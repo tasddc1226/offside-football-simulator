@@ -17,7 +17,7 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { purgeEdge } from '../edgeCache.js';
 import { hofDetailPath } from './hof.js';
 import { FIRSTS_PATH, recordFirsts } from './firsts.js';
-import { isAcceptablePublicName } from '../content-filter.js';
+import { isAcceptablePublicName } from '@offside/contracts/content-filter';
 
 /** 소유권 확인: careerId가 이미 다른 프로필 소유면 409. 없으면(새 커리어) 통과. */
 async function assertOwnable(db: ReturnType<typeof getDb>, careerId: string, profileId: string): Promise<void> {

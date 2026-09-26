@@ -5,6 +5,7 @@
 //   바꾼 뒤부터 생기는 기록에 새 이름이 쓰인다(이미 남은 기록·로그 문구는 그대로다).
 // - 로고: 게임 로직과 무관한 표시 전용 값이라 CLUBS에 넣지 않고 id → 로고 맵으로만 둔다.
 import { CLUBS, type Club } from './data.js';
+import { CLUB_CUSTOM_IMG_MAX } from '@offside/contracts/club-limits';
 
 export const CLUB_NAME_MAX = 20;
 export const LOGO_TEXT_MAX = 3;
@@ -25,8 +26,6 @@ export type ClubCustomMap = Record<string, ClubCustom>;
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const IMG = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
-// 서버 계약(contracts CLUB_CUSTOM_IMG_MAX)과 같은 한도 — 64px 엠블럼이면 넉넉하다.
-export const IMG_MAX = 16_000;
 
 function cleanLogo(v: unknown): ClubLogo | undefined {
   if (!v || typeof v !== 'object') return undefined;
@@ -34,7 +33,7 @@ function cleanLogo(v: unknown): ClubLogo | undefined {
   const text = typeof o.text === 'string' ? [...o.text.trim()].slice(0, LOGO_TEXT_MAX).join('') : '';
   const bg = typeof o.bg === 'string' && HEX.test(o.bg) ? o.bg : null;
   const fg = typeof o.fg === 'string' && HEX.test(o.fg) ? o.fg : null;
-  const img = typeof o.img === 'string' && o.img.length <= IMG_MAX && IMG.test(o.img) ? o.img : undefined;
+  const img = typeof o.img === 'string' && o.img.length <= CLUB_CUSTOM_IMG_MAX && IMG.test(o.img) ? o.img : undefined;
   if (!bg || !fg) return undefined;
   return img ? { text, bg, fg, img } : { text, bg, fg };
 }

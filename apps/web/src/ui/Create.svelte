@@ -9,6 +9,7 @@
   import { goHome, startCareer, rollCandidates } from './actions.js';
   import { hiddenStrength, scoutLine, startOvr } from './create-view.js';
   import { dur } from './motion.js';
+  import { withRo } from './format.js';
   import Topbar from './Topbar.svelte';
   import MiniRadar from './MiniRadar.svelte';
 
@@ -208,7 +209,7 @@
     <div class="action-bar at-bottom">
       <div class="action-bar-inner">
         <button class="btn btn-primary btn-block" data-act="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
-          {appState.candidatePick == null ? '후보를 한 명 골라주세요' : `후보 ${appState.candidatePick + 1}로 킥오프 →`}
+          {appState.candidatePick == null ? '후보를 한 명 골라주세요' : `${withRo(`후보 ${appState.candidatePick + 1}`)} 킥오프 →`}
         </button>
       </div>
     </div>

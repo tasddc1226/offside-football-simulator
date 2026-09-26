@@ -91,10 +91,18 @@ export async function recordCareerFirsts(db: Db, careerId: string, { legendOnly 
   return wins.length > 0;
 }
 
+/** 기록을 가진 커리어가 지워지면(프로필 삭제) 그 자리는 다음 업로더가 아니라 실제로 가장 이른 달성자에게
+ * 가야 한다 — 소급 표시를 지워 다음 목록 조회 때 전체를 다시 계산하게 한다. */
+export const resetFirstsBackfillStatement = (db: Db) => db.delete(appMeta).where(eq(appMeta.key, META_KEY));
+
 /** 규칙 버전이 바뀌었으면 모든 커리어를 다시 훑어 채운다(첫 배포 때 이전 기록 소급 포함). */
 export async function ensureFirstsBackfilled(db: Db): Promise<void> {
   const [meta] = await db.select({ value: appMeta.value }).from(appMeta).where(eq(appMeta.key, META_KEY));
-  if (meta?.value === BACKFILL_VERSION) return;
+  if (meta?.value !== BACKFILL_VERSION) await recomputeFirsts(db);
+}
+
+/** 모든 커리어를 다시 훑어 최초 기록을 채우고 소급 표시를 남긴다. */
+export async function recomputeFirsts(db: Db): Promise<void> {
   const [cs, rows] = await db.batch([db.select(careerColumns).from(careers), db.select(seasonColumns).from(careerSeasons)]);
   const best = new Map<string, Claim>();
   for (const c of toCareers(cs, rows)) {

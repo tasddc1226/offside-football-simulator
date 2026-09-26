@@ -529,7 +529,9 @@ export function rollEvent(s: GameState): string | null {
     return due.id;
   }
   if (!chance(s.phase === 0 ? EVENT_RULES.rate.preseason : EVENT_RULES.rate.season)) return null;
-  const seen = (s.flags.evSeen = s.flags.evSeen || {});
+  // 대입식의 값(원본 객체)이 아니라 다시 읽은 값을 쓴다 — s가 Svelte $state 프록시면 원본에 쓴 값이 반영되지 않을 수 있다.
+  if (!s.flags.evSeen) s.flags.evSeen = {};
+  const seen = s.flags.evSeen;
   const pool = EVENTS.filter((e) => !e.chain && e.cond(s) && s.flags.lastEvent !== e.id && !(seen[e.id] && t - seen[e.id]!.t < EV_COOLDOWN));
   if (!pool.length) return null;
   const weightOf = (e: EventDef) => (e.w * eventWeight(e.id)) / (1 + (seen[e.id] ? seen[e.id]!.n : 0));

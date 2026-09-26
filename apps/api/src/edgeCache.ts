@@ -10,7 +10,8 @@ function edge(): Cache | undefined {
   return (globalThis as { caches?: { default?: Cache } }).caches?.default;
 }
 
-function waitUntil(c: Context<AppEnv>, p: Promise<unknown>) {
+/** 응답을 먼저 보내고 p를 마저 돌린다. 실패는 삼킨다. */
+export function waitUntil(c: Context<AppEnv>, p: Promise<unknown>) {
   const safe = p.catch(() => {});
   try {
     c.executionCtx.waitUntil(safe);

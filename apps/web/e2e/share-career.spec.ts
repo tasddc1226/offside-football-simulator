@@ -22,7 +22,7 @@ async function stubApi(page: Page, state: { google: boolean }) {
   await page.route(/\/v1\/hof\/[0-9a-f-]{36}$/, async (r) => {
     const id = r.request().url().split('/').pop()!;
     const b = uploaded.get(id);
-    if (!b) return r.fulfill(json({ error: { code: 'HOF_NOT_FOUND', message: '없음', retryable: false } }, 404));
+    if (!b) return r.fulfill(json({ error: { code: 'VALIDATION_FAILED', message: '없음', retryable: false, details: { reason: 'HOF_NOT_FOUND' } } }, 404));
     const entry = {
       id, name: b.publicName ?? null, pos: 'FW', number: 10, retireAge: b.retireAge, peak: b.peak, legendScore: b.legendScore,
       apps: b.apps, goals: b.goals, assists: b.assists, trophies: b.trophies, awards: b.awards, caps: b.caps, ballon: b.ballon,
@@ -103,4 +103,15 @@ test('없는 공유 링크는 안내와 시작 버튼을 보여 준다', async (
   await page.goto('/career/00000000-0000-4000-8000-000000000000');
   await expect(page.locator('[data-shared="unavailable"]')).toContainText('기록을 찾을 수 없어요');
   await expect(page.locator('[data-act="shared-start"]')).toHaveText('나도 커리어 시작하기 →');
+});
+
+test('은퇴 기록이 아직 서버에 없으면 연결 오류가 아니라 "아직 올리지 못했다"고 알린다', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await stubApi(page, { google: true });
+  // 은퇴 업로드가 계속 실패해(5xx) 서버엔 기록이 없다. 나중에 등록한 route가 먼저 잡는다.
+  await page.route(/\/v1\/careers\/[^/]+\/retirement$/, (r) => r.fulfill({ status: 503, json: { error: { code: 'UNAVAILABLE', message: '점검 중', retryable: true } } }));
+  await retireNow(page);
+  await page.locator('[data-act="share-career"]').click();
+  await expect(page.getByText('기록을 아직 서버에 올리지 못했어요. 잠시 후 다시 시도해 주세요.')).toBeVisible();
+  await expect(page.locator('.share-url')).toHaveCount(0);
 });

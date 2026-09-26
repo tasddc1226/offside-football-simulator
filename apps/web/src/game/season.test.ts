@@ -104,3 +104,17 @@ describe('대학 4년', () => {
     expect(notes[0]).toContain('대학 1학년을 마쳤습니다');
   });
 });
+
+describe('로컬 명예의 전당 30명 한도', () => {
+  it('30명이 찬 상태에서 점수가 낮은 선수로 은퇴해도 방금 은퇴한 선수는 남는다', async () => {
+    const { retire, loadHOF } = await import('./season.js');
+    saveKey('ft_hof', Array.from({ length: 30 }, (_, i) => ({ name: `고수${i}`, score: 5000 - i })));
+    setActiveRng(createRng(5));
+    const g = newGame({ name: '막내', number: 7, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' }, 5);
+    const entry = retire(g);
+    const hof = loadHOF();
+    expect(hof).toHaveLength(30);
+    expect(hof.at(-1)).toMatchObject({ name: '막내', id: entry.id });
+    expect(hof.some((h) => h.name === '고수29')).toBe(false);
+  });
+});

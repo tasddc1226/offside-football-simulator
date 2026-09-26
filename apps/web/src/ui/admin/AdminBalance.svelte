@@ -22,6 +22,7 @@
   import { EVENTS } from '../../game/events-data.js';
   import { toast } from '../helpers.js';
   import { kstDateTime } from '../boardText.js';
+  import { withEulReul, withRo } from '../format.js';
 
   const STATUS = { draft: ['초안', 'warn'], active: ['적용 중', 'good'], archived: ['보관', ''] } as const;
   const GROUPS = Object.entries(BALANCE_GROUPS) as [BalanceGroup, string][];
@@ -138,7 +139,7 @@
     const v = await run(api.createBalanceDraft({ note, values: sanitizeBalance($state.snapshot(from)) }));
     if (!v) return;
     dirty = false;
-    toast(`초안 v${v.version}을 만들었어요`);
+    toast(`초안 ${withEulReul(`v${v.version}`)} 만들었어요`);
     await load(v.version);
   }
   async function save(): Promise<boolean> {
@@ -152,15 +153,15 @@
   async function activate(v: BalanceVersion) {
     if (v.status === 'draft' && dirty && !(await save())) return;
     const lines = diffLines(v.status === 'draft' ? work.values : v.values);
-    const what = v.status === 'archived' ? `v${v.version}로 되돌릴까요?` : `v${v.version}을 적용할까요?`;
+    const what = v.status === 'archived' ? `${withRo(`v${v.version}`)} 되돌릴까요?` : `${withEulReul(`v${v.version}`)} 적용할까요?`;
     const body = lines.length ? lines.join('\n') : '적용 중인 버전과 값이 같습니다.';
     if (!confirm(`${what}\n\n${body}\n\n진행 중인 커리어는 다음 시즌부터, 새 커리어는 바로 적용됩니다.`)) return;
     if (!(await run(api.activateBalance(v.version)))) return;
-    toast(`v${v.version}을 적용했어요`);
+    toast(`${withEulReul(`v${v.version}`)} 적용했어요`);
     await load(v.version);
   }
   async function remove(v: BalanceVersion) {
-    if (!confirm(`초안 v${v.version}을 지울까요?`)) return;
+    if (!confirm(`초안 ${withEulReul(`v${v.version}`)} 지울까요?`)) return;
     if ((await run(api.deleteBalanceDraft(v.version))) === null) return;
     dirty = false;
     selected = null;
@@ -300,7 +301,7 @@
 
         <div class="stack admin-diff" style="gap:4px" aria-live="polite">
           <b style="font-size:13px">적용 중인 버전과 다른 값 {changes.length}개</b>
-          {#each changes as line (line)}<span style="font-size:12px">{line}</span>{/each}
+          {#each changes as line, i (i)}<span style="font-size:12px">{line}</span>{/each}
         </div>
 
         <div class="row" style="gap:8px">

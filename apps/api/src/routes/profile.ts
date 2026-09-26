@@ -1,5 +1,6 @@
 import {
   AUTHORIZATION_HEADER,
+  BOARD_KEYS,
   DeleteProfileConfirmBodySchema,
   DeleteProfileStartResponseSchema,
   IssueRecoveryCodeResponseSchema,
@@ -18,7 +19,7 @@ import { commentIdentity } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
 import { sha256Hex } from '../db/hash.js';
 import { getProfile, createProfile, setNickname, touchLastSeen, updateSettings, type ProfileRecord } from '../db/repos/profiles.js';
-import { isAcceptablePublicName, isReservedNickname } from '../content-filter.js';
+import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
 import { revokeSession } from '../db/repos/sessions.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseJsonBody, parseWithAppError } from '../errors.js';
@@ -26,6 +27,11 @@ import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
+import { purgeEdge, waitUntil } from '../edgeCache.js';
+import { firstPagePath } from './boards.js';
+import { FIRSTS_PATH } from './firsts.js';
+import { recomputeFirsts } from '../db/repos/firsts.js';
+import { hofDetailPath } from './hof.js';
 import { issueRecoveryCode } from '../profile/issue-recovery-code.js';
 import { maskEmail } from '../profile/mask-email.js';
 import { recoverProfile } from '../profile/recover.js';
@@ -207,13 +213,18 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       return c.json(responseBody, 200);
     }
 
-    await executeProfileDeletion(db, {
+    const { careerIds, heldFirsts, hadComments } = await executeProfileDeletion(db, {
       profileId: session.profileId,
       sessionId: session.id,
       sessionTokenHash,
       confirmToken: body.confirmToken,
       now,
     });
+    // 지운 최초 기록은 응답 뒤에 다시 계산하고 그 캐시를 비운다. 소급 표시는 삭제 배치에서 이미 지웠으니,
+    // 재계산이 끝나기 전·실패한 뒤의 공개 조회도 스스로 다시 계산한다. 나머지는 바뀐 공개 캐시만 비운다
+    // (명예의 전당 목록은 TTL 1분).
+    if (heldFirsts) waitUntil(c, recomputeFirsts(db).finally(() => purgeEdge(c, [FIRSTS_PATH])));
+    purgeEdge(c, [...careerIds.map(hofDetailPath), ...(hadComments ? BOARD_KEYS.map(firstPagePath) : [])]);
     return c.body(null, 204);
   });
 }

@@ -3,7 +3,8 @@
   // 접히는 "구단 이름·엠블럼 변경"(리그별 클럽 이름·엠블럼, 에디트 파일 내보내기/가져오기), 운영 도구(관리자),
   // 도움말·서비스 정책 링크. 다크 모드·효과음 설정은 이 기기에만 저장된다.
   import { LEAGUES } from '../game/data.js';
-  import { CLUB_NAME_MAX, IMG_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '../game/clubs.js';
+  import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '../game/clubs.js';
+  import { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
   import { clubsIn } from '../game/engine.js';
   import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
   import { goHome } from './actions.js';
@@ -45,6 +46,7 @@
     syncing: '계정과 동기화하는 중…',
     synced: '계정에 저장됨 — 같은 계정으로 로그인한 기기에서 함께 쓰여요.',
     error: '동기화하지 못했어요 — 이 기기에는 저장됐고, 다음에 다시 시도합니다.',
+    full: '엠블럼 이미지가 너무 많아 계정과 동기화하지 못해요 — 이 기기에는 저장됐어요. 이미지를 몇 개 지우면 다시 동기화돼요.',
   } as const;
 
   function rename(id: string, value: string) {
@@ -76,8 +78,10 @@
       canvas.getContext('2d')!.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 64, 64);
       // WebP 인코딩을 못 하는 브라우저(PNG로 떨어짐)나 한도를 넘으면 JPEG로 다시 줄인다.
       let img = canvas.toDataURL('image/webp', 0.85);
-      if (!img.startsWith('data:image/webp') || img.length > IMG_MAX) img = canvas.toDataURL('image/jpeg', 0.8);
-      if (img.length > IMG_MAX) return toast('이미지가 너무 복잡해 저장할 수 없어요');
+      if (!img.startsWith('data:image/webp') || img.length > CLUB_CUSTOM_IMG_MAX) img = canvas.toDataURL('image/jpeg', 0.8);
+      if (img.length > CLUB_CUSTOM_IMG_MAX) return toast('이미지가 너무 복잡해 저장할 수 없어요');
+      const others = clubImgTotal(clubCustom.map) - (clubCustom.map[club.id]?.logo?.img?.length ?? 0);
+      if (others + img.length > CLUB_CUSTOM_IMG_TOTAL_MAX) return toast('엠블럼 이미지를 더 저장할 공간이 없어요 — 다른 클럽 이미지를 지운 뒤 올려 주세요');
       editLogo(club, { img });
     } catch {
       toast('이미지를 읽지 못했어요');

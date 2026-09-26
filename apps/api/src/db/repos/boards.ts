@@ -92,12 +92,14 @@ export async function createComment(
   return id;
 }
 
-export async function getCommentOwner(db: Db, id: string): Promise<string | undefined> {
+/** 지울 댓글의 작성자와 게시판(목록 캐시를 비우는 데 쓴다). */
+export async function getCommentOwner(db: Db, id: string): Promise<{ profileId: string; board: string } | undefined> {
   const [row] = await db
-    .select({ profileId: boardComments.profileId })
+    .select({ profileId: boardComments.profileId, board: boardPosts.board })
     .from(boardComments)
+    .innerJoin(boardPosts, eq(boardPosts.id, boardComments.postId))
     .where(and(eq(boardComments.id, id), isNull(boardComments.deletedAt)));
-  return row?.profileId;
+  return row;
 }
 
 export async function deleteComment(db: Db, id: string, now: string): Promise<void> {

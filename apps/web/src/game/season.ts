@@ -251,6 +251,7 @@ export function legendScoreBreakdown(s: LegendSource): { items: LegendBreakdownI
 export function legendScore(s: LegendSource): number {
   return legendScoreBreakdown(s).total;
 }
+const HOF_LOCAL_MAX = 30;
 export function retire(s: GameState): HofEntry {
   s.retired = true;
   retireMilestones(s);
@@ -267,7 +268,10 @@ export function retire(s: GameState): HofEntry {
   const hof = loadHOF();
   hof.push(entry);
   hof.sort((a, b) => b.score - a.score);
-  saveKey('ft_hof', hof.slice(0, 30));
+  // 30명이 찼어도 방금 은퇴한 선수는 남긴다 — 잘리면 은퇴 화면의 공유·이름 공개 카드가 사라진다.
+  const kept = hof.slice(0, HOF_LOCAL_MAX);
+  if (!kept.includes(entry)) kept[HOF_LOCAL_MAX - 1] = entry;
+  saveKey('ft_hof', kept);
   return entry;
 }
 /** T-10-005. 은퇴 상세를 다시 그리는 데 필요한 필드만 복사한다(서버 계약 LegendSnapshotSchema와 같은

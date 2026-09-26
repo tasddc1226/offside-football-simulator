@@ -8,8 +8,7 @@
   let on = $derived(!!h.public);
 
   function toggle() {
-    on = !on;
-    setLegendPublic(h, on);
+    if (setLegendPublic(h, !on)) on = !on;
   }
 </script>
 

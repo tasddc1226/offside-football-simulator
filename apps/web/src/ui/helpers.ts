@@ -13,7 +13,10 @@ export const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__
 const EV_BUF_CAP = 300;
 
 export function pushEvLog(s: GameState, entry: EventLogEntry) {
-  const buf = (s.evBuf = s.evBuf || []);
+  // s가 Svelte $state 프록시면 대입한 원본 배열이 아니라 s.evBuf(프록시)를 다시 읽어야 push가 남는다
+  // (`const buf = (s.evBuf = s.evBuf || [])`는 첫 항목을 원본 배열에 넣고 잃었다).
+  if (!s.evBuf) s.evBuf = [];
+  const buf = s.evBuf;
   buf.push(entry);
   while (buf.length > EV_BUF_CAP) buf.shift();
 }
@@ -70,6 +73,24 @@ export function uploadRetirement(careerId: string, entry: HofEntry) {
       ...(entry.detail ? { snapshot: entry.detail } : {}),
     }),
   );
+}
+
+/** cid 도입 전에 은퇴한 선수: 서버엔 이 커리어가 없어 은퇴만 보내면 CAREER_NOT_FOUND(400)로 버려진다 — 시즌을
+ * 먼저 큐에 넣어 커리어를 만든 뒤 은퇴를 보낸다(큐는 넣은 순서대로 보낸다). 선택 로그는 남아 있지 않다. */
+export function uploadLegacyRetirement(s: GameState, entry: HofEntry) {
+  void import('../game/outbox.js').then((m) => {
+    enqueueAllSeasons(m, s);
+    uploadRetirement(s.cid, entry);
+  });
+}
+
+/** 커리어의 모든 시즌을 지금 cid로 업로드 큐에 넣는다. eventsOf: 연도별 선택 로그(남아 있는 것만). */
+export function enqueueAllSeasons(
+  m: typeof import('../game/outbox.js'),
+  s: GameState,
+  eventsOf: (year: number) => PutCareerSeasonBody['events'] = () => [],
+) {
+  for (const rec of s.career) m.enqueueSeason(s.cid, rec.year, seasonBody(m, s, rec, eventsOf(rec.year)));
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;

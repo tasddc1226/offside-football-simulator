@@ -54,3 +54,21 @@ test('세션이 없으면 이 기기에만 저장하고 서버로 보내지 않�
   await expect(page.locator('[data-club="pl-2"] input[type="text"]')).toHaveValue('로컬 FC');
   expect(putCount).toBeLessThanOrEqual(1); // 편집 직후 한 번 시도 → 401 → 로컬 모드
 });
+
+test('엠블럼 이미지 합계가 서버 한도를 넘으면 보내지 않고, 이 기기에만 남았다고 알린다', async ({ page }) => {
+  let putCount = 0;
+  await page.route(API, async (route: Route) => {
+    if (route.request().method() === 'PUT') putCount++;
+    await route.fulfill({ json: envelope({ clubs: {}, updatedAt: null }) });
+  });
+  // 64px 엠블럼 한도(16,000자)에 가까운 이미지 55개 ≈ 82만 자 > 합계 한도 80만 자.
+  await page.addInitScript(() => {
+    const img = `data:image/png;base64,${'A'.repeat(14_950)}`;
+    const ids = ['pl', 'll', 'sa'].flatMap((l) => Array.from({ length: 20 }, (_, i) => `${l}-${i}`)).slice(0, 55);
+    const clubs = Object.fromEntries(ids.map((id) => [id, { logo: { text: 'A', bg: '#123456', fg: '#ffffff', img } }]));
+    localStorage.setItem('ft_clubs', JSON.stringify({ clubs, updatedAt: new Date().toISOString(), dirty: true }));
+  });
+  await openPl(page);
+  await expect(page.locator('[data-club-sync]')).toHaveAttribute('data-club-sync', 'full');
+  expect(putCount).toBe(0);
+});
