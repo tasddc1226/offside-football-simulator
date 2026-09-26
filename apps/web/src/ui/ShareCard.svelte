@@ -42,7 +42,8 @@
 
   async function copy() {
     busy = true;
-    const link = checkLink();
+    // 한 번 확인한 링크는 다시 서버에 묻지 않는다.
+    const link = url ? Promise.resolve(url) : checkLink();
     let copied: Promise<void>;
     try {
       const blob = link.then((l) => new Blob([l], { type: 'text/plain' }));
@@ -54,11 +55,11 @@
     try {
       url = await link;
     } catch (e) {
-      busy = false;
       copied.catch(() => {});
       return toast((e as Error).message);
+    } finally {
+      busy = false;
     }
-    busy = false;
     try {
       await copied;
       toast('공유 링크를 복사했어요.');
