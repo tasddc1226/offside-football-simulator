@@ -4,7 +4,7 @@ import App from './ui/App.svelte';
 import Sheet from './ui/Sheet.svelte';
 import Toast from './ui/Toast.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
-import { handleOAuthReturn } from './ui/actions.js';
+import { handleOAuthReturn } from './ui/login.js';
 import { hasSessionHint } from './api/client.js';
 import { routeSharedCareer } from './ui/legend.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';

@@ -3,7 +3,7 @@
   // '전체 보기'는 글이 없어도 보인다 — 관리자의 새 글 쓰기가 소식 화면에 있어서, 숨기면 첫 글을 쓸 길이 없다.
   import { fetchPosts, type BoardKey, type PostSummary } from '../api/boards.js';
   import { dateOf } from './boardText.js';
-  import { openBoard } from './actions.js';
+  import { openBoard } from './nav.js';
 
   let { board, eyebrow, title }: { board: BoardKey; eyebrow: string; title: string } = $props();
   const SHOWN = 3;

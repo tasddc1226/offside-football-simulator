@@ -6,7 +6,7 @@
   import { ovr } from '../game/attributes.js';
   import { leagueOf, roleOf, fmtMoney, potGrade, blockMatches, focusOf, labelOf } from '../game/engine.js';
   import { appState, type Tab } from './state.svelte.js';
-  import { goHome } from './actions.js';
+  import { goHome } from './nav.js';
   import { advance, nextPending } from './actions.js';
   import { buzz, dur } from './motion.js';
   import ClubBadge from './ClubBadge.svelte';

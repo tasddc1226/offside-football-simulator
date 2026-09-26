@@ -12,7 +12,8 @@
   import * as api from '../api/boards.js';
   import type { BoardKey, BoardViewerResponse, Comment, Post, PostSummary } from '../api/boards.js';
   import { appState } from './state.svelte.js';
-  import { goHome, startGoogleLogin } from './actions.js';
+  import { goHome } from './nav.js';
+import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
   import { BOARD_LABEL, dateOf, parseBody } from './boardText.js';
   import Topbar from './Topbar.svelte';

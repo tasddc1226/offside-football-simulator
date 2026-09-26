@@ -13,7 +13,7 @@
   import { getHof, getMyCareers } from '../api/client.js';
   import { openLocalLegend, openPublicLegend } from './legend.js';
   import { anonName } from './format.js';
-  import { openHof } from './actions.js';
+  import { openHof } from './nav.js';
   import Laurel from './Laurel.svelte';
   import { appState, type HofTab } from './state.svelte.js';
 

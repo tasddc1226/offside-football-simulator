@@ -4,7 +4,7 @@
   import type { FirstsResponse, ServerFirst } from '@offside/contracts';
   import { getFirsts } from '../../api/client.js';
   import { loadHOF } from '../../game/season.js';
-  import { goHome } from '../actions.js';
+  import { goHome } from '../nav.js';
   import { appState } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
   import { kstParts } from '../boardText.js';

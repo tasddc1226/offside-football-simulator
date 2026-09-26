@@ -4,7 +4,7 @@
   import { onMount } from 'svelte';
   import { appState, type LegendView } from './state.svelte.js';
   import { loadSharedLegend } from './legend.js';
-  import { goHome } from './actions.js';
+  import { goHome } from './nav.js';
   import Topbar from './Topbar.svelte';
   import LegendReport from './LegendReport.svelte';
 

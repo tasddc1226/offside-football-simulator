@@ -6,7 +6,8 @@
   import type { AttrKey, Pos } from '../game/data.js';
   import { baseline } from '../game/candidates.js';
   import { appState, randomName } from './state.svelte.js';
-  import { goHome, startCareer, rollCandidates } from './actions.js';
+  import { startCareer, rollCandidates } from './actions.js';
+import { goHome } from './nav.js';
   import { hiddenStrength, scoutLine, startOvr } from './create-view.js';
   import { dur } from './motion.js';
   import { withRo } from './format.js';

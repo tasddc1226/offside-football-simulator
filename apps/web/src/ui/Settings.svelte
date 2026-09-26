@@ -7,7 +7,7 @@
   import { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
   import { clubsIn } from '../game/engine.js';
   import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
-  import { goHome } from './actions.js';
+  import { goHome } from './nav.js';
   import { toast } from './helpers.js';
   import Topbar from './Topbar.svelte';
   import ClubBadge from './ClubBadge.svelte';
