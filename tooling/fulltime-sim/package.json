@@ -6,7 +6,9 @@
   "scripts": {
     "sim": "tsx simulate.ts",
     "analyze": "tsx analyze.ts",
-    "check-parity": "tsx check-parity.ts"
+    "check-parity": "tsx check-parity.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "tsx": "4.23.13"

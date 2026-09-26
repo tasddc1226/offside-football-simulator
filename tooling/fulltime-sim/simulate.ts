@@ -47,6 +47,7 @@ if (typeof (globalThis as Record<string, unknown>).localStorage === 'undefined')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// STRICT=1: 커리어 하나라도 예외가 나면 즉시 실패한다.
 // SEED=<정수>: 같은 시드면 같은 결과(코드 변경 전후를 잡음 없이 비교할 때).
 // BALANCE=<json 파일>: 그 밸런스 값으로 돌린다 — 어드민 초안의 values(또는 {values}) 그대로(T-10-016).
 const master = process.env.SEED ? createRng(+process.env.SEED) : null;
@@ -87,7 +88,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
     const type = pick(TYPES[pos]).id;
     const trait = pick(TRAITS).id;
     const seed = nextSeed();
-    let s = newGame({ name: 'SIM', number: 9, pos, foot: '오른발', type, trait }, seed);
+    const s = newGame({ name: 'SIM', number: 9, pos, foot: '오른발', type, trait }, seed);
     const pot0 = s.pot;
     const seen: Record<string, 1> = {};
     let events = 0, evOk = 0, injuries = 0;
@@ -147,8 +148,10 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
         }
       }
       if (!s.retired) { retireReason = 'cap'; retire(s); }
-    } catch {
-      (A.errors as number)++;
+    } catch (err) {
+      // STRICT=1: 첫 오류에서 멈춘다(리팩터링 검증·CI). 아니면 세고 넘어가되 첫 오류는 스택을 남긴다.
+      if (process.env.STRICT) throw err;
+      if (!(A.errors as number)++) console.error("[sim] 첫 오류 (이후는 개수만 셉니다)", err);
       continue;
     }
 
