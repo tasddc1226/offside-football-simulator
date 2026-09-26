@@ -1,0 +1,39 @@
+- main:
+  - text: "풀타임: 휘슬이 울릴 때까지 오프사이드"
+  - button "설정"
+  - text: Current career
+  - heading "이번 커리어는 구조테스트 입니다" [level=1]:
+    - text: ""
+    - strong: 구조테스트
+    - text: ""
+  - paragraph: /런던 해머스 · \d+세 · 공격수/
+  - paragraph: /\d+ 시즌 프리시즌 · OVR \d+/
+  - button "구조테스트로 계속 →"
+  - button "새 커리어 시작 →"
+  - region "지금 오프사이드에서는":
+    - text: Live
+    - heading "지금 오프사이드에서는" [level=2]
+    - text: /3 지금 뛰는 중 \d+ 오늘 치른 시즌 5 오늘 새 선수 2 오늘 은퇴/
+    - list:
+      - listitem:
+        - button /김오프 은퇴 · 레전드 점수 \d+/
+        - time: 2분 전
+      - listitem:
+        - text: 익명의 공격수 청운고에서 첫 시즌을 마쳤어요
+        - time: 9분 전
+      - listitem:
+        - text: 익명의 골키퍼 K리그1 우승 · 테스트 FC
+        - time: /\d+분 전/
+  - button "Server firsts 서버 최초 기록 모든 플레이어 중 첫 기록 보기 →"
+  - button "Events 확률 이벤트 선택지마다 성공 확률 공개 · 확률 도감 보기 →"
+  - text: Legends
+  - heading "명예의 전당" [level=2]
+  - button "전체" [pressed]
+  - button "내 선수"
+  - paragraph: 전체 명예의 전당을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+  - text: Notice
+  - heading "공지사항" [level=2]
+  - paragraph: 소식을 불러오지 못했어요.
+  - text: Release notes
+  - heading "릴리즈 노트" [level=2]
+  - paragraph: 소식을 불러오지 못했어요.

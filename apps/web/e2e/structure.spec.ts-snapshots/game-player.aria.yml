@@ -1,0 +1,86 @@
+- main:
+  - text: "풀타임: 휘슬이 울릴 때까지 오프사이드"
+  - button "메뉴"
+  - text: /No\.\d+ · 공격수/
+  - button "대표 칭호 슈퍼스타, 칭호 도감 열기": ‘슈퍼스타’
+  - heading "구조테스트" [level=1]
+  - text: /\d+세 · 런던 해머스 프리미어리그 · 연봉 \d+억 \d+,\d+만 \d+ OVR 로테이션 부상 4경기 주력 슈팅·드리블 잠재력 C Attributes/
+  - heading "능력치" [level=2]
+  - text: /스트라이커 · OVR \d+/
+  - img /스피드 \d+, 슈팅 \d+, 패스 \d+, 드리블 \d+, 수비 \d+, 피지컬 \d+/: /PAC 스피드 \d+ SHO 슈팅 \d+ PAS 패스 \d+ DRI 드리블 \d+ DEF 수비 \d+ PHY 피지컬 \d+/
+  - paragraph: 현재 시즌 시작
+  - text: /포지션별 OVR ST \d+ CF \d+ RW \d+ PAC스피드 \d+/
+  - list:
+    - listitem: /질주 속도 \d+/
+    - listitem: /가속력 \d+/
+  - text: /SHO슈팅 \d+/
+  - list:
+    - listitem: /골 결정력 \d+/
+    - listitem: /위치 선정 \d+/
+    - listitem: /슛 파워 \d+/
+    - listitem: /중거리 슛 \d+/
+    - listitem: /발리슛 \d+/
+    - listitem: /페널티킥 \d+/
+  - text: /PAS패스 \d+/
+  - list:
+    - listitem: /시야 \d+/
+    - listitem: /프리킥 \d+/
+    - listitem: /커브 \d+/
+    - listitem: /짧은 패스 \d+/
+    - listitem: /크로스 \d+/
+    - listitem: /긴 패스 \d+/
+  - text: /DRI드리블 \d+/
+  - list:
+    - listitem: /볼 컨트롤 \d+/
+    - listitem: /반응 속도 \d+/
+    - listitem: /드리블 \d+/
+    - listitem: /침착성 \d+/
+    - listitem: /민첩성 \d+/
+    - listitem: /밸런스 \d+/
+  - text: /DEF수비 \d+/
+  - list:
+    - listitem: /헤딩 정확도 \d+/
+    - listitem: /가로채기 \d+/
+    - listitem: /스탠딩 태클 \d+/
+    - listitem: /수비 인식 \d+/
+    - listitem: /슬라이딩 태클 \d+/
+  - text: /PHY피지컬 \d+/
+  - list:
+    - listitem: /힘 \d+/
+    - listitem: /점프력 \d+/
+    - listitem: /체력 \d+/
+    - listitem: /적극성 \d+/
+  - paragraph: 굵은 글씨가 스트라이커 OVR을 결정하는 능력치예요.
+  - text: Profile
+  - heading "선수 정보" [level=2]
+  - term: 주발
+  - definition: 오른발
+  - term: 성장 특성
+  - definition: 조기 성장
+  - term: 스카우트 잠재력 평가
+  - definition: C등급
+  - term: 최고 OVR
+  - definition: /\d+/
+  - term: 감독 신뢰
+  - definition: 보통
+  - term: 계약
+  - definition: /5년 남음 · \d+억 \d+,\d+만\/년/
+  - term: 보유 자금
+  - definition: /\d+억 \d+,\d+만원/
+  - term: 추정 시장가치
+  - definition: /\d+억 \d+,\d+만원/
+  - text: Korea Republic
+  - heading "국가대표" [level=2]
+  - text: /\d+ A매치 0 골 0 도움 - 주장/
+  - term: A매치 데뷔
+  - definition: /\d+/
+  - term: 병역
+  - definition: 상무 만기 전역
+  - term: 다음 월드컵
+  - definition: /\d+ · 사우디아라비아/
+  - text: /\d+ AFC 아시안컵 준우승 · 7경기 0골 \d+ 아시안게임 \(카타르 도하\) 4강 · 6경기 4골 \d+ FIFA 월드컵 \(스페인·포르투갈·모로코\) 조별리그 탈락 · 2경기 0골 \d+ 아시안게임 \(일본 아이치·나고야\) 8강 · 5경기 0골/
+  - tablist:
+    - tab "시즌"
+    - tab "선수" [selected]
+    - tab "커리어"
+    - tab "트로피"

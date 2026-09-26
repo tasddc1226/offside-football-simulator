@@ -1,0 +1,7 @@
+- dialog "다음 시즌, 어디서 뛸까요?":
+  - text: /\d+-\d+ Transfer Window/
+  - heading "다음 시즌, 어디서 뛸까요?" [level=2]
+  - paragraph: 런던 해머스와의 계약이 5년 남았습니다.
+  - button /런던 해머스 잔류 연봉 \d+억 \d+,\d+만 · 계약 5년 남음/
+  - button /크레모나 그리지오로시 세리에 A · 팀 전력 \d+ 9억 \d+,\d+만 연봉 3년 계약 · 주전 보장 · 이적료 약 \d+억/
+  - button "은퇴하기"

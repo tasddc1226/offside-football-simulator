@@ -1,0 +1,45 @@
+- main:
+  - text: "풀타임: 휘슬이 울릴 때까지 오프사이드"
+  - button "← 홈"
+  - text: Settings
+  - heading "환경설정" [level=1]
+  - region "계정":
+    - text: 로그인하지 않았어요 구글 계정을 연결하면 은퇴한 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.
+    - link "구글로 로그인":
+      - /url: http://localhost:8787/v1/auth/google/start
+  - text: Display
+  - strong: 다크 모드
+  - text: 어두운 화면으로 봐요. 이 기기에 저장됩니다.
+  - switch "다크 모드"
+  - text: Sound
+  - strong: 효과음
+  - text: 버튼을 누를 때 클릭 소리를 내요.
+  - switch "효과음" [checked]
+  - button "Team settings 구단 이름·엠블럼 변경":
+    - text: ""
+    - strong: 구단 이름·엠블럼 변경
+  - region "도움말":
+    - text: Help
+    - heading "도움말" [level=2]
+    - navigation "도움말":
+      - button "홈 화면에 추가하기"
+      - link "게임 가이드":
+        - /url: /guide/
+      - link "자주 묻는 질문":
+        - /url: /faq/
+  - region "서비스 정책":
+    - text: Legal
+    - heading "서비스 정책" [level=2]
+    - navigation "서비스 정책":
+      - link "이용약관":
+        - /url: /legal/terms/
+      - link "개인정보 처리방침":
+        - /url: /legal/privacy/
+  - paragraph:
+    - text: 문의
+    - link "contact@offside-lab.com":
+      - /url: mailto:contact@offside-lab.com
+  - paragraph:
+    - text: Instagram
+    - link "@offside.lab.kr":
+      - /url: https://www.instagram.com/offside.lab.kr/
