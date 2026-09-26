@@ -7,9 +7,8 @@ import { createApp } from '../app.js';
 import type { Bindings } from '../env.js';
 import { auditLog, careers, profiles, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { extractCookie, issueCookie } from '../test/http.js';
+import { extractCookie, issueCookie, ORIGIN } from '../test/http.js';
 
-const ALLOWED_ORIGIN = 'http://localhost:5173';
 const rotatedCookies = new Map<string, string>();
 
 function currentCookie(cookie: string): string {
@@ -96,7 +95,7 @@ function jsonInit(input: {
   origin?: string | null;
   idempotencyKey?: string | null;
 }): RequestInit {
-  const { body, cookie, origin = ALLOWED_ORIGIN, idempotencyKey = 'idem-key-0001' } = input;
+  const { body, cookie, origin = ORIGIN, idempotencyKey = 'idem-key-0001' } = input;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (origin !== null) headers.Origin = origin;
   if (idempotencyKey !== null) headers['Idempotency-Key'] = idempotencyKey;

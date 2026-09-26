@@ -4,15 +4,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { clubCustoms } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie } from '../test/http.js';
+import { issueCookie, ORIGIN, putJson } from '../test/http.js';
 
-const ORIGIN = 'http://localhost:5173';
 const Res = successEnvelope(ClubCustomResponseSchema);
 
 const get = (ctx: TestD1, cookie?: string) =>
   createApp().request('/v1/club-custom', { headers: { Origin: ORIGIN, ...(cookie ? { Cookie: cookie } : {}) } }, ctx.env);
-const put = (ctx: TestD1, cookie: string, body: unknown) =>
-  createApp().request('/v1/club-custom', { method: 'PUT', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie }, body: JSON.stringify(body) }, ctx.env);
+const put = (ctx: TestD1, cookie: string, body: unknown) => putJson(ctx, cookie, '/v1/club-custom', body);
 
 const CLUBS = { 'pl-0': { name: '우리 동네 FC', logo: { text: '우', bg: '#112233', fg: '#ffffff' } }, 'k1-3': { name: '서울 불꽃' } };
 

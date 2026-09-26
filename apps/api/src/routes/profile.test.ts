@@ -8,9 +8,8 @@ import { createProfile } from '../db/repos/profiles.js';
 import { createSession } from '../db/repos/sessions.js';
 import { idempotency, profiles, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { ADMIN_EMAIL, issueCookie, issueGoogleCookie } from '../test/http.js';
+import { ADMIN_EMAIL, issueCookie, issueGoogleCookie, ORIGIN } from '../test/http.js';
 
-const ALLOWED_ORIGIN = 'http://localhost:5173';
 
 describe('GET /v1/profile', () => {
   let ctx: TestD1;
@@ -158,7 +157,7 @@ describe('PATCH /v1/profile/settings', () => {
     cookie?: string;
   }): RequestInit {
     const headers: Record<string, string> = {};
-    if (overrides.origin !== null) headers.Origin = overrides.origin ?? ALLOWED_ORIGIN;
+    if (overrides.origin !== null) headers.Origin = overrides.origin ?? ORIGIN;
     if (overrides.contentType !== null) headers['Content-Type'] = overrides.contentType ?? 'application/json';
     if (overrides.idempotencyKey !== null) headers['Idempotency-Key'] = overrides.idempotencyKey ?? 'idem-key-0001';
     if (overrides.cookie) headers.Cookie = overrides.cookie;
@@ -371,7 +370,7 @@ describe('PUT /v1/profile/nickname', () => {
       '/v1/profile/nickname',
       {
         method: 'PUT',
-        headers: { Origin: ALLOWED_ORIGIN, 'Content-Type': 'application/json', Cookie: `offside_session=${token}` },
+        headers: { Origin: ORIGIN, 'Content-Type': 'application/json', Cookie: `offside_session=${token}` },
         body: JSON.stringify({ nickname }),
       },
       env(),

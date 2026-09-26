@@ -2,9 +2,8 @@ import { ErrorEnvelopeSchema } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.js';
 import { createTestD1, type TestD1 } from './test/d1.js';
-import { issueCookie } from './test/http.js';
+import { issueCookie, ORIGIN } from './test/http.js';
 
-const ALLOWED_ORIGIN = 'http://localhost:5173';
 const DISALLOWED_ORIGIN = 'https://evil.example';
 
 describe('CORS', () => {
@@ -25,7 +24,7 @@ describe('CORS', () => {
       {
         method: 'OPTIONS',
         headers: {
-          Origin: ALLOWED_ORIGIN,
+          Origin: ORIGIN,
           'Access-Control-Request-Method': 'PATCH',
           'Access-Control-Request-Headers': 'content-type, idempotency-key',
         },
@@ -34,7 +33,7 @@ describe('CORS', () => {
     );
 
     expect(res.status).toBe(204);
-    expect(res.headers.get('Access-Control-Allow-Origin')).toBe(ALLOWED_ORIGIN);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe(ORIGIN);
     expect(res.headers.get('Access-Control-Allow-Credentials')).toBe('true');
     const allowHeaders = res.headers.get('Access-Control-Allow-Headers') ?? '';
     expect(allowHeaders).toContain('Content-Type');

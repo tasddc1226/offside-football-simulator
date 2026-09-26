@@ -2,17 +2,14 @@ import { LiveResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie } from '../test/http.js';
+import { issueCookie, putJson, TEST_CAREER } from '../test/http.js';
 
-const ORIGIN = 'http://localhost:5173';
 const A = '0c000000-0000-4000-8000-00000000000a';
 const B = '0c000000-0000-4000-8000-00000000000b';
 const C = '0c000000-0000-4000-8000-00000000000c';
 
-const put = (ctx: TestD1, cookie: string, path: string, body: unknown) =>
-  createApp().request(path, { method: 'PUT', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: cookie }, body: JSON.stringify(body) }, ctx.env);
 const seasonBody = (over: Record<string, unknown> = {}) => ({
-  career: { pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late', startYear: 2026, appVersion: '1.0.0' },
+  career: TEST_CAREER,
   season: { age: 18, club: '테스트 고교', league: '고교리그', apps: 20, goals: 15, assists: 4, rating: 7.4, rank: 1, ovr: 58, honors: [], ...over },
   events: [],
 });
@@ -43,11 +40,11 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
   });
 
   it('시즌·은퇴 업로드가 최신순 피드와 오늘 숫자로 보인다 — 선수당 한 줄', async () => {
-    await put(ctx, cookie, `/v1/careers/${A}/seasons/2026`, seasonBody());
-    await put(ctx, cookie, `/v1/careers/${B}/seasons/2026`, seasonBody());
-    await put(ctx, cookie, `/v1/careers/${B}/seasons/2027`, seasonBody({ club: '테스트 FC', league: 'K리그1', goals: 21 }));
-    await put(ctx, cookie, `/v1/careers/${C}/seasons/2026`, seasonBody({ honors: ['고교리그 우승', '득점왕'] }));
-    await put(ctx, cookie, `/v1/careers/${A}/retirement`, summary);
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2026`, seasonBody());
+    await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2026`, seasonBody());
+    await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2027`, seasonBody({ club: '테스트 FC', league: 'K리그1', goals: 21 }));
+    await putJson(ctx, cookie, `/v1/careers/${C}/seasons/2026`, seasonBody({ honors: ['고교리그 우승', '득점왕'] }));
+    await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, summary);
 
     const data = await read(ctx);
     expect(data.stats).toEqual({ playing: 2, seasonsToday: 4, newToday: 3, retiredToday: 1 });
@@ -61,8 +58,8 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
   });
 
   it('짧은 커리어 은퇴는 오늘 숫자에만 세고 은퇴 소식에는 올리지 않는다 (T-10-032)', async () => {
-    await put(ctx, cookie, `/v1/careers/${A}/seasons/2026`, seasonBody());
-    await put(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, retireAge: 21 });
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2026`, seasonBody());
+    await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, retireAge: 21 });
     const data = await read(ctx);
     expect(data.stats.retiredToday).toBe(1);
     expect(data.feed).toEqual([]);
@@ -70,8 +67,8 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
 
   it('최근 1시간이 한산하면 기간을 넓혀 채우고, 7일보다 오래된 기록은 빠진다', async () => {
     for (const [i, id] of [A, B].entries()) {
-      await put(ctx, cookie, `/v1/careers/${id}/seasons/2026`, seasonBody());
-      await put(ctx, cookie, `/v1/careers/${id}/seasons/2027`, seasonBody({ goals: i }));
+      await putJson(ctx, cookie, `/v1/careers/${id}/seasons/2026`, seasonBody());
+      await putJson(ctx, cookie, `/v1/careers/${id}/seasons/2027`, seasonBody({ goals: i }));
     }
     const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
     await ctx.env.DB.prepare('UPDATE career_seasons SET created_at = ? WHERE career_id = ? AND year = 2026').bind(hoursAgo(4), A).run();

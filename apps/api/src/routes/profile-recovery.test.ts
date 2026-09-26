@@ -6,9 +6,8 @@ import { createApp } from '../app.js';
 import { sha256Hex } from '../db/hash.js';
 import { auditLog, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie } from '../test/http.js';
+import { issueCookie, ORIGIN } from '../test/http.js';
 
-const ALLOWED_ORIGIN = 'http://localhost:5173';
 
 function jsonInit(input: {
   method: 'POST' | 'DELETE';
@@ -18,7 +17,7 @@ function jsonInit(input: {
   origin?: string | null;
   ip?: string;
 }): RequestInit {
-  const { method, body, idempotencyKey = 'idem-key-0001', cookie, origin = ALLOWED_ORIGIN, ip } = input;
+  const { method, body, idempotencyKey = 'idem-key-0001', cookie, origin = ORIGIN, ip } = input;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (origin !== null) headers.Origin = origin;
   if (idempotencyKey !== null) headers['Idempotency-Key'] = idempotencyKey;
@@ -292,7 +291,7 @@ describe('POST /v1/profile/delete', () => {
 
     const settingsRes = await app.request(
       '/v1/profile/settings',
-      { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: ALLOWED_ORIGIN, Cookie: owner.cookie }, body: '{}' },
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: owner.cookie }, body: '{}' },
       ctx.env,
     );
     expect(settingsRes.status).toBe(401);
