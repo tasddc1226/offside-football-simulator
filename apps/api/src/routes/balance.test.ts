@@ -3,11 +3,10 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { auditLog, balanceVersions } from '../db/schema.js';
-import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
-import { issueCookie } from '../test/http.js';
+import { createTestD1, type TestD1 } from '../test/d1.js';
+import { ADMIN_EMAIL, issueAdminCookie, issueCookie } from '../test/http.js';
 
 const ORIGIN = 'http://localhost:5173';
-const ADMIN_EMAIL = 'admin@example.com';
 
 type Version = { version: number; status: string; note: string; values: Record<string, unknown>; activatedAt: string | null };
 
@@ -28,11 +27,7 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
     );
   const data = async <T>(res: Response) => ((await res.json()) as { data: T }).data;
 
-  async function makeAdmin() {
-    const who = await issueCookie(ctx);
-    await linkGoogle(ctx, who.profileId, { email: ADMIN_EMAIL });
-    return who;
-  }
+  const makeAdmin = () => issueAdminCookie(ctx);
   async function draft(cookie: string, values: Record<string, unknown>, note = '') {
     const res = await call('POST', '/v1/admin/balance', { cookie, body: { note, values } });
     expect(res.status).toBe(201);

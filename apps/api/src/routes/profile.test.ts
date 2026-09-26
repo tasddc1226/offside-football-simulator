@@ -8,7 +8,7 @@ import { createProfile } from '../db/repos/profiles.js';
 import { createSession } from '../db/repos/sessions.js';
 import { idempotency, profiles, sessions } from '../db/schema.js';
 import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
-import { issueCookie } from '../test/http.js';
+import { ADMIN_EMAIL, issueCookie } from '../test/http.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:5173';
 
@@ -365,7 +365,6 @@ describe('PUT /v1/profile/nickname', () => {
     await ctx.dispose();
   });
 
-  const ADMIN_EMAIL = 'admin@example.com';
   const env = () => ({ ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL });
   const put = (token: string, nickname: unknown) =>
     app.request(

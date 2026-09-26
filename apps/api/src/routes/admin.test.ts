@@ -5,10 +5,9 @@ import { createApp } from '../app.js';
 import { kstDays } from '../db/repos/admin.js';
 import { auditLog, careers } from '../db/schema.js';
 import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
-import { issueCookie } from '../test/http.js';
+import { ADMIN_EMAIL, issueAdminCookie, issueCookie } from '../test/http.js';
 
 const ORIGIN = 'http://localhost:5173';
-const ADMIN_EMAIL = 'admin@example.com';
 
 describe('운영 도구 /v1/admin (T-10-016)', () => {
   let ctx: TestD1;
@@ -27,11 +26,7 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     );
   const data = async <T>(res: Response) => ((await res.json()) as { data: T }).data;
 
-  async function makeAdmin() {
-    const who = await issueCookie(ctx);
-    await linkGoogle(ctx, who.profileId, { email: ADMIN_EMAIL });
-    return who;
-  }
+  const makeAdmin = () => issueAdminCookie(ctx);
   async function googleUser(nickname: string) {
     const who = await issueCookie(ctx);
     await linkGoogle(ctx, who.profileId, { nickname });
