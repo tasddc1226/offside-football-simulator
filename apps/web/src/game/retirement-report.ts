@@ -1,5 +1,6 @@
 // ───────── 은퇴 리포트: 클럽별 챕터 타임라인 · 우승 연혁 (T-10-062) ─────────
 // 순수 함수만 있다 — 이미 기록된 시즌·우승·수상·이정표만 읽고 RNG를 전혀 쓰지 않는다.
+import { sameClub } from './data.js';
 import type { LegendSource } from './types.js';
 
 export interface ChapterEvent {
@@ -13,7 +14,7 @@ export interface ChapterEvent {
 /** 한 클럽에서 연달아 뛴 시즌 묶음(영화의 한 장). 같은 클럽으로 돌아오면 새 장이 된다. */
 export interface Chapter {
   club: string;
-  /** T-10-066. 챕터 첫 시즌의 클럽 id(옛 기록엔 없다). */
+  /** T-10-066. 클럽 id(옛 기록엔 없다). 둘 다 id가 있으면 구단명이 바뀌어도 같은 챕터다. */
   clubId?: string | undefined;
   leagues: string[];
   from: number;
@@ -44,7 +45,9 @@ export function careerChapters(s: LegendSource): Chapter[] {
   const out: Chapter[] = [];
   for (const r of s.career) {
     const last = out.at(-1);
-    if (last && last.club === r.club) {
+    if (last && sameClub(last, r)) {
+      // 옛 기록(id 없음) 뒤에 id가 있는 시즌이 이어지면 챕터 엠블럼도 id로 찾게 한다.
+      last.clubId ??= r.clubId;
       last.to = r.year;
       last.ageTo = r.age;
       last.seasons++;
@@ -73,7 +76,7 @@ export function careerChapters(s: LegendSource): Chapter[] {
   }
   const inYear = (y: number) => out.find((c) => c.from <= y && y <= c.to);
   for (const t of s.trophies) {
-    const c = out.find((c) => c.club === t.club && c.from <= t.year && t.year <= c.to);
+    const c = out.find((c) => sameClub(c, t) && c.from <= t.year && t.year <= c.to);
     const same = c?.events.find((e) => e.kind === 'trophy' && e.text === t.t);
     if (same) same.years.push(t.year);
     else c?.events.push({ year: t.year, kind: 'trophy', text: t.t, years: [t.year] });

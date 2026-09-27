@@ -75,19 +75,22 @@ export function defaultLogo(club: Pick<Club, 'id' | 'name'>): ClubLogo {
  * T-10-064. T-10-066 이전 기록(커리어 표·우승·명예의 전당·라이브)은 클럽을 id 없이 이름으로만 남겼다 — 이름으로 클럽을 되찾는다.
  * 지금 이름(유저가 바꾼 이름 포함)이나 기본 별칭이 같으면 그 클럽. 다른 유저가 바꿔 부른 이름·대표팀은 null.
  */
+const allClubs = (): Pick<Club, 'id' | 'name'>[] => [...CLUBS, SANGMU];
 let byName: Map<string, Pick<Club, 'id' | 'name'>> | null = null;
 export function clubByName(name: string): Pick<Club, 'id' | 'name'> | null {
   // 이름이 바뀌는 곳은 applyClubNames뿐 — 거기서 비우고 다음 조회 때 다시 만든다. 지금 이름이 기본 별칭보다 우선.
   byName ??= new Map<string, Pick<Club, 'id' | 'name'>>([
     ...CLUBS.flatMap((c) => (c.baseName ? [[c.baseName, c] as const] : [])),
-    ...CLUBS.map((c) => [c.name, c] as const),
-    [SANGMU.name, SANGMU],
+    ...allClubs().map((c) => [c.name, c] as const),
   ]);
   return byName.get(name) ?? null;
 }
-/** T-10-066. 기록에 남은 클럽 id로 클럽을 찾는다(이름이 바뀌어도 같은 클럽). 모르는 id면 null. */
+/** T-10-066. 기록에 남은 클럽 id로 클럽을 찾는다(이름이 바뀌어도 같은 클럽 객체). 모르는 id면 null. */
+let byId: Map<string, Pick<Club, 'id' | 'name'>> | null = null;
 export function clubById(id: string): Pick<Club, 'id' | 'name'> | null {
-  return id === SANGMU.id ? SANGMU : (CLUBS.find((c) => c.id === id) ?? null);
+  // id는 바뀌지 않고 applyClubNames는 같은 객체의 이름만 고치므로 한 번 만들면 된다.
+  byId ??= new Map(allClubs().map((c) => [c.id, c]));
+  return byId.get(id) ?? null;
 }
 export const logoOf = (club: Pick<Club, 'id' | 'name'>, map: ClubCustomMap): ClubLogo =>
   map[club.id]?.logo ?? defaultLogo(club);

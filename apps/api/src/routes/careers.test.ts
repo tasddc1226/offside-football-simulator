@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { careers, careerSeasons, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { deleteProfile, issueCookie, ORIGIN, TEST_CAREER } from '../test/http.js';
+import { deleteProfile, issueCookie, ORIGIN, putJson, TEST_CAREER } from '../test/http.js';
 
 function jsonInit(input: {
   method: 'PUT' | 'POST';
@@ -122,10 +122,8 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
   });
 
   it('T-10-066: 클럽 id를 저장하고, id 없는 옛 클라이언트의 은퇴 재전송은 저장된 id를 지우지 않는다', async () => {
-    const owner = await issueCookie(ctx);
-    const app = createApp();
-    const put = (path: string, body: unknown) =>
-      app.request(path, jsonInit({ method: 'PUT', body, cookie: owner.cookie }), ctx.env);
+    const { cookie } = await issueCookie(ctx);
+    const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
     const body = seasonBody();
     expect(
       (
@@ -155,17 +153,12 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
   });
 
   it('T-10-066: 클럽 id 형식이 틀리면 400', async () => {
-    const owner = await issueCookie(ctx);
+    const { cookie } = await issueCookie(ctx);
     const body = seasonBody();
-    const res = await createApp().request(
-      `/v1/careers/${CAREER_ID}/seasons/2026`,
-      jsonInit({
-        method: 'PUT',
-        body: { ...body, season: { ...body.season, clubId: '<script>' } },
-        cookie: owner.cookie,
-      }),
-      ctx.env,
-    );
+    const res = await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/seasons/2026`, {
+      ...body,
+      season: { ...body.season, clubId: '<script>' },
+    });
     expect(res.status).toBe(400);
   });
 

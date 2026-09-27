@@ -12,7 +12,7 @@
   import HofRow, { type RowStats } from './HofRow.svelte';
   import type { POS } from '../game/data.js';
 
-  type MineRow = { key: string; name: string; pos: keyof typeof POS; club: string; clubId: string | null; tag: string | null; stats: RowStats; title: string | null; open: () => void };
+  type MineRow = { key: string; name: string; pos: keyof typeof POS; club: string; clubId?: string | null | undefined; tag: string | null; stats: RowStats; title: string | null; open: () => void };
   /** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다. */
   const SHOW = 10;
 
@@ -22,7 +22,7 @@
     name: h.name,
     pos: h.pos,
     club: h.lastClub,
-    clubId: h.lastClubId ?? null,
+    clubId: h.lastClubId,
     tag: h.public ? '공개' : null,
     stats: h,
     title: h.title ?? null,
@@ -33,7 +33,7 @@
     name: e.name ?? anonName(e.pos, e.number),
     pos: e.pos,
     club: e.lastClub,
-    clubId: e.lastClubId ?? null,
+    clubId: e.lastClubId,
     tag: e.name ? '공개' : null,
     stats: { ...e, score: e.legendScore },
     title: e.title ?? null,

@@ -1,5 +1,5 @@
 // ───────── 시즌 종료 · 이적 시장 · 은퇴 · 저장 ─────────
-import { CLUBS, type Club } from './data.js';
+import { CLUBS, clubRef, sameClub, type Club } from './data.js';
 import { BAL } from './balance.js';
 import { NATIONAL_TEAM } from './retirement-report.js';
 import { ovr } from './attributes.js';
@@ -68,7 +68,7 @@ export function endSeason(s: GameState): SeasonEndResult {
     s.career.some(
       (r) =>
         r.year === s.year - 1 &&
-        r.club === s.club.name &&
+        sameClub(r, clubRef(s.club)) &&
         r.honors.some((h) => /챔피언스(리그( 엘리트)?|컵) 우승/.test(h)),
     )
   ) {
@@ -89,7 +89,7 @@ export function endSeason(s: GameState): SeasonEndResult {
       t,
       ...(/월드컵 우승|아시안컵|아시안게임|올림픽/.test(t) && !/클럽/.test(t)
         ? { club: NATIONAL_TEAM }
-        : { club: s.club.name, clubId: s.club.id }),
+        : clubRef(s.club)),
     }),
   );
   awards.forEach((t) => s.awards.push({ year: s.year, t }));
@@ -107,8 +107,7 @@ export function endSeason(s: GameState): SeasonEndResult {
   const rec: CareerRecord = {
     year: s.year,
     age: s.age,
-    club: s.club.name,
-    clubId: s.club.id,
+    ...clubRef(s.club),
     league: L.name,
     apps: S.apps + cg.apps,
     goals: S.goals + cg.g,

@@ -26,7 +26,7 @@ export function seasonPayload(rec: CareerRecord): CareerSeasonPayload {
   return {
     age: rec.age,
     club: rec.club,
-    ...(rec.clubId ? { clubId: rec.clubId } : {}),
+    clubId: rec.clubId,
     league: rec.league,
     apps: rec.apps,
     goals: rec.goals,

@@ -322,6 +322,18 @@ export interface Club {
   /** T-10-009. 기본(별칭) 이름 — 유저가 이름을 바꿔도 되돌릴 수 있게 남긴다. */
   baseName?: string;
 }
+/** T-10-066. 기록에 남기는 클럽 참조 — 이름(표시용)과 id(엠블럼·같은 클럽 판정). 옛 기록에는 id가 없다. */
+export interface ClubRef {
+  club: string;
+  clubId?: string | undefined;
+}
+export const clubRef = (c: Pick<Club, 'id' | 'name'>): Required<ClubRef> => ({
+  club: c.name,
+  clubId: c.id,
+});
+/** 같은 클럽인가 — 둘 다 id가 있으면 id로(구단명이 바뀌어도 같은 클럽), 아니면 이름으로 본다. */
+export const sameClub = (a: ClubRef, b: ClubRef): boolean =>
+  a.clubId && b.clubId ? a.clubId === b.clubId : a.club === b.club;
 export const CLUBS: Club[] = [];
 for (const L of LEAGUES) {
   const names = CLUB_NAMES[L.id] ?? [];
