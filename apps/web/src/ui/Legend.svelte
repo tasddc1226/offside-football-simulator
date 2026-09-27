@@ -16,6 +16,6 @@
   {#if v}
     <LegendReport {v} />
     {#if v.own?.id}<OwnHofCards h={v.own} />{/if}
-    {#if v.own}<ShareBar h={v.own} />{/if}
+    {#if v.shareId}<ShareBar id={v.shareId} />{/if}
   {/if}
 </div>
