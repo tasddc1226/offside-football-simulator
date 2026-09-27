@@ -771,6 +771,7 @@ textarea {
 .club-badge.crest {
   border-radius: 0;
   overflow: visible;
+  user-select: none; /* 글자 엠블럼이 이름과 함께 복사되지 않게 (T-10-064) */
 }
 .offer-club {
   display: flex;
@@ -3022,9 +3023,6 @@ body:has(nav.tabs) .toast {
 }
 .league-table th:not(.lt-team) {
   width: 32px;
-}
-.league-table .lt-team .club-badge {
-  margin-right: 6px;
 }
 .league-table .lt-pts {
   font-weight: 700;

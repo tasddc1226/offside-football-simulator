@@ -116,11 +116,7 @@ test('리그 순위표 · 커리어 · 트로피 탭에 클럽 엠블럼이 붙�
   // 전반기를 치른 시점으로 바꿔 순위표가 채워지게 한다.
   const save = JSON.parse(SAVE);
   save.season = { ...save.season, played: 19, w: 12, d: 4, l: 3, pts: 40 };
-  await page.addInitScript((save) => {
-    if (sessionStorage.getItem('__seeded')) return;
-    sessionStorage.setItem('__seeded', '1');
-    localStorage.setItem('ft_save', save);
-  }, JSON.stringify(save));
+  await page.addInitScript((save) => localStorage.setItem('ft_save', save), JSON.stringify(save));
   await page.goto('/');
   await page.locator('[data-act="continue"]').click();
   // 시즌 화면 리그 순위표: 모든 줄에 엠블럼.

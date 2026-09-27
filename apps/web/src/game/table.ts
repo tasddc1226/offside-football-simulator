@@ -21,7 +21,7 @@ function rankedRivals(s: GameState): number[] {
 
 export interface TableRow {
   /** 클럽 id(엠블럼용, T-10-064). 리그 클럽이 모자라 번호로 채운 줄은 없다. */
-  id?: string;
+  id?: string | undefined;
   name: string;
   me: boolean;
   p: number;
@@ -58,7 +58,7 @@ export function leagueTable(s: GameState): TableRow[] {
       w++;
       d -= 3;
     }
-    return { ...(club ? { id: club.id } : {}), name, me: false, p: P, w, d, l: P - w - d, pts };
+    return { id: club?.id, name, me: false, p: P, w, d, l: P - w - d, pts };
   });
   rows.push({
     id: s.club.id,

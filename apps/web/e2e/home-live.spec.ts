@@ -50,15 +50,8 @@ async function stub(page: Page, body: unknown = live, status = 200) {
     }),
   );
 }
-// 클럽 엠블럼(T-10-064)의 SVG 글자는 빼고 읽는다.
 const rowsText = (page: Page) =>
-  page.locator('[data-home-live] .live-row:not([aria-hidden])').evaluateAll((els) =>
-    els.map((e) => {
-      const c = e.cloneNode(true) as HTMLElement;
-      c.querySelectorAll('svg').forEach((s) => s.remove());
-      return (c.textContent ?? '').replace(/\s+/g, ' ').trim();
-    }),
-  );
+  page.locator('[data-home-live] .live-row:not([aria-hidden])').allInnerTexts();
 
 test('숫자와 소식 티커를 보여 주고, 한 줄씩 올라가다 일시정지로 멈춘다', async ({ page }) => {
   await stub(page);
@@ -78,8 +71,9 @@ test('숫자와 소식 티커를 보여 주고, 한 줄씩 올라가다 일시�
   // 한 줄 올라가면 둘째 줄이 맨 위로, 넷째 소식이 아래에서 들어온다.
   await expect
     .poll(async () => (await rowsText(page)).join('|'), { timeout: 6_000 })
+    // 맨 앞에 청운고 엠블럼 글자(T-10-064)가 붙는다. ^는 빠져나가는 줄이 남은 중간 프레임을 거른다.
     .toMatch(
-      /^익명의 공격수 청운고.*\|.*K리그1 우승.*\|익명의 골키퍼 테스트 FC 시즌 30경기 무실점 11\s*1시간 전$/s,
+      /^(?:청\s+)?익명의 공격수 청운고.*\|.*K리그1 우승.*\|익명의 골키퍼 테스트 FC 시즌 30경기 무실점 11\s*1시간 전$/s,
     );
 
   await card.locator('[data-act="live-pause"]').click();

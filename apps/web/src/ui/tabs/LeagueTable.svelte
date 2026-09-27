@@ -43,7 +43,7 @@
           {:else}
             <tr class:me={x.r.me} class:top={x.rank === 1} aria-current={x.r.me ? 'true' : undefined}>
               <td class="num">{x.rank}</td>
-              <td class="lt-team">{#if x.r.id}<ClubBadge club={{ id: x.r.id, name: x.r.name }} size={16} />{/if}{x.r.name}</td>
+              <td class="lt-team">{#if x.r.id}<ClubBadge club={{ id: x.r.id, name: x.r.name }} size={16} /> {/if}{x.r.name}</td>
               <td class="num">{x.r.p}</td>
               <td class="num">{x.r.w}</td>
               <td class="num">{x.r.d}</td>
