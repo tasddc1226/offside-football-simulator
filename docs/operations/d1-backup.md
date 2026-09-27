@@ -24,12 +24,10 @@ D1 Time Travel(30일 시점 복구)과 별개로, D1 밖(R2)에 SQL 사본을 �
   레포에 두려고 코드로 했다).
 - 워커에 `BACKUP` R2 바인딩이 없으면 백업만 건너뛴다(정리는 돈다).
 
-### 처음 켜기
+### 설정
 
-1. Cloudflare 대시보드에서 R2를 켠다(계정당 한 번).
-2. 버킷을 만든다: `pnpm --filter @offside/api exec wrangler r2 bucket create offside-d1-backup`
-3. `apps/api/wrangler.jsonc`의 `env.production`에 바인딩을 넣고 배포한다:
-   `"r2_buckets": [{ "binding": "BACKUP", "bucket_name": "offside-d1-backup" }]`
+운영(`env.production`)에 버킷 `offside-d1-backup`이 `BACKUP`으로 붙어 있다(2026-09-27, T-10-071). staging에는 없다.
+새 계정에서 다시 켤 때: 대시보드에서 R2를 켜고 → `wrangler r2 bucket create offside-d1-backup` → 바인딩을 넣고 배포.
 
 ### 복구
 
