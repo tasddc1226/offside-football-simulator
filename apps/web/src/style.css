@@ -534,11 +534,11 @@ button.what:active {
 .hof-row:first-child {
   border-top: 0;
 }
-.hof-tabs {
+.board-tabs {
   grid-template-columns: 1fr 1fr;
   margin-bottom: 6px;
 }
-.hof-tabs .opt,
+.board-tabs .opt,
 .admin-tabs .opt {
   align-items: center;
   font-weight: 600;

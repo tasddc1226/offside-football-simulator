@@ -20,7 +20,7 @@
     settings: '설정',
   };
   const OPEN: Record<(typeof MAIN_SCREENS)[number], () => void> = {
-    hof: () => openHof('all'),
+    hof: openHof,
     board: () => openBoard('notice'),
     home: () => (goHome(), window.scrollTo(0, 0)),
     owner: () => go('owner'),

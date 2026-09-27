@@ -27,7 +27,6 @@ export type Screen =
   | 'admin'
   | 'shared';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
-export type HofTab = 'all' | 'mine';
 
 export interface DraftCharacter {
   name: string;
@@ -85,9 +84,9 @@ export const appState = $state<{
   /** T-10-013. 진행 중 커리어가 다른 계정 소유라 서버가 거절한 시즌 업로드(홈에서 처리를 고른다). */
   ownerConflict: OutboxItem[] | null;
   /** 명예의 전당 전체 보기 화면의 탭·페이지(1부터)·순위 유형. 선수 상세에서 돌아와도 그대로다. */
-  hof: { tab: HofTab; page: number; sort: HofSort };
+  hof: { page: number; sort: HofSort };
   /** 선수 상세의 '← 명예의 전당'이 돌아갈 화면. */
-  legendBack: 'home' | 'hof';
+  legendBack: 'home' | 'hof' | 'owner';
   /** T-10-029. 공유 링크(/career/:id)로 들어온 은퇴 선수 id — 보기 전용 화면(SharedCareer)이 읽는다. */
   sharedCareer: string | null;
   /** T-10-024. 방금 끝난 구간 리포트(시즌 탭 맨 위). 저장하지 않는다 — 새로고침하면 사라진다. */
@@ -112,7 +111,7 @@ export const appState = $state<{
   board: 'notice',
   boardPost: null,
   ownerConflict: null,
-  hof: { tab: 'all', page: 1, sort: 'score' },
+  hof: { page: 1, sort: 'score' },
   legendBack: 'home',
   sharedCareer: null,
   report: null,

@@ -126,7 +126,7 @@
       <h1>소식</h1>
     </div>
     {#if !detail && !editing}
-      <div class="seg hof-tabs">
+      <div class="seg board-tabs">
         {#each BOARD_KEYS as k (k)}
           <button class="opt" aria-pressed={board === k} data-board-tab={k} onclick={() => board !== k && openBoard(k)}>{BOARD_LABEL[k]}</button>
         {/each}
