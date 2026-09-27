@@ -14,7 +14,7 @@
 {:else}
   <section class="card stack" data-share="short">
     <div><div class="eyebrow">Hall of Fame</div><h2>내 선수에만 남는 기록</h2></div>
-    <p class="muted" style="font-size:13px">
+    <p class="muted" style="font-size:0.8125rem">
       {SHORT_CAREER_NOTE}
     </p>
   </section>

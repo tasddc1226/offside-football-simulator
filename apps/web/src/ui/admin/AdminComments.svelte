@@ -78,10 +78,10 @@
           <div class="row" style="gap:6px">
             <b>{c.nickname}</b>
             {#if c.admin}<span class="pill good">운영자</span>{/if}
-            <span class="muted" style="font-size:12px">{short(c.profileId)} · {kst(c.createdAt)}</span>
+            <span class="muted" style="font-size:0.75rem">{short(c.profileId)} · {kst(c.createdAt)}</span>
           </div>
           <p>{c.body}</p>
-          <span class="muted" style="font-size:12px">[{BOARD_LABEL[c.board]}] {c.postTitle}</span>
+          <span class="muted" style="font-size:0.75rem">[{BOARD_LABEL[c.board]}] {c.postTitle}</span>
           <div class="row" style="gap:6px">
             <button class="icon-btn" data-act="delete-comment" disabled={busy} onclick={() => remove(c)}>삭제</button>
             {#if !author}<button class="icon-btn" data-act="filter-author" onclick={() => filterBy(c)}>이 작성자 댓글</button>{/if}

@@ -58,7 +58,7 @@
       {#each tours.slice().reverse() as x (x.year + x.name)}
         <div class="trophy">
           <span class="y">{x.year}</span>
-          <div><b>{x.name.replace(/^\d{4} /, '')}</b> <span class="muted" style="font-size:12px">{x.stage} · {x.apps}경기 {x.goals}골</span></div>
+          <div><b>{x.name.replace(/^\d{4} /, '')}</b> <span class="muted" style="font-size:0.75rem">{x.stage} · {x.apps}경기 {x.goals}골</span></div>
         </div>
       {/each}
     </div>

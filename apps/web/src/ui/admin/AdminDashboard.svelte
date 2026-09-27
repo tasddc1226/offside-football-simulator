@@ -54,7 +54,7 @@
     </div>
   {:else}
     {@const s = stats}
-    <p class="muted" style="margin:0;font-size:12px">{kst(s.generatedAt)} 기준(KST) · 1분마다 갱신</p>
+    <p class="muted" style="margin:0;font-size:0.75rem">{kst(s.generatedAt)} 기준(KST) · 1분마다 갱신</p>
     <div class="stat-grid">
       <div class="stat" data-stat="users"><span>전체 유저</span><b>{s.profiles.total.toLocaleString()}</b><small>구글 연결 {s.profiles.linked.toLocaleString()} ({pct(s.profiles.linked, s.profiles.total)})</small></div>
       <div class="stat" data-stat="active"><span>활동 유저 (24시간)</span><b>{s.profiles.active24h.toLocaleString()}</b><small>7일 {s.profiles.active7d.toLocaleString()}</small></div>
@@ -63,10 +63,10 @@
       <div class="stat" data-stat="careers7d"><span>최근 7일 커리어</span><b>{s.careers.new7d.toLocaleString()}</b><small>은퇴 {s.careers.retired7d.toLocaleString()}</small></div>
       <div class="stat" data-stat="board"><span>댓글</span><b>{s.board.comments.toLocaleString()}</b><small>7일 {s.board.comments7d.toLocaleString()} · 글 {s.board.posts}</small></div>
     </div>
-    <p class="muted" style="margin:0;font-size:12px" data-stat="balance">
+    <p class="muted" style="margin:0;font-size:0.75rem" data-stat="balance">
       밸런스 {s.balance ? `v${s.balance.version} 적용 중${s.balance.activatedAt ? ` (${kst(s.balance.activatedAt)})` : ''}` : '기본값'}
     </p>
-    <p class="muted" style="margin:0;font-size:12px">활동 유저는 앱을 열어 서버에 프로필을 확인한 수예요. 게임은 기기에서 돌아가 실제 플레이 수와 다를 수 있어요.</p>
+    <p class="muted" style="margin:0;font-size:0.75rem">활동 유저는 앱을 열어 서버에 프로필을 확인한 수예요. 게임은 기기에서 돌아가 실제 플레이 수와 다를 수 있어요.</p>
 
     {#each SERIES as ser (ser.key)}
       {@const max = maxOf(s, ser.key)}
@@ -100,15 +100,15 @@
   .stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   @media (min-width: 560px) { .stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   .stat { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .stat span { font-size: 12px; color: var(--muted); }
-  .stat b { font-size: 22px; font-variant-numeric: tabular-nums; }
-  .stat small { font-size: 12px; color: var(--muted); }
+  .stat span { font-size: 0.75rem; color: var(--muted); }
+  .stat b { font-size: 1.375rem; font-variant-numeric: tabular-nums; }
+  .stat small { font-size: 0.75rem; color: var(--muted); }
   .daily { margin: 0; display: flex; flex-direction: column; gap: 6px; }
-  .daily figcaption { font-size: 13px; font-weight: 600; }
+  .daily figcaption { font-size: 0.8125rem; font-weight: 600; }
   .bars { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 3px; height: 90px; align-items: end; }
   .bar { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; }
   .bar i { width: 100%; min-height: 2px; background: var(--pitch); border-radius: 3px 3px 0 0; }
-  .bar small { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bar small { font-size: 0.625rem; color: var(--muted); font-variant-numeric: tabular-nums; }
   .audit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-  .audit li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .audit li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 0.8125rem; }
 </style>

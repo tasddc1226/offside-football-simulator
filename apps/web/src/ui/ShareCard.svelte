@@ -72,7 +72,7 @@
 {#if profile && profile !== 'error' && profile.linked.google}
   <section class="card stack" data-share="ready" bind:this={el}>
     <div><div class="eyebrow">Share</div><h2>커리어 공유하기</h2></div>
-    <p class="muted" style="font-size:13px">
+    <p class="muted" style="font-size:0.8125rem">
       링크를 받은 사람은 이 은퇴 리포트를 보기만 할 수 있어요. 선수 이름은 명예의 전당 이름 공개를 켰을 때만 보입니다.
     </p>
     <button class="btn btn-primary btn-block" data-act="share-career" disabled={busy} onclick={copy}>
@@ -85,7 +85,7 @@
 {:else if profile !== undefined && profile !== 'error'}
   <section class="card stack" data-share="login" bind:this={el}>
     <div><div class="eyebrow">Share</div><h2>로그인하고 커리어를 공유하세요</h2></div>
-    <p class="muted" style="font-size:13px">
+    <p class="muted" style="font-size:0.8125rem">
       구글로 로그인하면 이 은퇴 기록이 계정에 남아 다른 기기에서도 볼 수 있고, 친구에게 보여 줄 공유 링크를 만들 수 있어요.
     </p>
     <button class="btn btn-primary btn-block" data-act="share-login" onclick={() => startGoogleLogin({ career: id })}>구글로 로그인</button>

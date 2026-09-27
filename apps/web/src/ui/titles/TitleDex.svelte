@@ -32,13 +32,13 @@
       <div class="eyebrow">Titles</div>
       <h2>칭호 도감</h2>
     </div>
-    <span class="muted num" style="font-size:13px">{earned.length} / {TITLES.length}</span>
+    <span class="muted num" style="font-size:0.8125rem">{earned.length} / {TITLES.length}</span>
   </div>
   {#if main}
     <p class="title-main">대표 칭호 <TitleTag name={main.name} rarity={main.rarity} /> <span class="muted">{s.titleSel ? '직접 고름' : '자동'}</span></p>
   {/if}
   {#if earned.length}
-    <p class="muted" style="font-size:12px">칭호를 누르면 대표 칭호로 정해져 선수 카드와 명예의 전당에 표시됩니다.</p>
+    <p class="muted" style="font-size:0.75rem">칭호를 누르면 대표 칭호로 정해져 선수 카드와 명예의 전당에 표시됩니다.</p>
     <ul class="title-list">
       {#each earned as x (x.d.id)}
         <li>

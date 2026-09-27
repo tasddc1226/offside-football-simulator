@@ -83,14 +83,16 @@ html,
 body {
   background: var(--bg);
 }
+/* 글자 기준 크기(T-10-059). 글자 크기는 모두 rem이라 여기 한 곳으로 전체를 조절한다. 브라우저 글자 크기 설정도 따른다. */
 html {
+  font-size: 93.75%;
   overscroll-behavior-y: none;
 }
 body {
   margin: 0;
   color: var(--ink);
   font-family: var(--body);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   word-break: keep-all;
@@ -171,14 +173,14 @@ select:focus-visible {
 }
 .brand small {
   display: block;
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0.02em;
   color: var(--muted);
   line-height: 1.2;
 }
 .brand b {
   font-family: var(--display);
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1.1;
@@ -197,7 +199,7 @@ select:focus-visible {
 .eyebrow {
   font-family: var(--display);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--muted);
@@ -210,11 +212,11 @@ h3 {
   letter-spacing: -0.02em;
 }
 h1 {
-  font-size: 26px;
+  font-size: 1.625rem;
   line-height: 1.25;
 }
 h2 {
-  font-size: 19px;
+  font-size: 1.1875rem;
 }
 p {
   margin: 0;
@@ -232,7 +234,7 @@ p {
   border-radius: 12px;
   padding: 12px 16px;
   min-height: 48px;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 600;
   line-height: 1.25;
   text-decoration: none; /* <a class="btn">도 버튼처럼 보이게 */
@@ -245,7 +247,7 @@ p {
 .icon-btn {
   min-height: 44px;
   padding: 9px 14px;
-  font-size: 14px;
+  font-size: 0.875rem;
   gap: 6px;
 }
 .btn-primary {
@@ -392,7 +394,7 @@ button.what:active {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   border-radius: 999px;
   padding: 2px 9px;
@@ -426,7 +428,7 @@ button.what:active {
   color: color-mix(in srgb, var(--on-pitch) 70%, transparent);
 }
 .hero-home h1 {
-  font-size: 30px;
+  font-size: 1.875rem;
   margin-top: 6px;
 }
 .hero-home p {
@@ -443,20 +445,20 @@ button.what:active {
   gap: 2px;
 }
 .hero-current h1 span {
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 600;
   opacity: 0.8;
 }
 .hero-current h1 b {
   font-weight: 600;
-  font-size: 22px;
+  font-size: 1.375rem;
 }
 .hero-current h1 strong {
-  font-size: 32px;
+  font-size: 2rem;
   font-weight: 700;
 }
 .hero-current .hero-meta {
-  font-size: 13px;
+  font-size: 0.8125rem;
   opacity: 0.65;
   margin-top: 2px;
 }
@@ -521,7 +523,7 @@ button.what:active {
   gap: 2px;
 }
 .tile b {
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 .hof-row {
   display: grid;
@@ -603,7 +605,7 @@ button.hof-row {
 }
 .hof-rank.medal span {
   position: relative;
-  font-size: 17px;
+  font-size: 1.0625rem;
   line-height: 1;
 }
 .laurel {
@@ -641,12 +643,12 @@ button.hof-row {
   border-radius: 10px;
 }
 .hof-value {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   white-space: nowrap;
 }
 .hof-value small {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--muted);
   margin-left: 2px;
@@ -659,7 +661,7 @@ button.hof-row {
 }
 .hof-sort {
   font: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   padding: 6px 12px;
   border-radius: 999px;
@@ -686,7 +688,7 @@ button.hof-row {
 }
 .hof-rank {
   font-family: var(--display);
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   color: var(--accent-text);
   text-align: center;
@@ -700,7 +702,7 @@ button.hof-row {
 }
 .field label,
 .field .lbl {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--muted);
 }
@@ -712,6 +714,8 @@ select {
   border-radius: 10px;
   padding: 11px 12px;
   font: inherit;
+  /* iOS는 16px보다 작은 입력 칸에 초점이 가면 화면을 확대한다. */
+  font-size: max(1rem, 16px);
   color: var(--ink);
   width: 100%;
 }
@@ -734,7 +738,7 @@ select {
 }
 .opt small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.35;
 }
 .seg.three {
@@ -766,7 +770,7 @@ button.tile-link {
   cursor: pointer;
 }
 .dex-new {
-  font-size: 13px;
+  font-size: 0.8125rem;
   padding: 6px 10px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
@@ -816,10 +820,10 @@ button.tile-link {
 }
 .owner-conflict p {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .hof-source {
-  font-size: 12px;
+  font-size: 0.75rem;
   margin: 0 0 6px;
 }
 .dex-tabs {
@@ -840,7 +844,7 @@ button.tile-link {
   margin: 8px 0 0;
   display: grid;
   gap: 4px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.5;
 }
 .dex-rules dt {
@@ -877,7 +881,7 @@ button.tile-link {
   display: flex;
   gap: 8px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .dex-choices {
   list-style: none;
@@ -899,7 +903,7 @@ button.tile-link {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .dex-odds {
   white-space: nowrap;
@@ -909,7 +913,7 @@ button.tile-link {
   color: var(--good);
 }
 .dex-note {
-  font-size: 12px;
+  font-size: 0.75rem;
   margin: 8px 0 0;
 }
 /* T-10-011 소식(게시판) */
@@ -919,6 +923,7 @@ textarea {
   border-radius: 10px;
   padding: 11px 12px;
   font: inherit;
+  font-size: max(1rem, 16px);
   color: var(--ink);
   width: 100%;
   resize: vertical;
@@ -968,7 +973,7 @@ textarea {
 }
 .board-body h3 {
   margin: 14px 0 4px;
-  font-size: 16px;
+  font-size: 1rem;
 }
 .board-body p,
 .board-body ul {
@@ -990,7 +995,7 @@ textarea {
   margin-left: auto;
   min-height: 0;
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .nick-form {
   display: flex;
@@ -1007,7 +1012,7 @@ textarea {
 }
 .comment-gate p {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .club-list {
   list-style: none;
@@ -1037,7 +1042,7 @@ textarea {
   align-items: center;
   gap: 8px;
   margin-top: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .club-logo-edit label {
   display: inline-flex;
@@ -1087,19 +1092,19 @@ textarea {
 }
 .player .shirt {
   font-family: var(--display);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 600;
   opacity: 0.75;
   letter-spacing: 0.06em;
 }
 /* T-10-004: 선수 이름은 화면의 h1(axe page-has-heading-one) — 크기·행간은 예전 h2 그대로. */
 .player h1 {
-  font-size: 24px;
+  font-size: 1.5rem;
   margin-top: 2px;
   line-height: inherit;
 }
 .player .meta {
-  font-size: 13px;
+  font-size: 0.8125rem;
   opacity: 0.85;
   margin-top: 4px;
 }
@@ -1109,14 +1114,14 @@ textarea {
 .ovr .n {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 58px;
+  font-size: 3.625rem;
   line-height: 0.9;
   color: var(--accent);
 }
 .ovr .l {
   font-family: var(--display);
   letter-spacing: 0.18em;
-  font-size: 12px;
+  font-size: 0.75rem;
   opacity: 0.8;
 }
 .player .pill {
@@ -1180,7 +1185,7 @@ body:has(.main-nav) .wrap {
   padding: 6px 2px;
   border-radius: 9px;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   display: flex;
   flex-direction: column;
@@ -1289,7 +1294,7 @@ body:has(.main-nav) .wrap {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 4px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   margin-top: 4px;
   text-align: center;
@@ -1309,13 +1314,13 @@ body:has(.main-nav) .wrap {
 .stats b {
   display: block;
   font-family: var(--display);
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 .stats span {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
 }
 .meters {
@@ -1327,7 +1332,7 @@ body:has(.main-nav) .wrap {
   grid-template-columns: 54px 1fr 34px;
   gap: 10px;
   align-items: center;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .meter .bar {
   height: 8px;
@@ -1355,7 +1360,7 @@ body:has(.main-nav) .wrap {
 .meter .v {
   text-align: right;
   font-family: var(--display);
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 600;
 }
 .train {
@@ -1367,7 +1372,7 @@ body:has(.main-nav) .wrap {
   padding: 9px 10px;
 }
 .train .opt b {
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .feed {
   display: flex;
@@ -1377,7 +1382,7 @@ body:has(.main-nav) .wrap {
   display: grid;
   grid-template-columns: 76px 1fr;
   gap: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   padding-block: 8px;
   border-top: 1px solid var(--line);
 }
@@ -1386,7 +1391,7 @@ body:has(.main-nav) .wrap {
 }
 .feed time {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-family: var(--display);
   letter-spacing: 0.03em;
 }
@@ -1407,7 +1412,7 @@ body:has(.main-nav) .wrap {
   gap: 10px;
   align-items: center;
   padding-block: 6px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .attr .bar {
   height: 10px;
@@ -1426,7 +1431,7 @@ body:has(.main-nav) .wrap {
 }
 .attr .v {
   font-family: var(--display);
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -1469,7 +1474,7 @@ body:has(.main-nav) .wrap {
 }
 .rd-abbr {
   font-family: var(--display);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   fill: var(--muted);
@@ -1481,25 +1486,25 @@ body:has(.main-nav) .wrap {
 }
 .rd-val {
   font-family: var(--display);
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   fill: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 .rd-up {
   fill: var(--good);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .rd-down {
   fill: var(--bad);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .radar-legend {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .radar-legend i {
   display: inline-block;
@@ -1537,7 +1542,7 @@ body:has(.main-nav) .wrap {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .role-line > span:not(.muted) {
   font-family: var(--display);
@@ -1546,7 +1551,7 @@ body:has(.main-nav) .wrap {
   color: var(--muted);
 }
 .role-line b {
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--ink);
   letter-spacing: 0;
 }
@@ -1571,17 +1576,17 @@ body:has(.main-nav) .wrap {
   margin-bottom: 4px;
   border-bottom: 1px solid var(--line);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .stat-head small {
   font-family: var(--display);
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0.08em;
   color: var(--muted);
   margin-right: 6px;
 }
 .stat-head .num {
-  font-size: 22px;
+  font-size: 1.375rem;
   line-height: 1;
 }
 .stat-grp ul {
@@ -1595,7 +1600,7 @@ body:has(.main-nav) .wrap {
   align-items: baseline;
   gap: 8px;
   padding-block: 2px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 .stat-grp li.key {
@@ -1603,11 +1608,11 @@ body:has(.main-nav) .wrap {
   font-weight: 600;
 }
 .stat-grp li .num {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
 }
 .stat-note {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .stat-note b {
   color: var(--ink);
@@ -1621,7 +1626,7 @@ body:has(.main-nav) .wrap {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .kv dt {
   color: var(--muted);
@@ -1640,14 +1645,14 @@ body:has(.main-nav) .wrap {
 table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 13px;
+  font-size: 0.8125rem;
   white-space: nowrap;
 }
 th {
   text-align: left;
   font-weight: 600;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   padding: 6px;
   border-bottom: 1px solid var(--line);
 }
@@ -1678,12 +1683,12 @@ th.n {
 .totals b {
   display: block;
   font-family: var(--display);
-  font-size: 26px;
+  font-size: 1.625rem;
   font-weight: 700;
   line-height: 1.1;
 }
 .totals span {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
 }
 .trophy {
@@ -1699,7 +1704,7 @@ th.n {
 }
 .trophy .y {
   font-family: var(--display);
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--muted);
 }
@@ -1708,7 +1713,7 @@ th.n {
 }
 .empty {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.875rem;
   padding-block: 8px;
 }
 
@@ -1819,19 +1824,19 @@ th.n {
 .tally b {
   display: block;
   font-family: var(--display);
-  font-size: 24px;
+  font-size: 1.5rem;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 .tally span {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
 }
 .ticker {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
 }
 .ticker div {
@@ -1849,7 +1854,7 @@ th.n {
 .prog-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   margin-top: -6px;
@@ -1883,7 +1888,7 @@ th.n {
 }
 .skip {
   align-self: center;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 /* 글자색을 surface로 두면 라이트(흰 글자)·다크(짙은 글자) 모두 배경색 대비 4.5:1 이상이다. */
 .res {
@@ -1892,7 +1897,7 @@ th.n {
   width: 24px;
   height: 20px;
   border-radius: 5px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   color: var(--surface);
 }
@@ -1909,7 +1914,7 @@ th.n {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .steps div {
   color: var(--muted);
@@ -1953,7 +1958,7 @@ th.n {
 .judge-lbl {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   margin-top: -8px;
 }
@@ -1970,7 +1975,7 @@ th.n {
   animation: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
 }
 .twist {
-  font-size: 13px;
+  font-size: 0.8125rem;
   padding: 6px 10px;
   border-radius: 8px;
   background: var(--surface-2);
@@ -2004,7 +2009,7 @@ th.n {
 }
 .odds {
   font-family: var(--display);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 8px;
@@ -2017,7 +2022,7 @@ th.n {
   gap: 6px;
 }
 .chip {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   padding: 3px 9px;
   border-radius: 999px;
@@ -2032,7 +2037,7 @@ th.n {
 }
 .result-big {
   font-family: var(--display);
-  font-size: 40px;
+  font-size: 2.5rem;
   font-weight: 700;
   line-height: 1;
 }
@@ -2056,32 +2061,32 @@ th.n {
   border-color: var(--pitch-2);
 }
 .offer b {
-  font-size: 16px;
+  font-size: 1rem;
 }
 .offer .lg {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .offer .sal {
   font-family: var(--display);
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   text-align: right;
 }
 .offer .sub {
   grid-column: 1 / -1;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 .hl {
-  font-size: 14px;
+  font-size: 0.875rem;
   padding-left: 12px;
   border-left: 3px solid var(--accent);
 }
 /* storylines */
 .story-tag {
   align-self: flex-start;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 999px;
@@ -2091,12 +2096,12 @@ th.n {
 }
 .story-tag b {
   font-family: var(--display);
-  font-size: 14px;
+  font-size: 0.875rem;
   margin-left: 2px;
   color: var(--accent);
 }
 .story-next {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
   padding: 10px 12px;
   border-radius: 10px;
@@ -2113,7 +2118,7 @@ th.n {
   border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
 }
 .story-end b {
-  font-size: 17px;
+  font-size: 1.0625rem;
 }
 .story-row {
   display: grid;
@@ -2122,13 +2127,13 @@ th.n {
   align-items: center;
   padding-block: 9px;
   border-top: 1px solid var(--line);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .story-row:first-of-type {
   border-top: 0;
 }
 .story-row .muted {
-  font-size: 12px;
+  font-size: 0.75rem;
   min-width: 64px;
   text-align: right;
 }
@@ -2154,7 +2159,7 @@ th.n {
   color: var(--bg);
   padding: 10px 16px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 0.875rem;
   z-index: 20;
 }
 
@@ -2184,14 +2189,14 @@ th.n {
   text-align: left;
 }
 .settings-label .eyebrow {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--accent-text);
 }
 .settings-label strong {
-  font-size: 17px;
+  font-size: 1.0625rem;
 }
 .settings-label .muted {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .settings-trigger {
   border: 0;
@@ -2212,7 +2217,7 @@ th.n {
   background: var(--surface-2);
   color: var(--accent-text);
   font-style: normal;
-  font-size: 12px;
+  font-size: 0.75rem;
   transition: transform 0.2s;
 }
 .settings-trigger[aria-expanded='true'] .settings-chev {
@@ -2257,7 +2262,7 @@ th.n {
   color: inherit;
   text-decoration: none;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 .settings-links > * + * {
   border-top: 1px solid var(--line);
@@ -2267,7 +2272,7 @@ th.n {
 }
 .settings-foot {
   text-align: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   padding: 8px 0 20px;
   display: flex;
@@ -2299,11 +2304,11 @@ th.n {
   min-width: 0;
 }
 .account-card .who b {
-  font-size: 16px;
+  font-size: 1rem;
   overflow-wrap: anywhere;
 }
 .account-card .who .muted {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .account-card .btn {
   flex: none;
@@ -2313,7 +2318,7 @@ th.n {
   flex-direction: column;
   gap: 6px;
   margin-top: 12px;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .account-more {
   display: flex;
@@ -2321,7 +2326,7 @@ th.n {
   align-items: center;
   gap: 6px;
   margin-top: 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .link-btn {
@@ -2343,14 +2348,14 @@ th.n {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 .notice-check {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0 0 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--muted);
   cursor: pointer;
 }
@@ -2392,7 +2397,7 @@ th.n {
   min-width: 48px;
 }
 .lc-num b {
-  font-size: 40px;
+  font-size: 2.5rem;
   line-height: 1;
   font-weight: 700;
 }
@@ -2400,7 +2405,7 @@ th.n {
   font-family: var(--display);
   font-weight: 700;
   letter-spacing: 0.12em;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--pitch-accent);
 }
 .lc-main {
@@ -2410,14 +2415,14 @@ th.n {
   gap: 2px;
 }
 .lc-name {
-  font-size: 20px;
+  font-size: 1.25rem;
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .lc-meta {
-  font-size: 13px;
+  font-size: 0.8125rem;
   opacity: 0.75;
 }
 .lc-tags {
@@ -2427,7 +2432,7 @@ th.n {
   margin-top: 4px;
 }
 .lc-tag {
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   padding: 1px 8px;
   border-radius: 999px;
@@ -2441,12 +2446,12 @@ th.n {
   gap: 2px;
 }
 .lc-ovr {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: color-mix(in srgb, var(--on-pitch) 85%, transparent);
   white-space: nowrap;
 }
 .lc-ovr b {
-  font-size: 17px;
+  font-size: 1.0625rem;
   color: var(--pitch-accent);
   margin-left: 2px;
 }
@@ -2483,7 +2488,7 @@ th.n {
   height: 40px;
   border: 0;
   background: transparent;
-  font-size: 20px;
+  font-size: 1.25rem;
   border-radius: 10px;
 }
 .name-input .dice:active {
@@ -2500,7 +2505,7 @@ th.n {
   position: absolute;
   right: 10px;
   top: 8px;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--muted);
@@ -2522,7 +2527,7 @@ th.n {
 }
 .cand-intro p {
   flex: 1;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .cand-intro .icon-btn {
   flex: none;
@@ -2554,7 +2559,7 @@ th.n {
   place-items: center;
   border: 2px dashed color-mix(in srgb, var(--on-pitch) 40%, transparent);
   font-family: var(--display);
-  font-size: 26px;
+  font-size: 1.625rem;
   font-weight: 700;
 }
 .cc-closed {
@@ -2564,14 +2569,14 @@ th.n {
   min-width: 0;
 }
 .cc-closed b {
-  font-size: 16px;
+  font-size: 1rem;
 }
 .cc-closed small {
-  font-size: 12px;
+  font-size: 0.75rem;
   opacity: 0.75;
 }
 .cc-tap {
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   opacity: 0.7;
   white-space: nowrap;
@@ -2597,21 +2602,21 @@ th.n {
 .cc-no {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 1.125rem;
   letter-spacing: 0.02em;
 }
 .cc-ovr {
   margin-left: auto;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .cc-ovr b {
-  font-size: 22px;
+  font-size: 1.375rem;
   color: var(--ink);
   margin-left: 2px;
 }
 .cc-scout {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--accent-text);
 }
@@ -2632,7 +2637,7 @@ th.n {
   grid-template-columns: 56px 1fr 26px;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .cc-bar span {
@@ -2654,7 +2659,7 @@ th.n {
 }
 .cc-bar b {
   text-align: right;
-  font-size: 15px;
+  font-size: 0.9375rem;
   color: var(--ink);
 }
 .cc-bar.hi {
@@ -2670,7 +2675,7 @@ th.n {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   padding: 2px 6px;
@@ -2685,7 +2690,7 @@ th.n {
   gap: 6px;
 }
 .fan-line {
-  font-size: 13px;
+  font-size: 0.8125rem;
   padding: 8px 10px;
   border-radius: 10px;
   background: var(--surface-2);
@@ -2743,7 +2748,7 @@ th.n {
 .mile-row .mile-lbl {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .mile-row .mile-lbl b {
   font-weight: 600;
@@ -2763,7 +2768,7 @@ th.n {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 13px;
+  font-size: 0.8125rem;
   padding-block: 6px;
   border-top: 1px solid var(--line);
 }
@@ -2772,7 +2777,7 @@ th.n {
 }
 .legend-break-row b {
   font-family: var(--display);
-  font-size: 16px;
+  font-size: 1rem;
   font-variant-numeric: tabular-nums;
 }
 .legend-bar {
@@ -2793,7 +2798,7 @@ th.n {
   gap: 10px;
   padding-block: 8px;
   border-top: 1px solid var(--line);
-  font-size: 13px;
+  font-size: 0.8125rem;
   align-items: baseline;
 }
 .timeline-row:first-child {
@@ -2817,10 +2822,10 @@ th.n {
 .pb-item b {
   display: block;
   font-family: var(--display);
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 .pb-item span {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
 }
 
@@ -2885,7 +2890,7 @@ th.n {
 /* 모바일: 커리어 표가 가로 스크롤 없이 들어오도록 소속 칸만 줄바꿈하고 여백을 줄인다. */
 @media (max-width: 440px) {
   table {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
   th,
   td {
@@ -2917,7 +2922,7 @@ body:has(nav.tabs) .toast {
   border-radius: 14px;
   padding: 10px 10px 10px 16px;
   box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.5);
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 .update-banner span {
@@ -2937,7 +2942,7 @@ body:has(nav.tabs) .toast {
 }
 .news-text small {
   opacity: 0.85;
-  font-size: 13px;
+  font-size: 0.8125rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2951,7 +2956,7 @@ body:has(nav.tabs) .toast {
   border-radius: 10px;
   background: none;
   color: inherit;
-  font-size: 16px;
+  font-size: 1rem;
   cursor: pointer;
 }
 .news-close:active {
@@ -2981,7 +2986,7 @@ body:has(nav.tabs) .toast {
   animation-delay: calc(var(--i) * 60ms);
 }
 .rp-wdl small {
-  font-size: 20px;
+  font-size: 1.25rem;
   color: var(--muted);
   margin-right: 6px;
 }
@@ -3000,7 +3005,7 @@ body:has(nav.tabs) .toast {
 }
 .rp-games summary {
   cursor: pointer;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--muted);
   padding: 4px 0;
@@ -3023,7 +3028,7 @@ body:has(nav.tabs) .toast {
   gap: 10px;
 }
 .league-table th {
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-align: center;
   padding: 4px 2px;
 }
@@ -3041,7 +3046,7 @@ body:has(nav.tabs) .toast {
   text-overflow: ellipsis;
 }
 .league-table td.num {
-  font-size: 15px;
+  font-size: 0.9375rem;
   width: 32px;
 }
 .league-table th:not(.lt-team) {
@@ -3101,7 +3106,7 @@ body:has(nav.tabs) .toast {
 .title-tag {
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   border-radius: 999px;
   padding: 2px 9px;
@@ -3137,7 +3142,7 @@ body:has(nav.tabs) .toast {
   background: none;
   color: var(--pitch-accent);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 0.8125rem;
   text-align: left;
 }
 .card-title::before {
@@ -3154,7 +3159,7 @@ body:has(nav.tabs) .toast {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .title-list {
   list-style: none;
@@ -3186,12 +3191,12 @@ button.title-item:hover {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 .title-desc {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
   min-width: 0;
 }
 .title-year {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .title-list.compact {
@@ -3206,7 +3211,7 @@ button.title-item:hover {
   border-width: 1px;
 }
 .title-item.locked .title-name {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   color: var(--muted);
 }
@@ -3234,7 +3239,7 @@ button.title-item:hover {
 }
 .title-locked summary {
   cursor: pointer;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--muted);
   padding: 4px 0;
@@ -3248,12 +3253,12 @@ button.title-item:hover {
 /* T-10-027 서버 최초 기록 */
 .first-count {
   font-family: var(--display);
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   color: var(--accent-text);
 }
 .first-day {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   color: var(--muted);
   margin: 14px 0 2px;
@@ -3275,10 +3280,10 @@ button.title-item:hover {
   border-top: 0;
 }
 .first-label {
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 .first-time {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 .first-who {
@@ -3286,11 +3291,11 @@ button.title-item:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 .first-value {
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 800;
 }
 .first-row.locked .first-label {
@@ -3343,7 +3348,7 @@ button.title-item:hover {
   min-height: 40px;
   background: var(--surface);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
@@ -3360,7 +3365,7 @@ button.title-item:hover {
 .share-url {
   width: 100%;
   font: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--line);
@@ -3369,7 +3374,7 @@ button.title-item:hover {
 }
 .shared-note {
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--muted);
@@ -3389,7 +3394,7 @@ button.title-item:hover {
 }
 .live-head h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: 1.0625rem;
 }
 .live-dot {
   position: relative;
@@ -3439,11 +3444,11 @@ button.title-item:hover {
 }
 .live-stats b {
   font-family: var(--display);
-  font-size: 22px;
+  font-size: 1.375rem;
   line-height: 1.1;
 }
 .live-stats span {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
 }
 .live-rows-wrap {
@@ -3455,7 +3460,7 @@ button.title-item:hover {
   display: grid;
   place-items: center;
   text-align: center;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .live-rows {
   list-style: none;
@@ -3472,7 +3477,7 @@ button.title-item:hover {
   align-items: center;
   gap: 10px;
   border-top: 1px solid var(--line);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 .live-row .what {
   flex: 1;
@@ -3493,7 +3498,7 @@ button.what {
   text-underline-offset: 3px;
 }
 .live-row time {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   flex-shrink: 0;
 }

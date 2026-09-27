@@ -34,7 +34,7 @@
     {#each v.tours as x, i (i)}
       <div class="stack" style="gap:2px">
         <p><b>{x.name}</b> — {x.stage}{#if x.note}<span class="muted" style="margin-left:.25em">({x.note})</span>{/if}</p>
-        {#each x.lines as l, j (j)}<div class="muted" style="font-size:12px">{l}</div>{/each}
+        {#each x.lines as l, j (j)}<div class="muted" style="font-size:0.75rem">{l}</div>{/each}
       </div>
     {/each}
   </div>

@@ -49,7 +49,7 @@
           {#each rows as r, i (i)}
             <tr>
               <td>{r.mil ? r.year : seasonLabelOf(r)} <span class="muted">({r.age})</span>{#if r.ch?.length}<br /><span class="badge-ch">CH×{r.ch.length}</span>{/if}</td>
-              <td>{r.club}<div class="muted" style="font-size:11px">{r.league}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
+              <td>{r.club}<div class="muted" style="font-size:0.6875rem">{r.league}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
               <td class="n">{r.apps}</td>
               <td class="n">{r.goals}</td>
               <td class="n">{r.assists}</td>
@@ -64,7 +64,7 @@
   {:else}
     <p class="empty">첫 시즌을 마치면 기록이 쌓입니다.</p>
   {/if}
-  <p class="muted" style="font-size:12px">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다.</p>
+  <p class="muted" style="font-size:0.75rem">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다.</p>
 </section>
 <section class="card">
   <div class="eyebrow">Journey</div>
