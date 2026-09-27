@@ -7,10 +7,22 @@ import type {
   RetirementSummary,
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
-import { and, desc, eq, gte, inArray, isNotNull, sql, type AnyColumn, type SQL } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+  type AnyColumn,
+  type SQL,
+} from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
-import { careers, careerSeasons, goalsPlusAssists } from '../schema.js';
+import { kstDays } from './admin.js';
+import { appMeta, careers, careerSeasons, goalsPlusAssists } from '../schema.js';
 
 export type CareerRow = typeof careers.$inferSelect;
 
@@ -130,33 +142,61 @@ export type PutRetirementInput = {
   now: string;
 };
 
+/**
+ * 한국 시각 날짜별 은퇴 수를 담는 app_meta 키. 홈 라이브 현황이 오늘 은퇴 수를 count(*)로 세면 오늘 은퇴한
+ * 커리어 수만큼 행을 읽으므로(T-10-055), 은퇴할 때 이 키를 1 올리고 현황은 한 행만 읽는다. 프로필 삭제로
+ * 커리어가 지워져도 빼지 않는다(홈 현황 숫자라 허용).
+ */
+export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`;
+
 /** `PUT /v1/careers/:careerId/retirement`. 소유권 확인은 라우트가 미리 끝낸다. 같은 커리어로 다시
  * 보내도(이름 공개 토글) 최초 은퇴 시각은 바뀌지 않는다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
   const { careerId, summary, publicName, snapshot, now } = input;
-  await db
-    .update(careers)
-    .set({
-      status: 'retired',
-      retiredAt: sql`coalesce(${careers.retiredAt}, ${now})`,
-      updatedAt: now,
-      retireAge: summary.retireAge,
-      peak: summary.peak,
-      legendScore: summary.legendScore,
-      apps: summary.apps,
-      goals: summary.goals,
-      assists: summary.assists,
-      trophies: summary.trophies,
-      awards: summary.awards,
-      caps: summary.caps,
-      ballon: summary.ballon,
-      lastClub: summary.lastClub,
-      // 옛 클라이언트(칭호 없음)의 재전송이 이미 저장된 칭호를 지우지 않게, 보낸 경우에만 바꾼다.
-      ...(summary.title !== undefined ? { title: summary.title } : {}),
-      ...(publicName !== undefined ? { publicName } : {}),
-      ...(snapshot ? { snapshotJson: JSON.stringify(snapshot), shirtNumber: snapshot.number } : {}),
-    })
-    .where(eq(careers.id, careerId));
+  await runBatch(db, [
+    // 처음 은퇴할 때만 센다 — 이름 공개 토글로 다시 보내면 retired_at이 이미 있어 아무 행도 넣지 않는다.
+    // 같은 트랜잭션에서 아래 update보다 먼저 돌아야 retired_at이 비어 있는 것을 본다.
+    db
+      .insert(appMeta)
+      .select(
+        db
+          .select({
+            key: sql<string>`${retiredCountKey(new Date(now))}`.as('key'),
+            value: sql<string>`'1'`.as('value'),
+          })
+          .from(careers)
+          .where(and(eq(careers.id, careerId), isNull(careers.retiredAt))),
+      )
+      .onConflictDoUpdate({
+        target: appMeta.key,
+        set: { value: sql`cast(${appMeta.value} as integer) + 1` },
+      }),
+    db
+      .update(careers)
+      .set({
+        status: 'retired',
+        retiredAt: sql`coalesce(${careers.retiredAt}, ${now})`,
+        updatedAt: now,
+        retireAge: summary.retireAge,
+        peak: summary.peak,
+        legendScore: summary.legendScore,
+        apps: summary.apps,
+        goals: summary.goals,
+        assists: summary.assists,
+        trophies: summary.trophies,
+        awards: summary.awards,
+        caps: summary.caps,
+        ballon: summary.ballon,
+        lastClub: summary.lastClub,
+        // 옛 클라이언트(칭호 없음)의 재전송이 이미 저장된 칭호를 지우지 않게, 보낸 경우에만 바꾼다.
+        ...(summary.title !== undefined ? { title: summary.title } : {}),
+        ...(publicName !== undefined ? { publicName } : {}),
+        ...(snapshot
+          ? { snapshotJson: JSON.stringify(snapshot), shirtNumber: snapshot.number }
+          : {}),
+      })
+      .where(eq(careers.id, careerId)),
+  ]);
 }
 
 // ───────── T-10-005 공개 명예의 전당 (로그인 불필요 · 읽기 전용) ─────────
