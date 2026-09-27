@@ -13,11 +13,12 @@
     "check:bundle": "node scripts/check-bundle.mjs",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
-    "deploy:staging": "wrangler deploy --env staging",
-    "deploy:production": "wrangler deploy --env production"
+    "deploy:staging": "wrangler deploy -c wrangler.og.jsonc --env staging && wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy -c wrangler.og.jsonc --env production && wrangler deploy --env production"
   },
   "dependencies": {
-    "@offside/contracts": "workspace:*"
+    "@offside/contracts": "workspace:*",
+    "@resvg/resvg-wasm": "2.6.2"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

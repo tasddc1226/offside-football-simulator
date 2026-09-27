@@ -6,13 +6,14 @@
   import Topbar from './Topbar.svelte';
   import LegendReport from './LegendReport.svelte';
   import OwnHofCards from './OwnHofCards.svelte';
+  import ShareBar from './ShareBar.svelte';
 
   const v = $derived(viewFromGame(appState.G!));
 </script>
 
 <div class="wrap">
   <Topbar />
-  <!-- T-10-029: 명예의 전당 공개·공유·다음 버튼은 크레딧 맨 아래에 있다. -->
+  <!-- T-10-029: 명예의 전당 공개·다음 버튼은 크레딧 맨 아래에, 공유 버튼은 화면 아래에 고정된다(T-10-067). -->
   <LegendReport {v}>
     {#snippet end()}
       {#if v.own?.id}<OwnHofCards h={v.own} />{/if}
@@ -20,4 +21,5 @@
       <button class="btn btn-block" data-act="home" onclick={goHome}>명예의 전당 보기</button>
     {/snippet}
   </LegendReport>
+  {#if v.own}<ShareBar h={v.own} />{/if}
 </div>

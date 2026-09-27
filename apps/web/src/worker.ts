@@ -1,13 +1,18 @@
-import type { PublicHofEntry } from '@offside/contracts';
 import { resolveApiBaseUrl } from './api/base-url.js';
+import { fetchHofEntry } from './hof-entry.js';
 import { careerShareMeta, injectShareMeta } from './share-meta.js';
-import { SHARE_PATH } from './share-path.js';
+import { OG_CARD_PATH, SHARE_PATH } from './share-path.js';
 
-interface AssetFetcher {
+interface Fetcher {
   fetch(request: Request): Promise<Response>;
 }
 interface Env {
-  ASSETS: AssetFetcher;
+  ASSETS: Fetcher;
+  /** T-10-068 공유 미리보기 카드 워커(서비스 바인딩). 로컬 개발에선 없다. */
+  OG?: Fetcher;
+}
+interface Ctx {
+  waitUntil(p: Promise<unknown>): void;
 }
 
 const PUBLIC_PATHS = new Set([
@@ -37,19 +42,30 @@ function withRobots(response: Response, value: string): Response {
 }
 
 // T-10-031: 링크 미리보기 봇은 JS를 돌리지 않으므로 공유 링크의 셸 메타를 그 선수 기록으로 바꿔 준다.
+// T-10-068 선수별 공유 미리보기 카드(PNG)는 따로 둔 워커(offside-og, og-worker.ts)가 굽는다 — 2MB대 wasm이
+// 모든 페이지를 내리는 이 워커의 시작 시간을 늘리지 않게. URL에 내용 꼬리표(?v=)가 붙어 내용이 바뀌면 주소도
+// 바뀌므로 여기(커스텀 도메인)의 엣지 캐시에 오래 둔다.
+async function careerCard(request: Request, env: Env, ctx: Ctx): Promise<Response> {
+  const cache = (globalThis as unknown as { caches?: { default: Cache } }).caches?.default;
+  // 캐시는 GET만 받는다 — HEAD(링크 확인 봇)도 같은 GET 키로 찾고 넣는다.
+  const key = new Request(request.url);
+  const hit = await cache?.match(key);
+  if (hit) return hit;
+  if (!env.OG) return new Response('Not Found', { status: 404 }); // 로컬: og 워커를 같이 띄우지 않았다
+  const res = await env.OG.fetch(key);
+  // 대체 카드로 돌려보내는 302도 짧게(og-worker의 Cache-Control) 둔다 — 굽기가 계속 실패할 때 봇마다 다시 굽지 않게.
+  if ((res.status === 200 || res.status === 302) && cache)
+    ctx.waitUntil(cache.put(key, res.clone()));
+  return res;
+}
+
 // API가 없거나(로컬·미등록 호스트) 늦거나 실패하면 원래 셸을 그대로 내려 보기 전용 화면은 영향이 없다.
 async function withShareMeta(shellP: Promise<Response>, id: string, url: URL): Promise<Response> {
   // 셸과 선수 기록을 동시에 받는다.
-  const entryP = fetch(`${resolveApiBaseUrl(undefined, url.hostname)}/v1/hof/${id}`, {
-    signal: AbortSignal.timeout(2000),
-    cf: { cacheTtl: 300, cacheEverything: true },
-  } as RequestInit).catch(() => null);
-  const [shell, res] = await Promise.all([shellP, entryP]);
-  if (!shell.ok || !res?.ok) return shell;
+  const [shell, entry] = await Promise.all([shellP, fetchHofEntry(id, url.hostname)]);
+  if (!shell.ok || !entry) return shell;
   try {
-    const body = (await res.json()) as { data?: { entry?: PublicHofEntry } };
-    if (!body.data?.entry) return shell;
-    const meta = careerShareMeta(body.data.entry, url.origin); // 셸 본문을 읽기 전에 — 여기서 실패해도 셸은 그대로 쓸 수 있다.
+    const meta = careerShareMeta(entry, url.origin); // 셸 본문을 읽기 전에 — 여기서 실패해도 셸은 그대로 쓸 수 있다.
     const html = injectShareMeta(await shell.text(), meta);
     const headers = new Headers(shell.headers);
     headers.delete('Content-Length');
@@ -80,8 +96,9 @@ function withCacheControl(response: Response, value: string): Response {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(request.url);
+    if (OG_CARD_PATH.test(url.pathname)) return careerCard(request, env, ctx);
     return withPreconnect(await route(request, env, url), url);
   },
 };

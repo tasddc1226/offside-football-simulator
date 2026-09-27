@@ -4,7 +4,7 @@ import { BRAND_VERSION, CAREER_OG_BANDS, createHeadMarkup } from '../scripts/seo
 import { POS } from './game/data.js';
 import { LEGEND_BANDS } from './game/legend-bands.js';
 import { POS_LABEL } from './game/pos-label.js';
-import { careerShareMeta, injectShareMeta, OG_VERSION } from './share-meta.js';
+import { bandCardPath, careerShareMeta, injectShareMeta, OG_VERSION } from './share-meta.js';
 
 const entry = {
   id: '0f8a3b52-6c1d-4e0a-9b7e-1a2b3c4d5e6f',
@@ -34,7 +34,14 @@ describe('careerShareMeta', () => {
     expect(m.description).toContain(
       '36세 은퇴 · 540경기 231골 98도움 · 트로피 6개 · 마지막 소속 토트넘.',
     );
-    expect(m.image).toBe(`https://offside-lab.com/og-career-lg_world-${BRAND_VERSION}.png`);
+    // 선수마다 굽는 카드(T-10-068). 내용이 바뀌면 v가 바뀐다.
+    expect(m.image).toMatch(
+      new RegExp(`^https://offside-lab.com/og/career/${entry.id}\\.png\\?v=[0-9a-z]+$`),
+    );
+    expect(careerShareMeta({ ...entry, name: null }, 'https://offside-lab.com').image).not.toBe(
+      m.image,
+    );
+    expect(bandCardPath(612)).toBe(`/og-career-lg_world-${BRAND_VERSION}.png`);
     expect(m.url).toBe(`https://offside-lab.com/career/${entry.id}`);
   });
 
@@ -68,8 +75,10 @@ describe('injectShareMeta', () => {
     );
     expect(html).toMatch(/<meta name="description" content="36세 은퇴/);
     expect(html).toMatch(/<meta property="og:description" content="36세 은퇴/);
-    expect(html).toContain(
-      `<meta property="og:image" content="https://offside-lab.com/og-career-lg_world-${BRAND_VERSION}.png"`,
+    expect(html).toMatch(
+      new RegExp(
+        `<meta property="og:image" content="https://offside-lab.com/og/career/${entry.id}\\.png\\?v=[0-9a-z]+"`,
+      ),
     );
     expect(html).toContain(
       `<meta property="og:url" content="https://offside-lab.com/career/${entry.id}" />`,

@@ -148,6 +148,11 @@ select:focus-visible {
 .wrap.has-actionbar {
   padding-bottom: calc(var(--tabbar-h) + var(--actionbar-h) + var(--safe-b) + 20px);
 }
+/* T-10-067 내 은퇴 선수 화면: 아래에 고정된 공유 바만큼 비운다. 높이는 ShareBar가 바를 재서 넣는다(링크 칸이 열려도
+   맞다). 공유 바는 받을 수 있는 기록에만 뜨므로 .wrap 여백 클래스 대신 바와 함께 그려지는 자리 요소를 쓴다. */
+.sharebar-space {
+  flex: none;
+}
 
 /* top bar */
 .topbar {

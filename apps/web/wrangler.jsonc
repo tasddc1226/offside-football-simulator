@@ -12,11 +12,14 @@
   "env": {
     "staging": {
       "name": "offside-web-staging",
+      // T-10-068 공유 미리보기 카드 워커(wrangler.og.jsonc). 로컬 개발엔 두지 않는다.
+      "services": [{ "binding": "OG", "service": "offside-og-staging" }],
     },
     "production": {
       "name": "offside-web",
       "workers_dev": true,
       "routes": [{ "pattern": "offside-lab.com", "custom_domain": true }],
+      "services": [{ "binding": "OG", "service": "offside-og" }],
     },
   },
 }

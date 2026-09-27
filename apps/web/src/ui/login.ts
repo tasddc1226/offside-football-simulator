@@ -4,7 +4,7 @@ import type { BoardKey } from '@offside/contracts/board-limits';
 import { getProfile, googleStartUrl } from '../api/client.js';
 import { loadHOF } from '../game/season.js';
 import { toast } from './helpers.js';
-import { openLocalLegend, shareFocus } from './legend.js';
+import { openLocalLegend } from './legend.js';
 import { openBoard } from './nav.js';
 import { appState } from './state.svelte.js';
 
@@ -60,12 +60,9 @@ export function handleOAuthReturn() {
   const back = takeLoginReturn();
   if (back && google !== 'error') {
     if ('board' in back) return openBoard(back.board, back.postId);
-    // 은퇴 화면에서 공유하려고 로그인했으면 그 선수의 상세(공유 카드가 있다)로 돌아온다.
+    // 은퇴 화면에서 로그인했으면 그 선수의 상세로 돌아온다.
     const h = loadHOF().find((x) => x.id === back.career);
-    if (h) {
-      shareFocus.pending = true;
-      return openLocalLegend(h);
-    }
+    if (h) return openLocalLegend(h);
   }
   // 계정 패널이 구단주 화면에 있으므로, 로그인을 마치고 돌아오면 구단주 화면을 연다.
   appState.screen = 'owner';

@@ -161,6 +161,3 @@ export async function loadSharedLegend(
   if (r.ok) return publicView(r.data.entry, r.data.snapshot);
   return r.error.retryable ? 'error' : 'missing';
 }
-
-/** 공유하려고 로그인하고 돌아왔을 때 선수 상세의 공유 카드로 화면을 옮기라는 표시(ShareCard가 지운다). */
-export const shareFocus = { pending: false };

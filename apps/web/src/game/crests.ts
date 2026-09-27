@@ -4,7 +4,8 @@
 // 그 구단만의 고유 상징(대포, 리버버드, 교차한 망치 등)은 쓰지 않는다. 글자는 게임 속 별칭의 도시 머리글자만 쓴다.
 // 이미지가 아니라 64×64 벡터 설정값이라 16px에서도 선명하고, 저장·동기화 용량을 쓰지 않는다.
 import type { Club } from './data.js';
-import { hashStr } from './rng.js';
+import { escXml } from '../xml.js';
+import { hashStr } from './hash.js';
 
 export const CREST_SHAPES = {
   /** 방패 */
@@ -473,4 +474,31 @@ export function crestOf(club: Pick<Club, 'id' | 'name'>): Crest {
   let a = autoCache.get(key);
   if (!a) autoCache.set(key, (a = autoCrest(club)));
   return a;
+}
+
+/**
+ * T-10-068 엠블럼을 SVG 문자열로(0 0 64 64 좌표). 워커가 그리는 공유 미리보기 이미지용 — ClubBadge.svelte와
+ * 같은 순서로 칠한다(틀 테두리 → 바탕·패턴·원판·상징 → 테두리선). id는 문서 안에서 겹치지 않는 clipPath 이름.
+ */
+export function crestSvg(c: Crest, id: string, halo: string): string {
+  const icon = c.icon
+    ? `<g${c.transform ? ` transform="${c.transform}"` : ''}><path d="${c.icon.d}" fill="${c.motifColor}"/>${
+        c.icon.k ? `<path d="${c.icon.k}" fill="${c.disc ? '#fff' : c.base}"/>` : ''
+      }</g>`
+    : c.text
+      ? `<text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="IBM Plex Sans KR" font-size="${c.text.length > 1 ? 19 : 25}" font-weight="700" fill="${c.motifColor}">${escXml(c.text)}</text>`
+      : '';
+  return (
+    `<defs><clipPath id="${id}"><path d="${c.shape}"/></clipPath></defs>` +
+    `<path d="${c.shape}" fill="none" stroke="${halo}" stroke-width="6" stroke-linejoin="round"/>` +
+    `<g clip-path="url(#${id})"><rect width="64" height="64" fill="${c.base}"/>` +
+    (c.pattern ? `<path d="${c.pattern}" fill="${c.accent}"/>` : '') +
+    (c.third ? `<path d="${TRI_THIRD_PATH}" fill="${c.third}"/>` : '') +
+    (c.disc ? `<circle cx="32" cy="32" r="15" fill="#fff"/>` : '') +
+    icon +
+    `</g>` +
+    (c.edge
+      ? `<path d="${c.shape}" fill="none" stroke="${c.edge}" stroke-width="3.5" stroke-linejoin="round"/>`
+      : '')
+  );
 }
