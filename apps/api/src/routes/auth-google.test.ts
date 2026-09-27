@@ -1,6 +1,6 @@
 // T-1-013 D-21. API-AUTH-001·002·003·006. 전부 createFakeGoogleOidc(로컬 wrangler.jsonc의
 // GOOGLE_FAKE=1)로 검사한다 — 실 네트워크 0.
-import { ErrorEnvelopeSchema, ProfileSchema, successEnvelope } from '@offside/contracts';
+import { ProfileSchema, successEnvelope } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
@@ -32,6 +32,15 @@ function withoutGoogleFake(env: Bindings, overrides: Partial<Bindings> = {}): Bi
   const clone: Bindings = { ...env, ...overrides };
   delete clone.GOOGLE_FAKE;
   return clone;
+}
+
+/** /google/start 실패는 주소창 경로라 JSON 대신 설정 화면으로 돌려보낸다(T-10-057). */
+function expectSettingsError(res: Response, reason: string) {
+  expect(res.status).toBe(302);
+  const location = new URL(res.headers.get('Location') ?? '');
+  expect(location.pathname).toBe('/settings');
+  expect(location.searchParams.get('google')).toBe('error');
+  expect(location.searchParams.get('reason')).toBe(reason);
 }
 
 const extractCookiePair = (setCookie: string, name: string) =>
@@ -212,7 +221,7 @@ describe('GET /v1/auth/google/start', () => {
     expect(res.status).toBe(503);
   });
 
-  it('클라이언트 ID 없이 arctic 경로면 503(앱은 U-003 없이도 뜬다)', async () => {
+  it('클라이언트 ID 없이 arctic 경로면 설정 화면으로 돌려보낸다(앱은 U-003 없이도 뜬다)', async () => {
     const { cookie } = await issueCookie(ctx);
     const app = createApp();
     const noClientEnv = withoutGoogleFake(ctx.env);
@@ -222,11 +231,10 @@ describe('GET /v1/auth/google/start', () => {
       { headers: { Cookie: cookie } },
       noClientEnv,
     );
-    expect(res.status).toBe(503);
-    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('SERVICE_UNAVAILABLE');
+    expectSettingsError(res, 'unavailable');
   });
 
-  it('클라이언트 secret 없이 arctic 경로면 교환 전에 503', async () => {
+  it('클라이언트 secret 없이 arctic 경로면 교환 전에 설정 화면으로 돌려보낸다', async () => {
     const { cookie } = await issueCookie(ctx);
     const app = createApp();
     const noSecretEnv = withoutGoogleFake(ctx.env, { GOOGLE_CLIENT_ID: 'test-client-id' });
@@ -237,20 +245,15 @@ describe('GET /v1/auth/google/start', () => {
       { headers: { Cookie: cookie } },
       noSecretEnv,
     );
-    expect(res.status).toBe(503);
+    expectSettingsError(res, 'unavailable');
   });
 
   it('세션이 없으면(로그아웃 직후 등) JSON 대신 설정 화면으로 돌려보낸다', async () => {
     const app = createApp();
-    const res = await app.request('/v1/auth/google/start', {}, ctx.env);
-    expect(res.status).toBe(302);
-    const location = new URL(res.headers.get('Location') ?? '');
-    expect(location.pathname).toBe('/settings');
-    expect(location.searchParams.get('google')).toBe('error');
-    expect(location.searchParams.get('reason')).toBe('session');
+    expectSettingsError(await app.request('/v1/auth/google/start', {}, ctx.env), 'session');
   });
 
-  it('시간당 30회 초과(31번째)는 429', async () => {
+  it('시간당 30회 초과(31번째)는 설정 화면으로 돌려보낸다', async () => {
     const { cookie } = await issueCookie(ctx);
     const app = createApp();
 
@@ -268,8 +271,7 @@ describe('GET /v1/auth/google/start', () => {
       { headers: { Cookie: cookie } },
       ctx.env,
     );
-    expect(res.status).toBe(429);
-    expect(ErrorEnvelopeSchema.parse(await res.json()).error.code).toBe('RATE_LIMITED');
+    expectSettingsError(res, 'rate_limited');
   }, 20_000); // 테스트 예산만 넉넉히 잡는다. // 워크트리가 테스트·빌드를 돌리는 공유 머신에서 특히). 로직 자체의 타임아웃이 아니라 // 순차 요청 31회 × 로컬 D1 왕복이라 vitest 기본 5000ms로는 부족할 때가 있다(동시에 여러
 });
 

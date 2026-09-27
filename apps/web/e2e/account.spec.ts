@@ -108,20 +108,24 @@ test('로그아웃은 확인 창에서 한 번 더 확인한다', async ({ page 
 
 test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받고 시작한다', async ({ page }) => {
   // 로그아웃이 세션 쿠키를 지우므로, 로그인 시작 전에 GET /v1/profile(익명 세션 발급)을 거쳐야 한다.
+  let loggedOut = false;
   const calls: string[] = [];
   await page.route(PROFILE_URL, (route) => {
     calls.push('profile');
     return route.fulfill(
       ok({
         id: 'u1',
-        linked: { google: calls.length === 1 },
+        linked: { google: !loggedOut },
         googleEmailMasked: 'te***@gmail.com',
         recoveryCodeIssuedAt: null,
         createdAt: '2026-01-01T00:00:00.000Z',
       }),
     );
   });
-  await page.route(`${API}/v1/auth/logout`, (route) => route.fulfill({ status: 204 }));
+  await page.route(`${API}/v1/auth/logout`, (route) => {
+    loggedOut = true;
+    return route.fulfill({ status: 204 });
+  });
   await page.route(`${API}/v1/auth/google/start`, (route) => {
     calls.push('start');
     return route.fulfill({
@@ -136,10 +140,10 @@ test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받�
   await account.locator('[data-act="logout"]').click();
   await page.locator('#sheet [data-sheet="0"]').click();
   await expect(account).toContainText('구글로 로그인');
-  calls.length = 1;
+  calls.length = 0;
   await account.getByRole('link', { name: '구글로 로그인' }).click();
   await expect(page.locator('#toast')).toContainText('구글 계정을 연결했습니다');
-  expect(calls.slice(1, 3)).toEqual(['profile', 'start']);
+  expect(calls.slice(0, 2)).toEqual(['profile', 'start']);
 });
 
 test('세션 없이 로그인 시작에서 돌아오면 다시 누르라고 알린다', async ({ page }) => {

@@ -29,6 +29,13 @@ function isLocalEnv(env: { ENVIRONMENT: string }): boolean {
   return env.ENVIRONMENT === 'local';
 }
 
+/** 구글 로그인은 주소창으로 오가므로 결과·오류를 JSON 대신 웹 설정 화면의 쿼리로 돌려준다. */
+function settingsUrl(webOrigin: string, query: Record<string, string>): string {
+  const url = new URL('/settings', webOrigin);
+  for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
+  return url.toString();
+}
+
 export function registerAuthRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/auth/logout', requireProfile, idempotency, async (c) => {
     const db = getDb(c);
@@ -47,43 +54,27 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
 
   app.get('/v1/auth/google/start', async (c) => {
     const hostPair = resolveRequestHostPair(c.req.url, c.env);
-    // 주소창으로 여는 경로라 세션이 없으면(로그아웃 직후의 옛 화면 등) JSON 오류 대신 설정 화면으로 돌려보낸다 —
-    // 설정 화면이 GET /v1/profile로 새 익명 세션을 받으므로 다시 누르면 시작된다.
-    const session = await resolveSession(c);
-    if (!session) {
-      if (hostPair === null) {
-        throw new AppError({ code: 'PROFILE_REQUIRED', message: '프로필 세션이 필요합니다.' });
-      }
-      const url = new URL('/settings', hostPair.webOrigin);
-      url.searchParams.set('google', 'error');
-      url.searchParams.set('reason', 'session');
-      return c.redirect(url.toString(), 302);
-    }
-    const oidc =
-      hostPair === null
-        ? null
-        : selectGoogleOidc({
-            ...c.env,
-            GOOGLE_REDIRECT_URI: hostPair.googleRedirectUri,
-          });
-    if (oidc === null) {
+    if (hostPair === null) {
       throw new AppError({
         code: 'SERVICE_UNAVAILABLE',
         message: 'Google 로그인을 사용할 수 없습니다.',
       });
     }
+    // 주소창으로 여는 경로라 실패는 JSON 대신 설정 화면으로 돌려보낸다. 세션이 없으면(로그아웃 직후의 옛 화면
+    // 등) 설정 화면이 GET /v1/profile로 새 익명 세션을 받으므로 다시 누르면 시작된다.
+    const fail = (reason: string) =>
+      c.redirect(settingsUrl(hostPair.webOrigin, { google: 'error', reason }), 302);
+    const session = await resolveSession(c);
+    if (!session) return fail('session');
+    const oidc = selectGoogleOidc({ ...c.env, GOOGLE_REDIRECT_URI: hostPair.googleRedirectUri });
+    if (oidc === null) return fail('unavailable');
 
     const db = getDb(c);
     const now = nowIso();
     const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
 
     const attempts = await getAttemptCount(db, 'GOOGLE_START', ip, now);
-    if (attempts >= GOOGLE_START_RATE_LIMIT_MAX) {
-      throw new AppError({
-        code: 'RATE_LIMITED',
-        message: 'Google 연결 시도 횟수를 초과했습니다.',
-      });
-    }
+    if (attempts >= GOOGLE_START_RATE_LIMIT_MAX) return fail('rate_limited');
     await recordAttempt(db, 'GOOGLE_START', ip, now);
 
     const state = generateOauthToken();
@@ -112,11 +103,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
     function redirectToSettings(query: Record<string, string>, rotatedToken?: string): Response {
       c.header('Set-Cookie', clearOauthCookie(local));
       if (rotatedToken) c.header('Set-Cookie', sessionCookie(rotatedToken), { append: true });
-      const url = new URL('/settings', callbackWebOrigin);
-      for (const [key, value] of Object.entries(query)) {
-        url.searchParams.set(key, value);
-      }
-      return c.redirect(url.toString(), 302);
+      return c.redirect(settingsUrl(callbackWebOrigin, query), 302);
     }
 
     const session = await resolveSession(c);
