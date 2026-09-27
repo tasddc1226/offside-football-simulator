@@ -60,6 +60,9 @@ jobs:
           pnpm lint:deps
           pnpm typecheck
           pnpm test
+      - name: Fulltime balance smoke (N=2000, random)
+        if: steps.scope.outputs.code_changed == 'true'
+        run: node tooling/scripts/sim-smoke.mjs 2000 ci-pr-${{ github.run_id }}
 
   # 빌드·번들·마이그레이션 검사와 e2e는 위 검사와 나란히 돈다(T-10-061). 머지 전에 모두 잡아서,
   # 머지 뒤에는 main CI를 기다리지 않고 바로 운영에 배포한다.
@@ -93,13 +96,24 @@ jobs:
           restore-keys: pnpm-store-${{ runner.os }}-
       - if: steps.scope.outputs.code_changed == 'true'
         run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        id: pw-cache
+        if: steps.scope.outputs.code_changed == 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # API의 build는 tsc --noEmit뿐(위 typecheck와 같다). e2e·번들 검사는 웹 dist만 쓴다.
       - name: Build, bundle check and e2e
         if: steps.scope.outputs.code_changed == 'true'
         run: |
           pnpm --filter @offside/api db:check
-          pnpm build
+          pnpm --filter @offside/web build
           pnpm --filter @offside/web check:bundle
-          pnpm --filter @offside/web exec playwright install --with-deps chromium
+          if [ "${{ steps.pw-cache.outputs.cache-hit }}" = 'true' ]; then
+            pnpm --filter @offside/web exec playwright install-deps chromium
+          else
+            pnpm --filter @offside/web exec playwright install --with-deps chromium
+          fi
           pnpm --filter @offside/web e2e
         env:
           CI: 'true'
@@ -113,10 +127,10 @@ jobs:
           retention-days: 7
 
   deploy-staging:
-    name: Main checks and staging deploy
+    name: Main build and staging deploy
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       contents: read
       actions: read
@@ -155,7 +169,7 @@ jobs:
           CI_HEAD_SHA: ${{ github.sha }}
       - name: Documentation-only summary
         if: steps.scope.outputs.code_changed == 'false'
-        run: echo 'No undeployed code changes; skipped game checks and Cloudflare deployment.' >> "$GITHUB_STEP_SUMMARY"
+        run: echo 'No undeployed code changes; skipped the build and Cloudflare deployment.' >> "$GITHUB_STEP_SUMMARY"
       - uses: pnpm/action-setup@v4
         if: steps.scope.outputs.code_changed == 'true'
       - uses: actions/cache@v4
@@ -172,9 +186,6 @@ jobs:
         run: |
           pnpm --filter @offside/api db:check
           pnpm build
-      - name: Fulltime balance smoke (N=2000, random)
-        if: steps.scope.outputs.code_changed == 'true'
-        run: node tooling/scripts/sim-smoke.mjs 2000 ci-staging-${{ github.run_id }}
       # staging 배포는 일시 중지 상태다. 저장소 변수 STAGING_ENABLED=true로 다시 켠다.
       - name: Migrate and deploy staging
         if: steps.scope.outputs.code_changed == 'true' && vars.STAGING_ENABLED == 'true'
@@ -197,10 +208,3 @@ jobs:
             "https://offside-web-staging.tasddc1569.workers.dev/" | grep -qF '오프사이드'
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors \
             "https://offside-web-staging.tasddc1569.workers.dev/guide/" >/dev/null
-      - uses: actions/upload-artifact@v4
-        if: failure() && steps.scope.outputs.code_changed == 'true'
-        with:
-          name: staging-smoke-failure
-          path: apps/web/test-results
-          if-no-files-found: ignore
-          retention-days: 7
