@@ -18,6 +18,8 @@ export type Bindings = {
   GOOGLE_FAKE?: string;
   /** T-10-011. secret. 쉼표 구분 관리자 구글 이메일(게시판 글쓰기). 비어 있으면 관리자가 없다. */
   ADMIN_EMAILS?: string;
+  /** T-10-070 D1 매일 백업을 두는 R2 버킷. 운영에만 있다 — 없으면 백업을 건너뛴다. */
+  BACKUP?: R2Bucket;
 };
 
 export type SessionContext = {
