@@ -101,15 +101,16 @@
   {:else if all && all.length}
     {#if full}<p class="muted hof-source">{sort === 'score' ? '은퇴 선수' : `${by.label} 기록이 있는 선수`} {total}명 · {by.label} 순</p>{/if}
     {#each all as h, i (h.id)}
+      {@const t = { ...h, score: h.legendScore }}
       <button class="hof-row" data-hof-id={h.id} onclick={() => void openPublicLegend(h)}>
         <HofRow
           rank={offset + i}
           name={h.name ?? anonName(h.pos, h.number)}
           pos={h.pos}
           tag={myIds.has(h.id) ? '내 선수' : null}
-          t={{ ...h, score: h.legendScore }}
+          {t}
           titleId={h.title}
-          value={by.get({ ...h, score: h.legendScore })}
+          value={by.get(t)}
           unit={by.unit}
           showScore={sort !== 'score'}
         />

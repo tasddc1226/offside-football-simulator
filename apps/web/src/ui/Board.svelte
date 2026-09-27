@@ -8,6 +8,7 @@
     POST_BODY_MAX,
     POST_TITLE_MAX,
     POST_VERSION_MAX,
+    BOARD_KEYS,
   } from '@offside/contracts/board-limits';
   import * as api from '../api/boards.js';
   import type { BoardViewerResponse, Comment, Post, PostSummary } from '../api/boards.js';
@@ -16,7 +17,7 @@
   import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
   import { markNewsSeen } from './news.svelte.js';
-  import { BOARD_KEYS } from '@offside/contracts/board-limits';
+  import { loadKey, saveKey } from '../game/season.js';
   import { BOARD_LABEL, dateOf, parseBody, postMeta } from './boardText.js';
   import Topbar from './Topbar.svelte';
   import NicknameForm from './NicknameForm.svelte';
@@ -73,33 +74,25 @@
   const VIEWED_KEY = 'ft_board_viewed';
   const VIEWED_MAX = 300;
   function firstView(id: string): boolean {
-    try {
-      const seen: string[] = JSON.parse(localStorage.getItem(VIEWED_KEY) ?? '[]');
-      if (seen.includes(id)) return false;
-      localStorage.setItem(VIEWED_KEY, JSON.stringify([...seen, id].slice(-VIEWED_MAX)));
-    } catch {
-      /* 저장소를 못 쓰면 그냥 센다 */
-    }
+    const seen = loadKey<string[]>(VIEWED_KEY) ?? [];
+    if (seen.includes(id)) return false;
+    saveKey(VIEWED_KEY, [...seen, id].slice(-VIEWED_MAX));
     return true;
   }
   async function toggleLike() {
     if (!detail || liking) return;
     const d = detail;
-    const next = !d.liked;
-    // 먼저 화면에 반영하고, 실패하면 되돌린다.
-    d.liked = next;
-    d.post.likeCount += next ? 1 : -1;
+    const prev = { liked: d.liked, likeCount: d.post.likeCount };
+    // 먼저 화면에 반영하고, 서버 값으로 맞추거나 실패하면 되돌린다.
+    d.liked = !prev.liked;
+    d.post.likeCount += d.liked ? 1 : -1;
     liking = true;
-    const r = await api.setLike(d.post.id, next);
+    const r = await api.setLike(d.post.id, d.liked);
     liking = false;
-    if (r.ok) {
-      d.liked = r.data.liked;
-      d.post.likeCount = r.data.likeCount;
-    } else {
-      d.liked = !next;
-      d.post.likeCount += next ? -1 : 1;
-      toast(r.error.message);
-    }
+    const next = r.ok ? r.data : prev;
+    d.liked = next.liked;
+    d.post.likeCount = next.likeCount;
+    if (!r.ok) toast(r.error.message);
   }
   function backToList() {
     detail = editing = null;

@@ -21,6 +21,8 @@ const summaryColumns = {
   commentCount: sql<number>`(SELECT COUNT(*) FROM board_comments c WHERE c.post_id = board_posts.id AND c.deleted_at IS NULL)`,
 };
 const live = (id: string) => and(eq(boardPosts.id, id), isNull(boardPosts.deletedAt));
+const likeOf = (postId: string, profileId: string) =>
+  and(eq(boardPostLikes.postId, postId), eq(boardPostLikes.profileId, profileId));
 
 /** 첫 페이지(before 없음)는 고정 글 전부 + 최신 글, 다음 페이지부터는 고정 안 된 글만 createdAt 역순. */
 export async function listPosts(db: Db, board: BoardKey, limit: number, before?: string) {
@@ -119,40 +121,45 @@ export async function isLiked(db: Db, postId: string, profileId: string): Promis
   const [row] = await db
     .select({ postId: boardPostLikes.postId })
     .from(boardPostLikes)
-    .where(and(eq(boardPostLikes.postId, postId), eq(boardPostLikes.profileId, profileId)));
+    .where(likeOf(postId, profileId));
   return !!row;
 }
 
 /** 좋아요를 누르거나(like) 거둔다. 같은 batch에서 like_count를 다시 세어 늘 실제 행 수와 같다.
- *  이미 그 상태면 행은 그대로(멱등). 새 좋아요 수를 돌려준다. */
+ *  이미 그 상태면 행은 그대로(멱등). 새 좋아요 수를, 지운 글이거나 없으면 undefined를 돌려준다
+ *  (좋아요 행은 살아 있는 글에만 넣는다). */
 export async function setLike(
   db: Db,
   postId: string,
   profileId: string,
   like: boolean,
   now: string,
-): Promise<number> {
-  const [, , rows] = (await runBatch(db, [
+): Promise<number | undefined> {
+  const [, rows] = (await runBatch(db, [
     like
       ? db
           .insert(boardPostLikes)
-          .values({ postId, profileId, createdAt: now })
+          .select(
+            db
+              .select({
+                postId: boardPosts.id,
+                profileId: sql`${profileId}`.as('profile_id'),
+                createdAt: sql`${now}`.as('created_at'),
+              })
+              .from(boardPosts)
+              .where(live(postId)),
+          )
           .onConflictDoNothing()
-      : db
-          .delete(boardPostLikes)
-          .where(and(eq(boardPostLikes.postId, postId), eq(boardPostLikes.profileId, profileId))),
+      : db.delete(boardPostLikes).where(likeOf(postId, profileId)),
     db
       .update(boardPosts)
       .set({
         likeCount: sql`(SELECT COUNT(*) FROM board_post_likes l WHERE l.post_id = board_posts.id)`,
       })
-      .where(eq(boardPosts.id, postId)),
-    db
-      .select({ likeCount: boardPosts.likeCount })
-      .from(boardPosts)
-      .where(eq(boardPosts.id, postId)),
-  ])) as [unknown, unknown, { likeCount: number }[]];
-  return rows[0]?.likeCount ?? 0;
+      .where(live(postId))
+      .returning({ likeCount: boardPosts.likeCount }),
+  ])) as [unknown, { likeCount: number }[]];
+  return rows[0]?.likeCount;
 }
 
 export async function listComments(db: Db, postId: string) {

@@ -32,6 +32,7 @@ import { getDb, type AppEnv } from '../env.js';
 import { ok, readBody, nowIso } from './shared.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
+import { resolveSession } from '../middleware/session.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 import { EDGE, STALE } from '../edgeKeys.js';
@@ -81,16 +82,17 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
 
   app.get('/v1/boards/posts/:postId', async (c) => {
     const id = idParam(c, 'postId');
-    const [post, rows, viewer] = await Promise.all([
+    const db = getDb(c);
+    const [post, rows, viewer, liked] = await Promise.all([
       postOr404(c, id),
-      listComments(getDb(c), id),
+      listComments(db, id),
       getViewer(c),
+      resolveSession(c).then((s) => (s ? isLiked(db, id, s.profileId) : false)),
     ]);
     const comments = rows.map(({ profileId, ...r }) => ({
       ...r,
       deletable: viewer.admin || profileId === viewer.profileId,
     }));
-    const liked = viewer.profileId ? await isLiked(getDb(c), id, viewer.profileId) : false;
     return ok(c, PostDetailResponseSchema, { post, comments, liked });
   });
 
@@ -106,8 +108,8 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     app[method]('/v1/boards/posts/:postId/like', requireProfile, async (c) => {
       const postId = idParam(c, 'postId');
       const { profileId } = getSessionOrThrow(c);
-      await postOr404(c, postId); // 지운 글에 좋아요 행을 남기지 않는다.
       const likeCount = await setLike(getDb(c), postId, profileId, like, nowIso());
+      if (likeCount === undefined) throw notFound('글');
       return ok(c, PostLikeResponseSchema, { liked: like, likeCount });
     });
   }

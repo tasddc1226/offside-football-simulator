@@ -359,7 +359,7 @@ test('새 소식 알림: 마지막으로 본 뒤 올라온 글을 화면 위에 
   await mockBoards(page);
   await page.addInitScript(() => {
     if (!localStorage.getItem('ft_news_seen'))
-      localStorage.setItem('ft_news_seen', '2026-09-24T00:00:00.000Z');
+      localStorage.setItem('ft_news_seen', JSON.stringify('2026-09-24T00:00:00.000Z'));
   });
   await page.goto('/');
   const banner = page.locator('[data-news-banner]');
@@ -379,13 +379,19 @@ test('새 소식 알림: 처음 온 기기에는 지금까지의 글을 알리�
   await page.goto('/');
   await expect(page.locator('[data-home-news="notice"]')).toContainText(NOTICE.title);
   await expect(page.locator('[data-news-banner]')).toHaveCount(0);
-  expect(await page.evaluate(() => localStorage.getItem('ft_news_seen'))).toBe(NOTICE.createdAt);
+  expect(await page.evaluate(() => localStorage.getItem('ft_news_seen'))).toBe(
+    JSON.stringify(NOTICE.createdAt),
+  );
 
-  await page.evaluate(() => localStorage.setItem('ft_news_seen', '2026-09-24T00:00:00.000Z'));
+  await page.evaluate(() =>
+    localStorage.setItem('ft_news_seen', JSON.stringify('2026-09-24T00:00:00.000Z')),
+  );
   await page.reload();
   const banner = page.locator('[data-news-banner]');
   await expect(banner).toBeVisible();
   await banner.locator('[data-act="news-close"]').click();
   await expect(banner).toHaveCount(0);
-  expect(await page.evaluate(() => localStorage.getItem('ft_news_seen'))).toBe(NOTICE.createdAt);
+  expect(await page.evaluate(() => localStorage.getItem('ft_news_seen'))).toBe(
+    JSON.stringify(NOTICE.createdAt),
+  );
 });

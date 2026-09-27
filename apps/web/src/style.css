@@ -945,9 +945,6 @@ textarea {
   cursor: pointer;
 }
 /* T-10-058 좋아요: 누르면 하트가 채워지고 빨갛게. */
-.like-btn {
-  gap: 6px;
-}
 .like-btn svg {
   fill: none;
   stroke: currentColor;
@@ -1147,7 +1144,7 @@ textarea {
   bottom: 0;
   z-index: 6;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   background: var(--surface);
   border-top: 1px solid var(--line);
   padding: 6px 4px calc(6px + var(--safe-b));
@@ -1155,14 +1152,9 @@ textarea {
   box-shadow: 0 -6px 20px -12px rgba(20, 32, 26, 0.25);
 }
 .tabs-inner {
-  max-width: 480px;
-  margin: 0 auto;
   display: contents;
 }
 /* 게임 화면: 탭 4개 사이 가운데에 홈을 둔다(시즌 · 선수 · 홈 · 커리어 · 트로피). */
-.tabs:has(.tab-home) {
-  grid-template-columns: repeat(5, 1fr);
-}
 .tabs [role='tab']:nth-child(n + 3) {
   order: 2;
 }
@@ -1170,9 +1162,6 @@ textarea {
   order: 1;
 }
 /* 홈 하단 메뉴(기록실 · 소식 · 홈 · 구단주 · 설정)도 같은 5칸. 본문은 탭바만큼 아래 여백을 둔다. */
-.main-nav {
-  grid-template-columns: repeat(5, 1fr);
-}
 body:has(.main-nav) .wrap {
   padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 20px);
 }
