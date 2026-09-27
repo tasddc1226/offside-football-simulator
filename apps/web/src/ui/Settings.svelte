@@ -1,48 +1,21 @@
 <script lang="ts">
-  // 환경설정 화면(T-10-009, T-10-021). 계정(구글 로그인) 카드 아래로 항목마다 카드를 둔다 — 다크 모드·효과음 켜기/끄기,
-  // 접히는 "구단 이름·엠블럼 변경"(ClubCustomSettings), 운영 도구(관리자),
-  // 도움말·서비스 정책 링크. 다크 모드·효과음 설정은 이 기기에만 저장된다.
-  import { goHome } from './nav.js';
+  // 환경설정 화면(T-10-009, T-10-021) — 다크 모드·효과음 켜기/끄기, 도움말·서비스 정책 링크.
+  // 다크 모드·효과음 설정은 이 기기에만 저장된다. 계정·구단 꾸미기·운영 도구는 구단주 화면으로 옮겼다(T-10-058).
   import Topbar from './Topbar.svelte';
-  import ClubCustomSettings from './ClubCustomSettings.svelte';
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
   import { isDark, setDark } from './theme.js';
   import { showInstallGuide } from './install.js';
-  import { fetchBoardViewer } from '../api/boards.js';
-  import { appState } from './state.svelte.js';
-  import { accountCache } from './account-state.svelte.js';
-  import Account from './Account.svelte';
 
   let sfx = $state(sfxEnabled());
   let dark = $state(isDark());
-  // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
-  // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
-  // 바꾸면 다시 판단한다.
-  let admin = $state(false);
-  const linked = $derived.by(() => {
-    const acct = accountCache.value;
-    return !!acct && acct !== 'error' && acct.linked.google;
-  });
-  $effect(() => {
-    if (linked) void fetchBoardViewer().then((r) => (admin = linked && r.ok && r.data.admin));
-    else admin = false;
-  });
 </script>
 
 <div class="wrap">
-  <Topbar>
-    {#snippet right()}
-      <button class="icon-btn" data-act="home" onclick={goHome}>← 홈</button>
-    {/snippet}
-  </Topbar>
+  <Topbar />
   <header class="settings-head">
     <div class="eyebrow">Settings</div>
     <h1>환경설정</h1>
   </header>
-
-  <section class="card settings-card" id="account-slot" aria-label="계정">
-    <Account {admin} />
-  </section>
 
   <section class="card settings-card">
     <div class="settings-row">
@@ -65,20 +38,6 @@
       <button class="switch" role="switch" aria-checked={sfx} aria-labelledby="sfx-label" data-setting="sfx" onclick={() => setSfxEnabled((sfx = !sfx))}></button>
     </div>
   </section>
-
-  <ClubCustomSettings />
-
-  {#if admin}
-    <section class="card settings-card">
-      <button class="settings-row settings-trigger" data-act="admin" onclick={() => (appState.screen = 'admin')}>
-        <span class="settings-label">
-          <small class="eyebrow">Admin</small>
-          <strong>운영 도구</strong>
-        </span>
-        <i class="settings-chev" aria-hidden="true">›</i>
-      </button>
-    </section>
-  {/if}
 
   <section class="settings-group" aria-labelledby="settings-help">
     <div class="eyebrow">Help</div>

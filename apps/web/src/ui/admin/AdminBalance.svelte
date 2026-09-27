@@ -319,6 +319,7 @@
   .admin-versions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; }
   .admin-version { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; background: none; border: 0; border-bottom: 1px solid var(--line); text-align: left; color: inherit; font: inherit; cursor: pointer; min-height: 44px; }
   .admin-versions li:last-child .admin-version { border-bottom: 0; }
+  .admin-version:active { background: color-mix(in srgb, var(--ink) 7%, transparent); }
   .admin-version[aria-current='true'] { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
   .admin-note { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; font-size: 13px; }
   .admin-group { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }

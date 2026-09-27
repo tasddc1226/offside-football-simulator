@@ -16,11 +16,7 @@
 </script>
 
 <div class="wrap">
-  <Topbar>
-    {#snippet right()}
-      <button class="icon-btn" data-act="settings" onclick={() => go('settings')}>설정</button>
-    {/snippet}
-  </Topbar>
+  <Topbar />
   {#if live && appState.G}
     {@const G = appState.G}
     <!-- 진행 중인 커리어가 있으면 첫 카드를 '이번 커리어'로 바꿔 이어하기를 가장 먼저 보여 준다. -->

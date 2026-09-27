@@ -10,7 +10,7 @@ const withSessionHint = (page: Page) =>
 
 async function openPl(page: Page) {
   await page.goto('/');
-  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-act="owner"]').click();
   await page.locator('[data-settings-open="clubs"]').click();
   await page.locator('#club-league').selectOption('pl');
 }
@@ -57,7 +57,7 @@ test('세션이 없으면 이 기기에만 저장하고 서버로 보내지 않�
   await input.fill('로컬 FC');
   await input.blur();
   await page.reload();
-  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-act="owner"]').click();
   await page.locator('[data-settings-open="clubs"]').click();
   await page.locator('#club-league').selectOption('pl');
   await expect(page.locator('[data-club="pl-2"] input[type="text"]')).toHaveValue('로컬 FC');
@@ -79,7 +79,7 @@ test('세션 표시가 있어도 서버가 세션이 없다고 하면 표시를 
   await expect.poll(() => getCount).toBe(1);
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ft_session'))).toBeNull();
   await page.reload();
-  await page.locator('[data-act="settings"]').waitFor();
+  await page.locator('[data-act="owner"]').waitFor();
   expect(getCount).toBe(1);
 });
 

@@ -123,8 +123,16 @@
         <h2 id="live-title">지금 오프사이드에서는</h2>
       </div>
       {#if rolling}
-        <button class="icon-btn live-pause" data-act="live-pause" aria-pressed={paused} onclick={() => (paused = !paused)}>
-          {paused ? '다시 재생' : '일시정지'}
+        <!-- 아이콘만 보인다: 멈춰 있으면 재생(▶), 흐르고 있으면 일시정지(❚❚). 읽기 도구에는 '일시정지' 토글로 읽힌다. -->
+        <button class="icon-btn live-pause" data-act="live-pause" aria-label="소식 일시정지" aria-pressed={paused} title={paused ? '다시 재생' : '일시정지'} onclick={() => (paused = !paused)}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+            {#if paused}
+              <path d="M8 5.5v13a1 1 0 0 0 1.52.85l10.4-6.5a1 1 0 0 0 0-1.7L9.52 4.65A1 1 0 0 0 8 5.5z" />
+            {:else}
+              <rect x="6" y="5" width="4" height="14" rx="1.2" />
+              <rect x="14" y="5" width="4" height="14" rx="1.2" />
+            {/if}
+          </svg>
         </button>
       {/if}
     </div>

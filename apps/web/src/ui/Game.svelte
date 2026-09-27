@@ -61,11 +61,7 @@
 </script>
 
 <div class="wrap" class:has-tabbar={!showAction} class:has-actionbar={showAction}>
-  <Topbar sticky>
-    {#snippet right()}
-      <button class="icon-btn" data-act="home" onclick={goHome}>메뉴</button>
-    {/snippet}
-  </Topbar>
+  <Topbar sticky />
   <section class="player">
     <div class="chalk"></div>
     <div>
@@ -110,12 +106,17 @@
     </div>
   </div>
 {/if}
-<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -- 원본 ui.ts와 동일한
-     마크업(nav[role=tablist])을 그대로 유지한다(CSS·e2e·axe 셀렉터가 이 구조에 의존). -->
-<nav class="tabs" role="tablist">
-  {#each tabs as [k, l] (k)}
-    <button role="tab" data-tab={k} aria-selected={appState.tab === k} onclick={() => (appState.tab = k)}>
-      <TabIcon name={k} />{l}
-    </button>
-  {/each}
+<!-- 게임 탭 4개 + 가운데 홈. 홈은 화면을 떠나는 버튼이라 tablist 밖에 두고, CSS order로 가운데에 놓는다
+     (.tabs-inner는 display: contents라 탭들이 .tabs 그리드에 그대로 들어간다). -->
+<nav class="tabs" aria-label="게임 메뉴">
+  <div class="tabs-inner" role="tablist">
+    {#each tabs as [k, l] (k)}
+      <button role="tab" data-tab={k} aria-selected={appState.tab === k} onclick={() => (appState.tab = k)}>
+        <TabIcon name={k} />{l}
+      </button>
+    {/each}
+  </div>
+  <button class="tab-home" data-act="home" onclick={goHome}>
+    <TabIcon name="home" />홈
+  </button>
 </nav>

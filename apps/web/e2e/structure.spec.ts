@@ -145,3 +145,11 @@ test('설정', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.locator('#app')).toMatchAriaSnapshot({ name: 'settings.aria.yml' });
 });
+
+test('구단주', async ({ page }) => {
+  await setup(page);
+  await page.locator('[data-act="owner"]').click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('구단주');
+  await expect(page.locator('[data-my-source]')).toBeVisible();
+  await expect(page.locator('#app')).toMatchAriaSnapshot({ name: 'owner.aria.yml' });
+});

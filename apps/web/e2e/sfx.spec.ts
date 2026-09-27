@@ -13,19 +13,17 @@ test('클릭 효과음: 버튼에서만 나고, 설정에서 끌 수 있다', as
   });
   const clicks = () => page.evaluate(() => (window as unknown as { __osc: number }).__osc);
   await page.goto('/');
-  await page.locator('[data-hof-tab="mine"]').click();
-  expect(await clicks()).toBe(1);
   await page.locator('.hero-home h1').click();
-  expect(await clicks()).toBe(1);
+  expect(await clicks()).toBe(0);
 
   await page.locator('[data-act="settings"]').click();
+  expect(await clicks()).toBe(1);
   const toggle = page.locator('[data-setting="sfx"]');
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   const after = await clicks();
-  await page.locator('[data-act="home"]').click();
-  await page.locator('[data-hof-tab="mine"]').click();
+  await page.locator('[data-act="owner"]').click();
   expect(await clicks()).toBe(after);
   expect(await page.evaluate(() => localStorage.getItem('ft_sfx'))).toBe('false');
 });

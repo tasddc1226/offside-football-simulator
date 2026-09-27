@@ -54,4 +54,20 @@ export function kstParts(iso: string): { day: string; time: string } {
   return { day: `${p.year}.${p.month}.${p.day}`, time: `${p.hour}:${p.minute}` };
 }
 
+/** 목록 한 줄의 날짜 · 조회 · 좋아요 · 댓글(0이면 좋아요·댓글은 뺀다). */
+export const postMeta = (p: {
+  createdAt: string;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+}) =>
+  [
+    dateOf(p.createdAt),
+    `조회 ${p.viewCount}`,
+    p.likeCount ? `좋아요 ${p.likeCount}` : '',
+    p.commentCount ? `댓글 ${p.commentCount}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
 export const BOARD_LABEL: Record<BoardKey, string> = { notice: '공지사항', release: '릴리즈 노트' };

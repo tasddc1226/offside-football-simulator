@@ -67,6 +67,6 @@ export function handleOAuthReturn() {
       return openLocalLegend(h);
     }
   }
-  // 계정 패널이 설정 화면에 있으므로, 로그인을 마치고 돌아오면 설정 화면을 연다.
-  appState.screen = 'settings';
+  // 계정 패널이 구단주 화면에 있으므로, 로그인을 마치고 돌아오면 구단주 화면을 연다.
+  appState.screen = 'owner';
 }

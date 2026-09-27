@@ -1,7 +1,7 @@
 import { ErrorEnvelopeSchema } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { authAttempts, boardComments, profiles } from '../db/schema.js';
+import { authAttempts, boardComments, boardPostLikes, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {
   ADMIN_EMAIL,
@@ -297,5 +297,77 @@ describe('게시판 /v1/boards', () => {
     expect(
       await ctx.db.select().from(boardComments).where(eq(boardComments.profileId, user.profileId)),
     ).toHaveLength(0);
+  });
+
+  it('조회수: 누구나 한 번 보낼 때마다 +1, 목록·상세에 보인다. 없는 글은 404', async () => {
+    const admin = await makeAdmin();
+    const id = await writePost(admin.cookie);
+    expect((await call('POST', `/v1/boards/posts/${id}/views`)).status).toBe(204);
+    expect((await call('POST', `/v1/boards/posts/${id}/views`)).status).toBe(204);
+    expect(
+      (await call('POST', '/v1/boards/posts/pst_00000000-0000-4000-8000-000000000000/views'))
+        .status,
+    ).toBe(404);
+    const list = (await (await call('GET', '/v1/boards/notice/posts?limit=5')).json()) as {
+      data: { posts: { viewCount: number; likeCount: number }[] };
+    };
+    expect(list.data.posts[0]).toMatchObject({ viewCount: 2, likeCount: 0 });
+  });
+
+  it('좋아요: 프로필이 있으면 누르고 거둔다(멱등). 상세는 내가 눌렀는지 알려 준다', async () => {
+    const admin = await makeAdmin();
+    const id = await writePost(admin.cookie);
+    expect((await call('PUT', `/v1/boards/posts/${id}/like`)).status).toBe(401);
+    const alice = await issueCookie(ctx);
+    const bob = await issueCookie(ctx);
+    const like = async (cookie: string, method = 'PUT') =>
+      (
+        (await (await call(method, `/v1/boards/posts/${id}/like`, { cookie })).json()) as {
+          data: { liked: boolean; likeCount: number };
+        }
+      ).data;
+    expect(await like(alice.cookie)).toEqual({ liked: true, likeCount: 1 });
+    expect(await like(alice.cookie)).toEqual({ liked: true, likeCount: 1 });
+    expect(await like(bob.cookie)).toEqual({ liked: true, likeCount: 2 });
+    expect(await like(bob.cookie, 'DELETE')).toEqual({ liked: false, likeCount: 1 });
+    expect(await like(bob.cookie, 'DELETE')).toEqual({ liked: false, likeCount: 1 });
+
+    const detail = async (cookie?: string) =>
+      (
+        (await (await call('GET', `/v1/boards/posts/${id}`, cookie ? { cookie } : {})).json()) as {
+          data: { liked: boolean; post: { likeCount: number } };
+        }
+      ).data;
+    expect(await detail(alice.cookie)).toMatchObject({ liked: true, post: { likeCount: 1 } });
+    expect(await detail(bob.cookie)).toMatchObject({ liked: false });
+    expect(await detail()).toMatchObject({ liked: false });
+
+    const nope = await call(
+      'PUT',
+      '/v1/boards/posts/pst_00000000-0000-4000-8000-000000000000/like',
+      { cookie: bob.cookie },
+    );
+    expect(nope.status).toBe(404);
+    const del = await call('DELETE', `/v1/boards/posts/${id}`, { cookie: admin.cookie });
+    expect(del.status).toBe(204);
+    const gone = await call('PUT', `/v1/boards/posts/${id}/like`, { cookie: bob.cookie });
+    expect(gone.status).toBe(404);
+  });
+
+  it('프로필을 지우면 그 사람의 좋아요도 지워지고 좋아요 수가 줄어든다', async () => {
+    const admin = await makeAdmin();
+    const id = await writePost(admin.cookie);
+    const fan = await googleUser('팬');
+    const other = await issueCookie(ctx);
+    await call('PUT', `/v1/boards/posts/${id}/like`, { cookie: fan.cookie });
+    await call('PUT', `/v1/boards/posts/${id}/like`, { cookie: other.cookie });
+    expect((await deleteProfile(env, fan.cookie, 'idem-like-del')).status).toBe(204);
+    expect(
+      await ctx.db.select().from(boardPostLikes).where(eq(boardPostLikes.profileId, fan.profileId)),
+    ).toHaveLength(0);
+    const d = (await (await call('GET', `/v1/boards/posts/${id}`)).json()) as {
+      data: { post: { likeCount: number } };
+    };
+    expect(d.data.post.likeCount).toBe(1);
   });
 });

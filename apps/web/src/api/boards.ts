@@ -7,9 +7,10 @@ import type {
   Post,
   PostDetailResponse,
   PostInput,
+  PostLikeResponse,
 } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
-import { apiFetch, cachedGet } from './client.js';
+import { apiFetch, cachedGet, getProfile } from './client.js';
 
 export type { BoardKey, BoardViewerResponse, Comment, Post, PostInput };
 export type PostSummary = BoardListResponse['posts'][number];
@@ -34,3 +35,15 @@ export const addComment = (postId: string, input: CommentInput) =>
   });
 export const deleteComment = (id: string) =>
   apiFetch<undefined>(`/v1/boards/comments/${id}`, { method: 'DELETE' });
+
+/** T-10-058 조회수 +1(웹이 기기마다 글 하나에 한 번만 보낸다). */
+export const addView = (id: string) =>
+  apiFetch<undefined>(`/v1/boards/posts/${id}/views`, { method: 'POST' });
+/** T-10-058 좋아요를 누르거나 거둔다. 아직 프로필이 없는 기기면 익명 프로필을 만든 뒤 한 번 더 보낸다. */
+export async function setLike(id: string, like: boolean) {
+  const send = () =>
+    apiFetch<PostLikeResponse>(`/v1/boards/posts/${id}/like`, { method: like ? 'PUT' : 'DELETE' });
+  const r = await send();
+  if (!r.ok && r.error.code === 'PROFILE_REQUIRED' && (await getProfile()).ok) return send();
+  return r;
+}

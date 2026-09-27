@@ -8,21 +8,22 @@
     POST_BODY_MAX,
     POST_TITLE_MAX,
     POST_VERSION_MAX,
+    BOARD_KEYS,
   } from '@offside/contracts/board-limits';
   import * as api from '../api/boards.js';
-  import type { BoardKey, BoardViewerResponse, Comment, Post, PostSummary } from '../api/boards.js';
+  import type { BoardViewerResponse, Comment, Post, PostSummary } from '../api/boards.js';
   import { appState } from './state.svelte.js';
-  import { goHome } from './nav.js';
+  import { openBoard } from './nav.js';
   import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
-  import { BOARD_LABEL, dateOf, parseBody } from './boardText.js';
+  import { markNewsSeen } from './news.svelte.js';
+  import { loadKey, saveKey } from '../game/season.js';
+  import { BOARD_LABEL, dateOf, parseBody, postMeta } from './boardText.js';
   import Topbar from './Topbar.svelte';
   import NicknameForm from './NicknameForm.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
 
-  const EYEBROW: Record<BoardKey, string> = { notice: 'Notice', release: 'Release notes' };
-
-  // 홈의 공지사항 · 릴리즈 노트 섹션에서 고른 게시판 하나만 보여 준다.
+  // 게시판 하나를 보여 준다. 위의 공지사항 · 릴리즈 노트 버튼으로 바꾸면 App이 이 화면을 새로 그린다.
   const board = appState.board;
   /** 관리자 여부와 댓글 자격(구글 로그인·닉네임). 불러오기 전엔 null(댓글 폼을 그리지 않는다). */
   let viewer = $state<BoardViewerResponse | null>(null);
@@ -30,7 +31,8 @@
   let posts = $state<PostSummary[]>([]);
   let hasMore = $state(false);
   let status = $state<LoadStatus>('loading');
-  let detail = $state<{ post: Post; comments: Comment[] } | null>(null);
+  let detail = $state<{ post: Post; comments: Comment[]; liked: boolean } | null>(null);
+  let liking = $state(false);
   /** 관리자 편집기. id가 없으면 새 글. */
   let editing = $state<{ id?: string; title: string; body: string; version: string; pinned: boolean } | null>(null);
   let commentText = $state('');
@@ -60,8 +62,37 @@
   async function open(id: string) {
     const r = await api.fetchPost(id);
     if (!r.ok) return toast(r.error.message);
-    detail = r.data;
+    detail = { ...r.data, liked: !!r.data.liked }; // 옛 서버 응답엔 liked가 없다.
+    markNewsSeen(r.data.post.createdAt);
+    if (firstView(id)) {
+      detail.post.viewCount++;
+      void api.addView(id);
+    }
     window.scrollTo(0, 0);
+  }
+  // T-10-058 조회수는 기기마다 글 하나에 한 번만 센다. 최근 VIEWED_MAX개만 기억한다.
+  const VIEWED_KEY = 'ft_board_viewed';
+  const VIEWED_MAX = 300;
+  function firstView(id: string): boolean {
+    const seen = loadKey<string[]>(VIEWED_KEY) ?? [];
+    if (seen.includes(id)) return false;
+    saveKey(VIEWED_KEY, [...seen, id].slice(-VIEWED_MAX));
+    return true;
+  }
+  async function toggleLike() {
+    if (!detail || liking) return;
+    const d = detail;
+    const prev = { liked: d.liked, likeCount: d.post.likeCount };
+    // 먼저 화면에 반영하고, 서버 값으로 맞추거나 실패하면 되돌린다.
+    d.liked = !prev.liked;
+    d.post.likeCount += d.liked ? 1 : -1;
+    liking = true;
+    const r = await api.setLike(d.post.id, d.liked);
+    liking = false;
+    const next = r.ok ? r.data : prev;
+    d.liked = next.liked;
+    d.post.likeCount = next.likeCount;
+    if (!r.ok) toast(r.error.message);
   }
   function backToList() {
     detail = editing = null;
@@ -82,6 +113,7 @@
     const r = e.id ? await api.updatePost(e.id, input) : await api.createPost(board, input);
     busy = false;
     if (!r.ok) return toast(r.error.message);
+    if (!e.id) markNewsSeen(r.data.createdAt); // 내가 쓴 글은 알리지 않는다.
     editing = null;
     toast(e.id ? '글을 고쳤어요' : '글을 올렸어요');
     await open(r.data.id);
@@ -120,16 +152,19 @@
 {/snippet}
 
 <div class="wrap">
-  <Topbar>
-    {#snippet right()}
-      <button class="icon-btn" data-act="home" onclick={goHome}>← 홈</button>
-    {/snippet}
-  </Topbar>
+  <Topbar />
   <section class="card stack" style="gap:14px" data-board={board}>
     <div>
-      <div class="eyebrow">{EYEBROW[board]}</div>
-      <h1>{BOARD_LABEL[board]}</h1>
+      <div class="eyebrow">News</div>
+      <h1>소식</h1>
     </div>
+    {#if !detail && !editing}
+      <div class="seg board-tabs">
+        {#each BOARD_KEYS as k (k)}
+          <button class="opt" aria-pressed={board === k} data-board-tab={k} onclick={() => board !== k && openBoard(k)}>{BOARD_LABEL[k]}</button>
+        {/each}
+      </div>
+    {/if}
 
     {#if editing}
       <form class="stack board-editor" style="gap:10px" onsubmit={(e) => (e.preventDefault(), void savePost())}>
@@ -158,11 +193,11 @@
     {:else if detail}
       {@const post = detail.post}
       <article class="stack board-post" style="gap:10px" data-post={post.id}>
-        <button class="icon-btn" style="align-self:flex-start" data-act="back-list" onclick={backToList}>← 목록</button>
+        <button class="icon-btn self-start" data-act="back-list" onclick={backToList}>← 목록</button>
         <div class="stack" style="gap:4px">
           <div class="row" style="gap:6px;flex-wrap:wrap">
             {@render tags(post)}
-            <span class="muted" style="font-size:12px">{dateOf(post.createdAt)}{post.updatedAt !== post.createdAt ? ' · 수정됨' : ''}</span>
+            <span class="muted" style="font-size:12px">{dateOf(post.createdAt)}{post.updatedAt !== post.createdAt ? ' · 수정됨' : ''} · 조회 {post.viewCount}</span>
           </div>
           <h2 style="margin:0">{post.title}</h2>
         </div>
@@ -173,6 +208,10 @@
             {:else}<p>{#each b.lines as line, j (j)}{#if j}<br />{/if}{line}{/each}</p>{/if}
           {/each}
         </div>
+        <button class="btn btn-sm like-btn self-start" aria-pressed={detail.liked} data-act="like" onclick={toggleLike}>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.3s-7.8-4.6-7.8-10.4A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.8 2.5c0 5.8-7.8 10.4-7.8 10.4Z" /></svg>
+          좋아요 <span class="num" data-like-count>{post.likeCount}</span>
+        </button>
         {#if admin}
           <div class="row" style="gap:8px">
             <button class="icon-btn" data-act="edit-post" onclick={() => startEdit(post)}>수정</button>
@@ -228,7 +267,7 @@
                   {@render tags(p)}
                   <b>{p.title}</b>
                 </span>
-                <span class="muted" style="font-size:12px">{dateOf(p.createdAt)}{p.commentCount ? ` · 댓글 ${p.commentCount}` : ''}</span>
+                <span class="muted" style="font-size:12px">{postMeta(p)}</span>
               </button>
             </li>
           {:else}

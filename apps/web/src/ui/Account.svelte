@@ -67,19 +67,19 @@
 {:else if profile === 'error'}
   <div class="account-card">
     <div class="who"><b>연결할 수 없어요</b><span class="muted">서버에 연결하지 못해 로그인 상태를 확인하지 못했어요. 게임은 계속 즐길 수 있고, 저장은 이 기기에 남습니다.</span></div>
-    <button class="btn" onclick={() => load()}>다시 시도</button>
+    <button class="btn btn-sm" onclick={() => load()}>다시 시도</button>
   </div>
 {:else if !profile || !profile.linked.google}
   <div class="account-card">
     <div class="who"><b>로그인하지 않았어요</b><span class="muted">구글 계정을 연결하면 은퇴한 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.</span></div>
     <!-- 설정에서 로그인하면 설정으로 돌아온다(소식에서 로그인하다 그만둔 기록을 지운다). 로그아웃·탈퇴 직후엔
          세션 쿠키가 없으므로 링크로 바로 가지 않고 startGoogleLogin이 새 익명 세션부터 받는다. -->
-    <a class="btn btn-primary" href={googleStartUrl()} onclick={(e) => { e.preventDefault(); void startGoogleLogin(null); }}>구글로 로그인</a>
+    <a class="btn btn-primary btn-sm" href={googleStartUrl()} onclick={(e) => { e.preventDefault(); void startGoogleLogin(null); }}>구글로 로그인</a>
   </div>
 {:else}
   <div class="account-card">
     <div class="who"><b>{profile.googleEmailMasked ?? '구글 계정'}</b><span class="muted">Google 계정으로 로그인했어요.</span></div>
-    <button class="btn btn-primary" data-act="logout" onclick={askLogout}>로그아웃</button>
+    <button class="btn btn-primary btn-sm" data-act="logout" onclick={askLogout}>로그아웃</button>
   </div>
   <div class="account-nick">
     <span class="muted">댓글 닉네임{profile.nickname ? '' : ' — 정하면 소식 게시판에 댓글을 쓸 수 있어요'}</span>

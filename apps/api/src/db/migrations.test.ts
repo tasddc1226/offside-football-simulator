@@ -142,7 +142,11 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
     'updated_at',
     'deleted_at',
+    // T-10-058: 조회수·좋아요 수.
+    'view_count',
+    'like_count',
   ],
+  board_post_likes: ['post_id', 'profile_id', 'created_at'],
   board_comments: [
     'id',
     'post_id',
@@ -189,7 +193,7 @@ describe('migrations', () => {
     }
   });
 
-  it('전체 마이그레이션을 적용한 최종 테이블 집합은 정확히 이 13개뿐이다(0015: 게임 데이터 테이블 DROP, 0016: careers·career_seasons, 0019: club_customs, 0020: board_posts·board_comments, 0024: server_firsts·app_meta, 0028: server_records 추가)', async () => {
+  it('전체 마이그레이션을 적용한 최종 테이블 집합은 정확히 이 14개뿐이다(0015: 게임 데이터 테이블 DROP, 0016: careers·career_seasons, 0019: club_customs, 0020: board_posts·board_comments, 0024: server_firsts·app_meta, 0028: server_records, 0029: board_post_likes 추가)', async () => {
     const result = await ctx.db.$client
       .prepare(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '\\_cf\\_%' ESCAPE '\\'",

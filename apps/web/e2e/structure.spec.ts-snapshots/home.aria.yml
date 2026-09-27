@@ -1,7 +1,5 @@
 - main:
-  - text: "풀타임: 휘슬이 울릴 때까지 오프사이드"
-  - button "설정"
-  - text: Current career
+  - text: "풀타임: 휘슬이 울릴 때까지 오프사이드 Current career"
   - heading "이번 커리어는 구조테스트 입니다" [level=1]:
     - text: ""
     - strong: 구조테스트
@@ -28,12 +26,16 @@
   - button "Events 확률 이벤트 선택지마다 성공 확률 공개 · 확률 도감 보기 →"
   - text: Legends
   - heading "명예의 전당" [level=2]
-  - button "전체" [pressed]
-  - button "내 선수"
-  - paragraph: 전체 명예의 전당을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+  - paragraph: 명예의 전당을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
   - text: Notice
   - heading "공지사항" [level=2]
   - paragraph: 소식을 불러오지 못했어요.
   - text: Release notes
   - heading "릴리즈 노트" [level=2]
   - paragraph: 소식을 불러오지 못했어요.
+- navigation "메인 메뉴":
+  - button "기록실"
+  - button "소식"
+  - button "홈"
+  - button "구단주"
+  - button "설정"

@@ -186,14 +186,6 @@ select:focus-visible {
 .topbar .spacer {
   flex: 1;
 }
-.icon-btn {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 13px;
-  min-height: 44px;
-}
 
 /* generic */
 .card {
@@ -230,18 +222,31 @@ p {
 .muted {
   color: var(--muted);
 }
-.btn {
+/* 버튼은 모두 이 한 벌을 쓴다: .btn(기본) + 색(.btn-primary · .btn-accent) + 크기(.btn-sm) + 폭(.btn-block).
+   .icon-btn은 작은 보조 버튼(.btn.btn-sm)과 같다 — 화면 곳곳에서 쓰던 이름이라 그대로 둔다. */
+.btn,
+.icon-btn {
   border: 1px solid var(--line);
   background: var(--surface);
+  color: var(--ink);
   border-radius: 12px;
   padding: 12px 16px;
   min-height: 48px;
   font-size: 15px;
   font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none; /* <a class="btn">도 버튼처럼 보이게 */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+.btn-sm,
+.icon-btn {
+  min-height: 44px;
+  padding: 9px 14px;
+  font-size: 14px;
+  gap: 6px;
 }
 .btn-primary {
   background: var(--pitch);
@@ -259,9 +264,118 @@ p {
 .btn-block {
   width: 100%;
 }
-.btn:disabled {
+.btn:disabled,
+.icon-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+/* 누르는 동안 살짝 들어간다(떼면 빠르게 돌아온다). 비활성 버튼은 움직이지 않는다. */
+.btn,
+.icon-btn {
+  transition:
+    transform 0.16s ease-out,
+    filter 0.16s ease-out,
+    box-shadow 0.16s ease-out;
+}
+.btn:active:not(:disabled),
+.icon-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+  filter: brightness(0.92);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18);
+  transition-duration: 0.05s;
+}
+.link-btn:active {
+  opacity: 0.6;
+}
+/* 마우스를 올리면 버튼 둘레에 테두리가 쳐지고, 누를 수 있는 글자는 색이 바뀐다. 터치 기기에서는 누른 뒤
+   hover가 남아 버리므로 마우스(hover 가능) 환경에서만 준다. */
+.link-btn,
+.settings-foot a,
+.os-screen p a {
+  transition: color 0.16s ease-out;
+}
+@media (hover: hover) {
+  .btn:hover:not(:disabled, :active),
+  .icon-btn:hover:not(:disabled, :active),
+  .opt:hover:not(:disabled, :active),
+  .hof-sort:hover:not(:active) {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 35%, transparent);
+  }
+  .link-btn:hover,
+  button.what:hover {
+    color: var(--accent-text);
+  }
+  .link-btn.bad:hover {
+    color: color-mix(in srgb, var(--bad) 70%, var(--ink));
+  }
+  /* 이미 강조색인 링크는 글자색(ink)으로 바뀐다. */
+  .settings-foot a:hover,
+  .os-screen p a:hover {
+    color: var(--ink);
+  }
+}
+/* 선택지·카드도 버튼처럼 살짝 들어간다(크기가 커서 덜 줄인다). */
+.opt,
+button.tile-link,
+.choice,
+.offer,
+.cand-card,
+button.title-item,
+.hof-sort,
+.card-title {
+  transition:
+    transform 0.16s ease-out,
+    filter 0.16s ease-out,
+    box-shadow 0.16s ease-out;
+}
+.opt:active:not(:disabled),
+button.tile-link:active,
+.choice:active,
+.offer:active,
+.cand-card:active,
+button.title-item:active,
+.hof-sort:active,
+.card-title:active {
+  transform: scale(0.98);
+  filter: brightness(0.94);
+  transition-duration: 0.05s;
+}
+/* 화면 폭 목록 행은 줄이지 않고 누르는 동안 바탕만 옅게 깔린다. */
+.board-row,
+button.hof-row,
+.settings-trigger,
+.settings-links > a,
+.settings-links > button,
+button.what {
+  transition:
+    background-color 0.16s ease-out,
+    color 0.16s ease-out;
+}
+.board-row:active,
+button.hof-row:active,
+.settings-trigger:active,
+.settings-links > a:active,
+.settings-links > button:active,
+button.what:active {
+  background-color: color-mix(in srgb, var(--ink) 7%, transparent);
+  transition-duration: 0.05s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled),
+  .icon-btn:active:not(:disabled),
+  .opt:active:not(:disabled),
+  button.tile-link:active,
+  .choice:active,
+  .offer:active,
+  .cand-card:active,
+  button.title-item:active,
+  .hof-sort:active,
+  .card-title:active {
+    transform: none;
+  }
+}
+.self-start {
+  align-self: flex-start;
 }
 .row {
   display: flex;
@@ -420,11 +534,11 @@ p {
 .hof-row:first-child {
   border-top: 0;
 }
-.hof-tabs {
+.board-tabs {
   grid-template-columns: 1fr 1fr;
   margin-bottom: 6px;
 }
-.hof-tabs .opt,
+.board-tabs .opt,
 .admin-tabs .opt {
   align-items: center;
   font-weight: 600;
@@ -830,6 +944,24 @@ textarea {
   font: inherit;
   cursor: pointer;
 }
+/* T-10-058 좋아요: 누르면 하트가 채워지고 빨갛게. */
+.like-btn svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  transition: transform 0.16s ease-out;
+}
+.like-btn[aria-pressed='true'] svg {
+  fill: var(--bad);
+  stroke: var(--bad);
+  transform: scale(1.08);
+}
+@media (prefers-reduced-motion: reduce) {
+  .like-btn svg {
+    transition: none;
+  }
+}
 .board-body {
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -1012,7 +1144,7 @@ textarea {
   bottom: 0;
   z-index: 6;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   background: var(--surface);
   border-top: 1px solid var(--line);
   padding: 6px 4px calc(6px + var(--safe-b));
@@ -1020,9 +1152,18 @@ textarea {
   box-shadow: 0 -6px 20px -12px rgba(20, 32, 26, 0.25);
 }
 .tabs-inner {
-  max-width: 480px;
-  margin: 0 auto;
   display: contents;
+}
+/* 게임 화면: 탭 4개 사이 가운데에 홈을 둔다(시즌 · 선수 · 홈 · 커리어 · 트로피). */
+.tabs [role='tab']:nth-child(n + 3) {
+  order: 2;
+}
+.tabs-inner ~ .tab-home {
+  order: 1;
+}
+/* 홈 하단 메뉴(기록실 · 소식 · 홈 · 구단주 · 설정)도 같은 5칸. 본문은 탭바만큼 아래 여백을 둔다. */
+body:has(.main-nav) .wrap {
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 20px);
 }
 /* 데스크톱: left/right 0 + margin auto로 본문(.wrap 560px)과 같은 폭·위치에 둔다. */
 @media (min-width: 720px) {
@@ -1053,23 +1194,37 @@ textarea {
   display: block;
   transition: transform 0.15s ease;
 }
-.tabs button[aria-selected='true'] {
+.tabs button:is([aria-selected='true'], [aria-current='page']) {
   color: var(--pitch);
 }
-:root[data-theme='dark'] .tabs button[aria-selected='true'] {
+:root[data-theme='dark'] .tabs button:is([aria-selected='true'], [aria-current='page']) {
   color: var(--accent);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .tabs button[aria-selected='true'] {
+  :root:not([data-theme='light']) .tabs button:is([aria-selected='true'], [aria-current='page']) {
     color: var(--accent);
   }
 }
-.tabs button[aria-selected='true'] .tab-ic {
+.tabs button:is([aria-selected='true'], [aria-current='page']) .tab-ic {
   transform: translateY(-1px) scale(1.06);
+}
+/* 누르는 동안 탭이 살짝 들어가고 둥근 바탕이 옅게 깔린다(다른 버튼과 같은 느낌). */
+.tabs button {
+  transition:
+    transform 0.16s ease-out,
+    background-color 0.16s ease-out;
+}
+.tabs button:active {
+  transform: scale(0.94);
+  background-color: color-mix(in srgb, var(--ink) 7%, transparent);
+  transition-duration: 0.05s;
 }
 @media (prefers-reduced-motion: reduce) {
   .tabs button .tab-ic {
     transition: none;
+  }
+  .tabs button:active {
+    transform: none;
   }
 }
 
@@ -1728,12 +1883,7 @@ th.n {
 }
 .skip {
   align-self: center;
-  border: 0;
-  background: none;
-  color: var(--muted);
   font-size: 12px;
-  text-decoration: underline;
-  padding: 4px;
 }
 /* 글자색을 surface로 두면 라이트(흰 글자)·다크(짙은 글자) 모두 배경색 대비 4.5:1 이상이다. */
 .res {
@@ -2157,9 +2307,6 @@ th.n {
 }
 .account-card .btn {
   flex: none;
-  min-height: 44px;
-  padding: 9px 16px;
-  font-size: 14px;
 }
 .account-nick {
   display: flex;
@@ -2777,9 +2924,38 @@ body:has(nav.tabs) .toast {
   flex: 1;
 }
 .update-banner .btn {
-  min-height: 40px;
-  padding: 8px 14px;
   flex: none;
+}
+/* T-10-058 새 소식 알림: 새 버전 배너와 같은 자리·모양에 글 제목 한 줄과 닫기(✕). */
+.news-banner {
+  border: 1px solid color-mix(in srgb, var(--on-pitch) 22%, transparent);
+}
+.news-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.news-text small {
+  opacity: 0.85;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.news-close {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin-left: -4px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.news-close:active {
+  background-color: color-mix(in srgb, var(--on-pitch) 15%, transparent);
 }
 
 /* ───────── 구간 리포트 (T-10-024) ───────── */
@@ -3244,7 +3420,9 @@ button.title-item:hover {
   }
 }
 .live-pause {
-  font-size: 12px;
+  flex: none;
+  width: 44px;
+  padding: 0;
 }
 .live-stats {
   display: grid;
