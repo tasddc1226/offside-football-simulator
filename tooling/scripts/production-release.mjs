@@ -2,17 +2,17 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-// T-9-001c: migration 0015가 모든 게임 테이블(careers/snapshots/service_seasons 등)을 드롭한 뒤
-// 운영 D1에 남아야 하는 테이블. T-9-009가 migration 0016에서 careers·career_seasons를 다시
-// 추가했다(이번엔 커리어 원장이 아니라 플레이 데이터 요약 — ownerProfileId 대신 profileId,
-// revision·snapshot 없음). T-10-010이 0019에서 club_customs(클럽 커스텀 동기화)를, T-10-011이 0020에서 board_posts·board_comments(게시판)를, T-10-016이 0022에서 balance_versions(밸런스 설정)를, T-10-027이 0024에서 server_firsts(서버 최초 기록)·app_meta를, T-10-056이 0028에서 server_records(서버 기록)를 추가했다. 이 목록 밖의 테이블이 나타나거나 이 목록의 테이블이 없으면 preflight/deploy
-// 모두 실패로 취급해야 한다(사람이 직접 스키마를 검토해야 하는 신호).
+// T-9-001c: 모든 마이그레이션을 적용한 뒤 운영 D1에 있어야 하는 테이블(마이그레이션 0015가 옛 게임 테이블을
+// 모두 드롭했다). 새 테이블을 만드는 마이그레이션은 여기에도 추가한다 — 테스트가 최신 drizzle 스냅샷과 비교한다.
+// 이 목록 밖의 테이블이 나타나거나 이 목록의 테이블이 없으면 preflight/deploy 모두 실패로 취급해야 한다
+// (사람이 직접 스키마를 검토해야 하는 신호).
 export const EXPECTED_TABLES = Object.freeze([
   'app_meta',
   'audit_log',
   'auth_attempts',
   'balance_versions',
   'board_comments',
+  'board_post_likes',
   'board_posts',
   'careers',
   'career_seasons',
