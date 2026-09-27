@@ -46,7 +46,9 @@ export function handleOAuthReturn() {
       ? '구글 계정을 연결했습니다.'
       : google === 'switched'
         ? '다른 구글 계정으로 전환했습니다.'
-        : `구글 로그인에 실패했습니다${reason ? ` (${reason})` : ''}.`;
+        : reason === 'session'
+          ? '로그인 준비가 끝나지 않았어요. 구글로 로그인을 한 번 더 눌러 주세요.'
+          : `구글 로그인에 실패했습니다${reason ? ` (${reason})` : ''}.`;
   toast(msg);
   window.history.replaceState({}, '', '/');
   const back = takeLoginReturn();

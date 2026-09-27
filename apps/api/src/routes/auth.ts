@@ -45,8 +45,20 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
     return c.body(null, 204);
   });
 
-  app.get('/v1/auth/google/start', requireProfile, async (c) => {
+  app.get('/v1/auth/google/start', async (c) => {
     const hostPair = resolveRequestHostPair(c.req.url, c.env);
+    // 주소창으로 여는 경로라 세션이 없으면(로그아웃 직후의 옛 화면 등) JSON 오류 대신 설정 화면으로 돌려보낸다 —
+    // 설정 화면이 GET /v1/profile로 새 익명 세션을 받으므로 다시 누르면 시작된다.
+    const session = await resolveSession(c);
+    if (!session) {
+      if (hostPair === null) {
+        throw new AppError({ code: 'PROFILE_REQUIRED', message: '프로필 세션이 필요합니다.' });
+      }
+      const url = new URL('/settings', hostPair.webOrigin);
+      url.searchParams.set('google', 'error');
+      url.searchParams.set('reason', 'session');
+      return c.redirect(url.toString(), 302);
+    }
     const oidc =
       hostPair === null
         ? null
@@ -62,7 +74,6 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
     }
 
     const db = getDb(c);
-    const session = getSessionOrThrow(c);
     const now = nowIso();
     const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
 

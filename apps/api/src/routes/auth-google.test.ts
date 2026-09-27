@@ -240,10 +240,14 @@ describe('GET /v1/auth/google/start', () => {
     expect(res.status).toBe(503);
   });
 
-  it('세션이 없으면 401', async () => {
+  it('세션이 없으면(로그아웃 직후 등) JSON 대신 설정 화면으로 돌려보낸다', async () => {
     const app = createApp();
     const res = await app.request('/v1/auth/google/start', {}, ctx.env);
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(302);
+    const location = new URL(res.headers.get('Location') ?? '');
+    expect(location.pathname).toBe('/settings');
+    expect(location.searchParams.get('google')).toBe('error');
+    expect(location.searchParams.get('reason')).toBe('session');
   });
 
   it('시간당 30회 초과(31번째)는 429', async () => {
