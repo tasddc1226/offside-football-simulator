@@ -269,6 +269,30 @@ p {
   opacity: 0.45;
   cursor: not-allowed;
 }
+/* 누르는 동안 살짝 들어간다(떼면 빠르게 돌아온다). 비활성 버튼은 움직이지 않는다. */
+.btn,
+.icon-btn {
+  transition:
+    transform 0.16s ease-out,
+    filter 0.16s ease-out,
+    box-shadow 0.16s ease-out;
+}
+.btn:active:not(:disabled),
+.icon-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+  filter: brightness(0.92);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18);
+  transition-duration: 0.05s;
+}
+.link-btn:active {
+  opacity: 0.6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled),
+  .icon-btn:active:not(:disabled) {
+    transform: none;
+  }
+}
 .self-start {
   align-self: flex-start;
 }
