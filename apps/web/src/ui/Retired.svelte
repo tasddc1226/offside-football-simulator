@@ -21,5 +21,5 @@
       <button class="btn btn-block" data-act="home" onclick={goHome}>명예의 전당 보기</button>
     {/snippet}
   </LegendReport>
-  {#if v.own}<ShareBar h={v.own} />{/if}
+  {#if v.shareId}<ShareBar id={v.shareId} />{/if}
 </div>

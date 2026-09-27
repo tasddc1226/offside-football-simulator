@@ -37,7 +37,7 @@
     tag: e.name ? '공개' : null,
     stats: { ...e, score: e.legendScore },
     title: e.title ?? null,
-    open: () => void openPublicLegend(e),
+    open: () => void openPublicLegend(e, true),
   });
 
   let source = $state<'loading' | 'account' | 'device' | 'offline'>('loading');
