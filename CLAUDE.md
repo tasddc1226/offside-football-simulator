@@ -154,9 +154,14 @@ pnpm --filter @offside/fulltime-sim analyze
   `tooling/fulltime-sim` 실행, 정상·빈 상태·오류 테스트, UI 문자열에 폐기
   어휘 없음, 로그에 쿠키·복구 코드·선수명 원문 금지, 불필요한 API 호출·세션 조회·
   캐시 무효화 누락 없음(위 "백엔드 보호 · 요청 최소화 규칙").
-- CI는 self-hosted macOS runner(`self-hosted, macOS, ARM64, offside`)를 쓴다.
+- CI는 GitHub 호스트 러너(`ubuntu-latest`)를 쓴다.
   문서만 바뀐 커밋은 코드 검사·배포를 건너뛴다(`.github/scripts/ci-scope.mjs`).
-- 운영 배포는 `deploy-production.yml`(preflight → 같은 SHA로 deploy). 배포가 성공하면
+- PR 검사는 두 잡이 나란히 돈다: `PR quick checks`(서식·린트·타입·단위 테스트·밸런스 스모크)와
+  `PR build and e2e`(빌드·번들·마이그레이션 검사·e2e). main push의 CI는 staging용 빌드만 하므로 기다리지
+  않는다(T-10-061). 대신 머지 전에 PR 브랜치가 최신 main을 포함하는지 확인한다(아니면 main을 합치고
+  PR 검사를 다시 받는다) — 그래야 검사한 트리와 머지된 트리가 같다.
+- 운영 배포는 `deploy-production.yml`. 머지 직후 main SHA로 바로 `mode=deploy`를 실행한다 — deploy 모드도
+  운영 DB에 쓰기 전에 preflight와 같은 점검을 먼저 한다. 마이그레이션이 있는 배포만 preflight를 먼저 돌린다. 배포가 성공하면
   `release-tag` 잡이 릴리즈 태그 `vYYYY.MM.DD.N`(KST 날짜 + 그날 순번)과 GitHub 릴리즈를
   만든다(`.github/scripts/release-tag.mjs`). 태그를 손으로 만들지 않는다.
 - **공개 저장소다(All Rights Reserved, `LICENSE`).** 개인 메일·실명·로컬 경로(`/Users/…`, 에이전트 임시
