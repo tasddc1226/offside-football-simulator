@@ -1,6 +1,7 @@
 <script lang="ts">
   // T-10-027 서버 최초 기록 — 모든 플레이어를 통틀어 처음 세운 기록. 로그인 없이 누구나 본다.
-  // 최근 기록 탭은 날짜별 연대기, 분류 탭은 규칙 전체(아직 아무도 못 세운 기록 포함)를 보여 준다.
+  // 최근 기록 탭은 날짜별 연대기, 분류 탭은 규칙 전체(아직 아무도 못 세운 기록 포함)를 보여 준다. 끝없는 단계는
+  // 누가 넘을 때마다 다음 목표가 열린다. 서버 기록 탭은 더 큰 기록이 나오면 주인이 바뀌는 최다·최고 기록(T-10-056).
   import type { FirstsResponse, ServerFirst } from '@offside/contracts';
   import { getFirsts } from '../../api/client.js';
   import { loadHOF } from '../../game/season.js';
@@ -31,7 +32,7 @@
   const achieved = $derived(data ? achievedList(data.items) : []);
   const done = $derived(achieved.length);
   const days = $derived(byDay(achieved));
-  const list = $derived(data && tab !== 'recent' ? data.items.filter((x) => x.cat === tab) : []);
+  const list = $derived(data ? data.items.filter((x) => x.cat === tab) : []);
 </script>
 
 {#snippet who(h: NonNullable<ServerFirst['holder']>)}
@@ -54,7 +55,9 @@
       {#if data}<span class="first-count num" data-firsts-count>{done}/{total}</span>{/if}
     </div>
     <p class="muted" style="font-size:13px;margin:0 0 10px">
-      모든 플레이어를 통틀어 가장 먼저 세운 기록만 남아요. 이름은 명예의 전당에 이름을 공개한 선수만 보여요.
+      {tab === 'records'
+        ? '모든 플레이어 중 가장 높은 기록이에요. 더 큰 기록이 나오면 주인이 바뀌어요.'
+        : '모든 플레이어를 통틀어 가장 먼저 세운 기록만 남아요.'} 이름은 명예의 전당에 이름을 공개한 선수만 보여요.
     </p>
     <div class="hof-sorts" role="group" aria-label="기록 분류">
       {#each FIRSTS_TABS as t (t.id)}
@@ -81,6 +84,21 @@
       {:else}
         <p class="empty">아직 세워진 서버 최초 기록이 없어요. 첫 주인공이 되어 보세요!</p>
       {/each}
+    {:else if tab === 'records'}
+      <ul class="first-list">
+        {#each data.records as r (r.id)}
+          <li class="first-row" class:locked={!r.holder} data-record={r.id}>
+            <b class="first-label">{r.label}</b>
+            {#if r.holder && r.value !== null && r.achievedAt}
+              <span class="first-value num">{r.value.toLocaleString('ko-KR')}{r.unit}</span>
+              {@render who(r.holder)}
+              <span class="first-time num">{kstParts(r.achievedAt).day}</span>
+            {:else}
+              <span class="first-who">아직 기록 없음</span>
+            {/if}
+          </li>
+        {/each}
+      </ul>
     {:else}
       <ul class="first-list">
         {#each list as x (x.id)}

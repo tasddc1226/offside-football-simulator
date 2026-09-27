@@ -3,9 +3,11 @@ import type { ServerFirst, ServerFirstCat } from '@offside/contracts';
 import { anonName } from '../format.js';
 import { kstParts } from '../boardText.js';
 
-export type FirstsTab = 'recent' | ServerFirstCat;
+// T-10-056 'records'는 깨질 수 있는 서버 기록(최다·최고) 탭.
+export type FirstsTab = 'recent' | 'records' | ServerFirstCat;
 export const FIRSTS_TABS: { id: FirstsTab; label: string }[] = [
   { id: 'recent', label: '최근 기록' },
+  { id: 'records', label: '서버 기록' },
   { id: 'total', label: '통산' },
   { id: 'season', label: '시즌' },
   { id: 'honor', label: '수상·우승' },
