@@ -84,6 +84,8 @@ export {
   RetirementResponseSchema,
   RetiredNumberResultSchema,
   RetiredNumbersResponseSchema,
+  RetiredNumberCheckResponseSchema,
+  type RetiredNumberCheckResponse,
   type RetiredNumberResult,
   type RetiredNumbersResponse,
   CareerIdParamSchema,

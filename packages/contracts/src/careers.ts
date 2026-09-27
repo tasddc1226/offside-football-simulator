@@ -430,3 +430,9 @@ export const RetiredNumbersResponseSchema = z.strictObject({
   ),
 });
 export type RetiredNumbersResponse = z.infer<typeof RetiredNumbersResponseSchema>;
+
+/** T-10-076 `GET /v1/careers/:careerId/retired-number` 내 선수의 결번 심사 결과(소급으로 받은 결번·이미 찬 자리 포함). */
+export const RetiredNumberCheckResponseSchema = z.strictObject({
+  retiredNumber: RetiredNumberResultSchema.nullable(),
+});
+export type RetiredNumberCheckResponse = z.infer<typeof RetiredNumberCheckResponseSchema>;

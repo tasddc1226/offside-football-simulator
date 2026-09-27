@@ -1,6 +1,12 @@
-import { RetiredNumbersResponseSchema, type RetiredNumberResult } from '@offside/contracts';
+import {
+  CareerIdParamSchema,
+  RetiredNumberCheckResponseSchema,
+  RetiredNumbersResponseSchema,
+  type RetiredNumberResult,
+} from '@offside/contracts';
 import type { Context, Hono } from 'hono';
-import { ok } from './shared.js';
+import { nowIso, ok } from './shared.js';
+import { getCareerOwner } from '../db/repos/careers.js';
 import {
   ensureRetiredNumbersBackfilled,
   judgeRetiredNumber,
@@ -9,6 +15,8 @@ import {
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
+import { AppError, parseWithAppError } from '../errors.js';
+import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 
 // T-10-076 영구결번. 로그인 없이 누구나 읽는다 — 이름은 명예의 전당에 이름 공개를 고른 경우에만 있다.
 const TTL = 60;
@@ -33,6 +41,21 @@ export async function judgeRetirement(
 }
 
 export function registerRetiredNumberRoutes(app: Hono<AppEnv>): void {
+  // 내 선수의 심사 결과. 은퇴 PUT 응답을 받지 못한 기록(배포 전 은퇴를 소급으로 심사한 결번, 이미 찬 자리)을 이 기기가
+  // 은퇴 상세를 열 때 한 번 묻는다. 은퇴 PUT과 같은 심사라 이름을 공개했고 자리가 비어 있으면 이때 자리를 잡는다.
+  app.get('/v1/careers/:careerId/retired-number', requireProfile, async (c) => {
+    const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
+    const owner = await getCareerOwner(getDb(c), careerId);
+    if (owner !== getSessionOrThrow(c).profileId) {
+      throw new AppError({
+        code: 'CAREER_OWNER_MISMATCH',
+        message: '이 커리어 ID는 다른 프로필 소유입니다.',
+      });
+    }
+    const retiredNumber = await judgeRetirement(c, careerId, nowIso());
+    return ok(c, RetiredNumberCheckResponseSchema, { retiredNumber }, 200, 'private, no-store');
+  });
+
   app.get(EDGE.retiredNumbers, async (c) => {
     // 기존 은퇴를 훑는 중이면 캐시하지 않는다(서버 최초 기록과 같다 — 조회마다 한 조각씩 나아간다).
     let rescanning = false;

@@ -1,5 +1,6 @@
 import {
   HofDetailResponseSchema,
+  RetiredNumberCheckResponseSchema,
   RetiredNumbersResponseSchema,
   RetirementResponseSchema,
   successEnvelope,
@@ -8,7 +9,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { ensureRetiredNumbersBackfilled } from '../db/repos/retiredNumbers.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { deleteProfile, issueCookie, putJson, RETIREMENT, seasonBody } from '../test/http.js';
+import {
+  callJson,
+  deleteProfile,
+  issueCookie,
+  putJson,
+  RETIREMENT,
+  seasonBody,
+} from '../test/http.js';
 
 const A = '0c000000-0000-4000-8000-00000000000a';
 const B = '0c000000-0000-4000-8000-00000000000b';
@@ -210,5 +218,27 @@ describe('영구결번 (T-10-076)', () => {
       kind: 'taken',
       holder: '옛레전드',
     });
+  });
+  it('내 선수 심사 조회: 소급으로 받은 결번·이미 찬 자리를 알려 주고, 남의 커리어는 거부한다', async () => {
+    const other = (await issueCookie(ctx)).cookie;
+    await retire(B, skyBlue(10), '옛레전드', other);
+    await retire(A, skyBlue(10), '새레전드');
+    // 배포 전 은퇴처럼 응답을 못 받은 기록을 흉내 낸다 — 자리는 서버에만 있다.
+    const check = async (id: string, who: string) => {
+      const res = await callJson(ctx.env, 'GET', `/v1/careers/${id}/retired-number`, {
+        cookie: who,
+      });
+      return { status: res.status, body: (await res.json()) as unknown };
+    };
+    const mine = await check(A, cookie);
+    expect(mine.status).toBe(200);
+    expect(
+      successEnvelope(RetiredNumberCheckResponseSchema).parse(mine.body).data.retiredNumber,
+    ).toMatchObject({ kind: 'taken', holder: '옛레전드' });
+    const theirs = await check(B, other);
+    expect(
+      successEnvelope(RetiredNumberCheckResponseSchema).parse(theirs.body).data.retiredNumber,
+    ).toMatchObject({ kind: 'granted', seq: 1 });
+    expect((await check(B, cookie)).status).toBe(409);
   });
 });

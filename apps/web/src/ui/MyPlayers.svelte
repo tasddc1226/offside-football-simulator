@@ -6,7 +6,8 @@
   import type { PublicHofEntry } from '@offside/contracts';
   import { loadHOF } from '../game/season.js';
   import type { HofEntry } from '../game/types.js';
-  import { getMyCareers } from '../api/client.js';
+  import { getMyCareers, getRetiredNumbers } from '../api/client.js';
+  import { fillGranted } from './retiredNumber.svelte.js';
   import { openLocalLegend, openPublicLegend } from './legend.js';
   import { anonName } from './format.js';
   import HofRow, { type RowStats } from './HofRow.svelte';
@@ -69,6 +70,14 @@
       source = 'account';
     }
     rows = list.sort((a, b) => b.stats.score - a.stats.score);
+    // T-10-076 배포 전 은퇴를 소급해 받은 결번은 이 기기에 없다 — 결과를 모르는 기록이 있을 때만 서버 목록에서 채운다.
+    if (source !== 'offline' && local.some((h) => h.id && h.detail && h.rn === undefined)) {
+      const rn = await getRetiredNumbers();
+      if (!rn.ok) return;
+      fillGranted(rn.data.items);
+      const byCareer = new Map(rn.data.items.map((x) => [x.careerId, x.number]));
+      rows = rows.map((r) => ({ ...r, rn: r.rn ?? byCareer.get(r.key) }));
+    }
   });
 </script>
 

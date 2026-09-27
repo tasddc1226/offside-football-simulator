@@ -7,6 +7,8 @@
   import { clubById } from '../game/clubs.js';
   import { crestOf } from '../game/crests.js';
   import { setLegendPublic } from './legend.js';
+  import { checkRetiredNumber } from '../api/client.js';
+  import { recordRn } from './retiredNumber.svelte.js';
   import type { LegendView } from './state.svelte.js';
   import ClubMark from './ClubMark.svelte';
 
@@ -25,10 +27,30 @@
   const mine = $derived(!!(v.own || v.pot || v.shareId));
   const rnClubs = $derived(d ? clubsOf(d) : []);
   const rnJudge = $derived(mine && nearRetiredNumber(rnClubs[0]) ? rnClubs[0]! : null);
-  /** 방금 은퇴해 자격이 있는데 서버 응답을 아직 못 받았으면 심사 중. */
-  const rn = $derived(
-    rn0 ?? (v.pot && rn0 === undefined && rnClubs.some(rnQualifies) ? ({ kind: 'pending' } as const) : null),
-  );
+  const qualifies = $derived(rnClubs.some(rnQualifies));
+  // 결과를 모르는 내 선수 기록(배포 전 은퇴의 소급 결번·이미 찬 자리, 심사 중이던 기록)은 열 때 서버에 한 번 묻는다.
+  // 방금 은퇴한 화면은 은퇴 업로드 응답이 곧 온다.
+  let checking = $state(false);
+  /** 한 선수에 한 번만 묻는다(결과를 남기면 rn0가 바뀌어 효과가 다시 돈다). */
+  let asked = '';
+  $effect(() => {
+    const id = v.own?.id ?? v.shareId;
+    if (!id || id === asked || !mine || !qualifies || v.pot) return;
+    if (rn0?.kind === 'granted' || rn0?.kind === 'taken') return;
+    asked = id;
+    checking = true;
+    void checkRetiredNumber(id).then((r) => {
+      checking = false;
+      if (r.ok) recordRn(id, r.data.retiredNumber);
+    });
+  });
+  /** 자격이 있는데 결과를 아직 모르면 심사 중(방금 은퇴 · 서버에 묻는 중 · 서버가 소급 중). */
+  const rn = $derived.by(() => {
+    if (rn0 && rn0.kind !== 'pending') return rn0;
+    if (qualifies && (checking || rn0?.kind === 'pending' || (v.pot && rn0 === undefined)))
+      return { kind: 'pending' } as const;
+    return null;
+  });
   const rnSlot = $derived(rn && rn.kind !== 'pending' && (rn.kind !== 'anonymous' || v.own) ? rn : null);
   const rnClub = $derived(rnSlot ? rnClubs.find((c) => c.clubId === rnSlot.clubId) : undefined);
   const rnColors = $derived.by(() => {

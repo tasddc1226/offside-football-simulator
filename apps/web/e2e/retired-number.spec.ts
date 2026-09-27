@@ -98,3 +98,116 @@ test('자리가 이미 찼으면 명예의 벽 헌정으로 남는다', async ({
     '10번은 이미 김선배의 이름으로 남아 있어',
   );
 });
+
+// 배포 전에 은퇴한 기록: 이 기기엔 심사 결과가 없고 서버(소급)에만 있다.
+const OLD_ID = '0d000000-0000-4000-8000-00000000000a';
+async function seedOldLegend(page: Page) {
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
+  await page.addInitScript(
+    ({ id, slot }) => {
+      const career = Array.from({ length: 8 }, (_, i) => ({
+        year: 2030 + i,
+        age: 26 + i,
+        club: slot.club,
+        league: '프리미어리그',
+        apps: 38,
+        goals: 30,
+        assists: 10,
+        cs: 0,
+        rating: 7.9,
+        rank: 1,
+        ovr: 88,
+        honors: ['프리미어리그 우승', 'UEFA 챔피언스리그 우승', '발롱도르'],
+      }));
+      localStorage.setItem(
+        'ft_hof',
+        JSON.stringify([
+          {
+            id,
+            name: '옛레전드',
+            pos: 'FW',
+            number: 10,
+            peak: 90,
+            age: 34,
+            apps: 304,
+            goals: 240,
+            assists: 80,
+            trophies: 16,
+            awards: 8,
+            caps: 0,
+            ballon: 8,
+            lastClub: slot.club,
+            score: 1500,
+            date: '2026-09-01',
+            public: true,
+            detail: {
+              number: 10,
+              pos: 'FW',
+              age: 34,
+              peak: 90,
+              lastClub: slot.club,
+              career,
+              trophies: [],
+              awards: [],
+              ballon: [],
+              nat: { caps: 0 },
+              storyLog: [],
+              miles: [],
+            },
+          },
+        ]),
+      );
+    },
+    { id: OLD_ID, slot: SLOT },
+  );
+}
+
+test('소급으로 받은 결번이 이 기기의 내 선수 배지와 상세 세리머니에 보인다', async ({ page }) => {
+  await seedOldLegend(page);
+  await page.route(`${API}/v1/retired-numbers`, (r) =>
+    r.fulfill(
+      ok({
+        items: [
+          {
+            ...SLOT,
+            seq: 1,
+            score: 1500,
+            grantedAt: '2026-09-01T00:00:00.000Z',
+            careerId: OLD_ID,
+            name: '옛레전드',
+            pos: 'FW',
+          },
+        ],
+      }),
+    ),
+  );
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-my-player="0"] [data-rn-chip]')).toHaveText('👑 결번 10');
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-legend-rn-pill]')).toContainText('결번 10');
+  await expect(page.locator('[data-legend-rn="granted"]')).toContainText('서버 1번째 결번');
+});
+
+test('자리를 못 받은 옛 기록은 상세를 열 때 서버에 물어 명예의 벽 헌정을 보여 준다', async ({
+  page,
+}) => {
+  await seedOldLegend(page);
+  await page.route(`${API}/v1/retired-numbers`, (r) => r.fulfill(ok({ items: [] })));
+  let asked = 0;
+  await page.route(`${API}/v1/careers/${OLD_ID}/retired-number`, (r) => {
+    asked++;
+    return r.fulfill(
+      ok({ retiredNumber: { kind: 'taken', ...SLOT, holder: '김선배', score: 1500 } }),
+    );
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-legend-rn="taken"]')).toContainText('김선배');
+  // 결과를 기기에 남겨 다시 열어도 묻지 않는다.
+  await page.locator('[data-act="hof-back"]').click();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-legend-rn="taken"]')).toContainText('김선배');
+  expect(asked).toBe(1);
+});
