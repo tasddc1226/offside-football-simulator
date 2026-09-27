@@ -1,7 +1,8 @@
 import { FirstsResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
-import { FIRSTS } from '../firsts.js';
+import { ensureFirstsBackfilled } from '../db/repos/firsts.js';
+import { firstsCatalog } from '../firsts.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { deleteProfile, issueCookie, putJson, TEST_CAREER } from '../test/http.js';
 
@@ -65,7 +66,7 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
   it('로그인 없이 읽고, 아무 기록도 없으면 모든 항목이 미달성이다', async () => {
     const data = await read(ctx);
     expect(achieved(data)).toBe(0);
-    expect(data.items.map((x) => x.id)).toEqual(FIRSTS.map((d) => d.id));
+    expect(data.items.map((x) => x.id)).toEqual(firstsCatalog([]).map((d) => d.id));
     expect(data.items.every((x) => x.holder === null && x.achievedAt === null)).toBe(true);
   });
 
@@ -132,5 +133,60 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     // 두 번째 조회는 버전이 같아 다시 훑지 않는다.
     await db.prepare('DELETE FROM server_firsts').run();
     expect(achieved(await read(ctx))).toBe(0);
+  });
+
+  it('서버 기록: 더 큰 값만 자리를 바꾸고, 같은 값이면 먼저 세운 쪽이 지킨다 (T-10-056)', async () => {
+    const other = (await issueCookie(ctx)).cookie;
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 30 }));
+    await putJson(ctx, other, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 45 }));
+    const rec = async (id: string) => (await read(ctx)).records.find((r) => r.id === id);
+    expect(await rec('sgoals')).toMatchObject({ value: 45, unit: '골', holder: { careerId: B } });
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2031`, seasonBody({ goals: 45 }));
+    expect((await rec('sgoals'))?.holder?.careerId).toBe(B);
+    // 통산은 A가 30 + 45 = 75로 앞선다.
+    expect(await rec('goals')).toMatchObject({ value: 75, holder: { careerId: A } });
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2032`, seasonBody({ goals: 50 }));
+    expect(await rec('sgoals')).toMatchObject({ value: 50, holder: { careerId: A } });
+    expect(await rec('legend')).toMatchObject({ value: null, achievedAt: null, holder: null });
+  });
+
+  it('서버 기록을 가진 프로필이 지워지면 그다음 최고값이 이어받는다 (T-10-056)', async () => {
+    const other = (await issueCookie(ctx)).cookie;
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 50 }));
+    await putJson(ctx, other, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 40 }));
+    expect((await deleteProfile(ctx.env, cookie, 'idem-records-del')).status).toBe(204);
+    const r = (await read(ctx)).records.find((x) => x.id === 'sgoals');
+    expect(r).toMatchObject({ value: 40, holder: { careerId: B } });
+  });
+
+  it('전체 재계산은 조각씩 이어서 훑고, 다 끝나면 멈춘다 (T-10-056)', async () => {
+    const cookies = [cookie, (await issueCookie(ctx)).cookie, (await issueCookie(ctx)).cookie];
+    for (const [i, id] of [A, B, C].entries())
+      await putJson(
+        ctx,
+        cookies[i]!,
+        `/v1/careers/${id}/seasons/2030`,
+        seasonBody({ goals: 31 + i }),
+      );
+    const db = ctx.env.DB;
+    await db.prepare('DELETE FROM server_firsts').run();
+    await db.prepare('DELETE FROM server_records').run();
+    await db.prepare("DELETE FROM app_meta WHERE key LIKE 'server_firsts_%'").run();
+    // 가장 늦게 올린 C가 가장 이른 시즌을 가진 것으로 바꾼다 — 끝까지 훑어야 C가 최초가 된다.
+    await db
+      .prepare(
+        "UPDATE career_seasons SET created_at = '2026-01-01T00:00:00.000Z' WHERE career_id = ?",
+      )
+      .bind(C)
+      .run();
+    const steps: boolean[] = [];
+    for (let i = 0; i < 5; i++) steps.push(await ensureFirstsBackfilled(ctx.db, 1));
+    expect(steps).toEqual([true, true, true, true, false]); // 3조각 + 빈 조각에서 끝 표시
+    const data = await read(ctx);
+    expect(holderOf(data, 'sgoals30')?.careerId).toBe(C);
+    expect(data.records.find((r) => r.id === 'sgoals')).toMatchObject({
+      value: 33,
+      holder: { careerId: C },
+    });
   });
 });

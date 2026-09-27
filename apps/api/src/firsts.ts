@@ -64,27 +64,65 @@ function firstSeason(
 const honorCount = (h: string, times: number) =>
   cumulative((s) => s.honors.filter((x) => x === h).length, times);
 
+/**
+ * T-10-056 끝없는 단계. 기본 단계(base)를 다 채우면 마지막 단계에서 step씩 다음 목표가 계속 열린다 — 누가
+ * 가장 높은 단계를 넘으면 그 위가 '아직 아무도 못 한 다음 목표'가 된다. step이 없으면 기본 단계에서 끝난다
+ * (OVR 99처럼 상한이 있는 값). id는 `${key}${v}`(bareOne이면 1단계는 key만 — 발롱도르 'ballon').
+ */
+export interface FirstLadder {
+  key: string;
+  cat: FirstCat;
+  base: number[];
+  step?: number | undefined;
+  bareOne?: boolean;
+  /** 이 커리어가 이른 가장 큰 값(누적 합계·시즌 최고 등). */
+  reach: (c: FirstCareer) => number;
+  at: (v: number) => FirstDef['at'];
+  label: (v: number) => string;
+}
+type FirstSpec = FirstDef | FirstLadder;
+const isLadder = (x: FirstSpec): x is FirstLadder => 'base' in x;
+/** 직접 쓰는 단계(매개변수 타입을 잡아 준다). */
+const custom = (l: FirstLadder) => l;
+
+const sum = (get: (s: FirstSeason) => number) => (c: FirstCareer) =>
+  c.seasons.reduce((t, s) => t + get(s), 0);
+const best = (get: (s: FirstSeason) => number) => (c: FirstCareer) =>
+  c.seasons.reduce((m, s) => Math.max(m, get(s)), 0);
+
+/** 통산 누적 단계. */
 const ladder = (
   cat: FirstCat,
   key: string,
-  steps: number[],
+  base: number[],
+  step: number | undefined,
   get: (s: FirstSeason) => number,
   label: (v: string) => string,
-): FirstDef[] =>
-  steps.map((v) => ({ id: `${key}${v}`, cat, label: label(n(v)), at: cumulative(get, v) }));
-/** 한 시즌 값이 처음 target 이상이 된 시즌. */
+): FirstLadder => ({
+  key,
+  cat,
+  base,
+  step,
+  reach: sum(get),
+  at: (v) => cumulative(get, v),
+  label: (v) => label(n(v)),
+});
+/** 한 시즌 값 단계. */
 const seasonLadder = (
   key: string,
-  steps: number[],
+  base: number[],
+  step: number | undefined,
   get: (s: FirstSeason) => number,
   label: (v: number) => string,
-): FirstDef[] =>
-  steps.map((v) => ({
-    id: `${key}${v}`,
-    cat: 'season',
-    label: label(v),
-    at: firstSeason((s) => get(s) >= v),
-  }));
+): FirstLadder => ({
+  key,
+  cat: 'season',
+  base,
+  step,
+  reach: best(get),
+  at: (v) => firstSeason((s) => get(s) >= v),
+  label,
+});
 const range = (from: number, to: number, step: number) =>
   Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
 
@@ -121,73 +159,83 @@ const TOP_CONT_WIN = ['UEFA 챔피언스리그', 'AFC 챔피언스리그 엘리�
 );
 const hasAny = (honors: string[], names: string[]) => honors.some((h) => names.includes(h));
 
-export const FIRSTS: FirstDef[] = [
+const SPECS: FirstSpec[] = [
   // 통산
-  ...ladder(
+  ladder(
     'total',
     'goals',
     range(100, 500, 50),
+    50,
     (s) => s.goals,
     (v) => `통산 ${v}골 최초 달성!`,
   ),
-  ...ladder(
+  ladder(
     'total',
     'assists',
     range(50, 300, 50),
+    50,
     (s) => s.assists,
     (v) => `통산 ${v}도움 최초 달성!`,
   ),
-  ...ladder(
+  ladder(
     'total',
     'apps',
     range(200, 800, 100),
+    100,
     (s) => s.apps,
     (v) => `통산 ${v}경기 출전 최초 달성!`,
   ),
-  ...ladder(
+  ladder(
     'total',
     'cs',
     range(50, 250, 50),
+    50,
     (s) => s.cs ?? 0,
     (v) => `통산 무실점 ${v}경기 최초 달성!`,
   ),
-  ...ladder(
+  ladder(
     'total',
     'caps',
     [50, 100, 150],
+    50,
     (s) => s.caps ?? 0,
     (v) => `A매치 ${v}경기 최초 달성!`,
   ),
-  ...ladder(
+  ladder(
     'total',
     'trophies',
     [10, 20, 30],
+    10,
     (s) => s.honors.filter(isTrophy).length,
     (v) => `우승 트로피 ${v}개 최초 달성!`,
   ),
-  ...ladder(
+  ladder(
     'total',
     'awards',
     [10, 20, 30],
+    10,
     (s) => s.honors.filter((h) => !isTrophy(h)).length,
     (v) => `개인상 ${v}개 최초 달성!`,
   ),
   // 시즌 · 나이
-  ...seasonLadder(
+  seasonLadder(
     'sgoals',
     [30, 40, 50, 60],
+    10,
     (s) => s.goals,
     (v) => `한 시즌 ${v}골 최초 달성!`,
   ),
-  ...seasonLadder(
+  seasonLadder(
     'sassists',
     [20, 25, 30],
+    5,
     (s) => s.assists,
     (v) => `한 시즌 ${v}도움 최초 달성!`,
   ),
-  ...seasonLadder(
+  seasonLadder(
     'scs',
     [20, 25],
+    5,
     (s) => s.cs ?? 0,
     (v) => `한 시즌 무실점 ${v}경기 최초 달성!`,
   ),
@@ -197,9 +245,10 @@ export const FIRSTS: FirstDef[] = [
     label: `시즌 평균 평점 ${v.toFixed(1)} 최초 달성!`,
     at: firstSeason((s) => s.apps >= 15 && s.rating >= v),
   })),
-  ...seasonLadder(
+  seasonLadder(
     'ovr',
     [85, 90, 95, 99],
+    undefined,
     (s) => s.ovr,
     (v) => `OVR ${v} 최초 도달!`,
   ),
@@ -209,37 +258,44 @@ export const FIRSTS: FirstDef[] = [
     label: '20세 이하 한 시즌 20골 최초 달성!',
     at: firstSeason((s) => s.age <= 20 && s.goals >= 20),
   },
-  {
-    id: 'age38',
+  seasonLadder(
+    'age',
+    [38, 40],
+    1,
+    (s) => (s.apps > 0 ? s.age : 0),
+    (v) => `${v}세 현역 출전 최초 달성!`,
+  ),
+  custom({
+    key: 'oneclub',
     cat: 'season',
-    label: '38세 현역 출전 최초 달성!',
-    at: firstSeason((s) => s.age >= 38 && s.apps > 0),
-  },
-  {
-    id: 'age40',
+    base: [10],
+    step: 5,
+    reach: (c) => Math.max(0, ...c.seasons.map((_s, i) => clubSeasons(c.seasons, i))),
+    at: (v) => firstSeason((_s, i, all) => clubSeasons(all, i) >= v),
+    label: (v) => `한 클럽 ${v}시즌 최초 달성!`,
+  }),
+  custom({
+    key: 'leagues',
     cat: 'season',
-    label: '40세 현역 출전 최초 달성!',
-    at: firstSeason((s) => s.age >= 40 && s.apps > 0),
-  },
-  {
-    id: 'oneclub10',
-    cat: 'season',
-    label: '한 클럽 10시즌 최초 달성!',
-    at: firstSeason(
-      (s, i, all) =>
-        !s.mil && all.slice(0, i + 1).filter((x) => !x.mil && x.club === s.club).length >= 10,
-    ),
-  },
-  {
-    id: 'leagues5',
-    cat: 'season',
-    label: '5개 리그 경험 최초 달성!',
-    at: firstSeason((_s, i, all) => new Set(all.slice(0, i + 1).map((x) => x.league)).size >= 5),
-  },
+    base: [5],
+    step: 1,
+    reach: (c) => new Set(c.seasons.map((x) => x.league)).size,
+    at: (v) =>
+      firstSeason((_s, i, all) => new Set(all.slice(0, i + 1).map((x) => x.league)).size >= v),
+    label: (v) => `${v}개 리그 경험 최초 달성!`,
+  }),
   // 수상 · 우승
-  { id: 'ballon', cat: 'honor', label: '발롱도르 최초 수상!', at: honorCount('발롱도르', 1) },
-  { id: 'ballon3', cat: 'honor', label: '발롱도르 3회 최초 수상!', at: honorCount('발롱도르', 3) },
-  { id: 'ballon5', cat: 'honor', label: '발롱도르 5회 최초 수상!', at: honorCount('발롱도르', 5) },
+  {
+    ...ladder(
+      'honor',
+      'ballon',
+      [1, 3, 5],
+      1,
+      (s) => s.honors.filter((x) => x === '발롱도르').length,
+      (v) => (v === '1' ? '발롱도르 최초 수상!' : `발롱도르 ${v}회 최초 수상!`),
+    ),
+    bareOne: true,
+  },
   ...(
     [
       ['goldenshoe', '유러피언 골든슈'],
@@ -282,12 +338,14 @@ export const FIRSTS: FirstDef[] = [
     label: `${l} 최초 우승!`,
     at: honorCount(`${l} 우승`, 1),
   })),
-  {
-    id: 'leaguewins5',
-    cat: 'honor',
-    label: '리그 우승 5회 최초 달성!',
-    at: cumulative((s) => s.honors.filter((h) => LEAGUE_WIN.includes(h)).length, 5),
-  },
+  ladder(
+    'honor',
+    'leaguewins',
+    [5],
+    5,
+    (s) => s.honors.filter((h) => LEAGUE_WIN.includes(h)).length,
+    (v) => `리그 우승 ${v}회 최초 달성!`,
+  ),
   {
     id: 'treble',
     cat: 'honor',
@@ -297,20 +355,172 @@ export const FIRSTS: FirstDef[] = [
         hasAny(s.honors, LEAGUE_WIN) && hasAny(s.honors, CUP_WIN) && hasAny(s.honors, TOP_CONT_WIN),
     ),
   },
-  ...[840, 1000].map((v): FirstDef => ({
-    id: `legend${v}`,
+  custom({
+    key: 'legend',
     cat: 'honor',
-    label: `레전드 점수 ${n(v)}점 은퇴 최초 달성!`,
-    at: (c) => (c.retiredAt && (c.legendScore ?? 0) >= v ? { at: c.retiredAt, year: null } : null),
-  })),
+    base: [840, 1000],
+    step: 100,
+    reach: (c) => (c.retiredAt ? (c.legendScore ?? 0) : 0),
+    at: (v) => (c) =>
+      c.retiredAt && (c.legendScore ?? 0) >= v ? { at: c.retiredAt, year: null } : null,
+    label: (v) => `레전드 점수 ${n(v)}점 은퇴 최초 달성!`,
+  }),
 ];
+
+/** 군 복무를 뺀, i번째 시즌까지 그 시즌 클럽에서 뛴 시즌 수. */
+function clubSeasons(all: FirstSeason[], i: number): number {
+  const s = all[i]!;
+  return s.mil ? 0 : all.slice(0, i + 1).filter((x) => !x.mil && x.club === s.club).length;
+}
+
+const ladderId = (l: FirstLadder, v: number) => (l.bareOne && v === 1 ? l.key : `${l.key}${v}`);
+
+/** upTo 이하의 단계. */
+function stepsUpTo(l: FirstLadder, upTo: number): number[] {
+  const out = l.base.filter((v) => v <= upTo);
+  const last = l.base[l.base.length - 1]!;
+  if (l.step) for (let v = last + l.step; v <= upTo; v += l.step) out.push(v);
+  return out;
+}
+
+/** top(지금까지 달성된 가장 높은 단계)보다 높은 첫 단계. 끝난 단계면 null. */
+function nextStep(l: FirstLadder, top: number): number | null {
+  const inBase = l.base.find((v) => v > top);
+  if (inBase !== undefined) return inBase;
+  if (!l.step) return null;
+  const last = l.base[l.base.length - 1]!;
+  return last + l.step * (Math.floor((top - last) / l.step) + 1);
+}
+
+const LADDER_ID = new Map(SPECS.filter(isLadder).map((l) => [l.key, l]));
+/** 단계 id → (단계, 값). 단계 id가 아니면 null. */
+function parseLadderId(id: string): { l: FirstLadder; v: number } | null {
+  const m = /^([a-z_]+?)(\d*)$/.exec(id);
+  const l = m && LADDER_ID.get(m[1]!);
+  if (!l) return null;
+  if (m[2] === '') return l.bareOne ? { l, v: 1 } : null;
+  return { l, v: Number(m[2]) };
+}
+
+const toDef = (l: FirstLadder, v: number): FirstDef => ({
+  id: ladderId(l, v),
+  cat: l.cat,
+  label: l.label(v),
+  at: l.at(v),
+});
+
+/**
+ * 화면에 보일 규칙 목록(순서 고정). 끝없는 단계는 기본 단계 + 이미 달성된 단계 + 그 위의 다음 목표 하나.
+ * achieved: 지금까지 누군가 달성한 id.
+ */
+export function firstsCatalog(achieved: Iterable<string>): FirstDef[] {
+  const got = new Map<FirstLadder, Set<number>>();
+  for (const id of achieved) {
+    const p = parseLadderId(id);
+    if (p) got.set(p.l, (got.get(p.l) ?? new Set()).add(p.v));
+  }
+  return SPECS.flatMap((x) => {
+    if (!isLadder(x)) return [x];
+    const done = got.get(x) ?? new Set<number>();
+    const vals = new Set([...x.base, ...done]);
+    const next = nextStep(x, Math.max(0, ...done));
+    if (next !== null) vals.add(next);
+    return [...vals].sort((a, b) => a - b).map((v) => toDef(x, v));
+  });
+}
 
 /** 한 커리어가 채운 기록과 그 시각. */
 export function evaluateCareer(c: FirstCareer): { id: string; at: string; year: number | null }[] {
   const out: { id: string; at: string; year: number | null }[] = [];
-  for (const d of FIRSTS) {
-    const r = d.at(c);
-    if (r) out.push({ id: d.id, ...r });
+  for (const x of SPECS) {
+    const defs = isLadder(x) ? stepsUpTo(x, x.reach(c)).map((v) => toDef(x, v)) : [x];
+    for (const d of defs) {
+      const r = d.at(c);
+      if (r) out.push({ id: d.id, ...r });
+    }
   }
   return out;
+}
+
+/**
+ * T-10-056 서버 기록 — 깨질 수 있는 최고 기록. 더 큰 값을 낸 커리어가 가져가고, 같은 값이면 먼저 세운 쪽이
+ * 지킨다. 진행 중 커리어도 시즌을 올릴 때마다 값이 커질 수 있다.
+ */
+export interface RecordDef {
+  id: string;
+  label: string;
+  unit: string;
+  value: (c: FirstCareer) => { value: number; at: string; year: number | null } | null;
+}
+
+/** 통산 합계와 그 합계가 마지막으로 늘어난 시즌. */
+const totalRecord =
+  (get: (s: FirstSeason) => number): RecordDef['value'] =>
+  (c) => {
+    let value = 0;
+    let last: FirstSeason | undefined;
+    for (const s of c.seasons) {
+      const g = get(s);
+      if (g > 0) [value, last] = [value + g, s];
+    }
+    return last ? { value, at: last.createdAt, year: last.year } : null;
+  };
+/** 한 시즌 최고값과 그 값을 처음 낸 시즌. */
+const seasonRecord =
+  (get: (s: FirstSeason) => number): RecordDef['value'] =>
+  (c) => {
+    let top: FirstSeason | undefined;
+    for (const s of c.seasons) if (get(s) > (top ? get(top) : 0)) top = s;
+    return top ? { value: get(top), at: top.createdAt, year: top.year } : null;
+  };
+
+export const RECORDS: RecordDef[] = [
+  { id: 'goals', label: '통산 최다 골', unit: '골', value: totalRecord((s) => s.goals) },
+  { id: 'assists', label: '통산 최다 도움', unit: '도움', value: totalRecord((s) => s.assists) },
+  { id: 'apps', label: '통산 최다 출전', unit: '경기', value: totalRecord((s) => s.apps) },
+  { id: 'cs', label: '통산 최다 무실점', unit: '경기', value: totalRecord((s) => s.cs ?? 0) },
+  { id: 'caps', label: 'A매치 최다 출전', unit: '경기', value: totalRecord((s) => s.caps ?? 0) },
+  {
+    id: 'trophies',
+    label: '최다 우승 트로피',
+    unit: '개',
+    value: totalRecord((s) => s.honors.filter(isTrophy).length),
+  },
+  {
+    id: 'awards',
+    label: '최다 개인상',
+    unit: '개',
+    value: totalRecord((s) => s.honors.filter((h) => !isTrophy(h)).length),
+  },
+  {
+    id: 'ballon',
+    label: '발롱도르 최다 수상',
+    unit: '회',
+    value: totalRecord((s) => s.honors.filter((h) => h === '발롱도르').length),
+  },
+  { id: 'sgoals', label: '한 시즌 최다 골', unit: '골', value: seasonRecord((s) => s.goals) },
+  {
+    id: 'sassists',
+    label: '한 시즌 최다 도움',
+    unit: '도움',
+    value: seasonRecord((s) => s.assists),
+  },
+  { id: 'scs', label: '한 시즌 최다 무실점', unit: '경기', value: seasonRecord((s) => s.cs ?? 0) },
+  {
+    id: 'legend',
+    label: '최고 레전드 점수',
+    unit: '점',
+    value: (c) =>
+      c.retiredAt && c.legendScore ? { value: c.legendScore, at: c.retiredAt, year: null } : null,
+  },
+];
+
+/** 한 커리어의 서버 기록 후보 값. */
+export function evaluateRecords(
+  c: FirstCareer,
+): { id: string; value: number; at: string; year: number | null }[] {
+  return RECORDS.flatMap((d) => {
+    const r = d.value(c);
+    return r ? [{ id: d.id, ...r }] : [];
+  });
 }

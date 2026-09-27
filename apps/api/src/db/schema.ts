@@ -295,7 +295,7 @@ export const balanceVersions = sqliteTable(
   (table) => [index('balance_versions_status_idx').on(table.status)],
 );
 
-/** T-10-027 서버 최초 기록. 기록 id(src/firsts.ts FIRSTS)마다 가장 먼저 달성한 커리어 한 줄. 커리어가 지워지면
+/** T-10-027 서버 최초 기록. 기록 id(src/firsts.ts firstsCatalog)마다 가장 먼저 달성한 커리어 한 줄. 커리어가 지워지면
  * 함께 지워지고, 다음 재계산(app_meta 버전) 때 그다음으로 이른 커리어가 채운다. */
 export const serverFirsts = sqliteTable(
   'server_firsts',
@@ -309,6 +309,18 @@ export const serverFirsts = sqliteTable(
   },
   (table) => [index('server_firsts_achieved_idx').on(table.achievedAt)],
 );
+
+/** T-10-056 서버 기록(깨질 수 있는 최고 기록) 한 줄씩. 보유 커리어가 지워지면 함께 지워지고, 다음 재계산이
+ * 그다음 보유자를 채운다. */
+export const serverRecords = sqliteTable('server_records', {
+  id: text('id').primaryKey(),
+  careerId: text('career_id')
+    .notNull()
+    .references(() => careers.id, { onDelete: 'cascade' }),
+  value: integer('value').notNull(),
+  achievedAt: text('achieved_at').notNull(),
+  year: integer('year'),
+});
 
 /**
  * 서버 내부 상태 한 줄씩. T-10-027 서버 최초 기록 재계산 버전, T-10-055 한국 시각 날짜별 은퇴 수

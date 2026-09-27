@@ -6,12 +6,12 @@ import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 
-// T-10-027 서버 최초 기록. 로그인 없이 누구나 읽는다 — 응답엔 기록 문장·시각과 명예의 전당에
+// T-10-027 서버 최초 기록 · T-10-056 서버 기록. 로그인 없이 누구나 읽는다 — 응답엔 기록 문장·시각과 명예의 전당에
 // 이름 공개를 고른 이름만 있다. 목록은 새 기록이 1분 안에 보이게 짧게 캐시하고, 기록이 바뀌면 지운다.
 const TTL = 60;
 
 /** 시즌·은퇴 업로드 뒤에 부른다. 판정이 실패해도 업로드 응답은 그대로 성공시키고 로그로만 남긴다
- * (빠진 기록은 다음 업로드나 BACKFILL_VERSION 재계산이 채운다). */
+ * (빠진 기록은 다음 업로드나 전체 재계산이 채운다). */
 export async function recordFirsts(
   c: Context<AppEnv>,
   careerId: string,
@@ -32,7 +32,7 @@ export function registerFirstsRoutes(app: Hono<AppEnv>): void {
     const data = await edgeCached(c, EDGE.firsts, TTL, async () => {
       const db = getDb(c);
       await ensureFirstsBackfilled(db);
-      return { items: await listFirsts(db) };
+      return listFirsts(db);
     });
     return ok(c, FirstsResponseSchema, data, 200, `public, max-age=${TTL}`);
   });

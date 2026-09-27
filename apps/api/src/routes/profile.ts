@@ -33,9 +33,8 @@ import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
-import { purgeEdge, waitUntil } from '../edgeCache.js';
+import { purgeEdge } from '../edgeCache.js';
 import { STALE } from '../edgeKeys.js';
-import { recomputeFirsts } from '../db/repos/firsts.js';
 import { issueRecoveryCode } from '../profile/issue-recovery-code.js';
 import { maskEmail } from '../profile/mask-email.js';
 import { recoverProfile } from '../profile/recover.js';
@@ -203,14 +202,9 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       confirmToken: body.confirmToken,
       now,
     });
-    // 지운 최초 기록은 응답 뒤에 다시 계산하고 그 캐시를 비운다. 소급 표시는 삭제 배치에서 이미 지웠으니,
-    // 재계산이 끝나기 전·실패한 뒤의 공개 조회도 스스로 다시 계산한다. 나머지는 바뀐 공개 캐시만 비운다
-    // (명예의 전당 목록은 TTL 1분).
-    if (heldFirsts)
-      waitUntil(
-        c,
-        recomputeFirsts(db).finally(() => purgeEdge(c, STALE.firstsChanged())),
-      );
+    // 지운 커리어가 가진 최초·서버 기록은 삭제 배치가 재계산 표시를 지웠으니, 목록 캐시만 비우면 다음 공개
+    // 조회부터 조각씩 다시 훑어 채운다. 나머지는 바뀐 공개 캐시만 비운다(명예의 전당 목록은 TTL 1분).
+    if (heldFirsts) purgeEdge(c, STALE.firstsChanged());
     purgeEdge(c, STALE.profileDeleted(careerIds, hadComments));
     return c.body(null, 204);
   });

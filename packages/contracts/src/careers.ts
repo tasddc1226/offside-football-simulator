@@ -268,23 +268,41 @@ export const HofPageQuerySchema = z.coerce.number().int().min(1).max(10000).defa
 export const ServerFirstCatSchema = z.enum(['total', 'season', 'honor']);
 export type ServerFirstCat = z.infer<typeof ServerFirstCatSchema>;
 
-/** 기록 하나. 아직 아무도 못 채웠으면 achievedAt·holder가 null. 이름은 명예의 전당에 이름 공개를 고른 경우만. */
+/** 기록을 가진 커리어. 이름은 명예의 전당에 이름 공개를 고른 경우만. */
+const FirstHolderSchema = z.strictObject({
+  careerId: z.string().min(1),
+  name: z.string().nullable(),
+  pos: CareerPosSchema,
+  number: z.number().int().nullable(),
+});
+
+/** 기록 하나. 아직 아무도 못 채웠으면 achievedAt·holder가 null. */
 export const ServerFirstSchema = z.strictObject({
   id: z.string().min(1).max(32),
   cat: ServerFirstCatSchema,
   label: z.string().max(80),
   achievedAt: z.string().nullable(),
-  holder: z
-    .strictObject({
-      careerId: z.string().min(1),
-      name: z.string().nullable(),
-      pos: CareerPosSchema,
-      number: z.number().int().nullable(),
-    })
-    .nullable(),
+  holder: FirstHolderSchema.nullable(),
 });
 export type ServerFirst = z.infer<typeof ServerFirstSchema>;
 
-/** `GET /v1/firsts`. items는 규칙 순서 그대로(미달성 포함 — 달성 개수는 holder로 센다). */
-export const FirstsResponseSchema = z.strictObject({ items: z.array(ServerFirstSchema) });
+/** T-10-056 서버 기록(깨질 수 있는 최고 기록). 아직 아무도 없으면 value·achievedAt·holder가 null. */
+export const ServerRecordSchema = z.strictObject({
+  id: z.string().min(1).max(32),
+  label: z.string().max(80),
+  unit: z.string().max(8),
+  value: z.number().int().nullable(),
+  achievedAt: z.string().nullable(),
+  holder: FirstHolderSchema.nullable(),
+});
+export type ServerRecord = z.infer<typeof ServerRecordSchema>;
+
+/**
+ * `GET /v1/firsts`. items는 규칙 순서 그대로(미달성 포함 — 달성 개수는 holder로 센다). 끝없는 단계는 달성된
+ * 단계와 그 위 다음 목표 하나까지만 담는다(T-10-056). records는 서버 기록.
+ */
+export const FirstsResponseSchema = z.strictObject({
+  items: z.array(ServerFirstSchema),
+  records: z.array(ServerRecordSchema),
+});
 export type FirstsResponse = z.infer<typeof FirstsResponseSchema>;
