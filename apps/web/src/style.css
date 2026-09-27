@@ -1151,9 +1151,23 @@ textarea {
 .tabs button[aria-selected='true'] .tab-ic {
   transform: translateY(-1px) scale(1.06);
 }
+/* 누르는 동안 탭이 살짝 들어가고 둥근 바탕이 옅게 깔린다(다른 버튼과 같은 느낌). */
+.tabs button {
+  transition:
+    transform 0.16s ease-out,
+    background-color 0.16s ease-out;
+}
+.tabs button:active {
+  transform: scale(0.94);
+  background-color: color-mix(in srgb, var(--ink) 7%, transparent);
+  transition-duration: 0.05s;
+}
 @media (prefers-reduced-motion: reduce) {
   .tabs button .tab-ic {
     transition: none;
+  }
+  .tabs button:active {
+    transform: none;
   }
 }
 
