@@ -90,7 +90,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(page.locator(`[data-hof-id="${HOF_ID}"]`)).toBeVisible();
     await expectNoViolations(page, 'home');
     await page.locator(`[data-hof-id="${HOF_ID}"]`).click();
-    await expect(page.locator('.player h1')).toBeVisible();
+    await expect(page.locator('.film-open h1')).toBeVisible();
     await expectNoViolations(page, 'legend');
     await page.locator('[data-act="hof-back"]').click();
     await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();

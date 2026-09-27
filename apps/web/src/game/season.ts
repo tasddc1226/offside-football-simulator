@@ -1,6 +1,7 @@
 // ───────── 시즌 종료 · 이적 시장 · 은퇴 · 저장 ─────────
 import { CLUBS, type Club } from './data.js';
 import { BAL } from './balance.js';
+import { NATIONAL_TEAM } from './retirement-report.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, rnd } from './rng.js';
 import {
@@ -88,7 +89,7 @@ export function endSeason(s: GameState): SeasonEndResult {
       t,
       club:
         /월드컵 우승|아시안컵|아시안게임|올림픽/.test(t) && !/클럽/.test(t)
-          ? '대한민국'
+          ? NATIONAL_TEAM
           : s.club.name,
     }),
   );

@@ -120,7 +120,7 @@ test('은퇴 소식을 누르면 그 선수 상세가 열린다', async ({ page 
     .locator('[data-home-live]')
     .getByRole('button', { name: /김오프 은퇴/ })
     .click();
-  await expect(page.locator('.player h1')).toHaveText('김오프');
+  await expect(page.locator('.film-open h1')).toHaveText('김오프');
   await page.locator('[data-act="hof-back"]').click();
   await expect(page.locator('[data-home-live]')).toBeVisible();
 });

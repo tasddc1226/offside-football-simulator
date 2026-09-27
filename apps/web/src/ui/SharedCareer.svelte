@@ -40,7 +40,7 @@
     </section>
   {:else}
     <p class="shared-note" data-shared="view">공유받은 은퇴 커리어 · 보기 전용</p>
-    <LegendReport {v} credits>
+    <LegendReport {v}>
       {#snippet end()}
         <section class="card stack">
           <div><div class="eyebrow">Your Turn</div><h2>이제 당신의 차례예요</h2></div>

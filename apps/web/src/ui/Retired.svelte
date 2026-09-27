@@ -12,8 +12,8 @@
 
 <div class="wrap">
   <Topbar />
-  <!-- T-10-029: 크레딧이 끝나면 명예의 전당 공개·공유·다음 버튼이 마지막으로 올라온다. -->
-  <LegendReport {v} credits>
+  <!-- T-10-029: 명예의 전당 공개·공유·다음 버튼은 크레딧 맨 아래에 있다. -->
+  <LegendReport {v}>
     {#snippet end()}
       {#if v.own?.id}<OwnHofCards h={v.own} />{/if}
       <button class="btn btn-primary btn-block" data-act="new" onclick={goNew}>새 커리어 킥오프 →</button>

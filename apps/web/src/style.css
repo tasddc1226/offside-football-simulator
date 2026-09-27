@@ -2791,42 +2791,6 @@ th.n {
   height: 100%;
   background: var(--accent);
 }
-.timeline-row {
-  display: grid;
-  grid-template-columns: 52px 1fr;
-  gap: 10px;
-  padding-block: 8px;
-  border-top: 1px solid var(--line);
-  font-size: 0.8125rem;
-  align-items: baseline;
-}
-.timeline-row:first-child {
-  border-top: 0;
-}
-.timeline-row .y {
-  font-family: var(--display);
-  font-weight: 600;
-  color: var(--muted);
-}
-.pb-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.pb-item {
-  background: var(--surface-2);
-  border-radius: 10px;
-  padding: 8px 10px;
-}
-.pb-item b {
-  display: block;
-  font-family: var(--display);
-  font-size: 1.25rem;
-}
-.pb-item span {
-  font-size: 0.6875rem;
-  color: var(--muted);
-}
 
 /* ───────── 정적 공개 페이지 (/guide, /faq, /legal/*) ───────── */
 .os-screen {
@@ -3302,8 +3266,8 @@ button.title-item:hover {
   font-weight: 600;
 }
 
-/* ───────── 은퇴 크레딧 (T-10-029) ─────────
-   섹션이 아래에서 크게 떠오르고, 점수 막대가 차례로 차오르고, 등급 배지가 점수 카운트업 뒤에 튀어나온다.
+/* ───────── 은퇴 크레딧 (T-10-029 → T-10-062) ─────────
+   장면이 아래에서 크게 떠오르고, 등급 배지가 점수 카운트업 뒤에 튀어나온다.
    opacity를 쓰지 않는다(전환 중간 프레임의 axe 명도 대비, T-10-003 참고) — 등장 전 배지는 scale(0)로 숨긴다. */
 .credit-wrap {
   display: flex;
@@ -3312,12 +3276,14 @@ button.title-item:hover {
 }
 .credit-in {
   animation: credit-rise 0.9s cubic-bezier(0.16, 0.84, 0.24, 1) both;
-  scroll-margin-block: 16px 88px;
 }
 @keyframes credit-rise {
   from {
     transform: translateY(72px) scale(0.97);
   }
+}
+.credit-wait {
+  visibility: hidden;
 }
 .credit-late {
   animation: credit-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both;
@@ -3328,34 +3294,405 @@ button.title-item:hover {
     transform: scale(0);
   }
 }
-.credit-in .legend-bar i {
-  animation: fill 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  animation-delay: calc(var(--i, 0) * 90ms + 250ms);
-}
-.credit-in .timeline-row {
-  animation: slide-in 0.4s ease-out both;
-  animation-delay: calc(var(--i, 0) * 70ms);
-}
-.credits-skip {
-  position: fixed;
-  right: 16px;
-  bottom: calc(16px + var(--safe-b));
-  z-index: 5;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 8px 14px;
-  min-height: 40px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-}
 @media (prefers-reduced-motion: reduce) {
   .credit-in,
-  .credit-late,
-  .credit-in .legend-bar i,
-  .credit-in .timeline-row {
+  .credit-late {
+    animation: none;
+  }
+}
+
+/* ───────── 커리어 결산 필름 (T-10-062) ─────────
+   두 테마 모두 어두운 스크린 위 밝은 글자·금색 강조. 장면은 credit-rise로 올라오고, 챕터 레일은 위에서 아래로 그려지고,
+   사건 줄은 한 줄씩 밀려 들어온다. opacity 애니메이션은 쓰지 않는다(axe 명도 대비). */
+.film {
+  --film-bg: #08120d;
+  --film-ink: var(--on-pitch);
+  --film-muted: #a9b8ae;
+  --film-gold: var(--pitch-accent);
+  --film-line: rgba(238, 244, 239, 0.14);
+  position: relative;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(240, 180, 55, 0.1), transparent 60%),
+    linear-gradient(180deg, #0c1c14, var(--film-bg) 40%);
+  color: var(--film-ink);
+  border-radius: 20px;
+  padding: 40px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+.film h1,
+.film h2,
+.film h3 {
+  color: var(--film-ink);
+}
+.film-kicker {
+  letter-spacing: 0.32em;
+  color: var(--film-gold);
+}
+.film-open {
+  position: relative;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: calc(100svh - 170px);
+  padding-block: 8px;
+}
+.film-open h1 {
+  font-family: var(--display);
+  font-size: clamp(2.75rem, 14vw, 4.5rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  margin: 4px 0 0;
+}
+.film.playing .film-open {
+  padding-bottom: 72px;
+}
+.film-cue {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--film-muted);
+}
+.film-cue i {
+  font-style: normal;
+  font-size: 1.125rem;
+  color: var(--film-gold);
+  animation: cue-bob 1.6s ease-in-out infinite;
+}
+@keyframes cue-bob {
+  50% {
+    transform: translateY(6px);
+  }
+}
+.film-sub {
+  color: var(--film-muted);
+  font-size: 0.875rem;
+}
+.film-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 14px;
+}
+.film-score b {
+  font-family: var(--display);
+  font-size: 4rem;
+  line-height: 1;
+  color: var(--film-gold);
+  font-variant-numeric: tabular-nums;
+}
+.film-score span {
+  font-size: 0.6875rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--film-muted);
+}
+.film-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.film .pill {
+  background: rgba(238, 244, 239, 0.08);
+  color: var(--film-ink);
+  border: 1px solid var(--film-line);
+}
+.film .pill-gold {
+  background: var(--film-gold);
+  border-color: var(--film-gold);
+  color: #1a1204;
+  font-weight: 700;
+}
+.film-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-block: 1px solid var(--film-line);
+  padding-block: 18px;
+  row-gap: 18px;
+}
+.film-stats div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.film-stats b {
+  font-family: var(--display);
+  font-size: 2rem;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.film-stats span {
+  font-size: 0.75rem;
+  color: var(--film-muted);
+}
+.film-note {
+  color: var(--film-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+  margin: -24px 0 0;
+}
+.film-head,
+.film-national,
+.film-roll,
+.film-finale {
+  text-align: center;
+}
+.film h2 {
+  font-size: 1.5rem;
+  margin: 6px 0 0;
+}
+.film-head {
+  margin-bottom: -20px;
+}
+/* 챕터 레일: 왼쪽 세로선 위에 클럽마다 금색 점 하나. */
+.film-rail {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.chapter {
+  position: relative;
+  padding: 0 0 34px 26px;
+}
+.chapter::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 10px;
+  bottom: -10px;
+  width: 2px;
+  background: linear-gradient(var(--film-gold), var(--film-line));
+  transform-origin: top;
+}
+.chapter:last-child::before {
+  background: linear-gradient(var(--film-gold), transparent);
+}
+.chapter::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--film-gold);
+  box-shadow: 0 0 0 4px rgba(240, 180, 55, 0.18);
+}
+.ch-years {
+  font-family: var(--display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--film-gold);
+  font-variant-numeric: tabular-nums;
+}
+.ch-club {
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.05;
+  margin: 2px 0 4px;
+}
+.ch-meta {
+  color: var(--film-muted);
+  font-size: 0.8125rem;
+}
+.ch-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  color: var(--film-muted);
+}
+.ch-stats b {
+  font-family: var(--display);
+  font-size: 1.125rem;
+  color: var(--film-ink);
+  margin-right: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.ch-events {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+.ev {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+.ev-ic {
+  text-align: center;
+  color: var(--film-gold);
+  font-size: 0.75rem;
+}
+.ev-trophy {
+  font-weight: 700;
+}
+.ev-trophy .ev-ic {
+  font-size: 0.9375rem;
+}
+.ev-story {
+  font-style: italic;
+  color: var(--film-muted);
+}
+.ev-n {
+  color: var(--film-gold);
+}
+.ev-y {
+  margin-left: 8px;
+  font-family: var(--display);
+  font-weight: 500;
+  font-style: normal;
+  font-size: 0.8125rem;
+  color: var(--film-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.film-national .ch-events {
+  max-width: 320px;
+  margin-inline: auto;
+}
+.nat-caps {
+  margin-top: 10px;
+  color: var(--film-muted);
+  font-size: 0.875rem;
+}
+.nat-caps b {
+  font-family: var(--display);
+  font-size: 2.75rem;
+  color: var(--film-gold);
+  margin-right: 4px;
+}
+/* 우승 연혁: 엔딩 크레딧처럼 가운데 선을 두고 왼쪽엔 이름(오른쪽 정렬), 오른쪽엔 연도. */
+.film-roll {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.film-roll h2 {
+  margin-bottom: 8px;
+}
+.roll-gap {
+  margin-top: 26px;
+}
+.roll-line {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 16px;
+  align-items: baseline;
+}
+.roll-line b {
+  text-align: right;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+.roll-line span {
+  text-align: left;
+  font-family: var(--display);
+  font-size: 0.9375rem;
+  letter-spacing: 0.06em;
+  color: var(--film-muted);
+  font-variant-numeric: tabular-nums;
+}
+.film-finale {
+  padding-block: 36px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.film-finale p {
+  color: var(--film-muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 6px 0 0;
+}
+.film-finale h2 {
+  font-size: 1.75rem;
+}
+.film-end {
+  margin-top: 18px;
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  padding-left: 0.22em;
+  color: var(--film-gold);
+  border-block: 1px solid rgba(240, 180, 55, 0.4);
+  padding-block: 6px;
+}
+.film-more summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.film-more[open] summary {
+  margin-bottom: 14px;
+}
+.film-more > .stack {
+  margin-bottom: 18px;
+}
+.chapter.credit-in::before {
+  animation: rail-draw 1.1s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+@keyframes rail-draw {
+  from {
+    transform: scaleY(0);
+  }
+}
+.credit-in .ev {
+  animation: ev-wipe 0.6s ease-out both;
+  animation-delay: calc(var(--i, 0) * 160ms + 350ms);
+}
+@keyframes ev-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+.credit-in .roll-line {
+  animation: roll-up 0.6s ease-out both;
+  animation-delay: calc(var(--i, 0) * 90ms + 200ms);
+}
+@keyframes roll-up {
+  from {
+    transform: translateY(24px);
+  }
+}
+.film-finale.credit-in .film-end {
+  animation: credit-pop 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation-delay: 1s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chapter.credit-in::before,
+  .credit-in .ev,
+  .credit-in .roll-line,
+  .film-finale.credit-in .film-end,
+  .film-cue i {
     animation: none;
   }
 }
