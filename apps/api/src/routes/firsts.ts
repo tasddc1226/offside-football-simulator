@@ -29,11 +29,19 @@ export async function recordFirsts(
 
 export function registerFirstsRoutes(app: Hono<AppEnv>): void {
   app.get(EDGE.firsts, async (c) => {
-    const data = await edgeCached(c, EDGE.firsts, TTL, async () => {
-      const db = getDb(c);
-      await ensureFirstsBackfilled(db);
-      return listFirsts(db);
-    });
+    // 다시 훑는 중이면 캐시하지 않는다 — 캐시하면 데이터센터마다 1분에 한 조각씩만 나아간다.
+    let rescanning = false;
+    const data = await edgeCached(
+      c,
+      EDGE.firsts,
+      TTL,
+      async () => {
+        const db = getDb(c);
+        rescanning = await ensureFirstsBackfilled(db);
+        return listFirsts(db);
+      },
+      () => !rescanning,
+    );
     return ok(c, FirstsResponseSchema, data, 200, `public, max-age=${TTL}`);
   });
 }

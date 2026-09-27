@@ -73,7 +73,7 @@ describe('서버 최초 기록 규칙 (T-10-027)', () => {
       honors: ['발롱도르', 'UEFA 챔피언스리그 우승', '프리미어리그 우승', 'FA컵 우승'],
     });
     expect(ids(career([treble]))).toEqual(
-      expect.arrayContaining(['ballon', 'ucl', 'win_pl', 'treble']),
+      expect.arrayContaining(['ballon1', 'ucl', 'win_pl', 'treble']),
     );
     expect(
       ids(career([season({ honors: ['UEFA 챔피언스리그 우승', 'K리그1 우승', '코리아컵 우승'] })])),
@@ -88,7 +88,7 @@ describe('서버 최초 기록 규칙 (T-10-027)', () => {
       ),
     ).not.toContain('treble'); // 슈퍼컵은 컵이 아니다
     const b = Array.from({ length: 3 }, () => season({ honors: ['발롱도르'] }));
-    expect(ids(career(b))).toEqual(expect.arrayContaining(['ballon', 'ballon3']));
+    expect(ids(career(b))).toEqual(expect.arrayContaining(['ballon1', 'ballon3']));
   });
 
   it('레전드 점수 기록은 은퇴 시각으로 잡는다', () => {
@@ -108,7 +108,7 @@ describe('서버 최초 기록 규칙 (T-10-027)', () => {
     expect(got).not.toContain('goals700');
     expect(got).toContain('ovr99');
     const b = Array.from({ length: 6 }, () => season({ honors: ['발롱도르'] }));
-    expect(ids(career(b))).toEqual(expect.arrayContaining(['ballon', 'ballon5', 'ballon6']));
+    expect(ids(career(b))).toEqual(expect.arrayContaining(['ballon1', 'ballon5', 'ballon6']));
     const old = Array.from({ length: 4 }, (_, i) => season({ age: 39 + i }));
     expect(ids(career(old))).toEqual(expect.arrayContaining(['age38', 'age40', 'age41', 'age42']));
   });
@@ -135,10 +135,10 @@ describe('서버 최초 기록 규칙 (T-10-027)', () => {
       .map((d) => d.id)
       .filter((id) => id.startsWith('ovr'));
     expect(ovr).toEqual(['ovr85', 'ovr90', 'ovr95', 'ovr99']);
-    const ballon = firstsCatalog(['ballon', 'ballon3', 'ballon5']).filter((d) =>
+    const ballon = firstsCatalog(['ballon1', 'ballon3', 'ballon5']).filter((d) =>
       d.id.startsWith('ballon'),
     );
-    expect(ballon.map((d) => d.id)).toEqual(['ballon', 'ballon3', 'ballon5', 'ballon6']);
+    expect(ballon.map((d) => d.id)).toEqual(['ballon1', 'ballon3', 'ballon5', 'ballon6']);
     expect(ballon[3]!.label).toBe('발롱도르 6회 최초 수상!');
   });
 

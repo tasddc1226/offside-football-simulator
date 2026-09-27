@@ -15,11 +15,14 @@ import {
 // 최초 기록 자리를, "더 큰 값"이면 서버 기록 자리를 바꾼다. 판정 규칙이 바뀌거나 처음 배포될 때, 또는 기록을
 // 가진 커리어가 지워졌을 때는 전체 커리어를 다시 훑는다 — 한 요청에 다 읽으면 Workers 무료 플랜 CPU(10ms)를
 // 넘으므로 RESCAN_CHUNK명씩 나눠 공개 목록 조회 때마다 한 조각씩 진행한다(진행 위치는 app_meta).
+// 다시 훑기는 더 이른 달성·더 큰 값만 더한다 — 규칙이 늘어날 때는 BACKFILL_VERSION만 올리면 되지만, 규칙을
+// 좁히거나 없애면 기존 행이 남으므로 마이그레이션으로 해당 행을 지운 뒤 버전을 올린다.
 export const BACKFILL_VERSION = '2';
 const META_KEY = 'server_firsts_backfill';
 /** 다시 훑는 중이면 마지막으로 판정한 careers rowid. */
 const CURSOR_KEY = 'server_firsts_cursor';
-const RESCAN_CHUNK = 150;
+/** 한 조각의 판정이 Workers 무료 플랜 CPU 안에 들도록 작게 잡는다(150명이면 판정만 5–16ms였다). */
+const RESCAN_CHUNK = 40;
 /** D1 바인딩 변수 한도(100) 아래로 IN 목록을 나눈다. */
 const IN_CHUNK = 90;
 
