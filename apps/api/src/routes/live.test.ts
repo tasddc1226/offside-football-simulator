@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { LiveResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
@@ -139,6 +140,38 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
     expect(data.feed).toHaveLength(1);
     expect(data.feed[0]).toMatchObject({ kind: 'season', goals: 2, first: false });
     expect(data.stats).toMatchObject({ seasonsToday: 2, newToday: 1 });
+  });
+
+  it('은퇴를 다시 보내도(이름 공개 토글) 오늘 은퇴 수는 한 번만 센다 (T-10-055)', async () => {
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2026`, seasonBody());
+    await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2026`, seasonBody());
+    await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, summary);
+    await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, publicName: '도하람' });
+    expect((await read(ctx)).stats.retiredToday).toBe(1);
+    await putJson(ctx, cookie, `/v1/careers/${B}/retirement`, summary);
+    expect((await read(ctx)).stats.retiredToday).toBe(2);
+  });
+
+  it('migration 0027이 지금까지의 은퇴를 한국 시각 날짜별로 채운다', async () => {
+    for (const id of [A, B, C]) {
+      await putJson(ctx, cookie, `/v1/careers/${id}/seasons/2026`, seasonBody());
+      await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, summary);
+    }
+    // C는 사흘 전 은퇴로 옮기고, 카운터를 비운 뒤 migration만으로 다시 채운다.
+    await ctx.env.DB.prepare('UPDATE careers SET retired_at = ? WHERE id = ?')
+      .bind(new Date(Date.now() - 72 * 3_600_000).toISOString(), C)
+      .run();
+    await ctx.env.DB.prepare("DELETE FROM app_meta WHERE key LIKE 'retired:%'").run();
+    const sql = readFileSync(
+      new URL('../../migrations/0027_retired_daily_count.sql', import.meta.url),
+      'utf8',
+    );
+    await ctx.env.DB.exec(sql.replace(/\s+/g, ' ').trim());
+    expect((await read(ctx)).stats.retiredToday).toBe(2);
+    const rows = await ctx.env.DB.prepare(
+      "SELECT value FROM app_meta WHERE key LIKE 'retired:%' ORDER BY key",
+    ).all<{ value: string }>();
+    expect(rows.results.map((r) => Number(r.value))).toEqual([1, 2]);
   });
 
   it('최근 1시간이 한산하면 기간을 넓혀 채우고, 7일보다 오래된 기록은 빠진다', async () => {

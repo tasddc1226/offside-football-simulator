@@ -1,8 +1,8 @@
 import type { LiveEvent, LiveStats } from '@offside/contracts';
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
-import { careers, careerSeasons } from '../schema.js';
-import { isPublicRetired } from './careers.js';
+import { appMeta, careers, careerSeasons } from '../schema.js';
+import { isPublicRetired, retiredCountKey } from './careers.js';
 import { kstDays } from './admin.js';
 import { honorsOf } from './firsts.js';
 
@@ -41,9 +41,9 @@ export async function liveStats(db: Db, nowMs: number): Promise<LiveStats> {
       sql`select ${countSince(careerSeasons, today)} as seasons, ${countSince(careers, today)} as created`,
     ),
     db
-      .select({ n })
-      .from(careers)
-      .where(and(eq(careers.status, 'retired'), gte(careers.retiredAt, today))),
+      .select({ n: appMeta.value })
+      .from(appMeta)
+      .where(eq(appMeta.key, retiredCountKey(new Date(nowMs).toISOString()))),
   ]);
   return {
     playing: Number(playing?.n ?? 0),
