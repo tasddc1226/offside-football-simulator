@@ -56,7 +56,7 @@
     <div>
       <div class="eyebrow">Odds</div>
       <h1>확률 도감</h1>
-      <p class="muted" style="margin:6px 0 0;font-size:13px">
+      <p class="muted fs-sm" style="margin:6px 0 0">
         선택지의 성공 확률은 선수 상태로 계산돼요. 게임 코드에서 직접 뽑은 범위와 영향 요인을 그대로 공개합니다.
       </p>
     </div>
@@ -76,7 +76,7 @@
     {:else}
       <div class="row" style="justify-content:space-between;align-items:baseline">
         <h2 style="margin:0">이벤트</h2>
-        <span class="muted" style="font-size:13px" data-dex-progress>발견 {foundCount}/{dex.length}</span>
+        <span class="muted fs-sm" data-dex-progress>발견 {foundCount}/{dex.length}</span>
       </div>
       <div class="seg dex-tabs" role="group" aria-label="분류">
         <button class="opt" aria-pressed={filter === 'all'} data-dex-filter="all" onclick={() => (filter = 'all')}>전체</button>
@@ -124,7 +124,7 @@
           </li>
         {/each}
       </ul>
-      <p class="muted" style="font-size:12px;margin:0">▲는 값이 클수록 성공 확률이 오르고, ▼는 내려가요. 범위는 가능한 선수 상태 전체에서 나올 수 있는 최저~최고예요.</p>
+      <p class="muted fs-xs" style="margin:0">▲는 값이 클수록 성공 확률이 오르고, ▼는 내려가요. 범위는 가능한 선수 상태 전체에서 나올 수 있는 최저~최고예요.</p>
     {/if}
   </section>
 </div>

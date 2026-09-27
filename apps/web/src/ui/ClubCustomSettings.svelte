@@ -97,8 +97,8 @@
   </button>
   {#if clubsOpen}
     <div class="stack settings-body" id="settings-clubs" style="gap:10px">
-      <p class="muted" style="font-size:13px;margin:0">클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새 이름이 쓰입니다.</p>
-      <p class="muted" style="font-size:12px;margin:0" data-club-sync={clubCustom.status} aria-live="polite">{SYNC_TEXT[clubCustom.status]}</p>
+      <p class="muted fs-sm" style="margin:0">클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새 이름이 쓰입니다.</p>
+      <p class="muted fs-xs" style="margin:0" data-club-sync={clubCustom.status} aria-live="polite">{SYNC_TEXT[clubCustom.status]}</p>
       <div class="field">
         <label for="club-league">리그</label>
         <select id="club-league" bind:value={leagueId} onchange={() => (open = null)}>

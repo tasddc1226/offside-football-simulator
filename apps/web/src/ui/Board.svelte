@@ -182,7 +182,7 @@
         <div class="field">
           <label for="post-body">본문</label>
           <textarea id="post-body" rows="12" maxlength={POST_BODY_MAX} required bind:value={editing.body}></textarea>
-          <span class="muted" style="font-size:12px">"## 소제목", "- 목록" 줄을 쓸 수 있어요.</span>
+          <span class="muted fs-xs">"## 소제목", "- 목록" 줄을 쓸 수 있어요.</span>
         </div>
         <label class="row" style="gap:8px;align-items:center"><input type="checkbox" bind:checked={editing.pinned} /> 맨 위에 고정</label>
         <div class="row" style="gap:8px">
@@ -197,7 +197,7 @@
         <div class="stack" style="gap:4px">
           <div class="row" style="gap:6px;flex-wrap:wrap">
             {@render tags(post)}
-            <span class="muted" style="font-size:12px">{dateOf(post.createdAt)}{post.updatedAt !== post.createdAt ? ' · 수정됨' : ''} · 조회 {post.viewCount}</span>
+            <span class="muted fs-xs">{dateOf(post.createdAt)}{post.updatedAt !== post.createdAt ? ' · 수정됨' : ''} · 조회 {post.viewCount}</span>
           </div>
           <h2 style="margin:0">{post.title}</h2>
         </div>
@@ -226,13 +226,13 @@
             <div class="row" style="gap:6px;align-items:center">
               <!-- 관리자 댓글은 닉네임 대신 운영자 배지만(예전에 누구나 '운영자'라고 쓴 댓글과 구분된다). -->
               {#if c.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{c.nickname}</b>{/if}
-              <span class="muted" style="font-size:12px">{dateOf(c.createdAt)}</span>
+              <span class="muted fs-xs">{dateOf(c.createdAt)}</span>
               {#if c.deletable}<button class="icon-btn board-comment-del" onclick={() => removeComment(c)}>삭제</button>{/if}
             </div>
             <p>{c.body}</p>
           </div>
         {:else}
-          <p class="muted" style="margin:0;font-size:13px">첫 댓글을 남겨 보세요.</p>
+          <p class="muted fs-sm" style="margin:0">첫 댓글을 남겨 보세요.</p>
         {/each}
         {#if !viewer}
           <!-- 댓글 자격을 확인하는 중 -->
@@ -248,7 +248,7 @@
           </div>
         {:else}
           <form class="stack" style="gap:8px" onsubmit={(e) => (e.preventDefault(), void sendComment())}>
-            <span class="muted" style="font-size:12px"><b>{viewer.nickname}</b> 이름으로 남겨요</span>
+            <span class="muted fs-xs"><b>{viewer.nickname}</b> 이름으로 남겨요</span>
             <textarea aria-label="댓글 내용" placeholder="댓글을 남겨 주세요" rows="3" maxlength={COMMENT_BODY_MAX} required bind:value={commentText}></textarea>
             <button class="btn btn-accent" type="submit" data-act="send-comment" disabled={busy}>댓글 달기</button>
           </form>
@@ -267,7 +267,7 @@
                   {@render tags(p)}
                   <b>{p.title}</b>
                 </span>
-                <span class="muted" style="font-size:12px">{postMeta(p)}</span>
+                <span class="muted fs-xs">{postMeta(p)}</span>
               </button>
             </li>
           {:else}

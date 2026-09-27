@@ -45,7 +45,7 @@
               {#if p.version}<span class="pill">{p.version}</span>{/if}
               <b>{p.title}</b>
             </span>
-            <span class="muted" style="font-size:12px">{postMeta(p)}</span>
+            <span class="muted fs-xs">{postMeta(p)}</span>
           </button>
         </li>
       {/each}

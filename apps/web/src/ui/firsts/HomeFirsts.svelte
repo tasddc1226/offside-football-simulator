@@ -18,7 +18,7 @@
 </script>
 
 <button class="tile tile-link" data-act="firsts" onclick={() => go('firsts')}>
-  <span class="eyebrow">Server firsts</span><b>{latest ? latest.label : '서버 최초 기록'}</b><span class="muted num" style="font-size:13px"
+  <span class="eyebrow">Server firsts</span><b>{latest ? latest.label : '서버 최초 기록'}</b><span class="muted num fs-sm"
     >{count ? `서버 최초 업적 ${count.done} / ${count.total}` : '모든 플레이어 중 첫 기록 보기'} →</span
   >
 </button>
