@@ -12,7 +12,7 @@ import { appState } from './state.svelte.js';
 type LoginReturn = { board: BoardKey; postId: string | null } | { career: string };
 const LOGIN_RETURN_KEY = 'ft_board_return';
 /** null이면 기록을 지운다(설정에서 로그인할 때). */
-export function rememberLoginReturn(to: LoginReturn | null) {
+function rememberLoginReturn(to: LoginReturn | null) {
   try {
     if (to) sessionStorage.setItem(LOGIN_RETURN_KEY, JSON.stringify(to));
     else sessionStorage.removeItem(LOGIN_RETURN_KEY);
@@ -33,9 +33,16 @@ function takeLoginReturn(): LoginReturn | null {
  * 프로필을 만든다. */
 export async function startGoogleLogin(back: LoginReturn | null) {
   rememberLoginReturn(back);
-  await getProfile();
+  if (!(await getProfile()).ok)
+    return toast('서버에 연결하지 못해 로그인을 시작하지 못했어요. 잠시 뒤 다시 눌러 주세요.');
   window.location.assign(googleStartUrl());
 }
+/** 로그인 시작(/v1/auth/google/start)이 설정 화면으로 돌려보낸 이유별 안내. */
+const FAIL_MSG: Record<string, string> = {
+  session: '로그인 준비가 끝나지 않았어요. 구글로 로그인을 한 번 더 눌러 주세요.',
+  rate_limited: '로그인 시도가 너무 많아요. 잠시 뒤 다시 시도해 주세요.',
+  unavailable: '지금은 구글 로그인을 사용할 수 없어요. 잠시 뒤 다시 시도해 주세요.',
+};
 export function handleOAuthReturn() {
   const url = new URL(window.location.href);
   const google = url.searchParams.get('google');
@@ -46,7 +53,8 @@ export function handleOAuthReturn() {
       ? '구글 계정을 연결했습니다.'
       : google === 'switched'
         ? '다른 구글 계정으로 전환했습니다.'
-        : `구글 로그인에 실패했습니다${reason ? ` (${reason})` : ''}.`;
+        : ((reason && FAIL_MSG[reason]) ??
+          `구글 로그인에 실패했습니다${reason ? ` (${reason})` : ''}.`);
   toast(msg);
   window.history.replaceState({}, '', '/');
   const back = takeLoginReturn();
