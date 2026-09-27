@@ -41,6 +41,8 @@ export type PutCareerSeasonInput = {
   meta: CareerMeta;
   season: CareerSeasonPayload;
   eventsJson: string;
+  /** T-10-065 공개 이름. undefined(옛 클라이언트)면 그대로 둔다. */
+  publicName?: string | null | undefined;
   now: string;
 };
 
@@ -51,7 +53,15 @@ export type PutCareerSeasonInput = {
  * 이미 확인했다고 가정한다.
  */
 export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Promise<void> {
-  const { careerId, profileId, year, meta, season, eventsJson, now } = input;
+  const { careerId, profileId, year, meta, season, eventsJson, publicName, now } = input;
+  const name = publicName !== undefined ? { publicName } : {};
+  // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
+  const keepRetiredName =
+    publicName !== undefined
+      ? {
+          publicName: sql`case when ${careers.status} = 'retired' then ${careers.publicName} else ${publicName} end`,
+        }
+      : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
   const detail = {
     cs: season.cs ?? null,
@@ -75,6 +85,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         startYear: meta.startYear,
         status: 'active',
         appVersion: meta.appVersion,
+        ...name,
         createdAt: now,
         updatedAt: now,
       })
@@ -87,6 +98,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           trait: meta.trait,
           startYear: meta.startYear,
           appVersion: meta.appVersion,
+          ...keepRetiredName,
           updatedAt: now,
           // status는 의도적으로 뺀다 — 이미 retired인 커리어가 이 라우트로 다시 active가 되지 않는다.
         },

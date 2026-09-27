@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 
 /**
  * T-9-009. 커리어·시즌 요약 + 이벤트 선택 로그 업로드 계약. 세이브 전체(브리프: "클라우드 세이브
  * 아님")가 아니라 커리어 메타 + 시즌 한 줄 요약 + 그 시즌의 버퍼링된 선택 로그만 담는다. 선수 이름은
- * 담지 않는다(브리프: 실명일 수 있어 저장 금지).
+ * 유저가 공개를 켠 경우에만 `publicName`으로 따로 보낸다(T-10-065, 끄면 익명).
  */
 
 export const CareerPosSchema = z.enum(['FW', 'MF', 'DF', 'GK']);
@@ -79,10 +80,20 @@ export const EventLogEntrySchema = z.strictObject({
 });
 export type EventLogEntry = z.infer<typeof EventLogEntrySchema>;
 
+/** 선수의 공개 이름(명예의 전당·홈 라이브). 환경설정 '선수 이름 공개'가 켜져 있을 때만 보낸다 — 끄면 null(익명). */
+export const PublicNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(PUBLIC_NAME_MAX)
+  .regex(PUBLIC_NAME_CHARS, '이름에 사용할 수 없는 문자가 있습니다.');
+
 export const PutCareerSeasonBodySchema = z.strictObject({
   career: CareerMetaSchema,
   season: CareerSeasonPayloadSchema,
   events: z.array(EventLogEntrySchema).max(300),
+  /** T-10-065 진행 중 커리어의 공개 이름(홈 라이브). 없으면(옛 클라이언트) 서버 값을 그대로 둔다. */
+  publicName: PublicNameSchema.nullable().optional(),
 });
 export type PutCareerSeasonBody = z.infer<typeof PutCareerSeasonBodySchema>;
 
@@ -127,14 +138,6 @@ export const CareerIdParamSchema = z.string().uuid();
 export const CareerYearParamSchema = z.coerce.number().int().min(2000).max(2200);
 
 // ───────── T-10-005 공개 명예의 전당 ─────────
-
-/** 은퇴 선수의 공개 이름. 유저가 명시적으로 공개를 고른 경우에만 보낸다(기본은 익명 — null). */
-export const PublicNameSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(16)
-  .regex(/^[^\p{Cc}<>]+$/u, '이름에 사용할 수 없는 문자가 있습니다.');
 
 const LegendSeasonSchema = z.strictObject({
   year: z.number().int().min(2000).max(2200),
@@ -208,7 +211,7 @@ export const PutRetirementBodySchema = RetirementSummarySchema.extend({
 });
 export type PutRetirementBody = z.infer<typeof PutRetirementBodySchema>;
 
-/** `GET /v1/hof` 목록 한 줄. `name`이 null이면 익명(유저가 이름 공개를 고르지 않음). */
+/** `GET /v1/hof` 목록 한 줄. `name`이 null이면 익명(유저가 이름 공개를 끔). */
 export const PublicHofEntrySchema = z.strictObject({
   id: z.string().min(1),
   name: z.string().nullable(),

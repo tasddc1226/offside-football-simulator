@@ -23,7 +23,7 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { purgeEdge } from '../edgeCache.js';
 import { recordFirsts } from './firsts.js';
 import { STALE } from '../edgeKeys.js';
-import { isAcceptablePublicName } from '@offside/contracts/content-filter';
+import { isAcceptablePublicName, toPublicName } from '@offside/contracts/content-filter';
 
 /** 소유권 확인: careerId가 이미 다른 프로필 소유면 409. 없으면(새 커리어) 통과. */
 async function assertOwnable(
@@ -72,6 +72,8 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       meta: body.career,
       season: body.season,
       eventsJson: JSON.stringify(body.events),
+      // 링크·욕설이 든 이름은 시즌 기록까지 버리지 않고 익명으로만 남긴다(은퇴 PUT은 거부한다).
+      publicName: body.publicName && toPublicName(body.publicName),
       now,
     });
 

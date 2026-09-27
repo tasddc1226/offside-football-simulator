@@ -5,6 +5,8 @@ import { getActiveRng } from '../game/rng.js';
 import type { PutCareerSeasonBody } from '@offside/contracts';
 import type { CareerRecord, EventLogEntry, GameState, HofEntry } from '../game/types.js';
 import { appState, toastState } from './state.svelte.js';
+import { publicNameOf } from './namePublic.js';
+import { toPublicName } from '@offside/contracts/content-filter';
 
 // T-9-009: 빌드 시 vite define으로 커밋 SHA가 들어온다(vite.config.ts). 테스트 등 define이 없는
 // 환경은 'dev'.
@@ -57,10 +59,11 @@ export function seasonBody(
     },
     season: m.seasonPayload(rec),
     events,
+    publicName: publicNameOf(s.name),
   };
 }
 
-/** 은퇴 요약 + 상세 스냅샷을 서버 명예의 전당으로 보낸다. 이름은 `entry.public`일 때만 보낸다(기본 익명). */
+/** 은퇴 요약 + 상세 스냅샷을 서버 명예의 전당으로 보낸다. 이름은 `entry.public`일 때만 보낸다(은퇴 때 환경설정 '선수 이름 공개'를 따름, T-10-065). */
 export function uploadRetirement(careerId: string, entry: HofEntry) {
   void import('../game/outbox.js').then((m) =>
     m.enqueueRetirement(careerId, {
@@ -76,7 +79,7 @@ export function uploadRetirement(careerId: string, entry: HofEntry) {
       ballon: entry.ballon,
       lastClub: entry.lastClub,
       title: entry.title ?? null,
-      publicName: entry.public ? entry.name : null,
+      publicName: entry.public ? toPublicName(entry.name) : null,
       ...(entry.detail ? { snapshot: entry.detail } : {}),
     }),
   );

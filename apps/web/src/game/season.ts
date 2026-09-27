@@ -479,7 +479,8 @@ export function legendScore(s: LegendSource): number {
   return legendScoreBreakdown(s).total;
 }
 const HOF_LOCAL_MAX = 30;
-export function retire(s: GameState): HofEntry {
+/** isPublic: 명예의 전당에 이름을 공개한 채로 시작할지(환경설정 '선수 이름 공개', T-10-065). */
+export function retire(s: GameState, isPublic = false): HofEntry {
   s.retired = true;
   retireMilestones(s);
   const score = legendScore(s);
@@ -509,6 +510,7 @@ export function retire(s: GameState): HofEntry {
     date: new Date().toISOString().slice(0, 10),
     id: s.cid,
     detail: legendSnapshot(s),
+    public: isPublic,
   };
   const hof = loadHOF();
   hof.push(entry);

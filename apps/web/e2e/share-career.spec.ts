@@ -129,10 +129,10 @@ test('로그인했으면 공유 링크를 만들고, 링크를 연 사람은 보
   ).toBeUndefined();
   expect(uploaded.has(url.split('/').pop()!)).toBe(true);
 
-  // 링크를 연다: 이름을 공개하지 않았으니 익명, 주인 기능(이름 공개·공유)은 없다.
+  // 링크를 연다: 환경설정 '선수 이름 공개'가 기본으로 켜져 있어 이름이 보이고(T-10-065), 주인 기능(이름 공개·공유)은 없다.
   await page.goto(url);
   await expect(page.locator('[data-shared="view"]')).toHaveText('공유받은 은퇴 커리어 · 보기 전용');
-  await expect(page.locator('.film-open h1')).toContainText('익명의');
+  await expect(page.locator('.film-open h1')).not.toContainText('익명의');
   await expect(page.locator('[data-credit="career"]')).toBeVisible();
   await expect(page.locator('[data-act="hof-public"]')).toHaveCount(0);
   await expect(page.locator('[data-act="share-career"]')).toHaveCount(0);

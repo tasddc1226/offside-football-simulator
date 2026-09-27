@@ -298,7 +298,7 @@ export interface HofEntry {
   id?: string;
   /** T-10-005. 은퇴 상세(시즌별 기록·수상·여정). 옛 항목에는 없어 요약만 보여 준다. */
   detail?: LegendSnapshot;
-  /** T-10-005. 전체 명예의 전당에 선수 이름을 공개했는지(기본 false = 익명). */
+  /** T-10-005. 전체 명예의 전당에 선수 이름을 공개했는지. 은퇴 때 환경설정 '선수 이름 공개'를 따른다(T-10-065). */
   public?: boolean;
   /** T-10-026. 은퇴 때의 대표 칭호 id. */
   title?: string | undefined;
