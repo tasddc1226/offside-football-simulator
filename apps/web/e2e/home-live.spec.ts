@@ -50,8 +50,15 @@ async function stub(page: Page, body: unknown = live, status = 200) {
     }),
   );
 }
+// 클럽 엠블럼(T-10-064)의 SVG 글자는 빼고 읽는다.
 const rowsText = (page: Page) =>
-  page.locator('[data-home-live] .live-row:not([aria-hidden])').allInnerTexts();
+  page.locator('[data-home-live] .live-row:not([aria-hidden])').evaluateAll((els) =>
+    els.map((e) => {
+      const c = e.cloneNode(true) as HTMLElement;
+      c.querySelectorAll('svg').forEach((s) => s.remove());
+      return (c.textContent ?? '').replace(/\s+/g, ' ').trim();
+    }),
+  );
 
 test('숫자와 소식 티커를 보여 주고, 한 줄씩 올라가다 일시정지로 멈춘다', async ({ page }) => {
   await stub(page);

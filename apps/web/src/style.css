@@ -3023,6 +3023,9 @@ body:has(nav.tabs) .toast {
 .league-table th:not(.lt-team) {
   width: 32px;
 }
+.league-table .lt-team .club-badge {
+  margin-right: 6px;
+}
 .league-table .lt-pts {
   font-weight: 700;
 }
@@ -3511,6 +3514,9 @@ button.title-item:hover {
   font-variant-numeric: tabular-nums;
 }
 .ch-club {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--display);
   font-size: 2rem;
   font-weight: 700;

@@ -6,6 +6,7 @@
 // - 로고: 게임 로직과 무관한 표시 전용 값이라 CLUBS에 넣지 않고 id → 로고 맵으로만 둔다.
 import { CLUBS, type Club } from './data.js';
 import { clubInitial, crestOf } from './crests.js';
+import { SANGMU } from './military.js';
 import { CLUB_CUSTOM_IMG_MAX } from '@offside/contracts/club-limits';
 
 export const CLUB_NAME_MAX = 20;
@@ -68,6 +69,14 @@ export function defaultLogo(club: Pick<Club, 'id' | 'name'>): ClubLogo {
   const c = crestOf(club);
   const fg = [c.motifColor, c.edge, c.accent].find((v) => v && v !== c.base) ?? '#ffffff';
   return { text: clubInitial(club.name), bg: c.base, fg };
+}
+/**
+ * T-10-064. 기록(커리어 표·우승·명예의 전당·라이브)은 클럽을 id 없이 이름으로만 남긴다 — 이름으로 클럽을 되찾는다.
+ * 지금 이름(유저가 바꾼 이름 포함)이나 기본 별칭이 같으면 그 클럽. 다른 유저가 바꿔 부른 이름·대표팀은 null.
+ */
+export function clubByName(name: string): Pick<Club, 'id' | 'name'> | null {
+  if (name === SANGMU.name) return SANGMU;
+  return CLUBS.find((c) => c.name === name || c.baseName === name) ?? null;
 }
 export const logoOf = (club: Pick<Club, 'id' | 'name'>, map: ClubCustomMap): ClubLogo =>
   map[club.id]?.logo ?? defaultLogo(club);
