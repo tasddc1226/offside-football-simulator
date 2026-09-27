@@ -22,6 +22,8 @@ import {
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { kstDays } from './admin.js';
+import { honorsOf } from './firsts.js';
+import type { StoredSeason } from '../../plausibility.js';
 import { appMeta, careers, careerSeasons, goalsPlusAssists, retiredNumbers } from '../schema.js';
 
 export type CareerRow = typeof careers.$inferSelect;
@@ -97,11 +99,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
       .onConflictDoUpdate({
         target: careers.id,
         set: {
-          pos: meta.pos,
-          foot: meta.foot,
-          type: meta.type,
-          trait: meta.trait,
-          startYear: meta.startYear,
+          // 포지션·주발·유형·특성·시작 연도는 커리어를 만들 때 정해져 바뀌지 않는다 — 처음 값을 지킨다(뒤늦게
+          // 포지션을 바꿔 레전드 점수·결번 가중을 고르지 못하게).
           appVersion: meta.appVersion,
           ...keepRetiredName,
           updatedAt: now,
@@ -148,6 +147,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           ...signals,
           // 같은 시즌을 다시 보내면 덮어써 결과는 같다(멱등). createdAt은 최초값을 유지한다.
         },
+        // 은퇴한 커리어의 시즌은 고치지 않는다(은퇴 요약·결번 판정의 근거). 늦게 도착한 빠진 시즌은 새 행이라 들어간다.
+        setWhere: sql`(select ${careers.status} from ${careers} where ${careers.id} = ${careerId}) <> 'retired'`,
       }),
   ]);
 }
@@ -168,8 +169,8 @@ export type PutRetirementInput = {
  */
 export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`;
 
-/** `PUT /v1/careers/:careerId/retirement`. 소유권 확인은 라우트가 미리 끝낸다. 같은 커리어로 다시
- * 보내도(이름 공개 토글) 최초 은퇴 시각은 바뀌지 않는다. */
+/** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
+ * 끝낸다. 다시 보낸 은퇴(이름 공개 토글)는 `renameRetired`로 간다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
   const { careerId, summary, publicName, snapshot, now } = input;
   await runBatch(db, [
@@ -390,6 +391,49 @@ export function deleteCareersStatements(db: Db, profileId: string) {
 }
 
 /** 테스트 전용 헬퍼: 특정 커리어의 존재 여부·상태 확인. */
+/**
+ * 이미 은퇴한 커리어를 다시 보냈을 때(이름 공개 토글): 공개 이름만 바꾸고, 상세 스냅샷은 비어 있을 때만 채운다.
+ * 은퇴 요약은 첫 은퇴 때 정해져 바뀌지 않는다.
+ */
+export async function renameRetired(
+  db: Db,
+  input: Pick<PutRetirementInput, 'careerId' | 'publicName' | 'snapshot' | 'now'>,
+): Promise<void> {
+  const { careerId, publicName, snapshot, now } = input;
+  await db
+    .update(careers)
+    .set({
+      updatedAt: now,
+      ...(publicName !== undefined ? { publicName } : {}),
+      ...(snapshot
+        ? {
+            snapshotJson: sql`coalesce(${careers.snapshotJson}, ${JSON.stringify(snapshot)})`,
+            shirtNumber: sql`coalesce(${careers.shirtNumber}, ${snapshot.number})`,
+          }
+        : {}),
+    })
+    .where(eq(careers.id, careerId));
+}
+
+/** 은퇴 요약 보정에 쓰는 이 커리어의 시즌 기록. */
+export async function listStoredSeasons(db: Db, careerId: string): Promise<StoredSeason[]> {
+  const rows = await db
+    .select({
+      year: careerSeasons.year,
+      age: careerSeasons.age,
+      apps: careerSeasons.apps,
+      goals: careerSeasons.goals,
+      assists: careerSeasons.assists,
+      cs: careerSeasons.cs,
+      caps: careerSeasons.caps,
+      ovr: careerSeasons.ovr,
+      honorsJson: careerSeasons.honorsJson,
+    })
+    .from(careerSeasons)
+    .where(eq(careerSeasons.careerId, careerId));
+  return rows.map(({ honorsJson, ...r }) => ({ ...r, honors: honorsOf(honorsJson) }));
+}
+
 export async function getCareer(db: Db, careerId: string): Promise<CareerRow | undefined> {
   const [row] = await db.select().from(careers).where(eq(careers.id, careerId));
   return row;

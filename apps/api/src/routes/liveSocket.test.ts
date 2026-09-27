@@ -54,7 +54,9 @@ describe('T-10-072 업로드 → 홈 라이브 허브', () => {
 
   it('은퇴는 한 번만 보내고, 짧은 커리어 은퇴는 보내지 않는다', async () => {
     const B = '0c000000-0000-4000-8000-00000000000b';
-    for (const id of [A, B]) await put(`/v1/careers/${id}/seasons/2026`, season());
+    // 은퇴 나이는 받아 둔 마지막 시즌 + 1 — 33세 시즌이면 34세 은퇴(은퇴 소식), 18세 시즌이면 짧은 커리어.
+    await put(`/v1/careers/${A}/seasons/2041`, season({ age: 33 }));
+    await put(`/v1/careers/${B}/seasons/2026`, season());
     await vi.waitFor(() => expect(hub.pushed).toHaveLength(2));
 
     await put(`/v1/careers/${A}/retirement`, summary);

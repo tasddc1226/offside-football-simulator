@@ -270,6 +270,12 @@ export const CLUB_NAMES: Record<string, string[]> = {
 /** 클럽 id = `${리그}-${배열 위치}`. */
 export const clubIdOf = (leagueId: string, i: number): string => `${leagueId}-${i}`;
 
+/** 게임에 있는 클럽 id(`${리그}-${배열 위치}`)인지. */
+export function isDefaultClubId(id: string): boolean {
+  const m = /^([a-z0-9]+)-(\d+)$/.exec(id);
+  return !!m && Number(m[2]) < (CLUB_NAMES[m[1]!]?.length ?? 0);
+}
+
 /** 기본 이름 → 클럽 id. 두 리그에 같은 이름이 있으면(모호) 넣지 않는다. */
 export function defaultClubIds(): Map<string, string> {
   const out = new Map<string, string>();

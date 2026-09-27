@@ -1,5 +1,4 @@
 import type {
-  LegendSnapshot,
   LiveRetiredNumber,
   RetiredNumberResult,
   RetiredNumbersResponse,
@@ -10,11 +9,14 @@ import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { isPublicRetired } from './careers.js';
-import { appMeta, careers, clubCustoms, retiredNumbers } from '../schema.js';
+import { honorsOf } from './firsts.js';
+import { appMeta, careers, careerSeasons, clubCustoms, retiredNumbers } from '../schema.js';
+import { lifeSeasons } from '../../plausibility.js';
 
 // T-10-076 영구결번. 은퇴 PUT(이름 공개 토글 재전송 포함) 때 그 커리어를 심사해, 자격이 있고 이름을 공개했으면
 // 가장 큰 기여 구단의 그 등번호를 잡는다 — 이미 찼으면 두 번째 구단(자격이 있을 때만). 자리는 먼저 자격을 채운
-// 커리어가 가져가고(INSERT … ON CONFLICT DO NOTHING) 취소되지 않는다. 판정 규칙은 @offside/contracts/retired-numbers.
+// 커리어가 가져가고(INSERT … ON CONFLICT DO NOTHING) 취소되지 않는다. 판정 규칙은 @offside/contracts/retired-numbers,
+// 근거는 서버가 받아 둔 시즌 기록(career_seasons) — 은퇴 때 함께 오는 스냅샷은 클라이언트가 고칠 수 있어 쓰지 않는다.
 // 처음 배포될 때는 기존 공개 은퇴 기록을 은퇴 시각 순서로 한 번 훑어 결번을 채운다(서버 최초 기록처럼 RESCAN_CHUNK명씩,
 // 진행 위치는 app_meta). 다 훑기 전의 은퇴 PUT은 한 조각을 진행시키고 pending을 돌려준다 — 은퇴 시각이 더 늦은 새
 // 은퇴가 옛 은퇴보다 먼저 자리를 잡지 않게.
@@ -32,10 +34,39 @@ const judgeColumns = {
   profileId: careers.profileId,
   pos: careers.pos,
   publicName: careers.publicName,
-  snapshotJson: careers.snapshotJson,
+  shirtNumber: careers.shirtNumber,
+  retireAge: careers.retireAge,
   retiredAt: careers.retiredAt,
 };
 type JudgeRow = Pick<typeof careers.$inferSelect, keyof typeof judgeColumns>;
+
+const seasonColumns = {
+  careerId: careerSeasons.careerId,
+  year: careerSeasons.year,
+  age: careerSeasons.age,
+  club: careerSeasons.club,
+  clubId: careerSeasons.clubId,
+  league: careerSeasons.league,
+  apps: careerSeasons.apps,
+  goals: careerSeasons.goals,
+  assists: careerSeasons.assists,
+  cs: careerSeasons.cs,
+  honorsJson: careerSeasons.honorsJson,
+  mil: careerSeasons.mil,
+};
+type SeasonRow = Pick<typeof careerSeasons.$inferSelect, keyof typeof seasonColumns>;
+
+/** 커리어별 시즌 기록(판정의 근거 — 은퇴 스냅샷은 보기용이라 쓰지 않는다). */
+async function seasonsOf(db: Db, careerIds: string[]): Promise<Map<string, SeasonRow[]>> {
+  const out = new Map<string, SeasonRow[]>();
+  if (!careerIds.length) return out;
+  const rows = await db
+    .select(seasonColumns)
+    .from(careerSeasons)
+    .where(inArray(careerSeasons.careerId, careerIds));
+  for (const r of rows) out.set(r.careerId, [...(out.get(r.careerId) ?? []), r]);
+  return out;
+}
 
 /** 유저가 바꾼 구단 이름 → id(club_customs). 옛 시즌 기록의 바뀐 이름을 찾는 데 쓴다. */
 function renamedIds(clubsJson: string | undefined): Map<string, string> {
@@ -50,24 +81,24 @@ function renamedIds(clubsJson: string | undefined): Map<string, string> {
   return out;
 }
 
-/** 결번을 노릴 구단(0–2개)과 등번호. 스냅샷이 없거나 번호가 없으면 null. */
+/** 결번을 노릴 구단(0–2개)과 등번호. 등번호가 없으면 null. 은퇴 나이 뒤의 시즌(은퇴 뒤 덧붙인 행)은 세지 않는다. */
 function candidatesOf(
   row: JudgeRow,
+  seasons: SeasonRow[] | undefined,
   clubsJson: string | undefined,
 ): { number: number; clubs: RnClub[] } | null {
-  if (!row.snapshotJson) return null;
-  let snap: LegendSnapshot;
-  try {
-    snap = JSON.parse(row.snapshotJson) as LegendSnapshot;
-  } catch {
-    return null;
-  }
-  if (!(snap.number >= 1)) return null;
+  const number = row.shirtNumber;
+  if (number === null || !(number >= 1) || !seasons) return null;
   const renamed = renamedIds(clubsJson);
+  const life = lifeSeasons(seasons, row.retireAge).map((r) => ({
+    ...r,
+    honors: honorsOf(r.honorsJson),
+    mil: r.mil === 1,
+  }));
   const clubs = rnCandidates(
-    clubContributions(row.pos, snap.career, (n) => renamed.get(n) ?? DEFAULT_IDS.get(n)),
+    clubContributions(row.pos, life, (n) => renamed.get(n) ?? DEFAULT_IDS.get(n)),
   );
-  return clubs.length ? { number: snap.number, clubs } : null;
+  return clubs.length ? { number, clubs } : null;
 }
 
 /** 후보 구단 순서대로 자리를 잡는 문장들. 앞 문장이 자리를 잡으면 뒤 문장은 career_id 유일성에 걸려 아무것도 하지 않는다. */
@@ -134,9 +165,15 @@ export async function ensureRetiredNumbersBackfilled(
     )
     .orderBy(careers.retiredAt, careers.id)
     .limit(chunk);
-  const customs = await clubsJsonOf(db, [...new Set(rows.map((r) => r.profileId))]);
+  const [customs, seasons] = await Promise.all([
+    clubsJsonOf(db, [...new Set(rows.map((r) => r.profileId))]),
+    seasonsOf(
+      db,
+      rows.map((r) => r.id),
+    ),
+  ]);
   const statements = rows.flatMap((r) => {
-    const c = candidatesOf(r, customs.get(r.profileId));
+    const c = candidatesOf(r, seasons.get(r.id), customs.get(r.profileId));
     return c ? claimStatements(db, r.id, c, r.retiredAt!) : [];
   });
   const done = rows.length < chunk;
@@ -180,8 +217,11 @@ async function judge(db: Db, careerId: string, now: string): Promise<Judged | nu
   // 이미 가진 자리는 이름을 다시 숨겨도 그대로다.
   if (held[0]) return { result: { kind: 'granted', ...held[0] } };
   if (!row) return null;
-  const customs = await clubsJsonOf(db, [row.profileId]);
-  const c = candidatesOf(row, customs.get(row.profileId));
+  const [customs, seasons] = await Promise.all([
+    clubsJsonOf(db, [row.profileId]),
+    seasonsOf(db, [careerId]),
+  ]);
+  const c = candidatesOf(row, seasons.get(careerId), customs.get(row.profileId));
   if (!c) return null;
   const best = c.clubs[0]!;
   const slot = { clubId: best.clubId!, club: best.club, number: c.number };

@@ -402,11 +402,15 @@ function* steps(l: FirstLadder): Generator<number> {
   for (let v = l.base[l.base.length - 1]! + l.step; ; v += l.step) yield v;
 }
 
-/** upTo 이하의 단계. */
+/** 한 커리어가 한 단계 사다리에서 채울 수 있는 단계 수 상한. 실제 최고 기록도 20단계 남짓이다 — 지어낸 큰 값이
+ * 수백 개의 기록 행을 만들지 않게 한다. */
+const MAX_STEPS = 40;
+
+/** upTo 이하의 단계(최대 MAX_STEPS개). */
 function stepsUpTo(l: FirstLadder, upTo: number): number[] {
   const out: number[] = [];
   for (const v of steps(l)) {
-    if (v > upTo) break;
+    if (v > upTo || out.length >= MAX_STEPS) break;
     out.push(v);
   }
   return out;

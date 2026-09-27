@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { defaultClubIds } from './club-names.js';
+import { defaultClubIds, isDefaultClubId } from './club-names.js';
 import {
   clubContributions,
   honorPoints,
   RN_CUT,
+  RN_SEASON_HONOR_CAP,
   rnCandidates,
   rnQualifies,
   type RnSeason,
@@ -81,5 +82,20 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
       ...legend(3).map((s) => ({ ...s, year: s.year + 20, club: '런던 거너스', clubId: 'pl-2' })),
     ]);
     expect(rnCandidates(two).map((c) => c.clubId)).toEqual(['pl-0', 'pl-1']);
+  });
+
+  it('게임에 없는 클럽 id는 인정하지 않고, 리그는 클럽의 리그로 정하며, 한 시즌 영예 점수엔 상한이 있다', () => {
+    expect(isDefaultClubId('pl-0')).toBe(true);
+    expect(isDefaultClubId('pl-99')).toBe(false);
+    expect(isDefaultClubId('zz-0')).toBe(false);
+    const [fake] = clubContributions('FW', [season({ clubId: 'pl-99', club: '가짜 구단' })]);
+    expect(fake!.clubId).toBeNull();
+    // K리그2 클럽이 프리미어리그라고 적어 보내도 K리그2 배수(0.475)로 센다.
+    const [k2] = clubContributions('FW', [season({ clubId: 'k2-0', league: '프리미어리그' })]);
+    expect(k2!.play).toBeCloseTo((6 + 20 * 0.42 + 10 * 0.35 + 38 * 0.05) * 0.475, 5);
+    // 같은 영예를 여러 번 적거나 수십 개를 붙여도 한 시즌 상한까지만.
+    const spam = Array.from({ length: 30 }, (_, i) => `발롱도르 ${i}`);
+    const [capped] = clubContributions('FW', [season({ honors: [...spam, ...spam] })]);
+    expect(capped!.honors).toBe(RN_SEASON_HONOR_CAP);
   });
 });

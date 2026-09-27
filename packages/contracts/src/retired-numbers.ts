@@ -6,7 +6,11 @@
  * 구단 기여 점수 = 시즌마다 (6 + 골·도움·무실점 포지션 가중 + 출전 × 0.05) × 리그 배수 + 그 시즌 구단 우승·개인상 점수.
  * 대표팀 대회·협회 상은 구단 업적이 아니라 0점. 기준(RN_CUT)은 운영 명예의 전당 1,542명에서 상위 1%(15명)의
  * 경계값이다(2026-09-27 보정).
+ *
+ * 판정은 서버가 받아 둔 시즌 기록(career_seasons)으로만 한다. 클라이언트가 값을 지어 보내도 크게 부풀지 않게, 구단은
+ * 게임에 있는 클럽 id로만 인정하고 리그는 그 클럽의 리그로 정하며, 한 시즌의 영예 점수는 RN_SEASON_HONOR_CAP까지만 센다.
  */
+import { isDefaultClubId } from './club-names.js';
 
 /** 결번 기준 점수(상위 1%). */
 export const RN_CUT = 827;
@@ -34,9 +38,28 @@ export const RN_LEAGUE_TIER: Record<string, number> = {
   프리미어리그: 8,
 };
 const AMATEUR = new Set(['고교 리그', 'U리그 (대학)']);
+/** 리그 id(클럽 id 앞부분, web game/data.ts LEAGUES의 id) → 리그 이름. 클럽은 리그를 옮기지 않는다(승강 없음). */
+export const RN_LEAGUE_NAME: Record<string, string> = {
+  hs: '고교 리그',
+  uni: 'U리그 (대학)',
+  k3: 'K3리그',
+  k2: 'K리그2',
+  k1: 'K리그1',
+  j1: 'J1리그',
+  mls: 'MLS',
+  ere: '에레디비시',
+  l1: '리그 1',
+  bl: '분데스리가',
+  sa: '세리에 A',
+  ll: '라리가',
+  pl: '프리미어리그',
+};
+const leagueOfClub = (id: string) => RN_LEAGUE_NAME[id.slice(0, id.lastIndexOf('-'))];
+/** 한 시즌 영예 점수 상한. 운영 명예의 전당 상위 64명의 한 시즌 최고가 192점(2026-09-28)이다. */
+export const RN_SEASON_HONOR_CAP = 250;
 
 /** 포지션별 골·도움·무실점 가중(web game/season.ts LEGEND_W와 같다). */
-const W: Record<Pos, { g: number; a: number; cs: number }> = {
+export const LEGEND_W: Record<Pos, { g: number; a: number; cs: number }> = {
   FW: { g: 0.42, a: 0.35, cs: 0 },
   MF: { g: 0.65, a: 0.75, cs: 0 },
   DF: { g: 0.9, a: 0.5, cs: 0.9 },
@@ -109,11 +132,13 @@ export function clubContributions(
   seasons: readonly RnSeason[],
   resolve: (name: string) => string | undefined = () => undefined,
 ): RnClub[] {
-  const w = W[pos];
+  const w = LEGEND_W[pos];
   const by = new Map<string, RnClub>();
   for (const r of seasons) {
-    if (r.mil || AMATEUR.has(r.league)) continue;
-    const id = r.clubId || resolve(r.club) || null;
+    // 게임에 없는 클럽 id는 이름으로 다시 찾는다(못 찾으면 결번 대상이 아니다).
+    const id = (r.clubId && isDefaultClubId(r.clubId) ? r.clubId : resolve(r.club)) || null;
+    const league = (id && leagueOfClub(id)) || r.league;
+    if (r.mil || AMATEUR.has(league)) continue;
     const key = id ?? `name:${r.club}`;
     let b = by.get(key);
     if (!b) {
@@ -134,7 +159,7 @@ export function clubContributions(
       by.set(key, b);
     }
     const cs = r.cs ?? 0;
-    const m = 0.4 + 0.075 * (RN_LEAGUE_TIER[r.league] ?? 1);
+    const m = 0.4 + 0.075 * (RN_LEAGUE_TIER[league] ?? 1);
     b.seasons++;
     b.club = r.club;
     b.from = Math.min(b.from, r.year);
@@ -144,7 +169,8 @@ export function clubContributions(
     b.assists += r.assists;
     b.cs += cs;
     b.play += m * (6 + r.goals * w.g + r.assists * w.a + cs * w.cs + r.apps * 0.05);
-    b.honors += r.honors.reduce((t, h) => t + honorPoints(h), 0);
+    const honors = [...new Set(r.honors)].reduce((t, h) => t + honorPoints(h), 0);
+    b.honors += Math.min(honors, RN_SEASON_HONOR_CAP);
   }
   const out = [...by.values()];
   for (const b of out) b.score = b.play + b.honors;

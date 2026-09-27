@@ -39,6 +39,7 @@ const legendSeason = (year: number, club: string, clubId?: string) => ({
   ovr: 88,
   honors: ['프리미어리그 우승', 'UEFA 챔피언스리그 우승', '발롱도르'],
 });
+type Season = ReturnType<typeof legendSeason>;
 const quietSeason = (year: number, club: string, clubId: string) => ({
   ...legendSeason(year, club, clubId),
   goals: 3,
@@ -46,7 +47,7 @@ const quietSeason = (year: number, club: string, clubId: string) => ({
   honors: [],
 });
 const years = (from: number, n: number) => Array.from({ length: n }, (_, i) => from + i);
-const snapshot = (number: number, career: unknown[]) => ({
+const snapshot = (number: number, career: Season[]) => ({
   number,
   pos: 'FW',
   age: 34,
@@ -72,7 +73,8 @@ const twoClubs = (number: number) =>
     ...years(2038, 7).map((y) => legendSeason(y, '리버풀 더 레즈', 'pl-1')),
   ]);
 
-describe('영구결번 (T-10-076)', () => {
+// 시즌 기록을 수십 번 올리는 테스트가 있어 제한 시간을 늘린다.
+describe('영구결번 (T-10-076)', { timeout: 20_000 }, () => {
   let ctx: TestD1;
   let cookie: string;
 
@@ -84,17 +86,29 @@ describe('영구결번 (T-10-076)', () => {
     await ctx.dispose();
   });
 
+  /** 시즌 기록을 올린다 — 판정은 서버가 받아 둔 시즌으로 한다(스냅샷은 보기용). */
+  const putSeasons = async (id: string, seasons: Season[], who = cookie, env = ctx.env) => {
+    for (const { year, ...season } of seasons) {
+      const res = await callJson(env, 'PUT', `/v1/careers/${id}/seasons/${year}`, {
+        cookie: who,
+        body: { ...seasonBody(), season },
+      });
+      expect(res.status).toBe(200);
+    }
+  };
   const retire = async (
     id: string,
-    snap: unknown,
+    snap: { career: Season[] },
     publicName: string | null,
     who = cookie,
     env = ctx.env,
   ) => {
     const put = (path: string, body: unknown) => callJson(env, 'PUT', path, { cookie: who, body });
-    await put(`/v1/careers/${id}/seasons/2030`, seasonBody());
+    const { career } = snap;
+    await putSeasons(id, career, who, env);
     const res = await put(`/v1/careers/${id}/retirement`, {
       ...RETIREMENT,
+      retireAge: career.at(-1)!.age + 1,
       publicName,
       snapshot: snap,
     });
@@ -271,5 +285,37 @@ describe('영구결번 (T-10-076)', () => {
       successEnvelope(RetiredNumberCheckResponseSchema).parse(theirs.body).data.retiredNumber,
     ).toMatchObject({ kind: 'granted', seq: 1 });
     expect((await check(B, cookie)).status).toBe(409);
+  });
+  it('스냅샷을 부풀려 보내도 받아 둔 시즌 기록으로 판정한다', async () => {
+    const quiet = years(2030, 8).map((y) => quietSeason(y, '맨체스터 스카이블루', 'pl-0'));
+    await putSeasons(A, quiet);
+    const res = await callJson(ctx.env, 'PUT', `/v1/careers/${A}/retirement`, {
+      cookie,
+      body: { ...RETIREMENT, publicName: '부풀림', snapshot: skyBlue(10) },
+    });
+    expect(
+      successEnvelope(RetirementResponseSchema).parse(await res.json()).data.retiredNumber,
+    ).toBeNull();
+    expect(await list()).toEqual([]);
+  });
+
+  it('은퇴 뒤에 덧붙인 시즌·게임에 없는 클럽 id는 세지 않는다', async () => {
+    // 5시즌(자격 미달)으로 은퇴한 뒤 레전드 시즌을 덧붙이고 이름 공개로 다시 심사받는다.
+    const five = snapshot(
+      10,
+      years(2030, 5).map((y) => legendSeason(y, '맨체스터 스카이블루', 'pl-0')),
+    );
+    expect(await retire(A, five, null)).toBeNull();
+    await putSeasons(
+      A,
+      years(2035, 5).map((y) => legendSeason(y, '맨체스터 스카이블루', 'pl-0')),
+    );
+    expect(await retire(A, skyBlue(10), '덧붙임')).toBeNull();
+    // 없는 클럽 id + 모르는 구단 이름은 어느 구단의 결번도 아니다.
+    const fake = snapshot(
+      10,
+      years(2030, 8).map((y) => legendSeason(y, '가짜 구단', 'pl-99')),
+    );
+    expect(await retire(B, fake, '가짜')).toBeNull();
   });
 });
