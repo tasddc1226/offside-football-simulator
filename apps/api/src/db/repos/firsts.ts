@@ -226,7 +226,7 @@ export async function ensureFirstsBackfilled(db: Db, chunk = RESCAN_CHUNK): Prom
   return true;
 }
 
-/** 공개 목록: 규칙 전체(미달성 포함, 끝없는 단계는 다음 목표까지) + 서버 기록. 이름은 유저가 공개를 고른 경우에만. */
+/** 공개 목록: 규칙 전체(미달성 포함, 끝없는 단계는 다음 목표까지) + 서버 기록. 이름은 유저가 공개를 켠 경우에만(T-10-065부터 진행 중 커리어 포함). */
 export async function listFirsts(db: Db): Promise<FirstsResponse> {
   const holder = { name: careers.publicName, pos: careers.pos, number: careers.shirtNumber };
   const [firstRows, recordRows] = await db.batch([

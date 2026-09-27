@@ -510,7 +510,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     date: new Date().toISOString().slice(0, 10),
     id: s.cid,
     detail: legendSnapshot(s),
-    ...(isPublic ? { public: true } : {}),
+    public: isPublic,
   };
   const hof = loadHOF();
   hof.push(entry);

@@ -114,11 +114,9 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
   });
 
   it('진행 중 커리어는 시즌에 실어 보낸 공개 이름으로 보이고, 끄면 익명·안 보내면 그대로다 (T-10-065)', async () => {
+    // undefined 키는 JSON에서 빠진다 = 이름을 보내지 않는 옛 클라이언트.
     const put = (id: string, year: number, publicName?: string | null) =>
-      putJson(ctx, cookie, `/v1/careers/${id}/seasons/${year}`, {
-        ...seasonBody(),
-        ...(publicName !== undefined ? { publicName } : {}),
-      });
+      putJson(ctx, cookie, `/v1/careers/${id}/seasons/${year}`, { ...seasonBody(), publicName });
     await put(A, 2026, '도하람');
     await put(B, 2026, '시발 FC'); // 욕설은 시즌을 버리지 않고 익명으로만 남긴다
     expect((await read(ctx)).feed.map((e) => e.name)).toEqual(
@@ -128,6 +126,10 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
     expect((await read(ctx)).feed.map((e) => e.name)).toContain('도하람');
     await put(A, 2028, null); // 이름 공개를 끔
     expect((await read(ctx)).feed.map((e) => e.name)).toEqual([null, null]);
+    // 은퇴 뒤에는 명예의 전당 토글(은퇴 PUT)만 이름을 바꾼다 — 늦게 온 시즌 업로드가 되돌리지 않는다.
+    await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, summary);
+    await put(A, 2029, '도하람');
+    expect((await read(ctx)).feed.find((e) => e.kind === 'retire')?.name).toBeNull();
   });
 
   it('짧은 커리어 은퇴는 오늘 숫자에만 세고 은퇴 소식에는 올리지 않는다 (T-10-032)', async () => {

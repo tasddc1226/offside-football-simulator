@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 
 /**
  * T-9-009. 커리어·시즌 요약 + 이벤트 선택 로그 업로드 계약. 세이브 전체(브리프: "클라우드 세이브
@@ -84,8 +85,8 @@ export const PublicNameSchema = z
   .string()
   .trim()
   .min(1)
-  .max(16)
-  .regex(/^[^\p{Cc}<>]+$/u, '이름에 사용할 수 없는 문자가 있습니다.');
+  .max(PUBLIC_NAME_MAX)
+  .regex(PUBLIC_NAME_CHARS, '이름에 사용할 수 없는 문자가 있습니다.');
 
 export const PutCareerSeasonBodySchema = z.strictObject({
   career: CareerMetaSchema,

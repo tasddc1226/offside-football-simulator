@@ -47,7 +47,7 @@
       <div class="settings-label">
         <small class="eyebrow">Privacy</small>
         <strong id="name-public-label">선수 이름 공개</strong>
-        <span class="muted">홈 라이브 현황과 명예의 전당에 선수 이름이 보여요. 끄면 '익명의 공격수'처럼 표시되고, 다음 시즌 기록부터 반영돼요. 실명은 쓰지 않는 것을 권장합니다.</span>
+        <span class="muted">홈 라이브 현황·명예의 전당·서버 최초 업적에 선수 이름이 보여요. 끄면 '익명의 공격수'처럼 표시되고, 다음 시즌 기록부터 반영돼요. 실명은 쓰지 않는 것을 권장합니다.</span>
       </div>
       <button class="switch" role="switch" aria-checked={namePublic} aria-labelledby="name-public-label" data-setting="name-public" onclick={() => setNamePublic((namePublic = !namePublic))}></button>
     </div>
