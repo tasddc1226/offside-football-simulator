@@ -52,6 +52,8 @@ test('은퇴 크레딧은 끝까지 흘러가면 마지막에 다음 버튼이 �
   // 짧은 커리어(고교 1시즌)라도 섹션이 차례로 다 나오고 마지막에 버튼이 생긴다.
   await expect(page.locator('[data-act="new"]')).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('[data-act="credits-skip"]')).toHaveCount(0);
+  // 화면이 크레딧을 따라 내려가 마지막 버튼까지 보여 준다.
+  await expect(page.locator('[data-act="new"]')).toBeInViewport();
   await expect(page.locator('[data-credit="career"]')).toBeVisible();
 });
 

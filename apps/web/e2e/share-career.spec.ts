@@ -132,7 +132,7 @@ test('로그인했으면 공유 링크를 만들고, 링크를 연 사람은 보
   // 링크를 연다: 이름을 공개하지 않았으니 익명, 주인 기능(이름 공개·공유)은 없다.
   await page.goto(url);
   await expect(page.locator('[data-shared="view"]')).toHaveText('공유받은 은퇴 커리어 · 보기 전용');
-  await expect(page.locator('.player h1')).toContainText('익명의');
+  await expect(page.locator('.film-open h1')).toContainText('익명의');
   await page.locator('[data-act="credits-skip"]').click();
   await expect(page.locator('[data-credit="career"]')).toBeVisible();
   await expect(page.locator('[data-act="hof-public"]')).toHaveCount(0);

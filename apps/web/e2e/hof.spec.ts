@@ -78,7 +78,10 @@ test('전체 명예의 전당에서 다른 유저의 은퇴 선수 상세를 연
   const row = page.locator(`[data-hof-id="${ID}"]`);
   await expect(row).toContainText('익명의');
   await row.click();
-  await expect(page.locator('.player h1')).toContainText('익명의');
+  await expect(page.locator('.film-open h1')).toContainText('익명의');
+  // 우승 연혁이 크레딧처럼 나오고, 점수 구성·시즌별 표는 '자세히 보기'에 접혀 있다 (T-10-062).
+  await expect(page.locator('[data-credit="honours"]')).toContainText('고교리그 우승');
+  await page.locator('[data-credit="career"] summary').click();
   await expect(page.getByRole('heading', { name: '레전드 점수 구성' })).toBeVisible();
   await expect(page.locator('table')).toContainText('K리그1');
   await page.locator('[data-act="hof-back"]').click();
@@ -119,7 +122,7 @@ test('내 선수 탭: 상세 없는 옛 기록은 요약만 보여 준다', asyn
   );
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-my-player="0"]').click();
-  await expect(page.locator('.player h1')).toHaveText('옛선수');
+  await expect(page.locator('.film-open h1')).toHaveText('옛선수');
   await expect(page.getByText('요약만 보여 드립니다')).toBeVisible();
 });
 
