@@ -1138,6 +1138,16 @@ textarea {
   margin: 0 auto;
   display: contents;
 }
+/* 게임 화면: 탭 4개 사이 가운데에 홈을 둔다(시즌 · 선수 · 홈 · 커리어 · 트로피). */
+.tabs:has(.tab-home) {
+  grid-template-columns: repeat(5, 1fr);
+}
+.tabs [role='tab']:nth-child(n + 3) {
+  order: 2;
+}
+.tabs .tab-home {
+  order: 1;
+}
 /* 데스크톱: left/right 0 + margin auto로 본문(.wrap 560px)과 같은 폭·위치에 둔다. */
 @media (min-width: 720px) {
   .tabs {

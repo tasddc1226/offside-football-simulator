@@ -1,7 +1,5 @@
 - main:
-  - text: "풀타임: 휘슬이 울릴 때까지 오프사이드"
-  - button "메뉴"
-  - text: /No\.\d+ · 공격수/
+  - text: "/풀타임: 휘슬이 울릴 때까지 오프사이드 No\\.\\d+ · 공격수/"
   - button "대표 칭호 슈퍼스타, 칭호 도감 열기": ‘슈퍼스타’
   - heading "구조테스트" [level=1]
   - text: /\d+세 · 런던 해머스 프리미어리그 · 연봉 \d+억 \d+,\d+만 \d+ OVR 로테이션 부상 4경기 주력 슈팅·드리블 잠재력 C \d+-\d+ Season/
@@ -54,8 +52,10 @@
   - time: /\d+ 시즌 종료/
   - text: /\d+ 시즌 종료 · K리그1 8위 · 공식전 \d+경기 \d+골 \d+도움/
   - button "프리시즌 훈련 진행 →"
-  - tablist:
-    - tab "시즌" [selected]
-    - tab "선수"
-    - tab "커리어"
-    - tab "트로피"
+  - navigation "게임 메뉴":
+    - tablist:
+      - tab "시즌" [selected]
+      - tab "선수"
+      - tab "커리어"
+      - tab "트로피"
+    - button "홈"
