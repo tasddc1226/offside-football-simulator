@@ -287,9 +287,60 @@ p {
 .link-btn:active {
   opacity: 0.6;
 }
+/* 선택지·카드도 버튼처럼 살짝 들어간다(크기가 커서 덜 줄인다). */
+.opt,
+button.tile-link,
+.choice,
+.offer,
+.cand-card,
+button.title-item,
+.hof-sort,
+.card-title {
+  transition:
+    transform 0.16s ease-out,
+    filter 0.16s ease-out;
+}
+.opt:active:not(:disabled),
+button.tile-link:active,
+.choice:active,
+.offer:active,
+.cand-card:active,
+button.title-item:active,
+.hof-sort:active,
+.card-title:active {
+  transform: scale(0.98);
+  filter: brightness(0.94);
+  transition-duration: 0.05s;
+}
+/* 화면 폭 목록 행은 줄이지 않고 누르는 동안 바탕만 옅게 깔린다. */
+.board-row,
+button.hof-row,
+.settings-trigger,
+.settings-links > a,
+.settings-links > button,
+button.what {
+  transition: background-color 0.16s ease-out;
+}
+.board-row:active,
+button.hof-row:active,
+.settings-trigger:active,
+.settings-links > a:active,
+.settings-links > button:active,
+button.what:active {
+  background-color: color-mix(in srgb, var(--ink) 7%, transparent);
+  transition-duration: 0.05s;
+}
 @media (prefers-reduced-motion: reduce) {
   .btn:active:not(:disabled),
-  .icon-btn:active:not(:disabled) {
+  .icon-btn:active:not(:disabled),
+  .opt:active:not(:disabled),
+  button.tile-link:active,
+  .choice:active,
+  .offer:active,
+  .cand-card:active,
+  button.title-item:active,
+  .hof-sort:active,
+  .card-title:active {
     transform: none;
   }
 }
