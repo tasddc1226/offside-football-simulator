@@ -9,14 +9,18 @@
     "run_worker_first": true,
     "not_found_handling": "none",
   },
+  // T-10-068 공유 미리보기 카드 워커(wrangler.og.jsonc).
+  "services": [{ "binding": "OG", "service": "offside-og" }],
   "env": {
     "staging": {
       "name": "offside-web-staging",
+      "services": [{ "binding": "OG", "service": "offside-og-staging" }],
     },
     "production": {
       "name": "offside-web",
       "workers_dev": true,
       "routes": [{ "pattern": "offside-lab.com", "custom_domain": true }],
+      "services": [{ "binding": "OG", "service": "offside-og" }],
     },
   },
 }

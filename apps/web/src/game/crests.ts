@@ -474,3 +474,30 @@ export function crestOf(club: Pick<Club, 'id' | 'name'>): Crest {
   if (!a) autoCache.set(key, (a = autoCrest(club)));
   return a;
 }
+
+/**
+ * T-10-068 엠블럼을 SVG 문자열로(0 0 64 64 좌표). 워커가 그리는 공유 미리보기 이미지용 — ClubBadge.svelte와
+ * 같은 순서로 칠한다(틀 테두리 → 바탕·패턴·원판·상징 → 테두리선). id는 문서 안에서 겹치지 않는 clipPath 이름.
+ */
+export function crestSvg(c: Crest, id: string, halo = '#ffffff'): string {
+  const icon = c.icon
+    ? `<g${c.transform ? ` transform="${c.transform}"` : ''}><path d="${c.icon.d}" fill="${c.motifColor}"/>${
+        c.icon.k ? `<path d="${c.icon.k}" fill="${c.disc ? '#fff' : c.base}"/>` : ''
+      }</g>`
+    : c.text
+      ? `<text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="IBM Plex Sans KR" font-size="${c.text.length > 1 ? 19 : 25}" font-weight="700" fill="${c.motifColor}">${c.text.replace(/[<&]/g, '')}</text>`
+      : '';
+  return (
+    `<defs><clipPath id="${id}"><path d="${c.shape}"/></clipPath></defs>` +
+    `<path d="${c.shape}" fill="none" stroke="${halo}" stroke-width="6" stroke-linejoin="round"/>` +
+    `<g clip-path="url(#${id})"><rect width="64" height="64" fill="${c.base}"/>` +
+    (c.pattern ? `<path d="${c.pattern}" fill="${c.accent}"/>` : '') +
+    (c.third ? `<path d="${TRI_THIRD_PATH}" fill="${c.third}"/>` : '') +
+    (c.disc ? `<circle cx="32" cy="32" r="15" fill="#fff"/>` : '') +
+    icon +
+    `</g>` +
+    (c.edge
+      ? `<path d="${c.shape}" fill="none" stroke="${c.edge}" stroke-width="3.5" stroke-linejoin="round"/>`
+      : '')
+  );
+}

@@ -1,0 +1,19 @@
+{
+  // T-10-068 공유 미리보기 카드 워커. 공개 주소 없이 웹 워커의 서비스 바인딩(OG)으로만 불린다.
+  // 웹 워커보다 먼저 배포한다(package.json deploy:*).
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "offside-og",
+  "main": "src/og-worker.ts",
+  "compatibility_date": "2026-09-02",
+  "workers_dev": false,
+  "env": {
+    "staging": {
+      "name": "offside-og-staging",
+      "workers_dev": false,
+    },
+    "production": {
+      "name": "offside-og",
+      "workers_dev": false,
+    },
+  },
+}
