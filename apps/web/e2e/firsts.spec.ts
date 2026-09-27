@@ -40,7 +40,25 @@ test('홈 카드 → 서버 최초 기록 화면(연대기·분류 탭·내 선�
   const cid = await page.evaluate(
     () => (JSON.parse(localStorage.getItem('ft_save')!) as { cid: string }).cid,
   );
-  await page.route(`${API}/v1/firsts`, (r) => r.fulfill(ok({ items: items(cid) })));
+  const records = [
+    {
+      id: 'goals',
+      label: '통산 최다 골',
+      unit: '골',
+      value: 1234,
+      achievedAt: '2026-09-25T03:05:00.000Z',
+      holder: holder(cid, null),
+    },
+    {
+      id: 'legend',
+      label: '최고 레전드 점수',
+      unit: '점',
+      value: null,
+      achievedAt: null,
+      holder: null,
+    },
+  ];
+  await page.route(`${API}/v1/firsts`, (r) => r.fulfill(ok({ items: items(cid), records })));
   await page.goto('/');
 
   const card = page.locator('[data-act="firsts"]');
@@ -61,6 +79,12 @@ test('홈 카드 → 서버 최초 기록 화면(연대기·분류 탭·내 선�
   await view.locator('[data-firsts-tab="total"]').click();
   await expect(view.locator('[data-first]')).toHaveCount(2);
   await expect(view.locator('[data-first="goals150"]')).toContainText('미달성');
+
+  // T-10-056 서버 기록 탭: 값·단위·보유자, 아직 없는 기록.
+  await view.locator('[data-firsts-tab="records"]').click();
+  await expect(view.locator('[data-record="goals"]')).toContainText('1,234골');
+  await expect(view.locator('[data-record="goals"]')).toContainText('내 선수');
+  await expect(view.locator('[data-record="legend"]')).toContainText('아직 기록 없음');
 
   for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme });

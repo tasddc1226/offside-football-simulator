@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { FIRSTS, evaluateCareer, type FirstCareer, type FirstSeason } from './firsts.js';
+import {
+  evaluateCareer,
+  evaluateRecords,
+  firstsCatalog,
+  type FirstCareer,
+  type FirstSeason,
+} from './firsts.js';
 
 let t = 0;
 const season = (over: Partial<FirstSeason> = {}): FirstSeason => ({
@@ -30,9 +36,9 @@ const ids = (c: FirstCareer) => evaluateCareer(c).map((g) => g.id);
 
 describe('서버 최초 기록 규칙 (T-10-027)', () => {
   it('id는 겹치지 않고 짧은 소문자 키, 문장은 계약 길이 안이다', () => {
-    const list = FIRSTS.map((d) => d.id);
+    const list = firstsCatalog([]).map((d) => d.id);
     expect(new Set(list).size).toBe(list.length);
-    for (const d of FIRSTS) {
+    for (const d of firstsCatalog(['goals900', 'ballon7'])) {
       expect(d.id).toMatch(/^[a-z0-9_]{1,32}$/);
       expect(d.label.length).toBeLessThanOrEqual(80);
     }
@@ -67,7 +73,7 @@ describe('서버 최초 기록 규칙 (T-10-027)', () => {
       honors: ['발롱도르', 'UEFA 챔피언스리그 우승', '프리미어리그 우승', 'FA컵 우승'],
     });
     expect(ids(career([treble]))).toEqual(
-      expect.arrayContaining(['ballon', 'ucl', 'win_pl', 'treble']),
+      expect.arrayContaining(['ballon1', 'ucl', 'win_pl', 'treble']),
     );
     expect(
       ids(career([season({ honors: ['UEFA 챔피언스리그 우승', 'K리그1 우승', '코리아컵 우승'] })])),
@@ -82,7 +88,7 @@ describe('서버 최초 기록 규칙 (T-10-027)', () => {
       ),
     ).not.toContain('treble'); // 슈퍼컵은 컵이 아니다
     const b = Array.from({ length: 3 }, () => season({ honors: ['발롱도르'] }));
-    expect(ids(career(b))).toEqual(expect.arrayContaining(['ballon', 'ballon3']));
+    expect(ids(career(b))).toEqual(expect.arrayContaining(['ballon1', 'ballon3']));
   });
 
   it('레전드 점수 기록은 은퇴 시각으로 잡는다', () => {
@@ -93,5 +99,70 @@ describe('서버 최초 기록 규칙 (T-10-027)', () => {
       year: null,
     });
     expect(ids({ ...c, retiredAt: null })).not.toContain('legend840');
+  });
+
+  it('끝없는 단계: 기본 단계를 넘으면 step씩 이어지고, 상한이 있는 값은 기본 단계에서 끝난다 (T-10-056)', () => {
+    const s = Array.from({ length: 11 }, () => season({ goals: 60, ovr: 99 }));
+    const got = ids(career(s)); // 통산 660골
+    expect(got).toEqual(expect.arrayContaining(['goals500', 'goals550', 'goals600', 'goals650']));
+    expect(got).not.toContain('goals700');
+    expect(got).toContain('ovr99');
+    const b = Array.from({ length: 6 }, () => season({ honors: ['발롱도르'] }));
+    expect(ids(career(b))).toEqual(expect.arrayContaining(['ballon1', 'ballon5', 'ballon6']));
+    const old = Array.from({ length: 4 }, (_, i) => season({ age: 39 + i }));
+    expect(ids(career(old))).toEqual(expect.arrayContaining(['age38', 'age40', 'age41', 'age42']));
+  });
+
+  it('목록은 기본 단계 + 달성된 단계 + 그 위 다음 목표 하나까지 보인다 (T-10-056)', () => {
+    const goals = (achieved: string[]) =>
+      firstsCatalog(achieved)
+        .map((d) => d.id)
+        .filter((id) => /^goals\d+$/.test(id));
+    expect(goals([])).toEqual([
+      'goals100',
+      'goals150',
+      'goals200',
+      'goals250',
+      'goals300',
+      'goals350',
+      'goals400',
+      'goals450',
+      'goals500',
+    ]);
+    expect(goals(['goals500']).slice(-2)).toEqual(['goals500', 'goals550']);
+    expect(goals(['goals500', 'goals550', 'goals600']).slice(-2)).toEqual(['goals600', 'goals650']);
+    const ovr = firstsCatalog(['ovr99'])
+      .map((d) => d.id)
+      .filter((id) => id.startsWith('ovr'));
+    expect(ovr).toEqual(['ovr85', 'ovr90', 'ovr95', 'ovr99']);
+    const ballon = firstsCatalog(['ballon1', 'ballon3', 'ballon5']).filter((d) =>
+      d.id.startsWith('ballon'),
+    );
+    expect(ballon.map((d) => d.id)).toEqual(['ballon1', 'ballon3', 'ballon5', 'ballon6']);
+    expect(ballon[3]!.label).toBe('발롱도르 6회 최초 수상!');
+  });
+
+  it('서버 기록: 통산은 합계와 마지막으로 늘어난 시즌, 한 시즌은 최고값을 처음 낸 시즌 (T-10-056)', () => {
+    const s = [
+      season({ goals: 30 }),
+      season({ goals: 45 }),
+      season({ goals: 45 }),
+      season({ goals: 0 }),
+    ];
+    const r = new Map(evaluateRecords(career(s)).map((x) => [x.id, x]));
+    expect(r.get('goals')).toEqual({
+      id: 'goals',
+      value: 120,
+      at: s[2]!.createdAt,
+      year: s[2]!.year,
+    });
+    expect(r.get('sgoals')).toEqual({
+      id: 'sgoals',
+      value: 45,
+      at: s[1]!.createdAt,
+      year: s[1]!.year,
+    });
+    expect(r.has('legend')).toBe(false);
+    expect(r.has('ballon')).toBe(false); // 0이면 후보가 아니다
   });
 });

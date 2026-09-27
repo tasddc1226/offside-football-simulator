@@ -3113,6 +3113,10 @@ button.title-item:hover {
   font-size: 13px;
   color: var(--muted);
 }
+.first-value {
+  font-size: 15px;
+  font-weight: 800;
+}
 .first-row.locked .first-label {
   color: var(--muted);
   font-weight: 600;

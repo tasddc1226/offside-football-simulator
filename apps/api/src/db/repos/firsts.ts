@@ -1,20 +1,36 @@
-import type { ServerFirst } from '@offside/contracts';
+import type { FirstsResponse } from '@offside/contracts';
 import { eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
-import { appMeta, careers, careerSeasons, serverFirsts } from '../schema.js';
-import { FIRSTS, evaluateCareer, type FirstCareer } from '../../firsts.js';
+import { appMeta, careers, careerSeasons, serverFirsts, serverRecords } from '../schema.js';
+import {
+  RECORDS,
+  evaluateCareer,
+  evaluateRecords,
+  firstsCatalog,
+  type FirstCareer,
+} from '../../firsts.js';
 
-// T-10-027 서버 최초 기록. 시즌·은퇴 업로드 때 그 커리어만 다시 판정해 "더 이른 달성"이면 자리를 바꾸고,
-// 판정 규칙(FIRSTS)이 바뀌거나 처음 배포될 때는 BACKFILL_VERSION을 올려 전체 커리어를 한 번 다시 훑는다.
-export const BACKFILL_VERSION = '1';
+// T-10-027 서버 최초 기록 · T-10-056 서버 기록. 시즌·은퇴 업로드 때 그 커리어만 다시 판정해 "더 이른 달성"이면
+// 최초 기록 자리를, "더 큰 값"이면 서버 기록 자리를 바꾼다. 판정 규칙이 바뀌거나 처음 배포될 때, 또는 기록을
+// 가진 커리어가 지워졌을 때는 전체 커리어를 다시 훑는다 — 한 요청에 다 읽으면 Workers 무료 플랜 CPU(10ms)를
+// 넘으므로 RESCAN_CHUNK명씩 나눠 공개 목록 조회 때마다 한 조각씩 진행한다(진행 위치는 app_meta).
+// 다시 훑기는 더 이른 달성·더 큰 값만 더한다 — 규칙이 늘어날 때는 BACKFILL_VERSION만 올리면 되지만, 규칙을
+// 좁히거나 없애면 기존 행이 남으므로 마이그레이션으로 해당 행을 지운 뒤 버전을 올린다.
+export const BACKFILL_VERSION = '2';
 const META_KEY = 'server_firsts_backfill';
+/** 다시 훑는 중이면 마지막으로 판정한 careers rowid. */
+const CURSOR_KEY = 'server_firsts_cursor';
+/** 한 조각의 판정이 Workers 무료 플랜 CPU 안에 들도록 작게 잡는다(150명이면 판정만 5–16ms였다). */
+const RESCAN_CHUNK = 40;
+/** D1 바인딩 변수 한도(100) 아래로 IN 목록을 나눈다. */
+const IN_CHUNK = 90;
 
 type Claim = { id: string; careerId: string; at: string; year: number | null };
+type RecordClaim = Claim & { value: number };
 
-/** earlierOnly면 같은 기록은 시각이 더 이른 쪽만 남긴다(동시 업로드 순서와 상관없이 결과가 같다).
- * 전체 재계산(소급)은 계산 결과가 곧 정본이라 그대로 덮어쓴다. */
-function upsertFirst(db: Db, c: Claim, earlierOnly: boolean) {
+/** 같은 기록은 시각이 더 이른 쪽만 남긴다(동시 업로드·재계산 순서와 상관없이 결과가 같다). */
+function upsertFirst(db: Db, c: Claim) {
   const set = { careerId: c.careerId, achievedAt: c.at, year: c.year };
   return db
     .insert(serverFirsts)
@@ -22,9 +38,25 @@ function upsertFirst(db: Db, c: Claim, earlierOnly: boolean) {
     .onConflictDoUpdate({
       target: serverFirsts.id,
       set,
-      ...(earlierOnly ? { setWhere: sql`excluded.achieved_at < ${serverFirsts.achievedAt}` } : {}),
+      setWhere: sql`excluded.achieved_at < ${serverFirsts.achievedAt}`,
     });
 }
+
+/** 서버 기록은 더 큰 값만 자리를 바꾼다(같은 값이면 먼저 세운 쪽이 지킨다). */
+function upsertRecord(db: Db, r: RecordClaim) {
+  const set = { careerId: r.careerId, value: r.value, achievedAt: r.at, year: r.year };
+  return db
+    .insert(serverRecords)
+    .values({ id: r.id, ...set })
+    .onConflictDoUpdate({
+      target: serverRecords.id,
+      set,
+      setWhere: sql`excluded.value > ${serverRecords.value}`,
+    });
+}
+
+const chunks = <T>(xs: T[], n = IN_CHUNK): T[][] =>
+  Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
 
 const seasonColumns = {
   careerId: careerSeasons.careerId,
@@ -87,7 +119,46 @@ const careerColumns = {
   retiredAt: careers.retiredAt,
 };
 
-/** 한 커리어를 다시 판정해 더 이른 기록이면 반영한다. 바뀐 게 있으면 true(목록 캐시를 지울지 판단용).
+/** 여러 커리어를 판정해, 지금 가진 기록보다 나은 것만 쓰는 문장들. */
+async function claimStatements(db: Db, list: FirstCareer[]) {
+  const firsts = new Map<string, Claim>();
+  const records = new Map<string, RecordClaim>();
+  for (const c of list) {
+    for (const g of evaluateCareer(c)) {
+      const b = firsts.get(g.id);
+      if (!b || g.at < b.at) firsts.set(g.id, { ...g, careerId: c.id });
+    }
+    for (const r of evaluateRecords(c)) {
+      const b = records.get(r.id);
+      if (!b || r.value > b.value) records.set(r.id, { ...r, careerId: c.id });
+    }
+  }
+  if (!firsts.size && !records.size) return [];
+  const [heldRecords, ...heldFirsts] = await db.batch([
+    db.select({ id: serverRecords.id, value: serverRecords.value }).from(serverRecords),
+    ...chunks([...firsts.keys()]).map((ids) =>
+      db
+        .select({
+          id: serverFirsts.id,
+          careerId: serverFirsts.careerId,
+          at: serverFirsts.achievedAt,
+        })
+        .from(serverFirsts)
+        .where(inArray(serverFirsts.id, ids)),
+    ),
+  ]);
+  const cur = new Map(heldFirsts.flat().map((h) => [h.id, h]));
+  const top = new Map(heldRecords.map((r) => [r.id, r.value]));
+  // 이미 이 커리어가 가졌거나 더 이른 기록이 있으면 쓰지 않는다.
+  const wins = [...firsts.values()].filter((g) => {
+    const h = cur.get(g.id);
+    return !h || (h.careerId !== g.careerId && g.at < h.at);
+  });
+  const broken = [...records.values()].filter((r) => r.value > (top.get(r.id) ?? 0));
+  return [...wins.map((g) => upsertFirst(db, g)), ...broken.map((r) => upsertRecord(db, r))];
+}
+
+/** 한 커리어를 다시 판정해 더 나은 기록이면 반영한다. 바뀐 게 있으면 true(목록 캐시를 지울지 판단용).
  * legendOnly: 은퇴 때는 새로 가능해지는 기록이 레전드 점수뿐이라 시즌을 읽지 않는다. */
 export async function recordCareerFirsts(
   db: Db,
@@ -102,91 +173,112 @@ export async function recordCareerFirsts(
       ]);
   const [career] = toCareers(cs, rows);
   if (!career) return false;
-  const got = evaluateCareer(career);
-  if (!got.length) return false;
-  const held = await db
-    .select({ id: serverFirsts.id, careerId: serverFirsts.careerId, at: serverFirsts.achievedAt })
-    .from(serverFirsts)
-    .where(
-      inArray(
-        serverFirsts.id,
-        got.map((g) => g.id),
-      ),
-    );
-  const cur = new Map(held.map((h) => [h.id, h]));
-  // 이미 이 커리어가 가졌거나 더 이른 기록이 있으면 쓰지 않는다.
-  const wins = got.filter((g) => {
-    const h = cur.get(g.id);
-    return !h || (h.careerId !== careerId && g.at < h.at);
-  });
-  await runBatch(
-    db,
-    wins.map((g) => upsertFirst(db, { ...g, careerId }, true)),
-  );
-  return wins.length > 0;
+  const statements = await claimStatements(db, [career]);
+  await runBatch(db, statements);
+  return statements.length > 0;
 }
 
-/** 기록을 가진 커리어가 지워지면(프로필 삭제) 그 자리는 다음 업로더가 아니라 실제로 가장 이른 달성자에게
- * 가야 한다 — 소급 표시를 지워 다음 목록 조회 때 전체를 다시 계산하게 한다. */
+/** 기록을 가진 커리어가 지워지면(프로필 삭제) 그 자리는 다음 업로더가 아니라 실제로 가장 이른 달성자(서버
+ * 기록은 그다음 최고값)에게 가야 한다 — 재계산 표시를 지워 공개 목록 조회가 전체를 다시 훑게 한다. */
 export const resetFirstsBackfillStatement = (db: Db) =>
-  db.delete(appMeta).where(eq(appMeta.key, META_KEY));
+  db.delete(appMeta).where(inArray(appMeta.key, [META_KEY, CURSOR_KEY]));
 
-/** 규칙 버전이 바뀌었으면 모든 커리어를 다시 훑어 채운다(첫 배포 때 이전 기록 소급 포함). */
-export async function ensureFirstsBackfilled(db: Db): Promise<void> {
-  const [meta] = await db
-    .select({ value: appMeta.value })
+const setMeta = (db: Db, key: string, value: string) =>
+  db
+    .insert(appMeta)
+    .values({ key, value })
+    .onConflictDoUpdate({ target: appMeta.key, set: { value } });
+
+/** 다시 훑는 중이면 다음 한 조각(chunk명)을 판정한다. 무언가 했으면 true. */
+export async function ensureFirstsBackfilled(db: Db, chunk = RESCAN_CHUNK): Promise<boolean> {
+  const meta = await db
+    .select({ key: appMeta.key, value: appMeta.value })
     .from(appMeta)
-    .where(eq(appMeta.key, META_KEY));
-  if (meta?.value !== BACKFILL_VERSION) await recomputeFirsts(db);
-}
-
-/** 모든 커리어를 다시 훑어 최초 기록을 채우고 소급 표시를 남긴다. */
-export async function recomputeFirsts(db: Db): Promise<void> {
+    .where(inArray(appMeta.key, [META_KEY, CURSOR_KEY]));
+  const m = new Map(meta.map((r) => [r.key, r.value]));
+  if (m.get(META_KEY) === BACKFILL_VERSION) return false;
+  const cursor = Number(m.get(CURSOR_KEY) ?? 0);
   const [cs, rows] = await db.batch([
-    db.select(careerColumns).from(careers),
-    db.select(seasonColumns).from(careerSeasons),
-  ]);
-  const best = new Map<string, Claim>();
-  for (const c of toCareers(cs, rows)) {
-    for (const g of evaluateCareer(c)) {
-      const b = best.get(g.id);
-      if (!b || g.at < b.at) best.set(g.id, { ...g, careerId: c.id });
-    }
-  }
-  // 규칙에서 빠졌거나 이제 아무도 채우지 못한 기록은 지운다(재계산 결과가 곧 정본).
-  const stale = FIRSTS.map((d) => d.id).filter((id) => !best.has(id));
-  await runBatch(db, [
-    ...[...best.values()].map((c) => upsertFirst(db, c, false)),
-    ...(stale.length ? [db.delete(serverFirsts).where(inArray(serverFirsts.id, stale))] : []),
     db
-      .insert(appMeta)
-      .values({ key: META_KEY, value: BACKFILL_VERSION })
-      .onConflictDoUpdate({ target: appMeta.key, set: { value: BACKFILL_VERSION } }),
+      .select({ ...careerColumns, rowid: sql<number>`rowid` })
+      .from(careers)
+      .where(sql`rowid > ${cursor}`)
+      .orderBy(sql`rowid`)
+      .limit(chunk),
+    db
+      .select(seasonColumns)
+      .from(careerSeasons)
+      .where(
+        sql`${careerSeasons.careerId} in (select id from careers where rowid > ${cursor} order by rowid limit ${chunk})`,
+      ),
   ]);
+  const statements = await claimStatements(db, toCareers(cs, rows));
+  const done = cs.length < chunk;
+  await runBatch(db, [
+    ...statements,
+    ...(done
+      ? [
+          setMeta(db, META_KEY, BACKFILL_VERSION),
+          db.delete(appMeta).where(eq(appMeta.key, CURSOR_KEY)),
+        ]
+      : [setMeta(db, CURSOR_KEY, String(cs[cs.length - 1]!.rowid))]),
+  ]);
+  return true;
 }
 
-/** 공개 목록: 규칙 전체(미달성 포함) + 달성자. 이름은 유저가 공개를 고른 경우에만. */
-export async function listFirsts(db: Db): Promise<ServerFirst[]> {
-  const rows = await db
-    .select({
-      id: serverFirsts.id,
-      careerId: serverFirsts.careerId,
-      achievedAt: serverFirsts.achievedAt,
-      name: careers.publicName,
-      pos: careers.pos,
-      number: careers.shirtNumber,
-    })
-    .from(serverFirsts)
-    .innerJoin(careers, eq(careers.id, serverFirsts.careerId));
-  const by = new Map(rows.map((r) => [r.id, r]));
-  return FIRSTS.map((d): ServerFirst => {
-    const r = by.get(d.id);
-    return {
-      id: d.id,
-      cat: d.cat,
-      label: d.label,
-      achievedAt: r?.achievedAt ?? null,
-      holder: r ? { careerId: r.careerId, name: r.name, pos: r.pos, number: r.number } : null,
-    };
+/** 공개 목록: 규칙 전체(미달성 포함, 끝없는 단계는 다음 목표까지) + 서버 기록. 이름은 유저가 공개를 고른 경우에만. */
+export async function listFirsts(db: Db): Promise<FirstsResponse> {
+  const holder = { name: careers.publicName, pos: careers.pos, number: careers.shirtNumber };
+  const [firstRows, recordRows] = await db.batch([
+    db
+      .select({
+        id: serverFirsts.id,
+        careerId: serverFirsts.careerId,
+        achievedAt: serverFirsts.achievedAt,
+        ...holder,
+      })
+      .from(serverFirsts)
+      .innerJoin(careers, eq(careers.id, serverFirsts.careerId)),
+    db
+      .select({
+        id: serverRecords.id,
+        careerId: serverRecords.careerId,
+        achievedAt: serverRecords.achievedAt,
+        value: serverRecords.value,
+        ...holder,
+      })
+      .from(serverRecords)
+      .innerJoin(careers, eq(careers.id, serverRecords.careerId)),
+  ]);
+  const holderOf = (r: (typeof firstRows)[number]) => ({
+    careerId: r.careerId,
+    name: r.name,
+    pos: r.pos,
+    number: r.number,
   });
+  const firsts = new Map(firstRows.map((r) => [r.id, r]));
+  const records = new Map(recordRows.map((r) => [r.id, r]));
+  return {
+    items: firstsCatalog(firsts.keys()).map((d) => {
+      const r = firsts.get(d.id);
+      return {
+        id: d.id,
+        cat: d.cat,
+        label: d.label,
+        achievedAt: r?.achievedAt ?? null,
+        holder: r ? holderOf(r) : null,
+      };
+    }),
+    records: RECORDS.map((d) => {
+      const r = records.get(d.id);
+      return {
+        id: d.id,
+        label: d.label,
+        unit: d.unit,
+        value: r?.value ?? null,
+        achievedAt: r?.achievedAt ?? null,
+        holder: r ? holderOf(r) : null,
+      };
+    }),
+  };
 }

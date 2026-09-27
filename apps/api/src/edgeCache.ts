@@ -23,11 +23,13 @@ export function waitUntil(c: Context<AppEnv>, p: Promise<unknown>) {
 /** 이 요청과 같은 호스트의 캐시 키. path에는 정규화한 쿼리까지 담는다. */
 export const edgeKey = (c: Context<AppEnv>, path: string) => `${new URL(c.req.url).origin}${path}`;
 
+/** store: 읽은 뒤 캐시에 담을지(기본은 언제나). 아직 채우는 중인 결과처럼 곧 바뀔 응답을 거른다. */
 export async function edgeCached<T>(
   c: Context<AppEnv>,
   path: string,
   ttlSec: number,
   load: () => Promise<T>,
+  store: () => boolean = () => true,
 ): Promise<T> {
   const cache = edge();
   if (!cache) return load();
@@ -35,7 +37,7 @@ export async function edgeCached<T>(
   const hit = await cache.match(key);
   if (hit) return (await hit.json()) as T;
   const data = await load();
-  if (data === undefined) return data; // 없는 대상(404)은 담지 않는다.
+  if (data === undefined || !store()) return data; // 없는 대상(404)은 담지 않는다.
   const stored = new Response(JSON.stringify(data), {
     headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${ttlSec}` },
   });

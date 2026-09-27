@@ -14,6 +14,7 @@ import {
   idempotency,
   profiles,
   serverFirsts,
+  serverRecords,
   sessions,
 } from '../db/schema.js';
 import { AppError } from '../errors.js';
@@ -76,12 +77,13 @@ export async function executeProfileDeletion(
     });
   }
 
-  // 지울 커리어와 그 커리어가 가진 서버 최초 기록(FK cascade로 함께 지워진다), 댓글 유무를 한 번에 읽는다.
+  // 지울 커리어와 그 커리어가 가진 서버 최초·서버 기록(FK cascade로 함께 지워진다), 댓글 유무를 한 번에 읽는다.
   const [owned, comments] = await db.batch([
     db
-      .select({ id: careers.id, first: serverFirsts.id })
+      .select({ id: careers.id, first: serverFirsts.id, record: serverRecords.id })
       .from(careers)
       .leftJoin(serverFirsts, eq(serverFirsts.careerId, careers.id))
+      .leftJoin(serverRecords, eq(serverRecords.careerId, careers.id))
       .where(eq(careers.profileId, input.profileId)),
     db
       .select({ id: boardComments.id })
@@ -90,7 +92,7 @@ export async function executeProfileDeletion(
       .limit(1),
   ]);
   const careerIds = [...new Set(owned.map((r) => r.id))];
-  const heldFirsts = owned.some((r) => r.first !== null);
+  const heldFirsts = owned.some((r) => r.first !== null || r.record !== null);
 
   await runBatch(db, [
     // T-1-013 D-21: google_sub·email·linked_at도 비운다 — 그러지 않으면 unique index
@@ -116,7 +118,7 @@ export async function executeProfileDeletion(
       payloadJson: '{}',
       createdAt: input.now,
     }),
-    // 가진 최초 기록이 있었으면 소급 표시를 지워, 라우트가 전체를 다시 계산해 실제 가장 이른 달성자에게 돌려준다.
+    // 가진 최초·서버 기록이 있었으면 재계산 표시를 지워, 공개 조회가 전체를 다시 훑어 실제 다음 보유자에게 돌려준다.
     ...(heldFirsts ? [resetFirstsBackfillStatement(db)] : []),
   ]);
   return { careerIds, heldFirsts, hadComments: comments.length > 0 };
