@@ -1,5 +1,6 @@
 import type {
   LegendSnapshot,
+  LiveRetiredNumber,
   RetiredNumberResult,
   RetiredNumbersResponse,
 } from '@offside/contracts';
@@ -160,13 +161,16 @@ const slotColumns = {
   score: retiredNumbers.score,
 };
 
-/** 은퇴 PUT 뒤에 부른다. 자격이 없으면(또는 공개 명예의 전당 밖의 짧은 커리어면) null. */
-export async function judgeRetiredNumber(
-  db: Db,
-  careerId: string,
-  now: string,
-): Promise<RetiredNumberResult | null> {
-  if (await ensureRetiredNumbersBackfilled(db)) return { kind: 'pending' };
+/** 심사 결과. claimed는 이번 심사가 막 자리를 잡았을 때만 있다(홈 라이브로 알린다). */
+export type Judged = { result: RetiredNumberResult | null; claimed?: LiveRetiredNumber };
+
+/** 은퇴 PUT 뒤에 부른다. 자격이 없으면(또는 공개 명예의 전당 밖의 짧은 커리어면) result가 null. */
+export async function judgeRetiredNumber(db: Db, careerId: string, now: string): Promise<Judged> {
+  return { result: null, ...(await judge(db, careerId, now)) };
+}
+
+async function judge(db: Db, careerId: string, now: string): Promise<Judged | null> {
+  if (await ensureRetiredNumbersBackfilled(db)) return { result: { kind: 'pending' } };
   const [held, [row]] = await db.batch([
     db.select(slotColumns).from(retiredNumbers).where(eq(retiredNumbers.careerId, careerId)),
     db
@@ -175,7 +179,7 @@ export async function judgeRetiredNumber(
       .where(and(eq(careers.id, careerId), isPublicRetired)),
   ]);
   // 이미 가진 자리는 이름을 다시 숨겨도 그대로다.
-  if (held[0]) return { kind: 'granted', ...held[0] };
+  if (held[0]) return { result: { kind: 'granted', ...held[0] } };
   if (!row) return null;
   const customs = await clubsJsonOf(db, [row.profileId]);
   const c = candidatesOf(row, customs.get(row.profileId));
@@ -183,7 +187,7 @@ export async function judgeRetiredNumber(
   const best = c.clubs[0]!;
   const slot = { clubId: best.clubId!, club: best.club, number: c.number };
   const score = Math.round(best.score);
-  if (!row.publicName) return { kind: 'anonymous', ...slot, score };
+  if (!row.publicName) return { result: { kind: 'anonymous', ...slot, score } };
   await runBatch(db, claimStatements(db, careerId, c, now));
   const [[mine], [holder]] = await db.batch([
     db.select(slotColumns).from(retiredNumbers).where(eq(retiredNumbers.careerId, careerId)),
@@ -193,8 +197,21 @@ export async function judgeRetiredNumber(
       .innerJoin(careers, eq(careers.id, retiredNumbers.careerId))
       .where(and(eq(retiredNumbers.clubId, slot.clubId), eq(retiredNumbers.number, slot.number))),
   ]);
-  if (mine) return { kind: 'granted', ...mine };
-  return { kind: 'taken', ...slot, holder: holder?.name ?? null, score };
+  if (mine) {
+    const { clubId, club, number, seq } = mine;
+    const claimed = {
+      careerId,
+      name: row.publicName,
+      pos: row.pos,
+      clubId,
+      club,
+      number,
+      seq,
+      at: now,
+    };
+    return { result: { kind: 'granted', ...mine }, claimed };
+  }
+  return { result: { kind: 'taken', ...slot, holder: holder?.name ?? null, score } };
 }
 
 /** 서버 전체 영구결번(결번 순). */

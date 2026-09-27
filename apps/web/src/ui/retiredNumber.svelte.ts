@@ -1,6 +1,11 @@
 // T-10-076 영구결번 심사 결과. 은퇴 업로드(outbox, 지연 로드) 응답이 이벤트로 오면 이 기기의 명예의 전당
 // 기록(ft_hof)에 남기고, 은퇴 화면이 바로 다시 그리도록 반응형 맵에도 넣는다.
-import type { RetiredNumberResult, RetiredNumbersResponse } from '@offside/contracts';
+import type {
+  LiveRetiredNumber,
+  RetiredNumberResult,
+  RetiredNumbersResponse,
+} from '@offside/contracts';
+import { onLive } from '../api/liveSocket.js';
 import type { RetiredNumberEvent } from '../game/outbox.js';
 import { loadHOF, saveKey } from '../game/season.js';
 import { RETIRED_NUMBER_EVENT } from '../game/syncEvents.js';
@@ -38,3 +43,15 @@ export const rnOf = (
   careerId: string | undefined,
   saved: RetiredNumberResult | null | undefined,
 ) => (careerId && careerId in rnResults ? rnResults[careerId] : saved);
+
+/** 앱을 열어 둔 모두에게 띄울, 방금 서버 어딘가에서 확정된 영구결번(RetiredNumberAlert.svelte). */
+export const rnAlert = $state<{ item: LiveRetiredNumber | null }>({ item: null });
+
+/** 홈 라이브 소켓으로 영구결번 소식을 듣는다(어느 화면에서나). 내 선수는 은퇴 화면 세리머니로 이미 봤다. */
+export function watchRetiredNumberAlerts() {
+  onLive((p) => {
+    if (p.type !== 'retiredNumber') return;
+    if (loadHOF().some((h) => h.id === p.item.careerId)) return;
+    rnAlert.item = p.item;
+  });
+}

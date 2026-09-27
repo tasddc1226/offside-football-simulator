@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { API, ok, openMarket } from './helpers.js';
+import { API, ok, openMarket, startCareer } from './helpers.js';
 
 // T-10-076 영구결번: 은퇴 업로드 응답의 심사 결과로 은퇴 화면에 결번 세리머니를 띄운다. 결번 심사 카드는 이 기기가
 // 계산한 구단 기여(프리미어리그 8시즌 · 해마다 리그·챔스 우승 + 발롱도르)로 그린다.
@@ -210,4 +210,59 @@ test('자리를 못 받은 옛 기록은 상세를 열 때 서버에 물어 명�
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-rn="taken"]')).toContainText('김선배');
   expect(asked).toBe(1);
+});
+
+// 서버 어딘가에서 결번이 확정되면(홈 라이브 소켓) 게임 중에도 화면 위에 알린다. 내 선수 소식은 띄우지 않는다.
+test('다른 유저의 영구결번이 확정되면 플레이 중인 화면 위에 알림이 뜨고, 보기로 상세를 연다', async ({
+  page,
+}) => {
+  const OTHER = '0d000000-0000-4000-8000-00000000000b';
+  let push: (item: unknown) => void = () => {};
+  let connected = false;
+  await page.routeWebSocket(`${API.replace('http', 'ws')}/v1/live/ws`, (ws) => {
+    push = (item) => ws.send(JSON.stringify({ type: 'retiredNumber', item }));
+    connected = true;
+  });
+  await seedOldLegend(page);
+  const entry = {
+    id: OTHER,
+    name: '박결번',
+    pos: 'MF',
+    number: 8,
+    retireAge: 35,
+    peak: 90,
+    legendScore: 1500,
+    apps: 500,
+    goals: 90,
+    assists: 150,
+    trophies: 20,
+    awards: 5,
+    caps: 40,
+    ballon: 2,
+    lastClub: SLOT.club,
+    retiredAt: '2026-09-28T11:00:00.000Z',
+    hasDetail: false,
+    retiredNumber: { ...SLOT, number: 8, seq: 5, score: 1500 },
+  };
+  await page.route(`${API}/v1/hof/${OTHER}`, (r) => r.fulfill(ok({ entry, snapshot: null })));
+  await startCareer(page);
+  await expect.poll(() => connected).toBe(true);
+
+  const at = '2026-09-28T11:00:00.000Z';
+  push({ careerId: OLD_ID, name: '옛레전드', pos: 'FW', ...SLOT, seq: 4, at });
+  const alert = page.locator('[data-rn-alert]');
+  await page.waitForTimeout(300);
+  await expect(alert).toHaveCount(0);
+  push({ careerId: OTHER, name: '박결번', pos: 'MF', ...SLOT, number: 8, seq: 5, at });
+  await expect(alert).toHaveAttribute('data-rn-alert', '5');
+  await expect(alert).toContainText('박결번, 8번 영구결번');
+  await expect(alert).toContainText('맨체스터 스카이블루 · 서버 5번째 결번');
+  await alert.screenshot({ path: test.info().outputPath('retired-number-alert.png') });
+  const axe = await new AxeBuilder({ page }).include('[data-rn-alert]').analyze();
+  expect(axe.violations.map((v) => v.id)).toEqual([]);
+
+  await alert.locator('[data-act="rn-alert-open"]').click();
+  await expect(alert).toHaveCount(0);
+  await expect(page.locator('.film-open h1')).toHaveText('박결번');
+  await expect(page.locator('[data-legend-rn-pill]')).toContainText('결번 8');
 });

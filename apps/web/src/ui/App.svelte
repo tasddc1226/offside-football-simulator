@@ -12,6 +12,7 @@
   import UpdateBanner from './UpdateBanner.svelte';
   import NewsBanner from './NewsBanner.svelte';
   import MainNav, { hasMainNav } from './MainNav.svelte';
+  import { rnAlert } from './retiredNumber.svelte.js';
   import type { Component } from 'svelte';
 
   // T-10-009: 설정(클럽 편집)은 자주 안 여는 화면이라 메인 번들에서 떼어 처음 열 때 불러온다.
@@ -48,6 +49,11 @@
   let Shared = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
     if (appState.screen === 'shared' && !Shared) void import('./SharedCareer.svelte').then((m) => (Shared = m.default));
+  });
+  // T-10-076: 영구결번 알림 — 첫 소식이 올 때 불러온다.
+  let RnAlert = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (rnAlert.item && !RnAlert) void import('./RetiredNumberAlert.svelte').then((m) => (RnAlert = m.default));
   });
 </script>
 
@@ -92,3 +98,4 @@
 {#if hasMainNav(appState.screen)}<MainNav />{/if}
 <UpdateBanner />
 <NewsBanner />
+{#if RnAlert}<RnAlert />{/if}

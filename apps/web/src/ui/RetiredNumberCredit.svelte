@@ -4,8 +4,7 @@
   import type { RetiredNumberResult } from '@offside/contracts';
   import { RN_CUT, RN_MIN_SEASONS, rnQualifies } from '@offside/contracts/retired-numbers';
   import { clubsOf, nearRetiredNumber } from '../game/retired-number.js';
-  import { clubById } from '../game/clubs.js';
-  import { crestOf } from '../game/crests.js';
+  import { RN_SHIRT, RN_TRIM, rnStyle } from './rnStyle.js';
   import { setLegendPublic } from './legend.js';
   import { checkRetiredNumber } from '../api/client.js';
   import { recordRn } from './retiredNumber.svelte.js';
@@ -53,17 +52,7 @@
   });
   const rnSlot = $derived(rn && rn.kind !== 'pending' && (rn.kind !== 'anonymous' || v.own) ? rn : null);
   const rnClub = $derived(rnSlot ? rnClubs.find((c) => c.clubId === rnSlot.clubId) : undefined);
-  const rnColors = $derived.by(() => {
-    const club = rnSlot ? clubById(rnSlot.clubId) : null;
-    if (!club) return '';
-    const c = crestOf(club);
-    return `--rn-base:${c.base};--rn-accent:${c.accent};--rn-ink:${light(c.base) ? '#111a14' : '#ffffff'}`;
-  });
-  /** 밝은 유니폼이면 등번호를 어둡게. */
-  const light = (hex: string) => {
-    const n = parseInt(hex.replace('#', ''), 16);
-    return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 170;
-  };
+  const rnColors = $derived(rnStyle(rnSlot?.clubId));
   const pts = (n: number) => Math.round(n).toLocaleString('ko-KR');
 </script>
 
@@ -95,8 +84,8 @@
       <div class="rn-ceremony">
         <div class="eyebrow film-kicker">Retired Number</div>
         <svg class="rn-jersey" viewBox="0 0 120 124" aria-hidden="true">
-          <path class="rn-shirt" d="M40 6 L22 12 L4 34 L18 48 L28 40 L28 118 L92 118 L92 40 L102 48 L116 34 L98 12 L80 6 Q60 20 40 6 Z" />
-          <path class="rn-trim" d="M40 6 Q60 20 80 6" />
+          <path class="rn-shirt" d={RN_SHIRT} />
+          <path class="rn-trim" d={RN_TRIM} />
           <text class="rn-jersey-name" x="60" y="40">{v.name}</text>
           <text class="rn-jersey-num" x="60" y="92">{rnSlot.number}</text>
         </svg>

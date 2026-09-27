@@ -5,10 +5,11 @@ import {
   RetirementResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { ensureRetiredNumbersBackfilled } from '../db/repos/retiredNumbers.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { fakeHub } from '../test/liveHub.js';
 import {
   callJson,
   deleteProfile,
@@ -83,9 +84,16 @@ describe('영구결번 (T-10-076)', () => {
     await ctx.dispose();
   });
 
-  const retire = async (id: string, snap: unknown, publicName: string | null, who = cookie) => {
-    await putJson(ctx, who, `/v1/careers/${id}/seasons/2030`, seasonBody());
-    const res = await putJson(ctx, who, `/v1/careers/${id}/retirement`, {
+  const retire = async (
+    id: string,
+    snap: unknown,
+    publicName: string | null,
+    who = cookie,
+    env = ctx.env,
+  ) => {
+    const put = (path: string, body: unknown) => callJson(env, 'PUT', path, { cookie: who, body });
+    await put(`/v1/careers/${id}/seasons/2030`, seasonBody());
+    const res = await put(`/v1/careers/${id}/retirement`, {
       ...RETIREMENT,
       publicName,
       snapshot: snap,
@@ -117,6 +125,28 @@ describe('영구결번 (T-10-076)', () => {
       seq: 1,
       score: expect.any(Number),
     });
+  });
+
+  it('자리를 막 잡은 순간에만 앱을 열어 둔 브라우저에 알린다(재전송·익명·이미 찬 자리는 알리지 않는다)', async () => {
+    const hub = fakeHub();
+    const env = { ...ctx.env, LIVE: hub.ns };
+    await retire(A, skyBlue(10), null, cookie, env);
+    await retire(A, skyBlue(10), '김결번', cookie, env);
+    await vi.waitFor(() => expect(hub.retiredNumbers).toHaveLength(1));
+    expect(hub.retiredNumbers[0]).toEqual({
+      careerId: A,
+      name: '김결번',
+      pos: 'FW',
+      clubId: 'pl-0',
+      club: '맨체스터 스카이블루',
+      number: 10,
+      seq: 1,
+      at: expect.any(String),
+    });
+    await retire(A, skyBlue(10), '김결번', cookie, env);
+    await retire(B, skyBlue(10), '늦은자', cookie, env);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(hub.retiredNumbers).toHaveLength(1);
   });
 
   it('자리가 찼으면 두 번째 구단 번호를, 그마저 없으면 보유자를 알려 준다', async () => {

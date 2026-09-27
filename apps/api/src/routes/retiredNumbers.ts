@@ -15,6 +15,7 @@ import {
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
+import { publishRetiredNumber } from '../live/publish.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 
@@ -28,9 +29,11 @@ export async function judgeRetirement(
   now: string,
 ): Promise<RetiredNumberResult | null> {
   try {
-    const r = await judgeRetiredNumber(getDb(c), careerId, now);
-    if (r?.kind === 'granted') purgeEdge(c, STALE.retiredNumbersChanged());
-    return r;
+    const { result, claimed } = await judgeRetiredNumber(getDb(c), careerId, now);
+    // 이미 가진 자리여도 이름 공개 토글이 목록의 이름을 바꾼다.
+    if (result?.kind === 'granted') purgeEdge(c, STALE.retiredNumbersChanged());
+    if (claimed) publishRetiredNumber(c, claimed);
+    return result;
   } catch (err) {
     c.set('storeFailure', {
       code: 'RETIRED_NUMBER_FAILED',

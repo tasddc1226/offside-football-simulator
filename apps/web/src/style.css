@@ -2957,6 +2957,58 @@ body:has(nav.tabs) .toast {
 .news-close:active {
   background-color: color-mix(in srgb, var(--on-pitch) 15%, transparent);
 }
+/* T-10-076 영구결번 알림: 같은 자리에 금색 테두리 + 한 번 지나가는 빛, 구단 색 유니폼. 다른 배너보다 위. */
+.rn-alert {
+  z-index: 9;
+  overflow: hidden;
+  padding-left: 10px;
+  border: 1px solid var(--pitch-accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--pitch-accent) 25%, transparent),
+    0 12px 28px -12px rgba(0, 0, 0, 0.5);
+}
+.rn-alert::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--pitch-accent) 35%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: rn-alert-shine 1.6s 0.3s ease-out 2;
+  pointer-events: none;
+}
+.rn-alert b {
+  color: var(--pitch-accent);
+}
+.rn-alert small {
+  white-space: normal;
+}
+.rn-jersey.rn-alert-shirt {
+  flex: none;
+  width: 40px;
+  filter: none;
+  animation: rn-alert-pop 0.5s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes rn-alert-shine {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes rn-alert-pop {
+  from {
+    transform: scale(0.4) rotate(-12deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rn-alert::after,
+  .rn-jersey.rn-alert-shirt {
+    animation: none;
+  }
+}
 
 /* ───────── 구간 리포트 (T-10-024) ───────── */
 .report {
