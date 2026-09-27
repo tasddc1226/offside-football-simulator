@@ -77,6 +77,9 @@ test('숫자와 소식 티커를 보여 주고, 한 줄씩 올라가다 일시�
 
   await card.locator('[data-act="live-pause"]').click();
   await expect(card.locator('[data-act="live-pause"]')).toHaveAttribute('aria-pressed', 'true');
+  // 글자 대신 아이콘: 멈추면 재생 아이콘으로 바뀐다(마우스 안내 문구도 함께).
+  await expect(card.locator('[data-act="live-pause"]')).toHaveAttribute('title', '다시 재생');
+  await expect(card.locator('[data-act="live-pause"] rect')).toHaveCount(0);
   await page.mouse.move(0, 0);
   const paused = await rowsText(page);
   await page.waitForTimeout(4_500);

@@ -3362,7 +3362,9 @@ button.title-item:hover {
   }
 }
 .live-pause {
-  font-size: 12px;
+  flex: none;
+  width: 44px;
+  padding: 0;
 }
 .live-stats {
   display: grid;
