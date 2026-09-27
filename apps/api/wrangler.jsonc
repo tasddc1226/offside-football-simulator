@@ -47,8 +47,10 @@
       "name": "offside-api",
       "workers_dev": true,
       "routes": [{ "pattern": "api.offside-lab.com", "custom_domain": true }],
-      // T-10-070 매일 KST 04:00 정리·D1 백업(src/cron/daily.ts). R2 버킷(BACKUP)을 붙이면 백업도 돈다.
+      // T-10-070 매일 KST 04:00 정리·D1 백업(src/cron/daily.ts).
       "triggers": { "crons": ["0 19 * * *"] },
+      // T-10-071 백업 사본(docs/operations/d1-backup.md). staging은 붙이지 않는다(백업만 건너뛴다).
+      "r2_buckets": [{ "binding": "BACKUP", "bucket_name": "offside-d1-backup" }],
       // 백업은 DB 전체를 SQL로 굽고 압축한다 — DB가 커져도 중간에 끊기지 않게 CPU 한도를 기본(30초)보다 늘린다.
       "limits": { "cpu_ms": 120000 },
       "d1_databases": [
