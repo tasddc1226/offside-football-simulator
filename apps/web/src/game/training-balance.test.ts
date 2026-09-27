@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   newGame,
   balanceFactor,
-  trainingDesc,
+  trainingCard,
   TRAININGS,
   attackEdge,
   ATTACK_KNEE,
@@ -27,11 +27,11 @@ describe('훈련 치우침 억제 (T-10-042)', () => {
   it('고르게 키운 선수는 그대로, 한 능력치만 앞서면 성장이 줄고 화면에 알린다', () => {
     const s = fw();
     expect(balanceFactor(s, 'sho')).toBe(1);
-    expect(trainingDesc(s, sho)).not.toContain('치우침');
+    expect(trainingCard(s, sho).tag).not.toContain('치우침');
     s.attrs.sho = 95;
     expect(balanceFactor(s, 'sho')).toBe(BALANCE_MIN);
-    expect(trainingDesc(s, sho)).toContain(
-      `치우침 · 성장 −${Math.round((1 - BALANCE_MIN) * 100)}%`,
+    expect(trainingCard(s, sho).tag).toContain(
+      `치우침 성장 −${Math.round((1 - BALANCE_MIN) * 100)}%`,
     );
     // 뒤처진 능력치(패스)를 키우는 건 줄지 않는다.
     expect(balanceFactor(s, 'pas')).toBe(1);

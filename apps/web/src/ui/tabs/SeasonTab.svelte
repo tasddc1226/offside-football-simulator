@@ -1,7 +1,7 @@
 <script lang="ts">
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
   import { PHASES, LAST_PHASE } from '../../game/data.js';
-  import { teamRank, roundRange, TRAININGS, trainingLabel, trainingDesc, STORIES, turnNo } from '../../game/engine.js';
+  import { teamRank, roundRange, TRAININGS, trainingLabel, trainingCard, trainingHelp, TRAINING_NOTE, STORIES, turnNo } from '../../game/engine.js';
   import { eventById } from '../../game/events-data.js';
   import type { GameState } from '../../game/types.js';
   import { save, seasonLabel } from '../helpers.js';
@@ -20,6 +20,7 @@
   const comps = $derived(s.season.comps || []);
   const activeStories = $derived(Object.entries(s.story || {}).filter(([, v]) => !v.done));
   const t = $derived(turnNo(s));
+  const picked = $derived(TRAININGS.find((x) => x.id === s.training));
 
   function meterCls(v: number, badAt: number, warnAt: number): string {
     return v < badAt ? 'bad' : v < warnAt ? 'warn' : '';
@@ -114,11 +115,19 @@
   <div><div class="eyebrow">Training</div><h2>이번 구간 훈련 방향</h2></div>
   <div class="train">
     {#each TRAININGS as tr (tr.id)}
+      {@const c = trainingCard(s, tr)}
       <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={() => setTraining(tr.id)}>
-        <b>{trainingLabel(s, tr)}</b><small>{trainingDesc(s, tr)}</small>
+        <b>{trainingLabel(s, tr)}</b><small>{#each c.effect.split(' · ') as part, i (i)}{i ? ' · ' : ''}<span class="nowrap">{part}</span>{/each}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
       </button>
     {/each}
   </div>
+  {#if picked}
+    <div class="train-help" data-train-help aria-live="polite">
+      <b>{trainingLabel(s, picked)}</b>
+      <p>{trainingHelp(s, picked)}</p>
+      <p class="muted">{TRAINING_NOTE}</p>
+    </div>
+  {/if}
   <p class="muted fs-xs">진행 버튼은 화면 아래 고정 액션바에 있습니다.</p>
 </section>
 

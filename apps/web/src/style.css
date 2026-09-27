@@ -1387,6 +1387,30 @@ body:has(.main-nav) .wrap {
 .train .opt b {
   font-size: 0.875rem;
 }
+.train .nowrap {
+  white-space: nowrap;
+}
+.train-tag {
+  color: var(--accent-text) !important;
+  font-weight: 600;
+}
+/* T-10-074 고른 훈련의 자세한 설명 */
+.train-help {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.train-help p {
+  margin: 0;
+}
+.train-help .muted {
+  font-size: 0.75rem;
+}
 .feed {
   display: flex;
   flex-direction: column;
