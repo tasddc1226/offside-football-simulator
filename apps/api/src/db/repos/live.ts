@@ -1,4 +1,5 @@
 import type { LiveEvent, LiveStats } from '@offside/contracts';
+import { LIVE_FEED_MAX as FEED_MAX } from '@offside/contracts/polling';
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { appMeta, careers, careerSeasons } from '../schema.js';
@@ -12,7 +13,6 @@ const MIN = 60_000;
 const PLAYING_WINDOW_MS = 20 * MIN;
 /** 피드가 이만큼 차지 않으면 기간을 넓힌다: 1시간 → 24시간 → 7일(가장 넓은 기간으로 한 번만 읽고 거른다). */
 const FEED_MIN = 4;
-const FEED_MAX = 12;
 const WINDOWS_MS = [60 * MIN, 24 * 60 * MIN];
 const FEED_SPAN_MS = 7 * 24 * 60 * MIN;
 

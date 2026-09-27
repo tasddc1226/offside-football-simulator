@@ -3,43 +3,12 @@ import { LiveResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie, putJson, TEST_CAREER } from '../test/http.js';
+import { issueCookie, putJson, RETIREMENT as summary, seasonBody } from '../test/http.js';
 
 const A = '0c000000-0000-4000-8000-00000000000a';
 const B = '0c000000-0000-4000-8000-00000000000b';
 const C = '0c000000-0000-4000-8000-00000000000c';
 
-const seasonBody = (over: Record<string, unknown> = {}) => ({
-  career: TEST_CAREER,
-  season: {
-    age: 18,
-    club: '테스트 고교',
-    league: '고교리그',
-    apps: 20,
-    goals: 15,
-    assists: 4,
-    rating: 7.4,
-    rank: 1,
-    ovr: 58,
-    honors: [],
-    ...over,
-  },
-  events: [],
-});
-const summary = {
-  retireAge: 34,
-  peak: 88,
-  legendScore: 612,
-  apps: 300,
-  goals: 120,
-  assists: 60,
-  trophies: 1,
-  awards: 0,
-  caps: 30,
-  ballon: 0,
-  lastClub: '테스트 FC',
-  publicName: null,
-};
 const read = async (ctx: TestD1) => {
   const res = await createApp().request('/v1/live', {}, ctx.env);
   expect(res.status).toBe(200);

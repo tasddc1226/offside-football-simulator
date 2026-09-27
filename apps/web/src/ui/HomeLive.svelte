@@ -12,13 +12,11 @@
   import { motionOK } from './motion.js';
   import CountUp from './CountUp.svelte';
   import ClubMark from './ClubMark.svelte';
-  import { LIVE_POLL_SEC } from '@offside/contracts/polling';
+  import { LIVE_FEED_MAX, LIVE_POLL_SEC } from '@offside/contracts/polling';
 
   const POLL_MS = LIVE_POLL_SEC * 1000;
   const STEP_MS = 3_500;
   const VISIBLE = 3;
-  /** 서버 피드 길이 상한과 같다(repos/live.ts FEED_MAX). */
-  const FEED_MAX = 12;
 
   let data = $state<LiveResponse | null>(null);
   /** 조회가 실패한 적이 있다. 받은 데이터가 없을 때만 안내 문구를 띄우는 데 쓴다. */
@@ -32,16 +30,15 @@
   let holding = $state(false);
   /** 방금 받은 새 소식(점이 한 번 튄다). */
   let fresh = $state(new Set<string>());
-  /** 소켓으로 받은 소식(최신순). 마지막 조회(data.now) 뒤에 올라온 것만 조회 결과 위에 얹는다. */
+  /** 소켓으로 받은 소식(최신순). 마지막 조회(data.now) 뒤에 올라온 것만 둔다 — 조회 결과 위에 얹는다. */
   let pushed = $state<LiveEvent[]>([]);
 
-  const arrived = $derived(data ? pushed.filter((e) => e.at > data!.now) : []);
-  const feed = $derived(data ? [...arrived, ...data.feed].slice(0, FEED_MAX) : []);
+  const feed = $derived(data ? [...pushed, ...data.feed].slice(0, LIVE_FEED_MAX) : []);
   /** 조회 숫자에 아직 담기지 않은 소식만큼 더한다('지금 뛰는 중'은 조회로만 바뀐다). */
   const liveStats = $derived.by((): LiveStats | null => {
     if (!data) return null;
     const s = { ...data.stats };
-    for (const e of arrived) {
+    for (const e of pushed) {
       if (e.kind === 'retire') s.retiredToday++;
       else {
         s.seasonsToday++;
@@ -105,7 +102,7 @@
   function onPush(e: LiveEvent) {
     const key = keyOf(e);
     if (!data || e.at <= data.now || feed.some((f) => keyOf(f) === key)) return;
-    pushed = [e, ...pushed].slice(0, FEED_MAX);
+    pushed = [e, ...pushed].slice(0, LIVE_FEED_MAX);
     fresh = new Set([key]);
     cursor = 0;
     shifting = false;

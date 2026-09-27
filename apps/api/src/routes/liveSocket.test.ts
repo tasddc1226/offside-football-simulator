@@ -5,7 +5,13 @@ import type { Bindings } from '../env.js';
 import { LiveHub, MAX_SOCKETS } from '../live/hub.js';
 import { liveSocket } from '../live/socket.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { callJson, issueCookie, ORIGIN, TEST_CAREER } from '../test/http.js';
+import {
+  callJson,
+  issueCookie,
+  ORIGIN,
+  RETIREMENT as summary,
+  seasonBody as season,
+} from '../test/http.js';
 import worker from '../index.js';
 
 const A = '0c000000-0000-4000-8000-00000000000a';
@@ -27,38 +33,6 @@ function fakeHub() {
   const ns = { idFromName: (n: string) => n, get: () => stub };
   return { ns: ns as unknown as NonNullable<Bindings['LIVE']>, pushed, forwarded };
 }
-
-const season = (over: Record<string, unknown> = {}) => ({
-  career: TEST_CAREER,
-  season: {
-    age: 18,
-    club: '테스트 고교',
-    league: '고교리그',
-    apps: 20,
-    goals: 15,
-    assists: 4,
-    rating: 7.4,
-    rank: 1,
-    ovr: 58,
-    honors: [],
-    ...over,
-  },
-  events: [],
-});
-const summary = {
-  retireAge: 34,
-  peak: 88,
-  legendScore: 612,
-  apps: 300,
-  goals: 120,
-  assists: 60,
-  trophies: 1,
-  awards: 0,
-  caps: 30,
-  ballon: 0,
-  lastClub: '테스트 FC',
-  publicName: null,
-};
 
 describe('T-10-072 업로드 → 홈 라이브 허브', () => {
   let ctx: TestD1;
@@ -128,6 +102,19 @@ describe('T-10-072 라이브 소켓 입구', () => {
     expect((await liveSocket(upgrade(), env(hub.ns))).status).toBe(403);
     expect((await liveSocket(upgrade(ORIGIN), env())).status).toBe(503);
     expect(hub.forwarded).toHaveLength(0);
+  });
+
+  it('운영에선 들어온 API 호스트와 짝인 웹만 받는다(originGuard와 같은 규칙)', async () => {
+    const hub = fakeHub();
+    const prod = { ENVIRONMENT: 'production', LIVE: hub.ns } as Bindings;
+    const req = (origin: string) =>
+      new Request(`https://api.offside-lab.com${LIVE_SOCKET_PATH}`, {
+        headers: { Upgrade: 'websocket', Origin: origin },
+      });
+    expect((await liveSocket(req('https://offside-web.tasddc1569.workers.dev'), prod)).status).toBe(
+      403,
+    );
+    expect(await (await liveSocket(req('https://offside-lab.com'), prod)).text()).toBe('hub');
   });
 
   it('허용된 웹의 업그레이드는 앱 미들웨어를 거치지 않고 허브로 넘긴다', async () => {
