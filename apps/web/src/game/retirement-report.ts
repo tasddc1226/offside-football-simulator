@@ -26,11 +26,14 @@ export interface Chapter {
   events: ChapterEvent[];
 }
 
-// 대표팀 쪽 이정표는 대표팀 장면으로 따로 모은다.
+/** 대표팀 대회 우승이 기록되는 클럽 이름(season.ts). */
+export const NATIONAL_TEAM = '대한민국';
+// 대표팀 쪽 이정표는 대표팀 장면으로 따로 모은다. 이정표 문구는 comps.ts checkMilestones가 만든다.
 const NATIONAL_MILE = /A매치|대표팀|월드컵|센추리/;
+const MINOR_MILE = /데뷔골|경기 출전|후보|입성|본선 득점|컨퍼런스리그|엘리트/;
 /** 챕터에 남길 이정표 — 데뷔골·N경기 출전·후보 선정 같은 자잘한 것은 뺀다. 통산 골은 100골 단위만. */
 export function isKeyMilestone(t: string): boolean {
-  if (/데뷔골|경기 출전|후보|입성|본선 득점|컨퍼런스리그|엘리트/.test(t)) return false;
+  if (MINOR_MILE.test(t)) return false;
   const goals = /통산 (\d+)골/.exec(t);
   return !goals || Number(goals[1]) % 100 === 0;
 }
@@ -89,15 +92,14 @@ export function careerChapters(s: LegendSource): Chapter[] {
   return out;
 }
 
-/** 대표팀 장면: 클럽 챕터에 속하지 않는 우승(대표팀 대회)과 대표팀 이정표. */
+/** 대표팀 장면: 대표팀 대회 우승과 대표팀 이정표. */
 export function nationalEvents(s: LegendSource): ChapterEvent[] {
-  const clubs = new Set(s.career.map((r) => r.club));
   return [
     ...(s.miles ?? [])
       .filter((m) => NATIONAL_MILE.test(m.t) && !/데뷔골|본선 득점/.test(m.t))
       .map((m) => ({ year: m.year, kind: 'mile' as const, text: m.t, years: [m.year] })),
     ...s.trophies
-      .filter((t) => !clubs.has(t.club))
+      .filter((t) => t.club === NATIONAL_TEAM)
       .map((t) => ({ year: t.year, kind: 'trophy' as const, text: t.t, years: [t.year] })),
   ].sort((a, b) => a.year - b.year);
 }
@@ -109,7 +111,11 @@ export interface HonourLine {
 /** 엔딩 크레딧의 우승·수상 목록 — 같은 이름끼리 묶어 많이 든 순(같으면 먼저 든 순). */
 export function honoursRoll(items: { year: number; t: string }[]): HonourLine[] {
   const by = new Map<string, number[]>();
-  for (const it of items) by.set(it.t, [...(by.get(it.t) ?? []), it.year]);
+  for (const it of items) {
+    const ys = by.get(it.t);
+    if (ys) ys.push(it.year);
+    else by.set(it.t, [it.year]);
+  }
   return [...by]
     .map(([name, years]) => ({ name, years: years.sort((a, b) => a - b) }))
     .sort((a, b) => b.years.length - a.years.length || a.years[0]! - b.years[0]!);

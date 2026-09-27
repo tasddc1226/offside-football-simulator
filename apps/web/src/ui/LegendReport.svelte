@@ -6,7 +6,7 @@
   // 화면에 들어올 때 하나씩 올라온다. 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
   import type { Snippet } from 'svelte';
   import { legendScoreBreakdown, legendTitle } from '../game/season.js';
-  import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent } from '../game/retirement-report.js';
+  import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '../game/retirement-report.js';
   import { POS_LABEL } from '../game/pos-label.js';
   import { totals } from './format.js';
   import type { LegendView } from './state.svelte.js';
@@ -39,28 +39,49 @@
   // 장면(data-credit)이 화면 아래쪽 15%를 넘어 들어오면 한 번 올라온다. 그 전에는 자리만 차지하고 숨어 있다
   // (opacity 대신 visibility — 전환 중간 프레임의 axe 명도 대비, T-10-003 참고). 감속 모션이면 처음부터 다 보인다.
   const playing = motionOK;
-  const seen: Record<string, boolean> = $state({ player: true });
-  const shown = (key: string) => playing && !!seen[key];
-  const waiting = (key: string) => playing && !seen[key];
-  const statsRun = $derived(!playing || !!seen.highlights);
-  function reveal(el: HTMLElement, key: string) {
-    if (!playing || seen[key]) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((e) => e.isIntersecting)) return;
-        seen[key] = true;
-        io.disconnect();
-      },
-      { rootMargin: '0px 0px -15% 0px' },
-    );
+  /** 숫자를 세기 시작할 장면들(통산 기록·A매치). */
+  const seen = $state({ highlights: false, national: false });
+  // 장면 하나마다 관찰자를 두지 않고 하나로 본다. 들어온 장면은 credit-wait → credit-in으로 바꾸고 관찰을 멈춘다.
+  const io = playing
+    ? new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (!e.isIntersecting) continue;
+            const el = e.target as HTMLElement;
+            el.classList.replace('credit-wait', 'credit-in');
+            const key = el.dataset.credit;
+            if (key === 'highlights' || key === 'national') seen[key] = true;
+            io!.unobserve(el);
+          }
+        },
+        { rootMargin: '0px 0px -15% 0px' },
+      )
+    : null;
+  $effect(() => () => io?.disconnect());
+  function reveal(el: HTMLElement) {
+    if (!io) return;
+    el.classList.add('credit-wait');
     io.observe(el);
-    return { destroy: () => io.disconnect() };
+    return { destroy: () => io.unobserve(el) };
   }
+  let more = $state(false);
 </script>
+
+{#snippet event(e: ChapterEvent, j: number)}
+  <li class="ev ev-{e.kind}" style="--i:{j}">
+    <span class="ev-ic" aria-hidden="true">{ICON[e.kind]}</span>
+    <span>{e.text}{#if e.years.length > 1} <b class="ev-n">×{e.years.length}</b>{/if}<span class="ev-y">{yearsOf(e.years)}</span></span>
+  </li>
+{/snippet}
+{#snippet roll(list: HonourLine[], from: number)}
+  {#each list as h, j (h.name)}
+    <div class="roll-line" style="--i:{from + j}"><b>{h.name}{h.years.length > 1 ? ` ×${h.years.length}` : ''}</b><span>{yearsOf(h.years)}</span></div>
+  {/each}
+{/snippet}
 
 <article class="film" class:playing aria-label="{v.name} 커리어 결산">
   <section class="film-open" class:credit-in={playing} data-credit="player">
-    <div class="film-kicker">Full Time{v.number != null ? ` · No.${v.number}` : ''}</div>
+    <div class="eyebrow film-kicker">Full Time{v.number != null ? ` · No.${v.number}` : ''}</div>
     <h1>{v.name}</h1>
     <div class="film-sub">{POS_LABEL[v.pos]}{span ? ` · ${span}` : ''} · {v.age}세 은퇴</div>
     <div class="film-score">
@@ -71,40 +92,32 @@
       {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{main.name}’</span>{/if}
       <span class="pill">최고 OVR {v.peak}</span>
     </div>
-    {#if playing}<div class="film-cue" aria-hidden="true">스크롤해서 커리어 돌아보기<i>↓</i></div>{/if}
+    {#if playing && !seen.highlights}<div class="film-cue" aria-hidden="true">스크롤해서 커리어 돌아보기<i>↓</i></div>{/if}
   </section>
 
-  <section
-    class="film-stats"
-    class:credit-in={shown('highlights')}
-    class:credit-wait={waiting('highlights')}
-    data-credit="highlights"
-    aria-label="통산 기록"
-    use:reveal={'highlights'}
-  >
-    <div><b><CountUp value={d ? d.career.length : 0} animate={playing} run={statsRun} /></b><span>시즌</span></div>
-    <div><b><CountUp value={t ? t.p : v.totals.apps} animate={playing} run={statsRun} /></b><span>경기</span></div>
+  <section class="film-stats" data-credit="highlights" aria-label="통산 기록" use:reveal>
+    <div><b><CountUp value={d ? d.career.length : 0} animate={playing} run={seen.highlights} /></b><span>시즌</span></div>
+    <div><b><CountUp value={t ? t.p : v.totals.apps} animate={playing} run={seen.highlights} /></b><span>경기</span></div>
     {#if back && t}
-      <div><b><CountUp value={t.cs} animate={playing} run={statsRun} /></b><span>무실점</span></div>
-      <div><b><CountUp value={t.g + t.a} animate={playing} run={statsRun} /></b><span>공격P</span></div>
+      <div><b><CountUp value={t.cs} animate={playing} run={seen.highlights} /></b><span>무실점</span></div>
+      <div><b><CountUp value={t.g + t.a} animate={playing} run={seen.highlights} /></b><span>공격P</span></div>
     {:else}
-      <div><b><CountUp value={t ? t.g : v.totals.goals} animate={playing} run={statsRun} /></b><span>골</span></div>
-      <div><b><CountUp value={t ? t.a : v.totals.assists} animate={playing} run={statsRun} /></b><span>도움</span></div>
+      <div><b><CountUp value={t ? t.g : v.totals.goals} animate={playing} run={seen.highlights} /></b><span>골</span></div>
+      <div><b><CountUp value={t ? t.a : v.totals.assists} animate={playing} run={seen.highlights} /></b><span>도움</span></div>
     {/if}
-    <div><b><CountUp value={caps} animate={playing} run={statsRun} /></b><span>A매치</span></div>
-    <div><b><CountUp value={v.totals.trophies} animate={playing} run={statsRun} /></b><span>트로피</span></div>
+    <div><b><CountUp value={caps} animate={playing} run={seen.highlights} /></b><span>A매치</span></div>
+    <div><b><CountUp value={v.totals.trophies} animate={playing} run={seen.highlights} /></b><span>트로피</span></div>
   </section>
   {#if !d}<p class="film-note">시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 드립니다.</p>{/if}
 
   {#if chapters.length}
-    <header class="film-head" class:credit-in={shown('journey')} class:credit-wait={waiting('journey')} use:reveal={'journey'}>
-      <div class="film-kicker">The Journey</div>
+    <header class="film-head" use:reveal>
+      <div class="eyebrow film-kicker">The Journey</div>
       <h2>커리어 여정</h2>
     </header>
     <ol class="film-rail">
       {#each chapters as c, i (i)}
-        {@const key = `journey-${i}`}
-        <li class="chapter" class:credit-in={shown(key)} class:credit-wait={waiting(key)} data-credit={key} use:reveal={key}>
+        <li class="chapter" data-credit="journey-{i}" use:reveal>
           <div class="ch-years">{c.from}{c.to !== c.from ? ` — ${c.to}` : ''}</div>
           <h3 class="ch-club">{c.club}</h3>
           <div class="ch-meta">{c.leagues.join(' → ')} · {c.ageFrom === c.ageTo ? `${c.ageFrom}세` : `${c.ageFrom}–${c.ageTo}세`} · {c.seasons}시즌</div>
@@ -115,12 +128,7 @@
           </div>
           {#if c.events.length}
             <ul class="ch-events">
-              {#each c.events as e, j (j)}
-                <li class="ev ev-{e.kind}" style="--i:{j}">
-                  <span class="ev-ic" aria-hidden="true">{ICON[e.kind]}</span>
-                  <span>{e.text}{#if e.years.length > 1} <b class="ev-n">×{e.years.length}</b>{/if}<span class="ev-y">{yearsOf(e.years)}</span></span>
-                </li>
-              {/each}
+              {#each c.events as e, j (j)}{@render event(e, j)}{/each}
             </ul>
           {/if}
         </li>
@@ -129,43 +137,34 @@
   {/if}
 
   {#if caps > 0 || national.length}
-    <section class="film-national" class:credit-in={shown('national')} class:credit-wait={waiting('national')} data-credit="national" use:reveal={'national'}>
-      <div class="film-kicker">For the Country</div>
+    <section class="film-national" data-credit="national" use:reveal>
+      <div class="eyebrow film-kicker">For the Country</div>
       <h2>국가대표</h2>
-      <div class="nat-caps"><b><CountUp value={caps} animate={playing} run={!playing || !!seen.national} /></b> A매치</div>
+      <div class="nat-caps"><b><CountUp value={caps} animate={playing} run={seen.national} /></b> A매치</div>
       {#if national.length}
         <ul class="ch-events">
-          {#each national as e, j (j)}
-            <li class="ev ev-{e.kind}" style="--i:{j}">
-              <span class="ev-ic" aria-hidden="true">{ICON[e.kind]}</span>
-              <span>{e.text}<span class="ev-y">{e.year}</span></span>
-            </li>
-          {/each}
+          {#each national as e, j (j)}{@render event(e, j)}{/each}
         </ul>
       {/if}
     </section>
   {/if}
 
   {#if honours.length || awards.length}
-    <section class="film-roll" class:credit-in={shown('honours')} class:credit-wait={waiting('honours')} data-credit="honours" use:reveal={'honours'}>
+    <section class="film-roll" data-credit="honours" use:reveal>
       {#if honours.length}
-        <div class="film-kicker">Honours</div>
+        <div class="eyebrow film-kicker">Honours</div>
         <h2>우승 연혁</h2>
-        {#each honours as h, j (h.name)}
-          <div class="roll-line" style="--i:{j}"><b>{h.name}{h.years.length > 1 ? ` ×${h.years.length}` : ''}</b><span>{yearsOf(h.years)}</span></div>
-        {/each}
+        {@render roll(honours, 0)}
       {/if}
       {#if awards.length}
-        <div class="film-kicker roll-gap">Individual Awards</div>
-        {#each awards as h, j (h.name)}
-          <div class="roll-line" style="--i:{honours.length + j}"><b>{h.name}{h.years.length > 1 ? ` ×${h.years.length}` : ''}</b><span>{yearsOf(h.years)}</span></div>
-        {/each}
+        <div class="eyebrow film-kicker roll-gap">Individual Awards</div>
+        {@render roll(awards, honours.length)}
       {/if}
     </section>
   {/if}
 
-  <section class="film-finale" class:credit-in={shown('finale')} class:credit-wait={waiting('finale')} data-credit="finale" use:reveal={'finale'}>
-    <div class="film-kicker">The Final Whistle</div>
+  <section class="film-finale" data-credit="finale" use:reveal>
+    <div class="eyebrow film-kicker">The Final Whistle</div>
     <p>{v.age}세, {v.lastClub}에서<br />마지막 휘슬이 울렸습니다.</p>
     <h2>수고했어요, {v.name}</h2>
     <div class="film-end">Full Time</div>
@@ -173,9 +172,10 @@
 </article>
 
 {#if d}
-  <details class="card film-more" data-credit="career">
+  <!-- 펼칠 때만 그린다(시즌별 표가 길다). -->
+  <details class="card film-more" data-credit="career" bind:open={more}>
     <summary>시즌별 기록 · 레전드 점수 구성 자세히 보기</summary>
-    {#if breakdown}
+    {#if more && breakdown}
       <div class="stack">
         <h2>레전드 점수 구성</h2>
         <p class="muted fs-xs">포지션별 기여(공격수·미드필더는 골·도움, 수비수·골키퍼는 무실점 중심) + 출전 · 우승 · 개인상 · A매치 · 최고 OVR · 발롱도르/월드컵 보너스</p>
@@ -187,9 +187,9 @@
         </div>
       </div>
     {/if}
-    <CareerTab s={d} />
+    {#if more}<CareerTab s={d} />{/if}
   </details>
 {/if}
 {#if end}
-  <div class="credit-wrap" data-credit="end">{@render end()}</div>
+  <div class="credit-wrap">{@render end()}</div>
 {/if}

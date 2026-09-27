@@ -3266,8 +3266,8 @@ button.title-item:hover {
   font-weight: 600;
 }
 
-/* ───────── 은퇴 크레딧 (T-10-029) ─────────
-   섹션이 아래에서 크게 떠오르고, 점수 막대가 차례로 차오르고, 등급 배지가 점수 카운트업 뒤에 튀어나온다.
+/* ───────── 은퇴 크레딧 (T-10-029 → T-10-062) ─────────
+   장면이 아래에서 크게 떠오르고, 등급 배지가 점수 카운트업 뒤에 튀어나온다.
    opacity를 쓰지 않는다(전환 중간 프레임의 axe 명도 대비, T-10-003 참고) — 등장 전 배지는 scale(0)로 숨긴다. */
 .credit-wrap {
   display: flex;
@@ -3276,7 +3276,6 @@ button.title-item:hover {
 }
 .credit-in {
   animation: credit-rise 0.9s cubic-bezier(0.16, 0.84, 0.24, 1) both;
-  scroll-margin-block: 16px 88px;
 }
 @keyframes credit-rise {
   from {
@@ -3295,14 +3294,9 @@ button.title-item:hover {
     transform: scale(0);
   }
 }
-.credit-in .legend-bar i {
-  animation: fill 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  animation-delay: calc(var(--i, 0) * 90ms + 250ms);
-}
 @media (prefers-reduced-motion: reduce) {
   .credit-in,
-  .credit-late,
-  .credit-in .legend-bar i {
+  .credit-late {
     animation: none;
   }
 }
@@ -3312,9 +3306,9 @@ button.title-item:hover {
    사건 줄은 한 줄씩 밀려 들어온다. opacity 애니메이션은 쓰지 않는다(axe 명도 대비). */
 .film {
   --film-bg: #08120d;
-  --film-ink: #eef4ef;
+  --film-ink: var(--on-pitch);
   --film-muted: #a9b8ae;
-  --film-gold: #f0b437;
+  --film-gold: var(--pitch-accent);
   --film-line: rgba(238, 244, 239, 0.14);
   position: relative;
   background:
@@ -3335,11 +3329,7 @@ button.title-item:hover {
   color: var(--film-ink);
 }
 .film-kicker {
-  font-family: var(--display);
-  font-size: 0.75rem;
-  font-weight: 600;
   letter-spacing: 0.32em;
-  text-transform: uppercase;
   color: var(--film-gold);
 }
 .film-open {
@@ -3476,13 +3466,9 @@ button.title-item:hover {
   display: flex;
   flex-direction: column;
 }
-.film-rail:empty {
-  display: none;
-}
 .chapter {
   position: relative;
   padding: 0 0 34px 26px;
-  scroll-margin-block: 16px 88px;
 }
 .chapter::before {
   content: '';
@@ -3639,7 +3625,6 @@ button.title-item:hover {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  scroll-margin-block: 16px 88px;
 }
 .film-finale p {
   color: var(--film-muted);
@@ -3669,13 +3654,10 @@ button.title-item:hover {
 .film-more[open] summary {
   margin-bottom: 14px;
 }
-.film-more {
-  display: block;
-}
 .film-more > .stack {
   margin-bottom: 18px;
 }
-.film.playing .credit-in.chapter::before {
+.chapter.credit-in::before {
   animation: rail-draw 1.1s cubic-bezier(0.3, 0.7, 0.3, 1) both;
 }
 @keyframes rail-draw {
@@ -3683,7 +3665,7 @@ button.title-item:hover {
     transform: scaleY(0);
   }
 }
-.film.playing .credit-in .ev {
+.credit-in .ev {
   animation: ev-wipe 0.6s ease-out both;
   animation-delay: calc(var(--i, 0) * 160ms + 350ms);
 }
@@ -3692,7 +3674,7 @@ button.title-item:hover {
     clip-path: inset(0 100% 0 0);
   }
 }
-.film.playing .credit-in .roll-line {
+.credit-in .roll-line {
   animation: roll-up 0.6s ease-out both;
   animation-delay: calc(var(--i, 0) * 90ms + 200ms);
 }
@@ -3701,15 +3683,15 @@ button.title-item:hover {
     transform: translateY(24px);
   }
 }
-.film.playing .film-finale.credit-in .film-end {
+.film-finale.credit-in .film-end {
   animation: credit-pop 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) both;
   animation-delay: 1s;
 }
 @media (prefers-reduced-motion: reduce) {
-  .film.playing .credit-in.chapter::before,
-  .film.playing .credit-in .ev,
-  .film.playing .credit-in .roll-line,
-  .film.playing .film-finale.credit-in .film-end,
+  .chapter.credit-in::before,
+  .credit-in .ev,
+  .credit-in .roll-line,
+  .film-finale.credit-in .film-end,
   .film-cue i {
     animation: none;
   }
