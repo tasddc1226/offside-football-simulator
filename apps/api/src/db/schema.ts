@@ -310,7 +310,10 @@ export const serverFirsts = sqliteTable(
   (table) => [index('server_firsts_achieved_idx').on(table.achievedAt)],
 );
 
-/** T-10-027 서버 내부 상태 한 줄씩(예: 서버 최초 기록 전체 재계산 버전). */
+/**
+ * 서버 내부 상태 한 줄씩. T-10-027 서버 최초 기록 재계산 버전, T-10-055 한국 시각 날짜별 은퇴 수
+ * (`retired:YYYY-MM-DD`, 하루 한 줄씩 늘고 지우지 않는다 — retiredCountKey).
+ */
 export const appMeta = sqliteTable('app_meta', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),

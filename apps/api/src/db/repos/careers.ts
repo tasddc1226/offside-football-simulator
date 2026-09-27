@@ -144,9 +144,10 @@ export type PutRetirementInput = {
 
 /**
  * 한국 시각 날짜별 은퇴 수를 담는 app_meta 키. 홈 라이브 현황이 오늘 은퇴 수를 count(*)로 세면 오늘 은퇴한
- * 커리어 수만큼 행을 읽으므로(T-10-055), 은퇴할 때 이 키를 1 올리고 현황은 한 행만 읽는다.
+ * 커리어 수만큼 행을 읽으므로(T-10-055), 은퇴할 때 이 키를 1 올리고 현황은 한 행만 읽는다. 프로필 삭제로
+ * 커리어가 지워져도 빼지 않는다(홈 현황 숫자라 허용).
  */
-export const retiredCountKey = (iso: string) => `retired:${kstDays(new Date(iso), 1).days[0]}`;
+export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`;
 
 /** `PUT /v1/careers/:careerId/retirement`. 소유권 확인은 라우트가 미리 끝낸다. 같은 커리어로 다시
  * 보내도(이름 공개 토글) 최초 은퇴 시각은 바뀌지 않는다. */
@@ -160,7 +161,7 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
       .select(
         db
           .select({
-            key: sql<string>`${retiredCountKey(now)}`.as('key'),
+            key: sql<string>`${retiredCountKey(new Date(now))}`.as('key'),
             value: sql<string>`'1'`.as('value'),
           })
           .from(careers)

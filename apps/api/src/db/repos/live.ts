@@ -31,10 +31,9 @@ export async function liveStats(db: Db, nowMs: number): Promise<LiveStats> {
   // 오늘 = 한국 시각 자정부터(운영 대시보드와 같은 기준).
   const today = kstDays(new Date(nowMs), 1).startIso;
   const recent = new Date(nowMs - PLAYING_WINDOW_MS).toISOString();
-  const n = sql<number>`count(*)`;
   const [[playing], daily, [retired]] = await Promise.all([
     db
-      .select({ n })
+      .select({ n: sql<number>`count(*)` })
       .from(careers)
       .where(and(eq(careers.status, 'active'), gte(careers.updatedAt, recent))),
     db.get<{ seasons: number | null; created: number | null }>(
@@ -43,7 +42,7 @@ export async function liveStats(db: Db, nowMs: number): Promise<LiveStats> {
     db
       .select({ n: appMeta.value })
       .from(appMeta)
-      .where(eq(appMeta.key, retiredCountKey(new Date(nowMs).toISOString()))),
+      .where(eq(appMeta.key, retiredCountKey(new Date(nowMs)))),
   ]);
   return {
     playing: Number(playing?.n ?? 0),
