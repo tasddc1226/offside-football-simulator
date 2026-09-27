@@ -3679,6 +3679,29 @@ button.title-item:hover {
   line-height: 1.1;
   color: var(--film-gold);
 }
+.film-pot-ach {
+  margin-top: 14px;
+  padding: 12px 20px;
+  border: 1px solid var(--film-line);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.film-pot-ach span {
+  color: var(--film-muted);
+  font-size: 0.8125rem;
+}
+.film-pot-ach strong {
+  font-family: var(--display);
+  font-size: 2rem;
+  line-height: 1.1;
+}
+.film-pot-ach small {
+  color: var(--film-muted);
+  font-size: 0.8125rem;
+}
 .film-finale {
   padding-block: 36px 8px;
   display: flex;

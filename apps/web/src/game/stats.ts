@@ -24,8 +24,21 @@ export function potLabel(s: GameState): string {
 }
 /** 아직 재평가가 남아 범위가 좁혀질 수 있는지. */
 export const potFogged = (s: GameState): boolean => (s.flags.rescout ?? 0) < POT_FOG.length - 1;
-/** T-10-073 은퇴 때 공개하는 실제 잠재력과 마지막 스카우트 평가. */
-export const potReveal = (s: GameState) => ({ real: gradeOf(truePot(s)), scout: potGrade(s) });
+/** T-10-073 은퇴 때 공개하는 실제 잠재력과 마지막 스카우트 평가.
+ * T-10-075 ach: 최고 OVR ÷ 실제 잠재력(%) — 훈련·관리로 잠재력을 얼마나 끌어냈는지. 잠재력 근처에서도 느리게
+ * 자라므로 100을 넘을 수 있다(시뮬 smart 중앙값 99, 10~90% 95~104, OVR 비중 0 능력치만 훈련하면 중앙값 84). */
+export const potReveal = (s: GameState) => ({
+  real: gradeOf(truePot(s)),
+  scout: potGrade(s),
+  ach: Math.round((s.peak / truePot(s)) * 100),
+});
+/** T-10-075 달성도 한 줄. */
+export function potAchText(ach: number): string {
+  if (ach >= 102) return '타고난 한계를 넘어섰어요.';
+  if (ach >= 97) return '재능을 끝까지 끌어냈어요.';
+  if (ach >= 92) return '조금은 남겨 두고 떠났어요.';
+  return '다 피우지 못한 재능이었어요.';
+}
 export const BLOOM_SCOUT = 3;
 const BLOOM_DRIFT = 1.2,
   BLOOM_AGE = 25;

@@ -8,6 +8,7 @@
   import { legendScoreBreakdown, legendTitle } from '../game/season.js';
   import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '../game/retirement-report.js';
   import { POS_LABEL } from '../game/pos-label.js';
+  import { potAchText } from '../game/stats.js';
   import { totals } from './format.js';
   import type { LegendView } from './state.svelte.js';
   import CareerTab from './tabs/CareerTab.svelte';
@@ -180,6 +181,10 @@
       <p>끝까지 숨겨져 있던 잠재력</p>
       <b>{v.pot.real}</b>
       <p>{potVerdict}</p>
+      <div class="film-pot-ach" data-legend-ach>
+        <span>잠재력 달성도</span><strong>{v.pot.ach}%</strong>
+        <small>최고 OVR {v.peak} · {potAchText(v.pot.ach)}</small>
+      </div>
     </section>
   {/if}
   <section class="film-finale" data-credit="finale" use:reveal>

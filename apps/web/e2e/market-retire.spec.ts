@@ -48,6 +48,7 @@ test('만 30세가 넘어 은퇴하면 명예의 전당에 기록된다고 묻�
   await pot.scrollIntoViewIfNeeded();
   await expect(pot).toBeVisible();
   await expect(pot).toContainText(/끝까지 숨겨져 있던 잠재력\s*[SABCD]\s*스카우트/);
+  await expect(pot.locator('[data-legend-ach]')).toContainText(/잠재력 달성도\s*\d+%\s*최고 OVR \d+ · /);
 });
 
 test('환경설정에서 선수 이름 공개를 끄면 은퇴 때 익명으로 시작한다 (T-10-065)', async ({

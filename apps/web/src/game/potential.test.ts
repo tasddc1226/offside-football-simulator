@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { potFogged, potGrade, potLabel, potReveal } from './stats.js';
+import { potAchText, potFogged, potGrade, potLabel, potReveal } from './stats.js';
 import type { GameState } from './types.js';
 
 // T-10-073 잠재력은 흐리게: 재평가 전엔 스카우트 평가가 범위로만 보이고, 은퇴 때 실제 잠재력을 공개한다.
-const st = (pot: number, rescout?: number, bloom = 0, potBonus?: number) =>
-  ({ pot, bloom, flags: { rescout, potBonus } }) as unknown as GameState;
+const st = (pot: number, rescout?: number, bloom = 0, potBonus?: number, peak = 80) =>
+  ({ pot, bloom, peak, flags: { rescout, potBonus } }) as unknown as GameState;
 
 describe('잠재력 표시 (T-10-073)', () => {
   it('재평가 전(고교~20세)엔 ±4 범위로, 21세 재평가 뒤엔 ±2, 24세 재평가 뒤엔 한 등급으로 보인다', () => {
@@ -28,7 +28,16 @@ describe('잠재력 표시 (T-10-073)', () => {
   it('이벤트 보너스는 평가에 더해지고, 숨은 성장(bloom)은 은퇴 공개에만 보인다', () => {
     expect(potGrade(st(82, 2, 0, 3))).toBe('A');
     expect(potLabel(st(82, 2, 0, 3))).toBe('A');
-    expect(potReveal(st(82, 2, 9))).toEqual({ real: 'S', scout: 'B' });
-    expect(potReveal(st(82, 2, -6))).toEqual({ real: 'C', scout: 'B' });
+    expect(potReveal(st(82, 2, 9))).toMatchObject({ real: 'S', scout: 'B' });
+    expect(potReveal(st(82, 2, -6))).toMatchObject({ real: 'C', scout: 'B' });
+  });
+
+  it('T-10-075 달성도 = 최고 OVR ÷ 실제 잠재력', () => {
+    expect(potReveal(st(80, 2, 0, 0, 78)).ach).toBe(98);
+    expect(potReveal(st(76, 2, 2, 2, 84)).ach).toBe(105);
+    expect(potAchText(105)).toMatch(/넘어섰/);
+    expect(potAchText(98)).toMatch(/끌어냈/);
+    expect(potAchText(94)).toMatch(/남겨/);
+    expect(potAchText(80)).toMatch(/피우지 못한/);
   });
 });
