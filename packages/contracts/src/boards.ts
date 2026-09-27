@@ -51,6 +51,9 @@ export const PostSummarySchema = z.object({
   version: z.string().nullable(),
   pinned: z.boolean(),
   commentCount: z.number().int().min(0),
+  /** T-10-058 조회수·좋아요 수. 목록은 엣지에 60초 담기므로 조금 늦게 바뀔 수 있다. */
+  viewCount: z.number().int().min(0).default(0),
+  likeCount: z.number().int().min(0).default(0),
   createdAt: IsoUtcSchema,
   updatedAt: IsoUtcSchema,
 });
@@ -80,8 +83,17 @@ export type BoardListResponse = z.infer<typeof BoardListResponseSchema>;
 export const PostDetailResponseSchema = z.object({
   post: PostSchema,
   comments: z.array(CommentSchema),
+  /** 보는 프로필이 이 글에 좋아요를 눌렀다(세션이 없으면 false). */
+  liked: z.boolean().default(false),
 });
 export type PostDetailResponse = z.infer<typeof PostDetailResponseSchema>;
+
+/** T-10-058 PUT·DELETE /v1/boards/posts/:postId/like 응답. */
+export const PostLikeResponseSchema = z.object({
+  liked: z.boolean(),
+  likeCount: z.number().int().min(0),
+});
+export type PostLikeResponse = z.infer<typeof PostLikeResponseSchema>;
 
 /** google: 구글 로그인한 프로필(댓글을 쓸 수 있다), nickname: 그 프로필의 댓글 닉네임(없으면 먼저 정해야 한다). */
 export const BoardViewerResponseSchema = z.object({

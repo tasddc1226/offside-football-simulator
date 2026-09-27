@@ -250,8 +250,28 @@ export const boardPosts = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
     deletedAt: text('deleted_at'),
+    /** T-10-058 조회수. 기기마다 글 하나에 한 번만 센다(웹이 기억). */
+    viewCount: integer('view_count').notNull().default(0),
+    /** T-10-058 좋아요 수. board_post_likes를 바꿀 때 같은 batch에서 다시 센다(목록이 COUNT 없이 읽는다). */
+    likeCount: integer('like_count').notNull().default(0),
   },
   (table) => [index('board_posts_board_created_idx').on(table.board, table.createdAt)],
+);
+
+/** T-10-058. 글 좋아요 — 프로필당 글 하나에 한 번. */
+export const boardPostLikes = sqliteTable(
+  'board_post_likes',
+  {
+    postId: text('post_id')
+      .notNull()
+      .references(() => boardPosts.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.postId, table.profileId] }),
+    index('board_post_likes_profile_idx').on(table.profileId),
+  ],
 );
 
 /** T-10-011. 글마다 달리는 댓글. 프로필이 있는 누구나 쓰고, 본인·관리자가 지운다(deleted_at). */

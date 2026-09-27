@@ -16,7 +16,7 @@
   import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
   import { BOARD_KEYS } from '@offside/contracts/board-limits';
-  import { BOARD_LABEL, dateOf, parseBody } from './boardText.js';
+  import { BOARD_LABEL, dateOf, parseBody, postMeta } from './boardText.js';
   import Topbar from './Topbar.svelte';
   import NicknameForm from './NicknameForm.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
@@ -29,7 +29,8 @@
   let posts = $state<PostSummary[]>([]);
   let hasMore = $state(false);
   let status = $state<LoadStatus>('loading');
-  let detail = $state<{ post: Post; comments: Comment[] } | null>(null);
+  let detail = $state<{ post: Post; comments: Comment[]; liked: boolean } | null>(null);
+  let liking = $state(false);
   /** 관리자 편집기. id가 없으면 새 글. */
   let editing = $state<{ id?: string; title: string; body: string; version: string; pinned: boolean } | null>(null);
   let commentText = $state('');
@@ -59,8 +60,44 @@
   async function open(id: string) {
     const r = await api.fetchPost(id);
     if (!r.ok) return toast(r.error.message);
-    detail = r.data;
+    detail = { ...r.data, liked: !!r.data.liked }; // 옛 서버 응답엔 liked가 없다.
+    if (firstView(id)) {
+      detail.post.viewCount++;
+      void api.addView(id);
+    }
     window.scrollTo(0, 0);
+  }
+  // T-10-058 조회수는 기기마다 글 하나에 한 번만 센다. 최근 VIEWED_MAX개만 기억한다.
+  const VIEWED_KEY = 'ft_board_viewed';
+  const VIEWED_MAX = 300;
+  function firstView(id: string): boolean {
+    try {
+      const seen: string[] = JSON.parse(localStorage.getItem(VIEWED_KEY) ?? '[]');
+      if (seen.includes(id)) return false;
+      localStorage.setItem(VIEWED_KEY, JSON.stringify([...seen, id].slice(-VIEWED_MAX)));
+    } catch {
+      /* 저장소를 못 쓰면 그냥 센다 */
+    }
+    return true;
+  }
+  async function toggleLike() {
+    if (!detail || liking) return;
+    const d = detail;
+    const next = !d.liked;
+    // 먼저 화면에 반영하고, 실패하면 되돌린다.
+    d.liked = next;
+    d.post.likeCount += next ? 1 : -1;
+    liking = true;
+    const r = await api.setLike(d.post.id, next);
+    liking = false;
+    if (r.ok) {
+      d.liked = r.data.liked;
+      d.post.likeCount = r.data.likeCount;
+    } else {
+      d.liked = !next;
+      d.post.likeCount += next ? -1 : 1;
+      toast(r.error.message);
+    }
   }
   function backToList() {
     detail = editing = null;
@@ -164,7 +201,7 @@
         <div class="stack" style="gap:4px">
           <div class="row" style="gap:6px;flex-wrap:wrap">
             {@render tags(post)}
-            <span class="muted" style="font-size:12px">{dateOf(post.createdAt)}{post.updatedAt !== post.createdAt ? ' · 수정됨' : ''}</span>
+            <span class="muted" style="font-size:12px">{dateOf(post.createdAt)}{post.updatedAt !== post.createdAt ? ' · 수정됨' : ''} · 조회 {post.viewCount}</span>
           </div>
           <h2 style="margin:0">{post.title}</h2>
         </div>
@@ -175,6 +212,10 @@
             {:else}<p>{#each b.lines as line, j (j)}{#if j}<br />{/if}{line}{/each}</p>{/if}
           {/each}
         </div>
+        <button class="btn btn-sm like-btn self-start" aria-pressed={detail.liked} data-act="like" onclick={toggleLike}>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.3s-7.8-4.6-7.8-10.4A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.8 2.5c0 5.8-7.8 10.4-7.8 10.4Z" /></svg>
+          좋아요 <span class="num" data-like-count>{post.likeCount}</span>
+        </button>
         {#if admin}
           <div class="row" style="gap:8px">
             <button class="icon-btn" data-act="edit-post" onclick={() => startEdit(post)}>수정</button>
@@ -230,7 +271,7 @@
                   {@render tags(p)}
                   <b>{p.title}</b>
                 </span>
-                <span class="muted" style="font-size:12px">{dateOf(p.createdAt)}{p.commentCount ? ` · 댓글 ${p.commentCount}` : ''}</span>
+                <span class="muted" style="font-size:12px">{postMeta(p)}</span>
               </button>
             </li>
           {:else}

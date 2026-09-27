@@ -8,20 +8,24 @@ import {
   CommentSchema,
   PostDetailResponseSchema,
   PostInputSchema,
+  PostLikeResponseSchema,
   PostSchema,
 } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
 import { getViewer, requireAdmin } from '../auth/admin.js';
 import { getAttemptCount, recordAttempt } from '../db/repos/authAttempts.js';
 import {
+  addView,
   createComment,
   createPost,
   deleteComment,
   deletePost,
   getCommentOwner,
   getPost,
+  isLiked,
   listComments,
   listPosts,
+  setLike,
   updatePost,
 } from '../db/repos/boards.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -34,6 +38,7 @@ import { EDGE, STALE } from '../edgeKeys.js';
 import { hasProfanity } from '@offside/contracts/content-filter';
 
 // T-10-011 게시판(공지·릴리즈 노트). 읽기는 누구나, 글은 관리자만, 댓글은 프로필이 있는 누구나.
+// T-10-058 조회수는 웹이 기기마다 글 하나에 한 번 보내고, 좋아요는 프로필이 있는 누구나(구글 로그인 없이도).
 // 댓글은 프로필당 시간당 COMMENT_LIMIT개까지(관리자 제외).
 const COMMENT_LIMIT = 10;
 
@@ -85,8 +90,27 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       ...r,
       deletable: viewer.admin || profileId === viewer.profileId,
     }));
-    return ok(c, PostDetailResponseSchema, { post, comments });
+    const liked = viewer.profileId ? await isLiked(getDb(c), id, viewer.profileId) : false;
+    return ok(c, PostDetailResponseSchema, { post, comments, liked });
   });
+
+  app.post('/v1/boards/posts/:postId/views', async (c) => {
+    if (!(await addView(getDb(c), idParam(c, 'postId')))) throw notFound('글');
+    return c.body(null, 204);
+  });
+
+  for (const [method, like] of [
+    ['put', true],
+    ['delete', false],
+  ] as const) {
+    app[method]('/v1/boards/posts/:postId/like', requireProfile, async (c) => {
+      const postId = idParam(c, 'postId');
+      const { profileId } = getSessionOrThrow(c);
+      await postOr404(c, postId); // 지운 글에 좋아요 행을 남기지 않는다.
+      const likeCount = await setLike(getDb(c), postId, profileId, like, nowIso());
+      return ok(c, PostLikeResponseSchema, { liked: like, likeCount });
+    });
+  }
 
   app.post('/v1/boards/:board/posts', async (c) => {
     const board = parseWithAppError(BoardKeySchema, c.req.param('board'));

@@ -944,6 +944,27 @@ textarea {
   font: inherit;
   cursor: pointer;
 }
+/* T-10-058 좋아요: 누르면 하트가 채워지고 빨갛게. */
+.like-btn {
+  gap: 6px;
+}
+.like-btn svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  transition: transform 0.16s ease-out;
+}
+.like-btn[aria-pressed='true'] svg {
+  fill: var(--bad);
+  stroke: var(--bad);
+  transform: scale(1.08);
+}
+@media (prefers-reduced-motion: reduce) {
+  .like-btn svg {
+    transition: none;
+  }
+}
 .board-body {
   line-height: 1.6;
   overflow-wrap: anywhere;

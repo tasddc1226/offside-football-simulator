@@ -201,6 +201,8 @@ test('소식에서 댓글을 쓰려고 로그인하면, 돌아와서 보던 글�
     version: null,
     pinned: false,
     commentCount: 0,
+    viewCount: 0,
+    likeCount: 0,
     createdAt: T,
     updatedAt: T,
   };

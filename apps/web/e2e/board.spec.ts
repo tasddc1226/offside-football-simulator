@@ -11,6 +11,8 @@ const NOTICE = {
   version: null,
   pinned: true,
   commentCount: 1,
+  viewCount: 12,
+  likeCount: 3,
   createdAt: T,
   updatedAt: T,
 };
@@ -21,6 +23,8 @@ const RELEASE = {
   version: 'v1.4.0',
   pinned: false,
   commentCount: 0,
+  viewCount: 0,
+  likeCount: 0,
   createdAt: T,
   updatedAt: T,
 };
@@ -38,6 +42,7 @@ async function mockBoards(
   opts: { admin?: boolean; empty?: boolean; google?: boolean; nickname?: string | null } = {},
 ) {
   const sent: { method: string; url: string; body: unknown }[] = [];
+  const views: string[] = [];
   let nickname = opts.nickname ?? null;
   await page.route(`${API}/v1/profile/nickname`, async (route: Route) => {
     const req = route.request();
@@ -59,6 +64,14 @@ async function mockBoards(
     const req = route.request();
     const url = new URL(req.url());
     const method = req.method();
+    if (url.pathname.endsWith('/views')) {
+      views.push(url.pathname);
+      return route.fulfill({ status: 204 });
+    }
+    if (url.pathname.endsWith('/like')) {
+      const liked = method === 'PUT';
+      return route.fulfill(ok({ liked, likeCount: NOTICE.likeCount + (liked ? 1 : 0) }));
+    }
     if (method !== 'GET') sent.push({ method, url: url.pathname, body: req.postDataJSON() });
     if (url.pathname === '/v1/boards/viewer')
       return route.fulfill(
@@ -143,7 +156,7 @@ async function mockBoards(
     }
     return route.fulfill(fail(404, 'VALIDATION_FAILED', '없음'));
   });
-  return sent;
+  return Object.assign(sent, { views });
 }
 
 test('소식: 공지사항 전체 보기 → 글 → 댓글, 릴리즈 노트 전체 보기는 릴리즈 노트만', async ({
@@ -309,4 +322,33 @@ test('홈 하단 메뉴: 소식 → 릴리즈 노트로 바꾸기 → 기록실 
   await expect(page.locator('h1')).toHaveText('환경설정');
   await nav.getByRole('button', { name: '홈' }).click();
   await expect(page.locator('[data-act="new"]')).toBeVisible();
+});
+
+test('소식: 조회수는 기기마다 한 번, 좋아요를 누르고 거둔다', async ({ page }) => {
+  const sent = await mockBoards(page);
+  await page.goto('/');
+  await page.locator('[data-act="board"]').click();
+  await expect(page.locator(`[data-post-row="${NOTICE.id}"]`)).toContainText(
+    '조회 12 · 좋아요 3 · 댓글 1',
+  );
+  await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
+  const post = page.locator(`[data-post="${NOTICE.id}"]`);
+  await expect(post).toContainText('조회 13');
+  expect(sent.views).toEqual([`/v1/boards/posts/${NOTICE.id}/views`]);
+
+  const like = page.locator('[data-act="like"]');
+  await expect(like).toHaveAttribute('aria-pressed', 'false');
+  await like.click();
+  await expect(like).toHaveAttribute('aria-pressed', 'true');
+  await expect(like.locator('[data-like-count]')).toHaveText('4');
+  await like.click();
+  await expect(like).toHaveAttribute('aria-pressed', 'false');
+  await expect(like.locator('[data-like-count]')).toHaveText('3');
+
+  // 같은 기기에서 다시 열면 조회수를 보내지 않는다.
+  await page.locator('[data-act="back-list"]').click();
+  await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
+  await expect(post).toBeVisible();
+  expect(sent.views).toHaveLength(1);
+  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 });

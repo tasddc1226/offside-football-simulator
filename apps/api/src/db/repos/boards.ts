@@ -1,8 +1,9 @@
 import type { BoardKey, Post, PostSummary } from '@offside/contracts';
-import { and, asc, desc, eq, isNull, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
-import { boardComments, boardPosts } from '../schema.js';
+import { boardComments, boardPostLikes, boardPosts } from '../schema.js';
+import { runBatch } from './batch.js';
 
 const COMMENTS_MAX = 200;
 
@@ -12,6 +13,8 @@ const summaryColumns = {
   title: boardPosts.title,
   version: boardPosts.version,
   pinned: boardPosts.pinned,
+  viewCount: boardPosts.viewCount,
+  likeCount: boardPosts.likeCount,
   createdAt: boardPosts.createdAt,
   updatedAt: boardPosts.updatedAt,
   // 단일 테이블 select에서 drizzle은 컬럼을 테이블명 없이 쓰므로 상관 서브쿼리는 이름을 직접 적는다.
@@ -103,6 +106,55 @@ export async function deletePost(db: Db, id: string, now: string): Promise<boole
   return res.meta.changes > 0;
 }
 
+/** T-10-058 조회수 +1. 지운 글이거나 없으면 false. */
+export async function addView(db: Db, id: string): Promise<boolean> {
+  const res = await db
+    .update(boardPosts)
+    .set({ viewCount: sql`${boardPosts.viewCount} + 1` })
+    .where(live(id));
+  return res.meta.changes > 0;
+}
+
+export async function isLiked(db: Db, postId: string, profileId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ postId: boardPostLikes.postId })
+    .from(boardPostLikes)
+    .where(and(eq(boardPostLikes.postId, postId), eq(boardPostLikes.profileId, profileId)));
+  return !!row;
+}
+
+/** 좋아요를 누르거나(like) 거둔다. 같은 batch에서 like_count를 다시 세어 늘 실제 행 수와 같다.
+ *  이미 그 상태면 행은 그대로(멱등). 새 좋아요 수를 돌려준다. */
+export async function setLike(
+  db: Db,
+  postId: string,
+  profileId: string,
+  like: boolean,
+  now: string,
+): Promise<number> {
+  const [, , rows] = (await runBatch(db, [
+    like
+      ? db
+          .insert(boardPostLikes)
+          .values({ postId, profileId, createdAt: now })
+          .onConflictDoNothing()
+      : db
+          .delete(boardPostLikes)
+          .where(and(eq(boardPostLikes.postId, postId), eq(boardPostLikes.profileId, profileId))),
+    db
+      .update(boardPosts)
+      .set({
+        likeCount: sql`(SELECT COUNT(*) FROM board_post_likes l WHERE l.post_id = board_posts.id)`,
+      })
+      .where(eq(boardPosts.id, postId)),
+    db
+      .select({ likeCount: boardPosts.likeCount })
+      .from(boardPosts)
+      .where(eq(boardPosts.id, postId)),
+  ])) as [unknown, unknown, { likeCount: number }[]];
+  return rows[0]?.likeCount ?? 0;
+}
+
 export async function listComments(db: Db, postId: string) {
   return db
     .select({
@@ -146,6 +198,21 @@ export async function deleteComment(db: Db, id: string, now: string): Promise<vo
   await db.update(boardComments).set({ deletedAt: now }).where(eq(boardComments.id, id));
 }
 
-/** 프로필 삭제 batch용 — 그 사람이 쓴 댓글을 지운다(글은 관리자 운영 기록이라 남긴다). */
-export const deleteBoardCommentsStatement = (db: Db, profileId: string) =>
-  db.delete(boardComments).where(eq(boardComments.profileId, profileId));
+/** 프로필 삭제 batch용 — 그 사람이 쓴 댓글과 누른 좋아요를 지운다(글은 관리자 운영 기록이라 남긴다).
+ *  좋아요 수는 지우기 전에 그 글들에서 하나씩 뺀다. */
+export const deleteBoardActivityStatements = (db: Db, profileId: string) => {
+  const mine = eq(boardPostLikes.profileId, profileId);
+  return [
+    db.delete(boardComments).where(eq(boardComments.profileId, profileId)),
+    db
+      .update(boardPosts)
+      .set({ likeCount: sql`${boardPosts.likeCount} - 1` })
+      .where(
+        inArray(
+          boardPosts.id,
+          db.select({ id: boardPostLikes.postId }).from(boardPostLikes).where(mine),
+        ),
+      ),
+    db.delete(boardPostLikes).where(mine),
+  ] as const;
+};
