@@ -11,6 +11,7 @@
   const { h }: { h: HofEntry } = $props();
   let busy = $state(false);
   let url = $state<string | null>(null);
+  let barH = $state(0);
 
   // 링크를 서버에 확인한 뒤 클립보드로 복사만 한다(네이티브 공유 시트는 띄우지 않는다).
   // Safari 는 클릭 제스처가 끝난 뒤(await 이후)의 클립보드 쓰기를 막으므로, 쓰기는 클릭 안에서 바로 시작하고
@@ -58,8 +59,8 @@
 
 {#if h.id && isHofEligible(h.age)}
   {@const id = h.id}
-  <div class="sharebar-space" class:open={url} aria-hidden="true"></div>
-  <div class="action-bar at-bottom" data-share="bar">
+  <div class="sharebar-space" style:height="{barH}px" aria-hidden="true"></div>
+  <div class="action-bar at-bottom" data-share="bar" bind:clientHeight={barH}>
     <div class="action-bar-inner stack">
       {#if url}
         <input class="share-url" readonly value={url} aria-label="공유 링크" onfocus={(e) => e.currentTarget.select()} />

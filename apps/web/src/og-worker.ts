@@ -4,13 +4,12 @@
 import { fetchHofEntry } from './hof-entry.js';
 import { renderCareerCard } from './og-render.js';
 import { bandCardPath } from './share-meta.js';
-
-const CARD = /^\/og\/career\/([0-9a-f-]{36})\.png$/i;
+import { OG_CARD_PATH } from './share-path.js';
 
 export default {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    const id = CARD.exec(url.pathname)?.[1];
+    const id = OG_CARD_PATH.exec(url.pathname)?.[1];
     const entry = id ? await fetchHofEntry(id, url.hostname) : null;
     if (!entry) return new Response('Not Found', { status: 404 });
     try {
@@ -23,10 +22,13 @@ export default {
         },
       });
     } catch {
-      return Response.redirect(
-        new URL(bandCardPath(entry.legendScore), url.origin).toString(),
-        302,
-      );
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: new URL(bandCardPath(entry.legendScore), url.origin).toString(),
+          'Cache-Control': 'public, max-age=600',
+        },
+      });
     }
   },
 };

@@ -16,8 +16,9 @@ const assets = {
     return new Response('', { status: 404 });
   },
 };
+const ctx = { waitUntil: () => {} };
 const get = (path: string) =>
-  worker.fetch(new Request(`https://offside-lab.com${path}`), { ASSETS: assets });
+  worker.fetch(new Request(`https://offside-lab.com${path}`), { ASSETS: assets }, ctx);
 
 describe('T-10-037 preconnect 헤더', () => {
   it('HTML 응답은 폰트 파일·API 연결을 미리 열라고 알린다', async () => {
@@ -44,10 +45,14 @@ describe('T-10-068 공유 미리보기 카드 경로', () => {
         return new Response('png', { headers: { 'Content-Type': 'image/png' } });
       },
     };
-    const res = await worker.fetch(new Request(`https://offside-lab.com${PATH}`), {
-      ASSETS: assets,
-      OG: og,
-    });
+    const res = await worker.fetch(
+      new Request(`https://offside-lab.com${PATH}`),
+      {
+        ASSETS: assets,
+        OG: og,
+      },
+      ctx,
+    );
     expect(await res.text()).toBe('png');
     expect(seen).toEqual([`https://offside-lab.com${PATH}`]);
   });
