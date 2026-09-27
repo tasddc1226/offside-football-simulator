@@ -2,7 +2,7 @@
 // 풀타임 원본은 선수 상태를 하나의 거대한 객체(G)로 다루며 필드를 느슨하게 추가합니다.
 // 완전한 판별 유니온으로 다시 모델링하면 포팅 리스크가 커지므로, 여기서는 알려진 필드는 구체적으로
 // 타이핑하고 나머지(로그 라인 종류가 다양한 필드, 이벤트별 임시 플래그 등)는 폭넓게 둡니다.
-import type { LegendSnapshot, PlayStyle } from '@offside/contracts';
+import type { LegendSnapshot, PlayStyle, RetiredNumberResult } from '@offside/contracts';
 import type { CareerBalance } from './balance.js';
 import type { AttrKey, Pos, Club, SAVE_VERSION } from './data.js';
 import type { SeasonEndResult } from './season.js';
@@ -309,6 +309,8 @@ export interface HofEntry {
   public?: boolean;
   /** T-10-026. 은퇴 때의 대표 칭호 id. */
   title?: string | undefined;
+  /** T-10-076. 서버의 영구결번 심사 결과(null = 자격 없음). 업로드 응답을 받기 전·옛 항목에는 없다. */
+  rn?: RetiredNumberResult | null;
 }
 
 /** 은퇴 리포트(레전드 점수 구성·시즌별 기록·수상·여정)가 읽는 필드. 진행 중인 GameState와 저장된

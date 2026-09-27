@@ -107,7 +107,7 @@
         </div>
         <div class="field" style="width:84px">
           <label for="f-num">등번호</label>
-          <input type="number" id="f-num" inputmode="numeric" min="1" max="99" bind:value={C.number} />
+          <input type="number" id="f-num" inputmode="numeric" min="1" max="99" placeholder="1–99" bind:value={C.number} />
         </div>
       </div>
 

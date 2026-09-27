@@ -198,7 +198,11 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     );
     expect(retireRes.status).toBe(200);
     const retireBody = (await retireRes.json()) as { data: { careerId: string; status: string } };
-    expect(retireBody.data).toEqual({ careerId: CAREER_ID, status: 'retired' });
+    expect(retireBody.data).toEqual({
+      careerId: CAREER_ID,
+      status: 'retired',
+      retiredNumber: null,
+    });
 
     const retiredRow = (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0];
     expect(retiredRow?.status).toBe('retired');

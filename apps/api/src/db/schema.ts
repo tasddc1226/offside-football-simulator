@@ -350,6 +350,30 @@ export const serverRecords = sqliteTable('server_records', {
 });
 
 /**
+ * T-10-076 영구결번. 구단(club_id)·등번호마다 한 명 — 먼저 자격을 채운 커리어가 가져가고 취소되지 않는다(보유
+ * 커리어가 지워지면 함께 지워져 자리가 빈다). 한 커리어는 한 자리만 가진다. seq는 서버에서 몇 번째 결번인지.
+ */
+export const retiredNumbers = sqliteTable(
+  'retired_numbers',
+  {
+    clubId: text('club_id').notNull(),
+    number: integer('number').notNull(),
+    careerId: text('career_id')
+      .notNull()
+      .references(() => careers.id, { onDelete: 'cascade' }),
+    /** 결번을 받을 때의 구단 이름(표시용). */
+    club: text('club').notNull(),
+    score: integer('score').notNull(),
+    seq: integer('seq').notNull(),
+    grantedAt: text('granted_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.clubId, table.number] }),
+    uniqueIndex('retired_numbers_career_idx').on(table.careerId),
+  ],
+);
+
+/**
  * 서버 내부 상태 한 줄씩. T-10-027 서버 최초 기록 재계산 버전, T-10-055 한국 시각 날짜별 은퇴 수
  * (`retired:YYYY-MM-DD`, 하루 한 줄씩 늘고 지우지 않는다 — retiredCountKey).
  */

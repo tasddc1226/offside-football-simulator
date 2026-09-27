@@ -225,6 +225,13 @@
       "when": 1790556211102,
       "tag": "0031_play_signals",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1790558913304,
+      "tag": "0032_retired_numbers",
+      "breakpoints": true
     }
   ]
 }

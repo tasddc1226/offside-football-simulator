@@ -22,6 +22,7 @@ import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { purgeEdge } from '../edgeCache.js';
 import { recordFirsts } from './firsts.js';
+import { judgeRetirement } from './retiredNumbers.js';
 import { STALE } from '../edgeKeys.js';
 import { publishLive } from '../live/publish.js';
 import { isHeadless } from '../db/repos/automation.js';
@@ -124,9 +125,11 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
 
     await putRetirement(db, { careerId, summary, publicName, snapshot, now });
     await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
+    // T-10-076 영구결번 심사. 이름 공개 토글 재전송도 여기로 온다 — 이름을 공개하는 순간 자리를 잡는다.
+    const retiredNumber = await judgeRetirement(c, careerId, now);
     purgeEdge(c, STALE.retirementPut(careerId));
     publishLive(c, 'retire', careerId, now);
 
-    return ok(c, RetirementResponseSchema, { careerId, status: 'retired' });
+    return ok(c, RetirementResponseSchema, { careerId, status: 'retired', retiredNumber });
   });
 }

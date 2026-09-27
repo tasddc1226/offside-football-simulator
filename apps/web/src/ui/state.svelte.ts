@@ -2,11 +2,11 @@
 // 원본은 module-level `let G/screen/tab/...` + 수동 render() 호출로 화면을 갱신했다. Svelte 5
 // runes로 옮기면서 같은 상태를 하나의 반응형 객체에 모아 두고, 화면 갱신은 컴포넌트가 이 상태를
 // 구독하는 것으로 대신한다(수동 render() 호출은 더 이상 필요 없다).
-import type { HofSort } from '@offside/contracts';
+import type { HofSort, RetiredNumberResult } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import type { OutboxItem } from '../game/outbox.js';
 import type { AttrKey, Pos } from '../game/data.js';
-import { pick } from '../game/rng.js';
+import { pick, ri } from '../game/rng.js';
 import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
 import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
@@ -42,6 +42,9 @@ export function randomName(): string {
   return pick(SURNAMES) + pick(GIVEN);
 }
 
+/** T-10-076 기본 등번호는 무작위(1~99) — 모두 10번으로 시작하면 영구결번이 10번에 몰린다. 칸은 비우고 직접 적을 수 있다. */
+export const randomNumber = (): number => ri(1, 99);
+
 /** T-10-005 은퇴 선수 상세 화면에 띄울 대상. 내 선수(로컬 ft_hof)면 `own`이 있고 이름 공개를 바꿀 수 있다. */
 export interface LegendView {
   name: string;
@@ -70,6 +73,8 @@ export interface LegendView {
   title: string | null;
   /** T-10-073 은퇴 직후(진행 중 세이브)에만 — 실제 잠재력 공개. 저장된 기록에는 없다. */
   pot?: { real: string; scout: string; gap: number; ach: number } | undefined;
+  /** T-10-076 영구결번 심사 결과. null = 자격 없음, undefined = 아직 모름(업로드 전·옛 기록). */
+  rn?: RetiredNumberResult | null | undefined;
 }
 
 export const appState = $state<{
@@ -105,7 +110,7 @@ export const appState = $state<{
   legend: null,
   C: {
     name: randomName(),
-    number: 10,
+    number: randomNumber(),
     pos: 'FW',
     foot: '오른발',
     focus: defaultFocus('FW'),

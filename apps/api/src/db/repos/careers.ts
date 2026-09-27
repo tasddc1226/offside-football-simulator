@@ -22,7 +22,7 @@ import {
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { kstDays } from './admin.js';
-import { appMeta, careers, careerSeasons, goalsPlusAssists } from '../schema.js';
+import { appMeta, careers, careerSeasons, goalsPlusAssists, retiredNumbers } from '../schema.js';
 
 export type CareerRow = typeof careers.$inferSelect;
 
@@ -241,6 +241,12 @@ const publicColumns = {
   retiredAt: careers.retiredAt,
   hasDetail: sql<number>`${careers.snapshotJson} is not null`,
   title: careers.title,
+  // T-10-076 영구결번(retired_numbers를 left join한 쿼리에서만 쓴다).
+  rnClubId: retiredNumbers.clubId,
+  rnClub: retiredNumbers.club,
+  rnNumber: retiredNumbers.number,
+  rnSeq: retiredNumbers.seq,
+  rnScore: retiredNumbers.score,
 };
 type PublicRow = { [K in keyof typeof publicColumns]: unknown };
 
@@ -266,8 +272,19 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     retiredAt: String(r.retiredAt ?? ''),
     hasDetail: Boolean(r.hasDetail),
     title: (r.title as string | null) ?? null,
+    retiredNumber:
+      r.rnClubId == null
+        ? null
+        : {
+            clubId: String(r.rnClubId),
+            club: String(r.rnClub),
+            number: Number(r.rnNumber),
+            seq: Number(r.rnSeq),
+            score: Number(r.rnScore),
+          },
   };
 }
+const withRetiredNumber = eq(retiredNumbers.careerId, careers.id);
 
 /** 공개 명예의 전당(목록·상세·공유 링크·홈 라이브 은퇴 소식)에 오르는 은퇴. 짧은 커리어(T-10-032)는 내 선수에만 남는다. */
 /** 내 선수 목록은 짧은 커리어도 보여 준다. */
@@ -301,6 +318,7 @@ export async function listPublicHof(
     db
       .select(publicColumns)
       .from(careers)
+      .leftJoin(retiredNumbers, withRetiredNumber)
       .where(where)
       .orderBy(desc(by), desc(careers.legendScore), careers.retiredAt)
       .limit(limit)
@@ -320,6 +338,7 @@ export async function getPublicHof(
   const [row] = await db
     .select({ ...publicColumns, snapshotJson: careers.snapshotJson })
     .from(careers)
+    .leftJoin(retiredNumbers, withRetiredNumber)
     .where(and(eq(careers.id, careerId), isPublicRetired));
   if (!row) return undefined;
   const { snapshotJson, ...rest } = row;
@@ -338,6 +357,7 @@ export async function listOwnHof(
   const rows = await db
     .select(publicColumns)
     .from(careers)
+    .leftJoin(retiredNumbers, withRetiredNumber)
     .where(and(eq(careers.profileId, profileId), isOwnRetired))
     .orderBy(desc(careers.legendScore), careers.retiredAt)
     .limit(limit);

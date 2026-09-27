@@ -16,6 +16,7 @@
   import CountUp from './CountUp.svelte';
   import { motionOK } from './motion.js';
   import ClubMark from './ClubMark.svelte';
+  import { rnOf } from './retiredNumber.svelte.js';
 
   // end: 리포트 맨 아래(다음 행동 버튼 등).
   const { v, end }: { v: LegendView; end?: Snippet } = $props();
@@ -68,6 +69,12 @@
   }
   let more = $state(false);
 
+  // ───────── T-10-076 영구결번 ─────────
+  // 심사 카드·세리머니는 첫 화면 번들을 늘리지 않게 따로 불러온다(RetiredNumberCredit). 결번 배지만 여기서 그린다.
+  /** 내 선수는 이번 접속에서 받은 심사 결과(이름 공개 직후 등)를 먼저 본다. */
+  const rnv = $derived(v.own?.id ? rnOf(v.own.id, v.rn) : v.rn);
+  const rnGranted = $derived(rnv?.kind === 'granted' ? rnv : null);
+
   // T-10-073 은퇴 직후에만: 숨겨져 있던 실제 잠재력을 마지막 스카우트 평가와 견준다.
   const potVerdict = $derived.by(() => {
     if (!v.pot) return '';
@@ -102,6 +109,7 @@
       <span class="pill pill-gold">{legendTitle(v.score)}</span>
       {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{main.name}’</span>{/if}
       <span class="pill">최고 OVR {v.peak}</span>
+      {#if rnGranted}<span class="pill pill-rn" data-legend-rn-pill>👑 {rnGranted.club} 결번 {rnGranted.number}</span>{/if}
     </div>
     {#if playing && !seen.highlights}<div class="film-cue" aria-hidden="true">스크롤해서 커리어 돌아보기<i>↓</i></div>{/if}
   </section>
@@ -185,6 +193,11 @@
         <small>최고 OVR {v.peak} · {potAchText(v.pot.ach)}</small>
       </div>
     </section>
+  {/if}
+  {#if d || rnGranted}
+    {#await import('./RetiredNumberCredit.svelte') then { default: Credit }}
+      <Credit {v} rn={rnv} {reveal} />
+    {/await}
   {/if}
   <section class="film-finale" data-credit="finale" use:reveal>
     <ClubMark name={v.lastClub} id={v.lastClubId} size={56} />

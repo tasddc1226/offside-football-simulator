@@ -27,6 +27,7 @@
     showScore = false,
     club = null,
     clubId = null,
+    rn = null,
   }: {
     /** 0부터. 0~2는 금·은·동 월계관. */
     rank: number;
@@ -44,6 +45,8 @@
     club?: string | null;
     /** T-10-066 마지막 소속 클럽 id. 옛 기록엔 없어 이름으로 찾는다. */
     clubId?: string | null | undefined;
+    /** T-10-076 영구결번 등번호. */
+    rn?: number | null | undefined;
   } = $props();
   const tt = $derived(titleById(titleId));
 </script>
@@ -55,6 +58,7 @@
 {/if}
 <div>
   <ClubMark name={club} id={clubId} size={18} /> <b>{name}</b> <span class="pill">{POS[pos].label}</span>
+  {#if rn != null}<span class="pill pill-rn" data-rn-chip>👑 결번 {rn}</span>{/if}
   {#if tag}<span class="pill">{tag}</span>{/if}
   {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
   <div class="muted fs-xs">{t.apps}경기 {t.goals}골 {t.assists}도움 · 트로피 {t.trophies} · 최고 OVR {t.peak}{t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}{showScore ? ` · 레전드 ${t.score}` : ''}</div>
