@@ -57,6 +57,21 @@ describe('T-10-068 공유 미리보기 카드 경로', () => {
     expect(seen).toEqual([`https://offside-lab.com${PATH}`]);
   });
 
+  it('카드 워커의 302는 따라가지 않고 그대로 돌려준다', async () => {
+    const og = {
+      fetch: async (req: Request) => {
+        expect(req.redirect).toBe('manual');
+        return new Response(null, { status: 302, headers: { Location: '/og-career-x.png' } });
+      },
+    };
+    const res = await worker.fetch(
+      new Request(`https://offside-lab.com${PATH}`),
+      { ASSETS: assets, OG: og },
+      ctx,
+    );
+    expect(res.status).toBe(302);
+  });
+
   it('카드 워커가 없으면(로컬) 404', async () => {
     expect((await get(PATH)).status).toBe(404);
   });

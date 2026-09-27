@@ -47,8 +47,9 @@ function withRobots(response: Response, value: string): Response {
 // 바뀌므로 여기(커스텀 도메인)의 엣지 캐시에 오래 둔다.
 async function careerCard(request: Request, env: Env, ctx: Ctx): Promise<Response> {
   const cache = (globalThis as unknown as { caches?: { default: Cache } }).caches?.default;
-  // 캐시는 GET만 받는다 — HEAD(링크 확인 봇)도 같은 GET 키로 찾고 넣는다.
-  const key = new Request(request.url);
+  // 캐시는 GET만 받는다 — HEAD(링크 확인 봇)도 같은 GET 키로 찾고 넣는다. 카드 워커의 302(지금 주소·대체 카드)는
+  // 따라가지 않고 그대로 돌려준다 — 따라가면 대체 카드가 선수 카드 주소에 200으로 일주일 캐시된다.
+  const key = new Request(request.url, { redirect: 'manual' });
   const hit = await cache?.match(key);
   if (hit) return hit;
   if (!env.OG) return new Response('Not Found', { status: 404 }); // 로컬: og 워커를 같이 띄우지 않았다
