@@ -105,6 +105,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'shirt_number',
     'snapshot_json',
     'title',
+    'last_club_id',
   ],
   career_seasons: [
     'career_id',
@@ -128,6 +129,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'caps',
     'comps_json',
     'ch_json',
+    'club_id',
   ],
   club_customs: ['profile_id', 'clubs_json', 'updated_at'],
   // T-10-011: 게시판.

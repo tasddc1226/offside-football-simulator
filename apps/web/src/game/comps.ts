@@ -1,6 +1,7 @@
 // ───────── 실제 대회 구조: 국내 컵 · 슈퍼컵 · 대륙 클럽 대회 · 시상식 · 커리어 여정 ─────────
 import { ovr } from './attributes.js';
 import { clamp, ri, chance, gauss, rnd } from './rng.js';
+import { clubRef, sameClub } from './data.js';
 import {
   leagueOf,
   clubsIn,
@@ -140,7 +141,7 @@ export function seasonSetup(s: GameState, S: Season) {
   }));
   if (L.amateur || s.club.id === 'sangmu') return;
   const last = s.career[s.career.length - 1];
-  const same = last && last.club === s.club.name && last.league === L.name;
+  const same = last && sameClub(last, clubRef(s.club)) && last.league === L.name;
   const league = clubsIn(s.leagueId).sort((a, b) => b.str - a.str);
   const idx = league.findIndex((c) => c.id === s.club.id);
   const rank = same ? (last!.rank as number) : expectedRank(idx, league.length);

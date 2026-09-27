@@ -50,7 +50,7 @@
           {#each rows as r, i (i)}
             <tr>
               <td>{r.mil ? r.year : seasonLabelOf(r)} <span class="muted">({r.age})</span>{#if r.ch?.length}<br /><span class="badge-ch">CH×{r.ch.length}</span>{/if}</td>
-              <td><ClubMark name={r.club} /> {r.club}<div class="muted" style="font-size:0.6875rem">{r.league}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
+              <td><ClubMark name={r.club} id={r.clubId} /> {r.club}<div class="muted" style="font-size:0.6875rem">{r.league}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
               <td class="n">{r.apps}</td>
               <td class="n">{r.goals}</td>
               <td class="n">{r.assists}</td>

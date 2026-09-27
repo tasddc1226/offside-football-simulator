@@ -108,6 +108,7 @@
           name={h.name ?? anonName(h.pos, h.number)}
           pos={h.pos}
           club={h.lastClub}
+          clubId={h.lastClubId}
           tag={myIds.has(h.id) ? '내 선수' : null}
           {t}
           titleId={h.title}

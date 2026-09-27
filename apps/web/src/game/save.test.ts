@@ -71,6 +71,14 @@ describe('migrateSave (T-10-046)', () => {
     expect(loadSave(legacy())).toMatchObject({ newCid: true });
   });
 
+  it('T-10-066 이전 기록(클럽 id 없음)은 추측해 채우지 않고 그대로 읽는다 — 엠블럼은 이름으로 찾는다', () => {
+    const G = current();
+    expect(G.career.some((r) => 'clubId' in r)).toBe(false);
+    migrateSave(G);
+    expect(G.career.some((r) => 'clubId' in r)).toBe(false);
+    expect(G.trophies.some((t) => 'clubId' in t)).toBe(false);
+  });
+
   it('구단 이름이 바뀌었으면 현재 소속을 최신 이름으로', () => {
     const G = current();
     const name = G.club.name;

@@ -15,6 +15,12 @@ export type CareerFoot = z.infer<typeof CareerFootSchema>;
 
 const ShortStringSchema = z.string().max(40);
 
+/**
+ * T-10-066. 기록에 이름과 함께 남기는 클럽 id(web game/data.ts CLUBS[].id, 상무는 'sangmu'). 유저가 구단명을 바꿔도
+ * 엠블럼이 제 클럽을 찾게 한다. 옛 클라이언트·옛 기록엔 없고, 대표팀 기록엔 붙지 않는다.
+ */
+export const ClubIdSchema = z.string().regex(/^[a-z0-9-]{1,24}$/);
+
 /** 커리어 생성 시 고정되는 메타(포지션·주발·유형·특성·시작 연도·앱 버전). 매 PUT마다 함께 보내
  * 새 커리어면 이 값으로 생성하고, 이미 있으면 값이 같은지 검증 없이 덮어쓴다(클라이언트가 정본). */
 export const CareerMetaSchema = z.strictObject({
@@ -44,6 +50,7 @@ export type SeasonComp = z.infer<typeof SeasonCompSchema>;
 export const CareerSeasonPayloadSchema = z.strictObject({
   age: z.number().int().min(0).max(100),
   club: ShortStringSchema,
+  clubId: ClubIdSchema.optional(),
   league: ShortStringSchema,
   apps: z.number().int().min(0).max(1000),
   goals: z.number().int().min(0).max(1000),
@@ -120,6 +127,7 @@ export const RetirementSummarySchema = z.strictObject({
   caps: z.number().int().min(0).max(10000),
   ballon: z.number().int().min(0).max(1000),
   lastClub: ShortStringSchema,
+  lastClubId: ClubIdSchema.optional(),
   /** T-10-026 은퇴 때의 대표 칭호. 옛 클라이언트는 보내지 않는다. */
   title: TitleIdSchema.nullable().optional(),
 });
@@ -143,6 +151,7 @@ const LegendSeasonSchema = z.strictObject({
   year: z.number().int().min(2000).max(2200),
   age: z.number().int().min(0).max(100),
   club: ShortStringSchema,
+  clubId: ClubIdSchema.optional(),
   league: ShortStringSchema,
   apps: z.number().int().min(0).max(1000),
   goals: z.number().int().min(0).max(1000),
@@ -172,8 +181,11 @@ export const LegendSnapshotSchema = z.strictObject({
   age: z.number().int().min(0).max(100),
   peak: z.number().int().min(0).max(200),
   lastClub: ShortStringSchema,
+  lastClubId: ClubIdSchema.optional(),
   career: z.array(LegendSeasonSchema).max(40),
-  trophies: z.array(YearTextSchema.extend({ club: ShortStringSchema })).max(300),
+  trophies: z
+    .array(YearTextSchema.extend({ club: ShortStringSchema, clubId: ClubIdSchema.optional() }))
+    .max(300),
   awards: z.array(YearTextSchema).max(300),
   ballon: z
     .array(
@@ -228,6 +240,8 @@ export const PublicHofEntrySchema = z.strictObject({
   caps: z.number().int(),
   ballon: z.number().int(),
   lastClub: z.string(),
+  /** T-10-066 마지막 소속 클럽 id. 옛 기록·옛 클라이언트 은퇴는 null(배포 전 엣지 캐시 응답엔 없다). */
+  lastClubId: z.string().nullable().optional(),
   retiredAt: z.string(),
   hasDetail: z.boolean(),
   /** T-10-026 대표 칭호 id(없으면 null). */

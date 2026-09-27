@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { clubById } from './clubs.js';
+import { NATIONAL_TEAM } from './retirement-report.js';
 
 // vitest의 node 환경에는 localStorage가 없다 — season.test.ts와 같은 방식으로 메모리로 흉내낸다.
 class MemoryStorage {
@@ -365,6 +367,8 @@ describe('T-10-006 seasonPayload', () => {
         const payload = seasonPayload(rec);
         const parsed = CareerSeasonPayloadSchema.safeParse(payload);
         expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
+        // T-10-066: 시즌 기록·페이로드는 그 시즌 클럽(상무 포함) id를 함께 남긴다.
+        expect(clubById(payload.clubId!)?.name).toBe(rec.club);
         seasons++;
         if (payload.comps?.length) withComps++;
         const m = g.market(s);
@@ -372,6 +376,8 @@ describe('T-10-006 seasonPayload', () => {
         else g.acceptOption(s, m.options[0]!);
       }
       if (!s.retired) g.retire(s);
+      // 대표팀 우승에는 클럽 id가 없고, 클럽 우승에는 있다.
+      for (const t of s.trophies) expect(!!t.clubId).toBe(t.club !== NATIONAL_TEAM);
     }
     expect(seasons).toBeGreaterThan(N * 5);
     expect(withComps).toBeGreaterThan(0);

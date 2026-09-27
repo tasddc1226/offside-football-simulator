@@ -1,5 +1,5 @@
 // ───────── 시즌 종료 · 이적 시장 · 은퇴 · 저장 ─────────
-import { CLUBS, type Club } from './data.js';
+import { CLUBS, clubRef, sameClub, type Club } from './data.js';
 import { BAL } from './balance.js';
 import { NATIONAL_TEAM } from './retirement-report.js';
 import { ovr } from './attributes.js';
@@ -68,7 +68,7 @@ export function endSeason(s: GameState): SeasonEndResult {
     s.career.some(
       (r) =>
         r.year === s.year - 1 &&
-        r.club === s.club.name &&
+        sameClub(r, clubRef(s.club)) &&
         r.honors.some((h) => /챔피언스(리그( 엘리트)?|컵) 우승/.test(h)),
     )
   ) {
@@ -87,10 +87,9 @@ export function endSeason(s: GameState): SeasonEndResult {
     s.trophies.push({
       year: s.year,
       t,
-      club:
-        /월드컵 우승|아시안컵|아시안게임|올림픽/.test(t) && !/클럽/.test(t)
-          ? NATIONAL_TEAM
-          : s.club.name,
+      ...(/월드컵 우승|아시안컵|아시안게임|올림픽/.test(t) && !/클럽/.test(t)
+        ? { club: NATIONAL_TEAM }
+        : clubRef(s.club)),
     }),
   );
   awards.forEach((t) => s.awards.push({ year: s.year, t }));
@@ -108,7 +107,7 @@ export function endSeason(s: GameState): SeasonEndResult {
   const rec: CareerRecord = {
     year: s.year,
     age: s.age,
-    club: s.club.name,
+    ...clubRef(s.club),
     league: L.name,
     apps: S.apps + cg.apps,
     goals: S.goals + cg.g,
@@ -505,6 +504,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     caps: s.nat.caps,
     ballon: s.awards.filter((x) => x.t === '발롱도르').length,
     lastClub: s.club.name,
+    lastClubId: s.club.id,
     score,
     title: mainTitle(s)?.id,
     date: new Date().toISOString().slice(0, 10),
@@ -530,10 +530,12 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
     age: s.age,
     peak: s.peak,
     lastClub: s.club.name,
+    lastClubId: s.club.id,
     career: s.career.map((r) => ({
       year: r.year,
       age: r.age,
       club: r.club,
+      ...(r.clubId ? { clubId: r.clubId } : {}),
       league: r.league,
       apps: r.apps,
       goals: r.goals,
@@ -546,7 +548,12 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
       ...(r.mil ? { mil: true } : {}),
       ...(r.ch?.length ? { ch: r.ch } : {}),
     })),
-    trophies: s.trophies.map(({ year, t, club }) => ({ year, t, club })),
+    trophies: s.trophies.map(({ year, t, club, clubId }) => ({
+      year,
+      t,
+      club,
+      ...(clubId ? { clubId } : {}),
+    })),
     awards: s.awards.map(({ year, t }) => ({ year, t })),
     ballon: (s.ballon || []).map(({ year, rank }) => ({ year, rank })),
     nat: { caps: s.nat.caps },

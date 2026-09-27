@@ -194,3 +194,30 @@ test('라이브는 1분마다 한 번만 다시 받는다', async ({ page }) => 
   await page.clock.runFor(2_000);
   await expect.poll(() => calls).toBe(2);
 });
+
+// T-10-066: 다른 유저가 구단명을 다른 클럽의 기본 이름('런던 해머스' = pl-15)으로 바꿔 올린 기록이라도, 클럽 id가
+// 있으면 제 클럽(k1-0 울산 블루타이거즈)의 엠블럼을 그린다. id 없는 옛 기록은 이름으로 찾는다.
+test('클럽 id가 있으면 이름이 다른 클럽의 기본 이름과 같아도 제 클럽 엠블럼을 그린다', async ({
+  page,
+}) => {
+  await stub(page, {
+    ...live,
+    feed: [
+      season(1, { club: '런던 해머스', clubId: 'k1-0' }),
+      season(2, { club: '울산 블루타이거즈' }),
+      season(3, { club: '런던 해머스' }),
+    ],
+  });
+  await page.goto('/');
+  const rows = page.locator('[data-home-live] .live-row:not([aria-hidden])');
+  await expect(rows).toHaveCount(3);
+  // 엠블럼마다 clipPath id가 달라 그 부분만 지우고 비교한다.
+  const crest = (i: number) =>
+    rows
+      .nth(i)
+      .locator('svg.club-badge')
+      .evaluate((el) => el.innerHTML.replace(/(id="|url\(#)[^")]+/g, '$1'));
+  const [renamed, byId, byName] = [await crest(0), await crest(1), await crest(2)];
+  expect(renamed).toBe(byId);
+  expect(renamed).not.toBe(byName);
+});

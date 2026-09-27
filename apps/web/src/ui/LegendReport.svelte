@@ -120,7 +120,7 @@
       {#each chapters as c, i (i)}
         <li class="chapter" data-credit="journey-{i}" use:reveal>
           <div class="ch-years">{c.from}{c.to !== c.from ? ` — ${c.to}` : ''}</div>
-          <h3 class="ch-club"><ClubMark name={c.club} size={24} /> {c.club}</h3>
+          <h3 class="ch-club"><ClubMark name={c.club} id={c.clubId} size={24} /> {c.club}</h3>
           <div class="ch-meta">{c.leagues.join(' → ')} · {c.ageFrom === c.ageTo ? `${c.ageFrom}세` : `${c.ageFrom}–${c.ageTo}세`} · {c.seasons}시즌</div>
           <div class="ch-stats">
             <span><b>{c.apps}</b>경기</span>
@@ -165,7 +165,7 @@
   {/if}
 
   <section class="film-finale" data-credit="finale" use:reveal>
-    <ClubMark name={v.lastClub} size={56} />
+    <ClubMark name={v.lastClub} id={v.lastClubId} size={56} />
     <div class="eyebrow film-kicker">The Final Whistle</div>
     <p>{v.age}세, {v.lastClub}에서<br />마지막 휘슬이 울렸습니다.</p>
     <h2>수고했어요, {v.name}</h2>

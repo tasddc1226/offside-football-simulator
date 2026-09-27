@@ -168,10 +168,10 @@
               <span class="live-kind {tone(e)}" aria-hidden="true"></span>
               {#if e.kind === 'retire'}
                 <button class="what" tabindex={hidden ? -1 : undefined} onclick={() => openPublicLegendById(e.careerId)}>
-                  <ClubMark name={e.lastClub} /> <b>{who(e)}</b> {what(e)}
+                  <ClubMark name={e.lastClub} id={e.lastClubId} /> <b>{who(e)}</b> {what(e)}
                 </button>
               {:else}
-                <span class="what"><ClubMark name={e.club} /> <b>{who(e)}</b> {what(e)}</span>
+                <span class="what"><ClubMark name={e.club} id={e.clubId} /> <b>{who(e)}</b> {what(e)}</span>
               {/if}
               <time datetime={e.at}>{ago(e.at)}</time>
             </li>

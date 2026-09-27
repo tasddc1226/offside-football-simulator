@@ -63,6 +63,7 @@ export async function liveFeed(db: Db, nowMs: number): Promise<LiveEvent[]> {
         name: careers.publicName,
         pos: careers.pos,
         club: careerSeasons.club,
+        clubId: careerSeasons.clubId,
         league: careerSeasons.league,
         apps: careerSeasons.apps,
         goals: careerSeasons.goals,
@@ -101,6 +102,7 @@ export async function liveFeed(db: Db, nowMs: number): Promise<LiveEvent[]> {
         number: careers.shirtNumber,
         score: careers.legendScore,
         lastClub: careers.lastClub,
+        lastClubId: careers.lastClubId,
       })
       .from(careers)
       .where(and(isPublicRetired, gte(careers.retiredAt, since)))

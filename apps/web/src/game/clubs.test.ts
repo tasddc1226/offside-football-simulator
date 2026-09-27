@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { CLUBS, LEAGUES } from './data.js';
-import { applyClubNames, clubByName, defaultLogo, logoOf, sanitizeClubCustom } from './clubs.js';
+import { ClubIdSchema } from '@offside/contracts';
+import {
+  applyClubNames,
+  clubById,
+  clubByName,
+  defaultLogo,
+  logoOf,
+  sanitizeClubCustom,
+} from './clubs.js';
+import { SANGMU } from './military.js';
 import { expectedRank } from './comps.js';
 
 describe('리그별 클럽 구성 (T-10-009)', () => {
@@ -85,5 +94,26 @@ describe('clubByName (T-10-064)', () => {
     applyClubNames({ 'pl-15': { name: '웨스트햄' } });
     expect(clubByName('웨스트햄')?.id).toBe('pl-15');
     expect(clubByName('런던 해머스')?.id).toBe('pl-15');
+  });
+});
+
+describe('clubById (T-10-066)', () => {
+  afterEach(() => applyClubNames({}));
+
+  it('모든 클럽 id가 서버 계약(ClubIdSchema)을 통과한다', () => {
+    for (const id of [...CLUBS.map((c) => c.id), SANGMU.id]) {
+      expect(ClubIdSchema.safeParse(id).success, id).toBe(true);
+    }
+  });
+
+  it('id로 클럽을 찾는다 — 이름이 다른 클럽의 기본 이름과 겹치게 바뀌어도 제 클럽', () => {
+    const other = CLUBS.find((c) => c.id !== 'pl-15' && c.baseName)!;
+    applyClubNames({ 'pl-15': { name: other.baseName! } });
+    // 이름만 남은 기록이면 다른 클럽(pl-15)으로 붙는다 — id가 있으면 제 클럽을 찾는다.
+    expect(clubByName(other.baseName!)?.id).toBe('pl-15');
+    expect(clubById(other.id)?.id).toBe(other.id);
+    expect(clubById('pl-15')?.name).toBe(other.baseName);
+    expect(clubById('sangmu')).toBe(SANGMU);
+    expect(clubById('없는-id')).toBeNull();
   });
 });

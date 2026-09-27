@@ -70,6 +70,25 @@ describe('은퇴 리포트 타임라인 (T-10-062)', () => {
     expect(ch[2]!.events.map((e) => e.text)).toEqual(['평생의 라이벌 — 영원한 2인자']);
   });
 
+  it('T-10-066: 구단명이 바뀌어도 클럽 id가 같으면 한 챕터 · 우승도 그 챕터에, id 없는 옛 시즌은 이름으로 잇는다', () => {
+    const withId = (r: ReturnType<typeof row>, clubId: string) => ({ ...r, clubId });
+    const ch = careerChapters({
+      ...src,
+      career: [
+        row(2026, 18, '강원', 'K리그1'),
+        withId(row(2027, 19, '강원', 'K리그1'), 'k1-5'),
+        withId(row(2028, 20, '강원 FC 2028', 'K리그1'), 'k1-5'),
+        withId(row(2029, 21, '서울', 'K리그1'), 'k1-1'),
+      ],
+      trophies: [{ year: 2028, t: 'K리그1 우승', club: '강원 FC 2028', clubId: 'k1-5' }],
+    });
+    expect(ch.map((c) => [c.club, c.clubId, c.from, c.to])).toEqual([
+      ['강원', 'k1-5', 2026, 2028],
+      ['서울', 'k1-1', 2029, 2029],
+    ]);
+    expect(ch[0]!.events.filter((e) => e.kind === 'trophy').map((e) => e.years)).toEqual([[2028]]);
+  });
+
   it('대표팀 이정표와 클럽 밖 우승은 대표팀 장면으로 모은다', () => {
     expect(nationalEvents(src).map((e) => [e.year, e.kind, e.text])).toEqual([
       [2028, 'mile', 'A매치 데뷔'],
