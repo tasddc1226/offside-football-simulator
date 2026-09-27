@@ -23,13 +23,16 @@ const num = (desc: string, name: string) => {
 };
 
 describe('훈련 설명 (T-10-074)', () => {
-  it.each(['sho', 'phy', 'rest', 'coach', 'media'])('%s: 카드의 컨디션 변화가 실제와 같다', (id) => {
-    const s = fw();
-    const d = trainingCard(s, tr(id)).effect.join(' · ');
-    s.training = id;
-    applyTraining(s);
-    expect(s.cond - 50).toBe(num(d, '컨디션'));
-  });
+  it.each(['sho', 'phy', 'rest', 'coach', 'media'])(
+    '%s: 카드의 컨디션 변화가 실제와 같다',
+    (id) => {
+      const s = fw();
+      const d = trainingCard(s, tr(id)).effect.join(' · ');
+      s.training = id;
+      applyTraining(s);
+      expect(s.cond - 50).toBe(num(d, '컨디션'));
+    },
+  );
 
   it('휴식은 사기, 미디어는 인기 범위를 보여 준다', () => {
     const s = fw();
