@@ -292,7 +292,7 @@ p {
 /* 마우스를 올리면 버튼 둘레에 테두리가 쳐지고, 누를 수 있는 글자는 색이 바뀐다. 터치 기기에서는 누른 뒤
    hover가 남아 버리므로 마우스(hover 가능) 환경에서만 준다. */
 .link-btn,
-.settings-foot a,
+.site-foot a,
 .os-screen p a {
   transition: color 0.16s ease-out;
 }
@@ -311,7 +311,7 @@ p {
     color: color-mix(in srgb, var(--bad) 70%, var(--ink));
   }
   /* 이미 강조색인 링크는 글자색(ink)으로 바뀐다. */
-  .settings-foot a:hover,
+  .site-foot a:hover,
   .os-screen p a:hover {
     color: var(--ink);
   }
@@ -2270,7 +2270,7 @@ th.n {
 .settings-links span {
   color: var(--accent-text);
 }
-.settings-foot {
+.site-foot {
   text-align: center;
   font-size: 0.75rem;
   color: var(--muted);
@@ -2279,10 +2279,10 @@ th.n {
   flex-direction: column;
   gap: 4px;
 }
-.settings-foot p {
+.site-foot p {
   margin: 0;
 }
-.settings-foot a {
+.site-foot a {
   color: var(--accent-text);
   font-weight: 600;
 }

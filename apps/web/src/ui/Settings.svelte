@@ -4,6 +4,7 @@
   import Topbar from './Topbar.svelte';
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
   import { isDark, setDark } from './theme.js';
+  import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
 
   let sfx = $state(sfxEnabled());
@@ -58,8 +59,5 @@
     </nav>
   </section>
 
-  <footer class="settings-foot">
-    <p>문의 <a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a></p>
-    <p>Instagram <a href="https://www.instagram.com/offside.lab.kr/" target="_blank" rel="noopener noreferrer">@offside.lab.kr</a></p>
-  </footer>
+  <SiteFooter />
 </div>

@@ -7,6 +7,7 @@
   import Topbar from './Topbar.svelte';
   import HallOfFame from './HallOfFame.svelte';
   import HomeNews from './HomeNews.svelte';
+  import SiteFooter from './SiteFooter.svelte';
   import HomeFirsts from './firsts/HomeFirsts.svelte';
   import HomeLive from './HomeLive.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
@@ -61,4 +62,5 @@
   <HallOfFame />
   <HomeNews board="notice" eyebrow="Notice" title="공지사항" />
   <HomeNews board="release" eyebrow="Release notes" title="릴리즈 노트" />
+  <SiteFooter />
 </div>
