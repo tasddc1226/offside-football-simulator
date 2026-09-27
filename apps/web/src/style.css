@@ -287,6 +287,33 @@ p {
 .link-btn:active {
   opacity: 0.6;
 }
+/* 마우스를 올리면 버튼 둘레에 테두리가 쳐지고, 누를 수 있는 글자는 색이 바뀐다. 터치 기기에서는 누른 뒤
+   hover가 남아 버리므로 마우스(hover 가능) 환경에서만 준다. */
+.link-btn,
+.settings-foot a,
+.os-screen p a {
+  transition: color 0.16s ease-out;
+}
+@media (hover: hover) {
+  .btn:hover:not(:disabled, :active),
+  .icon-btn:hover:not(:disabled, :active),
+  .opt:hover:not(:disabled, :active),
+  .hof-sort:hover:not(:active) {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 35%, transparent);
+  }
+  .link-btn:hover,
+  button.what:hover {
+    color: var(--accent-text);
+  }
+  .link-btn.bad:hover {
+    color: color-mix(in srgb, var(--bad) 70%, var(--ink));
+  }
+  /* 이미 강조색인 링크는 글자색(ink)으로 바뀐다. */
+  .settings-foot a:hover,
+  .os-screen p a:hover {
+    color: var(--ink);
+  }
+}
 /* 선택지·카드도 버튼처럼 살짝 들어간다(크기가 커서 덜 줄인다). */
 .opt,
 button.tile-link,
@@ -298,7 +325,8 @@ button.title-item,
 .card-title {
   transition:
     transform 0.16s ease-out,
-    filter 0.16s ease-out;
+    filter 0.16s ease-out,
+    box-shadow 0.16s ease-out;
 }
 .opt:active:not(:disabled),
 button.tile-link:active,
@@ -319,7 +347,9 @@ button.hof-row,
 .settings-links > a,
 .settings-links > button,
 button.what {
-  transition: background-color 0.16s ease-out;
+  transition:
+    background-color 0.16s ease-out,
+    color 0.16s ease-out;
 }
 .board-row:active,
 button.hof-row:active,
