@@ -10,7 +10,10 @@ export type DailyResult = {
   backup: BackupResult | { error: string } | 'skipped';
 };
 
-const errorOf = (e: unknown) => ({ error: e instanceof Error ? e.message : String(e) });
+/** 요청 로그(middleware/logger.ts)처럼 메시지는 500자까지. */
+const errorOf = (e: unknown) => ({
+  error: (e instanceof Error ? e.message : String(e)).slice(0, 500),
+});
 
 export async function runDaily(env: Bindings, now: number): Promise<DailyResult> {
   const startedAt = Date.now();

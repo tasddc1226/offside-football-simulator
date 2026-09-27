@@ -28,15 +28,18 @@ export type TestD1 = {
   dispose: () => Promise<void>;
 };
 
-/** 빈 D1(Miniflare)에 migration을 적용하고 격리된 `Db`를 돌려준다. 테스트 파일마다 새로 만든다. */
-export async function createTestD1(): Promise<TestD1> {
+/** 빈 D1(Miniflare)에 migration을 적용하고 격리된 `Db`를 돌려준다. 테스트 파일마다 새로 만든다.
+ * migrate: false면 표 없는 빈 D1(백업 복구 테스트). */
+export async function createTestD1({ migrate = true } = {}): Promise<TestD1> {
   const proxy = await getPlatformProxy<Bindings>({
     configPath: WRANGLER_CONFIG_PATH,
     persist: false,
   });
 
-  for (const statement of readMigrationStatements()) {
-    await proxy.env.DB.exec(statement);
+  if (migrate) {
+    for (const statement of readMigrationStatements()) {
+      await proxy.env.DB.exec(statement);
+    }
   }
 
   return {

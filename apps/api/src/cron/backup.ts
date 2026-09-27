@@ -18,24 +18,21 @@ export type BackupResult = {
   pruned: number;
 };
 
-type SchemaRow = { type: string; name: string; tbl_name: string; sql: string };
+type SchemaRow = { type: string; name: string; sql: string };
 
 const q = (name: string) => `"${name.replace(/"/g, '""')}"`;
 
-/** SQLite 리터럴. D1은 BLOB을 바이트 배열로 돌려준다. */
+/** SQLite 리터럴. D1은 값을 null·number·string, BLOB은 바이트 배열로 돌려준다. */
 function literal(v: unknown): string {
   if (v === null || v === undefined) return 'NULL';
-  if (typeof v === 'number' || typeof v === 'bigint') return String(v);
-  if (typeof v === 'boolean') return v ? '1' : '0';
-  if (Array.isArray(v) || v instanceof ArrayBuffer || ArrayBuffer.isView(v)) {
-    const bytes =
-      v instanceof ArrayBuffer ? new Uint8Array(v) : Uint8Array.from(v as ArrayLike<number>);
-    return `X'${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}'`;
-  }
+  if (typeof v === 'number') return String(v);
+  if (Array.isArray(v))
+    return `X'${v.map((b: number) => b.toString(16).padStart(2, '0')).join('')}'`;
   return `'${String(v).replace(/'/g, "''")}'`;
 }
 
-/** 참조되는 표를 먼저(외래 키) — 마이그레이션이 표를 다시 만들면 만든 순서는 참조 순서와 다르다. */
+/** 참조되는 표의 행을 먼저 넣는다(외래 키). 마이그레이션이 표를 다시 만들면 만든 순서가 참조 순서와 달라진다.
+ * 머리글의 defer_foreign_keys는 파일을 한 트랜잭션으로 실행할 때만 듣는다 — 문장마다 실행해도 되게 순서도 맞춘다. */
 function byReferences(tables: SchemaRow[]): SchemaRow[] {
   const byName = new Map(tables.map((t) => [t.name, t]));
   const out: SchemaRow[] = [];
@@ -64,7 +61,7 @@ export async function backupToR2(
 ): Promise<BackupResult> {
   const { results: schema } = await db
     .prepare(
-      `SELECT type, name, tbl_name, sql FROM sqlite_master
+      `SELECT type, name, sql FROM sqlite_master
        WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'
        ORDER BY rowid`,
     )
@@ -88,13 +85,7 @@ export async function backupToR2(
     let buf: Uint8Array[] = [];
     let size = 0;
     const flush = async () => {
-      const part = new Uint8Array(size);
-      let at = 0;
-      for (const c of buf) {
-        part.set(c, at);
-        at += c.byteLength;
-      }
-      parts.push(await upload.uploadPart(parts.length + 1, part));
+      parts.push(await upload.uploadPart(parts.length + 1, new Blob(buf)));
       bytes += size;
       buf = [];
       size = 0;
@@ -106,7 +97,7 @@ export async function backupToR2(
       size += value.byteLength;
       if (size >= PART_BYTES) await flush();
     }
-    if (size > 0 || parts.length === 0) await flush();
+    if (size > 0) await flush(); // 머리글을 늘 쓰므로 조각은 적어도 하나다
   })();
 
   let rows = 0;

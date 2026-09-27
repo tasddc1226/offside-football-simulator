@@ -1,7 +1,5 @@
 import { gunzipSync } from 'node:zlib';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { getPlatformProxy, unstable_splitSqlQuery as splitSqlQuery } from 'wrangler';
+import { unstable_splitSqlQuery as splitSqlQuery } from 'wrangler';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import type { Bindings } from '../env.js';
@@ -40,7 +38,7 @@ beforeAll(async () => {
 afterAll(() => ctx.dispose());
 
 describe('T-10-070 매일 정리', () => {
-  it('만료된 멱등 키·지난 시도 기록·오래된 만료 세션만 지운다', async () => {
+  it('만료된 멱등 키·지난 시도 기록·만료된 지 한 달 넘은 세션만 지운다', async () => {
     const idem = `INSERT INTO idempotency (owner_profile_id, key, request_hash, response_status, response_body, created_at, expires_at) VALUES ('prf_1', ?1, 'h', 200, '{}', ?2, ?3)`;
     await run(idem, 'old', ago(2 * DAY), ago(HOUR));
     await run(idem, 'live', ago(HOUR), later(HOUR));
@@ -49,21 +47,25 @@ describe('T-10-070 매일 정리', () => {
     await run(att, 'att_new', ago(HOUR));
     const ses = `INSERT INTO sessions (id, profile_id, channel, token_hash, created_at, expires_at, revoked_at, last_seen_at) VALUES (?1, 'prf_1', 'web', ?1, ?2, ?3, ?4, ?2)`;
     await run(ses, 'ses_expired_long_ago', ago(90 * DAY), ago(40 * DAY), null);
-    await run(ses, 'ses_revoked_long_ago', ago(90 * DAY), later(DAY), ago(40 * DAY));
+    await run(ses, 'ses_revoked_not_expired', ago(90 * DAY), later(DAY), ago(40 * DAY));
     await run(ses, 'ses_expired_recently', ago(40 * DAY), ago(DAY), null);
     await run(ses, 'ses_live', ago(DAY), later(DAY), null);
 
     expect(await cleanupExpired(ctx.env.DB, NOW)).toEqual({
       idempotency: 1,
       auth_attempts: 1,
-      sessions: 2,
+      sessions: 1,
     });
     expect(await count('idempotency')).toBe(1);
     expect(await count('auth_attempts')).toBe(1);
     const left = await ctx.env.DB.prepare('SELECT id FROM sessions ORDER BY id').all<{
       id: string;
     }>();
-    expect(left.results.map((r) => r.id)).toEqual(['ses_expired_recently', 'ses_live']);
+    expect(left.results.map((r) => r.id)).toEqual([
+      'ses_expired_recently',
+      'ses_live',
+      'ses_revoked_not_expired',
+    ]);
   });
 });
 
@@ -81,11 +83,7 @@ describe('T-10-070 D1 → R2 백업', () => {
     expect(sql).not.toContain('__rowid');
 
     // 빈 D1(마이그레이션 없음)에 복구한다.
-    const here = path.dirname(fileURLToPath(import.meta.url));
-    const fresh = await getPlatformProxy<Bindings>({
-      configPath: path.resolve(here, '../../wrangler.jsonc'),
-      persist: false,
-    });
+    const fresh = await createTestD1({ migrate: false });
     try {
       for (const stmt of splitSqlQuery(sql)) {
         if (stmt.trim()) await fresh.env.DB.prepare(stmt).run();
