@@ -50,7 +50,7 @@
   {:else if status === 'error' || !stats}
     <div class="stack" style="gap:8px">
       <p class="muted" style="margin:0">대시보드를 불러오지 못했어요.</p>
-      <button class="icon-btn" style="align-self:flex-start" onclick={() => load(true)}>다시 시도</button>
+      <button class="icon-btn self-start" onclick={() => load(true)}>다시 시도</button>
     </div>
   {:else}
     {@const s = stats}

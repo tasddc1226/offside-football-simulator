@@ -32,5 +32,5 @@
   {/each}
 </div>
 {#if v.skip}
-  <button class="skip" id="an-skip" onclick={v.skip}>건너뛰기</button>
+  <button class="link-btn skip" id="an-skip" onclick={v.skip}>건너뛰기</button>
 {/if}

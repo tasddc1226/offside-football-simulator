@@ -186,14 +186,6 @@ select:focus-visible {
 .topbar .spacer {
   flex: 1;
 }
-.icon-btn {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 13px;
-  min-height: 44px;
-}
 
 /* generic */
 .card {
@@ -230,18 +222,31 @@ p {
 .muted {
   color: var(--muted);
 }
-.btn {
+/* 버튼은 모두 이 한 벌을 쓴다: .btn(기본) + 색(.btn-primary · .btn-accent) + 크기(.btn-sm) + 폭(.btn-block).
+   .icon-btn은 작은 보조 버튼(.btn.btn-sm)과 같다 — 화면 곳곳에서 쓰던 이름이라 그대로 둔다. */
+.btn,
+.icon-btn {
   border: 1px solid var(--line);
   background: var(--surface);
+  color: var(--ink);
   border-radius: 12px;
   padding: 12px 16px;
   min-height: 48px;
   font-size: 15px;
   font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none; /* <a class="btn">도 버튼처럼 보이게 */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+.btn-sm,
+.icon-btn {
+  min-height: 44px;
+  padding: 9px 14px;
+  font-size: 14px;
+  gap: 6px;
 }
 .btn-primary {
   background: var(--pitch);
@@ -259,9 +264,13 @@ p {
 .btn-block {
   width: 100%;
 }
-.btn:disabled {
+.btn:disabled,
+.icon-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+.self-start {
+  align-self: flex-start;
 }
 .row {
   display: flex;
@@ -1728,12 +1737,7 @@ th.n {
 }
 .skip {
   align-self: center;
-  border: 0;
-  background: none;
-  color: var(--muted);
   font-size: 12px;
-  text-decoration: underline;
-  padding: 4px;
 }
 /* 글자색을 surface로 두면 라이트(흰 글자)·다크(짙은 글자) 모두 배경색 대비 4.5:1 이상이다. */
 .res {
@@ -2157,9 +2161,6 @@ th.n {
 }
 .account-card .btn {
   flex: none;
-  min-height: 44px;
-  padding: 9px 16px;
-  font-size: 14px;
 }
 .account-nick {
   display: flex;
@@ -2777,8 +2778,6 @@ body:has(nav.tabs) .toast {
   flex: 1;
 }
 .update-banner .btn {
-  min-height: 40px;
-  padding: 8px 14px;
   flex: none;
 }
 
