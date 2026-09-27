@@ -4,6 +4,7 @@
 // 그 구단만의 고유 상징(대포, 리버버드, 교차한 망치 등)은 쓰지 않는다. 글자는 게임 속 별칭의 도시 머리글자만 쓴다.
 // 이미지가 아니라 64×64 벡터 설정값이라 16px에서도 선명하고, 저장·동기화 용량을 쓰지 않는다.
 import type { Club } from './data.js';
+import { hashStr } from './rng.js';
 
 export const CREST_SHAPES = {
   /** 방패 */
@@ -24,7 +25,6 @@ const lozenges = (() => {
 })();
 /** 바탕 위에 accent 색으로 칠하는 유니폼 패턴. tri는 오른쪽 3분의 1을 세 번째 색으로 더 칠한다. */
 export const CREST_PATTERNS: Record<string, string> = {
-  '-': '',
   v: 'M12 0h8v64h-8zM28 0h8v64h-8zM44 0h8v64h-8z',
   h: 'M0 14h64v8H0zM0 30h64v8H0zM0 46h64v8H0z',
   hoop: 'M0 38h64v9H0z',
@@ -39,7 +39,7 @@ export const CREST_PATTERNS: Record<string, string> = {
   dz: lozenges,
   tri: 'M21 0h22v64H21z',
 };
-const TRI_THIRD = 'M43 0h21v64H43z';
+export const TRI_THIRD_PATH = 'M43 0h21v64H43z';
 
 const ring = (r: number, n: number, rr: number) =>
   Array.from({ length: n }, (_, i) => {
@@ -133,23 +133,28 @@ export const CREST_MOTIFS: Record<string, { d: string; k?: string; t?: string }>
 };
 
 export interface Crest {
-  shape: keyof typeof CREST_SHAPES;
-  pattern: string;
+  /** 틀 path(CREST_SHAPES 값). */
+  shape: string;
+  /** accent 색으로 칠할 패턴 path. 없으면 바탕만. */
+  pattern?: string;
   base: string;
   accent: string;
-  /** tri 패턴의 세 번째 색. */
+  /** tri 패턴의 세 번째 색(TRI_THIRD_PATH에 칠한다). */
   third?: string;
   edge?: string;
-  /** CREST_MOTIFS 키, 또는 '=글자'. */
-  motif?: string;
+  /** 상징 모양 — 글자(text)와 둘 중 하나. */
+  icon?: { d: string; k?: string };
+  /** 상징 좌표 변환(기울인 상징, 원판 위 축소). */
+  transform?: string;
+  text?: string;
   motifColor: string;
   /** 줄무늬처럼 복잡한 바탕 위 상징 뒤에 흰 원판을 깐다. */
   disc: boolean;
 }
 
 // 한 줄 = '틀 패턴 바탕 accent 테두리 상징 상징색 [d]' (색은 # 뺀 hex, 없으면 -). tri 패턴은 'tri:세번째색'.
-// 배열 순서는 data.ts CLUB_NAMES와 같다(클럽 id = `${리그}-${위치}`). 고교·대학은 가상 학교라 아래 autoCrest로 만든다.
-const SPECS: Record<string, string[]> = {
+// 배열 순서는 data.ts CLUB_NAMES와 같다(클럽 id = `${리그}-${위치}`). 고교·대학(가상 학교)처럼 정의가 없는 클럽은 autoCrest로 만든다.
+export const CREST_SPECS: Record<string, string[]> = {
   k3: [
     'b - 1b5fa8 - f39800 bolt f39800',
     'r - 0b3d91 - fff =C fff',
@@ -379,27 +384,56 @@ const SPECS: Record<string, string[]> = {
     's ch 6c1d45 99d6ea 99d6ea - -',
   ],
 };
-/** 김천 상무(military.SANGMU) — K리그1에 병역 중에만 소속된다. */
-const SANGMU_SPEC = 'p - 1f4d2b - e60012 star ffd400';
+/** CLUBS 밖 클럽 — 김천 상무(military.SANGMU)는 K리그1에 병역 중에만 소속된다. */
+const EXTRA_SPECS: Record<string, string> = { sangmu: 'p - 1f4d2b - e60012 star ffd400' };
 
-const col = (h: string) => `#${h}`;
-export function parseCrest(spec: string): Crest {
-  const [shape, pat, base, accent, edge, motif, mc, disc] = spec.split(' ') as string[];
-  const [pattern, third] = pat!.split(':') as [string, string?];
+/** 원판 위 상징은 조금 줄인다. */
+const DISC_T = 'translate(32 32) scale(.78) translate(-32 -32)';
+// input[type=color]·clubs.ts cleanLogo는 6자리 hex만 받는다 — 로고 편집이 이 색에서 시작하므로 늘여 둔다.
+const col = (h: string) => `#${h.length === 3 ? h.replace(/./g, '$&$&') : h}`;
+/** 이름 첫 글자('FC 서울' → '서'). 글자 엠블럼과 학교 엠블럼이 같이 쓴다. */
+export const clubInitial = (name: string) => [...name.replace(/^FC\s+/, '')][0] ?? '?';
+
+function crest(
+  shape: string,
+  pattern: string,
+  base: string,
+  accent: string,
+  edge: string,
+  motif: string,
+  mc: string,
+  disc: boolean,
+): Crest {
+  const [pat, third] = pattern.split(':') as [string, string?];
+  const text = motif.startsWith('=') ? motif.slice(1) : undefined;
+  const m = motif !== '-' && !text ? CREST_MOTIFS[motif] : undefined;
+  const transform = [disc ? DISC_T : '', m?.t ?? ''].join(' ').trim();
+  if (
+    !(shape in CREST_SHAPES) ||
+    (pat !== '-' && !(pat in CREST_PATTERNS)) ||
+    (motif !== '-' && !text && !m)
+  )
+    throw new Error(`엠블럼 정의 오류: ${shape} ${pattern} ${motif}`);
   return {
-    shape: shape as Crest['shape'],
-    pattern: pattern,
-    base: col(base!),
-    accent: accent === '-' ? col(base!) : col(accent!),
+    shape: CREST_SHAPES[shape as keyof typeof CREST_SHAPES],
+    ...(pat !== '-' ? { pattern: CREST_PATTERNS[pat] } : {}),
+    base: col(base),
+    accent: col(accent === '-' ? base : accent),
     ...(third ? { third: col(third) } : {}),
-    ...(edge !== '-' ? { edge: col(edge!) } : {}),
-    ...(motif !== '-' ? { motif } : {}),
-    motifColor: mc === '-' ? '#ffffff' : col(mc!),
-    disc: disc === 'd',
+    ...(edge !== '-' ? { edge: col(edge) } : {}),
+    ...(m ? { icon: m.k ? { d: m.d, k: m.k } : { d: m.d } } : {}),
+    ...(transform ? { transform } : {}),
+    ...(text ? { text } : {}),
+    motifColor: col(mc === '-' ? 'fff' : mc),
+    disc,
   };
 }
+const parse = (spec: string) => {
+  const [shape, pattern, base, accent, edge, motif, mc, disc] = spec.split(' ') as string[];
+  return crest(shape!, pattern!, base!, accent!, edge!, motif!, mc!, disc === 'd');
+};
 
-// 고교·대학: 학교 색 조합 + 틀·패턴을 id 해시로 고르고, 학교 이름 첫 글자를 넣는다(이름을 바꾸면 글자도 따라간다).
+// 정의 없는 클럽: 학교 색 조합 + 틀·패턴을 id 해시로 고르고, 이름 첫 글자를 넣는다(이름을 바꾸면 글자도 따라간다).
 const SCHOOL_COLORS = [
   ['0b2a5b', 'd4a017'],
   ['7a1f2b', 'ffffff'],
@@ -413,45 +447,30 @@ const SCHOOL_COLORS = [
   ['23395d', 'c8102e'],
 ] as const;
 const SCHOOL_PATTERNS = ['-', 'v', 'hoop', 'half', 'sash', 'ch', 'band', '-'];
-const SCHOOL_SHAPES = ['s', 'p', 'b', 's', 'r'] as const;
-function fnv(id: string): number {
-  let h = 0x811c9dc5;
-  for (const ch of id) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
-  return h >>> 0;
-}
+const SCHOOL_SHAPES = ['s', 'p', 'b', 's', 'r'];
 function autoCrest(club: Pick<Club, 'id' | 'name'>): Crest {
-  const h = fnv(club.id);
+  const h = hashStr(club.id);
   const [bg, fg] = SCHOOL_COLORS[h % SCHOOL_COLORS.length]!;
   const pattern = SCHOOL_PATTERNS[(h >>> 4) % SCHOOL_PATTERNS.length]!;
-  return {
-    shape: SCHOOL_SHAPES[(h >>> 8) % SCHOOL_SHAPES.length]!,
-    pattern,
-    base: col(bg),
-    accent: col(fg),
-    edge: col(fg),
-    motif: `=${[...club.name][0] ?? '?'}`,
-    motifColor: pattern === '-' ? col(fg) : col(bg),
-    disc: pattern !== '-',
-  };
+  const plain = pattern === '-';
+  const shape = SCHOOL_SHAPES[(h >>> 8) % SCHOOL_SHAPES.length]!;
+  return crest(shape, pattern, bg, fg, fg, `=${clubInitial(club.name)}`, plain ? fg : bg, !plain);
 }
 
-const AUTO_LEAGUES = new Set(['hs', 'uni']);
-const cache = new Map<string, Crest>();
-/** 클럽의 기본 엠블럼. 정의가 없는 클럽(새로 추가된 클럽 등)은 null — 글자 엠블럼으로 그린다. */
-export function crestOf(club: Pick<Club, 'id' | 'name'>): Crest | null {
-  const cut = club.id.lastIndexOf('-');
-  const league = club.id.slice(0, cut);
-  if (AUTO_LEAGUES.has(league)) return autoCrest(club);
-  let c = cache.get(club.id);
-  if (!c) {
-    const spec =
-      club.id === 'sangmu' ? SANGMU_SPEC : SPECS[league]?.[Number(club.id.slice(cut + 1))];
-    if (!spec) return null;
-    c = parseCrest(spec);
-    cache.set(club.id, c);
-  }
-  return c;
+const CRESTS = new Map<string, Crest>([
+  ...Object.entries(CREST_SPECS).flatMap(([league, rows]) =>
+    rows.map((spec, i) => [`${league}-${i}`, parse(spec)] as const),
+  ),
+  ...Object.entries(EXTRA_SPECS).map(([id, spec]) => [id, parse(spec)] as const),
+]);
+// 자동 엠블럼은 이름 글자가 들어가므로 id+이름으로 캐시한다(매번 새 객체면 배지가 다시 그려진다).
+const autoCache = new Map<string, Crest>();
+/** 클럽의 기본 엠블럼(유저 로고가 없을 때). */
+export function crestOf(club: Pick<Club, 'id' | 'name'>): Crest {
+  const c = CRESTS.get(club.id);
+  if (c) return c;
+  const key = `${club.id}|${club.name}`;
+  let a = autoCache.get(key);
+  if (!a) autoCache.set(key, (a = autoCrest(club)));
+  return a;
 }
-/** 테스트용: 리그별 정의 줄 수. */
-export const crestSpecCount = (league: string) => SPECS[league]?.length ?? 0;
-export const TRI_THIRD_PATH = TRI_THIRD;

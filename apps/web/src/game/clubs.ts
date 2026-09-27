@@ -5,6 +5,7 @@
 //   바꾼 뒤부터 생기는 기록에 새 이름이 쓰인다(이미 남은 기록·로그 문구는 그대로다).
 // - 로고: 게임 로직과 무관한 표시 전용 값이라 CLUBS에 넣지 않고 id → 로고 맵으로만 둔다.
 import { CLUBS, type Club } from './data.js';
+import { clubInitial, crestOf } from './crests.js';
 import { CLUB_CUSTOM_IMG_MAX } from '@offside/contracts/club-limits';
 
 export const CLUB_NAME_MAX = 20;
@@ -62,30 +63,11 @@ export function applyClubNames(map: ClubCustomMap): void {
   for (const c of CLUBS) c.name = map[c.id]?.name || c.baseName || c.name;
 }
 
-// 기본 엠블럼: 이름 첫 글자 + id에서 뽑은 고정 색. 같은 클럽은 늘 같은 색이다.
-// FNV-1a — 'pl-1'과 'pl-2'처럼 끝 글자만 다른 id도 색이 크게 갈리게 한다.
-function hue(id: string): number {
-  let h = 0x811c9dc5;
-  for (const ch of id) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
-  return (h >>> 0) % 360;
-}
-function hslHex(h: number, s: number, l: number): string {
-  const a = s * Math.min(l, 1 - l);
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-    return Math.round(c * 255)
-      .toString(16)
-      .padStart(2, '0');
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
-}
+// 글자 엠블럼 편집의 시작값: 이름 첫 글자 + 지금 보이는 기본 엠블럼(game/crests.ts, T-10-063)의 바탕·상징 색.
 export function defaultLogo(club: Pick<Club, 'id' | 'name'>): ClubLogo {
-  return {
-    text: [...club.name.replace(/^FC\s+/, '')][0] ?? '?',
-    bg: hslHex(hue(club.id), 0.55, 0.32),
-    fg: '#ffffff',
-  };
+  const c = crestOf(club);
+  const fg = [c.motifColor, c.edge, c.accent].find((v) => v && v !== c.base) ?? '#ffffff';
+  return { text: clubInitial(club.name), bg: c.base, fg };
 }
 export const logoOf = (club: Pick<Club, 'id' | 'name'>, map: ClubCustomMap): ClubLogo =>
   map[club.id]?.logo ?? defaultLogo(club);

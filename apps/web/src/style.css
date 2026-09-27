@@ -18,12 +18,8 @@
   --bad: #c0392f;
   --warn: #96600a;
   --shadow: 0 1px 0 rgba(20, 32, 26, 0.05), 0 8px 24px -14px rgba(20, 32, 26, 0.28);
-  --crest-halo: rgba(
-    20,
-    32,
-    26,
-    0.16
-  ); /* T-10-063 기본 엠블럼 바깥선 — 바탕과 같은 색 테두리도 윤곽이 보이게 */
+  /* T-10-063 기본 엠블럼 바깥선 — 바탕과 같은 색 테두리도 윤곽이 보이게 */
+  --crest-halo: rgba(20, 32, 26, 0.16);
   --display: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
   --body: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
 }
