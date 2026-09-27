@@ -69,10 +69,9 @@
   let more = $state(false);
 
   // T-10-073 은퇴 직후에만: 숨겨져 있던 실제 잠재력을 마지막 스카우트 평가와 견준다.
-  const GRADE_ORDER = 'SABCD';
   const potVerdict = $derived.by(() => {
     if (!v.pot) return '';
-    const gap = GRADE_ORDER.indexOf(v.pot.scout) - GRADE_ORDER.indexOf(v.pot.real);
+    const { gap } = v.pot;
     if (gap > 0) return `스카우트 평가(${v.pot.scout})보다 큰 재능이었어요.`;
     if (gap < 0) return `스카우트 평가(${v.pot.scout})만큼은 피지 못했어요.`;
     return `스카우트의 눈이 정확했어요(평가 ${v.pot.scout}).`;

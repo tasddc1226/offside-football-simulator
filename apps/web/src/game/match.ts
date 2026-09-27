@@ -1,4 +1,11 @@
-import { POS, ATTR_KEYS, LAST_PHASE, type AttrKey } from './data.js';
+import {
+  POS,
+  ATTR_KEYS,
+  LAST_PHASE,
+  COND_LOW_START,
+  COND_LOW_INJURY,
+  type AttrKey,
+} from './data.js';
 import { ovr, wOf } from './attributes.js';
 import { clamp, ri, chance, gauss, poisson, rnd } from './rng.js';
 import { BAL } from './balance.js';
@@ -130,7 +137,7 @@ export function simBlock(s: GameState): BlockResult {
     const inj = s.injury > 0;
     if (inj) s.injury--;
     else {
-      const sp = startP * (s.cond < 35 ? 0.6 : 1);
+      const sp = startP * (s.cond < COND_LOW_START ? 0.6 : 1);
       if (chance(sp)) {
         mins = chance(0.18) ? ri(60, 85) : 90;
         S.starts++;
@@ -194,7 +201,7 @@ export function simBlock(s: GameState): BlockResult {
       r.games.push({ rd: S.played, res, mins, g, a, rating, cs });
       const ip =
         BAL.injuryRate *
-        (s.cond < 40 ? 2.5 : 1) *
+        (s.cond < COND_LOW_INJURY ? 2.5 : 1) *
         (s.trait === 'iron' ? 0.35 : 1) *
         (s.age >= 31 ? 1.4 : 1);
       if (chance(ip)) {

@@ -25,7 +25,7 @@ const num = (desc: string, name: string) => {
 describe('훈련 설명 (T-10-074)', () => {
   it.each(['sho', 'phy', 'rest', 'coach', 'media'])('%s: 카드의 컨디션 변화가 실제와 같다', (id) => {
     const s = fw();
-    const d = trainingCard(s, tr(id)).effect;
+    const d = trainingCard(s, tr(id)).effect.join(' · ');
     s.training = id;
     applyTraining(s);
     expect(s.cond - 50).toBe(num(d, '컨디션'));
@@ -33,13 +33,13 @@ describe('훈련 설명 (T-10-074)', () => {
 
   it('휴식은 사기, 미디어는 인기 범위를 보여 준다', () => {
     const s = fw();
-    expect(num(trainingCard(s, tr('rest')).effect, '사기')).toBe(4);
-    expect(trainingCard(s, tr('media')).effect).toMatch(/인기 \+5~9/);
+    expect(num(trainingCard(s, tr('rest')).effect.join(' · '), '사기')).toBe(4);
+    expect(trainingCard(s, tr('media')).effect).toContain('인기 +5~9');
   });
 
   it('능력치 훈련은 오르는 능력치·주력 여부·OVR 비중을 설명한다', () => {
     const s = fw();
-    expect(trainingCard(s, tr('phy')).effect).toMatch(/피지컬·스피드 ▲/);
+    expect(trainingCard(s, tr('phy')).effect[0]).toBe('피지컬·스피드 ▲');
     expect(trainingCard(s, tr('coach')).tag).toMatch(/^비용 /);
     const help = trainingHelp(s, tr('sho'));
     expect(help).toMatch(/능력치가 크게 오르고/);

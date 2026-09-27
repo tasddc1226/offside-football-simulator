@@ -1,4 +1,13 @@
-import { POS, ATTR_KEYS, FOCUS_GROWTH, OFF_FOCUS_GROWTH, type AttrKey, type Pos } from './data.js';
+import {
+  POS,
+  ATTR_KEYS,
+  FOCUS_GROWTH,
+  OFF_FOCUS_GROWTH,
+  COND_LOW_INJURY,
+  COND_LOW_START,
+  type AttrKey,
+  type Pos,
+} from './data.js';
 import { ovr, wOf } from './attributes.js';
 import { clamp, ri, pick, chance, rnd } from './rng.js';
 import { baseline } from './candidates.js';
@@ -42,35 +51,44 @@ export function trainingLabel(s: GameState, t: TrainingDef): string {
   return t.attr ? `${labelOf(s, t.attr)} 훈련` : t.label!;
 }
 const signed = (n: number) => (n > 0 ? `+${n}` : `−${-n}`);
-/** T-10-074 훈련 카드: 무엇이 오르고 무엇을 치르는지(effect)와 눈여겨볼 한 가지(tag — 주력·치우침·비용·수입). */
-export function trainingCard(s: GameState, t: TrainingDef): { effect: string; tag: string } {
+/** 능력치 훈련의 주력 여부·치우침 배율 — 카드와 자세한 설명이 같이 쓴다. */
+function attrInfo(s: GameState, k: AttrKey) {
+  const bf = balanceFactor(s, k);
+  return { focus: focusOf(s).includes(k), bf, lopsided: bf < 0.95 };
+}
+/** T-10-074 훈련 카드: 무엇이 오르고 무엇을 치르는지(effect, 항목별)와 눈여겨볼 한 가지(tag — 주력·치우침·비용·수입). */
+export function trainingCard(s: GameState, t: TrainingDef): { effect: string[]; tag: string } {
   if (t.id === 'rest')
-    return { effect: `컨디션 ${signed(REST.cond)} · 사기 ${signed(REST.morale)}`, tag: '' };
+    return { effect: [`컨디션 ${signed(REST.cond)}`, `사기 ${signed(REST.morale)}`], tag: '' };
   if (t.id === 'coach')
     return {
-      effect: `전 능력 소폭 ▲ · 컨디션 ${signed(COACH_COND)}`,
+      effect: ['전 능력 소폭 ▲', `컨디션 ${signed(COACH_COND)}`],
       tag: `비용 ${fmtMoney(coachCost(s))}`,
     };
   if (t.id === 'media') {
     const pay = mediaPay(s);
     return {
-      effect: `인기 +${MEDIA.fame[0]}~${MEDIA.fame[1]} · 사기 ${signed(MEDIA.morale)} · 컨디션 ${signed(MEDIA.cond)}`,
+      effect: [
+        `인기 +${MEDIA.fame[0]}~${MEDIA.fame[1]}`,
+        `사기 ${signed(MEDIA.morale)}`,
+        `컨디션 ${signed(MEDIA.cond)}`,
+      ],
       tag: pay ? `수입 +${fmtMoney(pay)}` : '',
     };
   }
   const k = t.attr!;
+  const { focus, bf, lopsided } = attrInfo(s, k);
   const up = k === 'phy' ? `${labelOf(s, k)}·${labelOf(s, 'pac')} ▲` : `${labelOf(s, k)} ▲`;
-  const bf = balanceFactor(s, k);
   const tags = [
-    focusOf(s).includes(k) ? `주력 성장 +${pct(FOCUS_GROWTH - 1)}%` : '',
-    bf < 0.95 ? `치우침 성장 −${pct(1 - bf)}%` : '',
+    focus ? `주력 성장 +${pct(FOCUS_GROWTH - 1)}%` : '',
+    lopsided ? `치우침 성장 −${pct(1 - bf)}%` : '',
   ];
-  return { effect: `${up} · 컨디션 ${signed(trainCond(k))}`, tag: tags.filter(Boolean).join(' · ') };
+  return { effect: [up, `컨디션 ${signed(trainCond(k))}`], tag: tags.filter(Boolean).join(' · ') };
 }
 /** T-10-074 고른 훈련의 자세한 설명(카드 아래). 숨은 잠재력 값은 드러내지 않는다. */
 export function trainingHelp(s: GameState, t: TrainingDef): string {
   if (t.id === 'rest')
-    return '훈련을 쉬고 몸을 추스릅니다. 컨디션이 40 밑으로 떨어지면 부상 위험이 크게 늘고, 35 밑이면 선발로 나서기 어려워요.';
+    return `훈련을 쉬고 몸을 추스릅니다. 컨디션이 ${COND_LOW_INJURY} 밑으로 떨어지면 부상 위험이 크게 늘고, ${COND_LOW_START} 밑이면 선발로 나서기 어려워요.`;
   if (t.id === 'coach')
     return 'OVR에 반영되는 능력치가 모두 조금씩 오릅니다. 한 능력치를 집중 훈련하는 것보다 오르는 폭은 작지만 고르게 자라요. 자금이 모자라면 자율 훈련(컨디션 회복)으로 바뀝니다.';
   if (t.id === 'media')
@@ -78,14 +96,14 @@ export function trainingHelp(s: GameState, t: TrainingDef): string {
   const k = t.attr!;
   const name = labelOf(s, k);
   const w = wOf(s)[k];
-  const bf = balanceFactor(s, k);
+  const { focus, bf, lopsided } = attrInfo(s, k);
   return [
     `${name} 능력치가 크게 오르고, 절반 확률로 다른 능력치도 하나 조금 오릅니다.`,
     k === 'phy' ? `${labelOf(s, 'pac')}도 함께 오르는 대신 컨디션이 더 떨어져요.` : '',
-    focusOf(s).includes(k)
+    focus
       ? `주력 능력치라 성장이 ${pct(FOCUS_GROWTH - 1)}% 빠릅니다.`
       : `주력 능력치가 아니라 성장이 ${pct(1 - OFF_FOCUS_GROWTH)}% 느립니다.`,
-    bf < 0.95
+    lopsided
       ? `다른 핵심 능력치보다 너무 앞서 있어 성장이 ${pct(1 - bf)}% 줄었어요. 다른 능력치를 키우면 다시 풀립니다.`
       : '',
     w < 0.05

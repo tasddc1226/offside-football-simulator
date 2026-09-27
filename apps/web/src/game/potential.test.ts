@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { potAchText, potFogged, potGrade, potLabel, potReveal } from './stats.js';
+import { bloomTick, potAchText, potFogged, potGrade, potLabel, potReveal } from './stats.js';
+import { createRng, setActiveRng } from './rng.js';
 import type { GameState } from './types.js';
 
 // T-10-073 잠재력은 흐리게: 재평가 전엔 스카우트 평가가 범위로만 보이고, 은퇴 때 실제 잠재력을 공개한다.
@@ -39,5 +40,13 @@ describe('잠재력 표시 (T-10-073)', () => {
     expect(potAchText(98)).toMatch(/끌어냈/);
     expect(potAchText(94)).toMatch(/남겨/);
     expect(potAchText(80)).toMatch(/피우지 못한/);
+  });
+
+  it('재평가 로그도 화면과 같은 흐린 평가로 알린다', () => {
+    setActiveRng(createRng(1));
+    const s = { ...st(81, 0, 4), age: 30, year: 2030, phase: 0, log: [] } as unknown as GameState;
+    // 나이 30이라 bloom은 더 흔들리지 않는다 — k = round(4 × 0.5) = 2, 스카우트 83.
+    expect(bloomTick(s)).toBe('스카우트 재평가 · 잠재력 C~A → B~A');
+    expect(s.log[0]!.kind).toBe('good');
   });
 });

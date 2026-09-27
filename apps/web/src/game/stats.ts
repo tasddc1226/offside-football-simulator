@@ -7,16 +7,20 @@ import { labelOf } from './player.js';
 
 const gradeOf = (p: number) =>
   p >= 90 ? 'S' : p >= 84 ? 'A' : p >= 78 ? 'B' : p >= 70 ? 'C' : 'D';
-/** 스카우트 평가 등급(한 점). 재평가 로그·판정이 쓴다 — 화면에는 potLabel로 흐리게 보인다. */
+/** 등급 서열 — 클수록 높다(S 4 … D 0). */
+export const gradeRank = (g: string): number => 'DCBAS'.indexOf(g);
+/** 스카우트가 보는 잠재력(숨은 성장 bloom 제외). */
+const scoutPot = (s: GameState): number => s.pot + (s.flags.potBonus ?? 0);
+/** 스카우트 평가 등급(한 점). 재평가 판정이 쓴다 — 화면에는 potLabel로 흐리게 보인다. */
 export function potGrade(s: GameState): string {
-  return gradeOf(s.pot + (s.flags.potBonus ?? 0));
+  return gradeOf(scoutPot(s));
 }
-export const truePot = (s: GameState): number => s.pot + (s.bloom ?? 0) + (s.flags.potBonus ?? 0);
+export const truePot = (s: GameState): number => scoutPot(s) + (s.bloom ?? 0);
 /** T-10-073 화면에 보이는 스카우트 평가의 오차(능력치 점수). 재평가(21·24세, flags.rescout)를 거칠수록 좁아진다. */
 const POT_FOG = [4, 2, 0] as const;
 /** 화면용 스카우트 평가 — 재평가 전에는 'C~B'처럼 범위로만 보인다. 실제 잠재력은 은퇴 때 공개된다(potReveal). */
 export function potLabel(s: GameState): string {
-  const p = s.pot + (s.flags.potBonus ?? 0);
+  const p = scoutPot(s);
   const fog = POT_FOG[Math.min(s.flags.rescout ?? 0, POT_FOG.length - 1)]!;
   const lo = gradeOf(p - fog),
     hi = gradeOf(p + fog);
@@ -27,11 +31,14 @@ export const potFogged = (s: GameState): boolean => (s.flags.rescout ?? 0) < POT
 /** T-10-073 은퇴 때 공개하는 실제 잠재력과 마지막 스카우트 평가.
  * T-10-075 ach: 최고 OVR ÷ 실제 잠재력(%) — 훈련·관리로 잠재력을 얼마나 끌어냈는지. 잠재력 근처에서도 느리게
  * 자라므로 100을 넘을 수 있다(시뮬 smart 중앙값 99, 10~90% 95~104, OVR 비중 0 능력치만 훈련하면 중앙값 84). */
-export const potReveal = (s: GameState) => ({
-  real: gradeOf(truePot(s)),
-  scout: potGrade(s),
-  ach: Math.round((s.peak / truePot(s)) * 100),
-});
+export function potReveal(s: GameState) {
+  const tp = truePot(s);
+  const real = gradeOf(tp),
+    scout = potGrade(s);
+  /** 실제가 스카우트 평가보다 몇 등급 높은지(음수면 낮다). */
+  const gap = gradeRank(real) - gradeRank(scout);
+  return { real, scout, gap, ach: Math.round((s.peak / tp) * 100) };
+}
 /** T-10-075 달성도 한 줄. */
 export function potAchText(ach: number): string {
   if (ach >= 102) return '타고난 한계를 넘어섰어요.';
@@ -47,18 +54,24 @@ export function bloomTick(s: GameState): string | null {
   if (s.age <= BLOOM_AGE) s.bloom = Math.round((s.bloom + gauss() * BLOOM_DRIFT) * 10) / 10;
   const n = s.flags.rescout ?? 0;
   if (!(n === 0 && s.age >= 21) && !(n === 1 && s.age >= 24)) return null;
+  // 화면과 같은 흐린 평가(potLabel)로 알린다 — 한 점 등급을 로그로 흘리지 않는다(T-10-073).
+  const before = potLabel(s);
   s.flags.rescout = n + 1;
-  const before = potGrade(s);
   const k = Math.round(s.bloom * (n === 0 ? 0.5 : 0.8));
   s.pot += k;
   s.bloom = Math.round((s.bloom - k) * 10) / 10;
-  const after = potGrade(s);
+  const after = potLabel(s);
   if (after === before) return null;
-  const up = after < before;
+  const note =
+    k > 0
+      ? '늦게 핀 재능이라는 평가입니다.'
+      : k < 0
+        ? '성장 곡선이 예상보다 일찍 꺾였다는 평가입니다.'
+        : '평가 범위가 좁혀졌습니다.';
   log(
     s,
-    `스카우트 재평가: 잠재력 ${before} → ${after}등급. ${up ? '늦게 핀 재능이라는 평가입니다.' : '성장 곡선이 예상보다 일찍 꺾였다는 평가입니다.'}`,
-    up ? 'good' : 'bad',
+    `스카우트 재평가: 잠재력 ${before} → ${after}등급. ${note}`,
+    k > 0 ? 'good' : k < 0 ? 'bad' : '',
   );
   return `스카우트 재평가 · 잠재력 ${before} → ${after}`;
 }

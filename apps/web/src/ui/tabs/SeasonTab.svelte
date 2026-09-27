@@ -117,7 +117,7 @@
     {#each TRAININGS as tr (tr.id)}
       {@const c = trainingCard(s, tr)}
       <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={() => setTraining(tr.id)}>
-        <b>{trainingLabel(s, tr)}</b><small>{#each c.effect.split(' · ') as part, i (i)}{i ? ' · ' : ''}<span class="nowrap">{part}</span>{/each}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
+        <b>{trainingLabel(s, tr)}</b><small>{#each c.effect as part, i (i)}{i ? ' · ' : ''}<span class="nowrap">{part}</span>{/each}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
       </button>
     {/each}
   </div>
@@ -125,7 +125,7 @@
     <div class="train-help" data-train-help aria-live="polite">
       <b>{trainingLabel(s, picked)}</b>
       <p>{trainingHelp(s, picked)}</p>
-      <p class="muted">{TRAINING_NOTE}</p>
+      <p class="muted fs-xs">{TRAINING_NOTE}</p>
     </div>
   {/if}
   <p class="muted fs-xs">진행 버튼은 화면 아래 고정 액션바에 있습니다.</p>
