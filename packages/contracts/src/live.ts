@@ -11,6 +11,8 @@ export const LiveEventSchema = z.discriminatedUnion('kind', [
     at: z.string(),
     pos: CareerPosSchema,
     club: z.string(),
+    /** T-10-066 클럽 id. 옛 시즌 기록은 null(배포 전 엣지 캐시 응답엔 없다). */
+    clubId: z.string().nullable().optional(),
     league: z.string(),
     apps: z.number().int(),
     goals: z.number().int(),
@@ -30,6 +32,7 @@ export const LiveEventSchema = z.discriminatedUnion('kind', [
     number: z.number().int().nullable(),
     score: z.number().int(),
     lastClub: z.string().nullable(),
+    lastClubId: z.string().nullable().optional(),
   }),
 ]);
 export type LiveEvent = z.infer<typeof LiveEventSchema>;

@@ -87,6 +87,7 @@ export {
   LegendSnapshotSchema,
   PublicHofEntrySchema,
   TitleIdSchema,
+  ClubIdSchema,
   ServerFirstCatSchema,
   ServerFirstSchema,
   ServerRecordSchema,

@@ -13,6 +13,8 @@ export interface ChapterEvent {
 /** 한 클럽에서 연달아 뛴 시즌 묶음(영화의 한 장). 같은 클럽으로 돌아오면 새 장이 된다. */
 export interface Chapter {
   club: string;
+  /** T-10-066. 챕터 첫 시즌의 클럽 id(옛 기록엔 없다). */
+  clubId?: string | undefined;
   leagues: string[];
   from: number;
   to: number;
@@ -54,6 +56,7 @@ export function careerChapters(s: LegendSource): Chapter[] {
     } else {
       out.push({
         club: r.club,
+        clubId: r.clubId,
         leagues: [r.league],
         from: r.year,
         to: r.year,

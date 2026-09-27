@@ -72,7 +72,7 @@ export function defaultLogo(club: Pick<Club, 'id' | 'name'>): ClubLogo {
   return { text: clubInitial(club.name), bg: c.base, fg };
 }
 /**
- * T-10-064. 기록(커리어 표·우승·명예의 전당·라이브)은 클럽을 id 없이 이름으로만 남긴다 — 이름으로 클럽을 되찾는다.
+ * T-10-064. T-10-066 이전 기록(커리어 표·우승·명예의 전당·라이브)은 클럽을 id 없이 이름으로만 남겼다 — 이름으로 클럽을 되찾는다.
  * 지금 이름(유저가 바꾼 이름 포함)이나 기본 별칭이 같으면 그 클럽. 다른 유저가 바꿔 부른 이름·대표팀은 null.
  */
 let byName: Map<string, Pick<Club, 'id' | 'name'>> | null = null;
@@ -84,6 +84,10 @@ export function clubByName(name: string): Pick<Club, 'id' | 'name'> | null {
     [SANGMU.name, SANGMU],
   ]);
   return byName.get(name) ?? null;
+}
+/** T-10-066. 기록에 남은 클럽 id로 클럽을 찾는다(이름이 바뀌어도 같은 클럽). 모르는 id면 null. */
+export function clubById(id: string): Pick<Club, 'id' | 'name'> | null {
+  return id === SANGMU.id ? SANGMU : (CLUBS.find((c) => c.id === id) ?? null);
 }
 export const logoOf = (club: Pick<Club, 'id' | 'name'>, map: ClubCustomMap): ClubLogo =>
   map[club.id]?.logo ?? defaultLogo(club);

@@ -121,6 +121,54 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(res.status).toBe(400);
   });
 
+  it('T-10-066: 클럽 id를 저장하고, id 없는 옛 클라이언트의 은퇴 재전송은 저장된 id를 지우지 않는다', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const put = (path: string, body: unknown) =>
+      app.request(path, jsonInit({ method: 'PUT', body, cookie: owner.cookie }), ctx.env);
+    const body = seasonBody();
+    expect(
+      (
+        await put(`/v1/careers/${CAREER_ID}/seasons/2026`, {
+          ...body,
+          season: { ...body.season, clubId: 'pl-15' },
+        })
+      ).status,
+    ).toBe(200);
+    const [season] = await ctx.db
+      .select()
+      .from(careerSeasons)
+      .where(eq(careerSeasons.careerId, CAREER_ID));
+    expect(season?.clubId).toBe('pl-15');
+
+    expect(
+      (
+        await put(`/v1/careers/${CAREER_ID}/retirement`, {
+          ...retirementBody(),
+          lastClubId: 'pl-15',
+        })
+      ).status,
+    ).toBe(200);
+    expect((await put(`/v1/careers/${CAREER_ID}/retirement`, retirementBody())).status).toBe(200);
+    const [row] = await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID));
+    expect(row?.lastClubId).toBe('pl-15');
+  });
+
+  it('T-10-066: 클럽 id 형식이 틀리면 400', async () => {
+    const owner = await issueCookie(ctx);
+    const body = seasonBody();
+    const res = await createApp().request(
+      `/v1/careers/${CAREER_ID}/seasons/2026`,
+      jsonInit({
+        method: 'PUT',
+        body: { ...body, season: { ...body.season, clubId: '<script>' } },
+        cookie: owner.cookie,
+      }),
+      ctx.env,
+    );
+    expect(res.status).toBe(400);
+  });
+
   it('happy path: 시즌 upsert 후 은퇴까지 정상 처리된다', async () => {
     const owner = await issueCookie(ctx);
     const app = createApp();
@@ -147,6 +195,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(seasonRows[0]?.goals).toBe(10);
     // T-10-006: 상세 필드가 없는 옛 페이로드는 NULL로 남는다.
     expect(seasonRows[0]?.cs).toBeNull();
+    expect(seasonRows[0]?.clubId).toBeNull();
     expect(seasonRows[0]?.compsJson).toBeNull();
 
     const retireRes = await app.request(

@@ -15,7 +15,7 @@
   <h2 style="margin-bottom:4px">우승 연혁</h2>
   {#if trophies.length}
     {#each trophies as x, i (i)}
-      <div class="trophy"><span class="y">{x.year}</span><div><b>{x.t}</b><span class="muted fs-xs"><ClubMark name={x.club} size={14} /> {x.club}</span></div></div>
+      <div class="trophy"><span class="y">{x.year}</span><div><b>{x.t}</b><span class="muted fs-xs"><ClubMark name={x.club} id={x.clubId} size={14} /> {x.club}</span></div></div>
     {/each}
   {:else}
     <p class="empty">아직 없습니다.</p>

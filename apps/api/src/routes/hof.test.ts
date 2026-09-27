@@ -45,11 +45,13 @@ const snapshot = {
   age: 34,
   peak: 88,
   lastClub: '테스트 FC',
+  lastClubId: 'pl-15',
   career: [
     {
       year: 2026,
       age: 18,
       club: '테스트 FC',
+      clubId: 'pl-15',
       league: '고교리그',
       apps: 20,
       goals: 10,
@@ -62,7 +64,7 @@ const snapshot = {
       ch: ['goals'],
     },
   ],
-  trophies: [{ year: 2026, t: '고교리그 우승', club: '테스트 FC' }],
+  trophies: [{ year: 2026, t: '고교리그 우승', club: '테스트 FC', clubId: 'pl-15' }],
   awards: [],
   ballon: [],
   nat: { caps: 30 },
@@ -90,6 +92,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
       (
         await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
           ...summary,
+          lastClubId: 'pl-15',
           publicName: null,
           snapshot,
         })
@@ -106,6 +109,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
       number: 7,
       legendScore: 420,
       hasDetail: true,
+      lastClubId: 'pl-15',
     });
   });
 
@@ -132,6 +136,9 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect(detail.entry.retiredAt).toBe(first.entry.retiredAt);
     // 스냅샷을 빼고 보내도 기존 상세는 지워지지 않는다.
     expect(detail.snapshot?.career[0]?.honors).toEqual(['고교리그 우승']);
+    // T-10-066 스냅샷의 클럽 id도 그대로 돌아온다.
+    expect(detail.snapshot?.career[0]?.clubId).toBe('pl-15');
+    expect(detail.snapshot?.trophies[0]?.clubId).toBe('pl-15');
   });
 
   it('옛 클라이언트 본문(이름·스냅샷 없음)도 목록에 익명·상세 없음으로 나온다', async () => {
@@ -139,7 +146,12 @@ describe('공개 명예의 전당 /v1/hof', () => {
     const { entries } = successEnvelope(HofListResponseSchema).parse(
       await (await createApp().request('/v1/hof', {}, ctx.env)).json(),
     ).data;
-    expect(entries[0]).toMatchObject({ name: null, number: null, hasDetail: false });
+    expect(entries[0]).toMatchObject({
+      name: null,
+      number: null,
+      hasDetail: false,
+      lastClubId: null,
+    });
   });
 
   it('대표 칭호와 획득 칭호를 저장하고, 칭호 없이 다시 보내도 지우지 않는다 (T-10-026)', async () => {

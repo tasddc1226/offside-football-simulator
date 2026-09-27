@@ -49,6 +49,8 @@ export interface LegendView {
   pos: Pos;
   age: number;
   lastClub: string;
+  /** T-10-066. 옛 기록에는 없다 — 엠블럼은 이름으로 찾는다. */
+  lastClubId: string | null;
   score: number;
   peak: number;
   /** 시즌별 상세. 옛 기록(스냅샷 없음)은 null — 요약만 보여 준다. */

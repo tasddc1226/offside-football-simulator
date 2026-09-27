@@ -87,10 +87,9 @@ export function endSeason(s: GameState): SeasonEndResult {
     s.trophies.push({
       year: s.year,
       t,
-      club:
-        /월드컵 우승|아시안컵|아시안게임|올림픽/.test(t) && !/클럽/.test(t)
-          ? NATIONAL_TEAM
-          : s.club.name,
+      ...(/월드컵 우승|아시안컵|아시안게임|올림픽/.test(t) && !/클럽/.test(t)
+        ? { club: NATIONAL_TEAM }
+        : { club: s.club.name, clubId: s.club.id }),
     }),
   );
   awards.forEach((t) => s.awards.push({ year: s.year, t }));
@@ -109,6 +108,7 @@ export function endSeason(s: GameState): SeasonEndResult {
     year: s.year,
     age: s.age,
     club: s.club.name,
+    clubId: s.club.id,
     league: L.name,
     apps: S.apps + cg.apps,
     goals: S.goals + cg.g,
@@ -504,6 +504,7 @@ export function retire(s: GameState): HofEntry {
     caps: s.nat.caps,
     ballon: s.awards.filter((x) => x.t === '발롱도르').length,
     lastClub: s.club.name,
+    lastClubId: s.club.id,
     score,
     title: mainTitle(s)?.id,
     date: new Date().toISOString().slice(0, 10),
@@ -528,10 +529,12 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
     age: s.age,
     peak: s.peak,
     lastClub: s.club.name,
+    lastClubId: s.club.id,
     career: s.career.map((r) => ({
       year: r.year,
       age: r.age,
       club: r.club,
+      ...(r.clubId ? { clubId: r.clubId } : {}),
       league: r.league,
       apps: r.apps,
       goals: r.goals,
@@ -544,7 +547,12 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
       ...(r.mil ? { mil: true } : {}),
       ...(r.ch?.length ? { ch: r.ch } : {}),
     })),
-    trophies: s.trophies.map(({ year, t, club }) => ({ year, t, club })),
+    trophies: s.trophies.map(({ year, t, club, clubId }) => ({
+      year,
+      t,
+      club,
+      ...(clubId ? { clubId } : {}),
+    })),
     awards: s.awards.map(({ year, t }) => ({ year, t })),
     ballon: (s.ballon || []).map(({ year, rank }) => ({ year, rank })),
     nat: { caps: s.nat.caps },

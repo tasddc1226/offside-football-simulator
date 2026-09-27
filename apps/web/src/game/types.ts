@@ -54,6 +54,8 @@ export interface CareerRecord {
   year: number;
   age: number;
   club: string;
+  /** T-10-066. 그 시즌 클럽 id(CLUBS[].id). 구단명이 바뀌어도 엠블럼이 제 클럽을 찾는다. 옛 기록에는 없다. */
+  clubId?: string | undefined;
   league: string;
   apps: number;
   goals: number;
@@ -252,7 +254,8 @@ export interface GameState {
   seasonStart: Record<AttrKey, number>;
   seasonStartSub: Record<string, number>;
   career: CareerRecord[];
-  trophies: { year: number; t: string; club: string }[];
+  /** club이 대표팀(NATIONAL_TEAM)이면 clubId가 없다(T-10-066, 옛 기록에도 없다). */
+  trophies: { year: number; t: string; club: string; clubId?: string | undefined }[];
   awards: { year: number; t: string }[];
   ballon?: { year: number; rank: number }[];
   nat: NatState;
@@ -292,6 +295,8 @@ export interface HofEntry {
   caps: number;
   ballon: number;
   lastClub: string;
+  /** T-10-066. 마지막 소속 클럽 id. 옛 항목에는 없다. */
+  lastClubId?: string | undefined;
   score: number;
   date: string;
   /** T-10-005. 커리어 ID(G.cid) — 서버 명예의 전당 행과 같은 키. 옛 항목에는 없다. */

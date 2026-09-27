@@ -94,12 +94,20 @@ describe('T-10-005 은퇴 스냅샷', () => {
       comps: [],
       ch: ['cs'],
     } as never);
+    g.career.push({ ...g.career[0]!, year: 2027, club: 'B', clubId: 'pl-15' });
     g.trophies.push({ year: 2026, t: '우승', club: 'A' });
+    g.trophies.push({ year: 2027, t: '우승', club: 'B', clubId: 'pl-15' });
     const snap = legendSnapshot(g);
     expect(() => LegendSnapshotSchema.parse(snap)).not.toThrow();
     expect(snap.career[0]).not.toHaveProperty('lgApps');
     expect(snap.career[0]).not.toHaveProperty('comps');
     expect(snap).not.toHaveProperty('name');
+    // T-10-066: 클럽 id는 있는 기록에만 옮긴다(옛 기록엔 키 자체가 없다).
+    expect(snap.lastClubId).toBe(g.club.id);
+    expect(snap.career[0]).not.toHaveProperty('clubId');
+    expect(snap.career[1]?.clubId).toBe('pl-15');
+    expect(snap.trophies[0]).not.toHaveProperty('clubId');
+    expect(snap.trophies[1]?.clubId).toBe('pl-15');
   });
 });
 

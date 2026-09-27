@@ -72,7 +72,7 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
       ctx,
       cookie,
       `/v1/careers/${B}/seasons/2027`,
-      seasonBody({ club: '테스트 FC', league: 'K리그1', goals: 21 }),
+      seasonBody({ club: '테스트 FC', clubId: 'pl-15', league: 'K리그1', goals: 21 }),
     );
     await putJson(
       ctx,
@@ -80,7 +80,7 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
       `/v1/careers/${C}/seasons/2026`,
       seasonBody({ honors: ['고교리그 우승', '득점왕'] }),
     );
-    await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, summary);
+    await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, lastClubId: 'pl-15' });
 
     const data = await read(ctx);
     expect(data.stats).toEqual({ playing: 2, seasonsToday: 4, newToday: 3, retiredToday: 1 });
@@ -93,16 +93,19 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
       pos: 'FW',
       score: 612,
       lastClub: '테스트 FC',
+      lastClubId: 'pl-15',
     });
     expect(data.feed[1]).toMatchObject({
       kind: 'season',
       club: '테스트 고교',
+      clubId: null,
       first: true,
       honor: '고교리그 우승',
     });
     expect(data.feed[2]).toMatchObject({
       kind: 'season',
       club: '테스트 FC',
+      clubId: 'pl-15',
       goals: 21,
       first: false,
       honor: null,

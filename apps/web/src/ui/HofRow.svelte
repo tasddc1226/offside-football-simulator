@@ -26,6 +26,7 @@
     unit = '',
     showScore = false,
     club = null,
+    clubId = null,
   }: {
     /** 0부터. 0~2는 금·은·동 월계관. */
     rank: number;
@@ -41,6 +42,8 @@
     showScore?: boolean;
     /** 마지막 소속(T-10-064) — 이름 앞에 엠블럼을 붙인다. */
     club?: string | null;
+    /** T-10-066 마지막 소속 클럽 id. 옛 기록엔 없어 이름으로 찾는다. */
+    clubId?: string | null | undefined;
   } = $props();
   const tt = $derived(titleById(titleId));
 </script>
@@ -51,7 +54,7 @@
   <div class="hof-rank">{rank + 1}</div>
 {/if}
 <div>
-  <ClubMark name={club} size={18} /> <b>{name}</b> <span class="pill">{POS[pos].label}</span>
+  <ClubMark name={club} id={clubId} size={18} /> <b>{name}</b> <span class="pill">{POS[pos].label}</span>
   {#if tag}<span class="pill">{tag}</span>{/if}
   {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
   <div class="muted fs-xs">{t.apps}경기 {t.goals}골 {t.assists}도움 · 트로피 {t.trophies} · 최고 OVR {t.peak}{t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}{showScore ? ` · 레전드 ${t.score}` : ''}</div>

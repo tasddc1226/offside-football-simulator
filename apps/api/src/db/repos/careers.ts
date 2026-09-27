@@ -58,6 +58,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
     lgApps: season.lgApps ?? null,
     lgGoals: season.lgGoals ?? null,
     caps: season.caps ?? null,
+    clubId: season.clubId ?? null,
     compsJson: season.comps ? JSON.stringify(season.comps) : null,
     chJson: season.ch ? JSON.stringify(season.ch) : null,
   };
@@ -188,8 +189,9 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
         caps: summary.caps,
         ballon: summary.ballon,
         lastClub: summary.lastClub,
-        // 옛 클라이언트(칭호 없음)의 재전송이 이미 저장된 칭호를 지우지 않게, 보낸 경우에만 바꾼다.
+        // 옛 클라이언트(칭호·클럽 id 없음)의 재전송이 이미 저장된 값을 지우지 않게, 보낸 경우에만 바꾼다.
         ...(summary.title !== undefined ? { title: summary.title } : {}),
+        ...(summary.lastClubId !== undefined ? { lastClubId: summary.lastClubId } : {}),
         ...(publicName !== undefined ? { publicName } : {}),
         ...(snapshot
           ? { snapshotJson: JSON.stringify(snapshot), shirtNumber: snapshot.number }
@@ -217,6 +219,7 @@ const publicColumns = {
   caps: careers.caps,
   ballon: careers.ballon,
   lastClub: careers.lastClub,
+  lastClubId: careers.lastClubId,
   retiredAt: careers.retiredAt,
   hasDetail: sql<number>`${careers.snapshotJson} is not null`,
   title: careers.title,
@@ -241,6 +244,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     caps: n(r.caps),
     ballon: n(r.ballon),
     lastClub: String(r.lastClub ?? ''),
+    lastClubId: (r.lastClubId as string | null) ?? null,
     retiredAt: String(r.retiredAt ?? ''),
     hasDetail: Boolean(r.hasDetail),
     title: (r.title as string | null) ?? null,

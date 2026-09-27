@@ -135,6 +135,8 @@ export const careers = sqliteTable(
     caps: integer('caps'),
     ballon: integer('ballon'),
     lastClub: text('last_club'),
+    // T-10-066 마지막 소속 클럽 id(web CLUBS[].id). 구단명이 바뀌어도 엠블럼이 제 클럽을 찾는다. 옛 기록은 NULL.
+    lastClubId: text('last_club_id'),
     // T-10-005 공개 명예의 전당. publicName은 유저가 이름 공개를 고른 경우에만 채운다(기본 NULL = 익명).
     // snapshotJson은 은퇴 상세(시즌별 기록·수상·여정) — 선수 이름은 들어 있지 않다.
     publicName: text('public_name'),
@@ -176,6 +178,8 @@ export const careerSeasons = sqliteTable(
     year: integer('year').notNull(),
     age: integer('age').notNull(),
     club: text('club').notNull(),
+    // T-10-066 클럽 id. 이 컬럼 이전 행·옛 클라이언트 업로드는 NULL(이름으로 찾는다).
+    clubId: text('club_id'),
     league: text('league').notNull(),
     apps: integer('apps').notNull(),
     goals: integer('goals').notNull(),
