@@ -10,6 +10,7 @@ import { routeSharedCareer } from './ui/legend.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';
 import { installClickSound } from './ui/sfx.js';
 import { watchForUpdates } from './ui/update.svelte.js';
+import { watchNews } from './ui/news.svelte.js';
 
 installClickSound();
 loadGame();
@@ -40,6 +41,8 @@ if (hasSessionHint())
 watchOwnerConflicts();
 // T-10-023: 열어 둔 탭이 새 배포를 알아채면 새로고침 배너를 띄운다.
 watchForUpdates();
+// T-10-058: 새 공지사항·릴리즈 노트가 올라오면 화면 위에 알린다.
+watchNews();
 // T-10-021: 모바일 브라우저로 홈 화면을 열면 '홈 화면에 추가' 안내를 띄운다('다시 보지 않기' 전까지).
 void import('./ui/install.js').then((m) => m.maybeShowInstallOnboarding()).catch(() => {});
 // T-9-009: 이전 세션에서 못 보낸 업로드를 앱 시작 시 한 번 재시도한다(실패해도 게임은 계속된다).

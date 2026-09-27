@@ -352,3 +352,40 @@ test('소식: 조회수는 기기마다 한 번, 좋아요를 누르고 거둔�
   expect(sent.views).toHaveLength(1);
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 });
+
+test('새 소식 알림: 마지막으로 본 뒤 올라온 글을 화면 위에 알리고, 보면 다시 뜨지 않는다', async ({
+  page,
+}) => {
+  await mockBoards(page);
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('ft_news_seen'))
+      localStorage.setItem('ft_news_seen', '2026-09-24T00:00:00.000Z');
+  });
+  await page.goto('/');
+  const banner = page.locator('[data-news-banner]');
+  await expect(banner).toContainText('새 소식 2개가 올라왔어요');
+  await banner.locator('[data-act="news-open"]').click();
+  await expect(page.locator('[data-post]')).toBeVisible();
+  await expect(banner).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('[data-home-news="notice"]')).toContainText(NOTICE.title);
+  await expect(banner).toHaveCount(0);
+});
+
+test('새 소식 알림: 처음 온 기기에는 지금까지의 글을 알리지 않고, 닫으면 사라진다', async ({
+  page,
+}) => {
+  await mockBoards(page);
+  await page.goto('/');
+  await expect(page.locator('[data-home-news="notice"]')).toContainText(NOTICE.title);
+  await expect(page.locator('[data-news-banner]')).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('ft_news_seen'))).toBe(NOTICE.createdAt);
+
+  await page.evaluate(() => localStorage.setItem('ft_news_seen', '2026-09-24T00:00:00.000Z'));
+  await page.reload();
+  const banner = page.locator('[data-news-banner]');
+  await expect(banner).toBeVisible();
+  await banner.locator('[data-act="news-close"]').click();
+  await expect(banner).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('ft_news_seen'))).toBe(NOTICE.createdAt);
+});

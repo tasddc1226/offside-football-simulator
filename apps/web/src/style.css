@@ -2937,6 +2937,37 @@ body:has(nav.tabs) .toast {
 .update-banner .btn {
   flex: none;
 }
+/* T-10-058 새 소식 알림: 새 버전 배너와 같은 자리·모양에 글 제목 한 줄과 닫기(✕). */
+.news-banner {
+  border: 1px solid color-mix(in srgb, var(--on-pitch) 22%, transparent);
+}
+.news-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.news-text small {
+  opacity: 0.85;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.news-close {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin-left: -4px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.news-close:active {
+  background-color: color-mix(in srgb, var(--on-pitch) 15%, transparent);
+}
 
 /* ───────── 구간 리포트 (T-10-024) ───────── */
 .report {

@@ -10,6 +10,7 @@
   import Legend from './Legend.svelte';
   import Hof from './Hof.svelte';
   import UpdateBanner from './UpdateBanner.svelte';
+  import NewsBanner from './NewsBanner.svelte';
   import MainNav, { hasMainNav } from './MainNav.svelte';
   import type { Component } from 'svelte';
 
@@ -90,3 +91,4 @@
 <!-- 홈 하단 메뉴는 화면 전환 래퍼 밖에 둬 화면이 바뀔 때 다시 그려지지 않게 한다. -->
 {#if hasMainNav(appState.screen)}<MainNav />{/if}
 <UpdateBanner />
+<NewsBanner />

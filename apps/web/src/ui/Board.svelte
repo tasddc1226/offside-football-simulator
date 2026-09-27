@@ -15,6 +15,7 @@
   import { openBoard } from './nav.js';
   import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
+  import { markNewsSeen } from './news.svelte.js';
   import { BOARD_KEYS } from '@offside/contracts/board-limits';
   import { BOARD_LABEL, dateOf, parseBody, postMeta } from './boardText.js';
   import Topbar from './Topbar.svelte';
@@ -61,6 +62,7 @@
     const r = await api.fetchPost(id);
     if (!r.ok) return toast(r.error.message);
     detail = { ...r.data, liked: !!r.data.liked }; // 옛 서버 응답엔 liked가 없다.
+    markNewsSeen(r.data.post.createdAt);
     if (firstView(id)) {
       detail.post.viewCount++;
       void api.addView(id);
@@ -118,6 +120,7 @@
     const r = e.id ? await api.updatePost(e.id, input) : await api.createPost(board, input);
     busy = false;
     if (!r.ok) return toast(r.error.message);
+    if (!e.id) markNewsSeen(r.data.createdAt); // 내가 쓴 글은 알리지 않는다.
     editing = null;
     toast(e.id ? '글을 고쳤어요' : '글을 올렸어요');
     await open(r.data.id);
