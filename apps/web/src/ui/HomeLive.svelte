@@ -1,10 +1,12 @@
 <script lang="ts">
   // T-10-030 홈 라이브 현황. 서버에 실제로 올라온 시즌·은퇴 기록으로 "지금 뛰는 중" 숫자와 소식 티커를
-  // 보여 준다(가짜 활동 없음). 1분마다 새로 받고(T-10-045: 폴링은 분 단위 — CLAUDE.md), 티커는 3.5초마다 한 줄씩 올라간다 — 감속 모션이면
+  // 보여 준다(가짜 활동 없음). 1분마다 새로 받고(T-10-045: 폴링은 분 단위 — CLAUDE.md), 그 사이 새 소식은 실시간
+  // 소켓으로 바로 받아 맨 위에 끼운다(T-10-072 — 다음 조회가 그 소식을 담으면 조회 결과로 넘긴다). 티커는 3.5초마다 한 줄씩 올라간다 — 감속 모션이면
   // 움직이지 않고 최신 3줄만, 마우스를 올리거나 포커스가 있거나 일시정지를 누르면 멈춘다.
   import { onMount } from 'svelte';
-  import type { LiveEvent, LiveResponse } from '@offside/contracts';
+  import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
   import { getLive } from '../api/client.js';
+  import { connectLive } from '../api/liveSocket.js';
   import { anonName } from './format.js';
   import { openPublicLegendById } from './legend.js';
   import { motionOK } from './motion.js';
@@ -15,6 +17,8 @@
   const POLL_MS = LIVE_POLL_SEC * 1000;
   const STEP_MS = 3_500;
   const VISIBLE = 3;
+  /** 서버 피드 길이 상한과 같다(repos/live.ts FEED_MAX). */
+  const FEED_MAX = 12;
 
   let data = $state<LiveResponse | null>(null);
   /** 조회가 실패한 적이 있다. 받은 데이터가 없을 때만 안내 문구를 띄우는 데 쓴다. */
@@ -28,20 +32,36 @@
   let holding = $state(false);
   /** 방금 받은 새 소식(점이 한 번 튄다). */
   let fresh = $state(new Set<string>());
+  /** 소켓으로 받은 소식(최신순). 마지막 조회(data.now) 뒤에 올라온 것만 조회 결과 위에 얹는다. */
+  let pushed = $state<LiveEvent[]>([]);
 
-  const feed = $derived(data?.feed ?? []);
+  const arrived = $derived(data ? pushed.filter((e) => e.at > data!.now) : []);
+  const feed = $derived(data ? [...arrived, ...data.feed].slice(0, FEED_MAX) : []);
+  /** 조회 숫자에 아직 담기지 않은 소식만큼 더한다('지금 뛰는 중'은 조회로만 바뀐다). */
+  const liveStats = $derived.by((): LiveStats | null => {
+    if (!data) return null;
+    const s = { ...data.stats };
+    for (const e of arrived) {
+      if (e.kind === 'retire') s.retiredToday++;
+      else {
+        s.seasonsToday++;
+        if (e.first) s.newToday++;
+      }
+    }
+    return s;
+  });
   const rolling = $derived(motionOK && feed.length > VISIBLE);
   // 한 줄 더 그려 두고(가려짐) 올라가는 동안 아래에서 들어오게 한다.
   const rows = $derived(
     rolling ? Array.from({ length: VISIBLE + 1 }, (_, k) => feed[(cursor + k) % feed.length]!) : feed.slice(0, VISIBLE),
   );
   const STATS = [
-    { key: 'playing', label: '지금 뛰는 중', of: (d: LiveResponse) => d.stats.playing },
-    { key: 'seasons', label: '오늘 치른 시즌', of: (d: LiveResponse) => d.stats.seasonsToday },
-    { key: 'new', label: '오늘 새 선수', of: (d: LiveResponse) => d.stats.newToday },
-    { key: 'retired', label: '오늘 은퇴', of: (d: LiveResponse) => d.stats.retiredToday },
+    { key: 'playing', label: '지금 뛰는 중', of: (s: LiveStats) => s.playing },
+    { key: 'seasons', label: '오늘 치른 시즌', of: (s: LiveStats) => s.seasonsToday },
+    { key: 'new', label: '오늘 새 선수', of: (s: LiveStats) => s.newToday },
+    { key: 'retired', label: '오늘 은퇴', of: (s: LiveStats) => s.retiredToday },
   ];
-  const stats = $derived(data ? STATS.map((s) => ({ ...s, n: s.of(data!) })).filter((s) => s.n > 0) : []);
+  const stats = $derived(liveStats ? STATS.map((s) => ({ ...s, n: s.of(liveStats!) })).filter((s) => s.n > 0) : []);
   /** 첫 응답 전 — 같은 높이의 자리표시 카드를 그린다. */
   const pending = $derived(!data && !failed);
 
@@ -77,6 +97,18 @@
     if (added.length) cursor = 0;
     shifting = false;
     data = r.data;
+    pushed = pushed.filter((e) => e.at > r.data.now);
+    now = Date.now();
+  }
+
+  /** 소켓 소식. 첫 조회 전이거나, 이미 조회에 담긴(그 시각 이전) 소식이거나, 이미 보이는 소식이면 버린다. */
+  function onPush(e: LiveEvent) {
+    const key = keyOf(e);
+    if (!data || e.at <= data.now || feed.some((f) => keyOf(f) === key)) return;
+    pushed = [e, ...pushed].slice(0, FEED_MAX);
+    fresh = new Set([key]);
+    cursor = 0;
+    shifting = false;
     now = Date.now();
   }
 
@@ -91,7 +123,9 @@
       if (rolling && !paused && !holding && document.visibilityState === 'visible') shifting = true;
     }, STEP_MS);
     document.addEventListener('visibilitychange', loadIfVisible);
+    const disconnect = connectLive(onPush);
     return () => {
+      disconnect();
       clearInterval(poll);
       clearInterval(step);
       document.removeEventListener('visibilitychange', loadIfVisible);

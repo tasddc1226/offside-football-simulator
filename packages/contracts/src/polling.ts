@@ -4,3 +4,11 @@
  * CLAUDE.md 백엔드 보호: 폴링은 분 단위.
  */
 export const LIVE_POLL_SEC = 60;
+
+/** T-10-072 홈 라이브 실시간 소켓(WebSocket). 새 시즌·은퇴 소식을 올라오는 즉시 밀어 준다 — 폴링은 숫자를 맞추고
+ * 소켓이 끊겼을 때를 받친다. */
+export const LIVE_SOCKET_PATH = '/v1/live/ws';
+/** 연결 유지용 핑 간격. 서버(Durable Object)는 깨지 않고 자동으로 pong을 돌려준다. */
+export const LIVE_PING_SEC = 45;
+export const LIVE_PING = 'ping';
+export const LIVE_PONG = 'pong';
