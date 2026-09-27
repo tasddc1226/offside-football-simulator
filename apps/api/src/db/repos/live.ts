@@ -1,4 +1,5 @@
 import type { LiveEvent, LiveStats } from '@offside/contracts';
+import { LIVE_FEED_MAX as FEED_MAX } from '@offside/contracts/polling';
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { appMeta, careers, careerSeasons } from '../schema.js';
@@ -12,7 +13,6 @@ const MIN = 60_000;
 const PLAYING_WINDOW_MS = 20 * MIN;
 /** 피드가 이만큼 차지 않으면 기간을 넓힌다: 1시간 → 24시간 → 7일(가장 넓은 기간으로 한 번만 읽고 거른다). */
 const FEED_MIN = 4;
-const FEED_MAX = 12;
 const WINDOWS_MS = [60 * MIN, 24 * 60 * MIN];
 const FEED_SPAN_MS = 7 * 24 * 60 * MIN;
 
@@ -52,38 +52,94 @@ export async function liveStats(db: Db, nowMs: number): Promise<LiveStats> {
   };
 }
 
+/** 시즌 소식 한 줄의 열. 진행 중 커리어의 마지막 시즌에 커리어를 붙인다(careerId는 내보내지 않는다). */
+const seasonCols = {
+  at: careerSeasons.createdAt,
+  name: careers.publicName,
+  pos: careers.pos,
+  club: careerSeasons.club,
+  clubId: careerSeasons.clubId,
+  league: careerSeasons.league,
+  apps: careerSeasons.apps,
+  goals: careerSeasons.goals,
+  assists: careerSeasons.assists,
+  cs: careerSeasons.cs,
+  honorsJson: careerSeasons.honorsJson,
+  year: careerSeasons.year,
+  startYear: careers.startYear,
+};
+const retireCols = {
+  at: careers.retiredAt,
+  careerId: careers.id,
+  name: careers.publicName,
+  pos: careers.pos,
+  number: careers.shirtNumber,
+  score: careers.legendScore,
+  lastClub: careers.lastClub,
+  lastClubId: careers.lastClubId,
+};
+
+const seasonRows = (db: Db) =>
+  db
+    .select(seasonCols)
+    .from(careers)
+    .innerJoin(
+      careerSeasons,
+      and(
+        eq(careerSeasons.careerId, careers.id),
+        eq(
+          careerSeasons.year,
+          sql`(select max(s2.year) from career_seasons s2 where s2.career_id = ${careers.id})`,
+        ),
+      ),
+    );
+
+const retireRows = (db: Db) => db.select(retireCols).from(careers);
+
+type SeasonRow = Awaited<ReturnType<typeof seasonRows>>[number];
+type RetireRow = Awaited<ReturnType<typeof retireRows>>[number];
+
+const seasonEvent = ({ honorsJson, year, startYear, ...s }: SeasonRow): LiveEvent => ({
+  kind: 'season',
+  ...s,
+  honor: honorsOf(honorsJson)[0] ?? null,
+  first: year === startYear,
+});
+const retireEvent = (r: RetireRow): LiveEvent => ({
+  kind: 'retire',
+  ...r,
+  at: r.at!,
+  score: r.score!,
+});
+
+/**
+ * T-10-072 방금 올라온 기록 하나를 피드와 같은 모양으로 — 실시간으로 홈에 밀어 줄 소식. 피드에 올라가지 않을
+ * 기록(마지막 시즌이 아니거나, 짧은 커리어 은퇴)과 다시 보낸 기록(시각이 now가 아니다)은 undefined.
+ */
+export async function liveEventOf(
+  db: Db,
+  kind: LiveEvent['kind'],
+  careerId: string,
+  now: string,
+): Promise<LiveEvent | undefined> {
+  if (kind === 'season') {
+    const [row] = await seasonRows(db).where(
+      and(eq(careers.id, careerId), eq(careers.status, 'active'), eq(careerSeasons.createdAt, now)),
+    );
+    return row && seasonEvent(row);
+  }
+  const [row] = await retireRows(db).where(
+    and(eq(careers.id, careerId), isPublicRetired, eq(careers.retiredAt, now)),
+  );
+  return row && retireEvent(row);
+}
+
 export async function liveFeed(db: Db, nowMs: number): Promise<LiveEvent[]> {
   const since = new Date(nowMs - FEED_SPAN_MS).toISOString();
   const [seasons, retires] = await Promise.all([
     // 진행 중 커리어만, 선수당 마지막 시즌 하나만. 시즌을 올리면 커리어 updated_at이 바뀌므로 (status, updated_at)
     // 인덱스로 최근 12명을 골라 마지막 시즌을 붙인다. created_at 앞의 +는 그 인덱스를 막아 커리어부터 훑게 한다.
-    db
-      .select({
-        at: careerSeasons.createdAt,
-        name: careers.publicName,
-        pos: careers.pos,
-        club: careerSeasons.club,
-        clubId: careerSeasons.clubId,
-        league: careerSeasons.league,
-        apps: careerSeasons.apps,
-        goals: careerSeasons.goals,
-        assists: careerSeasons.assists,
-        cs: careerSeasons.cs,
-        honorsJson: careerSeasons.honorsJson,
-        year: careerSeasons.year,
-        startYear: careers.startYear,
-      })
-      .from(careers)
-      .innerJoin(
-        careerSeasons,
-        and(
-          eq(careerSeasons.careerId, careers.id),
-          eq(
-            careerSeasons.year,
-            sql`(select max(s2.year) from career_seasons s2 where s2.career_id = ${careers.id})`,
-          ),
-        ),
-      )
+    seasonRows(db)
       .where(
         and(
           eq(careers.status, 'active'),
@@ -93,31 +149,12 @@ export async function liveFeed(db: Db, nowMs: number): Promise<LiveEvent[]> {
       )
       .orderBy(desc(careers.updatedAt))
       .limit(FEED_MAX),
-    db
-      .select({
-        at: careers.retiredAt,
-        careerId: careers.id,
-        name: careers.publicName,
-        pos: careers.pos,
-        number: careers.shirtNumber,
-        score: careers.legendScore,
-        lastClub: careers.lastClub,
-        lastClubId: careers.lastClubId,
-      })
-      .from(careers)
+    retireRows(db)
       .where(and(isPublicRetired, gte(careers.retiredAt, since)))
       .orderBy(desc(careers.retiredAt))
       .limit(FEED_MAX),
   ]);
-  const feed: LiveEvent[] = [
-    ...seasons.map(({ honorsJson, year, startYear, ...s }) => ({
-      kind: 'season' as const,
-      ...s,
-      honor: honorsOf(honorsJson)[0] ?? null,
-      first: year === startYear,
-    })),
-    ...retires.map((r) => ({ kind: 'retire' as const, ...r, at: r.at!, score: r.score! })),
-  ]
+  const feed: LiveEvent[] = [...seasons.map(seasonEvent), ...retires.map(retireEvent)]
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, FEED_MAX);
   // 최신순이라 짧은 기간의 소식은 앞부분이다 — 그 기간만으로 충분히 차면 거기까지만 보여 준다.

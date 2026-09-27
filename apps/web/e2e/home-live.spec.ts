@@ -91,6 +91,34 @@ test('숫자와 소식 티커를 보여 주고, 한 줄씩 올라가다 일시�
   expect(axe.violations.map((v) => v.id)).toEqual([]);
 });
 
+// T-10-072: 소켓으로 온 새 소식은 1분 조회를 기다리지 않고 맨 위에 들어오고, 오늘 숫자도 그만큼 오른다.
+test('실시간 소켓으로 온 새 소식이 바로 맨 위에 보이고 숫자가 오른다', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await stub(page);
+  let sendEvent: (e: unknown) => void = () => {};
+  let connected = false;
+  await page.routeWebSocket(`${API.replace('http', 'ws')}/v1/live/ws`, (ws) => {
+    sendEvent = (event) => ws.send(JSON.stringify({ type: 'event', event }));
+    connected = true;
+  });
+  await page.goto('/');
+  const card = page.locator('[data-home-live]');
+  await expect(card.locator('[data-live-stat="seasons"]')).toContainText('17');
+  await expect.poll(() => connected).toBe(true);
+
+  // 마지막 조회(now) 이전 소식·이미 보이는 소식은 무시한다.
+  sendEvent(season(5, { club: '옛 소식 FC' }));
+  sendEvent(live.feed[0]);
+  sendEvent(season(-1, { club: '새싹고', first: true, name: '이실시' }));
+  await expect(card.locator('.live-row').first()).toContainText(
+    '이실시 새싹고에서 첫 시즌을 마쳤어요',
+  );
+  await expect(card.locator('.live-row')).toHaveCount(3);
+  await expect(card).not.toContainText('옛 소식 FC');
+  await expect(card.locator('[data-live-stat="seasons"]')).toContainText('18');
+  await expect(card.locator('[data-live-stat="new"]')).toContainText('1오늘 새 선수');
+});
+
 test('은퇴 소식을 누르면 그 선수 상세가 열린다', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await stub(page);

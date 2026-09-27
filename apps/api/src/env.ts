@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { createDb, type Db } from './db/client.js';
 import type { SessionChannel } from './db/repos/sessions.js';
+import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
   DB: D1Database;
@@ -20,6 +21,8 @@ export type Bindings = {
   ADMIN_EMAILS?: string;
   /** T-10-070 D1 매일 백업을 두는 R2 버킷. 운영에만 있다 — 없으면 백업을 건너뛴다. */
   BACKUP?: R2Bucket;
+  /** T-10-072 홈 라이브 실시간 허브. 테스트(getPlatformProxy)엔 없다 — 없으면 소켓은 503, 소식은 보내지 않는다. */
+  LIVE?: DurableObjectNamespace<LiveHub>;
 };
 
 export type SessionContext = {

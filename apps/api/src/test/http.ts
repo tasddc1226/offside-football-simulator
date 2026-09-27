@@ -95,3 +95,37 @@ export async function issueGoogleCookie(ctx: TestD1, opts: Parameters<typeof lin
 /** ADMIN_EMAIL로 구글 연결한 새 프로필(관리자). */
 export const issueAdminCookie = (ctx: TestD1, opts: { nickname?: string } = {}) =>
   issueGoogleCookie(ctx, { email: ADMIN_EMAIL, ...opts });
+
+/** 시즌 업로드 본문(테스트 공용). over로 season 칸을 덮어쓴다. */
+export const seasonBody = (over: Record<string, unknown> = {}) => ({
+  career: TEST_CAREER,
+  season: {
+    age: 18,
+    club: '테스트 고교',
+    league: '고교리그',
+    apps: 20,
+    goals: 15,
+    assists: 4,
+    rating: 7.4,
+    rank: 1,
+    ovr: 58,
+    honors: [],
+    ...over,
+  },
+  events: [],
+});
+/** 은퇴 업로드 본문(테스트 공용). 30세 넘어 은퇴 — 명예의 전당·홈 소식에 오른다. */
+export const RETIREMENT = {
+  retireAge: 34,
+  peak: 88,
+  legendScore: 612,
+  apps: 300,
+  goals: 120,
+  assists: 60,
+  trophies: 1,
+  awards: 0,
+  caps: 30,
+  ballon: 0,
+  lastClub: '테스트 FC',
+  publicName: null,
+};

@@ -23,6 +23,7 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { purgeEdge } from '../edgeCache.js';
 import { recordFirsts } from './firsts.js';
 import { STALE } from '../edgeKeys.js';
+import { publishLive } from '../live/publish.js';
 import { isAcceptablePublicName, toPublicName } from '@offside/contracts/content-filter';
 
 /** 소유권 확인: careerId가 이미 다른 프로필 소유면 409. 없으면(새 커리어) 통과. */
@@ -78,6 +79,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     });
 
     await recordFirsts(c, careerId);
+    publishLive(c, 'season', careerId, now);
     const career = await getCareer(db, careerId);
     return ok(c, CareerUpsertResponseSchema, {
       careerId,
@@ -119,6 +121,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     await putRetirement(db, { careerId, summary, publicName, snapshot, now });
     await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
     purgeEdge(c, STALE.retirementPut(careerId));
+    publishLive(c, 'retire', careerId, now);
 
     return ok(c, RetirementResponseSchema, { careerId, status: 'retired' });
   });

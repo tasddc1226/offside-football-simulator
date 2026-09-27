@@ -19,6 +19,7 @@
 | 제품 지표 | Cloudflare Web Analytics + 자체 이벤트 테이블(D1) | 쿠키 없는 분석. 06 문서의 5개 이벤트만 |
 | 로그 | Workers Logs | 구조화 JSON, requestId |
 | 배치 | Cloudflare Cron Triggers | 시즌 전환, D1 → R2 백업, 밸런스 리포트 |
+| 실시간 | Cloudflare Durable Objects (WebSocket Hibernation) | 홈 라이브 소식 푸시(T-10-072, `apps/api/src/live/`). 객체 하나(`LiveHub`)가 소켓을 붙들고 업로드 때만 깬다 |
 | 관리자 | Cloudflare Access로 `admin.` 보호 | Phase 7. 초기에는 wrangler CLI로 운영 |
 | 앱인토스 서버 API 호출 | Workers `mtls_certificates` 바인딩 | 앱인토스가 발급한 클라이언트 인증서를 `wrangler mtls-certificate upload`로 등록. 식별키 검증 등 `apps-in-toss-api.toss.im` 호출에만 사용 |
 | 앱인토스 미니앱 배포 | 앱인토스 콘솔(번들 호스팅은 토스) | `.ait` 번들 업로드 → QR 테스트 → 검토 → 출시. 자체 호스팅 아님. [ADR-009](ADR-009-apps-in-toss-channel.md) |

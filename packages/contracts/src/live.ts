@@ -56,3 +56,6 @@ export const LiveResponseSchema = z.strictObject({
   feed: z.array(LiveEventSchema),
 });
 export type LiveResponse = z.infer<typeof LiveResponseSchema>;
+
+/** T-10-072 실시간 소켓(`LIVE_SOCKET_PATH`)으로 오는 메시지. event는 피드 한 줄과 같은 모양이다. */
+export type LivePush = { type: 'event'; event: LiveEvent };

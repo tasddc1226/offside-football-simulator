@@ -42,9 +42,13 @@ export async function createTestD1({ migrate = true } = {}): Promise<TestD1> {
     }
   }
 
+  // T-10-072 홈 라이브 허브(Durable Object)는 빼 둔다 — 업로드가 뒤에서 허브를 부르지 않게. 허브를 보는 테스트는
+  // 가짜를 넣는다(routes/liveSocket.test.ts).
+  const env: Bindings = { ...proxy.env };
+  delete env.LIVE;
   return {
     db: createDb(proxy.env.DB),
-    env: proxy.env,
+    env,
     dispose: () => proxy.dispose(),
   };
 }
