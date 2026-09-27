@@ -64,7 +64,7 @@
   {:else}
     <p class="empty">첫 시즌을 마치면 기록이 쌓입니다.</p>
   {/if}
-  <p class="muted" style="font-size:0.75rem">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다.</p>
+  <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다.</p>
 </section>
 <section class="card">
   <div class="eyebrow">Journey</div>

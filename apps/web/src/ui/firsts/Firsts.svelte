@@ -54,7 +54,7 @@
       </div>
       {#if data}<span class="first-count num" data-firsts-count>{done}/{total}</span>{/if}
     </div>
-    <p class="muted" style="font-size:0.8125rem;margin:0 0 10px">
+    <p class="muted fs-sm" style="margin:0 0 10px">
       {tab === 'records'
         ? '모든 플레이어 중 가장 높은 기록이에요. 더 큰 기록이 나오면 주인이 바뀌어요.'
         : '모든 플레이어를 통틀어 가장 먼저 세운 기록만 남아요.'} 이름은 명예의 전당에 이름을 공개한 선수만 보여요.

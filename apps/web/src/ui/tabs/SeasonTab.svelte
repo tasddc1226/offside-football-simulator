@@ -119,7 +119,7 @@
       </button>
     {/each}
   </div>
-  <p class="muted" style="font-size:0.75rem">진행 버튼은 화면 아래 고정 액션바에 있습니다.</p>
+  <p class="muted fs-xs">진행 버튼은 화면 아래 고정 액션바에 있습니다.</p>
 </section>
 
 <section class="card">

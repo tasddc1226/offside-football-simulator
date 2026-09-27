@@ -14,7 +14,7 @@
   <h2 style="margin-bottom:4px">우승 연혁</h2>
   {#if trophies.length}
     {#each trophies as x, i (i)}
-      <div class="trophy"><span class="y">{x.year}</span><div><b>{x.t}</b><span class="muted" style="font-size:0.75rem">{x.club}</span></div></div>
+      <div class="trophy"><span class="y">{x.year}</span><div><b>{x.t}</b><span class="muted fs-xs">{x.club}</span></div></div>
     {/each}
   {:else}
     <p class="empty">아직 없습니다.</p>
@@ -38,7 +38,7 @@
     <div class="eyebrow">Ballon d'Or</div>
     <h2 style="margin-bottom:4px">발롱도르 순위</h2>
     {#each ballon as b, i (i)}
-      <div class="trophy"><span class="y">{b.year}</span><div><b>{b.rank === 1 ? '수상' : `${b.rank}위`}</b> <span class="muted" style="font-size:0.75rem">30인 후보</span></div></div>
+      <div class="trophy"><span class="y">{b.year}</span><div><b>{b.rank === 1 ? '수상' : `${b.rank}위`}</b> <span class="muted fs-xs">30인 후보</span></div></div>
     {/each}
   </section>
 {/if}
@@ -48,7 +48,7 @@
   <h2 style="margin-bottom:4px">완결된 스토리</h2>
   {#if stories.length}
     {#each stories as x, i (i)}
-      <div class="trophy"><span class="y">{x.year}</span><div><b>{x.ending}</b><span class="muted" style="font-size:0.75rem">{x.name}</span></div></div>
+      <div class="trophy"><span class="y">{x.year}</span><div><b>{x.ending}</b><span class="muted fs-xs">{x.name}</span></div></div>
     {/each}
   {:else}
     <p class="empty">아직 없습니다.</p>

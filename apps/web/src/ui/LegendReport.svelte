@@ -136,10 +136,10 @@
   </div>
   {#if d}
     <p>{d.career.length}시즌 동안 {clubCount}개 팀에서 뛰며 트로피 {d.trophies.length}개, 개인상 {d.awards.length}개를 들어 올렸습니다.</p>
-    <p class="muted" style="font-size:0.75rem">레전드 점수 = 포지션별 기여(공격수·미드필더는 골·도움, 수비수·골키퍼는 무실점 중심) + 출전 · 우승 · 개인상 · A매치 · 최고 OVR · 발롱도르/월드컵 보너스</p>
+    <p class="muted fs-xs">레전드 점수 = 포지션별 기여(공격수·미드필더는 골·도움, 수비수·골키퍼는 무실점 중심) + 출전 · 우승 · 개인상 · A매치 · 최고 OVR · 발롱도르/월드컵 보너스</p>
   {:else}
     <p>트로피 {v.totals.trophies}개, 개인상 {v.totals.awards}개를 들어 올렸습니다.</p>
-    <p class="muted" style="font-size:0.75rem">시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 드립니다.</p>
+    <p class="muted fs-xs">시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 드립니다.</p>
   {/if}
 </section>
 {/if}
@@ -174,7 +174,7 @@
     <section class="card stack" class:credit-in={playing} data-credit="prime">
       <div><div class="eyebrow">Prime</div><h2>전성기 {prime.length}시즌</h2></div>
       {#each prime as r, i (i)}
-        <div class="trophy"><span class="y">{r.year}</span><div><b>{r.club} · {r.league}</b><span class="muted" style="font-size:0.75rem">{r.apps}경기 {r.goals}골 {r.assists}도움 · 평점 {r.rating ? r.rating.toFixed(2) : '-'}</span></div></div>
+        <div class="trophy"><span class="y">{r.year}</span><div><b>{r.club} · {r.league}</b><span class="muted fs-xs">{r.apps}경기 {r.goals}골 {r.assists}도움 · 평점 {r.rating ? r.rating.toFixed(2) : '-'}</span></div></div>
       {/each}
     </section>
   {/if}
@@ -183,7 +183,7 @@
     <section class="card stack" class:credit-in={playing} data-credit="best3">
       <div><div class="eyebrow">Best Seasons</div><h2>베스트 시즌 TOP {best3.length}</h2></div>
       {#each best3 as r, i (i)}
-        <div class="trophy"><span class="y">{seasonLabelOf(r)}</span><div><b>{r.club}</b><span class="muted" style="font-size:0.75rem">{r.apps}경기 {r.goals}골 {r.assists}도움{r.honors.length ? ` · ${r.honors.join(', ')}` : ''}</span></div></div>
+        <div class="trophy"><span class="y">{seasonLabelOf(r)}</span><div><b>{r.club}</b><span class="muted fs-xs">{r.apps}경기 {r.goals}골 {r.assists}도움{r.honors.length ? ` · ${r.honors.join(', ')}` : ''}</span></div></div>
       {/each}
     </section>
   {/if}

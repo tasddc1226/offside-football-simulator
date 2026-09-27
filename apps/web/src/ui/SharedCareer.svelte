@@ -32,7 +32,7 @@
   {:else if typeof v === 'string'}
     <section class="card stack" data-shared="unavailable">
       <div><div class="eyebrow">Shared Career</div><h2>{v === 'missing' ? '기록을 찾을 수 없어요' : '기록을 불러오지 못했어요'}</h2></div>
-      <p class="muted" style="font-size:0.8125rem">
+      <p class="muted fs-sm">
         {v === 'missing' ? '링크가 잘못되었거나 더 이상 공개되지 않는 기록이에요.' : '서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.'}
       </p>
       {#if v === 'error'}<button class="btn btn-block" onclick={load}>다시 시도</button>{/if}
@@ -44,7 +44,7 @@
       {#snippet end()}
         <section class="card stack">
           <div><div class="eyebrow">Your Turn</div><h2>이제 당신의 차례예요</h2></div>
-          <p class="muted" style="font-size:0.8125rem">유스에서 시작해 은퇴할 때까지, 나만의 축구 커리어를 만들어 보세요.</p>
+          <p class="muted fs-sm">유스에서 시작해 은퇴할 때까지, 나만의 축구 커리어를 만들어 보세요.</p>
           <button class="btn btn-primary btn-block" data-act="shared-start" onclick={leave}>{cta}</button>
         </section>
       {/snippet}

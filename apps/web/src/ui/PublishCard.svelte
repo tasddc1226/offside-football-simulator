@@ -14,7 +14,7 @@
 
 <section class="card stack">
   <div><div class="eyebrow">Hall of Fame</div><h2>전체 명예의 전당 이름 공개</h2></div>
-  <p class="muted" style="font-size:0.8125rem">
+  <p class="muted fs-sm">
     은퇴 기록은 모든 유저가 보는 명예의 전당에 올라갑니다. 지금은 <b>{on ? `"${h.name}" 이름으로` : '익명으로'}</b> 표시됩니다.
     {#if !on}이름을 공개하면 다른 유저에게 선수 이름이 보입니다. 실명은 쓰지 않는 것을 권장합니다.{/if}
   </p>

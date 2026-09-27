@@ -54,6 +54,6 @@
       </tbody>
     </table>
   {:else}
-    <p class="muted" style="font-size:0.8125rem">개막하면 {rows.length}개 팀 순위표가 채워져요.</p>
+    <p class="muted fs-sm">개막하면 {rows.length}개 팀 순위표가 채워져요.</p>
   {/if}
 </section>

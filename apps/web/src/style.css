@@ -92,7 +92,6 @@ body {
   margin: 0;
   color: var(--ink);
   font-family: var(--body);
-  font-size: 1rem;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   word-break: keep-all;
@@ -223,6 +222,13 @@ p {
 }
 .muted {
   color: var(--muted);
+}
+/* 작은 보조 글자(T-10-059). 인라인 style을 대신하므로 둘러싼 규칙보다 앞선다. */
+.fs-xs {
+  font-size: 0.75rem !important;
+}
+.fs-sm {
+  font-size: 0.8125rem !important;
 }
 /* 버튼은 모두 이 한 벌을 쓴다: .btn(기본) + 색(.btn-primary · .btn-accent) + 크기(.btn-sm) + 폭(.btn-block).
    .icon-btn은 작은 보조 버튼(.btn.btn-sm)과 같다 — 화면 곳곳에서 쓰던 이름이라 그대로 둔다. */
@@ -708,7 +714,8 @@ button.hof-row {
 }
 input[type='text'],
 input[type='number'],
-select {
+select,
+textarea {
   border: 1px solid var(--line);
   background: var(--surface-2);
   border-radius: 10px;
@@ -918,14 +925,6 @@ button.tile-link {
 }
 /* T-10-011 소식(게시판) */
 textarea {
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  border-radius: 10px;
-  padding: 11px 12px;
-  font: inherit;
-  font-size: max(1rem, 16px);
-  color: var(--ink);
-  width: 100%;
   resize: vertical;
 }
 .board-list {

@@ -174,7 +174,7 @@
 <div class="stack" style="gap:14px" data-admin="balance">
   <div class="stack" style="gap:4px">
     <h2 style="margin:0">밸런스 설정</h2>
-    <p class="muted" style="margin:0;font-size:0.8125rem">
+    <p class="muted fs-sm" style="margin:0">
       {#if active}적용 중: <b>v{active.version}</b> · {dateOf(active.activatedAt)}{:else}적용 중: <b>기본값</b> (서버 설정 없음){/if}
       — 진행 중인 커리어는 다음 시즌부터, 새 커리어는 바로 적용됩니다.
     </p>
@@ -196,7 +196,7 @@
               <span class="pill {STATUS[v.status][1]}">{STATUS[v.status][0]}</span>
               <span class="admin-note">{v.note || '메모 없음'}</span>
             </span>
-            <span class="muted" style="font-size:0.75rem">{dateOf(v.activatedAt ?? v.updatedAt)}</span>
+            <span class="muted fs-xs">{dateOf(v.activatedAt ?? v.updatedAt)}</span>
           </button>
         </li>
       {:else}
@@ -208,7 +208,7 @@
       <section class="stack admin-editor" style="gap:14px" aria-label="v{current.version} 설정" data-editing={current.version}>
         <div class="row" style="gap:8px;justify-content:space-between">
           <h3 style="margin:0">v{current.version} <span class="pill {STATUS[current.status][1]}">{STATUS[current.status][0]}</span></h3>
-          {#if !editable}<span class="muted" style="font-size:0.75rem">초안만 고칠 수 있어요 — 복제해 새 초안을 만드세요.</span>{/if}
+          {#if !editable}<span class="muted fs-xs">초안만 고칠 수 있어요 — 복제해 새 초안을 만드세요.</span>{/if}
         </div>
         <div class="field">
           <label for="bal-note">메모</label>
@@ -224,8 +224,8 @@
               <div class="admin-knob" class:changed={val !== activeValues[k]} data-knob={k}>
                 <div class="stack" style="gap:2px;min-width:0">
                   <label for="knob-{k}"><b>{spec.label}</b></label>
-                  <span class="muted" style="font-size:0.75rem">{spec.desc}</span>
-                  <span class="muted" style="font-size:0.75rem">기본 {spec.def} · 적용 중 {activeValues[k]} · 범위 {spec.min}~{spec.max}</span>
+                  <span class="muted fs-xs">{spec.desc}</span>
+                  <span class="muted fs-xs">기본 {spec.def} · 적용 중 {activeValues[k]} · 범위 {spec.min}~{spec.max}</span>
                 </div>
                 <div class="row" style="gap:6px;flex-wrap:nowrap">
                   <input id="knob-{k}" type="number" min={spec.min} max={spec.max} step={spec.step} value={val} onchange={(e) => setKnob(k, e.currentTarget.value)} />
@@ -240,7 +240,7 @@
 
         <fieldset class="admin-group" disabled={!editable}>
           <legend>이벤트 등장 가중치</legend>
-          <p class="muted" style="margin:0;font-size:0.75rem">이벤트별 등장 빈도 배율(기본 1, 0이면 나오지 않음, 범위 {EVENT_WEIGHT_RANGE.min}~{EVENT_WEIGHT_RANGE.max}).</p>
+          <p class="muted fs-xs" style="margin:0">이벤트별 등장 빈도 배율(기본 1, 0이면 나오지 않음, 범위 {EVENT_WEIGHT_RANGE.min}~{EVENT_WEIGHT_RANGE.max}).</p>
           {#each Object.entries(work.values.eventWeight ?? {}) as [id, w] (id)}
             <div class="admin-knob" data-event-weight={id}>
               <label for="ew-{id}">{eventTitle(id)} <span class="muted">({id})</span></label>
@@ -263,7 +263,7 @@
 
         <fieldset class="admin-group" disabled={!editable}>
           <legend>선택지 성공 확률 보정</legend>
-          <p class="muted" style="margin:0;font-size:0.75rem">선택지의 성공 확률에 더하는 값(범위 {CHOICE_BONUS_RANGE.min}~{CHOICE_BONUS_RANGE.max}, 결과는 1~99%).</p>
+          <p class="muted fs-xs" style="margin:0">선택지의 성공 확률에 더하는 값(범위 {CHOICE_BONUS_RANGE.min}~{CHOICE_BONUS_RANGE.max}, 결과는 1~99%).</p>
           {#each Object.entries(work.values.choiceBonus ?? {}) as [key, b] (key)}
             <div class="admin-knob" data-choice-bonus={key}>
               <label for="cb-{key}">{choiceLabel(key)}</label>
@@ -294,8 +294,8 @@
         </fieldset>
 
         <div class="stack admin-diff" style="gap:4px" aria-live="polite">
-          <b style="font-size:0.8125rem">적용 중인 버전과 다른 값 {changes.length}개</b>
-          {#each changes as line, i (i)}<span style="font-size:0.75rem">{line}</span>{/each}
+          <b class="fs-sm">적용 중인 버전과 다른 값 {changes.length}개</b>
+          {#each changes as line, i (i)}<span class="fs-xs">{line}</span>{/each}
         </div>
 
         <div class="row" style="gap:8px">

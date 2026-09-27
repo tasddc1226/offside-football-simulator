@@ -56,7 +56,7 @@
   <div class="tiles">
     <HomeFirsts />
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
-      <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted" style="font-size:0.8125rem">선택지마다 성공 확률 공개 · 확률 도감 보기 →</span>
+      <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted fs-sm">선택지마다 성공 확률 공개 · 확률 도감 보기 →</span>
     </button>
   </div>
   <HallOfFame />
