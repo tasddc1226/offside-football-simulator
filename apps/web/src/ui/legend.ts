@@ -6,7 +6,7 @@ import { toPublicName } from '@offside/contracts/content-filter';
 import { isHofEligible } from '@offside/contracts/hof-rules';
 import { legendScore, loadHOF, saveKey } from '../game/season.js';
 import type { GameState, HofEntry } from '../game/types.js';
-import { getHofDetail } from '../api/client.js';
+import { getHofDetail, getMyCareers } from '../api/client.js';
 import { appState, type LegendView } from './state.svelte.js';
 import { toast, uploadRetirement } from './helpers.js';
 import { anonName, totals } from './format.js';
@@ -70,15 +70,24 @@ export function viewFromGame(s: GameState): LegendView {
   };
 }
 
+/** mine: 계정의 내 선수(T-10-069) — 다른 기기에서 은퇴해 이 기기엔 없어도 공유 바는 띄운다(서버 명예의 전당에
+ * 있으니 링크가 있다). */
 function viewFromPublic(e: PublicHofEntry, d: LegendView['d'], mine: boolean): LegendView {
   // 내 기기에 있는 선수면 로컬 항목을 우선한다(이름 공개 토글 가능).
   const own = loadHOF().find((x) => x.id === e.id);
-  return own ? viewFromEntry(own) : publicView(e, d, mine);
+  if (own) return viewFromEntry(own);
+  return { ...publicView(e, d), shareId: mine ? e.id : null };
 }
 
-/** 다른 유저에게 보이는 그대로(공개하지 않은 이름은 익명). mine: 계정의 내 선수(T-10-069) — 다른 기기에서
- * 은퇴해 이 기기엔 없어도 공유 바는 띄운다(서버 명예의 전당에 있으니 링크가 있다). */
-function publicView(e: PublicHofEntry, d: LegendView['d'], mine: boolean): LegendView {
+/** T-10-069 계정에 기록된 내 선수인가 — 어디서 열든(명예의 전당·홈 라이브·구단주) 같게. 목록은 1분 메모라
+ * 여러 번 열어도 다시 묻지 않는다. 연결 안 됨·실패면 false(이 기기 기록은 viewFromPublic이 따로 본다). */
+async function isMyCareer(id: string): Promise<boolean> {
+  const r = await getMyCareers();
+  return r.ok && r.data.entries.some((e) => e.id === id);
+}
+
+/** 다른 유저에게 보이는 그대로(공개하지 않은 이름은 익명). */
+function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
   return {
     name: e.name ?? anonName(e.pos, e.number),
     number: e.number,
@@ -98,7 +107,7 @@ function publicView(e: PublicHofEntry, d: LegendView['d'], mine: boolean): Legen
       caps: e.caps,
     },
     own: null,
-    shareId: mine ? e.id : null,
+    shareId: null,
     title: e.title ?? null,
   };
 }
@@ -115,15 +124,14 @@ export function openLocalLegend(h: HofEntry) {
   show(viewFromEntry(h));
 }
 
-/** mine: 계정의 내 선수 목록에서 열었다(T-10-069 공유 바). */
-export async function openPublicLegend(e: PublicHofEntry, mine = false) {
-  if (!e.hasDetail) return show(viewFromPublic(e, null, mine));
-  return openPublicLegendById(e.id, mine);
+export async function openPublicLegend(e: PublicHofEntry) {
+  if (!e.hasDetail) return show(viewFromPublic(e, null, await isMyCareer(e.id)));
+  return openPublicLegendById(e.id);
 }
 
 /** T-10-030 홈 라이브 피드의 은퇴 소식처럼 id만 아는 선수를 연다. */
-export async function openPublicLegendById(careerId: string, mine = false) {
-  const r = await getHofDetail(careerId);
+export async function openPublicLegendById(careerId: string) {
+  const [r, mine] = await Promise.all([getHofDetail(careerId), isMyCareer(careerId)]);
   if (!r.ok) {
     toast('상세 기록을 불러오지 못했습니다.');
     return;
@@ -169,6 +177,6 @@ export async function loadSharedLegend(
   careerId: string,
 ): Promise<LegendView | 'missing' | 'error'> {
   const r = await getHofDetail(careerId);
-  if (r.ok) return publicView(r.data.entry, r.data.snapshot, false);
+  if (r.ok) return publicView(r.data.entry, r.data.snapshot);
   return r.error.retryable ? 'error' : 'missing';
 }

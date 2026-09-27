@@ -73,12 +73,14 @@ const snapshot = {
 test('전체 명예의 전당에서 다른 유저의 은퇴 선수 상세를 연다', async ({ page }) => {
   await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry] })));
   await page.route(`${API}/v1/hof/${ID}`, (r) => r.fulfill(ok({ entry, snapshot })));
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: true, entries: [] })));
 
   await page.goto('/');
   const row = page.locator(`[data-hof-id="${ID}"]`);
   await expect(row).toContainText('익명의');
   await row.click();
   await expect(page.locator('.film-open h1')).toContainText('익명의');
+  await expect(page.locator('[data-act="share-career"]')).toHaveCount(0); // 남의 선수엔 공유 바가 없다(T-10-069)
   // 다시 볼 때도 스크롤해 내려가야 장면이 올라온다 (T-10-062).
   await expect(page.locator('[data-credit="finale"]')).toBeHidden();
   await page.evaluate(async () => {
@@ -187,18 +189,17 @@ test('구단주 내 선수: 계정 기록(서버) + 이 기기 이름 덮어쓰�
   await expect(page.locator('h1')).toHaveText('구단주');
 });
 
-// T-10-069: 다른 기기에서 은퇴한(이 기기 ft_hof에 없는) 계정의 내 선수도 상세 아래에 공유 버튼이 뜬다.
-// 전체 명예의 전당에서 연 다른 유저의 선수에는 뜨지 않는다.
-test('구단주 내 선수: 이 기기에 없는 계정 선수도 공유 버튼이 뜬다', async ({ page }) => {
+// T-10-069: 다른 기기에서 은퇴한(이 기기 ft_hof에 없는) 계정의 내 선수도, 어디서 열든 상세 아래에 공유 버튼이 뜬다.
+test('이 기기에 없는 계정의 내 선수도 공유 버튼이 뜬다', async ({ page }) => {
   await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry] })));
   await page.route(`${API}/v1/hof/${ID}`, (r) => r.fulfill(ok({ entry, snapshot })));
   await page.route(`${API}/v1/careers/mine`, (r) =>
     r.fulfill(ok({ linked: true, entries: [entry] })),
   );
   await page.goto('/');
+  // 전체 명예의 전당에서 열어도 내 계정 선수면 뜬다.
   await page.locator(`[data-hof-id="${ID}"]`).click();
-  await expect(page.locator('[data-act="hof-back"]')).toBeVisible();
-  await expect(page.locator('[data-act="share-career"]')).toHaveCount(0);
+  await expect(page.locator('[data-act="share-career"]')).toBeInViewport();
 
   await page.locator('[data-act="hof-back"]').click();
   await page.locator('[data-act="owner"]').click();
