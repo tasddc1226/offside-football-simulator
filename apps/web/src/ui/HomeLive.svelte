@@ -147,7 +147,7 @@
     {:else if stats.length}
       <div class="live-stats">
         {#each stats as s (s.key)}
-          <div data-live-stat={s.key}><b class="num"><CountUp value={s.n} ms={900} /></b><span>{s.label}</span></div>
+          <div data-live-stat={s.key} style:--len={String(s.n).length}><b class="num"><CountUp value={s.n} ms={900} /></b><span>{s.label}</span></div>
         {/each}
       </div>
     {/if}
