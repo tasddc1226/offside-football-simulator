@@ -2,6 +2,7 @@
   // ui.ts careerTab() 포트 (371~387줄)
   import type { GameState, LegendSource } from '../../game/types.js';
   import { seasonLabelOf, totals } from '../format.js';
+  import ClubMark from '../ClubMark.svelte';
   import { nextMilestones } from '../../game/records.js';
 
   // 은퇴 상세(LegendSource)에는 '다음 목표'가 없다 — 진행 중인 커리어(GameState)에서만 계산한다.
@@ -49,7 +50,7 @@
           {#each rows as r, i (i)}
             <tr>
               <td>{r.mil ? r.year : seasonLabelOf(r)} <span class="muted">({r.age})</span>{#if r.ch?.length}<br /><span class="badge-ch">CH×{r.ch.length}</span>{/if}</td>
-              <td>{r.club}<div class="muted" style="font-size:0.6875rem">{r.league}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
+              <td><ClubMark name={r.club} /> {r.club}<div class="muted" style="font-size:0.6875rem">{r.league}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
               <td class="n">{r.apps}</td>
               <td class="n">{r.goals}</td>
               <td class="n">{r.assists}</td>

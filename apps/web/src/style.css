@@ -771,6 +771,7 @@ textarea {
 .club-badge.crest {
   border-radius: 0;
   overflow: visible;
+  user-select: none; /* 글자 엠블럼이 이름과 함께 복사되지 않게 (T-10-064) */
 }
 .offer-club {
   display: flex;
@@ -3511,6 +3512,9 @@ button.title-item:hover {
   font-variant-numeric: tabular-nums;
 }
 .ch-club {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--display);
   font-size: 2rem;
   font-weight: 700;

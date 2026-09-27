@@ -6,6 +6,7 @@
 // - 로고: 게임 로직과 무관한 표시 전용 값이라 CLUBS에 넣지 않고 id → 로고 맵으로만 둔다.
 import { CLUBS, type Club } from './data.js';
 import { clubInitial, crestOf } from './crests.js';
+import { SANGMU } from './military.js';
 import { CLUB_CUSTOM_IMG_MAX } from '@offside/contracts/club-limits';
 
 export const CLUB_NAME_MAX = 20;
@@ -61,6 +62,7 @@ export function sanitizeClubCustom(raw: unknown): ClubCustomMap {
 /** 커스텀 이름을 CLUBS에 반영한다. 맵에 없는 클럽은 기본 이름으로 되돌린다. */
 export function applyClubNames(map: ClubCustomMap): void {
   for (const c of CLUBS) c.name = map[c.id]?.name || c.baseName || c.name;
+  byName = null;
 }
 
 // 글자 엠블럼 편집의 시작값: 이름 첫 글자 + 지금 보이는 기본 엠블럼(game/crests.ts, T-10-063)의 바탕·상징 색.
@@ -68,6 +70,20 @@ export function defaultLogo(club: Pick<Club, 'id' | 'name'>): ClubLogo {
   const c = crestOf(club);
   const fg = [c.motifColor, c.edge, c.accent].find((v) => v && v !== c.base) ?? '#ffffff';
   return { text: clubInitial(club.name), bg: c.base, fg };
+}
+/**
+ * T-10-064. 기록(커리어 표·우승·명예의 전당·라이브)은 클럽을 id 없이 이름으로만 남긴다 — 이름으로 클럽을 되찾는다.
+ * 지금 이름(유저가 바꾼 이름 포함)이나 기본 별칭이 같으면 그 클럽. 다른 유저가 바꿔 부른 이름·대표팀은 null.
+ */
+let byName: Map<string, Pick<Club, 'id' | 'name'>> | null = null;
+export function clubByName(name: string): Pick<Club, 'id' | 'name'> | null {
+  // 이름이 바뀌는 곳은 applyClubNames뿐 — 거기서 비우고 다음 조회 때 다시 만든다. 지금 이름이 기본 별칭보다 우선.
+  byName ??= new Map<string, Pick<Club, 'id' | 'name'>>([
+    ...CLUBS.flatMap((c) => (c.baseName ? [[c.baseName, c] as const] : [])),
+    ...CLUBS.map((c) => [c.name, c] as const),
+    [SANGMU.name, SANGMU],
+  ]);
+  return byName.get(name) ?? null;
 }
 export const logoOf = (club: Pick<Club, 'id' | 'name'>, map: ClubCustomMap): ClubLogo =>
   map[club.id]?.logo ?? defaultLogo(club);

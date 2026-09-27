@@ -3,6 +3,7 @@
   // '전체 순위'로 모두 펼친다.
   import { leagueOf, leagueTable } from '../../game/engine.js';
   import type { GameState } from '../../game/types.js';
+  import ClubBadge from '../ClubBadge.svelte';
 
   const { s }: { s: GameState } = $props();
   let full = $state(false);
@@ -42,7 +43,7 @@
           {:else}
             <tr class:me={x.r.me} class:top={x.rank === 1} aria-current={x.r.me ? 'true' : undefined}>
               <td class="num">{x.rank}</td>
-              <td class="lt-team">{x.r.name}</td>
+              <td class="lt-team">{#if x.r.id}<ClubBadge club={{ id: x.r.id, name: x.r.name }} size={16} /> {/if}{x.r.name}</td>
               <td class="num">{x.r.p}</td>
               <td class="num">{x.r.w}</td>
               <td class="num">{x.r.d}</td>

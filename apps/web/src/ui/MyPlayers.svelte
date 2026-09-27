@@ -12,7 +12,7 @@
   import HofRow, { type RowStats } from './HofRow.svelte';
   import type { POS } from '../game/data.js';
 
-  type MineRow = { key: string; name: string; pos: keyof typeof POS; tag: string | null; stats: RowStats; title: string | null; open: () => void };
+  type MineRow = { key: string; name: string; pos: keyof typeof POS; club: string; tag: string | null; stats: RowStats; title: string | null; open: () => void };
   /** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다. */
   const SHOW = 10;
 
@@ -21,6 +21,7 @@
     key: h.id ?? h.name + i,
     name: h.name,
     pos: h.pos,
+    club: h.lastClub,
     tag: h.public ? '공개' : null,
     stats: h,
     title: h.title ?? null,
@@ -30,6 +31,7 @@
     key: e.id,
     name: e.name ?? anonName(e.pos, e.number),
     pos: e.pos,
+    club: e.lastClub,
     tag: e.name ? '공개' : null,
     stats: { ...e, score: e.legendScore },
     title: e.title ?? null,
@@ -77,7 +79,7 @@
     </p>
     {#each shown as r, i (r.key)}
       <button class="hof-row" data-my-player={i} onclick={r.open}>
-        <HofRow rank={i} name={r.name} pos={r.pos} tag={r.tag} t={r.stats} titleId={r.title} />
+        <HofRow rank={i} name={r.name} pos={r.pos} club={r.club} tag={r.tag} t={r.stats} titleId={r.title} />
       </button>
     {:else}
       <p class="empty">아직 은퇴한 선수가 없어요. 첫 커리어를 끝까지 뛰어 보세요.</p>

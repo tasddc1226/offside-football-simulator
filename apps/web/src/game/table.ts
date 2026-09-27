@@ -20,6 +20,8 @@ function rankedRivals(s: GameState): number[] {
 }
 
 export interface TableRow {
+  /** 클럽 id(엠블럼용, T-10-064). 리그 클럽이 모자라 번호로 채운 줄은 없다. */
+  id?: string | undefined;
   name: string;
   me: boolean;
   p: number;
@@ -35,12 +37,12 @@ export function leagueTable(s: GameState): TableRow[] {
   const L = leagueOf(s.leagueId),
     S = s.season,
     P = S.played;
-  const names = clubsIn(s.leagueId)
+  const clubs = clubsIn(s.leagueId)
     .filter((c) => c.id !== s.club.id)
-    .sort((a, b) => b.str - a.str)
-    .map((c) => c.name);
+    .sort((a, b) => b.str - a.str);
   const rows: TableRow[] = rankedRivals(s).map((ri, k) => {
-    const name = names[k] ?? `${L.name} ${k + 1}`;
+    const club = clubs[k];
+    const name = club?.name ?? `${L.name} ${k + 1}`;
     // 팀·시즌·경기 수로 정해지는 고정 편차(난수 아님) — 같은 전력대 팀들이 똑같은 전적으로 겹치지 않게.
     const h = hashStr(`${name}|${s.year}`);
     const jitter = P ? ((h + P * 7) % 5) - 2 : 0;
@@ -56,9 +58,18 @@ export function leagueTable(s: GameState): TableRow[] {
       w++;
       d -= 3;
     }
-    return { name, me: false, p: P, w, d, l: P - w - d, pts };
+    return { id: club?.id, name, me: false, p: P, w, d, l: P - w - d, pts };
   });
-  rows.push({ name: s.club.name, me: true, p: P, w: S.w, d: S.d, l: S.l, pts: S.pts });
+  rows.push({
+    id: s.club.id,
+    name: s.club.name,
+    me: true,
+    p: P,
+    w: S.w,
+    d: S.d,
+    l: S.l,
+    pts: S.pts,
+  });
   return rows.sort((a, b) => b.pts - a.pts || Number(b.me) - Number(a.me));
 }
 

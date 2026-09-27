@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { CLUBS, LEAGUES } from './data.js';
-import { applyClubNames, defaultLogo, logoOf, sanitizeClubCustom } from './clubs.js';
+import { applyClubNames, clubByName, defaultLogo, logoOf, sanitizeClubCustom } from './clubs.js';
 import { expectedRank } from './comps.js';
 
 describe('리그별 클럽 구성 (T-10-009)', () => {
@@ -72,5 +72,18 @@ describe('클럽 커스터마이즈 (T-10-009)', () => {
     expect(logoOf(c, { 'k1-3': { logo: { text: 'S', bg: '#000000', fg: '#ffffff' } } }).text).toBe(
       'S',
     );
+  });
+});
+
+describe('clubByName (T-10-064)', () => {
+  afterEach(() => applyClubNames({}));
+
+  it('기본 별칭·지금 이름·상무로 클럽을 찾고, 모르는 이름은 null', () => {
+    expect(clubByName('런던 해머스')?.id).toBe('pl-15');
+    expect(clubByName('김천 상무 (국군체육부대)')?.id).toBe('sangmu');
+    expect(clubByName('대한민국')).toBeNull();
+    applyClubNames({ 'pl-15': { name: '웨스트햄' } });
+    expect(clubByName('웨스트햄')?.id).toBe('pl-15');
+    expect(clubByName('런던 해머스')?.id).toBe('pl-15');
   });
 });

@@ -9,6 +9,7 @@
   import { openPublicLegendById } from './legend.js';
   import { motionOK } from './motion.js';
   import CountUp from './CountUp.svelte';
+  import ClubMark from './ClubMark.svelte';
   import { LIVE_POLL_SEC } from '@offside/contracts/polling';
 
   const POLL_MS = LIVE_POLL_SEC * 1000;
@@ -167,10 +168,10 @@
               <span class="live-kind {tone(e)}" aria-hidden="true"></span>
               {#if e.kind === 'retire'}
                 <button class="what" tabindex={hidden ? -1 : undefined} onclick={() => openPublicLegendById(e.careerId)}>
-                  <b>{who(e)}</b> {what(e)}
+                  <ClubMark name={e.lastClub} /> <b>{who(e)}</b> {what(e)}
                 </button>
               {:else}
-                <span class="what"><b>{who(e)}</b> {what(e)}</span>
+                <span class="what"><ClubMark name={e.club} /> <b>{who(e)}</b> {what(e)}</span>
               {/if}
               <time datetime={e.at}>{ago(e.at)}</time>
             </li>
