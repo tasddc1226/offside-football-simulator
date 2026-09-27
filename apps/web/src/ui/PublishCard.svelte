@@ -1,5 +1,5 @@
 <script lang="ts">
-  // T-10-005 이름 공개 옵트인. 기본은 익명 — 유저가 켜야만 선수 이름이 전체 명예의 전당에 보인다.
+  // T-10-005 명예의 전당 이름 공개 토글. 은퇴 때는 환경설정 '선수 이름 공개'(T-10-065, 기본 켜짐)를 따른다.
   import type { HofEntry } from '../game/types.js';
   import { setLegendPublic } from './legend.js';
 

@@ -72,6 +72,13 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       meta: body.career,
       season: body.season,
       eventsJson: JSON.stringify(body.events),
+      // 링크·욕설이 든 이름은 시즌 기록까지 버리지 않고 익명으로만 남긴다(은퇴 PUT은 거부한다).
+      ...(body.publicName !== undefined
+        ? {
+            publicName:
+              body.publicName && isAcceptablePublicName(body.publicName) ? body.publicName : null,
+          }
+        : {}),
       now,
     });
 
