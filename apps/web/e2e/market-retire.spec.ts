@@ -43,6 +43,11 @@ test('만 30세가 넘어 은퇴하면 명예의 전당에 기록된다고 묻�
   // T-10-065: 환경설정 '선수 이름 공개'가 기본으로 켜져 있어 이름을 공개한 채로 시작한다.
   await expect(page.locator('[data-act="hof-public"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-share="short"]')).toHaveCount(0);
+  // T-10-073: 크레딧 끝자락에서 숨겨져 있던 실제 잠재력을 마지막 스카우트 평가와 함께 공개한다.
+  const pot = page.locator('[data-legend-pot]');
+  await pot.scrollIntoViewIfNeeded();
+  await expect(pot).toBeVisible();
+  await expect(pot).toContainText(/끝까지 숨겨져 있던 잠재력\s*[SABCD]\s*스카우트/);
 });
 
 test('환경설정에서 선수 이름 공개를 끄면 은퇴 때 익명으로 시작한다 (T-10-065)', async ({

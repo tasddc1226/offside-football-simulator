@@ -5,11 +5,27 @@ import { clamp, gauss, rnd } from './rng.js';
 import type { GameState } from './types.js';
 import { labelOf } from './player.js';
 
+const gradeOf = (p: number) =>
+  p >= 90 ? 'S' : p >= 84 ? 'A' : p >= 78 ? 'B' : p >= 70 ? 'C' : 'D';
+/** 스카우트 평가 등급(한 점). 재평가 로그·판정이 쓴다 — 화면에는 potLabel로 흐리게 보인다. */
 export function potGrade(s: GameState): string {
-  const p = s.pot + (s.flags.potBonus ?? 0);
-  return p >= 90 ? 'S' : p >= 84 ? 'A' : p >= 78 ? 'B' : p >= 70 ? 'C' : 'D';
+  return gradeOf(s.pot + (s.flags.potBonus ?? 0));
 }
 export const truePot = (s: GameState): number => s.pot + (s.bloom ?? 0) + (s.flags.potBonus ?? 0);
+/** T-10-073 화면에 보이는 스카우트 평가의 오차(능력치 점수). 재평가(21·24세, flags.rescout)를 거칠수록 좁아진다. */
+const POT_FOG = [4, 2, 0] as const;
+/** 화면용 스카우트 평가 — 재평가 전에는 'C~B'처럼 범위로만 보인다. 실제 잠재력은 은퇴 때 공개된다(potReveal). */
+export function potLabel(s: GameState): string {
+  const p = s.pot + (s.flags.potBonus ?? 0);
+  const fog = POT_FOG[Math.min(s.flags.rescout ?? 0, POT_FOG.length - 1)]!;
+  const lo = gradeOf(p - fog),
+    hi = gradeOf(p + fog);
+  return lo === hi ? lo : `${lo}~${hi}`;
+}
+/** 아직 재평가가 남아 범위가 좁혀질 수 있는지. */
+export const potFogged = (s: GameState): boolean => (s.flags.rescout ?? 0) < POT_FOG.length - 1;
+/** T-10-073 은퇴 때 공개하는 실제 잠재력과 마지막 스카우트 평가. */
+export const potReveal = (s: GameState) => ({ real: gradeOf(truePot(s)), scout: potGrade(s) });
 export const BLOOM_SCOUT = 3;
 const BLOOM_DRIFT = 1.2,
   BLOOM_AGE = 25;

@@ -3636,6 +3636,25 @@ button.title-item:hover {
   color: var(--film-muted);
   font-variant-numeric: tabular-nums;
 }
+/* T-10-073 은퇴 직후 실제 잠재력 공개. */
+.film-pot {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.film-pot p {
+  color: var(--film-muted);
+  font-size: 0.9375rem;
+  margin: 0;
+}
+.film-pot b {
+  font-family: var(--display);
+  font-size: 4rem;
+  line-height: 1.1;
+  color: var(--film-gold);
+}
 .film-finale {
   padding-block: 36px 8px;
   display: flex;

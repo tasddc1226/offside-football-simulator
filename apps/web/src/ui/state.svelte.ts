@@ -68,6 +68,8 @@ export interface LegendView {
   shareId: string | null;
   /** T-10-026 대표 칭호 id. */
   title: string | null;
+  /** T-10-073 은퇴 직후(진행 중 세이브)에만 — 실제 잠재력 공개. 저장된 기록에는 없다. */
+  pot?: { real: string; scout: string } | undefined;
 }
 
 export const appState = $state<{

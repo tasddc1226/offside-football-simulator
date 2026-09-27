@@ -66,6 +66,16 @@
     return { destroy: () => io.unobserve(el) };
   }
   let more = $state(false);
+
+  // T-10-073 은퇴 직후에만: 숨겨져 있던 실제 잠재력을 마지막 스카우트 평가와 견준다.
+  const GRADE_ORDER = 'SABCD';
+  const potVerdict = $derived.by(() => {
+    if (!v.pot) return '';
+    const gap = GRADE_ORDER.indexOf(v.pot.scout) - GRADE_ORDER.indexOf(v.pot.real);
+    if (gap > 0) return `스카우트 평가(${v.pot.scout})보다 큰 재능이었어요.`;
+    if (gap < 0) return `스카우트 평가(${v.pot.scout})만큼은 피지 못했어요.`;
+    return `스카우트의 눈이 정확했어요(평가 ${v.pot.scout}).`;
+  });
 </script>
 
 {#snippet event(e: ChapterEvent, j: number)}
@@ -164,6 +174,14 @@
     </section>
   {/if}
 
+  {#if v.pot}
+    <section class="film-pot" data-credit="pot" data-legend-pot use:reveal>
+      <div class="eyebrow film-kicker">Scout Report</div>
+      <p>끝까지 숨겨져 있던 잠재력</p>
+      <b>{v.pot.real}</b>
+      <p>{potVerdict}</p>
+    </section>
+  {/if}
   <section class="film-finale" data-credit="finale" use:reveal>
     <ClubMark name={v.lastClub} id={v.lastClubId} size={56} />
     <div class="eyebrow film-kicker">The Final Whistle</div>

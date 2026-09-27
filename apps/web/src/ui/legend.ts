@@ -11,6 +11,7 @@ import { appState, type LegendView } from './state.svelte.js';
 import { toast, uploadRetirement } from './helpers.js';
 import { anonName, totals } from './format.js';
 import { mainTitle } from '../game/titles.js';
+import { potReveal } from '../game/stats.js';
 import { SHARE_PATH } from '../share-path.js';
 
 export function viewFromEntry(h: HofEntry): LegendView {
@@ -67,6 +68,7 @@ export function viewFromGame(s: GameState): LegendView {
     own,
     shareId: ownShareId(own),
     title: mainTitle(s)?.id ?? null,
+    pot: potReveal(s),
   };
 }
 
