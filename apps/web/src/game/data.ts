@@ -520,6 +520,9 @@ export const FOCUS_UP = 6;
 const FOCUS_DOWN = [4, 3] as const;
 export const FOCUS_GROWTH = 1.2;
 export const OFF_FOCUS_GROWTH = 0.9;
+/** 컨디션이 이보다 낮으면 선발 확률이 줄고(0.6배), 부상 확률이 늘어난다(2.5배). 훈련 설명(T-10-074)도 쓴다. */
+export const COND_LOW_START = 35,
+  COND_LOW_INJURY = 40;
 
 export function focusMod(pos: Pos, focus: readonly AttrKey[]): Partial<Record<AttrKey, number>> {
   const mod: Partial<Record<AttrKey, number>> = {};

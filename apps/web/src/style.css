@@ -1387,6 +1387,24 @@ body:has(.main-nav) .wrap {
 .train .opt b {
   font-size: 0.875rem;
 }
+.train .nowrap {
+  white-space: nowrap;
+}
+.train-tag {
+  color: var(--accent-text) !important;
+  font-weight: 600;
+}
+/* T-10-074 고른 훈련의 자세한 설명 */
+.train-help {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
 .feed {
   display: flex;
   flex-direction: column;
@@ -3401,7 +3419,8 @@ button.title-item:hover {
   align-items: center;
   margin-top: 14px;
 }
-.film-score b {
+.film-score b,
+.film-pot b {
   font-family: var(--display);
   font-size: 4rem;
   line-height: 1;
@@ -3443,7 +3462,8 @@ button.title-item:hover {
   flex-direction: column;
   align-items: center;
 }
-.film-stats b {
+.film-stats b,
+.film-pot-ach strong {
   font-family: var(--display);
   font-size: 2rem;
   line-height: 1.05;
@@ -3635,6 +3655,33 @@ button.title-item:hover {
   letter-spacing: 0.06em;
   color: var(--film-muted);
   font-variant-numeric: tabular-nums;
+}
+/* T-10-073 은퇴 직후 실제 잠재력 공개. */
+.film-pot {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.film-pot p {
+  color: var(--film-muted);
+  font-size: 0.9375rem;
+}
+.film-pot-ach {
+  margin-top: 14px;
+  padding: 12px 20px;
+  border: 1px solid var(--film-line);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.film-pot-ach span,
+.film-pot-ach small {
+  color: var(--film-muted);
+  font-size: 0.8125rem;
 }
 .film-finale {
   padding-block: 36px 8px;

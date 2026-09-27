@@ -8,6 +8,7 @@
   import { legendScoreBreakdown, legendTitle } from '../game/season.js';
   import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '../game/retirement-report.js';
   import { POS_LABEL } from '../game/pos-label.js';
+  import { potAchText } from '../game/stats.js';
   import { totals } from './format.js';
   import type { LegendView } from './state.svelte.js';
   import CareerTab from './tabs/CareerTab.svelte';
@@ -66,6 +67,15 @@
     return { destroy: () => io.unobserve(el) };
   }
   let more = $state(false);
+
+  // T-10-073 은퇴 직후에만: 숨겨져 있던 실제 잠재력을 마지막 스카우트 평가와 견준다.
+  const potVerdict = $derived.by(() => {
+    if (!v.pot) return '';
+    const { gap } = v.pot;
+    if (gap > 0) return `스카우트 평가(${v.pot.scout})보다 큰 재능이었어요.`;
+    if (gap < 0) return `스카우트 평가(${v.pot.scout})만큼은 피지 못했어요.`;
+    return `스카우트의 눈이 정확했어요(평가 ${v.pot.scout}).`;
+  });
 </script>
 
 {#snippet event(e: ChapterEvent, j: number)}
@@ -164,6 +174,18 @@
     </section>
   {/if}
 
+  {#if v.pot}
+    <section class="film-pot" data-credit="pot" data-legend-pot use:reveal>
+      <div class="eyebrow film-kicker">Scout Report</div>
+      <p>끝까지 숨겨져 있던 잠재력</p>
+      <b>{v.pot.real}</b>
+      <p>{potVerdict}</p>
+      <div class="film-pot-ach" data-legend-ach>
+        <span>잠재력 달성도</span><strong>{v.pot.ach}%</strong>
+        <small>최고 OVR {v.peak} · {potAchText(v.pot.ach)}</small>
+      </div>
+    </section>
+  {/if}
   <section class="film-finale" data-credit="finale" use:reveal>
     <ClubMark name={v.lastClub} id={v.lastClubId} size={56} />
     <div class="eyebrow film-kicker">The Final Whistle</div>
