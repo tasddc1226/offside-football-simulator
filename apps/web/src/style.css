@@ -148,6 +148,14 @@ select:focus-visible {
 .wrap.has-actionbar {
   padding-bottom: calc(var(--tabbar-h) + var(--actionbar-h) + var(--safe-b) + 20px);
 }
+/* T-10-067 내 은퇴 선수 화면: 아래에 고정된 공유 버튼만큼 비운다(링크 칸이 열리면 그만큼 더). */
+.sharebar-space {
+  flex: none;
+  height: calc(var(--actionbar-h) + var(--safe-b));
+}
+.sharebar-space.open {
+  height: calc(var(--actionbar-h) + var(--safe-b) + 52px);
+}
 
 /* top bar */
 .topbar {

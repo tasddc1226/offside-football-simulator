@@ -4,6 +4,7 @@
   import Topbar from './Topbar.svelte';
   import LegendReport from './LegendReport.svelte';
   import OwnHofCards from './OwnHofCards.svelte';
+  import ShareBar from './ShareBar.svelte';
 
   const v = $derived(appState.legend);
   const BACK = { home: '← 홈', hof: '← 명예의 전당', owner: '← 구단주' } as const;
@@ -15,5 +16,6 @@
   {#if v}
     <LegendReport {v} />
     {#if v.own?.id}<OwnHofCards h={v.own} />{/if}
+    {#if v.own}<ShareBar h={v.own} />{/if}
   {/if}
 </div>

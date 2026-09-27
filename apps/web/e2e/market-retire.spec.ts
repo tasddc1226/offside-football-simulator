@@ -28,6 +28,7 @@ test('이적 시장에서 언제든 은퇴할 수 있다 — 이른 은퇴는 �
   // 이름 공개·공유 카드 대신 '내 선수에만 남는 기록' 안내.
   await expect(page.locator('[data-share="short"]')).toContainText('내 선수에만 남는 기록');
   await expect(page.locator('[data-act="hof-public"]')).toHaveCount(0);
+  await expect(page.locator('[data-act="share-career"]')).toHaveCount(0); // 서버에 없어 공유 링크도 없다
 });
 
 test('만 30세가 넘어 은퇴하면 명예의 전당에 기록된다고 묻고, 이름 공개 카드가 나온다 (T-10-032)', async ({

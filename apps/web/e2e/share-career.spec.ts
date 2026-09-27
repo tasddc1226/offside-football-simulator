@@ -76,11 +76,13 @@ async function retireNow(page: Page) {
   await expect(page.locator('[data-credit="player"]')).toBeVisible();
 }
 
-test('로그인하지 않았으면 은퇴 화면 맨 아래에서 로그인을 권하고, 로그인하고 돌아오면 공유 카드로 온다', async ({
+test('로그인하지 않아도 공유 버튼이 화면 아래에 고정돼 링크를 복사하고, 로그인 권유는 기록 보관용이다 (T-10-067)', async ({
   page,
+  context,
 }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const state = { google: false };
-  await stubApi(page, state);
+  const uploaded = await stubApi(page, state);
   // 구글 로그인은 바로 성공해 앱의 OAuth 복귀 주소로 돌아온 것처럼 한다.
   await page.route(`${API}/v1/auth/google/start`, (r) => {
     state.google = true;
@@ -90,15 +92,25 @@ test('로그인하지 않았으면 은퇴 화면 맨 아래에서 로그인을 �
     });
   });
   await retireNow(page);
-  const card = page.locator('[data-share="login"]');
-  await expect(card).toContainText('로그인하고 커리어를 공유하세요');
-  await expect(page.locator('[data-share="ready"]')).toHaveCount(0);
-  await card.getByRole('button', { name: '구글로 로그인' }).click();
+  // 크레딧 맨 위에서도, 맨 아래로 내려가도 공유 버튼이 보인다.
+  const share = page.locator('[data-act="share-career"]');
+  await expect(share).toBeInViewport();
+  await page.locator('[data-act="new"]').scrollIntoViewIfNeeded();
+  await expect(share).toBeInViewport();
+  await expect(page.locator('[data-act="new"]')).toBeInViewport(); // 고정 버튼에 가리지 않는다
+  await share.click();
+  await expect(page.getByText('공유 링크를 복사했어요.')).toBeVisible();
+  const url = await page.locator('.share-url').inputValue();
+  expect(uploaded.has(url.split('/').pop()!)).toBe(true);
 
+  const card = page.locator('[data-share="login"]');
+  await expect(card).toContainText('로그인하고 기록 지키기');
+  await card.getByRole('button', { name: '구글로 로그인' }).click();
   await expect(page.getByText('구글 계정을 연결했습니다.')).toBeVisible();
   await expect(page).toHaveURL(/\/$/);
-  // 설정 화면이 아니라 방금 은퇴한 선수 상세로 돌아와 공유 버튼이 보인다.
+  // 설정 화면이 아니라 방금 은퇴한 선수 상세로 돌아오고, 공유 버튼은 그대로 있다.
   await expect(page.locator('[data-act="hof-back"]')).toBeVisible();
+  await expect(page.locator('[data-share="login"]')).toHaveCount(0);
   await expect(page.locator('[data-act="share-career"]')).toBeInViewport();
 });
 
