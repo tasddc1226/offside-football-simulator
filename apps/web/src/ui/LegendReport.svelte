@@ -2,8 +2,8 @@
   // 은퇴 리포트 본문. 은퇴 직후 화면(Retired) · 명예의 전당 상세(Legend) · 공유 링크(SharedCareer)가 함께 쓴다 —
   // 진행 중 세이브(G)든 저장된 스냅샷이든 LegendView 하나로 그린다.
   // T-10-062: 정보 나열 대신 한 편의 엔딩 크레딧처럼 — 타이틀 → 통산 기록 → 클럽별 챕터(우승·이정표·이야기) →
-  // 대표팀 → 우승·수상 롤 → 마지막 휘슬. 은퇴 직후(credits)에는 사용자가 스크롤해 내려가는 대로 장면이 화면에
-  // 들어올 때 하나씩 올라온다. 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
+  // 대표팀 → 우승·수상 롤 → 마지막 휘슬. 은퇴 직후든 다시 볼 때든 사용자가 스크롤해 내려가는 대로 장면이
+  // 화면에 들어올 때 하나씩 올라온다. 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
   import type { Snippet } from 'svelte';
   import { legendScoreBreakdown, legendTitle } from '../game/season.js';
   import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent } from '../game/retirement-report.js';
@@ -16,7 +16,7 @@
   import { motionOK } from './motion.js';
 
   // end: 리포트 맨 아래(다음 행동 버튼 등).
-  const { v, credits = false, end }: { v: LegendView; credits?: boolean; end?: Snippet } = $props();
+  const { v, end }: { v: LegendView; end?: Snippet } = $props();
   const d = $derived(v.d);
   const back = $derived(v.pos === 'GK' || v.pos === 'DF');
   const t = $derived(d ? totals(d) : null);
@@ -38,8 +38,7 @@
   // ───────── 스크롤 크레딧 (T-10-029 → T-10-062) ─────────
   // 장면(data-credit)이 화면 아래쪽 15%를 넘어 들어오면 한 번 올라온다. 그 전에는 자리만 차지하고 숨어 있다
   // (opacity 대신 visibility — 전환 중간 프레임의 axe 명도 대비, T-10-003 참고). 감속 모션이면 처음부터 다 보인다.
-  // svelte-ignore state_referenced_locally
-  const playing = credits && motionOK;
+  const playing = motionOK;
   const seen: Record<string, boolean> = $state({ player: true });
   const shown = (key: string) => playing && !!seen[key];
   const waiting = (key: string) => playing && !seen[key];
