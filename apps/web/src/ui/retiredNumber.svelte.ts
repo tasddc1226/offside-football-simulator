@@ -33,9 +33,8 @@ export function recordRn(careerId: string, result: RetiredNumberResult | null) {
 /** 서버 결번 목록의 내 선수 결번을 이 기기 기록에 채운다(배포 전 은퇴를 소급해 받은 결번은 기기에 없다). */
 export function fillGranted(items: RetiredNumbersResponse['items']) {
   const mine = new Set(loadHOF().flatMap((h) => (h.id && h.rn?.kind !== 'granted' ? [h.id] : [])));
-  for (const { careerId, clubId, club, number, seq, score } of items)
-    if (mine.has(careerId))
-      recordRn(careerId, { kind: 'granted', clubId, club, number, seq, score });
+  for (const { careerId, clubId, club, number, seq } of items)
+    if (mine.has(careerId)) recordRn(careerId, { kind: 'granted', clubId, club, number, seq });
 }
 
 /** 이 선수의 결과 — 이번 접속에서 받은 값이 먼저, 없으면 저장된 값. */

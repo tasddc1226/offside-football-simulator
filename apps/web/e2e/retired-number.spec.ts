@@ -2,8 +2,8 @@ import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { API, ok, openMarket, startCareer } from './helpers.js';
 
-// T-10-076 영구결번: 은퇴 업로드 응답의 심사 결과로 은퇴 화면에 결번 세리머니를 띄운다. 결번 심사 카드는 이 기기가
-// 계산한 구단 기여(프리미어리그 8시즌 · 해마다 리그·챔스 우승 + 발롱도르)로 그린다.
+// T-10-076 영구결번: 은퇴 업로드 응답의 심사 결과로 은퇴 화면에 결번 세리머니를 띄운다. 판정 기준(점수·시즌 수)은
+// 서버만 알고 화면에 내보내지 않는다.
 const SLOT = { clubId: 'pl-0', club: '맨체스터 스카이블루', number: 10 };
 
 async function stubRetirement(page: Page, results: unknown[]) {
@@ -61,11 +61,12 @@ async function retireLegend(page: Page) {
 }
 
 test('결번을 받으면 심사 카드와 유니폼 세리머니가 나온다', async ({ page }) => {
-  await stubRetirement(page, [{ kind: 'granted', ...SLOT, seq: 3, score: 1500 }]);
+  await stubRetirement(page, [{ kind: 'granted', ...SLOT, seq: 3 }]);
   await retireLegend(page);
   const rn = page.locator('[data-legend-rn="granted"]');
   await rn.evaluate((el) => el.scrollIntoView({ block: 'center' }));
-  await expect(rn.locator('[data-rn-judge]')).toContainText('영구결번 자격을 채웠어요.');
+  await expect(page.locator('[data-rn-judge]')).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText('827');
   await expect(rn).toContainText('10번은 이제,');
   await expect(rn).toContainText('맨체스터 스카이블루 영구결번 · 서버 3번째 결번');
   await expect(page.locator('[data-legend-rn-pill]')).toContainText('결번 10');
@@ -77,8 +78,8 @@ test('결번을 받으면 심사 카드와 유니폼 세리머니가 나온다',
 
 test('익명이면 이름 공개를 권하고, 공개하면 결번이 확정된다', async ({ page }) => {
   const bodies = await stubRetirement(page, [
-    { kind: 'anonymous', ...SLOT, score: 1500 },
-    { kind: 'granted', ...SLOT, seq: 1, score: 1500 },
+    { kind: 'anonymous', ...SLOT },
+    { kind: 'granted', ...SLOT, seq: 1 },
   ]);
   await page.addInitScript(() => localStorage.setItem('ft_name_public', 'false'));
   await retireLegend(page);
@@ -92,7 +93,7 @@ test('익명이면 이름 공개를 권하고, 공개하면 결번이 확정된�
 });
 
 test('자리가 이미 찼으면 명예의 벽 헌정으로 남는다', async ({ page }) => {
-  await stubRetirement(page, [{ kind: 'taken', ...SLOT, holder: '김선배', score: 1500 }]);
+  await stubRetirement(page, [{ kind: 'taken', ...SLOT, holder: '김선배' }]);
   await retireLegend(page);
   await expect(page.locator('[data-legend-rn="taken"]')).toContainText(
     '10번은 이미 김선배의 이름으로 남아 있어',
@@ -171,7 +172,6 @@ test('소급으로 받은 결번이 이 기기의 내 선수 배지와 상세 �
           {
             ...SLOT,
             seq: 1,
-            score: 1500,
             grantedAt: '2026-09-01T00:00:00.000Z',
             careerId: OLD_ID,
             name: '옛레전드',
@@ -197,9 +197,7 @@ test('자리를 못 받은 옛 기록은 상세를 열 때 서버에 물어 명�
   let asked = 0;
   await page.route(`${API}/v1/careers/${OLD_ID}/retired-number`, (r) => {
     asked++;
-    return r.fulfill(
-      ok({ retiredNumber: { kind: 'taken', ...SLOT, holder: '김선배', score: 1500 } }),
-    );
+    return r.fulfill(ok({ retiredNumber: { kind: 'taken', ...SLOT, holder: '김선배' } }));
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
@@ -242,7 +240,7 @@ test('다른 유저의 영구결번이 확정되면 플레이 중인 화면 위�
     lastClub: SLOT.club,
     retiredAt: '2026-09-28T11:00:00.000Z',
     hasDetail: false,
-    retiredNumber: { ...SLOT, number: 8, seq: 5, score: 1500 },
+    retiredNumber: { ...SLOT, number: 8, seq: 5 },
   };
   await page.route(`${API}/v1/hof/${OTHER}`, (r) => r.fulfill(ok({ entry, snapshot: null })));
   await startCareer(page);

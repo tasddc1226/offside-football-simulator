@@ -16,7 +16,9 @@ export default [
   ),
   {
     // 클라이언트 전용 web은 서버(api) 코드를 직접 import하지 않는다 — 둘은 별도 Cloudflare Worker다.
-    files: ['apps/web/src/**/*.ts'],
+    // T-10-076 영구결번 판정 규칙(기준 점수·가중치)은 서버만 안다 — 웹 번들에 들어가면 누구나 읽는다(테스트는 예외).
+    files: ['apps/web/src/**/*.ts', 'apps/web/src/**/*.svelte'],
+    ignores: ['apps/web/src/**/*.test.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -25,6 +27,10 @@ export default [
             {
               group: ['@offside/api', '@offside/api/*', '**/apps/api/*'],
               message: 'apps/web은 apps/api를 import할 수 없다(별도 Worker).',
+            },
+            {
+              group: ['@offside/contracts/retired-numbers'],
+              message: '영구결번 판정 규칙은 서버 전용이다(기준값이 웹 번들에 노출된다).',
             },
           ],
         },

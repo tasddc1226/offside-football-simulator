@@ -116,6 +116,8 @@ describe('영구결번 (T-10-076)', () => {
       seq: 1,
     });
     expect(await list()).toMatchObject([{ careerId: A, name: '김결번', number: 10, seq: 1 }]);
+    // 판정 기준(구단 기여 점수)은 서버 밖으로 내보내지 않는다.
+    expect((await list())[0]).not.toHaveProperty('score');
     const res = await createApp().request(`/v1/hof/${A}`, {}, ctx.env);
     const detail = successEnvelope(HofDetailResponseSchema).parse(await res.json()).data;
     expect(detail.entry.retiredNumber).toEqual({
@@ -123,7 +125,6 @@ describe('영구결번 (T-10-076)', () => {
       club: '맨체스터 스카이블루',
       number: 10,
       seq: 1,
-      score: expect.any(Number),
     });
   });
 

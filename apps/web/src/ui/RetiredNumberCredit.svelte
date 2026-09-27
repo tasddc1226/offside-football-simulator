@@ -1,13 +1,12 @@
 <script lang="ts">
-  // T-10-076 은퇴 리포트의 영구결번 장면 — 결번 심사(구단 기여 점수 vs 기준, 내 선수만) + 결번 세리머니 · 명예의 벽
-  // 헌정 · 이름 공개 안내. LegendReport가 따로 불러온다(첫 화면 번들 밖).
+  // T-10-076 은퇴 리포트의 영구결번 장면 — 결번 세리머니 · 명예의 벽 헌정 · 이름 공개 안내. 판정 기준(점수·시즌 수)은
+  // 서버만 안다 — 웹은 서버가 준 결과만 그린다. LegendReport가 따로 불러온다(첫 화면 번들 밖).
   import type { RetiredNumberResult } from '@offside/contracts';
-  import { RN_CUT, RN_MIN_SEASONS, rnQualifies } from '@offside/contracts/retired-numbers';
-  import { clubsOf, nearRetiredNumber } from '../game/retired-number.js';
   import { RN_SHIRT, RN_TRIM, rnStyle } from './rnStyle.js';
   import { setLegendPublic } from './legend.js';
   import { checkRetiredNumber } from '../api/client.js';
   import { recordRn } from './retiredNumber.svelte.js';
+  import { isHofEligible } from '@offside/contracts/hof-rules';
   import type { LegendView } from './state.svelte.js';
   import ClubMark from './ClubMark.svelte';
 
@@ -22,62 +21,35 @@
     /** 스크롤 크레딧(LegendReport). */
     reveal: (el: HTMLElement) => { destroy: () => void } | undefined;
   } = $props();
-  const d = $derived(v.d);
-  const mine = $derived(!!(v.own || v.pot || v.shareId));
-  const rnClubs = $derived(d ? clubsOf(d) : []);
-  const rnJudge = $derived(mine && nearRetiredNumber(rnClubs[0]) ? rnClubs[0]! : null);
-  const qualifies = $derived(rnClubs.some(rnQualifies));
-  // 결과를 모르는 내 선수 기록(배포 전 은퇴의 소급 결번·이미 찬 자리, 심사 중이던 기록)은 열 때 서버에 한 번 묻는다.
-  // 방금 은퇴한 화면은 은퇴 업로드 응답이 곧 온다.
-  let checking = $state(false);
+  // 결과를 모르는 내 선수 기록(배포 전 은퇴의 소급 결번·이미 찬 자리, 심사 중이던 기록)은 열 때 서버에 한 번 묻는다
+  // (결과는 이 기기 기록에 남아 다시 묻지 않는다). 방금 은퇴한 화면은 은퇴 업로드 응답이 곧 온다.
   /** 한 선수에 한 번만 묻는다(결과를 남기면 rn0가 바뀌어 효과가 다시 돈다). */
   let asked = '';
   $effect(() => {
     const id = v.own?.id ?? v.shareId;
-    if (!id || id === asked || !mine || !qualifies || v.pot) return;
-    if (rn0?.kind === 'granted' || rn0?.kind === 'taken') return;
+    // 공개 명예의 전당에 오르는 은퇴(만 30세 이상)만 심사 대상이다.
+    if (!id || id === asked || v.pot || !(v.own || v.shareId) || !isHofEligible(v.age)) return;
+    if (rn0 !== undefined && rn0?.kind !== 'pending') return;
     asked = id;
-    checking = true;
     void checkRetiredNumber(id).then((r) => {
-      checking = false;
       if (r.ok) recordRn(id, r.data.retiredNumber);
     });
   });
-  /** 자격이 있는데 결과를 아직 모르면 심사 중(방금 은퇴 · 서버에 묻는 중 · 서버가 소급 중). */
-  const rn = $derived.by(() => {
-    if (rn0 && rn0.kind !== 'pending') return rn0;
-    if (qualifies && (checking || rn0?.kind === 'pending' || (v.pot && rn0 === undefined)))
-      return { kind: 'pending' } as const;
-    return null;
-  });
+  const rn = $derived(rn0 ?? null);
   const rnSlot = $derived(rn && rn.kind !== 'pending' && (rn.kind !== 'anonymous' || v.own) ? rn : null);
-  const rnClub = $derived(rnSlot ? rnClubs.find((c) => c.clubId === rnSlot.clubId) : undefined);
+  /** 결번 구단에서 뛴 시즌(옛 기록은 구단 id가 없어 이름으로 찾는다). */
+  const rnClub = $derived.by(() => {
+    if (rnSlot?.kind !== 'granted' || !v.d) return null;
+    const recs = v.d.career.filter((r) => (r.clubId ? r.clubId === rnSlot.clubId : r.club === rnSlot.club));
+    if (!recs.length) return null;
+    const sum = (k: 'apps' | 'goals' | 'assists') => recs.reduce((s, r) => s + (r[k] ?? 0), 0);
+    return { from: recs[0]!.year, to: recs.at(-1)!.year, seasons: recs.length, apps: sum('apps'), goals: sum('goals'), assists: sum('assists') };
+  });
   const rnColors = $derived(rnStyle(rnSlot?.clubId));
-  const pts = (n: number) => Math.round(n).toLocaleString('ko-KR');
 </script>
 
-{#if rnJudge || rn}
-  <section class="film-rn" data-credit="retired-number" data-legend-rn={rn?.kind ?? 'judge'} style={rnColors} use:reveal>
-    {#if rnJudge}
-      <div class="rn-judge" data-rn-judge>
-        <div class="eyebrow film-kicker">결번 심사</div>
-        <h2 class="rn-judge-club"><ClubMark name={rnJudge.club} id={rnJudge.clubId} size={20} /> {rnJudge.club}</h2>
-        <dl class="rn-judge-rows">
-          <div><dt>뛴 시즌</dt><dd>{rnJudge.seasons}시즌 <small>/ {RN_MIN_SEASONS}시즌 이상</small></dd></div>
-          <div><dt>경기 기여</dt><dd>{pts(rnJudge.play)}점</dd></div>
-          <div><dt>우승 · 수상</dt><dd>{pts(rnJudge.honors)}점</dd></div>
-        </dl>
-        <div class="rn-bar" role="img" aria-label="구단 기여 {pts(rnJudge.score)}점, 기준 {RN_CUT}점">
-          <i style="width:{Math.min(100, Math.round((rnJudge.score / RN_CUT) * 100))}%"></i>
-        </div>
-        <p class="rn-judge-total"><b>{pts(rnJudge.score)}</b> / {RN_CUT}점</p>
-        <p class="rn-judge-verdict">
-          {#if rnQualifies(rnJudge)}영구결번 자격을 채웠어요.
-          {:else if rnJudge.seasons < RN_MIN_SEASONS}이 구단에서 {RN_MIN_SEASONS - rnJudge.seasons}시즌만 더 뛰었다면 심사 대상이었어요.
-          {:else}기준까지 {pts(RN_CUT - rnJudge.score)}점 모자랐어요. 한 구단에 더 오래 남아 우승을 쌓으면 결번이 보여요.{/if}
-        </p>
-      </div>
-    {/if}
+{#if rn?.kind === 'pending' || rnSlot}
+  <section class="film-rn" data-credit="retired-number" data-legend-rn={rn?.kind} style={rnColors} use:reveal>
     {#if rn?.kind === 'pending'}
       <p class="rn-pending" data-rn-pending>서버가 결번을 심사하고 있어요. 잠시 뒤 명예의 전당에서 확인할 수 있어요.</p>
     {:else if rnSlot?.kind === 'granted'}

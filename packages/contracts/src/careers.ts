@@ -180,14 +180,12 @@ export const RetiredNumberResultSchema = z.discriminatedUnion('kind', [
   RetiredSlotSchema.extend({
     kind: z.literal('granted'),
     seq: z.number().int(),
-    score: z.number().int(),
   }),
   RetiredSlotSchema.extend({
     kind: z.literal('taken'),
     holder: z.string().nullable(),
-    score: z.number().int(),
   }),
-  RetiredSlotSchema.extend({ kind: z.literal('anonymous'), score: z.number().int() }),
+  RetiredSlotSchema.extend({ kind: z.literal('anonymous') }),
   z.strictObject({ kind: z.literal('pending') }),
 ]);
 export type RetiredNumberResult = z.infer<typeof RetiredNumberResultSchema>;
@@ -335,9 +333,7 @@ export const PublicHofEntrySchema = z.strictObject({
   /** T-10-026 대표 칭호 id(없으면 null). */
   title: z.string().nullable(),
   /** T-10-076 이 선수가 가진 영구결번(없으면 null, 배포 전 엣지 캐시 응답엔 없다). */
-  retiredNumber: RetiredSlotSchema.extend({ seq: z.number().int(), score: z.number().int() })
-    .nullable()
-    .optional(),
+  retiredNumber: RetiredSlotSchema.extend({ seq: z.number().int() }).nullable().optional(),
 });
 export type PublicHofEntry = z.infer<typeof PublicHofEntrySchema>;
 
@@ -421,7 +417,6 @@ export const RetiredNumbersResponseSchema = z.strictObject({
   items: z.array(
     RetiredSlotSchema.extend({
       seq: z.number().int(),
-      score: z.number().int(),
       grantedAt: z.string(),
       careerId: z.string(),
       name: z.string().nullable(),

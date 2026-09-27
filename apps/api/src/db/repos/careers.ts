@@ -246,7 +246,6 @@ const publicColumns = {
   rnClub: retiredNumbers.club,
   rnNumber: retiredNumbers.number,
   rnSeq: retiredNumbers.seq,
-  rnScore: retiredNumbers.score,
 };
 type PublicRow = { [K in keyof typeof publicColumns]: unknown };
 
@@ -280,7 +279,6 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
             club: String(r.rnClub),
             number: Number(r.rnNumber),
             seq: Number(r.rnSeq),
-            score: Number(r.rnScore),
           },
   };
 }

@@ -70,7 +70,7 @@
   let more = $state(false);
 
   // ───────── T-10-076 영구결번 ─────────
-  // 심사 카드·세리머니는 첫 화면 번들을 늘리지 않게 따로 불러온다(RetiredNumberCredit). 결번 배지만 여기서 그린다.
+  // 세리머니는 첫 화면 번들을 늘리지 않게 따로 불러온다(RetiredNumberCredit). 결번 배지만 여기서 그린다.
   /** 내 선수는 이번 접속에서 받은 심사 결과(이름 공개 직후 등)를 먼저 본다. */
   const rnv = $derived.by(() => {
     const id = v.own?.id ?? v.shareId;

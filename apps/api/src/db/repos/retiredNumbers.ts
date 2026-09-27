@@ -158,7 +158,6 @@ const slotColumns = {
   club: retiredNumbers.club,
   number: retiredNumbers.number,
   seq: retiredNumbers.seq,
-  score: retiredNumbers.score,
 };
 
 /** 심사 결과. claimed는 이번 심사가 막 자리를 잡았을 때만 있다(홈 라이브로 알린다). */
@@ -186,8 +185,7 @@ async function judge(db: Db, careerId: string, now: string): Promise<Judged | nu
   if (!c) return null;
   const best = c.clubs[0]!;
   const slot = { clubId: best.clubId!, club: best.club, number: c.number };
-  const score = Math.round(best.score);
-  if (!row.publicName) return { result: { kind: 'anonymous', ...slot, score } };
+  if (!row.publicName) return { result: { kind: 'anonymous', ...slot } };
   await runBatch(db, claimStatements(db, careerId, c, now));
   const [[mine], [holder]] = await db.batch([
     db.select(slotColumns).from(retiredNumbers).where(eq(retiredNumbers.careerId, careerId)),
@@ -198,20 +196,10 @@ async function judge(db: Db, careerId: string, now: string): Promise<Judged | nu
       .where(and(eq(retiredNumbers.clubId, slot.clubId), eq(retiredNumbers.number, slot.number))),
   ]);
   if (mine) {
-    const { clubId, club, number, seq } = mine;
-    const claimed = {
-      careerId,
-      name: row.publicName,
-      pos: row.pos,
-      clubId,
-      club,
-      number,
-      seq,
-      at: now,
-    };
+    const claimed = { careerId, name: row.publicName, pos: row.pos, ...mine, at: now };
     return { result: { kind: 'granted', ...mine }, claimed };
   }
-  return { result: { kind: 'taken', ...slot, holder: holder?.name ?? null, score } };
+  return { result: { kind: 'taken', ...slot, holder: holder?.name ?? null } };
 }
 
 /** 서버 전체 영구결번(결번 순). */

@@ -3735,74 +3735,13 @@ button.title-item:hover {
   color: var(--film-muted);
   font-size: 0.8125rem;
 }
-/* T-10-076 영구결번 — 결번 심사 카드 + 유니폼 세리머니. 유니폼 색은 구단 엠블럼 색(--rn-base/--rn-accent). */
+/* T-10-076 영구결번 — 유니폼 세리머니. 유니폼 색은 구단 엠블럼 색(--rn-base/--rn-accent). */
 .film-rn {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 20px;
   text-align: center;
-}
-.rn-judge {
-  width: min(100%, 340px);
-  padding: 16px 18px;
-  border: 1px solid var(--film-line);
-  border-radius: 12px;
-  text-align: left;
-}
-.rn-judge-club {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 1.0625rem;
-  margin: 2px 0 10px;
-}
-.rn-judge-rows {
-  margin: 0 0 12px;
-  display: grid;
-  gap: 4px;
-}
-.rn-judge-rows div {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 0.875rem;
-}
-.rn-judge-rows dt {
-  color: var(--film-muted);
-}
-.rn-judge-rows dd {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-}
-.rn-judge-rows small,
-.rn-judge-verdict {
-  color: var(--film-muted);
-  font-size: 0.8125rem;
-}
-.rn-bar {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--film-line);
-  overflow: hidden;
-}
-.rn-bar i {
-  display: block;
-  height: 100%;
-  background: var(--film-gold);
-}
-.rn-judge-total {
-  margin: 6px 0 2px;
-  font-variant-numeric: tabular-nums;
-}
-.rn-judge-total b {
-  font-family: var(--display);
-  font-size: 1.5rem;
-  color: var(--film-gold);
-}
-.rn-judge-verdict {
-  margin: 0;
-  line-height: 1.5;
 }
 .rn-ceremony {
   display: flex;
