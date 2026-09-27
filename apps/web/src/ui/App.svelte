@@ -10,12 +10,18 @@
   import Legend from './Legend.svelte';
   import Hof from './Hof.svelte';
   import UpdateBanner from './UpdateBanner.svelte';
+  import MainNav, { hasMainNav } from './MainNav.svelte';
   import type { Component } from 'svelte';
 
   // T-10-009: 설정(클럽 편집)은 자주 안 여는 화면이라 메인 번들에서 떼어 처음 열 때 불러온다.
   let Settings = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
     if (appState.screen === 'settings' && !Settings) void import('./Settings.svelte').then((m) => (Settings = m.default));
+  });
+  // T-10-058: 구단주(계정·구단 꾸미기)도 같은 방식.
+  let Owner = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'owner' && !Owner) void import('./Owner.svelte').then((m) => (Owner = m.default));
   });
   // T-10-012: 확률 도감도 처음 열 때 불러온다(확률 분석 코드 포함).
   let Dex = $state<Component<Record<string, never>> | null>(null);
@@ -64,10 +70,12 @@
       <Hof />
     {:else if appState.screen === 'settings'}
       {#if Settings}<Settings />{/if}
+    {:else if appState.screen === 'owner'}
+      {#if Owner}<Owner />{/if}
     {:else if appState.screen === 'dex'}
       {#if Dex}<Dex />{/if}
     {:else if appState.screen === 'board'}
-      {#if Board}<Board />{/if}
+      {#if Board}{#key appState.board}<Board />{/key}{/if}
     {:else if appState.screen === 'firsts'}
       {#if Firsts}<Firsts />{/if}
     {:else if appState.screen === 'shared'}
@@ -79,4 +87,6 @@
     {/if}
   </main>
 {/key}
+<!-- 홈 하단 메뉴는 화면 전환 래퍼 밖에 둬 화면이 바뀔 때 다시 그려지지 않게 한다. -->
+{#if hasMainNav(appState.screen)}<MainNav />{/if}
 <UpdateBanner />

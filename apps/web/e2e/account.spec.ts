@@ -19,7 +19,7 @@ test('계정 영역: 홈이 아니라 설정 화면에 있다 — 로그아웃 �
   await page.goto('/');
   await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
   await expect(page.locator('#account-slot')).toHaveCount(0);
-  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-act="owner"]').click();
   const account = page.locator('#account-slot');
   await expect(account).toContainText('구글로 로그인');
   await expect(account.getByRole('link', { name: '구글로 로그인' })).toHaveAttribute(
@@ -45,7 +45,7 @@ test('/settings?google=linked: 토스트 표시 후 URL 정리', async ({ page }
 
   await expect(page.locator('#toast')).toContainText('구글 계정을 연결했습니다');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('h1')).toHaveText('환경설정');
+  await expect(page.locator('h1')).toHaveText('구단주');
 
   const account = page.locator('#account-slot');
   await expect(account).toContainText('연동 해제');
@@ -92,7 +92,7 @@ test('로그아웃은 확인 창에서 한 번 더 확인한다', async ({ page 
   });
 
   await page.goto('/');
-  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-act="owner"]').click();
   const account = page.locator('#account-slot');
   await account.locator('[data-act="logout"]').click();
   await expect(page.locator('#sheet')).toContainText('로그아웃할까요?');
@@ -135,7 +135,7 @@ test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받�
   });
 
   await page.goto('/');
-  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-act="owner"]').click();
   const account = page.locator('#account-slot');
   await account.locator('[data-act="logout"]').click();
   await page.locator('#sheet [data-sheet="0"]').click();
@@ -174,7 +174,7 @@ test('계정 카드에서 댓글 닉네임을 정하고 바꾼다 (T-10-028)', a
   });
 
   await page.goto('/');
-  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-act="owner"]').click();
   const account = page.locator('#account-slot');
   await expect(account).toContainText('정하면 소식 게시판에 댓글을 쓸 수 있어요');
   const input = account.getByLabel('댓글 닉네임');
@@ -236,7 +236,7 @@ test('소식에서 댓글을 쓰려고 로그인하면, 돌아와서 보던 글�
   await page.locator(`[data-home-news="release"] [data-post-row="${POST}"]`).click();
   await page.locator('[data-act="comment-login"]').click();
   await expect(page.locator('#toast')).toContainText('구글 계정을 연결했습니다');
-  await expect(page.locator('h1')).toHaveText('릴리즈 노트');
+  await expect(page.locator('[data-board]')).toHaveAttribute('data-board', 'release');
   await expect(page.locator(`[data-post="${POST}"] h2`)).toHaveText('260926 릴리즈 노트');
 });
 
@@ -259,7 +259,7 @@ test("운영자 계정은 댓글 닉네임이 '운영자'로 고정돼 바꾸는
     route.fulfill(ok({ admin: true, google: true, nickname: '운영자' })),
   );
   await page.goto('/');
-  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-act="owner"]').click();
   const account = page.locator('#account-slot');
   await expect(account).toContainText('운영자 · 운영자 계정은 고정이에요');
   await expect(account.getByLabel('댓글 닉네임')).toHaveCount(0);

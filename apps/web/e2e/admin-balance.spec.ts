@@ -146,7 +146,7 @@ test('운영 도구: 초안을 만들어 수치를 고치고 적용한다', asyn
   const sent = await mockApi(page, { linked: true, admin: true });
   page.on('dialog', (d) => void d.accept());
   await page.goto('/');
-  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-act="owner"]').click();
   await expect(page.getByText('ad***@gmail.com')).toBeVisible();
   await page.locator('[data-act="admin"]').click();
   await expect(page.locator('h1')).toHaveText('운영 도구');
@@ -179,8 +179,8 @@ test('운영 도구: 초안을 만들어 수치를 고치고 적용한다', asyn
 test('운영 도구: 구글 연결이 없으면 관리자 여부를 묻지도 않고 입구가 없다', async ({ page }) => {
   const sent = await mockApi(page, { linked: false, admin: false });
   await page.goto('/');
-  await page.locator('[data-act="settings"]').click();
-  await expect(page.locator('h1')).toHaveText('환경설정');
+  await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('h1')).toHaveText('구단주');
   await expect(page.locator('[data-act="admin"]')).toHaveCount(0);
   expect(sent.some((s) => s.path === '/v1/boards/viewer')).toBe(false);
 });
@@ -191,7 +191,7 @@ test('운영 도구: 대시보드가 기본 탭이고, 댓글 탭에서 작성�
   const sent = await mockApi(page, { linked: true, admin: true });
   page.on('dialog', (d) => void d.accept());
   await page.goto('/');
-  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-act="owner"]').click();
   await expect(page.getByText('ad***@gmail.com')).toBeVisible();
   await page.locator('[data-act="admin"]').click();
   await expect(page.locator('[data-stat="users"]')).toContainText('1,234');

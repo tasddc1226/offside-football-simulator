@@ -117,9 +117,6 @@
     {/each}
   </div>
   <button class="tab-home" data-act="home" onclick={goHome}>
-    <svg class="tab-ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M4 10.5 12 4l8 6.5" />
-      <path d="M6 9v10.5h4.5V15h3v4.5H18V9" />
-    </svg>홈
+    <TabIcon name="home" />홈
   </button>
 </nav>

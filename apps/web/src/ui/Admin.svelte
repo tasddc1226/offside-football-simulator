@@ -25,7 +25,7 @@
 <div class="wrap">
   <Topbar>
     {#snippet right()}
-      <button class="icon-btn" data-act="settings" onclick={() => (appState.screen = 'settings')}>← 설정</button>
+      <button class="icon-btn" data-act="owner" onclick={() => (appState.screen = 'owner')}>← 구단주</button>
     {/snippet}
   </Topbar>
   <section class="card stack" style="gap:14px">

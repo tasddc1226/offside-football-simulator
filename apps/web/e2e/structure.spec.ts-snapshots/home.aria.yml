@@ -1,7 +1,5 @@
 - main:
-  - text: "풀타임: 휘슬이 울릴 때까지 오프사이드"
-  - button "설정"
-  - text: Current career
+  - text: "풀타임: 휘슬이 울릴 때까지 오프사이드 Current career"
   - heading "이번 커리어는 구조테스트 입니다" [level=1]:
     - text: ""
     - strong: 구조테스트
@@ -37,3 +35,9 @@
   - text: Release notes
   - heading "릴리즈 노트" [level=2]
   - paragraph: 소식을 불러오지 못했어요.
+- navigation "메인 메뉴":
+  - button "기록실"
+  - button "소식"
+  - button "홈"
+  - button "구단주"
+  - button "설정"

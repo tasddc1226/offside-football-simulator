@@ -1145,8 +1145,15 @@ textarea {
 .tabs [role='tab']:nth-child(n + 3) {
   order: 2;
 }
-.tabs .tab-home {
+.tabs-inner ~ .tab-home {
   order: 1;
+}
+/* 홈 하단 메뉴(기록실 · 소식 · 홈 · 구단주 · 설정)도 같은 5칸. 본문은 탭바만큼 아래 여백을 둔다. */
+.main-nav {
+  grid-template-columns: repeat(5, 1fr);
+}
+body:has(.main-nav) .wrap {
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 20px);
 }
 /* 데스크톱: left/right 0 + margin auto로 본문(.wrap 560px)과 같은 폭·위치에 둔다. */
 @media (min-width: 720px) {
@@ -1177,18 +1184,18 @@ textarea {
   display: block;
   transition: transform 0.15s ease;
 }
-.tabs button[aria-selected='true'] {
+.tabs button:is([aria-selected='true'], [aria-current='page']) {
   color: var(--pitch);
 }
-:root[data-theme='dark'] .tabs button[aria-selected='true'] {
+:root[data-theme='dark'] .tabs button:is([aria-selected='true'], [aria-current='page']) {
   color: var(--accent);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .tabs button[aria-selected='true'] {
+  :root:not([data-theme='light']) .tabs button:is([aria-selected='true'], [aria-current='page']) {
     color: var(--accent);
   }
 }
-.tabs button[aria-selected='true'] .tab-ic {
+.tabs button:is([aria-selected='true'], [aria-current='page']) .tab-ic {
   transform: translateY(-1px) scale(1.06);
 }
 /* 누르는 동안 탭이 살짝 들어가고 둥근 바탕이 옅게 깔린다(다른 버튼과 같은 느낌). */

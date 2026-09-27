@@ -10,19 +10,18 @@
     POST_VERSION_MAX,
   } from '@offside/contracts/board-limits';
   import * as api from '../api/boards.js';
-  import type { BoardKey, BoardViewerResponse, Comment, Post, PostSummary } from '../api/boards.js';
+  import type { BoardViewerResponse, Comment, Post, PostSummary } from '../api/boards.js';
   import { appState } from './state.svelte.js';
-  import { goHome } from './nav.js';
+  import { openBoard } from './nav.js';
   import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
+  import { BOARD_KEYS } from '@offside/contracts/board-limits';
   import { BOARD_LABEL, dateOf, parseBody } from './boardText.js';
   import Topbar from './Topbar.svelte';
   import NicknameForm from './NicknameForm.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
 
-  const EYEBROW: Record<BoardKey, string> = { notice: 'Notice', release: 'Release notes' };
-
-  // 홈의 공지사항 · 릴리즈 노트 섹션에서 고른 게시판 하나만 보여 준다.
+  // 게시판 하나를 보여 준다. 위의 공지사항 · 릴리즈 노트 버튼으로 바꾸면 App이 이 화면을 새로 그린다.
   const board = appState.board;
   /** 관리자 여부와 댓글 자격(구글 로그인·닉네임). 불러오기 전엔 null(댓글 폼을 그리지 않는다). */
   let viewer = $state<BoardViewerResponse | null>(null);
@@ -120,16 +119,19 @@
 {/snippet}
 
 <div class="wrap">
-  <Topbar>
-    {#snippet right()}
-      <button class="icon-btn" data-act="home" onclick={goHome}>← 홈</button>
-    {/snippet}
-  </Topbar>
+  <Topbar />
   <section class="card stack" style="gap:14px" data-board={board}>
     <div>
-      <div class="eyebrow">{EYEBROW[board]}</div>
-      <h1>{BOARD_LABEL[board]}</h1>
+      <div class="eyebrow">News</div>
+      <h1>소식</h1>
     </div>
+    {#if !detail && !editing}
+      <div class="seg hof-tabs">
+        {#each BOARD_KEYS as k (k)}
+          <button class="opt" aria-pressed={board === k} data-board-tab={k} onclick={() => board !== k && openBoard(k)}>{BOARD_LABEL[k]}</button>
+        {/each}
+      </div>
+    {/if}
 
     {#if editing}
       <form class="stack board-editor" style="gap:10px" onsubmit={(e) => (e.preventDefault(), void savePost())}>

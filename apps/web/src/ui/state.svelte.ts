@@ -19,6 +19,7 @@ export type Screen =
   | 'game'
   | 'legend'
   | 'settings'
+  | 'owner'
   | 'board'
   | 'dex'
   | 'hof'
