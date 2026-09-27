@@ -60,6 +60,7 @@ export async function liveFeed(db: Db, nowMs: number): Promise<LiveEvent[]> {
     db
       .select({
         at: careerSeasons.createdAt,
+        name: careers.publicName,
         pos: careers.pos,
         club: careerSeasons.club,
         clubId: careerSeasons.clubId,

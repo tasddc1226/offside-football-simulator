@@ -21,7 +21,7 @@
     });
   });
 
-  // 내 선수: 진행 중인 커리어 + 이 기기의 은퇴 선수. 서버엔 이름 공개를 고르지 않은 이름이 없으니 여기서 채운다.
+  // 내 선수: 진행 중인 커리어 + 이 기기의 은퇴 선수. 서버엔 이름 공개를 끈 선수의 이름이 없으니 여기서 채운다.
   const G = appState.G;
   const mine: ReadonlyMap<string, string> = new Map([
     ...loadHOF().flatMap((h) => (h.id ? [[h.id, h.name] as const] : [])),

@@ -2,13 +2,16 @@ import { z } from 'zod';
 import { CareerPosSchema } from './careers.js';
 
 /**
- * T-10-030 홈 라이브 현황. 서버에 실제로 올라온 시즌·은퇴 기록만 담는다(가짜 활동 없음). 진행 중 커리어에는
- * 이름이 없고(서버가 모른다) careerId도 내보내지 않는다 — 은퇴 기록만 공개 명예의 전당 상세로 이어진다.
+ * T-10-030 홈 라이브 현황. 서버에 실제로 올라온 시즌·은퇴 기록만 담는다(가짜 활동 없음). 진행 중 커리어는
+ * 유저가 이름 공개를 켠 경우에만 이름이 있고(T-10-065) careerId는 내보내지 않는다 — 은퇴 기록만 공개 명예의
+ * 전당 상세로 이어진다.
  */
 export const LiveEventSchema = z.discriminatedUnion('kind', [
   z.strictObject({
     kind: z.literal('season'),
     at: z.string(),
+    /** T-10-065 공개 이름. 익명이면 null. */
+    name: z.string().nullable(),
     pos: CareerPosSchema,
     club: z.string(),
     /** T-10-066 클럽 id. 옛 시즌 기록은 null(배포 전 엣지 캐시 응답엔 없다). */

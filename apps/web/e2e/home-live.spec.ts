@@ -10,6 +10,7 @@ const ago = (min: number) => new Date(NOW - min * 60_000).toISOString();
 const season = (min: number, over: Record<string, unknown> = {}) => ({
   kind: 'season',
   at: ago(min),
+  name: null,
   pos: 'FW',
   club: '테스트 FC',
   league: 'K리그1',
@@ -36,7 +37,7 @@ const live = {
       lastClub: '테스트 FC',
     },
     season(4, { club: '청운고', first: true }),
-    season(30, { honor: 'K리그1 우승' }),
+    season(30, { honor: 'K리그1 우승', name: '도하람' }), // 이름 공개를 켠 진행 중 커리어(T-10-065)
     season(90, { pos: 'GK', cs: 11, goals: 0, assists: 0 }),
     season(60 * 30),
   ],
@@ -67,7 +68,7 @@ test('숫자와 소식 티커를 보여 주고, 한 줄씩 올라가다 일시�
   expect(first).toHaveLength(3);
   expect(first[0]).toMatch(/김오프 은퇴 · 레전드 점수 540\s*방금/);
   expect(first[1]).toMatch(/익명의 공격수 청운고에서 첫 시즌을 마쳤어요\s*4분 전/);
-  expect(first[2]).toMatch(/익명의 공격수 K리그1 우승 · 테스트 FC\s*30분 전/);
+  expect(first[2]).toMatch(/도하람 K리그1 우승 · 테스트 FC\s*30분 전/);
   // 한 줄 올라가면 둘째 줄이 맨 위로, 넷째 소식이 아래에서 들어온다.
   await expect
     .poll(async () => (await rowsText(page)).join('|'), { timeout: 6_000 })

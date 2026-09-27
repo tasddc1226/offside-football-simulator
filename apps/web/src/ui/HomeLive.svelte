@@ -46,7 +46,7 @@
   const pending = $derived(!data && !failed);
 
   const keyOf = (e: LiveEvent) => `${e.kind}:${e.at}:${e.kind === 'retire' ? e.careerId : `${e.club}:${e.goals}:${e.apps}`}`;
-  const who = (e: LiveEvent) => (e.kind === 'retire' ? (e.name ?? anonName(e.pos, e.number)) : anonName(e.pos, null));
+  const who = (e: LiveEvent) => e.name ?? anonName(e.pos, e.kind === 'retire' ? e.number : null);
   function what(e: LiveEvent): string {
     if (e.kind === 'retire') return `은퇴 · 레전드 점수 ${e.score}`;
     if (e.first) return `${e.club}에서 첫 시즌을 마쳤어요`;

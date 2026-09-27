@@ -1,42 +1,42 @@
 - main:
-  - text: "풀타임: 휘슬이 울릴 때까지 오프사이드 Settings"
-  - heading "환경설정" [level=1]
-  - text: Display
-  - strong: 다크 모드
-  - text: 어두운 화면으로 봐요. 이 기기에 저장됩니다.
-  - switch "다크 모드"
-  - text: Sound
-  - strong: 효과음
-  - text: 버튼을 누를 때 클릭 소리를 내요.
-  - switch "효과음" [checked]
-  - region "도움말":
-    - text: Help
-    - heading "도움말" [level=2]
-    - navigation "도움말":
-      - button "홈 화면에 추가하기"
-      - link "게임 가이드":
-        - /url: /guide/
-      - link "자주 묻는 질문":
-        - /url: /faq/
-  - region "서비스 정책":
-    - text: Legal
-    - heading "서비스 정책" [level=2]
-    - navigation "서비스 정책":
-      - link "이용약관":
-        - /url: /legal/terms/
-      - link "개인정보 처리방침":
-        - /url: /legal/privacy/
-  - paragraph:
-    - text: 문의
-    - link "contact@offside-lab.com":
-      - /url: mailto:contact@offside-lab.com
-  - paragraph:
-    - text: Instagram
-    - link "@offside.lab.kr":
-      - /url: https://www.instagram.com/offside.lab.kr/
+    - text: '풀타임: 휘슬이 울릴 때까지 오프사이드 Settings'
+    - heading "환경설정" [level=1]
+    - text: Display
+    - strong: 다크 모드
+    - text: 어두운 화면으로 봐요. 이 기기에 저장됩니다.
+    - switch "다크 모드"
+    - text: Sound
+    - strong: 효과음
+    - text: 버튼을 누를 때 클릭 소리를 내요.
+    - switch "효과음" [checked]
+    - region "도움말":
+        - text: Help
+        - heading "도움말" [level=2]
+        - navigation "도움말":
+            - button "홈 화면에 추가하기"
+            - link "게임 가이드":
+                - /url: /guide/
+            - link "자주 묻는 질문":
+                - /url: /faq/
+    - region "서비스 정책":
+        - text: Legal
+        - heading "서비스 정책" [level=2]
+        - navigation "서비스 정책":
+            - link "이용약관":
+                - /url: /legal/terms/
+            - link "개인정보 처리방침":
+                - /url: /legal/privacy/
+    - paragraph:
+        - text: 문의
+        - link "contact@offside-lab.com":
+            - /url: mailto:contact@offside-lab.com
+    - paragraph:
+        - text: Instagram
+        - link "@offside.lab.kr":
+            - /url: https://www.instagram.com/offside.lab.kr/
 - navigation "메인 메뉴":
-  - button "기록실"
-  - button "소식"
-  - button "홈"
-  - button "구단주"
-  - button "설정"
+    - button "기록실"
+    - button "소식"
+    - button "홈"
+    - button "구단주"
+    - button "설정"

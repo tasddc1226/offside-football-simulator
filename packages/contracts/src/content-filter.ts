@@ -6,6 +6,16 @@ export function isAcceptablePublicName(name: string): boolean {
   const compact = name.replace(/\s+/g, '');
   return !LINK.test(compact) && !PROFANITY.test(compact);
 }
+/** 공개 이름 형식(careers.ts PublicNameSchema와 같은 규칙) — zod 없이 웹 메인 번들에서도 쓴다. */
+export const PUBLIC_NAME_MAX = 16;
+export const PUBLIC_NAME_CHARS = /^[^\p{Cc}<>]+$/u;
+/** 서버가 받는 공개 이름으로 다듬는다. 형식이 틀리거나 링크·욕설이 있으면 null(익명). */
+export function toPublicName(name: string): string | null {
+  const n = name.trim();
+  return n && n.length <= PUBLIC_NAME_MAX && PUBLIC_NAME_CHARS.test(n) && isAcceptablePublicName(n)
+    ? n
+    : null;
+}
 /** T-10-028 운영자를 사칭하는 닉네임(공백·대소문자 무시, 포함 여부로 본다). 관리자 계정만 '운영자'로 쓴다. */
 const RESERVED_NICKNAME = /(운영자|관리자|운영진)/i;
 export const isReservedNickname = (name: string): boolean =>

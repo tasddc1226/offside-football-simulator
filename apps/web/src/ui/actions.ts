@@ -33,6 +33,7 @@ import { titleView } from '../game/titles.js';
 import type { EventLogEntry, MarketResult } from '../game/types.js';
 import { appState, randomName } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
+import { publicNameOf } from './namePublic.js';
 import { seasonLabelOf } from './format.js';
 import { motionOK } from './motion.js';
 import {
@@ -387,7 +388,7 @@ export function pickOption(i: number) {
 }
 
 export function doRetire() {
-  appState.lastRetired = retire(appState.G!);
+  appState.lastRetired = retire(appState.G!, publicNameOf(appState.G!.name) !== null);
   uploadRetirement(appState.G!.cid, appState.lastRetired);
   appState.G!.pending = null;
   save();

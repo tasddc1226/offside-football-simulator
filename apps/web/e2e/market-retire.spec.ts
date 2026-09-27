@@ -39,7 +39,27 @@ test('만 30세가 넘어 은퇴하면 명예의 전당에 기록된다고 묻�
   await expect(sheet).toContainText('명예의 전당에 기록되고');
   await sheet.getByRole('button', { name: '은퇴한다' }).click();
   await expect(page.locator('[data-act="hof-public"]')).toBeVisible();
+  // T-10-065: 환경설정 '선수 이름 공개'가 기본으로 켜져 있어 이름을 공개한 채로 시작한다.
+  await expect(page.locator('[data-act="hof-public"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-share="short"]')).toHaveCount(0);
+});
+
+test('환경설정에서 선수 이름 공개를 끄면 은퇴 때 익명으로 시작한다 (T-10-065)', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.locator('[data-act="settings"]').click();
+  const toggle = page.locator('[data-setting="name-public"]');
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  expect(await page.evaluate(() => localStorage.getItem('ft_name_public'))).toBe('false');
+
+  await openMarket(page, 34);
+  const sheet = page.locator('#sheet');
+  await sheet.getByRole('button', { name: '은퇴하기' }).click();
+  await sheet.getByRole('button', { name: '은퇴한다' }).click();
+  await expect(page.locator('[data-act="hof-public"]')).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('은퇴 크레딧은 직접 스크롤해 내려가는 대로 장면이 올라오고, 맨 아래에 다음 버튼이 있다', async ({

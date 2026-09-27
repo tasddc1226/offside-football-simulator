@@ -2,7 +2,7 @@
 // 은퇴 상세 화면(Legend.svelte)과 은퇴 직후 화면(Retired.svelte)이 같은 LegendView를 그린다.
 // 내 선수는 로컬 ft_hof 항목(HofEntry)에서, 다른 유저의 선수는 서버 /v1/hof에서 만든다.
 import type { PublicHofEntry } from '@offside/contracts';
-import { isAcceptablePublicName } from '@offside/contracts/content-filter';
+import { toPublicName } from '@offside/contracts/content-filter';
 import { legendScore, loadHOF, saveKey } from '../game/season.js';
 import type { GameState, HofEntry } from '../game/types.js';
 import { getHofDetail } from '../api/client.js';
@@ -126,7 +126,7 @@ export async function openPublicLegendById(careerId: string) {
  * 바꿨으면 true. */
 export function setLegendPublic(h: HofEntry, on: boolean): boolean {
   if (!h.id) return false;
-  if (on && !isAcceptablePublicName(h.name)) {
+  if (on && !toPublicName(h.name)) {
     toast('이 이름은 공개할 수 없어요 — 링크나 욕설이 들어간 이름은 익명으로만 올라갑니다.');
     return false;
   }
