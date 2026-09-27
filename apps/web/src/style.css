@@ -3283,6 +3283,9 @@ button.title-item:hover {
     transform: translateY(72px) scale(0.97);
   }
 }
+.credit-wait {
+  visibility: hidden;
+}
 .credit-late {
   animation: credit-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both;
   animation-delay: 1.5s;
@@ -3295,21 +3298,6 @@ button.title-item:hover {
 .credit-in .legend-bar i {
   animation: fill 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   animation-delay: calc(var(--i, 0) * 90ms + 250ms);
-}
-.credits-skip {
-  position: fixed;
-  right: 16px;
-  bottom: calc(16px + var(--safe-b));
-  z-index: 5;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 8px 14px;
-  min-height: 40px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 @media (prefers-reduced-motion: reduce) {
   .credit-in,
@@ -3355,6 +3343,7 @@ button.title-item:hover {
   color: var(--film-gold);
 }
 .film-open {
+  position: relative;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -3371,6 +3360,32 @@ button.title-item:hover {
   line-height: 0.95;
   letter-spacing: -0.01em;
   margin: 4px 0 0;
+}
+.film.playing .film-open {
+  padding-bottom: 72px;
+}
+.film-cue {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--film-muted);
+}
+.film-cue i {
+  font-style: normal;
+  font-size: 1.125rem;
+  color: var(--film-gold);
+  animation: cue-bob 1.6s ease-in-out infinite;
+}
+@keyframes cue-bob {
+  50% {
+    transform: translateY(6px);
+  }
 }
 .film-sub {
   color: var(--film-muted);
@@ -3670,7 +3685,7 @@ button.title-item:hover {
 }
 .film.playing .credit-in .ev {
   animation: ev-wipe 0.6s ease-out both;
-  animation-delay: calc(var(--i, 0) * 280ms + 450ms);
+  animation-delay: calc(var(--i, 0) * 160ms + 350ms);
 }
 @keyframes ev-wipe {
   from {
@@ -3679,7 +3694,7 @@ button.title-item:hover {
 }
 .film.playing .credit-in .roll-line {
   animation: roll-up 0.6s ease-out both;
-  animation-delay: calc(var(--i, 0) * 150ms + 250ms);
+  animation-delay: calc(var(--i, 0) * 90ms + 200ms);
 }
 @keyframes roll-up {
   from {
@@ -3694,7 +3709,8 @@ button.title-item:hover {
   .film.playing .credit-in.chapter::before,
   .film.playing .credit-in .ev,
   .film.playing .credit-in .roll-line,
-  .film.playing .film-finale.credit-in .film-end {
+  .film.playing .film-finale.credit-in .film-end,
+  .film-cue i {
     animation: none;
   }
 }

@@ -23,7 +23,7 @@ test('cid 없는 옛 은퇴 저장본은 시즌을 먼저 올려 커리어를 �
   page,
 }) => {
   await retireFromMarket(page, 34);
-  await page.locator('[data-act="credits-skip"]').click();
+  await expect(page.locator('[data-credit="player"]')).toBeVisible();
   // cid·상세 도입 전 모양으로 되돌린다(업로드 대기열도 비운다).
   await page.evaluate(() => {
     const g = JSON.parse(localStorage.getItem('ft_save')!);

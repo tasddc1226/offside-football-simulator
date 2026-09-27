@@ -73,7 +73,7 @@ async function stubApi(page: Page, state: { google: boolean }) {
 
 async function retireNow(page: Page) {
   await retireFromMarket(page, 34); // 짧은 커리어는 공유 카드 대신 안내가 나온다(T-10-032).
-  await page.locator('[data-act="credits-skip"]').click();
+  await expect(page.locator('[data-credit="player"]')).toBeVisible();
 }
 
 test('로그인하지 않았으면 은퇴 화면 맨 아래에서 로그인을 권하고, 로그인하고 돌아오면 공유 카드로 온다', async ({
@@ -133,7 +133,6 @@ test('로그인했으면 공유 링크를 만들고, 링크를 연 사람은 보
   await page.goto(url);
   await expect(page.locator('[data-shared="view"]')).toHaveText('공유받은 은퇴 커리어 · 보기 전용');
   await expect(page.locator('.film-open h1')).toContainText('익명의');
-  await page.locator('[data-act="credits-skip"]').click();
   await expect(page.locator('[data-credit="career"]')).toBeVisible();
   await expect(page.locator('[data-act="hof-public"]')).toHaveCount(0);
   await expect(page.locator('[data-act="share-career"]')).toHaveCount(0);

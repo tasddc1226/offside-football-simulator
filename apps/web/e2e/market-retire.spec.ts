@@ -20,13 +20,9 @@ test('이적 시장에서 언제든 은퇴할 수 있다 — 이른 은퇴는 �
   await sheet.getByRole('button', { name: '은퇴한다' }).click();
   await expect(sheet).toBeHidden();
 
-  // 은퇴 크레딧: 선수 카드부터 하나씩 올라오고, 끝나기 전엔 다음 버튼이 없다. 건너뛰면 한 번에 펼친다.
+  // 은퇴 크레딧: 선수 카드가 먼저 보이고, 아래 장면은 스크롤해 화면에 들어올 때 올라온다(T-10-062).
   await expect(page.locator('[data-credit="player"]')).toBeVisible();
-  await expect(page.locator('[data-credit="highlights"]')).toHaveCount(0);
-  await expect(page.locator('[data-act="new"]')).toHaveCount(0);
-  await expect(page.locator('[data-credit="highlights"]')).toBeVisible({ timeout: 4_000 });
-  await page.locator('[data-act="credits-skip"]').click();
-  await expect(page.locator('[data-act="credits-skip"]')).toHaveCount(0);
+  await expect(page.locator('[data-credit="finale"]')).toBeHidden();
   await expect(page.locator('[data-credit="career"]')).toBeVisible();
   await expect(page.locator('[data-act="new"]')).toHaveText(/새 커리어 킥오프/);
   // 이름 공개·공유 카드 대신 '내 선수에만 남는 기록' 안내.
@@ -42,19 +38,27 @@ test('만 30세가 넘어 은퇴하면 명예의 전당에 기록된다고 묻�
   await sheet.getByRole('button', { name: '은퇴하기' }).click();
   await expect(sheet).toContainText('명예의 전당에 기록되고');
   await sheet.getByRole('button', { name: '은퇴한다' }).click();
-  await page.locator('[data-act="credits-skip"]').click();
   await expect(page.locator('[data-act="hof-public"]')).toBeVisible();
   await expect(page.locator('[data-share="short"]')).toHaveCount(0);
 });
 
-test('은퇴 크레딧은 끝까지 흘러가면 마지막에 다음 버튼이 올라온다', async ({ page }) => {
+test('은퇴 크레딧은 직접 스크롤해 내려가는 대로 장면이 올라오고, 맨 아래에 다음 버튼이 있다', async ({
+  page,
+}) => {
   await retireFromMarket(page);
-  // 짧은 커리어(고교 1시즌)라도 섹션이 차례로 다 나오고 마지막에 버튼이 생긴다.
-  await expect(page.locator('[data-act="new"]')).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator('[data-act="credits-skip"]')).toHaveCount(0);
-  // 화면이 크레딧을 따라 내려가 마지막 버튼까지 보여 준다.
+  await expect(page.locator('[data-credit="finale"]')).toBeHidden();
+  // 자동으로 내려가지 않는다.
+  await page.waitForTimeout(1_500);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  await page.evaluate(async () => {
+    for (let y = 0; y <= document.documentElement.scrollHeight; y += 240) {
+      window.scrollTo(0, y);
+      await new Promise((r) => setTimeout(r, 60));
+    }
+  });
+  await expect(page.locator('[data-credit="finale"]')).toBeVisible();
+  await expect(page.locator('.credit-wait')).toHaveCount(0);
   await expect(page.locator('[data-act="new"]')).toBeInViewport();
-  await expect(page.locator('[data-credit="career"]')).toBeVisible();
 });
 
 test('감속 모션이면 은퇴 화면이 연출 없이 처음부터 다 보인다', async ({ page }) => {
@@ -62,5 +66,5 @@ test('감속 모션이면 은퇴 화면이 연출 없이 처음부터 다 보인
   await retireFromMarket(page);
   await expect(page.locator('[data-credit="career"]')).toBeVisible();
   await expect(page.locator('[data-act="new"]')).toBeVisible();
-  await expect(page.locator('[data-act="credits-skip"]')).toHaveCount(0);
+  await expect(page.locator('[data-credit="finale"]')).toBeVisible();
 });
