@@ -3,13 +3,13 @@ import { fetchHofEntry } from './hof-entry.js';
 import { careerShareMeta, injectShareMeta } from './share-meta.js';
 import { OG_CARD_PATH, SHARE_PATH } from './share-path.js';
 
-interface AssetFetcher {
+interface Fetcher {
   fetch(request: Request): Promise<Response>;
 }
 interface Env {
-  ASSETS: AssetFetcher;
+  ASSETS: Fetcher;
   /** T-10-068 공유 미리보기 카드 워커(서비스 바인딩). 로컬 개발에선 없다. */
-  OG?: AssetFetcher;
+  OG?: Fetcher;
 }
 interface Ctx {
   waitUntil(p: Promise<unknown>): void;
@@ -47,13 +47,15 @@ function withRobots(response: Response, value: string): Response {
 // 바뀌므로 여기(커스텀 도메인)의 엣지 캐시에 오래 둔다.
 async function careerCard(request: Request, env: Env, ctx: Ctx): Promise<Response> {
   const cache = (globalThis as unknown as { caches?: { default: Cache } }).caches?.default;
-  const hit = await cache?.match(request);
+  // 캐시는 GET만 받는다 — HEAD(링크 확인 봇)도 같은 GET 키로 찾고 넣는다.
+  const key = new Request(request.url);
+  const hit = await cache?.match(key);
   if (hit) return hit;
   if (!env.OG) return new Response('Not Found', { status: 404 }); // 로컬: og 워커를 같이 띄우지 않았다
-  const res = await env.OG.fetch(request);
+  const res = await env.OG.fetch(key);
   // 대체 카드로 돌려보내는 302도 짧게(og-worker의 Cache-Control) 둔다 — 굽기가 계속 실패할 때 봇마다 다시 굽지 않게.
   if ((res.status === 200 || res.status === 302) && cache)
-    ctx.waitUntil(cache.put(request, res.clone()));
+    ctx.waitUntil(cache.put(key, res.clone()));
   return res;
 }
 

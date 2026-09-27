@@ -1,13 +1,14 @@
 // T-10-068 공유 링크(/career/<id>) 미리보기 이미지. 선수마다 엠블럼·이름·레전드 점수를 담은 1200×630 카드를
 // SVG로 그린다(PNG 변환은 워커의 og-render.ts). 워커 번들에 게임 로직을 끌어오지 않게 순수 데이터 모듈만 쓴다.
 import type { PublicHofEntry } from '@offside/contracts';
-import { crestOf, crestSvg, escXml } from './game/crests.js';
+import { crestOf, crestSvg } from './game/crests.js';
 import { CLUBS } from './game/data.js';
 import { legendBand } from './game/legend-bands.js';
 import { anonName, POS_LABEL } from './game/pos-label.js';
+import { escXml } from './xml.js';
 
-export const OG_W = 1200;
-export const OG_H = 630;
+const OG_W = 1200;
+const OG_H = 630;
 /** 글자 칸 왼쪽 끝(엠블럼 오른쪽). */
 const X = 470;
 
@@ -92,7 +93,8 @@ function lines(e: PublicHofEntry): Line[] {
   ];
 }
 
-const FAMILY = { kr: 'IBM Plex Sans KR', num: 'Barlow Condensed' } as const;
+/** 카드 글꼴(굵기 700만 쓴다). og-render.ts가 이 이름으로 구글 폰트에서 받는다. */
+export const FAMILY = { kr: 'IBM Plex Sans KR', num: 'Barlow Condensed' } as const;
 const badgeText = (e: PublicHofEntry) => (e.number != null ? String(e.number) : e.pos);
 
 /** 카드 SVG. 글꼴은 이름만 적고, 실제 글꼴 파일은 렌더러가 넣는다(cardGlyphs로 필요한 글자만 받는다). */

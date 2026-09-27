@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { PublicHofEntry } from '@offside/contracts';
 import worker from './og-worker.js';
+import { cardVersion } from './share-meta.js';
 
 // wrangler가 묶는 wasm 모듈은 vitest가 읽지 못한다 — 굽기는 실제 워커(dry-run·배포 뒤 확인)에서 본다.
 vi.mock('@resvg/resvg-wasm/index_bg.wasm', () => ({ default: {} }));
@@ -31,9 +33,19 @@ describe('T-10-068 카드 워커', () => {
     expect((await get('/og/career/x.png')).status).toBe(404);
   });
 
+  it('꼬리표가 지금 기록과 다르면 굽지 않고 지금 주소로 돌려보낸다', async () => {
+    withApi({ data: { entry } }, 200);
+    const res = await get(`/og/career/${ID}.png?v=nope`);
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toBe(
+      `https://offside-lab.com/og/career/${ID}.png?v=${cardVersion(entry as unknown as PublicHofEntry)}`,
+    );
+  });
+
   it('카드를 굽지 못하면(글꼴 실패) 레전드 등급 카드로 돌려보낸다', async () => {
     withApi({ data: { entry } }, 200);
-    const res = await get(`/og/career/${ID}.png?v=1`);
+    const v = cardVersion(entry as unknown as PublicHofEntry);
+    const res = await get(`/og/career/${ID}.png?v=${v}`);
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toMatch(
       /^https:\/\/offside-lab\.com\/og-career-lg_world-v\d+\.png$/,
