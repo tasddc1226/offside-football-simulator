@@ -9,6 +9,10 @@
 > 워커 브리프·시뮬레이션 증거는 [`docs/archive/offside/tracking/`](../archive/offside/README.md)에
 > 보존돼 있다.
 
+## 분석 기획
+
+- [T-10-083: GA4 최소 행동 측정](ga4-measurement-plan.md) — 핵심 이벤트, 유입·반복 플레이 지표, 개인정보·중복 방지와 도입 기준.
+
 ## 역할
 
 | 역할 | 담당 | 하는 일 | 하지 않는 일 |
