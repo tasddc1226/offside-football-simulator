@@ -16,7 +16,8 @@
     "./club-names": "./src/club-names.ts",
     "./retired-numbers": "./src/retired-numbers.ts",
     "./service-seasons": "./src/service-seasons.ts",
-    "./positions": "./src/positions.ts"
+    "./positions": "./src/positions.ts",
+    "./owner-team": "./src/owner-team.ts"
   },
   "scripts": {
     "test": "vitest run",

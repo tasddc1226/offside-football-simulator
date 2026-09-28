@@ -1,0 +1,236 @@
+import type { FormationId } from '@offside/contracts/owner-team';
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, sql } from 'drizzle-orm';
+import type { Db } from '../client.js';
+import { careers, ownerTeams, profiles, teamMatches } from '../schema.js';
+import type { LineupCareer, PlayerRef } from '../../team/sim.js';
+
+// T-10-092 구단주 팀·팀 경기.
+
+export type OwnerTeamRow = typeof ownerTeams.$inferSelect;
+export type TeamMatchRow = typeof teamMatches.$inferSelect;
+
+/** 팀 행의 선발 11자리(커리어 id, 빈 자리 null). */
+export const slotIdsOf = (row: Pick<OwnerTeamRow, 'slotsJson'>): (string | null)[] =>
+  JSON.parse(row.slotsJson) as (string | null)[];
+
+/** 내 팀들(만든 순서). */
+export function listMyTeams(db: Db, profileId: string) {
+  return db
+    .select()
+    .from(ownerTeams)
+    .where(eq(ownerTeams.profileId, profileId))
+    .orderBy(asc(ownerTeams.createdAt));
+}
+
+/** 팀에 넣을 수 있는 내 은퇴 선수(최고 OVR 순). 은퇴 요약이 없는 기록(peak null)은 뺀다. */
+export function listEligibleCareers(db: Db, profileId: string, limit = 300) {
+  return db
+    .select({
+      id: careers.id,
+      pos: careers.pos,
+      peak: careers.peak,
+      number: careers.shirtNumber,
+      publicName: careers.publicName,
+      legendScore: careers.legendScore,
+    })
+    .from(careers)
+    .where(
+      and(eq(careers.profileId, profileId), eq(careers.status, 'retired'), isNotNull(careers.peak)),
+    )
+    .orderBy(desc(careers.peak))
+    .limit(limit);
+}
+
+/** 오늘(한국 시각) 이 구단주가 건 경기 수. sinceIso는 한국 시각 자정의 UTC ISO. */
+export function countMatchesSince(db: Db, profileId: string, sinceIso: string) {
+  return db
+    .select({ n: sql<number>`count(*)` })
+    .from(teamMatches)
+    .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
+}
+
+/** 여러 팀 선발의 커리어를 한 번에 읽는다. 소유자·은퇴 여부는 부르는 쪽이 팀마다 확인한다. */
+export async function careersByIds(db: Db, ids: string[]) {
+  if (ids.length === 0) return [];
+  return db
+    .select({
+      id: careers.id,
+      profileId: careers.profileId,
+      status: careers.status,
+      pos: careers.pos,
+      peak: careers.peak,
+      number: careers.shirtNumber,
+      publicName: careers.publicName,
+    })
+    .from(careers)
+    .where(inArray(careers.id, ids));
+}
+export type CareerLite = Awaited<ReturnType<typeof careersByIds>>[number];
+
+/** 이 구단주의 팀에 넣을 수 있는 커리어만 골라 선발 맵으로(본인 소유 · 은퇴 · 은퇴 요약 있음). */
+export function eligibleMap(rows: readonly CareerLite[], ownerId: string) {
+  const map = new Map<string, LineupCareer>();
+  for (const r of rows) {
+    if (r.profileId !== ownerId || r.status !== 'retired' || r.peak === null) continue;
+    // T-10-091 careers.dpos가 들어오면 여기서 읽는다.
+    map.set(r.id, {
+      id: r.id,
+      pos: r.pos,
+      dpos: null,
+      peak: r.peak,
+      number: r.number,
+      publicName: r.publicName,
+    });
+  }
+  return map;
+}
+
+/** 팀 한 개 + 구단주 닉네임(상대 팀). 구글 연결이 끊겼거나 삭제된 구단주의 팀은 없는 것으로 본다. */
+export async function getTeamWithOwner(db: Db, teamId: string) {
+  const [row] = await db
+    .select({ team: ownerTeams, nickname: profiles.nickname, email: profiles.email })
+    .from(ownerTeams)
+    .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+    .where(
+      and(eq(ownerTeams.id, teamId), isNotNull(profiles.googleSub), isNull(profiles.deletedAt)),
+    );
+  return row;
+}
+
+/**
+ * 상대 후보: 선수가 한 명 이상 있는 다른 구단주의 팀 중 내 팀 OVR 위·아래로 가까운 팀을 perSide개씩(OVR 인덱스).
+ * 구글 연결이 끊겼거나 삭제된 구단주의 팀은 뺀다.
+ */
+export async function listOpponentCandidates(db: Db, profileId: string, ovr: number, perSide = 8) {
+  const cols = { team: ownerTeams, nickname: profiles.nickname, email: profiles.email };
+  const base = and(
+    ne(ownerTeams.profileId, profileId),
+    gt(ownerTeams.filled, 0),
+    isNotNull(profiles.googleSub),
+    isNull(profiles.deletedAt),
+  );
+  const [up, down] = await db.batch([
+    db
+      .select(cols)
+      .from(ownerTeams)
+      .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+      .where(and(base, gte(ownerTeams.ovr, ovr)))
+      .orderBy(asc(ownerTeams.ovr))
+      .limit(perSide),
+    db
+      .select(cols)
+      .from(ownerTeams)
+      .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
+      .where(and(base, lt(ownerTeams.ovr, ovr)))
+      .orderBy(desc(ownerTeams.ovr))
+      .limit(perSide),
+  ]);
+  return [...up, ...down];
+}
+
+export type TeamSnapshot = {
+  teamId: string;
+  name: string;
+  owner: string;
+  formation: FormationId;
+  ovr: number;
+};
+export type StoredEvent = {
+  minute: number;
+  side: 'home' | 'away';
+  scorer: PlayerRef;
+  assist: PlayerRef | null;
+};
+/** team_matches.detail_json. */
+export type MatchDetail = { home: TeamSnapshot; away: TeamSnapshot; events: StoredEvent[] };
+
+type ResultDelta = { w: number; d: number; l: number };
+const deltaOf = (forGoals: number, againstGoals: number): ResultDelta =>
+  forGoals > againstGoals
+    ? { w: 1, d: 0, l: 0 }
+    : forGoals < againstGoals
+      ? { w: 0, d: 0, l: 1 }
+      : { w: 0, d: 1, l: 0 };
+
+/** 경기 한 판을 남기고 두 팀 전적(+ 다시 계산한 선발 수·OVR)을 한 batch로 고친다. 행 쓰기 3번. */
+export function recordMatchStatements(
+  db: Db,
+  input: {
+    id: string;
+    profileId: string;
+    home: { teamId: string; filled: number; ovr: number };
+    away: { teamId: string; filled: number; ovr: number };
+    homeGoals: number;
+    awayGoals: number;
+    detail: MatchDetail;
+    now: string;
+  },
+) {
+  const bump = (side: { teamId: string; filled: number; ovr: number }, d: ResultDelta) =>
+    db
+      .update(ownerTeams)
+      .set({
+        wins: sql`${ownerTeams.wins} + ${d.w}`,
+        draws: sql`${ownerTeams.draws} + ${d.d}`,
+        losses: sql`${ownerTeams.losses} + ${d.l}`,
+        filled: side.filled,
+        ovr: side.ovr,
+      })
+      .where(eq(ownerTeams.id, side.teamId));
+  return [
+    db.insert(teamMatches).values({
+      id: input.id,
+      profileId: input.profileId,
+      homeTeamId: input.home.teamId,
+      awayTeamId: input.away.teamId,
+      homeGoals: input.homeGoals,
+      awayGoals: input.awayGoals,
+      detailJson: JSON.stringify(input.detail),
+      createdAt: input.now,
+    }),
+    bump(input.home, deltaOf(input.homeGoals, input.awayGoals)),
+    bump(input.away, deltaOf(input.awayGoals, input.homeGoals)),
+  ] as const;
+}
+
+/** 내가 건 경기 + 내 팀이 상대였던 경기, 최근 limit개. */
+export async function listRecentMatches(
+  db: Db,
+  profileId: string,
+  teamIds: string[],
+  limit = 10,
+): Promise<TeamMatchRow[]> {
+  const mine = db
+    .select()
+    .from(teamMatches)
+    .where(eq(teamMatches.profileId, profileId))
+    .orderBy(desc(teamMatches.createdAt))
+    .limit(limit);
+  if (teamIds.length === 0) return mine;
+  const [home, away] = await db.batch([
+    mine,
+    db
+      .select()
+      .from(teamMatches)
+      .where(inArray(teamMatches.awayTeamId, teamIds))
+      .orderBy(desc(teamMatches.createdAt))
+      .limit(limit),
+  ]);
+  return [...home, ...away]
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
+    .slice(0, limit);
+}
+
+/** 경기 기록에 나온 커리어의 지금 공개 이름. */
+export async function publicNamesOf(db: Db, ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select({ id: careers.id, publicName: careers.publicName })
+    .from(careers)
+    .where(and(inArray(careers.id, ids), isNotNull(careers.publicName)));
+  return new Map(rows.map((r) => [r.id, r.publicName!]));
+}
+
+/** 프로필 삭제 batch용(프로필은 소프트 삭제라 FK CASCADE가 돌지 않는다). 팀 경기는 팀 FK CASCADE로 함께 지워진다. */
+export const deleteOwnerTeamsStatement = (db: Db, profileId: string) =>
+  db.delete(ownerTeams).where(eq(ownerTeams.profileId, profileId));

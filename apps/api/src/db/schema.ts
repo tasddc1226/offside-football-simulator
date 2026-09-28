@@ -383,3 +383,60 @@ export const appMeta = sqliteTable('app_meta', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
 });
+
+/**
+ * T-10-092 구단주 팀. 구글 로그인한 프로필만 만든다(팀 수는 TEAM_SLOTS). slots_json은 포메이션 순서 11자리의
+ * 커리어 id(빈 자리는 null — 유스 선수가 채운다). filled·ovr는 저장·경기 때 다시 계산해 두는 값이다(상대 목록이
+ * 커리어를 읽지 않고 고른다). 전적은 경기마다 두 팀 행을 한 번씩 고친다(행 쓰기를 적게).
+ */
+export const ownerTeams = sqliteTable(
+  'owner_teams',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    formation: text('formation').notNull(),
+    slotsJson: text('slots_json').notNull(),
+    filled: integer('filled').notNull(),
+    ovr: integer('ovr').notNull(),
+    wins: integer('wins').notNull().default(0),
+    draws: integer('draws').notNull().default(0),
+    losses: integer('losses').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    index('owner_teams_profile_idx').on(table.profileId),
+    // 상대 목록: 내 팀 OVR 위아래로 가까운 팀을 찾는다.
+    index('owner_teams_ovr_idx').on(table.ovr),
+  ],
+);
+
+/**
+ * T-10-092 팀 경기. home은 경기를 건 팀, profile_id는 그 구단주(하루 경기 수 제한을 센다). detail_json은 두 팀의
+ * 경기 당시 모습(이름·구단주·포메이션·OVR)과 골 이벤트 — 선수는 커리어 id와 익명 표기로만 담고 공개 이름은 읽을
+ * 때 붙인다(나중에 이름 공개를 끄면 경기 기록에서도 사라진다).
+ */
+export const teamMatches = sqliteTable(
+  'team_matches',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    homeTeamId: text('home_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    awayTeamId: text('away_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    homeGoals: integer('home_goals').notNull(),
+    awayGoals: integer('away_goals').notNull(),
+    detailJson: text('detail_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('team_matches_profile_created_idx').on(table.profileId, table.createdAt),
+    index('team_matches_away_created_idx').on(table.awayTeamId, table.createdAt),
+  ],
+);

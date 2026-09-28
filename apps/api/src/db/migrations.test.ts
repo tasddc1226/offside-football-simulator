@@ -175,6 +175,30 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   app_meta: ['key', 'value'],
   server_records: ['id', 'career_id', 'value', 'achieved_at', 'year'],
   retired_numbers: ['club_id', 'number', 'career_id', 'club', 'score', 'seq', 'granted_at'],
+  owner_teams: [
+    'id',
+    'profile_id',
+    'name',
+    'formation',
+    'slots_json',
+    'filled',
+    'ovr',
+    'wins',
+    'draws',
+    'losses',
+    'created_at',
+    'updated_at',
+  ],
+  team_matches: [
+    'id',
+    'profile_id',
+    'home_team_id',
+    'away_team_id',
+    'home_goals',
+    'away_goals',
+    'detail_json',
+    'created_at',
+  ],
 };
 
 describe('migrations', () => {
