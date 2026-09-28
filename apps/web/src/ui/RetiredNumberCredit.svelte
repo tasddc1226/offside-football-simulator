@@ -2,7 +2,7 @@
   // T-10-076 은퇴 리포트의 영구결번 장면 — 결번 세리머니 · 명예의 벽 헌정 · 이름 공개 안내. 판정 기준(점수·시즌 수)은
   // 서버만 안다 — 웹은 서버가 준 결과만 그린다. LegendReport가 따로 불러온다(첫 화면 번들 밖).
   import type { RetiredNumberResult } from '@offside/contracts';
-  import { RN_SHIRT, RN_TRIM, rnStyle } from './rnStyle.js';
+  import { rnStyle } from './rnStyle.js';
   import { setLegendPublic } from './legend.js';
   import { checkRetiredNumber } from '../api/client.js';
   import { recordRn } from './retiredNumber.svelte.js';
@@ -10,6 +10,7 @@
   import { totals } from './format.js';
   import type { LegendView } from './state.svelte.js';
   import ClubMark from './ClubMark.svelte';
+  import RnJersey from './RnJersey.svelte';
 
   const {
     v,
@@ -56,12 +57,7 @@
     {:else if rnSlot?.kind === 'granted'}
       <div class="rn-ceremony">
         <div class="eyebrow film-kicker">Retired Number</div>
-        <svg class="rn-jersey" viewBox="0 0 120 124" aria-hidden="true">
-          <path class="rn-shirt" d={RN_SHIRT} />
-          <path class="rn-trim" d={RN_TRIM} />
-          <text class="rn-jersey-name" x="60" y="40">{v.name}</text>
-          <text class="rn-jersey-num" x="60" y="92">{rnSlot.number}</text>
-        </svg>
+        <RnJersey name={v.name} number={rnSlot.number} />
         <p class="rn-line"><b>{rnSlot.number}번</b>은 이제,<br /><b>{v.name}</b>의 이름으로 남습니다.</p>
         {#if rnClub}
           <p class="rn-stats">{rnClub.from}–{rnClub.to} · {rnClub.seasons}시즌 · {rnClub.apps}경기 {rnClub.goals}골 {rnClub.assists}도움</p>

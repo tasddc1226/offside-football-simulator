@@ -169,7 +169,7 @@ export type RetirementSummary = z.infer<typeof RetirementSummarySchema>;
  * T-10-076 영구결번 심사 결과. granted: 결번을 받았다(seq = 서버 몇 번째 결번). taken: 자격은 있지만 그 구단의 그
  * 번호(두 번째 구단까지)를 이미 다른 선수가 가졌다 — holder는 가장 큰 기여 구단의 보유자(익명이면 null).
  * anonymous: 자격은 있지만 이름을 공개하지 않아 아직 자리를 잡지 않았다. pending: 서버가 기존 은퇴 기록을
- * 다시 훑는 중이라 곧 판정된다.
+ * 다시 훑는 중이거나 영구결번이 아직 열리지 않아 곧 판정된다.
  */
 const RetiredSlotSchema = z.strictObject({
   clubId: z.string().min(1),
