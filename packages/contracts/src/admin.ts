@@ -88,9 +88,9 @@ export const AutomationReasonSchema = z.enum([
   'noInput',
   /** 마우스로 클릭하는데 커서 이동이 거의 없음(클릭당 2번 미만). */
   'noMoves',
-  /** 시즌 간격이 기계처럼 일정함(변동계수 0.15 미만). */
+  /** 시즌 간격이 기계처럼 일정함(문턱은 api db/repos/automation.ts). */
   'metronome',
-  /** 시즌 간격이 꽤 일정함(변동계수 0.25 미만). */
+  /** 시즌 간격이 꽤 일정함(metronome보다 약한 근거). */
   'steady',
   /** 같은 이름에 번호만 바꾼 커리어를 연달아 돌림. */
   'serial',
@@ -108,7 +108,7 @@ const AutomationCareerSchema = z.object({
   seasons: count,
   /** 시즌 사이 간격 중앙값(초). 기기가 잰 시간이 있으면 그것, 없으면 서버 도착 간격. */
   medianGapSec: z.number().nullable(),
-  /** 간격의 변동계수(표준편차/평균). 5시즌 미만이면 null. */
+  /** 간격의 변동계수(표준편차/평균). 간격이 적으면 null(최소 수는 api automation.ts). */
   cv: z.number().nullable(),
   reasons: z.array(AutomationReasonSchema),
 });

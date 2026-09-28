@@ -84,16 +84,14 @@ function judgeCareer(rows: SeasonRow[]) {
   const { medianGapSec, cv } = rhythm(gaps);
 
   const reasons = new Set<AutomationReason>();
-  const sum = (k: 'clicks' | 'keys' | 'touches' | 'moves' | 'synthetic') =>
+  const sum = (k: 'clicks' | 'touches' | 'moves' | 'synthetic') =>
     measured.reduce((s, x) => s + x[k], 0);
   if (measured.some((s) => s.webdriver)) reasons.add('webdriver');
   if (measured.some((s) => s.headless)) reasons.add('headless');
-  const [clicks, touches, moves, synthetic] = [
-    sum('clicks'),
-    sum('touches'),
-    sum('moves'),
-    sum('synthetic'),
-  ];
+  const clicks = sum('clicks');
+  const touches = sum('touches');
+  const moves = sum('moves');
+  const synthetic = sum('synthetic');
   if (synthetic >= 5 && synthetic > clicks) reasons.add('synthetic');
   if (measured.filter((s) => s.clicks + s.keys + s.touches === 0).length >= 2)
     reasons.add('noInput');
@@ -120,26 +118,28 @@ const stem = (name: string) =>
     .trim()
     .toLowerCase();
 
+function groupBy<T>(xs: T[], key: (x: T) => string): Map<string, T[]> {
+  const out = new Map<string, T[]>();
+  for (const x of xs) {
+    const list = out.get(key(x));
+    if (list) list.push(x);
+    else out.set(key(x), [x]);
+  }
+  return out;
+}
+
 /** 시즌 행들을 프로필별로 판정한다. 점수가 MEDIUM 미만인 프로필은 뺀다(점수순). */
 export function judgeAutomation(rows: SeasonRow[], hours: number): AutomationSuspect[] {
-  const byProfile = new Map<string, Map<string, SeasonRow[]>>();
-  for (const r of rows) {
-    let careersOf = byProfile.get(r.profileId);
-    if (!careersOf) byProfile.set(r.profileId, (careersOf = new Map()));
-    const list = careersOf.get(r.careerId);
-    if (list) list.push(r);
-    else careersOf.set(r.careerId, [r]);
-  }
   const out: AutomationSuspect[] = [];
-  for (const [profileId, careersOf] of byProfile) {
-    const judged = [...careersOf.values()].map(judgeCareer);
-    const all = [...careersOf.values()].flat();
+  for (const [profileId, all] of groupBy(rows, (r) => r.profileId)) {
+    const judged = [...groupBy(all, (r) => r.careerId).values()].map(judgeCareer);
     const reasons = new Set(judged.flatMap((c) => c.reasons));
     // 번호만 다른 이름으로 커리어 3개 이상.
     const stems = new Map<string, Set<string>>();
     for (const c of judged) {
-      if (!c.name || stem(c.name) === c.name.toLowerCase() || !stem(c.name)) continue;
-      stems.set(stem(c.name), (stems.get(stem(c.name)) ?? new Set()).add(c.name));
+      const s = c.name && stem(c.name);
+      if (!s || s === c.name!.toLowerCase()) continue;
+      stems.set(s, (stems.get(s) ?? new Set()).add(c.name!));
     }
     if ([...stems.values()].some((names) => names.size >= 3)) reasons.add('serial');
     const activeHours = new Set(all.map((r) => r.createdAt.slice(0, 13))).size;
@@ -147,7 +147,7 @@ export function judgeAutomation(rows: SeasonRow[], hours: number): AutomationSus
 
     const score = [...reasons].reduce((s, r) => s + WEIGHT[r], 0);
     if (score < MEDIUM) continue;
-    const times = all.map((r) => r.createdAt).sort();
+    const times = all.map((r) => r.createdAt);
     out.push({
       profile: profileId.slice(0, 8),
       score,
@@ -155,8 +155,8 @@ export function judgeAutomation(rows: SeasonRow[], hours: number): AutomationSus
       reasons: [...reasons].sort((a, b) => WEIGHT[b] - WEIGHT[a]),
       seasons: all.length,
       activeHours,
-      firstAt: times[0]!,
-      lastAt: times.at(-1)!,
+      firstAt: times.reduce((a, b) => (b < a ? b : a)),
+      lastAt: times.reduce((a, b) => (b > a ? b : a)),
       careers: judged.sort((a, b) => b.reasons.length - a.reasons.length || b.seasons - a.seasons),
     });
   }

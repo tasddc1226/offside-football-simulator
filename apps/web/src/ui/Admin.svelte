@@ -40,7 +40,7 @@
     {:else if !admin}
       <p class="muted">운영자 계정으로 로그인해야 볼 수 있어요.</p>
     {:else}
-      <div class="seg admin-tabs" role="group" aria-label="운영 도구">
+      <div class="seg admin-tabs" style="grid-template-columns:repeat({TABS.length},1fr)" role="group" aria-label="운영 도구">
         {#each TABS as t (t.id)}
           <button class="opt" aria-pressed={tab === t.id} data-admin-tab={t.id} onclick={() => (tab = t.id)}>{t.label}</button>
         {/each}

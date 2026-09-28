@@ -4,7 +4,7 @@ import type { PlaySignals } from '@offside/contracts';
 
 type Counts = Pick<PlaySignals, 'clicks' | 'keys' | 'touches' | 'moves' | 'synthetic'>;
 const zero = (): Counts => ({ clicks: 0, keys: 0, touches: 0, moves: 0, synthetic: 0 });
-// 서버 스키마 상한(넘으면 시즌 업로드가 거절된다).
+// 서버 스키마 상한(넘으면 서버가 요약을 버린다).
 const MAX_COUNT = 1_000_000;
 const MAX_MS = 7 * 86_400_000;
 

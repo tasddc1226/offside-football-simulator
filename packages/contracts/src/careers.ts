@@ -100,13 +100,14 @@ export const PublicNameSchema = z
  * 운영 도구가 사람답지 않은 흐름(자동화 브라우저, 스크립트가 만든 클릭, 마우스 이동 없는 클릭)을 모아 보는 데만 쓴다.
  */
 const signalCount = z.number().int().min(0).max(1_000_000);
+const signalMs = z
+  .number()
+  .int()
+  .min(0)
+  .max(7 * 86_400_000);
 export const PlaySignalsSchema = z.strictObject({
   /** 지난 시즌 업로드(또는 앱 시작)부터 이 시즌이 끝날 때까지 걸린 시간. */
-  ms: z
-    .number()
-    .int()
-    .min(0)
-    .max(7 * 86_400_000),
+  ms: signalMs,
   /** 사용자가 직접 한 클릭·키·터치(isTrusted). */
   clicks: signalCount,
   keys: signalCount,
@@ -116,11 +117,7 @@ export const PlaySignalsSchema = z.strictObject({
   /** 스크립트가 만든 클릭(isTrusted가 아님). */
   synthetic: signalCount,
   /** 탭이 가려져 있던 시간. */
-  hiddenMs: z
-    .number()
-    .int()
-    .min(0)
-    .max(7 * 86_400_000),
+  hiddenMs: signalMs,
   /** navigator.webdriver — 자동화 도구가 조종하는 브라우저. */
   webdriver: z.boolean(),
 });
@@ -133,7 +130,8 @@ export const PutCareerSeasonBodySchema = z.strictObject({
   /** T-10-065 진행 중 커리어의 공개 이름(홈 라이브). 없으면(옛 클라이언트) 서버 값을 그대로 둔다. */
   publicName: PublicNameSchema.nullable().optional(),
   /** 자동 플레이 탐지용 조작 요약. 옛 클라이언트·기록을 다시 보낼 때는 없다. */
-  signals: PlaySignalsSchema.optional(),
+  // 관찰용 부가 정보라 모양이 틀려도 시즌 기록은 받는다(버리면 기기 큐가 시즌 전체를 버린다).
+  signals: PlaySignalsSchema.optional().catch(undefined),
 });
 export type PutCareerSeasonBody = z.infer<typeof PutCareerSeasonBodySchema>;
 

@@ -3,7 +3,7 @@
   // 보여 준다 — 게임에는 아무 영향이 없다. 근거 기준은 api `db/repos/automation.ts`.
   import { onMount } from 'svelte';
   import type { AutomationReason } from '@offside/contracts';
-  import type { LoadStatus } from '../LoadState.svelte';
+  import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import * as api from '../../api/admin.js';
   import type { AutomationReport } from '../../api/admin.js';
   import { kstDateTime as kst } from '../boardText.js';
@@ -29,9 +29,12 @@
 
   onMount(() => void load());
 
+  let req = 0;
   async function load() {
     status = 'loading';
+    const mine = ++req;
     const r = await api.fetchAutomation(hours);
+    if (mine !== req) return; // 구간을 바꿨으면 늦게 온 이전 응답은 버린다.
     if (!r.ok) {
       status = 'error';
       return;
@@ -59,15 +62,8 @@
     관찰 전용이에요 — 게임에는 영향이 없어요. 사람도 같은 속도로 누르면 간격이 일정하게 나올 수 있으니 근거를 함께 보고 판단해 주세요.
     조작 요약(브라우저·클릭·커서)은 이번 업데이트 뒤에 올라온 시즌부터 있어요.
   </p>
-  {#if status === 'loading'}
-    <p class="muted" aria-live="polite">불러오는 중…</p>
-  {:else if status === 'error' || !report}
-    <div class="stack" style="gap:8px">
-      <p class="muted" style="margin:0">불러오지 못했어요.</p>
-      <button class="icon-btn self-start" onclick={load}>다시 시도</button>
-    </div>
-  {:else}
-    {@const r = report}
+  <LoadState {status} failText="자동 플레이 현황을 불러오지 못했어요." retry={load}>
+    {@const r = report!}
     <p class="fs-sm" style="margin:0" data-automation-summary>
       {kst(r.generatedAt)} 기준 · 최근 {r.hours}시간 동안 시즌을 올린 <b>{r.profiles.toLocaleString()}</b>개 프로필 중
       <b>{r.suspects.length}</b>곳
@@ -77,7 +73,7 @@
         <li class="bot" data-suspect={s.profile} data-level={s.level}>
           <div class="row" style="justify-content:space-between;gap:8px">
             <b>
-              <span class="lvl {s.level}">{s.level === 'high' ? '높음' : '보통'}</span>
+              <span class="pill {s.level === 'high' ? 'bad' : 'warn'}">{s.level === 'high' ? '높음' : '보통'}</span>
               프로필 {s.profile}
             </b>
             <span class="muted fs-xs">점수 {s.score}</span>
@@ -108,7 +104,7 @@
         <li class="muted">의심되는 흐름이 없어요.</li>
       {/each}
     </ul>
-  {/if}
+  </LoadState>
 </div>
 
 <style>
@@ -116,11 +112,6 @@
   .bot-careers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
   .bots { gap: 10px; }
   .bot { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
-  .lvl { display: inline-block; font-size: 0.75rem; padding: 1px 8px; border-radius: 999px; margin-right: 4px; }
-  .lvl.high { background: var(--bad); color: #fff; }
-  .lvl.medium { background: var(--line); }
-  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
-  .chip { font-size: 0.75rem; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
   .bot-careers li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); font-size: 0.8125rem; }
   .bot-careers small { display: block; }
 </style>

@@ -193,6 +193,15 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       cookie: bot.cookie,
       body: seasonBody(),
     });
+    // 모양이 틀린 요약은 버리고 시즌은 받는다(요약도 지우지 않는다).
+    expect(
+      (
+        await call('PUT', `/v1/careers/${id(1)}/seasons/2028`, {
+          cookie: bot.cookie,
+          body: { ...seasonBody(), signals: { ...signals, clicks: -1, extra: 1 } },
+        })
+      ).status,
+    ).toBe(200);
 
     const res = await call('GET', '/v1/admin/automation?hours=2', { cookie: admin.cookie });
     expect(res.status).toBe(200);
