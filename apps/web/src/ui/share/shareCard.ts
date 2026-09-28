@@ -1,41 +1,54 @@
 // T-10-079 SNS 공유용 한 장 이미지(1080×1350, 인스타 4:5). 은퇴 리포트와 같은 LegendView로 카드 내용을 만들고
 // (shareCardData — 순수 함수라 테스트한다) 캔버스에 그린다(drawShareCard). 은퇴 화면의 공유 이미지 카드(지연 로드)만 쓴다.
-import { careerChapters } from '../../game/retirement-report.js';
+import { styleReport } from '../../game/playStyleReport.js';
+import { careerChapters, honoursRoll } from '../../game/retirement-report.js';
 import { legendTitle } from '../../game/season.js';
 import { POS_LABEL } from '../../game/pos-label.js';
 import { titleById } from '../../game/titles.js';
 import { totals } from '../format.js';
+import { RN_DEFAULT, rnColors } from '../rnStyle.js';
 import type { LegendView } from '../state.svelte.js';
+import { drawJersey, type JerseyArt } from './jerseyCanvas.js';
 
-const CARD_W = 1080;
-const CARD_H = 1350;
-/** 여정에 싣는 구단 수(넘치면 첫 구단과 마지막 구단들만 남기고 가운데를 줄인다). */
-const STOPS = 5;
+export const CARD_W = 1080;
+export const CARD_H = 1350;
+/** 여정에 싣는 구단 수(넘치면 첫 구단과 마지막 구단들만 남기고 가운데를 줄인다). 성향·우승 칸이 있으면 줄어든다. */
+const STOPS = { shared: 3, alone: 5 };
+/** 성향 칸이 없을 때 여정 아래에 싣는 대표 우승·수상 줄 수. */
+const HONOURS = 3;
 
 export interface ShareCardData {
   kicker: string;
   name: string;
   sub: string;
   score: number;
-  /** 등급 · 대표 칭호 · 최고 OVR. */
-  pills: { text: string; gold?: boolean }[];
+  /** 등급 · 대표 칭호 · 영구결번 배지. tail은 좁으면 text 끝을 줄여도 남기는 뒷부분. */
+  pills: { text: string; gold?: boolean; tail?: string }[];
   stats: { value: string; label: string }[];
   /** 커리어 여정(연도 · 구단 · 리그). 가운데를 줄였으면 null 한 칸이 들어간다. */
   stops: ({ years: string; club: string; league: string } | null)[];
+  style: { icon: string; name: string; line: string; best: string | null } | null;
+  /** 성향 칸이 없을 때 여정 아래 대표 우승·수상(발롱도르 → 많이 든 우승 → 개인상). */
+  honours: { count: string; name: string }[];
+  /** 영구결번을 받았으면 점수 옆에 세우는 결번 유니폼. */
+  jersey: JerseyArt | null;
 }
 
 const yy = (from: number, to: number) =>
   from === to ? `${from}` : `${from}–${String(to % 100).padStart(2, '0')}`;
 
-export function shareCardData(v: LegendView): ShareCardData {
+export function shareCardData(v: LegendView, titleId: string | null | undefined): ShareCardData {
   const d = v.d;
   const back = v.pos === 'GK' || v.pos === 'DF';
   const t = d ? totals(d) : null;
-  const span = d?.career.length ? `${d.career[0]!.year}–${d.career.at(-1)!.year}` : null;
-  const main = titleById(v.title);
+  const [y0, y1] = [d?.career[0]?.year, d?.career.at(-1)?.year];
+  const span = y0 == null ? null : y0 === y1 ? `${y0}` : `${y0}–${y1}`;
+  const main = titleById(titleId);
+  const rn = v.rn?.kind === 'granted' ? v.rn : null;
   const pills: ShareCardData['pills'] = [{ text: legendTitle(v.score), gold: true }];
   if (main && main.cat !== 'legend') pills.push({ text: `‘${main.name}’` });
-  pills.push({ text: `최고 OVR ${v.peak}` });
+  if (rn) pills.push({ text: `👑 ${rn.club}`, tail: ` 영구결번 ${rn.number}` });
+  else pills.push({ text: `최고 OVR ${v.peak}` });
 
   const stat = (value: number | undefined, label: string) => ({ value: `${value ?? '—'}`, label });
   const stats = [
@@ -47,12 +60,25 @@ export function shareCardData(v: LegendView): ShareCardData {
     stat(v.totals.trophies, '트로피'),
   ];
 
+  const r = d ? styleReport(d.style, d.career) : null;
   const all = (d ? careerChapters(d) : []).map((c) => ({
     years: yy(c.from, c.to),
     club: c.club,
     league: c.leagues.at(-1)!,
   }));
-  const stops = all.length > STOPS ? [all[0]!, null, ...all.slice(-(STOPS - 2))] : all;
+  const awards = d ? honoursRoll(d.awards) : [];
+  const ballon = (h: { name: string }) => h.name.includes('발롱도르');
+  const honours = r
+    ? []
+    : [
+        ...awards.filter(ballon),
+        ...(d ? honoursRoll(d.trophies) : []),
+        ...awards.filter((h) => !ballon(h)),
+      ]
+        .slice(0, HONOURS)
+        .map((h) => ({ count: `×${h.years.length}`, name: h.name }));
+  const room = r || honours.length ? STOPS.shared : STOPS.alone;
+  const stops = all.length > room ? [all[0]!, null, ...all.slice(-(room - 2))] : all;
   return {
     kicker: `FULL TIME${v.number != null ? ` · NO.${v.number}` : ''}`,
     name: v.name,
@@ -61,6 +87,18 @@ export function shareCardData(v: LegendView): ShareCardData {
     pills,
     stats,
     stops,
+    style: r
+      ? {
+          icon: r.type.icon,
+          name: r.type.name,
+          line: r.type.line,
+          best: r.best ? `성공 확률 ${r.best.pct}%의 ‘${r.best.title}’, 기어이 해냈다` : null,
+        }
+      : null,
+    honours,
+    jersey: rn
+      ? { name: v.name, number: rn.number, colors: rnColors(rn.clubId) ?? RN_DEFAULT }
+      : null,
   };
 }
 
@@ -91,13 +129,17 @@ const F = {
   years: `600 34px ${DISPLAY}`,
   club: `600 34px ${BODY}`,
   league: `400 26px ${BODY}`,
+  styleName: `700 52px ${BODY}`,
   note: `400 30px ${BODY}`,
   brand: `700 36px ${BODY}`,
   tagline: `400 26px ${BODY}`,
   url: `600 36px ${DISPLAY}`,
+  // 결번 유니폼 글자(유니폼 도안 단위 — 그릴 때 유니폼 크기만큼 커진다).
+  jerseyName: `600 10px ${BODY}`,
+  jerseyNumber: `700 50px ${DISPLAY}`,
 };
 const PAD = 80;
-const PILL = { h: 62, padX: 28, gap: 16 };
+const PILL = { h: 62, padX: 28, gap: 16, min: 300 };
 /** 여정 한 줄: 연도는 YEAR_X에 오른쪽 맞춤, 구단·리그는 CLUB_X부터. */
 const YEAR_X = CARD_W / 2 - 190;
 const CLUB_X = CARD_W / 2 - 160;
@@ -110,10 +152,14 @@ export async function loadCardFonts(c: ShareCardData) {
     c.kicker,
     c.name,
     c.sub,
-    ...c.pills.map((p) => p.text),
+    ...c.pills.map((p) => p.text + (p.tail ?? '')),
     ...c.stats.map((s) => s.label),
     ...c.stops.flatMap((s) => (s ? [s.club, s.league] : [])),
-    `오프사이드 ${TAGLINE} offside-lab.com LEGEND SCORE THE JOURNEY 0123456789`,
+    c.style?.name,
+    c.style?.best ?? c.style?.line,
+    c.jersey?.name,
+    ...c.honours.map((h) => h.name),
+    `오프사이드 ${TAGLINE} offside-lab.com LEGEND SCORE THE JOURNEY HONOURS HOW I PLAYED ×0123456789`,
   ].join('');
   await Promise.all(Object.values(F).map((f) => document.fonts.load(f, sample).catch(() => [])));
 }
@@ -145,10 +191,10 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
     return ctx.measureText(s).width;
   };
   /** 자간을 벌린 가운데 정렬 제목(letterSpacing이 없는 브라우저도 같은 모양이 나오게 한 글자씩 놓는다). */
-  const spaced = (s: string, y: number, font: string, color: string, gap: number) => {
+  const spaced = (s: string, y: number, font: string, color: string, gap: number, cx = mid) => {
     ctx.font = font;
     const ws = [...s].map((ch) => ctx.measureText(ch).width);
-    let x = mid - ws.reduce((n, w) => n + w + gap, -gap) / 2;
+    let x = cx - ws.reduce((n, w) => n + w + gap, -gap) / 2;
     [...s].forEach((ch, i) => {
       text(ch, x, y, font, color, { align: 'left' });
       x += ws[i]! + gap;
@@ -178,21 +224,42 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
   ctx.moveTo(0, 430);
   ctx.lineTo(CARD_W, 430);
   ctx.stroke();
+  ctx.textBaseline = 'alphabetic';
 
   // 머리: FULL TIME · 이름 · 포지션/기간
   spaced(c.kicker, 118, F.kicker, C.gold, 7);
   text(c.name, mid, 232, F.name, C.ink, { max: inner });
   text(c.sub, mid, 290, F.sub, C.muted, { max: inner });
 
-  // 레전드 점수
-  text(String(c.score), mid, 500, F.score, C.gold);
-  spaced('LEGEND SCORE', 546, F.label, C.muted, 8);
+  // 레전드 점수(영구결번이면 왼쪽으로 비키고 오른쪽에 결번 유니폼)
+  const scoreX = c.jersey ? mid - 200 : mid;
+  text(String(c.score), scoreX, 500, F.score, C.gold);
+  spaced('LEGEND SCORE', 546, F.label, C.muted, 8, scoreX);
+  if (c.jersey) {
+    drawJersey(ctx, { cx: mid + 215, top: 306, width: 220 }, c.jersey, {
+      name: F.jerseyName,
+      number: F.jerseyNumber,
+    });
+  }
 
-  // 배지: 한 줄에 가운데 정렬(넘치면 뒤 배지부터 뺀다).
+  // 배지: 한 줄에 가운데 정렬. 넘치면 뒷부분(tail)이 있는 마지막 배지는 앞을 줄이고, 그래도 안 되면 뒤 배지부터 뺀다.
   ctx.font = F.pill;
-  let pills = c.pills.map((p) => ({ ...p, w: ctx.measureText(p.text).width + PILL.padX * 2 }));
+  const width = (s: string) => ctx.measureText(s).width;
+  let pills = c.pills.map((p) => ({ ...p, w: width(p.text + (p.tail ?? '')) + PILL.padX * 2 }));
   const rowW = () => pills.reduce((n, p) => n + p.w + PILL.gap, -PILL.gap);
-  while (pills.length > 1 && rowW() > inner) pills = pills.slice(0, -1);
+  while (pills.length > 1 && rowW() > inner) {
+    const last = pills.at(-1)!;
+    const room = last.w - (rowW() - inner);
+    if (last.tail && room >= PILL.min) {
+      last.w = room;
+      let head = last.text;
+      while (head.length > 1 && width(`${head}…${last.tail}`) > room - PILL.padX * 2)
+        head = head.slice(0, -1);
+      last.text = `${head.trimEnd()}…`;
+      break;
+    }
+    pills = pills.slice(0, -1);
+  }
   let px = mid - rowW() / 2;
   for (const p of pills) {
     ctx.beginPath();
@@ -204,7 +271,9 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
       ctx.lineWidth = 2;
       ctx.stroke();
     }
-    text(p.text, px + p.w / 2, 621, F.pill, p.gold ? C.onGold : C.ink, { max: p.w - PILL.padX });
+    text(p.text + (p.tail ?? ''), px + p.w / 2, 621, F.pill, p.gold ? C.onGold : C.ink, {
+      max: p.w - PILL.padX * 2,
+    });
     px += p.w + PILL.gap;
   }
 
@@ -219,12 +288,15 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
     text(s.label, x, sy + 128, F.statLabel, C.muted);
   });
 
-  // 커리어 여정: 기록 아래 줄(top)~바닥 줄(bottom) 사이 가운데에 둔다(짧은 여정이 위에 몰리지 않게).
-  // 덩어리 높이 = 제목 윗선(22) + 제목→첫 줄(56) + 줄 간격들 + 마지막 줄 아랫선(10) = rows + 36.
-  const top = sy + 148;
-  const bottom = CARD_H - 100;
-  const rows = c.stops.reduce((n, s) => n + (s ? 52 : 40), 0);
-  let y = Math.max(top + 58, Math.round((top + bottom - rows - 36) / 2 + 22));
+  // 커리어 여정(+ 성향이 없으면 대표 우승). 성향 칸이 없으면 기록 아래~바닥 줄 사이 가운데에 둔다(짧은 여정이 위에 몰리지 않게).
+  let y = sy + 206;
+  const HONOURS_GAP = 26;
+  if (!c.style) {
+    const rows = c.stops.reduce((n, s) => n + (s ? 52 : 40), 0);
+    const honoursH = c.honours.length ? HONOURS_GAP + 56 + c.honours.length * 52 : 0;
+    const blockH = 22 + 56 + rows + honoursH - 52 + 10; // 제목 글자 윗선 ~ 마지막 줄 아랫선
+    y = Math.max(y, Math.round(sy + 148 + (CARD_H - 100 - (sy + 148) - blockH) / 2 + 22));
+  }
   spaced('THE JOURNEY', y, F.heading, C.gold, 6);
   y += 56;
   for (const s of c.stops) {
@@ -238,9 +310,27 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
     text(s.league, lx, y, F.league, C.muted, { align: 'left', max: CARD_W - PAD - lx });
     y += 52;
   }
+  if (c.honours.length) {
+    y += HONOURS_GAP;
+    spaced('HONOURS', y, F.heading, C.gold, 6);
+    y += 56;
+    for (const h of c.honours) {
+      text(h.count, YEAR_X, y, F.years, C.gold, { align: 'right' });
+      text(h.name, CLUB_X, y, F.club, C.ink, { align: 'left', max: CARD_W - PAD - CLUB_X });
+      y += 52;
+    }
+  }
+
+  // 플레이 성향
+  if (c.style) {
+    y = Math.max(y + 18, 1100);
+    spaced('HOW I PLAYED', y, F.heading, C.gold, 6);
+    text(`${c.style.icon} ${c.style.name}`, mid, y + 70, F.styleName, C.ink, { max: inner });
+    text(c.style.best ?? c.style.line, mid, y + 120, F.note, C.muted, { max: inner });
+  }
 
   // 바닥: 게임 이름과 주소
-  rule(bottom);
+  rule(CARD_H - 100);
   const bw = text('오프사이드', PAD, CARD_H - 44, F.brand, C.ink, { align: 'left' });
   text(TAGLINE, PAD + bw + 24, CARD_H - 46, F.tagline, C.muted, { align: 'left' });
   text('offside-lab.com', CARD_W - PAD, CARD_H - 44, F.url, C.gold, { align: 'right' });
