@@ -13,6 +13,7 @@ const PAY_FIRST = 1.3;
 function styleOf(s: GameState): PlayStyle {
   s.style ??= {
     from: s.age,
+    betOdds: 0,
     ...(Object.fromEntries(STYLE_COUNTERS.map((k) => [k, 0])) as Record<StyleCounter, number>),
   };
   return s.style;
@@ -24,6 +25,7 @@ const bump = (st: PlayStyle, k: StyleCounter) => (st[k] = Math.min(STYLE_COUNT_M
 export function noteChoice(s: GameState, evId: string, p: number, ok: boolean, safe: boolean) {
   const st = styleOf(s);
   if (p >= 1) return bump(st, safe ? 'safe' : 'sure');
+  if (st.bets < STYLE_COUNT_MAX) st.betOdds += Math.round(p * 100);
   bump(st, 'bets');
   if (ok) bump(st, 'betWins');
   if (p <= LONGSHOT) {

@@ -72,6 +72,7 @@ const snapshot = {
   miles: [{ year: 2026, t: '데뷔' }],
   style: {
     from: 18,
+    betOdds: 610,
     bets: 12,
     betWins: 7,
     longshots: 3,

@@ -41,6 +41,7 @@ describe('T-10-077 플레이 성향 카운터', () => {
     noteChoice(g, 'f', 1, true, false);
     expect(g.style).toMatchObject({
       from: 24,
+      betOdds: 160,
       bets: 4,
       betWins: 3,
       longshots: 3,

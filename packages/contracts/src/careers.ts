@@ -210,6 +210,12 @@ const StyleCountSchema = z.number().int().min(0).max(STYLE_COUNT_MAX);
  */
 export const PlayStyleSchema = z.strictObject({
   from: z.number().int().min(0).max(100),
+  /** 확률 선택들의 성공 확률 합(%, 정수). betWins와 견주면 기대보다 운이 좋았는지 나온다. */
+  betOdds: z
+    .number()
+    .int()
+    .min(0)
+    .max(STYLE_COUNT_MAX * 100),
   /** 가장 낮은 확률로 성공한 선택(이벤트 id · 성공 확률). */
   best: z
     .strictObject({ id: EventLogEntrySchema.shape.id, p: z.number().min(0).max(1) })
