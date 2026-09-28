@@ -25,15 +25,3 @@ export const serviceSeason = (id: number): ServiceSeason | undefined =>
 /** now(UTC ISO) 시점에 진행 중인 시즌. 개막 전이거나 마감 뒤면 undefined. */
 export const activeSeason = (now: string): ServiceSeason | undefined =>
   SERVICE_SEASONS.find((s) => s.startsAt <= now && (s.endsAt === null || now < s.endsAt));
-
-/** 아직 개막하지 않은 가장 가까운 시즌. */
-export const upcomingSeason = (now: string): ServiceSeason | undefined =>
-  SERVICE_SEASONS.find((s) => now < s.startsAt);
-
-/** 한국 시각으로 읽는 개막·마감 표기(예: "10월 6일 0시"). */
-export function seasonTimeKst(iso: string): string {
-  const d = new Date(Date.parse(iso) + 9 * 3600_000);
-  const h = d.getUTCHours(),
-    m = d.getUTCMinutes();
-  return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 ${h}시${m ? ` ${m}분` : ''}`;
-}

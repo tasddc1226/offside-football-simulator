@@ -3384,11 +3384,6 @@ body:has(nav.tabs) .toast {
 .hof-seasons {
   margin-top: 4px;
 }
-.hof-seasons .opt {
-  align-items: center;
-  text-align: center;
-  font-weight: 700;
-}
 .hof-season-note b {
   color: var(--ink);
 }

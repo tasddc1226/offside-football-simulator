@@ -209,5 +209,10 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
       cookie: admin.cookie,
     });
     expect(forced.status).toBe(200);
+    const [log] = await ctx.db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.kind, 'BALANCE_ACTIVATED'));
+    expect(JSON.parse(log!.payloadJson)).toMatchObject({ version: v1.version, seasonOverride: 1 });
   });
 });
