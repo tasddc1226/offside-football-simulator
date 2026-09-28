@@ -6,7 +6,6 @@
   import Home from './Home.svelte';
   import Create from './Create.svelte';
   import Game from './Game.svelte';
-  import Hof from './Hof.svelte';
   import UpdateBanner from './UpdateBanner.svelte';
   import NewsBanner from './NewsBanner.svelte';
   import MainNav, { hasMainNav } from './MainNav.svelte';
@@ -22,6 +21,11 @@
   let Owner = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
     if (appState.screen === 'owner' && !Owner) void import('./Owner.svelte').then((m) => (Owner = m.default));
+  });
+  // T-10-090: 기록실(전체 명예의 전당·영구결번 벽)도 처음 열 때 불러온다. 홈의 TOP 3는 그대로 첫 화면에 있다.
+  let Hof = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'hof' && !Hof) void import('./Hof.svelte').then((m) => (Hof = m.default));
   });
   // T-10-012: 확률 도감도 처음 열 때 불러온다(확률 분석 코드 포함).
   let Dex = $state<Component<Record<string, never>> | null>(null);
@@ -81,7 +85,7 @@
     {:else if appState.screen === 'legend'}
       {#if Legend}<Legend />{/if}
     {:else if appState.screen === 'hof'}
-      <Hof />
+      {#if Hof}<Hof />{/if}
     {:else if appState.screen === 'settings'}
       {#if Settings}<Settings />{/if}
     {:else if appState.screen === 'owner'}
