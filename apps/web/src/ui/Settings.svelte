@@ -1,8 +1,9 @@
 <script lang="ts">
-  // 환경설정 화면(T-10-009, T-10-021) — 다크 모드·효과음·선수 이름 공개(T-10-065) 켜기/끄기, 도움말·서비스 정책 링크.
+  // 환경설정 화면(T-10-009, T-10-021) — 다크 모드·효과음·배경음악·선수 이름 공개(T-10-065) 켜기/끄기, 도움말·서비스 정책 링크.
   // 이 설정들은 이 기기에만 저장된다. 계정·구단 꾸미기·운영 도구는 구단주 화면으로 옮겼다(T-10-058).
   import Topbar from './Topbar.svelte';
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
+  import { bgm, setBgm } from './bgm.svelte.js';
   import { isDark, setDark } from './theme.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
@@ -39,6 +40,13 @@
         <span class="muted">버튼을 누를 때 클릭 소리를 내요.</span>
       </div>
       <button class="switch" role="switch" aria-checked={sfx} aria-labelledby="sfx-label" data-setting="sfx" onclick={() => setSfxEnabled((sfx = !sfx))}></button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">
+        <strong id="bgm-label">배경음악</strong>
+        <span class="muted">게임을 진행하는 동안 잔잔한 음악을 틀어요. 게임 화면 위쪽 스피커 버튼으로도 켜고 끌 수 있어요.</span>
+      </div>
+      <button class="switch" role="switch" aria-checked={bgm.on} aria-labelledby="bgm-label" data-setting="bgm" onclick={() => setBgm(!bgm.on)}></button>
     </div>
   </section>
 

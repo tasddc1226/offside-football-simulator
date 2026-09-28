@@ -10,6 +10,7 @@ import { routeSharedCareer } from './ui/legend.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';
 import { watchRetiredNumberAlerts, watchRetiredNumbers } from './ui/retiredNumber.svelte.js';
 import { installClickSound } from './ui/sfx.js';
+import { watchBgm } from './ui/bgm.svelte.js';
 import { installPlaySignals } from './game/playSignals.js';
 import { watchForUpdates } from './ui/update.svelte.js';
 import { watchNews } from './ui/news.svelte.js';
@@ -47,6 +48,8 @@ watchOwnerConflicts();
 watchRetiredNumbers();
 // T-10-076: 서버 어딘가에서 영구결번이 확정되면 어느 화면에 있든 화면 위에 알린다(홈 라이브 소켓을 같이 쓴다).
 watchRetiredNumberAlerts();
+// 배경음악: 켜 두면 게임 화면에서만 튼다(합성기는 처음 틀 때 불러온다).
+watchBgm();
 // T-10-023: 열어 둔 탭이 새 배포를 알아채면 새로고침 배너를 띄운다.
 watchForUpdates();
 // T-10-058: 새 공지사항·릴리즈 노트가 올라오면 화면 위에 알린다.

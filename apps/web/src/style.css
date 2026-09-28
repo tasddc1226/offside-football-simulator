@@ -2218,6 +2218,42 @@ th.n {
   gap: 12px;
   width: 100%;
 }
+.settings-row + .settings-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+/* 게임 화면 상단 배경음악 스위치 — 켜져 있으면 소리 물결이 천천히 숨 쉰다. */
+.icon-btn.bgm-toggle {
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  justify-content: center;
+}
+.bgm-toggle svg {
+  width: 22px;
+  height: 22px;
+}
+.bgm-toggle[aria-checked='true'] {
+  color: var(--pitch);
+  border-color: color-mix(in srgb, var(--pitch) 45%, var(--line));
+}
+.bgm-wave {
+  animation: bgm-wave 1.8s ease-in-out infinite;
+}
+.bgm-wave-2 {
+  animation-delay: 0.3s;
+}
+@keyframes bgm-wave {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bgm-wave {
+    animation: none;
+  }
+}
 .settings-label {
   display: flex;
   flex-direction: column;
