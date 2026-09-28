@@ -43,8 +43,8 @@
   // 장면(data-credit)이 화면 아래쪽 15%를 넘어 들어오면 한 번 올라온다. 그 전에는 자리만 차지하고 숨어 있다
   // (opacity 대신 visibility — 전환 중간 프레임의 axe 명도 대비, T-10-003 참고). 감속 모션이면 처음부터 다 보인다.
   const playing = motionOK;
-  /** 숫자를 세기 시작할 장면들(통산 기록·A매치). */
-  const seen = $state({ highlights: false, national: false });
+  /** 숫자를 세기 시작할 장면들(통산 기록·A매치)과, 스크롤 안내를 거둘 첫 장면(여정). */
+  const seen = $state({ highlights: false, national: false, journey: false });
   // 장면 하나마다 관찰자를 두지 않고 하나로 본다. 들어온 장면은 credit-wait → credit-in으로 바꾸고 관찰을 멈춘다.
   const io = playing
     ? new IntersectionObserver(
@@ -54,7 +54,7 @@
             const el = e.target as HTMLElement;
             el.classList.replace('credit-wait', 'credit-in');
             const key = el.dataset.credit;
-            if (key === 'highlights' || key === 'national') seen[key] = true;
+            if (key === 'highlights' || key === 'national' || key === 'journey') seen[key] = true;
             io!.unobserve(el);
           }
         },
@@ -115,26 +115,26 @@
       <span class="pill">최고 OVR {v.peak}</span>
       {#if rnGranted}<span class="pill pill-rn" data-legend-rn-pill title="{rnGranted.club} 영구결번 {rnGranted.number}번">👑 {rnGranted.club} 영결 {rnGranted.number}</span>{/if}
     </div>
-    {#if playing && !seen.highlights}<div class="film-cue" aria-hidden="true">스크롤해서 커리어 돌아보기<i>↓</i></div>{/if}
+    <!-- 통산 기록은 레전드 점수 바로 아래(첫 화면에서 한눈에). -->
+    <section class="film-stats" data-credit="highlights" aria-label="통산 기록" use:reveal>
+      <div><b><CountUp value={d ? d.career.length : 0} animate={playing} run={seen.highlights} /></b><span>시즌</span></div>
+      <div><b><CountUp value={t ? t.p : v.totals.apps} animate={playing} run={seen.highlights} /></b><span>경기</span></div>
+      {#if back && t}
+        <div><b><CountUp value={t.cs} animate={playing} run={seen.highlights} /></b><span>무실점</span></div>
+        <div><b><CountUp value={t.g + t.a} animate={playing} run={seen.highlights} /></b><span>공격P</span></div>
+      {:else}
+        <div><b><CountUp value={t ? t.g : v.totals.goals} animate={playing} run={seen.highlights} /></b><span>골</span></div>
+        <div><b><CountUp value={t ? t.a : v.totals.assists} animate={playing} run={seen.highlights} /></b><span>도움</span></div>
+      {/if}
+      <div><b><CountUp value={caps} animate={playing} run={seen.highlights} /></b><span>A매치</span></div>
+      <div><b><CountUp value={v.totals.trophies} animate={playing} run={seen.highlights} /></b><span>트로피</span></div>
+    </section>
+    {#if !d}<p class="film-note">시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 드립니다.</p>{/if}
+    {#if playing && !seen.journey}<div class="film-cue" aria-hidden="true">스크롤해서 커리어 돌아보기<i>↓</i></div>{/if}
   </section>
-
-  <section class="film-stats" data-credit="highlights" aria-label="통산 기록" use:reveal>
-    <div><b><CountUp value={d ? d.career.length : 0} animate={playing} run={seen.highlights} /></b><span>시즌</span></div>
-    <div><b><CountUp value={t ? t.p : v.totals.apps} animate={playing} run={seen.highlights} /></b><span>경기</span></div>
-    {#if back && t}
-      <div><b><CountUp value={t.cs} animate={playing} run={seen.highlights} /></b><span>무실점</span></div>
-      <div><b><CountUp value={t.g + t.a} animate={playing} run={seen.highlights} /></b><span>공격P</span></div>
-    {:else}
-      <div><b><CountUp value={t ? t.g : v.totals.goals} animate={playing} run={seen.highlights} /></b><span>골</span></div>
-      <div><b><CountUp value={t ? t.a : v.totals.assists} animate={playing} run={seen.highlights} /></b><span>도움</span></div>
-    {/if}
-    <div><b><CountUp value={caps} animate={playing} run={seen.highlights} /></b><span>A매치</span></div>
-    <div><b><CountUp value={v.totals.trophies} animate={playing} run={seen.highlights} /></b><span>트로피</span></div>
-  </section>
-  {#if !d}<p class="film-note">시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 드립니다.</p>{/if}
 
   {#if chapters.length}
-    <header class="film-head" use:reveal>
+    <header class="film-head" data-credit="journey" use:reveal>
       <div class="eyebrow film-kicker">The Journey</div>
       <h2>커리어 여정</h2>
     </header>

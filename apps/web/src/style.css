@@ -3535,11 +3535,15 @@ button.title-item:hover {
   font-size: 0.75rem;
   color: var(--film-muted);
 }
+.film-open .film-stats {
+  align-self: stretch;
+  margin-top: 18px;
+}
 .film-note {
   color: var(--film-muted);
   font-size: 0.8125rem;
   text-align: center;
-  margin: -24px 0 0;
+  margin: 0;
 }
 .film-head,
 .film-national,
