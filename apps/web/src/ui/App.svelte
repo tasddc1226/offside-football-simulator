@@ -6,8 +6,6 @@
   import Home from './Home.svelte';
   import Create from './Create.svelte';
   import Game from './Game.svelte';
-  import Retired from './Retired.svelte';
-  import Legend from './Legend.svelte';
   import Hof from './Hof.svelte';
   import UpdateBanner from './UpdateBanner.svelte';
   import NewsBanner from './NewsBanner.svelte';
@@ -50,6 +48,15 @@
   $effect(() => {
     if (appState.screen === 'shared' && !Shared) void import('./SharedCareer.svelte').then((m) => (Shared = m.default));
   });
+  // T-10-077: 은퇴 직후 화면·은퇴 상세도 은퇴 리포트(크레딧 연출)가 커서 처음 열 때 불러온다.
+  let Retired = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'retired' && !Retired) void import('./Retired.svelte').then((m) => (Retired = m.default));
+  });
+  let Legend = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'legend' && !Legend) void import('./Legend.svelte').then((m) => (Legend = m.default));
+  });
   // T-10-076: 영구결번 알림 — 첫 소식이 올 때 불러온다.
   let RnAlert = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -70,9 +77,9 @@
     {:else if appState.screen === 'create'}
       <Create />
     {:else if appState.screen === 'retired'}
-      <Retired />
+      {#if Retired}<Retired />{/if}
     {:else if appState.screen === 'legend'}
-      <Legend />
+      {#if Legend}<Legend />{/if}
     {:else if appState.screen === 'hof'}
       <Hof />
     {:else if appState.screen === 'settings'}
