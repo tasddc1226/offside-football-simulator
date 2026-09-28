@@ -1999,6 +1999,133 @@ th.n {
   color: var(--muted);
   margin-top: -8px;
 }
+/* T-10-089 원터치 미니게임 — 장면·게이지·문구 전체가 버튼 하나다. */
+.mg-stage {
+  display: block;
+  position: relative;
+  width: 100%;
+  padding: 0 0 12px;
+  border: 0;
+  border-radius: var(--r3);
+  overflow: hidden;
+  background: var(--pitch);
+  color: var(--on-pitch);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.mg-stage:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.mg-stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mg-grass {
+  fill: var(--pitch);
+}
+.mg-net line {
+  stroke: var(--chalk);
+  stroke-width: 0.8;
+  opacity: 0.28;
+}
+.mg-net.hit {
+  animation: mg-net 0.5s ease-out;
+}
+@keyframes mg-net {
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+.mg-goal {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+.mg-line {
+  stroke: var(--chalk);
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+.mg-line-dot {
+  fill: var(--chalk);
+  opacity: 0.7;
+}
+.mg-keeper {
+  fill: color-mix(in srgb, var(--ink) 70%, var(--pitch));
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.mg-keeper.me {
+  fill: var(--accent);
+}
+.mg-ball {
+  transition: transform 0.38s cubic-bezier(0.25, 0.7, 0.35, 1);
+}
+.mg-ball circle {
+  fill: #fff;
+  stroke: #1d1d1d;
+  stroke-width: 1.5;
+}
+.mg-caption {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  font-family: var(--display);
+  font-size: 1.75rem;
+  font-weight: 800;
+  text-align: center;
+  color: var(--chalk);
+  text-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
+}
+.mg-caption.pop {
+  animation: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.mg-gauge {
+  position: relative;
+  display: block;
+  height: 16px;
+  margin: 10px 14px 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bad) 55%, var(--pitch));
+}
+.mg-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 8px;
+  background: var(--good);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--chalk) 60%, transparent);
+}
+.mg-gauge .needle {
+  width: 4px;
+  top: -5px;
+  bottom: -5px;
+  background: var(--chalk);
+  box-shadow: 0 0 0 2px var(--pitch);
+}
+.mg-tap {
+  display: block;
+  min-height: 1.4em;
+  margin-top: 10px;
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.mg-timing {
+  margin-top: -6px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--muted);
+}
 .chip.pop {
   animation: pop 0.32s cubic-bezier(0.3, 1.6, 0.5, 1) both;
   animation-delay: var(--d, 0ms);

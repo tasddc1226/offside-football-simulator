@@ -201,6 +201,8 @@ export interface EventLogEntry {
   ok?: boolean;
   /** 발생 시점(halves/phase 인덱스). */
   h: number;
+  /** T-10-089 미니게임 탭 정확도(구간 가운데에서 떨어진 정도 ×100, 100 이하 성공). */
+  mg?: number;
 }
 
 /** 이적 시장 한 번의 선택지(season.market·military.milEnlistMarket). */

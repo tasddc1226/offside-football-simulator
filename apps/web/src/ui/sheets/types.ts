@@ -3,6 +3,7 @@
 import type { Chip } from '../sheetState.svelte.js';
 import type { TitleView } from '../../game/titles.js';
 import type { ResolveResult } from '../../game/event-runner.js';
+import type { MgKind } from '../../game/minigame.js';
 
 export type StoryTag = { name: string; stage: number; total: number };
 export type StoryNote = NonNullable<ResolveResult['story']>;
@@ -58,6 +59,7 @@ export type PhaseReport = {
 export function sheetLabel(v: SheetView): string {
   switch (v.kind) {
     case 'judge':
+    case 'minigame':
     case 'eventResult':
       return v.label;
     case 'market':
@@ -87,6 +89,19 @@ export type SheetView =
     }
   | { kind: 'judge'; label: string; p: number; pos: number }
   | {
+      /** T-10-089 원터치 미니게임. 탭하면 onTap(바늘 위치)을 부르고, 판정이 나면 ok가 채워져 결과 장면을 그린다. */
+      kind: 'minigame';
+      label: string;
+      mg: MgKind;
+      /** 초록 구간의 가운데·넓이(게이지 전체 대비 0–1). */
+      center: number;
+      w: number;
+      /** 선택지가 정한 방향(-1 왼쪽 · 0 제자리). null이면 화면에서 무작위로 고른다. */
+      side: -1 | 0 | null;
+      ok: boolean | null;
+      onTap: (x: number) => void;
+    }
+  | {
       kind: 'event';
       eyebrow: string;
       title: string;
@@ -104,6 +119,8 @@ export type SheetView =
       twist: string | null;
       story: StoryNote | null;
       dexNew: string | null;
+      /** T-10-089 미니게임으로 가렸으면 탭 결과 한 줄(timingNote). */
+      timing?: string | null;
     }
   | {
       kind: 'season';

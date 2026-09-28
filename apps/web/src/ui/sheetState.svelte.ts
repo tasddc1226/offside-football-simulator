@@ -7,6 +7,7 @@ import { clamp, ri } from '../game/rng.js';
 import { clubsIn } from '../game/engine.js';
 import type { BlockResult, MatchGame } from '../game/match.js';
 import type { GameState } from '../game/types.js';
+import type { MgKind } from '../game/minigame.js';
 import { motionOK } from './motion.js';
 import type { SheetView, TickerRow } from './sheets/types.js';
 
@@ -202,6 +203,47 @@ export function playBlock(
     void tick().then(tickOnce);
   });
 }
+
+/**
+ * T-10-089 원터치 미니게임. 초록 구간(넓이 w)을 무작위 자리에 두고 탭을 기다린다. 탭하면 settle(바늘 위치,
+ * 구간 가운데)로 판정·저장을 끝낸 뒤, 결과 장면(공이 날아가는 연출)을 보여 주고 settle의 결과를 돌려준다.
+ * 구간 자리는 화면 연출이라 게임 RNG가 아니라 Math.random을 쓴다(게임 RNG 흐름을 바꾸지 않는다).
+ */
+export function playMinigame<R extends { ok: boolean }>(
+  label: string,
+  mg: MgKind,
+  w: number,
+  side: -1 | 0 | null,
+  settle: (x: number, center: number) => R,
+): Promise<R> {
+  return new Promise((resolve) => {
+    sheetState.busy = true;
+    const center = w / 2 + Math.random() * (1 - w);
+    let done = false;
+    showSheet({
+      kind: 'minigame',
+      label,
+      mg,
+      center,
+      w,
+      side,
+      ok: null,
+      onTap: (x) => {
+        if (done) return;
+        done = true;
+        const r = settle(x, center);
+        v.ok = r.ok;
+        setTimeout(() => {
+          sheetState.busy = false;
+          resolve(r);
+        }, MG_SCENE_MS);
+      },
+    });
+    const v = sheetState.view as Extract<SheetView, { kind: 'minigame' }>;
+  });
+}
+/** 탭 뒤 결과 장면(공이 날아가고 멈추는 연출)을 보여 주는 시간. */
+const MG_SCENE_MS = 1300;
 
 /** 성공 확률 막대 위에서 바늘이 흔들리다 실제 판정값(roll)에 멈춘다. */
 export function playJudge(label: string, p: number, roll: number): Promise<void> {
