@@ -122,4 +122,33 @@ describe('T-10-079 공유 이미지 카드 내용', () => {
     expect(styled.stops.map((s) => s?.club ?? '…')).toEqual(['청운고', '…', 'E']);
     expect(styled.style?.name).toBe('타고난 강운');
   });
+
+  it('성향이 없으면 여정 아래에 대표 우승(발롱도르 먼저, 많이 든 순)을 싣고 여정을 3곳으로 줄인다', () => {
+    const clubs = ['청운고', 'A', 'B', 'C', 'D', 'E'];
+    const career = clubs.map((c, i) => season(2026 + i, c, i ? 'K리그1' : '고교 리그'));
+    const d = view(career).d!;
+    const v = view(career, {
+      d: {
+        ...d,
+        trophies: [
+          { year: 2030, t: 'FA컵 우승', club: 'E' },
+          { year: 2030, t: '프리미어리그 우승', club: 'E' },
+          { year: 2031, t: '프리미어리그 우승', club: 'E' },
+        ],
+        awards: [
+          { year: 2030, t: '프리미어리그 득점왕' },
+          { year: 2031, t: '발롱도르' },
+        ],
+      },
+    });
+    const c = shareCardData(v, null);
+    expect(c.honours).toEqual([
+      { count: '×1', name: '발롱도르' },
+      { count: '×2', name: '프리미어리그 우승' },
+      { count: '×1', name: 'FA컵 우승' },
+    ]);
+    expect(c.stops.map((s) => s?.club ?? '…')).toEqual(['청운고', '…', 'E']);
+    // 성향 칸이 있으면 우승 칸은 없다.
+    expect(shareCardData(view(career, { d: { ...v.d!, style } }), null).honours).toEqual([]);
+  });
 });
