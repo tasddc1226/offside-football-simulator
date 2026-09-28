@@ -44,7 +44,7 @@
     <div class="settings-row">
       <div class="settings-label">
         <strong id="bgm-label">배경음악</strong>
-        <span class="muted">게임을 진행하는 동안 잔잔한 음악을 틀어요. 게임 화면 위쪽 스피커 버튼으로도 켜고 끌 수 있어요.</span>
+        <span class="muted">게임 화면과 홈·소식·구단주·설정에서 음악을 틀어요. 화면 위쪽 스피커 버튼으로도 켜고 끌 수 있어요.</span>
       </div>
       <button class="switch" role="switch" aria-checked={bgm.on} aria-labelledby="bgm-label" data-setting="bgm" onclick={() => setBgm(!bgm.on)}></button>
     </div>

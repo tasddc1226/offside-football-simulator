@@ -11,7 +11,6 @@
   import { buzz, dur } from './motion.js';
   import ClubBadge from './ClubBadge.svelte';
   import Topbar from './Topbar.svelte';
-  import BgmToggle from './BgmToggle.svelte';
   import TabIcon from './TabIcon.svelte';
   import SeasonTab from './tabs/SeasonTab.svelte';
   import PlayerTab from './tabs/PlayerTab.svelte';
@@ -62,9 +61,7 @@
 </script>
 
 <div class="wrap" class:has-tabbar={!showAction} class:has-actionbar={showAction}>
-  <Topbar sticky>
-    {#snippet right()}<BgmToggle />{/snippet}
-  </Topbar>
+  <Topbar sticky />
   <section class="player">
     <div class="chalk"></div>
     <div>
