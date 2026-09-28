@@ -6,6 +6,7 @@ import type { LegendSnapshot, PlayStyle, RetiredNumberResult } from '@offside/co
 import type { CareerBalance } from './balance.js';
 import type { AttrKey, Pos, Club, SAVE_VERSION } from './data.js';
 import type { SeasonEndResult } from './season.js';
+import type { MgKind } from './minigame.js';
 
 export interface RngSaveState {
   seed: number;
@@ -201,6 +202,8 @@ export interface EventLogEntry {
   ok?: boolean;
   /** 발생 시점(halves/phase 인덱스). */
   h: number;
+  /** T-10-089 미니게임 탭 정확도(구간 가운데에서 떨어진 정도 ×100, 100 이하 성공). */
+  mg?: number;
 }
 
 /** 이적 시장 한 번의 선택지(season.market·military.milEnlistMarket). */
@@ -335,6 +338,11 @@ export type LegendSource = Pick<
 export interface Choice {
   label: string | ((s: GameState) => string);
   p?: (s: GameState) => number;
+  /**
+   * T-10-089 경기 장면이 있는 선택지(p가 있어야 한다)는 확률 판정 대신 원터치 미니게임으로 가린다.
+   * side: 문구가 방향을 정한 장면(-1 왼쪽 · 0 제자리). 없으면 화면에서 무작위로 고른다.
+   */
+  mg?: { kind: MgKind; side?: -1 | 0 };
   ok: { text: string | ((s: GameState) => string); fx: (s: GameState) => void };
   fail?: { text: string | ((s: GameState) => string); fx: (s: GameState) => void };
 }

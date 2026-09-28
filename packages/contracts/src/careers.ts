@@ -85,6 +85,11 @@ export const EventLogEntrySchema = z.strictObject({
   ok: z.boolean().optional(),
   /** 발생 시점(halves/phase 인덱스). */
   h: z.number().int().min(0).max(1000),
+  /**
+   * T-10-089 원터치 미니게임으로 가린 선택의 탭 정확도 — 구간 가운데에서 떨어진 정도 ×100(100 이하가 성공).
+   * 구간 넓이 조정용 관찰 값이다. 미니게임이 없던 선택·옛 클라이언트는 없다.
+   */
+  mg: z.number().int().min(0).max(1000).optional(),
 });
 export type EventLogEntry = z.infer<typeof EventLogEntrySchema>;
 
