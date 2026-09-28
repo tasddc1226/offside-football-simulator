@@ -41,6 +41,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     profileId: string,
     over: {
       pos?: Pos;
+      dpos?: string | null;
       peak?: number;
       status?: 'active' | 'retired';
       publicName?: string | null;
@@ -53,6 +54,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       id,
       profileId,
       pos: over.pos ?? 'FW',
+      dpos: over.dpos ?? null,
       foot: '오른발',
       type: 'poacher',
       trait: 'late',
@@ -129,6 +131,27 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       dpos: null,
       peak: 88,
       publicName: '공개 선수',
+    });
+  });
+
+  it('T-10-091 세부 포지션이 있는 선수는 제자리에서 적합도 1.0, 다른 세부 자리에서 0.9', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const w = await addCareer(me.profileId, { peak: 80, dpos: 'W' });
+    const data = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(data.players[0]).toMatchObject({ careerId: w, dpos: 'W' });
+    // 4-3-3의 8번 칸은 W, 9번 칸은 ST.
+    const res = await putTeam(me.cookie, { slots: slots(...Array(8).fill(null), w) });
+    const team = PutRes.parse(await res.json()).data.team;
+    expect(team.slots[8]).toMatchObject({ careerId: w, rating: 80, fit: 1 });
+    const moved = await putTeam(me.cookie, {
+      teamId: team.id,
+      slots: slots(...Array(9).fill(null), w),
+    });
+    expect(PutRes.parse(await moved.json()).data.team.slots[9]).toMatchObject({
+      rating: 72,
+      fit: 0.9,
     });
   });
 

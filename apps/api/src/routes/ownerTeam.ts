@@ -23,6 +23,7 @@ import { runBatch } from '../db/repos/batch.js';
 import {
   careersByIds,
   countMatchesSince,
+  dposOf,
   eligibleMap,
   getTeamWithOwner,
   listEligibleCareers,
@@ -175,7 +176,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         {
           id: p.id,
           pos: p.pos,
-          dpos: null,
+          dpos: dposOf(p.dpos),
           peak: p.peak!,
           number: p.number,
           publicName: p.publicName,
@@ -201,8 +202,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         players: players.map((p) => ({
           careerId: p.id,
           pos: p.pos,
-          // T-10-091 careers.dpos가 들어오면 채운다.
-          dpos: null,
+          dpos: dposOf(p.dpos),
           peak: p.peak!,
           number: p.number,
           publicName: p.publicName,

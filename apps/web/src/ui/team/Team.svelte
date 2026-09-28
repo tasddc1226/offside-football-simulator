@@ -440,7 +440,7 @@
           <b class="tm-pick-ovr">{c.rating}</b>
           <span class="tm-opp-info">
             <span>{nameOf(c.p)}</span>
-            <small class="muted">{POS_LABEL[c.p.pos]} · 최고 {c.p.peak} · 적합 {pct(c.fit)}{c.at >= 0 && c.at !== picking ? ` · ${slotCodes[c.at]} 자리에서 바꿈` : ''}</small>
+            <small class="muted">{c.p.dpos ? DETAIL_LABEL[c.p.dpos] : POS_LABEL[c.p.pos]} · 최고 {c.p.peak} · 적합 {pct(c.fit)}{c.at >= 0 && c.at !== picking ? ` · ${slotCodes[c.at]} 자리에서 바꿈` : ''}</small>
           </span>
         </button>
       {:else}

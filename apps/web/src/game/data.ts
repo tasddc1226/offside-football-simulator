@@ -1,6 +1,6 @@
 // ───────── 정적 데이터: 리그 · 클럽 · 포지션 · 유형 · 특성 ─────────
 import { CLUB_NAMES, clubIdOf, LEAGUE_BASE, type LeagueBase } from '@offside/contracts/club-names';
-import { DETAILS_OF, type DetailPos } from '@offside/contracts/positions';
+import { DETAIL_LABEL, DETAILS_OF, type DetailPos } from '@offside/contracts/positions';
 
 /** 세이브(ft_save) 형식 버전. 다른 값이면 저장본을 버리고 새로 시작한다(ui/boot.ts). 형식 변환은 save.ts migrateSave. */
 export const SAVE_VERSION = 1;
@@ -158,7 +158,7 @@ export interface DetailPosDef {
 }
 export const DPOS: Record<DetailPos, DetailPosDef> = {
   ST: {
-    label: '스트라이커',
+    label: DETAIL_LABEL.ST,
     blurb: '박스 안에서 끝낸다',
     role: 'ST',
     mod: {},
@@ -167,7 +167,7 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 0.85,
   },
   W: {
-    label: '윙어',
+    label: DETAIL_LABEL.W,
     blurb: '측면을 찢고 올린다',
     role: 'RW',
     mod: { pac: 4, dri: 3, sho: -3, phy: -4 },
@@ -176,7 +176,7 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 1.35,
   },
   AM: {
-    label: '공격형 미드필더',
+    label: DETAIL_LABEL.AM,
     blurb: '마지막 패스와 중거리',
     role: 'CAM',
     mod: { sho: 3, dri: 2, def: -4, phy: -1 },
@@ -185,7 +185,7 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 1.05,
   },
   CM: {
-    label: '중앙 미드필더',
+    label: DETAIL_LABEL.CM,
     blurb: '공수를 잇는 엔진',
     role: 'CM',
     mod: {},
@@ -194,7 +194,7 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 1,
   },
   DM: {
-    label: '수비형 미드필더',
+    label: DETAIL_LABEL.DM,
     blurb: '수비 앞의 방패',
     role: 'CDM',
     mod: { def: 6, phy: 2, sho: -5, dri: -3 },
@@ -203,7 +203,7 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 1.0,
   },
   CB: {
-    label: '센터백',
+    label: DETAIL_LABEL.CB,
     blurb: '공중볼과 몸싸움',
     role: 'CB',
     mod: { phy: 2, def: 1, pac: -2, pas: -2 },
@@ -212,7 +212,7 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 0.6,
   },
   FB: {
-    label: '풀백',
+    label: DETAIL_LABEL.FB,
     blurb: '오버래핑과 크로스',
     role: 'RB',
     mod: { pac: 5, pas: 3, def: -2, phy: -4 },
@@ -221,7 +221,7 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 1.4,
   },
   GK: {
-    label: '골키퍼',
+    label: DETAIL_LABEL.GK,
     blurb: '마지막 방어선',
     role: 'GK',
     mod: {},

@@ -1,18 +1,11 @@
 import { z } from 'zod';
-import { CareerIdParamSchema, CareerPosSchema } from './careers.js';
+import { CareerIdParamSchema, CareerPosSchema, DetailPosSchema } from './careers.js';
 import { PUBLIC_NAME_CHARS } from './content-filter.js';
-import {
-  DETAIL_POS,
-  FORMATION_IDS,
-  LINEUP_SIZE,
-  TEAM_NAME_MAX,
-  TEAM_NAME_MIN,
-} from './owner-team.js';
+import { FORMATION_IDS, LINEUP_SIZE, TEAM_NAME_MAX, TEAM_NAME_MIN } from './owner-team.js';
 import { IsoUtcSchema } from './primitives.js';
 
 // T-10-092 구단주 팀(팀 슬롯). 값(포메이션·적합도)은 zod 없는 `./owner-team.ts`에 있다.
 
-export const DetailPosSchema = z.enum(DETAIL_POS);
 export const FormationIdSchema = z.enum(FORMATION_IDS);
 
 /** 팀 이름: 2~12자, 제어 문자·꺾쇠 없이. 욕설·링크·운영자 사칭은 서버가 따로 거른다. */

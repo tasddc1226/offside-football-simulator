@@ -1,4 +1,5 @@
 import type { FormationId } from '@offside/contracts/owner-team';
+import { DETAIL_POSITIONS, type DetailPos } from '@offside/contracts/positions';
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { careers, ownerTeams, profiles, teamMatches } from '../schema.js';
@@ -8,6 +9,10 @@ import type { LineupCareer, PlayerRef } from '../../team/sim.js';
 
 export type OwnerTeamRow = typeof ownerTeams.$inferSelect;
 export type TeamMatchRow = typeof teamMatches.$inferSelect;
+
+/** careers.dpos(TEXT) → 세부 포지션. 프리시즌 선수·옛 기록은 null. */
+export const dposOf = (v: string | null): DetailPos | null =>
+  (DETAIL_POSITIONS as readonly string[]).includes(v ?? '') ? (v as DetailPos) : null;
 
 /** 팀 행의 선발 11자리(커리어 id, 빈 자리 null). */
 export const slotIdsOf = (row: Pick<OwnerTeamRow, 'slotsJson'>): (string | null)[] =>
@@ -28,6 +33,7 @@ export function listEligibleCareers(db: Db, profileId: string, limit = 300) {
     .select({
       id: careers.id,
       pos: careers.pos,
+      dpos: careers.dpos,
       peak: careers.peak,
       number: careers.shirtNumber,
       publicName: careers.publicName,
@@ -58,6 +64,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       profileId: careers.profileId,
       status: careers.status,
       pos: careers.pos,
+      dpos: careers.dpos,
       peak: careers.peak,
       number: careers.shirtNumber,
       publicName: careers.publicName,
@@ -72,11 +79,10 @@ export function eligibleMap(rows: readonly CareerLite[], ownerId: string) {
   const map = new Map<string, LineupCareer>();
   for (const r of rows) {
     if (r.profileId !== ownerId || r.status !== 'retired' || r.peak === null) continue;
-    // T-10-091 careers.dpos가 들어오면 여기서 읽는다.
     map.set(r.id, {
       id: r.id,
       pos: r.pos,
-      dpos: null,
+      dpos: dposOf(r.dpos),
       peak: r.peak,
       number: r.number,
       publicName: r.publicName,

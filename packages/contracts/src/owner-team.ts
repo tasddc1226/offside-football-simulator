@@ -6,6 +6,8 @@
  * 채운다 — 은퇴 선수가 11명이 안 되는 구단주도 한 명만 넣으면 경기할 수 있다.
  */
 
+import { DETAIL_GROUP, type DetailPos, type PosGroup } from './positions.js';
+
 /** 구단주 한 명이 가질 수 있는 팀 수. 나중에 늘릴 때 이 값만 바꾼다. */
 export const TEAM_SLOTS = 1;
 /** 팀 이름 길이(앞뒤 공백 제외). */
@@ -19,33 +21,8 @@ export const TEAM_MATCHES_PER_DAY = 10;
 /** 한 팀의 선발 인원. */
 export const LINEUP_SIZE = 11;
 
-export type PosGroup = 'FW' | 'MF' | 'DF' | 'GK';
-
-/** 세부 포지션(원작의 8개). 커리어의 dpos(T-10-091)와 같은 코드를 쓴다. */
-export const DETAIL_POS = ['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST'] as const;
-export type DetailPos = (typeof DETAIL_POS)[number];
-
-export const DETAIL_GROUP: Record<DetailPos, PosGroup> = {
-  GK: 'GK',
-  CB: 'DF',
-  FB: 'DF',
-  DM: 'MF',
-  CM: 'MF',
-  AM: 'MF',
-  W: 'FW',
-  ST: 'FW',
-};
-
-export const DETAIL_LABEL: Record<DetailPos, string> = {
-  GK: '골키퍼',
-  CB: '센터백',
-  FB: '풀백',
-  DM: '수비형 미드필더',
-  CM: '중앙 미드필더',
-  AM: '공격형 미드필더',
-  W: '윙어',
-  ST: '스트라이커',
-};
+// 세부 포지션(T-10-091)은 커리어의 dpos와 같은 정의를 쓴다.
+export { DETAIL_GROUP, DETAIL_LABEL, type DetailPos, type PosGroup } from './positions.js';
 
 export const FORMATION_IDS = ['4-3-3', '4-4-2', '3-5-2'] as const;
 export type FormationId = (typeof FORMATION_IDS)[number];

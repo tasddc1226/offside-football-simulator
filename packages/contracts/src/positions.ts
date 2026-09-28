@@ -24,6 +24,17 @@ export const DETAIL_GROUP: Record<DetailPos, PosGroup> = {
   ST: 'FW',
 };
 
+export const DETAIL_LABEL: Record<DetailPos, string> = {
+  GK: '골키퍼',
+  CB: '센터백',
+  FB: '풀백',
+  DM: '수비형 미드필더',
+  CM: '중앙 미드필더',
+  AM: '공격형 미드필더',
+  W: '윙어',
+  ST: '스트라이커',
+};
+
 /** 큰 포지션 안의 세부 포지션(선수 생성 화면 순서). */
 export const DETAILS_OF: Record<PosGroup, readonly DetailPos[]> = {
   FW: ['ST', 'W'],
