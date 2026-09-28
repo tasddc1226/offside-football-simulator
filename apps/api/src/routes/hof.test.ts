@@ -348,4 +348,63 @@ describe('공개 명예의 전당 /v1/hof', () => {
     });
     expect(res.status).toBe(400);
   });
+
+  // T-10-081 T-10-066 이전 은퇴(구단 id 없음) 중 유저가 이름을 바꾼 구단은 그 유저의 구단 꾸미기로 id를 되찾는다.
+  it('구단 id 없는 옛 기록은 올린 유저가 바꾼 구단 이름으로 id를 채운다', async () => {
+    const renamed = '버밍엄 시티';
+    await putJson(ctx, cookie, '/v1/club-custom', {
+      clubs: {
+        'pl-7': { name: renamed },
+        'pl-3': { name: '겹친 이름' },
+        'pl-4': { name: '겹친 이름' },
+      },
+      updatedAt: '2026-09-25T00:00:00.000Z',
+    });
+    await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/seasons/2027`, {
+      ...season,
+      season: { ...season.season, age: 19, club: renamed, league: '프리미어리그' },
+    });
+    await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
+      ...summary,
+      lastClub: renamed,
+      publicName: null,
+      snapshot: {
+        ...snapshot,
+        // 옛 클라이언트: 구단 id 없이 이름만(JSON으로 가면 undefined는 빠진다).
+        lastClubId: undefined,
+        lastClub: renamed,
+        career: [
+          { ...snapshot.career[0]!, clubId: undefined },
+          { ...snapshot.career[0]!, year: 2027, club: renamed, clubId: undefined },
+        ],
+        trophies: [{ year: 2027, t: '리그 우승', club: renamed }],
+      },
+    });
+
+    const list = successEnvelope(HofListResponseSchema).parse(
+      await (await createApp().request('/v1/hof', {}, ctx.env)).json(),
+    ).data;
+    expect(list.entries[0]?.lastClubId).toBe('pl-7');
+    const detail = successEnvelope(HofDetailResponseSchema).parse(
+      await (await createApp().request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).json(),
+    ).data;
+    expect(detail.snapshot?.lastClubId).toBe('pl-7');
+    // 바꾸지 않은 이름('테스트 FC')은 웹이 이름으로 찾으므로 그대로 둔다.
+    expect(detail.snapshot?.career.map((r) => r.clubId)).toEqual([undefined, 'pl-7']);
+    expect(detail.snapshot?.trophies[0]?.clubId).toBe('pl-7');
+    const seasons = await ctx.env.DB.prepare(
+      'select club, club_id as clubId from career_seasons where career_id = ? order by year',
+    )
+      .bind(CAREER_ID)
+      .all();
+    expect(seasons.results).toEqual([
+      { club: '테스트 FC', clubId: null },
+      { club: renamed, clubId: 'pl-7' },
+    ]);
+    // 한 번 끝나면 다시 훑지 않는다.
+    const meta = await ctx.env.DB.prepare(
+      "select value from app_meta where key = 'club_ids_backfill'",
+    ).first();
+    expect(meta).toEqual({ value: '1' });
+  });
 });
