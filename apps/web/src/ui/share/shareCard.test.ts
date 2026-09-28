@@ -3,6 +3,7 @@ import type { PlayStyle } from '@offside/contracts';
 import { STYLE_COUNTERS } from '@offside/contracts/play-style';
 import type { CareerRecord, LegendSource } from '../../game/types.js';
 import type { LegendView } from '../state.svelte.js';
+import { RN_DEFAULT, rnColors } from '../rnStyle.js';
 import { shareCardData } from './shareCard.js';
 
 const season = (
@@ -91,10 +92,19 @@ describe('T-10-079 공유 이미지 카드 내용', () => {
     const v = view([season(2027, 'A', 'K리그1')], {
       rn: { kind: 'granted', clubId: 'k1-1', club: 'A', number: 17, seq: 1 },
     });
-    expect(shareCardData(v, null).pills.map((p) => p.text)).toEqual([
-      '월드클래스 레전드',
-      '👑 A 영구결번 17',
-    ]);
+    const c = shareCardData(v, null);
+    expect(c.pills.map((p) => p.text)).toEqual(['월드클래스 레전드', '👑 A 영구결번 17']);
+    // 점수 옆 결번 유니폼 — 구단 엠블럼 색.
+    expect(c.jersey).toMatchObject({ name: v.name, number: 17, colors: rnColors('k1-1') });
+    expect(c.jersey?.colors.base).toMatch(/^#/);
+  });
+
+  it('결번이 없으면 유니폼 없이, 모르는 구단의 결번은 기본 색 유니폼', () => {
+    expect(shareCardData(view([season(2027, 'A', 'K리그1')]), null).jersey).toBeNull();
+    const v = view([season(2027, 'A', 'K리그1')], {
+      rn: { kind: 'granted', clubId: 'zz-9', club: 'A', number: 3, seq: 2 },
+    });
+    expect(shareCardData(v, null).jersey?.colors).toEqual(RN_DEFAULT);
   });
 
   it('구단이 많으면 첫 구단과 마지막 구단만 남기고, 성향이 있으면 성향 칸을 채운다', () => {

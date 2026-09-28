@@ -6,7 +6,9 @@ import { legendTitle } from '../../game/season.js';
 import { POS_LABEL } from '../../game/pos-label.js';
 import { titleById } from '../../game/titles.js';
 import { totals } from '../format.js';
+import { RN_DEFAULT, rnColors } from '../rnStyle.js';
 import type { LegendView } from '../state.svelte.js';
+import { drawJersey, type JerseyArt } from './jerseyCanvas.js';
 
 export const CARD_W = 1080;
 export const CARD_H = 1350;
@@ -24,6 +26,8 @@ export interface ShareCardData {
   /** 커리어 여정(연도 · 구단 · 리그). 가운데를 줄였으면 null 한 칸이 들어간다. */
   stops: ({ years: string; club: string; league: string } | null)[];
   style: { icon: string; name: string; line: string; best: string | null } | null;
+  /** 영구결번을 받았으면 점수 옆에 세우는 결번 유니폼. */
+  jersey: JerseyArt | null;
 }
 
 const yy = (from: number, to: number) =>
@@ -75,6 +79,9 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
           best: r.best ? `성공 확률 ${r.best.pct}%의 ‘${r.best.title}’, 기어이 해냈다` : null,
         }
       : null,
+    jersey: rn
+      ? { name: v.name, number: rn.number, colors: rnColors(rn.clubId) ?? RN_DEFAULT }
+      : null,
   };
 }
 
@@ -110,6 +117,9 @@ const F = {
   brand: `700 36px ${BODY}`,
   tagline: `400 26px ${BODY}`,
   url: `600 36px ${DISPLAY}`,
+  // 결번 유니폼 글자(유니폼 도안 단위 — 그릴 때 유니폼 크기만큼 커진다).
+  jerseyName: `600 10px ${BODY}`,
+  jerseyNumber: `700 50px ${DISPLAY}`,
 };
 const PAD = 80;
 const PILL = { h: 62, padX: 28, gap: 16 };
@@ -130,6 +140,7 @@ export async function loadCardFonts(c: ShareCardData) {
     ...c.stops.flatMap((s) => (s ? [s.club, s.league] : [])),
     c.style?.name,
     c.style?.best ?? c.style?.line,
+    c.jersey?.name,
     `오프사이드 ${TAGLINE} offside-lab.com LEGEND SCORE THE JOURNEY HOW I PLAYED 0123456789`,
   ].join('');
   await Promise.all(Object.values(F).map((f) => document.fonts.load(f, sample).catch(() => [])));
@@ -162,10 +173,10 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
     return ctx.measureText(s).width;
   };
   /** 자간을 벌린 가운데 정렬 제목(letterSpacing이 없는 브라우저도 같은 모양이 나오게 한 글자씩 놓는다). */
-  const spaced = (s: string, y: number, font: string, color: string, gap: number) => {
+  const spaced = (s: string, y: number, font: string, color: string, gap: number, cx = mid) => {
     ctx.font = font;
     const ws = [...s].map((ch) => ctx.measureText(ch).width);
-    let x = mid - ws.reduce((n, w) => n + w + gap, -gap) / 2;
+    let x = cx - ws.reduce((n, w) => n + w + gap, -gap) / 2;
     [...s].forEach((ch, i) => {
       text(ch, x, y, font, color, { align: 'left' });
       x += ws[i]! + gap;
@@ -202,9 +213,16 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
   text(c.name, mid, 232, F.name, C.ink, { max: inner });
   text(c.sub, mid, 290, F.sub, C.muted, { max: inner });
 
-  // 레전드 점수
-  text(String(c.score), mid, 500, F.score, C.gold);
-  spaced('LEGEND SCORE', 546, F.label, C.muted, 8);
+  // 레전드 점수(영구결번이면 왼쪽으로 비키고 오른쪽에 결번 유니폼)
+  const scoreX = c.jersey ? mid - 200 : mid;
+  text(String(c.score), scoreX, 500, F.score, C.gold);
+  spaced('LEGEND SCORE', 546, F.label, C.muted, 8, scoreX);
+  if (c.jersey) {
+    drawJersey(ctx, { cx: mid + 225, top: 284, width: 262 }, c.jersey, {
+      name: F.jerseyName,
+      number: F.jerseyNumber,
+    });
+  }
 
   // 배지: 한 줄에 가운데 정렬(넘치면 뒤 배지부터 뺀다).
   ctx.font = F.pill;
