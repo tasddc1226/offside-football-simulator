@@ -44,7 +44,7 @@
     <div class="settings-row">
       <div class="settings-label">
         <strong id="bgm-label">배경음악</strong>
-        <span class="muted">게임 화면과 홈·소식·구단주·설정에서 음악을 틀어요. 화면 위쪽 스피커 버튼으로도 켜고 끌 수 있어요.</span>
+        <span class="muted">게임을 하는 동안 음악을 틀어요. 기록실과 선수 상세에서는 다른 곡이 흘러요. 화면 위쪽 스피커 버튼으로도 켜고 끌 수 있어요.</span>
       </div>
       <button class="switch" role="switch" aria-checked={bgm.on} aria-labelledby="bgm-label" data-setting="bgm" onclick={() => setBgm(!bgm.on)}></button>
     </div>
@@ -62,7 +62,9 @@
       />
       <output for="bgm-volume" class="num">{bgm.volume}%</output>
     </div>
-    <p class="muted fs-xs settings-credit">음악: Happy Wheels — <a href="https://ludoloonstudio.itch.io/happy-wheels-free-music" target="_blank" rel="noopener">LudoLoon Studio</a></p>
+    <p class="muted fs-xs settings-credit">
+      음악: Happy Wheels — <a href="https://ludoloonstudio.itch.io/happy-wheels-free-music" target="_blank" rel="noopener">LudoLoon Studio</a> · Deep House Lounge — <a href="https://pixabay.com/users/tunetank-50201703/" target="_blank" rel="noopener">Tunetank</a>
+    </p>
   </section>
 
   <section class="card settings-card">

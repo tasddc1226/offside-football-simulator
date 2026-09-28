@@ -1,16 +1,26 @@
-// 배경음악 켜기/끄기. 기본은 꺼짐이고 이 기기에만 저장된다(ft_bgm). 게임 화면과 기록실을 뺀 하단 메뉴 화면에서,
-// 탭이 보일 때만 튼다. 이 화면들 사이를 오가는 동안은 끊지 않고 이어서 튼다. 재생기(bgmEngine.ts)와 음원은 처음
-// 틀 때 불러온다. 브라우저는 사용자 동작 없이 소리를 못 내게 하므로, 켜 둔 채 새로 열었으면 첫 터치에 시작한다.
+// 배경음악 켜기/끄기. 기본은 꺼짐이고 이 기기에만 저장된다(ft_bgm). 화면마다 곡이 정해져 있고(TRACK_OF), 탭이 보일
+// 때만 튼다. 같은 곡의 화면끼리 오가는 동안은 끊지 않고 이어서 튼다. 재생기(bgmEngine.ts)와 음원은 처음 틀 때
+// 불러온다. 브라우저는 사용자 동작 없이 소리를 못 내게 하므로, 켜 둔 채 새로 열었으면 첫 터치에 시작한다.
 import { loadKey, saveKey } from '../game/season.js';
-import type { Bgm } from './bgmEngine.js';
+import type { Bgm, BgmTrack } from './bgmEngine.js';
 import { appState, type Screen } from './state.svelte.js';
 
 const KEY = 'ft_bgm';
 const VOLUME_KEY = 'ft_bgm_volume';
 /** 설정의 음량 슬라이더 기본값(0–100). */
 const DEFAULT_VOLUME = 70;
-/** 배경음악을 트는 화면 — 게임(모든 탭)과 기록실을 뺀 하단 메뉴 화면. */
-export const BGM_SCREENS: readonly Screen[] = ['game', 'home', 'board', 'owner', 'settings'];
+/** 화면 → 곡. 게임(모든 탭)과 홈·소식·구단주·설정은 main, 기록실과 선수 상세는 records. 없는 화면에선 멈춘다. */
+const TRACK_OF: Partial<Record<Screen, BgmTrack>> = {
+  game: 'main',
+  home: 'main',
+  board: 'main',
+  owner: 'main',
+  settings: 'main',
+  hof: 'records',
+  legend: 'records',
+};
+/** 배경음악을 트는 화면인지(상단 스위치를 보인다). */
+export const hasBgm = (s: Screen) => s in TRACK_OF;
 
 export const bgm = $state({
   on: loadKey<boolean>(KEY) ?? false,
@@ -20,7 +30,8 @@ export const bgm = $state({
 
 let engine: Promise<Bgm | null> | null = null;
 
-const wanted = () => bgm.on && BGM_SCREENS.includes(appState.screen) && !document.hidden;
+/** 지금 틀 곡. 꺼져 있거나 탭이 가려졌거나 음악 없는 화면이면 null. */
+const wanted = () => (bgm.on && !document.hidden && TRACK_OF[appState.screen]) || null;
 
 function sync() {
   if (wanted()) {
@@ -28,7 +39,11 @@ function sync() {
       (m) => m.createBgm(),
       () => null, // 오디오를 못 쓰는 환경·청크 실패는 조용히 넘어간다.
     );
-    void engine.then((e) => (wanted() ? e?.play(bgm.volume / 100) : e?.pause()));
+    void engine.then((e) => {
+      const track = wanted();
+      if (track) e?.play(track, bgm.volume / 100);
+      else e?.pause();
+    });
   } else void engine?.then((e) => e?.pause());
 }
 
