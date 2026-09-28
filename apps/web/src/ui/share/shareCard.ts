@@ -1,8 +1,8 @@
 // T-10-079 SNS 공유용 한 장 이미지(1080×1350, 인스타 4:5). 은퇴 리포트와 같은 LegendView로 카드 내용을 만들고
 // (shareCardData — 순수 함수라 테스트한다) 캔버스에 그린다(drawShareCard). 은퇴 화면의 공유 이미지 카드(지연 로드)만 쓴다.
-import { legendBand } from '../../game/legend-bands.js';
 import { styleReport } from '../../game/playStyleReport.js';
 import { careerChapters } from '../../game/retirement-report.js';
+import { legendTitle } from '../../game/season.js';
 import { POS_LABEL } from '../../game/pos-label.js';
 import { titleById } from '../../game/titles.js';
 import { totals } from '../format.js';
@@ -36,23 +36,20 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
   const span = d?.career.length ? `${d.career[0]!.year}–${d.career.at(-1)!.year}` : null;
   const main = titleById(titleId);
   const rn = v.rn?.kind === 'granted' ? v.rn : null;
-  const pills: ShareCardData['pills'] = [{ text: legendBand(v.score).name, gold: true }];
+  const pills: ShareCardData['pills'] = [{ text: legendTitle(v.score), gold: true }];
   if (main && main.cat !== 'legend') pills.push({ text: `‘${main.name}’` });
   if (rn) pills.push({ text: `👑 ${rn.club} 영구결번 ${rn.number}` });
   else pills.push({ text: `최고 OVR ${v.peak}` });
 
-  const apps = t?.p ?? v.totals.apps;
+  const stat = (value: number | undefined, label: string) => ({ value: `${value ?? '—'}`, label });
   const stats = [
-    { value: String(d?.career.length ?? '—'), label: '시즌' },
-    { value: String(apps), label: '경기' },
-    back
-      ? { value: String(t?.cs ?? '—'), label: '무실점' }
-      : { value: `${t?.g ?? v.totals.goals}`, label: '골' },
-    back
-      ? { value: String(v.totals.trophies), label: '트로피' }
-      : { value: `${t?.a ?? v.totals.assists}`, label: '도움' },
+    stat(d?.career.length, '시즌'),
+    stat(t?.p ?? v.totals.apps, '경기'),
+    ...(back
+      ? [stat(t?.cs, '무실점')]
+      : [stat(t?.g ?? v.totals.goals, '골'), stat(t?.a ?? v.totals.assists, '도움')]),
+    stat(v.totals.trophies, '트로피'),
   ];
-  if (!back) stats.push({ value: String(v.totals.trophies), label: '트로피' });
 
   const r = d ? styleReport(d.style, d.career) : null;
   const all = (d ? careerChapters(d) : []).map((c) => ({
@@ -88,60 +85,54 @@ const C = {
   ink: '#eef4ef',
   muted: '#a9b8ae',
   gold: '#f0b437',
+  onGold: '#1a1204',
   line: 'rgba(238, 244, 239, 0.16)',
   chip: 'rgba(238, 244, 239, 0.08)',
 };
 const DISPLAY = "'Barlow Condensed', 'Arial Narrow', sans-serif";
 const BODY = "'IBM Plex Sans KR', system-ui, sans-serif";
+/** 카드에 쓰는 글꼴 전부 — 그리기 전에 이 목록 그대로 불러온다(loadCardFonts). */
+const F = {
+  kicker: `600 34px ${DISPLAY}`,
+  name: `700 104px ${BODY}`,
+  sub: `400 34px ${BODY}`,
+  score: `700 210px ${DISPLAY}`,
+  label: `600 30px ${DISPLAY}`,
+  heading: `600 28px ${DISPLAY}`,
+  pill: `600 32px ${BODY}`,
+  statValue: `700 76px ${DISPLAY}`,
+  statLabel: `400 28px ${BODY}`,
+  years: `600 34px ${DISPLAY}`,
+  club: `600 34px ${BODY}`,
+  league: `400 26px ${BODY}`,
+  styleName: `700 52px ${BODY}`,
+  note: `400 30px ${BODY}`,
+  brand: `700 36px ${BODY}`,
+  tagline: `400 26px ${BODY}`,
+  url: `600 36px ${DISPLAY}`,
+};
 const PAD = 80;
+const PILL = { h: 62, padX: 28, gap: 16 };
+/** 여정 한 줄: 연도는 YEAR_X에 오른쪽 맞춤, 구단·리그는 CLUB_X부터. */
+const YEAR_X = CARD_W / 2 - 190;
+const CLUB_X = CARD_W / 2 - 160;
+const TAGLINE = '고3부터 은퇴까지, 한 선수의 인생';
 
-/** 폭을 넘으면 끝을 '…'로 줄인다. */
-function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
-  if (ctx.measureText(text).width <= max) return text;
-  let s = text;
-  while (s.length > 1 && ctx.measureText(`${s}…`).width > max) s = s.slice(0, -1);
-  return `${s}…`;
-}
-
-function spaced(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, gap: number) {
-  // letterSpacing을 지원하지 않는 브라우저도 같은 모양이 나오게 한 글자씩 놓는다(가운데 정렬 기준).
-  const w = [...text].reduce((n, ch) => n + ctx.measureText(ch).width + gap, -gap);
-  let cx = x - w / 2;
-  ctx.textAlign = 'left';
-  for (const ch of text) {
-    ctx.fillText(ch, cx, y);
-    cx += ctx.measureText(ch).width + gap;
-  }
-  ctx.textAlign = 'center';
-}
-
-function pill(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  gold: boolean,
-) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, h / 2);
-  ctx.fillStyle = gold ? C.gold : C.chip;
-  ctx.fill();
-  if (!gold) {
-    ctx.strokeStyle = C.line;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-}
-
-/** 카드에 쓰는 웹폰트를 기다린다(늦게 오면 대체 글꼴로 그려진다). */
-export async function loadCardFonts() {
+/** 카드에 쓰는 웹폰트를 카드 글자로 불러온다(한글 폰트는 글자 범위별로 나뉘어 있어 실제 글자를 넘겨야 다 온다). */
+export async function loadCardFonts(c: ShareCardData) {
   if (!document.fonts) return;
-  await Promise.all(
-    [`700 120px ${DISPLAY}`, `600 40px ${DISPLAY}`, `700 80px ${BODY}`, `400 32px ${BODY}`].map(
-      (f) => document.fonts.load(f, '가A1').catch(() => []),
-    ),
-  );
+  const sample = [
+    c.kicker,
+    c.name,
+    c.sub,
+    ...c.pills.map((p) => p.text),
+    ...c.stats.map((s) => s.label),
+    ...c.stops.flatMap((s) => (s ? [s.club, s.league] : [])),
+    c.style?.name,
+    c.style?.best ?? c.style?.line,
+    `오프사이드 ${TAGLINE} offside-lab.com LEGEND SCORE THE JOURNEY HOW I PLAYED 0123456789`,
+  ].join('');
+  await Promise.all(Object.values(F).map((f) => document.fonts.load(f, sample).catch(() => [])));
 }
 
 export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
@@ -150,6 +141,40 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
   const ctx = canvas.getContext('2d')!;
   const mid = CARD_W / 2;
   const inner = CARD_W - PAD * 2;
+
+  /** 글꼴·색·정렬을 정하고 한 줄 쓴다. max를 주면 넘칠 때 끝을 '…'로 줄인다. 쓴 폭을 돌려준다. */
+  const text = (
+    s: string,
+    x: number,
+    y: number,
+    font: string,
+    color: string,
+    { align = 'center', max }: { align?: CanvasTextAlign; max?: number } = {},
+  ) => {
+    ctx.font = font;
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    if (max != null && ctx.measureText(s).width > max) {
+      while (s.length > 1 && ctx.measureText(`${s}…`).width > max) s = s.slice(0, -1);
+      s = `${s}…`;
+    }
+    ctx.fillText(s, x, y);
+    return ctx.measureText(s).width;
+  };
+  /** 자간을 벌린 가운데 정렬 제목(letterSpacing이 없는 브라우저도 같은 모양이 나오게 한 글자씩 놓는다). */
+  const spaced = (s: string, y: number, font: string, color: string, gap: number) => {
+    ctx.font = font;
+    const ws = [...s].map((ch) => ctx.measureText(ch).width);
+    let x = mid - ws.reduce((n, w) => n + w + gap, -gap) / 2;
+    [...s].forEach((ch, i) => {
+      text(ch, x, y, font, color, { align: 'left' });
+      x += ws[i]! + gap;
+    });
+  };
+  const rule = (y: number) => {
+    ctx.fillStyle = C.line;
+    ctx.fillRect(PAD, y, inner, 2);
+  };
 
   // 배경: 은퇴 크레딧과 같은 밤 경기장 톤 + 위쪽 금빛 조명 + 센터 서클.
   const bg = ctx.createLinearGradient(0, 0, 0, CARD_H);
@@ -170,127 +195,77 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
   ctx.moveTo(0, 430);
   ctx.lineTo(CARD_W, 430);
   ctx.stroke();
-
-  ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
 
   // 머리: FULL TIME · 이름 · 포지션/기간
-  ctx.fillStyle = C.gold;
-  ctx.font = `600 34px ${DISPLAY}`;
-  spaced(ctx, c.kicker, mid, 118, 7);
-  ctx.fillStyle = C.ink;
-  ctx.font = `700 104px ${BODY}`;
-  ctx.fillText(fit(ctx, c.name, inner), mid, 232);
-  ctx.fillStyle = C.muted;
-  ctx.font = `400 34px ${BODY}`;
-  ctx.fillText(fit(ctx, c.sub, inner), mid, 290);
+  spaced(c.kicker, 118, F.kicker, C.gold, 7);
+  text(c.name, mid, 232, F.name, C.ink, { max: inner });
+  text(c.sub, mid, 290, F.sub, C.muted, { max: inner });
 
   // 레전드 점수
-  ctx.fillStyle = C.gold;
-  ctx.font = `700 210px ${DISPLAY}`;
-  ctx.fillText(String(c.score), mid, 500);
-  ctx.fillStyle = C.muted;
-  ctx.font = `600 30px ${DISPLAY}`;
-  spaced(ctx, 'LEGEND SCORE', mid, 546, 8);
+  text(String(c.score), mid, 500, F.score, C.gold);
+  spaced('LEGEND SCORE', 546, F.label, C.muted, 8);
 
   // 배지: 한 줄에 가운데 정렬(넘치면 뒤 배지부터 뺀다).
-  ctx.font = `600 32px ${BODY}`;
-  const padX = 28;
-  let pills = c.pills.map((p) => ({ ...p, w: ctx.measureText(p.text).width + padX * 2 }));
-  while (pills.length > 1 && pills.reduce((n, p) => n + p.w + 16, -16) > inner)
-    pills = pills.slice(0, -1);
-  let px = mid - pills.reduce((n, p) => n + p.w + 16, -16) / 2;
+  ctx.font = F.pill;
+  let pills = c.pills.map((p) => ({ ...p, w: ctx.measureText(p.text).width + PILL.padX * 2 }));
+  const rowW = () => pills.reduce((n, p) => n + p.w + PILL.gap, -PILL.gap);
+  while (pills.length > 1 && rowW() > inner) pills = pills.slice(0, -1);
+  let px = mid - rowW() / 2;
   for (const p of pills) {
-    pill(ctx, px, 578, p.w, 62, !!p.gold);
-    ctx.fillStyle = p.gold ? '#1a1204' : C.ink;
-    ctx.fillText(fit(ctx, p.text, p.w - padX), px + p.w / 2, 621);
-    px += p.w + 16;
+    ctx.beginPath();
+    ctx.roundRect(px, 578, p.w, PILL.h, PILL.h / 2);
+    ctx.fillStyle = p.gold ? C.gold : C.chip;
+    ctx.fill();
+    if (!p.gold) {
+      ctx.strokeStyle = C.line;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    text(p.text, px + p.w / 2, 621, F.pill, p.gold ? C.onGold : C.ink, { max: p.w - PILL.padX });
+    px += p.w + PILL.gap;
   }
 
   // 통산 기록
   const sy = 680;
-  ctx.strokeStyle = C.line;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(PAD, sy);
-  ctx.lineTo(CARD_W - PAD, sy);
-  ctx.moveTo(PAD, sy + 148);
-  ctx.lineTo(CARD_W - PAD, sy + 148);
-  ctx.stroke();
+  rule(sy);
+  rule(sy + 148);
   const cw = inner / c.stats.length;
   c.stats.forEach((s, i) => {
     const x = PAD + cw * (i + 0.5);
-    ctx.fillStyle = C.ink;
-    ctx.font = `700 76px ${DISPLAY}`;
-    ctx.fillText(s.value, x, sy + 88);
-    ctx.fillStyle = C.muted;
-    ctx.font = `400 28px ${BODY}`;
-    ctx.fillText(s.label, x, sy + 128);
+    text(s.value, x, sy + 88, F.statValue, C.ink);
+    text(s.label, x, sy + 128, F.statLabel, C.muted);
   });
 
   // 커리어 여정(성향이 없으면 더 길게)
   let y = sy + 206;
-  ctx.fillStyle = C.gold;
-  ctx.font = `600 28px ${DISPLAY}`;
-  spaced(ctx, 'THE JOURNEY', mid, y, 6);
+  spaced('THE JOURNEY', y, F.heading, C.gold, 6);
   y += 56;
   for (const s of c.stops) {
     if (!s) {
-      ctx.fillStyle = C.muted;
-      ctx.font = `400 30px ${BODY}`;
-      ctx.fillText('⋮', mid - 175, y - 6);
+      text('⋮', YEAR_X + 15, y - 6, F.note, C.muted);
       y += 40;
       continue;
     }
-    ctx.textAlign = 'right';
-    ctx.fillStyle = C.muted;
-    ctx.font = `600 34px ${DISPLAY}`;
-    ctx.fillText(s.years, mid - 190, y);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = C.ink;
-    ctx.font = `600 34px ${BODY}`;
-    const club = fit(ctx, s.club, 430);
-    ctx.fillText(club, mid - 160, y);
-    const cwid = ctx.measureText(club).width;
-    ctx.fillStyle = C.muted;
-    ctx.font = `400 26px ${BODY}`;
-    ctx.fillText(
-      fit(ctx, s.league, CARD_W - PAD - (mid - 160 + cwid + 16)),
-      mid - 160 + cwid + 16,
-      y,
-    );
-    ctx.textAlign = 'center';
+    text(s.years, YEAR_X, y, F.years, C.muted, { align: 'right' });
+    const lx = CLUB_X + text(s.club, CLUB_X, y, F.club, C.ink, { align: 'left', max: 430 }) + 16;
+    text(s.league, lx, y, F.league, C.muted, { align: 'left', max: CARD_W - PAD - lx });
     y += 52;
   }
 
   // 플레이 성향
   if (c.style) {
     y = Math.max(y + 18, 1100);
-    ctx.fillStyle = C.gold;
-    ctx.font = `600 28px ${DISPLAY}`;
-    spaced(ctx, 'HOW I PLAYED', mid, y, 6);
-    ctx.font = `700 52px ${BODY}`;
-    ctx.fillStyle = C.ink;
-    ctx.fillText(fit(ctx, `${c.style.icon} ${c.style.name}`, inner), mid, y + 70);
-    ctx.fillStyle = C.muted;
-    ctx.font = `400 30px ${BODY}`;
-    ctx.fillText(fit(ctx, c.style.best ?? c.style.line, inner), mid, y + 120);
+    spaced('HOW I PLAYED', y, F.heading, C.gold, 6);
+    text(`${c.style.icon} ${c.style.name}`, mid, y + 70, F.styleName, C.ink, { max: inner });
+    text(c.style.best ?? c.style.line, mid, y + 120, F.note, C.muted, { max: inner });
   }
 
   // 바닥: 게임 이름과 주소
-  ctx.fillStyle = C.line;
-  ctx.fillRect(PAD, CARD_H - 100, inner, 2);
-  ctx.textAlign = 'left';
-  ctx.fillStyle = C.ink;
-  ctx.font = `700 36px ${BODY}`;
-  ctx.fillText('오프사이드', PAD, CARD_H - 44);
-  ctx.fillStyle = C.muted;
-  ctx.font = `400 26px ${BODY}`;
-  ctx.fillText('고3부터 은퇴까지, 한 선수의 인생', PAD + 200, CARD_H - 46);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = C.gold;
-  ctx.font = `600 36px ${DISPLAY}`;
-  ctx.fillText('offside-lab.com', CARD_W - PAD, CARD_H - 44);
+  rule(CARD_H - 100);
+  const bw = text('오프사이드', PAD, CARD_H - 44, F.brand, C.ink, { align: 'left' });
+  text(TAGLINE, PAD + bw + 24, CARD_H - 46, F.tagline, C.muted, { align: 'left' });
+  text('offside-lab.com', CARD_W - PAD, CARD_H - 44, F.url, C.gold, { align: 'right' });
 }
 
 /** 캔버스 → PNG 파일(공유 시트·저장에 넘긴다). */
