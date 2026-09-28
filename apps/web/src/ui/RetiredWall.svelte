@@ -7,7 +7,7 @@
   // T-10-076 기록실 '영구결번' 탭 — 서버의 모든 결번을 구단별(결번 많은 구단 먼저) 또는 최신순으로 본다.
   // 유니폼은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
   import type { RetiredNumbersResponse } from '@offside/contracts';
-  import { LEAGUE_BASE } from '@offside/contracts/club-names';
+  import { defaultClubName, LEAGUE_BASE } from '@offside/contracts/club-names';
   import { getRetiredNumbers } from '../api/client.js';
   import { POS } from '../game/data.js';
   import { loadHOF } from '../game/season.js';
@@ -28,6 +28,8 @@
   const myIds = new Set(loadHOF().map((h) => h.id).filter(Boolean));
   const leagueOf = (clubId: string) =>
     LEAGUE_BASE.find((l) => l.id === clubId.slice(0, clubId.lastIndexOf('-')))?.name ?? '';
+  /** 결번 당시 기록된 이름은 유저가 바꿔 부른 이름일 수 있다 — 모두가 보는 벽에는 게임 기본 이름을 건다. */
+  const clubName = (it: Item) => defaultClubName(it.clubId) ?? it.club;
   const day = (iso: string) => {
     const d = new Date(iso);
     return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
@@ -57,7 +59,7 @@
     </svg>
     <b class="rn-tile-name">{it.name ?? anonName(it.pos, it.number)}</b>
     <span class="muted fs-xs">
-      {#if withClub}<ClubMark name={it.club} id={it.clubId} size={14} /> {it.club}{:else}{POS[it.pos].label}{/if}
+      {#if withClub}<ClubMark name={it.club} id={it.clubId} size={14} /> {clubName(it)}{:else}{POS[it.pos].label}{/if}
     </span>
     <span class="muted fs-xs num">{it.seq}번째 · {day(it.grantedAt)}</span>
     {#if myIds.has(it.careerId)}<span class="pill rn-tile-mine">내 선수</span>{/if}
@@ -89,7 +91,7 @@
         <div class="rn-club" data-rn-club={c.clubId}>
           <div class="rn-club-head">
             <ClubMark name={c.club} id={c.clubId} size={22} />
-            <b>{c.club}</b>
+            <b>{clubName(c)}</b>
             <span class="muted fs-xs">{leagueOf(c.clubId)}</span>
             <span class="num rn-club-count">{list.length}</span>
           </div>
