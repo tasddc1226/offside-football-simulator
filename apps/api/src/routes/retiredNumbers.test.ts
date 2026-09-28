@@ -74,7 +74,7 @@ const twoClubs = (number: number) =>
   ]);
 
 // 시즌 기록을 수십 번 올리는 테스트가 있어 제한 시간을 늘린다.
-describe('영구결번 (T-10-076)', { timeout: 20_000 }, () => {
+describe('영구결번 (T-10-076)', () => {
   let ctx: TestD1;
   let cookie: string;
 
