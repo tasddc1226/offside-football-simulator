@@ -7,8 +7,8 @@ import { titleById } from '../../game/titles.js';
 import { totals } from '../format.js';
 import type { LegendView } from '../state.svelte.js';
 
-export const CARD_W = 1080;
-export const CARD_H = 1350;
+const CARD_W = 1080;
+const CARD_H = 1350;
 /** 여정에 싣는 구단 수(넘치면 첫 구단과 마지막 구단들만 남기고 가운데를 줄인다). */
 const STOPS = 5;
 
@@ -178,7 +178,6 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
   ctx.moveTo(0, 430);
   ctx.lineTo(CARD_W, 430);
   ctx.stroke();
-  ctx.textBaseline = 'alphabetic';
 
   // 머리: FULL TIME · 이름 · 포지션/기간
   spaced(c.kicker, 118, F.kicker, C.gold, 7);
@@ -220,10 +219,12 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
     text(s.label, x, sy + 128, F.statLabel, C.muted);
   });
 
-  // 커리어 여정: 기록 아래~바닥 줄 사이 가운데에 둔다(짧은 여정이 위에 몰리지 않게).
+  // 커리어 여정: 기록 아래 줄(top)~바닥 줄(bottom) 사이 가운데에 둔다(짧은 여정이 위에 몰리지 않게).
+  // 덩어리 높이 = 제목 윗선(22) + 제목→첫 줄(56) + 줄 간격들 + 마지막 줄 아랫선(10) = rows + 36.
+  const top = sy + 148;
+  const bottom = CARD_H - 100;
   const rows = c.stops.reduce((n, s) => n + (s ? 52 : 40), 0);
-  const blockH = 22 + 56 + rows - 52 + 10; // 제목 글자 윗선 ~ 마지막 줄 아랫선
-  let y = Math.max(sy + 206, Math.round(sy + 148 + (CARD_H - 100 - (sy + 148) - blockH) / 2 + 22));
+  let y = Math.max(top + 58, Math.round((top + bottom - rows - 36) / 2 + 22));
   spaced('THE JOURNEY', y, F.heading, C.gold, 6);
   y += 56;
   for (const s of c.stops) {
@@ -239,7 +240,7 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
   }
 
   // 바닥: 게임 이름과 주소
-  rule(CARD_H - 100);
+  rule(bottom);
   const bw = text('오프사이드', PAD, CARD_H - 44, F.brand, C.ink, { align: 'left' });
   text(TAGLINE, PAD + bw + 24, CARD_H - 46, F.tagline, C.muted, { align: 'left' });
   text('offside-lab.com', CARD_W - PAD, CARD_H - 44, F.url, C.gold, { align: 'right' });
