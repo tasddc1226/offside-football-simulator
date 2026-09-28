@@ -2,6 +2,7 @@
   // T-10-089 드래그 슛(프로토타입). 장면 위에서 골문 쪽으로 끌어 올렸다가 떼면 찬다. 경로는 장면 좌표(viewBox
   // 300×170)로 모은다 — 화면 크기와 상관없이 같은 손짓이 같은 슛이 되게. 판정은 game/dragShot.ts.
   import { isShot, type DragPoint } from '../../game/dragShot.js';
+  import MgTimer from './MgTimer.svelte';
   import PitchScene, { type BallPose, type KeeperPose } from './PitchScene.svelte';
   import type { SheetView } from './types.js';
 
@@ -21,12 +22,21 @@
     return () => clearTimeout(t);
   });
 
+  /** 찼거나 시간이 지났다(더 받지 않는다). */
+  let over = $state(false);
+  function expire() {
+    if (over) return;
+    over = true;
+    dragging = false;
+    path = [];
+    v.onShot(null);
+  }
   function toScene(e: PointerEvent): DragPoint {
     const r = area!.getBoundingClientRect();
     return { x: ((e.clientX - r.left) / r.width) * 300, y: ((e.clientY - r.top) / r.height) * 170, t: e.timeStamp };
   }
   function down(e: PointerEvent) {
-    if (v.shot) return;
+    if (over) return;
     // 장면 밖으로 끌어도 끝까지 받는다(합성 이벤트 등으로 캡처가 안 되면 그냥 넘어간다).
     try {
       area!.setPointerCapture(e.pointerId);
@@ -50,13 +60,14 @@
       path = [];
       return;
     }
+    over = true;
     v.onShot($state.snapshot(path));
   }
 
   const SPOT: BallPose = { x: 150, y: 148, s: 1.35 };
   const ball = $derived.by((): BallPose => {
     const sh = v.shot;
-    if (!sh || stage === 0) return SPOT;
+    if (!sh || stage === 0 || sh.outcome === 'late') return SPOT;
     const at = { x: sh.x, y: sh.y, s: 0.6 };
     if (stage === 1) return at;
     const out = sh.x < 150 ? -1 : 1;
@@ -75,7 +86,7 @@
   });
   const kp = $derived.by((): KeeperPose => {
     const sh = v.shot;
-    if (!sh || stage === 0) return { dx: 0, dy: 0, rot: 0 };
+    if (!sh || stage === 0 || sh.outcome === 'late') return { dx: 0, dy: 0, rot: 0 };
     if (sh.keeper === 0) return { dx: 0, dy: -8, rot: 0 };
     return { dx: sh.keeper * 38, dy: -6, rot: sh.keeper * 68 };
   });
@@ -85,12 +96,14 @@
     post: '골대를 때렸다!',
     over: '하늘로 떴다…',
     wide: '빗나갔다!',
+    late: '시간 초과!',
   };
   const caption = $derived(v.shot && stage > 0 ? CAPTION[v.shot.outcome] : '');
   const trail = $derived(dragging ? path.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') : '');
   const readout = $derived.by(() => {
     const sh = v.shot;
     if (!sh) return '';
+    if (sh.outcome === 'late') return '3초 안에 차지 않았어요';
     const pw = sh.power < 0.6 ? '약함' : sh.power > 1.3 ? '과함' : '좋음';
     return `세기 ${Math.round(sh.power * 100)}% (${pw}) · 곧게 차기 ${Math.round(sh.straight * 100)}%`;
   });
@@ -110,6 +123,7 @@
   onpointerup={up}
   onpointercancel={() => ((dragging = false), (path = []))}
 >
+  <MgTimer stopped={over} onexpire={expire} />
   <PitchScene {ball} spin={stage * 300} {kp} goal={stage === 2 && v.shot?.outcome === 'goal'} {trail} />
   {#if caption}<span class="mg-caption pop" class:ok={v.shot?.ok}>{caption}</span>{/if}
   <span class="mg-tap mg-readout">{readout || hint || '↑ 위로 끌었다 떼기'}</span>

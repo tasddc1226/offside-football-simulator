@@ -101,14 +101,16 @@ export type SheetView =
       /** 선택지가 정한 방향(-1 왼쪽 · 0 제자리). null이면 화면에서 무작위로 고른다. */
       side: -1 | 0 | null;
       ok: boolean | null;
-      onTap: (x: number) => void;
+      /** x: 멈춘 바늘 위치. null이면 제한 시간이 지났다(실패). */
+      onTap: (x: number | null) => void;
     }
   | {
       /** T-10-089 드래그 슛(프로토타입). 손을 떼면 onShot(경로)을 부르고, 판정이 나면 shot이 채워진다. */
       kind: 'dragShot';
       label: string;
       shot: ShotResult | null;
-      onShot: (path: DragPoint[]) => void;
+      /** path가 null이면 제한 시간 안에 차지 않았다(실패). */
+      onShot: (path: DragPoint[] | null) => void;
     }
   | {
       kind: 'event';

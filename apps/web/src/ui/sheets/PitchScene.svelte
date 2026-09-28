@@ -1,6 +1,8 @@
 <script module lang="ts">
   export type BallPose = { x: number; y: number; s: number };
   export type KeeperPose = { dx: number; dy: number; rot: number };
+  /** 필드 수비수 — 발 위치(x, y)와 그 자리에서의 자세. */
+  export type DefenderPose = KeeperPose & { x: number; y: number; num: number };
 
   /** 축구공 무늬 — 가운데 오각형과 가장자리 다섯 조각(원 밖은 잘린다), 조각을 잇는 솔기. */
   const penta = (cx: number, cy: number, r: number, rot: number) =>
@@ -31,6 +33,7 @@
     me = false,
     goal = false,
     trail = '',
+    defenders = [],
   }: {
     ball: BallPose;
     spin?: number;
@@ -41,6 +44,8 @@
     goal?: boolean;
     /** 드래그 중인 손가락 경로(polyline points). */
     trail?: string;
+    /** 제치기 장면의 수비수들(키퍼보다 앞 — 카메라에 가깝다). */
+    defenders?: DefenderPose[];
   } = $props();
 
   /** 공이 땅에 닿은 높이(그림자 자리). 골라인 뒤로 날아간 공은 골라인에 그림자를 둔다. */
@@ -89,6 +94,24 @@
     <circle class="kp-skin" cx="150" cy="61" r="6" />
     <path class="kp-hair" d="M144 61 A6 6 0 0 1 156 61 Q153 57.6 150 58.2 Q147 57.6 144 61 Z" />
   </g>
+  {#each defenders as d, i (i)}
+    <!-- 키퍼 그림(발 150,112 기준)을 수비수 자리로 옮긴다. 팔은 달리는 자세, 장갑 대신 맨손. -->
+    <g transform="translate({d.x - 150} {d.y - 112}) scale(1.08)" transform-origin="150 112">
+      <g class="mg-def" style="transform:translate({d.dx}px,{d.dy}px) rotate({d.rot}deg)">
+        <path class="kp-sock" d="M145.5 95 L140.5 108 M154.5 95 L160 105.5" />
+        <path class="kp-boot" d="M137 110 h6 M157.5 107.5 h6" />
+        <path class="kp-shorts" d="M140.5 86 h19 l1.8 10 h-9 l-1.3 -3.5 -1.3 3.5 h-9 z" />
+        <path class="kp-arm" d="M140.5 73 L134.5 84.5 M159.5 73 L166.5 80" />
+        <path class="kp-shirt" d="M138.5 71.5 Q150 66.5 161.5 71.5 L160 88 H140 Z" />
+        <text class="kp-num" x="150" y="83.5">{d.num}</text>
+        <circle class="kp-skin" cx="134" cy="86" r="2.2" />
+        <circle class="kp-skin" cx="167.5" cy="79" r="2.2" />
+        <rect class="kp-skin" x="147.6" y="65" width="4.8" height="4" rx="1" />
+        <circle class="kp-skin" cx="150" cy="61" r="6" />
+        <path class="kp-hair" d="M144 61 A6 6 0 0 1 156 61 Q153 57.6 150 58.2 Q147 57.6 144 61 Z" />
+      </g>
+    </g>
+  {/each}
   {#if trail}<polyline class="mg-trail" points={trail} />{/if}
   <ellipse
     class="mg-shadow mg-ball-shadow"

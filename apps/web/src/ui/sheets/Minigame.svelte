@@ -4,7 +4,8 @@
   // 간격만큼 판정이 밀리지 않게. 판정이 나면(v.ok) 공이 날아가는 결과 장면을 두 단계로 그린다.
   import { onMount } from 'svelte';
   import { markerAt, MG_TAP } from '../../game/minigame.js';
-  import PitchScene, { type BallPose, type KeeperPose } from './PitchScene.svelte';
+  import MgTimer from './MgTimer.svelte';
+  import PitchScene, { type BallPose, type DefenderPose, type KeeperPose } from './PitchScene.svelte';
   import type { SheetView } from './types.js';
 
   let { v }: { v: Extract<SheetView, { kind: 'minigame' }> } = $props();
@@ -45,12 +46,19 @@
     pos = markerAt(at - t0);
     v.onTap(pos);
   }
+  /** 제한 시간이 지나도록 누르지 않았다 — 공은 그대로, 실패. */
+  let late = $state(false);
+  function expire() {
+    if (tapped) return;
+    tapped = late = true;
+    v.onTap(null);
+  }
 
   type Pose = BallPose;
   const SPOT: Pose = { x: 150, y: 148, s: 1.35 };
   /** 단계별 공 위치(골문 앞 시점, viewBox 300×170). */
   const ball = $derived.by((): Pose => {
-    if (stage === 0 || v.ok === null) return SPOT;
+    if (stage === 0 || v.ok === null || late) return SPOT;
     const s = side;
     const two = (a: Pose, b: Pose) => (stage === 1 ? a : b);
     switch (v.mg) {
@@ -63,9 +71,10 @@
           ? two({ x: 150 + s * 6, y: 26, s: 0.75 }, { x: 150 + s * 16, y: 62, s: 0.55 })
           : two({ x: 150, y: 44, s: 0.75 }, { x: 150, y: 74, s: 0.6 });
       case 'dribble':
+        // 실패는 이벤트 문구("너무 길게 쳤습니다. 공이 엔드라인을 넘어갔습니다")처럼 골대 옆으로 흘러 나간다.
         return v.ok
           ? two({ x: 150 - s * 34, y: 122, s: 0.8 }, { x: 150 - s * 44, y: 98, s: 0.6 })
-          : two({ x: 150 + s * 16, y: 118, s: 0.8 }, { x: 150 + s * 28, y: 104, s: 0.7 });
+          : two({ x: 150 - s * 48, y: 120, s: 0.8 }, { x: 150 - s * 104, y: 106, s: 0.55 });
       case 'save':
         if (hold)
           return v.ok
@@ -79,7 +88,7 @@
   type KPose = KeeperPose;
   /** 골키퍼 자세. 슈팅 계열에선 상대 키퍼, save에선 나. */
   const kp = $derived.by((): KPose => {
-    if (stage === 0 || v.ok === null) return { dx: 0, dy: 0, rot: 0 };
+    if (stage === 0 || v.ok === null || late) return { dx: 0, dy: 0, rot: 0 };
     const s = side;
     if (v.mg === 'chip') return { dx: 0, dy: v.ok ? -4 : -12, rot: 0 };
     if (hold) return v.ok ? { dx: 0, dy: -4, rot: 0 } : { dx: s * 14, dy: -4, rot: s * 25 };
@@ -92,11 +101,26 @@
   const goal = $derived(stage === 2 && v.ok !== null && (v.mg === 'save' ? !v.ok : v.ok));
   const caption = $derived.by(() => {
     if (v.ok === null) return '';
+    if (late) return '시간 초과!';
     if (v.mg === 'save') return v.ok ? '선방!' : '실점…';
     if (v.ok) return '골!';
-    return v.mg === 'shot' ? '크로스바!' : '막혔다!';
+    return v.mg === 'shot' ? '크로스바!' : v.mg === 'dribble' ? '너무 길었다!' : '막혔다!';
   });
   const me = $derived(v.mg === 'save');
+  /**
+   * 제치기: 뒤쫓아 온 수비수 둘이 양옆에서 좁혀 온다. 탭하면 공 쪽으로 몸을 날리지만(슬라이딩) 이미 늦었다 —
+   * 이벤트 문구대로 키퍼와는 단둘이다.
+   */
+  const defenders = $derived.by((): DefenderPose[] => {
+    if (v.mg !== 'dribble') return [];
+    // 둘 다 공이 빠져나간 쪽(키퍼 반대쪽)으로 슬라이딩한다 — 가운데로 모이면 한데 겹쳐 보인다.
+    const dir = -side;
+    const pose = stage > 0 && v.ok !== null && !late ? { dx: dir * 14, dy: 6, rot: dir * 75 } : { dx: 0, dy: 0, rot: 0 };
+    return [
+      { x: 102, y: 140, num: 4, ...pose },
+      { x: 200, y: 136, num: 5, ...pose },
+    ];
+  });
 </script>
 
 <div class="eyebrow">원터치 · 초록 구간에서 멈추세요</div>
@@ -110,7 +134,8 @@
   onpointerdown={(e) => tap(e.timeStamp)}
   onclick={() => tap(performance.now())}
 >
-  <PitchScene {ball} spin={stage * 280 * side} {kp} {me} {goal} />
+  <MgTimer stopped={tapped} onexpire={expire} />
+  <PitchScene {ball} spin={stage * 280 * side} {kp} {me} {goal} {defenders} />
   {#if caption}<span class="mg-caption pop" class:ok={v.ok}>{caption}</span>{/if}
   <span class="mg-gauge" aria-hidden="true">
     <span class="mg-zone" style="left:{(v.center - v.w / 2) * 100}%;width:{v.w * 100}%"></span>

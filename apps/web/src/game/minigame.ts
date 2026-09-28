@@ -48,6 +48,8 @@ export const zoneWidth = (p: number, kind?: MgKind) =>
 /** 장면별 구간 배율. 칩슛은 키퍼 머리 위로 띄우는 섬세한 슛이라 더 좁다. */
 const ZONE_SCALE: Readonly<Record<MgKind, number>> = { shot: 1, chip: 0.75, dribble: 1, save: 1 };
 export const SWEEP_MS = 800;
+/** 제한 시간(ms). 장면이 뜬 뒤 이 안에 누르지(차지) 않으면 실패다. */
+export const MG_TIME_MS = 3000;
 
 /** 선택 창·도감에 보이는 구간 크기. */
 export const zoneLabel = (w: number) => (w >= 0.26 ? '넓음' : w >= 0.17 ? '보통' : '좁음');
@@ -58,8 +60,12 @@ export function markerAt(t: number): number {
   return k <= 1 ? k : 2 - k;
 }
 
-/** 탭 위치가 구간 가운데에서 떨어진 정도. 0 = 한가운데, 1 = 구간 끝, 1 초과 = 빗나감. */
-export const tapOffset = (x: number, center: number, w: number) => Math.abs(x - center) / (w / 2);
+/**
+ * 탭 위치가 구간 가운데에서 떨어진 정도. 0 = 한가운데, 1 = 구간 끝, 1 초과 = 빗나감.
+ * x가 null이면 제한 시간 안에 누르지 않은 것 — 무한대(실패)다.
+ */
+export const tapOffset = (x: number | null, center: number, w: number) =>
+  x === null ? Infinity : Math.abs(x - center) / (w / 2);
 
 /** 떨어진 정도 → 판정값. 구간 안(≤1)이면 p보다 작고, 밖이면 p 이상이다. */
 export function offsetToRoll(d: number, p: number): number {
@@ -68,6 +74,7 @@ export function offsetToRoll(d: number, p: number): number {
 
 /** 결과 시트에 붙는 한 줄. */
 export function timingNote(d: number): string {
+  if (!Number.isFinite(d)) return '시간 초과 — 3초 안에 누르지 않았어요';
   if (d <= 0.25) return '완벽한 타이밍!';
   if (d <= 1) return '타이밍 성공';
   if (d <= 1.6) return '아깝게 빗나간 타이밍';

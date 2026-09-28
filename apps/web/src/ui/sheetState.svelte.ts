@@ -8,7 +8,7 @@ import { clubsIn } from '../game/engine.js';
 import type { BlockResult, MatchGame } from '../game/match.js';
 import type { GameState } from '../game/types.js';
 import type { MgKind } from '../game/minigame.js';
-import { evalShot, type ShotResult } from '../game/dragShot.js';
+import { evalShot, lateShot, type ShotResult } from '../game/dragShot.js';
 import { motionOK } from './motion.js';
 import type { SheetView, TickerRow } from './sheets/types.js';
 
@@ -215,7 +215,7 @@ export function playMinigame<R extends { ok: boolean }>(
   mg: MgKind,
   w: number,
   side: -1 | 0 | null,
-  settle: (x: number, center: number) => R,
+  settle: (x: number | null, center: number) => R,
 ): Promise<R> {
   return new Promise((resolve) => {
     sheetState.busy = true;
@@ -262,7 +262,7 @@ export function playDragShot<R extends { ok: boolean }>(
       onShot: (path) => {
         if (done) return;
         done = true;
-        const shot = evalShot(path, p);
+        const shot = path ? evalShot(path, p) : lateShot();
         const r = settle(shot);
         v.shot = shot;
         setTimeout(() => {

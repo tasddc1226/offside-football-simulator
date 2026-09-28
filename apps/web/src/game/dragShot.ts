@@ -6,7 +6,7 @@
 /** 드래그 경로의 한 점(장면 좌표, ms). */
 export type DragPoint = { x: number; y: number; t: number };
 
-export type ShotOutcome = 'goal' | 'saved' | 'post' | 'over' | 'wide';
+export type ShotOutcome = 'goal' | 'saved' | 'post' | 'over' | 'wide' | 'late';
 export interface ShotResult {
   ok: boolean;
   outcome: ShotOutcome;
@@ -30,6 +30,17 @@ export const MIN_DRAG = 24;
 /** 세기 1에 해당하는 손가락 속도(장면 단위/ms). 마지막 FLICK_MS 동안의 속도를 잰다. */
 const REF_SPEED = 1.1;
 const FLICK_MS = 110;
+
+/** 제한 시간 안에 차지 않았다(실패). */
+export const lateShot = (): ShotResult => ({
+  ok: false,
+  outcome: 'late',
+  x: SPOT.x,
+  y: SPOT.y,
+  keeper: 0,
+  power: 0,
+  straight: 0,
+});
 
 /** 드래그가 슛이 되는지 — 충분히 길고 위쪽(골문 쪽)으로 끌었는가. */
 export function isShot(path: readonly DragPoint[]): boolean {

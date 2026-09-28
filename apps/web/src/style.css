@@ -2087,6 +2087,17 @@ th.n {
   --kp: var(--accent);
   --kp-num: var(--accent-ink);
 }
+/* 필드 수비수(상대): 파란 상의·흰 반바지. */
+.mg-def {
+  --kp: #3a6fd6;
+  --kp-num: #fff;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transition: transform 0.34s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+.mg-def .kp-shorts {
+  fill: #eef1f5;
+}
 .kp-shirt {
   fill: var(--kp);
   stroke: rgb(0 0 0 / 0.28);
@@ -2172,6 +2183,54 @@ th.n {
   font-size: 0.8125rem;
   font-weight: 700;
   opacity: 0.9;
+}
+/* 제한 시간: 장면 위쪽 막대가 줄어들고, 마지막 1초는 빨갛게. */
+.mg-timer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: 4px;
+  background: rgb(0 0 0 / 0.25);
+}
+.mg-timer i {
+  display: block;
+  height: 100%;
+  background: var(--chalk);
+  transform-origin: left;
+  animation: mg-timer var(--mg-time) linear forwards;
+}
+.mg-timer.hurry i {
+  background: var(--bad);
+}
+.mg-timer.stop i {
+  animation-play-state: paused;
+}
+.mg-timer b {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.35);
+  color: var(--chalk);
+  font-family: var(--display);
+  font-size: 0.9375rem;
+  font-weight: 800;
+  text-align: center;
+}
+.mg-timer.hurry b {
+  background: var(--bad);
+}
+.mg-timer.stop b {
+  opacity: 0;
+}
+@keyframes mg-timer {
+  to {
+    transform: scaleX(0);
+  }
 }
 .mg-caption {
   position: absolute;

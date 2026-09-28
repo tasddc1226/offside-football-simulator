@@ -59,6 +59,17 @@ for (const inside of [true, false]) {
   });
 }
 
+test('미니게임: 3초 안에 누르지 않으면 시간 초과로 실패한다', async ({ page }) => {
+  await resumeWithSave(page, { pending: { type: 'event', id: 'penalty' } });
+  const sheet = page.locator('#sheet');
+  await sheet.locator('[data-choice="0"]').click();
+  await expect(sheet.locator('.mg-timer b')).toHaveText('3');
+  await expect(sheet.locator('.mg-caption')).toHaveText('시간 초과!', { timeout: 5000 });
+  await expect(sheet.locator('.result-big')).toHaveText('실패');
+  await expect(sheet.locator('[data-mg-timing]')).toContainText('시간 초과');
+  expect(await lastLog(page)).toMatchObject({ id: 'penalty', ok: false, mg: 1000 });
+});
+
 test('감속 모션이면 미니게임 없이 표시된 확률로 판정한다', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await resumeWithSave(page, { pending: { type: 'event', id: 'penalty' } });
