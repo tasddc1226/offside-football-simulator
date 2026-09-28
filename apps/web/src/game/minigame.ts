@@ -43,7 +43,10 @@ export const MG_TAP: Readonly<Record<MgKind, string>> = {
  * 성공 구간 넓이(게이지 전체 대비). p 0.72(보통 페널티킥) → 0.30, p 0.3(보통 승부차기) → 0.16. 바늘이 한쪽 끝에서
  * 반대쪽까지 SWEEP_MS에 가므로 0.30은 약 240ms, 0.16은 약 130ms 동안 구간 안에 머문다.
  */
-export const zoneWidth = (p: number) => clamp(0.06 + 0.34 * p, 0.08, 0.36);
+export const zoneWidth = (p: number, kind?: MgKind) =>
+  clamp((0.06 + 0.34 * p) * (kind ? ZONE_SCALE[kind] : 1), 0.06, 0.36);
+/** 장면별 구간 배율. 칩슛은 키퍼 머리 위로 띄우는 섬세한 슛이라 더 좁다. */
+const ZONE_SCALE: Readonly<Record<MgKind, number>> = { shot: 1, chip: 0.75, dribble: 1, save: 1 };
 export const SWEEP_MS = 800;
 
 /** 선택 창·도감에 보이는 구간 크기. */

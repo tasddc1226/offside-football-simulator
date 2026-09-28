@@ -45,8 +45,9 @@
     if (c.kind === 'sure') return '확정';
     if (c.min === null || c.max === null) return '상황별';
     // T-10-089 미니게임 선택지는 확률이 아니라 성공 구간 넓이다.
-    if (minigameOf(id, i)) {
-      const [lo, hi] = [c.min, c.max].map((v) => Math.round(zoneWidth(v / 100) * 100));
+    const mg = minigameOf(id, i);
+    if (mg) {
+      const [lo, hi] = [c.min, c.max].map((v) => Math.round(zoneWidth(v / 100, mg) * 100));
       return `원터치 · 구간 ${lo === hi ? lo : `${lo}~${hi}`}%`;
     }
     return c.min === c.max ? `${c.min}%` : `${c.min}~${c.max}%`;

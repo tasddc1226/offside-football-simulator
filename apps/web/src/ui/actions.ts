@@ -188,7 +188,7 @@ function showEvent(id: string) {
       c.p && motionOK && minigameOf(ev.id, i)
         ? {
             label: txt(c.label, s),
-            odds: `원터치 · ${zoneLabel(zoneWidth(choiceOdds(c.p(s), ev.id, i)))}`,
+            odds: `원터치 · ${zoneLabel(zoneWidth(choiceOdds(c.p(s), ev.id, i), minigameOf(ev.id, i)))}`,
             hint: '바늘이 초록 구간에 올 때 탭하면 성공해요. 구간 넓이는 능력치로 정해져요',
           }
         : c.p
@@ -228,17 +228,12 @@ export async function chooseEvent(i: number) {
   const mg = motionOK ? minigameOf(p.id, i) : undefined;
   let r: ReturnType<typeof settle>;
   if (mg) {
-    const odds = choiceOdds(c.p?.(s), p.id, i);
-    r = await playMinigame(
-      label,
-      mg,
-      zoneWidth(odds),
-      minigameSide(p.id, i) ?? null,
-      (x, center) => {
-        const d = tapOffset(x, center, zoneWidth(odds));
-        return settle({ roll: offsetToRoll(d, odds), d });
-      },
-    );
+    const odds = choiceOdds(c.p?.(s), p.id, i),
+      w = zoneWidth(odds, mg);
+    r = await playMinigame(label, mg, w, minigameSide(p.id, i) ?? null, (x, center) => {
+      const d = tapOffset(x, center, w);
+      return settle({ roll: offsetToRoll(d, odds), d });
+    });
   } else {
     r = settle();
     if (r.p < 1) await playJudge(label, r.p, r.roll);

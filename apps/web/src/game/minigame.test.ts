@@ -36,7 +36,8 @@ describe('원터치 미니게임', () => {
 
   it('구간 넓이는 능력치 확률을 따라 넓어지고 범위 안에 머문다', () => {
     expect(zoneWidth(0.3)).toBeLessThan(zoneWidth(0.72));
-    expect(zoneWidth(0)).toBe(0.08);
+    expect(zoneWidth(0.5, 'chip')).toBeCloseTo(zoneWidth(0.5) * 0.75);
+    expect(zoneWidth(0)).toBe(0.06);
     expect(zoneWidth(1)).toBe(0.36);
   });
 
