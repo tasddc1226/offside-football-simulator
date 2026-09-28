@@ -565,6 +565,7 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
     })),
     miles: (s.miles || []).map(({ year, t }) => ({ year, t })),
     titles: (s.titles || []).map(({ id, year }) => ({ id, year })),
+    ...(s.style ? { style: { ...s.style } } : {}),
   };
 }
 export function legendTitle(score: number): string {
