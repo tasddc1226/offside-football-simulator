@@ -3,6 +3,7 @@ import { defaultClubIds, isDefaultClubId } from './club-names.js';
 import {
   clubContributions,
   honorPoints,
+  RN_BOND,
   RN_CUT,
   RN_SEASON_HONOR_CAP,
   rnCandidates,
@@ -97,5 +98,31 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
     const spam = Array.from({ length: 30 }, (_, i) => `발롱도르 ${i}`);
     const [capped] = clubContributions('FW', [season({ honors: [...spam, ...spam] })]);
     expect(capped!.honors).toBe(RN_SEASON_HONOR_CAP);
+  });
+
+  it('구단 애착: 원클럽맨 20%, 아니면 은퇴 구단·친정 복귀·10시즌 연속을 5%씩(병역은 연속을 끊지 않는다)', () => {
+    const at = (year: number, club: string, clubId: string, over: Partial<RnSeason> = {}) =>
+      season({ year, club, clubId, ...over });
+    const years = (from: number, n: number, club: string, clubId: string) =>
+      Array.from({ length: n }, (_, i) => at(from + i, club, clubId));
+    const base = (c: ReturnType<typeof clubContributions>[number]) => c.play + c.honors;
+
+    // 원클럽맨(8시즌) — 원클럽 몫만.
+    const [one] = clubContributions('FW', years(2030, 8, '맨체스터 스카이블루', 'pl-0'));
+    expect(one!.bond).toBeCloseTo(base(one!) * RN_BOND.oneClub);
+    expect(one!.score).toBeCloseTo(base(one!) * 1.2);
+
+    // 스카이블루 10시즌 연속(중간 병역 1시즌) → 리버풀 2시즌 → 스카이블루로 돌아와 은퇴: 은퇴·복귀·연속 = 15%.
+    const home = clubContributions('FW', [
+      ...years(2030, 5, '맨체스터 스카이블루', 'pl-0'),
+      at(2035, '김천 상무 (국군체육부대)', 'k1-9', { mil: true }),
+      ...years(2036, 5, '맨체스터 스카이블루', 'pl-0'),
+      ...years(2041, 2, '리버풀 더 레즈', 'pl-1'),
+      ...years(2043, 2, '맨체스터 스카이블루', 'pl-0'),
+    ]);
+    const sky = home.find((c) => c.clubId === 'pl-0')!;
+    expect(sky.bond / base(sky)).toBeCloseTo(0.15);
+    // 거쳐 간 구단은 애착이 없다.
+    expect(home.find((c) => c.clubId === 'pl-1')!.bond).toBe(0);
   });
 });
