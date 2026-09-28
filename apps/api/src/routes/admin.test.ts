@@ -1,4 +1,4 @@
-import { type AdminCommentList, type AdminStats } from '@offside/contracts';
+import { type AdminCommentList, type AdminStats, type AutomationReport } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { kstDays } from '../db/repos/admin.js';
@@ -10,6 +10,7 @@ import {
   issueAdminCookie,
   issueCookie,
   issueGoogleCookie,
+  seasonBody,
 } from '../test/http.js';
 
 describe('운영 도구 /v1/admin (T-10-016)', () => {
@@ -51,6 +52,7 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       ['GET', '/v1/admin/stats'],
       ['GET', '/v1/admin/comments'],
       ['POST', '/v1/admin/comments/purge'],
+      ['GET', '/v1/admin/automation'],
     ] as const) {
       expect((await call(method, path)).status, path).toBe(401);
       expect(
@@ -157,6 +159,58 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
 
     expect(
       (await call('GET', '/v1/admin/comments?profile=nope', { cookie: admin.cookie })).status,
+    ).toBe(400);
+  });
+  it('자동 플레이 탐지: 시즌 업로드의 조작 요약·헤드리스 UA를 남기고, 의심 프로필을 모아 보여 준다', async () => {
+    const admin = await makeAdmin();
+    const bot = await issueCookie(ctx);
+    const human = await issueCookie(ctx);
+    const signals = {
+      ms: 50_000,
+      clicks: 0,
+      keys: 0,
+      touches: 0,
+      moves: 0,
+      synthetic: 12,
+      hiddenMs: 0,
+      webdriver: true,
+    };
+    const id = (n: number) => `0e000000-0000-4000-8000-00000000000${n}`;
+    for (const y of [2026, 2027, 2028]) {
+      const res = await call('PUT', `/v1/careers/${id(1)}/seasons/${y}`, {
+        cookie: bot.cookie,
+        headers: { 'User-Agent': 'Mozilla/5.0 HeadlessChrome/140.0' },
+        body: { ...seasonBody(), signals },
+      });
+      expect(res.status).toBe(200);
+      await call('PUT', `/v1/careers/${id(2)}/seasons/${y}`, {
+        cookie: human.cookie,
+        body: seasonBody(),
+      });
+    }
+    // 조작 요약이 없는 재전송은 남긴 요약을 지우지 않는다.
+    await call('PUT', `/v1/careers/${id(1)}/seasons/2028`, {
+      cookie: bot.cookie,
+      body: seasonBody(),
+    });
+
+    const res = await call('GET', '/v1/admin/automation?hours=2', { cookie: admin.cookie });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+    const report = await data<AutomationReport>(res);
+    expect(report).toMatchObject({ hours: 2, profiles: 2 });
+    expect(report.suspects).toHaveLength(1);
+    expect(report.suspects[0]).toMatchObject({
+      profile: bot.profileId.slice(0, 8),
+      level: 'high',
+      seasons: 3,
+      careers: [{ careerId: id(1), seasons: 3 }],
+    });
+    expect(report.suspects[0]!.reasons).toEqual(
+      expect.arrayContaining(['webdriver', 'headless', 'synthetic', 'noInput']),
+    );
+    expect(
+      (await call('GET', '/v1/admin/automation?hours=48', { cookie: admin.cookie })).status,
     ).toBe(400);
   });
 });

@@ -7,6 +7,7 @@ import type { CareerRecord, EventLogEntry, GameState, HofEntry } from '../game/t
 import { appState, toastState } from './state.svelte.js';
 import { publicNameOf } from './namePublic.js';
 import { toPublicName } from '@offside/contracts/content-filter';
+import { takePlaySignals } from '../game/playSignals.js';
 
 // T-9-009: 빌드 시 vite define으로 커밋 SHA가 들어온다(vite.config.ts). 테스트 등 define이 없는
 // 환경은 'dev'.
@@ -37,8 +38,9 @@ export const seasonLabel = (s: GameState, y = s.year): string =>
 export function uploadSeason(s: GameState, rec: CareerRecord) {
   const events = (s.evBuf || []).slice();
   s.evBuf = [];
+  const signals = takePlaySignals();
   void import('../game/outbox.js').then((m) =>
-    m.enqueueSeason(s.cid, rec.year, seasonBody(m, s, rec, events)),
+    m.enqueueSeason(s.cid, rec.year, { ...seasonBody(m, s, rec, events), signals }),
   );
 }
 

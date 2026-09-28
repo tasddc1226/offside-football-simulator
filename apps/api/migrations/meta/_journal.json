@@ -218,6 +218,13 @@
       "when": 1790499298869,
       "tag": "0030_record_club_ids",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1790556211102,
+      "tag": "0031_play_signals",
+      "breakpoints": true
     }
   ]
 }

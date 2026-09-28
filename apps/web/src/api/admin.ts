@@ -5,13 +5,14 @@ import type {
   AdminComment,
   AdminCommentList,
   AdminStats,
+  AutomationReport,
   BalanceDraftInput,
   BalanceVersion,
   BalanceVersionList,
 } from '@offside/contracts';
 import { apiFetch, cachedGet } from './client.js';
 
-export type { AdminComment, AdminStats, BalanceVersion };
+export type { AdminComment, AdminStats, AutomationReport, BalanceVersion };
 
 export const fetchBalanceVersions = () => apiFetch<BalanceVersionList>('/v1/admin/balance');
 export const createBalanceDraft = (draft: BalanceDraftInput) =>
@@ -42,3 +43,7 @@ export const purgeComments = (profileId: string) =>
     method: 'POST',
     body: JSON.stringify({ profileId }),
   });
+
+/** 자동 플레이 탐지(관찰 전용). 열 때만, 늘 새로 읽는다. */
+export const fetchAutomation = (hours: number) =>
+  apiFetch<AutomationReport>(`/v1/admin/automation?hours=${hours}`);

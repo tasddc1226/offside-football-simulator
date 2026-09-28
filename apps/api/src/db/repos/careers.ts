@@ -43,6 +43,8 @@ export type PutCareerSeasonInput = {
   eventsJson: string;
   /** T-10-065 공개 이름. undefined(옛 클라이언트)면 그대로 둔다. */
   publicName?: string | null | undefined;
+  /** 자동 플레이 탐지용 조작 요약(JSON). undefined(옛 클라이언트·다시 보낸 기록)면 그대로 둔다. */
+  signalsJson?: string | undefined;
   now: string;
 };
 
@@ -53,7 +55,9 @@ export type PutCareerSeasonInput = {
  * 이미 확인했다고 가정한다.
  */
 export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Promise<void> {
-  const { careerId, profileId, year, meta, season, eventsJson, publicName, now } = input;
+  const { careerId, profileId, year, meta, season, eventsJson, publicName, signalsJson, now } =
+    input;
+  const signals = signalsJson !== undefined ? { signalsJson } : {};
   const name = publicName !== undefined ? { publicName } : {};
   // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
   const keepRetiredName =
@@ -122,6 +126,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         mil: season.mil ? 1 : 0,
         eventsJson,
         ...detail,
+        ...signals,
         createdAt: now,
       })
       .onConflictDoUpdate({
@@ -140,6 +145,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           mil: season.mil ? 1 : 0,
           eventsJson,
           ...detail,
+          ...signals,
           // 같은 시즌을 다시 보내면 덮어써 결과는 같다(멱등). createdAt은 최초값을 유지한다.
         },
       }),

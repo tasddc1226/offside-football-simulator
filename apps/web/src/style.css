@@ -555,6 +555,9 @@ button.what:active {
   grid-template-columns: 1fr 1fr;
   margin-bottom: 6px;
 }
+.admin-tabs {
+  grid-template-columns: repeat(4, 1fr);
+}
 .board-tabs .opt,
 .admin-tabs .opt {
   align-items: center;
