@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultClubIds, isDefaultClubId } from './club-names.js';
+import { defaultClubIds, defaultClubName, isDefaultClubId } from './club-names.js';
 import {
   clubContributions,
   honorPoints,
@@ -89,6 +89,10 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
     expect(isDefaultClubId('pl-0')).toBe(true);
     expect(isDefaultClubId('pl-99')).toBe(false);
     expect(isDefaultClubId('zz-0')).toBe(false);
+    // 기록실·알림은 유저가 바꿔 부른 이름 대신 게임 기본 이름을 쓴다.
+    expect(defaultClubName('pl-0')).toBe('맨체스터 스카이블루');
+    expect(defaultClubName('pl-99')).toBeNull();
+    expect(defaultClubName('맨체스터')).toBeNull();
     const [fake] = clubContributions('FW', [season({ clubId: 'pl-99', club: '가짜 구단' })]);
     expect(fake!.clubId).toBeNull();
     // K리그2 클럽이 프리미어리그라고 적어 보내도 K리그2 배수(0.475)로 센다.

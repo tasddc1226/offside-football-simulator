@@ -251,7 +251,16 @@ test('다른 유저의 영구결번이 확정되면 플레이 중인 화면 위�
   const alert = page.locator('[data-rn-alert]');
   await page.waitForTimeout(300);
   await expect(alert).toHaveCount(0);
-  push({ careerId: OTHER, name: '박결번', pos: 'MF', ...SLOT, number: 8, seq: 5, at });
+  push({
+    careerId: OTHER,
+    name: '박결번',
+    pos: 'MF',
+    ...SLOT,
+    club: '레알',
+    number: 8,
+    seq: 5,
+    at,
+  });
   await expect(alert).toHaveAttribute('data-rn-alert', '5');
   await expect(alert).toContainText('박결번, 8번 영구결번');
   await expect(alert).toContainText('맨체스터 스카이블루 · 서버 5번째 결번');
@@ -285,7 +294,7 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
         items: [
           item(1, { clubId: 'k1-0', club: '울산 호랑이', number: 1, pos: 'GK', name: null }),
           item(2, { careerId: OLD_ID, name: '옛레전드' }),
-          item(3, { number: 4, pos: 'DF', careerId: OTHER, name: '박결번' }),
+          item(3, { number: 4, pos: 'DF', careerId: OTHER, name: '박결번', club: '시티' }),
         ],
       }),
     ),
@@ -328,6 +337,8 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
   await expect(wall.locator('[data-rn-club]')).toHaveCount(2);
   // 결번 둘인 맨체스터가 먼저, 구단 안에서는 번호 순.
   await expect(wall.locator('[data-rn-club]').first()).toHaveAttribute('data-rn-club', 'pl-0');
+  // 결번 당시 유저가 바꿔 부른 이름('시티')이 아니라 게임 기본 이름으로 건다.
+  await expect(wall.locator('[data-rn-club="pl-0"] b').first()).toHaveText('맨체스터 스카이블루');
   await expect(wall.locator('[data-rn-club="pl-0"] [data-rn-tile]')).toHaveText([
     /4\s*박결번/,
     /10\s*옛레전드.*내 선수/s,

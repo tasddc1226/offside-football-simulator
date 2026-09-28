@@ -296,10 +296,15 @@ export const CLUB_NAMES: Record<string, string[]> = {
 /** 클럽 id = `${리그}-${배열 위치}`. */
 export const clubIdOf = (leagueId: string, i: number): string => `${leagueId}-${i}`;
 
+/** 게임에 있는 클럽 id(`${리그}-${배열 위치}`)의 기본 이름. 유저가 바꿔 부른 이름이 아니라 게임 원래 이름이다. 모르는 id면 null. */
+export function defaultClubName(id: string): string | null {
+  const m = /^([a-z0-9]+)-(\d+)$/.exec(id);
+  return (m && CLUB_NAMES[m[1]!]?.[Number(m[2])]) ?? null;
+}
+
 /** 게임에 있는 클럽 id(`${리그}-${배열 위치}`)인지. */
 export function isDefaultClubId(id: string): boolean {
-  const m = /^([a-z0-9]+)-(\d+)$/.exec(id);
-  return !!m && Number(m[2]) < (CLUB_NAMES[m[1]!]?.length ?? 0);
+  return defaultClubName(id) !== null;
 }
 
 /** 기본 이름 → 클럽 id. 두 리그에 같은 이름이 있으면(모호) 넣지 않는다. */
