@@ -15,7 +15,7 @@
   <button class="btn btn-block" data-act="hof-back" onclick={() => (appState.screen = appState.legendBack)}>{BACK[appState.legendBack]}</button>
   {#if v}
     <LegendReport {v} />
-    {#if v.own?.id}<OwnHofCards h={v.own} />{/if}
+    {#if v.own?.id}<OwnHofCards {v} />{/if}
     {#if v.shareId}<ShareBar id={v.shareId} />{/if}
   {/if}
 </div>
