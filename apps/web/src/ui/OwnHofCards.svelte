@@ -5,12 +5,12 @@
   import type { HofEntry } from '../game/types.js';
   import PublishCard from './PublishCard.svelte';
   import KeepLoginCard from './KeepLoginCard.svelte';
-  import TitlePickCard from './titles/TitlePickCard.svelte';
 
   const { h }: { h: HofEntry } = $props();
 </script>
 
-<TitlePickCard {h} />
+<!-- 대표 칭호 카드는 첫 화면 번들 밖에서 불러온다. -->
+{#await import('./titles/TitlePickCard.svelte') then { default: TitlePickCard }}<TitlePickCard {h} />{/await}
 {#if isHofEligible(h.age)}
   <PublishCard {h} /><KeepLoginCard id={h.id!} />
 {:else}
