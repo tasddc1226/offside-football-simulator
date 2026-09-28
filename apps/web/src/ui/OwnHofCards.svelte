@@ -1,5 +1,5 @@
 <script lang="ts">
-  // 내 은퇴 선수(서버에 올라간 기록) 아래의 대표 칭호·이름 공개·로그인 카드(공유 버튼은 화면 아래 ShareBar, T-10-067). T-10-032: 짧은 커리어는 전체 명예의 전당과
+  // 내 은퇴 선수(서버에 올라간 기록) 아래의 SNS 공유 이미지(T-10-079)·대표 칭호·이름 공개·로그인 카드(공유 버튼은 화면 아래 ShareBar, T-10-067). T-10-032: 짧은 커리어는 전체 명예의 전당과
   // 공유 링크에 오르지 않으므로(서버도 같은 기준으로 거른다) 두 카드 대신 안내만 한다.
   import { isHofEligible, SHORT_CAREER_NOTE } from '@offside/contracts/hof-rules';
   import type { LegendView } from './state.svelte.js';
