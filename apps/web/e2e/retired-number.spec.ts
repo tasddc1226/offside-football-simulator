@@ -69,7 +69,7 @@ test('결번을 받으면 심사 카드와 유니폼 세리머니가 나온다',
   await expect(page.locator('body')).not.toContainText('827');
   await expect(rn).toContainText('10번은 이제,');
   await expect(rn).toContainText('맨체스터 스카이블루 영구결번 · 서버 3번째 결번');
-  await expect(page.locator('[data-legend-rn-pill]')).toContainText('결번 10');
+  await expect(page.locator('[data-legend-rn-pill]')).toContainText('영결 10');
   await rn.screenshot({ path: test.info().outputPath('retired-number.png') });
 
   const axe = await new AxeBuilder({ page }).include('[data-legend-rn]').analyze();
@@ -185,7 +185,7 @@ test('소급으로 받은 결번이 이 기기의 내 선수 배지와 상세 �
   await page.locator('[data-act="owner"]').click();
   await expect(page.locator('[data-my-player="0"] [data-rn-chip]')).toHaveText('👑 영결 10');
   await page.locator('[data-my-player="0"]').click();
-  await expect(page.locator('[data-legend-rn-pill]')).toContainText('결번 10');
+  await expect(page.locator('[data-legend-rn-pill]')).toContainText('영결 10');
   await expect(page.locator('[data-legend-rn="granted"]')).toContainText('서버 1번째 결번');
 });
 
@@ -262,5 +262,5 @@ test('다른 유저의 영구결번이 확정되면 플레이 중인 화면 위�
   await alert.locator('[data-act="rn-alert-open"]').click();
   await expect(alert).toHaveCount(0);
   await expect(page.locator('.film-open h1')).toHaveText('박결번');
-  await expect(page.locator('[data-legend-rn-pill]')).toContainText('결번 8');
+  await expect(page.locator('[data-legend-rn-pill]')).toContainText('영결 8');
 });

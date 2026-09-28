@@ -112,7 +112,7 @@
       <span class="pill pill-gold">{legendTitle(v.score)}</span>
       {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{main.name}’</span>{/if}
       <span class="pill">최고 OVR {v.peak}</span>
-      {#if rnGranted}<span class="pill pill-rn" data-legend-rn-pill>👑 {rnGranted.club} 결번 {rnGranted.number}</span>{/if}
+      {#if rnGranted}<span class="pill pill-rn" data-legend-rn-pill title="{rnGranted.club} 영구결번 {rnGranted.number}번">👑 {rnGranted.club} 영결 {rnGranted.number}</span>{/if}
     </div>
     {#if playing && !seen.highlights}<div class="film-cue" aria-hidden="true">스크롤해서 커리어 돌아보기<i>↓</i></div>{/if}
   </section>
