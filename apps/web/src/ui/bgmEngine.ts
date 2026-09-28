@@ -5,7 +5,8 @@
 // - main: LudoLoon Studio "Happy Wheels (Loop)" — https://ludoloonstudio.itch.io/happy-wheels-free-music
 //   라이선스(https://ludoloon.studio/music): 상업 이용 가능, 출처 표기는 선택(설정 화면에 적는다), 곡 단독 재배포 금지.
 // - records: Tunetank "Deep House Lounge Music"(Pixabay 349539) — Pixabay Content License: 상업 이용 가능, 표기 불필요,
-//   곡 단독 재배포 금지.
+//   곡 단독 재배포 금지. 원본이 0 dBFS를 넘게 마스터링돼 있어(피크 +1 dB) -5 dB 낮춰 인코딩했다 — 넘는 샘플을 잘라
+//   내는 디코더에서 지지직거리지 않게 하고, main 곡과 크기(RMS -15 dB)도 맞춘다.
 import mainSrc from '../assets/bgm-loop.m4a?url';
 import recordsSrc from '../assets/bgm-records.m4a?url';
 
@@ -29,7 +30,8 @@ interface Track {
 }
 
 export function createBgm(): Bgm {
-  const ctx = new AudioContext();
+  // 배경음악은 반응 속도가 필요 없다. 기본값(interactive)의 작은 버퍼는 폰·블루투스 이어폰에서 모자라 지지직거린다.
+  const ctx = new AudioContext({ latencyHint: 'playback' });
   const master = ctx.createGain();
   master.gain.value = 0;
   master.connect(ctx.destination);
