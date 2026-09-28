@@ -6,7 +6,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie, putJson, putSeasonsFor } from '../test/http.js';
+import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
 
 const CAREER_ID = '3b1d6c1e-2a4f-4f7e-9a0b-7c8d9e0f1a2b';
 
@@ -360,10 +360,12 @@ describe('공개 명예의 전당 /v1/hof', () => {
       },
       updatedAt: '2026-09-25T00:00:00.000Z',
     });
-    await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/seasons/2027`, {
-      ...season,
-      season: { ...season.season, age: 19, club: renamed, league: '프리미어리그' },
-    });
+    await putJson(
+      ctx,
+      cookie,
+      `/v1/careers/${CAREER_ID}/seasons/2027`,
+      seasonBody({ age: 19, club: renamed, league: '프리미어리그' }),
+    );
     await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
       ...summary,
       lastClub: renamed,
@@ -393,12 +395,12 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect(detail.snapshot?.career.map((r) => r.clubId)).toEqual([undefined, 'pl-7']);
     expect(detail.snapshot?.trophies[0]?.clubId).toBe('pl-7');
     const seasons = await ctx.env.DB.prepare(
-      'select club, club_id as clubId from career_seasons where career_id = ? order by year',
+      'select club, club_id as clubId from career_seasons where career_id = ? and year <= 2027 order by year',
     )
       .bind(CAREER_ID)
       .all();
     expect(seasons.results).toEqual([
-      { club: '테스트 FC', clubId: null },
+      { club: '테스트 고교', clubId: null },
       { club: renamed, clubId: 'pl-7' },
     ]);
     // 한 번 끝나면 다시 훑지 않는다.
