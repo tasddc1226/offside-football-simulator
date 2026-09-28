@@ -46,7 +46,7 @@
   }
 
   type Pose = { x: number; y: number; s: number };
-  const SPOT: Pose = { x: 150, y: 150, s: 1 };
+  const SPOT: Pose = { x: 150, y: 148, s: 1.35 };
   /** 단계별 공 위치(골문 앞 시점, viewBox 300×170). */
   const ball = $derived.by((): Pose => {
     if (stage === 0 || v.ok === null) return SPOT;
@@ -75,18 +75,37 @@
           : two({ x: 150 + s * 56, y: 56, s: 0.66 }, { x: 150 + s * 68, y: 40, s: 0.58 });
     }
   });
+  type KPose = { dx: number; dy: number; rot: number };
   /** 골키퍼 자세. 슈팅 계열에선 상대 키퍼, save에선 나. */
-  const keeper = $derived.by(() => {
-    if (stage === 0 || v.ok === null) return 'translate(0px,0px) rotate(0deg)';
+  const kp = $derived.by((): KPose => {
+    if (stage === 0 || v.ok === null) return { dx: 0, dy: 0, rot: 0 };
     const s = side;
-    if (v.mg === 'chip') return `translate(0px,${v.ok ? -4 : -12}px) rotate(0deg)`;
-    if (hold) return v.ok ? 'translate(0px,-4px) rotate(0deg)' : `translate(${s * 14}px,-4px) rotate(${s * 25}deg)`;
+    if (v.mg === 'chip') return { dx: 0, dy: v.ok ? -4 : -12, rot: 0 };
+    if (hold) return v.ok ? { dx: 0, dy: -4, rot: 0 } : { dx: s * 14, dy: -4, rot: s * 25 };
     // 페널티킥이 들어가면 키퍼는 반대로 속고, 나머지는 공 쪽으로 몸을 던진다(드리블 성공은 그 반대로 제친다).
     const toward = v.mg !== 'shot' || !v.ok;
     const d = toward ? s : -s;
-    const reach = v.mg === 'save' && !v.ok ? 30 : 38;
-    return `translate(${d * reach}px,-6px) rotate(${d * 68}deg)`;
+    return { dx: d * (v.mg === 'save' && !v.ok ? 30 : 38), dy: -6, rot: d * 68 };
   });
+  /** 공이 땅에 닿은 높이(그림자 자리). 골라인 뒤로 날아간 공은 골라인에 그림자를 둔다. */
+  const shadowY = $derived(ball.y + 6 >= 112 ? ball.y + 6 : 112);
+  /** 축구공 무늬 — 가운데 오각형과 가장자리 다섯 조각(원 밖은 잘린다), 조각을 잇는 솔기. */
+  const penta = (cx: number, cy: number, r: number, rot: number) =>
+    Array.from({ length: 5 }, (_, k) => {
+      const a = ((rot + 72 * k) * Math.PI) / 180;
+      return `${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`;
+    }).join(' ');
+  const rad = (a: number) => (a * Math.PI) / 180;
+  const PATCHES = [
+    penta(0, 0, 2.2, -90),
+    ...[90, 162, 234, 306, 18].map((a) => penta(7.2 * Math.cos(rad(a)), 7.2 * Math.sin(rad(a)), 2.5, a + 180)),
+  ];
+  const SEAMS = [-90, -18, 54, 126, 198].map((a) => ({
+    x1: 2.2 * Math.cos(rad(a)),
+    y1: 2.2 * Math.sin(rad(a)),
+    x2: 4.9 * Math.cos(rad(a)),
+    y2: 4.9 * Math.sin(rad(a)),
+  }));
   /** 골이 들어갔는가(그물 흔들기). */
   const goal = $derived(stage === 2 && v.ok !== null && (v.mg === 'save' ? !v.ok : v.ok));
   const caption = $derived.by(() => {
@@ -110,22 +129,63 @@
   onclick={() => tap(performance.now())}
 >
   <svg viewBox="0 0 300 170" aria-hidden="true">
+    <defs>
+      <radialGradient id="mg-ball-shade" cx="36%" cy="30%" r="80%">
+        <stop offset="0" stop-color="#ffffff" />
+        <stop offset="0.65" stop-color="#eef0f3" />
+        <stop offset="1" stop-color="#b9bfc8" />
+      </radialGradient>
+      <clipPath id="mg-ball-clip"><circle r="6.5" /></clipPath>
+    </defs>
     <rect class="mg-grass" x="0" y="0" width="300" height="170" />
+    {#each [112, 138] as y (y)}<rect class="mg-stripe" x="0" {y} width="300" height="13" />{/each}
+    <!-- 골대: 뒤 그물 틀 → 그물 → 앞 골대 순서로 그려 깊이를 준다. -->
+    <path class="mg-goal-back" d="M70 28 L82 40 H218 L230 28 M82 40 V104 M218 40 V104 M70 112 L82 104 H218 L230 112" />
     <g class="mg-net" class:hit={goal}>
-      {#each [85, 100, 115, 130, 145, 160, 175, 190, 205, 220] as x (x)}<line x1={x} y1="28" x2={x} y2="112" />{/each}
-      {#each [43, 58, 73, 88, 103] as y (y)}<line x1="70" y1={y} x2="230" y2={y} />{/each}
+      {#each [94, 106, 118, 130, 142, 154, 166, 178, 190, 202] as x (x)}<line x1={x} y1="40" x2={x} y2="104" />{/each}
+      {#each [52, 64, 76, 88] as y (y)}<line x1="82" y1={y} x2="218" y2={y} />{/each}
+      <path d="M70 40 L82 52 M70 56 L82 64 M70 72 L82 76 M70 88 L82 88 M70 104 L82 100 M230 40 L218 52 M230 56 L218 64 M230 72 L218 76 M230 88 L218 88 M230 104 L218 100" />
     </g>
-    <path class="mg-goal" d="M70 112 V28 H230 V112" />
     <line class="mg-line" x1="0" y1="112" x2="300" y2="112" />
+    <path class="mg-goal" d="M70 112 V28 H230 V112" />
     <circle class="mg-line-dot" cx="150" cy="150" r="2" />
-    <g class="mg-keeper" class:me style="transform:{keeper}">
-      <rect x="128" y="78" width="44" height="7" rx="3.5" />
-      <rect x="141" y="76" width="18" height="30" rx="5" />
-      <rect x="143" y="104" width="14" height="8" rx="2" />
-      <circle cx="150" cy="68" r="7" />
+    <ellipse
+      class="mg-shadow"
+      cx="150"
+      cy="113"
+      rx={kp.rot ? 22 : 14}
+      ry="2.6"
+      style="transform:translateX({kp.dx}px)"
+    />
+    <g class="mg-keeper" class:me style="transform:translate({kp.dx}px,{kp.dy}px) rotate({kp.rot}deg)">
+      <path class="kp-sock" d="M145.5 95 L142 108.5 M154.5 95 L158 108.5" />
+      <path class="kp-boot" d="M138.5 110.5 h6 M155.5 110.5 h6" />
+      <path class="kp-shorts" d="M140.5 86 h19 l1.8 10 h-9 l-1.3 -3.5 -1.3 3.5 h-9 z" />
+      <path class="kp-arm" d="M140.5 72.5 L128.5 80 L123.5 70 M159.5 72.5 L171.5 80 L176.5 70" />
+      <path class="kp-shirt" d="M138.5 71.5 Q150 66.5 161.5 71.5 L160 88 H140 Z" />
+      <text class="kp-num" x="150" y="83.5">1</text>
+      <circle class="kp-glove" cx="122.8" cy="66.8" r="4.3" />
+      <circle class="kp-glove" cx="177.2" cy="66.8" r="4.3" />
+      <rect class="kp-skin" x="147.6" y="65" width="4.8" height="4" rx="1" />
+      <circle class="kp-skin" cx="150" cy="61" r="6" />
+      <path class="kp-hair" d="M144 61 A6 6 0 0 1 156 61 Q153 57.6 150 58.2 Q147 57.6 144 61 Z" />
     </g>
-    <g class="mg-ball" style="transform:translate({ball.x}px,{ball.y}px) scale({ball.s})">
-      <circle r="6" />
+    <ellipse
+      class="mg-shadow mg-ball-shadow"
+      rx="6"
+      ry="1.9"
+      style="transform:translate({ball.x}px,{shadowY}px) scale({ball.s});opacity:{ball.y + 6 >= 112 ? 0.4 : 0.18}"
+    />
+    <g
+      class="mg-ball"
+      style="transform:translate({ball.x}px,{ball.y}px) scale({ball.s}) rotate({stage * 280 * side}deg)"
+    >
+      <circle r="6.5" fill="url(#mg-ball-shade)" />
+      <g clip-path="url(#mg-ball-clip)">
+        {#each PATCHES as pts, i (i)}<polygon class="ball-patch" points={pts} />{/each}
+        {#each SEAMS as l, i (i)}<line class="ball-seam" {...l} />{/each}
+      </g>
+      <circle class="ball-edge" r="6.5" />
     </g>
   </svg>
   {#if caption}<span class="mg-caption pop" class:ok={v.ok}>{caption}</span>{/if}
