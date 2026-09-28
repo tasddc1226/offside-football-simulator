@@ -164,3 +164,23 @@ test('선택 기록이 없는 은퇴에는 플레이 성향 카드가 없다', a
   await expect(page.locator('[data-credit="finale"]')).toBeAttached();
   await expect(page.locator('[data-legend-style]')).toHaveCount(0);
 });
+
+// T-10-079 은퇴한 내 선수의 SNS 공유용 한 장 이미지 — 만들면 미리 보기가 뜨고 PNG로 저장된다(공유 시트가 없는 브라우저).
+test('은퇴한 내 선수의 공유 이미지를 만들어 저장한다', async ({ page }) => {
+  await seed(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-my-player="0"]').click();
+  const card = page.locator('[data-share-image]');
+  await card.locator('[data-act="share-image-make"]').click();
+  const img = card.locator('[data-share-image-preview]');
+  await expect(img).toBeVisible();
+  expect(
+    await img.evaluate((el: HTMLImageElement) =>
+      el.decode().then(() => [el.naturalWidth, el.naturalHeight]),
+    ),
+  ).toEqual([1080, 1350]);
+  const download = page.waitForEvent('download');
+  await card.locator('[data-act="share-image-save"]').click();
+  expect((await download).suggestedFilename()).toBe('offside-칭호왕.png');
+});

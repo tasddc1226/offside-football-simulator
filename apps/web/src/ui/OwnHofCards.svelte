@@ -9,7 +9,8 @@
   const { h }: { h: HofEntry } = $props();
 </script>
 
-<!-- 대표 칭호 카드는 첫 화면 번들 밖에서 불러온다. -->
+<!-- 공유 이미지·대표 칭호 카드는 첫 화면 번들 밖에서 불러온다. -->
+{#await import('./share/ShareImageCard.svelte') then { default: ShareImageCard }}<ShareImageCard {h} />{/await}
 {#await import('./titles/TitlePickCard.svelte') then { default: TitlePickCard }}<TitlePickCard {h} />{/await}
 {#if isHofEligible(h.age)}
   <PublishCard {h} /><KeepLoginCard id={h.id!} />
