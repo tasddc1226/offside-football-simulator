@@ -4,6 +4,7 @@
   import Topbar from './Topbar.svelte';
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
   import { bgm, setBgm, setBgmVolume } from './bgm.svelte.js';
+  import { volumeAdjustable } from './bgmEngine.js';
   import { isDark, setDark } from './theme.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
@@ -48,6 +49,7 @@
       </div>
       <button class="switch" role="switch" aria-checked={bgm.on} aria-labelledby="bgm-label" data-setting="bgm" onclick={() => setBgm(!bgm.on)}></button>
     </div>
+    {#if volumeAdjustable()}
     <div class="settings-volume" class:off={!bgm.on}>
       <label for="bgm-volume">배경음악 음량</label>
       <input
@@ -62,6 +64,9 @@
       />
       <output for="bgm-volume" class="num">{bgm.volume}%</output>
     </div>
+    {:else}
+    <p class="muted fs-xs settings-volume-note" data-setting="bgm-volume-note">이 기기에서는 배경음악 음량을 기기 음량 버튼으로 조절해요.</p>
+    {/if}
     <p class="muted fs-xs settings-credit">
       음악: Happy Wheels — <a href="https://ludoloonstudio.itch.io/happy-wheels-free-music" target="_blank" rel="noopener">LudoLoon Studio</a> · Deep House Lounge — <a href="https://pixabay.com/users/tunetank-50201703/" target="_blank" rel="noopener">Tunetank</a>
     </p>
