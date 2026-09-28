@@ -70,6 +70,23 @@ const snapshot = {
   nat: { caps: 30 },
   storyLog: [],
   miles: [{ year: 2026, t: '데뷔' }],
+  style: {
+    from: 18,
+    betOdds: 610,
+    bets: 12,
+    betWins: 7,
+    longshots: 3,
+    longshotWins: 1,
+    safe: 2,
+    sure: 5,
+    best: { id: 'derby', p: 0.22 },
+    moves: 2,
+    tierUp: 2,
+    tierDown: 0,
+    payFirst: 0,
+    loyal: 1,
+    snubUp: 0,
+  },
 };
 
 describe('공개 명예의 전당 /v1/hof', () => {
@@ -139,6 +156,8 @@ describe('공개 명예의 전당 /v1/hof', () => {
     // T-10-066 스냅샷의 클럽 id도 그대로 돌아온다.
     expect(detail.snapshot?.career[0]?.clubId).toBe('pl-15');
     expect(detail.snapshot?.trophies[0]?.clubId).toBe('pl-15');
+    // T-10-077 플레이 성향도 그대로 돌아온다.
+    expect(detail.snapshot?.style).toEqual(snapshot.style);
   });
 
   it('옛 클라이언트 본문(이름·스냅샷 없음)도 목록에 익명·상세 없음으로 나온다', async () => {

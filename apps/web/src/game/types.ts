@@ -2,7 +2,7 @@
 // 풀타임 원본은 선수 상태를 하나의 거대한 객체(G)로 다루며 필드를 느슨하게 추가합니다.
 // 완전한 판별 유니온으로 다시 모델링하면 포팅 리스크가 커지므로, 여기서는 알려진 필드는 구체적으로
 // 타이핑하고 나머지(로그 라인 종류가 다양한 필드, 이벤트별 임시 플래그 등)는 폭넓게 둡니다.
-import type { LegendSnapshot } from '@offside/contracts';
+import type { LegendSnapshot, PlayStyle } from '@offside/contracts';
 import type { CareerBalance } from './balance.js';
 import type { AttrKey, Pos, Club, SAVE_VERSION } from './data.js';
 import type { SeasonEndResult } from './season.js';
@@ -275,6 +275,8 @@ export interface GameState {
   titles?: { id: string; year: number }[] | undefined;
   /** T-10-026. 유저가 고른 대표 칭호 id. 없으면 mainTitle()이 자동으로 고른다. */
   titleSel?: string;
+  /** T-10-077. 커리어 내내 센 플레이 성향(playStyle.ts). 기능이 나오기 전에 시작한 저장엔 처음 선택 때 생긴다. */
+  style?: PlayStyle;
   rng: RngSaveState;
   /** T-9-009. 이번 시즌 버퍼링된 선택 로그(`ft_save`와 함께 자동 저장). 시즌 종료 시 업로드 페이로드로
    * 옮겨지고 비워진다. 최대 300개, 넘치면 가장 오래된 것부터 버린다. */

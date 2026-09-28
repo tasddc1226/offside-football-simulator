@@ -203,7 +203,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
             break;
           }
           const opt = pickOption(s, m);
-          const r = acceptOption(s, opt);
+          const r = acceptOption(s, opt, m.options);
           if (r?.reopen && g++ < 5) {
             m = market(s);
             continue;

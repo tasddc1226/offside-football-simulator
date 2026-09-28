@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
+import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
 
 /**
  * T-9-009. 커리어·시즌 요약 + 이벤트 선택 로그 업로드 계약. 세이브 전체(브리프: "클라우드 세이브
@@ -201,6 +202,31 @@ const YearTextSchema = z.strictObject({
   t: z.string().max(80),
 });
 
+const StyleCountSchema = z.number().int().min(0).max(STYLE_COUNT_MAX);
+/**
+ * T-10-077 플레이 성향 — 커리어 내내 유저가 한 선택을 센 값(은퇴 화면 성향 카드). 무엇을 골랐는지 목록은
+ * 담지 않고 횟수만 센다(각 카운터의 뜻은 play-style.ts). 이 기능이 나온 뒤의 선택만 세므로 `from`(세기 시작한
+ * 나이)부터의 기록이다.
+ */
+export const PlayStyleSchema = z.strictObject({
+  from: z.number().int().min(0).max(100),
+  /** 확률 선택들의 성공 확률 합(%, 정수). betWins와 견주면 기대보다 운이 좋았는지 나온다. */
+  betOdds: z
+    .number()
+    .int()
+    .min(0)
+    .max(STYLE_COUNT_MAX * 100),
+  /** 가장 낮은 확률로 성공한 선택(이벤트 id · 성공 확률). */
+  best: z
+    .strictObject({ id: EventLogEntrySchema.shape.id, p: z.number().min(0).max(1) })
+    .optional(),
+  ...(Object.fromEntries(STYLE_COUNTERS.map((k) => [k, StyleCountSchema])) as Record<
+    StyleCounter,
+    typeof StyleCountSchema
+  >),
+});
+export type PlayStyle = z.infer<typeof PlayStyleSchema>;
+
 /**
  * 은퇴 선수 상세(시즌별 기록 · 수상 · 여정)를 다시 그리는 데 필요한 커리어 스냅샷. 선수 이름은 담지
  * 않는다 — 공개 이름은 `publicName`으로 따로 보내고, 공개하지 않으면 서버에 이름이 남지 않는다.
@@ -243,6 +269,8 @@ export const LegendSnapshotSchema = z.strictObject({
     .array(z.strictObject({ id: TitleIdSchema, year: z.number().int().min(0).max(2200) }))
     .max(200)
     .optional(),
+  /** T-10-077 플레이 성향. 기능이 나오기 전에 은퇴한 스냅샷엔 없다. */
+  style: PlayStyleSchema.optional(),
 });
 export type LegendSnapshot = z.infer<typeof LegendSnapshotSchema>;
 

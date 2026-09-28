@@ -346,9 +346,10 @@ function showMarket(m: MarketResult) {
 export function pickOption(i: number) {
   // 이적시장 옵션은 G.pending.m에 이미 저장돼 있다(nextPending이 만든 그 목록).
   const p = appState.G?.pending;
-  const o = p?.type === 'market' ? p.m?.options[i] : undefined;
+  const options = p?.type === 'market' ? (p.m?.options ?? []) : [];
+  const o = options[i];
   if (!o || !appState.G) return;
-  const r = acceptOption(appState.G, o);
+  const r = acceptOption(appState.G, o, options);
   const logEntry: EventLogEntry = {
     k: o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' ? 'mil' : 'mkt',
     id: o.kind,

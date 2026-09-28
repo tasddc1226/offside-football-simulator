@@ -29,6 +29,7 @@ import { checkTitles, mainTitle, titleView, type TitleView } from './titles.js';
 import { natInit, natSeasonEnd, type NatTourResult } from './national.js';
 import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
 import { detectCareerHighs } from './records.js';
+import { noteMarket } from './playStyle.js';
 import type { LegendSnapshot } from '@offside/contracts';
 import type {
   GameState,
@@ -384,7 +385,10 @@ export function market(s: GameState): MarketResult {
 export function acceptOption(
   s: GameState,
   opt: MarketOption,
+  /** 이번 이적 시장의 선택지 전부(플레이 성향 — 제의를 뿌리친 잔류를 센다). */
+  options: readonly MarketOption[] = [],
 ): { text: string; ok?: boolean; reopen?: boolean } | null {
+  noteMarket(s, opt, options);
   if (opt.kind === 'sangmu' || opt.kind === 'army' || opt.kind === 'serve') {
     return acceptMilitary(s, opt);
   }
@@ -565,6 +569,7 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
     })),
     miles: (s.miles || []).map(({ year, t }) => ({ year, t })),
     titles: (s.titles || []).map(({ id, year }) => ({ id, year })),
+    ...(s.style ? { style: { ...s.style } } : {}),
   };
 }
 export function legendTitle(score: number): string {

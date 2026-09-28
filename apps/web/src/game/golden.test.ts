@@ -65,7 +65,7 @@ function playCareer(i: number): GameState {
         retire(s);
         break;
       }
-      const r = acceptOption(s, pickOption(s, m.options));
+      const r = acceptOption(s, pickOption(s, m.options), m.options);
       s.training = 'rest';
       if (r?.reopen && reopen++ < 5) {
         m = market(s);

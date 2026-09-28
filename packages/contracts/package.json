@@ -11,7 +11,8 @@
     "./hof-rules": "./src/hof-rules.ts",
     "./content-filter": "./src/content-filter.ts",
     "./club-limits": "./src/club-limits.ts",
-    "./polling": "./src/polling.ts"
+    "./polling": "./src/polling.ts",
+    "./play-style": "./src/play-style.ts"
   },
   "scripts": {
     "test": "vitest run",
