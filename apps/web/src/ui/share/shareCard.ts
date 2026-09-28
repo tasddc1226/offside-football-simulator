@@ -237,8 +237,13 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
     text(s.label, x, sy + 128, F.statLabel, C.muted);
   });
 
-  // 커리어 여정(성향이 없으면 더 길게)
+  // 커리어 여정(성향이 없으면 더 길게). 성향 칸이 없으면 기록 아래~바닥 줄 사이 가운데에 둔다(짧은 여정이 위에 몰리지 않게).
   let y = sy + 206;
+  if (!c.style) {
+    const rows = c.stops.reduce((n, s) => n + (s ? 52 : 40), 0);
+    const blockH = 22 + 56 + rows - 52 + 10; // 제목 글자 윗선 ~ 마지막 줄 아랫선
+    y = Math.max(y, Math.round(sy + 148 + (CARD_H - 100 - (sy + 148) - blockH) / 2 + 22));
+  }
   spaced('THE JOURNEY', y, F.heading, C.gold, 6);
   y += 56;
   for (const s of c.stops) {
