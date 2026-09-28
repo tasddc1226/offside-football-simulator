@@ -7,14 +7,20 @@ import { startCareer } from './helpers.js';
 async function watchAudio(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem('ft_sfx', 'false'); // 클릭 효과음의 AudioContext는 만들지 않는다.
-    const w = window as unknown as { __ctx: AudioContext[]; __src: number };
+    const w = window as unknown as { __ctx: AudioContext[]; __src: number; __gain: GainNode[] };
     w.__ctx = [];
     w.__src = 0;
+    w.__gain = [];
     const Base = window.AudioContext;
     window.AudioContext = class extends Base {
       constructor(o?: AudioContextOptions) {
         super(o);
         w.__ctx.push(this);
+      }
+      override createGain() {
+        const g = super.createGain();
+        w.__gain.push(g);
+        return g;
       }
       override createBufferSource() {
         w.__src++;
@@ -65,6 +71,15 @@ test('배경음악: 게임 탭과 하단 메뉴를 오가도 이어서 틀고, �
   await nav.getByRole('button', { name: '설정' }).click();
   const setting = page.locator('[data-setting="bgm"]');
   await expect(setting).toHaveAttribute('aria-checked', 'true');
+  // 음량 슬라이더는 틀고 있는 음악에 바로 반영된다(기본 70% → 게인 0.35, 40% → 0.2).
+  const gain = () =>
+    page.evaluate(() => (window as unknown as { __gain: GainNode[] }).__gain[0]!.gain.value);
+  await expect(page.locator('[data-setting="bgm-volume"]')).toHaveValue('70');
+  await expect.poll(gain).toBeCloseTo(0.35, 2);
+  await page.locator('[data-setting="bgm-volume"]').fill('40');
+  await expect(page.locator('.settings-volume output')).toHaveText('40%');
+  await expect.poll(gain).toBeCloseTo(0.2, 2);
+  expect(await page.evaluate(() => localStorage.getItem('ft_bgm_volume'))).toBe('40');
   await setting.click();
   await expect(page.locator('[data-act="bgm"]')).toHaveAttribute('aria-checked', 'false');
   expect(await page.evaluate(() => localStorage.getItem('ft_bgm'))).toBe('false');

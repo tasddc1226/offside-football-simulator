@@ -6,10 +6,17 @@ import type { Bgm } from './bgmEngine.js';
 import { appState, type Screen } from './state.svelte.js';
 
 const KEY = 'ft_bgm';
+const VOLUME_KEY = 'ft_bgm_volume';
+/** 설정의 음량 슬라이더 기본값(0–100). */
+const DEFAULT_VOLUME = 70;
 /** 배경음악을 트는 화면 — 게임(모든 탭)과 기록실을 뺀 하단 메뉴 화면. */
 export const BGM_SCREENS: readonly Screen[] = ['game', 'home', 'board', 'owner', 'settings'];
 
-export const bgm = $state({ on: loadKey<boolean>(KEY) ?? false });
+export const bgm = $state({
+  on: loadKey<boolean>(KEY) ?? false,
+  /** 0–100. */
+  volume: loadKey<number>(VOLUME_KEY) ?? DEFAULT_VOLUME,
+});
 
 let engine: Promise<Bgm | null> | null = null;
 
@@ -21,13 +28,20 @@ function sync() {
       (m) => m.createBgm(),
       () => null, // 오디오를 못 쓰는 환경·청크 실패는 조용히 넘어간다.
     );
-    void engine.then((e) => (wanted() ? e?.play() : e?.pause()));
+    void engine.then((e) => (wanted() ? e?.play(bgm.volume / 100) : e?.pause()));
   } else void engine?.then((e) => e?.pause());
 }
 
 export function setBgm(on: boolean) {
   bgm.on = on;
   saveKey(KEY, on);
+  sync();
+}
+
+/** 설정의 음량 슬라이더. 틀고 있으면 바로 반영한다. */
+export function setBgmVolume(volume: number) {
+  bgm.volume = Math.max(0, Math.min(100, Math.round(volume)));
+  saveKey(VOLUME_KEY, bgm.volume);
   sync();
 }
 

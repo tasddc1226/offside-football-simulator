@@ -2218,6 +2218,42 @@ th.n {
   gap: 12px;
   width: 100%;
 }
+/* 배경음악 음량 — 배경음악이 꺼져 있어도 미리 맞춰 둘 수 있게 흐리게만 한다. */
+.settings-volume {
+  display: grid;
+  grid-template-columns: auto 1fr 3.5em;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 0.875rem;
+}
+.settings-volume.off {
+  opacity: 0.55;
+}
+.settings-volume input {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  accent-color: var(--pitch);
+}
+:root[data-theme='dark'] .settings-volume input {
+  accent-color: var(--accent);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .settings-volume input {
+    accent-color: var(--accent);
+  }
+}
+.settings-credit {
+  margin: 6px 0 0;
+}
+.settings-credit a {
+  color: inherit;
+}
+.settings-volume output {
+  text-align: right;
+  color: var(--muted);
+}
 .settings-row + .settings-row {
   margin-top: 14px;
   padding-top: 14px;
