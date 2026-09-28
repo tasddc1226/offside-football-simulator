@@ -9,6 +9,10 @@
 > 워커 브리프·시뮬레이션 증거는 [`docs/archive/offside/tracking/`](../archive/offside/README.md)에
 > 보존돼 있다.
 
+## 확장 기획
+
+- [T-10-082: 구단주 도전 과제·칭호](owner-quests-and-titles-plan.md) — 장기 과제와 표시 보상, 초기 조건 및 구현 전 검토 항목.
+
 ## 역할
 
 | 역할 | 담당 | 하는 일 | 하지 않는 일 |
