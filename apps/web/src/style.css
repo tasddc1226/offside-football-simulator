@@ -3015,6 +3015,131 @@ body:has(nav.tabs) .toast {
     animation: none;
   }
 }
+/* T-10-076 기록실 영구결번 탭 — 구단 색 유니폼 타일을 구단별로 건다. */
+.hof-tabs {
+  margin-bottom: 12px;
+}
+.rn-wall-lead {
+  margin: 0 0 14px;
+}
+.rn-wall-sum {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.rn-wall-sum > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.rn-wall-sum b {
+  font-size: 1.25rem;
+}
+.rn-wall-sum > div:last-child b {
+  font-size: 0.9375rem;
+  line-height: 1.75rem;
+}
+.rn-wall-sum small {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.rn-club {
+  padding-block: 14px 4px;
+  border-top: 1px solid var(--line);
+}
+.rn-club-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+.rn-club-head b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rn-club-count {
+  margin-left: auto;
+  flex: none;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+}
+.rn-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+  padding-bottom: 10px;
+}
+.hof-sorts + .rn-tiles {
+  margin-top: 10px;
+}
+.rn-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background:
+    radial-gradient(
+      90% 60% at 50% 30%,
+      color-mix(in srgb, var(--rn-base, #1f6f4a) 22%, transparent),
+      transparent
+    ),
+    var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.16s ease-out;
+}
+.rn-tile:active {
+  transform: scale(0.97);
+  transition-duration: 0.05s;
+}
+.rn-tile > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rn-jersey.rn-tile-shirt {
+  width: 52px;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+.rn-tile-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+.rn-tile-mine {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 0 6px;
+  font-size: 0.625rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rn-tile {
+    transition: none;
+  }
+}
 
 /* ───────── 구간 리포트 (T-10-024) ───────── */
 .report {

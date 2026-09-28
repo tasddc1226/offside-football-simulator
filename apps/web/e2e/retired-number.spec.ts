@@ -264,3 +264,86 @@ test('다른 유저의 영구결번이 확정되면 플레이 중인 화면 위�
   await expect(page.locator('.film-open h1')).toHaveText('박결번');
   await expect(page.locator('[data-legend-rn-pill]')).toContainText('영결 8');
 });
+
+test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신순으로 보고, 누르면 상세에 갔다 같은 탭으로 돌아온다', async ({
+  page,
+}) => {
+  await seedOldLegend(page);
+  const OTHER = '0d000000-0000-4000-8000-00000000000c';
+  const item = (seq: number, o: Record<string, unknown>) => ({
+    ...SLOT,
+    seq,
+    grantedAt: `2026-09-28T1${seq}:00:00.000Z`,
+    careerId: `0d000000-0000-4000-8000-00000000010${seq}`,
+    name: `결번${seq}`,
+    pos: 'FW',
+    ...o,
+  });
+  await page.route(`${API}/v1/retired-numbers`, (r) =>
+    r.fulfill(
+      ok({
+        items: [
+          item(1, { clubId: 'k1-0', club: '울산 호랑이', number: 1, pos: 'GK', name: null }),
+          item(2, { careerId: OLD_ID, name: '옛레전드' }),
+          item(3, { number: 4, pos: 'DF', careerId: OTHER, name: '박결번' }),
+        ],
+      }),
+    ),
+  );
+  await page.route(`${API}/v1/hof/${OTHER}`, (r) =>
+    r.fulfill(
+      ok({
+        entry: {
+          id: OTHER,
+          name: '박결번',
+          pos: 'DF',
+          number: 4,
+          retireAge: 35,
+          peak: 88,
+          legendScore: 1200,
+          apps: 400,
+          goals: 20,
+          assists: 30,
+          trophies: 12,
+          awards: 2,
+          caps: 40,
+          ballon: 0,
+          lastClub: SLOT.club,
+          retiredAt: '2026-09-28T13:00:00.000Z',
+          hasDetail: false,
+          retiredNumber: { ...SLOT, number: 4, seq: 3 },
+        },
+        snapshot: null,
+      }),
+    ),
+  );
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: '메인 메뉴' })
+    .getByRole('button', { name: '기록실' })
+    .click();
+  await page.locator('[data-hof-tab="rn"]').click();
+
+  const wall = page.locator('[data-rn-wall]');
+  await expect(wall.locator('[data-rn-club]')).toHaveCount(2);
+  // 결번 둘인 맨체스터가 먼저, 구단 안에서는 번호 순.
+  await expect(wall.locator('[data-rn-club]').first()).toHaveAttribute('data-rn-club', 'pl-0');
+  await expect(wall.locator('[data-rn-club="pl-0"] [data-rn-tile]')).toHaveText([
+    /4\s*박결번/,
+    /10\s*옛레전드.*내 선수/s,
+  ]);
+  await expect(wall.locator('[data-rn-club="k1-0"] [data-rn-tile]')).toContainText('골키퍼');
+  const axe = await new AxeBuilder({ page }).include('[data-rn-wall]').analyze();
+  expect(axe.violations.map((v) => v.id)).toEqual([]);
+
+  await wall.locator('[data-rn-order="recent"]').click();
+  await expect(wall.locator('[data-rn-tile]')).toHaveCount(3);
+  await expect(wall.locator('[data-rn-tile]').first()).toHaveAttribute('data-rn-tile', '3');
+  await expect(wall.locator('[data-rn-tile]').first()).toContainText('맨체스터 스카이블루');
+
+  await wall.locator('[data-rn-tile="3"]').click();
+  await expect(page.locator('.film-open h1')).toHaveText('박결번');
+  await page.locator('[data-act="hof-back"]').click();
+  await expect(page.locator('[data-hof-tab="rn"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(wall.locator('[data-rn-order="recent"]')).toHaveAttribute('aria-pressed', 'true');
+});
