@@ -2152,6 +2152,27 @@ th.n {
   stroke: rgb(0 0 0 / 0.55);
   stroke-width: 0.7;
 }
+/* 드래그 슛: 끄는 동안 페이지가 스크롤되지 않게 하고, 손가락 경로를 옅게 그린다. */
+.mg-drag {
+  touch-action: none;
+  cursor: grab;
+}
+.mg-drag.dragging {
+  cursor: grabbing;
+}
+.mg-trail {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+}
+.mg-readout {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  opacity: 0.9;
+}
 .mg-caption {
   position: absolute;
   top: 10px;
@@ -2192,6 +2213,7 @@ th.n {
 }
 .mg-tap {
   display: block;
+  text-align: center;
   min-height: 1.4em;
   margin-top: 10px;
   font-size: 1.125rem;

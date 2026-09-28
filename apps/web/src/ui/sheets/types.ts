@@ -4,6 +4,7 @@ import type { Chip } from '../sheetState.svelte.js';
 import type { TitleView } from '../../game/titles.js';
 import type { ResolveResult } from '../../game/event-runner.js';
 import type { MgKind } from '../../game/minigame.js';
+import type { DragPoint, ShotResult } from '../../game/dragShot.js';
 
 export type StoryTag = { name: string; stage: number; total: number };
 export type StoryNote = NonNullable<ResolveResult['story']>;
@@ -60,6 +61,7 @@ export function sheetLabel(v: SheetView): string {
   switch (v.kind) {
     case 'judge':
     case 'minigame':
+    case 'dragShot':
     case 'eventResult':
       return v.label;
     case 'market':
@@ -100,6 +102,13 @@ export type SheetView =
       side: -1 | 0 | null;
       ok: boolean | null;
       onTap: (x: number) => void;
+    }
+  | {
+      /** T-10-089 드래그 슛(프로토타입). 손을 떼면 onShot(경로)을 부르고, 판정이 나면 shot이 채워진다. */
+      kind: 'dragShot';
+      label: string;
+      shot: ShotResult | null;
+      onShot: (path: DragPoint[]) => void;
     }
   | {
       kind: 'event';

@@ -8,6 +8,7 @@ import { clubsIn } from '../game/engine.js';
 import type { BlockResult, MatchGame } from '../game/match.js';
 import type { GameState } from '../game/types.js';
 import type { MgKind } from '../game/minigame.js';
+import { evalShot, type ShotResult } from '../game/dragShot.js';
 import { motionOK } from './motion.js';
 import type { SheetView, TickerRow } from './sheets/types.js';
 
@@ -240,6 +241,37 @@ export function playMinigame<R extends { ok: boolean }>(
       },
     });
     const v = sheetState.view as Extract<SheetView, { kind: 'minigame' }>;
+  });
+}
+/**
+ * T-10-089 드래그 슛(프로토타입). 손을 떼면 경로로 슛을 판정(evalShot)하고 settle에 넘긴 뒤 결과 장면을 보여 준다.
+ * 흩어짐·키퍼 방향은 화면 연출용 Math.random이다.
+ */
+export function playDragShot<R extends { ok: boolean }>(
+  label: string,
+  p: number,
+  settle: (shot: ShotResult) => R,
+): Promise<R> {
+  return new Promise((resolve) => {
+    sheetState.busy = true;
+    let done = false;
+    showSheet({
+      kind: 'dragShot',
+      label,
+      shot: null,
+      onShot: (path) => {
+        if (done) return;
+        done = true;
+        const shot = evalShot(path, p);
+        const r = settle(shot);
+        v.shot = shot;
+        setTimeout(() => {
+          sheetState.busy = false;
+          resolve(r);
+        }, MG_SCENE_MS + 300);
+      },
+    });
+    const v = sheetState.view as Extract<SheetView, { kind: 'dragShot' }>;
   });
 }
 /** 탭 뒤 결과 장면(공이 날아가고 멈추는 연출)을 보여 주는 시간. */
