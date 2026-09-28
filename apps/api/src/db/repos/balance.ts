@@ -96,6 +96,8 @@ export async function activateBalance(
   previous: number | null,
   profileId: string,
   now: string,
+  /** T-10-090 시즌 진행 중 잠금을 풀고 활성화했으면 그 시즌 id(감사 로그에 남긴다). */
+  seasonOverride?: number,
 ) {
   await runBatch(db, [
     db
@@ -110,7 +112,7 @@ export async function activateBalance(
       id: newId('aud'),
       kind: 'BALANCE_ACTIVATED',
       profileId,
-      payloadJson: JSON.stringify({ version, previous }),
+      payloadJson: JSON.stringify({ version, previous, seasonOverride }),
       createdAt: now,
     }),
   ]);

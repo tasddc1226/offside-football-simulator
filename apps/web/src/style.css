@@ -3380,6 +3380,16 @@ body:has(nav.tabs) .toast {
 .hof-tabs {
   margin-bottom: 12px;
 }
+/* T-10-090 전체 / 시즌 순위 전환과 개막 전 안내. */
+.hof-seasons {
+  margin-top: 4px;
+}
+.hof-season-note b {
+  color: var(--ink);
+}
+.hof-season-note p {
+  margin: 4px 0 0;
+}
 .rn-wall-lead {
   margin: 0 0 14px;
 }

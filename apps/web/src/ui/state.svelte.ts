@@ -4,6 +4,7 @@
 // 구독하는 것으로 대신한다(수동 render() 호출은 더 이상 필요 없다).
 import type { HofSort, RetiredNumberResult } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
+import { activeSeason } from '@offside/contracts/service-seasons';
 import type { OutboxItem } from '../game/outbox.js';
 import type { AttrKey, Pos } from '../game/data.js';
 import { pick, ri } from '../game/rng.js';
@@ -14,6 +15,15 @@ import type { PhaseReport } from './sheets/types.js';
 
 /** 기록실(하단 메뉴 'hof')의 탭. */
 export type HofTab = 'legends' | 'rn';
+/** 기록실 화면 상태. season: 서비스 시즌 순위(T-10-090). null이면 전체 명예의 전당. */
+export type HofView = { tab: HofTab; page: number; sort: HofSort; season: number | null };
+/** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
+export const hofStart = (): HofView => ({
+  tab: 'legends',
+  page: 1,
+  sort: 'score',
+  season: activeSeason(new Date().toISOString())?.id ?? null,
+});
 
 export type Screen =
   | 'home'
@@ -98,7 +108,7 @@ export const appState = $state<{
   /** T-10-013. 진행 중 커리어가 다른 계정 소유라 서버가 거절한 시즌 업로드(홈에서 처리를 고른다). */
   ownerConflict: OutboxItem[] | null;
   /** 기록실 화면의 탭(명예의 전당·영구결번)·페이지(1부터)·순위 유형. 선수 상세에서 돌아와도 그대로다. */
-  hof: { tab: HofTab; page: number; sort: HofSort };
+  hof: HofView;
   /** 선수 상세의 '← 이전으로'가 돌아갈 화면. */
   legendBack: 'home' | 'hof' | 'owner';
   /** T-10-029. 공유 링크(/career/:id)로 들어온 은퇴 선수 id — 보기 전용 화면(SharedCareer)이 읽는다. */
@@ -125,7 +135,7 @@ export const appState = $state<{
   board: 'notice',
   boardPost: null,
   ownerConflict: null,
-  hof: { tab: 'legends', page: 1, sort: 'score' },
+  hof: hofStart(),
   legendBack: 'home',
   sharedCareer: null,
   report: null,

@@ -6,6 +6,7 @@ import {
   BalanceVersionSchema,
 } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
+import { activeSeason } from '@offside/contracts/service-seasons';
 import { requireAdmin } from '../auth/admin.js';
 import {
   activateBalance,
@@ -43,6 +44,15 @@ const notDraft = () =>
     status: 409,
     message: '초안만 고치거나 지울 수 있습니다. 복제해서 새 초안을 만드세요.',
     details: { reason: 'BALANCE_NOT_DRAFT' },
+  });
+
+/** T-10-090 시즌 중에는 밸런스를 바꾸지 않는다(시즌 경쟁 조건 고정). */
+const seasonLocked = (name: string) =>
+  new AppError({
+    code: 'VALIDATION_FAILED',
+    status: 409,
+    message: `${name} 진행 중에는 밸런스를 바꿀 수 없습니다. 시즌이 끝난 뒤 적용하세요.`,
+    details: { reason: 'SEASON_BALANCE_LOCKED' },
   });
 
 async function versionOr404(c: Context<AppEnv>, version: number) {
@@ -104,7 +114,10 @@ export function registerBalanceRoutes(app: Hono<AppEnv>): void {
     const [target, active] = await Promise.all([versionOr404(c, version), getActiveBalance(db)]);
     if (target.status === 'active') return ok(c, BalanceVersionSchema, target);
     const now = nowIso();
-    await activateBalance(db, version, active?.version ?? null, viewer.profileId!, now);
+    // T-10-090 급한 버그 수정만 ?override=season으로 시즌 중에 연다 — 감사 로그에 남긴다.
+    const season = activeSeason(now);
+    if (season && c.req.query('override') !== 'season') throw seasonLocked(season.name);
+    await activateBalance(db, version, active?.version ?? null, viewer.profileId!, now, season?.id);
     purgeEdge(c, STALE.balanceActivated());
     const activated = { ...target, status: 'active' as const, activatedAt: now, updatedAt: now };
     return ok(c, BalanceVersionSchema, activated);
