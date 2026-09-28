@@ -328,7 +328,8 @@ export type LegendSource = Pick<
   | 'titles'
   | 'style'
 > & {
-  nat: { caps: number };
+  /** goals·assists는 T-10-086부터 남긴다 — 옛 은퇴 스냅샷엔 없다. */
+  nat: { caps: number; goals?: number | undefined; assists?: number | undefined };
 };
 
 export interface Choice {

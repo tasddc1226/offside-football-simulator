@@ -279,7 +279,12 @@ export const LegendSnapshotSchema = z.strictObject({
       }),
     )
     .max(40),
-  nat: z.strictObject({ caps: z.number().int().min(0).max(10000) }),
+  nat: z.strictObject({
+    caps: z.number().int().min(0).max(10000),
+    /** T-10-086 A매치 통산 골·도움. 옛 스냅샷엔 없다(그땐 출전 수만 남겼다). */
+    goals: z.number().int().min(0).max(10000).optional(),
+    assists: z.number().int().min(0).max(10000).optional(),
+  }),
   storyLog: z
     .array(
       z.strictObject({

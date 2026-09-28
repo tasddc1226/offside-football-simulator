@@ -3891,6 +3891,12 @@ button.title-item:hover {
   color: var(--film-gold);
   margin-right: 4px;
 }
+.nat-ga {
+  margin-top: 2px;
+  color: var(--film-muted);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
 /* 우승 연혁: 엔딩 크레딧처럼 가운데 선을 두고 왼쪽엔 이름(오른쪽 정렬), 오른쪽엔 연도. */
 .film-roll {
   display: flex;

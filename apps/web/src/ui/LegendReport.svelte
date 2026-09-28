@@ -164,6 +164,9 @@
       <div class="eyebrow film-kicker">For the Country</div>
       <h2>국가대표</h2>
       <div class="nat-caps"><b><CountUp value={caps} animate={playing} run={seen.national} /></b> A매치</div>
+      {#if d?.nat.goals !== undefined}
+        <div class="nat-ga" data-nat-ga>{d.nat.goals}골 · {d.nat.assists ?? 0}도움</div>
+      {/if}
       {#if national.length}
         <ul class="ch-events">
           {#each national as e, j (j)}{@render event(e, j)}{/each}
