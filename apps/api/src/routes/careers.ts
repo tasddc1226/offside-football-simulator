@@ -8,20 +8,25 @@ import {
   RetirementResponseSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { ok, readBody, nowIso } from './shared.js';
+import { careerOwnerMismatch, ok, readBody, nowIso } from './shared.js';
 import {
   getCareer,
+  getCareerHead,
   getCareerOwner,
   listOwnHof,
   putCareerSeason,
   putRetirement,
+  storedSeasonsOf,
+  updateRetired,
 } from '../db/repos/careers.js';
+import { boundRetirement, sanitizeSeason } from '../plausibility.js';
 import { getProfile, isLinked } from '../db/repos/profiles.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { purgeEdge } from '../edgeCache.js';
 import { recordFirsts } from './firsts.js';
+import { judgeRetirement } from './retiredNumbers.js';
 import { STALE } from '../edgeKeys.js';
 import { publishLive } from '../live/publish.js';
 import { isHeadless } from '../db/repos/automation.js';
@@ -35,10 +40,7 @@ async function assertOwnable(
 ): Promise<void> {
   const owner = await getCareerOwner(db, careerId);
   if (owner !== undefined && owner !== profileId) {
-    throw new AppError({
-      code: 'CAREER_OWNER_MISMATCH',
-      message: '이 커리어 ID는 다른 프로필 소유입니다.',
-    });
+    throw careerOwnerMismatch();
   }
 }
 
@@ -72,7 +74,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       profileId: session.profileId,
       year,
       meta: body.career,
-      season: body.season,
+      season: sanitizeSeason(body.season),
       eventsJson: JSON.stringify(body.events),
       // 링크·욕설이 든 이름은 시즌 기록까지 버리지 않고 익명으로만 남긴다(은퇴 PUT은 거부한다).
       publicName: body.publicName && toPublicName(body.publicName),
@@ -97,22 +99,19 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const session = getSessionOrThrow(c);
     const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
 
-    const owner = await getCareerOwner(db, careerId);
-    if (owner === undefined) {
+    const career = await getCareerHead(db, careerId);
+    if (career === undefined) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
         message: '존재하지 않는 커리어입니다.',
         details: { reason: 'CAREER_NOT_FOUND' },
       });
     }
-    if (owner !== session.profileId) {
-      throw new AppError({
-        code: 'CAREER_OWNER_MISMATCH',
-        message: '이 커리어 ID는 다른 프로필 소유입니다.',
-      });
+    if (career.profileId !== session.profileId) {
+      throw careerOwnerMismatch();
     }
 
-    const { publicName, snapshot, ...summary } = readBody(c, PutRetirementBodySchema);
+    const { publicName, snapshot, ...sent } = readBody(c, PutRetirementBodySchema);
     if (publicName && !isAcceptablePublicName(publicName)) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
@@ -122,11 +121,27 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     }
     const now = nowIso();
 
-    await putRetirement(db, { careerId, summary, publicName, snapshot, now });
-    await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
+    if (career.status === 'retired') {
+      await updateRetired(db, { careerId, publicName, snapshot, title: sent.title, now });
+    } else {
+      // 은퇴 요약은 받아 둔 시즌 기록에 맞춘다 — 보낸 숫자를 그대로 믿지 않는다.
+      const seasons = (await storedSeasonsOf(db, [careerId])).get(careerId) ?? [];
+      const summary = boundRetirement(career.pos, sent, seasons);
+      if (!summary) {
+        throw new AppError({
+          code: 'VALIDATION_FAILED',
+          message: '시즌 기록이 없는 커리어는 은퇴를 기록할 수 없습니다.',
+          details: { reason: 'NO_SEASONS' },
+        });
+      }
+      await putRetirement(db, { careerId, summary, publicName, snapshot, now });
+      await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
+    }
+    // T-10-076 영구결번 심사. 이름 공개 토글 재전송도 여기로 온다 — 이름을 공개하는 순간 자리를 잡는다.
+    const retiredNumber = await judgeRetirement(c, careerId, now);
     purgeEdge(c, STALE.retirementPut(careerId));
     publishLive(c, 'retire', careerId, now);
 
-    return ok(c, RetirementResponseSchema, { careerId, status: 'retired' });
+    return ok(c, RetirementResponseSchema, { careerId, status: 'retired', retiredNumber });
   });
 }

@@ -31,6 +31,7 @@ import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } fro
 import { detectCareerHighs } from './records.js';
 import { noteMarket } from './playStyle.js';
 import type { LegendSnapshot } from '@offside/contracts';
+import { legendTerms } from '@offside/contracts/hof-rules';
 import type {
   GameState,
   CareerRecord,
@@ -427,11 +428,19 @@ export function acceptOption(
 }
 
 // ───────── 은퇴 · 명예의 전당 ─────────
-const LEGEND_W: Record<string, { g: number; a: number; cs: number }> = {
-  FW: { g: 0.42, a: 0.35, cs: 0 },
-  MF: { g: 0.65, a: 0.75, cs: 0 },
-  DF: { g: 0.9, a: 0.5, cs: 0.9 },
-  GK: { g: 1, a: 0.6, cs: 0.95 },
+const LEGEND_LABEL: Record<keyof ReturnType<typeof legendTerms>, string> = {
+  goals: '골 기여',
+  assists: '도움 기여',
+  cs: '무실점 기여',
+  apps: '출전',
+  trophies: '우승 트로피',
+  awards: '개인 수상',
+  caps: 'A매치',
+  peak: '최고 OVR',
+  ballonWin: '발롱도르 수상',
+  ballonRank: '발롱도르 순위',
+  wc: '월드컵 우승',
+  century: '센추리 클럽',
 };
 export interface LegendBreakdownItem {
   key: string;
@@ -448,33 +457,22 @@ export function legendScoreBreakdown(s: LegendSource): {
     (a, r) => ({ g: a.g + r.goals, a: a.a + r.assists, p: a.p + r.apps, cs: a.cs + (r.cs || 0) }),
     { g: 0, a: 0, p: 0, cs: 0 },
   );
-  const w = LEGEND_W[s.pos] || LEGEND_W.MF!;
-  const items: LegendBreakdownItem[] = [
-    { key: 'goals', label: '골 기여', value: t.g * w.g },
-    { key: 'assists', label: '도움 기여', value: t.a * w.a },
-    { key: 'cs', label: '무실점 기여', value: t.cs * w.cs },
-    { key: 'apps', label: '출전', value: t.p * 0.05 },
-    { key: 'trophies', label: '우승 트로피', value: s.trophies.length * 10 },
-    { key: 'awards', label: '개인 수상', value: s.awards.length * 12 },
-    { key: 'caps', label: 'A매치', value: s.nat.caps * 0.4 },
-    { key: 'peak', label: '최고 OVR', value: s.peak * 2 },
-    {
-      key: 'ballonWin',
-      label: '발롱도르 수상',
-      value: s.awards.filter((x) => x.t === '발롱도르').length * 60,
-    },
-    {
-      key: 'ballonRank',
-      label: '발롱도르 순위',
-      value: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0) * 0.6,
-    },
-    {
-      key: 'wc',
-      label: '월드컵 우승',
-      value: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length * 60,
-    },
-    { key: 'century', label: '센추리 클럽', value: s.nat.caps >= 100 ? 25 : 0 },
-  ].filter((it) => it.value !== 0);
+  const terms = legendTerms(s.pos, {
+    goals: t.g,
+    assists: t.a,
+    cs: t.cs,
+    apps: t.p,
+    trophies: s.trophies.length,
+    awards: s.awards.length,
+    caps: s.nat.caps,
+    peak: s.peak,
+    ballon: s.awards.filter((x) => x.t === '발롱도르').length,
+    ballonRankPoints: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0),
+    worldCups: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length,
+  });
+  const items: LegendBreakdownItem[] = Object.entries(terms)
+    .map(([key, value]) => ({ key, label: LEGEND_LABEL[key as keyof typeof terms], value }))
+    .filter((it) => it.value !== 0);
   const total = Math.round(items.reduce((sum, it) => sum + it.value, 0));
   return { items, total };
 }

@@ -6,12 +6,11 @@
   import Home from './Home.svelte';
   import Create from './Create.svelte';
   import Game from './Game.svelte';
-  import Retired from './Retired.svelte';
-  import Legend from './Legend.svelte';
   import Hof from './Hof.svelte';
   import UpdateBanner from './UpdateBanner.svelte';
   import NewsBanner from './NewsBanner.svelte';
   import MainNav, { hasMainNav } from './MainNav.svelte';
+  import { rnAlert } from './retiredNumber.svelte.js';
   import type { Component } from 'svelte';
 
   // T-10-009: 설정(클럽 편집)은 자주 안 여는 화면이라 메인 번들에서 떼어 처음 열 때 불러온다.
@@ -49,6 +48,20 @@
   $effect(() => {
     if (appState.screen === 'shared' && !Shared) void import('./SharedCareer.svelte').then((m) => (Shared = m.default));
   });
+  // T-10-077: 은퇴 직후 화면·은퇴 상세도 은퇴 리포트(크레딧 연출)가 커서 처음 열 때 불러온다.
+  let Retired = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'retired' && !Retired) void import('./Retired.svelte').then((m) => (Retired = m.default));
+  });
+  let Legend = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'legend' && !Legend) void import('./Legend.svelte').then((m) => (Legend = m.default));
+  });
+  // T-10-076: 영구결번 알림 — 첫 소식이 올 때 불러온다.
+  let RnAlert = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (rnAlert.item && !RnAlert) void import('./RetiredNumberAlert.svelte').then((m) => (RnAlert = m.default));
+  });
 </script>
 
 <!-- 화면 전환 모션(T-10-003 goal 3): appState.screen을 key로 써서 화면이 바뀔 때만 새로 마운트해
@@ -64,9 +77,9 @@
     {:else if appState.screen === 'create'}
       <Create />
     {:else if appState.screen === 'retired'}
-      <Retired />
+      {#if Retired}<Retired />{/if}
     {:else if appState.screen === 'legend'}
-      <Legend />
+      {#if Legend}<Legend />{/if}
     {:else if appState.screen === 'hof'}
       <Hof />
     {:else if appState.screen === 'settings'}
@@ -92,3 +105,4 @@
 {#if hasMainNav(appState.screen)}<MainNav />{/if}
 <UpdateBanner />
 <NewsBanner />
+{#if RnAlert}<RnAlert />{/if}

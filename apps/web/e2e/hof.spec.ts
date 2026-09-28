@@ -184,7 +184,7 @@ test('구단주 내 선수: 계정 기록(서버) + 이 기기 이름 덮어쓰�
   await expect(page.locator('[data-my-players]')).not.toContainText('다른계정선수');
   // 상세에서 돌아오면 구단주 화면이다.
   await page.locator('[data-my-player="0"]').click();
-  await expect(page.locator('[data-act="hof-back"]')).toHaveText('← 구단주');
+  await expect(page.locator('[data-act="hof-back"]')).toHaveText('← 이전으로');
   await page.locator('[data-act="hof-back"]').click();
   await expect(page.locator('h1')).toHaveText('구단주');
 });

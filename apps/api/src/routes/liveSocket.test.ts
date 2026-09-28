@@ -1,10 +1,11 @@
 import { LIVE_PING, LIVE_PONG, LIVE_SOCKET_PATH } from '@offside/contracts/polling';
-import type { LiveEvent, LivePush } from '@offside/contracts';
+import type { LiveEvent } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Bindings } from '../env.js';
 import { LiveHub, MAX_SOCKETS } from '../live/hub.js';
 import { liveSocket } from '../live/socket.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { fakeHub } from '../test/liveHub.js';
 import {
   callJson,
   issueCookie,
@@ -15,24 +16,6 @@ import {
 import worker from '../index.js';
 
 const A = '0c000000-0000-4000-8000-00000000000a';
-
-/** 허브 대역: publish로 받은 메시지와 fetch로 넘어온 요청을 모은다. */
-function fakeHub() {
-  const pushed: LiveEvent[] = [];
-  const forwarded: Request[] = [];
-  const stub = {
-    publish: async (m: string) => {
-      pushed.push((JSON.parse(m) as LivePush).event);
-      return 1;
-    },
-    fetch: async (req: Request) => {
-      forwarded.push(req);
-      return new Response('hub');
-    },
-  };
-  const ns = { idFromName: (n: string) => n, get: () => stub };
-  return { ns: ns as unknown as NonNullable<Bindings['LIVE']>, pushed, forwarded };
-}
 
 describe('T-10-072 업로드 → 홈 라이브 허브', () => {
   let ctx: TestD1;
@@ -71,7 +54,9 @@ describe('T-10-072 업로드 → 홈 라이브 허브', () => {
 
   it('은퇴는 한 번만 보내고, 짧은 커리어 은퇴는 보내지 않는다', async () => {
     const B = '0c000000-0000-4000-8000-00000000000b';
-    for (const id of [A, B]) await put(`/v1/careers/${id}/seasons/2026`, season());
+    // 은퇴 나이는 받아 둔 마지막 시즌 + 1 — 33세 시즌이면 34세 은퇴(은퇴 소식), 18세 시즌이면 짧은 커리어.
+    await put(`/v1/careers/${A}/seasons/2041`, season({ age: 33 }));
+    await put(`/v1/careers/${B}/seasons/2026`, season());
     await vi.waitFor(() => expect(hub.pushed).toHaveLength(2));
 
     await put(`/v1/careers/${A}/retirement`, summary);

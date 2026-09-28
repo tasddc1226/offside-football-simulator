@@ -31,7 +31,7 @@ import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
 import { titleView } from '../game/titles.js';
 import type { EventLogEntry, MarketResult } from '../game/types.js';
-import { appState, randomName } from './state.svelte.js';
+import { appState, randomName, randomNumber } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { publicNameOf } from './namePublic.js';
 import { seasonLabelOf } from './format.js';
@@ -417,6 +417,7 @@ export function confirmNew() {
           closeSheet();
           appState.screen = 'create';
           appState.C.name = randomName();
+          appState.C.number = randomNumber();
         },
       },
       { label: '취소', fn: closeSheet },
@@ -441,7 +442,7 @@ export function retireAsk(onCancel: () => void = closeSheet) {
 
 export function startCareer(name: string, number: number, presetAttrs?: Record<AttrKey, number>) {
   const finalName = name.trim() || randomName();
-  const finalNumber = clamp(+number || 10, 1, 99);
+  const finalNumber = clamp(+number || randomNumber(), 1, 99);
   const seed = freshSeed();
   setActiveRng(createRng(seed));
   appState.G = newGame({ ...appState.C, name: finalName, number: finalNumber }, seed, presetAttrs);

@@ -6,26 +6,10 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie, putJson, TEST_CAREER } from '../test/http.js';
+import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
 
 const CAREER_ID = '3b1d6c1e-2a4f-4f7e-9a0b-7c8d9e0f1a2b';
 
-const season = {
-  career: TEST_CAREER,
-  season: {
-    age: 18,
-    club: '테스트 FC',
-    league: '고교리그',
-    apps: 20,
-    goals: 10,
-    assists: 3,
-    rating: 7.2,
-    rank: 1,
-    ovr: 60,
-    honors: [],
-  },
-  events: [],
-};
 const summary = {
   retireAge: 34,
   peak: 88,
@@ -96,9 +80,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
   beforeEach(async () => {
     ctx = await createTestD1();
     cookie = (await issueCookie(ctx)).cookie;
-    expect(
-      (await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/seasons/2026`, season)).status,
-    ).toBe(200);
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID, summary);
   });
   afterEach(async () => {
     await ctx.dispose();
@@ -207,6 +189,30 @@ describe('공개 명예의 전당 /v1/hof', () => {
     ).toBe(400);
   });
 
+  it('은퇴 뒤에도 받은 칭호 중에서만 대표 칭호를 바꾼다', async () => {
+    const titles = [
+      { id: 'goals100', year: 2034 },
+      { id: 'debut', year: 0 },
+    ];
+    const put = (title: string) =>
+      putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
+        ...summary,
+        title,
+        publicName: null,
+        snapshot: { ...snapshot, titles },
+      });
+    const titleNow = async () =>
+      successEnvelope(HofDetailResponseSchema).parse(
+        await (await createApp().request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).json(),
+      ).data.entry.title;
+    await put('goals100');
+    expect((await put('debut')).status).toBe(200);
+    expect(await titleNow()).toBe('debut');
+    // 받지 않은 칭호는 무시한다(요청은 성공 — 업로드 큐가 버리지 않게).
+    expect((await put('ballon1')).status).toBe(200);
+    expect(await titleNow()).toBe('debut');
+  });
+
   it('칭호 없이 은퇴한 옛 기록은 title이 null이다', async () => {
     await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, summary);
     const { entries } = successEnvelope(HofListResponseSchema).parse(
@@ -216,17 +222,24 @@ describe('공개 명예의 전당 /v1/hof', () => {
   });
 
   it('30세 전에 은퇴한 짧은 커리어는 목록·상세(공유 링크)에 오르지 않는다 (T-10-032)', async () => {
-    await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
+    const SHORT = '0c000000-0000-4000-8000-000000000001';
+    await putSeasonsFor(ctx.env, cookie, SHORT, { ...summary, retireAge: 29 });
+    await putJson(ctx, cookie, `/v1/careers/${SHORT}/retirement`, {
       ...summary,
       retireAge: 29,
       publicName: null,
       snapshot,
     });
-    expect((await createApp().request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).status).toBe(404);
+    expect((await createApp().request(`/v1/hof/${SHORT}`, {}, ctx.env)).status).toBe(404);
     const list = successEnvelope(HofListResponseSchema).parse(
       await (await createApp().request('/v1/hof', {}, ctx.env)).json(),
     ).data;
     expect(list).toEqual({ entries: [], total: 0 });
+    // 은퇴 나이는 받아 둔 시즌이 정한다 — 30세라고 보내도 29세에 은퇴한 기록이다.
+    const LIED = '0c000000-0000-4000-8000-000000000002';
+    await putSeasonsFor(ctx.env, cookie, LIED, { ...summary, retireAge: 29 });
+    await putJson(ctx, cookie, `/v1/careers/${LIED}/retirement`, { ...summary, retireAge: 34 });
+    expect((await createApp().request(`/v1/hof/${LIED}`, {}, ctx.env)).status).toBe(404);
     await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
       ...summary,
       retireAge: 30,
@@ -251,7 +264,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
       '0a000000-0000-4000-8000-000000000003',
     ];
     for (const [i, id] of ids.entries()) {
-      await putJson(ctx, cookie, `/v1/careers/${id}/seasons/2026`, season);
+      await putSeasonsFor(ctx.env, cookie, id, summary);
       await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, {
         ...summary,
         legendScore: 100 * (i + 1),
@@ -294,7 +307,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
       },
     ];
     for (const { id, ...s } of rows) {
-      await putJson(ctx, cookie, `/v1/careers/${id}/seasons/2026`, season);
+      await putSeasonsFor(ctx.env, cookie, id, { ...summary, ...s });
       await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, { ...summary, ...s });
     }
     const read = async (q: string) =>
@@ -347,10 +360,12 @@ describe('공개 명예의 전당 /v1/hof', () => {
       },
       updatedAt: '2026-09-25T00:00:00.000Z',
     });
-    await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/seasons/2027`, {
-      ...season,
-      season: { ...season.season, age: 19, club: renamed, league: '프리미어리그' },
-    });
+    await putJson(
+      ctx,
+      cookie,
+      `/v1/careers/${CAREER_ID}/seasons/2027`,
+      seasonBody({ age: 19, club: renamed, league: '프리미어리그' }),
+    );
     await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
       ...summary,
       lastClub: renamed,
@@ -380,12 +395,12 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect(detail.snapshot?.career.map((r) => r.clubId)).toEqual([undefined, 'pl-7']);
     expect(detail.snapshot?.trophies[0]?.clubId).toBe('pl-7');
     const seasons = await ctx.env.DB.prepare(
-      'select club, club_id as clubId from career_seasons where career_id = ? order by year',
+      'select club, club_id as clubId from career_seasons where career_id = ? and year <= 2027 order by year',
     )
       .bind(CAREER_ID)
       .all();
     expect(seasons.results).toEqual([
-      { club: '테스트 FC', clubId: null },
+      { club: '테스트 고교', clubId: null },
       { club: renamed, clubId: 'pl-7' },
     ]);
     // 한 번 끝나면 다시 훑지 않는다.

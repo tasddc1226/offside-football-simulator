@@ -165,9 +165,36 @@ export const RetirementSummarySchema = z.strictObject({
 });
 export type RetirementSummary = z.infer<typeof RetirementSummarySchema>;
 
+/**
+ * T-10-076 영구결번 심사 결과. granted: 결번을 받았다(seq = 서버 몇 번째 결번). taken: 자격은 있지만 그 구단의 그
+ * 번호(두 번째 구단까지)를 이미 다른 선수가 가졌다 — holder는 가장 큰 기여 구단의 보유자(익명이면 null).
+ * anonymous: 자격은 있지만 이름을 공개하지 않아 아직 자리를 잡지 않았다. pending: 서버가 기존 은퇴 기록을
+ * 다시 훑는 중이거나 영구결번이 아직 열리지 않아 곧 판정된다.
+ */
+const RetiredSlotSchema = z.strictObject({
+  clubId: z.string().min(1),
+  club: z.string(),
+  number: z.number().int(),
+});
+export const RetiredNumberResultSchema = z.discriminatedUnion('kind', [
+  RetiredSlotSchema.extend({
+    kind: z.literal('granted'),
+    seq: z.number().int(),
+  }),
+  RetiredSlotSchema.extend({
+    kind: z.literal('taken'),
+    holder: z.string().nullable(),
+  }),
+  RetiredSlotSchema.extend({ kind: z.literal('anonymous') }),
+  z.strictObject({ kind: z.literal('pending') }),
+]);
+export type RetiredNumberResult = z.infer<typeof RetiredNumberResultSchema>;
+
 export const RetirementResponseSchema = z.strictObject({
   careerId: z.string().min(1),
   status: z.literal('retired'),
+  /** T-10-076 영구결번 심사. 자격이 없으면 null(배포 전 응답엔 없다). */
+  retiredNumber: RetiredNumberResultSchema.nullable().optional(),
 });
 export type RetirementResponse = z.infer<typeof RetirementResponseSchema>;
 
@@ -305,6 +332,8 @@ export const PublicHofEntrySchema = z.strictObject({
   hasDetail: z.boolean(),
   /** T-10-026 대표 칭호 id(없으면 null). */
   title: z.string().nullable(),
+  /** T-10-076 이 선수가 가진 영구결번(없으면 null, 배포 전 엣지 캐시 응답엔 없다). */
+  retiredNumber: RetiredSlotSchema.extend({ seq: z.number().int() }).nullable().optional(),
 });
 export type PublicHofEntry = z.infer<typeof PublicHofEntrySchema>;
 
@@ -382,3 +411,23 @@ export const FirstsResponseSchema = z.strictObject({
   records: z.array(ServerRecordSchema),
 });
 export type FirstsResponse = z.infer<typeof FirstsResponseSchema>;
+
+/** T-10-076 `GET /v1/retired-numbers` 서버 전체 영구결번(결번 순). 이름은 공개를 고른 경우에만. */
+export const RetiredNumbersResponseSchema = z.strictObject({
+  items: z.array(
+    RetiredSlotSchema.extend({
+      seq: z.number().int(),
+      grantedAt: z.string(),
+      careerId: z.string(),
+      name: z.string().nullable(),
+      pos: CareerPosSchema,
+    }),
+  ),
+});
+export type RetiredNumbersResponse = z.infer<typeof RetiredNumbersResponseSchema>;
+
+/** T-10-076 `GET /v1/careers/:careerId/retired-number` 내 선수의 결번 심사 결과(소급으로 받은 결번·이미 찬 자리 포함). */
+export const RetiredNumberCheckResponseSchema = z.strictObject({
+  retiredNumber: RetiredNumberResultSchema.nullable(),
+});
+export type RetiredNumberCheckResponse = z.infer<typeof RetiredNumberCheckResponseSchema>;

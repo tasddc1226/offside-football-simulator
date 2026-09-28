@@ -12,7 +12,9 @@
     "./content-filter": "./src/content-filter.ts",
     "./club-limits": "./src/club-limits.ts",
     "./polling": "./src/polling.ts",
-    "./play-style": "./src/play-style.ts"
+    "./play-style": "./src/play-style.ts",
+    "./club-names": "./src/club-names.ts",
+    "./retired-numbers": "./src/retired-numbers.ts"
   },
   "scripts": {
     "test": "vitest run",

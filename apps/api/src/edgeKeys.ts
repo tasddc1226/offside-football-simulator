@@ -8,6 +8,7 @@ export const EDGE = {
   balance: '/v1/balance',
   adminStats: '/v1/admin/stats',
   firsts: '/v1/firsts',
+  retiredNumbers: '/v1/retired-numbers',
   live: '/v1/live',
   hofDetail: (careerId: string) => `/v1/hof/${careerId}`,
   hofList: (limit: number, page: number, sort: string) =>
@@ -22,6 +23,7 @@ const allBoardLists = () => BOARD_KEYS.map(EDGE.boardFirstPage);
 export const STALE = {
   balanceActivated: () => [EDGE.balance],
   firstsChanged: () => [EDGE.firsts],
+  retiredNumbersChanged: () => [EDGE.retiredNumbers],
   /** 이름 공개 토글이 바로 보이게(최초 기록의 이름 포함). */
   retirementPut: (careerId: string) => [EDGE.hofDetail(careerId), EDGE.firsts],
   /** 글·댓글 쓰기/지우기 — 목록의 글과 댓글 수가 바뀐다. */

@@ -8,6 +8,7 @@ import { handleOAuthReturn } from './ui/login.js';
 import { hasSessionHint } from './api/client.js';
 import { routeSharedCareer } from './ui/legend.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';
+import { watchRetiredNumberAlerts, watchRetiredNumbers } from './ui/retiredNumber.svelte.js';
 import { installClickSound } from './ui/sfx.js';
 import { installPlaySignals } from './game/playSignals.js';
 import { watchForUpdates } from './ui/update.svelte.js';
@@ -42,6 +43,10 @@ if (hasSessionHint())
   void import('./ui/clubCustom.svelte.js').then((m) => m.syncClubCustom()).catch(() => {});
 // T-10-013: 다른 계정 소유 커리어 알림은 첫 flush 전에 듣기 시작한다.
 watchOwnerConflicts();
+// T-10-076: 은퇴 업로드 응답의 영구결번 심사 결과도 첫 flush 전에 듣는다.
+watchRetiredNumbers();
+// T-10-076: 서버 어딘가에서 영구결번이 확정되면 어느 화면에 있든 화면 위에 알린다(홈 라이브 소켓을 같이 쓴다).
+watchRetiredNumberAlerts();
 // T-10-023: 열어 둔 탭이 새 배포를 알아채면 새로고침 배너를 띄운다.
 watchForUpdates();
 // T-10-058: 새 공지사항·릴리즈 노트가 올라오면 화면 위에 알린다.

@@ -173,6 +173,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   server_firsts: ['id', 'career_id', 'achieved_at', 'year'],
   app_meta: ['key', 'value'],
   server_records: ['id', 'career_id', 'value', 'achieved_at', 'year'],
+  retired_numbers: ['club_id', 'number', 'career_id', 'club', 'score', 'seq', 'granted_at'],
 };
 
 describe('migrations', () => {

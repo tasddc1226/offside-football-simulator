@@ -72,6 +72,8 @@
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",
         "GOOGLE_FAKE": "0",
+        // T-10-076 영구결번 오픈 = KST 2026-09-28 19:30. 오픈 뒤 이 줄과 게이트 코드를 지운다.
+        "RETIRED_NUMBERS_OPEN_AT": "2026-09-28T10:30:00.000Z",
       },
     },
   },
