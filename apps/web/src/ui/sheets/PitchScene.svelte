@@ -3,6 +3,10 @@
   export type KeeperPose = { dx: number; dy: number; rot: number };
   /** 필드 수비수 — 발 위치(x, y)와 그 자리에서의 자세. */
   export type DefenderPose = KeeperPose & { x: number; y: number; num: number };
+  /** 페널티 지점에 놓인 공(겨냥 단계). */
+  export const SPOT_POSE: BallPose = { x: 150, y: 148, s: 1.35 };
+  /** 제자리에 선 자세. */
+  export const REST: KeeperPose = { dx: 0, dy: 0, rot: 0 };
 
   /** 축구공 무늬 — 가운데 오각형과 가장자리 다섯 조각(원 밖은 잘린다), 조각을 잇는 솔기. */
   const penta = (cx: number, cy: number, r: number, rot: number) =>
@@ -49,8 +53,16 @@
   } = $props();
 
   /** 공이 땅에 닿은 높이(그림자 자리). 골라인 뒤로 날아간 공은 골라인에 그림자를 둔다. */
-  const shadowY = $derived(ball.y + 6 >= 112 ? ball.y + 6 : 112);
+  const shadowY = $derived(Math.max(ball.y + 6, 112));
+  const grounded = $derived(ball.y + 6 >= 112);
 </script>
+
+<!-- 목·머리·머리카락(키퍼·수비수 공통). -->
+{#snippet head()}
+  <rect class="kp-skin" x="147.6" y="65" width="4.8" height="4" rx="1" />
+  <circle class="kp-skin" cx="150" cy="61" r="6" />
+  <path class="kp-hair" d="M144 61 A6 6 0 0 1 156 61 Q153 57.6 150 58.2 Q147 57.6 144 61 Z" />
+{/snippet}
 
 <svg viewBox="0 0 300 170" aria-hidden="true">
   <defs>
@@ -90,9 +102,7 @@
     <text class="kp-num" x="150" y="83.5">1</text>
     <circle class="kp-glove" cx="122.8" cy="66.8" r="4.3" />
     <circle class="kp-glove" cx="177.2" cy="66.8" r="4.3" />
-    <rect class="kp-skin" x="147.6" y="65" width="4.8" height="4" rx="1" />
-    <circle class="kp-skin" cx="150" cy="61" r="6" />
-    <path class="kp-hair" d="M144 61 A6 6 0 0 1 156 61 Q153 57.6 150 58.2 Q147 57.6 144 61 Z" />
+    {@render head()}
   </g>
   {#each defenders as d, i (i)}
     <!-- 키퍼 그림(발 150,112 기준)을 수비수 자리로 옮긴다. 팔은 달리는 자세, 장갑 대신 맨손. -->
@@ -106,9 +116,7 @@
         <text class="kp-num" x="150" y="83.5">{d.num}</text>
         <circle class="kp-skin" cx="134" cy="86" r="2.2" />
         <circle class="kp-skin" cx="167.5" cy="79" r="2.2" />
-        <rect class="kp-skin" x="147.6" y="65" width="4.8" height="4" rx="1" />
-        <circle class="kp-skin" cx="150" cy="61" r="6" />
-        <path class="kp-hair" d="M144 61 A6 6 0 0 1 156 61 Q153 57.6 150 58.2 Q147 57.6 144 61 Z" />
+        {@render head()}
       </g>
     </g>
   {/each}
@@ -117,7 +125,7 @@
     class="mg-shadow mg-ball-shadow"
     rx="6"
     ry="1.9"
-    style="transform:translate({ball.x}px,{shadowY}px) scale({ball.s});opacity:{ball.y + 6 >= 112 ? 0.4 : 0.18}"
+    style="transform:translate({ball.x}px,{shadowY}px) scale({ball.s});opacity:{grounded ? 0.4 : 0.18}"
   />
   <g
     class="mg-ball"

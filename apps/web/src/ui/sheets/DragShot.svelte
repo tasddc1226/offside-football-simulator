@@ -2,14 +2,19 @@
   // T-10-089 드래그 슛(프로토타입). 장면 위에서 골문 쪽으로 끌어 올렸다가 떼면 찬다. 경로는 장면 좌표(viewBox
   // 300×170)로 모은다 — 화면 크기와 상관없이 같은 손짓이 같은 슛이 되게. 판정은 game/dragShot.ts.
   import { isShot, type DragPoint } from '../../game/dragShot.js';
+  import { MG_TIME_MS } from '../../game/minigame.js';
   import MgTimer from './MgTimer.svelte';
-  import PitchScene, { type BallPose, type KeeperPose } from './PitchScene.svelte';
+  import PitchScene, { REST, SPOT_POSE, type BallPose, type KeeperPose } from './PitchScene.svelte';
   import type { SheetView } from './types.js';
 
   let { v }: { v: Extract<SheetView, { kind: 'dragShot' }> } = $props();
 
-  let path = $state<DragPoint[]>([]);
+  // 경로는 판정에만 쓰고 화면엔 trail 문자열로만 그린다 — 움직일 때마다 한 점씩 덧붙인다.
+  let path: DragPoint[] = [];
+  let trail = $state('');
   let dragging = $state(false);
+  /** 끌기 시작할 때 잰 장면 크기(움직이는 동안 레이아웃을 다시 읽지 않는다). */
+  let rect: DOMRect | undefined;
   let hint = $state('');
   /** 결과 장면 단계: 0 겨냥 · 1 공이 닿는 자리까지 · 2 마무리(튕기거나 그물로). */
   let stage = $state(0);
@@ -27,13 +32,19 @@
   function expire() {
     if (over) return;
     over = true;
-    dragging = false;
-    path = [];
+    stop();
     v.onShot(null);
   }
-  function toScene(e: PointerEvent): DragPoint {
-    const r = area!.getBoundingClientRect();
-    return { x: ((e.clientX - r.left) / r.width) * 300, y: ((e.clientY - r.top) / r.height) * 170, t: e.timeStamp };
+  function stop() {
+    dragging = false;
+    path = [];
+    trail = '';
+  }
+  function add(e: PointerEvent) {
+    const r = rect!;
+    const p = { x: ((e.clientX - r.left) / r.width) * 300, y: ((e.clientY - r.top) / r.height) * 170, t: e.timeStamp };
+    path.push(p);
+    trail += ` ${p.x.toFixed(1)},${p.y.toFixed(1)}`;
   }
   function down(e: PointerEvent) {
     if (over) return;
@@ -43,31 +54,31 @@
     } catch {
       /* no-op */
     }
+    stop();
     dragging = true;
     hint = '';
-    path = [toScene(e)];
+    rect = area!.getBoundingClientRect();
+    add(e);
   }
   function move(e: PointerEvent) {
-    if (!dragging) return;
-    path.push(toScene(e));
+    if (dragging) add(e);
   }
   function up(e: PointerEvent) {
     if (!dragging) return;
-    dragging = false;
-    path.push(toScene(e));
-    if (!isShot(path)) {
+    add(e);
+    const shot = path;
+    stop();
+    if (!isShot(shot)) {
       hint = '골문 쪽(위)으로 더 길게 끌었다가 떼세요';
-      path = [];
       return;
     }
     over = true;
-    v.onShot($state.snapshot(path));
+    v.onShot(shot);
   }
 
-  const SPOT: BallPose = { x: 150, y: 148, s: 1.35 };
   const ball = $derived.by((): BallPose => {
     const sh = v.shot;
-    if (!sh || stage === 0 || sh.outcome === 'late') return SPOT;
+    if (!sh || stage === 0 || sh.outcome === 'late') return SPOT_POSE;
     const at = { x: sh.x, y: sh.y, s: 0.6 };
     if (stage === 1) return at;
     const out = sh.x < 150 ? -1 : 1;
@@ -86,7 +97,7 @@
   });
   const kp = $derived.by((): KeeperPose => {
     const sh = v.shot;
-    if (!sh || stage === 0 || sh.outcome === 'late') return { dx: 0, dy: 0, rot: 0 };
+    if (!sh || stage === 0 || sh.outcome === 'late') return REST;
     if (sh.keeper === 0) return { dx: 0, dy: -8, rot: 0 };
     return { dx: sh.keeper * 38, dy: -6, rot: sh.keeper * 68 };
   });
@@ -99,11 +110,10 @@
     late: '시간 초과!',
   };
   const caption = $derived(v.shot && stage > 0 ? CAPTION[v.shot.outcome] : '');
-  const trail = $derived(dragging ? path.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') : '');
   const readout = $derived.by(() => {
     const sh = v.shot;
     if (!sh) return '';
-    if (sh.outcome === 'late') return '3초 안에 차지 않았어요';
+    if (sh.outcome === 'late') return `${MG_TIME_MS / 1000}초 안에 차지 않았어요`;
     const pw = sh.power < 0.6 ? '약함' : sh.power > 1.3 ? '과함' : '좋음';
     return `세기 ${Math.round(sh.power * 100)}% (${pw}) · 곧게 차기 ${Math.round(sh.straight * 100)}%`;
   });
@@ -121,7 +131,7 @@
   onpointerdown={down}
   onpointermove={move}
   onpointerup={up}
-  onpointercancel={() => ((dragging = false), (path = []))}
+  onpointercancel={stop}
 >
   <MgTimer stopped={over} onexpire={expire} />
   <PitchScene {ball} spin={stage * 300} {kp} goal={stage === 2 && v.shot?.outcome === 'goal'} {trail} />

@@ -7,29 +7,8 @@
 // 곧 "구간 안"이 된다. 시뮬레이터·골든 테스트는 탭 없이 부르므로 지금처럼 난수로 판정한다.
 import { clamp } from './rng.js';
 
-/** 장면 종류. shot·chip·dribble은 내가 차고, save는 내가 골키퍼다. */
+/** 장면 종류(선택지의 mg.kind). shot·chip·dribble은 내가 차고, save는 내가 골키퍼다. */
 export type MgKind = 'shot' | 'chip' | 'dribble' | 'save';
-
-/** '이벤트 id:선택지 번호' → 장면. 선택지 순서는 서버 choiceBonus 키와 같아 바뀌지 않는다. */
-const MINIGAMES: Readonly<Record<string, MgKind>> = {
-  'penalty:0': 'shot',
-  'fw-one-on-one:0': 'chip',
-  'fw-one-on-one:1': 'dribble',
-  'pk-save:0': 'save',
-  'pk-save:1': 'save',
-  'gk-pk:0': 'save',
-  'gk-pk:1': 'save',
-};
-export const minigameOf = (id: string, idx: number): MgKind | undefined =>
-  MINIGAMES[`${id}:${idx}`];
-
-/** 선택지 문구가 방향을 정한 장면(-1 왼쪽 · 0 제자리). 없으면 화면에서 무작위로 고른다. */
-const MG_SIDE: Readonly<Record<string, -1 | 0>> = {
-  'pk-save:0': -1,
-  'pk-save:1': 0,
-};
-export const minigameSide = (id: string, idx: number): -1 | 0 | undefined =>
-  MG_SIDE[`${id}:${idx}`];
 
 /** 탭 버튼 문구. */
 export const MG_TAP: Readonly<Record<MgKind, string>> = {
@@ -44,9 +23,8 @@ export const MG_TAP: Readonly<Record<MgKind, string>> = {
  * 반대쪽까지 SWEEP_MS에 가므로 0.30은 약 240ms, 0.16은 약 130ms 동안 구간 안에 머문다.
  */
 export const zoneWidth = (p: number, kind?: MgKind) =>
-  clamp((0.06 + 0.34 * p) * (kind ? ZONE_SCALE[kind] : 1), 0.06, 0.36);
-/** 장면별 구간 배율. 칩슛은 키퍼 머리 위로 띄우는 섬세한 슛이라 더 좁다. */
-const ZONE_SCALE: Readonly<Record<MgKind, number>> = { shot: 1, chip: 0.75, dribble: 1, save: 1 };
+  // 칩슛은 키퍼 머리 위로 띄우는 섬세한 슛이라 구간이 더 좁다.
+  clamp((0.06 + 0.34 * p) * (kind === 'chip' ? 0.75 : 1), 0.06, 0.36);
 export const SWEEP_MS = 800;
 /** 제한 시간(ms). 장면이 뜬 뒤 이 안에 누르지(차지) 않으면 실패다. */
 export const MG_TIME_MS = 3000;
@@ -74,7 +52,7 @@ export function offsetToRoll(d: number, p: number): number {
 
 /** 결과 시트에 붙는 한 줄. */
 export function timingNote(d: number): string {
-  if (!Number.isFinite(d)) return '시간 초과 — 3초 안에 누르지 않았어요';
+  if (!Number.isFinite(d)) return `시간 초과 — ${MG_TIME_MS / 1000}초 안에 누르지 않았어요`;
   if (d <= 0.25) return '완벽한 타이밍!';
   if (d <= 1) return '타이밍 성공';
   if (d <= 1.6) return '아깝게 빗나간 타이밍';

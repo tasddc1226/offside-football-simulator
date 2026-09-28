@@ -5,7 +5,7 @@
   import '../game/index.js';
   import { EVENT_RULES, JITTER_RANGE } from '../game/engine.js';
   import { DEX_GROUPS, eventDex, type DexChoice, type DexEntry, type DexGroup } from '../game/eventDex.js';
-  import { minigameOf, zoneWidth } from '../game/minigame.js';
+  import { zoneWidth } from '../game/minigame.js';
   import { dexSeen } from './dex.js';
   import { goHome } from './nav.js';
   import Topbar from './Topbar.svelte';
@@ -40,13 +40,13 @@
     return () => clearTimeout(t);
   });
 
-  function oddsText(c: DexChoice, id: string, i: number): string {
+  function oddsText(c: DexChoice): string {
     if (c.kind === 'safe') return '안전';
     if (c.kind === 'sure') return '확정';
     if (c.min === null || c.max === null) return '상황별';
     // T-10-089 미니게임 선택지는 확률이 아니라 성공 구간 넓이다.
-    const mg = minigameOf(id, i);
-    if (mg) {
+    if (c.mg) {
+      const mg = c.mg;
       const [lo, hi] = [c.min, c.max].map((v) => Math.round(zoneWidth(v / 100, mg) * 100));
       return `원터치 · 구간 ${lo === hi ? lo : `${lo}~${hi}`}%`;
     }
@@ -114,7 +114,7 @@
                     <li>
                       <div class="dex-choice-head">
                         <span>{c.label}</span>
-                        <b class="dex-odds" class:safe={c.kind !== 'odds'}>{oddsText(c, e.ids[0]!, i)}</b>
+                        <b class="dex-odds" class:safe={c.kind !== 'odds'}>{oddsText(c)}</b>
                       </div>
                       {#if c.factors.length}
                         <div class="chips">

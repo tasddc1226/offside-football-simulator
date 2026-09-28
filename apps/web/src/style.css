@@ -2075,12 +2075,16 @@ th.n {
     transform 0.38s cubic-bezier(0.2, 0.8, 0.3, 1),
     rx 0.38s;
 }
+/* 사람(골키퍼·수비수)은 발끝을 축으로 몸을 던진다. */
+.mg-keeper,
+.mg-def {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
 /* 골키퍼: 상대는 주황 키퍼 유니폼, 나(save)는 강조색. */
 .mg-keeper {
   --kp: #f07a36;
   --kp-num: #fff;
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
   transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 .mg-keeper.me {
@@ -2091,8 +2095,6 @@ th.n {
 .mg-def {
   --kp: #3a6fd6;
   --kp-num: #fff;
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
   transition: transform 0.34s cubic-bezier(0.3, 0.7, 0.3, 1);
 }
 .mg-def .kp-shorts {
@@ -2244,9 +2246,6 @@ th.n {
   color: var(--chalk);
   text-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
 }
-.mg-caption.pop {
-  animation: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
-}
 .mg-gauge {
   position: relative;
   display: block;
@@ -2294,7 +2293,8 @@ th.n {
     transform: scale(0.6);
   }
 }
-.result-big.pop {
+.result-big.pop,
+.mg-caption.pop {
   animation: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
 }
 .twist {

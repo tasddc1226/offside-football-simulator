@@ -5,7 +5,13 @@
   import { onMount } from 'svelte';
   import { markerAt, MG_TAP } from '../../game/minigame.js';
   import MgTimer from './MgTimer.svelte';
-  import PitchScene, { type BallPose, type DefenderPose, type KeeperPose } from './PitchScene.svelte';
+  import PitchScene, {
+    REST,
+    SPOT_POSE,
+    type BallPose,
+    type DefenderPose,
+    type KeeperPose,
+  } from './PitchScene.svelte';
   import type { SheetView } from './types.js';
 
   let { v }: { v: Extract<SheetView, { kind: 'minigame' }> } = $props();
@@ -54,13 +60,13 @@
     v.onTap(null);
   }
 
-  type Pose = BallPose;
-  const SPOT: Pose = { x: 150, y: 148, s: 1.35 };
+  /** 아직 결과 장면이 아니다(겨냥 중이거나 시간 초과 — 공·키퍼는 그대로). stage는 판정(v.ok)이 난 뒤에야 오른다. */
+  const idle = $derived(stage === 0 || late);
   /** 단계별 공 위치(골문 앞 시점, viewBox 300×170). */
-  const ball = $derived.by((): Pose => {
-    if (stage === 0 || v.ok === null || late) return SPOT;
+  const ball = $derived.by((): BallPose => {
+    if (idle) return SPOT_POSE;
     const s = side;
-    const two = (a: Pose, b: Pose) => (stage === 1 ? a : b);
+    const two = (a: BallPose, b: BallPose) => (stage === 1 ? a : b);
     switch (v.mg) {
       case 'shot':
         return v.ok
@@ -80,17 +86,16 @@
         // 맞고 골대 옆으로(카메라 쪽으로 커지며). 다이빙한 키퍼의 몸통은 발에서 옆으로 60쯤, 골라인 위 20쯤이다.
         if (hold)
           return v.ok
-            ? two({ x: 150, y: 88, s: 0.72 }, { x: 150 + rs * 42, y: 13, s: 0.55 })
+            ? two({ x: 150, y: 88, s: 0.72 }, { x: 150 + s * 42, y: 13, s: 0.55 })
             : two({ x: 150 + s * 56, y: 56, s: 0.66 }, { x: 150 + s * 70, y: 40, s: 0.58 });
         return v.ok
           ? two({ x: 150 + s * 62, y: 90, s: 0.7 }, { x: 150 + s * 112, y: 132, s: 0.85 })
           : two({ x: 150 + s * 56, y: 56, s: 0.66 }, { x: 150 + s * 68, y: 40, s: 0.58 });
     }
   });
-  type KPose = KeeperPose;
   /** 골키퍼 자세. 슈팅 계열에선 상대 키퍼, save에선 나. */
-  const kp = $derived.by((): KPose => {
-    if (stage === 0 || v.ok === null || late) return { dx: 0, dy: 0, rot: 0 };
+  const kp = $derived.by((): KeeperPose => {
+    if (idle) return REST;
     const s = side;
     if (v.mg === 'chip') return { dx: 0, dy: v.ok ? -4 : -12, rot: 0 };
     if (hold) return v.ok ? { dx: 0, dy: -4, rot: 0 } : { dx: s * 14, dy: -4, rot: s * 25 };
@@ -100,7 +105,7 @@
     return { dx: d * (v.mg === 'save' && !v.ok ? 30 : 38), dy: -6, rot: d * 68 };
   });
   /** 골이 들어갔는가(그물 흔들기). */
-  const goal = $derived(stage === 2 && v.ok !== null && (v.mg === 'save' ? !v.ok : v.ok));
+  const goal = $derived(stage === 2 && v.ok === (v.mg !== 'save'));
   const caption = $derived.by(() => {
     if (v.ok === null) return '';
     if (late) return '시간 초과!';
@@ -117,7 +122,7 @@
     if (v.mg !== 'dribble') return [];
     // 둘 다 공이 빠져나간 쪽(키퍼 반대쪽)으로 슬라이딩한다 — 가운데로 모이면 한데 겹쳐 보인다.
     const dir = -side;
-    const pose = stage > 0 && v.ok !== null && !late ? { dx: dir * 14, dy: 6, rot: dir * 75 } : { dx: 0, dy: 0, rot: 0 };
+    const pose = idle ? REST : { dx: dir * 14, dy: 6, rot: dir * 75 };
     return [
       { x: 102, y: 140, num: 4, ...pose },
       { x: 200, y: 136, num: 5, ...pose },
@@ -129,7 +134,6 @@
 <h2>{v.label}</h2>
 <button
   class="mg-stage"
-  class:done={tapped}
   data-sheet="mg"
   data-mg-tap
   aria-label="{MG_TAP[v.mg]} — 바늘이 초록 구간에 올 때 누르세요"

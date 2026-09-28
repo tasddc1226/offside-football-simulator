@@ -23,15 +23,7 @@ import {
 import { playPhase, type PhaseResult } from '../game/turn.js';
 import { eventById } from '../game/events-data.js';
 import { choiceOdds } from '../game/balance.js';
-import {
-  minigameOf,
-  minigameSide,
-  offsetToRoll,
-  tapOffset,
-  timingNote,
-  zoneLabel,
-  zoneWidth,
-} from '../game/minigame.js';
+import { offsetToRoll, tapOffset, timingNote, zoneLabel, zoneWidth } from '../game/minigame.js';
 import { isHiddenEvent } from '../game/dexGroups.js';
 import { markDexSeen } from './dex.js';
 import { scoreLine, type NatTourResult } from '../game/national.js';
@@ -39,7 +31,7 @@ import { endSeason, market, acceptOption, retire, type SeasonEndResult } from '.
 import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
 import { titleView } from '../game/titles.js';
-import type { EventLogEntry, MarketResult } from '../game/types.js';
+import type { Choice, EventDef, EventLogEntry, GameState, MarketResult } from '../game/types.js';
 import { appState, randomName, randomNumber } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { publicNameOf } from './namePublic.js';
@@ -173,6 +165,25 @@ export function nextPending() {
   }
 }
 
+/** T-10-089: 원터치 미니게임으로 가릴 선택지의 장면(감속 모션이면 지금처럼 확률 판정). */
+const activeMg = (c: Choice) => (motionOK && c.p ? c.mg : undefined);
+
+function choiceView(s: GameState, ev: EventDef, c: Choice, i: number) {
+  const label = txt(c.label, s);
+  if (!c.p)
+    return isSafe(ev, c)
+      ? { label, odds: '안전', hint: '확정이지만 보상이 줄고 가끔 대가가 따릅니다' }
+      : { label, odds: '확정' };
+  const odds = choiceOdds(c.p(s), ev.id, i);
+  const mg = activeMg(c);
+  if (!mg) return { label, odds: `${Math.round(odds * 100)}%` };
+  return {
+    label,
+    odds: `원터치 · ${zoneLabel(zoneWidth(odds, mg.kind))}`,
+    hint: '바늘이 초록 구간에 올 때 탭하면 성공해요. 구간 넓이는 능력치로 정해져요',
+  };
+}
+
 function showEvent(id: string) {
   const s = appState.G!;
   const ev = eventById(id)!;
@@ -184,23 +195,7 @@ function showEvent(id: string) {
     story: ev.story
       ? { name: STORIES[ev.story]!.name, stage: ev.stage ?? 0, total: STORIES[ev.story]!.total }
       : null,
-    choices: ev.choices.map((c, i) =>
-      c.p && motionOK && minigameOf(ev.id, i)
-        ? {
-            label: txt(c.label, s),
-            odds: `원터치 · ${zoneLabel(zoneWidth(choiceOdds(c.p(s), ev.id, i), minigameOf(ev.id, i)))}`,
-            hint: '바늘이 초록 구간에 올 때 탭하면 성공해요. 구간 넓이는 능력치로 정해져요',
-          }
-        : c.p
-          ? { label: txt(c.label, s), odds: `${Math.round(choiceOdds(c.p(s), ev.id, i) * 100)}%` }
-          : isSafe(ev, c)
-            ? {
-                label: txt(c.label, s),
-                odds: '안전',
-                hint: '확정이지만 보상이 줄고 가끔 대가가 따릅니다',
-              }
-            : { label: txt(c.label, s), odds: '확정' },
-    ),
+    choices: ev.choices.map((c, i) => choiceView(s, ev, c, i)),
   });
 }
 
@@ -213,24 +208,23 @@ export async function chooseEvent(i: number) {
     c = ev.choices[i]!,
     label = txt(c.label, s);
   // 판정·기록·저장은 한 번에 끝낸다(연출 도중 새로고침해도 결과가 바뀌지 않게). 미니게임이면 탭 결과로 판정한다.
-  const settle = (mg?: { roll: number; d: number }) => {
-    const r = resolveChoice(s, p.id, i, mg?.roll);
+  const settle = (tap?: { roll: number; d: number }) => {
+    const r = resolveChoice(s, p.id, i, tap?.roll);
     // T-10-012: 처음 겪은 스토리·특별 이벤트는 도감에서 열린다 — 결과 시트 안에서 알린다(토스트는 확인 버튼을 가린다).
     const dexNew = markDexSeen(p.id) && isHiddenEvent(ev) ? ev.title : null;
     const entry: EventLogEntry = { k: 'ev', id: p.id, c: i, ok: r.ok, h: s.phase };
-    if (mg) entry.mg = Math.min(1000, Math.round(mg.d * 100));
+    if (tap) entry.mg = Math.min(1000, Math.round(tap.d * 100));
     pushEvLog(s, entry);
     s.pending = p.then === 'seasonEnd' ? { type: 'seasonEnd' } : null;
     save();
-    return { ...r, dexNew, timing: mg ? timingNote(mg.d) : null };
+    return { ...r, dexNew, timing: tap ? timingNote(tap.d) : null };
   };
-  // T-10-089: 경기 장면이 있는 선택지는 원터치 미니게임으로 가린다(감속 모션이면 지금처럼 확률 판정).
-  const mg = motionOK ? minigameOf(p.id, i) : undefined;
+  const mg = activeMg(c);
   let r: ReturnType<typeof settle>;
   if (mg) {
     const odds = choiceOdds(c.p?.(s), p.id, i),
-      w = zoneWidth(odds, mg);
-    r = await playMinigame(label, mg, w, minigameSide(p.id, i) ?? null, (x, center) => {
+      w = zoneWidth(odds, mg.kind);
+    r = await playMinigame(label, mg.kind, w, mg.side ?? null, (x, center) => {
       const d = tapOffset(x, center, w);
       return settle({ roll: offsetToRoll(d, odds), d });
     });

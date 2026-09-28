@@ -2,28 +2,29 @@ import { describe, expect, it } from 'vitest';
 import './event-registry.js';
 import { TRAITS, TYPES } from './data.js';
 import { newGame, resolveChoice } from './engine.js';
-import { eventById } from './events-data.js';
-import {
-  markerAt,
-  minigameOf,
-  offsetToRoll,
-  SWEEP_MS,
-  tapOffset,
-  timingNote,
-  zoneWidth,
-} from './minigame.js';
+import { EVENTS } from './events-data.js';
+import { markerAt, offsetToRoll, SWEEP_MS, tapOffset, timingNote, zoneWidth } from './minigame.js';
 import { createRng, rnd, setActiveRng } from './rng.js';
 
 // T-10-089 원터치 미니게임: 탭 위치가 구간 안이면 성공, 밖이면 실패. 난수는 탭과 상관없이 한 번 쓴다.
 describe('원터치 미니게임', () => {
   it('미니게임 선택지는 모두 확률 판정이 있는 선택지다', () => {
-    for (const id of ['penalty', 'fw-one-on-one', 'pk-save', 'gk-pk']) {
-      const ev = eventById(id)!;
-      ev.choices.forEach((c, i) => {
-        if (minigameOf(id, i)) expect(c.p, `${id}:${i}`).toBeTypeOf('function');
-      });
-    }
-    expect(minigameOf('penalty', 1)).toBeUndefined();
+    const mg = EVENTS.flatMap((ev) =>
+      ev.choices.flatMap((c, i) => {
+        if (!c.mg) return [];
+        expect(c.p, `${ev.id}:${i}`).toBeTypeOf('function');
+        return [`${ev.id}:${i}:${c.mg.kind}`];
+      }),
+    );
+    expect(mg.sort()).toEqual([
+      'fw-one-on-one:0:chip',
+      'fw-one-on-one:1:dribble',
+      'gk-pk:0:save',
+      'gk-pk:1:save',
+      'penalty:0:shot',
+      'pk-save:0:save',
+      'pk-save:1:save',
+    ]);
   });
 
   it('바늘은 SWEEP_MS마다 끝에서 끝으로 왕복한다', () => {

@@ -2,6 +2,7 @@
 // 페널티킥을 손가락으로 찬다. 공에서 골문 쪽으로 끌어 올린 경로에서 방향·강도·정확성을 뽑아 공이 닿는 자리를
 // 정하고, 골문 안이면서 키퍼 손이 닿지 않으면 골이다. 능력치(성공 확률 p)는 흩어짐과 키퍼가 닿는 범위를 줄인다.
 // 키퍼가 어느 쪽으로 뛸지만 운이다. 좌표는 미니게임 장면(viewBox 300×170)과 같다.
+import { clamp, gauss } from './rng.js';
 
 /** 드래그 경로의 한 점(장면 좌표, ms). */
 export type DragPoint = { x: number; y: number; t: number };
@@ -22,11 +23,11 @@ export interface ShotResult {
 }
 
 /** 골대 안쪽(장면 좌표). */
-export const GOAL = { left: 70, right: 230, top: 28, bottom: 112 } as const;
+const GOAL = { left: 70, right: 230, top: 28, bottom: 112 } as const;
 /** 페널티 지점. */
 export const SPOT = { x: 150, y: 148 } as const;
 /** 이만큼(장면 단위)은 끌어야 슛으로 본다. */
-export const MIN_DRAG = 24;
+const MIN_DRAG = 24;
 /** 세기 1에 해당하는 손가락 속도(장면 단위/ms). 마지막 FLICK_MS 동안의 속도를 잰다. */
 const REF_SPEED = 1.1;
 const FLICK_MS = 110;
@@ -73,12 +74,6 @@ export function readDrag(path: readonly DragPoint[]) {
   return { aimX, power, straight };
 }
 
-/** 정규분포 난수(Box–Muller). */
-function gauss(rand: () => number): number {
-  const u = Math.max(1e-9, rand());
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rand());
-}
-
 /**
  * 슛 판정. p: 능력치로 정해진 성공 확률(선택 창의 %). rand: 흩어짐과 키퍼 방향에 쓰는 난수 — 화면 연출이라
  * 게임 RNG가 아니라 Math.random을 넘긴다(테스트는 고정값).
@@ -91,13 +86,13 @@ export function evalShot(
   return judgeShot(readDrag(path), p, rand);
 }
 
-/** 방향·세기·곧은 정도로 판정한다(evalShot의 본체 — 보정 시뮬레이션이 경로 없이 부른다). */
+/** 방향·세기·곧은 정도로 판정한다(evalShot의 본체 — 테스트는 경로 없이 부른다). */
 export function judgeShot(
   { aimX, power, straight }: ReturnType<typeof readDrag>,
   p: number,
-  rand: () => number = Math.random,
+  rand: () => number,
 ): ShotResult {
-  const skill = Math.min(1, Math.max(0, p));
+  const skill = clamp(p, 0, 1);
   // 높이: 세기 1이면 골대 위쪽 3분의 1쯤, 1.3을 넘으면 크로스바 위로 뜬다.
   const aimY = GOAL.bottom - power * 0.77 * (GOAL.bottom - GOAL.top);
   // 흩어짐: 능력치가 낮을수록, 경로가 휠수록, 너무 세게 찰수록 커진다.
