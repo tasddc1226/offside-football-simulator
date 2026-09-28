@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
+import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
 
 /**
  * T-9-009. 커리어·시즌 요약 + 이벤트 선택 로그 업로드 계약. 세이브 전체(브리프: "클라우드 세이브
@@ -201,33 +202,22 @@ const YearTextSchema = z.strictObject({
   t: z.string().max(80),
 });
 
-const StyleCountSchema = z.number().int().min(0).max(5000);
+const StyleCountSchema = z.number().int().min(0).max(STYLE_COUNT_MAX);
 /**
  * T-10-077 플레이 성향 — 커리어 내내 유저가 한 선택을 센 값(은퇴 화면 성향 카드). 무엇을 골랐는지 목록은
- * 담지 않고 횟수만 센다. 이 기능이 나온 뒤의 선택만 세므로 `from`(세기 시작한 나이)부터의 기록이다.
+ * 담지 않고 횟수만 센다(각 카운터의 뜻은 play-style.ts). 이 기능이 나온 뒤의 선택만 세므로 `from`(세기 시작한
+ * 나이)부터의 기록이다.
  */
 export const PlayStyleSchema = z.strictObject({
   from: z.number().int().min(0).max(100),
-  /** 확률이 걸린 선택(주사위)과 그중 성공. */
-  bets: StyleCountSchema,
-  betWins: StyleCountSchema,
-  /** 성공 확률 40% 이하에 건 횟수와 그중 성공. */
-  longshots: StyleCountSchema,
-  longshotWins: StyleCountSchema,
-  /** '안전' 선택(확정이지만 보상이 준다). */
-  safe: StyleCountSchema,
-  /** 확률 없는 확정 선택. */
-  sure: StyleCountSchema,
   /** 가장 낮은 확률로 성공한 선택(이벤트 id · 성공 확률). */
-  best: z.strictObject({ id: z.string().max(48), p: z.number().min(0).max(1) }).optional(),
-  /** 프로 구단 사이 이적과 그중 윗 리그로 · 아랫 리그로 · 같은 급 이하인데 연봉을 크게 올린 이적. */
-  moves: StyleCountSchema,
-  tierUp: StyleCountSchema,
-  tierDown: StyleCountSchema,
-  payFirst: StyleCountSchema,
-  /** 제의가 있었는데도 잔류·재계약한 횟수와 그중 윗 리그 제의를 거절한 횟수. */
-  loyal: StyleCountSchema,
-  snubUp: StyleCountSchema,
+  best: z
+    .strictObject({ id: EventLogEntrySchema.shape.id, p: z.number().min(0).max(1) })
+    .optional(),
+  ...(Object.fromEntries(STYLE_COUNTERS.map((k) => [k, StyleCountSchema])) as Record<
+    StyleCounter,
+    typeof StyleCountSchema
+  >),
 });
 export type PlayStyle = z.infer<typeof PlayStyleSchema>;
 

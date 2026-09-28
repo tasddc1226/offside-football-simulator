@@ -27,7 +27,6 @@ import { isHiddenEvent } from '../game/dexGroups.js';
 import { markDexSeen } from './dex.js';
 import { scoreLine, type NatTourResult } from '../game/national.js';
 import { endSeason, market, acceptOption, retire, type SeasonEndResult } from '../game/season.js';
-import { noteChoice, noteMarket } from '../game/playStyle.js';
 import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
 import { titleView } from '../game/titles.js';
@@ -201,7 +200,6 @@ export async function chooseEvent(i: number) {
   // T-10-012: 처음 겪은 스토리·특별 이벤트는 도감에서 열린다 — 결과 시트 안에서 알린다(토스트는 확인 버튼을 가린다).
   const dexNew = markDexSeen(p.id) && isHiddenEvent(ev) ? ev.title : null;
   pushEvLog(s, { k: 'ev', id: p.id, c: i, ok: r.ok, h: s.phase });
-  noteChoice(s, p.id, r.p, r.ok, isSafe(ev, c));
   s.pending = p.then === 'seasonEnd' ? { type: 'seasonEnd' } : null;
   save();
   if (r.p < 1) await playJudge(label, r.p, r.roll);
@@ -351,8 +349,7 @@ export function pickOption(i: number) {
   const options = p?.type === 'market' ? (p.m?.options ?? []) : [];
   const o = options[i];
   if (!o || !appState.G) return;
-  noteMarket(appState.G, o, options);
-  const r = acceptOption(appState.G, o);
+  const r = acceptOption(appState.G, o, options);
   const logEntry: EventLogEntry = {
     k: o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' ? 'mil' : 'mkt',
     id: o.kind,

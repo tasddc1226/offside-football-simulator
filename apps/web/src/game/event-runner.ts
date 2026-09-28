@@ -5,6 +5,7 @@ import { EVENTS, eventById } from './events-data.js';
 import { BAL, choiceOdds, eventWeight } from './balance.js';
 import type { GameState, Choice, EventDef } from './types.js';
 import { leagueOf, labelOf } from './player.js';
+import { noteChoice } from './playStyle.js';
 import {
   setJitter,
   addAttr,
@@ -131,6 +132,7 @@ export function resolveChoice(s: GameState, evId: string, idx: number): ResolveR
   const text = txt(out.text, s);
   log(s, `[${ev.title}] ${text}`, ok ? 'good' : 'bad', Math.max(0, s.phase - 1));
   const safe = isSafe(ev, c);
+  noteChoice(s, evId, p, ok, safe);
   setJitter(safe ? 'safe' : true);
   try {
     out.fx(s);
