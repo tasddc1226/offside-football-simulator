@@ -7,6 +7,7 @@ import type {
   RetirementSummary,
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
+import type { ServiceSeason } from '@offside/contracts/service-seasons';
 import {
   and,
   desc,
@@ -15,6 +16,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  lt,
   sql,
   type AnyColumn,
   type SQL,
@@ -309,9 +311,14 @@ export async function listPublicHof(
   limit: number,
   page = 1,
   sort: HofSort = 'score',
+  season?: ServiceSeason,
 ): Promise<{ entries: PublicHofEntry[]; total: number }> {
   const by = HOF_SORT[sort];
-  const where = sort === 'score' ? isPublicRetired : and(isPublicRetired, sql`${by} > 0`);
+  const where = and(
+    isPublicRetired,
+    sort === 'score' ? undefined : sql`${by} > 0`,
+    season && inSeason(season),
+  );
   const [rows, [count]] = await Promise.all([
     db
       .select(publicColumns)
@@ -327,6 +334,17 @@ export async function listPublicHof(
       .where(where),
   ]);
   return { entries: rows.map(toPublicEntry), total: Number(count?.n ?? 0) };
+}
+
+/**
+ * T-10-090 시즌 순위에 오르는 커리어 — 개막 뒤 서버에 처음 올라온(첫 시즌 업로드) 커리어가 마감 전에 은퇴했다.
+ * created_at·retired_at은 nowIso() 형식이라 문자열 비교가 시각 비교다.
+ */
+function inSeason(s: ServiceSeason): SQL | undefined {
+  const started = gte(careers.createdAt, s.startsAt);
+  return s.endsAt === null
+    ? started
+    : and(started, lt(careers.createdAt, s.endsAt), lt(careers.retiredAt, s.endsAt));
 }
 
 export async function getPublicHof(

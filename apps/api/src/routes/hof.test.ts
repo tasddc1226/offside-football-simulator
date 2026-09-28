@@ -3,7 +3,7 @@ import {
   HofListResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
@@ -84,6 +84,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
   });
   afterEach(async () => {
     await ctx.dispose();
+    vi.useRealTimers();
   });
 
   it('로그인 없이 목록을 읽고, 이름은 공개를 고르기 전엔 익명이다', async () => {
@@ -280,6 +281,31 @@ describe('공개 명예의 전당 /v1/hof', () => {
     const p2 = await read('limit=2&page=2');
     expect(p2.entries.map((e) => e.legendScore)).toEqual([100]);
     expect((await createApp().request('/v1/hof?page=0', {}, ctx.env)).status).toBe(400);
+  });
+
+  it('T-10-090: season=1은 개막 뒤 처음 올라온 커리어만 보여 준다(프리시즌 선수 제외)', async () => {
+    const [pre, s1] = [
+      '0b000000-0000-4000-8000-000000000001',
+      '0b000000-0000-4000-8000-000000000002',
+    ];
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-05T14:59:00.000Z')); // 개막 1분 전(KST 10/5 23:59)
+    await putSeasonsFor(ctx.env, cookie, pre, summary);
+    vi.setSystemTime(new Date('2026-10-05T15:00:00.000Z')); // 개막
+    await putSeasonsFor(ctx.env, cookie, s1, summary);
+    // 프리시즌 선수가 시즌 중에 은퇴해도 시즌 순위에는 오르지 않는다.
+    vi.setSystemTime(new Date('2026-10-20T00:00:00.000Z'));
+    for (const id of [pre, s1]) await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, summary);
+
+    const read = async (q: string) => {
+      const res = await createApp().request(`/v1/hof?${q}`, {}, ctx.env);
+      return successEnvelope(HofListResponseSchema).parse(await res.json()).data;
+    };
+    expect((await read('')).entries.map((e) => e.id).sort()).toEqual([pre, s1]);
+    const season = await read('season=1');
+    expect(season.total).toBe(1);
+    expect(season.entries.map((e) => e.id)).toEqual([s1]);
+    expect((await createApp().request('/v1/hof?season=9', {}, ctx.env)).status).toBe(400);
   });
 
   it('sort로 기록별 순위를 매기고, 그 기록이 0인 선수는 뺀다', async () => {

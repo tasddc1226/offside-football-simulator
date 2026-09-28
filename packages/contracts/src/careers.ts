@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
+import { serviceSeason } from './service-seasons.js';
 
 /**
  * T-9-009. 커리어·시즌 요약 + 이벤트 선택 로그 업로드 계약. 세이브 전체(브리프: "클라우드 세이브
@@ -377,6 +378,12 @@ export const HofSortSchema = z
 export type HofSort = z.infer<typeof HofSortSchema>;
 /** `GET /v1/hof?page=` 1부터 시작하는 페이지 번호(한 페이지 = limit명). */
 export const HofPageQuerySchema = z.coerce.number().int().min(1).max(10000).default(1);
+/** T-10-090 `GET /v1/hof?season=` 서비스 시즌 순위(service-seasons.ts의 id). 없으면 전체 명예의 전당. */
+export const HofSeasonQuerySchema = z.coerce
+  .number()
+  .int()
+  .refine((id) => serviceSeason(id) !== undefined, '없는 시즌입니다.')
+  .optional();
 
 // ───────── T-10-027 서버 최초 기록 ─────────
 

@@ -109,6 +109,7 @@ export {
   HofDetailResponseSchema,
   HofListQuerySchema,
   HofPageQuerySchema,
+  HofSeasonQuerySchema,
   HofSortSchema,
   type LegendSnapshot,
   type PlayStyle,
