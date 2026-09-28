@@ -3749,6 +3749,73 @@ button.title-item:hover {
   color: var(--film-muted);
   font-size: 0.8125rem;
 }
+/* T-10-077 플레이 성향 — 유형 하나 + 주사위 기록 네 칸 + 최고의 한 수. */
+.film-style {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.style-type {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.style-icon {
+  font-size: 3.5rem;
+  line-height: 1;
+}
+.style-type b {
+  font-size: 1.625rem;
+  color: var(--film-gold);
+}
+.style-type p {
+  color: var(--film-muted);
+  font-size: 0.9375rem;
+  margin: 0 0 4px;
+}
+.style-grid {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-block: 1px solid var(--film-line);
+  padding-block: 18px;
+  row-gap: 18px;
+}
+.style-grid div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.style-grid b {
+  font-family: var(--display);
+  font-size: 2rem;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.style-grid b.up {
+  color: var(--film-gold);
+}
+.style-grid span {
+  font-size: 0.8125rem;
+}
+.style-grid small {
+  font-size: 0.75rem;
+  color: var(--film-muted);
+}
+.style-best {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.9375rem;
+}
+.style-best b {
+  color: var(--film-gold);
+}
 /* T-10-076 영구결번 — 유니폼 세리머니. 유니폼 색은 구단 엠블럼 색(--rn-base/--rn-accent). */
 .film-rn {
   display: flex;

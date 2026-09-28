@@ -1,10 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { API, ok } from './helpers.js';
 
 // 은퇴한 내 선수의 대표 칭호를 그 선수가 받은 칭호 중에서 다시 고른다(내 선수 상세 아래 카드).
 const ID = '0d000000-0000-4000-8000-00000000000c';
 
-test('은퇴한 내 선수의 대표 칭호를 받은 칭호 중에서 바꾼다', async ({ page }) => {
+/** 은퇴한 내 선수 한 명(이 기기 기록)과 API 목. 은퇴 PUT 본문을 모은다. */
+async function seed(page: Page, style?: Record<string, unknown>) {
   const bodies: Record<string, unknown>[] = [];
   await page.route(`${API}/v1/profile`, (r) =>
     r.fulfill(
@@ -27,66 +28,75 @@ test('은퇴한 내 선수의 대표 칭호를 받은 칭호 중에서 바꾼다
     bodies.push(r.request().postDataJSON() as Record<string, unknown>);
     return r.fulfill(ok({ careerId: ID, status: 'retired', retiredNumber: null }));
   });
-  await page.addInitScript((id) => {
-    if (localStorage.getItem('ft_hof')) return;
-    const career = Array.from({ length: 8 }, (_, i) => ({
-      year: 2030 + i,
-      age: 26 + i,
-      club: '맨체스터 스카이블루',
-      league: '프리미어리그',
-      apps: 38,
-      goals: 20,
-      assists: 10,
-      cs: 0,
-      rating: 7.4,
-      rank: 2,
-      ovr: 85,
-      honors: [],
-    }));
-    localStorage.setItem(
-      'ft_hof',
-      JSON.stringify([
-        {
-          id,
-          name: '칭호왕',
-          pos: 'FW',
-          number: 9,
-          peak: 86,
-          age: 34,
-          apps: 304,
-          goals: 160,
-          assists: 80,
-          trophies: 0,
-          awards: 0,
-          caps: 0,
-          ballon: 0,
-          lastClub: '맨체스터 스카이블루',
-          score: 500,
-          date: '2026-09-01',
-          public: true,
-          title: 'europe',
-          detail: {
-            number: 9,
+  await page.addInitScript(
+    ({ id, style }) => {
+      if (localStorage.getItem('ft_hof')) return;
+      const career = Array.from({ length: 8 }, (_, i) => ({
+        year: 2030 + i,
+        age: 26 + i,
+        club: '맨체스터 스카이블루',
+        league: '프리미어리그',
+        apps: 38,
+        goals: 20,
+        assists: 10,
+        cs: 0,
+        rating: 7.4,
+        rank: 2,
+        ovr: 85,
+        honors: [],
+      }));
+      localStorage.setItem(
+        'ft_hof',
+        JSON.stringify([
+          {
+            id,
+            name: '칭호왕',
             pos: 'FW',
-            age: 34,
+            number: 9,
             peak: 86,
+            age: 34,
+            apps: 304,
+            goals: 160,
+            assists: 80,
+            trophies: 0,
+            awards: 0,
+            caps: 0,
+            ballon: 0,
             lastClub: '맨체스터 스카이블루',
-            career,
-            trophies: [],
-            awards: [],
-            ballon: [],
-            nat: { caps: 0 },
-            storyLog: [],
-            miles: [],
-            titles: [
-              { id: 'europe', year: 2030 },
-              { id: 'oneclub', year: 2037 },
-            ],
+            score: 500,
+            date: '2026-09-01',
+            public: true,
+            title: 'europe',
+            detail: {
+              number: 9,
+              pos: 'FW',
+              age: 34,
+              peak: 86,
+              lastClub: '맨체스터 스카이블루',
+              career,
+              trophies: [],
+              awards: [],
+              ballon: [],
+              nat: { caps: 0 },
+              storyLog: [],
+              miles: [],
+              titles: [
+                { id: 'europe', year: 2030 },
+                { id: 'oneclub', year: 2037 },
+              ],
+              ...(style ? { style } : {}),
+            },
           },
-        },
-      ]),
-    );
-  }, ID);
+        ]),
+      );
+    },
+    { id: ID, style },
+  );
+  return bodies;
+}
+
+test('은퇴한 내 선수의 대표 칭호를 받은 칭호 중에서 바꾼다', async ({ page }) => {
+  const bodies = await seed(page);
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-my-player="0"]').click();
@@ -110,4 +120,47 @@ test('은퇴한 내 선수의 대표 칭호를 받은 칭호 중에서 바꾼다
   await page.locator('[data-act="hof-back"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-title]')).toHaveText('‘원클럽맨’');
+});
+
+// T-10-077 은퇴 리포트의 플레이 성향 — 커리어 내내 센 선택으로 유형을 뽑는다. 선택 기록이 없는 옛 은퇴는 그리지 않는다.
+test('은퇴 리포트에 플레이 성향 카드가 나온다', async ({ page }) => {
+  await seed(page, {
+    from: 18,
+    betOdds: 1050,
+    bets: 22,
+    betWins: 15,
+    longshots: 9,
+    longshotWins: 5,
+    safe: 6,
+    sure: 8,
+    best: { id: 'rival', p: 0.18 },
+    moves: 4,
+    tierUp: 3,
+    tierDown: 0,
+    payFirst: 1,
+    loyal: 3,
+    snubUp: 1,
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-my-player="0"]').click();
+  const card = page.locator('[data-legend-style]');
+  // 한 구단에서만 8시즌 — 대표 유형은 원클럽, 운·승부수 성향은 곁들인다.
+  await expect(card).toHaveAttribute('data-legend-style', 'oneclub');
+  await expect(card.locator('[data-style-name]')).toHaveText('원클럽 순정파');
+  await expect(card).toContainText('타고난 강운');
+  await expect(card).toContainText('올인 승부사');
+  await expect(card).toContainText('+4.5');
+  await expect(card.locator('[data-style-best]')).toContainText(
+    '성공 확률 18%의 ‘포지션 경쟁자 영입’',
+  );
+});
+
+test('선택 기록이 없는 은퇴에는 플레이 성향 카드가 없다', async ({ page }) => {
+  await seed(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-credit="finale"]')).toBeAttached();
+  await expect(page.locator('[data-legend-style]')).toHaveCount(0);
 });

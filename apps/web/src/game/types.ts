@@ -276,7 +276,7 @@ export interface GameState {
   /** T-10-026. 유저가 고른 대표 칭호 id. 없으면 mainTitle()이 자동으로 고른다. */
   titleSel?: string;
   /** T-10-077. 커리어 내내 센 플레이 성향(playStyle.ts). 기능이 나오기 전에 시작한 저장엔 처음 선택 때 생긴다. */
-  style?: PlayStyle;
+  style?: PlayStyle | undefined;
   rng: RngSaveState;
   /** T-9-009. 이번 시즌 버퍼링된 선택 로그(`ft_save`와 함께 자동 저장). 시즌 종료 시 업로드 페이로드로
    * 옮겨지고 비워진다. 최대 300개, 넘치면 가장 오래된 것부터 버린다. */
@@ -317,7 +317,16 @@ export interface HofEntry {
  * 은퇴 스냅샷(LegendSnapshot) 둘 다 이 모양을 만족한다. */
 export type LegendSource = Pick<
   GameState,
-  'pos' | 'peak' | 'career' | 'trophies' | 'awards' | 'ballon' | 'storyLog' | 'miles' | 'titles'
+  | 'pos'
+  | 'peak'
+  | 'career'
+  | 'trophies'
+  | 'awards'
+  | 'ballon'
+  | 'storyLog'
+  | 'miles'
+  | 'titles'
+  | 'style'
 > & {
   nat: { caps: number };
 };
