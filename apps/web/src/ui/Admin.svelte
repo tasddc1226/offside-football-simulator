@@ -8,11 +8,13 @@
   import AdminBalance from './admin/AdminBalance.svelte';
   import AdminComments from './admin/AdminComments.svelte';
   import AdminDashboard from './admin/AdminDashboard.svelte';
+  import AdminAutomation from './admin/AdminAutomation.svelte';
 
   const TABS = [
     { id: 'dashboard', label: '대시보드' },
     { id: 'comments', label: '댓글' },
     { id: 'balance', label: '밸런스' },
+    { id: 'automation', label: '자동 플레이' },
   ] as const;
   let tab = $state<(typeof TABS)[number]['id']>('dashboard');
   let admin = $state<boolean | null>(null);
@@ -38,13 +40,14 @@
     {:else if !admin}
       <p class="muted">운영자 계정으로 로그인해야 볼 수 있어요.</p>
     {:else}
-      <div class="seg three admin-tabs" role="group" aria-label="운영 도구">
+      <div class="seg admin-tabs" style="grid-template-columns:repeat({TABS.length},1fr)" role="group" aria-label="운영 도구">
         {#each TABS as t (t.id)}
           <button class="opt" aria-pressed={tab === t.id} data-admin-tab={t.id} onclick={() => (tab = t.id)}>{t.label}</button>
         {/each}
       </div>
       {#if tab === 'dashboard'}<AdminDashboard />
       {:else if tab === 'comments'}<AdminComments />
+      {:else if tab === 'automation'}<AdminAutomation />
       {:else}<AdminBalance />{/if}
     {/if}
   </section>

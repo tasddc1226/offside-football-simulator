@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { startCareer } from './helpers.js';
+import { API, ok, startCareer } from './helpers.js';
 
 // 프리시즌 → 전반기 → 후반기를 여러 시즌 돌리는 동안 확률 이벤트 선택지, 오퍼/시트 버튼,
 // 경기 중계 건너뛰기 버튼이 그때그때 나타난다 — 매 스텝마다 "지금 보이는 걸 하나 고른다"는
@@ -29,6 +29,24 @@ async function clickWhateverIsNext(page: Page): Promise<boolean> {
 
 test('커리어 생성 후 2시즌 이상 진행한다', async ({ page }) => {
   test.setTimeout(120_000);
+  // 시즌 업로드에 조작 요약(자동 플레이 탐지, 관찰 전용)이 실린다 — Playwright는 자동화 브라우저라 webdriver가 켜져 있다.
+  const signals: Record<string, unknown>[] = [];
+  await page.route(`${API}/v1/profile`, (r) =>
+    r.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: false, toss: false },
+        googleEmailMasked: null,
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        nickname: null,
+      }),
+    ),
+  );
+  await page.route(/\/v1\/careers\/[^/]+\/seasons\/\d+$/, (r) => {
+    signals.push((r.request().postDataJSON() as { signals: Record<string, unknown> }).signals);
+    return r.fulfill(ok({}));
+  });
   await startCareer(page);
 
   const initialYear = await page.evaluate(() => {
@@ -51,4 +69,8 @@ test('커리어 생성 후 2시즌 이상 진행한다', async ({ page }) => {
   }
 
   expect(seasonsCompleted).toBeGreaterThanOrEqual(2);
+  await expect.poll(() => signals.length).toBeGreaterThanOrEqual(1);
+  expect(signals[0]).toMatchObject({ webdriver: true, synthetic: 0, touches: 0 });
+  expect(signals[0]!.clicks).toBeGreaterThan(0);
+  expect(signals[0]!.ms).toBeGreaterThan(0);
 });

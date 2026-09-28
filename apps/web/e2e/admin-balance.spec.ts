@@ -222,3 +222,57 @@ test('운영 도구: 대시보드가 기본 탭이고, 댓글 탭에서 작성�
     profileId: SPAMMER,
   });
 });
+
+test('운영 도구: 자동 플레이 탭은 열 때 불러오고, 구간을 바꾸면 다시 받는다', async ({ page }) => {
+  await mockApi(page, { linked: true, admin: true });
+  const asked: string[] = [];
+  await page.route(`${API}/v1/admin/automation**`, (route) => {
+    const url = new URL(route.request().url());
+    asked.push(url.searchParams.get('hours')!);
+    return route.fulfill(
+      ok({
+        generatedAt: T,
+        hours: Number(url.searchParams.get('hours')),
+        profiles: 55,
+        suspects: [
+          {
+            profile: 'prf_0000',
+            score: 4,
+            level: 'high',
+            reasons: ['metronome', 'serial'],
+            seasons: 60,
+            activeHours: 3,
+            firstAt: T,
+            lastAt: T,
+            careers: [
+              {
+                careerId: '0f000000-0000-4000-8000-000000000001',
+                name: 'Maverick#4',
+                status: 'active',
+                seasons: 12,
+                medianGapSec: 49,
+                cv: 0.05,
+                reasons: ['metronome'],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await expect(page.getByText('ad***@gmail.com')).toBeVisible();
+  await page.locator('[data-act="admin"]').click();
+  await expect(page.locator('[data-stat="users"]')).toBeVisible();
+  expect(asked).toEqual([]);
+  await page.locator('[data-admin-tab="automation"]').click();
+  const bot = page.locator('[data-suspect="prf_0000"]');
+  await expect(bot).toContainText('높음');
+  await expect(bot.locator('[data-reason="metronome"]')).toHaveText('기계처럼 일정한 간격');
+  await expect(bot).toContainText('Maverick#4');
+  await expect(bot).toContainText('간격 49초 · 변동 0.05');
+  await expect(page.locator('[data-automation-summary]')).toContainText('55개 프로필 중 1곳');
+  await page.locator('[data-automation-hours="24"]').click();
+  await expect.poll(() => asked).toEqual(['6', '24']);
+});

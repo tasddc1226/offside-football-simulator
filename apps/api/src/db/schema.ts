@@ -199,6 +199,8 @@ export const careerSeasons = sqliteTable(
     caps: integer('caps'),
     compsJson: text('comps_json'),
     chJson: text('ch_json'),
+    /** 자동 플레이 탐지(관찰 전용): 기기가 보낸 조작 요약(PlaySignals) + 서버가 본 headless 여부. 옛 기록은 null. */
+    signalsJson: text('signals_json'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [

@@ -1,0 +1,1 @@
+ALTER TABLE `career_seasons` ADD `signals_json` text;
