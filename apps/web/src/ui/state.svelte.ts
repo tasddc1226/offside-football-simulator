@@ -96,7 +96,7 @@ export const appState = $state<{
   ownerConflict: OutboxItem[] | null;
   /** 명예의 전당 전체 보기 화면의 탭·페이지(1부터)·순위 유형. 선수 상세에서 돌아와도 그대로다. */
   hof: { page: number; sort: HofSort };
-  /** 선수 상세의 '← 명예의 전당'이 돌아갈 화면. */
+  /** 선수 상세의 '← 이전으로'가 돌아갈 화면. */
   legendBack: 'home' | 'hof' | 'owner';
   /** T-10-029. 공유 링크(/career/:id)로 들어온 은퇴 선수 id — 보기 전용 화면(SharedCareer)이 읽는다. */
   sharedCareer: string | null;

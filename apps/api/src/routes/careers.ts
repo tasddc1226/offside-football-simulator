@@ -17,7 +17,7 @@ import {
   putCareerSeason,
   putRetirement,
   storedSeasonsOf,
-  renameRetired,
+  updateRetired,
 } from '../db/repos/careers.js';
 import { boundRetirement, sanitizeSeason } from '../plausibility.js';
 import { getProfile, isLinked } from '../db/repos/profiles.js';
@@ -122,7 +122,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
 
     if (career.status === 'retired') {
-      await renameRetired(db, { careerId, publicName, snapshot, now });
+      await updateRetired(db, { careerId, publicName, snapshot, title: sent.title, now });
     } else {
       // 은퇴 요약은 받아 둔 시즌 기록에 맞춘다 — 보낸 숫자를 그대로 믿지 않는다.
       const seasons = (await storedSeasonsOf(db, [careerId])).get(careerId) ?? [];

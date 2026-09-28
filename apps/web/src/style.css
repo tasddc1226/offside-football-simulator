@@ -1270,6 +1270,12 @@ body:has(.main-nav) .wrap {
   max-width: 480px;
   margin: 0 auto;
 }
+/* 내 은퇴 선수 화면 아래 공유 바: 홈으로 | 커리어 공유하기 */
+.share-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
 /* 탭바가 없는 화면(선수 생성)에서는 화면 맨 아래에 붙는다 */
 .action-bar.at-bottom {
   bottom: 0;
@@ -3284,12 +3290,16 @@ button.title-item:hover {
   height: 100%;
   background: var(--accent);
 }
-.title-locked summary {
+.title-locked summary,
+.title-pick summary {
   cursor: pointer;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--muted);
   padding: 4px 0;
+}
+.title-pick .title-list {
+  margin-top: 8px;
 }
 @media (prefers-reduced-motion: reduce) {
   .title-tag.pop {

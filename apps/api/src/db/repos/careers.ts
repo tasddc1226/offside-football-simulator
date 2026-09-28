@@ -169,7 +169,7 @@ export type PutRetirementInput = {
 export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`;
 
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
- * 끝낸다. 다시 보낸 은퇴(이름 공개 토글)는 `renameRetired`로 간다. */
+ * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
   const { careerId, summary, publicName, snapshot, now } = input;
   await runBatch(db, [
@@ -390,19 +390,27 @@ export function deleteCareersStatements(db: Db, profileId: string) {
 }
 
 /**
- * 이미 은퇴한 커리어를 다시 보냈을 때(이름 공개 토글): 공개 이름만 바꾸고, 상세 스냅샷은 비어 있을 때만 채운다.
- * 은퇴 요약은 첫 은퇴 때 정해져 바뀌지 않는다.
+ * 이미 은퇴한 커리어를 다시 보냈을 때(이름 공개 토글·대표 칭호 바꾸기): 공개 이름과 대표 칭호만 바꾸고, 상세
+ * 스냅샷은 비어 있을 때만 채운다. 대표 칭호는 은퇴 때 올라온 스냅샷의 획득 칭호 중 하나일 때만 바꾼다. 은퇴
+ * 요약은 첫 은퇴 때 정해져 바뀌지 않는다.
  */
-export async function renameRetired(
+export async function updateRetired(
   db: Db,
-  input: Pick<PutRetirementInput, 'careerId' | 'publicName' | 'snapshot' | 'now'>,
+  input: Pick<PutRetirementInput, 'careerId' | 'publicName' | 'snapshot' | 'now'> & {
+    title: string | null | undefined;
+  },
 ): Promise<void> {
-  const { careerId, publicName, snapshot, now } = input;
+  const { careerId, publicName, snapshot, title, now } = input;
   await db
     .update(careers)
     .set({
       updatedAt: now,
       ...(publicName !== undefined ? { publicName } : {}),
+      ...(title
+        ? {
+            title: sql`case when exists (select 1 from json_each(${careers.snapshotJson}, '$.titles') where json_extract(value, '$.id') = ${title}) then ${title} else ${careers.title} end`,
+          }
+        : {}),
       ...(snapshot
         ? {
             snapshotJson: sql`coalesce(${careers.snapshotJson}, ${JSON.stringify(snapshot)})`,

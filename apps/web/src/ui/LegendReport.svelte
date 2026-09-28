@@ -13,6 +13,7 @@
   import type { LegendView } from './state.svelte.js';
   import CareerTab from './tabs/CareerTab.svelte';
   import { titleById } from '../game/titles.js';
+  import { legendTitleOf } from './titles/legendTitle.svelte.js';
   import CountUp from './CountUp.svelte';
   import { motionOK } from './motion.js';
   import ClubMark from './ClubMark.svelte';
@@ -23,7 +24,7 @@
   const d = $derived(v.d);
   const back = $derived(v.pos === 'GK' || v.pos === 'DF');
   const t = $derived(d ? totals(d) : null);
-  const main = $derived(titleById(v.title));
+  const main = $derived(titleById(legendTitleOf(v.own?.id, v.title)));
 
   const chapters = $derived(d ? careerChapters(d) : []);
   const national = $derived(d ? nationalEvents(d) : []);

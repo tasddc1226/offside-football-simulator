@@ -189,6 +189,30 @@ describe('공개 명예의 전당 /v1/hof', () => {
     ).toBe(400);
   });
 
+  it('은퇴 뒤에도 받은 칭호 중에서만 대표 칭호를 바꾼다', async () => {
+    const titles = [
+      { id: 'goals100', year: 2034 },
+      { id: 'debut', year: 0 },
+    ];
+    const put = (title: string) =>
+      putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
+        ...summary,
+        title,
+        publicName: null,
+        snapshot: { ...snapshot, titles },
+      });
+    const titleNow = async () =>
+      successEnvelope(HofDetailResponseSchema).parse(
+        await (await createApp().request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).json(),
+      ).data.entry.title;
+    await put('goals100');
+    expect((await put('debut')).status).toBe(200);
+    expect(await titleNow()).toBe('debut');
+    // 받지 않은 칭호는 무시한다(요청은 성공 — 업로드 큐가 버리지 않게).
+    expect((await put('ballon1')).status).toBe(200);
+    expect(await titleNow()).toBe('debut');
+  });
+
   it('칭호 없이 은퇴한 옛 기록은 title이 null이다', async () => {
     await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, summary);
     const { entries } = successEnvelope(HofListResponseSchema).parse(

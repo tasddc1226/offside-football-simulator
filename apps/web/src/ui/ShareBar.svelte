@@ -1,9 +1,10 @@
 <script lang="ts">
   // T-10-029 → T-10-067 은퇴 커리어 공유. 내 은퇴 선수 화면(은퇴 직후·선수 상세) 아래에 고정된 버튼으로, 로그인하지
   // 않아도 보기 전용 공유 링크(/career/<id>)를 복사한다 — 링크는 공개 명예의 전당 상세라 로그인과 무관하다.
-  // T-10-069 이 기기에 없는 계정의 내 선수도 띄운다 — 띄울지는 LegendView.shareId(legend.ts)가 정한다.
+  // T-10-069 이 기기에 없는 계정의 내 선수도 띄운다 — 띄울지는 LegendView.shareId(legend.ts)가 정한다. 왼쪽 반은 홈으로.
   import { getHofDetail } from '../api/client.js';
   import { toast } from './helpers.js';
+  import { goHome } from './nav.js';
   import { shareUrl } from './legend.js';
 
   const { id }: { id: string } = $props();
@@ -61,8 +62,11 @@
     {#if url}
       <input class="share-url" readonly value={url} aria-label="공유 링크" onfocus={(e) => e.currentTarget.select()} />
     {/if}
-    <button class="btn btn-primary btn-block" data-act="share-career" disabled={busy} onclick={copy}>
-      {busy ? '링크 만드는 중…' : url ? '공유 링크 다시 복사하기' : '커리어 공유하기'}
-    </button>
+    <div class="share-actions">
+      <button class="btn" data-act="share-home" onclick={goHome}>홈으로</button>
+      <button class="btn btn-primary" data-act="share-career" disabled={busy} onclick={copy}>
+        {busy ? '링크 만드는 중…' : url ? '링크 다시 복사' : '커리어 공유하기'}
+      </button>
+    </div>
   </div>
 </div>

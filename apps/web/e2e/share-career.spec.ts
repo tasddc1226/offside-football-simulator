@@ -112,6 +112,10 @@ test('로그인하지 않아도 공유 버튼이 화면 아래에 고정돼 링�
   await expect(page.locator('[data-act="hof-back"]')).toBeVisible();
   await expect(page.locator('[data-share="login"]')).toHaveCount(0);
   await expect(page.locator('[data-act="share-career"]')).toBeInViewport();
+  // 공유 바 왼쪽 반은 홈으로.
+  await page.locator('[data-act="share-home"]').click();
+  await expect(page.locator('[data-act="share-career"]')).toHaveCount(0);
+  await expect(page.locator('[data-act="continue"], [data-act="new"]').first()).toBeVisible();
 });
 
 test('로그인했으면 공유 링크를 만들고, 링크를 연 사람은 보기 전용 리포트를 본다', async ({
