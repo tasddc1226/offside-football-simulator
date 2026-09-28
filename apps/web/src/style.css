@@ -1270,6 +1270,12 @@ body:has(.main-nav) .wrap {
   max-width: 480px;
   margin: 0 auto;
 }
+/* 두 칸 버튼 줄: 공유 이미지(이미지 저장 | 바로 공유하기) */
+.share-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
 /* 탭바가 없는 화면(선수 생성)에서는 화면 맨 아래에 붙는다 */
 .action-bar.at-bottom {
   bottom: 0;
@@ -3933,4 +3939,11 @@ button.what {
   .live-rows.shift {
     transition: none;
   }
+}
+/* T-10-079 SNS 공유 이미지 미리 보기(1080×1350을 카드 폭에 맞춘다). */
+.share-image {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
 }
