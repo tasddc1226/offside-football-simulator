@@ -127,6 +127,9 @@ export const TeamMatchEventSchema = z.strictObject({
   side: z.enum(['home', 'away']),
   scorer: z.string(),
   assist: z.string().nullable(),
+  /** 조회한 구단주 쪽 선수의 커리어 id — 웹이 이 기기에 있는 (비공개) 이름으로 바꿔 보여 준다. 상대 쪽은 늘 null. */
+  scorerId: z.string().nullable(),
+  assistId: z.string().nullable(),
 });
 export type TeamMatchEvent = z.infer<typeof TeamMatchEventSchema>;
 

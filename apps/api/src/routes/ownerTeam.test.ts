@@ -250,8 +250,13 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const drew = match.home.goals === match.away.goals;
     expect(record).toEqual({ w: won ? 1 : 0, d: drew ? 1 : 0, l: !won && !drew ? 1 : 0 });
     // 상대 득점자 이름은 공개 이름이거나 익명·유스 표기다(비공개 이름은 서버에 없다).
-    for (const e of match.events.filter((x) => x.side === 'away'))
+    for (const e of match.events.filter((x) => x.side === 'away')) {
       expect(e.scorer).toMatch(/^(라이벌 에이스|유스 선수|익명의 .+)$/);
+      // 상대 선수의 커리어 id는 내보내지 않는다.
+      expect([e.scorerId, e.assistId]).toEqual([null, null]);
+    }
+    for (const e of match.events.filter((x) => x.side === 'home' && x.scorer !== '유스 선수'))
+      expect(me.ids).toContain(e.scorerId);
 
     const [homeRow] = await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, me.team.id));
     const [awayRow] = await ctx.db
@@ -267,7 +272,9 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     ).data.items;
     expect(theirs).toHaveLength(1);
     expect(theirs[0]).toMatchObject({ id: match.id, mine: 'away' });
-    expect(theirs[0]!.events).toEqual(match.events);
+    expect(theirs[0]!.events.map((e) => [e.minute, e.side, e.scorer, e.assist])).toEqual(
+      match.events.map((e) => [e.minute, e.side, e.scorer, e.assist]),
+    );
     const mineList = MatchesRes.parse(
       await (await call('GET', '/v1/owner-team/matches', { cookie: me.cookie })).json(),
     ).data.items;

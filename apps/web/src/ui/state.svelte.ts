@@ -34,6 +34,8 @@ export type Screen =
   | 'legend'
   | 'settings'
   | 'owner'
+  /** T-10-092 구단주 팀(구단주 화면에서 연다). */
+  | 'team'
   | 'board'
   | 'dex'
   | 'hof'

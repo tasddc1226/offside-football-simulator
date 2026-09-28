@@ -131,6 +131,7 @@ function toMatch(
 ): TeamMatch {
   const d = JSON.parse(row.detailJson) as MatchDetail;
   const label = (p: PlayerRef) => (p.careerId ? (names.get(p.careerId) ?? p.anon) : p.anon);
+  const mine = myTeamIds.has(row.homeTeamId) ? 'home' : 'away';
   return {
     id: row.id,
     home: { ...d.home, goals: row.homeGoals },
@@ -140,8 +141,10 @@ function toMatch(
       side: e.side,
       scorer: label(e.scorer),
       assist: e.assist ? label(e.assist) : null,
+      scorerId: e.side === mine ? e.scorer.careerId : null,
+      assistId: e.side === mine ? (e.assist?.careerId ?? null) : null,
     })),
-    mine: myTeamIds.has(row.homeTeamId) ? 'home' : 'away',
+    mine,
     createdAt: row.createdAt,
   };
 }
