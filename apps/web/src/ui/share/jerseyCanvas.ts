@@ -141,8 +141,11 @@ export function drawJersey(
   ctx.font = font.name;
   const { x0, x1, y0, yc } = J.arc;
   const chars = [...j.name];
-  const ws = chars.map((ch) => ctx.measureText(ch).width);
-  const gap = 1.2;
+  const raw = chars.map((ch) => ctx.measureText(ch).width);
+  // 긴 이름은 등판(J.nameMax) 안에 들어오게 글자를 줄인다.
+  const f = Math.min(1, J.nameMax / raw.reduce((n, w) => n + w + 1.2, -1.2));
+  const ws = raw.map((w) => w * f);
+  const gap = 1.2 * f;
   let x = 60 - ws.reduce((n, w) => n + w + gap, -gap) / 2;
   chars.forEach((ch, i) => {
     const mid = x + ws[i]! / 2;
@@ -151,6 +154,7 @@ export function drawJersey(
     ctx.save();
     ctx.translate(mid, y);
     ctx.rotate(Math.atan2(2 * (yc - y0) * (1 - 2 * t), x1 - x0));
+    ctx.scale(f, f);
     ctx.fillText(ch, 0, 0);
     ctx.restore();
     x += ws[i]! + gap;

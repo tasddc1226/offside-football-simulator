@@ -91,6 +91,8 @@ export const JERSEY = {
   collarInside: 'M42 7 Q60 2 78 7 Q60 14 42 7 Z',
   collar: 'M42 7 Q60 14 78 7 L77.2 10.2 Q60 18 42.8 10.2 Z',
   arc: { x0: 30, x1: 90, y0: 43, yc: 33 },
+  /** 이름이 차지할 수 있는 최대 폭(등판 안쪽). 넘치면 줄인다. */
+  nameMax: 56,
   numberY: 94,
 } as const;
 

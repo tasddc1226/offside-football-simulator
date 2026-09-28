@@ -93,14 +93,20 @@ describe('T-10-079 공유 이미지 카드 내용', () => {
       rn: { kind: 'granted', clubId: 'k1-1', club: 'A', number: 17, seq: 1 },
     });
     const c = shareCardData(v, null);
-    expect(c.pills.map((p) => p.text)).toEqual(['월드클래스 레전드', '👑 A 영구결번 17']);
+    expect(c.pills.map((p) => p.text + (p.tail ?? ''))).toEqual([
+      '월드클래스 레전드',
+      '👑 A 영구결번 17',
+    ]);
     // 점수 옆 결번 유니폼 — 구단 엠블럼 색.
     expect(c.jersey).toMatchObject({ name: v.name, number: 17, colors: rnColors('k1-1') });
     expect(c.jersey?.colors.base).toMatch(/^#/);
   });
 
   it('결번이 없으면 유니폼 없이, 모르는 구단의 결번은 기본 색 유니폼', () => {
-    expect(shareCardData(view([season(2027, 'A', 'K리그1')]), null).jersey).toBeNull();
+    const one = shareCardData(view([season(2027, 'A', 'K리그1')]), null);
+    expect(one.jersey).toBeNull();
+    // 한 시즌이면 기간도 한 해만.
+    expect(one.sub).toBe('공격수 · 2027 · 34세 은퇴');
     const v = view([season(2027, 'A', 'K리그1')], {
       rn: { kind: 'granted', clubId: 'zz-9', club: 'A', number: 3, seq: 2 },
     });

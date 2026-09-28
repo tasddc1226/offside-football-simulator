@@ -6,6 +6,10 @@
   const { name, number }: { name: string; number: number } = $props();
   const id = $props.id();
   const { x0, x1, y0, yc } = J.arc;
+  /** 글자 폭 어림(한글 ≈ 10, 로마자 ≈ 6.5, 글꼴 10px) + 자간 1.2 — 등판 폭을 넘을 이름만 폭을 맞춘다. */
+  const long = $derived(
+    [...name].reduce((n, ch) => n + (/[\u3131-\uD79D]/.test(ch) ? 11.2 : 7.7), -1.2) > J.nameMax,
+  );
   /** [위치, ±불투명도] → 흰색(+)·검정(−) 그라디언트 멈춤점. */
   const stops = (shade: readonly (readonly [number, number])[]) =>
     shade.map(([offset, o]) => ({ offset, color: o > 0 ? '#fff' : '#000', o: Math.abs(o) }));
@@ -65,7 +69,9 @@
     <path d={J.shirt} fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="0.8" stroke-linejoin="round" />
 
     <g filter="url(#{id}-print)">
-      <text class="rn-jersey-name"><textPath href="#{id}-arc" startOffset="50%">{name}</textPath></text>
+      <text class="rn-jersey-name">
+        <textPath href="#{id}-arc" startOffset="50%" textLength={long ? J.nameMax : undefined} lengthAdjust="spacingAndGlyphs">{name}</textPath>
+      </text>
       <text class="rn-jersey-num" x="60" y={J.numberY}>{number}</text>
     </g>
   </svg>

@@ -20,8 +20,8 @@ export interface ShareCardData {
   name: string;
   sub: string;
   score: number;
-  /** 등급 · 대표 칭호 · 영구결번 배지. */
-  pills: { text: string; gold?: boolean }[];
+  /** 등급 · 대표 칭호 · 영구결번 배지. tail은 좁으면 text 끝을 줄여도 남기는 뒷부분. */
+  pills: { text: string; gold?: boolean; tail?: string }[];
   stats: { value: string; label: string }[];
   /** 커리어 여정(연도 · 구단 · 리그). 가운데를 줄였으면 null 한 칸이 들어간다. */
   stops: ({ years: string; club: string; league: string } | null)[];
@@ -37,12 +37,13 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
   const d = v.d;
   const back = v.pos === 'GK' || v.pos === 'DF';
   const t = d ? totals(d) : null;
-  const span = d?.career.length ? `${d.career[0]!.year}–${d.career.at(-1)!.year}` : null;
+  const [y0, y1] = [d?.career[0]?.year, d?.career.at(-1)?.year];
+  const span = y0 == null ? null : y0 === y1 ? `${y0}` : `${y0}–${y1}`;
   const main = titleById(titleId);
   const rn = v.rn?.kind === 'granted' ? v.rn : null;
   const pills: ShareCardData['pills'] = [{ text: legendTitle(v.score), gold: true }];
   if (main && main.cat !== 'legend') pills.push({ text: `‘${main.name}’` });
-  if (rn) pills.push({ text: `👑 ${rn.club} 영구결번 ${rn.number}` });
+  if (rn) pills.push({ text: `👑 ${rn.club}`, tail: ` 영구결번 ${rn.number}` });
   else pills.push({ text: `최고 OVR ${v.peak}` });
 
   const stat = (value: number | undefined, label: string) => ({ value: `${value ?? '—'}`, label });
@@ -122,7 +123,7 @@ const F = {
   jerseyNumber: `700 50px ${DISPLAY}`,
 };
 const PAD = 80;
-const PILL = { h: 62, padX: 28, gap: 16 };
+const PILL = { h: 62, padX: 28, gap: 16, min: 300 };
 /** 여정 한 줄: 연도는 YEAR_X에 오른쪽 맞춤, 구단·리그는 CLUB_X부터. */
 const YEAR_X = CARD_W / 2 - 190;
 const CLUB_X = CARD_W / 2 - 160;
@@ -135,7 +136,7 @@ export async function loadCardFonts(c: ShareCardData) {
     c.kicker,
     c.name,
     c.sub,
-    ...c.pills.map((p) => p.text),
+    ...c.pills.map((p) => p.text + (p.tail ?? '')),
     ...c.stats.map((s) => s.label),
     ...c.stops.flatMap((s) => (s ? [s.club, s.league] : [])),
     c.style?.name,
@@ -224,11 +225,24 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
     });
   }
 
-  // 배지: 한 줄에 가운데 정렬(넘치면 뒤 배지부터 뺀다).
+  // 배지: 한 줄에 가운데 정렬. 넘치면 뒷부분(tail)이 있는 마지막 배지는 앞을 줄이고, 그래도 안 되면 뒤 배지부터 뺀다.
   ctx.font = F.pill;
-  let pills = c.pills.map((p) => ({ ...p, w: ctx.measureText(p.text).width + PILL.padX * 2 }));
+  const width = (s: string) => ctx.measureText(s).width;
+  let pills = c.pills.map((p) => ({ ...p, w: width(p.text + (p.tail ?? '')) + PILL.padX * 2 }));
   const rowW = () => pills.reduce((n, p) => n + p.w + PILL.gap, -PILL.gap);
-  while (pills.length > 1 && rowW() > inner) pills = pills.slice(0, -1);
+  while (pills.length > 1 && rowW() > inner) {
+    const last = pills.at(-1)!;
+    const room = last.w - (rowW() - inner);
+    if (last.tail && room >= PILL.min) {
+      last.w = room;
+      let head = last.text;
+      while (head.length > 1 && width(`${head}…${last.tail}`) > room - PILL.padX * 2)
+        head = head.slice(0, -1);
+      last.text = `${head.trimEnd()}…`;
+      break;
+    }
+    pills = pills.slice(0, -1);
+  }
   let px = mid - rowW() / 2;
   for (const p of pills) {
     ctx.beginPath();
@@ -240,7 +254,9 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
       ctx.lineWidth = 2;
       ctx.stroke();
     }
-    text(p.text, px + p.w / 2, 621, F.pill, p.gold ? C.onGold : C.ink, { max: p.w - PILL.padX });
+    text(p.text + (p.tail ?? ''), px + p.w / 2, 621, F.pill, p.gold ? C.onGold : C.ink, {
+      max: p.w - PILL.padX * 2,
+    });
     px += p.w + PILL.gap;
   }
 
