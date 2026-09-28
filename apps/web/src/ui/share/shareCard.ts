@@ -218,7 +218,7 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
   text(String(c.score), scoreX, 500, F.score, C.gold);
   spaced('LEGEND SCORE', 546, F.label, C.muted, 8, scoreX);
   if (c.jersey) {
-    drawJersey(ctx, { cx: mid + 225, top: 284, width: 262 }, c.jersey, {
+    drawJersey(ctx, { cx: mid + 215, top: 306, width: 220 }, c.jersey, {
       name: F.jerseyName,
       number: F.jerseyNumber,
     });
