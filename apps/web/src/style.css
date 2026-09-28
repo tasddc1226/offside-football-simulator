@@ -2244,6 +2244,9 @@ th.n {
     accent-color: var(--accent);
   }
 }
+.settings-volume-note {
+  margin: 12px 0 0;
+}
 .settings-credit {
   margin: 6px 0 0;
 }

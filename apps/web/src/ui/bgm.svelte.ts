@@ -1,8 +1,9 @@
 // 배경음악 켜기/끄기. 기본은 꺼짐이고 이 기기에만 저장된다(ft_bgm). 화면마다 곡이 정해져 있고(TRACK_OF), 탭이 보일
-// 때만 튼다. 같은 곡의 화면끼리 오가는 동안은 끊지 않고 이어서 튼다. 재생기(bgmEngine.ts)와 음원은 처음 틀 때
-// 불러온다. 브라우저는 사용자 동작 없이 소리를 못 내게 하므로, 켜 둔 채 새로 열었으면 첫 터치에 시작한다.
+// 때만 튼다. 같은 곡의 화면끼리 오가는 동안은 끊지 않고 이어서 튼다. 음원은 처음 틀 때 받는다. 브라우저(특히
+// 아이폰)는 사용자 동작 안에서 부른 play()만 허락하므로, 재생기는 지연 로드하지 않고 터치 처리 안에서 바로 부른다.
+// 켜 둔 채 새로 열었으면 첫 터치에 시작한다.
 import { loadKey, saveKey } from '../game/season.js';
-import type { Bgm, BgmTrack } from './bgmEngine.js';
+import { createBgm, type Bgm, type BgmTrack } from './bgmEngine.js';
 import { appState, type Screen } from './state.svelte.js';
 
 const KEY = 'ft_bgm';
@@ -28,23 +29,15 @@ export const bgm = $state({
   volume: loadKey<number>(VOLUME_KEY) ?? DEFAULT_VOLUME,
 });
 
-let engine: Promise<Bgm | null> | null = null;
+let engine: Bgm | null = null;
 
 /** 지금 틀 곡. 꺼져 있거나 탭이 가려졌거나 음악 없는 화면이면 null. */
 const wanted = () => (bgm.on && !document.hidden && TRACK_OF[appState.screen]) || null;
 
 function sync() {
-  if (wanted()) {
-    engine ??= import('./bgmEngine.js').then(
-      (m) => m.createBgm(),
-      () => null, // 오디오를 못 쓰는 환경·청크 실패는 조용히 넘어간다.
-    );
-    void engine.then((e) => {
-      const track = wanted();
-      if (track) e?.play(track, bgm.volume / 100);
-      else e?.pause();
-    });
-  } else void engine?.then((e) => e?.pause());
+  const track = wanted();
+  if (track) (engine ??= createBgm()).play(track, bgm.volume / 100);
+  else engine?.pause();
 }
 
 export function setBgm(on: boolean) {
