@@ -183,7 +183,7 @@ export async function recordCareerFirsts(
 export const resetFirstsBackfillStatement = (db: Db) =>
   db.delete(appMeta).where(inArray(appMeta.key, [META_KEY, CURSOR_KEY]));
 
-const setMeta = (db: Db, key: string, value: string) =>
+export const setMeta = (db: Db, key: string, value: string) =>
   db
     .insert(appMeta)
     .values({ key, value })

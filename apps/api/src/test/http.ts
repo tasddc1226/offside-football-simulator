@@ -142,7 +142,7 @@ const share = (total: number, n: number, i: number) =>
  * 은퇴 요약을 뒷받침하는 시즌 기록(18세부터 은퇴 전 해까지, 연도 = 2008 + 나이). 서버는 은퇴 요약을 받아 둔 시즌
  * 기록으로 맞추므로(plausibility.ts) 은퇴를 보내기 전에 올린다. 우승·수상은 시즌 영예로, 최고 OVR은 마지막 시즌에.
  */
-export function seasonsFor(summary: Summary = RETIREMENT) {
+function seasonsFor(summary: Summary = RETIREMENT) {
   const n = Math.max(1, summary.retireAge - 18);
   const honors = [
     ...Array.from({ length: summary.trophies }, (_, k) => `테스트 우승 ${k + 1}`),

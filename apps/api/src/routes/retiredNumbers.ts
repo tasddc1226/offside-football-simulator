@@ -5,7 +5,7 @@ import {
   type RetiredNumberResult,
 } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
-import { nowIso, ok } from './shared.js';
+import { careerOwnerMismatch, nowIso, ok } from './shared.js';
 import { getCareerOwner } from '../db/repos/careers.js';
 import {
   ensureRetiredNumbersBackfilled,
@@ -16,7 +16,7 @@ import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { publishRetiredNumber } from '../live/publish.js';
-import { AppError, parseWithAppError } from '../errors.js';
+import { parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 
 // T-10-076 영구결번. 로그인 없이 누구나 읽는다 — 이름은 명예의 전당에 이름 공개를 고른 경우에만 있다.
@@ -49,12 +49,7 @@ export function registerRetiredNumberRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/careers/:careerId/retired-number', requireProfile, async (c) => {
     const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
     const owner = await getCareerOwner(getDb(c), careerId);
-    if (owner !== getSessionOrThrow(c).profileId) {
-      throw new AppError({
-        code: 'CAREER_OWNER_MISMATCH',
-        message: '이 커리어 ID는 다른 프로필 소유입니다.',
-      });
-    }
+    if (owner !== getSessionOrThrow(c).profileId) throw careerOwnerMismatch();
     const retiredNumber = await judgeRetirement(c, careerId, nowIso());
     return ok(c, RetiredNumberCheckResponseSchema, { retiredNumber }, 200, 'private, no-store');
   });

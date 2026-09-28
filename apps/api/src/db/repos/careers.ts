@@ -23,7 +23,6 @@ import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { kstDays } from './admin.js';
 import { honorsOf } from './firsts.js';
-import type { StoredSeason } from '../../plausibility.js';
 import { appMeta, careers, careerSeasons, goalsPlusAssists, retiredNumbers } from '../schema.js';
 
 export type CareerRow = typeof careers.$inferSelect;
@@ -174,8 +173,8 @@ export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
   const { careerId, summary, publicName, snapshot, now } = input;
   await runBatch(db, [
-    // 처음 은퇴할 때만 센다 — 이름 공개 토글로 다시 보내면 retired_at이 이미 있어 아무 행도 넣지 않는다.
-    // 같은 트랜잭션에서 아래 update보다 먼저 돌아야 retired_at이 비어 있는 것을 본다.
+    // 처음 은퇴할 때만 센다 — 같은 커리어의 첫 은퇴가 동시에 두 번 와도 retired_at이 이미 있으면 아무 행도 넣지
+    // 않는다. 같은 트랜잭션에서 아래 update보다 먼저 돌아야 retired_at이 비어 있는 것을 본다.
     db
       .insert(appMeta)
       .select(
@@ -208,7 +207,7 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
         caps: summary.caps,
         ballon: summary.ballon,
         lastClub: summary.lastClub,
-        // 옛 클라이언트(칭호·클럽 id 없음)의 재전송이 이미 저장된 값을 지우지 않게, 보낸 경우에만 바꾼다.
+        // 옛 클라이언트는 칭호·클럽 id를 보내지 않는다 — 보낸 경우에만 쓴다.
         ...(summary.title !== undefined ? { title: summary.title } : {}),
         ...(summary.lastClubId !== undefined ? { lastClubId: summary.lastClubId } : {}),
         ...(publicName !== undefined ? { publicName } : {}),
@@ -390,7 +389,6 @@ export function deleteCareersStatements(db: Db, profileId: string) {
   ] as const;
 }
 
-/** 테스트 전용 헬퍼: 특정 커리어의 존재 여부·상태 확인. */
 /**
  * 이미 은퇴한 커리어를 다시 보냈을 때(이름 공개 토글): 공개 이름만 바꾸고, 상세 스냅샷은 비어 있을 때만 채운다.
  * 은퇴 요약은 첫 은퇴 때 정해져 바뀌지 않는다.
@@ -415,25 +413,56 @@ export async function renameRetired(
     .where(eq(careers.id, careerId));
 }
 
-/** 은퇴 요약 보정에 쓰는 이 커리어의 시즌 기록. */
-export async function listStoredSeasons(db: Db, careerId: string): Promise<StoredSeason[]> {
+const storedSeasonColumns = {
+  careerId: careerSeasons.careerId,
+  year: careerSeasons.year,
+  age: careerSeasons.age,
+  club: careerSeasons.club,
+  clubId: careerSeasons.clubId,
+  league: careerSeasons.league,
+  apps: careerSeasons.apps,
+  goals: careerSeasons.goals,
+  assists: careerSeasons.assists,
+  cs: careerSeasons.cs,
+  caps: careerSeasons.caps,
+  ovr: careerSeasons.ovr,
+  honorsJson: careerSeasons.honorsJson,
+  mil: careerSeasons.mil,
+};
+export type StoredSeasonRow = Omit<
+  Pick<typeof careerSeasons.$inferSelect, keyof typeof storedSeasonColumns>,
+  'honorsJson' | 'mil'
+> & { honors: string[]; mil: boolean };
+
+/** 커리어별 받아 둔 시즌 기록 — 은퇴 요약 보정(plausibility.ts)과 영구결번 판정의 근거. */
+export async function storedSeasonsOf(
+  db: Db,
+  careerIds: string[],
+): Promise<Map<string, StoredSeasonRow[]>> {
+  const out = new Map<string, StoredSeasonRow[]>();
+  if (!careerIds.length) return out;
   const rows = await db
-    .select({
-      year: careerSeasons.year,
-      age: careerSeasons.age,
-      apps: careerSeasons.apps,
-      goals: careerSeasons.goals,
-      assists: careerSeasons.assists,
-      cs: careerSeasons.cs,
-      caps: careerSeasons.caps,
-      ovr: careerSeasons.ovr,
-      honorsJson: careerSeasons.honorsJson,
-    })
+    .select(storedSeasonColumns)
     .from(careerSeasons)
-    .where(eq(careerSeasons.careerId, careerId));
-  return rows.map(({ honorsJson, ...r }) => ({ ...r, honors: honorsOf(honorsJson) }));
+    .where(inArray(careerSeasons.careerId, careerIds));
+  for (const { honorsJson, mil, ...r } of rows) {
+    const list = out.get(r.careerId) ?? [];
+    list.push({ ...r, honors: honorsOf(honorsJson), mil: mil === 1 });
+    out.set(r.careerId, list);
+  }
+  return out;
 }
 
+/** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). */
+export async function getCareerHead(db: Db, careerId: string) {
+  const [row] = await db
+    .select({ profileId: careers.profileId, status: careers.status, pos: careers.pos })
+    .from(careers)
+    .where(eq(careers.id, careerId));
+  return row;
+}
+
+/** 테스트 전용 헬퍼: 특정 커리어의 존재 여부·상태 확인. */
 export async function getCareer(db: Db, careerId: string): Promise<CareerRow | undefined> {
   const [row] = await db.select().from(careers).where(eq(careers.id, careerId));
   return row;

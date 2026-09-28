@@ -1,7 +1,33 @@
 /**
- * T-10-076. 리그별 기본 클럽 이름(web game/data.ts CLUBS의 원본). zod가 없는 서브패스(`@offside/contracts/club-names`)라
- * 웹 번들이 값으로 가져와도 zod가 들어가지 않는다 — 서버는 클럽 id가 없는 옛 기록의 구단을 이 이름으로 찾는다(영구결번).
+ * T-10-076. 리그의 이름·등급과 리그별 기본 클럽 이름(web game/data.ts LEAGUES·CLUBS의 원본). zod가 없는
+ * 서브패스(`@offside/contracts/club-names`)라 웹 번들이 값으로 가져와도 zod가 들어가지 않는다 — 서버는 클럽 id가 없는
+ * 옛 기록의 구단을 이 이름으로 찾고, 리그 등급으로 구단 기여를 매긴다(영구결번).
  */
+
+/** 리그의 정체(웹은 여기에 전력·자금력·경기 수를 붙인다). 고교·대학은 아마추어. */
+export interface LeagueBase {
+  id: string;
+  name: string;
+  tier: number;
+  amateur?: boolean;
+}
+export const LEAGUE_BASE: LeagueBase[] = [
+  { id: 'hs', name: '고교 리그', tier: 0, amateur: true },
+  { id: 'uni', name: 'U리그 (대학)', tier: 0, amateur: true },
+  { id: 'k3', name: 'K3리그', tier: 0 },
+  { id: 'k2', name: 'K리그2', tier: 1 },
+  { id: 'k1', name: 'K리그1', tier: 2 },
+  { id: 'j1', name: 'J1리그', tier: 3 },
+  // T-10-016 미국 MLS. 유럽이 아니라 J1과 같은 tier 3(해외·단일 연도 시즌).
+  { id: 'mls', name: 'MLS', tier: 3 },
+  { id: 'ere', name: '에레디비시', tier: 4 },
+  { id: 'l1', name: '리그 1', tier: 5 },
+  { id: 'bl', name: '분데스리가', tier: 6 },
+  { id: 'sa', name: '세리에 A', tier: 6 },
+  { id: 'll', name: '라리가', tier: 7 },
+  { id: 'pl', name: '프리미어리그', tier: 8 },
+];
+
 // T-10-009: 리그마다 실제 참가 팀 수만큼 클럽을 둔다(국내 2026 시즌, 유럽 2025-26 시즌 기준). 이름은
 // 실명이 아닌 별칭이고, 배열 순서가 곧 전력 순서다. 고교·대학은 단일 리그가 없어 권역 리그 한 조 규모(12)로
 // 둔다. K리그1은 11개 + 병역 중에만 소속되는 김천 상무(military.SANGMU)로 12개다.

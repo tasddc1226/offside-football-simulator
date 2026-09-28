@@ -8,9 +8,9 @@ import { clubContributions, rnCandidates, type RnClub } from '@offside/contracts
 import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
-import { isPublicRetired } from './careers.js';
-import { honorsOf } from './firsts.js';
-import { appMeta, careers, careerSeasons, clubCustoms, retiredNumbers } from '../schema.js';
+import { isPublicRetired, storedSeasonsOf, type StoredSeasonRow } from './careers.js';
+import { setMeta } from './firsts.js';
+import { appMeta, careers, clubCustoms, retiredNumbers } from '../schema.js';
 import { lifeSeasons } from '../../plausibility.js';
 
 // T-10-076 영구결번. 은퇴 PUT(이름 공개 토글 재전송 포함) 때 그 커리어를 심사해, 자격이 있고 이름을 공개했으면
@@ -20,7 +20,7 @@ import { lifeSeasons } from '../../plausibility.js';
 // 처음 배포될 때는 기존 공개 은퇴 기록을 은퇴 시각 순서로 한 번 훑어 결번을 채운다(서버 최초 기록처럼 RESCAN_CHUNK명씩,
 // 진행 위치는 app_meta). 다 훑기 전의 은퇴 PUT은 한 조각을 진행시키고 pending을 돌려준다 — 은퇴 시각이 더 늦은 새
 // 은퇴가 옛 은퇴보다 먼저 자리를 잡지 않게.
-export const BACKFILL_VERSION = '1';
+const BACKFILL_VERSION = '1';
 const META_KEY = 'retired_numbers_backfill';
 /** 다시 훑는 중이면 마지막으로 판정한 `${retiredAt}\t${id}`. */
 const CURSOR_KEY = 'retired_numbers_cursor';
@@ -40,34 +40,6 @@ const judgeColumns = {
 };
 type JudgeRow = Pick<typeof careers.$inferSelect, keyof typeof judgeColumns>;
 
-const seasonColumns = {
-  careerId: careerSeasons.careerId,
-  year: careerSeasons.year,
-  age: careerSeasons.age,
-  club: careerSeasons.club,
-  clubId: careerSeasons.clubId,
-  league: careerSeasons.league,
-  apps: careerSeasons.apps,
-  goals: careerSeasons.goals,
-  assists: careerSeasons.assists,
-  cs: careerSeasons.cs,
-  honorsJson: careerSeasons.honorsJson,
-  mil: careerSeasons.mil,
-};
-type SeasonRow = Pick<typeof careerSeasons.$inferSelect, keyof typeof seasonColumns>;
-
-/** 커리어별 시즌 기록(판정의 근거 — 은퇴 스냅샷은 보기용이라 쓰지 않는다). */
-async function seasonsOf(db: Db, careerIds: string[]): Promise<Map<string, SeasonRow[]>> {
-  const out = new Map<string, SeasonRow[]>();
-  if (!careerIds.length) return out;
-  const rows = await db
-    .select(seasonColumns)
-    .from(careerSeasons)
-    .where(inArray(careerSeasons.careerId, careerIds));
-  for (const r of rows) out.set(r.careerId, [...(out.get(r.careerId) ?? []), r]);
-  return out;
-}
-
 /** 유저가 바꾼 구단 이름 → id(club_customs). 옛 시즌 기록의 바뀐 이름을 찾는 데 쓴다. */
 function renamedIds(clubsJson: string | undefined): Map<string, string> {
   const out = new Map<string, string>();
@@ -84,17 +56,13 @@ function renamedIds(clubsJson: string | undefined): Map<string, string> {
 /** 결번을 노릴 구단(0–2개)과 등번호. 등번호가 없으면 null. 은퇴 나이 뒤의 시즌(은퇴 뒤 덧붙인 행)은 세지 않는다. */
 function candidatesOf(
   row: JudgeRow,
-  seasons: SeasonRow[] | undefined,
+  seasons: StoredSeasonRow[] | undefined,
   clubsJson: string | undefined,
 ): { number: number; clubs: RnClub[] } | null {
   const number = row.shirtNumber;
   if (number === null || !(number >= 1) || !seasons) return null;
   const renamed = renamedIds(clubsJson);
-  const life = lifeSeasons(seasons, row.retireAge).map((r) => ({
-    ...r,
-    honors: honorsOf(r.honorsJson),
-    mil: r.mil === 1,
-  }));
+  const life = lifeSeasons(seasons, row.retireAge);
   const clubs = rnCandidates(
     clubContributions(row.pos, life, (n) => renamed.get(n) ?? DEFAULT_IDS.get(n)),
   );
@@ -123,12 +91,6 @@ const claimStatements = (
       .onConflictDoNothing(),
   );
 
-const setMeta = (db: Db, key: string, value: string) =>
-  db
-    .insert(appMeta)
-    .values({ key, value })
-    .onConflictDoUpdate({ target: appMeta.key, set: { value } });
-
 const clubsJsonOf = async (db: Db, profileIds: string[]) =>
   new Map(
     profileIds.length
@@ -141,17 +103,22 @@ const clubsJsonOf = async (db: Db, profileIds: string[]) =>
       : [],
   );
 
+const backfillMeta = (db: Db) =>
+  db
+    .select({ key: appMeta.key, value: appMeta.value })
+    .from(appMeta)
+    .where(inArray(appMeta.key, [META_KEY, CURSOR_KEY]));
+const backfilled = (meta: { key: string; value: string }[]) =>
+  meta.some((r) => r.key === META_KEY && r.value === BACKFILL_VERSION);
+
 /** 기존 공개 은퇴를 은퇴 시각 순서로 한 조각 심사한다. 아직 다 훑지 못했으면 true. */
 export async function ensureRetiredNumbersBackfilled(
   db: Db,
   chunk = RESCAN_CHUNK,
 ): Promise<boolean> {
-  const meta = await db
-    .select({ key: appMeta.key, value: appMeta.value })
-    .from(appMeta)
-    .where(inArray(appMeta.key, [META_KEY, CURSOR_KEY]));
+  const meta = await backfillMeta(db);
+  if (backfilled(meta)) return false;
   const m = new Map(meta.map((r) => [r.key, r.value]));
-  if (m.get(META_KEY) === BACKFILL_VERSION) return false;
   const [at = '', id = ''] = (m.get(CURSOR_KEY) ?? '').split('\t');
   const rows = await db
     .select(judgeColumns)
@@ -167,7 +134,7 @@ export async function ensureRetiredNumbersBackfilled(
     .limit(chunk);
   const [customs, seasons] = await Promise.all([
     clubsJsonOf(db, [...new Set(rows.map((r) => r.profileId))]),
-    seasonsOf(
+    storedSeasonsOf(
       db,
       rows.map((r) => r.id),
     ),
@@ -198,43 +165,47 @@ const slotColumns = {
 };
 
 /** 심사 결과. claimed는 이번 심사가 막 자리를 잡았을 때만 있다(홈 라이브로 알린다). */
-export type Judged = { result: RetiredNumberResult | null; claimed?: LiveRetiredNumber };
+type Judged = { result: RetiredNumberResult | null; claimed?: LiveRetiredNumber };
 
 /** 은퇴 PUT 뒤에 부른다. 자격이 없으면(또는 공개 명예의 전당 밖의 짧은 커리어면) result가 null. */
 export async function judgeRetiredNumber(db: Db, careerId: string, now: string): Promise<Judged> {
-  return { result: null, ...(await judge(db, careerId, now)) };
-}
-
-async function judge(db: Db, careerId: string, now: string): Promise<Judged | null> {
-  if (await ensureRetiredNumbersBackfilled(db)) return { result: { kind: 'pending' } };
-  const [held, [row]] = await db.batch([
-    db.select(slotColumns).from(retiredNumbers).where(eq(retiredNumbers.careerId, careerId)),
+  const heldBy = () =>
+    db.select(slotColumns).from(retiredNumbers).where(eq(retiredNumbers.careerId, careerId));
+  const [meta, held, [row]] = await db.batch([
+    backfillMeta(db),
+    heldBy(),
     db
       .select(judgeColumns)
       .from(careers)
       .where(and(eq(careers.id, careerId), isPublicRetired)),
   ]);
+  if (!backfilled(meta) && (await ensureRetiredNumbersBackfilled(db))) {
+    return { result: { kind: 'pending' } };
+  }
   // 이미 가진 자리는 이름을 다시 숨겨도 그대로다.
   if (held[0]) return { result: { kind: 'granted', ...held[0] } };
-  if (!row) return null;
+  if (!row) return { result: null };
   const [customs, seasons] = await Promise.all([
     clubsJsonOf(db, [row.profileId]),
-    seasonsOf(db, [careerId]),
+    storedSeasonsOf(db, [careerId]),
   ]);
   const c = candidatesOf(row, seasons.get(careerId), customs.get(row.profileId));
-  if (!c) return null;
+  if (!c) return { result: null };
   const best = c.clubs[0]!;
   const slot = { clubId: best.clubId!, club: best.club, number: c.number };
   if (!row.publicName) return { result: { kind: 'anonymous', ...slot } };
-  await runBatch(db, claimStatements(db, careerId, c, now));
-  const [[mine], [holder]] = await db.batch([
-    db.select(slotColumns).from(retiredNumbers).where(eq(retiredNumbers.careerId, careerId)),
+  // 자리 잡기와 결과 확인을 한 번에 보낸다(batch는 한 트랜잭션이라 뒤의 select가 앞의 insert를 본다).
+  const results = await runBatch(db, [
+    ...claimStatements(db, careerId, c, now),
+    heldBy(),
     db
       .select({ name: careers.publicName })
       .from(retiredNumbers)
       .innerJoin(careers, eq(careers.id, retiredNumbers.careerId))
       .where(and(eq(retiredNumbers.clubId, slot.clubId), eq(retiredNumbers.number, slot.number))),
   ]);
+  const [mine] = results.at(-2) as typeof held;
+  const [holder] = results.at(-1) as { name: string | null }[];
   if (mine) {
     const claimed = { careerId, name: row.publicName, pos: row.pos, ...mine, at: now };
     return { result: { kind: 'granted', ...mine }, claimed };

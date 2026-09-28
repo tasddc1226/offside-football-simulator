@@ -183,7 +183,7 @@ test('소급으로 받은 결번이 이 기기의 내 선수 배지와 상세 �
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-my-player="0"] [data-rn-chip]')).toHaveText('👑 결번 10');
+  await expect(page.locator('[data-my-player="0"] [data-rn-chip]')).toHaveText('👑 영결 10');
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-rn-pill]')).toContainText('결번 10');
   await expect(page.locator('[data-legend-rn="granted"]')).toContainText('서버 1번째 결번');

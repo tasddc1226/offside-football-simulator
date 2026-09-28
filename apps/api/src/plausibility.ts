@@ -1,6 +1,6 @@
 import type { CareerPos, CareerSeasonPayload, RetirementSummary } from '@offside/contracts';
 import { isDefaultClubId } from '@offside/contracts/club-names';
-import { LEGEND_W } from '@offside/contracts/retired-numbers';
+import { legendTerms } from '@offside/contracts/hof-rules';
 
 // 클라이언트가 보낸 기록 값의 현실성 검사. 게임은 브라우저에서 돌고 서버는 결과만 받으므로, 모양(zod)만 맞으면
 // 어떤 숫자든 들어올 수 있다. 거부하면 기기의 업로드 큐가 그 기록을 버리므로(400) 게임에서 나올 수 없는 값은
@@ -23,8 +23,9 @@ const MAX_AGE = 45;
 /** 시즌 영예에 없이 따로 쌓이는 수상(푸스카스상 등)의 여유 — 실측 0–2개. */
 const EXTRA_HONORS = 3;
 
-/** 게임에 있는 클럽 id(병역 중의 상무 포함). */
-const knownClubId = (id: string) => id === 'sangmu' || isDefaultClubId(id);
+/** 게임에 있는 클럽 id(병역 중의 상무 포함)면 그대로, 아니면 undefined. */
+const knownClubId = (id: string | undefined) =>
+  id && (id === 'sangmu' || isDefaultClubId(id)) ? id : undefined;
 
 const cap = (v: number | undefined, max: number) =>
   v === undefined ? undefined : Math.min(v, max);
@@ -36,7 +37,7 @@ export function sanitizeSeason(s: CareerSeasonPayload): CareerSeasonPayload {
   const assists = Math.min(s.assists, SEASON_CAP.assists, apps * 3 + 5);
   return {
     ...s,
-    ...(s.clubId && !knownClubId(s.clubId) ? { clubId: undefined } : {}),
+    ...(s.clubId ? { clubId: knownClubId(s.clubId) } : {}),
     age: Math.min(s.age, MAX_AGE),
     apps,
     goals,
@@ -124,24 +125,22 @@ export function boundRetirement(
   const ballon = Math.min(summary.ballon, count('발롱도르'));
   const trophies = Math.min(summary.trophies, honors.length + EXTRA_HONORS);
   const awards = Math.min(summary.awards, honors.length + EXTRA_HONORS - trophies);
-  // 발롱도르 순위 점수(1위 30점)는 시즌 기록에 남지 않아 뛴 해마다 1위로 친다.
-  const rankPoints = life.length * 30;
-
-  // web game/season.ts legendScoreBreakdown과 같은 식.
-  const w = LEGEND_W[pos];
-  const ceiling =
-    goals * w.g +
-    assists * w.a +
-    cs * w.cs +
-    apps * 0.05 +
-    trophies * 10 +
-    awards * 12 +
-    caps * 0.4 +
-    peak * 2 +
-    ballon * 60 +
-    rankPoints * 0.6 +
-    count('FIFA 월드컵 우승') * 60 +
-    (caps >= 100 ? 25 : 0);
+  const ceiling = Object.values(
+    legendTerms(pos, {
+      goals,
+      assists,
+      cs,
+      apps,
+      trophies,
+      awards,
+      caps,
+      peak,
+      ballon,
+      // 발롱도르 순위 점수(1위 30점)는 시즌 기록에 남지 않아 뛴 해마다 1위로 친다.
+      ballonRankPoints: life.length * 30,
+      worldCups: count('FIFA 월드컵 우승'),
+    }),
+  ).reduce((t, v) => t + v, 0);
 
   return {
     ...summary,
@@ -155,6 +154,6 @@ export function boundRetirement(
     awards,
     caps,
     ballon,
-    ...(summary.lastClubId && !knownClubId(summary.lastClubId) ? { lastClubId: undefined } : {}),
+    ...(summary.lastClubId ? { lastClubId: knownClubId(summary.lastClubId) } : {}),
   };
 }

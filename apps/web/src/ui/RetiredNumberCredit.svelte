@@ -7,6 +7,7 @@
   import { checkRetiredNumber } from '../api/client.js';
   import { recordRn } from './retiredNumber.svelte.js';
   import { isHofEligible } from '@offside/contracts/hof-rules';
+  import { totals } from './format.js';
   import type { LegendView } from './state.svelte.js';
   import ClubMark from './ClubMark.svelte';
 
@@ -28,7 +29,7 @@
   $effect(() => {
     const id = v.own?.id ?? v.shareId;
     // 공개 명예의 전당에 오르는 은퇴(만 30세 이상)만 심사 대상이다.
-    if (!id || id === asked || v.pot || !(v.own || v.shareId) || !isHofEligible(v.age)) return;
+    if (!id || id === asked || v.pot || !isHofEligible(v.age)) return;
     if (rn0 !== undefined && rn0?.kind !== 'pending') return;
     asked = id;
     void checkRetiredNumber(id).then((r) => {
@@ -42,8 +43,8 @@
     if (rnSlot?.kind !== 'granted' || !v.d) return null;
     const recs = v.d.career.filter((r) => (r.clubId ? r.clubId === rnSlot.clubId : r.club === rnSlot.club));
     if (!recs.length) return null;
-    const sum = (k: 'apps' | 'goals' | 'assists') => recs.reduce((s, r) => s + (r[k] ?? 0), 0);
-    return { from: recs[0]!.year, to: recs.at(-1)!.year, seasons: recs.length, apps: sum('apps'), goals: sum('goals'), assists: sum('assists') };
+    const t = totals({ career: recs });
+    return { from: recs[0]!.year, to: recs.at(-1)!.year, seasons: recs.length, apps: t.p, goals: t.g, assists: t.a };
   });
   const rnColors = $derived(rnStyle(rnSlot?.clubId));
 </script>

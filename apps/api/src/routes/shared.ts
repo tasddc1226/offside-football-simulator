@@ -5,6 +5,12 @@ import { AppError, parseWithAppError, type SchemaLike } from '../errors.js';
 
 export const nowIso = () => new Date().toISOString();
 
+export const careerOwnerMismatch = () =>
+  new AppError({
+    code: 'CAREER_OWNER_MISMATCH',
+    message: '이 커리어 ID는 다른 프로필 소유입니다.',
+  });
+
 // api는 zod에 직접 의존하지 않는다 — data 타입(z.input<S>와 같은 값)은 스키마 타입의 _zod.input에서 읽는다.
 type DataSchema = Parameters<typeof successEnvelope>[0];
 

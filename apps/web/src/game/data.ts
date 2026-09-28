@@ -1,53 +1,33 @@
 // ───────── 정적 데이터: 리그 · 클럽 · 포지션 · 유형 · 특성 ─────────
-import { CLUB_NAMES, clubIdOf } from '@offside/contracts/club-names';
+import { CLUB_NAMES, clubIdOf, LEAGUE_BASE, type LeagueBase } from '@offside/contracts/club-names';
 
 /** 세이브(ft_save) 형식 버전. 다른 값이면 저장본을 버리고 새로 시작한다(ui/boot.ts). 형식 변환은 save.ts migrateSave. */
 export const SAVE_VERSION = 1;
 
-export interface League {
-  id: string;
-  name: string;
-  tier: number;
+export interface League extends LeagueBase {
   avg: number;
   spread: number;
   wealth: number;
   matches: number;
-  amateur?: boolean;
 }
-export const LEAGUES: League[] = [
-  {
-    id: 'hs',
-    name: '고교 리그',
-    tier: 0,
-    avg: 46,
-    spread: 5,
-    wealth: 0,
-    matches: 20,
-    amateur: true,
-  },
-  {
-    id: 'uni',
-    name: 'U리그 (대학)',
-    tier: 0,
-    avg: 52,
-    spread: 5,
-    wealth: 0,
-    matches: 20,
-    amateur: true,
-  },
-  { id: 'k3', name: 'K3리그', tier: 0, avg: 51, spread: 5, wealth: 1.5, matches: 28 },
-  { id: 'k2', name: 'K리그2', tier: 1, avg: 57, spread: 5, wealth: 4, matches: 36 },
-  { id: 'k1', name: 'K리그1', tier: 2, avg: 63, spread: 6, wealth: 7, matches: 38 },
-  { id: 'j1', name: 'J1리그', tier: 3, avg: 65, spread: 6, wealth: 9, matches: 38 },
-  // T-10-016 미국 MLS. 유럽이 아니라 J1과 같은 tier 3(해외·단일 연도 시즌)에 두고, 전력은 J1보다 조금 위, 자금력은 에레디비시 위.
-  { id: 'mls', name: 'MLS', tier: 3, avg: 66, spread: 7, wealth: 14, matches: 34 },
-  { id: 'ere', name: '에레디비시', tier: 4, avg: 68, spread: 7, wealth: 12, matches: 34 },
-  { id: 'l1', name: '리그 1', tier: 5, avg: 71, spread: 7, wealth: 18, matches: 34 },
-  { id: 'bl', name: '분데스리가', tier: 6, avg: 74, spread: 7, wealth: 24, matches: 34 },
-  { id: 'sa', name: '세리에 A', tier: 6, avg: 74, spread: 7, wealth: 24, matches: 38 },
-  { id: 'll', name: '라리가', tier: 7, avg: 76, spread: 8, wealth: 30, matches: 38 },
-  { id: 'pl', name: '프리미어리그', tier: 8, avg: 78, spread: 7, wealth: 40, matches: 38 },
-];
+// 리그 id·이름·등급은 @offside/contracts/club-names(서버가 영구결번 판정에 같은 등급을 쓴다, T-10-076).
+const LEAGUE_STATS: Record<string, Pick<League, 'avg' | 'spread' | 'wealth' | 'matches'>> = {
+  hs: { avg: 46, spread: 5, wealth: 0, matches: 20 },
+  uni: { avg: 52, spread: 5, wealth: 0, matches: 20 },
+  k3: { avg: 51, spread: 5, wealth: 1.5, matches: 28 },
+  k2: { avg: 57, spread: 5, wealth: 4, matches: 36 },
+  k1: { avg: 63, spread: 6, wealth: 7, matches: 38 },
+  j1: { avg: 65, spread: 6, wealth: 9, matches: 38 },
+  // T-10-016 MLS: 전력은 J1보다 조금 위, 자금력은 에레디비시 위.
+  mls: { avg: 66, spread: 7, wealth: 14, matches: 34 },
+  ere: { avg: 68, spread: 7, wealth: 12, matches: 34 },
+  l1: { avg: 71, spread: 7, wealth: 18, matches: 34 },
+  bl: { avg: 74, spread: 7, wealth: 24, matches: 34 },
+  sa: { avg: 74, spread: 7, wealth: 24, matches: 38 },
+  ll: { avg: 76, spread: 8, wealth: 30, matches: 38 },
+  pl: { avg: 78, spread: 7, wealth: 40, matches: 38 },
+};
+export const LEAGUES: League[] = LEAGUE_BASE.map((l) => ({ ...l, ...LEAGUE_STATS[l.id]! }));
 
 // 리그별 클럽 이름은 @offside/contracts/club-names(서버가 옛 기록의 구단을 이름으로 찾는다, T-10-076).
 /** 리그 안 전력 편차: 1위 +9 ~ 꼴찌 -6을 팀 수에 맞춰 고르게 나눈다(6팀이면 9,6,3,0,-3,-6 — 예전 고정값과 같다). */

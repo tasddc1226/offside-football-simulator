@@ -1,7 +1,7 @@
 /**
  * T-10-076 영구결번. 한 구단에서 레전드급 업적을 남기고 은퇴한 선수에게 그 구단의 그 등번호를 서버 전체에서
- * 영구히 준다(구단·번호마다 한 명, 먼저 자격을 채운 선수). zod가 없는 서브패스(`@offside/contracts/retired-numbers`)라
- * 서버 판정(apps/api db/repos/retiredNumbers.ts)과 웹 은퇴 화면의 결번 심사가 같은 점수를 쓴다.
+ * 영구히 준다(구단·번호마다 한 명, 먼저 자격을 채운 선수). 판정은 서버(apps/api db/repos/retiredNumbers.ts)만
+ * 한다 — 기준값이 웹 번들에 실리지 않게 웹은 이 서브패스(`@offside/contracts/retired-numbers`)를 import하지 않는다(eslint).
  *
  * 구단 기여 점수 = 시즌마다 (6 + 골·도움·무실점 포지션 가중 + 출전 × 0.05) × 리그 배수 + 그 시즌 구단 우승·개인상 점수.
  * 대표팀 대회·협회 상은 구단 업적이 아니라 0점. 기준(RN_CUT)은 운영 명예의 전당 1,542명에서 상위 1%(15명)의
@@ -10,61 +10,22 @@
  * 판정은 서버가 받아 둔 시즌 기록(career_seasons)으로만 한다. 클라이언트가 값을 지어 보내도 크게 부풀지 않게, 구단은
  * 게임에 있는 클럽 id로만 인정하고 리그는 그 클럽의 리그로 정하며, 한 시즌의 영예 점수는 RN_SEASON_HONOR_CAP까지만 센다.
  */
-import { isDefaultClubId } from './club-names.js';
+import { isDefaultClubId, LEAGUE_BASE, type LeagueBase } from './club-names.js';
+import { LEGEND_W } from './hof-rules.js';
 
 /** 결번 기준 점수(상위 1%). */
 export const RN_CUT = 827;
 /** 그 구단에서 뛴 최소 시즌 수. */
 export const RN_MIN_SEASONS = 6;
-/** 결번 심사 카드를 보여 주는 하한(기준의 60%) — 아깝게 못 받은 선수에게 얼마나 남았는지 알려 준다. */
-export const RN_NEAR = 0.6;
 
 type Pos = 'FW' | 'MF' | 'DF' | 'GK';
 
-/** 리그 이름 → 등급(web game/data.ts LEAGUES의 tier). 고교·대학은 구단 기록이 아니라 뺀다(K3는 tier 0이지만 프로). */
-export const RN_LEAGUE_TIER: Record<string, number> = {
-  '고교 리그': 0,
-  'U리그 (대학)': 0,
-  K3리그: 0,
-  K리그2: 1,
-  K리그1: 2,
-  J1리그: 3,
-  MLS: 3,
-  에레디비시: 4,
-  '리그 1': 5,
-  분데스리가: 6,
-  '세리에 A': 6,
-  라리가: 7,
-  프리미어리그: 8,
-};
-const AMATEUR = new Set(['고교 리그', 'U리그 (대학)']);
-/** 리그 id(클럽 id 앞부분, web game/data.ts LEAGUES의 id) → 리그 이름. 클럽은 리그를 옮기지 않는다(승강 없음). */
-export const RN_LEAGUE_NAME: Record<string, string> = {
-  hs: '고교 리그',
-  uni: 'U리그 (대학)',
-  k3: 'K3리그',
-  k2: 'K리그2',
-  k1: 'K리그1',
-  j1: 'J1리그',
-  mls: 'MLS',
-  ere: '에레디비시',
-  l1: '리그 1',
-  bl: '분데스리가',
-  sa: '세리에 A',
-  ll: '라리가',
-  pl: '프리미어리그',
-};
-const leagueOfClub = (id: string) => RN_LEAGUE_NAME[id.slice(0, id.lastIndexOf('-'))];
+const LEAGUE_BY_NAME = new Map<string, LeagueBase>(LEAGUE_BASE.map((l) => [l.name, l]));
+const LEAGUE_BY_ID = new Map<string, LeagueBase>(LEAGUE_BASE.map((l) => [l.id, l]));
+/** 클럽 id 앞부분이 리그 id다. 클럽은 리그를 옮기지 않는다(승강 없음). */
+const leagueOfClub = (id: string) => LEAGUE_BY_ID.get(id.slice(0, id.lastIndexOf('-')));
 /** 한 시즌 영예 점수 상한. 운영 명예의 전당 상위 64명의 한 시즌 최고가 192점(2026-09-28)이다. */
 export const RN_SEASON_HONOR_CAP = 250;
-
-/** 포지션별 골·도움·무실점 가중(web game/season.ts LEGEND_W와 같다). */
-export const LEGEND_W: Record<Pos, { g: number; a: number; cs: number }> = {
-  FW: { g: 0.42, a: 0.35, cs: 0 },
-  MF: { g: 0.65, a: 0.75, cs: 0 },
-  DF: { g: 0.9, a: 0.5, cs: 0.9 },
-  GK: { g: 1, a: 0.6, cs: 0.95 },
-};
 
 const NATIONAL =
   /아시안컵|월드컵|올림픽|아시안게임|네이션스|유로 |코파 아메리카|대한축구협회|국제선수|대회 MVP|대회 베스트|AFC 올해의 선수|동아시안|U-/;
@@ -110,12 +71,6 @@ export interface RnClub {
   /** 마지막으로 뛴 시즌의 구단 이름. */
   club: string;
   seasons: number;
-  from: number;
-  to: number;
-  apps: number;
-  goals: number;
-  assists: number;
-  cs: number;
   /** 경기 기여(리그 배수 적용). */
   play: number;
   /** 구단 우승·개인상. */
@@ -137,37 +92,19 @@ export function clubContributions(
   for (const r of seasons) {
     // 게임에 없는 클럽 id는 이름으로 다시 찾는다(못 찾으면 결번 대상이 아니다).
     const id = (r.clubId && isDefaultClubId(r.clubId) ? r.clubId : resolve(r.club)) || null;
-    const league = (id && leagueOfClub(id)) || r.league;
-    if (r.mil || AMATEUR.has(league)) continue;
+    // 고교·대학은 구단 기록이 아니라 뺀다(K3는 tier 0이지만 프로).
+    const league = (id && leagueOfClub(id)) || LEAGUE_BY_NAME.get(r.league);
+    if (r.mil || league?.amateur) continue;
     const key = id ?? `name:${r.club}`;
     let b = by.get(key);
     if (!b) {
-      b = {
-        clubId: id,
-        club: r.club,
-        seasons: 0,
-        from: r.year,
-        to: r.year,
-        apps: 0,
-        goals: 0,
-        assists: 0,
-        cs: 0,
-        play: 0,
-        honors: 0,
-        score: 0,
-      };
+      b = { clubId: id, club: r.club, seasons: 0, play: 0, honors: 0, score: 0 };
       by.set(key, b);
     }
     const cs = r.cs ?? 0;
-    const m = 0.4 + 0.075 * (RN_LEAGUE_TIER[league] ?? 1);
+    const m = 0.4 + 0.075 * (league?.tier ?? 1);
     b.seasons++;
     b.club = r.club;
-    b.from = Math.min(b.from, r.year);
-    b.to = Math.max(b.to, r.year);
-    b.apps += r.apps;
-    b.goals += r.goals;
-    b.assists += r.assists;
-    b.cs += cs;
     b.play += m * (6 + r.goals * w.g + r.assists * w.a + cs * w.cs + r.apps * 0.05);
     const honors = [...new Set(r.honors)].reduce((t, h) => t + honorPoints(h), 0);
     b.honors += Math.min(honors, RN_SEASON_HONOR_CAP);

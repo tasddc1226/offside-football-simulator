@@ -49,7 +49,7 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
       (n) => ids.get(n),
     );
     expect(clubs).toHaveLength(1);
-    expect(clubs[0]).toMatchObject({ clubId: 'pl-0', seasons: 2, from: 2031, to: 2032 });
+    expect(clubs[0]).toMatchObject({ clubId: 'pl-0', seasons: 2 });
     // (6 + 20×0.42 + 10×0.35 + 38×0.05) × (0.4 + 0.075×8) = 19.8점씩
     expect(clubs[0]!.play).toBeCloseTo(39.6, 5);
   });

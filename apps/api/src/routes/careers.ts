@@ -8,14 +8,15 @@ import {
   RetirementResponseSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { ok, readBody, nowIso } from './shared.js';
+import { careerOwnerMismatch, ok, readBody, nowIso } from './shared.js';
 import {
   getCareer,
+  getCareerHead,
   getCareerOwner,
   listOwnHof,
   putCareerSeason,
   putRetirement,
-  listStoredSeasons,
+  storedSeasonsOf,
   renameRetired,
 } from '../db/repos/careers.js';
 import { boundRetirement, sanitizeSeason } from '../plausibility.js';
@@ -39,10 +40,7 @@ async function assertOwnable(
 ): Promise<void> {
   const owner = await getCareerOwner(db, careerId);
   if (owner !== undefined && owner !== profileId) {
-    throw new AppError({
-      code: 'CAREER_OWNER_MISMATCH',
-      message: '이 커리어 ID는 다른 프로필 소유입니다.',
-    });
+    throw careerOwnerMismatch();
   }
 }
 
@@ -101,7 +99,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const session = getSessionOrThrow(c);
     const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
 
-    const career = await getCareer(db, careerId);
+    const career = await getCareerHead(db, careerId);
     if (career === undefined) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
@@ -110,10 +108,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       });
     }
     if (career.profileId !== session.profileId) {
-      throw new AppError({
-        code: 'CAREER_OWNER_MISMATCH',
-        message: '이 커리어 ID는 다른 프로필 소유입니다.',
-      });
+      throw careerOwnerMismatch();
     }
 
     const { publicName, snapshot, ...sent } = readBody(c, PutRetirementBodySchema);
@@ -130,7 +125,8 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       await renameRetired(db, { careerId, publicName, snapshot, now });
     } else {
       // 은퇴 요약은 받아 둔 시즌 기록에 맞춘다 — 보낸 숫자를 그대로 믿지 않는다.
-      const summary = boundRetirement(career.pos, sent, await listStoredSeasons(db, careerId));
+      const seasons = (await storedSeasonsOf(db, [careerId])).get(careerId) ?? [];
+      const summary = boundRetirement(career.pos, sent, seasons);
       if (!summary) {
         throw new AppError({
           code: 'VALIDATION_FAILED',

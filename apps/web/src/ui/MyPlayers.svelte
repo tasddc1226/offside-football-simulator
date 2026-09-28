@@ -70,8 +70,9 @@
       source = 'account';
     }
     rows = list.sort((a, b) => b.stats.score - a.stats.score);
-    // T-10-076 배포 전 은퇴를 소급해 받은 결번은 이 기기에 없다 — 결과를 모르는 기록이 있을 때만 서버 목록에서 채운다.
-    if (source !== 'offline' && local.some((h) => h.id && h.detail && h.rn === undefined)) {
+    // T-10-076 배포 전 은퇴를 소급해 받은 결번은 이 기기에 없다 — 결과를 모르는 기록이 있을 때만 서버 목록에서 채운다
+    // (계정 목록은 서버가 결번을 함께 준다).
+    if (source === 'device' && local.some((h) => h.id && h.detail && h.rn === undefined)) {
       const rn = await getRetiredNumbers();
       if (!rn.ok) return;
       fillGranted(rn.data.items);
