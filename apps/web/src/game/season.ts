@@ -457,19 +457,23 @@ export function legendScoreBreakdown(s: LegendSource): {
     (a, r) => ({ g: a.g + r.goals, a: a.a + r.assists, p: a.p + r.apps, cs: a.cs + (r.cs || 0) }),
     { g: 0, a: 0, p: 0, cs: 0 },
   );
-  const terms = legendTerms(s.pos, {
-    goals: t.g,
-    assists: t.a,
-    cs: t.cs,
-    apps: t.p,
-    trophies: s.trophies.length,
-    awards: s.awards.length,
-    caps: s.nat.caps,
-    peak: s.peak,
-    ballon: s.awards.filter((x) => x.t === '발롱도르').length,
-    ballonRankPoints: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0),
-    worldCups: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length,
-  });
+  const terms = legendTerms(
+    s.pos,
+    {
+      goals: t.g,
+      assists: t.a,
+      cs: t.cs,
+      apps: t.p,
+      trophies: s.trophies.length,
+      awards: s.awards.length,
+      caps: s.nat.caps,
+      peak: s.peak,
+      ballon: s.awards.filter((x) => x.t === '발롱도르').length,
+      ballonRankPoints: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0),
+      worldCups: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length,
+    },
+    s.dpos,
+  );
   const items: LegendBreakdownItem[] = Object.entries(terms)
     .map(([key, value]) => ({ key, label: LEGEND_LABEL[key as keyof typeof terms], value }))
     .filter((it) => it.value !== 0);
@@ -495,6 +499,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
   const entry: HofEntry = {
     name: s.name,
     pos: s.pos,
+    ...(s.dpos && { dpos: s.dpos }),
     number: s.number,
     peak: s.peak,
     age: s.age,
@@ -529,6 +534,7 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
   return {
     number: s.number,
     pos: s.pos,
+    ...(s.dpos && { dpos: s.dpos }),
     age: s.age,
     peak: s.peak,
     lastClub: s.club.name,

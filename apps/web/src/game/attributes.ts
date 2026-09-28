@@ -1,5 +1,5 @@
 // ───────── 세부 능력치 체계 (FIFA / EA SPORTS FC 방식) ─────────
-import { ATTR_KEYS, POS, type AttrKey, type Pos } from './data.js';
+import { ATTR_KEYS, DPOS, POS, type AttrKey, type Pos } from './data.js';
 import { clamp, ri } from './rng.js';
 import type { GameState } from './types.js';
 
@@ -236,7 +236,8 @@ export const POS_ROLES: Record<Pos, string[]> = {
   DF: ['CB', 'RB', 'CDM'],
   GK: ['GK'],
 };
-export const mainRole = (s: GameState): string => TYPE_ROLE[s.type] ?? POS_ROLES[s.pos][0]!;
+export const mainRole = (s: GameState): string =>
+  s.dpos ? DPOS[s.dpos].role : (TYPE_ROLE[s.type] ?? POS_ROLES[s.pos][0]!);
 
 function groupOfSub(face: Face, k: string): AttrKey | null {
   for (const g in face)

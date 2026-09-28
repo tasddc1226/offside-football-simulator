@@ -1,5 +1,6 @@
 // ───────── 정적 데이터: 리그 · 클럽 · 포지션 · 유형 · 특성 ─────────
 import { CLUB_NAMES, clubIdOf, LEAGUE_BASE, type LeagueBase } from '@offside/contracts/club-names';
+import { DETAILS_OF, type DetailPos } from '@offside/contracts/positions';
 
 /** 세이브(ft_save) 형식 버전. 다른 값이면 저장본을 버리고 새로 시작한다(ui/boot.ts). 형식 변환은 save.ts migrateSave. */
 export const SAVE_VERSION = 1;
@@ -137,6 +138,110 @@ export const POS: Record<Pos, PosDef> = {
     atk: { sho: 1 },
   },
 };
+
+// ───────── 세부 포지션 (T-10-091) ─────────
+// 시즌 1부터 만든 선수는 큰 포지션 안에서 세부 포지션을 고른다(옛 버전의 8종). 세부 포지션은
+// (1) OVR·성장 가중을 정하는 역할(attributes ROLES) (2) 시작 분포 보정(mod, 순합 ≈ 0 — 시작 OVR은 같다)
+// (3) 득점·도움 기대값 배수를 바꾼다. 레전드 점수 가중은 hof-rules LEGEND_W_DETAIL이 세부 포지션별로 맞춘다.
+export { DETAILS_OF, type DetailPos };
+export interface DetailPosDef {
+  label: string;
+  /** 선수 생성 화면의 한 줄 설명. */
+  blurb: string;
+  /** attributes.ts ROLES 키. */
+  role: string;
+  mod: Partial<Record<AttrKey, number>>;
+  /** 이 세부 포지션을 고르면 처음 켜 두는 주력 능력치. */
+  focus: AttrKey[];
+  goal: number;
+  assist: number;
+}
+export const DPOS: Record<DetailPos, DetailPosDef> = {
+  ST: {
+    label: '스트라이커',
+    blurb: '박스 안에서 끝낸다',
+    role: 'ST',
+    mod: {},
+    focus: ['sho', 'dri'],
+    goal: 1.05,
+    assist: 0.85,
+  },
+  W: {
+    label: '윙어',
+    blurb: '측면을 찢고 올린다',
+    role: 'RW',
+    mod: { pac: 4, dri: 3, sho: -3, phy: -4 },
+    focus: ['pac', 'dri'],
+    goal: 0.85,
+    assist: 1.35,
+  },
+  AM: {
+    label: '공격형 미드필더',
+    blurb: '마지막 패스와 중거리',
+    role: 'CAM',
+    mod: { sho: 3, dri: 2, def: -4, phy: -1 },
+    focus: ['pas', 'dri'],
+    goal: 1.1,
+    assist: 1.05,
+  },
+  CM: {
+    label: '중앙 미드필더',
+    blurb: '공수를 잇는 엔진',
+    role: 'CM',
+    mod: {},
+    focus: ['pas', 'phy'],
+    goal: 1,
+    assist: 1,
+  },
+  DM: {
+    label: '수비형 미드필더',
+    blurb: '수비 앞의 방패',
+    role: 'CDM',
+    mod: { def: 6, phy: 2, sho: -5, dri: -3 },
+    focus: ['def', 'pas'],
+    goal: 0.8,
+    assist: 1.0,
+  },
+  CB: {
+    label: '센터백',
+    blurb: '공중볼과 몸싸움',
+    role: 'CB',
+    mod: { phy: 2, def: 1, pac: -2, pas: -2 },
+    focus: ['def', 'phy'],
+    goal: 1.2,
+    assist: 0.6,
+  },
+  FB: {
+    label: '풀백',
+    blurb: '오버래핑과 크로스',
+    role: 'RB',
+    mod: { pac: 5, pas: 3, def: -2, phy: -4 },
+    focus: ['pac', 'def'],
+    goal: 0.8,
+    assist: 1.4,
+  },
+  GK: {
+    label: '골키퍼',
+    blurb: '마지막 방어선',
+    role: 'GK',
+    mod: {},
+    focus: ['def', 'pac'],
+    goal: 1,
+    assist: 1,
+  },
+};
+/** 경기 득점·도움 기대값(포지션 기본값 × 세부 포지션 배수). */
+export const scoreRate = (s: {
+  pos: Pos;
+  dpos?: DetailPos | undefined;
+}): { goal: number; assist: number } => {
+  const P = POS[s.pos],
+    D = s.dpos ? DPOS[s.dpos] : null;
+  return { goal: P.goal * (D?.goal ?? 1), assist: P.assist * (D?.assist ?? 1) };
+};
+/** 포지션 표시 이름(세부 포지션이 있으면 그 이름). */
+export const posLabel = (s: { pos: Pos; dpos?: DetailPos | null | undefined }): string =>
+  s.dpos ? DPOS[s.dpos].label : POS[s.pos].label;
 
 export interface TypeDef {
   id: string;

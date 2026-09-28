@@ -8,6 +8,7 @@ import type {
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
 import type { ServiceSeason } from '@offside/contracts/service-seasons';
+import { DETAIL_GROUP } from '@offside/contracts/positions';
 import {
   and,
   desc,
@@ -87,6 +88,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         id: careerId,
         profileId,
         pos: meta.pos,
+        dpos: meta.dpos && DETAIL_GROUP[meta.dpos] === meta.pos ? meta.dpos : null,
         foot: meta.foot,
         type: meta.type,
         trait: meta.trait,
@@ -227,6 +229,7 @@ const publicColumns = {
   id: careers.id,
   name: careers.publicName,
   pos: careers.pos,
+  dpos: careers.dpos,
   number: careers.shirtNumber,
   retireAge: careers.retireAge,
   peak: careers.peak,
@@ -257,6 +260,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     id: String(r.id),
     name: (r.name as string | null) ?? null,
     pos: r.pos as PublicHofEntry['pos'],
+    dpos: (r.dpos as PublicHofEntry['dpos']) ?? null,
     number: r.number == null ? null : Number(r.number),
     retireAge: n(r.retireAge),
     peak: n(r.peak),
@@ -482,7 +486,12 @@ export async function storedSeasonsOf(
 /** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). */
 export async function getCareerHead(db: Db, careerId: string) {
   const [row] = await db
-    .select({ profileId: careers.profileId, status: careers.status, pos: careers.pos })
+    .select({
+      profileId: careers.profileId,
+      status: careers.status,
+      pos: careers.pos,
+      dpos: careers.dpos,
+    })
     .from(careers)
     .where(eq(careers.id, careerId));
   return row;

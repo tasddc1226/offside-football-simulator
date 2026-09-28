@@ -53,6 +53,7 @@ export function seasonBody(
   return {
     career: {
       pos: s.pos,
+      ...(s.dpos && { dpos: s.dpos }),
       foot: s.foot,
       type: s.type,
       trait: s.trait,

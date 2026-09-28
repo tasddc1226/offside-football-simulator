@@ -437,6 +437,34 @@ describe('조작된 기록 보정', () => {
     expect(await row()).toMatchObject({ pos: 'FW', type: 'poacher', appVersion: '1.0.1' });
   });
 
+  it('T-10-091: 세부 포지션은 처음 값을 지키고, 큰 포지션과 어긋나면 버린다', async () => {
+    await put(`/v1/careers/${CAREER_ID}/seasons/2026`, {
+      ...seasonBody(),
+      career: { ...TEST_CAREER, dpos: 'W' },
+    });
+    await put(`/v1/careers/${CAREER_ID}/seasons/2027`, {
+      ...seasonBody(),
+      career: { ...TEST_CAREER, dpos: 'ST' },
+    });
+    expect(await row()).toMatchObject({ pos: 'FW', dpos: 'W' });
+
+    const other = '55555555-5555-4555-8555-555555555555';
+    await put(`/v1/careers/${other}/seasons/2026`, {
+      ...seasonBody(),
+      career: { ...TEST_CAREER, dpos: 'CB' },
+    });
+    const [r] = await ctx.db.select().from(careers).where(eq(careers.id, other));
+    expect(r).toMatchObject({ pos: 'FW', dpos: null });
+    expect(
+      (
+        await put(`/v1/careers/${other}/seasons/2027`, {
+          ...seasonBody(),
+          career: { ...TEST_CAREER, dpos: 'LW' },
+        })
+      ).status,
+    ).toBe(400);
+  });
+
   it('은퇴 요약은 받아 둔 시즌 기록에 맞추고, 레전드 점수는 그 기록으로 낼 수 있는 만큼만 받는다', async () => {
     await putSeasonsFor(ctx.env, cookie, CAREER_ID, { ...retirementBody(), retireAge: 25 });
     const res = await put(`/v1/careers/${CAREER_ID}/retirement`, {

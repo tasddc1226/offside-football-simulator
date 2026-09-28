@@ -126,7 +126,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     } else {
       // 은퇴 요약은 받아 둔 시즌 기록에 맞춘다 — 보낸 숫자를 그대로 믿지 않는다.
       const seasons = (await storedSeasonsOf(db, [careerId])).get(careerId) ?? [];
-      const summary = boundRetirement(career.pos, sent, seasons);
+      const summary = boundRetirement(career.pos, sent, seasons, career.dpos);
       if (!summary) {
         throw new AppError({
           code: 'VALIDATION_FAILED',

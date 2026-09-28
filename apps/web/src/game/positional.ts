@@ -420,7 +420,10 @@ export const POSITIONAL_EVENTS: EventDef[] = [
     id: 'df-overlap',
     title: '풀백의 오버래핑',
     w: 2,
-    cond: (s) => posIs('DF')(s) && inGame(s) && (s.type === 'fullback' || s.attrs.pac >= 65),
+    cond: (s) =>
+      posIs('DF')(s) &&
+      inGame(s) &&
+      (s.dpos ? s.dpos === 'FB' : s.type === 'fullback' || s.attrs.pac >= 65),
     text: () =>
       '측면이 비었습니다. 윙어가 안쪽으로 파고들며 당신에게 오버래핑 공간을 만들어 줬습니다.',
     choices: [

@@ -5,8 +5,9 @@
 import type { HofSort, RetiredNumberResult } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason } from '@offside/contracts/service-seasons';
+import { detailPosOpen, DETAIL_GROUP } from '@offside/contracts/positions';
 import type { OutboxItem } from '../game/outbox.js';
-import type { AttrKey, Pos } from '../game/data.js';
+import type { AttrKey, DetailPos, Pos } from '../game/data.js';
 import { pick, ri } from '../game/rng.js';
 import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
 import type { GameState, HofEntry, LegendSource } from '../game/types.js';
@@ -45,11 +46,20 @@ export interface DraftCharacter {
   name: string;
   number: number;
   pos: Pos;
+  /** T-10-091 세부 포지션. 시즌 1 개막 전(프리시즌)엔 고르지 않는다 — create-view.draftDpos()가 거른다. */
+  dpos: DetailPos | null;
   foot: GameState['foot'];
   /** T-10-008. 키우고 싶은 주력 능력치(FOCUS_PICK개). */
   focus: AttrKey[];
   trait: string;
 }
+
+/** T-10-091 지금 새 선수가 세부 포지션을 고를 수 있는가(시즌 1 개막부터). */
+export const detailOpenNow = (): boolean => detailPosOpen(new Date().toISOString());
+
+/** 새 커리어에 넣을 세부 포지션 — 프리시즌이거나 큰 포지션과 어긋나면 넣지 않는다. */
+export const draftDpos = (c: Pick<DraftCharacter, 'pos' | 'dpos'>): DetailPos | undefined =>
+  c.dpos && DETAIL_GROUP[c.dpos] === c.pos && detailOpenNow() ? c.dpos : undefined;
 
 export function randomName(): string {
   return pick(SURNAMES) + pick(GIVEN);
@@ -125,6 +135,7 @@ export const appState = $state<{
     name: randomName(),
     number: randomNumber(),
     pos: 'FW',
+    dpos: null,
     foot: '오른발',
     focus: defaultFocus('FW'),
     trait: 'late',

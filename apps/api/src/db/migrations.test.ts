@@ -81,6 +81,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'id',
     'profile_id',
     'pos',
+    'dpos',
     'foot',
     'type',
     'trait',

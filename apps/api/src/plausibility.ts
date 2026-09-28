@@ -95,6 +95,8 @@ export function boundRetirement(
   pos: CareerPos,
   summary: RetirementSummary,
   rows: readonly StoredSeason[],
+  /** T-10-091 세부 포지션(레전드 점수 가중 보정). */
+  dpos?: string | null,
 ): RetirementSummary | null {
   const life = lifeSeasons(rows);
   const last = life.at(-1);
@@ -126,20 +128,24 @@ export function boundRetirement(
   const trophies = Math.min(summary.trophies, honors.length + EXTRA_HONORS);
   const awards = Math.min(summary.awards, honors.length + EXTRA_HONORS - trophies);
   const ceiling = Object.values(
-    legendTerms(pos, {
-      goals,
-      assists,
-      cs,
-      apps,
-      trophies,
-      awards,
-      caps,
-      peak,
-      ballon,
-      // 발롱도르 순위 점수(1위 30점)는 시즌 기록에 남지 않아 뛴 해마다 1위로 친다.
-      ballonRankPoints: life.length * 30,
-      worldCups: count('FIFA 월드컵 우승'),
-    }),
+    legendTerms(
+      pos,
+      {
+        goals,
+        assists,
+        cs,
+        apps,
+        trophies,
+        awards,
+        caps,
+        peak,
+        ballon,
+        // 발롱도르 순위 점수(1위 30점)는 시즌 기록에 남지 않아 뛴 해마다 1위로 친다.
+        ballonRankPoints: life.length * 30,
+        worldCups: count('FIFA 월드컵 우승'),
+      },
+      dpos,
+    ),
   ).reduce((t, v) => t + v, 0);
 
   return {

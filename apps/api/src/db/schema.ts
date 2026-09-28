@@ -114,6 +114,8 @@ export const careers = sqliteTable(
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
     pos: text('pos', { enum: ['FW', 'MF', 'DF', 'GK'] }).notNull(),
+    // T-10-091 세부 포지션(DETAIL_POSITIONS). 시즌 1 전에 만든 선수·옛 클라이언트는 NULL.
+    dpos: text('dpos'),
     foot: text('foot', { enum: ['오른발', '왼발', '양발'] }).notNull(),
     type: text('type').notNull(),
     trait: text('trait').notNull(),
