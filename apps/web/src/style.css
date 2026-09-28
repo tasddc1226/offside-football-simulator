@@ -3857,6 +3857,93 @@ button.title-item:hover {
 .rn-jersey-num {
   font-size: 46px;
 }
+/* 은퇴 세리머니 유니폼 — 원근 속에서 천천히 몸을 돌리고, 바닥 그림자·뒤 조명이 따라온다. */
+.rn-jersey3d {
+  position: relative;
+  perspective: 640px;
+  padding: 6px 0 18px;
+}
+.rn-jersey3d::before {
+  content: '';
+  position: absolute;
+  inset: -12% -30% 8%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--rn-accent, #f2c14e) 30%, transparent),
+    transparent
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+.rn-jersey3d::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 150px;
+  height: 18px;
+  translate: -50% 0;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), transparent);
+  animation: rn-floor 7s ease-in-out infinite alternate;
+}
+.rn-jersey.rn-jersey-3d {
+  position: relative;
+  width: 196px;
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.5));
+  transform-origin: 50% 40%;
+  animation: rn-sway 7s ease-in-out infinite alternate;
+}
+.rn-jersey-3d .rn-shirt {
+  stroke: none;
+}
+.rn-jersey-3d .rn-cuff,
+.rn-jersey-3d .rn-collar {
+  fill: var(--rn-trim, #f2c14e);
+}
+.rn-jersey-3d .rn-jersey-name {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+.rn-jersey-3d .rn-jersey-num {
+  font-size: 50px;
+  stroke: var(--rn-trim, #f2c14e);
+  stroke-width: 1.3px;
+  paint-order: stroke;
+}
+.rn-jersey-3d .rn-sheen {
+  animation: rn-sheen 7s ease-in-out infinite;
+}
+@keyframes rn-sway {
+  from {
+    transform: rotateY(-18deg) rotateX(3deg) translateY(0);
+  }
+  to {
+    transform: rotateY(18deg) rotateX(3deg) translateY(-6px);
+  }
+}
+@keyframes rn-floor {
+  to {
+    scale: 0.82 1;
+    opacity: 0.7;
+  }
+}
+@keyframes rn-sheen {
+  0%,
+  40% {
+    transform: translateX(0);
+  }
+  75%,
+  100% {
+    transform: translateX(240px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rn-jersey3d::after,
+  .rn-jersey.rn-jersey-3d,
+  .rn-jersey-3d .rn-sheen {
+    animation: none;
+  }
+}
 .rn-line {
   font-size: 1.1875rem;
   line-height: 1.55;
