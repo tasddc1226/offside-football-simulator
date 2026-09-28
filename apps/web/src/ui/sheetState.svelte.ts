@@ -237,13 +237,17 @@ function playScene<K extends SceneKind, I, R>(
  * 구간 가운데)로 판정·저장을 끝낸 뒤, 결과 장면(공이 날아가는 연출)을 보여 주고 settle의 결과를 돌려준다.
  * 구간 자리는 화면 연출이라 게임 RNG가 아니라 Math.random을 쓴다(게임 RNG 흐름을 바꾸지 않는다).
  */
-export function playMinigame<R extends { ok: boolean }>(
+export async function playMinigame<R extends { ok: boolean }>(
   label: string,
   mg: MgKind,
   w: number,
   side: -1 | 0 | null,
   settle: (x: number | null, center: number) => R,
 ): Promise<R> {
+  // 장면 컴포넌트는 첫 화면 번들 밖이다 — 띄우기 전에 불러 둬야 바늘·제한 시간이 늦게 시작하지 않는다.
+  // 불러오는 동안 선택지를 다시 누르지 못하게 먼저 막는다.
+  sheetState.busy = true;
+  await import('./sheets/Minigame.svelte');
   const center = w / 2 + Math.random() * (1 - w);
   return playScene<'minigame', number | null, R>(
     (onTap) => ({ kind: 'minigame', label, mg, center, w, side, ok: null, onTap }),
@@ -264,6 +268,7 @@ export async function playDragShot<R extends { ok: boolean }>(
   p: number,
   settle: (shot: ShotResult) => R,
 ): Promise<R> {
+  sheetState.busy = true;
   const { evalShot, lateShot } = await import('../game/dragShot.js');
   return playScene<'dragShot', DragPoint[] | null, R>(
     (onShot) => ({ kind: 'dragShot', label, shot: null, onShot }),
