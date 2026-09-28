@@ -1270,7 +1270,7 @@ body:has(.main-nav) .wrap {
   max-width: 480px;
   margin: 0 auto;
 }
-/* 내 은퇴 선수 화면 아래 공유 바: 홈으로 | 커리어 공유하기 */
+/* 두 칸 버튼 줄: 은퇴 선수 화면 아래 공유 바(홈으로 | 커리어 공유하기), 공유 이미지(이미지 저장 | 바로 공유하기) */
 .share-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -4136,4 +4136,11 @@ button.what {
   .live-rows.shift {
     transition: none;
   }
+}
+/* T-10-079 SNS 공유 이미지 미리 보기(1080×1350을 카드 폭에 맞춘다). */
+.share-image {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
 }
