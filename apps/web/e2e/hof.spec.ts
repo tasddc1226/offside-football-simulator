@@ -65,7 +65,7 @@ const snapshot = {
   trophies: [{ year: 2026, t: '고교리그 우승', club: '테스트 고교' }],
   awards: [{ year: 2027, t: '영플레이어상' }],
   ballon: [],
-  nat: { caps: 88 },
+  nat: { caps: 88, goals: 31, assists: 12 },
   storyLog: [],
   miles: [{ year: 2027, t: '프로 데뷔' }],
 };
@@ -91,6 +91,8 @@ test('전체 명예의 전당에서 다른 유저의 은퇴 선수 상세를 연
   });
   await expect(page.locator('[data-credit="finale"]')).toBeVisible();
   // 우승 연혁이 크레딧처럼 나오고, 점수 구성·시즌별 표는 '자세히 보기'에 접혀 있다 (T-10-062).
+  // A매치는 출전 수와 함께 골·도움도 보인다 (T-10-086).
+  await expect(page.locator('[data-nat-ga]')).toHaveText('31골 · 12도움');
   await expect(page.locator('[data-credit="honours"]')).toContainText('고교리그 우승');
   await page.locator('[data-credit="career"] summary').click();
   await expect(page.getByRole('heading', { name: '레전드 점수 구성' })).toBeVisible();

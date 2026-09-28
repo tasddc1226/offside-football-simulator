@@ -108,6 +108,8 @@ describe('T-10-005 은퇴 스냅샷', () => {
     expect(snap.career[1]?.clubId).toBe('pl-15');
     expect(snap.trophies[0]).not.toHaveProperty('clubId');
     expect(snap.trophies[1]?.clubId).toBe('pl-15');
+    // T-10-086: A매치 골·도움도 남긴다.
+    expect(snap.nat).toEqual({ caps: g.nat.caps, goals: g.nat.goals, assists: g.nat.assists });
   });
 });
 

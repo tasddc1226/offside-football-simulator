@@ -558,7 +558,7 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
     })),
     awards: s.awards.map(({ year, t }) => ({ year, t })),
     ballon: (s.ballon || []).map(({ year, rank }) => ({ year, rank })),
-    nat: { caps: s.nat.caps },
+    nat: { caps: s.nat.caps, goals: s.nat.goals, assists: s.nat.assists },
     storyLog: (s.storyLog || []).map(({ year, key, name, ending }) => ({
       year,
       key,
