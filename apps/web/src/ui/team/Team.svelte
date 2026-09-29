@@ -48,6 +48,7 @@
   import { appState, hofStart } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
   import TeamLines from './TeamLines.svelte';
+  import TeamLive from './TeamLive.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import { num, recordText, signedNum } from './teamText.js';
 
@@ -80,6 +81,8 @@
   let oppStatus = $state<LoadStatus>('loading');
   let playing = $state(false);
   let result = $state<TeamMatch | null>(null);
+  /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
+  let live = $state(false);
   let history = $state<TeamMatch[]>([]);
   let histStatus = $state<LoadStatus>('loading');
   let ach = $state<ClubAchievementsResponse | null>(null);
@@ -278,6 +281,7 @@
       return toast(r.error.message);
     }
     result = r.data.match;
+    live = true;
     matchesLeft = r.data.matchesLeft;
     if (team) {
       team.record = r.data.record;
@@ -509,6 +513,11 @@
     {:else if view === 'result' && result}
       {@const m = result}
       {@const gain = m[m.mine].ratingChange}
+      {#if live}
+        {#key m.id}
+          <TeamLive match={m} name={eventName} onend={() => ((live = false), window.scrollTo(0, 0))} />
+        {/key}
+      {:else}
       <section class="card stack tm-result" style="gap:14px" data-team-result>
         <div>
           <div class="eyebrow">Full time</div>
@@ -544,9 +553,11 @@
         {/if}
         <div class="tm-actions">
           <button class="btn" onclick={() => (view = 'team')}>내 팀</button>
+          <button class="btn" onclick={() => (live = true)} data-act="team-replay">중계 다시 보기</button>
           <button class="btn btn-primary" onclick={openOpponents} disabled={matchesLeft === 0}>다시 경기하기</button>
         </div>
       </section>
+      {/if}
     {:else if view === 'history'}
       <section class="card stack" style="gap:12px">
         <div>
@@ -556,7 +567,7 @@
         <LoadState status={histStatus} failText="경기 기록을 불러오지 못했어요." retry={openHistory}>
           {#each history as m (m.id)}
             {@const opp = m[m.mine === 'home' ? 'away' : 'home']}
-            <button class="tm-hist" onclick={() => ((result = m), (view = 'result'))} data-team-match={m.id}>
+            <button class="tm-hist" onclick={() => ((result = m), (live = false), (view = 'result'))} data-team-match={m.id}>
               <span class="tm-out" data-out={outcome(m)}>{outcome(m)}</span>
               <span class="tm-opp-info">
                 <b>{m[m.mine].goals} : {opp.goals} {opp.name}</b>
