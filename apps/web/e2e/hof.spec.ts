@@ -368,7 +368,7 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
   await expect(full.locator('[data-hof-sort="ballon"]')).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => asked.at(-1)).toBe('?limit=100&sort=ballon');
 
-  // T-10-100 은퇴 가치 순: 오른쪽에 조·억·천만으로 적는다.
+  // T-10-100 은퇴 가치 순: 오른쪽에 큰 두 단위(억·천만)로 적는다.
   await full.locator('[data-hof-sort="value"]').click();
   await expect.poll(() => asked.at(-1)).toBe('?limit=100&sort=value');
   await expect(full.locator('.hof-row').first().locator('.hof-value')).toHaveText('1,115억 3천만');

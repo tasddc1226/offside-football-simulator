@@ -20,13 +20,18 @@ describe('withRo', () => {
 });
 
 describe('fmtValue (T-10-100 몸값)', () => {
-  it('조·억·천만까지만 쓴다', () => {
+  it('큰 두 단위까지만 쓴다(조·억 / 억·천만 / 천·백만)', () => {
     expect(fmtValue(0)).toBe('-');
-    expect(fmtValue(400)).toBe('1천만 미만');
+    expect(fmtValue(40)).toBe('1백만 미만');
+    expect(fmtValue(100)).toBe('1백만');
     expect(fmtValue(3000)).toBe('3천만');
+    expect(fmtValue(5300)).toBe('5천 3백만');
+    expect(fmtValue(9_960)).toBe('1억');
     expect(fmtValue(35_200)).toBe('3억 5천만');
-    expect(fmtValue(11_150_000)).toBe('1,115억');
-    expect(fmtValue(123_456_789)).toBe('1조 2,345억 7천만');
+    expect(fmtValue(2_410_000)).toBe('241억');
+    expect(fmtValue(11_153_000)).toBe('1,115억 3천만');
+    expect(fmtValue(123_456_789)).toBe('1조 2,346억');
+    expect(fmtValue(99_999_000)).toBe('1조');
     expect(fmtValue(100_000_000)).toBe('1조');
   });
 });
