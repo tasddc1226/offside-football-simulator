@@ -24,6 +24,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'server_firsts',
   'server_records',
   'sessions',
+  'team_likes',
   'team_matches',
 ]);
 
