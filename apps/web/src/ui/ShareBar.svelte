@@ -3,16 +3,21 @@
   // 않아도 보기 전용 공유 링크(/career/<id>)를 복사한다 — 링크는 공개 명예의 전당 상세라 로그인과 무관하다.
   // T-10-069 이 기기에 없는 계정의 내 선수도 띄운다 — 띄울지는 LegendView.shareId(legend.ts)가 정한다. 왼쪽 반은 홈으로.
   // T-10-128 선수 상세는 공유할 수 없는 선수(다른 유저·짧은 커리어)에도 같은 바를 띄우고, 오른쪽 반을 '이전으로'(back)로 쓴다.
+  // 홈에서 열었으면 둘 다 홈으로 가니 '이전으로' 하나만(home=false). height는 바 위에 띄울 버튼(커리어 재생)이 쓴다.
   import { trackShareClick, trackShareSuccess } from '../analytics/index.js';
   import { getHofDetail } from '../api/client.js';
   import { toast } from './helpers.js';
   import { goHome } from './nav.js';
   import { shareUrl } from './legend.js';
 
-  const { id, back }: { id: string | null; back?: () => void } = $props();
+  let {
+    id,
+    back,
+    home = true,
+    height = $bindable(0),
+  }: { id: string | null; back?: () => void; home?: boolean; height?: number } = $props();
   let busy = $state(false);
   let url = $state<string | null>(null);
-  let barH = $state(0);
 
   // 링크를 서버에 확인한 뒤 공유한다 — T-10-118 네이티브 공유 시트(navigator.share)가 있으면 그걸 먼저 쓰고,
   // 없거나 실패하면 클립보드로 복사한다.
@@ -90,14 +95,14 @@
   }
 </script>
 
-<div class="sharebar-space" style:height="{barH}px" aria-hidden="true"></div>
-<div class="action-bar at-bottom" data-share="bar" bind:clientHeight={barH}>
+<div class="sharebar-space" style:height="{height}px" aria-hidden="true"></div>
+<div class="action-bar at-bottom" data-share="bar" bind:clientHeight={height}>
   <div class="action-bar-inner stack">
     {#if url}
       <input class="share-url" readonly value={url} aria-label="공유 링크" onfocus={(e) => e.currentTarget.select()} />
     {/if}
-    <div class="share-actions">
-      <button class="btn" data-act="share-home" onclick={goHome}>홈으로</button>
+    <div class="share-actions" class:solo={!home && !id}>
+      {#if home || id}<button class="btn" data-act="share-home" onclick={goHome}>홈으로</button>{/if}
       {#if id}
         <button class="btn btn-primary" data-act="share-career" disabled={busy} onclick={copy}>
           {busy ? '링크 만드는 중…' : url ? '링크 다시 복사' : '커리어 공유하기'}

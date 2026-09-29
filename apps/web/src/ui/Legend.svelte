@@ -5,18 +5,79 @@
   import LegendReport from './LegendReport.svelte';
   import OwnHofCards from './OwnHofCards.svelte';
   import ShareBar from './ShareBar.svelte';
-  import { autoTour } from './autoTour.js';
+  import { motionOK } from './motion.js';
+  import { rollCredits } from './creditRoll.js';
 
   const v = $derived(appState.legend);
+  let root: HTMLDivElement;
+  let barH = $state(0);
+
+  // T-10-129 커리어 재생: 누르면 크레딧처럼 흘러가고, 다시 누르거나 화면을 만지면 멈춘다. 감속 모션이면 버튼이 없다.
+  let rolling = $state(false);
+  let stopRoll: (() => void) | null = null;
+  function toggleRoll() {
+    if (stopRoll) return stopRoll();
+    rolling = true;
+    stopRoll = rollCredits(root, () => {
+      rolling = false;
+      stopRoll = null;
+    });
+  }
+  $effect(() => () => stopRoll?.());
 </script>
 
-<!-- T-10-127 3초 동안 가만히 있으면 다음 장면으로 천천히 넘어간다. -->
-<div class="wrap" use:autoTour>
+<div class="wrap" bind:this={root}>
   <Topbar />
   {#if v}
     <LegendReport {v} />
     {#if v.own?.id}<OwnHofCards {v} />{/if}
   {/if}
-  <!-- T-10-128 위쪽 '이전으로' 대신 모든 선수에 같은 아래 바: 홈으로 + 공유하기(내 선수) 또는 이전으로. -->
-  <ShareBar id={v?.shareId ?? null} back={() => (appState.screen = appState.legendBack)} />
+  <!-- T-10-128 위쪽 '이전으로' 대신 모든 선수에 같은 아래 바: 홈으로 + 공유하기(내 선수) 또는 이전으로.
+       홈에서 연 선수를 공유할 수 없으면 '이전으로' 하나만. -->
+  <ShareBar
+    id={v?.shareId ?? null}
+    home={appState.legendBack !== 'home'}
+    back={() => (appState.screen = appState.legendBack)}
+    bind:height={barH}
+  />
+  {#if motionOK && v}
+    <button class="career-play" class:on={rolling} data-act="career-play" aria-pressed={rolling} style:bottom="{barH + 12}px" onclick={toggleRoll}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        {#if rolling}<path d="M8 6h3v12H8zM13 6h3v12h-3z" />{:else}<path d="M8 5.5v13l10.5-6.5z" />{/if}
+      </svg>
+      {rolling ? '멈춤' : '커리어 재생'}
+    </button>
+  {/if}
 </div>
+
+<style>
+  .career-play {
+    position: fixed;
+    right: max(var(--pad-r, 16px), calc(50% - 240px + 16px));
+    z-index: 6;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 8px 16px 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 700;
+    font-size: 0.875rem;
+    box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+  }
+  .career-play.on {
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    color: var(--ink);
+    border-color: var(--line);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .career-play svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+</style>
