@@ -15,16 +15,15 @@ export const motionOK = (() => {
 export const dur = (ms: number): number => (motionOK ? ms : 0);
 
 /** 화면 전환(T-10-119). dir 1이면 다음 화면이 오른쪽에서, -1이면 이전 화면이 왼쪽에서 밀려 들어온다 — 모바일에서
- * 가장자리를 밀어 뒤로 갈 수 있다는 걸 보여 준다. 0(하단 메뉴끼리)은 예전처럼 살짝 아래에서 올라온다.
- * transform이 아니라 left/top을 움직인다: transform은 안의 position:fixed(탭바·액션바)의 기준을 화면 래퍼로
+ * 가장자리를 밀어 뒤로 갈 수 있다는 걸 보여 준다.
+ * transform이 아니라 left를 움직인다: transform은 안의 position:fixed(탭바·액션바)의 기준을 화면 래퍼로
  * 바꿔 전환 중에 바가 사라진다. opacity는 그대로 둬 axe 명도 대비 검사가 중간 프레임에 흔들리지 않는다. */
-export function screenIn(_node: Element, { dir = 1 }: { dir?: -1 | 0 | 1 } = {}) {
+export function screenIn(_node: Element, { dir = 1 }: { dir?: -1 | 1 } = {}) {
   const dx = Math.min(innerWidth, 560) * 0.36 * dir;
   return {
-    duration: dur(dir ? 260 : 180),
+    duration: dur(260),
     easing: cubicOut,
-    css: (t: number) =>
-      dir ? `position:relative;left:${(1 - t) * dx}px` : `position:relative;top:${(1 - t) * 10}px`,
+    css: (t: number) => `position:relative;left:${(1 - t) * dx}px`,
   };
 }
 
