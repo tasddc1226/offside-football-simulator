@@ -44,7 +44,7 @@ async function mockBoards(
     empty?: boolean;
     google?: boolean;
     nickname?: string | null;
-    /** 릴리즈 노트를 고친 시각(T-10-098). */
+    /** 릴리즈 노트를 고친 시각(T-10-108). */
     releaseEdited?: string;
   } = {},
 ) {
@@ -407,7 +407,7 @@ test('새 소식 알림: 처음 온 기기에는 지금까지의 글을 알리�
   );
 });
 
-// T-10-098 이미 본 글이 고쳐지면 '수정됐어요'로 다시 알리고, 열어 보면 다시 뜨지 않는다.
+// T-10-108 이미 본 글이 고쳐지면 '수정됐어요'로 다시 알리고, 열어 보면 다시 뜨지 않는다.
 test('새 소식 알림: 본 글이 수정되면 다시 알린다', async ({ page }) => {
   const edited = '2026-09-26T05:00:00.000Z';
   await mockBoards(page, { releaseEdited: edited });

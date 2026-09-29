@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-10-058: 새 공지사항·릴리즈 노트 알림(news.svelte.ts). 새 버전 배너가 떠 있으면 그쪽을 먼저 보이고,
-  // 소식 화면을 보고 있을 때는 띄우지 않는다. T-10-098 이미 본 글이 고쳐져도 같은 자리에 알린다.
+  // 소식 화면을 보고 있을 때는 띄우지 않는다. T-10-108 이미 본 글이 고쳐져도 같은 자리에 알린다.
   import { fly } from 'svelte/transition';
   import { newsState, dismissNews } from './news.svelte.js';
   import { updateState } from './update.svelte.js';
