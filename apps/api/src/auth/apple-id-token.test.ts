@@ -52,10 +52,10 @@ describe('verifyAppleIdToken', () => {
   });
 
   it('올바른 토큰이면 sub·email을 돌려준다', async () => {
-    const token = await sign({ email: 'a@privaterelay.appleid.com' });
+    const token = await sign({ email: 'relay@apple.example.com' });
     await expect(verify(token)).resolves.toEqual({
       sub: 'apple-sub-1',
-      email: 'a@privaterelay.appleid.com',
+      email: 'relay@apple.example.com',
     });
   });
 
