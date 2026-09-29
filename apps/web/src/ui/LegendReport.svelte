@@ -16,6 +16,7 @@
   import { titleById } from '../game/titles.js';
   import { legendTitleOf } from './titles/legendTitle.svelte.js';
   import CountUp from './CountUp.svelte';
+  import ValueChart from './ValueChart.svelte';
   import { motionOK } from './motion.js';
   import ClubMark from './ClubMark.svelte';
   import { rnOf } from './retiredNumber.svelte.js';
@@ -167,6 +168,15 @@
         </li>
       {/each}
     </ol>
+  {/if}
+
+  <!-- T-10-106 여정 다음에 몸값 흐름: 클럽을 옮겨 다닌 이야기를 숫자 하나의 곡선으로 되짚는다. -->
+  {#if d && peakV}
+    <section class="film-value" data-credit="value" use:reveal>
+      <div class="eyebrow film-kicker">Market Value</div>
+      <h2>몸값 흐름</h2>
+      <ValueChart rows={d.career} />
+    </section>
   {/if}
 
   {#if caps > 0 || national.length}

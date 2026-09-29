@@ -3,6 +3,7 @@
   import type { GameState, LegendSource } from '../../game/types.js';
   import { fmtValue, seasonLabelOf, totals } from '../format.js';
   import ClubMark from '../ClubMark.svelte';
+  import ValueChart from '../ValueChart.svelte';
   import { nextMilestones } from '../../game/records.js';
   import { peakValue, seasonValue } from '@offside/contracts/market-value';
 
@@ -13,11 +14,6 @@
   const miles = $derived((s.miles || []).slice().reverse());
   const next = $derived('attrs' in s && !s.retired ? nextMilestones(s) : []);
   const peakV = $derived(peakValue(s.career));
-  // 시즌별 몸값 막대 그래프(T-10-100): 누른 막대의 시즌을 위에 보여 준다.
-  const bars = $derived(s.career.map((r) => ({ r, v: seasonValue(r) })));
-  const maxV = $derived(peakV?.value ?? 0);
-  let pick = $state<number | null>(null);
-  const picked = $derived(pick == null ? null : bars[pick]);
 </script>
 
 <section class="card stack">
@@ -33,17 +29,7 @@
     <div><b>{s.trophies.length + s.awards.length}</b><span>수상</span></div>
   </div>
   {#if peakV}
-    <div class="value-chart" data-value-chart>
-      <div class="value-chart-head fs-xs" data-value-pick>
-        {#if picked}{picked.r.mil ? picked.r.year : seasonLabelOf(picked.r)} ({picked.r.age}) · {picked.r.club} · <b>{fmtValue(picked.v)}</b>{:else}<span class="muted">시즌별 몸값 · 막대를 누르면 시즌 값을 보여 줘요</span>{/if}
-      </div>
-      <div class="value-bars" role="group" aria-label="시즌별 몸값">
-        {#each bars as b, i (i)}
-          <button type="button" class="value-bar" class:peak={b.r === peakV.row} class:on={i === pick} style="--h:{b.v ? Math.max(4, (b.v / maxV) * 100) : 0}%" aria-label="{b.r.year} {b.r.club} 몸값 {fmtValue(b.v)}" aria-pressed={i === pick} onclick={() => (pick = pick === i ? null : i)}></button>
-        {/each}
-      </div>
-      <div class="value-chart-axis muted fs-xs"><span>{bars[0]!.r.year}</span><span>{bars[bars.length - 1]!.r.year}</span></div>
-    </div>
+    <ValueChart rows={s.career} />
     <p class="muted fs-sm" data-peak-value>최고 몸값 <b>{fmtValue(peakV.value)}</b> · {seasonLabelOf(peakV.row)} {peakV.row.club}</p>
   {/if}
 </section>

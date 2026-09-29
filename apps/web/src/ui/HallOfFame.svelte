@@ -68,6 +68,24 @@
       if (next !== appState.hof.q) appState.hof = { ...appState.hof, q: next, page: 1 };
     }, 300);
   }
+  // T-10-105 검색 칸은 돋보기를 눌러 연다(검색어가 남아 있으면 열린 채로). 닫으면 검색도 푼다.
+  let searching = $state(!!appState.hof.q);
+  function toggleSearch() {
+    searching = !searching;
+    if (!searching && draft) {
+      draft = '';
+      onSearch();
+    }
+  }
+  const focusIn = (el: HTMLElement) => el.focus();
+  /** 한 줄 가로 스크롤 칩에서 고른 유형이 보이게 가운데로 민다(상세에서 돌아와도). */
+  function keepPicked(el: HTMLElement) {
+    $effect(() => {
+      void sort;
+      const c = el.querySelector<HTMLElement>('[aria-pressed="true"]');
+      if (c && el.scrollWidth > el.clientWidth) el.scrollLeft = c.offsetLeft - (el.clientWidth - c.offsetWidth) / 2;
+    });
+  }
   function goPage(p: number) {
     appState.hof.page = p;
     window.scrollTo(0, 0);
@@ -110,15 +128,22 @@
 {/snippet}
 
 <section class="card" data-hof={full ? 'full' : 'home'}>
-  <div class="row" style="justify-content:space-between;align-items:baseline">
+  <div class="hof-head">
     <div>
       <div class="eyebrow">Legends</div>
       {#if full}<h1 style="margin-bottom:8px">명예의 전당</h1>{:else}<h2 style="margin-bottom:8px">명예의 전당</h2>{/if}
     </div>
     {#if !full && all?.length}
       <button class="icon-btn" data-act="hof-all" onclick={openHof}>전체 보기</button>
+    {:else if full && !upcoming}
+      <button class="hof-search-btn" aria-label="선수 이름 검색" aria-expanded={searching} data-act="hof-search" onclick={toggleSearch}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+      </button>
     {/if}
   </div>
+  {#if full && searching && !upcoming}
+    <input class="hof-search" type="search" placeholder="선수 이름 검색" aria-label="선수 이름 검색" maxlength="20" enterkeyhint="search" data-hof-search bind:value={draft} oninput={onSearch} use:focusIn />
+  {/if}
   {#if full}
     <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
       <button class="opt" aria-pressed={season === null} data-hof-season="all" onclick={() => pickSeason(null)}>전체</button>
@@ -127,12 +152,11 @@
       {/each}
     </div>
     {#if !upcoming}
-      <div class="hof-sorts" role="group" aria-label="순위 유형">
+      <div class="hof-sorts" role="group" aria-label="순위 유형" use:keepPicked>
         {#each SORT_KEYS as k (k)}
           <button class="hof-sort" aria-pressed={sort === k} data-hof-sort={k} onclick={() => pickSort(k)}>{SORTS[k].label}{#if isNew(k)}<small class="hof-new" aria-hidden="true">NEW</small>{/if}</button>
         {/each}
       </div>
-      <input class="hof-search" type="search" placeholder="선수 이름 검색" aria-label="선수 이름 검색" maxlength="20" enterkeyhint="search" data-hof-search bind:value={draft} oninput={onSearch} />
     {/if}
   {/if}
 

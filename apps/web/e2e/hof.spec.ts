@@ -396,7 +396,11 @@ test('명예의 전당 이름 검색', async ({ page }) => {
   await page.goto('/');
   await page.locator('[data-act="hof-all"]').click();
   const full = page.locator('[data-hof="full"]');
+  // T-10-105 검색 칸은 돋보기를 눌러야 열린다(열리면 바로 입력).
   const search = full.locator('[data-hof-search]');
+  await expect(search).toHaveCount(0);
+  await full.locator('[data-act="hof-search"]').click();
+  await expect(search).toBeFocused();
   await search.pressSequentially('오프');
   await expect.poll(() => asked.at(-1)).toBe(`?limit=10&q=${encodeURIComponent('오프')}`);
   expect(asked.filter((a) => a.includes('q='))).toHaveLength(1); // 글자마다 묻지 않는다.
@@ -413,6 +417,12 @@ test('명예의 전당 이름 검색', async ({ page }) => {
   await expect(full.locator('.empty')).toHaveText("'없는사람'이 들어간 이름의 선수가 없습니다.");
   await search.fill('');
   await expect.poll(() => asked.at(-1)).toBe('?limit=10&sort=goals');
+  // 검색어를 둔 채 닫으면 검색도 풀린다.
+  await search.fill('오프사');
+  await expect(full.locator('.empty')).toContainText("'오프사'");
+  await full.locator('[data-act="hof-search"]').click();
+  await expect(search).toHaveCount(0);
+  await expect(full.locator('.hof-source')).not.toContainText('검색');
 });
 
 // T-10-101 새로 생긴 순위 유형(은퇴 가치)에 NEW — 정해 둔 날까지만.

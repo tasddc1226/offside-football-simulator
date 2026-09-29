@@ -43,19 +43,25 @@ test('커리어 표에 시즌 몸값과 최고 몸값 시즌이 보인다', asyn
   await expect(page.locator('[data-peak-value]')).toContainText('최고 몸값 263억 1천만');
   await expect(page.locator('[data-peak-value]')).toContainText('리버풀 토피스');
 
-  // 시즌별 몸값 막대: 시즌마다 하나, 최고 시즌은 강조, 누르면 그 시즌 값이 위에 나온다.
-  const bars = page.locator('[data-value-chart] .value-bar');
-  await expect(bars).toHaveCount(4);
-  await expect(bars.nth(2)).toHaveClass(/peak/);
-  await bars.nth(1).click();
+  // 시즌별 몸값 꺾은선: 시즌마다 점 하나, 최고 시즌은 강조, 누르면 그 시즌 값이 위에 나온다.
+  const chart = page.locator('[data-value-chart]');
+  await expect(chart).toHaveClass(/\bgo\b/); // 화면에 들어오면 그리기 시작
+  const dots = chart.locator('.value-dot');
+  await expect(dots).toHaveCount(4);
+  await expect(dots.nth(2)).toHaveClass(/peak/);
+  await expect(chart.locator('.value-peak-tag')).toHaveText('263억 1천만');
+  await dots.nth(1).click();
   await expect(page.locator('[data-value-pick]')).toHaveText(
     '2034-35 (26) · 마드리드 로스 블랑코스 · 241억',
   );
-  const [h1, h2] = await Promise.all(
-    [1, 2].map((i) => bars.nth(i).evaluate((el) => el.clientHeight)),
+  // 높이(--y, 위에서부터 %): 최고 시즌이 가장 높고, 고교·복무 시즌은 바닥.
+  const ys = await dots.evaluateAll((els) =>
+    els.map((el) => parseFloat((el as HTMLElement).style.getPropertyValue('--y'))),
   );
-  expect(h1).toBeLessThan(h2!);
-  expect(h1).toBeGreaterThan(h2! * 0.85);
+  expect(ys[0]).toBe(100);
+  expect(ys[3]).toBe(100);
+  expect(ys[2]).toBeLessThan(ys[1]!);
+  expect(ys[1]).toBeLessThan(ys[2]! + 10);
 });
 
 test('선수 카드에 연봉과 함께 몸값이 보인다(아마추어는 없다)', async ({ page }) => {
@@ -74,4 +80,9 @@ test('은퇴 크레딧에 은퇴 가치와 최고 몸값 시즌이 나온다', a
   await expect(worth).toBeVisible();
   await expect(worth).toContainText(/은퇴 가치\s*[\d,]+억/);
   await expect(worth).toContainText('최고 몸값 263억 1천만');
+  // 여정 다음에 몸값 흐름 그래프 — 스크롤해 들어오면 그린다.
+  const value = page.locator('[data-credit="value"]');
+  await value.scrollIntoViewIfNeeded();
+  await expect(value.locator('[data-value-chart]')).toHaveClass(/\bgo\b/);
+  await expect(value.locator('.value-dot')).toHaveCount(4);
 });
