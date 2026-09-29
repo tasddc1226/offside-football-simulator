@@ -119,7 +119,7 @@ export function createUploader(host: UploaderHost) {
   return { uploadSeason, uploadRetirement, enqueueAllSeasons, uploadLegacyRetirement };
 }
 
-export function retirementBody(entry: HofEntry): PutRetirementBody {
+function retirementBody(entry: HofEntry): PutRetirementBody {
   return {
     retireAge: entry.age,
     peak: entry.peak,

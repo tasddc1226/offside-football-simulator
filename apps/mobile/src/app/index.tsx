@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { newGame } from '@offside/game/engine';
-import { createRng, setActiveRng } from '@offside/game/rng';
-import { loadKey, saveKey } from '@offside/game/season';
+import { createRng, freshSeed, setActiveRng } from '@offside/game/rng';
+import { loadKey } from '@offside/game/season';
+import { saveGame } from '@offside/app-core/career';
 import type { GameState } from '@offside/game/types';
 import { useColors } from '../theme/useColors';
 
@@ -13,13 +14,14 @@ export default function Home() {
   const [g, setG] = useState(() => loadKey<GameState>('ft_save'));
 
   function start() {
-    setActiveRng(createRng(Date.now() >>> 0));
+    const seed = freshSeed();
+    setActiveRng(createRng(seed));
     const next = newGame(
       { name: '테스트', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
-      Date.now() >>> 0,
+      seed,
     );
-    saveKey('ft_save', next);
-    setG(loadKey<GameState>('ft_save'));
+    saveGame(next);
+    setG(next);
   }
 
   return (

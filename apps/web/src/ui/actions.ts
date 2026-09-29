@@ -6,7 +6,7 @@ import { analytics, trackPage } from '../analytics/index.js';
 import { appState } from './state.svelte.js';
 import { save, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { motionOK } from './motion.js';
-import * as sheet from './sheetState.svelte.js';
+import { sheet } from './sheetState.svelte.js';
 
 export const {
   advance,
@@ -20,7 +20,7 @@ export const {
   rollCandidates,
 } = createGameActions({
   state: appState,
-  sheet: { ...sheet, state: sheet.sheetState },
+  sheet,
   save,
   toast,
   scrollTop: (smooth) =>
@@ -29,5 +29,4 @@ export const {
   uploadRetirement,
   analytics,
   trackPage,
-  motionOK,
 });

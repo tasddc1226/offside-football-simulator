@@ -10,7 +10,6 @@ import {
 import { motionOK } from './motion.js';
 
 export type { SheetButton, SheetView, Chip } from '@offside/app-core/sheets';
-export { matchRows } from '@offside/app-core/sheet-controller';
 
 export const sheetState = $state<SheetState>(initialSheetState());
 
@@ -20,15 +19,7 @@ export function registerSheetEl(el: HTMLElement | null) {
   sheetEl = el;
 }
 
-export const {
-  showSheet,
-  closeSheet,
-  playSteps,
-  playBlock,
-  playMinigame,
-  playDragShot,
-  playJudge,
-} = createSheetController(sheetState, {
+export const sheet = createSheetController(sheetState, {
   tick,
   painted: () =>
     new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
@@ -39,5 +30,6 @@ export const {
   focusFirstButton: () =>
     sheetEl?.querySelector<HTMLButtonElement>('[data-sheet="0"]')?.focus({ preventScroll: true }),
   preloadMinigame: () => import('./sheets/Minigame.svelte'),
-  motionOK,
+  motionOK: () => motionOK,
 });
+export const { showSheet, closeSheet } = sheet;

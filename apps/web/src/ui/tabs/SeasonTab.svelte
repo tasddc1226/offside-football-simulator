@@ -4,7 +4,8 @@
   import { teamRank, roundRange, TRAININGS, trainingLabel, trainingCard, trainingHelp, TRAINING_NOTE, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
   import type { GameState } from '@offside/game/types';
-  import { save, seasonLabel } from '../helpers.js';
+  import { save } from '../helpers.js';
+  import { seasonLabel } from '@offside/app-core/career';
   import { appState } from '../state.svelte.js';
   import PhaseReport from './PhaseReport.svelte';
   import LeagueTable from './LeagueTable.svelte';

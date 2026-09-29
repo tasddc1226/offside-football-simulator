@@ -42,7 +42,6 @@ let host: OutboxHost = {
 export function configureOutbox(h: OutboxHost): void {
   host = h;
 }
-const apiBaseUrl = () => host.baseUrl();
 
 const loadOutbox = (): OutboxItem[] => loadKey<OutboxItem[]>(OUTBOX_KEY) ?? [];
 /* 저장 실패(쿼터 등)는 무시한다 — 다음 enqueue에서 다시 시도된다. */
@@ -62,7 +61,7 @@ async function ensureProfile(): Promise<boolean> {
   // 페이지당 한 번만 확인한다 — 세션이 한번 확인되면 이후 flush는 추가 GET 없이 보낸다.
   if (profileReady) return true;
   try {
-    const res = await fetch(`${apiBaseUrl()}/v1/profile`, { method: 'GET', ...host.auth() });
+    const res = await fetch(`${host.baseUrl()}/v1/profile`, { method: 'GET', ...host.auth() });
     profileReady = res.ok;
     if (res.ok) host.onSession?.();
     return res.ok;
@@ -87,7 +86,7 @@ type SendResult = 'ok' | 'retry' | 'abort' | 'drop' | 'conflict';
 async function sendItem(item: OutboxItem): Promise<SendResult> {
   try {
     const { headers, ...auth } = host.auth();
-    const res = await fetch(`${apiBaseUrl()}${pathFor(item)}`, {
+    const res = await fetch(`${host.baseUrl()}${pathFor(item)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(item.body),

@@ -53,7 +53,7 @@ import { markDexSeen } from './dex.js';
 import { pushEvLog, seasonLabel } from './career.js';
 import { publicNameOf } from './namePublic.js';
 import { fmtValue, seasonLabelOf } from './format.js';
-import { matchRows, type SheetController, type SheetState } from './sheet-controller.js';
+import { matchRows, type SheetController } from './sheet-controller.js';
 import {
   draftBody,
   draftDpos,
@@ -66,7 +66,7 @@ import type { NatView, TourView } from './sheets.js';
 
 export interface GameHost {
   state: AppState;
-  sheet: SheetController & { state: SheetState };
+  sheet: SheetController;
   /** 진행 중 세이브(state.G)를 저장한다. */
   save(): void;
   toast(text: string): void;
@@ -82,8 +82,6 @@ export interface GameHost {
     retire(s: GameState): void;
   };
   trackPage(screen: Screen): void;
-  /** 감속 모션이 아니면 true — 원터치 미니게임을 띄운다(감속 모션이면 확률 판정). */
-  motionOK: boolean;
 }
 
 function natViews(nt: PhaseResult['nt']): NatView[] {
@@ -126,7 +124,7 @@ const SCOUT_SEED = 'ft_scout_seed';
 function scoutSeed(): number {
   const kept = loadKey<number>(SCOUT_SEED);
   if (typeof kept === 'number') return kept;
-  const seed = Math.floor(Math.random() * 0xffffffff);
+  const seed = freshSeed();
   saveKey(SCOUT_SEED, seed);
   return seed;
 }
@@ -256,7 +254,7 @@ export function createGameActions(host: GameHost) {
   }
 
   /** T-10-089: 원터치 미니게임으로 가릴 선택지의 장면(감속 모션이면 지금처럼 확률 판정). */
-  const activeMg = (c: Choice) => (host.motionOK && c.p ? c.mg : undefined);
+  const activeMg = (c: Choice) => (sheet.motionOK() && c.p ? c.mg : undefined);
 
   function choiceView(s: GameState, ev: EventDef, c: Choice, i: number) {
     const label = txt(c.label, s);
@@ -595,5 +593,3 @@ export function createGameActions(host: GameHost) {
     rollCandidates,
   };
 }
-
-export type GameActions = ReturnType<typeof createGameActions>;

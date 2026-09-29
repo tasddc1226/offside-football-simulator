@@ -1,7 +1,7 @@
 // ───────── 시트 진행 연출 (웹·앱 공용, T-11-002) ─────────
 // 아래에서 올라오는 시트 하나에 뷰 모델(sheets.ts)을 띄우고, 진행 단계·경기 중계·판정 바늘·미니게임을 시간에 맞춰
 // 채운다. 상태 객체는 클라이언트가 반응형으로 감싸 넘긴다(웹 Svelte `$state`, 앱 스토어) — 여기서는 그 객체를
-// 고치기만 한다. 뷰를 띄운 뒤에는 state.view를 다시 읽어 고친다(반응형 프록시를 거쳐야 화면이 바뀐다).
+// 고치기만 한다. 띄운 뷰는 showSheet이 돌려준 것(state.view를 다시 읽은 반응형 프록시)을 고쳐야 화면이 바뀐다.
 import { clamp, ri } from '@offside/game/rng';
 import { clubsIn } from '@offside/game/engine';
 import type { BlockResult, MatchGame } from '@offside/game/match';
@@ -9,6 +9,8 @@ import type { GameState } from '@offside/game/types';
 import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
 import type { SheetButton, SheetView, TickerRow } from './sheets.js';
+
+type ViewOf<K extends SheetView['kind']> = Extract<SheetView, { kind: K }>;
 
 export interface SheetState {
   open: boolean;
@@ -36,8 +38,8 @@ export interface SheetUi {
   focusFirstButton?(): void;
   /** 미니게임 장면을 미리 불러 둔다(웹 지연 로드). */
   preloadMinigame?(): Promise<unknown>;
-  /** 감속 모션이 아니면 true — 판정 바늘을 흔든다. */
-  motionOK: boolean;
+  /** 감속 모션이 아니면 true — 판정 바늘을 흔들고, 이벤트 선택지를 원터치 미니게임으로 가린다. */
+  motionOK(): boolean;
 }
 
 // ───────── 진행 연출 ─────────
@@ -64,6 +66,8 @@ function fakeScore(m: MatchGame): string {
   return `${gf}-${ga}`;
 }
 
+/** 탭 뒤 결과 장면(공이 날아가고 멈추는 연출)을 보여 주는 시간. */
+const MG_SCENE_MS = 1300;
 /** 건너뛰기로 남은 경기를 한 번에 채울 때 막대가 끝까지 차는 시간. */
 const SKIP_FILL_MS = 240;
 
@@ -85,11 +89,13 @@ export function matchRows(s: GameState, b: BlockResult): TickerRow[] {
 }
 
 export function createSheetController(state: SheetState, ui: SheetUi) {
-  function showSheet(view: SheetView, buttons: SheetButton[] = []) {
+  /** 뷰를 띄우고, 이후에 고칠 뷰(state에 들어간 반응형 사본)를 돌려준다. 넘긴 원본을 고치면 화면이 바뀌지 않는다. */
+  function showSheet<V extends SheetView>(view: V, buttons: SheetButton[] = []): V {
     state.view = view;
     state.buttons = buttons;
     state.open = true;
     void ui.tick().then(() => ui.afterShow?.());
+    return state.view as V;
   }
   function closeSheet() {
     state.open = false;
@@ -100,8 +106,14 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
   /** 단계 목록을 하나씩 켰다 끄며 진행률 막대를 채운다. 막대는 단계마다 그 단계 길이 동안 고르게 차오른다(T-10-123). */
   async function playSteps(title: string, steps: string[], ms = STEP_MS) {
     state.busy = true;
-    showSheet({ kind: 'steps', title, steps, active: -1, progress: 0, fill: ms });
-    const v = state.view as Extract<SheetView, { kind: 'steps' }>;
+    const v = showSheet<ViewOf<'steps'>>({
+      kind: 'steps',
+      title,
+      steps,
+      active: -1,
+      progress: 0,
+      fill: ms,
+    });
     await ui.painted();
     for (let i = 0; i < steps.length; i++) {
       v.active = i;
@@ -181,7 +193,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
         ];
         void ui.tick().then(() => ui.focusFirstButton?.());
       };
-      showSheet({
+      const v = showSheet<ViewOf<'block'>>({
         kind: 'block',
         eyebrow: head.eyebrow,
         title: head.title,
@@ -195,7 +207,6 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
         extras: [],
         skip: () => void finish(true),
       });
-      const v = state.view as Extract<SheetView, { kind: 'block' }>;
       const tickOnce = () => {
         // 시트가 다른 내용으로 바뀌었거나 닫혔으면 확인 없이 끝낸다.
         if (state.view !== v) {
@@ -217,18 +228,18 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
    * 결과 장면을 ms 동안 보여 준 뒤 judge의 결과를 돌려준다. 두 번째 입력(제한 시간과 탭이 겹칠 때)은 버린다.
    */
   function playScene<K extends SceneKind, I, R>(
-    view: (onInput: (x: I) => void) => Extract<SheetView, { kind: K }>,
-    judge: (x: I, v: Extract<SheetView, { kind: K }>) => R,
+    view: (onInput: (x: I) => void) => ViewOf<K>,
+    judge: (x: I, v: ViewOf<K>) => R,
     ms: number,
   ): Promise<R> {
     return new Promise((resolve) => {
       state.busy = true;
       let done = false;
-      showSheet(
+      const v = showSheet(
         view((x) => {
           if (done) return;
           done = true;
-          const r = judge(x, state.view as Extract<SheetView, { kind: K }>);
+          const r = judge(x, v);
           void wait(ms).then(() => {
             state.busy = false;
             resolve(r);
@@ -287,16 +298,12 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
       MG_SCENE_MS + 300,
     );
   }
-  /** 탭 뒤 결과 장면(공이 날아가고 멈추는 연출)을 보여 주는 시간. */
-  const MG_SCENE_MS = 1300;
-
   /** 성공 확률 막대 위에서 바늘이 흔들리다 실제 판정값(roll)에 멈춘다. */
   function playJudge(label: string, p: number, roll: number): Promise<void> {
     return new Promise((resolve) => {
       state.busy = true;
-      showSheet({ kind: 'judge', label, p, pos: 0 });
-      const v = state.view as Extract<SheetView, { kind: 'judge' }>;
-      const dur = ui.motionOK ? 1150 : 0,
+      const v = showSheet<ViewOf<'judge'>>({ kind: 'judge', label, p, pos: 0 });
+      const dur = ui.motionOK() ? 1150 : 0,
         t0 = performance.now();
       const frame = () => {
         const t = dur ? Math.min(1, (performance.now() - t0) / dur) : 1,
@@ -311,14 +318,24 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
               resolve();
               // 감속 모션이면 바늘이 흔들리지 않고 곧장 판정값에 서므로, 결과를 읽을 시간을 조금 더 준다.
             },
-            ui.motionOK ? 280 : 700,
+            ui.motionOK() ? 280 : 700,
           );
       };
       void ui.tick().then(frame);
     });
   }
 
-  return { showSheet, closeSheet, playSteps, playBlock, playMinigame, playDragShot, playJudge };
+  return {
+    state,
+    motionOK: ui.motionOK,
+    showSheet,
+    closeSheet,
+    playSteps,
+    playBlock,
+    playMinigame,
+    playDragShot,
+    playJudge,
+  };
 }
 
 export type SheetController = ReturnType<typeof createSheetController>;

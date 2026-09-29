@@ -1,9 +1,6 @@
-// ───────── 저장 로드 (형식 변환은 game/save.ts migrateSave) ─────────
-import { legendSnapshot, loadHOF, loadKey, saveKey } from '@offside/game/season';
-import { createRng, freshSeed, setActiveRng } from '@offside/game/rng';
-import type { GameState } from '@offside/game/types';
-import { loadSave } from '@offside/game/save';
-import { setLatestBalance, useCareerBalance } from '@offside/game/balance';
+// ───────── 저장 로드 (세이브 복원은 웹·앱 공용 @offside/app-core/career restoreGame) ─────────
+import { setLatestBalance } from '@offside/game/balance';
+import { restoreGame } from '@offside/app-core/career';
 import { cachedGet } from '../api/client.js';
 import type { BalanceConfig } from '@offside/contracts';
 import { appState } from './state.svelte.js';
@@ -24,35 +21,10 @@ function migrateLegacySave() {
 }
 
 export function loadGame() {
-  // T-10-009: 유저 클럽 이름을 먼저 CLUBS에 반영해야 아래 '현재 소속 최신 이름' 갱신이 커스텀 이름을 읽는다.
+  // T-10-009: 유저 클럽 이름을 먼저 CLUBS에 반영해야 세이브를 읽을 때 '현재 소속 최신 이름' 갱신이 커스텀 이름을 읽는다.
   loadClubCustom();
   migrateLegacySave();
-  const loaded = loadSave(loadKey<GameState>('ft_save'));
-  const G = loaded?.G ?? null;
-  if (loaded) {
-    const { G: s, newCid } = loaded;
-    // T-10-005: 은퇴 상세 스냅샷 도입 전에 은퇴한 선수. 세이브(ft_save)에 남아 있는 마지막 은퇴 선수만
-    // 되살릴 수 있다 — 명예의 전당 항목에 커리어 ID와 상세를 붙이고 서버에도 다시 올린다(기본 익명).
-    if (s.retired) {
-      const hof = loadHOF();
-      const h = hof.find((x) => !x.id && x.name === s.name && x.age === s.age && x.peak === s.peak);
-      if (h) {
-        h.id = s.cid;
-        h.detail = legendSnapshot(s);
-        saveKey('ft_hof', hof);
-        // cid를 방금 만든 선수는 서버에 커리어가 없다 — 시즌부터 보낸다(이미 있던 cid면 시즌을 다시 보내지
-        // 않는다: 시즌 PUT은 upsert라 올라가 있던 선택 로그를 빈 값으로 덮는다).
-        if (newCid) uploadLegacyRetirement(s, h);
-        else uploadRetirement(s.cid, h);
-      }
-    }
-    // 새로 만든 cid는 바로 저장한다 — 안 그러면 다음 부팅 때 또 다른 cid가 생겨 서버 기록과 어긋난다.
-    if (newCid) saveKey('ft_save', s);
-  } else {
-    setActiveRng(createRng(freshSeed()));
-  }
-  useCareerBalance(G);
-  appState.G = G;
+  appState.G = restoreGame({ uploadRetirement, uploadLegacyRetirement });
 }
 
 /** T-10-016. 앱을 열 때 한 번 최신 밸런스 버전을 받는다. 각 커리어는 다음 시즌 시작부터 이 값을 쓴다.

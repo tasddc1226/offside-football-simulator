@@ -10,8 +10,8 @@ export type { Chip };
 export type SheetButton = { label: string; cls?: string; fn: () => void };
 
 export type StoryTag = { name: string; stage: number; total: number };
-export type StoryNote = NonNullable<ResolveResult['story']>;
-export type NatGameView = { line: string; hl: boolean; detail: string };
+type StoryNote = NonNullable<ResolveResult['story']>;
+type NatGameView = { line: string; hl: boolean; detail: string };
 export type NatView = { name: string; comp: string; called: boolean; games: NatGameView[] };
 export type TourView = { name: string; stage: string; note: string; lines: string[] };
 export type TickerRow = {
