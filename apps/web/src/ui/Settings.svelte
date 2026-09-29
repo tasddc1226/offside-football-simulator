@@ -10,7 +10,7 @@
   import { isDark, setDark } from './theme.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
-  import { namePublicEnabled, setNamePublic } from './namePublic.js';
+  import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
   import BackupSettings from './BackupSettings.svelte';
 

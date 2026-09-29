@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { polyPoints } from './format.js';
+  import { polyPoints } from '@offside/app-core/format';
   const R = 40;
   const rings = [100, 66, 33].map((r) => polyPoints([r, r, r, r, r, r], R, R));
 </script>

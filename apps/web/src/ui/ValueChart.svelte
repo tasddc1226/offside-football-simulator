@@ -3,7 +3,7 @@
   // 화면에 들어오면 선이 왼쪽부터 그려지고 점이 차례로 올라온다(감속 모션이면 처음부터 다 보인다).
   // 시즌마다 세로 한 칸이 버튼이라, 칸을 누르면 그 시즌 값을 위에 보여 준다.
   import type { CareerRecord } from '@offside/game/types';
-  import { fmtValue, seasonLabelOf } from './format.js';
+  import { fmtValue, seasonLabelOf } from '@offside/app-core/format';
   import { peakValue, seasonValue } from '@offside/contracts/market-value';
   import { motionOK } from './motion.js';
 

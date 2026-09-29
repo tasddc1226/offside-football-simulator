@@ -1,6 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { clubById } from '@offside/game/clubs';
-import { isNationalTeam } from '@offside/game/nation';
 
 // vitest의 node 환경에는 localStorage가 없다 — season.test.ts와 같은 방식으로 메모리로 흉내낸다.
 class MemoryStorage {
@@ -165,12 +163,16 @@ describe('T-10-013 소유권 충돌', () => {
     await new Promise((r) => setTimeout(r, 0));
   };
 
-  // node의 globalThis는 EventTarget이 아니다 — dispatchEvent만 흉내 낸다.
-  const stubDispatch = () => {
-    const dispatch = vi.fn();
-    vi.stubGlobal('dispatchEvent', dispatch);
-    return () =>
-      dispatch.mock.calls.map(([e]) => [(e as CustomEvent).type, (e as CustomEvent).detail]);
+  // 클라이언트가 configureOutbox로 넣는 알림을 모은다.
+  const stubDispatch = async () => {
+    const calls: [string, unknown][] = [];
+    (await import('./outbox.js')).configureOutbox({
+      baseUrl: () => 'http://localhost:8787',
+      auth: () => ({ credentials: 'include' }),
+      onConflict: (items) => void calls.push(['offside:owner-conflict', items]),
+      onRetiredNumber: (ev) => void calls.push(['offside:retired-number', ev]),
+    });
+    return () => calls;
   };
 
   it('CAREER_OWNER_MISMATCH는 버리고 그 항목으로 이벤트를 알린다', async () => {
@@ -178,7 +180,7 @@ describe('T-10-013 소유권 충돌', () => {
       'fetch',
       vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(conflict('CAREER_OWNER_MISMATCH')),
     );
-    const dispatched = stubDispatch();
+    const dispatched = await stubDispatch();
     const { enqueueSeason } = await import('./outbox.js');
     enqueueSeason('33333333-3333-3333-3333-333333333333', 2027, seasonBody);
     await flush();
@@ -203,7 +205,7 @@ describe('T-10-013 소유권 충돌', () => {
       'fetch',
       vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(conflict('VALIDATION_FAILED')),
     );
-    const dispatched = stubDispatch();
+    const dispatched = await stubDispatch();
     const { enqueueSeason } = await import('./outbox.js');
     enqueueSeason('44444444-4444-4444-4444-444444444444', 2027, seasonBody);
     await flush();
@@ -329,57 +331,5 @@ describe('T-10-045 재시도·버림·한도', () => {
     expect(years).toHaveLength(100);
     expect(years[0]).toBe(1901);
     expect(years.at(-1)).toBe(2026);
-  });
-});
-
-describe('T-10-006 seasonPayload', () => {
-  // 실제 커리어를 은퇴까지 헤드리스로 돌려(fulltime-sim 랜덤 정책의 축약판) 모든 시즌 페이로드가
-  // 서버 계약을 통과하는지 본다. SEASON_PAYLOAD_CAREERS로 표본 수를 늘려 대량 검증할 수 있다.
-  it('은퇴까지 모든 시즌 페이로드가 CareerSeasonPayloadSchema를 통과한다', async () => {
-    const { CareerSeasonPayloadSchema } = await import('@offside/contracts');
-    const g = await import('@offside/game/index');
-    const { seasonPayload } = await import('./outbox.js');
-    const { createRng, setActiveRng, pick, ri } = await import('@offside/game/rng');
-    const N = Number(process.env.SEASON_PAYLOAD_CAREERS) || 12;
-    let seasons = 0;
-    let withComps = 0;
-    for (let i = 0; i < N; i++) {
-      setActiveRng(createRng(1000 + i));
-      const pos = pick(['FW', 'MF', 'DF', 'GK'] as const);
-      const s = g.newGame(
-        {
-          name: 'T',
-          number: 9,
-          pos,
-          foot: '오른발',
-          type: pick(g.TYPES[pos]).id,
-          trait: pick(g.TRAITS).id,
-        },
-        1000 + i,
-      );
-      for (let y = 0; y < 30 && !s.retired; y++) {
-        for (let ph = 0; ph <= g.LAST_PHASE; ph++) {
-          s.training = s.cond < 45 ? 'rest' : pick(g.ATTR_KEYS);
-          const { ev: e } = g.playPhase(s);
-          if (e) g.resolveChoice(s, e, ri(0, g.eventById(e)!.choices.length - 1));
-        }
-        const { rec } = g.endSeason(s);
-        const payload = seasonPayload(rec);
-        const parsed = CareerSeasonPayloadSchema.safeParse(payload);
-        expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
-        // T-10-066: 시즌 기록·페이로드는 그 시즌 클럽(상무 포함) id를 함께 남긴다.
-        expect(clubById(payload.clubId!)?.name).toBe(rec.club);
-        seasons++;
-        if (payload.comps?.length) withComps++;
-        const m = g.market(s);
-        if (!m.options.length || (m.canRetire && s.age >= 35)) g.retire(s);
-        else g.acceptOption(s, m.options[0]!);
-      }
-      if (!s.retired) g.retire(s);
-      // 대표팀 우승에는 클럽 id가 없고, 클럽 우승에는 있다.
-      for (const t of s.trophies) expect(!!t.clubId).toBe(!isNationalTeam(t.club));
-    }
-    expect(seasons).toBeGreaterThan(N * 5);
-    expect(withComps).toBeGreaterThan(0);
   });
 });

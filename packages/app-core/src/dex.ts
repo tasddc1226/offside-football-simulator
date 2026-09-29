@@ -2,14 +2,13 @@
 // 스토리·특별 이벤트는 여기 기록돼야 도감에서 열린다.
 import { EVENTS } from '@offside/game/events-data';
 import { loadKey, saveKey } from '@offside/game/season';
-import { appState } from './state.svelte.js';
+import type { GameState } from '@offside/game/types';
 
 const KEY = 'ft_dex';
 let seen: Set<string> | null = null;
 
 /** 처음 쓸 때 진행 중인 커리어에서 이미 겪은 이벤트를 옮겨 온다(도감 도입 전 기록). */
-function backfill(): string[] {
-  const G = appState.G;
+function backfill(G: GameState | null): string[] {
   if (!G) return [];
   const ids = Object.keys(G.flags.evSeen ?? {});
   for (const [story, st] of Object.entries(G.story ?? {})) {
@@ -18,11 +17,12 @@ function backfill(): string[] {
   return ids;
 }
 
-export function dexSeen(): Set<string> {
+/** G: 진행 중 커리어(처음 한 번 옛 기록을 옮겨 올 때만 읽는다). */
+export function dexSeen(G: GameState | null): Set<string> {
   if (!seen) {
     const raw = loadKey<unknown>(KEY);
     seen = new Set(
-      Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : backfill(),
+      Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : backfill(G),
     );
     if (!Array.isArray(raw) && seen.size) saveKey(KEY, [...seen]);
   }
@@ -30,8 +30,8 @@ export function dexSeen(): Set<string> {
 }
 
 /** 처음 겪은 이벤트면 기록하고 true. */
-export function markDexSeen(id: string): boolean {
-  const s = dexSeen();
+export function markDexSeen(id: string, G: GameState | null): boolean {
+  const s = dexSeen(G);
   if (s.has(id)) return false;
   s.add(id);
   saveKey(KEY, [...s]);

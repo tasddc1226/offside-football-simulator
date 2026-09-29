@@ -4,7 +4,7 @@
   import type { LoadStatus } from '../LoadState.svelte';
   import * as api from '../../api/admin.js';
   import type { AdminStats } from '../../api/admin.js';
-  import { kstDateTime as kst } from '../boardText.js';
+  import { kstDateTime as kst } from '@offside/app-core/boardText';
 
   const AUDIT: Record<string, string> = {
     PROFILE_DELETED: '프로필 삭제',

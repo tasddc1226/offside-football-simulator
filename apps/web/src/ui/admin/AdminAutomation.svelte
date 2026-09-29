@@ -6,7 +6,7 @@
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import * as api from '../../api/admin.js';
   import type { AutomationReport } from '../../api/admin.js';
-  import { kstDateTime as kst } from '../boardText.js';
+  import { kstDateTime as kst } from '@offside/app-core/boardText';
   import { openPublicLegendById } from '../legend.js';
 
   const REASON: Record<AutomationReason, string> = {

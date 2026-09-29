@@ -21,8 +21,8 @@
   import type { BalanceVersion } from '../../api/admin.js';
   import { EVENTS } from '@offside/game/events-data';
   import { toast } from '../helpers.js';
-  import { kstDateTime } from '../boardText.js';
-  import { withEulReul, withRo } from '../format.js';
+  import { kstDateTime } from '@offside/app-core/boardText';
+  import { withEulReul, withRo } from '@offside/app-core/format';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
 
   const STATUS = { draft: ['초안', 'warn'], active: ['적용 중', 'good'], archived: ['보관', ''] } as const;

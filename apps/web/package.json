@@ -17,6 +17,7 @@
     "deploy:production": "wrangler deploy -c wrangler.og.jsonc --env production && wrangler deploy --env production"
   },
   "dependencies": {
+    "@offside/app-core": "workspace:*",
     "@offside/contracts": "workspace:*",
     "@offside/game": "workspace:*",
     "@resvg/resvg-wasm": "2.6.2"

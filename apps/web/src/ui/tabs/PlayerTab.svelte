@@ -9,7 +9,7 @@
   import type { GameState } from '@offside/game/types';
   import { flagOf, isKorean, nationOf } from '@offside/game/nation';
   import { BODY_DEFAULT } from '@offside/contracts/body';
-  import { fmtValue } from '../format.js';
+  import { fmtValue } from '@offside/app-core/format';
   import AttrCard from '../AttrCard.svelte';
   import { retireAsk } from '../actions.js';
 

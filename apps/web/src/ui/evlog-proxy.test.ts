@@ -1,13 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 // @ts-expect-error -- $state가 쓰는 Svelte 내부 proxy(). 공개 타입 선언이 없다.
 import { proxy } from 'svelte/internal/client';
 import { newGame } from '@offside/game/engine';
 import { createRng, setActiveRng } from '@offside/game/rng';
 import type { GameState } from '@offside/game/types';
-import { pushEvLog } from './helpers.js';
-
-// helpers.ts가 읽는 룬 상태 모듈(.svelte.ts)은 이 테스트 환경에서 컴파일하지 않는다.
-vi.mock('./state.svelte.js', () => ({ appState: {}, toastState: {} }));
+import { pushEvLog } from '@offside/app-core/career';
 
 describe('pushEvLog', () => {
   // 앱은 게임 상태를 Svelte $state(깊은 프록시)로 들고 있다 — 새로 만든 버퍼의 첫 항목이 사라지면 안 된다.

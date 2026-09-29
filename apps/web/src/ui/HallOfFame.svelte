@@ -6,11 +6,11 @@
   // T-10-090 전체 보기는 '전체 / 시즌 1'을 고른다. 시즌 순위엔 개막 뒤 새로 만든 선수만 오른다(프리시즌 선수 제외).
   import type { HofSort, PublicHofEntry } from '@offside/contracts';
   import { SERVICE_SEASONS, serviceSeason } from '@offside/contracts/service-seasons';
-  import { kstMonthDayHour } from './boardText.js';
+  import { kstMonthDayHour } from '@offside/app-core/boardText';
   import { loadHOF } from '@offside/game/season';
   import { getHof } from '../api/client.js';
   import { openPublicLegend } from './legend.js';
-  import { anonName, fmtValue, iGa } from './format.js';
+  import { anonName, fmtValue, iGa } from '@offside/app-core/format';
   import { openHof } from './nav.js';
   import HofRow, { type RowStats } from './HofRow.svelte';
   import { appState } from './state.svelte.js';

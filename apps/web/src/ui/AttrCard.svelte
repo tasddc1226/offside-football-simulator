@@ -1,7 +1,7 @@
 <script lang="ts">
   // ui.ts attrCard() 포트 (292~314줄)
   import { ovr } from '@offside/game/attributes';
-  import { attrData } from './format.js';
+  import { attrData } from '@offside/app-core/format';
   import type { GameState } from '@offside/game/types';
   import Radar from './Radar.svelte';
 

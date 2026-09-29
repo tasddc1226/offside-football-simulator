@@ -20,7 +20,7 @@
   import TitleDex from './titles/TitleDex.svelte';
   import { mainTitle } from '@offside/game/titles';
   import { marketValue } from '@offside/game/season';
-  import { fmtValue } from './format.js';
+  import { fmtValue } from '@offside/app-core/format';
 
   // T-10-104: 이벤트·결산·이적시장 시트 본문도 게임 청크다 — 첫 시트가 뜨기 전에 미리 받아 둔다.
   void loadGameSheets().catch(() => {});

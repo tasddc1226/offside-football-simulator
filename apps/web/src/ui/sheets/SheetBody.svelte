@@ -4,7 +4,7 @@
   import Notice from './Notice.svelte';
   import Steps from './Steps.svelte';
   import { gameSheets, isGameSheet, loadGameSheets } from './gameSheets.svelte.js';
-  import type { SheetView } from './types.js';
+  import type { SheetView } from '@offside/app-core/sheets';
 
   let { v }: { v: SheetView } = $props();
 

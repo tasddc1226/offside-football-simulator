@@ -21,7 +21,7 @@
   import { uaSwiped } from './history.svelte.js';
   import { markNewsSeen, touchedAt } from './news.svelte.js';
   import { loadKey, saveKey } from '@offside/game/season';
-  import { BOARD_LABEL, dateOf, parseBody, postMeta } from './boardText.js';
+  import { BOARD_LABEL, dateOf, parseBody, postMeta } from '@offside/app-core/boardText';
   import Topbar from './Topbar.svelte';
   import NicknameForm from './NicknameForm.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';

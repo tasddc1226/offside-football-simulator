@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { SheetView } from './types.js';
+  import type { SheetView } from '@offside/app-core/sheets';
   let { v }: { v: Extract<SheetView, { kind: 'steps' }> } = $props();
 </script>
 

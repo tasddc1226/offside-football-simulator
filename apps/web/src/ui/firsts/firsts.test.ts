@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ServerFirst } from '@offside/contracts';
-import { kstParts } from '../boardText.js';
+import { kstParts } from '@offside/app-core/boardText';
 import { achievedList, byDay, holderLabel } from './firsts.js';
 
 const f = (id: string, achievedAt: string | null): ServerFirst => ({

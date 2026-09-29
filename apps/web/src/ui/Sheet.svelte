@@ -8,7 +8,7 @@
   import { fly } from 'svelte/transition';
   import { closeSheet, registerSheetEl, sheetState } from './sheetState.svelte.js';
   import SheetBody from './sheets/SheetBody.svelte';
-  import { sheetLabel } from './sheets/types.js';
+  import { sheetLabel } from '@offside/app-core/sheets';
   import { appState } from './state.svelte.js';
   import { buzz, dur } from './motion.js';
   import { lockScroll } from './scrollLock.js';
