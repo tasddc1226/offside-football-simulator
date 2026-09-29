@@ -19,6 +19,7 @@
     "./positions": "./src/positions.ts",
     "./owner-team": "./src/owner-team.ts",
     "./nations": "./src/nations.ts",
+    "./nations-en": "./src/nations-en.ts",
     "./body": "./src/body.ts"
   },
   "scripts": {

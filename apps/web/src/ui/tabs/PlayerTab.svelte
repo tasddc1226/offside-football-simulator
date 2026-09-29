@@ -47,7 +47,8 @@
 </section>
 
 <section class="card">
-  <div class="eyebrow">{nation.en}</div>
+  <!-- 영어 나라 이름은 첫 화면 번들에 싣지 않는다 — 외국 국적만 처음 볼 때 불러온다(T-10-096). -->
+  <div class="eyebrow">{#if isKorean(s)}Korea Republic{:else}{#await import('@offside/contracts/nations-en') then m}{m.NATION_EN[nation.code]}{/await}{/if}</div>
   <h2 style="margin-bottom:10px">국가대표</h2>
   <div class="totals">
     <div><b>{s.nat.caps}</b><span>A매치</span></div>
