@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { PlayStyle } from '@offside/contracts';
 import { STYLE_COUNTERS } from '@offside/contracts/play-style';
 import type { CareerRecord, LegendSource } from '@offside/game/types';
-import type { LegendView } from '../state.svelte.js';
-import { RN_DEFAULT, rnColors } from '@offside/app-core/rnStyle';
+import type { LegendView } from './state.js';
+import { RN_DEFAULT, rnColors } from './rnStyle.js';
 import { shareCardData } from './shareCard.js';
 
 const season = (

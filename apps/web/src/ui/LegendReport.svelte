@@ -20,6 +20,7 @@
   import { motionOK } from './motion.js';
   import ClubMark from './ClubMark.svelte';
   import { rnOf } from './retiredNumber.svelte.js';
+  import { EVENT_ICON as ICON, potVerdict as verdictOf, yearsOf } from '@offside/app-core/legendReport';
 
   // end: 리포트 맨 아래(다음 행동 버튼 등).
   const { v, end }: { v: LegendView; end?: Snippet } = $props();
@@ -40,9 +41,6 @@
   const peakV = $derived(d ? peakValue(d.career) : null);
   const maxAbs = $derived(breakdown ? Math.max(1, ...breakdown.items.map((i) => Math.abs(i.value))) : 1);
 
-  /** 2036 · 37 · 39 — 첫 해만 네 자리. */
-  const yearsOf = (ys: number[]) => ys.map((y, i) => (i ? String(y % 100).padStart(2, '0') : y)).join(' · ');
-  const ICON: Record<ChapterEvent['kind'], string> = { trophy: '🏆', mile: '◆', story: '✦' };
 
   // ───────── 스크롤 크레딧 (T-10-029 → T-10-062) ─────────
   // 장면(data-credit)이 화면 아래쪽 15%를 넘어 들어오면 한 번 올라온다. 그 전에는 자리만 차지하고 숨어 있다
@@ -85,13 +83,7 @@
   const rnGranted = $derived(rnv?.kind === 'granted' ? rnv : null);
 
   // T-10-073 은퇴 직후에만: 숨겨져 있던 실제 잠재력을 마지막 스카우트 평가와 견준다.
-  const potVerdict = $derived.by(() => {
-    if (!v.pot) return '';
-    const { gap } = v.pot;
-    if (gap > 0) return `스카우트 평가(${v.pot.scout})보다 큰 재능이었어요.`;
-    if (gap < 0) return `스카우트 평가(${v.pot.scout})만큼은 피지 못했어요.`;
-    return `스카우트의 눈이 정확했어요(평가 ${v.pot.scout}).`;
-  });
+  const potVerdict = $derived(verdictOf(v.pot));
 </script>
 
 {#snippet event(e: ChapterEvent, j: number)}

@@ -4,27 +4,8 @@
 // 처음엔 서서히 빨라지고 마지막 휘슬(finale)이 가운데쯤 오면 서서히 멈춘다. 끝에서 다시 누르면 처음부터.
 // 휠·터치·키·클릭(재생 버튼 말고)이 들어오면 그 자리에서 멈춘다.
 
-/** 흐르는 속도(px/초). */
-export const ROLL_SPEED = 64;
-const RAMP_MS = 700;
-/** 끝나기 이만큼(px) 전부터 느려진다. */
-const EASE_OUT = 160;
-
-/** 재생을 멈출 스크롤 위치: 마지막 휘슬 가운데가 화면 45% 높이에 올 때. 문서 끝을 넘지 않는다. */
-export function rollEnd(
-  finale: { top: number; height: number } | null,
-  vh: number,
-  maxY: number,
-): number {
-  return finale ? Math.max(0, Math.min(maxY, finale.top + finale.height / 2 - vh * 0.45)) : maxY;
-}
-
-/** 이번 프레임의 속도(px/초): 출발할 때 서서히 오르고, 끝 가까이에서 서서히 줄되 아주 멈추지는 않는다. */
-export function rollSpeed(sinceStart: number, left: number): number {
-  return (
-    ROLL_SPEED * Math.min(1, sinceStart / RAMP_MS) * Math.min(1, Math.max(0.15, left / EASE_OUT))
-  );
-}
+import { ROLL_SPEED, rollEnd, rollSpeed } from '@offside/app-core/creditRoll';
+export { ROLL_SPEED, rollEnd, rollSpeed };
 
 /** 재생을 시작하고 멈추는 함수를 돌려준다. 끝까지 가거나 사용자가 손대거나 stop을 부르면 onStop이 한 번 불린다. */
 export function rollCredits(root: HTMLElement, onStop: () => void): () => void {

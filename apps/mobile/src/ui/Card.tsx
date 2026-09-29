@@ -27,15 +27,18 @@ export function Card({
   children,
   style,
   gap = 10,
+  testID,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   gap?: number;
+  testID?: string;
 }) {
   const c = useColors();
   const shadow = useShadow();
   return (
     <View
+      testID={testID}
       style={[{ backgroundColor: c.surface, borderRadius: 16, padding: 18, gap }, shadow, style]}
     >
       {children}

@@ -10,7 +10,10 @@ import { closeSheet, navStack } from '../game/host';
 import { MainNav, hasMainNav } from '../ui/MainNav';
 import { BarBelow } from '../ui/Screen';
 import { Sheet } from '../ui/Sheet';
+import { TABBAR_H } from '../ui/TabBar';
 import { Toast } from '../ui/Toast';
+import { NewsBanner } from '../banners/NewsBanner';
+import { RetiredNumberAlert } from '../banners/RetiredNumberAlert';
 import { useColors } from '../theme/useColors';
 import Home from '../screens/home/Home';
 import Create from '../screens/create/Create';
@@ -70,8 +73,11 @@ export default function App() {
         <Current key={snap.screen === 'board' ? `board:${snap.board}` : snap.screen} />
       </BarBelow.Provider>
       {main ? <MainNav /> : null}
+      <NewsBanner />
+      <RetiredNumberAlert />
       <Sheet />
-      <Toast />
+      {/* 아래 탭 막대(메인·게임)가 있으면 그 위로 띄운다(웹 body:has(nav.tabs) .toast). */}
+      <Toast lift={main || snap.screen === 'game' ? TABBAR_H : 0} />
     </View>
   );
 }

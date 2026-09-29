@@ -34,6 +34,7 @@ export function Screen({
         scrollEventThrottle={64}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
         refreshControl={refreshControl}
         contentContainerStyle={[
           {

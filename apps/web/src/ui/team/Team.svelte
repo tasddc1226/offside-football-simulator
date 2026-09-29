@@ -16,7 +16,6 @@
     YOUTH_NAME,
     YOUTH_OVR,
     lineStrength,
-    slotFit,
     slotRating,
     teamOvr,
     type FormationId,
@@ -28,7 +27,6 @@
     fetchTeamMatches,
     playMatch,
     saveOwnerTeam,
-    type ClubAchievement,
     type ClubAchievementsResponse,
     type OwnerTeam,
     type OwnerTeamResponse,
@@ -36,8 +34,6 @@
     type TeamOpponent,
     type TeamPlayer,
   } from '@offside/app-core/api/team';
-  import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
-  import { ATTR_KEYS } from '@offside/game/data';
   import { localCareerNames } from '@offside/game/season';
   import { kstMonthDayTime } from '@offside/app-core/boardText';
   import { go } from '../nav.js';
@@ -54,6 +50,10 @@
   import TeamLive from './TeamLive.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import { num, recordText, signedNum } from '@offside/app-core/teamText';
+  import {
+    OUTCOME_TITLE, PICK_SORTS, achDone, achState, assignSlot, attrLine, autoFillSlots, outcomeOf as outcome,
+    pct, pickCandidates, playHintOf, type PickSort,
+  } from '@offside/app-core/teamOwner';
 
   let status = $state<LoadStatus>('loading');
   let needLogin = $state(false);
@@ -92,12 +92,7 @@
   let ach = $state<ClubAchievementsResponse | null>(null);
   let achStatus = $state<LoadStatus>('loading');
   /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
-  let pickSort = $state<'fit' | 'score' | 'peak'>('fit');
-  const PICK_SORTS = [
-    ['fit', '자리 실력'],
-    ['score', '레전드 점수'],
-    ['peak', '최고 OVR'],
-  ] as const;
+  let pickSort = $state<PickSort>('fit');
 
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = localCareerNames();
@@ -135,17 +130,7 @@
       return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p };
     }),
   );
-  const playHint = $derived(
-    !team
-      ? '팀을 저장하면 경기할 수 있어요.'
-      : dirty
-        ? '바꾼 편성을 저장해야 경기할 수 있어요.'
-        : team.slots.every((s) => s.careerId === null)
-          ? '은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.'
-          : matchesLeft === 0
-            ? '오늘 경기는 모두 치렀어요. 한국 시각 자정에 다시 열려요.'
-            : null,
-  );
+  const playHint = $derived(playHintOf(team, dirty, matchesLeft));
 
   function applyTeam(t: OwnerTeam | null) {
     team = t;
@@ -181,67 +166,20 @@
   onMount(() => void load());
 
   // ───────── 편성 ─────────
-  const candidates = $derived.by(() => {
-    if (picking === null) return [];
-    const slot = slotCodes[picking]!;
-    return players
-      .map((p) => {
-        const rating = slotRating(slot, p);
-        return {
-          p,
-          rating,
-          fit: slotFit(slot, p, rating),
-          at: slots.indexOf(p.careerId),
-        };
-      })
-      .sort((a, b) =>
-        pickSort === 'score'
-          ? (b.p.legendScore ?? 0) - (a.p.legendScore ?? 0) || b.rating - a.rating
-          : pickSort === 'peak'
-            ? b.p.peak - a.p.peak || b.rating - a.rating
-            : b.rating - a.rating || b.p.peak - a.p.peak,
-      );
-  });
-  /** 최고 시점 대표 능력치 한 줄(골키퍼는 골키퍼 능력치 이름). */
-  const attrLine = (p: TeamPlayer) =>
-    p.attrs
-      ? ATTR_KEYS.map((k) => `${(p.pos === 'GK' ? GK_ABBR : FACE_ABBR)[k]} ${p.attrs![k]}`).join(' · ')
-      : null;
+  const candidates = $derived(
+    picking === null ? [] : pickCandidates(slotCodes, picking, players, slots, pickSort),
+  );
 
   /** 고른 자리에 선수를 넣는다. 이미 다른 자리에 있던 선수면 두 자리를 맞바꾼다. */
   function assign(id: string | null) {
     if (picking === null) return;
-    const next = [...slots];
-    const from = id ? next.indexOf(id) : -1;
-    if (from >= 0) next[from] = next[picking] ?? null;
-    next[picking] = id;
-    slots = next;
+    slots = assignSlot(slots, picking, id);
     picking = null;
   }
 
-  /** 실력이 같으면 먼저 채울 자리(스트라이커·골키퍼·센터백 …). */
-  const FILL_ORDER = ['ST', 'GK', 'CB', 'CM', 'AM', 'DM', 'W', 'FB'];
-
   /** 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만). */
   function autoFill() {
-    const next: (string | null)[] = Array(LINEUP_SIZE).fill(null);
-    const order = slotCodes
-      .map((slot, i) => ({ slot, i }))
-      .sort((a, b) => FILL_ORDER.indexOf(a.slot) - FILL_ORDER.indexOf(b.slot));
-    for (;;) {
-      let best: { i: number; id: string; r: number } | null = null;
-      for (const { slot, i } of order) {
-        if (next[i] !== null) continue;
-        for (const p of players) {
-          if (next.includes(p.careerId)) continue;
-          const r = slotRating(slot, p);
-          if (r > YOUTH_OVR && (!best || r > best.r)) best = { i, id: p.careerId, r };
-        }
-      }
-      if (!best) break;
-      next[best.i] = best.id;
-    }
-    slots = next;
+    slots = autoFillSlots(slotCodes, players);
   }
 
   async function save() {
@@ -305,16 +243,6 @@
     ach = r.data;
     achStatus = 'ready';
   }
-  const achDone = (items: ClubAchievement[]) => items.filter((i) => i.done).length;
-  /** 업적 한 줄의 오른쪽 표시. */
-  const achState = (i: ClubAchievement) =>
-    i.level !== undefined
-      ? `${i.level}단계 · ${num(i.cur ?? 0)}${i.unit ?? ''}${i.next != null ? ` · NEXT ${num(i.next)}` : ' · 최고 단계'}`
-      : i.max !== undefined
-        ? `${i.cur ?? 0} / ${i.max}`
-        : i.done
-          ? '달성 완료'
-          : '미달성';
 
   async function loadHistory() {
     histStatus = 'loading';
@@ -326,14 +254,6 @@
     history = r.data.items;
     histStatus = 'ready';
   }
-
-  const outcome = (m: TeamMatch) => {
-    const mine = m[m.mine].goals;
-    const theirs = m[m.mine === 'home' ? 'away' : 'home'].goals;
-    return mine > theirs ? '승' : mine < theirs ? '패' : '무';
-  };
-  const OUTCOME_TITLE = { 승: '승리', 무: '무승부', 패: '패배' } as const;
-  const pct = (f: number) => `${Math.round(f * 100)}%`;
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 $effect가, 이미 그 화면이면 open이 다시 불러온다.
   const LOAD = {

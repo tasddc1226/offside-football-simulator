@@ -4,21 +4,14 @@
   // 시즌마다 세로 한 칸이 버튼이라, 칸을 누르면 그 시즌 값을 위에 보여 준다.
   import type { CareerRecord } from '@offside/game/types';
   import { fmtValue, seasonLabelOf } from '@offside/app-core/format';
-  import { peakValue, seasonValue } from '@offside/contracts/market-value';
+  import { peakValue } from '@offside/contracts/market-value';
+  import { valuePoints } from '@offside/app-core/legendReport';
   import { motionOK } from './motion.js';
 
   let { rows }: { rows: CareerRecord[] } = $props();
 
   const peakV = $derived(peakValue(rows));
-  const pts = $derived.by(() => {
-    const max = peakV?.value || 1;
-    const n = rows.length;
-    // 맨 위 20%는 최고 몸값 꼬리표 자리로 비워 둔다.
-    return rows.map((r, i) => {
-      const v = seasonValue(r);
-      return { r, v, x: n > 1 ? i / (n - 1) : 0.5, y: 100 - (v / max) * 80 };
-    });
-  });
+  const pts = $derived(valuePoints(rows, peakV?.value ?? 0));
   const line = $derived(pts.map((p, i) => `${i ? 'L' : 'M'}${p.x * 100},${p.y}`).join(''));
   let pick = $state<number | null>(null);
   const picked = $derived(pick == null ? null : pts[pick]);

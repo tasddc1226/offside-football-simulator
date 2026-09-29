@@ -105,6 +105,8 @@ export function Opt({
   style,
   disabled,
   children,
+  testID,
+  accessibilityLabel,
 }: {
   title?: string;
   sub?: string | undefined;
@@ -113,6 +115,8 @@ export function Opt({
   style?: StyleProp<ViewStyle>;
   disabled?: boolean;
   children?: ReactNode;
+  testID?: string;
+  accessibilityLabel?: string;
 }) {
   const c = useColors();
   const dark = useIsDark();
@@ -122,6 +126,8 @@ export function Opt({
       scale={0.985}
       onPress={onPress}
       disabled={disabled}
+      testID={testID}
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: !!selected, disabled: !!disabled }}
       style={[
         {

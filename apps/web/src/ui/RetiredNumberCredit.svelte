@@ -7,7 +7,7 @@
   import { checkRetiredNumber } from '@offside/app-core/api/client';
   import { recordRn } from './retiredNumber.svelte.js';
   import { isHofEligible } from '@offside/contracts/hof-rules';
-  import { totals } from '@offside/app-core/format';
+  import { rnClubStats, rnSlotOf } from '@offside/app-core/legendReport';
   import type { LegendView } from './state.svelte.js';
   import ClubMark from './ClubMark.svelte';
   import RnJersey from './RnJersey.svelte';
@@ -38,15 +38,8 @@
     });
   });
   const rn = $derived(rn0 ?? null);
-  const rnSlot = $derived(rn && rn.kind !== 'pending' && (rn.kind !== 'anonymous' || v.own) ? rn : null);
-  /** 결번 구단에서 뛴 시즌(옛 기록은 구단 id가 없어 이름으로 찾는다). */
-  const rnClub = $derived.by(() => {
-    if (rnSlot?.kind !== 'granted' || !v.d) return null;
-    const recs = v.d.career.filter((r) => (r.clubId ? r.clubId === rnSlot.clubId : r.club === rnSlot.club));
-    if (!recs.length) return null;
-    const t = totals({ career: recs });
-    return { from: recs[0]!.year, to: recs.at(-1)!.year, seasons: recs.length, apps: t.p, goals: t.g, assists: t.a };
-  });
+  const rnSlot = $derived(rnSlotOf(rn, v.own));
+  const rnClub = $derived(rnSlot?.kind === 'granted' ? rnClubStats(rnSlot, v.d) : null);
   const rnColors = $derived(rnStyle(rnSlot?.clubId));
 </script>
 

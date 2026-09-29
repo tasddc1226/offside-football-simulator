@@ -1,12 +1,7 @@
 // T-10-079 공유 이미지의 결번 유니폼 — 은퇴 세리머니(RnJersey.svelte)와 같은 도안(JERSEY)을 캔버스에 그린다.
 // SVG 필터 대신 캔버스로: 흐린 주름은 굵기를 줄여 가며 겹쳐 긋고, 원단 결은 시드 고정 노이즈 타일을 overlay로 깐다.
-import { JERSEY as J, type RnColors } from '@offside/app-core/rnStyle';
-
-export interface JerseyArt {
-  name: string;
-  number: number;
-  colors: RnColors;
-}
+import { JERSEY as J } from '@offside/app-core/rnStyle';
+import type { JerseyArt } from '@offside/app-core/shareCard';
 
 const rgba = (hex: string, a: number) => {
   const n = parseInt(hex.replace('#', ''), 16);
