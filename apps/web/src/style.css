@@ -1342,6 +1342,20 @@ textarea {
 .tabs-inner ~ .tab-home {
   order: 1;
 }
+/* T-10-120 iOS Chrome은 주소창·아래 도구막대가 접힐 때 position:fixed의 기준(레이아웃 뷰포트)이 늦게 따라와,
+   바가 화면 아래에서 떨어져 그 밑으로 페이지가 비친다(바가 떠 보인다). 바 배경을 아래로 길게 이어 그 틈을 바 색으로
+   채운다 — 뷰포트 밖이라 평소엔 안 보이고, 고정 요소라 문서 스크롤 길이도 늘리지 않는다. */
+.tabs::after,
+.action-bar.at-bottom::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 50vh;
+  background: inherit;
+  pointer-events: none;
+}
 /* 홈 하단 메뉴(기록실 · 소식 · 홈 · 구단주 · 설정)도 같은 5칸. 본문은 탭바만큼 아래 여백을 둔다. */
 body:has(.main-nav) .wrap {
   padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 20px);
