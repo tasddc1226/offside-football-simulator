@@ -3,22 +3,13 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
+import { pkceChallenge } from '../auth/base64url.js';
 import { appAuthTickets, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { extractCookie } from '../test/http.js';
 
 const VERIFIER = 'v'.repeat(43) + '-verifier';
 const NONCE = 'nonce-0123456789abcdef';
-
-async function s256(verifier: string): Promise<string> {
-  const digest = new Uint8Array(
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)),
-  );
-  return btoa(String.fromCharCode(...digest))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
 
 /** 네이티브 앱처럼: Origin 없이, Bearer로. */
 function appCall(ctx: TestD1, path: string, body: unknown, token?: string) {
@@ -52,26 +43,20 @@ async function profileOf(ctx: TestD1, token: string) {
   return ((await res.json()) as { data: { id: string; linked: Record<string, boolean> } }).data;
 }
 
-/** 앱의 구글 로그인 전 과정: 시작 → (시스템 브라우저) start → callback → 앱 스킴 주소. */
+/** 앱의 구글 로그인 전 과정: 시작(구글 인가 주소) → (시스템 브라우저) callback → 앱 스킴 주소. 쿠키는 없다. */
 async function googleViaBrowser(ctx: TestD1, token: string, sub: string, verifier = VERIFIER) {
   const startRes = await appCall(
     ctx,
     '/v1/auth/app/google',
-    { challenge: await s256(verifier) },
+    { challenge: await pkceChallenge(verifier) },
     token,
   );
   expect(startRes.status).toBe(200);
   const { url } = ((await startRes.json()) as { data: { url: string } }).data;
-  const ticket = new URL(url).searchParams.get('ticket')!;
-
-  const app = createApp();
-  const start = await app.request(url, {}, ctx.env);
-  expect(start.status).toBe(302);
-  const state = new URL(start.headers.get('Location')!).searchParams.get('state')!;
-  const oauth = `offside_oauth=${extractCookie(start.headers.get('Set-Cookie')!, 'offside_oauth')}`;
-  const cb = await app.request(
-    `/v1/auth/google/callback?${new URLSearchParams({ code: `fake:${sub}`, state })}`,
-    { headers: { Cookie: oauth } },
+  const ticket = new URL(url).searchParams.get('state')!;
+  const cb = await createApp().request(
+    `/v1/auth/google/callback?${new URLSearchParams({ code: `fake:${sub}`, state: ticket })}`,
+    {},
     ctx.env,
   );
   expect(cb.status).toBe(302);
@@ -192,13 +177,18 @@ describe('앱 로그인 (T-11-003)', () => {
     expect(ok.status).toBe(200);
   });
 
-  it('구글: 없는 티켓으로 시작하면 앱 스킴으로 오류를 돌려준다', async () => {
-    const res = await createApp().request('/v1/auth/google/start?ticket=nope', {}, ctx.env);
-    expect(res.status).toBe(302);
-    const loc = new URL(res.headers.get('Location')!);
-    expect(`${loc.protocol}//${loc.host}`).toBe('offside://auth');
-    expect(loc.searchParams.get('google')).toBe('error');
-    expect(loc.searchParams.get('reason')).toBe('session');
+  it('구글: 콜백 전(브라우저에서 로그인하기 전) 티켓은 교환할 수 없다', async () => {
+    const token = await newAppSession(ctx);
+    const start = await appCall(
+      ctx,
+      '/v1/auth/app/google',
+      { challenge: await pkceChallenge(VERIFIER) },
+      token,
+    );
+    const { url } = ((await start.json()) as { data: { url: string } }).data;
+    const ticket = new URL(url).searchParams.get('state')!;
+    const ex = await appCall(ctx, '/v1/auth/app/exchange', { ticket, verifier: VERIFIER }, token);
+    expect(ex.status).toBe(400);
   });
 
   it('구글: 만료된 티켓은 교환할 수 없다', async () => {

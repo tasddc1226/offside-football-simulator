@@ -11,31 +11,30 @@ import {
   AppSessionResponseSchema,
 } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
-import { appleVerifier } from '../auth/apple-id-token.js';
+import { verifyApple } from '../auth/apple-id-token.js';
+import { pkceChallenge, randomToken } from '../auth/base64url.js';
 import { selectGoogleOidc } from '../auth/google-oidc.js';
-import { generateOauthToken } from '../auth/oauth-cookie.js';
 import { issueSession, rotateSession } from '../auth/session.js';
-import { consumeTicket, createAppAuthTicket, findLiveTicket } from '../db/repos/appAuthTickets.js';
-import { getAttemptCount, recordAttempt, type AuthAttemptKind } from '../db/repos/authAttempts.js';
+import { createAppAuthTicket, takeReadyTicket } from '../db/repos/appAuthTickets.js';
+import { tryAttempt, type AuthAttemptKind } from '../db/repos/authAttempts.js';
 import { createProfile } from '../db/repos/profiles.js';
 import { getDb, type AppEnv, type SessionContext } from '../env.js';
 import { AppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
+import type { SignInOutcome } from '../profile/google-link.js';
 import { resolveAppleSignIn } from '../profile/apple-link.js';
 import { resolveRequestHostPair } from '../production-hosts.js';
-import { nowIso, ok, readBody } from './shared.js';
+import { GOOGLE_START_RATE_LIMIT_MAX } from './auth.js';
+import { clientIp, nowIso, ok, readBody } from './shared.js';
 
 /** IP당 시간당 — 앱 설치·재설치 한 번에 한 세션이면 넉넉하다. */
 const APP_SESSION_RATE_LIMIT_MAX = 20;
 const APPLE_SIGNIN_RATE_LIMIT_MAX = 30;
 
 async function limitByIp(c: Context<AppEnv>, kind: AuthAttemptKind, max: number, now: string) {
-  const db = getDb(c);
-  const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
-  if ((await getAttemptCount(db, kind, ip, now)) >= max) {
+  if (!(await tryAttempt(getDb(c), kind, clientIp(c), max, now))) {
     throw new AppError({ code: 'RATE_LIMITED', message: '잠시 후 다시 시도해 주세요.' });
   }
-  await recordAttempt(db, kind, ip, now);
 }
 
 const loginFailed = (reason: string) =>
@@ -54,14 +53,20 @@ function appSession(c: Context<AppEnv>): SessionContext {
   return session;
 }
 
-/** PKCE S256: base64url(SHA-256(verifier)). */
-async function s256(verifier: string): Promise<string> {
-  const digest = new Uint8Array(
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)),
-  );
-  let binary = '';
-  for (const byte of digest) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+/** 로그인한 프로필로 세션을 돌려 새 토큰을 준다(옛 토큰 폐기). */
+async function finishAppLogin(
+  c: Context<AppEnv>,
+  session: SessionContext,
+  outcome: SignInOutcome,
+  now: string,
+) {
+  const token = await rotateSession(getDb(c), {
+    oldSessionId: session.id,
+    profileId: outcome.profileId,
+    now,
+    channel: 'app',
+  });
+  return ok(c, AppAuthResultSchema, { token, result: outcome.kind });
 }
 
 export function registerAppAuthRoutes(app: Hono<AppEnv>): void {
@@ -74,6 +79,7 @@ export function registerAppAuthRoutes(app: Hono<AppEnv>): void {
     return ok(c, AppSessionResponseSchema, { token });
   });
 
+  // 구글 인가 주소를 바로 준다. state가 곧 티켓 id라 콜백은 쿠키 없이 티켓(세션·verifier)을 찾는다.
   app.post('/v1/auth/app/google', requireProfile, async (c) => {
     const session = appSession(c);
     const { challenge } = readBody(c, AppGoogleStartBodySchema);
@@ -86,43 +92,35 @@ export function registerAppAuthRoutes(app: Hono<AppEnv>): void {
         message: 'Google 로그인을 사용할 수 없습니다.',
       });
     }
-    const ticket = generateOauthToken();
+    const now = nowIso();
+    await limitByIp(c, 'GOOGLE_START', GOOGLE_START_RATE_LIMIT_MAX, now);
+    const state = randomToken();
+    const codeVerifier = randomToken();
     await createAppAuthTicket(getDb(c), {
-      id: ticket,
+      id: state,
       sessionId: session.id,
       challenge,
-      now: nowIso(),
+      codeVerifier,
+      now,
     });
-    const url = new URL('/v1/auth/google/start', c.req.url);
-    url.searchParams.set('ticket', ticket);
+    const url = oidc.createAuthorizationUrl(state, codeVerifier);
     return ok(c, AppGoogleStartResponseSchema, { url: url.toString() });
   });
 
   app.post('/v1/auth/app/exchange', requireProfile, async (c) => {
     const session = appSession(c);
     const body = readBody(c, AppAuthExchangeBodySchema);
-    const db = getDb(c);
     const now = nowIso();
-    const ticket = await findLiveTicket(db, body.ticket, now, false);
     // 티켓을 만든 세션만, 그 세션이 가진 verifier로만 바꿀 수 있다 — 스킴 주소를 가로채도 쓸 수 없다.
-    if (
-      !ticket ||
-      ticket.sessionId !== session.id ||
-      ticket.challenge !== (await s256(body.verifier))
-    ) {
-      throw loginFailed('ticket');
-    }
-    if (ticket.outcome === null || ticket.outcome === 'error' || ticket.outcomeProfileId === null) {
-      throw loginFailed(ticket.reason ?? 'error');
-    }
-    if (!(await consumeTicket(db, ticket.id, now))) throw loginFailed('ticket');
-    const token = await rotateSession(db, {
-      oldSessionId: session.id,
-      profileId: ticket.outcomeProfileId,
+    const ticket = await takeReadyTicket(getDb(c), {
+      id: body.ticket,
+      sessionId: session.id,
+      challenge: await pkceChallenge(body.verifier),
       now,
-      channel: 'app',
     });
-    return ok(c, AppAuthResultSchema, { token, result: ticket.outcome });
+    if (!ticket?.profileId) throw loginFailed('ticket');
+    const kind = ticket.profileId === session.profileId ? 'linked' : 'switched';
+    return finishAppLogin(c, session, { kind, profileId: ticket.profileId }, now);
   });
 
   app.post('/v1/auth/apple', requireProfile, async (c) => {
@@ -132,22 +130,15 @@ export function registerAppAuthRoutes(app: Hono<AppEnv>): void {
     await limitByIp(c, 'APPLE_SIGNIN', APPLE_SIGNIN_RATE_LIMIT_MAX, now);
     let claims;
     try {
-      claims = await appleVerifier(c.env)(body.identityToken, body.nonce);
+      claims = await verifyApple(c.env, body.identityToken, body.nonce);
     } catch {
       throw loginFailed('apple_token');
     }
-    const db = getDb(c);
-    const outcome = await resolveAppleSignIn(db, {
+    const outcome = await resolveAppleSignIn(getDb(c), {
       sub: claims.sub,
       currentProfileId: session.profileId,
       now,
     });
-    const token = await rotateSession(db, {
-      oldSessionId: session.id,
-      profileId: outcome.kind === 'linked' ? session.profileId : outcome.profileId,
-      now,
-      channel: 'app',
-    });
-    return ok(c, AppAuthResultSchema, { token, result: outcome.kind });
+    return finishAppLogin(c, session, outcome, now);
   });
 }

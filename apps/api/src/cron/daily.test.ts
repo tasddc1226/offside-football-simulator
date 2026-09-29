@@ -50,7 +50,7 @@ describe('T-10-070 매일 정리', () => {
     await run(ses, 'ses_revoked_not_expired', ago(90 * DAY), later(DAY), ago(40 * DAY));
     await run(ses, 'ses_expired_recently', ago(40 * DAY), ago(DAY), null);
     await run(ses, 'ses_live', ago(DAY), later(DAY), null);
-    const tkt = `INSERT INTO app_auth_tickets (id, session_id, challenge, created_at, expires_at) VALUES (?1, 'ses_live', 'c', ?2, ?2)`;
+    const tkt = `INSERT INTO app_auth_tickets (id, session_id, challenge, code_verifier, expires_at) VALUES (?1, 'ses_live', 'c', 'v', ?2)`;
     await run(tkt, 'tkt_old', ago(2 * DAY));
     await run(tkt, 'tkt_new', ago(HOUR));
 

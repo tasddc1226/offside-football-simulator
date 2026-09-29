@@ -5,6 +5,7 @@ import type { Context } from 'hono';
 import { generateCookie, getCookie } from 'hono/cookie';
 import type { Db } from '../db/client.js';
 import { sha256Hex } from '../db/hash.js';
+import { randomToken } from './base64url.js';
 import { newId } from '../db/ids.js';
 import { runBatch } from '../db/repos/batch.js';
 import { createSession, type SessionChannel, type SessionRecord } from '../db/repos/sessions.js';
@@ -15,16 +16,6 @@ export const SESSION_COOKIE_NAME = 'offside_session';
 
 /** 설계 결정 1: 만료는 발급 시각 + 365일 고정. */
 const SESSION_MAX_AGE_SECONDS = 31536000;
-
-function randomToken(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
 
 export async function issueSession(
   db: Db,

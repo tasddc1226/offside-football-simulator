@@ -6,6 +6,9 @@ import { AppError, parseWithAppError, type SchemaLike } from '../errors.js';
 
 export const nowIso = () => new Date().toISOString();
 
+/** 속도 제한의 주체 — Cloudflare가 넣는 접속 IP. */
+export const clientIp = (c: Context<AppEnv>) => c.req.header('CF-Connecting-IP') ?? 'unknown';
+
 /** 사람마다 다른 응답(엣지·브라우저 캐시 금지). */
 export const NO_STORE = 'private, no-store';
 

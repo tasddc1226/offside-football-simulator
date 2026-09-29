@@ -1,6 +1,6 @@
 import { ADMIN_NICKNAME } from '@offside/contracts';
 import type { Context } from 'hono';
-import { getProfile } from '../db/repos/profiles.js';
+import { getProfile, hasAccount } from '../db/repos/profiles.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { resolveSession } from '../middleware/session.js';
@@ -30,7 +30,7 @@ export function commentIdentity(
   profile: IdentityProfile | undefined,
   adminEmails: string | undefined,
 ): CommentIdentity {
-  if (!profile || profile.deletedAt || (profile.googleSub ?? profile.appleSub) === null)
+  if (!profile || profile.deletedAt || !hasAccount(profile))
     return { google: false, admin: false, nickname: null };
   const admin = !!profile.googleSub && isAdminEmail(adminEmails, profile.email);
   return { google: true, admin, nickname: admin ? ADMIN_NICKNAME : profile.nickname };

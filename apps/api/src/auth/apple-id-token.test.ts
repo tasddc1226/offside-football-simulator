@@ -1,21 +1,20 @@
 // T-11-003 Sign in with Apple 신원 토큰 검증 — 테스트용 RSA 키로 서명한 토큰으로 서명·클레임 검사를 확인한다.
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { sha256Hex } from '../db/hash.js';
+import { bytesToBase64Url } from './base64url.js';
 import { APPLE_ISSUER, verifyAppleIdToken, type AppleJwk } from './apple-id-token.js';
 
 const AUD = 'com.offsidelab.app';
 const NOW = Date.parse('2026-10-01T00:00:00Z');
+const NONCE = 'raw-nonce-123456';
 
-const b64url = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-const b64urlJson = (v: unknown) => b64url(new TextEncoder().encode(JSON.stringify(v)));
+const b64urlJson = (v: unknown) => bytesToBase64Url(new TextEncoder().encode(JSON.stringify(v)));
 
 let keys: CryptoKeyPair;
 let jwk: AppleJwk;
 const jwks = async () => [jwk];
+const verify = (token: string, nonce = NONCE) =>
+  verifyAppleIdToken(token, { audience: AUD, now: NOW, nonce, jwks });
 
 async function sign(claims: Record<string, unknown>, header: Record<string, unknown> = {}) {
   const h = b64urlJson({ alg: 'RS256', kid: 'k1', ...header });
@@ -24,6 +23,7 @@ async function sign(claims: Record<string, unknown>, header: Record<string, unkn
     aud: AUD,
     exp: NOW / 1000 + 600,
     sub: 'apple-sub-1',
+    nonce: await sha256Hex(NONCE),
     ...claims,
   });
   const sig = new Uint8Array(
@@ -33,7 +33,7 @@ async function sign(claims: Record<string, unknown>, header: Record<string, unkn
       new TextEncoder().encode(`${h}.${p}`),
     ),
   );
-  return `${h}.${p}.${b64url(sig)}`;
+  return `${h}.${p}.${bytesToBase64Url(sig)}`;
 }
 
 describe('verifyAppleIdToken', () => {
@@ -52,14 +52,8 @@ describe('verifyAppleIdToken', () => {
   });
 
   it('올바른 토큰이면 sub·email을 돌려준다', async () => {
-    const nonce = 'raw-nonce-123456';
-    const token = await sign({
-      email: 'a@privaterelay.appleid.com',
-      nonce: await sha256Hex(nonce),
-    });
-    await expect(
-      verifyAppleIdToken(token, { audience: AUD, now: NOW, nonce, jwks }),
-    ).resolves.toEqual({
+    const token = await sign({ email: 'a@privaterelay.appleid.com' });
+    await expect(verify(token)).resolves.toEqual({
       sub: 'apple-sub-1',
       email: 'a@privaterelay.appleid.com',
     });
@@ -71,30 +65,27 @@ describe('verifyAppleIdToken', () => {
     ['exp', { exp: NOW / 1000 - 1 }],
     ['sub', { sub: '' }],
   ])('%s가 틀리면 거절한다', async (_, claims) => {
-    const token = await sign(claims);
-    await expect(verifyAppleIdToken(token, { audience: AUD, now: NOW, jwks })).rejects.toThrow();
+    await expect(verify(await sign(claims))).rejects.toThrow();
   });
 
   it('nonce가 다르면 거절한다', async () => {
-    const token = await sign({ nonce: await sha256Hex('other') });
-    await expect(
-      verifyAppleIdToken(token, { audience: AUD, now: NOW, nonce: 'raw', jwks }),
-    ).rejects.toThrow(/nonce/);
+    await expect(verify(await sign({}), 'other-nonce')).rejects.toThrow(/nonce/);
   });
 
-  it('서명이 바뀌었거나 모르는 kid면 거절한다', async () => {
+  it('서명이 바뀌었거나 모르는 kid·알고리즘이면 거절한다', async () => {
+    const [h, , sig] = (await sign({})).split('.');
+    const forged = `${h}.${b64urlJson({ iss: APPLE_ISSUER, aud: AUD, exp: NOW / 1000 + 600, sub: 'x' })}.${sig}`;
+    await expect(verify(forged)).rejects.toThrow(/서명/);
+    await expect(verify(await sign({}, { kid: 'k2' }))).rejects.toThrow(/공개키/);
+    await expect(verify(await sign({}, { alg: 'HS256' }))).rejects.toThrow(/헤더/);
+  });
+
+  it('모르는 kid면 키 목록을 한 번 다시 받는다(Apple 키 교체)', async () => {
+    const fetchKeys = vi.fn(async (_now: number, refresh?: boolean) => (refresh ? [jwk] : []));
     const token = await sign({});
-    const [h, p] = token.split('.');
-    const forged = `${h}.${b64urlJson({ iss: APPLE_ISSUER, aud: AUD, exp: NOW / 1000 + 600, sub: 'x' })}.${token.split('.')[2]}`;
-    await expect(verifyAppleIdToken(forged, { audience: AUD, now: NOW, jwks })).rejects.toThrow(
-      /서명/,
-    );
-    expect(p).toBeTruthy();
-    const unknownKid = await sign({}, { kid: 'k2' });
-    await expect(verifyAppleIdToken(unknownKid, { audience: AUD, now: NOW, jwks })).rejects.toThrow(
-      /공개키/,
-    );
-    const hs = await sign({}, { alg: 'HS256' });
-    await expect(verifyAppleIdToken(hs, { audience: AUD, now: NOW, jwks })).rejects.toThrow(/헤더/);
+    await expect(
+      verifyAppleIdToken(token, { audience: AUD, now: NOW, nonce: NONCE, jwks: fetchKeys }),
+    ).resolves.toMatchObject({ sub: 'apple-sub-1' });
+    expect(fetchKeys.mock.calls.map((call) => call[1])).toEqual([undefined, true]);
   });
 });

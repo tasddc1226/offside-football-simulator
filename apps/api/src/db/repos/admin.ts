@@ -3,6 +3,7 @@ import { and, desc, eq, isNull, lt, sql, type SQL } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import type { Db } from '../client.js';
 import { insertAuditLog } from './auditLog.js';
+import { accountLinkedSql } from './profiles.js';
 import { auditLog, boardComments, boardPosts, careers, profiles } from '../schema.js';
 
 // T-10-016 운영 도구. 관리자만 드물게 여는 화면이라 집계는 테이블을 한 번씩 훑는다(쿼리당 한 번,
@@ -44,10 +45,7 @@ export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats,
     db
       .select({
         total: count('total'),
-        linked: sumOf(
-          sql`(${profiles.googleSub} is not null or ${profiles.appleSub} is not null)`,
-          'linked',
-        ),
+        linked: sumOf(sql`${accountLinkedSql()}`, 'linked'),
         new24h: since(profiles.createdAt, t24, 'new24h'),
         new7d: since(profiles.createdAt, t7, 'new7d'),
         active24h: since(profiles.lastSeenAt, t24, 'active24h'),

@@ -179,6 +179,13 @@ export async function linkGoogleAccount(
 }
 
 /** API-AUTH-006: `google_sub`·`email`·`linked_at`을 비운다. */
+export async function unlinkGoogleAccount(db: Db, id: string): Promise<void> {
+  await db
+    .update(profiles)
+    .set({ googleSub: null, email: null, linkedAt: null })
+    .where(eq(profiles.id, id));
+}
+
 export async function getProfileByAppleSub(
   db: Db,
   sub: string,
@@ -196,12 +203,5 @@ export async function linkAppleAccount(
   await db
     .update(profiles)
     .set({ appleSub: input.appleSub, appleLinkedAt: input.linkedAt })
-    .where(eq(profiles.id, id));
-}
-
-export async function unlinkGoogleAccount(db: Db, id: string): Promise<void> {
-  await db
-    .update(profiles)
-    .set({ googleSub: null, email: null, linkedAt: null })
     .where(eq(profiles.id, id));
 }
