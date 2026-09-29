@@ -32,7 +32,7 @@ import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
 import { titleView } from '../game/titles.js';
 import type { Choice, EventDef, EventLogEntry, GameState, MarketResult } from '../game/types.js';
-import { appState, randomName, randomNumber } from './state.svelte.js';
+import { appState, draftDpos, randomName, randomNumber } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { publicNameOf } from './namePublic.js';
 import { seasonLabelOf } from './format.js';
@@ -475,7 +475,11 @@ export function startCareer(name: string, number: number, presetAttrs?: Record<A
   const finalNumber = clamp(+number || randomNumber(), 1, 99);
   const seed = freshSeed();
   setActiveRng(createRng(seed));
-  appState.G = newGame({ ...appState.C, name: finalName, number: finalNumber }, seed, presetAttrs);
+  appState.G = newGame(
+    { ...appState.C, dpos: draftDpos(appState.C), name: finalName, number: finalNumber },
+    seed,
+    presetAttrs,
+  );
   save();
   appState.screen = 'game';
   appState.tab = 'season';
@@ -487,7 +491,7 @@ export function startCareer(name: string, number: number, presetAttrs?: Record<A
 
 // ───────── 후보 선수 카드 (T-10-002) ─────────
 export function rollCandidates() {
-  appState.candidates = generateCandidates(appState.C.pos, appState.C.focus);
+  appState.candidates = generateCandidates(appState.C.pos, appState.C.focus, draftDpos(appState.C));
   appState.candidatesOpen = [false, false, false];
   appState.candidatePick = null;
 }

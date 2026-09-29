@@ -1,0 +1,1 @@
+ALTER TABLE `careers` ADD `peak_profile` text;

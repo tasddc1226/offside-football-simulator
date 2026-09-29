@@ -11,9 +11,9 @@
   import { openLocalLegend, openPublicLegend } from './legend.js';
   import { anonName } from './format.js';
   import HofRow, { type RowStats } from './HofRow.svelte';
-  import type { POS } from '../game/data.js';
+  import type { DetailPos, POS } from '../game/data.js';
 
-  type MineRow = { key: string; name: string; pos: keyof typeof POS; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; open: () => void };
+  type MineRow = { key: string; name: string; pos: keyof typeof POS; dpos?: DetailPos | null | undefined; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; open: () => void };
   /** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다. */
   const SHOW = 10;
 
@@ -22,6 +22,7 @@
     key: h.id ?? h.name + i,
     name: h.name,
     pos: h.pos,
+    dpos: h.dpos,
     club: h.lastClub,
     clubId: h.lastClubId,
     rn: h.rn?.kind === 'granted' ? h.rn.number : null,
@@ -34,6 +35,7 @@
     key: e.id,
     name: e.name ?? anonName(e.pos, e.number),
     pos: e.pos,
+    dpos: e.dpos,
     club: e.lastClub,
     clubId: e.lastClubId,
     rn: e.retiredNumber?.number,
@@ -97,7 +99,7 @@
     </p>
     {#each shown as r, i (r.key)}
       <button class="hof-row" data-my-player={i} onclick={r.open}>
-        <HofRow rank={i} name={r.name} pos={r.pos} club={r.club} clubId={r.clubId} rn={r.rn} tag={r.tag} t={r.stats} titleId={r.title} />
+        <HofRow rank={i} name={r.name} pos={r.pos} dpos={r.dpos} club={r.club} clubId={r.clubId} rn={r.rn} tag={r.tag} t={r.stats} titleId={r.title} />
       </button>
     {:else}
       <p class="empty">아직 은퇴한 선수가 없어요. 첫 커리어를 끝까지 뛰어 보세요.</p>

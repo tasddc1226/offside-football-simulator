@@ -6,7 +6,7 @@
 // 다시 뽑든 메인 게임 RNG 스트림은 전혀 움직이지 않고, newGame()에 최종 선택한 분포를
 // presetAttrs로 넘기면(엔진 쪽 ri(-4,4) 루프를 건너뛰므로) fulltime-sim이 쓰는 newGame() 기본
 // 경로(코치/시뮬레이터가 직접 호출하는 경로, presetAttrs 없음)의 RNG 소비 순서도 그대로다.
-import { ATTR_KEYS, POS, focusMod, type AttrKey, type Pos } from './data.js';
+import { ATTR_KEYS, DPOS, POS, focusMod, type AttrKey, type DetailPos, type Pos } from './data.js';
 
 // 로컬(비영속) mulberry32 — game/rng.ts의 활성 RNG와 완전히 분리되어 있다.
 function localRng(seed: number): () => number {
@@ -30,10 +30,16 @@ export interface Candidate {
 const CLAMP = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** pos/주력 능력치에 대한 "기준 분포"(랜덤 없음) — 세 후보 모두 이 총합을 공유한다. */
-export function baseline(pos: Pos, focus: readonly AttrKey[]): Record<AttrKey, number> {
+export function baseline(
+  pos: Pos,
+  focus: readonly AttrKey[],
+  dpos?: DetailPos | null,
+): Record<AttrKey, number> {
   const mod = focusMod(pos, focus);
+  const dmod = dpos ? DPOS[dpos].mod : {};
   const out = {} as Record<AttrKey, number>;
-  for (const k of ATTR_KEYS) out[k] = CLAMP(POS[pos].base[k] + (mod[k] ?? 0), 20, 70);
+  for (const k of ATTR_KEYS)
+    out[k] = CLAMP(POS[pos].base[k] + (mod[k] ?? 0) + (dmod[k] ?? 0), 20, 70);
   return out;
 }
 
@@ -60,8 +66,13 @@ function redistribute(
 }
 
 /** 후보 3명을 만든다. 세 후보의 attrs 합계는 모두 같다(baseline 총합과 동일) — 분포만 다르다. */
-export function generateCandidates(pos: Pos, focus: readonly AttrKey[], n = 3): Candidate[] {
-  const base = baseline(pos, focus);
+export function generateCandidates(
+  pos: Pos,
+  focus: readonly AttrKey[],
+  dpos?: DetailPos | null,
+  n = 3,
+): Candidate[] {
+  const base = baseline(pos, focus, dpos);
   const rand = localRng((Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0);
   const out: Candidate[] = [];
   for (let i = 0; i < n; i++) {

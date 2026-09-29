@@ -1,0 +1,7 @@
+content_id,content_axis,planned_day,status,post_url,published_at_kst,utm_campaign,utm_content,asset_verified,release_verified,permission_verified,views_24h,likes_24h,replies_24h,reposts_24h,views_72h,link_clicks_72h,attributed_sessions_72h,start_sessions_72h,start_users,first_season_users_24h,d1_eligible_users,d1_return_users,d7_eligible_users,d7_return_users,work_minutes,observed_at_kst,missing_reason,confounders,decision
+s1_story_01,story,D0,candidate,,,season1_launch,s1_story_01,,,,,,,,,,,,,,,,,,,,not_published_not_measured,,
+s1_choice_01,choice,D+3,candidate,,,season1_launch,s1_choice_01,,,,,,,,,,,,,,,,,,,,not_published_not_measured,,
+s1_update_01,update,D+6,candidate,,,season1_launch,s1_update_01,,,,,,,,,,,,,,,,,,,,not_published_not_measured,,
+s1_story_02,story,D+8,candidate,,,season1_launch,s1_story_02,,,,,,,,,,,,,,,,,,,,not_published_not_measured,,
+s1_choice_02,choice,D+10,candidate,,,season1_launch,s1_choice_02,,,,,,,,,,,,,,,,,,,,not_published_not_measured,,
+s1_update_02,update,D+13,candidate,,,season1_launch,s1_update_02,,,,,,,,,,,,,,,,,,,,not_published_not_measured,,
