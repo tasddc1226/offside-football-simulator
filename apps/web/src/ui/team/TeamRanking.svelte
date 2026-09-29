@@ -6,6 +6,7 @@
   import Laurel from '../Laurel.svelte';
   import { appState } from '../state.svelte.js';
   import TeamProfile from './TeamProfile.svelte';
+  import { num as n, recordText } from './teamText.js';
 
   const MEDAL = ['gold', 'silver', 'bronze'];
   const SORTS: [TeamRankSort, string][] = [
@@ -30,7 +31,6 @@
   });
 
   const pages = $derived(data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1);
-  const n = (v: number) => v.toLocaleString('ko-KR');
   function goPage(p: number) {
     page = p;
     window.scrollTo(0, 0);
@@ -74,7 +74,7 @@
           {/if}
           <div>
             <b>{t.name}</b> <span class="muted fs-sm">· {t.manager}</span>
-            <div class="muted fs-xs">{t.formation} · {t.record.w}승 {t.record.d}무 {t.record.l}패 · OVR {t.ovr}{t.likes ? ` · ♥ ${n(t.likes)}` : ''}</div>
+            <div class="muted fs-xs">{t.formation} · {recordText(t.record)} · OVR {t.ovr}{t.likes ? ` · ♥ ${n(t.likes)}` : ''}</div>
           </div>
           <div class="num hof-value">{sort === 'rating' ? n(t.rating) : t.ovr}</div>
         </button>

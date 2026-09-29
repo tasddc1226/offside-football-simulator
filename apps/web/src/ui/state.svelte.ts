@@ -5,7 +5,7 @@
 import type { HofSort, RetiredNumberResult } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason } from '@offside/contracts/service-seasons';
-import { detailPosOpen, DETAIL_GROUP } from '@offside/contracts/positions';
+import { detailPosOpen, dposFor } from '@offside/contracts/positions';
 import type { OutboxItem } from '../game/outbox.js';
 import type { AttrKey, DetailPos, Pos } from '../game/data.js';
 import { pick, ri } from '../game/rng.js';
@@ -71,7 +71,7 @@ export const detailOpenNow = (): boolean => detailPosOpen(new Date().toISOString
 
 /** 새 커리어에 넣을 세부 포지션 — 프리시즌이거나 큰 포지션과 어긋나면 넣지 않는다. */
 export const draftDpos = (c: Pick<DraftCharacter, 'pos' | 'dpos'>): DetailPos | undefined =>
-  c.dpos && DETAIL_GROUP[c.dpos] === c.pos && detailOpenNow() ? c.dpos : undefined;
+  (detailOpenNow() && dposFor(c.pos, c.dpos)) || undefined;
 
 export function randomName(): string {
   return pick(SURNAMES) + pick(GIVEN);

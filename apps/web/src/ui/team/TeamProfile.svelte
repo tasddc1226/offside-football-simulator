@@ -8,10 +8,12 @@
     viewTeam,
     type TeamProfile,
   } from '../../api/team.js';
-  import { loadHOF } from '../../game/season.js';
+  import { localCareerNames } from '../../game/season.js';
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
+  import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
+  import { num as n, recordText } from './teamText.js';
 
   let { id, onback }: { id: string; onback: () => void } = $props();
 
@@ -22,7 +24,7 @@
   let liking = $state(false);
 
   // 내 팀이면 이 기기에 남은 (비공개) 이름으로 보여 준다.
-  const localNames = new Map(loadHOF().flatMap((h) => (h.id ? [[h.id, h.name] as const] : [])));
+  const localNames = localCareerNames();
 
   async function load() {
     status = 'loading';
@@ -57,13 +59,6 @@
       youth: s.careerId === null,
     })) ?? [],
   );
-  const n = (v: number) => v.toLocaleString('ko-KR');
-  const LINE_CELLS = [
-    ['atk', '공격'],
-    ['mid', '중원'],
-    ['def', '수비'],
-    ['gk', '골문'],
-  ] as const;
 </script>
 
 <LoadState {status} failText="팀을 불러오지 못했어요." retry={load}>
@@ -83,7 +78,7 @@
       </div>
       <dl class="tp-stats">
         <div><dt>팀 OVR</dt><dd>{team.ovr}</dd></div>
-        <div><dt>전적</dt><dd>{team.record.w}승 {team.record.d}무 {team.record.l}패</dd></div>
+        <div><dt>전적</dt><dd>{recordText(team.record)}</dd></div>
         <div><dt>득실</dt><dd>{team.goals.for} : {team.goals.against}</dd></div>
       </dl>
     </section>
@@ -91,11 +86,7 @@
     <TeamPitch formation={team.formation} {cells} />
 
     <section class="card stack" style="gap:12px">
-      <dl class="tp-lines">
-        {#each LINE_CELLS as [k, label] (k)}
-          <div><dt>{label}</dt><dd>{team.lines[k]}</dd></div>
-        {/each}
-      </dl>
+      <TeamLines lines={team.lines} />
       <div class="tp-social">
         <button class="tp-like" aria-pressed={liked} disabled={mine || liking} onclick={toggleLike} data-act="team-like" aria-label="좋아요 {team.likes}">
           <span aria-hidden="true">{liked ? '♥' : '♡'}</span> {n(team.likes)}
@@ -163,20 +154,13 @@
     font-size: 1.5rem;
     color: var(--pitch-accent);
   }
-  .tp-stats,
-  .tp-lines {
+  .tp-stats {
     display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 6px;
     margin: 0;
   }
-  .tp-stats {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .tp-lines {
-    grid-template-columns: repeat(4, 1fr);
-  }
-  .tp-stats div,
-  .tp-lines div {
+  .tp-stats div {
     display: grid;
     place-items: center;
     padding: 6px 2px;
@@ -184,19 +168,13 @@
     background: var(--surface-2);
     text-align: center;
   }
-  .tp-stats dt,
-  .tp-lines dt {
+  .tp-stats dt {
     font-size: 0.75rem;
     color: var(--muted);
   }
-  .tp-stats dd,
-  .tp-lines dd {
+  .tp-stats dd {
     margin: 0;
     font-weight: 700;
-  }
-  .tp-lines dd {
-    font-family: var(--display);
-    font-size: 1.25rem;
   }
   .tp-social {
     display: flex;

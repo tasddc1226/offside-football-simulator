@@ -1,6 +1,7 @@
 // T-10-092 구단 시즌 업적(클럽하우스). 그 시즌에 처음 올라와(careers.service_season) 은퇴한 내 선수들의 기록과 그 시즌
 // 내 팀·팀 경기로 판정하는 순수 함수다. 판정 재료는 서버가 이미 받은 시즌 요약(career_seasons)·은퇴 요약(careers)뿐이다.
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
+import { LEAGUE_BASE } from '@offside/contracts/club-names';
 import { DETAIL_POSITIONS, type DetailPos, type PosGroup } from '@offside/contracts/positions';
 
 export type AchievementCareer = {
@@ -38,10 +39,13 @@ export type AchievementInput = {
   detail: boolean;
 };
 
-// 이름은 web game/data.ts LEAGUES · game/comps.ts(POTY·TOP_SCORER·YOUNG) · game/national.ts와 같다.
-const BIG5 = ['프리미어리그', '라리가', '세리에 A', '분데스리가', '리그 1'];
-const EUROPE = [...BIG5, '에레디비시'];
-const LEAGUES = [...EUROPE, 'MLS', 'J1리그', 'K리그1', 'K리그2', 'K3리그'];
+// 리그는 contracts LEAGUE_BASE(프로 리그 · 유럽 = 등급 4 이상 · 5대 리그 = 등급 5 이상). 상 이름은 web game/comps.ts
+// (POTY·TOP_SCORER·YOUNG) · game/national.ts와 같다.
+const leaguesFrom = (minTier: number) =>
+  LEAGUE_BASE.filter((l) => !l.amateur && l.tier >= minTier).map((l) => l.name);
+const LEAGUES = leaguesFrom(0);
+const EUROPE = leaguesFrom(4);
+const BIG5 = leaguesFrom(5);
 const POTY = [
   'PFA 올해의 선수',
   '라리가 올해의 선수',

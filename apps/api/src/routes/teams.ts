@@ -7,20 +7,15 @@ import {
   type TeamRankResponse,
 } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
-import {
-  openTeamSeasons,
-  teamSeasonAt,
-  teamSeasonClosed,
-  teamSeasonName,
-} from '@offside/contracts/service-seasons';
+import { teamSeasonClosed, teamSeasonName } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
-import { nowIso, ok } from './shared.js';
+import { NO_STORE, nowIso, ok, teamNotFound, teamSeasonParam } from './shared.js';
 import {
   addTeamView,
   careersByIds,
   eligibleMap,
-  getTeamWithOwner,
   isTeamLiked,
+  liveTeam,
   listTeamRanking,
   ratingRankOf,
   setTeamLike,
@@ -40,15 +35,6 @@ import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 // 표기)만 있고 구단주 계정 정보는 없다. 랭킹은 원작처럼 5분마다 새로 센다(엣지 캐시).
 const RANK_TTL = 300;
 const RANK_CACHE = 'public, max-age=60';
-const NO_STORE = 'private, no-store';
-
-const teamNotFound = () =>
-  new AppError({
-    code: 'VALIDATION_FAILED',
-    status: 404,
-    message: '팀을 찾을 수 없어요.',
-    details: { reason: 'TEAM_NOT_FOUND' },
-  });
 
 const teamParam = (c: Context<AppEnv>) => parseWithAppError(TeamIdSchema, c.req.param('teamId'));
 
@@ -56,15 +42,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/teams', async (c) => {
     const now = nowIso();
     const q = parseWithAppError(TeamRankQuerySchema, c.req.query());
-    const open = openTeamSeasons(now);
-    const season = q.season ?? teamSeasonAt(now) ?? open.at(-1)!;
-    if (!open.includes(season)) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        message: '아직 열리지 않은 시즌이에요.',
-        details: { reason: 'SEASON_NOT_OPEN' },
-      });
-    }
+    const season = teamSeasonParam(q.season, now);
     const data = await edgeCached(
       c,
       EDGE.teamRank(season, q.sort, q.page),
@@ -99,7 +77,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/teams/:teamId', async (c) => {
     const id = teamParam(c);
     const db = getDb(c);
-    const [found, session] = await Promise.all([getTeamWithOwner(db, id), resolveSession(c)]);
+    const [[found], session] = await Promise.all([liveTeam(db, id), resolveSession(c)]);
     if (!found) throw teamNotFound();
     const t = found.team;
     const ids = slotIdsOf(t);
@@ -163,7 +141,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       const id = teamParam(c);
       const { profileId } = getSessionOrThrow(c);
       const db = getDb(c);
-      const found = await getTeamWithOwner(db, id);
+      const [found] = await liveTeam(db, id);
       if (!found) throw teamNotFound();
       if (found.team.profileId === profileId) {
         throw new AppError({

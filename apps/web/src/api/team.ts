@@ -26,6 +26,7 @@ export type {
   TeamRankItem,
   TeamRankResponse,
   TeamRankSort,
+  TeamLines,
   TeamRecord,
   TeamSlot,
 } from '@offside/contracts';
@@ -60,6 +61,6 @@ export const fetchTeamRanking = (season: number | undefined, sort: TeamRankSort,
 /** 팀 프로필(좋아요 여부가 사람마다 달라 메모하지 않는다). */
 export const fetchTeamProfile = (id: string) => apiFetch<TeamProfileResponse>(`/v1/teams/${id}`);
 export const viewTeam = (id: string) =>
-  apiFetch<undefined>(`/v1/teams/${id}/views`, { method: 'POST' });
+  apiFetch<undefined>(`/v1/teams/${id}/views`, { method: 'POST', keepCache: true });
 export const likeTeam = (id: string, like: boolean) =>
   apiFetch<TeamLikeResponse>(`/v1/teams/${id}/like`, { method: like ? 'PUT' : 'DELETE' });

@@ -4,8 +4,9 @@ import {
   LINEUP_SIZE,
   YOUTH_NAME,
   YOUTH_OVR,
-  fit,
-  lineStrength as linesOf,
+  anonName,
+  lineStrength,
+  slotFit,
   slotRating,
   teamOvr,
   type DetailPos,
@@ -41,17 +42,6 @@ export type LineupSlot = {
   publicName: string | null;
 };
 
-const POS_LABEL: Record<PosGroup, string> = {
-  FW: '공격수',
-  MF: '미드필더',
-  DF: '수비수',
-  GK: '골키퍼',
-};
-
-/** 이름을 공개하지 않은 선수 표기 — 웹 game/pos-label.ts anonName과 같은 모양. */
-export const anonName = (pos: PosGroup, number: number | null): string =>
-  `익명의 ${POS_LABEL[pos]}${number != null ? ` No.${number}` : ''}`;
-
 /**
  * 포메이션 11자리에 선수를 놓는다. eligible에 없는 커리어(남의 선수·아직 뛰는 선수·지워진 선수)와 빈 자리는
  * 유스 선수(YOUTH_OVR, 적합도 1)가 채운다.
@@ -81,11 +71,7 @@ export function buildLineup(
       careerId: c.id,
       pos: c.pos,
       rating,
-      // 자리별 실력이 있으면 최고 OVR 대비 비율, 없으면 적합도 규칙.
-      fit:
-        c.roles && c.peak > 0
-          ? Math.round((rating / c.peak) * 100) / 100
-          : fit(slot, c.pos, c.dpos),
+      fit: slotFit(slot, c, rating),
       ref: { careerId: c.id, anon: anonName(c.pos, c.number) },
       publicName: c.publicName,
     };
@@ -96,11 +82,9 @@ export const filledCount = (lineup: readonly LineupSlot[]) =>
   lineup.filter((s) => s.careerId !== null).length;
 export const lineupOvr = (lineup: readonly LineupSlot[]) => teamOvr(lineup.map((s) => s.rating));
 
-export type { LineStrength };
-
 /** 공격·중원·수비·골키퍼 힘 — 자리마다의 몫과 포메이션의 줄 무게(contracts owner-team.ts lineStrength). */
-export const lineStrength = (lineup: readonly LineupSlot[]): LineStrength =>
-  linesOf(
+export const lineupLines = (lineup: readonly LineupSlot[]): LineStrength =>
+  lineStrength(
     lineup.map((s) => s.slot),
     lineup.map((s) => s.rating),
   );
@@ -128,7 +112,7 @@ export function expectedGoals(att: LineStrength, opp: LineStrength, home: boolea
 }
 
 /** 문자열 → 32비트 시드(FNV-1a). */
-export function seedOf(s: string): number {
+function seedOf(s: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i);
@@ -138,7 +122,7 @@ export function seedOf(s: string): number {
 }
 
 /** mulberry32 — [0, 1) 난수. */
-export function rngOf(seed: number): () => number {
+function rngOf(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -161,7 +145,7 @@ function poisson(lambda: number, rng: () => number): number {
 }
 
 /** 득점 가중치 — 골키퍼는 넣지 않는다. */
-export const SCORE_W: Record<DetailPos, number> = {
+const SCORE_W: Record<DetailPos, number> = {
   ST: 5,
   W: 3,
   AM: 2.5,
@@ -172,7 +156,7 @@ export const SCORE_W: Record<DetailPos, number> = {
   GK: 0,
 };
 /** 도움 가중치. */
-export const ASSIST_W: Record<DetailPos, number> = {
+const ASSIST_W: Record<DetailPos, number> = {
   AM: 3,
   W: 3,
   CM: 2,
@@ -220,8 +204,8 @@ export function simulateMatch(
   if (home.length !== LINEUP_SIZE || away.length !== LINEUP_SIZE)
     throw new Error('선발은 11명이어야 합니다.');
   const rng = rngOf(seedOf(seed));
-  const hs = lineStrength(home);
-  const as = lineStrength(away);
+  const hs = lineupLines(home);
+  const as = lineupLines(away);
   const homeGoals = poisson(expectedGoals(hs, as, true), rng);
   const awayGoals = poisson(expectedGoals(as, hs, false), rng);
   const events: SimEvent[] = [];

@@ -4,7 +4,7 @@ import {
   buildLineup,
   expectedGoals,
   filledCount,
-  lineStrength,
+  lineupLines,
   lineupOvr,
   simulateMatch,
   type LineupCareer,
@@ -109,9 +109,9 @@ describe('T-10-092 자리별 실력·포메이션', () => {
   });
 
   it('같은 실력이면 4-4-2는 공격, 3-5-2는 수비, 4-3-3은 중원이 가장 세다', () => {
-    const l433 = lineStrength(fullTeam('A', 75, '4-3-3'));
-    const l442 = lineStrength(fullTeam('A', 75, '4-4-2'));
-    const l352 = lineStrength(fullTeam('A', 75, '3-5-2'));
+    const l433 = lineupLines(fullTeam('A', 75, '4-3-3'));
+    const l442 = lineupLines(fullTeam('A', 75, '4-4-2'));
+    const l352 = lineupLines(fullTeam('A', 75, '3-5-2'));
     expect(l442.atk).toBeGreaterThan(l433.atk);
     expect(l433.atk).toBeGreaterThan(l352.atk);
     expect(l352.def).toBeGreaterThan(l433.def);
@@ -153,11 +153,11 @@ describe('simulateMatch', () => {
   });
 
   it('실력이 오를수록 기대 득점이 오르고 상대 기대 득점은 내려간다', () => {
-    const opp = lineStrength(fullTeam('B', 70));
+    const opp = lineupLines(fullTeam('B', 70));
     let prevFor = 0;
     let prevAgainst = Infinity;
     for (const peak of [55, 65, 75, 85, 95]) {
-      const me = lineStrength(fullTeam('A', peak));
+      const me = lineupLines(fullTeam('A', peak));
       const forXg = expectedGoals(me, opp, true);
       const againstXg = expectedGoals(opp, me, false);
       expect(forXg).toBeGreaterThanOrEqual(prevFor);

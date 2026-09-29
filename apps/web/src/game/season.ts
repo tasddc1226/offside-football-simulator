@@ -612,3 +612,6 @@ export function loadKey<T = unknown>(k: string): T | null {
 export function loadHOF(): HofEntry[] {
   return loadKey<HofEntry[]>('ft_hof') || loadKey<HofEntry[]>('sl_hof') || [];
 }
+/** 이 기기에 남은 은퇴 선수 이름(커리어 id → 이름). 서버엔 이름 공개를 끈 선수의 이름이 없어 화면이 이것으로 채운다. */
+export const localCareerNames = (): Map<string, string> =>
+  new Map(loadHOF().flatMap((h) => (h.id ? [[h.id, h.name] as const] : [])));

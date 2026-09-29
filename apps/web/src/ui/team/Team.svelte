@@ -14,8 +14,8 @@
     TEAM_NAME_MIN,
     YOUTH_NAME,
     YOUTH_OVR,
-    fit,
     lineStrength,
+    slotFit,
     slotRating,
     teamOvr,
     type FormationId,
@@ -34,11 +34,11 @@
     type TeamMatch,
     type TeamOpponent,
     type TeamPlayer,
-    type TeamRecord,
   } from '../../api/team.js';
   import { FACE_ABBR, GK_ABBR } from '../../game/attributes.js';
   import { ATTR_KEYS } from '../../game/data.js';
-  import { loadHOF } from '../../game/season.js';
+  import { localCareerNames } from '../../game/season.js';
+  import { kstMonthDayTime } from '../boardText.js';
   import { go } from '../nav.js';
   import { POS_LABEL, anonName } from '../../game/pos-label.js';
   import { toast } from '../helpers.js';
@@ -46,7 +46,9 @@
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import { appState, hofStart } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
+  import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
+  import { num, recordText } from './teamText.js';
 
   type View = 'team' | 'achievements' | 'opponents' | 'result' | 'history';
 
@@ -90,7 +92,7 @@
   ] as const;
 
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
-  const localNames = new Map(loadHOF().flatMap((h) => (h.id ? [[h.id, h.name] as const] : [])));
+  const localNames = localCareerNames();
   const byId = $derived(new Map(players.map((p) => [p.careerId, p])));
   const nameOf = (p: TeamPlayer) =>
     localNames.get(p.careerId) ?? p.publicName ?? anonName(p.pos, p.number);
@@ -107,12 +109,6 @@
   const ovr = $derived(teamOvr(ratings));
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = $derived(lineStrength(slotCodes, ratings));
-  const LINE_CELLS = [
-    ['atk', '공격'],
-    ['mid', '중원'],
-    ['def', '수비'],
-    ['gk', '골문'],
-  ] as const;
   const filled = $derived(slots.filter((s) => s !== null).length);
   const dirty = $derived(
     !team ||
@@ -186,8 +182,7 @@
         return {
           p,
           rating,
-          // 자리별 실력이 있으면 최고 OVR 대비, 없으면 적합도 규칙(서버 buildLineup과 같다).
-          fit: p.roles && p.peak > 0 ? rating / p.peak : fit(slot, p.pos, p.dpos),
+          fit: slotFit(slot, p, rating),
           at: slots.indexOf(p.careerId),
         };
       })
@@ -302,11 +297,10 @@
     achStatus = 'ready';
   }
   const achDone = (items: ClubAchievement[]) => items.filter((i) => i.done).length;
-  const n = (v: number) => v.toLocaleString('ko-KR');
   /** 업적 한 줄의 오른쪽 표시. */
   const achState = (i: ClubAchievement) =>
     i.level !== undefined
-      ? `${i.level}단계 · ${n(i.cur ?? 0)}${i.unit ?? ''}${i.next != null ? ` · NEXT ${n(i.next)}` : ' · 최고 단계'}`
+      ? `${i.level}단계 · ${num(i.cur ?? 0)}${i.unit ?? ''}${i.next != null ? ` · NEXT ${num(i.next)}` : ' · 최고 단계'}`
       : i.max !== undefined
         ? `${i.cur ?? 0} / ${i.max}`
         : i.done
@@ -331,12 +325,7 @@
     return mine > theirs ? '승' : mine < theirs ? '패' : '무';
   };
   const OUTCOME_TITLE = { 승: '승리', 무: '무승부', 패: '패배' } as const;
-  const recordText = (r: TeamRecord) => `${r.w}승 ${r.d}무 ${r.l}패`;
   const pct = (f: number) => `${Math.round(f * 100)}%`;
-  const kstDate = (iso: string) => {
-    const d = new Date(Date.parse(iso) + 9 * 3_600_000);
-    return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
-  };
 
   function back() {
     if (view === 'team' || view === 'achievements') appState.screen = 'owner';
@@ -429,7 +418,7 @@
           </select>
         {/if}
         {#if team}
-          <p class="muted tm-record" data-team-record>{recordText(team.record)} · 레이팅 {team.rating.toLocaleString('ko-KR')}{editable ? ` · 오늘 남은 경기 ${matchesLeft}/${perDay}` : ''}</p>
+          <p class="muted tm-record" data-team-record>{recordText(team.record)} · 레이팅 {num(team.rating)}{editable ? ` · 오늘 남은 경기 ${matchesLeft}/${perDay}` : ''}</p>
         {:else if editable}
           <p class="muted">{seasonName}에 뛰고 은퇴한 내 선수로 11명을 꾸려요. 빈 자리는 유스 선수(OVR {YOUTH_OVR})가 채워서, 한 명만 넣어도 경기할 수 있어요. 팀은 시즌마다 새로 꾸려요.</p>
         {:else}
@@ -458,11 +447,7 @@
             <button class="opt tm-form" aria-pressed={formation === f} data-formation={f} disabled={!editable} onclick={() => (formation = f)}>{f}</button>
           {/each}
         </div>
-        <dl class="tm-lines" data-team-lines>
-          {#each LINE_CELLS as [k, label] (k)}
-            <div><dt>{label}</dt><dd>{Math.round(lines[k])}</dd></div>
-          {/each}
-        </dl>
+        <TeamLines {lines} />
         {#if editable}<p class="muted fs-sm">포메이션을 바꾸면 공격·중원·수비 무게가 옮겨 가요. 선수는 자리마다 그 자리 능력치로 뛰어요.</p>{/if}
         {/if}
       </section>
@@ -548,7 +533,7 @@
         {:else}
           <p class="muted">골 없이 비겼어요.</p>
         {/if}
-        <p class="muted fs-sm">{kstDate(m.createdAt)}{team && m.mine === 'home' ? ` · 내 팀 ${recordText(team.record)}` : ''}</p>
+        <p class="muted fs-sm">{kstMonthDayTime(m.createdAt)}{team && m.mine === 'home' ? ` · 내 팀 ${recordText(team.record)}` : ''}</p>
         <div class="tm-actions">
           <button class="btn" onclick={() => (view = 'team')}>내 팀</button>
           <button class="btn btn-primary" onclick={openOpponents} disabled={matchesLeft === 0}>다시 경기하기</button>
@@ -567,7 +552,7 @@
               <span class="tm-out" data-out={outcome(m)}>{outcome(m)}</span>
               <span class="tm-opp-info">
                 <b>{m[m.mine].goals} : {opp.goals} {opp.name}</b>
-                <span class="muted fs-sm">{m.mine === 'home' ? '도전' : '도전받음'} · {opp.owner} · {kstDate(m.createdAt)}</span>
+                <span class="muted fs-sm">{m.mine === 'home' ? '도전' : '도전받음'} · {opp.owner} · {kstMonthDayTime(m.createdAt)}</span>
               </span>
             </button>
           {:else}
@@ -753,29 +738,6 @@
   }
   .tm-attrs {
     font-size: 0.6875rem;
-  }
-  .tm-lines {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    margin: 0;
-  }
-  .tm-lines div {
-    display: grid;
-    place-items: center;
-    padding: 6px 0;
-    border-radius: 10px;
-    background: var(--surface-2);
-  }
-  .tm-lines dt {
-    font-size: 0.75rem;
-    color: var(--muted);
-  }
-  .tm-lines dd {
-    margin: 0;
-    font-family: var(--display);
-    font-size: 1.25rem;
-    font-weight: 700;
   }
   .tm-actions {
     display: grid;

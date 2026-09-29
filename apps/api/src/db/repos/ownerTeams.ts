@@ -3,8 +3,9 @@ import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-t
 import {
   DETAIL_POSITIONS,
   FACE_ATTRS,
-  type DetailPos,
+  dposFor,
   type PeakProfile,
+  type PosGroup,
 } from '@offside/contracts/positions';
 import {
   and,
@@ -40,10 +41,6 @@ import type { LineupCareer, PlayerRef } from '../../team/sim.js';
 export type OwnerTeamRow = typeof ownerTeams.$inferSelect;
 export type TeamMatchRow = typeof teamMatches.$inferSelect;
 
-/** careers.dpos(TEXT) → 세부 포지션. 프리시즌 선수·옛 기록은 null. */
-export const dposOf = (v: string | null): DetailPos | null =>
-  (DETAIL_POSITIONS as readonly string[]).includes(v ?? '') ? (v as DetailPos) : null;
-
 /** careers.peak_profile(JSON) → 최고 시점 능력치. 이 기능 전에 은퇴한 기록이거나 모양이 틀리면 null. */
 export function peakOf(json: string | null): PeakProfile | null {
   if (!json) return null;
@@ -64,9 +61,28 @@ export function peakOf(json: string | null): PeakProfile | null {
 export const slotIdsOf = (row: Pick<OwnerTeamRow, 'slotsJson'>): (string | null)[] =>
   JSON.parse(row.slotsJson) as (string | null)[];
 
-/** 팀 시즌(0 = 프리시즌)에 처음 올라온 커리어. */
-const inTeamSeason = (season: number) =>
-  season === 0 ? isNull(careers.serviceSeason) : eq(careers.serviceSeason, season);
+/** 선발 맵에 넣는 커리어 모양(careers 행 → 팀 선수). */
+type LineupRow = {
+  id: string;
+  pos: PosGroup;
+  dpos: string | null;
+  peak: number | null;
+  peakProfile: string | null;
+  number: number | null;
+  publicName: string | null;
+};
+export const toLineupCareer = (
+  r: LineupRow,
+  profile: PeakProfile | null = peakOf(r.peakProfile),
+): LineupCareer => ({
+  id: r.id,
+  pos: r.pos,
+  dpos: dposFor(r.pos, r.dpos),
+  peak: r.peak ?? 0,
+  roles: profile?.roles ?? null,
+  number: r.number,
+  publicName: r.publicName,
+});
 
 /** 내 팀들(시즌 순). 시즌마다 한 팀이라 몇 개 되지 않는다. */
 export function listMyTeams(db: Db, profileId: string) {
@@ -76,6 +92,13 @@ export function listMyTeams(db: Db, profileId: string) {
     .where(eq(ownerTeams.profileId, profileId))
     .orderBy(asc(ownerTeams.season));
 }
+
+/** 그 시즌 내 팀(없으면 빈 배열) — (구단주, 시즌) 유니크 인덱스로 한 행만 읽는다. batch에 넣을 수 있게 쿼리로 돌려준다. */
+export const myTeamIn = (db: Db, profileId: string, season: number) =>
+  db
+    .select()
+    .from(ownerTeams)
+    .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)));
 
 /** 그 시즌에 넣을 수 있는 내 은퇴 선수(그 시즌에 처음 올라온 선수, 최고 OVR 순). 은퇴 요약이 없는 기록(peak null)은 뺀다. */
 export function listEligibleCareers(db: Db, profileId: string, season: number, limit = 300) {
@@ -96,7 +119,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
         eq(careers.profileId, profileId),
         eq(careers.status, 'retired'),
         isNotNull(careers.peak),
-        inTeamSeason(season),
+        eq(careers.serviceSeason, season),
       ),
     )
     .orderBy(desc(careers.peak))
@@ -137,31 +160,21 @@ export function eligibleMap(rows: readonly CareerLite[], ownerId: string, season
   const map = new Map<string, LineupCareer>();
   for (const r of rows) {
     if (r.profileId !== ownerId || r.status !== 'retired' || r.peak === null) continue;
-    if ((r.serviceSeason ?? 0) !== season) continue;
-    map.set(r.id, {
-      id: r.id,
-      pos: r.pos,
-      dpos: dposOf(r.dpos),
-      peak: r.peak,
-      roles: peakOf(r.peakProfile)?.roles ?? null,
-      number: r.number,
-      publicName: r.publicName,
-    });
+    if (r.serviceSeason !== season) continue;
+    map.set(r.id, toLineupCareer(r));
   }
   return map;
 }
 
-/** 팀 한 개 + 구단주 닉네임(상대 팀). 구글 연결이 끊겼거나 삭제된 구단주의 팀은 없는 것으로 본다. */
-export async function getTeamWithOwner(db: Db, teamId: string) {
-  const [row] = await db
-    .select({ team: ownerTeams, nickname: profiles.nickname, email: profiles.email })
+/** 팀 한 개(없으면 빈 배열). 구글 연결이 끊겼거나 삭제된 구단주의 팀은 없는 것으로 본다. batch에 넣을 수 있게 쿼리로 돌려준다. */
+export const liveTeam = (db: Db, teamId: string) =>
+  db
+    .select({ team: ownerTeams })
     .from(ownerTeams)
     .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
     .where(
       and(eq(ownerTeams.id, teamId), isNotNull(profiles.googleSub), isNull(profiles.deletedAt)),
     );
-  return row;
-}
 
 /** 랭킹·상대에 오르는 팀: 그 시즌 · 선수가 한 명 이상 · 구글 연결이 살아 있는(삭제되지 않은) 구단주. */
 const rankedIn = (season: number) =>
@@ -180,7 +193,7 @@ export async function listOpponentCandidates(
   ovr: number,
   perSide = 8,
 ) {
-  const cols = { team: ownerTeams, nickname: profiles.nickname, email: profiles.email };
+  const cols = { team: ownerTeams };
   const base = and(rankedIn(season), ne(ownerTeams.profileId, profileId));
   const [up, down] = await db.batch([
     db
@@ -198,7 +211,7 @@ export async function listOpponentCandidates(
       .orderBy(desc(ownerTeams.ovr))
       .limit(perSide),
   ]);
-  return [...up, ...down];
+  return [...up, ...down].map((r) => r.team);
 }
 
 const RANK_ORDER: Record<TeamRankSort, ReturnType<typeof desc>[]> = {
@@ -434,13 +447,16 @@ export const deleteOwnerTeamsStatements = (db: Db, profileId: string) => {
 
 // ───────── 구단 시즌 업적 ─────────
 
-/** 그 시즌에 처음 올라와(service_season, 팀 시즌 0 = 프리시즌 = NULL) 은퇴한 내 선수 + 영구결번 여부 + 받아 둔 시즌(리그·영예). */
+/**
+ * 그 시즌에 처음 올라와(service_season, 0 = 프리시즌) 은퇴한 내 선수 + 영구결번 여부 + 받아 둔 시즌(리그·영예). 이 조건이
+ * 곧 그 시즌 팀에 넣을 수 있는 선수라 팀 선발(lineup)도 여기서 만든다.
+ */
 export async function seasonCareersOf(db: Db, profileId: string, season: number) {
   const mine = and(
     eq(careers.profileId, profileId),
     eq(careers.status, 'retired'),
     isNotNull(careers.peak),
-    inTeamSeason(season),
+    eq(careers.serviceSeason, season),
   );
   const [rows, seasons] = await db.batch([
     db
@@ -448,6 +464,11 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         id: careers.id,
         pos: careers.pos,
         dpos: careers.dpos,
+        peak: careers.peak,
+        peakProfile: careers.peakProfile,
+        number: careers.shirtNumber,
+        publicName: careers.publicName,
+        lastClubId: careers.lastClubId,
         caps: careers.caps,
         ballon: careers.ballon,
         trophies: careers.trophies,
@@ -480,8 +501,11 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     byCareer.set(r.careerId, list);
   }
   return rows.map((r) => ({
+    id: r.id,
+    lineup: toLineupCareer(r),
+    lastClubId: r.lastClubId,
     pos: r.pos,
-    dpos: dposOf(r.dpos),
+    dpos: dposFor(r.pos, r.dpos),
     caps: r.caps ?? 0,
     ballon: r.ballon ?? 0,
     trophies: r.trophies ?? 0,
@@ -493,26 +517,4 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     retiredNumber: r.rn !== null,
     seasons: byCareer.get(r.id) ?? [],
   }));
-}
-
-/** 팀 선발 커리어의 업적 재료(마지막 구단 · A매치 · 영구결번). 11명 이하라 id 목록으로 읽는다. */
-export async function teamCareerFacts(db: Db, ids: string[]) {
-  if (ids.length === 0)
-    return new Map<string, { lastClubId: string | null; caps: number; retiredNumber: boolean }>();
-  const rows = await db
-    .select({
-      id: careers.id,
-      lastClubId: careers.lastClubId,
-      caps: careers.caps,
-      rn: retiredNumbers.careerId,
-    })
-    .from(careers)
-    .leftJoin(retiredNumbers, eq(retiredNumbers.careerId, careers.id))
-    .where(inArray(careers.id, ids));
-  return new Map(
-    rows.map((r) => [
-      r.id,
-      { lastClubId: r.lastClubId, caps: r.caps ?? 0, retiredNumber: r.rn !== null },
-    ]),
-  );
 }

@@ -46,11 +46,29 @@ export const DETAILS_OF: Record<PosGroup, readonly DetailPos[]> = {
 /** 세부 포지션을 고를 수 있게 되는 서비스 시즌. */
 const DETAIL_POS_SEASON = 1;
 
+/** 그 팀 시즌(0 = 프리시즌)의 선수에게 세부 포지션이 있는가. */
+export const detailPosInSeason = (season: number): boolean => season >= DETAIL_POS_SEASON;
+
 /** now(UTC ISO) 시점에 새 선수가 세부 포지션을 고를 수 있는가(시즌 1 개막부터). */
 export const detailPosOpen = (now: string): boolean => {
   const s = serviceSeason(DETAIL_POS_SEASON);
   return !!s && s.startsAt <= now;
 };
+
+/** 큰 포지션과 맞는 세부 포지션만 남긴다(어긋나거나 모르는 값이면 null). 웹 저장·서버 저장·서버 읽기가 같이 쓴다. */
+export const dposFor = (pos: PosGroup, dpos: string | null | undefined): DetailPos | null =>
+  dpos && DETAIL_GROUP[dpos as DetailPos] === pos ? (dpos as DetailPos) : null;
+
+export const POS_LABEL: Record<PosGroup, string> = {
+  FW: '공격수',
+  MF: '미드필더',
+  DF: '수비수',
+  GK: '골키퍼',
+};
+
+/** 이름을 공개하지 않은 선수 표기(명예의 전당·서버 최초 기록·공유 링크 미리보기·구단주 팀). */
+export const anonName = (pos: PosGroup, number: number | null): string =>
+  `익명의 ${POS_LABEL[pos]}${number != null ? ` No.${number}` : ''}`;
 
 /** 대표 능력치 6개(웹 game/data.ts ATTR_KEYS와 같은 순서). 골키퍼는 같은 키에 골키퍼 능력치(DIV·HAN…)가 들어간다. */
 export const FACE_ATTRS = ['pac', 'sho', 'pas', 'dri', 'def', 'phy'] as const;

@@ -60,6 +60,7 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
         legendScore: 300,
         shirtNumber: 9,
         publicName: i === 0 ? `${manager} 에이스` : null,
+        serviceSeason: 0,
       });
       s[[9, 8, 10][i]!] = id;
     }

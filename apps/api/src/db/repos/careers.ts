@@ -7,8 +7,8 @@ import type {
   RetirementSummary,
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
-import { activeSeason, type ServiceSeason } from '@offside/contracts/service-seasons';
-import { DETAIL_GROUP, type PeakProfile } from '@offside/contracts/positions';
+import { teamSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
+import { dposFor, type PeakProfile } from '@offside/contracts/positions';
 import {
   and,
   desc,
@@ -88,7 +88,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         id: careerId,
         profileId,
         pos: meta.pos,
-        dpos: meta.dpos && DETAIL_GROUP[meta.dpos] === meta.pos ? meta.dpos : null,
+        dpos: dposFor(meta.pos, meta.dpos),
         foot: meta.foot,
         type: meta.type,
         trait: meta.trait,
@@ -96,8 +96,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         status: 'active',
         appVersion: meta.appVersion,
         ...name,
-        // 처음 올라온 시각의 시즌 — onConflict set에 없어 바뀌지 않는다.
-        serviceSeason: activeSeason(now)?.id ?? null,
+        // 처음 올라온 시각의 시즌(0 = 프리시즌, 시즌 사이 휴식기면 NULL) — onConflict set에 없어 바뀌지 않는다.
+        serviceSeason: teamSeasonAt(now),
         createdAt: now,
         updatedAt: now,
       })
@@ -265,7 +265,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     id: String(r.id),
     name: (r.name as string | null) ?? null,
     pos: r.pos as PublicHofEntry['pos'],
-    dpos: (r.dpos as PublicHofEntry['dpos']) ?? null,
+    dpos: dposFor(r.pos as PublicHofEntry['pos'], r.dpos as string | null),
     number: r.number == null ? null : Number(r.number),
     retireAge: n(r.retireAge),
     peak: n(r.peak),

@@ -1,5 +1,4 @@
 import {
-  ADMIN_NICKNAME,
   ClubAchievementsResponseSchema,
   OwnerTeamResponseSchema,
   PlayTeamMatchBodySchema,
@@ -8,36 +7,35 @@ import {
   PutOwnerTeamResponseSchema,
   TeamMatchesResponseSchema,
   TeamOpponentsResponseSchema,
-  TeamSeasonQuerySchema,
   type OwnerTeam,
   type TeamMatch,
   type TeamOpponent,
 } from '@offside/contracts';
 import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
 import { TEAM_MATCHES_PER_DAY, ratingDelta, type FormationId } from '@offside/contracts/owner-team';
-import { openTeamSeasons, teamSeasonAt } from '@offside/contracts/service-seasons';
+import { detailPosInSeason } from '@offside/contracts/positions';
+import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
-import { nowIso, ok, readBody } from './shared.js';
-import { isAdminEmail } from '../auth/admin.js';
+import { NO_STORE, nowIso, ok, readBody, teamNotFound, teamSeasonParam } from './shared.js';
 import { newId } from '../db/ids.js';
 import { kstDays } from '../db/repos/admin.js';
 import { runBatch } from '../db/repos/batch.js';
 import {
   careersByIds,
   countMatchesSince,
-  dposOf,
   eligibleMap,
-  getTeamWithOwner,
   listEligibleCareers,
   listMyTeams,
   listOpponentCandidates,
   listRecentMatches,
+  liveTeam,
+  myTeamIn,
   peakOf,
   publicNamesOf,
   recordMatchStatements,
   seasonCareersOf,
   slotIdsOf,
-  teamCareerFacts,
+  toLineupCareer,
   type MatchDetail,
   type OwnerTeamRow,
   type TeamMatchRow,
@@ -47,7 +45,7 @@ import { ownerTeams } from '../db/schema.js';
 import { purgeEdge } from '../edgeCache.js';
 import { STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
-import { AppError, parseWithAppError } from '../errors.js';
+import { AppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { clubAchievements } from '../team/achievements.js';
@@ -56,25 +54,15 @@ import {
   filledCount,
   lineupOvr,
   simulateMatch,
-  type LineupCareer,
   type LineupSlot,
   type PlayerRef,
 } from '../team/sim.js';
 import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀). 구글 로그인한 구단주만 쓴다 — 사람마다 다른 응답이라 엣지 캐시하지 않는다.
-const NO_STORE = 'private, no-store';
 /** 상대 목록에 보여 줄 팀 수. */
 const OPPONENTS_SHOWN = 5;
-const ANON_OWNER = '익명 구단주';
 
-const teamNotFound = () =>
-  new AppError({
-    code: 'VALIDATION_FAILED',
-    status: 404,
-    message: '팀을 찾을 수 없어요.',
-    details: { reason: 'TEAM_NOT_FOUND' },
-  });
 const teamRequired = () =>
   new AppError({
     code: 'VALIDATION_FAILED',
@@ -110,20 +98,8 @@ function currentSeasonOrThrow(now: string): number {
   return season;
 }
 
-/** `?season=`을 읽는다 — 없으면 지금 시즌(휴식기면 마지막으로 열린 시즌). 열리지 않은 시즌이면 400. */
-function seasonQuery(c: Context<AppEnv>, now: string): number {
-  const q = parseWithAppError(TeamSeasonQuerySchema, c.req.query('season'));
-  const open = openTeamSeasons(now);
-  const season = q ?? teamSeasonAt(now) ?? open.at(-1)!;
-  if (!open.includes(season)) {
-    throw new AppError({
-      code: 'VALIDATION_FAILED',
-      message: '아직 열리지 않은 시즌이에요.',
-      details: { reason: 'SEASON_NOT_OPEN' },
-    });
-  }
-  return season;
-}
+const seasonQuery = (c: Context<AppEnv>, now: string) =>
+  teamSeasonParam(c.req.query('season'), now);
 
 /** 팀·감독 이름 검사(욕설·운영자 사칭). */
 function checkName(value: string, what: string) {
@@ -142,14 +118,6 @@ function checkName(value: string, what: string) {
     });
   }
 }
-
-/** 감독 표기 — 감독 이름, 없으면(이름을 정하기 전 팀) 댓글 닉네임(운영자는 '운영자'), 그것도 없으면 '익명 구단주'. */
-const managerOf = (
-  t: Pick<OwnerTeamRow, 'manager'>,
-  p: { nickname: string | null; email: string | null },
-  adminEmails: string | undefined,
-) =>
-  t.manager || (isAdminEmail(adminEmails, p.email) ? ADMIN_NICKNAME : (p.nickname ?? ANON_OWNER));
 
 /** 오늘(한국 시각 자정부터)의 시작 UTC ISO. */
 const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
@@ -173,12 +141,14 @@ function toOwnerTeam(row: OwnerTeamRow, lineup: LineupSlot[]): OwnerTeam {
   };
 }
 
+type MatchHead = Pick<TeamMatchRow, 'id' | 'homeTeamId' | 'homeGoals' | 'awayGoals' | 'createdAt'>;
+
 function toMatch(
-  row: TeamMatchRow,
+  row: MatchHead,
+  d: MatchDetail,
   myTeamId: string,
   names: ReadonlyMap<string, string>,
 ): TeamMatch {
-  const d = JSON.parse(row.detailJson) as MatchDetail;
   const label = (p: PlayerRef) => (p.careerId ? (names.get(p.careerId) ?? p.anon) : p.anon);
   const mine = row.homeTeamId === myTeamId ? 'home' : 'away';
   return {
@@ -198,10 +168,10 @@ function toMatch(
   };
 }
 
-const careerIdsIn = (rows: readonly TeamMatchRow[]) => [
+const careerIdsIn = (details: readonly MatchDetail[]) => [
   ...new Set(
-    rows.flatMap((r) =>
-      (JSON.parse(r.detailJson) as MatchDetail).events.flatMap((e) =>
+    details.flatMap((d) =>
+      d.events.flatMap((e) =>
         [e.scorer.careerId, e.assist?.careerId].filter((x): x is string => !!x),
       ),
     ),
@@ -221,21 +191,11 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       countMatchesSince(db, me.id, kstTodayStart(now)),
     ]);
     const team = teams.find((t) => t.season === season) ?? null;
-    const peaks = new Map(players.map((p) => [p.id, peakOf(p.peakProfile)]));
-    const eligible = new Map<string, LineupCareer>(
-      players.map((p) => [
-        p.id,
-        {
-          id: p.id,
-          pos: p.pos,
-          dpos: dposOf(p.dpos),
-          peak: p.peak!,
-          roles: peaks.get(p.id)?.roles ?? null,
-          number: p.number,
-          publicName: p.publicName,
-        },
-      ]),
-    );
+    const picks = players.map((p) => {
+      const profile = peakOf(p.peakProfile);
+      return { p, profile, career: toLineupCareer(p, profile) };
+    });
+    const eligible = new Map(picks.map(({ career }) => [career.id, career]));
     // 은퇴 선수가 목록 상한보다 많으면 선발에 든 선수가 목록 밖에 있을 수 있다 — 그 선수만 따로 읽는다.
     const missing = (team ? slotIdsOf(team) : []).filter(
       (id): id is string => !!id && !eligible.has(id),
@@ -254,13 +214,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         team: team
           ? toOwnerTeam(team, buildLineup(team.formation as FormationId, slotIdsOf(team), eligible))
           : null,
-        players: players.map((p) => ({
+        players: picks.map(({ p, profile, career }) => ({
           careerId: p.id,
           pos: p.pos,
-          dpos: dposOf(p.dpos),
-          peak: p.peak!,
-          roles: peaks.get(p.id)?.roles ?? null,
-          attrs: peaks.get(p.id)?.attrs ?? null,
+          dpos: career.dpos,
+          peak: career.peak,
+          roles: career.roles,
+          attrs: profile?.attrs ?? null,
           number: p.number,
           publicName: p.publicName,
           legendScore: p.legendScore,
@@ -323,7 +283,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const me = await requireOwner(c);
     const db = getDb(c);
     const season = currentSeasonOrThrow(nowIso());
-    const mine = (await listMyTeams(db, me.id)).find((t) => t.season === season);
+    const [mine] = await myTeamIn(db, me.id, season);
     if (!mine) throw teamRequired();
     const candidates = await listOpponentCandidates(db, me.id, season, mine.ovr);
     // 가까운 팀 중에서 무작위로(매번 같은 상대만 나오지 않게).
@@ -333,11 +293,11 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     }
     const items: TeamOpponent[] = candidates
       .slice(0, OPPONENTS_SHOWN)
-      .sort((a, b) => b.team.ovr - a.team.ovr)
-      .map(({ team, nickname, email }) => ({
+      .sort((a, b) => b.ovr - a.ovr)
+      .map((team) => ({
         teamId: team.id,
         name: team.name,
-        owner: managerOf(team, { nickname, email }, c.env.ADMIN_EMAILS),
+        owner: team.manager,
         formation: team.formation as FormationId,
         ovr: team.ovr,
         rating: team.rating,
@@ -354,11 +314,11 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const input = readBody(c, PlayTeamMatchBodySchema);
     const now = nowIso();
     const season = currentSeasonOrThrow(now);
-    const [teams, [played]] = await db.batch([
-      listMyTeams(db, me.id),
+    const [[mine], [played], [opp]] = await db.batch([
+      myTeamIn(db, me.id, season),
       countMatchesSince(db, me.id, kstTodayStart(now)),
+      liveTeam(db, input.opponentTeamId),
     ]);
-    const mine = teams.find((t) => t.season === season);
     if (!mine) throw teamRequired();
     const usedToday = Number(played?.n ?? 0);
     if (usedToday >= TEAM_MATCHES_PER_DAY) {
@@ -368,7 +328,6 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'TEAM_MATCH_DAILY_LIMIT' },
       });
     }
-    const opp = await getTeamWithOwner(db, input.opponentTeamId);
     if (!opp || opp.team.profileId === me.id || opp.team.season !== season) throw teamNotFound();
 
     const mySlots = slotIdsOf(mine);
@@ -419,14 +378,14 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       home: {
         teamId: mine.id,
         name: mine.name,
-        owner: managerOf(mine, me, c.env.ADMIN_EMAILS),
+        owner: mine.manager,
         formation: mine.formation as FormationId,
         ovr: homeSide.ovr,
       },
       away: {
         teamId: opp.team.id,
         name: opp.team.name,
-        owner: managerOf(opp.team, opp, c.env.ADMIN_EMAILS),
+        owner: opp.team.manager,
         formation: opp.team.formation as FormationId,
         ovr: awaySide.ovr,
       },
@@ -450,21 +409,18 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const names = new Map<string, string>();
     for (const s of [...home, ...away])
       if (s.careerId && s.publicName) names.set(s.careerId, s.publicName);
-    const row: TeamMatchRow = {
+    const head: MatchHead = {
       id,
-      profileId: me.id,
       homeTeamId: mine.id,
-      awayTeamId: opp.team.id,
       homeGoals: result.homeGoals,
       awayGoals: result.awayGoals,
-      detailJson: JSON.stringify(detail),
       createdAt: now,
     };
     return ok(
       c,
       PlayTeamMatchResponseSchema,
       {
-        match: toMatch(row, mine.id, names),
+        match: toMatch(head, detail, mine.id, names),
         record: {
           w: mine.wins + (score === 1 ? 1 : 0),
           d: mine.draws + (score === 0.5 ? 1 : 0),
@@ -484,29 +440,28 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const [careersIn, teams] = await Promise.all([
+    const [careersIn, [team]] = await Promise.all([
       seasonCareersOf(db, me.id, season),
-      listMyTeams(db, me.id),
+      myTeamIn(db, me.id, season),
     ]);
-    const team = teams.find((t) => t.season === season);
-    let slots = null;
-    if (team) {
-      const ids = slotIdsOf(team);
-      const picked = ids.filter((x): x is string => !!x);
-      const [rows, facts] = await Promise.all([
-        careersByIds(db, picked),
-        teamCareerFacts(db, picked),
-      ]);
-      slots = buildLineup(team.formation as FormationId, ids, eligibleMap(rows, me.id, season)).map(
-        (s) => ({
-          careerId: s.careerId,
-          fit: s.fit,
-          lastClubId: (s.careerId && facts.get(s.careerId)?.lastClubId) || null,
-          caps: (s.careerId && facts.get(s.careerId)?.caps) || 0,
-          retiredNumber: !!(s.careerId && facts.get(s.careerId)?.retiredNumber),
-        }),
-      );
-    }
+    // 그 시즌 팀에 넣을 수 있는 선수 = 이 시즌 은퇴 선수라 선발도 careersIn에서 만든다.
+    const byId = new Map(careersIn.map((r) => [r.id, r]));
+    const slots = team
+      ? buildLineup(
+          team.formation as FormationId,
+          slotIdsOf(team),
+          new Map(careersIn.map((r) => [r.id, r.lineup])),
+        ).map((s) => {
+          const r = s.careerId ? byId.get(s.careerId) : undefined;
+          return {
+            careerId: s.careerId,
+            fit: s.fit,
+            lastClubId: r?.lastClubId ?? null,
+            caps: r?.caps ?? 0,
+            retiredNumber: r?.retiredNumber ?? false,
+          };
+        })
+      : null;
     return ok(
       c,
       ClubAchievementsResponseSchema,
@@ -518,7 +473,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           careers: careersIn,
           team: slots ?? (season === teamSeasonAt(now) ? [] : null),
           teamWins: team?.wins ?? 0,
-          detail: season !== 0,
+          detail: detailPosInSeason(season),
         }),
       },
       200,
@@ -531,13 +486,14 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const me = await requireOwner(c);
     const db = getDb(c);
     const season = seasonQuery(c, nowIso());
-    const team = (await listMyTeams(db, me.id)).find((t) => t.season === season);
+    const [team] = await myTeamIn(db, me.id, season);
     const rows = team ? await listRecentMatches(db, me.id, team.id) : [];
-    const names = await publicNamesOf(db, careerIdsIn(rows));
+    const details = rows.map((r) => JSON.parse(r.detailJson) as MatchDetail);
+    const names = await publicNamesOf(db, careerIdsIn(details));
     return ok(
       c,
       TeamMatchesResponseSchema,
-      { items: team ? rows.map((r) => toMatch(r, team.id, names)) : [] },
+      { items: team ? rows.map((r, i) => toMatch(r, details[i]!, team.id, names)) : [] },
       200,
       NO_STORE,
     );

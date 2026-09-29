@@ -41,6 +41,7 @@ export const LINEUP_SIZE = 11;
 export {
   DETAIL_GROUP,
   DETAIL_LABEL,
+  anonName,
   type DetailPos,
   type PeakProfile,
   type PosGroup,
@@ -91,6 +92,10 @@ export type SlotPlayer = {
  */
 export const slotRating = (slot: DetailPos, p: SlotPlayer): number =>
   p.roles ? Math.min(p.roles[slot], p.peak) : Math.round(p.peak * fit(slot, p.pos, p.dpos));
+
+/** 그 자리 적합도(보여 주기) — 자리별 실력이 있으면 최고 OVR 대비 비율(소수 둘째 자리), 없으면 적합도 규칙. */
+export const slotFit = (slot: DetailPos, p: SlotPlayer, rating = slotRating(slot, p)): number =>
+  p.roles && p.peak > 0 ? Math.round((rating / p.peak) * 100) / 100 : fit(slot, p.pos, p.dpos);
 
 /** 팀의 세 줄. */
 export const LINES = ['atk', 'mid', 'def'] as const;

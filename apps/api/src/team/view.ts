@@ -2,7 +2,7 @@
 import type { TeamLines, TeamRecord, TeamSlot, TeamSeasonOption } from '@offside/contracts';
 import { openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
 import type { OwnerTeamRow } from '../db/repos/ownerTeams.js';
-import { lineStrength, type LineupSlot } from './sim.js';
+import { lineupLines, type LineupSlot } from './sim.js';
 
 export const recordOf = (t: Pick<OwnerTeamRow, 'wins' | 'draws' | 'losses'>): TeamRecord => ({
   w: t.wins,
@@ -22,7 +22,7 @@ export const slotsOf = (lineup: readonly LineupSlot[]): TeamSlot[] =>
   }));
 
 export function linesOf(lineup: readonly LineupSlot[]): TeamLines {
-  const l = lineStrength(lineup);
+  const l = lineupLines(lineup);
   return {
     atk: Math.round(l.atk),
     mid: Math.round(l.mid),

@@ -313,7 +313,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
       .select({ id: careers.id, s: careers.serviceSeason })
       .from(careers)
       .where(inArray(careers.id, [pre, s1]));
-    expect(Object.fromEntries(stamped.map((r) => [r.id, r.s]))).toEqual({ [pre]: null, [s1]: 1 });
+    expect(Object.fromEntries(stamped.map((r) => [r.id, r.s]))).toEqual({ [pre]: 0, [s1]: 1 });
   });
 
   it('sort로 기록별 순위를 매기고, 그 기록이 0인 선수는 뺀다', async () => {

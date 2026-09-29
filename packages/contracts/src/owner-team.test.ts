@@ -90,7 +90,7 @@ describe('PutOwnerTeamBodySchema', () => {
     expect(PutOwnerTeamBodySchema.safeParse({ ...base, slots: Array(11).fill(null) }).success).toBe(
       true,
     );
-    const { manager: _, ...noManager } = base;
+    const noManager = { name: base.name, formation: base.formation };
     expect(
       PutOwnerTeamBodySchema.safeParse({ ...noManager, slots: Array(11).fill(null) }).success,
     ).toBe(false);

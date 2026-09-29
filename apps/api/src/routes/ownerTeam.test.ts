@@ -77,7 +77,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       legendScore: retired ? 300 : null,
       shirtNumber: 9,
       publicName: over.publicName ?? null,
-      serviceSeason: over.serviceSeason ?? null,
+      serviceSeason: over.serviceSeason === undefined ? 0 : over.serviceSeason,
       peakProfile: over.roles
         ? JSON.stringify({
             attrs: { pac: 80, sho: 70, pas: 70, dri: 75, def: 60, phy: 70 },
