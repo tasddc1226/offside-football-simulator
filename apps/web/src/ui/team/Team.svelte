@@ -13,6 +13,7 @@
     YOUTH_NAME,
     YOUTH_OVR,
     fit,
+    lineStrength,
     slotRating,
     teamOvr,
     type FormationId,
@@ -73,10 +74,18 @@
     slotCodes.map((slot, i) => {
       const id = slots[i];
       const p = id ? byId.get(id) : undefined;
-      return p ? slotRating(p.peak, slot, p.pos, p.dpos) : null;
+      return p ? slotRating(slot, p) : null;
     }),
   );
   const ovr = $derived(teamOvr(ratings));
+  // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
+  const lines = $derived(lineStrength(slotCodes, ratings));
+  const LINE_CELLS = [
+    ['atk', '공격'],
+    ['mid', '중원'],
+    ['def', '수비'],
+    ['gk', '골문'],
+  ] as const;
   const filled = $derived(slots.filter((s) => s !== null).length);
   const dirty = $derived(
     !team ||
@@ -136,12 +145,16 @@
     if (picking === null) return [];
     const slot = slotCodes[picking]!;
     return players
-      .map((p) => ({
-        p,
-        rating: slotRating(p.peak, slot, p.pos, p.dpos),
-        fit: fit(slot, p.pos, p.dpos),
-        at: slots.indexOf(p.careerId),
-      }))
+      .map((p) => {
+        const rating = slotRating(slot, p);
+        return {
+          p,
+          rating,
+          // 자리별 실력이 있으면 최고 OVR 대비, 없으면 적합도 규칙(서버 buildLineup과 같다).
+          fit: p.roles && p.peak > 0 ? rating / p.peak : fit(slot, p.pos, p.dpos),
+          at: slots.indexOf(p.careerId),
+        };
+      })
       .sort((a, b) => b.rating - a.rating || b.p.peak - a.p.peak);
   });
 
@@ -171,7 +184,7 @@
         if (next[i] !== null) continue;
         for (const p of players) {
           if (next.includes(p.careerId)) continue;
-          const r = slotRating(p.peak, slot, p.pos, p.dpos);
+          const r = slotRating(slot, p);
           if (r > YOUTH_OVR && (!best || r > best.r)) best = { i, id: p.careerId, r };
         }
       }
@@ -300,6 +313,12 @@
             <button class="opt tm-form" aria-pressed={formation === f} data-formation={f} onclick={() => (formation = f)}>{f}</button>
           {/each}
         </div>
+        <dl class="tm-lines" data-team-lines>
+          {#each LINE_CELLS as [k, label] (k)}
+            <div><dt>{label}</dt><dd>{Math.round(lines[k])}</dd></div>
+          {/each}
+        </dl>
+        <p class="muted fs-sm">포메이션을 바꾸면 공격·중원·수비 무게가 옮겨 가요. 선수는 자리마다 그 자리 능력치로 뛰어요.</p>
       </section>
 
       <section class="tm-pitch" aria-label="선발 {filled}명 · 나머지 유스 선수">
@@ -486,6 +505,29 @@
     font-family: var(--display);
     font-weight: 700;
     font-size: 1.0625rem;
+  }
+  .tm-lines {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin: 0;
+  }
+  .tm-lines div {
+    display: grid;
+    place-items: center;
+    padding: 6px 0;
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+  .tm-lines dt {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .tm-lines dd {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 1.25rem;
+    font-weight: 700;
   }
   .tm-pitch {
     display: flex;

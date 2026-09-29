@@ -2,7 +2,7 @@
 import { CLUBS, clubRef, sameClub, type Club } from './data.js';
 import { BAL } from './balance.js';
 import { NATIONAL_TEAM } from './retirement-report.js';
-import { ovr } from './attributes.js';
+import { ovr, peakProfileOf } from './attributes.js';
 import { clamp, ri, pick, rnd } from './rng.js';
 import {
   leagueOf,
@@ -58,6 +58,8 @@ export function endSeason(s: GameState): SeasonEndResult {
   const L = leagueOf(s.leagueId),
     S = s.season,
     o = ovr(s);
+  // T-10-092 최고 OVR을 찍은(같아도) 시즌 말 능력치를 남긴다 — 아래 노쇠 감소 전 값.
+  if (o >= s.peak) s.peakProfile = peakProfileOf(s);
   if (!S.comps) seasonSetup(s, S);
   const avg = S.apps ? S.ratingSum / S.apps : 0;
   const rank = finalRank(s);
@@ -517,6 +519,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     date: new Date().toISOString().slice(0, 10),
     id: s.cid,
     detail: legendSnapshot(s),
+    profile: s.peakProfile ?? peakProfileOf(s, s.peak - ovr(s)),
     public: isPublic,
   };
   const hof = loadHOF();

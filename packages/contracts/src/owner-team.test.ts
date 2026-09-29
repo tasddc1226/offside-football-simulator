@@ -5,8 +5,11 @@ import {
   FORMATION_ROWS,
   FORMATIONS,
   LINEUP_SIZE,
+  LINE_BASE,
+  LINES,
   YOUTH_OVR,
   fit,
+  lineStrength,
   slotRating,
   teamOvr,
 } from './owner-team.js';
@@ -44,9 +47,32 @@ describe('fit', () => {
     expect(fit('GK', 'GK')).toBe(0.95);
   });
   it('실력 = 최고 OVR × 적합도, 팀 OVR은 빈 자리를 유스로 센 평균', () => {
-    expect(slotRating(90, 'ST', 'FW', null)).toBe(86);
+    expect(slotRating('ST', { peak: 90, pos: 'FW', dpos: null })).toBe(86);
     expect(teamOvr(Array.from({ length: 11 }, () => null))).toBe(YOUTH_OVR);
     expect(teamOvr([83, ...Array.from({ length: 10 }, () => null)])).toBe(53);
+  });
+});
+
+describe('T-10-092 자리별 실력·줄 무게', () => {
+  const roles = { GK: 30, CB: 60, FB: 70, DM: 75, CM: 80, AM: 88, W: 85, ST: 83 } as const;
+  it('자리별 실력이 있으면 그 값을 쓰되 최고 OVR을 넘지 않는다', () => {
+    expect(slotRating('AM', { peak: 86, pos: 'MF', dpos: 'AM', roles })).toBe(86);
+    expect(slotRating('W', { peak: 86, pos: 'MF', dpos: 'AM', roles })).toBe(85);
+    expect(slotRating('CB', { peak: 86, pos: 'MF', dpos: 'AM', roles })).toBe(60);
+    // roles가 null이면 옛 적합도 규칙.
+    expect(slotRating('W', { peak: 86, pos: 'MF', dpos: 'AM', roles: null })).toBe(65);
+  });
+  it('줄 기준 인원의 합은 필드 10명이라 포메이션은 무게만 옮긴다', () => {
+    expect(LINES.reduce((t, l) => t + LINE_BASE[l], 0)).toBeCloseTo(10);
+    for (const id of FORMATION_IDS) {
+      const l = lineStrength(FORMATIONS[id], Array(11).fill(70));
+      expect(l.gk).toBe(70);
+      expect(LINES.reduce((t, k) => t + (l[k] - 70), 0)).toBeCloseTo(0);
+    }
+  });
+  it('빈 자리는 유스 선수로 센다', () => {
+    const l = lineStrength(FORMATIONS['4-3-3'], Array(11).fill(null));
+    expect(l.gk).toBe(YOUTH_OVR);
   });
 });
 

@@ -45,6 +45,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       peak?: number;
       status?: 'active' | 'retired';
       publicName?: string | null;
+      roles?: Record<string, number>;
     } = {},
   ) {
     const id = crypto.randomUUID();
@@ -69,6 +70,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       legendScore: retired ? 300 : null,
       shirtNumber: 9,
       publicName: over.publicName ?? null,
+      peakProfile: over.roles
+        ? JSON.stringify({
+            attrs: { pac: 80, sho: 70, pas: 70, dri: 75, def: 60, phy: 70 },
+            roles: over.roles,
+          })
+        : null,
     });
     return id;
   }
@@ -153,6 +160,26 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       rating: 72,
       fit: 0.9,
     });
+  });
+
+  it('T-10-092 최고 시점 능력치가 있으면 자리마다 그 자리 실력으로 뛰고, 팀 줄 힘을 돌려준다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const roles = { GK: 22, CB: 83, FB: 79, DM: 74, CM: 66, AM: 58, W: 55, ST: 52 };
+    const cb = await addCareer(me.profileId, { pos: 'DF', dpos: 'CB', peak: 82, roles });
+    const data = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(data.players[0]).toMatchObject({ careerId: cb, roles });
+    // 4-3-3: 1번 칸 FB, 2번 칸 CB, 5번 칸 DM.
+    const res = await putTeam(me.cookie, { slots: slots(null, cb) });
+    const team = PutRes.parse(await res.json()).data.team;
+    expect(team.slots[1]).toMatchObject({ slot: 'FB', rating: 79, fit: 0.96 });
+    const moved = PutRes.parse(
+      await (await putTeam(me.cookie, { teamId: team.id, slots: slots(null, null, cb) })).json(),
+    ).data.team;
+    expect(moved.slots[2]).toMatchObject({ slot: 'CB', rating: 82, fit: 1 });
+    expect(moved.lines.def).toBeGreaterThan(moved.lines.atk);
+    expect(moved.lines.gk).toBe(YOUTH_OVR);
   });
 
   it('팀을 만들고 고친다 — 빈 자리는 유스 선수, 팀 슬롯은 1개', async () => {

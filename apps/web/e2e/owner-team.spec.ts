@@ -18,8 +18,9 @@ const PLAYERS = [
   {
     careerId: 'c-st',
     pos: 'FW',
-    dpos: null,
+    dpos: 'ST',
     peak: 90,
+    roles: { GK: 25, CB: 50, FB: 62, DM: 60, CM: 70, AM: 82, W: 84, ST: 90 },
     number: 9,
     publicName: '공개 골잡이',
     legendScore: 500,
@@ -29,6 +30,7 @@ const PLAYERS = [
     pos: 'GK',
     dpos: null,
     peak: 80,
+    roles: null,
     number: 1,
     publicName: null,
     legendScore: 300,
@@ -54,6 +56,7 @@ function teamFrom(body: { name: string; formation: string; slots: (string | null
       };
     }),
     ovr: 56,
+    lines: { atk: 60, mid: 52, def: 48, gk: 50 },
     record: REC,
     createdAt: '2026-09-29T00:00:00.000Z',
     updatedAt: '2026-09-29T00:00:00.000Z',
@@ -200,13 +203,22 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(page.locator('[data-slot="9"]')).toContainText('공개 골잡이');
   await expect(page.locator('[data-slot="0"]')).toContainText('No.1');
   await expect(page.locator('[data-slot="1"]')).toContainText('유스 선수');
+  // T-10-092 공격·중원·수비·골문 힘이 보이고, 포메이션을 바꾸면 무게가 옮겨 간다.
+  const lines = page.locator('[data-team-lines]');
+  await expect(lines).toContainText('공격');
+  await expect(lines).toContainText('골문');
+  const atk433 = await lines.locator('dd').first().textContent();
+  await page.locator('[data-formation="4-4-2"]').click();
+  await expect(lines.locator('dd').first()).not.toHaveText(atk433!);
+  await page.locator('[data-formation="4-3-3"]').click();
   await expectNoA11yViolations(page);
 
-  // 자리를 눌러 고르는 시트 — 적합도와 함께 실력 순이다.
+  // 자리를 눌러 고르는 시트 — 그 자리 능력치로 센 실력 순이다(스트라이커의 윙어 실력 84 = 최고 90의 93%).
   await page.locator('[data-slot="10"]').click();
   const sheet = page.getByRole('dialog');
   await expect(sheet).toContainText('윙어');
-  await expect(sheet.locator('[data-pick]').nth(1)).toContainText('적합 95%');
+  await expect(sheet.locator('[data-pick]').nth(1)).toContainText('84');
+  await expect(sheet.locator('[data-pick]').nth(1)).toContainText('적합 93%');
   await sheet.getByRole('button', { name: '닫기' }).first().click();
   await expect(sheet).toHaveCount(0);
 

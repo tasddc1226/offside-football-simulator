@@ -1,5 +1,5 @@
 import type { FormationId } from '@offside/contracts/owner-team';
-import { DETAIL_POSITIONS, type DetailPos } from '@offside/contracts/positions';
+import { DETAIL_POSITIONS, type DetailPos, type PeakProfile } from '@offside/contracts/positions';
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { careers, ownerTeams, profiles, teamMatches } from '../schema.js';
@@ -13,6 +13,17 @@ export type TeamMatchRow = typeof teamMatches.$inferSelect;
 /** careers.dpos(TEXT) → 세부 포지션. 프리시즌 선수·옛 기록은 null. */
 export const dposOf = (v: string | null): DetailPos | null =>
   (DETAIL_POSITIONS as readonly string[]).includes(v ?? '') ? (v as DetailPos) : null;
+
+/** careers.peak_profile(JSON) → 자리별 실력. 이 기능 전에 은퇴한 기록이거나 모양이 틀리면 null. */
+export function rolesOf(json: string | null): PeakProfile['roles'] | null {
+  if (!json) return null;
+  try {
+    const roles = (JSON.parse(json) as Partial<PeakProfile>).roles;
+    return roles && DETAIL_POSITIONS.every((d) => Number.isFinite(roles[d])) ? roles : null;
+  } catch {
+    return null;
+  }
+}
 
 /** 팀 행의 선발 11자리(커리어 id, 빈 자리 null). */
 export const slotIdsOf = (row: Pick<OwnerTeamRow, 'slotsJson'>): (string | null)[] =>
@@ -35,6 +46,7 @@ export function listEligibleCareers(db: Db, profileId: string, limit = 300) {
       pos: careers.pos,
       dpos: careers.dpos,
       peak: careers.peak,
+      peakProfile: careers.peakProfile,
       number: careers.shirtNumber,
       publicName: careers.publicName,
       legendScore: careers.legendScore,
@@ -66,6 +78,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       pos: careers.pos,
       dpos: careers.dpos,
       peak: careers.peak,
+      peakProfile: careers.peakProfile,
       number: careers.shirtNumber,
       publicName: careers.publicName,
     })
@@ -84,6 +97,7 @@ export function eligibleMap(rows: readonly CareerLite[], ownerId: string) {
       pos: r.pos,
       dpos: dposOf(r.dpos),
       peak: r.peak,
+      roles: rolesOf(r.peakProfile),
       number: r.number,
       publicName: r.publicName,
     });

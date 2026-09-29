@@ -147,6 +147,9 @@ export const careers = sqliteTable(
     snapshotJson: text('snapshot_json'),
     // T-10-026 은퇴 때의 대표 칭호 id(web game/titles.ts). 옛 은퇴 기록은 NULL.
     title: text('title'),
+    // T-10-092 최고 시점 능력치(contracts PeakProfile JSON — 대표 능력치 6개 + 세부 포지션 8자리 실력). 구단주 팀이
+    // 자리마다 실력을 센다. 이 기능 전에 은퇴한 기록·옛 클라이언트는 NULL.
+    peakProfile: text('peak_profile'),
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),

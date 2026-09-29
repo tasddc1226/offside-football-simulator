@@ -51,3 +51,16 @@ export const detailPosOpen = (now: string): boolean => {
   const s = serviceSeason(DETAIL_POS_SEASON);
   return !!s && s.startsAt <= now;
 };
+
+/** 대표 능력치 6개(웹 game/data.ts ATTR_KEYS와 같은 순서). 골키퍼는 같은 키에 골키퍼 능력치(DIV·HAN…)가 들어간다. */
+export const FACE_ATTRS = ['pac', 'sho', 'pas', 'dri', 'def', 'phy'] as const;
+export type FaceAttr = (typeof FACE_ATTRS)[number];
+
+/**
+ * T-10-092 은퇴 선수의 최고 시점 능력치. attrs는 대표 능력치 6개, roles는 세부 포지션 8자리 각각에서의 실력
+ * (그 자리 역할의 세부 능력치 가중합 — 주 포지션 자리는 최고 OVR과 같다). 구단주 팀은 자리마다 roles를 쓴다.
+ */
+export type PeakProfile = {
+  attrs: Record<FaceAttr, number>;
+  roles: Record<DetailPos, number>;
+};

@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { CareerIdParamSchema, CareerPosSchema, DetailPosSchema } from './careers.js';
+import {
+  CareerIdParamSchema,
+  CareerPosSchema,
+  DetailPosSchema,
+  PeakProfileSchema,
+} from './careers.js';
 import { PUBLIC_NAME_CHARS } from './content-filter.js';
 import { FORMATION_IDS, LINEUP_SIZE, TEAM_NAME_MAX, TEAM_NAME_MIN } from './owner-team.js';
 import { IsoUtcSchema } from './primitives.js';
@@ -29,6 +34,8 @@ export const TeamPlayerSchema = z.strictObject({
   /** 세부 포지션(T-10-091). 아직 모르면 null. */
   dpos: DetailPosSchema.nullable(),
   peak: z.number().int(),
+  /** 최고 시점의 자리별 실력(T-10-092). 이 기능 전에 은퇴한 선수는 null — 최고 OVR × 적합도로 센다. */
+  roles: PeakProfileSchema.shape.roles.nullable(),
   number: z.number().int().nullable(),
   publicName: z.string().nullable(),
   legendScore: z.number().int().nullable(),
@@ -42,11 +49,20 @@ export const TeamSlotSchema = z.strictObject({
   /** 표시 이름 — 공개 이름, 없으면 익명 표기, 유스 선수면 '유스 선수'. */
   name: z.string(),
   pos: CareerPosSchema.nullable(),
-  /** 그 자리에서의 실력(최고 OVR × 적합도). */
+  /** 그 자리에서의 실력(자리별 실력, 없으면 최고 OVR × 적합도). */
   rating: z.number().int(),
   fit: z.number(),
 });
 export type TeamSlot = z.infer<typeof TeamSlotSchema>;
+
+/** 공격·중원·수비·골키퍼 힘(owner-team.ts lineStrength, 반올림) — 포메이션마다 무게가 다르다. */
+export const TeamLinesSchema = z.strictObject({
+  atk: z.number().int(),
+  mid: z.number().int(),
+  def: z.number().int(),
+  gk: z.number().int(),
+});
+export type TeamLines = z.infer<typeof TeamLinesSchema>;
 
 export const OwnerTeamSchema = z.strictObject({
   id: TeamIdSchema,
@@ -54,6 +70,7 @@ export const OwnerTeamSchema = z.strictObject({
   formation: FormationIdSchema,
   slots: z.array(TeamSlotSchema).length(LINEUP_SIZE),
   ovr: z.number().int(),
+  lines: TeamLinesSchema,
   record: TeamRecordSchema,
   createdAt: IsoUtcSchema,
   updatedAt: IsoUtcSchema,

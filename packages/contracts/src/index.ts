@@ -70,6 +70,7 @@ export {
 export {
   CareerPosSchema,
   DetailPosSchema,
+  PeakProfileSchema,
   CareerFootSchema,
   CareerMetaSchema,
   CareerHonorSchema,

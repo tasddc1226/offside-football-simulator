@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
 import { serviceSeason } from './service-seasons.js';
-import { DETAIL_POSITIONS } from './positions.js';
+import { DETAIL_POSITIONS, FACE_ATTRS, type DetailPos, type FaceAttr } from './positions.js';
 
 /**
  * T-9-009. 커리어·시즌 요약 + 이벤트 선택 로그 업로드 계약. 세이브 전체(브리프: "클라우드 세이브
@@ -14,6 +14,23 @@ export const CareerPosSchema = z.enum(['FW', 'MF', 'DF', 'GK']);
 export type CareerPos = z.infer<typeof CareerPosSchema>;
 /** T-10-091 세부 포지션(시즌 1부터 만든 선수만). 큰 포지션과 어긋나면 서버가 버린다. */
 export const DetailPosSchema = z.enum(DETAIL_POSITIONS);
+
+const Rating99Schema = z.number().int().min(0).max(99);
+/** T-10-092 은퇴 선수의 최고 시점 능력치(positions.ts PeakProfile). 서버는 roles를 최고 OVR 아래로 자른다. */
+export const PeakProfileSchema = z.strictObject({
+  attrs: z.strictObject(
+    Object.fromEntries(FACE_ATTRS.map((k) => [k, Rating99Schema])) as Record<
+      FaceAttr,
+      typeof Rating99Schema
+    >,
+  ),
+  roles: z.strictObject(
+    Object.fromEntries(DETAIL_POSITIONS.map((k) => [k, Rating99Schema])) as Record<
+      DetailPos,
+      typeof Rating99Schema
+    >,
+  ),
+});
 
 export const CareerFootSchema = z.enum(['오른발', '왼발', '양발']);
 export type CareerFoot = z.infer<typeof CareerFootSchema>;
@@ -322,6 +339,8 @@ export type LegendSnapshot = z.infer<typeof LegendSnapshotSchema>;
 export const PutRetirementBodySchema = RetirementSummarySchema.extend({
   publicName: PublicNameSchema.nullable().optional(),
   snapshot: LegendSnapshotSchema.optional(),
+  /** T-10-092 최고 시점 능력치. 옛 클라이언트는 없다 — 모양이 틀려도 은퇴는 받는다. */
+  profile: PeakProfileSchema.optional().catch(undefined),
 });
 export type PutRetirementBody = z.infer<typeof PutRetirementBodySchema>;
 

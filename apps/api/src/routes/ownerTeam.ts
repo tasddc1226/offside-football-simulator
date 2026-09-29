@@ -9,6 +9,7 @@ import {
   TeamOpponentsResponseSchema,
   type OwnerTeam,
   type TeamMatch,
+  type TeamLines,
   type TeamOpponent,
   type TeamRecord,
 } from '@offside/contracts';
@@ -27,6 +28,7 @@ import {
   eligibleMap,
   getTeamWithOwner,
   listEligibleCareers,
+  rolesOf,
   listMyTeams,
   listOpponentCandidates,
   listRecentMatches,
@@ -46,8 +48,10 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import {
   buildLineup,
   filledCount,
+  lineStrength,
   lineupOvr,
   simulateMatch,
+  type LineStrength,
   type LineupCareer,
   type LineupSlot,
   type PlayerRef,
@@ -105,6 +109,13 @@ const recordOf = (t: Pick<OwnerTeamRow, 'wins' | 'draws' | 'losses'>): TeamRecor
 
 const nameOf = (s: LineupSlot) => s.publicName ?? s.ref.anon;
 
+const roundLines = (l: LineStrength): TeamLines => ({
+  atk: Math.round(l.atk),
+  mid: Math.round(l.mid),
+  def: Math.round(l.def),
+  gk: Math.round(l.gk),
+});
+
 function toOwnerTeam(row: OwnerTeamRow, lineup: LineupSlot[]): OwnerTeam {
   return {
     id: row.id,
@@ -119,6 +130,7 @@ function toOwnerTeam(row: OwnerTeamRow, lineup: LineupSlot[]): OwnerTeam {
       fit: s.fit,
     })),
     ovr: lineupOvr(lineup),
+    lines: roundLines(lineStrength(lineup)),
     record: recordOf(row),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -178,6 +190,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           pos: p.pos,
           dpos: dposOf(p.dpos),
           peak: p.peak!,
+          roles: rolesOf(p.peakProfile),
           number: p.number,
           publicName: p.publicName,
         },
@@ -204,6 +217,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           pos: p.pos,
           dpos: dposOf(p.dpos),
           peak: p.peak!,
+          roles: rolesOf(p.peakProfile),
           number: p.number,
           publicName: p.publicName,
           legendScore: p.legendScore,

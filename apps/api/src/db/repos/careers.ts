@@ -8,7 +8,7 @@ import type {
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
 import type { ServiceSeason } from '@offside/contracts/service-seasons';
-import { DETAIL_GROUP } from '@offside/contracts/positions';
+import { DETAIL_GROUP, type PeakProfile } from '@offside/contracts/positions';
 import {
   and,
   desc,
@@ -162,6 +162,8 @@ export type PutRetirementInput = {
   /** undefined면 기존 값을 그대로 둔다(옛 클라이언트 본문). null이면 익명으로 되돌린다. */
   publicName?: string | null | undefined;
   snapshot?: LegendSnapshot | undefined;
+  /** T-10-092 최고 시점 능력치(plausibility.ts boundProfile로 자른 값). 옛 클라이언트는 없다. */
+  profile?: PeakProfile | undefined;
   now: string;
 };
 
@@ -175,7 +177,7 @@ export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
  * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
-  const { careerId, summary, publicName, snapshot, now } = input;
+  const { careerId, summary, publicName, snapshot, profile, now } = input;
   await runBatch(db, [
     // 처음 은퇴할 때만 센다 — 같은 커리어의 첫 은퇴가 동시에 두 번 와도 retired_at이 이미 있으면 아무 행도 넣지
     // 않는다. 같은 트랜잭션에서 아래 update보다 먼저 돌아야 retired_at이 비어 있는 것을 본다.
@@ -218,6 +220,7 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
         ...(snapshot
           ? { snapshotJson: JSON.stringify(snapshot), shirtNumber: snapshot.number }
           : {}),
+        ...(profile ? { peakProfile: JSON.stringify(profile) } : {}),
       })
       .where(eq(careers.id, careerId)),
   ]);

@@ -3,6 +3,7 @@
 // 완전한 판별 유니온으로 다시 모델링하면 포팅 리스크가 커지므로, 여기서는 알려진 필드는 구체적으로
 // 타이핑하고 나머지(로그 라인 종류가 다양한 필드, 이벤트별 임시 플래그 등)는 폭넓게 둡니다.
 import type { LegendSnapshot, PlayStyle, RetiredNumberResult } from '@offside/contracts';
+import type { PeakProfile } from '@offside/contracts/positions';
 import type { CareerBalance } from './balance.js';
 import type { AttrKey, Pos, Club, SAVE_VERSION, DetailPos } from './data.js';
 import type { SeasonEndResult } from './season.js';
@@ -270,6 +271,8 @@ export interface GameState {
   pending: Pending | null;
   flags: Flags;
   peak: number;
+  /** T-10-092 최고 OVR을 찍은 시즌 말의 능력치(구단주 팀의 자리별 실력). 옛 저장본엔 없다 — 은퇴 때 지금 능력치로 추정한다. */
+  peakProfile?: PeakProfile | undefined;
   training: string;
   retired: boolean;
   chains: ChainEvent[];
@@ -294,6 +297,8 @@ export interface HofEntry {
   dpos?: DetailPos | undefined;
   number: number;
   peak: number;
+  /** T-10-092 서버로 보내는 최고 시점 능력치. 옛 기록엔 없다. */
+  profile?: PeakProfile | undefined;
   age: number;
   apps: number;
   goals: number;

@@ -16,7 +16,7 @@ import {
   type AttrKey,
   type Pos,
 } from './data.js';
-import { ovr, initSubs, legacyOvr } from './attributes.js';
+import { ovr, initSubs, legacyOvr, peakProfileOf } from './attributes.js';
 import { clamp, ri, pick, gauss } from './rng.js';
 import { adoptLatestBalance } from './balance.js';
 import type { GameState, Season, LogEntry } from './types.js';
@@ -145,6 +145,7 @@ export function newGame(
   s.seasonStart = { ...s.attrs };
   s.seasonStartSub = { ...s.sub };
   s.peak = ovr(s);
+  s.peakProfile = peakProfileOf(s);
   s.season = newSeason(s);
   log(
     s,

@@ -1,14 +1,17 @@
 // T-10-092 구단주 팀 경기 시뮬레이션. 서버만 돌리는 순수 함수다 — 같은 경기 id(시드)와 같은 선발이면 결과가 늘 같다.
 import {
-  DETAIL_GROUP,
   FORMATIONS,
   LINEUP_SIZE,
   YOUTH_NAME,
   YOUTH_OVR,
   fit,
+  lineStrength as linesOf,
+  slotRating,
   teamOvr,
   type DetailPos,
   type FormationId,
+  type LineStrength,
+  type PeakProfile,
   type PosGroup,
 } from '@offside/contracts/owner-team';
 
@@ -19,6 +22,8 @@ export type LineupCareer = {
   /** 세부 포지션(T-10-091). 아직 모르면 null. */
   dpos: DetailPos | null;
   peak: number;
+  /** 최고 시점의 자리별 실력(T-10-092). 이 기능 전에 은퇴한 선수는 null — 최고 OVR × 적합도로 센다. */
+  roles: PeakProfile['roles'] | null;
   number: number | null;
   publicName: string | null;
 };
@@ -70,13 +75,17 @@ export function buildLineup(
         publicName: null,
       };
     }
-    const f = fit(slot, c.pos, c.dpos);
+    const rating = slotRating(slot, c);
     return {
       slot,
       careerId: c.id,
       pos: c.pos,
-      rating: Math.round(c.peak * f),
-      fit: f,
+      rating,
+      // 자리별 실력이 있으면 최고 OVR 대비 비율, 없으면 적합도 규칙.
+      fit:
+        c.roles && c.peak > 0
+          ? Math.round((rating / c.peak) * 100) / 100
+          : fit(slot, c.pos, c.dpos),
       ref: { careerId: c.id, anon: anonName(c.pos, c.number) },
       publicName: c.publicName,
     };
@@ -87,24 +96,14 @@ export const filledCount = (lineup: readonly LineupSlot[]) =>
   lineup.filter((s) => s.careerId !== null).length;
 export const lineupOvr = (lineup: readonly LineupSlot[]) => teamOvr(lineup.map((s) => s.rating));
 
-export type LineStrength = { atk: number; mid: number; def: number; gk: number };
+export type { LineStrength };
 
-const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : YOUTH_OVR);
-
-/** 계열별 평균으로 공격·중원·수비·골키퍼 힘을 낸다. 공격은 공격수 중심에 미드필더·수비 가담을 조금 섞는다. */
-export function lineStrength(lineup: readonly LineupSlot[]): LineStrength {
-  const by: Record<PosGroup, number[]> = { FW: [], MF: [], DF: [], GK: [] };
-  for (const s of lineup) by[DETAIL_GROUP[s.slot]].push(s.rating);
-  const fw = mean(by.FW);
-  const mf = mean(by.MF);
-  const df = mean(by.DF);
-  return {
-    atk: 0.6 * fw + 0.3 * mf + 0.1 * df,
-    mid: mf,
-    def: 0.6 * df + 0.25 * mf + 0.15 * fw,
-    gk: mean(by.GK),
-  };
-}
+/** 공격·중원·수비·골키퍼 힘 — 자리마다의 몫과 포메이션의 줄 무게(contracts owner-team.ts lineStrength). */
+export const lineStrength = (lineup: readonly LineupSlot[]): LineStrength =>
+  linesOf(
+    lineup.map((s) => s.slot),
+    lineup.map((s) => s.rating),
+  );
 
 /** 기대 득점의 기준(두 팀 힘이 같을 때), 공격 − 상대 수비 10점당 배율(지수), 중원 10점당 배율, 홈 이점. */
 export const SIM = {

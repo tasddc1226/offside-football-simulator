@@ -77,4 +77,20 @@ describe('세부 포지션 (T-10-091)', () => {
     expect(legendScore(s)).toBeGreaterThan(legendScore(plain));
     expect(retire(s).dpos).toBe('W');
   });
+
+  it('T-10-092 최고 시점 능력치: 주 포지션 자리 실력 = 최고 OVR, 은퇴 기록에 실린다', () => {
+    const s = make('DF', 'CB');
+    expect(s.peakProfile!.roles.CB).toBe(s.peak);
+    expect(s.peakProfile!.roles.CB).toBeGreaterThan(s.peakProfile!.roles.ST);
+    expect(Object.keys(s.peakProfile!.attrs)).toEqual(['pac', 'sho', 'pas', 'dri', 'def', 'phy']);
+    expect(retire(s).profile).toEqual(s.peakProfile);
+  });
+
+  it('T-10-092 최고 시점 능력치가 없는 옛 저장본은 은퇴 때 최고 OVR 높이로 추정한다', () => {
+    const s = make('FW', 'ST');
+    delete s.peakProfile;
+    s.peak = ovr(s) + 6;
+    const p = retire(s).profile!;
+    expect(p.roles.ST).toBe(s.peak);
+  });
 });

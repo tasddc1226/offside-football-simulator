@@ -19,7 +19,7 @@ import {
   storedSeasonsOf,
   updateRetired,
 } from '../db/repos/careers.js';
-import { boundRetirement, sanitizeSeason } from '../plausibility.js';
+import { boundProfile, boundRetirement, sanitizeSeason } from '../plausibility.js';
 import { getProfile, isLinked } from '../db/repos/profiles.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
@@ -111,7 +111,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       throw careerOwnerMismatch();
     }
 
-    const { publicName, snapshot, ...sent } = readBody(c, PutRetirementBodySchema);
+    const { publicName, snapshot, profile, ...sent } = readBody(c, PutRetirementBodySchema);
     if (publicName && !isAcceptablePublicName(publicName)) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
@@ -134,7 +134,14 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
           details: { reason: 'NO_SEASONS' },
         });
       }
-      await putRetirement(db, { careerId, summary, publicName, snapshot, now });
+      await putRetirement(db, {
+        careerId,
+        summary,
+        publicName,
+        snapshot,
+        profile: profile && boundProfile(profile, summary.peak),
+        now,
+      });
       await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
     }
     // T-10-076 영구결번 심사. 이름 공개 토글 재전송도 여기로 온다 — 이름을 공개하는 순간 자리를 잡는다.
