@@ -8,6 +8,7 @@
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
   import { advance, nextPending } from './actions.js';
+  import { loadGameSheets } from './sheets/gameSheets.svelte.js';
   import { buzz, dur } from './motion.js';
   import ClubBadge from './ClubBadge.svelte';
   import Topbar from './Topbar.svelte';
@@ -18,6 +19,11 @@
   import TrophyTab from './tabs/TrophyTab.svelte';
   import TitleDex from './titles/TitleDex.svelte';
   import { mainTitle } from '../game/titles.js';
+  import { marketValue } from '../game/season.js';
+  import { fmtValue } from './format.js';
+
+  // T-10-104: 이벤트·결산·이적시장 시트 본문도 게임 청크다 — 첫 시트가 뜨기 전에 미리 받아 둔다.
+  void loadGameSheets().catch(() => {});
 
   const s = $derived(appState.G!);
   // OVR 숫자 트윈(T-10-003 goal 3): 훈련·이벤트 결과로 능력치가 바뀔 때마다 즉시 점프하는 대신
@@ -25,7 +31,12 @@
   const ovrTween = Tween.of(() => ovr(s), { duration: dur(420) });
   const L = $derived(leagueOf(s.leagueId));
   const role = $derived(roleOf(s));
-  const contract = $derived(s.contract ? `연봉 ${fmtMoney(s.contract.salary)}` : L.amateur ? '아마추어' : '');
+  // T-10-100 연봉 옆에 몸값(이적료 기준)을 같이 둔다 — 연봉을 몸값으로 읽지 않게.
+  const contract = $derived(
+    [s.contract ? `연봉 ${fmtMoney(s.contract.salary)}` : L.amateur ? '아마추어' : '', L.amateur ? '' : `몸값 ${fmtValue(marketValue(s))}`]
+      .filter(Boolean)
+      .join(' · '),
+  );
   const title = $derived(mainTitle(s));
   // 대표 칭호를 누르면 트로피 탭의 칭호 도감으로 간다.
   function openTitles() {

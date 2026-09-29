@@ -17,7 +17,7 @@ test('첫 화면 제목을 다시 그리지 않고 이어받는다', async ({ pa
     }).observe(document, { childList: true, subtree: true });
   });
   await page.goto('/');
-  await expect(page.locator('.hero-home h1')).toHaveText(/지금 시작됩니다/);
+  await expect(page.locator('.hero-home h1')).toHaveText(/이번 생은 축구다/);
   expect(
     await page.evaluate(() => {
       const w = window as unknown as { __firstH1: Element | null; __removed: number };

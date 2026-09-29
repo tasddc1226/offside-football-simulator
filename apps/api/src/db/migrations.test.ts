@@ -113,6 +113,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'nation',
     'height',
     'weight',
+    'value',
   ],
   career_seasons: [
     'career_id',

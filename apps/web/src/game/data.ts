@@ -8,25 +8,24 @@ export const SAVE_VERSION = 1;
 export interface League extends LeagueBase {
   avg: number;
   spread: number;
-  wealth: number;
   matches: number;
 }
-// 리그 id·이름·등급은 @offside/contracts/club-names(서버가 영구결번 판정에 같은 등급을 쓴다, T-10-076).
-const LEAGUE_STATS: Record<string, Pick<League, 'avg' | 'spread' | 'wealth' | 'matches'>> = {
-  hs: { avg: 46, spread: 5, wealth: 0, matches: 20 },
-  uni: { avg: 52, spread: 5, wealth: 0, matches: 20 },
-  k3: { avg: 51, spread: 5, wealth: 1.5, matches: 28 },
-  k2: { avg: 57, spread: 5, wealth: 4, matches: 36 },
-  k1: { avg: 63, spread: 6, wealth: 7, matches: 38 },
-  j1: { avg: 65, spread: 6, wealth: 9, matches: 38 },
-  // T-10-016 MLS: 전력은 J1보다 조금 위, 자금력은 에레디비시 위.
-  mls: { avg: 66, spread: 7, wealth: 14, matches: 34 },
-  ere: { avg: 68, spread: 7, wealth: 12, matches: 34 },
-  l1: { avg: 71, spread: 7, wealth: 18, matches: 34 },
-  bl: { avg: 74, spread: 7, wealth: 24, matches: 34 },
-  sa: { avg: 74, spread: 7, wealth: 24, matches: 38 },
-  ll: { avg: 76, spread: 8, wealth: 30, matches: 38 },
-  pl: { avg: 78, spread: 7, wealth: 40, matches: 38 },
+// 리그 id·이름·등급·자금력은 @offside/contracts/club-names(서버가 영구결번 등급·은퇴 가치에 쓴다, T-10-076·100).
+const LEAGUE_STATS: Record<string, Pick<League, 'avg' | 'spread' | 'matches'>> = {
+  hs: { avg: 46, spread: 5, matches: 20 },
+  uni: { avg: 52, spread: 5, matches: 20 },
+  k3: { avg: 51, spread: 5, matches: 28 },
+  k2: { avg: 57, spread: 5, matches: 36 },
+  k1: { avg: 63, spread: 6, matches: 38 },
+  j1: { avg: 65, spread: 6, matches: 38 },
+  // T-10-016 MLS: 전력은 J1보다 조금 위(자금력은 에레디비시 위 — club-names LEAGUE_BASE).
+  mls: { avg: 66, spread: 7, matches: 34 },
+  ere: { avg: 68, spread: 7, matches: 34 },
+  l1: { avg: 71, spread: 7, matches: 34 },
+  bl: { avg: 74, spread: 7, matches: 34 },
+  sa: { avg: 74, spread: 7, matches: 38 },
+  ll: { avg: 76, spread: 8, matches: 38 },
+  pl: { avg: 78, spread: 7, matches: 38 },
 };
 export const LEAGUES: League[] = LEAGUE_BASE.map((l) => ({ ...l, ...LEAGUE_STATS[l.id]! }));
 

@@ -17,6 +17,7 @@ import {
 import type { CareerRecord, GameState } from '../game/types.js';
 
 export { anonName } from '../game/pos-label.js';
+export { fmtValue } from '@offside/contracts/market-value';
 
 export function seasonLabelOf(r: CareerRecord): string {
   const L = LEAGUES.find((l) => l.name === r.league);

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { careers } from '../db/schema.js';
 import { inArray } from 'drizzle-orm';
+import { retireValue, valueFor } from '@offside/contracts/market-value';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
 
@@ -356,6 +357,64 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect((await createApp().request('/v1/hof?sort=name', {}, ctx.env)).status).toBe(400);
   });
 
+  it('T-10-101: q로 공개 이름을 찾고, 찾은 선수에 검색 전 순위를 붙인다', async () => {
+    const rows = [
+      {
+        id: '0c000000-0000-4000-8000-000000000001',
+        legendScore: 400,
+        goals: 10,
+        publicName: '김오프',
+      },
+      {
+        id: '0c000000-0000-4000-8000-000000000002',
+        legendScore: 300,
+        goals: 90,
+        publicName: '박사이드',
+      },
+      {
+        id: '0c000000-0000-4000-8000-000000000003',
+        legendScore: 200,
+        goals: 50,
+        publicName: '오프_100%',
+      },
+      { id: '0c000000-0000-4000-8000-000000000004', legendScore: 100, goals: 70, publicName: null },
+    ];
+    for (const { id, publicName, ...s } of rows) {
+      await putSeasonsFor(ctx.env, cookie, id, { ...summary, ...s });
+      await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, { ...summary, ...s, publicName });
+    }
+    const read = async (q: string) =>
+      successEnvelope(HofListResponseSchema).parse(
+        await (await createApp().request(`/v1/hof?${q}`, {}, ctx.env)).json(),
+      ).data;
+    const pick = (d: Awaited<ReturnType<typeof read>>) => d.entries.map((e) => [e.name, e.rank]);
+
+    const off = await read(`q=${encodeURIComponent('오프')}`);
+    expect(off.total).toBe(2);
+    expect(pick(off)).toEqual([
+      ['김오프', 1],
+      ['오프_100%', 3],
+    ]);
+    // 순위는 고른 유형 기준(득점 순이면 박사이드 90 · 익명 70 · 오프_100% 50 · 김오프 10).
+    expect(pick(await read(`sort=goals&q=${encodeURIComponent('오프')}`))).toEqual([
+      ['오프_100%', 3],
+      ['김오프', 4],
+    ]);
+    // LIKE 특수 문자는 글자 그대로 찾는다.
+    expect(pick(await read(`q=${encodeURIComponent('_1')}`))).toEqual([['오프_100%', 3]]);
+    expect((await read(`q=${encodeURIComponent('%')}`)).total).toBe(1);
+    // 한 페이지를 나눠도 순위는 그대로, 빈 검색어는 전체 목록.
+    expect(pick(await read(`limit=1&page=2&q=${encodeURIComponent('오프')}`))).toEqual([
+      ['오프_100%', 3],
+    ]);
+    const blank = await read('q=%20');
+    expect(blank.total).toBe(4);
+    expect(blank.entries.every((e) => e.rank === undefined)).toBe(true);
+    expect((await createApp().request(`/v1/hof?q=${'가'.repeat(21)}`, {}, ctx.env)).status).toBe(
+      400,
+    );
+  });
+
   it('공개 목록은 쿠키가 있어도 세션·프로필을 읽지 않는다(T-10-015)', async () => {
     const seen: string[] = [];
     const DB = new Proxy(ctx.env.DB, {
@@ -440,6 +499,70 @@ describe('공개 명예의 전당 /v1/hof', () => {
     // 한 번 끝나면 다시 훑지 않는다.
     const meta = await ctx.env.DB.prepare(
       "select value from app_meta where key = 'club_ids_backfill'",
+    ).first();
+    expect(meta).toEqual({ value: '1' });
+  });
+  it('T-10-100: 은퇴 가치를 스냅샷으로 매기고 가치 순으로 정렬한다(옛 기록은 리그 이름으로, 스냅샷 없으면 빠진다)', async () => {
+    const pro = (ovr: number, age: number, league: string) => ({
+      ...snapshot.career[0]!,
+      league,
+      clubId: undefined,
+      ovr,
+      age,
+    });
+    const rows = [
+      {
+        id: '0c000000-0000-4000-8000-000000000001',
+        legendScore: 300,
+        career: [pro(80, 26, '라리가')],
+      },
+      {
+        id: '0c000000-0000-4000-8000-000000000002',
+        legendScore: 900,
+        career: [pro(90, 25, '프리미어리그'), pro(88, 27, '프리미어리그')],
+      },
+      { id: '0c000000-0000-4000-8000-000000000003', legendScore: 500, career: null }, // 옛 클라이언트: 스냅샷 없음
+    ];
+    for (const { id, legendScore, career } of rows) {
+      await putSeasonsFor(ctx.env, cookie, id, summary);
+      await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, {
+        ...summary,
+        legendScore,
+        ...(career ? { publicName: null, snapshot: { ...snapshot, career } } : {}),
+      });
+    }
+    const read = async (q: string) =>
+      successEnvelope(HofListResponseSchema).parse(
+        await (await createApp().request(`/v1/hof?${q}`, {}, ctx.env)).json(),
+      ).data;
+    const list = await read('sort=value');
+    expect(list.entries.map((e) => e.id)).toEqual([rows[1]!.id, rows[0]!.id]);
+    expect(list.entries[1]!.value).toBe(retireValue(rows[0]!.career!, 300));
+    expect(list.entries[1]!.value).toBe(
+      Math.round(((valueFor('ll', 80, 26) / 3) * (1 + 300 / 250)) / 1000) * 1000,
+    );
+    // 스냅샷 없는 기록은 소급해도 0 — 가치 순에서 빠지고, 레전드 점수 순에는 남는다.
+    expect((await read('sort=score')).entries.find((e) => e.id === rows[2]!.id)?.value).toBe(0);
+  });
+
+  it('T-10-100: 이 기능 전 은퇴 기록(value 없음)은 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {
+    await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
+      ...summary,
+      publicName: null,
+      snapshot: {
+        ...snapshot,
+        career: [{ ...snapshot.career[0]!, league: 'K리그1', clubId: undefined, ovr: 75, age: 23 }],
+      },
+    });
+    await ctx.env.DB.prepare('update careers set value = null').run();
+    const list = successEnvelope(HofListResponseSchema).parse(
+      await (await createApp().request('/v1/hof?sort=value', {}, ctx.env)).json(),
+    ).data;
+    expect(list.entries[0]?.value).toBe(
+      Math.round(((valueFor('k1', 75, 23) / 3) * (1 + 420 / 250)) / 1000) * 1000,
+    );
+    const meta = await ctx.env.DB.prepare(
+      "select value from app_meta where key = 'career_values_backfill'",
     ).first();
     expect(meta).toEqual({ value: '1' });
   });

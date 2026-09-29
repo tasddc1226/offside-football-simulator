@@ -2,7 +2,8 @@
 // 첫 화면에 내려받는 JS(index.html의 진입 스크립트 + modulepreload) gzip 합이 예산을 넘지 않는지 검사한다.
 // T-10-051: 예전엔 index-*.js만 셌다 — 번들러가 공유 모듈을 정적 청크로 떼어 내면 실제 첫 화면 크기는 그대로인데
 // 숫자만 오르내렸다. 동적 import 청크(account, 도감, 관리자 등)는 첫 화면에 받지 않으므로 넣지 않는다.
-import { existsSync, readFileSync } from 'node:fs';
+// T-10-104: 게임 화면·액션·게임 시트도 지연 청크로 뗐다(홈이 한가할 때 미리 받는다 — nav.warmGame).
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,8 +24,26 @@ if (!existsSync(path.join(distDir, 'index.html'))) {
 // T-10-033: 이벤트 정의는 import 부수효과로 EVENTS에 등록된다. 게임 경로에서 import가 빠지면 정의가
 // 지연 청크(EventDex)로만 가고 일반 플레이에서 이벤트가 안 뜬다 — 모듈마다 첫 이벤트 id로 확인한다.
 // military.ts는 season.ts가 정적으로 import해 공유 청크로 가므로 여기서는 나머지 네 모듈만 본다.
-// 첫 화면 청크 어디에든 있으면 된다.
+// T-10-104: 게임 화면(Game.svelte → actions.ts → turn.ts → event-registry)이 첫 화면 번들에서 지연 청크로 빠졌다.
+// 그래서 첫 화면 청크가 아니라 '게임 청크(Game-*.js)에서 정적 import로 따라가 닿는 청크들'에 마커가 있는지 본다 —
+// 게임 화면이 뜨면 함께 실행되는 범위이고, 동적 import(EventDex 등)는 따라가지 않는다.
 const EVENT_MARKERS = ['knock', 'rival-1', 'var', 'fw-drought'];
+const GAME_CHUNK = /^Game-[^/]+\.js$/;
+// 정적 import·재수출(`import{..}from"./x.js"`, `import"./x.js"`, `export{..}from"./x.js"`)만 잡는다. `import("./x.js")`(동적)는 제외.
+const STATIC_IMPORT = /\b(?:import|export)\s*(?:[^"'`;()]*?\bfrom\s*)?["']\.\/([^"']+\.js)["']/g;
+/** dist/assets에서 entry 청크들이 정적 import로 닿는 청크 파일명 집합. */
+function staticClosure(entries) {
+  const seen = new Set();
+  const queue = [...entries];
+  while (queue.length) {
+    const f = queue.pop();
+    if (seen.has(f) || !existsSync(path.join(distAssetsDir, f))) continue;
+    seen.add(f);
+    const src = readFileSync(path.join(distAssetsDir, f), 'utf8');
+    for (const m of src.matchAll(STATIC_IMPORT)) queue.push(m[1]);
+  }
+  return seen;
+}
 const indexHtml = readFileSync(path.join(distDir, 'index.html'), 'utf8');
 const initialFiles = [...indexHtml.matchAll(/(?:src|href)="\/?assets\/([^"]+\.js)"/g)].map(
   (m) => m[1],
@@ -33,9 +52,6 @@ if (!initialFiles.some((f) => /^index-/.test(f))) {
   console.error('index.html이 가리키는 index-*.js를 dist/assets에서 찾지 못했다.');
   process.exit(1);
 }
-const initialSource = initialFiles
-  .map((f) => readFileSync(path.join(distAssetsDir, f), 'utf8'))
-  .join('\n');
 let totalGzipBytes = 0;
 for (const file of initialFiles) {
   const bytes = readFileSync(path.join(distAssetsDir, file));
@@ -52,12 +68,22 @@ if (totalGzipBytes > LIMIT_BYTES) {
   process.exit(1);
 }
 
+const gameEntries = readdirSync(distAssetsDir).filter((f) => GAME_CHUNK.test(f));
+if (!gameEntries.length) {
+  console.error(
+    'dist/assets에서 게임 청크(Game-*.js)를 찾지 못했다 — App.svelte가 Game.svelte를 지연 import하는지 확인하라.',
+  );
+  process.exit(1);
+}
+const gameSource = [...staticClosure(gameEntries)]
+  .map((f) => readFileSync(path.join(distAssetsDir, f), 'utf8'))
+  .join('\n');
 const missing = EVENT_MARKERS.filter(
-  (id) => !new RegExp(`id:\\s*["'\`]${id}["'\`]`).test(initialSource),
+  (id) => !new RegExp(`id:\\s*["'\`]${id}["'\`]`).test(gameSource),
 );
 if (missing.length) {
   console.error(
-    `초기 청크에 이벤트 정의가 없다(${missing.join(', ')}) — 진입점(main.ts → ui/actions.ts → game/turn.ts)에서 game/event-registry.js가 정적으로 import되는지 확인하라.`,
+    `게임 청크의 정적 import 범위에 이벤트 정의가 없다(${missing.join(', ')}) — 게임 경로(Game.svelte → ui/actions.ts → game/turn.ts)에서 game/event-registry.js가 정적으로 import되는지 확인하라.`,
   );
   process.exit(1);
 }

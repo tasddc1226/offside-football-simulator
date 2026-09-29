@@ -2,6 +2,7 @@
   // T-10-029 → T-10-067 은퇴 커리어 공유. 내 은퇴 선수 화면(은퇴 직후·선수 상세) 아래에 고정된 버튼으로, 로그인하지
   // 않아도 보기 전용 공유 링크(/career/<id>)를 복사한다 — 링크는 공개 명예의 전당 상세라 로그인과 무관하다.
   // T-10-069 이 기기에 없는 계정의 내 선수도 띄운다 — 띄울지는 LegendView.shareId(legend.ts)가 정한다. 왼쪽 반은 홈으로.
+  import { trackShareClick, trackShareSuccess } from '../analytics/index.js';
   import { getHofDetail } from '../api/client.js';
   import { toast } from './helpers.js';
   import { goHome } from './nav.js';
@@ -28,7 +29,9 @@
   }
 
   async function copy() {
+    if (busy) return;
     busy = true;
+    trackShareClick();
     // 한 번 확인한 링크는 다시 서버에 묻지 않는다.
     const link = url ? Promise.resolve(url) : checkLink();
     let copied: Promise<void>;
@@ -43,15 +46,17 @@
       url = await link;
     } catch (e) {
       copied.catch(() => {});
-      return toast((e as Error).message);
-    } finally {
       busy = false;
+      return toast((e as Error).message);
     }
     try {
       await copied;
+      trackShareSuccess();
       toast('공유 링크를 복사했어요.');
     } catch {
       toast('위 링크를 복사해 공유해 주세요.');
+    } finally {
+      busy = false;
     }
   }
 </script>

@@ -1,3 +1,4 @@
+import { analytics, trackPage } from '../analytics/index.js';
 // ───────── 게임 진행 액션 ─────────
 // 게임 로직을 호출하고, 그 결과를 시트 뷰 모델(sheets/types.ts)로 바꿔 showSheet에 넘긴다.
 // 게임 로직 호출 순서(=RNG 소비 순서)는 포팅 전 ui.ts와 동일하게 유지한다.
@@ -35,7 +36,7 @@ import type { Choice, EventDef, EventLogEntry, GameState, MarketResult } from '.
 import { appState, draftBody, draftDpos, randomName, randomNumber } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { publicNameOf } from './namePublic.js';
-import { seasonLabelOf } from './format.js';
+import { fmtValue, seasonLabelOf } from './format.js';
 import { motionOK } from './motion.js';
 import {
   closeSheet,
@@ -69,6 +70,7 @@ export async function advance() {
       ? { type: 'seasonEnd' }
       : null;
   save();
+  analytics.play(s, ph === 0 && s.career.length === 0);
   const extras = [
     ...(comp.length ? ['컵 · 대륙 대회 결과 집계'] : []),
     ...(nt ? ['A매치 소집 명단 발표'] : []),
@@ -146,6 +148,8 @@ export function nextPending() {
     uploadSeason(s, res.rec);
     s.pending = { type: 'market', res, m: null };
     save();
+    analytics.play(s);
+    analytics.firstSeason(s);
     const steps = [
       '리그 최종 순위 확정',
       ...(res.tours.length ? ['국제 대회 결과 반영'] : []),
@@ -217,6 +221,7 @@ export async function chooseEvent(i: number) {
     pushEvLog(s, entry);
     s.pending = p.then === 'seasonEnd' ? { type: 'seasonEnd' } : null;
     save();
+    analytics.play(s);
     return { ...r, dexNew, timing: tap ? timingNote(tap.d) : null };
   };
   const mg = activeMg(c);
@@ -348,7 +353,7 @@ function showMarket(m: MarketResult) {
       note: m.note,
       options: m.options.map((o) => {
         if (o.kind === 'offer') {
-          const extra = `${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtMoney(o.fee)}` : G.contract && !leagueOf(G.leagueId).amateur ? ' · 자유계약(FA)' : ''}`;
+          const extra = `${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtValue(o.fee)}` : G.contract && !leagueOf(G.leagueId).amateur ? ' · 자유계약(FA)' : ''}`;
           return {
             clubId: o.clubId,
             name: o.name,
@@ -393,12 +398,14 @@ export function pickOption(i: number) {
     if (r.reopen) {
       appState.G.pending = { type: 'market', res: null, m: market(appState.G) };
       save();
+      analytics.play(appState.G);
       return showSheet({ kind: 'notice', eyebrow: '병역', text: r.text }, [
         { label: '이적 시장으로 →', cls: 'btn-primary', fn: nextPending },
       ]);
     }
     appState.G.pending = null;
     save();
+    analytics.play(appState.G);
     appState.tab = 'season';
     return showSheet(
       {
@@ -413,6 +420,7 @@ export function pickOption(i: number) {
   appState.G.pending = null;
   appState.G.training = 'rest';
   save();
+  analytics.play(appState.G);
   closeSheet();
   appState.tab = 'season';
   toast(`${appState.G.year} 시즌 시작!`);
@@ -425,6 +433,8 @@ export function doRetire() {
   save();
   closeSheet();
   appState.screen = 'retired';
+  trackPage('retired');
+  analytics.retire(appState.G!);
   window.scrollTo(0, 0);
 }
 
@@ -442,6 +452,7 @@ export function confirmNew() {
         label: '새 커리어 시작',
         cls: 'btn-primary',
         fn: () => {
+          analytics.replace();
           appState.G = null;
           save();
           closeSheet();
@@ -471,6 +482,7 @@ export function retireAsk(onCancel: () => void = closeSheet) {
 }
 
 export function startCareer(name: string, number: number, presetAttrs?: Record<AttrKey, number>) {
+  const previous = appState.G;
   const finalName = name.trim() || randomName();
   const finalNumber = clamp(+number || randomNumber(), 1, 99);
   const seed = freshSeed();
@@ -488,6 +500,8 @@ export function startCareer(name: string, number: number, presetAttrs?: Record<A
   );
   save();
   appState.screen = 'game';
+  trackPage('game');
+  analytics.start(appState.G!, previous);
   appState.tab = 'season';
   appState.candidates = null;
   appState.report = null;

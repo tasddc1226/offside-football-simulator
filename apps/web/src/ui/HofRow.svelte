@@ -1,6 +1,6 @@
 <script lang="ts" module>
   import type { PublicHofEntry } from '@offside/contracts';
-  export type RowStats = Pick<PublicHofEntry, 'apps' | 'goals' | 'assists' | 'trophies' | 'awards' | 'caps' | 'peak' | 'ballon'> & {
+  export type RowStats = Pick<PublicHofEntry, 'apps' | 'goals' | 'assists' | 'trophies' | 'awards' | 'caps' | 'peak' | 'ballon' | 'value'> & {
     score: number;
   };
 </script>
@@ -41,8 +41,8 @@
     tag?: string | null;
     t: RowStats;
     titleId: string | null | undefined;
-    /** 오른쪽에 크게 보일 값. 기본은 레전드 점수. */
-    value?: number;
+    /** 오른쪽에 크게 보일 값. 기본은 레전드 점수. 은퇴 가치(T-10-100)는 '1,115억'처럼 글자로. */
+    value?: number | string;
     unit?: string;
     /** 오른쪽 값이 레전드 점수가 아니면 요약 줄에 레전드 점수를 덧붙인다. */
     showScore?: boolean;
@@ -57,6 +57,8 @@
   } = $props();
   const foreign = $derived(nation && nation !== DEFAULT_NATION ? NATION_BY_CODE.get(nation) : undefined);
   const tt = $derived(titleById(titleId));
+  // 글자 값('1,115억 3천만')은 큰 단위 아래에 작은 단위를 한 줄 더 — 오른쪽 칸이 좁아 이름 줄이 덜 밀린다.
+  const [valueHead, valueSub] = $derived(typeof value === 'string' ? value.split(' ') : []);
 </script>
 
 {#if rank < MEDAL.length}
@@ -64,11 +66,12 @@
 {:else}
   <div class="hof-rank">{rank + 1}</div>
 {/if}
-<div>
-  <ClubMark name={club} id={clubId} size={18} /> {#if foreign}<span class="hof-flag" role="img" aria-label={foreign.ko} title={foreign.ko} data-hof-nation={foreign.code}>{flagOf(foreign.code)}</span> {/if}<b>{name}</b> <span class="pill">{posLabel({ pos, dpos })}</span>
+<!-- 두 줄: 윗줄은 이름·포지션·칭호와 오른쪽 값, 아랫줄 기록 요약은 값 밑까지 넓게 쓰고 넘치면 말줄임(T-10-105). -->
+<div class="hof-main">
+  <ClubMark name={club} id={clubId} size={18} />{#if foreign}<span class="hof-flag" role="img" aria-label={foreign.ko} title={foreign.ko} data-hof-nation={foreign.code}>{flagOf(foreign.code)}</span>{/if}<b>{name}</b> <span class="pill">{posLabel({ pos, dpos })}</span>
   {#if rn != null}<span class="pill pill-rn" data-rn-chip title="영구결번 {rn}번">👑 영결 {rn}</span>{/if}
   {#if tag}<span class="pill">{tag}</span>{/if}
   {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
-  <div class="muted fs-xs">{t.apps}경기 {t.goals}골 {t.assists}도움 · 트로피 {t.trophies} · 최고 OVR {t.peak}{t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}{showScore ? ` · 레전드 ${t.score}` : ''}</div>
 </div>
-<div class="num hof-value">{value}{#if unit}<small>{unit}</small>{/if}</div>
+<div class="num hof-value" class:hof-value-text={typeof value === 'string'}>{#if valueSub}{valueHead} <small class="hof-value-sub">{valueSub}</small>{:else}{value}{/if}{#if unit}<small>{unit}</small>{/if}</div>
+<div class="muted fs-xs hof-stats">{t.apps}경기 {t.goals}골 {t.assists}도움 · 트로피 {t.trophies} · 최고 OVR {t.peak}{t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}{showScore ? ` · 레전드 ${t.score}` : ''}</div>

@@ -1,16 +1,20 @@
 <script lang="ts">
   // ui.ts careerTab() 포트 (371~387줄)
   import type { GameState, LegendSource } from '../../game/types.js';
-  import { seasonLabelOf, totals } from '../format.js';
+  import { fmtValue, seasonLabelOf, totals } from '../format.js';
   import ClubMark from '../ClubMark.svelte';
+  import ValueChart from '../ValueChart.svelte';
   import { nextMilestones } from '../../game/records.js';
+  import { peakValue, seasonValue } from '@offside/contracts/market-value';
 
   // 은퇴 상세(LegendSource)에는 '다음 목표'가 없다 — 진행 중인 커리어(GameState)에서만 계산한다.
-  const { s }: { s: LegendSource | GameState } = $props();
+  // chart: 몸값 그래프·최고 몸값 줄. 은퇴 크레딧은 자기 '몸값 흐름' 장면이 있어 끈다(T-10-106).
+  const { s, chart = true }: { s: LegendSource | GameState; chart?: boolean } = $props();
   const t = $derived(totals(s));
   const rows = $derived(s.career.slice().reverse());
   const miles = $derived((s.miles || []).slice().reverse());
   const next = $derived('attrs' in s && !s.retired ? nextMilestones(s) : []);
+  const peakV = $derived(chart ? peakValue(s.career) : null);
 </script>
 
 <section class="card stack">
@@ -25,6 +29,10 @@
     {/if}
     <div><b>{s.trophies.length + s.awards.length}</b><span>수상</span></div>
   </div>
+  {#if peakV}
+    <ValueChart rows={s.career} />
+    <p class="muted fs-sm" data-peak-value>최고 몸값 <b>{fmtValue(peakV.value)}</b> · {seasonLabelOf(peakV.row)} {peakV.row.club}</p>
+  {/if}
 </section>
 {#if next.length}
   <section class="card stack">
@@ -48,9 +56,10 @@
         </thead>
         <tbody>
           {#each rows as r, i (i)}
+            {@const sv = seasonValue(r)}
             <tr>
               <td>{r.mil ? r.year : seasonLabelOf(r)} <span class="muted">({r.age})</span>{#if r.ch?.length}<br /><span class="badge-ch">CH×{r.ch.length}</span>{/if}</td>
-              <td><ClubMark name={r.club} id={r.clubId} /> {r.club}<div class="muted" style="font-size:0.6875rem">{r.league}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
+              <td><ClubMark name={r.club} id={r.clubId} /> {r.club}<div class="muted season-sub">{r.league}{sv ? ' · ' : ''}{#if sv}<span class="season-value" data-season-value>몸값 {fmtValue(sv)}</span>{/if}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
               <td class="n">{r.apps}</td>
               <td class="n">{r.goals}</td>
               <td class="n">{r.assists}</td>
@@ -65,7 +74,7 @@
   {:else}
     <p class="empty">첫 시즌을 마치면 기록이 쌓입니다.</p>
   {/if}
-  <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다.</p>
+  <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다. 몸값은 시즌을 마친 때의 리그·OVR·나이로 매긴 추정치(이적료 기준)예요.</p>
 </section>
 <section class="card">
   <div class="eyebrow">Journey</div>

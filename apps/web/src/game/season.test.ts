@@ -159,4 +159,22 @@ describe('로컬 명예의 전당 30명 한도', () => {
     expect(hof.at(-1)).toMatchObject({ name: '막내', id: entry.id });
     expect(hof.some((h) => h.name === '고수29')).toBe(false);
   });
+  it('같은 커리어가 다시 은퇴하면 기록을 바꾸고, 예전에 겹친 기록은 하나로 읽는다(T-10-107)', async () => {
+    const { retire, loadHOF } = await import('./season.js');
+    saveKey('ft_hof', [
+      { name: '겹침', id: 'dup', score: 900 },
+      { name: '겹침', id: 'dup', score: 900 },
+      { name: '옛 기록', score: 100 },
+      { name: '옛 기록', score: 100 },
+    ]);
+    expect(loadHOF().map((h) => h.name)).toEqual(['겹침', '옛 기록', '옛 기록']);
+    setActiveRng(createRng(5));
+    const g = newGame(
+      { name: '두 번', number: 7, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      5,
+    );
+    retire(g);
+    const again = retire(g);
+    expect(loadHOF().filter((h) => h.id === again.id)).toHaveLength(1);
+  });
 });

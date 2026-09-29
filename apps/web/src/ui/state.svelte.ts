@@ -28,6 +28,8 @@ export type HofView = {
   sort: HofSort;
   season: number | null;
   team: string | null;
+  /** T-10-101 이름 검색어(공개 이름 부분 일치). */
+  q: string;
 };
 /** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
 export const hofStart = (): HofView => ({
@@ -36,6 +38,7 @@ export const hofStart = (): HofView => ({
   sort: 'score',
   season: activeSeason(new Date().toISOString())?.id ?? null,
   team: null,
+  q: '',
 });
 
 export type Screen =

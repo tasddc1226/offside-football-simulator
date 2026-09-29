@@ -4,6 +4,7 @@ import {
   HofListQuerySchema,
   HofListResponseSchema,
   HofPageQuerySchema,
+  HofSearchQuerySchema,
   HofSeasonQuerySchema,
   HofSortSchema,
 } from '@offside/contracts';
@@ -11,6 +12,7 @@ import type { Hono } from 'hono';
 import { ok } from './shared.js';
 import { getPublicHof, listPublicHof } from '../db/repos/careers.js';
 import { ensureClubIdsBackfilled } from '../db/repos/clubIds.js';
+import { ensureCareerValuesBackfilled } from '../db/repos/careerValues.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -30,16 +32,23 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
     const sort = parseWithAppError(HofSortSchema, c.req.query('sort'));
     // T-10-090 시즌 순위. 없으면 전체 명예의 전당.
     const season = parseWithAppError(HofSeasonQuerySchema, c.req.query('season'));
+    // T-10-101 공개 이름 검색.
+    const q = parseWithAppError(HofSearchQuerySchema, c.req.query('q'));
     // T-10-081 옛 기록 구단 id 채우기가 끝날 때까지는 캐시하지 않는다(데이터센터마다 1분에 한 조각씩만 나아가지 않게).
     let filling = false;
     const data = await edgeCached(
       c,
-      EDGE.hofList(limit, page, sort, season?.id),
+      EDGE.hofList(limit, page, sort, season?.id, q),
       LIST_TTL,
       async () => {
         const db = getDb(c);
-        filling = await ensureClubIdsBackfilled(db);
-        return listPublicHof(db, limit, page, sort, season);
+        // 둘 다 한 번뿐인 소급 — 조회마다 둘 다 한 조각씩 나아간다(몸값은 리그 이름으로도 매겨 순서에 기대지 않는다).
+        const [clubIds, values] = await Promise.all([
+          ensureClubIdsBackfilled(db),
+          ensureCareerValuesBackfilled(db),
+        ]);
+        filling = clubIds || values;
+        return listPublicHof(db, limit, page, sort, season, q);
       },
       () => !filling,
     );

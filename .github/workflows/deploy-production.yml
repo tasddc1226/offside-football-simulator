@@ -38,6 +38,9 @@ jobs:
       PRODUCTION_WEB_URL: https://offside-lab.com
       VITE_PUBLIC_SITE_URL: https://offside-lab.com
       VITE_ENABLE_SEARCH_INDEXING: 'true'
+      # Empty until the consent notice and GA4 console setup are approved for release.
+      VITE_GA4_MEASUREMENT_ID: ${{ vars.VITE_GA4_MEASUREMENT_ID }}
+      VITE_GA4_HOSTNAME: ${{ vars.VITE_GA4_HOSTNAME }}
     steps:
       - name: Require main and explicit deploy confirmation
         env:

@@ -14,6 +14,7 @@
     "./polling": "./src/polling.ts",
     "./play-style": "./src/play-style.ts",
     "./club-names": "./src/club-names.ts",
+    "./market-value": "./src/market-value.ts",
     "./retired-numbers": "./src/retired-numbers.ts",
     "./service-seasons": "./src/service-seasons.ts",
     "./positions": "./src/positions.ts",

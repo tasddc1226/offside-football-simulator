@@ -157,6 +157,9 @@ export const careers = sqliteTable(
     // 서비스 시즌 번호(contracts service-seasons). 서버에 처음 올라온(첫 시즌 업로드) 시각에 진행 중인 시즌으로 한 번
     // 정해져 바뀌지 않는다 — 나중에 시즌 기간을 고쳐도 이미 뛴 선수의 시즌이 소급해 바뀌지 않는다. 0 = 프리시즌, NULL = 시즌 사이 휴식기.
     serviceSeason: integer('service_season'),
+    // T-10-100 은퇴 가치(만 원, contracts market-value retireValue). 은퇴 PUT의 스냅샷으로 매기고, 이 기능 전 은퇴는
+    // 명예의 전당 조회 때 스냅샷으로 소급한다(db/repos/careerValues.ts). 스냅샷이 없으면 0.
+    value: integer('value'),
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),
@@ -171,6 +174,7 @@ export const careers = sqliteTable(
     index('careers_hof_ballon_idx').on(table.status, table.ballon, table.legendScore),
     index('careers_hof_caps_idx').on(table.status, table.caps, table.legendScore),
     index('careers_hof_peak_idx').on(table.status, table.peak, table.legendScore),
+    index('careers_hof_value_idx').on(table.status, table.value, table.legendScore),
     // T-10-030 홈 라이브 현황: 지금 뛰는 중·오늘 새 선수·오늘 은퇴와 최근 은퇴 소식을 시각 범위로 찾는다.
     index('careers_status_updated_idx').on(table.status, table.updatedAt),
     index('careers_created_idx').on(table.createdAt),
