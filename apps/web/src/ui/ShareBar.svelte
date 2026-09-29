@@ -3,7 +3,7 @@
   // 않아도 보기 전용 공유 링크(/career/<id>)를 복사한다 — 링크는 공개 명예의 전당 상세라 로그인과 무관하다.
   // T-10-069 이 기기에 없는 계정의 내 선수도 띄운다 — 띄울지는 LegendView.shareId(legend.ts)가 정한다. 왼쪽 반은 홈으로.
   import { trackShareClick, trackShareSuccess } from '../analytics/index.js';
-  import { getHofDetail } from '../api/client.js';
+  import { getHofDetail } from '@offside/app-core/api/client';
   import { toast } from './helpers.js';
   import { goHome } from './nav.js';
   import { shareUrl } from './legend.js';

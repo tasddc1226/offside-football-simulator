@@ -4,7 +4,7 @@
   // 형식·검증·쓰는 키는 backup.ts. 여기는 화면과 브라우저 API(클립보드·공유·파일)만 맡는다.
   import { loadHOF, loadKey } from '@offside/game/season';
   import { loadGame } from './boot.js';
-  import { applyBackup, backupFileName, decodeBackup, encodeBackup, type DecodeFail } from './backup.js';
+  import { applyBackup, backupFileName, decodeBackup, encodeBackup, type DecodeFail } from '@offside/app-core/backup';
   import { save, toast } from './helpers.js';
   import { goHome } from './nav.js';
   import { appState } from './state.svelte.js';

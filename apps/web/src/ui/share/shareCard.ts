@@ -6,7 +6,7 @@ import { legendTitle } from '@offside/game/season';
 import { POS_LABEL } from '@offside/game/pos-label';
 import { titleById } from '@offside/game/titles';
 import { totals } from '@offside/app-core/format';
-import { RN_DEFAULT, rnColors } from '../rnStyle.js';
+import { RN_DEFAULT, rnColors } from '@offside/app-core/rnStyle';
 import type { LegendView } from '../state.svelte.js';
 import { drawJersey, type JerseyArt } from './jerseyCanvas.js';
 

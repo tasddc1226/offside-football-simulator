@@ -12,16 +12,24 @@ import type {
   RetiredNumbersResponse,
   TickerResponse,
 } from '@offside/contracts';
-import { resolveApiBaseUrl } from './base-url.js';
+import { storage } from '@offside/game/storage';
 
-// API 클라이언트 최소본 (계정: 로그인/프로필/연동 해제/로그아웃/삭제 만). 게임 상태는 전부
-// localStorage에 남고 서버로 보내지 않는다. `@offside/contracts` 전체를 값으로 가져오면 zod까지
-// 번들에 들어오므로, 헤더 이름은 zod 없는 `./headers` 서브패스에서, 응답 타입은 type-only import로
-// 가져온다(타입 전용 import는 컴파일 시 제거되어 번들 비용이 없다).
-export const API_BASE_URL = resolveApiBaseUrl(
-  import.meta.env.VITE_API_BASE_URL as string | undefined,
-  typeof window === 'undefined' ? undefined : window.location.hostname,
-);
+// API 클라이언트 (웹·앱 공용, T-11-002). 게임 상태는 전부 기기 저장소에 남고, 서버로는 계정·공개 기록 요청만 나간다.
+// `@offside/contracts` 전체를 값으로 가져오면 zod까지 번들에 들어오므로, 헤더 이름은 zod 없는 `./headers`
+// 서브패스에서, 응답 타입은 type-only import로 가져온다(타입 전용 import는 컴파일 시 제거되어 번들 비용이 없다).
+
+/** 클라이언트가 넣는 서버 주소·인증. 웹은 세션 쿠키(`credentials: 'include'`), 앱은 Authorization 헤더. */
+export interface ApiHost {
+  baseUrl: string;
+  auth(): { credentials?: 'include' | 'omit' | 'same-origin'; headers?: Record<string, string> };
+}
+let host: ApiHost = { baseUrl: 'http://localhost:8787', auth: () => ({ credentials: 'include' }) };
+/** 시작할 때 한 번(첫 요청 전에) 부른다. */
+export function configureApi(h: ApiHost): void {
+  host = h;
+}
+export const apiBaseUrl = (): string => host.baseUrl;
+export const apiAuth = (): ReturnType<ApiHost['auth']> => host.auth();
 
 export type Profile = Pick<
   ContractProfile,
@@ -76,7 +84,9 @@ export async function apiFetch<T>(
   const isMutation =
     method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
   const body = isMutation && init.body === undefined ? '{}' : init.body;
+  const { headers: authHeaders, ...auth } = host.auth();
   const headers = new Headers(init.headers);
+  for (const [k, v] of Object.entries(authHeaders ?? {})) headers.set(k, v);
   headers.set('Accept', 'application/json');
   if ((body !== undefined || isMutation) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -87,12 +97,12 @@ export async function apiFetch<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(`${host.baseUrl}${path}`, {
       ...init,
       method,
       headers,
       ...(body !== undefined ? { body } : {}),
-      credentials: 'include',
+      ...auth,
     });
   } catch {
     return failure('NETWORK_ERROR', '서버에 연결할 수 없습니다.', true);
@@ -153,15 +163,14 @@ export async function getProfile(): Promise<ApiResult<Profile>> {
 const SESSION_HINT = 'ft_session';
 export function hasSessionHint(): boolean {
   try {
-    return localStorage.getItem(SESSION_HINT) === '1';
+    return storage().getItem(SESSION_HINT) === '1';
   } catch {
     return false;
   }
 }
 export function noteSession(on: boolean) {
   try {
-    if (on) localStorage.setItem(SESSION_HINT, '1');
-    else localStorage.removeItem(SESSION_HINT);
+    storage().setItem(SESSION_HINT, on ? '1' : '0');
   } catch {
     // 저장소를 못 쓰면 표시 없이 그대로 둔다.
   }
@@ -185,7 +194,7 @@ export function putNickname(nickname: string): Promise<ApiResult<Profile>> {
   return apiFetch('/v1/profile/nickname', { method: 'PUT', body: JSON.stringify({ nickname }) });
 }
 export function googleStartUrl(): string {
-  return `${API_BASE_URL}/v1/auth/google/start`;
+  return `${host.baseUrl}/v1/auth/google/start`;
 }
 
 // ───────── T-10-005 공개 명예의 전당 (로그인 불필요) ─────────

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import fixture from '../../../../packages/game/src/__fixtures__/save-fw26.json';
+import fixture from '../../game/src/__fixtures__/save-fw26.json';
 import { SAVE_VERSION } from '@offside/game/data';
 import '@offside/game/event-registry';
 import { createRng, getActiveRng, setActiveRng } from '@offside/game/rng';

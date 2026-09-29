@@ -11,7 +11,7 @@ import {
   type ClubCustomMap,
 } from '@offside/game/clubs';
 import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
-import { apiFetch } from '../api/client.js';
+import { apiFetch } from '@offside/app-core/api/client';
 import { appState } from './state.svelte.js';
 import { save } from './helpers.js';
 

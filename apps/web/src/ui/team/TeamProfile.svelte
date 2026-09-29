@@ -7,14 +7,14 @@
     likeTeam,
     viewTeam,
     type TeamProfile,
-  } from '../../api/team.js';
+  } from '@offside/app-core/api/team';
   import { localCareerNames } from '@offside/game/season';
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import BackBar from '../BackBar.svelte';
   import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
-  import { num as n, recordText } from './teamText.js';
+  import { num as n, recordText } from '@offside/app-core/teamText';
 
   let { id, onback }: { id: string; onback: () => void } = $props();
 

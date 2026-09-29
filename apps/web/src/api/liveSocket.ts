@@ -1,6 +1,6 @@
 import { LIVE_PING, LIVE_PING_SEC, LIVE_SOCKET_PATH } from '@offside/contracts/polling';
 import type { LivePush } from '@offside/contracts';
-import { API_BASE_URL } from './client.js';
+import { apiBaseUrl } from '@offside/app-core/api/client';
 
 // T-10-072 홈 라이브 실시간 소켓. 새 시즌·은퇴 소식을 올라오는 즉시 받는다. 화면이 보일 때만 붙어 있고(숨으면
 // 끊고, 다시 보이면 붙는다), 끊기면 5초부터 두 배씩 최대 5분까지 기다렸다 다시 붙는다 — 그동안 홈은 1분 폴링으로
@@ -10,7 +10,7 @@ import { API_BASE_URL } from './client.js';
 const RETRY_MIN_MS = 5_000;
 const RETRY_MAX_MS = 5 * 60_000;
 
-export const liveSocketUrl = (base = API_BASE_URL) =>
+export const liveSocketUrl = (base = apiBaseUrl()) =>
   `${base.replace(/^http/, 'ws')}${LIVE_SOCKET_PATH}`;
 
 const listeners = new Set<(p: LivePush) => void>();

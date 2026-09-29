@@ -2,9 +2,9 @@
   // T-10-076 은퇴 리포트의 영구결번 장면 — 결번 세리머니 · 명예의 벽 헌정 · 이름 공개 안내. 판정 기준(점수·시즌 수)은
   // 서버만 안다 — 웹은 서버가 준 결과만 그린다. LegendReport가 따로 불러온다(첫 화면 번들 밖).
   import type { RetiredNumberResult } from '@offside/contracts';
-  import { rnStyle } from './rnStyle.js';
+  import { rnStyle } from '@offside/app-core/rnStyle';
   import { setLegendPublic } from './legend.js';
-  import { checkRetiredNumber } from '../api/client.js';
+  import { checkRetiredNumber } from '@offside/app-core/api/client';
   import { recordRn } from './retiredNumber.svelte.js';
   import { isHofEligible } from '@offside/contracts/hof-rules';
   import { totals } from '@offside/app-core/format';

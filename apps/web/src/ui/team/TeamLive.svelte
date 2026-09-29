@@ -3,8 +3,8 @@
   // 시계가 느려지고, 골이 들어가면 전광판이 번쩍인다. 결과는 이미 서버가 정했고 여기서는 보여 주기만 한다.
   // 감속 모션이어도 진행 템포는 그대로 두고(읽는 시간) 움직임 효과만 뺀다. '결과 바로 보기'로 언제든 끝낼 수 있다.
   import { onDestroy, onMount } from 'svelte';
-  import type { TeamMatch } from '../../api/team.js';
-  import { clockText, liveScript, type LiveLine } from './teamLive.js';
+  import type { TeamMatch } from '@offside/app-core/api/team';
+  import { clockText, liveScript, type LiveLine } from '@offside/app-core/teamLive';
 
   let {
     match,

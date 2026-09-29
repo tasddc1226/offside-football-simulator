@@ -6,7 +6,7 @@
   // 첫 화면이 밀리지 않게(CLS — T-10-038) 응답 전·실패·빈 목록에도 같은 높이의 줄을 그린다.
   import { onMount } from 'svelte';
   import { TICKER_POLL_SEC } from '@offside/contracts/polling';
-  import { getTicker } from '../api/client.js';
+  import { getTicker } from '@offside/app-core/api/client';
   import { clubById } from '@offside/game/clubs';
   import { agoKo } from '@offside/app-core/format';
   import { motionOK } from './motion.js';

@@ -1,7 +1,7 @@
 // T-10-097 팀 경기 문자중계 대본. 서버가 정한 결과(스코어·골 분·득점자·도움)는 그대로 두고, 그 사이를 채우는 중계 문구만
 // 경기 id를 시드로 만든다 — 같은 경기는 다시 봐도 같은 중계가 나온다. 골이 아닌 줄(슈팅·선방·코너킥)은 연출이라 기록에
 // 남지 않는다.
-import type { TeamMatch } from '../../api/team.js';
+import type { TeamMatch } from './api/team.js';
 import { iGa, waGwa } from '@offside/app-core/format';
 
 export type LiveKind =

@@ -2,9 +2,9 @@
   // T-10-016 댓글 관리: 전체 게시판의 최근 댓글을 보고 지운다. 도배·욕설은 작성자(프로필) 단위로 모아 보고
   // 한 번에 지울 수 있다(감사 로그가 남는다).
   import { onMount } from 'svelte';
-  import * as api from '../../api/admin.js';
-  import type { AdminComment } from '../../api/admin.js';
-  import { deleteComment } from '../../api/boards.js';
+  import * as api from '@offside/app-core/api/admin';
+  import type { AdminComment } from '@offside/app-core/api/admin';
+  import { deleteComment } from '@offside/app-core/api/boards';
   import { toast } from '../helpers.js';
   import { BOARD_LABEL, kstDateTime as kst } from '@offside/app-core/boardText';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';

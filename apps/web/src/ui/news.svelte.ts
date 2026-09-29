@@ -4,7 +4,7 @@
 // 이따금 보고, 이 기기에서 마지막으로 본 글보다 새 글이 있으면 알린다. 처음 온 기기는 지금까지의 글을
 // 본 것으로 치고 알리지 않는다. 브라우저 푸시가 아니라서 앱을 닫아 둔 동안에는 오지 않는다.
 // T-10-108: 이미 본 글이 고쳐져도 알린다 — '본 시각'을 글 작성 시각 대신 마지막으로 바뀐 시각(touchedAt)과 견준다.
-import { fetchPosts, type PostSummary } from '../api/boards.js';
+import { fetchPosts, type PostSummary } from '@offside/app-core/api/boards';
 import { BOARD_KEYS } from '@offside/contracts/board-limits';
 import { loadKey, saveKey } from '@offside/game/season';
 

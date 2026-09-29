@@ -6,7 +6,7 @@ import { toPublicName } from '@offside/contracts/content-filter';
 import { isHofEligible } from '@offside/contracts/hof-rules';
 import { legendScore, loadHOF, saveKey } from '@offside/game/season';
 import type { GameState, HofEntry } from '@offside/game/types';
-import { getHofDetail, getMyCareers } from '../api/client.js';
+import { getHofDetail, getMyCareers } from '@offside/app-core/api/client';
 import { appState, type LegendView } from './state.svelte.js';
 import { toast, uploadRetirement } from './helpers.js';
 import { anonName, totals } from '@offside/app-core/format';

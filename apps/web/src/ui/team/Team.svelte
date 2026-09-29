@@ -35,7 +35,7 @@
     type TeamMatch,
     type TeamOpponent,
     type TeamPlayer,
-  } from '../../api/team.js';
+  } from '@offside/app-core/api/team';
   import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
   import { ATTR_KEYS } from '@offside/game/data';
   import { localCareerNames } from '@offside/game/season';
@@ -53,7 +53,7 @@
   import TeamLines from './TeamLines.svelte';
   import TeamLive from './TeamLive.svelte';
   import TeamPitch from './TeamPitch.svelte';
-  import { num, recordText, signedNum } from './teamText.js';
+  import { num, recordText, signedNum } from '@offside/app-core/teamText';
 
   let status = $state<LoadStatus>('loading');
   let needLogin = $state(false);

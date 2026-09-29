@@ -5,7 +5,7 @@
   // 움직이지 않고 최신 3줄만, 마우스를 올리거나 포커스가 있거나 일시정지를 누르면 멈춘다.
   import { onMount } from 'svelte';
   import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
-  import { getLive } from '../api/client.js';
+  import { getLive } from '@offside/app-core/api/client';
   import { onLive } from '../api/liveSocket.js';
   import { agoKo, anonName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';

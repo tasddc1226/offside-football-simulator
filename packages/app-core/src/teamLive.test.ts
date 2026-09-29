@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { TeamMatch } from '../../api/team.js';
+import type { TeamMatch } from './api/team.js';
 import { clockText, liveScript } from './teamLive.js';
 
 const side = (name: string, goals: number, ovr = 70) => ({

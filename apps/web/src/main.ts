@@ -1,3 +1,4 @@
+import './api/setup.js';
 import { initializeAnalytics } from './analytics/index.js';
 import { appState } from './ui/state.svelte.js';
 import { hydrate, mount } from 'svelte';
@@ -8,7 +9,7 @@ import Toast from './ui/Toast.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
 import { keepStorage } from './ui/helpers.js';
 import { handleOAuthReturn } from './ui/login.js';
-import { hasSessionHint } from './api/client.js';
+import { hasSessionHint } from '@offside/app-core/api/client';
 import { routeSharedCareer } from './ui/legend.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';
 import { watchRetiredNumberAlerts, watchRetiredNumbers } from './ui/retiredNumber.svelte.js';

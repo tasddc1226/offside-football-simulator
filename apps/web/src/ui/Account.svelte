@@ -6,7 +6,7 @@
   // 게임 화면을 막지 않는다.
   import {
     unlinkGoogle, logout, startProfileDeletion, confirmProfileDeletion,
-  } from '../api/client.js';
+  } from '@offside/app-core/api/client';
   import { accountCache, refreshAccount } from './account-state.svelte.js';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
   import NicknameForm from './NicknameForm.svelte';

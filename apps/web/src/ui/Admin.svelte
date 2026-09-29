@@ -2,7 +2,7 @@
   // T-10-016 운영 도구(관리자 전용). 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
   // 관리자 여부는 서버가 요청마다 다시 확인한다 — 여기서는 화면만 가린다.
   import { onMount } from 'svelte';
-  import { fetchBoardViewer } from '../api/boards.js';
+  import { fetchBoardViewer } from '@offside/app-core/api/boards';
   import { appState } from './state.svelte.js';
   import BackBar from './BackBar.svelte';
   import Topbar from './Topbar.svelte';

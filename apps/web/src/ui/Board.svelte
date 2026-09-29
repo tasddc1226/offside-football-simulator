@@ -10,8 +10,8 @@
     POST_VERSION_MAX,
     BOARD_KEYS,
   } from '@offside/contracts/board-limits';
-  import * as api from '../api/boards.js';
-  import type { BoardViewerResponse, Comment, Post, PostSummary } from '../api/boards.js';
+  import * as api from '@offside/app-core/api/boards';
+  import type { BoardViewerResponse, Comment, Post, PostSummary } from '@offside/app-core/api/boards';
   import { appState } from './state.svelte.js';
   import { openBoard } from './nav.js';
   import { startGoogleLogin } from './login.js';

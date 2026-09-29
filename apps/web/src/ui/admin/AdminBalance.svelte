@@ -17,8 +17,8 @@
     type BalanceKey,
     type BalanceOverrides,
   } from '@offside/contracts/balance';
-  import * as api from '../../api/admin.js';
-  import type { BalanceVersion } from '../../api/admin.js';
+  import * as api from '@offside/app-core/api/admin';
+  import type { BalanceVersion } from '@offside/app-core/api/admin';
   import { EVENTS } from '@offside/game/events-data';
   import { toast } from '../helpers.js';
   import { kstDateTime } from '@offside/app-core/boardText';
