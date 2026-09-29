@@ -9,6 +9,10 @@
 > 워커 브리프·시뮬레이션 증거는 [`docs/archive/offside/tracking/`](../archive/offside/README.md)에
 > 보존돼 있다.
 
+## 확장 기획
+
+- [T-10-078: 서비스 시즌·커리어 카드·구단·유저 이적시장](season-card-market-plan.md) — 논의 정리와 미결 정책. 구현 완료나 확정 ADR이 아니다.
+
 ## 역할
 
 | 역할 | 담당 | 하는 일 | 하지 않는 일 |
