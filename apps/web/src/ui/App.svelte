@@ -4,7 +4,6 @@
   import { appState } from './state.svelte.js';
   import { dur } from './motion.js';
   import Home from './Home.svelte';
-  import Create from './Create.svelte';
   import Game from './Game.svelte';
   import UpdateBanner from './UpdateBanner.svelte';
   import NewsBanner from './NewsBanner.svelte';
@@ -12,6 +11,11 @@
   import { rnAlert } from './retiredNumber.svelte.js';
   import type { Component } from 'svelte';
 
+  // T-10-096: 선수 생성(국적 목록·체격 입력)은 새 커리어를 누를 때만 쓰니 처음 열 때 불러온다.
+  let Create = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'create' && !Create) void import('./Create.svelte').then((m) => (Create = m.default));
+  });
   // T-10-009: 설정(클럽 편집)은 자주 안 여는 화면이라 메인 번들에서 떼어 처음 열 때 불러온다.
   let Settings = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -84,7 +88,7 @@
     {#if appState.screen === 'home'}
       <Home />
     {:else if appState.screen === 'create'}
-      <Create />
+      {#if Create}<Create />{/if}
     {:else if appState.screen === 'retired'}
       {#if Retired}<Retired />{/if}
     {:else if appState.screen === 'legend'}

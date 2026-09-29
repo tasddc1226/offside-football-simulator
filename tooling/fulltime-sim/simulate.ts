@@ -31,6 +31,7 @@ import {
 } from '../../apps/web/src/game/index.js';
 import { pick, ri, createRng, setActiveRng, freshSeed } from '../../apps/web/src/game/rng.js';
 import { setLatestBalance } from '../../apps/web/src/game/balance.js';
+import { BODY_DEFAULT, BODY_LIMITS } from '../../packages/contracts/src/body.js';
 import type {
   EventDef,
   GameState,
@@ -54,6 +55,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // SEED=<정수>: 같은 시드면 같은 결과(코드 변경 전후를 잡음 없이 비교할 때).
 // BALANCE=<json 파일>: 그 밸런스 값으로 돌린다 — 어드민 초안의 values(또는 {values}) 그대로(T-10-016).
 const DETAIL = !!process.env.DPOS;
+// T-10-096 NATION=<국가 코드>: 그 국적으로 만든 선수. BODY=tall|short|heavy|light|default: 포지션 기본 체격
+// (BODY_DEFAULT)에서 한쪽 끝으로 간 체격. 둘 다 없으면 예전 선수 그대로(RNG 소비도 같다).
+const NATION = process.env.NATION;
+const BODY = process.env.BODY as 'tall' | 'short' | 'heavy' | 'light' | 'default' | undefined;
+function bodyFor(pos: keyof typeof BODY_DEFAULT) {
+  if (!BODY) return undefined;
+  const d = BODY_DEFAULT[pos];
+  const L = BODY_LIMITS;
+  const fit = (h: number, w: number) => {
+    const lo = Math.ceil(L.bmi.min * (h / 100) ** 2),
+      hi = Math.floor(L.bmi.max * (h / 100) ** 2);
+    return { h, w: Math.min(L.weight.max, Math.max(L.weight.min, lo, Math.min(hi, w))) };
+  };
+  if (BODY === 'tall') return fit(L.height.max, Math.round(d.w * (L.height.max / d.h) ** 2));
+  if (BODY === 'short') return fit(L.height.min, Math.round(d.w * (L.height.min / d.h) ** 2));
+  if (BODY === 'heavy') return fit(d.h, L.weight.max);
+  if (BODY === 'light') return fit(d.h, L.weight.min);
+  return { ...d };
+}
 const master = process.env.SEED ? createRng(+process.env.SEED) : null;
 const nextSeed = () => (master ? (master.next() * 0x100000000) >>> 0 : freshSeed());
 if (process.env.BALANCE) {
@@ -129,12 +149,22 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
     // T-10-091 DPOS=1: 세부 포지션을 고른 시즌 1 선수(주력 능력치는 그 포지션의 기본값).
     const dpos = DETAIL ? pick(DETAILS_OF[pos]) : undefined;
     const seed = nextSeed();
+    const extra = { nation: NATION, body: bodyFor(pos) };
     const s = dpos
       ? newGame(
-          { name: 'SIM', number: 9, pos, dpos, foot: '오른발', focus: DPOS[dpos].focus, trait },
+          {
+            name: 'SIM',
+            number: 9,
+            pos,
+            dpos,
+            foot: '오른발',
+            focus: DPOS[dpos].focus,
+            trait,
+            ...extra,
+          },
           seed,
         )
-      : newGame({ name: 'SIM', number: 9, pos, foot: '오른발', type, trait }, seed);
+      : newGame({ name: 'SIM', number: 9, pos, foot: '오른발', type, trait, ...extra }, seed);
     const pot0 = s.pot;
     const seen: Record<string, 1> = {};
     let events = 0,

@@ -8,7 +8,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // T-10-051: 첫 화면 JS 전체 ~120KB(index 63 + season 51 + 작은 공유 청크) — 여유 약 13%로 잡는다.
-const LIMIT_BYTES = 135 * 1024;
+// T-10-096: 국적 표(211개국, 게임 엔진이 동기로 쓴다)로 +1.2KB — 생성 화면·영어 이름을 지연 청크로 떼고도 넘어 138KB로(사용자 결정).
+const LIMIT_BYTES = 138 * 1024;
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(scriptDir, '../dist');

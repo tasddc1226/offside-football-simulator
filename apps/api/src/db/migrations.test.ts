@@ -109,6 +109,10 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'last_club_id',
     'peak_profile',
     'service_season',
+    // T-10-096 국적·체격.
+    'nation',
+    'height',
+    'weight',
   ],
   career_seasons: [
     'career_id',

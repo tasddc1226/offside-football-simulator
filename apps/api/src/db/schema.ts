@@ -116,6 +116,10 @@ export const careers = sqliteTable(
     pos: text('pos', { enum: ['FW', 'MF', 'DF', 'GK'] }).notNull(),
     // T-10-091 세부 포지션(DETAIL_POSITIONS). 시즌 1 전에 만든 선수·옛 클라이언트는 NULL.
     dpos: text('dpos'),
+    // T-10-096 국적(nations.ts 코드)·키(cm)·몸무게(kg). 기능 이전 커리어·대한민국 선수(국적)는 NULL.
+    nation: text('nation'),
+    height: integer('height'),
+    weight: integer('weight'),
     foot: text('foot', { enum: ['오른발', '왼발', '양발'] }).notNull(),
     type: text('type').notNull(),
     trait: text('trait').notNull(),

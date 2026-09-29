@@ -2,6 +2,7 @@
 // 풀타임 원본은 선수 상태를 하나의 거대한 객체(G)로 다루며 필드를 느슨하게 추가합니다.
 // 완전한 판별 유니온으로 다시 모델링하면 포팅 리스크가 커지므로, 여기서는 알려진 필드는 구체적으로
 // 타이핑하고 나머지(로그 라인 종류가 다양한 필드, 이벤트별 임시 플래그 등)는 폭넓게 둡니다.
+import type { Body } from '@offside/contracts/body';
 import type { LegendSnapshot, PlayStyle, RetiredNumberResult } from '@offside/contracts';
 import type { PeakProfile } from '@offside/contracts/positions';
 import type { CareerBalance } from './balance.js';
@@ -234,6 +235,10 @@ export interface GameState {
   pos: Pos;
   /** T-10-091 세부 포지션(시즌 1부터 만든 선수). 없으면 주력 조합의 유형으로 역할을 정한다. */
   dpos?: DetailPos | undefined;
+  /** T-10-096 국적(nations.ts 코드). 없으면 대한민국 — 옛 저장과 대한민국 선수는 이 필드가 없다. */
+  nation?: string | undefined;
+  /** T-10-096 키(cm)·몸무게(kg). 기능 이전 저장엔 없다. */
+  body?: Body | undefined;
   foot: Foot;
   /** 주력 조합에서 파생된 호환용 유형 id(역할·이벤트 조건·서버 meta). */
   type: string;
@@ -260,7 +265,7 @@ export interface GameState {
   seasonStart: Record<AttrKey, number>;
   seasonStartSub: Record<string, number>;
   career: CareerRecord[];
-  /** club이 대표팀(NATIONAL_TEAM)이면 clubId가 없다(T-10-066, 옛 기록에도 없다). */
+  /** club이 대표팀(나라 이름, nation.ts isNationalTeam)이면 clubId가 없다(T-10-066, 옛 기록에도 없다). */
   trophies: { year: number; t: string; club: string; clubId?: string | undefined }[];
   awards: { year: number; t: string }[];
   ballon?: { year: number; rank: number }[];

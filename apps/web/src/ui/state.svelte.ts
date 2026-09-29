@@ -2,6 +2,8 @@
 // 원본은 module-level `let G/screen/tab/...` + 수동 render() 호출로 화면을 갱신했다. Svelte 5
 // runes로 옮기면서 같은 상태를 하나의 반응형 객체에 모아 두고, 화면 갱신은 컴포넌트가 이 상태를
 // 구독하는 것으로 대신한다(수동 render() 호출은 더 이상 필요 없다).
+import { BODY_DEFAULT, type Body } from '@offside/contracts/body';
+import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { HofSort, RetiredNumberResult } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason } from '@offside/contracts/service-seasons';
@@ -64,7 +66,18 @@ export interface DraftCharacter {
   /** T-10-008. 키우고 싶은 주력 능력치(FOCUS_PICK개). */
   focus: AttrKey[];
   trait: string;
+  /** T-10-096 국적(국가 코드, 기본 대한민국). */
+  nation: string;
+  /** T-10-096 키(cm)·몸무게(kg). null이면 포지션 기본 체격을 따른다(포지션을 바꾸면 같이 바뀐다). */
+  height: number | null;
+  weight: number | null;
 }
+
+/** 새 커리어에 넣을 체격 — 입력하지 않은 칸은 포지션 기본값. */
+export const draftBody = (c: Pick<DraftCharacter, 'pos' | 'height' | 'weight'>): Body => ({
+  h: c.height ?? BODY_DEFAULT[c.pos].h,
+  w: c.weight ?? BODY_DEFAULT[c.pos].w,
+});
 
 /** T-10-091 지금 새 선수가 세부 포지션을 고를 수 있는가(시즌 1 개막부터). */
 export const detailOpenNow = (): boolean => detailPosOpen(new Date().toISOString());
@@ -151,6 +164,9 @@ export const appState = $state<{
     foot: '오른발',
     focus: defaultFocus('FW'),
     trait: 'late',
+    nation: DEFAULT_NATION,
+    height: null,
+    weight: null,
   },
   candidates: null,
   candidatesOpen: [],

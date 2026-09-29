@@ -1,5 +1,6 @@
 // ───────── 은퇴 리포트: 클럽별 챕터 타임라인 · 우승 연혁 (T-10-062) ─────────
 // 순수 함수만 있다 — 이미 기록된 시즌·우승·수상·이정표만 읽고 RNG를 전혀 쓰지 않는다.
+import { isNationalTeam } from './nation.js';
 import { sameClub } from './data.js';
 import type { LegendSource } from './types.js';
 
@@ -29,8 +30,6 @@ export interface Chapter {
   events: ChapterEvent[];
 }
 
-/** 대표팀 대회 우승이 기록되는 클럽 이름(season.ts). */
-export const NATIONAL_TEAM = '대한민국';
 // 대표팀 쪽 이정표는 대표팀 장면으로 따로 모은다. 이정표 문구는 comps.ts checkMilestones가 만든다.
 const NATIONAL_MILE = /A매치|대표팀|월드컵|센추리/;
 const MINOR_MILE = /데뷔골|경기 출전|후보|입성|본선 득점|컨퍼런스리그|엘리트/;
@@ -105,7 +104,7 @@ export function nationalEvents(s: LegendSource): ChapterEvent[] {
       .filter((m) => NATIONAL_MILE.test(m.t) && !/데뷔골|본선 득점/.test(m.t))
       .map((m) => ({ year: m.year, kind: 'mile' as const, text: m.t, years: [m.year] })),
     ...s.trophies
-      .filter((t) => t.club === NATIONAL_TEAM)
+      .filter((t) => isNationalTeam(t.club))
       .map((t) => ({ year: t.year, kind: 'trophy' as const, text: t.t, years: [t.year] })),
   ].sort((a, b) => a.year - b.year);
 }

@@ -13,6 +13,7 @@
  */
 import { isDefaultClubId, LEAGUE_BASE, type LeagueBase } from './club-names.js';
 import { LEGEND_W } from './hof-rules.js';
+import { CONFEDS } from './nations.js';
 
 /** 결번 기준 점수(상위 1%). */
 export const RN_CUT = 827;
@@ -46,13 +47,15 @@ export const RN_BOND = {
 export const RN_SEASON_HONOR_CAP = 250;
 
 const NATIONAL =
-  /아시안컵|월드컵|올림픽|아시안게임|네이션스|유로 |코파 아메리카|대한축구협회|국제선수|대회 MVP|대회 베스트|AFC 올해의 선수|동아시안|U-/;
+  /아시안컵|월드컵|올림픽|아시안게임|네이션스|유로 |코파 아메리카|축구협회|국제선수|대회 MVP|대회 베스트|동아시안|U-/;
+/** 연맹 대륙컵·올해의 선수상(T-10-096) — 대표팀 몫이라 구단 점수에 들지 않는다. */
+const CONF_HONORS = Object.values(CONFEDS).flatMap((c) => [c.cup, c.poty]);
 const LEAGUE_TITLE =
   /(리그|리가|분데스리가|세리에 A|에레디비시|리그 1|K리그1|K리그2|J1리그|MLS|K3리그) 우승$/;
 
 /** 시즌 영예 한 줄의 구단 기여 점수. */
 export function honorPoints(h: string): number {
-  if (NATIONAL.test(h)) return 0;
+  if (NATIONAL.test(h) || CONF_HONORS.some((n) => h.includes(n))) return 0;
   if (h.includes('발롱도르')) return 60;
   if (h.includes('챔피언스리그 우승') && !h.includes('AFC')) return 40;
   if (LEAGUE_TITLE.test(h) && !h.includes('컵')) return 25;

@@ -3,6 +3,7 @@ import { clamp, ri, pick } from './rng.js';
 import { leagueOf, addStat, addAttr, isPro, byPos, adFee } from './engine.js';
 import { ovr } from './attributes.js';
 import { callupScore, RELEASE } from './national.js';
+import { isKorean, nationOf } from './nation.js';
 import type { EventDef, GameState } from './types.js';
 
 const DERBY: Record<string, string> = {
@@ -32,6 +33,9 @@ function releaseEvent(o: {
   key: 'ag' | 'olympic';
   year: number;
   text: string;
+  /** 병역 특례 문장 — 대한민국 국적에게만 text 첫 문장 뒤에 붙인다(T-10-096). */
+  mil: string;
+  rest: string;
   blessing: string;
   refusal: string;
   missed: string;
@@ -51,8 +55,9 @@ function releaseEvent(o: {
       leagueOf(s.leagueId).tier >= 3 &&
       s.flags[flag + s.year] === undefined &&
       !(s.mil && (s.mil.exempt || s.mil.served)) &&
+      (o.key !== 'ag' || nationOf(s).conf === 'AFC') &&
       callupScore(s) >= 62,
-    text: () => o.text,
+    text: (s) => (isKorean(s) ? [o.text, o.mil, o.rest] : [o.text, o.rest]).join(' '),
     choices: [
       {
         label: '구단 수뇌부와 직접 담판을 짓는다',
@@ -261,7 +266,9 @@ export const REAL_EVENTS: EventDef[] = [
     title: '아시안게임 차출 협상',
     key: 'ag',
     year: 2,
-    text: '아시안게임 대표팀이 당신을 원합니다. 금메달이면 병역 특례. 하지만 아시안게임은 FIFA 의무 차출 대회가 아니어서, 시즌 중 차출은 소속팀 허락이 필요합니다.',
+    text: '아시안게임 대표팀이 당신을 원합니다.',
+    mil: '금메달이면 병역 특례.',
+    rest: '하지만 아시안게임은 FIFA 의무 차출 대회가 아니어서, 시즌 중 차출은 소속팀 허락이 필요합니다.',
     blessing: '"금메달 따서 돌아와라." 구단이 차출을 허락했습니다.',
     refusal: '구단은 시즌 중 주전 이탈을 받아들일 수 없다며 거절했습니다.',
     missed: '협상은 결렬됐습니다. 이번 아시안게임은 TV로 지켜봐야 합니다.',
@@ -271,7 +278,9 @@ export const REAL_EVENTS: EventDef[] = [
     title: '올림픽 차출 협상',
     key: 'olympic',
     year: 0,
-    text: '올림픽 대표팀이 당신을 원합니다. 동메달 이상이면 병역 특례. 하지만 올림픽 남자축구도 FIFA 의무 차출 대회가 아니어서, 프리시즌과 겹치는 차출은 소속팀 허락이 필요합니다.',
+    text: '올림픽 대표팀이 당신을 원합니다.',
+    mil: '동메달 이상이면 병역 특례.',
+    rest: '하지만 올림픽 남자축구도 FIFA 의무 차출 대회가 아니어서, 프리시즌과 겹치는 차출은 소속팀 허락이 필요합니다.',
     blessing: '"메달 걸고 돌아와라." 구단이 차출을 허락했습니다.',
     refusal: '구단은 새 시즌 준비에서 빠질 수 없다며 거절했습니다.',
     missed: '협상은 결렬됐습니다. 이번 올림픽은 TV로 지켜봐야 합니다.',

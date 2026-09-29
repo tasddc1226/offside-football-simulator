@@ -32,7 +32,7 @@ import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
 import { titleView } from '../game/titles.js';
 import type { Choice, EventDef, EventLogEntry, GameState, MarketResult } from '../game/types.js';
-import { appState, draftDpos, randomName, randomNumber } from './state.svelte.js';
+import { appState, draftBody, draftDpos, randomName, randomNumber } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { publicNameOf } from './namePublic.js';
 import { seasonLabelOf } from './format.js';
@@ -476,7 +476,13 @@ export function startCareer(name: string, number: number, presetAttrs?: Record<A
   const seed = freshSeed();
   setActiveRng(createRng(seed));
   appState.G = newGame(
-    { ...appState.C, dpos: draftDpos(appState.C), name: finalName, number: finalNumber },
+    {
+      ...appState.C,
+      dpos: draftDpos(appState.C),
+      body: draftBody(appState.C),
+      name: finalName,
+      number: finalNumber,
+    },
     seed,
     presetAttrs,
   );

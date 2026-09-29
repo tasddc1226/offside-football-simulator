@@ -13,13 +13,15 @@ import {
 import { ovr as ovrCalc } from './attributes.js';
 import { BAL } from './balance.js';
 import type { EventDef, GameState, MarketResult, MilOption } from './types.js';
+import { isKorean } from './nation.js';
 
 export const SANGMU = { id: 'sangmu', name: '김천 상무 (국군체육부대)', leagueId: 'k1', str: 63 };
 const MIL_AGE = 28;
 const SANGMU_MIN_AGE = 22;
 
+/** 병역을 마쳤거나 면제·특례를 받았는지. 외국 국적 선수는 병역이 없다(T-10-096) — 상무·현역 선택지가 뜨지 않는다. */
 export function milDone(s: GameState): boolean {
-  return !!(s.mil.exempt || s.mil.served);
+  return !isKorean(s) || !!(s.mil.exempt || s.mil.served);
 }
 export function milAbroad(s: GameState): boolean {
   return leagueOf(s.leagueId).tier >= 3;
@@ -49,6 +51,7 @@ export function milCanApply(s: GameState): boolean {
   );
 }
 export function milStatusText(s: GameState): string {
+  if (!isKorean(s)) return '해당 없음 (외국 국적)';
   const m = s.mil;
   if (m.exempt) return `병역 특례 (${m.exempt})`;
   if (m.serving) return `상무 복무 중 · 전역까지 ${m.left}시즌`;

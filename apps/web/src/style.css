@@ -740,6 +740,26 @@ textarea {
   gap: 8px;
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
 }
+/* T-10-096 체격 입력 */
+.body-row {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.body-in {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.body-in > span[aria-hidden] {
+  color: var(--muted);
+  font-weight: 600;
+}
+.body-err {
+  color: var(--bad);
+  font-weight: 600;
+}
 .opt {
   border: 1.5px solid var(--line);
   background: var(--surface);

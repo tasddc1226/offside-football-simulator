@@ -7,6 +7,8 @@ import { LEAGUES } from './data.js';
 import { CONT, CUPS, POTY, TOP_SCORER } from './comps.js';
 import { STORIES } from './engine.js';
 import type { GameState } from './types.js';
+import { CONFEDS, CONF_ORDER, cupTrophy } from '@offside/contracts/nations';
+import { isKorean, nationOf, type Confed } from './nation.js';
 import { LEGEND_BANDS, legendBand, type Rarity } from './legend-bands.js';
 export type { Rarity } from './legend-bands.js';
 
@@ -28,6 +30,8 @@ export interface TitleDef {
   earned: (s: GameState, x: TitleCtx) => boolean;
   /** 진행도 [현재, 목표] — 숫자로 셀 수 있는 조건만. */
   progress?: (s: GameState) => [number, number];
+  /** T-10-096 이 선수가 얻을 수 있는 칭호인지(국적·연맹). 없으면 누구나. 도감은 얻을 수 없는 칭호를 감춘다. */
+  avail?: (s: Pick<GameState, 'nation'>) => boolean;
 }
 export interface EarnedTitle {
   id: string;
@@ -130,6 +134,13 @@ const t = (
   ...(hidden ? { hidden } : {}),
 });
 
+/** 국적 조건이 붙은 칭호 — 얻을 수 없는 선수에겐 판정도 도감도 없다. */
+const only = (avail: NonNullable<TitleDef['avail']>, d: TitleDef): TitleDef => ({
+  ...d,
+  avail,
+  earned: (s, x) => avail(s) && d.earned(s, x),
+});
+const confIs = (c: Confed) => (s: Pick<GameState, 'nation'>) => nationOf(s).conf === c;
 /** 셀 수 있는 조건(값 ≥ 목표) — 판정과 진행도가 같은 값을 쓴다. */
 const n = (
   id: string,
@@ -202,15 +213,18 @@ export const TITLES: TitleDef[] = [
   t('oneclub', '원클럽맨', 'journey', 4, '한 클럽에서만 뛰고 은퇴(8시즌 이상)', (s) =>
     mile(s, 'oneclub'),
   ),
-  t(
-    'mil',
-    '군필',
-    'journey',
-    1,
-    '병역 의무를 마치기',
-    (s) => !!s.mil?.served && !s.mil.serving,
-    undefined,
-    true,
+  only(
+    isKorean,
+    t(
+      'mil',
+      '군필',
+      'journey',
+      1,
+      '병역 의무를 마치기',
+      (s) => !!s.mil?.served && !s.mil.serving,
+      undefined,
+      true,
+    ),
   ),
   // 개인 수상
   t(
@@ -316,7 +330,14 @@ export const TITLES: TitleDef[] = [
   ),
   n('trophies10', '우승 청부사', 'trophy', 3, '트로피 10개', (s) => s.trophies.length, 10),
   // 국가대표
-  t('ntdebut', '태극전사', 'nation', 1, 'A매치 데뷔', (s) => s.nat.caps > 0),
+  only(
+    isKorean,
+    t('ntdebut', '태극전사', 'nation', 1, 'A매치 데뷔', (s) => s.nat.caps > 0),
+  ),
+  only(
+    (s) => !isKorean(s),
+    t('ntdebutx', '국가대표', 'nation', 1, 'A매치 데뷔', (s) => s.nat.caps > 0),
+  ),
   t(
     'captain',
     '캡틴',
@@ -335,14 +356,14 @@ export const TITLES: TitleDef[] = [
     '아시안게임 또는 올림픽 금메달',
     (s) => trophyCount(s, (x) => x === '아시안게임 금메달' || x === '올림픽 금메달') >= 1,
   ),
-  t(
-    'asiancup',
-    '아시아의 왕',
-    'nation',
-    3,
-    'AFC 아시안컵 우승',
-    (s) => trophyCount(s, (x) => x === 'AFC 아시안컵 우승') >= 1,
-  ),
+  ...CONF_ORDER.map((conf) => {
+    const { id, name } = CONFEDS[conf].title;
+    const trophy = cupTrophy(conf);
+    return only(
+      confIs(conf),
+      t(id, name, 'nation', 3, trophy, (s) => trophyCount(s, (x) => x === trophy) >= 1),
+    );
+  }),
   t(
     'worldchamp',
     '월드 챔피언',

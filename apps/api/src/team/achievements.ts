@@ -3,6 +3,7 @@
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
 import { DETAIL_POSITIONS, type DetailPos, type PosGroup } from '@offside/contracts/positions';
+import { NATIONAL_WINS } from '@offside/contracts/nations';
 
 export type AchievementCareer = {
   pos: PosGroup;
@@ -77,12 +78,6 @@ const YOUNG = [
   'K리그1 영플레이어상',
   'K리그2 영플레이어상',
   'J리그 베스트 영플레이어상',
-];
-const NATIONAL_WIN = [
-  'FIFA 월드컵 우승',
-  'AFC 아시안컵 우승',
-  '아시안게임 금메달',
-  '올림픽 금메달',
 ];
 
 const POS_FIRST: [PosGroup, string][] = [
@@ -169,7 +164,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         careers.some((c) => c.pos === pos),
       ),
     ),
-    once('national-win', '첫 국제대회 우승', has(NATIONAL_WIN) > 0),
+    once('national-win', '첫 국제대회 우승', has(NATIONAL_WINS) > 0),
     once(
       'europe',
       '첫 유럽 진출',

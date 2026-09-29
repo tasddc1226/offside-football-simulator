@@ -1,7 +1,6 @@
 // ───────── 시즌 종료 · 이적 시장 · 은퇴 · 저장 ─────────
 import { CLUBS, clubRef, sameClub, type Club } from './data.js';
 import { BAL } from './balance.js';
-import { NATIONAL_TEAM } from './retirement-report.js';
 import { ovr, peakProfileOf } from './attributes.js';
 import { clamp, ri, pick, rnd } from './rng.js';
 import {
@@ -26,8 +25,9 @@ import {
 } from './comps.js';
 import { legendBand } from './legend-bands.js';
 import { checkTitles, mainTitle, titleView, type TitleView } from './titles.js';
-import { natInit, natSeasonEnd, type NatTourResult } from './national.js';
+import { natInit, natSeasonEnd, NATIONAL_TROPHIES, type NatTourResult } from './national.js';
 import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
+import { nationOf } from './nation.js';
 import { detectCareerHighs } from './records.js';
 import { noteMarket } from './playStyle.js';
 import type { LegendSnapshot } from '@offside/contracts';
@@ -91,9 +91,7 @@ export function endSeason(s: GameState): SeasonEndResult {
     s.trophies.push({
       year: s.year,
       t,
-      ...(/월드컵 우승|아시안컵|아시안게임|올림픽/.test(t) && !/클럽/.test(t)
-        ? { club: NATIONAL_TEAM }
-        : clubRef(s.club)),
+      ...(NATIONAL_TROPHIES.has(t) ? { club: nationOf(s).ko } : clubRef(s.club)),
     }),
   );
   awards.forEach((t) => s.awards.push({ year: s.year, t }));

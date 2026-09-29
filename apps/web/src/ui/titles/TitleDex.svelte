@@ -14,9 +14,11 @@
       .sort((a, b) => b.d.rarity - a.d.rarity || b.year - a.year),
   );
   const have = $derived(new Set(earned.map((x) => x.d.id)));
+  // T-10-096 국적으로 얻을 수 없는 칭호(다른 대륙컵·병역 등)는 도감에서 뺀다.
+  const pool = $derived(TITLES.filter((d) => !d.avail || d.avail(s) || have.has(d.id)));
   const main = $derived(mainTitle(s));
   const locked = $derived(
-    TITLE_CATS.map((c) => ({ ...c, list: TITLES.filter((d) => d.cat === c.id && !have.has(d.id)) })).filter((c) => c.list.length),
+    TITLE_CATS.map((c) => ({ ...c, list: pool.filter((d) => d.cat === c.id && !have.has(d.id)) })).filter((c) => c.list.length),
   );
 
   function pick(id: string) {
@@ -32,7 +34,7 @@
       <div class="eyebrow">Titles</div>
       <h2>칭호 도감</h2>
     </div>
-    <span class="muted num fs-sm">{earned.length} / {TITLES.length}</span>
+    <span class="muted num fs-sm">{earned.length} / {pool.length}</span>
   </div>
   {#if main}
     <p class="title-main">대표 칭호 <TitleTag name={main.name} rarity={main.rarity} /> <span class="muted">{s.titleSel ? '직접 고름' : '자동'}</span></p>
@@ -55,7 +57,7 @@
   {/if}
   {#if locked.length}
     <details class="title-locked">
-      <summary>아직 얻지 못한 칭호 {TITLES.length - earned.length}개</summary>
+      <summary>아직 얻지 못한 칭호 {pool.length - earned.length}개</summary>
       {#each locked as c (c.id)}
         <div class="eyebrow" style="margin:12px 0 4px">{c.label}</div>
         <ul class="title-list compact">
