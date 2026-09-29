@@ -13,7 +13,9 @@
 두 속성 모두 한국 시간·원화, 향상된 측정 비활성. 계정의 선택적 데이터 공유는 비활성.
 Google Signals와 사용자 제공 데이터 수집은 활성화하지 않음. 코드도 Signals/User-ID/광고 수집을 사용하지 않는다.
 사용자·이벤트 보관 2개월, 새 활동에 따른 보관 갱신 비활성, 광고 개인 최적화 모든 지역 차단.
-운영 핵심 이벤트 career_start/career_retire 생성 요청은 콘솔에서 성공 응답을 확인했으나 이벤트 목록 반영은 재확인해야 한다.
+운영·테스트 핵심 이벤트 career_start/career_retire 생성 요청은 콘솔에서 성공 응답을 확인했으나 이벤트 목록 반영은 재확인해야 한다.
+이벤트 범위 맞춤 측정기준 8개를 두 속성에 등록하고 목록을 확인했다:
+start_context, career_origin, position, player_trait, balance_version, position_changed, trait_changed, completed_seasons_bucket.
 운영 측정 시작일은 아직 없음: 이 PR은 병합·배포·운영 환경변수 적용 전이다.
 
 ## 코드 동작
@@ -39,9 +41,11 @@ Google Signals와 사용자 제공 데이터 수집은 활성화하지 않음. �
 - 기존 E2E 124개 통과, GA 전용 3개는 별도 테스트 빌드에서 통과
 - GA 전용 E2E: 동의 전 미로드, 거부 후 게임 저장, URL 정규화, 생성/페이지 중복 방지,
   새로고침·이어하기 제외, 다중 탭 철회와 게임 세이브 보존, 공유 URL ID 제외
-- 기본 초기 JS: 136.83 KB gzip (기존 예산 138 KB 유지)
+- 기본 초기 JS: 136.83 KB, 운영 ID/호스트 빌드 136.87 KB gzip (기존 예산 138 KB 유지)
+- 추가 호스트/ID 격리 테스트 2개 통과 (분석 단위 테스트 총 9개)
 - ego-browser 실제 테스트 태그: 동의 전 Google 리소스 없음, 동의 후 G-00CVJ30Y60의
-  정규화된 page_view/create/game 및 career_start 전송 경로 확인
+  정규화된 page_view 네트워크 요청 확인 (HTTP 응답/서버 수신은 미확인)
+- 실제 브라우저 철회: 동의 denied, ledger null, GA 쿠키 없음, ga-disable=true, 게임 세이브 유지 확인
 - 실제 GA4 DebugView의 수신/이벤트 순서, 일반 보고서 집계는 아직 미확인이다.
 - 전체 API 테스트는 로컬 workerd bind EADDRNOTAVAIL/런타임 시작 실패로 실패했다.
   순차 재시도도 진행되지 않아 중단. API 변경 없음; 원격 CI 결과 확인 필요.
