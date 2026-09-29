@@ -14,6 +14,7 @@
   import Laurel from './Laurel.svelte';
   import ClubMark from './ClubMark.svelte';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
+  import { motionOK } from './motion.js';
 
   const MEDAL = ['gold', 'silver', 'bronze'];
   const {
@@ -31,6 +32,7 @@
     clubId = null,
     rn = null,
     nation = null,
+    flow = false,
   }: {
     /** 0부터. 0~2는 금·은·동 월계관. */
     rank: number;
@@ -54,11 +56,22 @@
     rn?: number | null | undefined;
     /** T-10-096 국적 코드 — 대한민국이 아니면 이름 앞에 국기를 붙인다. */
     nation?: string | null | undefined;
+    /** T-10-125 기록 요약이 칸보다 길면 말줄임 대신 홈 전광판처럼 오른쪽에서 왼쪽으로 흘린다. */
+    flow?: boolean;
   } = $props();
   const foreign = $derived(nation && nation !== DEFAULT_NATION ? NATION_BY_CODE.get(nation) : undefined);
   const tt = $derived(titleById(titleId));
   // 글자 값('1,115억 3천만')은 큰 단위 아래에 작은 단위를 한 줄 더 — 오른쪽 칸이 좁아 이름 줄이 덜 밀린다.
   const [valueHead, valueSub] = $derived(typeof value === 'string' ? value.split(' ') : []);
+  const stats = $derived(
+    `${t.apps}경기 ${t.goals}골 ${t.assists}도움 · 트로피 ${t.trophies} · 최고 OVR ${t.peak}${t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}${showScore ? ` · 레전드 ${t.score}` : ''}`,
+  );
+  // 흐를 때 두 벌을 이어 붙여 -50%까지 민다(HomeTicker와 같은 방식). 한 벌 = 글 + 뒤 여백(FLOW_GAP).
+  const FLOW_SPEED = 28; // px/초
+  const FLOW_GAP = 32;
+  let boxW = $state(0);
+  let copyW = $state(0);
+  const flowing = $derived(flow && motionOK && copyW - FLOW_GAP > boxW + 1);
 </script>
 
 {#if rank < MEDAL.length}
@@ -74,4 +87,12 @@
   {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
 </div>
 <div class="num hof-value" class:hof-value-text={typeof value === 'string'}>{#if valueSub}{valueHead} <small class="hof-value-sub">{valueSub}</small>{:else}{value}{/if}{#if unit}<small>{unit}</small>{/if}</div>
-<div class="muted fs-xs hof-stats">{t.apps}경기 {t.goals}골 {t.assists}도움 · 트로피 {t.trophies} · 최고 OVR {t.peak}{t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}{showScore ? ` · 레전드 ${t.score}` : ''}</div>
+{#if flow}
+  <div class="muted fs-xs hof-stats" class:flowing bind:clientWidth={boxW}>
+    <div class="hof-flow" style:animation-duration={flowing ? `${copyW / FLOW_SPEED}s` : null}>
+      <span bind:clientWidth={copyW} style:padding-right="{FLOW_GAP}px">{stats}</span>{#if flowing}<span aria-hidden="true" style:padding-right="{FLOW_GAP}px">{stats}</span>{/if}
+    </div>
+  </div>
+{:else}
+  <div class="muted fs-xs hof-stats">{stats}</div>
+{/if}

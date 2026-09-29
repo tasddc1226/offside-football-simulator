@@ -191,6 +191,7 @@
           value={by.get(t)}
           unit={by.unit}
           showScore={sort !== 'score'}
+          flow={!full}
         />
       </button>
     {/each}

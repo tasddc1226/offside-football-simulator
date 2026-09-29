@@ -662,6 +662,27 @@ button.what:active {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* T-10-125 홈 TOP 3 기록 요약이 넘치면 흐른다(HofRow flow). 첫 글자를 읽을 틈을 두고 출발하고, 올려 두면 멈춘다. */
+.hof-flow {
+  display: flex;
+  width: max-content;
+}
+.hof-stats.flowing {
+  text-overflow: clip;
+  mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+}
+.hof-stats.flowing .hof-flow {
+  animation: hof-flow 1s linear 1.2s infinite;
+}
+.hof-row:hover .hof-flow,
+.hof-row:active .hof-flow {
+  animation-play-state: paused;
+}
+@keyframes hof-flow {
+  to {
+    transform: translateX(-50%);
+  }
+}
 .hof-row:first-child {
   border-top: 0;
 }
