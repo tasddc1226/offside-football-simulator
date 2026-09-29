@@ -281,6 +281,13 @@
       "when": 1790670535443,
       "tag": "0039_career_value",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1790705049211,
+      "tag": "0040_app_auth",
+      "breakpoints": true
     }
   ]
 }

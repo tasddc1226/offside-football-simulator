@@ -40,7 +40,7 @@ describe('GET /v1/profile', () => {
     expect(setCookie).toContain('Max-Age=31536000');
 
     const body = successEnvelope(ProfileSchema).parse(await res.json());
-    expect(body.data.linked).toEqual({ google: false, toss: false });
+    expect(body.data.linked).toEqual({ google: false, toss: false, apple: false });
 
     const profileRows = await ctx.db.select().from(profiles);
     const sessionRows = await ctx.db.select().from(sessions);

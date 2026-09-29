@@ -21,6 +21,8 @@ const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
   },
   // 만료된 세션도 한 달은 둔다(문의가 오면 언제 로그인했는지 볼 수 있게). 폐기된 세션은 만료 뒤에 지워진다.
   { table: 'sessions', column: 'expires_at', keepMs: 30 * DAY_MS },
+  // T-11-003 앱 로그인 티켓은 10분이면 끝난다.
+  { table: 'app_auth_tickets', column: 'expires_at', keepMs: DAY_MS },
 ];
 
 export type CleanupResult = Record<string, number>;

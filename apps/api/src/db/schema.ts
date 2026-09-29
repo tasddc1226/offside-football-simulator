@@ -29,15 +29,19 @@ export const profiles = sqliteTable(
     deletedAt: text('deleted_at'),
     /** T-10-028 댓글에 쓰는 닉네임(구글 로그인한 프로필만 정한다). 대소문자만 다른 닉네임도 겹치지 못한다. */
     nickname: text('nickname'),
+    /** T-11-003 Sign in with Apple 사용자 id(앱). 구글과 따로 연결된다. */
+    appleSub: text('apple_sub'),
+    appleLinkedAt: text('apple_linked_at'),
   },
   (table) => [
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
+    uniqueIndex('profiles_apple_sub_unique').on(table.appleSub),
     uniqueIndex('profiles_nickname_unique').on(sql`lower(${table.nickname})`),
     uniqueIndex('profiles_toss_anon_key_hash_unique').on(table.tossAnonKeyHash),
   ],
 );
 
-/** ADR-002 세션. web은 쿠키, toss는 Bearer 토큰이지만 세션 테이블은 같다. */
+/** ADR-002 세션. web은 쿠키, toss·app(T-11-003 네이티브 앱)은 Bearer 토큰이지만 세션 테이블은 같다. */
 export const sessions = sqliteTable(
   'sessions',
   {
@@ -45,7 +49,7 @@ export const sessions = sqliteTable(
     profileId: text('profile_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    channel: text('channel', { enum: ['web', 'toss'] }).notNull(),
+    channel: text('channel', { enum: ['web', 'toss', 'app'] }).notNull(),
     tokenHash: text('token_hash').notNull(),
     createdAt: text('created_at').notNull(),
     expiresAt: text('expires_at').notNull(),
@@ -89,13 +93,46 @@ export const authAttempts = sqliteTable(
   {
     id: text('id').primaryKey(),
     kind: text('kind', {
-      enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START', 'BOARD_COMMENT'],
+      enum: [
+        'RECOVERY_ISSUE',
+        'RECOVERY_REDEEM',
+        'GOOGLE_START',
+        'BOARD_COMMENT',
+        'APP_SESSION',
+        'APPLE_SIGNIN',
+      ],
     }).notNull(),
     subject: text('subject').notNull(),
     windowStart: text('window_start').notNull(),
     count: integer('count').notNull(),
   },
   (table) => [uniqueIndex('auth_attempts_kind_subject_unique').on(table.kind, table.subject)],
+);
+
+/**
+ * T-11-003 앱 구글 로그인 표. 앱은 쿠키가 없어 시스템 브라우저로 구글 로그인을 거친다 — 앱이 PKCE 챌린지를 내면 서버가
+ * 이 표(id = 구글 OAuth state)를 앱 세션에 묶어 만들고 구글 인증 주소를 돌려준다. 콜백은 state로 표를 찾아 로그인할
+ * 프로필을 적고 offside://auth로 보낸다. 앱이 표 id와 verifier를 내면 표를 지우고 새 앱 세션 토큰을 준다. 10분 뒤 만료.
+ */
+export const appAuthTickets = sqliteTable(
+  'app_auth_tickets',
+  {
+    id: text('id').primaryKey(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    /** 앱의 PKCE 챌린지: base64url(SHA-256(verifier)). */
+    challenge: text('challenge').notNull(),
+    /** 구글 OAuth PKCE verifier(웹은 oauth 쿠키에 둔다). */
+    codeVerifier: text('code_verifier').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    /** 콜백이 정한 로그인 프로필. NULL이면 아직 콜백 전. 티켓 세션의 프로필과 같으면 연결, 다르면 전환. */
+    profileId: text('profile_id'),
+  },
+  (table) => [
+    index('app_auth_tickets_expires_at_idx').on(table.expiresAt),
+    index('app_auth_tickets_session_id_idx').on(table.sessionId),
+  ],
 );
 
 /**
@@ -237,6 +274,7 @@ export const auditLog = sqliteTable(
         'RECOVERY_CODE_ISSUED',
         'GOOGLE_LINKED',
         'GOOGLE_UNLINKED',
+        'APPLE_LINKED',
         'CAREERS_MERGED',
         'BALANCE_ACTIVATED',
         'COMMENTS_PURGED',

@@ -19,7 +19,7 @@ export type ProfileSettings = z.infer<typeof ProfileSettingsSchema>;
 export const ProfileSchema = z.strictObject({
   id: z.string().min(1),
   settings: ProfileSettingsSchema,
-  linked: z.strictObject({ google: z.boolean(), toss: z.boolean() }),
+  linked: z.strictObject({ google: z.boolean(), toss: z.boolean(), apple: z.boolean() }),
   recoveryCodeIssuedAt: IsoUtcSchema.nullable(),
   createdAt: IsoUtcSchema,
   googleEmailMasked: z.string().nullable().default(null),

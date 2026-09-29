@@ -48,7 +48,7 @@ import {
   type OwnerTeamRow,
   type TeamMatchRow,
 } from '../db/repos/ownerTeams.js';
-import { getProfile, type ProfileRecord } from '../db/repos/profiles.js';
+import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
 import { ownerTeams } from '../db/schema.js';
 import { purgeEdge } from '../edgeCache.js';
 import { STALE } from '../edgeKeys.js';
@@ -82,7 +82,7 @@ const teamRequired = () =>
 /** 구글 로그인한(삭제되지 않은) 프로필만 구단주다. 익명 프로필은 403 GOOGLE_LOGIN_REQUIRED — 웹이 로그인 안내를 띄운다. */
 async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
   const profile = await getProfile(getDb(c), getSessionOrThrow(c).profileId);
-  if (!profile || !profile.googleSub || profile.deletedAt) {
+  if (!profile || !hasAccount(profile) || profile.deletedAt) {
     throw new AppError({
       code: 'FORBIDDEN',
       message: '구글로 로그인한 구단주만 팀을 만들 수 있어요.',

@@ -5,6 +5,7 @@ import type { Context } from 'hono';
 import { generateCookie, getCookie } from 'hono/cookie';
 import type { Db } from '../db/client.js';
 import { sha256Hex } from '../db/hash.js';
+import { randomToken } from './base64url.js';
 import { newId } from '../db/ids.js';
 import { runBatch } from '../db/repos/batch.js';
 import { createSession, type SessionChannel, type SessionRecord } from '../db/repos/sessions.js';
@@ -15,16 +16,6 @@ export const SESSION_COOKIE_NAME = 'offside_session';
 
 /** 설계 결정 1: 만료는 발급 시각 + 365일 고정. */
 const SESSION_MAX_AGE_SECONDS = 31536000;
-
-function randomToken(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
 
 export async function issueSession(
   db: Db,
@@ -44,10 +35,10 @@ export async function issueSession(
   return { token, session };
 }
 
-/** 인증 경계에서 기존 토큰 폐기와 새 web 세션 발급을 한 D1 batch로 묶는다. */
-export async function prepareWebSessionRotation(
+/** 인증 경계에서 기존 토큰 폐기와 새 세션 발급(기본 web, 앱은 app)을 한 D1 batch로 묶는다. */
+export async function prepareSessionRotation(
   db: Db,
-  input: { oldSessionId: string; profileId: string; now: string },
+  input: { oldSessionId: string; profileId: string; now: string; channel?: SessionChannel },
 ): Promise<{ token: string; statements: [BatchItem<'sqlite'>, BatchItem<'sqlite'>] }> {
   const token = randomToken();
   const tokenHash = await sha256Hex(token);
@@ -60,7 +51,7 @@ export async function prepareWebSessionRotation(
       db.insert(sessions).values({
         id: newId('ses'),
         profileId: input.profileId,
-        channel: 'web',
+        channel: input.channel ?? 'web',
         tokenHash,
         createdAt: input.now,
         expiresAt,
@@ -71,11 +62,11 @@ export async function prepareWebSessionRotation(
   };
 }
 
-export async function rotateWebSession(
+export async function rotateSession(
   db: Db,
-  input: { oldSessionId: string; profileId: string; now: string },
+  input: { oldSessionId: string; profileId: string; now: string; channel?: SessionChannel },
 ): Promise<string> {
-  const prepared = await prepareWebSessionRotation(db, input);
+  const prepared = await prepareSessionRotation(db, input);
   await runBatch(db, prepared.statements);
   return prepared.token;
 }

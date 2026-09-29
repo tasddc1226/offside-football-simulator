@@ -50,12 +50,17 @@ describe('T-10-070 매일 정리', () => {
     await run(ses, 'ses_revoked_not_expired', ago(90 * DAY), later(DAY), ago(40 * DAY));
     await run(ses, 'ses_expired_recently', ago(40 * DAY), ago(DAY), null);
     await run(ses, 'ses_live', ago(DAY), later(DAY), null);
+    const tkt = `INSERT INTO app_auth_tickets (id, session_id, challenge, code_verifier, expires_at) VALUES (?1, 'ses_live', 'c', 'v', ?2)`;
+    await run(tkt, 'tkt_old', ago(2 * DAY));
+    await run(tkt, 'tkt_new', ago(HOUR));
 
     expect(await cleanupExpired(ctx.env.DB, NOW)).toEqual({
       idempotency: 1,
       auth_attempts: 1,
       sessions: 1,
+      app_auth_tickets: 1,
     });
+    expect(await count('app_auth_tickets')).toBe(1);
     expect(await count('idempotency')).toBe(1);
     expect(await count('auth_attempts')).toBe(1);
     const left = await ctx.env.DB.prepare('SELECT id FROM sessions ORDER BY id').all<{

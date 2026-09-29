@@ -1,4 +1,5 @@
 import { sha256Hex } from '../db/hash.js';
+import { base64UrlToBytes, bytesToBase64Url } from './base64url.js';
 
 /**
  * T-1-004 API-PRO-005 2단계 삭제 확인 토큰. 별도 저장 없이 세션의 `tokenHash`를 서명 키로 쓴다
@@ -7,20 +8,8 @@ import { sha256Hex } from '../db/hash.js';
  */
 const DELIMITER = '|';
 
-function toBase64Url(text: string): string {
-  const bytes = new TextEncoder().encode(text);
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function fromBase64Url(encoded: string): string {
-  const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-  const binary = atob(padded);
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
+const toBase64Url = (text: string) => bytesToBase64Url(new TextEncoder().encode(text));
+const fromBase64Url = (encoded: string) => new TextDecoder().decode(base64UrlToBytes(encoded));
 
 async function sign(
   sessionTokenHash: string,

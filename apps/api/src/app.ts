@@ -8,6 +8,7 @@ import { logger } from './middleware/logger.js';
 import { originGuard } from './middleware/originGuard.js';
 import { requestId } from './middleware/requestId.js';
 import { registerAdminRoutes } from './routes/admin.js';
+import { registerAppAuthRoutes } from './routes/appAuth.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerBalanceRoutes } from './routes/balance.js';
 import { registerBoardRoutes } from './routes/boards.js';
@@ -36,6 +37,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
 
   registerProfileRoutes(app);
   registerAuthRoutes(app);
+  registerAppAuthRoutes(app);
   registerCareerRoutes(app);
   registerHofRoutes(app);
   registerFirstsRoutes(app);

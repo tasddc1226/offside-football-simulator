@@ -1,6 +1,6 @@
 import { ADMIN_NICKNAME } from '@offside/contracts';
 import type { Context } from 'hono';
-import { getProfile } from '../db/repos/profiles.js';
+import { getProfile, hasAccount } from '../db/repos/profiles.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { resolveSession } from '../middleware/session.js';
@@ -14,6 +14,7 @@ export function isAdminEmail(adminEmails: string | undefined, email: string | nu
 
 type IdentityProfile = {
   googleSub: string | null;
+  appleSub: string | null;
   email: string | null;
   nickname: string | null;
   deletedAt: string | null;
@@ -21,16 +22,18 @@ type IdentityProfile = {
 export type CommentIdentity = { google: boolean; admin: boolean; nickname: string | null };
 
 /**
- * T-10-028 댓글 자격 — 구글 로그인(삭제되지 않은 프로필), 관리자 여부, 댓글 닉네임. 관리자 닉네임은 언제나
- * '운영자'다. viewer·프로필 응답·닉네임 변경이 모두 이 한 곳의 판단을 쓴다.
+ * T-10-028 댓글 자격 — 계정 로그인(삭제되지 않은 프로필), 관리자 여부, 댓글 닉네임. 관리자 닉네임은 언제나
+ * '운영자'다. viewer·프로필 응답·닉네임 변경이 모두 이 한 곳의 판단을 쓴다. `google`은 옛 이름 그대로 두었고
+ * 앱의 Sign in with Apple(T-11-003)도 같은 자격이다 — 관리자는 구글 이메일로만 정한다.
  */
 export function commentIdentity(
   profile: IdentityProfile | undefined,
   adminEmails: string | undefined,
 ): CommentIdentity {
-  const google = !!profile?.googleSub && !profile.deletedAt;
-  const admin = google && isAdminEmail(adminEmails, profile.email);
-  return { google, admin, nickname: admin ? ADMIN_NICKNAME : google ? profile.nickname : null };
+  if (!profile || profile.deletedAt || !hasAccount(profile))
+    return { google: false, admin: false, nickname: null };
+  const admin = !!profile.googleSub && isAdminEmail(adminEmails, profile.email);
+  return { google: true, admin, nickname: admin ? ADMIN_NICKNAME : profile.nickname };
 }
 
 export type Viewer = CommentIdentity & { profileId: string | null };

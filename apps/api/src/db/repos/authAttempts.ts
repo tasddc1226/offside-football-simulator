@@ -54,3 +54,16 @@ export async function recordAttempt(
       },
     });
 }
+
+/** 한도 안이면 시도 1회를 기록하고 true, 이미 한도면 기록하지 않고 false. */
+export async function tryAttempt(
+  db: Db,
+  kind: AuthAttemptKind,
+  subject: string,
+  max: number,
+  now: string,
+): Promise<boolean> {
+  if ((await getAttemptCount(db, kind, subject, now)) >= max) return false;
+  await recordAttempt(db, kind, subject, now);
+  return true;
+}

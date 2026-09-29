@@ -1,6 +1,7 @@
 import { generateCookie, getCookie } from 'hono/cookie';
 import type { Context } from 'hono';
 import type { AppEnv } from '../env.js';
+import { randomToken } from './base64url.js';
 
 /** D-21: `state`·PKCE `codeVerifier`를 담는 10분짜리 쿠키. 서버 저장소는 두지 않는다. */
 export const OAUTH_COOKIE_NAME = 'offside_oauth';
@@ -51,13 +52,5 @@ export function readOauthCookie(c: Context<AppEnv>): string | undefined {
   return getCookie(c, OAUTH_COOKIE_NAME);
 }
 
-/** `state`·PKCE `codeVerifier` 생성에 쓴다. `auth/session.ts`의 세션 토큰과 같은 32바이트 base64url 방식. */
-export function generateOauthToken(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
+/** `state`·PKCE `codeVerifier` 생성에 쓴다 — 세션 토큰과 같은 32바이트 base64url. */
+export const generateOauthToken = randomToken;
