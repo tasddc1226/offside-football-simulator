@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { resumeWithSave } from './helpers.js';
 
 // T-10-096: 선수 생성에서 국적(전 세계)·키·몸무게를 고른다. 이상한 체격은 막고, 고른 값이 선수 정보에 남는다.
 test('국적·키·몸무게를 입력하고, 범위를 벗어나면 다음으로 넘어가지 못한다', async ({ page }) => {
@@ -38,4 +39,12 @@ test('국적·키·몸무게를 입력하고, 범위를 벗어나면 다음으�
   await page.locator('[data-tab="player"]').click();
   await expect(page.locator('[data-nation]')).toContainText('브라질');
   await expect(page.locator('[data-body]')).toContainText('192cm · 86kg');
+});
+
+// 체격 입력 이전 저장본(국적·체격 없음)은 대한민국 · 포지션 표준 체격으로 보인다(표시만).
+test('옛 저장본은 대한민국 국적에 포지션 표준 체격으로 보인다', async ({ page }) => {
+  await resumeWithSave(page, { nation: undefined, body: undefined, pos: 'GK' });
+  await page.locator('[data-tab="player"]').click();
+  await expect(page.locator('[data-nation]')).toContainText('대한민국');
+  await expect(page.locator('[data-body]')).toContainText('189cm · 83kg');
 });

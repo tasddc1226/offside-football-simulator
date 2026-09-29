@@ -8,6 +8,7 @@
   import { nextWC, HOSTS } from '../../game/national.js';
   import type { GameState } from '../../game/types.js';
   import { flagOf, isKorean, nationOf } from '../../game/nation.js';
+  import { BODY_DEFAULT } from '@offside/contracts/body';
   import AttrCard from '../AttrCard.svelte';
   import { retireAsk } from '../actions.js';
 
@@ -20,6 +21,8 @@
   const nextWcYear = $derived(nextWC(s.year - 1));
   const nextWcHost = $derived((HOSTS.wc as Record<number, string>)[nextWcYear] || '개최지 미정');
   const nation = $derived(nationOf(s));
+  // 체격 입력 이전 선수는 포지션 표준 체격으로 보여 준다(표시만 — 능력치 보정은 없다).
+  const body = $derived(s.body ?? BODY_DEFAULT[s.pos]);
 </script>
 
 <AttrCard {s} />
@@ -29,9 +32,7 @@
   <h2 style="margin-bottom:10px">선수 정보</h2>
   <dl class="kv">
     <dt>국적</dt><dd data-nation><span aria-hidden="true">{flagOf(nation.code)}</span> {nation.ko}</dd>
-    {#if s.body}
-      <dt>체격</dt><dd data-body>{s.body.h}cm · {s.body.w}kg</dd>
-    {/if}
+    <dt>체격</dt><dd data-body>{body.h}cm · {body.w}kg</dd>
     <dt>주발</dt><dd>{s.foot}</dd>
     <dt>성장 특성</dt><dd>{traitName}</dd>
     <dt>스카우트 잠재력 평가</dt><dd data-pot>{potLabel(s)}등급{#if potFogged(s)} <small class="muted">· 21·24세 재평가 때 좁혀져요</small>{/if}</dd>
