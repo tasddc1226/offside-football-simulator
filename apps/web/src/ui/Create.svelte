@@ -6,7 +6,7 @@
   import type { AttrKey, DetailPos, Pos } from '../game/data.js';
   import { baseline } from '../game/candidates.js';
   import { appState, detailOpenNow, draftBody, draftDpos, randomName } from './state.svelte.js';
-  import { CONFEDS, CONF_ORDER, DEFAULT_NATION, NATIONS, flagOf } from '@offside/contracts/nations';
+  import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { bodyMods, GK_SUBS, SUBS } from '../game/attributes.js';
   import { isKorean, nationOf } from '../game/nation.js';
@@ -17,6 +17,7 @@
   import { withRo } from './format.js';
   import Topbar from './Topbar.svelte';
   import MiniRadar from './MiniRadar.svelte';
+  import NationPicker from './NationPicker.svelte';
 
   const C = appState.C;
   const posKeys = Object.keys(POS) as Pos[];
@@ -37,12 +38,7 @@
   const cardAttrs = $derived(picked?.attrs ?? baseline(C.pos, C.focus, dpos));
   const trait = $derived(TRAITS.find((t) => t.id === C.trait));
 
-  // T-10-096 국적·체격. 국적은 연맹별로 묶어 가나다순으로 보여 주고, 대한민국은 맨 위에 둔다.
-  const byKo = new Intl.Collator('ko').compare;
-  const nationGroups = CONF_ORDER.map((conf) => ({
-    conf,
-    list: NATIONS.filter((n) => n.conf === conf && n.code !== DEFAULT_NATION).sort((a, b) => byKo(a.ko, b.ko)),
-  }));
+  // T-10-096 국적·체격
   const nation = $derived(nationOf(C));
   const foreign = $derived(!isKorean(C));
   // 골키퍼에게 보여 줄 체격 보정(나머지는 골키퍼 능력치에 거의 안 쓰인다).
@@ -148,16 +144,7 @@
 
       <div class="field">
         <label for="f-nation">국적</label>
-        <select id="f-nation" data-set="nation" bind:value={C.nation}>
-          <option value={DEFAULT_NATION}>{flagOf(DEFAULT_NATION)} 대한민국</option>
-          {#each nationGroups as g (g.conf)}
-            <optgroup label="{CONFEDS[g.conf].region} ({g.conf})">
-              {#each g.list as n (n.code)}
-                <option value={n.code}>{flagOf(n.code)} {n.ko}</option>
-              {/each}
-            </optgroup>
-          {/each}
-        </select>
+        <NationPicker id="f-nation" bind:value={C.nation} />
         <p class="muted fs-sm" data-nation-note>
           {#if foreign}
             한국 고교로 축구 유학을 온 선수로 시작해요. {nation.ko} 대표팀에 뽑히고 대륙컵은 {CONFEDS[nation.conf].cup}예요. 병역은 없어요.
