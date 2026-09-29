@@ -123,7 +123,7 @@
     <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
       <button class="opt" aria-pressed={season === null} data-hof-season="all" onclick={() => pickSeason(null)}>전체</button>
       {#each SERVICE_SEASONS as s (s.id)}
-        <button class="opt" aria-pressed={season === s.id} data-hof-season={s.id} onclick={() => pickSeason(s.id)}>{s.name}</button>
+        <button class="opt" aria-pressed={season === s.id} data-hof-season={s.id} onclick={() => pickSeason(s.id)}>{s.name}{#if new Date().toISOString() < s.startsAt}<span class="soon-tag" data-soon>Coming soon</span>{/if}</button>
       {/each}
     </div>
     {#if !upcoming}

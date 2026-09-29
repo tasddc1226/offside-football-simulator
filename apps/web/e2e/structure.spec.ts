@@ -150,6 +150,6 @@ test('구단주', async ({ page }) => {
   await setup(page);
   await page.locator('[data-act="owner"]').click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('구단주');
-  await expect(page.locator('[data-my-source]')).toBeVisible();
+  await expect(page.locator('#account-slot')).toContainText('로그인하지 않았어요');
   await expect(page.locator('#app')).toMatchAriaSnapshot({ name: 'owner.aria.yml' });
 });

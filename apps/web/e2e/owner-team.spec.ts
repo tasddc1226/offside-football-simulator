@@ -125,7 +125,41 @@ test('익명 구단주는 내 팀 대신 구글 로그인 버튼 하나만 본�
   await expect(page.locator('[data-owner-team]')).toHaveCount(0);
   await expect(page.locator('[data-act="team"]')).toHaveCount(0);
   await expect(page.locator('[data-settings-open="clubs"]')).toHaveCount(0); // 환경설정으로 옮겼다.
-  await expect(page.locator('[data-my-players]')).toBeVisible(); // 이 기기 기록은 로그인 없이도 본다.
+  // T-10-103 이 기기에 은퇴한 선수가 없으면 빈 '내 선수'도 숨긴다.
+  await expect(page.locator('[data-my-players]')).toHaveCount(0);
+});
+
+test('익명 구단주도 이 기기에 은퇴한 선수가 있으면 내 선수를 본다', async ({ page }) => {
+  await stubOwner(page, false);
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      'ft_hof',
+      JSON.stringify([
+        {
+          name: '기기왕',
+          pos: 'FW',
+          number: 9,
+          peak: 80,
+          age: 34,
+          apps: 300,
+          goals: 100,
+          assists: 50,
+          trophies: 0,
+          awards: 0,
+          caps: 0,
+          ballon: 0,
+          lastClub: '서울 FC',
+          score: 400,
+          date: '2026-09-01',
+        },
+      ]),
+    ),
+  );
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-my-players]')).toContainText('기기왕');
+  await expect(page.locator('[data-my-source]')).toHaveAttribute('data-my-source', 'device');
 });
 
 test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async ({ page }) => {

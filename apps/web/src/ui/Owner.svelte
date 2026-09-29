@@ -9,6 +9,7 @@
   import { accountCache } from './account-state.svelte.js';
   import Account from './Account.svelte';
   import MyPlayers from './MyPlayers.svelte';
+  import { loadHOF } from '../game/season.js';
   import { startGoogleLogin } from './login.js';
   import { go } from './nav.js';
   import { googleStartUrl } from '../api/client.js';
@@ -21,6 +22,8 @@
     const acct = accountCache.value;
     return !!acct && acct !== 'error' && acct.linked.google;
   });
+  // T-10-103 비로그인으로 확인됐고 이 기기에 은퇴한 선수도 없으면 빈 '내 선수'를 숨긴다(확인 중·연결 실패면 그대로 둔다).
+  const hasLocal = loadHOF().length > 0;
   // 로그인 안 함(익명 프로필이거나 세션 없음). 확인 중·연결 실패는 아니다.
   const guest = $derived.by(() => {
     const acct = accountCache.value;
@@ -62,7 +65,7 @@
     </section>
   {/if}
 
-  <MyPlayers />
+  {#if !guest || hasLocal}<MyPlayers />{/if}
 
   {#if admin}
     <section class="card settings-card">

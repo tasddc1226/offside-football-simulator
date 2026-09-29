@@ -432,6 +432,32 @@ test('명예의 전당: 은퇴 가치 칩에 NEW 표시(기한까지만)', async
   await expect(chip.locator('.hof-new')).toHaveCount(0);
 });
 
+// T-10-103 개막 전 시즌 버튼엔 'Coming soon' — 개막하면 사라진다. 눌러 보면 개막 안내.
+test('명예의 전당: 개막 전 시즌에 Coming soon 표시', async ({ page }) => {
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry], total: 1 })));
+  await page.clock.setFixedTime(new Date('2026-10-01T00:00:00+09:00'));
+  await page.goto('/');
+  await page.locator('[data-act="hof-all"]').click();
+  const full = page.locator('[data-hof="full"]');
+  const s1 = full.locator('[data-hof-season="1"]');
+  await expect(s1.locator('[data-soon]')).toHaveText('Coming soon');
+  await expect(full.locator('[data-hof-season="all"] [data-soon]')).toHaveCount(0);
+  const [tag, btn] = await Promise.all([
+    s1.locator('[data-soon]').boundingBox(),
+    full.locator('[data-hof-season="all"]').boundingBox(),
+  ]);
+  expect(tag!.y).toBeLessThan(btn!.y); // 버튼 높이는 그대로, 위 테두리에 걸친다.
+  await s1.click();
+  await expect(full.locator('[data-hof-upcoming]')).toContainText('시즌 1은');
+  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+
+  await page.clock.setFixedTime(new Date('2026-10-06T00:00:00+09:00'));
+  await page.reload();
+  await page.locator('[data-act="hof-all"]').click();
+  await expect(full.locator('[data-hof-season="1"]')).toBeVisible();
+  await expect(full.locator('[data-soon]')).toHaveCount(0);
+});
+
 // T-10-015: 화면을 오가도 같은 공개 조회는 다시 보내지 않는다(메모 60초).
 test('홈 ↔ 전체 보기 ↔ 상세를 오가도 같은 목록을 다시 요청하지 않는다', async ({ page }) => {
   const asked: string[] = [];

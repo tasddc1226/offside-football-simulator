@@ -3438,6 +3438,35 @@ body:has(nav.tabs) .toast {
 .hof-seasons {
   margin-top: 4px;
 }
+/* T-10-103 개막 전 시즌 버튼에 'Coming soon' — 버튼 높이는 그대로, 오른쪽 위 테두리에 걸친다. */
+.hof-seasons .opt {
+  position: relative;
+}
+.soon-tag {
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  animation: soon-glow 2.4s ease-in-out infinite;
+}
+@keyframes soon-glow {
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .soon-tag {
+    animation: none;
+  }
+}
 .hof-season-note b {
   color: var(--ink);
 }
