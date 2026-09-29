@@ -416,7 +416,11 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(awayRow!.losses).toBe(homeRow!.wins);
     // 레이팅은 홈 이점을 넣은 엘로만큼 옮겨 가고(두 팀 합은 그대로, T-10-095), 득실·연승·골 차가 쌓인다.
     const want = ratingChange(1000, 1000, matchScore(match.home.goals, match.away.goals));
-    expect([match.home.ratingChange, match.away.ratingChange]).toEqual([want.home, want.away]);
+    // JSON 응답은 -0을 0으로 직렬화하므로 기대값도 같은 표현으로 비교한다.
+    expect([match.home.ratingChange, match.away.ratingChange]).toEqual([
+      want.home + 0,
+      want.away + 0,
+    ]);
     expect(homeRow!.rating).toBe(rating);
     expect([homeRow!.rating, awayRow!.rating]).toEqual([1000 + want.home, 1000 + want.away]);
     expect(homeRow!.rating + awayRow!.rating).toBe(2000);
@@ -548,7 +552,11 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const { match } = PlayRes.parse(await res.json()).data;
     const score = matchScore(match.home.goals, match.away.goals);
     const want = ratingChange(mineBefore!.rating, rivalBefore, score, 2);
-    expect([match.home.ratingChange, match.away.ratingChange]).toEqual([want.home, want.away]);
+    // JSON 응답은 -0을 0으로 직렬화하므로 기대값도 같은 표현으로 비교한다.
+    expect([match.home.ratingChange, match.away.ratingChange]).toEqual([
+      want.home + 0,
+      want.away + 0,
+    ]);
     expect(await rivalRating()).toBe(rivalBefore + want.away);
   });
 
