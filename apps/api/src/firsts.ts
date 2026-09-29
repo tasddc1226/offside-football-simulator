@@ -4,6 +4,7 @@
 // 시즌 행이 서버에 처음 올라온 시각(created_at)이고, 같은 기록은 시각이 더 이른 커리어가 가져간다.
 
 import type { ServerFirstCat as FirstCat } from '@offside/contracts';
+import { CONFEDS, CONF_ORDER, cupTrophy } from '@offside/contracts/nations';
 
 export interface FirstSeason {
   year: number;
@@ -332,13 +333,10 @@ const SPECS: FirstSpec[] = [
       ['acle', 'AFC 챔피언스리그 엘리트 우승', 'AFC 챔피언스리그 엘리트 최초 우승!'],
       ['cwc', 'FIFA 클럽 월드컵 우승', 'FIFA 클럽 월드컵 최초 우승!'],
       ['wc', 'FIFA 월드컵 우승', 'FIFA 월드컵 최초 우승!'],
-      ['asiancup', 'AFC 아시안컵 우승', 'AFC 아시안컵 최초 우승!'],
-      // T-10-096 다른 연맹 국적 선수의 대륙컵.
-      ['euro', 'UEFA 유로 우승', 'UEFA 유로 최초 우승!'],
-      ['copa', '코파 아메리카 우승', '코파 아메리카 최초 우승!'],
-      ['afcon', '아프리카 네이션스컵 우승', '아프리카 네이션스컵 최초 우승!'],
-      ['goldcup', 'CONCACAF 골드컵 우승', 'CONCACAF 골드컵 최초 우승!'],
-      ['ofcup', 'OFC 네이션스컵 우승', 'OFC 네이션스컵 최초 우승!'],
+      // T-10-096 연맹마다 대륙컵(아시안컵이 맨 앞 — 예전 순서 그대로).
+      ...CONF_ORDER.map(
+        (c) => [CONFEDS[c].title.id, cupTrophy(c), `${CONFEDS[c].cup} 최초 우승!`] as const,
+      ),
       ['olympic', '올림픽 금메달', '올림픽 금메달 최초 획득!'],
       ['asiangames', '아시안게임 금메달', '아시안게임 금메달 최초 획득!'],
     ] as const

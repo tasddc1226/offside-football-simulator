@@ -133,7 +133,7 @@ export function newGame(
       assists: 0,
       tours: [],
       // 2026 월드컵 본선 — 외국 국적은 전력으로 정한다(시드 RNG를 쓰지 않는다).
-      qual: { 2026: !o.nation || nationOf({ nation: o.nation }).str >= 70 },
+      qual: { 2026: nationOf(o).str >= 70 },
       captain: false,
       debutYear: null,
     },
@@ -158,9 +158,7 @@ export function newGame(
   s.season = newSeason(s);
   log(
     s,
-    s.nation
-      ? `${nationOf(s).ko}에서 축구 유학을 온 ${club.name} 3학년 ${posLabel(s)} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`
-      : `${club.name} 3학년 ${posLabel(s)} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`,
+    `${s.nation ? `${nationOf(s).ko}에서 축구 유학을 온 ` : ''}${club.name} 3학년 ${posLabel(s)} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`,
     'big',
   );
   return s;

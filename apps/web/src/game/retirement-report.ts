@@ -30,8 +30,6 @@ export interface Chapter {
   events: ChapterEvent[];
 }
 
-/** 대한민국 대표팀 대회 우승이 기록되는 클럽 이름(season.ts). 외국 국적은 그 나라 이름이다(T-10-096). */
-export const NATIONAL_TEAM = '대한민국';
 // 대표팀 쪽 이정표는 대표팀 장면으로 따로 모은다. 이정표 문구는 comps.ts checkMilestones가 만든다.
 const NATIONAL_MILE = /A매치|대표팀|월드컵|센추리/;
 const MINOR_MILE = /데뷔골|경기 출전|후보|입성|본선 득점|컨퍼런스리그|엘리트/;

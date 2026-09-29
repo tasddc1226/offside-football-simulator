@@ -25,14 +25,9 @@ import {
 } from './comps.js';
 import { legendBand } from './legend-bands.js';
 import { checkTitles, mainTitle, titleView, type TitleView } from './titles.js';
-import {
-  natInit,
-  natSeasonEnd,
-  natSide,
-  NATIONAL_TROPHIES,
-  type NatTourResult,
-} from './national.js';
+import { natInit, natSeasonEnd, NATIONAL_TROPHIES, type NatTourResult } from './national.js';
 import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
+import { nationOf } from './nation.js';
 import { detectCareerHighs } from './records.js';
 import { noteMarket } from './playStyle.js';
 import type { LegendSnapshot } from '@offside/contracts';
@@ -96,7 +91,7 @@ export function endSeason(s: GameState): SeasonEndResult {
     s.trophies.push({
       year: s.year,
       t,
-      ...(NATIONAL_TROPHIES.has(t) ? { club: natSide(s).name } : clubRef(s.club)),
+      ...(NATIONAL_TROPHIES.has(t) ? { club: nationOf(s).ko } : clubRef(s.club)),
     }),
   );
   awards.forEach((t) => s.awards.push({ year: s.year, t }));

@@ -265,7 +265,7 @@ export interface GameState {
   seasonStart: Record<AttrKey, number>;
   seasonStartSub: Record<string, number>;
   career: CareerRecord[];
-  /** club이 대표팀(NATIONAL_TEAM)이면 clubId가 없다(T-10-066, 옛 기록에도 없다). */
+  /** club이 대표팀(나라 이름, nation.ts isNationalTeam)이면 clubId가 없다(T-10-066, 옛 기록에도 없다). */
   trophies: { year: number; t: string; club: string; clubId?: string | undefined }[];
   awards: { year: number; t: string }[];
   ballon?: { year: number; rank: number }[];

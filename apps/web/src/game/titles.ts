@@ -7,6 +7,7 @@ import { LEAGUES } from './data.js';
 import { CONT, CUPS, POTY, TOP_SCORER } from './comps.js';
 import { STORIES } from './engine.js';
 import type { GameState } from './types.js';
+import { CONFEDS, CONF_ORDER, cupTrophy } from '@offside/contracts/nations';
 import { isKorean, nationOf, type Confed } from './nation.js';
 import { LEGEND_BANDS, legendBand, type Rarity } from './legend-bands.js';
 export type { Rarity } from './legend-bands.js';
@@ -58,7 +59,6 @@ const sum = (s: GameState, k: 'goals' | 'assists' | 'apps' | 'cs') =>
   pro(s).reduce((t, r) => t + (r[k] || 0), 0);
 const best = (s: GameState, f: (r: GameState['career'][number]) => number) =>
   s.career.reduce((m, r) => Math.max(m, f(r)), 0);
-const natConf = (s: Pick<GameState, 'nation'>) => nationOf(s).conf;
 const count = <T>(xs: readonly T[], f: (x: T) => boolean) => xs.filter(f).length;
 const awardCount = (s: GameState, f: (t: string) => boolean) => count(s.awards, (a) => f(a.t));
 const trophyCount = (s: GameState, f: (t: string) => boolean) => count(s.trophies, (a) => f(a.t));
@@ -134,14 +134,14 @@ const t = (
   ...(hidden ? { hidden } : {}),
 });
 
-/** 셀 수 있는 조건(값 ≥ 목표) — 판정과 진행도가 같은 값을 쓴다. */
 /** 국적 조건이 붙은 칭호 — 얻을 수 없는 선수에겐 판정도 도감도 없다. */
 const only = (avail: NonNullable<TitleDef['avail']>, d: TitleDef): TitleDef => ({
   ...d,
   avail,
   earned: (s, x) => avail(s) && d.earned(s, x),
 });
-const confIs = (c: Confed) => (s: Pick<GameState, 'nation'>) => natConf(s) === c;
+const confIs = (c: Confed) => (s: Pick<GameState, 'nation'>) => nationOf(s).conf === c;
+/** 셀 수 있는 조건(값 ≥ 목표) — 판정과 진행도가 같은 값을 쓴다. */
 const n = (
   id: string,
   name: string,
@@ -356,21 +356,14 @@ export const TITLES: TitleDef[] = [
     '아시안게임 또는 올림픽 금메달',
     (s) => trophyCount(s, (x) => x === '아시안게임 금메달' || x === '올림픽 금메달') >= 1,
   ),
-  ...(
-    [
-      ['asiancup', '아시아의 왕', 'AFC', 'AFC 아시안컵 우승'],
-      ['euro', '유럽의 왕', 'UEFA', 'UEFA 유로 우승'],
-      ['copa', '남미의 왕', 'CONMEBOL', '코파 아메리카 우승'],
-      ['afcon', '아프리카의 왕', 'CAF', '아프리카 네이션스컵 우승'],
-      ['goldcup', '북중미의 왕', 'CONCACAF', 'CONCACAF 골드컵 우승'],
-      ['ofcup', '오세아니아의 왕', 'OFC', 'OFC 네이션스컵 우승'],
-    ] as const
-  ).map(([id, name, conf, trophy]) =>
-    only(
+  ...CONF_ORDER.map((conf) => {
+    const { id, name } = CONFEDS[conf].title;
+    const trophy = cupTrophy(conf);
+    return only(
       confIs(conf),
       t(id, name, 'nation', 3, trophy, (s) => trophyCount(s, (x) => x === trophy) >= 1),
-    ),
-  ),
+    );
+  }),
   t(
     'worldchamp',
     '월드 챔피언',

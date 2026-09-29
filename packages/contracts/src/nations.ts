@@ -251,6 +251,70 @@ export const NATION_BY_CODE: ReadonlyMap<string, Nation> = new Map(NATIONS.map((
 /** 신규 선수 기본 국적. */
 export const DEFAULT_NATION = 'KR';
 
+/**
+ * 대륙연맹별 이름 — 지역, 대륙컵, 올해의 선수상, 대륙컵 칭호(=최초 기록 id). 웹(대회·수상·칭호)과
+ * API(최초 기록·팀 업적)·영구결번 점수가 모두 이 표에서 이름을 꺼낸다. 순서가 곧 화면·목록 순서다.
+ */
+export const CONFEDS: Record<
+  Confed,
+  {
+    region: string;
+    cup: string;
+    poty: string;
+    /** 자기 대륙 밖에서 뛰는 선수의 올해의 선수상(없으면 poty). */
+    potyAbroad?: string;
+    title: { id: string; name: string };
+  }
+> = {
+  AFC: {
+    region: '아시아',
+    cup: 'AFC 아시안컵',
+    poty: 'AFC 올해의 선수',
+    potyAbroad: 'AFC 올해의 국제선수',
+    title: { id: 'asiancup', name: '아시아의 왕' },
+  },
+  UEFA: {
+    region: '유럽',
+    cup: 'UEFA 유로',
+    poty: 'UEFA 올해의 선수',
+    title: { id: 'euro', name: '유럽의 왕' },
+  },
+  CONMEBOL: {
+    region: '남미',
+    cup: '코파 아메리카',
+    poty: '남미 올해의 선수',
+    title: { id: 'copa', name: '남미의 왕' },
+  },
+  CAF: {
+    region: '아프리카',
+    cup: '아프리카 네이션스컵',
+    poty: '아프리카 올해의 선수',
+    title: { id: 'afcon', name: '아프리카의 왕' },
+  },
+  CONCACAF: {
+    region: '북중미',
+    cup: 'CONCACAF 골드컵',
+    poty: 'CONCACAF 올해의 선수',
+    title: { id: 'goldcup', name: '북중미의 왕' },
+  },
+  OFC: {
+    region: '오세아니아',
+    cup: 'OFC 네이션스컵',
+    poty: 'OFC 올해의 선수',
+    title: { id: 'ofcup', name: '오세아니아의 왕' },
+  },
+};
+export const CONF_ORDER = Object.keys(CONFEDS) as Confed[];
+/** 대륙컵 우승 트로피 이름(예: 'UEFA 유로 우승'). */
+export const cupTrophy = (c: Confed) => `${CONFEDS[c].cup} 우승`;
+/** 대표팀 우승 트로피 — 월드컵·대륙컵(연맹 순)·아시안게임·올림픽 금메달. */
+export const NATIONAL_WINS: readonly string[] = [
+  'FIFA 월드컵 우승',
+  ...CONF_ORDER.map(cupTrophy),
+  '아시안게임 금메달',
+  '올림픽 금메달',
+];
+
 /** 국기 이모지. 영국 4개 협회는 서브디비전 태그 시퀀스(🏴󠁧󠁢󠁥󠁮󠁧󠁿 등)를 쓴다. */
 export function flagOf(code: string): string {
   // 잉글랜드·스코틀랜드·웨일스: 검은 깃발 + 태그 문자 + 취소 태그

@@ -1,14 +1,15 @@
 // ───────── 국가대표 · 국제대회 ─────────
 // T-10-096 국적별로 돈다. 대한민국(국적 없는 옛 저장 포함)은 아래 AFC_NT·WORLD_NT 표와 BAL 전력 그대로 —
 // 시드 RNG 소비 순서까지 예전과 같다. 다른 나라는 자기 연맹 표에서 상대를 뽑고, 대륙컵이 연맹마다 다르다.
-import { NATIONS } from '@offside/contracts/nations';
+import { CONFEDS, NATIONS, cupTrophy, NATIONAL_WINS } from '@offside/contracts/nations';
 import { LAST_PHASE, scoreRate } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
 import { leagueOf, addStat, log, fameEff, atkOf, creOf } from './engine.js';
 import { BAL } from './balance.js';
 import type { GameState, NatTour } from './types.js';
-import { isKorean, nationOf, REGION, RIVAL, type Confed } from './nation.js';
+import { isKorean, KR, nationOf, RIVAL, type Confed } from './nation.js';
+import { milDone } from './military.js';
 
 const NT_THRESHOLD = 80;
 const AFC_NT: [string, number][] = [
@@ -62,8 +63,6 @@ const WORLD_NT: [string, number][] = [
   ['카메룬', 72],
   ['코스타리카', 70],
 ];
-/** 대한민국 전력(nations.ts의 KR str) — 다른 나라 전력은 이 값과의 차이만큼 BAL.koreaStr에서 옮긴다. */
-const KR_STR = 75;
 /**
  * 나라 전력 차를 얼마나 반영할지. 1이면 그대로, 0이면 모든 나라가 대한민국과 같은 전력이다. 발탁 문턱은 모든
  * 나라가 같고(사용자 결정), 전력은 A매치 상대·대회 성적에만 들어간다 — 강팀을 골라 트로피를 쓸어 담지
@@ -86,14 +85,14 @@ interface NatSide {
   world: NT[];
 }
 const byStr = (a: NT, b: NT) => b[1] - a[1];
-const AFC_WITH_KR: NT[] = [...AFC_NT, ['대한민국', KR_STR] as NT].sort(byStr);
+const AFC_WITH_KR: NT[] = [...AFC_NT, [KR.ko, KR.str] as NT].sort(byStr);
 /** 코파 아메리카는 북중미 팀을 초청한다 — 남미 표가 10팀뿐이라 북중미 상위 팀으로 채운다. */
 const COPA_GUESTS = 8;
 const sideCache = new Map<string, Omit<NatSide, 'str' | 'u23'>>();
 export function natSide(s: GameState): NatSide {
   if (isKorean(s))
     return {
-      name: '대한민국',
+      name: KR.ko,
       str: BAL.koreaStr,
       u23: BAL.koreaU23,
       conf: 'AFC',
@@ -108,9 +107,10 @@ export function natSide(s: GameState): NatSide {
       NATIONS.filter((x) => x.conf === c && x.code !== n.code)
         .map((x): NT => [x.ko, x.str])
         .sort(byStr);
+    const afc = AFC_WITH_KR.filter(([k]) => k !== n.ko);
     const pool =
       n.conf === 'AFC'
-        ? AFC_WITH_KR.filter(([k]) => k !== n.ko)
+        ? afc
         : n.conf === 'CONMEBOL'
           ? [...others('CONMEBOL'), ...others('CONCACAF').slice(0, COPA_GUESTS)].sort(byStr)
           : others(n.conf).slice(0, 17);
@@ -118,19 +118,19 @@ export function natSide(s: GameState): NatSide {
       name: n.ko,
       conf: n.conf,
       pool,
-      afc: AFC_WITH_KR.filter(([k]) => k !== n.ko),
+      afc,
       world: WORLD_NT.filter(([k]) => k !== n.ko),
     };
     sideCache.set(n.code, base);
   }
-  const d = (n.str - KR_STR) * NAT_STR_K;
+  const d = (n.str - KR.str) * NAT_STR_K;
   return { ...base, str: BAL.koreaStr + d, u23: BAL.koreaU23 + d };
 }
 /** 월드컵·올림픽 본선 진출 확률. 대한민국은 BAL 값, 다른 나라는 전력에 따라. */
 function qualP(s: GameState, what: 'wc' | 'olympic'): number {
   const base = what === 'wc' ? BAL.wcQual : BAL.olympicQual;
   if (isKorean(s)) return base;
-  return clamp(base + (nationOf(s).str - KR_STR) * (what === 'wc' ? 0.03 : 0.02), 0.1, 0.98);
+  return clamp(base + (nationOf(s).str - KR.str) * (what === 'wc' ? 0.03 : 0.02), 0.1, 0.98);
 }
 
 export const HOSTS = {
@@ -152,54 +152,41 @@ export const HOSTS = {
 /** 연맹별 대륙컵 — 4년에 한 번씩, 어느 나라든 같은 횟수다. */
 const CONT_CUP: Record<
   Confed,
-  { key: string; label: (y: number) => string; trophy: string; year: (y: number) => boolean }
+  { key: string; label: (y: number) => string; year: (y: number) => boolean }
 > = {
   AFC: {
     key: 'asian',
     label: (y) => `${y} AFC 아시안컵${HOSTS.asian[y] ? ` (${HOSTS.asian[y]})` : ''}`,
-    trophy: 'AFC 아시안컵 우승',
     year: (y) => y % 4 === 3,
   },
   UEFA: {
     key: 'euro',
     label: (y) => `UEFA 유로 ${y}${HOSTS.euro[y] ? ` (${HOSTS.euro[y]})` : ''}`,
-    trophy: 'UEFA 유로 우승',
     year: (y) => y % 4 === 0,
   },
   CONMEBOL: {
     key: 'copa',
     label: (y) => `${y} 코파 아메리카`,
-    trophy: '코파 아메리카 우승',
     year: (y) => y % 4 === 0,
   },
   CAF: {
     key: 'afcon',
     label: (y) => `${y} 아프리카 네이션스컵${HOSTS.afcon[y] ? ` (${HOSTS.afcon[y]})` : ''}`,
-    trophy: '아프리카 네이션스컵 우승',
     year: (y) => y % 4 === 3,
   },
   CONCACAF: {
     key: 'gold',
     label: (y) => `${y} CONCACAF 골드컵`,
-    trophy: 'CONCACAF 골드컵 우승',
     year: (y) => y % 4 === 3,
   },
   OFC: {
     key: 'ofc',
     label: (y) => `${y} OFC 네이션스컵`,
-    trophy: 'OFC 네이션스컵 우승',
     year: (y) => y % 4 === 0,
   },
 };
 /** 대표팀 트로피 이름들(대륙컵·월드컵·올림픽·아시안게임) — 기록의 club을 대표팀으로 적는 데 쓴다. */
-export const NATIONAL_TROPHIES = new Set([
-  'FIFA 월드컵 우승',
-  '아시안게임 금메달',
-  '올림픽 금메달',
-  '올림픽 은메달',
-  '올림픽 동메달',
-  ...Object.values(CONT_CUP).map((c) => c.trophy),
-]);
+export const NATIONAL_TROPHIES = new Set([...NATIONAL_WINS, '올림픽 은메달', '올림픽 동메달']);
 const WINDOW_NAME: string[][] = [[], ['9월 A매치', '10월 A매치'], ['11월 A매치', '3월 A매치']];
 
 export function natInit(s: GameState) {
@@ -316,7 +303,7 @@ function simIntl(
     s.nat.goals += g;
     s.nat.assists += a;
   }
-  const rival = RIVAL[isKorean(s) ? 'KR' : nationOf(s).code];
+  const rival = RIVAL[nationOf(s).code];
   if (rival && opp[0].startsWith(rival.opp) && win && mins) {
     addStat(s, 'fame', 3);
     log(s, `${rival.label} 승리!${g ? ` ${g}골을 터뜨리며` : ''} 국민 영웅이 됐습니다.`, 'good');
@@ -341,7 +328,7 @@ function natOne(s: GameState, name: string) {
     return s.nat.caps && sc >= thr - 4 ? { name, called: false as const } : null;
   const qual = isQualYear(s.year);
   const side = natSide(s);
-  const comp = qual ? `${nextWC(s.year)} 월드컵 ${REGION[side.conf]} 예선` : '친선 A매치';
+  const comp = qual ? `${nextWC(s.year)} 월드컵 ${CONFEDS[side.conf].region} 예선` : '친선 A매치';
   const role: 'starter' | 'sub' =
     sc >= 85 || s.nat.captain ? 'starter' : chance(0.45) ? 'starter' : 'sub';
   const pool = qual ? side.pool.slice(0, 14) : chance(0.55) ? side.world : side.pool.slice(0, 8);
@@ -382,7 +369,13 @@ function pickDistinct<T>(pool: T[], n: number): T[] {
   return out;
 }
 /** 대회 정의 — 대표팀(side)의 상대 표로 만든다. 대한민국은 예전 표 그대로다. */
+const tourCache = new Map<string, Record<string, TournamentDef>>();
 function tournaments(side: NatSide): Record<string, TournamentDef> {
+  let defs = tourCache.get(side.name);
+  if (!defs) tourCache.set(side.name, (defs = buildTournaments(side)));
+  return defs;
+}
+function buildTournaments(side: NatSide): Record<string, TournamentDef> {
   const { pool, afc, world } = side;
   const cont = CONT_CUP[side.conf];
   return {
@@ -415,7 +408,7 @@ function tournaments(side: NatSide): Record<string, TournamentDef> {
         ['4강', pool.slice(0, 6)],
         ['결승', pool.slice(0, 3)],
       ],
-      trophy: cont.trophy,
+      trophy: cupTrophy(side.conf),
     },
     ag: {
       label: (y) => `${y} 아시안게임 (${HOSTS.ag[y] ?? '개최지 미정'})`,
@@ -567,7 +560,7 @@ function runTournament(s: GameState, key: string) {
       )[stage] ?? 2,
     );
   // 병역 특례는 대한민국 국적만(T-10-096).
-  if (inSquad && T.exempt && T.exempt(stage) && isKorean(s) && !s.mil.exempt && !s.mil.served) {
+  if (inSquad && T.exempt && T.exempt(stage) && !milDone(s)) {
     s.mil.exempt = key === 'ag' ? '아시안게임 금메달' : `올림픽 ${stage}`;
     log(
       s,
@@ -588,7 +581,7 @@ export function natSeasonEnd(s: GameState) {
     trophies: string[] = [];
   const side = natSide(s),
     cont = CONT_CUP[side.conf],
-    region = REGION[side.conf];
+    region = CONFEDS[side.conf].region;
   const keys: string[] = [];
   if (y % 4 === 2 && s.nat.qual[y] !== false) keys.push('wc');
   // 아시안게임은 아시아 연맹 나라만. 대륙컵은 연맹마다 해가 다르다(아시안컵은 예전처럼 y % 4 === 3).

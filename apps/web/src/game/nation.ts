@@ -3,6 +3,7 @@
 // 시드 RNG 소비 순서가 그대로다. 외국 국적 선수도 커리어는 한국 고3(유학 온 선수)에서 시작하고, 발탁 문턱은
 // 같다. 나라 전력은 A매치 상대와 대회 성적에만 들어가고, 병역(상무·현역)은 대한민국 국적에만 있다.
 import {
+  CONFEDS,
   DEFAULT_NATION,
   NATIONS,
   NATION_BY_CODE,
@@ -13,7 +14,8 @@ import {
 
 export { flagOf, type Confed, type Nation };
 
-const KR = NATION_BY_CODE.get(DEFAULT_NATION)!;
+/** 대한민국 — 국적 없는 저장의 기본값이자 다른 나라 전력의 기준점. */
+export const KR = NATION_BY_CODE.get(DEFAULT_NATION)!;
 
 export const nationOf = (s: { nation?: string | undefined }): Nation =>
   (s.nation && NATION_BY_CODE.get(s.nation)) || KR;
@@ -24,29 +26,15 @@ export const isKorean = (s: { nation?: string | undefined }) =>
 const NATION_NAMES = new Set(NATIONS.map((n) => n.ko));
 export const isNationalTeam = (club: string) => NATION_NAMES.has(club);
 
-/** 대륙 연맹의 지역 이름(예선·수상 문구). */
-export const REGION: Record<Confed, string> = {
-  AFC: '아시아',
-  UEFA: '유럽',
-  CONMEBOL: '남미',
-  CAF: '아프리카',
-  CONCACAF: '북중미',
-  OFC: '오세아니아',
-};
-
-/** 대륙 올해의 선수상 — 대한민국(AFC)은 예전 이름 그대로. 조건·확률은 모든 연맹이 같다. */
-export const CONF_POTY: Record<Confed, { home: string; abroad: string }> = {
-  AFC: { home: 'AFC 올해의 선수', abroad: 'AFC 올해의 국제선수' },
-  UEFA: { home: 'UEFA 올해의 선수', abroad: 'UEFA 올해의 선수' },
-  CONMEBOL: { home: '남미 올해의 선수', abroad: '남미 올해의 선수' },
-  CAF: { home: '아프리카 올해의 선수', abroad: '아프리카 올해의 선수' },
-  CONCACAF: { home: 'CONCACAF 올해의 선수', abroad: 'CONCACAF 올해의 선수' },
-  OFC: { home: 'OFC 올해의 선수', abroad: 'OFC 올해의 선수' },
-};
-
 /** 자국 축구협회 올해의 선수상. */
 export const federationPoty = (s: { nation?: string | undefined }) =>
   isKorean(s) ? '대한축구협회 올해의 선수' : `${nationOf(s).ko} 축구협회 올해의 선수`;
+
+/** 대륙 올해의 선수상 — 자기 대륙 밖에서 뛰면 abroad(아시아만 국제선수상이 따로 있다). 조건·확률은 모든 연맹이 같다. */
+export function confPoty(s: { nation?: string | undefined }, abroad: boolean) {
+  const c = CONFEDS[nationOf(s).conf];
+  return abroad ? (c.potyAbroad ?? c.poty) : c.poty;
+}
 
 /** 라이벌전 — 이기면 인기가 크게 오른다(대한민국의 한일전과 같은 보상). */
 export const RIVAL: Record<string, { opp: string; label: string }> = {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clubById } from './clubs.js';
-import { NATIONAL_TEAM } from './retirement-report.js';
+import { isNationalTeam } from './nation.js';
 
 // vitest의 node 환경에는 localStorage가 없다 — season.test.ts와 같은 방식으로 메모리로 흉내낸다.
 class MemoryStorage {
@@ -377,7 +377,7 @@ describe('T-10-006 seasonPayload', () => {
       }
       if (!s.retired) g.retire(s);
       // 대표팀 우승에는 클럽 id가 없고, 클럽 우승에는 있다.
-      for (const t of s.trophies) expect(!!t.clubId).toBe(t.club !== NATIONAL_TEAM);
+      for (const t of s.trophies) expect(!!t.clubId).toBe(!isNationalTeam(t.club));
     }
     expect(seasons).toBeGreaterThan(N * 5);
     expect(withComps).toBeGreaterThan(0);

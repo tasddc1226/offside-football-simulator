@@ -6,10 +6,10 @@
   import type { AttrKey, DetailPos, Pos } from '../game/data.js';
   import { baseline } from '../game/candidates.js';
   import { appState, detailOpenNow, draftBody, draftDpos, randomName } from './state.svelte.js';
-  import { NATIONS, NATION_BY_CODE, DEFAULT_NATION, flagOf, type Confed } from '@offside/contracts/nations';
+  import { CONFEDS, CONF_ORDER, DEFAULT_NATION, NATIONS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { bodyMods, GK_SUBS, SUBS } from '../game/attributes.js';
-  import { REGION } from '../game/nation.js';
+  import { isKorean, nationOf } from '../game/nation.js';
   import { startCareer, rollCandidates } from './actions.js';
   import { goHome } from './nav.js';
   import { hiddenStrength, scoutLine, startOvr } from './create-view.js';
@@ -38,21 +38,15 @@
   const trait = $derived(TRAITS.find((t) => t.id === C.trait));
 
   // T-10-096 국적·체격. 국적은 연맹별로 묶어 가나다순으로 보여 주고, 대한민국은 맨 위에 둔다.
-  const CONF_ORDER: Confed[] = ['AFC', 'UEFA', 'CONMEBOL', 'CAF', 'CONCACAF', 'OFC'];
+  const byKo = new Intl.Collator('ko').compare;
   const nationGroups = CONF_ORDER.map((conf) => ({
     conf,
-    list: NATIONS.filter((n) => n.conf === conf && n.code !== DEFAULT_NATION).sort((a, b) => a.ko.localeCompare(b.ko, 'ko')),
+    list: NATIONS.filter((n) => n.conf === conf && n.code !== DEFAULT_NATION).sort((a, b) => byKo(a.ko, b.ko)),
   }));
-  const CONT_CUP_NAME: Record<Confed, string> = {
-    AFC: 'AFC 아시안컵',
-    UEFA: 'UEFA 유로',
-    CONMEBOL: '코파 아메리카',
-    CAF: '아프리카 네이션스컵',
-    CONCACAF: 'CONCACAF 골드컵',
-    OFC: 'OFC 네이션스컵',
-  };
-  const nation = $derived(NATION_BY_CODE.get(C.nation) ?? NATION_BY_CODE.get(DEFAULT_NATION)!);
-  const foreign = $derived(nation.code !== DEFAULT_NATION);
+  const nation = $derived(nationOf(C));
+  const foreign = $derived(!isKorean(C));
+  // 골키퍼에게 보여 줄 체격 보정(나머지는 골키퍼 능력치에 거의 안 쓰인다).
+  const GK_BODY = ['div', 'han', 'jmp', 'str', 'ref', 'rea'];
   const body = $derived(draftBody(C));
   const bodyErr = $derived(bodyError(body));
   const bodyNote = $derived.by(() => {
@@ -63,8 +57,6 @@
     return mods.map(([k, v]) => `${SUBS[k]} ${v > 0 ? '+' : '−'}${Math.abs(v)}`).join(' · ');
   });
   const L = BODY_LIMITS;
-  // 골키퍼에게 보여 줄 체격 보정(나머지는 골키퍼 능력치에 거의 안 쓰인다).
-  const GK_BODY = ['div', 'han', 'jmp', 'str', 'ref', 'rea'];
 
   function setPos(v: Pos) {
     C.pos = v;
@@ -159,7 +151,7 @@
         <select id="f-nation" data-set="nation" bind:value={C.nation}>
           <option value={DEFAULT_NATION}>{flagOf(DEFAULT_NATION)} 대한민국</option>
           {#each nationGroups as g (g.conf)}
-            <optgroup label="{REGION[g.conf]} ({g.conf})">
+            <optgroup label="{CONFEDS[g.conf].region} ({g.conf})">
               {#each g.list as n (n.code)}
                 <option value={n.code}>{flagOf(n.code)} {n.ko}</option>
               {/each}
@@ -168,7 +160,7 @@
         </select>
         <p class="muted fs-sm" data-nation-note>
           {#if foreign}
-            한국 고교로 축구 유학을 온 선수로 시작해요. {nation.ko} 대표팀에 뽑히고 대륙컵은 {CONT_CUP_NAME[nation.conf]}예요. 병역은 없어요.
+            한국 고교로 축구 유학을 온 선수로 시작해요. {nation.ko} 대표팀에 뽑히고 대륙컵은 {CONFEDS[nation.conf].cup}예요. 병역은 없어요.
           {:else}
             대표팀 대륙컵은 AFC 아시안컵이에요. 병역(상무·현역)이 있고, 아시안게임·올림픽 메달로 특례를 받을 수 있어요.
           {/if}
