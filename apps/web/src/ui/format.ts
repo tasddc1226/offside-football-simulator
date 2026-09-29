@@ -180,3 +180,14 @@ export const iGa = (word: string): string => (jongOf(word) > 0 ? '이' : '가');
 export const waGwa = (word: string): string => (jongOf(word) > 0 ? '과' : '와');
 /** 단어 뒤에 '을/를'을 붙인다. 받침이 있으면 '을', 없으면(한글이 아니어도) '를'. */
 export const withEulReul = (word: string): string => `${word}${jongOf(word) > 0 ? '을' : '를'}`;
+
+/** 몸값 표기(T-10-100): 조 · 억 · 천만까지만. 천만 미만은 '1천만 미만', 0 이하는 '-'. */
+export function fmtValue(man: number): string {
+  if (man <= 0) return '-';
+  const t = Math.round(man / 1000); // 천만 단위
+  if (!t) return '1천만 미만';
+  const jo = Math.floor(t / 100000),
+    eok = Math.floor((t % 100000) / 10),
+    chun = t % 10;
+  return [jo && `${jo}조`, eok && `${eok.toLocaleString()}억`, chun && `${chun}천만`].filter(Boolean).join(' ');
+}

@@ -9,7 +9,8 @@
   import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '../game/retirement-report.js';
   import { POS_LABEL } from '../game/pos-label.js';
   import { potAchText } from '../game/stats.js';
-  import { totals } from './format.js';
+  import { fmtValue, seasonLabelOf, totals } from './format.js';
+  import { peakValue, retireValue } from '../game/value.js';
   import type { LegendView } from './state.svelte.js';
   import CareerTab from './tabs/CareerTab.svelte';
   import { titleById } from '../game/titles.js';
@@ -33,6 +34,9 @@
   const awards = $derived(d ? honoursRoll(d.awards).slice(0, 8) : []);
   const span = $derived(d?.career.length ? `${d.career[0]!.year} — ${d.career.at(-1)!.year}` : null);
   const breakdown = $derived(d ? legendScoreBreakdown(d) : null);
+  // T-10-100 은퇴 가치: 가장 비쌌던 세 시즌 몸값 평균에 레전드 점수만큼 웃돈.
+  const worth = $derived(d ? retireValue(d.career, v.score) : 0);
+  const peakV = $derived(d ? peakValue(d.career) : null);
   const maxAbs = $derived(breakdown ? Math.max(1, ...breakdown.items.map((i) => Math.abs(i.value))) : 1);
 
   /** 2036 · 37 · 39 — 첫 해만 네 자리. */
@@ -109,6 +113,12 @@
     <div class="film-score">
       <b><CountUp value={v.score} animate={playing} ms={1800} /></b><span>Legend Score</span>
     </div>
+    {#if worth > 0}
+      <div class="film-worth" class:credit-late={playing} data-legend-value>
+        <span>은퇴 가치</span><b>{fmtValue(worth)}</b>
+        {#if peakV}<small>최고 몸값 {fmtValue(peakV.value)} · {seasonLabelOf(peakV.row)} {peakV.row.club}</small>{/if}
+      </div>
+    {/if}
     <div class="film-pills" class:credit-late={playing}>
       <span class="pill pill-gold">{legendTitle(v.score)}</span>
       {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{main.name}’</span>{/if}

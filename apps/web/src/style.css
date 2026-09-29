@@ -1413,6 +1413,7 @@ body:has(.main-nav) .wrap {
 .train .opt b {
   font-size: 0.875rem;
 }
+td.nowrap,
 .train .nowrap {
   white-space: nowrap;
 }
@@ -4010,6 +4011,28 @@ button.title-item:hover {
   font-size: 0.6875rem;
   letter-spacing: 0.24em;
   text-transform: uppercase;
+  color: var(--film-muted);
+}
+/* T-10-100 은퇴 가치 */
+.film-worth {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 10px;
+}
+.film-worth span {
+  font-size: 0.75rem;
+  color: var(--film-muted);
+}
+.film-worth b {
+  font-family: var(--display);
+  font-size: 1.75rem;
+  line-height: 1.1;
+  color: var(--film-ink);
+}
+.film-worth small {
+  font-size: 0.75rem;
   color: var(--film-muted);
 }
 .film-pills {

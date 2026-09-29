@@ -26,6 +26,10 @@ export function salaryFor(leagueId: string, o: number): number {
   const L = leagueOf(leagueId);
   return Math.round((L.wealth * 1000 * Math.exp((o - 60) / 10)) / 10) * 10;
 }
+/** 리그·OVR·나이로 매긴 몸값(만 원). 이적 제안 이적료의 기준이고, 시즌 몸값·은퇴 가치(T-10-100)도 같은 식이다. */
+export function valueFor(leagueId: string, o: number, age: number): number {
+  return Math.round((salaryFor(leagueId, o) * (age <= 24 ? 5 : age <= 29 ? 4 : 2)) / 100) * 100;
+}
 export function fmtMoney(man: number): string {
   const m = Math.round(man);
   if (Math.abs(m) >= 10000) {

@@ -1,9 +1,10 @@
 <script lang="ts">
   // ui.ts careerTab() 포트 (371~387줄)
   import type { GameState, LegendSource } from '../../game/types.js';
-  import { seasonLabelOf, totals } from '../format.js';
+  import { fmtValue, seasonLabelOf, totals } from '../format.js';
   import ClubMark from '../ClubMark.svelte';
   import { nextMilestones } from '../../game/records.js';
+  import { peakValue, seasonValue } from '../../game/value.js';
 
   // 은퇴 상세(LegendSource)에는 '다음 목표'가 없다 — 진행 중인 커리어(GameState)에서만 계산한다.
   const { s }: { s: LegendSource | GameState } = $props();
@@ -11,6 +12,7 @@
   const rows = $derived(s.career.slice().reverse());
   const miles = $derived((s.miles || []).slice().reverse());
   const next = $derived('attrs' in s && !s.retired ? nextMilestones(s) : []);
+  const peakV = $derived(peakValue(s.career));
 </script>
 
 <section class="card stack">
@@ -25,6 +27,9 @@
     {/if}
     <div><b>{s.trophies.length + s.awards.length}</b><span>수상</span></div>
   </div>
+  {#if peakV}
+    <p class="muted fs-sm" data-peak-value>최고 몸값 <b>{fmtValue(peakV.value)}</b> · {seasonLabelOf(peakV.row)} {peakV.row.club}</p>
+  {/if}
 </section>
 {#if next.length}
   <section class="card stack">
@@ -44,7 +49,7 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>시즌</th><th>소속</th><th class="n">경기</th><th class="n">골</th><th class="n">도움</th><th class="n">평점</th><th class="n">순위</th><th class="n">OVR</th></tr>
+          <tr><th>시즌</th><th>소속</th><th class="n">경기</th><th class="n">골</th><th class="n">도움</th><th class="n">평점</th><th class="n">순위</th><th class="n">OVR</th><th class="n">몸값</th></tr>
         </thead>
         <tbody>
           {#each rows as r, i (i)}
@@ -57,6 +62,7 @@
               <td class="n">{r.rating ? r.rating.toFixed(2) : '-'}</td>
               <td class="n">{r.rank}</td>
               <td class="n">{r.ovr}</td>
+              <td class="n nowrap" data-season-value>{fmtValue(seasonValue(r))}</td>
             </tr>
           {/each}
         </tbody>
@@ -65,7 +71,7 @@
   {:else}
     <p class="empty">첫 시즌을 마치면 기록이 쌓입니다.</p>
   {/if}
-  <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다.</p>
+  <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다. 몸값은 시즌을 마친 때의 리그·OVR·나이로 매긴 추정치예요.</p>
 </section>
 <section class="card">
   <div class="eyebrow">Journey</div>

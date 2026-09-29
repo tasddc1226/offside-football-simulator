@@ -8,6 +8,7 @@ import {
   clubsIn,
   fmtMoney,
   salaryFor,
+  valueFor,
   addStat,
   addAttr,
   log,
@@ -279,13 +280,7 @@ export function offerFrom(s: GameState, c: (typeof CLUBS)[number]): OfferOption 
 }
 
 export function marketValue(s: GameState) {
-  return (
-    Math.round(
-      (salaryFor(leagueOf(s.leagueId).amateur ? 'k2' : s.leagueId, ovr(s)) *
-        (s.age <= 24 ? 5 : s.age <= 29 ? 4 : 2)) /
-        100,
-    ) * 100
-  );
+  return valueFor(leagueOf(s.leagueId).amateur ? 'k2' : s.leagueId, ovr(s), s.age);
 }
 export function market(s: GameState): MarketResult {
   natInit(s);
