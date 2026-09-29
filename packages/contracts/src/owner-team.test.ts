@@ -11,7 +11,8 @@ import {
   YOUTH_OVR,
   fit,
   lineStrength,
-  ratingDelta,
+  ratingChange,
+  repeatFactor,
   slotRating,
   teamOvr,
 } from './owner-team.js';
@@ -111,10 +112,18 @@ describe('T-10-092 감독 이름 · 팀 레이팅', () => {
     expect(ManagerNameSchema.safeParse('가'.repeat(11)).success).toBe(false);
   });
   it('레이팅은 같은 팀끼리 이기면 K/2, 비기면 0이고, 약한 팀이 이기면 더 많이 오른다', () => {
-    expect(ratingDelta(1000, 1000, 1)).toBe(TEAM_RATING_K / 2);
-    expect(ratingDelta(1000, 1000, 0.5)).toBe(0);
-    expect(ratingDelta(1000, 1000, 0)).toBe(-TEAM_RATING_K / 2);
-    expect(ratingDelta(900, 1100, 1)).toBeGreaterThan(ratingDelta(1100, 900, 1));
-    expect(ratingDelta(1100, 900, 1)).toBeGreaterThan(0);
+    expect(ratingChange(1000, 1000, 1).home).toBe(TEAM_RATING_K / 2);
+    expect(ratingChange(1000, 1000, 0.5).home).toBe(0);
+    expect(ratingChange(1000, 1000, 0).home).toBe(-TEAM_RATING_K / 2);
+    expect(ratingChange(900, 1100, 1).home).toBeGreaterThan(ratingChange(1100, 900, 1).home);
+    expect(ratingChange(1100, 900, 1).home).toBeGreaterThan(0);
+  });
+  it('T-10-095 받은 쪽은 절반만 움직이고, 최근에 만난 상대면 변화가 줄어든다', () => {
+    expect(ratingChange(1000, 1000, 1)).toEqual({ home: 16, away: -8 });
+    expect(ratingChange(1000, 1000, 0)).toEqual({ home: -16, away: 8 });
+    expect(ratingChange(1000, 1000, 1, 1)).toEqual({ home: 8, away: -4 });
+    expect(ratingChange(1000, 1000, 1, 2)).toEqual({ home: 4, away: -2 });
+    expect(ratingChange(1000, 1000, 1, 5)).toEqual({ home: 4, away: -2 });
+    expect([0, 1, 2, 3].map(repeatFactor)).toEqual([1, 0.5, 0.25, 0.25]);
   });
 });

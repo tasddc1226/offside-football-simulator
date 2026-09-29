@@ -193,6 +193,8 @@ export const PlayTeamMatchResponseSchema = z.strictObject({
   match: TeamMatchSchema,
   record: TeamRecordSchema,
   rating: z.number().int(),
+  /** 이 경기로 바뀐 내 팀 레이팅(최근에 만난 상대면 줄어든 값, T-10-095). */
+  ratingChange: z.number().int(),
   matchesLeft: z.number().int().min(0),
 });
 export type PlayTeamMatchResponse = z.infer<typeof PlayTeamMatchResponseSchema>;

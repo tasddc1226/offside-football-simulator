@@ -15,19 +15,41 @@ export const TEAM_NAME_MAX = 12;
 /** 감독 이름 길이(앞뒤 공백 제외). */
 export const MANAGER_NAME_MIN = 2;
 export const MANAGER_NAME_MAX = 10;
-/** 팀 레이팅 — 새 팀은 TEAM_RATING_START에서 시작해 경기마다 엘로 방식으로 오르내린다(두 팀 합은 그대로). */
+/** 팀 레이팅 — 새 팀은 TEAM_RATING_START에서 시작해 경기마다 엘로 방식으로 오르내린다. */
 export const TEAM_RATING_START = 1000;
 export const TEAM_RATING_K = 32;
 /** 라이브 랭킹(팀 랭킹) 한 페이지의 팀 수. */
 export const TEAM_RANK_PER_PAGE = 20;
 
+// T-10-095 공정한 팀 경쟁 — 한 팀만 골라 되풀이해 이기며 레이팅을 쌓지 못하게 한다.
+/** 같은 상대에게는 한국 시각 하루에 이만큼만 도전한다(상대 후보에서도 뺀다). */
+export const TEAM_SAME_OPPONENT_PER_DAY = 1;
+/** 같은 두 팀이 이 기간(일) 안에 다시 만나면 레이팅 변화를 줄인다(누가 걸었든 센다). */
+export const TEAM_REPEAT_WINDOW_DAYS = 7;
+/** 다시 만날 때마다 레이팅 변화에 곱하는 값과 그 하한 — 1번째 재대결 ×0.5, 2번째부터 ×0.25. */
+export const TEAM_REPEAT_FACTOR = 0.5;
+export const TEAM_REPEAT_FLOOR = 0.25;
+/** 경기를 받은 쪽(away)은 스스로 고른 경기가 아니라 레이팅이 이만큼만 움직인다(얻는 쪽도 잃는 쪽도). */
+export const TEAM_DEFENDER_FACTOR = 0.5;
+
+/** 최근 TEAM_REPEAT_WINDOW_DAYS일 동안 두 팀이 이미 치른 경기 수 → 레이팅 변화 배율. */
+export const repeatFactor = (meetings: number): number =>
+  meetings <= 0 ? 1 : Math.max(TEAM_REPEAT_FLOOR, TEAM_REPEAT_FACTOR ** meetings);
+
 /**
- * 경기 한 판의 레이팅 변화(home 쪽, away는 부호만 반대). score = home 결과(승 1 · 무 0.5 · 패 0). 강한 팀이 약한 팀을
- * 이기면 조금, 약한 팀이 이기면 많이 오른다.
+ * 경기 한 판의 레이팅 변화. score = home(경기를 건 팀) 결과(승 1 · 무 0.5 · 패 0). 강한 팀이 약한 팀을 이기면 조금,
+ * 약한 팀이 이기면 많이 오른다. 최근에 만난 상대면 repeatFactor만큼 줄고, 받은 쪽은 TEAM_DEFENDER_FACTOR만큼만
+ * 움직인다 — 그래서 두 팀 합은 그대로가 아니다.
  */
-export function ratingDelta(home: number, away: number, score: 0 | 0.5 | 1): number {
+export function ratingChange(
+  home: number,
+  away: number,
+  score: 0 | 0.5 | 1,
+  meetings = 0,
+): { home: number; away: number } {
   const expected = 1 / (1 + 10 ** ((away - home) / 400));
-  return Math.round(TEAM_RATING_K * (score - expected));
+  const base = TEAM_RATING_K * (score - expected) * repeatFactor(meetings);
+  return { home: Math.round(base), away: -Math.round(base * TEAM_DEFENDER_FACTOR) };
 }
 /** 빈 자리를 채우는 유스 선수의 OVR. */
 export const YOUTH_OVR = 50;

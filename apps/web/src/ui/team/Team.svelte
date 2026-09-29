@@ -79,6 +79,8 @@
   let oppStatus = $state<LoadStatus>('loading');
   let playing = $state(false);
   let result = $state<TeamMatch | null>(null);
+  /** 방금 치른 경기의 레이팅 변화(기록에서 연 경기는 null). */
+  let ratingGain = $state<number | null>(null);
   let history = $state<TeamMatch[]>([]);
   let histStatus = $state<LoadStatus>('loading');
   let ach = $state<ClubAchievementsResponse | null>(null);
@@ -272,9 +274,12 @@
     playing = false;
     if (!r.ok) {
       if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') matchesLeft = 0;
+      if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT')
+        opponents = opponents.filter((x) => x.teamId !== o.teamId);
       return toast(r.error.message);
     }
     result = r.data.match;
+    ratingGain = r.data.ratingChange;
     matchesLeft = r.data.matchesLeft;
     if (team) {
       team.record = r.data.record;
@@ -485,6 +490,7 @@
           <div class="eyebrow">Match</div>
           <h1>상대 고르기</h1>
           <p class="muted fs-sm">내 팀 OVR {team?.ovr ?? ovr}과 비슷한 팀이에요 · 오늘 남은 경기 {matchesLeft}/{perDay}</p>
+          <p class="muted fs-xs">같은 팀에는 하루 한 번 도전할 수 있어요. 최근 7일 안에 다시 만난 팀이면 레이팅이 덜 움직여요.</p>
         </div>
         <LoadState status={oppStatus} failText="상대를 불러오지 못했어요." retry={openOpponents}>
           {#each opponents as o (o.teamId)}
@@ -534,6 +540,9 @@
           <p class="muted">골 없이 비겼어요.</p>
         {/if}
         <p class="muted fs-sm">{kstMonthDayTime(m.createdAt)}{team && m.mine === 'home' ? ` · 내 팀 ${recordText(team.record)}` : ''}</p>
+        {#if ratingGain !== null && team}
+          <p class="fs-sm" data-rating-change>레이팅 <b>{ratingGain > 0 ? '+' : ''}{ratingGain}</b> → {num(team.rating)}</p>
+        {/if}
         <div class="tm-actions">
           <button class="btn" onclick={() => (view = 'team')}>내 팀</button>
           <button class="btn btn-primary" onclick={openOpponents} disabled={matchesLeft === 0}>다시 경기하기</button>
@@ -548,7 +557,7 @@
         <LoadState status={histStatus} failText="경기 기록을 불러오지 못했어요." retry={openHistory}>
           {#each history as m (m.id)}
             {@const opp = m[m.mine === 'home' ? 'away' : 'home']}
-            <button class="tm-hist" onclick={() => ((result = m), (view = 'result'))} data-team-match={m.id}>
+            <button class="tm-hist" onclick={() => ((result = m), (ratingGain = null), (view = 'result'))} data-team-match={m.id}>
               <span class="tm-out" data-out={outcome(m)}>{outcome(m)}</span>
               <span class="tm-opp-info">
                 <b>{m[m.mine].goals} : {opp.goals} {opp.name}</b>
