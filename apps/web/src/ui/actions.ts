@@ -1,3 +1,4 @@
+import { analytics, trackPage } from '../analytics/index.js';
 // ───────── 게임 진행 액션 ─────────
 // 게임 로직을 호출하고, 그 결과를 시트 뷰 모델(sheets/types.ts)로 바꿔 showSheet에 넘긴다.
 // 게임 로직 호출 순서(=RNG 소비 순서)는 포팅 전 ui.ts와 동일하게 유지한다.
@@ -146,6 +147,7 @@ export function nextPending() {
     uploadSeason(s, res.rec);
     s.pending = { type: 'market', res, m: null };
     save();
+    analytics.firstSeason(s);
     const steps = [
       '리그 최종 순위 확정',
       ...(res.tours.length ? ['국제 대회 결과 반영'] : []),
@@ -425,6 +427,8 @@ export function doRetire() {
   save();
   closeSheet();
   appState.screen = 'retired';
+  trackPage('retired');
+  analytics.retire(appState.G!);
   window.scrollTo(0, 0);
 }
 
@@ -442,6 +446,7 @@ export function confirmNew() {
         label: '새 커리어 시작',
         cls: 'btn-primary',
         fn: () => {
+          analytics.replace();
           appState.G = null;
           save();
           closeSheet();
@@ -471,6 +476,7 @@ export function retireAsk(onCancel: () => void = closeSheet) {
 }
 
 export function startCareer(name: string, number: number, presetAttrs?: Record<AttrKey, number>) {
+  const previous = appState.G;
   const finalName = name.trim() || randomName();
   const finalNumber = clamp(+number || randomNumber(), 1, 99);
   const seed = freshSeed();
@@ -488,6 +494,8 @@ export function startCareer(name: string, number: number, presetAttrs?: Record<A
   );
   save();
   appState.screen = 'game';
+  trackPage('game');
+  analytics.start(appState.G!, previous);
   appState.tab = 'season';
   appState.candidates = null;
   appState.report = null;
