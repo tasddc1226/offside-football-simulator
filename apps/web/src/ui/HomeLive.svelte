@@ -6,7 +6,7 @@
   import { onMount } from 'svelte';
   import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
   import { getLive } from '@offside/app-core/api/client';
-  import { onLive } from '../api/liveSocket.js';
+  import { onLive } from '@offside/app-core/api/liveSocket';
   import { agoKo, anonName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';
   import { motionOK } from './motion.js';
