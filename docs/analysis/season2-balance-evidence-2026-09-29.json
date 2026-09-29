@@ -1,0 +1,2469 @@
+{
+  "old_cutoff_utc": "2026-09-28T10:00:00.000Z",
+  "cutoff_utc": "2026-09-29T01:30:00.000Z",
+  "main_sha": "4b1103649d26834e937e4c130cce3a44daa6f6d5",
+  "queries": {
+    "population": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')) SELECT cohort,count(*) retired,sum(retire_age<30) short,sum(retire_age>=30) eligible,sum(retire_age IS NULL) unknown_age,count(distinct CASE WHEN retire_age>=30 THEN profile_id END) profiles,sum(retire_age>=30 AND public_name IS NOT NULL) public_eligible,sum(json_type(snapshot_json,'$.style') IS NOT NULL) style,sum(json_type(snapshot_json,'$.potential') IS NOT NULL) potential FROM r CROSS JOIN labels WHERE cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z') GROUP BY cohort",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "retired": 3260,
+          "short": 756,
+          "eligible": 2504,
+          "unknown_age": 0,
+          "profiles": 565,
+          "public_eligible": 1385,
+          "style": 469,
+          "potential": 0
+        },
+        {
+          "cohort": "cumulative",
+          "retired": 3909,
+          "short": 953,
+          "eligible": 2956,
+          "unknown_age": 0,
+          "profiles": 598,
+          "public_eligible": 1802,
+          "style": 1101,
+          "potential": 0
+        },
+        {
+          "cohort": "increment",
+          "retired": 649,
+          "short": 197,
+          "eligible": 452,
+          "unknown_age": 0,
+          "profiles": 154,
+          "public_eligible": 417,
+          "style": 632,
+          "potential": 0
+        }
+      ],
+      "read_only_verified": true
+    },
+    "summary": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) SELECT cohort,count(*) n,round(avg(legend_score),1) ls,sum(legend_score>=840) goat,sum(peak>=90) peak90,sum(peak>=95) peak95,sum(retire_age>=40) age40,sum(retire_age=41) age41,round(100.0*sum(retire_age>=40 AND legend_score>=840)/sum(legend_score>=840),2) goat_age40_pct FROM c GROUP BY cohort",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "n": 2504,
+          "ls": 659,
+          "goat": 634,
+          "peak90": 145,
+          "peak95": 6,
+          "age40": 1144,
+          "age41": 975,
+          "goat_age40_pct": 80.13
+        },
+        {
+          "cohort": "cumulative",
+          "n": 2956,
+          "ls": 689.7,
+          "goat": 827,
+          "peak90": 186,
+          "peak95": 7,
+          "age40": 1400,
+          "age41": 1201,
+          "goat_age40_pct": 79.81
+        },
+        {
+          "cohort": "increment",
+          "n": 452,
+          "ls": 859.4,
+          "goat": 193,
+          "peak90": 41,
+          "peak95": 1,
+          "age40": 256,
+          "age41": 226,
+          "goat_age40_pct": 78.76
+        }
+      ],
+      "read_only_verified": true
+    },
+    "quantiles": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) , ranked AS (SELECT cohort,legend_score,row_number() OVER(PARTITION BY cohort ORDER BY legend_score) rn,count(*) OVER(PARTITION BY cohort) n FROM c), ps(p) AS (VALUES(25),(50),(75),(90),(95),(98),(99)) SELECT cohort,p,min(legend_score) score FROM ranked CROSS JOIN ps WHERE rn>=((n*p+99)/100) GROUP BY cohort,p",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "p": 25,
+          "score": 358
+        },
+        {
+          "cohort": "baseline_requery",
+          "p": 50,
+          "score": 526
+        },
+        {
+          "cohort": "baseline_requery",
+          "p": 75,
+          "score": 843
+        },
+        {
+          "cohort": "baseline_requery",
+          "p": 90,
+          "score": 1216
+        },
+        {
+          "cohort": "baseline_requery",
+          "p": 95,
+          "score": 1449
+        },
+        {
+          "cohort": "baseline_requery",
+          "p": 98,
+          "score": 1809
+        },
+        {
+          "cohort": "baseline_requery",
+          "p": 99,
+          "score": 2063
+        },
+        {
+          "cohort": "cumulative",
+          "p": 25,
+          "score": 367
+        },
+        {
+          "cohort": "cumulative",
+          "p": 50,
+          "score": 547
+        },
+        {
+          "cohort": "cumulative",
+          "p": 75,
+          "score": 899
+        },
+        {
+          "cohort": "cumulative",
+          "p": 90,
+          "score": 1274
+        },
+        {
+          "cohort": "cumulative",
+          "p": 95,
+          "score": 1524
+        },
+        {
+          "cohort": "cumulative",
+          "p": 98,
+          "score": 1905
+        },
+        {
+          "cohort": "cumulative",
+          "p": 99,
+          "score": 2203
+        },
+        {
+          "cohort": "increment",
+          "p": 25,
+          "score": 457
+        },
+        {
+          "cohort": "increment",
+          "p": 50,
+          "score": 729
+        },
+        {
+          "cohort": "increment",
+          "p": 75,
+          "score": 1137
+        },
+        {
+          "cohort": "increment",
+          "p": 90,
+          "score": 1594
+        },
+        {
+          "cohort": "increment",
+          "p": 95,
+          "score": 1930
+        },
+        {
+          "cohort": "increment",
+          "p": 98,
+          "score": 2325
+        },
+        {
+          "cohort": "increment",
+          "p": 99,
+          "score": 2605
+        }
+      ],
+      "read_only_verified": true
+    },
+    "thresholds": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) , v(threshold) AS (VALUES(840),(1200),(1400),(1500),(1600),(1800),(2000)) SELECT cohort,threshold,count(*) n,sum(legend_score>=threshold) reached,round(100.0*sum(legend_score>=threshold)/count(*),2) pct,round(100.0*sum(legend_score>=threshold AND public_name IS NOT NULL)/sum(public_name IS NOT NULL),2) public_pct,count(distinct CASE WHEN legend_score>=threshold THEN profile_id END) owners,count(distinct profile_id) profiles FROM c CROSS JOIN v GROUP BY cohort,threshold",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "threshold": 840,
+          "n": 2504,
+          "reached": 634,
+          "pct": 25.32,
+          "public_pct": 33.29,
+          "owners": 253,
+          "profiles": 565
+        },
+        {
+          "cohort": "baseline_requery",
+          "threshold": 1200,
+          "n": 2504,
+          "reached": 262,
+          "pct": 10.46,
+          "public_pct": 14.87,
+          "owners": 133,
+          "profiles": 565
+        },
+        {
+          "cohort": "baseline_requery",
+          "threshold": 1400,
+          "n": 2504,
+          "reached": 138,
+          "pct": 5.51,
+          "public_pct": 7.65,
+          "owners": 77,
+          "profiles": 565
+        },
+        {
+          "cohort": "baseline_requery",
+          "threshold": 1500,
+          "n": 2504,
+          "reached": 108,
+          "pct": 4.31,
+          "public_pct": 5.92,
+          "owners": 62,
+          "profiles": 565
+        },
+        {
+          "cohort": "baseline_requery",
+          "threshold": 1600,
+          "n": 2504,
+          "reached": 84,
+          "pct": 3.35,
+          "public_pct": 4.69,
+          "owners": 51,
+          "profiles": 565
+        },
+        {
+          "cohort": "baseline_requery",
+          "threshold": 1800,
+          "n": 2504,
+          "reached": 53,
+          "pct": 2.12,
+          "public_pct": 3.1,
+          "owners": 34,
+          "profiles": 565
+        },
+        {
+          "cohort": "baseline_requery",
+          "threshold": 2000,
+          "n": 2504,
+          "reached": 29,
+          "pct": 1.16,
+          "public_pct": 1.44,
+          "owners": 20,
+          "profiles": 565
+        },
+        {
+          "cohort": "cumulative",
+          "threshold": 840,
+          "n": 2956,
+          "reached": 827,
+          "pct": 27.98,
+          "public_pct": 35.52,
+          "owners": 280,
+          "profiles": 598
+        },
+        {
+          "cohort": "cumulative",
+          "threshold": 1200,
+          "n": 2956,
+          "reached": 362,
+          "pct": 12.25,
+          "public_pct": 16.7,
+          "owners": 153,
+          "profiles": 598
+        },
+        {
+          "cohort": "cumulative",
+          "threshold": 1400,
+          "n": 2956,
+          "reached": 200,
+          "pct": 6.77,
+          "public_pct": 9.05,
+          "owners": 95,
+          "profiles": 598
+        },
+        {
+          "cohort": "cumulative",
+          "threshold": 1500,
+          "n": 2956,
+          "reached": 159,
+          "pct": 5.38,
+          "public_pct": 7.16,
+          "owners": 76,
+          "profiles": 598
+        },
+        {
+          "cohort": "cumulative",
+          "threshold": 1600,
+          "n": 2956,
+          "reached": 129,
+          "pct": 4.36,
+          "public_pct": 5.94,
+          "owners": 65,
+          "profiles": 598
+        },
+        {
+          "cohort": "cumulative",
+          "threshold": 1800,
+          "n": 2956,
+          "reached": 81,
+          "pct": 2.74,
+          "public_pct": 3.88,
+          "owners": 45,
+          "profiles": 598
+        },
+        {
+          "cohort": "cumulative",
+          "threshold": 2000,
+          "n": 2956,
+          "reached": 46,
+          "pct": 1.56,
+          "public_pct": 2.05,
+          "owners": 24,
+          "profiles": 598
+        },
+        {
+          "cohort": "increment",
+          "threshold": 840,
+          "n": 452,
+          "reached": 193,
+          "pct": 42.7,
+          "public_pct": 42.93,
+          "owners": 87,
+          "profiles": 154
+        },
+        {
+          "cohort": "increment",
+          "threshold": 1200,
+          "n": 452,
+          "reached": 100,
+          "pct": 22.12,
+          "public_pct": 22.78,
+          "owners": 56,
+          "profiles": 154
+        },
+        {
+          "cohort": "increment",
+          "threshold": 1400,
+          "n": 452,
+          "reached": 62,
+          "pct": 13.72,
+          "public_pct": 13.67,
+          "owners": 39,
+          "profiles": 154
+        },
+        {
+          "cohort": "increment",
+          "threshold": 1500,
+          "n": 452,
+          "reached": 51,
+          "pct": 11.28,
+          "public_pct": 11.27,
+          "owners": 30,
+          "profiles": 154
+        },
+        {
+          "cohort": "increment",
+          "threshold": 1600,
+          "n": 452,
+          "reached": 45,
+          "pct": 9.96,
+          "public_pct": 10.07,
+          "owners": 28,
+          "profiles": 154
+        },
+        {
+          "cohort": "increment",
+          "threshold": 1800,
+          "n": 452,
+          "reached": 28,
+          "pct": 6.19,
+          "public_pct": 6.47,
+          "owners": 19,
+          "profiles": 154
+        },
+        {
+          "cohort": "increment",
+          "threshold": 2000,
+          "n": 452,
+          "reached": 17,
+          "pct": 3.76,
+          "public_pct": 4.08,
+          "owners": 9,
+          "profiles": 154
+        }
+      ],
+      "read_only_verified": true
+    },
+    "positions": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) , ranked AS (SELECT *,row_number() OVER(PARTITION BY cohort,pos ORDER BY legend_score) rn,count(*) OVER(PARTITION BY cohort,pos) total FROM c) SELECT cohort,pos,count(*) n,round(avg(legend_score),1) ls,min(CASE WHEN rn>=(total*95+99)/100 THEN legend_score END) p95,max(legend_score) max_ls,sum(legend_score>=840) goat,sum(legend_score>=1600) above1600,sum(legend_score>=2000) above2000,round(avg(ballon),3) ballon FROM ranked GROUP BY cohort,pos",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "pos": "DF",
+          "n": 185,
+          "ls": 683.9,
+          "p95": 1335,
+          "max_ls": 1503,
+          "goat": 54,
+          "above1600": 0,
+          "above2000": 0,
+          "ballon": 0.005
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "FW",
+          "n": 1762,
+          "ls": 658.3,
+          "p95": 1503,
+          "max_ls": 3315,
+          "goat": 426,
+          "above1600": 76,
+          "above2000": 29,
+          "ballon": 0.196
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "GK",
+          "n": 171,
+          "ls": 707,
+          "p95": 1359,
+          "max_ls": 1737,
+          "goat": 61,
+          "above1600": 2,
+          "above2000": 0,
+          "ballon": 0
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "MF",
+          "n": 386,
+          "ls": 629,
+          "p95": 1268,
+          "max_ls": 1924,
+          "goat": 93,
+          "above1600": 6,
+          "above2000": 0,
+          "ballon": 0.039
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "DF",
+          "n": 225,
+          "ls": 710,
+          "p95": 1340,
+          "max_ls": 1503,
+          "goat": 75,
+          "above1600": 0,
+          "above2000": 0,
+          "ballon": 0.004
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "FW",
+          "n": 2075,
+          "ls": 695.7,
+          "p95": 1644,
+          "max_ls": 3315,
+          "goat": 564,
+          "above1600": 120,
+          "above2000": 46,
+          "ballon": 0.238
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "GK",
+          "n": 199,
+          "ls": 725.2,
+          "p95": 1359,
+          "max_ls": 1737,
+          "goat": 74,
+          "above1600": 2,
+          "above2000": 0,
+          "ballon": 0
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "MF",
+          "n": 457,
+          "ls": 636.7,
+          "p95": 1281,
+          "max_ls": 1933,
+          "goat": 114,
+          "above1600": 7,
+          "above2000": 0,
+          "ballon": 0.044
+        },
+        {
+          "cohort": "increment",
+          "pos": "DF",
+          "n": 40,
+          "ls": 831,
+          "p95": 1347,
+          "max_ls": 1421,
+          "goat": 21,
+          "above1600": 0,
+          "above2000": 0,
+          "ballon": 0
+        },
+        {
+          "cohort": "increment",
+          "pos": "FW",
+          "n": 313,
+          "ls": 906.1,
+          "p95": 2094,
+          "max_ls": 2730,
+          "goat": 138,
+          "above1600": 44,
+          "above2000": 17,
+          "ballon": 0.47
+        },
+        {
+          "cohort": "increment",
+          "pos": "GK",
+          "n": 28,
+          "ls": 836,
+          "p95": 1354,
+          "max_ls": 1463,
+          "goat": 13,
+          "above1600": 0,
+          "above2000": 0,
+          "ballon": 0
+        },
+        {
+          "cohort": "increment",
+          "pos": "MF",
+          "n": 71,
+          "ls": 678.8,
+          "p95": 1408,
+          "max_ls": 1933,
+          "goat": 21,
+          "above1600": 1,
+          "above2000": 0,
+          "ballon": 0.07
+        }
+      ],
+      "read_only_verified": true
+    },
+    "traits": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) SELECT cohort,pos,trait,count(*) n,round(avg(legend_score),1) ls,round(100.0*avg(legend_score>=840),2) goat_pct,round(avg(retire_age),1) age FROM c GROUP BY cohort,pos,trait",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "pos": "DF",
+          "trait": "early",
+          "n": 32,
+          "ls": 745.4,
+          "goat_pct": 34.38,
+          "age": 38.3
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "DF",
+          "trait": "iron",
+          "n": 56,
+          "ls": 713.7,
+          "goat_pct": 28.57,
+          "age": 38.9
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "DF",
+          "trait": "late",
+          "n": 68,
+          "ls": 700.7,
+          "goat_pct": 32.35,
+          "age": 39
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "DF",
+          "trait": "star",
+          "n": 29,
+          "ls": 519,
+          "goat_pct": 17.24,
+          "age": 37.5
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "FW",
+          "trait": "early",
+          "n": 372,
+          "ls": 659.2,
+          "goat_pct": 24.46,
+          "age": 37.1
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "FW",
+          "trait": "iron",
+          "n": 274,
+          "ls": 628,
+          "goat_pct": 20.44,
+          "age": 37.7
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "FW",
+          "trait": "late",
+          "n": 709,
+          "ls": 715.5,
+          "goat_pct": 28.49,
+          "age": 38.3
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "FW",
+          "trait": "star",
+          "n": 407,
+          "ls": 578.3,
+          "goat_pct": 18.92,
+          "age": 37.4
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "GK",
+          "trait": "early",
+          "n": 39,
+          "ls": 686.3,
+          "goat_pct": 30.77,
+          "age": 38.3
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "GK",
+          "trait": "iron",
+          "n": 26,
+          "ls": 721.3,
+          "goat_pct": 26.92,
+          "age": 38.5
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "GK",
+          "trait": "late",
+          "n": 70,
+          "ls": 734.9,
+          "goat_pct": 44.29,
+          "age": 39.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "GK",
+          "trait": "star",
+          "n": 36,
+          "ls": 665.1,
+          "goat_pct": 30.56,
+          "age": 39.3
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "MF",
+          "trait": "early",
+          "n": 60,
+          "ls": 627.2,
+          "goat_pct": 23.33,
+          "age": 36.9
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "MF",
+          "trait": "iron",
+          "n": 87,
+          "ls": 553,
+          "goat_pct": 20.69,
+          "age": 37.3
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "MF",
+          "trait": "late",
+          "n": 161,
+          "ls": 690.9,
+          "goat_pct": 27.95,
+          "age": 38.5
+        },
+        {
+          "cohort": "baseline_requery",
+          "pos": "MF",
+          "trait": "star",
+          "n": 78,
+          "ls": 587.2,
+          "goat_pct": 20.51,
+          "age": 37.9
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "DF",
+          "trait": "early",
+          "n": 34,
+          "ls": 753.6,
+          "goat_pct": 35.29,
+          "age": 38.3
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "DF",
+          "trait": "iron",
+          "n": 67,
+          "ls": 766.9,
+          "goat_pct": 37.31,
+          "age": 38.9
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "DF",
+          "trait": "late",
+          "n": 88,
+          "ls": 713.4,
+          "goat_pct": 35.23,
+          "age": 39.1
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "DF",
+          "trait": "star",
+          "n": 36,
+          "ls": 554.8,
+          "goat_pct": 19.44,
+          "age": 37.6
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "FW",
+          "trait": "early",
+          "n": 442,
+          "ls": 677.2,
+          "goat_pct": 26.7,
+          "age": 37.4
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "FW",
+          "trait": "iron",
+          "n": 302,
+          "ls": 665.7,
+          "goat_pct": 23.18,
+          "age": 37.8
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "FW",
+          "trait": "late",
+          "n": 873,
+          "ls": 761.3,
+          "goat_pct": 32.07,
+          "age": 38.5
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "FW",
+          "trait": "star",
+          "n": 458,
+          "ls": 608.3,
+          "goat_pct": 20.96,
+          "age": 37.5
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "GK",
+          "trait": "early",
+          "n": 40,
+          "ls": 680,
+          "goat_pct": 30,
+          "age": 38.3
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "GK",
+          "trait": "iron",
+          "n": 28,
+          "ls": 724.6,
+          "goat_pct": 28.57,
+          "age": 38.5
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "GK",
+          "trait": "late",
+          "n": 87,
+          "ls": 771.2,
+          "goat_pct": 45.98,
+          "age": 39.4
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "GK",
+          "trait": "star",
+          "n": 44,
+          "ls": 675.5,
+          "goat_pct": 31.82,
+          "age": 39.5
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "MF",
+          "trait": "early",
+          "n": 74,
+          "ls": 643.2,
+          "goat_pct": 25.68,
+          "age": 37.2
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "MF",
+          "trait": "iron",
+          "n": 107,
+          "ls": 592.4,
+          "goat_pct": 23.36,
+          "age": 37.6
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "MF",
+          "trait": "late",
+          "n": 184,
+          "ls": 682,
+          "goat_pct": 27.72,
+          "age": 38.4
+        },
+        {
+          "cohort": "cumulative",
+          "pos": "MF",
+          "trait": "star",
+          "n": 92,
+          "ls": 592.5,
+          "goat_pct": 20.65,
+          "age": 37.9
+        },
+        {
+          "cohort": "increment",
+          "pos": "DF",
+          "trait": "early",
+          "n": 2,
+          "ls": 885,
+          "goat_pct": 50,
+          "age": 39
+        },
+        {
+          "cohort": "increment",
+          "pos": "DF",
+          "trait": "iron",
+          "n": 11,
+          "ls": 1038,
+          "goat_pct": 81.82,
+          "age": 39
+        },
+        {
+          "cohort": "increment",
+          "pos": "DF",
+          "trait": "late",
+          "n": 20,
+          "ls": 756.5,
+          "goat_pct": 45,
+          "age": 39.6
+        },
+        {
+          "cohort": "increment",
+          "pos": "DF",
+          "trait": "star",
+          "n": 7,
+          "ls": 703,
+          "goat_pct": 28.57,
+          "age": 37.9
+        },
+        {
+          "cohort": "increment",
+          "pos": "FW",
+          "trait": "early",
+          "n": 70,
+          "ls": 772.6,
+          "goat_pct": 38.57,
+          "age": 38.7
+        },
+        {
+          "cohort": "increment",
+          "pos": "FW",
+          "trait": "iron",
+          "n": 28,
+          "ls": 1035,
+          "goat_pct": 50,
+          "age": 39
+        },
+        {
+          "cohort": "increment",
+          "pos": "FW",
+          "trait": "late",
+          "n": 164,
+          "ls": 959.2,
+          "goat_pct": 47.56,
+          "age": 39.2
+        },
+        {
+          "cohort": "increment",
+          "pos": "FW",
+          "trait": "star",
+          "n": 51,
+          "ls": 847.8,
+          "goat_pct": 37.25,
+          "age": 38.4
+        },
+        {
+          "cohort": "increment",
+          "pos": "GK",
+          "trait": "early",
+          "n": 1,
+          "ls": 434,
+          "goat_pct": 0,
+          "age": 38
+        },
+        {
+          "cohort": "increment",
+          "pos": "GK",
+          "trait": "iron",
+          "n": 2,
+          "ls": 768.5,
+          "goat_pct": 50,
+          "age": 39.5
+        },
+        {
+          "cohort": "increment",
+          "pos": "GK",
+          "trait": "late",
+          "n": 17,
+          "ls": 920.9,
+          "goat_pct": 52.94,
+          "age": 40
+        },
+        {
+          "cohort": "increment",
+          "pos": "GK",
+          "trait": "star",
+          "n": 8,
+          "ls": 722.5,
+          "goat_pct": 37.5,
+          "age": 40.5
+        },
+        {
+          "cohort": "increment",
+          "pos": "MF",
+          "trait": "early",
+          "n": 14,
+          "ls": 711.6,
+          "goat_pct": 35.71,
+          "age": 38.4
+        },
+        {
+          "cohort": "increment",
+          "pos": "MF",
+          "trait": "iron",
+          "n": 20,
+          "ls": 764,
+          "goat_pct": 35,
+          "age": 38.9
+        },
+        {
+          "cohort": "increment",
+          "pos": "MF",
+          "trait": "late",
+          "n": 23,
+          "ls": 619.4,
+          "goat_pct": 26.09,
+          "age": 38
+        },
+        {
+          "cohort": "increment",
+          "pos": "MF",
+          "trait": "star",
+          "n": 14,
+          "ls": 621.9,
+          "goat_pct": 21.43,
+          "age": 38.1
+        }
+      ],
+      "read_only_verified": true
+    },
+    "peaks": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) SELECT cohort,CASE WHEN peak<80 THEN '<80' WHEN peak<85 THEN '80-84' WHEN peak<90 THEN '85-89' WHEN peak<95 THEN '90-94' ELSE '95+' END band,count(*) n,round(100.0*avg(legend_score>=840),2) goat_pct FROM c GROUP BY cohort,band",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "band": "80-84",
+          "n": 539,
+          "goat_pct": 28.39
+        },
+        {
+          "cohort": "baseline_requery",
+          "band": "85-89",
+          "n": 409,
+          "goat_pct": 80.44
+        },
+        {
+          "cohort": "baseline_requery",
+          "band": "90-94",
+          "n": 139,
+          "goat_pct": 97.12
+        },
+        {
+          "cohort": "baseline_requery",
+          "band": "95+",
+          "n": 6,
+          "goat_pct": 100
+        },
+        {
+          "cohort": "baseline_requery",
+          "band": "<80",
+          "n": 1411,
+          "goat_pct": 0.78
+        },
+        {
+          "cohort": "cumulative",
+          "band": "80-84",
+          "n": 656,
+          "goat_pct": 29.12
+        },
+        {
+          "cohort": "cumulative",
+          "band": "85-89",
+          "n": 530,
+          "goat_pct": 82.64
+        },
+        {
+          "cohort": "cumulative",
+          "band": "90-94",
+          "n": 179,
+          "goat_pct": 97.77
+        },
+        {
+          "cohort": "cumulative",
+          "band": "95+",
+          "n": 7,
+          "goat_pct": 100
+        },
+        {
+          "cohort": "cumulative",
+          "band": "<80",
+          "n": 1584,
+          "goat_pct": 1.01
+        },
+        {
+          "cohort": "increment",
+          "band": "80-84",
+          "n": 117,
+          "goat_pct": 32.48
+        },
+        {
+          "cohort": "increment",
+          "band": "85-89",
+          "n": 121,
+          "goat_pct": 90.08
+        },
+        {
+          "cohort": "increment",
+          "band": "90-94",
+          "n": 40,
+          "goat_pct": 100
+        },
+        {
+          "cohort": "increment",
+          "band": "95+",
+          "n": 1,
+          "goat_pct": 100
+        },
+        {
+          "cohort": "increment",
+          "band": "<80",
+          "n": 173,
+          "goat_pct": 2.89
+        }
+      ],
+      "read_only_verified": true
+    },
+    "components": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) SELECT cohort,CASE WHEN legend_score<840 THEN '<840' WHEN legend_score<1600 THEN '840-1599' ELSE '1600+' END band,count(*) n,round(avg(legend_score),1) ls,round(avg(awards*12),1) award_points,round(avg(trophies*10),1) trophy_points,round(avg(ballon*60),1) ballon_points,round(avg(peak*2),1) peak_points,round(avg(retire_age),1) age FROM c GROUP BY cohort,band",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "band": "1600+",
+          "n": 84,
+          "ls": 1977,
+          "award_points": 739.1,
+          "trophy_points": 236.1,
+          "ballon_points": 185,
+          "peak_points": 181.7,
+          "age": 40.6
+        },
+        {
+          "cohort": "baseline_requery",
+          "band": "840-1599",
+          "n": 550,
+          "ls": 1119.7,
+          "award_points": 338.8,
+          "trophy_points": 162.5,
+          "ballon_points": 11.2,
+          "peak_points": 172.3,
+          "age": 40.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "band": "<840",
+          "n": 1870,
+          "ls": 464.3,
+          "award_points": 80.9,
+          "trophy_points": 42.5,
+          "ballon_points": 0,
+          "peak_points": 148.6,
+          "age": 37.1
+        },
+        {
+          "cohort": "cumulative",
+          "band": "1600+",
+          "n": 129,
+          "ls": 1986.7,
+          "award_points": 752.3,
+          "trophy_points": 236,
+          "ballon_points": 183.7,
+          "peak_points": 181,
+          "age": 40.6
+        },
+        {
+          "cohort": "cumulative",
+          "band": "840-1599",
+          "n": 698,
+          "ls": 1122.7,
+          "award_points": 344.4,
+          "trophy_points": 161.6,
+          "ballon_points": 10.2,
+          "peak_points": 172.1,
+          "age": 40.2
+        },
+        {
+          "cohort": "cumulative",
+          "band": "<840",
+          "n": 2129,
+          "ls": 469.1,
+          "award_points": 82,
+          "trophy_points": 43.1,
+          "ballon_points": 0,
+          "peak_points": 148.9,
+          "age": 37.2
+        },
+        {
+          "cohort": "increment",
+          "band": "1600+",
+          "n": 45,
+          "ls": 2004.8,
+          "award_points": 776.8,
+          "trophy_points": 235.8,
+          "ballon_points": 181.3,
+          "peak_points": 179.7,
+          "age": 40.5
+        },
+        {
+          "cohort": "increment",
+          "band": "840-1599",
+          "n": 148,
+          "ls": 1133.7,
+          "award_points": 365.3,
+          "trophy_points": 158.2,
+          "ballon_points": 6.5,
+          "peak_points": 171.4,
+          "age": 40.2
+        },
+        {
+          "cohort": "increment",
+          "band": "<840",
+          "n": 259,
+          "ls": 503.7,
+          "award_points": 89.6,
+          "trophy_points": 47.6,
+          "ballon_points": 0,
+          "peak_points": 151.6,
+          "age": 37.9
+        }
+      ],
+      "read_only_verified": true
+    },
+    "titles": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) SELECT cohort,json_extract(j.value,'$.id') earned,count(distinct c.id) n,count(distinct CASE WHEN title=json_extract(j.value,'$.id') THEN c.id END) displayed FROM c,json_each(c.snapshot_json,'$.titles') j WHERE json_extract(j.value,'$.id') IN ('lg_goat','ballon','ballon3','ovr90','treble','st_rehab_strong','oneclub') GROUP BY cohort,earned",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "earned": "ballon",
+          "n": 165,
+          "displayed": 4
+        },
+        {
+          "cohort": "baseline_requery",
+          "earned": "ballon3",
+          "n": 43,
+          "displayed": 0
+        },
+        {
+          "cohort": "baseline_requery",
+          "earned": "lg_goat",
+          "n": 619,
+          "displayed": 594
+        },
+        {
+          "cohort": "baseline_requery",
+          "earned": "oneclub",
+          "n": 18,
+          "displayed": 14
+        },
+        {
+          "cohort": "baseline_requery",
+          "earned": "ovr90",
+          "n": 144,
+          "displayed": 1
+        },
+        {
+          "cohort": "baseline_requery",
+          "earned": "st_rehab_strong",
+          "n": 91,
+          "displayed": 0
+        },
+        {
+          "cohort": "baseline_requery",
+          "earned": "treble",
+          "n": 59,
+          "displayed": 3
+        },
+        {
+          "cohort": "cumulative",
+          "earned": "ballon",
+          "n": 220,
+          "displayed": 12
+        },
+        {
+          "cohort": "cumulative",
+          "earned": "ballon3",
+          "n": 70,
+          "displayed": 9
+        },
+        {
+          "cohort": "cumulative",
+          "earned": "lg_goat",
+          "n": 812,
+          "displayed": 664
+        },
+        {
+          "cohort": "cumulative",
+          "earned": "oneclub",
+          "n": 33,
+          "displayed": 28
+        },
+        {
+          "cohort": "cumulative",
+          "earned": "ovr90",
+          "n": 185,
+          "displayed": 7
+        },
+        {
+          "cohort": "cumulative",
+          "earned": "st_rehab_strong",
+          "n": 112,
+          "displayed": 0
+        },
+        {
+          "cohort": "cumulative",
+          "earned": "treble",
+          "n": 80,
+          "displayed": 8
+        },
+        {
+          "cohort": "increment",
+          "earned": "ballon",
+          "n": 55,
+          "displayed": 8
+        },
+        {
+          "cohort": "increment",
+          "earned": "ballon3",
+          "n": 27,
+          "displayed": 9
+        },
+        {
+          "cohort": "increment",
+          "earned": "lg_goat",
+          "n": 193,
+          "displayed": 70
+        },
+        {
+          "cohort": "increment",
+          "earned": "oneclub",
+          "n": 15,
+          "displayed": 14
+        },
+        {
+          "cohort": "increment",
+          "earned": "ovr90",
+          "n": 41,
+          "displayed": 6
+        },
+        {
+          "cohort": "increment",
+          "earned": "st_rehab_strong",
+          "n": 21,
+          "displayed": 0
+        },
+        {
+          "cohort": "increment",
+          "earned": "treble",
+          "n": 21,
+          "displayed": 5
+        }
+      ],
+      "read_only_verified": true
+    },
+    "paired": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) , p AS (SELECT cohort,profile_id,avg(CASE WHEN trait='late' THEN legend_score END) late,avg(CASE WHEN trait='early' THEN legend_score END) early FROM c WHERE pos='FW' GROUP BY cohort,profile_id) SELECT cohort,count(*) profiles,round(avg(late-early),1) late_minus_early,round(100.0*avg(late>early),1) late_better_pct FROM p WHERE late IS NOT NULL AND early IS NOT NULL GROUP BY cohort",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "profiles": 112,
+          "late_minus_early": 31.9,
+          "late_better_pct": 53.6
+        },
+        {
+          "cohort": "cumulative",
+          "profiles": 129,
+          "late_minus_early": 5.3,
+          "late_better_pct": 51.2
+        },
+        {
+          "cohort": "increment",
+          "profiles": 15,
+          "late_minus_early": 90.5,
+          "late_better_pct": 46.7
+        }
+      ],
+      "read_only_verified": true
+    },
+    "growth": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) , per AS (SELECT c.cohort,c.id,c.trait,min(CASE WHEN s.ovr>=80 THEN s.age END) a80,min(CASE WHEN s.ovr>=90 THEN s.age END) a90,count(s.year) seasons FROM c LEFT JOIN career_seasons s ON s.career_id=c.id GROUP BY c.cohort,c.id,c.trait) SELECT cohort,trait,count(*) n,count(a80) reach80,round(avg(a80),1) age80,count(a90) reach90,round(avg(a90),1) age90,round(avg(seasons),1) seasons FROM per GROUP BY cohort,trait",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "trait": "early",
+          "n": 503,
+          "reach80": 238,
+          "age80": 22.2,
+          "reach90": 20,
+          "age90": 26.3,
+          "seasons": 19
+        },
+        {
+          "cohort": "baseline_requery",
+          "trait": "iron",
+          "n": 443,
+          "reach80": 180,
+          "age80": 23.2,
+          "reach90": 20,
+          "age90": 26.8,
+          "seasons": 19.5
+        },
+        {
+          "cohort": "baseline_requery",
+          "trait": "late",
+          "n": 1008,
+          "reach80": 477,
+          "age80": 24.6,
+          "reach90": 84,
+          "age90": 27.8,
+          "seasons": 20.1
+        },
+        {
+          "cohort": "baseline_requery",
+          "trait": "star",
+          "n": 550,
+          "reach80": 198,
+          "age80": 23.1,
+          "reach90": 21,
+          "age90": 26.7,
+          "seasons": 19.1
+        },
+        {
+          "cohort": "cumulative",
+          "trait": "early",
+          "n": 590,
+          "reach80": 291,
+          "age80": 22.3,
+          "reach90": 22,
+          "age90": 26.3,
+          "seasons": 19.2
+        },
+        {
+          "cohort": "cumulative",
+          "trait": "iron",
+          "n": 504,
+          "reach80": 223,
+          "age80": 23.1,
+          "reach90": 29,
+          "age90": 26.1,
+          "seasons": 19.7
+        },
+        {
+          "cohort": "cumulative",
+          "trait": "late",
+          "n": 1232,
+          "reach80": 619,
+          "age80": 24.5,
+          "reach90": 109,
+          "age90": 27.9,
+          "seasons": 20.3
+        },
+        {
+          "cohort": "cumulative",
+          "trait": "star",
+          "n": 630,
+          "reach80": 239,
+          "age80": 23,
+          "reach90": 26,
+          "age90": 26.3,
+          "seasons": 19.3
+        },
+        {
+          "cohort": "increment",
+          "trait": "early",
+          "n": 87,
+          "reach80": 53,
+          "age80": 22.5,
+          "reach90": 2,
+          "age90": 27,
+          "seasons": 20.5
+        },
+        {
+          "cohort": "increment",
+          "trait": "iron",
+          "n": 61,
+          "reach80": 43,
+          "age80": 22.3,
+          "reach90": 9,
+          "age90": 24.4,
+          "seasons": 20.9
+        },
+        {
+          "cohort": "increment",
+          "trait": "late",
+          "n": 224,
+          "reach80": 142,
+          "age80": 24.2,
+          "reach90": 25,
+          "age90": 28.4,
+          "seasons": 20.9
+        },
+        {
+          "cohort": "increment",
+          "trait": "star",
+          "n": 80,
+          "reach80": 41,
+          "age80": 22.7,
+          "reach90": 5,
+          "age90": 24.8,
+          "seasons": 20.1
+        }
+      ],
+      "read_only_verified": true
+    },
+    "attempts": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) , ranks AS (SELECT id,row_number() OVER(PARTITION BY profile_id ORDER BY retired_at,id) attempt FROM r WHERE retire_age>=30) SELECT cohort,CASE WHEN attempt=1 THEN '1' WHEN attempt<=3 THEN '2-3' WHEN attempt<=5 THEN '4-5' ELSE '6+' END attempt,count(*) n,round(avg(legend_score),1) ls,round(100.0*avg(legend_score>=840),1) goat_pct FROM c JOIN ranks USING(id) GROUP BY cohort,CASE WHEN attempt=1 THEN '1' WHEN attempt<=3 THEN '2-3' WHEN attempt<=5 THEN '4-5' ELSE '6+' END",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "attempt": "1",
+          "n": 565,
+          "ls": 538,
+          "goat_pct": 14.5
+        },
+        {
+          "cohort": "baseline_requery",
+          "attempt": "2-3",
+          "n": 683,
+          "ls": 600.5,
+          "goat_pct": 19.8
+        },
+        {
+          "cohort": "baseline_requery",
+          "attempt": "4-5",
+          "n": 398,
+          "ls": 678.3,
+          "goat_pct": 27.6
+        },
+        {
+          "cohort": "baseline_requery",
+          "attempt": "6+",
+          "n": 858,
+          "ls": 776.4,
+          "goat_pct": 35.8
+        },
+        {
+          "cohort": "cumulative",
+          "attempt": "1",
+          "n": 598,
+          "ls": 541.2,
+          "goat_pct": 15.1
+        },
+        {
+          "cohort": "cumulative",
+          "attempt": "2-3",
+          "n": 736,
+          "ls": 607,
+          "goat_pct": 20.1
+        },
+        {
+          "cohort": "cumulative",
+          "attempt": "4-5",
+          "n": 455,
+          "ls": 677.4,
+          "goat_pct": 27
+        },
+        {
+          "cohort": "cumulative",
+          "attempt": "6+",
+          "n": 1167,
+          "ls": 822.7,
+          "goat_pct": 39.9
+        },
+        {
+          "cohort": "increment",
+          "attempt": "1",
+          "n": 33,
+          "ls": 594.8,
+          "goat_pct": 24.2
+        },
+        {
+          "cohort": "increment",
+          "attempt": "2-3",
+          "n": 53,
+          "ls": 690.5,
+          "goat_pct": 24.5
+        },
+        {
+          "cohort": "increment",
+          "attempt": "4-5",
+          "n": 57,
+          "ls": 671.3,
+          "goat_pct": 22.8
+        },
+        {
+          "cohort": "increment",
+          "attempt": "6+",
+          "n": 309,
+          "ls": 951.4,
+          "goat_pct": 51.5
+        }
+      ],
+      "read_only_verified": true
+    },
+    "days": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) SELECT date(retired_at,'+9 hours') day,count(*) n,round(avg(legend_score),1) ls,round(100.0*avg(legend_score>=840),2) goat_pct FROM c WHERE cohort='cumulative' GROUP BY day",
+      "results": [
+        {
+          "day": "2026-09-24",
+          "n": 2,
+          "ls": 525,
+          "goat_pct": 0
+        },
+        {
+          "day": "2026-09-25",
+          "n": 15,
+          "ls": 808.7,
+          "goat_pct": 33.33
+        },
+        {
+          "day": "2026-09-26",
+          "n": 146,
+          "ls": 553.1,
+          "goat_pct": 15.07
+        },
+        {
+          "day": "2026-09-27",
+          "n": 1443,
+          "ls": 594.9,
+          "goat_pct": 19.75
+        },
+        {
+          "day": "2026-09-28",
+          "n": 1126,
+          "ls": 776.6,
+          "goat_pct": 35.61
+        },
+        {
+          "day": "2026-09-29",
+          "n": 224,
+          "ls": 945.2,
+          "goat_pct": 50.89
+        }
+      ],
+      "read_only_verified": true
+    },
+    "versions": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) SELECT cohort,app_version,count(*) n,round(avg(legend_score),1) ls FROM c GROUP BY cohort,app_version",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "app_version": "1589a59",
+          "n": 2,
+          "ls": 966.5
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "1804f20",
+          "n": 30,
+          "ls": 712.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "18a58f8",
+          "n": 3,
+          "ls": 327.7
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "1908085",
+          "n": 1,
+          "ls": 309
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "191f928",
+          "n": 194,
+          "ls": 509.4
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "1c77a5c",
+          "n": 4,
+          "ls": 448.8
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "1c8f1d7",
+          "n": 1,
+          "ls": 1122
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "1d52e66",
+          "n": 38,
+          "ls": 566.1
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "29484f9",
+          "n": 85,
+          "ls": 702.4
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "2bd13d2",
+          "n": 11,
+          "ls": 578.7
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "3027fd8",
+          "n": 13,
+          "ls": 461.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "341a742",
+          "n": 52,
+          "ls": 607.5
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "3d6ebd1",
+          "n": 8,
+          "ls": 545
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "43d6f20",
+          "n": 1,
+          "ls": 771
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "4b11a09",
+          "n": 1,
+          "ls": 436
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "4b37b04",
+          "n": 42,
+          "ls": 693.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "4ce7c91",
+          "n": 136,
+          "ls": 591.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "5a8b9de",
+          "n": 100,
+          "ls": 730
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "648f9ff",
+          "n": 44,
+          "ls": 534.5
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "653a396",
+          "n": 75,
+          "ls": 730.7
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "6b76012",
+          "n": 13,
+          "ls": 641.5
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "700899c",
+          "n": 14,
+          "ls": 1073.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "817268a",
+          "n": 5,
+          "ls": 560.6
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "8567989",
+          "n": 77,
+          "ls": 802.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "864ec78",
+          "n": 24,
+          "ls": 649.6
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "88aac0b",
+          "n": 111,
+          "ls": 710.8
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "8eae1f5",
+          "n": 1,
+          "ls": 490
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "9083e54",
+          "n": 36,
+          "ls": 555.7
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "982e0d1",
+          "n": 91,
+          "ls": 608.6
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "9f06740",
+          "n": 10,
+          "ls": 388.9
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "a1adeab",
+          "n": 26,
+          "ls": 632.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "bfb8317",
+          "n": 135,
+          "ls": 938.8
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "c79faad",
+          "n": 38,
+          "ls": 462.4
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "cce3be0",
+          "n": 152,
+          "ls": 549.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "cdd2daf",
+          "n": 32,
+          "ls": 523.4
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "cfb25ab",
+          "n": 14,
+          "ls": 603.5
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "d175159",
+          "n": 11,
+          "ls": 708.3
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "d28e796",
+          "n": 3,
+          "ls": 496
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "dba658f",
+          "n": 24,
+          "ls": 556.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "dbd79e1",
+          "n": 49,
+          "ls": 669.9
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "dc0c44b",
+          "n": 7,
+          "ls": 772.6
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "de4613f",
+          "n": 9,
+          "ls": 751.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "e31834a",
+          "n": 24,
+          "ls": 726.4
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "e46a291",
+          "n": 80,
+          "ls": 660.2
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "e7a5652",
+          "n": 1,
+          "ls": 614
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "f1dd395",
+          "n": 15,
+          "ls": 674.7
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "f2f26ee",
+          "n": 14,
+          "ls": 938.4
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "f329501",
+          "n": 517,
+          "ls": 707.8
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "f61ad49",
+          "n": 31,
+          "ls": 538.9
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "fac1ad1",
+          "n": 1,
+          "ls": 481
+        },
+        {
+          "cohort": "baseline_requery",
+          "app_version": "fdc67c2",
+          "n": 98,
+          "ls": 569.3
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "1589a59",
+          "n": 2,
+          "ls": 966.5
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "16e2dbc",
+          "n": 99,
+          "ls": 791.7
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "1804f20",
+          "n": 30,
+          "ls": 712.2
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "18a58f8",
+          "n": 3,
+          "ls": 327.7
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "1908085",
+          "n": 1,
+          "ls": 309
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "191f928",
+          "n": 194,
+          "ls": 509.4
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "1c77a5c",
+          "n": 4,
+          "ls": 448.8
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "1c8f1d7",
+          "n": 1,
+          "ls": 1122
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "1d52e66",
+          "n": 38,
+          "ls": 566.1
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "29484f9",
+          "n": 85,
+          "ls": 702.4
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "2bd13d2",
+          "n": 11,
+          "ls": 578.7
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "3027fd8",
+          "n": 13,
+          "ls": 461.2
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "341a742",
+          "n": 52,
+          "ls": 607.5
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "3d6ebd1",
+          "n": 8,
+          "ls": 545
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "40407d3",
+          "n": 33,
+          "ls": 813.8
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "43d6f20",
+          "n": 1,
+          "ls": 771
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "4b11036",
+          "n": 133,
+          "ls": 880.3
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "4b11a09",
+          "n": 1,
+          "ls": 436
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "4b37b04",
+          "n": 42,
+          "ls": 693.2
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "4ce7c91",
+          "n": 136,
+          "ls": 591.2
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "5a8b9de",
+          "n": 102,
+          "ls": 732.1
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "622eceb",
+          "n": 97,
+          "ls": 797.9
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "648f9ff",
+          "n": 44,
+          "ls": 534.5
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "653a396",
+          "n": 75,
+          "ls": 730.7
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "6b76012",
+          "n": 13,
+          "ls": 641.5
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "700899c",
+          "n": 15,
+          "ls": 1076.7
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "817268a",
+          "n": 5,
+          "ls": 560.6
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "8567989",
+          "n": 77,
+          "ls": 802.2
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "864ec78",
+          "n": 25,
+          "ls": 686.9
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "88aac0b",
+          "n": 115,
+          "ls": 711.9
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "8a17b61",
+          "n": 63,
+          "ls": 1062.8
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "8eae1f5",
+          "n": 1,
+          "ls": 490
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "9083e54",
+          "n": 36,
+          "ls": 555.7
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "982e0d1",
+          "n": 91,
+          "ls": 608.6
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "9f06740",
+          "n": 10,
+          "ls": 388.9
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "a1adeab",
+          "n": 26,
+          "ls": 632.2
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "bfb8317",
+          "n": 139,
+          "ls": 926.5
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "c79faad",
+          "n": 38,
+          "ls": 462.4
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "cce3be0",
+          "n": 152,
+          "ls": 549.2
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "cdd2daf",
+          "n": 32,
+          "ls": 523.4
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "cfb25ab",
+          "n": 25,
+          "ls": 717.4
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "d175159",
+          "n": 11,
+          "ls": 708.3
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "d28e796",
+          "n": 3,
+          "ls": 496
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "dba658f",
+          "n": 24,
+          "ls": 556.2
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "dbd79e1",
+          "n": 50,
+          "ls": 684.4
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "dc0c44b",
+          "n": 7,
+          "ls": 772.6
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "de4613f",
+          "n": 9,
+          "ls": 751.2
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "e31834a",
+          "n": 25,
+          "ls": 710.9
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "e46a291",
+          "n": 80,
+          "ls": 660.2
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "e7a5652",
+          "n": 1,
+          "ls": 614
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "f1dd395",
+          "n": 15,
+          "ls": 674.7
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "f2f26ee",
+          "n": 14,
+          "ls": 938.4
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "f329501",
+          "n": 519,
+          "ls": 707.4
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "f61ad49",
+          "n": 31,
+          "ls": 538.9
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "fac1ad1",
+          "n": 1,
+          "ls": 481
+        },
+        {
+          "cohort": "cumulative",
+          "app_version": "fdc67c2",
+          "n": 98,
+          "ls": 569.3
+        },
+        {
+          "cohort": "increment",
+          "app_version": "16e2dbc",
+          "n": 99,
+          "ls": 791.7
+        },
+        {
+          "cohort": "increment",
+          "app_version": "40407d3",
+          "n": 33,
+          "ls": 813.8
+        },
+        {
+          "cohort": "increment",
+          "app_version": "4b11036",
+          "n": 133,
+          "ls": 880.3
+        },
+        {
+          "cohort": "increment",
+          "app_version": "5a8b9de",
+          "n": 2,
+          "ls": 837.5
+        },
+        {
+          "cohort": "increment",
+          "app_version": "622eceb",
+          "n": 97,
+          "ls": 797.9
+        },
+        {
+          "cohort": "increment",
+          "app_version": "700899c",
+          "n": 1,
+          "ls": 1125
+        },
+        {
+          "cohort": "increment",
+          "app_version": "864ec78",
+          "n": 1,
+          "ls": 1582
+        },
+        {
+          "cohort": "increment",
+          "app_version": "88aac0b",
+          "n": 4,
+          "ls": 741.5
+        },
+        {
+          "cohort": "increment",
+          "app_version": "8a17b61",
+          "n": 63,
+          "ls": 1062.8
+        },
+        {
+          "cohort": "increment",
+          "app_version": "bfb8317",
+          "n": 4,
+          "ls": 512
+        },
+        {
+          "cohort": "increment",
+          "app_version": "cfb25ab",
+          "n": 11,
+          "ls": 862.3
+        },
+        {
+          "cohort": "increment",
+          "app_version": "dbd79e1",
+          "n": 1,
+          "ls": 1395
+        },
+        {
+          "cohort": "increment",
+          "app_version": "e31834a",
+          "n": 1,
+          "ls": 338
+        },
+        {
+          "cohort": "increment",
+          "app_version": "f329501",
+          "n": 2,
+          "ls": 585.5
+        }
+      ],
+      "read_only_verified": true
+    },
+    "signals": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) , sig AS (SELECT c.cohort,c.id,c.legend_score,max(s.signals_json IS NOT NULL) measured,max(CASE WHEN json_valid(s.signals_json) THEN coalesce(json_extract(s.signals_json,'$.webdriver'),0) OR coalesce(json_extract(s.signals_json,'$.headless'),0) OR coalesce(json_extract(s.signals_json,'$.synthetic'),0)>0 ELSE 0 END) flagged FROM c LEFT JOIN career_seasons s ON s.career_id=c.id GROUP BY c.cohort,c.id,c.legend_score) SELECT cohort,CASE WHEN flagged THEN 'signal_not_proof' WHEN measured THEN 'recorded_no_signal' ELSE 'unobserved' END category,count(*) n,round(avg(legend_score),1) ls,sum(legend_score>=840) goat,sum(legend_score>=1600) above1600 FROM sig GROUP BY cohort,category",
+      "results": [
+        {
+          "cohort": "baseline_requery",
+          "category": "recorded_no_signal",
+          "n": 469,
+          "ls": 787.7,
+          "goat": 173,
+          "above1600": 30
+        },
+        {
+          "cohort": "baseline_requery",
+          "category": "signal_not_proof",
+          "n": 7,
+          "ls": 1732,
+          "goat": 6,
+          "above1600": 5
+        },
+        {
+          "cohort": "baseline_requery",
+          "category": "unobserved",
+          "n": 2028,
+          "ls": 625.6,
+          "goat": 455,
+          "above1600": 49
+        },
+        {
+          "cohort": "cumulative",
+          "category": "recorded_no_signal",
+          "n": 917,
+          "ls": 822,
+          "goat": 364,
+          "above1600": 75
+        },
+        {
+          "cohort": "cumulative",
+          "category": "signal_not_proof",
+          "n": 7,
+          "ls": 1732,
+          "goat": 6,
+          "above1600": 5
+        },
+        {
+          "cohort": "cumulative",
+          "category": "unobserved",
+          "n": 2032,
+          "ls": 626.4,
+          "goat": 457,
+          "above1600": 49
+        },
+        {
+          "cohort": "increment",
+          "category": "recorded_no_signal",
+          "n": 448,
+          "ls": 857.8,
+          "goat": 191,
+          "above1600": 45
+        },
+        {
+          "cohort": "increment",
+          "category": "unobserved",
+          "n": 4,
+          "ls": 1037,
+          "goat": 2,
+          "above1600": 0
+        }
+      ],
+      "read_only_verified": true
+    },
+    "awards": {
+      "sql": "WITH r AS (SELECT * FROM careers WHERE status='retired' AND retired_at<'2026-09-29T01:30:00.000Z'), labels(cohort) AS (VALUES('baseline_requery'),('increment'),('cumulative')), c AS (SELECT r.*,labels.cohort FROM r CROSS JOIN labels WHERE retire_age>=30 AND (cohort='cumulative' OR (cohort='baseline_requery' AND retired_at<'2026-09-28T10:00:00.000Z') OR (cohort='increment' AND retired_at>='2026-09-28T10:00:00.000Z'))) SELECT json_extract(j.value,'$.t') award,count(*) awards FROM c,json_each(c.snapshot_json,'$.awards') j WHERE cohort='cumulative' AND legend_score>=1600 GROUP BY award ORDER BY awards DESC LIMIT 10",
+      "results": [
+        {
+          "award": "대한축구협회 올해의 선수",
+          "awards": 1140
+        },
+        {
+          "award": "FIFPRO 월드 11",
+          "awards": 830
+        },
+        {
+          "award": "프리미어리그 올해의 팀",
+          "awards": 675
+        },
+        {
+          "award": "AFC 올해의 국제선수",
+          "awards": 655
+        },
+        {
+          "award": "프리미어리그 골든부트",
+          "awards": 600
+        },
+        {
+          "award": "게르트 뮐러 트로피",
+          "awards": 510
+        },
+        {
+          "award": "발롱도르",
+          "awards": 395
+        },
+        {
+          "award": "유러피언 골든슈",
+          "awards": 363
+        },
+        {
+          "award": "FIFA 더 베스트 남자 선수",
+          "awards": 325
+        },
+        {
+          "award": "피치치 트로피",
+          "awards": 304
+        }
+      ],
+      "read_only_verified": true
+    },
+    "active_balance": {
+      "sql": "SELECT version,status FROM balance_versions WHERE status='active'",
+      "results": [],
+      "read_only_verified": true
+    }
+  },
+  "queried_at_utc": "2026-09-29T01:36:10.367325+00:00"
+}

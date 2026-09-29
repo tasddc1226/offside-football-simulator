@@ -1,0 +1,1616 @@
+{
+  "cutoff": "2026-09-28T10:00:00Z",
+  "cohort": "status=retired AND retire_age>=30 AND retired_at<cutoff",
+  "main_sha": "cfb25ab31d8c45200dd77e18b7facc14bab5beb7",
+  "notes": "Read-only SELECT queries against offside-production. Separate calls are not a transaction snapshot; metadata may update. No personal identifiers exported.",
+  "base": [
+    [
+      {
+        "status": "active",
+        "n": 1450,
+        "profiles": 488,
+        "earliest": "2026-09-24T09:39:23.457Z",
+        "latest": "2026-09-28T09:58:50.991Z"
+      },
+      {
+        "status": "retired",
+        "n": 3259,
+        "profiles": 580,
+        "earliest": "2026-09-24T07:17:33.589Z",
+        "latest": "2026-09-28T09:53:00.007Z"
+      }
+    ],
+    [
+      {
+        "app_version": "f329501",
+        "status": "retired",
+        "n": 765
+      },
+      {
+        "app_version": "f329501",
+        "status": "active",
+        "n": 318
+      },
+      {
+        "app_version": "191f928",
+        "status": "retired",
+        "n": 227
+      },
+      {
+        "app_version": "cce3be0",
+        "status": "retired",
+        "n": 193
+      },
+      {
+        "app_version": "bfb8317",
+        "status": "retired",
+        "n": 171
+      },
+      {
+        "app_version": "4ce7c91",
+        "status": "retired",
+        "n": 166
+      },
+      {
+        "app_version": "88aac0b",
+        "status": "retired",
+        "n": 149
+      },
+      {
+        "app_version": "5a8b9de",
+        "status": "retired",
+        "n": 133
+      },
+      {
+        "app_version": "fdc67c2",
+        "status": "retired",
+        "n": 121
+      },
+      {
+        "app_version": "982e0d1",
+        "status": "retired",
+        "n": 115
+      },
+      {
+        "app_version": "29484f9",
+        "status": "retired",
+        "n": 110
+      },
+      {
+        "app_version": "e46a291",
+        "status": "retired",
+        "n": 105
+      },
+      {
+        "app_version": "191f928",
+        "status": "active",
+        "n": 99
+      },
+      {
+        "app_version": "8567989",
+        "status": "retired",
+        "n": 95
+      },
+      {
+        "app_version": "653a396",
+        "status": "retired",
+        "n": 89
+      },
+      {
+        "app_version": "4ce7c91",
+        "status": "active",
+        "n": 86
+      },
+      {
+        "app_version": "bfb8317",
+        "status": "active",
+        "n": 85
+      },
+      {
+        "app_version": "dbd79e1",
+        "status": "retired",
+        "n": 81
+      },
+      {
+        "app_version": "341a742",
+        "status": "retired",
+        "n": 59
+      },
+      {
+        "app_version": "cce3be0",
+        "status": "active",
+        "n": 58
+      },
+      {
+        "app_version": "648f9ff",
+        "status": "retired",
+        "n": 57
+      },
+      {
+        "app_version": "fdc67c2",
+        "status": "active",
+        "n": 57
+      },
+      {
+        "app_version": "4b37b04",
+        "status": "retired",
+        "n": 53
+      },
+      {
+        "app_version": "88aac0b",
+        "status": "active",
+        "n": 53
+      },
+      {
+        "app_version": "8567989",
+        "status": "active",
+        "n": 48
+      }
+    ],
+    [
+      {
+        "title": "lg_goat",
+        "n": 595
+      },
+      {
+        "title": "lg_world",
+        "n": 438
+      },
+      {
+        "title": "big5",
+        "n": 436
+      },
+      {
+        "title": "lg_club",
+        "n": 347
+      },
+      {
+        "title": "lg_plain",
+        "n": 177
+      },
+      {
+        "title": "fame300",
+        "n": 148
+      },
+      {
+        "title": "apps500",
+        "n": 144
+      },
+      {
+        "title": "goals300",
+        "n": 114
+      },
+      {
+        "title": "veteran",
+        "n": 106
+      },
+      {
+        "title": "topscorer",
+        "n": 101
+      },
+      {
+        "title": "mvp",
+        "n": 89
+      },
+      {
+        "title": "topscorer3",
+        "n": 62
+      },
+      {
+        "title": null,
+        "n": 48
+      },
+      {
+        "title": "fame100",
+        "n": 44
+      },
+      {
+        "title": "europe",
+        "n": 41
+      },
+      {
+        "title": "wcgoal",
+        "n": 39
+      },
+      {
+        "title": "assists100",
+        "n": 33
+      },
+      {
+        "title": "goals100",
+        "n": 30
+      },
+      {
+        "title": "journeyman",
+        "n": 23
+      },
+      {
+        "title": "captain",
+        "n": 22
+      }
+    ],
+    [
+      {
+        "key": "number",
+        "type": "integer"
+      },
+      {
+        "key": "pos",
+        "type": "text"
+      },
+      {
+        "key": "age",
+        "type": "integer"
+      },
+      {
+        "key": "peak",
+        "type": "integer"
+      },
+      {
+        "key": "lastClub",
+        "type": "text"
+      },
+      {
+        "key": "lastClubId",
+        "type": "text"
+      },
+      {
+        "key": "career",
+        "type": "array"
+      },
+      {
+        "key": "trophies",
+        "type": "array"
+      },
+      {
+        "key": "awards",
+        "type": "array"
+      },
+      {
+        "key": "ballon",
+        "type": "array"
+      },
+      {
+        "key": "nat",
+        "type": "object"
+      },
+      {
+        "key": "storyLog",
+        "type": "array"
+      },
+      {
+        "key": "miles",
+        "type": "array"
+      },
+      {
+        "key": "titles",
+        "type": "array"
+      },
+      {
+        "key": "style",
+        "type": "object"
+      }
+    ]
+  ],
+  "distribution": [
+    [
+      {
+        "n": 3260,
+        "short": 756,
+        "eligible": 2504,
+        "public_eligible": 1384,
+        "goat_all": 635,
+        "goat_eligible": 634,
+        "goat_public": 460,
+        "min_ls": 109,
+        "max_ls": 3315,
+        "avg_ls": 558.4
+      }
+    ],
+    [
+      {
+        "p25": 358,
+        "p50": 526,
+        "p75": 843,
+        "p90": 1216,
+        "p95": 1449,
+        "p98": 1809,
+        "p99": 2063
+      }
+    ],
+    [
+      {
+        "band": "1000-1199",
+        "n": 187
+      },
+      {
+        "band": "1200-1399",
+        "n": 124
+      },
+      {
+        "band": "1400-1599",
+        "n": 54
+      },
+      {
+        "band": "1600-1999",
+        "n": 55
+      },
+      {
+        "band": "2000+",
+        "n": 29
+      },
+      {
+        "band": "305-424",
+        "n": 574
+      },
+      {
+        "band": "425-589",
+        "n": 481
+      },
+      {
+        "band": "590-839",
+        "n": 458
+      },
+      {
+        "band": "840-999",
+        "n": 185
+      },
+      {
+        "band": "<305",
+        "n": 357
+      }
+    ],
+    [
+      {
+        "profiles": 566,
+        "goat_owners": 253,
+        "careers": 2504,
+        "max_careers": 33,
+        "avg_careers": 4.42,
+        "top10_careers": 257
+      }
+    ],
+    [
+      {
+        "day": "2026-09-24",
+        "n": 2,
+        "ls": 525,
+        "goat_pct": 0,
+        "peak": 77
+      },
+      {
+        "day": "2026-09-25",
+        "n": 15,
+        "ls": 808.7,
+        "goat_pct": 33.3,
+        "peak": 80.7
+      },
+      {
+        "day": "2026-09-26",
+        "n": 146,
+        "ls": 553.1,
+        "goat_pct": 15.1,
+        "peak": 75.5
+      },
+      {
+        "day": "2026-09-27",
+        "n": 1443,
+        "ls": 594.9,
+        "goat_pct": 19.8,
+        "peak": 76.1
+      },
+      {
+        "day": "2026-09-28",
+        "n": 898,
+        "ls": 777,
+        "goat_pct": 35.9,
+        "peak": 79.9
+      }
+    ]
+  ],
+  "segments": [
+    [
+      {
+        "pos": "DF",
+        "trait": "late",
+        "n": 68,
+        "ls": 700.7,
+        "goat_pct": 32.4,
+        "peak": 80.1,
+        "age": 39,
+        "awards": 16,
+        "ballon": 0
+      },
+      {
+        "pos": "DF",
+        "trait": "iron",
+        "n": 56,
+        "ls": 713.7,
+        "goat_pct": 28.6,
+        "peak": 80,
+        "age": 38.9,
+        "awards": 16.3,
+        "ballon": 0.02
+      },
+      {
+        "pos": "DF",
+        "trait": "early",
+        "n": 32,
+        "ls": 745.4,
+        "goat_pct": 34.4,
+        "peak": 79.9,
+        "age": 38.3,
+        "awards": 18.2,
+        "ballon": 0
+      },
+      {
+        "pos": "DF",
+        "trait": "star",
+        "n": 29,
+        "ls": 519,
+        "goat_pct": 17.2,
+        "peak": 76.3,
+        "age": 37.5,
+        "awards": 8.9,
+        "ballon": 0
+      },
+      {
+        "pos": "FW",
+        "trait": "late",
+        "n": 709,
+        "ls": 715.5,
+        "goat_pct": 28.5,
+        "peak": 77.6,
+        "age": 38.3,
+        "awards": 15.7,
+        "ballon": 0.3
+      },
+      {
+        "pos": "FW",
+        "trait": "star",
+        "n": 407,
+        "ls": 578.3,
+        "goat_pct": 18.9,
+        "peak": 75,
+        "age": 37.4,
+        "awards": 11.2,
+        "ballon": 0.12
+      },
+      {
+        "pos": "FW",
+        "trait": "early",
+        "n": 372,
+        "ls": 659.2,
+        "goat_pct": 24.5,
+        "peak": 77.6,
+        "age": 37.1,
+        "awards": 13.3,
+        "ballon": 0.15
+      },
+      {
+        "pos": "FW",
+        "trait": "iron",
+        "n": 274,
+        "ls": 628,
+        "goat_pct": 20.4,
+        "peak": 76.9,
+        "age": 37.7,
+        "awards": 12.3,
+        "ballon": 0.11
+      },
+      {
+        "pos": "GK",
+        "trait": "late",
+        "n": 70,
+        "ls": 734.9,
+        "goat_pct": 44.3,
+        "peak": 79,
+        "age": 39.2,
+        "awards": 20,
+        "ballon": 0
+      },
+      {
+        "pos": "GK",
+        "trait": "early",
+        "n": 39,
+        "ls": 686.3,
+        "goat_pct": 30.8,
+        "peak": 79.3,
+        "age": 38.3,
+        "awards": 17.5,
+        "ballon": 0
+      },
+      {
+        "pos": "GK",
+        "trait": "star",
+        "n": 36,
+        "ls": 665.1,
+        "goat_pct": 30.6,
+        "peak": 79.6,
+        "age": 39.3,
+        "awards": 15.6,
+        "ballon": 0
+      },
+      {
+        "pos": "GK",
+        "trait": "iron",
+        "n": 26,
+        "ls": 721.3,
+        "goat_pct": 26.9,
+        "peak": 80.8,
+        "age": 38.5,
+        "awards": 17.6,
+        "ballon": 0
+      },
+      {
+        "pos": "MF",
+        "trait": "late",
+        "n": 161,
+        "ls": 690.9,
+        "goat_pct": 28,
+        "peak": 79.5,
+        "age": 38.5,
+        "awards": 10.4,
+        "ballon": 0.09
+      },
+      {
+        "pos": "MF",
+        "trait": "iron",
+        "n": 87,
+        "ls": 553,
+        "goat_pct": 20.7,
+        "peak": 76.4,
+        "age": 37.3,
+        "awards": 6.9,
+        "ballon": 0
+      },
+      {
+        "pos": "MF",
+        "trait": "star",
+        "n": 78,
+        "ls": 587.2,
+        "goat_pct": 20.5,
+        "peak": 77.8,
+        "age": 37.9,
+        "awards": 7.1,
+        "ballon": 0.01
+      },
+      {
+        "pos": "MF",
+        "trait": "early",
+        "n": 60,
+        "ls": 627.2,
+        "goat_pct": 23.3,
+        "peak": 77.9,
+        "age": 36.9,
+        "awards": 8.7,
+        "ballon": 0
+      }
+    ],
+    [
+      {
+        "trait": "early",
+        "status": "active",
+        "n": 280,
+        "short": 0
+      },
+      {
+        "trait": "early",
+        "status": "retired",
+        "n": 737,
+        "short": 234
+      },
+      {
+        "trait": "iron",
+        "status": "active",
+        "n": 252,
+        "short": 0
+      },
+      {
+        "trait": "iron",
+        "status": "retired",
+        "n": 578,
+        "short": 135
+      },
+      {
+        "trait": "late",
+        "status": "active",
+        "n": 596,
+        "short": 0
+      },
+      {
+        "trait": "late",
+        "status": "retired",
+        "n": 1263,
+        "short": 255
+      },
+      {
+        "trait": "star",
+        "status": "active",
+        "n": 321,
+        "short": 0
+      },
+      {
+        "trait": "star",
+        "status": "retired",
+        "n": 682,
+        "short": 132
+      }
+    ],
+    [
+      {
+        "peak_band": "75-79",
+        "n": 541,
+        "ls": 489.1,
+        "goat_pct": 1.7,
+        "age": 37.6
+      },
+      {
+        "peak_band": "80-84",
+        "n": 539,
+        "ls": 743.6,
+        "goat_pct": 28.4,
+        "age": 39
+      },
+      {
+        "peak_band": "85-89",
+        "n": 409,
+        "ls": 1111.8,
+        "goat_pct": 80.4,
+        "age": 40
+      },
+      {
+        "peak_band": "90-94",
+        "n": 139,
+        "ls": 1567.1,
+        "goat_pct": 97.1,
+        "age": 40.3
+      },
+      {
+        "peak_band": "95+",
+        "n": 6,
+        "ls": 1835.8,
+        "goat_pct": 100,
+        "age": 41
+      },
+      {
+        "peak_band": "<75",
+        "n": 870,
+        "ls": 346.2,
+        "goat_pct": 0.2,
+        "age": 36.1
+      }
+    ],
+    [
+      {
+        "v": 840,
+        "n": 2504,
+        "reached": 634,
+        "pct": 25.32,
+        "public_pct": 33.24,
+        "today_pct": 35.86
+      },
+      {
+        "v": 1000,
+        "n": 2504,
+        "reached": 449,
+        "pct": 17.93,
+        "public_pct": 24.28,
+        "today_pct": 27.06
+      },
+      {
+        "v": 1200,
+        "n": 2504,
+        "reached": 262,
+        "pct": 10.46,
+        "public_pct": 14.81,
+        "today_pct": 16.26
+      },
+      {
+        "v": 1400,
+        "n": 2504,
+        "reached": 138,
+        "pct": 5.51,
+        "public_pct": 7.59,
+        "today_pct": 8.91
+      },
+      {
+        "v": 1500,
+        "n": 2504,
+        "reached": 108,
+        "pct": 4.31,
+        "public_pct": 5.85,
+        "today_pct": 7.02
+      },
+      {
+        "v": 1600,
+        "n": 2504,
+        "reached": 84,
+        "pct": 3.35,
+        "public_pct": 4.62,
+        "today_pct": 5.79
+      },
+      {
+        "v": 1800,
+        "n": 2504,
+        "reached": 53,
+        "pct": 2.12,
+        "public_pct": 3.03,
+        "today_pct": 3.79
+      },
+      {
+        "v": 2000,
+        "n": 2504,
+        "reached": 29,
+        "pct": 1.16,
+        "public_pct": 1.37,
+        "today_pct": 1.89
+      }
+    ],
+    [
+      {
+        "app_version": "f329501",
+        "n": 517,
+        "ls": 707.8,
+        "peak": 78.6,
+        "goat_pct": 30
+      },
+      {
+        "app_version": "191f928",
+        "n": 194,
+        "ls": 509.4,
+        "peak": 73.6,
+        "goat_pct": 11.9
+      },
+      {
+        "app_version": "cce3be0",
+        "n": 152,
+        "ls": 549.2,
+        "peak": 75.4,
+        "goat_pct": 16.4
+      },
+      {
+        "app_version": "4ce7c91",
+        "n": 136,
+        "ls": 591.2,
+        "peak": 75,
+        "goat_pct": 17.6
+      },
+      {
+        "app_version": "bfb8317",
+        "n": 135,
+        "ls": 938.8,
+        "peak": 81.9,
+        "goat_pct": 46.7
+      },
+      {
+        "app_version": "88aac0b",
+        "n": 111,
+        "ls": 710.8,
+        "peak": 79.1,
+        "goat_pct": 31.5
+      },
+      {
+        "app_version": "5a8b9de",
+        "n": 100,
+        "ls": 730,
+        "peak": 78.7,
+        "goat_pct": 36
+      },
+      {
+        "app_version": "fdc67c2",
+        "n": 98,
+        "ls": 569.3,
+        "peak": 75.6,
+        "goat_pct": 16.3
+      },
+      {
+        "app_version": "982e0d1",
+        "n": 91,
+        "ls": 608.6,
+        "peak": 76.2,
+        "goat_pct": 27.5
+      },
+      {
+        "app_version": "29484f9",
+        "n": 85,
+        "ls": 702.4,
+        "peak": 78.7,
+        "goat_pct": 30.6
+      },
+      {
+        "app_version": "e46a291",
+        "n": 80,
+        "ls": 660.2,
+        "peak": 78,
+        "goat_pct": 26.3
+      },
+      {
+        "app_version": "8567989",
+        "n": 77,
+        "ls": 802.2,
+        "peak": 80.8,
+        "goat_pct": 37.7
+      },
+      {
+        "app_version": "653a396",
+        "n": 75,
+        "ls": 730.7,
+        "peak": 78.7,
+        "goat_pct": 32
+      },
+      {
+        "app_version": "341a742",
+        "n": 52,
+        "ls": 607.5,
+        "peak": 77.1,
+        "goat_pct": 15.4
+      },
+      {
+        "app_version": "dbd79e1",
+        "n": 49,
+        "ls": 669.9,
+        "peak": 78.7,
+        "goat_pct": 28.6
+      },
+      {
+        "app_version": "648f9ff",
+        "n": 44,
+        "ls": 534.5,
+        "peak": 75.5,
+        "goat_pct": 9.1
+      },
+      {
+        "app_version": "4b37b04",
+        "n": 42,
+        "ls": 693.2,
+        "peak": 78.7,
+        "goat_pct": 31
+      }
+    ]
+  ],
+  "growth": [
+    [
+      {
+        "band": "1600+",
+        "n": 84,
+        "ls": 1977,
+        "peak_points": 181.7,
+        "award_points": 739.1,
+        "trophy_points": 236.1,
+        "ballon_win_points": 185,
+        "national_points": 92.8,
+        "apps_points": 45.9,
+        "age": 40.6,
+        "ballon": 3.08
+      },
+      {
+        "band": "840-1599",
+        "n": 550,
+        "ls": 1119.7,
+        "peak_points": 172.3,
+        "award_points": 338.8,
+        "trophy_points": 162.5,
+        "ballon_win_points": 11.2,
+        "national_points": 84.1,
+        "apps_points": 41.5,
+        "age": 40.2,
+        "ballon": 0.19
+      },
+      {
+        "band": "<840",
+        "n": 1870,
+        "ls": 464.3,
+        "peak_points": 148.6,
+        "award_points": 80.9,
+        "trophy_points": 42.5,
+        "ballon_win_points": 0,
+        "national_points": 24.1,
+        "apps_points": 28.2,
+        "age": 37.1,
+        "ballon": 0
+      }
+    ],
+    [
+      {
+        "key": "ms",
+        "type": "integer"
+      },
+      {
+        "key": "clicks",
+        "type": "integer"
+      },
+      {
+        "key": "keys",
+        "type": "integer"
+      },
+      {
+        "key": "touches",
+        "type": "integer"
+      },
+      {
+        "key": "moves",
+        "type": "integer"
+      },
+      {
+        "key": "synthetic",
+        "type": "integer"
+      },
+      {
+        "key": "hiddenMs",
+        "type": "integer"
+      },
+      {
+        "key": "webdriver",
+        "type": "false"
+      },
+      {
+        "key": "headless",
+        "type": "false"
+      }
+    ],
+    [
+      {
+        "earned": "debut",
+        "n": 2456
+      },
+      {
+        "earned": "fame50",
+        "n": 2449
+      },
+      {
+        "earned": "fame100",
+        "n": 2394
+      },
+      {
+        "earned": "europe",
+        "n": 2290
+      },
+      {
+        "earned": "big5",
+        "n": 2186
+      },
+      {
+        "earned": "journeyman",
+        "n": 2134
+      },
+      {
+        "earned": "champion",
+        "n": 2030
+      },
+      {
+        "earned": "mil",
+        "n": 1933
+      },
+      {
+        "earned": "goals100",
+        "n": 1811
+      },
+      {
+        "earned": "fame300",
+        "n": 1798
+      },
+      {
+        "earned": "cupwinner",
+        "n": 1777
+      },
+      {
+        "earned": "ntdebut",
+        "n": 1746
+      },
+      {
+        "earned": "apps500",
+        "n": 1729
+      },
+      {
+        "earned": "topscorer",
+        "n": 1642
+      },
+      {
+        "earned": "veteran",
+        "n": 1259
+      },
+      {
+        "earned": "captain",
+        "n": 1184
+      },
+      {
+        "earned": "mvp",
+        "n": 1154
+      },
+      {
+        "earned": "awards10",
+        "n": 1082
+      },
+      {
+        "earned": "topscorer3",
+        "n": 1081
+      },
+      {
+        "earned": "ovr80",
+        "n": 1068
+      },
+      {
+        "earned": "wcgoal",
+        "n": 1059
+      },
+      {
+        "earned": "century",
+        "n": 1024
+      }
+    ],
+    [
+      {
+        "retired": 3260,
+        "snapshots": 3259,
+        "style": 469,
+        "potential": 0
+      }
+    ],
+    [
+      {
+        "trait": "early",
+        "n": 503,
+        "age80": 22.2,
+        "reach80": 238,
+        "age85": 24.3,
+        "reach85": 117,
+        "age90": 26.3,
+        "reach90": 20,
+        "seasons": 19
+      },
+      {
+        "trait": "iron",
+        "n": 443,
+        "age80": 23.2,
+        "reach80": 180,
+        "age85": 24.9,
+        "reach85": 95,
+        "age90": 26.8,
+        "reach90": 20,
+        "seasons": 19.5
+      },
+      {
+        "trait": "late",
+        "n": 1008,
+        "age80": 24.6,
+        "reach80": 477,
+        "age85": 25.9,
+        "reach85": 252,
+        "age90": 27.8,
+        "reach90": 84,
+        "seasons": 20.1
+      },
+      {
+        "trait": "star",
+        "n": 550,
+        "age80": 23.1,
+        "reach80": 198,
+        "age85": 24.6,
+        "reach85": 90,
+        "age90": 26.7,
+        "reach90": 21,
+        "seasons": 19.1
+      }
+    ],
+    [
+      {
+        "trait": "early",
+        "age": 18,
+        "n": 503,
+        "ovr": 63
+      },
+      {
+        "trait": "early",
+        "age": 21,
+        "n": 503,
+        "ovr": 73.3
+      },
+      {
+        "trait": "early",
+        "age": 24,
+        "n": 500,
+        "ovr": 76.3
+      },
+      {
+        "trait": "early",
+        "age": 27,
+        "n": 496,
+        "ovr": 77.3
+      },
+      {
+        "trait": "early",
+        "age": 30,
+        "n": 475,
+        "ovr": 77.6
+      },
+      {
+        "trait": "early",
+        "age": 33,
+        "n": 402,
+        "ovr": 76.9
+      },
+      {
+        "trait": "early",
+        "age": 36,
+        "n": 319,
+        "ovr": 73.7
+      },
+      {
+        "trait": "early",
+        "age": 39,
+        "n": 186,
+        "ovr": 69.3
+      },
+      {
+        "trait": "iron",
+        "age": 18,
+        "n": 443,
+        "ovr": 61.4
+      },
+      {
+        "trait": "iron",
+        "age": 21,
+        "n": 443,
+        "ovr": 71.9
+      },
+      {
+        "trait": "iron",
+        "age": 24,
+        "n": 438,
+        "ovr": 75.4
+      },
+      {
+        "trait": "iron",
+        "age": 27,
+        "n": 440,
+        "ovr": 76.5
+      },
+      {
+        "trait": "iron",
+        "age": 30,
+        "n": 427,
+        "ovr": 77.1
+      },
+      {
+        "trait": "iron",
+        "age": 33,
+        "n": 373,
+        "ovr": 76.8
+      },
+      {
+        "trait": "iron",
+        "age": 36,
+        "n": 307,
+        "ovr": 74.3
+      },
+      {
+        "trait": "iron",
+        "age": 39,
+        "n": 196,
+        "ovr": 69.8
+      },
+      {
+        "trait": "late",
+        "age": 18,
+        "n": 1008,
+        "ovr": 59.2
+      },
+      {
+        "trait": "late",
+        "age": 21,
+        "n": 1008,
+        "ovr": 68.6
+      },
+      {
+        "trait": "late",
+        "age": 24,
+        "n": 990,
+        "ovr": 74.6
+      },
+      {
+        "trait": "late",
+        "age": 27,
+        "n": 996,
+        "ovr": 76.6
+      },
+      {
+        "trait": "late",
+        "age": 30,
+        "n": 976,
+        "ovr": 77.4
+      },
+      {
+        "trait": "late",
+        "age": 33,
+        "n": 873,
+        "ovr": 78.6
+      },
+      {
+        "trait": "late",
+        "age": 36,
+        "n": 777,
+        "ovr": 77.5
+      },
+      {
+        "trait": "late",
+        "age": 39,
+        "n": 561,
+        "ovr": 75.2
+      },
+      {
+        "trait": "star",
+        "age": 18,
+        "n": 550,
+        "ovr": 60.8
+      },
+      {
+        "trait": "star",
+        "age": 21,
+        "n": 550,
+        "ovr": 70.4
+      },
+      {
+        "trait": "star",
+        "age": 24,
+        "n": 539,
+        "ovr": 73.9
+      },
+      {
+        "trait": "star",
+        "age": 27,
+        "n": 537,
+        "ovr": 75.1
+      },
+      {
+        "trait": "star",
+        "age": 30,
+        "n": 530,
+        "ovr": 75.3
+      },
+      {
+        "trait": "star",
+        "age": 33,
+        "n": 467,
+        "ovr": 75.2
+      },
+      {
+        "trait": "star",
+        "age": 36,
+        "n": 376,
+        "ovr": 72.6
+      },
+      {
+        "trait": "star",
+        "age": 39,
+        "n": 201,
+        "ovr": 69
+      }
+    ]
+  ],
+  "checks": [
+    [
+      {
+        "earned": "ballon",
+        "n": 165,
+        "displayed": 4
+      },
+      {
+        "earned": "ballon3",
+        "n": 43,
+        "displayed": 0
+      },
+      {
+        "earned": "lg_club",
+        "n": 469,
+        "displayed": 341
+      },
+      {
+        "earned": "lg_goat",
+        "n": 619,
+        "displayed": 594
+      },
+      {
+        "earned": "lg_plain",
+        "n": 355,
+        "displayed": 3
+      },
+      {
+        "earned": "lg_pro",
+        "n": 565,
+        "displayed": 10
+      },
+      {
+        "earned": "lg_world",
+        "n": 448,
+        "displayed": 433
+      },
+      {
+        "earned": "oneclub",
+        "n": 18,
+        "displayed": 14
+      },
+      {
+        "earned": "ovr90",
+        "n": 144,
+        "displayed": 1
+      },
+      {
+        "earned": "st_rehab_strong",
+        "n": 91,
+        "displayed": 0
+      },
+      {
+        "earned": "treble",
+        "n": 59,
+        "displayed": 3
+      },
+      {
+        "earned": "worldchamp",
+        "n": 29,
+        "displayed": 2
+      }
+    ],
+    [
+      {
+        "attempt": "1",
+        "n": 566,
+        "ls": 537.6,
+        "goat_pct": 14.5
+      },
+      {
+        "attempt": "2-3",
+        "n": 685,
+        "ls": 600.1,
+        "goat_pct": 19.7
+      },
+      {
+        "attempt": "4-5",
+        "n": 397,
+        "ls": 679.1,
+        "goat_pct": 27.7
+      },
+      {
+        "attempt": "6+",
+        "n": 856,
+        "ls": 777.2,
+        "goat_pct": 35.9
+      }
+    ],
+    [
+      {
+        "pos": "DF",
+        "n": 185,
+        "ls": 683.9,
+        "above1600": 0,
+        "above2000": 0,
+        "ballon": 0.005,
+        "awards": 15.4
+      },
+      {
+        "pos": "FW",
+        "n": 1762,
+        "ls": 658.3,
+        "above1600": 76,
+        "above2000": 29,
+        "ballon": 0.196,
+        "awards": 13.6
+      },
+      {
+        "pos": "GK",
+        "n": 171,
+        "ls": 707,
+        "above1600": 2,
+        "above2000": 0,
+        "ballon": 0,
+        "awards": 18.1
+      },
+      {
+        "pos": "MF",
+        "n": 386,
+        "ls": 629,
+        "above1600": 6,
+        "above2000": 0,
+        "ballon": 0.039,
+        "awards": 8.7
+      }
+    ],
+    [
+      {
+        "status": "retired",
+        "n": 756,
+        "ls": 225
+      }
+    ],
+    [],
+    [
+      {
+        "group_name": "automation_signal_not_proof",
+        "n": 7,
+        "ls": 1732,
+        "goat_pct": 85.7,
+        "above1600": 5
+      },
+      {
+        "group_name": "recorded_no_signal",
+        "n": 469,
+        "ls": 787.7,
+        "goat_pct": 36.9,
+        "above1600": 30
+      },
+      {
+        "group_name": "unobserved",
+        "n": 2028,
+        "ls": 625.6,
+        "goat_pct": 22.4,
+        "above1600": 49
+      }
+    ]
+  ],
+  "robustness": [
+    [
+      {
+        "v": 1200,
+        "profiles": 566,
+        "owners": 133,
+        "owner_pct": 23.5
+      },
+      {
+        "v": 1400,
+        "profiles": 566,
+        "owners": 77,
+        "owner_pct": 13.6
+      },
+      {
+        "v": 1500,
+        "profiles": 566,
+        "owners": 62,
+        "owner_pct": 10.95
+      },
+      {
+        "v": 1600,
+        "profiles": 566,
+        "owners": 51,
+        "owner_pct": 9.01
+      },
+      {
+        "v": 1800,
+        "profiles": 566,
+        "owners": 34,
+        "owner_pct": 6.01
+      },
+      {
+        "v": 2000,
+        "profiles": 566,
+        "owners": 20,
+        "owner_pct": 3.53
+      }
+    ],
+    [
+      {
+        "profiles": 112,
+        "late_minus_early": 31.9,
+        "late_better_pct": 53.6
+      }
+    ],
+    [
+      {
+        "pos": "DF",
+        "n": 185,
+        "p90": 1177,
+        "p95": 1335,
+        "p99": 1501,
+        "max_ls": 1503
+      },
+      {
+        "pos": "FW",
+        "n": 1762,
+        "p90": 1241,
+        "p95": 1503,
+        "p99": 2203,
+        "max_ls": 3315
+      },
+      {
+        "pos": "GK",
+        "n": 171,
+        "p90": 1235,
+        "p95": 1359,
+        "p99": 1615,
+        "max_ls": 1737
+      },
+      {
+        "pos": "MF",
+        "n": 386,
+        "p90": 1141,
+        "p95": 1268,
+        "p99": 1728,
+        "max_ls": 1924
+      }
+    ],
+    [
+      {
+        "award": "대한축구협회 올해의 선수",
+        "awards": 4680,
+        "top_awards": 749
+      },
+      {
+        "award": "FIFPRO 월드 11",
+        "awards": 1102,
+        "top_awards": 546
+      },
+      {
+        "award": "프리미어리그 올해의 팀",
+        "awards": 1869,
+        "top_awards": 479
+      },
+      {
+        "award": "AFC 올해의 국제선수",
+        "awards": 2367,
+        "top_awards": 444
+      },
+      {
+        "award": "프리미어리그 골든부트",
+        "awards": 1191,
+        "top_awards": 401
+      },
+      {
+        "award": "게르트 뮐러 트로피",
+        "awards": 661,
+        "top_awards": 309
+      },
+      {
+        "award": "발롱도르",
+        "awards": 362,
+        "top_awards": 259
+      },
+      {
+        "award": "FIFA 더 베스트 남자 선수",
+        "awards": 300,
+        "top_awards": 218
+      },
+      {
+        "award": "유러피언 골든슈",
+        "awards": 440,
+        "top_awards": 216
+      },
+      {
+        "award": "피치치 트로피",
+        "awards": 506,
+        "top_awards": 165
+      },
+      {
+        "award": "PFA 올해의 선수",
+        "awards": 385,
+        "top_awards": 157
+      },
+      {
+        "award": "라리가 올해의 팀",
+        "awards": 765,
+        "top_awards": 154
+      },
+      {
+        "award": "K리그1 베스트 11",
+        "awards": 1711,
+        "top_awards": 89
+      },
+      {
+        "award": "K리그1 득점왕",
+        "awards": 1428,
+        "top_awards": 84
+      },
+      {
+        "award": "라리가 올해의 선수",
+        "awards": 199,
+        "top_awards": 69
+      }
+    ],
+    [
+      {
+        "n": 2504,
+        "age40": 1144,
+        "age41": 975,
+        "goat_age40_pct": 80.1
+      }
+    ]
+  ]
+}
