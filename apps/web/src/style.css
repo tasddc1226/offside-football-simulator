@@ -540,13 +540,38 @@ button.what:active {
 .tile b {
   font-size: 0.9375rem;
 }
+/* 순위 | 이름 줄 + 값 / 기록 요약 줄(값 밑까지 넓게). T-10-105 */
 .hof-row {
   display: grid;
-  grid-template-columns: 40px 1fr auto;
-  gap: 10px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'rank main value'
+    'rank stats stats';
+  column-gap: 10px;
+  row-gap: 3px;
   align-items: center;
   padding-block: 10px;
   border-top: 1px solid var(--line);
+}
+.hof-rank {
+  grid-area: rank;
+}
+.hof-main {
+  grid-area: main;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 5px;
+  min-width: 0;
+}
+.hof-row .hof-value {
+  grid-area: value;
+}
+.hof-stats {
+  grid-area: stats;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .hof-row:first-child {
   border-top: 0;
@@ -662,6 +687,17 @@ button.hof-row {
   font-weight: 700;
   white-space: nowrap;
 }
+.hof-value-text {
+  font-size: 1.0625rem;
+}
+.hof-value-text {
+  text-align: right;
+  line-height: 1.15;
+}
+.hof-value .hof-value-sub {
+  display: block;
+  margin-left: 0;
+}
 .hof-value small {
   font-size: 0.75rem;
   font-weight: 600;
@@ -689,6 +725,44 @@ button.hof-row {
   background: var(--ink);
   border-color: var(--ink);
   color: var(--surface);
+}
+.hof-sort .hof-new {
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.5625rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+/* 검색은 제목 옆 돋보기를 눌러야 열린다(T-10-105). */
+.hof-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.hof-search-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  cursor: pointer;
+}
+.hof-search-btn[aria-expanded='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+.hof-search {
+  margin-bottom: 8px;
 }
 .hof-pager {
   display: flex;
@@ -722,6 +796,7 @@ button.hof-row {
   color: var(--muted);
 }
 input[type='text'],
+input[type='search'],
 input[type='number'],
 select,
 textarea {
@@ -1726,6 +1801,17 @@ th.n {
   color: var(--accent-text);
   font-weight: 600;
 }
+/* 커리어 표 소속 칸 아래 줄(리그 · 몸값 · 수상). 수상이 길어도 표가 옆으로 늘지 않게 줄바꿈한다(T-10-100). */
+.season-sub {
+  font-size: 0.6875rem;
+  white-space: normal;
+  min-width: 11em;
+}
+.season-value {
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
 .totals {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -2533,8 +2619,12 @@ th.n {
   margin-top: 12px;
   font-size: 0.875rem;
 }
-.settings-volume.off {
+/* 배경음악이 꺼지면 슬라이더만 흐리게 — 글자까지 흐리면 명도 대비가 모자란다(T-10-102 axe). */
+.settings-volume.off input {
   opacity: 0.55;
+}
+.settings-volume.off label {
+  color: var(--muted);
 }
 .settings-volume input {
   width: 100%;
@@ -3405,6 +3495,65 @@ body:has(nav.tabs) .toast {
 .hof-seasons {
   margin-top: 4px;
 }
+/* T-10-103 개막 전 시즌 버튼에 'Coming soon' — 버튼 높이는 그대로, 오른쪽 위 테두리에 걸친다. */
+.hof-seasons .opt {
+  position: relative;
+}
+.soon-tag {
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  animation: soon-glow 2.4s ease-in-out infinite;
+}
+@keyframes soon-glow {
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .soon-tag {
+    animation: none;
+  }
+}
+/* T-10-105 모바일 기록실: 카드·줄 여백을 줄이고, 순위 유형 칩은 한 줄 가로 스크롤(끝을 흐려 더 있음을 알린다). */
+@media (max-width: 599px) {
+  .card[data-hof='full'] {
+    padding: 16px 12px;
+  }
+  .card[data-hof] .hof-row {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    column-gap: 8px;
+    padding-inline: 2px;
+  }
+  .hof-seasons .opt {
+    min-height: 36px;
+    padding-block: 6px;
+  }
+  .hof-sorts {
+    position: relative;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: -12px;
+    padding: 2px 12px;
+    scrollbar-width: none;
+    mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 28px), transparent);
+  }
+  .hof-sorts::-webkit-scrollbar {
+    display: none;
+  }
+  .hof-sort {
+    flex: none;
+  }
+}
 .hof-season-note b {
   color: var(--ink);
 }
@@ -4012,6 +4161,28 @@ button.title-item:hover {
   text-transform: uppercase;
   color: var(--film-muted);
 }
+/* T-10-100 은퇴 가치 */
+.film-worth {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 10px;
+}
+.film-worth span {
+  font-size: 0.75rem;
+  color: var(--film-muted);
+}
+.film-worth b {
+  font-family: var(--display);
+  font-size: 1.75rem;
+  line-height: 1.1;
+  color: var(--film-ink);
+}
+.film-worth small {
+  font-size: 0.75rem;
+  color: var(--film-muted);
+}
 .film-pills {
   display: flex;
   flex-wrap: wrap;
@@ -4063,6 +4234,7 @@ button.title-item:hover {
   margin: 0;
 }
 .film-head,
+.film-value,
 .film-national,
 .film-roll,
 .film-finale {
@@ -4074,6 +4246,28 @@ button.title-item:hover {
 }
 .film-head {
   margin-bottom: -20px;
+}
+/* 크레딧 몸값 흐름(T-10-106): 필름 색으로 칠하고, 장면이 올라온 뒤에 선을 긋는다. */
+.film-value .value-chart {
+  --vc-line: var(--film-gold);
+  --vc-dot: var(--film-ink);
+  --vc-bg: var(--film-bg);
+  --muted: var(--film-muted);
+  --line: var(--film-line);
+  margin-top: 16px;
+  text-align: left;
+}
+.film-value .value-plot {
+  height: 120px;
+}
+.film-value .value-plot svg {
+  transition-delay: 0.35s;
+}
+.film-value .value-chart.go .value-dot::after {
+  animation-delay: calc(0.35s + var(--x) * 1.1s);
+}
+.film-value .value-chart.go .value-peak-tag {
+  animation-delay: 1.65s;
 }
 /* 챕터 레일: 왼쪽 세로선 위에 클럽마다 금색 점 하나. */
 .film-rail {
@@ -4753,4 +4947,130 @@ button.what {
   height: auto;
   border-radius: 12px;
   display: block;
+}
+
+/* 시즌별 몸값 꺾은선 그래프(T-10-106): 화면에 들어오면(.go) 선이 왼쪽부터 드러나고 점이 차례로 올라온다. */
+.value-chart {
+  --vc-line: var(--accent);
+  --vc-dot: var(--ink);
+  --vc-bg: var(--surface);
+}
+.value-chart-head {
+  min-height: 1.5em;
+  margin-bottom: 4px;
+}
+.value-plot {
+  position: relative;
+  height: 96px;
+  margin-inline: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.value-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transition: clip-path 1.2s cubic-bezier(0.45, 0, 0.25, 1);
+}
+.value-chart:not(.go) .value-plot svg {
+  clip-path: inset(-10px 100% -10px -10px);
+}
+.value-chart.go .value-plot svg {
+  clip-path: inset(-10px -10px -10px -10px);
+}
+.value-line {
+  fill: none;
+  stroke: var(--vc-line);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.value-area {
+  fill: color-mix(in srgb, var(--vc-line) 16%, transparent);
+}
+/* 시즌 한 칸 = 세로 한 줄 버튼. 점은 ::after, 고른 칸은 ::before 세로 안내선. */
+.value-dot {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--x) * 100%);
+  width: calc(100% / var(--n));
+  min-width: 12px;
+  transform: translateX(-50%);
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.value-dot::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: var(--y);
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--vc-dot);
+  box-shadow: 0 0 0 2px var(--vc-bg);
+}
+.value-dot.peak::after {
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  background: var(--vc-line);
+}
+.value-dot.on::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: var(--y);
+  bottom: 0;
+  border-left: 1px dashed var(--vc-dot);
+}
+.value-dot.on::after {
+  outline: 2px solid var(--vc-dot);
+  outline-offset: 2px;
+}
+.value-chart:not(.go) .value-dot::after,
+.value-chart:not(.go) .value-peak-tag {
+  transform: scale(0);
+}
+.value-chart.go .value-dot::after {
+  animation: credit-pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation-delay: calc(var(--x) * 1.1s);
+}
+.value-peak-tag {
+  position: absolute;
+  left: calc(var(--x) * 100%);
+  top: var(--y);
+  translate: calc(var(--x) * -100%) calc(-100% - 10px);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--vc-line);
+  color: var(--accent-ink);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.value-chart.go .value-peak-tag {
+  animation: credit-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation-delay: 1.3s;
+}
+.value-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .value-plot svg {
+    transition: none;
+  }
+  .value-chart.go .value-dot::after,
+  .value-chart.go .value-peak-tag {
+    animation: none;
+  }
 }

@@ -9,12 +9,14 @@
   import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '../game/retirement-report.js';
   import { POS_LABEL } from '../game/pos-label.js';
   import { potAchText } from '../game/stats.js';
-  import { totals } from './format.js';
+  import { fmtValue, seasonLabelOf, totals } from './format.js';
+  import { peakValue, retireValue } from '@offside/contracts/market-value';
   import type { LegendView } from './state.svelte.js';
   import CareerTab from './tabs/CareerTab.svelte';
   import { titleById } from '../game/titles.js';
   import { legendTitleOf } from './titles/legendTitle.svelte.js';
   import CountUp from './CountUp.svelte';
+  import ValueChart from './ValueChart.svelte';
   import { motionOK } from './motion.js';
   import ClubMark from './ClubMark.svelte';
   import { rnOf } from './retiredNumber.svelte.js';
@@ -33,6 +35,9 @@
   const awards = $derived(d ? honoursRoll(d.awards).slice(0, 8) : []);
   const span = $derived(d?.career.length ? `${d.career[0]!.year} — ${d.career.at(-1)!.year}` : null);
   const breakdown = $derived(d ? legendScoreBreakdown(d) : null);
+  // T-10-100 은퇴 가치: 가장 비쌌던 세 시즌 몸값 평균에 레전드 점수만큼 웃돈.
+  const worth = $derived(d ? retireValue(d.career, v.score) : 0);
+  const peakV = $derived(d ? peakValue(d.career) : null);
   const maxAbs = $derived(breakdown ? Math.max(1, ...breakdown.items.map((i) => Math.abs(i.value))) : 1);
 
   /** 2036 · 37 · 39 — 첫 해만 네 자리. */
@@ -109,6 +114,12 @@
     <div class="film-score">
       <b><CountUp value={v.score} animate={playing} ms={1800} /></b><span>Legend Score</span>
     </div>
+    {#if worth > 0}
+      <div class="film-worth" class:credit-late={playing} data-legend-value>
+        <span>은퇴 가치</span><b>{fmtValue(worth)}</b>
+        {#if peakV}<small>최고 몸값 {fmtValue(peakV.value)} · {seasonLabelOf(peakV.row)} {peakV.row.club}</small>{/if}
+      </div>
+    {/if}
     <div class="film-pills" class:credit-late={playing}>
       <span class="pill pill-gold">{legendTitle(v.score)}</span>
       {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{main.name}’</span>{/if}
@@ -157,6 +168,15 @@
         </li>
       {/each}
     </ol>
+  {/if}
+
+  <!-- T-10-106 여정 다음에 몸값 흐름: 클럽을 옮겨 다닌 이야기를 숫자 하나의 곡선으로 되짚는다. -->
+  {#if d && peakV}
+    <section class="film-value" data-credit="value" use:reveal>
+      <div class="eyebrow film-kicker">Market Value</div>
+      <h2>몸값 흐름</h2>
+      <ValueChart rows={d.career} />
+    </section>
   {/if}
 
   {#if caps > 0 || national.length}
@@ -231,7 +251,7 @@
         </div>
       </div>
     {/if}
-    {#if more}<CareerTab s={d} />{/if}
+    {#if more}<CareerTab s={d} chart={false} />{/if}
   </details>
 {/if}
 {#if end}

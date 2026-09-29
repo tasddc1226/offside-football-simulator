@@ -246,9 +246,9 @@ test('구단주 내 선수: 계정에 연결되지 않았으면 이 기기 기�
   await expect(page.locator('[data-hof-tab]')).toHaveText(['명예의 전당', '영구결번', '팀 랭킹']);
 });
 
-// 홈은 TOP 3만, '전체 보기'는 100명씩 페이지. 상세에서 돌아오면 보던 페이지로 돌아온다.
-test('명예의 전당: 홈 TOP 3 → 전체 보기 100명씩 페이지', async ({ page }) => {
-  const TOTAL = 150;
+// 홈은 TOP 3만, '전체 보기'는 10명씩 페이지(T-10-101). 상세에서 돌아오면 보던 페이지로 돌아온다.
+test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async ({ page }) => {
+  const TOTAL = 15;
   const nth = (k: number) => ({
     ...entry,
     id: `00000000-0000-4000-8000-${String(k).padStart(12, '0')}`,
@@ -276,20 +276,20 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 100명씩 페이지', async 
   await home.locator('[data-act="hof-all"]').click();
   const full = page.locator('[data-hof="full"]');
   await expect(full.locator('h1')).toHaveText('명예의 전당');
-  await expect(full.locator('.hof-row')).toHaveCount(100);
+  await expect(full.locator('.hof-row')).toHaveCount(10);
   await expect(full.locator('.hof-pager')).toContainText('1 / 2');
   await expect(full.locator('[data-hof-page="prev"]')).toBeDisabled();
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
   await full.locator('[data-hof-page="next"]').click();
-  await expect(full.locator('.hof-row')).toHaveCount(50);
-  await expect(full.locator('.hof-row').first().locator('.hof-rank')).toHaveText('101');
-  expect(asked.at(-1)).toBe('?limit=100&page=2');
+  await expect(full.locator('.hof-row')).toHaveCount(5);
+  await expect(full.locator('.hof-row').first().locator('.hof-rank')).toHaveText('11');
+  expect(asked.at(-1)).toBe('?limit=10&page=2');
 
   await full.locator('.hof-row').first().click();
   await page.locator('[data-act="hof-back"]').click();
   await expect(full.locator('.hof-pager')).toContainText('2 / 2');
-  await expect(full.locator('.hof-row').first().locator('.hof-rank')).toHaveText('101');
+  await expect(full.locator('.hof-row').first().locator('.hof-rank')).toHaveText('11');
 
   await page.locator('[data-act="home"]').click();
   await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(3);
@@ -340,13 +340,16 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
   await page.route(HOF_LIST, (r) => {
     const u = new URL(r.request().url());
     asked.push(u.search);
+    const sort = u.searchParams.get('sort');
     const entries =
-      u.searchParams.get('sort') === 'goals'
+      sort === 'goals'
         ? [
             { ...entry, goals: 401 },
             { ...entry, id: '00000000-0000-4000-8000-000000000002', goals: 99 },
           ]
-        : [entry];
+        : sort === 'value'
+          ? [{ ...entry, value: 11_153_000 }]
+          : [entry];
     return r.fulfill(ok({ entries, total: entries.length }));
   });
   await page.goto('/');
@@ -358,12 +361,111 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
   await full.locator('[data-hof-sort="goals"]').click();
   await expect(full.locator('.hof-source')).toContainText('득점 기록이 있는 선수 2명 · 득점 순');
   await expect(full.locator('.hof-row').first().locator('.hof-value')).toHaveText('401골');
-  expect(asked.at(-1)).toBe('?limit=100&sort=goals');
+  expect(asked.at(-1)).toBe('?limit=10&sort=goals');
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
   await full.locator('[data-hof-sort="ballon"]').click();
   await expect(full.locator('[data-hof-sort="ballon"]')).toHaveAttribute('aria-pressed', 'true');
-  await expect.poll(() => asked.at(-1)).toBe('?limit=100&sort=ballon');
+  await expect.poll(() => asked.at(-1)).toBe('?limit=10&sort=ballon');
+
+  // T-10-100 은퇴 가치 순: 오른쪽에 큰 두 단위(억·천만)로 적는다.
+  await full.locator('[data-hof-sort="value"]').click();
+  await expect.poll(() => asked.at(-1)).toBe('?limit=10&sort=value');
+  await expect(full.locator('.hof-row').first().locator('.hof-value')).toHaveText('1,115억 3천만');
+  await expect(full.locator('.hof-source')).toContainText('은퇴 가치 순');
+});
+
+// T-10-101 이름 검색: 타자를 멈추면 서버에 q로 묻고, 찾은 선수는 검색 전 순위(rank)로 보여 준다.
+test('명예의 전당 이름 검색', async ({ page }) => {
+  const asked: string[] = [];
+  await page.route(HOF_LIST, (r) => {
+    const u = new URL(r.request().url());
+    asked.push(u.search);
+    const q = u.searchParams.get('q');
+    const entries =
+      q === '오프'
+        ? [
+            { ...entry, name: '김오프', rank: 7 },
+            { ...entry, id: '00000000-0000-4000-8000-000000000002', name: '오프사이드', rank: 42 },
+          ]
+        : q
+          ? []
+          : [entry];
+    return r.fulfill(ok({ entries, total: entries.length }));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="hof-all"]').click();
+  const full = page.locator('[data-hof="full"]');
+  // T-10-105 검색 칸은 돋보기를 눌러야 열린다(열리면 바로 입력).
+  const search = full.locator('[data-hof-search]');
+  await expect(search).toHaveCount(0);
+  await full.locator('[data-act="hof-search"]').click();
+  await expect(search).toBeFocused();
+  await search.pressSequentially('오프');
+  await expect.poll(() => asked.at(-1)).toBe(`?limit=10&q=${encodeURIComponent('오프')}`);
+  expect(asked.filter((a) => a.includes('q='))).toHaveLength(1); // 글자마다 묻지 않는다.
+  await expect(full.locator('.hof-row .hof-rank')).toHaveText(['7', '42']);
+  await expect(full.locator('.hof-source')).toContainText("'오프' 검색 은퇴 선수 2명");
+  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+
+  // 유형을 바꿔도 검색어는 그대로, 없는 이름은 안내.
+  await full.locator('[data-hof-sort="goals"]').click();
+  await expect
+    .poll(() => asked.at(-1))
+    .toBe(`?limit=10&sort=goals&q=${encodeURIComponent('오프')}`);
+  await search.fill('없는사람');
+  await expect(full.locator('.empty')).toHaveText("'없는사람'이 들어간 이름의 선수가 없습니다.");
+  await search.fill('');
+  await expect.poll(() => asked.at(-1)).toBe('?limit=10&sort=goals');
+  // 검색어를 둔 채 닫으면 검색도 풀린다.
+  await search.fill('오프사');
+  await expect(full.locator('.empty')).toContainText("'오프사'");
+  await full.locator('[data-act="hof-search"]').click();
+  await expect(search).toHaveCount(0);
+  await expect(full.locator('.hof-source')).not.toContainText('검색');
+});
+
+// T-10-101 새로 생긴 순위 유형(은퇴 가치)에 NEW — 정해 둔 날까지만.
+test('명예의 전당: 은퇴 가치 칩에 NEW 표시(기한까지만)', async ({ page }) => {
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry], total: 1 })));
+  await page.clock.setFixedTime(new Date('2026-10-01T00:00:00+09:00'));
+  await page.goto('/');
+  await page.locator('[data-act="hof-all"]').click();
+  const chip = page.locator('[data-hof="full"] [data-hof-sort="value"]');
+  await expect(chip.locator('.hof-new')).toHaveText('NEW');
+  await expect(page.locator('[data-hof="full"] .hof-new')).toHaveCount(1);
+
+  await page.clock.setFixedTime(new Date('2026-10-14T00:00:00+09:00'));
+  await page.reload();
+  await page.locator('[data-act="hof-all"]').click();
+  await expect(chip).toBeVisible();
+  await expect(chip.locator('.hof-new')).toHaveCount(0);
+});
+
+// T-10-103 개막 전 시즌 버튼엔 'Coming soon' — 개막하면 사라진다. 눌러 보면 개막 안내.
+test('명예의 전당: 개막 전 시즌에 Coming soon 표시', async ({ page }) => {
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry], total: 1 })));
+  await page.clock.setFixedTime(new Date('2026-10-01T00:00:00+09:00'));
+  await page.goto('/');
+  await page.locator('[data-act="hof-all"]').click();
+  const full = page.locator('[data-hof="full"]');
+  const s1 = full.locator('[data-hof-season="1"]');
+  await expect(s1.locator('[data-soon]')).toHaveText('Coming soon');
+  await expect(full.locator('[data-hof-season="all"] [data-soon]')).toHaveCount(0);
+  const [tag, btn] = await Promise.all([
+    s1.locator('[data-soon]').boundingBox(),
+    full.locator('[data-hof-season="all"]').boundingBox(),
+  ]);
+  expect(tag!.y).toBeLessThan(btn!.y); // 버튼 높이는 그대로, 위 테두리에 걸친다.
+  await s1.click();
+  await expect(full.locator('[data-hof-upcoming]')).toContainText('시즌 1은');
+  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+
+  await page.clock.setFixedTime(new Date('2026-10-06T00:00:00+09:00'));
+  await page.reload();
+  await page.locator('[data-act="hof-all"]').click();
+  await expect(full.locator('[data-hof-season="1"]')).toBeVisible();
+  await expect(full.locator('[data-soon]')).toHaveCount(0);
 });
 
 // T-10-015: 화면을 오가도 같은 공개 조회는 다시 보내지 않는다(메모 60초).
@@ -387,7 +489,7 @@ test('홈 ↔ 전체 보기 ↔ 상세를 오가도 같은 목록을 다시 요�
   }
   const count = (p: string) => asked.filter((a) => a === p).length;
   expect(count('/v1/hof?limit=3')).toBe(1);
-  expect(count('/v1/hof?limit=100')).toBe(1);
+  expect(count('/v1/hof?limit=10')).toBe(1);
   expect(count(`/v1/hof/${ID}`)).toBe(1);
   expect(count('/v1/boards/notice/posts')).toBe(1);
   expect(count('/v1/boards/release/posts')).toBe(1);

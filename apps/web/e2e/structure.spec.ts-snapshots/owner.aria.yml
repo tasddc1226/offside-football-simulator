@@ -4,17 +4,9 @@
     - text: Owner
     - heading "구단주" [level=1]
     - region "계정":
-        - text: 로그인하지 않았어요 구글 계정을 연결하면 은퇴한 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.
-        - link "구글로 로그인":
-            - /url: http://localhost:8787/v1/auth/google/start
-    - region "내 선수":
-        - text: My players
-        - heading "내 선수" [level=2]
-        - paragraph: 이 기기에 저장된 선수예요. 구글 계정을 연결하면 계정에 모아 볼 수 있어요.
-        - paragraph: 아직 은퇴한 선수가 없어요. 첫 커리어를 끝까지 뛰어 보세요.
-    - button "Team settings 구단 이름·엠블럼 변경":
-        - text: ''
-        - strong: 구단 이름·엠블럼 변경
+        - text: 로그인하지 않았어요 구글 계정을 연결하면 은퇴한 선수로 내 팀을 꾸려 다른 구단주와 겨루고, 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.
+    - link "구글로 로그인":
+        - /url: http://localhost:8787/v1/auth/google/start
 - navigation "메인 메뉴":
     - button "기록실"
     - button "소식"

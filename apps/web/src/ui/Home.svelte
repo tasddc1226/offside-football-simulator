@@ -3,7 +3,7 @@
   import { PHASES, LAST_PHASE, posLabel } from '../game/data.js';
   import { ovr } from '../game/attributes.js';
   import { appState } from './state.svelte.js';
-  import { goNew, goContinue, go } from './nav.js';
+  import { goNew, goContinue, go, warmGame } from './nav.js';
   import Topbar from './Topbar.svelte';
   import HallOfFame from './HallOfFame.svelte';
   import HomeNews from './HomeNews.svelte';
@@ -27,11 +27,11 @@
       <h1><span>이번 커리어는</span><b><strong>{G.name}</strong> 입니다</b></h1>
       <p>{G.club.name} · {G.age}세 · {posLabel(G)}</p>
       <p class="hero-meta num">{G.year} 시즌 {PHASES[Math.min(G.phase, LAST_PHASE + 1)]} · OVR {ovr(G)}</p>
-      <button class="btn btn-accent btn-block" data-act="continue" onclick={goContinue}>
+      <button class="btn btn-accent btn-block" data-act="continue" onclick={goContinue} onpointerenter={warmGame} onfocus={warmGame}>
         <svg class="hero-play" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m10 7.8 6 4.2-6 4.2Z" /></svg>
         {withRo(G.name)} 계속 →
       </button>
-      <button class="btn btn-block hero-new" data-act="new" onclick={goNew}>새 커리어 시작 →</button>
+      <button class="btn btn-block hero-new" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>새 커리어 시작 →</button>
     </section>
   {:else}
     <section class="hero-home">
@@ -39,7 +39,7 @@
       <div class="eyebrow">Kick-off · 0′</div>
       <h1>이번 생은 축구다<br />나만의 커리어를 시작하세요</h1>
       <p>고교 3학년의 킥오프부터 은퇴의 종료 휘슬까지. 오프사이드에서 훈련·이적·이벤트 선택으로 나만의 축구선수 커리어를 만들어 보세요.</p>
-      <button class="btn btn-accent btn-block" data-act="new" onclick={goNew}>새 커리어 킥오프 →</button>
+      <button class="btn btn-accent btn-block" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>새 커리어 킥오프 →</button>
     </section>
   {/if}
   {#if live && appState.G && appState.ownerConflict}

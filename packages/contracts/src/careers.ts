@@ -391,6 +391,10 @@ export const PublicHofEntrySchema = z.strictObject({
   title: z.string().nullable(),
   /** T-10-076 이 선수가 가진 영구결번(없으면 null, 배포 전 엣지 캐시 응답엔 없다). */
   retiredNumber: RetiredSlotSchema.extend({ seq: z.number().int() }).nullable().optional(),
+  /** T-10-100 은퇴 가치(만 원). 아직 소급하지 못한 옛 기록은 null(배포 전 엣지 캐시 응답엔 없다). */
+  value: z.number().int().nullable().optional(),
+  /** T-10-101 이름 검색 결과에만: 고른 순위 유형·시즌에서의 실제 순위(1부터). */
+  rank: z.number().int().min(1).optional(),
 });
 export type PublicHofEntry = z.infer<typeof PublicHofEntrySchema>;
 
@@ -417,13 +421,32 @@ export type MyCareersResponse = z.infer<typeof MyCareersResponseSchema>;
 
 export const HofListQuerySchema = z.coerce.number().int().min(1).max(100).default(50);
 /** `GET /v1/hof?sort=` 명예의 전당 순위 유형. score(레전드 점수) 말고는 그 기록이 0인 선수는 빠진다.
- * ga = 공격포인트(골 + 도움). */
+ * ga = 공격포인트(골 + 도움), value = 은퇴 가치(T-10-100). */
 export const HofSortSchema = z
-  .enum(['score', 'goals', 'assists', 'ga', 'apps', 'trophies', 'awards', 'ballon', 'caps', 'peak'])
+  .enum([
+    'score',
+    'value',
+    'goals',
+    'assists',
+    'ga',
+    'apps',
+    'trophies',
+    'awards',
+    'ballon',
+    'caps',
+    'peak',
+  ])
   .default('score');
 export type HofSort = z.infer<typeof HofSortSchema>;
 /** `GET /v1/hof?page=` 1부터 시작하는 페이지 번호(한 페이지 = limit명). */
 export const HofPageQuerySchema = z.coerce.number().int().min(1).max(10000).default(1);
+/** T-10-101 `GET /v1/hof?q=` 공개 이름 검색(부분 일치). 비었으면 검색하지 않는다. */
+export const HofSearchQuerySchema = z
+  .string()
+  .trim()
+  .max(20)
+  .optional()
+  .transform((v) => v || undefined);
 /** T-10-090 `GET /v1/hof?season=` 서비스 시즌 순위(service-seasons.ts의 id → 그 시즌). 없으면 전체 명예의 전당. */
 export const HofSeasonQuerySchema = z.coerce
   .number()

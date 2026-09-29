@@ -6,13 +6,18 @@
   import { enabled, trackPage } from '../analytics/index.js';
   $effect(() => trackPage(appState.screen));
   import Home from './Home.svelte';
-  import Game from './Game.svelte';
   import UpdateBanner from './UpdateBanner.svelte';
   import NewsBanner from './NewsBanner.svelte';
   import MainNav, { hasMainNav } from './MainNav.svelte';
   import { rnAlert } from './retiredNumber.svelte.js';
   import type { Component } from 'svelte';
 
+  // T-10-104: 게임 화면(엔진·탭·액션)은 홈에서 안 쓰니 처음 '계속하기'·'새 커리어'를 누를 때 불러온다.
+  // 홈이 한가할 때 nav.warmGame이 미리 받아 둔다. 오기 전엔 빈 화면이다.
+  let Game = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'game' && !Game) void import('./Game.svelte').then((m) => (Game = m.default));
+  });
   // Optional consent UI is loaded only in explicitly configured analytics builds.
   let AnalyticsConsent = $state<Component<{ settings?: boolean }> | null>(null);
   $effect(() => {
@@ -29,7 +34,7 @@
   $effect(() => {
     if (appState.screen === 'settings' && !Settings) void import('./Settings.svelte').then((m) => (Settings = m.default));
   });
-  // T-10-058: 구단주(계정·구단 꾸미기)도 같은 방식.
+  // T-10-058: 구단주(계정·내 선수)도 같은 방식. 구단 꾸미기는 설정 화면에 있다(T-10-102).
   let Owner = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
     if (appState.screen === 'owner' && !Owner) void import('./Owner.svelte').then((m) => (Owner = m.default));
@@ -121,7 +126,7 @@
     {:else if appState.screen === 'admin'}
       {#if Admin}<Admin />{/if}
     {:else}
-      <Game />
+      {#if Game}<Game />{/if}
     {/if}
   </main>
 {/key}

@@ -4,7 +4,7 @@
     - text: "/No\\.\\d+ · 공격수/"
     - button "대표 칭호 슈퍼스타, 칭호 도감 열기": ‘슈퍼스타’
     - heading "구조테스트" [level=1]
-    - text: /\d+세 · 런던 해머스 프리미어리그 · 연봉 \d+억 \d+,\d+만 \d+ OVR 로테이션 부상 4경기 주력 슈팅·드리블 잠재력 C Attributes/
+    - text: /\d+세 · 런던 해머스 프리미어리그 · 연봉 \d+억 \d+,\d+만 · 몸값 \d+억( \d천만)? \d+ OVR 로테이션 부상 4경기 주력 슈팅·드리블 잠재력 C Attributes/
     - heading "능력치" [level=2]
     - text: /스트라이커 · OVR \d+/
     - img /스피드 \d+, 슈팅 \d+, 패스 \d+, 드리블 \d+, 수비 \d+, 피지컬 \d+/: /PAC 스피드 \d+ SHO 슈팅 \d+ PAS 패스 \d+ DRI 드리블 \d+ DEF 수비 \d+ PHY 피지컬 \d+/
@@ -66,9 +66,9 @@
     - term: 계약
     - definition: /5년 남음 · \d+억 \d+,\d+만\/년/
     - term: 보유 자금
-    - definition: /\d+억 \d+,\d+만원/
-    - term: 추정 시장가치
-    - definition: /\d+억 \d+,\d+만원/
+    - definition: /\d+억( \d천만)?/
+    - term: 추정 몸값
+    - definition: /\d+억( \d천만)?/
     - text: Korea Republic
     - heading "국가대표" [level=2]
     - text: /\d+ A매치 0 골 0 도움 - 주장/

@@ -9,6 +9,7 @@
   import type { GameState } from '../../game/types.js';
   import { flagOf, isKorean, nationOf } from '../../game/nation.js';
   import { BODY_DEFAULT } from '@offside/contracts/body';
+  import { fmtValue } from '../format.js';
   import AttrCard from '../AttrCard.svelte';
   import { retireAsk } from '../actions.js';
 
@@ -41,7 +42,7 @@
     <dt>계약</dt><dd>{s.contract ? `${s.contract.years}년 남음 · ${fmtMoney(s.contract.salary)}/년` : L.amateur ? '아마추어' : '-'}</dd>
     <dt>보유 자금</dt><dd>{fmtMoney(s.money)}원</dd>
     {#if !L.amateur}
-      <dt>추정 시장가치</dt><dd>{fmtMoney(value)}원</dd>
+      <dt>추정 몸값</dt><dd data-value>{fmtValue(value)}</dd>
     {/if}
   </dl>
 </section>

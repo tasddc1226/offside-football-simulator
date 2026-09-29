@@ -5,7 +5,9 @@
 import type { PlayStyle } from '@offside/contracts';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
 import { eventById } from './events-data.js';
-// 이벤트 등록부(event-registry)는 첫 화면 번들이 이미 채운다(event-runner) — 여기서 다시 불러오면 청크가 갈라져 번들이 커진다.
+// 가장 어려웠던 선택의 이벤트 제목을 찾으려면 정의가 등록돼 있어야 한다. T-10-104 뒤로 등록부는 게임 청크에만 있어,
+// 게임 화면을 거치지 않고 은퇴 리포트만 열어도(구단주 → 내 선수) 여기서 직접 불러온다(성향 카드는 지연 청크라 첫 화면 밖).
+import './event-registry.js';
 import type { CareerRecord } from './types.js';
 
 /** 고교·대학 리그 이름(스냅샷 시즌 기록엔 프로 여부가 없어 리그 이름으로 가린다). */

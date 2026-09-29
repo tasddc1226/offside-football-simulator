@@ -11,6 +11,9 @@
     - strong: 효과음
     - text: 버튼을 누를 때 클릭 소리를 내요.
     - switch "효과음" [checked]
+    - button "Team settings 구단 이름·엠블럼 변경":
+        - text: ''
+        - strong: 구단 이름·엠블럼 변경
     - region "도움말":
         - text: Help
         - heading "도움말" [level=2]

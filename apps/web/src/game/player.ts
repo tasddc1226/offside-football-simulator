@@ -22,10 +22,8 @@ export function roleOf(s: GameState): '주전' | '로테이션' | '벤치' {
   const d = ovr(s) - s.club.str + s.trust;
   return d >= 1 ? '주전' : d >= -5 ? '로테이션' : '벤치';
 }
-export function salaryFor(leagueId: string, o: number): number {
-  const L = leagueOf(leagueId);
-  return Math.round((L.wealth * 1000 * Math.exp((o - 60) / 10)) / 10) * 10;
-}
+// 연봉·몸값 식은 서버와 같이 쓴다(T-10-100 명예의 전당 가치 순).
+export { fmtValue, salaryFor, valueFor } from '@offside/contracts/market-value';
 export function fmtMoney(man: number): string {
   const m = Math.round(man);
   if (Math.abs(m) >= 10000) {

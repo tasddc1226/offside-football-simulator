@@ -4,28 +4,30 @@
  * 옛 기록의 구단을 이 이름으로 찾고, 리그 등급으로 구단 기여를 매긴다(영구결번).
  */
 
-/** 리그의 정체(웹은 여기에 전력·자금력·경기 수를 붙인다). 고교·대학은 아마추어. */
+/** 리그의 정체(웹은 여기에 전력·경기 수를 붙인다). 고교·대학은 아마추어. wealth = 자금력(연봉·몸값 배수,
+ * T-10-100부터 서버도 은퇴 가치를 매길 때 쓴다). */
 export interface LeagueBase {
   id: string;
   name: string;
   tier: number;
+  wealth: number;
   amateur?: boolean;
 }
 export const LEAGUE_BASE: LeagueBase[] = [
-  { id: 'hs', name: '고교 리그', tier: 0, amateur: true },
-  { id: 'uni', name: 'U리그 (대학)', tier: 0, amateur: true },
-  { id: 'k3', name: 'K3리그', tier: 0 },
-  { id: 'k2', name: 'K리그2', tier: 1 },
-  { id: 'k1', name: 'K리그1', tier: 2 },
-  { id: 'j1', name: 'J1리그', tier: 3 },
+  { id: 'hs', name: '고교 리그', tier: 0, wealth: 0, amateur: true },
+  { id: 'uni', name: 'U리그 (대학)', tier: 0, wealth: 0, amateur: true },
+  { id: 'k3', name: 'K3리그', tier: 0, wealth: 1.5 },
+  { id: 'k2', name: 'K리그2', tier: 1, wealth: 4 },
+  { id: 'k1', name: 'K리그1', tier: 2, wealth: 7 },
+  { id: 'j1', name: 'J1리그', tier: 3, wealth: 9 },
   // T-10-016 미국 MLS. 유럽이 아니라 J1과 같은 tier 3(해외·단일 연도 시즌).
-  { id: 'mls', name: 'MLS', tier: 3 },
-  { id: 'ere', name: '에레디비시', tier: 4 },
-  { id: 'l1', name: '리그 1', tier: 5 },
-  { id: 'bl', name: '분데스리가', tier: 6 },
-  { id: 'sa', name: '세리에 A', tier: 6 },
-  { id: 'll', name: '라리가', tier: 7 },
-  { id: 'pl', name: '프리미어리그', tier: 8 },
+  { id: 'mls', name: 'MLS', tier: 3, wealth: 14 },
+  { id: 'ere', name: '에레디비시', tier: 4, wealth: 12 },
+  { id: 'l1', name: '리그 1', tier: 5, wealth: 18 },
+  { id: 'bl', name: '분데스리가', tier: 6, wealth: 24 },
+  { id: 'sa', name: '세리에 A', tier: 6, wealth: 24 },
+  { id: 'll', name: '라리가', tier: 7, wealth: 30 },
+  { id: 'pl', name: '프리미어리그', tier: 8, wealth: 40 },
 ];
 
 // T-10-009: 리그마다 실제 참가 팀 수만큼 클럽을 둔다(국내 2026 시즌, 유럽 2025-26 시즌 기준). 이름은
