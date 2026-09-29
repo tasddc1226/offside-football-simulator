@@ -16,6 +16,7 @@
   import { openBoard } from './nav.js';
   import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
+  import { doneOnEnter } from './inputDone.js';
   import { markNewsSeen, touchedAt } from './news.svelte.js';
   import { loadKey, saveKey } from '../game/season.js';
   import { BOARD_LABEL, dateOf, parseBody, postMeta } from './boardText.js';
@@ -196,12 +197,12 @@
         <h2 style="margin:0">{editing.id ? '글 고치기' : `${BOARD_LABEL[board]} 새 글`}</h2>
         <div class="field">
           <label for="post-title">제목</label>
-          <input id="post-title" type="text" maxlength={POST_TITLE_MAX} required bind:value={editing.title} />
+          <input id="post-title" type="text" maxlength={POST_TITLE_MAX} required enterkeyhint="done" use:doneOnEnter bind:value={editing.title} />
         </div>
         {#if board === 'release'}
           <div class="field">
             <label for="post-version">버전</label>
-            <input id="post-version" type="text" maxlength={POST_VERSION_MAX} placeholder="v1.4.0" bind:value={editing.version} />
+            <input id="post-version" type="text" maxlength={POST_VERSION_MAX} placeholder="v1.4.0" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter bind:value={editing.version} />
           </div>
         {/if}
         <div class="field">

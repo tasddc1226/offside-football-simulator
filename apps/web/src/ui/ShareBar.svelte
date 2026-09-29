@@ -13,7 +13,8 @@
   let url = $state<string | null>(null);
   let barH = $state(0);
 
-  // 링크를 서버에 확인한 뒤 클립보드로 복사만 한다(네이티브 공유 시트는 띄우지 않는다).
+  // 링크를 서버에 확인한 뒤 공유한다 — T-10-118 네이티브 공유 시트(navigator.share)가 있으면 그걸 먼저 쓰고,
+  // 없거나 실패하면 클립보드로 복사한다.
   // Safari 는 클릭 제스처가 끝난 뒤(await 이후)의 클립보드 쓰기를 막으므로, 쓰기는 클릭 안에서 바로 시작하고
   // 내용은 확인이 끝나면 채워지는 Promise 로 넘긴다.
   async function checkLink(): Promise<string> {
@@ -28,12 +29,8 @@
     return shareUrl(id);
   }
 
-  async function copy() {
-    if (busy) return;
-    busy = true;
-    trackShareClick();
-    // 한 번 확인한 링크는 다시 서버에 묻지 않는다.
-    const link = url ? Promise.resolve(url) : checkLink();
+  // 클립보드 복사. link 는 확인이 끝나면 채워지는 Promise 다(위 주석 참고).
+  async function copyLink(link: Promise<string>) {
     let copied: Promise<void>;
     try {
       const blob = link.then((l) => new Blob([l], { type: 'text/plain' }));
@@ -46,7 +43,6 @@
       url = await link;
     } catch (e) {
       copied.catch(() => {});
-      busy = false;
       return toast((e as Error).message);
     }
     try {
@@ -55,6 +51,38 @@
       toast('공유 링크를 복사했어요.');
     } catch {
       toast('위 링크를 복사해 공유해 주세요.');
+    }
+  }
+
+  async function copy() {
+    if (busy) return;
+    busy = true;
+    trackShareClick();
+    try {
+      // 한 번 확인한 링크는 다시 서버에 묻지 않는다.
+      const link = url ? Promise.resolve(url) : checkLink();
+      // T-10-118 네이티브 공유 시트 우선. 사용자가 닫으면(AbortError) 조용히 끝내고, 못 쓰면 복사로 넘어간다.
+      // 확인(await) 뒤엔 제스처가 끝나 막힐 수 있는데, 그때도 링크는 url 에 남아 다음 탭은 바로 공유 시트로 간다.
+      if (typeof navigator.share === 'function') {
+        let l: string;
+        try {
+          l = await link;
+        } catch (e) {
+          return toast((e as Error).message);
+        }
+        url = l;
+        const data = { title: '오프사이드 — 은퇴 커리어', text: '내 선수의 축구 인생 — 오프사이드 offside-lab.com', url: l };
+        if (navigator.canShare?.(data) !== false) {
+          try {
+            await navigator.share(data);
+            trackShareSuccess();
+            return;
+          } catch (e) {
+            if ((e as Error).name === 'AbortError') return;
+          }
+        }
+      }
+      await copyLink(link);
     } finally {
       busy = false;
     }

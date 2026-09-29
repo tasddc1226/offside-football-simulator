@@ -81,6 +81,8 @@ test('로그인하지 않아도 공유 버튼이 화면 아래에 고정돼 링�
   context,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  // T-10-118 공유 시트가 있으면 그걸 쓰므로, 여기선 시트가 없는 브라우저(클립보드 복사 경로)로 고정한다.
+  await page.addInitScript(() => Object.defineProperty(navigator, 'share', { value: undefined }));
   const state = { google: false };
   const uploaded = await stubApi(page, state);
   // 구글 로그인은 바로 성공해 앱의 OAuth 복귀 주소로 돌아온 것처럼 한다.
@@ -123,11 +125,11 @@ test('로그인했으면 공유 링크를 만들고, 링크를 연 사람은 보
   context,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  // 공유 시트를 지원하는 브라우저여도 띄우지 않고 링크 복사만 한다.
+  // T-10-118 공유 시트를 지원하는 브라우저면 시트를 먼저 띄운다(복사 안내 토스트는 없다).
   await page.addInitScript(() =>
     Object.defineProperty(navigator, 'share', {
-      value: () => {
-        (window as unknown as { __shared: boolean }).__shared = true;
+      value: (data: ShareData) => {
+        (window as unknown as { __shared: ShareData }).__shared = data;
         return Promise.resolve();
       },
     }),
@@ -136,13 +138,13 @@ test('로그인했으면 공유 링크를 만들고, 링크를 연 사람은 보
   await retireNow(page);
   await expect(page.locator('[data-share="login"]')).toHaveCount(0);
   await page.locator('[data-act="share-career"]').click();
-  await expect(page.getByText('공유 링크를 복사했어요.')).toBeVisible();
+  await expect(page.locator('.share-url')).toBeVisible();
   const url = await page.locator('.share-url').inputValue();
   expect(url).toMatch(/^http:\/\/localhost:\d+\/career\/[0-9a-f-]{36}$/);
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
   expect(
-    await page.evaluate(() => (window as unknown as { __shared?: boolean }).__shared),
-  ).toBeUndefined();
+    await page.evaluate(() => (window as unknown as { __shared?: ShareData }).__shared?.url),
+  ).toBe(url);
+  await expect(page.getByText('공유 링크를 복사했어요.')).toHaveCount(0);
   expect(uploaded.has(url.split('/').pop()!)).toBe(true);
 
   // 링크를 연다: 환경설정 '선수 이름 공개'가 기본으로 켜져 있어 이름이 보이고(T-10-065), 주인 기능(이름 공개·공유)은 없다.

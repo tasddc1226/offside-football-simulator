@@ -5,6 +5,7 @@
   import { putNickname } from '../api/client.js';
   import { accountCache } from './account-state.svelte.js';
   import { toast } from './helpers.js';
+  import { doneOnEnter } from './inputDone.js';
 
   let { current = null, onsaved }: { current?: string | null; onsaved?: (nickname: string) => void } = $props();
   // 처음 값만 받아 오고 이후엔 사용자가 고친다.
@@ -34,6 +35,11 @@
     minlength="2"
     maxlength={COMMENT_NICKNAME_MAX}
     required
+    enterkeyhint="done"
+    autocapitalize="off"
+    autocorrect="off"
+    spellcheck="false"
+    use:doneOnEnter
     bind:value
   />
   <button class="btn" type="submit" data-act="save-nickname" disabled={busy || value.trim() === (current ?? '')}>
