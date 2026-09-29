@@ -4,6 +4,7 @@ import {
   HofListQuerySchema,
   HofListResponseSchema,
   HofPageQuerySchema,
+  HofSearchQuerySchema,
   HofSeasonQuerySchema,
   HofSortSchema,
 } from '@offside/contracts';
@@ -31,11 +32,13 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
     const sort = parseWithAppError(HofSortSchema, c.req.query('sort'));
     // T-10-090 시즌 순위. 없으면 전체 명예의 전당.
     const season = parseWithAppError(HofSeasonQuerySchema, c.req.query('season'));
+    // T-10-101 공개 이름 검색.
+    const q = parseWithAppError(HofSearchQuerySchema, c.req.query('q'));
     // T-10-081 옛 기록 구단 id 채우기가 끝날 때까지는 캐시하지 않는다(데이터센터마다 1분에 한 조각씩만 나아가지 않게).
     let filling = false;
     const data = await edgeCached(
       c,
-      EDGE.hofList(limit, page, sort, season?.id),
+      EDGE.hofList(limit, page, sort, season?.id, q),
       LIST_TTL,
       async () => {
         const db = getDb(c);
@@ -43,7 +46,7 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
         const clubIds = await ensureClubIdsBackfilled(db);
         const values = await ensureCareerValuesBackfilled(db);
         filling = clubIds || values;
-        return listPublicHof(db, limit, page, sort, season);
+        return listPublicHof(db, limit, page, sort, season, q);
       },
       () => !filling,
     );

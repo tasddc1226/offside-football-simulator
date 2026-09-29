@@ -393,6 +393,8 @@ export const PublicHofEntrySchema = z.strictObject({
   retiredNumber: RetiredSlotSchema.extend({ seq: z.number().int() }).nullable().optional(),
   /** T-10-100 은퇴 가치(만 원). 아직 소급하지 못한 옛 기록은 null(배포 전 엣지 캐시 응답엔 없다). */
   value: z.number().int().nullable().optional(),
+  /** T-10-101 이름 검색 결과에만: 고른 순위 유형·시즌에서의 실제 순위(1부터). */
+  rank: z.number().int().min(1).optional(),
 });
 export type PublicHofEntry = z.infer<typeof PublicHofEntrySchema>;
 
@@ -438,6 +440,13 @@ export const HofSortSchema = z
 export type HofSort = z.infer<typeof HofSortSchema>;
 /** `GET /v1/hof?page=` 1부터 시작하는 페이지 번호(한 페이지 = limit명). */
 export const HofPageQuerySchema = z.coerce.number().int().min(1).max(10000).default(1);
+/** T-10-101 `GET /v1/hof?q=` 공개 이름 검색(부분 일치). 비었으면 검색하지 않는다. */
+export const HofSearchQuerySchema = z
+  .string()
+  .trim()
+  .max(20)
+  .optional()
+  .transform((v) => v || undefined);
 /** T-10-090 `GET /v1/hof?season=` 서비스 시즌 순위(service-seasons.ts의 id → 그 시즌). 없으면 전체 명예의 전당. */
 export const HofSeasonQuerySchema = z.coerce
   .number()

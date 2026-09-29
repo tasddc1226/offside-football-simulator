@@ -357,6 +357,64 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect((await createApp().request('/v1/hof?sort=name', {}, ctx.env)).status).toBe(400);
   });
 
+  it('T-10-101: q로 공개 이름을 찾고, 찾은 선수에 검색 전 순위를 붙인다', async () => {
+    const rows = [
+      {
+        id: '0c000000-0000-4000-8000-000000000001',
+        legendScore: 400,
+        goals: 10,
+        publicName: '김오프',
+      },
+      {
+        id: '0c000000-0000-4000-8000-000000000002',
+        legendScore: 300,
+        goals: 90,
+        publicName: '박사이드',
+      },
+      {
+        id: '0c000000-0000-4000-8000-000000000003',
+        legendScore: 200,
+        goals: 50,
+        publicName: '오프_100%',
+      },
+      { id: '0c000000-0000-4000-8000-000000000004', legendScore: 100, goals: 70, publicName: null },
+    ];
+    for (const { id, publicName, ...s } of rows) {
+      await putSeasonsFor(ctx.env, cookie, id, { ...summary, ...s });
+      await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, { ...summary, ...s, publicName });
+    }
+    const read = async (q: string) =>
+      successEnvelope(HofListResponseSchema).parse(
+        await (await createApp().request(`/v1/hof?${q}`, {}, ctx.env)).json(),
+      ).data;
+    const pick = (d: Awaited<ReturnType<typeof read>>) => d.entries.map((e) => [e.name, e.rank]);
+
+    const off = await read(`q=${encodeURIComponent('오프')}`);
+    expect(off.total).toBe(2);
+    expect(pick(off)).toEqual([
+      ['김오프', 1],
+      ['오프_100%', 3],
+    ]);
+    // 순위는 고른 유형 기준(득점 순이면 박사이드 90 · 익명 70 · 오프_100% 50 · 김오프 10).
+    expect(pick(await read(`sort=goals&q=${encodeURIComponent('오프')}`))).toEqual([
+      ['오프_100%', 3],
+      ['김오프', 4],
+    ]);
+    // LIKE 특수 문자는 글자 그대로 찾는다.
+    expect(pick(await read(`q=${encodeURIComponent('_1')}`))).toEqual([['오프_100%', 3]]);
+    expect((await read(`q=${encodeURIComponent('%')}`)).total).toBe(1);
+    // 한 페이지를 나눠도 순위는 그대로, 빈 검색어는 전체 목록.
+    expect(pick(await read(`limit=1&page=2&q=${encodeURIComponent('오프')}`))).toEqual([
+      ['오프_100%', 3],
+    ]);
+    const blank = await read('q=%20');
+    expect(blank.total).toBe(4);
+    expect(blank.entries.every((e) => e.rank === undefined)).toBe(true);
+    expect((await createApp().request(`/v1/hof?q=${'가'.repeat(21)}`, {}, ctx.env)).status).toBe(
+      400,
+    );
+  });
+
   it('공개 목록은 쿠키가 있어도 세션·프로필을 읽지 않는다(T-10-015)', async () => {
     const seen: string[] = [];
     const DB = new Proxy(ctx.env.DB, {

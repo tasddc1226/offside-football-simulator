@@ -327,27 +327,36 @@ const HOF_SORT: Record<HofSort, AnyColumn | SQL> = {
 };
 
 /** 전체 유저의 은퇴 선수를 sort 기록 순으로(같으면 레전드 점수 · 먼저 은퇴), page(1부터)번째 limit명과 전체 인원.
- * score가 아니면 그 기록이 0인 선수는 뺀다(발롱도르 0회끼리 순위를 매기지 않는다). */
+ * score가 아니면 그 기록이 0인 선수는 뺀다(발롱도르 0회끼리 순위를 매기지 않는다).
+ * T-10-101 q가 있으면 공개 이름에 q가 들어간 선수만 — 각 선수에 검색 전 순위(rank)를 붙인다. */
 export async function listPublicHof(
   db: Db,
   limit: number,
   page = 1,
   sort: HofSort = 'score',
   season?: ServiceSeason,
+  q?: string,
 ): Promise<{ entries: PublicHofEntry[]; total: number }> {
   const by = HOF_SORT[sort];
-  const where = and(
+  const ranked = and(
     isPublicRetired,
     sort === 'score' ? undefined : sql`${by} > 0`,
     season && inSeason(season),
   );
+  const where = q
+    ? and(
+        ranked,
+        sql`${careers.publicName} like ${`%${q.replace(/[\\%_]/g, '\\$&')}%`} escape '\\'`,
+      )
+    : ranked;
+  const order = [desc(by), desc(careers.legendScore), careers.retiredAt] as const;
   const [rows, [count]] = await Promise.all([
     db
       .select(publicColumns)
       .from(careers)
       .leftJoin(retiredNumbers, withRetiredNumber)
       .where(where)
-      .orderBy(desc(by), desc(careers.legendScore), careers.retiredAt)
+      .orderBy(...order)
       .limit(limit)
       .offset((page - 1) * limit),
     db
@@ -355,7 +364,30 @@ export async function listPublicHof(
       .from(careers)
       .where(where),
   ]);
-  return { entries: rows.map(toPublicEntry), total: Number(count?.n ?? 0) };
+  const entries = rows.map(toPublicEntry);
+  if (q && entries.length) {
+    // 찾은 선수(최대 limit명)만 전체 순위에서 몇 위인지 — id·순번만 읽는 창 함수 한 번.
+    const all = db
+      .select({
+        id: careers.id,
+        rk: sql<number>`row_number() over (order by ${sql.join([...order], sql`, `)})`.as('rk'),
+      })
+      .from(careers)
+      .where(ranked)
+      .as('ranked');
+    const ranks = await db
+      .select({ id: all.id, rk: all.rk })
+      .from(all)
+      .where(
+        inArray(
+          all.id,
+          entries.map((e) => e.id),
+        ),
+      );
+    const at = new Map(ranks.map((r) => [r.id, Number(r.rk)]));
+    for (const e of entries) e.rank = at.get(e.id);
+  }
+  return { entries, total: Number(count?.n ?? 0) };
 }
 
 /**

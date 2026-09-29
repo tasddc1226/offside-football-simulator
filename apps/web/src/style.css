@@ -693,6 +693,20 @@ button.hof-row {
   border-color: var(--ink);
   color: var(--surface);
 }
+.hof-sort .hof-new {
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.5625rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+.hof-search {
+  margin-bottom: 8px;
+}
 .hof-pager {
   display: flex;
   align-items: center;
@@ -725,6 +739,7 @@ button.hof-row {
   color: var(--muted);
 }
 input[type='text'],
+input[type='search'],
 input[type='number'],
 select,
 textarea {
