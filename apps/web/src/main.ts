@@ -6,6 +6,7 @@ import App from './ui/App.svelte';
 import Sheet from './ui/Sheet.svelte';
 import Toast from './ui/Toast.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
+import { keepStorage } from './ui/helpers.js';
 import { handleOAuthReturn } from './ui/login.js';
 import { hasSessionHint } from './api/client.js';
 import { routeSharedCareer } from './ui/legend.js';
@@ -23,6 +24,8 @@ installClickSound();
 // 자동 플레이 탐지(관찰 전용): 시즌마다 조작 횟수만 센다.
 installPlaySignals();
 loadGame();
+// T-10-116 이어 할 세이브가 있으면 브라우저에 '영구 저장'을 요청한다(새 커리어는 첫 저장 때, helpers.save).
+if (appState.G) keepStorage();
 // OAuth 복귀는 세이브를 읽은 뒤에 처리한다 — 돌아갈 곳이 로컬 명예의 전당 선수일 수 있고, loadGame이
 // 옛 은퇴 선수에 커리어 id를 붙인다(ft_hof).
 handleOAuthReturn();

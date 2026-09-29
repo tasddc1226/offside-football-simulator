@@ -24,10 +24,34 @@ export function pushEvLog(s: GameState, entry: EventLogEntry) {
   while (buf.length > EV_BUF_CAP) buf.shift();
 }
 
+// T-10-116 세이브는 이 브라우저 localStorage에만 있다 — 용량 초과로 못 쓰면 한 번만 알리고 백업을 안내한다.
+let saveWarned = false;
 export function save() {
   const s = appState.G;
   if (s) s.rng = getActiveRng().getState();
-  saveKey('ft_save', s);
+  const ok = saveKey('ft_save', s);
+  if (!s) return;
+  if (ok) return void keepStorage();
+  if (saveWarned) return;
+  saveWarned = true;
+  toast('저장 공간이 부족해 진행 상황을 저장하지 못했어요. 설정에서 백업해 두세요.');
+}
+
+/** T-10-116 브라우저가 저장소를 함부로 지우지 않게 '영구 저장'을 한 번 요청한다(UI 없음, 실패해도 무시).
+ * 진행 중 세이브가 있을 때만 — Firefox는 이 요청에 권한 안내를 띄운다. */
+let keepAsked = false;
+export function keepStorage() {
+  if (keepAsked) return;
+  keepAsked = true;
+  try {
+    const st = navigator.storage;
+    void st
+      ?.persisted?.()
+      .then((p) => (p ? undefined : st.persist?.()))
+      .catch(() => {});
+  } catch {
+    // 지원하지 않는 브라우저
+  }
 }
 
 export const seasonLabel = (s: GameState, y = s.year): string =>

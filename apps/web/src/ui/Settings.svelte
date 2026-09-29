@@ -12,6 +12,7 @@
   import { showInstallGuide } from './install.js';
   import { namePublicEnabled, setNamePublic } from './namePublic.js';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
+  import BackupSettings from './BackupSettings.svelte';
 
   let sfx = $state(sfxEnabled());
   let dark = $state(isDark());
@@ -86,6 +87,8 @@
     </div>
   </section>
 
+  <!-- T-10-116 진행 중 커리어 백업·불러오기 -->
+  <BackupSettings />
   <ClubCustomSettings />
   <AnalyticsConsent settings />
 
