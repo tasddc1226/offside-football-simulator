@@ -202,7 +202,6 @@
     {:else if detail}
       {@const post = detail.post}
       <article class="stack board-post" style="gap:10px" data-post={post.id}>
-        <button class="icon-btn self-start" data-act="back-list" onclick={backToList}>← 목록</button>
         <div class="stack" style="gap:4px">
           <div class="row" style="gap:6px;flex-wrap:wrap">
             {@render tags(post)}

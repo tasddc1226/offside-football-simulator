@@ -359,16 +359,14 @@ test('소식: 조회수는 기기마다 한 번, 좋아요를 누르고 거둔�
   await expect(like).toHaveAccessibleName('좋아요 3');
 
   // 같은 기기에서 다시 열면 조회수를 보내지 않는다.
-  await page.locator('[data-act="back-list"]').click();
+  // T-10-113 글 상세에서 목록으로는 하단 '소식'을 다시 눌러 간다('← 목록' 버튼은 없앴다).
+  await page.locator('.main-nav [data-act="board"]').click();
   await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
   await expect(post).toBeVisible();
   expect(sent.views).toHaveLength(1);
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
-  // T-10-113 글을 보다가 하단 '소식'을 다시 누르면 목록으로 돌아간다.
-  await page.locator('.main-nav [data-act="board"]').click();
-  await expect(post).toBeHidden();
-  await expect(page.locator(`[data-post-row="${NOTICE.id}"]`)).toBeVisible();
+  await expect(page.locator('[data-act="back-list"]')).toHaveCount(0);
 });
 
 test('새 소식 알림: 마지막으로 본 뒤 올라온 글을 화면 위에 알리고, 보면 다시 뜨지 않는다', async ({
