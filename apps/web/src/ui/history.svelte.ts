@@ -7,25 +7,11 @@
 // 후보로 다시 시작하거나 끝난 게임을 여는 일을 막는다. 게임 중 뒤로 가면 홈(시트는 닫고, 남은 이벤트·결산은
 // '이어하기'가 다시 연다)으로 나간다 — 게임 화면의 홈 버튼과 같다.
 import { untrack } from 'svelte';
-import type { BoardKey } from '@offside/contracts/board-limits';
-import type { Candidate } from '@offside/game/candidates';
+import { navKey, navRestore, navSnapshot, type NavEntry } from '@offside/app-core/navHistory';
 import { closeSheet } from './sheetState.svelte.js';
-import { appState, type LegendView, type Screen, type TeamView } from './state.svelte.js';
+import { appState } from './state.svelte.js';
 
-interface Entry {
-  key: string;
-  screen: Screen;
-  /** 떠날 때의 스크롤 위치 — 돌아오면 그 자리로. */
-  y: number;
-  board: BoardKey;
-  post: string | null;
-  cand: { list: Candidate[]; open: boolean[]; pick: number | null } | null;
-  legend: LegendView | null;
-  legendBack: typeof appState.legendBack;
-  /** T-10-130 구단주 팀 안의 화면 · 기록실 팀 랭킹에서 연 팀 프로필. */
-  teamView: TeamView;
-  hofTeam: string | null;
-}
+type Entry = NavEntry;
 
 /** 이 탭에서 쌓은 기록 — 새로 고침 전의 기록(sid가 다르다)은 모른다. */
 const sid = Math.random().toString(36).slice(2);
@@ -53,80 +39,12 @@ function setPopDir(d: -1 | 1, ua: boolean) {
 let edgeTouchAt = -Infinity;
 const EDGE_PX = 30;
 
-// 선수 상세는 LegendView 객체마다 번호를 붙여 구분한다.
-const legendIds = new WeakMap<object, number>();
-let legendSeq = 0;
-const legendId = (v: LegendView | null) => {
-  if (!v) return 0;
-  if (!legendIds.has(v)) legendIds.set(v, ++legendSeq);
-  return legendIds.get(v)!;
-};
-
-function keyOf(): string {
-  const s = appState.screen;
-  if (s === 'create') return appState.candidates ? 'create:cand' : 'create';
-  if (s === 'board') return `board:${appState.board}:${appState.boardOpenId ?? ''}`;
-  if (s === 'legend') return `legend:${legendId(appState.legend)}`;
-  // 팀·시즌 업적은 같은 화면의 탭이라 한 기록으로 친다.
-  if (s === 'team')
-    return `team:${appState.teamView === 'achievements' ? 'team' : appState.teamView}`;
-  if (s === 'hof') return `hof:${appState.hof.tab === 'teams' ? (appState.hof.team ?? '') : ''}`;
-  return s;
-}
-
-function snapshot(): Entry {
-  return {
-    key: keyOf(),
-    screen: appState.screen,
-    y: window.scrollY,
-    board: appState.board,
-    post: appState.boardOpenId,
-    cand: appState.candidates
-      ? {
-          list: appState.candidates,
-          open: [...appState.candidatesOpen],
-          pick: appState.candidatePick,
-        }
-      : null,
-    legend: appState.legend,
-    legendBack: appState.legendBack,
-    teamView: appState.teamView,
-    hofTeam: appState.hof.tab === 'teams' ? appState.hof.team : null,
-  };
-}
+const keyOf = () => navKey(appState);
+const snapshot = (): Entry => navSnapshot(appState, window.scrollY);
 
 function restore(e: Entry) {
   closeSheet();
-  const G = appState.G;
-  const live = !!G && !G.retired;
-  let screen = e.screen;
-  if (
-    (screen === 'create' && live) ||
-    (screen === 'game' && !live) ||
-    (screen === 'legend' && !e.legend)
-  )
-    screen = 'home';
-  if (screen === 'create') {
-    appState.candidates = e.cand?.list ?? null;
-    appState.candidatesOpen = e.cand?.open ?? [];
-    appState.candidatePick = e.cand?.pick ?? null;
-  }
-  if (screen === 'board') {
-    appState.board = e.board;
-    appState.boardOpenId = e.post;
-  }
-  if (screen === 'legend') {
-    appState.legend = e.legend;
-    appState.legendBack = e.legendBack;
-  }
-  if (screen === 'team') appState.teamView = e.teamView;
-  if (screen === 'hof' && appState.hof.team !== e.hofTeam)
-    appState.hof = {
-      ...appState.hof,
-      team: e.hofTeam,
-      ...(e.hofTeam ? { tab: 'teams' as const } : {}),
-    };
-  appState.screen = screen;
+  const screen = navRestore(appState, e);
   // 되살린 상태를 이 기록의 값으로 삼는다(홈으로 돌렸으면 홈) — 아래 $effect가 새 기록을 쌓지 않는다.
   entries[cur] = { ...snapshot(), y: screen === e.screen ? e.y : 0 };
   scrollBack(entries[cur]!.y);
