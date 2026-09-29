@@ -2,17 +2,33 @@
  * T-10-092 구단주 팀(팀 슬롯). zod가 없는 서브패스(`@offside/contracts/owner-team`)라 웹이 값으로 가져와도
  * 번들에 zod가 들어가지 않는다 — 서버의 팀 OVR·경기 시뮬레이션과 웹의 편성 미리보기가 같은 규칙을 쓴다.
  *
- * 팀은 구글 로그인한 구단주만 만든다. 선수는 그 구단주의 은퇴한 커리어만 넣고, 빈 자리는 유스 선수(고정 OVR)가
- * 채운다 — 은퇴 선수가 11명이 안 되는 구단주도 한 명만 넣으면 경기할 수 있다.
+ * 팀은 구글 로그인한 구단주만 시즌마다 한 팀씩 만든다(원작처럼 시즌마다 새 팀). 선수는 그 구단주의 은퇴한 커리어 중
+ * 그 시즌에 처음 올라온 선수만 넣고, 빈 자리는 유스 선수(고정 OVR)가 채운다 — 은퇴 선수가 11명이 안 되는 구단주도
+ * 한 명만 넣으면 경기할 수 있다.
  */
 
 import { DETAIL_GROUP, type DetailPos, type PeakProfile, type PosGroup } from './positions.js';
 
-/** 구단주 한 명이 가질 수 있는 팀 수. 나중에 늘릴 때 이 값만 바꾼다. */
-export const TEAM_SLOTS = 1;
 /** 팀 이름 길이(앞뒤 공백 제외). */
 export const TEAM_NAME_MIN = 2;
 export const TEAM_NAME_MAX = 12;
+/** 감독 이름 길이(앞뒤 공백 제외). */
+export const MANAGER_NAME_MIN = 2;
+export const MANAGER_NAME_MAX = 10;
+/** 팀 레이팅 — 새 팀은 TEAM_RATING_START에서 시작해 경기마다 엘로 방식으로 오르내린다(두 팀 합은 그대로). */
+export const TEAM_RATING_START = 1000;
+export const TEAM_RATING_K = 32;
+/** 라이브 랭킹(팀 랭킹) 한 페이지의 팀 수. */
+export const TEAM_RANK_PER_PAGE = 20;
+
+/**
+ * 경기 한 판의 레이팅 변화(home 쪽, away는 부호만 반대). score = home 결과(승 1 · 무 0.5 · 패 0). 강한 팀이 약한 팀을
+ * 이기면 조금, 약한 팀이 이기면 많이 오른다.
+ */
+export function ratingDelta(home: number, away: number, score: 0 | 0.5 | 1): number {
+  const expected = 1 / (1 + 10 ** ((away - home) / 400));
+  return Math.round(TEAM_RATING_K * (score - expected));
+}
 /** 빈 자리를 채우는 유스 선수의 OVR. */
 export const YOUTH_OVR = 50;
 export const YOUTH_NAME = '유스 선수';

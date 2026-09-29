@@ -29,6 +29,9 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
   let ctx: TestD1;
   beforeEach(async () => {
     ctx = await createTestD1();
+    // 기본은 프리시즌(팀 시즌 0) — 시즌 1 개막 뒤에도 테스트가 같은 시즌을 보게 시각을 고정한다.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z'));
   });
   afterEach(async () => {
     vi.useRealTimers();
@@ -89,7 +92,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
   const putTeam = (cookie: string, body: Record<string, unknown>) =>
     call('PUT', '/v1/owner-team', {
       cookie,
-      body: { name: '우리 FC', formation: '4-3-3', ...body },
+      body: { name: '우리 FC', manager: '김감독', formation: '4-3-3', ...body },
     });
 
   /** 구단주 한 명과 선수 n명(공격수)으로 만든 팀. */
@@ -135,8 +138,13 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('Cache-Control')).toBe('private, no-store');
     const data = GetRes.parse(await res.json()).data;
-    expect(data.teams).toEqual([]);
-    expect(data.slotsMax).toBe(1);
+    expect(data).toMatchObject({
+      season: 0,
+      current: 0,
+      seasons: [{ id: 0, name: '프리시즌' }],
+      team: null,
+      lastManager: null,
+    });
     expect(data.matchesLeft).toBe(TEAM_MATCHES_PER_DAY);
     expect(data.players.map((p) => p.careerId)).toEqual([a, b]);
     expect(data.players[0]).toMatchObject({
@@ -158,10 +166,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const res = await putTeam(me.cookie, { slots: slots(...Array(8).fill(null), w) });
     const team = PutRes.parse(await res.json()).data.team;
     expect(team.slots[8]).toMatchObject({ careerId: w, rating: 80, fit: 1 });
-    const moved = await putTeam(me.cookie, {
-      teamId: team.id,
-      slots: slots(...Array(9).fill(null), w),
-    });
+    const moved = await putTeam(me.cookie, { slots: slots(...Array(9).fill(null), w) });
     expect(PutRes.parse(await moved.json()).data.team.slots[9]).toMatchObject({
       rating: 72,
       fit: 0.9,
@@ -181,16 +186,14 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const team = PutRes.parse(await res.json()).data.team;
     expect(team.slots[1]).toMatchObject({ slot: 'FB', rating: 79, fit: 0.96 });
     const moved = PutRes.parse(
-      await (await putTeam(me.cookie, { teamId: team.id, slots: slots(null, null, cb) })).json(),
+      await (await putTeam(me.cookie, { slots: slots(null, null, cb) })).json(),
     ).data.team;
     expect(moved.slots[2]).toMatchObject({ slot: 'CB', rating: 82, fit: 1 });
     expect(moved.lines.def).toBeGreaterThan(moved.lines.atk);
     expect(moved.lines.gk).toBe(YOUTH_OVR);
   });
 
-  it('구단 시즌 업적은 그 시즌에 처음 올라온 내 은퇴 선수로 판정하고, 팀 업적은 지금 시즌에만 보인다', async () => {
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z')); // 프리시즌
+  it('구단 시즌 업적은 그 시즌에 처음 올라온 내 은퇴 선수와 그 시즌 팀으로 판정한다', async () => {
     const me = await issueGoogleCookie(ctx);
     await addCareer(me.profileId, { pos: 'GK', peak: 70 });
     const s1 = await addCareer(me.profileId, { pos: 'DF', dpos: 'CB', peak: 80, serviceSeason: 1 });
@@ -203,27 +206,32 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       d.groups.flatMap((g) => g.items).find((i) => i.id === id);
 
     const pre = AchRes.parse((await read()).body).data;
-    expect(pre).toMatchObject({ season: null, players: 1, seasons: [{ id: null }] });
+    expect(pre).toMatchObject({ season: 0, players: 1, seasons: [{ id: 0 }] });
     expect(item(pre, 'retire-GK')?.done).toBe(true);
     expect(item(pre, 'retire-DF')?.done).toBe(false);
     expect(item(pre, 'all-dpos')).toBeUndefined();
     expect(pre.groups.at(-1)?.id).toBe('team'); // 지금 시즌(프리시즌) — 팀이 없어도 팀 업적 목록은 보인다
+    expect(pre.groups.filter((g) => g.locked).map((g) => g.stage)).toEqual([
+      '3단계',
+      '4단계',
+      '5단계',
+    ]);
     expect((await read('?season=1')).status).toBe(400); // 아직 열리지 않은 시즌
 
     vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
     await putTeam(me.cookie, { slots: slots(null, null, s1) });
     const cur = AchRes.parse((await read()).body).data;
     expect(cur).toMatchObject({ season: 1, players: 1 });
-    expect(cur.seasons.map((x) => x.id)).toEqual([null, 1]);
+    expect(cur.seasons.map((x) => x.id)).toEqual([0, 1]);
     expect(item(cur, 'retire-DF')?.done).toBe(true);
     expect(item(cur, 'all-dpos')).toMatchObject({ cur: 1, max: 8 });
     expect(item(cur, 'team-one')?.done).toBe(true);
     const past = AchRes.parse((await read('?season=0')).body).data;
-    expect(past).toMatchObject({ season: null, players: 1 });
-    expect(past.groups.some((g) => g.id === 'team')).toBe(false);
+    expect(past).toMatchObject({ season: 0, players: 1 });
+    expect(past.groups.some((g) => g.id === 'team')).toBe(false); // 프리시즌에는 팀을 만들지 않았다
   });
 
-  it('팀을 만들고 고친다 — 빈 자리는 유스 선수, 팀 슬롯은 1개', async () => {
+  it('팀을 만들고 고친다 — 빈 자리는 유스 선수, 시즌마다 한 팀', async () => {
     const me = await issueGoogleCookie(ctx);
     const st = await addCareer(me.profileId, { peak: 90 });
     const gk = await addCareer(me.profileId, { pos: 'GK', peak: 80 });
@@ -245,29 +253,73 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(team.ovr).toBe(Math.round((76 + 86 + 9 * YOUTH_OVR) / 11));
     expect(team.record).toEqual({ w: 0, d: 0, l: 0 });
 
-    // 두 번째 팀은 만들 수 없다.
-    const second = await putTeam(me.cookie, { slots: slots() });
-    expect(second.status).toBe(409);
-    expect(ErrorEnvelopeSchema.parse(await second.json()).error.details).toEqual({
-      reason: 'TEAM_SLOTS_FULL',
-    });
-
-    // teamId로 고치면 같은 팀이 바뀐다(포메이션·자리).
+    // 같은 시즌에 다시 저장하면 같은 팀이 바뀐다(시즌마다 한 팀 — 포메이션·자리·감독).
     const updated = await putTeam(me.cookie, {
-      teamId: team.id,
       formation: '3-5-2',
+      manager: '박감독',
       slots: slots(null, null, null, null, null, null, null, null, null, st),
     });
     expect(updated.status).toBe(200);
     const after = PutRes.parse(await updated.json()).data.team;
-    expect(after.id).toBe(team.id);
-    expect(after.formation).toBe('3-5-2');
+    expect(after).toMatchObject({ id: team.id, formation: '3-5-2', manager: '박감독', season: 0 });
     const got = GetRes.parse(
       await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
     );
-    expect(got.data.teams).toHaveLength(1);
-    expect(got.data.teams[0]!.slots[9]!.careerId).toBe(st);
-    expect(got.data.teams[0]!.slots[0]!.careerId).toBeNull();
+    expect(got.data.team!.id).toBe(team.id);
+    expect(got.data.team!.slots[9]!.careerId).toBe(st);
+    expect(got.data.team!.slots[0]!.careerId).toBeNull();
+    expect(got.data.lastManager).toBe('박감독');
+    expect(await ctx.db.select().from(ownerTeams)).toHaveLength(1);
+  });
+
+  it('시즌마다 새 팀 — 그 시즌에 처음 올라온 선수만 넣고, 지난 시즌 팀은 그대로 남는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const pre = await addCareer(me.profileId, { peak: 90 });
+    const s1 = await addCareer(me.profileId, { peak: 85, serviceSeason: 1 });
+    // 프리시즌에는 시즌 1 선수를 넣을 수 없다.
+    const early = await putTeam(me.cookie, { slots: slots(s1) });
+    expect(ErrorEnvelopeSchema.parse(await early.json()).error.details).toEqual({
+      reason: 'PLAYER_NOT_ELIGIBLE',
+    });
+    const preTeam = PutRes.parse(
+      await (await putTeam(me.cookie, { name: '프리 FC', slots: slots(pre) })).json(),
+    ).data.team;
+    const rival = await ownerWithTeam(1);
+
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
+    const fresh = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(fresh).toMatchObject({ season: 1, current: 1, team: null, lastManager: '김감독' });
+    expect(fresh.seasons.map((x) => x.id)).toEqual([0, 1]);
+    expect(fresh.players.map((p) => p.careerId)).toEqual([s1]);
+    // 지난 시즌 팀으로는 경기할 수 없다(이번 시즌 팀이 없다).
+    const noTeam = await call('POST', '/v1/owner-team/matches', {
+      cookie: me.cookie,
+      headers: idem(),
+      body: { opponentTeamId: rival.team.id },
+    });
+    expect(noTeam.status).toBe(409);
+    expect((await putTeam(me.cookie, { slots: slots(pre) })).status).toBe(400);
+    const s1Team = PutRes.parse(
+      await (await putTeam(me.cookie, { name: '시즌 FC', slots: slots(s1) })).json(),
+    ).data.team;
+    expect(s1Team).toMatchObject({ season: 1, name: '시즌 FC' });
+    expect(s1Team.id).not.toBe(preTeam.id);
+    // 프리시즌 팀은 상대가 될 수 없다.
+    const vsOld = await call('POST', '/v1/owner-team/matches', {
+      cookie: me.cookie,
+      headers: idem(),
+      body: { opponentTeamId: rival.team.id },
+    });
+    expect(vsOld.status).toBe(404);
+    const past = GetRes.parse(
+      await (await call('GET', '/v1/owner-team?season=0', { cookie: me.cookie })).json(),
+    ).data;
+    expect(past).toMatchObject({ season: 0, current: 1 });
+    expect(past.team).toMatchObject({ id: preTeam.id, name: '프리 FC' });
+    expect(past.team!.slots[0]!.careerId).toBe(pre);
+    expect((await call('GET', '/v1/owner-team?season=2', { cookie: me.cookie })).status).toBe(400);
   });
 
   it('남의 선수·뛰는 중인 선수·같은 선수 두 번·욕설 이름은 거절한다', async () => {
@@ -296,6 +348,9 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(await reason(await putTeam(me.cookie, { name: '운영자 FC', slots: slots() }))).toBe(
       'RESERVED_NAME',
     );
+    expect(await reason(await putTeam(me.cookie, { manager: '시발감독', slots: slots() }))).toBe(
+      'BLOCKED_WORD',
+    );
     const short = await putTeam(me.cookie, { name: '가', slots: slots() });
     expect(short.status).toBe(400);
     const rows = await ctx.db.select().from(ownerTeams);
@@ -311,10 +366,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(res.status).toBe(200);
     const items = OppRes.parse(await res.json()).data.items;
     expect(items.map((i) => i.teamId)).toEqual([rival.team.id]);
-    expect(items[0]).toMatchObject({
-      owner: expect.stringMatching(/^구단주/),
-      record: { w: 0, d: 0, l: 0 },
-    });
+    expect(items[0]).toMatchObject({ owner: '김감독', rating: 1000, record: { w: 0, d: 0, l: 0 } });
 
     // 팀이 없으면 409 TEAM_REQUIRED.
     const noTeam = await issueGoogleCookie(ctx);
@@ -331,7 +383,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       body: { opponentTeamId: rival.team.id },
     });
     expect(res.status).toBe(201);
-    const { match, record, matchesLeft } = PlayRes.parse(await res.json()).data;
+    const { match, record, rating, matchesLeft } = PlayRes.parse(await res.json()).data;
     expect(matchesLeft).toBe(TEAM_MATCHES_PER_DAY - 1);
     expect(match.home.teamId).toBe(me.team.id);
     expect(match.away).toMatchObject({ teamId: rival.team.id, name: rival.team.name });
@@ -357,6 +409,20 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(homeRow!.wins + homeRow!.draws + homeRow!.losses).toBe(1);
     expect(awayRow!.wins).toBe(homeRow!.losses);
     expect(awayRow!.losses).toBe(homeRow!.wins);
+    // 레이팅은 두 팀 합이 그대로이고, 득실·연승·골 차가 쌓인다.
+    expect(homeRow!.rating).toBe(rating);
+    expect(homeRow!.rating + awayRow!.rating).toBe(2000);
+    expect(Math.sign(homeRow!.rating - 1000)).toBe(won ? 1 : drew ? 0 : -1);
+    expect([homeRow!.goalsFor, homeRow!.goalsAgainst]).toEqual([
+      match.home.goals,
+      match.away.goals,
+    ]);
+    expect([awayRow!.goalsFor, awayRow!.goalsAgainst]).toEqual([
+      match.away.goals,
+      match.home.goals,
+    ]);
+    expect(homeRow!.streak).toBe(won ? 1 : 0);
+    expect(homeRow!.bestMargin).toBe(Math.max(0, match.home.goals - match.away.goals));
 
     const theirs = MatchesRes.parse(
       await (await call('GET', '/v1/owner-team/matches', { cookie: rival.cookie })).json(),

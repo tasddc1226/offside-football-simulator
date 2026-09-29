@@ -15,15 +15,25 @@ import type { Candidate } from '../game/candidates.js';
 import type { PhaseReport } from './sheets/types.js';
 
 /** 기록실(하단 메뉴 'hof')의 탭. */
-export type HofTab = 'legends' | 'rn';
-/** 기록실 화면 상태. season: 서비스 시즌 순위(T-10-090). null이면 전체 명예의 전당. */
-export type HofView = { tab: HofTab; page: number; sort: HofSort; season: number | null };
+export type HofTab = 'legends' | 'rn' | 'teams';
+/**
+ * 기록실 화면 상태. season: 서비스 시즌 순위(T-10-090). null이면 전체 명예의 전당. team: 라이브 랭킹에서 연 팀
+ * 프로필(T-10-092).
+ */
+export type HofView = {
+  tab: HofTab;
+  page: number;
+  sort: HofSort;
+  season: number | null;
+  team: string | null;
+};
 /** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
 export const hofStart = (): HofView => ({
   tab: 'legends',
   page: 1,
   sort: 'score',
   season: activeSeason(new Date().toISOString())?.id ?? null,
+  team: null,
 });
 
 export type Screen =

@@ -26,3 +26,27 @@ export const serviceSeason = (id: number): ServiceSeason | undefined =>
 /** now(UTC ISO) 시점에 진행 중인 시즌. 개막 전이거나 마감 뒤면 undefined. */
 export const activeSeason = (now: string): ServiceSeason | undefined =>
   SERVICE_SEASONS.find((s) => s.startsAt <= now && (s.endsAt === null || now < s.endsAt));
+
+/**
+ * T-10-092 팀 시즌: now에 만들고 겨루는 팀의 시즌. 진행 중인 시즌 id, 첫 시즌 개막 전이면 0(프리시즌), 시즌 사이
+ * 휴식기면 null(팀을 고치거나 경기하지 않는다).
+ */
+export const teamSeasonAt = (now: string): number | null =>
+  activeSeason(now)?.id ?? (now < SERVICE_SEASONS[0]!.startsAt ? 0 : null);
+
+/** 팀 시즌 이름(0 = 프리시즌). */
+export const teamSeasonName = (id: number): string =>
+  id === 0 ? '프리시즌' : (serviceSeason(id)?.name ?? `시즌 ${id}`);
+
+/** 고를 수 있는 팀 시즌(프리시즌 + 개막한 시즌, 오래된 순). */
+export const openTeamSeasons = (now: string): number[] => [
+  0,
+  ...SERVICE_SEASONS.filter((s) => s.startsAt <= now).map((s) => s.id),
+];
+
+/** 그 팀 시즌이 끝났는가(프리시즌은 첫 시즌 개막에, 시즌은 마감에 끝난다). */
+export const teamSeasonClosed = (id: number, now: string): boolean => {
+  if (id === 0) return SERVICE_SEASONS[0]!.startsAt <= now;
+  const end = serviceSeason(id)?.endsAt;
+  return !!end && end <= now;
+};

@@ -1,5 +1,5 @@
-// T-10-092 구단 시즌 업적(클럽하우스). 그 시즌에 처음 올라와(careers.service_season) 은퇴한 내 선수들의 기록과 내 팀·팀
-// 경기로 판정하는 순수 함수다. 판정 재료는 서버가 이미 받은 시즌 요약(career_seasons)·은퇴 요약(careers)뿐이다.
+// T-10-092 구단 시즌 업적(클럽하우스). 그 시즌에 처음 올라와(careers.service_season) 은퇴한 내 선수들의 기록과 그 시즌
+// 내 팀·팀 경기로 판정하는 순수 함수다. 판정 재료는 서버가 이미 받은 시즌 요약(career_seasons)·은퇴 요약(careers)뿐이다.
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import { DETAIL_POSITIONS, type DetailPos, type PosGroup } from '@offside/contracts/positions';
 
@@ -30,9 +30,9 @@ export type AchievementTeamSlot = {
 
 export type AchievementInput = {
   careers: readonly AchievementCareer[];
-  /** 지금 팀(지난 시즌을 볼 때는 null — 팀 업적은 지금 팀으로만 판정한다). */
+  /** 그 시즌 팀의 선발(팀이 없는 지난 시즌이면 null — 팀 업적 단계를 보이지 않는다). */
   team: readonly AchievementTeamSlot[] | null;
-  /** 이 시즌 기간에 이긴 팀 경기 수. */
+  /** 그 시즌 팀이 이긴 경기 수. */
   teamWins: number;
   /** 세부 포지션이 있는 시즌(시즌 1부터)인가. */
   detail: boolean;
@@ -227,6 +227,14 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
       items: TIERS.map((t) => tier(t.id, t.label, t.unit, sum(t.get), t.steps)),
     },
     { id: 'collection', stage: '2단계', title: '기록 조각 모으기', items: collection },
+    // 3~5단계는 원작처럼 잠금으로 예고만 한다(아직 발견하지 못한 업적).
+    ...[3, 4, 5].map((n) => ({
+      id: `locked-${n}`,
+      stage: `${n}단계`,
+      title: 'LOCKED',
+      items: [],
+      locked: true,
+    })),
   ];
 
   if (team) {

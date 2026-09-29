@@ -34,7 +34,15 @@ const item = (groups: ReturnType<typeof clubAchievements>, id: string) =>
 describe('구단 시즌 업적', () => {
   it('선수가 없으면 모두 미달성이고, 팀을 넘기지 않으면 팀 업적이 없다', () => {
     const g = clubAchievements({ careers: [], team: null, teamWins: 0, detail: true });
-    expect(g.map((x) => x.id)).toEqual(['first', 'records', 'collection']);
+    expect(g.map((x) => x.id)).toEqual([
+      'first',
+      'records',
+      'collection',
+      'locked-3',
+      'locked-4',
+      'locked-5',
+    ]);
+    expect(g.filter((x) => x.locked).every((x) => x.items.length === 0)).toBe(true);
     expect(g.flatMap((x) => x.items).every((i) => !i.done)).toBe(true);
   });
 

@@ -40,11 +40,40 @@ const PLAYERS = [
 ];
 const FORMATION_433 = ['GK', 'FB', 'CB', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST', 'W'];
 const REC = { w: 0, d: 0, l: 0 };
+const MY_TEAM = 'tem_00000000-0000-4000-8000-000000000001';
+const RIVAL = 'tem_00000000-0000-4000-8000-000000000002';
+const SEASONS = [
+  { id: 0, name: '프리시즌' },
+  { id: 1, name: '시즌 1' },
+];
 
-function teamFrom(body: { name: string; formation: string; slots: (string | null)[] }) {
+/** GET /v1/owner-team(?season=) 응답. */
+const ownerTeam = (over: Record<string, unknown> = {}) =>
+  ok({
+    season: 0,
+    current: 0,
+    seasons: SEASONS.slice(0, 1),
+    team: null,
+    players: PLAYERS,
+    lastManager: null,
+    matchesLeft: 10,
+    matchesPerDay: 10,
+    ...over,
+  });
+/** /v1/owner-team 자체(쿼리 포함) — 하위 경로(/matches 등)는 빼고. */
+const ownerTeamUrl = (u: URL) => u.href.startsWith(API) && u.pathname === '/v1/owner-team';
+
+function teamFrom(body: {
+  name: string;
+  manager?: string;
+  formation: string;
+  slots: (string | null)[];
+}) {
   return {
-    id: 'tem_00000000-0000-4000-8000-000000000001',
+    id: MY_TEAM,
+    season: 0,
     name: body.name,
+    manager: body.manager ?? '홍감독',
     formation: body.formation,
     slots: FORMATION_433.map((slot, i) => {
       const id = body.slots[i] ?? null;
@@ -59,7 +88,10 @@ function teamFrom(body: { name: string; formation: string; slots: (string | null
     }),
     ovr: 56,
     lines: { atk: 60, mid: 52, def: 48, gk: 50 },
+    rating: 1000,
     record: REC,
+    likes: 0,
+    views: 0,
     createdAt: '2026-09-29T00:00:00.000Z',
     updatedAt: '2026-09-29T00:00:00.000Z',
   };
@@ -92,19 +124,13 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await stubOwner(page, true);
   let getCount = 0;
   let saved: ReturnType<typeof teamFrom> | null = null;
-  await page.route(`${API}/v1/owner-team`, async (route) => {
+  let body: Record<string, unknown> | null = null;
+  await page.route(ownerTeamUrl, async (route) => {
     if (route.request().method() === 'GET') {
       getCount++;
-      return route.fulfill(
-        ok({
-          teams: saved ? [saved] : [],
-          slotsMax: 1,
-          players: PLAYERS,
-          matchesLeft: 10,
-          matchesPerDay: 10,
-        }),
-      );
+      return route.fulfill(ownerTeam({ team: saved }));
     }
+    body = route.request().postDataJSON();
     saved = teamFrom(route.request().postDataJSON());
     return route.fulfill(ok({ team: saved }));
   });
@@ -115,9 +141,10 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
           {
             teamId: 'tem_00000000-0000-4000-8000-000000000002',
             name: '라이벌 FC',
-            owner: '익명 구단주',
+            owner: '라이벌 감독',
             formation: '4-4-2',
             ovr: 55,
+            rating: 1012,
             record: { w: 3, d: 1, l: 2 },
           },
         ],
@@ -179,6 +206,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
             createdAt: '2026-09-29T03:00:00.000Z',
           },
           record: { w: 1, d: 0, l: 0 },
+          rating: 1016,
           matchesLeft: 9,
         },
         201,
@@ -200,6 +228,9 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   expect(getCount).toBe(1);
 
   await page.locator('[data-team-name]').fill('우리 동네 FC');
+  // 감독 이름이 비면 저장할 수 없다.
+  await expect(page.locator('[data-act="team-save"]')).toBeDisabled();
+  await page.locator('[data-team-manager]').fill('홍감독');
   await page.locator('[data-act="team-auto"]').click();
   // 스트라이커 자리(9)에 공격수, 골키퍼 자리(0)에 골키퍼가 들어간다.
   await expect(page.locator('[data-slot="9"]')).toContainText('공개 골잡이');
@@ -230,6 +261,8 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await page.locator('[data-act="team-save"]').click();
   await expect(page.locator('#toast')).toContainText('팀을 만들었어요');
   await expect(page.locator('h1')).toHaveText('우리 동네 FC');
+  expect(body).toMatchObject({ name: '우리 동네 FC', manager: '홍감독', formation: '4-3-3' });
+  await expect(page.locator('[data-team-record]')).toContainText('레이팅 1,000');
 
   await page.locator('[data-act="team-play"]').click();
   await expect(page.locator('[data-opponent]')).toContainText('라이벌 FC');
@@ -241,27 +274,24 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(result).toContainText('익명의 공격수 No.7');
   await expect(result).toContainText('1승 0무 0패');
   await expectNoA11yViolations(page);
+  await result.getByRole('button', { name: '내 팀' }).click();
+  await expect(page.locator('[data-team-record]')).toContainText('레이팅 1,016');
 });
 
 test('시즌 업적 — 단계별로 달성 수를 보이고, 펼치면 업적마다 상태를 보인다', async ({ page }) => {
   await stubOwner(page, true);
-  await page.route(`${API}/v1/owner-team`, (route) =>
-    route.fulfill(
-      ok({ teams: [], slotsMax: 1, players: PLAYERS, matchesLeft: 10, matchesPerDay: 10 }),
-    ),
+  await page.route(ownerTeamUrl, (route) =>
+    route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS })),
   );
-  const seasons: (number | null)[] = [];
+  const seasons: number[] = [];
   await page.route(`${API}/v1/owner-team/achievements**`, (route) => {
     const q = new URL(route.request().url()).searchParams.get('season');
-    const season = q === null || q === '1' ? 1 : null;
+    const season = Number(q ?? 1);
     seasons.push(season);
     return route.fulfill(
       ok({
         season,
-        seasons: [
-          { id: null, name: '프리시즌' },
-          { id: 1, name: '시즌 1' },
-        ],
+        seasons: SEASONS,
         players: season ? 2 : 5,
         groups: [
           {
@@ -281,6 +311,7 @@ test('시즌 업적 — 단계별로 달성 수를 보이고, 펼치면 업적�
               { id: 'goals', label: '골', done: true, cur: 370, level: 2, next: 1000, unit: '골' },
             ],
           },
+          { id: 'locked-3', stage: '3단계', title: 'LOCKED', items: [], locked: true },
         ],
       }),
     );
@@ -299,9 +330,163 @@ test('시즌 업적 — 단계별로 달성 수를 보이고, 펼치면 업적�
   const records = box.locator('[data-ach-group="records"]');
   await records.locator('summary').click();
   await expect(records).toContainText('2단계 · 370골 · NEXT 1,000');
+  await expect(box.locator('[data-ach-group="locked-3"]')).toContainText('아직 발견하지 못했어요');
   await expectNoA11yViolations(page);
 
   await box.getByLabel('시즌').selectOption({ label: '프리시즌' });
   await expect(box).toContainText('프리시즌에 처음 뛰어 은퇴한 내 선수 5명');
-  expect(seasons).toEqual([1, null]);
+  expect(seasons).toEqual([1, 0]);
+});
+
+test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹에서 팀 프로필을 열어 좋아요를 누른다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  const pre = {
+    ...teamFrom({
+      name: '프리 FC',
+      formation: '4-3-3',
+      slots: ['c-gk', ...Array(8).fill(null), 'c-st'],
+    }),
+    record: { w: 5, d: 1, l: 2 },
+    rating: 1040,
+  };
+  await page.route(ownerTeamUrl, (route) => {
+    const q = new URL(route.request().url()).searchParams.get('season');
+    return route.fulfill(
+      q === '0'
+        ? ownerTeam({ season: 0, current: 1, seasons: SEASONS, team: pre })
+        : ownerTeam({
+            season: 1,
+            current: 1,
+            seasons: SEASONS,
+            players: [],
+            lastManager: '홍감독',
+          }),
+    );
+  });
+  const rankQueries: string[] = [];
+  await page.route(`${API}/v1/teams?*`, (route) => {
+    const sp = new URL(route.request().url()).searchParams;
+    rankQueries.push(sp.toString());
+    return route.fulfill(
+      ok({
+        season: Number(sp.get('season') ?? 1),
+        seasons: SEASONS,
+        sort: sp.get('sort') ?? 'rating',
+        page: 1,
+        total: 2,
+        items: [
+          {
+            rank: 1,
+            teamId: RIVAL,
+            name: '라이벌 FC',
+            manager: '라이벌 감독',
+            formation: '4-4-2',
+            ovr: 70,
+            rating: 1100,
+            record: { w: 9, d: 0, l: 1 },
+            likes: 3,
+            createdAt: '2026-09-29T00:00:00.000Z',
+          },
+          {
+            rank: 2,
+            teamId: MY_TEAM,
+            name: '프리 FC',
+            manager: '홍감독',
+            formation: '4-3-3',
+            ovr: 56,
+            rating: 1040,
+            record: { w: 5, d: 1, l: 2 },
+            likes: 0,
+            createdAt: '2026-09-29T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+  });
+  let views = 0;
+  const likes: string[] = [];
+  await page.route(`${API}/v1/teams/${RIVAL}**`, (route) => {
+    const req = route.request();
+    if (req.url().endsWith('/views')) {
+      views++;
+      return route.fulfill({ status: 204, body: '' });
+    }
+    if (req.url().endsWith('/like')) {
+      likes.push(req.method());
+      return route.fulfill(
+        ok({ liked: req.method() === 'PUT', likes: req.method() === 'PUT' ? 4 : 3 }),
+      );
+    }
+    return route.fulfill(
+      ok({
+        team: {
+          ...teamFrom({ name: '라이벌 FC', formation: '4-4-2', slots: Array(11).fill(null) }),
+          id: RIVAL,
+          seasonName: '프리시즌',
+          rank: 1,
+          manager: '라이벌 감독',
+          rating: 1100,
+          record: { w: 9, d: 0, l: 1 },
+          goals: { for: 31, against: 8 },
+          likes: 3,
+          views: 41,
+          badges: [
+            { id: 'final-1', label: '시즌 우승', desc: '프리시즌 최종 1위' },
+            { id: 'streak-5', label: '5연승', desc: '5경기를 내리 이겼다' },
+          ],
+        },
+        liked: false,
+        mine: false,
+      }),
+    );
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  // 새 시즌 — 팀이 없고 감독 이름은 지난 팀에서 채워 둔다.
+  await expect(page.locator('h1')).toHaveText('팀 만들기');
+  await expect(page.locator('[data-team-manager]')).toHaveValue('홍감독');
+  await expect(page.locator('.tm-head')).toContainText('시즌 1에 뛰고 은퇴한');
+
+  // 지난 시즌 팀은 보기만 한다.
+  await page.locator('[data-team-season]').selectOption({ label: '프리시즌' });
+  await expect(page.locator('h1')).toHaveText('프리 FC');
+  await expect(page.locator('[data-team-readonly]')).toBeVisible();
+  await expect(page.locator('[data-act="team-save"]')).toHaveCount(0);
+  await expect(page.locator('[data-team-record]')).toContainText('레이팅 1,040');
+  await expect(page.locator('button[data-slot]')).toHaveCount(0);
+  await expect(page.locator('div[data-slot="9"]')).toContainText('공개 골잡이');
+  await expectNoA11yViolations(page);
+
+  // 라이브 랭킹 → 다른 팀 프로필(조회수 한 번) → 좋아요.
+  await page.locator('[data-act="team-ranking"]').click();
+  await expect(page.locator('[data-hof-tab="teams"]')).toHaveAttribute('aria-pressed', 'true');
+  const list = page.locator('[data-team-ranking]');
+  await expect(list.locator('[data-rank-team]')).toHaveCount(2);
+  await expect(list.locator('[data-rank-team]').first()).toContainText('라이벌 FC');
+  await expect(list.locator('[data-rank-team]').first()).toContainText('1,100');
+  await list.locator('[data-rank-sort="ovr"]').click();
+  await expect.poll(() => rankQueries.at(-1)).toBe('sort=ovr&page=1');
+  await list.locator(`[data-rank-team="${RIVAL}"]`).click();
+  const prof = page.locator(`[data-team-profile="${RIVAL}"]`);
+  await expect(prof).toContainText('라이벌 FC');
+  await expect(prof).toContainText('감독 라이벌 감독');
+  await expect(prof).toContainText('RANK #1');
+  await expect(page.locator('[data-team-history]')).toContainText('시즌 우승');
+  await expect(page.locator('[data-team-history]')).toContainText('5연승');
+  await expect(page.getByText('조회수 42')).toBeVisible();
+  expect(views).toBe(1);
+  const like = page.locator('[data-act="team-like"]');
+  await like.click();
+  await expect(like).toHaveAttribute('aria-pressed', 'true');
+  await expect(like).toContainText('4');
+  await expectNoA11yViolations(page);
+  await like.click();
+  await expect(like).toContainText('3');
+  expect(likes).toEqual(['PUT', 'DELETE']);
+  await page.locator('[data-act="team-profile-back"]').click();
+  await expect(list).toBeVisible();
 });

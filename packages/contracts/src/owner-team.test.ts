@@ -7,13 +7,15 @@ import {
   LINEUP_SIZE,
   LINE_BASE,
   LINES,
+  TEAM_RATING_K,
   YOUTH_OVR,
   fit,
   lineStrength,
+  ratingDelta,
   slotRating,
   teamOvr,
 } from './owner-team.js';
-import { PutOwnerTeamBodySchema, TeamNameSchema } from './teams.js';
+import { ManagerNameSchema, PutOwnerTeamBodySchema, TeamNameSchema } from './teams.js';
 
 describe('T-10-092 포메이션', () => {
   it.each(FORMATION_IDS)('%s는 11자리이고 줄 인원 합과 계열 순서가 맞다', (id) => {
@@ -84,10 +86,14 @@ describe('PutOwnerTeamBodySchema', () => {
     expect(TeamNameSchema.safeParse('<b>팀</b>').success).toBe(false);
   });
   it('자리는 정확히 11칸', () => {
-    const base = { name: '우리 FC', formation: '4-3-3' };
+    const base = { name: '우리 FC', manager: '홍감독', formation: '4-3-3' };
     expect(PutOwnerTeamBodySchema.safeParse({ ...base, slots: Array(11).fill(null) }).success).toBe(
       true,
     );
+    const { manager: _, ...noManager } = base;
+    expect(
+      PutOwnerTeamBodySchema.safeParse({ ...noManager, slots: Array(11).fill(null) }).success,
+    ).toBe(false);
     expect(PutOwnerTeamBodySchema.safeParse({ ...base, slots: Array(10).fill(null) }).success).toBe(
       false,
     );
@@ -95,5 +101,20 @@ describe('PutOwnerTeamBodySchema', () => {
       PutOwnerTeamBodySchema.safeParse({ ...base, formation: '5-4-1', slots: Array(11).fill(null) })
         .success,
     ).toBe(false);
+  });
+});
+
+describe('T-10-092 감독 이름 · 팀 레이팅', () => {
+  it('감독 이름은 앞뒤 공백을 떼고 2~10자', () => {
+    expect(ManagerNameSchema.parse(' 홍감독 ')).toBe('홍감독');
+    expect(ManagerNameSchema.safeParse('홍').success).toBe(false);
+    expect(ManagerNameSchema.safeParse('가'.repeat(11)).success).toBe(false);
+  });
+  it('레이팅은 같은 팀끼리 이기면 K/2, 비기면 0이고, 약한 팀이 이기면 더 많이 오른다', () => {
+    expect(ratingDelta(1000, 1000, 1)).toBe(TEAM_RATING_K / 2);
+    expect(ratingDelta(1000, 1000, 0.5)).toBe(0);
+    expect(ratingDelta(1000, 1000, 0)).toBe(-TEAM_RATING_K / 2);
+    expect(ratingDelta(900, 1100, 1)).toBeGreaterThan(ratingDelta(1100, 900, 1));
+    expect(ratingDelta(1100, 900, 1)).toBeGreaterThan(0);
   });
 });

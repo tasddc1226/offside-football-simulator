@@ -45,7 +45,7 @@
           <span class="settings-label">
             <small class="eyebrow">My team</small>
             <strong>내 팀 · 시즌 업적</strong>
-            <span class="muted">은퇴한 선수로 팀을 꾸려 겨루고, 시즌마다 구단 업적을 채워요</span>
+            <span class="muted">시즌마다 은퇴한 선수로 팀을 꾸려 겨루고, 라이브 랭킹과 구단 업적을 채워요</span>
           </span>
           <i class="settings-chev" aria-hidden="true">›</i>
         </button>
