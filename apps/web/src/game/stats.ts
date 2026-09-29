@@ -26,6 +26,9 @@ export function potLabel(s: GameState): string {
     hi = gradeOf(p + fog);
   return lo === hi ? lo : `${lo}~${hi}`;
 }
+/** T-10-112 스카우트 평가가 나왔는지 — 고3 첫 시즌을 마쳐야 첫 평가가 나온다(시작하자마자 잠재력을 보고
+ * 다시 만드는 리세 방지). */
+export const potScouted = (s: GameState): boolean => s.career.length > 0;
 /** 아직 재평가가 남아 범위가 좁혀질 수 있는지. */
 export const potFogged = (s: GameState): boolean => (s.flags.rescout ?? 0) < POT_FOG.length - 1;
 /** T-10-073 은퇴 때 공개하는 실제 잠재력과 마지막 스카우트 평가.

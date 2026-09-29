@@ -245,7 +245,7 @@
           {/each}
         </div>
       </div>
-      <p class="muted fs-sm">잠재력은 숨겨져 있어요. 스카우트 평가로만 짐작할 수 있어요.</p>
+      <p class="muted fs-sm">잠재력은 숨겨져 있어요. 고3 시즌을 마치면 스카우트의 첫 평가가 나와요.</p>
     </section>
 
     <div class="action-bar at-bottom">

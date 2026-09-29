@@ -65,15 +65,30 @@ function redistribute(
   return out;
 }
 
-/** 후보 3명을 만든다. 세 후보의 attrs 합계는 모두 같다(baseline 총합과 동일) — 분포만 다르다. */
+/** T-10-112 스카우트 시드와 조건(포지션·세부 포지션·주력)을 섞은 후보 난수 시드 — 주력은 고른 순서와 무관하다. */
+function candidateSeed(
+  seed: number,
+  pos: Pos,
+  focus: readonly AttrKey[],
+  dpos?: DetailPos | null,
+): number {
+  let h = 0x811c9dc5 ^ (seed >>> 0);
+  for (const ch of `${pos}|${dpos ?? ''}|${[...focus].sort().join(',')}`)
+    h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193);
+  return h >>> 0;
+}
+
+/** 후보 3명을 만든다. 세 후보의 attrs 합계는 모두 같다(baseline 총합과 동일) — 분포만 다르다.
+ * T-10-112 seed를 주면 같은 시드·조건에서 늘 같은 후보가 나온다(다시 뽑아 고르는 리세 방지). */
 export function generateCandidates(
   pos: Pos,
   focus: readonly AttrKey[],
   dpos?: DetailPos | null,
+  seed: number = Math.floor(Math.random() * 0xffffffff),
   n = 3,
 ): Candidate[] {
   const base = baseline(pos, focus, dpos);
-  const rand = localRng((Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0);
+  const rand = localRng(candidateSeed(seed, pos, focus, dpos));
   const out: Candidate[] = [];
   for (let i = 0; i < n; i++) {
     const attrs = i === 0 ? { ...base } : redistribute(base, focus, rand, 8 + i * 4, 4);

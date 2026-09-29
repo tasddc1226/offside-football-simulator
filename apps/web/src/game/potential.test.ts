@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { bloomTick, potAchText, potFogged, potGrade, potLabel, potReveal } from './stats.js';
+import {
+  bloomTick,
+  potAchText,
+  potFogged,
+  potGrade,
+  potLabel,
+  potReveal,
+  potScouted,
+} from './stats.js';
 import { createRng, setActiveRng } from './rng.js';
 import type { GameState } from './types.js';
 
@@ -14,6 +22,11 @@ describe('잠재력 표시 (T-10-073)', () => {
     expect(potLabel(st(79, 1))).toBe('C~B'); // 77~81
     expect(potLabel(st(79, 2))).toBe('B');
     expect(potLabel(st(95))).toBe('S'); // 범위가 한 등급 안이면 한 글자
+  });
+
+  it('T-10-112 고3 첫 시즌을 마치기 전에는 스카우트 평가가 없다', () => {
+    expect(potScouted({ ...st(80), career: [] } as GameState)).toBe(false);
+    expect(potScouted({ ...st(80), career: [{}] } as unknown as GameState)).toBe(true);
   });
 
   it('남은 재평가가 있는 동안만 흐리다', () => {

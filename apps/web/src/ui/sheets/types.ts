@@ -146,6 +146,8 @@ export type SheetView =
       miles: string[];
       titles: TitleView[];
       notes: string[];
+      /** T-10-112 고3 첫 시즌 뒤 처음 공개하는 스카우트 잠재력 평가(그 외 시즌은 null). */
+      scout: string | null;
       fans: string[];
       age: number;
     }

@@ -20,6 +20,7 @@ import {
   STORIES,
   teamRank,
   roundRange,
+  potLabel,
 } from '../game/engine.js';
 import { playPhase, type PhaseResult } from '../game/turn.js';
 import { eventById } from '../game/events-data.js';
@@ -28,7 +29,15 @@ import { offsetToRoll, tapOffset, timingNote, zoneLabel, zoneWidth } from '../ga
 import { isHiddenEvent } from '../game/dexGroups.js';
 import { markDexSeen } from './dex.js';
 import { scoreLine, type NatTourResult } from '../game/national.js';
-import { endSeason, market, acceptOption, retire, type SeasonEndResult } from '../game/season.js';
+import {
+  endSeason,
+  market,
+  acceptOption,
+  retire,
+  loadKey,
+  saveKey,
+  type SeasonEndResult,
+} from '../game/season.js';
 import { pickFanLines } from '../game/fanfeed.js';
 import { chLabel } from '../game/records.js';
 import { titleView } from '../game/titles.js';
@@ -291,6 +300,9 @@ function showSeasonEnd(res: SeasonEndResult) {
   // pending.res로 복원된 옛 세이브에는 뒤에 추가된 필드(titles 등)가 없을 수 있다.
   const { rec, trophies, awards, notes, gala = [], tours = [], miles = [], titles = [] } = res;
   const s = appState.G!;
+  // T-10-112 고3 첫 시즌이 끝났다 — 스카우트 첫 평가를 공개하고, 다음 커리어는 새 후보를 받는다.
+  const firstScout = s.career.length === 1;
+  if (firstScout) releaseScoutSeed();
   const [col, colLabel] =
     s.pos === 'GK' || s.pos === 'DF' ? [rec.cs, '무실점'] : [rec.assists, '도움'];
   // T-10-034: indexOf(rec)는 $state 프록시라 늘 -1이었다(이적 팬 반응이 안 나옴) — 연도로 찾는다.
@@ -326,6 +338,7 @@ function showSeasonEnd(res: SeasonEndResult) {
       miles,
       titles,
       notes,
+      scout: firstScout ? potLabel(s) : null,
       fans,
       age: s.age,
     },
@@ -510,8 +523,25 @@ export function startCareer(name: string, number: number, presetAttrs?: Record<A
 }
 
 // ───────── 후보 선수 카드 (T-10-002) ─────────
+// T-10-112 스카우트 시드: 한 번 정하면 커리어가 고3 첫 시즌을 마칠 때까지 유지한다. 뒤로 가기·새로 고침·
+// 시작 직후 포기로 다시 와도 같은 조건이면 같은 후보가 나온다(다시 뽑아 고르는 리세 방지).
+const SCOUT_SEED = 'ft_scout_seed';
+function scoutSeed(): number {
+  const kept = loadKey<number>(SCOUT_SEED);
+  if (typeof kept === 'number') return kept;
+  const seed = Math.floor(Math.random() * 0xffffffff);
+  saveKey(SCOUT_SEED, seed);
+  return seed;
+}
+const releaseScoutSeed = () => saveKey(SCOUT_SEED, null);
+
 export function rollCandidates() {
-  appState.candidates = generateCandidates(appState.C.pos, appState.C.focus, draftDpos(appState.C));
+  appState.candidates = generateCandidates(
+    appState.C.pos,
+    appState.C.focus,
+    draftDpos(appState.C),
+    scoutSeed(),
+  );
   appState.candidatesOpen = [false, false, false];
   appState.candidatePick = null;
 }

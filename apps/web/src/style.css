@@ -2562,6 +2562,19 @@ th.n {
 .story-end b {
   font-size: 1.0625rem;
 }
+/* T-10-112 고3 첫 시즌 뒤 스카우트 첫 평가 공개 */
+.scout-card b {
+  color: var(--accent-text);
+}
+.scout-card.pop {
+  animation: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation-delay: 160ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scout-card.pop {
+    animation: none;
+  }
+}
 .story-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
