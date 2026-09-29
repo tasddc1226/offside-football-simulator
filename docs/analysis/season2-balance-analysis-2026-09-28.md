@@ -211,4 +211,3 @@ LS는 개인상마다 12점, 트로피마다 10점, 발롱도르 우승 60점과
 - [잠재력·재평가](https://github.com/tasddc1226/offside-football-simulator/blob/cfb25ab31d8c45200dd77e18b7facc14bab5beb7/apps/web/src/game/stats.ts)
 - [연령 쇠퇴와 은퇴 스냅샷](https://github.com/tasddc1226/offside-football-simulator/blob/cfb25ab31d8c45200dd77e18b7facc14bab5beb7/apps/web/src/game/season.ts)
 - 집계 원본: season2-balance-evidence-2026-09-28.json
-
