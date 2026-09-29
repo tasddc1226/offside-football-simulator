@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "0.1.0",
   "dependencies": {
+    "@expo-google-fonts/barlow-condensed": "^0.4.1",
     "@offside/app-core": "workspace:*",
     "@offside/contracts": "workspace:*",
     "@offside/game": "workspace:*",

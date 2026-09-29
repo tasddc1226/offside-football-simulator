@@ -69,6 +69,9 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@expo-google-fonts/barlow-condensed':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@offside/app-core':
         specifier: workspace:*
         version: link:../../packages/app-core
@@ -1329,6 +1332,9 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@expo-google-fonts/barlow-condensed@0.4.1':
+    resolution: {integrity: sha512-9yuXU1MpI4Dw/8rR4pj2EXcT4/31H5+DrrT47auF8IzD9r7SZPRoNVq8clRq7zxOTh7v1gJk3pBhydDVf2x/dA==}
 
   '@expo-google-fonts/material-symbols@0.4.48':
     resolution: {integrity: sha512-aZztj44PyA/sj3TXSwwpLJwqMlTUJ49okbZJYURzEcuERxMQB0KbX7RrLBi8WJnuWz5HFOLlTRxORrJfNnUPNQ==}
@@ -5938,6 +5944,8 @@ snapshots:
 
   '@exodus/bytes@1.15.1':
     optional: true
+
+  '@expo-google-fonts/barlow-condensed@0.4.1': {}
 
   '@expo-google-fonts/material-symbols@0.4.48': {}
 
