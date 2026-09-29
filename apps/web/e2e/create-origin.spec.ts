@@ -18,7 +18,10 @@ test('국적·키·몸무게를 입력하고, 범위를 벗어나면 다음으�
 
   // T-10-099 한글·초성으로 찾는다. 타이핑 중인 글자(블)도 맞고, 키보드로 고를 수 있다.
   await nation.click();
-  await expect(page.getByRole('option', { name: /대한민국/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('option', { name: /대한민국/ })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await nation.fill('ㅂㄹㅈ');
   await expect(page.getByRole('option', { name: '브라질' })).toBeVisible();
   await expect(page.getByRole('option', { name: '대한민국' })).toHaveCount(0);

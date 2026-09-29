@@ -1,15 +1,15 @@
 <script lang="ts">
   // T-10-099 국적 고르기: 한글·초성으로 찾는 콤보박스. 연맹별로 묶어 가나다순, 대한민국은 맨 위.
-  import { CONFEDS, CONF_ORDER, DEFAULT_NATION, NATIONS, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
-  import type { Nation } from '@offside/contracts/nations';
-  import { koMatchAt } from './format.js';
+  import { CONFEDS, CONF_ORDER, DEFAULT_NATION, NATIONS } from '@offside/contracts/nations';
+  import { KR, flagOf, nationOf, type Nation } from '../game/nation.js';
+  import { koMatchAt } from './koSearch.js';
+  import { motionOK } from './motion.js';
 
   let { id, value = $bindable() }: { id: string; value: string } = $props();
 
   const byKo = new Intl.Collator('ko').compare;
-  const KOREA = NATION_BY_CODE.get(DEFAULT_NATION)!;
   const GROUPS = [
-    { key: 'KR', label: '기본', list: [KOREA] },
+    { key: 'KR', label: '기본', list: [KR] },
     ...CONF_ORDER.map((conf) => ({
       key: conf,
       label: `${CONFEDS[conf].region} (${conf})`,
@@ -25,7 +25,7 @@
   let root: HTMLDivElement;
   let list = $state<HTMLDivElement>();
 
-  const selected = $derived(NATION_BY_CODE.get(value) ?? KOREA);
+  const selected = $derived(nationOf({ nation: value }));
   // 검색 중엔 연맹 묶음 대신 한 목록으로, 이름이 검색어로 시작하는 나라부터.
   const groups = $derived.by(() => {
     if (!query) return GROUPS;
@@ -45,7 +45,7 @@
     active = Math.max(0, flat.findIndex((n) => n.code === value));
     input.select();
     // 폰에선 키보드가 올라와 아래 목록을 가리므로 입력 칸을 화면 위쪽으로 올린다(여백은 scroll-margin-top).
-    if (matchMedia('(pointer: coarse)').matches) setTimeout(() => root.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300);
+    if (matchMedia('(pointer: coarse)').matches) setTimeout(() => root.scrollIntoView({ block: 'start', behavior: motionOK ? 'smooth' : 'auto' }), 300);
   }
   function hide() {
     open = false;
@@ -90,7 +90,6 @@
     aria-expanded={open}
     aria-controls="{id}-list"
     aria-activedescendant={open && cur ? optId(cur) : undefined}
-    data-set="nation"
     data-value={value}
     placeholder="나라 이름이나 초성(ㅂㄹㅈ)"
     value={query ?? selected.ko}
