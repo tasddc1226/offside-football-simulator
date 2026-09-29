@@ -111,7 +111,7 @@ test('로그인하지 않아도 공유 버튼이 화면 아래에 고정돼 링�
   await expect(page.getByText('구글 계정을 연결했습니다.')).toBeVisible();
   await expect(page).toHaveURL(/\/$/);
   // 설정 화면이 아니라 방금 은퇴한 선수 상세로 돌아오고, 공유 버튼은 그대로 있다.
-  await expect(page.locator('[data-act="hof-back"]')).toBeVisible();
+  await expect(page.locator('.film-open h1')).toBeVisible();
   await expect(page.locator('[data-share="login"]')).toHaveCount(0);
   await expect(page.locator('[data-act="share-career"]')).toBeInViewport();
   // 공유 바 왼쪽 반은 홈으로.

@@ -11,7 +11,10 @@
 
 <div class="wrap">
   <Topbar />
-  <button class="btn btn-block" data-act="hof-back" onclick={() => (appState.screen = appState.legendBack)}>← 이전으로</button>
+  <!-- T-10-126 내가 은퇴시킨 선수(v.own)는 버튼 없이 뒤로 가기·밀어서 돌아간다. -->
+  {#if !v?.own}
+    <button class="btn btn-block" data-act="hof-back" onclick={() => (appState.screen = appState.legendBack)}>← 이전으로</button>
+  {/if}
   {#if v}
     <LegendReport {v} />
     {#if v.own?.id}<OwnHofCards {v} />{/if}
