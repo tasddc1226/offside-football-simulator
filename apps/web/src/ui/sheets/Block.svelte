@@ -13,7 +13,7 @@
 
 <div class="eyebrow">{v.eyebrow}</div>
 <h2>{v.title}</h2>
-<div class="prog"><i style="width:{v.progress * 100}%"></i></div>
+<div class="prog"><i style:width="{v.progress * 100}%" style:transition-duration="{v.fill}ms"></i></div>
 <div class="prog-meta"><span>{v.round}</span><span data-block-wdl>{v.wdl.w}승 {v.wdl.d}무 {v.wdl.l}패</span></div>
 <div class="tally">
   {#each tally as t (t.l)}

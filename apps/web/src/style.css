@@ -2062,6 +2062,8 @@ th.n {
   height: 100%;
   width: 0;
   background: linear-gradient(90deg, var(--pitch-2), var(--accent));
+  /* T-10-123 길이는 시트가 한 단계(한 경기) 간격으로 정한다(style:transition-duration) — 다음 값까지 그 시간 동안
+     고르게 차올라 막대가 끊김 없이 흐른다. */
   transition: width 0.12s linear;
 }
 .tally {
