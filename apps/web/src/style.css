@@ -331,20 +331,97 @@ p {
   opacity: 0.45;
   cursor: not-allowed;
 }
-/* 누르는 동안 살짝 들어간다(떼면 빠르게 돌아온다). 비활성 버튼은 움직이지 않는다. */
-.btn,
-.icon-btn {
+/* T-10-121 누를 수 있는 모든 요소는 누르는 동안 버튼처럼 살짝 들어간다(떼면 빠르게 돌아온다). button·a·role=button 등
+   이면 새로 만든 요소도 따로 적지 않아도 된다. transform이 아니라 scale 속성을 써서 요소가 원래 가진 transform(가운데
+   맞춤 translate 등)과 겹치지 않는다. :where로 특이도를 0으로 둬 요소별 transition이 있으면 그쪽이 이긴다.
+   비활성 요소는 움직이지 않는다. iOS는 문서에 touchstart 리스너가 있어야 :active가 걸린다(main.ts). */
+:where(
+  button,
+  a[href],
+  summary,
+  select,
+  [role='button'],
+  [role='tab'],
+  [role='switch'],
+  [role='link'],
+  [role='option'],
+  [role='menuitem'],
+  label:has(> input[type='checkbox'], > input[type='radio']),
+  .choice,
+  .offer,
+  .cand-card,
+  .tile-link,
+  .card-title
+) {
   transition:
-    transform 0.16s ease-out,
+    scale 0.16s ease-out,
     filter 0.16s ease-out,
-    box-shadow 0.16s ease-out;
+    box-shadow 0.16s ease-out,
+    background-color 0.16s ease-out;
+}
+:where(
+    button,
+    a[href],
+    summary,
+    select,
+    [role='button'],
+    [role='tab'],
+    [role='switch'],
+    [role='link'],
+    [role='option'],
+    [role='menuitem'],
+    label:has(> input[type='checkbox'], > input[type='radio']),
+    .choice,
+    .offer,
+    .cand-card,
+    .tile-link,
+    .card-title
+  ):active:not(:disabled, [aria-disabled='true']) {
+  scale: var(--press-scale, 0.97);
+  filter: brightness(0.92);
+  transition-duration: 0.05s;
+}
+/* 큰 카드·화면 폭 목록 행은 덜 줄인다. */
+.opt,
+.choice,
+.offer,
+.cand-card,
+.title-item,
+.card-title,
+.tile-link,
+.board-row,
+.hof-row,
+.settings-trigger,
+.settings-links > *,
+.mg-stage,
+label:has(> input[type='checkbox'], > input[type='radio']) {
+  --press-scale: 0.985;
 }
 .btn:active:not(:disabled),
 .icon-btn:active:not(:disabled) {
-  transform: translateY(1px) scale(0.97);
-  filter: brightness(0.92);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18);
-  transition-duration: 0.05s;
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(
+    button,
+    a[href],
+    summary,
+    select,
+    [role='button'],
+    [role='tab'],
+    [role='switch'],
+    [role='link'],
+    [role='option'],
+    [role='menuitem'],
+    label:has(> input[type='checkbox'], > input[type='radio']),
+    .choice,
+    .offer,
+    .cand-card,
+    .tile-link,
+    .card-title
+  ):active {
+    scale: none;
+  }
 }
 .link-btn:active {
   opacity: 0.6;
@@ -376,43 +453,7 @@ p {
     color: var(--ink);
   }
 }
-/* 선택지·카드도 버튼처럼 살짝 들어간다(크기가 커서 덜 줄인다). */
-.opt,
-button.tile-link,
-.choice,
-.offer,
-.cand-card,
-button.title-item,
-.hof-sort,
-.card-title {
-  transition:
-    transform 0.16s ease-out,
-    filter 0.16s ease-out,
-    box-shadow 0.16s ease-out;
-}
-.opt:active:not(:disabled),
-button.tile-link:active,
-.choice:active,
-.offer:active,
-.cand-card:active,
-button.title-item:active,
-.hof-sort:active,
-.card-title:active {
-  transform: scale(0.98);
-  filter: brightness(0.94);
-  transition-duration: 0.05s;
-}
-/* 화면 폭 목록 행은 줄이지 않고 누르는 동안 바탕만 옅게 깔린다. */
-.board-row,
-button.hof-row,
-.settings-trigger,
-.settings-links > a,
-.settings-links > button,
-button.what {
-  transition:
-    background-color 0.16s ease-out,
-    color 0.16s ease-out;
-}
+/* 화면 폭 목록 행은 누르는 동안 바탕도 옅게 깔린다(바탕이 투명해 밝기만으로는 잘 안 보인다). */
 .board-row:active,
 button.hof-row:active,
 .settings-trigger:active,
@@ -421,20 +462,6 @@ button.hof-row:active,
 button.what:active {
   background-color: color-mix(in srgb, var(--ink) 7%, transparent);
   transition-duration: 0.05s;
-}
-@media (prefers-reduced-motion: reduce) {
-  .btn:active:not(:disabled),
-  .icon-btn:active:not(:disabled),
-  .opt:active:not(:disabled),
-  button.tile-link:active,
-  .choice:active,
-  .offer:active,
-  .cand-card:active,
-  button.title-item:active,
-  .hof-sort:active,
-  .card-title:active {
-    transform: none;
-  }
 }
 .self-start {
   align-self: flex-start;
@@ -1403,23 +1430,14 @@ body:has(.main-nav) .wrap {
 .tabs button:is([aria-selected='true'], [aria-current='page']) .tab-ic {
   transform: translateY(-1px) scale(1.06);
 }
-/* 누르는 동안 탭이 살짝 들어가고 둥근 바탕이 옅게 깔린다(다른 버튼과 같은 느낌). */
-.tabs button {
-  transition:
-    transform 0.16s ease-out,
-    background-color 0.16s ease-out;
-}
+/* 누르는 동안 탭 둥근 바탕이 옅게 깔린다(들어가는 효과는 전역 T-10-121). */
 .tabs button:active {
-  transform: scale(0.94);
   background-color: color-mix(in srgb, var(--ink) 7%, transparent);
   transition-duration: 0.05s;
 }
 @media (prefers-reduced-motion: reduce) {
   .tabs button .tab-ic {
     transition: none;
-  }
-  .tabs button:active {
-    transform: none;
   }
 }
 
@@ -3769,11 +3787,6 @@ body:has(nav.tabs) .toast {
   font: inherit;
   text-align: center;
   cursor: pointer;
-  transition: transform 0.16s ease-out;
-}
-.rn-tile:active {
-  transform: scale(0.97);
-  transition-duration: 0.05s;
 }
 .rn-tile > span {
   max-width: 100%;

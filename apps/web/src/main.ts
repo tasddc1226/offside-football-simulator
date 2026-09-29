@@ -34,6 +34,8 @@ initializeAnalytics(appState.screen, appState.G && !appState.G.retired ? appStat
 syncBalance();
 // T-10-114 모바일 뒤로 가기(iOS 가장자리 밀기·Android 뒤로)가 앱 안의 이전 화면으로 가게 한다.
 initHistory();
+// T-10-121 iOS Safari·Chrome은 문서에 touchstart 리스너가 없으면 터치로 :active(누름 효과)를 걸지 않는다.
+document.addEventListener('touchstart', () => {}, { passive: true });
 
 // T-10-041: index.html의 첫 화면은 빌드 때 넣은 App 서버 렌더 결과다(scripts/app-shell.mjs). 지우고 다시
 // 그리지 않고 hydrate로 이어받아야 첫 페인트의 제목이 LCP로 남는다. 셸이 없거나(app-shell.html) 상태가 달라도
