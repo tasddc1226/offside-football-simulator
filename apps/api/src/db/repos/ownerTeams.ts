@@ -139,19 +139,29 @@ export function countMatchesSince(db: Db, profileId: string, sinceIso: string) {
  * T-10-095 두 팀이 sinceIso 이후 치른 경기(누가 걸었든). 오늘 같은 상대에게 이미 걸었는지와 최근 재대결 횟수(레이팅 감쇠)를
  * 함께 센다. batch에 넣을 수 있게 쿼리로 돌려준다.
  */
-export const meetingsSince = (db: Db, teamA: string, teamB: string, sinceIso: string) =>
-  db
-    .select({ homeTeamId: teamMatches.homeTeamId, createdAt: teamMatches.createdAt })
-    .from(teamMatches)
-    .where(
-      and(
-        or(
-          and(eq(teamMatches.homeTeamId, teamA), eq(teamMatches.awayTeamId, teamB)),
-          and(eq(teamMatches.homeTeamId, teamB), eq(teamMatches.awayTeamId, teamA)),
-        ),
-        gte(teamMatches.createdAt, sinceIso),
-      ),
+export const meetingsSince = (db: Db, teamA: string, teamB: string, sinceIso: string) => {
+  // 날짜 조건을 갈래마다 넣어야 두 갈래 모두 (away_team_id, created_at) 인덱스 범위로 찾는다.
+  const leg = (home: string, away: string) =>
+    and(
+      eq(teamMatches.awayTeamId, away),
+      gte(teamMatches.createdAt, sinceIso),
+      eq(teamMatches.homeTeamId, home),
     );
+  return db
+    .select({ n: sql<number>`count(*)` })
+    .from(teamMatches)
+    .where(or(leg(teamA, teamB), leg(teamB, teamA)));
+};
+
+/**
+ * 이 구단주가 sinceIso 이후 건 경기의 상대 팀(경기마다 한 줄). 오늘 경기 수·오늘 이미 건 상대(T-10-095)를 한 번에 센다 —
+ * 상대 후보에서 빼는 하위 쿼리로도 쓴다.
+ */
+export const challengedSince = (db: Db, profileId: string, sinceIso: string) =>
+  db
+    .select({ teamId: teamMatches.awayTeamId })
+    .from(teamMatches)
+    .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
 
 /** 여러 팀 선발의 커리어를 한 번에 읽는다. 소유자·은퇴 여부는 부르는 쪽이 팀마다 확인한다. */
 export async function careersByIds(db: Db, ids: string[]) {
@@ -205,32 +215,22 @@ const rankedIn = (season: number) =>
   );
 
 /**
- * 상대 후보: 같은 시즌 다른 구단주의 팀 중 내 팀 OVR 위·아래로 가까운 팀을 perSide개씩(시즌·OVR 인덱스). 오늘(challengedSince
- * 이후) 이미 도전한 팀은 뺀다(T-10-095).
+ * 상대 후보: 같은 시즌 다른 구단주의 팀 중 내 팀 OVR 위·아래로 가까운 팀을 perSide개씩(시즌·OVR 인덱스). 오늘(todayStart
+ * 이후) 이미 건 팀은 뺀다(T-10-095).
  */
 export async function listOpponentCandidates(
   db: Db,
-  me: { profileId: string; teamId: string },
+  profileId: string,
   season: number,
   ovr: number,
-  challengedSince: string,
+  todayStart: string,
   perSide = 8,
 ) {
   const cols = { team: ownerTeams };
-  const challenged = db
-    .select({ id: teamMatches.awayTeamId })
-    .from(teamMatches)
-    .where(
-      and(
-        eq(teamMatches.profileId, me.profileId),
-        gte(teamMatches.createdAt, challengedSince),
-        eq(teamMatches.homeTeamId, me.teamId),
-      ),
-    );
   const base = and(
     rankedIn(season),
-    ne(ownerTeams.profileId, me.profileId),
-    notInArray(ownerTeams.id, challenged),
+    ne(ownerTeams.profileId, profileId),
+    notInArray(ownerTeams.id, challengedSince(db, profileId, todayStart)),
   );
   const [up, down] = await db.batch([
     db
@@ -364,6 +364,8 @@ export type TeamSnapshot = {
   owner: string;
   formation: FormationId;
   ovr: number;
+  /** 이 경기로 바뀐 레이팅(T-10-095부터 남긴다). */
+  ratingChange?: number;
 };
 export type StoredEvent = {
   minute: number;

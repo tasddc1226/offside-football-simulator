@@ -15,7 +15,7 @@ import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/c
 import {
   TEAM_MATCHES_PER_DAY,
   TEAM_REPEAT_WINDOW_DAYS,
-  TEAM_SAME_OPPONENT_PER_DAY,
+  matchScore,
   ratingChange,
   type FormationId,
 } from '@offside/contracts/owner-team';
@@ -28,6 +28,7 @@ import { kstDays } from '../db/repos/admin.js';
 import { runBatch } from '../db/repos/batch.js';
 import {
   careersByIds,
+  challengedSince,
   countMatchesSince,
   eligibleMap,
   listEligibleCareers,
@@ -162,8 +163,8 @@ function toMatch(
   const mine = row.homeTeamId === myTeamId ? 'home' : 'away';
   return {
     id: row.id,
-    home: { ...d.home, goals: row.homeGoals },
-    away: { ...d.away, goals: row.awayGoals },
+    home: { ...d.home, goals: row.homeGoals, ratingChange: d.home.ratingChange ?? null },
+    away: { ...d.away, goals: row.awayGoals, ratingChange: d.away.ratingChange ?? null },
     events: d.events.map((e) => ({
       minute: e.minute,
       side: e.side,
@@ -297,7 +298,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     if (!mine) throw teamRequired();
     const candidates = await listOpponentCandidates(
       db,
-      { profileId: me.id, teamId: mine.id },
+      me.id,
       season,
       mine.ovr,
       kstTodayStart(now),
@@ -330,13 +331,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const input = readBody(c, PlayTeamMatchBodySchema);
     const now = nowIso();
     const season = currentSeasonOrThrow(now);
-    const [[mine], [played], [opp]] = await db.batch([
+    const [[mine], challenged, [opp]] = await db.batch([
       myTeamIn(db, me.id, season),
-      countMatchesSince(db, me.id, kstTodayStart(now)),
+      challengedSince(db, me.id, kstTodayStart(now)),
       liveTeam(db, input.opponentTeamId),
     ]);
     if (!mine) throw teamRequired();
-    const usedToday = Number(played?.n ?? 0);
+    const usedToday = challenged.length;
     if (usedToday >= TEAM_MATCHES_PER_DAY) {
       throw new AppError({
         code: 'RATE_LIMITED',
@@ -345,27 +346,23 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       });
     }
     if (!opp || opp.team.profileId === me.id || opp.team.season !== season) throw teamNotFound();
-
-    const mySlots = slotIdsOf(mine);
-    const oppSlots = slotIdsOf(opp.team);
-    const [rows, met] = await Promise.all([
-      careersByIds(db, [
-        ...new Set([...mySlots, ...oppSlots].filter((x): x is string => x !== null)),
-      ]),
-      meetingsSince(db, mine.id, opp.team.id, repeatWindowStart(now)),
-    ]);
     // T-10-095 같은 상대에게는 하루 한 번만 건다(받은 경기는 세지 않는다 — 받은 쪽은 되갚을 수 있다).
-    const todayStart = kstTodayStart(now);
-    const challengedToday = met.filter(
-      (m) => m.homeTeamId === mine.id && m.createdAt >= todayStart,
-    ).length;
-    if (challengedToday >= TEAM_SAME_OPPONENT_PER_DAY) {
+    if (challenged.some((m) => m.teamId === opp.team.id)) {
       throw new AppError({
         code: 'RATE_LIMITED',
         message: '이 팀과는 오늘 이미 겨뤘어요. 한국 시각 자정에 다시 도전할 수 있어요.',
         details: { reason: 'TEAM_OPPONENT_DAILY_LIMIT' },
       });
     }
+
+    const mySlots = slotIdsOf(mine);
+    const oppSlots = slotIdsOf(opp.team);
+    const [rows, [met]] = await Promise.all([
+      careersByIds(db, [
+        ...new Set([...mySlots, ...oppSlots].filter((x): x is string => x !== null)),
+      ]),
+      meetingsSince(db, mine.id, opp.team.id, repeatWindowStart(now)),
+    ]);
     const home = buildLineup(
       mine.formation as FormationId,
       mySlots,
@@ -388,10 +385,9 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
 
     const id = newId('mat');
     const result = simulateMatch(id, home, away);
-    const score =
-      result.homeGoals > result.awayGoals ? 1 : result.homeGoals < result.awayGoals ? 0 : 0.5;
+    const score = matchScore(result.homeGoals, result.awayGoals);
     // 최근 TEAM_REPEAT_WINDOW_DAYS일 안에 이미 만난 횟수만큼 변화가 줄고, 받은 쪽은 절반만 움직인다.
-    const delta = ratingChange(mine.rating, opp.team.rating, score, met.length);
+    const delta = ratingChange(mine.rating, opp.team.rating, score, Number(met?.n ?? 0));
     const homeSide = {
       teamId: mine.id,
       filled: filledCount(home),
@@ -413,6 +409,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         owner: mine.manager,
         formation: mine.formation as FormationId,
         ovr: homeSide.ovr,
+        ratingChange: delta.home,
       },
       away: {
         teamId: opp.team.id,
@@ -420,6 +417,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         owner: opp.team.manager,
         formation: opp.team.formation as FormationId,
         ovr: awaySide.ovr,
+        ratingChange: delta.away,
       },
       events: result.events.map((e) => ({
         minute: e.minute,
@@ -459,7 +457,6 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           l: mine.losses + (score === 0 ? 1 : 0),
         },
         rating: mine.rating + delta.home,
-        ratingChange: delta.home,
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - usedToday - 1),
       },
       201,

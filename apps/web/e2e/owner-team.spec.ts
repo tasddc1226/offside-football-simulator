@@ -167,6 +167,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
               formation: '4-3-3',
               ovr: 56,
               goals: 2,
+              ratingChange: 16,
             },
             away: {
               teamId: 'tem_00000000-0000-4000-8000-000000000002',
@@ -175,6 +176,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
               formation: '4-4-2',
               ovr: 55,
               goals: 1,
+              ratingChange: -8,
             },
             events: [
               {
@@ -207,7 +209,6 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
           },
           record: { w: 1, d: 0, l: 0 },
           rating: 1016,
-          ratingChange: 16,
           matchesLeft: 9,
         },
         201,
@@ -274,7 +275,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(result.locator('.tm-goals')).toContainText('2:1');
   await expect(result).toContainText('익명의 공격수 No.7');
   await expect(result).toContainText('1승 0무 0패');
-  await expect(result.locator('[data-rating-change]')).toContainText('레이팅 +16 → 1,016');
+  await expect(result.locator('[data-rating-change]')).toContainText('내 팀 레이팅 +16');
   await expectNoA11yViolations(page);
   await result.getByRole('button', { name: '내 팀' }).click();
   await expect(page.locator('[data-team-record]')).toContainText('레이팅 1,016');

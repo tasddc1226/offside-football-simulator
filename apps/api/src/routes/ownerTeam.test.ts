@@ -8,7 +8,12 @@ import {
   TeamOpponentsResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
-import { TEAM_MATCHES_PER_DAY, YOUTH_OVR, ratingChange } from '@offside/contracts/owner-team';
+import {
+  TEAM_MATCHES_PER_DAY,
+  YOUTH_OVR,
+  matchScore,
+  ratingChange,
+} from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { careers, ownerTeams, teamMatches } from '../db/schema.js';
@@ -383,13 +388,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       body: { opponentTeamId: rival.team.id },
     });
     expect(res.status).toBe(201);
-    const {
-      match,
-      record,
-      rating,
-      ratingChange: gain,
-      matchesLeft,
-    } = PlayRes.parse(await res.json()).data;
+    const { match, record, rating, matchesLeft } = PlayRes.parse(await res.json()).data;
     expect(matchesLeft).toBe(TEAM_MATCHES_PER_DAY - 1);
     expect(match.home.teamId).toBe(me.team.id);
     expect(match.away).toMatchObject({ teamId: rival.team.id, name: rival.team.name });
@@ -416,8 +415,8 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(awayRow!.wins).toBe(homeRow!.losses);
     expect(awayRow!.losses).toBe(homeRow!.wins);
     // 레이팅은 건 쪽이 엘로만큼, 받은 쪽은 그 절반만 움직이고(T-10-095), 득실·연승·골 차가 쌓인다.
-    const want = ratingChange(1000, 1000, won ? 1 : drew ? 0.5 : 0);
-    expect(gain).toBe(want.home);
+    const want = ratingChange(1000, 1000, matchScore(match.home.goals, match.away.goals));
+    expect([match.home.ratingChange, match.away.ratingChange]).toEqual([want.home, want.away]);
     expect(homeRow!.rating).toBe(rating);
     expect([homeRow!.rating, awayRow!.rating]).toEqual([1000 + want.home, 1000 + want.away]);
     expect(Math.sign(homeRow!.rating - 1000)).toBe(won ? 1 : drew ? 0 : -1);
@@ -536,21 +535,21 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
 
     // 다음 날(한국 시각 자정 뒤) 다시 걸 수 있지만, 최근 7일 안에 두 번 만났으니 ×0.25.
     vi.setSystemTime(new Date('2026-10-01T00:00:00.000Z'));
-    expect((await opponents(me.cookie)).sort()).toEqual([rival.team.id, other.team.id].sort());
-    const [before] = await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, me.team.id));
-    const [rivalBefore] = await ctx.db
+    expect(await opponents(me.cookie)).toEqual([rival.team.id, other.team.id].sort());
+    const rivalRating = async () =>
+      (await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, rival.team.id)))[0]!.rating;
+    const [mineBefore] = await ctx.db
       .select()
       .from(ownerTeams)
-      .where(eq(ownerTeams.id, rival.team.id));
+      .where(eq(ownerTeams.id, me.team.id));
+    const rivalBefore = await rivalRating();
     const res = await play(me.cookie, rival.team.id);
     expect(res.status).toBe(201);
-    const { match, ratingChange: gain } = PlayRes.parse(await res.json()).data;
-    const score =
-      match.home.goals > match.away.goals ? 1 : match.home.goals < match.away.goals ? 0 : 0.5;
-    const want = ratingChange(before!.rating, rivalBefore!.rating, score, 2);
-    expect(gain).toBe(want.home);
-    const [after] = await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, rival.team.id));
-    expect(after!.rating).toBe(rivalBefore!.rating + want.away);
+    const { match } = PlayRes.parse(await res.json()).data;
+    const score = matchScore(match.home.goals, match.away.goals);
+    const want = ratingChange(mineBefore!.rating, rivalBefore, score, 2);
+    expect([match.home.ratingChange, match.away.ratingChange]).toEqual([want.home, want.away]);
+    expect(await rivalRating()).toBe(rivalBefore + want.away);
   });
 
   it('프로필을 지우면 팀과 그 팀의 경기도 지워진다', async () => {

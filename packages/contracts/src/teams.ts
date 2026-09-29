@@ -164,6 +164,8 @@ export const TeamMatchSideSchema = z.strictObject({
   formation: FormationIdSchema,
   ovr: z.number().int(),
   goals: z.number().int().min(0),
+  /** 이 경기로 바뀐 그 팀 레이팅(T-10-095 전에 치른 경기는 기록이 없어 null). */
+  ratingChange: z.number().int().nullable(),
 });
 export type TeamMatchSide = z.infer<typeof TeamMatchSideSchema>;
 
@@ -193,8 +195,6 @@ export const PlayTeamMatchResponseSchema = z.strictObject({
   match: TeamMatchSchema,
   record: TeamRecordSchema,
   rating: z.number().int(),
-  /** 이 경기로 바뀐 내 팀 레이팅(최근에 만난 상대면 줄어든 값, T-10-095). */
-  ratingChange: z.number().int(),
   matchesLeft: z.number().int().min(0),
 });
 export type PlayTeamMatchResponse = z.infer<typeof PlayTeamMatchResponseSchema>;

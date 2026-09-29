@@ -21,9 +21,8 @@ export const TEAM_RATING_K = 32;
 /** 라이브 랭킹(팀 랭킹) 한 페이지의 팀 수. */
 export const TEAM_RANK_PER_PAGE = 20;
 
-// T-10-095 공정한 팀 경쟁 — 한 팀만 골라 되풀이해 이기며 레이팅을 쌓지 못하게 한다.
-/** 같은 상대에게는 한국 시각 하루에 이만큼만 도전한다(상대 후보에서도 뺀다). */
-export const TEAM_SAME_OPPONENT_PER_DAY = 1;
+// T-10-095 공정한 팀 경쟁 — 한 팀만 골라 되풀이해 이기며 레이팅을 쌓지 못하게 한다. 같은 상대에게는 한국 시각 하루에
+// 한 번만 건다(서버가 상대 후보에서 빼고, 다시 걸면 거절한다).
 /** 같은 두 팀이 이 기간(일) 안에 다시 만나면 레이팅 변화를 줄인다(누가 걸었든 센다). */
 export const TEAM_REPEAT_WINDOW_DAYS = 7;
 /** 다시 만날 때마다 레이팅 변화에 곱하는 값과 그 하한 — 1번째 재대결 ×0.5, 2번째부터 ×0.25. */
@@ -34,7 +33,11 @@ export const TEAM_DEFENDER_FACTOR = 0.5;
 
 /** 최근 TEAM_REPEAT_WINDOW_DAYS일 동안 두 팀이 이미 치른 경기 수 → 레이팅 변화 배율. */
 export const repeatFactor = (meetings: number): number =>
-  meetings <= 0 ? 1 : Math.max(TEAM_REPEAT_FLOOR, TEAM_REPEAT_FACTOR ** meetings);
+  Math.max(TEAM_REPEAT_FLOOR, TEAM_REPEAT_FACTOR ** meetings);
+
+/** 한 팀 쪽 경기 결과(승 1 · 무 0.5 · 패 0). */
+export const matchScore = (goalsFor: number, goalsAgainst: number): 0 | 0.5 | 1 =>
+  goalsFor > goalsAgainst ? 1 : goalsFor < goalsAgainst ? 0 : 0.5;
 
 /**
  * 경기 한 판의 레이팅 변화. score = home(경기를 건 팀) 결과(승 1 · 무 0.5 · 패 0). 강한 팀이 약한 팀을 이기면 조금,
