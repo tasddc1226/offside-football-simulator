@@ -96,11 +96,7 @@
 </script>
 
 <div class="wrap has-cta">
-  <Topbar>
-    {#snippet right()}
-      <button class="icon-btn" data-act="home" onclick={step === 'form' ? goHome : backToForm}>{step === 'form' ? '취소' : '← 다시 입력'}</button>
-    {/snippet}
-  </Topbar>
+  <Topbar />
 
   <div>
     <div class="eyebrow">Player Creation · {step === 'form' ? 1 : 2}/2</div>
@@ -238,8 +234,9 @@
     </section>
 
     <div class="action-bar at-bottom">
-      <div class="action-bar-inner">
-        <button class="btn btn-primary btn-block" data-act="next-candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={rollCandidates}>
+      <div class="action-bar-inner with-back">
+        <button class="btn" data-act="home" onclick={goHome}>취소</button>
+        <button class="btn btn-primary" data-act="next-candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={rollCandidates}>
           {bodyErr ? '키·몸무게를 확인해 주세요' : focusLeft > 0 ? `주력 능력치를 ${focusLeft}개 더 골라주세요` : '후보 3명 보기 →'}
         </button>
       </div>
@@ -289,8 +286,9 @@
     </div>
 
     <div class="action-bar at-bottom">
-      <div class="action-bar-inner">
-        <button class="btn btn-primary btn-block" data-act="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
+      <div class="action-bar-inner with-back">
+        <button class="btn" data-act="home" onclick={backToForm}>← 다시 입력</button>
+        <button class="btn btn-primary" data-act="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
           {appState.candidatePick == null ? '후보를 한 명 골라주세요' : `${withRo(`후보 ${appState.candidatePick + 1}`)} 킥오프 →`}
         </button>
       </div>

@@ -1369,6 +1369,15 @@ body:has(.main-nav) .wrap {
   max-width: 480px;
   margin: 0 auto;
 }
+/* 선수 생성: 왼쪽 되돌리기(취소 · 다시 입력) + 오른쪽 진행 버튼 */
+.action-bar-inner.with-back {
+  display: flex;
+  gap: 8px;
+}
+.action-bar-inner.with-back .btn-primary {
+  flex: 1;
+  min-width: 0;
+}
 /* 두 칸 버튼 줄: 은퇴 선수 화면 아래 공유 바(홈으로 | 커리어 공유하기), 공유 이미지(이미지 저장 | 바로 공유하기) */
 .share-actions {
   display: grid;
