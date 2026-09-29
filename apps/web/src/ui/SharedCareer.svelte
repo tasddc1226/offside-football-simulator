@@ -17,7 +17,7 @@
   onMount(load);
 
   function leave() {
-    window.history.replaceState({}, '', '/');
+    window.history.replaceState(window.history.state, '', '/'); // 방문 기록(T-10-114)은 그대로 둔다.
     appState.sharedCareer = null;
     goHome();
     window.scrollTo(0, 0);

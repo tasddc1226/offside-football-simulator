@@ -367,6 +367,13 @@ test('소식: 조회수는 기기마다 한 번, 좋아요를 누르고 거둔�
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
   await expect(page.locator('[data-act="back-list"]')).toHaveCount(0);
+
+  // T-10-114 브라우저 뒤로 가기(모바일 가장자리 밀기)로 글에서 목록으로, 앞으로 가기로 다시 글로.
+  await page.goBack();
+  await expect(post).toBeHidden();
+  await expect(page.locator(`[data-post-row="${NOTICE.id}"]`)).toBeVisible();
+  await page.goForward();
+  await expect(post).toBeVisible();
 });
 
 test('새 소식 알림: 마지막으로 본 뒤 올라온 글을 화면 위에 알리고, 보면 다시 뜨지 않는다', async ({

@@ -1,7 +1,7 @@
 <script lang="ts">
   // T-10-011 소식 화면 — 공지사항·릴리즈 노트 게시판. 읽기는 누구나, 글은 관리자만(수정·삭제 포함),
   // 댓글은 구글로 로그인하고 닉네임을 정한 사람만(T-10-028). 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import {
     ADMIN_NICKNAME,
     COMMENT_BODY_MAX,
@@ -41,8 +41,6 @@
   onMount(() => {
     void api.fetchBoardViewer().then((r) => (viewer = r.ok ? r.data : { admin: false, google: false, nickname: null }));
     void load();
-    if (appState.boardPost) void open(appState.boardPost);
-    appState.boardPost = null;
   });
 
   async function load(more = false) {
@@ -59,9 +57,17 @@
     status = 'ready';
   }
 
+  /** 불러오는 중인 글 — 아래 $effect가 같은 글을 두 번 부르지 않게. */
+  let loadingId: string | null = null;
   async function open(id: string) {
+    appState.boardOpenId = loadingId = id;
     const r = await api.fetchPost(id);
-    if (!r.ok) return toast(r.error.message);
+    if (loadingId === id) loadingId = null;
+    if (appState.boardOpenId !== id) return; // 기다리는 사이 다른 글·목록으로 옮겼다.
+    if (!r.ok) {
+      appState.boardOpenId = null;
+      return toast(r.error.message);
+    }
     detail = { ...r.data, liked: !!r.data.liked }; // 옛 서버 응답엔 liked가 없다.
     markNewsSeen(touchedAt(r.data.post));
     if (firstView(id)) {
@@ -96,8 +102,18 @@
   }
   function backToList() {
     detail = editing = null;
+    appState.boardOpenId = null;
     void load();
   }
+  // T-10-114 펼친 글은 appState.boardOpenId를 따른다 — 홈에서 글을 바로 열 때, 뒤로·앞으로 가기로 바뀔 때.
+  $effect(() => {
+    const want = appState.boardOpenId;
+    untrack(() => {
+      if (want === (detail?.post.id ?? null) || (want && want === loadingId)) return;
+      if (want) void open(want);
+      else if (detail || editing) backToList();
+    });
+  });
   // T-10-113 하단 '소식'을 다시 누르면 목록 맨 위로(쓰던 글이 있으면 먼저 묻는다).
   let seenTop = appState.boardTop;
   $effect(() => {

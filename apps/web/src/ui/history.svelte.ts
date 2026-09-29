@@ -1,0 +1,156 @@
+// ───────── 브라우저 뒤로 가기 ↔ 앱 화면 (T-10-114) ─────────
+// 앱은 주소를 바꾸지 않고 appState로 화면을 그린다. 그래서 모바일에서 왼쪽 끝을 밀거나(iOS) 뒤로 가기를 누르면
+// (Android) 앱 밖으로 나가 버렸다. 화면이 바뀔 때마다 방문 기록을 하나 쌓고(주소는 그대로), 뒤로·앞으로 가면 그
+// 기록의 화면을 되살린다. 기록하는 단위는 화면(appState.screen)과 그 안의 한 단계 — 선수 생성 1·2단계, 소식 목록·글,
+// 선수 상세 — 까지다. 게임 탭·기록실 페이지는 기록하지 않는다.
+// 이미 시작한 커리어의 생성 화면, 끝난(은퇴한) 커리어의 게임 화면으로는 돌아가지 않고 홈을 연다 — 뒤로 가서 같은
+// 후보로 다시 시작하거나 끝난 게임을 여는 일을 막는다. 게임 중 뒤로 가면 홈(시트는 닫고, 남은 이벤트·결산은
+// '이어하기'가 다시 연다)으로 나간다 — 게임 화면의 홈 버튼과 같다.
+import { untrack } from 'svelte';
+import type { BoardKey } from '@offside/contracts/board-limits';
+import type { Candidate } from '../game/candidates.js';
+import { closeSheet } from './sheetState.svelte.js';
+import { appState, type LegendView, type Screen } from './state.svelte.js';
+
+interface Entry {
+  key: string;
+  screen: Screen;
+  /** 떠날 때의 스크롤 위치 — 돌아오면 그 자리로. */
+  y: number;
+  board: BoardKey;
+  post: string | null;
+  cand: { list: Candidate[]; open: boolean[]; pick: number | null } | null;
+  legend: LegendView | null;
+  legendBack: typeof appState.legendBack;
+}
+
+/** 이 탭에서 쌓은 기록 — 새로 고침 전의 기록(sid가 다르다)은 모른다. */
+const sid = Math.random().toString(36).slice(2);
+const entries: Entry[] = [];
+let cur = 0;
+
+// 선수 상세는 LegendView 객체마다 번호를 붙여 구분한다.
+const legendIds = new WeakMap<object, number>();
+let legendSeq = 0;
+const legendId = (v: LegendView | null) => {
+  if (!v) return 0;
+  if (!legendIds.has(v)) legendIds.set(v, ++legendSeq);
+  return legendIds.get(v)!;
+};
+
+function keyOf(): string {
+  const s = appState.screen;
+  if (s === 'create') return appState.candidates ? 'create:cand' : 'create';
+  if (s === 'board') return `board:${appState.board}:${appState.boardOpenId ?? ''}`;
+  if (s === 'legend') return `legend:${legendId(appState.legend)}`;
+  return s;
+}
+
+function snapshot(): Entry {
+  return {
+    key: keyOf(),
+    screen: appState.screen,
+    y: window.scrollY,
+    board: appState.board,
+    post: appState.boardOpenId,
+    cand: appState.candidates
+      ? {
+          list: appState.candidates,
+          open: [...appState.candidatesOpen],
+          pick: appState.candidatePick,
+        }
+      : null,
+    legend: appState.legend,
+    legendBack: appState.legendBack,
+  };
+}
+
+function restore(e: Entry) {
+  closeSheet();
+  const G = appState.G;
+  const live = !!G && !G.retired;
+  let screen = e.screen;
+  if (
+    (screen === 'create' && live) ||
+    (screen === 'game' && !live) ||
+    (screen === 'legend' && !e.legend)
+  )
+    screen = 'home';
+  if (screen === 'create') {
+    appState.candidates = e.cand?.list ?? null;
+    appState.candidatesOpen = e.cand?.open ?? [];
+    appState.candidatePick = e.cand?.pick ?? null;
+  }
+  if (screen === 'board') {
+    appState.board = e.board;
+    appState.boardOpenId = e.post;
+  }
+  if (screen === 'legend') {
+    appState.legend = e.legend;
+    appState.legendBack = e.legendBack;
+  }
+  appState.screen = screen;
+  // 되살린 상태를 이 기록의 값으로 삼는다(홈으로 돌렸으면 홈) — 아래 $effect가 새 기록을 쌓지 않는다.
+  entries[cur] = { ...snapshot(), y: screen === e.screen ? e.y : 0 };
+  scrollBack(entries[cur]!.y);
+}
+
+/** 화면이 다 그려질 때까지(지연 로딩·목록 조회) 몇 프레임 기다리며 스크롤을 되돌린다. */
+function scrollBack(y: number, tries = 30) {
+  requestAnimationFrame(() => {
+    window.scrollTo(0, y);
+    if (Math.abs(window.scrollY - y) > 2 && tries > 0) scrollBack(y, tries - 1);
+  });
+}
+
+export function initHistory() {
+  try {
+    history.scrollRestoration = 'manual';
+  } catch {
+    /* no-op */
+  }
+  entries.push(snapshot());
+  history.replaceState({ sid, i: 0 }, '');
+
+  let ticking = false;
+  addEventListener(
+    'scroll',
+    () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const e = entries[cur];
+        if (e) e.y = window.scrollY;
+      });
+    },
+    { passive: true },
+  );
+
+  addEventListener('popstate', (ev) => {
+    const st = ev.state as { sid?: string; i?: number } | null;
+    if (st?.sid === sid && typeof st.i === 'number' && entries[st.i]) {
+      cur = st.i;
+      return restore(entries[cur]!);
+    }
+    // 새로 고침 전 기록이나 다른 코드가 지운 기록 — 홈에서 새로 쌓는다.
+    entries.length = 0;
+    cur = 0;
+    entries.push({ ...snapshot(), key: '' });
+    restore({ ...entries[0]!, screen: 'home' });
+    history.replaceState({ sid, i: 0 }, '');
+  });
+
+  $effect.root(() => {
+    $effect(() => {
+      const key = keyOf();
+      untrack(() => {
+        if (key === entries[cur]?.key) return;
+        entries.length = cur + 1;
+        entries.push(snapshot());
+        cur = entries.length - 1;
+        history.pushState({ sid, i: cur }, '');
+      });
+    });
+  });
+}

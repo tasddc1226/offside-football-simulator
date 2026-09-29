@@ -141,8 +141,8 @@ export const appState = $state<{
   candidatePick: number | null;
   /** T-10-011. 소식 화면에서 마지막으로 본 게시판. */
   board: BoardKey;
-  /** 소식 화면을 열 때 바로 펼칠 글(홈의 소식 섹션에서 누른 글). */
-  boardPost: string | null;
+  /** 소식 화면에서 펼친 글(없으면 목록). 홈의 소식 섹션에서 누른 글을 바로 열 때도, 뒤로 가기로 되살릴 때도 쓴다. */
+  boardOpenId: string | null;
   /** T-10-113 소식 화면에서 하단 '소식'을 다시 누른 횟수 — 바뀌면 글 상세를 닫고 목록으로 간다. */
   boardTop: number;
   /** T-10-013. 진행 중 커리어가 다른 계정 소유라 서버가 거절한 시즌 업로드(홈에서 처리를 고른다). */
@@ -177,7 +177,7 @@ export const appState = $state<{
   candidatesOpen: [],
   candidatePick: null,
   board: 'notice',
-  boardPost: null,
+  boardOpenId: null,
   boardTop: 0,
   ownerConflict: null,
   hof: hofStart(),
