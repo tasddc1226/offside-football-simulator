@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 // @ts-expect-error -- $state가 쓰는 Svelte 내부 proxy(). 공개 타입 선언이 없다.
 import { proxy } from 'svelte/internal/client';
-import { newGame } from '../game/engine.js';
-import { createRng, setActiveRng } from '../game/rng.js';
-import type { GameState } from '../game/types.js';
+import { newGame } from '@offside/game/engine';
+import { createRng, setActiveRng } from '@offside/game/rng';
+import type { GameState } from '@offside/game/types';
 import { pushEvLog } from './helpers.js';
 
 // helpers.ts가 읽는 룬 상태 모듈(.svelte.ts)은 이 테스트 환경에서 컴파일하지 않는다.

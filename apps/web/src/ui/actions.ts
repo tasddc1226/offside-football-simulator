@@ -3,9 +3,9 @@ import { analytics, trackPage } from '../analytics/index.js';
 // 게임 로직을 호출하고, 그 결과를 시트 뷰 모델(sheets/types.ts)로 바꿔 showSheet에 넘긴다.
 // 게임 로직 호출 순서(=RNG 소비 순서)는 포팅 전 ui.ts와 동일하게 유지한다.
 import { isHofEligible, SHORT_CAREER_NOTE } from '@offside/contracts/hof-rules';
-import { PHASES, LAST_PHASE, type AttrKey } from '../game/data.js';
-import { clamp, createRng, freshSeed, setActiveRng } from '../game/rng.js';
-import { generateCandidates } from '../game/candidates.js';
+import { PHASES, LAST_PHASE, type AttrKey } from '@offside/game/data';
+import { clamp, createRng, freshSeed, setActiveRng } from '@offside/game/rng';
+import { generateCandidates } from '@offside/game/candidates';
 import {
   leagueOf,
   fmtMoney,
@@ -21,14 +21,14 @@ import {
   teamRank,
   roundRange,
   potLabel,
-} from '../game/engine.js';
-import { playPhase, type PhaseResult } from '../game/turn.js';
-import { eventById } from '../game/events-data.js';
-import { choiceOdds } from '../game/balance.js';
-import { offsetToRoll, tapOffset, timingNote, zoneLabel, zoneWidth } from '../game/minigame.js';
-import { isHiddenEvent } from '../game/dexGroups.js';
+} from '@offside/game/engine';
+import { playPhase, type PhaseResult } from '@offside/game/turn';
+import { eventById } from '@offside/game/events-data';
+import { choiceOdds } from '@offside/game/balance';
+import { offsetToRoll, tapOffset, timingNote, zoneLabel, zoneWidth } from '@offside/game/minigame';
+import { isHiddenEvent } from '@offside/game/dexGroups';
 import { markDexSeen } from './dex.js';
-import { scoreLine, type NatTourResult } from '../game/national.js';
+import { scoreLine, type NatTourResult } from '@offside/game/national';
 import {
   endSeason,
   market,
@@ -37,11 +37,11 @@ import {
   loadKey,
   saveKey,
   type SeasonEndResult,
-} from '../game/season.js';
-import { pickFanLines } from '../game/fanfeed.js';
-import { chLabel } from '../game/records.js';
-import { titleView } from '../game/titles.js';
-import type { Choice, EventDef, EventLogEntry, GameState, MarketResult } from '../game/types.js';
+} from '@offside/game/season';
+import { pickFanLines } from '@offside/game/fanfeed';
+import { chLabel } from '@offside/game/records';
+import { titleView } from '@offside/game/titles';
+import type { Choice, EventDef, EventLogEntry, GameState, MarketResult } from '@offside/game/types';
 import { appState, draftBody, draftDpos, randomName, randomNumber } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { publicNameOf } from './namePublic.js';

@@ -8,7 +8,7 @@
 // '이어하기'가 다시 연다)으로 나간다 — 게임 화면의 홈 버튼과 같다.
 import { untrack } from 'svelte';
 import type { BoardKey } from '@offside/contracts/board-limits';
-import type { Candidate } from '../game/candidates.js';
+import type { Candidate } from '@offside/game/candidates';
 import { closeSheet } from './sheetState.svelte.js';
 import { appState, type LegendView, type Screen, type TeamView } from './state.svelte.js';
 

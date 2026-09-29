@@ -1,7 +1,7 @@
 <script lang="ts">
   // T-10-089 미니게임 제한 시간. 장면이 뜨면 줄어드는 막대와 남은 초를 보여 주고, 시간이 다 되면 onexpire를
   // 부른다(부른 쪽이 실패로 처리). 누르거나 차면(stopped) 그 자리에서 멈춘다.
-  import { MG_TIME_MS } from '../../game/minigame.js';
+  import { MG_TIME_MS } from '@offside/game/minigame';
 
   let { stopped, onexpire }: { stopped: boolean; onexpire: () => void } = $props();
 

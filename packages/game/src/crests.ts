@@ -4,7 +4,7 @@
 // 그 구단만의 고유 상징(대포, 리버버드, 교차한 망치 등)은 쓰지 않는다. 글자는 게임 속 별칭의 도시 머리글자만 쓴다.
 // 이미지가 아니라 64×64 벡터 설정값이라 16px에서도 선명하고, 저장·동기화 용량을 쓰지 않는다.
 import type { Club } from './data.js';
-import { escXml } from '../xml.js';
+import { escXml } from './xml.js';
 import { hashStr } from './hash.js';
 
 export const CREST_SHAPES = {

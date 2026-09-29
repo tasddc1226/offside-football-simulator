@@ -1,7 +1,7 @@
 // ───────── 순수 포맷/집계 헬퍼 (ui.ts의 문자열 템플릿 함수들을 컴포넌트가 쓰기 좋은 형태로 분리) ─────────
-import { labelOf } from '../game/engine.js';
-import { LEAGUES } from '../game/data.js';
-import type { AttrKey } from '../game/data.js';
+import { labelOf } from '@offside/game/engine';
+import { LEAGUES } from '@offside/game/data';
+import type { AttrKey } from '@offside/game/data';
 import {
   ovrRole,
   mainRole,
@@ -13,10 +13,10 @@ import {
   FACE_ABBR,
   GK_ABBR,
   SUBS,
-} from '../game/attributes.js';
-import type { CareerRecord, GameState } from '../game/types.js';
+} from '@offside/game/attributes';
+import type { CareerRecord, GameState } from '@offside/game/types';
 
-export { anonName } from '../game/pos-label.js';
+export { anonName } from '@offside/game/pos-label';
 export { fmtValue } from '@offside/contracts/market-value';
 
 export function seasonLabelOf(r: CareerRecord): string {

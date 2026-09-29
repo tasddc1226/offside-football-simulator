@@ -1,8 +1,8 @@
 <script lang="ts">
   // ui.ts attrCard() 포트 (292~314줄)
-  import { ovr } from '../game/attributes.js';
+  import { ovr } from '@offside/game/attributes';
   import { attrData } from './format.js';
-  import type { GameState } from '../game/types.js';
+  import type { GameState } from '@offside/game/types';
   import Radar from './Radar.svelte';
 
   const { s }: { s: GameState } = $props();

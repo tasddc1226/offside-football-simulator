@@ -9,7 +9,7 @@
   import { accountCache } from './account-state.svelte.js';
   import Account from './Account.svelte';
   import MyPlayers from './MyPlayers.svelte';
-  import { loadHOF } from '../game/season.js';
+  import { loadHOF } from '@offside/game/season';
   import { startGoogleLogin } from './login.js';
   import { go } from './nav.js';
   import { googleStartUrl } from '../api/client.js';

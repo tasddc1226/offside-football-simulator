@@ -1,10 +1,10 @@
 // T-10-079 SNS 공유용 한 장 이미지(1080×1350, 인스타 4:5). 은퇴 리포트와 같은 LegendView로 카드 내용을 만들고
 // (shareCardData — 순수 함수라 테스트한다) 캔버스에 그린다(drawShareCard). 은퇴 화면의 공유 이미지 카드(지연 로드)만 쓴다.
-import { styleReport } from '../../game/playStyleReport.js';
-import { careerChapters, honoursRoll } from '../../game/retirement-report.js';
-import { legendTitle } from '../../game/season.js';
-import { POS_LABEL } from '../../game/pos-label.js';
-import { titleById } from '../../game/titles.js';
+import { styleReport } from '@offside/game/playStyleReport';
+import { careerChapters, honoursRoll } from '@offside/game/retirement-report';
+import { legendTitle } from '@offside/game/season';
+import { POS_LABEL } from '@offside/game/pos-label';
+import { titleById } from '@offside/game/titles';
 import { totals } from '../format.js';
 import { RN_DEFAULT, rnColors } from '../rnStyle.js';
 import type { LegendView } from '../state.svelte.js';

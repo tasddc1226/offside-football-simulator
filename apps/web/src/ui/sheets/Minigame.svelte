@@ -3,7 +3,7 @@
   // 탭한 순간의 바늘 위치는 마지막으로 그린 프레임이 아니라 입력 시각(event.timeStamp)으로 계산한다 — 프레임
   // 간격만큼 판정이 밀리지 않게. 판정이 나면(v.ok) 공이 날아가는 결과 장면을 두 단계로 그린다.
   import { onMount } from 'svelte';
-  import { markerAt, MG_TAP } from '../../game/minigame.js';
+  import { markerAt, MG_TAP } from '@offside/game/minigame';
   import MgTimer from './MgTimer.svelte';
   import PitchScene, {
     REST,

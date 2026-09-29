@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { clubById } from './clubs.js';
-import { isNationalTeam } from './nation.js';
+import { clubById } from '@offside/game/clubs';
+import { isNationalTeam } from '@offside/game/nation';
 
 // vitest의 node 환경에는 localStorage가 없다 — season.test.ts와 같은 방식으로 메모리로 흉내낸다.
 class MemoryStorage {
@@ -337,9 +337,9 @@ describe('T-10-006 seasonPayload', () => {
   // 서버 계약을 통과하는지 본다. SEASON_PAYLOAD_CAREERS로 표본 수를 늘려 대량 검증할 수 있다.
   it('은퇴까지 모든 시즌 페이로드가 CareerSeasonPayloadSchema를 통과한다', async () => {
     const { CareerSeasonPayloadSchema } = await import('@offside/contracts');
-    const g = await import('./index.js');
+    const g = await import('@offside/game/index');
     const { seasonPayload } = await import('./outbox.js');
-    const { createRng, setActiveRng, pick, ri } = await import('./rng.js');
+    const { createRng, setActiveRng, pick, ri } = await import('@offside/game/rng');
     const N = Number(process.env.SEASON_PAYLOAD_CAREERS) || 12;
     let seasons = 0;
     let withComps = 0;

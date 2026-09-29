@@ -7,7 +7,7 @@
   import type { HofSort, PublicHofEntry } from '@offside/contracts';
   import { SERVICE_SEASONS, serviceSeason } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from './boardText.js';
-  import { loadHOF } from '../game/season.js';
+  import { loadHOF } from '@offside/game/season';
   import { getHof } from '../api/client.js';
   import { openPublicLegend } from './legend.js';
   import { anonName, fmtValue, iGa } from './format.js';

@@ -2,14 +2,14 @@
 // 정본은 이 기기의 localStorage(ft_clubs)이고, 프로필 세션이 있으면 서버(/v1/club-custom)와 최신 쓰기
 // 우선으로 맞춘다 — 구글 계정으로 로그인한 기기끼리 같은 설정을 쓴다. 세션이 없거나 오프라인이면
 // 로컬에만 남고(게임은 그대로), 다음 부팅·다음 변경 때 다시 맞춘다. 에디트 파일(JSON)로도 옮길 수 있다.
-import { loadKey, saveKey } from '../game/season.js';
-import { CLUBS } from '../game/data.js';
+import { loadKey, saveKey } from '@offside/game/season';
+import { CLUBS } from '@offside/game/data';
 import {
   applyClubNames,
   sanitizeClubCustom,
   type ClubCustom,
   type ClubCustomMap,
-} from '../game/clubs.js';
+} from '@offside/game/clubs';
 import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
 import { apiFetch } from '../api/client.js';
 import { appState } from './state.svelte.js';

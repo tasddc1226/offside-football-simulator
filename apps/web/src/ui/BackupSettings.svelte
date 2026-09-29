@@ -2,7 +2,7 @@
   // 설정 화면의 "진행 중 커리어 백업" 카드(T-10-116) — 세이브를 백업 코드/파일로 내보내고 다시 불러온다.
   // 세이브는 이 브라우저에만 있어서, 기기를 바꾸거나 카톡 등 앱 안 브라우저에서 사파리로 옮길 때 쓴다.
   // 형식·검증·쓰는 키는 backup.ts. 여기는 화면과 브라우저 API(클립보드·공유·파일)만 맡는다.
-  import { loadHOF } from '../game/season.js';
+  import { loadHOF } from '@offside/game/season';
   import { loadGame } from './boot.js';
   import { applyBackup, backupFileName, decodeBackup, encodeBackup, type DecodeFail } from './backup.js';
   import { save, toast } from './helpers.js';

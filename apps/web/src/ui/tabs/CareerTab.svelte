@@ -1,10 +1,10 @@
 <script lang="ts">
   // ui.ts careerTab() 포트 (371~387줄)
-  import type { GameState, LegendSource } from '../../game/types.js';
+  import type { GameState, LegendSource } from '@offside/game/types';
   import { fmtValue, seasonLabelOf, totals } from '../format.js';
   import ClubMark from '../ClubMark.svelte';
   import ValueChart from '../ValueChart.svelte';
-  import { nextMilestones } from '../../game/records.js';
+  import { nextMilestones } from '@offside/game/records';
   import { peakValue, seasonValue } from '@offside/contracts/market-value';
 
   // 은퇴 상세(LegendSource)에는 '다음 목표'가 없다 — 진행 중인 커리어(GameState)에서만 계산한다.

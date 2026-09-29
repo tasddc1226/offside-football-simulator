@@ -36,12 +36,12 @@
     type TeamOpponent,
     type TeamPlayer,
   } from '../../api/team.js';
-  import { FACE_ABBR, GK_ABBR } from '../../game/attributes.js';
-  import { ATTR_KEYS } from '../../game/data.js';
-  import { localCareerNames } from '../../game/season.js';
+  import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
+  import { ATTR_KEYS } from '@offside/game/data';
+  import { localCareerNames } from '@offside/game/season';
   import { kstMonthDayTime } from '../boardText.js';
   import { go } from '../nav.js';
-  import { POS_LABEL, anonName } from '../../game/pos-label.js';
+  import { POS_LABEL, anonName } from '@offside/game/pos-label';
   import { toast } from '../helpers.js';
   import { lockScroll } from '../scrollLock.js';
   import { doneOnEnter } from '../inputDone.js';

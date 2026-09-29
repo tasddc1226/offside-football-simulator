@@ -7,7 +7,7 @@
   import { onMount } from 'svelte';
   import { TICKER_POLL_SEC } from '@offside/contracts/polling';
   import { getTicker } from '../api/client.js';
-  import { clubById } from '../game/clubs.js';
+  import { clubById } from '@offside/game/clubs';
   import { agoKo } from './format.js';
   import { motionOK } from './motion.js';
   import { tickerItems, type TickerItem } from './ticker.js';

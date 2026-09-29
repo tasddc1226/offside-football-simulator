@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "tsx": "4.23.13"
+  },
+  "dependencies": {
+    "@offside/game": "workspace:*"
   }
 }

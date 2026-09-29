@@ -1,8 +1,8 @@
 <script lang="ts">
   // T-10-089 드래그 슛(프로토타입). 장면 위에서 골문 쪽으로 끌어 올렸다가 떼면 찬다. 경로는 장면 좌표(viewBox
   // 300×170)로 모은다 — 화면 크기와 상관없이 같은 손짓이 같은 슛이 되게. 판정은 game/dragShot.ts.
-  import { isShot, type DragPoint } from '../../game/dragShot.js';
-  import { MG_TIME_MS } from '../../game/minigame.js';
+  import { isShot, type DragPoint } from '@offside/game/dragShot';
+  import { MG_TIME_MS } from '@offside/game/minigame';
   import MgTimer from './MgTimer.svelte';
   import PitchScene, { REST, SPOT_POSE, type BallPose, type KeeperPose } from './PitchScene.svelte';
   import type { SheetView } from './types.js';

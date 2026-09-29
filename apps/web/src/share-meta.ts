@@ -3,11 +3,11 @@
 // (/og/career/<id>.png, T-10-068)이고, 굽지 못하면 빌드 때 만든 레전드 등급별 카드(scripts/seo.mjs
 // CAREER_OG_BANDS)로 돌려보낸다. 게임 코드를 끌어오지 않게 순수 함수로만 둔다.
 import type { PublicHofEntry } from '@offside/contracts';
-import { legendBand } from './game/legend-bands.js';
-import { anonName } from './game/pos-label.js';
-import { hashStr } from './game/hash.js';
+import { legendBand } from '@offside/game/legend-bands';
+import { anonName } from '@offside/game/pos-label';
+import { hashStr } from '@offside/game/hash';
 import { ogCardPath } from './share-path.js';
-import { escXml } from './xml.js';
+import { escXml } from '@offside/game/xml';
 
 /** scripts/seo.mjs BRAND_VERSION과 같다(미리보기 이미지 파일명). */
 export const OG_VERSION = 'v6';

@@ -5,15 +5,15 @@
   // 대표팀 → 우승·수상 롤 → 마지막 휘슬. 은퇴 직후든 다시 볼 때든 사용자가 스크롤해 내려가는 대로 장면이
   // 화면에 들어올 때 하나씩 올라온다. 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
   import type { Snippet } from 'svelte';
-  import { legendScoreBreakdown, legendTitle } from '../game/season.js';
-  import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '../game/retirement-report.js';
-  import { POS_LABEL } from '../game/pos-label.js';
-  import { potAchText } from '../game/stats.js';
+  import { legendScoreBreakdown, legendTitle } from '@offside/game/season';
+  import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '@offside/game/retirement-report';
+  import { POS_LABEL } from '@offside/game/pos-label';
+  import { potAchText } from '@offside/game/stats';
   import { fmtValue, seasonLabelOf, totals } from './format.js';
   import { peakValue, retireValue } from '@offside/contracts/market-value';
   import type { LegendView } from './state.svelte.js';
   import CareerTab from './tabs/CareerTab.svelte';
-  import { titleById } from '../game/titles.js';
+  import { titleById } from '@offside/game/titles';
   import { legendTitleOf } from './titles/legendTitle.svelte.js';
   import CountUp from './CountUp.svelte';
   import ValueChart from './ValueChart.svelte';

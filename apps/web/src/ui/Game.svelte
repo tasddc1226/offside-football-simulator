@@ -2,9 +2,9 @@
   // ui.ts renderGame() 포트 (207~222줄)
   import { fly } from 'svelte/transition';
   import { Tween } from 'svelte/motion';
-  import { posLabel, LAST_PHASE } from '../game/data.js';
-  import { ovr } from '../game/attributes.js';
-  import { leagueOf, roleOf, fmtMoney, potLabel, potScouted, blockMatches, focusOf, labelOf } from '../game/engine.js';
+  import { posLabel, LAST_PHASE } from '@offside/game/data';
+  import { ovr } from '@offside/game/attributes';
+  import { leagueOf, roleOf, fmtMoney, potLabel, potScouted, blockMatches, focusOf, labelOf } from '@offside/game/engine';
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
   import { advance, nextPending } from './actions.js';
@@ -18,8 +18,8 @@
   import CareerTab from './tabs/CareerTab.svelte';
   import TrophyTab from './tabs/TrophyTab.svelte';
   import TitleDex from './titles/TitleDex.svelte';
-  import { mainTitle } from '../game/titles.js';
-  import { marketValue } from '../game/season.js';
+  import { mainTitle } from '@offside/game/titles';
+  import { marketValue } from '@offside/game/season';
   import { fmtValue } from './format.js';
 
   // T-10-104: 이벤트·결산·이적시장 시트 본문도 게임 청크다 — 첫 시트가 뜨기 전에 미리 받아 둔다.

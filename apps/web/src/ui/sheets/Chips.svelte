@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fmtMoney } from '../../game/engine.js';
+  import { fmtMoney } from '@offside/game/engine';
   import type { Chip } from '../sheetState.svelte.js';
 
   let { chips, pop = false }: { chips: Chip[]; pop?: boolean } = $props();

@@ -3,14 +3,14 @@
   // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
   import { cubicOut } from 'svelte/easing';
   import { fly } from 'svelte/transition';
-  import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '../game/data.js';
-  import type { AttrKey, DetailPos, Pos } from '../game/data.js';
-  import { baseline } from '../game/candidates.js';
+  import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '@offside/game/data';
+  import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
+  import { baseline } from '@offside/game/candidates';
   import { appState, detailOpenNow, draftBody, draftDpos, randomName } from './state.svelte.js';
   import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
-  import { bodyMods, GK_SUBS, SUBS } from '../game/attributes.js';
-  import { isKorean, nationOf } from '../game/nation.js';
+  import { bodyMods, GK_SUBS, SUBS } from '@offside/game/attributes';
+  import { isKorean, nationOf } from '@offside/game/nation';
   import { startCareer, rollCandidates } from './actions.js';
   import { goHome } from './nav.js';
   import { hiddenStrength, scoutLine, startOvr } from './create-view.js';

@@ -11,7 +11,7 @@ import type {
 } from '@offside/contracts';
 import { resolveApiBaseUrl } from '../api/base-url.js';
 import { clearApiCache, noteSession } from '../api/client.js';
-import type { CareerRecord } from './types.js';
+import type { CareerRecord } from '@offside/game/types';
 import { OWNER_CONFLICT_EVENT, RETIRED_NUMBER_EVENT } from './syncEvents.js';
 
 const OUTBOX_KEY = 'ft_outbox';

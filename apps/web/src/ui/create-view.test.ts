@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { generateCandidates } from '../game/candidates.js';
-import { defaultFocus, type Pos } from '../game/data.js';
-import { newGame } from '../game/engine.js';
-import { ovr } from '../game/attributes.js';
-import { createRng, setActiveRng } from '../game/rng.js';
+import { generateCandidates } from '@offside/game/candidates';
+import { defaultFocus, type Pos } from '@offside/game/data';
+import { newGame } from '@offside/game/engine';
+import { ovr } from '@offside/game/attributes';
+import { createRng, setActiveRng } from '@offside/game/rng';
 import { hiddenStrength, scoutLine, startOvr } from './create-view.js';
 import { iGa, polyPoints } from './format.js';
 

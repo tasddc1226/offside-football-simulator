@@ -2,7 +2,7 @@
   // 시즌별 몸값 꺾은선 그래프(T-10-106): 커리어 탭과 은퇴 크레딧이 같이 쓴다.
   // 화면에 들어오면 선이 왼쪽부터 그려지고 점이 차례로 올라온다(감속 모션이면 처음부터 다 보인다).
   // 시즌마다 세로 한 칸이 버튼이라, 칸을 누르면 그 시즌 값을 위에 보여 준다.
-  import type { CareerRecord } from '../game/types.js';
+  import type { CareerRecord } from '@offside/game/types';
   import { fmtValue, seasonLabelOf } from './format.js';
   import { peakValue, seasonValue } from '@offside/contracts/market-value';
   import { motionOK } from './motion.js';

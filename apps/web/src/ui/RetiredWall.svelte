@@ -9,8 +9,8 @@
   import type { RetiredNumbersResponse } from '@offside/contracts';
   import { defaultClubName, leagueOfClub } from '@offside/contracts/club-names';
   import { getRetiredNumbers } from '../api/client.js';
-  import { POS } from '../game/data.js';
-  import { loadHOF } from '../game/season.js';
+  import { POS } from '@offside/game/data';
+  import { loadHOF } from '@offside/game/season';
   import ClubMark from './ClubMark.svelte';
   import { anonName } from './format.js';
   import { openPublicLegendById } from './legend.js';

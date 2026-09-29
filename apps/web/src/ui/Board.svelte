@@ -20,7 +20,7 @@
   import { screenIn } from './motion.js';
   import { uaSwiped } from './history.svelte.js';
   import { markNewsSeen, touchedAt } from './news.svelte.js';
-  import { loadKey, saveKey } from '../game/season.js';
+  import { loadKey, saveKey } from '@offside/game/season';
   import { BOARD_LABEL, dateOf, parseBody, postMeta } from './boardText.js';
   import Topbar from './Topbar.svelte';
   import NicknameForm from './NicknameForm.svelte';

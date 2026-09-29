@@ -4,7 +4,7 @@
   // 누가 넘을 때마다 다음 목표가 열린다. 서버 기록 탭은 더 큰 기록이 나오면 주인이 바뀌는 최다·최고 기록(T-10-056).
   import type { FirstsResponse, ServerFirst } from '@offside/contracts';
   import { getFirsts } from '../../api/client.js';
-  import { localCareerNames } from '../../game/season.js';
+  import { localCareerNames } from '@offside/game/season';
   import { goHome } from '../nav.js';
   import BackBar from '../BackBar.svelte';
   import { appState } from '../state.svelte.js';

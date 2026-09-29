@@ -21,6 +21,7 @@
 | [ADR-011](ADR-011-league-ledger-and-career-feedback.md) | 소속 리그 결과 원장, 결정론·저장·사건·모션의 분리 | Superseded by ADR-013 |
 | [ADR-012](ADR-012-server-annual-careers.md) | 서버 권위 연간 커리어 진행 | Superseded by ADR-013 |
 | [ADR-013](ADR-013-fulltime-replacement.md) | 원작 OFFSIDE → 풀타임 전면 교체, 서버는 로그인·프로필만, 구현은 Sonnet 5 서브에이전트에게 위임 | 확정. 서버 범위는 D-87 이후 확장, 구현 위임 규칙은 2026-09-24 메인 세션 직접 구현으로 변경 |
+| [ADR-014](ADR-014-native-app.md) | 네이티브 앱은 Expo(React Native), 게임 엔진은 `packages/game` 공용 패키지로 웹·앱·시뮬레이터가 함께 쓴다 | 확정 (2026-09-30) |
 
 ## 한 줄 요약
 

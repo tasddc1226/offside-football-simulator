@@ -1,8 +1,8 @@
 <script lang="ts">
   // T-10-077 은퇴 리포트의 '플레이 성향' 장면 — 커리어 내내 유저가 한 선택으로 뽑은 유형 · 주사위 기록 · 커리어 최고의
   // 한 수. LegendReport가 따로 불러온다(첫 화면 번들 밖). 선택 기록이 없는 옛 은퇴는 그리지 않는다.
-  import { styleReport } from '../game/playStyleReport.js';
-  import type { LegendSource } from '../game/types.js';
+  import { styleReport } from '@offside/game/playStyleReport';
+  import type { LegendSource } from '@offside/game/types';
 
   const {
     d,

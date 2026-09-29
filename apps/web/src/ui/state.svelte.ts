@@ -8,12 +8,12 @@ import type { HofSort, RetiredNumberResult } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason } from '@offside/contracts/service-seasons';
 import { detailPosOpen, dposFor } from '@offside/contracts/positions';
-import type { OutboxItem } from '../game/outbox.js';
-import type { AttrKey, DetailPos, Pos } from '../game/data.js';
-import { pick, ri } from '../game/rng.js';
-import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
-import type { GameState, HofEntry, LegendSource } from '../game/types.js';
-import type { Candidate } from '../game/candidates.js';
+import type { OutboxItem } from '../sync/outbox.js';
+import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
+import { pick, ri } from '@offside/game/rng';
+import { SURNAMES, GIVEN, defaultFocus } from '@offside/game/data';
+import type { GameState, HofEntry, LegendSource } from '@offside/game/types';
+import type { Candidate } from '@offside/game/candidates';
 import type { PhaseReport } from './sheets/types.js';
 
 /** 기록실(하단 메뉴 'hof')의 탭. */
