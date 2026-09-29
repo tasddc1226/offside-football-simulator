@@ -108,6 +108,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'title',
     'last_club_id',
     'peak_profile',
+    'service_season',
   ],
   career_seasons: [
     'career_id',

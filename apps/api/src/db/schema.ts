@@ -150,6 +150,9 @@ export const careers = sqliteTable(
     // T-10-092 최고 시점 능력치(contracts PeakProfile JSON — 대표 능력치 6개 + 세부 포지션 8자리 실력). 구단주 팀이
     // 자리마다 실력을 센다. 이 기능 전에 은퇴한 기록·옛 클라이언트는 NULL.
     peakProfile: text('peak_profile'),
+    // 서비스 시즌 번호(contracts service-seasons). 서버에 처음 올라온(첫 시즌 업로드) 시각에 진행 중인 시즌으로 한 번
+    // 정해져 바뀌지 않는다 — 나중에 시즌 기간을 고쳐도 이미 뛴 선수의 시즌이 소급해 바뀌지 않는다. NULL = 프리시즌.
+    serviceSeason: integer('service_season'),
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),

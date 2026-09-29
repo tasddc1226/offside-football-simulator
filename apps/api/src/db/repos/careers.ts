@@ -7,7 +7,7 @@ import type {
   RetirementSummary,
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
-import type { ServiceSeason } from '@offside/contracts/service-seasons';
+import { activeSeason, type ServiceSeason } from '@offside/contracts/service-seasons';
 import { DETAIL_GROUP, type PeakProfile } from '@offside/contracts/positions';
 import {
   and,
@@ -96,6 +96,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         status: 'active',
         appVersion: meta.appVersion,
         ...name,
+        // 처음 올라온 시각의 시즌 — onConflict set에 없어 바뀌지 않는다.
+        serviceSeason: activeSeason(now)?.id ?? null,
         createdAt: now,
         updatedAt: now,
       })
@@ -344,14 +346,12 @@ export async function listPublicHof(
 }
 
 /**
- * T-10-090 시즌 순위에 오르는 커리어 — 개막 뒤 서버에 처음 올라온(첫 시즌 업로드) 커리어가 마감 전에 은퇴했다.
- * created_at·retired_at은 nowIso() 형식이라 문자열 비교가 시각 비교다.
+ * T-10-090 시즌 순위에 오르는 커리어 — 그 시즌에 처음 올라온 커리어(careers.service_season)가 마감 전에 은퇴했다.
+ * retired_at은 nowIso() 형식이라 문자열 비교가 시각 비교다.
  */
 function inSeason(s: ServiceSeason): SQL | undefined {
-  const started = gte(careers.createdAt, s.startsAt);
-  return s.endsAt === null
-    ? started
-    : and(started, lt(careers.createdAt, s.endsAt), lt(careers.retiredAt, s.endsAt));
+  const joined = eq(careers.serviceSeason, s.id);
+  return s.endsAt === null ? joined : and(joined, lt(careers.retiredAt, s.endsAt));
 }
 
 export async function getPublicHof(

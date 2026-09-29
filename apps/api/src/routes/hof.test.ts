@@ -5,6 +5,8 @@ import {
 } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
+import { careers } from '../db/schema.js';
+import { inArray } from 'drizzle-orm';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
 
@@ -306,6 +308,12 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect(season.total).toBe(1);
     expect(season.entries.map((e) => e.id)).toEqual([s1]);
     expect((await createApp().request('/v1/hof?season=9', {}, ctx.env)).status).toBe(400);
+    // 시즌 번호는 처음 올라온 시각으로 한 번 정해져 컬럼에 남는다(시즌 기간을 고쳐도 소급하지 않는다).
+    const stamped = await ctx.db
+      .select({ id: careers.id, s: careers.serviceSeason })
+      .from(careers)
+      .where(inArray(careers.id, [pre, s1]));
+    expect(Object.fromEntries(stamped.map((r) => [r.id, r.s]))).toEqual({ [pre]: null, [s1]: 1 });
   });
 
   it('sort로 기록별 순위를 매기고, 그 기록이 0인 선수는 뺀다', async () => {
