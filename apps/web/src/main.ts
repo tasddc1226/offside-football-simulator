@@ -25,7 +25,7 @@ loadGame();
 // 옛 은퇴 선수에 커리어 id를 붙인다(ft_hof).
 handleOAuthReturn();
 routeSharedCareer();
-initializeAnalytics(appState.screen);
+initializeAnalytics(appState.screen, appState.G && !appState.G.retired ? appState.G.cid : null);
 syncBalance();
 
 // T-10-041: index.html의 첫 화면은 빌드 때 넣은 App 서버 렌더 결과다(scripts/app-shell.mjs). 지우고 다시

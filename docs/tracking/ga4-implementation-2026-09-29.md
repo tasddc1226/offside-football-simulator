@@ -65,3 +65,23 @@ start_context, career_origin, position, player_trait, balance_version, position_
 
 비활성 롤백은 production의 측정 ID/호스트 변수를 비우고 웹을 다시 빌드·배포한다.
 변수 변경만으로 이미 배포된 번들 또는 열린 탭이 즉시 바뀌지는 않는다.
+
+## 우선순위 1 확장 (measurement_version=2)
+
+| 이벤트 | 실제 발생 조건 | 중복 및 해석 |
+|---|---|---|
+| first_action_complete | 첫 커리어 시즌의 프리시즌 진행이 끝나 게임 상태 저장을 시도한 직후 | 커리어당 1회. 생성·훈련 설정 변경·화면 열람 제외. 기존 첫 행동 소급 없음 |
+| career_progress_milestone | 새 시즌 결산으로 완료 시즌 수가 정확히 3·5·10·20에 도달 | milestone_seasons=3/5/10/20. 커리어·지점별 1회. 학교 시즌 포함. 옛 결산 재열기나 이미 지난 지점 소급 없음 |
+| career_resume | 불러온 현역 커리어에서 실제 구간 진행·이벤트 결정·시즌 결산·이적 결정이 처리되거나, 마지막 관측 행동부터 30분 이상 지난 뒤 다시 행동 | 읽기/이어하기 클릭만으로는 전송하지 않음. 같은 커리어의 관측 행동 간격 30분 미만이면 탭·새로고침 중복 억제. GA session_start와 동일한 정의가 아님 |
+
+새 생성 시각도 활동 경계로 기록하여 생성 직후 새로고침을 재방문으로 세지 않는다.
+활동 기록이 없는 기존 세이브의 첫 실제 행동은 preexisting_or_unknown으로 구분한다.
+동의·분석 초기화 이전 행동은 재생하지 않으므로 첫 행동/진행 지점이 누락될 수 있다.
+career_resume은 동의·브라우저 저장소가 유지되는 범위의 측정이며 실제 사람/계정의 복귀를 보증하지 않는다.
+모든 추가 이벤트에 position/player_trait/balance_version/career_origin을 붙이고,
+career_resume에는 completed_seasons_bucket을 붙인다. milestone_seasons만 맞춤 정의에 추가한다.
+게임 세이브 스키마/엔진/RNG/API는 변경하지 않고 분석용 로컬 ledger에만 활동 시각과 중복 표시를 저장한다.
+
+추가 검증: 첫 행동/시즌 지점/이어하기의 동의·기존 ledger 호환·30분 경계·전송 실패·탭 중복 단위 사례,
+자연스러운 3시즌 UI 진행 및 새로고침/이어하기/비공개 ID 미전송 브라우저 사례.
+운영 배포 SHA와 실제 수신 결과는 PR의 배포 검증 기록에 남긴다.

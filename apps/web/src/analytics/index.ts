@@ -5,14 +5,14 @@ let adapter: typeof import('./browser.js') | undefined;
 let screen = 'home';
 let initializing = false;
 // Optional analytics never blocks mounting, game actions or save recovery. No action replay.
-export function initializeAnalytics(initialScreen: string) {
+export function initializeAnalytics(initialScreen: string, restoredCareerId: string | null = null) {
   screen = initialScreen;
   if (initializing || !enabled()) return;
   initializing = true;
   void import('./browser.js')
     .then((m) => {
       adapter = m;
-      m.initializeAnalytics(screen);
+      m.initializeAnalytics(screen, restoredCareerId);
     })
     .catch(() => {});
 }
@@ -23,6 +23,7 @@ export function trackPage(next: string) {
 export const analytics = {
   replace: () => adapter?.analytics.replace(),
   start: (s: Career, previous: Career | null) => adapter?.analytics.start(s, previous),
+  play: (s: Career, firstAction = false) => adapter?.analytics.play(s, firstAction),
   firstSeason: (s: Career) => adapter?.analytics.firstSeason(s),
   retire: (s: Career) => adapter?.analytics.retire(s),
 };

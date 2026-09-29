@@ -16,7 +16,7 @@ type IO = {
   now: () => number;
 };
 /** Best-effort local dedupe, re-read on every action for other tabs. No retries or game-save writes. */
-export function createTracker(io: IO) {
+export function createTracker(io: IO, restoredCareerId: string | null = null) {
   let fallback = emptyLedger();
   const run = (s: Career | null, fn: (ledger: Ledger) => void) => {
     try {
@@ -42,7 +42,12 @@ export function createTracker(io: IO) {
       /* quota/private mode */
     }
   };
-  const once = (l: Ledger, s: Career, key: 'start' | 'first' | 'retire', fn: () => void) => {
+  const once = (
+    l: Ledger,
+    s: Career,
+    key: 'start' | 'first' | 'retire' | 'action',
+    fn: () => void,
+  ) => {
     let e = l.entries.find((e) => e.id === s.cid);
     if (e?.[key]) return;
     if (!e) {
@@ -65,6 +70,7 @@ export function createTracker(io: IO) {
       });
     },
     start(s: Career, previous: Career | null) {
+      restoredCareerId = null;
       run(s, (l) =>
         once(l, s, 'start', () => {
           const prior = l.next;
@@ -88,23 +94,64 @@ export function createTracker(io: IO) {
           };
           l.next = null;
           l.seenStart = true;
+          l.entries.find((e) => e.id === s.cid)!.lastActionAt = io.now();
           save(l);
           io.send('career_start', params);
         }),
       );
     },
+    play(s: Career, firstAction = false) {
+      if (s.retired) return;
+      run(s, (l) => {
+        let e = l.entries.find((e) => e.id === s.cid);
+        const previous = e?.lastActionAt;
+        const resume =
+          (restoredCareerId === s.cid || Number.isFinite(previous)) &&
+          (!Number.isFinite(previous) || io.now() - previous! >= 30 * 60_000);
+        if (!e) {
+          e = { id: s.cid, at: io.now() };
+          l.entries.push(e);
+        }
+        e.lastActionAt = io.now();
+        e.at = io.now();
+        save(l); // Advance the activity boundary before sending, including failed sends.
+        const params = {
+          ...gameParams(s),
+          career_origin: e.start ? 'observed_start' : 'preexisting_or_unknown',
+        };
+        if (firstAction) once(l, s, 'action', () => io.send('first_action_complete', params));
+        if (resume)
+          io.send('career_resume', {
+            ...params,
+            completed_seasons_bucket: seasonBucket(s.career.length),
+          });
+      });
+    },
     firstSeason(s: Career) {
-      if (s.career.length !== 1) return;
-      run(s, (l) =>
-        once(l, s, 'first', () =>
-          io.send('first_season_complete', {
-            ...gameParams(s),
-            career_origin: l.entries.find((e) => e.id === s.cid)?.start
-              ? 'observed_start'
-              : 'preexisting_or_unknown',
-          }),
-        ),
-      );
+      run(s, (l) => {
+        const params = {
+          ...gameParams(s),
+          career_origin: l.entries.find((e) => e.id === s.cid)?.start
+            ? 'observed_start'
+            : 'preexisting_or_unknown',
+        };
+        if (s.career.length === 1)
+          once(l, s, 'first', () => io.send('first_season_complete', params));
+        // Exact, newly completed milestones only; never backfill old saves.
+        const milestone = s.career.length;
+        if (![3, 5, 10, 20].includes(milestone)) return;
+        let e = l.entries.find((e) => e.id === s.cid);
+        if (!e) {
+          e = { id: s.cid, at: io.now() };
+          l.entries.push(e);
+        }
+        const seen = Array.isArray(e.milestones) ? e.milestones : [];
+        if (seen.includes(milestone)) return;
+        e.milestones = [...seen, milestone];
+        e.at = io.now();
+        save(l);
+        io.send('career_progress_milestone', { ...params, milestone_seasons: milestone });
+      });
     },
     retire(s: Career) {
       run(s, (l) =>

@@ -26,6 +26,7 @@ let consent: Consent = 'unknown';
 let initialized = false;
 let loaded = false;
 let screen = 'home';
+let restoredId: string | null = null;
 let lastPage = '';
 let campaign = '';
 let referrer = '';
@@ -70,7 +71,7 @@ function send(event: string, params: Params = {}) {
   if (!allowed() || !loaded || screen === 'admin') return;
   tag('event', event, {
     ...pageParams(),
-    measurement_version: '1',
+    measurement_version: '2',
     app_version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev',
     ...params,
     send_to: id,
@@ -85,13 +86,16 @@ function pageView() {
 async function loadTag() {
   if (!allowed()) return;
   // Tracking logic is unnecessary before consent; keep it out of the game's initial payload.
-  tracker ??= (await import('./tracker.js')).createTracker({
-    allowed,
-    read: readLedger,
-    write: (l) => localStorage.setItem(LEDGER_KEY, JSON.stringify(l)),
-    now: Date.now,
-    send,
-  });
+  tracker ??= (await import('./tracker.js')).createTracker(
+    {
+      allowed,
+      read: readLedger,
+      write: (l) => localStorage.setItem(LEDGER_KEY, JSON.stringify(l)),
+      now: Date.now,
+      send,
+    },
+    restoredId,
+  );
   if (!allowed()) return;
   Reflect.set(window, `ga-disable-${id}`, false);
   if (loaded) {
@@ -182,9 +186,10 @@ export function setConsent(value: 'granted' | 'denied') {
   } else stop();
   for (const fn of listeners) fn();
 }
-export function initializeAnalytics(initialScreen: string) {
+export function initializeAnalytics(initialScreen: string, restoredCareerId: string | null = null) {
   if (initialized || !enabled()) return;
   initialized = true;
+  restoredId = restoredCareerId;
   screen = initialScreen;
   campaign = campaignQuery(location.href);
   referrer = safeReferrer(document.referrer);
@@ -246,6 +251,7 @@ export const analytics = {
   reset: () => tracker?.reset(),
   replace: () => tracker?.replace(),
   start: (s: Career, previous: Career | null) => tracker?.start(s, previous),
+  play: (s: Career, firstAction = false) => tracker?.play(s, firstAction),
   firstSeason: (s: Career) => tracker?.firstSeason(s),
   retire: (s: Career) => tracker?.retire(s),
 };

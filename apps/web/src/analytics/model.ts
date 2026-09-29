@@ -95,7 +95,16 @@ export function gameParams(s: Career): Params {
 export function seasonBucket(n: number): string {
   return n <= 0 ? '0' : n === 1 ? '1' : n <= 5 ? '2-5' : n <= 10 ? '6-10' : '11+';
 }
-export type Entry = { id: string; at: number; start?: boolean; first?: boolean; retire?: boolean };
+export type Entry = {
+  id: string;
+  at: number;
+  start?: boolean;
+  first?: boolean;
+  action?: boolean;
+  milestones?: number[];
+  lastActionAt?: number;
+  retire?: boolean;
+};
 export type Ledger = {
   entries: Entry[];
   seenStart: boolean;

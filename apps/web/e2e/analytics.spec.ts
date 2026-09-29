@@ -104,3 +104,69 @@ test('shared URLs and player names never enter GA commands', async ({ page }) =>
   expect(wire).not.toContain('00000000');
   expect(wire).not.toContain('PRIVATE');
 });
+
+test('actual play measures first action, milestones and a resumed career without reload duplicates', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await prepare(page);
+  await page.addInitScript((key) => localStorage.setItem(key, 'granted'), consentKey);
+  await startCareer(page);
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
+  const events = async (name: string) =>
+    (await commands(page)).filter((x) => x[0] === 'event' && x[1] === name);
+  expect(await events('first_action_complete')).toHaveLength(0);
+  await page.locator('[data-act="advance"]').click();
+  await expect.poll(async () => (await events('first_action_complete')).length).toBe(1);
+  expect(await events('career_resume')).toHaveLength(0);
+  await page.reload();
+  await page.locator('[data-act="continue"]').click();
+  expect(await events('career_resume')).toHaveLength(0);
+
+  // Natural UI play, never patching the save or invoking the analytics adapter directly.
+  async function step() {
+    for (const selector of [
+      '#an-skip',
+      '.choice:visible',
+      '[data-opt]:visible',
+      '#sheet [data-sheet]:visible',
+      '[data-act="resume"]:visible',
+      '[data-act="advance"]:visible',
+    ]) {
+      if (selector.startsWith('[data-act=') && (await page.locator('#sheet').isVisible())) continue;
+      const el = page.locator(selector).first();
+      if (await el.isVisible()) {
+        await el.click({ timeout: 2000 });
+        return;
+      }
+    }
+    await page.waitForTimeout(50);
+  }
+  for (let i = 0; i < 300 && (await events('career_progress_milestone')).length === 0; i++)
+    await step();
+  expect(await events('first_action_complete')).toHaveLength(0);
+  expect(await events('first_season_complete')).toHaveLength(1);
+  expect(await events('career_progress_milestone')).toHaveLength(1);
+  expect((await events('career_progress_milestone'))[0]?.[2]).toMatchObject({
+    milestone_seasons: 3,
+  });
+  expect(await events('career_resume')).toHaveLength(0);
+  // Advance only the analytics activity clock to exercise the inactivity boundary.
+  await page.evaluate((key) => {
+    const l = JSON.parse(localStorage.getItem(key)!);
+    for (const e of l.entries) e.lastActionAt = Date.now() - 31 * 60_000;
+    localStorage.setItem(key, JSON.stringify(l));
+  }, ledgerKey);
+  await page.reload();
+  await page.locator('[data-act="continue"]').click();
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
+  expect(await events('career_resume')).toHaveLength(0);
+  expect(await events('career_progress_milestone')).toHaveLength(0);
+  for (let i = 0; i < 30 && (await events('career_resume')).length === 0; i++) await step();
+  expect(await events('career_resume')).toHaveLength(1);
+  expect(await events('first_action_complete')).toHaveLength(0);
+  expect(await events('career_progress_milestone')).toHaveLength(0);
+  const wire = JSON.stringify(await commands(page));
+  const cid = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).cid);
+  expect(wire).not.toContain(cid);
+});

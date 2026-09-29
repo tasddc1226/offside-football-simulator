@@ -70,6 +70,7 @@ export async function advance() {
       ? { type: 'seasonEnd' }
       : null;
   save();
+  analytics.play(s, ph === 0 && s.career.length === 0);
   const extras = [
     ...(comp.length ? ['컵 · 대륙 대회 결과 집계'] : []),
     ...(nt ? ['A매치 소집 명단 발표'] : []),
@@ -147,6 +148,7 @@ export function nextPending() {
     uploadSeason(s, res.rec);
     s.pending = { type: 'market', res, m: null };
     save();
+    analytics.play(s);
     analytics.firstSeason(s);
     const steps = [
       '리그 최종 순위 확정',
@@ -219,6 +221,7 @@ export async function chooseEvent(i: number) {
     pushEvLog(s, entry);
     s.pending = p.then === 'seasonEnd' ? { type: 'seasonEnd' } : null;
     save();
+    analytics.play(s);
     return { ...r, dexNew, timing: tap ? timingNote(tap.d) : null };
   };
   const mg = activeMg(c);
@@ -395,12 +398,14 @@ export function pickOption(i: number) {
     if (r.reopen) {
       appState.G.pending = { type: 'market', res: null, m: market(appState.G) };
       save();
+      analytics.play(appState.G);
       return showSheet({ kind: 'notice', eyebrow: '병역', text: r.text }, [
         { label: '이적 시장으로 →', cls: 'btn-primary', fn: nextPending },
       ]);
     }
     appState.G.pending = null;
     save();
+    analytics.play(appState.G);
     appState.tab = 'season';
     return showSheet(
       {
@@ -415,6 +420,7 @@ export function pickOption(i: number) {
   appState.G.pending = null;
   appState.G.training = 'rest';
   save();
+  analytics.play(appState.G);
   closeSheet();
   appState.tab = 'season';
   toast(`${appState.G.year} 시즌 시작!`);

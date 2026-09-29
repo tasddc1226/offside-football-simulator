@@ -164,3 +164,98 @@ describe('career boundaries', () => {
     expect(l.next).toBeNull();
   });
 });
+
+describe('priority-one gameplay measurement', () => {
+  it('records first actual phase once, never on creation or a later phase', () => {
+    const h = setup(),
+      s = career();
+    h.tracker.start(s, null);
+    expect(h.events.map((e) => e.name)).toEqual(['career_start']);
+    h.tracker.play(s, true);
+    createTracker(h.io).play(s, true);
+    h.tracker.play(s);
+    expect(h.events.filter((e) => e.name === 'first_action_complete')).toHaveLength(1);
+    expect(h.events.some((e) => e.name === 'career_resume')).toBe(false);
+    const old = career('old');
+    h.tracker.play(old);
+    expect(h.events.filter((e) => e.name === 'first_action_complete')).toHaveLength(1);
+  });
+  it('does not replay a first action taken before consent, even after a reload', () => {
+    const h = setup(),
+      s = career();
+    h.deny();
+    h.tracker.play(s, true);
+    h.grant();
+    createTracker(h.io, s.cid).play(s);
+    expect(h.events.map((e) => e.name)).toEqual(['career_resume']);
+    expect(h.events[0]?.params.career_origin).toBe('preexisting_or_unknown');
+  });
+  it('only records exact 3/5/10/20 season completions and dedupes across tabs', () => {
+    const h = setup(),
+      s = career();
+    h.tracker.start(s, null);
+    for (const n of [2, 3, 3, 4, 5, 10, 20, 21]) {
+      s.career = Array.from({ length: n }, () => ({}));
+      createTracker(h.io).firstSeason(s);
+    }
+    const events = h.events.filter((e) => e.name === 'career_progress_milestone');
+    expect(events.map((e) => e.params.milestone_seasons)).toEqual([3, 5, 10, 20]);
+    expect(events.every((e) => e.params.career_origin === 'observed_start')).toBe(true);
+    expect(JSON.stringify(events)).not.toContain(s.cid);
+    const old = { ...career('old'), career: Array.from({ length: 11 }, () => ({})) };
+    h.tracker.firstSeason(old);
+    expect(h.events.filter((e) => e.name === 'career_progress_milestone')).toHaveLength(4);
+  });
+  it('requires gameplay on a restored career, suppresses reloads and resumes after 30 minutes', () => {
+    const h = setup(),
+      s = career();
+    let now = 1700000000000;
+    const io = { ...h.io, now: () => now };
+    const restored = createTracker(io, s.cid);
+    expect(h.events).toEqual([]); // Loading, opening screens, and continue alone do not count.
+    restored.play(s);
+    expect(h.events.map((e) => e.name)).toEqual(['career_resume']);
+    now += 60_000;
+    createTracker(io, s.cid).play(s);
+    expect(h.events).toHaveLength(1);
+    now += 30 * 60_000 - 1;
+    restored.play(s);
+    expect(h.events).toHaveLength(1);
+    now += 30 * 60_000;
+    restored.play(s);
+    expect(h.events).toHaveLength(2);
+    s.retired = true;
+    now += 30 * 60_000;
+    restored.play(s);
+    expect(h.events).toHaveLength(2);
+  });
+  it('does not mistake a replacement career for the restored career', () => {
+    const h = setup(),
+      s = career();
+    const t = createTracker(h.io, 'old');
+    t.start(s, career('old'));
+    t.play(s, true);
+    expect(h.events.map((e) => e.name)).toEqual(['career_start', 'first_action_complete']);
+  });
+  it('marks milestones before failing transmission and accepts older ledger entries', () => {
+    const h = setup(),
+      s = career();
+    h.io.write({
+      seenStart: true,
+      next: null,
+      entries: [{ id: s.cid, at: 1700000000000, start: true }],
+    });
+    let attempts = 0;
+    const t = createTracker({
+      ...h.io,
+      send: () => {
+        attempts++;
+        throw new Error('blocked');
+      },
+    });
+    s.career = [{}, {}, {}];
+    expect(() => t.firstSeason(s)).not.toThrow();
+    t.firstSeason(s);
+    expect(attempts).toBe(1);
+  });
+});
