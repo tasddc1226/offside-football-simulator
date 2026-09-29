@@ -70,7 +70,9 @@ if (totalGzipBytes > LIMIT_BYTES) {
 
 const gameEntries = readdirSync(distAssetsDir).filter((f) => GAME_CHUNK.test(f));
 if (!gameEntries.length) {
-  console.error('dist/assets에서 게임 청크(Game-*.js)를 찾지 못했다 — App.svelte가 Game.svelte를 지연 import하는지 확인하라.');
+  console.error(
+    'dist/assets에서 게임 청크(Game-*.js)를 찾지 못했다 — App.svelte가 Game.svelte를 지연 import하는지 확인하라.',
+  );
   process.exit(1);
 }
 const gameSource = [...staticClosure(gameEntries)]

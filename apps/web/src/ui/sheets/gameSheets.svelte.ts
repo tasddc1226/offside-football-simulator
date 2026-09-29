@@ -4,7 +4,10 @@
 import type { Component } from 'svelte';
 import type { SheetView } from './types.js';
 
-export type GameSheetView = Extract<SheetView, { kind: 'event' | 'eventResult' | 'season' | 'market' }>;
+export type GameSheetView = Extract<
+  SheetView,
+  { kind: 'event' | 'eventResult' | 'season' | 'market' }
+>;
 /** 게임 청크가 필요한 시트인지. */
 export const isGameSheet = (v: SheetView): v is GameSheetView =>
   v.kind === 'event' || v.kind === 'eventResult' || v.kind === 'season' || v.kind === 'market';
