@@ -740,6 +740,10 @@ textarea {
   gap: 8px;
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
 }
+/* T-10-099 국적 검색: 폰에서 입력 칸을 올릴 때 위에 붙은 라이브 카드 아래에 멈춘다. */
+.create-form .combo {
+  scroll-margin-top: calc(var(--safe-t) + 176px);
+}
 /* T-10-096 체격 입력 */
 .body-row {
   flex-wrap: nowrap;
