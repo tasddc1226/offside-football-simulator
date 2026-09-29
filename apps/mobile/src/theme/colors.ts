@@ -23,6 +23,10 @@ export const LIGHT = {
   tabOn: '#1c4a35',
   /** 시트 뒤 어두운 막. */
   scrim: 'rgba(8,14,11,0.55)',
+  /** 칭호 등급 색(웹 --r2 · --r3 · --r4) — 희귀·영웅·전설. 일반은 muted. */
+  r2: '#1f63a8',
+  r3: '#7336b0',
+  r4: '#8a5c0a',
 };
 export const DARK: typeof LIGHT = {
   bg: '#0d1511',
@@ -45,6 +49,9 @@ export const DARK: typeof LIGHT = {
   crestHalo: 'rgba(238,244,239,0.3)',
   tabOn: '#f0b437',
   scrim: 'rgba(8,14,11,0.55)',
+  r2: '#72b4f2',
+  r3: '#c8a0f7',
+  r4: '#f0b437',
 };
 export type Colors = typeof LIGHT;
 
