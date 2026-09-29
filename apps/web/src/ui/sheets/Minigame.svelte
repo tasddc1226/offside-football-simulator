@@ -12,7 +12,7 @@
     type DefenderPose,
     type KeeperPose,
   } from './PitchScene.svelte';
-  import type { SheetView } from './types.js';
+  import type { SheetView } from '@offside/app-core/sheets';
 
   let { v }: { v: Extract<SheetView, { kind: 'minigame' }> } = $props();
 

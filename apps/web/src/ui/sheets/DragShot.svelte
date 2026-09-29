@@ -5,7 +5,7 @@
   import { MG_TIME_MS } from '@offside/game/minigame';
   import MgTimer from './MgTimer.svelte';
   import PitchScene, { REST, SPOT_POSE, type BallPose, type KeeperPose } from './PitchScene.svelte';
-  import type { SheetView } from './types.js';
+  import type { SheetView } from '@offside/app-core/sheets';
 
   let { v }: { v: Extract<SheetView, { kind: 'dragShot' }> } = $props();
 

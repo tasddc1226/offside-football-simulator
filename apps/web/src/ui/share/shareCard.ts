@@ -5,7 +5,7 @@ import { careerChapters, honoursRoll } from '@offside/game/retirement-report';
 import { legendTitle } from '@offside/game/season';
 import { POS_LABEL } from '@offside/game/pos-label';
 import { titleById } from '@offside/game/titles';
-import { totals } from '../format.js';
+import { totals } from '@offside/app-core/format';
 import { RN_DEFAULT, rnColors } from '../rnStyle.js';
 import type { LegendView } from '../state.svelte.js';
 import { drawJersey, type JerseyArt } from './jerseyCanvas.js';

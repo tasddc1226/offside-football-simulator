@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "dependencies": {
     "@expo/ui": "~57.0.20",
+    "@offside/app-core": "workspace:*",
     "@offside/contracts": "workspace:*",
     "@offside/game": "workspace:*",
     "expo": "~57.0.25",

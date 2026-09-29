@@ -39,7 +39,7 @@
   import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
   import { ATTR_KEYS } from '@offside/game/data';
   import { localCareerNames } from '@offside/game/season';
-  import { kstMonthDayTime } from '../boardText.js';
+  import { kstMonthDayTime } from '@offside/app-core/boardText';
   import { go } from '../nav.js';
   import { POS_LABEL, anonName } from '@offside/game/pos-label';
   import { toast } from '../helpers.js';

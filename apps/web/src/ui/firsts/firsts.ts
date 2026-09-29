@@ -1,7 +1,7 @@
 // T-10-027 서버 최초 기록 화면의 순수 계산(정렬·날짜 묶기·표시 이름). 컴포넌트와 테스트가 같이 쓴다.
 import type { ServerFirst, ServerFirstCat } from '@offside/contracts';
-import { anonName } from '../format.js';
-import { kstParts } from '../boardText.js';
+import { anonName } from '@offside/app-core/format';
+import { kstParts } from '@offside/app-core/boardText';
 
 // T-10-056 'records'는 깨질 수 있는 서버 기록(최다·최고) 탭.
 export type FirstsTab = 'recent' | 'records' | ServerFirstCat;

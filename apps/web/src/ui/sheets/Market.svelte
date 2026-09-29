@@ -1,6 +1,6 @@
 <script lang="ts">
   import { pickOption } from '../actions.js';
-  import type { SheetView } from './types.js';
+  import type { SheetView } from '@offside/app-core/sheets';
   import ClubBadge from '../ClubBadge.svelte';
   let { v }: { v: Extract<SheetView, { kind: 'market' }> } = $props();
 </script>

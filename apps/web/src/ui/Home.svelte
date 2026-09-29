@@ -13,7 +13,7 @@
   import HomeLive from './HomeLive.svelte';
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
-  import { withRo } from './format.js';
+  import { withRo } from '@offside/app-core/format';
 
   const live = $derived(!!appState.G && !appState.G.retired);
 </script>

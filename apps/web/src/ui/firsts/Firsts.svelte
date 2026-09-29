@@ -9,7 +9,7 @@
   import BackBar from '../BackBar.svelte';
   import { appState } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
-  import { kstParts } from '../boardText.js';
+  import { kstParts } from '@offside/app-core/boardText';
   import { FIRSTS_TABS, achievedList, byDay, holderLabel, type FirstsTab } from './firsts.js';
 
   let data = $state<FirstsResponse | null>(null);

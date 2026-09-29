@@ -7,7 +7,7 @@
   import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
   import { getLive } from '../api/client.js';
   import { onLive } from '../api/liveSocket.js';
-  import { agoKo, anonName } from './format.js';
+  import { agoKo, anonName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';
   import { motionOK } from './motion.js';
   import CountUp from './CountUp.svelte';

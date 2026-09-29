@@ -1,6 +1,6 @@
 <script lang="ts">
   import Chips from './Chips.svelte';
-  import type { SheetView } from './types.js';
+  import type { SheetView } from '@offside/app-core/sheets';
   let { v }: { v: Extract<SheetView, { kind: 'eventResult' }> } = $props();
 </script>
 

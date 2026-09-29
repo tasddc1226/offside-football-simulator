@@ -9,7 +9,10 @@ import { API, ok } from './helpers.js';
 //
 // 세이브(packages/game/src/__fixtures__/save-fw26.json)는 시드 20260926 공격수를 8시즌 돌린 GameState다(26세·프리미어리그).
 // 게임 로직이 바뀌어도 이 데이터는 그대로라 밸런스 변경이 스냅샷을 흔들지 않는다.
-const SAVE = readFileSync(new URL('../../../packages/game/src/__fixtures__/save-fw26.json', import.meta.url), 'utf8');
+const SAVE = readFileSync(
+  new URL('../../../packages/game/src/__fixtures__/save-fw26.json', import.meta.url),
+  'utf8',
+);
 const NOW = new Date('2026-09-26T12:00:00.000Z');
 const ago = (min: number) => new Date(NOW.getTime() - min * 60_000).toISOString();
 const profile = {

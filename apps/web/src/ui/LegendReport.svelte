@@ -9,7 +9,7 @@
   import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '@offside/game/retirement-report';
   import { POS_LABEL } from '@offside/game/pos-label';
   import { potAchText } from '@offside/game/stats';
-  import { fmtValue, seasonLabelOf, totals } from './format.js';
+  import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
   import { peakValue, retireValue } from '@offside/contracts/market-value';
   import type { LegendView } from './state.svelte.js';
   import CareerTab from './tabs/CareerTab.svelte';

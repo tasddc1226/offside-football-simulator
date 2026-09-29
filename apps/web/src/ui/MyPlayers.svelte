@@ -9,7 +9,7 @@
   import { getMyCareers, getRetiredNumbers } from '../api/client.js';
   import { fillGranted } from './retiredNumber.svelte.js';
   import { openLocalLegend, openPublicLegend } from './legend.js';
-  import { anonName } from './format.js';
+  import { anonName } from '@offside/app-core/format';
   import HofRow, { type RowStats } from './HofRow.svelte';
   import type { DetailPos, POS } from '@offside/game/data';
 

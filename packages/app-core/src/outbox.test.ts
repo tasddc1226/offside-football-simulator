@@ -165,12 +165,16 @@ describe('T-10-013 소유권 충돌', () => {
     await new Promise((r) => setTimeout(r, 0));
   };
 
-  // node의 globalThis는 EventTarget이 아니다 — dispatchEvent만 흉내 낸다.
-  const stubDispatch = () => {
-    const dispatch = vi.fn();
-    vi.stubGlobal('dispatchEvent', dispatch);
-    return () =>
-      dispatch.mock.calls.map(([e]) => [(e as CustomEvent).type, (e as CustomEvent).detail]);
+  // 클라이언트가 configureOutbox로 넣는 알림을 모은다.
+  const stubDispatch = async () => {
+    const calls: [string, unknown][] = [];
+    (await import('./outbox.js')).configureOutbox({
+      baseUrl: () => 'http://localhost:8787',
+      auth: () => ({ credentials: 'include' }),
+      onConflict: (items) => void calls.push(['offside:owner-conflict', items]),
+      onRetiredNumber: (ev) => void calls.push(['offside:retired-number', ev]),
+    });
+    return () => calls;
   };
 
   it('CAREER_OWNER_MISMATCH는 버리고 그 항목으로 이벤트를 알린다', async () => {
@@ -178,7 +182,7 @@ describe('T-10-013 소유권 충돌', () => {
       'fetch',
       vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(conflict('CAREER_OWNER_MISMATCH')),
     );
-    const dispatched = stubDispatch();
+    const dispatched = await stubDispatch();
     const { enqueueSeason } = await import('./outbox.js');
     enqueueSeason('33333333-3333-3333-3333-333333333333', 2027, seasonBody);
     await flush();
@@ -203,7 +207,7 @@ describe('T-10-013 소유권 충돌', () => {
       'fetch',
       vi.fn().mockResolvedValueOnce(ok()).mockResolvedValueOnce(conflict('VALIDATION_FAILED')),
     );
-    const dispatched = stubDispatch();
+    const dispatched = await stubDispatch();
     const { enqueueSeason } = await import('./outbox.js');
     enqueueSeason('44444444-4444-4444-4444-444444444444', 2027, seasonBody);
     await flush();
@@ -338,7 +342,7 @@ describe('T-10-006 seasonPayload', () => {
   it('은퇴까지 모든 시즌 페이로드가 CareerSeasonPayloadSchema를 통과한다', async () => {
     const { CareerSeasonPayloadSchema } = await import('@offside/contracts');
     const g = await import('@offside/game/index');
-    const { seasonPayload } = await import('./outbox.js');
+    const { seasonPayload } = await import('./upload.js');
     const { createRng, setActiveRng, pick, ri } = await import('@offside/game/rng');
     const N = Number(process.env.SEASON_PAYLOAD_CAREERS) || 12;
     let seasons = 0;

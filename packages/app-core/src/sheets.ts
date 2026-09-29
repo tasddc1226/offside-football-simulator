@@ -1,10 +1,13 @@
-// 시트 본문 뷰 모델. actions.ts가 게임 상태에서 화면에 필요한 값만 골라 만들고,
-// ui/sheets/*.svelte가 그대로 그린다(컴포넌트는 게임 로직을 직접 부르지 않는다).
-import type { Chip } from '../sheetState.svelte.js';
+// 시트 본문 뷰 모델. 게임 진행 액션(game-actions.ts)이 게임 상태에서 화면에 필요한 값만 골라 만들고,
+// 웹(ui/sheets/*.svelte)·앱 시트 컴포넌트가 그대로 그린다(컴포넌트는 게임 로직을 직접 부르지 않는다).
+import type { Chip } from '@offside/game/stats';
 import type { TitleView } from '@offside/game/titles';
 import type { ResolveResult } from '@offside/game/event-runner';
 import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
+
+export type { Chip };
+export type SheetButton = { label: string; cls?: string; fn: () => void };
 
 export type StoryTag = { name: string; stage: number; total: number };
 export type StoryNote = NonNullable<ResolveResult['story']>;

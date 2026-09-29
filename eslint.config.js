@@ -14,6 +14,7 @@ export default [
       'apps/mobile/src/**/*.tsx',
       'packages/contracts/src/**/*.ts',
       'packages/game/src/**/*.ts',
+      'packages/app-core/src/**/*.ts',
       'tooling/fulltime-sim/*.ts',
     ],
     import.meta.dirname,
@@ -69,8 +70,8 @@ export default [
     },
   },
   {
-    // T-11-001 게임 엔진은 웹·앱이 함께 쓴다 — 어느 앱에도, 화면 프레임워크에도 기대지 않는다.
-    files: ['packages/game/src/**/*.ts'],
+    // T-11-001 게임 엔진·T-11-002 클라이언트 공용 층은 웹·앱이 함께 쓴다 — 어느 앱에도, 화면 프레임워크에도 기대지 않는다.
+    files: ['packages/game/src/**/*.ts', 'packages/app-core/src/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -84,11 +85,11 @@ export default [
                 '@offside/mobile/*',
                 '**/apps/*',
               ],
-              message: 'packages/game은 앱 코드를 import할 수 없다.',
+              message: '공용 패키지(game·app-core)는 앱 코드를 import할 수 없다.',
             },
             {
               group: ['svelte', 'svelte/*', 'react', 'react-native'],
-              message: '엔진은 화면 프레임워크를 모른다.',
+              message: '공용 패키지는 화면 프레임워크를 모른다.',
             },
           ],
         },
