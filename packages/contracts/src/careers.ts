@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { bodyError } from './body.js';
+import { NATION_BY_CODE } from './nations.js';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
 import { serviceSeason } from './service-seasons.js';
@@ -45,15 +47,31 @@ export const ClubIdSchema = z.string().regex(/^[a-z0-9-]{1,24}$/);
 
 /** 커리어 생성 시 고정되는 메타(포지션·주발·유형·특성·시작 연도·앱 버전). 매 PUT마다 함께 보내
  * 새 커리어면 이 값으로 생성하고, 이미 있으면 값이 같은지 검증 없이 덮어쓴다(클라이언트가 정본). */
-export const CareerMetaSchema = z.strictObject({
-  pos: CareerPosSchema,
-  dpos: DetailPosSchema.optional(),
-  foot: CareerFootSchema,
-  type: ShortStringSchema,
-  trait: ShortStringSchema,
-  startYear: z.number().int().min(2000).max(2200),
-  appVersion: ShortStringSchema,
-});
+export const CareerMetaSchema = z
+  .strictObject({
+    pos: CareerPosSchema,
+    dpos: DetailPosSchema.optional(),
+    foot: CareerFootSchema,
+    type: ShortStringSchema,
+    trait: ShortStringSchema,
+    startYear: z.number().int().min(2000).max(2200),
+    appVersion: ShortStringSchema,
+    /** T-10-096 국적(nations.ts 코드). 옛 클라이언트·옛 커리어엔 없다 = 대한민국. */
+    nation: z
+      .string()
+      .refine((c) => NATION_BY_CODE.has(c), '알 수 없는 국적')
+      .optional(),
+    /** T-10-096 키(cm)·몸무게(kg). 둘 다 있거나 둘 다 없다. */
+    height: z.number().int().optional(),
+    weight: z.number().int().optional(),
+  })
+  .check((ctx) => {
+    const { height: h, weight: w } = ctx.value;
+    if (h === undefined && w === undefined) return;
+    const err =
+      h === undefined || w === undefined ? '키·몸무게는 함께 보낸다' : bodyError({ h, w });
+    if (err) ctx.issues.push({ code: 'custom', message: err, input: ctx.value, path: ['height'] });
+  });
 export type CareerMeta = z.infer<typeof CareerMetaSchema>;
 
 export const CareerHonorSchema = z.string().max(60);
@@ -351,6 +369,8 @@ export const PublicHofEntrySchema = z.strictObject({
   pos: CareerPosSchema,
   /** T-10-091 세부 포지션. 프리시즌 선수·옛 기록은 null(배포 전 엣지 캐시 응답엔 없다). */
   dpos: DetailPosSchema.nullable().optional(),
+  /** T-10-096 국적 코드. 대한민국·옛 기록은 null(배포 전 엣지 캐시 응답엔 없다). */
+  nation: z.string().nullable().optional(),
   number: z.number().int().nullable(),
   retireAge: z.number().int(),
   peak: z.number().int(),

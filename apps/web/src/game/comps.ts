@@ -13,7 +13,8 @@ import {
   START_P,
 } from './engine.js';
 import type { GameState, Season, SeasonComp } from './types.js';
-import type { NatTourResult } from './national.js';
+import { natSide, type NatTourResult } from './national.js';
+import { CONF_POTY, federationPoty } from './nation.js';
 
 export const CUPS: Record<string, string[]> = {
   hs: ['전국고교축구선수권'],
@@ -409,13 +410,13 @@ export function seasonAwards(
   if (s.pos === 'GK' && enough && avg >= 7.1 && rank <= 4 && chance(0.45))
     awards.push(`${L.name} 올해의 골키퍼`);
   const kfa = s.nat.caps > 0 && (ballonRank <= 30 || (o >= 80 && avg >= 7.2)) && chance(0.5);
-  if (kfa) awards.push('대한축구협회 올해의 선수');
+  if (kfa) awards.push(federationPoty(s));
   // AFC 올해의 선수는 아시아 리그 소속, 국제선수상은 아시아 밖(유럽 · MLS)에서 뛰는 선수 몫이다.
+  // T-10-096 다른 연맹 국적은 같은 조건·확률로 자기 대륙 올해의 선수상을 받는다(이름만 다르다).
   const outsideAsia = L.tier >= 4 || L.id === 'mls';
-  if (outsideAsia && o >= 80 && enough && avg >= 7.1 && chance(0.35))
-    awards.push('AFC 올해의 국제선수');
-  if (!outsideAsia && o >= 72 && enough && avg >= 7.3 && chance(0.25))
-    awards.push('AFC 올해의 선수');
+  const poty = CONF_POTY[natSide(s).conf];
+  if (outsideAsia && o >= 80 && enough && avg >= 7.1 && chance(0.35)) awards.push(poty.abroad);
+  if (!outsideAsia && o >= 72 && enough && avg >= 7.3 && chance(0.25)) awards.push(poty.home);
   return { awards, gala, allG, allA };
 }
 

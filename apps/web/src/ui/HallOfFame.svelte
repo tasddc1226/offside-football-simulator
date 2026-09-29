@@ -136,6 +136,7 @@
           name={h.name ?? anonName(h.pos, h.number)}
           pos={h.pos}
           dpos={h.dpos}
+          nation={h.nation}
           club={h.lastClub}
           clubId={h.lastClubId}
           rn={h.retiredNumber?.number}

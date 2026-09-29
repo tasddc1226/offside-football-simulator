@@ -13,6 +13,7 @@
   import { posLabel, type DetailPos, type POS } from '../game/data.js';
   import Laurel from './Laurel.svelte';
   import ClubMark from './ClubMark.svelte';
+  import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
 
   const MEDAL = ['gold', 'silver', 'bronze'];
   const {
@@ -29,6 +30,7 @@
     club = null,
     clubId = null,
     rn = null,
+    nation = null,
   }: {
     /** 0부터. 0~2는 금·은·동 월계관. */
     rank: number;
@@ -50,7 +52,10 @@
     clubId?: string | null | undefined;
     /** T-10-076 영구결번 등번호. */
     rn?: number | null | undefined;
+    /** T-10-096 국적 코드 — 대한민국이 아니면 이름 앞에 국기를 붙인다. */
+    nation?: string | null | undefined;
   } = $props();
+  const foreign = $derived(nation && nation !== DEFAULT_NATION ? NATION_BY_CODE.get(nation) : undefined);
   const tt = $derived(titleById(titleId));
 </script>
 
@@ -60,7 +65,7 @@
   <div class="hof-rank">{rank + 1}</div>
 {/if}
 <div>
-  <ClubMark name={club} id={clubId} size={18} /> <b>{name}</b> <span class="pill">{posLabel({ pos, dpos })}</span>
+  <ClubMark name={club} id={clubId} size={18} /> {#if foreign}<span class="hof-flag" role="img" aria-label={foreign.ko} title={foreign.ko} data-hof-nation={foreign.code}>{flagOf(foreign.code)}</span> {/if}<b>{name}</b> <span class="pill">{posLabel({ pos, dpos })}</span>
   {#if rn != null}<span class="pill pill-rn" data-rn-chip title="영구결번 {rn}번">👑 영결 {rn}</span>{/if}
   {#if tag}<span class="pill">{tag}</span>{/if}
   {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}

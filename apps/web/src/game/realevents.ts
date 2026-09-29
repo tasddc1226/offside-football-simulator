@@ -2,7 +2,8 @@
 import { clamp, ri, pick } from './rng.js';
 import { leagueOf, addStat, addAttr, isPro, byPos, adFee } from './engine.js';
 import { ovr } from './attributes.js';
-import { callupScore, RELEASE } from './national.js';
+import { callupScore, natSide, RELEASE } from './national.js';
+import { isKorean } from './nation.js';
 import type { EventDef, GameState } from './types.js';
 
 const DERBY: Record<string, string> = {
@@ -51,8 +52,10 @@ function releaseEvent(o: {
       leagueOf(s.leagueId).tier >= 3 &&
       s.flags[flag + s.year] === undefined &&
       !(s.mil && (s.mil.exempt || s.mil.served)) &&
+      (o.key !== 'ag' || natSide(s).conf === 'AFC') &&
       callupScore(s) >= 62,
-    text: () => o.text,
+    // 외국 국적 선수에겐 병역 특례 문구를 뺀다(T-10-096).
+    text: (s) => (isKorean(s) ? o.text : o.text.replace(/ [^.]*병역 특례\./, '')),
     choices: [
       {
         label: '구단 수뇌부와 직접 담판을 짓는다',

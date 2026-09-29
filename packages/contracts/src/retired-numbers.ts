@@ -46,7 +46,7 @@ export const RN_BOND = {
 export const RN_SEASON_HONOR_CAP = 250;
 
 const NATIONAL =
-  /아시안컵|월드컵|올림픽|아시안게임|네이션스|유로 |코파 아메리카|대한축구협회|국제선수|대회 MVP|대회 베스트|AFC 올해의 선수|동아시안|U-/;
+  /아시안컵|월드컵|올림픽|아시안게임|네이션스|유로 |코파 아메리카|골드컵|축구협회|국제선수|대회 MVP|대회 베스트|(AFC|UEFA|남미|아프리카|CONCACAF|OFC) 올해의 선수|동아시안|U-/;
 const LEAGUE_TITLE =
   /(리그|리가|분데스리가|세리에 A|에레디비시|리그 1|K리그1|K리그2|J1리그|MLS|K3리그) 우승$/;
 

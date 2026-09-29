@@ -54,6 +54,8 @@ export function seasonBody(
     career: {
       pos: s.pos,
       ...(s.dpos && { dpos: s.dpos }),
+      ...(s.nation && { nation: s.nation }),
+      ...(s.body && { height: s.body.h, weight: s.body.w }),
       foot: s.foot,
       type: s.type,
       trait: s.trait,

@@ -5,7 +5,11 @@
   import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '../game/data.js';
   import type { AttrKey, DetailPos, Pos } from '../game/data.js';
   import { baseline } from '../game/candidates.js';
-  import { appState, detailOpenNow, draftDpos, randomName } from './state.svelte.js';
+  import { appState, detailOpenNow, draftBody, draftDpos, randomName } from './state.svelte.js';
+  import { NATIONS, NATION_BY_CODE, DEFAULT_NATION, flagOf, type Confed } from '@offside/contracts/nations';
+  import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
+  import { bodyMods, GK_SUBS, SUBS } from '../game/attributes.js';
+  import { REGION } from '../game/nation.js';
   import { startCareer, rollCandidates } from './actions.js';
   import { goHome } from './nav.js';
   import { hiddenStrength, scoutLine, startOvr } from './create-view.js';
@@ -32,6 +36,35 @@
   // 라이브 카드의 레이더·OVR: 후보를 골랐으면 그 후보, 아니면 지금 조합의 기준 분포.
   const cardAttrs = $derived(picked?.attrs ?? baseline(C.pos, C.focus, dpos));
   const trait = $derived(TRAITS.find((t) => t.id === C.trait));
+
+  // T-10-096 국적·체격. 국적은 연맹별로 묶어 가나다순으로 보여 주고, 대한민국은 맨 위에 둔다.
+  const CONF_ORDER: Confed[] = ['AFC', 'UEFA', 'CONMEBOL', 'CAF', 'CONCACAF', 'OFC'];
+  const nationGroups = CONF_ORDER.map((conf) => ({
+    conf,
+    list: NATIONS.filter((n) => n.conf === conf && n.code !== DEFAULT_NATION).sort((a, b) => a.ko.localeCompare(b.ko, 'ko')),
+  }));
+  const CONT_CUP_NAME: Record<Confed, string> = {
+    AFC: 'AFC 아시안컵',
+    UEFA: 'UEFA 유로',
+    CONMEBOL: '코파 아메리카',
+    CAF: '아프리카 네이션스컵',
+    CONCACAF: 'CONCACAF 골드컵',
+    OFC: 'OFC 네이션스컵',
+  };
+  const nation = $derived(NATION_BY_CODE.get(C.nation) ?? NATION_BY_CODE.get(DEFAULT_NATION)!);
+  const foreign = $derived(nation.code !== DEFAULT_NATION);
+  const body = $derived(draftBody(C));
+  const bodyErr = $derived(bodyError(body));
+  const bodyNote = $derived.by(() => {
+    const mods = Object.entries(bodyMods({ pos: C.pos, body }))
+      .filter(([k]) => (C.pos === 'GK' ? GK_BODY.includes(k) : !GK_SUBS.includes(k)))
+      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+      .slice(0, 4);
+    return mods.map(([k, v]) => `${SUBS[k]} ${v > 0 ? '+' : '−'}${Math.abs(v)}`).join(' · ');
+  });
+  const L = BODY_LIMITS;
+  // 골키퍼에게 보여 줄 체격 보정(나머지는 골키퍼 능력치에 거의 안 쓰인다).
+  const GK_BODY = ['div', 'han', 'jmp', 'str', 'ref', 'rea'];
 
   function setPos(v: Pos) {
     C.pos = v;
@@ -93,7 +126,7 @@
     </div>
     <div class="lc-main">
       <b class="lc-name">{C.name.trim() || '이름 없음'}</b>
-      <span class="lc-meta">{posLabel({ pos: C.pos, dpos })} · {C.foot}</span>
+      <span class="lc-meta"><span aria-hidden="true">{flagOf(nation.code)}</span> {nation.ko} · {posLabel({ pos: C.pos, dpos })} · {C.foot}{bodyErr ? '' : ` · ${body.h}cm ${body.w}kg`}</span>
       <div class="lc-tags">
         {#if trait}<span class="lc-tag">{trait.icon} {trait.name}</span>{/if}
         {#if C.focus.length}<span class="lc-tag">주력 {C.focus.map((k) => labels[k]).join('·')}</span>{/if}
@@ -119,6 +152,51 @@
           <label for="f-num">등번호</label>
           <input type="number" id="f-num" inputmode="numeric" min="1" max="99" placeholder="1–99" bind:value={C.number} />
         </div>
+      </div>
+
+      <div class="field">
+        <label for="f-nation">국적</label>
+        <select id="f-nation" data-set="nation" bind:value={C.nation}>
+          <option value={DEFAULT_NATION}>{flagOf(DEFAULT_NATION)} 대한민국</option>
+          {#each nationGroups as g (g.conf)}
+            <optgroup label="{REGION[g.conf]} ({g.conf})">
+              {#each g.list as n (n.code)}
+                <option value={n.code}>{flagOf(n.code)} {n.ko}</option>
+              {/each}
+            </optgroup>
+          {/each}
+        </select>
+        <p class="muted fs-sm" data-nation-note>
+          {#if foreign}
+            한국 고교로 축구 유학을 온 선수로 시작해요. {nation.ko} 대표팀에 뽑히고 대륙컵은 {CONT_CUP_NAME[nation.conf]}예요. 병역은 없어요.
+          {:else}
+            대표팀 대륙컵은 AFC 아시안컵이에요. 병역(상무·현역)이 있고, 아시안게임·올림픽 메달로 특례를 받을 수 있어요.
+          {/if}
+          대표팀 발탁 기준은 어느 나라든 같아요.
+        </p>
+      </div>
+
+      <div class="field">
+        <span class="lbl">체격</span>
+        <div class="row body-row">
+          <label class="body-in" for="f-height">
+            <span class="sr-only">키</span>
+            <input type="number" id="f-height" inputmode="numeric" min={L.height.min} max={L.height.max} placeholder={String(BODY_DEFAULT[C.pos].h)} value={C.height ?? BODY_DEFAULT[C.pos].h} oninput={(e) => (C.height = e.currentTarget.value === '' ? null : Math.round(+e.currentTarget.value))} aria-invalid={!!bodyErr} aria-describedby="f-body-note" />
+            <span aria-hidden="true">cm</span>
+          </label>
+          <label class="body-in" for="f-weight">
+            <span class="sr-only">몸무게</span>
+            <input type="number" id="f-weight" inputmode="numeric" min={L.weight.min} max={L.weight.max} placeholder={String(BODY_DEFAULT[C.pos].w)} value={C.weight ?? BODY_DEFAULT[C.pos].w} oninput={(e) => (C.weight = e.currentTarget.value === '' ? null : Math.round(+e.currentTarget.value))} aria-invalid={!!bodyErr} aria-describedby="f-body-note" />
+            <span aria-hidden="true">kg</span>
+          </label>
+        </div>
+        <p class="fs-sm" class:muted={!bodyErr} class:body-err={!!bodyErr} id="f-body-note" data-body-note aria-live="polite">
+          {#if bodyErr}
+            {bodyErr}
+          {:else}
+            BMI {bmiOf(body).toFixed(1)}{bodyNote ? ` · ${bodyNote}` : ' · 포지션 평균 체격'}. 시작 OVR은 같고, 세부 능력치 분포만 조금 달라져요.
+          {/if}
+        </p>
       </div>
 
       <div class="field">
@@ -182,8 +260,8 @@
 
     <div class="action-bar at-bottom">
       <div class="action-bar-inner">
-        <button class="btn btn-primary btn-block" data-act="next-candidates" disabled={focusLeft > 0} onclick={rollCandidates}>
-          {focusLeft > 0 ? `주력 능력치를 ${focusLeft}개 더 골라주세요` : '후보 3명 보기 →'}
+        <button class="btn btn-primary btn-block" data-act="next-candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={rollCandidates}>
+          {bodyErr ? '키·몸무게를 확인해 주세요' : focusLeft > 0 ? `주력 능력치를 ${focusLeft}개 더 골라주세요` : '후보 3명 보기 →'}
         </button>
       </div>
     </div>

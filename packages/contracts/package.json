@@ -17,7 +17,9 @@
     "./retired-numbers": "./src/retired-numbers.ts",
     "./service-seasons": "./src/service-seasons.ts",
     "./positions": "./src/positions.ts",
-    "./owner-team": "./src/owner-team.ts"
+    "./owner-team": "./src/owner-team.ts",
+    "./nations": "./src/nations.ts",
+    "./body": "./src/body.ts"
   },
   "scripts": {
     "test": "vitest run",

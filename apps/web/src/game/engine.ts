@@ -22,6 +22,9 @@ import { adoptLatestBalance } from './balance.js';
 import type { GameState, Season, LogEntry } from './types.js';
 import { leagueOf, clubsIn } from './player.js';
 import { BLOOM_SCOUT, log } from './stats.js';
+import { nationOf } from './nation.js';
+import { DEFAULT_NATION } from '@offside/contracts/nations';
+import type { Body } from '@offside/contracts/body';
 
 export * from './player.js';
 export * from './stats.js';
@@ -44,6 +47,9 @@ export function newGame(
     pos: Pos;
     /** T-10-091 세부 포지션(시즌 1부터). 없으면 옛 방식 그대로 — RNG 소비 순서도 같다. */
     dpos?: DetailPos | undefined;
+    /** T-10-096 국적·체격. 없으면(또는 대한민국이면) 예전과 같은 선수 — RNG 소비 순서도 같다. */
+    nation?: string | undefined;
+    body?: Body | undefined;
     foot: GameState['foot'];
     trait: string;
   } & ({ type: string; focus?: undefined } | { type?: undefined; focus: AttrKey[] }),
@@ -77,6 +83,8 @@ export function newGame(
     number: o.number,
     pos: o.pos,
     ...(o.dpos && { dpos: o.dpos }),
+    ...(o.nation && o.nation !== DEFAULT_NATION && { nation: o.nation }),
+    ...(o.body && { body: { ...o.body } }),
     foot: o.foot,
     type: typeId,
     focus,
@@ -124,7 +132,8 @@ export function newGame(
       goals: 0,
       assists: 0,
       tours: [],
-      qual: { 2026: true },
+      // 2026 월드컵 본선 — 외국 국적은 전력으로 정한다(시드 RNG를 쓰지 않는다).
+      qual: { 2026: !o.nation || nationOf({ nation: o.nation }).str >= 70 },
       captain: false,
       debutYear: null,
     },
@@ -149,7 +158,9 @@ export function newGame(
   s.season = newSeason(s);
   log(
     s,
-    `${club.name} 3학년 ${posLabel(s)} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`,
+    s.nation
+      ? `${nationOf(s).ko}에서 축구 유학을 온 ${club.name} 3학년 ${posLabel(s)} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`
+      : `${club.name} 3학년 ${posLabel(s)} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`,
     'big',
   );
   return s;

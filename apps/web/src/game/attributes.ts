@@ -1,4 +1,5 @@
 // ───────── 세부 능력치 체계 (FIFA / EA SPORTS FC 방식) ─────────
+import { BODY_DEFAULT, bmiOf } from '@offside/contracts/body';
 import { DETAIL_POSITIONS, type PeakProfile } from '@offside/contracts/positions';
 import { ATTR_KEYS, DPOS, POS, type AttrKey, type Pos } from './data.js';
 import { clamp, ri } from './rng.js';
@@ -302,6 +303,41 @@ export function spreadAttr(s: GameState, k: AttrKey, v: number) {
   syncFace(s);
 }
 
+/**
+ * T-10-096 키·몸무게가 세부 능력치에 주는 약한 보정 — [키 10cm당, BMI 1당]. 포지션 기본 체격(BODY_DEFAULT)과의
+ * 차이로 계산하고, 한 능력치에 ±3을 넘지 않는다. 큰 키는 헤딩·점프·힘·다이빙에, 작은 키는 가속·민첩·질주에 유리하다.
+ * initSubs가 이 보정을 넣은 뒤 역할 OVR을 목표값으로 다시 맞추므로 시작 OVR은 체격과 무관하다 — 분포만 바뀐다.
+ */
+const BODY_MOD: Record<string, [number, number]> = {
+  hea: [1.5, 0],
+  jmp: [1, -0.2],
+  str: [1, 0.6],
+  agg: [0, 0.2],
+  spr: [-0.8, -0.4],
+  acc: [-1, -0.4],
+  agi: [-1.2, -0.3],
+  bal: [-0.8, 0.3],
+  stm: [0, -0.5],
+  div: [1.2, -0.2],
+  han: [0.6, 0],
+  ref: [-0.6, -0.2],
+  rea: [-0.4, 0],
+};
+const BODY_MOD_MAX = 3;
+/** 체격 보정(세부 능력치 키 → 보정값, 0.1 단위). 체격이 없으면 빈 객체. */
+export function bodyMods(s: Pick<GameState, 'pos' | 'body'>): Record<string, number> {
+  if (!s.body) return {};
+  const d = BODY_DEFAULT[s.pos];
+  const dh = (s.body.h - d.h) / 10,
+    db = bmiOf(s.body) - bmiOf(d);
+  const out: Record<string, number> = {};
+  for (const [k, [ph, pb]] of Object.entries(BODY_MOD)) {
+    const v = clamp(Math.round((ph * dh + pb * db) * 10) / 10, -BODY_MOD_MAX, BODY_MOD_MAX);
+    if (v) out[k] = v;
+  }
+  return out;
+}
+
 export function initSubs(s: GameState, base: Record<AttrKey, number>, targetOvr?: number) {
   const role = mainRole(s);
   const W = ROLES[role]!;
@@ -322,6 +358,7 @@ export function initSubs(s: GameState, base: Record<AttrKey, number>, targetOvr?
       Math.max(gv, gv + a * (core - gv)) + (w ? Math.round((w * 100 - 5) * 0.25) : -1) + ri(-4, 4);
     s.sub[k] = clamp(v, 10, 80);
   }
+  for (const [k, v] of Object.entries(bodyMods(s))) s.sub[k] = clamp(s.sub[k]! + v, 5, 99);
   if (targetOvr !== undefined) {
     const d = targetOvr - ovrRole(s, role);
     for (const k in W) s.sub[k] = clamp(Math.round((s.sub[k]! + d) * 10) / 10, 5, 99);
