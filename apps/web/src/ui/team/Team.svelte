@@ -19,17 +19,22 @@
     type FormationId,
   } from '@offside/contracts/owner-team';
   import {
+    fetchClubAchievements,
     fetchOpponents,
     fetchOwnerTeam,
     fetchTeamMatches,
     playMatch,
     saveOwnerTeam,
+    type ClubAchievement,
+    type ClubAchievementsResponse,
     type OwnerTeam,
     type TeamMatch,
     type TeamOpponent,
     type TeamPlayer,
     type TeamRecord,
   } from '../../api/team.js';
+  import { FACE_ABBR, GK_ABBR } from '../../game/attributes.js';
+  import { ATTR_KEYS } from '../../game/data.js';
   import { loadHOF } from '../../game/season.js';
   import { POS_LABEL, anonName } from '../../game/pos-label.js';
   import { toast } from '../helpers.js';
@@ -38,7 +43,7 @@
   import { appState } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
 
-  type View = 'team' | 'opponents' | 'result' | 'history';
+  type View = 'team' | 'achievements' | 'opponents' | 'result' | 'history';
 
   let status = $state<LoadStatus>('loading');
   let needLogin = $state(false);
@@ -61,6 +66,15 @@
   let result = $state<TeamMatch | null>(null);
   let history = $state<TeamMatch[]>([]);
   let histStatus = $state<LoadStatus>('loading');
+  let ach = $state<ClubAchievementsResponse | null>(null);
+  let achStatus = $state<LoadStatus>('loading');
+  /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
+  let pickSort = $state<'fit' | 'score' | 'peak'>('fit');
+  const PICK_SORTS = [
+    ['fit', '자리 실력'],
+    ['score', '레전드 점수'],
+    ['peak', '최고 OVR'],
+  ] as const;
 
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = new Map(loadHOF().flatMap((h) => (h.id ? [[h.id, h.name] as const] : [])));
@@ -155,8 +169,19 @@
           at: slots.indexOf(p.careerId),
         };
       })
-      .sort((a, b) => b.rating - a.rating || b.p.peak - a.p.peak);
+      .sort((a, b) =>
+        pickSort === 'score'
+          ? (b.p.legendScore ?? 0) - (a.p.legendScore ?? 0) || b.rating - a.rating
+          : pickSort === 'peak'
+            ? b.p.peak - a.p.peak || b.rating - a.rating
+            : b.rating - a.rating || b.p.peak - a.p.peak,
+      );
   });
+  /** 최고 시점 대표 능력치 한 줄(골키퍼는 골키퍼 능력치 이름). */
+  const attrLine = (p: TeamPlayer) =>
+    p.attrs
+      ? ATTR_KEYS.map((k) => `${(p.pos === 'GK' ? GK_ABBR : FACE_ABBR)[k]} ${p.attrs![k]}`).join(' · ')
+      : null;
 
   /** 고른 자리에 선수를 넣는다. 이미 다른 자리에 있던 선수면 두 자리를 맞바꾼다. */
   function assign(id: string | null) {
@@ -239,6 +264,30 @@
     window.scrollTo(0, 0);
   }
 
+  // ───────── 시즌 업적 ─────────
+  async function openAchievements(season?: number) {
+    view = 'achievements';
+    achStatus = 'loading';
+    const r = await fetchClubAchievements(season);
+    if (!r.ok) {
+      achStatus = 'error';
+      return;
+    }
+    ach = r.data;
+    achStatus = 'ready';
+  }
+  const achDone = (items: ClubAchievement[]) => items.filter((i) => i.done).length;
+  const n = (v: number) => v.toLocaleString('ko-KR');
+  /** 업적 한 줄의 오른쪽 표시. */
+  const achState = (i: ClubAchievement) =>
+    i.level !== undefined
+      ? `${i.level}단계 · ${n(i.cur ?? 0)}${i.unit ?? ''}${i.next != null ? ` · NEXT ${n(i.next)}` : ' · 최고 단계'}`
+      : i.max !== undefined
+        ? `${i.cur ?? 0} / ${i.max}`
+        : i.done
+          ? '달성 완료'
+          : '미달성';
+
   async function openHistory() {
     view = 'history';
     histStatus = 'loading';
@@ -265,7 +314,7 @@
   };
 
   function back() {
-    if (view === 'team') appState.screen = 'owner';
+    if (view === 'team' || view === 'achievements') appState.screen = 'owner';
     else view = 'team';
   }
   function onKey(e: KeyboardEvent) {
@@ -278,7 +327,7 @@
 <div class="wrap">
   <Topbar>
     {#snippet right()}
-      <button class="icon-btn" data-act="team-back" onclick={back}>{view === 'team' ? '← 구단주' : '← 내 팀'}</button>
+      <button class="icon-btn" data-act="team-back" onclick={back}>{view === 'team' || view === 'achievements' ? '← 구단주' : '← 내 팀'}</button>
     {/snippet}
   </Topbar>
 
@@ -290,7 +339,47 @@
         <p class="muted">구글로 로그인한 구단주만 은퇴한 선수로 팀을 꾸릴 수 있어요.</p>
         <button class="btn btn-primary self-start" onclick={() => void startGoogleLogin(null)}>구글로 로그인</button>
       </section>
-    {:else if view === 'team'}
+    {:else if view === 'team' || view === 'achievements'}
+      <div class="seg two tm-tabs" role="group" aria-label="내 팀 메뉴">
+        <button class="opt" aria-pressed={view === 'team'} onclick={() => (view = 'team')} data-act="team-tab">팀</button>
+        <button class="opt" aria-pressed={view === 'achievements'} onclick={() => void openAchievements()} data-act="team-achievements">시즌 업적</button>
+      </div>
+      {#if view === 'achievements'}
+        <section class="card stack" style="gap:12px" data-club-achievements>
+          <div class="tm-title">
+            <div>
+              <div class="eyebrow">Season achievements</div>
+              <h1>시즌 업적</h1>
+            </div>
+            {#if ach && ach.seasons.length > 1}
+              <select class="tm-season" aria-label="시즌" value={ach.season ?? 0} onchange={(e) => void openAchievements(Number(e.currentTarget.value))}>
+                {#each ach.seasons as o (o.id ?? 0)}
+                  <option value={o.id ?? 0}>{o.name}</option>
+                {/each}
+              </select>
+            {/if}
+          </div>
+          <LoadState status={achStatus} failText="업적을 불러오지 못했어요." retry={() => void openAchievements(ach?.season ?? undefined)}>
+            {#if ach}
+              <p class="muted fs-sm">{ach.seasons.find((o) => o.id === ach?.season)?.name ?? ''}에 처음 뛰어 은퇴한 내 선수 {ach.players}명의 기록으로 채워요.</p>
+              {#each ach.groups as g (g.id)}
+                <details class="tm-ach" data-ach-group={g.id}>
+                  <summary>
+                    <span class="tm-ach-stage">{g.stage}</span>
+                    <b>{g.title}</b>
+                    <span class="tm-ach-count">{achDone(g.items)} / {g.items.length}</span>
+                  </summary>
+                  <ul>
+                    {#each g.items as i (i.id)}
+                      <li class:done={i.done}><span>{i.label}</span><small>{achState(i)}</small></li>
+                    {/each}
+                  </ul>
+                </details>
+              {/each}
+            {/if}
+          </LoadState>
+        </section>
+      {:else}
       <section class="card stack tm-head" style="gap:12px">
         <div class="tm-title">
           <div>
@@ -353,6 +442,7 @@
           <button class="icon-btn self-start" onclick={openHistory} data-act="team-history">최근 경기</button>
         {/if}
       </section>
+      {/if}
     {:else if view === 'opponents'}
       <section class="card stack" style="gap:12px">
         <div>
@@ -449,6 +539,11 @@
       </div>
       <button class="icon-btn" onclick={() => (picking = null)}>닫기</button>
     </div>
+    <div class="seg three tm-sort" role="group" aria-label="정렬">
+      {#each PICK_SORTS as [k, label] (k)}
+        <button class="opt" aria-pressed={pickSort === k} onclick={() => (pickSort = k)} data-pick-sort={k}>{label}</button>
+      {/each}
+    </div>
     <div class="tm-list">
       <button class="tm-pick" aria-pressed={slots[picking] === null} onclick={() => assign(null)} data-pick="youth">
         <b class="tm-pick-ovr">{YOUTH_OVR}</b>
@@ -460,6 +555,7 @@
           <span class="tm-opp-info">
             <span>{nameOf(c.p)}</span>
             <small class="muted">{c.p.dpos ? DETAIL_LABEL[c.p.dpos] : POS_LABEL[c.p.pos]} · 최고 {c.p.peak} · 적합 {pct(c.fit)}{c.at >= 0 && c.at !== picking ? ` · ${slotCodes[c.at]} 자리에서 바꿈` : ''}</small>
+            {#if attrLine(c.p)}<small class="muted tm-attrs">{attrLine(c.p)}</small>{/if}
           </span>
         </button>
       {:else}
@@ -505,6 +601,84 @@
     font-family: var(--display);
     font-weight: 700;
     font-size: 1.0625rem;
+  }
+  .tm-tabs {
+    margin-bottom: 12px;
+  }
+  .tm-season {
+    flex: none;
+    max-width: 45%;
+    min-height: 40px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+  }
+  .tm-ach {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .tm-ach summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .tm-ach-stage {
+    flex: none;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    background: var(--surface-2);
+    color: var(--accent-text);
+  }
+  .tm-ach summary b {
+    flex: 1;
+    min-width: 0;
+  }
+  .tm-ach-count {
+    flex: none;
+    font-family: var(--display);
+    font-weight: 700;
+    color: var(--accent-text);
+  }
+  .tm-ach ul {
+    list-style: none;
+    margin: 0;
+    padding: 0 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tm-ach li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+  .tm-ach li small {
+    flex: none;
+    color: var(--muted);
+    text-align: right;
+  }
+  .tm-ach li.done small {
+    color: var(--accent-text);
+    font-weight: 700;
+  }
+  .tm-sort {
+    margin-bottom: 6px;
+  }
+  .tm-attrs {
+    font-size: 0.6875rem;
   }
   .tm-lines {
     display: grid;

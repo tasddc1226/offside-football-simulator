@@ -1,5 +1,7 @@
 import {
   ADMIN_NICKNAME,
+  ClubAchievementsQuerySchema,
+  ClubAchievementsResponseSchema,
   OwnerTeamResponseSchema,
   PlayTeamMatchBodySchema,
   PlayTeamMatchResponseSchema,
@@ -15,6 +17,7 @@ import {
 } from '@offside/contracts';
 import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
 import { TEAM_MATCHES_PER_DAY, TEAM_SLOTS, type FormationId } from '@offside/contracts/owner-team';
+import { SERVICE_SEASONS, activeSeason, serviceSeason } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { nowIso, ok, readBody } from './shared.js';
 import { isAdminEmail } from '../auth/admin.js';
@@ -24,17 +27,20 @@ import { runBatch } from '../db/repos/batch.js';
 import {
   careersByIds,
   countMatchesSince,
+  countTeamWins,
   dposOf,
   eligibleMap,
   getTeamWithOwner,
   listEligibleCareers,
-  rolesOf,
+  peakOf,
   listMyTeams,
   listOpponentCandidates,
   listRecentMatches,
   publicNamesOf,
+  seasonCareersOf,
   recordMatchStatements,
   slotIdsOf,
+  teamCareerFacts,
   type MatchDetail,
   type OwnerTeamRow,
   type TeamMatchRow,
@@ -42,7 +48,7 @@ import {
 import { getProfile, type ProfileRecord } from '../db/repos/profiles.js';
 import { ownerTeams } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
-import { AppError } from '../errors.js';
+import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import {
@@ -56,6 +62,7 @@ import {
   type LineupSlot,
   type PlayerRef,
 } from '../team/sim.js';
+import { clubAchievements } from '../team/achievements.js';
 import { eq } from 'drizzle-orm';
 
 // T-10-092 구단주 팀(팀 슬롯). 구글 로그인한 구단주만 쓴다 — 사람마다 다른 응답이라 엣지 캐시하지 않는다.
@@ -182,6 +189,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       listEligibleCareers(db, me.id),
       countMatchesSince(db, me.id, kstTodayStart(nowIso())),
     ]);
+    const peaks = new Map(players.map((p) => [p.id, peakOf(p.peakProfile)]));
     const eligible = new Map<string, LineupCareer>(
       players.map((p) => [
         p.id,
@@ -190,7 +198,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           pos: p.pos,
           dpos: dposOf(p.dpos),
           peak: p.peak!,
-          roles: rolesOf(p.peakProfile),
+          roles: peaks.get(p.id)?.roles ?? null,
           number: p.number,
           publicName: p.publicName,
         },
@@ -217,7 +225,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           pos: p.pos,
           dpos: dposOf(p.dpos),
           peak: p.peak!,
-          roles: rolesOf(p.peakProfile),
+          roles: peaks.get(p.id)?.roles ?? null,
+          attrs: peaks.get(p.id)?.attrs ?? null,
           number: p.number,
           publicName: p.publicName,
           legendScore: p.legendScore,
@@ -437,6 +446,80 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - usedToday - 1),
       },
       201,
+    );
+  });
+
+  // 구단 시즌 업적(클럽하우스). season 없으면 지금 시즌(개막 전이면 프리시즌), 0이면 프리시즌. 팀 업적은 지금 시즌을 볼
+  // 때만 지금 팀으로 판정한다.
+  app.get('/v1/owner-team/achievements', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const now = nowIso();
+    const current = activeSeason(now)?.id ?? null;
+    const q = parseWithAppError(ClubAchievementsQuerySchema, c.req.query());
+    const season = q.season === undefined ? current : q.season === 0 ? null : q.season;
+    const def = season === null ? undefined : serviceSeason(season);
+    if (season !== null && (!def || def.startsAt > now)) {
+      throw new AppError({
+        code: 'VALIDATION_FAILED',
+        message: '아직 열리지 않은 시즌이에요.',
+        details: { reason: 'SEASON_NOT_OPEN' },
+      });
+    }
+    const first = SERVICE_SEASONS[0]!;
+    const window = def
+      ? { from: def.startsAt, to: def.endsAt }
+      : { from: null, to: first.startsAt };
+    const [careersIn, teams] = await Promise.all([
+      seasonCareersOf(db, me.id, season),
+      season === current ? listMyTeams(db, me.id) : Promise.resolve([]),
+    ]);
+    const team = teams[0];
+    let slots = null;
+    if (team) {
+      const ids = slotIdsOf(team);
+      const picked = ids.filter((x): x is string => !!x);
+      const [rows, facts] = await Promise.all([
+        careersByIds(db, picked),
+        teamCareerFacts(db, picked),
+      ]);
+      slots = buildLineup(team.formation as FormationId, ids, eligibleMap(rows, me.id)).map(
+        (s) => ({
+          careerId: s.careerId,
+          fit: s.fit,
+          lastClubId: (s.careerId && facts.get(s.careerId)?.lastClubId) || null,
+          caps: (s.careerId && facts.get(s.careerId)?.caps) || 0,
+          retiredNumber: !!(s.careerId && facts.get(s.careerId)?.retiredNumber),
+        }),
+      );
+    }
+    const teamWins = await countTeamWins(
+      db,
+      teams.map((t) => t.id),
+      window,
+    );
+    return ok(
+      c,
+      ClubAchievementsResponseSchema,
+      {
+        season,
+        seasons: [
+          { id: null, name: '프리시즌' },
+          ...SERVICE_SEASONS.filter((s) => s.startsAt <= now).map((s) => ({
+            id: s.id,
+            name: s.name,
+          })),
+        ],
+        players: careersIn.length,
+        groups: clubAchievements({
+          careers: careersIn,
+          team: season === current ? (slots ?? []) : null,
+          teamWins,
+          detail: season !== null,
+        }),
+      },
+      200,
+      NO_STORE,
     );
   });
 

@@ -1,8 +1,36 @@
 import type { FormationId } from '@offside/contracts/owner-team';
-import { DETAIL_POSITIONS, type DetailPos, type PeakProfile } from '@offside/contracts/positions';
-import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, sql } from 'drizzle-orm';
+import {
+  DETAIL_POSITIONS,
+  FACE_ATTRS,
+  type DetailPos,
+  type PeakProfile,
+} from '@offside/contracts/positions';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import type { Db } from '../client.js';
-import { careers, ownerTeams, profiles, teamMatches } from '../schema.js';
+import { honorsOf } from './firsts.js';
+import {
+  careerSeasons,
+  careers,
+  ownerTeams,
+  profiles,
+  retiredNumbers,
+  teamMatches,
+} from '../schema.js';
 import type { LineupCareer, PlayerRef } from '../../team/sim.js';
 
 // T-10-092 구단주 팀·팀 경기.
@@ -14,12 +42,17 @@ export type TeamMatchRow = typeof teamMatches.$inferSelect;
 export const dposOf = (v: string | null): DetailPos | null =>
   (DETAIL_POSITIONS as readonly string[]).includes(v ?? '') ? (v as DetailPos) : null;
 
-/** careers.peak_profile(JSON) → 자리별 실력. 이 기능 전에 은퇴한 기록이거나 모양이 틀리면 null. */
-export function rolesOf(json: string | null): PeakProfile['roles'] | null {
+/** careers.peak_profile(JSON) → 최고 시점 능력치. 이 기능 전에 은퇴한 기록이거나 모양이 틀리면 null. */
+export function peakOf(json: string | null): PeakProfile | null {
   if (!json) return null;
   try {
-    const roles = (JSON.parse(json) as Partial<PeakProfile>).roles;
-    return roles && DETAIL_POSITIONS.every((d) => Number.isFinite(roles[d])) ? roles : null;
+    const p = JSON.parse(json) as Partial<PeakProfile>;
+    return p.roles &&
+      p.attrs &&
+      DETAIL_POSITIONS.every((d) => Number.isFinite(p.roles![d])) &&
+      FACE_ATTRS.every((k) => Number.isFinite(p.attrs![k]))
+      ? (p as PeakProfile)
+      : null;
   } catch {
     return null;
   }
@@ -97,7 +130,7 @@ export function eligibleMap(rows: readonly CareerLite[], ownerId: string) {
       pos: r.pos,
       dpos: dposOf(r.dpos),
       peak: r.peak,
-      roles: rolesOf(r.peakProfile),
+      roles: peakOf(r.peakProfile)?.roles ?? null,
       number: r.number,
       publicName: r.publicName,
     });
@@ -254,3 +287,120 @@ export async function publicNamesOf(db: Db, ids: string[]): Promise<Map<string, 
 /** 프로필 삭제 batch용(프로필은 소프트 삭제라 FK CASCADE가 돌지 않는다). 팀 경기는 팀 FK CASCADE로 함께 지워진다. */
 export const deleteOwnerTeamsStatement = (db: Db, profileId: string) =>
   db.delete(ownerTeams).where(eq(ownerTeams.profileId, profileId));
+
+// ───────── 구단 시즌 업적 ─────────
+
+/** 시각 범위 [from, to) — 구단 업적의 시즌 기간(null이면 그쪽 끝이 열려 있다). */
+export type Window = { from: string | null; to: string | null };
+const inWindow = (w: Window): SQL | undefined =>
+  and(
+    w.from ? gte(teamMatches.createdAt, w.from) : undefined,
+    w.to ? lt(teamMatches.createdAt, w.to) : undefined,
+  );
+
+/** 그 시즌에 처음 올라와(service_season, null = 프리시즌) 은퇴한 내 선수 + 영구결번 여부 + 받아 둔 시즌(리그·영예). */
+export async function seasonCareersOf(db: Db, profileId: string, season: number | null) {
+  const mine = and(
+    eq(careers.profileId, profileId),
+    eq(careers.status, 'retired'),
+    isNotNull(careers.peak),
+    season === null ? isNull(careers.serviceSeason) : eq(careers.serviceSeason, season),
+  );
+  const [rows, seasons] = await db.batch([
+    db
+      .select({
+        id: careers.id,
+        pos: careers.pos,
+        dpos: careers.dpos,
+        caps: careers.caps,
+        ballon: careers.ballon,
+        trophies: careers.trophies,
+        awards: careers.awards,
+        apps: careers.apps,
+        goals: careers.goals,
+        assists: careers.assists,
+        legendScore: careers.legendScore,
+        rn: retiredNumbers.careerId,
+      })
+      .from(careers)
+      .leftJoin(retiredNumbers, eq(retiredNumbers.careerId, careers.id))
+      .where(mine),
+    // 선수가 많아도 바인딩 수 한도에 걸리지 않게 id 목록 대신 하위 질의로 고른다.
+    db
+      .select({
+        careerId: careerSeasons.careerId,
+        league: careerSeasons.league,
+        honorsJson: careerSeasons.honorsJson,
+      })
+      .from(careerSeasons)
+      .where(
+        inArray(careerSeasons.careerId, db.select({ id: careers.id }).from(careers).where(mine)),
+      ),
+  ]);
+  const byCareer = new Map<string, { league: string; honors: string[] }[]>();
+  for (const r of seasons) {
+    const list = byCareer.get(r.careerId) ?? [];
+    list.push({ league: r.league, honors: honorsOf(r.honorsJson) });
+    byCareer.set(r.careerId, list);
+  }
+  return rows.map((r) => ({
+    pos: r.pos,
+    dpos: dposOf(r.dpos),
+    caps: r.caps ?? 0,
+    ballon: r.ballon ?? 0,
+    trophies: r.trophies ?? 0,
+    awards: r.awards ?? 0,
+    apps: r.apps ?? 0,
+    goals: r.goals ?? 0,
+    assists: r.assists ?? 0,
+    legendScore: r.legendScore ?? 0,
+    retiredNumber: r.rn !== null,
+    seasons: byCareer.get(r.id) ?? [],
+  }));
+}
+
+/** 팀 선발 커리어의 업적 재료(마지막 구단 · A매치 · 영구결번). 11명 이하라 id 목록으로 읽는다. */
+export async function teamCareerFacts(db: Db, ids: string[]) {
+  if (ids.length === 0)
+    return new Map<string, { lastClubId: string | null; caps: number; retiredNumber: boolean }>();
+  const rows = await db
+    .select({
+      id: careers.id,
+      lastClubId: careers.lastClubId,
+      caps: careers.caps,
+      rn: retiredNumbers.careerId,
+    })
+    .from(careers)
+    .leftJoin(retiredNumbers, eq(retiredNumbers.careerId, careers.id))
+    .where(inArray(careers.id, ids));
+  return new Map(
+    rows.map((r) => [
+      r.id,
+      { lastClubId: r.lastClubId, caps: r.caps ?? 0, retiredNumber: r.rn !== null },
+    ]),
+  );
+}
+
+/** 기간 안에 내 팀이 이긴 경기 수(건 경기·받은 경기 모두). */
+export async function countTeamWins(db: Db, teamIds: string[], w: Window): Promise<number> {
+  if (teamIds.length === 0) return 0;
+  const [row] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(teamMatches)
+    .where(
+      and(
+        inWindow(w),
+        or(
+          and(
+            inArray(teamMatches.homeTeamId, teamIds),
+            sql`${teamMatches.homeGoals} > ${teamMatches.awayGoals}`,
+          ),
+          and(
+            inArray(teamMatches.awayTeamId, teamIds),
+            sql`${teamMatches.awayGoals} > ${teamMatches.homeGoals}`,
+          ),
+        ),
+      ),
+    );
+  return Number(row?.n ?? 0);
+}

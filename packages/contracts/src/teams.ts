@@ -36,6 +36,8 @@ export const TeamPlayerSchema = z.strictObject({
   peak: z.number().int(),
   /** 최고 시점의 자리별 실력(T-10-092). 이 기능 전에 은퇴한 선수는 null — 최고 OVR × 적합도로 센다. */
   roles: PeakProfileSchema.shape.roles.nullable(),
+  /** 최고 시점 대표 능력치 6개(선수 고르기 표시용). 이 기능 전에 은퇴한 선수는 null. */
+  attrs: PeakProfileSchema.shape.attrs.nullable(),
   number: z.number().int().nullable(),
   publicName: z.string().nullable(),
   legendScore: z.number().int().nullable(),
@@ -163,3 +165,51 @@ export type PlayTeamMatchResponse = z.infer<typeof PlayTeamMatchResponseSchema>;
 
 export const TeamMatchesResponseSchema = z.strictObject({ items: z.array(TeamMatchSchema) });
 export type TeamMatchesResponse = z.infer<typeof TeamMatchesResponseSchema>;
+
+// ───────── 구단 시즌 업적(클럽하우스) ─────────
+
+/**
+ * 업적 한 줄. done은 달성 여부. 모으기·단계 업적은 cur/max(지금 값·목표)를, 단계 업적은 level(지금 단계, 0부터)과
+ * next(다음 단계 목표, 끝까지 왔으면 null)를 함께 준다.
+ */
+export const ClubAchievementSchema = z.strictObject({
+  id: z.string(),
+  label: z.string(),
+  done: z.boolean(),
+  cur: z.number().int().min(0).optional(),
+  max: z.number().int().min(1).optional(),
+  level: z.number().int().min(0).optional(),
+  next: z.number().int().nullable().optional(),
+  /** 단계 업적 숫자 뒤에 붙는 단위('골'·'경기' …). */
+  unit: z.string().optional(),
+});
+export type ClubAchievement = z.infer<typeof ClubAchievementSchema>;
+
+export const ClubAchievementGroupSchema = z.strictObject({
+  id: z.string(),
+  /** 단계 표시('0단계' · 'TEAM'). */
+  stage: z.string(),
+  title: z.string(),
+  items: z.array(ClubAchievementSchema),
+});
+export type ClubAchievementGroup = z.infer<typeof ClubAchievementGroupSchema>;
+
+/** 고를 수 있는 시즌. id null = 프리시즌(시즌 1 개막 전에 처음 올라온 선수). */
+export const ClubSeasonOptionSchema = z.strictObject({
+  id: z.number().int().nullable(),
+  name: z.string(),
+});
+
+/** `?season=` — 서비스 시즌 id, 0이면 프리시즌. 없으면 지금 진행 중인 시즌(개막 전이면 프리시즌). */
+export const ClubAchievementsQuerySchema = z.strictObject({
+  season: z.coerce.number().int().min(0).max(999).optional(),
+});
+
+export const ClubAchievementsResponseSchema = z.strictObject({
+  season: z.number().int().nullable(),
+  seasons: z.array(ClubSeasonOptionSchema),
+  /** 이 시즌에 처음 올라와 은퇴한 내 선수 수. */
+  players: z.number().int().min(0),
+  groups: z.array(ClubAchievementGroupSchema),
+});
+export type ClubAchievementsResponse = z.infer<typeof ClubAchievementsResponseSchema>;

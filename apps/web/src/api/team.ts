@@ -1,5 +1,6 @@
 // T-10-092 구단주 팀 API. 팀 화면(지연 청크)만 import한다. 타입은 type-only import라 번들에 zod가 들어가지 않는다.
 import type {
+  ClubAchievementsResponse,
   OwnerTeamResponse,
   PlayTeamMatchResponse,
   PutOwnerTeamBody,
@@ -10,6 +11,8 @@ import type {
 import { apiFetch, cachedGet } from './client.js';
 
 export type {
+  ClubAchievement,
+  ClubAchievementsResponse,
   OwnerTeam,
   OwnerTeamResponse,
   TeamMatch,
@@ -31,3 +34,9 @@ export const playMatch = (opponentTeamId: string) =>
   });
 export const fetchTeamMatches = () =>
   cachedGet<TeamMatchesResponse>('/v1/owner-team/matches', 60_000);
+/** 구단 시즌 업적. season: 서비스 시즌 id, 0 = 프리시즌, 없으면 지금 시즌. */
+export const fetchClubAchievements = (season?: number) =>
+  cachedGet<ClubAchievementsResponse>(
+    `/v1/owner-team/achievements${season === undefined ? '' : `?season=${season}`}`,
+    60_000,
+  );

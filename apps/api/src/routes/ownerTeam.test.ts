@@ -1,4 +1,5 @@
 import {
+  ClubAchievementsResponseSchema,
   ErrorEnvelopeSchema,
   OwnerTeamResponseSchema,
   PlayTeamMatchResponseSchema,
@@ -9,7 +10,7 @@ import {
 } from '@offside/contracts';
 import { TEAM_MATCHES_PER_DAY, YOUTH_OVR } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { careers, ownerTeams, teamMatches } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
@@ -19,6 +20,7 @@ const PutRes = successEnvelope(PutOwnerTeamResponseSchema);
 const OppRes = successEnvelope(TeamOpponentsResponseSchema);
 const PlayRes = successEnvelope(PlayTeamMatchResponseSchema);
 const MatchesRes = successEnvelope(TeamMatchesResponseSchema);
+const AchRes = successEnvelope(ClubAchievementsResponseSchema);
 
 type Pos = 'FW' | 'MF' | 'DF' | 'GK';
 let seq = 0;
@@ -29,6 +31,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     ctx = await createTestD1();
   });
   afterEach(async () => {
+    vi.useRealTimers();
     await ctx.dispose();
   });
 
@@ -46,6 +49,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       status?: 'active' | 'retired';
       publicName?: string | null;
       roles?: Record<string, number>;
+      serviceSeason?: number | null;
     } = {},
   ) {
     const id = crypto.randomUUID();
@@ -70,6 +74,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       legendScore: retired ? 300 : null,
       shirtNumber: 9,
       publicName: over.publicName ?? null,
+      serviceSeason: over.serviceSeason ?? null,
       peakProfile: over.roles
         ? JSON.stringify({
             attrs: { pac: 80, sho: 70, pas: 70, dri: 75, def: 60, phy: 70 },
@@ -109,6 +114,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       ['PUT', '/v1/owner-team'],
       ['GET', '/v1/owner-team/opponents'],
       ['GET', '/v1/owner-team/matches'],
+      ['GET', '/v1/owner-team/achievements'],
     ] as const) {
       const res = await call(method, path, { cookie: anon.cookie, body: {} });
       expect(res.status, `${method} ${path}`).toBe(403);
@@ -180,6 +186,41 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(moved.slots[2]).toMatchObject({ slot: 'CB', rating: 82, fit: 1 });
     expect(moved.lines.def).toBeGreaterThan(moved.lines.atk);
     expect(moved.lines.gk).toBe(YOUTH_OVR);
+  });
+
+  it('구단 시즌 업적은 그 시즌에 처음 올라온 내 은퇴 선수로 판정하고, 팀 업적은 지금 시즌에만 보인다', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z')); // 프리시즌
+    const me = await issueGoogleCookie(ctx);
+    await addCareer(me.profileId, { pos: 'GK', peak: 70 });
+    const s1 = await addCareer(me.profileId, { pos: 'DF', dpos: 'CB', peak: 80, serviceSeason: 1 });
+    await addCareer(me.profileId, { status: 'active' });
+    const read = async (q = '') => {
+      const res = await call('GET', `/v1/owner-team/achievements${q}`, { cookie: me.cookie });
+      return { status: res.status, body: await res.json() };
+    };
+    const item = (d: { groups: { items: { id: string; done: boolean }[] }[] }, id: string) =>
+      d.groups.flatMap((g) => g.items).find((i) => i.id === id);
+
+    const pre = AchRes.parse((await read()).body).data;
+    expect(pre).toMatchObject({ season: null, players: 1, seasons: [{ id: null }] });
+    expect(item(pre, 'retire-GK')?.done).toBe(true);
+    expect(item(pre, 'retire-DF')?.done).toBe(false);
+    expect(item(pre, 'all-dpos')).toBeUndefined();
+    expect(pre.groups.at(-1)?.id).toBe('team'); // 지금 시즌(프리시즌) — 팀이 없어도 팀 업적 목록은 보인다
+    expect((await read('?season=1')).status).toBe(400); // 아직 열리지 않은 시즌
+
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
+    await putTeam(me.cookie, { slots: slots(null, null, s1) });
+    const cur = AchRes.parse((await read()).body).data;
+    expect(cur).toMatchObject({ season: 1, players: 1 });
+    expect(cur.seasons.map((x) => x.id)).toEqual([null, 1]);
+    expect(item(cur, 'retire-DF')?.done).toBe(true);
+    expect(item(cur, 'all-dpos')).toMatchObject({ cur: 1, max: 8 });
+    expect(item(cur, 'team-one')?.done).toBe(true);
+    const past = AchRes.parse((await read('?season=0')).body).data;
+    expect(past).toMatchObject({ season: null, players: 1 });
+    expect(past.groups.some((g) => g.id === 'team')).toBe(false);
   });
 
   it('팀을 만들고 고친다 — 빈 자리는 유스 선수, 팀 슬롯은 1개', async () => {

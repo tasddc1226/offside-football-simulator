@@ -21,6 +21,7 @@ const PLAYERS = [
     dpos: 'ST',
     peak: 90,
     roles: { GK: 25, CB: 50, FB: 62, DM: 60, CM: 70, AM: 82, W: 84, ST: 90 },
+    attrs: { pac: 88, sho: 91, pas: 70, dri: 84, def: 35, phy: 78 },
     number: 9,
     publicName: '공개 골잡이',
     legendScore: 500,
@@ -31,6 +32,7 @@ const PLAYERS = [
     dpos: null,
     peak: 80,
     roles: null,
+    attrs: null,
     number: 1,
     publicName: null,
     legendScore: 300,
@@ -219,6 +221,9 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(sheet).toContainText('윙어');
   await expect(sheet.locator('[data-pick]').nth(1)).toContainText('84');
   await expect(sheet.locator('[data-pick]').nth(1)).toContainText('적합 93%');
+  await expect(sheet.locator('[data-pick]').nth(1)).toContainText('SHO 91');
+  await sheet.locator('[data-pick-sort="score"]').click();
+  await expect(sheet.locator('[data-pick]').nth(1)).toContainText('공개 골잡이');
   await sheet.getByRole('button', { name: '닫기' }).first().click();
   await expect(sheet).toHaveCount(0);
 
@@ -236,4 +241,67 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(result).toContainText('익명의 공격수 No.7');
   await expect(result).toContainText('1승 0무 0패');
   await expectNoA11yViolations(page);
+});
+
+test('시즌 업적 — 단계별로 달성 수를 보이고, 펼치면 업적마다 상태를 보인다', async ({ page }) => {
+  await stubOwner(page, true);
+  await page.route(`${API}/v1/owner-team`, (route) =>
+    route.fulfill(
+      ok({ teams: [], slotsMax: 1, players: PLAYERS, matchesLeft: 10, matchesPerDay: 10 }),
+    ),
+  );
+  const seasons: (number | null)[] = [];
+  await page.route(`${API}/v1/owner-team/achievements**`, (route) => {
+    const q = new URL(route.request().url()).searchParams.get('season');
+    const season = q === null || q === '1' ? 1 : null;
+    seasons.push(season);
+    return route.fulfill(
+      ok({
+        season,
+        seasons: [
+          { id: null, name: '프리시즌' },
+          { id: 1, name: '시즌 1' },
+        ],
+        players: season ? 2 : 5,
+        groups: [
+          {
+            id: 'first',
+            stage: '0단계',
+            title: '축구 인생 출발',
+            items: [
+              { id: 'retire-FW', label: '공격수 1명 은퇴', done: true },
+              { id: 'all-dpos', label: '전 세부 포지션 선수 배출', done: false, cur: 2, max: 8 },
+            ],
+          },
+          {
+            id: 'records',
+            stage: '1단계',
+            title: '기록 쌓기',
+            items: [
+              { id: 'goals', label: '골', done: true, cur: 370, level: 2, next: 1000, unit: '골' },
+            ],
+          },
+        ],
+      }),
+    );
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-act="team-achievements"]').click();
+  const box = page.locator('[data-club-achievements]');
+  await expect(box).toContainText('시즌 1에 처음 뛰어 은퇴한 내 선수 2명');
+  const first = box.locator('[data-ach-group="first"]');
+  await expect(first).toContainText('1 / 2');
+  await first.locator('summary').click();
+  await expect(first).toContainText('달성 완료');
+  await expect(first).toContainText('2 / 8');
+  const records = box.locator('[data-ach-group="records"]');
+  await records.locator('summary').click();
+  await expect(records).toContainText('2단계 · 370골 · NEXT 1,000');
+  await expectNoA11yViolations(page);
+
+  await box.getByLabel('시즌').selectOption({ label: '프리시즌' });
+  await expect(box).toContainText('프리시즌에 처음 뛰어 은퇴한 내 선수 5명');
+  expect(seasons).toEqual([1, null]);
 });
