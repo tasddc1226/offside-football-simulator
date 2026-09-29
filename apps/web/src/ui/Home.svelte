@@ -11,6 +11,7 @@
   import SiteFooter from './SiteFooter.svelte';
   import HomeFirsts from './firsts/HomeFirsts.svelte';
   import HomeLive from './HomeLive.svelte';
+  import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { withRo } from './format.js';
 
@@ -21,6 +22,8 @@
   <Topbar />
   <!-- T-10-115 카톡·인스타 같은 앱 안 브라우저에서만 한 번 보이는 외부 브라우저 안내 -->
   <InAppBanner />
+  <!-- T-10-122 이적·서버 최초 기록이 흐르는 전광판 -->
+  <HomeTicker />
   {#if live && appState.G}
     {@const G = appState.G}
     <!-- 진행 중인 커리어가 있으면 첫 카드를 '이번 커리어'로 바꿔 이어하기를 가장 먼저 보여 준다. -->
