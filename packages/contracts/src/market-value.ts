@@ -60,3 +60,28 @@ export function retireValue(career: ValueRow[], legendScore: number): number {
   const avg = top.reduce((a, b) => a + b, 0) / 3;
   return Math.round((avg * (1 + Math.max(0, legendScore) / LEGACY_PER)) / 1000) * 1000;
 }
+
+/**
+ * 몸값·이적료 표기(T-10-100): 큰 두 단위까지만 — '1조 2,346억' · '263억 1천만' · '5천 3백만'.
+ * 아래 단위에서 반올림하고, 반올림으로 자리가 올라가면(9,999억 6천만 → 1조) 윗 단위로 쓴다. 0 이하는 '-'.
+ */
+export function fmtValue(man: number): string {
+  if (man <= 0) return '-';
+  const r = (u: number) => Math.round(man / u) * u;
+  const v = r(10_000) >= 100_000_000 ? r(10_000) : r(1000) >= 10_000 ? r(1000) : r(100);
+  if (!v) return '1백만 미만';
+  // [윗 단위 크기, 윗 단위, 아랫 단위 크기, 아랫 단위, 꼬리]
+  const [hu, hn, lu, ln, tail] =
+    v >= 100_000_000
+      ? [100_000_000, '조', 10_000, '억', '']
+      : v >= 10_000
+        ? [10_000, '억', 1000, '천만', '']
+        : [1000, '천', 100, '백', '만'];
+  const hi = Math.floor(v / hu),
+    lo = (v % hu) / lu;
+  return (
+    [hi && `${hi.toLocaleString()}${hn}`, lo && `${lo.toLocaleString()}${ln}`]
+      .filter(Boolean)
+      .join(' ') + tail
+  );
+}

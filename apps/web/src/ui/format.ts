@@ -17,6 +17,7 @@ import {
 import type { CareerRecord, GameState } from '../game/types.js';
 
 export { anonName } from '../game/pos-label.js';
+export { fmtValue } from '@offside/contracts/market-value';
 
 export function seasonLabelOf(r: CareerRecord): string {
   const L = LEAGUES.find((l) => l.name === r.league);
@@ -180,28 +181,3 @@ export const iGa = (word: string): string => (jongOf(word) > 0 ? '이' : '가');
 export const waGwa = (word: string): string => (jongOf(word) > 0 ? '과' : '와');
 /** 단어 뒤에 '을/를'을 붙인다. 받침이 있으면 '을', 없으면(한글이 아니어도) '를'. */
 export const withEulReul = (word: string): string => `${word}${jongOf(word) > 0 ? '을' : '를'}`;
-
-/**
- * 몸값 표기(T-10-100): 큰 두 단위까지만 — '1조 2,346억' · '263억 1천만' · '5천 3백만'.
- * 아래 단위에서 반올림하고, 반올림으로 자리가 올라가면(9,999억 6천만 → 1조) 윗 단위로 쓴다. 0 이하는 '-'.
- */
-export function fmtValue(man: number): string {
-  if (man <= 0) return '-';
-  const r = (u: number) => Math.round(man / u) * u;
-  const v = r(10_000) >= 100_000_000 ? r(10_000) : r(1000) >= 10_000 ? r(1000) : r(100);
-  if (!v) return '1백만 미만';
-  // [윗 단위 크기, 윗 단위, 아랫 단위 크기, 아랫 단위, 꼬리]
-  const [hu, hn, lu, ln, tail] =
-    v >= 100_000_000
-      ? [100_000_000, '조', 10_000, '억', '']
-      : v >= 10_000
-        ? [10_000, '억', 1000, '천만', '']
-        : [1000, '천', 100, '백', '만'];
-  const hi = Math.floor(v / hu),
-    lo = (v % hu) / lu;
-  return (
-    [hi && `${hi.toLocaleString()}${hn}`, lo && `${lo.toLocaleString()}${ln}`]
-      .filter(Boolean)
-      .join(' ') + tail
-  );
-}

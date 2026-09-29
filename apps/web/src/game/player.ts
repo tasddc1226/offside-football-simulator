@@ -23,7 +23,7 @@ export function roleOf(s: GameState): '주전' | '로테이션' | '벤치' {
   return d >= 1 ? '주전' : d >= -5 ? '로테이션' : '벤치';
 }
 // 연봉·몸값 식은 서버와 같이 쓴다(T-10-100 명예의 전당 가치 순).
-export { salaryFor, valueFor } from '@offside/contracts/market-value';
+export { fmtValue, salaryFor, valueFor } from '@offside/contracts/market-value';
 export function fmtMoney(man: number): string {
   const m = Math.round(man);
   if (Math.abs(m) >= 10000) {

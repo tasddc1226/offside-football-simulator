@@ -9,6 +9,7 @@ import {
   fmtMoney,
   salaryFor,
   valueFor,
+  fmtValue,
   addStat,
   addAttr,
   log,
@@ -413,7 +414,7 @@ export function acceptOption(
       s,
       wasAm
         ? `${c.name}(${leagueOf(c.leagueId).name}) 입단! ${opt.years}년 · 연봉 ${fmtMoney(opt.salary)}`
-        : `${from} → ${c.name}(${leagueOf(c.leagueId).name}) 이적! ${opt.fee ? `이적료 ${fmtMoney(opt.fee)} · ` : '자유계약 · '}${opt.years}년 · 연봉 ${fmtMoney(opt.salary)}`,
+        : `${from} → ${c.name}(${leagueOf(c.leagueId).name}) 이적! ${opt.fee ? `이적료 ${fmtValue(opt.fee)} · ` : '자유계약 · '}${opt.years}년 · 연봉 ${fmtMoney(opt.salary)}`,
       'big',
     );
   }

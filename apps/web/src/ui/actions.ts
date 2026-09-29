@@ -35,7 +35,7 @@ import type { Choice, EventDef, EventLogEntry, GameState, MarketResult } from '.
 import { appState, draftBody, draftDpos, randomName, randomNumber } from './state.svelte.js';
 import { pushEvLog, save, seasonLabel, toast, uploadSeason, uploadRetirement } from './helpers.js';
 import { publicNameOf } from './namePublic.js';
-import { seasonLabelOf } from './format.js';
+import { fmtValue, seasonLabelOf } from './format.js';
 import { motionOK } from './motion.js';
 import {
   closeSheet,
@@ -348,7 +348,7 @@ function showMarket(m: MarketResult) {
       note: m.note,
       options: m.options.map((o) => {
         if (o.kind === 'offer') {
-          const extra = `${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtMoney(o.fee)}` : G.contract && !leagueOf(G.leagueId).amateur ? ' · 자유계약(FA)' : ''}`;
+          const extra = `${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtValue(o.fee)}` : G.contract && !leagueOf(G.leagueId).amateur ? ' · 자유계약(FA)' : ''}`;
           return {
             clubId: o.clubId,
             name: o.name,
