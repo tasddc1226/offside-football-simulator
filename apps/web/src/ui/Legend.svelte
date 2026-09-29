@@ -13,13 +13,10 @@
 <!-- T-10-127 3초 동안 가만히 있으면 다음 장면으로 천천히 넘어간다. -->
 <div class="wrap" use:autoTour>
   <Topbar />
-  <!-- T-10-126 내가 은퇴시킨 선수(v.own)는 버튼 없이 뒤로 가기·밀어서 돌아간다. -->
-  {#if !v?.own}
-    <button class="btn btn-block" data-act="hof-back" onclick={() => (appState.screen = appState.legendBack)}>← 이전으로</button>
-  {/if}
   {#if v}
     <LegendReport {v} />
     {#if v.own?.id}<OwnHofCards {v} />{/if}
-    {#if v.shareId}<ShareBar id={v.shareId} />{/if}
   {/if}
+  <!-- T-10-128 위쪽 '이전으로' 대신 모든 선수에 같은 아래 바: 홈으로 + 공유하기(내 선수) 또는 이전으로. -->
+  <ShareBar id={v?.shareId ?? null} back={() => (appState.screen = appState.legendBack)} />
 </div>
