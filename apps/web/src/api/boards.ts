@@ -38,7 +38,7 @@ export const deleteComment = (id: string) =>
 
 /** T-10-058 조회수 +1(웹이 기기마다 글 하나에 한 번만 보낸다). */
 export const addView = (id: string) =>
-  apiFetch<undefined>(`/v1/boards/posts/${id}/views`, { method: 'POST' });
+  apiFetch<undefined>(`/v1/boards/posts/${id}/views`, { method: 'POST', keepCache: true });
 /** T-10-058 좋아요를 누르거나 거둔다. 아직 프로필이 없는 기기면 익명 프로필을 만든 뒤 한 번 더 보낸다. */
 export async function setLike(id: string, like: boolean) {
   const send = () =>

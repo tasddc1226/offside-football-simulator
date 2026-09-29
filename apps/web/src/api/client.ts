@@ -66,7 +66,11 @@ export function cachedGet<T>(path: string, ttlMs: number): Promise<ApiResult<T>>
   return result;
 }
 
-export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<ApiResult<T>> {
+/** keepCache: 조회수 같은 카운터 쓰기 — 메모해 둔 목록을 비울 만큼의 변화가 아니다. */
+export async function apiFetch<T>(
+  path: string,
+  { keepCache = false, ...init }: RequestInit & { keepCache?: boolean } = {},
+): Promise<ApiResult<T>> {
   const method = (init.method ?? 'GET').toUpperCase();
   const isMutation =
     method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
@@ -93,7 +97,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     return failure('NETWORK_ERROR', '서버에 연결할 수 없습니다.', true);
   }
 
-  if (isMutation && response.ok) clearApiCache();
+  if (isMutation && response.ok && !keepCache) clearApiCache();
   if (response.status === 204) return { ok: true, data: undefined as T };
 
   let json: unknown;

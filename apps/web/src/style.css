@@ -3378,6 +3378,7 @@ body:has(nav.tabs) .toast {
 }
 /* T-10-076 기록실 영구결번 탭 — 구단 색 유니폼 타일을 구단별로 건다. */
 .hof-tabs {
+  grid-template-columns: repeat(3, 1fr);
   margin-bottom: 12px;
 }
 /* T-10-090 전체 / 시즌 순위 전환과 개막 전 안내. */

@@ -135,6 +135,7 @@
           rank={offset + i}
           name={h.name ?? anonName(h.pos, h.number)}
           pos={h.pos}
+          dpos={h.dpos}
           club={h.lastClub}
           clubId={h.lastClubId}
           rn={h.retiredNumber?.number}

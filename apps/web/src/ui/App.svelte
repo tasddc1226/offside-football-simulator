@@ -22,6 +22,11 @@
   $effect(() => {
     if (appState.screen === 'owner' && !Owner) void import('./Owner.svelte').then((m) => (Owner = m.default));
   });
+  // T-10-092: 구단주 팀(편성·팀 경기)도 처음 열 때 불러온다.
+  let Team = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'team' && !Team) void import('./team/Team.svelte').then((m) => (Team = m.default));
+  });
   // T-10-090: 기록실(전체 명예의 전당·영구결번 벽)도 처음 열 때 불러온다. 홈의 TOP 3는 그대로 첫 화면에 있다.
   let Hof = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -90,6 +95,8 @@
       {#if Settings}<Settings />{/if}
     {:else if appState.screen === 'owner'}
       {#if Owner}<Owner />{/if}
+    {:else if appState.screen === 'team'}
+      {#if Team}<Team />{/if}
     {:else if appState.screen === 'dex'}
       {#if Dex}<Dex />{/if}
     {:else if appState.screen === 'board'}
