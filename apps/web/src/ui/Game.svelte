@@ -64,6 +64,13 @@
     ['trophy', '트로피'],
   ];
 
+  // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
+  function switchTab(k: Tab) {
+    if (appState.tab === k) return;
+    appState.tab = k;
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }
+
   function onAdvanceClick() {
     buzz();
     if (busy) nextPending();
@@ -122,7 +129,7 @@
 <nav class="tabs" aria-label="게임 메뉴">
   <div class="tabs-inner" role="tablist">
     {#each tabs as [k, l] (k)}
-      <button role="tab" data-tab={k} aria-selected={appState.tab === k} onclick={() => (appState.tab = k)}>
+      <button role="tab" data-tab={k} aria-selected={appState.tab === k} onclick={() => switchTab(k)}>
         <TabIcon name={k} />{l}
       </button>
     {/each}

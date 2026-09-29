@@ -43,6 +43,7 @@
   import { go } from '../nav.js';
   import { POS_LABEL, anonName } from '../../game/pos-label.js';
   import { toast } from '../helpers.js';
+  import { lockScroll } from '../scrollLock.js';
   import { startGoogleLogin } from '../login.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import { appState, hofStart } from '../state.svelte.js';
@@ -338,6 +339,11 @@
     if (view === 'team' || view === 'achievements') appState.screen = 'owner';
     else view = 'team';
   }
+  // T-10-117 선수 고르기 시트가 열린 동안 뒤 페이지 스크롤을 잠근다(스크롤 위치는 그대로).
+  $effect(() => {
+    if (picking === null) return;
+    return lockScroll();
+  });
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Escape' && picking !== null) picking = null;
   }
