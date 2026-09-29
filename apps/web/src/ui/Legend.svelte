@@ -5,11 +5,13 @@
   import LegendReport from './LegendReport.svelte';
   import OwnHofCards from './OwnHofCards.svelte';
   import ShareBar from './ShareBar.svelte';
+  import { autoTour } from './autoTour.js';
 
   const v = $derived(appState.legend);
 </script>
 
-<div class="wrap">
+<!-- T-10-127 3초 동안 가만히 있으면 다음 장면으로 천천히 넘어간다. -->
+<div class="wrap" use:autoTour>
   <Topbar />
   <!-- T-10-126 내가 은퇴시킨 선수(v.own)는 버튼 없이 뒤로 가기·밀어서 돌아간다. -->
   {#if !v?.own}
