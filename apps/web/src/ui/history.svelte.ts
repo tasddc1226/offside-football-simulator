@@ -68,7 +68,8 @@ function keyOf(): string {
   if (s === 'board') return `board:${appState.board}:${appState.boardOpenId ?? ''}`;
   if (s === 'legend') return `legend:${legendId(appState.legend)}`;
   // 팀·시즌 업적은 같은 화면의 탭이라 한 기록으로 친다.
-  if (s === 'team') return `team:${appState.teamView === 'achievements' ? 'team' : appState.teamView}`;
+  if (s === 'team')
+    return `team:${appState.teamView === 'achievements' ? 'team' : appState.teamView}`;
   if (s === 'hof') return `hof:${appState.hof.tab === 'teams' ? (appState.hof.team ?? '') : ''}`;
   return s;
 }
@@ -120,7 +121,11 @@ function restore(e: Entry) {
   }
   if (screen === 'team') appState.teamView = e.teamView;
   if (screen === 'hof' && appState.hof.team !== e.hofTeam)
-    appState.hof = { ...appState.hof, team: e.hofTeam, ...(e.hofTeam ? { tab: 'teams' as const } : {}) };
+    appState.hof = {
+      ...appState.hof,
+      team: e.hofTeam,
+      ...(e.hofTeam ? { tab: 'teams' as const } : {}),
+    };
   appState.screen = screen;
   // 되살린 상태를 이 기록의 값으로 삼는다(홈으로 돌렸으면 홈) — 아래 $effect가 새 기록을 쌓지 않는다.
   entries[cur] = { ...snapshot(), y: screen === e.screen ? e.y : 0 };

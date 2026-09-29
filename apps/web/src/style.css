@@ -353,11 +353,11 @@ p {
   .tile-link,
   .card-title
 ) {
+  /* 배경색은 넣지 않는다 — 테마·선택 상태가 바뀔 때 색이 섞이는 중간 프레임에서 명도 대비(axe)가 깨진다. */
   transition:
     scale 0.16s ease-out,
     filter 0.16s ease-out,
-    box-shadow 0.16s ease-out,
-    background-color 0.16s ease-out;
+    box-shadow 0.16s ease-out;
 }
 :where(
     button,
@@ -1471,7 +1471,6 @@ body:has(.main-nav) .wrap {
 /* 누르는 동안 탭 둥근 바탕이 옅게 깔린다(들어가는 효과는 전역 T-10-121). */
 .tabs button:active {
   background-color: color-mix(in srgb, var(--ink) 7%, transparent);
-  transition-duration: 0.05s;
 }
 @media (prefers-reduced-motion: reduce) {
   .tabs button .tab-ic {

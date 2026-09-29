@@ -203,8 +203,8 @@ test('자리를 못 받은 옛 기록은 상세를 열 때 서버에 물어 명�
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-rn="taken"]')).toContainText('김선배');
-  // 결과를 기기에 남겨 다시 열어도 묻지 않는다.
-  await page.locator('[data-act="hof-back"]').click();
+  // 결과를 기기에 남겨 다시 열어도 묻지 않는다. 내 선수 상세는 뒤로 가기로 돌아간다(T-10-128).
+  await page.goBack();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-rn="taken"]')).toContainText('김선배');
   expect(asked).toBe(1);

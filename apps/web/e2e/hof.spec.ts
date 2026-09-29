@@ -204,7 +204,8 @@ test('이 기기에 없는 계정의 내 선수도 공유 버튼이 뜬다', asy
   await page.locator(`[data-hof-id="${ID}"]`).click();
   await expect(page.locator('[data-act="share-career"]')).toBeInViewport();
 
-  await page.locator('[data-act="hof-back"]').click();
+  // 공유할 수 있는 선수는 아래 바가 홈으로 · 공유하기(T-10-128) — 뒤로 가기로 돌아간다.
+  await page.goBack();
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-act="share-career"]')).toBeInViewport();
