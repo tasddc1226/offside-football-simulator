@@ -1,14 +1,19 @@
 <script lang="ts">
-  // 내 은퇴 선수(서버에 올라간 기록) 아래의 이름 공개·로그인 카드(공유 버튼은 화면 아래 ShareBar, T-10-067). T-10-032: 짧은 커리어는 전체 명예의 전당과
+  // 내 은퇴 선수(서버에 올라간 기록) 아래의 SNS 공유 이미지(T-10-079)·대표 칭호·이름 공개·로그인 카드(공유 버튼은 화면 아래 ShareBar, T-10-067). T-10-032: 짧은 커리어는 전체 명예의 전당과
   // 공유 링크에 오르지 않으므로(서버도 같은 기준으로 거른다) 두 카드 대신 안내만 한다.
   import { isHofEligible, SHORT_CAREER_NOTE } from '@offside/contracts/hof-rules';
-  import type { HofEntry } from '../game/types.js';
+  import type { LegendView } from './state.svelte.js';
   import PublishCard from './PublishCard.svelte';
   import KeepLoginCard from './KeepLoginCard.svelte';
 
-  const { h }: { h: HofEntry } = $props();
+  // 은퇴 리포트와 같은 v를 받는다(공유 이미지가 리포트와 같은 값을 그리게). v.own이 있을 때만 그린다.
+  const { v }: { v: LegendView } = $props();
+  const h = $derived(v.own!);
 </script>
 
+<!-- 공유 이미지·대표 칭호 카드는 첫 화면 번들 밖에서 불러온다. -->
+{#await import('./share/ShareImageCard.svelte') then { default: ShareImageCard }}<ShareImageCard {v} />{/await}
+{#await import('./titles/TitlePickCard.svelte') then { default: TitlePickCard }}<TitlePickCard {h} />{/await}
 {#if isHofEligible(h.age)}
   <PublishCard {h} /><KeepLoginCard id={h.id!} />
 {:else}

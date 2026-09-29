@@ -7,14 +7,18 @@ import type {
   CareerSeasonPayload,
   PutCareerSeasonBody,
   PutRetirementBody,
+  RetiredNumberResult,
 } from '@offside/contracts';
 import { resolveApiBaseUrl } from '../api/base-url.js';
 import { clearApiCache, noteSession } from '../api/client.js';
 import type { CareerRecord } from './types.js';
-import { OWNER_CONFLICT_EVENT } from './syncEvents.js';
+import { OWNER_CONFLICT_EVENT, RETIRED_NUMBER_EVENT } from './syncEvents.js';
 
 const OUTBOX_KEY = 'ft_outbox';
 const OUTBOX_CAP = 100;
+
+/** T-10-076 영구결번 심사 결과 이벤트. result가 null이면 자격 없음. */
+export type RetiredNumberEvent = { careerId: string; result: RetiredNumberResult | null };
 
 export type OutboxItem =
   | { kind: 'season'; careerId: string; year: number; body: PutCareerSeasonBody }
@@ -102,6 +106,17 @@ async function ensureProfile(): Promise<boolean> {
   }
 }
 
+/** T-10-076 은퇴 응답의 영구결번 심사 결과를 UI에 알린다(배포 전 서버 응답엔 필드가 없어 알리지 않는다). */
+async function announceRetiredNumber(careerId: string, res: Response): Promise<void> {
+  const body = (await res.json().catch(() => null)) as {
+    data?: { retiredNumber?: RetiredNumberResult | null };
+  } | null;
+  const result = body?.data?.retiredNumber;
+  if (result === undefined) return;
+  const detail: RetiredNumberEvent = { careerId, result };
+  globalThis.dispatchEvent?.(new CustomEvent(RETIRED_NUMBER_EVENT, { detail }));
+}
+
 /** retry: 이 커리어만 다음 회차로 미룬다(5xx). abort: 이번 회차를 멈춘다(오프라인·세션 만료 — 뒤 항목도 같은 결과다). */
 type SendResult = 'ok' | 'retry' | 'abort' | 'drop' | 'conflict';
 
@@ -116,7 +131,10 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
     });
     if (res.ok) {
       // 은퇴가 올라가면 명예의 전당 · 내 선수 메모가 낡는다(T-10-015).
-      if (item.kind === 'retirement') clearApiCache();
+      if (item.kind === 'retirement') {
+        clearApiCache();
+        await announceRetiredNumber(item.careerId, res);
+      }
       return 'ok';
     }
     // T-10-013: 다른 계정 소유 커리어. 버리되 UI에 알린다(이 계정으로 이어서 기록할지 고르게).

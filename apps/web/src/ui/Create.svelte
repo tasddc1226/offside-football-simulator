@@ -2,10 +2,10 @@
   // 선수 생성(T-10-022): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
   // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
   import { cubicOut } from 'svelte/easing';
-  import { POS, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod } from '../game/data.js';
-  import type { AttrKey, Pos } from '../game/data.js';
+  import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '../game/data.js';
+  import type { AttrKey, DetailPos, Pos } from '../game/data.js';
   import { baseline } from '../game/candidates.js';
-  import { appState, randomName } from './state.svelte.js';
+  import { appState, detailOpenNow, draftDpos, randomName } from './state.svelte.js';
   import { startCareer, rollCandidates } from './actions.js';
   import { goHome } from './nav.js';
   import { hiddenStrength, scoutLine, startOvr } from './create-view.js';
@@ -18,6 +18,10 @@
   const posKeys = Object.keys(POS) as Pos[];
   const feet = ['오른발', '왼발', '양발'] as const;
   const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
+  // T-10-091 세부 포지션은 시즌 1 개막부터 고른다. 프리시즌엔 선택지를 보이지 않고, 저장된 선택도 쓰지 않는다.
+  const detailOpen = detailOpenNow();
+  if (detailOpen && !draftDpos(C)) pickDetail(DETAILS_OF[C.pos][0]!);
+  const dpos = $derived(draftDpos(C));
   const focusLeft = $derived(FOCUS_PICK - C.focus.length);
   // 고른 조합이 시작 분포를 어떻게 바꾸는지 버튼마다 미리 보여준다(주력 ▲ / 가장 덜 쓰는 능력치 ▼).
   const preview = $derived(focusMod(C.pos, C.focus));
@@ -26,12 +30,18 @@
   const labels = $derived(attrLabels(C.pos));
   const picked = $derived(appState.candidates && appState.candidatePick != null ? appState.candidates[appState.candidatePick]! : null);
   // 라이브 카드의 레이더·OVR: 후보를 골랐으면 그 후보, 아니면 지금 조합의 기준 분포.
-  const cardAttrs = $derived(picked?.attrs ?? baseline(C.pos, C.focus));
+  const cardAttrs = $derived(picked?.attrs ?? baseline(C.pos, C.focus, dpos));
   const trait = $derived(TRAITS.find((t) => t.id === C.trait));
 
   function setPos(v: Pos) {
     C.pos = v;
-    C.focus = defaultFocus(v);
+    if (detailOpen) pickDetail(DETAILS_OF[v][0]!);
+    else C.focus = defaultFocus(v);
+  }
+  // 세부 포지션을 바꾸면 주력 능력치도 그 포지션의 기본값으로 다시 켠다.
+  function pickDetail(d: DetailPos) {
+    C.dpos = d;
+    C.focus = [...DPOS[d].focus];
   }
   // 이미 두 개를 골랐으면 먼저 고른 쪽을 밀어낸다 — 한 번의 탭으로 바꿔 끼울 수 있게.
   function toggleFocus(k: AttrKey) {
@@ -79,11 +89,11 @@
   <section class="live-card" class:sticky={step === 'form'} aria-label="내 선수 미리보기">
     <div class="lc-num">
       <b class="num">{C.number || '–'}</b>
-      <span>{C.pos}</span>
+      <span>{dpos ?? C.pos}</span>
     </div>
     <div class="lc-main">
       <b class="lc-name">{C.name.trim() || '이름 없음'}</b>
-      <span class="lc-meta">{POS[C.pos].label} · {C.foot}</span>
+      <span class="lc-meta">{posLabel({ pos: C.pos, dpos })} · {C.foot}</span>
       <div class="lc-tags">
         {#if trait}<span class="lc-tag">{trait.icon} {trait.name}</span>{/if}
         {#if C.focus.length}<span class="lc-tag">주력 {C.focus.map((k) => labels[k]).join('·')}</span>{/if}
@@ -107,7 +117,7 @@
         </div>
         <div class="field" style="width:84px">
           <label for="f-num">등번호</label>
-          <input type="number" id="f-num" inputmode="numeric" min="1" max="99" bind:value={C.number} />
+          <input type="number" id="f-num" inputmode="numeric" min="1" max="99" placeholder="1–99" bind:value={C.number} />
         </div>
       </div>
 
@@ -121,6 +131,20 @@
           {/each}
         </div>
       </div>
+
+      {#if detailOpen && DETAILS_OF[C.pos].length > 1}
+        <div class="field">
+          <span class="lbl">세부 포지션</span>
+          <div class="seg" class:two={DETAILS_OF[C.pos].length === 2} class:three={DETAILS_OF[C.pos].length === 3}>
+            {#each DETAILS_OF[C.pos] as d (d)}
+              <button class="opt pos-opt" data-set="dpos" data-val={d} aria-pressed={C.dpos === d} onclick={() => pickDetail(d)}>
+                <span class="pos-code num">{d}</span><b>{DPOS[d].label}</b><small>{DPOS[d].blurb}</small>
+              </button>
+            {/each}
+          </div>
+          <p class="muted fs-sm">세부 포지션은 은퇴까지 바뀌지 않아요. 능력치 성장·골과 도움 비중이 달라져요.</p>
+        </div>
+      {/if}
 
       <div class="field">
         <span class="lbl">주발</span>

@@ -165,4 +165,11 @@ describe('서버 최초 기록 규칙 (T-10-027)', () => {
     expect(r.has('legend')).toBe(false);
     expect(r.has('ballon')).toBe(false); // 0이면 후보가 아니다
   });
+
+  it('지어낸 큰 값이어도 한 사다리에서 채우는 단계 수엔 상한이 있다', () => {
+    const got = evaluateCareer(
+      career([season()], { legendScore: 100_000, retiredAt: '2026-09-26T01:00:00.000Z' }),
+    );
+    expect(got.filter((g) => g.id.startsWith('legend')).length).toBe(40);
+  });
 });

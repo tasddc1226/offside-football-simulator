@@ -118,7 +118,7 @@ export const seasonBody = (over: Record<string, unknown> = {}) => ({
 export const RETIREMENT = {
   retireAge: 34,
   peak: 88,
-  legendScore: 612,
+  legendScore: 420,
   apps: 300,
   goals: 120,
   assists: 60,
@@ -129,3 +129,58 @@ export const RETIREMENT = {
   lastClub: '테스트 FC',
   publicName: null,
 };
+
+type Summary = Pick<
+  typeof RETIREMENT,
+  'retireAge' | 'peak' | 'apps' | 'goals' | 'assists' | 'trophies' | 'awards' | 'caps' | 'ballon'
+>;
+/** total을 n칸에 고르게 나눈 i번째 칸. */
+const share = (total: number, n: number, i: number) =>
+  Math.floor(total / n) + (i < total % n ? 1 : 0);
+
+/**
+ * 은퇴 요약을 뒷받침하는 시즌 기록(18세부터 은퇴 전 해까지, 연도 = 2008 + 나이). 서버는 은퇴 요약을 받아 둔 시즌
+ * 기록으로 맞추므로(plausibility.ts) 은퇴를 보내기 전에 올린다. 우승·수상은 시즌 영예로, 최고 OVR은 마지막 시즌에.
+ */
+function seasonsFor(summary: Summary = RETIREMENT) {
+  const n = Math.max(1, summary.retireAge - 18);
+  const honors = [
+    ...Array.from({ length: summary.trophies }, (_, k) => `테스트 우승 ${k + 1}`),
+    ...Array.from({ length: summary.ballon }, () => '발롱도르'),
+    ...Array.from({ length: summary.awards - summary.ballon }, (_, k) => `테스트 상 ${k + 1}`),
+  ];
+  // 발롱도르는 한 시즌에 하나라 해마다 앞에서부터 하나씩 나눠 준다.
+  const perSeason: string[][] = Array.from({ length: n }, () => []);
+  honors.forEach((h, k) => perSeason[k % n]!.push(h));
+  return Array.from({ length: n }, (_, i) => {
+    const age = summary.retireAge - n + i;
+    return {
+      year: 2008 + age,
+      body: seasonBody({
+        age,
+        apps: share(summary.apps, n, i),
+        goals: share(summary.goals, n, i),
+        assists: share(summary.assists, n, i),
+        caps: share(summary.caps, n, i),
+        ovr: i === n - 1 ? summary.peak : Math.min(summary.peak, 60),
+        honors: perSeason[i],
+      }),
+    };
+  });
+}
+
+/** seasonsFor의 시즌을 차례로 올린다. */
+export async function putSeasonsFor(
+  env: TestD1['env'],
+  cookie: string,
+  careerId: string,
+  summary: Summary = RETIREMENT,
+) {
+  for (const s of seasonsFor(summary)) {
+    const res = await callJson(env, 'PUT', `/v1/careers/${careerId}/seasons/${s.year}`, {
+      cookie,
+      body: s.body,
+    });
+    if (res.status !== 200) throw new Error(`시즌 업로드 실패 ${res.status}`);
+  }
+}

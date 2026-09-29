@@ -479,7 +479,8 @@ export function retireMilestones(s: GameState): string[] {
   const clubs = new Set(pro.map((r) => r.club));
   const out: (string | null)[] = [];
   if (pro.length >= 8 && clubs.size === 1)
-    out.push(mile(s, 'oneclub', `원클럽맨 · ${s.club.name} 영구결번 (No.${s.number})`, 0));
+    // 진짜 영구결번은 서버가 심사한다(T-10-076) — 여기서는 원클럽맨 헌정 이정표만 남긴다.
+    out.push(mile(s, 'oneclub', `원클럽맨 · ${s.club.name} 헌정 (No.${s.number})`, 0));
   else {
     const byClub: Record<string, number> = {};
     pro.forEach((r) => (byClub[r.club] = (byClub[r.club] ?? 0) + r.goals + r.apps * 0.2));

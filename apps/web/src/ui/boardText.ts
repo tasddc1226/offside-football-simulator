@@ -54,6 +54,22 @@ export function kstParts(iso: string): { day: string; time: string } {
   return { day: `${p.year}.${p.month}.${p.day}`, time: `${p.hour}:${p.minute}` };
 }
 
+/** 한국 시간 "9/30 14:05"(월/일 시:분) — 경기 기록 한 줄. */
+export function kstMonthDayTime(iso: string): string {
+  const p = Object.fromEntries(
+    KST_PARTS.formatToParts(new Date(iso)).map((x) => [x.type, x.value]),
+  );
+  return `${Number(p.month)}/${Number(p.day)} ${p.hour}:${p.minute}`;
+}
+
+/** 한국 시간 "10월 6일 0시"(분이 있으면 "0시 30분") — 시즌 개막·마감 안내(T-10-090). */
+export function kstMonthDayHour(iso: string): string {
+  const p = Object.fromEntries(
+    KST_PARTS.formatToParts(new Date(iso)).map((x) => [x.type, Number(x.value)]),
+  );
+  return `${p.month}월 ${p.day}일 ${p.hour}시${p.minute ? ` ${p.minute}분` : ''}`;
+}
+
 /** 목록 한 줄의 날짜 · 조회 · 좋아요 · 댓글(0이면 좋아요·댓글은 뺀다). */
 export const postMeta = (p: {
   createdAt: string;

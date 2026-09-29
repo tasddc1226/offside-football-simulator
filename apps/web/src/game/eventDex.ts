@@ -19,6 +19,7 @@ import { EVENTS } from './events-data.js';
 import { BAL, choiceOdds } from './balance.js';
 import { groupOf, posOf, type DexGroup } from './dexGroups.js';
 import { createRng, getActiveRng, setActiveRng } from './rng.js';
+import type { MgKind } from './minigame.js';
 import type { Choice, EventDef, GameState } from './types.js';
 
 export { DEX_GROUPS, isHiddenEvent, type DexGroup } from './dexGroups.js';
@@ -36,6 +37,8 @@ export interface DexChoice {
   min: number | null;
   max: number | null;
   factors: DexFactor[];
+  /** T-10-089 원터치 미니게임 장면(도감엔 확률 대신 구간 넓이를 보인다). */
+  mg?: MgKind;
 }
 export interface DexEntry {
   /** 같은 제목의 변형 이벤트는 한 항목으로 묶는다. 하나라도 겪으면 열린다. */
@@ -244,6 +247,7 @@ function analyzeChoice(ev: EventDef, c: Choice, idx: number, states: GameState[]
   return {
     label,
     kind: 'odds',
+    ...(c.mg && { mg: c.mg.kind }),
     min: pct(Math.min(...values)),
     max: pct(Math.max(...values)),
     factors: factorsOf(p, states.slice(0, FACTOR_SAMPLES)),

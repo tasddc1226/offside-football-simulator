@@ -69,6 +69,8 @@ export {
 
 export {
   CareerPosSchema,
+  DetailPosSchema,
+  PeakProfileSchema,
   CareerFootSchema,
   CareerMetaSchema,
   CareerHonorSchema,
@@ -82,6 +84,12 @@ export {
   RetirementSummarySchema,
   PutRetirementBodySchema,
   RetirementResponseSchema,
+  RetiredNumberResultSchema,
+  RetiredNumbersResponseSchema,
+  RetiredNumberCheckResponseSchema,
+  type RetiredNumberCheckResponse,
+  type RetiredNumberResult,
+  type RetiredNumbersResponse,
   CareerIdParamSchema,
   CareerYearParamSchema,
   PublicNameSchema,
@@ -103,6 +111,7 @@ export {
   HofDetailResponseSchema,
   HofListQuerySchema,
   HofPageQuerySchema,
+  HofSeasonQuerySchema,
   HofSortSchema,
   type LegendSnapshot,
   type PlayStyle,
@@ -148,3 +157,4 @@ export * from './boards.js';
 export * from './balance.js';
 export * from './admin.js';
 export * from './live.js';
+export * from './teams.js';

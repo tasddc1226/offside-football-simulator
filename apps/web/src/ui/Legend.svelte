@@ -7,15 +7,14 @@
   import ShareBar from './ShareBar.svelte';
 
   const v = $derived(appState.legend);
-  const BACK = { home: '← 홈', hof: '← 명예의 전당', owner: '← 구단주' } as const;
 </script>
 
 <div class="wrap">
   <Topbar />
-  <button class="btn btn-block" data-act="hof-back" onclick={() => (appState.screen = appState.legendBack)}>{BACK[appState.legendBack]}</button>
+  <button class="btn btn-block" data-act="hof-back" onclick={() => (appState.screen = appState.legendBack)}>← 이전으로</button>
   {#if v}
     <LegendReport {v} />
-    {#if v.own?.id}<OwnHofCards h={v.own} />{/if}
+    {#if v.own?.id}<OwnHofCards {v} />{/if}
     {#if v.shareId}<ShareBar id={v.shareId} />{/if}
   {/if}
 </div>

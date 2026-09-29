@@ -8,6 +8,8 @@ import type {
   HofSort,
   LiveResponse,
   MyCareersResponse,
+  RetiredNumberCheckResponse,
+  RetiredNumbersResponse,
 } from '@offside/contracts';
 import { resolveApiBaseUrl } from './base-url.js';
 
@@ -64,7 +66,11 @@ export function cachedGet<T>(path: string, ttlMs: number): Promise<ApiResult<T>>
   return result;
 }
 
-export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<ApiResult<T>> {
+/** keepCache: 조회수 같은 카운터 쓰기 — 메모해 둔 목록을 비울 만큼의 변화가 아니다. */
+export async function apiFetch<T>(
+  path: string,
+  { keepCache = false, ...init }: RequestInit & { keepCache?: boolean } = {},
+): Promise<ApiResult<T>> {
   const method = (init.method ?? 'GET').toUpperCase();
   const isMutation =
     method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
@@ -91,7 +97,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     return failure('NETWORK_ERROR', '서버에 연결할 수 없습니다.', true);
   }
 
-  if (isMutation && response.ok) clearApiCache();
+  if (isMutation && response.ok && !keepCache) clearApiCache();
   if (response.status === 204) return { ok: true, data: undefined as T };
 
   let json: unknown;
@@ -186,8 +192,9 @@ export function getHof(
   limit = 50,
   page = 1,
   sort: HofSort = 'score',
+  season: number | null = null,
 ): Promise<ApiResult<HofListResponse>> {
-  const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}`;
+  const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}${season ? `&season=${season}` : ''}`;
   return cachedGet<HofListResponse>(`/v1/hof?${q}`, 60_000);
 }
 /** T-10-013. 이 계정의 은퇴 선수. 익명 프로필이면 linked=false. */
@@ -196,6 +203,18 @@ export function getMyCareers(): Promise<ApiResult<MyCareersResponse>> {
 }
 export function getHofDetail(careerId: string): Promise<ApiResult<HofDetailResponse>> {
   return cachedGet<HofDetailResponse>(`/v1/hof/${encodeURIComponent(careerId)}`, 300_000);
+}
+/** T-10-076 서버 전체 영구결번(로그인 불필요). 내 선수 목록이 결번 배지를 붙일 때 쓴다. */
+export function getRetiredNumbers(): Promise<ApiResult<RetiredNumbersResponse>> {
+  return cachedGet<RetiredNumbersResponse>('/v1/retired-numbers', 60_000);
+}
+/** T-10-076 내 선수의 결번 심사 결과(소급 결번·이미 찬 자리). 메모하지 않는다 — 결과는 ft_hof에 남긴다. */
+export function checkRetiredNumber(
+  careerId: string,
+): Promise<ApiResult<RetiredNumberCheckResponse>> {
+  return apiFetch<RetiredNumberCheckResponse>(
+    `/v1/careers/${encodeURIComponent(careerId)}/retired-number`,
+  );
 }
 /** T-10-027 서버 최초 기록(로그인 불필요). */
 export function getFirsts(): Promise<ApiResult<FirstsResponse>> {

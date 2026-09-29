@@ -121,11 +121,21 @@ export interface ResolveResult {
   story: { name: string; ending: string | null; started: boolean } | null;
   twist: string | null;
 }
-export function resolveChoice(s: GameState, evId: string, idx: number): ResolveResult {
+/**
+ * rollOverride: 원터치 미니게임(minigame.ts)으로 가린 판정값. 난수 대신 이 값으로 성공을 가린다 — 난수는 그대로 한 번 써서
+ * 뒤따르는 RNG 흐름(시뮬레이터·골든 테스트)이 미니게임 여부와 상관없이 같다.
+ */
+export function resolveChoice(
+  s: GameState,
+  evId: string,
+  idx: number,
+  rollOverride?: number,
+): ResolveResult {
   const ev = eventById(evId)!;
   const c = ev.choices[idx]!;
   const p = choiceOdds(c.p?.(s), evId, idx);
-  const roll = rnd();
+  const r = rnd();
+  const roll = rollOverride ?? r;
   const ok = roll < p;
   const out = ok || !c.fail ? c.ok : c.fail;
   const before = snapshot(s);

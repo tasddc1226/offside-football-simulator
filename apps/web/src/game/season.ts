@@ -2,7 +2,7 @@
 import { CLUBS, clubRef, sameClub, type Club } from './data.js';
 import { BAL } from './balance.js';
 import { NATIONAL_TEAM } from './retirement-report.js';
-import { ovr } from './attributes.js';
+import { ovr, peakProfileOf } from './attributes.js';
 import { clamp, ri, pick, rnd } from './rng.js';
 import {
   leagueOf,
@@ -31,6 +31,7 @@ import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } fro
 import { detectCareerHighs } from './records.js';
 import { noteMarket } from './playStyle.js';
 import type { LegendSnapshot } from '@offside/contracts';
+import { legendTerms } from '@offside/contracts/hof-rules';
 import type {
   GameState,
   CareerRecord,
@@ -57,6 +58,8 @@ export function endSeason(s: GameState): SeasonEndResult {
   const L = leagueOf(s.leagueId),
     S = s.season,
     o = ovr(s);
+  // T-10-092 최고 OVR을 찍은(같아도) 시즌 말 능력치를 남긴다 — 아래 노쇠 감소 전 값.
+  if (o >= s.peak) s.peakProfile = peakProfileOf(s);
   if (!S.comps) seasonSetup(s, S);
   const avg = S.apps ? S.ratingSum / S.apps : 0;
   const rank = finalRank(s);
@@ -427,11 +430,19 @@ export function acceptOption(
 }
 
 // ───────── 은퇴 · 명예의 전당 ─────────
-const LEGEND_W: Record<string, { g: number; a: number; cs: number }> = {
-  FW: { g: 0.42, a: 0.35, cs: 0 },
-  MF: { g: 0.65, a: 0.75, cs: 0 },
-  DF: { g: 0.9, a: 0.5, cs: 0.9 },
-  GK: { g: 1, a: 0.6, cs: 0.95 },
+const LEGEND_LABEL: Record<keyof ReturnType<typeof legendTerms>, string> = {
+  goals: '골 기여',
+  assists: '도움 기여',
+  cs: '무실점 기여',
+  apps: '출전',
+  trophies: '우승 트로피',
+  awards: '개인 수상',
+  caps: 'A매치',
+  peak: '최고 OVR',
+  ballonWin: '발롱도르 수상',
+  ballonRank: '발롱도르 순위',
+  wc: '월드컵 우승',
+  century: '센추리 클럽',
 };
 export interface LegendBreakdownItem {
   key: string;
@@ -448,33 +459,26 @@ export function legendScoreBreakdown(s: LegendSource): {
     (a, r) => ({ g: a.g + r.goals, a: a.a + r.assists, p: a.p + r.apps, cs: a.cs + (r.cs || 0) }),
     { g: 0, a: 0, p: 0, cs: 0 },
   );
-  const w = LEGEND_W[s.pos] || LEGEND_W.MF!;
-  const items: LegendBreakdownItem[] = [
-    { key: 'goals', label: '골 기여', value: t.g * w.g },
-    { key: 'assists', label: '도움 기여', value: t.a * w.a },
-    { key: 'cs', label: '무실점 기여', value: t.cs * w.cs },
-    { key: 'apps', label: '출전', value: t.p * 0.05 },
-    { key: 'trophies', label: '우승 트로피', value: s.trophies.length * 10 },
-    { key: 'awards', label: '개인 수상', value: s.awards.length * 12 },
-    { key: 'caps', label: 'A매치', value: s.nat.caps * 0.4 },
-    { key: 'peak', label: '최고 OVR', value: s.peak * 2 },
+  const terms = legendTerms(
+    s.pos,
     {
-      key: 'ballonWin',
-      label: '발롱도르 수상',
-      value: s.awards.filter((x) => x.t === '발롱도르').length * 60,
+      goals: t.g,
+      assists: t.a,
+      cs: t.cs,
+      apps: t.p,
+      trophies: s.trophies.length,
+      awards: s.awards.length,
+      caps: s.nat.caps,
+      peak: s.peak,
+      ballon: s.awards.filter((x) => x.t === '발롱도르').length,
+      ballonRankPoints: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0),
+      worldCups: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length,
     },
-    {
-      key: 'ballonRank',
-      label: '발롱도르 순위',
-      value: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0) * 0.6,
-    },
-    {
-      key: 'wc',
-      label: '월드컵 우승',
-      value: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length * 60,
-    },
-    { key: 'century', label: '센추리 클럽', value: s.nat.caps >= 100 ? 25 : 0 },
-  ].filter((it) => it.value !== 0);
+    s.dpos,
+  );
+  const items: LegendBreakdownItem[] = Object.entries(terms)
+    .map(([key, value]) => ({ key, label: LEGEND_LABEL[key as keyof typeof terms], value }))
+    .filter((it) => it.value !== 0);
   const total = Math.round(items.reduce((sum, it) => sum + it.value, 0));
   return { items, total };
 }
@@ -497,6 +501,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
   const entry: HofEntry = {
     name: s.name,
     pos: s.pos,
+    ...(s.dpos && { dpos: s.dpos }),
     number: s.number,
     peak: s.peak,
     age: s.age,
@@ -514,6 +519,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     date: new Date().toISOString().slice(0, 10),
     id: s.cid,
     detail: legendSnapshot(s),
+    profile: s.peakProfile ?? peakProfileOf(s, s.peak - ovr(s)),
     public: isPublic,
   };
   const hof = loadHOF();
@@ -531,6 +537,7 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
   return {
     number: s.number,
     pos: s.pos,
+    ...(s.dpos && { dpos: s.dpos }),
     age: s.age,
     peak: s.peak,
     lastClub: s.club.name,
@@ -560,7 +567,7 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
     })),
     awards: s.awards.map(({ year, t }) => ({ year, t })),
     ballon: (s.ballon || []).map(({ year, rank }) => ({ year, rank })),
-    nat: { caps: s.nat.caps },
+    nat: { caps: s.nat.caps, goals: s.nat.goals, assists: s.nat.assists },
     storyLog: (s.storyLog || []).map(({ year, key, name, ending }) => ({
       year,
       key,
@@ -605,3 +612,6 @@ export function loadKey<T = unknown>(k: string): T | null {
 export function loadHOF(): HofEntry[] {
   return loadKey<HofEntry[]>('ft_hof') || loadKey<HofEntry[]>('sl_hof') || [];
 }
+/** 이 기기에 남은 은퇴 선수 이름(커리어 id → 이름). 서버엔 이름 공개를 끈 선수의 이름이 없어 화면이 이것으로 채운다. */
+export const localCareerNames = (): Map<string, string> =>
+  new Map(loadHOF().flatMap((h) => (h.id ? [[h.id, h.name] as const] : [])));

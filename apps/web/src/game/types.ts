@@ -2,10 +2,12 @@
 // 풀타임 원본은 선수 상태를 하나의 거대한 객체(G)로 다루며 필드를 느슨하게 추가합니다.
 // 완전한 판별 유니온으로 다시 모델링하면 포팅 리스크가 커지므로, 여기서는 알려진 필드는 구체적으로
 // 타이핑하고 나머지(로그 라인 종류가 다양한 필드, 이벤트별 임시 플래그 등)는 폭넓게 둡니다.
-import type { LegendSnapshot, PlayStyle } from '@offside/contracts';
+import type { LegendSnapshot, PlayStyle, RetiredNumberResult } from '@offside/contracts';
+import type { PeakProfile } from '@offside/contracts/positions';
 import type { CareerBalance } from './balance.js';
-import type { AttrKey, Pos, Club, SAVE_VERSION } from './data.js';
+import type { AttrKey, Pos, Club, SAVE_VERSION, DetailPos } from './data.js';
 import type { SeasonEndResult } from './season.js';
+import type { MgKind } from './minigame.js';
 
 export interface RngSaveState {
   seed: number;
@@ -201,6 +203,8 @@ export interface EventLogEntry {
   ok?: boolean;
   /** 발생 시점(halves/phase 인덱스). */
   h: number;
+  /** T-10-089 미니게임 탭 정확도(구간 가운데에서 떨어진 정도 ×100, 100 이하 성공). */
+  mg?: number;
 }
 
 /** 이적 시장 한 번의 선택지(season.market·military.milEnlistMarket). */
@@ -228,6 +232,8 @@ export interface GameState {
   name: string;
   number: number;
   pos: Pos;
+  /** T-10-091 세부 포지션(시즌 1부터 만든 선수). 없으면 주력 조합의 유형으로 역할을 정한다. */
+  dpos?: DetailPos | undefined;
   foot: Foot;
   /** 주력 조합에서 파생된 호환용 유형 id(역할·이벤트 조건·서버 meta). */
   type: string;
@@ -265,6 +271,8 @@ export interface GameState {
   pending: Pending | null;
   flags: Flags;
   peak: number;
+  /** T-10-092 최고 OVR을 찍은 시즌 말의 능력치(구단주 팀의 자리별 실력). 옛 저장본엔 없다 — 은퇴 때 지금 능력치로 추정한다. */
+  peakProfile?: PeakProfile | undefined;
   training: string;
   retired: boolean;
   chains: ChainEvent[];
@@ -276,7 +284,7 @@ export interface GameState {
   /** T-10-026. 유저가 고른 대표 칭호 id. 없으면 mainTitle()이 자동으로 고른다. */
   titleSel?: string;
   /** T-10-077. 커리어 내내 센 플레이 성향(playStyle.ts). 기능이 나오기 전에 시작한 저장엔 처음 선택 때 생긴다. */
-  style?: PlayStyle;
+  style?: PlayStyle | undefined;
   rng: RngSaveState;
   /** T-9-009. 이번 시즌 버퍼링된 선택 로그(`ft_save`와 함께 자동 저장). 시즌 종료 시 업로드 페이로드로
    * 옮겨지고 비워진다. 최대 300개, 넘치면 가장 오래된 것부터 버린다. */
@@ -286,8 +294,11 @@ export interface GameState {
 export interface HofEntry {
   name: string;
   pos: Pos;
+  dpos?: DetailPos | undefined;
   number: number;
   peak: number;
+  /** T-10-092 서버로 보내는 최고 시점 능력치. 옛 기록엔 없다. */
+  profile?: PeakProfile | undefined;
   age: number;
   apps: number;
   goals: number;
@@ -309,20 +320,38 @@ export interface HofEntry {
   public?: boolean;
   /** T-10-026. 은퇴 때의 대표 칭호 id. */
   title?: string | undefined;
+  /** T-10-076. 서버의 영구결번 심사 결과(null = 자격 없음). 업로드 응답을 받기 전·옛 항목에는 없다. */
+  rn?: RetiredNumberResult | null;
 }
 
 /** 은퇴 리포트(레전드 점수 구성·시즌별 기록·수상·여정)가 읽는 필드. 진행 중인 GameState와 저장된
  * 은퇴 스냅샷(LegendSnapshot) 둘 다 이 모양을 만족한다. */
 export type LegendSource = Pick<
   GameState,
-  'pos' | 'peak' | 'career' | 'trophies' | 'awards' | 'ballon' | 'storyLog' | 'miles' | 'titles'
+  | 'pos'
+  | 'dpos'
+  | 'peak'
+  | 'career'
+  | 'trophies'
+  | 'awards'
+  | 'ballon'
+  | 'storyLog'
+  | 'miles'
+  | 'titles'
+  | 'style'
 > & {
-  nat: { caps: number };
+  /** goals·assists는 T-10-086부터 남긴다 — 옛 은퇴 스냅샷엔 없다. */
+  nat: { caps: number; goals?: number | undefined; assists?: number | undefined };
 };
 
 export interface Choice {
   label: string | ((s: GameState) => string);
   p?: (s: GameState) => number;
+  /**
+   * T-10-089 경기 장면이 있는 선택지(p가 있어야 한다)는 확률 판정 대신 원터치 미니게임으로 가린다.
+   * side: 문구가 방향을 정한 장면(-1 왼쪽 · 0 제자리). 없으면 화면에서 무작위로 고른다.
+   */
+  mg?: { kind: MgKind; side?: -1 | 0 };
   ok: { text: string | ((s: GameState) => string); fx: (s: GameState) => void };
   fail?: { text: string | ((s: GameState) => string); fx: (s: GameState) => void };
 }
