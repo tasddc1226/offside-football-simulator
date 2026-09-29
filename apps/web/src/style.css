@@ -549,13 +549,30 @@ button.what:active {
   opacity: 0.65;
   margin-top: 2px;
 }
+/* T-10-124 이어하기가 이름 길이만큼 남은 폭을 다 쓰고, 넘치면 이름 줄을 말줄임한다. */
+.hero-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  margin-top: 18px;
+}
+.hero-home .hero-actions .btn {
+  margin-top: 0;
+  min-width: 0;
+  padding-inline: 14px;
+}
+.hero-actions .btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .hero-current .hero-new {
-  margin-top: 8px;
   background: transparent;
   color: var(--on-pitch);
   border-color: color-mix(in srgb, var(--on-pitch) 35%, transparent);
 }
 .hero-play {
+  flex: none;
   width: 18px;
   height: 18px;
   fill: none;

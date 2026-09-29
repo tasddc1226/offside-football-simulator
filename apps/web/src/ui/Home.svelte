@@ -33,11 +33,14 @@
       <h1><span>이번 커리어는</span><b><strong>{G.name}</strong> 입니다</b></h1>
       <p>{G.club.name} · {G.age}세 · {posLabel(G)}</p>
       <p class="hero-meta num">{G.year} 시즌 {PHASES[Math.min(G.phase, LAST_PHASE + 1)]} · OVR {ovr(G)}</p>
-      <button class="btn btn-accent btn-block" data-act="continue" onclick={goContinue} onpointerenter={warmGame} onfocus={warmGame}>
-        <svg class="hero-play" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m10 7.8 6 4.2-6 4.2Z" /></svg>
-        {withRo(G.name)} 계속 →
-      </button>
-      <button class="btn btn-block hero-new" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>새 커리어 시작 →</button>
+      <!-- T-10-124 한 줄에 왼쪽 새 커리어, 오른쪽 이어하기(주 버튼이라 더 넓게). -->
+      <div class="hero-actions">
+        <button class="btn hero-new" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>새 커리어 시작</button>
+        <button class="btn btn-accent" data-act="continue" onclick={goContinue} onpointerenter={warmGame} onfocus={warmGame}>
+          <svg class="hero-play" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m10 7.8 6 4.2-6 4.2Z" /></svg>
+          <span>{withRo(G.name)} 계속 →</span>
+        </button>
+      </div>
     </section>
   {:else}
     <section class="hero-home">

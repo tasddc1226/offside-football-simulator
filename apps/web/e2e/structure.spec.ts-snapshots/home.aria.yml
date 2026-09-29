@@ -8,8 +8,8 @@
         - text: ''
     - paragraph: /런던 해머스 · \d+세 · 공격수/
     - paragraph: /\d+ 시즌 프리시즌 · OVR \d+/
+    - button "새 커리어 시작"
     - button "구조테스트로 계속 →"
-    - button "새 커리어 시작 →"
     - region "지금 오프사이드에서는":
         - text: Live
         - heading "지금 오프사이드에서는" [level=2]
