@@ -29,18 +29,26 @@ const sid = Math.random().toString(36).slice(2);
 const entries: Entry[] = [];
 let cur = 0;
 
-// T-10-119 뒤로(-1)·앞으로(1) 가서 바뀐 화면인지 — App의 화면 전환 방향. 화면이 안 바뀐 복원(소식 글 등)이면
-// 다음 프레임에 지워 다음 화면 이동에 새지 않게 한다.
-let popDir: -1 | 0 | 1 = 0;
+// T-10-119 뒤로(-1)·앞으로(1) 가서 바뀐 화면인지 — App의 화면 전환 방향. null은 뒤로·앞으로 가기가 아니고,
+// 0은 브라우저가 이미 넘김 효과를 보여 준 경우다(iOS 가장자리 밀기 등) — 앱 효과까지 겹치면 두 번 넘어간다.
+// 화면이 안 바뀐 복원(소식 글 등)이면 다음 프레임에 지워 다음 화면 이동에 새지 않게 한다.
+let popDir: -1 | 0 | 1 | null = null;
+let swiped = false;
 export const takePopDir = () => {
   const d = popDir;
-  popDir = 0;
+  popDir = null;
   return d;
 };
-function setPopDir(d: -1 | 1) {
-  popDir = d;
-  requestAnimationFrame(() => (popDir = 0));
+/** 지금 화면 변화가 브라우저 넘김 효과가 있었던 뒤로·앞으로 가기인지(화면 안 전환 — 소식 글 — 용). */
+export const uaSwiped = () => swiped;
+function setPopDir(d: -1 | 1, ua: boolean) {
+  popDir = ua ? 0 : d;
+  swiped = ua;
+  requestAnimationFrame(() => ((popDir = null), (swiped = false)));
 }
+// 가장자리에서 시작한 터치 — hasUAVisualTransition을 모르는 브라우저에서 밀어서 뒤로 간 것으로 본다.
+let edgeTouchAt = -Infinity;
+const EDGE_PX = 30;
 
 // 선수 상세는 LegendView 객체마다 번호를 붙여 구분한다.
 const legendIds = new WeakMap<object, number>();
@@ -140,15 +148,27 @@ export function initHistory() {
     { passive: true },
   );
 
+  addEventListener(
+    'touchstart',
+    (e) => {
+      const x = e.touches[0]?.clientX;
+      if (x != null && (x < EDGE_PX || x > innerWidth - EDGE_PX)) edgeTouchAt = performance.now();
+    },
+    { passive: true },
+  );
+
   addEventListener('popstate', (ev) => {
+    const ua =
+      (ev as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition === true ||
+      performance.now() - edgeTouchAt < 1500;
     const st = ev.state as { sid?: string; i?: number } | null;
     if (st?.sid === sid && typeof st.i === 'number' && entries[st.i]) {
-      setPopDir(st.i < cur ? -1 : 1);
+      setPopDir(st.i < cur ? -1 : 1, ua);
       cur = st.i;
       return restore(entries[cur]!);
     }
     // 새로 고침 전 기록이나 다른 코드가 지운 기록 — 홈에서 새로 쌓는다.
-    setPopDir(-1);
+    setPopDir(-1, ua);
     entries.length = 0;
     cur = 0;
     entries.push({ ...snapshot(), key: '' });

@@ -18,6 +18,7 @@
   import { toast } from './helpers.js';
   import { doneOnEnter } from './inputDone.js';
   import { screenIn } from './motion.js';
+  import { uaSwiped } from './history.svelte.js';
   import { markNewsSeen, touchedAt } from './news.svelte.js';
   import { loadKey, saveKey } from '../game/season.js';
   import { BOARD_LABEL, dateOf, parseBody, postMeta } from './boardText.js';
@@ -181,7 +182,7 @@
 
 <!-- T-10-119 글을 열면 화면 전체가 오른쪽에서, 목록으로 돌아오면 왼쪽에서 들어온다. -->
 {#key view}
-  <div class="wrap" in:screenIn={{ dir: view === 'list' ? -1 : 1 }}>
+  <div class="wrap" in:screenIn={{ dir: uaSwiped() ? 0 : view === 'list' ? -1 : 1 }}>
     <Topbar />
     <section class="card stack" style="gap:14px" data-board={board}>
       <div>

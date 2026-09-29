@@ -14,9 +14,9 @@
   import type { Component } from 'svelte';
 
   // T-10-119 화면 전환 방향. 선수 생성은 1·2단계를 다른 화면으로 친다(상태는 appState에 있어 다시 그려도 된다).
-  // 뒤로·앞으로 가기면 그 방향, 게임·선수 상세 등에서 하단 메뉴 화면으로 나오면 뒤로, 그 밖(하단 메뉴끼리 포함)은 앞으로.
+  // 뒤로·앞으로 가기면 그 방향(브라우저가 이미 넘김 효과를 보였으면 없이), 게임·선수 상세 등에서 하단 메뉴 화면으로 나오면 뒤로, 그 밖(하단 메뉴끼리 포함)은 앞으로.
   const screenKey = $derived(appState.screen === 'create' ? `create:${appState.candidates ? 2 : 1}` : appState.screen);
-  const enter: { dir: -1 | 1 } = { dir: 1 };
+  const enter: { dir: -1 | 0 | 1 } = { dir: 1 };
   let shown = '';
   $effect.pre(() => {
     const to = screenKey;
@@ -26,7 +26,7 @@
       if (!from || from === to) return;
       const main = (k: string) => hasMainNav(k as typeof appState.screen);
       enter.dir =
-        takePopDir() ||
+        takePopDir() ??
         ((main(to) && !main(from)) || (from === 'create:2' && to === 'create:1') ? -1 : 1);
     });
   });
