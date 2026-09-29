@@ -15,6 +15,7 @@ import { createOwnerConflicts } from '@offside/app-core/ownerConflict';
 import { createNavStack } from '@offside/app-core/navHistory';
 import { getProfile } from '@offside/app-core/api/client';
 import { APP_VERSION, WEB_ORIGIN } from '../platform/config';
+import { ensureSession, sessionToken, setSessionToken } from '../platform/session';
 import {
   accountCache,
   appState,
@@ -131,9 +132,15 @@ Outbox.configureOutbox({
   onRetiredNumber: (e) => recordRn(e.careerId, e.result),
 });
 
-/** 프로필을 다시 받아 캐시에 둔다. 실패는 'error'(서버에 연결하지 못함). */
+/** 프로필을 다시 받아 캐시에 둔다. 실패는 'error'(서버에 연결하지 못함). 토큰이 무효(폐기·만료·탈퇴)면 버리고
+ * 새 익명 세션으로 한 번 더 받는다. */
 export async function refreshAccount() {
-  const r = await getProfile();
+  await ensureSession();
+  let r = await getProfile();
+  if (!r.ok && r.error.code === 'PROFILE_REQUIRED' && sessionToken()) {
+    await setSessionToken(null);
+    if (await ensureSession()) r = await getProfile();
+  }
   accountCache.fetchedAt = Date.now();
   accountCache.value = r.ok ? r.data : 'error';
 }

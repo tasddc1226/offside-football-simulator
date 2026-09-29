@@ -8,6 +8,7 @@ import { useSnapshot } from 'valtio';
 import { fetchBoardViewer } from '@offside/app-core/api/boards';
 import { loadHOF } from '@offside/game/season';
 import { accountCache, appState } from '../../store';
+import { isMember } from '../../game/account';
 import { go } from '../../game/nav';
 import { Screen, Topbar, Txt } from '../../ui';
 import { Account } from './Account';
@@ -22,11 +23,11 @@ export default function Owner() {
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
   // 바꾸면 다시 판단한다.
   const [admin, setAdmin] = useState(false);
-  const linked = !!acct && acct !== 'error' && acct.linked.google;
+  const linked = !!acct && acct !== 'error' && isMember(acct);
   // T-10-103 비로그인으로 확인됐고 이 기기에 은퇴한 선수도 없으면 빈 '내 선수'를 숨긴다(확인 중·연결 실패면 그대로 둔다).
   const [hasLocal] = useState(() => loadHOF().length > 0);
   // 로그인 안 함(익명 프로필이거나 세션 없음). 확인 중·연결 실패는 아니다.
-  const guest = acct === null || (!!acct && acct !== 'error' && !acct.linked.google);
+  const guest = acct === null || (!!acct && acct !== 'error' && !isMember(acct));
 
   useEffect(() => {
     if (!linked) {

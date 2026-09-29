@@ -12,6 +12,7 @@ import {
   unlinkGoogle,
 } from '@offside/app-core/api/client';
 import { accountCache } from '../../store';
+import { isMember } from '../../game/account';
 import { closeSheet, refreshAccount, showSheet } from '../../game/host';
 import { setSessionToken } from '../../platform/session';
 import { rem } from '../../theme/type';
@@ -122,15 +123,15 @@ export function Account({ admin = false }: { admin?: boolean }) {
         </Btn>
       </View>
     );
-  if (!profile || !profile.linked.google)
+  if (!profile || !isMember(profile))
     // T-10-102 비로그인은 안내만 — 로그인 버튼은 구단주 화면이 카드 밖에 하나만 둔다.
     return (
       <View style={head}>
         <View style={who}>
           <Txt style={bTitle}>로그인하지 않았어요</Txt>
           <Txt tone="muted" style={bMuted}>
-            구글 계정을 연결하면 은퇴한 선수로 내 팀을 꾸려 다른 구단주와 겨루고, 선수 기록과 구단
-            이름을 다른 기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.
+            로그인하면 은퇴한 선수로 내 팀을 꾸려 다른 구단주와 겨루고, 선수 기록과 구단 이름을 다른
+            기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.
           </Txt>
         </View>
       </View>
@@ -139,9 +140,11 @@ export function Account({ admin = false }: { admin?: boolean }) {
     <View style={{ gap: 12 }}>
       <View style={head}>
         <View style={who}>
-          <Txt style={bTitle}>{profile.googleEmailMasked ?? '구글 계정'}</Txt>
+          <Txt style={bTitle}>
+            {profile.linked.google ? (profile.googleEmailMasked ?? '구글 계정') : 'Apple 계정'}
+          </Txt>
           <Txt tone="muted" style={bMuted}>
-            Google 계정으로 로그인했어요.
+            {profile.linked.google ? 'Google' : 'Apple'} 계정으로 로그인했어요.
           </Txt>
         </View>
         <Btn kind="primary" sm onPress={askLogout} testID="logout">
@@ -161,12 +164,16 @@ export function Account({ admin = false }: { admin?: boolean }) {
         )}
       </View>
       <Row gap={6} wrap={false} style={{ justifyContent: 'flex-end' }}>
-        <LinkBtn onPress={() => void doUnlink()} testID="account-unlink">
-          구글 연동 해제
-        </LinkBtn>
-        <Txt tone="muted" accessible={false} style={{ fontSize: rem(0.75) }}>
-          ·
-        </Txt>
+        {profile.linked.google ? (
+          <>
+            <LinkBtn onPress={() => void doUnlink()} testID="account-unlink">
+              구글 연동 해제
+            </LinkBtn>
+            <Txt tone="muted" accessible={false} style={{ fontSize: rem(0.75) }}>
+              ·
+            </Txt>
+          </>
+        ) : null}
         <LinkBtn bad onPress={askDelete} testID="account-delete">
           계정 삭제
         </LinkBtn>

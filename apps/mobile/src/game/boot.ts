@@ -6,7 +6,7 @@ import { restoreGame } from '@offside/app-core/career';
 import { cachedGet, hasSessionHint } from '@offside/app-core/api/client';
 import { flushOutbox } from '@offside/app-core/outbox';
 import { NEWS_GAP_MS } from '@offside/app-core/news';
-import { loadSession } from '../platform/session';
+import { ensureSession, loadSession } from '../platform/session';
 import { appState, prefs } from '../store';
 import {
   checkNews,
@@ -35,7 +35,10 @@ export async function boot(): Promise<void> {
   void cachedGet<BalanceConfig>('/v1/balance', 3_600_000).then((r) => {
     if (r.ok) setLatestBalance(r.data);
   });
-  if (hasSessionHint()) void syncClubCustom().catch(() => {});
+  // 앱 세션이 없으면(첫 실행) 받고, 있으면 서버의 클럽 꾸미기와 맞춘다.
+  void ensureSession().then(
+    (ok) => ok && hasSessionHint() && void syncClubCustom().catch(() => {}),
+  );
   watchRetiredNumberAlerts();
   // 새 소식: 열 때·앱으로 돌아올 때·10분마다. 못 보낸 업로드도 돌아올 때 다시 보낸다.
   void checkNews();
@@ -45,5 +48,5 @@ export async function boot(): Promise<void> {
     void flushOutbox();
   });
   setInterval(() => AppState.currentState === 'active' && void checkNews(), NEWS_GAP_MS);
-  void flushOutbox();
+  void ensureSession().then(() => flushOutbox());
 }

@@ -14,7 +14,8 @@ import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { NicknameForm } from '../../components/NicknameForm';
 import { markNewsSeen, toast } from '../../game/host';
 import { openBoard } from '../../game/nav';
-import { appleLoginAvailable, startAppleLogin, startGoogleLogin } from '../../platform/auth';
+import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
+import { AppleLoginButton, useAppleLogin } from '../../ui/AppleLoginButton';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
@@ -89,13 +90,12 @@ export default function Board() {
   const view = editing ? 'edit' : (detail?.post.id ?? 'list');
   const [commentText, setCommentText] = useState('');
   const [busy, setBusy] = useState(false);
-  const [apple, setApple] = useState(false);
+  const apple = useAppleLogin();
 
   useEffect(() => {
     void api
       .fetchBoardViewer()
       .then((r) => setViewer(r.ok ? r.data : { admin: false, google: false, nickname: null }));
-    void appleLoginAvailable().then(setApple);
   }, []);
 
   const load = useCallback(
@@ -449,9 +449,7 @@ export default function Board() {
                       구글로 로그인
                     </Btn>
                     {apple ? (
-                      <Btn testID="comment-login-apple" onPress={loginApple}>
-                        Apple로 로그인
-                      </Btn>
+                      <AppleLoginButton testID="comment-login-apple" onPress={loginApple} />
                     ) : null}
                   </View>
                 ) : !viewer.nickname ? (
