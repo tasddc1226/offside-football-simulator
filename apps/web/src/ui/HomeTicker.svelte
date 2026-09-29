@@ -85,7 +85,7 @@
   </span>
 {/snippet}
 
-<div class="ticker" role="marquee" aria-label="이적·서버 기록 소식" data-home-ticker>
+<div class="home-ticker" role="marquee" aria-label="이적·서버 기록 소식" data-home-ticker>
   {#if !items.length}
     <span class="tk-item tk-idle"><b class="tk-tag">Transfer</b>이적 소식과 서버 최초 기록이 여기로 흘러요</span>
   {:else if !motionOK}
@@ -103,7 +103,8 @@
 </div>
 
 <style>
-  .ticker {
+  /* 라이브 현황의 전역 .ticker(세로 목록)와 겹치지 않는 이름. */
+  .home-ticker {
     height: 34px;
     display: flex;
     align-items: center;
@@ -122,8 +123,8 @@
     animation: tk-flow linear infinite;
     will-change: transform;
   }
-  .ticker:hover .tk-track,
-  .ticker:active .tk-track {
+  .home-ticker:hover .tk-track,
+  .home-ticker:active .tk-track {
     animation-play-state: paused;
   }
   @keyframes tk-flow {
