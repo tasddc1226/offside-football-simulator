@@ -8,12 +8,13 @@
   import { peakValue, seasonValue } from '@offside/contracts/market-value';
 
   // 은퇴 상세(LegendSource)에는 '다음 목표'가 없다 — 진행 중인 커리어(GameState)에서만 계산한다.
-  const { s }: { s: LegendSource | GameState } = $props();
+  // chart: 몸값 그래프·최고 몸값 줄. 은퇴 크레딧은 자기 '몸값 흐름' 장면이 있어 끈다(T-10-106).
+  const { s, chart = true }: { s: LegendSource | GameState; chart?: boolean } = $props();
   const t = $derived(totals(s));
   const rows = $derived(s.career.slice().reverse());
   const miles = $derived((s.miles || []).slice().reverse());
   const next = $derived('attrs' in s && !s.retired ? nextMilestones(s) : []);
-  const peakV = $derived(peakValue(s.career));
+  const peakV = $derived(chart ? peakValue(s.career) : null);
 </script>
 
 <section class="card stack">
@@ -55,9 +56,10 @@
         </thead>
         <tbody>
           {#each rows as r, i (i)}
+            {@const sv = seasonValue(r)}
             <tr>
               <td>{r.mil ? r.year : seasonLabelOf(r)} <span class="muted">({r.age})</span>{#if r.ch?.length}<br /><span class="badge-ch">CH×{r.ch.length}</span>{/if}</td>
-              <td><ClubMark name={r.club} id={r.clubId} /> {r.club}<div class="muted season-sub">{r.league}{seasonValue(r) ? ' · ' : ''}{#if seasonValue(r)}<span class="season-value" data-season-value>몸값 {fmtValue(seasonValue(r))}</span>{/if}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
+              <td><ClubMark name={r.club} id={r.clubId} /> {r.club}<div class="muted season-sub">{r.league}{sv ? ' · ' : ''}{#if sv}<span class="season-value" data-season-value>몸값 {fmtValue(sv)}</span>{/if}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
               <td class="n">{r.apps}</td>
               <td class="n">{r.goals}</td>
               <td class="n">{r.assists}</td>

@@ -43,8 +43,10 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
       async () => {
         const db = getDb(c);
         // 둘 다 한 번뿐인 소급 — 조회마다 둘 다 한 조각씩 나아간다(몸값은 리그 이름으로도 매겨 순서에 기대지 않는다).
-        const clubIds = await ensureClubIdsBackfilled(db);
-        const values = await ensureCareerValuesBackfilled(db);
+        const [clubIds, values] = await Promise.all([
+          ensureClubIdsBackfilled(db),
+          ensureCareerValuesBackfilled(db),
+        ]);
         filling = clubIds || values;
         return listPublicHof(db, limit, page, sort, season, q);
       },

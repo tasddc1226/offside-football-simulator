@@ -21,6 +21,8 @@
   // T-10-101 새로 생긴 순위 유형에 'NEW'를 이때까지 단다.
   const NEW_UNTIL: Partial<Record<HofSort, string>> = { value: '2026-10-14T00:00:00+09:00' };
   const isNew = (k: HofSort) => !!NEW_UNTIL[k] && Date.now() < Date.parse(NEW_UNTIL[k]);
+  /** 아직 개막 전인 시즌인지(ISO 문자열 비교). */
+  const notOpen = (s: { startsAt: string }) => new Date().toISOString() < s.startsAt;
 
   const SORTS: Record<HofSort, { label: string; unit: string; get: (s: RowStats) => number | string }> = {
     score: { label: '레전드 점수', unit: '', get: (s) => s.score },
@@ -45,7 +47,7 @@
   const q = $derived(full ? appState.hof.q : '');
   const ss = $derived(season === null ? undefined : serviceSeason(season));
   /** 고른 시즌이 아직 개막 전이면 그 시즌(목록 대신 개막 안내). */
-  const upcoming = $derived(ss && new Date().toISOString() < ss.startsAt ? ss : undefined);
+  const upcoming = $derived(ss && notOpen(ss) ? ss : undefined);
   /** 문구 앞에 붙는 시즌 이름('시즌 1 '). 전체면 빈 문자열. */
   const scope = $derived(ss ? `${ss.name} ` : '');
   let all = $state<PublicHofEntry[] | null>(null);
@@ -148,7 +150,7 @@
     <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
       <button class="opt" aria-pressed={season === null} data-hof-season="all" onclick={() => pickSeason(null)}>전체</button>
       {#each SERVICE_SEASONS as s (s.id)}
-        <button class="opt" aria-pressed={season === s.id} data-hof-season={s.id} onclick={() => pickSeason(s.id)}>{s.name}{#if new Date().toISOString() < s.startsAt}<span class="soon-tag" data-soon>Coming soon</span>{/if}</button>
+        <button class="opt" aria-pressed={season === s.id} data-hof-season={s.id} onclick={() => pickSeason(s.id)}>{s.name}{#if notOpen(s)}<span class="soon-tag" data-soon>Coming soon</span>{/if}</button>
       {/each}
     </div>
     {#if !upcoming}

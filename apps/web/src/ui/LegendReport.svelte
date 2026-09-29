@@ -251,7 +251,7 @@
         </div>
       </div>
     {/if}
-    {#if more}<CareerTab s={d} />{/if}
+    {#if more}<CareerTab s={d} chart={false} />{/if}
   </details>
 {/if}
 {#if end}

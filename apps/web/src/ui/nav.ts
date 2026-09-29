@@ -23,6 +23,7 @@ export function warmGame() {
 export function goNew() {
   if (appState.G && !appState.G.retired) return void loadActions().then((a) => a.confirmNew());
   appState.screen = 'create';
+  warmGame(); // 선수를 만드는 동안 게임 청크를 받아 둔다.
 }
 export function goContinue() {
   appState.screen = 'game';
