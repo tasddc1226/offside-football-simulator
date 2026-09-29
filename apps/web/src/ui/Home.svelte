@@ -5,6 +5,7 @@
   import { appState } from './state.svelte.js';
   import { goNew, goContinue, go, warmGame } from './nav.js';
   import Topbar from './Topbar.svelte';
+  import InAppBanner from './InAppBanner.svelte';
   import HallOfFame from './HallOfFame.svelte';
   import HomeNews from './HomeNews.svelte';
   import SiteFooter from './SiteFooter.svelte';
@@ -18,6 +19,8 @@
 
 <div class="wrap">
   <Topbar />
+  <!-- T-10-115 카톡·인스타 같은 앱 안 브라우저에서만 한 번 보이는 외부 브라우저 안내 -->
+  <InAppBanner />
   {#if live && appState.G}
     {@const G = appState.G}
     <!-- 진행 중인 커리어가 있으면 첫 카드를 '이번 커리어'로 바꿔 이어하기를 가장 먼저 보여 준다. -->
