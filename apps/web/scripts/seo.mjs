@@ -21,9 +21,9 @@ const BRAND_BG = '#0D1511';
 
 export const PUBLIC_PAGES = {
   '/': {
-    title: '오프사이드 - 축구선수 커리어 시뮬레이션 게임',
+    title: '오프사이드 | 이번 생은 축구다 — 축구선수 커리어 시뮬레이션',
     description:
-      '고교 3학년의 킥오프부터 은퇴의 종료 휘슬까지. 선택과 확률이 한 축구 선수의 커리어를 만드는 스토리 시뮬레이션, 오프사이드 · 풀타임.',
+      '이번 생은 축구다. 오프사이드(풀타임)에서 고교 3학년부터 은퇴까지, 훈련·이적·이벤트 선택으로 나만의 축구선수 커리어를 만들어 보세요. 설치 없이 즐기는 무료 웹 시뮬레이션 게임입니다.',
   },
   '/guide/': {
     title: '게임 가이드 | 오프사이드',
@@ -96,7 +96,7 @@ export function createStructuredData(origin, path) {
       { '@type': 'WebSite', name: '오프사이드', alternateName: 'OFFSIDE', url, inLanguage: 'ko' },
       {
         '@type': 'VideoGame',
-        name: PUBLIC_PAGES['/'].title,
+        name: '오프사이드',
         description: PUBLIC_PAGES['/'].description,
         url,
         image: `${origin}/og-offside-flag-${BRAND_VERSION}.png`,
