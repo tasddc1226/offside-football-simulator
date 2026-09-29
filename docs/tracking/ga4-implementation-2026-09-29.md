@@ -44,9 +44,11 @@ start_context, career_origin, position, player_trait, balance_version, position_
 - 기본 초기 JS: 136.83 KB, 운영 ID/호스트 빌드 136.87 KB gzip (기존 예산 138 KB 유지)
 - 추가 호스트/ID 격리 테스트 2개 통과 (분석 단위 테스트 총 9개)
 - ego-browser 실제 테스트 태그: 동의 전 Google 리소스 없음, 동의 후 G-00CVJ30Y60의
-  정규화된 page_view 네트워크 요청 확인 (HTTP 응답/서버 수신은 미확인)
+  정규화된 page_view 네트워크 요청 확인
 - 실제 브라우저 철회: 동의 denied, ledger null, GA 쿠키 없음, ga-disable=true, 게임 세이브 유지 확인
-- 실제 GA4 DebugView의 수신/이벤트 순서, 일반 보고서 집계는 아직 미확인이다.
+- 17:40 KST 테스트 DebugView: page_view 6, career_start 1, user_engagement 2,
+  first_visit 1, session_start 1 수신 확인. non_personalized_ads=1 확인.
+  첫 시즌/은퇴/공유의 실제 Google 수신 및 일반 보고서 집계는 아직 미확인이다.
 - 전체 API 테스트는 로컬 workerd bind EADDRNOTAVAIL/런타임 시작 실패로 실패했다.
   순차 재시도도 진행되지 않아 중단. API 변경 없음; 원격 CI 결과 확인 필요.
 
