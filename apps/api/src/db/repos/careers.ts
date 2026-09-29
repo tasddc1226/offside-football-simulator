@@ -7,7 +7,8 @@ import type {
   RetirementSummary,
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
-import type { ServiceSeason } from '@offside/contracts/service-seasons';
+import { teamSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
+import { dposFor, type PeakProfile } from '@offside/contracts/positions';
 import {
   and,
   desc,
@@ -87,6 +88,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         id: careerId,
         profileId,
         pos: meta.pos,
+        dpos: dposFor(meta.pos, meta.dpos),
         foot: meta.foot,
         type: meta.type,
         trait: meta.trait,
@@ -94,6 +96,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         status: 'active',
         appVersion: meta.appVersion,
         ...name,
+        // 처음 올라온 시각의 시즌(0 = 프리시즌, 시즌 사이 휴식기면 NULL) — onConflict set에 없어 바뀌지 않는다.
+        serviceSeason: teamSeasonAt(now),
         createdAt: now,
         updatedAt: now,
       })
@@ -160,6 +164,8 @@ export type PutRetirementInput = {
   /** undefined면 기존 값을 그대로 둔다(옛 클라이언트 본문). null이면 익명으로 되돌린다. */
   publicName?: string | null | undefined;
   snapshot?: LegendSnapshot | undefined;
+  /** T-10-092 최고 시점 능력치(plausibility.ts boundProfile로 자른 값). 옛 클라이언트는 없다. */
+  profile?: PeakProfile | undefined;
   now: string;
 };
 
@@ -173,7 +179,7 @@ export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
  * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
-  const { careerId, summary, publicName, snapshot, now } = input;
+  const { careerId, summary, publicName, snapshot, profile, now } = input;
   await runBatch(db, [
     // 처음 은퇴할 때만 센다 — 같은 커리어의 첫 은퇴가 동시에 두 번 와도 retired_at이 이미 있으면 아무 행도 넣지
     // 않는다. 같은 트랜잭션에서 아래 update보다 먼저 돌아야 retired_at이 비어 있는 것을 본다.
@@ -216,6 +222,7 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
         ...(snapshot
           ? { snapshotJson: JSON.stringify(snapshot), shirtNumber: snapshot.number }
           : {}),
+        ...(profile ? { peakProfile: JSON.stringify(profile) } : {}),
       })
       .where(eq(careers.id, careerId)),
   ]);
@@ -227,6 +234,7 @@ const publicColumns = {
   id: careers.id,
   name: careers.publicName,
   pos: careers.pos,
+  dpos: careers.dpos,
   number: careers.shirtNumber,
   retireAge: careers.retireAge,
   peak: careers.peak,
@@ -257,6 +265,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     id: String(r.id),
     name: (r.name as string | null) ?? null,
     pos: r.pos as PublicHofEntry['pos'],
+    dpos: dposFor(r.pos as PublicHofEntry['pos'], r.dpos as string | null),
     number: r.number == null ? null : Number(r.number),
     retireAge: n(r.retireAge),
     peak: n(r.peak),
@@ -337,14 +346,12 @@ export async function listPublicHof(
 }
 
 /**
- * T-10-090 시즌 순위에 오르는 커리어 — 개막 뒤 서버에 처음 올라온(첫 시즌 업로드) 커리어가 마감 전에 은퇴했다.
- * created_at·retired_at은 nowIso() 형식이라 문자열 비교가 시각 비교다.
+ * T-10-090 시즌 순위에 오르는 커리어 — 그 시즌에 처음 올라온 커리어(careers.service_season)가 마감 전에 은퇴했다.
+ * retired_at은 nowIso() 형식이라 문자열 비교가 시각 비교다.
  */
 function inSeason(s: ServiceSeason): SQL | undefined {
-  const started = gte(careers.createdAt, s.startsAt);
-  return s.endsAt === null
-    ? started
-    : and(started, lt(careers.createdAt, s.endsAt), lt(careers.retiredAt, s.endsAt));
+  const joined = eq(careers.serviceSeason, s.id);
+  return s.endsAt === null ? joined : and(joined, lt(careers.retiredAt, s.endsAt));
 }
 
 export async function getPublicHof(
@@ -482,7 +489,12 @@ export async function storedSeasonsOf(
 /** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). */
 export async function getCareerHead(db: Db, careerId: string) {
   const [row] = await db
-    .select({ profileId: careers.profileId, status: careers.status, pos: careers.pos })
+    .select({
+      profileId: careers.profileId,
+      status: careers.status,
+      pos: careers.pos,
+      dpos: careers.dpos,
+    })
     .from(careers)
     .where(eq(careers.id, careerId));
   return row;

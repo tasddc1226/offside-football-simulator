@@ -241,9 +241,9 @@ test('구단주 내 선수: 계정에 연결되지 않았으면 이 기기 기�
   await page.locator('[data-act="owner"]').click();
   await expect(page.locator('[data-my-source="device"]')).toContainText('구글 계정을 연결하면');
   await expect(page.locator('[data-my-player="0"]')).toContainText('기기선수');
-  // 기록실에는 전체/내 선수 전환이 없다(탭은 명예의 전당·영구결번뿐).
+  // 기록실에는 전체/내 선수 전환이 없다(탭은 명예의 전당·영구결번·팀 랭킹).
   await page.locator('[data-act="hof"]').click();
-  await expect(page.locator('[data-hof-tab]')).toHaveText(['명예의 전당', '영구결번']);
+  await expect(page.locator('[data-hof-tab]')).toHaveText(['명예의 전당', '영구결번', '팀 랭킹']);
 });
 
 // 홈은 TOP 3만, '전체 보기'는 100명씩 페이지. 상세에서 돌아오면 보던 페이지로 돌아온다.

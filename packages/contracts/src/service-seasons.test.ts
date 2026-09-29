@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { HofSeasonQuerySchema } from './careers.js';
-import { activeSeason, SERVICE_SEASONS } from './service-seasons.js';
+import {
+  activeSeason,
+  openTeamSeasons,
+  SERVICE_SEASONS,
+  teamSeasonAt,
+  teamSeasonClosed,
+  teamSeasonName,
+} from './service-seasons.js';
 
 describe('서비스 시즌 (T-10-090)', () => {
   const s1 = SERVICE_SEASONS[0]!;
@@ -19,5 +26,21 @@ describe('서비스 시즌 (T-10-090)', () => {
     expect(HofSeasonQuerySchema.parse('1')).toBe(s1);
     expect(HofSeasonQuerySchema.safeParse('99').success).toBe(false);
     expect(HofSeasonQuerySchema.safeParse('x').success).toBe(false);
+  });
+});
+
+describe('T-10-092 팀 시즌', () => {
+  const S1 = SERVICE_SEASONS[0]!.startsAt;
+  it('개막 전은 프리시즌(0), 개막 뒤는 시즌 id', () => {
+    expect(teamSeasonAt('2026-09-30T00:00:00.000Z')).toBe(0);
+    expect(teamSeasonAt(S1)).toBe(1);
+    expect(openTeamSeasons('2026-09-30T00:00:00.000Z')).toEqual([0]);
+    expect(openTeamSeasons(S1)).toEqual([0, 1]);
+    expect([teamSeasonName(0), teamSeasonName(1)]).toEqual(['프리시즌', '시즌 1']);
+  });
+  it('프리시즌은 첫 시즌 개막에 끝나고, 마감이 없는 시즌은 끝나지 않는다', () => {
+    expect(teamSeasonClosed(0, '2026-09-30T00:00:00.000Z')).toBe(false);
+    expect(teamSeasonClosed(0, S1)).toBe(true);
+    expect(teamSeasonClosed(1, '2030-01-01T00:00:00.000Z')).toBe(false);
   });
 });

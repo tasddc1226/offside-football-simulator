@@ -5,8 +5,9 @@
 import type { HofSort, RetiredNumberResult } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason } from '@offside/contracts/service-seasons';
+import { detailPosOpen, dposFor } from '@offside/contracts/positions';
 import type { OutboxItem } from '../game/outbox.js';
-import type { AttrKey, Pos } from '../game/data.js';
+import type { AttrKey, DetailPos, Pos } from '../game/data.js';
 import { pick, ri } from '../game/rng.js';
 import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
 import type { GameState, HofEntry, LegendSource } from '../game/types.js';
@@ -14,15 +15,25 @@ import type { Candidate } from '../game/candidates.js';
 import type { PhaseReport } from './sheets/types.js';
 
 /** 기록실(하단 메뉴 'hof')의 탭. */
-export type HofTab = 'legends' | 'rn';
-/** 기록실 화면 상태. season: 서비스 시즌 순위(T-10-090). null이면 전체 명예의 전당. */
-export type HofView = { tab: HofTab; page: number; sort: HofSort; season: number | null };
+export type HofTab = 'legends' | 'rn' | 'teams';
+/**
+ * 기록실 화면 상태. season: 서비스 시즌 순위(T-10-090). null이면 전체 명예의 전당. team: 라이브 랭킹에서 연 팀
+ * 프로필(T-10-092).
+ */
+export type HofView = {
+  tab: HofTab;
+  page: number;
+  sort: HofSort;
+  season: number | null;
+  team: string | null;
+};
 /** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
 export const hofStart = (): HofView => ({
   tab: 'legends',
   page: 1,
   sort: 'score',
   season: activeSeason(new Date().toISOString())?.id ?? null,
+  team: null,
 });
 
 export type Screen =
@@ -33,6 +44,8 @@ export type Screen =
   | 'legend'
   | 'settings'
   | 'owner'
+  /** T-10-092 구단주 팀(구단주 화면에서 연다). */
+  | 'team'
   | 'board'
   | 'dex'
   | 'hof'
@@ -45,11 +58,20 @@ export interface DraftCharacter {
   name: string;
   number: number;
   pos: Pos;
+  /** T-10-091 세부 포지션. 시즌 1 개막 전(프리시즌)엔 고르지 않는다 — create-view.draftDpos()가 거른다. */
+  dpos: DetailPos | null;
   foot: GameState['foot'];
   /** T-10-008. 키우고 싶은 주력 능력치(FOCUS_PICK개). */
   focus: AttrKey[];
   trait: string;
 }
+
+/** T-10-091 지금 새 선수가 세부 포지션을 고를 수 있는가(시즌 1 개막부터). */
+export const detailOpenNow = (): boolean => detailPosOpen(new Date().toISOString());
+
+/** 새 커리어에 넣을 세부 포지션 — 프리시즌이거나 큰 포지션과 어긋나면 넣지 않는다. */
+export const draftDpos = (c: Pick<DraftCharacter, 'pos' | 'dpos'>): DetailPos | undefined =>
+  (detailOpenNow() && dposFor(c.pos, c.dpos)) || undefined;
 
 export function randomName(): string {
   return pick(SURNAMES) + pick(GIVEN);
@@ -125,6 +147,7 @@ export const appState = $state<{
     name: randomName(),
     number: randomNumber(),
     pos: 'FW',
+    dpos: null,
     foot: '오른발',
     focus: defaultFocus('FW'),
     trait: 'late',

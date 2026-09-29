@@ -10,7 +10,7 @@
   // 누르는 버튼(.hof-row)은 부르는 쪽이 감싼다.
   import TitleTag from './titles/TitleTag.svelte';
   import { titleById } from '../game/titles.js';
-  import { POS } from '../game/data.js';
+  import { posLabel, type DetailPos, type POS } from '../game/data.js';
   import Laurel from './Laurel.svelte';
   import ClubMark from './ClubMark.svelte';
 
@@ -19,6 +19,7 @@
     rank,
     name,
     pos,
+    dpos = null,
     tag = null,
     t,
     titleId,
@@ -33,6 +34,8 @@
     rank: number;
     name: string;
     pos: keyof typeof POS;
+    /** T-10-091 세부 포지션(시즌 1부터 만든 선수). */
+    dpos?: DetailPos | null | undefined;
     tag?: string | null;
     t: RowStats;
     titleId: string | null | undefined;
@@ -57,7 +60,7 @@
   <div class="hof-rank">{rank + 1}</div>
 {/if}
 <div>
-  <ClubMark name={club} id={clubId} size={18} /> <b>{name}</b> <span class="pill">{POS[pos].label}</span>
+  <ClubMark name={club} id={clubId} size={18} /> <b>{name}</b> <span class="pill">{posLabel({ pos, dpos })}</span>
   {#if rn != null}<span class="pill pill-rn" data-rn-chip title="영구결번 {rn}번">👑 영결 {rn}</span>{/if}
   {#if tag}<span class="pill">{tag}</span>{/if}
   {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}

@@ -1,5 +1,6 @@
 // ───────── 세부 능력치 체계 (FIFA / EA SPORTS FC 방식) ─────────
-import { ATTR_KEYS, POS, type AttrKey, type Pos } from './data.js';
+import { DETAIL_POSITIONS, type PeakProfile } from '@offside/contracts/positions';
+import { ATTR_KEYS, DPOS, POS, type AttrKey, type Pos } from './data.js';
 import { clamp, ri } from './rng.js';
 import type { GameState } from './types.js';
 
@@ -236,7 +237,8 @@ export const POS_ROLES: Record<Pos, string[]> = {
   DF: ['CB', 'RB', 'CDM'],
   GK: ['GK'],
 };
-export const mainRole = (s: GameState): string => TYPE_ROLE[s.type] ?? POS_ROLES[s.pos][0]!;
+export const mainRole = (s: GameState): string =>
+  s.dpos ? DPOS[s.dpos].role : (TYPE_ROLE[s.type] ?? POS_ROLES[s.pos][0]!);
 
 function groupOfSub(face: Face, k: string): AttrKey | null {
   for (const g in face)
@@ -263,6 +265,19 @@ export function ovrRole(s: GameState, role: string): number {
 }
 export function ovr(s: GameState): number {
   return Math.round(ovrRole(s, mainRole(s)));
+}
+/**
+ * T-10-092 지금 능력치로 만든 최고 시점 능력치 — 대표 능력치 6개와 세부 포지션 8자리 각각의 실력(그 자리 역할의
+ * 세부 능력치 가중합). shift는 전성기가 지난 옛 저장본을 은퇴 때 최고 OVR 높이로 끌어올리는 보정이다.
+ */
+export function peakProfileOf(s: GameState, shift = 0): PeakProfile {
+  const r = (v: number) => clamp(Math.round(v + shift), 0, 99);
+  return {
+    attrs: Object.fromEntries(ATTR_KEYS.map((k) => [k, r(s.attrs[k])])) as PeakProfile['attrs'],
+    roles: Object.fromEntries(
+      DETAIL_POSITIONS.map((d) => [d, r(ovrRole(s, DPOS[d].role))]),
+    ) as PeakProfile['roles'],
+  };
 }
 export function syncFace(s: GameState) {
   const F = faceOf(s);

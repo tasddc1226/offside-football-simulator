@@ -1,6 +1,6 @@
 <script lang="ts">
   // ui.ts renderHome() 포트 (156~182줄)
-  import { PHASES, LAST_PHASE, POS } from '../game/data.js';
+  import { PHASES, LAST_PHASE, posLabel } from '../game/data.js';
   import { ovr } from '../game/attributes.js';
   import { appState } from './state.svelte.js';
   import { goNew, goContinue, go } from './nav.js';
@@ -25,7 +25,7 @@
       <div class="chalk"></div>
       <div class="eyebrow">Current career</div>
       <h1><span>이번 커리어는</span><b><strong>{G.name}</strong> 입니다</b></h1>
-      <p>{G.club.name} · {G.age}세 · {POS[G.pos].label}</p>
+      <p>{G.club.name} · {G.age}세 · {posLabel(G)}</p>
       <p class="hero-meta num">{G.year} 시즌 {PHASES[Math.min(G.phase, LAST_PHASE + 1)]} · OVR {ovr(G)}</p>
       <button class="btn btn-accent btn-block" data-act="continue" onclick={goContinue}>
         <svg class="hero-play" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m10 7.8 6 4.2-6 4.2Z" /></svg>
