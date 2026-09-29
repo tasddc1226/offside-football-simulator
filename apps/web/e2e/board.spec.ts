@@ -39,8 +39,16 @@ const COMMENT = {
 
 async function mockBoards(
   page: Page,
-  opts: { admin?: boolean; empty?: boolean; google?: boolean; nickname?: string | null } = {},
+  opts: {
+    admin?: boolean;
+    empty?: boolean;
+    google?: boolean;
+    nickname?: string | null;
+    /** 릴리즈 노트를 고친 시각(T-10-098). */
+    releaseEdited?: string;
+  } = {},
 ) {
+  const release = opts.releaseEdited ? { ...RELEASE, updatedAt: opts.releaseEdited } : RELEASE;
   const sent: { method: string; url: string; body: unknown }[] = [];
   const views: string[] = [];
   let nickname = opts.nickname ?? null;
@@ -109,7 +117,7 @@ async function mockBoards(
     if (url.pathname === '/v1/boards/notice/posts' && method === 'GET')
       return route.fulfill(ok({ posts: [NOTICE], hasMore: false }));
     if (url.pathname === '/v1/boards/release/posts' && method === 'GET')
-      return route.fulfill(ok({ posts: [RELEASE], hasMore: false }));
+      return route.fulfill(ok({ posts: [release], hasMore: false }));
     if (url.pathname === `/v1/boards/posts/${NOTICE.id}`) {
       return route.fulfill(
         ok({
@@ -119,7 +127,7 @@ async function mockBoards(
       );
     }
     if (url.pathname === `/v1/boards/posts/${RELEASE.id}`)
-      return route.fulfill(ok({ post: { ...RELEASE, body: '본문' }, comments: [] }));
+      return route.fulfill(ok({ post: { ...release, body: '본문' }, comments: [] }));
     if (url.pathname === `/v1/boards/posts/${NOTICE.id}/comments`) {
       const b = req.postDataJSON() as { body: string };
       return route.fulfill(
@@ -397,4 +405,26 @@ test('새 소식 알림: 처음 온 기기에는 지금까지의 글을 알리�
   expect(await page.evaluate(() => localStorage.getItem('ft_news_seen'))).toBe(
     JSON.stringify(NOTICE.createdAt),
   );
+});
+
+// T-10-098 이미 본 글이 고쳐지면 '수정됐어요'로 다시 알리고, 열어 보면 다시 뜨지 않는다.
+test('새 소식 알림: 본 글이 수정되면 다시 알린다', async ({ page }) => {
+  const edited = '2026-09-26T05:00:00.000Z';
+  await mockBoards(page, { releaseEdited: edited });
+  await page.addInitScript((seen) => {
+    if (!localStorage.getItem('ft_news_seen'))
+      localStorage.setItem('ft_news_seen', JSON.stringify(seen));
+  }, T);
+  await page.goto('/');
+  const banner = page.locator('[data-news-banner]');
+  await expect(banner).toContainText('릴리즈 노트가 수정됐어요');
+  await expect(banner).toContainText(RELEASE.title);
+  await banner.locator('[data-act="news-open"]').click();
+  await expect(page.locator(`[data-post="${RELEASE.id}"]`)).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('ft_news_seen'))).toBe(
+    JSON.stringify(edited),
+  );
+  await page.reload();
+  await expect(page.locator('[data-home-news="release"]')).toContainText(RELEASE.title);
+  await expect(banner).toHaveCount(0);
 });
