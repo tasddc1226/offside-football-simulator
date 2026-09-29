@@ -6,7 +6,8 @@
   import { EVENT_RULES, JITTER_RANGE } from '@offside/game/engine';
   import { DEX_GROUPS, eventDex, type DexChoice, type DexEntry, type DexGroup } from '@offside/game/eventDex';
   import { zoneWidth } from '@offside/game/minigame';
-  import { dexSeen } from './dex.js';
+  import { dexSeen } from '@offside/app-core/dex';
+  import { appState } from './state.svelte.js';
   import { goHome } from './nav.js';
   import BackBar from './BackBar.svelte';
   import Topbar from './Topbar.svelte';
@@ -27,7 +28,7 @@
 
   let dex = $state<DexEntry[] | null>(null);
   let filter = $state<DexGroup | 'all'>('all');
-  const seen = dexSeen();
+  const seen = dexSeen(appState.G);
   const found = (e: DexEntry) => e.ids.some((id) => seen.has(id));
   const hidden = (e: DexEntry) => DEX_GROUPS.find((g) => g.id === e.group)!.hidden && !found(e);
   // 전체 보기는 분류 순서(커리어 → 포지션 → 스토리 → 특별)로 묶는다.

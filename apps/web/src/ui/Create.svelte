@@ -13,9 +13,9 @@
   import { isKorean, nationOf } from '@offside/game/nation';
   import { startCareer, rollCandidates } from './actions.js';
   import { goHome } from './nav.js';
-  import { hiddenStrength, scoutLine, startOvr } from './create-view.js';
+  import { hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
   import { dur } from './motion.js';
-  import { withRo } from './format.js';
+  import { withRo } from '@offside/app-core/format';
   import Topbar from './Topbar.svelte';
   import MiniRadar from './MiniRadar.svelte';
   import NationPicker from './NationPicker.svelte';

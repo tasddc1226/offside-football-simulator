@@ -2,7 +2,7 @@
   // T-10-099 국적 고르기: 한글·초성으로 찾는 콤보박스. 연맹별로 묶어 가나다순, 대한민국은 맨 위.
   import { CONFEDS, CONF_ORDER, DEFAULT_NATION, NATIONS } from '@offside/contracts/nations';
   import { KR, flagOf, nationOf, type Nation } from '@offside/game/nation';
-  import { koMatchAt } from './koSearch.js';
+  import { koMatchAt } from '@offside/app-core/koSearch';
   import { motionOK } from './motion.js';
 
   let { id, value = $bindable() }: { id: string; value: string } = $props();

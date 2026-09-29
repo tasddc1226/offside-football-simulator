@@ -4,7 +4,10 @@ import { ok, API } from './helpers.js';
 
 // T-10-064: 기록에 이름으로만 남은 클럽에도 엠블럼을 붙인다 — 홈 라이브 · 명예의 전당 · 은퇴 리포트 · 리그 순위표 · 커리어/트로피 탭.
 // 게임 속 클럽 이름(별칭)은 엠블럼이 붙고, 다른 유저가 바꿔 부른 이름·대표팀은 이름만 보인다.
-const SAVE = readFileSync(new URL('./fixtures/save-fw26.json', import.meta.url), 'utf8');
+const SAVE = readFileSync(
+  new URL('../../../packages/game/src/__fixtures__/save-fw26.json', import.meta.url),
+  'utf8',
+);
 const ID = '7c1d6c1e-2a4f-4f7e-9a0b-7c8d9e0f1a2b';
 const entry = {
   id: ID,

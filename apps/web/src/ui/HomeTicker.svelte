@@ -8,9 +8,9 @@
   import { TICKER_POLL_SEC } from '@offside/contracts/polling';
   import { getTicker } from '../api/client.js';
   import { clubById } from '@offside/game/clubs';
-  import { agoKo } from './format.js';
+  import { agoKo } from '@offside/app-core/format';
   import { motionOK } from './motion.js';
-  import { tickerItems, type TickerItem } from './ticker.js';
+  import { tickerItems, type TickerItem } from '@offside/app-core/ticker';
   import ClubMark from './ClubMark.svelte';
 
   /** 흐르는 속도(px/초). 한글 한 줄을 편히 읽을 만큼 천천히. */

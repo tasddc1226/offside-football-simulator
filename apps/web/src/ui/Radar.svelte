@@ -1,7 +1,7 @@
 <script lang="ts">
   // ui.ts radarSvg() 포트 (262~291줄)
   import { Tween } from 'svelte/motion';
-  import { radarData } from './format.js';
+  import { radarData } from '@offside/app-core/format';
   import { dur } from './motion.js';
   import type { GameState } from '@offside/game/types';
 

@@ -6,7 +6,7 @@
   import type { AdminComment } from '../../api/admin.js';
   import { deleteComment } from '../../api/boards.js';
   import { toast } from '../helpers.js';
-  import { BOARD_LABEL, kstDateTime as kst } from '../boardText.js';
+  import { BOARD_LABEL, kstDateTime as kst } from '@offside/app-core/boardText';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
 
   let comments = $state<AdminComment[]>([]);

@@ -12,7 +12,7 @@
   import { POS } from '@offside/game/data';
   import { loadHOF } from '@offside/game/season';
   import ClubMark from './ClubMark.svelte';
-  import { anonName } from './format.js';
+  import { anonName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';
   import { RN_SHIRT, RN_TRIM, rnStyle } from './rnStyle.js';
 

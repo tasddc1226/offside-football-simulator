@@ -1,7 +1,7 @@
 <script lang="ts">
   // ui.ts careerTab() 포트 (371~387줄)
   import type { GameState, LegendSource } from '@offside/game/types';
-  import { fmtValue, seasonLabelOf, totals } from '../format.js';
+  import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
   import ClubMark from '../ClubMark.svelte';
   import ValueChart from '../ValueChart.svelte';
   import { nextMilestones } from '@offside/game/records';

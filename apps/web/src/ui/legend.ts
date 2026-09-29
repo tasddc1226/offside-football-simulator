@@ -9,7 +9,7 @@ import type { GameState, HofEntry } from '@offside/game/types';
 import { getHofDetail, getMyCareers } from '../api/client.js';
 import { appState, type LegendView } from './state.svelte.js';
 import { toast, uploadRetirement } from './helpers.js';
-import { anonName, totals } from './format.js';
+import { anonName, totals } from '@offside/app-core/format';
 import { mainTitle } from '@offside/game/titles';
 import { potReveal } from '@offside/game/stats';
 import { SHARE_PATH } from '../share-path.js';

@@ -7,7 +7,7 @@
   import { checkRetiredNumber } from '../api/client.js';
   import { recordRn } from './retiredNumber.svelte.js';
   import { isHofEligible } from '@offside/contracts/hof-rules';
-  import { totals } from './format.js';
+  import { totals } from '@offside/app-core/format';
   import type { LegendView } from './state.svelte.js';
   import ClubMark from './ClubMark.svelte';
   import RnJersey from './RnJersey.svelte';

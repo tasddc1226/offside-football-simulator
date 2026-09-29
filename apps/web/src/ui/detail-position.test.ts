@@ -5,7 +5,7 @@ import { newGame } from '@offside/game/engine';
 import { mainRole, ovr } from '@offside/game/attributes';
 import { legendScore, retire, legendSnapshot } from '@offside/game/season';
 import { createRng, setActiveRng } from '@offside/game/rng';
-import { startOvr } from './create-view.js';
+import { startOvr } from '@offside/app-core/create-view';
 
 const make = (pos: Pos, dpos?: DetailPos, attrs?: Parameters<typeof newGame>[2]) => {
   setActiveRng(createRng(11));

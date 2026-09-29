@@ -8,7 +8,7 @@
   import NewTitles from '../titles/NewTitles.svelte';
   import { dur } from '../motion.js';
   import TickerLine from '../sheets/TickerLine.svelte';
-  import { RES_LABEL as RES, type PhaseReport } from '../sheets/types.js';
+  import { RES_LABEL as RES, type PhaseReport } from '@offside/app-core/sheets';
 
   const { r }: { r: PhaseReport } = $props();
   const DOT_MS = 60;

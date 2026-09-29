@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { SheetView } from './types.js';
+  import type { SheetView } from '@offside/app-core/sheets';
   import NewTitles from '../titles/NewTitles.svelte';
   let { v }: { v: Extract<SheetView, { kind: 'season' }> } = $props();
 </script>
