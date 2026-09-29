@@ -1062,6 +1062,13 @@ textarea {
   cursor: pointer;
 }
 /* T-10-058 좋아요: 누르면 하트가 채워지고 빨갛게. */
+/* T-10-113 글 가운데에 하트와 숫자만 */
+.like-btn {
+  align-self: center;
+  gap: 6px;
+  min-width: 72px;
+  border-radius: 999px;
+}
 .like-btn svg {
   fill: none;
   stroke: currentColor;

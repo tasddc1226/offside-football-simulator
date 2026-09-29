@@ -98,6 +98,15 @@
     detail = editing = null;
     void load();
   }
+  // T-10-113 하단 '소식'을 다시 누르면 목록 맨 위로(쓰던 글이 있으면 먼저 묻는다).
+  let seenTop = appState.boardTop;
+  $effect(() => {
+    if (appState.boardTop === seenTop) return;
+    seenTop = appState.boardTop;
+    if (editing && !confirm('작성 중인 글을 두고 목록으로 갈까요?')) return;
+    if (detail || editing) backToList();
+    window.scrollTo(0, 0);
+  });
 
   function startEdit(post?: Post) {
     editing = post
@@ -208,9 +217,9 @@
             {:else}<p>{#each b.lines as line, j (j)}{#if j}<br />{/if}{line}{/each}</p>{/if}
           {/each}
         </div>
-        <button class="btn btn-sm like-btn self-start" aria-pressed={detail.liked} data-act="like" onclick={toggleLike}>
+        <button class="btn btn-sm like-btn" aria-pressed={detail.liked} aria-label="좋아요 {post.likeCount}" data-act="like" onclick={toggleLike}>
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.3s-7.8-4.6-7.8-10.4A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.8 2.5c0 5.8-7.8 10.4-7.8 10.4Z" /></svg>
-          좋아요 <span class="num" data-like-count>{post.likeCount}</span>
+          <span class="num" data-like-count>{post.likeCount}</span>
         </button>
         {#if admin}
           <div class="row" style="gap:8px">

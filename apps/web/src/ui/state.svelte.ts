@@ -143,6 +143,8 @@ export const appState = $state<{
   board: BoardKey;
   /** 소식 화면을 열 때 바로 펼칠 글(홈의 소식 섹션에서 누른 글). */
   boardPost: string | null;
+  /** T-10-113 소식 화면에서 하단 '소식'을 다시 누른 횟수 — 바뀌면 글 상세를 닫고 목록으로 간다. */
+  boardTop: number;
   /** T-10-013. 진행 중 커리어가 다른 계정 소유라 서버가 거절한 시즌 업로드(홈에서 처리를 고른다). */
   ownerConflict: OutboxItem[] | null;
   /** 기록실 화면의 탭(명예의 전당·영구결번)·페이지(1부터)·순위 유형. 선수 상세에서 돌아와도 그대로다. */
@@ -176,6 +178,7 @@ export const appState = $state<{
   candidatePick: null,
   board: 'notice',
   boardPost: null,
+  boardTop: 0,
   ownerConflict: null,
   hof: hofStart(),
   legendBack: 'home',
