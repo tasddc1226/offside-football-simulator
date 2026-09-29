@@ -6,6 +6,7 @@ import { clamp, ri, pick, rnd } from './rng.js';
 import {
   leagueOf,
   clubsIn,
+  clubLeague,
   clubLeagueId,
   fmtMoney,
   salaryFor,
@@ -57,7 +58,7 @@ export interface SeasonEndResult {
   miles: string[];
   titles: TitleView[];
   /** T-10-110 K리그2 우승으로 구단이 승격했으면. 옛 세이브의 pending.res에는 없다. */
-  promo?: Promotion | null;
+  promo?: Promotion | undefined;
 }
 export function endSeason(s: GameState): SeasonEndResult {
   natInit(s);
@@ -142,12 +143,6 @@ export function endSeason(s: GameState): SeasonEndResult {
   );
   // T-10-110 기록(K리그2 · 우승)을 남긴 뒤 승격을 확정한다 — 이어지는 이적 시장·재계약부터 K1 기준이다.
   const promo = promoteClub(s, rank);
-  if (promo)
-    log(
-      s,
-      `${promo.club} ${promo.league} 승격 확정! 다음 시즌은 ${promo.league}에서 뜁니다${promo.down ? ` (${promo.down} 강등)` : ''}`,
-      'big',
-    );
   const mil = milSeasonEnd(s);
   if (mil) notes.push(mil);
 
@@ -225,16 +220,15 @@ export function makeOffers(s: GameState) {
     fameEff(s) * 0.04 -
     (s.age >= 31 ? (s.age - 30) * 1.2 : 0);
   const am = leagueOf(s.leagueId).amateur;
-  // T-10-110 구단의 리그는 이 커리어의 승강을 반영한다.
-  const lg = (c: Club) => leagueOf(clubLeagueId(c, s));
+  // T-10-110 구단의 리그는 이 커리어의 승강을 반영한다(clubLeague).
   const pool = CLUBS.filter(
     (c) =>
-      !lg(c).amateur &&
+      !clubLeague(c, s).amateur &&
       c.id !== s.club.id &&
       c.str <= value + 2 &&
       c.str >= value - 14 &&
-      (!am || (lg(c).tier <= (value >= 66 ? 4 : 3) && c.leagueId !== 'mls')) &&
-      (lg(c).tier < 4 || leagueOf(s.leagueId).tier >= 4 || c.str <= value - 3),
+      (!am || (clubLeague(c, s).tier <= (value >= 66 ? 4 : 3) && c.leagueId !== 'mls')) &&
+      (clubLeague(c, s).tier < 4 || leagueOf(s.leagueId).tier >= 4 || c.str <= value - 3),
   );
   // T-10-016 MLS는 팀이 30개라 그대로 두면 오퍼를 쓸어 간다. 실제처럼 주로 30대 베테랑에게 오게 한다.
   const pull = (c: Club) => (c.leagueId === 'mls' && s.age < 30 ? BAL.mlsYoungPull : 1);
@@ -263,10 +257,10 @@ export function makeOffers(s: GameState) {
     coach =
       CLUBS.filter(
         (c) =>
-          !lg(c).amateur &&
+          !clubLeague(c, s).amateur &&
           c.id !== s.club.id &&
           !chosen.includes(c) &&
-          Math.abs(lg(c).tier - tier) <= 1,
+          Math.abs(clubLeague(c, s).tier - tier) <= 1,
       ).sort((a, b) => Math.abs(a.str - (value + 1)) - Math.abs(b.str - (value + 1)))[0] ?? null;
     s.flags.coachOffer = false;
   }
@@ -426,7 +420,7 @@ export function acceptOption(
       wasAm = leagueOf(s.leagueId).amateur;
     // T-10-110 승강한 구단이면 이 커리어의 지금 리그로(오퍼를 만들 때와 같다).
     s.leagueId = clubLeagueId(c, s);
-    s.club = { ...c, leagueId: s.leagueId };
+    s.club = { ...c };
     s.trust = opt.trust || 0;
     s.contract = { years: opt.years, salary: opt.salary };
     addStat(s, 'fame', Math.max(1, leagueOf(s.leagueId).tier * 1.5));

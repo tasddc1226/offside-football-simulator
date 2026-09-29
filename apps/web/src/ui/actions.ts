@@ -298,7 +298,7 @@ function showSeasonEnd(res: SeasonEndResult) {
     tours = [],
     miles = [],
     titles = [],
-    promo = null,
+    promo,
   } = res;
   const s = appState.G!;
   const [col, colLabel] =

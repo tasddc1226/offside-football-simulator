@@ -147,7 +147,7 @@ export type SheetView =
       miles: string[];
       titles: TitleView[];
       /** T-10-110 K리그2 우승 승격. */
-      promo: Promotion | null;
+      promo: Promotion | undefined;
       notes: string[];
       fans: string[];
       age: number;

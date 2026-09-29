@@ -28,6 +28,17 @@ function inContinental(s: GameState) {
   return s.season.comps!.some((c) => c.type === 'cont');
 }
 
+/** 이적 시장에서 잔류를 고르고 다음 시즌으로. */
+function stay(s: GameState) {
+  const m = market(s);
+  acceptOption(
+    s,
+    m.options.find((o) => o.kind === 'stay')!,
+    m.options,
+  );
+  return m;
+}
+
 /** 시즌을 끝까지 치른 것으로 — 승점을 크게 주면 finalRank가 1위다. */
 function finishSeason(s: GameState, pts: number) {
   Object.assign(s.season, { played: 36, w: 30, d: 0, l: 6, pts, apps: 30, ratingSum: 30 * 7.2 });
@@ -44,35 +55,34 @@ describe('K2 우승 승격', () => {
     expect(res.rec.rank).toBe(1);
     expect(res.rec.league).toBe('K리그2');
     expect(res.rec.honors).toContain('K리그2 우승');
-    expect(res.promo).toMatchObject({ club: s.club.name, league: 'K리그1' });
+    expect(res.promo).toEqual({ club: s.club.name, down: '부천 95' });
     // 승격은 트로피·영예로 세지 않는다(LS·서버 영예 검사).
     expect(res.trophies.some((t) => t.includes('승격'))).toBe(false);
     expect(s.leagueId).toBe('k1');
-    expect(s.club.leagueId).toBe('k1');
 
-    const down = clubsIn('k1').sort((a, b) => a.str - b.str || a.id.localeCompare(b.id))[0]!;
-    expect(res.promo!.down).toBe(down.name);
-    expect(s.leagueMoves).toEqual({ [me]: 'k1', [down.id]: 'k2' });
+    // K1 기본 전력 최하위(k1-10 부천 95)가 내려간다.
+    const down = 'k1-10';
+    expect(s.leagueMoves).toEqual({ [me]: 'k1', [down]: 'k2' });
     const k1 = clubsIn('k1', s).map((c) => c.id),
       k2 = clubsIn('k2', s).map((c) => c.id);
     expect(k1).toHaveLength(clubsIn('k1').length);
     expect(k2).toHaveLength(clubsIn('k2').length);
     expect(k1).toContain(me);
-    expect(k1).not.toContain(down.id);
-    expect(k2).toContain(down.id);
+    expect(k1).not.toContain(down);
+    expect(k2).toContain(down);
     expect(k2).not.toContain(me);
     expect(s.log.some((l) => l.text.includes('K리그1 승격 확정'))).toBe(true);
   });
 
   it('2위 이하·K1·아마추어 리그는 승격하지 않는다', () => {
     const s = k2Player();
-    expect(promoteClub(s, 2)).toBeNull();
+    expect(promoteClub(s, 2)).toBeUndefined();
     s.leagueId = 'k1';
     s.club = { ...clubsIn('k1')[0]! };
-    expect(promoteClub(s, 1)).toBeNull();
+    expect(promoteClub(s, 1)).toBeUndefined();
     s.leagueId = 'k3';
     s.club = { ...clubsIn('k3')[0]! };
-    expect(promoteClub(s, 1)).toBeNull();
+    expect(promoteClub(s, 1)).toBeUndefined();
     expect(s.leagueMoves).toBeUndefined();
   });
 
@@ -80,11 +90,9 @@ describe('K2 우승 승격', () => {
     const s = k2Player();
     finishSeason(s, 200);
     endSeason(s);
-    const m = market(s);
+    const m = stay(s);
     expect(m.note).toContain('K리그1 승격');
-    const stay = m.options.find((o) => o.kind === 'stay')!;
-    expect(stay.desc).toContain('K리그1 도전');
-    acceptOption(s, stay, m.options);
+    expect(m.options.find((o) => o.kind === 'stay')!.desc).toContain('K리그1 도전');
 
     expect(s.leagueId).toBe('k1');
     expect(inContinental(s)).toBe(false);
@@ -93,33 +101,21 @@ describe('K2 우승 승격', () => {
     expect(rows).toHaveLength(clubsIn('k1').length);
     expect(rows.filter((r) => r.id === s.club.id)).toHaveLength(1);
     expect(new Set(rows.map((r) => r.name)).size).toBe(rows.length);
-    const downId = Object.keys(s.leagueMoves!).find((id) => s.leagueMoves![id] === 'k2')!;
-    expect(rows.some((r) => r.id === downId)).toBe(false);
+    expect(rows.some((r) => r.id === 'k1-10')).toBe(false);
   });
 
   it('두 번째 K1 시즌부터는 지난 K1 순위로 대륙 대회 자격을 따진다', () => {
     const s = k2Player();
     finishSeason(s, 200);
     endSeason(s);
-    const m = market(s);
-    acceptOption(
-      s,
-      m.options.find((o) => o.kind === 'stay')!,
-      m.options,
-    );
+    stay(s);
     finishSeason(s, 300);
     Object.assign(s.season, { played: 38 });
     const res = endSeason(s);
     expect(res.rec.league).toBe('K리그1');
     expect(res.rec.rank).toBe(1);
-    expect(res.promo).toBeNull();
-    const m2 = market(s);
-    expect(m2.note).not.toContain('승격');
-    acceptOption(
-      s,
-      m2.options.find((o) => o.kind === 'stay')!,
-      m2.options,
-    );
+    expect(res.promo).toBeUndefined();
+    expect(stay(s).note).not.toContain('승격');
     expect(inContinental(s)).toBe(true);
   });
 
@@ -135,7 +131,7 @@ describe('K2 우승 승격', () => {
     expect(offer.leagueId).toBe('k1');
     acceptOption(s, offer);
     expect(s.leagueId).toBe('k1');
-    expect(s.club).toMatchObject({ id: promotedId, leagueId: 'k1' });
+    expect(s.club.id).toBe(promotedId);
   });
 
   it('승강 정보는 저장·복구 뒤에도 남고, 필드가 없는 옛 저장은 정적 소속으로 읽는다', () => {

@@ -23,11 +23,11 @@
   <p class="muted">이번 시즌 수상은 없었습니다.</p>
 {/if}
 {#if v.promo}
-  <div class="promo-card pop" data-promo>
+  <div class="story-end promo-card pop" style="--d:160ms" data-promo>
     <div class="eyebrow">Promotion</div>
-    <p><b>{v.promo.league} 승격 확정</b></p>
-    <p class="muted fs-sm">이번 시즌 1위로 {v.promo.club}의 승격이 확정됐습니다. 다음 시즌에는 {v.promo.league}에서 새로운 도전을 시작합니다.</p>
-    {#if v.promo.down}<p class="muted fs-xs">자리를 내준 {v.promo.down} · K리그2 강등</p>{/if}
+    <b>K리그1 승격 확정</b>
+    <p class="muted fs-sm">이번 시즌 1위로 {v.promo.club}의 승격이 확정됐습니다. 다음 시즌에는 K리그1에서 새로운 도전을 시작합니다.</p>
+    <p class="muted fs-xs">자리를 내준 {v.promo.down} · K리그2 강등</p>
   </div>
 {/if}
 {#if v.comps.length}

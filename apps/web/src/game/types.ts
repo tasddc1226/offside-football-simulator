@@ -259,7 +259,8 @@ export interface GameState {
   leagueId: string;
   club: Club;
   /** T-10-110 이 커리어에서 리그를 옮긴 구단(K2 우승 승격·그 자리를 비운 K1 구단 강등) — 구단 id → 지금 리그 id.
-   * 정적 CLUBS 소속은 그대로 두고 커리어마다 따로 둔다. 없으면 모든 구단이 정적 소속이다. */
+   * 정적 CLUBS 소속은 그대로 두고 커리어마다 따로 둔다. 없으면 모든 구단이 정적 소속이다. 지금 리그는 leagueId가
+   * 정본이고, club.leagueId는 CLUBS에서 복사한 정적 값이다(읽지 않는다). */
   leagueMoves?: Record<string, string>;
   contract: Contract | null;
   phase: number;

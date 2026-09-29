@@ -14,7 +14,6 @@ import {
 } from './engine.js';
 import type { GameState, Season, SeasonComp } from './types.js';
 import type { NatTourResult } from './national.js';
-import { movedWithClub } from './promotion.js';
 import { confPoty, federationPoty } from './nation.js';
 
 export const CUPS: Record<string, string[]> = {
@@ -143,9 +142,10 @@ export function seasonSetup(s: GameState, S: Season) {
   }));
   if (L.amateur || s.club.id === 'sangmu') return;
   const last = s.career[s.career.length - 1];
-  const same = last && sameClub(last, clubRef(s.club)) && last.league === L.name;
+  const stayed = last && sameClub(last, clubRef(s.club));
+  const same = stayed && last.league === L.name;
   // T-10-110 구단과 함께 승격한 첫 시즌 — 지난 순위는 아래 리그의 것이라 대륙 대회에 나가지 않는다.
-  if (movedWithClub(s)) return;
+  if (stayed && !same) return;
   const league = clubsIn(s.leagueId, s).sort((a, b) => b.str - a.str);
   const idx = league.findIndex((c) => c.id === s.club.id);
   const rank = same ? (last!.rank as number) : expectedRank(idx, league.length);
