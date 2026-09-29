@@ -96,6 +96,12 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();
     await expectNoViolations(page, 'create-profile');
     await page.locator('[data-act="next-candidates"]').click();
+    // T-10-111 스카우트 연출: 페이드인이 끝난 뒤 한 번, 연출이 닫히고 후보 카드가 다 들어온 뒤 한 번 검사한다.
+    const scan = page.locator('[data-scout-scan]');
+    await expect(scan).toHaveCSS('opacity', '1');
+    await expectNoViolations(page, 'create-scouting');
+    await expect(scan).toBeHidden();
+    await expect(page.locator('[data-cand="2"]')).toHaveCSS('opacity', '1');
     await expectNoViolations(page, 'create-candidates');
     await startCareer(page);
     for (const tab of ['season', 'player', 'career', 'trophy']) {

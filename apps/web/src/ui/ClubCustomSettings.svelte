@@ -6,6 +6,7 @@
   import { clubsIn } from '../game/engine.js';
   import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
   import { toast } from './helpers.js';
+  import { doneOnEnter } from './inputDone.js';
   import ClubBadge from './ClubBadge.svelte';
 
   let clubsOpen = $state(false);
@@ -118,6 +119,8 @@
                 aria-label="{c.baseName} 이름"
                 maxlength={CLUB_NAME_MAX}
                 placeholder={c.baseName}
+                enterkeyhint="done"
+                use:doneOnEnter
                 value={clubCustom.map[c.id]?.name ?? ''}
                 onchange={(e) => rename(c.id, e.currentTarget.value)}
               />
@@ -125,7 +128,7 @@
             </div>
             {#if open === c.id}
               <div class="club-logo-edit">
-                <label>글자 <input type="text" maxlength={LOGO_TEXT_MAX} value={logo.text} onchange={(e) => editLogo(c, { text: e.currentTarget.value })} /></label>
+                <label>글자 <input type="text" maxlength={LOGO_TEXT_MAX} enterkeyhint="done" use:doneOnEnter value={logo.text} onchange={(e) => editLogo(c, { text: e.currentTarget.value })} /></label>
                 <label>바탕 <input type="color" value={logo.bg} onchange={(e) => editLogo(c, { bg: e.currentTarget.value })} /></label>
                 <label>글자색 <input type="color" value={logo.fg} onchange={(e) => editLogo(c, { fg: e.currentTarget.value })} /></label>
                 <label class="icon-btn">이미지 올리기<input type="file" accept="image/*" hidden onchange={(e) => upload(c, e)} /></label>

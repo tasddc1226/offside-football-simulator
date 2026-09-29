@@ -185,7 +185,7 @@ export function createHeaders({ indexingEnabled }) {
 // T-10-065 선수 이름 공개 정책(가이드·FAQ·약관·개인정보처리방침이 같은 문장을 쓴다).
 const NAME_POLICY =
   '선수 이름은 환경설정의 ‘선수 이름 공개’가 켜져 있으면(기본값) 홈 라이브 현황·명예의 전당·서버 최초 업적에 함께 공개되고, 끄면 익명으로 표시됩니다.';
-const guideBody = `<div class="os-screen"><header><p class="os-eyebrow">HOW TO PLAY</p><h1>게임 가이드</h1><p>고교 3학년 킥오프부터 은퇴까지, 한 명의 축구 선수를 만들고 이어 가는 기본 흐름입니다.</p></header><section class="os-panel"><h2>1. 선수 생성</h2><p>이름, 등번호, 포지션(FW·MF·DF·GK), 주발, 플레이 유형(강점·약점), 성장 특성을 정하고 고교 3학년 시즌을 시작합니다. 잠재력은 숨겨져 있고 스카우트 평가로만 짐작할 수 있습니다.</p></section><section class="os-panel"><h2>2. 시즌 진행 — 프리시즌 · 전반기 · 후반기</h2><p>한 시즌은 프리시즌과 전반기·후반기 두 구간으로 진행됩니다. 구간마다 훈련 방향(체력·기술·전술 등)을 고르고 진행하면, 그 구간의 경기 결과가 한 번에 시뮬레이션되어 출전·골·도움·평점으로 쌓입니다.</p></section><section class="os-panel"><h2>3. 확률 이벤트와 스토리</h2><p>구간을 진행할 때마다 무작위 이벤트가 등장할 수 있습니다. 선택지마다 성공 확률이 공개되며, 일부 이벤트는 여러 시즌에 걸쳐 이어지는 연속 스토리로 발전합니다.</p></section><section class="os-panel"><h2>4. 능력치 성장</h2><p>OVR 하나가 아니라 스피드·슈팅·패스·드리블·수비·피지컬 같은 카드 능력치와, 그 아래 세부 능력치(포지션별 역할 OVR에 반영)가 함께 성장합니다. 육각형 레이더로 현재 능력치와 시즌 시작 시점을 비교할 수 있습니다.</p></section><section class="os-panel"><h2>5. 컵 대회 · 대륙 대회</h2><p>소속 리그에 따라 국내 컵, 슈퍼컵, 대륙 클럽 대회(챔피언스리그 등)에 함께 출전하며, 시즌이 끝나면 득점왕·MVP·발롱도르 같은 개인상을 노려볼 수 있습니다.</p></section><section class="os-panel"><h2>6. 이적 시장 · 계약</h2><p>시즌이 끝나면 잔류·재계약·이적 제안 중에서 다음 행선지를 정합니다. 성적과 평판에 따라 해외 리그로 도약할 수도 있습니다.</p></section><section class="os-panel"><h2>7. 국가대표 · 병역</h2><p>대표팀에 발탁되면 A매치·아시안컵·월드컵 등 국제 대회에 출전합니다. 병역 의무가 있는 나이가 되면 김천 상무 입대, 일반 입대, 국제대회 병역 특례 등 병역 관련 선택을 만나게 됩니다.</p></section><section class="os-panel"><h2>8. 은퇴와 명예의 전당</h2><p>나이가 들거나 더 이상 팀을 찾지 못하면 은퇴를 선언합니다. 통산 기록과 트로피, 수상 경력을 바탕으로 레전드 점수가 매겨지고, 명예의 전당에 이름이 남습니다.</p></section><section class="os-panel"><h2>진행 상황 저장</h2><p>진행 상황(세이브)은 이 브라우저(기기)에만 저장되며, 다른 기기로 옮기려면 같은 브라우저를 사용해야 합니다. 다만 커리어·시즌 요약 기록과 플레이 중 선택 기록은 서비스 개선·밸런스 분석을 위해 익명 프로필 단위로 서버에도 함께 저장됩니다. 은퇴한 선수의 커리어 기록은 명예의 전당에서 모든 이용자에게 공개됩니다. ${NAME_POLICY} 자세한 내용은 <a href="/legal/privacy/">개인정보처리방침</a>을 확인해 주세요.</p></section><p><a href="/">첫 커리어 시작</a></p><nav><a href="/">홈</a> · <a href="/faq/">자주 묻는 질문</a></nav></div>`;
+const guideBody = `<div class="os-screen"><header><p class="os-eyebrow">HOW TO PLAY</p><h1>게임 가이드</h1><p>고교 3학년 킥오프부터 은퇴까지, 한 명의 축구 선수를 만들고 이어 가는 기본 흐름입니다.</p></header><section class="os-panel"><h2>1. 선수 생성</h2><p>이름, 등번호, 포지션(FW·MF·DF·GK), 주발, 플레이 유형(강점·약점), 성장 특성을 정하고 고교 3학년 시즌을 시작합니다. 잠재력은 숨겨져 있고, 고교 3학년 시즌을 마치면 나오는 스카우트 평가로만 짐작할 수 있습니다.</p></section><section class="os-panel"><h2>2. 시즌 진행 — 프리시즌 · 전반기 · 후반기</h2><p>한 시즌은 프리시즌과 전반기·후반기 두 구간으로 진행됩니다. 구간마다 훈련 방향(체력·기술·전술 등)을 고르고 진행하면, 그 구간의 경기 결과가 한 번에 시뮬레이션되어 출전·골·도움·평점으로 쌓입니다.</p></section><section class="os-panel"><h2>3. 확률 이벤트와 스토리</h2><p>구간을 진행할 때마다 무작위 이벤트가 등장할 수 있습니다. 선택지마다 성공 확률이 공개되며, 일부 이벤트는 여러 시즌에 걸쳐 이어지는 연속 스토리로 발전합니다.</p></section><section class="os-panel"><h2>4. 능력치 성장</h2><p>OVR 하나가 아니라 스피드·슈팅·패스·드리블·수비·피지컬 같은 카드 능력치와, 그 아래 세부 능력치(포지션별 역할 OVR에 반영)가 함께 성장합니다. 육각형 레이더로 현재 능력치와 시즌 시작 시점을 비교할 수 있습니다.</p></section><section class="os-panel"><h2>5. 컵 대회 · 대륙 대회</h2><p>소속 리그에 따라 국내 컵, 슈퍼컵, 대륙 클럽 대회(챔피언스리그 등)에 함께 출전하며, 시즌이 끝나면 득점왕·MVP·발롱도르 같은 개인상을 노려볼 수 있습니다.</p></section><section class="os-panel"><h2>6. 이적 시장 · 계약</h2><p>시즌이 끝나면 잔류·재계약·이적 제안 중에서 다음 행선지를 정합니다. 성적과 평판에 따라 해외 리그로 도약할 수도 있습니다.</p></section><section class="os-panel"><h2>7. 국가대표 · 병역</h2><p>대표팀에 발탁되면 A매치·아시안컵·월드컵 등 국제 대회에 출전합니다. 병역 의무가 있는 나이가 되면 김천 상무 입대, 일반 입대, 국제대회 병역 특례 등 병역 관련 선택을 만나게 됩니다.</p></section><section class="os-panel"><h2>8. 은퇴와 명예의 전당</h2><p>나이가 들거나 더 이상 팀을 찾지 못하면 은퇴를 선언합니다. 통산 기록과 트로피, 수상 경력을 바탕으로 레전드 점수가 매겨지고, 명예의 전당에 이름이 남습니다.</p></section><section class="os-panel"><h2>진행 상황 저장</h2><p>진행 상황(세이브)은 이 브라우저(기기)에만 저장되며, 다른 기기로 옮기려면 같은 브라우저를 사용해야 합니다. 다만 커리어·시즌 요약 기록과 플레이 중 선택 기록은 서비스 개선·밸런스 분석을 위해 익명 프로필 단위로 서버에도 함께 저장됩니다. 은퇴한 선수의 커리어 기록은 명예의 전당에서 모든 이용자에게 공개됩니다. ${NAME_POLICY} 자세한 내용은 <a href="/legal/privacy/">개인정보처리방침</a>을 확인해 주세요.</p></section><p><a href="/">첫 커리어 시작</a></p><nav><a href="/">홈</a> · <a href="/faq/">자주 묻는 질문</a></nav></div>`;
 const FAQ_ITEMS = [
   [
     '어떤 게임인가요?',
@@ -253,6 +253,20 @@ export function pageHtml(
       `<div id="app"><main id="game-content">${body}</main></div>\n<div id="modal"`,
     );
 }
+// T-10-118 maskable 아이콘: 배경은 모서리 없이 꽉 채우고(OS 가 마스크로 깎는다) 깃발·깃대만 80% 로 줄여 안전 영역 안에 둔다.
+// 원본 SVG 구조(둥근 배경 rect · 깃대 rect 부터가 로고)에 기대므로 바뀌면 조용히 틀어지지 않게 던진다.
+export function maskableSvg(svg) {
+  const text = svg.toString();
+  const BG = ' rx="112"';
+  const LOGO = '<rect x="146" y="96"';
+  if (!text.includes(BG) || !text.includes(LOGO) || !text.includes('</svg>')) {
+    throw new Error('brand SVG 구조가 바뀌어 maskable 아이콘을 만들 수 없습니다.');
+  }
+  return text
+    .replace(BG, '')
+    .replace(LOGO, `<g transform="translate(51.2 51.2) scale(0.8)">${LOGO}`)
+    .replace('</svg>', '</g></svg>');
+}
 async function createBrandAssets(outputDirectory) {
   const sizes = [64, 180, 192, 512];
   const resized = new Map();
@@ -265,6 +279,10 @@ async function createBrandAssets(outputDirectory) {
       buffer,
     );
   }
+  await sharp(Buffer.from(maskableSvg(brandSvg)))
+    .resize(512, 512)
+    .png()
+    .toFile(join(outputDirectory, 'brand', `offside-flag-${BRAND_VERSION}-maskable-512.png`));
   await writeFile(join(outputDirectory, 'favicon.svg'), brandSvg);
   await writeFile(join(outputDirectory, 'favicon.png'), resized.get(64));
   // PNG를 그대로 담은 단일 이미지 ICO — /favicon.ico를 직접 요청하는 크롤러·브라우저용.
@@ -319,10 +337,13 @@ async function createBrandAssets(outputDirectory) {
   await writeFile(
     join(outputDirectory, 'site.webmanifest'),
     JSON.stringify({
+      id: '/',
       name: 'OFFSIDE',
       short_name: 'OFFSIDE',
+      lang: 'ko',
       start_url: '/',
       display: 'standalone',
+      orientation: 'portrait',
       background_color: BRAND_BG,
       theme_color: BRAND_BG,
       icons: [
@@ -335,6 +356,12 @@ async function createBrandAssets(outputDirectory) {
           src: `/brand/offside-flag-${BRAND_VERSION}-512.png`,
           sizes: '512x512',
           type: 'image/png',
+        },
+        {
+          src: `/brand/offside-flag-${BRAND_VERSION}-maskable-512.png`,
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable',
         },
       ],
     }),

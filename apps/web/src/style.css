@@ -76,6 +76,11 @@
   --actionbar-h: 68px;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
+  /* T-10-117 가로 모드 노치·둥근 모서리: 본문 좌우 여백(16px)을 안전 영역 이하로 줄이지 않는다(세로에선 그대로 16px). */
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --pad-l: max(16px, var(--safe-l));
+  --pad-r: max(16px, var(--safe-r));
 }
 * {
   box-sizing: border-box;
@@ -101,7 +106,18 @@ body {
   word-break: keep-all;
   overflow-wrap: anywhere;
   overscroll-behavior-y: contain;
-  touch-action: pan-y;
+  /* T-10-117 pan-y는 핀치 확대까지 막아 접근성을 해친다 — 두 번 탭 확대만 막고 확대·스크롤은 둔다. */
+  touch-action: manipulation;
+}
+/* T-10-119 화면이 옆에서 밀려 들어오는 동안 가로 스크롤이 생기지 않게 자른다(clip은 스크롤 영역을 만들지 않아 sticky가 그대로다). */
+#app {
+  overflow-x: clip;
+}
+/* T-10-117 시트가 열린 동안 뒤 페이지가 스크롤되지 않게 잠근다(iOS). position:fixed 방식이 아니라 스크롤 위치가
+   그대로 남는다. 데스크톱은 스크롤바가 사라져 본문이 흔들리지 않게 자리를 비워 둔다. */
+html.scroll-locked {
+  overflow: hidden;
+  scrollbar-gutter: stable;
 }
 button,
 .btn,
@@ -109,6 +125,35 @@ button,
 .tile,
 a {
   touch-action: manipulation;
+}
+/* T-10-117 누름 표시는 :active 스타일이 맡는다 — 브라우저 기본 회색 번쩍임·길게 누르기 메뉴가 겹치지 않게 한다.
+   글 본문(게시글·댓글)은 그대로 선택되고, 링크 텍스트 선택도 막지 않는다(callout은 링크 미리보기만 끈다). */
+button,
+.btn,
+.opt,
+.tile,
+.tile-link,
+.choice,
+.offer,
+.cand-card,
+.title-item,
+.hof-sort,
+.card-title,
+.link-btn,
+.icon-btn,
+.tabs [role='tab'],
+[role='tab'],
+[role='button'],
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+.btn,
+.opt,
+.tile,
+.tabs button,
+a.btn {
+  -webkit-touch-callout: none;
 }
 button {
   font: inherit;
@@ -128,7 +173,7 @@ select:focus-visible {
 .wrap {
   max-width: 480px;
   margin: 0 auto;
-  padding-inline: 16px;
+  padding-inline: var(--pad-l) var(--pad-r);
   padding-block: 0 calc(24px + var(--safe-b));
   display: flex;
   flex-direction: column;
@@ -148,9 +193,9 @@ select:focus-visible {
 .wrap.has-actionbar {
   padding-bottom: calc(var(--tabbar-h) + var(--actionbar-h) + var(--safe-b) + 20px);
 }
-/* T-10-067 내 은퇴 선수 화면: 아래에 고정된 공유 바만큼 비운다. 높이는 ShareBar가 바를 재서 넣는다(링크 칸이 열려도
-   맞다). 공유 바는 받을 수 있는 기록에만 뜨므로 .wrap 여백 클래스 대신 바와 함께 그려지는 자리 요소를 쓴다. */
-.sharebar-space {
+/* T-10-067 아래에 고정된 바(ActionBar — 공유 바·이전으로 바)만큼 비운다. 높이는 ActionBar가 바를 재서 넣는다(링크 칸이
+   열려도 맞다). 바는 화면·기록에 따라 뜨거나 안 뜨므로 .wrap 여백 클래스 대신 바와 함께 그려지는 자리 요소를 쓴다. */
+.action-bar-space {
   flex: none;
 }
 
@@ -165,8 +210,8 @@ select:focus-visible {
   position: sticky;
   top: 0;
   z-index: 5;
-  margin-inline: -16px;
-  padding-inline: 16px;
+  margin-inline: calc(-1 * var(--pad-l)) calc(-1 * var(--pad-r));
+  padding-inline: var(--pad-l) var(--pad-r);
   padding-top: calc(14px + var(--safe-t));
   background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(6px);
@@ -286,20 +331,97 @@ p {
   opacity: 0.45;
   cursor: not-allowed;
 }
-/* 누르는 동안 살짝 들어간다(떼면 빠르게 돌아온다). 비활성 버튼은 움직이지 않는다. */
-.btn,
-.icon-btn {
+/* T-10-121 누를 수 있는 모든 요소는 누르는 동안 버튼처럼 살짝 들어간다(떼면 빠르게 돌아온다). button·a·role=button 등
+   이면 새로 만든 요소도 따로 적지 않아도 된다. transform이 아니라 scale 속성을 써서 요소가 원래 가진 transform(가운데
+   맞춤 translate 등)과 겹치지 않는다. :where로 특이도를 0으로 둬 요소별 transition이 있으면 그쪽이 이긴다.
+   비활성 요소는 움직이지 않는다. iOS는 문서에 touchstart 리스너가 있어야 :active가 걸린다(main.ts). */
+:where(
+  button,
+  a[href],
+  summary,
+  select,
+  [role='button'],
+  [role='tab'],
+  [role='switch'],
+  [role='link'],
+  [role='option'],
+  [role='menuitem'],
+  label:has(> input[type='checkbox'], > input[type='radio']),
+  .choice,
+  .offer,
+  .cand-card,
+  .tile-link,
+  .card-title
+) {
+  /* 배경색은 넣지 않는다 — 테마·선택 상태가 바뀔 때 색이 섞이는 중간 프레임에서 명도 대비(axe)가 깨진다. */
   transition:
-    transform 0.16s ease-out,
+    scale 0.16s ease-out,
     filter 0.16s ease-out,
     box-shadow 0.16s ease-out;
 }
+:where(
+    button,
+    a[href],
+    summary,
+    select,
+    [role='button'],
+    [role='tab'],
+    [role='switch'],
+    [role='link'],
+    [role='option'],
+    [role='menuitem'],
+    label:has(> input[type='checkbox'], > input[type='radio']),
+    .choice,
+    .offer,
+    .cand-card,
+    .tile-link,
+    .card-title
+  ):active:not(:disabled, [aria-disabled='true']) {
+  scale: var(--press-scale, 0.97);
+  filter: brightness(0.92);
+  transition-duration: 0.05s;
+}
+/* 큰 카드·화면 폭 목록 행은 덜 줄인다. */
+.opt,
+.choice,
+.offer,
+.cand-card,
+.title-item,
+.card-title,
+.tile-link,
+.board-row,
+.hof-row,
+.settings-trigger,
+.settings-links > *,
+.mg-stage,
+label:has(> input[type='checkbox'], > input[type='radio']) {
+  --press-scale: 0.985;
+}
 .btn:active:not(:disabled),
 .icon-btn:active:not(:disabled) {
-  transform: translateY(1px) scale(0.97);
-  filter: brightness(0.92);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18);
-  transition-duration: 0.05s;
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(
+    button,
+    a[href],
+    summary,
+    select,
+    [role='button'],
+    [role='tab'],
+    [role='switch'],
+    [role='link'],
+    [role='option'],
+    [role='menuitem'],
+    label:has(> input[type='checkbox'], > input[type='radio']),
+    .choice,
+    .offer,
+    .cand-card,
+    .tile-link,
+    .card-title
+  ):active {
+    scale: none;
+  }
 }
 .link-btn:active {
   opacity: 0.6;
@@ -331,43 +453,7 @@ p {
     color: var(--ink);
   }
 }
-/* 선택지·카드도 버튼처럼 살짝 들어간다(크기가 커서 덜 줄인다). */
-.opt,
-button.tile-link,
-.choice,
-.offer,
-.cand-card,
-button.title-item,
-.hof-sort,
-.card-title {
-  transition:
-    transform 0.16s ease-out,
-    filter 0.16s ease-out,
-    box-shadow 0.16s ease-out;
-}
-.opt:active:not(:disabled),
-button.tile-link:active,
-.choice:active,
-.offer:active,
-.cand-card:active,
-button.title-item:active,
-.hof-sort:active,
-.card-title:active {
-  transform: scale(0.98);
-  filter: brightness(0.94);
-  transition-duration: 0.05s;
-}
-/* 화면 폭 목록 행은 줄이지 않고 누르는 동안 바탕만 옅게 깔린다. */
-.board-row,
-button.hof-row,
-.settings-trigger,
-.settings-links > a,
-.settings-links > button,
-button.what {
-  transition:
-    background-color 0.16s ease-out,
-    color 0.16s ease-out;
-}
+/* 화면 폭 목록 행은 누르는 동안 바탕도 옅게 깔린다(바탕이 투명해 밝기만으로는 잘 안 보인다). */
 .board-row:active,
 button.hof-row:active,
 .settings-trigger:active,
@@ -376,20 +462,6 @@ button.hof-row:active,
 button.what:active {
   background-color: color-mix(in srgb, var(--ink) 7%, transparent);
   transition-duration: 0.05s;
-}
-@media (prefers-reduced-motion: reduce) {
-  .btn:active:not(:disabled),
-  .icon-btn:active:not(:disabled),
-  .opt:active:not(:disabled),
-  button.tile-link:active,
-  .choice:active,
-  .offer:active,
-  .cand-card:active,
-  button.title-item:active,
-  .hof-sort:active,
-  .card-title:active {
-    transform: none;
-  }
 }
 .self-start {
   align-self: flex-start;
@@ -477,13 +549,30 @@ button.what:active {
   opacity: 0.65;
   margin-top: 2px;
 }
+/* T-10-124 이어하기가 이름 길이만큼 남은 폭을 다 쓰고, 넘치면 이름 줄을 말줄임한다. */
+.hero-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  margin-top: 18px;
+}
+.hero-home .hero-actions .btn {
+  margin-top: 0;
+  min-width: 0;
+  padding-inline: 14px;
+}
+.hero-actions .btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .hero-current .hero-new {
-  margin-top: 8px;
   background: transparent;
   color: var(--on-pitch);
   border-color: color-mix(in srgb, var(--on-pitch) 35%, transparent);
 }
 .hero-play {
+  flex: none;
   width: 18px;
   height: 18px;
   fill: none;
@@ -573,6 +662,27 @@ button.what:active {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* T-10-125 홈 TOP 3 기록 요약이 넘치면 흐른다(HofRow flow). 첫 글자를 읽을 틈을 두고 출발하고, 올려 두면 멈춘다. */
+.hof-flow {
+  display: flex;
+  width: max-content;
+}
+.hof-stats.flowing {
+  text-overflow: clip;
+  mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+}
+.hof-stats.flowing .hof-flow {
+  animation: hof-flow 1s linear 1.2s infinite;
+}
+.hof-row:hover .hof-flow,
+.hof-row:active .hof-flow {
+  animation-play-state: paused;
+}
+@keyframes hof-flow {
+  to {
+    transform: translateX(-50%);
+  }
+}
 .hof-row:first-child {
   border-top: 0;
 }
@@ -584,7 +694,7 @@ button.what:active {
 .admin-tabs .opt {
   align-items: center;
   font-weight: 600;
-  min-height: 40px;
+  min-height: 44px; /* T-10-117 터치 44px */
 }
 button.hof-row {
   width: 100%;
@@ -747,8 +857,8 @@ button.hof-row {
 .hof-search-btn {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px; /* T-10-117 터치 44px */
+  height: 44px;
   padding: 0;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -953,7 +1063,7 @@ button.tile-link {
 .dex-tabs .opt {
   align-items: center;
   font-weight: 600;
-  min-height: 40px;
+  min-height: 44px; /* T-10-117 터치 44px */
   padding: 8px 4px;
 }
 .dex-rules summary,
@@ -1062,6 +1172,13 @@ textarea {
   cursor: pointer;
 }
 /* T-10-058 좋아요: 누르면 하트가 채워지고 빨갛게. */
+/* T-10-113 글 가운데에 하트와 숫자만 */
+.like-btn {
+  align-self: center;
+  gap: 6px;
+  min-width: 72px;
+  border-radius: 999px;
+}
 .like-btn svg {
   fill: none;
   stroke: currentColor;
@@ -1165,11 +1282,22 @@ textarea {
   width: 4.5em;
 }
 .club-logo-edit input[type='color'] {
-  width: 36px;
-  height: 30px;
+  width: 44px; /* T-10-117 터치 44px — 보이는 색 칸은 안쪽 여백으로 예전 크기 근처를 유지 */
+  height: 44px;
   padding: 0;
   border: 0;
   background: none;
+}
+.club-logo-edit input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 8px 4px;
+}
+.club-logo-edit input[type='color']::-webkit-color-swatch {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.club-logo-edit input[type='color']::-moz-color-swatch {
+  border: 1px solid var(--line);
+  border-radius: 6px;
 }
 .opt[aria-pressed='true'] {
   border-color: var(--pitch);
@@ -1265,6 +1393,7 @@ textarea {
   background: var(--surface);
   border-top: 1px solid var(--line);
   padding: 6px 4px calc(6px + var(--safe-b));
+  padding-inline: max(4px, var(--safe-l)) max(4px, var(--safe-r)); /* T-10-117 */
   height: calc(var(--tabbar-h) + var(--safe-b));
   box-shadow: 0 -6px 20px -12px rgba(20, 32, 26, 0.25);
 }
@@ -1277,6 +1406,20 @@ textarea {
 }
 .tabs-inner ~ .tab-home {
   order: 1;
+}
+/* T-10-120 iOS Chrome은 주소창·아래 도구막대가 접힐 때 position:fixed의 기준(레이아웃 뷰포트)이 늦게 따라와,
+   바가 화면 아래에서 떨어져 그 밑으로 페이지가 비친다(바가 떠 보인다). 바 배경을 아래로 길게 이어 그 틈을 바 색으로
+   채운다 — 뷰포트 밖이라 평소엔 안 보이고, 고정 요소라 문서 스크롤 길이도 늘리지 않는다. */
+.tabs::after,
+.action-bar.at-bottom::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 50vh;
+  background: inherit;
+  pointer-events: none;
 }
 /* 홈 하단 메뉴(기록실 · 소식 · 홈 · 구단주 · 설정)도 같은 5칸. 본문은 탭바만큼 아래 여백을 둔다. */
 body:has(.main-nav) .wrap {
@@ -1325,23 +1468,13 @@ body:has(.main-nav) .wrap {
 .tabs button:is([aria-selected='true'], [aria-current='page']) .tab-ic {
   transform: translateY(-1px) scale(1.06);
 }
-/* 누르는 동안 탭이 살짝 들어가고 둥근 바탕이 옅게 깔린다(다른 버튼과 같은 느낌). */
-.tabs button {
-  transition:
-    transform 0.16s ease-out,
-    background-color 0.16s ease-out;
-}
+/* 누르는 동안 탭 둥근 바탕이 옅게 깔린다(들어가는 효과는 전역 T-10-121). */
 .tabs button:active {
-  transform: scale(0.94);
   background-color: color-mix(in srgb, var(--ink) 7%, transparent);
-  transition-duration: 0.05s;
 }
 @media (prefers-reduced-motion: reduce) {
   .tabs button .tab-ic {
     transition: none;
-  }
-  .tabs button:active {
-    transform: none;
   }
 }
 
@@ -1364,10 +1497,20 @@ body:has(.main-nav) .wrap {
   -webkit-backdrop-filter: blur(6px);
   border-top: 1px solid var(--line);
   padding: 10px 16px;
+  padding-inline: var(--pad-l) var(--pad-r); /* T-10-117 */
 }
 .action-bar-inner {
   max-width: 480px;
   margin: 0 auto;
+}
+/* 선수 생성: 왼쪽 되돌리기(취소 · 다시 입력) + 오른쪽 진행 버튼 */
+.action-bar-inner.with-back {
+  display: flex;
+  gap: 8px;
+}
+.action-bar-inner.with-back .btn-primary {
+  flex: 1;
+  min-width: 0;
 }
 /* 두 칸 버튼 줄: 은퇴 선수 화면 아래 공유 바(홈으로 | 커리어 공유하기), 공유 이미지(이미지 저장 | 바로 공유하기) */
 .share-actions {
@@ -1910,7 +2053,8 @@ th.n {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  touch-action: pan-y;
+  /* T-10-117 끌어 닫기는 Sheet.svelte의 non-passive touchmove가 맡는다 — 핀치 확대는 막지 않는다. */
+  touch-action: manipulation;
 }
 @media (min-width: 720px) {
   .sheet {
@@ -1955,6 +2099,8 @@ th.n {
   height: 100%;
   width: 0;
   background: linear-gradient(90deg, var(--pitch-2), var(--accent));
+  /* T-10-123 길이는 시트가 한 단계(한 경기) 간격으로 정한다(style:transition-duration) — 다음 값까지 그 시간 동안
+     고르게 차올라 막대가 끊김 없이 흐른다. */
   transition: width 0.12s linear;
 }
 .tally {
@@ -2553,6 +2699,19 @@ th.n {
 .story-end b {
   font-size: 1.0625rem;
 }
+/* T-10-112 고3 첫 시즌 뒤 스카우트 첫 평가 공개 */
+.scout-card b {
+  color: var(--accent-text);
+}
+.scout-card.pop {
+  animation: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation-delay: 160ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scout-card.pop {
+    animation: none;
+  }
+}
 .story-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
@@ -2588,6 +2747,10 @@ th.n {
   left: 50%;
   bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
+  /* T-10-117 shrink-to-fit이 화면의 절반에서 막혀 긴 문구가 좁은 기둥으로 줄바꿈되던 것을 푼다. */
+  width: max-content;
+  max-width: calc(100% - 32px);
+  text-align: center;
   background: var(--ink);
   color: var(--bg);
   padding: 10px 16px;
@@ -2842,6 +3005,7 @@ th.n {
   color: var(--muted);
 }
 .link-btn {
+  position: relative;
   border: 0;
   background: none;
   padding: 6px 2px;
@@ -2853,6 +3017,12 @@ th.n {
 }
 .link-btn.bad {
   color: var(--bad);
+}
+/* T-10-117 글자 높이(~35px)는 그대로 두고 눌리는 자리만 위아래로 넓혀 44px를 채운다. */
+.link-btn::after {
+  content: '';
+  position: absolute;
+  inset: -5px -4px;
 }
 .notice-steps {
   margin: 4px 0 12px;
@@ -2996,8 +3166,8 @@ th.n {
   right: 4px;
   top: 50%;
   transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
+  width: 44px; /* T-10-117 터치 44px(입력칸 padding-right 48px 안에 들어간다) */
+  height: 44px;
   border: 0;
   background: transparent;
   font-size: 1.25rem;
@@ -3424,6 +3594,7 @@ body:has(nav.tabs) .toast {
   text-overflow: ellipsis;
 }
 .news-close {
+  position: relative;
   flex: none;
   width: 36px;
   height: 36px;
@@ -3434,6 +3605,12 @@ body:has(nav.tabs) .toast {
   color: inherit;
   font-size: 1rem;
   cursor: pointer;
+}
+/* T-10-117 보이는 크기(36px)는 그대로 두고 눌리는 자리만 44px로 넓힌다. */
+.news-close::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
 }
 .news-close:active {
   background-color: color-mix(in srgb, var(--on-pitch) 15%, transparent);
@@ -3539,7 +3716,7 @@ body:has(nav.tabs) .toast {
     padding-inline: 2px;
   }
   .hof-seasons .opt {
-    min-height: 36px;
+    min-height: 44px; /* T-10-117 터치 44px */
     padding-block: 6px;
   }
   .hof-sorts {
@@ -3649,11 +3826,6 @@ body:has(nav.tabs) .toast {
   font: inherit;
   text-align: center;
   cursor: pointer;
-  transition: transform 0.16s ease-out;
-}
-.rn-tile:active {
-  transform: scale(0.97);
-  transition-duration: 0.05s;
 }
 .rn-tile > span {
   max-width: 100%;

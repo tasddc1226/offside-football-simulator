@@ -2,7 +2,7 @@
   // ui.ts playerTab()/nationalCard() 포트 (316~356줄)
   import { TRAITS } from '../../game/data.js';
   import { ovr } from '../../game/attributes.js';
-  import { potFogged, potLabel, leagueOf, fmtMoney } from '../../game/engine.js';
+  import { potFogged, potLabel, potScouted, leagueOf, fmtMoney } from '../../game/engine.js';
   import { marketValue } from '../../game/season.js';
   import { milStatusText } from '../../game/military.js';
   import { nextWC, HOSTS } from '../../game/national.js';
@@ -36,7 +36,7 @@
     <dt>체격</dt><dd data-body>{body.h}cm · {body.w}kg</dd>
     <dt>주발</dt><dd>{s.foot}</dd>
     <dt>성장 특성</dt><dd>{traitName}</dd>
-    <dt>스카우트 잠재력 평가</dt><dd data-pot>{potLabel(s)}등급{#if potFogged(s)} <small class="muted">· 21·24세 재평가 때 좁혀져요</small>{/if}</dd>
+    <dt>스카우트 잠재력 평가</dt><dd data-pot>{#if !potScouted(s)}평가 전 <small class="muted">· 고3 시즌을 마치면 첫 평가가 나와요</small>{:else}{potLabel(s)}등급{#if potFogged(s)} <small class="muted">· 21·24세 재평가 때 좁혀져요</small>{/if}{/if}</dd>
     <dt>최고 OVR</dt><dd>{Math.max(s.peak, ovr(s))}</dd>
     <dt>감독 신뢰</dt><dd>{s.trust >= 2 ? '두터움' : s.trust >= 0 ? '보통' : '냉랭함'}</dd>
     <dt>계약</dt><dd>{s.contract ? `${s.contract.years}년 남음 · ${fmtMoney(s.contract.salary)}/년` : L.amateur ? '아마추어' : '-'}</dd>

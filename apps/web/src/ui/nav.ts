@@ -42,6 +42,6 @@ export function openHof() {
 /** 소식 화면을 연다. postId가 있으면 그 글을 바로 연다(홈의 소식 섹션에서). */
 export function openBoard(board: BoardKey, postId: string | null = null) {
   appState.board = board;
-  appState.boardPost = postId;
+  appState.boardOpenId = postId;
   go('board');
 }

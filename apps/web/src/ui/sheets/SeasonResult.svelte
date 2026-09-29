@@ -22,6 +22,13 @@
 {:else}
   <p class="muted">이번 시즌 수상은 없었습니다.</p>
 {/if}
+{#if v.scout}
+  <div class="story-end scout-card pop" data-scout-first>
+    <span class="eyebrow">First Scouting Report</span>
+    <b>스카우트 잠재력 평가 {v.scout}등급</b>
+    <span class="muted fs-sm">고3 시즌을 지켜본 스카우트의 첫 평가예요. 21·24세 재평가 때 좁혀져요.</span>
+  </div>
+{/if}
 {#if v.comps.length}
   <div>
     <div class="eyebrow" style="margin-bottom:6px">대회별 성적</div>

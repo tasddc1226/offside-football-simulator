@@ -74,7 +74,15 @@ export function sheetLabel(v: SheetView): string {
 }
 
 export type SheetView =
-  | { kind: 'steps'; title: string; steps: string[]; active: number; progress: number }
+  | {
+      kind: 'steps';
+      title: string;
+      steps: string[];
+      active: number;
+      progress: number;
+      /** 진행률 막대가 다음 값까지 차오르는 시간(ms) — 한 단계 길이와 같게 둬 끊김 없이 찬다(T-10-123). */
+      fill: number;
+    }
   | {
       /** T-10-028: 구간 경기를 한 경기씩 흘려보내는 중계 시트(T-10-024 전의 연출). 끝나면 리포트로 넘어간다. */
       kind: 'block';
@@ -82,6 +90,8 @@ export type SheetView =
       title: string;
       back: boolean;
       progress: number;
+      /** 진행률 막대가 다음 값까지 차오르는 시간(ms) — 한 경기 간격과 같다. 건너뛰면 짧게. */
+      fill: number;
       round: string;
       wdl: { w: number; d: number; l: number };
       tally: { apps: number; g: number; a: number; cs: number; rating: string };
@@ -146,6 +156,8 @@ export type SheetView =
       miles: string[];
       titles: TitleView[];
       notes: string[];
+      /** T-10-112 고3 첫 시즌 뒤 처음 공개하는 스카우트 잠재력 평가(그 외 시즌은 null). */
+      scout: string | null;
       fans: string[];
       age: number;
     }

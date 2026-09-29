@@ -6,6 +6,7 @@ import App from './ui/App.svelte';
 import Sheet from './ui/Sheet.svelte';
 import Toast from './ui/Toast.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
+import { keepStorage } from './ui/helpers.js';
 import { handleOAuthReturn } from './ui/login.js';
 import { hasSessionHint } from './api/client.js';
 import { routeSharedCareer } from './ui/legend.js';
@@ -17,17 +18,24 @@ import { installPlaySignals } from './game/playSignals.js';
 import { watchForUpdates } from './ui/update.svelte.js';
 import { watchNews } from './ui/news.svelte.js';
 import { warmGame } from './ui/nav.js';
+import { initHistory } from './ui/history.svelte.js';
 
 installClickSound();
 // 자동 플레이 탐지(관찰 전용): 시즌마다 조작 횟수만 센다.
 installPlaySignals();
 loadGame();
+// T-10-116 이어 할 세이브가 있으면 브라우저에 '영구 저장'을 요청한다(새 커리어는 첫 저장 때, helpers.save).
+if (appState.G) keepStorage();
 // OAuth 복귀는 세이브를 읽은 뒤에 처리한다 — 돌아갈 곳이 로컬 명예의 전당 선수일 수 있고, loadGame이
 // 옛 은퇴 선수에 커리어 id를 붙인다(ft_hof).
 handleOAuthReturn();
 routeSharedCareer();
 initializeAnalytics(appState.screen, appState.G && !appState.G.retired ? appState.G.cid : null);
 syncBalance();
+// T-10-114 모바일 뒤로 가기(iOS 가장자리 밀기·Android 뒤로)가 앱 안의 이전 화면으로 가게 한다.
+initHistory();
+// T-10-121 iOS Safari·Chrome은 문서에 touchstart 리스너가 없으면 터치로 :active(누름 효과)를 걸지 않는다.
+document.addEventListener('touchstart', () => {}, { passive: true });
 
 // T-10-041: index.html의 첫 화면은 빌드 때 넣은 App 서버 렌더 결과다(scripts/app-shell.mjs). 지우고 다시
 // 그리지 않고 hydrate로 이어받아야 첫 페인트의 제목이 LCP로 남는다. 셸이 없거나(app-shell.html) 상태가 달라도

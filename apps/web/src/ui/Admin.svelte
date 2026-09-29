@@ -4,6 +4,7 @@
   import { onMount } from 'svelte';
   import { fetchBoardViewer } from '../api/boards.js';
   import { appState } from './state.svelte.js';
+  import BackBar from './BackBar.svelte';
   import Topbar from './Topbar.svelte';
   import AdminBalance from './admin/AdminBalance.svelte';
   import AdminComments from './admin/AdminComments.svelte';
@@ -25,11 +26,7 @@
 </script>
 
 <div class="wrap">
-  <Topbar>
-    {#snippet right()}
-      <button class="icon-btn" data-act="owner" onclick={() => (appState.screen = 'owner')}>← 구단주</button>
-    {/snippet}
-  </Topbar>
+  <Topbar />
   <section class="card stack" style="gap:14px">
     <div>
       <div class="eyebrow">Admin</div>
@@ -51,5 +48,6 @@
       {:else}<AdminBalance />{/if}
     {/if}
   </section>
+  <BackBar act="owner" fallback={() => (appState.screen = 'owner')} />
 </div>
 

@@ -41,6 +41,8 @@ export const hofStart = (): HofView => ({
   q: '',
 });
 
+export type TeamView = 'team' | 'achievements' | 'opponents' | 'result' | 'history';
+
 export type Screen =
   | 'home'
   | 'create'
@@ -141,14 +143,18 @@ export const appState = $state<{
   candidatePick: number | null;
   /** T-10-011. 소식 화면에서 마지막으로 본 게시판. */
   board: BoardKey;
-  /** 소식 화면을 열 때 바로 펼칠 글(홈의 소식 섹션에서 누른 글). */
-  boardPost: string | null;
+  /** 소식 화면에서 펼친 글(없으면 목록). 홈의 소식 섹션에서 누른 글을 바로 열 때도, 뒤로 가기로 되살릴 때도 쓴다. */
+  boardOpenId: string | null;
+  /** T-10-113 소식 화면에서 하단 '소식'을 다시 누른 횟수 — 바뀌면 글 상세를 닫고 목록으로 간다. */
+  boardTop: number;
   /** T-10-013. 진행 중 커리어가 다른 계정 소유라 서버가 거절한 시즌 업로드(홈에서 처리를 고른다). */
   ownerConflict: OutboxItem[] | null;
   /** 기록실 화면의 탭(명예의 전당·영구결번)·페이지(1부터)·순위 유형. 선수 상세에서 돌아와도 그대로다. */
   hof: HofView;
   /** 선수 상세의 '← 이전으로'가 돌아갈 화면. */
   legendBack: 'home' | 'hof' | 'owner';
+  /** T-10-130 구단주 팀 안의 화면 — 뒤로 가기 기록에 남도록 appState에 둔다(history.svelte.ts). */
+  teamView: TeamView;
   /** T-10-029. 공유 링크(/career/:id)로 들어온 은퇴 선수 id — 보기 전용 화면(SharedCareer)이 읽는다. */
   sharedCareer: string | null;
   /** T-10-024. 방금 끝난 구간 리포트(시즌 탭 맨 위). 저장하지 않는다 — 새로고침하면 사라진다. */
@@ -175,10 +181,12 @@ export const appState = $state<{
   candidatesOpen: [],
   candidatePick: null,
   board: 'notice',
-  boardPost: null,
+  boardOpenId: null,
+  boardTop: 0,
   ownerConflict: null,
   hof: hofStart(),
   legendBack: 'home',
+  teamView: 'team',
   sharedCareer: null,
   report: null,
 });

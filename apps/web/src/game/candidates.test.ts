@@ -127,3 +127,18 @@ describe('주력 능력치 (T-10-008)', () => {
     expect(gain('sho')).toBeGreaterThan(gain('pas'));
   });
 });
+
+// T-10-112 스카우트 시드 고정 — 다시 뽑아 고르는 리세 방지
+describe('generateCandidates 시드 고정', () => {
+  const attrsOf = (c: ReturnType<typeof generateCandidates>) => c.map((x) => x.attrs);
+  it('같은 시드·조건이면 몇 번을 뽑아도 같은 후보다(주력 순서와 무관)', () => {
+    const a = generateCandidates('FW', ['sho', 'dri'], null, 1234);
+    expect(attrsOf(generateCandidates('FW', ['sho', 'dri'], null, 1234))).toEqual(attrsOf(a));
+    expect(attrsOf(generateCandidates('FW', ['dri', 'sho'], null, 1234))).toEqual(attrsOf(a));
+  });
+  it('시드나 조건이 바뀌면 다른 후보가 나온다', () => {
+    const a = attrsOf(generateCandidates('FW', ['sho', 'dri'], null, 1234));
+    expect(attrsOf(generateCandidates('FW', ['sho', 'dri'], null, 1235))).not.toEqual(a);
+    expect(attrsOf(generateCandidates('FW', ['sho', 'pac'], null, 1234))).not.toEqual(a);
+  });
+});

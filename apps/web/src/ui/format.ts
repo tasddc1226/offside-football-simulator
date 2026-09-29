@@ -181,3 +181,12 @@ export const iGa = (word: string): string => (jongOf(word) > 0 ? '이' : '가');
 export const waGwa = (word: string): string => (jongOf(word) > 0 ? '과' : '와');
 /** 단어 뒤에 '을/를'을 붙인다. 받침이 있으면 '을', 없으면(한글이 아니어도) '를'. */
 export const withEulReul = (word: string): string => `${word}${jongOf(word) > 0 ? '을' : '를'}`;
+
+/** 경과 시간(ms)을 '방금 · N분 전 · N시간 전 · 어제 · N일 전'으로(홈 라이브·전광판). */
+export function agoKo(ms: number): string {
+  const s = Math.max(0, ms / 1000);
+  if (s < 60) return '방금';
+  if (s < 3600) return `${Math.floor(s / 60)}분 전`;
+  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
+  return s < 172800 ? '어제' : `${Math.floor(s / 86400)}일 전`;
+}

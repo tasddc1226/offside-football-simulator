@@ -6,6 +6,7 @@
   import { getFirsts } from '../../api/client.js';
   import { localCareerNames } from '../../game/season.js';
   import { goHome } from '../nav.js';
+  import BackBar from '../BackBar.svelte';
   import { appState } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
   import { kstParts } from '../boardText.js';
@@ -41,11 +42,7 @@
 {/snippet}
 
 <div class="wrap">
-  <Topbar>
-    {#snippet right()}
-      <button class="icon-btn" data-act="home" onclick={goHome}>← 홈</button>
-    {/snippet}
-  </Topbar>
+  <Topbar />
   <section class="card" data-firsts>
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <div>
@@ -115,4 +112,5 @@
       </ul>
     {/if}
   </section>
+  <BackBar act="home" fallback={goHome} />
 </div>

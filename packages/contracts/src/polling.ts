@@ -14,3 +14,10 @@ export const LIVE_SOCKET_PATH = '/v1/live/ws';
 export const LIVE_PING_SEC = 45;
 export const LIVE_PING = 'ping';
 export const LIVE_PONG = 'pong';
+
+/** T-10-122 홈 전광판(GET /v1/ticker) 폴링 간격 — 서버 엣지 캐시 TTL과 같다. 이적·최초 기록은 분 단위로 몰려
+ * 오지 않으니 라이브 현황보다 느슨하게 묻는다. */
+export const TICKER_POLL_SEC = 180;
+/** 전광판에 담는 이적 소식·최초 기록 수 상한. */
+export const TICKER_TRANSFERS_MAX = 12;
+export const TICKER_FIRSTS_MAX = 6;

@@ -184,10 +184,11 @@ test('구단주 내 선수: 계정 기록(서버) + 이 기기 이름 덮어쓰�
   await expect(page.locator('[data-my-player="0"]')).toContainText('이기기선수');
   await expect(page.locator('[data-my-player="1"]')).toContainText('익명의 골키퍼');
   await expect(page.locator('[data-my-players]')).not.toContainText('다른계정선수');
-  // 상세에서 돌아오면 구단주 화면이다.
+  // 상세에서 돌아오면 구단주 화면이다. 내 선수 상세엔 '이전으로' 버튼이 없고 뒤로 가기로 돌아간다(T-10-126).
   await page.locator('[data-my-player="0"]').click();
-  await expect(page.locator('[data-act="hof-back"]')).toHaveText('← 이전으로');
-  await page.locator('[data-act="hof-back"]').click();
+  await expect(page.locator('.film-open h1')).toBeVisible();
+  await expect(page.locator('[data-act="hof-back"]')).toHaveCount(0);
+  await page.goBack();
   await expect(page.locator('h1')).toHaveText('구단주');
 });
 
@@ -203,7 +204,8 @@ test('이 기기에 없는 계정의 내 선수도 공유 버튼이 뜬다', asy
   await page.locator(`[data-hof-id="${ID}"]`).click();
   await expect(page.locator('[data-act="share-career"]')).toBeInViewport();
 
-  await page.locator('[data-act="hof-back"]').click();
+  // 공유할 수 있는 선수는 아래 바가 홈으로 · 공유하기(T-10-128) — 뒤로 가기로 돌아간다.
+  await page.goBack();
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-act="share-career"]')).toBeInViewport();

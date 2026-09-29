@@ -11,6 +11,7 @@
   import { localCareerNames } from '../../game/season.js';
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
+  import BackBar from '../BackBar.svelte';
   import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import { num as n, recordText } from './teamText.js';
@@ -65,7 +66,6 @@
   {#if team}
     <section class="card stack tp-head" style="gap:10px" data-team-profile={team.id}>
       <div class="tp-top">
-        <button class="icon-btn" onclick={onback} data-act="team-profile-back">← 랭킹</button>
         <span class="eyebrow">Team profile{team.rank ? ` · #${team.rank}` : ''}</span>
       </div>
       <div class="tp-title">
@@ -113,6 +113,8 @@
     </section>
   {/if}
 </LoadState>
+<!-- T-10-130 '← 랭킹'은 화면 아래(탭바 위)로. 뒤로 가기로도 랭킹에 돌아간다. -->
+<BackBar act="team-profile-back" fallback={onback} atBottom={false} />
 
 <style>
   .tp-top {

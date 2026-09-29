@@ -8,6 +8,7 @@
   import { zoneWidth } from '../game/minigame.js';
   import { dexSeen } from './dex.js';
   import { goHome } from './nav.js';
+  import BackBar from './BackBar.svelte';
   import Topbar from './Topbar.svelte';
 
   const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -55,11 +56,7 @@
 </script>
 
 <div class="wrap">
-  <Topbar>
-    {#snippet right()}
-      <button class="icon-btn" data-act="home" onclick={goHome}>← 홈</button>
-    {/snippet}
-  </Topbar>
+  <Topbar />
   <section class="card stack" style="gap:14px">
     <div>
       <div class="eyebrow">Odds</div>
@@ -135,4 +132,5 @@
       <p class="muted fs-xs" style="margin:0">▲는 값이 클수록 성공 확률이 오르고, ▼는 내려가요. 범위는 가능한 선수 상태 전체에서 나올 수 있는 최저~최고예요.</p>
     {/if}
   </section>
+  <BackBar act="home" fallback={goHome} />
 </div>

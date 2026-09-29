@@ -10,6 +10,8 @@ export const EDGE = {
   firsts: '/v1/firsts',
   retiredNumbers: '/v1/retired-numbers',
   live: '/v1/live',
+  /** T-10-122 홈 전광판(이적·최초 기록). TTL로만 새로 읽는다. */
+  ticker: '/v1/ticker',
   hofDetail: (careerId: string) => `/v1/hof/${careerId}`,
   hofList: (limit: number, page: number, sort: string, season?: number, q?: string) =>
     `/v1/hof?limit=${limit}&page=${page}&sort=${sort}${season ? `&season=${season}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}`,

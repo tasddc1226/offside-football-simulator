@@ -97,6 +97,7 @@ const HOME_REQUESTS = [
   'GET /v1/firsts',
   'GET /v1/hof?limit=3',
   'GET /v1/live',
+  'GET /v1/ticker',
 ];
 
 async function continueGame(page: Page) {

@@ -21,7 +21,8 @@
   };
   const OPEN: Record<(typeof MAIN_SCREENS)[number], () => void> = {
     hof: openHof,
-    board: () => openBoard('notice'),
+    // T-10-113 소식 화면에서 다시 누르면 보고 있던 게시판의 목록으로 돌아간다.
+    board: () => (appState.screen === 'board' ? appState.boardTop++ : openBoard('notice')),
     home: () => (goHome(), window.scrollTo(0, 0)),
     owner: () => go('owner'),
     settings: () => go('settings'),

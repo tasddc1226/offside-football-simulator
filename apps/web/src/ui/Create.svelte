@@ -2,6 +2,7 @@
   // 선수 생성(T-10-022): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
   // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
   import { cubicOut } from 'svelte/easing';
+  import { fly } from 'svelte/transition';
   import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '../game/data.js';
   import type { AttrKey, DetailPos, Pos } from '../game/data.js';
   import { baseline } from '../game/candidates.js';
@@ -18,6 +19,8 @@
   import Topbar from './Topbar.svelte';
   import MiniRadar from './MiniRadar.svelte';
   import NationPicker from './NationPicker.svelte';
+  import { doneOnEnter } from './inputDone.js';
+  import ScoutScan from './ScoutScan.svelte';
 
   const C = appState.C;
   const posKeys = Object.keys(POS) as Pos[];
@@ -73,6 +76,19 @@
     if (C.focus.includes(k)) return `시작 +${d} · 성장 +${growthPct}%`;
     return d < 0 ? `시작 ${d}` : '변화 없음';
   }
+  // T-10-111 후보를 바로 보여 주지 않고 스카우트가 추리는 연출(약 3초)이 끝난 뒤에 뽑는다.
+  let scouting = $state(false);
+  const scoutSteps = $derived([
+    `${nation.ko} 고교 경기 영상 분석`,
+    `${posLabel({ pos: C.pos, dpos })} 후보군 추리기`,
+    `주력 ${C.focus.map((k) => labels[k]).join('·')} 대조`,
+    `체격 ${body.h}cm · ${body.w}kg 비교`,
+    '잠재력 평가 · 후보 3명 확정',
+  ]);
+  function scouted() {
+    rollCandidates();
+    scouting = false;
+  }
   function backToForm() {
     appState.candidates = null;
   }
@@ -96,11 +112,7 @@
 </script>
 
 <div class="wrap has-cta">
-  <Topbar>
-    {#snippet right()}
-      <button class="icon-btn" data-act="home" onclick={step === 'form' ? goHome : backToForm}>{step === 'form' ? '취소' : '← 다시 입력'}</button>
-    {/snippet}
-  </Topbar>
+  <Topbar />
 
   <div>
     <div class="eyebrow">Player Creation · {step === 'form' ? 1 : 2}/2</div>
@@ -132,13 +144,13 @@
         <div class="field" style="flex:1">
           <label for="f-name">이름</label>
           <div class="name-input">
-            <input type="text" id="f-name" maxlength="10" autocomplete="off" bind:value={C.name} />
+            <input type="text" id="f-name" maxlength="10" autocomplete="off" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter bind:value={C.name} />
             <button type="button" class="dice" data-act="random-name" aria-label="이름 랜덤으로 바꾸기" onclick={() => (C.name = randomName())}>🎲</button>
           </div>
         </div>
         <div class="field" style="width:84px">
           <label for="f-num">등번호</label>
-          <input type="number" id="f-num" inputmode="numeric" min="1" max="99" placeholder="1–99" bind:value={C.number} />
+          <input type="number" id="f-num" inputmode="numeric" min="1" max="99" placeholder="1–99" enterkeyhint="done" use:doneOnEnter bind:value={C.number} />
         </div>
       </div>
 
@@ -160,12 +172,12 @@
         <div class="row body-row">
           <label class="body-in" for="f-height">
             <span class="sr-only">키</span>
-            <input type="number" id="f-height" inputmode="numeric" min={L.height.min} max={L.height.max} placeholder={String(BODY_DEFAULT[C.pos].h)} value={C.height ?? BODY_DEFAULT[C.pos].h} oninput={(e) => (C.height = e.currentTarget.value === '' ? null : Math.round(+e.currentTarget.value))} aria-invalid={!!bodyErr} aria-describedby="f-body-note" />
+            <input type="number" id="f-height" inputmode="numeric" min={L.height.min} max={L.height.max} placeholder={String(BODY_DEFAULT[C.pos].h)} value={C.height ?? BODY_DEFAULT[C.pos].h} oninput={(e) => (C.height = e.currentTarget.value === '' ? null : Math.round(+e.currentTarget.value))} enterkeyhint="done" use:doneOnEnter aria-invalid={!!bodyErr} aria-describedby="f-body-note" />
             <span aria-hidden="true">cm</span>
           </label>
           <label class="body-in" for="f-weight">
             <span class="sr-only">몸무게</span>
-            <input type="number" id="f-weight" inputmode="numeric" min={L.weight.min} max={L.weight.max} placeholder={String(BODY_DEFAULT[C.pos].w)} value={C.weight ?? BODY_DEFAULT[C.pos].w} oninput={(e) => (C.weight = e.currentTarget.value === '' ? null : Math.round(+e.currentTarget.value))} aria-invalid={!!bodyErr} aria-describedby="f-body-note" />
+            <input type="number" id="f-weight" inputmode="numeric" min={L.weight.min} max={L.weight.max} placeholder={String(BODY_DEFAULT[C.pos].w)} value={C.weight ?? BODY_DEFAULT[C.pos].w} oninput={(e) => (C.weight = e.currentTarget.value === '' ? null : Math.round(+e.currentTarget.value))} enterkeyhint="done" use:doneOnEnter aria-invalid={!!bodyErr} aria-describedby="f-body-note" />
             <span aria-hidden="true">kg</span>
           </label>
         </div>
@@ -234,12 +246,13 @@
           {/each}
         </div>
       </div>
-      <p class="muted fs-sm">잠재력은 숨겨져 있어요. 스카우트 평가로만 짐작할 수 있어요.</p>
+      <p class="muted fs-sm">잠재력은 숨겨져 있어요. 고3 시즌을 마치면 스카우트의 첫 평가가 나와요.</p>
     </section>
 
     <div class="action-bar at-bottom">
-      <div class="action-bar-inner">
-        <button class="btn btn-primary btn-block" data-act="next-candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={rollCandidates}>
+      <div class="action-bar-inner with-back">
+        <button class="btn" data-act="home" onclick={goHome}>취소</button>
+        <button class="btn btn-primary" data-act="next-candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={() => (scouting = true)}>
           {bodyErr ? '키·몸무게를 확인해 주세요' : focusLeft > 0 ? `주력 능력치를 ${focusLeft}개 더 골라주세요` : '후보 3명 보기 →'}
         </button>
       </div>
@@ -276,7 +289,7 @@
             </span>
           </button>
         {:else}
-          <button class="cand-card" data-cand={i} onclick={() => pick(i)}>
+          <button class="cand-card" data-cand={i} onclick={() => pick(i)} in:fly|global={{ y: 14, duration: dur(280), delay: dur(90 * i) }}>
             <span class="cand-n">?</span>
             <span class="cc-closed">
               <b>후보 {i + 1}</b>
@@ -289,11 +302,13 @@
     </div>
 
     <div class="action-bar at-bottom">
-      <div class="action-bar-inner">
-        <button class="btn btn-primary btn-block" data-act="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
+      <div class="action-bar-inner with-back">
+        <button class="btn" data-act="home" onclick={backToForm}>← 다시 입력</button>
+        <button class="btn btn-primary" data-act="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
           {appState.candidatePick == null ? '후보를 한 명 골라주세요' : `${withRo(`후보 ${appState.candidatePick + 1}`)} 킥오프 →`}
         </button>
       </div>
     </div>
   {/if}
 </div>
+{#if scouting}<ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} />{/if}

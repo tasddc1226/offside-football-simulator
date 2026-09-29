@@ -2,7 +2,7 @@
   // T-10-092 구단주 팀 — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가 채운다) 같은 시즌
   // 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 구단주 화면에서 처음 열 때 불러오는 지연 청크다. 경기 결과는
   // 서버가 정한다(웹은 보여 주기만).
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import {
     DETAIL_LABEL,
     FORMATION_IDS,
@@ -43,16 +43,17 @@
   import { go } from '../nav.js';
   import { POS_LABEL, anonName } from '../../game/pos-label.js';
   import { toast } from '../helpers.js';
+  import { lockScroll } from '../scrollLock.js';
+  import { doneOnEnter } from '../inputDone.js';
   import { startGoogleLogin } from '../login.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
-  import { appState, hofStart } from '../state.svelte.js';
+  import { appState, hofStart, type TeamView } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
+  import BackBar from '../BackBar.svelte';
   import TeamLines from './TeamLines.svelte';
   import TeamLive from './TeamLive.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import { num, recordText, signedNum } from './teamText.js';
-
-  type View = 'team' | 'achievements' | 'opponents' | 'result' | 'history';
 
   let status = $state<LoadStatus>('loading');
   let needLogin = $state(false);
@@ -60,7 +61,6 @@
   let players = $state<TeamPlayer[]>([]);
   let matchesLeft = $state(0);
   let perDay = $state(0);
-  let view = $state<View>('team');
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   let season = $state(0);
   let current = $state<number | null>(null);
@@ -83,6 +83,10 @@
   let result = $state<TeamMatch | null>(null);
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   let live = $state(false);
+  // T-10-130 팀 안의 화면은 appState.teamView — 뒤로 가기로 오간다. 결과는 이 화면에만 있어 다시 들어왔을 때(앞으로 가기)
+  // 없으면 팀을 보여 준다.
+  const view = $derived(appState.teamView === 'result' && !result ? 'team' : appState.teamView);
+  const show = (v: TeamView) => (appState.teamView = v);
   let history = $state<TeamMatch[]>([]);
   let histStatus = $state<LoadStatus>('loading');
   let ach = $state<ClubAchievementsResponse | null>(null);
@@ -166,7 +170,7 @@
   }
   /** 시즌을 바꿔 본다(지난 시즌 팀은 보기만). */
   function pickSeason(id: number) {
-    view = 'team';
+    show('team');
     void load(id);
   }
   /** 기록실 라이브 랭킹에서 팀 프로필을 연다(id 없으면 랭킹 목록). */
@@ -257,8 +261,7 @@
   }
 
   // ───────── 경기 ─────────
-  async function openOpponents() {
-    view = 'opponents';
+  async function loadOpponents() {
     oppStatus = 'loading';
     const r = await fetchOpponents();
     if (!r.ok) {
@@ -287,13 +290,12 @@
       team.record = r.data.record;
       team.rating = r.data.rating;
     }
-    view = 'result';
+    show('result');
     window.scrollTo(0, 0);
   }
 
   // ───────── 시즌 업적 ─────────
-  async function openAchievements(want = season) {
-    view = 'achievements';
+  async function loadAchievements(want = season) {
     achStatus = 'loading';
     const r = await fetchClubAchievements(want);
     if (!r.ok) {
@@ -314,8 +316,7 @@
           ? '달성 완료'
           : '미달성';
 
-  async function openHistory() {
-    view = 'history';
+  async function loadHistory() {
     histStatus = 'loading';
     const r = await fetchTeamMatches(season);
     if (!r.ok) {
@@ -334,10 +335,31 @@
   const OUTCOME_TITLE = { 승: '승리', 무: '무승부', 패: '패배' } as const;
   const pct = (f: number) => `${Math.round(f * 100)}%`;
 
+  // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 $effect가, 이미 그 화면이면 open이 다시 불러온다.
+  const LOAD = {
+    opponents: loadOpponents,
+    achievements: () => loadAchievements(),
+    history: loadHistory,
+  };
+  function open(v: keyof typeof LOAD) {
+    if (appState.teamView === v) void LOAD[v]();
+    else show(v);
+  }
+  $effect(() => {
+    const v = appState.teamView;
+    if (status !== 'ready' || needLogin) return;
+    if (v in LOAD) untrack(() => void LOAD[v as keyof typeof LOAD]());
+  });
+  /** 이전 기록이 없을 때 '← 이전으로'가 갈 곳. */
   function back() {
     if (view === 'team' || view === 'achievements') appState.screen = 'owner';
-    else view = 'team';
+    else show('team');
   }
+  // T-10-117 선수 고르기 시트가 열린 동안 뒤 페이지 스크롤을 잠근다(스크롤 위치는 그대로).
+  $effect(() => {
+    if (picking === null) return;
+    return lockScroll();
+  });
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Escape' && picking !== null) picking = null;
   }
@@ -346,11 +368,7 @@
 <svelte:window onkeydown={onKey} />
 
 <div class="wrap">
-  <Topbar>
-    {#snippet right()}
-      <button class="icon-btn" data-act="team-back" onclick={back}>{view === 'team' || view === 'achievements' ? '← 구단주' : '← 내 팀'}</button>
-    {/snippet}
-  </Topbar>
+  <Topbar />
 
   <LoadState {status} failText="팀을 불러오지 못했어요." retry={load}>
     {#if needLogin}
@@ -362,8 +380,8 @@
       </section>
     {:else if view === 'team' || view === 'achievements'}
       <div class="seg two tm-tabs" role="group" aria-label="내 팀 메뉴">
-        <button class="opt" aria-pressed={view === 'team'} onclick={() => (view = 'team')} data-act="team-tab">팀</button>
-        <button class="opt" aria-pressed={view === 'achievements'} onclick={() => void openAchievements()} data-act="team-achievements">시즌 업적</button>
+        <button class="opt" aria-pressed={view === 'team'} onclick={() => show('team')} data-act="team-tab">팀</button>
+        <button class="opt" aria-pressed={view === 'achievements'} onclick={() => open('achievements')} data-act="team-achievements">시즌 업적</button>
       </div>
       {#if view === 'achievements'}
         <section class="card stack" style="gap:12px" data-club-achievements>
@@ -373,14 +391,14 @@
               <h1>시즌 업적</h1>
             </div>
             {#if ach && ach.seasons.length > 1}
-              <select class="tm-season" aria-label="시즌" value={ach.season} onchange={(e) => void openAchievements(Number(e.currentTarget.value))}>
+              <select class="tm-season" aria-label="시즌" value={ach.season} onchange={(e) => void loadAchievements(Number(e.currentTarget.value))}>
                 {#each ach.seasons as o (o.id)}
                   <option value={o.id}>{o.name}</option>
                 {/each}
               </select>
             {/if}
           </div>
-          <LoadState status={achStatus} failText="업적을 불러오지 못했어요." retry={() => void openAchievements(ach?.season)}>
+          <LoadState status={achStatus} failText="업적을 불러오지 못했어요." retry={() => void loadAchievements(ach?.season)}>
             {#if ach}
               <p class="muted fs-sm">{ach.seasons.find((o) => o.id === ach?.season)?.name ?? ''}에 처음 뛰어 은퇴한 내 선수 {ach.players}명의 기록으로 채워요.</p>
               {#each ach.groups as g (g.id)}
@@ -438,11 +456,11 @@
           <div class="tm-names">
             <label class="field">
               <span class="lbl">팀 이름</span>
-              <input type="text" bind:value={name} minlength={TEAM_NAME_MIN} maxlength={TEAM_NAME_MAX} placeholder="{TEAM_NAME_MIN}~{TEAM_NAME_MAX}자" data-team-name />
+              <input type="text" bind:value={name} minlength={TEAM_NAME_MIN} maxlength={TEAM_NAME_MAX} placeholder="{TEAM_NAME_MIN}~{TEAM_NAME_MAX}자" data-team-name enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
             </label>
             <label class="field">
               <span class="lbl">감독 이름</span>
-              <input type="text" bind:value={manager} minlength={MANAGER_NAME_MIN} maxlength={MANAGER_NAME_MAX} placeholder="{MANAGER_NAME_MIN}~{MANAGER_NAME_MAX}자" data-team-manager />
+              <input type="text" bind:value={manager} minlength={MANAGER_NAME_MIN} maxlength={MANAGER_NAME_MAX} placeholder="{MANAGER_NAME_MIN}~{MANAGER_NAME_MAX}자" data-team-manager enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
             </label>
           </div>
         {:else if team}
@@ -474,13 +492,13 @@
             <button class="btn" onclick={autoFill} disabled={players.length === 0} data-act="team-auto">자동 배치</button>
             <button class="btn btn-primary" onclick={save} disabled={saving || !nameOk || !dirty} data-act="team-save">{team ? '편성 저장' : '팀 만들기'}</button>
           </div>
-          <button class="btn btn-accent btn-block" onclick={openOpponents} disabled={!!playHint} data-act="team-play">경기하기</button>
+          <button class="btn btn-accent btn-block" onclick={() => open('opponents')} disabled={!!playHint} data-act="team-play">경기하기</button>
           {#if playHint}<p class="muted fs-sm">{playHint}</p>{/if}
         {/if}
         <div class="tm-links">
           {#if team}
             <button class="icon-btn" onclick={() => openRanking(team?.id ?? null)} data-act="team-profile">팀 프로필 · 순위</button>
-            <button class="icon-btn" onclick={openHistory} data-act="team-history">최근 경기</button>
+            <button class="icon-btn" onclick={() => open('history')} data-act="team-history">최근 경기</button>
           {/if}
           <button class="icon-btn" onclick={() => openRanking()} data-act="team-ranking">라이브 랭킹</button>
         </div>
@@ -494,7 +512,7 @@
           <p class="muted fs-sm">내 팀 OVR {team?.ovr ?? ovr}과 비슷한 팀이에요 · 오늘 남은 경기 {matchesLeft}/{perDay}</p>
           <p class="muted fs-xs">같은 팀에는 하루 한 번 도전할 수 있어요. 최근 {TEAM_REPEAT_WINDOW_DAYS}일 안에 다시 만난 팀이면 레이팅이 덜 움직여요.</p>
         </div>
-        <LoadState status={oppStatus} failText="상대를 불러오지 못했어요." retry={openOpponents}>
+        <LoadState status={oppStatus} failText="상대를 불러오지 못했어요." retry={loadOpponents}>
           {#each opponents as o (o.teamId)}
             <div class="tm-opp" data-opponent={o.teamId}>
               <div class="tm-opp-info">
@@ -507,7 +525,7 @@
           {:else}
             <p class="muted">아직 겨룰 팀이 없어요. 다른 구단주가 팀을 꾸리면 여기에 나와요.</p>
           {/each}
-          <button class="icon-btn self-start" onclick={openOpponents} disabled={playing}>다른 상대 보기</button>
+          <button class="icon-btn self-start" onclick={() => open('opponents')} disabled={playing}>다른 상대 보기</button>
         </LoadState>
       </section>
     {:else if view === 'result' && result}
@@ -552,9 +570,9 @@
           <p class="fs-sm" data-rating-change>내 팀 레이팅 <b>{signedNum(gain)}</b></p>
         {/if}
         <div class="tm-actions">
-          <button class="btn" onclick={() => (view = 'team')}>내 팀</button>
+          <button class="btn" onclick={() => show('team')}>내 팀</button>
           <button class="btn" onclick={() => (live = true)} data-act="team-replay">중계 다시 보기</button>
-          <button class="btn btn-primary" onclick={openOpponents} disabled={matchesLeft === 0}>다시 경기하기</button>
+          <button class="btn btn-primary" onclick={() => open('opponents')} disabled={matchesLeft === 0}>다시 경기하기</button>
         </div>
       </section>
       {/if}
@@ -564,10 +582,10 @@
           <div class="eyebrow">Matches</div>
           <h1>최근 경기</h1>
         </div>
-        <LoadState status={histStatus} failText="경기 기록을 불러오지 못했어요." retry={openHistory}>
+        <LoadState status={histStatus} failText="경기 기록을 불러오지 못했어요." retry={loadHistory}>
           {#each history as m (m.id)}
             {@const opp = m[m.mine === 'home' ? 'away' : 'home']}
-            <button class="tm-hist" onclick={() => ((result = m), (live = false), (view = 'result'))} data-team-match={m.id}>
+            <button class="tm-hist" onclick={() => ((result = m), (live = false), show('result'))} data-team-match={m.id}>
               <span class="tm-out" data-out={outcome(m)}>{outcome(m)}</span>
               <span class="tm-opp-info">
                 <b>{m[m.mine].goals} : {opp.goals} {opp.name}</b>
@@ -581,6 +599,7 @@
       </section>
     {/if}
   </LoadState>
+  <BackBar act="team-back" fallback={back} />
 </div>
 
 {#if picking !== null}

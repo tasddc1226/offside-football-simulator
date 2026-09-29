@@ -1,7 +1,9 @@
+import { detectInApp } from './inapp.js';
 // T-10-021 '홈 화면에 추가' 안내의 브라우저별 단계. 화면(install.ts)과 떼어 단위 테스트할 수 있게 둔다.
-export type Platform = 'ios-chrome' | 'ios-safari' | 'android' | 'other';
+// T-10-115 'inapp'은 카톡·인스타 같은 앱 안 브라우저 — 홈 화면 추가 메뉴가 없어 단계 대신 외부 브라우저 안내를 보인다.
+export type Platform = 'ios-chrome' | 'ios-safari' | 'android' | 'other' | 'inapp';
 
-export const INSTALL_STEPS: Record<Platform, string[]> = {
+export const INSTALL_STEPS: Record<Exclude<Platform, 'inapp'>, string[]> = {
   'ios-chrome': [
     '주소창 오른쪽의 공유 버튼을 눌러요.',
     "아래 줄 맨 오른쪽의 '더 보기'를 눌러요.",
@@ -25,7 +27,8 @@ export const INSTALL_STEPS: Record<Platform, string[]> = {
   ],
 };
 
-export function detectPlatform(ua: string): Platform {
+export function detectPlatform(ua: string, standalone = false): Platform {
+  if (detectInApp(ua, standalone)) return 'inapp';
   if (/iPhone|iPad|iPod/.test(ua)) return /CriOS/.test(ua) ? 'ios-chrome' : 'ios-safari';
   if (/Android/.test(ua)) return 'android';
   return 'other';

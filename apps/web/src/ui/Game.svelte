@@ -4,7 +4,7 @@
   import { Tween } from 'svelte/motion';
   import { posLabel, LAST_PHASE } from '../game/data.js';
   import { ovr } from '../game/attributes.js';
-  import { leagueOf, roleOf, fmtMoney, potLabel, blockMatches, focusOf, labelOf } from '../game/engine.js';
+  import { leagueOf, roleOf, fmtMoney, potLabel, potScouted, blockMatches, focusOf, labelOf } from '../game/engine.js';
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
   import { advance, nextPending } from './actions.js';
@@ -64,6 +64,13 @@
     ['trophy', '트로피'],
   ];
 
+  // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
+  function switchTab(k: Tab) {
+    if (appState.tab === k) return;
+    appState.tab = k;
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }
+
   function onAdvanceClick() {
     buzz();
     if (busy) nextPending();
@@ -85,7 +92,7 @@
     <div class="foot">
       <span class="pill role-{role}">{role}</span>
       {#if s.injury}<span class="pill" style="background:var(--bad);border-color:var(--bad)">부상 {s.injury}경기</span>{/if}
-      <span class="pill">{focusName}</span><span class="pill">잠재력 {potLabel(s)}</span>
+      <span class="pill">{focusName}</span><span class="pill">잠재력 {potScouted(s) ? potLabel(s) : '평가 전'}</span>
     </div>
   </section>
   <!-- 탭 전환 모션(T-10-003 goal 3): appState.tab을 key로 써서 탭이 바뀔 때만 새로 마운트해
@@ -122,7 +129,7 @@
 <nav class="tabs" aria-label="게임 메뉴">
   <div class="tabs-inner" role="tablist">
     {#each tabs as [k, l] (k)}
-      <button role="tab" data-tab={k} aria-selected={appState.tab === k} onclick={() => (appState.tab = k)}>
+      <button role="tab" data-tab={k} aria-selected={appState.tab === k} onclick={() => switchTab(k)}>
         <TabIcon name={k} />{l}
       </button>
     {/each}

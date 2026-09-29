@@ -7,7 +7,7 @@
   import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
   import { getLive } from '../api/client.js';
   import { onLive } from '../api/liveSocket.js';
-  import { anonName } from './format.js';
+  import { agoKo, anonName } from './format.js';
   import { openPublicLegendById } from './legend.js';
   import { motionOK } from './motion.js';
   import CountUp from './CountUp.svelte';
@@ -72,13 +72,7 @@
     return `${e.club} 시즌 ${e.goals}골 ${e.assists}도움`;
   }
   const tone = (e: LiveEvent) => (e.kind === 'retire' ? 'retire' : e.first ? 'first' : e.honor ? 'honor' : '');
-  function ago(at: string): string {
-    const s = Math.max(0, (now + skew - Date.parse(at)) / 1000);
-    if (s < 60) return '방금';
-    if (s < 3600) return `${Math.floor(s / 60)}분 전`;
-    if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
-    return s < 172800 ? '어제' : `${Math.floor(s / 86400)}일 전`;
-  }
+  const ago = (at: string) => agoKo(now + skew - Date.parse(at));
 
   async function load() {
     const r = await getLive();

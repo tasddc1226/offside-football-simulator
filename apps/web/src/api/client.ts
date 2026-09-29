@@ -1,5 +1,5 @@
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
-import { LIVE_POLL_SEC } from '@offside/contracts/polling';
+import { LIVE_POLL_SEC, TICKER_POLL_SEC } from '@offside/contracts/polling';
 import type {
   Profile as ContractProfile,
   FirstsResponse,
@@ -10,6 +10,7 @@ import type {
   MyCareersResponse,
   RetiredNumberCheckResponse,
   RetiredNumbersResponse,
+  TickerResponse,
 } from '@offside/contracts';
 import { resolveApiBaseUrl } from './base-url.js';
 
@@ -225,4 +226,8 @@ export function getFirsts(): Promise<ApiResult<FirstsResponse>> {
 export function getLive(): Promise<ApiResult<LiveResponse>> {
   // 메모는 폴링 간격보다 조금 짧게 — 다음 폴링이 메모가 아니라 서버(엣지)를 읽는다.
   return cachedGet<LiveResponse>('/v1/live', LIVE_POLL_SEC * 1000 - 5_000);
+}
+/** T-10-122 홈 전광판(로그인 불필요). 서버 엣지 캐시와 같은 간격으로 묻는다. */
+export function getTicker(): Promise<ApiResult<TickerResponse>> {
+  return cachedGet<TickerResponse>('/v1/ticker', TICKER_POLL_SEC * 1000 - 5_000);
 }

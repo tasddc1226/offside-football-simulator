@@ -479,7 +479,7 @@ export function legendScoreBreakdown(s: LegendSource): {
 export function legendScore(s: LegendSource): number {
   return legendScoreBreakdown(s).total;
 }
-const HOF_LOCAL_MAX = 30;
+export const HOF_LOCAL_MAX = 30;
 /** isPublic: 명예의 전당에 이름을 공개한 채로 시작할지(환경설정 '선수 이름 공개', T-10-065). */
 export function retire(s: GameState, isPublic = false): HofEntry {
   s.retired = true;

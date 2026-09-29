@@ -73,11 +73,18 @@ function fakeScore(m: MatchGame): string {
   return `${gf}-${ga}`;
 }
 
-/** 단계 목록을 하나씩 켰다 끄며 진행률 막대를 채운다. */
+/** 시트가 그려지고 한 번 칠해질 때까지 기다린다 — 그 전에 막대 폭을 바꾸면 0%에서 차오르지 않고 바로 뛴다. */
+const painted = () =>
+  new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+/** 건너뛰기로 남은 경기를 한 번에 채울 때 막대가 끝까지 차는 시간. */
+const SKIP_FILL_MS = 240;
+
+/** 단계 목록을 하나씩 켰다 끄며 진행률 막대를 채운다. 막대는 단계마다 그 단계 길이 동안 고르게 차오른다(T-10-123). */
 export async function playSteps(title: string, steps: string[], ms = STEP_MS) {
   sheetState.busy = true;
-  showSheet({ kind: 'steps', title, steps, active: -1, progress: 0 });
+  showSheet({ kind: 'steps', title, steps, active: -1, progress: 0, fill: ms });
   const v = sheetState.view as Extract<SheetView, { kind: 'steps' }>;
+  await painted();
   for (let i = 0; i < steps.length; i++) {
     v.active = i;
     v.progress = (i + 1) / steps.length;
@@ -150,6 +157,7 @@ export function playBlock(
       if (timer) clearTimeout(timer);
       v.skip = null;
       if (skipped) {
+        v.fill = SKIP_FILL_MS;
         while (i < n) playNext();
         v.extras.push(...extras.map((text) => ({ text, done: true })));
       } else {
@@ -182,6 +190,7 @@ export function playBlock(
       title: head.title,
       back: head.back,
       progress: 0,
+      fill: step,
       round: '킥오프',
       wdl: { w: 0, d: 0, l: 0 },
       tally: { apps: 0, g: 0, a: 0, cs: 0, rating: '-' },
@@ -201,7 +210,7 @@ export function playBlock(
       playNext();
       timer = setTimeout(tickOnce, step);
     };
-    void tick().then(tickOnce);
+    void tick().then(painted).then(tickOnce);
   });
 }
 
