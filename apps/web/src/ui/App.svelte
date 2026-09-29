@@ -3,6 +3,8 @@
   import { fly } from 'svelte/transition';
   import { appState } from './state.svelte.js';
   import { dur } from './motion.js';
+  import { enabled, trackPage } from '../analytics/index.js';
+  $effect(() => trackPage(appState.screen));
   import Home from './Home.svelte';
   import Game from './Game.svelte';
   import UpdateBanner from './UpdateBanner.svelte';
@@ -10,6 +12,12 @@
   import MainNav, { hasMainNav } from './MainNav.svelte';
   import { rnAlert } from './retiredNumber.svelte.js';
   import type { Component } from 'svelte';
+
+  // Optional consent UI is loaded only in explicitly configured analytics builds.
+  let AnalyticsConsent = $state<Component<{ settings?: boolean }> | null>(null);
+  $effect(() => {
+    if (enabled() && !AnalyticsConsent) void import('./AnalyticsConsent.svelte').then((m) => (AnalyticsConsent = m.default)).catch(() => {});
+  });
 
   // T-10-096: 선수 생성(국적 목록·체격 입력)은 새 커리어를 누를 때만 쓰니 처음 열 때 불러온다.
   let Create = $state<Component<Record<string, never>> | null>(null);
@@ -85,6 +93,7 @@
      T-10-004: 래퍼를 <main> 랜드마크로 둬 모든 화면 콘텐츠가 랜드마크 안에 들어가게 한다(axe region). -->
 {#key appState.screen}
   <main in:fly={{ y: 10, duration: dur(180), opacity: 1 }}>
+    {#if AnalyticsConsent && appState.screen !== 'settings'}<AnalyticsConsent />{/if}
     {#if appState.screen === 'home'}
       <Home />
     {:else if appState.screen === 'create'}
