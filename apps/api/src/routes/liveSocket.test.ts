@@ -84,9 +84,14 @@ describe('T-10-072 라이브 소켓 입구', () => {
       (await liveSocket(new Request(`http://api.test${LIVE_SOCKET_PATH}`), env(hub.ns))).status,
     ).toBe(426);
     expect((await liveSocket(upgrade('https://evil.example'), env(hub.ns))).status).toBe(403);
-    expect((await liveSocket(upgrade(), env(hub.ns))).status).toBe(403);
     expect((await liveSocket(upgrade(ORIGIN), env())).status).toBe(503);
     expect(hub.forwarded).toHaveLength(0);
+  });
+
+  it('T-11-003 네이티브 앱(Origin 없음·API 자기 주소)은 받는다', async () => {
+    const hub = fakeHub();
+    expect(await (await liveSocket(upgrade(), env(hub.ns))).text()).toBe('hub');
+    expect(await (await liveSocket(upgrade('http://api.test'), env(hub.ns))).text()).toBe('hub');
   });
 
   it('운영에선 들어온 API 호스트와 짝인 웹만 받는다(originGuard와 같은 규칙)', async () => {

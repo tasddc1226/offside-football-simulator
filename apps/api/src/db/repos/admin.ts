@@ -44,7 +44,10 @@ export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats,
     db
       .select({
         total: count('total'),
-        linked: sumOf(sql`${profiles.googleSub} is not null`, 'linked'),
+        linked: sumOf(
+          sql`(${profiles.googleSub} is not null or ${profiles.appleSub} is not null)`,
+          'linked',
+        ),
         new24h: since(profiles.createdAt, t24, 'new24h'),
         new7d: since(profiles.createdAt, t7, 'new7d'),
         active24h: since(profiles.lastSeenAt, t24, 'active24h'),

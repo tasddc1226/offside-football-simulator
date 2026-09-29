@@ -35,6 +35,7 @@ import {
   teamLikes,
   teamMatches,
 } from '../schema.js';
+import { accountLinkedSql } from './profiles.js';
 import type { LineupCareer, PlayerRef } from '../../team/sim.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀)·팀 경기·라이브 랭킹.
@@ -201,16 +202,14 @@ export const liveTeam = (db: Db, teamId: string) =>
     .select({ team: ownerTeams })
     .from(ownerTeams)
     .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-    .where(
-      and(eq(ownerTeams.id, teamId), isNotNull(profiles.googleSub), isNull(profiles.deletedAt)),
-    );
+    .where(and(eq(ownerTeams.id, teamId), accountLinkedSql(), isNull(profiles.deletedAt)));
 
 /** 랭킹·상대에 오르는 팀: 그 시즌 · 선수가 한 명 이상 · 구글 연결이 살아 있는(삭제되지 않은) 구단주. */
 const rankedIn = (season: number) =>
   and(
     eq(ownerTeams.season, season),
     gt(ownerTeams.filled, 0),
-    isNotNull(profiles.googleSub),
+    accountLinkedSql(),
     isNull(profiles.deletedAt),
   );
 

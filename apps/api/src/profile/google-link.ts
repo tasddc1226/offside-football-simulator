@@ -62,18 +62,26 @@ export async function resolveGoogleCallback(
     return { kind: 'linked' };
   }
 
-  // T-10-013: 로그인 전(익명)에 쌓은 커리어는 전환하면 다시 찾을 수 없으니 로그인한 계정으로 옮긴다.
-  const current = await getProfile(db, input.currentProfileId);
-  if (current && isAnonymous(current)) {
-    const count = await moveCareers(db, current.id, target.id);
-    if (count) {
-      await insertAuditLog(db, {
-        kind: 'CAREERS_MERGED',
-        profileId: target.id,
-        payload: { fromProfileId: current.id, count },
-        createdAt: input.now,
-      });
-    }
-  }
+  await adoptAnonymousCareers(db, input.currentProfileId, target.id, input.now);
   return { kind: 'switched', profileId: target.id };
+}
+
+/** T-10-013: 로그인 전(익명)에 쌓은 커리어는 전환하면 다시 찾을 수 없으니 로그인한 계정으로 옮긴다(구글·애플 공용). */
+export async function adoptAnonymousCareers(
+  db: Db,
+  currentProfileId: string,
+  targetId: string,
+  now: string,
+): Promise<void> {
+  const current = await getProfile(db, currentProfileId);
+  if (!current || !isAnonymous(current)) return;
+  const count = await moveCareers(db, current.id, targetId);
+  if (count) {
+    await insertAuditLog(db, {
+      kind: 'CAREERS_MERGED',
+      profileId: targetId,
+      payload: { fromProfileId: current.id, count },
+      createdAt: now,
+    });
+  }
 }

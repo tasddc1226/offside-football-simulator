@@ -45,7 +45,11 @@ function buildProfileResponse(record: ProfileRecord, adminEmails: string | undef
   return {
     id: record.id,
     settings: record.settings,
-    linked: { google: record.googleSub !== null, toss: record.tossAnonKeyHash !== null },
+    linked: {
+      google: record.googleSub !== null,
+      toss: record.tossAnonKeyHash !== null,
+      apple: record.appleSub !== null,
+    },
     recoveryCodeIssuedAt: record.recoveryCodeIssuedAt,
     createdAt: record.createdAt,
     googleEmailMasked: maskEmail(record.email),

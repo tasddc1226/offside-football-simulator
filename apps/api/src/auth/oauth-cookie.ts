@@ -8,22 +8,27 @@ export const OAUTH_COOKIE_PATH = '/v1/auth/google';
 const OAUTH_COOKIE_MAX_AGE_SECONDS = 600;
 const DELIMITER = '.';
 
-/** `state`·`codeVerifier`는 둘 다 base64url이라 `.`을 구분자로 써도 안전하다. */
+/** `state`·`codeVerifier`·앱 티켓은 모두 base64url이라 `.`을 구분자로 써도 안전하다. 앱 로그인(T-11-003)이면 넷째 칸에 티켓. */
 export function encodeOauthCookieValue(
   state: string,
   codeVerifier: string,
   sessionId: string,
+  ticket?: string,
 ): string {
-  return `${state}${DELIMITER}${codeVerifier}${DELIMITER}${sessionId}`;
+  const parts = [state, codeVerifier, sessionId];
+  if (ticket !== undefined) parts.push(ticket);
+  return parts.join(DELIMITER);
 }
 
 export function decodeOauthCookieValue(
   value: string,
-): { state: string; codeVerifier: string; sessionId: string } | null {
+): { state: string; codeVerifier: string; sessionId: string; ticket?: string } | null {
   const parts = value.split(DELIMITER);
-  if (parts.length !== 3 || parts.some((part) => part.length === 0)) return null;
-  const [state, codeVerifier, sessionId] = parts as [string, string, string];
-  return { state, codeVerifier, sessionId };
+  if (parts.length < 3 || parts.length > 4 || parts.some((part) => part.length === 0)) return null;
+  const [state, codeVerifier, sessionId, ticket] = parts as [string, string, string, string?];
+  return ticket === undefined
+    ? { state, codeVerifier, sessionId }
+    : { state, codeVerifier, sessionId, ticket };
 }
 
 /** 로컬(http)에서는 Secure를 뺀다 — 그 외 환경은 항상 Secure다. */
