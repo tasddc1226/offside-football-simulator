@@ -100,7 +100,11 @@ function teamFrom(body: {
 /** 게임 화면처럼 moderate까지 접근성 위반 0(T-10-004). */
 async function expectNoA11yViolations(page: Page) {
   const { violations } = await new AxeBuilder({ page }).analyze();
-  expect(violations.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
+  expect(
+    violations.map(
+      (v) => `${v.id} (${v.impact}) ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`,
+    ),
+  ).toEqual([]);
 }
 
 async function stubOwner(page: Page, google: boolean) {
@@ -167,6 +171,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
               formation: '4-3-3',
               ovr: 56,
               goals: 2,
+              ratingChange: 16,
             },
             away: {
               teamId: 'tem_00000000-0000-4000-8000-000000000002',
@@ -175,6 +180,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
               formation: '4-4-2',
               ovr: 55,
               goals: 1,
+              ratingChange: -8,
             },
             events: [
               {
@@ -268,12 +274,23 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(page.locator('[data-opponent]')).toContainText('라이벌 FC');
   await page.locator('[data-act="team-challenge"]').click();
   expect(played).toEqual({ opponentTeamId: 'tem_00000000-0000-4000-8000-000000000002' });
+  // T-10-097 결과 전에 문자중계가 먼저 흐른다 — 킥오프 줄로 시작하고, 건너뛰면 결과 화면.
+  const live = page.locator('[data-team-live]');
+  await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
+  await expect(live.locator('[data-live-score]')).toContainText('0');
+  await expectNoA11yViolations(page);
+  await live.locator('[data-act="live-skip"]').click();
+  await expect(live).toHaveCount(0);
   const result = page.locator('[data-team-result]');
   await expect(result.locator('h1')).toHaveText('승리');
   await expect(result.locator('.tm-goals')).toContainText('2:1');
   await expect(result).toContainText('익명의 공격수 No.7');
   await expect(result).toContainText('1승 0무 0패');
+  await expect(result.locator('[data-rating-change]')).toContainText('내 팀 레이팅 +16');
   await expectNoA11yViolations(page);
+  await result.locator('[data-act="team-replay"]').click();
+  await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
+  await live.locator('[data-act="live-skip"]').click();
   await result.getByRole('button', { name: '내 팀' }).click();
   await expect(page.locator('[data-team-record]')).toContainText('레이팅 1,016');
 });

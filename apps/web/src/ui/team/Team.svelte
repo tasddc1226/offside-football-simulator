@@ -12,6 +12,7 @@
     MANAGER_NAME_MIN,
     TEAM_NAME_MAX,
     TEAM_NAME_MIN,
+    TEAM_REPEAT_WINDOW_DAYS,
     YOUTH_NAME,
     YOUTH_OVR,
     lineStrength,
@@ -47,8 +48,9 @@
   import { appState, hofStart } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
   import TeamLines from './TeamLines.svelte';
+  import TeamLive from './TeamLive.svelte';
   import TeamPitch from './TeamPitch.svelte';
-  import { num, recordText } from './teamText.js';
+  import { num, recordText, signedNum } from './teamText.js';
 
   type View = 'team' | 'achievements' | 'opponents' | 'result' | 'history';
 
@@ -79,6 +81,8 @@
   let oppStatus = $state<LoadStatus>('loading');
   let playing = $state(false);
   let result = $state<TeamMatch | null>(null);
+  /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
+  let live = $state(false);
   let history = $state<TeamMatch[]>([]);
   let histStatus = $state<LoadStatus>('loading');
   let ach = $state<ClubAchievementsResponse | null>(null);
@@ -272,9 +276,12 @@
     playing = false;
     if (!r.ok) {
       if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') matchesLeft = 0;
+      if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT')
+        opponents = opponents.filter((x) => x.teamId !== o.teamId);
       return toast(r.error.message);
     }
     result = r.data.match;
+    live = true;
     matchesLeft = r.data.matchesLeft;
     if (team) {
       team.record = r.data.record;
@@ -485,6 +492,7 @@
           <div class="eyebrow">Match</div>
           <h1>상대 고르기</h1>
           <p class="muted fs-sm">내 팀 OVR {team?.ovr ?? ovr}과 비슷한 팀이에요 · 오늘 남은 경기 {matchesLeft}/{perDay}</p>
+          <p class="muted fs-xs">같은 팀에는 하루 한 번 도전할 수 있어요. 최근 {TEAM_REPEAT_WINDOW_DAYS}일 안에 다시 만난 팀이면 레이팅이 덜 움직여요.</p>
         </div>
         <LoadState status={oppStatus} failText="상대를 불러오지 못했어요." retry={openOpponents}>
           {#each opponents as o (o.teamId)}
@@ -504,6 +512,12 @@
       </section>
     {:else if view === 'result' && result}
       {@const m = result}
+      {@const gain = m[m.mine].ratingChange}
+      {#if live}
+        {#key m.id}
+          <TeamLive match={m} name={eventName} onend={() => ((live = false), window.scrollTo(0, 0))} />
+        {/key}
+      {:else}
       <section class="card stack tm-result" style="gap:14px" data-team-result>
         <div>
           <div class="eyebrow">Full time</div>
@@ -534,11 +548,16 @@
           <p class="muted">골 없이 비겼어요.</p>
         {/if}
         <p class="muted fs-sm">{kstMonthDayTime(m.createdAt)}{team && m.mine === 'home' ? ` · 내 팀 ${recordText(team.record)}` : ''}</p>
+        {#if gain != null}
+          <p class="fs-sm" data-rating-change>내 팀 레이팅 <b>{signedNum(gain)}</b></p>
+        {/if}
         <div class="tm-actions">
           <button class="btn" onclick={() => (view = 'team')}>내 팀</button>
+          <button class="btn" onclick={() => (live = true)} data-act="team-replay">중계 다시 보기</button>
           <button class="btn btn-primary" onclick={openOpponents} disabled={matchesLeft === 0}>다시 경기하기</button>
         </div>
       </section>
+      {/if}
     {:else if view === 'history'}
       <section class="card stack" style="gap:12px">
         <div>
@@ -548,7 +567,7 @@
         <LoadState status={histStatus} failText="경기 기록을 불러오지 못했어요." retry={openHistory}>
           {#each history as m (m.id)}
             {@const opp = m[m.mine === 'home' ? 'away' : 'home']}
-            <button class="tm-hist" onclick={() => ((result = m), (view = 'result'))} data-team-match={m.id}>
+            <button class="tm-hist" onclick={() => ((result = m), (live = false), (view = 'result'))} data-team-match={m.id}>
               <span class="tm-out" data-out={outcome(m)}>{outcome(m)}</span>
               <span class="tm-opp-info">
                 <b>{m[m.mine].goals} : {opp.goals} {opp.name}</b>

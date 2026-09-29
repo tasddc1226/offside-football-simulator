@@ -21,13 +21,41 @@ export const TEAM_RATING_K = 32;
 /** 라이브 랭킹(팀 랭킹) 한 페이지의 팀 수. */
 export const TEAM_RANK_PER_PAGE = 20;
 
+// T-10-095 공정한 팀 경쟁 — 한 팀만 골라 되풀이해 이기며 레이팅을 쌓지 못하게 한다. 같은 상대에게는 한국 시각 하루에
+// 한 번만 건다(서버가 상대 후보에서 빼고, 다시 걸면 거절한다).
+/** 같은 두 팀이 이 기간(일) 안에 다시 만나면 레이팅 변화를 줄인다(누가 걸었든 센다). */
+export const TEAM_REPEAT_WINDOW_DAYS = 7;
+/** 다시 만날 때마다 레이팅 변화에 곱하는 값과 그 하한 — 1번째 재대결 ×0.5, 2번째부터 ×0.25. */
+export const TEAM_REPEAT_FACTOR = 0.5;
+export const TEAM_REPEAT_FLOOR = 0.25;
 /**
- * 경기 한 판의 레이팅 변화(home 쪽, away는 부호만 반대). score = home 결과(승 1 · 무 0.5 · 패 0). 강한 팀이 약한 팀을
- * 이기면 조금, 약한 팀이 이기면 많이 오른다.
+ * 경기를 건 쪽(홈)의 이점을 레이팅 점수로 — 같은 전력이면 홈 기대 점수가 약 0.528(경기 시뮬레이션 2만 판)이라 기대 승률에
+ * 이만큼 얹는다. 없으면 건 쪽이 기대보다 자주 이겨 경기를 많이 거는 팀의 레이팅이 부푼다.
  */
-export function ratingDelta(home: number, away: number, score: 0 | 0.5 | 1): number {
-  const expected = 1 / (1 + 10 ** ((away - home) / 400));
-  return Math.round(TEAM_RATING_K * (score - expected));
+export const TEAM_HOME_ADV_RATING = 20;
+
+/** 최근 TEAM_REPEAT_WINDOW_DAYS일 동안 두 팀이 이미 치른 경기 수 → 레이팅 변화 배율. */
+export const repeatFactor = (meetings: number): number =>
+  Math.max(TEAM_REPEAT_FLOOR, TEAM_REPEAT_FACTOR ** meetings);
+
+/** 한 팀 쪽 경기 결과(승 1 · 무 0.5 · 패 0). */
+export const matchScore = (goalsFor: number, goalsAgainst: number): 0 | 0.5 | 1 =>
+  goalsFor > goalsAgainst ? 1 : goalsFor < goalsAgainst ? 0 : 0.5;
+
+/**
+ * 경기 한 판의 레이팅 변화(away는 부호만 반대라 두 팀 합은 그대로). score = home(경기를 건 팀) 결과(승 1 · 무 0.5 · 패 0).
+ * 강한 팀이 약한 팀을 이기면 조금, 약한 팀이 이기면 많이 오른다. 기대 승률에는 홈 이점(TEAM_HOME_ADV_RATING)을 넣고,
+ * 최근에 만난 상대면 repeatFactor만큼 줄인다.
+ */
+export function ratingChange(
+  home: number,
+  away: number,
+  score: 0 | 0.5 | 1,
+  meetings = 0,
+): { home: number; away: number } {
+  const expected = 1 / (1 + 10 ** ((away - home - TEAM_HOME_ADV_RATING) / 400));
+  const delta = Math.round(TEAM_RATING_K * (score - expected) * repeatFactor(meetings));
+  return { home: delta, away: -delta };
 }
 /** 빈 자리를 채우는 유스 선수의 OVR. */
 export const YOUTH_OVR = 50;

@@ -12,7 +12,13 @@ import {
   type TeamOpponent,
 } from '@offside/contracts';
 import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
-import { TEAM_MATCHES_PER_DAY, ratingDelta, type FormationId } from '@offside/contracts/owner-team';
+import {
+  TEAM_MATCHES_PER_DAY,
+  TEAM_REPEAT_WINDOW_DAYS,
+  matchScore,
+  ratingChange,
+  type FormationId,
+} from '@offside/contracts/owner-team';
 import { detailPosInSeason } from '@offside/contracts/positions';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
@@ -22,6 +28,7 @@ import { kstDays } from '../db/repos/admin.js';
 import { runBatch } from '../db/repos/batch.js';
 import {
   careersByIds,
+  challengedSince,
   countMatchesSince,
   eligibleMap,
   listEligibleCareers,
@@ -29,6 +36,7 @@ import {
   listOpponentCandidates,
   listRecentMatches,
   liveTeam,
+  meetingsSince,
   myTeamIn,
   peakOf,
   publicNamesOf,
@@ -121,6 +129,8 @@ function checkName(value: string, what: string) {
 
 /** 오늘(한국 시각 자정부터)의 시작 UTC ISO. */
 const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
+/** 재대결 감쇠를 세는 기간의 시작(오늘 포함 TEAM_REPEAT_WINDOW_DAYS일, 한국 시각 자정 기준). */
+const repeatWindowStart = (now: string) => kstDays(new Date(now), TEAM_REPEAT_WINDOW_DAYS).startIso;
 
 function toOwnerTeam(row: OwnerTeamRow, lineup: LineupSlot[]): OwnerTeam {
   return {
@@ -153,8 +163,8 @@ function toMatch(
   const mine = row.homeTeamId === myTeamId ? 'home' : 'away';
   return {
     id: row.id,
-    home: { ...d.home, goals: row.homeGoals },
-    away: { ...d.away, goals: row.awayGoals },
+    home: { ...d.home, goals: row.homeGoals, ratingChange: d.home.ratingChange ?? null },
+    away: { ...d.away, goals: row.awayGoals, ratingChange: d.away.ratingChange ?? null },
     events: d.events.map((e) => ({
       minute: e.minute,
       side: e.side,
@@ -282,10 +292,17 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/owner-team/opponents', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const season = currentSeasonOrThrow(nowIso());
+    const now = nowIso();
+    const season = currentSeasonOrThrow(now);
     const [mine] = await myTeamIn(db, me.id, season);
     if (!mine) throw teamRequired();
-    const candidates = await listOpponentCandidates(db, me.id, season, mine.ovr);
+    const candidates = await listOpponentCandidates(
+      db,
+      me.id,
+      season,
+      mine.ovr,
+      kstTodayStart(now),
+    );
     // 가까운 팀 중에서 무작위로(매번 같은 상대만 나오지 않게).
     for (let i = candidates.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -314,13 +331,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const input = readBody(c, PlayTeamMatchBodySchema);
     const now = nowIso();
     const season = currentSeasonOrThrow(now);
-    const [[mine], [played], [opp]] = await db.batch([
+    const [[mine], challenged, [opp]] = await db.batch([
       myTeamIn(db, me.id, season),
-      countMatchesSince(db, me.id, kstTodayStart(now)),
+      challengedSince(db, me.id, kstTodayStart(now)),
       liveTeam(db, input.opponentTeamId),
     ]);
     if (!mine) throw teamRequired();
-    const usedToday = Number(played?.n ?? 0);
+    const usedToday = challenged.length;
     if (usedToday >= TEAM_MATCHES_PER_DAY) {
       throw new AppError({
         code: 'RATE_LIMITED',
@@ -329,11 +346,22 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       });
     }
     if (!opp || opp.team.profileId === me.id || opp.team.season !== season) throw teamNotFound();
+    // T-10-095 같은 상대에게는 하루 한 번만 건다(받은 경기는 세지 않는다 — 받은 쪽은 되갚을 수 있다).
+    if (challenged.some((m) => m.teamId === opp.team.id)) {
+      throw new AppError({
+        code: 'RATE_LIMITED',
+        message: '이 팀과는 오늘 이미 겨뤘어요. 한국 시각 자정에 다시 도전할 수 있어요.',
+        details: { reason: 'TEAM_OPPONENT_DAILY_LIMIT' },
+      });
+    }
 
     const mySlots = slotIdsOf(mine);
     const oppSlots = slotIdsOf(opp.team);
-    const rows = await careersByIds(db, [
-      ...new Set([...mySlots, ...oppSlots].filter((x): x is string => x !== null)),
+    const [rows, [met]] = await Promise.all([
+      careersByIds(db, [
+        ...new Set([...mySlots, ...oppSlots].filter((x): x is string => x !== null)),
+      ]),
+      meetingsSince(db, mine.id, opp.team.id, repeatWindowStart(now)),
     ]);
     const home = buildLineup(
       mine.formation as FormationId,
@@ -357,22 +385,22 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
 
     const id = newId('mat');
     const result = simulateMatch(id, home, away);
-    const score =
-      result.homeGoals > result.awayGoals ? 1 : result.homeGoals < result.awayGoals ? 0 : 0.5;
-    const delta = ratingDelta(mine.rating, opp.team.rating, score);
+    const score = matchScore(result.homeGoals, result.awayGoals);
+    // 기대 승률에 홈 이점을 넣고, 최근 TEAM_REPEAT_WINDOW_DAYS일 안에 이미 만난 횟수만큼 변화를 줄인다.
+    const delta = ratingChange(mine.rating, opp.team.rating, score, Number(met?.n ?? 0));
     const homeSide = {
       teamId: mine.id,
       filled: filledCount(home),
       ovr: lineupOvr(home),
       goals: result.homeGoals,
-      rating: delta,
+      rating: delta.home,
     };
     const awaySide = {
       teamId: opp.team.id,
       filled: filledCount(away),
       ovr: lineupOvr(away),
       goals: result.awayGoals,
-      rating: -delta,
+      rating: delta.away,
     };
     const detail: MatchDetail = {
       home: {
@@ -381,6 +409,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         owner: mine.manager,
         formation: mine.formation as FormationId,
         ovr: homeSide.ovr,
+        ratingChange: delta.home,
       },
       away: {
         teamId: opp.team.id,
@@ -388,6 +417,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         owner: opp.team.manager,
         formation: opp.team.formation as FormationId,
         ovr: awaySide.ovr,
+        ratingChange: delta.away,
       },
       events: result.events.map((e) => ({
         minute: e.minute,
@@ -426,7 +456,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           d: mine.draws + (score === 0.5 ? 1 : 0),
           l: mine.losses + (score === 0 ? 1 : 0),
         },
-        rating: mine.rating + delta,
+        rating: mine.rating + delta.home,
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - usedToday - 1),
       },
       201,
