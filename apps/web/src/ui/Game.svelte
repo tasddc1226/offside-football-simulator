@@ -2,7 +2,7 @@
   // ui.ts renderGame() 포트 (207~222줄)
   import { fly } from 'svelte/transition';
   import { Tween } from 'svelte/motion';
-  import { POS, LAST_PHASE } from '../game/data.js';
+  import { posLabel, LAST_PHASE } from '../game/data.js';
   import { ovr } from '../game/attributes.js';
   import { leagueOf, roleOf, fmtMoney, potLabel, blockMatches, focusOf, labelOf } from '../game/engine.js';
   import { appState, type Tab } from './state.svelte.js';
@@ -65,7 +65,7 @@
   <section class="player">
     <div class="chalk"></div>
     <div>
-      <div class="shirt">No.{s.number} · {POS[s.pos].label}</div>
+      <div class="shirt">No.{s.number} · {posLabel(s)}</div>
       {#if title}<button class="card-title r{title.rarity}" data-act="titles" aria-label="대표 칭호 {title.name}, 칭호 도감 열기" onclick={openTitles}>{title.name}</button>{/if}
       <h1>{s.name}</h1>
       <div class="meta">{s.age}세 · <ClubBadge club={s.club} size={16} /> {s.club.name}<br />{L.name}{contract ? ` · ${contract}` : ''}</div>

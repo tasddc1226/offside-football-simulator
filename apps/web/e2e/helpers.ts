@@ -60,6 +60,9 @@ export async function clearPendingEvent(page: Page): Promise<void> {
   await expect(resume).toContainText('이벤트 확인');
   await resume.click();
   await page.locator('.choice').first().click();
-  await page.locator('#sheet [data-sheet]').first().click();
+  // T-10-089: 미니게임 선택지면 장면(버튼)을 한 번 탭해야 결과 시트가 뜬다.
+  const tap = page.locator('#sheet [data-mg-tap]');
+  if (await tap.isVisible()) await tap.click();
+  await page.locator('#sheet [data-sheet]:not([data-mg-tap])').first().click();
   await expect(page.locator('#sheet')).toBeHidden();
 }

@@ -225,11 +225,14 @@ test('소식: 닉네임을 정하면 바로 그 이름으로 댓글을 쓴다', 
   ).toEqual([]);
   await gate.getByLabel('댓글 닉네임').fill(' 루키 ');
   await gate.locator('[data-act="save-nickname"]').click();
-  expect(sent.at(-1)).toEqual({
-    method: 'PUT',
-    url: '/v1/profile/nickname',
-    body: { nickname: ' 루키 ' },
-  });
+  // 클릭 직후엔 요청이 아직 목에 닿지 않았을 수 있다 — 도착할 때까지 기다린다.
+  await expect
+    .poll(() => sent.at(-1))
+    .toEqual({
+      method: 'PUT',
+      url: '/v1/profile/nickname',
+      body: { nickname: ' 루키 ' },
+    });
   await expect(page.locator('.board-comments form')).toContainText('루키');
   await page.getByLabel('댓글 내용').fill('반가워요');
   await page.locator('[data-act="send-comment"]').click();

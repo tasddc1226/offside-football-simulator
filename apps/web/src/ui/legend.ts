@@ -13,6 +13,7 @@ import { anonName, totals } from './format.js';
 import { mainTitle } from '../game/titles.js';
 import { potReveal } from '../game/stats.js';
 import { SHARE_PATH } from '../share-path.js';
+import { rnOf } from './retiredNumber.svelte.js';
 
 export function viewFromEntry(h: HofEntry): LegendView {
   return {
@@ -36,6 +37,7 @@ export function viewFromEntry(h: HofEntry): LegendView {
     own: h,
     shareId: ownShareId(h),
     title: h.title ?? null,
+    rn: rnOf(h.id, h.rn),
   };
 }
 
@@ -69,6 +71,7 @@ export function viewFromGame(s: GameState): LegendView {
     shareId: ownShareId(own),
     title: mainTitle(s)?.id ?? null,
     pot: potReveal(s),
+    rn: rnOf(s.cid, own?.rn),
   };
 }
 
@@ -111,6 +114,7 @@ function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
     own: null,
     shareId: null,
     title: e.title ?? null,
+    rn: e.retiredNumber ? { kind: 'granted', ...e.retiredNumber } : null,
   };
 }
 

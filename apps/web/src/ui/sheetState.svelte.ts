@@ -7,6 +7,8 @@ import { clamp, ri } from '../game/rng.js';
 import { clubsIn } from '../game/engine.js';
 import type { BlockResult, MatchGame } from '../game/match.js';
 import type { GameState } from '../game/types.js';
+import type { MgKind } from '../game/minigame.js';
+import type { DragPoint, ShotResult } from '../game/dragShot.js';
 import { motionOK } from './motion.js';
 import type { SheetView, TickerRow } from './sheets/types.js';
 
@@ -202,6 +204,85 @@ export function playBlock(
     void tick().then(tickOnce);
   });
 }
+
+type SceneKind = 'minigame' | 'dragShot';
+/**
+ * T-10-089 입력 한 번을 받는 장면(미니게임)을 띄운다. 입력이 오면 judge가 판정·저장을 끝내고 뷰에 결과를 적는다.
+ * 결과 장면을 ms 동안 보여 준 뒤 judge의 결과를 돌려준다. 두 번째 입력(제한 시간과 탭이 겹칠 때)은 버린다.
+ */
+function playScene<K extends SceneKind, I, R>(
+  view: (onInput: (x: I) => void) => Extract<SheetView, { kind: K }>,
+  judge: (x: I, v: Extract<SheetView, { kind: K }>) => R,
+  ms: number,
+): Promise<R> {
+  return new Promise((resolve) => {
+    sheetState.busy = true;
+    let done = false;
+    showSheet(
+      view((x) => {
+        if (done) return;
+        done = true;
+        const r = judge(x, sheetState.view as Extract<SheetView, { kind: K }>);
+        void wait(ms).then(() => {
+          sheetState.busy = false;
+          resolve(r);
+        });
+      }),
+    );
+  });
+}
+
+/**
+ * T-10-089 원터치 미니게임. 초록 구간(넓이 w)을 무작위 자리에 두고 탭을 기다린다. 탭하면 settle(바늘 위치,
+ * 구간 가운데)로 판정·저장을 끝낸 뒤, 결과 장면(공이 날아가는 연출)을 보여 주고 settle의 결과를 돌려준다.
+ * 구간 자리는 화면 연출이라 게임 RNG가 아니라 Math.random을 쓴다(게임 RNG 흐름을 바꾸지 않는다).
+ */
+export async function playMinigame<R extends { ok: boolean }>(
+  label: string,
+  mg: MgKind,
+  w: number,
+  side: -1 | 0 | null,
+  settle: (x: number | null, center: number) => R,
+): Promise<R> {
+  // 장면 컴포넌트는 첫 화면 번들 밖이다 — 띄우기 전에 불러 둬야 바늘·제한 시간이 늦게 시작하지 않는다.
+  // 불러오는 동안 선택지를 다시 누르지 못하게 먼저 막는다.
+  sheetState.busy = true;
+  await import('./sheets/Minigame.svelte');
+  const center = w / 2 + Math.random() * (1 - w);
+  return playScene<'minigame', number | null, R>(
+    (onTap) => ({ kind: 'minigame', label, mg, center, w, side, ok: null, onTap }),
+    (x, v) => {
+      const r = settle(x, center);
+      v.ok = r.ok;
+      return r;
+    },
+    MG_SCENE_MS,
+  );
+}
+/**
+ * T-10-089 드래그 슛(프로토타입). 손을 떼면 경로로 슛을 판정(evalShot)하고 settle에 넘긴 뒤 결과 장면을 보여 준다.
+ * 흩어짐·키퍼 방향은 화면 연출용 Math.random이다. 아직 이벤트에 연결하지 않아 판정 코드는 첫 화면 번들 밖에서 부른다.
+ */
+export async function playDragShot<R extends { ok: boolean }>(
+  label: string,
+  p: number,
+  settle: (shot: ShotResult) => R,
+): Promise<R> {
+  sheetState.busy = true;
+  const { evalShot, lateShot } = await import('../game/dragShot.js');
+  return playScene<'dragShot', DragPoint[] | null, R>(
+    (onShot) => ({ kind: 'dragShot', label, shot: null, onShot }),
+    (path, v) => {
+      const shot = path ? evalShot(path, p) : lateShot();
+      const r = settle(shot);
+      v.shot = shot;
+      return r;
+    },
+    MG_SCENE_MS + 300,
+  );
+}
+/** 탭 뒤 결과 장면(공이 날아가고 멈추는 연출)을 보여 주는 시간. */
+const MG_SCENE_MS = 1300;
 
 /** 성공 확률 막대 위에서 바늘이 흔들리다 실제 판정값(roll)에 멈춘다. */
 export function playJudge(label: string, p: number, roll: number): Promise<void> {

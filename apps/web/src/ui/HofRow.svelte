@@ -10,7 +10,7 @@
   // 누르는 버튼(.hof-row)은 부르는 쪽이 감싼다.
   import TitleTag from './titles/TitleTag.svelte';
   import { titleById } from '../game/titles.js';
-  import { POS } from '../game/data.js';
+  import { posLabel, type DetailPos, type POS } from '../game/data.js';
   import Laurel from './Laurel.svelte';
   import ClubMark from './ClubMark.svelte';
 
@@ -19,6 +19,7 @@
     rank,
     name,
     pos,
+    dpos = null,
     tag = null,
     t,
     titleId,
@@ -27,11 +28,14 @@
     showScore = false,
     club = null,
     clubId = null,
+    rn = null,
   }: {
     /** 0부터. 0~2는 금·은·동 월계관. */
     rank: number;
     name: string;
     pos: keyof typeof POS;
+    /** T-10-091 세부 포지션(시즌 1부터 만든 선수). */
+    dpos?: DetailPos | null | undefined;
     tag?: string | null;
     t: RowStats;
     titleId: string | null | undefined;
@@ -44,6 +48,8 @@
     club?: string | null;
     /** T-10-066 마지막 소속 클럽 id. 옛 기록엔 없어 이름으로 찾는다. */
     clubId?: string | null | undefined;
+    /** T-10-076 영구결번 등번호. */
+    rn?: number | null | undefined;
   } = $props();
   const tt = $derived(titleById(titleId));
 </script>
@@ -54,7 +60,8 @@
   <div class="hof-rank">{rank + 1}</div>
 {/if}
 <div>
-  <ClubMark name={club} id={clubId} size={18} /> <b>{name}</b> <span class="pill">{POS[pos].label}</span>
+  <ClubMark name={club} id={clubId} size={18} /> <b>{name}</b> <span class="pill">{posLabel({ pos, dpos })}</span>
+  {#if rn != null}<span class="pill pill-rn" data-rn-chip title="영구결번 {rn}번">👑 영결 {rn}</span>{/if}
   {#if tag}<span class="pill">{tag}</span>{/if}
   {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
   <div class="muted fs-xs">{t.apps}경기 {t.goals}골 {t.assists}도움 · 트로피 {t.trophies} · 최고 OVR {t.peak}{t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}{showScore ? ` · 레전드 ${t.score}` : ''}</div>

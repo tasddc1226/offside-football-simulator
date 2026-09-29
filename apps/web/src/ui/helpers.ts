@@ -53,6 +53,7 @@ export function seasonBody(
   return {
     career: {
       pos: s.pos,
+      ...(s.dpos && { dpos: s.dpos }),
       foot: s.foot,
       type: s.type,
       trait: s.trait,
@@ -84,6 +85,7 @@ export function uploadRetirement(careerId: string, entry: HofEntry) {
       title: entry.title ?? null,
       publicName: entry.public ? toPublicName(entry.name) : null,
       ...(entry.detail ? { snapshot: entry.detail } : {}),
+      ...(entry.profile ? { profile: entry.profile } : {}),
     }),
   );
 }

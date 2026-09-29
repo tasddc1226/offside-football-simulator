@@ -6,7 +6,7 @@
   import { onMount } from 'svelte';
   import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
   import { getLive } from '../api/client.js';
-  import { connectLive } from '../api/liveSocket.js';
+  import { onLive } from '../api/liveSocket.js';
   import { anonName } from './format.js';
   import { openPublicLegendById } from './legend.js';
   import { motionOK } from './motion.js';
@@ -120,7 +120,7 @@
       if (rolling && !paused && !holding && document.visibilityState === 'visible') shifting = true;
     }, STEP_MS);
     document.addEventListener('visibilitychange', loadIfVisible);
-    const disconnect = connectLive(onPush);
+    const disconnect = onLive((p) => p.type === 'event' && onPush(p.event));
     return () => {
       disconnect();
       clearInterval(poll);

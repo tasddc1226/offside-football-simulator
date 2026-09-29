@@ -1270,7 +1270,7 @@ body:has(.main-nav) .wrap {
   max-width: 480px;
   margin: 0 auto;
 }
-/* 두 칸 버튼 줄: 공유 이미지(이미지 저장 | 바로 공유하기) */
+/* 두 칸 버튼 줄: 은퇴 선수 화면 아래 공유 바(홈으로 | 커리어 공유하기), 공유 이미지(이미지 저장 | 바로 공유하기) */
 .share-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1999,6 +1999,291 @@ th.n {
   color: var(--muted);
   margin-top: -8px;
 }
+/* T-10-089 원터치 미니게임 — 장면·게이지·문구 전체가 버튼 하나다. */
+.mg-stage {
+  display: block;
+  position: relative;
+  width: 100%;
+  padding: 0 0 12px;
+  border: 0;
+  border-radius: var(--r3);
+  overflow: hidden;
+  background: var(--pitch);
+  color: var(--on-pitch);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.mg-stage:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.mg-stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mg-grass {
+  fill: var(--pitch);
+}
+.mg-net line,
+.mg-net path {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 0.8;
+  opacity: 0.28;
+}
+.mg-net.hit {
+  animation: mg-net 0.5s ease-out;
+}
+@keyframes mg-net {
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+.mg-goal {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+.mg-line {
+  stroke: var(--chalk);
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+.mg-line-dot {
+  fill: var(--chalk);
+  opacity: 0.7;
+}
+.mg-stripe {
+  fill: color-mix(in srgb, var(--chalk) 5%, transparent);
+}
+.mg-goal-back {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 1.6;
+  opacity: 0.45;
+}
+.mg-shadow {
+  fill: #000;
+  opacity: 0.3;
+  transition:
+    transform 0.38s cubic-bezier(0.2, 0.8, 0.3, 1),
+    rx 0.38s;
+}
+/* 사람(골키퍼·수비수)은 발끝을 축으로 몸을 던진다. */
+.mg-keeper,
+.mg-def {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+/* 골키퍼: 상대는 주황 키퍼 유니폼, 나(save)는 강조색. */
+.mg-keeper {
+  --kp: #f07a36;
+  --kp-num: #fff;
+  transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.mg-keeper.me {
+  --kp: var(--accent);
+  --kp-num: var(--accent-ink);
+}
+/* 필드 수비수(상대): 파란 상의·흰 반바지. */
+.mg-def {
+  --kp: #3a6fd6;
+  --kp-num: #fff;
+  transition: transform 0.34s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+.mg-def .kp-shorts {
+  fill: #eef1f5;
+}
+.kp-shirt {
+  fill: var(--kp);
+  stroke: rgb(0 0 0 / 0.28);
+  stroke-width: 0.8;
+}
+.kp-arm {
+  fill: none;
+  stroke: var(--kp);
+  stroke-width: 5.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.kp-num {
+  fill: var(--kp-num);
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+.kp-glove {
+  fill: #f5f7fa;
+  stroke: #9aa3ad;
+  stroke-width: 0.9;
+}
+.kp-shorts {
+  fill: #1e2329;
+}
+.kp-sock {
+  fill: none;
+  stroke: color-mix(in srgb, var(--kp) 78%, #000);
+  stroke-width: 5.4;
+  stroke-linecap: round;
+}
+.kp-boot {
+  fill: none;
+  stroke: #121417;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.kp-skin {
+  fill: #e2ae86;
+}
+.kp-hair {
+  fill: #2b221b;
+}
+.mg-ball {
+  transition: transform 0.38s cubic-bezier(0.25, 0.7, 0.35, 1);
+}
+.mg-ball-shadow {
+  transition:
+    transform 0.38s cubic-bezier(0.25, 0.7, 0.35, 1),
+    opacity 0.38s;
+}
+.ball-patch {
+  fill: #23272e;
+}
+.ball-seam {
+  stroke: #5b626c;
+  stroke-width: 0.4;
+}
+.ball-edge {
+  fill: none;
+  stroke: rgb(0 0 0 / 0.55);
+  stroke-width: 0.7;
+}
+/* 드래그 슛: 끄는 동안 페이지가 스크롤되지 않게 하고, 손가락 경로를 옅게 그린다. */
+.mg-drag {
+  touch-action: none;
+  cursor: grab;
+}
+.mg-drag.dragging {
+  cursor: grabbing;
+}
+.mg-trail {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+}
+.mg-readout {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  opacity: 0.9;
+}
+/* 제한 시간: 장면 위쪽 막대가 줄어들고, 마지막 1초는 빨갛게. */
+.mg-timer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: 4px;
+  background: rgb(0 0 0 / 0.25);
+}
+.mg-timer i {
+  display: block;
+  height: 100%;
+  background: var(--chalk);
+  transform-origin: left;
+  animation: mg-timer var(--mg-time) linear forwards;
+}
+.mg-timer.hurry i {
+  background: var(--bad);
+}
+.mg-timer.stop i {
+  animation-play-state: paused;
+}
+.mg-timer b {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.35);
+  color: var(--chalk);
+  font-family: var(--display);
+  font-size: 0.9375rem;
+  font-weight: 800;
+  text-align: center;
+}
+.mg-timer.hurry b {
+  background: var(--bad);
+}
+.mg-timer.stop b {
+  opacity: 0;
+}
+@keyframes mg-timer {
+  to {
+    transform: scaleX(0);
+  }
+}
+.mg-caption {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  font-family: var(--display);
+  font-size: 1.75rem;
+  font-weight: 800;
+  text-align: center;
+  color: var(--chalk);
+  text-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
+}
+.mg-gauge {
+  position: relative;
+  display: block;
+  height: 16px;
+  margin: 10px 14px 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bad) 55%, var(--pitch));
+}
+.mg-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 8px;
+  background: var(--good);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--chalk) 60%, transparent);
+}
+.mg-gauge .needle {
+  width: 4px;
+  top: -5px;
+  bottom: -5px;
+  background: var(--chalk);
+  box-shadow: 0 0 0 2px var(--pitch);
+}
+.mg-tap {
+  display: block;
+  text-align: center;
+  min-height: 1.4em;
+  margin-top: 10px;
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.mg-timing {
+  margin-top: -6px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--muted);
+}
 .chip.pop {
   animation: pop 0.32s cubic-bezier(0.3, 1.6, 0.5, 1) both;
   animation-delay: var(--d, 0ms);
@@ -2008,7 +2293,8 @@ th.n {
     transform: scale(0.6);
   }
 }
-.result-big.pop {
+.result-big.pop,
+.mg-caption.pop {
   animation: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
 }
 .twist {
@@ -2217,6 +2503,81 @@ th.n {
   justify-content: space-between;
   gap: 12px;
   width: 100%;
+}
+/* 배경음악 음량 — 배경음악이 꺼져 있어도 미리 맞춰 둘 수 있게 흐리게만 한다. */
+.settings-volume {
+  display: grid;
+  grid-template-columns: auto 1fr 3.5em;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 0.875rem;
+}
+.settings-volume.off {
+  opacity: 0.55;
+}
+.settings-volume input {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  accent-color: var(--pitch);
+}
+:root[data-theme='dark'] .settings-volume input {
+  accent-color: var(--accent);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .settings-volume input {
+    accent-color: var(--accent);
+  }
+}
+.settings-volume-note {
+  margin: 12px 0 0;
+}
+.settings-credit {
+  margin: 6px 0 0;
+}
+.settings-credit a {
+  color: inherit;
+}
+.settings-volume output {
+  text-align: right;
+  color: var(--muted);
+}
+.settings-row + .settings-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+/* 게임 화면 상단 배경음악 스위치 — 켜져 있으면 소리 물결이 천천히 숨 쉰다. */
+.icon-btn.bgm-toggle {
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  justify-content: center;
+}
+.bgm-toggle svg {
+  width: 22px;
+  height: 22px;
+}
+.bgm-toggle[aria-checked='true'] {
+  color: var(--pitch);
+  border-color: color-mix(in srgb, var(--pitch) 45%, var(--line));
+}
+.bgm-wave {
+  animation: bgm-wave 1.8s ease-in-out infinite;
+}
+.bgm-wave-2 {
+  animation-delay: 0.3s;
+}
+@keyframes bgm-wave {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bgm-wave {
+    animation: none;
+  }
 }
 .settings-label {
   display: flex;
@@ -2963,6 +3324,194 @@ body:has(nav.tabs) .toast {
 .news-close:active {
   background-color: color-mix(in srgb, var(--on-pitch) 15%, transparent);
 }
+/* T-10-076 영구결번 알림: 같은 자리에 금색 테두리 + 한 번 지나가는 빛, 구단 색 유니폼. 다른 배너보다 위. */
+.rn-alert {
+  z-index: 9;
+  overflow: hidden;
+  padding-left: 10px;
+  border: 1px solid var(--pitch-accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--pitch-accent) 25%, transparent),
+    0 12px 28px -12px rgba(0, 0, 0, 0.5);
+}
+.rn-alert::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--pitch-accent) 35%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: rn-alert-shine 1.6s 0.3s ease-out 2;
+  pointer-events: none;
+}
+.rn-alert b {
+  color: var(--pitch-accent);
+}
+.rn-alert small {
+  white-space: normal;
+}
+.rn-jersey.rn-alert-shirt {
+  flex: none;
+  width: 40px;
+  filter: none;
+  animation: rn-alert-pop 0.5s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes rn-alert-shine {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes rn-alert-pop {
+  from {
+    transform: scale(0.4) rotate(-12deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rn-alert::after,
+  .rn-jersey.rn-alert-shirt {
+    animation: none;
+  }
+}
+/* T-10-076 기록실 영구결번 탭 — 구단 색 유니폼 타일을 구단별로 건다. */
+.hof-tabs {
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 12px;
+}
+/* T-10-090 전체 / 시즌 순위 전환과 개막 전 안내. */
+.hof-seasons {
+  margin-top: 4px;
+}
+.hof-season-note b {
+  color: var(--ink);
+}
+.hof-season-note p {
+  margin: 4px 0 0;
+}
+.rn-wall-lead {
+  margin: 0 0 14px;
+}
+.rn-wall-sum {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.rn-wall-sum > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.rn-wall-sum b {
+  font-size: 1.25rem;
+}
+.rn-wall-sum > div:last-child b {
+  font-size: 0.9375rem;
+  line-height: 1.75rem;
+}
+.rn-wall-sum small {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.rn-club {
+  padding-block: 14px 4px;
+  border-top: 1px solid var(--line);
+}
+.rn-club-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+.rn-club-head b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rn-club-count {
+  margin-left: auto;
+  flex: none;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+}
+.rn-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+  padding-bottom: 10px;
+}
+.hof-sorts + .rn-tiles {
+  margin-top: 10px;
+}
+.rn-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background:
+    radial-gradient(
+      90% 60% at 50% 30%,
+      color-mix(in srgb, var(--rn-base, #1f6f4a) 22%, transparent),
+      transparent
+    ),
+    var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.16s ease-out;
+}
+.rn-tile:active {
+  transform: scale(0.97);
+  transition-duration: 0.05s;
+}
+.rn-tile > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rn-jersey.rn-tile-shirt {
+  width: 52px;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+.rn-tile-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+.rn-tile-mine {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 0 6px;
+  font-size: 0.625rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rn-tile {
+    transition: none;
+  }
+}
 
 /* ───────── 구간 리포트 (T-10-024) ───────── */
 .report {
@@ -3238,12 +3787,16 @@ button.title-item:hover {
   height: 100%;
   background: var(--accent);
 }
-.title-locked summary {
+.title-locked summary,
+.title-pick summary {
   cursor: pointer;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--muted);
   padding: 4px 0;
+}
+.title-pick .title-list {
+  margin-top: 8px;
 }
 @media (prefers-reduced-motion: reduce) {
   .title-tag.pop {
@@ -3479,11 +4032,15 @@ button.title-item:hover {
   font-size: 0.75rem;
   color: var(--film-muted);
 }
+.film-open .film-stats {
+  align-self: stretch;
+  margin-top: 18px;
+}
 .film-note {
   color: var(--film-muted);
   font-size: 0.8125rem;
   text-align: center;
-  margin: -24px 0 0;
+  margin: 0;
 }
 .film-head,
 .film-national,
@@ -3631,6 +4188,12 @@ button.title-item:hover {
   color: var(--film-gold);
   margin-right: 4px;
 }
+.nat-ga {
+  margin-top: 2px;
+  color: var(--film-muted);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
 /* 우승 연혁: 엔딩 크레딧처럼 가운데 선을 두고 왼쪽엔 이름(오른쪽 정렬), 오른쪽엔 연도. */
 .film-roll {
   display: flex;
@@ -3688,6 +4251,230 @@ button.title-item:hover {
 .film-pot-ach small {
   color: var(--film-muted);
   font-size: 0.8125rem;
+}
+/* T-10-077 플레이 성향 — 유형 하나 + 주사위 기록 네 칸 + 최고의 한 수. */
+.film-style {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.style-type {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.style-icon {
+  font-size: 3.5rem;
+  line-height: 1;
+}
+.style-type b {
+  font-size: 1.625rem;
+  color: var(--film-gold);
+}
+.style-type p {
+  color: var(--film-muted);
+  font-size: 0.9375rem;
+  margin: 0 0 4px;
+}
+.style-grid {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-block: 1px solid var(--film-line);
+  padding-block: 18px;
+  row-gap: 18px;
+}
+.style-grid div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.style-grid b {
+  font-family: var(--display);
+  font-size: 2rem;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.style-grid b.up {
+  color: var(--film-gold);
+}
+.style-grid span {
+  font-size: 0.8125rem;
+}
+.style-grid small {
+  font-size: 0.75rem;
+  color: var(--film-muted);
+}
+.style-best {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.9375rem;
+}
+.style-best b {
+  color: var(--film-gold);
+}
+/* T-10-076 영구결번 — 유니폼 세리머니. 유니폼 색은 구단 엠블럼 색(--rn-base/--rn-accent). */
+.film-rn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+.rn-ceremony {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.rn-jersey {
+  width: 168px;
+  height: auto;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45));
+}
+.rn-shirt {
+  fill: var(--rn-base, #1f6f4a);
+  stroke: var(--rn-accent, #f2c14e);
+  stroke-width: 2;
+}
+.rn-trim {
+  fill: none;
+  stroke: var(--rn-accent, #f2c14e);
+  stroke-width: 4;
+}
+.rn-jersey text {
+  fill: var(--rn-ink, #fff);
+  text-anchor: middle;
+  font-family: var(--display);
+}
+.rn-jersey-name {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.rn-jersey-num {
+  font-size: 46px;
+}
+/* 은퇴 세리머니 유니폼 — 원근 속에서 천천히 몸을 돌리고, 바닥 그림자·뒤 조명이 따라온다. */
+.rn-jersey3d {
+  position: relative;
+  perspective: 640px;
+  padding: 6px 0 18px;
+}
+.rn-jersey3d::before {
+  content: '';
+  position: absolute;
+  inset: -12% -30% 8%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--rn-accent, #f2c14e) 30%, transparent),
+    transparent
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+.rn-jersey3d::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 150px;
+  height: 18px;
+  translate: -50% 0;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), transparent);
+  animation: rn-floor 7s ease-in-out infinite alternate;
+}
+.rn-jersey.rn-jersey-3d {
+  position: relative;
+  width: 196px;
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.5));
+  transform-origin: 50% 40%;
+  animation: rn-sway 7s ease-in-out infinite alternate;
+}
+.rn-jersey-3d .rn-shirt {
+  stroke: none;
+}
+.rn-jersey-3d .rn-cuff,
+.rn-jersey-3d .rn-collar {
+  fill: var(--rn-trim, #f2c14e);
+}
+.rn-jersey-3d .rn-jersey-name {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+.rn-jersey-3d .rn-jersey-num {
+  font-size: 50px;
+  stroke: var(--rn-trim, #f2c14e);
+  stroke-width: 1.3px;
+  paint-order: stroke;
+}
+.rn-jersey-3d .rn-sheen {
+  animation: rn-sheen 7s ease-in-out infinite;
+}
+@keyframes rn-sway {
+  from {
+    transform: rotateY(-18deg) rotateX(3deg) translateY(0);
+  }
+  to {
+    transform: rotateY(18deg) rotateX(3deg) translateY(-6px);
+  }
+}
+@keyframes rn-floor {
+  to {
+    scale: 0.82 1;
+    opacity: 0.7;
+  }
+}
+@keyframes rn-sheen {
+  0%,
+  40% {
+    transform: translateX(0);
+  }
+  75%,
+  100% {
+    transform: translateX(240px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rn-jersey3d::after,
+  .rn-jersey.rn-jersey-3d,
+  .rn-jersey-3d .rn-sheen {
+    animation: none;
+  }
+}
+.rn-line {
+  font-size: 1.1875rem;
+  line-height: 1.55;
+  margin: 0;
+}
+.rn-line b {
+  color: var(--film-gold);
+}
+.rn-stats,
+.rn-pending {
+  color: var(--film-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0;
+}
+.rn-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  margin: 0;
+}
+.pill-rn {
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.film .pill-rn {
+  border-color: var(--film-gold);
 }
 .film-finale {
   padding-block: 36px 8px;

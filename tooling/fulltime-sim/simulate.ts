@@ -11,6 +11,8 @@ import {
   LEAGUES,
   TYPES,
   TRAITS,
+  DPOS,
+  DETAILS_OF,
   POS,
   ATTR_KEYS,
   LAST_PHASE,
@@ -51,6 +53,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // STRICT=1: 커리어 하나라도 예외가 나면 즉시 실패한다.
 // SEED=<정수>: 같은 시드면 같은 결과(코드 변경 전후를 잡음 없이 비교할 때).
 // BALANCE=<json 파일>: 그 밸런스 값으로 돌린다 — 어드민 초안의 values(또는 {values}) 그대로(T-10-016).
+const DETAIL = !!process.env.DPOS;
 const master = process.env.SEED ? createRng(+process.env.SEED) : null;
 const nextSeed = () => (master ? (master.next() * 0x100000000) >>> 0 : freshSeed());
 if (process.env.BALANCE) {
@@ -123,8 +126,15 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
     const pos = pick(['FW', 'MF', 'DF', 'GK'] as const);
     const type = pick(TYPES[pos]).id;
     const trait = pick(TRAITS).id;
+    // T-10-091 DPOS=1: 세부 포지션을 고른 시즌 1 선수(주력 능력치는 그 포지션의 기본값).
+    const dpos = DETAIL ? pick(DETAILS_OF[pos]) : undefined;
     const seed = nextSeed();
-    const s = newGame({ name: 'SIM', number: 9, pos, foot: '오른발', type, trait }, seed);
+    const s = dpos
+      ? newGame(
+          { name: 'SIM', number: 9, pos, dpos, foot: '오른발', focus: DPOS[dpos].focus, trait },
+          seed,
+        )
+      : newGame({ name: 'SIM', number: 9, pos, foot: '오른발', type, trait }, seed);
     const pot0 = s.pot;
     const seen: Record<string, 1> = {};
     let events = 0,
@@ -290,6 +300,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
 
     rows.push({
       pos,
+      dpos: dpos ?? '',
       type,
       trait,
       pot: pot0,

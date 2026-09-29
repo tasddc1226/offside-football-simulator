@@ -6,6 +6,7 @@
 
 <div class="eyebrow">결과 · {v.label}</div>
 <div class="result-big pop {v.ok ? 'ok' : 'ng'}">{v.outcome}</div>
+{#if v.timing}<div class="mg-timing" data-mg-timing>{v.timing}</div>{/if}
 <p>{v.text}</p>
 <Chips chips={v.chips} pop />
 {#if v.twist}<p class="twist">{v.twist}</p>{/if}
