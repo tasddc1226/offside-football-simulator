@@ -4,13 +4,18 @@
   import { appState } from './state.svelte.js';
   import { dur } from './motion.js';
   import Home from './Home.svelte';
-  import Game from './Game.svelte';
   import UpdateBanner from './UpdateBanner.svelte';
   import NewsBanner from './NewsBanner.svelte';
   import MainNav, { hasMainNav } from './MainNav.svelte';
   import { rnAlert } from './retiredNumber.svelte.js';
   import type { Component } from 'svelte';
 
+  // T-10-104: 게임 화면(엔진·탭·액션)은 홈에서 안 쓰니 처음 '계속하기'·'새 커리어'를 누를 때 불러온다.
+  // 홈이 한가할 때 nav.warmGame이 미리 받아 둔다. 오기 전엔 빈 화면이다.
+  let Game = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'game' && !Game) void import('./Game.svelte').then((m) => (Game = m.default));
+  });
   // T-10-096: 선수 생성(국적 목록·체격 입력)은 새 커리어를 누를 때만 쓰니 처음 열 때 불러온다.
   let Create = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -112,7 +117,7 @@
     {:else if appState.screen === 'admin'}
       {#if Admin}<Admin />{/if}
     {:else}
-      <Game />
+      {#if Game}<Game />{/if}
     {/if}
   </main>
 {/key}

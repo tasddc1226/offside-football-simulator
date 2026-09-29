@@ -2,6 +2,30 @@
 
 날짜 역순. ADR로 승격된 결정은 링크만 남긴다.
 
+## 2026-09-29 (T-10-104 첫 화면 번들 분리)
+
+- **왜.** 첫 화면 JS가 137.99KB로 예산(138KB)에 붙어, 새 기능을 넣을 때마다 예산을 올려야 했다. 홈이 게임 엔진·탭·액션을
+  통째로 끌어오는 길이 셋이었다 — ① `App.svelte`의 `Game.svelte` 정적 import, ② `nav.ts`의 `actions.ts`(`confirmNew`·
+  `nextPending`), ③ `main.ts`가 마운트하는 `Sheet` → `SheetBody` → 이벤트·이적시장·결산 시트 → `actions.ts` → `turn.ts` →
+  이벤트 등록.
+- **분리.** 셋 다 지연 로딩으로 바꿨다. `App.svelte`는 다른 화면과 같은 `$state` + `$effect` + `import()` 패턴으로 Game을
+  불러오고(오기 전엔 빈 화면), `nav.ts`는 `import('./actions.js')`로 부른다. 게임 전용 시트 본문(이벤트·이벤트 결과·시즌
+  결산·이적시장)은 `sheets/PlaySheets.svelte` 청크로 묶고 `sheets/gameSheets.svelte.ts`가 컴포넌트를 모듈 상태에 담아
+  두어, 한 번 받은 뒤엔 시트가 열리는 프레임에 바로 그려진다(깜빡임·첫 버튼 포커스 누락 없음). 안내·확인 시트(`notice`)와
+  진행 연출 시트(steps·block·judge)는 그대로 첫 화면에 남아, 홈의 설치 안내·로그아웃 확인은 게임 청크를 받지 않는다.
+- **실측(gzip, index.html의 진입 + modulepreload 합).** 137.99KB → **100.64KB**(−37.35KB, 예산 138KB 그대로).
+  Game+nav만 −9.78, SheetBody만 −1.66이라 세 길을 모두 끊어야 효과가 난다. 공유 청크(season 41.6KB)에는 홈이 쓰는 엔진 일부가
+  남아 있어 더 줄이려면 그쪽을 쪼개야 한다(이번 범위 밖).
+- **미리 받기.** 첫 페인트 뒤 브라우저가 한가할 때(`requestIdleCallback`, 없으면 1.5초 뒤 `setTimeout`) `nav.warmGame`이
+  Game·actions·시트 청크를 `import()`로 받아 둔다. 홈의 '계속하기'·'새 커리어' 버튼은 `pointerenter`/`focus`에서도 같은
+  함수를 불러 유휴 시간이 오기 전에 눌러도 대기가 짧다. index.html modulepreload에는 넣지 않는다(예산에 다시 잡힘).
+- **check-bundle 규칙 변경.** 이벤트 정의 검사(T-10-033, `knock`·`rival-1`·`var`·`fw-drought`)는 첫 화면 청크가 아니라
+  `Game-*.js`에서 정적 import(`import`·`export … from`)를 따라가 닿는 청크 텍스트로 본다. 동적 `import()`(EventDex 등)는
+  따라가지 않는다. 게임 청크를 못 찾으면 실패한다. 예산 합산은 종전대로 index.html 기준이다.
+- **위험·주의.** 게임을 처음 여는 클릭은 청크가 아직 안 왔으면 빈 화면이 잠깐 보인다(느린 망·유휴 전에 바로 누른 경우).
+  청크 받기가 실패하면(오프라인 등) 그 화면은 비어 있고 다시 누르면 재시도한다 — 다른 지연 화면과 같은 동작이다. 게임 엔진
+  로직·저장 형식은 건드리지 않았다(SAVE_VERSION 그대로, 골든 테스트 무변경).
+
 ## 2026-09-29 (T-10-103 시즌 1 Coming soon · 빈 내 선수 숨김)
 
 - **개막 전 시즌 버튼에 'Coming soon'(사용자 요청, 기대감).** 기록실 전체/시즌 전환의 시즌 버튼 오른쪽 위 테두리에 금색

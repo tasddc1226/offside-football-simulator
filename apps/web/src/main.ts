@@ -14,6 +14,7 @@ import { watchBgm } from './ui/bgm.svelte.js';
 import { installPlaySignals } from './game/playSignals.js';
 import { watchForUpdates } from './ui/update.svelte.js';
 import { watchNews } from './ui/news.svelte.js';
+import { warmGame } from './ui/nav.js';
 
 installClickSound();
 // 자동 플레이 탐지(관찰 전용): 시즌마다 조작 횟수만 센다.
@@ -58,3 +59,9 @@ watchNews();
 void import('./ui/install.js').then((m) => m.maybeShowInstallOnboarding()).catch(() => {});
 // T-9-009: 이전 세션에서 못 보낸 업로드를 앱 시작 시 한 번 재시도한다(실패해도 게임은 계속된다).
 void import('./game/outbox.js').then((m) => m.flushOutbox()).catch(() => {});
+// T-10-104: 게임 화면·액션·게임 시트는 첫 화면 번들 밖(지연 청크)이다. 첫 페인트 뒤 브라우저가 한가할 때 미리
+// 받아 둬 '계속하기'를 눌렀을 때 기다리지 않게 한다(index.html modulepreload에는 넣지 않는다 — 첫 화면 예산 밖).
+const whenIdle = window.requestIdleCallback
+  ? (fn: () => void) => window.requestIdleCallback(fn, { timeout: 4000 })
+  : (fn: () => void) => setTimeout(fn, 1500);
+whenIdle(warmGame);

@@ -8,6 +8,7 @@
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
   import { advance, nextPending } from './actions.js';
+  import { loadGameSheets } from './sheets/gameSheets.svelte.js';
   import { buzz, dur } from './motion.js';
   import ClubBadge from './ClubBadge.svelte';
   import Topbar from './Topbar.svelte';
@@ -20,6 +21,9 @@
   import { mainTitle } from '../game/titles.js';
   import { marketValue } from '../game/season.js';
   import { fmtValue } from './format.js';
+
+  // T-10-104: 이벤트·결산·이적시장 시트 본문도 게임 청크다 — 첫 시트가 뜨기 전에 미리 받아 둔다.
+  void loadGameSheets().catch(() => {});
 
   const s = $derived(appState.G!);
   // OVR 숫자 트윈(T-10-003 goal 3): 훈련·이벤트 결과로 능력치가 바뀔 때마다 즉시 점프하는 대신
