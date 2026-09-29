@@ -2,6 +2,7 @@
   // 선수 생성(T-10-022): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
   // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
   import { cubicOut } from 'svelte/easing';
+  import { fly } from 'svelte/transition';
   import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '../game/data.js';
   import type { AttrKey, DetailPos, Pos } from '../game/data.js';
   import { baseline } from '../game/candidates.js';
@@ -18,6 +19,7 @@
   import Topbar from './Topbar.svelte';
   import MiniRadar from './MiniRadar.svelte';
   import NationPicker from './NationPicker.svelte';
+  import ScoutScan from './ScoutScan.svelte';
 
   const C = appState.C;
   const posKeys = Object.keys(POS) as Pos[];
@@ -72,6 +74,19 @@
   function focusNote(k: AttrKey, d: number): string {
     if (C.focus.includes(k)) return `시작 +${d} · 성장 +${growthPct}%`;
     return d < 0 ? `시작 ${d}` : '변화 없음';
+  }
+  // T-10-111 후보를 바로 보여 주지 않고 스카우트가 추리는 연출(약 3초)이 끝난 뒤에 뽑는다.
+  let scouting = $state(false);
+  const scoutSteps = $derived([
+    `${nation.ko} 고교 경기 영상 분석`,
+    `${posLabel({ pos: C.pos, dpos })} 후보군 추리기`,
+    `주력 ${C.focus.map((k) => labels[k]).join('·')} 대조`,
+    `체격 ${body.h}cm · ${body.w}kg 비교`,
+    '잠재력 평가 · 후보 3명 확정',
+  ]);
+  function scouted() {
+    rollCandidates();
+    scouting = false;
   }
   function backToForm() {
     appState.candidates = null;
@@ -236,7 +251,7 @@
     <div class="action-bar at-bottom">
       <div class="action-bar-inner with-back">
         <button class="btn" data-act="home" onclick={goHome}>취소</button>
-        <button class="btn btn-primary" data-act="next-candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={rollCandidates}>
+        <button class="btn btn-primary" data-act="next-candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={() => (scouting = true)}>
           {bodyErr ? '키·몸무게를 확인해 주세요' : focusLeft > 0 ? `주력 능력치를 ${focusLeft}개 더 골라주세요` : '후보 3명 보기 →'}
         </button>
       </div>
@@ -273,7 +288,7 @@
             </span>
           </button>
         {:else}
-          <button class="cand-card" data-cand={i} onclick={() => pick(i)}>
+          <button class="cand-card" data-cand={i} onclick={() => pick(i)} in:fly|global={{ y: 14, duration: dur(280), delay: dur(90 * i) }}>
             <span class="cand-n">?</span>
             <span class="cc-closed">
               <b>후보 {i + 1}</b>
@@ -295,3 +310,4 @@
     </div>
   {/if}
 </div>
+{#if scouting}<ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} />{/if}
