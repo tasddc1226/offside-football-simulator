@@ -108,7 +108,7 @@
           {busy ? '링크 만드는 중…' : url ? '링크 다시 복사' : '커리어 공유하기'}
         </button>
       {:else if back}
-        <button class="btn btn-primary" data-act="hof-back" onclick={back}>← 이전으로</button>
+        <button class="btn" data-act="hof-back" onclick={back}>← 이전으로</button>
       {/if}
     </div>
   </div>

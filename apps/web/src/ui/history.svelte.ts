@@ -10,7 +10,7 @@ import { untrack } from 'svelte';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import type { Candidate } from '../game/candidates.js';
 import { closeSheet } from './sheetState.svelte.js';
-import { appState, type LegendView, type Screen } from './state.svelte.js';
+import { appState, type LegendView, type Screen, type TeamView } from './state.svelte.js';
 
 interface Entry {
   key: string;
@@ -22,6 +22,9 @@ interface Entry {
   cand: { list: Candidate[]; open: boolean[]; pick: number | null } | null;
   legend: LegendView | null;
   legendBack: typeof appState.legendBack;
+  /** T-10-130 구단주 팀 안의 화면 · 기록실 팀 랭킹에서 연 팀 프로필. */
+  teamView: TeamView;
+  hofTeam: string | null;
 }
 
 /** 이 탭에서 쌓은 기록 — 새로 고침 전의 기록(sid가 다르다)은 모른다. */
@@ -64,6 +67,9 @@ function keyOf(): string {
   if (s === 'create') return appState.candidates ? 'create:cand' : 'create';
   if (s === 'board') return `board:${appState.board}:${appState.boardOpenId ?? ''}`;
   if (s === 'legend') return `legend:${legendId(appState.legend)}`;
+  // 팀·시즌 업적은 같은 화면의 탭이라 한 기록으로 친다.
+  if (s === 'team') return `team:${appState.teamView === 'achievements' ? 'team' : appState.teamView}`;
+  if (s === 'hof') return `hof:${appState.hof.tab === 'teams' ? (appState.hof.team ?? '') : ''}`;
   return s;
 }
 
@@ -83,6 +89,8 @@ function snapshot(): Entry {
       : null,
     legend: appState.legend,
     legendBack: appState.legendBack,
+    teamView: appState.teamView,
+    hofTeam: appState.hof.tab === 'teams' ? appState.hof.team : null,
   };
 }
 
@@ -110,6 +118,9 @@ function restore(e: Entry) {
     appState.legend = e.legend;
     appState.legendBack = e.legendBack;
   }
+  if (screen === 'team') appState.teamView = e.teamView;
+  if (screen === 'hof' && appState.hof.team !== e.hofTeam)
+    appState.hof = { ...appState.hof, team: e.hofTeam, ...(e.hofTeam ? { tab: 'teams' as const } : {}) };
   appState.screen = screen;
   // 되살린 상태를 이 기록의 값으로 삼는다(홈으로 돌렸으면 홈) — 아래 $effect가 새 기록을 쌓지 않는다.
   entries[cur] = { ...snapshot(), y: screen === e.screen ? e.y : 0 };
@@ -122,6 +133,12 @@ function scrollBack(y: number, tries = 30) {
     window.scrollTo(0, y);
     if (Math.abs(window.scrollY - y) > 2 && tries > 0) scrollBack(y, tries - 1);
   });
+}
+
+/** T-10-130 화면 아래 '← 이전으로'(BackBar): 이 탭에서 쌓은 이전 기록이 있으면 브라우저 뒤로 가기와 똑같이, 없으면 fallback. */
+export function goBack(fallback: () => void) {
+  if (cur > 0) history.back();
+  else fallback();
 }
 
 export function initHistory() {

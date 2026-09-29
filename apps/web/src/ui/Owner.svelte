@@ -54,7 +54,7 @@
   <!-- T-10-092 내 팀: 구글로 로그인한 구단주만 — 확인 중·비로그인·연결 실패면 그리지 않는다. -->
   {#if linked}
     <section class="card settings-card" aria-label="내 팀" data-owner-team>
-      <button class="settings-row settings-trigger" data-act="team" onclick={() => go('team')}>
+      <button class="settings-row settings-trigger" data-act="team" onclick={() => ((appState.teamView = 'team'), go('team'))}>
         <span class="settings-label">
           <small class="eyebrow">My team</small>
           <strong>내 팀 · 시즌 업적</strong>

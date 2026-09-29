@@ -41,6 +41,8 @@ export const hofStart = (): HofView => ({
   q: '',
 });
 
+export type TeamView = 'team' | 'achievements' | 'opponents' | 'result' | 'history';
+
 export type Screen =
   | 'home'
   | 'create'
@@ -151,6 +153,8 @@ export const appState = $state<{
   hof: HofView;
   /** 선수 상세의 '← 이전으로'가 돌아갈 화면. */
   legendBack: 'home' | 'hof' | 'owner';
+  /** T-10-130 구단주 팀 안의 화면 — 뒤로 가기 기록에 남도록 appState에 둔다(history.svelte.ts). */
+  teamView: TeamView;
   /** T-10-029. 공유 링크(/career/:id)로 들어온 은퇴 선수 id — 보기 전용 화면(SharedCareer)이 읽는다. */
   sharedCareer: string | null;
   /** T-10-024. 방금 끝난 구간 리포트(시즌 탭 맨 위). 저장하지 않는다 — 새로고침하면 사라진다. */
@@ -182,6 +186,7 @@ export const appState = $state<{
   ownerConflict: null,
   hof: hofStart(),
   legendBack: 'home',
+  teamView: 'team',
   sharedCareer: null,
   report: null,
 });
