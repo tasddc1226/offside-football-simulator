@@ -51,11 +51,12 @@ export function pick<T>(a: readonly T[]): T {
   return a[Math.floor(rnd() * a.length)] as T;
 }
 export const chance = (p: number): boolean => rnd() < p;
-export function gauss(): number {
+/** 정규분포 난수(Box–Muller). r: 난수원 — 화면 연출(드래그 슛)은 게임 RNG 대신 Math.random을 넘긴다. */
+export function gauss(r: () => number = rnd): number {
   let u = 0,
     v = 0;
-  while (!u) u = rnd();
-  while (!v) v = rnd();
+  while (!u) u = r();
+  while (!v) v = r();
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 export function poisson(l: number): number {

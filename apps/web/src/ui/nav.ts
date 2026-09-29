@@ -4,7 +4,7 @@
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { confirmNew, nextPending } from './actions.js';
 import { closeSheet } from './sheetState.svelte.js';
-import { appState, type Screen } from './state.svelte.js';
+import { appState, hofStart, type Screen } from './state.svelte.js';
 
 /** 화면을 바꾸고 맨 위로 올린다. */
 export function go(screen: Screen) {
@@ -26,7 +26,7 @@ export function goHome() {
 }
 /** 명예의 전당 전체 보기(100명씩 페이지). */
 export function openHof() {
-  appState.hof = { page: 1, sort: 'score' };
+  appState.hof = hofStart();
   go('hof');
 }
 /** 소식 화면을 연다. postId가 있으면 그 글을 바로 연다(홈의 소식 섹션에서). */

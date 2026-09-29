@@ -6,13 +6,14 @@
   import type { PublicHofEntry } from '@offside/contracts';
   import { loadHOF } from '../game/season.js';
   import type { HofEntry } from '../game/types.js';
-  import { getMyCareers } from '../api/client.js';
+  import { getMyCareers, getRetiredNumbers } from '../api/client.js';
+  import { fillGranted } from './retiredNumber.svelte.js';
   import { openLocalLegend, openPublicLegend } from './legend.js';
   import { anonName } from './format.js';
   import HofRow, { type RowStats } from './HofRow.svelte';
-  import type { POS } from '../game/data.js';
+  import type { DetailPos, POS } from '../game/data.js';
 
-  type MineRow = { key: string; name: string; pos: keyof typeof POS; club: string; clubId?: string | null | undefined; tag: string | null; stats: RowStats; title: string | null; open: () => void };
+  type MineRow = { key: string; name: string; pos: keyof typeof POS; dpos?: DetailPos | null | undefined; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; open: () => void };
   /** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다. */
   const SHOW = 10;
 
@@ -21,8 +22,10 @@
     key: h.id ?? h.name + i,
     name: h.name,
     pos: h.pos,
+    dpos: h.dpos,
     club: h.lastClub,
     clubId: h.lastClubId,
+    rn: h.rn?.kind === 'granted' ? h.rn.number : null,
     tag: h.public ? '공개' : null,
     stats: h,
     title: h.title ?? null,
@@ -32,8 +35,10 @@
     key: e.id,
     name: e.name ?? anonName(e.pos, e.number),
     pos: e.pos,
+    dpos: e.dpos,
     club: e.lastClub,
     clubId: e.lastClubId,
+    rn: e.retiredNumber?.number,
     tag: e.name ? '공개' : null,
     stats: { ...e, score: e.legendScore },
     title: e.title ?? null,
@@ -57,12 +62,25 @@
       // 방금 은퇴해 아직 업로드 대기 중인 선수도 잠깐 더한다.
       const pending = outbox.pendingRetirementIds();
       list = [
-        ...r.data.entries.map((e) => byId.get(e.id) ?? serverRow(e)),
+        ...r.data.entries.map((e) => {
+          const row = byId.get(e.id);
+          // 이 기기 기록이 있어도 결번(T-10-076)은 서버 값을 쓴다 — 소급으로 받은 결번은 기기에 없다.
+          return row ? { ...row, rn: row.rn ?? e.retiredNumber?.number } : serverRow(e);
+        }),
         ...[...byId].filter(([id]) => !onServer.has(id) && pending.has(id)).map(([, row]) => row),
       ];
       source = 'account';
     }
     rows = list.sort((a, b) => b.stats.score - a.stats.score);
+    // T-10-076 배포 전 은퇴를 소급해 받은 결번은 이 기기에 없다 — 결과를 모르는 기록이 있을 때만 서버 목록에서 채운다
+    // (계정 목록은 서버가 결번을 함께 준다).
+    if (source === 'device' && local.some((h) => h.id && h.detail && h.rn === undefined)) {
+      const rn = await getRetiredNumbers();
+      if (!rn.ok) return;
+      fillGranted(rn.data.items);
+      const byCareer = new Map(rn.data.items.map((x) => [x.careerId, x.number]));
+      rows = rows.map((r) => ({ ...r, rn: r.rn ?? byCareer.get(r.key) }));
+    }
   });
 </script>
 
@@ -81,7 +99,7 @@
     </p>
     {#each shown as r, i (r.key)}
       <button class="hof-row" data-my-player={i} onclick={r.open}>
-        <HofRow rank={i} name={r.name} pos={r.pos} club={r.club} clubId={r.clubId} tag={r.tag} t={r.stats} titleId={r.title} />
+        <HofRow rank={i} name={r.name} pos={r.pos} dpos={r.dpos} club={r.club} clubId={r.clubId} rn={r.rn} tag={r.tag} t={r.stats} titleId={r.title} />
       </button>
     {:else}
       <p class="empty">아직 은퇴한 선수가 없어요. 첫 커리어를 끝까지 뛰어 보세요.</p>

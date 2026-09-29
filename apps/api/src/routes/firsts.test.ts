@@ -4,7 +4,7 @@ import { createApp } from '../app.js';
 import { ensureFirstsBackfilled } from '../db/repos/firsts.js';
 import { firstsCatalog } from '../firsts.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { deleteProfile, issueCookie, putJson, TEST_CAREER } from '../test/http.js';
+import { deleteProfile, issueCookie, putJson, putSeasonsFor, TEST_CAREER } from '../test/http.js';
 
 const A = '0b000000-0000-4000-8000-00000000000a';
 const B = '0b000000-0000-4000-8000-00000000000b';
@@ -27,6 +27,7 @@ const seasonBody = (over: Record<string, unknown> = {}) => ({
   },
   events: [],
 });
+// 발롱도르 5회 — 받아 둔 시즌 기록으로 900점을 낼 수 있는 레전드.
 const summary = {
   retireAge: 34,
   peak: 88,
@@ -35,9 +36,9 @@ const summary = {
   goals: 120,
   assists: 60,
   trophies: 1,
-  awards: 0,
+  awards: 5,
   caps: 30,
-  ballon: 0,
+  ballon: 5,
   lastClub: '테스트 FC',
 };
 const read = async (ctx: TestD1) => {
@@ -91,7 +92,7 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
   });
 
   it('은퇴 때 레전드 점수 기록을 판정하고, 이름은 공개를 고른 경우에만 보인다', async () => {
-    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody());
+    await putSeasonsFor(ctx.env, cookie, A, summary);
     await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, publicName: null });
     expect(holderOf(await read(ctx), 'legend840')).toMatchObject({ careerId: A, name: null });
     await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, publicName: '김오프' });

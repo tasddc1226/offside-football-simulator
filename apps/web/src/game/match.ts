@@ -4,6 +4,7 @@ import {
   LAST_PHASE,
   COND_LOW_START,
   COND_LOW_INJURY,
+  scoreRate,
   type AttrKey,
 } from './data.js';
 import { ovr, wOf } from './attributes.js';
@@ -101,7 +102,7 @@ export function rollScoring(
   oppAvg: number,
   mins: number,
 ): { g: number; a: number } {
-  const P = POS[s.pos];
+  const P = scoreRate(s);
   const g = poisson(P.goal * scoreBoost(atk, o, perf, oppAvg) * (mins / 90));
   const a = poisson(P.assist * scoreBoost(cre, o, perf, oppAvg) * (mins / 90));
   return { g, a };
@@ -180,6 +181,8 @@ export function simBlock(s: GameState): BlockResult {
         perf * 0.35 +
         (cs ? 0.45 : 0) +
         (s.pos === 'DF' || s.pos === 'GK' ? (s.attrs.def - L.avg) / 25 : 0) +
+        // T-10-091 수비형 미드필더는 수비 기여를 평점에 절반만큼 받는다(골·도움이 적은 몫).
+        (s.dpos === 'DM' ? (s.attrs.def - L.avg) / 50 : 0) +
         (res === 'W' ? 0.2 : res === 'L' ? -0.2 : 0) +
         gauss() * 0.25;
       rating = clamp(Math.round(rating * 10) / 10, 4.5, 10);

@@ -408,19 +408,22 @@ export function ensureTitles(s: GameState): void {
 export type TitleView = { id: string; name: string; rarity: Rarity };
 export const titleView = (d: TitleDef): TitleView => ({ id: d.id, name: d.name, rarity: d.rarity });
 
-/** 대표 칭호 — 유저가 고른 것이 있으면 그것, 없으면 가장 높은 등급 중 가장 최근에 얻은 것. */
+/** 대표 칭호 — 유저가 고른 것이 있으면 그것, 없으면 가장 높은 등급 중 가장 최근에 얻은 것.
+ * 은퇴 등급 칭호(cat 'legend')는 리포트에 레전드 등급으로 따로 보이고 은퇴 때 마지막에 붙어 늘 '최근'이 된다 —
+ * 그래서 같은 등급이면 다른 칭호(발롱도르·트레블·원클럽맨 …)를 먼저 고른다(#369 기획 A: 등급과 대표 칭호 분리). */
 export function mainTitle(s: Pick<GameState, 'titles' | 'titleSel'>): TitleDef | undefined {
   const list = s.titles ?? [];
   if (s.titleSel && list.some((e) => e.id === s.titleSel)) return titleById(s.titleSel);
+  // 등급 → 은퇴 등급이 아닌 것 → 최근 순. 목록은 얻은 순서라 같은 해면 뒤의 것(>= 0)이 더 최근이다.
+  const notBand = (d: TitleDef) => (d.cat === 'legend' ? 0 : 1);
   let pick: { d: TitleDef; year: number } | undefined;
   for (const e of list) {
-    // 목록은 얻은 순서라, 같은 등급·같은 해면 뒤의 것(>=)이 더 최근이다.
     const d = titleById(e.id);
-    if (
-      d &&
-      (!pick || d.rarity > pick.d.rarity || (d.rarity === pick.d.rarity && e.year >= pick.year))
-    )
-      pick = { d, year: e.year };
+    if (!d) continue;
+    const cmp = pick
+      ? d.rarity - pick.d.rarity || notBand(d) - notBand(pick.d) || e.year - pick.year
+      : 0;
+    if (!pick || cmp >= 0) pick = { d, year: e.year };
   }
   return pick?.d;
 }

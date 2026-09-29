@@ -57,5 +57,19 @@ export const LiveResponseSchema = z.strictObject({
 });
 export type LiveResponse = z.infer<typeof LiveResponseSchema>;
 
-/** T-10-072 실시간 소켓(`LIVE_SOCKET_PATH`)으로 오는 메시지. event는 피드 한 줄과 같은 모양이다. */
-export type LivePush = { type: 'event'; event: LiveEvent };
+/** T-10-076 방금 확정된 영구결번(은퇴 심사·이름 공개로 자리를 잡은 순간 한 번). 소급으로 채운 결번은 보내지 않는다. */
+export type LiveRetiredNumber = {
+  careerId: string;
+  name: string;
+  pos: z.infer<typeof CareerPosSchema>;
+  clubId: string;
+  club: string;
+  number: number;
+  seq: number;
+  at: string;
+};
+
+/** T-10-072 실시간 소켓(`LIVE_SOCKET_PATH`)으로 오는 메시지. event는 피드 한 줄과 같은 모양이다. 모르는 type은
+ * 웹이 버린다(옛 탭은 retiredNumber를 무시한다). */
+export type LivePush =
+  { type: 'event'; event: LiveEvent } | { type: 'retiredNumber'; item: LiveRetiredNumber };

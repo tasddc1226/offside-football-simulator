@@ -3,7 +3,13 @@ import { LiveResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueCookie, putJson, RETIREMENT as summary, seasonBody } from '../test/http.js';
+import {
+  issueCookie,
+  putJson,
+  putSeasonsFor,
+  RETIREMENT as summary,
+  seasonBody,
+} from '../test/http.js';
 
 const A = '0c000000-0000-4000-8000-00000000000a';
 const B = '0c000000-0000-4000-8000-00000000000b';
@@ -35,7 +41,7 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
   });
 
   it('시즌·은퇴 업로드가 최신순 피드와 오늘 숫자로 보인다 — 선수당 한 줄', async () => {
-    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2026`, seasonBody());
+    await putSeasonsFor(ctx.env, cookie, A); // 18–33세 16시즌
     await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2026`, seasonBody());
     await putJson(
       ctx,
@@ -52,7 +58,7 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
     await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, lastClubId: 'pl-15' });
 
     const data = await read(ctx);
-    expect(data.stats).toEqual({ playing: 2, seasonsToday: 4, newToday: 3, retiredToday: 1 });
+    expect(data.stats).toEqual({ playing: 2, seasonsToday: 19, newToday: 3, retiredToday: 1 });
     // A는 은퇴 소식만, B는 최신 시즌(2027)만 남는다.
     expect(data.feed.map((e) => e.kind)).toEqual(['retire', 'season', 'season']);
     expect(data.feed[0]).toMatchObject({
@@ -60,7 +66,7 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
       careerId: A,
       name: null,
       pos: 'FW',
-      score: 612,
+      score: 420,
       lastClub: '테스트 FC',
       lastClubId: 'pl-15',
     });
@@ -88,7 +94,10 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
   it('진행 중 커리어는 시즌에 실어 보낸 공개 이름으로 보이고, 끄면 익명·안 보내면 그대로다 (T-10-065)', async () => {
     // undefined 키는 JSON에서 빠진다 = 이름을 보내지 않는 옛 클라이언트.
     const put = (id: string, year: number, publicName?: string | null) =>
-      putJson(ctx, cookie, `/v1/careers/${id}/seasons/${year}`, { ...seasonBody(), publicName });
+      putJson(ctx, cookie, `/v1/careers/${id}/seasons/${year}`, {
+        ...seasonBody({ age: year - 1996 }), // 30대에 은퇴해야 은퇴 소식에 오른다
+        publicName,
+      });
     await put(A, 2026, '도하람');
     await put(B, 2026, '시발 FC'); // 욕설은 시즌을 버리지 않고 익명으로만 남긴다
     expect((await read(ctx)).feed.map((e) => e.name)).toEqual(

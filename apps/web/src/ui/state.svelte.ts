@@ -2,15 +2,39 @@
 // 원본은 module-level `let G/screen/tab/...` + 수동 render() 호출로 화면을 갱신했다. Svelte 5
 // runes로 옮기면서 같은 상태를 하나의 반응형 객체에 모아 두고, 화면 갱신은 컴포넌트가 이 상태를
 // 구독하는 것으로 대신한다(수동 render() 호출은 더 이상 필요 없다).
-import type { HofSort } from '@offside/contracts';
+import type { HofSort, RetiredNumberResult } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
+import { activeSeason } from '@offside/contracts/service-seasons';
+import { detailPosOpen, dposFor } from '@offside/contracts/positions';
 import type { OutboxItem } from '../game/outbox.js';
-import type { AttrKey, Pos } from '../game/data.js';
-import { pick } from '../game/rng.js';
+import type { AttrKey, DetailPos, Pos } from '../game/data.js';
+import { pick, ri } from '../game/rng.js';
 import { SURNAMES, GIVEN, defaultFocus } from '../game/data.js';
 import type { GameState, HofEntry, LegendSource } from '../game/types.js';
 import type { Candidate } from '../game/candidates.js';
 import type { PhaseReport } from './sheets/types.js';
+
+/** 기록실(하단 메뉴 'hof')의 탭. */
+export type HofTab = 'legends' | 'rn' | 'teams';
+/**
+ * 기록실 화면 상태. season: 서비스 시즌 순위(T-10-090). null이면 전체 명예의 전당. team: 라이브 랭킹에서 연 팀
+ * 프로필(T-10-092).
+ */
+export type HofView = {
+  tab: HofTab;
+  page: number;
+  sort: HofSort;
+  season: number | null;
+  team: string | null;
+};
+/** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
+export const hofStart = (): HofView => ({
+  tab: 'legends',
+  page: 1,
+  sort: 'score',
+  season: activeSeason(new Date().toISOString())?.id ?? null,
+  team: null,
+});
 
 export type Screen =
   | 'home'
@@ -20,6 +44,8 @@ export type Screen =
   | 'legend'
   | 'settings'
   | 'owner'
+  /** T-10-092 구단주 팀(구단주 화면에서 연다). */
+  | 'team'
   | 'board'
   | 'dex'
   | 'hof'
@@ -32,15 +58,27 @@ export interface DraftCharacter {
   name: string;
   number: number;
   pos: Pos;
+  /** T-10-091 세부 포지션. 시즌 1 개막 전(프리시즌)엔 고르지 않는다 — create-view.draftDpos()가 거른다. */
+  dpos: DetailPos | null;
   foot: GameState['foot'];
   /** T-10-008. 키우고 싶은 주력 능력치(FOCUS_PICK개). */
   focus: AttrKey[];
   trait: string;
 }
 
+/** T-10-091 지금 새 선수가 세부 포지션을 고를 수 있는가(시즌 1 개막부터). */
+export const detailOpenNow = (): boolean => detailPosOpen(new Date().toISOString());
+
+/** 새 커리어에 넣을 세부 포지션 — 프리시즌이거나 큰 포지션과 어긋나면 넣지 않는다. */
+export const draftDpos = (c: Pick<DraftCharacter, 'pos' | 'dpos'>): DetailPos | undefined =>
+  (detailOpenNow() && dposFor(c.pos, c.dpos)) || undefined;
+
 export function randomName(): string {
   return pick(SURNAMES) + pick(GIVEN);
 }
+
+/** T-10-076 기본 등번호는 무작위(1~99) — 모두 10번으로 시작하면 영구결번이 10번에 몰린다. 칸은 비우고 직접 적을 수 있다. */
+export const randomNumber = (): number => ri(1, 99);
 
 /** T-10-005 은퇴 선수 상세 화면에 띄울 대상. 내 선수(로컬 ft_hof)면 `own`이 있고 이름 공개를 바꿀 수 있다. */
 export interface LegendView {
@@ -70,6 +108,8 @@ export interface LegendView {
   title: string | null;
   /** T-10-073 은퇴 직후(진행 중 세이브)에만 — 실제 잠재력 공개. 저장된 기록에는 없다. */
   pot?: { real: string; scout: string; gap: number; ach: number } | undefined;
+  /** T-10-076 영구결번 심사 결과. null = 자격 없음, undefined = 아직 모름(업로드 전·옛 기록). */
+  rn?: RetiredNumberResult | null | undefined;
 }
 
 export const appState = $state<{
@@ -89,9 +129,9 @@ export const appState = $state<{
   boardPost: string | null;
   /** T-10-013. 진행 중 커리어가 다른 계정 소유라 서버가 거절한 시즌 업로드(홈에서 처리를 고른다). */
   ownerConflict: OutboxItem[] | null;
-  /** 명예의 전당 전체 보기 화면의 탭·페이지(1부터)·순위 유형. 선수 상세에서 돌아와도 그대로다. */
-  hof: { page: number; sort: HofSort };
-  /** 선수 상세의 '← 명예의 전당'이 돌아갈 화면. */
+  /** 기록실 화면의 탭(명예의 전당·영구결번)·페이지(1부터)·순위 유형. 선수 상세에서 돌아와도 그대로다. */
+  hof: HofView;
+  /** 선수 상세의 '← 이전으로'가 돌아갈 화면. */
   legendBack: 'home' | 'hof' | 'owner';
   /** T-10-029. 공유 링크(/career/:id)로 들어온 은퇴 선수 id — 보기 전용 화면(SharedCareer)이 읽는다. */
   sharedCareer: string | null;
@@ -105,8 +145,9 @@ export const appState = $state<{
   legend: null,
   C: {
     name: randomName(),
-    number: 10,
+    number: randomNumber(),
     pos: 'FW',
+    dpos: null,
     foot: '오른발',
     focus: defaultFocus('FW'),
     trait: 'late',
@@ -117,7 +158,7 @@ export const appState = $state<{
   board: 'notice',
   boardPost: null,
   ownerConflict: null,
-  hof: { page: 1, sort: 'score' },
+  hof: hofStart(),
   legendBack: 'home',
   sharedCareer: null,
   report: null,

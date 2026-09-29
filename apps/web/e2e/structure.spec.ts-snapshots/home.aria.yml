@@ -1,5 +1,7 @@
 - main:
-    - text: '풀타임: 휘슬이 울릴 때까지 오프사이드 Current career'
+    - text: '풀타임: 휘슬이 울릴 때까지 오프사이드'
+    - switch "배경음악"
+    - text: Current career
     - heading "이번 커리어는 구조테스트 입니다" [level=1]:
         - text: ''
         - strong: 구조테스트

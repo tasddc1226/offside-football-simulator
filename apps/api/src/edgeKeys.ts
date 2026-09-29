@@ -8,10 +8,14 @@ export const EDGE = {
   balance: '/v1/balance',
   adminStats: '/v1/admin/stats',
   firsts: '/v1/firsts',
+  retiredNumbers: '/v1/retired-numbers',
   live: '/v1/live',
   hofDetail: (careerId: string) => `/v1/hof/${careerId}`,
-  hofList: (limit: number, page: number, sort: string) =>
-    `/v1/hof?limit=${limit}&page=${page}&sort=${sort}`,
+  hofList: (limit: number, page: number, sort: string, season?: number) =>
+    `/v1/hof?limit=${limit}&page=${page}&sort=${sort}${season ? `&season=${season}` : ''}`,
+  /** T-10-092 라이브 랭킹(팀 랭킹). TTL로만 새로 읽는다(원작처럼 5분마다 갱신). */
+  teamRank: (season: number, sort: string, page: number) =>
+    `/v1/teams?season=${season}&sort=${sort}&page=${page}`,
   /** 게시판 목록은 첫 페이지(웹 기본 limit)만 담는다. */
   boardFirstPage: (board: string) => `/v1/boards/${board}/posts?limit=${BOARD_PAGE_LIMIT}`,
 } as const;
@@ -22,11 +26,17 @@ const allBoardLists = () => BOARD_KEYS.map(EDGE.boardFirstPage);
 export const STALE = {
   balanceActivated: () => [EDGE.balance],
   firstsChanged: () => [EDGE.firsts],
+  retiredNumbersChanged: () => [EDGE.retiredNumbers],
   /** 이름 공개 토글이 바로 보이게(최초 기록의 이름 포함). */
   retirementPut: (careerId: string) => [EDGE.hofDetail(careerId), EDGE.firsts],
   /** 글·댓글 쓰기/지우기 — 목록의 글과 댓글 수가 바뀐다. */
   boardChanged: (board: string) => [EDGE.boardFirstPage(board)],
   commentsPurged: allBoardLists,
+  /** 팀 등록·편성 저장 — 새 팀이 라이브 랭킹 첫 페이지에 바로 보이게(경기 결과는 TTL로만). */
+  teamSaved: (season: number) => [
+    EDGE.teamRank(season, 'rating', 1),
+    EDGE.teamRank(season, 'ovr', 1),
+  ],
   profileDeleted: (careerIds: string[], hadComments: boolean) => [
     ...careerIds.map(EDGE.hofDetail),
     ...(hadComments ? allBoardLists() : []),

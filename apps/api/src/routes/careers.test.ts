@@ -4,7 +4,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { careers, careerSeasons, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { deleteProfile, issueCookie, ORIGIN, putJson, TEST_CAREER } from '../test/http.js';
+import {
+  deleteProfile,
+  issueCookie,
+  ORIGIN,
+  putJson,
+  putSeasonsFor,
+  TEST_CAREER,
+} from '../test/http.js';
 
 function jsonInit(input: {
   method: 'PUT' | 'POST';
@@ -139,6 +146,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       .where(eq(careerSeasons.careerId, CAREER_ID));
     expect(season?.clubId).toBe('pl-15');
 
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());
     expect(
       (
         await put(`/v1/careers/${CAREER_ID}/retirement`, {
@@ -191,6 +199,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(seasonRows[0]?.clubId).toBeNull();
     expect(seasonRows[0]?.compsJson).toBeNull();
 
+    await putSeasonsFor(ctx.env, owner.cookie, CAREER_ID, retirementBody());
     const retireRes = await app.request(
       `/v1/careers/${CAREER_ID}/retirement`,
       jsonInit({ method: 'PUT', body: retirementBody(), cookie: owner.cookie }),
@@ -198,7 +207,11 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     );
     expect(retireRes.status).toBe(200);
     const retireBody = (await retireRes.json()) as { data: { careerId: string; status: string } };
-    expect(retireBody.data).toEqual({ careerId: CAREER_ID, status: 'retired' });
+    expect(retireBody.data).toEqual({
+      careerId: CAREER_ID,
+      status: 'retired',
+      retiredNumber: null,
+    });
 
     const retiredRow = (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0];
     expect(retiredRow?.status).toBe('retired');
@@ -213,6 +226,12 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(staleSeasonRes.status).toBe(200);
     const stillRetired = (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0];
     expect(stillRetired?.status).toBe('retired');
+    // 은퇴 요약의 근거인 시즌 기록도 고쳐지지 않는다.
+    const [kept] = await ctx.db
+      .select()
+      .from(careerSeasons)
+      .where(eq(careerSeasons.careerId, CAREER_ID));
+    expect(kept?.goals).toBe(8);
   });
 
   it('다른 프로필 소유의 careerId를 쓰면 409 CAREER_OWNER_MISMATCH', async () => {
@@ -295,16 +314,8 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
 
   async function retire(cookie: string, careerId: string, legendScore: number, retireAge?: number) {
     const app = createApp();
-    expect(
-      (
-        await app.request(
-          `/v1/careers/${careerId}/seasons/2026`,
-          jsonInit({ method: 'PUT', body: seasonBody(), cookie }),
-          ctx.env,
-        )
-      ).status,
-    ).toBe(200);
     const body = { ...retirementBody(), legendScore, ...(retireAge ? { retireAge } : {}) };
+    await putSeasonsFor(ctx.env, cookie, careerId, body);
     expect(
       (
         await app.request(
@@ -343,7 +354,7 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
     const low = '11111111-1111-4111-8111-111111111111';
     const high = '22222222-2222-4222-8222-222222222222';
     await retire(me.cookie, low, 100);
-    await retire(me.cookie, high, 500, 22); // 짧은 커리어도 내 선수에는 남는다(T-10-032).
+    await retire(me.cookie, high, 300, 22); // 짧은 커리어도 내 선수에는 남는다(T-10-032).
     await retire(other.cookie, '33333333-3333-4333-8333-333333333333', 900);
     // 은퇴하지 않은 커리어는 빠진다.
     const app = createApp();
@@ -358,8 +369,188 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
     ).data;
     expect(data.linked).toBe(true);
     expect(data.entries.map((e) => [e.id, e.legendScore])).toEqual([
-      [high, 500],
+      [high, 300],
       [low, 100],
     ]);
+  });
+});
+
+// 브라우저에서 값을 고쳐 보낸 기록이 서버 기록·순위를 부풀리지 못한다.
+describe('조작된 기록 보정', () => {
+  let ctx: TestD1;
+  let cookie: string;
+  const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
+  const row = async () =>
+    (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0]!;
+
+  beforeEach(async () => {
+    ctx = await createTestD1();
+    cookie = (await issueCookie(ctx)).cookie;
+  });
+  afterEach(async () => {
+    await ctx.dispose();
+  });
+
+  it('게임에서 나올 수 없는 시즌 값은 거부하지 않고 잘라서 저장한다', async () => {
+    const body = seasonBody();
+    const res = await put(`/v1/careers/${CAREER_ID}/seasons/2026`, {
+      ...body,
+      season: {
+        ...body.season,
+        age: 99,
+        clubId: 'pl-999',
+        apps: 900,
+        goals: 1000,
+        assists: 1000,
+        cs: 1000,
+        caps: 200,
+        ovr: 200,
+        honors: [...Array.from({ length: 25 }, (_, i) => `상 ${i}`), '상 0', ' 상 1 '],
+      },
+    });
+    expect(res.status).toBe(200);
+    const [s] = await ctx.db
+      .select()
+      .from(careerSeasons)
+      .where(eq(careerSeasons.careerId, CAREER_ID));
+    expect(s).toMatchObject({
+      age: 45,
+      clubId: null,
+      apps: 80,
+      goals: 100,
+      assists: 80,
+      cs: 60,
+      caps: 30,
+      ovr: 99,
+    });
+    const honors = JSON.parse(s!.honorsJson) as string[];
+    expect(honors).toHaveLength(20);
+    expect(new Set(honors).size).toBe(20);
+  });
+
+  it('포지션·유형 같은 커리어 메타는 처음 값을 지킨다', async () => {
+    await put(`/v1/careers/${CAREER_ID}/seasons/2026`, seasonBody());
+    await put(`/v1/careers/${CAREER_ID}/seasons/2027`, {
+      ...seasonBody(),
+      career: { ...TEST_CAREER, pos: 'GK', type: 'wall', appVersion: '1.0.1' },
+    });
+    expect(await row()).toMatchObject({ pos: 'FW', type: 'poacher', appVersion: '1.0.1' });
+  });
+
+  it('T-10-091: 세부 포지션은 처음 값을 지키고, 큰 포지션과 어긋나면 버린다', async () => {
+    await put(`/v1/careers/${CAREER_ID}/seasons/2026`, {
+      ...seasonBody(),
+      career: { ...TEST_CAREER, dpos: 'W' },
+    });
+    await put(`/v1/careers/${CAREER_ID}/seasons/2027`, {
+      ...seasonBody(),
+      career: { ...TEST_CAREER, dpos: 'ST' },
+    });
+    expect(await row()).toMatchObject({ pos: 'FW', dpos: 'W' });
+
+    const other = '55555555-5555-4555-8555-555555555555';
+    await put(`/v1/careers/${other}/seasons/2026`, {
+      ...seasonBody(),
+      career: { ...TEST_CAREER, dpos: 'CB' },
+    });
+    const [r] = await ctx.db.select().from(careers).where(eq(careers.id, other));
+    expect(r).toMatchObject({ pos: 'FW', dpos: null });
+    expect(
+      (
+        await put(`/v1/careers/${other}/seasons/2027`, {
+          ...seasonBody(),
+          career: { ...TEST_CAREER, dpos: 'LW' },
+        })
+      ).status,
+    ).toBe(400);
+  });
+
+  it('T-10-092: 최고 시점 능력치는 자리별 실력을 최고 OVR 아래로 잘라 남기고, 모양이 틀려도 은퇴는 받는다', async () => {
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID, { ...retirementBody(), retireAge: 25 });
+    const profile = {
+      attrs: { pac: 91, sho: 70, pas: 66, dri: 80, def: 40, phy: 72 },
+      roles: { GK: 20, CB: 45, FB: 60, DM: 55, CM: 64, AM: 75, W: 99, ST: 86 },
+    };
+    const res = await put(`/v1/careers/${CAREER_ID}/retirement`, {
+      ...retirementBody(),
+      peak: 150,
+      profile,
+    });
+    expect(res.status).toBe(200);
+    const r = await row();
+    expect(r.peak).toBe(88);
+    expect(JSON.parse(r.peakProfile!)).toEqual({
+      attrs: profile.attrs,
+      roles: { ...profile.roles, W: 88 },
+    });
+
+    const other = '66666666-6666-4666-8666-666666666666';
+    await putSeasonsFor(ctx.env, cookie, other, { ...retirementBody(), retireAge: 25 });
+    const bad = await put(`/v1/careers/${other}/retirement`, {
+      ...retirementBody(),
+      profile: { attrs: {}, roles: { ST: 'x' } },
+    });
+    expect(bad.status).toBe(200);
+    const [o] = await ctx.db.select().from(careers).where(eq(careers.id, other));
+    expect(o).toMatchObject({ status: 'retired', peakProfile: null });
+  });
+
+  it('은퇴 요약은 받아 둔 시즌 기록에 맞추고, 레전드 점수는 그 기록으로 낼 수 있는 만큼만 받는다', async () => {
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID, { ...retirementBody(), retireAge: 25 });
+    const res = await put(`/v1/careers/${CAREER_ID}/retirement`, {
+      ...retirementBody(),
+      retireAge: 40,
+      legendScore: 99_999,
+      apps: 99_999,
+      goals: 99_999,
+      assists: 99_999,
+      trophies: 9_999,
+      awards: 9_999,
+      caps: 9_999,
+      ballon: 999,
+      peak: 150,
+      lastClubId: 'zz-1',
+    });
+    expect(res.status).toBe(200);
+    const r = await row();
+    // 18–24세 7시즌: 출전·골·도움은 시즌 합계, 우승·수상은 시즌 영예(6개) + 여유 3, A매치는 시즌 합계.
+    expect(r).toMatchObject({
+      retireAge: 25,
+      apps: 300,
+      goals: 120,
+      assists: 60,
+      trophies: 9,
+      awards: 0,
+      caps: 30,
+      ballon: 0,
+      peak: 88,
+      lastClubId: null,
+    });
+    // 120×0.42 + 60×0.35 + 300×0.05 + 9×10 + 30×0.4 + 88×2 + 7시즌×30×0.6 = 490.4
+    expect(r.legendScore).toBe(491);
+  });
+
+  it('은퇴를 다시 보내면 공개 이름만 바뀌고 요약은 첫 은퇴 그대로다', async () => {
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());
+    await put(`/v1/careers/${CAREER_ID}/retirement`, retirementBody());
+    const res = await put(`/v1/careers/${CAREER_ID}/retirement`, {
+      ...retirementBody(),
+      legendScore: 1,
+      goals: 1,
+      publicName: '김오프',
+    });
+    expect(res.status).toBe(200);
+    expect(await row()).toMatchObject({ legendScore: 420, goals: 120, publicName: '김오프' });
+  });
+
+  it('받아 둔 시즌이 없는 커리어의 은퇴는 400', async () => {
+    const other = '0d000000-0000-4000-8000-000000000001';
+    await put(`/v1/careers/${other}/seasons/2026`, seasonBody());
+    await ctx.db.delete(careerSeasons).where(eq(careerSeasons.careerId, other));
+    const res = await put(`/v1/careers/${other}/retirement`, retirementBody());
+    expect(res.status).toBe(400);
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toMatchObject({
+      reason: 'NO_SEASONS',
+    });
   });
 });

@@ -23,6 +23,8 @@ export type Bindings = {
   BACKUP?: R2Bucket;
   /** T-10-072 홈 라이브 실시간 허브. 테스트(getPlatformProxy)엔 없다 — 없으면 소켓은 503, 소식은 보내지 않는다. */
   LIVE?: DurableObjectNamespace<LiveHub>;
+  /** T-10-076 영구결번을 여는 시각(ISO, UTC). 운영에만 둔다 — 없으면 바로 열려 있다. 오픈 뒤 지운다. */
+  RETIRED_NUMBERS_OPEN_AT?: string;
 };
 
 export type SessionContext = {
