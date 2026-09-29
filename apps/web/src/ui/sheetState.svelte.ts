@@ -3,18 +3,18 @@
 // 그린다. 진행 연출(playSteps·playBlock·playJudge)은 반응형 뷰 상태를 원본과 같은 타이밍으로
 // 갱신하는 async 함수라, 호출하는 쪽은 여전히 연출이 끝날 때까지 await 한다.
 import { tick } from 'svelte';
-import { clamp, ri } from '../game/rng.js';
-import { clubsIn } from '../game/engine.js';
-import type { BlockResult, MatchGame } from '../game/match.js';
-import type { GameState } from '../game/types.js';
-import type { MgKind } from '../game/minigame.js';
-import type { DragPoint, ShotResult } from '../game/dragShot.js';
+import { clamp, ri } from '@offside/game/rng';
+import { clubsIn } from '@offside/game/engine';
+import type { BlockResult, MatchGame } from '@offside/game/match';
+import type { GameState } from '@offside/game/types';
+import type { MgKind } from '@offside/game/minigame';
+import type { DragPoint, ShotResult } from '@offside/game/dragShot';
 import { motionOK } from './motion.js';
 import type { SheetView, TickerRow } from './sheets/types.js';
 
 export type SheetButton = { label: string; cls?: string; fn: () => void };
 export type { SheetView } from './sheets/types.js';
-export type { Chip } from '../game/stats.js';
+export type { Chip } from '@offside/game/stats';
 
 export const sheetState = $state<{
   open: boolean;
@@ -278,7 +278,7 @@ export async function playDragShot<R extends { ok: boolean }>(
   settle: (shot: ShotResult) => R,
 ): Promise<R> {
   sheetState.busy = true;
-  const { evalShot, lateShot } = await import('../game/dragShot.js');
+  const { evalShot, lateShot } = await import('@offside/game/dragShot');
   return playScene<'dragShot', DragPoint[] | null, R>(
     (onShot) => ({ kind: 'dragShot', label, shot: null, onShot }),
     (path, v) => {

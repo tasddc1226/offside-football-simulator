@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { generateCandidates } from './candidates.js';
-import { DETAILS_OF, DPOS, scoreRate, type DetailPos, type Pos } from './data.js';
-import { newGame } from './engine.js';
-import { mainRole, ovr } from './attributes.js';
-import { legendScore, retire, legendSnapshot } from './season.js';
-import { createRng, setActiveRng } from './rng.js';
-import { startOvr } from '../ui/create-view.js';
+import { generateCandidates } from '@offside/game/candidates';
+import { DETAILS_OF, DPOS, scoreRate, type DetailPos, type Pos } from '@offside/game/data';
+import { newGame } from '@offside/game/engine';
+import { mainRole, ovr } from '@offside/game/attributes';
+import { legendScore, retire, legendSnapshot } from '@offside/game/season';
+import { createRng, setActiveRng } from '@offside/game/rng';
+import { startOvr } from './create-view.js';
 
 const make = (pos: Pos, dpos?: DetailPos, attrs?: Parameters<typeof newGame>[2]) => {
   setActiveRng(createRng(11));

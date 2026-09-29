@@ -4,14 +4,14 @@
   // 없어(공개를 고른 경우만) 같은 기기의 기록이 있으면 그 이름·공개 설정을 쓴다.
   import { onMount } from 'svelte';
   import type { PublicHofEntry } from '@offside/contracts';
-  import { loadHOF } from '../game/season.js';
-  import type { HofEntry } from '../game/types.js';
+  import { loadHOF } from '@offside/game/season';
+  import type { HofEntry } from '@offside/game/types';
   import { getMyCareers, getRetiredNumbers } from '../api/client.js';
   import { fillGranted } from './retiredNumber.svelte.js';
   import { openLocalLegend, openPublicLegend } from './legend.js';
   import { anonName } from './format.js';
   import HofRow, { type RowStats } from './HofRow.svelte';
-  import type { DetailPos, POS } from '../game/data.js';
+  import type { DetailPos, POS } from '@offside/game/data';
 
   type MineRow = { key: string; name: string; pos: keyof typeof POS; dpos?: DetailPos | null | undefined; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; open: () => void };
   /** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다. */
@@ -51,7 +51,7 @@
   const shown = $derived(expanded ? rows : rows.slice(0, SHOW));
 
   onMount(async () => {
-    const [r, outbox] = await Promise.all([getMyCareers(), import('../game/outbox.js')]);
+    const [r, outbox] = await Promise.all([getMyCareers(), import('../sync/outbox.js')]);
     let list: MineRow[];
     if (!r.ok || !r.data.linked) {
       source = !r.ok && r.error.code === 'NETWORK_ERROR' ? 'offline' : 'device';

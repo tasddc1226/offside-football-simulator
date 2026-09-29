@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import fixture from '../../e2e/fixtures/save-fw26.json';
-import { SAVE_VERSION } from '../game/data.js';
-import '../game/event-registry.js';
-import { createRng, getActiveRng, setActiveRng } from '../game/rng.js';
-import type { GameState, HofEntry } from '../game/types.js';
+import { SAVE_VERSION } from '@offside/game/data';
+import '@offside/game/event-registry';
+import { createRng, getActiveRng, setActiveRng } from '@offside/game/rng';
+import type { GameState, HofEntry } from '@offside/game/types';
 import { applyBackup, backupFileName, decodeBackup, encodeBackup, mergeHof } from './backup.js';
 
 // T-10-116: 진행 중 커리어 백업 코드. 형식·검증·화이트리스트 쓰기를 확인한다.

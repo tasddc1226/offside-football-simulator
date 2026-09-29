@@ -7,8 +7,8 @@
 <script lang="ts">
   // 선수 생성 화면용 작은 육각형 레이더(T-10-022). 라벨 없이 모양만 보여 주고, 값이 바뀌면 모핑한다.
   import { Tween } from 'svelte/motion';
-  import { attrLabels, type AttrKey, type Pos } from '../game/data.js';
-  import { radarOrder } from '../game/attributes.js';
+  import { attrLabels, type AttrKey, type Pos } from '@offside/game/data';
+  import { radarOrder } from '@offside/game/attributes';
   import { dur } from './motion.js';
 
   const { pos, attrs, size = 80 }: { pos: Pos; attrs: Record<AttrKey, number>; size?: number } = $props();

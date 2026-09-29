@@ -1,13 +1,13 @@
 <script lang="ts">
   // ui.ts playerTab()/nationalCard() 포트 (316~356줄)
-  import { TRAITS } from '../../game/data.js';
-  import { ovr } from '../../game/attributes.js';
-  import { potFogged, potLabel, potScouted, leagueOf, fmtMoney } from '../../game/engine.js';
-  import { marketValue } from '../../game/season.js';
-  import { milStatusText } from '../../game/military.js';
-  import { nextWC, HOSTS } from '../../game/national.js';
-  import type { GameState } from '../../game/types.js';
-  import { flagOf, isKorean, nationOf } from '../../game/nation.js';
+  import { TRAITS } from '@offside/game/data';
+  import { ovr } from '@offside/game/attributes';
+  import { potFogged, potLabel, potScouted, leagueOf, fmtMoney } from '@offside/game/engine';
+  import { marketValue } from '@offside/game/season';
+  import { milStatusText } from '@offside/game/military';
+  import { nextWC, HOSTS } from '@offside/game/national';
+  import type { GameState } from '@offside/game/types';
+  import { flagOf, isKorean, nationOf } from '@offside/game/nation';
   import { BODY_DEFAULT } from '@offside/contracts/body';
   import { fmtValue } from '../format.js';
   import AttrCard from '../AttrCard.svelte';

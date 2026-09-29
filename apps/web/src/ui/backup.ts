@@ -7,11 +7,12 @@
 // 담는 키: `ft_save`(필수)와 `ft_hof`(이 기기 은퇴 선수 기록, 있으면). `ft_scout_seed`는 선수 생성 후보의 시드라
 // 커리어가 시작된 세이브에는 쓸모가 없어 뺐다. 로그인·세션·프로필·설정 키는 절대 담지 않는다.
 // 가져올 때는 아래 WRITE_KEYS 두 개만 쓴다 — 백업에 다른 키가 있어도 무시한다.
-import { SAVE_VERSION } from '../game/data.js';
-import { getActiveRng, setActiveRng } from '../game/rng.js';
-import { loadSave } from '../game/save.js';
-import { HOF_LOCAL_MAX, saveKey } from '../game/season.js';
-import type { GameState, HofEntry } from '../game/types.js';
+import { SAVE_VERSION } from '@offside/game/data';
+import { getActiveRng, setActiveRng } from '@offside/game/rng';
+import { loadSave } from '@offside/game/save';
+import { HOF_LOCAL_MAX, saveKey } from '@offside/game/season';
+import { storage } from '@offside/game/storage';
+import type { GameState, HofEntry } from '@offside/game/types';
 
 export const BACKUP_VERSION = 1;
 /** 가져오기가 쓸 수 있는 localStorage 키(화이트리스트). */
@@ -145,13 +146,13 @@ export function mergeHof(mine: HofEntry[], incoming: HofEntry[]): HofEntry[] {
 export function applyBackup(b: Backup, currentHof: HofEntry[]): boolean {
   let prev: string | null;
   try {
-    prev = localStorage.getItem('ft_save');
+    prev = storage().getItem('ft_save');
   } catch {
     return false;
   }
   if (!saveKey('ft_save', b.save)) {
     try {
-      if (prev != null) localStorage.setItem('ft_save', prev);
+      if (prev != null) storage().setItem('ft_save', prev);
     } catch {
       // 되돌리지 못해도 새 값은 쓰이지 않았다(setItem이 던지면 기존 값이 남는다).
     }

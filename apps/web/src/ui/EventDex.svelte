@@ -2,10 +2,10 @@
   // T-10-012 확률 도감. 공통 규칙과 이벤트별 선택지 확률(범위·영향 요인)을 게임 코드에서 직접 뽑아 보여 준다.
   // 스토리·특별 이벤트는 한 번 겪어야 열린다(스포일러 보호). 분석 코드와 함께 처음 열 때 불러오는 화면이다.
   import { onMount } from 'svelte';
-  import '../game/index.js';
-  import { EVENT_RULES, JITTER_RANGE } from '../game/engine.js';
-  import { DEX_GROUPS, eventDex, type DexChoice, type DexEntry, type DexGroup } from '../game/eventDex.js';
-  import { zoneWidth } from '../game/minigame.js';
+  import '@offside/game/index';
+  import { EVENT_RULES, JITTER_RANGE } from '@offside/game/engine';
+  import { DEX_GROUPS, eventDex, type DexChoice, type DexEntry, type DexGroup } from '@offside/game/eventDex';
+  import { zoneWidth } from '@offside/game/minigame';
   import { dexSeen } from './dex.js';
   import { goHome } from './nav.js';
   import BackBar from './BackBar.svelte';

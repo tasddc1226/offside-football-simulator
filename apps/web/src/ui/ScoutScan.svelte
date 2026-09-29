@@ -5,7 +5,7 @@
   // 빔 없이 짧게 단계만 넘긴다.
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
-  import type { Pos } from '../game/data.js';
+  import type { Pos } from '@offside/game/data';
   import { buzz, dur, motionOK } from './motion.js';
 
   let { pos, steps, onDone }: { pos: Pos; steps: string[]; onDone: () => void } = $props();

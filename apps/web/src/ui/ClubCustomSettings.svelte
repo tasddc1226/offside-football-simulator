@@ -1,9 +1,9 @@
 <script lang="ts">
   // 설정 화면의 "구단 이름·엠블럼 변경" 카드(T-10-009) — 리그별 클럽 이름·엠블럼 편집, 에디트 파일 내보내기/가져오기.
-  import { LEAGUES } from '../game/data.js';
-  import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '../game/clubs.js';
+  import { LEAGUES } from '@offside/game/data';
+  import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
   import { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
-  import { clubsIn } from '../game/engine.js';
+  import { clubsIn } from '@offside/game/engine';
   import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
   import { toast } from './helpers.js';
   import { doneOnEnter } from './inputDone.js';

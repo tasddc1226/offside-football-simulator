@@ -43,6 +43,7 @@ import type {
   MarketResult,
   OfferOption,
 } from './types.js';
+import { storage } from './storage.js';
 
 /** 시즌 결산 결과 — 결산 시트가 그린다. tours는 명단에 들었거나 경기가 없던(예선 결과) 대회와 우승 대회만. */
 export interface SeasonEndResult {
@@ -582,7 +583,7 @@ export function legendTitle(score: number): string {
 /** 저장 성공 여부를 돌려준다(용량 초과·저장소 차단이면 false). */
 export function saveKey(k: string, v: unknown): boolean {
   try {
-    localStorage.setItem(k, JSON.stringify(v));
+    storage().setItem(k, JSON.stringify(v));
     return true;
   } catch {
     return false;
@@ -591,14 +592,14 @@ export function saveKey(k: string, v: unknown): boolean {
 /** 값을 읽지 않고(큰 세이브를 파싱하지 않고) 키가 있는지만 본다. */
 export function hasKey(k: string): boolean {
   try {
-    return localStorage.getItem(k) != null;
+    return storage().getItem(k) != null;
   } catch {
     return false;
   }
 }
 export function loadKey<T = unknown>(k: string): T | null {
   try {
-    const raw = localStorage.getItem(k);
+    const raw = storage().getItem(k);
     return raw == null ? null : (JSON.parse(raw) as T);
   } catch {
     return null;

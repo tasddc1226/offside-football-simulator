@@ -9,8 +9,8 @@
   // 명예의 전당 · 구단주 '내 선수'가 함께 쓰는 은퇴 선수 한 줄(순위 · 이름 · 기록 요약 · 오른쪽 값).
   // 누르는 버튼(.hof-row)은 부르는 쪽이 감싼다.
   import TitleTag from './titles/TitleTag.svelte';
-  import { titleById } from '../game/titles.js';
-  import { posLabel, type DetailPos, type POS } from '../game/data.js';
+  import { titleById } from '@offside/game/titles';
+  import { posLabel, type DetailPos, type POS } from '@offside/game/data';
   import Laurel from './Laurel.svelte';
   import ClubMark from './ClubMark.svelte';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';

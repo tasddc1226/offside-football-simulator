@@ -1,13 +1,13 @@
 // ───────── 저장 · 업로드 · 토스트 (ui.ts 43~142줄 포트) ─────────
-import { leagueOf } from '../game/engine.js';
-import { saveKey } from '../game/season.js';
-import { getActiveRng } from '../game/rng.js';
+import { leagueOf } from '@offside/game/engine';
+import { saveKey } from '@offside/game/season';
+import { getActiveRng } from '@offside/game/rng';
 import type { PutCareerSeasonBody } from '@offside/contracts';
-import type { CareerRecord, EventLogEntry, GameState, HofEntry } from '../game/types.js';
+import type { CareerRecord, EventLogEntry, GameState, HofEntry } from '@offside/game/types';
 import { appState, toastState } from './state.svelte.js';
 import { publicNameOf } from './namePublic.js';
 import { toPublicName } from '@offside/contracts/content-filter';
-import { takePlaySignals } from '../game/playSignals.js';
+import { takePlaySignals } from '../sync/playSignals.js';
 
 // T-9-009: 빌드 시 vite define으로 커밋 SHA가 들어온다(vite.config.ts). 테스트 등 define이 없는
 // 환경은 'dev'.
@@ -63,13 +63,13 @@ export function uploadSeason(s: GameState, rec: CareerRecord) {
   const events = (s.evBuf || []).slice();
   s.evBuf = [];
   const signals = takePlaySignals();
-  void import('../game/outbox.js').then((m) =>
+  void import('../sync/outbox.js').then((m) =>
     m.enqueueSeason(s.cid, rec.year, { ...seasonBody(m, s, rec, events), signals }),
   );
 }
 
 export function seasonBody(
-  m: typeof import('../game/outbox.js'),
+  m: typeof import('../sync/outbox.js'),
   s: GameState,
   rec: CareerRecord,
   events: PutCareerSeasonBody['events'],
@@ -94,7 +94,7 @@ export function seasonBody(
 
 /** 은퇴 요약 + 상세 스냅샷을 서버 명예의 전당으로 보낸다. 이름은 `entry.public`일 때만 보낸다(은퇴 때 환경설정 '선수 이름 공개'를 따름, T-10-065). */
 export function uploadRetirement(careerId: string, entry: HofEntry) {
-  void import('../game/outbox.js').then((m) =>
+  void import('../sync/outbox.js').then((m) =>
     m.enqueueRetirement(careerId, {
       retireAge: entry.age,
       peak: entry.peak,
@@ -119,7 +119,7 @@ export function uploadRetirement(careerId: string, entry: HofEntry) {
 /** cid 도입 전에 은퇴한 선수: 서버엔 이 커리어가 없어 은퇴만 보내면 CAREER_NOT_FOUND(400)로 버려진다 — 시즌을
  * 먼저 큐에 넣어 커리어를 만든 뒤 은퇴를 보낸다(큐는 넣은 순서대로 보낸다). 선택 로그는 남아 있지 않다. */
 export function uploadLegacyRetirement(s: GameState, entry: HofEntry) {
-  void import('../game/outbox.js').then((m) => {
+  void import('../sync/outbox.js').then((m) => {
     enqueueAllSeasons(m, s);
     uploadRetirement(s.cid, entry);
   });
@@ -127,7 +127,7 @@ export function uploadLegacyRetirement(s: GameState, entry: HofEntry) {
 
 /** 커리어의 모든 시즌을 지금 cid로 업로드 큐에 넣는다. eventsOf: 연도별 선택 로그(남아 있는 것만). */
 export function enqueueAllSeasons(
-  m: typeof import('../game/outbox.js'),
+  m: typeof import('../sync/outbox.js'),
   s: GameState,
   eventsOf: (year: number) => PutCareerSeasonBody['events'] = () => [],
 ) {

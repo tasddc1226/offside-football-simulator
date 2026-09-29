@@ -6,9 +6,9 @@ import type {
   RetiredNumbersResponse,
 } from '@offside/contracts';
 import { onLive } from '../api/liveSocket.js';
-import type { RetiredNumberEvent } from '../game/outbox.js';
-import { loadHOF, saveKey } from '../game/season.js';
-import { RETIRED_NUMBER_EVENT } from '../game/syncEvents.js';
+import type { RetiredNumberEvent } from '../sync/outbox.js';
+import { loadHOF, saveKey } from '@offside/game/season';
+import { RETIRED_NUMBER_EVENT } from '../sync/syncEvents.js';
 
 /** 커리어 id → 이번 접속에서 받은 심사 결과. */
 export const rnResults = $state<Record<string, RetiredNumberResult | null>>({});

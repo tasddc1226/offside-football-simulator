@@ -4,14 +4,14 @@
 import type { PublicHofEntry } from '@offside/contracts';
 import { toPublicName } from '@offside/contracts/content-filter';
 import { isHofEligible } from '@offside/contracts/hof-rules';
-import { legendScore, loadHOF, saveKey } from '../game/season.js';
-import type { GameState, HofEntry } from '../game/types.js';
+import { legendScore, loadHOF, saveKey } from '@offside/game/season';
+import type { GameState, HofEntry } from '@offside/game/types';
 import { getHofDetail, getMyCareers } from '../api/client.js';
 import { appState, type LegendView } from './state.svelte.js';
 import { toast, uploadRetirement } from './helpers.js';
 import { anonName, totals } from './format.js';
-import { mainTitle } from '../game/titles.js';
-import { potReveal } from '../game/stats.js';
+import { mainTitle } from '@offside/game/titles';
+import { potReveal } from '@offside/game/stats';
 import { SHARE_PATH } from '../share-path.js';
 import { rnOf } from './retiredNumber.svelte.js';
 

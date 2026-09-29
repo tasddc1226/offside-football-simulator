@@ -1,7 +1,7 @@
 <script lang="ts">
   // ui.ts renderHome() 포트 (156~182줄)
-  import { PHASES, LAST_PHASE, posLabel } from '../game/data.js';
-  import { ovr } from '../game/attributes.js';
+  import { PHASES, LAST_PHASE, posLabel } from '@offside/game/data';
+  import { ovr } from '@offside/game/attributes';
   import { appState } from './state.svelte.js';
   import { goNew, goContinue, go, warmGame } from './nav.js';
   import Topbar from './Topbar.svelte';

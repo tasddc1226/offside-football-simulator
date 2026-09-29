@@ -23,10 +23,11 @@
 
 | 위치                   | 내용                                                                                                                                                                                       |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `apps/web`             | Svelte 5 SPA (Vite). 게임 로직은 `src/game/*`(순수 TS, 시드 RNG를 세이브에 저장), 화면은 `src/ui/*`. 세이브는 `localStorage`. Cloudflare Workers Static Assets로 배포                      |
+| `apps/web`             | Svelte 5 SPA (Vite). 화면은 `src/ui/*`, 게임 로직은 `packages/game`. 세이브는 `localStorage`. Cloudflare Workers Static Assets로 배포                      |
 | `apps/api`             | Hono on Cloudflare Workers + D1(Drizzle). 익명 프로필·Google 로그인·복구 코드, 커리어·시즌 요약 적재, 명예의 전당, 공지·업데이트 게시판과 댓글, 구단명 커스텀, 서버 밸런스 설정, 운영 도구 |
+| `packages/game`        | 게임 엔진(순수 TS, 시드 RNG를 세이브에 저장). 웹·앱·시뮬레이터가 함께 쓴다(ADR-014) |
 | `packages/contracts`   | API 요청·응답 Zod 스키마와 밸런스 스펙(`@offside/contracts/balance`)                                                                                                                       |
-| `tooling/fulltime-sim` | 헤드리스 밸런스 시뮬레이터. `apps/web/src/game/*`을 그대로 import해 대량 커리어를 돌리고 밸런스 기준선(`reference/random.json`)과 비교한다                                              |
+| `tooling/fulltime-sim` | 헤드리스 밸런스 시뮬레이터. `packages/game`을 그대로 import해 대량 커리어를 돌리고 밸런스 기준선(`reference/random.json`)과 비교한다                                              |
 | `tooling/scripts`      | 의존 방향 검사, 운영 배포 보조 스크립트 등                                                                                                                                                 |
 | `docs/`                | `adr/`(아키텍처 결정), `tracking/`(보드·결정 로그), `operations/`(런북), `archive/offside/`(원작 문서, 참고용)                                                                             |
 

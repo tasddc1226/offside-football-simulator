@@ -1,9 +1,9 @@
 import type { PublicHofEntry } from '@offside/contracts';
 import { describe, expect, it } from 'vitest';
 import { BRAND_VERSION, CAREER_OG_BANDS, createHeadMarkup } from '../scripts/seo.mjs';
-import { POS } from './game/data.js';
-import { LEGEND_BANDS } from './game/legend-bands.js';
-import { POS_LABEL } from './game/pos-label.js';
+import { POS } from '@offside/game/data';
+import { LEGEND_BANDS } from '@offside/game/legend-bands';
+import { POS_LABEL } from '@offside/game/pos-label';
 import { bandCardPath, careerShareMeta, injectShareMeta, OG_VERSION } from './share-meta.js';
 
 const entry = {

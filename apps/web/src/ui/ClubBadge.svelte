@@ -1,6 +1,6 @@
 <script lang="ts">
   // 클럽 엠블럼(T-10-009). 유저 로고(이미지·글자)가 있으면 그걸, 없으면 기본 엠블럼(T-10-063, game/crests.ts)을 그린다.
-  import { crestOf, TRI_THIRD_PATH } from '../game/crests.js';
+  import { crestOf, TRI_THIRD_PATH } from '@offside/game/crests';
   import { clubCustom } from './clubCustom.svelte.js';
   const { club, size = 22 }: { club: { id: string; name: string }; size?: number } = $props();
   const logo = $derived(clubCustom.map[club.id]?.logo);

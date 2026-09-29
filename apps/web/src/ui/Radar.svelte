@@ -3,7 +3,7 @@
   import { Tween } from 'svelte/motion';
   import { radarData } from './format.js';
   import { dur } from './motion.js';
-  import type { GameState } from '../game/types.js';
+  import type { GameState } from '@offside/game/types';
 
   const { s }: { s: GameState } = $props();
   const d = $derived(radarData(s));

@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-10-005 명예의 전당 이름 공개 토글. 은퇴 때는 환경설정 '선수 이름 공개'(T-10-065, 기본 켜짐)를 따른다.
-  import type { HofEntry } from '../game/types.js';
+  import type { HofEntry } from '@offside/game/types';
   import { setLegendPublic } from './legend.js';
 
   const { h }: { h: HofEntry } = $props();

@@ -1,8 +1,8 @@
 <script lang="ts">
   // T-10-026 칭호 도감(트로피 탭). 얻은 칭호는 눌러서 대표 칭호로 고르고(다시 누르면 자동 선택으로),
   // 못 얻은 칭호는 접힌 목록에서 조건·진행도를 본다. 숨김 칭호는 얻기 전까지 이름을 가린다.
-  import { TITLES, TITLE_CATS, RARITY_LABEL, mainTitle, titleById, type TitleDef } from '../../game/titles.js';
-  import type { GameState } from '../../game/types.js';
+  import { TITLES, TITLE_CATS, RARITY_LABEL, mainTitle, titleById, type TitleDef } from '@offside/game/titles';
+  import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
   import TitleTag from './TitleTag.svelte';
 

@@ -1,8 +1,8 @@
 <script lang="ts">
   // T-10-024: 선수가 뛰는 리그의 순위표. 기본은 상위 3팀 + 내 팀 앞뒤 2팀 + 꼴찌만 접어서 보여 주고,
   // '전체 순위'로 모두 펼친다.
-  import { leagueOf, leagueTable } from '../../game/engine.js';
-  import type { GameState } from '../../game/types.js';
+  import { leagueOf, leagueTable } from '@offside/game/engine';
+  import type { GameState } from '@offside/game/types';
   import ClubBadge from '../ClubBadge.svelte';
 
   const { s }: { s: GameState } = $props();

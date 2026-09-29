@@ -8,7 +8,7 @@
     viewTeam,
     type TeamProfile,
   } from '../../api/team.js';
-  import { localCareerNames } from '../../game/season.js';
+  import { localCareerNames } from '@offside/game/season';
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import BackBar from '../BackBar.svelte';

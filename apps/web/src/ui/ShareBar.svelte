@@ -19,7 +19,7 @@
   // 내용은 확인이 끝나면 채워지는 Promise 로 넘긴다.
   async function checkLink(): Promise<string> {
     // 은퇴 기록이 아직 서버에 안 올라갔으면(오프라인이었거나 막 은퇴한 직후) 링크가 404다 — 먼저 보내 본다.
-    await import('../game/outbox.js').then((m) => m.flushOutbox()).catch(() => {});
+    await import('../sync/outbox.js').then((m) => m.flushOutbox()).catch(() => {});
     const r = await getHofDetail(id);
     if (!r.ok) {
       throw new Error(

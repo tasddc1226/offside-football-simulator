@@ -2,9 +2,9 @@
   // 은퇴한 내 선수의 대표 칭호 고르기(은퇴 화면·내 선수 상세 아래). 받은 칭호 목록은 접어 두고, 펼쳐서 고르면 선수
   // 카드·명예의 전당·공유 링크의 대표 칭호가 바뀐다. 이 기기 기록(ft_hof)에 남기고 서버에 다시 올린다 — 서버는 은퇴 때
   // 올라온 상세 기록의 칭호 목록에 있는 것만 받는다.
-  import { loadHOF, saveKey } from '../../game/season.js';
-  import { titleById, type TitleDef } from '../../game/titles.js';
-  import type { HofEntry } from '../../game/types.js';
+  import { loadHOF, saveKey } from '@offside/game/season';
+  import { titleById, type TitleDef } from '@offside/game/titles';
+  import type { HofEntry } from '@offside/game/types';
   import { toast, uploadRetirement } from '../helpers.js';
   import { legendTitleOf, picked } from './legendTitle.svelte.js';
   import TitleTag from './TitleTag.svelte';

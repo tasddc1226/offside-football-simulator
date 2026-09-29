@@ -1,8 +1,8 @@
 // ───────── 선수 생성 화면 표시 로직 (T-10-022) ─────────
 // Create.svelte의 라이브 카드·후보 카드가 쓰는 순수 함수. .svelte.ts 상태를 import하지 않아
 // vitest에서 바로 검증할 수 있다.
-import { ATTR_KEYS, attrLabels, type AttrKey, type Pos } from '../game/data.js';
-import { legacyOvr } from '../game/attributes.js';
+import { ATTR_KEYS, attrLabels, type AttrKey, type Pos } from '@offside/game/data';
+import { legacyOvr } from '@offside/game/attributes';
 import { iGa } from './format.js';
 
 // 가장 높은 능력치 하나로 스카우트가 붙이는 선수 유형 이름.

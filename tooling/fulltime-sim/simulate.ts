@@ -1,5 +1,5 @@
 // 풀타임(fulltime) 원본 analysis/simulate.js 를 포팅한 TS 시뮬레이션 러너.
-// 포트된(ported) apps/web/src/game/* ES 모듈을 그대로 import 해서, DOM/UI 없이
+// 포트된(ported) 게임 엔진(packages/game) ES 모듈을 그대로 import 해서, DOM/UI 없이
 // N개의 랜덤(또는 "스마트") 정책 커리어를 은퇴까지 헤드리스로 돌리고
 // 커리어별 CSV + 집계 JSON 을 저장한다. 원본과 동일한 정책 로직을 그대로 옮겼다.
 //
@@ -28,16 +28,11 @@ import {
   legendTitle,
   eventById,
   playPhase,
-} from '../../apps/web/src/game/index.js';
-import { pick, ri, createRng, setActiveRng, freshSeed } from '../../apps/web/src/game/rng.js';
-import { setLatestBalance } from '../../apps/web/src/game/balance.js';
+} from '@offside/game/index';
+import { pick, ri, createRng, setActiveRng, freshSeed } from '@offside/game/rng';
+import { setLatestBalance } from '@offside/game/balance';
 import { BODY_DEFAULT, BODY_LIMITS } from '../../packages/contracts/src/body.js';
-import type {
-  EventDef,
-  GameState,
-  MarketOption,
-  OfferOption,
-} from '../../apps/web/src/game/types.js';
+import type { EventDef, GameState, MarketOption, OfferOption } from '@offside/game/types';
 
 // ───────── Node 환경에 localStorage 스텁 (retire()/HOF 저장용, season.ts 는 이미 try/catch 로 감싸지만 예외 비용을 피한다) ─────────
 if (typeof (globalThis as Record<string, unknown>).localStorage === 'undefined') {

@@ -1,9 +1,9 @@
 <script lang="ts">
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
-  import { PHASES, LAST_PHASE } from '../../game/data.js';
-  import { teamRank, roundRange, TRAININGS, trainingLabel, trainingCard, trainingHelp, TRAINING_NOTE, STORIES, turnNo } from '../../game/engine.js';
-  import { eventById } from '../../game/events-data.js';
-  import type { GameState } from '../../game/types.js';
+  import { PHASES, LAST_PHASE } from '@offside/game/data';
+  import { teamRank, roundRange, TRAININGS, trainingLabel, trainingCard, trainingHelp, TRAINING_NOTE, STORIES, turnNo } from '@offside/game/engine';
+  import { eventById } from '@offside/game/events-data';
+  import type { GameState } from '@offside/game/types';
   import { save, seasonLabel } from '../helpers.js';
   import { appState } from '../state.svelte.js';
   import PhaseReport from './PhaseReport.svelte';

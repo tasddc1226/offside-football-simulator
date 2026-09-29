@@ -1,9 +1,9 @@
 // ───────── 저장 로드 (형식 변환은 game/save.ts migrateSave) ─────────
-import { legendSnapshot, loadHOF, loadKey, saveKey } from '../game/season.js';
-import { createRng, freshSeed, setActiveRng } from '../game/rng.js';
-import type { GameState } from '../game/types.js';
-import { loadSave } from '../game/save.js';
-import { setLatestBalance, useCareerBalance } from '../game/balance.js';
+import { legendSnapshot, loadHOF, loadKey, saveKey } from '@offside/game/season';
+import { createRng, freshSeed, setActiveRng } from '@offside/game/rng';
+import type { GameState } from '@offside/game/types';
+import { loadSave } from '@offside/game/save';
+import { setLatestBalance, useCareerBalance } from '@offside/game/balance';
 import { cachedGet } from '../api/client.js';
 import type { BalanceConfig } from '@offside/contracts';
 import { appState } from './state.svelte.js';

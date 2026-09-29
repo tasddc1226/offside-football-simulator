@@ -1,5 +1,5 @@
-import { clubById } from '../game/clubs.js';
-import { crestOf } from '../game/crests.js';
+import { clubById } from '@offside/game/clubs';
+import { crestOf } from '@offside/game/crests';
 
 const rgb = (hex: string) => {
   const n = parseInt(hex.replace('#', ''), 16);

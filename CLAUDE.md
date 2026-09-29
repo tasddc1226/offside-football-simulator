@@ -6,13 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OFFSIDE — 부제 "풀타임: 휘슬이 울릴 때까지". 확률/이벤트 기반 축구 선수 커리어
 시뮬레이션 웹 게임. `apps/web`은 Svelte 5 SPA(Vite)이고 게임 로직은
-`apps/web/src/game/*`(순수 TS), 화면은 `apps/web/src/ui/*`에 있다. 게임은 전부
+`packages/game/src/*`(순수 TS), 화면은 `apps/web/src/ui/*`에 있다. 게임은 전부
 브라우저에서 돌고 세이브는 `localStorage`에 있다. `apps/api`(Hono on Cloudflare
 Workers + D1)는 게임을 시뮬레이션하지 않고 익명 프로필·Google 로그인·복구 코드,
 커리어·시즌 요약 적재, 명예의 전당, 공지·업데이트 게시판, 구단명 커스텀, 서버
 밸런스 설정, 운영 도구를 다룬다. 계정 병합 플로우는 없다.
 
-pnpm workspaces + Turborepo 모노레포. Node ≥22.13, TypeScript strict.
+pnpm workspaces + Turborepo 모노레포. Node ≥22.13, TypeScript strict. 게임 엔진은 웹·앱이 함께 쓰는 `packages/game`(ADR-014)이다.
 
 2026-09-24 Phase 9에서 원작 OFFSIDE(React 19 + TanStack, Web Worker 결정론
 시뮬레이터, 버전 고정 콘텐츠 팩, 서버 체크포인트 동기화·리그 원장·서버 연간
@@ -45,7 +45,7 @@ pnpm --filter @offside/web check:bundle             # 초기 청크 예산 검�
 pnpm --filter @offside/api db:migrate               # 로컬 D1 마이그레이션
 pnpm --filter @offside/api db:check                 # drizzle-kit generate 후 migrations diff 없음 확인
 
-# 밸런스 시뮬레이션 (apps/web/src/game/*을 그대로 import)
+# 밸런스 시뮬레이션 (packages/game/src/*을 그대로 import)
 pnpm --filter @offside/fulltime-sim sim
 pnpm --filter @offside/fulltime-sim analyze
 ```
@@ -54,12 +54,12 @@ pnpm --filter @offside/fulltime-sim analyze
 
 ## 주요 구성 요소
 
-- **`apps/web/src/game`**: 게임 로직 배럴(`index.ts`). data → rng → attributes →
+- **`packages/game/src`**: 게임 로직 배럴(`index.ts`). data → rng → attributes →
   engine → events-data → events → stories → military → realevents →
   positional → national → comps → season 순서로 로드된다. 시드 RNG
   (`RngSaveState`)는 세이브 상태 안에 저장돼 저장/재개 후에도 이어진다.
 - **`apps/web/src/api`**: `apps/api`와 통신하는 클라이언트. GET은 `cachedGet`으로 부른다.
-  시즌·은퇴 요약 업로드 큐는 `src/game/outbox.ts`.
+  시즌·은퇴 요약 업로드 큐는 `apps/web/src/sync/outbox.ts`.
 - **`apps/api`**: 세션 지연 조회(`middleware/session.ts`의 `resolveSession`), 익명 프로필 1급 +
   Google 로그인은 복구·기기 이동 수단(`profile/`, `auth/`). D1 스키마는
   `db/schema.ts`, 마이그레이션은 `migrations/`(`0015`가 원작 게임 테이블을 드롭한 뒤
@@ -68,7 +68,7 @@ pnpm --filter @offside/fulltime-sim analyze
   마이그레이션은 drizzle-kit generate 산출물을 커밋한다(`db:check`로 검증).
 - **`packages/contracts`**: API 요청·응답 Zod 스키마와 밸런스 스펙
   (`@offside/contracts/balance`, zod 없는 서브패스).
-- **`tooling/fulltime-sim`**: 헤드리스 밸런스 시뮬레이터. `apps/web/src/game/*`
+- **`tooling/fulltime-sim`**: 헤드리스 밸런스 시뮬레이터. `packages/game/src/*`
   ES 모듈을 DOM 없이 그대로 import해 대량 커리어를 시뮬레이션한다.
 
 ## 백엔드 보호 · 요청 최소화 규칙 (2026-09-25, T-10-015)
@@ -104,11 +104,11 @@ pnpm --filter @offside/fulltime-sim analyze
 원작의 "콘텐츠 팩·ruleset 불변 버전 고정", "리플레이 결정론 검증" 규칙은
 서버 시뮬레이션·서버 저장 구조와 함께 폐기됐다(ADR-013). 대신:
 
-- **세이브 호환성**: 세이브 포맷을 바꾸는 변경은 `apps/web/src/game/save.ts`의
+- **세이브 호환성**: 세이브 포맷을 바꾸는 변경은 `packages/game/src/save.ts`의
   `migrateSave`가 이전 버전 `localStorage` 세이브를 계속 읽을 수 있게
   해야 하고, `save.test.ts`에 이전 형식 사례를 더한다. 마이그레이션 없이
   기존 세이브를 깨뜨리는 배포는 하지 않는다.
-- **결정성 골든 (T-10-044)**: `apps/web/src/game/golden.test.ts`가 고정 시드
+- **결정성 골든 (T-10-044)**: `packages/game/src/golden.test.ts`가 고정 시드
   커리어의 최종 상태 해시를 스냅샷으로 고정한다. 동작을 보존하는 리팩터링은
   이 스냅샷을 바꾸면 안 된다. 의도한 밸런스 변경일 때만 `vitest -u`로 갱신하고,
   구조 변경과 결과 변경은 커밋을 나눈다.
@@ -120,19 +120,19 @@ pnpm --filter @offside/fulltime-sim analyze
 - **서버 밸런스 설정 (T-10-016)**: 운영 중 조정할 수치는 코드 배포 대신
   운영 도구(설정 → 운영 도구 → 밸런스)에서 버전으로 바꾼다. 스펙(키·기본값·
   범위)은 `packages/contracts/src/balance-spec.ts` 한 곳이고, 게임 코드는
-  `BAL.<키>`(`apps/web/src/game/balance.ts`)를 읽는다. 새 버전은 진행 중인
+  `BAL.<키>`(`packages/game/src/balance.ts`)를 읽는다. 새 버전은 진행 중인
   커리어에 **다음 시즌 시작부터**(`newSeason`), 새 커리어에는 바로 적용되며
   커리어마다 `GameState.bal`에 버전이 저장된다. 수치를 새로 열 때는 스펙에
   키를 더하고 기본값을 지금 하드코딩 값과 같게 둔 뒤, `SEED=<n>`로 시뮬레이터를
   변경 전후 돌려 결과가 똑같은지 확인한다. 적용 전 초안은
   `BALANCE=<values json> pnpm --filter @offside/fulltime-sim sim`으로 미리 돌려 본다.
 - **RNG는 입력이 아니라 상태다.** 원작 domain 패키지의 "시간·난수는 입력으로만
-  받는다"는 순수성 규칙은 더 이상 적용되지 않는다 — `apps/web/src/game`은
+  받는다"는 순수성 규칙은 더 이상 적용되지 않는다 — `packages/game/src`은
   일반 TypeScript 모듈이며, RNG 시드는 게임 상태의 일부로 저장·복원된다.
 
 ## 문서 정본 우선순위
 
-문서 충돌 시: [`docs/adr/`](docs/adr/README.md)(ADR-001~013) >
+문서 충돌 시: [`docs/adr/`](docs/adr/README.md)(ADR-001~014) >
 [`docs/tracking/`](docs/tracking/README.md)(보드는 `board.md`, 결정은
 `decision-log.md`) > [`docs/operations/`](docs/operations)(런북) 순이다.
 

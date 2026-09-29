@@ -19,7 +19,7 @@
   } from '@offside/contracts/balance';
   import * as api from '../../api/admin.js';
   import type { BalanceVersion } from '../../api/admin.js';
-  import { EVENTS } from '../../game/events-data.js';
+  import { EVENTS } from '@offside/game/events-data';
   import { toast } from '../helpers.js';
   import { kstDateTime } from '../boardText.js';
   import { withEulReul, withRo } from '../format.js';

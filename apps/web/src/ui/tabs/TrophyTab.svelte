@@ -1,6 +1,6 @@
 <script lang="ts">
   // ui.ts trophyTab() 포트 (388~395줄)
-  import type { LegendSource } from '../../game/types.js';
+  import type { LegendSource } from '@offside/game/types';
   import ClubMark from '../ClubMark.svelte';
 
   const { s }: { s: LegendSource } = $props();
