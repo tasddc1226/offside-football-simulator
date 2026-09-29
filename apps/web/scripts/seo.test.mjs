@@ -8,6 +8,7 @@ import {
   createHeadMarkup,
   createRobotsTxt,
   createSitemapXml,
+  maskableSvg,
   pageHtml,
   parsePublicSiteUrl,
   resolveSeoConfig,
@@ -118,4 +119,12 @@ test('structured data: home is a free web game, FAQ mirrors visible Q&A, no-inde
   assert.deepEqual(graph(createHeadMarkup(config, '/')), ['WebSite', 'VideoGame']);
   assert.deepEqual(graph(createHeadMarkup(config, '/faq/')), ['BreadcrumbList', 'FAQPage']);
   assert.doesNotMatch(createHeadMarkup(config, '/', true), /ld\+json/);
+});
+
+test('T-10-118 maskable 아이콘은 모서리 없는 배경에 로고만 80%로 줄인다', () => {
+  const svg = readFileSync(new URL('../brand/offside-app-icon-fulltime-v6.svg', import.meta.url));
+  const out = maskableSvg(svg);
+  assert.doesNotMatch(out, /rx="112"/);
+  assert.match(out, /<g transform="translate\(51\.2 51\.2\) scale\(0\.8\)"><rect x="146"/);
+  assert.throws(() => maskableSvg('<svg></svg>'), /maskable/);
 });

@@ -19,6 +19,7 @@
   import Topbar from './Topbar.svelte';
   import MiniRadar from './MiniRadar.svelte';
   import NationPicker from './NationPicker.svelte';
+  import { doneOnEnter } from './inputDone.js';
   import ScoutScan from './ScoutScan.svelte';
 
   const C = appState.C;
@@ -143,13 +144,13 @@
         <div class="field" style="flex:1">
           <label for="f-name">이름</label>
           <div class="name-input">
-            <input type="text" id="f-name" maxlength="10" autocomplete="off" bind:value={C.name} />
+            <input type="text" id="f-name" maxlength="10" autocomplete="off" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter bind:value={C.name} />
             <button type="button" class="dice" data-act="random-name" aria-label="이름 랜덤으로 바꾸기" onclick={() => (C.name = randomName())}>🎲</button>
           </div>
         </div>
         <div class="field" style="width:84px">
           <label for="f-num">등번호</label>
-          <input type="number" id="f-num" inputmode="numeric" min="1" max="99" placeholder="1–99" bind:value={C.number} />
+          <input type="number" id="f-num" inputmode="numeric" min="1" max="99" placeholder="1–99" enterkeyhint="done" use:doneOnEnter bind:value={C.number} />
         </div>
       </div>
 
@@ -171,12 +172,12 @@
         <div class="row body-row">
           <label class="body-in" for="f-height">
             <span class="sr-only">키</span>
-            <input type="number" id="f-height" inputmode="numeric" min={L.height.min} max={L.height.max} placeholder={String(BODY_DEFAULT[C.pos].h)} value={C.height ?? BODY_DEFAULT[C.pos].h} oninput={(e) => (C.height = e.currentTarget.value === '' ? null : Math.round(+e.currentTarget.value))} aria-invalid={!!bodyErr} aria-describedby="f-body-note" />
+            <input type="number" id="f-height" inputmode="numeric" min={L.height.min} max={L.height.max} placeholder={String(BODY_DEFAULT[C.pos].h)} value={C.height ?? BODY_DEFAULT[C.pos].h} oninput={(e) => (C.height = e.currentTarget.value === '' ? null : Math.round(+e.currentTarget.value))} enterkeyhint="done" use:doneOnEnter aria-invalid={!!bodyErr} aria-describedby="f-body-note" />
             <span aria-hidden="true">cm</span>
           </label>
           <label class="body-in" for="f-weight">
             <span class="sr-only">몸무게</span>
-            <input type="number" id="f-weight" inputmode="numeric" min={L.weight.min} max={L.weight.max} placeholder={String(BODY_DEFAULT[C.pos].w)} value={C.weight ?? BODY_DEFAULT[C.pos].w} oninput={(e) => (C.weight = e.currentTarget.value === '' ? null : Math.round(+e.currentTarget.value))} aria-invalid={!!bodyErr} aria-describedby="f-body-note" />
+            <input type="number" id="f-weight" inputmode="numeric" min={L.weight.min} max={L.weight.max} placeholder={String(BODY_DEFAULT[C.pos].w)} value={C.weight ?? BODY_DEFAULT[C.pos].w} oninput={(e) => (C.weight = e.currentTarget.value === '' ? null : Math.round(+e.currentTarget.value))} enterkeyhint="done" use:doneOnEnter aria-invalid={!!bodyErr} aria-describedby="f-body-note" />
             <span aria-hidden="true">kg</span>
           </label>
         </div>

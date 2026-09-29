@@ -253,6 +253,20 @@ export function pageHtml(
       `<div id="app"><main id="game-content">${body}</main></div>\n<div id="modal"`,
     );
 }
+// T-10-118 maskable 아이콘: 배경은 모서리 없이 꽉 채우고(OS 가 마스크로 깎는다) 깃발·깃대만 80% 로 줄여 안전 영역 안에 둔다.
+// 원본 SVG 구조(둥근 배경 rect · 깃대 rect 부터가 로고)에 기대므로 바뀌면 조용히 틀어지지 않게 던진다.
+export function maskableSvg(svg) {
+  const text = svg.toString();
+  const BG = ' rx="112"';
+  const LOGO = '<rect x="146" y="96"';
+  if (!text.includes(BG) || !text.includes(LOGO) || !text.includes('</svg>')) {
+    throw new Error('brand SVG 구조가 바뀌어 maskable 아이콘을 만들 수 없습니다.');
+  }
+  return text
+    .replace(BG, '')
+    .replace(LOGO, `<g transform="translate(51.2 51.2) scale(0.8)">${LOGO}`)
+    .replace('</svg>', '</g></svg>');
+}
 async function createBrandAssets(outputDirectory) {
   const sizes = [64, 180, 192, 512];
   const resized = new Map();
@@ -265,6 +279,10 @@ async function createBrandAssets(outputDirectory) {
       buffer,
     );
   }
+  await sharp(Buffer.from(maskableSvg(brandSvg)))
+    .resize(512, 512)
+    .png()
+    .toFile(join(outputDirectory, 'brand', `offside-flag-${BRAND_VERSION}-maskable-512.png`));
   await writeFile(join(outputDirectory, 'favicon.svg'), brandSvg);
   await writeFile(join(outputDirectory, 'favicon.png'), resized.get(64));
   // PNG를 그대로 담은 단일 이미지 ICO — /favicon.ico를 직접 요청하는 크롤러·브라우저용.
@@ -319,10 +337,13 @@ async function createBrandAssets(outputDirectory) {
   await writeFile(
     join(outputDirectory, 'site.webmanifest'),
     JSON.stringify({
+      id: '/',
       name: 'OFFSIDE',
       short_name: 'OFFSIDE',
+      lang: 'ko',
       start_url: '/',
       display: 'standalone',
+      orientation: 'portrait',
       background_color: BRAND_BG,
       theme_color: BRAND_BG,
       icons: [
@@ -335,6 +356,12 @@ async function createBrandAssets(outputDirectory) {
           src: `/brand/offside-flag-${BRAND_VERSION}-512.png`,
           sizes: '512x512',
           type: 'image/png',
+        },
+        {
+          src: `/brand/offside-flag-${BRAND_VERSION}-maskable-512.png`,
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable',
         },
       ],
     }),
