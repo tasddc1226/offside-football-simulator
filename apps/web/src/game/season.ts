@@ -33,7 +33,7 @@ import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } fro
 import { nationOf } from './nation.js';
 import { detectCareerHighs } from './records.js';
 import { noteMarket } from './playStyle.js';
-import { movedWithClub, type Promotion } from './promotion.js';
+import { movedWithClub, promoteClub, type Promotion } from './promotion.js';
 import type { LegendSnapshot } from '@offside/contracts';
 import { legendTerms } from '@offside/contracts/hof-rules';
 import type {
@@ -140,6 +140,14 @@ export function endSeason(s: GameState): SeasonEndResult {
     `${s.year} 시즌 종료 · ${L.name} ${rank}위 · 공식전 ${rec.apps}경기 ${rec.goals}골 ${rec.assists}도움`,
     'big',
   );
+  // T-10-110 기록(K리그2 · 우승)을 남긴 뒤 승격을 확정한다 — 이어지는 이적 시장·재계약부터 K1 기준이다.
+  const promo = promoteClub(s, rank);
+  if (promo)
+    log(
+      s,
+      `${promo.club} ${promo.league} 승격 확정! 다음 시즌은 ${promo.league}에서 뜁니다${promo.down ? ` (${promo.down} 강등)` : ''}`,
+      'big',
+    );
   const mil = milSeasonEnd(s);
   if (mil) notes.push(mil);
 
@@ -174,6 +182,7 @@ export function endSeason(s: GameState): SeasonEndResult {
     ),
     miles,
     titles,
+    promo,
   };
 }
 

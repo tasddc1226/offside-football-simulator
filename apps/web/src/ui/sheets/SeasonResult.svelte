@@ -26,10 +26,8 @@
   <div class="promo-card pop" data-promo>
     <div class="eyebrow">Promotion</div>
     <p><b>{v.promo.league} 승격 확정</b></p>
-    <p class="muted fs-sm">
-      이번 시즌 1위로 {v.promo.club}의 승격이 확정됐습니다. 다음 시즌에는 {v.promo.league}에서 새로운 도전을 시작합니다.{#if v.promo.down}
-        ({v.promo.down} 강등){/if}
-    </p>
+    <p class="muted fs-sm">이번 시즌 1위로 {v.promo.club}의 승격이 확정됐습니다. 다음 시즌에는 {v.promo.league}에서 새로운 도전을 시작합니다.</p>
+    {#if v.promo.down}<p class="muted fs-xs">자리를 내준 {v.promo.down} · K리그2 강등</p>{/if}
   </div>
 {/if}
 {#if v.comps.length}
