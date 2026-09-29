@@ -11,6 +11,7 @@ import { SAVE_VERSION } from '@offside/game/data';
 import { getActiveRng, setActiveRng } from '@offside/game/rng';
 import { loadSave } from '@offside/game/save';
 import { HOF_LOCAL_MAX, saveKey } from '@offside/game/season';
+import { storage } from '@offside/game/storage';
 import type { GameState, HofEntry } from '@offside/game/types';
 
 export const BACKUP_VERSION = 1;
@@ -145,13 +146,13 @@ export function mergeHof(mine: HofEntry[], incoming: HofEntry[]): HofEntry[] {
 export function applyBackup(b: Backup, currentHof: HofEntry[]): boolean {
   let prev: string | null;
   try {
-    prev = localStorage.getItem('ft_save');
+    prev = storage().getItem('ft_save');
   } catch {
     return false;
   }
   if (!saveKey('ft_save', b.save)) {
     try {
-      if (prev != null) localStorage.setItem('ft_save', prev);
+      if (prev != null) storage().setItem('ft_save', prev);
     } catch {
       // 되돌리지 못해도 새 값은 쓰이지 않았다(setItem이 던지면 기존 값이 남는다).
     }

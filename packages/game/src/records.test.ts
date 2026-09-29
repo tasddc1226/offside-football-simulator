@@ -62,8 +62,6 @@ describe('detectCareerHighs', () => {
     df.career.push(rec2);
     expect(detectCareerHighs(df, rec2)).toContain('cs');
   });
-
-  // T-10-034: 앱은 게임 상태를 Svelte $state(깊은 프록시)로 들고 있다 — push된 원소가 rec과 다른 객체가 된다.
 });
 
 describe('nextMilestones', () => {

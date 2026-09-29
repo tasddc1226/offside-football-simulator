@@ -7,6 +7,7 @@ import { detectCareerHighs } from '@offside/game/records';
 import type { CareerRecord, GameState } from '@offside/game/types';
 
 // T-11-001 게임 엔진이 packages/game으로 옮겨 가며, 웹의 Svelte 상태에 얹혀서도 도는지는 웹에서 본다.
+// T-10-034: 앱은 게임 상태를 Svelte $state(깊은 프록시)로 들고 있다 — push된 원소가 rec과 다른 객체가 된다.
 const makeRec = (over: Partial<CareerRecord>): CareerRecord => ({
   year: 2026,
   age: 18,

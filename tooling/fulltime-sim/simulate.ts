@@ -1,5 +1,5 @@
 // 풀타임(fulltime) 원본 analysis/simulate.js 를 포팅한 TS 시뮬레이션 러너.
-// 포트된(ported) apps/web/src/game/* ES 모듈을 그대로 import 해서, DOM/UI 없이
+// 포트된(ported) 게임 엔진(packages/game) ES 모듈을 그대로 import 해서, DOM/UI 없이
 // N개의 랜덤(또는 "스마트") 정책 커리어를 은퇴까지 헤드리스로 돌리고
 // 커리어별 CSV + 집계 JSON 을 저장한다. 원본과 동일한 정책 로직을 그대로 옮겼다.
 //

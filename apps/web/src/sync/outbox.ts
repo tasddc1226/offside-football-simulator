@@ -11,6 +11,7 @@ import type {
 } from '@offside/contracts';
 import { resolveApiBaseUrl } from '../api/base-url.js';
 import { clearApiCache, noteSession } from '../api/client.js';
+import { loadKey, saveKey } from '@offside/game/season';
 import type { CareerRecord } from '@offside/game/types';
 import { OWNER_CONFLICT_EVENT, RETIRED_NUMBER_EVENT } from './syncEvents.js';
 
@@ -63,22 +64,9 @@ function apiBaseUrl(): string {
   );
 }
 
-function loadOutbox(): OutboxItem[] {
-  try {
-    const raw = localStorage.getItem(OUTBOX_KEY);
-    return raw ? (JSON.parse(raw) as OutboxItem[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveOutbox(items: OutboxItem[]): void {
-  try {
-    localStorage.setItem(OUTBOX_KEY, JSON.stringify(items));
-  } catch {
-    /* 저장 실패(쿼터 등)는 무시한다 — 다음 enqueue에서 다시 시도된다. */
-  }
-}
+const loadOutbox = (): OutboxItem[] => loadKey<OutboxItem[]>(OUTBOX_KEY) ?? [];
+/* 저장 실패(쿼터 등)는 무시한다 — 다음 enqueue에서 다시 시도된다. */
+const saveOutbox = (items: OutboxItem[]): void => void saveKey(OUTBOX_KEY, items);
 
 function pathFor(item: OutboxItem): string {
   return item.kind === 'season'

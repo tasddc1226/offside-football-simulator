@@ -2,7 +2,7 @@
   // 설정 화면의 "진행 중 커리어 백업" 카드(T-10-116) — 세이브를 백업 코드/파일로 내보내고 다시 불러온다.
   // 세이브는 이 브라우저에만 있어서, 기기를 바꾸거나 카톡 등 앱 안 브라우저에서 사파리로 옮길 때 쓴다.
   // 형식·검증·쓰는 키는 backup.ts. 여기는 화면과 브라우저 API(클립보드·공유·파일)만 맡는다.
-  import { loadHOF } from '@offside/game/season';
+  import { loadHOF, loadKey } from '@offside/game/season';
   import { loadGame } from './boot.js';
   import { applyBackup, backupFileName, decodeBackup, encodeBackup, type DecodeFail } from './backup.js';
   import { save, toast } from './helpers.js';
@@ -27,14 +27,8 @@
   function build() {
     if (!appState.G) return null;
     save(); // 화면 상태를 저장소에 맞춰 둔다(RNG 상태 포함)
-    let raw: unknown;
-    try {
-      raw = JSON.parse(localStorage.getItem('ft_save') ?? 'null');
-    } catch {
-      raw = null;
-    }
     // 저장소가 막혀 있어도 메모리의 세이브로 백업은 만들 수 있다.
-    const g = raw ?? JSON.parse(JSON.stringify(appState.G));
+    const g = loadKey('ft_save') ?? JSON.parse(JSON.stringify(appState.G));
     return encodeBackup(g, loadHOF());
   }
 

@@ -31,7 +31,7 @@ export function fmtMoney(man: number): string {
     const t = Math.round(Math.abs(m) / 1000) * 1000;
     const e = Math.floor(t / 10000),
       r = t % 10000;
-    return `${m < 0 ? '-' : ''}${e}억${r ? ` ${r.toLocaleString()}만` : ''}`;
+    return `${m < 0 ? '-' : ''}${e}억${r ? ` ${r.toLocaleString('ko-KR')}만` : ''}`;
   }
-  return `${m.toLocaleString()}만`;
+  return `${m.toLocaleString('ko-KR')}만`;
 }
