@@ -336,19 +336,19 @@
   const pct = (f: number) => `${Math.round(f * 100)}%`;
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 $effect가, 이미 그 화면이면 open이 다시 불러온다.
-  const LOAD: Partial<Record<TeamView, () => Promise<void>>> = {
+  const LOAD = {
     opponents: loadOpponents,
     achievements: () => loadAchievements(),
     history: loadHistory,
   };
-  function open(v: 'opponents' | 'achievements' | 'history') {
-    if (appState.teamView === v) void LOAD[v]!();
+  function open(v: keyof typeof LOAD) {
+    if (appState.teamView === v) void LOAD[v]();
     else show(v);
   }
   $effect(() => {
     const v = appState.teamView;
     if (status !== 'ready' || needLogin) return;
-    untrack(() => void LOAD[v]?.());
+    if (v in LOAD) untrack(() => void LOAD[v as keyof typeof LOAD]());
   });
   /** 이전 기록이 없을 때 '← 이전으로'가 갈 곳. */
   function back() {

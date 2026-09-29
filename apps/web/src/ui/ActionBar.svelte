@@ -13,7 +13,7 @@
   });
 </script>
 
-<div class="sharebar-space" style:height="{h}px" aria-hidden="true"></div>
+<div class="action-bar-space" style:height="{h}px" aria-hidden="true"></div>
 <div {...rest} class="action-bar" class:at-bottom={atBottom} bind:clientHeight={h}>
   <div class="action-bar-inner stack">{@render children()}</div>
 </div>
