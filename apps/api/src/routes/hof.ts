@@ -11,6 +11,7 @@ import type { Hono } from 'hono';
 import { ok } from './shared.js';
 import { getPublicHof, listPublicHof } from '../db/repos/careers.js';
 import { ensureClubIdsBackfilled } from '../db/repos/clubIds.js';
+import { ensureCareerValuesBackfilled } from '../db/repos/careerValues.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -38,7 +39,10 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
       LIST_TTL,
       async () => {
         const db = getDb(c);
-        filling = await ensureClubIdsBackfilled(db);
+        // 둘 다 한 번뿐인 소급 — 조회마다 둘 다 한 조각씩 나아간다(몸값은 리그 이름으로도 매겨 순서에 기대지 않는다).
+        const clubIds = await ensureClubIdsBackfilled(db);
+        const values = await ensureCareerValuesBackfilled(db);
+        filling = clubIds || values;
         return listPublicHof(db, limit, page, sort, season);
       },
       () => !filling,

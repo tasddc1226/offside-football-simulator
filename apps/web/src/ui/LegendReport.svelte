@@ -10,7 +10,7 @@
   import { POS_LABEL } from '../game/pos-label.js';
   import { potAchText } from '../game/stats.js';
   import { fmtValue, seasonLabelOf, totals } from './format.js';
-  import { peakValue, retireValue } from '../game/value.js';
+  import { peakValue, retireValue } from '@offside/contracts/market-value';
   import type { LegendView } from './state.svelte.js';
   import CareerTab from './tabs/CareerTab.svelte';
   import { titleById } from '../game/titles.js';

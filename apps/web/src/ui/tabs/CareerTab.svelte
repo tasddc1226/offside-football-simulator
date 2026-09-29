@@ -4,7 +4,7 @@
   import { fmtValue, seasonLabelOf, totals } from '../format.js';
   import ClubMark from '../ClubMark.svelte';
   import { nextMilestones } from '../../game/records.js';
-  import { peakValue, seasonValue } from '../../game/value.js';
+  import { peakValue, seasonValue } from '@offside/contracts/market-value';
 
   // 은퇴 상세(LegendSource)에는 '다음 목표'가 없다 — 진행 중인 커리어(GameState)에서만 계산한다.
   const { s }: { s: LegendSource | GameState } = $props();
@@ -13,6 +13,11 @@
   const miles = $derived((s.miles || []).slice().reverse());
   const next = $derived('attrs' in s && !s.retired ? nextMilestones(s) : []);
   const peakV = $derived(peakValue(s.career));
+  // 시즌별 몸값 막대 그래프(T-10-100): 누른 막대의 시즌을 위에 보여 준다.
+  const bars = $derived(s.career.map((r) => ({ r, v: seasonValue(r) })));
+  const maxV = $derived(peakV?.value ?? 0);
+  let pick = $state<number | null>(null);
+  const picked = $derived(pick == null ? null : bars[pick]);
 </script>
 
 <section class="card stack">
@@ -28,6 +33,17 @@
     <div><b>{s.trophies.length + s.awards.length}</b><span>수상</span></div>
   </div>
   {#if peakV}
+    <div class="value-chart" data-value-chart>
+      <div class="value-chart-head fs-xs" data-value-pick>
+        {#if picked}{picked.r.mil ? picked.r.year : seasonLabelOf(picked.r)} ({picked.r.age}) · {picked.r.club} · <b>{fmtValue(picked.v)}</b>{:else}<span class="muted">시즌별 몸값 · 막대를 누르면 시즌 값을 보여 줘요</span>{/if}
+      </div>
+      <div class="value-bars" role="group" aria-label="시즌별 몸값">
+        {#each bars as b, i (i)}
+          <button type="button" class="value-bar" class:peak={b.r === peakV.row} class:on={i === pick} style="--h:{b.v ? Math.max(4, (b.v / maxV) * 100) : 0}%" aria-label="{b.r.year} {b.r.club} 몸값 {fmtValue(b.v)}" aria-pressed={i === pick} onclick={() => (pick = pick === i ? null : i)}></button>
+        {/each}
+      </div>
+      <div class="value-chart-axis muted fs-xs"><span>{bars[0]!.r.year}</span><span>{bars[bars.length - 1]!.r.year}</span></div>
+    </div>
     <p class="muted fs-sm" data-peak-value>최고 몸값 <b>{fmtValue(peakV.value)}</b> · {seasonLabelOf(peakV.row)} {peakV.row.club}</p>
   {/if}
 </section>
@@ -49,20 +65,19 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>시즌</th><th>소속</th><th class="n">경기</th><th class="n">골</th><th class="n">도움</th><th class="n">평점</th><th class="n">순위</th><th class="n">OVR</th><th class="n">몸값</th></tr>
+          <tr><th>시즌</th><th>소속</th><th class="n">경기</th><th class="n">골</th><th class="n">도움</th><th class="n">평점</th><th class="n">순위</th><th class="n">OVR</th></tr>
         </thead>
         <tbody>
           {#each rows as r, i (i)}
             <tr>
               <td>{r.mil ? r.year : seasonLabelOf(r)} <span class="muted">({r.age})</span>{#if r.ch?.length}<br /><span class="badge-ch">CH×{r.ch.length}</span>{/if}</td>
-              <td><ClubMark name={r.club} id={r.clubId} /> {r.club}<div class="muted" style="font-size:0.6875rem">{r.league}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
+              <td><ClubMark name={r.club} id={r.clubId} /> {r.club}<div class="muted season-sub">{r.league}{seasonValue(r) ? ' · ' : ''}{#if seasonValue(r)}<span class="season-value" data-season-value>몸값 {fmtValue(seasonValue(r))}</span>{/if}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
               <td class="n">{r.apps}</td>
               <td class="n">{r.goals}</td>
               <td class="n">{r.assists}</td>
               <td class="n">{r.rating ? r.rating.toFixed(2) : '-'}</td>
               <td class="n">{r.rank}</td>
               <td class="n">{r.ovr}</td>
-              <td class="n nowrap" data-season-value>{fmtValue(seasonValue(r))}</td>
             </tr>
           {/each}
         </tbody>
@@ -71,7 +86,7 @@
   {:else}
     <p class="empty">첫 시즌을 마치면 기록이 쌓입니다.</p>
   {/if}
-  <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다. 몸값은 시즌을 마친 때의 리그·OVR·나이로 매긴 추정치예요.</p>
+  <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다. 몸값은 시즌을 마친 때의 리그·OVR·나이로 매긴 추정치(이적료 기준)예요.</p>
 </section>
 <section class="card">
   <div class="eyebrow">Journey</div>

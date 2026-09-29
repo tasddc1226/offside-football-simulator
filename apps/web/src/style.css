@@ -662,6 +662,9 @@ button.hof-row {
   font-weight: 700;
   white-space: nowrap;
 }
+.hof-value-text {
+  font-size: 1.0625rem;
+}
 .hof-value small {
   font-size: 0.75rem;
   font-weight: 600;
@@ -1413,7 +1416,6 @@ body:has(.main-nav) .wrap {
 .train .opt b {
   font-size: 0.875rem;
 }
-td.nowrap,
 .train .nowrap {
   white-space: nowrap;
 }
@@ -1726,6 +1728,17 @@ th.n {
 .honor {
   color: var(--accent-text);
   font-weight: 600;
+}
+/* 커리어 표 소속 칸 아래 줄(리그 · 몸값 · 수상). 수상이 길어도 표가 옆으로 늘지 않게 줄바꿈한다(T-10-100). */
+.season-sub {
+  font-size: 0.6875rem;
+  white-space: normal;
+  min-width: 11em;
+}
+.season-value {
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
 }
 .totals {
   display: grid;
@@ -4776,4 +4789,41 @@ button.what {
   height: auto;
   border-radius: 12px;
   display: block;
+}
+
+/* 커리어 탭 시즌별 몸값 막대 그래프(T-10-100) */
+.value-chart-head {
+  min-height: 1.5em;
+  margin-bottom: 4px;
+}
+.value-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 84px;
+  border-bottom: 1px solid var(--line);
+}
+.value-bar {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 28px;
+  height: var(--h);
+  min-height: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px 3px 0 0;
+  background: color-mix(in srgb, var(--ink) 26%, transparent);
+  cursor: pointer;
+}
+.value-bar.peak {
+  background: var(--accent);
+}
+.value-bar.on {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+.value-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
 }

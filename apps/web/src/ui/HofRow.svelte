@@ -1,6 +1,6 @@
 <script lang="ts" module>
   import type { PublicHofEntry } from '@offside/contracts';
-  export type RowStats = Pick<PublicHofEntry, 'apps' | 'goals' | 'assists' | 'trophies' | 'awards' | 'caps' | 'peak' | 'ballon'> & {
+  export type RowStats = Pick<PublicHofEntry, 'apps' | 'goals' | 'assists' | 'trophies' | 'awards' | 'caps' | 'peak' | 'ballon' | 'value'> & {
     score: number;
   };
 </script>
@@ -41,8 +41,8 @@
     tag?: string | null;
     t: RowStats;
     titleId: string | null | undefined;
-    /** 오른쪽에 크게 보일 값. 기본은 레전드 점수. */
-    value?: number;
+    /** 오른쪽에 크게 보일 값. 기본은 레전드 점수. 은퇴 가치(T-10-100)는 '1,115억'처럼 글자로. */
+    value?: number | string;
     unit?: string;
     /** 오른쪽 값이 레전드 점수가 아니면 요약 줄에 레전드 점수를 덧붙인다. */
     showScore?: boolean;
@@ -71,4 +71,4 @@
   {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
   <div class="muted fs-xs">{t.apps}경기 {t.goals}골 {t.assists}도움 · 트로피 {t.trophies} · 최고 OVR {t.peak}{t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}{showScore ? ` · 레전드 ${t.score}` : ''}</div>
 </div>
-<div class="num hof-value">{value}{#if unit}<small>{unit}</small>{/if}</div>
+<div class="num hof-value" class:hof-value-text={typeof value === 'string'}>{value}{#if unit}<small>{unit}</small>{/if}</div>

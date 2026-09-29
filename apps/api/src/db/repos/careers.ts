@@ -7,6 +7,7 @@ import type {
   RetirementSummary,
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
+import { retireValue } from '@offside/contracts/market-value';
 import { teamSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
 import { dposFor, type PeakProfile } from '@offside/contracts/positions';
 import {
@@ -223,7 +224,11 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
         ...(summary.lastClubId !== undefined ? { lastClubId: summary.lastClubId } : {}),
         ...(publicName !== undefined ? { publicName } : {}),
         ...(snapshot
-          ? { snapshotJson: JSON.stringify(snapshot), shirtNumber: snapshot.number }
+          ? {
+              snapshotJson: JSON.stringify(snapshot),
+              shirtNumber: snapshot.number,
+              value: retireValue(snapshot.career, summary.legendScore),
+            }
           : {}),
         ...(profile ? { peakProfile: JSON.stringify(profile) } : {}),
       })
@@ -255,6 +260,7 @@ const publicColumns = {
   retiredAt: careers.retiredAt,
   hasDetail: sql<number>`${careers.snapshotJson} is not null`,
   title: careers.title,
+  value: careers.value,
   // T-10-076 영구결번(retired_numbers를 left join한 쿼리에서만 쓴다).
   rnClubId: retiredNumbers.clubId,
   rnClub: retiredNumbers.club,
@@ -287,6 +293,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     retiredAt: String(r.retiredAt ?? ''),
     hasDetail: Boolean(r.hasDetail),
     title: (r.title as string | null) ?? null,
+    value: r.value == null ? null : Number(r.value),
     retiredNumber:
       r.rnClubId == null
         ? null
@@ -307,6 +314,7 @@ export const isPublicRetired = and(isOwnRetired, gte(careers.retireAge, HOF_MIN_
 
 const HOF_SORT: Record<HofSort, AnyColumn | SQL> = {
   score: careers.legendScore,
+  value: careers.value,
   goals: careers.goals,
   assists: careers.assists,
   ga: goalsPlusAssists(careers),

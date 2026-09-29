@@ -10,7 +10,7 @@
   import { loadHOF } from '../game/season.js';
   import { getHof } from '../api/client.js';
   import { openPublicLegend } from './legend.js';
-  import { anonName } from './format.js';
+  import { anonName, fmtValue } from './format.js';
   import { openHof } from './nav.js';
   import HofRow, { type RowStats } from './HofRow.svelte';
   import { appState } from './state.svelte.js';
@@ -19,8 +19,10 @@
   const TOP = 3;
   const PER_PAGE = 100;
 
-  const SORTS: Record<HofSort, { label: string; unit: string; get: (s: RowStats) => number }> = {
+  const SORTS: Record<HofSort, { label: string; unit: string; get: (s: RowStats) => number | string }> = {
     score: { label: '레전드 점수', unit: '', get: (s) => s.score },
+    // T-10-100 은퇴 가치(만 원) — 조·억·천만으로 적는다.
+    value: { label: '은퇴 가치', unit: '', get: (s) => fmtValue(s.value ?? 0) },
     goals: { label: '득점', unit: '골', get: (s) => s.goals },
     assists: { label: '도움', unit: '도움', get: (s) => s.assists },
     ga: { label: '공격포인트', unit: 'P', get: (s) => s.goals + s.assists },

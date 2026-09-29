@@ -340,13 +340,16 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
   await page.route(HOF_LIST, (r) => {
     const u = new URL(r.request().url());
     asked.push(u.search);
+    const sort = u.searchParams.get('sort');
     const entries =
-      u.searchParams.get('sort') === 'goals'
+      sort === 'goals'
         ? [
             { ...entry, goals: 401 },
             { ...entry, id: '00000000-0000-4000-8000-000000000002', goals: 99 },
           ]
-        : [entry];
+        : sort === 'value'
+          ? [{ ...entry, value: 11_153_000 }]
+          : [entry];
     return r.fulfill(ok({ entries, total: entries.length }));
   });
   await page.goto('/');
@@ -364,6 +367,12 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
   await full.locator('[data-hof-sort="ballon"]').click();
   await expect(full.locator('[data-hof-sort="ballon"]')).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => asked.at(-1)).toBe('?limit=100&sort=ballon');
+
+  // T-10-100 은퇴 가치 순: 오른쪽에 조·억·천만으로 적는다.
+  await full.locator('[data-hof-sort="value"]').click();
+  await expect.poll(() => asked.at(-1)).toBe('?limit=100&sort=value');
+  await expect(full.locator('.hof-row').first().locator('.hof-value')).toHaveText('1,115억 3천만');
+  await expect(full.locator('.hof-source')).toContainText('은퇴 가치 순');
 });
 
 // T-10-015: 화면을 오가도 같은 공개 조회는 다시 보내지 않는다(메모 60초).
