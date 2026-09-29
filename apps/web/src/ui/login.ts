@@ -4,6 +4,7 @@ import type { BoardKey } from '@offside/contracts/board-limits';
 import { getProfile, googleStartUrl } from '../api/client.js';
 import { loadHOF } from '../game/season.js';
 import { toast } from './helpers.js';
+import { currentInApp, showInAppLoginNotice } from './inapp-open.js';
 import { openLocalLegend } from './legend.js';
 import { openBoard } from './nav.js';
 import { appState } from './state.svelte.js';
@@ -32,6 +33,9 @@ function takeLoginReturn(): LoginReturn | null {
 /** 구글 로그인을 시작한다. 로그인은 프로필 세션이 있어야 시작된다 — 없으면 GET /v1/profile이 익명
  * 프로필을 만든다. */
 export async function startGoogleLogin(back: LoginReturn | null) {
+  // T-10-115 인앱 브라우저에서는 구글이 로그인을 막는다(403 disallowed_useragent) — 구글로 보내지 않고 안내한다.
+  const inApp = currentInApp();
+  if (inApp) return showInAppLoginNotice(inApp);
   rememberLoginReturn(back);
   if (!(await getProfile()).ok)
     return toast('서버에 연결하지 못해 로그인을 시작하지 못했어요. 잠시 뒤 다시 눌러 주세요.');
