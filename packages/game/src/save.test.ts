@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import fixture from '../../../apps/web/e2e/fixtures/save-fw26.json';
+import fixture from './__fixtures__/save-fw26.json';
 import { SUB_KEYS } from './attributes.js';
 import { SAVE_VERSION } from './data.js';
 import { leagueOf } from './engine.js';
