@@ -100,6 +100,19 @@ P(
   '· UCL winner',
   share((r) => (r.ucl as number) > 0),
 );
+// T-10-110 K2 우승 승격: K2 시즌 대비 우승률, 승격 후 잔류, 승격 구단에서 뛴 K1 시즌의 출전·득점
+{
+  const k2 = A.k2Seasons as number | undefined;
+  if (k2 != null) {
+    const pk = A.promoK1Seasons as number;
+    P(
+      'K2 promotion',
+      `K2 seasons ${k2} · titles ${A.k2Wins} (${k2 ? (((A.k2Wins as number) / k2) * 100).toFixed(1) : 0}%)`,
+      `· promotions ${A.promotions} (${(((A.promotions as number) / N) * 1000).toFixed(1)}/1000 careers) · stayed ${A.promoStay}`,
+      `· K1 seasons at promoted club ${pk} (apps ${pk ? ((A.promoK1Apps as number) / pk).toFixed(1) : '-'}, goals ${pk ? ((A.promoK1Goals as number) / pk).toFixed(1) : '-'})`,
+    );
+  }
+}
 P('military', top(A.mil as Record<string, number>));
 P('retire', top(A.retireReason as Record<string, number>));
 P('money', top(A.moneyBin as Record<string, number>));

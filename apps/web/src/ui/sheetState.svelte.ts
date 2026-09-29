@@ -90,7 +90,7 @@ export async function playSteps(title: string, steps: string[], ms = STEP_MS) {
 
 /** 구간 경기를 리포트의 경기별 기록 줄로 바꾼다(상대 팀 이름·스코어를 붙인다). */
 export function matchRows(s: GameState, b: BlockResult): TickerRow[] {
-  const opps = clubsIn(s.leagueId).filter((c) => c.id !== s.club.id);
+  const opps = clubsIn(s.leagueId, s).filter((c) => c.id !== s.club.id);
   return b.games.map((m, i) => ({
     key: i,
     rd: m.rd,

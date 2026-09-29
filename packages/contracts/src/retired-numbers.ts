@@ -24,7 +24,9 @@ type Pos = 'FW' | 'MF' | 'DF' | 'GK';
 
 const LEAGUE_BY_NAME = new Map<string, LeagueBase>(LEAGUE_BASE.map((l) => [l.name, l]));
 const LEAGUE_BY_ID = new Map<string, LeagueBase>(LEAGUE_BASE.map((l) => [l.id, l]));
-/** 클럽 id 앞부분이 리그 id다. 클럽은 리그를 옮기지 않는다(승강 없음). */
+/** 클럽 id 앞부분이 리그 id다(처음 소속 리그). T-10-110부터 커리어 안에서 K2 우승 구단이 K1으로 승격하고 K1 한
+ * 구단이 K2로 내려가지만, 결번 점수는 클라이언트가 적어 보낸 리그를 믿지 않고 이 정적 리그로 센다 — 승격 구단의
+ * K1 시즌은 K2 배수로 조금 낮게, 강등 구단의 K2 시즌은 K1 배수로 조금 높게 잡힌다(결번 자격 기준이 높아 영향이 작다). */
 const leagueOfClub = (id: string) => LEAGUE_BY_ID.get(id.slice(0, id.lastIndexOf('-')));
 /**
  * 구단 애착 가산(경기·영예 점수에 곱하는 비율). 서버가 받아 둔 시즌 기록만으로 정한다 — 인지도·감독 신뢰 같은

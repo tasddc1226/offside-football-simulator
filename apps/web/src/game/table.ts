@@ -13,7 +13,7 @@ const basePpg = (L: League, str: number) => 1.35 + (str - L.avg) * 0.06;
 /** 순위에 들어가는 상대 인덱스(S.rivals 기준, 강한 순). */
 function rankedRivals(s: GameState): number[] {
   const R = s.season.rivals;
-  const n = Math.max(1, Math.min(R.length, clubsIn(s.leagueId).length - 1));
+  const n = Math.max(1, Math.min(R.length, clubsIn(s.leagueId, s).length - 1));
   return R.map((_, i) => i)
     .sort((a, b) => R[b]! - R[a]!)
     .slice(0, n);
@@ -37,7 +37,7 @@ export function leagueTable(s: GameState): TableRow[] {
   const L = leagueOf(s.leagueId),
     S = s.season,
     P = S.played;
-  const clubs = clubsIn(s.leagueId)
+  const clubs = clubsIn(s.leagueId, s)
     .filter((c) => c.id !== s.club.id)
     .sort((a, b) => b.str - a.str);
   const rows: TableRow[] = rankedRivals(s).map((ri, k) => {

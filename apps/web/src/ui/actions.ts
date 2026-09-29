@@ -289,7 +289,17 @@ function tourView(x: NatTourResult): TourView {
 
 function showSeasonEnd(res: SeasonEndResult) {
   // pending.res로 복원된 옛 세이브에는 뒤에 추가된 필드(titles 등)가 없을 수 있다.
-  const { rec, trophies, awards, notes, gala = [], tours = [], miles = [], titles = [] } = res;
+  const {
+    rec,
+    trophies,
+    awards,
+    notes,
+    gala = [],
+    tours = [],
+    miles = [],
+    titles = [],
+    promo,
+  } = res;
   const s = appState.G!;
   const [col, colLabel] =
     s.pos === 'GK' || s.pos === 'DF' ? [rec.cs, '무실점'] : [rec.assists, '도움'];
@@ -325,6 +335,7 @@ function showSeasonEnd(res: SeasonEndResult) {
       gala,
       miles,
       titles,
+      promo,
       notes,
       fans,
       age: s.age,

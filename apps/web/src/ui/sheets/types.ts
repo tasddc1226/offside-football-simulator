@@ -2,6 +2,7 @@
 // ui/sheets/*.svelte가 그대로 그린다(컴포넌트는 게임 로직을 직접 부르지 않는다).
 import type { Chip } from '../sheetState.svelte.js';
 import type { TitleView } from '../../game/titles.js';
+import type { Promotion } from '../../game/promotion.js';
 import type { ResolveResult } from '../../game/event-runner.js';
 import type { MgKind } from '../../game/minigame.js';
 import type { DragPoint, ShotResult } from '../../game/dragShot.js';
@@ -145,6 +146,8 @@ export type SheetView =
       gala: string[];
       miles: string[];
       titles: TitleView[];
+      /** T-10-110 K리그2 우승 승격. */
+      promo: Promotion | undefined;
       notes: string[];
       fans: string[];
       age: number;
