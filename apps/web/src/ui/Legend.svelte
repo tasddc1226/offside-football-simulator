@@ -5,12 +5,12 @@
   import LegendReport from './LegendReport.svelte';
   import OwnHofCards from './OwnHofCards.svelte';
   import ShareBar from './ShareBar.svelte';
+  import BackBar from './BackBar.svelte';
   import { motionOK } from './motion.js';
   import { rollCredits } from './creditRoll.js';
 
   const v = $derived(appState.legend);
   let root: HTMLDivElement;
-  let barH = $state(0);
 
   // T-10-129 커리어 재생: 누르면 크레딧처럼 흘러가고, 다시 누르거나 화면을 만지면 멈춘다. 감속 모션이면 버튼이 없다.
   let rolling = $state(false);
@@ -32,16 +32,14 @@
     <LegendReport {v} />
     {#if v.own?.id}<OwnHofCards {v} />{/if}
   {/if}
-  <!-- T-10-128 위쪽 '이전으로' 대신 모든 선수에 같은 아래 바: 홈으로 + 공유하기(내 선수) 또는 이전으로.
-       홈에서 연 선수를 공유할 수 없으면 '이전으로' 하나만. -->
-  <ShareBar
-    id={v?.shareId ?? null}
-    home={appState.legendBack !== 'home'}
-    back={() => (appState.screen = appState.legendBack)}
-    bind:height={barH}
-  />
+  <!-- T-10-128 위쪽 '이전으로' 대신 아래 바: 공유할 수 있는 내 선수는 홈으로 + 공유하기, 그 밖은 '← 이전으로' 하나. -->
+  {#if v?.shareId}
+    <ShareBar id={v.shareId} />
+  {:else}
+    <BackBar act="hof-back" fallback={() => (appState.screen = appState.legendBack)} />
+  {/if}
   {#if motionOK && v}
-    <button class="career-play" class:on={rolling} data-act="career-play" aria-pressed={rolling} style:bottom="{barH + 12}px" onclick={toggleRoll}>
+    <button class="career-play" class:on={rolling} data-act="career-play" aria-pressed={rolling} onclick={toggleRoll}>
       <svg viewBox="0 0 24 24" aria-hidden="true">
         {#if rolling}<path d="M8 6h3v12H8zM13 6h3v12h-3z" />{:else}<path d="M8 5.5v13l10.5-6.5z" />{/if}
       </svg>
@@ -53,6 +51,7 @@
 <style>
   .career-play {
     position: fixed;
+    bottom: calc(var(--bottom-bar-h, 0px) + 12px);
     right: max(var(--pad-r, 16px), calc(50% - 240px + 16px));
     z-index: 6;
     display: inline-flex;

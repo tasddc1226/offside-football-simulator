@@ -61,10 +61,16 @@ export function rollCredits(root: HTMLElement, onStop: () => void): () => void {
   const INPUTS = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
   for (const e of INPUTS) addEventListener(e, touched, { passive: true });
 
+  // 끝 위치는 장면이 늦게 붙어(LateCredits) 바뀔 수 있어 가끔만 다시 잰다 — 매 프레임 재면 레이아웃을 강제한다.
+  let end = endY();
+  let measuredAt = t0;
   const frame = (now: number) => {
     const dt = Math.min(64, now - last) / 1000;
     last = now;
-    const end = endY();
+    if (now - measuredAt > 250) {
+      end = endY();
+      measuredAt = now;
+    }
     y = Math.min(end, y + rollSpeed(now - t0, end - y) * dt);
     scrollTo(0, y);
     if (y >= end - 0.5 || document.hidden) return stop();

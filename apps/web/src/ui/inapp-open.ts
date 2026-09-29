@@ -4,7 +4,7 @@ import { detectInApp, externalOpenUrl, manualOpenGuide, type InAppInfo } from '.
 import { closeSheet, showSheet } from './sheetState.svelte.js';
 
 /** 홈 화면 아이콘(웹 앱)으로 연 상태인지. */
-function isStandalone(): boolean {
+export function isStandalone(): boolean {
   try {
     return (
       matchMedia('(display-mode: standalone)').matches ||

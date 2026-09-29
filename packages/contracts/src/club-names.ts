@@ -298,6 +298,11 @@ export const CLUB_NAMES: Record<string, string[]> = {
 /** 클럽 id = `${리그}-${배열 위치}`. */
 export const clubIdOf = (leagueId: string, i: number): string => `${leagueId}-${i}`;
 
+const AMATEUR_LEAGUES = new Set(LEAGUE_BASE.filter((l) => l.amateur).map((l) => l.id));
+/** T-10-122 클럽 id가 고교·대학(아마추어) 리그 클럽인지. */
+export const isAmateurClubId = (id: string): boolean =>
+  AMATEUR_LEAGUES.has(id.slice(0, id.lastIndexOf('-')));
+
 /** 게임에 있는 클럽 id(`${리그}-${배열 위치}`)의 기본 이름. 유저가 바꿔 부른 이름이 아니라 게임 원래 이름이다. 모르는 id면 null. */
 export function defaultClubName(id: string): string | null {
   const m = /^([a-z0-9]+)-(\d+)$/.exec(id);

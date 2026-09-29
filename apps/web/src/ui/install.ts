@@ -3,19 +3,11 @@
 // 띄우지 않고, 설정 > 도움말에서는 언제든 다시 연다.
 import { hasKey, loadKey, saveKey } from '../game/season.js';
 import { closeSheet, showSheet } from './sheetState.svelte.js';
-import { currentInApp, openExternal } from './inapp-open.js';
+import { currentInApp, isStandalone, openExternal } from './inapp-open.js';
 import { INSTALL_STEPS, detectPlatform } from './install-platform.js';
 import { appState } from './state.svelte.js';
 
 const HIDE_KEY = 'ft_install_hide';
-
-/** 홈 화면 아이콘(웹 앱)으로 연 상태인지. */
-function isStandalone(): boolean {
-  return (
-    matchMedia('(display-mode: standalone)').matches ||
-    (navigator as { standalone?: boolean }).standalone === true
-  );
-}
 
 export function showInstallGuide(withOptOut = false) {
   const platform = detectPlatform(navigator.userAgent, isStandalone());

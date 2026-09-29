@@ -1,5 +1,5 @@
 import type { TickerFirst, TickerTransfer } from '@offside/contracts';
-import { LEAGUE_BASE, defaultClubName } from '@offside/contracts/club-names';
+import { defaultClubName, isAmateurClubId } from '@offside/contracts/club-names';
 import { TICKER_FIRSTS_MAX, TICKER_TRANSFERS_MAX } from '@offside/contracts/polling';
 import { sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
@@ -8,9 +8,6 @@ import { listFirsts } from './firsts.js';
 // T-10-122 홈 전광판. 이적은 최근 올라온 시즌 중 직전 시즌과 클럽 id가 다른 것 — (career_id, year) 기본 키로
 // 직전 시즌을 바로 붙이고, created_at 인덱스를 최신순으로 훑다가 상한에서 멈춘다.
 const SPAN_MS = 7 * 24 * 60 * 60_000;
-
-const AMATEUR = new Set(LEAGUE_BASE.filter((l) => l.amateur).map((l) => l.id));
-const leagueOf = (clubId: string) => clubId.slice(0, clubId.lastIndexOf('-'));
 
 export async function tickerTransfers(db: Db, nowMs: number): Promise<TickerTransfer[]> {
   const since = new Date(nowMs - SPAN_MS).toISOString();
@@ -35,7 +32,7 @@ export async function tickerTransfers(db: Db, nowMs: number): Promise<TickerTran
       defaultClubName(r.toClubId) === null
     )
       continue;
-    if (AMATEUR.has(leagueOf(r.toClubId))) continue;
+    if (isAmateurClubId(r.toClubId)) continue;
     seen.add(cid);
     out.push(r);
     if (out.length === TICKER_TRANSFERS_MAX) break;

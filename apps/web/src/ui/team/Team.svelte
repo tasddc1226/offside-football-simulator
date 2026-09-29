@@ -261,11 +261,6 @@
   }
 
   // ───────── 경기 ─────────
-  // 다른 화면에서 들어올 때(뒤로·앞으로 가기 포함)는 아래 $effect가 불러오고, 이미 그 화면이면 다시 불러온다.
-  function openOpponents() {
-    if (appState.teamView === 'opponents') void loadOpponents();
-    else show('opponents');
-  }
   async function loadOpponents() {
     oppStatus = 'loading';
     const r = await fetchOpponents();
@@ -300,10 +295,6 @@
   }
 
   // ───────── 시즌 업적 ─────────
-  function openAchievements() {
-    if (appState.teamView === 'achievements') void loadAchievements();
-    else show('achievements');
-  }
   async function loadAchievements(want = season) {
     achStatus = 'loading';
     const r = await fetchClubAchievements(want);
@@ -325,10 +316,6 @@
           ? '달성 완료'
           : '미달성';
 
-  function openHistory() {
-    if (appState.teamView === 'history') void loadHistory();
-    else show('history');
-  }
   async function loadHistory() {
     histStatus = 'loading';
     const r = await fetchTeamMatches(season);
@@ -348,15 +335,20 @@
   const OUTCOME_TITLE = { 승: '승리', 무: '무승부', 패: '패배' } as const;
   const pct = (f: number) => `${Math.round(f * 100)}%`;
 
-  // 팀을 다 불러온 뒤, 화면이 바뀔 때마다 그 화면 내용을 새로 받는다(뒤로·앞으로 가기로 들어와도).
+  // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 $effect가, 이미 그 화면이면 open이 다시 불러온다.
+  const LOAD: Partial<Record<TeamView, () => Promise<void>>> = {
+    opponents: loadOpponents,
+    achievements: () => loadAchievements(),
+    history: loadHistory,
+  };
+  function open(v: 'opponents' | 'achievements' | 'history') {
+    if (appState.teamView === v) void LOAD[v]!();
+    else show(v);
+  }
   $effect(() => {
     const v = appState.teamView;
     if (status !== 'ready' || needLogin) return;
-    untrack(() => {
-      if (v === 'opponents') void loadOpponents();
-      else if (v === 'history') void loadHistory();
-      else if (v === 'achievements') void loadAchievements();
-    });
+    untrack(() => void LOAD[v]?.());
   });
   /** 이전 기록이 없을 때 '← 이전으로'가 갈 곳. */
   function back() {
@@ -389,7 +381,7 @@
     {:else if view === 'team' || view === 'achievements'}
       <div class="seg two tm-tabs" role="group" aria-label="내 팀 메뉴">
         <button class="opt" aria-pressed={view === 'team'} onclick={() => show('team')} data-act="team-tab">팀</button>
-        <button class="opt" aria-pressed={view === 'achievements'} onclick={() => void openAchievements()} data-act="team-achievements">시즌 업적</button>
+        <button class="opt" aria-pressed={view === 'achievements'} onclick={() => open('achievements')} data-act="team-achievements">시즌 업적</button>
       </div>
       {#if view === 'achievements'}
         <section class="card stack" style="gap:12px" data-club-achievements>
@@ -500,13 +492,13 @@
             <button class="btn" onclick={autoFill} disabled={players.length === 0} data-act="team-auto">자동 배치</button>
             <button class="btn btn-primary" onclick={save} disabled={saving || !nameOk || !dirty} data-act="team-save">{team ? '편성 저장' : '팀 만들기'}</button>
           </div>
-          <button class="btn btn-accent btn-block" onclick={openOpponents} disabled={!!playHint} data-act="team-play">경기하기</button>
+          <button class="btn btn-accent btn-block" onclick={() => open('opponents')} disabled={!!playHint} data-act="team-play">경기하기</button>
           {#if playHint}<p class="muted fs-sm">{playHint}</p>{/if}
         {/if}
         <div class="tm-links">
           {#if team}
             <button class="icon-btn" onclick={() => openRanking(team?.id ?? null)} data-act="team-profile">팀 프로필 · 순위</button>
-            <button class="icon-btn" onclick={openHistory} data-act="team-history">최근 경기</button>
+            <button class="icon-btn" onclick={() => open('history')} data-act="team-history">최근 경기</button>
           {/if}
           <button class="icon-btn" onclick={() => openRanking()} data-act="team-ranking">라이브 랭킹</button>
         </div>
@@ -533,7 +525,7 @@
           {:else}
             <p class="muted">아직 겨룰 팀이 없어요. 다른 구단주가 팀을 꾸리면 여기에 나와요.</p>
           {/each}
-          <button class="icon-btn self-start" onclick={openOpponents} disabled={playing}>다른 상대 보기</button>
+          <button class="icon-btn self-start" onclick={() => open('opponents')} disabled={playing}>다른 상대 보기</button>
         </LoadState>
       </section>
     {:else if view === 'result' && result}
@@ -580,7 +572,7 @@
         <div class="tm-actions">
           <button class="btn" onclick={() => show('team')}>내 팀</button>
           <button class="btn" onclick={() => (live = true)} data-act="team-replay">중계 다시 보기</button>
-          <button class="btn btn-primary" onclick={openOpponents} disabled={matchesLeft === 0}>다시 경기하기</button>
+          <button class="btn btn-primary" onclick={() => open('opponents')} disabled={matchesLeft === 0}>다시 경기하기</button>
         </div>
       </section>
       {/if}
@@ -644,7 +636,7 @@
         <p class="muted">넣을 수 있는 은퇴 선수가 없어요.</p>
       {/each}
     </div>
-</div>
+  </div>
 {/if}
 
 <style>

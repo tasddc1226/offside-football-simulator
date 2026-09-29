@@ -1518,9 +1518,6 @@ body:has(.main-nav) .wrap {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
-.share-actions.solo {
-  grid-template-columns: 1fr;
-}
 /* 탭바가 없는 화면(선수 생성)에서는 화면 맨 아래에 붙는다 */
 .action-bar.at-bottom {
   bottom: 0;
