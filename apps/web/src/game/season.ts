@@ -516,7 +516,8 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     profile: s.peakProfile ?? peakProfileOf(s, s.peak - ovr(s)),
     public: isPublic,
   };
-  const hof = loadHOF();
+  // T-10-107 같은 커리어가 다시 은퇴하면(탭 두 개로 같은 저장 등) 이전 기록을 바꾼다 — 겹치면 '내 선수' 목록이 깨진다.
+  const hof = loadHOF().filter((h) => !entry.id || h.id !== entry.id);
   hof.push(entry);
   hof.sort((a, b) => b.score - a.score);
   // 30명이 찼어도 방금 은퇴한 선수는 남긴다 — 잘리면 은퇴 화면의 공유·이름 공개 카드가 사라진다.
@@ -604,7 +605,10 @@ export function loadKey<T = unknown>(k: string): T | null {
   }
 }
 export function loadHOF(): HofEntry[] {
-  return loadKey<HofEntry[]>('ft_hof') || loadKey<HofEntry[]>('sl_hof') || [];
+  const hof = loadKey<HofEntry[]>('ft_hof') || loadKey<HofEntry[]>('sl_hof') || [];
+  // T-10-107 예전에 겹쳐 저장된 같은 커리어는 하나만(점수 순이라 앞의 것).
+  const seen = new Set<string>();
+  return hof.filter((h) => !h.id || (!seen.has(h.id) && !!seen.add(h.id)));
 }
 /** 이 기기에 남은 은퇴 선수 이름(커리어 id → 이름). 서버엔 이름 공개를 끈 선수의 이름이 없어 화면이 이것으로 채운다. */
 export const localCareerNames = (): Map<string, string> =>
