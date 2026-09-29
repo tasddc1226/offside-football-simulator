@@ -543,6 +543,7 @@ export const BASE_EVENTS: EventDef[] = [
       {
         label: '내가 찬다',
         p: (s) => clamp(0.55 + (s.attrs.sho - 60) * 0.012 + (s.morale - 60) / 300, 0.35, 0.92),
+        mg: { kind: 'shot' },
         ok: {
           text: '골망이 흔들립니다! 극장 결승골!',
           fx: (s) => {
@@ -584,6 +585,7 @@ export const BASE_EVENTS: EventDef[] = [
       {
         label: '왼쪽으로 몸을 던진다',
         p: (s) => clamp(0.3 + (s.attrs.pac - 70) * 0.015, 0.12, 0.7),
+        mg: { kind: 'save', side: -1 },
         ok: {
           text: '막았습니다! 영웅이 됐습니다.',
           fx: (s) => {
@@ -597,6 +599,7 @@ export const BASE_EVENTS: EventDef[] = [
       {
         label: '끝까지 기다린다',
         p: (s) => clamp(0.3 + (s.attrs.def - 78) * 0.012 + (s.age - 26) * 0.01, 0.12, 0.7),
+        mg: { kind: 'save', side: 0 },
         ok: {
           text: '침착함이 빛났습니다. 정면 슈팅을 잡아냈습니다!',
           fx: (s) => {

@@ -117,4 +117,27 @@ describe('칭호 판정', () => {
     expect(mainTitle(s)?.id).toBe('cs100');
     expect(titleById('nope')).toBeUndefined();
   });
+
+  it('대표 칭호: 같은 등급이면 은퇴 등급 칭호보다 다른 칭호를 먼저 고른다 (#369)', () => {
+    const s = fresh();
+    s.titles = [
+      { id: 'ballon', year: 2035 },
+      { id: 'lg_goat', year: 2044 }, // 은퇴 때 마지막에 붙는다
+    ];
+    expect(titleById('ballon')?.rarity).toBe(titleById('lg_goat')?.rarity);
+    expect(mainTitle(s)?.id).toBe('ballon');
+    // 은퇴 등급보다 높은 등급이 없으면 은퇴 등급이 대표다.
+    s.titles = [
+      { id: 'debut', year: 2027 },
+      { id: 'lg_club', year: 2044 },
+    ];
+    expect(mainTitle(s)?.id).toBe('lg_club');
+    // 직접 고른 은퇴 등급은 그대로 쓴다.
+    s.titles = [
+      { id: 'ballon', year: 2035 },
+      { id: 'lg_goat', year: 2044 },
+    ];
+    s.titleSel = 'lg_goat';
+    expect(mainTitle(s)?.id).toBe('lg_goat');
+  });
 });

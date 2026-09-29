@@ -232,6 +232,41 @@
       "when": 1790558913304,
       "tag": "0032_retired_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1790616774051,
+      "tag": "0033_detail_position",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1790618487407,
+      "tag": "0034_owner_team",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1790641791751,
+      "tag": "0035_peak_profile",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1790642526887,
+      "tag": "0036_service_season",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1790644072707,
+      "tag": "0037_team_seasons",
+      "breakpoints": true
     }
   ]
 }

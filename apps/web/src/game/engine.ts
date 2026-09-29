@@ -9,11 +9,14 @@ import {
   SAVE_VERSION,
   focusMod,
   focusOfType,
+  posLabel,
+  DPOS,
+  type DetailPos,
   typeForFocus,
   type AttrKey,
   type Pos,
 } from './data.js';
-import { ovr, initSubs, legacyOvr } from './attributes.js';
+import { ovr, initSubs, legacyOvr, peakProfileOf } from './attributes.js';
 import { clamp, ri, pick, gauss } from './rng.js';
 import { adoptLatestBalance } from './balance.js';
 import type { GameState, Season, LogEntry } from './types.js';
@@ -35,9 +38,15 @@ export * from './event-runner.js';
 // T-10-008: 화면은 focus(주력 능력치)를 넘기고 type은 그 조합에서 파생한다. type만 넘기는 기존
 // 호출(시뮬레이터·테스트)은 유형 mod·RNG 소비가 그대로이고, focus는 유형에서 거꾸로 구한다.
 export function newGame(
-  o: { name: string; number: number; pos: Pos; foot: GameState['foot']; trait: string } & (
-    { type: string; focus?: undefined } | { type?: undefined; focus: AttrKey[] }
-  ),
+  o: {
+    name: string;
+    number: number;
+    pos: Pos;
+    /** T-10-091 세부 포지션(시즌 1부터). 없으면 옛 방식 그대로 — RNG 소비 순서도 같다. */
+    dpos?: DetailPos | undefined;
+    foot: GameState['foot'];
+    trait: string;
+  } & ({ type: string; focus?: undefined } | { type?: undefined; focus: AttrKey[] }),
   seed: number,
   presetAttrs?: Record<AttrKey, number>,
 ): GameState {
@@ -45,11 +54,12 @@ export function newGame(
   const typeId = o.focus ? typeForFocus(o.pos, o.focus) : o.type;
   const focus = o.focus ? [...o.focus] : focusOfType(o.pos, typeId);
   const mod = o.focus ? focusMod(o.pos, o.focus) : TYPES[o.pos].find((t) => t.id === typeId)!.mod;
+  const dmod = o.dpos ? DPOS[o.dpos].mod : {};
   if (presetAttrs) {
     for (const k of ATTR_KEYS) attrs[k] = clamp(presetAttrs[k], 20, 70);
   } else {
     for (const k of ATTR_KEYS)
-      attrs[k] = clamp(POS[o.pos].base[k] + (mod[k] ?? 0) + ri(-4, 4), 20, 70);
+      attrs[k] = clamp(POS[o.pos].base[k] + (mod[k] ?? 0) + (dmod[k] ?? 0) + ri(-4, 4), 20, 70);
   }
   const club = pick(clubsIn('hs'));
   const pot = clamp(Math.round(74 + gauss() * 8), 55, 96);
@@ -66,6 +76,7 @@ export function newGame(
     name: o.name,
     number: o.number,
     pos: o.pos,
+    ...(o.dpos && { dpos: o.dpos }),
     foot: o.foot,
     type: typeId,
     focus,
@@ -134,10 +145,11 @@ export function newGame(
   s.seasonStart = { ...s.attrs };
   s.seasonStartSub = { ...s.sub };
   s.peak = ovr(s);
+  s.peakProfile = peakProfileOf(s);
   s.season = newSeason(s);
   log(
     s,
-    `${club.name} 3학년 ${POS[s.pos].label} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`,
+    `${club.name} 3학년 ${posLabel(s)} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`,
     'big',
   );
   return s;

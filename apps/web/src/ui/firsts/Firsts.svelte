@@ -4,7 +4,7 @@
   // 누가 넘을 때마다 다음 목표가 열린다. 서버 기록 탭은 더 큰 기록이 나오면 주인이 바뀌는 최다·최고 기록(T-10-056).
   import type { FirstsResponse, ServerFirst } from '@offside/contracts';
   import { getFirsts } from '../../api/client.js';
-  import { loadHOF } from '../../game/season.js';
+  import { localCareerNames } from '../../game/season.js';
   import { goHome } from '../nav.js';
   import { appState } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
@@ -24,7 +24,7 @@
   // 내 선수: 진행 중인 커리어 + 이 기기의 은퇴 선수. 서버엔 이름 공개를 끈 선수의 이름이 없으니 여기서 채운다.
   const G = appState.G;
   const mine: ReadonlyMap<string, string> = new Map([
-    ...loadHOF().flatMap((h) => (h.id ? [[h.id, h.name] as const] : [])),
+    ...localCareerNames(),
     ...(G ? [[G.cid, G.name] as const] : []),
   ]);
 

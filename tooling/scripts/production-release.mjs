@@ -18,11 +18,14 @@ export const EXPECTED_TABLES = Object.freeze([
   'career_seasons',
   'club_customs',
   'idempotency',
+  'owner_teams',
   'profiles',
   'retired_numbers',
   'server_firsts',
   'server_records',
   'sessions',
+  'team_likes',
+  'team_matches',
 ]);
 
 // wrangler가 적용한 migration 이력을 기록하는 내부 테이블. 앱 스키마가 아니므로 비교에서 뺀다.

@@ -68,6 +68,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
       {
         label: '칩슛으로 넘긴다',
         p: (s) => clamp(0.35 + (s.attrs.sho - 62) * 0.012 + (s.attrs.dri - 60) * 0.006, 0.15, 0.75),
+        mg: { kind: 'chip' },
         ok: {
           text: '공이 골키퍼 머리 위를 부드럽게 넘어 골문에 떨어졌습니다. 결승골!',
           fx: (s) => {
@@ -88,6 +89,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
       {
         label: '골키퍼를 제치고 빈 골대에 넣는다',
         p: (s) => clamp(0.4 + (s.attrs.dri - 62) * 0.014, 0.15, 0.8),
+        mg: { kind: 'dribble' },
         ok: {
           text: '침착하게 제치고 빈 골대에 밀어 넣었습니다. 결승골!',
           fx: (s) => {
@@ -418,7 +420,10 @@ export const POSITIONAL_EVENTS: EventDef[] = [
     id: 'df-overlap',
     title: '풀백의 오버래핑',
     w: 2,
-    cond: (s) => posIs('DF')(s) && inGame(s) && (s.type === 'fullback' || s.attrs.pac >= 65),
+    cond: (s) =>
+      posIs('DF')(s) &&
+      inGame(s) &&
+      (s.dpos ? s.dpos === 'FB' : s.type === 'fullback' || s.attrs.pac >= 65),
     text: () =>
       '측면이 비었습니다. 윙어가 안쪽으로 파고들며 당신에게 오버래핑 공간을 만들어 줬습니다.',
     choices: [
@@ -548,6 +553,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
       {
         label: '키커의 습관을 분석한 대로 뛴다',
         p: (s) => clamp(0.25 + (s.attrs.def - 62) * 0.01 + (s.attrs.dri - 55) * 0.006, 0.12, 0.55),
+        mg: { kind: 'save' },
         ok: {
           text: '막았습니다! 승리를 지켜낸 선방. 동료들이 당신을 덮칩니다.',
           fx: (s) => {
@@ -573,6 +579,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
       {
         label: '골라인에서 심리전을 건다',
         p: (s) => clamp(0.2 + (s.fame - 20) * 0.004 + (s.attrs.phy - 55) * 0.006, 0.1, 0.45),
+        mg: { kind: 'save' },
         ok: {
           text: '당신의 몸짓에 키커가 흔들렸습니다. 슈팅이 하늘로 날아갑니다!',
           fx: (s) => {

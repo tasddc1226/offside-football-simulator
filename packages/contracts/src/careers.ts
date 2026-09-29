@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
+import { serviceSeason } from './service-seasons.js';
+import { DETAIL_POSITIONS, FACE_ATTRS, type DetailPos, type FaceAttr } from './positions.js';
 
 /**
  * T-9-009. 커리어·시즌 요약 + 이벤트 선택 로그 업로드 계약. 세이브 전체(브리프: "클라우드 세이브
@@ -10,6 +12,25 @@ import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style
 
 export const CareerPosSchema = z.enum(['FW', 'MF', 'DF', 'GK']);
 export type CareerPos = z.infer<typeof CareerPosSchema>;
+/** T-10-091 세부 포지션(시즌 1부터 만든 선수만). 큰 포지션과 어긋나면 서버가 버린다. */
+export const DetailPosSchema = z.enum(DETAIL_POSITIONS);
+
+const Rating99Schema = z.number().int().min(0).max(99);
+/** T-10-092 은퇴 선수의 최고 시점 능력치(positions.ts PeakProfile). 서버는 roles를 최고 OVR 아래로 자른다. */
+export const PeakProfileSchema = z.strictObject({
+  attrs: z.strictObject(
+    Object.fromEntries(FACE_ATTRS.map((k) => [k, Rating99Schema])) as Record<
+      FaceAttr,
+      typeof Rating99Schema
+    >,
+  ),
+  roles: z.strictObject(
+    Object.fromEntries(DETAIL_POSITIONS.map((k) => [k, Rating99Schema])) as Record<
+      DetailPos,
+      typeof Rating99Schema
+    >,
+  ),
+});
 
 export const CareerFootSchema = z.enum(['오른발', '왼발', '양발']);
 export type CareerFoot = z.infer<typeof CareerFootSchema>;
@@ -26,6 +47,7 @@ export const ClubIdSchema = z.string().regex(/^[a-z0-9-]{1,24}$/);
  * 새 커리어면 이 값으로 생성하고, 이미 있으면 값이 같은지 검증 없이 덮어쓴다(클라이언트가 정본). */
 export const CareerMetaSchema = z.strictObject({
   pos: CareerPosSchema,
+  dpos: DetailPosSchema.optional(),
   foot: CareerFootSchema,
   type: ShortStringSchema,
   trait: ShortStringSchema,
@@ -85,6 +107,11 @@ export const EventLogEntrySchema = z.strictObject({
   ok: z.boolean().optional(),
   /** 발생 시점(halves/phase 인덱스). */
   h: z.number().int().min(0).max(1000),
+  /**
+   * T-10-089 원터치 미니게임으로 가린 선택의 탭 정확도 — 구간 가운데에서 떨어진 정도 ×100(100 이하가 성공).
+   * 구간 넓이 조정용 관찰 값이다. 미니게임이 없던 선택·옛 클라이언트는 없다.
+   */
+  mg: z.number().int().min(0).max(1000).optional(),
 });
 export type EventLogEntry = z.infer<typeof EventLogEntrySchema>;
 
@@ -262,6 +289,7 @@ export type PlayStyle = z.infer<typeof PlayStyleSchema>;
 export const LegendSnapshotSchema = z.strictObject({
   number: z.number().int().min(0).max(99),
   pos: CareerPosSchema,
+  dpos: DetailPosSchema.optional(),
   age: z.number().int().min(0).max(100),
   peak: z.number().int().min(0).max(200),
   lastClub: ShortStringSchema,
@@ -279,7 +307,12 @@ export const LegendSnapshotSchema = z.strictObject({
       }),
     )
     .max(40),
-  nat: z.strictObject({ caps: z.number().int().min(0).max(10000) }),
+  nat: z.strictObject({
+    caps: z.number().int().min(0).max(10000),
+    /** T-10-086 A매치 통산 골·도움. 옛 스냅샷엔 없다(그땐 출전 수만 남겼다). */
+    goals: z.number().int().min(0).max(10000).optional(),
+    assists: z.number().int().min(0).max(10000).optional(),
+  }),
   storyLog: z
     .array(
       z.strictObject({
@@ -306,6 +339,8 @@ export type LegendSnapshot = z.infer<typeof LegendSnapshotSchema>;
 export const PutRetirementBodySchema = RetirementSummarySchema.extend({
   publicName: PublicNameSchema.nullable().optional(),
   snapshot: LegendSnapshotSchema.optional(),
+  /** T-10-092 최고 시점 능력치. 옛 클라이언트는 없다 — 모양이 틀려도 은퇴는 받는다. */
+  profile: PeakProfileSchema.optional().catch(undefined),
 });
 export type PutRetirementBody = z.infer<typeof PutRetirementBodySchema>;
 
@@ -314,6 +349,8 @@ export const PublicHofEntrySchema = z.strictObject({
   id: z.string().min(1),
   name: z.string().nullable(),
   pos: CareerPosSchema,
+  /** T-10-091 세부 포지션. 프리시즌 선수·옛 기록은 null(배포 전 엣지 캐시 응답엔 없다). */
+  dpos: DetailPosSchema.nullable().optional(),
   number: z.number().int().nullable(),
   retireAge: z.number().int(),
   peak: z.number().int(),
@@ -367,6 +404,13 @@ export const HofSortSchema = z
 export type HofSort = z.infer<typeof HofSortSchema>;
 /** `GET /v1/hof?page=` 1부터 시작하는 페이지 번호(한 페이지 = limit명). */
 export const HofPageQuerySchema = z.coerce.number().int().min(1).max(10000).default(1);
+/** T-10-090 `GET /v1/hof?season=` 서비스 시즌 순위(service-seasons.ts의 id → 그 시즌). 없으면 전체 명예의 전당. */
+export const HofSeasonQuerySchema = z.coerce
+  .number()
+  .int()
+  .refine((id) => serviceSeason(id) !== undefined, '없는 시즌입니다.')
+  .transform((id) => serviceSeason(id)!)
+  .optional();
 
 // ───────── T-10-027 서버 최초 기록 ─────────
 

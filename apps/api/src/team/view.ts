@@ -1,0 +1,36 @@
+// T-10-092 팀 응답을 만드는 공통 부분(내 팀 화면 · 공개 팀 프로필).
+import type { TeamLines, TeamRecord, TeamSlot, TeamSeasonOption } from '@offside/contracts';
+import { openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
+import type { OwnerTeamRow } from '../db/repos/ownerTeams.js';
+import { lineupLines, type LineupSlot } from './sim.js';
+
+export const recordOf = (t: Pick<OwnerTeamRow, 'wins' | 'draws' | 'losses'>): TeamRecord => ({
+  w: t.wins,
+  d: t.draws,
+  l: t.losses,
+});
+
+/** 선발 11자리 표시 — 이름은 공개 이름, 없으면 익명 표기(유스 선수 포함). */
+export const slotsOf = (lineup: readonly LineupSlot[]): TeamSlot[] =>
+  lineup.map((s) => ({
+    slot: s.slot,
+    careerId: s.careerId,
+    name: s.publicName ?? s.ref.anon,
+    pos: s.pos,
+    rating: s.rating,
+    fit: s.fit,
+  }));
+
+export function linesOf(lineup: readonly LineupSlot[]): TeamLines {
+  const l = lineupLines(lineup);
+  return {
+    atk: Math.round(l.atk),
+    mid: Math.round(l.mid),
+    def: Math.round(l.def),
+    gk: Math.round(l.gk),
+  };
+}
+
+/** 고를 수 있는 팀 시즌 목록(프리시즌 + 개막한 시즌). */
+export const seasonOptions = (now: string): TeamSeasonOption[] =>
+  openTeamSeasons(now).map((id) => ({ id, name: teamSeasonName(id) }));

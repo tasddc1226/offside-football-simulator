@@ -1999,6 +1999,291 @@ th.n {
   color: var(--muted);
   margin-top: -8px;
 }
+/* T-10-089 원터치 미니게임 — 장면·게이지·문구 전체가 버튼 하나다. */
+.mg-stage {
+  display: block;
+  position: relative;
+  width: 100%;
+  padding: 0 0 12px;
+  border: 0;
+  border-radius: var(--r3);
+  overflow: hidden;
+  background: var(--pitch);
+  color: var(--on-pitch);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.mg-stage:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.mg-stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mg-grass {
+  fill: var(--pitch);
+}
+.mg-net line,
+.mg-net path {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 0.8;
+  opacity: 0.28;
+}
+.mg-net.hit {
+  animation: mg-net 0.5s ease-out;
+}
+@keyframes mg-net {
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+.mg-goal {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+.mg-line {
+  stroke: var(--chalk);
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+.mg-line-dot {
+  fill: var(--chalk);
+  opacity: 0.7;
+}
+.mg-stripe {
+  fill: color-mix(in srgb, var(--chalk) 5%, transparent);
+}
+.mg-goal-back {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 1.6;
+  opacity: 0.45;
+}
+.mg-shadow {
+  fill: #000;
+  opacity: 0.3;
+  transition:
+    transform 0.38s cubic-bezier(0.2, 0.8, 0.3, 1),
+    rx 0.38s;
+}
+/* 사람(골키퍼·수비수)은 발끝을 축으로 몸을 던진다. */
+.mg-keeper,
+.mg-def {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+/* 골키퍼: 상대는 주황 키퍼 유니폼, 나(save)는 강조색. */
+.mg-keeper {
+  --kp: #f07a36;
+  --kp-num: #fff;
+  transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.mg-keeper.me {
+  --kp: var(--accent);
+  --kp-num: var(--accent-ink);
+}
+/* 필드 수비수(상대): 파란 상의·흰 반바지. */
+.mg-def {
+  --kp: #3a6fd6;
+  --kp-num: #fff;
+  transition: transform 0.34s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+.mg-def .kp-shorts {
+  fill: #eef1f5;
+}
+.kp-shirt {
+  fill: var(--kp);
+  stroke: rgb(0 0 0 / 0.28);
+  stroke-width: 0.8;
+}
+.kp-arm {
+  fill: none;
+  stroke: var(--kp);
+  stroke-width: 5.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.kp-num {
+  fill: var(--kp-num);
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+.kp-glove {
+  fill: #f5f7fa;
+  stroke: #9aa3ad;
+  stroke-width: 0.9;
+}
+.kp-shorts {
+  fill: #1e2329;
+}
+.kp-sock {
+  fill: none;
+  stroke: color-mix(in srgb, var(--kp) 78%, #000);
+  stroke-width: 5.4;
+  stroke-linecap: round;
+}
+.kp-boot {
+  fill: none;
+  stroke: #121417;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.kp-skin {
+  fill: #e2ae86;
+}
+.kp-hair {
+  fill: #2b221b;
+}
+.mg-ball {
+  transition: transform 0.38s cubic-bezier(0.25, 0.7, 0.35, 1);
+}
+.mg-ball-shadow {
+  transition:
+    transform 0.38s cubic-bezier(0.25, 0.7, 0.35, 1),
+    opacity 0.38s;
+}
+.ball-patch {
+  fill: #23272e;
+}
+.ball-seam {
+  stroke: #5b626c;
+  stroke-width: 0.4;
+}
+.ball-edge {
+  fill: none;
+  stroke: rgb(0 0 0 / 0.55);
+  stroke-width: 0.7;
+}
+/* 드래그 슛: 끄는 동안 페이지가 스크롤되지 않게 하고, 손가락 경로를 옅게 그린다. */
+.mg-drag {
+  touch-action: none;
+  cursor: grab;
+}
+.mg-drag.dragging {
+  cursor: grabbing;
+}
+.mg-trail {
+  fill: none;
+  stroke: var(--chalk);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+}
+.mg-readout {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  opacity: 0.9;
+}
+/* 제한 시간: 장면 위쪽 막대가 줄어들고, 마지막 1초는 빨갛게. */
+.mg-timer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: 4px;
+  background: rgb(0 0 0 / 0.25);
+}
+.mg-timer i {
+  display: block;
+  height: 100%;
+  background: var(--chalk);
+  transform-origin: left;
+  animation: mg-timer var(--mg-time) linear forwards;
+}
+.mg-timer.hurry i {
+  background: var(--bad);
+}
+.mg-timer.stop i {
+  animation-play-state: paused;
+}
+.mg-timer b {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.35);
+  color: var(--chalk);
+  font-family: var(--display);
+  font-size: 0.9375rem;
+  font-weight: 800;
+  text-align: center;
+}
+.mg-timer.hurry b {
+  background: var(--bad);
+}
+.mg-timer.stop b {
+  opacity: 0;
+}
+@keyframes mg-timer {
+  to {
+    transform: scaleX(0);
+  }
+}
+.mg-caption {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  font-family: var(--display);
+  font-size: 1.75rem;
+  font-weight: 800;
+  text-align: center;
+  color: var(--chalk);
+  text-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
+}
+.mg-gauge {
+  position: relative;
+  display: block;
+  height: 16px;
+  margin: 10px 14px 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bad) 55%, var(--pitch));
+}
+.mg-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 8px;
+  background: var(--good);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--chalk) 60%, transparent);
+}
+.mg-gauge .needle {
+  width: 4px;
+  top: -5px;
+  bottom: -5px;
+  background: var(--chalk);
+  box-shadow: 0 0 0 2px var(--pitch);
+}
+.mg-tap {
+  display: block;
+  text-align: center;
+  min-height: 1.4em;
+  margin-top: 10px;
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.mg-timing {
+  margin-top: -6px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--muted);
+}
 .chip.pop {
   animation: pop 0.32s cubic-bezier(0.3, 1.6, 0.5, 1) both;
   animation-delay: var(--d, 0ms);
@@ -2008,7 +2293,8 @@ th.n {
     transform: scale(0.6);
   }
 }
-.result-big.pop {
+.result-big.pop,
+.mg-caption.pop {
   animation: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
 }
 .twist {
@@ -3092,7 +3378,18 @@ body:has(nav.tabs) .toast {
 }
 /* T-10-076 기록실 영구결번 탭 — 구단 색 유니폼 타일을 구단별로 건다. */
 .hof-tabs {
+  grid-template-columns: repeat(3, 1fr);
   margin-bottom: 12px;
+}
+/* T-10-090 전체 / 시즌 순위 전환과 개막 전 안내. */
+.hof-seasons {
+  margin-top: 4px;
+}
+.hof-season-note b {
+  color: var(--ink);
+}
+.hof-season-note p {
+  margin: 4px 0 0;
 }
 .rn-wall-lead {
   margin: 0 0 14px;
@@ -3890,6 +4187,12 @@ button.title-item:hover {
   font-size: 2.75rem;
   color: var(--film-gold);
   margin-right: 4px;
+}
+.nat-ga {
+  margin-top: 2px;
+  color: var(--film-muted);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
 }
 /* 우승 연혁: 엔딩 크레딧처럼 가운데 선을 두고 왼쪽엔 이름(오른쪽 정렬), 오른쪽엔 연도. */
 .film-roll {
