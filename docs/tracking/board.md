@@ -42,3 +42,9 @@
 [`docs/archive/offside/tracking/board-pre-phase9.md`](../archive/offside/tracking/board-pre-phase9.md)에
 그대로 보존했다. 워커 브리프(118건), 시뮬레이션 증거, phase별 계획·완료 감사,
 레거시 위임 스크립트도 같은 아카이브의 `tracking/` 아래 있다.
+
+## 시즌1 유입 준비
+
+| 작업 | 범위 | 상태 |
+|---|---|---|
+| T-10-093 | [Threads 유입 전략·준비 자료·측정 및 2주 실험](season1-threads-acquisition-plan.md) | 기획 검토 — 구현·게시·예약 재개 없음 |
