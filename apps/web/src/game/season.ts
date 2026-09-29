@@ -6,6 +6,7 @@ import { clamp, ri, pick, rnd } from './rng.js';
 import {
   leagueOf,
   clubsIn,
+  clubLeagueId,
   fmtMoney,
   salaryFor,
   valueFor,
@@ -32,6 +33,7 @@ import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } fro
 import { nationOf } from './nation.js';
 import { detectCareerHighs } from './records.js';
 import { noteMarket } from './playStyle.js';
+import { movedWithClub, type Promotion } from './promotion.js';
 import type { LegendSnapshot } from '@offside/contracts';
 import { legendTerms } from '@offside/contracts/hof-rules';
 import type {
@@ -54,6 +56,8 @@ export interface SeasonEndResult {
   tours: NatTourResult[];
   miles: string[];
   titles: TitleView[];
+  /** T-10-110 K리그2 우승으로 구단이 승격했으면. 옛 세이브의 pending.res에는 없다. */
+  promo?: Promotion | null;
 }
 export function endSeason(s: GameState): SeasonEndResult {
   natInit(s);
@@ -212,14 +216,16 @@ export function makeOffers(s: GameState) {
     fameEff(s) * 0.04 -
     (s.age >= 31 ? (s.age - 30) * 1.2 : 0);
   const am = leagueOf(s.leagueId).amateur;
+  // T-10-110 구단의 리그는 이 커리어의 승강을 반영한다.
+  const lg = (c: Club) => leagueOf(clubLeagueId(c, s));
   const pool = CLUBS.filter(
     (c) =>
-      !leagueOf(c.leagueId).amateur &&
+      !lg(c).amateur &&
       c.id !== s.club.id &&
       c.str <= value + 2 &&
       c.str >= value - 14 &&
-      (!am || (leagueOf(c.leagueId).tier <= (value >= 66 ? 4 : 3) && c.leagueId !== 'mls')) &&
-      (leagueOf(c.leagueId).tier < 4 || leagueOf(s.leagueId).tier >= 4 || c.str <= value - 3),
+      (!am || (lg(c).tier <= (value >= 66 ? 4 : 3) && c.leagueId !== 'mls')) &&
+      (lg(c).tier < 4 || leagueOf(s.leagueId).tier >= 4 || c.str <= value - 3),
   );
   // T-10-016 MLS는 팀이 30개라 그대로 두면 오퍼를 쓸어 간다. 실제처럼 주로 30대 베테랑에게 오게 한다.
   const pull = (c: Club) => (c.leagueId === 'mls' && s.age < 30 ? BAL.mlsYoungPull : 1);
@@ -248,10 +254,10 @@ export function makeOffers(s: GameState) {
     coach =
       CLUBS.filter(
         (c) =>
-          !leagueOf(c.leagueId).amateur &&
+          !lg(c).amateur &&
           c.id !== s.club.id &&
           !chosen.includes(c) &&
-          Math.abs(leagueOf(c.leagueId).tier - tier) <= 1,
+          Math.abs(lg(c).tier - tier) <= 1,
       ).sort((a, b) => Math.abs(a.str - (value + 1)) - Math.abs(b.str - (value + 1)))[0] ?? null;
     s.flags.coachOffer = false;
   }
@@ -264,14 +270,15 @@ export function offerFrom(s: GameState, c: (typeof CLUBS)[number]): OfferOption 
   const o = ovr(s),
     old = s.age >= 31;
   const d = o - c.str;
+  const leagueId = clubLeagueId(c, s);
   return {
     kind: 'offer',
     clubId: c.id,
     name: c.name,
-    leagueId: c.leagueId,
+    leagueId,
     str: c.str,
     years: ri(old ? 1 : 2, old ? 2 : 5),
-    salary: Math.round((salaryFor(c.leagueId, o) * (0.85 + rnd() * 0.35)) / 10) * 10,
+    salary: Math.round((salaryFor(leagueId, o) * (0.85 + rnd() * 0.35)) / 10) * 10,
     role: d >= 1 ? '주전 보장' : d >= -5 ? '로테이션' : '벤치 경쟁',
     fee:
       s.contract && s.contract.years > 0
@@ -310,6 +317,8 @@ export function market(s: GameState): MarketResult {
       canRetire: s.age >= 32,
     };
   const offers = makeOffers(s);
+  // T-10-110 방금 구단이 승격했다 — 잔류·재계약은 새 리그 조건이고, 선수가 떠나도 구단의 승격은 그대로다.
+  const promoted = movedWithClub(s);
 
   if (s.leagueId === 'hs') {
     note = offers.length
@@ -344,7 +353,7 @@ export function market(s: GameState): MarketResult {
       options.push({
         kind: 'stay',
         name: `${s.club.name} 잔류`,
-        desc: `연봉 ${fmtMoney(contract.salary)} · 계약 ${contract.years}년 남음`,
+        desc: `${promoted ? `이 구단과 ${L.name} 도전 · ` : ''}연봉 ${fmtMoney(contract.salary)} · 계약 ${contract.years}년 남음`,
       });
       options.push(...offers);
     } else {
@@ -362,11 +371,12 @@ export function market(s: GameState): MarketResult {
       options.push(...offers);
       if (!options.length && s.age < 31) {
         const down = DOWN[L.id] ?? 'k3';
-        const c = clubsIn(down).sort((a, b) => Math.abs(a.str - o) - Math.abs(b.str - o))[0];
+        const c = clubsIn(down, s).sort((a, b) => Math.abs(a.str - o) - Math.abs(b.str - o))[0];
         if (c && o >= c.str - 10)
           options.push({ ...offerFrom(s, c), role: '하부 리그 · 재기 도전', years: 1 });
       }
     }
+    if (promoted) note = `${s.club.name}, ${L.name} 승격! ${note}`;
   }
   if (!L.amateur) options.push(...milOptions(s));
   const lastUni = s.leagueId === 'uni' && s.uniYears >= 4;
@@ -405,16 +415,17 @@ export function acceptOption(
     const c = CLUBS.find((x) => x.id === opt.clubId)!;
     const from = s.club.name,
       wasAm = leagueOf(s.leagueId).amateur;
-    s.leagueId = c.leagueId;
-    s.club = { ...c };
+    // T-10-110 승강한 구단이면 이 커리어의 지금 리그로(오퍼를 만들 때와 같다).
+    s.leagueId = clubLeagueId(c, s);
+    s.club = { ...c, leagueId: s.leagueId };
     s.trust = opt.trust || 0;
     s.contract = { years: opt.years, salary: opt.salary };
-    addStat(s, 'fame', Math.max(1, leagueOf(c.leagueId).tier * 1.5));
+    addStat(s, 'fame', Math.max(1, leagueOf(s.leagueId).tier * 1.5));
     log(
       s,
       wasAm
-        ? `${c.name}(${leagueOf(c.leagueId).name}) 입단! ${opt.years}년 · 연봉 ${fmtMoney(opt.salary)}`
-        : `${from} → ${c.name}(${leagueOf(c.leagueId).name}) 이적! ${opt.fee ? `이적료 ${fmtValue(opt.fee)} · ` : '자유계약 · '}${opt.years}년 · 연봉 ${fmtMoney(opt.salary)}`,
+        ? `${c.name}(${leagueOf(s.leagueId).name}) 입단! ${opt.years}년 · 연봉 ${fmtMoney(opt.salary)}`
+        : `${from} → ${c.name}(${leagueOf(s.leagueId).name}) 이적! ${opt.fee ? `이적료 ${fmtValue(opt.fee)} · ` : '자유계약 · '}${opt.years}년 · 연봉 ${fmtMoney(opt.salary)}`,
       'big',
     );
   }

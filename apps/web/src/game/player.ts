@@ -12,7 +12,12 @@ import { ovr } from './attributes.js';
 import type { GameState } from './types.js';
 
 export const leagueOf = (id: string): League => LEAGUES.find((l) => l.id === id)!;
-export const clubsIn = (id: string): Club[] => CLUBS.filter((c) => c.leagueId === id);
+/** 구단의 지금 리그 — 커리어 안의 승강(T-10-110)이 있으면 그쪽, 없으면 정적 소속. */
+export const clubLeagueId = (c: Club, s?: Pick<GameState, 'leagueMoves'>): string =>
+  s?.leagueMoves?.[c.id] ?? c.leagueId;
+/** 리그의 구단 목록. s를 주면 그 커리어의 승강을 반영한다(순위표·이적 시장·대회). */
+export const clubsIn = (id: string, s?: Pick<GameState, 'leagueMoves'>): Club[] =>
+  CLUBS.filter((c) => clubLeagueId(c, s) === id);
 /** 주력 능력치 — 옛 저장본(focus 없음)은 유형에서 거꾸로 구한다. */
 export const focusOf = (s: GameState): AttrKey[] => s.focus ?? focusOfType(s.pos, s.type);
 export const labelOf = (s: GameState, k: AttrKey): string => attrLabels(s.pos)[k];
