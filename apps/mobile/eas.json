@@ -1,0 +1,29 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": { "simulator": true }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.offside-lab.com",
+        "EXPO_PUBLIC_WEB_ORIGIN": "https://offside-lab.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": { "track": "alpha", "releaseStatus": "draft" }
+    }
+  }
+}
