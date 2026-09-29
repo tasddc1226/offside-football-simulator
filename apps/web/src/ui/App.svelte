@@ -1,8 +1,9 @@
 <script lang="ts">
   // ui.ts render()의 화면 라우팅 포트 (148~153줄)
-  import { fly } from 'svelte/transition';
+  import { untrack } from 'svelte';
   import { appState } from './state.svelte.js';
-  import { dur } from './motion.js';
+  import { screenIn } from './motion.js';
+  import { takePopDir } from './history.svelte.js';
   import { enabled, trackPage } from '../analytics/index.js';
   $effect(() => trackPage(appState.screen));
   import Home from './Home.svelte';
@@ -11,6 +12,24 @@
   import MainNav, { hasMainNav } from './MainNav.svelte';
   import { rnAlert } from './retiredNumber.svelte.js';
   import type { Component } from 'svelte';
+
+  // T-10-119 화면 전환 방향. 선수 생성은 1·2단계를 다른 화면으로 친다(상태는 appState에 있어 다시 그려도 된다).
+  // 뒤로·앞으로 가기면 그 방향, 하단 메뉴 화면끼리는 방향 없이, 하단 메뉴 화면으로 나오면 뒤로, 그 밖은 앞으로.
+  const screenKey = $derived(appState.screen === 'create' ? `create:${appState.candidates ? 2 : 1}` : appState.screen);
+  const enter: { dir: -1 | 0 | 1 } = { dir: 1 };
+  let shown = '';
+  $effect.pre(() => {
+    const to = screenKey;
+    untrack(() => {
+      const from = shown;
+      shown = to;
+      if (!from || from === to) return;
+      const main = (k: string) => hasMainNav(k as typeof appState.screen);
+      enter.dir =
+        takePopDir() ||
+        (main(from) && main(to) ? 0 : main(to) || (from === 'create:2' && to === 'create:1') ? -1 : 1);
+    });
+  });
 
   // T-10-104: 게임 화면(엔진·탭·액션)은 홈에서 안 쓰니 처음 '계속하기'·'새 커리어'를 누를 때 불러온다.
   // 홈이 한가할 때 nav.warmGame이 미리 받아 둔다. 오기 전엔 빈 화면이다.
@@ -90,14 +109,11 @@
   });
 </script>
 
-<!-- 화면 전환 모션(T-10-003 goal 3): appState.screen을 key로 써서 화면이 바뀔 때만 새로 마운트해
-     in/out 트랜지션이 걸리게 한다. opacity는 고정(1)해 transform(y)만 움직인다 — 전환 중에도 텍스트
-     명도 대비가 최종 값과 같아서(axe color-contrast가 중간 프레임을 스냅샷해도 값이 흔들리지
-     않는다) e2e/a11y 타이밍에 안전하다. 래퍼 div는 transform만 건드리므로 그 안의 position:fixed
-     요소(탭바·액션바·시트)는 뷰포트 기준 위치를 그대로 유지한다. 감속 모션이면 duration 0.
+<!-- 화면 전환 모션(T-10-003 goal 3, T-10-119): 화면이 바뀔 때만 새로 마운트해 들어오는 트랜지션을 건다.
+     방향·방식은 motion.ts screenIn. 감속 모션이면 duration 0.
      T-10-004: 래퍼를 <main> 랜드마크로 둬 모든 화면 콘텐츠가 랜드마크 안에 들어가게 한다(axe region). -->
-{#key appState.screen}
-  <main in:fly={{ y: 10, duration: dur(180), opacity: 1 }}>
+{#key screenKey}
+  <main in:screenIn={{ dir: enter.dir }}>
     {#if AnalyticsConsent && appState.screen !== 'settings'}<AnalyticsConsent />{/if}
     {#if appState.screen === 'home'}
       <Home />
