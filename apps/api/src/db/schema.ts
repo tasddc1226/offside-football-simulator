@@ -114,6 +114,8 @@ export const careers = sqliteTable(
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
     pos: text('pos', { enum: ['FW', 'MF', 'DF', 'GK'] }).notNull(),
+    // T-10-091 세부 포지션(DETAIL_POSITIONS). 시즌 1 전에 만든 선수·옛 클라이언트는 NULL.
+    dpos: text('dpos'),
     foot: text('foot', { enum: ['오른발', '왼발', '양발'] }).notNull(),
     type: text('type').notNull(),
     trait: text('trait').notNull(),
@@ -145,6 +147,12 @@ export const careers = sqliteTable(
     snapshotJson: text('snapshot_json'),
     // T-10-026 은퇴 때의 대표 칭호 id(web game/titles.ts). 옛 은퇴 기록은 NULL.
     title: text('title'),
+    // T-10-092 최고 시점 능력치(contracts PeakProfile JSON — 대표 능력치 6개 + 세부 포지션 8자리 실력). 구단주 팀이
+    // 자리마다 실력을 센다. 이 기능 전에 은퇴한 기록·옛 클라이언트는 NULL.
+    peakProfile: text('peak_profile'),
+    // 서비스 시즌 번호(contracts service-seasons). 서버에 처음 올라온(첫 시즌 업로드) 시각에 진행 중인 시즌으로 한 번
+    // 정해져 바뀌지 않는다 — 나중에 시즌 기간을 고쳐도 이미 뛴 선수의 시즌이 소급해 바뀌지 않는다. 0 = 프리시즌, NULL = 시즌 사이 휴식기.
+    serviceSeason: integer('service_season'),
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),
@@ -381,3 +389,92 @@ export const appMeta = sqliteTable('app_meta', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
 });
+
+/**
+ * T-10-092 구단주 팀. 구글 로그인한 프로필만 만들고, 시즌마다 한 팀이다(season: 서비스 시즌 id, 0 = 프리시즌 —
+ * 그 시즌에 처음 올라온 은퇴 선수만 넣는다). slots_json은 포메이션 순서 11자리의
+ * 커리어 id(빈 자리는 null — 유스 선수가 채운다). filled·ovr는 저장·경기 때 다시 계산해 두는 값이다(상대 목록이
+ * 커리어를 읽지 않고 고른다). 전적은 경기마다 두 팀 행을 한 번씩 고친다(행 쓰기를 적게).
+ */
+export const ownerTeams = sqliteTable(
+  'owner_teams',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    season: integer('season').notNull().default(0),
+    name: text('name').notNull(),
+    /** 감독 이름(팀마다, 공개). */
+    manager: text('manager').notNull().default(''),
+    formation: text('formation').notNull(),
+    slotsJson: text('slots_json').notNull(),
+    filled: integer('filled').notNull(),
+    ovr: integer('ovr').notNull(),
+    /** 팀 레이팅(경기 결과로 오르내린다, TEAM_RATING_START에서 시작). */
+    rating: integer('rating').notNull().default(1000),
+    wins: integer('wins').notNull().default(0),
+    draws: integer('draws').notNull().default(0),
+    losses: integer('losses').notNull().default(0),
+    goalsFor: integer('goals_for').notNull().default(0),
+    goalsAgainst: integer('goals_against').notNull().default(0),
+    /** 지금 연승 · 최다 연승 · 가장 큰 승리 골 차(팀 히스토리 배지). */
+    streak: integer('streak').notNull().default(0),
+    bestStreak: integer('best_streak').notNull().default(0),
+    bestMargin: integer('best_margin').notNull().default(0),
+    likes: integer('likes').notNull().default(0),
+    views: integer('views').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('owner_teams_profile_season_unique').on(table.profileId, table.season),
+    // 상대 목록: 같은 시즌에서 내 팀 OVR 위아래로 가까운 팀을 찾는다.
+    index('owner_teams_season_ovr_idx').on(table.season, table.ovr),
+    // 라이브 랭킹(팀 랭킹).
+    index('owner_teams_season_rating_idx').on(table.season, table.rating),
+  ],
+);
+
+/** T-10-092 팀 좋아요(구단주 한 명이 팀 하나에 한 번). 수는 owner_teams.likes에 함께 센다. */
+export const teamLikes = sqliteTable(
+  'team_likes',
+  {
+    teamId: text('team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.teamId, table.profileId] }),
+    index('team_likes_profile_idx').on(table.profileId),
+  ],
+);
+
+/**
+ * T-10-092 팀 경기. home은 경기를 건 팀, profile_id는 그 구단주(하루 경기 수 제한을 센다). detail_json은 두 팀의
+ * 경기 당시 모습(이름·구단주·포메이션·OVR)과 골 이벤트 — 선수는 커리어 id와 익명 표기로만 담고 공개 이름은 읽을
+ * 때 붙인다(나중에 이름 공개를 끄면 경기 기록에서도 사라진다).
+ */
+export const teamMatches = sqliteTable(
+  'team_matches',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    homeTeamId: text('home_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    awayTeamId: text('away_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    homeGoals: integer('home_goals').notNull(),
+    awayGoals: integer('away_goals').notNull(),
+    detailJson: text('detail_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('team_matches_profile_created_idx').on(table.profileId, table.createdAt),
+    index('team_matches_away_created_idx').on(table.awayTeamId, table.createdAt),
+  ],
+);

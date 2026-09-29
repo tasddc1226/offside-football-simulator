@@ -1,6 +1,6 @@
 import { ErrorEnvelopeSchema } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { auditLog, balanceVersions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, callJson, issueAdminCookie, issueCookie } from '../test/http.js';
@@ -13,6 +13,8 @@ type Version = {
   values: Record<string, unknown>;
   activatedAt: string | null;
 };
+
+const PRESEASON = new Date('2026-09-29T00:00:00.000Z');
 
 describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
   let ctx: TestD1;
@@ -29,11 +31,15 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
   }
 
   beforeEach(async () => {
+    // T-10-090 시즌 중엔 활성화가 잠긴다 — 기본은 시즌 1 개막 전(프리시즌) 시각으로 고정한다.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(PRESEASON);
     ctx = await createTestD1();
     env = { ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL };
   });
   afterEach(async () => {
     await ctx.dispose();
+    vi.useRealTimers();
   });
 
   it('활성 버전이 없으면 누구나 version 0(코드 기본값)을 받는다', async () => {
@@ -184,5 +190,29 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
     } finally {
       edge.uninstall();
     }
+  });
+
+  it('T-10-090: 시즌 중에는 활성화가 잠기고 override=season으로만 연다', async () => {
+    const admin = await makeAdmin();
+    const v1 = await draft(admin.cookie, { growthScale: 1.1 });
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z'));
+    const locked = await call('POST', `/v1/admin/balance/${v1.version}/activate`, {
+      cookie: admin.cookie,
+    });
+    expect(locked.status).toBe(409);
+    expect(ErrorEnvelopeSchema.parse(await locked.json()).error.details).toMatchObject({
+      reason: 'SEASON_BALANCE_LOCKED',
+    });
+    expect((await data<Version>(await call('GET', '/v1/balance'))).version).toBe(0);
+
+    const forced = await call('POST', `/v1/admin/balance/${v1.version}/activate?override=season`, {
+      cookie: admin.cookie,
+    });
+    expect(forced.status).toBe(200);
+    const [log] = await ctx.db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.kind, 'BALANCE_ACTIVATED'));
+    expect(JSON.parse(log!.payloadJson)).toMatchObject({ version: v1.version, seasonOverride: 1 });
   });
 });

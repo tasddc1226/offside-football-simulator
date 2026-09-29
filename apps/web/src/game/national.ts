@@ -1,5 +1,5 @@
 // ───────── 대한민국 국가대표 · 국제대회 ─────────
-import { POS, LAST_PHASE } from './data.js';
+import { LAST_PHASE, scoreRate } from './data.js';
 import { ovr } from './attributes.js';
 import { clamp, ri, pick, chance, gauss, poisson, rnd } from './rng.js';
 import { leagueOf, addStat, log, fameEff, atkOf, creOf } from './engine.js';
@@ -138,7 +138,7 @@ function simIntl(
   stage = '',
   youth = false,
 ): IntlResult {
-  const P = POS[s.pos],
+  const P = scoreRate(s),
     o = ovr(s),
     teamStr = youth ? BAL.koreaU23 : BAL.koreaStr;
   let mins = 0;

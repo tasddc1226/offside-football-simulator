@@ -18,6 +18,16 @@ export const LEGEND_W = {
   GK: { g: 1, a: 0.6, cs: 0.95 },
 };
 
+/**
+ * T-10-091 세부 포지션별 가중 보정. 윙어·수비형 미드필더는 같은 포지션 안에서 골 대신 도움(또는 수비)을 맡아
+ * 골에 붙는 수상이 적다 — 시뮬레이션(fulltime-sim DPOS=1, 12,000명)에서 같은 큰 포지션 평균에 맞춘 값이다.
+ * 여기 없는 세부 포지션은 큰 포지션 가중을 그대로 쓴다.
+ */
+export const LEGEND_W_DETAIL: Partial<Record<string, { g: number; a: number; cs: number }>> = {
+  W: { g: 0.42, a: 0.55, cs: 0 },
+  DM: { g: 0.8, a: 0.85, cs: 0 },
+};
+
 /** 레전드 점수에 들어가는 통산 값. ballonRankPoints = 발롱도르 순위마다 max(0, 31 − 순위)의 합. */
 export interface LegendTotals {
   goals: number;
@@ -37,8 +47,9 @@ export interface LegendTotals {
  * 레전드 점수의 각 항(반올림 전 — 합을 한 번 반올림한 것이 점수). 웹 은퇴 리포트(legendScoreBreakdown)와 서버의
  * 은퇴 요약 보정(apps/api plausibility.ts)이 같은 식을 쓴다.
  */
-export function legendTerms(pos: string, t: LegendTotals) {
-  const w = LEGEND_W[pos as keyof typeof LEGEND_W] ?? LEGEND_W.MF;
+export function legendTerms(pos: string, t: LegendTotals, dpos?: string | null) {
+  const w =
+    (dpos && LEGEND_W_DETAIL[dpos]) || (LEGEND_W[pos as keyof typeof LEGEND_W] ?? LEGEND_W.MF);
   return {
     goals: t.goals * w.g,
     assists: t.assists * w.a,

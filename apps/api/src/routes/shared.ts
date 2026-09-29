@@ -1,9 +1,36 @@
-import { successEnvelope } from '@offside/contracts';
+import { successEnvelope, TeamSeasonQuerySchema } from '@offside/contracts';
+import { openTeamSeasons, teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context } from 'hono';
 import type { AppEnv } from '../env.js';
 import { AppError, parseWithAppError, type SchemaLike } from '../errors.js';
 
 export const nowIso = () => new Date().toISOString();
+
+/** 사람마다 다른 응답(엣지·브라우저 캐시 금지). */
+export const NO_STORE = 'private, no-store';
+
+export const teamNotFound = () =>
+  new AppError({
+    code: 'VALIDATION_FAILED',
+    status: 404,
+    message: '팀을 찾을 수 없어요.',
+    details: { reason: 'TEAM_NOT_FOUND' },
+  });
+
+/** T-10-092 `?season=` 팀 시즌 — 없으면 지금 시즌(휴식기면 마지막으로 열린 시즌). 열리지 않은 시즌이면 400. */
+export function teamSeasonParam(raw: unknown, now: string): number {
+  const q = parseWithAppError(TeamSeasonQuerySchema, raw);
+  const open = openTeamSeasons(now);
+  const season = q ?? teamSeasonAt(now) ?? open.at(-1)!;
+  if (!open.includes(season)) {
+    throw new AppError({
+      code: 'VALIDATION_FAILED',
+      message: '아직 열리지 않은 시즌이에요.',
+      details: { reason: 'SEASON_NOT_OPEN' },
+    });
+  }
+  return season;
+}
 
 export const careerOwnerMismatch = () =>
   new AppError({
