@@ -414,12 +414,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(homeRow!.wins + homeRow!.draws + homeRow!.losses).toBe(1);
     expect(awayRow!.wins).toBe(homeRow!.losses);
     expect(awayRow!.losses).toBe(homeRow!.wins);
-    // 레이팅은 건 쪽이 엘로만큼, 받은 쪽은 그 절반만 움직이고(T-10-095), 득실·연승·골 차가 쌓인다.
+    // 레이팅은 홈 이점을 넣은 엘로만큼 옮겨 가고(두 팀 합은 그대로, T-10-095), 득실·연승·골 차가 쌓인다.
     const want = ratingChange(1000, 1000, matchScore(match.home.goals, match.away.goals));
     expect([match.home.ratingChange, match.away.ratingChange]).toEqual([want.home, want.away]);
     expect(homeRow!.rating).toBe(rating);
     expect([homeRow!.rating, awayRow!.rating]).toEqual([1000 + want.home, 1000 + want.away]);
-    expect(Math.sign(homeRow!.rating - 1000)).toBe(won ? 1 : drew ? 0 : -1);
+    expect(homeRow!.rating + awayRow!.rating).toBe(2000);
     expect([homeRow!.goalsFor, homeRow!.goalsAgainst]).toEqual([
       match.home.goals,
       match.away.goals,
@@ -511,7 +511,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(err.details).toEqual({ reason: 'TEAM_MATCH_DAILY_LIMIT' });
   });
 
-  it('T-10-095 같은 상대에게는 하루 한 번만 걸고, 다음 날 다시 만나면 레이팅 변화가 절반이다', async () => {
+  it('T-10-095 같은 상대에게는 하루 한 번만 걸고, 다음 날 다시 만나면 레이팅 변화가 줄어든다', async () => {
     const me = await ownerWithTeam(1);
     const rival = await ownerWithTeam(1);
     const other = await ownerWithTeam(1);

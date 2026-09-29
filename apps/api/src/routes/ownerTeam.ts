@@ -386,7 +386,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const id = newId('mat');
     const result = simulateMatch(id, home, away);
     const score = matchScore(result.homeGoals, result.awayGoals);
-    // 최근 TEAM_REPEAT_WINDOW_DAYS일 안에 이미 만난 횟수만큼 변화가 줄고, 받은 쪽은 절반만 움직인다.
+    // 기대 승률에 홈 이점을 넣고, 최근 TEAM_REPEAT_WINDOW_DAYS일 안에 이미 만난 횟수만큼 변화를 줄인다.
     const delta = ratingChange(mine.rating, opp.team.rating, score, Number(met?.n ?? 0));
     const homeSide = {
       teamId: mine.id,

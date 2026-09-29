@@ -15,7 +15,7 @@ export const TEAM_NAME_MAX = 12;
 /** 감독 이름 길이(앞뒤 공백 제외). */
 export const MANAGER_NAME_MIN = 2;
 export const MANAGER_NAME_MAX = 10;
-/** 팀 레이팅 — 새 팀은 TEAM_RATING_START에서 시작해 경기마다 엘로 방식으로 오르내린다. */
+/** 팀 레이팅 — 새 팀은 TEAM_RATING_START에서 시작해 경기마다 엘로 방식으로 오르내린다(두 팀 합은 그대로). */
 export const TEAM_RATING_START = 1000;
 export const TEAM_RATING_K = 32;
 /** 라이브 랭킹(팀 랭킹) 한 페이지의 팀 수. */
@@ -28,8 +28,11 @@ export const TEAM_REPEAT_WINDOW_DAYS = 7;
 /** 다시 만날 때마다 레이팅 변화에 곱하는 값과 그 하한 — 1번째 재대결 ×0.5, 2번째부터 ×0.25. */
 export const TEAM_REPEAT_FACTOR = 0.5;
 export const TEAM_REPEAT_FLOOR = 0.25;
-/** 경기를 받은 쪽(away)은 스스로 고른 경기가 아니라 레이팅이 이만큼만 움직인다(얻는 쪽도 잃는 쪽도). */
-export const TEAM_DEFENDER_FACTOR = 0.5;
+/**
+ * 경기를 건 쪽(홈)의 이점을 레이팅 점수로 — 같은 전력이면 홈 기대 점수가 약 0.528(경기 시뮬레이션 2만 판)이라 기대 승률에
+ * 이만큼 얹는다. 없으면 건 쪽이 기대보다 자주 이겨 경기를 많이 거는 팀의 레이팅이 부푼다.
+ */
+export const TEAM_HOME_ADV_RATING = 20;
 
 /** 최근 TEAM_REPEAT_WINDOW_DAYS일 동안 두 팀이 이미 치른 경기 수 → 레이팅 변화 배율. */
 export const repeatFactor = (meetings: number): number =>
@@ -40,9 +43,9 @@ export const matchScore = (goalsFor: number, goalsAgainst: number): 0 | 0.5 | 1 
   goalsFor > goalsAgainst ? 1 : goalsFor < goalsAgainst ? 0 : 0.5;
 
 /**
- * 경기 한 판의 레이팅 변화. score = home(경기를 건 팀) 결과(승 1 · 무 0.5 · 패 0). 강한 팀이 약한 팀을 이기면 조금,
- * 약한 팀이 이기면 많이 오른다. 최근에 만난 상대면 repeatFactor만큼 줄고, 받은 쪽은 TEAM_DEFENDER_FACTOR만큼만
- * 움직인다 — 그래서 두 팀 합은 그대로가 아니다.
+ * 경기 한 판의 레이팅 변화(away는 부호만 반대라 두 팀 합은 그대로). score = home(경기를 건 팀) 결과(승 1 · 무 0.5 · 패 0).
+ * 강한 팀이 약한 팀을 이기면 조금, 약한 팀이 이기면 많이 오른다. 기대 승률에는 홈 이점(TEAM_HOME_ADV_RATING)을 넣고,
+ * 최근에 만난 상대면 repeatFactor만큼 줄인다.
  */
 export function ratingChange(
   home: number,
@@ -50,9 +53,9 @@ export function ratingChange(
   score: 0 | 0.5 | 1,
   meetings = 0,
 ): { home: number; away: number } {
-  const expected = 1 / (1 + 10 ** ((away - home) / 400));
-  const base = TEAM_RATING_K * (score - expected) * repeatFactor(meetings);
-  return { home: Math.round(base), away: -Math.round(base * TEAM_DEFENDER_FACTOR) };
+  const expected = 1 / (1 + 10 ** ((away - home - TEAM_HOME_ADV_RATING) / 400));
+  const delta = Math.round(TEAM_RATING_K * (score - expected) * repeatFactor(meetings));
+  return { home: delta, away: -delta };
 }
 /** 빈 자리를 채우는 유스 선수의 OVR. */
 export const YOUTH_OVR = 50;
