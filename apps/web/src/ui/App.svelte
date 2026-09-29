@@ -21,7 +21,7 @@
   $effect(() => {
     if (appState.screen === 'settings' && !Settings) void import('./Settings.svelte').then((m) => (Settings = m.default));
   });
-  // T-10-058: 구단주(계정·구단 꾸미기)도 같은 방식.
+  // T-10-058: 구단주(계정·내 선수)도 같은 방식. 구단 꾸미기는 설정 화면에 있다(T-10-102).
   let Owner = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
     if (appState.screen === 'owner' && !Owner) void import('./Owner.svelte').then((m) => (Owner = m.default));

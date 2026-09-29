@@ -5,12 +5,11 @@
   // 오류에도 게임 자체는 그대로 플레이할 수 있어야 하므로, 실패 시 조용히 "로그아웃 상태" 취급하고
   // 게임 화면을 막지 않는다.
   import {
-    unlinkGoogle, logout, startProfileDeletion, confirmProfileDeletion, googleStartUrl,
+    unlinkGoogle, logout, startProfileDeletion, confirmProfileDeletion,
   } from '../api/client.js';
   import { accountCache, refreshAccount } from './account-state.svelte.js';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
   import NicknameForm from './NicknameForm.svelte';
-  import { startGoogleLogin } from './login.js';
 
   /** 관리자 계정(설정 화면이 확인한다)은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다. */
   let { admin = false }: { admin?: boolean } = $props();
@@ -70,11 +69,9 @@
     <button class="btn btn-sm" onclick={() => load()}>다시 시도</button>
   </div>
 {:else if !profile || !profile.linked.google}
+  <!-- T-10-102 비로그인은 안내만 — 구글 로그인 버튼은 구단주 화면이 카드 밖에 하나만 둔다. -->
   <div class="account-card">
-    <div class="who"><b>로그인하지 않았어요</b><span class="muted">구글 계정을 연결하면 은퇴한 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.</span></div>
-    <!-- 설정에서 로그인하면 설정으로 돌아온다(소식에서 로그인하다 그만둔 기록을 지운다). 로그아웃·탈퇴 직후엔
-         세션 쿠키가 없으므로 링크로 바로 가지 않고 startGoogleLogin이 새 익명 세션부터 받는다. -->
-    <a class="btn btn-primary btn-sm" href={googleStartUrl()} onclick={(e) => { e.preventDefault(); void startGoogleLogin(null); }}>구글로 로그인</a>
+    <div class="who"><b>로그인하지 않았어요</b><span class="muted">구글 계정을 연결하면 은퇴한 선수로 내 팀을 꾸려 다른 구단주와 겨루고, 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.</span></div>
   </div>
 {:else}
   <div class="account-card">

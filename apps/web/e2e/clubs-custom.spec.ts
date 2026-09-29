@@ -4,9 +4,9 @@ import AxeBuilder from '@axe-core/playwright';
 // T-10-009: 게임 설정에서 클럽 이름·엠블럼을 바꾸면 새 커리어에 그대로 쓰인다.
 test('설정에서 고교 클럽 이름을 모두 바꾸면 새 커리어 소속에 반영된다', async ({ page }) => {
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await page.locator('[data-settings-open="clubs"]').click();
-  await expect(page.getByRole('heading', { name: '구단주' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '환경설정' })).toBeVisible();
   await page.locator('#club-league').selectOption('hs');
   const rows = page.locator('.club-row');
   await expect(rows).toHaveCount(12);
@@ -30,7 +30,7 @@ test('설정에서 고교 클럽 이름을 모두 바꾸면 새 커리어 소속
 
   // 새로고침해도 유지된다(이 기기 localStorage).
   await page.reload();
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await page.locator('[data-settings-open="clubs"]').click();
   await page.locator('#club-league').selectOption('hs');
   await expect(page.locator('.club-row').first().locator('input[type="text"]')).toHaveValue(

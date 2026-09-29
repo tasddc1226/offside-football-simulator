@@ -2562,8 +2562,12 @@ th.n {
   margin-top: 12px;
   font-size: 0.875rem;
 }
-.settings-volume.off {
+/* 배경음악이 꺼지면 슬라이더만 흐리게 — 글자까지 흐리면 명도 대비가 모자란다(T-10-102 axe). */
+.settings-volume.off input {
   opacity: 0.55;
+}
+.settings-volume.off label {
+  color: var(--muted);
 }
 .settings-volume input {
   width: 100%;

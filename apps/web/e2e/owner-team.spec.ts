@@ -114,14 +114,18 @@ async function stubOwner(page: Page, google: boolean) {
   );
 }
 
-test('익명 구단주는 내 팀 대신 구글 로그인 안내를 본다', async ({ page }) => {
+// T-10-102 비로그인 구단주는 안내 카드와 로그인 버튼 하나만 — 로그인해야 쓰는 내 팀은 숨긴다.
+test('익명 구단주는 내 팀 대신 구글 로그인 버튼 하나만 본다', async ({ page }) => {
   await stubOwner(page, false);
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  const card = page.locator('[data-owner-team]');
-  await expect(card).toContainText('구글로 로그인한 구단주만');
-  await expect(card.getByRole('button', { name: '구글로 로그인' })).toBeVisible();
+  await expect(page.locator('#account-slot')).toContainText('로그인하지 않았어요');
+  await expect(page.getByRole('link', { name: '구글로 로그인' })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: '구글로 로그인' })).toHaveCount(0);
+  await expect(page.locator('[data-owner-team]')).toHaveCount(0);
   await expect(page.locator('[data-act="team"]')).toHaveCount(0);
+  await expect(page.locator('[data-settings-open="clubs"]')).toHaveCount(0); // 환경설정으로 옮겼다.
+  await expect(page.locator('[data-my-players]')).toBeVisible(); // 이 기기 기록은 로그인 없이도 본다.
 });
 
 test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async ({ page }) => {

@@ -1,6 +1,7 @@
 <script lang="ts">
   // 환경설정 화면(T-10-009, T-10-021) — 다크 모드·효과음·배경음악·선수 이름 공개(T-10-065) 켜기/끄기, 도움말·서비스 정책 링크.
-  // 이 설정들은 이 기기에만 저장된다. 계정·구단 꾸미기·운영 도구는 구단주 화면으로 옮겼다(T-10-058).
+  // 이 설정들은 이 기기에만 저장된다. 계정·운영 도구는 구단주 화면으로 옮겼다(T-10-058).
+  // T-10-102 구단 이름·엠블럼 변경은 구단주 화면에서 다시 이리로 — 게임 표시를 바꾸는 설정이라서.
   import Topbar from './Topbar.svelte';
   import { setSfxEnabled, sfxEnabled } from './sfx.js';
   import { bgm, setBgm, setBgmVolume } from './bgm.svelte.js';
@@ -9,6 +10,7 @@
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
   import { namePublicEnabled, setNamePublic } from './namePublic.js';
+  import ClubCustomSettings from './ClubCustomSettings.svelte';
 
   let sfx = $state(sfxEnabled());
   let dark = $state(isDark());
@@ -82,6 +84,8 @@
       <button class="switch" role="switch" aria-checked={namePublic} aria-labelledby="name-public-label" data-setting="name-public" onclick={() => setNamePublic((namePublic = !namePublic))}></button>
     </div>
   </section>
+
+  <ClubCustomSettings />
 
   <section class="settings-group" aria-labelledby="settings-help">
     <div class="eyebrow">Help</div>

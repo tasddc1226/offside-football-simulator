@@ -21,8 +21,10 @@ test('계정 영역: 홈이 아니라 설정 화면에 있다 — 로그아웃 �
   await expect(page.locator('#account-slot')).toHaveCount(0);
   await page.locator('[data-act="owner"]').click();
   const account = page.locator('#account-slot');
-  await expect(account).toContainText('구글로 로그인');
-  await expect(account.getByRole('link', { name: '구글로 로그인' })).toHaveAttribute(
+  // T-10-102 비로그인 카드는 안내만, 로그인 버튼은 카드 밖에 하나.
+  await expect(account).toContainText('로그인하지 않았어요');
+  await expect(account.getByRole('link')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: '구글로 로그인' })).toHaveAttribute(
     'href',
     `${API}/v1/auth/google/start`,
   );
@@ -102,7 +104,8 @@ test('로그아웃은 확인 창에서 한 번 더 확인한다', async ({ page 
 
   await account.locator('[data-act="logout"]').click();
   await page.locator('#sheet [data-sheet="0"]').click();
-  await expect(account).toContainText('구글로 로그인');
+  await expect(account).toContainText('로그인하지 않았어요');
+  await expect(page.locator('[data-act="google-login"]')).toBeVisible();
   expect(logouts).toBe(1);
 });
 
@@ -139,9 +142,9 @@ test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받�
   const account = page.locator('#account-slot');
   await account.locator('[data-act="logout"]').click();
   await page.locator('#sheet [data-sheet="0"]').click();
-  await expect(account).toContainText('구글로 로그인');
+  await expect(account).toContainText('로그인하지 않았어요');
   calls.length = 0;
-  await account.getByRole('link', { name: '구글로 로그인' }).click();
+  await page.locator('[data-act="google-login"]').click();
   await expect(page.locator('#toast')).toContainText('구글 계정을 연결했습니다');
   expect(calls.slice(0, 2)).toEqual(['profile', 'start']);
 });
