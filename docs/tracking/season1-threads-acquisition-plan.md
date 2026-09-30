@@ -1,12 +1,12 @@
 # T-10-093: 시즌1 Threads 유입·플레이 전환 실험
 
-상태: 기획 검토 / 문서만 추가 / 2026-09-29 KST
+상태: 시즌1 UTM 허용 목록·회귀 테스트 구현 / 운영 배포 및 실측 검증 전 / 2026-09-30
 
 ## 목적과 범위
 
 시즌1을 준비하면서 Threads를 축구선수 커리어 게임에 관심 있는 이용자가 실제 플레이를 시작하는 채널로 검증한다. 좋아요·팔로워·댓글 수 자체를 성공 지표로 삼지 않는다. 자동 소통이 유입을 늘리지 않는다는 운영자 관찰은 가설이며, 현재 기록만으로 전환 효과나 알고리즘 불이익을 입증할 수 없다.
 
-이 문서는 콘텐츠·측정·준비 자료·2주 실험을 정의한다. 게임 기능, GA 설치, DB, 세이브, 배포, SNS 게시·예약 재개는 수행하지 않는다. 일시정지한 소통 및 업데이트 게시 예약은 별도 재개 지시 전까지 유지한다.
+이 문서는 콘텐츠·측정·준비 자료·2주 실험을 정의한다. 후속 구현은 기존 웹 GA 계측의 시즌1 UTM 허용 목록과 회귀 테스트만 보강한다. 게임 기능, 새 GA 설치, DB, 세이브, 배포, SNS 게시·예약 재개는 수행하지 않는다. 일시정지한 소통 및 업데이트 게시 예약은 별도 재개 지시 전까지 유지한다.
 
 ## 기준과 의존성
 
@@ -14,7 +14,7 @@
 - `packages/contracts/src/service-seasons.ts`에 서비스 시즌1 개막은 2026-10-06 00:00 KST, 종료 시각은 미정으로 정의돼 있다. 게임 안의 첫 해와 서비스 시즌1을 구별한다.
 - 참가 기준은 단순 선수 생성 버튼 시각과 동일시하지 않는다. 현재 계약 주석은 서버 최초 커리어 업로드 시각을 기준으로 설명한다. 대외 참가 안내는 실제 서버 판정·운영 배포를 재확인한 뒤 확정한다.
 - main 병합은 운영 배포 증거가 아니다. 개막일·밸런스 잠금·명예의 전당 안내는 게시 직전 배포 기록과 실제 화면을 확인한다.
-- [GA4 최소 행동 측정 #366](https://github.com/tasddc1226/offside-football-simulator/pull/366): 아직 기획 PR이다. 이 문서는 이벤트 명칭·동의·개인정보·중복 방지 원칙을 재사용하며 별도 태그를 중복 설치하지 않는다.
+- [GA4 최소 행동 측정 #366](https://github.com/tasddc1226/offside-football-simulator/pull/366): 기존 웹 계측 코드의 이벤트 명칭·동의·개인정보·중복 방지 원칙을 재사용하며 별도 태그를 중복 설치하지 않는다. 운영 보고서 수집은 별도로 확인한다.
 - [칭호·LS·성장 기획 #369](https://github.com/tasddc1226/offside-football-simulator/pull/369), [구단주 과제 #365](https://github.com/tasddc1226/offside-football-simulator/pull/365), [K2 승격 #371](https://github.com/tasddc1226/offside-football-simulator/pull/371)은 검토안이다. 일부 선반영과 전체 완료를 구분하고 미출시 기능을 홍보하지 않는다.
 
 ## 대상과 콘텐츠 방향
@@ -41,7 +41,7 @@
 | 선수 이야기 2건          | 운영자    | 공개 출처 또는 재사용 허락, 원본 결과 대조                      | 후보 수집 필요                   |
 | 선택 사례 2건            | 제작자    | 선택과 결과를 실제 플레이로 확인, 인과 과장 없음                | 미수집                           |
 | 고정 소개 글             | 운영자    | 게임 설명·화면·시작 링크·현재 참가 안내 일치                    | 초안 아래 제공                   |
-| 채널 측정                | 개발 담당 | #366 구현·배포 상태 및 실제 보고서 검증                         | 기획 의존, 미확인                |
+| 채널 측정                | 개발 담당 | #366 구현·배포 상태 및 실제 보고서 검증                         | 웹 허용 목록 구현, 운영 실측 미실행 |
 | 게시물별 기록표          | 운영자    | 원문 URL·UTM·시각·24h/72h 수치 기록 가능                        | CSV 템플릿 제공                  |
 | 주간 판정표              | 운영자    | 분자/분모·비용·관측 창·미표시 구분                              | 기준 아래 제공                   |
 
@@ -83,7 +83,11 @@ D0는 운영에서 시즌1 개막이 확인된 날이다. 현재 소스 날짜�
 - 게시물 `utm_content=s1_story_01`, `s1_choice_01`, `s1_update_01`처럼 제한된 목록을 등록한다. 프로필은 `s1_bio`다.
 - 예시: `https://offside-lab.com/?utm_source=threads&utm_medium=social&utm_campaign=season1_launch&utm_content=s1_story_01`
 - 값에 이용자명·선수명·프로필/커리어 ID·자유 입력을 넣지 않는다.
-- #366의 UTM 허용 목록에 위 캠페인/콘텐츠 값을 추가하는 것은 후속 구현 과제다. URL을 붙인 것만으로 수집 완료로 처리하지 않는다.
+- 웹 UTM 허용 목록에 `season1_launch` 및 `s1_story_01`, `s1_story_02`, `s1_choice_01`, `s1_choice_02`, `s1_update_01`, `s1_update_02`, `s1_bio`, `s1_ig_story_01`을 등록했다. 기존 `launch`·`retirement_share`도 유지한다. URL을 붙인 것만으로 수집 완료로 처리하지 않는다.
+- Instagram 프로필: `https://offside-lab.com/?utm_source=instagram&utm_medium=social&utm_campaign=season1_launch&utm_content=s1_bio`
+- Instagram 스토리: `https://offside-lab.com/?utm_source=instagram&utm_medium=social&utm_campaign=season1_launch&utm_content=s1_ig_story_01`
+- 공통 Instagram bio 링크는 개별 릴스별 유입을 구분할 수 없다. 릴스별 전환 수치를 이 링크에서 추정하지 않는다.
+- 검증 범위는 로컬의 격리된 테스트 태그와 GA 스크립트 목업이다. 실제 Threads/Instagram 모바일 인앱 브라우저 링크 검증, 운영 배포 확인, 처리된 GA 보고서에서 캠페인·career_start 연결 확인은 **미실행**이다. 네이티브 앱 계측은 범위 밖이다.
 - Threads 링크 클릭/방문 수와 분석 도구의 세션은 다른 지표다. 클릭 수를 세션 전환율의 분모로 대신 사용하지 않는다.
 
 | 지표         | 정의                                                                              | 관측 시점                     |
