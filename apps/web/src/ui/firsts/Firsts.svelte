@@ -3,14 +3,14 @@
   // 최근 기록 탭은 날짜별 연대기, 분류 탭은 규칙 전체(아직 아무도 못 세운 기록 포함)를 보여 준다. 끝없는 단계는
   // 누가 넘을 때마다 다음 목표가 열린다. 서버 기록 탭은 더 큰 기록이 나오면 주인이 바뀌는 최다·최고 기록(T-10-056).
   import type { FirstsResponse, ServerFirst } from '@offside/contracts';
-  import { getFirsts } from '../../api/client.js';
+  import { getFirsts } from '@offside/app-core/api/client';
   import { localCareerNames } from '@offside/game/season';
   import { goHome } from '../nav.js';
   import BackBar from '../BackBar.svelte';
   import { appState } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
   import { kstParts } from '@offside/app-core/boardText';
-  import { FIRSTS_TABS, achievedList, byDay, holderLabel, type FirstsTab } from './firsts.js';
+  import { FIRSTS_TABS, achievedList, byDay, holderLabel, type FirstsTab } from '@offside/app-core/firsts';
 
   let data = $state<FirstsResponse | null>(null);
   let failed = $state(false);

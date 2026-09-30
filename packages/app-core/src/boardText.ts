@@ -1,6 +1,10 @@
 // T-10-011 게시판 본문 표기. HTML은 받지 않고 줄 단위 약속만 읽는다 — 텍스트 노드로만 그려서 안전하다.
 //   "## 제목" → 소제목, "- 항목"·"* 항목" → 목록, 빈 줄 → 문단 구분, 그 밖의 줄 → 문단(줄바꿈 유지)
-import type { BoardKey } from '@offside/contracts/board-limits';
+import type {
+  BoardKey,
+  CommentReportReason,
+  NameReportKind,
+} from '@offside/contracts/board-limits';
 
 export type Block =
   { kind: 'h'; text: string } | { kind: 'ul'; items: string[] } | { kind: 'p'; lines: string[] };
@@ -87,3 +91,14 @@ export const postMeta = (p: {
     .join(' · ');
 
 export const BOARD_LABEL: Record<BoardKey, string> = { notice: '공지사항', release: '릴리즈 노트' };
+
+/** 댓글 신고 사유 — 웹·앱 신고 패널이 이 순서로 버튼을 놓는다. */
+/** 이름 신고 대상(운영 도구). */
+export const NAME_KIND_LABEL: Record<NameReportKind, string> = { career: '선수', team: '구단' };
+
+export const REPORT_REASON_LABEL: Record<CommentReportReason, string> = {
+  spam: '스팸·광고',
+  abuse: '욕설·비방',
+  sexual: '음란·불쾌한 내용',
+  other: '기타',
+};

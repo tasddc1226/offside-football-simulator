@@ -10,6 +10,7 @@ import type {
   RetiredNumberResult,
 } from '@offside/contracts';
 import { loadKey, saveKey } from '@offside/game/season';
+import { apiAuth, apiBaseUrl, clearApiCache, noteSession } from './api/client.js';
 
 const OUTBOX_KEY = 'ft_outbox';
 const OUTBOX_CAP = 100;
@@ -21,24 +22,14 @@ export type OutboxItem =
   | { kind: 'season'; careerId: string; year: number; body: PutCareerSeasonBody }
   | { kind: 'retirement'; careerId: string; body: PutRetirementBody };
 
-/** 클라이언트가 넣는 전송 설정과 UI 알림. */
+/** 클라이언트가 넣는 UI 알림(서버 주소·인증은 api/client의 configureApi를 따른다). */
 export interface OutboxHost {
-  baseUrl(): string;
-  /** 요청마다 붙일 인증 — 웹은 `{ credentials: 'include' }`(세션 쿠키), 앱은 Authorization 헤더. */
-  auth(): { credentials?: 'include' | 'omit' | 'same-origin'; headers?: Record<string, string> };
-  /** 세션이 확인됐다(웹: 로그인 힌트를 남긴다). */
-  onSession?(): void;
-  /** 은퇴가 올라갔다 — 명예의 전당·내 선수 캐시가 낡는다(T-10-015). */
-  onRetirementSent?(): void;
   /** T-10-013 다른 계정 소유라 서버가 거절한 항목. */
   onConflict?(items: OutboxItem[]): void;
   /** T-10-076 은퇴 응답의 영구결번 심사 결과. */
   onRetiredNumber?(ev: RetiredNumberEvent): void;
 }
-let host: OutboxHost = {
-  baseUrl: () => 'http://localhost:8787',
-  auth: () => ({ credentials: 'include' }),
-};
+let host: OutboxHost = {};
 export function configureOutbox(h: OutboxHost): void {
   host = h;
 }
@@ -61,9 +52,9 @@ async function ensureProfile(): Promise<boolean> {
   // 페이지당 한 번만 확인한다 — 세션이 한번 확인되면 이후 flush는 추가 GET 없이 보낸다.
   if (profileReady) return true;
   try {
-    const res = await fetch(`${host.baseUrl()}/v1/profile`, { method: 'GET', ...host.auth() });
+    const res = await fetch(`${apiBaseUrl()}/v1/profile`, { method: 'GET', ...apiAuth() });
     profileReady = res.ok;
-    if (res.ok) host.onSession?.();
+    if (res.ok) noteSession(true);
     return res.ok;
   } catch {
     return false;
@@ -85,8 +76,8 @@ type SendResult = 'ok' | 'retry' | 'abort' | 'drop' | 'conflict';
 
 async function sendItem(item: OutboxItem): Promise<SendResult> {
   try {
-    const { headers, ...auth } = host.auth();
-    const res = await fetch(`${host.baseUrl()}${pathFor(item)}`, {
+    const { headers, ...auth } = apiAuth();
+    const res = await fetch(`${apiBaseUrl()}${pathFor(item)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(item.body),
@@ -96,7 +87,7 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
     if (res.ok) {
       // 은퇴가 올라가면 명예의 전당 · 내 선수 메모가 낡는다(T-10-015).
       if (item.kind === 'retirement') {
-        host.onRetirementSent?.();
+        clearApiCache();
         await announceRetiredNumber(item.careerId, res);
       }
       return 'ok';

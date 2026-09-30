@@ -2,7 +2,7 @@
   "expo": {
     "name": "오프사이드",
     "slug": "offside",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "offside",
@@ -11,7 +11,13 @@
     "ios": {
       "bundleIdentifier": "com.offsidelab.app",
       "supportsTablet": false,
-      "config": { "usesNonExemptEncryption": false }
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "CFBundleName": "오프사이드"
+      }
     },
     "android": {
       "package": "com.offsidelab.app",
@@ -36,11 +42,22 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 160
         }
-      ]
+      ],
+      "expo-sharing",
+      "expo-secure-store",
+      "expo-apple-authentication",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bacad4c8-df2f-4fc5-8938-b02d060fbc45"
+      }
+    },
+    "owner": "tasddc1569"
   }
 }

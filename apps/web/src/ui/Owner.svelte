@@ -4,7 +4,7 @@
   // T-10-102 비로그인이면 계정 카드는 안내만, 구글 로그인 버튼은 카드 밖에 하나만 두고 로그인해야 쓰는 '내 팀'은 숨긴다.
   // 구단 이름·엠블럼 변경은 환경설정으로 옮겼다.
   import Topbar from './Topbar.svelte';
-  import { fetchBoardViewer } from '../api/boards.js';
+  import { fetchBoardViewer } from '@offside/app-core/api/boards';
   import { appState } from './state.svelte.js';
   import { accountCache } from './account-state.svelte.js';
   import Account from './Account.svelte';
@@ -12,7 +12,7 @@
   import { loadHOF } from '@offside/game/season';
   import { startGoogleLogin } from './login.js';
   import { go } from './nav.js';
-  import { googleStartUrl } from '../api/client.js';
+  import { googleStartUrl } from '@offside/app-core/api/client';
 
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나

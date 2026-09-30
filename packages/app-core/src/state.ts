@@ -122,6 +122,8 @@ export interface LegendView {
   own: HofEntry | null;
   /** T-10-069 공유 링크를 걸 커리어 id — 내 선수(이 기기·계정 기록) 중 명예의 전당에 오른 기록만. 아래 공유 바(ShareBar)를 띄운다. */
   shareId: string | null;
+  /** 남의 공개 이름이면 이름 신고(앱스토어 UGC 정책)에 쓸 커리어 id. 내 선수·익명이면 null. */
+  reportId: string | null;
   /** T-10-026 대표 칭호 id. */
   title: string | null;
   /** T-10-073 은퇴 직후(진행 중 세이브)에만 — 실제 잠재력 공개. 저장된 기록에는 없다. */

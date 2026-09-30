@@ -1,7 +1,7 @@
 <script lang="ts">
   // 홈의 소식 섹션(공지사항 · 릴리즈 노트). 최근 글 몇 개만 보여 주고, 글을 누르면 소식 화면에서 본문·댓글을 연다.
   // '전체 보기'는 글이 없어도 보인다 — 관리자의 새 글 쓰기가 소식 화면에 있어서, 숨기면 첫 글을 쓸 길이 없다.
-  import { fetchPosts, type BoardKey, type PostSummary } from '../api/boards.js';
+  import { fetchPosts, type BoardKey, type PostSummary } from '@offside/app-core/api/boards';
   import { postMeta } from '@offside/app-core/boardText';
   import { openBoard } from './nav.js';
 

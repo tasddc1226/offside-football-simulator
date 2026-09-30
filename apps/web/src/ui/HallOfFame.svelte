@@ -8,7 +8,7 @@
   import { SERVICE_SEASONS, serviceSeason } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from '@offside/app-core/boardText';
   import { loadHOF } from '@offside/game/season';
-  import { getHof } from '../api/client.js';
+  import { getHof } from '@offside/app-core/api/client';
   import { openPublicLegend } from './legend.js';
   import { anonName, fmtValue, iGa } from '@offside/app-core/format';
   import { openHof } from './nav.js';

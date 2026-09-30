@@ -4,8 +4,8 @@
   import { onMount } from 'svelte';
   import type { AutomationReason } from '@offside/contracts';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
-  import * as api from '../../api/admin.js';
-  import type { AutomationReport } from '../../api/admin.js';
+  import * as api from '@offside/app-core/api/admin';
+  import type { AutomationReport } from '@offside/app-core/api/admin';
   import { kstDateTime as kst } from '@offside/app-core/boardText';
   import { openPublicLegendById } from '../legend.js';
 

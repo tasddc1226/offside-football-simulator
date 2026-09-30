@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-10-092 팀의 공격·중원·수비·골문 힘(내 팀 편성 · 팀 프로필).
-  import type { TeamLines } from '../../api/team.js';
+  import type { TeamLines } from '@offside/app-core/api/team';
 
   let { lines }: { lines: TeamLines } = $props();
 

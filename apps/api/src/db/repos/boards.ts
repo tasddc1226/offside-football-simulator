@@ -1,8 +1,20 @@
-import type { BoardKey, Post, PostSummary } from '@offside/contracts';
-import { and, asc, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
+import type {
+  BoardBlock,
+  BoardKey,
+  CommentReportReason,
+  Post,
+  PostSummary,
+} from '@offside/contracts';
+import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
-import { boardComments, boardPostLikes, boardPosts } from '../schema.js';
+import {
+  boardBlocks,
+  boardCommentReports,
+  boardComments,
+  boardPostLikes,
+  boardPosts,
+} from '../schema.js';
 import { runBatch } from './batch.js';
 
 const COMMENTS_MAX = 200;
@@ -205,8 +217,93 @@ export async function deleteComment(db: Db, id: string, now: string): Promise<vo
   await db.update(boardComments).set({ deletedAt: now }).where(eq(boardComments.id, id));
 }
 
-/** 프로필 삭제 batch용 — 그 사람이 쓴 댓글과 누른 좋아요를 지운다(글은 관리자 운영 기록이라 남긴다).
- *  좋아요 수는 지우기 전에 그 글들에서 하나씩 뺀다. */
+/** 살아 있는 댓글의 작성자(차단할 사람)와 그때의 닉네임·관리자 여부. 없거나 지운 댓글이면 undefined. */
+export async function getCommentAuthor(db: Db, id: string) {
+  const [row] = await db
+    .select({
+      profileId: boardComments.profileId,
+      nickname: boardComments.nickname,
+      admin: boardComments.admin,
+    })
+    .from(boardComments)
+    .where(and(eq(boardComments.id, id), isNull(boardComments.deletedAt)));
+  return row;
+}
+
+/** 신고를 남긴다. 같은 사람이 같은 댓글을 다시 신고하면 처음 기록을 그대로 둔다(멱등). */
+export async function reportComment(
+  db: Db,
+  input: { commentId: string; profileId: string; reason: CommentReportReason },
+  now: string,
+): Promise<void> {
+  await db
+    .insert(boardCommentReports)
+    .values({ ...input, createdAt: now })
+    .onConflictDoNothing();
+}
+
+/** 작성자를 차단한다. 이미 차단했으면 그 기록을 돌려준다(멱등). */
+export async function blockAuthor(
+  db: Db,
+  input: { profileId: string; blockedProfileId: string; nickname: string },
+  now: string,
+): Promise<BoardBlock> {
+  await db
+    .insert(boardBlocks)
+    .values({ id: newId('blk'), ...input, createdAt: now })
+    .onConflictDoNothing();
+  const [row] = await db
+    .select({
+      id: boardBlocks.id,
+      nickname: boardBlocks.nickname,
+      createdAt: boardBlocks.createdAt,
+    })
+    .from(boardBlocks)
+    .where(
+      and(
+        eq(boardBlocks.profileId, input.profileId),
+        eq(boardBlocks.blockedProfileId, input.blockedProfileId),
+      ),
+    );
+  return row!;
+}
+
+/** 내 차단 하나를 푼다. 내 것이 아니거나 없으면 false. */
+export async function unblock(db: Db, id: string, profileId: string): Promise<boolean> {
+  const res = await db
+    .delete(boardBlocks)
+    .where(and(eq(boardBlocks.id, id), eq(boardBlocks.profileId, profileId)));
+  return res.meta.changes > 0;
+}
+
+/** 이 프로필이 글 하나에서 뺄 댓글 — 차단한 작성자와 (이 글에서) 신고한 댓글 — 과 차단 목록. */
+export async function getHiddenFor(db: Db, profileId: string, postId: string) {
+  const [blocks, reported] = await Promise.all([
+    db
+      .select({
+        id: boardBlocks.id,
+        nickname: boardBlocks.nickname,
+        createdAt: boardBlocks.createdAt,
+        blockedProfileId: boardBlocks.blockedProfileId,
+      })
+      .from(boardBlocks)
+      .where(eq(boardBlocks.profileId, profileId))
+      .orderBy(asc(boardBlocks.createdAt)),
+    db
+      .select({ commentId: boardCommentReports.commentId })
+      .from(boardCommentReports)
+      .innerJoin(boardComments, eq(boardComments.id, boardCommentReports.commentId))
+      .where(and(eq(boardCommentReports.profileId, profileId), eq(boardComments.postId, postId))),
+  ]);
+  return {
+    blocks: blocks.map(({ blockedProfileId: _, ...b }) => b),
+    blockedAuthors: new Set(blocks.map((b) => b.blockedProfileId)),
+    reportedComments: new Set(reported.map((r) => r.commentId)),
+  };
+}
+
+/** 프로필 삭제 batch용 — 그 사람이 쓴 댓글과 누른 좋아요, 신고·차단 기록(차단당한 기록 포함)을 지운다
+ *  (글은 관리자 운영 기록이라 남긴다). 좋아요 수는 지우기 전에 그 글들에서 하나씩 뺀다. */
 export const deleteBoardActivityStatements = (db: Db, profileId: string) => {
   const mine = eq(boardPostLikes.profileId, profileId);
   return [
@@ -221,5 +318,9 @@ export const deleteBoardActivityStatements = (db: Db, profileId: string) => {
         ),
       ),
     db.delete(boardPostLikes).where(mine),
+    db.delete(boardCommentReports).where(eq(boardCommentReports.profileId, profileId)),
+    db
+      .delete(boardBlocks)
+      .where(or(eq(boardBlocks.profileId, profileId), eq(boardBlocks.blockedProfileId, profileId))),
   ] as const;
 };

@@ -3,6 +3,8 @@ import {
   AdminCommentPurgeInputSchema,
   AdminCommentPurgeResultSchema,
   AdminCommentQuerySchema,
+  AdminNameReportListSchema,
+  AdminNameReportResolveSchema,
   AdminStatsSchema,
   AutomationHoursSchema,
   AutomationReportSchema,
@@ -10,11 +12,12 @@ import {
 import type { Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
 import { getAdminStats, listRecentComments, purgeCommentsBy } from '../db/repos/admin.js';
+import { listOpenNameReports, resolveNameReports } from '../db/repos/nameReports.js';
 import { getActiveBalance } from '../db/repos/balance.js';
 import { automationReport } from '../db/repos/automation.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
-import { ok, readBody, nowIso } from './shared.js';
+import { notFoundError, ok, readBody, nowIso } from './shared.js';
 import { parseWithAppError } from '../errors.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 
@@ -59,5 +62,23 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
     const deleted = await purgeCommentsBy(getDb(c), profileId, viewer.profileId!, nowIso());
     if (deleted) purgeEdge(c, STALE.commentsPurged());
     return ok(c, AdminCommentPurgeResultSchema, { deleted });
+  });
+
+  app.get('/v1/admin/name-reports', async (c) => {
+    await requireAdmin(c);
+    return ok(c, AdminNameReportListSchema, { items: await listOpenNameReports(getDb(c)) });
+  });
+
+  // 가리면 이름이 보이는 공개 조회의 엣지 캐시를 지운다(명예의 전당 목록·팀 랭킹 뒤 페이지는 TTL로).
+  app.post('/v1/admin/name-reports/resolve', async (c) => {
+    const viewer = await requireAdmin(c);
+    const input = readBody(c, AdminNameReportResolveSchema);
+    const done = await resolveNameReports(getDb(c), input, viewer.profileId!, nowIso());
+    if (!done) throw notFoundError('열린 신고가 없어요.', 'NAME_REPORT_NOT_FOUND');
+    if (input.action === 'hide') {
+      if (input.kind === 'career') purgeEdge(c, STALE.retirementPut(input.id));
+      else if (done.season !== null) purgeEdge(c, STALE.teamSaved(done.season));
+    }
+    return c.body(null, 204);
   });
 }

@@ -3,8 +3,10 @@ import {
   BoardKeySchema,
   BoardListQuerySchema,
   BoardListResponseSchema,
+  BoardBlockSchema,
   BoardViewerResponseSchema,
   CommentInputSchema,
+  CommentReportInputSchema,
   CommentSchema,
   PostDetailResponseSchema,
   PostInputSchema,
@@ -16,20 +18,25 @@ import { getViewer, requireAdmin } from '../auth/admin.js';
 import { getAttemptCount, recordAttempt } from '../db/repos/authAttempts.js';
 import {
   addView,
+  blockAuthor,
   createComment,
   createPost,
   deleteComment,
   deletePost,
+  getCommentAuthor,
   getCommentOwner,
+  getHiddenFor,
   getPost,
   isLiked,
   listComments,
   listPosts,
+  reportComment,
   setLike,
+  unblock,
   updatePost,
 } from '../db/repos/boards.js';
 import { getDb, type AppEnv } from '../env.js';
-import { ok, readBody, nowIso } from './shared.js';
+import { notFoundError, ok, readBody, nowIso } from './shared.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
@@ -41,15 +48,12 @@ import { hasProfanity } from '@offside/contracts/content-filter';
 // T-10-011 게시판(공지·릴리즈 노트). 읽기는 누구나, 글은 관리자만, 댓글은 프로필이 있는 누구나.
 // T-10-058 조회수는 웹이 기기마다 글 하나에 한 번 보내고, 좋아요는 프로필이 있는 누구나(구글 로그인 없이도).
 // 댓글은 프로필당 시간당 COMMENT_LIMIT개까지(관리자 제외).
+// 앱스토어 UGC 정책: 프로필이 있는 누구나 남의 댓글을 신고하고 작성자를 차단한다. 신고한 댓글과 차단한 작성자의
+// 댓글은 그 사람의 글 화면에서 빠진다(글 상세는 보는 사람마다 달라 엣지에 담지 않는다).
 const COMMENT_LIMIT = 10;
 
 const notFound = (what: string) =>
-  new AppError({
-    code: 'VALIDATION_FAILED',
-    status: 404,
-    message: `${what}을(를) 찾을 수 없습니다.`,
-    details: { reason: 'BOARD_NOT_FOUND' },
-  });
+  notFoundError(`${what}을(를) 찾을 수 없습니다.`, 'BOARD_NOT_FOUND');
 
 const idParam = (c: Context<AppEnv>, name: string) =>
   parseWithAppError(BoardIdParamSchema, c.req.param(name));
@@ -83,17 +87,28 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/boards/posts/:postId', async (c) => {
     const id = idParam(c, 'postId');
     const db = getDb(c);
-    const [post, rows, viewer, liked] = await Promise.all([
+    const session = resolveSession(c);
+    const [post, rows, viewer, liked, hidden] = await Promise.all([
       postOr404(c, id),
       listComments(db, id),
       getViewer(c),
-      resolveSession(c).then((s) => (s ? isLiked(db, id, s.profileId) : false)),
+      session.then((s) => (s ? isLiked(db, id, s.profileId) : false)),
+      session.then((s) => (s ? getHiddenFor(db, s.profileId, id) : undefined)),
     ]);
-    const comments = rows.map(({ profileId, ...r }) => ({
-      ...r,
-      deletable: viewer.admin || profileId === viewer.profileId,
-    }));
-    return ok(c, PostDetailResponseSchema, { post, comments, liked });
+    const comments = rows
+      .filter(
+        (r) => !hidden?.blockedAuthors.has(r.profileId) && !hidden?.reportedComments.has(r.id),
+      )
+      .map(({ profileId, ...r }) => ({
+        ...r,
+        deletable: viewer.admin || profileId === viewer.profileId,
+      }));
+    return ok(c, PostDetailResponseSchema, {
+      post,
+      comments,
+      liked,
+      blocks: hidden?.blocks ?? [],
+    });
   });
 
   app.post('/v1/boards/posts/:postId/views', async (c) => {
@@ -185,7 +200,14 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       now,
     );
     purgeList(c, post.board); // 댓글 수가 바뀐다.
-    const comment = { id, nickname, body, admin: viewer.admin, deletable: true, createdAt: now };
+    const comment = {
+      id,
+      nickname,
+      body,
+      admin: viewer.admin,
+      deletable: true,
+      createdAt: now,
+    };
     return ok(c, CommentSchema, comment, 201);
   });
 
@@ -198,6 +220,43 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       throw new AppError({ code: 'FORBIDDEN', message: '내 댓글만 지울 수 있습니다.' });
     await deleteComment(db, id, nowIso());
     purgeList(c, owner.board); // 댓글 수가 바뀐다.
+    return c.body(null, 204);
+  });
+
+  /** 남의 댓글만 신고·차단한다. 운영자 댓글은 차단하지 않는다(공지 답변이 사라지면 안 된다). */
+  async function othersComment(c: Context<AppEnv>) {
+    const commentId = idParam(c, 'commentId');
+    const db = getDb(c);
+    const author = await getCommentAuthor(db, commentId);
+    if (!author) throw notFound('댓글');
+    const { profileId } = getSessionOrThrow(c);
+    if (author.profileId === profileId)
+      throw new AppError({ code: 'FORBIDDEN', message: '내 댓글은 신고하거나 차단할 수 없어요.' });
+    return { db, commentId, author, profileId };
+  }
+
+  app.post('/v1/boards/comments/:commentId/report', requireProfile, async (c) => {
+    const { reason } = readBody(c, CommentReportInputSchema);
+    const { db, commentId, profileId } = await othersComment(c);
+    await reportComment(db, { commentId, profileId, reason }, nowIso());
+    return c.body(null, 204);
+  });
+
+  app.post('/v1/boards/comments/:commentId/block', requireProfile, async (c) => {
+    const { db, author, profileId } = await othersComment(c);
+    if (author.admin)
+      throw new AppError({ code: 'FORBIDDEN', message: '운영자는 차단할 수 없어요.' });
+    const block = await blockAuthor(
+      db,
+      { profileId, blockedProfileId: author.profileId, nickname: author.nickname },
+      nowIso(),
+    );
+    return ok(c, BoardBlockSchema, block, 201);
+  });
+
+  app.delete('/v1/boards/blocks/:blockId', requireProfile, async (c) => {
+    const id = idParam(c, 'blockId');
+    if (!(await unblock(getDb(c), id, getSessionOrThrow(c).profileId))) throw notFound('차단');
     return c.body(null, 204);
   });
 }

@@ -2,7 +2,7 @@
   // T-10-028 댓글 닉네임 정하기 — 소식 화면(첫 댓글 전)과 설정의 계정 카드가 함께 쓴다.
   // 구글 로그인한 프로필만 정할 수 있고, 다른 사람과 겹치면(대소문자 무시) 서버가 거절한다.
   import { COMMENT_NICKNAME_MAX } from '@offside/contracts/board-limits';
-  import { putNickname } from '../api/client.js';
+  import { putNickname } from '@offside/app-core/api/client';
   import { accountCache } from './account-state.svelte.js';
   import { toast } from './helpers.js';
   import { doneOnEnter } from './inputDone.js';

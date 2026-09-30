@@ -9,7 +9,6 @@
     BALANCE_SPEC,
     CHOICE_BONUS_RANGE,
     clampTo,
-    EVENT_ID_PATTERN,
     EVENT_WEIGHT_RANGE,
     resolveBalance,
     sanitizeBalance,
@@ -17,9 +16,18 @@
     type BalanceKey,
     type BalanceOverrides,
   } from '@offside/contracts/balance';
-  import * as api from '../../api/admin.js';
-  import type { BalanceVersion } from '../../api/admin.js';
-  import { EVENTS } from '@offside/game/events-data';
+  import * as api from '@offside/app-core/api/admin';
+  import type { BalanceVersion } from '@offside/app-core/api/admin';
+  import {
+    EVENT_LIST,
+    PROB_EVENTS,
+    choiceLabel,
+    diffLines as diffOf,
+    eventTitle,
+    probChoicesOf,
+    setKnobValue,
+    setMapValue,
+  } from '@offside/app-core/balanceEdit';
   import { toast } from '../helpers.js';
   import { kstDateTime } from '@offside/app-core/boardText';
   import { withEulReul, withRo } from '@offside/app-core/format';
@@ -29,16 +37,6 @@
   const GROUPS = Object.entries(BALANCE_GROUPS) as [BalanceGroup, string][];
   const keysOf = (g: BalanceGroup) => BALANCE_KEYS.filter((k) => BALANCE_SPEC[k].group === g);
 
-  const EVENT_LIST = EVENTS.filter((e) => EVENT_ID_PATTERN.test(e.id)).sort((a, b) => a.title.localeCompare(b.title, 'ko'));
-  // 확률 선택지가 있는 이벤트만 선택지 보정 대상이다.
-  const PROB_EVENTS = EVENT_LIST.filter((e) => e.choices.some((c) => c.p));
-  const EVENT_BY_ID = new Map(EVENTS.map((e) => [e.id, e]));
-  const eventTitle = (id: string) => EVENT_BY_ID.get(id)?.title ?? id;
-  const labelOf = (label: unknown, i: number) => (typeof label === 'string' ? label : `선택지 ${i + 1}`);
-  const choiceLabel = (key: string) => {
-    const [id, i] = key.split(':') as [string, string];
-    return `${eventTitle(id)} — ${labelOf(EVENT_BY_ID.get(id)?.choices[+i]?.label, +i)}`;
-  };
   const discardOk = () => !dirty || confirm('저장하지 않은 변경을 버릴까요?');
 
   let versions = $state<BalanceVersion[]>([]);
@@ -55,9 +53,7 @@
   const current = $derived(versions.find((v) => v.version === selected) ?? null);
   const editable = $derived(current?.status === 'draft');
   const activeValues = $derived(resolveBalance(active?.values));
-  const probChoices = $derived(
-    (EVENT_BY_ID.get(addChoiceEvent)?.choices ?? []).flatMap((c, i) => (c.p ? [{ i, label: labelOf(c.label, i) }] : [])),
-  );
+  const probChoices = $derived(probChoicesOf(addChoiceEvent));
 
   onMount(() => void load());
 
@@ -82,46 +78,17 @@
 
   /** 기본값과 다른 값만 남긴다(서버에도 그렇게 저장된다). */
   function setKnob(k: BalanceKey, raw: string) {
-    const spec = BALANCE_SPEC[k];
-    const n = Number(raw);
-    const next = { ...work.values };
-    if (raw.trim() === '' || !Number.isFinite(n)) delete next[k];
-    else {
-      const v = clampTo(Math.round(n / spec.step) * spec.step, spec.min, spec.max);
-      const fixed = +v.toFixed(6);
-      if (fixed === spec.def) delete next[k];
-      else next[k] = fixed;
-    }
-    work.values = next;
+    work.values = setKnobValue(work.values, k, raw);
     dirty = true;
   }
   function setMap(map: 'eventWeight' | 'choiceBonus', key: string, value: number | null) {
-    const m = { ...(work.values[map] ?? {}) };
-    if (value === null) delete m[key];
-    else m[key] = value;
-    const next = { ...work.values };
-    if (Object.keys(m).length) next[map] = m;
-    else delete next[map];
-    work.values = next;
+    work.values = setMapValue(work.values, map, key, value);
     dirty = true;
   }
   const clampRange = (raw: string, r: { min: number; max: number }) => clampTo(Number(raw) || 0, r.min, r.max);
 
   /** 적용 중인 버전과 비교한 변경 목록. */
-  function diffLines(values: BalanceOverrides): string[] {
-    const a = activeValues;
-    const b = resolveBalance(values);
-    const out = BALANCE_KEYS.filter((k) => a[k] !== b[k]).map((k) => `${BALANCE_SPEC[k].label}: ${a[k]} → ${b[k]}`);
-    for (const map of ['eventWeight', 'choiceBonus'] as const) {
-      const keys = new Set([...Object.keys(a[map]), ...Object.keys(b[map])]);
-      const base = map === 'eventWeight' ? 1 : 0;
-      for (const k of keys) {
-        const [x, y] = [a[map][k] ?? base, b[map][k] ?? base];
-        if (x !== y) out.push(`${map === 'eventWeight' ? `등장 가중치 · ${eventTitle(k)}` : `확률 보정 · ${choiceLabel(k)}`}: ${x} → ${y}`);
-      }
-    }
-    return out;
-  }
+  const diffLines = (values: BalanceOverrides) => diffOf(active?.values, values);
   const changes = $derived(diffLines(work.values));
 
   async function run<T>(p: Promise<{ ok: true; data: T } | { ok: false; error: { message: string } }>): Promise<T | null> {

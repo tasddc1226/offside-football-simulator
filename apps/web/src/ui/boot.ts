@@ -1,7 +1,7 @@
 // ───────── 저장 로드 (세이브 복원은 웹·앱 공용 @offside/app-core/career restoreGame) ─────────
 import { setLatestBalance } from '@offside/game/balance';
 import { restoreGame } from '@offside/app-core/career';
-import { cachedGet } from '../api/client.js';
+import { cachedGet } from '@offside/app-core/api/client';
 import type { BalanceConfig } from '@offside/contracts';
 import { appState } from './state.svelte.js';
 import { uploadLegacyRetirement, uploadRetirement } from './helpers.js';

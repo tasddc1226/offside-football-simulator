@@ -4,6 +4,7 @@ import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { runBatch } from '../db/repos/batch.js';
 import { deleteBoardActivityStatements } from '../db/repos/boards.js';
+import { deleteNameReportsStatement } from '../db/repos/nameReports.js';
 import { deleteCareersStatements } from '../db/repos/careers.js';
 import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
 import { resetFirstsBackfillStatement } from '../db/repos/firsts.js';
@@ -112,6 +113,7 @@ export async function executeProfileDeletion(
       .where(eq(profiles.id, input.profileId)),
     // T-9-009: profiles는 소프트 삭제(deletedAt만 세팅)라 FK ON DELETE CASCADE가 트리거되지 않는다.
     // 커리어·시즌 데이터는 이 batch에서 명시적으로 지운다.
+    deleteNameReportsStatement(db, input.profileId),
     ...deleteCareersStatements(db, input.profileId),
     deleteClubCustomStatement(db, input.profileId),
     // T-10-092 구단주 팀(팀 경기는 팀 FK CASCADE로 함께 지워진다).

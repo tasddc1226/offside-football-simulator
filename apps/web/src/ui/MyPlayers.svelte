@@ -6,7 +6,7 @@
   import type { PublicHofEntry } from '@offside/contracts';
   import { loadHOF } from '@offside/game/season';
   import type { HofEntry } from '@offside/game/types';
-  import { getMyCareers, getRetiredNumbers } from '../api/client.js';
+  import { getMyCareers, getRetiredNumbers } from '@offside/app-core/api/client';
   import { fillGranted } from './retiredNumber.svelte.js';
   import { openLocalLegend, openPublicLegend } from './legend.js';
   import { anonName } from '@offside/app-core/format';

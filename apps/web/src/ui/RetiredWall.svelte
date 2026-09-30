@@ -8,13 +8,13 @@
   // 유니폼은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
   import type { RetiredNumbersResponse } from '@offside/contracts';
   import { defaultClubName, leagueOfClub } from '@offside/contracts/club-names';
-  import { getRetiredNumbers } from '../api/client.js';
+  import { getRetiredNumbers } from '@offside/app-core/api/client';
   import { POS } from '@offside/game/data';
   import { loadHOF } from '@offside/game/season';
   import ClubMark from './ClubMark.svelte';
   import { anonName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';
-  import { RN_SHIRT, RN_TRIM, rnStyle } from './rnStyle.js';
+  import { RN_SHIRT, RN_TRIM, rnStyle } from '@offside/app-core/rnStyle';
 
   type Item = RetiredNumbersResponse['items'][number];
 

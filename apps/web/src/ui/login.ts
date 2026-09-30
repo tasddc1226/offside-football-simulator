@@ -1,7 +1,7 @@
 // ───────── 구글 로그인 ─────────
 // 시작(startGoogleLogin), 로그인 뒤 돌아올 곳 기억, OAuth 콜백(/settings?google=linked|switched|error) 처리.
 import type { BoardKey } from '@offside/contracts/board-limits';
-import { getProfile, googleStartUrl } from '../api/client.js';
+import { getProfile, googleStartUrl } from '@offside/app-core/api/client';
 import { loadHOF } from '@offside/game/season';
 import { toast } from './helpers.js';
 import { currentInApp, showInAppLoginNotice } from './inapp-open.js';

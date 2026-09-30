@@ -1226,6 +1226,20 @@ textarea {
   padding: 2px 8px;
   font-size: 0.75rem;
 }
+.report-panel {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.board-blocks ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .nick-form {
   display: flex;
   gap: 8px;

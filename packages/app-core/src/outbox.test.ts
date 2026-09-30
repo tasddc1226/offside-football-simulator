@@ -167,8 +167,6 @@ describe('T-10-013 소유권 충돌', () => {
   const stubDispatch = async () => {
     const calls: [string, unknown][] = [];
     (await import('./outbox.js')).configureOutbox({
-      baseUrl: () => 'http://localhost:8787',
-      auth: () => ({ credentials: 'include' }),
       onConflict: (items) => void calls.push(['offside:owner-conflict', items]),
       onRetiredNumber: (ev) => void calls.push(['offside:retired-number', ev]),
     });

@@ -1,9 +1,9 @@
 <script lang="ts">
   // T-10-027 홈 타일의 서버 최초 기록 진입점. 가장 최근에 세워진 기록 한 줄을 보여 주고, 누르면 전체 화면으로 간다.
   import type { ServerFirst } from '@offside/contracts';
-  import { getFirsts } from '../../api/client.js';
+  import { getFirsts } from '@offside/app-core/api/client';
   import { go } from '../nav.js';
-  import { achievedList } from './firsts.js';
+  import { achievedList } from '@offside/app-core/firsts';
 
   let latest = $state<ServerFirst | null>(null);
   let count = $state<{ done: number; total: number } | null>(null);

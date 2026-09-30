@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { COMMENT_REPORT_REASONS, NAME_REPORT_KINDS } from '@offside/contracts/board-limits';
 import {
   index,
   primaryKey,
@@ -197,6 +198,8 @@ export const careers = sqliteTable(
     // T-10-100 은퇴 가치(만 원, contracts market-value retireValue). 은퇴 PUT의 스냅샷으로 매기고, 이 기능 전 은퇴는
     // 명예의 전당 조회 때 스냅샷으로 소급한다(db/repos/careerValues.ts). 스냅샷이 없으면 0.
     value: integer('value'),
+    // 운영자가 이름 신고를 받고 가린 시각. 있으면 시즌·은퇴 업로드가 공개 이름을 다시 채우지 않는다.
+    nameHiddenAt: text('name_hidden_at'),
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),
@@ -278,6 +281,7 @@ export const auditLog = sqliteTable(
         'CAREERS_MERGED',
         'BALANCE_ACTIVATED',
         'COMMENTS_PURGED',
+        'NAME_REPORT_RESOLVED',
       ],
     }).notNull(),
     profileId: text('profile_id').notNull(),
@@ -355,6 +359,61 @@ export const boardComments = sqliteTable(
     index('board_comments_profile_idx').on(table.profileId),
     // T-10-016 운영 도구: 전체 게시판의 최근 댓글.
     index('board_comments_created_idx').on(table.createdAt),
+  ],
+);
+
+/** 댓글 신고(앱스토어 UGC 정책). 프로필 하나가 댓글 하나에 한 번. 신고한 사람 화면에서는 그 댓글이 숨겨지고,
+ *  운영자는 관리 화면에서 신고 수로 본다. 댓글을 지워도(deleted_at) 기록은 남는다. */
+export const boardCommentReports = sqliteTable(
+  'board_comment_reports',
+  {
+    commentId: text('comment_id')
+      .notNull()
+      .references(() => boardComments.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id').notNull(),
+    reason: text('reason', { enum: COMMENT_REPORT_REASONS }).notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.commentId, table.profileId] }),
+    index('board_comment_reports_profile_idx').on(table.profileId),
+  ],
+);
+
+/** 공개 이름 신고(앱스토어 UGC 정책) — 명예의 전당 선수 이름(career)과 구단 이름·감독 이름(team). 프로필 하나가
+ *  대상 하나에 한 줄. name은 신고할 때 보인 이름이다. 운영자가 처리(가리기·기각)하면 resolved_at을 채우고,
+ *  그 뒤 같은 사람이 다시 신고하면 다시 열린다. */
+export const nameReports = sqliteTable(
+  'name_reports',
+  {
+    kind: text('kind', { enum: NAME_REPORT_KINDS }).notNull(),
+    targetId: text('target_id').notNull(),
+    profileId: text('profile_id').notNull(),
+    name: text('name').notNull(),
+    createdAt: text('created_at').notNull(),
+    resolvedAt: text('resolved_at'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.kind, table.targetId, table.profileId] }),
+    index('name_reports_resolved_idx').on(table.resolvedAt, table.createdAt),
+    index('name_reports_profile_idx').on(table.profileId),
+  ],
+);
+
+/** 댓글 작성자 차단. 차단한 사람(profile_id)에게는 그 작성자의 댓글을 보내지 않는다. nickname은 차단할 때의
+ *  이름(차단 목록에 보여 준다). */
+export const boardBlocks = sqliteTable(
+  'board_blocks',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    blockedProfileId: text('blocked_profile_id').notNull(),
+    nickname: text('nickname').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('board_blocks_pair_unique').on(table.profileId, table.blockedProfileId),
+    index('board_blocks_blocked_idx').on(table.blockedProfileId),
   ],
 );
 

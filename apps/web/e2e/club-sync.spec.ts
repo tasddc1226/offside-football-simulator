@@ -77,7 +77,8 @@ test('세션 표시가 있어도 서버가 세션이 없다고 하면 표시를 
   await page.evaluate(() => localStorage.setItem('ft_session', '1'));
   await page.reload();
   await expect.poll(() => getCount).toBe(1);
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('ft_session'))).toBeNull();
+  // 표시는 '1'일 때만 켜진 것(app-core 저장소는 지우지 않고 '0'으로 끈다).
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ft_session'))).not.toBe('1');
   await page.reload();
   await page.locator('[data-act="owner"]').waitFor();
   expect(getCount).toBe(1);
