@@ -149,15 +149,14 @@ export default function Home() {
         />
       </View>
       {/* T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일(두 칸 폭). */}
-      <View style={{ flexDirection: 'row' }}>
-        <Tile
-          testID="dc-gallery"
-          eyebrow="Community"
-          title="오프사이드 마이너 갤러리 ↗"
-          sub="디시인사이드에서 커리어 자랑 · 공략 · 건의 나누기"
-          onPress={() => void Linking.openURL(DC_GALLERY_URL)}
-        />
-      </View>
+      <Tile
+        wide
+        testID="dc-gallery"
+        eyebrow="Community"
+        title="오프사이드 마이너 갤러리 ↗"
+        sub="디시인사이드에서 커리어 자랑 · 공략 · 건의 나누기"
+        onPress={() => void Linking.openURL(DC_GALLERY_URL)}
+      />
       <HallOfFame />
       <HomeNews board="notice" eyebrow="Notice" title="공지사항" />
       <HomeNews board="release" eyebrow="Release notes" title="릴리즈 노트" />

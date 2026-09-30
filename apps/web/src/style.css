@@ -629,11 +629,9 @@ button.what:active {
 .tile b {
   font-size: 0.9375rem;
 }
-/* T-11-009 커뮤니티 링크 타일: 두 칸을 다 쓰고, 링크지만 글자색은 타일 그대로. */
+/* T-11-009 두 칸을 다 쓰는 타일(커뮤니티 링크). */
 .tile-wide {
   grid-column: 1 / -1;
-  color: inherit;
-  text-decoration: none;
 }
 /* 순위 | 이름 줄 + 값 / 기록 요약 줄(값 밑까지 넓게). T-10-105 */
 .hof-row {
@@ -1004,6 +1002,11 @@ button.tile-link {
   font: inherit;
   color: inherit;
   cursor: pointer;
+}
+/* 바깥 링크 타일(<a>)도 글자색·밑줄은 타일 그대로. */
+a.tile-link {
+  color: inherit;
+  text-decoration: none;
 }
 .dex-new {
   font-size: 0.8125rem;
