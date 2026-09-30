@@ -4,6 +4,7 @@
   import { KR, flagOf, nationOf, type Nation } from '@offside/game/nation';
   import { koMatchAt } from '@offside/app-core/koSearch';
   import { motionOK } from './motion.js';
+  import { trackViewport } from './viewport.js';
 
   let { id, value = $bindable() }: { id: string; value: string } = $props();
 
@@ -71,18 +72,9 @@
     }
   }
 
-  // T-10-118 iOS 의 vh 는 키보드를 빼지 않아 목록이 키보드 뒤로 밀린다 — 열려 있는 동안 visualViewport 높이로 상한을 잡는다.
-  // 지원하지 않으면 변수가 없어 CSS 의 40vh 로 남는다.
+  // T-10-118 iOS 의 vh 는 키보드를 빼지 않아 목록이 키보드 뒤로 밀린다 — 열려 있는 동안 보이는 높이(--vvh)로 상한을 잡는다.
   $effect(() => {
-    const vv = window.visualViewport;
-    if (!open || !vv) return;
-    const sync = () => root.style.setProperty('--combo-vvh', `${vv.height}px`);
-    sync();
-    vv.addEventListener('resize', sync);
-    return () => {
-      vv.removeEventListener('resize', sync);
-      root.style.removeProperty('--combo-vvh');
-    };
+    if (open) return trackViewport(root);
   });
 
   // 키보드로 움직인 항목이 목록 밖으로 나가지 않게.
@@ -182,8 +174,8 @@
     top: calc(100% + 6px);
     left: 0;
     right: 0;
-    /* --combo-vvh 는 T-10-118 (키보드가 올라오면 visualViewport 높이). 없으면 100vh 라 기존 40vh 와 같다. */
-    max-height: min(300px, calc(var(--combo-vvh, 100vh) * 0.4));
+    /* --vvh 는 T-10-118 (키보드가 올라오면 보이는 높이, viewport.ts). 없으면 100vh 라 기존 40vh 와 같다. */
+    max-height: min(300px, calc(var(--vvh, 100vh) * 0.4));
     overflow-y: auto;
     overscroll-behavior: contain;
     background: var(--surface);

@@ -5285,24 +5285,26 @@ button.what {
 }
 
 /* T-11-017 채팅 화면은 한 화면에 맞춘다 — 페이지는 스크롤하지 않고, 카드가 남은 높이를 채워 메시지 목록만 스크롤한다.
-   T-11-019 높이·위치는 실제로 보이는 영역(visualViewport — Chat.svelte가 재서 넣는다)을 따른다. iOS Safari는 키보드가
-   떠도 100dvh를 줄이지 않고 페이지를 밀어 올리는데, 고정 위치라 밀리지 않고 밀린 만큼(--chat-vvtop) 따라 내려온다. */
+   T-11-019 높이·위치는 키보드를 뺀 보이는 영역(--vvh·--vvtop, viewport.ts)을 따른다. 고정 위치라 iOS Safari가 페이지를
+   밀어 올려도 밀리지 않고, 밀린 만큼 따라 내려온다. */
 .wrap.chat-wrap {
   position: fixed;
   inset-inline: 0;
-  top: var(--chat-vvtop, 0px);
+  top: var(--vvtop, 0px);
   height: 100vh;
-  height: var(--chat-vvh, 100dvh);
+  height: var(--vvh, 100dvh);
   overflow-y: auto; /* 아주 낮은 화면에서 로그인·닉네임 칸이 넘쳐도 닿게 */
   overscroll-behavior: contain;
   padding-bottom: var(--safe-b); /* 아래 고정 바 자리는 action-bar-space가 맡는다 */
 }
-/* 입력 중(폰)엔 머리글·안내·이전으로 바를 접어 메시지 목록을 남긴다. 키보드가 입력창 바로 아래에 붙는다. */
-.chat-wrap.typing :is(.topbar, .chat-fold, .action-bar, .action-bar-space) {
-  display: none;
-}
-.chat-wrap.typing {
-  padding-block: calc(8px + var(--safe-t)) 8px;
+/* 폰에서 입력 중(키보드가 떠 있다)엔 머리글·안내·이전으로 바를 접어 메시지 목록을 남긴다. */
+@media (pointer: coarse) {
+  .chat-wrap:has([data-chat-input]:focus) {
+    padding-block: calc(8px + var(--safe-t)) 8px;
+  }
+  .chat-wrap:has([data-chat-input]:focus) :is(.topbar, .chat-fold, .action-bar, .action-bar-space) {
+    display: none;
+  }
 }
 .chat-card {
   flex: 1;

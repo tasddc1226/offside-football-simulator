@@ -2,7 +2,7 @@
   // T-11-015 라운지 채팅 — 모두가 보는 실시간 공개 채팅. 누구나 읽고, 구글로 로그인하고 닉네임을 정하면 쓴다.
   // 남의 메시지는 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 여럿이 신고하면 모두의 화면에서 가려진다.
   // 운영자는 메시지를 가리고 작성자를 정지한다. 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
-  import { onMount, tick, untrack } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { ADMIN_NICKNAME, COMMENT_REPORT_REASONS, type CommentReportReason } from '@offside/contracts/board-limits';
   import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
   import * as api from '@offside/app-core/api/chat';
@@ -23,6 +23,7 @@
   import { toast } from './helpers.js';
   import { startGoogleLogin } from './login.js';
   import { goHome } from './nav.js';
+  import { trackViewport } from './viewport.js';
 
   // 상태는 통째로 바꿔 끼우므로 깊은 반응성이 필요 없다.
   let view = $state.raw<ChatView>(EMPTY_CHAT);
@@ -31,8 +32,7 @@
   let busy = $state(false);
   let list: HTMLOListElement | undefined = $state();
   let wrap: HTMLDivElement | undefined = $state();
-  /** 폰에서 입력창에 초점이 있다 = 키보드가 떠 있다. 머리글·안내·이전으로 바를 접어 메시지 자리를 남긴다. */
-  let typing = $state(false);
+  let input: HTMLInputElement | undefined = $state();
   let session: ChatSession | null = null;
 
   const mine = (m: ChatMessage) => !!view.me && m.author === view.me.author;
@@ -59,27 +59,14 @@
     return () => session?.close();
   });
 
-  // T-11-019 iOS Safari는 키보드가 올라와도 100dvh(레이아웃 뷰포트)를 줄이지 않고 페이지를 밀어 올린다 — 대화는 위로
-  // 잘리고 입력창 아래에 빈 칸과 '이전으로' 바가 남는다. 채팅 화면을 실제로 보이는 영역(visualViewport)에 맞춰 고정한다.
+  // T-11-019 키보드가 떠도 채팅 화면을 보이는 영역에 맞춘다(style.css .chat-wrap). 키보드가 오르내리는 동안 입력 중이면
+  // 마지막 줄을 붙잡는다.
   $effect(() => {
-    const vv = window.visualViewport;
-    const el = wrap;
-    if (!vv || !el) return;
-    const sync = () => {
-      el.style.setProperty('--chat-vvh', `${vv.height}px`);
-      el.style.setProperty('--chat-vvtop', `${vv.offsetTop}px`);
-      // 키보드가 오르내리는 동안 마지막 줄을 붙잡는다. typing은 이 effect의 의존성이 아니다(리스너를 다시 걸지 않게).
-      if (untrack(() => typing)) list?.scrollTo({ top: list.scrollHeight });
-    };
-    sync();
-    vv.addEventListener('resize', sync);
-    vv.addEventListener('scroll', sync);
-    return () => {
-      vv.removeEventListener('resize', sync);
-      vv.removeEventListener('scroll', sync);
-    };
+    if (wrap)
+      return trackViewport(wrap, () => {
+        if (input && document.activeElement === input) list?.scrollTo({ top: list.scrollHeight });
+      });
   });
-  const coarse = () => matchMedia('(pointer: coarse)').matches;
 
   function send() {
     const body = text.trim();
@@ -113,7 +100,7 @@
   }
 </script>
 
-<div class="wrap chat-wrap" class:typing bind:this={wrap}>
+<div class="wrap chat-wrap" bind:this={wrap}>
   <Topbar />
   <section class="card chat-card" data-chat>
     <div class="row" style="justify-content:space-between;align-items:baseline">
@@ -181,8 +168,7 @@
           enterkeyhint="send"
           autocomplete="off"
           bind:value={text}
-          onfocus={() => (typing = coarse())}
-          onblur={() => (typing = false)}
+          bind:this={input}
           data-chat-input
         />
         <button class="btn btn-primary" data-act="chat-send" disabled={!text.trim()}>보내기</button>
