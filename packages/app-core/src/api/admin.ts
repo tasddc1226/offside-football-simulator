@@ -4,6 +4,9 @@
 import type {
   AdminComment,
   AdminCommentList,
+  AdminNameReport,
+  AdminNameReportList,
+  AdminNameReportResolve,
   AdminStats,
   AutomationReport,
   BalanceDraftInput,
@@ -12,7 +15,7 @@ import type {
 } from '@offside/contracts';
 import { apiFetch, cachedGet } from './client.js';
 
-export type { AdminComment, AdminStats, AutomationReport, BalanceVersion };
+export type { AdminComment, AdminNameReport, AdminStats, AutomationReport, BalanceVersion };
 
 export const fetchBalanceVersions = () => apiFetch<BalanceVersionList>('/v1/admin/balance');
 export const createBalanceDraft = (draft: BalanceDraftInput) =>
@@ -46,6 +49,14 @@ export const purgeComments = (profileId: string) =>
   apiFetch<{ deleted: number }>('/v1/admin/comments/purge', {
     method: 'POST',
     body: JSON.stringify({ profileId }),
+  });
+
+/** 처리를 기다리는 이름 신고(대상마다 한 줄). */
+export const fetchNameReports = () => apiFetch<AdminNameReportList>('/v1/admin/name-reports');
+export const resolveNameReport = (input: AdminNameReportResolve) =>
+  apiFetch<undefined>('/v1/admin/name-reports/resolve', {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 
 /** 자동 플레이 탐지(관찰 전용). 열 때만, 늘 새로 읽는다. */

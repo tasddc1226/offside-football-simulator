@@ -12,11 +12,12 @@ import { Seg, TabOpt } from '../board/parts';
 import AdminAutomation from './admin/AdminAutomation';
 import AdminBalance from './admin/AdminBalance';
 import AdminComments from './admin/AdminComments';
+import AdminNameReports from './admin/AdminNameReports';
 import AdminDashboard from './admin/AdminDashboard';
 
 const TABS = [
   { id: 'dashboard', label: '대시보드' },
-  { id: 'comments', label: '댓글' },
+  { id: 'comments', label: '신고·댓글' },
   { id: 'balance', label: '밸런스' },
   { id: 'automation', label: '자동 플레이' },
 ] as const;
@@ -66,7 +67,10 @@ export default function Admin() {
             {tab === 'dashboard' ? (
               <AdminDashboard />
             ) : tab === 'comments' ? (
-              <AdminComments />
+              <>
+                <AdminNameReports />
+                <AdminComments />
+              </>
             ) : tab === 'automation' ? (
               <AdminAutomation />
             ) : (

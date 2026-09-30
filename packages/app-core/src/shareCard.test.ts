@@ -64,6 +64,7 @@ function view(career: CareerRecord[], o: Partial<LegendView> = {}, withStyle = f
     totals: { apps: 0, goals: 0, assists: 0, trophies: 4, awards: 2, caps: 30 },
     own: null,
     shareId: null,
+    reportId: null,
     title: null,
     ...o,
   };

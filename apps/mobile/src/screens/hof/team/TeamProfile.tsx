@@ -12,6 +12,7 @@ import {
 import { num as n, recordText } from '@offside/app-core/teamText';
 import { localCareerNames } from '@offside/game/season';
 import { LoadState, type LoadStatus } from '../../../components/LoadState';
+import { NameReport } from '../../../components/NameReport';
 import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
 import { toast } from '../../../game/host';
 import { DISPLAY, rem } from '../../../theme/type';
@@ -244,6 +245,7 @@ export default function TeamProfile({ id }: { id: string }) {
               </Txt>
             )}
           </Card>
+          {mine ? null : <NameReport kind="team" id={team.id} name={team.name} />}
         </>
       ) : null}
     </LoadState>

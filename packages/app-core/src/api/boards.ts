@@ -6,6 +6,7 @@ import type {
   Comment,
   CommentInput,
   CommentReportInput,
+  NameReportInput,
   Post,
   PostDetailResponse,
   PostInput,
@@ -59,6 +60,11 @@ export const blockAuthor = (commentId: string) =>
   );
 export const unblock = (id: string) =>
   apiFetch<undefined>(`/v1/boards/blocks/${id}`, { method: 'DELETE' });
+/** 명예의 전당 선수 이름·구단 이름 신고(운영자가 가리거나 기각한다). */
+export const reportName = (input: NameReportInput) =>
+  withProfile(() =>
+    apiFetch<undefined>('/v1/reports/names', { method: 'POST', body: JSON.stringify(input) }),
+  );
 
 /** T-10-058 조회수 +1(웹이 기기마다 글 하나에 한 번만 보낸다). */
 export const addView = (id: string) =>

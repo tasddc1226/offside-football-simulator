@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1c58ee4c-acab-4481-872d-6d48006e2c76",
+  "id": "7a711a6a-b6d0-4d8c-873e-4fb144982b66",
   "prevId": "2e8b28ec-7443-4aa4-8a20-730bad437049",
   "tables": {
     "app_auth_tickets": {
@@ -1139,6 +1139,13 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "name_hidden_at": {
+          "name": "name_hidden_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -1419,6 +1426,83 @@
             "key"
           ],
           "name": "idempotency_owner_profile_id_key_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "name_reports": {
+      "name": "name_reports",
+      "columns": {
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "profile_id": {
+          "name": "profile_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "name_reports_resolved_idx": {
+          "name": "name_reports_resolved_idx",
+          "columns": [
+            "resolved_at",
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "name_reports_profile_idx": {
+          "name": "name_reports_profile_idx",
+          "columns": [
+            "profile_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "name_reports_kind_target_id_profile_id_pk": {
+          "columns": [
+            "kind",
+            "target_id",
+            "profile_id"
+          ],
+          "name": "name_reports_kind_target_id_profile_id_pk"
         }
       },
       "uniqueConstraints": {},

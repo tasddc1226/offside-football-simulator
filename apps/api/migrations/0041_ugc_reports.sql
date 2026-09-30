@@ -17,4 +17,17 @@ CREATE TABLE `board_comment_reports` (
 	FOREIGN KEY (`comment_id`) REFERENCES `board_comments`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `board_comment_reports_profile_idx` ON `board_comment_reports` (`profile_id`);
+CREATE INDEX `board_comment_reports_profile_idx` ON `board_comment_reports` (`profile_id`);--> statement-breakpoint
+CREATE TABLE `name_reports` (
+	`kind` text NOT NULL,
+	`target_id` text NOT NULL,
+	`profile_id` text NOT NULL,
+	`name` text NOT NULL,
+	`created_at` text NOT NULL,
+	`resolved_at` text,
+	PRIMARY KEY(`kind`, `target_id`, `profile_id`)
+);
+--> statement-breakpoint
+CREATE INDEX `name_reports_resolved_idx` ON `name_reports` (`resolved_at`,`created_at`);--> statement-breakpoint
+CREATE INDEX `name_reports_profile_idx` ON `name_reports` (`profile_id`);--> statement-breakpoint
+ALTER TABLE `careers` ADD `name_hidden_at` text;

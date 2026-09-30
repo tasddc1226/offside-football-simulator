@@ -4,6 +4,7 @@ import {
   BOARD_PAGE_LIMIT,
   COMMENT_BODY_MAX,
   COMMENT_REPORT_REASONS,
+  NAME_REPORT_KINDS,
   POST_BODY_MAX,
   POST_TITLE_MAX,
   POST_VERSION_MAX,
@@ -48,6 +49,13 @@ export type CommentInput = z.infer<typeof CommentInputSchema>;
 /** 댓글 신고. 프로필 하나가 댓글 하나에 한 번 — 신고한 댓글은 그 사람 화면에서 숨기고, 운영자가 관리 화면에서 본다. */
 export const CommentReportInputSchema = z.strictObject({ reason: z.enum(COMMENT_REPORT_REASONS) });
 export type CommentReportInput = z.infer<typeof CommentReportInputSchema>;
+
+/** POST /v1/reports/names — 남의 공개 이름(명예의 전당 선수·구단) 신고. 한 번만 남고, 운영자가 처리한다. */
+export const NameReportInputSchema = z.strictObject({
+  kind: z.enum(NAME_REPORT_KINDS),
+  id: z.string().min(1).max(64),
+});
+export type NameReportInput = z.infer<typeof NameReportInputSchema>;
 
 export const PostSummarySchema = z.object({
   id: z.string(),

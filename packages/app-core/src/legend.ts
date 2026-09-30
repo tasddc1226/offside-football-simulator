@@ -50,6 +50,7 @@ function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
     },
     own: null,
     shareId: null,
+    reportId: e.name ? e.id : null,
     title: e.title ?? null,
     rn: e.retiredNumber ? { kind: 'granted', ...e.retiredNumber } : null,
   };
@@ -77,6 +78,7 @@ export function createLegends(host: LegendHost) {
       },
       own: h,
       shareId: ownShareId(h),
+      reportId: null,
       title: h.title ?? null,
       rn: host.rnOf(h.id, h.rn),
     };
@@ -106,6 +108,7 @@ export function createLegends(host: LegendHost) {
       },
       own,
       shareId: ownShareId(own),
+      reportId: null,
       title: mainTitle(s)?.id ?? null,
       pot: potReveal(s),
       rn: host.rnOf(s.cid, own?.rn),
@@ -118,7 +121,8 @@ export function createLegends(host: LegendHost) {
     // 내 기기에 있는 선수면 로컬 항목을 우선한다(이름 공개 토글 가능).
     const own = loadHOF().find((x) => x.id === e.id);
     if (own) return viewFromEntry(own);
-    return { ...publicView(e, d), shareId: mine ? e.id : null };
+    const v = publicView(e, d);
+    return mine ? { ...v, shareId: e.id, reportId: null } : v;
   }
 
   /** T-10-069 계정에 기록된 내 선수인가 — 어디서 열든(명예의 전당·홈 라이브·구단주) 같게. 목록은 1분 메모라

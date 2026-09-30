@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { COMMENT_REPORT_REASONS } from '@offside/contracts/board-limits';
+import { COMMENT_REPORT_REASONS, NAME_REPORT_KINDS } from '@offside/contracts/board-limits';
 import {
   index,
   primaryKey,
@@ -198,6 +198,8 @@ export const careers = sqliteTable(
     // T-10-100 은퇴 가치(만 원, contracts market-value retireValue). 은퇴 PUT의 스냅샷으로 매기고, 이 기능 전 은퇴는
     // 명예의 전당 조회 때 스냅샷으로 소급한다(db/repos/careerValues.ts). 스냅샷이 없으면 0.
     value: integer('value'),
+    // 운영자가 이름 신고를 받고 가린 시각. 있으면 시즌·은퇴 업로드가 공개 이름을 다시 채우지 않는다.
+    nameHiddenAt: text('name_hidden_at'),
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),
@@ -279,6 +281,7 @@ export const auditLog = sqliteTable(
         'CAREERS_MERGED',
         'BALANCE_ACTIVATED',
         'COMMENTS_PURGED',
+        'NAME_REPORT_RESOLVED',
       ],
     }).notNull(),
     profileId: text('profile_id').notNull(),
@@ -374,6 +377,26 @@ export const boardCommentReports = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.commentId, table.profileId] }),
     index('board_comment_reports_profile_idx').on(table.profileId),
+  ],
+);
+
+/** 공개 이름 신고(앱스토어 UGC 정책) — 명예의 전당 선수 이름(career)과 구단 이름·감독 이름(team). 프로필 하나가
+ *  대상 하나에 한 줄. name은 신고할 때 보인 이름이다. 운영자가 처리(가리기·기각)하면 resolved_at을 채우고,
+ *  그 뒤 같은 사람이 다시 신고하면 다시 열린다. */
+export const nameReports = sqliteTable(
+  'name_reports',
+  {
+    kind: text('kind', { enum: NAME_REPORT_KINDS }).notNull(),
+    targetId: text('target_id').notNull(),
+    profileId: text('profile_id').notNull(),
+    name: text('name').notNull(),
+    createdAt: text('created_at').notNull(),
+    resolvedAt: text('resolved_at'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.kind, table.targetId, table.profileId] }),
+    index('name_reports_resolved_idx').on(table.resolvedAt, table.createdAt),
+    index('name_reports_profile_idx').on(table.profileId),
   ],
 );
 

@@ -12,6 +12,7 @@
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import BackBar from '../BackBar.svelte';
+  import NameReport from '../NameReport.svelte';
   import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import { num as n, recordText } from '@offside/app-core/teamText';
@@ -111,6 +112,7 @@
         <p class="empty">첫 기록을 기다리고 있어요. 팀 경기와 시즌 순위의 배지가 이곳에 쌓여요.</p>
       {/if}
     </section>
+    {#if !mine}<NameReport kind="team" id={team.id} name={team.name} />{/if}
   {/if}
 </LoadState>
 <!-- T-10-130 '← 랭킹'은 화면 아래(탭바 위)로. 뒤로 가기로도 랭킹에 돌아간다. -->

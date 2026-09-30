@@ -17,3 +17,9 @@ export const ADMIN_NICKNAME = '운영자';
 /** 댓글 신고 사유(앱스토어 UGC 정책 — 신고·차단). 화면 라벨은 app-core/boardText REPORT_REASON_LABEL. */
 export const COMMENT_REPORT_REASONS = ['spam', 'abuse', 'sexual', 'other'] as const;
 export type CommentReportReason = (typeof COMMENT_REPORT_REASONS)[number];
+/** 공개 이름 신고 대상 — 명예의 전당 선수 이름(career), 구단 이름·감독 이름(team). */
+export const NAME_REPORT_KINDS = ['career', 'team'] as const;
+export type NameReportKind = (typeof NAME_REPORT_KINDS)[number];
+/** 운영자가 가린 구단의 이름·감독 이름. */
+export const HIDDEN_TEAM_NAME = '이름 가린 구단';
+export const HIDDEN_MANAGER_NAME = '익명 감독';

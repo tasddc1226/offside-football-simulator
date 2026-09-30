@@ -117,6 +117,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'height',
     'weight',
     'value',
+    'name_hidden_at',
   ],
   career_seasons: [
     'career_id',
@@ -173,6 +174,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   ],
   board_comment_reports: ['comment_id', 'profile_id', 'reason', 'created_at'],
   board_blocks: ['id', 'profile_id', 'blocked_profile_id', 'nickname', 'created_at'],
+  name_reports: ['kind', 'target_id', 'profile_id', 'name', 'created_at', 'resolved_at'],
   balance_versions: [
     'version',
     'status',

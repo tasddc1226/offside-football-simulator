@@ -8,12 +8,13 @@
   import Topbar from './Topbar.svelte';
   import AdminBalance from './admin/AdminBalance.svelte';
   import AdminComments from './admin/AdminComments.svelte';
+  import AdminNameReports from './admin/AdminNameReports.svelte';
   import AdminDashboard from './admin/AdminDashboard.svelte';
   import AdminAutomation from './admin/AdminAutomation.svelte';
 
   const TABS = [
     { id: 'dashboard', label: '대시보드' },
-    { id: 'comments', label: '댓글' },
+    { id: 'comments', label: '신고·댓글' },
     { id: 'balance', label: '밸런스' },
     { id: 'automation', label: '자동 플레이' },
   ] as const;
@@ -43,7 +44,7 @@
         {/each}
       </div>
       {#if tab === 'dashboard'}<AdminDashboard />
-      {:else if tab === 'comments'}<AdminComments />
+      {:else if tab === 'comments'}<AdminNameReports /><AdminComments />
       {:else if tab === 'automation'}<AdminAutomation />
       {:else}<AdminBalance />{/if}
     {/if}
