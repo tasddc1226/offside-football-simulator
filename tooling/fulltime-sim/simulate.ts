@@ -31,7 +31,7 @@ import {
   investCost,
   INVESTS,
 } from '@offside/game/index';
-import { pick, ri, createRng, setActiveRng, freshSeed } from '@offside/game/rng';
+import { pick, ri, rnd, createRng, setActiveRng, freshSeed } from '@offside/game/rng';
 import { setLatestBalance } from '@offside/game/balance';
 import { BODY_DEFAULT, BODY_LIMITS } from '../../packages/contracts/src/body.js';
 import type { EventDef, GameState, MarketOption, OfferOption } from '@offside/game/types';
@@ -55,6 +55,13 @@ const DETAIL = !!process.env.DPOS;
 // T-11-012 INVEST=1: 자금으로 자기 투자를 한다(다치거나 지쳤으면 메디컬, 사기가 낮으면 멘탈, 아니면 약점 보강 특훈 —
 // 비용의 두 배 이상 있을 때만). 없으면 예전처럼 투자하지 않는다(RNG 소비도 같다).
 const INVEST = process.env.INVEST === '1';
+// T-11-018 운영 유저에 맞춘 정책. RETIRE_AGE=<나이>: 그 나이부터 스스로 은퇴(기본 35 — 41이면 강제 은퇴까지 뛴다).
+// MG=<0~1>: 원터치 미니게임 장면(페널티킥·1대1·승부차기)을 손으로 가린 것처럼 이 확률로 성공한다(능력치 확률 대신).
+// MG가 없으면 예전처럼 난수로 판정한다(RNG 소비도 같다).
+const RETIRE_AGE = +(process.env.RETIRE_AGE || 35);
+const MG = process.env.MG === undefined ? null : +process.env.MG;
+const mgRoll = (E: EventDef, idx: number): number | undefined =>
+  MG === null || !E.choices[idx]?.mg ? undefined : rnd() < MG ? 0 : 0.999999;
 // T-10-096 NATION=<국가 코드>: 그 국적으로 만든 선수. BODY=tall|short|heavy|light|default: 포지션 기본 체격
 // (BODY_DEFAULT)에서 한쪽 끝으로 간 체격. 둘 다 없으면 예전 선수 그대로(RNG 소비도 같다).
 const NATION = process.env.NATION;
@@ -193,7 +200,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
           if (e) {
             const E = eventById(e)!;
             const idx = pickChoice(s, E);
-            const r = resolveChoice(s, e, idx);
+            const r = resolveChoice(s, e, idx, mgRoll(E, idx));
             events++;
             if (r.ok) evOk++;
             if (seen[e]) (A.repeats as number)++;
@@ -237,9 +244,11 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
           }
           if (
             m.canRetire &&
-            (s.age >= 35 || (s.age >= 28 && !m.options.some(realJob)) || !m.options.some(anyJob))
+            (s.age >= RETIRE_AGE ||
+              (s.age >= 28 && !m.options.some(realJob)) ||
+              !m.options.some(anyJob))
           ) {
-            retireReason = s.age >= 35 ? 'age35' : 'washout';
+            retireReason = s.age >= RETIRE_AGE ? 'age35' : 'washout';
             retire(s);
             break;
           }
@@ -412,7 +421,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
       let v = 0;
       for (let k = 0; k < 8; k++) {
         const x = JSON.parse(snap) as GameState;
-        resolveChoice(x, E.id, i);
+        resolveChoice(x, E.id, i, mgRoll(E, i));
         v += value(x);
       }
       if (v > bv) {
