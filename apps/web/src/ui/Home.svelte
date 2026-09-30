@@ -14,6 +14,7 @@
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { withRo } from '@offside/app-core/format';
+  import { DC_GALLERY_URL } from '@offside/app-core/links';
 
   const live = $derived(!!appState.G && !appState.G.retired);
 </script>
@@ -67,6 +68,10 @@
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
       <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted fs-sm">선택지마다 성공 확률 공개 · 확률 도감 보기 →</span>
     </button>
+    <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일(두 칸 폭). -->
+    <a class="tile tile-link tile-wide" data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
+      <span class="eyebrow">Community</span><b>오프사이드 마이너 갤러리 ↗</b><span class="muted fs-sm">디시인사이드에서 커리어 자랑 · 공략 · 건의 나누기</span>
+    </a>
   </div>
   <HallOfFame />
   <HomeNews board="notice" eyebrow="Notice" title="공지사항" />

@@ -1,10 +1,11 @@
 // 홈(웹 Home.svelte — ui.ts renderHome() 포트): 전광판 · 히어로 · 라이브 현황 · 타일 · 명예의 전당 TOP 3 · 소식 · 푸터.
-import { View } from 'react-native';
+import { Linking, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import { PHASES, LAST_PHASE, posLabel } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
 import { withRo } from '@offside/app-core/format';
+import { DC_GALLERY_URL } from '@offside/app-core/links';
 import { HallOfFame } from '../../components/HallOfFame';
 import { SiteFooter } from '../../components/SiteFooter';
 import { adoptCareer, keepOnDevice } from '../../game/host';
@@ -145,6 +146,16 @@ export default function Home() {
           title="확률 이벤트"
           sub="선택지마다 성공 확률 공개 · 확률 도감 보기 →"
           onPress={() => go('dex')}
+        />
+      </View>
+      {/* T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일(두 칸 폭). */}
+      <View style={{ flexDirection: 'row' }}>
+        <Tile
+          testID="dc-gallery"
+          eyebrow="Community"
+          title="오프사이드 마이너 갤러리 ↗"
+          sub="디시인사이드에서 커리어 자랑 · 공략 · 건의 나누기"
+          onPress={() => void Linking.openURL(DC_GALLERY_URL)}
         />
       </View>
       <HallOfFame />
