@@ -53,8 +53,17 @@ migration은 이 목록도 함께 고친다.
     실행 때 받거나, 앱으로 돌아올 때 받아 두고 '다시 시작' 배너로 바로 적용한다.
     - 직전 production OTA 커밋 이후 `apps/mobile`·`packages`·루트 `package.json`·`pnpm-lock.yaml`이 그대로면
       게시하지 않는다(웹·API만 바뀐 배포에 새 버전 배너가 뜨지 않게).
+      판단 전에 `pnpm install`을 한다(eas가 `app.json` 플러그인을 풀어야 조회가 된다).
     - `runtimeVersion`은 `fingerprint` 정책이다. 네이티브(모듈 추가·SDK·`app.json` 네이티브 설정)가 바뀐 커밋은
       런타임이 달라 기존 스토어 앱에 내려가지 않는다 — 그때는 새 스토어 빌드(`eas build`)와 심사가 필요하다.
+    - 게시 전에 플랫폼별 `eas fingerprint:generate` 해시를 완료된 production 빌드의
+      `runtime.version`과 대조해(`build:list --runtime-version`), 맞는 빌드가 없으면 `::warning::`과 요약 줄을 남긴다(실패시키지는 않는다).
+      네이티브 변경이 아닌데 이 경고가 뜨면 `eas.json`·`app.json` 수정을 먼저 의심한다.
+    - **`apps/mobile/eas.json`은 수정만 해도 런타임이 바뀐다**(fingerprint source `easBuild`). 2026-09-30
+      `submit.production.ios.ascAppId` 한 줄 추가(#393)로 iOS `9e9ebda2`→`9243e6d7`, Android
+      `965907c7`→`e9d03a9d`가 되어 그날 OTA가 설치된 어느 앱에도 가지 않았다(T-11-013에서 되돌림).
+      `ascAppId` 같은 submit 전용 설정도 다음 네이티브(스토어) 빌드 때 함께 넣는다. `.fingerprintignore`로
+      `eas.json`을 빼는 것도 그 자체로 해시를 바꾸므로 새 스토어 빌드와 같이 할 때만 한다.
     - GitHub `production` 환경 secret `EXPO_TOKEN`(expo.dev → Access tokens)이 없으면 이 잡은 건너뛴다.
     - 되돌리기: `cd apps/mobile && npx eas-cli@latest update:rollback` 또는 이전 커밋으로 다시 `eas update`.
     - 앱 OTA가 아직 안 간(또는 옛 런타임) 앱도 한동안 남으므로 API는 하위 호환을 유지한다.

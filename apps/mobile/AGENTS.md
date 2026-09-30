@@ -39,3 +39,10 @@ Docs: https://docs.expo.dev/eas/index.md
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+
+## OTA runtime (fingerprint) — eas.json 수정 주의
+
+- `runtimeVersion`은 `fingerprint` 정책이라 OTA는 같은 런타임 해시로 빌드된 스토어 앱에만 내려간다.
+- **`eas.json`은 어떤 필드든(`submit` 포함) 고치면 런타임이 바뀐다.** `ascAppId` 같은 submit 전용 설정도 다음 스토어 빌드 때 함께 넣는다.
+  `.fingerprintignore`로 `eas.json`을 빼는 것도 그 자체로 해시를 바꾸므로 새 스토어 빌드와 같은 PR에서만 한다.
+- 사고 경위·확인 방법: [`docs/operations/production-release.md`](../../docs/operations/production-release.md)의 "앱 OTA" 항목.
