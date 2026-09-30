@@ -6,7 +6,7 @@
   // T-10-090 전체 보기는 '전체 / 시즌 1'을 고른다. 시즌 순위엔 개막 뒤 새로 만든 선수만 오른다(프리시즌 선수 제외).
   // T-11-018 포지션별 순위 — 레전드 점수 상위권을 공격수가 채우므로 포지션 안에서도 겨루게 한다.
   import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
-  import { POS_LABEL } from '@offside/contracts/positions';
+  import { POS_GROUPS, POS_LABEL } from '@offside/contracts/positions';
   import { SERVICE_SEASONS, serviceSeason } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from '@offside/app-core/boardText';
   import { loadHOF } from '@offside/game/season';
@@ -41,7 +41,6 @@
     peak: { label: '최고 OVR', unit: '', get: (s) => s.peak },
   };
   const SORT_KEYS = Object.keys(SORTS) as HofSort[];
-  const POS_KEYS = Object.keys(POS_LABEL) as CareerPos[];
   // 전체 보기의 페이지·유형은 appState에 둬 선수 상세에서 돌아와도 그대로다.
   const page = $derived(full ? appState.hof.page : 1);
   const sort = $derived<HofSort>(full ? appState.hof.sort : 'score');
@@ -163,7 +162,7 @@
     {#if !upcoming}
       <div class="seg hof-pos" role="group" aria-label="포지션">
         <button class="opt" aria-pressed={pos === null} data-hof-pos="all" onclick={() => pickPos(null)}>전체</button>
-        {#each POS_KEYS as k (k)}
+        {#each POS_GROUPS as k (k)}
           <button class="opt" aria-pressed={pos === k} data-hof-pos={k} onclick={() => pickPos(k)}>{POS_LABEL[k]}</button>
         {/each}
       </div>

@@ -8,7 +8,7 @@ import { View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
-import { POS_LABEL } from '@offside/contracts/positions';
+import { POS_GROUPS, POS_LABEL } from '@offside/contracts/positions';
 import { SERVICE_SEASONS, serviceSeason } from '@offside/contracts/service-seasons';
 import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { anonName, fmtValue, iGa } from '@offside/app-core/format';
@@ -56,7 +56,6 @@ const SORTS: Record<
   peak: { label: '최고 OVR', unit: '', get: (s) => s.peak },
 };
 const SORT_KEYS = Object.keys(SORTS) as HofSort[];
-const POS_KEYS = Object.keys(POS_LABEL) as CareerPos[];
 
 function SearchIcon({ color }: { color: string }) {
   return (
@@ -268,7 +267,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                 testID="hof-pos-all"
                 onPress={() => pickPos(null)}
               />
-              {POS_KEYS.map((k) => (
+              {POS_GROUPS.map((k) => (
                 <TabOpt
                   key={k}
                   tight

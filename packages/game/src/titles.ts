@@ -9,7 +9,7 @@ import { STORIES } from './engine.js';
 import type { GameState } from './types.js';
 import { CONFEDS, CONF_ORDER, cupTrophy } from '@offside/contracts/nations';
 import { isKorean, nationOf, type Confed } from './nation.js';
-import { LEGEND_BANDS, LEGEND_BANDS_PRESEASON, legendBand, type Rarity } from './legend-bands.js';
+import { LEGEND_BANDS, legendBand, type Rarity } from './legend-bands.js';
 export type { Rarity } from './legend-bands.js';
 
 export type TitleCat =
@@ -391,19 +391,18 @@ export const TITLES: TitleDef[] = [
   n('fame300', '슈퍼스타', 'fame', 3, '인기 300', (s) => Math.floor(s.fame), 300),
   n('fame1000', '월드 아이콘', 'fame', 4, '인기 1000', (s) => Math.floor(s.fame), 1000),
   // 은퇴 — 은퇴할 때 레전드 점수 구간 하나만. T-11-018 기준은 시즌 1 선수 것이고, 프리시즌 선수는 옛 기준을 쓴다.
-  ...LEGEND_BANDS.map(([id, name, rarity, min], i) => {
-    const pre = LEGEND_BANDS_PRESEASON[i]![3];
-    return t(
+  ...LEGEND_BANDS.map(([id, name, rarity, min, preMin], i) =>
+    t(
       id,
       name,
       'legend',
       rarity,
       i === LEGEND_BANDS.length - 1
         ? `은퇴(레전드 점수 ${LEGEND_BANDS[i - 1]![3]} 미만)`
-        : `은퇴 시 레전드 점수 ${min} 이상${pre === min ? '' : `(프리시즌 선수 ${pre})`}`,
+        : `은퇴 시 레전드 점수 ${min} 이상${preMin === min ? '' : `(프리시즌 선수 ${preMin})`}`,
       (s, x) => x.score != null && legendBand(x.score, s.dpos).id === id,
-    );
-  }),
+    ),
+  ),
 ];
 const BY_ID = new Map(TITLES.map((d) => [d.id, d]));
 export const titleById = (id: string | null | undefined): TitleDef | undefined =>
