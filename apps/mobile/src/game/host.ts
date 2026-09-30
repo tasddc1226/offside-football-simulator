@@ -15,7 +15,7 @@ import { createOwnerConflicts } from '@offside/app-core/ownerConflict';
 import { createNavStack } from '@offside/app-core/navHistory';
 import { getProfile } from '@offside/app-core/api/client';
 import { APP_VERSION, WEB_ORIGIN } from '../platform/config';
-import { ensureSession, sessionToken, setSessionToken } from '../platform/session';
+import { ensureSession, renewSession, sessionToken } from '../platform/session';
 import {
   accountCache,
   appState,
@@ -138,8 +138,7 @@ export async function refreshAccount() {
   await ensureSession();
   let r = await getProfile();
   if (!r.ok && r.error.code === 'PROFILE_REQUIRED' && sessionToken()) {
-    await setSessionToken(null);
-    if (await ensureSession()) r = await getProfile();
+    if (await renewSession()) r = await getProfile();
   }
   accountCache.fetchedAt = Date.now();
   accountCache.value = r.ok ? r.data : 'error';

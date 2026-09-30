@@ -3,6 +3,7 @@ import {
   BOARD_KEYS,
   BOARD_PAGE_LIMIT,
   COMMENT_BODY_MAX,
+  COMMENT_REPORT_REASONS,
   POST_BODY_MAX,
   POST_TITLE_MAX,
   POST_VERSION_MAX,
@@ -18,7 +19,7 @@ export * from './board-limits.js';
  */
 export const BoardKeySchema = z.enum(BOARD_KEYS);
 
-export const BoardIdParamSchema = z.string().regex(/^(pst|cmt)_[0-9a-f-]{36}$/);
+export const BoardIdParamSchema = z.string().regex(/^(pst|cmt|blk)_[0-9a-f-]{36}$/);
 
 export const BoardListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(BOARD_PAGE_LIMIT),
@@ -43,6 +44,10 @@ export const CommentInputSchema = z.strictObject({
   body: trimmed(COMMENT_BODY_MAX),
 });
 export type CommentInput = z.infer<typeof CommentInputSchema>;
+
+/** 댓글 신고. 프로필 하나가 댓글 하나에 한 번 — 신고한 댓글은 그 사람 화면에서 숨기고, 운영자가 관리 화면에서 본다. */
+export const CommentReportInputSchema = z.strictObject({ reason: z.enum(COMMENT_REPORT_REASONS) });
+export type CommentReportInput = z.infer<typeof CommentReportInputSchema>;
 
 export const PostSummarySchema = z.object({
   id: z.string(),
@@ -70,9 +75,19 @@ export const CommentSchema = z.object({
   admin: z.boolean(),
   /** 보는 사람이 지울 수 있다(본인 댓글이거나 관리자). */
   deletable: z.boolean(),
+  /** 보는 사람이 쓴 댓글 — 신고·차단 버튼을 그리지 않는다. */
+  mine: z.boolean().default(false),
   createdAt: IsoUtcSchema,
 });
 export type Comment = z.infer<typeof CommentSchema>;
+
+/** 내가 차단한 댓글 작성자. 그 사람의 댓글은 내 화면에 오지 않는다. id로 차단을 푼다. */
+export const BoardBlockSchema = z.object({
+  id: z.string(),
+  nickname: z.string(),
+  createdAt: IsoUtcSchema,
+});
+export type BoardBlock = z.infer<typeof BoardBlockSchema>;
 
 export const BoardListResponseSchema = z.object({
   posts: z.array(PostSummarySchema),
@@ -85,6 +100,8 @@ export const PostDetailResponseSchema = z.object({
   comments: z.array(CommentSchema),
   /** 보는 프로필이 이 글에 좋아요를 눌렀다(세션이 없으면 false). */
   liked: z.boolean().default(false),
+  /** 보는 프로필이 차단한 작성자들(댓글 아래에서 풀 수 있다). */
+  blocks: z.array(BoardBlockSchema).default([]),
 });
 export type PostDetailResponse = z.infer<typeof PostDetailResponseSchema>;
 

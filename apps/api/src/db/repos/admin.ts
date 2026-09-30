@@ -1,10 +1,17 @@
 import type { AdminComment, AdminStats } from '@offside/contracts';
-import { and, desc, eq, isNull, lt, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, lt, sql, type SQL } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import type { Db } from '../client.js';
 import { insertAuditLog } from './auditLog.js';
 import { accountLinkedSql } from './profiles.js';
-import { auditLog, boardComments, boardPosts, careers, profiles } from '../schema.js';
+import {
+  auditLog,
+  boardCommentReports,
+  boardComments,
+  boardPosts,
+  careers,
+  profiles,
+} from '../schema.js';
 
 // T-10-016 운영 도구. 관리자만 드물게 여는 화면이라 집계는 테이블을 한 번씩 훑는다(쿼리당 한 번,
 // 한 번의 D1 왕복으로 묶는다). 라우트가 결과를 60초 엣지 캐시에 둔다.
@@ -113,11 +120,22 @@ export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats,
   };
 }
 
-/** 전체 게시판의 최근 댓글(지운 것 제외), 최신부터. profileId를 주면 그 작성자 것만. */
+/** 전체 게시판의 최근 댓글(지운 것 제외), 최신부터. profileId를 주면 그 작성자 것만, reported면 신고된 것만.
+ *  댓글마다 받은 신고 수를 붙인다. */
 export async function listRecentComments(
   db: Db,
-  q: { limit: number; before?: string | undefined; profile?: string | undefined },
+  q: {
+    limit: number;
+    before?: string | undefined;
+    profile?: string | undefined;
+    reported?: '1' | undefined;
+  },
 ) {
+  const reports = db
+    .select({ commentId: boardCommentReports.commentId, n: count('n') })
+    .from(boardCommentReports)
+    .groupBy(boardCommentReports.commentId)
+    .as('reports');
   const rows = await db
     .select({
       id: boardComments.id,
@@ -128,15 +146,18 @@ export async function listRecentComments(
       nickname: boardComments.nickname,
       body: boardComments.body,
       admin: boardComments.admin,
+      reports: sql<number>`coalesce(${reports.n}, 0)`.as('reports'),
       createdAt: boardComments.createdAt,
     })
     .from(boardComments)
     .innerJoin(boardPosts, eq(boardPosts.id, boardComments.postId))
+    .leftJoin(reports, eq(reports.commentId, boardComments.id))
     .where(
       and(
         isNull(boardComments.deletedAt),
         q.before ? lt(boardComments.createdAt, q.before) : undefined,
         q.profile ? eq(boardComments.profileId, q.profile) : undefined,
+        q.reported ? isNotNull(reports.commentId) : undefined,
       ),
     )
     .orderBy(desc(boardComments.createdAt))

@@ -8,7 +8,7 @@ import { setStorage } from '@offside/game/storage';
 import { configureApi } from '@offside/app-core/api/client';
 import { configureLive } from '@offside/app-core/api/liveSocket';
 import { API_BASE_URL } from './config';
-import { authHeaders } from './session';
+import { authHeaders, renewSession } from './session';
 
 const g = globalThis as { crypto?: { randomUUID?: () => string } };
 g.crypto ??= {};
@@ -24,6 +24,7 @@ setStorage({
 configureApi({
   baseUrl: API_BASE_URL,
   auth: () => ({ credentials: 'omit', headers: authHeaders() }),
+  renewSession,
 });
 
 configureLive({

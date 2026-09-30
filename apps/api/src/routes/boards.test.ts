@@ -1,7 +1,14 @@
 import { ErrorEnvelopeSchema } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { authAttempts, boardComments, boardPostLikes, profiles } from '../db/schema.js';
+import {
+  authAttempts,
+  boardBlocks,
+  boardCommentReports,
+  boardComments,
+  boardPostLikes,
+  profiles,
+} from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {
   ADMIN_EMAIL,
@@ -279,6 +286,113 @@ describe('게시판 /v1/boards', () => {
         ).status,
       ).toBe(201);
     }
+  });
+
+  type Detail = {
+    data: {
+      comments: { id: string; nickname: string; mine: boolean }[];
+      blocks: { id: string; nickname: string }[];
+    };
+  };
+  const detailOf = async (id: string, cookie?: string) =>
+    (await (
+      await call('GET', `/v1/boards/posts/${id}`, cookie ? { cookie } : {})
+    ).json()) as Detail;
+  async function comment(postId: string, cookie: string, body: string) {
+    const res = await call('POST', `/v1/boards/posts/${postId}/comments`, {
+      cookie,
+      body: { body },
+    });
+    expect(res.status).toBe(201);
+    return ((await res.json()) as { data: { id: string } }).data.id;
+  }
+
+  it('신고: 남의 댓글만, 한 번만 남고 신고한 사람 화면에서 빠진다. 관리자 목록에 신고 수가 보인다', async () => {
+    const admin = await makeAdmin();
+    const id = await writePost(admin.cookie);
+    const alice = await googleUser('앨리스');
+    const bad = await comment(id, alice.cookie, '광고입니다');
+    const anon = await issueCookie(ctx); // 구글 로그인 없이도 프로필만 있으면 신고한다.
+    const report = (cookie: string | undefined, reason = 'spam', cid = bad) =>
+      call('POST', `/v1/boards/comments/${cid}/report`, {
+        ...(cookie ? { cookie } : {}),
+        body: { reason },
+      });
+
+    expect((await report(undefined)).status).toBe(401);
+    expect((await report(anon.cookie, 'nope')).status).toBe(400);
+    expect((await report(alice.cookie)).status).toBe(403); // 내 댓글
+    expect((await report(anon.cookie)).status).toBe(204);
+    expect((await report(anon.cookie, 'abuse')).status).toBe(204); // 멱등(처음 사유 유지)
+    expect(
+      (await report(anon.cookie, 'spam', 'cmt_00000000-0000-0000-0000-000000000000')).status,
+    ).toBe(404);
+    expect(await ctx.db.select().from(boardCommentReports)).toMatchObject([
+      { commentId: bad, profileId: anon.profileId, reason: 'spam' },
+    ]);
+
+    expect((await detailOf(id, anon.cookie)).data.comments).toHaveLength(0);
+    expect((await detailOf(id, alice.cookie)).data.comments).toMatchObject([
+      { id: bad, mine: true },
+    ]);
+    const list = (await (
+      await call('GET', '/v1/admin/comments?reported=1', { cookie: admin.cookie })
+    ).json()) as { data: { comments: { id: string; reports: number }[] } };
+    expect(list.data.comments).toMatchObject([{ id: bad, reports: 1 }]);
+  });
+
+  it('차단: 작성자의 댓글이 모두 빠지고, 차단 목록에서 풀 수 있다. 운영자·나는 차단하지 않는다', async () => {
+    const admin = await makeAdmin();
+    const id = await writePost(admin.cookie);
+    const alice = await googleUser('앨리스');
+    const bob = await googleUser('밥');
+    const a1 = await comment(id, alice.cookie, '하나');
+    await comment(id, alice.cookie, '둘');
+    await comment(id, bob.cookie, '밥 댓글');
+    const fromAdmin = await comment(id, admin.cookie, '공지 답변');
+    const block = (cookie: string, cid: string) =>
+      call('POST', `/v1/boards/comments/${cid}/block`, { cookie });
+
+    expect((await block(bob.cookie, fromAdmin)).status).toBe(403);
+    expect((await block(alice.cookie, a1)).status).toBe(403);
+    const res = await block(bob.cookie, a1);
+    expect(res.status).toBe(201);
+    const blk = ((await res.json()) as { data: { id: string; nickname: string } }).data;
+    expect(blk.nickname).toBe('앨리스');
+    expect(((await (await block(bob.cookie, a1)).json()) as { data: { id: string } }).data.id).toBe(
+      blk.id,
+    ); // 멱등
+
+    const asBob = await detailOf(id, bob.cookie);
+    expect(asBob.data.comments.map((c) => c.nickname)).toEqual(['밥', '운영자']);
+    expect(asBob.data.blocks).toMatchObject([{ id: blk.id, nickname: '앨리스' }]);
+    expect((await detailOf(id)).data.comments).toHaveLength(4); // 다른 사람에겐 그대로
+
+    expect(
+      (await call('DELETE', `/v1/boards/blocks/${blk.id}`, { cookie: alice.cookie })).status,
+    ).toBe(404); // 남의 차단은 못 푼다
+    expect(
+      (await call('DELETE', `/v1/boards/blocks/${blk.id}`, { cookie: bob.cookie })).status,
+    ).toBe(204);
+    expect((await detailOf(id, bob.cookie)).data.comments).toHaveLength(4);
+  });
+
+  it('프로필을 지우면 신고·차단 기록(차단당한 기록 포함)도 지워진다', async () => {
+    const admin = await makeAdmin();
+    const id = await writePost(admin.cookie);
+    const alice = await googleUser('앨리스');
+    const bob = await googleUser('밥');
+    const a = await comment(id, alice.cookie, '앨리스');
+    const b = await comment(id, bob.cookie, '밥');
+    await call('POST', `/v1/boards/comments/${a}/report`, {
+      cookie: bob.cookie,
+      body: { reason: 'abuse' },
+    });
+    await call('POST', `/v1/boards/comments/${a}/block`, { cookie: bob.cookie });
+    await call('POST', `/v1/boards/comments/${b}/block`, { cookie: alice.cookie });
+    expect((await deleteProfile(env, bob.cookie, 'idem-board-block-del')).status).toBe(204);
+    expect(await ctx.db.select().from(boardCommentReports)).toHaveLength(0);
+    expect(await ctx.db.select().from(boardBlocks)).toHaveLength(0);
   });
 
   it('프로필을 지우면 그 사람의 댓글도 지워진다', async () => {

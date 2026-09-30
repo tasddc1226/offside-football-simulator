@@ -14,3 +14,6 @@ export const COMMENT_BODY_MAX = 500;
 export const COMMENT_NICKNAME_MAX = 12;
 /** T-10-028 관리자(ADMIN_EMAILS) 계정의 댓글 닉네임. 다른 사람은 이 이름을 쓸 수 없다. */
 export const ADMIN_NICKNAME = '운영자';
+/** 댓글 신고 사유(앱스토어 UGC 정책 — 신고·차단). 화면 라벨은 app-core/boardText REPORT_REASON_LABEL. */
+export const COMMENT_REPORT_REASONS = ['spam', 'abuse', 'sexual', 'other'] as const;
+export type CommentReportReason = (typeof COMMENT_REPORT_REASONS)[number];

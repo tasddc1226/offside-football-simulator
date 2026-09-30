@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { COMMENT_REPORT_REASONS } from '@offside/contracts/board-limits';
 import {
   index,
   primaryKey,
@@ -355,6 +356,41 @@ export const boardComments = sqliteTable(
     index('board_comments_profile_idx').on(table.profileId),
     // T-10-016 운영 도구: 전체 게시판의 최근 댓글.
     index('board_comments_created_idx').on(table.createdAt),
+  ],
+);
+
+/** 댓글 신고(앱스토어 UGC 정책). 프로필 하나가 댓글 하나에 한 번. 신고한 사람 화면에서는 그 댓글이 숨겨지고,
+ *  운영자는 관리 화면에서 신고 수로 본다. 댓글을 지워도(deleted_at) 기록은 남는다. */
+export const boardCommentReports = sqliteTable(
+  'board_comment_reports',
+  {
+    commentId: text('comment_id')
+      .notNull()
+      .references(() => boardComments.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id').notNull(),
+    reason: text('reason', { enum: COMMENT_REPORT_REASONS }).notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.commentId, table.profileId] }),
+    index('board_comment_reports_profile_idx').on(table.profileId),
+  ],
+);
+
+/** 댓글 작성자 차단. 차단한 사람(profile_id)에게는 그 작성자의 댓글을 보내지 않는다. nickname은 차단할 때의
+ *  이름(차단 목록에 보여 준다). */
+export const boardBlocks = sqliteTable(
+  'board_blocks',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    blockedProfileId: text('blocked_profile_id').notNull(),
+    nickname: text('nickname').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('board_blocks_pair_unique').on(table.profileId, table.blockedProfileId),
+    index('board_blocks_blocked_idx').on(table.blockedProfileId),
   ],
 );
 

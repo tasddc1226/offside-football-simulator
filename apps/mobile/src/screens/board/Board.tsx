@@ -1,13 +1,33 @@
 // T-10-011 소식 화면(웹 Board.svelte) — 공지사항·릴리즈 노트 게시판. 읽기는 누구나, 글은 관리자만(수정·삭제 포함),
 // 댓글은 로그인하고 닉네임을 정한 사람만(T-10-028). 글 본문은 app-core/boardText의 약속("## 소제목", "- 목록", 줄바꿈)만 읽는다.
+// 남의 댓글은 누구나 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 신고한 댓글·차단한 사람의 댓글은 서버가 빼고 준다.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import Svg, { Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
-import { ADMIN_NICKNAME, BOARD_KEYS, COMMENT_BODY_MAX } from '@offside/contracts/board-limits';
+import {
+  ADMIN_NICKNAME,
+  BOARD_KEYS,
+  COMMENT_BODY_MAX,
+  COMMENT_REPORT_REASONS,
+} from '@offside/contracts/board-limits';
 import * as api from '@offside/app-core/api/boards';
-import type { BoardViewerResponse, Comment, Post, PostSummary } from '@offside/app-core/api/boards';
-import { BOARD_LABEL, dateOf, parseBody, postMeta } from '@offside/app-core/boardText';
+import type {
+  BoardBlock,
+  BoardViewerResponse,
+  Comment,
+  Post,
+  PostSummary,
+} from '@offside/app-core/api/boards';
+import {
+  BOARD_LABEL,
+  REPORT_REASON_LABEL,
+  dateOf,
+  parseBody,
+  postMeta,
+} from '@offside/app-core/boardText';
+import type { CommentReportReason } from '@offside/contracts/board-limits';
 import { touchedAt } from '@offside/app-core/news';
 import { loadKey, saveKey } from '@offside/game/season';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
@@ -15,6 +35,7 @@ import { NicknameForm } from '../../components/NicknameForm';
 import { markNewsSeen, toast } from '../../game/host';
 import { openBoard } from '../../game/nav';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
+import { WEB_ORIGIN } from '../../platform/config';
 import { AppleLoginButton, useAppleLogin } from '../../ui/AppleLoginButton';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
@@ -41,7 +62,42 @@ function firstView(id: string): boolean {
   return true;
 }
 
-type Detail = { post: Post; comments: Comment[]; liked: boolean };
+type Detail = { post: Post; comments: Comment[]; liked: boolean; blocks: BoardBlock[] };
+
+/** 댓글 줄 오른쪽 작은 버튼(삭제·신고). */
+function CommentAct({
+  label,
+  testID,
+  onPress,
+  accessibilityLabel,
+}: {
+  label: string;
+  testID: string;
+  onPress: () => void;
+  accessibilityLabel: string;
+}) {
+  const c = useColors();
+  return (
+    <Press
+      testID={testID}
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={{
+        marginLeft: 'auto',
+        minHeight: 32,
+        justifyContent: 'center',
+        paddingVertical: 2,
+        paddingHorizontal: 8,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: c.line,
+        backgroundColor: c.surface,
+      }}
+    >
+      <Txt style={{ fontSize: rem(0.75), fontWeight: '600' }}>{label}</Txt>
+    </Press>
+  );
+}
 
 function Tags({ p }: { p: PostSummary }) {
   return (
@@ -90,6 +146,8 @@ export default function Board() {
   const view = editing ? 'edit' : (detail?.post.id ?? 'list');
   const [commentText, setCommentText] = useState('');
   const [busy, setBusy] = useState(false);
+  /** 신고·차단 패널을 펼친 댓글. */
+  const [reporting, setReporting] = useState<string | null>(null);
   const apple = useAppleLogin();
 
   useEffect(() => {
@@ -127,7 +185,9 @@ export default function Board() {
       appState.boardOpenId = null;
       return toast(r.error.message);
     }
-    const d: Detail = { ...r.data, liked: !!r.data.liked }; // 옛 서버 응답엔 liked가 없다.
+    // 옛 서버 응답엔 liked·blocks가 없다.
+    const d: Detail = { ...r.data, liked: !!r.data.liked, blocks: r.data.blocks ?? [] };
+    setReporting(null);
     markNewsSeen(touchedAt(r.data.post));
     if (firstView(id)) {
       d.post = { ...d.post, viewCount: d.post.viewCount + 1 };
@@ -248,6 +308,48 @@ export default function Board() {
     const r = await api.deleteComment(cm.id);
     if (!r.ok) return toast(r.error.message);
     setDetail((d) => (d ? { ...d, comments: d.comments.filter((x) => x.id !== cm.id) } : d));
+  }
+
+  /** 차단·차단 해제 뒤 댓글과 차단 목록을 서버 기준으로 다시 받는다. */
+  async function reloadComments(postId: string) {
+    const r = await api.fetchPost(postId);
+    if (!r.ok) return;
+    const { comments, blocks = [] } = r.data;
+    setDetail((d) => (d && d.post.id === postId ? { ...d, comments, blocks } : d));
+  }
+  async function report(cm: Comment, reason: CommentReportReason) {
+    setBusy(true);
+    const r = await api.reportComment(cm.id, { reason });
+    setBusy(false);
+    if (!r.ok) return toast(r.error.message);
+    setReporting(null);
+    setDetail((d) => (d ? { ...d, comments: d.comments.filter((x) => x.id !== cm.id) } : d));
+    toast('신고했어요. 운영자가 확인할게요.');
+  }
+  async function block(cm: Comment) {
+    if (!detail) return;
+    const ok = await confirmAsync(
+      `${cm.nickname}님을 차단할까요?`,
+      '이 사람의 댓글이 더는 보이지 않아요.',
+      '차단',
+    );
+    if (!ok) return;
+    const postId = detail.post.id;
+    setBusy(true);
+    const r = await api.blockAuthor(cm.id);
+    setBusy(false);
+    if (!r.ok) return toast(r.error.message);
+    setReporting(null);
+    toast(`${r.data.nickname}님을 차단했어요`);
+    await reloadComments(postId);
+  }
+  async function unblock(b: BoardBlock) {
+    if (!detail) return;
+    const postId = detail.post.id;
+    const r = await api.unblock(b.id);
+    if (!r.ok) return toast(r.error.message);
+    toast(`${b.nickname}님 차단을 풀었어요`);
+    await reloadComments(postId);
   }
 
   const small = { fontSize: rem(0.75) } as const;
@@ -399,27 +501,72 @@ export default function Board() {
                           {dateOf(cm.createdAt)}
                         </Txt>
                         {cm.deletable ? (
-                          <Press
+                          <CommentAct
+                            label="삭제"
                             testID="comment-delete"
                             accessibilityLabel="댓글 삭제"
                             onPress={() => void removeComment(cm)}
-                            style={{
-                              marginLeft: 'auto',
-                              minHeight: 32,
-                              justifyContent: 'center',
-                              paddingVertical: 2,
-                              paddingHorizontal: 8,
-                              borderRadius: 12,
-                              borderWidth: 1,
-                              borderColor: c.line,
-                              backgroundColor: c.surface,
-                            }}
-                          >
-                            <Txt style={{ fontSize: rem(0.75), fontWeight: '600' }}>삭제</Txt>
-                          </Press>
+                          />
+                        ) : !cm.admin ? (
+                          <CommentAct
+                            label="신고"
+                            testID="comment-report"
+                            accessibilityLabel="댓글 신고·작성자 차단"
+                            onPress={() => setReporting(reporting === cm.id ? null : cm.id)}
+                          />
                         ) : null}
                       </View>
                       <Txt style={{ marginTop: 4 }}>{cm.body}</Txt>
+                      {reporting === cm.id ? (
+                        <View
+                          testID="report-panel"
+                          style={{
+                            marginTop: 8,
+                            gap: 8,
+                            paddingVertical: 10,
+                            paddingHorizontal: 12,
+                            borderRadius: 10,
+                            backgroundColor: c.surface2,
+                          }}
+                        >
+                          <Txt style={{ fontSize: rem(0.8125) }}>
+                            이 댓글을 신고하는 이유를 골라 주세요. 신고한 댓글은 내 화면에서 숨겨요.
+                          </Txt>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                            {COMMENT_REPORT_REASONS.map((reason) => (
+                              <Btn
+                                key={reason}
+                                sm
+                                testID={`report-${reason}`}
+                                disabled={busy}
+                                onPress={() => void report(cm, reason)}
+                              >
+                                {REPORT_REASON_LABEL[reason]}
+                              </Btn>
+                            ))}
+                          </View>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 8,
+                            }}
+                          >
+                            <Txt tone="muted" style={[small, { flex: 1 }]}>
+                              {`${cm.nickname}님의 댓글을 모두 숨기려면`}
+                            </Txt>
+                            <Btn
+                              sm
+                              testID="comment-block"
+                              disabled={busy}
+                              onPress={() => void block(cm)}
+                            >
+                              작성자 차단
+                            </Btn>
+                          </View>
+                        </View>
+                      ) : null}
                     </View>
                   ))
                 ) : (
@@ -427,6 +574,24 @@ export default function Board() {
                     첫 댓글을 남겨 보세요.
                   </Txt>
                 )}
+                {detail.blocks.length ? (
+                  <View testID="board-blocks" style={{ gap: 4 }}>
+                    <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                      {`차단한 사용자 ${detail.blocks.length}명`}
+                    </Txt>
+                    {detail.blocks.map((b) => (
+                      <View
+                        key={b.id}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                      >
+                        <Txt style={{ flex: 1 }}>{b.nickname}</Txt>
+                        <Btn sm testID="unblock" onPress={() => void unblock(b)}>
+                          차단 해제
+                        </Btn>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
                 {!viewer ? null : !viewer.google ? (
                   // 앱은 Apple 로그인도 있다 — iOS에서만 버튼이 함께 놓인다.
                   <View
@@ -477,7 +642,20 @@ export default function Board() {
                       <Txt bold tone="muted" style={small}>
                         {viewer.nickname}
                       </Txt>
-                      {' 이름으로 남겨요'}
+                      {
+                        ' 이름으로 남겨요. 욕설·비방·광고 같은 부적절한 댓글은 지우고 이용을 제한해요('
+                      }
+                      <Txt
+                        tone="muted"
+                        style={[small, { textDecorationLine: 'underline' }]}
+                        accessibilityRole="link"
+                        onPress={() =>
+                          void WebBrowser.openBrowserAsync(`${WEB_ORIGIN}/legal/terms/`)
+                        }
+                      >
+                        이용약관
+                      </Txt>
+                      {').'}
                     </Txt>
                     <TextBox
                       testID="comment-input"

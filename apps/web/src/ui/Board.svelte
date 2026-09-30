@@ -1,6 +1,7 @@
 <script lang="ts">
   // T-10-011 소식 화면 — 공지사항·릴리즈 노트 게시판. 읽기는 누구나, 글은 관리자만(수정·삭제 포함),
   // 댓글은 구글로 로그인하고 닉네임을 정한 사람만(T-10-028). 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
+  // 남의 댓글은 누구나 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 신고한 댓글·차단한 사람의 댓글은 서버가 빼고 준다.
   import { onMount, untrack } from 'svelte';
   import {
     ADMIN_NICKNAME,
@@ -11,7 +12,7 @@
     BOARD_KEYS,
   } from '@offside/contracts/board-limits';
   import * as api from '@offside/app-core/api/boards';
-  import type { BoardViewerResponse, Comment, Post, PostSummary } from '@offside/app-core/api/boards';
+  import type { BoardBlock, BoardViewerResponse, Comment, Post, PostSummary } from '@offside/app-core/api/boards';
   import { appState } from './state.svelte.js';
   import { openBoard } from './nav.js';
   import { startGoogleLogin } from './login.js';
@@ -21,7 +22,8 @@
   import { uaSwiped } from './history.svelte.js';
   import { markNewsSeen, touchedAt } from './news.svelte.js';
   import { loadKey, saveKey } from '@offside/game/season';
-  import { BOARD_LABEL, dateOf, parseBody, postMeta } from '@offside/app-core/boardText';
+  import { BOARD_LABEL, REPORT_REASON_LABEL, dateOf, parseBody, postMeta } from '@offside/app-core/boardText';
+  import type { CommentReportReason } from '@offside/contracts/board-limits';
   import Topbar from './Topbar.svelte';
   import NicknameForm from './NicknameForm.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
@@ -34,7 +36,9 @@
   let posts = $state<PostSummary[]>([]);
   let hasMore = $state(false);
   let status = $state<LoadStatus>('loading');
-  let detail = $state<{ post: Post; comments: Comment[]; liked: boolean } | null>(null);
+  let detail = $state<{ post: Post; comments: Comment[]; liked: boolean; blocks: BoardBlock[] } | null>(null);
+  /** 신고·차단 패널을 펼친 댓글. */
+  let reporting = $state<string | null>(null);
   let liking = $state(false);
   /** 관리자 편집기. id가 없으면 새 글. */
   let editing = $state<{ id?: string; title: string; body: string; version: string; pinned: boolean } | null>(null);
@@ -72,7 +76,8 @@
       appState.boardOpenId = null;
       return toast(r.error.message);
     }
-    detail = { ...r.data, liked: !!r.data.liked }; // 옛 서버 응답엔 liked가 없다.
+    detail = { ...r.data, liked: !!r.data.liked, blocks: r.data.blocks ?? [] }; // 옛 서버 응답엔 liked·blocks가 없다.
+    reporting = null;
     markNewsSeen(touchedAt(r.data.post));
     if (firstView(id)) {
       detail.post.viewCount++;
@@ -173,6 +178,42 @@
     if (!r.ok) return toast(r.error.message);
     if (detail) detail.comments = detail.comments.filter((x) => x.id !== c.id);
   }
+
+  /** 차단·차단 해제 뒤 댓글과 차단 목록을 서버 기준으로 다시 받는다. */
+  async function reloadComments(postId: string) {
+    const r = await api.fetchPost(postId);
+    if (!r.ok || detail?.post.id !== postId) return;
+    detail.comments = r.data.comments;
+    detail.blocks = r.data.blocks ?? [];
+  }
+  async function report(c: Comment, reason: CommentReportReason) {
+    busy = true;
+    const r = await api.reportComment(c.id, { reason });
+    busy = false;
+    if (!r.ok) return toast(r.error.message);
+    reporting = null;
+    if (detail) detail.comments = detail.comments.filter((x) => x.id !== c.id);
+    toast('신고했어요. 운영자가 확인할게요.');
+  }
+  async function block(c: Comment) {
+    if (!detail || !confirm(`${c.nickname}님을 차단할까요? 이 사람의 댓글이 더는 보이지 않아요.`)) return;
+    const postId = detail.post.id;
+    busy = true;
+    const r = await api.blockAuthor(c.id);
+    busy = false;
+    if (!r.ok) return toast(r.error.message);
+    reporting = null;
+    toast(`${r.data.nickname}님을 차단했어요`);
+    await reloadComments(postId);
+  }
+  async function unblock(b: BoardBlock) {
+    if (!detail) return;
+    const postId = detail.post.id;
+    const r = await api.unblock(b.id);
+    if (!r.ok) return toast(r.error.message);
+    toast(`${b.nickname}님 차단을 풀었어요`);
+    await reloadComments(postId);
+  }
 </script>
 
 {#snippet tags(p: PostSummary)}
@@ -257,13 +298,41 @@
                 <!-- 관리자 댓글은 닉네임 대신 운영자 배지만(예전에 누구나 '운영자'라고 쓴 댓글과 구분된다). -->
                 {#if c.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{c.nickname}</b>{/if}
                 <span class="muted fs-xs">{dateOf(c.createdAt)}</span>
-                {#if c.deletable}<button class="icon-btn board-comment-del" onclick={() => removeComment(c)}>삭제</button>{/if}
+                {#if c.deletable}<button class="icon-btn board-comment-del" onclick={() => removeComment(c)}>삭제</button>
+                {:else if !c.admin}<button class="icon-btn board-comment-del" aria-expanded={reporting === c.id} data-act="comment-report" onclick={() => (reporting = reporting === c.id ? null : c.id)}>신고</button>{/if}
               </div>
               <p>{c.body}</p>
+              {#if reporting === c.id}
+                <div class="report-panel stack" style="gap:8px" data-report-panel>
+                  <span class="fs-sm">이 댓글을 신고하는 이유를 골라 주세요. 신고한 댓글은 내 화면에서 숨겨요.</span>
+                  <div class="row" style="gap:6px;flex-wrap:wrap">
+                    {#each Object.entries(REPORT_REASON_LABEL) as [reason, label] (reason)}
+                      <button class="btn btn-sm" data-report-reason={reason} disabled={busy} onclick={() => report(c, reason as CommentReportReason)}>{label}</button>
+                    {/each}
+                  </div>
+                  <div class="row" style="gap:8px;justify-content:space-between;align-items:center">
+                    <span class="muted fs-xs">{c.nickname}님의 댓글을 모두 숨기려면</span>
+                    <button class="btn btn-sm" data-act="comment-block" disabled={busy} onclick={() => block(c)}>작성자 차단</button>
+                  </div>
+                </div>
+              {/if}
             </div>
           {:else}
             <p class="muted fs-sm" style="margin:0">첫 댓글을 남겨 보세요.</p>
           {/each}
+          {#if detail.blocks.length}
+            <details class="board-blocks" data-board-blocks>
+              <summary class="muted fs-sm">차단한 사용자 {detail.blocks.length}명</summary>
+              <ul>
+                {#each detail.blocks as b (b.id)}
+                  <li class="row" style="justify-content:space-between;align-items:center">
+                    <span>{b.nickname}</span>
+                    <button class="icon-btn" data-act="unblock" onclick={() => unblock(b)}>차단 해제</button>
+                  </li>
+                {/each}
+              </ul>
+            </details>
+          {/if}
           {#if !viewer}
             <!-- 댓글 자격을 확인하는 중 -->
           {:else if !viewer.google}
@@ -278,7 +347,7 @@
             </div>
           {:else}
             <form class="stack" style="gap:8px" onsubmit={(e) => (e.preventDefault(), void sendComment())}>
-              <span class="muted fs-xs"><b>{viewer.nickname}</b> 이름으로 남겨요</span>
+              <span class="muted fs-xs"><b>{viewer.nickname}</b> 이름으로 남겨요. 욕설·비방·광고 같은 부적절한 댓글은 지우고 이용을 제한해요(<a href="/legal/terms/">이용약관</a>).</span>
               <textarea aria-label="댓글 내용" placeholder="댓글을 남겨 주세요" rows="3" maxlength={COMMENT_BODY_MAX} required bind:value={commentText}></textarea>
               <button class="btn btn-accent" type="submit" data-act="send-comment" disabled={busy}>댓글 달기</button>
             </form>

@@ -22,6 +22,9 @@ import { storage } from '@offside/game/storage';
 export interface ApiHost {
   baseUrl: string;
   auth(): { credentials?: 'include' | 'omit' | 'same-origin'; headers?: Record<string, string> };
+  /** 세션이 없거나 무효일 때(PROFILE_REQUIRED) 새 익명 세션을 받는다. 없으면 GET /v1/profile — 웹은 이것이
+   *  새 프로필과 세션 쿠키를 만든다. 앱은 무효 토큰을 버리고 새 앱 세션을 받는다. */
+  renewSession?(): Promise<boolean>;
 }
 let host: ApiHost = { baseUrl: 'http://localhost:8787', auth: () => ({ credentials: 'include' }) };
 /** 시작할 때 한 번(첫 요청 전에) 부른다. */
@@ -156,6 +159,10 @@ export async function getProfile(): Promise<ApiResult<Profile>> {
   if (r.ok) noteSession(true);
   return r;
 }
+
+/** 세션이 없다는 응답(PROFILE_REQUIRED)을 받은 뒤 새 익명 세션을 받는다. 받았으면 true. */
+export const renewSession = (): Promise<boolean> =>
+  host.renewSession ? host.renewSession() : getProfile().then((r) => r.ok);
 
 // T-10-037: 세션 쿠키는 API 도메인의 httpOnly라 웹에서 읽을 수 없다. 프로필 조회가 한 번이라도 성공했으면
 // 표시를 남겨 두고, 표시가 없는 첫 방문자에게는 부팅 때 세션 전용 요청(→ 401)을 보내지 않는다. 어느 요청이든

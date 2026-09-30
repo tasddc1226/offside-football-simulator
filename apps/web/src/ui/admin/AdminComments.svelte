@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-10-016 댓글 관리: 전체 게시판의 최근 댓글을 보고 지운다. 도배·욕설은 작성자(프로필) 단위로 모아 보고
-  // 한 번에 지울 수 있다(감사 로그가 남는다).
+  // 한 번에 지울 수 있다(감사 로그가 남는다). 신고받은 댓글은 신고 수가 붙고, '신고된 댓글'로 모아 본다.
   import { onMount } from 'svelte';
   import * as api from '@offside/app-core/api/admin';
   import type { AdminComment } from '@offside/app-core/api/admin';
@@ -15,6 +15,7 @@
   /** 한 작성자만 볼 때 그 프로필과 닉네임. */
   let author = $state<{ id: string; nickname: string } | null>(null);
   let busy = $state(false);
+  let reported = $state(false);
 
   onMount(() => void load());
 
@@ -23,6 +24,7 @@
     const r = await api.fetchAdminComments({
       ...(more && comments.length ? { before: comments.at(-1)!.createdAt } : {}),
       ...(author ? { profile: author.id } : {}),
+      reported,
     });
     if (!r.ok) {
       if (more) toast(r.error.message);
@@ -62,7 +64,10 @@
 <div class="stack" style="gap:12px" data-admin="comments">
   <div class="row" style="justify-content:space-between">
     <h2 style="margin:0">댓글 관리</h2>
-    <button class="icon-btn" onclick={() => load()}>새로고침</button>
+    <div class="row" style="gap:6px">
+      <button class="icon-btn" aria-pressed={reported} data-act="reported-only" onclick={() => ((reported = !reported), void load())}>신고된 댓글</button>
+      <button class="icon-btn" onclick={() => load()}>새로고침</button>
+    </div>
   </div>
   {#if author}
     <div class="row author-filter" style="gap:8px">
@@ -78,6 +83,7 @@
           <div class="row" style="gap:6px">
             <b>{c.nickname}</b>
             {#if c.admin}<span class="pill good">운영자</span>{/if}
+            {#if c.reports}<span class="pill warn" data-reports>신고 {c.reports}</span>{/if}
             <span class="muted fs-xs">{short(c.profileId)} · {kst(c.createdAt)}</span>
           </div>
           <p>{c.body}</p>

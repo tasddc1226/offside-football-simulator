@@ -30,6 +30,12 @@ export async function setSessionToken(next: string | null): Promise<void> {
 export const authHeaders = (): Record<string, string> =>
   token ? { Authorization: `Bearer ${token}` } : {};
 
+/** 서버가 토큰을 받지 않으면(폐기·만료·탈퇴) 버리고 새 익명 앱 세션을 받는다. */
+export async function renewSession(): Promise<boolean> {
+  await setSessionToken(null);
+  return ensureSession();
+}
+
 let pending: Promise<boolean> | null = null;
 /** 토큰이 없으면 새 익명 앱 세션을 받는다(첫 실행·로그아웃·탈퇴 뒤). 동시에 불러도 한 번만 받는다. */
 export function ensureSession(): Promise<boolean> {

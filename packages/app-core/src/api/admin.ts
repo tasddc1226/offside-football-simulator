@@ -31,10 +31,14 @@ export const fetchAdminStats = (fresh = false) =>
   fresh
     ? apiFetch<AdminStats>('/v1/admin/stats')
     : cachedGet<AdminStats>('/v1/admin/stats', 60_000);
-export const fetchAdminComments = (q: { before?: string; profile?: string } = {}) => {
+/** reported: 신고된 댓글만. */
+export const fetchAdminComments = (
+  q: { before?: string; profile?: string; reported?: boolean } = {},
+) => {
   const p = new URLSearchParams();
   if (q.before) p.set('before', q.before);
   if (q.profile) p.set('profile', q.profile);
+  if (q.reported) p.set('reported', '1');
   const qs = p.toString();
   return apiFetch<AdminCommentList>(`/v1/admin/comments${qs ? `?${qs}` : ''}`);
 };
