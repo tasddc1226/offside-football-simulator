@@ -2,7 +2,7 @@
   // T-11-015 라운지 채팅 — 모두가 보는 실시간 공개 채팅. 누구나 읽고, 구글로 로그인하고 닉네임을 정하면 쓴다.
   // 남의 메시지는 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 여럿이 신고하면 모두의 화면에서 가려진다.
   // 운영자는 메시지를 가리고 작성자를 정지한다. 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
-  import { onMount, tick } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import { ADMIN_NICKNAME, COMMENT_REPORT_REASONS, type CommentReportReason } from '@offside/contracts/board-limits';
   import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
   import * as api from '@offside/app-core/api/chat';
@@ -30,6 +30,9 @@
   let selected = $state<string | null>(null);
   let busy = $state(false);
   let list: HTMLOListElement | undefined = $state();
+  let wrap: HTMLDivElement | undefined = $state();
+  /** 폰에서 입력창에 초점이 있다 = 키보드가 떠 있다. 머리글·안내·이전으로 바를 접어 메시지 자리를 남긴다. */
+  let typing = $state(false);
   let session: ChatSession | null = null;
 
   const mine = (m: ChatMessage) => !!view.me && m.author === view.me.author;
@@ -55,6 +58,28 @@
     connect();
     return () => session?.close();
   });
+
+  // T-11-019 iOS Safari는 키보드가 올라와도 100dvh(레이아웃 뷰포트)를 줄이지 않고 페이지를 밀어 올린다 — 대화는 위로
+  // 잘리고 입력창 아래에 빈 칸과 '이전으로' 바가 남는다. 채팅 화면을 실제로 보이는 영역(visualViewport)에 맞춰 고정한다.
+  $effect(() => {
+    const vv = window.visualViewport;
+    const el = wrap;
+    if (!vv || !el) return;
+    const sync = () => {
+      el.style.setProperty('--chat-vvh', `${vv.height}px`);
+      el.style.setProperty('--chat-vvtop', `${vv.offsetTop}px`);
+      // 키보드가 오르내리는 동안 마지막 줄을 붙잡는다. typing은 이 effect의 의존성이 아니다(리스너를 다시 걸지 않게).
+      if (untrack(() => typing)) list?.scrollTo({ top: list.scrollHeight });
+    };
+    sync();
+    vv.addEventListener('resize', sync);
+    vv.addEventListener('scroll', sync);
+    return () => {
+      vv.removeEventListener('resize', sync);
+      vv.removeEventListener('scroll', sync);
+    };
+  });
+  const coarse = () => matchMedia('(pointer: coarse)').matches;
 
   function send() {
     const body = text.trim();
@@ -88,19 +113,19 @@
   }
 </script>
 
-<div class="wrap chat-wrap">
+<div class="wrap chat-wrap" class:typing bind:this={wrap}>
   <Topbar />
   <section class="card chat-card" data-chat>
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <div>
-        <div class="eyebrow">Lounge</div>
+        <div class="eyebrow chat-fold">Lounge</div>
         <h1 style="margin-bottom:4px">라운지 채팅</h1>
       </div>
       <span class="muted fs-sm" data-chat-status>
         {#if view.status === 'open'}<span class="chat-dot" aria-hidden="true"></span>{view.online}명 접속{:else if view.status === 'retrying'}다시 연결하는 중…{:else}연결하는 중…{/if}
       </span>
     </div>
-    <p class="muted fs-xs" style="margin:0 0 8px">모두가 보는 공개 채팅이에요. 링크는 보낼 수 없고, 욕설·비방·광고·개인정보는 가리고 이용을 제한해요(<a href="/legal/terms/">이용약관</a>).</p>
+    <p class="muted fs-xs chat-fold" style="margin:0 0 8px">모두가 보는 공개 채팅이에요. 링크는 보낼 수 없고, 욕설·비방·광고·개인정보는 가리고 이용을 제한해요(<a href="/legal/terms/">이용약관</a>).</p>
 
     <ol class="chat-list" bind:this={list} data-chat-list>
       {#each view.messages as m (m.id)}
@@ -156,6 +181,8 @@
           enterkeyhint="send"
           autocomplete="off"
           bind:value={text}
+          onfocus={() => (typing = coarse())}
+          onblur={() => (typing = false)}
           data-chat-input
         />
         <button class="btn btn-primary" data-act="chat-send" disabled={!text.trim()}>보내기</button>
