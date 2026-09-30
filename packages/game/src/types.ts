@@ -279,6 +279,8 @@ export interface GameState {
   /** T-10-092 최고 OVR을 찍은 시즌 말의 능력치(구단주 팀의 자리별 실력). 옛 저장본엔 없다 — 은퇴 때 지금 능력치로 추정한다. */
   peakProfile?: PeakProfile | undefined;
   training: string;
+  /** T-11-012 자기 투자(training.ts INVESTS). 훈련과 따로 구간마다 자금을 쓴다. 기능 전 저장엔 없다 — 없으면 '투자 안 함'. */
+  invest?: string | undefined;
   retired: boolean;
   chains: ChainEvent[];
   story: Record<string, StoryState>;

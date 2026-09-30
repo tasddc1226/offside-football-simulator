@@ -327,7 +327,8 @@ p {
   width: 100%;
 }
 .btn:disabled,
-.icon-btn:disabled {
+.icon-btn:disabled,
+.opt:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }

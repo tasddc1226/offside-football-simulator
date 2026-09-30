@@ -12,6 +12,12 @@ import {
   trainingCard,
   trainingHelp,
   TRAINING_NOTE,
+  INVESTS,
+  investCard,
+  investHelp,
+  investDef,
+  INVEST_NOTE,
+  fmtMoney,
   STORIES,
   turnNo,
 } from '@offside/game/engine';
@@ -103,6 +109,106 @@ const RowMuted = ({ children }: { children: ReactNode }) => (
   </Txt>
 );
 
+interface Choice {
+  id: string;
+  label: string;
+  effect: string[];
+  tag: string;
+  selected: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}
+
+/** 훈련·자기 투자 선택지(웹 .train grid 3열) — 3개씩 끊어 줄로 그리고, 모자란 칸은 빈 칸으로 폭을 맞춘다. */
+function ChoiceGrid({ testPrefix, items }: { testPrefix: string; items: Choice[] }) {
+  const c = useColors();
+  const rows: Choice[][] = [];
+  for (let i = 0; i < items.length; i += 3) rows.push(items.slice(i, i + 3));
+  return (
+    <View style={{ gap: 8 }}>
+      {rows.map((row, ri) => (
+        <View key={ri} style={{ flexDirection: 'row', gap: 8 }}>
+          {row.map((it) => (
+            <View key={it.id} testID={`${testPrefix}-${it.id}`} style={{ flex: 1 }}>
+              <Opt
+                selected={it.selected}
+                disabled={it.disabled}
+                onPress={it.onPress}
+                style={{
+                  flex: 1,
+                  paddingVertical: it.selected ? 7.5 : 9,
+                  paddingHorizontal: it.selected ? 8.5 : 10,
+                }}
+              >
+                <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>{it.label}</Txt>
+                <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
+                  {it.effect.map((part, i) => (
+                    <Fragment key={i}>
+                      {i ? ' · ' : ''}
+                      {part}
+                    </Fragment>
+                  ))}
+                </Txt>
+                {it.tag ? (
+                  <Txt
+                    style={{
+                      fontSize: rem(0.75),
+                      lineHeight: rem(0.75) * 1.35,
+                      fontWeight: '600',
+                      color: c.accentText,
+                    }}
+                  >
+                    {it.tag}
+                  </Txt>
+                ) : null}
+              </Opt>
+            </View>
+          ))}
+          {Array.from({ length: 3 - row.length }).map((_, i) => (
+            <View key={`pad-${i}`} style={{ flex: 1 }} />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** 고른 선택지의 자세한 설명(웹 .train-help). */
+function HelpBox({
+  testID,
+  title,
+  body,
+  note,
+}: {
+  testID: string;
+  title: string;
+  body: string;
+  note: string;
+}) {
+  const c = useColors();
+  return (
+    <View
+      testID={testID}
+      accessibilityLiveRegion="polite"
+      style={{
+        gap: 4,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        backgroundColor: c.surface2,
+      }}
+    >
+      <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5, fontWeight: '700' }}>
+        {title}
+      </Txt>
+      <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}>{body}</Txt>
+      <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+        {note}
+      </Txt>
+    </View>
+  );
+}
+
 export function SeasonTab({ s }: { s: GameState }) {
   const c = useColors();
   const { report } = useSnapshot(appState);
@@ -117,9 +223,15 @@ export function SeasonTab({ s }: { s: GameState }) {
   const activeStories = Object.entries(s.story || {}).filter(([, v]) => !v.done);
   const t = turnNo(s);
   const picked = TRAININGS.find((x) => x.id === s.training);
+  const invest = investDef(s);
 
   function setTraining(id: string) {
     appState.G!.training = id;
+    save();
+  }
+
+  function setInvest(id: string) {
+    appState.G!.invest = id;
     save();
   }
 
@@ -131,10 +243,6 @@ export function SeasonTab({ s }: { s: GameState }) {
     if (!ch) return '';
     return ch.at <= t ? '곧 이어짐' : `약 ${ch.at - t}구간 후`;
   }
-
-  // 훈련 선택지는 웹 grid 3열 — 3개씩 끊어 줄로 그린다.
-  const trainRows: (typeof TRAININGS)[] = [];
-  for (let i = 0; i < TRAININGS.length; i += 3) trainRows.push(TRAININGS.slice(i, i + 3));
 
   return (
     <>
@@ -254,88 +362,71 @@ export function SeasonTab({ s }: { s: GameState }) {
             이번 구간 훈련 방향
           </Txt>
         </View>
-        <View style={{ gap: 8 }}>
-          {trainRows.map((row, ri) => (
-            <View key={ri} style={{ flexDirection: 'row', gap: 8 }}>
-              {row.map((tr) => {
-                const cd = trainingCard(s, tr);
-                const on = s.training === tr.id;
-                return (
-                  <View key={tr.id} testID={`train-${tr.id}`} style={{ flex: 1 }}>
-                    <Opt
-                      selected={on}
-                      onPress={() => setTraining(tr.id)}
-                      style={{
-                        flex: 1,
-                        paddingVertical: on ? 7.5 : 9,
-                        paddingHorizontal: on ? 8.5 : 10,
-                      }}
-                    >
-                      <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>
-                        {trainingLabel(s, tr)}
-                      </Txt>
-                      <Txt
-                        tone="muted"
-                        style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}
-                      >
-                        {cd.effect.map((part, i) => (
-                          <Fragment key={i}>
-                            {i ? ' · ' : ''}
-                            {part}
-                          </Fragment>
-                        ))}
-                      </Txt>
-                      {cd.tag ? (
-                        <Txt
-                          style={{
-                            fontSize: rem(0.75),
-                            lineHeight: rem(0.75) * 1.35,
-                            fontWeight: '600',
-                            color: c.accentText,
-                          }}
-                        >
-                          {cd.tag}
-                        </Txt>
-                      ) : null}
-                    </Opt>
-                  </View>
-                );
-              })}
-              {/* 마지막 줄이 모자라면 칸 폭을 맞추려 빈 칸으로 채운다. */}
-              {Array.from({ length: 3 - row.length }).map((_, i) => (
-                <View key={`pad-${i}`} style={{ flex: 1 }} />
-              ))}
-            </View>
-          ))}
-        </View>
+        <ChoiceGrid
+          testPrefix="train"
+          items={TRAININGS.map((tr) => {
+            const cd = trainingCard(s, tr);
+            return {
+              id: tr.id,
+              label: trainingLabel(s, tr),
+              effect: cd.effect,
+              tag: cd.tag,
+              selected: s.training === tr.id,
+              onPress: () => setTraining(tr.id),
+            };
+          })}
+        />
         {picked ? (
-          <View
+          <HelpBox
             testID="train-help"
-            accessibilityLiveRegion="polite"
-            style={{
-              gap: 4,
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-              borderRadius: 10,
-              backgroundColor: c.surface2,
-            }}
-          >
-            <Txt
-              style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5, fontWeight: '700' }}
-            >
-              {trainingLabel(s, picked)}
-            </Txt>
-            <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}>
-              {trainingHelp(s, picked)}
-            </Txt>
-            <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-              {TRAINING_NOTE}
-            </Txt>
-          </View>
+            title={trainingLabel(s, picked)}
+            body={trainingHelp(s, picked)}
+            note={TRAINING_NOTE}
+          />
         ) : null}
         <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
           진행 버튼은 화면 아래 고정 액션바에 있습니다.
         </Txt>
+      </Card>
+
+      <Card gap={10}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Txt v="eyebrow">Invest</Txt>
+            <Txt v="h2" accessibilityRole="header">
+              자기 투자
+            </Txt>
+          </View>
+          <Pill>{`보유 ${fmtMoney(s.money)}원`}</Pill>
+        </View>
+        <ChoiceGrid
+          testPrefix="invest"
+          items={INVESTS.map((d) => {
+            const cd = investCard(s, d);
+            return {
+              id: d.id,
+              label: d.label,
+              effect: cd.effect,
+              tag: cd.tag,
+              selected: invest.id === d.id,
+              disabled: !cd.affordable,
+              onPress: () => setInvest(d.id),
+            };
+          })}
+        />
+        <HelpBox
+          testID="invest-help"
+          title={invest.label}
+          body={investHelp(s, invest)}
+          note={INVEST_NOTE}
+        />
       </Card>
 
       <Card gap={0}>

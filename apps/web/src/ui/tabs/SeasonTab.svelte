@@ -1,7 +1,7 @@
 <script lang="ts">
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
   import { PHASES, LAST_PHASE } from '@offside/game/data';
-  import { teamRank, roundRange, TRAININGS, trainingLabel, trainingCard, trainingHelp, TRAINING_NOTE, STORIES, turnNo } from '@offside/game/engine';
+  import { teamRank, roundRange, TRAININGS, trainingLabel, trainingCard, trainingHelp, TRAINING_NOTE, INVESTS, INVEST_NOTE, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
@@ -22,6 +22,7 @@
   const activeStories = $derived(Object.entries(s.story || {}).filter(([, v]) => !v.done));
   const t = $derived(turnNo(s));
   const picked = $derived(TRAININGS.find((x) => x.id === s.training));
+  const invest = $derived(investDef(s));
 
   function meterCls(v: number, badAt: number, warnAt: number): string {
     return v < badAt ? 'bad' : v < warnAt ? 'warn' : '';
@@ -29,6 +30,11 @@
 
   function setTraining(id: string) {
     s.training = id;
+    save();
+  }
+
+  function setInvest(id: string) {
+    s.invest = id;
     save();
   }
 
@@ -112,24 +118,50 @@
   </section>
 {/if}
 
+<!-- 훈련·자기 투자 카드 공통 내용 -->
+{#snippet optBody(label: string, c: { effect: string[]; tag: string })}
+  <b>{label}</b><small>{#each c.effect as part, i (i)}{i ? ' · ' : ''}<span class="nowrap">{part}</span>{/each}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
+{/snippet}
+{#snippet helpBody(title: string, body: string, note: string)}
+  <b>{title}</b>
+  <p>{body}</p>
+  <p class="muted fs-xs">{note}</p>
+{/snippet}
+
 <section class="card stack">
   <div><div class="eyebrow">Training</div><h2>이번 구간 훈련 방향</h2></div>
   <div class="train">
     {#each TRAININGS as tr (tr.id)}
       {@const c = trainingCard(s, tr)}
       <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={() => setTraining(tr.id)}>
-        <b>{trainingLabel(s, tr)}</b><small>{#each c.effect as part, i (i)}{i ? ' · ' : ''}<span class="nowrap">{part}</span>{/each}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
+        {@render optBody(trainingLabel(s, tr), c)}
       </button>
     {/each}
   </div>
   {#if picked}
     <div class="train-help" data-train-help aria-live="polite">
-      <b>{trainingLabel(s, picked)}</b>
-      <p>{trainingHelp(s, picked)}</p>
-      <p class="muted fs-xs">{TRAINING_NOTE}</p>
+      {@render helpBody(trainingLabel(s, picked), trainingHelp(s, picked), TRAINING_NOTE)}
     </div>
   {/if}
   <p class="muted fs-xs">진행 버튼은 화면 아래 고정 액션바에 있습니다.</p>
+</section>
+
+<section class="card stack">
+  <div class="row" style="justify-content:space-between">
+    <div><div class="eyebrow">Invest</div><h2>자기 투자</h2></div>
+    <span class="pill" data-invest-money>보유 {fmtMoney(s.money)}원</span>
+  </div>
+  <div class="train">
+    {#each INVESTS as d (d.id)}
+      {@const c = investCard(s, d)}
+      <button class="opt" data-invest={d.id} aria-pressed={invest.id === d.id} disabled={!c.affordable} onclick={() => setInvest(d.id)}>
+        {@render optBody(d.label, c)}
+      </button>
+    {/each}
+  </div>
+  <div class="train-help" data-invest-help aria-live="polite">
+    {@render helpBody(invest.label, investHelp(s, invest), INVEST_NOTE)}
+  </div>
 </section>
 
 <section class="card">

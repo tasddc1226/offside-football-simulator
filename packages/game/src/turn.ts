@@ -3,6 +3,7 @@
 // 호출 순서가 곧 RNG 소비 순서다 — 순서를 바꾸면 같은 시드의 결과가 바뀐다(golden.test.ts가 잡는다).
 import { PHASES } from './data.js';
 import {
+  applyInvest,
   applyTraining,
   log,
   rollEvent,
@@ -35,6 +36,7 @@ export interface PhaseResult {
 
 export function playPhase(s: GameState): PhaseResult {
   applyTraining(s);
+  applyInvest(s);
   const condBeforeMatches = s.cond;
   const block = s.phase > 0 ? simBlock(s) : null;
   const comp = compsPhase(s);

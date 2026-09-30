@@ -116,8 +116,11 @@ export function trainingHelp(s: GameState, t: TrainingDef): string {
 /** 모든 훈련 공통 — 성장 폭을 정하는 요소(값은 숨긴다). */
 export const TRAINING_NOTE =
   '성장 폭은 나이가 어릴수록, 잠재력까지 남은 여유가 클수록, 사기가 높을수록 커집니다.';
+/** 연봉 비례 비용(만 원, 10 단위) — 최소 금액이 있어 아마추어·저연봉도 0이 아니다. 개인 코치·자기 투자가 같이 쓴다. */
+const salaryCost = (s: GameState, rate: number, min: number, mult = 1) =>
+  Math.round((Math.max(min, (s.contract ? s.contract.salary : 0) * rate) * mult) / 10) * 10;
 export function coachCost(s: GameState): number {
-  return Math.max(200, Math.round(((s.contract ? s.contract.salary : 0) * 0.06) / 10) * 10);
+  return salaryCost(s, 0.06, 200);
 }
 
 const TRAIN_X = 5 / 3;
@@ -137,6 +140,13 @@ export function balanceFactor(s: GameState, k: AttrKey): number {
     leadOf(s.pos, s.attrs, k) - Math.max(0, leadOf(s.pos, baseline(s.pos, focusOf(s)), k));
   return clamp(1 - (excess - BALANCE_KNEE) / BALANCE_RANGE, BALANCE_MIN, 1);
 }
+/** 능력치 훈련 한 번의 주 능력치 성장 — 자기 투자 특훈도 같은 공식에 배율만 곱한다. */
+const attrGain = (s: GameState, k: AttrKey, g: number) =>
+  (1.6 + rnd() * 2.6) *
+  g *
+  TRAIN_X *
+  (focusOf(s).includes(k) ? FOCUS_GROWTH : OFF_FOCUS_GROWTH) *
+  balanceFactor(s, k);
 export function applyTraining(s: GameState) {
   const g = growthFactor(s);
   const t = s.training;
@@ -165,16 +175,108 @@ export function applyTraining(s: GameState) {
     addStat(s, 'cond', COACH_COND);
     return;
   }
-  addAttr(
-    s,
-    t as AttrKey,
-    (1.6 + rnd() * 2.6) *
-      g *
-      TRAIN_X *
-      (focusOf(s).includes(t as AttrKey) ? FOCUS_GROWTH : OFF_FOCUS_GROWTH) *
-      balanceFactor(s, t as AttrKey),
-  );
+  addAttr(s, t as AttrKey, attrGain(s, t as AttrKey, g));
   if (t === 'phy') addAttr(s, 'pac', rnd() * g * TRAIN_X);
   if (chance(0.5)) addAttr(s, pick(ATTR_KEYS), rnd() * g * TRAIN_X);
   addStat(s, 'cond', trainCond(t as AttrKey));
+}
+
+// ───────── T-11-012 자기 투자 ─────────
+// 훈련과 따로 구간마다 자금을 한 가지에 쓴다. 비용은 연봉 비례(최소 금액이 있어 아마추어·저연봉도 의미가 있다)이고,
+// 특훈 성장은 능력치 훈련과 같은 공식(나이·잠재력까지 남은 여유·사기·치우침)을 타서 돈으로 잠재력을 넘지 못한다.
+// 고르지 않은 커리어(invest 없음)는 RNG를 한 번도 쓰지 않는다 — 기존 시드 결과(golden.test.ts)가 그대로다.
+export type InvestId = 'none' | 'weak' | 'best' | 'medical' | 'mental';
+export interface InvestDef {
+  id: InvestId;
+  label: string;
+  /** 비용 = max(min, 연봉 × rate) × 밸런스 배율(만 원). */
+  rate: number;
+  min: number;
+}
+export const INVESTS: InvestDef[] = [
+  { id: 'none', label: '투자 안 함', rate: 0, min: 0 },
+  { id: 'weak', label: '약점 보강 특훈', rate: 0.1, min: 300 },
+  { id: 'best', label: '강점 특화 특훈', rate: 0.1, min: 300 },
+  { id: 'medical', label: '메디컬 케어', rate: 0.06, min: 200 },
+  { id: 'mental', label: '멘탈 코칭', rate: 0.04, min: 150 },
+];
+export const INVEST_NOTE =
+  '훈련과 따로, 구간마다 한 번 적용됩니다. 고른 투자는 바꾸기 전까지 이어져요.';
+const SPECIAL_COND = -3;
+const MEDICAL = { cond: 15, injury: 3 };
+const MENTAL_MORALE = 10;
+
+/** 고른 투자(없거나 모르는 값이면 '투자 안 함'). */
+export const investDef = (s: GameState): InvestDef =>
+  INVESTS.find((d) => d.id === s.invest) ?? INVESTS[0]!;
+export const investCost = (s: GameState, d: InvestDef): number =>
+  salaryCost(s, d.rate, d.min, BAL.investCost);
+/** 특훈이 올릴 능력치 — 지금 포지션의 핵심 능력치(가중치 0.1 이상) 중 가장 낮은 것 / 가장 높은 것. */
+export function investTarget(s: GameState, id: 'weak' | 'best'): AttrKey {
+  const w = wOf(s);
+  const core = ATTR_KEYS.filter((k) => (w[k] ?? 0) >= 0.1);
+  return core.reduce((a, b) =>
+    (id === 'weak' ? s.attrs[b] < s.attrs[a] : s.attrs[b] >= s.attrs[a]) ? b : a,
+  );
+}
+function investEffect(s: GameState, id: InvestId): string[] {
+  if (id === 'none') return ['자금을 아낀다'];
+  if (id === 'medical') return [`컨디션 +${MEDICAL.cond}`, `부상 결장 −${MEDICAL.injury}경기`];
+  if (id === 'mental') return [`사기 +${MENTAL_MORALE}`];
+  return [`${labelOf(s, investTarget(s, id))} ▲`, `컨디션 ${signed(SPECIAL_COND)}`];
+}
+/** 카드 한 장: 효과(항목별)와 비용 태그. 자금이 모자라면 affordable=false(화면이 버튼을 막는다)·태그 '자금 부족'. */
+export function investCard(
+  s: GameState,
+  d: InvestDef,
+): { effect: string[]; tag: string; affordable: boolean } {
+  const cost = investCost(s, d);
+  const affordable = s.money >= cost;
+  const tag = !cost ? '' : affordable ? `비용 ${fmtMoney(cost)}` : '자금 부족';
+  return { effect: investEffect(s, d.id), tag, affordable };
+}
+export function investHelp(s: GameState, d: InvestDef): string {
+  if (d.id === 'none') return '이번 구간에는 자금을 쓰지 않습니다.';
+  if (d.id === 'medical')
+    return `전담 메디컬 팀이 몸을 관리합니다. 컨디션이 오르고, 부상 중이면 복귀가 ${MEDICAL.injury}경기 빨라져요.`;
+  if (d.id === 'mental')
+    return '스포츠 심리 전문가와 상담합니다. 사기가 높을수록 경기력과 성장이 좋아져요.';
+  const k = investTarget(s, d.id);
+  const name = labelOf(s, k);
+  const { bf, lopsided } = attrInfo(s, k);
+  return [
+    d.id === 'weak'
+      ? `가장 낮은 핵심 능력치(${name})를 따로 끌어올립니다.`
+      : `가장 높은 핵심 능력치(${name})를 더 날카롭게 다듬습니다.`,
+    `훈련과 별개로 오르며, 오르는 폭은 능력치 훈련 한 번의 ${pct(BAL.investGain)}% 정도예요.`,
+    lopsided ? `다른 능력치보다 너무 앞서 있어 성장이 ${pct(1 - bf)}% 줄었어요.` : '',
+    '자금이 모자라면 건너뛰고 투자 안 함으로 바뀝니다.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+/** 훈련 다음, 경기 전에 적용한다(turn.ts playPhase). */
+export function applyInvest(s: GameState) {
+  const d = investDef(s);
+  const id = d.id;
+  if (id === 'none') return;
+  const cost = investCost(s, d);
+  if (s.money < cost) {
+    log(s, `자금이 부족해 이번 구간 자기 투자(${d.label})를 하지 못했습니다. 투자를 멈춥니다.`);
+    s.invest = 'none';
+    return;
+  }
+  addStat(s, 'money', -cost);
+  if (id === 'medical') {
+    addStat(s, 'cond', MEDICAL.cond);
+    if (s.injury > 0) s.injury = Math.max(0, s.injury - MEDICAL.injury);
+    return;
+  }
+  if (id === 'mental') {
+    addStat(s, 'morale', MENTAL_MORALE);
+    return;
+  }
+  const k = investTarget(s, id);
+  addAttr(s, k, attrGain(s, k, growthFactor(s)) * BAL.investGain);
+  addStat(s, 'cond', SPECIAL_COND);
 }
