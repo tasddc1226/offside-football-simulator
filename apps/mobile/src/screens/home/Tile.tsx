@@ -11,6 +11,7 @@ export function Tile({
   subNum,
   onPress,
   testID,
+  wide,
 }: {
   eyebrow: string;
   title: string;
@@ -19,6 +20,8 @@ export function Tile({
   subNum?: boolean;
   onPress: () => void;
   testID: string;
+  /** 한 줄을 혼자 다 쓴다(웹 .tile-wide). 기본은 옆 타일과 반씩 나눈다. */
+  wide?: boolean;
 }) {
   const c = useColors();
   const shadow = useShadow();
@@ -28,7 +31,15 @@ export function Tile({
       testID={testID}
       accessibilityLabel={`${eyebrow}, ${title}, ${sub}`}
       onPress={onPress}
-      style={[{ flex: 1, backgroundColor: c.surface, borderRadius: 14, padding: 14 }, shadow]}
+      style={[
+        {
+          ...(wide ? null : { flex: 1 }),
+          backgroundColor: c.surface,
+          borderRadius: 14,
+          padding: 14,
+        },
+        shadow,
+      ]}
     >
       <View style={{ gap: 2 }}>
         <Txt v="eyebrow">{eyebrow}</Txt>
