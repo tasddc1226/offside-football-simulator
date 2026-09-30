@@ -41,8 +41,22 @@ const CAMPAIGNS: Record<string, readonly string[]> = {
     'dreamboat',
   ],
   utm_medium: ['social', 'community'],
-  utm_campaign: ['launch', 'retirement_share'],
-  utm_content: ['career', 'retirement', 'feedback', 'update', 'day5'],
+  utm_campaign: ['launch', 'retirement_share', 'season1_launch'],
+  utm_content: [
+    'career',
+    'retirement',
+    'feedback',
+    'update',
+    'day5',
+    's1_story_01',
+    's1_story_02',
+    's1_choice_01',
+    's1_choice_02',
+    's1_update_01',
+    's1_update_02',
+    's1_bio',
+    's1_ig_story_01',
+  ],
 };
 export function campaignQuery(href: string): string {
   const safe = new URLSearchParams();
