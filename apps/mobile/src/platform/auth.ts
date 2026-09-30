@@ -17,7 +17,11 @@ import { openBoard } from '../game/nav';
 import { ensureSession, setSessionToken } from './session';
 
 /** 로그인을 마치고 돌아가 다시 열 곳. 소식 글(댓글) · 내 은퇴 선수(공유). */
-export type LoginReturn = { board: BoardKey; postId: string | null } | { career: string };
+export type LoginReturn =
+  | { board: BoardKey; postId: string | null }
+  | { career: string }
+  /** T-11-015 채팅 화면에서 로그인했으면 채팅으로 돌아온다. */
+  | { chat: true };
 
 /** API가 구글 로그인을 마치고 돌려보내는 주소(contracts APP_AUTH_REDIRECT_URL). */
 const REDIRECT_URL = 'offside://auth';
@@ -129,6 +133,7 @@ async function finishLogin(r: AuthResult, back: LoginReturn | null, via: string)
   void flushOutbox();
   if (back) {
     if ('board' in back) return openBoard(back.board, back.postId);
+    if ('chat' in back) return void (appState.screen = 'chat');
     const h = loadHOF().find((x) => x.id === back.career);
     if (h) return openLocalLegend(h);
   }

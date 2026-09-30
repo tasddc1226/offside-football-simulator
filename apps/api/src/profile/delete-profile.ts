@@ -4,6 +4,7 @@ import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { runBatch } from '../db/repos/batch.js';
 import { deleteBoardActivityStatements } from '../db/repos/boards.js';
+import { deleteChatActivityStatements } from '../db/repos/chat.js';
 import { deleteNameReportsStatement } from '../db/repos/nameReports.js';
 import { deleteCareersStatements } from '../db/repos/careers.js';
 import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
@@ -119,6 +120,7 @@ export async function executeProfileDeletion(
     // T-10-092 구단주 팀(팀 경기는 팀 FK CASCADE로 함께 지워진다).
     ...deleteOwnerTeamsStatements(db, input.profileId),
     ...deleteBoardActivityStatements(db, input.profileId),
+    ...deleteChatActivityStatements(db, input.profileId),
     db.delete(idempotency).where(eq(idempotency.ownerProfileId, input.profileId)),
     db
       .update(sessions)

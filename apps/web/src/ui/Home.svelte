@@ -14,7 +14,7 @@
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { withRo } from '@offside/app-core/format';
-  import { DC_GALLERY_URL } from '@offside/app-core/links';
+  import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL } from '@offside/app-core/links';
 
   const live = $derived(!!appState.G && !appState.G.retired);
 </script>
@@ -68,13 +68,21 @@
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
       <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted fs-sm">선택지마다 성공 확률 공개 · 확률 도감 보기 →</span>
     </button>
-    <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일(두 칸 폭). -->
-    <a class="tile tile-link tile-wide" data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
-      <span class="eyebrow">Community</span><b>오프사이드 마이너 갤러리 ↗</b><span class="muted fs-sm">디시인사이드에서 커리어 자랑 · 공략 · 건의 나누기</span>
+    <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일, T-11-016 옆에 안드로이드 테스터 모집(구글 폼). -->
+    <a class="tile tile-link" data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
+      <span class="eyebrow">Community</span><b>마이너 갤러리 ↗</b><span class="muted fs-sm">디시인사이드에서 커리어 자랑 · 공략 · 건의</span>
+    </a>
+    <a class="tile tile-link" data-act="android-tester" href={ANDROID_TESTER_FORM_URL} target="_blank" rel="noopener noreferrer">
+      <span class="eyebrow">Android</span><b>테스터 모집 ↗</b><span class="muted fs-sm">안드로이드 앱 비공개 테스트 신청하기</span>
     </a>
   </div>
   <HallOfFame />
   <HomeNews board="notice" eyebrow="Notice" title="공지사항" />
   <HomeNews board="release" eyebrow="Release notes" title="릴리즈 노트" />
   <SiteFooter />
+  <!-- T-11-015 라운지 채팅으로 가는 떠 있는 버튼(하단 메뉴 위). -->
+  <button class="chat-fab" data-act="chat" onclick={() => go('chat')}>
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z" fill="currentColor"/></svg>
+    채팅
+  </button>
 </div>

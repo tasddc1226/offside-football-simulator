@@ -26,6 +26,7 @@ import Hof from '../screens/hof/Hof';
 import Firsts from '../screens/hof/Firsts';
 import Dex from '../screens/hof/Dex';
 import Board from '../screens/board/Board';
+import Chat from '../screens/chat/Chat';
 import Owner from '../screens/owner/Owner';
 import Team from '../screens/owner/Team';
 import Settings from '../screens/settings/Settings';
@@ -42,6 +43,7 @@ const SCREENS: Record<Screen, ComponentType> = {
   firsts: Firsts,
   dex: Dex,
   board: Board,
+  chat: Chat,
   owner: Owner,
   team: Team,
   settings: Settings,

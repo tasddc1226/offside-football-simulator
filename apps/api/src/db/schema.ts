@@ -583,3 +583,39 @@ export const teamMatches = sqliteTable(
     index('team_matches_away_created_idx').on(table.awayTeamId, table.createdAt),
   ],
 );
+
+/** T-11-015 채팅 신고. 프로필 하나가 메시지 하나에 한 번. 메시지는 채팅방(Durable Object)에 7일만 남으므로 신고할
+ *  때 작성자·닉네임·본문 사본을 함께 적어 둔다(운영자 확인용, 90일 뒤 cron이 지운다). 운영자가 처리하면
+ *  resolved_at을 채운다. */
+export const chatReports = sqliteTable(
+  'chat_reports',
+  {
+    messageId: text('message_id').notNull(),
+    profileId: text('profile_id').notNull(),
+    reason: text('reason', { enum: COMMENT_REPORT_REASONS }).notNull(),
+    authorProfileId: text('author_profile_id').notNull(),
+    nickname: text('nickname').notNull(),
+    body: text('body').notNull(),
+    createdAt: text('created_at').notNull(),
+    /** 운영자가 처리(가리기·기각·정지)한 시각. 처리 전엔 null. */
+    resolvedAt: text('resolved_at'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.messageId, table.profileId] }),
+    index('chat_reports_created_idx').on(table.createdAt),
+    index('chat_reports_open_idx').on(table.resolvedAt, table.createdAt),
+    index('chat_reports_profile_idx').on(table.profileId),
+    index('chat_reports_author_idx').on(table.authorProfileId),
+  ],
+);
+
+/** T-11-015 채팅 정지. 프로필당 한 줄, until까지 입장권(쓰기)을 주지 않는다. 지난 줄은 cron이 지운다. */
+export const chatMutes = sqliteTable(
+  'chat_mutes',
+  {
+    profileId: text('profile_id').primaryKey(),
+    until: text('until').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('chat_mutes_until_idx').on(table.until)],
+);

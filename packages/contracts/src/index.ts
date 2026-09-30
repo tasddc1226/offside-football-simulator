@@ -155,6 +155,7 @@ export {
 export { IsoUtcSchema, Hex64Schema, Uint32Schema, ClientIdSchema } from './primitives.js';
 
 export * from './boards.js';
+export * from './chat.js';
 export * from './balance.js';
 export * from './admin.js';
 export * from './live.js';
