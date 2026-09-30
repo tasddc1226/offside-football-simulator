@@ -35,9 +35,9 @@ describe('T-11-015 ChatRoom', () => {
   it('입장권이 있으면 쓰고, 없으면 읽기만 한다. 한 줄은 모두에게 간다(프로필 id 없이)', async () => {
     const { room, join } = fakeRoom();
     const reader = await join();
-    expect(last(reader)).toEqual({ t: 'hello', messages: [], online: 1, write: false });
+    expect(reader.sent[0]).toEqual({ t: 'hello', messages: [], online: 1, write: false });
     const alice = await join(room.issueTicket(ALICE));
-    expect(last(alice)).toMatchObject({ t: 'hello', online: 2, write: true });
+    expect(alice.sent[0]).toMatchObject({ t: 'hello', online: 2, write: true });
 
     say(alice, room, '안녕하세요');
     const m = last(reader);
@@ -52,15 +52,25 @@ describe('T-11-015 ChatRoom', () => {
     expect(last(reader)).toEqual({ t: 'err', code: 'readonly' });
   });
 
+  it('누가 들어오거나 나가면 접속자 수를 모두에게 알린다', async () => {
+    const { room, join, sockets } = fakeRoom();
+    const a = await join();
+    const b = await join();
+    expect(last(a)).toEqual({ t: 'online', n: 2 });
+    room.webSocketClose(b as unknown as WebSocket, 1000);
+    sockets.splice(sockets.indexOf(b), 1);
+    expect(last(a)).toEqual({ t: 'online', n: 1 });
+  });
+
   it('입장권은 한 번만, 수명 안에서만 쓴다', async () => {
     vi.useFakeTimers({ now: 1_000_000 });
     const { room, join } = fakeRoom();
     const ticket = room.issueTicket(ALICE);
-    expect(last(await join(ticket))).toMatchObject({ write: true });
-    expect(last(await join(ticket))).toMatchObject({ write: false });
+    expect((await join(ticket)).sent[0]).toMatchObject({ write: true });
+    expect((await join(ticket)).sent[0]).toMatchObject({ write: false });
     const stale = room.issueTicket(ALICE);
     vi.advanceTimersByTime(CHAT_TICKET_MS + 1);
-    expect(last(await join(stale))).toMatchObject({ write: false });
+    expect((await join(stale)).sent[0]).toMatchObject({ write: false });
   });
 
   it('도배는 보낸 사람에게만 거절을 알린다', async () => {
@@ -83,13 +93,13 @@ describe('T-11-015 ChatRoom', () => {
     expect(last(admin)).toEqual({ t: 'hide', id: hidden });
     expect(room.hide(hidden)).toBe(false);
 
-    const hello = last(await join()) as Extract<ChatServerEvent, { t: 'hello' }>;
+    const hello = (await join()).sent[0] as Extract<ChatServerEvent, { t: 'hello' }>;
     expect(hello.messages).toHaveLength(CHAT_HISTORY);
     expect(hello.messages.at(-1)!.body).toBe(`m${CHAT_HISTORY}`);
 
     vi.advanceTimersByTime(CHAT_KEEP_MS + 1);
     say(admin, room, '새 줄');
-    const after = last(await join()) as Extract<ChatServerEvent, { t: 'hello' }>;
+    const after = (await join()).sent[0] as Extract<ChatServerEvent, { t: 'hello' }>;
     expect(after.messages.map((m) => m.body)).toEqual(['새 줄']);
   });
 

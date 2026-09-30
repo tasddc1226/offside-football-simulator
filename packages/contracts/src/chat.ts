@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { COMMENT_REPORT_REASONS } from './board-limits.js';
 import { CHAT_DENY_REASONS, CHAT_MUTE_DAYS } from './chat-limits.js';
 import { IsoUtcSchema } from './primitives.js';
 
@@ -38,3 +39,26 @@ export const ChatBlockResponseSchema = z.strictObject({
   author: z.string(),
 });
 export type ChatBlockResponse = z.infer<typeof ChatBlockResponseSchema>;
+
+/** T-11-015 운영자 채팅 신고 목록 — 처리하지 않은 신고를 메시지마다 모은다. 본문은 신고할 때 남긴 사본이다. */
+export const AdminChatReportSchema = z.object({
+  messageId: z.string(),
+  nickname: z.string(),
+  body: z.string(),
+  reasons: z.array(z.enum(COMMENT_REPORT_REASONS)),
+  reports: z.number().int().min(0),
+  lastReportedAt: IsoUtcSchema,
+});
+export type AdminChatReport = z.infer<typeof AdminChatReportSchema>;
+export const AdminChatReportListSchema = z.object({ items: z.array(AdminChatReportSchema) });
+export type AdminChatReportList = z.infer<typeof AdminChatReportListSchema>;
+/** hide: 메시지를 가린다. dismiss: 그대로 두고 닫는다. mute: 작성자를 days일 정지하고 메시지도 가린다. */
+export const AdminChatReportResolveSchema = z.discriminatedUnion('action', [
+  z.strictObject({ messageId: ChatMessageIdSchema, action: z.enum(['hide', 'dismiss']) }),
+  z.strictObject({
+    messageId: ChatMessageIdSchema,
+    action: z.literal('mute'),
+    days: z.literal(CHAT_MUTE_DAYS),
+  }),
+]);
+export type AdminChatReportResolve = z.infer<typeof AdminChatReportResolveSchema>;

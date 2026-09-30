@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "93c61fec-bd4a-455a-ab7d-411b5ee0b7bf",
+  "id": "bd98e135-0ddf-481b-8c98-8d1808c1fd18",
   "prevId": "7a711a6a-b6d0-4d8c-873e-4fb144982b66",
   "tables": {
     "app_auth_tickets": {
@@ -1387,12 +1387,27 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
         "chat_reports_created_idx": {
           "name": "chat_reports_created_idx",
           "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "chat_reports_open_idx": {
+          "name": "chat_reports_open_idx",
+          "columns": [
+            "resolved_at",
             "created_at"
           ],
           "isUnique": false

@@ -40,6 +40,8 @@ export type ChatServerEvent =
   | { t: 'hello'; messages: ChatMessage[]; online: number; write: boolean }
   | { t: 'msg'; m: ChatMessage }
   | { t: 'hide'; id: string }
+  /** 접속자 수가 바뀌었다(누가 들어오거나 나갔다). */
+  | { t: 'online'; n: number }
   | { t: 'err'; code: ChatRejectCode };
 
 /** 클라이언트 → 서버(핑은 LIVE_PING 문자열 그대로). */

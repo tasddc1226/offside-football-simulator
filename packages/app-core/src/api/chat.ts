@@ -2,6 +2,9 @@
 // 끊기면 2초부터 두 배씩 최대 1분까지 기다렸다가 새 입장권으로 다시 붙는다(입장권은 한 번만 쓴다).
 // 타입은 type-only import라 번들에 zod가 들어가지 않는다.
 import type {
+  AdminChatReport,
+  AdminChatReportList,
+  AdminChatReportResolve,
   ChatBlockResponse,
   ChatMuteInput,
   ChatTicketResponse,
@@ -16,7 +19,7 @@ import {
 import { LIVE_PING, LIVE_PING_SEC } from '@offside/contracts/polling';
 import { apiBaseUrl, apiFetch, withProfile } from './client.js';
 
-export type { ChatMessage, ChatRejectCode, ChatTicketResponse };
+export type { AdminChatReport, ChatMessage, ChatRejectCode, ChatTicketResponse };
 
 export const chatTicket = () =>
   withProfile(() =>
@@ -40,6 +43,15 @@ export const adminHideChat = (id: string) =>
   apiFetch<undefined>(`/v1/admin/chat/messages/${id}/hide`, { method: 'POST', keepCache: true });
 export const adminMuteChat = (id: string, input: ChatMuteInput) =>
   apiFetch<undefined>(`/v1/admin/chat/messages/${id}/mute`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+    keepCache: true,
+  });
+
+/** 처리하지 않은 채팅 신고(운영자). */
+export const fetchChatReports = () => apiFetch<AdminChatReportList>('/v1/admin/chat/reports');
+export const resolveChatReport = (input: AdminChatReportResolve) =>
+  apiFetch<undefined>('/v1/admin/chat/reports/resolve', {
     method: 'POST',
     body: JSON.stringify(input),
     keepCache: true,
@@ -84,6 +96,8 @@ export function applyChat(
       };
     case 'msg':
       return skip(e.m) ? view : { ...view, messages: [...view.messages, e.m].slice(-KEEP) };
+    case 'online':
+      return { ...view, online: e.n };
     case 'hide':
       return { ...view, messages: view.messages.filter((m) => m.id !== e.id) };
     case 'err':

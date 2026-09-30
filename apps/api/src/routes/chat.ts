@@ -1,4 +1,6 @@
 import {
+  AdminChatReportListSchema,
+  AdminChatReportResolveSchema,
   CHAT_KEEP_MS,
   CHAT_REPORT_HIDE,
   ChatBlockResponseSchema,
@@ -15,9 +17,11 @@ import { blockAuthor } from '../db/repos/boards.js';
 import {
   blockedProfileIds,
   getMutedUntil,
+  listOpenChatReports,
   muteChat,
   reportChat,
   reportedMessageIds,
+  resolveChatReports,
 } from '../db/repos/chat.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
@@ -45,12 +49,33 @@ async function findMessage(c: Context<AppEnv>) {
   return { chat, m };
 }
 
-/** 남의 메시지만 신고·차단한다. */
+/** 작성자를 days일 정지하고 그 메시지를 가린다. 열린 소켓은 바로 읽기 전용이 된다. */
+async function muteAuthor(
+  c: Context<AppEnv>,
+  chat: ReturnType<typeof room>,
+  input: { profileId: string; messageId: string; days: number },
+) {
+  const now = Date.now();
+  await muteChat(
+    getDb(c),
+    input.profileId,
+    new Date(now + input.days * DAY_MS).toISOString(),
+    new Date(now).toISOString(),
+  );
+  await Promise.all([chat.revoke(input.profileId), chat.hide(input.messageId)]);
+}
+
+/** 남의 메시지만 신고·차단한다. 운영자 메시지는 신고·차단하지 않는다. */
 async function othersMessage(c: Context<AppEnv>) {
   const found = await findMessage(c);
   const { profileId } = getSessionOrThrow(c);
   if (found.m.profileId === profileId)
     throw new AppError({ code: 'FORBIDDEN', message: '내 메시지는 신고하거나 차단할 수 없어요.' });
+  if (found.m.admin)
+    throw new AppError({
+      code: 'FORBIDDEN',
+      message: '운영자 메시지는 신고하거나 차단할 수 없어요.',
+    });
   return { ...found, profileId, db: getDb(c) };
 }
 
@@ -121,7 +146,6 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
 
   app.post('/v1/chat/messages/:messageId/block', requireProfile, async (c) => {
     const { m, profileId, db } = await othersMessage(c);
-    if (m.admin) throw new AppError({ code: 'FORBIDDEN', message: '운영자는 차단할 수 없어요.' });
     const block = await blockAuthor(
       db,
       { profileId, blockedProfileId: m.profileId, nickname: m.nickname },
@@ -137,20 +161,35 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
     return c.body(null, 204);
   });
 
-  /** 작성자를 정지하고 그 메시지를 가린다. 열린 소켓은 바로 읽기 전용이 된다. */
   app.post('/v1/admin/chat/messages/:messageId/mute', async (c) => {
     await requireAdmin(c);
     const { days } = readBody(c, ChatMuteInputSchema);
     const { chat, m } = await findMessage(c);
     if (m.admin) throw new AppError({ code: 'FORBIDDEN', message: '운영자는 정지할 수 없어요.' });
-    const now = Date.now();
-    await muteChat(
-      getDb(c),
-      m.profileId,
-      new Date(now + days * DAY_MS).toISOString(),
-      new Date(now).toISOString(),
-    );
-    await Promise.all([chat.revoke(m.profileId), chat.hide(m.id)]);
+    await muteAuthor(c, chat, { profileId: m.profileId, messageId: m.id, days });
+    return c.body(null, 204);
+  });
+
+  app.get('/v1/admin/chat/reports', async (c) => {
+    await requireAdmin(c);
+    const items = await listOpenChatReports(getDb(c));
+    return ok(c, AdminChatReportListSchema, { items }, 200, NO_STORE);
+  });
+
+  /** 신고를 닫는다. 메시지가 이미 방에서 지워졌어도(7일) 사본의 작성자로 정지할 수 있다. */
+  app.post('/v1/admin/chat/reports/resolve', async (c) => {
+    await requireAdmin(c);
+    const input = readBody(c, AdminChatReportResolveSchema);
+    const chat = room(c);
+    const author = await resolveChatReports(getDb(c), input.messageId, nowIso());
+    if (!author) throw notFoundError('열린 신고가 없어요.', 'CHAT_REPORT_NOT_FOUND');
+    if (input.action === 'hide') await chat.hide(input.messageId);
+    if (input.action === 'mute')
+      await muteAuthor(c, chat, {
+        profileId: author,
+        messageId: input.messageId,
+        days: input.days,
+      });
     return c.body(null, 204);
   });
 }

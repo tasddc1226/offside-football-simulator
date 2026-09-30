@@ -1,5 +1,6 @@
+import type { AdminChatReport } from '@offside/contracts';
 import type { CommentReportReason } from '@offside/contracts/board-limits';
-import { and, count, eq, gt, or } from 'drizzle-orm';
+import { and, count, desc, eq, gt, isNull, max, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { boardBlocks, chatMutes, chatReports } from '../schema.js';
 
@@ -48,6 +49,48 @@ export async function reportChat(
     db.select({ n: count() }).from(chatReports).where(eq(chatReports.messageId, input.messageId)),
   ]);
   return row?.n ?? 0;
+}
+
+const OPEN_LIMIT = 100;
+
+/** 처리하지 않은 신고를 메시지마다 모은다(최근 신고 순). */
+export async function listOpenChatReports(db: Db): Promise<AdminChatReport[]> {
+  const lastAt = max(chatReports.createdAt);
+  const rows = await db
+    .select({
+      messageId: chatReports.messageId,
+      // 한 메시지의 사본은 모두 같다.
+      nickname: sql<string>`min(${chatReports.nickname})`,
+      body: sql<string>`min(${chatReports.body})`,
+      reasons: sql<string>`group_concat(distinct ${chatReports.reason})`,
+      reports: count(),
+      lastReportedAt: lastAt,
+    })
+    .from(chatReports)
+    .where(isNull(chatReports.resolvedAt))
+    .groupBy(chatReports.messageId)
+    .orderBy(desc(lastAt))
+    .limit(OPEN_LIMIT);
+  return rows.map((r) => ({
+    ...r,
+    reasons: r.reasons.split(',') as CommentReportReason[],
+    lastReportedAt: r.lastReportedAt ?? '',
+  }));
+}
+
+/** 메시지의 열린 신고를 닫고 작성자 프로필 id를 돌려준다. 열린 신고가 없으면 null. */
+export async function resolveChatReports(
+  db: Db,
+  messageId: string,
+  now: string,
+): Promise<string | null> {
+  const open = and(eq(chatReports.messageId, messageId), isNull(chatReports.resolvedAt));
+  const [row] = await db
+    .update(chatReports)
+    .set({ resolvedAt: now })
+    .where(open)
+    .returning({ author: chatReports.authorProfileId });
+  return row?.author ?? null;
 }
 
 /** 내가 신고한 메시지 id(since 이후 — 방이 메시지를 들고 있는 기간만). */

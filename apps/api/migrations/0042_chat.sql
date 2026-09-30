@@ -13,9 +13,11 @@ CREATE TABLE `chat_reports` (
 	`nickname` text NOT NULL,
 	`body` text NOT NULL,
 	`created_at` text NOT NULL,
+	`resolved_at` text,
 	PRIMARY KEY(`message_id`, `profile_id`)
 );
 --> statement-breakpoint
 CREATE INDEX `chat_reports_created_idx` ON `chat_reports` (`created_at`);--> statement-breakpoint
+CREATE INDEX `chat_reports_open_idx` ON `chat_reports` (`resolved_at`,`created_at`);--> statement-breakpoint
 CREATE INDEX `chat_reports_profile_idx` ON `chat_reports` (`profile_id`);--> statement-breakpoint
 CREATE INDEX `chat_reports_author_idx` ON `chat_reports` (`author_profile_id`);

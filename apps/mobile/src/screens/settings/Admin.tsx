@@ -12,6 +12,7 @@ import { Seg, TabOpt } from '../board/parts';
 import AdminAutomation from './admin/AdminAutomation';
 import AdminBalance from './admin/AdminBalance';
 import AdminComments from './admin/AdminComments';
+import AdminChatReports from './admin/AdminChatReports';
 import AdminNameReports from './admin/AdminNameReports';
 import AdminDashboard from './admin/AdminDashboard';
 
@@ -68,6 +69,7 @@ export default function Admin() {
               <AdminDashboard />
             ) : tab === 'comments' ? (
               <>
+                <AdminChatReports />
                 <AdminNameReports />
                 <AdminComments />
               </>

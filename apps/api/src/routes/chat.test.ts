@@ -1,5 +1,5 @@
 import { CHAT_REPORT_HIDE, CHAT_SOCKET_PATH, type ChatServerEvent } from '@offside/contracts/chat';
-import type { ChatTicketResponse } from '@offside/contracts';
+import type { AdminChatReport, ChatTicketResponse } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { chatReports } from '../db/schema.js';
 import worker from '../index.js';
@@ -60,7 +60,7 @@ describe('T-11-015 채팅 /v1/chat', () => {
       blocked: [],
       reported: [],
     });
-    expect(last(await chat.join(ok.data.ticket!))).toMatchObject({ t: 'hello', write: true });
+    expect((await chat.join(ok.data.ticket!)).sent[0]).toMatchObject({ t: 'hello', write: true });
 
     delete env.CHAT;
     expect(
@@ -147,6 +147,50 @@ describe('T-11-015 채팅 /v1/chat', () => {
         .status,
     ).toBe(204);
     expect(chat.room.message(other.id)).toBeNull();
+  });
+
+  it('운영자는 열린 신고를 메시지마다 모아 보고, 가리거나 기각하거나 작성자를 정지한다', async () => {
+    const bob = await speak('밥', '나쁜 말');
+    const carol = await speak('캐럴', '광고');
+    const dave = await speak('데이브', '그냥 말');
+    const admin = await issueAdminCookie(ctx);
+    const [r1, r2] = await Promise.all([issueCookie(ctx), issueCookie(ctx)]);
+    const report = (cookie: string, id: string, reason: string) =>
+      call('POST', `/v1/chat/messages/${id}/report`, { cookie, body: { reason } });
+    await report(r1.cookie, bob.id, 'abuse');
+    await report(r2.cookie, bob.id, 'spam');
+    await report(r1.cookie, carol.id, 'spam');
+    await report(r1.cookie, dave.id, 'other');
+
+    const list = async (cookie = admin.cookie) => {
+      const res = await call('GET', '/v1/admin/chat/reports', { cookie });
+      return {
+        status: res.status,
+        items: ((await res.json()) as { data?: { items: AdminChatReport[] } }).data?.items,
+      };
+    };
+    expect((await list(bob.cookie)).status).toBe(403);
+    const open = (await list()).items!;
+    expect(open.map((i) => i.messageId).sort()).toEqual([bob.id, carol.id, dave.id].sort());
+    expect(open.find((i) => i.messageId === bob.id)).toMatchObject({
+      nickname: '밥',
+      body: '나쁜 말',
+      reports: 2,
+    });
+    expect(open.find((i) => i.messageId === bob.id)!.reasons.sort()).toEqual(['abuse', 'spam']);
+
+    const resolve = (body: Record<string, unknown>) =>
+      call('POST', '/v1/admin/chat/reports/resolve', { cookie: admin.cookie, body });
+    expect((await resolve({ messageId: dave.id, action: 'dismiss' })).status).toBe(204);
+    expect(chat.room.message(dave.id)).not.toBeNull();
+    expect((await resolve({ messageId: dave.id, action: 'dismiss' })).status).toBe(404);
+    expect((await resolve({ messageId: carol.id, action: 'hide' })).status).toBe(204);
+    expect(chat.room.message(carol.id)).toBeNull();
+    expect((await resolve({ messageId: bob.id, action: 'mute' })).status).toBe(400); // 기간 없음
+    expect((await resolve({ messageId: bob.id, action: 'mute', days: 30 })).status).toBe(204);
+    expect(chat.room.message(bob.id)).toBeNull();
+    expect((await ticketOf(bob.cookie)).data.reason).toBe('muted');
+    expect((await list()).items).toEqual([]);
   });
 
   it('프로필을 지우면 그 사람의 신고 사본·정지 기록도 지운다', async () => {

@@ -183,6 +183,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'nickname',
     'body',
     'created_at',
+    'resolved_at',
   ],
   chat_mutes: ['profile_id', 'until', 'created_at'],
   balance_versions: [

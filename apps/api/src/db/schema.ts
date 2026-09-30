@@ -585,7 +585,8 @@ export const teamMatches = sqliteTable(
 );
 
 /** T-11-015 채팅 신고. 프로필 하나가 메시지 하나에 한 번. 메시지는 채팅방(Durable Object)에 7일만 남으므로 신고할
- *  때 작성자·닉네임·본문 사본을 함께 적어 둔다(운영자 확인용, 90일 뒤 cron이 지운다). */
+ *  때 작성자·닉네임·본문 사본을 함께 적어 둔다(운영자 확인용, 90일 뒤 cron이 지운다). 운영자가 처리하면
+ *  resolved_at을 채운다. */
 export const chatReports = sqliteTable(
   'chat_reports',
   {
@@ -596,10 +597,13 @@ export const chatReports = sqliteTable(
     nickname: text('nickname').notNull(),
     body: text('body').notNull(),
     createdAt: text('created_at').notNull(),
+    /** 운영자가 처리(가리기·기각·정지)한 시각. 처리 전엔 null. */
+    resolvedAt: text('resolved_at'),
   },
   (table) => [
     primaryKey({ columns: [table.messageId, table.profileId] }),
     index('chat_reports_created_idx').on(table.createdAt),
+    index('chat_reports_open_idx').on(table.resolvedAt, table.createdAt),
     index('chat_reports_profile_idx').on(table.profileId),
     index('chat_reports_author_idx').on(table.authorProfileId),
   ],

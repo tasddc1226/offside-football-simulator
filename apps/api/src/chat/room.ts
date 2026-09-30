@@ -90,6 +90,7 @@ export class ChatRoom extends DurableObject<Bindings> {
       write: !!w,
     };
     send(server, JSON.stringify(hello));
+    this.broadcast({ t: 'online', n: online + 1 });
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -136,6 +137,9 @@ export class ChatRoom extends DurableObject<Bindings> {
   override webSocketClose(ws: WebSocket, code: number): void {
     // 1005(코드 없음)·1006(비정상)은 되돌려 보낼 수 없는 예약 코드다.
     ws.close(code === 1005 || code === 1006 ? 1000 : code);
+    const rest = this.ctx.getWebSockets().filter((s) => s !== ws);
+    const message = JSON.stringify({ t: 'online', n: rest.length } satisfies ChatServerEvent);
+    for (const s of rest) send(s, message);
   }
 
   /** 가려지지 않은 메시지 한 줄(신고·차단 대상 확인). */
