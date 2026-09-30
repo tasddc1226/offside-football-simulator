@@ -9,6 +9,14 @@ import { HUB } from './hub.js';
  * API 자기 주소를 Origin으로 보낸다(React Native iOS) — 브라우저 페이지가 아니므로 받는다.
  */
 export function liveSocket(req: Request, env: Bindings): Response | Promise<Response> {
+  const refused = refuseUpgrade(req, env);
+  if (refused) return refused;
+  if (!env.LIVE) return new Response(null, { status: 503 });
+  return env.LIVE.get(env.LIVE.idFromName(HUB)).fetch(req);
+}
+
+/** 소켓 입구 공통 검사(라이브·채팅). 받을 수 없으면 그 응답을, 받을 수 있으면 null을 돌려준다. */
+export function refuseUpgrade(req: Request, env: Bindings): Response | null {
   if (req.headers.get('Upgrade')?.toLowerCase() !== 'websocket') {
     return new Response(null, { status: 426, headers: { Upgrade: 'websocket' } });
   }
@@ -16,6 +24,5 @@ export function liveSocket(req: Request, env: Bindings): Response | Promise<Resp
   const native = origin === null || origin === new URL(req.url).origin;
   if (!native && !allowedOriginsFor(req.url, env).includes(origin))
     return new Response(null, { status: 403 });
-  if (!env.LIVE) return new Response(null, { status: 503 });
-  return env.LIVE.get(env.LIVE.idFromName(HUB)).fetch(req);
+  return null;
 }

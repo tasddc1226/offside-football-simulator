@@ -20,5 +20,7 @@ export function toPublicName(name: string): string | null {
 const RESERVED_NICKNAME = /(운영자|관리자|운영진)/i;
 export const isReservedNickname = (name: string): boolean =>
   RESERVED_NICKNAME.test(name.replace(/\s+/g, ''));
+/** T-11-015 채팅 — 링크(공백 무시)가 들어 있다. */
+export const hasLink = (text: string): boolean => LINK.test(text.replace(/\s+/g, ''));
 /** 긴 글(게시판 댓글)용 — 링크는 허용하고 흔한 욕설만 막는다. */
 export const hasProfanity = (text: string): boolean => PROFANITY.test(text.replace(/\s+/g, ''));
