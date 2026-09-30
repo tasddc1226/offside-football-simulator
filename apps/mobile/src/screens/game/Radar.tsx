@@ -2,12 +2,24 @@
 // 모핑한다(T-10-003). 점(dot)은 웹처럼 목표 위치에 바로 찍는다. 좌표 계산은 app-core/format(radarData).
 import { View } from 'react-native';
 import Svg, { Circle, Line, Polygon, Text as SvgText, TSpan } from 'react-native-svg';
-import { radarData } from '@offside/app-core/format';
+import { radarData, type RadarPoint } from '@offside/app-core/format';
 import type { GameState } from '@offside/game/types';
 import { useTween } from '../../sheets/useTween';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
+
+// 라벨 'PAC 스피드'는 영문 약자(Barlow)와 한글(시스템 서체)이 섞여 있다. react-native-svg는 섞인 글자의 폭을 잘못 재서
+// 가운데·끝 정렬이면 둘이 겹친다 — 두 조각을 왼쪽 정렬로 따로 그리고 시작 위치는 추정 폭으로 직접 계산한다.
+const LABEL = rem(0.75);
+const GAP = 4;
+const abbrWidth = (abbr: string) => abbr.length * LABEL * 0.54;
+const labelStart = (p: RadarPoint) => {
+  const w = abbrWidth(p.abbr) + GAP + p.labelKr.length * LABEL * 0.86;
+  const x = p.anchor === 'middle' ? p.labelX - w / 2 : p.anchor === 'end' ? p.labelX - w : p.labelX;
+  // SVG 밖으로 나간 글자는 잘리므로 viewBox(0~300) 안에 가둔다.
+  return Math.min(Math.max(x, 1), 299 - w);
+};
 
 export function Radar({ s }: { s: GameState }) {
   const c = useColors();
@@ -57,23 +69,32 @@ export function Radar({ s }: { s: GameState }) {
         {d.dots.map(([x, y], i) => (
           <Circle key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} r={3} fill={c.accent} />
         ))}
-        {d.points.map((p) => (
-          <SvgText
-            key={`${p.key}-a`}
-            x={p.labelX.toFixed(1)}
-            y={p.labelY.toFixed(1)}
-            textAnchor={p.anchor}
-            fill={c.muted}
-            fontFamily={DISPLAY[700]}
-            fontSize={rem(0.75)}
-            letterSpacing={rem(0.75) * 0.08}
-          >
-            {`${p.abbr} `}
-            <TSpan fontWeight="600" letterSpacing={0}>
+        {d.points.map((p) => {
+          const x = labelStart(p);
+          return [
+            <SvgText
+              key={`${p.key}-a`}
+              x={x.toFixed(1)}
+              y={p.labelY.toFixed(1)}
+              fill={c.muted}
+              fontFamily={DISPLAY[700]}
+              fontSize={LABEL}
+              letterSpacing={LABEL * 0.08}
+            >
+              {p.abbr}
+            </SvgText>,
+            <SvgText
+              key={`${p.key}-k`}
+              x={(x + abbrWidth(p.abbr) + GAP).toFixed(1)}
+              y={p.labelY.toFixed(1)}
+              fill={c.muted}
+              fontSize={LABEL}
+              fontWeight="600"
+            >
               {p.labelKr}
-            </TSpan>
-          </SvgText>
-        ))}
+            </SvgText>,
+          ];
+        })}
         {d.points.map((p) => (
           <SvgText
             key={`${p.key}-v`}

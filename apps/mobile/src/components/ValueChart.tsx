@@ -291,8 +291,10 @@ function PeakTag({
   const c = useColors();
   const [size, setSize] = useState({ w: 0, h: 0 });
   const scale = useProgress(go, 450, { delay, easing: POP });
+  // 자리(translate)는 바깥 View, 튀어 오르는 크기(scale)는 안쪽 Animated.View가 맡는다 — 한 transform에 섞으면
+  // 네이티브 애니메이션이 transform을 가져가서, 나중에 잰 폭으로 고친 translateX가 반영되지 않는다.
   return (
-    <Animated.View
+    <View
       pointerEvents="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
@@ -301,16 +303,22 @@ function PeakTag({
         position: 'absolute',
         left: p.x * w,
         top: (p.y / 100) * plotH,
-        paddingVertical: 1,
-        paddingHorizontal: 6,
-        borderRadius: 999,
-        backgroundColor: color,
-        transform: [{ translateX: -p.x * size.w }, { translateY: -size.h - 10 }, { scale }],
+        transform: [{ translateX: -p.x * size.w }, { translateY: -size.h - 10 }],
       }}
     >
-      <Txt style={{ fontSize: rem(0.6875), fontWeight: '700', color: c.accentInk }}>
-        {fmtValue(p.v)}
-      </Txt>
-    </Animated.View>
+      <Animated.View
+        style={{
+          paddingVertical: 1,
+          paddingHorizontal: 6,
+          borderRadius: 999,
+          backgroundColor: color,
+          transform: [{ scale }],
+        }}
+      >
+        <Txt style={{ fontSize: rem(0.6875), fontWeight: '700', color: c.accentInk }}>
+          {fmtValue(p.v)}
+        </Txt>
+      </Animated.View>
+    </View>
   );
 }
