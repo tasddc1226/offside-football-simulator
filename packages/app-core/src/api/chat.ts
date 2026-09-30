@@ -11,12 +11,16 @@ import type {
   CommentReportInput,
 } from '@offside/contracts';
 import {
+  CHAT_BODY_MAX,
+  type CHAT_MUTE_DAYS,
   CHAT_SOCKET_PATH,
+  type ChatClientEvent,
   type ChatMessage,
   type ChatRejectCode,
   type ChatServerEvent,
 } from '@offside/contracts/chat';
 import { LIVE_PING, LIVE_PING_SEC } from '@offside/contracts/polling';
+import { kstParts } from '../boardText.js';
 import { apiBaseUrl, apiFetch, withProfile } from './client.js';
 
 export type { AdminChatReport, ChatMessage, ChatRejectCode, ChatTicketResponse };
@@ -56,6 +60,40 @@ export const resolveChatReport = (input: AdminChatReportResolve) =>
     body: JSON.stringify(input),
     keepCache: true,
   });
+/** 신고 처리 방법 — 가리기, 기각, 또는 정지 일수. */
+export type ChatReportAction = 'hide' | 'dismiss' | (typeof CHAT_MUTE_DAYS)[number];
+/** 신고 하나를 처리한다. 성공 여부와 알릴 문구(실패면 오류 문구)를 돌려준다. */
+export async function resolveChatReportAs(it: AdminChatReport, action: ChatReportAction) {
+  const mute = typeof action === 'number';
+  const r = await resolveChatReport(
+    mute
+      ? { messageId: it.messageId, action: 'mute', days: action }
+      : { messageId: it.messageId, action },
+  );
+  if (!r.ok) return { ok: false, text: r.error.message };
+  const text = mute
+    ? `${it.nickname}님을 ${action}일 정지했어요`
+    : action === 'hide'
+      ? '메시지를 가렸어요'
+      : '신고를 기각했어요';
+  return { ok: true, text };
+}
+
+/** 방이 내 줄을 거절한 이유(웹·앱 같은 문구). */
+export const CHAT_REJECT_TEXT: Record<ChatRejectCode, string> = {
+  readonly: '로그인하고 닉네임을 정하면 쓸 수 있어요.',
+  muted: '운영 정책에 따라 채팅이 정지됐어요.',
+  long: `한 번에 ${CHAT_BODY_MAX}자까지 보낼 수 있어요.`,
+  filter: '링크나 욕설은 보낼 수 없어요.',
+  rate: '조금 천천히 보내 주세요.',
+};
+/** 메시지 옆 시각(KST HH:MM). */
+export const chatTime = (at: number) => kstParts(new Date(at).toISOString()).time;
+/** 정지 안내 문장. */
+export function chatMutedText(until: string | null) {
+  const p = until ? kstParts(until) : null;
+  return `운영 정책에 따라 ${p ? `${p.day} ${p.time}까지 ` : ''}채팅이 정지됐어요. 읽기는 계속할 수 있어요.`;
+}
 
 export const chatSocketUrl = (ticket: string | null, base = apiBaseUrl()) =>
   `${base.replace(/^http/, 'ws')}${CHAT_SOCKET_PATH}${ticket ? `?t=${encodeURIComponent(ticket)}` : ''}`;
@@ -128,12 +166,17 @@ export type ChatSession = {
   close(): void;
 };
 
-/** 채팅방에 붙는다. 상태가 바뀔 때마다 onChange, 내 줄이 거절되면 onReject를 부른다. */
+/**
+ * 채팅방에 붙는다. 상태가 바뀔 때마다 onChange, 내 줄이 거절되면 onReject를 부른다. restore는 거절된 줄 —
+ * 고쳐 다시 보낼 수 있을 때만(정지·읽기 전용이 아니면) 준다.
+ */
 export function openChat(
   onChange: (v: ChatView) => void,
-  onReject: (code: ChatRejectCode) => void = () => {},
+  onReject: (code: ChatRejectCode, restore: string | null) => void = () => {},
 ): ChatSession {
   let view = EMPTY_CHAT;
+  /** 보냈지만 아직 방에서 돌아오지 않은 줄. */
+  let pending = '';
   let blocked = new Set<string>();
   const dropped = new Set<string>();
   const skip = (m: ChatMessage) => blocked.has(m.author) || dropped.has(m.id);
@@ -156,7 +199,7 @@ export function openChat(
     const me = r.ok ? r.data : null;
     if (me) {
       blocked = new Set([...blocked, ...me.blocked]);
-      for (const id of me.reported ?? []) dropped.add(id); // 옛 서버 응답엔 없다
+      for (const id of me.reported) dropped.add(id);
     }
     set({ ...view, me, status: view.status === 'open' ? 'retrying' : view.status });
     const sock = new WS(chatSocketUrl(me?.ticket ?? null));
@@ -173,8 +216,12 @@ export function openChat(
       } catch {
         return;
       }
+      if (e.t === 'msg' && e.m.author === view.me?.author) pending = '';
       set(applyChat(view, e, skip));
-      if (e.t === 'err') onReject(e.code);
+      if (e.t === 'err') {
+        onReject(e.code, pending && e.code !== 'muted' && e.code !== 'readonly' ? pending : null);
+        pending = '';
+      }
     };
     sock.onclose = () => {
       clearInterval(ping);
@@ -190,7 +237,8 @@ export function openChat(
   return {
     send(body) {
       if (!ws || view.status !== 'open') return false;
-      ws.send(JSON.stringify({ t: 'send', body }));
+      ws.send(JSON.stringify({ t: 'send', body } satisfies ChatClientEvent));
+      pending = body;
       return true;
     },
     block(author) {

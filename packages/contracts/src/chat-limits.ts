@@ -49,4 +49,3 @@ export type ChatClientEvent = { t: 'send'; body: string };
 
 /** 입장권을 못 받는 이유 — login: 계정 로그인 전, nickname: 닉네임을 아직 안 정함, muted: 채팅 정지 중. */
 export const CHAT_DENY_REASONS = ['login', 'nickname', 'muted'] as const;
-export type ChatDenyReason = (typeof CHAT_DENY_REASONS)[number];

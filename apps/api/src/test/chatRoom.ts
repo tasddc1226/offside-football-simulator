@@ -31,7 +31,7 @@ function fakeSql() {
   return {
     exec(query: string, ...bindings: (string | number)[]) {
       const stmt = db.prepare(query);
-      if (/^\s*select/i.test(query)) {
+      if (/^\s*select|\breturning\b/i.test(query)) {
         const rows = stmt.all(...bindings);
         return { toArray: () => rows, rowsWritten: 0 };
       }

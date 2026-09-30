@@ -22,16 +22,13 @@
     items = r.data.items;
     status = 'ready';
   }
-  async function resolve(it: AdminChatReport, action: 'hide' | 'dismiss' | (typeof CHAT_MUTE_DAYS)[number]) {
-    const mute = typeof action === 'number';
-    if (mute && !confirm(`${it.nickname}님의 채팅을 ${action}일 정지할까요? 이 메시지도 가려져요.`)) return;
+  async function resolve(it: AdminChatReport, action: api.ChatReportAction) {
+    if (typeof action === 'number' && !confirm(`${it.nickname}님의 채팅을 ${action}일 정지할까요? 이 메시지도 가려져요.`)) return;
     busy = true;
-    const r = await api.resolveChatReport(
-      mute ? { messageId: it.messageId, action: 'mute', days: action } : { messageId: it.messageId, action },
-    );
+    const r = await api.resolveChatReportAs(it, action);
     busy = false;
-    if (!r.ok) return toast(r.error.message);
-    toast(mute ? `${it.nickname}님을 ${action}일 정지했어요` : action === 'hide' ? '메시지를 가렸어요' : '신고를 기각했어요');
+    toast(r.text);
+    if (!r.ok) return;
     items = items.filter((x) => x.messageId !== it.messageId);
   }
 </script>

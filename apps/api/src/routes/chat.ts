@@ -82,16 +82,17 @@ async function othersMessage(c: Context<AppEnv>) {
 export function registerChatRoutes(app: Hono<AppEnv>) {
   app.post('/v1/chat/ticket', requireProfile, async (c) => {
     const chat = room(c);
-    const viewer = await getViewer(c);
-    const profileId = viewer.profileId!;
+    const { profileId } = getSessionOrThrow(c);
     const db = getDb(c);
     const now = Date.now();
-    const [author, blocked, reported, mutedUntil] = await Promise.all([
+    const [viewer, author, blocked, reported, muted] = await Promise.all([
+      getViewer(c),
       chatAuthor(profileId),
       blockedProfileIds(db, profileId).then((ids) => Promise.all(ids.map(chatAuthor))),
       reportedMessageIds(db, profileId, new Date(now - CHAT_KEEP_MS).toISOString()),
-      viewer.admin ? null : getMutedUntil(db, profileId, new Date(now).toISOString()),
+      getMutedUntil(db, profileId, new Date(now).toISOString()),
     ]);
+    const mutedUntil = viewer.admin ? null : muted;
     const reason = !viewer.google
       ? 'login'
       : !viewer.nickname

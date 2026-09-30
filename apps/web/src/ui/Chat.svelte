@@ -3,11 +3,20 @@
   // 남의 메시지는 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 여럿이 신고하면 모두의 화면에서 가려진다.
   // 운영자는 메시지를 가리고 작성자를 정지한다. 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
   import { onMount, tick } from 'svelte';
-  import { ADMIN_NICKNAME, type CommentReportReason } from '@offside/contracts/board-limits';
-  import { CHAT_BODY_MAX, CHAT_MUTE_DAYS, type ChatRejectCode } from '@offside/contracts/chat';
+  import { ADMIN_NICKNAME, COMMENT_REPORT_REASONS, type CommentReportReason } from '@offside/contracts/board-limits';
+  import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
   import * as api from '@offside/app-core/api/chat';
-  import { EMPTY_CHAT, type ChatMessage, type ChatSession, type ChatView } from '@offside/app-core/api/chat';
-  import { REPORT_REASON_LABEL, kstParts } from '@offside/app-core/boardText';
+  import {
+    CHAT_REJECT_TEXT,
+    EMPTY_CHAT,
+    chatMutedText,
+    chatTime,
+    type ChatMessage,
+    type ChatSession,
+    type ChatView,
+  } from '@offside/app-core/api/chat';
+  import type { ApiResult } from '@offside/app-core/api/client';
+  import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
   import BackBar from './BackBar.svelte';
   import NicknameForm from './NicknameForm.svelte';
   import Topbar from './Topbar.svelte';
@@ -15,25 +24,15 @@
   import { startGoogleLogin } from './login.js';
   import { goHome } from './nav.js';
 
-  const REJECT: Record<ChatRejectCode, string> = {
-    readonly: '로그인하고 닉네임을 정하면 쓸 수 있어요.',
-    muted: '운영 정책에 따라 채팅이 정지됐어요.',
-    long: `한 번에 ${CHAT_BODY_MAX}자까지 보낼 수 있어요.`,
-    filter: '링크나 욕설은 보낼 수 없어요.',
-    rate: '조금 천천히 보내 주세요.',
-  };
-
-  let view = $state<ChatView>(EMPTY_CHAT);
+  // 상태는 통째로 바꿔 끼우므로 깊은 반응성이 필요 없다.
+  let view = $state.raw<ChatView>(EMPTY_CHAT);
   let text = $state('');
-  /** 보냈지만 아직 방에서 돌아오지 않은 줄 — 거절되면 입력칸에 되돌린다. */
-  let pending = '';
   let selected = $state<string | null>(null);
   let busy = $state(false);
   let list: HTMLOListElement | undefined = $state();
   let session: ChatSession | null = null;
 
   const mine = (m: ChatMessage) => !!view.me && m.author === view.me.author;
-  const time = (at: number) => kstParts(new Date(at).toISOString()).time;
   /** 맨 아래 가까이 보고 있을 때만 새 줄을 따라 내려간다(위로 올려 읽는 중이면 그대로 둔다). */
   const nearBottom = () => !list || list.scrollHeight - list.scrollTop - list.clientHeight < 80;
 
@@ -41,15 +40,14 @@
     session?.close();
     session = api.openChat(
       (v) => {
-        const follow = nearBottom() || v.messages.at(-1)?.author === v.me?.author;
-        if (pending && v.messages.at(-1)?.author === v.me?.author) pending = '';
+        const grew = v.messages !== view.messages;
+        const follow = grew && (nearBottom() || v.messages.at(-1)?.author === v.me?.author);
         view = v;
         if (follow) void tick().then(() => list?.scrollTo({ top: list.scrollHeight }));
       },
-      (code) => {
-        toast(REJECT[code]);
-        if (pending && code !== 'muted' && code !== 'readonly') text ||= pending;
-        pending = '';
+      (code, restore) => {
+        toast(CHAT_REJECT_TEXT[code]);
+        if (restore) text ||= restore;
       },
     );
   }
@@ -62,12 +60,11 @@
     const body = text.trim();
     if (!body) return;
     if (!session?.send(body)) return toast('연결 중이에요. 잠시 뒤 다시 보내 주세요.');
-    pending = body;
     text = '';
   }
 
   /** 요청 하나를 보내고 성공하면 패널을 닫고 알린다. 성공 여부와 응답을 돌려준다. */
-  async function run<T>(p: Promise<{ ok: true; data: T } | { ok: false; error: { message: string } }>, done: string) {
+  async function run<T>(p: Promise<ApiResult<T>>, done: string) {
     busy = true;
     const r = await p;
     busy = false;
@@ -110,7 +107,7 @@
         <li class="chat-msg" class:mine={mine(m)} data-chat-msg={m.id}>
           <div class="row" style="gap:6px;align-items:baseline">
             {#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{m.nickname}</b>{/if}
-            <span class="muted fs-xs num">{time(m.at)}</span>
+            <span class="muted fs-xs num">{chatTime(m.at)}</span>
             {#if !mine(m) && (!m.admin || view.me?.admin)}
               <button class="icon-btn chat-more" aria-expanded={selected === m.id} aria-label="{m.nickname}님 메시지 신고·차단" data-act="chat-more" onclick={() => (selected = selected === m.id ? null : m.id)}>⋯</button>
             {/if}
@@ -132,8 +129,8 @@
               {#if !m.admin}
                 <span class="fs-sm">신고하는 이유를 골라 주세요. 신고한 메시지는 내 화면에서 숨겨요.</span>
                 <div class="row" style="gap:6px;flex-wrap:wrap">
-                  {#each Object.entries(REPORT_REASON_LABEL) as [reason, label] (reason)}
-                    <button class="btn btn-sm" data-report-reason={reason} disabled={busy} onclick={() => report(m, reason as CommentReportReason)}>{label}</button>
+                  {#each COMMENT_REPORT_REASONS as reason (reason)}
+                    <button class="btn btn-sm" data-report-reason={reason} disabled={busy} onclick={() => report(m, reason)}>{REPORT_REASON_LABEL[reason]}</button>
                   {/each}
                 </div>
                 <div class="row" style="gap:8px;justify-content:space-between;align-items:center">
@@ -177,7 +174,7 @@
       </div>
     {:else}
       <p class="muted fs-sm" data-chat-gate="muted">
-        운영 정책에 따라 {view.me.mutedUntil ? `${kstParts(view.me.mutedUntil).day} ${kstParts(view.me.mutedUntil).time}까지 ` : ''}채팅이 정지됐어요. 읽기는 계속할 수 있어요.
+        {chatMutedText(view.me.mutedUntil)}
       </p>
     {/if}
   </section>

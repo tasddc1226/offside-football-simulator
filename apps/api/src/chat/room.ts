@@ -3,12 +3,14 @@ import {
   CHAT_HISTORY,
   CHAT_KEEP_MS,
   CHAT_TICKET_MS,
+  type ChatClientEvent,
   type ChatMessage,
   type ChatRejectCode,
   type ChatServerEvent,
 } from '@offside/contracts/chat';
 import { LIVE_PING, LIVE_PONG } from '@offside/contracts/polling';
 import type { Bindings } from '../env.js';
+import { MAX_SOCKETS } from '../live/hub.js';
 import { checkSend } from './rules.js';
 
 // T-11-015 채팅방. 방 하나(이름 CHAT_ROOM)가 소켓을 모두 붙들고, 받은 줄을 SQLite에 적은 뒤 모두에게 보낸다.
@@ -16,13 +18,11 @@ import { checkSend } from './rules.js';
 // 누구나 읽고, 쓰려면 API가 발급한 입장권(issueTicket)을 소켓 주소에 붙여 온다. 소켓마다 누가 쓰는지와 최근
 // 전송 시각(도배 방지)을 attachment에 둔다 — 잠들었다 깨도 남는다.
 
-export const MAX_SOCKETS = 5_000;
-
 /** 쓸 수 있는 사람. */
 export type ChatWriter = { profileId: string; author: string; nickname: string; admin: boolean };
 type Attachment = { w: ChatWriter | null; sent: number[] };
 /** 신고·차단할 때 API가 읽는 메시지 한 줄(작성자 프로필 포함). */
-export type StoredMessage = ChatMessage & { profileId: string };
+type StoredMessage = ChatMessage & { profileId: string };
 
 type Row = Record<string, string | number | null>;
 const toMessage = (r: Row): StoredMessage => ({
@@ -41,6 +41,11 @@ const send = (ws: WebSocket, message: string) => {
   } catch {
     // 이미 닫히는 중 — webSocketClose가 정리한다.
   }
+};
+
+const sendAll = (sockets: WebSocket[], event: ChatServerEvent) => {
+  const message = JSON.stringify(event);
+  for (const ws of sockets) send(ws, message);
 };
 
 export class ChatRoom extends DurableObject<Bindings> {
@@ -76,7 +81,8 @@ export class ChatRoom extends DurableObject<Bindings> {
   }
 
   override async fetch(req: Request): Promise<Response> {
-    const online = this.ctx.getWebSockets().length;
+    const others = this.ctx.getWebSockets();
+    const online = others.length;
     if (online >= MAX_SOCKETS) return new Response(null, { status: 503 });
     const ticket = new URL(req.url).searchParams.get('t');
     const w = ticket ? this.useTicket(ticket) : null;
@@ -90,7 +96,8 @@ export class ChatRoom extends DurableObject<Bindings> {
       write: !!w,
     };
     send(server, JSON.stringify(hello));
-    this.broadcast({ t: 'online', n: online + 1 });
+    // 새 소켓은 hello로 이미 받았다.
+    sendAll(others, { t: 'online', n: online + 1 });
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -98,7 +105,7 @@ export class ChatRoom extends DurableObject<Bindings> {
     if (typeof data !== 'string') return;
     let body: unknown;
     try {
-      const event = JSON.parse(data) as { t?: unknown; body?: unknown };
+      const event = JSON.parse(data) as Partial<Record<keyof ChatClientEvent, unknown>>;
       if (event.t !== 'send') return;
       body = event.body;
     } catch {
@@ -138,8 +145,7 @@ export class ChatRoom extends DurableObject<Bindings> {
     // 1005(코드 없음)·1006(비정상)은 되돌려 보낼 수 없는 예약 코드다.
     ws.close(code === 1005 || code === 1006 ? 1000 : code);
     const rest = this.ctx.getWebSockets().filter((s) => s !== ws);
-    const message = JSON.stringify({ t: 'online', n: rest.length } satisfies ChatServerEvent);
-    for (const s of rest) send(s, message);
+    sendAll(rest, { t: 'online', n: rest.length });
   }
 
   /** 가려지지 않은 메시지 한 줄(신고·차단 대상 확인). */
@@ -176,14 +182,12 @@ export class ChatRoom extends DurableObject<Bindings> {
 
   private useTicket(id: string): ChatWriter | null {
     const [row] = this.sql
-      .exec<{ writer: string }>(
-        'SELECT writer FROM tickets WHERE id = ? AND expires >= ?',
+      .exec<{ writer: string; expires: number }>(
+        'DELETE FROM tickets WHERE id = ? RETURNING writer, expires',
         id,
-        Date.now(),
       )
       .toArray();
-    this.sql.exec('DELETE FROM tickets WHERE id = ?', id);
-    return row ? (JSON.parse(row.writer) as ChatWriter) : null;
+    return row && row.expires >= Date.now() ? (JSON.parse(row.writer) as ChatWriter) : null;
   }
 
   private recent(): ChatMessage[] {
@@ -199,7 +203,6 @@ export class ChatRoom extends DurableObject<Bindings> {
   }
 
   private broadcast(event: ChatServerEvent) {
-    const message = JSON.stringify(event);
-    for (const ws of this.ctx.getWebSockets()) send(ws, message);
+    sendAll(this.ctx.getWebSockets(), event);
   }
 }

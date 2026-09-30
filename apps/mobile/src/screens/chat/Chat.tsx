@@ -1,22 +1,26 @@
 // T-11-015 라운지 채팅(웹 Chat.svelte) — 모두가 보는 실시간 공개 채팅. 누구나 읽고, 로그인하고 닉네임을 정하면 쓴다.
 // 남의 메시지는 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 여럿이 신고하면 모두의 화면에서 가려진다.
 // 운영자는 메시지를 가리고 작성자를 정지한다.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
 import {
   ADMIN_NICKNAME,
   COMMENT_REPORT_REASONS,
   type CommentReportReason,
 } from '@offside/contracts/board-limits';
-import { CHAT_BODY_MAX, CHAT_MUTE_DAYS, type ChatRejectCode } from '@offside/contracts/chat';
+import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
 import * as api from '@offside/app-core/api/chat';
 import {
+  CHAT_REJECT_TEXT,
   EMPTY_CHAT,
+  chatMutedText,
+  chatTime,
   type ChatMessage,
   type ChatSession,
   type ChatView,
 } from '@offside/app-core/api/chat';
-import { REPORT_REASON_LABEL, kstParts } from '@offside/app-core/boardText';
+import type { ApiResult } from '@offside/app-core/api/client';
+import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
 import { NicknameForm } from '../../components/NicknameForm';
 import { toast } from '../../game/host';
 import { goHome } from '../../game/nav';
@@ -35,46 +39,71 @@ import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
 import { TextBox, confirmAsync } from '../board/parts';
 
-const REJECT: Record<ChatRejectCode, string> = {
-  readonly: '로그인하고 닉네임을 정하면 쓸 수 있어요.',
-  muted: '운영 정책에 따라 채팅이 정지됐어요.',
-  long: `한 번에 ${CHAT_BODY_MAX}자까지 보낼 수 있어요.`,
-  filter: '링크나 욕설은 보낼 수 없어요.',
-  rate: '조금 천천히 보내 주세요.',
-};
 const small = { fontSize: rem(0.75) } as const;
-const time = (at: number) => kstParts(new Date(at).toISOString()).time;
-type Result<T> = { ok: true; data: T } | { ok: false; error: { message: string } };
+
+/** 입력칸 — 글자를 칠 때마다 메시지 목록까지 다시 그리지 않도록 입력 상태를 따로 둔다. */
+type InputHandle = { restore(body: string): void };
+function ChatInput(props: {
+  nickname: string;
+  send: (body: string) => boolean;
+  ref: Ref<InputHandle>;
+}) {
+  const [text, setText] = useState('');
+  useImperativeHandle(props.ref, () => ({ restore: (body) => setText((t) => t || body) }), []);
+  const submit = () => {
+    const body = text.trim();
+    if (body && props.send(body)) setText('');
+  };
+  return (
+    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+      <TextBox
+        testID="chat-input"
+        accessibilityLabel="채팅 메시지"
+        placeholder={`${props.nickname} 이름으로 보내요`}
+        maxLength={CHAT_BODY_MAX}
+        value={text}
+        onChangeText={setText}
+        onSubmitEditing={submit}
+        submitBehavior="submit"
+        returnKeyType="send"
+        style={{ flex: 1 }}
+      />
+      <Btn kind="primary" testID="chat-send" disabled={!text.trim()} onPress={submit}>
+        보내기
+      </Btn>
+    </View>
+  );
+}
 
 export default function Chat() {
   const c = useColors();
   const { height } = useWindowDimensions();
   const apple = useAppleLogin();
   const [view, setView] = useState<ChatView>(EMPTY_CHAT);
-  const [text, setText] = useState('');
+  const input = useRef<InputHandle>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const session = useRef<ChatSession | null>(null);
-  /** 보냈지만 아직 방에서 돌아오지 않은 줄 — 거절되면 입력칸에 되돌린다. */
-  const pending = useRef('');
   const list = useRef<ScrollView>(null);
   /** 맨 아래 가까이 보고 있을 때만 새 줄을 따라 내려간다. */
   const atBottom = useRef(true);
+  /** 지난번에 그린 메시지 배열 — 줄이 바뀔 때만 따라 내려간다(접속자 수만 바뀌면 그대로). */
+  const shown = useRef(EMPTY_CHAT.messages);
 
   const connect = () => {
     session.current?.close();
     session.current = api.openChat(
       (v) => {
-        const fromMe = v.messages.at(-1)?.author === v.me?.author;
-        if (fromMe) pending.current = '';
+        const grew = v.messages !== shown.current;
+        shown.current = v.messages;
         setView(v);
-        if (atBottom.current || fromMe) requestAnimationFrame(() => list.current?.scrollToEnd());
+        const fromMe = v.messages.at(-1)?.author === v.me?.author;
+        if (grew && (atBottom.current || fromMe))
+          requestAnimationFrame(() => list.current?.scrollToEnd());
       },
-      (code) => {
-        toast(REJECT[code]);
-        const back = pending.current;
-        if (back && code !== 'muted' && code !== 'readonly') setText((t) => t || back);
-        pending.current = '';
+      (code, restore) => {
+        toast(CHAT_REJECT_TEXT[code]);
+        if (restore) input.current?.restore(restore);
       },
     );
   };
@@ -84,15 +113,13 @@ export default function Chat() {
   }, []);
 
   const mine = (m: ChatMessage) => !!view.me && m.author === view.me.author;
-  function send() {
-    const body = text.trim();
-    if (!body) return;
-    if (!session.current?.send(body)) return toast('연결 중이에요. 잠시 뒤 다시 보내 주세요.');
-    pending.current = body;
-    setText('');
+  function send(body: string) {
+    if (session.current?.send(body)) return true;
+    toast('연결 중이에요. 잠시 뒤 다시 보내 주세요.');
+    return false;
   }
   /** 요청 하나를 보내고 성공하면 패널을 닫고 알린다. */
-  async function run<T>(p: Promise<Result<T>>, done: string) {
+  async function run<T>(p: Promise<ApiResult<T>>, done: string) {
     setBusy(true);
     const r = await p;
     setBusy(false);
@@ -203,7 +230,7 @@ export default function Chat() {
                     </Txt>
                   )}
                   <Txt tone="muted" style={small}>
-                    {time(m.at)}
+                    {chatTime(m.at)}
                   </Txt>
                   {!mine(m) && (!m.admin || me?.admin) ? (
                     <Press
@@ -308,23 +335,7 @@ export default function Chat() {
         </ScrollView>
 
         {view.write ? (
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <TextBox
-              testID="chat-input"
-              accessibilityLabel="채팅 메시지"
-              placeholder={`${me?.nickname ?? ''} 이름으로 보내요`}
-              maxLength={CHAT_BODY_MAX}
-              value={text}
-              onChangeText={setText}
-              onSubmitEditing={send}
-              submitBehavior="submit"
-              returnKeyType="send"
-              style={{ flex: 1 }}
-            />
-            <Btn kind="primary" testID="chat-send" disabled={!text.trim()} onPress={send}>
-              보내기
-            </Btn>
-          </View>
+          <ChatInput ref={input} nickname={me?.nickname ?? ''} send={send} />
         ) : view.status !== 'open' ? null : !me || me.reason === 'login' ? (
           <View testID="chat-gate-login" style={gate}>
             <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
@@ -355,11 +366,7 @@ export default function Chat() {
           </View>
         ) : (
           <Txt tone="muted" style={{ fontSize: rem(0.8125) }} testID="chat-gate-muted">
-            {`운영 정책에 따라 ${
-              me.mutedUntil
-                ? `${kstParts(me.mutedUntil).day} ${kstParts(me.mutedUntil).time}까지 `
-                : ''
-            }채팅이 정지됐어요. 읽기는 계속할 수 있어요.`}
+            {chatMutedText(me.mutedUntil)}
           </Txt>
         )}
       </Card>

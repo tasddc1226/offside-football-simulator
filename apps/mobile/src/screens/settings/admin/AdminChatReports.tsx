@@ -15,8 +15,6 @@ import { Pill } from '../../../ui/bits';
 import { Txt } from '../../../ui/Txt';
 import { confirmAsync } from '../../board/parts';
 
-type Action = 'hide' | 'dismiss' | (typeof CHAT_MUTE_DAYS)[number];
-
 export default function AdminChatReports() {
   const c = useColors();
   const [items, setItems] = useState<AdminChatReport[]>([]);
@@ -32,10 +30,9 @@ export default function AdminChatReports() {
   }
   useEffect(() => void load(), []);
 
-  async function resolve(it: AdminChatReport, action: Action) {
-    const mute = typeof action === 'number';
+  async function resolve(it: AdminChatReport, action: api.ChatReportAction) {
     if (
-      mute &&
+      typeof action === 'number' &&
       !(await confirmAsync(
         `${it.nickname}님의 채팅을 ${action}일 정지할까요?`,
         '이 메시지도 가려져요.',
@@ -44,20 +41,10 @@ export default function AdminChatReports() {
     )
       return;
     setBusy(true);
-    const r = await api.resolveChatReport(
-      mute
-        ? { messageId: it.messageId, action: 'mute', days: action }
-        : { messageId: it.messageId, action },
-    );
+    const r = await api.resolveChatReportAs(it, action);
     setBusy(false);
-    if (!r.ok) return toast(r.error.message);
-    toast(
-      mute
-        ? `${it.nickname}님을 ${action}일 정지했어요`
-        : action === 'hide'
-          ? '메시지를 가렸어요'
-          : '신고를 기각했어요',
-    );
+    toast(r.text);
+    if (!r.ok) return;
     setItems((list) => list.filter((x) => x.messageId !== it.messageId));
   }
 
