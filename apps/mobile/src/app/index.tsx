@@ -13,6 +13,7 @@ import { Sheet } from '../ui/Sheet';
 import { TABBAR_H } from '../ui/TabBar';
 import { Toast } from '../ui/Toast';
 import { NewsBanner } from '../banners/NewsBanner';
+import { UpdateBanner } from '../banners/UpdateBanner';
 import { RetiredNumberAlert } from '../banners/RetiredNumberAlert';
 import { useColors } from '../theme/useColors';
 import Home from '../screens/home/Home';
@@ -73,6 +74,7 @@ export default function App() {
         <Current key={snap.screen === 'board' ? `board:${snap.board}` : snap.screen} />
       </BarBelow.Provider>
       {main ? <MainNav /> : null}
+      <UpdateBanner />
       <NewsBanner />
       <RetiredNumberAlert />
       <Sheet />

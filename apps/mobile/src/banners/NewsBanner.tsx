@@ -1,9 +1,8 @@
 // 새 공지사항·릴리즈 노트 알림(웹 NewsBanner.svelte, news.svelte.ts). 소식 화면을 보고 있을 때는 띄우지 않는다.
-// 이미 본 글이 고쳐져도 같은 자리에 알린다. 웹의 '새 버전 배너가 떠 있으면 그쪽 먼저'는 앱에 새 버전 배너가 없어 뺐다.
-// 루트에서 화면 위에 얹는다(화면 전체를 덮는 자리 — 배너 밖은 터치를 통과시킨다).
+// 이미 본 글이 고쳐져도 같은 자리에 알린다. 새 버전 배너(UpdateBanner)가 떠 있으면 그쪽을 먼저 보인다(웹과 같다).
 import { useState } from 'react';
-import { Animated, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View } from 'react-native';
+import { useUpdates } from 'expo-updates';
 import { useSnapshot } from 'valtio';
 import type { PostSummary } from '@offside/app-core/api/boards';
 import { dismissNews } from '../game/host';
@@ -13,15 +12,15 @@ import { alpha } from '../theme/colors';
 import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
 import { Btn, Press, Txt } from '../ui';
+import { TopBanner } from './TopBanner';
 import { useFly } from './useFly';
 
 export function NewsBanner() {
   const c = useColors();
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
   const news = useSnapshot(newsState);
   const { screen } = useSnapshot(appState);
-  const show = !!news.post && screen !== 'board';
+  const { isUpdatePending } = useUpdates();
+  const show = !!news.post && screen !== 'board' && !isUpdatePending;
   const { mounted, style } = useFly(show, 200);
   // 사라지는 동안에도 글자가 남도록 마지막 글을 붙들어 둔다.
   const [last, setLast] = useState<{
@@ -57,75 +56,41 @@ export function NewsBanner() {
   };
 
   return (
-    <View
-      pointerEvents="box-none"
-      style={{ position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', zIndex: 8 }}
-    >
-      <Animated.View
-        testID={`news-banner-${post.board}`}
-        accessibilityLabel="새 소식 알림"
-        accessibilityLiveRegion="polite"
-        style={[
-          {
-            marginTop: insets.top + 8,
-            width: Math.min(448, width - 32),
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-            backgroundColor: c.pitch,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: alpha(c.onPitch, 0.22),
-            paddingVertical: 10,
-            paddingLeft: 16,
-            paddingRight: 10,
-            shadowColor: '#000',
-            shadowOpacity: 0.4,
-            shadowRadius: 14,
-            shadowOffset: { width: 0, height: 10 },
-            elevation: 6,
-          },
-          style,
-        ]}
-      >
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Txt
-            bold
-            style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.4, color: c.onPitch }}
-          >
-            {headline}
-          </Txt>
-          <Txt
-            numberOfLines={1}
-            style={{
-              fontSize: rem(0.8125),
-              lineHeight: rem(0.8125) * 1.4,
-              color: alpha(c.onPitch, 0.85),
-            }}
-          >
-            {post.title}
-          </Txt>
-        </View>
-        <Btn kind="accent" sm testID="news-open" onPress={open}>
-          보기
-        </Btn>
-        <Press
-          testID="news-close"
-          accessibilityLabel="알림 닫기"
-          onPress={dismissNews}
-          hitSlop={4}
+    <TopBanner testID={`news-banner-${post.board}`} label="새 소식 알림" style={style}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Txt bold style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.4, color: c.onPitch }}>
+          {headline}
+        </Txt>
+        <Txt
+          numberOfLines={1}
           style={{
-            width: 36,
-            height: 36,
-            marginLeft: -4,
-            borderRadius: 10,
-            alignItems: 'center',
-            justifyContent: 'center',
+            fontSize: rem(0.8125),
+            lineHeight: rem(0.8125) * 1.4,
+            color: alpha(c.onPitch, 0.85),
           }}
         >
-          <Txt style={{ fontSize: rem(1), color: c.onPitch }}>✕</Txt>
-        </Press>
-      </Animated.View>
-    </View>
+          {post.title}
+        </Txt>
+      </View>
+      <Btn kind="accent" sm testID="news-open" onPress={open}>
+        보기
+      </Btn>
+      <Press
+        testID="news-close"
+        accessibilityLabel="알림 닫기"
+        onPress={dismissNews}
+        hitSlop={4}
+        style={{
+          width: 36,
+          height: 36,
+          marginLeft: -4,
+          borderRadius: 10,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Txt style={{ fontSize: rem(1), color: c.onPitch }}>✕</Txt>
+      </Press>
+    </TopBanner>
   );
 }

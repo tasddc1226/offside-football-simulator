@@ -8,6 +8,14 @@
     "scheme": "offside",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#0d1511",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/bacad4c8-df2f-4fc5-8938-b02d060fbc45",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "bundleIdentifier": "com.offsidelab.app",
       "supportsTablet": false,

@@ -7,6 +7,7 @@ import { cachedGet, hasSessionHint } from '@offside/app-core/api/client';
 import { flushOutbox } from '@offside/app-core/outbox';
 import { NEWS_GAP_MS } from '@offside/app-core/news';
 import { ensureSession, loadSession } from '../platform/session';
+import { UPDATE_GAP_MS, checkForUpdate } from '../platform/updates';
 import { appState, prefs } from '../store';
 import {
   checkNews,
@@ -46,7 +47,10 @@ export async function boot(): Promise<void> {
     if (st !== 'active') return;
     void checkNews();
     void flushOutbox();
+    void checkForUpdate();
   });
   setInterval(() => AppState.currentState === 'active' && void checkNews(), NEWS_GAP_MS);
+  // 새 앱 번들(OTA)도 돌아올 때·10분마다 본다(웹 새 배포 감지와 같다).
+  setInterval(() => AppState.currentState === 'active' && void checkForUpdate(), UPDATE_GAP_MS);
   void ensureSession().then(() => flushOutbox());
 }

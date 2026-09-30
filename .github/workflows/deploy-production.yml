@@ -212,6 +212,59 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+  # T-11-010 웹·API 배포가 끝까지 성공하면 같은 커밋의 앱 JS 번들을 EAS Update production 채널로 내보낸다.
+  # 스토어 앱은 다음 실행 때(또는 '다시 시작' 배너로) 받는다. runtimeVersion(fingerprint)이 맞는 빌드에만 내려가므로
+  # 네이티브가 바뀐 커밋은 새 스토어 빌드가 나올 때까지 기존 앱에 적용되지 않는다. EXPO_TOKEN이 없으면 건너뛴다.
+  app-update:
+    name: Publish app OTA update
+    needs: production-release
+    if: inputs.mode == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+    steps:
+      - name: Require EXPO_TOKEN
+        id: token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "${EXPO_TOKEN:-}" ]; then
+            echo "EXPO_TOKEN secret not set; skipping app OTA update." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v6
+        if: steps.token.outputs.ok == 'true'
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        if: steps.token.outputs.ok == 'true'
+      - uses: actions/setup-node@v6
+        if: steps.token.outputs.ok == 'true'
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+        if: steps.token.outputs.ok == 'true'
+      - uses: expo/expo-github-action@v8
+        if: steps.token.outputs.ok == 'true'
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Publish production update
+        if: steps.token.outputs.ok == 'true'
+        working-directory: apps/mobile
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          EXPO_PUBLIC_API_URL: https://api.offside-lab.com
+          EXPO_PUBLIC_WEB_ORIGIN: https://offside-lab.com
+        run: |
+          eas update --channel production --environment production --non-interactive \
+            --message "운영 배포 ${EXPECTED_SHA:0:7}" | tee -a "$GITHUB_STEP_SUMMARY"
+
   # 운영 배포가 끝까지 성공했을 때만 릴리즈 태그(KST 날짜 + 그날 순번, 예: v2026.09.25.1)와
   # GitHub 릴리즈를 만든다. 같은 커밋을 다시 배포하면 새 태그를 만들지 않는다.
   release-tag:
