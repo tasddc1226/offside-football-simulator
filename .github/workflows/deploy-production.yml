@@ -213,8 +213,9 @@ jobs:
           retention-days: 30
 
   # T-11-010 웹·API 배포가 끝까지 성공하면 같은 커밋의 앱 JS 번들을 EAS Update production 채널로 내보낸다.
-  # 스토어 앱은 다음 실행 때(또는 '다시 시작' 배너로) 받는다. runtimeVersion(fingerprint)이 맞는 빌드에만 내려가므로
-  # 네이티브가 바뀐 커밋은 새 스토어 빌드가 나올 때까지 기존 앱에 적용되지 않는다. EXPO_TOKEN이 없으면 건너뛴다.
+  # 스토어 앱은 다음 실행 때(또는 '다시 시작' 배너로) 받는다. 직전 OTA 이후 앱이 쓰는 코드(apps/mobile·packages·lockfile)가
+  # 그대로면 게시하지 않는다(새 버전 배너가 괜히 뜨지 않게). runtimeVersion(fingerprint)이 맞는 빌드에만 내려가므로
+  # 네이티브가 바뀐 커밋은 새 스토어 빌드가 나올 때까지 기존 앱에 적용되지 않는다. EXPO_TOKEN이 없으면 경고만 남기고 건너뛴다.
   app-update:
     name: Publish app OTA update
     needs: production-release
@@ -223,42 +224,54 @@ jobs:
     timeout-minutes: 20
     environment:
       name: production
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
     steps:
       - name: Require EXPO_TOKEN
-        id: token
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        if: env.EXPO_TOKEN == ''
         run: |
-          if [ -z "${EXPO_TOKEN:-}" ]; then
-            echo "EXPO_TOKEN secret not set; skipping app OTA update." | tee -a "$GITHUB_STEP_SUMMARY"
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-          fi
+          echo "::warning::EXPO_TOKEN secret not set; app OTA update was NOT published."
+          echo "⚠️ EXPO_TOKEN이 없어 앱 OTA를 게시하지 않았어요." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v6
-        if: steps.token.outputs.ok == 'true'
+        if: env.EXPO_TOKEN != ''
         with:
           ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
           persist-credentials: false
       - uses: pnpm/action-setup@v4
-        if: steps.token.outputs.ok == 'true'
+        if: env.EXPO_TOKEN != ''
       - uses: actions/setup-node@v6
-        if: steps.token.outputs.ok == 'true'
+        if: env.EXPO_TOKEN != ''
         with:
           node-version-file: .node-version
           package-manager-cache: false
-      - run: pnpm install --frozen-lockfile
-        if: steps.token.outputs.ok == 'true'
+      - run: pnpm install --frozen-lockfile --filter @offside/mobile...
+        if: env.EXPO_TOKEN != ''
       - uses: expo/expo-github-action@v8
-        if: steps.token.outputs.ok == 'true'
+        if: env.EXPO_TOKEN != ''
         with:
-          eas-version: latest
+          eas-version: 24.8.0
           token: ${{ secrets.EXPO_TOKEN }}
+      - name: Skip when app code is unchanged since the last OTA
+        id: changed
+        if: env.EXPO_TOKEN != ''
+        working-directory: apps/mobile
+        run: |
+          BASE="$(eas update:list --branch production --limit 1 --json 2>/dev/null \
+            | grep -oE '"gitCommitHash": *"[0-9a-f]{40}"' | head -1 | grep -oE '[0-9a-f]{40}' || true)"
+          if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null \
+            && git diff --quiet "$BASE" HEAD -- ../../apps/mobile ../../packages ../../pnpm-lock.yaml; then
+            echo "앱 코드가 직전 OTA(${BASE:0:7}) 이후 그대로라 게시하지 않았어요." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+      # eas update는 eas.json 빌드 프로필의 env를 쓰지 않는다 — 번들에 들어갈 주소를 여기서 넣는다.
       - name: Publish production update
-        if: steps.token.outputs.ok == 'true'
+        if: steps.changed.outputs.publish == 'true'
         working-directory: apps/mobile
         env:
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
           EXPO_PUBLIC_API_URL: https://api.offside-lab.com
           EXPO_PUBLIC_WEB_ORIGIN: https://offside-lab.com
         run: |

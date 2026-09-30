@@ -2,11 +2,11 @@
 // 이미 본 글이 고쳐져도 같은 자리에 알린다. 새 버전 배너(UpdateBanner)가 떠 있으면 그쪽을 먼저 보인다(웹과 같다).
 import { useState } from 'react';
 import { View } from 'react-native';
-import { useUpdates } from 'expo-updates';
 import { useSnapshot } from 'valtio';
 import type { PostSummary } from '@offside/app-core/api/boards';
 import { dismissNews } from '../game/host';
 import { openBoard } from '../game/nav';
+import { useUpdatePending } from '../platform/updates';
 import { appState, newsState } from '../store';
 import { alpha } from '../theme/colors';
 import { rem } from '../theme/type';
@@ -19,8 +19,8 @@ export function NewsBanner() {
   const c = useColors();
   const news = useSnapshot(newsState);
   const { screen } = useSnapshot(appState);
-  const { isUpdatePending } = useUpdates();
-  const show = !!news.post && screen !== 'board' && !isUpdatePending;
+  const updatePending = useUpdatePending();
+  const show = !!news.post && screen !== 'board' && !updatePending;
   const { mounted, style } = useFly(show, 200);
   // 사라지는 동안에도 글자가 남도록 마지막 글을 붙들어 둔다.
   const [last, setLast] = useState<{

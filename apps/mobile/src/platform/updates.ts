@@ -7,15 +7,20 @@ import * as Updates from 'expo-updates';
 export const UPDATE_GAP_MS = 10 * 60_000;
 const MIN_GAP_MS = 60_000;
 let lastCheck = Date.now(); // 켤 때의 확인은 expo-updates가 한다.
+let pending = false; // 받아 둔 번들이 있으면 다시 시작할 때까지 더 보지 않는다.
 
 export async function checkForUpdate(): Promise<void> {
-  if (!Updates.isEnabled || Date.now() - lastCheck < MIN_GAP_MS) return;
+  if (!Updates.isEnabled || pending || Date.now() - lastCheck < MIN_GAP_MS) return;
   lastCheck = Date.now();
   try {
-    if ((await Updates.checkForUpdateAsync()).isAvailable) await Updates.fetchUpdateAsync();
+    // 새 번들이 없으면 받지 않고 isNew=false로 끝난다 — 확인을 따로 부르지 않는다.
+    pending = (await Updates.fetchUpdateAsync()).isNew;
   } catch {
     /* 오프라인이면 다음에 다시 본다. */
   }
 }
 
 export const applyUpdate = () => void Updates.reloadAsync();
+
+/** 받아 둔 새 번들이 있다(다시 시작하면 적용). 새 버전 배너가 뜨고, 새 소식 배너는 그동안 물러난다. */
+export const useUpdatePending = () => Updates.useUpdates().isUpdatePending;
