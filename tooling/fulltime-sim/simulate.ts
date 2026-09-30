@@ -28,6 +28,7 @@ import {
   legendTitle,
   eventById,
   playPhase,
+  investCost,
 } from '@offside/game/index';
 import { pick, ri, createRng, setActiveRng, freshSeed } from '@offside/game/rng';
 import { setLatestBalance } from '@offside/game/balance';
@@ -50,6 +51,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // SEED=<정수>: 같은 시드면 같은 결과(코드 변경 전후를 잡음 없이 비교할 때).
 // BALANCE=<json 파일>: 그 밸런스 값으로 돌린다 — 어드민 초안의 values(또는 {values}) 그대로(T-10-016).
 const DETAIL = !!process.env.DPOS;
+// T-11-012 INVEST=1: 자금으로 자기 투자를 한다(다치거나 지쳤으면 메디컬, 사기가 낮으면 멘탈, 아니면 약점 보강 특훈 —
+// 비용의 두 배 이상 있을 때만). 없으면 예전처럼 투자하지 않는다(RNG 소비도 같다).
+const INVEST = process.env.INVEST === '1';
 // T-10-096 NATION=<국가 코드>: 그 국적으로 만든 선수. BODY=tall|short|heavy|light|default: 포지션 기본 체격
 // (BODY_DEFAULT)에서 한쪽 끝으로 간 체격. 둘 다 없으면 예전 선수 그대로(RNG 소비도 같다).
 const NATION = process.env.NATION;
@@ -174,6 +178,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
       for (let y = 0; y < 30 && !s.retired; y++) {
         for (let ph = 0; ph <= LAST_PHASE; ph++) {
           s.training = pickTraining(s);
+          if (INVEST) s.invest = pickInvest(s);
           // T-10-046: 화면과 같은 game/turn.ts playPhase로 진행한다(칭호 판정 포함 — 전에는 빠져 있었다).
           const { block: b, condBeforeMatches, ev: e } = playPhase(s);
           if (b) {
@@ -372,6 +377,12 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
         (a, b) =>
           s.attrs[a] - (POS[s.pos].w[a] ?? 0) * 40 - (s.attrs[b] - (POS[s.pos].w[b] ?? 0) * 40),
       )[0]!;
+  }
+  function pickInvest(s: GameState): string {
+    const can = (id: 'weak' | 'medical' | 'mental') => s.money >= investCost(s, id) * 2;
+    if (s.injury > 0 || s.cond < 50) return can('medical') ? 'medical' : 'none';
+    if (s.morale < 45) return can('mental') ? 'mental' : 'none';
+    return can('weak') ? 'weak' : 'none';
   }
   function value(x: GameState): number {
     const S = x.season || ({} as GameState['season']);

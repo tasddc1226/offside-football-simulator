@@ -1,7 +1,7 @@
 <script lang="ts">
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
   import { PHASES, LAST_PHASE } from '@offside/game/data';
-  import { teamRank, roundRange, TRAININGS, trainingLabel, trainingCard, trainingHelp, TRAINING_NOTE, STORIES, turnNo } from '@offside/game/engine';
+  import { teamRank, roundRange, TRAININGS, trainingLabel, trainingCard, trainingHelp, TRAINING_NOTE, INVESTS, investCard, investHelp, investOf, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
@@ -22,6 +22,7 @@
   const activeStories = $derived(Object.entries(s.story || {}).filter(([, v]) => !v.done));
   const t = $derived(turnNo(s));
   const picked = $derived(TRAININGS.find((x) => x.id === s.training));
+  const invest = $derived(INVESTS.find((x) => x.id === investOf(s))!);
 
   function meterCls(v: number, badAt: number, warnAt: number): string {
     return v < badAt ? 'bad' : v < warnAt ? 'warn' : '';
@@ -29,6 +30,11 @@
 
   function setTraining(id: string) {
     s.training = id;
+    save();
+  }
+
+  function setInvest(id: string) {
+    s.invest = id;
     save();
   }
 
@@ -130,6 +136,26 @@
     </div>
   {/if}
   <p class="muted fs-xs">진행 버튼은 화면 아래 고정 액션바에 있습니다.</p>
+</section>
+
+<section class="card stack">
+  <div class="row" style="justify-content:space-between">
+    <div><div class="eyebrow">Invest</div><h2>자기 투자</h2></div>
+    <span class="pill" data-invest-money>보유 {fmtMoney(s.money)}원</span>
+  </div>
+  <div class="train">
+    {#each INVESTS as d (d.id)}
+      {@const c = investCard(s, d)}
+      <button class="opt" data-invest={d.id} aria-pressed={invest.id === d.id} disabled={!c.affordable} onclick={() => setInvest(d.id)}>
+        <b>{d.label}</b><small>{#each c.effect as part, i (i)}{i ? ' · ' : ''}<span class="nowrap">{part}</span>{/each}</small>{#if c.tag}<small class="train-tag">{c.affordable ? c.tag : '자금 부족'}</small>{/if}
+      </button>
+    {/each}
+  </div>
+  <div class="train-help" data-invest-help aria-live="polite">
+    <b>{invest.label}</b>
+    <p>{investHelp(s, invest)}</p>
+    <p class="muted fs-xs">훈련과 따로, 구간마다 한 번 적용됩니다. 고른 투자는 바꾸기 전까지 이어져요.</p>
+  </div>
 </section>
 
 <section class="card">
