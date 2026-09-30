@@ -239,35 +239,36 @@ jobs:
           ref: ${{ inputs.expected_sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-        if: env.EXPO_TOKEN != ''
       - uses: actions/setup-node@v6
         if: env.EXPO_TOKEN != ''
         with:
           node-version-file: .node-version
           package-manager-cache: false
-      - run: pnpm install --frozen-lockfile --filter @offside/mobile...
-        if: env.EXPO_TOKEN != ''
       - uses: expo/expo-github-action@v8
         if: env.EXPO_TOKEN != ''
         with:
           eas-version: 24.8.0
           token: ${{ secrets.EXPO_TOKEN }}
+      # 설치 전에 판단한다 — 웹·API만 바뀐 배포는 여기서 끝난다.
       - name: Skip when app code is unchanged since the last OTA
         id: changed
         if: env.EXPO_TOKEN != ''
         working-directory: apps/mobile
         run: |
           BASE="$(eas update:list --branch production --limit 1 --json 2>/dev/null \
-            | grep -oE '"gitCommitHash": *"[0-9a-f]{40}"' | head -1 | grep -oE '[0-9a-f]{40}' || true)"
+            | jq -r '[.. | objects | .gitCommitHash? // empty] | first // empty' || true)"
           if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null \
-            && git diff --quiet "$BASE" HEAD -- ../../apps/mobile ../../packages ../../pnpm-lock.yaml; then
+            && git diff --quiet "$BASE" HEAD -- . ../../packages ../../package.json ../../pnpm-lock.yaml; then
             echo "앱 코드가 직전 OTA(${BASE:0:7}) 이후 그대로라 게시하지 않았어요." | tee -a "$GITHUB_STEP_SUMMARY"
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
-      # eas update는 eas.json 빌드 프로필의 env를 쓰지 않는다 — 번들에 들어갈 주소를 여기서 넣는다.
+      - uses: pnpm/action-setup@v4
+        if: steps.changed.outputs.publish == 'true'
+      - run: pnpm install --frozen-lockfile --filter @offside/mobile...
+        if: steps.changed.outputs.publish == 'true'
+      # eas update는 eas.json 빌드 프로필의 env를 쓰지 않는다 — 번들에 들어갈 주소를 여기서 넣는다(eas.json production과 같은 값).
       - name: Publish production update
         if: steps.changed.outputs.publish == 'true'
         working-directory: apps/mobile

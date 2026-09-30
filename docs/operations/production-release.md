@@ -51,6 +51,8 @@ migration은 이 목록도 함께 고친다.
 12. **앱 OTA** (`app-update` 잡, T-11-010, 위 배포가 성공했을 때만): 같은 커밋의 앱 JS 번들을
     `eas update --channel production --environment production`으로 EAS Update에 올린다. 스토어 앱은 다음
     실행 때 받거나, 앱으로 돌아올 때 받아 두고 '다시 시작' 배너로 바로 적용한다.
+    - 직전 production OTA 커밋 이후 `apps/mobile`·`packages`·루트 `package.json`·`pnpm-lock.yaml`이 그대로면
+      게시하지 않는다(웹·API만 바뀐 배포에 새 버전 배너가 뜨지 않게).
     - `runtimeVersion`은 `fingerprint` 정책이다. 네이티브(모듈 추가·SDK·`app.json` 네이티브 설정)가 바뀐 커밋은
       런타임이 달라 기존 스토어 앱에 내려가지 않는다 — 그때는 새 스토어 빌드(`eas build`)와 심사가 필요하다.
     - GitHub `production` 환경 secret `EXPO_TOKEN`(expo.dev → Access tokens)이 없으면 이 잡은 건너뛴다.
