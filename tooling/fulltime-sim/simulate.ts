@@ -29,6 +29,7 @@ import {
   eventById,
   playPhase,
   investCost,
+  INVESTS,
 } from '@offside/game/index';
 import { pick, ri, createRng, setActiveRng, freshSeed } from '@offside/game/rng';
 import { setLatestBalance } from '@offside/game/balance';
@@ -379,10 +380,9 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
       )[0]!;
   }
   function pickInvest(s: GameState): string {
-    const can = (id: 'weak' | 'medical' | 'mental') => s.money >= investCost(s, id) * 2;
-    if (s.injury > 0 || s.cond < 50) return can('medical') ? 'medical' : 'none';
-    if (s.morale < 45) return can('mental') ? 'mental' : 'none';
-    return can('weak') ? 'weak' : 'none';
+    const want = s.injury > 0 || s.cond < 50 ? 'medical' : s.morale < 45 ? 'mental' : 'weak';
+    const d = INVESTS.find((x) => x.id === want)!;
+    return s.money >= investCost(s, d) * 2 ? want : 'none';
   }
   function value(x: GameState): number {
     const S = x.season || ({} as GameState['season']);

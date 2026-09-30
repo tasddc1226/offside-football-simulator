@@ -15,7 +15,8 @@ import {
   INVESTS,
   investCard,
   investHelp,
-  investOf,
+  investDef,
+  INVEST_NOTE,
   fmtMoney,
   STORIES,
   turnNo,
@@ -110,7 +111,6 @@ const RowMuted = ({ children }: { children: ReactNode }) => (
 
 interface Choice {
   id: string;
-  testID: string;
   label: string;
   effect: string[];
   tag: string;
@@ -120,7 +120,7 @@ interface Choice {
 }
 
 /** 훈련·자기 투자 선택지(웹 .train grid 3열) — 3개씩 끊어 줄로 그리고, 모자란 칸은 빈 칸으로 폭을 맞춘다. */
-function ChoiceGrid({ items }: { items: Choice[] }) {
+function ChoiceGrid({ testPrefix, items }: { testPrefix: string; items: Choice[] }) {
   const c = useColors();
   const rows: Choice[][] = [];
   for (let i = 0; i < items.length; i += 3) rows.push(items.slice(i, i + 3));
@@ -129,7 +129,7 @@ function ChoiceGrid({ items }: { items: Choice[] }) {
       {rows.map((row, ri) => (
         <View key={ri} style={{ flexDirection: 'row', gap: 8 }}>
           {row.map((it) => (
-            <View key={it.id} testID={it.testID} style={{ flex: 1 }}>
+            <View key={it.id} testID={`${testPrefix}-${it.id}`} style={{ flex: 1 }}>
               <Opt
                 selected={it.selected}
                 disabled={it.disabled}
@@ -178,12 +178,12 @@ function HelpBox({
   testID,
   title,
   body,
-  children,
+  note,
 }: {
   testID: string;
   title: string;
   body: string;
-  children: ReactNode;
+  note: string;
 }) {
   const c = useColors();
   return (
@@ -203,7 +203,7 @@ function HelpBox({
       </Txt>
       <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}>{body}</Txt>
       <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-        {children}
+        {note}
       </Txt>
     </View>
   );
@@ -223,7 +223,7 @@ export function SeasonTab({ s }: { s: GameState }) {
   const activeStories = Object.entries(s.story || {}).filter(([, v]) => !v.done);
   const t = turnNo(s);
   const picked = TRAININGS.find((x) => x.id === s.training);
-  const invest = INVESTS.find((x) => x.id === investOf(s))!;
+  const invest = investDef(s);
 
   function setTraining(id: string) {
     appState.G!.training = id;
@@ -363,11 +363,11 @@ export function SeasonTab({ s }: { s: GameState }) {
           </Txt>
         </View>
         <ChoiceGrid
+          testPrefix="train"
           items={TRAININGS.map((tr) => {
             const cd = trainingCard(s, tr);
             return {
               id: tr.id,
-              testID: `train-${tr.id}`,
               label: trainingLabel(s, tr),
               effect: cd.effect,
               tag: cd.tag,
@@ -381,9 +381,8 @@ export function SeasonTab({ s }: { s: GameState }) {
             testID="train-help"
             title={trainingLabel(s, picked)}
             body={trainingHelp(s, picked)}
-          >
-            {TRAINING_NOTE}
-          </HelpBox>
+            note={TRAINING_NOTE}
+          />
         ) : null}
         <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
           진행 버튼은 화면 아래 고정 액션바에 있습니다.
@@ -408,23 +407,26 @@ export function SeasonTab({ s }: { s: GameState }) {
           <Pill>{`보유 ${fmtMoney(s.money)}원`}</Pill>
         </View>
         <ChoiceGrid
+          testPrefix="invest"
           items={INVESTS.map((d) => {
             const cd = investCard(s, d);
             return {
               id: d.id,
-              testID: `invest-${d.id}`,
               label: d.label,
               effect: cd.effect,
-              tag: cd.tag && !cd.affordable ? '자금 부족' : cd.tag,
+              tag: cd.tag,
               selected: invest.id === d.id,
               disabled: !cd.affordable,
               onPress: () => setInvest(d.id),
             };
           })}
         />
-        <HelpBox testID="invest-help" title={invest.label} body={investHelp(s, invest)}>
-          훈련과 따로, 구간마다 한 번 적용됩니다. 고른 투자는 바꾸기 전까지 이어져요.
-        </HelpBox>
+        <HelpBox
+          testID="invest-help"
+          title={invest.label}
+          body={investHelp(s, invest)}
+          note={INVEST_NOTE}
+        />
       </Card>
 
       <Card gap={0}>

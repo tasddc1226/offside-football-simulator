@@ -5,7 +5,7 @@ import {
   investCard,
   investCost,
   investTarget,
-  investOf,
+  investDef,
   INVESTS,
 } from './engine.js';
 import { createRng, rnd, setActiveRng } from './rng.js';
@@ -29,18 +29,18 @@ describe('자기 투자 (T-11-012)', () => {
   it('비용은 연봉 비례, 계약이 없으면 최소 금액', () => {
     const s = fw();
     expect(s.contract).toBeNull();
-    expect(investCost(s, 'weak')).toBe(300);
-    expect(investCost(s, 'medical')).toBe(200);
-    expect(investCost(s, 'mental')).toBe(150);
-    expect(investCost(s, 'none')).toBe(0);
+    expect(investCost(s, inv('weak'))).toBe(300);
+    expect(investCost(s, inv('medical'))).toBe(200);
+    expect(investCost(s, inv('mental'))).toBe(150);
+    expect(investCost(s, inv('none'))).toBe(0);
     s.contract = { years: 2, salary: 50_000 };
-    expect(investCost(s, 'weak')).toBe(5_000);
-    expect(investCost(s, 'medical')).toBe(3_000);
+    expect(investCost(s, inv('weak'))).toBe(5_000);
+    expect(investCost(s, inv('medical'))).toBe(3_000);
   });
 
   it('고르지 않은 커리어(옛 저장)는 아무것도 바꾸지 않고 RNG도 쓰지 않는다', () => {
     const s = fw();
-    expect(investOf(s)).toBe('none');
+    expect(investDef(s).id).toBe('none');
     const before = JSON.stringify(s);
     applyInvest(s);
     expect(JSON.stringify(s)).toBe(before);
@@ -90,7 +90,7 @@ describe('자기 투자 (T-11-012)', () => {
     expect(s.attrs).toEqual(attrs);
     expect(s.invest).toBe('none');
     expect(s.log[0]!.text).toContain('자금이 부족');
-    expect(investCard(s, inv('medical')).affordable).toBe(false);
+    expect(investCard(s, inv('medical'))).toMatchObject({ affordable: false, tag: '자금 부족' });
     expect(investCard(s, inv('none')).affordable).toBe(true);
   });
 });
