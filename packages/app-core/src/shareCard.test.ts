@@ -56,6 +56,7 @@ function view(career: CareerRecord[], o: Partial<LegendView> = {}, withStyle = f
     name: '도하람',
     number: 17,
     pos: 'FW',
+    dpos: null,
     age: 34,
     lastClub: career.at(-1)!.club,
     score: 612,

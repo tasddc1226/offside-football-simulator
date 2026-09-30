@@ -168,7 +168,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
               delay={1500}
               style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}
             >
-              <FilmPill gold>{legendTitle(v.score)}</FilmPill>
+              <FilmPill gold>{legendTitle(v.score, v.dpos)}</FilmPill>
               {main && main.cat !== 'legend' ? (
                 <FilmPill testID="legend-title">{`‘${main.name}’`}</FilmPill>
               ) : null}

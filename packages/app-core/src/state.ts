@@ -30,6 +30,8 @@ export type HofView = {
   team: string | null;
   /** T-10-101 이름 검색어(공개 이름 부분 일치). */
   q: string;
+  /** T-11-018 포지션별 순위(null = 모든 포지션). */
+  pos: Pos | null;
 };
 /** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
 export const hofStart = (): HofView => ({
@@ -39,6 +41,7 @@ export const hofStart = (): HofView => ({
   season: activeSeason(new Date().toISOString())?.id ?? null,
   team: null,
   q: '',
+  pos: null,
 });
 
 export type TeamView = 'team' | 'achievements' | 'opponents' | 'result' | 'history';
@@ -105,6 +108,8 @@ export interface LegendView {
   name: string;
   number: number | null;
   pos: Pos;
+  /** T-10-091 세부 포지션 — 있으면 시즌 1 선수라 레전드 등급을 시즌 1 기준으로 가른다(T-11-018). */
+  dpos: string | null | undefined;
   age: number;
   lastClub: string;
   /** T-10-066. 옛 기록에는 없다 — 엠블럼은 이름으로 찾는다. */

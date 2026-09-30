@@ -575,8 +575,8 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
     ...(s.style ? { style: { ...s.style } } : {}),
   };
 }
-export function legendTitle(score: number): string {
-  return legendBand(score).name;
+export function legendTitle(score: number, dpos: string | null | undefined): string {
+  return legendBand(score, dpos).name;
 }
 
 // ───────── 저장 ─────────

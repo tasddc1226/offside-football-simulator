@@ -33,7 +33,10 @@ export default {
         },
       });
     } catch {
-      return redirect(new URL(bandCardPath(entry.legendScore), url.origin).toString(), 600);
+      return redirect(
+        new URL(bandCardPath(entry.legendScore, entry.dpos), url.origin).toString(),
+        600,
+      );
     }
   },
 };

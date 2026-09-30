@@ -52,7 +52,7 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
   const span = y0 == null ? null : y0 === y1 ? `${y0}` : `${y0}–${y1}`;
   const main = titleById(titleId);
   const rn = v.rn?.kind === 'granted' ? v.rn : null;
-  const pills: ShareCardData['pills'] = [{ text: legendTitle(v.score), gold: true }];
+  const pills: ShareCardData['pills'] = [{ text: legendTitle(v.score, v.dpos), gold: true }];
   if (main && main.cat !== 'legend') pills.push({ text: `‘${main.name}’` });
   if (rn) pills.push({ text: `👑 ${rn.club}`, tail: ` 영구결번 ${rn.number}` });
   else pills.push({ text: `최고 OVR ${v.peak}` });

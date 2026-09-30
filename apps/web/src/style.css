@@ -3696,6 +3696,19 @@ body:has(nav.tabs) .toast {
 .hof-seasons {
   margin-top: 4px;
 }
+/* T-11-018 포지션별 순위 — 다섯 칸을 한 줄에(폰 폭에서도). */
+.seg.hof-pos {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.hof-pos .opt {
+  padding: 6px 2px;
+  align-items: center;
+  text-align: center;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
 /* T-10-103 개막 전 시즌 버튼에 'Coming soon' — 버튼 높이는 그대로, 오른쪽 위 테두리에 걸친다. */
 .hof-seasons .opt {
   position: relative;
