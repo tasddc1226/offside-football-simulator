@@ -7,6 +7,7 @@ import { cachedGet, hasSessionHint } from '@offside/app-core/api/client';
 import { flushOutbox } from '@offside/app-core/outbox';
 import { NEWS_GAP_MS } from '@offside/app-core/news';
 import { ensureSession, loadSession } from '../platform/session';
+import { checkForUpdate } from '../platform/updates';
 import { appState, prefs } from '../store';
 import {
   checkNews,
@@ -40,12 +41,13 @@ export async function boot(): Promise<void> {
     (ok) => ok && hasSessionHint() && void syncClubCustom().catch(() => {}),
   );
   watchRetiredNumberAlerts();
-  // 새 소식: 열 때·앱으로 돌아올 때·10분마다. 못 보낸 업로드도 돌아올 때 다시 보낸다.
+  // 새 소식: 열 때·앱으로 돌아올 때·10분마다. 못 보낸 업로드·새 앱 번들(OTA)도 돌아올 때 다시 본다.
   void checkNews();
   AppState.addEventListener('change', (st) => {
     if (st !== 'active') return;
     void checkNews();
     void flushOutbox();
+    void checkForUpdate();
   });
   setInterval(() => AppState.currentState === 'active' && void checkNews(), NEWS_GAP_MS);
   void ensureSession().then(() => flushOutbox());
