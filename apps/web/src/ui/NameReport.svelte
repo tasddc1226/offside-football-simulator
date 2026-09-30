@@ -1,6 +1,6 @@
 <script lang="ts">
   // 남의 공개 이름(명예의 전당 선수·구단) 신고 — 앱스토어 UGC 정책. 운영자가 관리 화면에서 가리거나 기각한다.
-  import { reportName } from '@offside/app-core/api/boards';
+  import { reportName } from '@offside/app-core/api/reports';
   import type { NameReportKind } from '@offside/contracts/board-limits';
   import { toast } from './helpers.js';
 

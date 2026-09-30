@@ -290,7 +290,7 @@ describe('게시판 /v1/boards', () => {
 
   type Detail = {
     data: {
-      comments: { id: string; nickname: string; mine: boolean }[];
+      comments: { id: string; nickname: string; deletable: boolean }[];
       blocks: { id: string; nickname: string }[];
     };
   };
@@ -333,7 +333,7 @@ describe('게시판 /v1/boards', () => {
 
     expect((await detailOf(id, anon.cookie)).data.comments).toHaveLength(0);
     expect((await detailOf(id, alice.cookie)).data.comments).toMatchObject([
-      { id: bad, mine: true },
+      { id: bad, deletable: true },
     ]);
     const list = (await (
       await call('GET', '/v1/admin/comments?reported=1', { cookie: admin.cookie })

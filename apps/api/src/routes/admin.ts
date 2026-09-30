@@ -12,13 +12,13 @@ import {
 import type { Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
 import { getAdminStats, listRecentComments, purgeCommentsBy } from '../db/repos/admin.js';
-import { getNameTarget, listOpenNameReports, resolveNameReports } from '../db/repos/nameReports.js';
+import { listOpenNameReports, resolveNameReports } from '../db/repos/nameReports.js';
 import { getActiveBalance } from '../db/repos/balance.js';
 import { automationReport } from '../db/repos/automation.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
-import { ok, readBody, nowIso } from './shared.js';
-import { AppError, parseWithAppError } from '../errors.js';
+import { notFoundError, ok, readBody, nowIso } from './shared.js';
+import { parseWithAppError } from '../errors.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 
 // T-10-016 운영 도구: 대시보드와 댓글 관리. 댓글 하나 지우기는 게시판의 DELETE /v1/boards/comments/:id를 쓴다.
@@ -73,23 +73,11 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/admin/name-reports/resolve', async (c) => {
     const viewer = await requireAdmin(c);
     const input = readBody(c, AdminNameReportResolveSchema);
-    const db = getDb(c);
-    const target = input.action === 'hide' ? await getNameTarget(db, input.kind, input.id) : null;
-    if (!(await resolveNameReports(db, input, viewer.profileId!, nowIso()))) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        status: 404,
-        message: '열린 신고가 없어요.',
-        details: { reason: 'NAME_REPORT_NOT_FOUND' },
-      });
-    }
-    if (target) {
-      purgeEdge(
-        c,
-        input.kind === 'career'
-          ? STALE.retirementPut(input.id)
-          : STALE.teamSaved(target.season ?? 0),
-      );
+    const done = await resolveNameReports(getDb(c), input, viewer.profileId!, nowIso());
+    if (!done) throw notFoundError('열린 신고가 없어요.', 'NAME_REPORT_NOT_FOUND');
+    if (input.action === 'hide') {
+      if (input.kind === 'career') purgeEdge(c, STALE.retirementPut(input.id));
+      else if (done.season !== null) purgeEdge(c, STALE.teamSaved(done.season));
     }
     return c.body(null, 204);
   });

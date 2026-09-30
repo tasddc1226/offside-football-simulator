@@ -3,11 +3,10 @@
 // 앱에서 뺀 것(웹 전용): 효과음·배경음악·음량·음악 출처, 분석 동의, '홈 화면에 추가하기' 안내.
 import { useState } from 'react';
 import { View } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
 import { saveKey } from '@offside/game/season';
 import { SiteFooter } from '../../components/SiteFooter';
-import { WEB_ORIGIN } from '../../platform/config';
+import { openWeb } from '../../platform/openWeb';
 import { prefs } from '../../store';
 import { useColors, useIsDark } from '../../theme/useColors';
 import { rem } from '../../theme/type';
@@ -17,8 +16,6 @@ import { ClubCustomSettings } from './ClubCustomSettings';
 import { SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
 
 /** 정책·가이드는 웹 페이지를 앱 안 브라우저로 연다. */
-const openWeb = (path: string) => void WebBrowser.openBrowserAsync(`${WEB_ORIGIN}${path}`);
-
 function LinkList({ label, items }: { label: string; items: { text: string; path: string }[] }) {
   const c = useColors();
   return (

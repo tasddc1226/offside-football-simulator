@@ -3,7 +3,6 @@
 // 남의 댓글은 누구나 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 신고한 댓글·차단한 사람의 댓글은 서버가 빼고 준다.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import Svg, { Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import {
@@ -35,7 +34,7 @@ import { NicknameForm } from '../../components/NicknameForm';
 import { markNewsSeen, toast } from '../../game/host';
 import { openBoard } from '../../game/nav';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
-import { WEB_ORIGIN } from '../../platform/config';
+import { openWeb } from '../../platform/openWeb';
 import { AppleLoginButton, useAppleLogin } from '../../ui/AppleLoginButton';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
@@ -649,9 +648,7 @@ export default function Board() {
                         tone="muted"
                         style={[small, { textDecorationLine: 'underline' }]}
                         accessibilityRole="link"
-                        onPress={() =>
-                          void WebBrowser.openBrowserAsync(`${WEB_ORIGIN}/legal/terms/`)
-                        }
+                        onPress={() => openWeb('/legal/terms/')}
                       >
                         이용약관
                       </Txt>

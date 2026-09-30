@@ -36,7 +36,7 @@ import {
   updatePost,
 } from '../db/repos/boards.js';
 import { getDb, type AppEnv } from '../env.js';
-import { ok, readBody, nowIso } from './shared.js';
+import { notFoundError, ok, readBody, nowIso } from './shared.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
@@ -53,12 +53,7 @@ import { hasProfanity } from '@offside/contracts/content-filter';
 const COMMENT_LIMIT = 10;
 
 const notFound = (what: string) =>
-  new AppError({
-    code: 'VALIDATION_FAILED',
-    status: 404,
-    message: `${what}을(를) 찾을 수 없습니다.`,
-    details: { reason: 'BOARD_NOT_FOUND' },
-  });
+  notFoundError(`${what}을(를) 찾을 수 없습니다.`, 'BOARD_NOT_FOUND');
 
 const idParam = (c: Context<AppEnv>, name: string) =>
   parseWithAppError(BoardIdParamSchema, c.req.param(name));
@@ -98,16 +93,16 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       listComments(db, id),
       getViewer(c),
       session.then((s) => (s ? isLiked(db, id, s.profileId) : false)),
-      session.then((s) => (s ? getHiddenFor(db, s.profileId) : undefined)),
+      session.then((s) => (s ? getHiddenFor(db, s.profileId, id) : undefined)),
     ]);
     const comments = rows
       .filter(
         (r) => !hidden?.blockedAuthors.has(r.profileId) && !hidden?.reportedComments.has(r.id),
       )
-      .map(({ profileId, ...r }) => {
-        const mine = profileId === viewer.profileId;
-        return { ...r, mine, deletable: viewer.admin || mine };
-      });
+      .map(({ profileId, ...r }) => ({
+        ...r,
+        deletable: viewer.admin || profileId === viewer.profileId,
+      }));
     return ok(c, PostDetailResponseSchema, {
       post,
       comments,
@@ -211,7 +206,6 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       body,
       admin: viewer.admin,
       deletable: true,
-      mine: true,
       createdAt: now,
     };
     return ok(c, CommentSchema, comment, 201);

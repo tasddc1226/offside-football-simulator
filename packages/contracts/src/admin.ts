@@ -50,8 +50,11 @@ export const AdminCommentQuerySchema = z.object({
   before: IsoUtcSchema.optional(),
   /** 한 작성자(프로필)의 댓글만. */
   profile: ProfileIdSchema.optional(),
-  /** '1'이면 신고된 댓글만. */
-  reported: z.literal('1').optional(),
+  /** ?reported=1 이면 신고된 댓글만. */
+  reported: z
+    .literal('1')
+    .optional()
+    .transform((v) => v === '1'),
 });
 
 export const AdminCommentSchema = z.object({

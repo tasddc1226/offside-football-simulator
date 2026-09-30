@@ -4,11 +4,10 @@
   import { onMount } from 'svelte';
   import * as api from '@offside/app-core/api/admin';
   import type { AdminNameReport } from '@offside/app-core/api/admin';
-  import { kstDateTime as kst } from '@offside/app-core/boardText';
+  import { NAME_KIND_LABEL as KIND, kstDateTime as kst } from '@offside/app-core/boardText';
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
 
-  const KIND = { career: '선수', team: '구단' } as const;
   let items = $state<AdminNameReport[]>([]);
   let status = $state<LoadStatus>('loading');
   let busy = $state(false);

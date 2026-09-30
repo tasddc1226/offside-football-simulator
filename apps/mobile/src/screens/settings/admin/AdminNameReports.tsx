@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
 import type { AdminNameReport } from '@offside/app-core/api/admin';
-import { kstDateTime as kst } from '@offside/app-core/boardText';
+import { NAME_KIND_LABEL as KIND, kstDateTime as kst } from '@offside/app-core/boardText';
 import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { toast } from '../../../game/host';
 import { rem } from '../../../theme/type';
@@ -13,8 +13,6 @@ import { Btn } from '../../../ui/Btn';
 import { Pill } from '../../../ui/bits';
 import { Txt } from '../../../ui/Txt';
 import { confirmAsync } from '../../board/parts';
-
-const KIND = { career: '선수', team: '구단' } as const;
 
 export default function AdminNameReports() {
   const c = useColors();

@@ -276,8 +276,8 @@ export async function unblock(db: Db, id: string, profileId: string): Promise<bo
   return res.meta.changes > 0;
 }
 
-/** 이 프로필 화면에서 뺄 댓글 — 차단한 작성자와 신고한 댓글 — 과 차단 목록. */
-export async function getHiddenFor(db: Db, profileId: string) {
+/** 이 프로필이 글 하나에서 뺄 댓글 — 차단한 작성자와 (이 글에서) 신고한 댓글 — 과 차단 목록. */
+export async function getHiddenFor(db: Db, profileId: string, postId: string) {
   const [blocks, reported] = await Promise.all([
     db
       .select({
@@ -292,7 +292,8 @@ export async function getHiddenFor(db: Db, profileId: string) {
     db
       .select({ commentId: boardCommentReports.commentId })
       .from(boardCommentReports)
-      .where(eq(boardCommentReports.profileId, profileId)),
+      .innerJoin(boardComments, eq(boardComments.id, boardCommentReports.commentId))
+      .where(and(eq(boardCommentReports.profileId, profileId), eq(boardComments.postId, postId))),
   ]);
   return {
     blocks: blocks.map(({ blockedProfileId: _, ...b }) => b),

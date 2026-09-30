@@ -81,10 +81,8 @@ export const CommentSchema = z.object({
   body: z.string(),
   /** 관리자가 쓴 댓글(운영자 표시). */
   admin: z.boolean(),
-  /** 보는 사람이 지울 수 있다(본인 댓글이거나 관리자). */
+  /** 보는 사람이 지울 수 있다(본인 댓글이거나 관리자) — 이런 댓글엔 신고·차단 버튼을 그리지 않는다. */
   deletable: z.boolean(),
-  /** 보는 사람이 쓴 댓글 — 신고·차단 버튼을 그리지 않는다. */
-  mine: z.boolean().default(false),
   createdAt: IsoUtcSchema,
 });
 export type Comment = z.infer<typeof CommentSchema>;

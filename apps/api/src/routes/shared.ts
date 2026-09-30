@@ -12,13 +12,11 @@ export const clientIp = (c: Context<AppEnv>) => c.req.header('CF-Connecting-IP')
 /** 사람마다 다른 응답(엣지·브라우저 캐시 금지). */
 export const NO_STORE = 'private, no-store';
 
-export const teamNotFound = () =>
-  new AppError({
-    code: 'VALIDATION_FAILED',
-    status: 404,
-    message: '팀을 찾을 수 없어요.',
-    details: { reason: 'TEAM_NOT_FOUND' },
-  });
+/** 404 — 없는 대상. reason은 클라이언트가 구분할 때 쓰는 코드. */
+export const notFoundError = (message: string, reason: string) =>
+  new AppError({ code: 'VALIDATION_FAILED', status: 404, message, details: { reason } });
+
+export const teamNotFound = () => notFoundError('팀을 찾을 수 없어요.', 'TEAM_NOT_FOUND');
 
 /** T-10-092 `?season=` 팀 시즌 — 없으면 지금 시즌(휴식기면 마지막으로 열린 시즌). 열리지 않은 시즌이면 400. */
 export function teamSeasonParam(raw: unknown, now: string): number {

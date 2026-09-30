@@ -5,8 +5,9 @@ import {
   type NameReportKind,
 } from '@offside/contracts/board-limits';
 import { and, count, desc, eq, inArray, isNull, max, or } from 'drizzle-orm';
+import type { BatchItem } from 'drizzle-orm/batch';
 import type { Db } from '../client.js';
-import { insertAuditLog } from './auditLog.js';
+import { auditLogStatement } from './auditLog.js';
 import { runBatch } from './batch.js';
 import { careers, nameReports, ownerTeams } from '../schema.js';
 
@@ -14,7 +15,7 @@ import { careers, nameReports, ownerTeams } from '../schema.js';
 // 기각한다. 선수 이름은 careers.name_hidden_at을 남겨 시즌·은퇴 업로드가 다시 채우지 않게 하고, 구단은 이름을
 // 바꿔 둔다(구단주가 다시 고칠 수 있다).
 
-export type NameTarget = { ownerId: string; name: string; season?: number };
+export type NameTarget = { ownerId: string; name: string };
 
 /** 신고할 수 있는 대상과 지금 보이는 이름. 없거나 이름이 공개되지 않았으면 null. */
 export async function getNameTarget(
@@ -35,14 +36,11 @@ export async function getNameTarget(
       ownerId: ownerTeams.profileId,
       name: ownerTeams.name,
       manager: ownerTeams.manager,
-      season: ownerTeams.season,
     })
     .from(ownerTeams)
     .where(eq(ownerTeams.id, id))
     .limit(1);
-  return row
-    ? { ownerId: row.ownerId, name: teamLabel(row.name, row.manager), season: row.season }
-    : null;
+  return row ? { ownerId: row.ownerId, name: teamLabel(row.name, row.manager) } : null;
 }
 
 const teamLabel = (name: string, manager: string) => (manager ? `${name} · ${manager}` : name);
@@ -107,13 +105,14 @@ export async function listOpenNameReports(db: Db): Promise<AdminNameReport[]> {
   }));
 }
 
-/** 신고를 닫는다. hide면 이름을 가린다. 열린 신고가 없으면 false. */
+/** 신고를 닫는다. hide면 이름을 가린다. 열린 신고가 없으면 null, 있으면 대상 구단의 시즌(엣지 캐시 퍼지용 —
+ *  선수이거나 구단이 지워졌으면 null). */
 export async function resolveNameReports(
   db: Db,
   input: { kind: NameReportKind; id: string; action: 'hide' | 'dismiss' },
   adminProfileId: string,
   now: string,
-): Promise<boolean> {
+): Promise<{ season: number | null } | null> {
   const { kind, id, action } = input;
   const open = and(
     eq(nameReports.kind, kind),
@@ -121,35 +120,37 @@ export async function resolveNameReports(
     isNull(nameReports.resolvedAt),
   );
   const [first] = await db
-    .select({ name: nameReports.name })
+    .select({ name: nameReports.name, season: ownerTeams.season })
     .from(nameReports)
+    .leftJoin(
+      ownerTeams,
+      and(eq(nameReports.kind, 'team'), eq(ownerTeams.id, nameReports.targetId)),
+    )
     .where(open)
     .limit(1);
-  if (!first) return false;
-  const hide =
-    action !== 'hide'
-      ? []
-      : kind === 'career'
-        ? [
-            db
-              .update(careers)
-              .set({ publicName: null, nameHiddenAt: now })
-              .where(eq(careers.id, id)),
-          ]
-        : [
-            db
-              .update(ownerTeams)
-              .set({ name: HIDDEN_TEAM_NAME, manager: HIDDEN_MANAGER_NAME, updatedAt: now })
-              .where(eq(ownerTeams.id, id)),
-          ];
-  await runBatch(db, [...hide, db.update(nameReports).set({ resolvedAt: now }).where(open)]);
-  await insertAuditLog(db, {
-    kind: 'NAME_REPORT_RESOLVED',
-    profileId: adminProfileId,
-    payload: { kind, id, action, name: first.name },
-    createdAt: now,
-  });
-  return true;
+  if (!first) return null;
+  const statements: BatchItem<'sqlite'>[] = [];
+  if (action === 'hide') {
+    statements.push(
+      kind === 'career'
+        ? db.update(careers).set({ publicName: null, nameHiddenAt: now }).where(eq(careers.id, id))
+        : db
+            .update(ownerTeams)
+            .set({ name: HIDDEN_TEAM_NAME, manager: HIDDEN_MANAGER_NAME, updatedAt: now })
+            .where(eq(ownerTeams.id, id)),
+    );
+  }
+  statements.push(
+    db.update(nameReports).set({ resolvedAt: now }).where(open),
+    auditLogStatement(db, {
+      kind: 'NAME_REPORT_RESOLVED',
+      profileId: adminProfileId,
+      payload: { kind, id, action, name: first.name },
+      createdAt: now,
+    }),
+  );
+  await runBatch(db, statements);
+  return { season: first.season };
 }
 
 /** 프로필 삭제 batch용 — 그 사람이 한 신고와 그 사람의 선수·구단이 받은 신고를 지운다. 커리어·팀을 지우는

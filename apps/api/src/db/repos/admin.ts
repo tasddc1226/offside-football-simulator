@@ -128,7 +128,7 @@ export async function listRecentComments(
     limit: number;
     before?: string | undefined;
     profile?: string | undefined;
-    reported?: '1' | undefined;
+    reported?: boolean | undefined;
   },
 ) {
   const reports = db

@@ -164,6 +164,14 @@ export async function getProfile(): Promise<ApiResult<Profile>> {
 export const renewSession = (): Promise<boolean> =>
   host.renewSession ? host.renewSession() : getProfile().then((r) => r.ok);
 
+/** 아직 프로필이 없거나 세션이 무효인 기기면 새 익명 세션을 받은 뒤 한 번 더 보낸다. 익명 프로필로 충분한
+ *  요청(좋아요·신고·차단)만 쓴다 — PROFILE_REQUIRED가 로그인 안내인 요청에 쓰면 새 프로필이 생긴다. */
+export async function withProfile<T>(send: () => Promise<ApiResult<T>>): Promise<ApiResult<T>> {
+  const r = await send();
+  if (!r.ok && r.error.code === 'PROFILE_REQUIRED' && (await renewSession())) return send();
+  return r;
+}
+
 // T-10-037: 세션 쿠키는 API 도메인의 httpOnly라 웹에서 읽을 수 없다. 프로필 조회가 한 번이라도 성공했으면
 // 표시를 남겨 두고, 표시가 없는 첫 방문자에게는 부팅 때 세션 전용 요청(→ 401)을 보내지 않는다. 어느 요청이든
 // 서버가 세션이 없다고(PROFILE_REQUIRED) 하면 apiFetch가 지운다.

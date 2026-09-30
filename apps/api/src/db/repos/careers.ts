@@ -39,6 +39,19 @@ export async function getCareerOwner(db: Db, careerId: string): Promise<string |
   return row?.profileId;
 }
 
+/** 공개 이름 갱신(upsert·update의 set). undefined(옛 클라이언트)면 그대로 두고, 운영자가 가린 이름(이름 신고,
+ *  name_hidden_at)은 다시 채우지 않는다. keepRetired면 은퇴한 커리어의 이름도 그대로 둔다. */
+function publicNameSet(
+  publicName: string | null | undefined,
+  opts: { keepRetired?: boolean } = {},
+) {
+  if (publicName === undefined) return {};
+  const locked = opts.keepRetired
+    ? sql`${careers.nameHiddenAt} is not null or ${careers.status} = 'retired'`
+    : sql`${careers.nameHiddenAt} is not null`;
+  return { publicName: sql`case when ${locked} then ${careers.publicName} else ${publicName} end` };
+}
+
 export type PutCareerSeasonInput = {
   careerId: string;
   profileId: string;
@@ -64,14 +77,6 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
     input;
   const signals = signalsJson !== undefined ? { signalsJson } : {};
   const name = publicName !== undefined ? { publicName } : {};
-  // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
-  // 운영자가 가린 이름(이름 신고)도 다시 채우지 않는다.
-  const keepRetiredName =
-    publicName !== undefined
-      ? {
-          publicName: sql`case when ${careers.status} = 'retired' or ${careers.nameHiddenAt} is not null then ${careers.publicName} else ${publicName} end`,
-        }
-      : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
   const detail = {
     cs: season.cs ?? null,
@@ -112,7 +117,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           // 포지션·주발·유형·특성·시작 연도는 커리어를 만들 때 정해져 바뀌지 않는다 — 처음 값을 지킨다(뒤늦게
           // 포지션을 바꿔 레전드 점수·결번 가중을 고르지 못하게).
           appVersion: meta.appVersion,
-          ...keepRetiredName,
+          // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
+          ...publicNameSet(publicName, { keepRetired: true }),
           updatedAt: now,
           // status는 의도적으로 뺀다 — 이미 retired인 커리어가 이 라우트로 다시 active가 되지 않는다.
         },
@@ -181,14 +187,6 @@ export type PutRetirementInput = {
  */
 export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`;
 
-/** 은퇴 PUT의 공개 이름. undefined(옛 클라이언트)면 그대로 두고, 운영자가 가린 이름(이름 신고)은 다시 채우지 않는다. */
-const unlessHidden = (publicName: string | null | undefined) =>
-  publicName !== undefined
-    ? {
-        publicName: sql`case when ${careers.nameHiddenAt} is not null then ${careers.publicName} else ${publicName} end`,
-      }
-    : {};
-
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
  * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
@@ -231,7 +229,7 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
         // 옛 클라이언트는 칭호·클럽 id를 보내지 않는다 — 보낸 경우에만 쓴다.
         ...(summary.title !== undefined ? { title: summary.title } : {}),
         ...(summary.lastClubId !== undefined ? { lastClubId: summary.lastClubId } : {}),
-        ...unlessHidden(publicName),
+        ...publicNameSet(publicName),
         ...(snapshot
           ? {
               snapshotJson: JSON.stringify(snapshot),
@@ -484,7 +482,7 @@ export async function updateRetired(
     .update(careers)
     .set({
       updatedAt: now,
-      ...unlessHidden(publicName),
+      ...publicNameSet(publicName),
       ...(title
         ? {
             title: sql`case when exists (select 1 from json_each(${careers.snapshotJson}, '$.titles') where json_extract(value, '$.id') = ${title}) then ${title} else ${careers.title} end`,
