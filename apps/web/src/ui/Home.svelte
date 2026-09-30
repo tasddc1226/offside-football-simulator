@@ -77,4 +77,9 @@
   <HomeNews board="notice" eyebrow="Notice" title="공지사항" />
   <HomeNews board="release" eyebrow="Release notes" title="릴리즈 노트" />
   <SiteFooter />
+  <!-- T-11-015 라운지 채팅으로 가는 떠 있는 버튼(하단 메뉴 위). -->
+  <button class="chat-fab" data-act="chat" onclick={() => go('chat')}>
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z" fill="currentColor"/></svg>
+    채팅
+  </button>
 </div>

@@ -50,6 +50,19 @@ export async function reportChat(
   return row?.n ?? 0;
 }
 
+/** 내가 신고한 메시지 id(since 이후 — 방이 메시지를 들고 있는 기간만). */
+export async function reportedMessageIds(
+  db: Db,
+  profileId: string,
+  since: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ id: chatReports.messageId })
+    .from(chatReports)
+    .where(and(eq(chatReports.profileId, profileId), gt(chatReports.createdAt, since)));
+  return rows.map((r) => r.id);
+}
+
 /** 내가 차단한 사람들의 프로필 id. */
 export async function blockedProfileIds(db: Db, profileId: string): Promise<string[]> {
   const rows = await db

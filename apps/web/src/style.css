@@ -5274,3 +5274,68 @@ button.what {
     animation: none;
   }
 }
+
+/* T-11-015 라운지 채팅. 홈의 떠 있는 버튼은 하단 메뉴 위, 데스크톱에선 본문(560px) 오른쪽 끝에 맞춘다. */
+.chat-fab {
+  position: fixed;
+  right: max(16px, calc(50% - 280px + 16px));
+  bottom: calc(var(--tabbar-h) + var(--safe-b) + 16px);
+  z-index: 15;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+}
+.chat-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0 2px 0 0;
+  height: min(58vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chat-msg {
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.chat-msg p {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chat-msg.mine b {
+  color: var(--accent-text);
+}
+.chat-more {
+  margin-left: auto;
+  min-height: 0;
+  padding: 0 8px;
+  font-size: 0.875rem;
+}
+.chat-empty {
+  margin: auto;
+}
+.chat-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--good);
+}
+.chat-form {
+  gap: 8px;
+}
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+}

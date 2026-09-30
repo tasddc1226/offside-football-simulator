@@ -25,6 +25,7 @@ export const PAGES: Record<string, string> = {
   board: 'board',
   dex: 'dex',
   firsts: 'firsts',
+  chat: 'chat',
 };
 const CAMPAIGNS: Record<string, readonly string[]> = {
   utm_source: [

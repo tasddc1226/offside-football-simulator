@@ -1,4 +1,5 @@
 import {
+  CHAT_KEEP_MS,
   CHAT_REPORT_HIDE,
   ChatBlockResponseSchema,
   ChatMessageIdSchema,
@@ -11,7 +12,13 @@ import { getViewer, requireAdmin } from '../auth/admin.js';
 import { chatAuthor } from '../chat/rules.js';
 import { chatRoom } from '../chat/socket.js';
 import { blockAuthor } from '../db/repos/boards.js';
-import { blockedProfileIds, getMutedUntil, muteChat, reportChat } from '../db/repos/chat.js';
+import {
+  blockedProfileIds,
+  getMutedUntil,
+  muteChat,
+  reportChat,
+  reportedMessageIds,
+} from '../db/repos/chat.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
@@ -53,10 +60,12 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
     const viewer = await getViewer(c);
     const profileId = viewer.profileId!;
     const db = getDb(c);
-    const [author, blocked, mutedUntil] = await Promise.all([
+    const now = Date.now();
+    const [author, blocked, reported, mutedUntil] = await Promise.all([
       chatAuthor(profileId),
       blockedProfileIds(db, profileId).then((ids) => Promise.all(ids.map(chatAuthor))),
-      viewer.admin ? null : getMutedUntil(db, profileId, nowIso()),
+      reportedMessageIds(db, profileId, new Date(now - CHAT_KEEP_MS).toISOString()),
+      viewer.admin ? null : getMutedUntil(db, profileId, new Date(now).toISOString()),
     ]);
     const reason = !viewer.google
       ? 'login'
@@ -84,6 +93,7 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
         admin: viewer.admin,
         mutedUntil,
         blocked,
+        reported,
       },
       200,
       NO_STORE,

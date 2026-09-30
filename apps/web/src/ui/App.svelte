@@ -78,6 +78,11 @@
   $effect(() => {
     if (appState.screen === 'board' && !Board) void import('./Board.svelte').then((m) => (Board = m.default));
   });
+  // T-11-015: 라운지 채팅.
+  let Chat = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'chat' && !Chat) void import('./Chat.svelte').then((m) => (Chat = m.default));
+  });
   // T-10-027: 서버 최초 기록.
   let Firsts = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -135,6 +140,8 @@
       {#if Dex}<Dex />{/if}
     {:else if appState.screen === 'board'}
       {#if Board}{#key appState.board}<Board />{/key}{/if}
+    {:else if appState.screen === 'chat'}
+      {#if Chat}<Chat />{/if}
     {:else if appState.screen === 'firsts'}
       {#if Firsts}<Firsts />{/if}
     {:else if appState.screen === 'shared'}

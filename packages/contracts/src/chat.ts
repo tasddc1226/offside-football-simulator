@@ -6,7 +6,8 @@ export * from './chat-limits.js';
 
 /**
  * T-11-015 `POST /v1/chat/ticket`. 쓸 수 있으면 ticket을 받아 소켓 주소에 붙인다(`?t=`). 못 쓰면 ticket 없이
- * 읽기만 한다 — reason이 이유다. author는 내 메시지를 알아보는 키, blocked는 내가 차단한 작성자 키(화면에서 뺀다).
+ * 읽기만 한다 — reason이 이유다. author는 내 메시지를 알아보는 키, blocked는 내가 차단한 작성자 키, reported는
+ * 내가 신고한 메시지 id(둘 다 화면에서 뺀다).
  */
 export const ChatTicketResponseSchema = z.strictObject({
   ticket: z.string().nullable(),
@@ -16,6 +17,7 @@ export const ChatTicketResponseSchema = z.strictObject({
   admin: z.boolean(),
   mutedUntil: IsoUtcSchema.nullable(),
   blocked: z.array(z.string()),
+  reported: z.array(z.string()).default([]),
 });
 export type ChatTicketResponse = z.infer<typeof ChatTicketResponseSchema>;
 

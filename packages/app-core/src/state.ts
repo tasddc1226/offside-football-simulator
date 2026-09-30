@@ -57,6 +57,8 @@ export type Screen =
   | 'dex'
   | 'hof'
   | 'firsts'
+  /** T-11-015 라운지 채팅(홈의 채팅 버튼으로 연다). */
+  | 'chat'
   | 'admin'
   | 'shared';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';

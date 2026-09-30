@@ -53,7 +53,13 @@ describe('T-11-015 채팅 /v1/chat', () => {
     expect(noName.data).toMatchObject({ ticket: null, reason: 'nickname' });
 
     const ok = await ticketOf((await issueGoogleCookie(ctx, { nickname: '도하람' })).cookie);
-    expect(ok.data).toMatchObject({ reason: null, nickname: '도하람', admin: false, blocked: [] });
+    expect(ok.data).toMatchObject({
+      reason: null,
+      nickname: '도하람',
+      admin: false,
+      blocked: [],
+      reported: [],
+    });
     expect(last(await chat.join(ok.data.ticket!))).toMatchObject({ t: 'hello', write: true });
 
     delete env.CHAT;
@@ -82,6 +88,8 @@ describe('T-11-015 채팅 /v1/chat', () => {
     expect(chat.room.message(bob.id)).toBeNull();
     expect(last(bob.ws)).toEqual({ t: 'hide', id: bob.id });
     expect(await ctx.db.select().from(chatReports)).toHaveLength(CHAT_REPORT_HIDE);
+    // 신고한 사람은 다음 입장권에서 그 메시지를 빼라고 받는다(게시판 댓글처럼).
+    expect((await ticketOf(reporters[0]!.cookie)).data.reported).toEqual([bob.id]);
     expect((await ctx.db.select().from(chatReports))[0]).toMatchObject({
       authorProfileId: bob.profileId,
       nickname: '밥',
