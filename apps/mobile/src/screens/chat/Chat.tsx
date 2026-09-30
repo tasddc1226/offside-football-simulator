@@ -2,7 +2,7 @@
 // 남의 메시지는 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 여럿이 신고하면 모두의 화면에서 가려진다.
 // 운영자는 메시지를 가리고 작성자를 정지한다.
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
-import { ScrollView, View, useWindowDimensions } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import {
   ADMIN_NICKNAME,
   COMMENT_REPORT_REASONS,
@@ -77,7 +77,6 @@ function ChatInput(props: {
 
 export default function Chat() {
   const c = useColors();
-  const { height } = useWindowDimensions();
   const apple = useAppleLogin();
   const [view, setView] = useState<ChatView>(EMPTY_CHAT);
   const input = useRef<InputHandle>(null);
@@ -169,9 +168,9 @@ export default function Chat() {
   } as const;
   const me = view.me;
   return (
-    <Screen footer={<BackBar fallback={goHome} testID="back" />}>
+    <Screen fixed footer={<BackBar fallback={goHome} testID="back" />}>
       <Topbar />
-      <Card gap={10}>
+      <Card gap={10} style={{ flex: 1, minHeight: 0 }}>
         <View testID="chat" style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
           <View style={{ flex: 1 }}>
             <Txt v="eyebrow">Lounge</Txt>
@@ -204,9 +203,8 @@ export default function Chat() {
         <ScrollView
           ref={list}
           testID="chat-list"
-          nestedScrollEnabled
           keyboardShouldPersistTaps="handled"
-          style={{ height: Math.min(height * 0.55, 520) }}
+          style={{ flex: 1, minHeight: 120 }}
           contentContainerStyle={{ gap: 8, flexGrow: 1 }}
           onScroll={(e) => {
             const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;

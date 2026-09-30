@@ -88,7 +88,7 @@
   }
 </script>
 
-<div class="wrap">
+<div class="wrap chat-wrap">
   <Topbar />
   <section class="card chat-card" data-chat>
     <div class="row" style="justify-content:space-between;align-items:baseline">
