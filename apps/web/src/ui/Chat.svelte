@@ -23,6 +23,7 @@
   import { toast } from './helpers.js';
   import { startGoogleLogin } from './login.js';
   import { goHome } from './nav.js';
+  import { trackViewport } from './viewport.js';
 
   // 상태는 통째로 바꿔 끼우므로 깊은 반응성이 필요 없다.
   let view = $state.raw<ChatView>(EMPTY_CHAT);
@@ -30,6 +31,8 @@
   let selected = $state<string | null>(null);
   let busy = $state(false);
   let list: HTMLOListElement | undefined = $state();
+  let wrap: HTMLDivElement | undefined = $state();
+  let input: HTMLInputElement | undefined = $state();
   let session: ChatSession | null = null;
 
   const mine = (m: ChatMessage) => !!view.me && m.author === view.me.author;
@@ -54,6 +57,15 @@
   onMount(() => {
     connect();
     return () => session?.close();
+  });
+
+  // T-11-019 키보드가 떠도 채팅 화면을 보이는 영역에 맞춘다(style.css .chat-wrap). 키보드가 오르내리는 동안 입력 중이면
+  // 마지막 줄을 붙잡는다.
+  $effect(() => {
+    if (wrap)
+      return trackViewport(wrap, () => {
+        if (input && document.activeElement === input) list?.scrollTo({ top: list.scrollHeight });
+      });
   });
 
   function send() {
@@ -88,19 +100,19 @@
   }
 </script>
 
-<div class="wrap chat-wrap">
+<div class="wrap chat-wrap" bind:this={wrap}>
   <Topbar />
   <section class="card chat-card" data-chat>
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <div>
-        <div class="eyebrow">Lounge</div>
+        <div class="eyebrow chat-fold">Lounge</div>
         <h1 style="margin-bottom:4px">라운지 채팅</h1>
       </div>
       <span class="muted fs-sm" data-chat-status>
         {#if view.status === 'open'}<span class="chat-dot" aria-hidden="true"></span>{view.online}명 접속{:else if view.status === 'retrying'}다시 연결하는 중…{:else}연결하는 중…{/if}
       </span>
     </div>
-    <p class="muted fs-xs" style="margin:0 0 8px">모두가 보는 공개 채팅이에요. 링크는 보낼 수 없고, 욕설·비방·광고·개인정보는 가리고 이용을 제한해요(<a href="/legal/terms/">이용약관</a>).</p>
+    <p class="muted fs-xs chat-fold" style="margin:0 0 8px">모두가 보는 공개 채팅이에요. 링크는 보낼 수 없고, 욕설·비방·광고·개인정보는 가리고 이용을 제한해요(<a href="/legal/terms/">이용약관</a>).</p>
 
     <ol class="chat-list" bind:this={list} data-chat-list>
       {#each view.messages as m (m.id)}
@@ -156,6 +168,7 @@
           enterkeyhint="send"
           autocomplete="off"
           bind:value={text}
+          bind:this={input}
           data-chat-input
         />
         <button class="btn btn-primary" data-act="chat-send" disabled={!text.trim()}>보내기</button>
