@@ -2,11 +2,13 @@
 // '내 선수' 표시를 단다. 홈에서는 레전드 점수 TOP 3만 보여 주고, '전체 보기'(full)에서는 순위 유형(득점·도움·발롱도르…)을
 // 골라 10명씩 페이지로 나눠 보여 준다. score가 아닌 유형은 그 기록이 0인 선수를 뺀다(서버와 같은 규칙).
 // T-10-090 전체 보기는 '전체 / 시즌 1'을 고른다. 시즌 순위엔 개막 뒤 새로 만든 선수만 오른다(프리시즌 선수 제외).
+// T-11-018 포지션별 순위 — 레전드 점수 상위권을 공격수가 채우므로 포지션 안에서도 겨루게 한다.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
-import type { HofSort, PublicHofEntry } from '@offside/contracts';
+import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
+import { POS_LABEL } from '@offside/contracts/positions';
 import { SERVICE_SEASONS, serviceSeason } from '@offside/contracts/service-seasons';
 import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { anonName, fmtValue, iGa } from '@offside/app-core/format';
@@ -54,6 +56,7 @@ const SORTS: Record<
   peak: { label: '최고 OVR', unit: '', get: (s) => s.peak },
 };
 const SORT_KEYS = Object.keys(SORTS) as HofSort[];
+const POS_KEYS = Object.keys(POS_LABEL) as CareerPos[];
 
 function SearchIcon({ color }: { color: string }) {
   return (
@@ -73,17 +76,21 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   const by = SORTS[sort];
   const season = full ? snap.hof.season : null;
   const q = full ? snap.hof.q : '';
+  const pos = full ? snap.hof.pos : null;
   const ss = season === null ? undefined : serviceSeason(season);
   /** 고른 시즌이 아직 개막 전이면 그 시즌(목록 대신 개막 안내). */
   const upcoming = ss && notOpen(ss) ? ss : undefined;
-  /** 문구 앞에 붙는 시즌 이름('시즌 1 '). 전체면 빈 문자열. */
-  const scope = ss ? `${ss.name} ` : '';
+  /** 문구 앞에 붙는 시즌·포지션 이름('시즌 1 수비수 '). 둘 다 전체면 빈 문자열. */
+  const scope = `${ss ? `${ss.name} ` : ''}${pos ? `${POS_LABEL[pos]} ` : ''}`;
   const [all, setAll] = useState<PublicHofEntry[] | null>(null);
   const [total, setTotal] = useState(0);
   const [failed, setFailed] = useState(false);
 
   function pickSeason(id: number | null) {
     appState.hof = { ...appState.hof, season: id, page: 1 };
+  }
+  function pickPos(p: CareerPos | null) {
+    appState.hof = { ...appState.hof, pos: p, page: 1 };
   }
   function pickSort(s: HofSort) {
     appState.hof = { ...appState.hof, sort: s, page: 1 };
@@ -118,8 +125,8 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
     setAll(null);
     setFailed(false);
     if (upcoming) return;
-    let live = true; // 더 늦게 고른 페이지·유형·시즌·검색어의 응답만 쓴다.
-    void getHof(full ? PER_PAGE : TOP, page, sort, season, q).then((r) => {
+    let live = true; // 더 늦게 고른 페이지·유형·시즌·검색어·포지션의 응답만 쓴다.
+    void getHof(full ? PER_PAGE : TOP, page, sort, season, q, pos).then((r) => {
       if (!live) return;
       if (r.ok) {
         setAll(r.data.entries);
@@ -129,7 +136,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
     return () => {
       live = false;
     };
-  }, [full, page, sort, season, q, upcoming]);
+  }, [full, page, sort, season, q, pos, upcoming]);
 
   const myIds = useMemo(() => new Set(loadHOF().flatMap((h) => (h.id ? [h.id] : []))), []);
   const offset = (page - 1) * PER_PAGE;
@@ -252,6 +259,27 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
               </TabOpt>
             ))}
           </Seg>
+          {!upcoming ? (
+            <Seg cols={5} gap={6} label="포지션" style={{ marginBottom: 6 }}>
+              <TabOpt
+                tight
+                title="전체"
+                selected={pos === null}
+                testID="hof-pos-all"
+                onPress={() => pickPos(null)}
+              />
+              {POS_KEYS.map((k) => (
+                <TabOpt
+                  key={k}
+                  tight
+                  title={POS_LABEL[k]}
+                  selected={pos === k}
+                  testID={`hof-pos-${k}`}
+                  onPress={() => pickPos(k)}
+                />
+              ))}
+            </Seg>
+          ) : null}
           {!upcoming ? (
             <SortChips
               label="순위 유형"

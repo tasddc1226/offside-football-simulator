@@ -285,7 +285,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
     const first = pro[0] ? pro[0].league : 'none';
     const ballonBest = (s.ballon || []).reduce((b, x) => Math.min(b, x.rank), 99);
     const score = legendScore(s),
-      title = legendTitle(score);
+      title = legendTitle(score, s.dpos);
     s.trophies.forEach((t) => inc(A.trophies as Record<string, number>, t.t));
     s.awards.forEach((t) => inc(A.awards as Record<string, number>, t.t));
     (s.storyLog || []).forEach((x) =>

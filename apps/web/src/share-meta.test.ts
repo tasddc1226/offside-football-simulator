@@ -41,7 +41,8 @@ describe('careerShareMeta', () => {
     expect(careerShareMeta({ ...entry, name: null }, 'https://offside-lab.com').image).not.toBe(
       m.image,
     );
-    expect(bandCardPath(612)).toBe(`/og-career-lg_world-${BRAND_VERSION}.png`);
+    expect(bandCardPath(612, null)).toBe(`/og-career-lg_world-${BRAND_VERSION}.png`);
+    expect(bandCardPath(612, 'ST')).toBe(`/og-career-lg_club-${BRAND_VERSION}.png`);
     expect(m.url).toBe(`https://offside-lab.com/career/${entry.id}`);
   });
 

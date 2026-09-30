@@ -34,7 +34,7 @@ function lines(e: PublicHofEntry): Line[] {
   const who = e.name ?? anonName(e.pos, e.number);
   // 한글은 글자 폭이 대략 글자 크기와 같다 — 오른쪽 칸(660px)에 들어가게 줄인다.
   const nameSize = Math.min(88, Math.floor(660 / Math.max(1, [...who].length)));
-  const band = legendBand(e.legendScore);
+  const band = legendBand(e.legendScore, e.dpos);
   const tagX = X + String(e.legendScore).length * 62 + 28; // 점수 숫자 오른쪽
   return [
     {

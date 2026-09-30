@@ -4,7 +4,9 @@
   // 홈에서는 레전드 점수 TOP 3만 보여 주고, '전체 보기'(full)에서는 순위 유형(득점·도움·발롱도르…)을 골라
   // 10명씩 페이지로 나눠 보여 준다. score가 아닌 유형은 그 기록이 0인 선수를 뺀다(서버와 같은 규칙).
   // T-10-090 전체 보기는 '전체 / 시즌 1'을 고른다. 시즌 순위엔 개막 뒤 새로 만든 선수만 오른다(프리시즌 선수 제외).
-  import type { HofSort, PublicHofEntry } from '@offside/contracts';
+  // T-11-018 포지션별 순위 — 레전드 점수 상위권을 공격수가 채우므로 포지션 안에서도 겨루게 한다.
+  import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
+  import { POS_LABEL } from '@offside/contracts/positions';
   import { SERVICE_SEASONS, serviceSeason } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from '@offside/app-core/boardText';
   import { loadHOF } from '@offside/game/season';
@@ -39,23 +41,28 @@
     peak: { label: '최고 OVR', unit: '', get: (s) => s.peak },
   };
   const SORT_KEYS = Object.keys(SORTS) as HofSort[];
+  const POS_KEYS = Object.keys(POS_LABEL) as CareerPos[];
   // 전체 보기의 페이지·유형은 appState에 둬 선수 상세에서 돌아와도 그대로다.
   const page = $derived(full ? appState.hof.page : 1);
   const sort = $derived<HofSort>(full ? appState.hof.sort : 'score');
   const by = $derived(SORTS[sort]);
   const season = $derived(full ? appState.hof.season : null);
   const q = $derived(full ? appState.hof.q : '');
+  const pos = $derived(full ? appState.hof.pos : null);
   const ss = $derived(season === null ? undefined : serviceSeason(season));
   /** 고른 시즌이 아직 개막 전이면 그 시즌(목록 대신 개막 안내). */
   const upcoming = $derived(ss && notOpen(ss) ? ss : undefined);
-  /** 문구 앞에 붙는 시즌 이름('시즌 1 '). 전체면 빈 문자열. */
-  const scope = $derived(ss ? `${ss.name} ` : '');
+  /** 문구 앞에 붙는 시즌·포지션 이름('시즌 1 수비수 '). 둘 다 전체면 빈 문자열. */
+  const scope = $derived(`${ss ? `${ss.name} ` : ''}${pos ? `${POS_LABEL[pos]} ` : ''}`);
   let all = $state<PublicHofEntry[] | null>(null);
   let total = $state(0);
   let failed = $state(false);
 
   function pickSeason(id: number | null) {
     appState.hof = { ...appState.hof, season: id, page: 1 };
+  }
+  function pickPos(p: CareerPos | null) {
+    appState.hof = { ...appState.hof, pos: p, page: 1 };
   }
   function pickSort(s: HofSort) {
     appState.hof = { ...appState.hof, sort: s, page: 1 };
@@ -94,12 +101,12 @@
   }
 
   $effect(() => {
-    const [p, s, se, qq] = [page, sort, season, q];
+    const [p, s, se, qq, po] = [page, sort, season, q, pos];
     all = null;
     failed = false;
     if (upcoming) return;
-    void getHof(full ? PER_PAGE : TOP, p, s, se, qq).then((r) => {
-      if (p !== page || s !== sort || se !== season || qq !== q) return; // 더 늦게 고른 페이지·유형·시즌·검색어의 응답만 쓴다.
+    void getHof(full ? PER_PAGE : TOP, p, s, se, qq, po).then((r) => {
+      if (p !== page || s !== sort || se !== season || qq !== q || po !== pos) return; // 더 늦게 고른 페이지·유형·시즌·검색어·포지션의 응답만 쓴다.
       if (r.ok) {
         all = r.data.entries;
         total = r.data.total ?? r.data.entries.length;
@@ -154,6 +161,12 @@
       {/each}
     </div>
     {#if !upcoming}
+      <div class="seg hof-pos" role="group" aria-label="포지션">
+        <button class="opt" aria-pressed={pos === null} data-hof-pos="all" onclick={() => pickPos(null)}>전체</button>
+        {#each POS_KEYS as k (k)}
+          <button class="opt" aria-pressed={pos === k} data-hof-pos={k} onclick={() => pickPos(k)}>{POS_LABEL[k]}</button>
+        {/each}
+      </div>
       <div class="hof-sorts" role="group" aria-label="순위 유형" use:keepPicked>
         {#each SORT_KEYS as k (k)}
           <button class="hof-sort" aria-pressed={sort === k} data-hof-sort={k} onclick={() => pickSort(k)}>{SORTS[k].label}{#if isNew(k)}<small class="hof-new" aria-hidden="true">NEW</small>{/if}</button>

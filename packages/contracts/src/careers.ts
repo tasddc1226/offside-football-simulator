@@ -454,6 +454,8 @@ export const HofSeasonQuerySchema = z.coerce
   .refine((id) => serviceSeason(id) !== undefined, '없는 시즌입니다.')
   .transform((id) => serviceSeason(id)!)
   .optional();
+/** T-11-018 `GET /v1/hof?pos=` 그 포지션 선수만(포지션별 순위). 없으면 모든 포지션. */
+export const HofPosQuerySchema = CareerPosSchema.optional();
 
 // ───────── T-10-027 서버 최초 기록 ─────────
 
