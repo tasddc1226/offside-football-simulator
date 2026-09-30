@@ -1,11 +1,11 @@
 // 홈(웹 Home.svelte — ui.ts renderHome() 포트): 전광판 · 히어로 · 라이브 현황 · 타일 · 명예의 전당 TOP 3 · 소식 · 푸터.
-import { Linking, View } from 'react-native';
+import { Linking, Platform, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import { PHASES, LAST_PHASE, posLabel } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
 import { withRo } from '@offside/app-core/format';
-import { DC_GALLERY_URL } from '@offside/app-core/links';
+import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL } from '@offside/app-core/links';
 import { HallOfFame } from '../../components/HallOfFame';
 import { SiteFooter } from '../../components/SiteFooter';
 import { adoptCareer, keepOnDevice } from '../../game/host';
@@ -156,15 +156,35 @@ export default function Home() {
             onPress={() => go('dex')}
           />
         </View>
-        {/* T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일(두 칸 폭). */}
-        <Tile
-          wide
-          testID="dc-gallery"
-          eyebrow="Community"
-          title="오프사이드 마이너 갤러리 ↗"
-          sub="디시인사이드에서 커리어 자랑 · 공략 · 건의 나누기"
-          onPress={() => void Linking.openURL(DC_GALLERY_URL)}
-        />
+        {/* T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. T-11-016 안드로이드 앱에선 반으로 나눠 옆에
+            비공개 테스터 모집(구글 폼)을 둔다 — iOS 앱엔 다른 플랫폼 안내를 싣지 않고 두 칸 폭 그대로 둔다. */}
+        {Platform.OS === 'android' ? (
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Tile
+              testID="dc-gallery"
+              eyebrow="Community"
+              title="마이너 갤러리 ↗"
+              sub="디시인사이드에서 커리어 자랑 · 공략 · 건의"
+              onPress={() => void Linking.openURL(DC_GALLERY_URL)}
+            />
+            <Tile
+              testID="android-tester"
+              eyebrow="Android"
+              title="테스터 모집 ↗"
+              sub="안드로이드 앱 비공개 테스트 신청하기"
+              onPress={() => void Linking.openURL(ANDROID_TESTER_FORM_URL)}
+            />
+          </View>
+        ) : (
+          <Tile
+            wide
+            testID="dc-gallery"
+            eyebrow="Community"
+            title="오프사이드 마이너 갤러리 ↗"
+            sub="디시인사이드에서 커리어 자랑 · 공략 · 건의 나누기"
+            onPress={() => void Linking.openURL(DC_GALLERY_URL)}
+          />
+        )}
         <HallOfFame />
         <HomeNews board="notice" eyebrow="Notice" title="공지사항" />
         <HomeNews board="release" eyebrow="Release notes" title="릴리즈 노트" />
