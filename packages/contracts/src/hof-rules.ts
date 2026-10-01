@@ -28,6 +28,36 @@ export const LEGEND_W_DETAIL: Partial<Record<string, { g: number; a: number; cs:
   DM: { g: 0.8, a: 0.85, cs: 0 },
 };
 
+/**
+ * T-11-021 경기 장악: 골·도움이 적은 중앙 미드필더가 쌓는 몫. 시즌마다 출전 × (평균 평점 − CONTROL_BASE)를
+ * 더한다 — 평점이 기준 아래면 0, CONTROL_CAP 위는 세지 않는다(평균을 올리는 항이지 꼬리를 만드는 항이 아니다).
+ * 세부 포지션별 가중이라 프리시즌 선수(세부 포지션 없음)는 0이다.
+ */
+export const CONTROL_BASE = 6.5;
+export const CONTROL_CAP = 0.6;
+export const CONTROL_W: Partial<Record<string, number>> = { CM: 0.7, DM: 0.55, AM: 0.5 };
+export const controlPoints = (seasons: readonly { apps: number; rating: number }[]): number =>
+  seasons.reduce(
+    (t, r) => t + r.apps * Math.min(CONTROL_CAP, Math.max(0, r.rating - CONTROL_BASE)),
+    0,
+  );
+
+/**
+ * T-11-021 한 시즌에 레전드 점수로 치는 개인상 수. 득점상(리그 득점왕·게르트 뮐러·골든슈)이 한 시즌에 겹쳐
+ * 공격수 꼬리를 만들었다(시즌 1 딥다이브 결론 3). 상은 그대로 받고 점수만 시즌당 이만큼 센다. 세부 포지션이
+ * 있는 선수(시즌 1부터)에게만 적용한다.
+ */
+export const AWARDS_PER_SEASON = 3;
+export function legendAwardCount(
+  awards: readonly { year: number }[],
+  dpos?: string | null,
+): number {
+  if (!dpos) return awards.length;
+  const per = new Map<number, number>();
+  for (const a of awards) per.set(a.year, (per.get(a.year) ?? 0) + 1);
+  return [...per.values()].reduce((t, n) => t + Math.min(n, AWARDS_PER_SEASON), 0);
+}
+
 /** 레전드 점수에 들어가는 통산 값. ballonRankPoints = 발롱도르 순위마다 max(0, 31 − 순위)의 합. */
 export interface LegendTotals {
   goals: number;
@@ -41,6 +71,8 @@ export interface LegendTotals {
   ballon: number;
   ballonRankPoints: number;
   worldCups: number;
+  /** controlPoints() — 옛 호출은 넘기지 않는다(0). */
+  control?: number;
 }
 
 /**
@@ -63,5 +95,6 @@ export function legendTerms(pos: string, t: LegendTotals, dpos?: string | null) 
     ballonRank: t.ballonRankPoints * 0.6,
     wc: t.worldCups * 60,
     century: t.caps >= 100 ? 25 : 0,
+    control: (t.control ?? 0) * ((dpos && CONTROL_W[dpos]) || 0),
   };
 }

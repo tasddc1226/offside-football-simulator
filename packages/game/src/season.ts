@@ -33,7 +33,7 @@ import { nationOf } from './nation.js';
 import { detectCareerHighs } from './records.js';
 import { noteMarket } from './playStyle.js';
 import type { LegendSnapshot } from '@offside/contracts';
-import { legendTerms } from '@offside/contracts/hof-rules';
+import { controlPoints, legendAwardCount, legendTerms } from '@offside/contracts/hof-rules';
 import type {
   GameState,
   CareerRecord,
@@ -438,6 +438,7 @@ const LEGEND_LABEL: Record<keyof ReturnType<typeof legendTerms>, string> = {
   ballonRank: '발롱도르 순위',
   wc: '월드컵 우승',
   century: '센추리 클럽',
+  control: '경기 장악',
 };
 export interface LegendBreakdownItem {
   key: string;
@@ -462,12 +463,13 @@ export function legendScoreBreakdown(s: LegendSource): {
       cs: t.cs,
       apps: t.p,
       trophies: s.trophies.length,
-      awards: s.awards.length,
+      awards: legendAwardCount(s.awards, s.dpos),
       caps: s.nat.caps,
       peak: s.peak,
       ballon: s.awards.filter((x) => x.t === '발롱도르').length,
       ballonRankPoints: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0),
       worldCups: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length,
+      control: controlPoints(s.career),
     },
     s.dpos,
   );

@@ -3,7 +3,7 @@ import { generateCandidates } from '@offside/game/candidates';
 import { DETAILS_OF, DPOS, scoreRate, type DetailPos, type Pos } from '@offside/game/data';
 import { newGame } from '@offside/game/engine';
 import { mainRole, ovr } from '@offside/game/attributes';
-import { legendScore, retire, legendSnapshot } from '@offside/game/season';
+import { legendScore, legendScoreBreakdown, retire, legendSnapshot } from '@offside/game/season';
 import { createRng, setActiveRng } from '@offside/game/rng';
 import { startOvr } from '@offside/app-core/create-view';
 
@@ -76,6 +76,30 @@ describe('세부 포지션 (T-10-091)', () => {
     const plain = { ...s, dpos: undefined };
     expect(legendScore(s)).toBeGreaterThan(legendScore(plain));
     expect(retire(s).dpos).toBe('W');
+  });
+
+  it('T-11-021 중앙 미드필더는 평점 높은 시즌으로 경기 장악 점수를 쌓는다', () => {
+    const s = make('MF', 'CM');
+    s.career.push({
+      year: 2026,
+      age: 18,
+      club: 'x',
+      league: 'x',
+      apps: 30,
+      goals: 3,
+      assists: 5,
+      rating: 7.5,
+      rank: 1,
+      ovr: 60,
+      honors: [],
+      mil: false,
+    } as never);
+    const item = legendScoreBreakdown(s).items.find((it) => it.key === 'control');
+    expect(item).toMatchObject({ label: '경기 장악' });
+    expect(item!.value).toBeGreaterThan(0);
+    expect(
+      legendScoreBreakdown({ ...s, dpos: undefined }).items.some((it) => it.key === 'control'),
+    ).toBe(false);
   });
 
   it('T-10-092 최고 시점 능력치: 주 포지션 자리 실력 = 최고 OVR, 은퇴 기록에 실린다', () => {
