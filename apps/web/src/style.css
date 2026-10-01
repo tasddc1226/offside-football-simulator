@@ -5393,7 +5393,9 @@ html:root[data-skin='sheet'] {
   --sx-body: min(calc(var(--sx-col) * 7), calc(100vw - var(--sx-head) - 24px));
   --sx-grid: #e2e3e3;
   --sx-chrome: #f9fbfd;
-  --sx-blue: #1a73e8;
+  /* 칸 테두리(본문 블록) · 머리글 선 */
+  --sx-cell: #c4c7c5;
+  --sx-border: var(--sx-border);
   --bg: #ffffff;
   --surface: #ffffff;
   --surface-2: #f8f9fa;
@@ -5413,11 +5415,9 @@ html:root[data-skin='sheet'] {
   --warn: #b06000;
   --shadow: none;
   --crest-halo: rgba(0, 0, 0, 0.12);
-  --display: Arial, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   --body: Arial, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --display: var(--body);
   --tabbar-h: var(--sx-foot);
-  --safe-b: 0px;
-  --safe-t: 0px;
   font-size: 81.25%;
   background: #fff;
 }
@@ -5425,27 +5425,12 @@ html:root[data-skin='sheet'] {
   min-height: 100vh;
   padding: var(--sx-top) 0 calc(var(--sx-foot) + 24px);
   line-height: 1.45;
+  /* 격자: A1 칸 하나(오른쪽·아래 선)를 깔아 반복한다. 머리글 쪽은 틀이 덮는다. */
   background:
-    linear-gradient(
-        90deg,
-        transparent calc(var(--sx-head) - 1px),
-        var(--sx-grid) calc(var(--sx-head) - 1px) var(--sx-head),
-        transparent var(--sx-head)
-      )
-      0 0 / 100% 100% no-repeat,
-    repeating-linear-gradient(
-        90deg,
-        transparent 0 calc(var(--sx-col) - 1px),
-        var(--sx-grid) calc(var(--sx-col) - 1px) var(--sx-col)
-      )
-      var(--sx-head) var(--sx-top) / 100% 100% no-repeat,
-    repeating-linear-gradient(
-        180deg,
-        transparent 0 calc(var(--sx-row) - 1px),
-        var(--sx-grid) calc(var(--sx-row) - 1px) var(--sx-row)
-      )
-      0 var(--sx-top) / 100% 100% no-repeat,
-    #fff;
+    linear-gradient(90deg, transparent calc(var(--sx-col) - 1px), var(--sx-grid) 0),
+    linear-gradient(transparent calc(var(--sx-row) - 1px), var(--sx-grid) 0), #fff;
+  background-position: var(--sx-head) var(--sx-top);
+  background-size: var(--sx-col) var(--sx-row);
 }
 /* 본문은 A열부터 7칸 폭. 카드는 둥근 모서리·그림자 없이 칸 테두리처럼. */
 :root[data-skin='sheet'] .wrap {
@@ -5453,10 +5438,6 @@ html:root[data-skin='sheet'] {
   margin: 0 0 0 var(--sx-head);
   padding: 6px 8px 32px;
   gap: 10px;
-}
-:root[data-skin='sheet'] :is(.card, .sheet, .tile, .opt, .choice, .offer, .cand-card) {
-  border-radius: 0;
-  box-shadow: none;
 }
 /* 본문은 칸처럼 각지고 평평하게 — 둥근 모서리·그라데이션·장식 선을 걷는다(작은 점 표시만 둥글게 둔다). */
 :root[data-skin='sheet'] :is(main, .sheet, .action-bar) :not(.live-dot, .live-kind) {
@@ -5468,8 +5449,14 @@ html:root[data-skin='sheet'] {
 :root[data-skin='sheet'] .chalk {
   display: none;
 }
+:root[data-skin='sheet'] :is(.card, .hero-home, .player) {
+  border: 1px solid var(--sx-cell);
+  background: var(--surface);
+}
+:root[data-skin='sheet'] .card {
+  padding: 8px 10px;
+}
 :root[data-skin='sheet'] :is(.hero-home, .player) {
-  border: 1px solid #c4c7c5;
   padding: 10px 12px;
 }
 :root[data-skin='sheet'] .hero-home h1 {
@@ -5494,34 +5481,22 @@ html:root[data-skin='sheet'] {
   bottom: calc(var(--sx-foot) + 12px);
   z-index: 22;
   padding: 7px 12px;
-  border: 1px solid #dadce0;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   color: #444746;
   font-weight: 500;
   box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3);
 }
-:root[data-skin='sheet'] .card {
-  border: 1px solid #c4c7c5;
-  padding: 8px 10px;
-  background: #fff;
-}
 :root[data-skin='sheet'] :is(h1, h2, h3) {
-  font-family: var(--body);
   font-size: 1.08rem;
   letter-spacing: 0;
   line-height: 1.35;
 }
 :root[data-skin='sheet'] .eyebrow {
-  font-family: var(--body);
   letter-spacing: 0;
   text-transform: none;
   font-weight: 400;
-}
-:root[data-skin='sheet'] .btn,
-:root[data-skin='sheet'] button.btn-primary {
-  border-radius: 4px;
-  box-shadow: none;
 }
 :root[data-skin='sheet'] img:not(.sx-keep) {
   filter: grayscale(1) opacity(0.75);
@@ -5584,15 +5559,14 @@ html:root[data-skin='sheet'] {
   max-width: none;
   margin: 0;
   bottom: var(--sx-foot);
-  background: #fff;
+  background: var(--surface);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border: 1px solid #c4c7c5;
+  border: 1px solid var(--sx-cell);
   border-bottom: 0;
   padding: 6px 8px;
 }
 :root[data-skin='sheet'] .action-bar.at-bottom {
-  bottom: var(--sx-foot);
   padding-bottom: 6px;
 }
 :root[data-skin='sheet'] body:has(.main-nav) .wrap,
@@ -5606,7 +5580,7 @@ html:root[data-skin='sheet'] {
 }
 :root[data-skin='sheet'] .sheet {
   border-radius: 8px;
-  border: 1px solid #dadce0;
+  border: 1px solid var(--line);
   box-shadow: 0 4px 16px rgba(60, 64, 67, 0.3);
 }
 
@@ -5616,7 +5590,7 @@ html:root[data-skin='sheet'] {
   inset: 0;
   z-index: 20;
   pointer-events: none;
-  font-family: Arial, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  font-family: var(--body);
   color: #444746;
   font-size: 14px;
   line-height: 1.2;
@@ -5636,9 +5610,7 @@ html:root[data-skin='sheet'] {
   background: var(--sx-chrome);
 }
 .sx-doc-icon {
-  display: flex;
-  width: 40px;
-  justify-content: center;
+  margin: 0 6px;
 }
 .sx-doc {
   flex: 1;
@@ -5744,7 +5716,7 @@ html:root[data-skin='sheet'] {
 .sx-tools > i {
   width: 1px;
   height: 20px;
-  background: #c7c7c7;
+  background: var(--sx-border);
   margin: 0 5px;
 }
 .sx-formula {
@@ -5757,7 +5729,7 @@ html:root[data-skin='sheet'] {
   align-items: center;
   background: #fff;
   border-top: 1px solid #e1e3e1;
-  border-bottom: 1px solid #c7c7c7;
+  border-bottom: 1px solid var(--sx-border);
   font-size: 13px;
 }
 .sx-name {
@@ -5766,7 +5738,7 @@ html:root[data-skin='sheet'] {
   color: #1f1f1f;
 }
 .sx-fx {
-  border-left: 1px solid #c7c7c7;
+  border-left: 1px solid var(--sx-border);
   padding: 0 10px;
   color: #a8abaf;
   font-style: italic;
@@ -5774,7 +5746,7 @@ html:root[data-skin='sheet'] {
 }
 .sx-value {
   flex: 1;
-  border-left: 1px solid #c7c7c7;
+  border-left: 1px solid var(--sx-border);
   padding: 0 8px;
   color: #1f1f1f;
   overflow: hidden;
@@ -5789,17 +5761,19 @@ html:root[data-skin='sheet'] {
   height: calc(var(--sx-top) - 136px);
   display: flex;
   background: #f8f9fa;
-  border-bottom: 1px solid #c7c7c7;
+  border-bottom: 1px solid var(--sx-border);
   overflow: hidden;
+}
+:is(.sx-cols, .sx-rows) span {
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: #444746;
 }
 .sx-cols span {
   flex: none;
   width: var(--sx-col);
-  display: grid;
-  place-items: center;
-  border-right: 1px solid #c7c7c7;
-  font-size: 11px;
-  color: #444746;
+  border-right: 1px solid var(--sx-border);
 }
 .sx-cols .sx-corner {
   width: var(--sx-head);
@@ -5812,15 +5786,11 @@ html:root[data-skin='sheet'] {
   width: var(--sx-head);
   overflow: hidden;
   background: #f8f9fa;
-  border-right: 1px solid #c7c7c7;
+  border-right: 1px solid var(--sx-border);
 }
 .sx-rows span {
   height: var(--sx-row);
-  display: grid;
-  place-items: center;
-  border-bottom: 1px solid #c7c7c7;
-  font-size: 11px;
-  color: #444746;
+  border-bottom: 1px solid var(--sx-border);
 }
 :is(.sx-cols, .sx-rows) span.on {
   background: #d3e3fd;
@@ -5835,8 +5805,8 @@ html:root[data-skin='sheet'] {
   align-items: stretch;
   gap: 2px;
   padding-left: 8px;
-  background: #f9fbfd;
-  border-top: 1px solid #c7c7c7;
+  background: var(--sx-chrome);
+  border-top: 1px solid var(--sx-border);
   font-size: 14px;
 }
 .sx-foot span {
@@ -5857,9 +5827,9 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
 .sx-sel {
   position: absolute;
   z-index: 19;
-  width: var(--sx-col, 100px);
-  height: var(--sx-row, 21px);
+  width: var(--sx-col);
+  height: var(--sx-row);
   margin: -1px 0 0 -1px;
-  border: 2px solid var(--sx-blue, #1a73e8);
+  border: 2px solid var(--accent);
   pointer-events: none;
 }

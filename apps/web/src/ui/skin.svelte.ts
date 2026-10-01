@@ -2,10 +2,11 @@
 // 마우스로 쓰는 넓은 화면에서만 적용한다 — 휴대폰·태블릿은 켜 둬도 원래 화면이다(창을 640px 아래로 좁히면 그 자리에서 풀린다).
 // 첫 페인트 전 적용은 index.html의 인라인 스크립트가 같은 키·같은 매체 쿼리로 한다. 모양은 style.css의 [data-skin='sheet'].
 const KEY = 'ft_skin';
-export const SHEET_MEDIA = '(hover: hover) and (pointer: fine) and (min-width: 640px)';
-/** 업무 모드 문서 제목·파비콘(녹색 표 아이콘). */
-export const SHEET_TITLE = '4분기 업무 정리_v3 - 스프레드시트';
-const SHEET_ICON =
+const SHEET_MEDIA = '(hover: hover) and (pointer: fine) and (min-width: 640px)';
+/** 업무 모드 문서 이름(틀의 제목)·탭 제목·파비콘이자 틀의 문서 아이콘(녹색 표). */
+export const SHEET_DOC = '4분기 업무 정리_v3';
+const SHEET_TITLE = `${SHEET_DOC} - 스프레드시트`;
+export const SHEET_ICON =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='1' width='12' height='14' rx='1.5' fill='%2334a853'/%3E%3Cpath d='M4.5 6h7v6h-7zM4.5 8h7M4.5 10h7M7.5 6v6' fill='none' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E";
 
 function readPref(): boolean {
@@ -52,14 +53,12 @@ apply();
  * 단축키: 숫자 1 왼쪽 키(` — 한글 자판에선 ₩)로 바로 켜고 끈다. 글자를 입력하는 칸에 있을 때·조합키와 함께일 때는
  * 무시한다. 키 위치(code)나 찍히는 글자(` · ₩) 어느 쪽으로든 알아본다.
  */
-export const SHEET_KEY_LABEL = '`';
 export function installSheetKey() {
   addEventListener('keydown', (e) => {
     const hit = e.code === 'Backquote' || e.key === '`' || e.key === '₩';
     if (!hit || e.repeat || e.ctrlKey || e.metaKey || e.altKey || !skin.desktop) return;
     const t = e.target as HTMLElement | null;
-    if (t?.closest?.('input, textarea, select, [contenteditable=""], [contenteditable="true"]'))
-      return;
+    if (t?.isContentEditable || t?.matches?.('input, textarea, select')) return;
     e.preventDefault();
     setSheetSkin(!skin.pref);
   });
