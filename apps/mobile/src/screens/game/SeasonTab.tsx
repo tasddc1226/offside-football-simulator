@@ -1,7 +1,7 @@
 // 시즌 탭(웹 tabs/SeasonTab.svelte, T-11-024): 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·
 // 누적 기록·순위표·대회) → 스토리 → 최근 소식 → 버튼. 버튼은 고정 바 없이 탭 맨 아래 한 자리에 둔다 — 이벤트·시즌 결산이
 // 대기 중이면 그걸 열고, 아니면 구간을 진행한다. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
-import { Fragment, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { PHASES, LAST_PHASE } from '@offside/game/data';
@@ -13,12 +13,10 @@ import {
   trainingLabel,
   trainingCard,
   trainingHelp,
-  TRAINING_NOTE,
   INVESTS,
   investCard,
   investHelp,
   investDef,
-  INVEST_NOTE,
   fmtMoney,
   STORIES,
   turnNo,
@@ -28,7 +26,6 @@ import type { GameState } from '@offside/game/types';
 import { seasonLabel } from '@offside/app-core/career';
 import type { PhaseReport as PhaseReportData } from '@offside/app-core/sheets';
 import { advance, buzz, nextPending, save } from '../../game/host';
-import { StatGrid } from '../../sheets/parts';
 import { useTween } from '../../sheets/useTween';
 import { appState } from '../../store';
 import { useColors } from '../../theme/useColors';
@@ -122,7 +119,8 @@ interface Choice {
   onPress: () => void;
 }
 
-/** 훈련·자기 투자 선택지(웹 .train grid 3열) — 3개씩 끊어 줄로 그리고, 모자란 칸은 빈 칸으로 폭을 맞춘다. */
+/** 훈련·자기 투자 선택지(웹 .train grid 3열) — 3개씩 끊어 줄로 그리고, 모자란 칸은 빈 칸으로 폭을 맞춘다.
+ * T-11-024 카드에는 무엇이 오르는지(첫 효과)와 눈여겨볼 한 가지(주력·비용 등)만 두고, 나머지 효과는 고른 카드의 설명 칸에서. */
 function ChoiceGrid({ testPrefix, items }: { testPrefix: string; items: Choice[] }) {
   const c = useColors();
   const rows: Choice[][] = [];
@@ -145,12 +143,7 @@ function ChoiceGrid({ testPrefix, items }: { testPrefix: string; items: Choice[]
               >
                 <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>{it.label}</Txt>
                 <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
-                  {it.effect.map((part, i) => (
-                    <Fragment key={i}>
-                      {i ? ' · ' : ''}
-                      {part}
-                    </Fragment>
-                  ))}
+                  {it.effect[0]}
                 </Txt>
                 {it.tag ? (
                   <Txt
@@ -176,17 +169,17 @@ function ChoiceGrid({ testPrefix, items }: { testPrefix: string; items: Choice[]
   );
 }
 
-/** 고른 선택지의 자세한 설명(웹 .train-help). */
+/** 고른 선택지의 자세한 설명(웹 .train-help) — 제목 옆에 효과 전체를 붙인다. */
 function HelpBox({
   testID,
   title,
+  effect,
   body,
-  note,
 }: {
   testID: string;
   title: string;
+  effect: string[];
   body: string;
-  note: string;
 }) {
   const c = useColors();
   return (
@@ -203,11 +196,11 @@ function HelpBox({
     >
       <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5, fontWeight: '700' }}>
         {title}
+        <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
+          {` · ${effect.join(' · ')}`}
+        </Txt>
       </Txt>
       <Txt style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}>{body}</Txt>
-      <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-        {note}
-      </Txt>
     </View>
   );
 }
@@ -308,8 +301,8 @@ export function SeasonTab({ s }: { s: GameState }) {
           <HelpBox
             testID="train-help"
             title={trainingLabel(s, picked)}
+            effect={trainingCard(s, picked).effect}
             body={trainingHelp(s, picked)}
-            note={TRAINING_NOTE}
           />
         ) : null}
       </Card>
@@ -349,8 +342,8 @@ export function SeasonTab({ s }: { s: GameState }) {
         <HelpBox
           testID="invest-help"
           title={invest.label}
+          effect={investCard(s, invest).effect}
           body={investHelp(s, invest)}
-          note={INVEST_NOTE}
         />
       </Card>
 
@@ -382,15 +375,9 @@ export function SeasonTab({ s }: { s: GameState }) {
           </View>
         </View>
         {showTotals ? (
-          <StatGrid
-            items={[
-              { key: 'apps', v: S.apps, l: '출전' },
-              { key: 'goals', v: S.goals, l: '골' },
-              { key: 'third', v: back ? S.assists : S.starts, l: back ? '도움' : '선발' },
-              { key: 'last', v: lastCol[1], l: lastCol[0] },
-              { key: 'avg', v: avg, l: '평점' },
-            ]}
-          />
+          <Txt testID="season-totals" tone="muted" style={{ fontSize: rem(0.8125) }}>
+            {`시즌 누적 · ${S.w}승 ${S.d}무 ${S.l}패 · 출전 ${S.apps} · ${S.goals}골 · ${lastCol[0]} ${lastCol[1]} · 평점 ${avg}`}
+          </Txt>
         ) : null}
         <LeagueTable s={s} />
         {comps.length ? (

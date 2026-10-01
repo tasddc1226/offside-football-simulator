@@ -4,7 +4,7 @@
   // 순위표·대회) → 스토리 → 최근 소식 → 버튼. 버튼은 고정 바 없이 탭 맨 아래 한 자리에 둔다 — 이벤트·시즌 결산이 대기 중이면
   // 그걸 열고, 아니면 구간을 진행한다. 결과와 훈련 선택을 지나야 누를 수 있다. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
   import { PHASES, LAST_PHASE } from '@offside/game/data';
-  import { roundRange, leagueOf, blockMatches, TRAININGS, trainingLabel, trainingCard, trainingHelp, TRAINING_NOTE, INVESTS, INVEST_NOTE, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
+  import { roundRange, leagueOf, blockMatches, TRAININGS, trainingLabel, trainingCard, trainingHelp, INVESTS, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
@@ -83,14 +83,14 @@
   {/key}
 {/if}
 
-<!-- 훈련·자기 투자 카드 공통 내용 -->
+<!-- 훈련·자기 투자 카드 공통 내용. T-11-024 카드에는 무엇이 오르는지(첫 효과)와 눈여겨볼 한 가지(주력·비용 등)만 두고,
+     컨디션 소모 같은 나머지 효과와 자세한 설명은 고른 카드의 설명 칸에서만 보여 준다. -->
 {#snippet optBody(label: string, c: { effect: string[]; tag: string })}
-  <b>{label}</b><small>{#each c.effect as part, i (i)}{i ? ' · ' : ''}<span class="nowrap">{part}</span>{/each}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
+  <b>{label}</b><small>{c.effect[0]}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
 {/snippet}
-{#snippet helpBody(title: string, body: string, note: string)}
-  <b>{title}</b>
+{#snippet helpBody(title: string, c: { effect: string[] }, body: string)}
+  <b>{title} <span class="muted">· {c.effect.join(' · ')}</span></b>
   <p>{body}</p>
-  <p class="muted fs-xs">{note}</p>
 {/snippet}
 
 <section class="card stack" data-prep>
@@ -111,7 +111,7 @@
   </div>
   {#if picked}
     <div class="train-help" data-train-help aria-live="polite">
-      {@render helpBody(trainingLabel(s, picked), trainingHelp(s, picked), TRAINING_NOTE)}
+      {@render helpBody(trainingLabel(s, picked), trainingCard(s, picked), trainingHelp(s, picked))}
     </div>
   {/if}
 </section>
@@ -130,7 +130,7 @@
     {/each}
   </div>
   <div class="train-help" data-invest-help aria-live="polite">
-    {@render helpBody(invest.label, investHelp(s, invest), INVEST_NOTE)}
+    {@render helpBody(invest.label, investCard(s, invest), investHelp(s, invest))}
   </div>
 </section>
 
@@ -150,13 +150,7 @@
     </div>
   </div>
   {#if showTotals}
-    <div class="stats" style="margin-top:0" data-season-totals>
-      <div><b>{S.apps}</b><span>출전</span></div>
-      <div><b>{S.goals}</b><span>골</span></div>
-      <div><b>{s.pos === 'GK' || s.pos === 'DF' ? S.assists : S.starts}</b><span>{s.pos === 'GK' || s.pos === 'DF' ? '도움' : '선발'}</span></div>
-      <div><b>{lastCol[1]}</b><span>{lastCol[0]}</span></div>
-      <div><b>{avg}</b><span>평점</span></div>
-    </div>
+    <p class="muted fs-sm" data-season-totals>시즌 누적 · {S.w}승 {S.d}무 {S.l}패 · 출전 {S.apps} · {S.goals}골 · {lastCol[0]} {lastCol[1]} · 평점 {avg}</p>
   {/if}
   <LeagueTable {s} />
   {#if comps.length}
