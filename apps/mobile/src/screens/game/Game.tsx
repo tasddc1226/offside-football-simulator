@@ -1,6 +1,5 @@
-// 게임 화면(웹 Game.svelte, ui.ts renderGame() 포트): 선수 카드 + 시즌·선수·커리어·트로피 탭 + 탭바.
-// T-11-025 진행·이벤트 확인 버튼은 고정 바 없이 시즌 탭 맨 아래에 있다(SeasonTab).
-// 탭바(시즌·선수·홈·커리어·트로피 — 홈은 가운데)가 아래 안전 영역을 채운다.
+// 게임 화면(웹 Game.svelte, ui.ts renderGame() 포트): 선수 카드 + 시즌·선수·커리어·트로피 탭 + 아래 고정 진행 바와 탭바.
+// 탭바(시즌·선수·홈·커리어·트로피 — 홈은 가운데)가 아래 안전 영역을 채우고, 진행 바는 그 바로 위에 붙는다.
 import { useEffect, useRef, type ReactNode } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,13 +20,17 @@ import { marketValue } from '@offside/game/season';
 import type { GameState } from '@offside/game/types';
 import type { Tab } from '@offside/app-core/state';
 import { fmtValue } from '@offside/app-core/format';
+import { seasonAction } from '@offside/app-core/seasonAction';
 import { CareerTab } from '../../components/CareerTab';
+import { advance, buzz, nextPending } from '../../game/host';
 import { goHome } from '../../game/nav';
 import { Enter } from '../../sheets/anim';
 import { useTween } from '../../sheets/useTween';
 import { appState, prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
+import { ActionBar } from '../../ui/ActionBar';
+import { Btn } from '../../ui/Btn';
 import { PitchCard } from '../../ui/Card';
 import { ClubBadge } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
@@ -100,6 +103,7 @@ export default function Game() {
   // 대표 칭호를 누르면 트로피 탭의 칭호 도감으로 간다(웹 scrollIntoView 자리 — 탭 패널·도감 위치를 재 둔다).
   const panelY = useRef(0);
   const titlesY = useRef(0);
+  const prepY = useRef(0);
   const wantTitles = useRef(false);
   const toTitles = () => scrollTo(Math.max(0, panelY.current + titlesY.current - insets.top - 8));
   useEffect(() => {
@@ -126,8 +130,20 @@ export default function Game() {
     .map((k) => labelOf(s, k))
     .join('·')}`;
 
+  // T-11-030 엄지 영역 고정 진행 바(웹 Game.svelte와 같다): 시즌 탭에서는 구간 진행 버튼과 그 위 한 줄 준비 요약(훈련·자기
+  // 투자·컨디션)을, 다른 탭에서도 이벤트·시즌 결산이 대기 중이면 그걸 여는 버튼을 띄운다. 요약을 누르면 '다음 구간 준비' 카드로 간다.
+  const act = seasonAction(s);
+  const showAction = tab === 'season' || act.kind === 'pending';
+  function onAct() {
+    buzz();
+    if (act.kind === 'pending') nextPending();
+    else void advance();
+  }
+  const openPrep = () =>
+    scrollTo(Math.max(0, panelY.current + prepY.current - insets.top - 8), prefs.motionOK);
+
   // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
-  // T-11-025 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(시즌 탭 맨 아래 버튼을 누른 뒤 결과로 돌아가기 쉽게).
+  // T-11-025 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다.
   function switchTab(k: Tab) {
     if (appState.tab === k) return scrollTo(0, prefs.motionOK);
     appState.tab = k;
@@ -157,7 +173,35 @@ export default function Game() {
   return (
     <BarBelow.Provider value>
       <View style={{ flex: 1, backgroundColor: c.bg }}>
-        <Screen>
+        <Screen
+          footer={
+            showAction ? (
+              <ActionBar>
+                {act.kind === 'advance' ? (
+                  <Press
+                    testID="prep"
+                    accessibilityLabel={`다음 구간 준비 보기: ${act.prep}`}
+                    onPress={openPrep}
+                    hitSlop={{ top: 6, bottom: 2 }}
+                    style={{ marginBottom: -2 }}
+                  >
+                    <Txt tone="muted" center numberOfLines={1} style={{ fontSize: rem(0.8125) }}>
+                      {act.prep}
+                    </Txt>
+                  </Press>
+                ) : null}
+                <Btn
+                  block
+                  kind={act.kind === 'pending' ? 'accent' : 'primary'}
+                  testID={act.kind === 'pending' ? 'resume' : 'advance'}
+                  onPress={onAct}
+                >
+                  {`${act.label} →`}
+                </Btn>
+              </ActionBar>
+            ) : undefined
+          }
+        >
           <Topbar />
           <PitchCard gap={12} style={{ paddingTop: 18, paddingHorizontal: 18, paddingBottom: 16 }}>
             <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -269,7 +313,7 @@ export default function Game() {
           {/* 탭 전환 모션(T-10-003): 탭이 바뀔 때만 새로 마운트해 들어오는 모션을 건다. 동작 줄이기면 바로. */}
           <TabPanel key={tab} onLayout={(e) => (panelY.current = e.nativeEvent.layout.y)}>
             {tab === 'season' ? (
-              <SeasonTab s={s} />
+              <SeasonTab s={s} onPrepY={(y) => (prepY.current = y)} />
             ) : tab === 'player' ? (
               <PlayerTab s={s} />
             ) : tab === 'career' ? (

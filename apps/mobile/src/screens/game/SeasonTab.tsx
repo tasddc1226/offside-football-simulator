@@ -1,16 +1,14 @@
 // 시즌 탭(웹 tabs/SeasonTab.svelte, T-11-025): 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·
-// 누적 기록·순위표·대회) → 스토리 → 최근 소식 → 버튼. 버튼은 고정 바 없이 탭 맨 아래 한 자리에 둔다 — 이벤트·시즌 결산이
-// 대기 중이면 그걸 열고, 아니면 구간을 진행한다. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
+// 누적 기록·순위표·대회) → 스토리 → 최근 소식. 진행·이벤트 확인 버튼은 화면 아래 고정 바(Game.tsx, T-11-030)에 있다.
+// 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
 // 새 리포트가 뜨면 아래 카드들을 차례로 비추며 내려가는 결과 안내가 돈다(useResultTour).
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Animated, View } from 'react-native';
+import { Animated, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { PHASES, LAST_PHASE } from '@offside/game/data';
 import {
   roundRange,
-  leagueOf,
-  blockMatches,
   logLabel,
   TRAININGS,
   trainingLabel,
@@ -36,7 +34,7 @@ import {
   type TourSpot,
 } from '@offside/app-core/resultTour';
 import type { PhaseReport as PhaseReportData } from '@offside/app-core/sheets';
-import { advance, buzz, nextPending, save } from '../../game/host';
+import { save } from '../../game/host';
 import { useTween } from '../../sheets/useTween';
 import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
@@ -45,7 +43,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
 import { Opt, Pill } from '../../ui/bits';
 import { Btn } from '../../ui/Btn';
-import { scrollTo, scrollToEnd, scrollY, viewH } from '../../ui/scroll';
+import { scrollTo, scrollY, viewH } from '../../ui/scroll';
 import { Txt } from '../../ui/Txt';
 import { LeagueTable, SubTitle, type RankPlay } from './LeagueTable';
 import { PhaseReport } from './PhaseReport';
@@ -123,7 +121,8 @@ const RowMuted = ({ children }: { children: ReactNode }) => (
 );
 
 // T-11-025 결과 안내(웹 SeasonTab tour): 중계 시트를 닫고 새 리포트가 뜨면, 리포트를 읽을 시간을 준 뒤 아래 카드들을
-// 차례로 화면 위쪽에 맞춰 부드럽게 내려가며 잠깐씩 테두리를 두르고, 맨 아래 버튼에서 멈춘다. 훈련·자기 투자 카드에서는
+// 차례로 화면 위쪽에 맞춰 부드럽게 내려가며 잠깐씩 테두리를 두르고, 최근 소식에서 멈춘다(T-11-030 진행 버튼은 아래 고정 바라
+// 'go' 단계는 자리를 등록하지 않아 건너뛴다). 훈련·자기 투자 카드에서는
 // 사용자가 하나를 고를 때까지 기다렸다가(고른 카드가 톡 튄다) 넘어가고, 시즌 현황에서는 순위표의 내 팀 순위 변동을
 // 움직여 보여 준다. 기다리는 카드 밖의 단계에서 화면을 만지면 바로 그만둔다. 동작 줄이기면 돌지 않는다.
 /** 안내를 이미 돈 리포트 — 탭을 오가며 다시 마운트돼도 한 리포트에 한 번만. */
@@ -166,8 +165,7 @@ function useResultTour(report: PhaseReportData | null) {
       if (i >= steps.length) return stop();
       const [k, w] = steps[i]!;
       const gate = typeof w !== 'number';
-      if (k === 'go') scrollToEnd(true);
-      else if (i)
+      if (i)
         views.current[k]?.measureInWindow((_x, y, _w, h) => {
           if (!alive) return;
           let to = scrollY() + y - insets.top - 12;
@@ -213,10 +211,12 @@ function useResultTour(report: PhaseReportData | null) {
 function Spotlight({
   reg,
   on,
+  onLayout,
   children,
 }: {
   reg: (v: View | null) => void;
   on: boolean;
+  onLayout?: (e: LayoutChangeEvent) => void;
   children: ReactNode;
 }) {
   const c = useColors();
@@ -224,6 +224,7 @@ function Spotlight({
     <View
       ref={reg}
       collapsable={false}
+      onLayout={onLayout}
       style={{
         margin: -5,
         padding: 3,
@@ -383,7 +384,8 @@ function HelpBox({
 const FEED_SHORT = 5;
 const FEED_LONG = 14;
 
-export function SeasonTab({ s }: { s: GameState }) {
+/** onPrepY: '다음 구간 준비' 카드가 탭 맨 위에서 떨어진 거리 — 아래 고정 바의 준비 요약을 누르면 Game이 그리로 스크롤한다. */
+export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) => void }) {
   const c = useColors();
   const { report: rep } = useSnapshot(appState);
   const report = rep && rep.year === s.year ? (rep as PhaseReportData) : null;
@@ -401,11 +403,6 @@ export function SeasonTab({ s }: { s: GameState }) {
   const invest = investDef(s);
   // 리포트가 개막 후 첫 구간이면 시즌 누적 = 구간 기록이라 누적 칸을 숨긴다. 개막 전(0경기)에도 숨긴다.
   const showTotals = S.played > 0 && !(report?.block && S.played === report.games.length);
-  const left = leagueOf(s.leagueId).matches - S.played;
-  const btnLabel =
-    phase === 0
-      ? '프리시즌 훈련 진행'
-      : `훈련 후 ${phase >= LAST_PHASE ? left : Math.min(blockMatches(s), left)}경기 진행`;
   // 최근 소식: 리포트에 이미 나온 구간 기록은 빼고 5줄만, '더 보기'로 14줄까지.
   const hide = report ? logLabel(report.year, report.ph) : null;
   const feed = s.log.filter((l) => l.t !== hide).slice(0, FEED_LONG);
@@ -438,18 +435,6 @@ export function SeasonTab({ s }: { s: GameState }) {
     pick('invest', id);
   }
 
-  const pendingLabel = s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기';
-
-  function onAdvance() {
-    buzz();
-    void advance();
-  }
-
-  function onPending() {
-    buzz();
-    nextPending();
-  }
-
   function waitText(k: string): string {
     const ch = (s.chains || []).find((x) => {
       const e = eventById(x.id);
@@ -467,7 +452,11 @@ export function SeasonTab({ s }: { s: GameState }) {
         </Spotlight>
       ) : null}
 
-      <Spotlight reg={reg('prep')} on={spot === 'prep'}>
+      <Spotlight
+        reg={reg('prep')}
+        on={spot === 'prep'}
+        onLayout={(e) => onPrepY?.(e.nativeEvent.layout.y)}
+      >
         <Card gap={10}>
           <View>
             <Txt v="eyebrow">{`Next · ${label}`}</Txt>
@@ -695,29 +684,6 @@ export function SeasonTab({ s }: { s: GameState }) {
           </Card>
         </Spotlight>
       ) : null}
-      <Spotlight reg={reg('go')} on={spot === 'go'}>
-        <View style={{ gap: 8 }}>
-          {s.pending ? (
-            <Btn block kind="accent" testID="resume" onPress={onPending}>
-              {`${pendingLabel} →`}
-            </Btn>
-          ) : (
-            <>
-              <Txt tone="muted" center style={{ fontSize: rem(0.8125) }}>
-                {'훈련 '}
-                <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
-                  {picked ? trainingLabel(s, picked) : '-'}
-                </Txt>
-                {' · 자기 투자 '}
-                <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>{invest.label}</Txt>
-              </Txt>
-              <Btn block kind="primary" testID="advance" onPress={onAdvance}>
-                {`${btnLabel} →`}
-              </Btn>
-            </>
-          )}
-        </View>
-      </Spotlight>
     </View>
   );
 }

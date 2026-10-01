@@ -73,6 +73,8 @@
   --space-5: 24px;
   --space-6: 32px;
   --tabbar-h: 60px;
+  /* T-11-030 게임 화면 고정 진행 바(준비 요약 줄 + 버튼) 높이 */
+  --actionbar-h: 96px;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
   /* T-10-117 가로 모드 노치·둥근 모서리: 본문 좌우 여백(16px)을 안전 영역 이하로 줄이지 않는다(세로에선 그대로 16px). */
@@ -185,9 +187,12 @@ select:focus-visible {
     padding-block: 8px calc(32px + var(--safe-b));
   }
 }
-/* 하단 고정 탭바가 있는 화면은 그만큼 스크롤 여백을 더 둔다 */
+/* 하단 고정 탭바/진행 바가 있는 화면은 그만큼 스크롤 여백을 더 둔다 */
 .wrap.has-tabbar {
   padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 20px);
+}
+.wrap.has-actionbar {
+  padding-bottom: calc(var(--tabbar-h) + var(--actionbar-h) + var(--safe-b) + 20px);
 }
 /* T-10-067 아래에 고정된 바(ActionBar — 공유 바·이전으로 바)만큼 비운다. 높이는 ActionBar가 바를 재서 넣는다(링크 칸이
    열려도 맞다). 바는 화면·기록에 따라 뜨거나 안 뜨므로 .wrap 여백 클래스 대신 바와 함께 그려지는 자리 요소를 쓴다. */
@@ -1593,13 +1598,30 @@ body:has(.main-nav) .wrap {
     box-shadow: 0 0 0 3px var(--accent);
   }
 }
-/* T-11-025 시즌 탭 맨 아래 버튼(구간 진행 · 이벤트 확인 · 시즌 결산) — 진행이면 고른 훈련·투자를 한 줄로 다시 보여 준다 */
-.advance-go {
+/* T-11-030 고정 진행 바 위 한 줄 준비 요약(훈련 · 자기 투자 · 컨디션) — 누르면 시즌 탭 '다음 구간 준비' 카드로 간다 */
+.season-bar .action-bar-inner {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+}
+.season-prep {
+  display: block;
+  width: 100%;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8125rem;
   text-align: center;
-  border-radius: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.season-prep:active {
+  background-color: color-mix(in srgb, var(--ink) 7%, transparent);
 }
 .track {
   display: grid;
@@ -3616,13 +3638,19 @@ th.n {
     min-width: 5.5em;
   }
 }
-/* 게임 화면에서는 토스트가 하단 탭바를 가리지 않게 그 위로 올린다. */
+/* 게임 화면에서는 토스트가 하단 탭바(·진행 바)를 가리지 않게 그 위로 올린다. */
 body:has(nav.tabs) .toast {
   bottom: calc(var(--tabbar-h) + var(--safe-b) + 12px);
 }
-/* 게임 화면: 포커스 이동·scrollIntoView로 내려간 요소가 하단 고정 탭바 밑에 숨지 않게 그만큼 비우고 멈춘다. */
+body:has(.wrap.has-actionbar) .toast {
+  bottom: calc(var(--tabbar-h) + var(--actionbar-h) + var(--safe-b) + 12px);
+}
+/* 게임 화면: 포커스 이동·scrollIntoView로 내려간 요소가 하단 고정 탭바(·진행 바) 밑에 숨지 않게 그만큼 비우고 멈춘다. */
 html:has(nav.tabs) {
   scroll-padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 12px);
+}
+html:has(.wrap.has-actionbar) {
+  scroll-padding-bottom: calc(var(--tabbar-h) + var(--actionbar-h) + var(--safe-b) + 12px);
 }
 
 /* ───────── 새 버전 안내 배너 (T-10-023) ───────── */
@@ -5724,7 +5752,8 @@ html:root[data-skin='sheet'] {
   padding-bottom: 6px;
 }
 :root[data-skin='sheet'] body:has(.main-nav) .wrap,
-:root[data-skin='sheet'] .wrap.has-tabbar {
+:root[data-skin='sheet'] .wrap.has-tabbar,
+:root[data-skin='sheet'] .wrap.has-actionbar {
   padding-bottom: 32px;
 }
 :root[data-skin='sheet'] .modal {

@@ -6,18 +6,17 @@
 <script lang="ts">
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
   // T-11-025 순서: 방금 끝난 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·누적 기록·
-  // 순위표·대회) → 스토리 → 최근 소식 → 버튼. 버튼은 고정 바 없이 탭 맨 아래 한 자리에 둔다 — 이벤트·시즌 결산이 대기 중이면
-  // 그걸 열고, 아니면 구간을 진행한다. 결과와 훈련 선택을 지나야 누를 수 있다. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
+  // 순위표·대회) → 스토리 → 최근 소식. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다. T-11-030 진행·이벤트 확인 버튼은
+  // 화면 아래 고정 바(Game.svelte)에 있다 — 탭 맨 아래에 두니 구간마다 끝까지 내려야 해 불편했다.
   import { PHASES, LAST_PHASE } from '@offside/game/data';
-  import { roundRange, leagueOf, blockMatches, logLabel, TRAININGS, trainingLabel, trainingCard, trainingHelp, INVESTS, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
+  import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, trainingHelp, INVESTS, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
   import { seasonLabel } from '@offside/app-core/career';
   import { RESULT_TOUR, TOUR_PICK_MS, TOUR_RANK_DELAY, TOUR_RANK_MS, type TourGate } from '@offside/app-core/resultTour';
   import { appState } from '../state.svelte.js';
-  import { advance, nextPending } from '../actions.js';
-  import { buzz, dur } from '../motion.js';
+  import { dur } from '../motion.js';
   import PhaseReport from './PhaseReport.svelte';
   import LeagueTable from './LeagueTable.svelte';
 
@@ -36,8 +35,6 @@
   const report = $derived(appState.report && appState.report.year === s.year ? appState.report : null);
   // 리포트가 개막 후 첫 구간이면 시즌 누적 = 구간 기록이라 누적 칸을 숨긴다. 개막 전(0경기)에도 숨긴다.
   const showTotals = $derived(S.played > 0 && !(report?.block && S.played === report.games.length));
-  const left = $derived(leagueOf(s.leagueId).matches - S.played);
-  const btnLabel = $derived(phase === 0 ? '프리시즌 훈련 진행' : `훈련 후 ${phase >= LAST_PHASE ? left : Math.min(blockMatches(s), left)}경기 진행`);
   // 최근 소식: 리포트에 이미 나온 구간 기록은 빼고 5줄만, '더 보기'로 14줄까지.
   const FEED_SHORT = 5;
   const FEED_LONG = 14;
@@ -47,10 +44,8 @@
     return s.log.filter((l) => l.t !== hide).slice(0, FEED_LONG);
   });
 
-  const pendingLabel = $derived(s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기');
-
   // T-11-025 결과 안내 스크롤(순서·시간은 app-core resultTour): 중계 시트를 닫고 새 리포트가 뜨면, 리포트를 읽을 시간을 준 뒤
-  // 아래 카드들([data-tour])을 차례로 화면 위쪽에 맞춰 부드럽게 내려가며 잠깐씩 강조하고, 맨 아래 버튼에서 멈춘다. 훈련·자기
+  // 아래 카드들([data-tour])을 차례로 화면 위쪽에 맞춰 부드럽게 내려가며 잠깐씩 강조하고, 아래 고정 진행 바(Game.svelte)를 비추고 멈춘다. 훈련·자기
   // 투자 카드에서는 시간 대신 사용자가 하나를 고를 때까지 기다렸다가(고른 카드가 톡 튄다) 넘어가고, 시즌 현황에서는 순위표의
   // 내 팀 순위 변동을 움직여 보여 준다. 기다리는 카드 밖의 단계에서 사용자가 손대면(휠·터치·클릭·키) 바로 그만둔다.
   // 감속 모션·업무 모드에서는 돌지 않는다.
@@ -93,17 +88,18 @@
       const step = steps[i];
       if (!step) return stop();
       const { k, el, wait } = step;
-      if (i) {
+      // T-11-030 마지막 단계(go)는 화면 아래 고정 진행 버튼이라 내려가지 않고 초점만 옮긴다.
+      if (k === 'go') el.focus({ preventScroll: true });
+      else if (i) {
         const head = document.querySelector<HTMLElement>('.topbar')?.offsetHeight ?? 0;
         const box = el.getBoundingClientRect();
-        let y = k === 'go' ? document.documentElement.scrollHeight : box.top + scrollY - head - 12;
-        // 고르기를 기다리는 카드가 화면보다 길면 선택지·설명이 있는 아래쪽이 보이게 바닥에 맞춘다.
+        let y = box.top + scrollY - head - 12;
+        // 고르기를 기다리는 카드가 화면보다 길면 선택지·설명이 있는 아래쪽이 보이게, 아래 고정 진행 바 바로 위에 바닥을 맞춘다.
         if (typeof wait !== 'number') {
-          const foot = document.querySelector<HTMLElement>('.tabs')?.offsetHeight ?? 0;
-          y = Math.max(y, box.bottom + scrollY - (innerHeight - foot - 12));
+          const floor = document.querySelector('.season-bar, .tabs')?.getBoundingClientRect().top ?? innerHeight;
+          y = Math.max(y, box.bottom + scrollY - (floor - 12));
         }
         scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-        if (k === 'go') el.querySelector('button')?.focus({ preventScroll: true });
       }
       light(el);
       if (typeof wait !== 'number') {
@@ -129,16 +125,6 @@
     };
     go(0);
     return stop;
-  }
-
-  function onAdvance() {
-    buzz();
-    void advance();
-  }
-
-  function onPending() {
-    buzz();
-    nextPending();
   }
 
   function meterCls(v: number, badAt: number, warnAt: number): string {
@@ -292,11 +278,3 @@
   </section>
 {/if}
 
-<div class="advance-go" data-tour="go">
-  {#if s.pending}
-    <button class="btn btn-block btn-accent" data-act="resume" onclick={onPending}>{pendingLabel} →</button>
-  {:else}
-    <p class="muted fs-sm">훈련 <b>{picked ? trainingLabel(s, picked) : '-'}</b> · 자기 투자 <b>{invest.label}</b></p>
-    <button class="btn btn-block btn-primary" data-act="advance" onclick={onAdvance}>{btnLabel} →</button>
-  {/if}
-</div>
