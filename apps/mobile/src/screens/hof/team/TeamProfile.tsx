@@ -9,6 +9,7 @@ import {
   viewTeam,
   type TeamProfile as TeamProfileData,
 } from '@offside/app-core/api/team';
+import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import { num as n, recordText } from '@offside/app-core/teamText';
 import { localCareerNames } from '@offside/game/season';
 import { LoadState, type LoadStatus } from '../../../components/LoadState';
@@ -29,6 +30,8 @@ export default function TeamProfile({ id }: { id: string }) {
   const [liked, setLiked] = useState(false);
   const [mine, setMine] = useState(false);
   const [liking, setLiking] = useState(false);
+  // T-11-029 끝난 시즌의 팀은 좋아요가 굳는다(서버가 409로 거절한다).
+  const closed = !!team && teamSeasonClosed(team.season, new Date().toISOString());
 
   // 내 팀이면 이 기기에 남은 (비공개) 이름으로 보여 준다.
   const localNames = useMemo(() => localCareerNames(), []);
@@ -174,8 +177,8 @@ export default function TeamProfile({ id }: { id: string }) {
               <Press
                 testID="team-like"
                 accessibilityLabel={`좋아요 ${team.likes}`}
-                accessibilityState={{ selected: liked, disabled: mine || liking }}
-                disabled={mine || liking}
+                accessibilityState={{ selected: liked, disabled: mine || liking || closed }}
+                disabled={mine || liking || closed}
                 onPress={() => void toggleLike()}
                 style={{
                   minHeight: 40,
@@ -187,7 +190,7 @@ export default function TeamProfile({ id }: { id: string }) {
                   borderColor: c.line,
                   borderRadius: 999,
                   backgroundColor: c.surface,
-                  opacity: mine || liking ? 0.7 : 1,
+                  opacity: mine || liking || closed ? 0.7 : 1,
                 }}
               >
                 <Txt style={{ fontWeight: '700', color: liked ? c.bad : c.ink }}>

@@ -151,6 +151,15 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           details: { reason: 'OWN_TEAM' },
         });
       }
+      // T-11-029 닫힌 시즌 팀의 좋아요는 굳는다 — 누르기도 거두기도 막아 끝난 시즌의 순위가 흔들리지 않게 한다.
+      if (teamSeasonClosed(found.team.season, nowIso())) {
+        throw new AppError({
+          code: 'VALIDATION_FAILED',
+          status: 409,
+          message: '끝난 시즌의 팀에는 좋아요를 바꿀 수 없어요.',
+          details: { reason: 'SEASON_CLOSED' },
+        });
+      }
       const likes = await setTeamLike(db, id, profileId, like, nowIso());
       if (likes === undefined) throw teamNotFound();
       return ok(c, TeamLikeResponseSchema, { liked: like, likes });
