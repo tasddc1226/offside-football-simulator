@@ -1,5 +1,6 @@
 // 선수가 뛰는 리그의 순위표(웹 tabs/LeagueTable.svelte, T-10-024). 기본은 상위 3팀 + 내 팀 앞뒤 2팀 + 꼴찌만 접어서 보여
-// 주고, '전체 순위'로 모두 펼친다. 접힌 구간은 '⋯' 줄 하나로 표시한다.
+// 주고, '전체 순위'로 모두 펼친다. 접힌 구간은 '⋯' 줄 하나로 표시한다. T-11-024 시즌 탭의 시즌 현황 카드 안에 들어가는
+// 한 묶음이라 카드 테두리 없이 작은 제목을 단다.
 import { useState } from 'react';
 import { View } from 'react-native';
 import { leagueOf, leagueTable } from '@offside/game/engine';
@@ -8,7 +9,6 @@ import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn } from '../../ui/Btn';
-import { Card } from '../../ui/Card';
 import { ClubBadge } from '../../ui/ClubBadge';
 import { Txt } from '../../ui/Txt';
 
@@ -45,124 +45,125 @@ export function LeagueTable({ s }: { s: GameState }) {
     </Txt>
   );
   return (
-    <Card gap={10}>
-      <View testID="league-table" style={{ gap: 10 }}>
-        <View
-          style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}
-        >
-          <View>
-            <Txt v="eyebrow">League Table</Txt>
-            <Txt v="h2" accessibilityRole="header">{`${leagueOf(s.leagueId).name} 순위`}</Txt>
+    <View testID="league-table" style={{ gap: 10 }}>
+      <View
+        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}
+      >
+        <SubTitle>{`${leagueOf(s.leagueId).name} 순위`}</SubTitle>
+        {s.season.played && (folded || full) ? (
+          <Btn
+            sm
+            testID="table-toggle"
+            accessibilityLabel={full ? '순위표 접기' : '전체 순위 보기'}
+            onPress={() => setFull(!full)}
+          >
+            {full ? '접기' : '전체 순위'}
+          </Btn>
+        ) : null}
+      </View>
+      {s.season.played ? (
+        <View>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingVertical: 4,
+              paddingHorizontal: 2,
+              borderBottomWidth: 1,
+              borderBottomColor: c.line,
+            }}
+          >
+            {head('#')}
+            {head('팀', true)}
+            {['경기', '승', '무', '패', '승점'].map((t) => head(t))}
           </View>
-          {s.season.played && (folded || full) ? (
-            <Btn
-              sm
-              testID="table-toggle"
-              accessibilityLabel={full ? '순위표 접기' : '전체 순위 보기'}
-              onPress={() => setFull(!full)}
-            >
-              {full ? '접기' : '전체 순위'}
-            </Btn>
-          ) : null}
-        </View>
-        {s.season.played ? (
-          <View>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingVertical: 4,
-                paddingHorizontal: 2,
-                borderBottomWidth: 1,
-                borderBottomColor: c.line,
-              }}
-            >
-              {head('#')}
-              {head('팀', true)}
-              {['경기', '승', '무', '패', '승점'].map((t) => head(t))}
-            </View>
-            {shown.map((x) =>
-              x.gap ? (
-                <View
-                  key={x.key}
-                  accessibilityElementsHidden
-                  importantForAccessibility="no-hide-descendants"
-                  style={{
-                    padding: 2,
+          {shown.map((x) =>
+            x.gap ? (
+              <View
+                key={x.key}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+                style={{
+                  padding: 2,
+                  alignItems: 'center',
+                  borderBottomWidth: 1,
+                  borderBottomColor: c.line,
+                }}
+              >
+                <Txt tone="muted" style={{ lineHeight: rem(1) }}>
+                  ⋯
+                </Txt>
+              </View>
+            ) : (
+              <View
+                key={x.key}
+                accessible
+                accessibilityLabel={`${x.rank}위 ${x.r.name} ${x.r.p}경기 ${x.r.w}승 ${x.r.d}무 ${x.r.l}패 승점 ${x.r.pts}${x.r.me ? ', 내 팀' : ''}`}
+                style={[
+                  {
+                    flexDirection: 'row',
                     alignItems: 'center',
+                    paddingVertical: 7,
+                    paddingHorizontal: 2,
                     borderBottomWidth: 1,
                     borderBottomColor: c.line,
+                  },
+                  x.r.me && {
+                    backgroundColor: alpha(c.pitch, 0.1),
+                    borderLeftWidth: 3,
+                    borderLeftColor: c.accent,
+                  },
+                ]}
+              >
+                <Cell bold={x.r.me || x.rank === 1} color={x.rank === 1 ? c.accentText : undefined}>
+                  {x.rank}
+                </Cell>
+                <View
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    paddingLeft: 6,
                   }}
                 >
-                  <Txt tone="muted" style={{ lineHeight: rem(1) }}>
-                    ⋯
-                  </Txt>
-                </View>
-              ) : (
-                <View
-                  key={x.key}
-                  accessible
-                  accessibilityLabel={`${x.rank}위 ${x.r.name} ${x.r.p}경기 ${x.r.w}승 ${x.r.d}무 ${x.r.l}패 승점 ${x.r.pts}${x.r.me ? ', 내 팀' : ''}`}
-                  style={[
-                    {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: 7,
-                      paddingHorizontal: 2,
-                      borderBottomWidth: 1,
-                      borderBottomColor: c.line,
-                    },
-                    x.r.me && {
-                      backgroundColor: alpha(c.pitch, 0.1),
-                      borderLeftWidth: 3,
-                      borderLeftColor: c.accent,
-                    },
-                  ]}
-                >
-                  <Cell
-                    bold={x.r.me || x.rank === 1}
-                    color={x.rank === 1 ? c.accentText : undefined}
-                  >
-                    {x.rank}
-                  </Cell>
-                  <View
+                  {x.r.id ? <ClubBadge club={{ id: x.r.id, name: x.r.name }} size={16} /> : null}
+                  <Txt
+                    numberOfLines={1}
                     style={{
                       flex: 1,
-                      minWidth: 0,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 4,
-                      paddingLeft: 6,
+                      fontSize: rem(0.8125),
+                      fontWeight: x.r.me ? '700' : '400',
                     }}
                   >
-                    {x.r.id ? <ClubBadge club={{ id: x.r.id, name: x.r.name }} size={16} /> : null}
-                    <Txt
-                      numberOfLines={1}
-                      style={{
-                        flex: 1,
-                        fontSize: rem(0.8125),
-                        fontWeight: x.r.me ? '700' : '400',
-                      }}
-                    >
-                      {x.r.name}
-                    </Txt>
-                  </View>
-                  <Cell bold={x.r.me}>{x.r.p}</Cell>
-                  <Cell bold={x.r.me}>{x.r.w}</Cell>
-                  <Cell bold={x.r.me}>{x.r.d}</Cell>
-                  <Cell bold={x.r.me}>{x.r.l}</Cell>
-                  <Cell bold>{x.r.pts}</Cell>
+                    {x.r.name}
+                  </Txt>
                 </View>
-              ),
-            )}
-          </View>
-        ) : (
-          <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-            {`개막하면 ${rows.length}개 팀 순위표가 채워져요.`}
-          </Txt>
-        )}
-      </View>
-    </Card>
+                <Cell bold={x.r.me}>{x.r.p}</Cell>
+                <Cell bold={x.r.me}>{x.r.w}</Cell>
+                <Cell bold={x.r.me}>{x.r.d}</Cell>
+                <Cell bold={x.r.me}>{x.r.l}</Cell>
+                <Cell bold>{x.r.pts}</Cell>
+              </View>
+            ),
+          )}
+        </View>
+      ) : (
+        <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+          {`개막하면 ${rows.length}개 팀 순위표가 채워져요.`}
+        </Txt>
+      )}
+    </View>
+  );
+}
+
+/** 카드 안 작은 묶음 제목(웹 .sub-title). */
+export function SubTitle({ children }: { children: string }) {
+  return (
+    <Txt accessibilityRole="header" style={{ fontSize: rem(0.9375), fontWeight: '700' }}>
+      {children}
+    </Txt>
   );
 }
 

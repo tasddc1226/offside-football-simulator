@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-10-024: 선수가 뛰는 리그의 순위표. 기본은 상위 3팀 + 내 팀 앞뒤 2팀 + 꼴찌만 접어서 보여 주고,
-  // '전체 순위'로 모두 펼친다.
+  // '전체 순위'로 모두 펼친다. T-11-024 시즌 탭의 시즌 현황 카드 안에 들어가는 한 묶음이라 카드 테두리 없이 작은 제목을 단다.
   import { leagueOf, leagueTable } from '@offside/game/engine';
   import type { GameState } from '@offside/game/types';
   import ClubBadge from '../ClubBadge.svelte';
@@ -24,9 +24,9 @@
   const folded = $derived(shown.some((x) => x.gap));
 </script>
 
-<section class="card league-table" data-league-table>
+<div class="league-table" data-league-table>
   <div class="row" style="justify-content:space-between;align-items:baseline">
-    <div><div class="eyebrow">League Table</div><h2>{leagueOf(s.leagueId).name} 순위</h2></div>
+    <h3 class="sub-title">{leagueOf(s.leagueId).name} 순위</h3>
     {#if s.season.played && (folded || full)}
       <button class="icon-btn" data-act="table-toggle" aria-expanded={full} onclick={() => (full = !full)}>{full ? '접기' : '전체 순위'}</button>
     {/if}
@@ -57,4 +57,4 @@
   {:else}
     <p class="muted fs-sm">개막하면 {rows.length}개 팀 순위표가 채워져요.</p>
   {/if}
-</section>
+</div>

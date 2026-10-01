@@ -1,12 +1,14 @@
-// 시즌 탭(웹 tabs/SeasonTab.svelte): 구간 리포트 · 시즌 진행 카드 · 순위표 · 컨디션/사기/인기 · 대회 · 스토리 · 훈련 · 최근 소식.
-// 진행 버튼은 화면 아래 고정 액션바(Game)에 있다.
-import { Fragment, type ReactNode } from 'react';
+// 시즌 탭(웹 tabs/SeasonTab.svelte, T-11-024): 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자 → 진행 버튼) →
+// 시즌 현황(진행 막대·누적 기록·순위표·대회) → 스토리 → 최근 소식. 진행 버튼은 준비 카드 끝에 둬서 결과와 훈련 선택을
+// 지나야 누를 수 있다(이벤트·결산 대기 중일 때만 Game이 아래 고정 바로 띄운다). 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
+import { Fragment, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { PHASES, LAST_PHASE } from '@offside/game/data';
 import {
-  teamRank,
   roundRange,
+  leagueOf,
+  blockMatches,
   TRAININGS,
   trainingLabel,
   trainingCard,
@@ -25,7 +27,7 @@ import { eventById } from '@offside/game/events-data';
 import type { GameState } from '@offside/game/types';
 import { seasonLabel } from '@offside/app-core/career';
 import type { PhaseReport as PhaseReportData } from '@offside/app-core/sheets';
-import { save } from '../../game/host';
+import { advance, buzz, save } from '../../game/host';
 import { StatGrid } from '../../sheets/parts';
 import { useTween } from '../../sheets/useTween';
 import { appState } from '../../store';
@@ -33,8 +35,9 @@ import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
 import { Opt, Pill } from '../../ui/bits';
+import { Btn } from '../../ui/Btn';
 import { Txt } from '../../ui/Txt';
-import { LeagueTable } from './LeagueTable';
+import { LeagueTable, SubTitle } from './LeagueTable';
 import { PhaseReport } from './PhaseReport';
 
 function meterTone(v: number, badAt: number, warnAt: number): 'bad' | 'warn' | 'good' {
@@ -209,12 +212,16 @@ function HelpBox({
   );
 }
 
+const FEED_SHORT = 5;
+const FEED_LONG = 14;
+
 export function SeasonTab({ s }: { s: GameState }) {
   const c = useColors();
-  const { report } = useSnapshot(appState);
+  const { report: rep } = useSnapshot(appState);
+  const report = rep && rep.year === s.year ? (rep as PhaseReportData) : null;
+  const [feedAll, setFeedAll] = useState(false);
   const S = s.season;
   const avg = S.apps ? (S.ratingSum / S.apps).toFixed(2) : '-';
-  const rank = teamRank(s);
   const phase = Math.min(s.phase, LAST_PHASE);
   const label = phase === 0 ? '프리시즌' : `${PHASES[phase]} · ${roundRange(s, phase)}`;
   const back = s.pos === 'GK' || s.pos === 'DF';
@@ -224,6 +231,16 @@ export function SeasonTab({ s }: { s: GameState }) {
   const t = turnNo(s);
   const picked = TRAININGS.find((x) => x.id === s.training);
   const invest = investDef(s);
+  // 리포트가 개막 후 첫 구간이면 시즌 누적 = 구간 기록이라 누적 칸을 숨긴다. 개막 전(0경기)에도 숨긴다.
+  const showTotals = S.played > 0 && !(report?.block && S.played === report.games.length);
+  const left = leagueOf(s.leagueId).matches - S.played;
+  const btnLabel =
+    phase === 0
+      ? '프리시즌 훈련 진행'
+      : `훈련 후 ${phase >= LAST_PHASE ? left : Math.min(blockMatches(s), left)}경기 진행`;
+  // 최근 소식: 리포트에 이미 나온 구간 기록은 빼고 5줄만, '더 보기'로 14줄까지.
+  const hide = report ? `${report.year} ${PHASES[report.ph]}` : null;
+  const feed = s.log.filter((l) => l.t !== hide).slice(0, FEED_LONG);
 
   function setTraining(id: string) {
     appState.G!.training = id;
@@ -233,6 +250,11 @@ export function SeasonTab({ s }: { s: GameState }) {
   function setInvest(id: string) {
     appState.G!.invest = id;
     save();
+  }
+
+  function onAdvance() {
+    buzz();
+    void advance();
   }
 
   function waitText(k: string): string {
@@ -246,122 +268,21 @@ export function SeasonTab({ s }: { s: GameState }) {
 
   return (
     <>
-      {report && report.year === s.year ? (
-        <PhaseReport key={report.key} r={report as PhaseReportData} />
-      ) : null}
-
-      <Card gap={0}>
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 10,
-          }}
-        >
-          <View style={{ flex: 1 }}>
-            <Txt v="eyebrow">{`${seasonLabel(s)} Season`}</Txt>
-            <Txt v="h2" accessibilityRole="header">
-              {label}
-            </Txt>
-          </View>
-          <Pill>{`${rank ? `팀 ${rank}위` : '개막 전'} · ${S.w}승 ${S.d}무 ${S.l}패`}</Pill>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 4, marginTop: 10 }}>
-          {[0, 1, 2].map((i) => (
-            <View
-              key={i}
-              style={{
-                flex: 1,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: i < phase ? c.pitch2 : i === phase ? c.accent : c.line,
-              }}
-            />
-          ))}
-        </View>
-        <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
-          {['프리시즌', '전반기', '후반기'].map((tl) => (
-            <Txt key={tl} tone="muted" center style={{ flex: 1, fontSize: rem(0.6875) }}>
-              {tl}
-            </Txt>
-          ))}
-        </View>
-        <StatGrid
-          mt={14}
-          items={[
-            { key: 'apps', v: S.apps, l: '출전' },
-            { key: 'goals', v: S.goals, l: '골' },
-            { key: 'third', v: back ? S.assists : S.starts, l: back ? '도움' : '선발' },
-            { key: 'last', v: lastCol[1], l: lastCol[0] },
-            { key: 'avg', v: avg, l: '평점' },
-          ]}
-        />
-      </Card>
-
-      <LeagueTable s={s} />
-
-      <Card gap={9}>
-        <Meter label="컨디션" value={s.cond} tone={meterTone(s.cond, 40, 65)} />
-        <Meter label="사기" value={s.morale} tone={meterTone(s.morale, 40, 60)} />
-        <Meter label="인기" value={s.fame} tone="acc" />
-      </Card>
-
-      {comps.length ? (
-        <Card gap={0}>
-          <Txt v="eyebrow">Competitions</Txt>
-          <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
-            이번 시즌 대회
-          </Txt>
-          {comps.map((cp) => (
-            <StoryRow key={cp.name}>
-              <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>{cp.name}</Txt>
-              <RowMuted>
-                {`${cp.stage || (cp.type === 'super' ? '개막 전 단판' : '1구간 시작')}${cp.alive && cp.stage ? ' · 진행 중' : ''}`}
-              </RowMuted>
-              <RowMuted>{`${cp.apps}경기 ${cp.g}골`}</RowMuted>
-            </StoryRow>
-          ))}
-        </Card>
-      ) : null}
-
-      {activeStories.length ? (
-        <Card gap={0}>
-          <Txt v="eyebrow">Storylines</Txt>
-          <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
-            진행 중인 스토리
-          </Txt>
-          {activeStories.map(([k, v]) => (
-            <StoryRow key={k}>
-              <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>
-                {STORIES[k]!.name}
-              </Txt>
-              <View style={{ flexDirection: 'row', gap: 4 }}>
-                {Array.from({ length: STORIES[k]!.total }).map((_, i) => (
-                  <View
-                    key={i}
-                    style={{
-                      width: 18,
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: i < v.stage ? c.accent : c.line,
-                    }}
-                  />
-                ))}
-              </View>
-              <RowMuted>{waitText(k)}</RowMuted>
-            </StoryRow>
-          ))}
-        </Card>
-      ) : null}
+      {report ? <PhaseReport key={report.key} r={report} /> : null}
 
       <Card gap={10}>
         <View>
-          <Txt v="eyebrow">Training</Txt>
+          <Txt v="eyebrow">{`Next · ${label}`}</Txt>
           <Txt v="h2" accessibilityRole="header">
-            이번 구간 훈련 방향
+            다음 구간 준비
           </Txt>
         </View>
+        <View style={{ gap: 9 }}>
+          <Meter label="컨디션" value={s.cond} tone={meterTone(s.cond, 40, 65)} />
+          <Meter label="사기" value={s.morale} tone={meterTone(s.morale, 40, 60)} />
+          <Meter label="인기" value={s.fame} tone="acc" />
+        </View>
+        <SubTitle>훈련 방향</SubTitle>
         <ChoiceGrid
           testPrefix="train"
           items={TRAININGS.map((tr) => {
@@ -384,9 +305,6 @@ export function SeasonTab({ s }: { s: GameState }) {
             note={TRAINING_NOTE}
           />
         ) : null}
-        <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-          진행 버튼은 화면 아래 고정 액션바에 있습니다.
-        </Txt>
       </Card>
 
       <Card gap={10}>
@@ -429,49 +347,163 @@ export function SeasonTab({ s }: { s: GameState }) {
         />
       </Card>
 
-      <Card gap={0}>
-        <Txt v="eyebrow">Timeline</Txt>
-        <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
-          최근 소식
-        </Txt>
+      {!s.pending ? (
+        <View style={{ gap: 8 }}>
+          <Txt tone="muted" center style={{ fontSize: rem(0.8125) }}>
+            {'훈련 '}
+            <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
+              {picked ? trainingLabel(s, picked) : '-'}
+            </Txt>
+            {' · 자기 투자 '}
+            <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>{invest.label}</Txt>
+          </Txt>
+          <Btn block kind="primary" testID="advance" onPress={onAdvance}>
+            {`${btnLabel} →`}
+          </Btn>
+        </View>
+      ) : null}
+
+      <Card gap={14}>
         <View>
-          {s.log.slice(0, 14).map((l, i) => (
-            <View
-              key={i}
-              style={{
-                flexDirection: 'row',
-                gap: 8,
-                paddingVertical: 8,
-                borderTopWidth: i ? 1 : 0,
-                borderTopColor: c.line,
-              }}
-            >
-              <Txt
-                tone="muted"
-                style={{
-                  width: 76,
-                  fontFamily: DISPLAY[400],
-                  fontSize: rem(0.75),
-                  letterSpacing: rem(0.75) * 0.03,
-                }}
-              >
-                {l.t}
-              </Txt>
-              <Txt
+          <Txt v="eyebrow">{`${seasonLabel(s)} Season`}</Txt>
+          <Txt v="h2" accessibilityRole="header">
+            {label}
+          </Txt>
+          <View style={{ flexDirection: 'row', gap: 4, marginTop: 10 }}>
+            {[0, 1, 2].map((i) => (
+              <View
+                key={i}
                 style={{
                   flex: 1,
-                  fontSize: rem(0.8125),
-                  lineHeight: rem(0.8125) * 1.5,
-                  fontWeight: l.kind === 'big' ? '600' : '400',
-                  color: l.kind === 'good' ? c.good : l.kind === 'bad' ? c.bad : c.ink,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: i < phase ? c.pitch2 : i === phase ? c.accent : c.line,
+                }}
+              />
+            ))}
+          </View>
+          <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+            {['프리시즌', '전반기', '후반기'].map((tl) => (
+              <Txt key={tl} tone="muted" center style={{ flex: 1, fontSize: rem(0.6875) }}>
+                {tl}
+              </Txt>
+            ))}
+          </View>
+        </View>
+        {showTotals ? (
+          <StatGrid
+            items={[
+              { key: 'apps', v: S.apps, l: '출전' },
+              { key: 'goals', v: S.goals, l: '골' },
+              { key: 'third', v: back ? S.assists : S.starts, l: back ? '도움' : '선발' },
+              { key: 'last', v: lastCol[1], l: lastCol[0] },
+              { key: 'avg', v: avg, l: '평점' },
+            ]}
+          />
+        ) : null}
+        <LeagueTable s={s} />
+        {comps.length ? (
+          <View>
+            <SubTitle>이번 시즌 대회</SubTitle>
+            {comps.map((cp) => (
+              <StoryRow key={cp.name}>
+                <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>{cp.name}</Txt>
+                <RowMuted>
+                  {`${cp.stage || (cp.type === 'super' ? '개막 전 단판' : '1구간 시작')}${cp.alive && cp.stage ? ' · 진행 중' : ''}`}
+                </RowMuted>
+                <RowMuted>{`${cp.apps}경기 ${cp.g}골`}</RowMuted>
+              </StoryRow>
+            ))}
+          </View>
+        ) : null}
+      </Card>
+
+      {activeStories.length ? (
+        <Card gap={0}>
+          <Txt v="eyebrow">Storylines</Txt>
+          <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
+            진행 중인 스토리
+          </Txt>
+          {activeStories.map(([k, v]) => (
+            <StoryRow key={k}>
+              <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>
+                {STORIES[k]!.name}
+              </Txt>
+              <View style={{ flexDirection: 'row', gap: 4 }}>
+                {Array.from({ length: STORIES[k]!.total }).map((_, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      width: 18,
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: i < v.stage ? c.accent : c.line,
+                    }}
+                  />
+                ))}
+              </View>
+              <RowMuted>{waitText(k)}</RowMuted>
+            </StoryRow>
+          ))}
+        </Card>
+      ) : null}
+
+      {feed.length ? (
+        <Card gap={0}>
+          <Txt v="eyebrow">Timeline</Txt>
+          <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
+            최근 소식
+          </Txt>
+          <View>
+            {(feedAll ? feed : feed.slice(0, FEED_SHORT)).map((l, i) => (
+              <View
+                key={i}
+                style={{
+                  flexDirection: 'row',
+                  gap: 8,
+                  paddingVertical: 8,
+                  borderTopWidth: i ? 1 : 0,
+                  borderTopColor: c.line,
                 }}
               >
-                {l.text}
-              </Txt>
-            </View>
-          ))}
-        </View>
-      </Card>
+                <Txt
+                  tone="muted"
+                  style={{
+                    width: 76,
+                    fontFamily: DISPLAY[400],
+                    fontSize: rem(0.75),
+                    letterSpacing: rem(0.75) * 0.03,
+                  }}
+                >
+                  {l.t}
+                </Txt>
+                <Txt
+                  style={{
+                    flex: 1,
+                    fontSize: rem(0.8125),
+                    lineHeight: rem(0.8125) * 1.5,
+                    fontWeight: l.kind === 'big' ? '600' : '400',
+                    color: l.kind === 'good' ? c.good : l.kind === 'bad' ? c.bad : c.ink,
+                  }}
+                >
+                  {l.text}
+                </Txt>
+              </View>
+            ))}
+          </View>
+          {feed.length > FEED_SHORT ? (
+            <Btn
+              sm
+              testID="feed-more"
+              accessibilityLabel={feedAll ? '최근 소식 접기' : '최근 소식 더 보기'}
+              onPress={() => setFeedAll(!feedAll)}
+              style={{ alignSelf: 'flex-start', marginTop: 8 }}
+            >
+              {feedAll ? '접기' : '더 보기'}
+            </Btn>
+          ) : null}
+        </Card>
+      ) : null}
     </>
   );
 }

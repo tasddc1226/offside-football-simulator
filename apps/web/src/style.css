@@ -1554,6 +1554,18 @@ body:has(.main-nav) .wrap {
 }
 
 /* season */
+/* T-11-024 카드 안 작은 묶음 제목(훈련 방향·리그 순위·이번 시즌 대회) */
+.sub-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+/* T-11-024 '다음 구간 준비' 끝의 진행 버튼 — 고른 훈련·투자를 한 줄로 다시 보여 주고 누른다 */
+.advance-go {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
 .track {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

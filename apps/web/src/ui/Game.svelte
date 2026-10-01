@@ -2,12 +2,12 @@
   // ui.ts renderGame() 포트 (207~222줄)
   import { fly } from 'svelte/transition';
   import { Tween } from 'svelte/motion';
-  import { posLabel, LAST_PHASE } from '@offside/game/data';
+  import { posLabel } from '@offside/game/data';
   import { ovr } from '@offside/game/attributes';
-  import { leagueOf, roleOf, fmtMoney, potLabel, potScouted, blockMatches, focusOf, labelOf } from '@offside/game/engine';
+  import { leagueOf, roleOf, fmtMoney, potLabel, potScouted, focusOf, labelOf } from '@offside/game/engine';
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
-  import { advance, nextPending } from './actions.js';
+  import { nextPending } from './actions.js';
   import { loadGameSheets } from './sheets/gameSheets.svelte.js';
   import { buzz, dur } from './motion.js';
   import ClubBadge from './ClubBadge.svelte';
@@ -45,17 +45,10 @@
   }
   const focusName = $derived(`주력 ${focusOf(s).map((k) => labelOf(s, k)).join('·')}`);
 
-  // 엄지 영역 스티키 액션바: "시즌" 탭에서만 노출되는 메인 진행 버튼(원래 SeasonTab 안에 있던
-  // 버튼을 화면 어디서나 손 닿는 위치로 끌어올린다). 다른 탭에서 시즌 진행 중 이벤트가 대기 중이면
-  // 계속 노출해 사용자가 놓치지 않게 한다.
+  // 엄지 영역 스티키 액션바: 이벤트·시즌 결산이 대기 중일 때만 띄워 어느 탭에서든 놓치지 않게 한다.
+  // T-11-024 평소 구간 진행 버튼은 시즌 탭의 '다음 구간 준비' 끝에 있다 — 결과·훈련을 지나야 누를 수 있게.
   const busy = $derived(!!s.pending);
-  const phase = $derived(Math.min(s.phase, LAST_PHASE));
-  const btnLabel = $derived(
-    phase === 0 ? '프리시즌 훈련 진행' : `훈련 후 ${phase >= LAST_PHASE ? leagueOf(s.leagueId).matches - s.season.played : Math.min(blockMatches(s), leagueOf(s.leagueId).matches - s.season.played)}경기 진행`,
-  );
-  // T-10-024: 구간 결과는 시즌 탭 리포트로 보여 주고, 이어지는 이벤트·시즌 결산은 이 버튼으로 연다.
   const pendingLabel = $derived(s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기');
-  const showAction = $derived(appState.tab === 'season' || busy);
 
   const tabs: [Tab, string][] = [
     ['season', '시즌'],
@@ -71,14 +64,13 @@
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }
 
-  function onAdvanceClick() {
+  function onPendingClick() {
     buzz();
-    if (busy) nextPending();
-    else void advance();
+    nextPending();
   }
 </script>
 
-<div class="wrap" class:has-tabbar={!showAction} class:has-actionbar={showAction}>
+<div class="wrap" class:has-tabbar={!busy} class:has-actionbar={busy}>
   <Topbar sticky />
   <section class="player">
     <div class="chalk"></div>
@@ -115,11 +107,11 @@
   {/key}
 </div>
 
-{#if showAction}
+{#if busy}
   <div class="action-bar" transition:fly={{ y: 20, duration: dur(180) }}>
     <div class="action-bar-inner">
-      <button class="btn btn-block {busy ? 'btn-accent' : 'btn-primary'}" data-act={busy ? 'resume' : 'advance'} onclick={onAdvanceClick}>
-        {busy ? pendingLabel : btnLabel} →
+      <button class="btn btn-block btn-accent" data-act="resume" onclick={onPendingClick}>
+        {pendingLabel} →
       </button>
     </div>
   </div>

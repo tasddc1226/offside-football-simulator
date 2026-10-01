@@ -1,10 +1,10 @@
-// 게임 화면(웹 Game.svelte, ui.ts renderGame() 포트): 선수 카드 + 시즌·선수·커리어·트로피 탭 + 아래 고정 진행 버튼과 탭바.
+// 게임 화면(웹 Game.svelte, ui.ts renderGame() 포트): 선수 카드 + 시즌·선수·커리어·트로피 탭 + 아래 고정 대기 버튼과 탭바.
 // 탭바(시즌·선수·홈·커리어·트로피 — 홈은 가운데)가 아래 안전 영역을 채우고, 진행 버튼 줄은 그 바로 위에 붙는다.
 import { useEffect, useRef, type ReactNode } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
-import { posLabel, LAST_PHASE } from '@offside/game/data';
+import { posLabel } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
 import {
   leagueOf,
@@ -12,7 +12,6 @@ import {
   fmtMoney,
   potLabel,
   potScouted,
-  blockMatches,
   focusOf,
   labelOf,
 } from '@offside/game/engine';
@@ -22,7 +21,7 @@ import type { GameState } from '@offside/game/types';
 import type { Tab } from '@offside/app-core/state';
 import { fmtValue } from '@offside/app-core/format';
 import { CareerTab } from '../../components/CareerTab';
-import { advance, buzz, nextPending } from '../../game/host';
+import { buzz, nextPending } from '../../game/host';
 import { goHome } from '../../game/nav';
 import { Enter } from '../../sheets/anim';
 import { useTween } from '../../sheets/useTween';
@@ -129,18 +128,10 @@ export default function Game() {
     .map((k) => labelOf(s, k))
     .join('·')}`;
 
-  // 엄지 영역 스티키 액션바: "시즌" 탭에서만 노출되는 메인 진행 버튼. 다른 탭에서 시즌 진행 중 이벤트가 대기 중이면
-  // 계속 노출해 사용자가 놓치지 않게 한다.
+  // 엄지 영역 스티키 액션바: 이벤트·시즌 결산이 대기 중일 때만 띄워 어느 탭에서든 놓치지 않게 한다.
+  // T-11-024 평소 구간 진행 버튼은 시즌 탭의 '다음 구간 준비' 끝에 있다 — 결과·훈련을 지나야 누를 수 있게.
   const busy = !!s.pending;
-  const phase = Math.min(s.phase, LAST_PHASE);
-  const left = L.matches - s.season.played;
-  const btnLabel =
-    phase === 0
-      ? '프리시즌 훈련 진행'
-      : `훈련 후 ${phase >= LAST_PHASE ? left : Math.min(blockMatches(s), left)}경기 진행`;
-  // T-10-024: 구간 결과는 시즌 탭 리포트로 보여 주고, 이어지는 이벤트·시즌 결산은 이 버튼으로 연다.
   const pendingLabel = s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기';
-  const showAction = tab === 'season' || busy;
 
   // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
   function switchTab(k: Tab) {
@@ -153,10 +144,9 @@ export default function Game() {
     wantTitles.current = true;
     appState.tab = 'trophy';
   }
-  function onAdvanceClick() {
+  function onPendingClick() {
     buzz();
-    if (busy) nextPending();
-    else void advance();
+    nextPending();
   }
 
   const tabItem = (key: Tab, label: string): TabItem => ({
@@ -179,15 +169,10 @@ export default function Game() {
       <View style={{ flex: 1, backgroundColor: c.bg }}>
         <Screen
           footer={
-            showAction ? (
+            busy ? (
               <ActionBar>
-                <Btn
-                  block
-                  kind={busy ? 'accent' : 'primary'}
-                  testID={busy ? 'resume' : 'advance'}
-                  onPress={onAdvanceClick}
-                >
-                  {`${busy ? pendingLabel : btnLabel} →`}
+                <Btn block kind="accent" testID="resume" onPress={onPendingClick}>
+                  {`${pendingLabel} →`}
                 </Btn>
               </ActionBar>
             ) : undefined
