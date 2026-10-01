@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import { leagueOf, leagueTable } from '@offside/game/engine';
 import type { GameState } from '@offside/game/types';
+import { RANK_SLIDE_MS, rankSlideSpan } from '@offside/app-core/resultTour';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -52,34 +53,39 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
   // 줄들은 한 칸씩 반대로 밀려난다. 접힌 표에서는 보이는 줄 안에서 이전 순위에 가장 가까운 자리부터 움직인다.
   // 시즌 탭 결과 안내가 시즌 현황 카드를 비출 때 play를 넘긴다.
   useEffect(() => {
-    if (!play || play.before === myRank) return;
-    const me = shown.findIndex((x) => !x.gap && x.r.me);
-    if (me < 0) return;
-    const up = play.before > myRank;
-    const passed = (x: Shown) => x.gap || (up ? x.rank <= play.before : x.rank >= play.before);
-    let from = me;
-    for (
-      let i = me + (up ? 1 : -1);
-      i >= 0 && i < shown.length && passed(shown[i]!);
-      i += up ? 1 : -1
-    )
-      from = i;
+    if (!play) return;
+    const span = rankSlideSpan(
+      shown.map((x) => (x.gap ? {} : { rank: x.rank, me: x.r.me })),
+      play.before,
+      myRank,
+    );
+    if (!span) return;
+    const { me, from, up } = span;
     const a = rowBox.current.get(shown[me]!.key);
     const b = rowBox.current.get(shown[from]!.key);
-    if (from === me || !a || !b) return;
+    if (!a || !b) return;
     const runs: Animated.CompositeAnimation[] = [];
     for (let i = Math.min(me, from); i <= Math.max(me, from); i++) {
       const v = shift(shown[i]!.key);
       v.setValue(i === me ? b.y - a.y : up ? -a.height : a.height);
       runs.push(
-        Animated.timing(v, { toValue: 0, duration: 900, easing: MOVE_EASE, useNativeDriver: true }),
+        Animated.timing(v, {
+          toValue: 0,
+          duration: RANK_SLIDE_MS,
+          easing: MOVE_EASE,
+          useNativeDriver: true,
+        }),
       );
     }
     setMoving(true);
     setDelta(`${up ? '▲' : '▼'}${Math.abs(play.before - myRank)}`);
-    Animated.parallel(runs).start(() => setMoving(false));
-    const id = setTimeout(() => setDelta(null), 3300);
-    return () => clearTimeout(id);
+    const anim = Animated.parallel(runs);
+    anim.start(() => setMoving(false));
+    const id = setTimeout(() => setDelta(null), RANK_SLIDE_MS + 2400);
+    return () => {
+      anim.stop();
+      clearTimeout(id);
+    };
     // 같은 연출 요청(key)마다 한 번만 튼다.
   }, [play?.key]);
 
@@ -128,36 +134,33 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
             {head('팀', true)}
             {['경기', '승점'].map((t) => head(t))}
           </View>
-          {shown.map((x) =>
-            x.gap ? (
-              <Animated.View
-                key={x.key}
-                onLayout={(e) => rowBox.current.set(x.key, e.nativeEvent.layout)}
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-                style={{
-                  padding: 2,
-                  alignItems: 'center',
-                  borderBottomWidth: 1,
-                  borderBottomColor: c.line,
-                  transform: [{ translateY: shift(x.key) }],
-                }}
-              >
-                <Txt tone="muted" style={{ lineHeight: rem(1) }}>
-                  ⋯
-                </Txt>
-              </Animated.View>
-            ) : (
-              <Animated.View
-                key={x.key}
-                onLayout={(e) => rowBox.current.set(x.key, e.nativeEvent.layout)}
-                style={[
-                  { transform: [{ translateY: shift(x.key) }] },
-                  // 움직이는 내 팀 줄은 지나치는 줄들 위로 — 반투명 강조색 아래에 카드 바탕을 깐다.
-                  x.r.me && { backgroundColor: c.surface },
-                  x.r.me && moving && { zIndex: 1, elevation: 3 },
-                ]}
-              >
+          {shown.map((x) => (
+            <Animated.View
+              key={x.key}
+              onLayout={(e) => rowBox.current.set(x.key, e.nativeEvent.layout)}
+              style={[
+                { transform: [{ translateY: shift(x.key) }] },
+                // 움직이는 내 팀 줄은 지나치는 줄들 위로 — 반투명 강조색 아래에 카드 바탕을 깐다.
+                !x.gap && x.r.me && { backgroundColor: c.surface },
+                !x.gap && x.r.me && moving && { zIndex: 1, elevation: 3 },
+              ]}
+            >
+              {x.gap ? (
+                <View
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                  style={{
+                    padding: 2,
+                    alignItems: 'center',
+                    borderBottomWidth: 1,
+                    borderBottomColor: c.line,
+                  }}
+                >
+                  <Txt tone="muted" style={{ lineHeight: rem(1) }}>
+                    ⋯
+                  </Txt>
+                </View>
+              ) : (
                 <View
                   accessible
                   accessibilityLabel={`${x.rank}위 ${x.r.name} ${x.r.p}경기 ${x.r.w}승 ${x.r.d}무 ${x.r.l}패 승점 ${x.r.pts}${x.r.me ? ', 내 팀' : ''}`}
@@ -222,9 +225,9 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
                   <Cell bold={x.r.me}>{x.r.p}</Cell>
                   <Cell bold>{x.r.pts}</Cell>
                 </View>
-              </Animated.View>
-            ),
-          )}
+              )}
+            </Animated.View>
+          ))}
         </View>
       ) : (
         <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>

@@ -9,11 +9,12 @@
   // 순위표·대회) → 스토리 → 최근 소식 → 버튼. 버튼은 고정 바 없이 탭 맨 아래 한 자리에 둔다 — 이벤트·시즌 결산이 대기 중이면
   // 그걸 열고, 아니면 구간을 진행한다. 결과와 훈련 선택을 지나야 누를 수 있다. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
   import { PHASES, LAST_PHASE } from '@offside/game/data';
-  import { roundRange, leagueOf, blockMatches, TRAININGS, trainingLabel, trainingCard, trainingHelp, INVESTS, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
+  import { roundRange, leagueOf, blockMatches, logLabel, TRAININGS, trainingLabel, trainingCard, trainingHelp, INVESTS, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
   import { seasonLabel } from '@offside/app-core/career';
+  import { RESULT_TOUR, TOUR_PICK_MS, TOUR_RANK_DELAY, TOUR_RANK_MS, type TourGate } from '@offside/app-core/resultTour';
   import { appState } from '../state.svelte.js';
   import { advance, nextPending } from '../actions.js';
   import { buzz, dur } from '../motion.js';
@@ -42,31 +43,19 @@
   const FEED_LONG = 14;
   let feedAll = $state(false);
   const feed = $derived.by(() => {
-    const hide = report ? `${report.year} ${PHASES[report.ph]}` : null;
+    const hide = report ? logLabel(report.year, report.ph) : null;
     return s.log.filter((l) => l.t !== hide).slice(0, FEED_LONG);
   });
 
   const pendingLabel = $derived(s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기');
 
-  // T-11-025 결과 안내 스크롤: 중계 시트를 닫고 새 리포트가 뜨면, 리포트를 읽을 시간을 준 뒤 아래 카드들을 차례로
-  // 화면 위쪽에 맞춰 부드럽게 내려가며 잠깐씩 강조하고, 맨 아래 버튼에서 멈춘다. 훈련·자기 투자 카드에서는 시간 대신
-  // 사용자가 하나를 고를 때까지 기다렸다가(고른 카드가 톡 튄다) 넘어가고, 순위표에서는 내 팀 순위 변동을 움직여 보여 준다.
-  // 기다리는 카드 밖의 단계에서 사용자가 손대면(휠·터치·클릭·키) 바로 그만둔다. 감속 모션·업무 모드에서는 돌지 않는다.
-  type Gate = 'train' | 'invest';
-  const TOUR: [string, number | Gate][] = [
-    ['[data-report]', 2600],
-    ['[data-prep]', 'train'],
-    ['[data-invest-card]', 'invest'],
-    ['[data-season-status]', 1600],
-    ['[data-stories]', 1000],
-    ['[data-feed]', 1000],
-    ['.advance-go', 1400],
-  ];
-  const PICK_MS = 650;
-  const RANK_DELAY = 500;
-  const RANK_MS = 1000;
-  let tourWait = $state<Gate | null>(null);
-  let onPick: ((g: Gate, btn: HTMLElement) => void) | null = null;
+  // T-11-025 결과 안내 스크롤(순서·시간은 app-core resultTour): 중계 시트를 닫고 새 리포트가 뜨면, 리포트를 읽을 시간을 준 뒤
+  // 아래 카드들([data-tour])을 차례로 화면 위쪽에 맞춰 부드럽게 내려가며 잠깐씩 강조하고, 맨 아래 버튼에서 멈춘다. 훈련·자기
+  // 투자 카드에서는 시간 대신 사용자가 하나를 고를 때까지 기다렸다가(고른 카드가 톡 튄다) 넘어가고, 시즌 현황에서는 순위표의
+  // 내 팀 순위 변동을 움직여 보여 준다. 기다리는 카드 밖의 단계에서 사용자가 손대면(휠·터치·클릭·키) 바로 그만둔다.
+  // 감속 모션·업무 모드에서는 돌지 않는다.
+  let tourWait = $state<TourGate | null>(null);
+  let resume: ((btn: HTMLElement) => void) | null = null;
   let table = $state<ReturnType<typeof LeagueTable>>();
   $effect(() => {
     const k = report?.key;
@@ -92,46 +81,49 @@
       timers.forEach(clearTimeout);
       light(null);
       tourWait = null;
-      onPick = null;
+      resume = null;
       for (const e of evs) removeEventListener(e, onUser, true);
     };
     for (const e of evs) addEventListener(e, onUser, { capture: true, passive: true });
-    const steps = TOUR.map(([sel, wait]) => [document.querySelector<HTMLElement>(sel), wait] as const).filter(([el]) => el);
+    const steps = RESULT_TOUR.flatMap(([k, wait]) => {
+      const el = document.querySelector<HTMLElement>(`[data-tour="${k}"]`);
+      return el ? [{ k, el, wait }] : [];
+    });
     const go = (i: number) => {
-      if (i >= steps.length) return stop();
-      const [el, wait] = steps[i]!;
+      const step = steps[i];
+      if (!step) return stop();
+      const { k, el, wait } = step;
       if (i) {
-        const last = i === steps.length - 1;
         const head = document.querySelector<HTMLElement>('.topbar')?.offsetHeight ?? 0;
-        const box = el!.getBoundingClientRect();
-        let y = last ? document.documentElement.scrollHeight : box.top + scrollY - head - 12;
+        const box = el.getBoundingClientRect();
+        let y = k === 'go' ? document.documentElement.scrollHeight : box.top + scrollY - head - 12;
         // 고르기를 기다리는 카드가 화면보다 길면 선택지·설명이 있는 아래쪽이 보이게 바닥에 맞춘다.
         if (typeof wait !== 'number') {
           const foot = document.querySelector<HTMLElement>('.tabs')?.offsetHeight ?? 0;
           y = Math.max(y, box.bottom + scrollY - (innerHeight - foot - 12));
         }
         scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-        if (last) el!.querySelector('button')?.focus({ preventScroll: true });
+        if (k === 'go') el.querySelector('button')?.focus({ preventScroll: true });
       }
       light(el);
       if (typeof wait !== 'number') {
         tourWait = wait;
-        onPick = (g, btn) => {
-          if (g !== wait) return;
+        resume = (btn) => {
           tourWait = null;
-          onPick = null;
+          resume = null;
           btn.dataset.picked = '';
           later(() => {
             delete btn.dataset.picked;
             go(i + 1);
-          }, PICK_MS);
+          }, TOUR_PICK_MS);
         };
         return;
       }
       let ms = wait;
-      if (el!.hasAttribute('data-season-status') && report && report.rank.before !== report.rank.after) {
-        later(() => table?.playRank(report.rank.before), RANK_DELAY);
-        ms += RANK_MS;
+      const rank = report?.rank;
+      if (k === 'status' && rank?.before && rank.before !== rank.after) {
+        later(() => table?.playRank(rank.before), TOUR_RANK_DELAY);
+        ms += TOUR_RANK_MS;
       }
       later(() => go(i + 1), ms);
     };
@@ -156,13 +148,13 @@
   function setTraining(id: string, btn: HTMLElement) {
     s.training = id;
     save();
-    onPick?.('train', btn);
+    if (tourWait === 'train') resume?.(btn);
   }
 
   function setInvest(id: string, btn: HTMLElement) {
     s.invest = id;
     save();
-    onPick?.('invest', btn);
+    if (tourWait === 'invest') resume?.(btn);
   }
 
   function waitText(k: string): string {
@@ -191,7 +183,7 @@
   <p>{body}</p>
 {/snippet}
 
-<section class="card stack" data-prep>
+<section class="card stack" data-prep data-tour="prep">
   <div><div class="eyebrow">Next · {label}</div><h2>다음 구간 준비</h2></div>
   <div class="meters">
     <div class="meter"><span>컨디션</span><div class="bar"><i class={meterCls(s.cond, 40, 65)} style="width:{Math.round(s.cond)}%"></i></div><span class="v">{Math.round(s.cond)}</span></div>
@@ -215,7 +207,7 @@
   {/if}
 </section>
 
-<section class="card stack" data-invest-card>
+<section class="card stack" data-invest-card data-tour="invest">
   <div class="row" style="justify-content:space-between">
     <div><div class="eyebrow">Invest</div><h2>자기 투자</h2></div>
     <span class="pill" data-invest-money>보유 {fmtMoney(s.money)}원</span>
@@ -234,7 +226,7 @@
   </div>
 </section>
 
-<section class="card stack" data-season-status>
+<section class="card stack" data-season-status data-tour="status">
   <div>
     <div class="eyebrow">{seasonLabel(s)} Season</div>
     <h2>{label}</h2>
@@ -268,7 +260,7 @@
 </section>
 
 {#if activeStories.length}
-  <section class="card" data-stories>
+  <section class="card" data-stories data-tour="stories">
     <div class="eyebrow">Storylines</div>
     <h2 style="margin-bottom:6px">진행 중인 스토리</h2>
     {#each activeStories as [k, v] (k)}
@@ -286,7 +278,7 @@
 {/if}
 
 {#if feed.length}
-  <section class="card" data-feed>
+  <section class="card" data-feed data-tour="feed">
     <div class="eyebrow">Timeline</div>
     <h2 style="margin-bottom:6px">최근 소식</h2>
     <div class="feed">
@@ -300,7 +292,7 @@
   </section>
 {/if}
 
-<div class="advance-go">
+<div class="advance-go" data-tour="go">
   {#if s.pending}
     <button class="btn btn-block btn-accent" data-act="resume" onclick={onPending}>{pendingLabel} →</button>
   {:else}

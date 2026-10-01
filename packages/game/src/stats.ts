@@ -117,8 +117,11 @@ export function addStat(s: GameState, k: StatKey, v: number) {
 }
 /** 이적 가치·대표 선발·광고비·수당처럼 밸런스에 닿는 공식에 쓰는 인기 — 상한을 풀기 전(100) 수준까지만 반영한다. */
 export const fameEff = (s: GameState): number => Math.min(s.fame, 100);
+/** 소식 한 줄의 때 표기('2026 전반기'). 시즌 탭이 구간 리포트와 겹치는 소식을 가릴 때도 같은 표기로 맞춘다. */
+export const logLabel = (year: number, ph: number) => `${year} ${PHASES[ph] ?? ''}`;
+
 export function log(s: GameState, text: string, kind = '', ph = s.phase) {
-  s.log.unshift({ t: `${s.year} ${PHASES[ph] ?? ''}`, text, kind });
+  s.log.unshift({ t: logLabel(s.year, ph), text, kind });
   s.log.length = Math.min(s.log.length, 60);
 }
 

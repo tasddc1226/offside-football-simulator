@@ -2,7 +2,7 @@
 // 누적 기록·순위표·대회) → 스토리 → 최근 소식 → 버튼. 버튼은 고정 바 없이 탭 맨 아래 한 자리에 둔다 — 이벤트·시즌 결산이
 // 대기 중이면 그걸 열고, 아니면 구간을 진행한다. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
 // 새 리포트가 뜨면 아래 카드들을 차례로 비추며 내려가는 결과 안내가 돈다(useResultTour).
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
@@ -11,6 +11,7 @@ import {
   roundRange,
   leagueOf,
   blockMatches,
+  logLabel,
   TRAININGS,
   trainingLabel,
   trainingCard,
@@ -26,6 +27,14 @@ import {
 import { eventById } from '@offside/game/events-data';
 import type { GameState } from '@offside/game/types';
 import { seasonLabel } from '@offside/app-core/career';
+import {
+  RESULT_TOUR,
+  TOUR_PICK_MS,
+  TOUR_RANK_DELAY,
+  TOUR_RANK_MS,
+  type TourGate,
+  type TourSpot,
+} from '@offside/app-core/resultTour';
 import type { PhaseReport as PhaseReportData } from '@offside/app-core/sheets';
 import { advance, buzz, nextPending, save } from '../../game/host';
 import { useTween } from '../../sheets/useTween';
@@ -117,36 +126,22 @@ const RowMuted = ({ children }: { children: ReactNode }) => (
 // 차례로 화면 위쪽에 맞춰 부드럽게 내려가며 잠깐씩 테두리를 두르고, 맨 아래 버튼에서 멈춘다. 훈련·자기 투자 카드에서는
 // 사용자가 하나를 고를 때까지 기다렸다가(고른 카드가 톡 튄다) 넘어가고, 시즌 현황에서는 순위표의 내 팀 순위 변동을
 // 움직여 보여 준다. 기다리는 카드 밖의 단계에서 화면을 만지면 바로 그만둔다. 동작 줄이기면 돌지 않는다.
-type Gate = 'train' | 'invest';
-type Spot = 'report' | 'prep' | 'invest' | 'status' | 'stories' | 'feed' | 'go';
-const TOUR: [Spot, number | Gate][] = [
-  ['report', 2600],
-  ['prep', 'train'],
-  ['invest', 'invest'],
-  ['status', 1600],
-  ['stories', 1000],
-  ['feed', 1000],
-  ['go', 1400],
-];
-const PICK_MS = 650;
-const RANK_DELAY = 500;
-const RANK_MS = 1000;
 /** 안내를 이미 돈 리포트 — 탭을 오가며 다시 마운트돼도 한 리포트에 한 번만. */
 let touredKey = 0;
 
 interface Tour {
   /** 화면을 만졌다(고르기를 기다리는 중이 아니면 그만둔다). */
   touch: () => void;
-  pick: (g: Gate) => void;
+  pick: (g: TourGate) => void;
 }
 
 function useResultTour(report: PhaseReportData | null) {
   const { motionOK } = useSnapshot(prefs);
   const insets = useSafeAreaInsets();
-  const views = useRef<Partial<Record<Spot, View | null>>>({});
+  const views = useRef<Partial<Record<TourSpot, View | null>>>({});
   const tour = useRef<Tour | null>(null);
-  const [spot, setSpot] = useState<Spot | null>(null);
-  const [wait, setWait] = useState<Gate | null>(null);
+  const [spot, setSpot] = useState<TourSpot | null>(null);
+  const [wait, setWait] = useState<TourGate | null>(null);
   const [rankPlay, setRankPlay] = useState<RankPlay | null>(null);
 
   useEffect(() => {
@@ -156,15 +151,17 @@ function useResultTour(report: PhaseReportData | null) {
     if (!motionOK) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const later = (fn: () => void, ms: number) => void timers.push(setTimeout(fn, ms));
-    let waiting: Gate | null = null;
+    let waiting: TourGate | null = null;
+    let alive = true;
     const stop = () => {
+      alive = false;
       timers.forEach(clearTimeout);
       waiting = null;
       tour.current = null;
       setSpot(null);
       setWait(null);
     };
-    const steps = TOUR.filter(([k]) => views.current[k]);
+    const steps = RESULT_TOUR.filter(([k]) => views.current[k]);
     const go = (i: number) => {
       if (i >= steps.length) return stop();
       const [k, w] = steps[i]!;
@@ -172,6 +169,7 @@ function useResultTour(report: PhaseReportData | null) {
       if (k === 'go') scrollToEnd(true);
       else if (i)
         views.current[k]?.measureInWindow((_x, y, _w, h) => {
+          if (!alive) return;
           let to = scrollY() + y - insets.top - 12;
           // 고르기를 기다리는 카드가 화면보다 길면 선택지·설명이 있는 아래쪽이 보이게 바닥에 맞춘다.
           if (gate) to = Math.max(to, scrollY() + y + h - (viewH() - 12));
@@ -186,8 +184,8 @@ function useResultTour(report: PhaseReportData | null) {
       let ms = w;
       const { before, after } = report.rank;
       if (k === 'status' && before != null && before !== after) {
-        later(() => setRankPlay({ before, key: report.key }), RANK_DELAY);
-        ms += RANK_MS;
+        later(() => setRankPlay({ before, key: report.key }), TOUR_RANK_DELAY);
+        ms += TOUR_RANK_MS;
       }
       later(() => go(i + 1), ms);
     };
@@ -198,7 +196,7 @@ function useResultTour(report: PhaseReportData | null) {
         waiting = null;
         setWait(null);
         const i = steps.findIndex(([k]) => k === (g === 'train' ? 'prep' : 'invest'));
-        later(() => go(i + 1), PICK_MS);
+        later(() => go(i + 1), TOUR_PICK_MS);
       },
     };
     go(0);
@@ -206,29 +204,37 @@ function useResultTour(report: PhaseReportData | null) {
     // 새 리포트(key)마다 한 번만 돈다.
   }, [report?.key]);
 
-  /** 카드를 비출 자리로 등록하고, 지금 비추는 카드면 테두리를 두르는 감싸개. */
-  const Spotlight = useRef(
-    ({ id, on, children }: { id: Spot; on: boolean; children: ReactNode }) => {
-      const c = useColors();
-      return (
-        <View
-          ref={(v) => void (views.current[id] = v)}
-          collapsable={false}
-          style={{
-            margin: -5,
-            padding: 3,
-            borderWidth: 2,
-            borderRadius: 21,
-            borderColor: on ? c.accent : 'transparent',
-          }}
-        >
-          {children}
-        </View>
-      );
-    },
-  ).current;
+  /** Spotlight에 넘길 등록 함수 — 안내가 스크롤해 갈 카드 자리를 재 둔다. */
+  const reg = (id: TourSpot) => (v: View | null) => void (views.current[id] = v);
+  return { spot, wait, rankPlay, tour, reg };
+}
 
-  return { spot, wait, rankPlay, tour, Spotlight };
+/** 안내가 비추는 카드 감싸개 — 자리를 등록하고, 지금 비추는 카드면 바깥에 강조 테두리를 두른다(웹 [data-tour-spot]). */
+function Spotlight({
+  reg,
+  on,
+  children,
+}: {
+  reg: (v: View | null) => void;
+  on: boolean;
+  children: ReactNode;
+}) {
+  const c = useColors();
+  return (
+    <View
+      ref={reg}
+      collapsable={false}
+      style={{
+        margin: -5,
+        padding: 3,
+        borderWidth: 2,
+        borderRadius: 21,
+        borderColor: on ? c.accent : 'transparent',
+      }}
+    >
+      {children}
+    </View>
+  );
 }
 
 /** 고르기를 기다리는 카드의 안내 줄(웹 .tour-hint). */
@@ -401,13 +407,22 @@ export function SeasonTab({ s }: { s: GameState }) {
       ? '프리시즌 훈련 진행'
       : `훈련 후 ${phase >= LAST_PHASE ? left : Math.min(blockMatches(s), left)}경기 진행`;
   // 최근 소식: 리포트에 이미 나온 구간 기록은 빼고 5줄만, '더 보기'로 14줄까지.
-  const hide = report ? `${report.year} ${PHASES[report.ph]}` : null;
+  const hide = report ? logLabel(report.year, report.ph) : null;
   const feed = s.log.filter((l) => l.t !== hide).slice(0, FEED_LONG);
-  const { spot, wait, rankPlay, tour, Spotlight } = useResultTour(report);
-  const [popped, setPopped] = useState<{ g: Gate; id: string } | null>(null);
+  // 안내가 단계마다 탭을 다시 그리므로 선택지 카드 계산은 게임 상태가 바뀔 때만 한다(설명 칸도 같은 값을 쓴다).
+  const trainCards = useMemo(
+    () => new Map(TRAININGS.map((tr) => [tr.id, trainingCard(s, tr)])),
+    [s],
+  );
+  const investCards = useMemo(() => new Map(INVESTS.map((d) => [d.id, investCard(s, d)])), [s]);
+  const { spot, wait, rankPlay, tour, reg } = useResultTour(report);
+  const [popped, setPopped] = useState<{ g: TourGate; id: string } | null>(null);
 
-  function pick(g: Gate, id: string) {
-    if (wait === g) setPopped({ g, id });
+  function pick(g: TourGate, id: string) {
+    if (wait === g) {
+      setPopped({ g, id });
+      setTimeout(() => setPopped(null), TOUR_PICK_MS);
+    }
     tour.current?.pick(g);
   }
 
@@ -447,12 +462,12 @@ export function SeasonTab({ s }: { s: GameState }) {
   return (
     <View style={{ gap: 14 }} onTouchStart={() => tour.current?.touch()}>
       {report ? (
-        <Spotlight id="report" on={spot === 'report'}>
+        <Spotlight reg={reg('report')} on={spot === 'report'}>
           <PhaseReport key={report.key} r={report} />
         </Spotlight>
       ) : null}
 
-      <Spotlight id="prep" on={spot === 'prep'}>
+      <Spotlight reg={reg('prep')} on={spot === 'prep'}>
         <Card gap={10}>
           <View>
             <Txt v="eyebrow">{`Next · ${label}`}</Txt>
@@ -471,7 +486,7 @@ export function SeasonTab({ s }: { s: GameState }) {
             testPrefix="train"
             popped={popped?.g === 'train' ? popped.id : null}
             items={TRAININGS.map((tr) => {
-              const cd = trainingCard(s, tr);
+              const cd = trainCards.get(tr.id)!;
               return {
                 id: tr.id,
                 label: trainingLabel(s, tr),
@@ -486,14 +501,14 @@ export function SeasonTab({ s }: { s: GameState }) {
             <HelpBox
               testID="train-help"
               title={trainingLabel(s, picked)}
-              effect={trainingCard(s, picked).effect}
+              effect={trainCards.get(picked.id)!.effect}
               body={trainingHelp(s, picked)}
             />
           ) : null}
         </Card>
       </Spotlight>
 
-      <Spotlight id="invest" on={spot === 'invest'}>
+      <Spotlight reg={reg('invest')} on={spot === 'invest'}>
         <Card gap={10}>
           <View
             style={{
@@ -518,7 +533,7 @@ export function SeasonTab({ s }: { s: GameState }) {
             testPrefix="invest"
             popped={popped?.g === 'invest' ? popped.id : null}
             items={INVESTS.map((d) => {
-              const cd = investCard(s, d);
+              const cd = investCards.get(d.id)!;
               return {
                 id: d.id,
                 label: d.label,
@@ -533,13 +548,13 @@ export function SeasonTab({ s }: { s: GameState }) {
           <HelpBox
             testID="invest-help"
             title={invest.label}
-            effect={investCard(s, invest).effect}
+            effect={investCards.get(invest.id)!.effect}
             body={investHelp(s, invest)}
           />
         </Card>
       </Spotlight>
 
-      <Spotlight id="status" on={spot === 'status'}>
+      <Spotlight reg={reg('status')} on={spot === 'status'}>
         <Card gap={14}>
           <View>
             <Txt v="eyebrow">{`${seasonLabel(s)} Season`}</Txt>
@@ -591,7 +606,7 @@ export function SeasonTab({ s }: { s: GameState }) {
       </Spotlight>
 
       {activeStories.length ? (
-        <Spotlight id="stories" on={spot === 'stories'}>
+        <Spotlight reg={reg('stories')} on={spot === 'stories'}>
           <Card gap={0}>
             <Txt v="eyebrow">Storylines</Txt>
             <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
@@ -623,7 +638,7 @@ export function SeasonTab({ s }: { s: GameState }) {
       ) : null}
 
       {feed.length ? (
-        <Spotlight id="feed" on={spot === 'feed'}>
+        <Spotlight reg={reg('feed')} on={spot === 'feed'}>
           <Card gap={0}>
             <Txt v="eyebrow">Timeline</Txt>
             <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
@@ -680,7 +695,7 @@ export function SeasonTab({ s }: { s: GameState }) {
           </Card>
         </Spotlight>
       ) : null}
-      <Spotlight id="go" on={spot === 'go'}>
+      <Spotlight reg={reg('go')} on={spot === 'go'}>
         <View style={{ gap: 8 }}>
           {s.pending ? (
             <Btn block kind="accent" testID="resume" onPress={onPending}>
