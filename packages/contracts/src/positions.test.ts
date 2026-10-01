@@ -10,6 +10,21 @@ import {
 } from './hof-rules.js';
 import { DETAIL_GROUP, DETAIL_POSITIONS, DETAILS_OF, detailPosOpen } from './positions.js';
 
+const ZERO: LegendTotals = {
+  goals: 0,
+  assists: 0,
+  cs: 0,
+  apps: 0,
+  trophies: 0,
+  awards: 0,
+  caps: 0,
+  peak: 0,
+  ballon: 0,
+  ballonRankPoints: 0,
+  worldCups: 0,
+  control: 0,
+};
+
 describe('세부 포지션 (T-10-091)', () => {
   it('세부 포지션 8종은 모두 큰 포지션 하나에 속하고, 큰 포지션 목록과 겹치지 않는다', () => {
     const listed = Object.values(DETAILS_OF).flat();
@@ -24,19 +39,7 @@ describe('세부 포지션 (T-10-091)', () => {
   });
 
   it('레전드 점수는 윙어·수비형 미드필더만 가중을 보정한다', () => {
-    const t: LegendTotals = {
-      goals: 100,
-      assists: 100,
-      cs: 0,
-      apps: 0,
-      trophies: 0,
-      awards: 0,
-      caps: 0,
-      peak: 0,
-      ballon: 0,
-      ballonRankPoints: 0,
-      worldCups: 0,
-    };
+    const t = { ...ZERO, goals: 100, assists: 100 };
     expect(legendTerms('FW', t, 'ST')).toEqual(legendTerms('FW', t));
     expect(legendTerms('FW', t, null)).toEqual(legendTerms('FW', t));
     expect(legendTerms('FW', t, 'W').assists).toBeGreaterThan(legendTerms('FW', t).assists);
@@ -63,17 +66,3 @@ describe('세부 포지션 (T-10-091)', () => {
     expect(legendAwardCount(awards, 'ST')).toBe(AWARDS_PER_SEASON + 1);
   });
 });
-
-const ZERO: LegendTotals = {
-  goals: 0,
-  assists: 0,
-  cs: 0,
-  apps: 0,
-  trophies: 0,
-  awards: 0,
-  caps: 0,
-  peak: 0,
-  ballon: 0,
-  ballonRankPoints: 0,
-  worldCups: 0,
-};

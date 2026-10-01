@@ -6,6 +6,24 @@ import { mainRole, ovr } from '@offside/game/attributes';
 import { legendScore, legendScoreBreakdown, retire, legendSnapshot } from '@offside/game/season';
 import { createRng, setActiveRng } from '@offside/game/rng';
 import { startOvr } from '@offside/app-core/create-view';
+import type { CareerRecord } from '@offside/game/types';
+
+/** 레전드 점수 테스트용 30경기 시즌 한 줄. */
+const season = (over: Partial<CareerRecord>): CareerRecord => ({
+  year: 2026,
+  age: 18,
+  club: 'x',
+  league: 'x',
+  apps: 30,
+  goals: 0,
+  assists: 0,
+  cs: 0,
+  rating: 7,
+  rank: 1,
+  ovr: 60,
+  honors: [],
+  ...over,
+});
 
 const make = (pos: Pos, dpos?: DetailPos, attrs?: Parameters<typeof newGame>[2]) => {
   setActiveRng(createRng(11));
@@ -59,20 +77,7 @@ describe('세부 포지션 (T-10-091)', () => {
 
   it('은퇴 기록·레전드 점수가 세부 포지션을 쓴다', () => {
     const s = make('FW', 'W');
-    s.career.push({
-      year: 2026,
-      age: 18,
-      club: 'x',
-      league: 'x',
-      apps: 30,
-      goals: 10,
-      assists: 20,
-      rating: 7,
-      rank: 1,
-      ovr: 60,
-      honors: [],
-      mil: false,
-    } as never);
+    s.career.push(season({ goals: 10, assists: 20, rating: 7 }));
     const plain = { ...s, dpos: undefined };
     expect(legendScore(s)).toBeGreaterThan(legendScore(plain));
     expect(retire(s).dpos).toBe('W');
@@ -80,20 +85,7 @@ describe('세부 포지션 (T-10-091)', () => {
 
   it('T-11-021 중앙 미드필더는 평점 높은 시즌으로 경기 장악 점수를 쌓는다', () => {
     const s = make('MF', 'CM');
-    s.career.push({
-      year: 2026,
-      age: 18,
-      club: 'x',
-      league: 'x',
-      apps: 30,
-      goals: 3,
-      assists: 5,
-      rating: 7.5,
-      rank: 1,
-      ovr: 60,
-      honors: [],
-      mil: false,
-    } as never);
+    s.career.push(season({ goals: 3, assists: 5, rating: 7.5 }));
     const item = legendScoreBreakdown(s).items.find((it) => it.key === 'control');
     expect(item).toMatchObject({ label: '경기 장악' });
     expect(item!.value).toBeGreaterThan(0);
