@@ -1,6 +1,6 @@
-// 시즌 탭(웹 tabs/SeasonTab.svelte, T-11-024): 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자 → 진행 버튼) →
-// 시즌 현황(진행 막대·누적 기록·순위표·대회) → 스토리 → 최근 소식. 진행 버튼은 준비 카드 끝에 둬서 결과와 훈련 선택을
-// 지나야 누를 수 있다(이벤트·결산 대기 중일 때만 Game이 아래 고정 바로 띄운다). 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
+// 시즌 탭(웹 tabs/SeasonTab.svelte, T-11-024): 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·
+// 누적 기록·순위표·대회) → 스토리 → 최근 소식 → 버튼. 버튼은 고정 바 없이 탭 맨 아래 한 자리에 둔다 — 이벤트·시즌 결산이
+// 대기 중이면 그걸 열고, 아니면 구간을 진행한다. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
 import { Fragment, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -27,7 +27,7 @@ import { eventById } from '@offside/game/events-data';
 import type { GameState } from '@offside/game/types';
 import { seasonLabel } from '@offside/app-core/career';
 import type { PhaseReport as PhaseReportData } from '@offside/app-core/sheets';
-import { advance, buzz, save } from '../../game/host';
+import { advance, buzz, nextPending, save } from '../../game/host';
 import { StatGrid } from '../../sheets/parts';
 import { useTween } from '../../sheets/useTween';
 import { appState } from '../../store';
@@ -252,9 +252,16 @@ export function SeasonTab({ s }: { s: GameState }) {
     save();
   }
 
+  const pendingLabel = s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기';
+
   function onAdvance() {
     buzz();
     void advance();
+  }
+
+  function onPending() {
+    buzz();
+    nextPending();
   }
 
   function waitText(k: string): string {
@@ -346,22 +353,6 @@ export function SeasonTab({ s }: { s: GameState }) {
           note={INVEST_NOTE}
         />
       </Card>
-
-      {!s.pending ? (
-        <View style={{ gap: 8 }}>
-          <Txt tone="muted" center style={{ fontSize: rem(0.8125) }}>
-            {'훈련 '}
-            <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
-              {picked ? trainingLabel(s, picked) : '-'}
-            </Txt>
-            {' · 자기 투자 '}
-            <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>{invest.label}</Txt>
-          </Txt>
-          <Btn block kind="primary" testID="advance" onPress={onAdvance}>
-            {`${btnLabel} →`}
-          </Btn>
-        </View>
-      ) : null}
 
       <Card gap={14}>
         <View>
@@ -504,6 +495,27 @@ export function SeasonTab({ s }: { s: GameState }) {
           ) : null}
         </Card>
       ) : null}
+      <View style={{ gap: 8 }}>
+        {s.pending ? (
+          <Btn block kind="accent" testID="resume" onPress={onPending}>
+            {`${pendingLabel} →`}
+          </Btn>
+        ) : (
+          <>
+            <Txt tone="muted" center style={{ fontSize: rem(0.8125) }}>
+              {'훈련 '}
+              <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
+                {picked ? trainingLabel(s, picked) : '-'}
+              </Txt>
+              {' · 자기 투자 '}
+              <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>{invest.label}</Txt>
+            </Txt>
+            <Btn block kind="primary" testID="advance" onPress={onAdvance}>
+              {`${btnLabel} →`}
+            </Btn>
+          </>
+        )}
+      </View>
     </>
   );
 }

@@ -1,4 +1,5 @@
-// 게임 화면(웹 Game.svelte, ui.ts renderGame() 포트): 선수 카드 + 시즌·선수·커리어·트로피 탭 + 아래 고정 대기 버튼과 탭바.
+// 게임 화면(웹 Game.svelte, ui.ts renderGame() 포트): 선수 카드 + 시즌·선수·커리어·트로피 탭 + 탭바.
+// T-11-024 진행·이벤트 확인 버튼은 고정 바 없이 시즌 탭 맨 아래에 있다(SeasonTab).
 // 탭바(시즌·선수·홈·커리어·트로피 — 홈은 가운데)가 아래 안전 영역을 채우고, 진행 버튼 줄은 그 바로 위에 붙는다.
 import { useEffect, useRef, type ReactNode } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
@@ -21,15 +22,12 @@ import type { GameState } from '@offside/game/types';
 import type { Tab } from '@offside/app-core/state';
 import { fmtValue } from '@offside/app-core/format';
 import { CareerTab } from '../../components/CareerTab';
-import { buzz, nextPending } from '../../game/host';
 import { goHome } from '../../game/nav';
 import { Enter } from '../../sheets/anim';
 import { useTween } from '../../sheets/useTween';
 import { appState } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
-import { ActionBar } from '../../ui/ActionBar';
-import { Btn } from '../../ui/Btn';
 import { PitchCard } from '../../ui/Card';
 import { ClubBadge } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
@@ -128,11 +126,6 @@ export default function Game() {
     .map((k) => labelOf(s, k))
     .join('·')}`;
 
-  // 엄지 영역 스티키 액션바: 이벤트·시즌 결산이 대기 중일 때만 띄워 어느 탭에서든 놓치지 않게 한다.
-  // T-11-024 평소 구간 진행 버튼은 시즌 탭의 '다음 구간 준비' 끝에 있다 — 결과·훈련을 지나야 누를 수 있게.
-  const busy = !!s.pending;
-  const pendingLabel = s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기';
-
   // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
   function switchTab(k: Tab) {
     if (appState.tab === k) return;
@@ -143,10 +136,6 @@ export default function Game() {
     if (appState.tab === 'trophy') return toTitles();
     wantTitles.current = true;
     appState.tab = 'trophy';
-  }
-  function onPendingClick() {
-    buzz();
-    nextPending();
   }
 
   const tabItem = (key: Tab, label: string): TabItem => ({
@@ -167,17 +156,7 @@ export default function Game() {
   return (
     <BarBelow.Provider value>
       <View style={{ flex: 1, backgroundColor: c.bg }}>
-        <Screen
-          footer={
-            busy ? (
-              <ActionBar>
-                <Btn block kind="accent" testID="resume" onPress={onPendingClick}>
-                  {`${pendingLabel} →`}
-                </Btn>
-              </ActionBar>
-            ) : undefined
-          }
-        >
+        <Screen>
           <Topbar />
           <PitchCard gap={12} style={{ paddingTop: 18, paddingHorizontal: 18, paddingBottom: 16 }}>
             <View style={{ flexDirection: 'row', gap: 12 }}>

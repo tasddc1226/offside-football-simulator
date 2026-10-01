@@ -1559,7 +1559,7 @@ body:has(.main-nav) .wrap {
   font-size: 0.9375rem;
   font-weight: 700;
 }
-/* T-11-024 '다음 구간 준비' 끝의 진행 버튼 — 고른 훈련·투자를 한 줄로 다시 보여 주고 누른다 */
+/* T-11-024 시즌 탭 맨 아래 버튼(구간 진행 · 이벤트 확인 · 시즌 결산) — 진행이면 고른 훈련·투자를 한 줄로 다시 보여 준다 */
 .advance-go {
   display: flex;
   flex-direction: column;

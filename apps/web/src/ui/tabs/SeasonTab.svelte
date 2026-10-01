@@ -1,8 +1,8 @@
 <script lang="ts">
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
-  // T-11-024 순서: 방금 끝난 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자 → 진행 버튼) → 시즌 현황(진행 막대·
-  // 누적 기록·순위표·대회) → 스토리 → 최근 소식. 진행 버튼은 화면 아래 고정 대신 준비 카드 끝에 둬서, 결과와 훈련 선택을
-  // 지나야 누를 수 있다(이벤트·결산 대기 중일 때만 Game.svelte가 고정 바로 띄운다). 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
+  // T-11-024 순서: 방금 끝난 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·누적 기록·
+  // 순위표·대회) → 스토리 → 최근 소식 → 버튼. 버튼은 고정 바 없이 탭 맨 아래 한 자리에 둔다 — 이벤트·시즌 결산이 대기 중이면
+  // 그걸 열고, 아니면 구간을 진행한다. 결과와 훈련 선택을 지나야 누를 수 있다. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
   import { PHASES, LAST_PHASE } from '@offside/game/data';
   import { roundRange, leagueOf, blockMatches, TRAININGS, trainingLabel, trainingCard, trainingHelp, TRAINING_NOTE, INVESTS, INVEST_NOTE, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
@@ -10,7 +10,7 @@
   import { save } from '../helpers.js';
   import { seasonLabel } from '@offside/app-core/career';
   import { appState } from '../state.svelte.js';
-  import { advance } from '../actions.js';
+  import { advance, nextPending } from '../actions.js';
   import { buzz } from '../motion.js';
   import PhaseReport from './PhaseReport.svelte';
   import LeagueTable from './LeagueTable.svelte';
@@ -41,9 +41,16 @@
     return s.log.filter((l) => l.t !== hide).slice(0, FEED_LONG);
   });
 
+  const pendingLabel = $derived(s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기');
+
   function onAdvance() {
     buzz();
     void advance();
+  }
+
+  function onPending() {
+    buzz();
+    nextPending();
   }
 
   function meterCls(v: number, badAt: number, warnAt: number): string {
@@ -127,13 +134,6 @@
   </div>
 </section>
 
-{#if !s.pending}
-  <div class="advance-go">
-    <p class="muted fs-sm">훈련 <b>{picked ? trainingLabel(s, picked) : '-'}</b> · 자기 투자 <b>{invest.label}</b></p>
-    <button class="btn btn-block btn-primary" data-act="advance" onclick={onAdvance}>{btnLabel} →</button>
-  </div>
-{/if}
-
 <section class="card stack" data-season-status>
   <div>
     <div class="eyebrow">{seasonLabel(s)} Season</div>
@@ -205,3 +205,12 @@
     {/if}
   </section>
 {/if}
+
+<div class="advance-go">
+  {#if s.pending}
+    <button class="btn btn-block btn-accent" data-act="resume" onclick={onPending}>{pendingLabel} →</button>
+  {:else}
+    <p class="muted fs-sm">훈련 <b>{picked ? trainingLabel(s, picked) : '-'}</b> · 자기 투자 <b>{invest.label}</b></p>
+    <button class="btn btn-block btn-primary" data-act="advance" onclick={onAdvance}>{btnLabel} →</button>
+  {/if}
+</div>

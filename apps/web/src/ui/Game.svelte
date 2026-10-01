@@ -7,9 +7,8 @@
   import { leagueOf, roleOf, fmtMoney, potLabel, potScouted, focusOf, labelOf } from '@offside/game/engine';
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
-  import { nextPending } from './actions.js';
   import { loadGameSheets } from './sheets/gameSheets.svelte.js';
-  import { buzz, dur } from './motion.js';
+  import { dur } from './motion.js';
   import ClubBadge from './ClubBadge.svelte';
   import Topbar from './Topbar.svelte';
   import TabIcon from './TabIcon.svelte';
@@ -45,11 +44,6 @@
   }
   const focusName = $derived(`주력 ${focusOf(s).map((k) => labelOf(s, k)).join('·')}`);
 
-  // 엄지 영역 스티키 액션바: 이벤트·시즌 결산이 대기 중일 때만 띄워 어느 탭에서든 놓치지 않게 한다.
-  // T-11-024 평소 구간 진행 버튼은 시즌 탭의 '다음 구간 준비' 끝에 있다 — 결과·훈련을 지나야 누를 수 있게.
-  const busy = $derived(!!s.pending);
-  const pendingLabel = $derived(s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기');
-
   const tabs: [Tab, string][] = [
     ['season', '시즌'],
     ['player', '선수'],
@@ -64,13 +58,10 @@
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }
 
-  function onPendingClick() {
-    buzz();
-    nextPending();
-  }
 </script>
 
-<div class="wrap" class:has-tabbar={!busy} class:has-actionbar={busy}>
+<!-- T-11-024 진행·이벤트 확인 버튼은 고정 바 없이 시즌 탭 맨 아래에 있다(SeasonTab). -->
+<div class="wrap has-tabbar">
   <Topbar sticky />
   <section class="player">
     <div class="chalk"></div>
@@ -107,15 +98,6 @@
   {/key}
 </div>
 
-{#if busy}
-  <div class="action-bar" transition:fly={{ y: 20, duration: dur(180) }}>
-    <div class="action-bar-inner">
-      <button class="btn btn-block btn-accent" data-act="resume" onclick={onPendingClick}>
-        {pendingLabel} →
-      </button>
-    </div>
-  </div>
-{/if}
 <!-- 게임 탭 4개 + 가운데 홈. 홈은 화면을 떠나는 버튼이라 tablist 밖에 두고, CSS order로 가운데에 놓는다
      (.tabs-inner는 display: contents라 탭들이 .tabs 그리드에 그대로 들어간다). -->
 <nav class="tabs" aria-label="게임 메뉴">
