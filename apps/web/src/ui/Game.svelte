@@ -8,7 +8,7 @@
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
   import { loadGameSheets } from './sheets/gameSheets.svelte.js';
-  import { dur } from './motion.js';
+  import { dur, motionOK } from './motion.js';
   import ClubBadge from './ClubBadge.svelte';
   import Topbar from './Topbar.svelte';
   import TabIcon from './TabIcon.svelte';
@@ -52,8 +52,12 @@
   ];
 
   // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
+  // T-11-024 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(시즌 탭 맨 아래 버튼을 누른 뒤 결과로 돌아가기 쉽게).
   function switchTab(k: Tab) {
-    if (appState.tab === k) return;
+    if (appState.tab === k) {
+      window.scrollTo({ top: 0, left: 0, behavior: motionOK ? 'smooth' : 'instant' });
+      return;
+    }
     appState.tab = k;
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }

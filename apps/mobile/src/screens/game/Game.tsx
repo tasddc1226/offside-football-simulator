@@ -25,7 +25,7 @@ import { CareerTab } from '../../components/CareerTab';
 import { goHome } from '../../game/nav';
 import { Enter } from '../../sheets/anim';
 import { useTween } from '../../sheets/useTween';
-import { appState } from '../../store';
+import { appState, prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { PitchCard } from '../../ui/Card';
@@ -127,8 +127,9 @@ export default function Game() {
     .join('·')}`;
 
   // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
+  // T-11-024 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(시즌 탭 맨 아래 버튼을 누른 뒤 결과로 돌아가기 쉽게).
   function switchTab(k: Tab) {
-    if (appState.tab === k) return;
+    if (appState.tab === k) return scrollTo(0, prefs.motionOK);
     appState.tab = k;
     scrollTo(0);
   }
