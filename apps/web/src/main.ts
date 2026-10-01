@@ -6,6 +6,7 @@ import './style.css';
 import App from './ui/App.svelte';
 import Sheet from './ui/Sheet.svelte';
 import Toast from './ui/Toast.svelte';
+import SheetChrome from './ui/SheetChrome.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
 import { keepStorage } from './ui/helpers.js';
 import { handleOAuthReturn } from './ui/login.js';
@@ -51,6 +52,8 @@ modalEl.innerHTML = '';
 mount(Sheet, { target: modalEl });
 
 mount(Toast, { target: document.getElementById('toast')! });
+// T-11-022 업무 모드 틀(꺼져 있으면 아무것도 그리지 않는다).
+mount(SheetChrome, { target: document.body.appendChild(document.createElement('div')) });
 
 // T-10-010: 클럽 커스텀을 계정과 맞춘다. 세션이 있었던 기기만 — 첫 방문자는 로컬 모드 그대로다(T-10-037).
 if (hasSessionHint())

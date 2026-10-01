@@ -11,8 +11,11 @@ export const motionOK = (() => {
   }
 })();
 
+// T-11-022 업무 모드(스프레드시트 화면)에서는 화면이 미끄러지지 않는다.
+const sheetSkin = () =>
+  typeof document !== 'undefined' && document.documentElement.dataset.skin === 'sheet';
 /** 감속 모션이면 0, 아니면 주어진 지속시간(ms)을 그대로 돌려준다. Svelte transition duration 등에 쓴다. */
-export const dur = (ms: number): number => (motionOK ? ms : 0);
+export const dur = (ms: number): number => (motionOK && !sheetSkin() ? ms : 0);
 
 /** 화면 전환(T-10-119). dir 1이면 다음 화면이 오른쪽에서, -1이면 이전 화면이 왼쪽에서 밀려 들어온다 — 모바일에서
  * 가장자리를 밀어 뒤로 갈 수 있다는 걸 보여 준다. 0이면 효과 없이 바로 바꾼다(브라우저가 이미 넘김 효과를 보인 경우).
