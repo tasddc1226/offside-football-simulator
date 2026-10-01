@@ -1559,12 +1559,51 @@ body:has(.main-nav) .wrap {
   font-size: 0.9375rem;
   font-weight: 700;
 }
+/* T-11-024 결과 안내 스크롤이 지금 비추는 카드(SeasonTab tour) — 테두리 바깥에 강조 색 윤곽을 잠깐 두른다 */
+.tab-panel > * {
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  transition: outline-color 0.35s ease;
+}
+.tab-panel > [data-tour-spot] {
+  outline-color: var(--accent);
+}
+/* 안내 스크롤이 훈련·자기 투자 카드에서 고르기를 기다릴 때의 안내 줄과, 고른 선택지가 톡 튀는 효과 */
+.tour-hint {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--accent-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  animation: tour-hint-in 0.3s ease both;
+}
+@keyframes tour-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.opt[data-picked] {
+  animation: opt-pick 0.6s ease;
+}
+@keyframes opt-pick {
+  30% {
+    transform: scale(0.96);
+  }
+  60% {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 3px var(--accent);
+  }
+}
 /* T-11-024 시즌 탭 맨 아래 버튼(구간 진행 · 이벤트 확인 · 시즌 결산) — 진행이면 고른 훈련·투자를 한 줄로 다시 보여 준다 */
 .advance-go {
   display: flex;
   flex-direction: column;
   gap: 8px;
   text-align: center;
+  border-radius: 16px;
 }
 .track {
   display: grid;
@@ -4010,6 +4049,27 @@ body:has(nav.tabs) .toast {
   color: var(--muted);
   padding: 2px;
   line-height: 1;
+}
+/* T-11-024 순위 변동 연출(LeagueTable playRank) — 움직이는 내 팀 줄을 지나치는 줄들 위로 올리고, 순위 칸 옆에 변동 폭을 잠깐 단다 */
+.league-table tr.lt-moving td {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 6px 14px -8px rgb(0 0 0 / 0.35);
+}
+.league-table tr.lt-moving td:first-child {
+  box-shadow:
+    inset 3px 0 0 var(--accent),
+    0 6px 14px -8px rgb(0 0 0 / 0.35);
+}
+.league-table td[data-delta]::after {
+  content: attr(data-delta);
+  margin-left: 3px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--good);
+}
+.league-table td[data-delta^='▼']::after {
+  color: var(--bad);
 }
 
 /* ───────── 칭호 (T-10-026) ───────── */

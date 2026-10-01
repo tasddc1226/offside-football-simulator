@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../theme/useColors';
-import { noteScrollY, registerScroll } from './scroll';
+import { noteScrollY, noteViewH, registerScroll } from './scroll';
 
 /** 화면 아래에 탭바가 붙어 있다(탭바가 아래 안전 영역을 채운다). 루트·게임 화면이 넣는다. */
 export const BarBelow = createContext(false);
@@ -57,6 +57,7 @@ export function Screen({
       <ScrollView
         ref={registerScroll}
         onScroll={(e) => noteScrollY(e.nativeEvent.contentOffset.y)}
+        onLayout={(e) => noteViewH(e.nativeEvent.layout.height)}
         scrollEventThrottle={64}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"

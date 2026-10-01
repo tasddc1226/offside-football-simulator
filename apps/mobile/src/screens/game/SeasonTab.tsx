@@ -1,8 +1,10 @@
 // 시즌 탭(웹 tabs/SeasonTab.svelte, T-11-024): 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·
 // 누적 기록·순위표·대회) → 스토리 → 최근 소식 → 버튼. 버튼은 고정 바 없이 탭 맨 아래 한 자리에 둔다 — 이벤트·시즌 결산이
 // 대기 중이면 그걸 열고, 아니면 구간을 진행한다. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
-import { useState, type ReactNode } from 'react';
-import { View } from 'react-native';
+// 새 리포트가 뜨면 아래 카드들을 차례로 비추며 내려가는 결과 안내가 돈다(useResultTour).
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Animated, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { PHASES, LAST_PHASE } from '@offside/game/data';
 import {
@@ -27,14 +29,16 @@ import { seasonLabel } from '@offside/app-core/career';
 import type { PhaseReport as PhaseReportData } from '@offside/app-core/sheets';
 import { advance, buzz, nextPending, save } from '../../game/host';
 import { useTween } from '../../sheets/useTween';
-import { appState } from '../../store';
+import { appState, prefs } from '../../store';
+import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
 import { Opt, Pill } from '../../ui/bits';
 import { Btn } from '../../ui/Btn';
+import { scrollTo, scrollToEnd, scrollY, viewH } from '../../ui/scroll';
 import { Txt } from '../../ui/Txt';
-import { LeagueTable, SubTitle } from './LeagueTable';
+import { LeagueTable, SubTitle, type RankPlay } from './LeagueTable';
 import { PhaseReport } from './PhaseReport';
 
 function meterTone(v: number, badAt: number, warnAt: number): 'bad' | 'warn' | 'good' {
@@ -109,6 +113,160 @@ const RowMuted = ({ children }: { children: ReactNode }) => (
   </Txt>
 );
 
+// T-11-024 결과 안내(웹 SeasonTab tour): 중계 시트를 닫고 새 리포트가 뜨면, 리포트를 읽을 시간을 준 뒤 아래 카드들을
+// 차례로 화면 위쪽에 맞춰 부드럽게 내려가며 잠깐씩 테두리를 두르고, 맨 아래 버튼에서 멈춘다. 훈련·자기 투자 카드에서는
+// 사용자가 하나를 고를 때까지 기다렸다가(고른 카드가 톡 튄다) 넘어가고, 시즌 현황에서는 순위표의 내 팀 순위 변동을
+// 움직여 보여 준다. 기다리는 카드 밖의 단계에서 화면을 만지면 바로 그만둔다. 동작 줄이기면 돌지 않는다.
+type Gate = 'train' | 'invest';
+type Spot = 'report' | 'prep' | 'invest' | 'status' | 'stories' | 'feed' | 'go';
+const TOUR: [Spot, number | Gate][] = [
+  ['report', 2600],
+  ['prep', 'train'],
+  ['invest', 'invest'],
+  ['status', 1600],
+  ['stories', 1000],
+  ['feed', 1000],
+  ['go', 1400],
+];
+const PICK_MS = 650;
+const RANK_DELAY = 500;
+const RANK_MS = 1000;
+/** 안내를 이미 돈 리포트 — 탭을 오가며 다시 마운트돼도 한 리포트에 한 번만. */
+let touredKey = 0;
+
+interface Tour {
+  /** 화면을 만졌다(고르기를 기다리는 중이 아니면 그만둔다). */
+  touch: () => void;
+  pick: (g: Gate) => void;
+}
+
+function useResultTour(report: PhaseReportData | null) {
+  const { motionOK } = useSnapshot(prefs);
+  const insets = useSafeAreaInsets();
+  const views = useRef<Partial<Record<Spot, View | null>>>({});
+  const tour = useRef<Tour | null>(null);
+  const [spot, setSpot] = useState<Spot | null>(null);
+  const [wait, setWait] = useState<Gate | null>(null);
+  const [rankPlay, setRankPlay] = useState<RankPlay | null>(null);
+
+  useEffect(() => {
+    const k = report?.key;
+    if (!report || !k || k === touredKey) return;
+    touredKey = k;
+    if (!motionOK) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const later = (fn: () => void, ms: number) => void timers.push(setTimeout(fn, ms));
+    let waiting: Gate | null = null;
+    const stop = () => {
+      timers.forEach(clearTimeout);
+      waiting = null;
+      tour.current = null;
+      setSpot(null);
+      setWait(null);
+    };
+    const steps = TOUR.filter(([k]) => views.current[k]);
+    const go = (i: number) => {
+      if (i >= steps.length) return stop();
+      const [k, w] = steps[i]!;
+      const gate = typeof w !== 'number';
+      if (k === 'go') scrollToEnd(true);
+      else if (i)
+        views.current[k]?.measureInWindow((_x, y, _w, h) => {
+          let to = scrollY() + y - insets.top - 12;
+          // 고르기를 기다리는 카드가 화면보다 길면 선택지·설명이 있는 아래쪽이 보이게 바닥에 맞춘다.
+          if (gate) to = Math.max(to, scrollY() + y + h - (viewH() - 12));
+          scrollTo(Math.max(0, to), true);
+        });
+      setSpot(k);
+      if (gate) {
+        waiting = w;
+        setWait(w);
+        return;
+      }
+      let ms = w;
+      const { before, after } = report.rank;
+      if (k === 'status' && before != null && before !== after) {
+        later(() => setRankPlay({ before, key: report.key }), RANK_DELAY);
+        ms += RANK_MS;
+      }
+      later(() => go(i + 1), ms);
+    };
+    tour.current = {
+      touch: () => void (waiting || stop()),
+      pick: (g) => {
+        if (g !== waiting) return;
+        waiting = null;
+        setWait(null);
+        const i = steps.findIndex(([k]) => k === (g === 'train' ? 'prep' : 'invest'));
+        later(() => go(i + 1), PICK_MS);
+      },
+    };
+    go(0);
+    return stop;
+    // 새 리포트(key)마다 한 번만 돈다.
+  }, [report?.key]);
+
+  /** 카드를 비출 자리로 등록하고, 지금 비추는 카드면 테두리를 두르는 감싸개. */
+  const Spotlight = useRef(
+    ({ id, on, children }: { id: Spot; on: boolean; children: ReactNode }) => {
+      const c = useColors();
+      return (
+        <View
+          ref={(v) => void (views.current[id] = v)}
+          collapsable={false}
+          style={{
+            margin: -5,
+            padding: 3,
+            borderWidth: 2,
+            borderRadius: 21,
+            borderColor: on ? c.accent : 'transparent',
+          }}
+        >
+          {children}
+        </View>
+      );
+    },
+  ).current;
+
+  return { spot, wait, rankPlay, tour, Spotlight };
+}
+
+/** 고르기를 기다리는 카드의 안내 줄(웹 .tour-hint). */
+function TourHint({ children }: { children: string }) {
+  const c = useColors();
+  return (
+    <View
+      accessibilityLiveRegion="polite"
+      style={{
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        backgroundColor: alpha(c.accent, 0.14),
+      }}
+    >
+      <Txt style={{ fontSize: rem(0.8125), fontWeight: '700', color: c.accentText }}>
+        {children}
+      </Txt>
+    </View>
+  );
+}
+
+/** 고른 선택지가 톡 튄다(웹 .opt[data-picked] — 0.96배로 눌렸다가 1.03배로 튀고 제자리로). */
+function PickPop({ on, children }: { on: boolean; children: ReactNode }) {
+  const v = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!on) return;
+    const a = Animated.sequence([
+      Animated.timing(v, { toValue: 0.96, duration: 180, useNativeDriver: true }),
+      Animated.timing(v, { toValue: 1.03, duration: 180, useNativeDriver: true }),
+      Animated.timing(v, { toValue: 1, duration: 240, useNativeDriver: true }),
+    ]);
+    a.start();
+    return () => a.stop();
+  }, [on, v]);
+  return <Animated.View style={{ flex: 1, transform: [{ scale: v }] }}>{children}</Animated.View>;
+}
+
 interface Choice {
   id: string;
   label: string;
@@ -121,7 +279,16 @@ interface Choice {
 
 /** 훈련·자기 투자 선택지(웹 .train grid 3열) — 3개씩 끊어 줄로 그리고, 모자란 칸은 빈 칸으로 폭을 맞춘다.
  * T-11-024 카드에는 무엇이 오르는지(첫 효과)와 눈여겨볼 한 가지(주력·비용 등)만 두고, 나머지 효과는 고른 카드의 설명 칸에서. */
-function ChoiceGrid({ testPrefix, items }: { testPrefix: string; items: Choice[] }) {
+function ChoiceGrid({
+  testPrefix,
+  items,
+  popped,
+}: {
+  testPrefix: string;
+  items: Choice[];
+  /** 방금 고른 선택지(안내가 고르기를 기다리던 중에 고른 것만) — 톡 튀는 효과를 준다. */
+  popped?: string | null;
+}) {
   const c = useColors();
   const rows: Choice[][] = [];
   for (let i = 0; i < items.length; i += 3) rows.push(items.slice(i, i + 3));
@@ -131,33 +298,35 @@ function ChoiceGrid({ testPrefix, items }: { testPrefix: string; items: Choice[]
         <View key={ri} style={{ flexDirection: 'row', gap: 8 }}>
           {row.map((it) => (
             <View key={it.id} testID={`${testPrefix}-${it.id}`} style={{ flex: 1 }}>
-              <Opt
-                selected={it.selected}
-                disabled={it.disabled}
-                onPress={it.onPress}
-                style={{
-                  flex: 1,
-                  paddingVertical: it.selected ? 7.5 : 9,
-                  paddingHorizontal: it.selected ? 8.5 : 10,
-                }}
-              >
-                <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>{it.label}</Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
-                  {it.effect[0]}
-                </Txt>
-                {it.tag ? (
-                  <Txt
-                    style={{
-                      fontSize: rem(0.75),
-                      lineHeight: rem(0.75) * 1.35,
-                      fontWeight: '600',
-                      color: c.accentText,
-                    }}
-                  >
-                    {it.tag}
+              <PickPop on={popped === it.id}>
+                <Opt
+                  selected={it.selected}
+                  disabled={it.disabled}
+                  onPress={it.onPress}
+                  style={{
+                    flex: 1,
+                    paddingVertical: it.selected ? 7.5 : 9,
+                    paddingHorizontal: it.selected ? 8.5 : 10,
+                  }}
+                >
+                  <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>{it.label}</Txt>
+                  <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
+                    {it.effect[0]}
                   </Txt>
-                ) : null}
-              </Opt>
+                  {it.tag ? (
+                    <Txt
+                      style={{
+                        fontSize: rem(0.75),
+                        lineHeight: rem(0.75) * 1.35,
+                        fontWeight: '600',
+                        color: c.accentText,
+                      }}
+                    >
+                      {it.tag}
+                    </Txt>
+                  ) : null}
+                </Opt>
+              </PickPop>
             </View>
           ))}
           {Array.from({ length: 3 - row.length }).map((_, i) => (
@@ -234,15 +403,24 @@ export function SeasonTab({ s }: { s: GameState }) {
   // 최근 소식: 리포트에 이미 나온 구간 기록은 빼고 5줄만, '더 보기'로 14줄까지.
   const hide = report ? `${report.year} ${PHASES[report.ph]}` : null;
   const feed = s.log.filter((l) => l.t !== hide).slice(0, FEED_LONG);
+  const { spot, wait, rankPlay, tour, Spotlight } = useResultTour(report);
+  const [popped, setPopped] = useState<{ g: Gate; id: string } | null>(null);
+
+  function pick(g: Gate, id: string) {
+    if (wait === g) setPopped({ g, id });
+    tour.current?.pick(g);
+  }
 
   function setTraining(id: string) {
     appState.G!.training = id;
     save();
+    pick('train', id);
   }
 
   function setInvest(id: string) {
     appState.G!.invest = id;
     save();
+    pick('invest', id);
   }
 
   const pendingLabel = s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기';
@@ -267,242 +445,264 @@ export function SeasonTab({ s }: { s: GameState }) {
   }
 
   return (
-    <>
-      {report ? <PhaseReport key={report.key} r={report} /> : null}
+    <View style={{ gap: 14 }} onTouchStart={() => tour.current?.touch()}>
+      {report ? (
+        <Spotlight id="report" on={spot === 'report'}>
+          <PhaseReport key={report.key} r={report} />
+        </Spotlight>
+      ) : null}
 
-      <Card gap={10}>
-        <View>
-          <Txt v="eyebrow">{`Next · ${label}`}</Txt>
-          <Txt v="h2" accessibilityRole="header">
-            다음 구간 준비
-          </Txt>
-        </View>
-        <View style={{ gap: 9 }}>
-          <Meter label="컨디션" value={s.cond} tone={meterTone(s.cond, 40, 65)} />
-          <Meter label="사기" value={s.morale} tone={meterTone(s.morale, 40, 60)} />
-          <Meter label="인기" value={s.fame} tone="acc" />
-        </View>
-        <SubTitle>훈련 방향</SubTitle>
-        <ChoiceGrid
-          testPrefix="train"
-          items={TRAININGS.map((tr) => {
-            const cd = trainingCard(s, tr);
-            return {
-              id: tr.id,
-              label: trainingLabel(s, tr),
-              effect: cd.effect,
-              tag: cd.tag,
-              selected: s.training === tr.id,
-              onPress: () => setTraining(tr.id),
-            };
-          })}
-        />
-        {picked ? (
-          <HelpBox
-            testID="train-help"
-            title={trainingLabel(s, picked)}
-            effect={trainingCard(s, picked).effect}
-            body={trainingHelp(s, picked)}
-          />
-        ) : null}
-      </Card>
-
-      <Card gap={10}>
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 10,
-          }}
-        >
-          <View style={{ flex: 1 }}>
-            <Txt v="eyebrow">Invest</Txt>
+      <Spotlight id="prep" on={spot === 'prep'}>
+        <Card gap={10}>
+          <View>
+            <Txt v="eyebrow">{`Next · ${label}`}</Txt>
             <Txt v="h2" accessibilityRole="header">
-              자기 투자
+              다음 구간 준비
             </Txt>
           </View>
-          <Pill>{`보유 ${fmtMoney(s.money)}원`}</Pill>
-        </View>
-        <ChoiceGrid
-          testPrefix="invest"
-          items={INVESTS.map((d) => {
-            const cd = investCard(s, d);
-            return {
-              id: d.id,
-              label: d.label,
-              effect: cd.effect,
-              tag: cd.tag,
-              selected: invest.id === d.id,
-              disabled: !cd.affordable,
-              onPress: () => setInvest(d.id),
-            };
-          })}
-        />
-        <HelpBox
-          testID="invest-help"
-          title={invest.label}
-          effect={investCard(s, invest).effect}
-          body={investHelp(s, invest)}
-        />
-      </Card>
+          <View style={{ gap: 9 }}>
+            <Meter label="컨디션" value={s.cond} tone={meterTone(s.cond, 40, 65)} />
+            <Meter label="사기" value={s.morale} tone={meterTone(s.morale, 40, 60)} />
+            <Meter label="인기" value={s.fame} tone="acc" />
+          </View>
+          <SubTitle>훈련 방향</SubTitle>
+          {wait === 'train' ? <TourHint>이번 구간 훈련을 고르면 다음으로 넘어가요</TourHint> : null}
+          <ChoiceGrid
+            testPrefix="train"
+            popped={popped?.g === 'train' ? popped.id : null}
+            items={TRAININGS.map((tr) => {
+              const cd = trainingCard(s, tr);
+              return {
+                id: tr.id,
+                label: trainingLabel(s, tr),
+                effect: cd.effect,
+                tag: cd.tag,
+                selected: s.training === tr.id,
+                onPress: () => setTraining(tr.id),
+              };
+            })}
+          />
+          {picked ? (
+            <HelpBox
+              testID="train-help"
+              title={trainingLabel(s, picked)}
+              effect={trainingCard(s, picked).effect}
+              body={trainingHelp(s, picked)}
+            />
+          ) : null}
+        </Card>
+      </Spotlight>
 
-      <Card gap={14}>
-        <View>
-          <Txt v="eyebrow">{`${seasonLabel(s)} Season`}</Txt>
-          <Txt v="h2" accessibilityRole="header">
-            {label}
-          </Txt>
-          <View style={{ flexDirection: 'row', gap: 4, marginTop: 10 }}>
-            {[0, 1, 2].map((i) => (
-              <View
-                key={i}
-                style={{
-                  flex: 1,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: i < phase ? c.pitch2 : i === phase ? c.accent : c.line,
-                }}
-              />
-            ))}
-          </View>
-          <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
-            {['프리시즌', '전반기', '후반기'].map((tl) => (
-              <Txt key={tl} tone="muted" center style={{ flex: 1, fontSize: rem(0.6875) }}>
-                {tl}
+      <Spotlight id="invest" on={spot === 'invest'}>
+        <Card gap={10}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Txt v="eyebrow">Invest</Txt>
+              <Txt v="h2" accessibilityRole="header">
+                자기 투자
               </Txt>
-            ))}
+            </View>
+            <Pill>{`보유 ${fmtMoney(s.money)}원`}</Pill>
           </View>
-        </View>
-        {showTotals ? (
-          <Txt testID="season-totals" tone="muted" style={{ fontSize: rem(0.8125) }}>
-            {`시즌 누적 · ${S.w}승 ${S.d}무 ${S.l}패 · 출전 ${S.apps} · ${S.goals}골 · ${lastCol[0]} ${lastCol[1]} · 평점 ${avg}`}
-          </Txt>
-        ) : null}
-        <LeagueTable s={s} />
-        {comps.length ? (
+          {wait === 'invest' ? (
+            <TourHint>투자를 고르면 넘어가요 · 아끼려면 투자 안 함</TourHint>
+          ) : null}
+          <ChoiceGrid
+            testPrefix="invest"
+            popped={popped?.g === 'invest' ? popped.id : null}
+            items={INVESTS.map((d) => {
+              const cd = investCard(s, d);
+              return {
+                id: d.id,
+                label: d.label,
+                effect: cd.effect,
+                tag: cd.tag,
+                selected: invest.id === d.id,
+                disabled: !cd.affordable,
+                onPress: () => setInvest(d.id),
+              };
+            })}
+          />
+          <HelpBox
+            testID="invest-help"
+            title={invest.label}
+            effect={investCard(s, invest).effect}
+            body={investHelp(s, invest)}
+          />
+        </Card>
+      </Spotlight>
+
+      <Spotlight id="status" on={spot === 'status'}>
+        <Card gap={14}>
           <View>
-            <SubTitle>이번 시즌 대회</SubTitle>
-            {comps.map((cp) => (
-              <StoryRow key={cp.name}>
-                <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>{cp.name}</Txt>
-                <RowMuted>
-                  {`${cp.stage || (cp.type === 'super' ? '개막 전 단판' : '1구간 시작')}${cp.alive && cp.stage ? ' · 진행 중' : ''}`}
-                </RowMuted>
-                <RowMuted>{`${cp.apps}경기 ${cp.g}골`}</RowMuted>
-              </StoryRow>
-            ))}
+            <Txt v="eyebrow">{`${seasonLabel(s)} Season`}</Txt>
+            <Txt v="h2" accessibilityRole="header">
+              {label}
+            </Txt>
+            <View style={{ flexDirection: 'row', gap: 4, marginTop: 10 }}>
+              {[0, 1, 2].map((i) => (
+                <View
+                  key={i}
+                  style={{
+                    flex: 1,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: i < phase ? c.pitch2 : i === phase ? c.accent : c.line,
+                  }}
+                />
+              ))}
+            </View>
+            <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+              {['프리시즌', '전반기', '후반기'].map((tl) => (
+                <Txt key={tl} tone="muted" center style={{ flex: 1, fontSize: rem(0.6875) }}>
+                  {tl}
+                </Txt>
+              ))}
+            </View>
           </View>
-        ) : null}
-      </Card>
+          {showTotals ? (
+            <Txt testID="season-totals" tone="muted" style={{ fontSize: rem(0.8125) }}>
+              {`시즌 누적 · ${S.w}승 ${S.d}무 ${S.l}패 · 출전 ${S.apps} · ${S.goals}골 · ${lastCol[0]} ${lastCol[1]} · 평점 ${avg}`}
+            </Txt>
+          ) : null}
+          <LeagueTable s={s} play={rankPlay} />
+          {comps.length ? (
+            <View>
+              <SubTitle>이번 시즌 대회</SubTitle>
+              {comps.map((cp) => (
+                <StoryRow key={cp.name}>
+                  <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>{cp.name}</Txt>
+                  <RowMuted>
+                    {`${cp.stage || (cp.type === 'super' ? '개막 전 단판' : '1구간 시작')}${cp.alive && cp.stage ? ' · 진행 중' : ''}`}
+                  </RowMuted>
+                  <RowMuted>{`${cp.apps}경기 ${cp.g}골`}</RowMuted>
+                </StoryRow>
+              ))}
+            </View>
+          ) : null}
+        </Card>
+      </Spotlight>
 
       {activeStories.length ? (
-        <Card gap={0}>
-          <Txt v="eyebrow">Storylines</Txt>
-          <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
-            진행 중인 스토리
-          </Txt>
-          {activeStories.map(([k, v]) => (
-            <StoryRow key={k}>
-              <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>
-                {STORIES[k]!.name}
-              </Txt>
-              <View style={{ flexDirection: 'row', gap: 4 }}>
-                {Array.from({ length: STORIES[k]!.total }).map((_, i) => (
-                  <View
-                    key={i}
-                    style={{
-                      width: 18,
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: i < v.stage ? c.accent : c.line,
-                    }}
-                  />
-                ))}
-              </View>
-              <RowMuted>{waitText(k)}</RowMuted>
-            </StoryRow>
-          ))}
-        </Card>
+        <Spotlight id="stories" on={spot === 'stories'}>
+          <Card gap={0}>
+            <Txt v="eyebrow">Storylines</Txt>
+            <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
+              진행 중인 스토리
+            </Txt>
+            {activeStories.map(([k, v]) => (
+              <StoryRow key={k}>
+                <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>
+                  {STORIES[k]!.name}
+                </Txt>
+                <View style={{ flexDirection: 'row', gap: 4 }}>
+                  {Array.from({ length: STORIES[k]!.total }).map((_, i) => (
+                    <View
+                      key={i}
+                      style={{
+                        width: 18,
+                        height: 6,
+                        borderRadius: 3,
+                        backgroundColor: i < v.stage ? c.accent : c.line,
+                      }}
+                    />
+                  ))}
+                </View>
+                <RowMuted>{waitText(k)}</RowMuted>
+              </StoryRow>
+            ))}
+          </Card>
+        </Spotlight>
       ) : null}
 
       {feed.length ? (
-        <Card gap={0}>
-          <Txt v="eyebrow">Timeline</Txt>
-          <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
-            최근 소식
-          </Txt>
-          <View>
-            {(feedAll ? feed : feed.slice(0, FEED_SHORT)).map((l, i) => (
-              <View
-                key={i}
-                style={{
-                  flexDirection: 'row',
-                  gap: 8,
-                  paddingVertical: 8,
-                  borderTopWidth: i ? 1 : 0,
-                  borderTopColor: c.line,
-                }}
-              >
-                <Txt
-                  tone="muted"
-                  style={{
-                    width: 76,
-                    fontFamily: DISPLAY[400],
-                    fontSize: rem(0.75),
-                    letterSpacing: rem(0.75) * 0.03,
-                  }}
-                >
-                  {l.t}
-                </Txt>
-                <Txt
-                  style={{
-                    flex: 1,
-                    fontSize: rem(0.8125),
-                    lineHeight: rem(0.8125) * 1.5,
-                    fontWeight: l.kind === 'big' ? '600' : '400',
-                    color: l.kind === 'good' ? c.good : l.kind === 'bad' ? c.bad : c.ink,
-                  }}
-                >
-                  {l.text}
-                </Txt>
-              </View>
-            ))}
-          </View>
-          {feed.length > FEED_SHORT ? (
-            <Btn
-              sm
-              testID="feed-more"
-              accessibilityLabel={feedAll ? '최근 소식 접기' : '최근 소식 더 보기'}
-              onPress={() => setFeedAll(!feedAll)}
-              style={{ alignSelf: 'flex-start', marginTop: 8 }}
-            >
-              {feedAll ? '접기' : '더 보기'}
-            </Btn>
-          ) : null}
-        </Card>
-      ) : null}
-      <View style={{ gap: 8 }}>
-        {s.pending ? (
-          <Btn block kind="accent" testID="resume" onPress={onPending}>
-            {`${pendingLabel} →`}
-          </Btn>
-        ) : (
-          <>
-            <Txt tone="muted" center style={{ fontSize: rem(0.8125) }}>
-              {'훈련 '}
-              <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
-                {picked ? trainingLabel(s, picked) : '-'}
-              </Txt>
-              {' · 자기 투자 '}
-              <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>{invest.label}</Txt>
+        <Spotlight id="feed" on={spot === 'feed'}>
+          <Card gap={0}>
+            <Txt v="eyebrow">Timeline</Txt>
+            <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
+              최근 소식
             </Txt>
-            <Btn block kind="primary" testID="advance" onPress={onAdvance}>
-              {`${btnLabel} →`}
+            <View>
+              {(feedAll ? feed : feed.slice(0, FEED_SHORT)).map((l, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flexDirection: 'row',
+                    gap: 8,
+                    paddingVertical: 8,
+                    borderTopWidth: i ? 1 : 0,
+                    borderTopColor: c.line,
+                  }}
+                >
+                  <Txt
+                    tone="muted"
+                    style={{
+                      width: 76,
+                      fontFamily: DISPLAY[400],
+                      fontSize: rem(0.75),
+                      letterSpacing: rem(0.75) * 0.03,
+                    }}
+                  >
+                    {l.t}
+                  </Txt>
+                  <Txt
+                    style={{
+                      flex: 1,
+                      fontSize: rem(0.8125),
+                      lineHeight: rem(0.8125) * 1.5,
+                      fontWeight: l.kind === 'big' ? '600' : '400',
+                      color: l.kind === 'good' ? c.good : l.kind === 'bad' ? c.bad : c.ink,
+                    }}
+                  >
+                    {l.text}
+                  </Txt>
+                </View>
+              ))}
+            </View>
+            {feed.length > FEED_SHORT ? (
+              <Btn
+                sm
+                testID="feed-more"
+                accessibilityLabel={feedAll ? '최근 소식 접기' : '최근 소식 더 보기'}
+                onPress={() => setFeedAll(!feedAll)}
+                style={{ alignSelf: 'flex-start', marginTop: 8 }}
+              >
+                {feedAll ? '접기' : '더 보기'}
+              </Btn>
+            ) : null}
+          </Card>
+        </Spotlight>
+      ) : null}
+      <Spotlight id="go" on={spot === 'go'}>
+        <View style={{ gap: 8 }}>
+          {s.pending ? (
+            <Btn block kind="accent" testID="resume" onPress={onPending}>
+              {`${pendingLabel} →`}
             </Btn>
-          </>
-        )}
-      </View>
-    </>
+          ) : (
+            <>
+              <Txt tone="muted" center style={{ fontSize: rem(0.8125) }}>
+                {'훈련 '}
+                <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
+                  {picked ? trainingLabel(s, picked) : '-'}
+                </Txt>
+                {' · 자기 투자 '}
+                <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>{invest.label}</Txt>
+              </Txt>
+              <Btn block kind="primary" testID="advance" onPress={onAdvance}>
+                {`${btnLabel} →`}
+              </Btn>
+            </>
+          )}
+        </View>
+      </Spotlight>
+    </View>
   );
 }

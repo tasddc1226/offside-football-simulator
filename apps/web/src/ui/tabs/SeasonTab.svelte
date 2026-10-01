@@ -1,3 +1,8 @@
+<script lang="ts" module>
+  /** 마지막으로 안내 스크롤을 돈 리포트 — 탭을 오가며 다시 마운트돼도 같은 리포트로 또 돌지 않는다. */
+  let touredKey = 0;
+</script>
+
 <script lang="ts">
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
   // T-11-024 순서: 방금 끝난 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·누적 기록·
@@ -11,7 +16,7 @@
   import { seasonLabel } from '@offside/app-core/career';
   import { appState } from '../state.svelte.js';
   import { advance, nextPending } from '../actions.js';
-  import { buzz } from '../motion.js';
+  import { buzz, dur } from '../motion.js';
   import PhaseReport from './PhaseReport.svelte';
   import LeagueTable from './LeagueTable.svelte';
 
@@ -43,6 +48,97 @@
 
   const pendingLabel = $derived(s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기');
 
+  // T-11-024 결과 안내 스크롤: 중계 시트를 닫고 새 리포트가 뜨면, 리포트를 읽을 시간을 준 뒤 아래 카드들을 차례로
+  // 화면 위쪽에 맞춰 부드럽게 내려가며 잠깐씩 강조하고, 맨 아래 버튼에서 멈춘다. 훈련·자기 투자 카드에서는 시간 대신
+  // 사용자가 하나를 고를 때까지 기다렸다가(고른 카드가 톡 튄다) 넘어가고, 순위표에서는 내 팀 순위 변동을 움직여 보여 준다.
+  // 기다리는 카드 밖의 단계에서 사용자가 손대면(휠·터치·클릭·키) 바로 그만둔다. 감속 모션·업무 모드에서는 돌지 않는다.
+  type Gate = 'train' | 'invest';
+  const TOUR: [string, number | Gate][] = [
+    ['[data-report]', 2600],
+    ['[data-prep]', 'train'],
+    ['[data-invest-card]', 'invest'],
+    ['[data-season-status]', 1600],
+    ['[data-stories]', 1000],
+    ['[data-feed]', 1000],
+    ['.advance-go', 1400],
+  ];
+  const PICK_MS = 650;
+  const RANK_DELAY = 500;
+  const RANK_MS = 1000;
+  let tourWait = $state<Gate | null>(null);
+  let onPick: ((g: Gate, btn: HTMLElement) => void) | null = null;
+  let table = $state<ReturnType<typeof LeagueTable>>();
+  $effect(() => {
+    const k = report?.key;
+    if (!k || k === touredKey) return;
+    touredKey = k;
+    if (!dur(1)) return;
+    return tour();
+  });
+
+  function tour(): () => void {
+    const timers: number[] = [];
+    const later = (fn: () => void, ms: number) => void timers.push(window.setTimeout(fn, ms));
+    let lit: HTMLElement | null = null;
+    const light = (el: HTMLElement | null) => {
+      if (lit) delete lit.dataset.tourSpot;
+      lit = el;
+      if (el) el.dataset.tourSpot = '';
+    };
+    const evs = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
+    // 고르기를 기다리는 동안에는 스크롤·탭으로 카드를 살펴볼 수 있어야 하니 멈추지 않는다.
+    const onUser = () => void (tourWait || stop());
+    const stop = () => {
+      timers.forEach(clearTimeout);
+      light(null);
+      tourWait = null;
+      onPick = null;
+      for (const e of evs) removeEventListener(e, onUser, true);
+    };
+    for (const e of evs) addEventListener(e, onUser, { capture: true, passive: true });
+    const steps = TOUR.map(([sel, wait]) => [document.querySelector<HTMLElement>(sel), wait] as const).filter(([el]) => el);
+    const go = (i: number) => {
+      if (i >= steps.length) return stop();
+      const [el, wait] = steps[i]!;
+      if (i) {
+        const last = i === steps.length - 1;
+        const head = document.querySelector<HTMLElement>('.topbar')?.offsetHeight ?? 0;
+        const box = el!.getBoundingClientRect();
+        let y = last ? document.documentElement.scrollHeight : box.top + scrollY - head - 12;
+        // 고르기를 기다리는 카드가 화면보다 길면 선택지·설명이 있는 아래쪽이 보이게 바닥에 맞춘다.
+        if (typeof wait !== 'number') {
+          const foot = document.querySelector<HTMLElement>('.tabs')?.offsetHeight ?? 0;
+          y = Math.max(y, box.bottom + scrollY - (innerHeight - foot - 12));
+        }
+        scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+        if (last) el!.querySelector('button')?.focus({ preventScroll: true });
+      }
+      light(el);
+      if (typeof wait !== 'number') {
+        tourWait = wait;
+        onPick = (g, btn) => {
+          if (g !== wait) return;
+          tourWait = null;
+          onPick = null;
+          btn.dataset.picked = '';
+          later(() => {
+            delete btn.dataset.picked;
+            go(i + 1);
+          }, PICK_MS);
+        };
+        return;
+      }
+      let ms = wait;
+      if (el!.hasAttribute('data-season-status') && report && report.rank.before !== report.rank.after) {
+        later(() => table?.playRank(report.rank.before), RANK_DELAY);
+        ms += RANK_MS;
+      }
+      later(() => go(i + 1), ms);
+    };
+    go(0);
+    return stop;
+  }
+
   function onAdvance() {
     buzz();
     void advance();
@@ -57,14 +153,16 @@
     return v < badAt ? 'bad' : v < warnAt ? 'warn' : '';
   }
 
-  function setTraining(id: string) {
+  function setTraining(id: string, btn: HTMLElement) {
     s.training = id;
     save();
+    onPick?.('train', btn);
   }
 
-  function setInvest(id: string) {
+  function setInvest(id: string, btn: HTMLElement) {
     s.invest = id;
     save();
+    onPick?.('invest', btn);
   }
 
   function waitText(k: string): string {
@@ -101,10 +199,11 @@
     <div class="meter"><span>인기</span><div class="bar"><i class="acc" style="width:{Math.min(100, Math.round(s.fame))}%"></i></div><span class="v">{Math.round(s.fame)}</span></div>
   </div>
   <h3 class="sub-title">훈련 방향</h3>
+  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">이번 구간 훈련을 고르면 다음으로 넘어가요</p>{/if}
   <div class="train">
     {#each TRAININGS as tr (tr.id)}
       {@const c = trainingCard(s, tr)}
-      <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={() => setTraining(tr.id)}>
+      <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={(e) => setTraining(tr.id, e.currentTarget)}>
         {@render optBody(trainingLabel(s, tr), c)}
       </button>
     {/each}
@@ -116,15 +215,16 @@
   {/if}
 </section>
 
-<section class="card stack">
+<section class="card stack" data-invest-card>
   <div class="row" style="justify-content:space-between">
     <div><div class="eyebrow">Invest</div><h2>자기 투자</h2></div>
     <span class="pill" data-invest-money>보유 {fmtMoney(s.money)}원</span>
   </div>
+  {#if tourWait === 'invest'}<p class="tour-hint" aria-live="polite">투자를 고르면 넘어가요 · 아끼려면 투자 안 함</p>{/if}
   <div class="train">
     {#each INVESTS as d (d.id)}
       {@const c = investCard(s, d)}
-      <button class="opt" data-invest={d.id} aria-pressed={invest.id === d.id} disabled={!c.affordable} onclick={() => setInvest(d.id)}>
+      <button class="opt" data-invest={d.id} aria-pressed={invest.id === d.id} disabled={!c.affordable} onclick={(e) => setInvest(d.id, e.currentTarget)}>
         {@render optBody(d.label, c)}
       </button>
     {/each}
@@ -152,7 +252,7 @@
   {#if showTotals}
     <p class="muted fs-sm" data-season-totals>시즌 누적 · {S.w}승 {S.d}무 {S.l}패 · 출전 {S.apps} · {S.goals}골 · {lastCol[0]} {lastCol[1]} · 평점 {avg}</p>
   {/if}
-  <LeagueTable {s} />
+  <LeagueTable {s} bind:this={table} />
   {#if comps.length}
     <div>
       <h3 class="sub-title" style="margin-bottom:2px">이번 시즌 대회</h3>
@@ -168,7 +268,7 @@
 </section>
 
 {#if activeStories.length}
-  <section class="card">
+  <section class="card" data-stories>
     <div class="eyebrow">Storylines</div>
     <h2 style="margin-bottom:6px">진행 중인 스토리</h2>
     {#each activeStories as [k, v] (k)}
@@ -186,7 +286,7 @@
 {/if}
 
 {#if feed.length}
-  <section class="card">
+  <section class="card" data-feed>
     <div class="eyebrow">Timeline</div>
     <h2 style="margin-bottom:6px">최근 소식</h2>
     <div class="feed">
