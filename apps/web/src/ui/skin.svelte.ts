@@ -48,6 +48,23 @@ mq?.addEventListener('change', (e) => {
 });
 apply();
 
+/**
+ * 단축키: 숫자 1 왼쪽 키(` — 한글 자판에선 ₩)로 바로 켜고 끈다. 글자를 입력하는 칸에 있을 때·조합키와 함께일 때는
+ * 무시한다. 키 위치(code)나 찍히는 글자(` · ₩) 어느 쪽으로든 알아본다.
+ */
+export const SHEET_KEY_LABEL = '`';
+export function installSheetKey() {
+  addEventListener('keydown', (e) => {
+    const hit = e.code === 'Backquote' || e.key === '`' || e.key === '₩';
+    if (!hit || e.repeat || e.ctrlKey || e.metaKey || e.altKey || !skin.desktop) return;
+    const t = e.target as HTMLElement | null;
+    if (t?.closest?.('input, textarea, select, [contenteditable=""], [contenteditable="true"]'))
+      return;
+    e.preventDefault();
+    setSheetSkin(!skin.pref);
+  });
+}
+
 export function setSheetSkin(on: boolean) {
   skin.pref = on;
   try {

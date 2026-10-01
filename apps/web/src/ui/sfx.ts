@@ -1,6 +1,7 @@
 // 클릭 효과음. 음원 파일 없이 Web Audio로 짧은 '톡' 소리를 합성한다(용량·라이선스 부담 없음).
 // 버튼·링크 등 눌리는 요소를 클릭할 때만 난다. 설정에서 끌 수 있고, 이 기기에만 저장된다(ft_sfx).
 import { loadKey, saveKey } from '@offside/game/season';
+import { sheetOn } from './skin.svelte.js';
 
 const KEY = 'ft_sfx';
 const CLICKABLE =
@@ -40,7 +41,8 @@ export function installClickSound() {
   document.addEventListener(
     'click',
     (e) => {
-      if (!enabled) return;
+      // T-11-022 업무 모드에서는 소리를 내지 않는다.
+      if (!enabled || sheetOn()) return;
       const el = (e.target as Element | null)?.closest?.(CLICKABLE);
       if (el && !(el as HTMLButtonElement).disabled) tick();
     },

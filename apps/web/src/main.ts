@@ -21,6 +21,7 @@ import { watchForUpdates } from './ui/update.svelte.js';
 import { watchNews } from './ui/news.svelte.js';
 import { warmGame } from './ui/nav.js';
 import { initHistory } from './ui/history.svelte.js';
+import { installSheetKey } from './ui/skin.svelte.js';
 
 installClickSound();
 // 자동 플레이 탐지(관찰 전용): 시즌마다 조작 횟수만 센다.
@@ -36,6 +37,8 @@ initializeAnalytics(appState.screen, appState.G && !appState.G.retired ? appStat
 syncBalance();
 // T-10-114 모바일 뒤로 가기(iOS 가장자리 밀기·Android 뒤로)가 앱 안의 이전 화면으로 가게 한다.
 initHistory();
+// T-11-022 업무 모드 단축키.
+installSheetKey();
 // T-10-121 iOS Safari·Chrome은 문서에 touchstart 리스너가 없으면 터치로 :active(누름 효과)를 걸지 않는다.
 document.addEventListener('touchstart', () => {}, { passive: true });
 
