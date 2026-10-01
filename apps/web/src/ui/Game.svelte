@@ -13,6 +13,7 @@
   import ClubBadge from './ClubBadge.svelte';
   import Topbar from './Topbar.svelte';
   import TabIcon from './TabIcon.svelte';
+  import NavIntro from './NavIntro.svelte';
   import SeasonTab from './tabs/SeasonTab.svelte';
   import PlayerTab from './tabs/PlayerTab.svelte';
   import CareerTab from './tabs/CareerTab.svelte';
@@ -137,15 +138,18 @@
 {/if}
 <!-- 게임 탭 4개 + 가운데 홈. 홈은 화면을 떠나는 버튼이라 tablist 밖에 두고, CSS order로 가운데에 놓는다
      (.tabs-inner는 display: contents라 탭들이 .tabs 그리드에 그대로 들어간다). -->
-<nav class="tabs" aria-label="게임 메뉴">
+<!-- T-11-031 메인 메뉴와 구분되게 위쪽 강조선(sub-nav)·가운데 나가기 버튼 둥근 바탕을 두고, 처음 볼 때 한 번 말풍선으로 알린다.
+     --i는 메뉴가 올라오는 순서(왼쪽부터 화면 순서). -->
+<nav class="tabs sub-nav" aria-label="게임 메뉴">
   <div class="tabs-inner" role="tablist">
-    {#each tabs as [k, l] (k)}
-      <button role="tab" data-tab={k} aria-selected={appState.tab === k} onclick={() => switchTab(k)}>
+    {#each tabs as [k, l], i (k)}
+      <button role="tab" data-tab={k} aria-selected={appState.tab === k} style:--i={i < 2 ? i : i + 1} onclick={() => switchTab(k)}>
         <TabIcon name={k} />{l}
       </button>
     {/each}
   </div>
-  <button class="tab-home" data-act="home" onclick={goHome}>
+  <button class="tab-home" data-act="home" style:--i={2} onclick={goHome}>
     <TabIcon name="home" />홈
   </button>
+  <NavIntro kind="game" />
 </nav>

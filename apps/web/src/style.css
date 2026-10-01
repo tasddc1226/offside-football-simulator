@@ -1489,6 +1489,77 @@ body:has(.main-nav) .wrap {
 .tabs button:is([aria-selected='true'], [aria-current='page']) .tab-ic {
   transform: translateY(-1px) scale(1.06);
 }
+/* T-11-031 하단 메뉴가 세 벌(메인 · 게임 · 내 팀)이라 바뀐 걸 알아보게 한다. 메뉴가 새로 붙으면 칸들이 왼쪽부터 차례로
+   올라오고(--i), 게임·내 팀 메뉴(.sub-nav)는 위쪽 강조선과 가운데 나가기 버튼의 둥근 바탕으로 메인 메뉴와 구분한다.
+   transform만 움직여 글자 명도 대비는 그대로다. */
+.tabs > button,
+.tabs-inner > button {
+  animation: tab-rise 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+@keyframes tab-rise {
+  from {
+    transform: translateY(14px);
+  }
+}
+.tabs.sub-nav {
+  border-top: 2px solid var(--accent);
+}
+.sub-nav .tab-home .tab-ic {
+  box-sizing: content-box;
+  padding: 4px;
+  margin: -4px 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+/* 처음 볼 때 말풍선(NavIntro)이 떠 있는 동안 가운데 나가기 버튼이 고리를 그리며 깜빡인다. */
+.tabs:has(.nav-intro) .tab-home .tab-ic {
+  animation: tab-ping 1.2s ease-out 3;
+}
+@keyframes tab-ping {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+.nav-intro {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 7;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 32px));
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+  translate: -50% 0;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+}
+.nav-intro::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  translate: -50% 0;
+  border: 7px solid transparent;
+  border-top-color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabs > button,
+  .tabs-inner > button,
+  .tabs:has(.nav-intro) .tab-home .tab-ic {
+    animation: none;
+  }
+}
 /* 누르는 동안 탭 둥근 바탕이 옅게 깔린다(들어가는 효과는 전역 T-10-121). */
 .tabs button:active {
   background-color: color-mix(in srgb, var(--ink) 7%, transparent);

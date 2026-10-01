@@ -30,8 +30,8 @@
 </script>
 
 <nav class="tabs main-nav" aria-label="메인 메뉴">
-  {#each MAIN_SCREENS as k (k)}
-    <button data-act={k} aria-current={appState.screen === k ? 'page' : undefined} onclick={OPEN[k]}>
+  {#each MAIN_SCREENS as k, i (k)}
+    <button data-act={k} aria-current={appState.screen === k ? 'page' : undefined} style:--i={i} onclick={OPEN[k]}>
       <TabIcon name={k} />{LABEL[k]}
     </button>
   {/each}

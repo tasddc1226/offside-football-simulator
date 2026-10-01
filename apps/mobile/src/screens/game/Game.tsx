@@ -328,7 +328,7 @@ export default function Game() {
             )}
           </TabPanel>
         </Screen>
-        <TabBar label="게임 메뉴" items={items} />
+        <TabBar label="게임 메뉴" items={items} sub="game" />
       </View>
     </BarBelow.Provider>
   );

@@ -555,7 +555,7 @@ export default function Team() {
               {body}
             </LoadState>
           </Screen>
-          {needLogin ? null : <TabBar label="내 팀 메뉴" items={navItems} />}
+          {needLogin ? null : <TabBar label="내 팀 메뉴" items={navItems} sub="team" />}
         </View>
       </BarBelow.Provider>
       <TeamPicker
