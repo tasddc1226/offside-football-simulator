@@ -166,5 +166,6 @@ describe('T-10-070 D1 → R2 백업', () => {
     const r = await runDaily(noBackup, NOW);
     expect(r.backup).toBe('skipped');
     expect(r.cleanup).not.toHaveProperty('error');
+    expect(r.anomalies).not.toHaveProperty('error');
   });
 });
