@@ -35,7 +35,8 @@ export function volumeAdjustable() {
 export interface Bgm {
   /** volume은 0–1(설정 슬라이더). 이미 그 곡을 틀고 있으면 음량만 바꾼다. */
   play(track: BgmTrack, volume: number): void;
-  pause(): void;
+  /** now면 페이드 없이 바로 끊는다(업무 모드 단축키). */
+  pause(now?: boolean): void;
 }
 
 export function createBgm(): Bgm {
@@ -60,7 +61,12 @@ export function createBgm(): Bgm {
     }, 30);
     fading.set(el, id);
   }
-  const stop = (el: HTMLAudioElement) => fade(el, 0, () => el.pause());
+  const stop = (el: HTMLAudioElement, now = false) => {
+    if (!now) return fade(el, 0, () => el.pause());
+    clearInterval(fading.get(el));
+    fading.delete(el);
+    el.pause();
+  };
 
   return {
     play(track, volume) {
@@ -71,9 +77,9 @@ export function createBgm(): Bgm {
       void el.play().catch(() => {});
       fade(el, MAX_GAIN * volume);
     },
-    pause() {
+    pause(now) {
       if (!active) return;
-      stop(els[active]!);
+      stop(els[active]!, now);
       active = null;
     },
   };

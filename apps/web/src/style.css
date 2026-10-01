@@ -5377,3 +5377,459 @@ button.what {
   flex: 1;
   min-width: 0;
 }
+
+/* ───────── T-11-022 업무 모드(스프레드시트 화면) ─────────
+   PC 브라우저에서 설정으로 켠다(ui/skin.svelte.ts가 <html data-skin='sheet'>를 붙인다 — 휴대폰·좁은 창에선 붙지 않는다).
+   틀(제목·메뉴·도구 모음·수식 입력줄·열/행 머리글)은 SheetChrome.svelte, 여기서는 색·글꼴을 시트처럼 납작하게 바꾸고
+   본문을 격자 위에 얹는다. 다크 모드를 골랐어도 시트는 밝은 화면이다. */
+html:root[data-skin='sheet'] {
+  color-scheme: light;
+  --sx-top: 158px;
+  --sx-row: 21px;
+  --sx-col: 100px;
+  --sx-head: 46px;
+  --sx-foot: 37px;
+  /* 본문 폭: A~G 7칸, 창이 좁으면 행 머리글 옆 남은 폭 */
+  --sx-body: min(calc(var(--sx-col) * 7), calc(100vw - var(--sx-head) - 24px));
+  --sx-grid: #e2e3e3;
+  --sx-chrome: #f9fbfd;
+  /* 칸 테두리(본문 블록) · 머리글 선 */
+  --sx-cell: #c4c7c5;
+  --sx-border: var(--sx-border);
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f8f9fa;
+  --ink: #202124;
+  --muted: #5f6368;
+  --line: #dadce0;
+  --pitch: #ffffff;
+  --pitch-2: #f8f9fa;
+  --chalk: rgba(0, 0, 0, 0.08);
+  --on-pitch: #202124;
+  --pitch-accent: #188038;
+  --accent: #1a73e8;
+  --accent-text: #1967d2;
+  --accent-ink: #ffffff;
+  --good: #188038;
+  --bad: #d93025;
+  --warn: #b06000;
+  --shadow: none;
+  --crest-halo: rgba(0, 0, 0, 0.12);
+  --body: Arial, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --display: var(--body);
+  --tabbar-h: var(--sx-foot);
+  font-size: 81.25%;
+  background: #fff;
+}
+:root[data-skin='sheet'] body {
+  min-height: 100vh;
+  padding: var(--sx-top) 0 calc(var(--sx-foot) + 24px);
+  line-height: 1.45;
+  /* 격자: A1 칸 하나(오른쪽·아래 선)를 깔아 반복한다. 머리글 쪽은 틀이 덮는다. */
+  background:
+    linear-gradient(90deg, transparent calc(var(--sx-col) - 1px), var(--sx-grid) 0),
+    linear-gradient(transparent calc(var(--sx-row) - 1px), var(--sx-grid) 0), #fff;
+  background-position: var(--sx-head) var(--sx-top);
+  background-size: var(--sx-col) var(--sx-row);
+}
+/* 본문은 A열부터 7칸 폭. 카드는 둥근 모서리·그림자 없이 칸 테두리처럼. */
+:root[data-skin='sheet'] .wrap {
+  max-width: var(--sx-body);
+  margin: 0 0 0 var(--sx-head);
+  padding: 6px 8px 32px;
+  gap: 10px;
+}
+/* 본문은 칸처럼 각지고 평평하게 — 둥근 모서리·그라데이션·장식 선을 걷는다(작은 점 표시만 둥글게 둔다). */
+:root[data-skin='sheet'] :is(main, .sheet, .action-bar) :not(.live-dot, .live-kind) {
+  border-radius: 0 !important;
+  background-image: none !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+:root[data-skin='sheet'] .chalk {
+  display: none;
+}
+:root[data-skin='sheet'] :is(.card, .hero-home, .player) {
+  border: 1px solid var(--sx-cell);
+  background: var(--surface);
+}
+:root[data-skin='sheet'] .card {
+  padding: 8px 10px;
+}
+:root[data-skin='sheet'] :is(.hero-home, .player) {
+  padding: 10px 12px;
+}
+:root[data-skin='sheet'] .hero-home h1 {
+  font-size: 1.15rem;
+}
+:root[data-skin='sheet'] .player .ovr .n {
+  font-size: 1.6rem;
+  color: var(--ink);
+}
+:root[data-skin='sheet'] :is(.btn-primary, .btn-accent) {
+  background: #e6f4ea;
+  border: 1px solid #a8dab5;
+  color: #137333;
+  font-weight: 600;
+}
+:root[data-skin='sheet'] :is(.btn-primary, .btn-accent):hover {
+  background: #ceead6;
+}
+/* 라운지 채팅 버튼은 오른쪽 아래 '탐색' 버튼 자리처럼. */
+:root[data-skin='sheet'] .chat-fab {
+  right: 16px;
+  bottom: calc(var(--sx-foot) + 12px);
+  z-index: 22;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: #444746;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3);
+}
+:root[data-skin='sheet'] :is(h1, h2, h3) {
+  font-size: 1.08rem;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+:root[data-skin='sheet'] .eyebrow {
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 400;
+}
+:root[data-skin='sheet'] img:not(.sx-keep) {
+  filter: grayscale(1) opacity(0.75);
+}
+:root[data-skin='sheet'] *,
+:root[data-skin='sheet'] *::before,
+:root[data-skin='sheet'] *::after {
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}
+/* 브랜드 머리글은 문서 제목이 대신한다. */
+:root[data-skin='sheet'] .topbar {
+  display: none;
+}
+/* 하단 메뉴·게임 탭 → 아래쪽 시트 탭. 아이콘은 숨기고 이름만, 지금 화면은 흰 바탕 초록 글자. */
+:root[data-skin='sheet'] .tabs {
+  z-index: 21;
+  left: 92px;
+  right: 0;
+  max-width: none;
+  margin: 0;
+  height: var(--sx-foot);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+:root[data-skin='sheet'] .tabs::after {
+  content: none;
+}
+:root[data-skin='sheet'] .tabs button {
+  flex: none;
+  flex-direction: row;
+  min-height: 0;
+  padding: 0 18px;
+  border-radius: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #444746;
+}
+:root[data-skin='sheet'] .tabs button .tab-ic {
+  display: none;
+}
+:root[data-skin='sheet'] .tabs button:is([aria-selected='true'], [aria-current='page']) {
+  color: #188038;
+  background: #e1f1e5;
+  font-weight: 600;
+}
+:root[data-skin='sheet'] .tabs button:hover {
+  background: #e9ebee;
+}
+:root[data-skin='sheet'] .action-bar {
+  left: var(--sx-head);
+  right: auto;
+  width: var(--sx-body);
+  max-width: none;
+  margin: 0;
+  bottom: var(--sx-foot);
+  background: var(--surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--sx-cell);
+  border-bottom: 0;
+  padding: 6px 8px;
+}
+:root[data-skin='sheet'] .action-bar.at-bottom {
+  padding-bottom: 6px;
+}
+:root[data-skin='sheet'] body:has(.main-nav) .wrap,
+:root[data-skin='sheet'] .wrap.has-tabbar,
+:root[data-skin='sheet'] .wrap.has-actionbar {
+  padding-bottom: 32px;
+}
+:root[data-skin='sheet'] .modal {
+  z-index: 30;
+  background: rgba(255, 255, 255, 0.6);
+}
+:root[data-skin='sheet'] .sheet {
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 16px rgba(60, 64, 67, 0.3);
+}
+
+/* 틀 */
+.sx-chrome {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  font-family: var(--body);
+  color: #444746;
+  font-size: 14px;
+  line-height: 1.2;
+  user-select: none;
+}
+.sx-chrome > div {
+  pointer-events: auto;
+}
+.sx-title {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 0 12px;
+  background: var(--sx-chrome);
+}
+.sx-doc-icon {
+  margin: 0 6px;
+}
+.sx-doc {
+  flex: 1;
+  min-width: 0;
+}
+.sx-doc-name {
+  font-size: 18px;
+  color: #1f1f1f;
+  padding: 2px 6px;
+}
+.sx-doc-tools {
+  font-size: 15px;
+  color: #444746;
+  letter-spacing: 6px;
+  margin-left: 6px;
+}
+.sx-menus {
+  display: flex;
+  gap: 2px;
+}
+.sx-menus span {
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #1f1f1f;
+}
+.sx-menus span:hover {
+  background: #e9ebee;
+}
+.sx-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sx-round {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 18px;
+}
+.sx-share {
+  background: #c2e7ff;
+  color: #001d35;
+  border-radius: 18px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.sx-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #7b5ea7;
+  color: #fff;
+  font-size: 14px;
+}
+.sx-tools {
+  position: absolute;
+  top: 64px;
+  left: 16px;
+  right: 16px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 8px;
+  border-radius: 24px;
+  background: #edf2fa;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.sx-tools > :is(span, b, em, s, u) {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #444746;
+  font-style: normal;
+}
+.sx-tools > em {
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+.sx-tools > .sx-w {
+  padding: 0 8px;
+}
+.sx-tools > .sx-font {
+  min-width: 96px;
+  justify-content: start;
+}
+.sx-tools > .sx-size {
+  border: 1px solid #747775;
+  height: 22px;
+  min-width: 32px;
+}
+.sx-tools > i {
+  width: 1px;
+  height: 20px;
+  background: var(--sx-border);
+  margin: 0 5px;
+}
+.sx-formula {
+  position: absolute;
+  top: 108px;
+  left: 0;
+  right: 0;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-top: 1px solid #e1e3e1;
+  border-bottom: 1px solid var(--sx-border);
+  font-size: 13px;
+}
+.sx-name {
+  width: 92px;
+  padding: 0 10px;
+  color: #1f1f1f;
+}
+.sx-fx {
+  border-left: 1px solid var(--sx-border);
+  padding: 0 10px;
+  color: #a8abaf;
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+.sx-value {
+  flex: 1;
+  border-left: 1px solid var(--sx-border);
+  padding: 0 8px;
+  color: #1f1f1f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sx-cols {
+  position: absolute;
+  top: 136px;
+  left: 0;
+  right: 0;
+  height: calc(var(--sx-top) - 136px);
+  display: flex;
+  background: #f8f9fa;
+  border-bottom: 1px solid var(--sx-border);
+  overflow: hidden;
+}
+:is(.sx-cols, .sx-rows) span {
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: #444746;
+}
+.sx-cols span {
+  flex: none;
+  width: var(--sx-col);
+  border-right: 1px solid var(--sx-border);
+}
+.sx-cols .sx-corner {
+  width: var(--sx-head);
+}
+.sx-rows {
+  position: absolute;
+  top: var(--sx-top);
+  bottom: var(--sx-foot);
+  left: 0;
+  width: var(--sx-head);
+  overflow: hidden;
+  background: #f8f9fa;
+  border-right: 1px solid var(--sx-border);
+}
+.sx-rows span {
+  height: var(--sx-row);
+  border-bottom: 1px solid var(--sx-border);
+}
+:is(.sx-cols, .sx-rows) span.on {
+  background: #d3e3fd;
+  color: #0b57d0;
+  font-weight: 700;
+}
+.sx-foot {
+  position: absolute;
+  inset: auto 0 0;
+  height: var(--sx-foot);
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding-left: 8px;
+  background: var(--sx-chrome);
+  border-top: 1px solid var(--sx-border);
+  font-size: 14px;
+}
+.sx-foot span {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+}
+.sx-foot .sx-sheet-tab {
+  padding: 0 18px;
+  color: #188038;
+  background: #e1f1e5;
+  font-weight: 600;
+}
+/* 탭이 있는 화면은 시트 탭이 그 자리를 덮는다. */
+body:has(.tabs) .sx-foot .sx-sheet-tab {
+  visibility: hidden;
+}
+.sx-sel {
+  position: absolute;
+  z-index: 19;
+  width: var(--sx-col);
+  height: var(--sx-row);
+  margin: -1px 0 0 -1px;
+  border: 2px solid var(--accent);
+  pointer-events: none;
+}

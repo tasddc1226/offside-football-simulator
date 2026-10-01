@@ -14,6 +14,9 @@
           document.documentElement.dataset.theme = t;
           document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.media = m.dataset.scheme === t ? 'all' : 'not all'; });
         }
+        // T-11-022 업무 모드(src/ui/skin.svelte.ts의 ft_skin·SHEET_MEDIA)도 첫 페인트 전에.
+        if (localStorage.getItem('ft_skin') === 'sheet' && matchMedia('(hover: hover) and (pointer: fine) and (min-width: 640px)').matches)
+          document.documentElement.dataset.skin = 'sheet';
       } catch (e) {}
     </script>
     <title>오프사이드 | 이번 생은 축구다 — 축구선수 커리어 시뮬레이션</title>

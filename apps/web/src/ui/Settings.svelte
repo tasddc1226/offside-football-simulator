@@ -8,6 +8,7 @@
   import { bgm, setBgm, setBgmVolume } from './bgm.svelte.js';
   import { volumeAdjustable } from './bgmEngine.js';
   import { isDark, setDark } from './theme.js';
+  import { setSheetSkin, skin } from './skin.svelte.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
@@ -35,6 +36,15 @@
       </div>
       <button class="switch" role="switch" aria-checked={dark} aria-labelledby="dark-label" data-setting="dark" onclick={() => setDark((dark = !dark))}></button>
     </div>
+    {#if skin.desktop}
+    <div class="settings-row">
+      <div class="settings-label">
+        <strong id="sheet-label">업무 모드</strong>
+        <span class="muted">게임 화면을 스프레드시트처럼 보이게 하고 배경음악·효과음을 꺼요. 키보드 <kbd>`</kbd>(숫자 1 왼쪽 키)로 언제든 바로 켜고 끌 수 있어요. PC 브라우저에서만 적용되고 이 기기에 저장됩니다.</span>
+      </div>
+      <button class="switch" role="switch" aria-checked={skin.pref} aria-labelledby="sheet-label" data-setting="sheet-skin" onclick={() => setSheetSkin(!skin.pref)}></button>
+    </div>
+    {/if}
   </section>
 
   <section class="card settings-card">
