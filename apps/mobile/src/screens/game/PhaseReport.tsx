@@ -11,7 +11,7 @@ import { ResBadge, TickerLine } from '../../sheets/TickerLine';
 import { cubicOut, useTween } from '../../sheets/useTween';
 import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
-import { DISPLAY, rem } from '../../theme/type';
+import { DISPLAY, fitLine, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
 import { Pill } from '../../ui/bits';
 import { Press } from '../../ui/Press';
@@ -93,13 +93,13 @@ export function PhaseReport({ r }: { r: Report }) {
           <Text
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
-            style={{
+            style={fitLine({
               color: c.ink,
               fontFamily: DISPLAY[700],
               fontSize: rem(2.5),
               lineHeight: rem(2.5),
               fontVariant: ['tabular-nums'],
-            }}
+            })}
           >
             {`${Math.round(w)}`}
             <Text style={small}>{'승'}</Text>

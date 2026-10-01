@@ -6,7 +6,7 @@ import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
-import { DISPLAY, rem } from '../theme/type';
+import { DISPLAY, fitLine, rem } from '../theme/type';
 import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
 import { Enter } from './anim';
@@ -33,16 +33,20 @@ function Bump({ value }: { value: number | string }) {
   }, [value, bump, t]);
   return (
     <Animated.Text
-      style={{
-        fontFamily: DISPLAY[700],
-        fontSize: rem(1.5),
-        lineHeight: rem(1.5) * 1.1,
-        fontVariant: ['tabular-nums'],
-        color: t.interpolate({ inputRange: [0, 0.4, 1], outputRange: [c.ink, c.accent, c.ink] }),
-        transform: [
-          { scale: t.interpolate({ inputRange: [0, 0.4, 1], outputRange: [1, 1.25, 1] }) },
-        ],
-      }}
+      style={[
+        fitLine({
+          fontFamily: DISPLAY[700],
+          fontSize: rem(1.5),
+          lineHeight: rem(1.5) * 1.1,
+          fontVariant: ['tabular-nums'],
+        }),
+        {
+          color: t.interpolate({ inputRange: [0, 0.4, 1], outputRange: [c.ink, c.accent, c.ink] }),
+          transform: [
+            { scale: t.interpolate({ inputRange: [0, 0.4, 1], outputRange: [1, 1.25, 1] }) },
+          ],
+        },
+      ]}
     >
       {value}
     </Animated.Text>
