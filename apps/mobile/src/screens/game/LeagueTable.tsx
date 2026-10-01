@@ -1,5 +1,5 @@
 // 선수가 뛰는 리그의 순위표(웹 tabs/LeagueTable.svelte, T-10-024). 기본은 상위 3팀 + 내 팀 앞뒤 2팀 + 꼴찌만 접어서 보여
-// 주고, '전체 순위'로 모두 펼친다. 접힌 구간은 '⋯' 줄 하나로 표시한다. T-11-024 시즌 탭의 시즌 현황 카드 안에 들어가는
+// 주고, '전체 순위'로 모두 펼친다. 접힌 구간은 '⋯' 줄 하나로 표시한다. T-11-025 시즌 탭의 시즌 현황 카드 안에 들어가는
 // 한 묶음이라 카드 테두리 없이 작은 제목을 단다. 칸은 순위·팀·경기·승점만(승·무·패는 리포트·시즌 누적 줄에 있다).
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, View } from 'react-native';
@@ -48,7 +48,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
   });
   const folded = shown.some((x) => x.gap);
 
-  // T-11-024 순위 변동 연출(웹 LeagueTable playRank): 내 팀 줄이 이전 순위 자리에서 지금 자리로 미끄러지고, 그사이 지나친
+  // T-11-025 순위 변동 연출(웹 LeagueTable playRank): 내 팀 줄이 이전 순위 자리에서 지금 자리로 미끄러지고, 그사이 지나친
   // 줄들은 한 칸씩 반대로 밀려난다. 접힌 표에서는 보이는 줄 안에서 이전 순위에 가장 가까운 자리부터 움직인다.
   // 시즌 탭 결과 안내가 시즌 현황 카드를 비출 때 play를 넘긴다.
   useEffect(() => {

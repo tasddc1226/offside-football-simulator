@@ -1,5 +1,5 @@
 // 게임 화면(웹 Game.svelte, ui.ts renderGame() 포트): 선수 카드 + 시즌·선수·커리어·트로피 탭 + 탭바.
-// T-11-024 진행·이벤트 확인 버튼은 고정 바 없이 시즌 탭 맨 아래에 있다(SeasonTab).
+// T-11-025 진행·이벤트 확인 버튼은 고정 바 없이 시즌 탭 맨 아래에 있다(SeasonTab).
 // 탭바(시즌·선수·홈·커리어·트로피 — 홈은 가운데)가 아래 안전 영역을 채우고, 진행 버튼 줄은 그 바로 위에 붙는다.
 import { useEffect, useRef, type ReactNode } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
@@ -127,7 +127,7 @@ export default function Game() {
     .join('·')}`;
 
   // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
-  // T-11-024 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(시즌 탭 맨 아래 버튼을 누른 뒤 결과로 돌아가기 쉽게).
+  // T-11-025 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(시즌 탭 맨 아래 버튼을 누른 뒤 결과로 돌아가기 쉽게).
   function switchTab(k: Tab) {
     if (appState.tab === k) return scrollTo(0, prefs.motionOK);
     appState.tab = k;
