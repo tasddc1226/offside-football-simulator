@@ -468,10 +468,13 @@ export const serverRecords = sqliteTable('server_records', {
 /**
  * T-10-076 영구결번. 구단(club_id)·등번호마다 한 명 — 먼저 자격을 채운 커리어가 가져가고 취소되지 않는다(보유
  * 커리어가 지워지면 함께 지워져 자리가 빈다). 한 커리어는 한 자리만 가진다. seq는 서버에서 몇 번째 결번인지.
+ * T-11-029 시즌마다 따로 센다 — season은 커리어의 service_season(NULL이면 0, 0 = 프리시즌)이라 시즌 1 선수도
+ * 프리시즌 선수와 같은 구단·번호를 받고, seq도 시즌 안에서 센다.
  */
 export const retiredNumbers = sqliteTable(
   'retired_numbers',
   {
+    season: integer('season').notNull().default(0),
     clubId: text('club_id').notNull(),
     number: integer('number').notNull(),
     careerId: text('career_id')
@@ -484,7 +487,7 @@ export const retiredNumbers = sqliteTable(
     grantedAt: text('granted_at').notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.clubId, table.number] }),
+    primaryKey({ columns: [table.season, table.clubId, table.number] }),
     uniqueIndex('retired_numbers_career_idx').on(table.careerId),
   ],
 );

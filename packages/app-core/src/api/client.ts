@@ -232,9 +232,27 @@ export function getMyCareers(): Promise<ApiResult<MyCareersResponse>> {
 export function getHofDetail(careerId: string): Promise<ApiResult<HofDetailResponse>> {
   return cachedGet<HofDetailResponse>(`/v1/hof/${encodeURIComponent(careerId)}`, 300_000);
 }
-/** T-10-076 서버 전체 영구결번(로그인 불필요). 내 선수 목록이 결번 배지를 붙일 때 쓴다. */
-export function getRetiredNumbers(): Promise<ApiResult<RetiredNumbersResponse>> {
-  return cachedGet<RetiredNumbersResponse>('/v1/retired-numbers', 60_000);
+/**
+ * T-10-076 영구결번(로그인 불필요). 내 선수 목록이 결번 배지를 붙일 때도 쓴다.
+ * T-11-029 결번은 시즌마다 따로다 — season(0 = 프리시즌)을 안 주면 서버가 지금 시즌을 쓴다.
+ */
+export function getRetiredNumbers(season?: number): Promise<ApiResult<RetiredNumbersResponse>> {
+  return cachedGet<RetiredNumbersResponse>(
+    `/v1/retired-numbers${season === undefined ? '' : `?season=${season}`}`,
+    60_000,
+  );
+}
+/** T-11-029 여러 시즌의 결번 항목을 한 목록으로(내 선수 배지용). 하나라도 실패하면 실패다. */
+export async function getRetiredNumbersIn(
+  seasons: readonly number[],
+): Promise<ApiResult<RetiredNumbersResponse['items']>> {
+  const rs = await Promise.all([...new Set(seasons)].map((n) => getRetiredNumbers(n)));
+  const items: RetiredNumbersResponse['items'] = [];
+  for (const r of rs) {
+    if (!r.ok) return r;
+    items.push(...r.data.items);
+  }
+  return { ok: true, data: items };
 }
 /** T-10-076 내 선수의 결번 심사 결과(소급 결번·이미 찬 자리). 메모하지 않는다 — 결과는 ft_hof에 남긴다. */
 export function checkRetiredNumber(

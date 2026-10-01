@@ -454,6 +454,15 @@ export const HofSeasonQuerySchema = z.coerce
   .refine((id) => serviceSeason(id) !== undefined, '없는 시즌입니다.')
   .transform((id) => serviceSeason(id)!)
   .optional();
+/**
+ * T-11-029 `?season=` 시즌 id(0 = 프리시즌, 그 밖엔 service-seasons.ts의 id). 없으면 서버가 지금 시즌을 쓴다
+ * (displaySeasonAt — 개막 전이면 프리시즌, 휴식기면 마지막 시즌).
+ */
+export const SeasonPickQuerySchema = z.coerce
+  .number()
+  .int()
+  .refine((id) => id === 0 || serviceSeason(id) !== undefined, '없는 시즌입니다.')
+  .optional();
 /** T-11-018 `GET /v1/hof?pos=` 그 포지션 선수만(포지션별 순위). 없으면 모든 포지션. */
 export const HofPosQuerySchema = CareerPosSchema.optional();
 
@@ -501,8 +510,12 @@ export const FirstsResponseSchema = z.strictObject({
 });
 export type FirstsResponse = z.infer<typeof FirstsResponseSchema>;
 
-/** T-10-076 `GET /v1/retired-numbers` 서버 전체 영구결번(결번 순). 이름은 공개를 고른 경우에만. */
+/**
+ * T-10-076 `GET /v1/retired-numbers?season=` 한 시즌의 영구결번(결번 순). 이름은 공개를 고른 경우에만.
+ * T-11-029 결번은 시즌마다 따로다 — season은 이 목록의 시즌(0 = 프리시즌).
+ */
 export const RetiredNumbersResponseSchema = z.strictObject({
+  season: z.number().int().nonnegative(),
   items: z.array(
     RetiredSlotSchema.extend({
       seq: z.number().int(),

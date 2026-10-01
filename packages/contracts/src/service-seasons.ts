@@ -34,6 +34,14 @@ export const activeSeason = (now: string): ServiceSeason | undefined =>
 export const teamSeasonAt = (now: string): number | null =>
   activeSeason(now)?.id ?? (now < SERVICE_SEASONS[0]!.startsAt ? 0 : null);
 
+/**
+ * T-11-029 기록(영구결번·최초 기록·명예의 전당 등)을 보여 줄 기본 시즌: 진행 중인 시즌, 개막 전이면 0(프리시즌),
+ * 시즌 사이 휴식기면 마지막으로 개막한 시즌.
+ */
+export const displaySeasonAt = (now: string): number =>
+  teamSeasonAt(now) ??
+  SERVICE_SEASONS.filter((s) => s.startsAt <= now).reduce((id, s) => Math.max(id, s.id), 0);
+
 /** 팀 시즌 이름(0 = 프리시즌). */
 export const teamSeasonName = (id: number): string =>
   id === 0 ? '프리시즌' : (serviceSeason(id)?.name ?? `시즌 ${id}`);

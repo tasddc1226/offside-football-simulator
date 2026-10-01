@@ -8,7 +8,8 @@ export const EDGE = {
   balance: '/v1/balance',
   adminStats: '/v1/admin/stats',
   firsts: '/v1/firsts',
-  retiredNumbers: '/v1/retired-numbers',
+  /** T-11-029 영구결번은 시즌마다 따로다(시즌 id를 푼 경로). */
+  retiredNumbers: (season: number) => `/v1/retired-numbers?season=${season}`,
   live: '/v1/live',
   /** T-10-122 홈 전광판(이적·최초 기록). TTL로만 새로 읽는다. */
   ticker: '/v1/ticker',
@@ -28,7 +29,7 @@ const allBoardLists = () => BOARD_KEYS.map(EDGE.boardFirstPage);
 export const STALE = {
   balanceActivated: () => [EDGE.balance],
   firstsChanged: () => [EDGE.firsts],
-  retiredNumbersChanged: () => [EDGE.retiredNumbers],
+  retiredNumbersChanged: (season: number) => [EDGE.retiredNumbers(season)],
   /** 이름 공개 토글이 바로 보이게(최초 기록의 이름 포함). */
   retirementPut: (careerId: string) => [EDGE.hofDetail(careerId), EDGE.firsts],
   /** 글·댓글 쓰기/지우기 — 목록의 글과 댓글 수가 바뀐다. */

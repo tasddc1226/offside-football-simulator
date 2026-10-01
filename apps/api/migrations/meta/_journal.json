@@ -309,6 +309,13 @@
       "when": 1790845232325,
       "tag": "0043_career_hidden",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1790862124357,
+      "tag": "0044_season_split",
+      "breakpoints": true
     }
   ]
 }

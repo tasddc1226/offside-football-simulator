@@ -6,7 +6,8 @@
   import type { PublicHofEntry } from '@offside/contracts';
   import { loadHOF } from '@offside/game/season';
   import type { HofEntry } from '@offside/game/types';
-  import { getMyCareers, getRetiredNumbers } from '@offside/app-core/api/client';
+  import { getMyCareers, getRetiredNumbersIn } from '@offside/app-core/api/client';
+  import { displaySeasonAt } from '@offside/contracts/service-seasons';
   import { fillGranted } from './retiredNumber.svelte.js';
   import { openLocalLegend, openPublicLegend } from './legend.js';
   import { anonName } from '@offside/app-core/format';
@@ -81,10 +82,11 @@
     // T-10-076 배포 전 은퇴를 소급해 받은 결번은 이 기기에 없다 — 결과를 모르는 기록이 있을 때만 서버 목록에서 채운다
     // (계정 목록은 서버가 결번을 함께 준다).
     if (source === 'device' && local.some((h) => h.id && h.detail && h.rn === undefined)) {
-      const rn = await getRetiredNumbers();
+      // T-11-029 결번은 시즌마다 따로 — 이 기기 선수가 있을 수 있는 시즌(프리시즌·지금 시즌)을 함께 받는다.
+      const rn = await getRetiredNumbersIn([0, displaySeasonAt(new Date().toISOString())]);
       if (!rn.ok) return;
-      fillGranted(rn.data.items);
-      const byCareer = new Map(rn.data.items.map((x) => [x.careerId, x.number]));
+      fillGranted(rn.data);
+      const byCareer = new Map(rn.data.map((x) => [x.careerId, x.number]));
       rows = rows.map((r) => ({ ...r, rn: r.rn ?? byCareer.get(r.key) }));
     }
   });
