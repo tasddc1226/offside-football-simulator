@@ -13,9 +13,12 @@
   import HofRow, { type RowStats } from './HofRow.svelte';
   import type { DetailPos, POS } from '@offside/game/data';
 
+  /** T-11-026 구단주 화면이 요약(선수 수·점수 합·결번 수)을 세도록 불러온 목록을 알려 준다. */
+  let { onrows }: { onrows?: (rows: readonly MineRow[]) => void } = $props();
+
   type MineRow = { key: string; name: string; pos: keyof typeof POS; dpos?: DetailPos | null | undefined; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; open: () => void };
-  /** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다. */
-  const SHOW = 10;
+  /** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다(T-11-026 구단주 화면 위쪽을 내 팀에 내주려 상위 3명만). */
+  const SHOW = 3;
 
   const local = loadHOF();
   const localRow = (h: HofEntry, i: number): MineRow => ({
@@ -49,6 +52,9 @@
   let rows = $state<MineRow[]>([]);
   let expanded = $state(false);
   const shown = $derived(expanded ? rows : rows.slice(0, SHOW));
+  $effect(() => {
+    if (source !== 'loading') onrows?.(rows);
+  });
 
   onMount(async () => {
     const [r, outbox] = await Promise.all([getMyCareers(), import('../sync/outbox.js')]);

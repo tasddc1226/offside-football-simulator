@@ -28,8 +28,8 @@ type MineRow = {
   title: string | null;
   open: () => void;
 };
-/** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다. */
-const SHOW = 10;
+/** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다(T-11-026 구단주 화면 위쪽을 내 팀에 내주려 상위 3명만). */
+const SHOW = 3;
 
 const localRow = (h: HofEntry, i: number): MineRow => ({
   key: h.id ?? h.name + i,
@@ -58,12 +58,16 @@ const serverRow = (e: PublicHofEntry): MineRow => ({
   open: () => void openPublicLegend(e),
 });
 
-export function MyPlayers() {
+/** onRows: T-11-026 구단주 화면이 요약(선수 수·점수 합·결번 수)을 세도록 불러온 목록을 알려 준다. */
+export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => void }) {
   const local = useMemo(() => loadHOF(), []);
   const [source, setSource] = useState<'loading' | 'account' | 'device' | 'offline'>('loading');
   const [rows, setRows] = useState<MineRow[]>([]);
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? rows : rows.slice(0, SHOW);
+  useEffect(() => {
+    if (source !== 'loading') onRows?.(rows);
+  }, [source, rows, onRows]);
 
   useEffect(() => {
     let alive = true;
