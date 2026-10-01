@@ -113,7 +113,7 @@
       </div>
     {/if}
     <div class="film-pills" class:credit-late={playing}>
-      <span class="pill pill-gold">{legendTitle(v.score)}</span>
+      <span class="pill pill-gold">{legendTitle(v.score, v.dpos)}</span>
       {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{main.name}’</span>{/if}
       <span class="pill">최고 OVR {v.peak}</span>
       {#if rnGranted}<span class="pill pill-rn" data-legend-rn-pill title="{rnGranted.club} 영구결번 {rnGranted.number}번">👑 {rnGranted.club} 영결 {rnGranted.number}</span>{/if}

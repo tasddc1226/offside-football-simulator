@@ -17,7 +17,7 @@ export async function tickerTransfers(db: Db, nowMs: number): Promise<TickerTran
     from career_seasons s
     join career_seasons p on p.career_id = s.career_id and p.year = s.year - 1
     join careers c on c.id = s.career_id
-    where s.created_at >= ${since} and s.mil = 0 and p.mil = 0
+    where s.created_at >= ${since} and c.hidden = 0 and s.mil = 0 and p.mil = 0
       and s.club_id is not null and p.club_id is not null and s.club_id <> p.club_id
     order by s.created_at desc
     limit ${TICKER_TRANSFERS_MAX * 4}`);
@@ -40,9 +40,9 @@ export async function tickerTransfers(db: Db, nowMs: number): Promise<TickerTran
   return out;
 }
 
-/** 달성된 서버 최초 기록·신기록을 최신순으로. 표는 규칙 수만큼(수십 행)이라 전부 읽어 고른다. */
-export async function tickerFirsts(db: Db): Promise<TickerFirst[]> {
-  const { items, records } = await listFirsts(db);
+/** 그 시즌(T-11-029 — 지금 시즌)에 달성된 서버 최초 기록·신기록을 최신순으로. 표는 규칙 수만큼(수십 행)이라 전부 읽어 고른다. */
+export async function tickerFirsts(db: Db, season: number): Promise<TickerFirst[]> {
+  const { items, records } = await listFirsts(db, season);
   const out: TickerFirst[] = [];
   for (const f of items) {
     if (!f.achievedAt || !f.holder) continue;

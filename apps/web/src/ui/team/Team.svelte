@@ -18,6 +18,7 @@
     lineStrength,
     slotRating,
     teamOvr,
+    type AchCategory,
     type FormationId,
   } from '@offside/contracts/owner-team';
   import {
@@ -39,6 +40,7 @@
   import { go } from '../nav.js';
   import { POS_LABEL, anonName } from '@offside/game/pos-label';
   import { toast } from '../helpers.js';
+  import { dur } from '../motion.js';
   import { lockScroll } from '../scrollLock.js';
   import { doneOnEnter } from '../inputDone.js';
   import { startGoogleLogin } from '../login.js';
@@ -46,13 +48,16 @@
   import { appState, hofStart, type TeamView } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
   import BackBar from '../BackBar.svelte';
+  import TabIcon from '../TabIcon.svelte';
   import TeamLines from './TeamLines.svelte';
   import TeamLive from './TeamLive.svelte';
   import TeamPitch from './TeamPitch.svelte';
+  import AchGradeBadge from './AchGradeBadge.svelte';
   import { num, recordText, signedNum } from '@offside/app-core/teamText';
   import {
-    OUTCOME_TITLE, PICK_SORTS, achDone, achState, assignSlot, attrLine, autoFillSlots, outcomeOf as outcome,
-    pct, pickCandidates, playHintOf, type PickSort,
+    OUTCOME_TITLE, PICK_SORTS, achDone, achGradeView, achNear, achOpenGroup, achPoints, achRankText, achSections,
+    achState, achTotal, assignSlot,
+    attrLine, autoFillSlots, matchHintOf, outcomeOf as outcome, pct, pickCandidates, type PickSort,
   } from '@offside/app-core/teamOwner';
 
   let status = $state<LoadStatus>('loading');
@@ -75,6 +80,8 @@
   let formation = $state<FormationId>('4-3-3');
   let slots = $state<(string | null)[]>(Array(LINEUP_SIZE).fill(null));
   let saving = $state(false);
+  /** 팀이 있으면 이름 칸은 '이름 바꾸기'를 눌렀을 때만 펼친다. */
+  let renaming = $state(false);
   let picking = $state<number | null>(null);
 
   let opponents = $state<TeamOpponent[]>([]);
@@ -91,6 +98,8 @@
   let histStatus = $state<LoadStatus>('loading');
   let ach = $state<ClubAchievementsResponse | null>(null);
   let achStatus = $state<LoadStatus>('loading');
+  /** T-11-028 업적 화면에서 보고 있는 분류(선수·팀·구단주·감독). */
+  let achCat = $state<AchCategory>('player');
   /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
   let pickSort = $state<PickSort>('fit');
 
@@ -130,7 +139,7 @@
       return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p };
     }),
   );
-  const playHint = $derived(playHintOf(team, dirty, matchesLeft));
+  const matchHint = $derived(matchHintOf(team, dirty, matchesLeft, season, current));
 
   function applyTeam(t: OwnerTeam | null) {
     team = t;
@@ -157,6 +166,11 @@
   function pickSeason(id: number) {
     show('team');
     void load(id);
+  }
+  /** T-11-028 기록실 업적 랭킹. */
+  function openAchRanking() {
+    appState.hof = { ...hofStart(), tab: 'ach' };
+    go('hof');
   }
   /** 기록실 라이브 랭킹에서 팀 프로필을 연다(id 없으면 랭킹 목록). */
   function openRanking(id: string | null = null) {
@@ -195,6 +209,7 @@
     if (!r.ok) return toast(r.error.message);
     const created = !team;
     applyTeam(r.data.team);
+    renaming = false;
     toast(created ? '팀을 만들었어요' : '편성을 저장했어요');
   }
 
@@ -257,7 +272,7 @@
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 $effect가, 이미 그 화면이면 open이 다시 불러온다.
   const LOAD = {
-    opponents: loadOpponents,
+    opponents: () => (matchHint ? undefined : loadOpponents()),
     achievements: () => loadAchievements(),
     history: loadHistory,
   };
@@ -270,10 +285,19 @@
     if (status !== 'ready' || needLogin) return;
     if (v in LOAD) untrack(() => void LOAD[v as keyof typeof LOAD]());
   });
-  /** 이전 기록이 없을 때 '← 이전으로'가 갈 곳. */
-  function back() {
-    if (view === 'team' || view === 'achievements') appState.screen = 'owner';
-    else show('team');
+  // T-11-026 내 팀 하단 메뉴 — 편성 · 경기 · (가운데) 구단주 · 업적 · 기록. 경기 결과는 '경기' 탭 안이다.
+  const NAV: [TeamView, string, 'lineup' | 'season' | 'trophy' | 'career'][] = [
+    ['team', '편성', 'lineup'],
+    ['opponents', '경기', 'season'],
+    ['achievements', '업적', 'trophy'],
+    ['history', '기록', 'career'],
+  ];
+  const navOn = $derived(view === 'result' ? 'opponents' : view);
+  /** 탭을 바꾸면 맨 위에서 시작하고, 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(게임 화면 탭과 같다). */
+  function switchView(v: TeamView) {
+    if (view === v) return window.scrollTo({ top: 0, behavior: dur(1) ? 'smooth' : 'instant' });
+    show(v);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }
   // T-10-117 선수 고르기 시트가 열린 동안 뒤 페이지 스크롤을 잠근다(스크롤 위치는 그대로).
   $effect(() => {
@@ -287,7 +311,7 @@
 
 <svelte:window onkeydown={onKey} />
 
-<div class="wrap">
+<div class="wrap" class:has-tabbar={!needLogin}>
   <Topbar />
 
   <LoadState {status} failText="팀을 불러오지 못했어요." retry={load}>
@@ -298,72 +322,110 @@
         <p class="muted">구글로 로그인한 구단주만 은퇴한 선수로 팀을 꾸릴 수 있어요.</p>
         <button class="btn btn-primary self-start" onclick={() => void startGoogleLogin(null)}>구글로 로그인</button>
       </section>
-    {:else if view === 'team' || view === 'achievements'}
-      <div class="seg two tm-tabs" role="group" aria-label="내 팀 메뉴">
-        <button class="opt" aria-pressed={view === 'team'} onclick={() => show('team')} data-act="team-tab">팀</button>
-        <button class="opt" aria-pressed={view === 'achievements'} onclick={() => open('achievements')} data-act="team-achievements">시즌 업적</button>
-      </div>
-      {#if view === 'achievements'}
-        <section class="card stack" style="gap:12px" data-club-achievements>
-          <div class="tm-title">
-            <div>
-              <div class="eyebrow">Season achievements</div>
-              <h1>시즌 업적</h1>
-            </div>
-            {#if ach && ach.seasons.length > 1}
-              <select class="tm-season" aria-label="시즌" value={ach.season} onchange={(e) => void loadAchievements(Number(e.currentTarget.value))}>
-                {#each ach.seasons as o (o.id)}
-                  <option value={o.id}>{o.name}</option>
-                {/each}
-              </select>
-            {/if}
+    {:else if view === 'achievements'}
+      <section class="card stack" style="gap:12px" data-club-achievements>
+        <div class="tm-title">
+          <div>
+            <div class="eyebrow">Season achievements</div>
+            <h1>시즌 업적</h1>
           </div>
-          <LoadState status={achStatus} failText="업적을 불러오지 못했어요." retry={() => void loadAchievements(ach?.season)}>
-            {#if ach}
-              <p class="muted fs-sm">{ach.seasons.find((o) => o.id === ach?.season)?.name ?? ''}에 처음 뛰어 은퇴한 내 선수 {ach.players}명의 기록으로 채워요.</p>
-              {#each ach.groups as g (g.id)}
-                {#if g.locked}
-                  <div class="tm-ach tm-ach-locked" data-ach-group={g.id}>
-                    <span class="tm-ach-stage">{g.stage}</span>
-                    <b>LOCKED</b>
-                    <small class="muted">아직 발견하지 못했어요</small>
-                  </div>
-                {:else}
-                <details class="tm-ach" data-ach-group={g.id}>
+          {#if ach && ach.seasons.length > 1}
+            <select class="tm-season" aria-label="시즌" value={ach.season} onchange={(e) => void loadAchievements(Number(e.currentTarget.value))}>
+              {#each ach.seasons as o (o.id)}
+                <option value={o.id}>{o.name}</option>
+              {/each}
+            </select>
+          {/if}
+        </div>
+        <LoadState status={achStatus} failText="업적을 불러오지 못했어요." retry={() => void loadAchievements(ach?.season)}>
+          {#if ach}
+            {@const tot = achTotal(ach.groups)}
+            {@const gv = achGradeView(ach.score)}
+            {@const sections = achSections(ach.groups)}
+            {@const sec = sections.find((x) => x.id === achCat) ?? sections[0]!}
+            {@const near = achNear(ach.groups)}
+            {@const openId = achOpenGroup(sec.groups)}
+            <div class="tm-ach-sum" data-ach-summary>
+              <div class="tm-ach-head">
+                <AchGradeBadge grade={gv.grade} large />
+                <div class="tm-ach-total"><b>{num(ach.score)}</b><span class="muted">점</span></div>
+                <button class="tm-ach-rank" data-act="ach-ranking" onclick={openAchRanking}>
+                  <small class="muted">업적 랭킹</small><span>{achRankText(ach.rank, ach.ranked)}</span>
+                </button>
+              </div>
+              <div class="tm-bar" role="progressbar" aria-label="다음 등급까지" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(gv.ratio * 100)}>
+                <span style:width="{gv.ratio * 100}%"></span>
+              </div>
+              <p class="muted fs-sm" data-ach-next>
+                {gv.next ? `${gv.next.name}까지 ${num(gv.toNext)}점` : '최고 등급이에요'} · 업적 {tot.done}/{tot.total} 달성
+              </p>
+              <p class="muted fs-xs">{ach.seasons.find((o) => o.id === ach?.season)?.name ?? ''}에 처음 뛰어 은퇴한 내 선수 {ach.players}명과 이 시즌 팀·구단 활동으로 채워요. 시즌마다 처음부터 다시 쌓아요.</p>
+            </div>
+            {#if near.length}
+              <div class="tm-near" data-ach-near>
+                <div class="eyebrow">다음 목표</div>
+                <ul>
+                  {#each near as n (n.item.id)}
+                    <li>
+                      <span class="tm-near-txt"><b>{n.item.label}</b><small class="muted">{n.group} · {achState(n.item)}</small></span>
+                      <span class="tm-pts">+{num(n.item.worth)}점</span>
+                      <span class="tm-bar sm" aria-hidden="true"><span style:width="{n.ratio * 100}%"></span></span>
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
+            <div class="tm-ach-cats" role="tablist" aria-label="업적 분류" style:grid-template-columns="repeat({sections.length}, minmax(0, 1fr))">
+              {#each sections as x (x.id)}
+                <button role="tab" aria-selected={sec.id === x.id} data-ach-cat={x.id} onclick={() => (achCat = x.id)}>
+                  <span>{x.name.replace(' 업적', '')}</span>
+                  <small class="num">{x.locked ? '🔒︎' : num(x.score)}</small>
+                </button>
+              {/each}
+            </div>
+            {#if sec.locked}
+              <div class="tm-ach tm-ach-locked tm-ach-soon" data-ach-group="manager">
+                <div class="tm-ach-head"><span class="tm-ach-stage">SOON</span><b>감독 커리어</b></div>
+                <small class="muted">감독 시뮬레이션이 열리면 감독으로 거둔 성적도 업적이 돼요. 선수·팀·구단주 업적처럼 시즌마다 새로 쌓여요.</small>
+              </div>
+            {:else}
+              {#each sec.groups as g (`${ach.season}-${g.id}`)}
+                <details class="tm-ach" data-ach-group={g.id} open={g.id === openId}>
                   <summary>
                     <span class="tm-ach-stage">{g.stage}</span>
                     <b>{g.title}</b>
-                    <span class="tm-ach-count">{achDone(g.items)} / {g.items.length}</span>
+                    <span class="tm-ach-count">{achDone(g.items)}/{g.items.length}</span>
                   </summary>
                   <ul>
                     {#each g.items as i (i.id)}
-                      <li class:done={i.done}><span>{i.label}</span><small>{achState(i)}</small></li>
+                      <li class:done={i.done}>
+                        <span class="tm-ach-txt"><span>{i.label}</span><small>{achState(i)}</small></span>
+                        <span class="tm-pts" class:got={i.points > 0}>{achPoints(i)}</span>
+                      </li>
                     {/each}
                   </ul>
                 </details>
-                {/if}
               {/each}
             {/if}
-          </LoadState>
-        </section>
-      {:else}
+          {/if}
+        </LoadState>
+      </section>
+    {:else if view === 'team'}
       <section class="card stack tm-head" style="gap:12px">
         <div class="tm-title">
           <div>
             <div class="eyebrow">My team · {seasonName}</div>
             <h1>{team?.name ?? (editable ? '팀 만들기' : '팀 없음')}</h1>
+            {#if team}<span class="muted fs-sm">{team.manager} 감독</span>{/if}
           </div>
           <div class="tm-ovr-badge" aria-label="팀 OVR {ovr}"><small>OVR</small><b>{ovr}</b></div>
         </div>
-        {#if seasons.length > 1}
-          <select class="tm-season self-start" aria-label="시즌" value={season} onchange={(e) => pickSeason(Number(e.currentTarget.value))} data-team-season>
-            {#each seasons as o (o.id)}
-              <option value={o.id}>{o.name}{o.id === current ? ' (지금)' : ''}</option>
-            {/each}
-          </select>
-        {/if}
         {#if team}
-          <p class="muted tm-record" data-team-record>{recordText(team.record)} · 레이팅 {num(team.rating)}{editable ? ` · 오늘 남은 경기 ${matchesLeft}/${perDay}` : ''}</p>
+          <dl class="tm-stats" data-team-record>
+            <div><dt>전적</dt><dd>{recordText(team.record)}</dd></div>
+            <div><dt>레이팅</dt><dd>{num(team.rating)}</dd></div>
+            <div><dt>{editable ? '오늘 경기' : '시즌'}</dt><dd>{editable ? `${matchesLeft}/${perDay}` : '지난 시즌'}</dd></div>
+          </dl>
         {:else if editable}
           <p class="muted">{seasonName}에 뛰고 은퇴한 내 선수로 11명을 꾸려요. 빈 자리는 유스 선수(OVR {YOUTH_OVR})가 채워서, 한 명만 넣어도 경기할 수 있어요. 팀은 시즌마다 새로 꾸려요.</p>
         {:else}
@@ -372,7 +434,7 @@
         {#if !editable && team}
           <p class="muted fs-sm" data-team-readonly>지난 시즌 팀이에요 — 보기만 할 수 있어요.</p>
         {/if}
-        {#if editable}
+        {#if editable && (!team || renaming)}
           <div class="tm-names">
             <label class="field">
               <span class="lbl">팀 이름</span>
@@ -383,26 +445,40 @@
               <input type="text" bind:value={manager} minlength={MANAGER_NAME_MIN} maxlength={MANAGER_NAME_MAX} placeholder="{MANAGER_NAME_MIN}~{MANAGER_NAME_MAX}자" data-team-manager enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
             </label>
           </div>
-        {:else if team}
-          <p class="muted fs-sm">감독 <b>{team.manager}</b></p>
         {/if}
-        {#if editable || team}
-        <div class="seg three" role="group" aria-label="포메이션">
-          {#each FORMATION_IDS as f (f)}
-            <button class="opt tm-form" aria-pressed={formation === f} data-formation={f} disabled={!editable} onclick={() => (formation = f)}>{f}</button>
-          {/each}
+        <div class="tm-links">
+          {#if seasons.length > 1}
+            <select class="tm-season" aria-label="시즌" value={season} onchange={(e) => pickSeason(Number(e.currentTarget.value))} data-team-season>
+              {#each seasons as o (o.id)}
+                <option value={o.id}>{o.name}{o.id === current ? ' (지금)' : ''}</option>
+              {/each}
+            </select>
+          {/if}
+          {#if editable && team && !renaming}
+            <button class="icon-btn" onclick={() => (renaming = true)} data-act="team-rename">이름 바꾸기</button>
+          {/if}
+          {#if team}
+            <button class="icon-btn" onclick={() => openRanking(team?.id ?? null)} data-act="team-profile">팀 프로필 · 순위</button>
+          {/if}
+          <button class="icon-btn" onclick={() => openRanking()} data-act="team-ranking">라이브 랭킹</button>
         </div>
-        <TeamLines {lines} />
-        {#if editable}<p class="muted fs-sm">포메이션을 바꾸면 공격·중원·수비 무게가 옮겨 가요. 선수는 자리마다 그 자리 능력치로 뛰어요.</p>{/if}
-        {/if}
       </section>
 
       {#if editable || team}
+        <section class="card stack" style="gap:10px" aria-label="포메이션">
+          <div class="seg three" role="group" aria-label="포메이션">
+            {#each FORMATION_IDS as f (f)}
+              <button class="opt tm-form" aria-pressed={formation === f} data-formation={f} disabled={!editable} onclick={() => (formation = f)}>{f}</button>
+            {/each}
+          </div>
+          <TeamLines {lines} />
+          {#if editable}<p class="muted fs-sm">포메이션을 바꾸면 공격·중원·수비 무게가 옮겨 가요. 선수는 자리마다 그 자리 능력치로 뛰어요.</p>{/if}
+        </section>
         <TeamPitch {formation} {cells} onpick={editable ? (i) => (picking = i) : undefined} />
       {/if}
 
-      <section class="card stack" style="gap:10px">
-        {#if editable}
+      {#if editable}
+        <section class="card stack" style="gap:10px">
           {#if players.length === 0}
             <p class="muted">{seasonName}에 뛰고 은퇴한 선수가 아직 없어요. 이번 시즌에 커리어를 끝까지 뛰면 팀에 넣을 수 있어요.</p>
           {:else}
@@ -410,28 +486,22 @@
           {/if}
           <div class="tm-actions">
             <button class="btn" onclick={autoFill} disabled={players.length === 0} data-act="team-auto">자동 배치</button>
-            <button class="btn btn-primary" onclick={save} disabled={saving || !nameOk || !dirty} data-act="team-save">{team ? '편성 저장' : '팀 만들기'}</button>
+            <button class="btn btn-primary" onclick={save} disabled={saving || !nameOk || !dirty} data-act="team-save">{team ? (dirty ? '편성 저장' : '저장됨') : '팀 만들기'}</button>
           </div>
-          <button class="btn btn-accent btn-block" onclick={() => open('opponents')} disabled={!!playHint} data-act="team-play">경기하기</button>
-          {#if playHint}<p class="muted fs-sm">{playHint}</p>{/if}
-        {/if}
-        <div class="tm-links">
-          {#if team}
-            <button class="icon-btn" onclick={() => openRanking(team?.id ?? null)} data-act="team-profile">팀 프로필 · 순위</button>
-            <button class="icon-btn" onclick={() => open('history')} data-act="team-history">최근 경기</button>
-          {/if}
-          <button class="icon-btn" onclick={() => openRanking()} data-act="team-ranking">라이브 랭킹</button>
-        </div>
-      </section>
+        </section>
       {/if}
     {:else if view === 'opponents'}
       <section class="card stack" style="gap:12px">
         <div>
           <div class="eyebrow">Match</div>
           <h1>상대 고르기</h1>
-          <p class="muted fs-sm">내 팀 OVR {team?.ovr ?? ovr}과 비슷한 팀이에요 · 오늘 남은 경기 {matchesLeft}/{perDay}</p>
+          {#if !matchHint}<p class="muted fs-sm">내 팀 OVR {team?.ovr ?? ovr}과 비슷한 팀이에요 · 오늘 남은 경기 {matchesLeft}/{perDay}</p>{/if}
           <p class="muted fs-xs">같은 팀에는 하루 한 번 도전할 수 있어요. 최근 {TEAM_REPEAT_WINDOW_DAYS}일 안에 다시 만난 팀이면 레이팅이 덜 움직여요.</p>
         </div>
+        {#if matchHint}
+          <p class="muted" data-match-hint>{matchHint}</p>
+          {#if editable}<button class="btn self-start" onclick={() => switchView('team')}>편성으로</button>{/if}
+        {:else}
         <LoadState status={oppStatus} failText="상대를 불러오지 못했어요." retry={loadOpponents}>
           {#each opponents as o (o.teamId)}
             <div class="tm-opp" data-opponent={o.teamId}>
@@ -447,6 +517,7 @@
           {/each}
           <button class="icon-btn self-start" onclick={() => open('opponents')} disabled={playing}>다른 상대 보기</button>
         </LoadState>
+        {/if}
       </section>
     {:else if view === 'result' && result}
       {@const m = result}
@@ -519,8 +590,24 @@
       </section>
     {/if}
   </LoadState>
-  <BackBar act="team-back" fallback={back} />
+  {#if needLogin}<BackBar act="team-back" fallback={() => (appState.screen = 'owner')} />{/if}
 </div>
+
+{#if !needLogin}
+  <!-- 내 팀 탭 4개 + 가운데 구단주(게임 화면 탭바와 같은 모양). 구단주는 화면을 떠나는 버튼이라 tablist 밖에 둔다. -->
+  <nav class="tabs" aria-label="내 팀 메뉴">
+    <div class="tabs-inner" role="tablist">
+      {#each NAV as [k, l, icon] (k)}
+        <button role="tab" data-team-tab={k} aria-selected={navOn === k} onclick={() => switchView(k)}>
+          <TabIcon name={icon} />{l}
+        </button>
+      {/each}
+    </div>
+    <button class="tab-home" data-act="team-back" onclick={() => go('owner')}>
+      <TabIcon name="owner" />구단주
+    </button>
+  </nav>
+{/if}
 
 {#if picking !== null}
   {@const slot = slotCodes[picking]!}
@@ -596,8 +683,175 @@
     font-weight: 700;
     font-size: 1.0625rem;
   }
-  .tm-tabs {
-    margin-bottom: 12px;
+  .tm-stats {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr;
+    gap: 8px;
+    margin: 0;
+  }
+  .tm-stats div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    min-width: 0;
+  }
+  .tm-stats dt {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .tm-stats dd {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .tm-ach-sum {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .tm-ach-sum p {
+    margin: 0;
+  }
+  .tm-ach-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tm-ach-total {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+  .tm-ach-rank {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .tm-ach-rank small {
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+  .tm-ach-cats {
+    display: grid;
+    gap: 6px;
+  }
+  .tm-ach-cats button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    min-height: 48px;
+    padding: 6px 4px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .tm-ach-cats button small {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .tm-ach-cats button[aria-selected='true'] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  }
+  .tm-ach-cats button[aria-selected='true'] small {
+    color: var(--accent-text);
+  }
+  .tm-ach-txt {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+  .tm-ach-txt small {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  .tm-pts {
+    flex: none;
+    font-family: var(--display);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .tm-pts.got,
+  .tm-near .tm-pts {
+    color: var(--accent-text);
+  }
+  .tm-ach-total b {
+    font-family: var(--display);
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--accent-text);
+  }
+  .tm-bar {
+    display: block;
+    height: 8px;
+    border-radius: 99px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+  .tm-bar.sm {
+    grid-column: 1 / -1;
+    height: 6px;
+    background: var(--line);
+  }
+  .tm-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent);
+  }
+  .tm-near ul {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tm-near li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 6px 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+  .tm-near-txt {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
   }
   .tm-season {
     flex: none;
@@ -653,18 +907,13 @@
   .tm-ach li {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     gap: 10px;
     padding: 8px 10px;
     border-radius: 10px;
     background: var(--surface-2);
   }
-  .tm-ach li small {
-    flex: none;
-    color: var(--muted);
-    text-align: right;
-  }
-  .tm-ach li.done small {
+  .tm-ach li.done .tm-ach-txt small {
     color: var(--accent-text);
     font-weight: 700;
   }
@@ -681,6 +930,15 @@
   .tm-ach-locked b {
     flex: 1;
   }
+  .tm-ach-soon {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 12px;
+  }
+  .tm-ach-soon b {
+    color: var(--ink);
+  }
   .tm-names {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -689,6 +947,7 @@
   .tm-links {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
   }
   .tm-sort {

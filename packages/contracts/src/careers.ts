@@ -3,7 +3,7 @@ import { bodyError } from './body.js';
 import { NATION_BY_CODE } from './nations.js';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
-import { serviceSeason } from './service-seasons.js';
+import { seasonById } from './service-seasons.js';
 import { DETAIL_POSITIONS, FACE_ATTRS, type DetailPos, type FaceAttr } from './positions.js';
 
 /**
@@ -240,6 +240,11 @@ export const RetirementResponseSchema = z.strictObject({
   status: z.literal('retired'),
   /** T-10-076 영구결번 심사. 자격이 없으면 null(배포 전 응답엔 없다). */
   retiredNumber: RetiredNumberResultSchema.nullable().optional(),
+  /**
+   * T-11-029 이 커리어가 속한 서비스 시즌(0 = 프리시즌, 휴식기에 올라왔으면 null). 기기가 은퇴 기록(ft_hof)에 남겨
+   * '내 선수'를 시즌별로 거른다(배포 전 응답엔 없다).
+   */
+  serviceSeason: z.number().int().nonnegative().nullable().optional(),
 });
 export type RetirementResponse = z.infer<typeof RetirementResponseSchema>;
 
@@ -393,6 +398,11 @@ export const PublicHofEntrySchema = z.strictObject({
   retiredNumber: RetiredSlotSchema.extend({ seq: z.number().int() }).nullable().optional(),
   /** T-10-100 은퇴 가치(만 원). 아직 소급하지 못한 옛 기록은 null(배포 전 엣지 캐시 응답엔 없다). */
   value: z.number().int().nullable().optional(),
+  /**
+   * T-11-029 이 선수가 속한 서비스 시즌(careers.service_season — 처음 올라온 시각의 시즌, 0 = 프리시즌, 시즌 사이
+   * 휴식기에 올라왔으면 null). 배포 전 엣지 캐시 응답엔 없다.
+   */
+  season: z.number().int().nonnegative().nullable().optional(),
   /** T-10-101 이름 검색 결과에만: 고른 순위 유형·시즌에서의 실제 순위(1부터). */
   rank: z.number().int().min(1).optional(),
 });
@@ -447,13 +457,27 @@ export const HofSearchQuerySchema = z
   .max(20)
   .optional()
   .transform((v) => v || undefined);
-/** T-10-090 `GET /v1/hof?season=` 서비스 시즌 순위(service-seasons.ts의 id → 그 시즌). 없으면 전체 명예의 전당. */
+/**
+ * T-10-090 `GET /v1/hof?season=` 서비스 시즌 순위(service-seasons.ts의 id → 그 시즌). 없으면 전체 명예의 전당.
+ * T-11-029 season=0은 프리시즌(개막 전에 처음 올라온 선수 — 개막 뒤에 은퇴해도 포함).
+ */
 export const HofSeasonQuerySchema = z.coerce
   .number()
   .int()
-  .refine((id) => serviceSeason(id) !== undefined, '없는 시즌입니다.')
-  .transform((id) => serviceSeason(id)!)
+  .refine((id) => seasonById(id) !== undefined, '없는 시즌입니다.')
+  .transform((id) => seasonById(id)!)
   .optional();
+/**
+ * T-11-029 `?season=` 시즌 id(0 = 프리시즌, 그 밖엔 service-seasons.ts의 id). 없으면 서버가 지금 시즌을 쓴다
+ * (displaySeasonAt — 개막 전이면 프리시즌, 휴식기면 마지막 시즌).
+ */
+export const SeasonPickQuerySchema = z.coerce
+  .number()
+  .int()
+  .refine((id) => seasonById(id) !== undefined, '없는 시즌입니다.')
+  .optional();
+/** T-11-018 `GET /v1/hof?pos=` 그 포지션 선수만(포지션별 순위). 없으면 모든 포지션. */
+export const HofPosQuerySchema = CareerPosSchema.optional();
 
 // ───────── T-10-027 서버 최초 기록 ─────────
 
@@ -490,17 +514,23 @@ export const ServerRecordSchema = z.strictObject({
 export type ServerRecord = z.infer<typeof ServerRecordSchema>;
 
 /**
- * `GET /v1/firsts`. items는 규칙 순서 그대로(미달성 포함 — 달성 개수는 holder로 센다). 끝없는 단계는 달성된
+ * `GET /v1/firsts?season=`. items는 규칙 순서 그대로(미달성 포함 — 달성 개수는 holder로 센다). 끝없는 단계는 달성된
  * 단계와 그 위 다음 목표 하나까지만 담는다(T-10-056). records는 서버 기록.
+ * T-11-029 기록은 시즌마다 따로 겨룬다 — season은 이 목록의 시즌(0 = 프리시즌).
  */
 export const FirstsResponseSchema = z.strictObject({
+  season: z.number().int().nonnegative(),
   items: z.array(ServerFirstSchema),
   records: z.array(ServerRecordSchema),
 });
 export type FirstsResponse = z.infer<typeof FirstsResponseSchema>;
 
-/** T-10-076 `GET /v1/retired-numbers` 서버 전체 영구결번(결번 순). 이름은 공개를 고른 경우에만. */
+/**
+ * T-10-076 `GET /v1/retired-numbers?season=` 한 시즌의 영구결번(결번 순). 이름은 공개를 고른 경우에만.
+ * T-11-029 결번은 시즌마다 따로다 — season은 이 목록의 시즌(0 = 프리시즌).
+ */
 export const RetiredNumbersResponseSchema = z.strictObject({
+  season: z.number().int().nonnegative(),
   items: z.array(
     RetiredSlotSchema.extend({
       seq: z.number().int(),

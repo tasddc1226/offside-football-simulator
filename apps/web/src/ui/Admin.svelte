@@ -9,6 +9,7 @@
   import AdminBalance from './admin/AdminBalance.svelte';
   import AdminComments from './admin/AdminComments.svelte';
   import AdminNameReports from './admin/AdminNameReports.svelte';
+  import AdminChatReports from './admin/AdminChatReports.svelte';
   import AdminDashboard from './admin/AdminDashboard.svelte';
   import AdminAutomation from './admin/AdminAutomation.svelte';
 
@@ -44,7 +45,7 @@
         {/each}
       </div>
       {#if tab === 'dashboard'}<AdminDashboard />
-      {:else if tab === 'comments'}<AdminNameReports /><AdminComments />
+      {:else if tab === 'comments'}<AdminChatReports /><AdminNameReports /><AdminComments />
       {:else if tab === 'automation'}<AdminAutomation />
       {:else}<AdminBalance />{/if}
     {/if}

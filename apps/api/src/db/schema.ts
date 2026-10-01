@@ -101,6 +101,7 @@ export const authAttempts = sqliteTable(
         'BOARD_COMMENT',
         'APP_SESSION',
         'APPLE_SIGNIN',
+        'PROFILE_CREATE',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -200,6 +201,8 @@ export const careers = sqliteTable(
     value: integer('value'),
     // 운영자가 이름 신고를 받고 가린 시각. 있으면 시즌·은퇴 업로드가 공개 이름을 다시 채우지 않는다.
     nameHiddenAt: text('name_hidden_at'),
+    // 1이면 공개 순위(명예의 전당·서버 기록·결번·홈 소식)에서 뺀다. 은퇴 때 시즌 신호가 자동 플레이로 판정되면 서버가 켠다.
+    hidden: integer('hidden').notNull().default(0),
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),
@@ -436,39 +439,52 @@ export const balanceVersions = sqliteTable(
 );
 
 /** T-10-027 서버 최초 기록. 기록 id(src/firsts.ts firstsCatalog)마다 가장 먼저 달성한 커리어 한 줄. 커리어가 지워지면
- * 함께 지워지고, 다음 재계산(app_meta 버전) 때 그다음으로 이른 커리어가 채운다. */
+ * 함께 지워지고, 다음 재계산(app_meta 버전) 때 그다음으로 이른 커리어가 채운다.
+ * T-11-029 시즌마다 따로 겨룬다 — season은 커리어의 service_season(NULL이면 0, 0 = 프리시즌), 키는 (season, id). */
 export const serverFirsts = sqliteTable(
   'server_firsts',
   {
-    id: text('id').primaryKey(),
+    season: integer('season').notNull().default(0),
+    id: text('id').notNull(),
     careerId: text('career_id')
       .notNull()
       .references(() => careers.id, { onDelete: 'cascade' }),
     achievedAt: text('achieved_at').notNull(),
     year: integer('year'),
   },
-  (table) => [index('server_firsts_achieved_idx').on(table.achievedAt)],
+  (table) => [
+    primaryKey({ columns: [table.season, table.id] }),
+    index('server_firsts_achieved_idx').on(table.achievedAt),
+  ],
 );
 
 /** T-10-056 서버 기록(깨질 수 있는 최고 기록) 한 줄씩. 보유 커리어가 지워지면 함께 지워지고, 다음 재계산이
- * 그다음 보유자를 채운다. */
-export const serverRecords = sqliteTable('server_records', {
-  id: text('id').primaryKey(),
-  careerId: text('career_id')
-    .notNull()
-    .references(() => careers.id, { onDelete: 'cascade' }),
-  value: integer('value').notNull(),
-  achievedAt: text('achieved_at').notNull(),
-  year: integer('year'),
-});
+ * 그다음 보유자를 채운다. T-11-029 서버 최초 기록처럼 시즌마다 따로다 — 키는 (season, id). */
+export const serverRecords = sqliteTable(
+  'server_records',
+  {
+    season: integer('season').notNull().default(0),
+    id: text('id').notNull(),
+    careerId: text('career_id')
+      .notNull()
+      .references(() => careers.id, { onDelete: 'cascade' }),
+    value: integer('value').notNull(),
+    achievedAt: text('achieved_at').notNull(),
+    year: integer('year'),
+  },
+  (table) => [primaryKey({ columns: [table.season, table.id] })],
+);
 
 /**
  * T-10-076 영구결번. 구단(club_id)·등번호마다 한 명 — 먼저 자격을 채운 커리어가 가져가고 취소되지 않는다(보유
  * 커리어가 지워지면 함께 지워져 자리가 빈다). 한 커리어는 한 자리만 가진다. seq는 서버에서 몇 번째 결번인지.
+ * T-11-029 시즌마다 따로 센다 — season은 커리어의 service_season(NULL이면 0, 0 = 프리시즌)이라 시즌 1 선수도
+ * 프리시즌 선수와 같은 구단·번호를 받고, seq도 시즌 안에서 센다.
  */
 export const retiredNumbers = sqliteTable(
   'retired_numbers',
   {
+    season: integer('season').notNull().default(0),
     clubId: text('club_id').notNull(),
     number: integer('number').notNull(),
     careerId: text('career_id')
@@ -481,7 +497,7 @@ export const retiredNumbers = sqliteTable(
     grantedAt: text('granted_at').notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.clubId, table.number] }),
+    primaryKey({ columns: [table.season, table.clubId, table.number] }),
     uniqueIndex('retired_numbers_career_idx').on(table.careerId),
   ],
 );
@@ -582,4 +598,64 @@ export const teamMatches = sqliteTable(
     index('team_matches_profile_created_idx').on(table.profileId, table.createdAt),
     index('team_matches_away_created_idx').on(table.awayTeamId, table.createdAt),
   ],
+);
+
+/**
+ * T-11-028 구단주 시즌 업적 점수(업적 랭킹). 업적은 은퇴 기록·팀에서 그때그때 계산하고, 랭킹을 세려고 점수만 여기에
+ * 적어 둔다 — 업적 화면을 열 때·은퇴·팀 저장·팀 경기 뒤와 매일 cron이 다시 센다. 점수가 0이면 행을 두지 않는다.
+ * reached_at은 점수가 바뀐 시각이라 같은 점수면 먼저 닿은 구단주가 앞선다.
+ */
+export const ownerAchievements = sqliteTable(
+  'owner_achievements',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    season: integer('season').notNull(),
+    score: integer('score').notNull(),
+    done: integer('done').notNull(),
+    players: integer('players').notNull(),
+    reachedAt: text('reached_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.profileId, table.season] }),
+    index('owner_achievements_season_score_idx').on(table.season, table.score, table.reachedAt),
+  ],
+);
+
+/** T-11-015 채팅 신고. 프로필 하나가 메시지 하나에 한 번. 메시지는 채팅방(Durable Object)에 7일만 남으므로 신고할
+ *  때 작성자·닉네임·본문 사본을 함께 적어 둔다(운영자 확인용, 90일 뒤 cron이 지운다). 운영자가 처리하면
+ *  resolved_at을 채운다. */
+export const chatReports = sqliteTable(
+  'chat_reports',
+  {
+    messageId: text('message_id').notNull(),
+    profileId: text('profile_id').notNull(),
+    reason: text('reason', { enum: COMMENT_REPORT_REASONS }).notNull(),
+    authorProfileId: text('author_profile_id').notNull(),
+    nickname: text('nickname').notNull(),
+    body: text('body').notNull(),
+    createdAt: text('created_at').notNull(),
+    /** 운영자가 처리(가리기·기각·정지)한 시각. 처리 전엔 null. */
+    resolvedAt: text('resolved_at'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.messageId, table.profileId] }),
+    index('chat_reports_created_idx').on(table.createdAt),
+    index('chat_reports_open_idx').on(table.resolvedAt, table.createdAt),
+    index('chat_reports_profile_idx').on(table.profileId),
+    index('chat_reports_author_idx').on(table.authorProfileId),
+  ],
+);
+
+/** T-11-015 채팅 정지. 프로필당 한 줄, until까지 입장권(쓰기)을 주지 않는다. 지난 줄은 cron이 지운다. */
+export const chatMutes = sqliteTable(
+  'chat_mutes',
+  {
+    profileId: text('profile_id').primaryKey(),
+    until: text('until').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('chat_mutes_until_idx').on(table.until)],
 );

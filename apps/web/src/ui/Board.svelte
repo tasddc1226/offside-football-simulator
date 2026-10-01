@@ -42,7 +42,9 @@
   let liking = $state(false);
   /** 관리자 편집기. id가 없으면 새 글. */
   let editing = $state<{ id?: string; title: string; body: string; version: string; pinned: boolean } | null>(null);
-  const view = $derived(editing ? 'edit' : (detail?.post.id ?? 'list'));
+  /** 홈 등에서 글을 바로 열며 들어온 동안 — 목록을 그리지 않는다(목록이 비쳤다 글로 한 번 더 넘어가지 않게). */
+  let entering = $state(!!appState.boardOpenId);
+  const view = $derived(editing ? 'edit' : (detail?.post.id ?? (entering ? appState.boardOpenId : null) ?? 'list'));
   let commentText = $state('');
   let busy = $state(false);
 
@@ -71,6 +73,7 @@
     appState.boardOpenId = loadingId = id;
     const r = await api.fetchPost(id);
     if (loadingId === id) loadingId = null;
+    entering = false;
     if (appState.boardOpenId !== id) return; // 기다리는 사이 다른 글·목록으로 옮겼다.
     if (!r.ok) {
       appState.boardOpenId = null;
@@ -230,7 +233,7 @@
         <div class="eyebrow">News</div>
         <h1>소식</h1>
       </div>
-      {#if !detail && !editing}
+      {#if !detail && !editing && !entering}
         <div class="seg board-tabs">
           {#each BOARD_KEYS as k (k)}
             <button class="opt" aria-pressed={board === k} data-board-tab={k} onclick={() => board !== k && openBoard(k)}>{BOARD_LABEL[k]}</button>
@@ -354,10 +357,10 @@
           {/if}
         </section>
       {:else}
-        {#if admin}
+        {#if admin && !entering}
           <button class="btn btn-accent" data-act="new-post" onclick={() => startEdit()}>새 글 쓰기</button>
         {/if}
-        <LoadState {status} failText="소식을 불러오지 못했어요." retry={load}>
+        <LoadState status={entering ? 'loading' : status} failText="소식을 불러오지 못했어요." retry={load}>
           <ul class="board-list">
             {#each posts as p (p.id)}
               <li>

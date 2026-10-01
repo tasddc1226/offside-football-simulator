@@ -21,12 +21,49 @@ export const LEGEND_W = {
 /**
  * T-10-091 세부 포지션별 가중 보정. 윙어·수비형 미드필더는 같은 포지션 안에서 골 대신 도움(또는 수비)을 맡아
  * 골에 붙는 수상이 적다 — 시뮬레이션(fulltime-sim DPOS=1, 12,000명)에서 같은 큰 포지션 평균에 맞춘 값이다.
- * 여기 없는 세부 포지션은 큰 포지션 가중을 그대로 쓴다.
+ * 여기 없는 세부 포지션은 큰 포지션 가중을 그대로 쓴다. c는 경기 장악(T-11-021) 가중이다.
  */
-export const LEGEND_W_DETAIL: Partial<Record<string, { g: number; a: number; cs: number }>> = {
+interface LegendWeight {
+  g: number;
+  a: number;
+  cs: number;
+  c?: number;
+}
+export const LEGEND_W_DETAIL: Partial<Record<string, LegendWeight>> = {
   W: { g: 0.42, a: 0.55, cs: 0 },
-  DM: { g: 0.8, a: 0.85, cs: 0 },
+  DM: { g: 0.8, a: 0.85, cs: 0, c: 0.55 },
+  CM: { ...LEGEND_W.MF, c: 0.7 },
+  AM: { ...LEGEND_W.MF, c: 0.5 },
 };
+
+/**
+ * T-11-021 경기 장악: 골·도움이 적은 중앙 미드필더(LEGEND_W_DETAIL의 c)가 쌓는 몫. 시즌마다 출전 × (평균 평점 −
+ * CONTROL_BASE)를 더한다 — 평점이 기준 아래면 0, CONTROL_CAP 위는 세지 않는다(평균을 올리는 항이지 꼬리를 만드는
+ * 항이 아니다). 세부 포지션별 가중이라 프리시즌 선수(세부 포지션 없음)는 0이다.
+ */
+export const CONTROL_BASE = 6.5;
+export const CONTROL_CAP = 0.6;
+export const controlPoints = (seasons: readonly { apps: number; rating: number }[]): number =>
+  seasons.reduce(
+    (t, r) => t + r.apps * Math.min(CONTROL_CAP, Math.max(0, r.rating - CONTROL_BASE)),
+    0,
+  );
+
+/**
+ * T-11-021 한 시즌에 레전드 점수로 치는 개인상 수. 득점상(리그 득점왕·게르트 뮐러·골든슈)이 한 시즌에 겹쳐
+ * 공격수 꼬리를 만들었다(시즌 1 딥다이브 결론 3). 상은 그대로 받고 점수만 시즌당 이만큼 센다. 세부 포지션이
+ * 있는 선수(시즌 1부터)에게만 적용한다.
+ */
+export const AWARDS_PER_SEASON = 3;
+export function legendAwardCount(
+  awards: readonly { year: number }[],
+  dpos?: string | null,
+): number {
+  const cap = dpos ? AWARDS_PER_SEASON : Infinity;
+  const per = new Map<number, number>();
+  for (const a of awards) per.set(a.year, (per.get(a.year) ?? 0) + 1);
+  return [...per.values()].reduce((t, n) => t + Math.min(n, cap), 0);
+}
 
 /** 레전드 점수에 들어가는 통산 값. ballonRankPoints = 발롱도르 순위마다 max(0, 31 − 순위)의 합. */
 export interface LegendTotals {
@@ -41,6 +78,8 @@ export interface LegendTotals {
   ballon: number;
   ballonRankPoints: number;
   worldCups: number;
+  /** controlPoints(). */
+  control: number;
 }
 
 /**
@@ -48,7 +87,7 @@ export interface LegendTotals {
  * 은퇴 요약 보정(apps/api plausibility.ts)이 같은 식을 쓴다.
  */
 export function legendTerms(pos: string, t: LegendTotals, dpos?: string | null) {
-  const w =
+  const w: LegendWeight =
     (dpos && LEGEND_W_DETAIL[dpos]) || (LEGEND_W[pos as keyof typeof LEGEND_W] ?? LEGEND_W.MF);
   return {
     goals: t.goals * w.g,
@@ -63,5 +102,6 @@ export function legendTerms(pos: string, t: LegendTotals, dpos?: string | null) 
     ballonRank: t.ballonRankPoints * 0.6,
     wc: t.worldCups * 60,
     century: t.caps >= 100 ? 25 : 0,
+    control: t.control * (w.c ?? 0),
   };
 }

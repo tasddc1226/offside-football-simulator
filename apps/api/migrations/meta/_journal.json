@@ -295,6 +295,41 @@
       "when": 1790732198934,
       "tag": "0041_ugc_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "6",
+      "when": 1790754858877,
+      "tag": "0042_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1790845232325,
+      "tag": "0043_career_hidden",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1790862124357,
+      "tag": "0044_season_split",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "6",
+      "when": 1790862640684,
+      "tag": "0045_season_split_records",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "6",
+      "when": 1790864137308,
+      "tag": "0046_owner_achievements",
+      "breakpoints": true
     }
   ]
 }

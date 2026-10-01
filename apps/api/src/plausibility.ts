@@ -1,6 +1,6 @@
 import type { CareerPos, CareerSeasonPayload, RetirementSummary } from '@offside/contracts';
 import { isDefaultClubId } from '@offside/contracts/club-names';
-import { legendTerms } from '@offside/contracts/hof-rules';
+import { controlPoints, legendTerms } from '@offside/contracts/hof-rules';
 import type { PeakProfile } from '@offside/contracts/positions';
 
 // 클라이언트가 보낸 기록 값의 현실성 검사. 게임은 브라우저에서 돌고 서버는 결과만 받으므로, 모양(zod)만 맞으면
@@ -18,6 +18,15 @@ export const SEASON_CAP = {
   ovr: 99,
   honors: 20,
 };
+/**
+ * 나이별 OVR 상한(만 18세부터). 새 선수의 시작 능력치는 70 이하라 어린 나이에는 OVR이 정해진 속도로만 오른다 — 운영 은퇴
+ * 기록 실측 최고(조작 의심 2명 제외)가 만 18세 78·19세 84·20세 88이고, 상한은 거기에 2~3을 더했다. 만 18세에 OVR 99로
+ * 시작한 커리어가 명예의 전당 1위에 오른 사례(T-11-023)를 막는다. 만 24세부터는 SEASON_CAP.ovr.
+ * 서버 밸런스의 성장 수치(growthScale 등)를 올리면 이 표도 다시 구해야 한다 — 안 그러면 정상 선수가 잘려 저장된다.
+ * 시즌 값에 실린 나이를 그대로 믿으므로 나이까지 꾸민 기록은 막지 못한다(시즌별 성장 폭 검사는 후속 과제).
+ */
+const OVR_CAP_BY_AGE = [81, 87, 91, 94, 97, 97];
+const ovrCapAt = (age: number): number => OVR_CAP_BY_AGE[Math.max(age, 18) - 18] ?? SEASON_CAP.ovr;
 /** 생애 나이 범위(고3 데뷔 전 · 41세 강제 은퇴 뒤까지 여유). */
 const MIN_AGE = 14;
 const MAX_AGE = 45;
@@ -43,7 +52,7 @@ export function sanitizeSeason(s: CareerSeasonPayload): CareerSeasonPayload {
     apps,
     goals,
     assists,
-    ovr: Math.min(s.ovr, SEASON_CAP.ovr),
+    ovr: Math.min(s.ovr, ovrCapAt(s.age)),
     honors: [...new Set(s.honors.map((h) => h.trim()).filter(Boolean))].slice(0, SEASON_CAP.honors),
     cs: cap(s.cs, Math.min(SEASON_CAP.cs, apps)),
     lgApps: cap(s.lgApps, apps),
@@ -65,6 +74,8 @@ export interface StoredSeason {
   apps: number;
   goals: number;
   assists: number;
+  /** 시즌 평균 평점(경기 장악 점수). */
+  rating: number;
   cs: number | null;
   caps: number | null;
   ovr: number;
@@ -144,6 +155,7 @@ export function boundRetirement(
         // 발롱도르 순위 점수(1위 30점)는 시즌 기록에 남지 않아 뛴 해마다 1위로 친다.
         ballonRankPoints: life.length * 30,
         worldCups: count('FIFA 월드컵 우승'),
+        control: controlPoints(life),
       },
       dpos,
     ),

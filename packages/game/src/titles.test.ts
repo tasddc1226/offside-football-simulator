@@ -57,10 +57,14 @@ describe('칭호 레지스트리 (T-10-026)', () => {
     }
   });
 
-  it('레전드 등급 이름은 은퇴 칭호와 같은 표를 쓴다', () => {
-    expect(legendTitle(900)).toBe('역대 최고의 전설');
-    expect(legendTitle(430)).toBe('클럽 레전드');
-    expect(legendTitle(10)).toBe('평범한 축구 커리어');
+  it('레전드 등급 이름은 은퇴 칭호와 같은 표를 쓴다 — 프리시즌 선수는 옛 기준, 시즌 1 선수(세부 포지션)는 새 기준', () => {
+    expect(legendTitle(900, null)).toBe('역대 최고의 전설');
+    expect(legendTitle(430, null)).toBe('클럽 레전드');
+    expect(legendTitle(10, null)).toBe('평범한 축구 커리어');
+    expect(legendTitle(900, 'ST')).toBe('클럽 레전드');
+    expect(legendTitle(1800, 'CB')).toBe('역대 최고의 전설');
+    expect(legendTitle(1799, 'CB')).toBe('월드클래스 레전드');
+    expect(legendTitle(305, 'GK')).toBe('성실한 프로');
   });
 });
 
@@ -85,6 +89,10 @@ describe('칭호 판정', () => {
     expect(checkTitles(s).some((d) => d.cat === 'legend')).toBe(false);
     const got = checkTitles(s, { score: 600 }).filter((d) => d.cat === 'legend');
     expect(got.map((d) => d.id)).toEqual(['lg_world']);
+    // T-11-018 시즌 1 선수는 같은 점수라도 새 기준(클럽 레전드 600 이상)으로 받는다.
+    const s1 = { ...fresh(), dpos: 'CM' as const };
+    const got1 = checkTitles(s1, { score: 600 }).filter((d) => d.cat === 'legend');
+    expect(got1.map((d) => d.id)).toEqual(['lg_club']);
   });
 
   it('칭호 도입 전 저장은 조용히 채운다(연도 0, 인기 변화 없음)', () => {

@@ -1,5 +1,6 @@
 import type {
   CareerMeta,
+  CareerPos,
   CareerSeasonPayload,
   HofSort,
   LegendSnapshot,
@@ -268,6 +269,7 @@ const publicColumns = {
   hasDetail: sql<number>`${careers.snapshotJson} is not null`,
   title: careers.title,
   value: careers.value,
+  serviceSeason: careers.serviceSeason,
   // T-10-076 영구결번(retired_numbers를 left join한 쿼리에서만 쓴다).
   rnClubId: retiredNumbers.clubId,
   rnClub: retiredNumbers.club,
@@ -301,6 +303,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     hasDetail: Boolean(r.hasDetail),
     title: (r.title as string | null) ?? null,
     value: r.value == null ? null : Number(r.value),
+    season: r.serviceSeason == null ? null : Number(r.serviceSeason),
     retiredNumber:
       r.rnClubId == null
         ? null
@@ -317,7 +320,11 @@ const withRetiredNumber = eq(retiredNumbers.careerId, careers.id);
 /** 공개 명예의 전당(목록·상세·공유 링크·홈 라이브 은퇴 소식)에 오르는 은퇴. 짧은 커리어(T-10-032)는 내 선수에만 남는다. */
 /** 내 선수 목록은 짧은 커리어도 보여 준다. */
 const isOwnRetired = and(eq(careers.status, 'retired'), isNotNull(careers.legendScore));
-export const isPublicRetired = and(isOwnRetired, gte(careers.retireAge, HOF_MIN_RETIRE_AGE));
+export const isPublicRetired = and(
+  isOwnRetired,
+  gte(careers.retireAge, HOF_MIN_RETIRE_AGE),
+  eq(careers.hidden, 0),
+);
 
 const HOF_SORT: Record<HofSort, AnyColumn | SQL> = {
   score: careers.legendScore,
@@ -335,7 +342,8 @@ const HOF_SORT: Record<HofSort, AnyColumn | SQL> = {
 
 /** 전체 유저의 은퇴 선수를 sort 기록 순으로(같으면 레전드 점수 · 먼저 은퇴), page(1부터)번째 limit명과 전체 인원.
  * score가 아니면 그 기록이 0인 선수는 뺀다(발롱도르 0회끼리 순위를 매기지 않는다).
- * T-10-101 q가 있으면 공개 이름에 q가 들어간 선수만 — 각 선수에 검색 전 순위(rank)를 붙인다. */
+ * T-10-101 q가 있으면 공개 이름에 q가 들어간 선수만 — 각 선수에 검색 전 순위(rank)를 붙인다.
+ * T-11-018 pos가 있으면 그 포지션 안의 순위다. */
 export async function listPublicHof(
   db: Db,
   limit: number,
@@ -343,12 +351,14 @@ export async function listPublicHof(
   sort: HofSort = 'score',
   season?: ServiceSeason,
   q?: string,
+  pos?: CareerPos,
 ): Promise<{ entries: PublicHofEntry[]; total: number }> {
   const by = HOF_SORT[sort];
   const ranked = and(
     isPublicRetired,
     sort === 'score' ? undefined : sql`${by} > 0`,
     season && inSeason(season),
+    pos && eq(careers.pos, pos),
   );
   const where = q
     ? and(
@@ -508,6 +518,7 @@ const storedSeasonColumns = {
   apps: careerSeasons.apps,
   goals: careerSeasons.goals,
   assists: careerSeasons.assists,
+  rating: careerSeasons.rating,
   cs: careerSeasons.cs,
   caps: careerSeasons.caps,
   ovr: careerSeasons.ovr,
@@ -546,6 +557,7 @@ export async function getCareerHead(db: Db, careerId: string) {
       status: careers.status,
       pos: careers.pos,
       dpos: careers.dpos,
+      serviceSeason: careers.serviceSeason,
     })
     .from(careers)
     .where(eq(careers.id, careerId));

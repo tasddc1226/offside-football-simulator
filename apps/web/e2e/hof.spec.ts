@@ -245,7 +245,12 @@ test('구단주 내 선수: 계정에 연결되지 않았으면 이 기기 기�
   await expect(page.locator('[data-my-player="0"]')).toContainText('기기선수');
   // 기록실에는 전체/내 선수 전환이 없다(탭은 명예의 전당·영구결번·팀 랭킹).
   await page.locator('[data-act="hof"]').click();
-  await expect(page.locator('[data-hof-tab]')).toHaveText(['명예의 전당', '영구결번', '팀 랭킹']);
+  await expect(page.locator('[data-hof-tab]')).toHaveText([
+    '명예의 전당',
+    '영구결번',
+    '팀 랭킹',
+    '업적 랭킹',
+  ]);
 });
 
 // 홈은 TOP 3만, '전체 보기'는 10명씩 페이지(T-10-101). 상세에서 돌아오면 보던 페이지로 돌아온다.
@@ -297,7 +302,7 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
   await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(3);
 });
 
-test('구단주 내 선수: 10명까지 보이고 모두 보기로 펼친다', async ({ page }) => {
+test('구단주 내 선수: 3명까지 보이고 모두 보기로 펼친다', async ({ page }) => {
   await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [], total: 0 })));
   await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   await page.addInitScript(() => {
@@ -329,7 +334,7 @@ test('구단주 내 선수: 10명까지 보이고 모두 보기로 펼친다', a
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-my-player]')).toHaveCount(10);
+  await expect(page.locator('[data-my-player]')).toHaveCount(3);
   await expect(page.locator('[data-my-player="0"]')).toContainText('기기선수1');
   await page.locator('[data-act="my-players-all"]').click();
   await expect(page.locator('[data-my-player]')).toHaveCount(12);

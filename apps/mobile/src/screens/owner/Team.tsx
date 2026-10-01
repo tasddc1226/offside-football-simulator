@@ -38,8 +38,8 @@ import { recordText, num } from '@offside/app-core/teamText';
 import {
   assignSlot,
   autoFillSlots,
+  matchHintOf,
   pickCandidates,
-  playHintOf,
   type PickSort,
 } from '@offside/app-core/teamOwner';
 import { anonName } from '@offside/game/pos-label';
@@ -48,23 +48,36 @@ import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines, TeamPitch } from '../../components/TeamPitch';
 import { toast } from '../../game/host';
 import { go } from '../../game/nav';
-import { appState } from '../../store';
+import { appState, prefs } from '../../store';
+import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { BackBar, Btn, Card, Screen, Topbar, Txt, scrollTo } from '../../ui';
+import { BarBelow } from '../../ui/Screen';
+import { TabBar, type TabItem } from '../../ui/TabBar';
+import type { TabIconName } from '../../ui/TabIcon';
 import { Field, SelectField, TextField } from '../settings/parts';
 import { LoginButtons } from './LoginButtons';
 import { TeamAchievements } from './TeamAchievements';
 import { TeamHistory } from './TeamHistory';
 import { TeamLive } from './TeamLive';
 import { TeamOpponents } from './TeamOpponents';
-import { Grid2, OvrBadge, Seg, SegBtn, TmTitle } from './TeamParts';
+import { Grid2, OvrBadge, Seg, SegBtn, Stats, TmTitle } from './TeamParts';
 import { TeamPicker } from './TeamPicker';
 import { TeamResult } from './TeamResult';
 
 const between = (v: string, min: number, max: number) =>
   v.trim().length >= min && v.trim().length <= max;
 
+// T-11-026 내 팀 하단 메뉴 — 편성 · 경기 · (가운데) 구단주 · 업적 · 기록. 경기 결과는 '경기' 탭 안이다.
+const NAV: [TeamView, string, TabIconName][] = [
+  ['team', '편성', 'lineup'],
+  ['opponents', '경기', 'season'],
+  ['achievements', '업적', 'trophy'],
+  ['history', '기록', 'career'],
+];
+
 export default function Team() {
+  const c = useColors();
   const { teamView } = useSnapshot(appState);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [needLogin, setNeedLogin] = useState(false);
@@ -86,6 +99,8 @@ export default function Team() {
   const [formation, setFormation] = useState<FormationId>('4-3-3');
   const [slots, setSlots] = useState<(string | null)[]>(Array(LINEUP_SIZE).fill(null));
   const [saving, setSaving] = useState(false);
+  /** 팀이 있으면 이름 칸은 '이름 바꾸기'를 눌렀을 때만 펼친다. */
+  const [renaming, setRenaming] = useState(false);
   const [picking, setPicking] = useState<number | null>(null);
   const [pickSort, setPickSort] = useState<PickSort>('fit');
 
@@ -137,7 +152,7 @@ export default function Team() {
     const p = id ? byId.get(id) : undefined;
     return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p };
   });
-  const playHint = playHintOf(team, dirty, matchesLeft);
+  const matchHint = matchHintOf(team, dirty, matchesLeft, season, current);
 
   function applyTeam(t: OwnerTeam | null, lm: string | null = lastManager) {
     setTeam(t);
@@ -203,6 +218,7 @@ export default function Team() {
     if (!r.ok) return toast(r.error.message);
     const created = !team;
     applyTeam(r.data.team);
+    setRenaming(false);
     toast(created ? '팀을 만들었어요' : '편성을 저장했어요');
   }
 
@@ -253,7 +269,7 @@ export default function Team() {
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 effect가, 이미 그 화면이면 open이 다시 불러온다.
   const LOAD = {
-    opponents: loadOpponents,
+    opponents: () => (matchHint ? undefined : loadOpponents()),
     achievements: () => loadAchievements(),
     history: loadHistory,
   };
@@ -263,34 +279,33 @@ export default function Team() {
   }
   useEffect(() => {
     if (status !== 'ready' || needLogin) return;
-    if (teamView === 'opponents') void loadOpponents();
+    if (teamView === 'opponents') void LOAD.opponents();
     else if (teamView === 'achievements') void loadAchievements();
     else if (teamView === 'history') void loadHistory();
     // 화면·상태가 바뀔 때만(시즌 등 다른 값 변화로는 다시 부르지 않는다).
   }, [teamView, status, needLogin]);
 
-  /** 이전 기록이 없을 때 '← 이전으로'가 갈 곳. */
-  function back() {
-    if (view === 'team' || view === 'achievements') appState.screen = 'owner';
-    else show('team');
+  /** 탭을 바꾸면 맨 위에서 시작하고, 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(게임 화면 탭과 같다). */
+  function switchView(v: TeamView) {
+    if (view === v) return scrollTo(0, prefs.motionOK);
+    show(v);
+    scrollTo(0);
   }
-
-  const tabs = (
-    <View style={{ marginBottom: 12 }}>
-      <Seg label="내 팀 메뉴">
-        <SegBtn selected={view === 'team'} onPress={() => show('team')} testID="team-tab">
-          <Txt style={{ fontWeight: '600' }}>팀</Txt>
-        </SegBtn>
-        <SegBtn
-          selected={view === 'achievements'}
-          onPress={() => open('achievements')}
-          testID="team-achievements"
-        >
-          <Txt style={{ fontWeight: '600' }}>시즌 업적</Txt>
-        </SegBtn>
-      </Seg>
-    </View>
-  );
+  const navOn = view === 'result' ? 'opponents' : view;
+  const navItems: TabItem[] = NAV.map(([k, label, icon]) => ({
+    key: icon,
+    label,
+    active: navOn === k,
+    onPress: () => switchView(k),
+    testID: `team-tab-${k}`,
+  }));
+  navItems.splice(2, 0, {
+    key: 'owner',
+    label: '구단주',
+    active: false,
+    onPress: () => go('owner'),
+    testID: 'team-back',
+  });
 
   let body;
   if (needLogin) {
@@ -304,188 +319,172 @@ export default function Team() {
         <LoginButtons block={false} />
       </Card>
     );
-  } else if (view === 'team' || view === 'achievements') {
+  } else if (view === 'achievements') {
+    body = <TeamAchievements ach={ach} status={achStatus} load={(s) => void loadAchievements(s)} />;
+  } else if (view === 'team') {
     body = (
       <>
-        {tabs}
-        {view === 'achievements' ? (
-          <TeamAchievements ach={ach} status={achStatus} load={(s) => void loadAchievements(s)} />
-        ) : (
-          <>
-            <Card gap={12}>
-              <TmTitle
-                eyebrow={`My team · ${seasonName}`}
-                title={team?.name ?? (editable ? '팀 만들기' : '팀 없음')}
-                right={<OvrBadge ovr={ovr} />}
+        <Card gap={12}>
+          <TmTitle
+            eyebrow={`My team · ${seasonName}`}
+            title={team?.name ?? (editable ? '팀 만들기' : '팀 없음')}
+            right={<OvrBadge ovr={ovr} />}
+          />
+          {team ? (
+            <Txt tone="muted" v="sm" style={{ marginTop: -8 }}>
+              {`${team.manager} 감독`}
+            </Txt>
+          ) : null}
+          {team ? (
+            <View testID="team-record">
+              <Stats
+                first={1.5}
+                items={[
+                  ['전적', recordText(team.record)],
+                  ['레이팅', num(team.rating)],
+                  editable ? ['오늘 경기', `${matchesLeft}/${perDay}`] : ['시즌', '지난 시즌'],
+                ]}
               />
-              {seasons.length > 1 ? (
-                <SelectField
-                  label="시즌"
-                  testID="team-season"
-                  value={season}
-                  options={seasons.map((o) => ({
-                    value: o.id,
-                    label: `${o.name}${o.id === current ? ' (지금)' : ''}`,
-                  }))}
-                  onChange={pickSeason}
-                  style={{ alignSelf: 'flex-start', minWidth: '45%', minHeight: 40 }}
+            </View>
+          ) : editable ? (
+            <Txt tone="muted">{`${seasonName}에 뛰고 은퇴한 내 선수로 11명을 꾸려요. 빈 자리는 유스 선수(OVR ${YOUTH_OVR})가 채워서, 한 명만 넣어도 경기할 수 있어요. 팀은 시즌마다 새로 꾸려요.`}</Txt>
+          ) : (
+            <Txt tone="muted">{`${seasonName}에는 팀을 꾸리지 않았어요.`}</Txt>
+          )}
+          {!editable && team ? (
+            <Txt tone="muted" v="sm" testID="team-readonly">
+              지난 시즌 팀이에요 — 보기만 할 수 있어요.
+            </Txt>
+          ) : null}
+          {editable && (!team || renaming) ? (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Field label="팀 이름" style={{ flex: 1 }}>
+                <TextField
+                  value={name}
+                  onChangeText={setName}
+                  maxLength={TEAM_NAME_MAX}
+                  placeholder={`${TEAM_NAME_MIN}~${TEAM_NAME_MAX}자`}
+                  testID="team-name"
+                  accessibilityLabel="팀 이름"
+                  spellCheck={false}
                 />
-              ) : null}
-              {team ? (
-                <Txt tone="muted" testID="team-record">
-                  {`${recordText(team.record)} · 레이팅 ${num(team.rating)}${editable ? ` · 오늘 남은 경기 ${matchesLeft}/${perDay}` : ''}`}
-                </Txt>
-              ) : editable ? (
-                <Txt tone="muted">{`${seasonName}에 뛰고 은퇴한 내 선수로 11명을 꾸려요. 빈 자리는 유스 선수(OVR ${YOUTH_OVR})가 채워서, 한 명만 넣어도 경기할 수 있어요. 팀은 시즌마다 새로 꾸려요.`}</Txt>
-              ) : (
-                <Txt tone="muted">{`${seasonName}에는 팀을 꾸리지 않았어요.`}</Txt>
-              )}
-              {!editable && team ? (
-                <Txt tone="muted" v="sm" testID="team-readonly">
-                  지난 시즌 팀이에요 — 보기만 할 수 있어요.
-                </Txt>
-              ) : null}
-              {editable ? (
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <Field label="팀 이름" style={{ flex: 1 }}>
-                    <TextField
-                      value={name}
-                      onChangeText={setName}
-                      maxLength={TEAM_NAME_MAX}
-                      placeholder={`${TEAM_NAME_MIN}~${TEAM_NAME_MAX}자`}
-                      testID="team-name"
-                      accessibilityLabel="팀 이름"
-                      spellCheck={false}
-                    />
-                  </Field>
-                  <Field label="감독 이름" style={{ flex: 1 }}>
-                    <TextField
-                      value={manager}
-                      onChangeText={setManager}
-                      maxLength={MANAGER_NAME_MAX}
-                      placeholder={`${MANAGER_NAME_MIN}~${MANAGER_NAME_MAX}자`}
-                      testID="team-manager"
-                      accessibilityLabel="감독 이름"
-                      spellCheck={false}
-                    />
-                  </Field>
-                </View>
-              ) : team ? (
-                <Txt tone="muted" v="sm">
-                  {'감독 '}
-                  <Txt v="sm" bold tone="muted">
-                    {team.manager}
-                  </Txt>
-                </Txt>
-              ) : null}
-              {editable || team ? (
-                <>
-                  <Seg label="포메이션">
-                    {FORMATION_IDS.map((f) => (
-                      <SegBtn
-                        key={f}
-                        center
-                        selected={formation === f}
-                        disabled={!editable}
-                        testID={`formation-${f}`}
-                        label={`포메이션 ${f}`}
-                        onPress={() => setFormation(f)}
-                      >
-                        <Txt
-                          style={{
-                            fontFamily: DISPLAY[700],
-                            fontSize: rem(1.0625),
-                            lineHeight: rem(1.0625) * 1.3,
-                          }}
-                        >
-                          {f}
-                        </Txt>
-                      </SegBtn>
-                    ))}
-                  </Seg>
-                  <TeamLines lines={lines} />
-                  {editable ? (
-                    <Txt tone="muted" v="sm">
-                      포메이션을 바꾸면 공격·중원·수비 무게가 옮겨 가요. 선수는 자리마다 그 자리
-                      능력치로 뛰어요.
-                    </Txt>
-                  ) : null}
-                </>
-              ) : null}
-            </Card>
-
-            {editable || team ? (
-              <TeamPitch
-                formation={formation}
-                cells={cells}
-                onpick={editable ? (i) => setPicking(i) : undefined}
+              </Field>
+              <Field label="감독 이름" style={{ flex: 1 }}>
+                <TextField
+                  value={manager}
+                  onChangeText={setManager}
+                  maxLength={MANAGER_NAME_MAX}
+                  placeholder={`${MANAGER_NAME_MIN}~${MANAGER_NAME_MAX}자`}
+                  testID="team-manager"
+                  accessibilityLabel="감독 이름"
+                  spellCheck={false}
+                />
+              </Field>
+            </View>
+          ) : null}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+            {seasons.length > 1 ? (
+              <SelectField
+                label="시즌"
+                testID="team-season"
+                value={season}
+                options={seasons.map((o) => ({
+                  value: o.id,
+                  label: `${o.name}${o.id === current ? ' (지금)' : ''}`,
+                }))}
+                onChange={pickSeason}
+                style={{ minHeight: 40 }}
               />
             ) : null}
+            {editable && team && !renaming ? (
+              <Btn sm onPress={() => setRenaming(true)} testID="team-rename">
+                이름 바꾸기
+              </Btn>
+            ) : null}
+            {team ? (
+              <Btn sm onPress={() => openRanking(team.id)} testID="team-profile">
+                팀 프로필 · 순위
+              </Btn>
+            ) : null}
+            <Btn sm onPress={() => openRanking()} testID="team-ranking">
+              라이브 랭킹
+            </Btn>
+          </View>
+        </Card>
 
+        {editable || team ? (
+          <>
             <Card gap={10}>
-              {editable ? (
-                <>
-                  {players.length === 0 ? (
-                    <Txt tone="muted">{`${seasonName}에 뛰고 은퇴한 선수가 아직 없어요. 이번 시즌에 커리어를 끝까지 뛰면 팀에 넣을 수 있어요.`}</Txt>
-                  ) : (
-                    <Txt
-                      tone="muted"
-                      v="sm"
-                    >{`선수 ${filled}명 · 유스 ${LINEUP_SIZE - filled}명. 자리를 누르면 선수를 바꿀 수 있어요.`}</Txt>
-                  )}
-                  <Grid2>
-                    <Btn
-                      block
-                      onPress={() => setSlots(autoFillSlots(slotCodes, players))}
-                      disabled={players.length === 0}
-                      testID="team-auto"
-                    >
-                      자동 배치
-                    </Btn>
-                    <Btn
-                      block
-                      kind="primary"
-                      onPress={() => void save()}
-                      disabled={saving || !nameOk || !dirty}
-                      testID="team-save"
-                    >
-                      {team ? '편성 저장' : '팀 만들기'}
-                    </Btn>
-                  </Grid2>
-                  <Btn
-                    block
-                    kind="accent"
-                    onPress={() => open('opponents')}
-                    disabled={!!playHint}
-                    testID="team-play"
+              <Seg label="포메이션">
+                {FORMATION_IDS.map((f) => (
+                  <SegBtn
+                    key={f}
+                    center
+                    selected={formation === f}
+                    disabled={!editable}
+                    testID={`formation-${f}`}
+                    label={`포메이션 ${f}`}
+                    onPress={() => setFormation(f)}
                   >
-                    경기하기
-                  </Btn>
-                  {playHint ? (
-                    <Txt tone="muted" v="sm">
-                      {playHint}
+                    <Txt
+                      style={{
+                        fontFamily: DISPLAY[700],
+                        fontSize: rem(1.0625),
+                        lineHeight: rem(1.0625) * 1.3,
+                      }}
+                    >
+                      {f}
                     </Txt>
-                  ) : null}
-                </>
+                  </SegBtn>
+                ))}
+              </Seg>
+              <TeamLines lines={lines} />
+              {editable ? (
+                <Txt tone="muted" v="sm">
+                  포메이션을 바꾸면 공격·중원·수비 무게가 옮겨 가요. 선수는 자리마다 그 자리
+                  능력치로 뛰어요.
+                </Txt>
               ) : null}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {team ? (
-                  <>
-                    <Btn sm onPress={() => openRanking(team.id)} testID="team-profile">
-                      팀 프로필 · 순위
-                    </Btn>
-                    <Btn sm onPress={() => open('history')} testID="team-history">
-                      최근 경기
-                    </Btn>
-                  </>
-                ) : null}
-                <Btn sm onPress={() => openRanking()} testID="team-ranking">
-                  라이브 랭킹
-                </Btn>
-              </View>
             </Card>
+            <TeamPitch
+              formation={formation}
+              cells={cells}
+              onpick={editable ? (i) => setPicking(i) : undefined}
+            />
           </>
-        )}
+        ) : null}
+
+        {editable ? (
+          <Card gap={10}>
+            {players.length === 0 ? (
+              <Txt tone="muted">{`${seasonName}에 뛰고 은퇴한 선수가 아직 없어요. 이번 시즌에 커리어를 끝까지 뛰면 팀에 넣을 수 있어요.`}</Txt>
+            ) : (
+              <Txt
+                tone="muted"
+                v="sm"
+              >{`선수 ${filled}명 · 유스 ${LINEUP_SIZE - filled}명. 자리를 누르면 선수를 바꿀 수 있어요.`}</Txt>
+            )}
+            <Grid2>
+              <Btn
+                block
+                onPress={() => setSlots(autoFillSlots(slotCodes, players))}
+                disabled={players.length === 0}
+                testID="team-auto"
+              >
+                자동 배치
+              </Btn>
+              <Btn
+                block
+                kind="primary"
+                onPress={() => void save()}
+                disabled={saving || !nameOk || !dirty}
+                testID="team-save"
+              >
+                {team ? (dirty ? '편성 저장' : '저장됨') : '팀 만들기'}
+              </Btn>
+            </Grid2>
+          </Card>
+        ) : null}
       </>
     );
   } else if (view === 'opponents') {
@@ -499,6 +498,8 @@ export default function Team() {
         playing={playing}
         reload={() => void loadOpponents()}
         challenge={(o) => void challenge(o)}
+        hint={matchHint}
+        toTeam={editable ? () => switchView('team') : undefined}
       />
     );
   } else if (view === 'result' && result) {
@@ -540,12 +541,23 @@ export default function Team() {
 
   return (
     <>
-      <Screen footer={<BackBar fallback={back} testID="team-back" />}>
-        <Topbar />
-        <LoadState status={status} failText="팀을 불러오지 못했어요." retry={() => void load()}>
-          {body}
-        </LoadState>
-      </Screen>
+      <BarBelow.Provider value={!needLogin}>
+        <View style={{ flex: 1, backgroundColor: c.bg }}>
+          <Screen
+            footer={
+              needLogin ? (
+                <BackBar fallback={() => (appState.screen = 'owner')} testID="team-back" />
+              ) : undefined
+            }
+          >
+            <Topbar />
+            <LoadState status={status} failText="팀을 불러오지 못했어요." retry={() => void load()}>
+              {body}
+            </LoadState>
+          </Screen>
+          {needLogin ? null : <TabBar label="내 팀 메뉴" items={navItems} />}
+        </View>
+      </BarBelow.Provider>
       <TeamPicker
         slot={picking === null ? null : (slotCodes[picking] ?? null)}
         slotCodes={slotCodes}

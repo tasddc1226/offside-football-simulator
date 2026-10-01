@@ -13,8 +13,8 @@ import { escXml } from '@offside/game/xml';
 export const OG_VERSION = 'v6';
 
 /** 선수 카드를 굽지 못했을 때 쓰는 레전드 등급별 정적 카드. */
-export const bandCardPath = (score: number) =>
-  `/og-career-${legendBand(score).id}-${OG_VERSION}.png`;
+export const bandCardPath = (score: number, dpos: string | null | undefined) =>
+  `/og-career-${legendBand(score, dpos).id}-${OG_VERSION}.png`;
 
 /** og-card.ts 카드 모양이 바뀌면 올린다 — 이미지 URL이 바뀌어 미리보기 캐시(카카오톡 등)가 새로 받는다. */
 const CARD_VERSION = 1;
@@ -27,7 +27,7 @@ export type ShareMeta = { title: string; description: string; image: string; url
 
 export function careerShareMeta(e: PublicHofEntry, origin: string): ShareMeta {
   const who = e.name ?? anonName(e.pos, e.number);
-  const band = legendBand(e.legendScore);
+  const band = legendBand(e.legendScore, e.dpos);
   const club = e.lastClub ? ` · 마지막 소속 ${e.lastClub}` : '';
   return {
     title: `${who} · ${band.name} (레전드 ${e.legendScore}점)`,

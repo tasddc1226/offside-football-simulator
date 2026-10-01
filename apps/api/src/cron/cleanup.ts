@@ -23,6 +23,9 @@ const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
   { table: 'sessions', column: 'expires_at', keepMs: 30 * DAY_MS },
   // T-11-003 앱 로그인 티켓은 10분이면 끝난다.
   { table: 'app_auth_tickets', column: 'expires_at', keepMs: DAY_MS },
+  // T-11-015 채팅 신고 사본은 90일, 끝난 채팅 정지는 바로.
+  { table: 'chat_reports', column: 'created_at', keepMs: 90 * DAY_MS },
+  { table: 'chat_mutes', column: 'until', keepMs: 0 },
 ];
 
 export type CleanupResult = Record<string, number>;

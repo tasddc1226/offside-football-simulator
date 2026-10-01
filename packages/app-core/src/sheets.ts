@@ -35,6 +35,8 @@ export type PhaseReport = {
   /** 새 리포트마다 바뀌어 카드 애니메이션을 처음부터 다시 건다. */
   key: number;
   year: number;
+  /** 끝난 구간(0 프리시즌·1 전반기·2 후반기). 시즌 탭 '최근 소식'이 리포트와 겹치는 이 구간 기록을 뺄 때 쓴다. */
+  ph: number;
   eyebrow: string;
   title: string;
   /** 수비수·골키퍼는 도움 대신 무실점을 보여 준다. */

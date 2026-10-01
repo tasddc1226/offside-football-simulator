@@ -165,7 +165,7 @@ async function seedOldLegend(page: Page) {
 
 test('소급으로 받은 결번이 이 기기의 내 선수 배지와 상세 세리머니에 보인다', async ({ page }) => {
   await seedOldLegend(page);
-  await page.route(`${API}/v1/retired-numbers`, (r) =>
+  await page.route(`${API}/v1/retired-numbers*`, (r) =>
     r.fulfill(
       ok({
         items: [
@@ -193,7 +193,7 @@ test('자리를 못 받은 옛 기록은 상세를 열 때 서버에 물어 명�
   page,
 }) => {
   await seedOldLegend(page);
-  await page.route(`${API}/v1/retired-numbers`, (r) => r.fulfill(ok({ items: [] })));
+  await page.route(`${API}/v1/retired-numbers*`, (r) => r.fulfill(ok({ items: [] })));
   let asked = 0;
   await page.route(`${API}/v1/careers/${OLD_ID}/retired-number`, (r) => {
     asked++;
@@ -288,7 +288,7 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
     pos: 'FW',
     ...o,
   });
-  await page.route(`${API}/v1/retired-numbers`, (r) =>
+  await page.route(`${API}/v1/retired-numbers*`, (r) =>
     r.fulfill(
       ok({
         items: [

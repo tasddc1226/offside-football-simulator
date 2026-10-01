@@ -46,6 +46,37 @@ function setup() {
   };
 }
 describe('privacy allowlists', () => {
+  it.each(['threads', 'instagram'])('preserves registered season1 tags from %s only', (source) => {
+    for (const content of [
+      's1_story_01',
+      's1_story_02',
+      's1_choice_01',
+      's1_choice_02',
+      's1_update_01',
+      's1_update_02',
+      's1_bio',
+      's1_ig_story_01',
+    ]) {
+      const query = `?utm_source=${source}&utm_medium=social&utm_campaign=season1_launch&utm_content=${content}`;
+      expect(
+        campaignQuery(`https://offside-lab.com/${query}&email=PRIVATE&gclid=PRIVATE#PRIVATE`),
+      ).toBe(query);
+    }
+    expect(
+      campaignQuery(
+        `https://offside-lab.com/?utm_campaign=season1_launch&utm_content=s1_unknown&player=PRIVATE`,
+      ),
+    ).toBe('?utm_campaign=season1_launch');
+  });
+  it.each(['launch', 'retirement_share'])(
+    'preserves existing campaign %s and content',
+    (campaign) => {
+      for (const content of ['career', 'retirement', 'feedback', 'update', 'day5']) {
+        const query = `?utm_source=threads&utm_medium=social&utm_campaign=${campaign}&utm_content=${content}`;
+        expect(campaignQuery(`https://offside-lab.com/${query}`)).toBe(query);
+      }
+    },
+  );
   it('drops arbitrary query, OAuth, campaign values, fragment and referral path', () => {
     expect(
       campaignQuery(

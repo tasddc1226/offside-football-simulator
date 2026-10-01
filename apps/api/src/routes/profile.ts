@@ -13,7 +13,7 @@ import {
   type ProfileSettings,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { ok, readBody, readJson, nowIso } from './shared.js';
+import { clientIp, ok, readBody, readJson, nowIso } from './shared.js';
 import { commentIdentity } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
 import { sha256Hex } from '../db/hash.js';
@@ -26,6 +26,7 @@ import {
   type ProfileRecord,
 } from '../db/repos/profiles.js';
 import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
+import { tryAttempt } from '../db/repos/authAttempts.js';
 import { revokeSession } from '../db/repos/sessions.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
@@ -40,6 +41,8 @@ import { maskEmail } from '../profile/mask-email.js';
 import { recoverProfile } from '../profile/recover.js';
 
 const LAST_SEEN_REFRESH_MS = 60 * 60 * 1000;
+/** 한 주소에서 1시간에 새로 만들 수 있는 프로필 수(학교·회사 공유 주소도 넉넉히 지난다). */
+const PROFILE_CREATE_LIMIT = 30;
 
 function buildProfileResponse(record: ProfileRecord, adminEmails: string | undefined): Profile {
   return {
@@ -79,6 +82,13 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     }
 
     if (!record) {
+      // 한 주소에서 새 프로필을 계속 만들어 내는 스크립트를 늦춘다.
+      if (!(await tryAttempt(db, 'PROFILE_CREATE', clientIp(c), PROFILE_CREATE_LIMIT, now))) {
+        throw new AppError({
+          code: 'RATE_LIMITED',
+          message: '새 프로필을 너무 자주 만들고 있어요. 잠시 뒤에 다시 시도해 주세요.',
+        });
+      }
       record = await createProfile(db);
       const { token } = await issueSession(db, { profileId: record.id, channel: 'web', now });
       c.header('Set-Cookie', sessionCookie(token));

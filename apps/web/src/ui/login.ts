@@ -9,8 +9,8 @@ import { openLocalLegend } from './legend.js';
 import { openBoard } from './nav.js';
 import { appState } from './state.svelte.js';
 
-/** 로그인을 마치고 돌아와 다시 열 곳. T-10-028 소식 글(댓글), T-10-029 내 은퇴 선수(공유). */
-type LoginReturn = { board: BoardKey; postId: string | null } | { career: string };
+/** 로그인을 마치고 돌아와 다시 열 곳. T-10-028 소식 글(댓글), T-10-029 내 은퇴 선수(공유), T-11-015 채팅. */
+type LoginReturn = { board: BoardKey; postId: string | null } | { career: string } | { chat: true };
 const LOGIN_RETURN_KEY = 'ft_board_return';
 /** null이면 기록을 지운다(설정에서 로그인할 때). */
 function rememberLoginReturn(to: LoginReturn | null) {
@@ -64,6 +64,7 @@ export function handleOAuthReturn() {
   const back = takeLoginReturn();
   if (back && google !== 'error') {
     if ('board' in back) return openBoard(back.board, back.postId);
+    if ('chat' in back) return void (appState.screen = 'chat');
     // 은퇴 화면에서 로그인했으면 그 선수의 상세로 돌아온다.
     const h = loadHOF().find((x) => x.id === back.career);
     if (h) return openLocalLegend(h);

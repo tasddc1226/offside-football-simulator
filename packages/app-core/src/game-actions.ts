@@ -188,6 +188,7 @@ export function createGameActions(host: GameHost) {
     appState.report = {
       key: Date.now(),
       year: s.year,
+      ph,
       eyebrow: `${s.year} · ${title}`,
       title: b ? `${range} · ${b.n}경기` : '시즌 준비를 마쳤습니다',
       back,

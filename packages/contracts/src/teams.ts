@@ -7,6 +7,7 @@ import {
 } from './careers.js';
 import { PUBLIC_NAME_CHARS } from './content-filter.js';
 import {
+  ACH_CATEGORIES,
   FORMATION_IDS,
   LINEUP_SIZE,
   MANAGER_NAME_MAX,
@@ -218,11 +219,19 @@ export const ClubAchievementSchema = z.strictObject({
   next: z.number().int().nullable().optional(),
   /** 단계 업적 숫자 뒤에 붙는 단위('골'·'경기' …). */
   unit: z.string().optional(),
+  /** T-11-028 지금까지 얻은 점수(단계 업적은 넘은 단계의 점수 합). */
+  points: count,
+  /** 다음에 달성하면 더 얻는 점수(끝까지 왔으면 0). */
+  worth: count,
 });
 export type ClubAchievement = z.infer<typeof ClubAchievementSchema>;
 
+export const AchCategorySchema = z.enum(ACH_CATEGORIES);
+
 export const ClubAchievementGroupSchema = z.strictObject({
   id: z.string(),
+  /** T-11-028 분류(선수·팀·구단주·감독). */
+  category: AchCategorySchema,
   /** 단계 표시('0단계' · 'TEAM'). */
   stage: z.string(),
   title: z.string(),
@@ -238,6 +247,11 @@ export const ClubAchievementsResponseSchema = z.strictObject({
   /** 이 시즌에 처음 올라와 은퇴한 내 선수 수. */
   players: z.number().int().min(0),
   groups: z.array(ClubAchievementGroupSchema),
+  /** T-11-028 이 시즌 업적 점수(등급은 contracts owner-team achGradeOf). */
+  score: count,
+  /** 업적 랭킹 순위(점수가 0이면 null)와 랭킹에 오른 구단주 수. */
+  rank: z.number().int().min(1).nullable(),
+  ranked: count,
 });
 export type ClubAchievementsResponse = z.infer<typeof ClubAchievementsResponseSchema>;
 
@@ -276,6 +290,35 @@ export const TeamRankResponseSchema = z.strictObject({
   items: z.array(TeamRankItemSchema),
 });
 export type TeamRankResponse = z.infer<typeof TeamRankResponseSchema>;
+
+// ───────── T-11-028 업적 랭킹(기록실) ─────────
+
+export const AchRankQuerySchema = z.strictObject({
+  season: TeamSeasonQuerySchema,
+  page: z.coerce.number().int().min(1).max(500).default(1),
+});
+
+/** 업적 랭킹 한 줄. 구단주는 공개 닉네임(없으면 null)과 그 시즌 팀 이름으로만 보인다. */
+export const AchRankItemSchema = z.strictObject({
+  rank: z.number().int().min(1),
+  nickname: z.string().nullable(),
+  team: z.strictObject({ id: TeamIdSchema, name: z.string() }).nullable(),
+  score: count,
+  /** 달성한 업적 수. */
+  done: count,
+  /** 그 시즌 은퇴 선수 수. */
+  players: count,
+});
+export type AchRankItem = z.infer<typeof AchRankItemSchema>;
+
+export const AchRankResponseSchema = z.strictObject({
+  season: TeamSeasonSchema,
+  seasons: z.array(TeamSeasonOptionSchema),
+  page: z.number().int().min(1),
+  total: count,
+  items: z.array(AchRankItemSchema),
+});
+export type AchRankResponse = z.infer<typeof AchRankResponseSchema>;
 
 /** 팀 히스토리 배지(경기·시즌 순위로 얻는다). */
 export const TeamBadgeSchema = z.strictObject({

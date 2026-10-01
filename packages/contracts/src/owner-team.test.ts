@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ACH_GRADES,
   DETAIL_GROUP,
   FORMATION_IDS,
   FORMATION_ROWS,
@@ -14,6 +15,7 @@ import {
   repeatFactor,
   slotRating,
   teamOvr,
+  achGradeOf,
 } from './owner-team.js';
 import { ManagerNameSchema, PutOwnerTeamBodySchema, TeamNameSchema } from './teams.js';
 
@@ -127,5 +129,17 @@ describe('T-10-092 감독 이름 · 팀 레이팅', () => {
     expect(ratingChange(1000, 1000, 1, 2).home).toBe(4);
     expect(ratingChange(1000, 1000, 1, 5).home).toBe(4);
     expect([0, 1, 2, 3].map(repeatFactor)).toEqual([1, 0.5, 0.25, 0.25]);
+  });
+});
+
+describe('T-11-028 시즌 업적 등급', () => {
+  it('점수가 등급 기준을 넘으면 그 등급, 다음 등급을 함께 준다', () => {
+    expect(achGradeOf(0)).toMatchObject({ grade: { id: 'rookie' }, next: { id: 'bronze' } });
+    expect(achGradeOf(199).grade.id).toBe('rookie');
+    expect(achGradeOf(200).grade.id).toBe('bronze');
+    expect(achGradeOf(1600)).toMatchObject({ grade: { id: 'platinum' }, next: { min: 2400 } });
+    expect(achGradeOf(99999)).toMatchObject({ grade: { id: 'legend' }, next: null });
+    // 기준은 오름차순이다.
+    expect(ACH_GRADES.every((g, i) => i === 0 || g.min > ACH_GRADES[i - 1]!.min)).toBe(true);
   });
 });

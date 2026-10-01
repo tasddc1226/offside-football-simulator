@@ -6,6 +6,7 @@ import './style.css';
 import App from './ui/App.svelte';
 import Sheet from './ui/Sheet.svelte';
 import Toast from './ui/Toast.svelte';
+import SheetChrome from './ui/SheetChrome.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
 import { keepStorage } from './ui/helpers.js';
 import { handleOAuthReturn } from './ui/login.js';
@@ -20,6 +21,7 @@ import { watchForUpdates } from './ui/update.svelte.js';
 import { watchNews } from './ui/news.svelte.js';
 import { warmGame } from './ui/nav.js';
 import { initHistory } from './ui/history.svelte.js';
+import { installSheetKey } from './ui/skin.svelte.js';
 
 installClickSound();
 // 자동 플레이 탐지(관찰 전용): 시즌마다 조작 횟수만 센다.
@@ -35,6 +37,8 @@ initializeAnalytics(appState.screen, appState.G && !appState.G.retired ? appStat
 syncBalance();
 // T-10-114 모바일 뒤로 가기(iOS 가장자리 밀기·Android 뒤로)가 앱 안의 이전 화면으로 가게 한다.
 initHistory();
+// T-11-022 업무 모드 단축키.
+installSheetKey();
 // T-10-121 iOS Safari·Chrome은 문서에 touchstart 리스너가 없으면 터치로 :active(누름 효과)를 걸지 않는다.
 document.addEventListener('touchstart', () => {}, { passive: true });
 
@@ -51,6 +55,8 @@ modalEl.innerHTML = '';
 mount(Sheet, { target: modalEl });
 
 mount(Toast, { target: document.getElementById('toast')! });
+// T-11-022 업무 모드 틀(꺼져 있으면 아무것도 그리지 않는다).
+mount(SheetChrome, { target: document.body.appendChild(document.createElement('div')) });
 
 // T-10-010: 클럽 커스텀을 계정과 맞춘다. 세션이 있었던 기기만 — 첫 방문자는 로컬 모드 그대로다(T-10-037).
 if (hasSessionHint())

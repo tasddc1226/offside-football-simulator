@@ -6,7 +6,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { careers } from '../db/schema.js';
-import { inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { retireValue, valueFor } from '@offside/contracts/market-value';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
@@ -308,6 +308,10 @@ describe('공개 명예의 전당 /v1/hof', () => {
     const season = await read('season=1');
     expect(season.total).toBe(1);
     expect(season.entries.map((e) => e.id)).toEqual([s1]);
+    // T-11-029 season=0은 프리시즌 — 개막 뒤에 은퇴한 프리시즌 선수는 여기 오르고 시즌 1 선수는 빠진다.
+    const preseason = await read('season=0');
+    expect(preseason.total).toBe(1);
+    expect(preseason.entries.map((e) => e.id)).toEqual([pre]);
     expect((await createApp().request('/v1/hof?season=9', {}, ctx.env)).status).toBe(400);
     // 시즌 번호는 처음 올라온 시각으로 한 번 정해져 컬럼에 남는다(시즌 기간을 고쳐도 소급하지 않는다).
     const stamped = await ctx.db
@@ -355,6 +359,37 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect(ballon.total).toBe(2);
     expect(ballon.entries.map((e) => e.ballon)).toEqual([2, 1]);
     expect((await createApp().request('/v1/hof?sort=name', {}, ctx.env)).status).toBe(400);
+  });
+
+  it('T-11-018: pos로 그 포지션 선수만 순위를 매긴다(검색 순위도 포지션 안에서)', async () => {
+    const rows = [
+      { id: '0d000000-0000-4000-8000-000000000001', legendScore: 900, pos: 'FW' },
+      { id: '0d000000-0000-4000-8000-000000000002', legendScore: 500, pos: 'DF' },
+      { id: '0d000000-0000-4000-8000-000000000003', legendScore: 400, pos: 'DF' },
+      { id: '0d000000-0000-4000-8000-000000000004', legendScore: 300, pos: 'GK' },
+    ] as const;
+    for (const { id, legendScore, pos } of rows) {
+      await putSeasonsFor(ctx.env, cookie, id, summary);
+      await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, {
+        ...summary,
+        legendScore,
+        publicName: `선수${legendScore}`,
+      });
+      await ctx.db.update(careers).set({ pos }).where(eq(careers.id, id));
+    }
+    const read = async (q: string) =>
+      successEnvelope(HofListResponseSchema).parse(
+        await (await createApp().request(`/v1/hof?${q}`, {}, ctx.env)).json(),
+      ).data;
+    const df = await read('pos=DF');
+    expect(df.total).toBe(2);
+    expect(df.entries.map((e) => e.legendScore)).toEqual([500, 400]);
+    expect((await read('pos=GK')).entries.map((e) => e.pos)).toEqual(['GK']);
+    expect((await read('pos=MF')).total).toBe(0);
+    expect((await read('')).total).toBe(4);
+    // 검색 결과의 순위도 고른 포지션 안에서 센다.
+    expect((await read('pos=DF&q=선수400')).entries.map((e) => e.rank)).toEqual([2]);
+    expect((await createApp().request('/v1/hof?pos=ST', {}, ctx.env)).status).toBe(400);
   });
 
   it('T-10-101: q로 공개 이름을 찾고, 찾은 선수에 검색 전 순위를 붙인다', async () => {

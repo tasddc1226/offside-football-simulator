@@ -284,6 +284,7 @@ export function TabOpt({
   onPress,
   testID,
   tight,
+  fit,
   children,
 }: {
   title: string;
@@ -292,19 +293,31 @@ export function TabOpt({
   testID: string;
   /** 좌우 여백을 줄인다(칸이 좁은 탭). */
   tight?: boolean;
+  /** T-11-028 글자를 작게(웹 .hof-tabs .opt 0.8125rem) 한 줄에 맞춘다 — 칸보다 길면 글자가 줄어든다. */
+  fit?: boolean;
   children?: ReactNode;
 }) {
   return (
     <View testID={testID}>
       <Opt
-        title={title}
+        {...(fit ? { accessibilityLabel: title } : { title })}
         selected={selected}
         onPress={onPress}
         style={{
           alignItems: 'center',
-          ...(tight ? { paddingHorizontal: 4, paddingVertical: 8 } : null),
+          ...(tight || fit ? { paddingHorizontal: 4, paddingVertical: 8 } : null),
         }}
       >
+        {fit ? (
+          <Txt
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            style={{ fontSize: rem(0.8125), fontWeight: '600' }}
+          >
+            {title}
+          </Txt>
+        ) : null}
         {children}
       </Opt>
     </View>

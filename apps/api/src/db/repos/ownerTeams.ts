@@ -36,6 +36,7 @@ import {
   teamMatches,
 } from '../schema.js';
 import { accountLinkedSql } from './profiles.js';
+import type { AchievementSeason } from '../../team/achievements.js';
 import type { LineupCareer, PlayerRef } from '../../team/sim.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀)·팀 경기·라이브 랭킹.
@@ -121,6 +122,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
         eq(careers.profileId, profileId),
         eq(careers.status, 'retired'),
         isNotNull(careers.peak),
+        eq(careers.hidden, 0),
         eq(careers.serviceSeason, season),
       ),
     )
@@ -179,6 +181,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       number: careers.shirtNumber,
       publicName: careers.publicName,
       serviceSeason: careers.serviceSeason,
+      hidden: careers.hidden,
     })
     .from(careers)
     .where(inArray(careers.id, ids));
@@ -190,7 +193,7 @@ export function eligibleMap(rows: readonly CareerLite[], ownerId: string, season
   const map = new Map<string, LineupCareer>();
   for (const r of rows) {
     if (r.profileId !== ownerId || r.status !== 'retired' || r.peak === null) continue;
-    if (r.serviceSeason !== season) continue;
+    if (r.serviceSeason !== season || r.hidden) continue;
     map.set(r.id, toLineupCareer(r));
   }
   return map;
@@ -495,6 +498,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     eq(careers.status, 'retired'),
     isNotNull(careers.peak),
     eq(careers.serviceSeason, season),
+    // T-11-028 업적 점수가 공개 랭킹이 되므로 공개 순위에서 뺀 기록(자동 플레이)은 세지 않는다.
+    eq(careers.hidden, 0),
   );
   const [rows, seasons] = await db.batch([
     db
@@ -515,6 +520,9 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         goals: careers.goals,
         assists: careers.assists,
         legendScore: careers.legendScore,
+        nation: careers.nation,
+        retireAge: careers.retireAge,
+        retiredAt: careers.retiredAt,
         rn: retiredNumbers.careerId,
       })
       .from(careers)
@@ -526,16 +534,26 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         careerId: careerSeasons.careerId,
         league: careerSeasons.league,
         honorsJson: careerSeasons.honorsJson,
+        club: careerSeasons.club,
+        clubId: careerSeasons.clubId,
+        goals: careerSeasons.goals,
+        cs: careerSeasons.cs,
       })
       .from(careerSeasons)
       .where(
         inArray(careerSeasons.careerId, db.select({ id: careers.id }).from(careers).where(mine)),
       ),
   ]);
-  const byCareer = new Map<string, { league: string; honors: string[] }[]>();
+  const byCareer = new Map<string, AchievementSeason[]>();
   for (const r of seasons) {
     const list = byCareer.get(r.careerId) ?? [];
-    list.push({ league: r.league, honors: honorsOf(r.honorsJson) });
+    list.push({
+      league: r.league,
+      honors: honorsOf(r.honorsJson),
+      club: r.clubId ?? r.club,
+      goals: r.goals,
+      cs: r.cs,
+    });
     byCareer.set(r.careerId, list);
   }
   return rows.map((r) => ({
@@ -553,6 +571,9 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     assists: r.assists ?? 0,
     legendScore: r.legendScore ?? 0,
     retiredNumber: r.rn !== null,
+    nation: r.nation,
+    retireAge: r.retireAge ?? 0,
+    retiredAt: r.retiredAt,
     seasons: byCareer.get(r.id) ?? [],
   }));
 }

@@ -5,6 +5,7 @@
 import { loadKey, saveKey } from '@offside/game/season';
 import { createBgm, type Bgm, type BgmTrack } from './bgmEngine.js';
 import { appState, type Screen } from './state.svelte.js';
+import { sheetOn } from './skin.svelte.js';
 
 const KEY = 'ft_bgm';
 const VOLUME_KEY = 'ft_bgm_volume';
@@ -31,13 +32,15 @@ export const bgm = $state({
 
 let engine: Bgm | null = null;
 
-/** 지금 틀 곡. 꺼져 있거나 탭이 가려졌거나 음악 없는 화면이면 null. */
-const wanted = () => (bgm.on && !document.hidden && TRACK_OF[appState.screen]) || null;
+/** 지금 틀 곡. 꺼져 있거나 탭이 가려졌거나 음악 없는 화면이거나 업무 모드(T-11-022)면 null. */
+const wanted = () =>
+  (bgm.on && !document.hidden && !sheetOn() && TRACK_OF[appState.screen]) || null;
 
 function sync() {
   const track = wanted();
   if (track) (engine ??= createBgm()).play(track, bgm.volume / 100);
-  else engine?.pause();
+  // 업무 모드로 바뀌면 소리가 남지 않게 바로 끊는다.
+  else engine?.pause(sheetOn());
 }
 
 export function setBgm(on: boolean) {
@@ -56,7 +59,7 @@ export function setBgmVolume(volume: number) {
 export function watchBgm() {
   $effect.root(() => {
     $effect(() => {
-      void [bgm.on, appState.screen];
+      void [bgm.on, appState.screen, sheetOn()];
       sync();
     });
   });

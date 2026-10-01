@@ -390,17 +390,17 @@ export const TITLES: TitleDef[] = [
   n('fame100', '국민 스타', 'fame', 2, '인기 100', (s) => Math.floor(s.fame), 100),
   n('fame300', '슈퍼스타', 'fame', 3, '인기 300', (s) => Math.floor(s.fame), 300),
   n('fame1000', '월드 아이콘', 'fame', 4, '인기 1000', (s) => Math.floor(s.fame), 1000),
-  // 은퇴 — 은퇴할 때 레전드 점수 구간 하나만
-  ...LEGEND_BANDS.map(([id, name, rarity, min], i) =>
+  // 은퇴 — 은퇴할 때 레전드 점수 구간 하나만. T-11-018 기준은 시즌 1 선수 것이고, 프리시즌 선수는 옛 기준을 쓴다.
+  ...LEGEND_BANDS.map(([id, name, rarity, min, preMin], i) =>
     t(
       id,
       name,
       'legend',
       rarity,
       i === LEGEND_BANDS.length - 1
-        ? '은퇴(레전드 점수 305 미만)'
-        : `은퇴 시 레전드 점수 ${min} 이상`,
-      (_s, x) => x.score != null && legendBand(x.score).id === id,
+        ? `은퇴(레전드 점수 ${LEGEND_BANDS[i - 1]![3]} 미만)`
+        : `은퇴 시 레전드 점수 ${min} 이상${preMin === min ? '' : `(프리시즌 선수 ${preMin})`}`,
+      (s, x) => x.score != null && legendBand(x.score, s.dpos).id === id,
     ),
   ),
 ];
