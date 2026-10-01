@@ -1,5 +1,5 @@
 import { FirstsResponseSchema, successEnvelope } from '@offside/contracts';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { ensureFirstsBackfilled } from '../db/repos/firsts.js';
 import { firstsCatalog } from '../firsts.js';
@@ -41,8 +41,8 @@ const summary = {
   ballon: 5,
   lastClub: '테스트 FC',
 };
-const read = async (ctx: TestD1) => {
-  const res = await createApp().request('/v1/firsts', {}, ctx.env);
+const read = async (ctx: TestD1, query = '') => {
+  const res = await createApp().request(`/v1/firsts${query}`, {}, ctx.env);
   expect(res.status).toBe(200);
   expect(res.headers.get('Cache-Control')).toContain('public');
   return successEnvelope(FirstsResponseSchema).parse(await res.json()).data;
@@ -61,6 +61,7 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     cookie = (await issueCookie(ctx)).cookie;
   });
   afterEach(async () => {
+    vi.useRealTimers();
     await ctx.dispose();
   });
 
@@ -189,5 +190,53 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
       value: 33,
       holder: { careerId: C },
     });
+  });
+
+  it('T-11-029: 시즌마다 따로 겨룬다 — 시즌 1 선수도 같은 기록의 최초가 되고, 서버 기록도 시즌별이다', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z')); // 프리시즌
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 }));
+    // 개막 전 기본 목록은 프리시즌.
+    expect(holderOf(await read(ctx), 'sgoals30')?.careerId).toBe(A);
+
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
+    await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 35 }));
+    // 기본 목록은 지금 시즌 — 프리시즌의 A가 아니라 시즌 1의 B가 최초다.
+    const now = await read(ctx);
+    expect(now.season).toBe(1);
+    expect(holderOf(now, 'sgoals30')?.careerId).toBe(B);
+    expect(now.records.find((r) => r.id === 'sgoals')).toMatchObject({
+      value: 35,
+      holder: { careerId: B },
+    });
+    const pre = await read(ctx, '?season=0');
+    expect(pre.season).toBe(0);
+    expect(holderOf(pre, 'sgoals30')?.careerId).toBe(A);
+    expect(pre.records.find((r) => r.id === 'sgoals')).toMatchObject({
+      value: 32,
+      holder: { careerId: A },
+    });
+    expect(achieved(await read(ctx, '?season=1'))).toBe(achieved(now));
+
+    // 프리시즌 선수의 새 기록은 프리시즌 안에서만 겨룬다.
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2031`, seasonBody({ goals: 50 }));
+    expect((await read(ctx, '?season=0')).records.find((r) => r.id === 'sgoals')?.value).toBe(50);
+    expect((await read(ctx, '?season=1')).records.find((r) => r.id === 'sgoals')?.value).toBe(35);
+    expect((await createApp().request('/v1/firsts?season=9', {}, ctx.env)).status).toBe(400);
+  });
+
+  it('T-11-029: 전체 재계산도 커리어를 자기 시즌 기록으로만 판정한다', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z'));
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 }));
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z'));
+    await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 35 }));
+    const db = ctx.env.DB;
+    await db.prepare('DELETE FROM server_firsts').run();
+    await db.prepare('DELETE FROM server_records').run();
+    await db.prepare("DELETE FROM app_meta WHERE key LIKE 'server_firsts_%'").run();
+    // 첫 조회가 한 조각(전체)을 판정한다.
+    expect(holderOf(await read(ctx, '?season=1'), 'sgoals30')?.careerId).toBe(B);
+    expect(holderOf(await read(ctx, '?season=0'), 'sgoals30')?.careerId).toBe(A);
   });
 });

@@ -1,7 +1,8 @@
 // 내 팀 화면들이 함께 쓰는 작은 부품(웹 team/Team.svelte 의 .seg · .opt · .tm-title · .tm-actions · .tm-ovr-badge).
 import { useState, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { alpha } from '../../theme/colors';
+import type { AchGrade } from '@offside/contracts/owner-team';
+import { alpha, mix } from '../../theme/colors';
 import { useColors, useIsDark } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Press, Txt } from '../../ui';
@@ -158,6 +159,100 @@ export function Grid2({
           {ch}
         </View>
       ))}
+    </View>
+  );
+}
+
+/** 숫자 칸 줄(웹 .owner-stats · .tm-stats). first는 첫 칸 너비 비율(전적처럼 긴 값). */
+export function Stats({
+  items,
+  small,
+  first = 1,
+}: {
+  items: [string, string][];
+  small?: boolean;
+  first?: number;
+}) {
+  const c = useColors();
+  return (
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      {items.map(([k, v], i) => (
+        <View
+          key={k}
+          accessible
+          accessibilityLabel={`${k} ${v}`}
+          style={{
+            flex: i === 0 ? first : 1,
+            minWidth: 0,
+            gap: 2,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 12,
+            backgroundColor: c.surface2,
+          }}
+        >
+          <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+            {k}
+          </Txt>
+          <Txt
+            style={{
+              fontFamily: DISPLAY[700],
+              fontSize: rem(small ? 1.0625 : 1.25),
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {v}
+          </Txt>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** T-11-028 등급 색(웹 style.css .ach-grade[data-grade] --g). 모르는 등급은 회색. */
+const GRADE_COLOR: Record<string, string> = {
+  bronze: '#c27a3e',
+  silver: '#9aa6b1',
+  gold: '#d9a21b',
+  platinum: '#2bb3a3',
+  diamond: '#4c7dff',
+  legend: '#c04cff',
+};
+
+/** 시즌 업적 등급 배지(웹 AchGradeBadge.svelte) — 등급 색을 옅게 깔고 글자는 잉크와 섞어 밝기 모드 모두에서 읽히게. 요약·업적 랭킹 공용. */
+export function AchGradeBadge({ grade, large }: { grade: AchGrade; large?: boolean }) {
+  const c = useColors();
+  const g = GRADE_COLOR[grade.id] ?? '#8a96a3';
+  const fs = rem(large ? 0.875 : 0.6875);
+  return (
+    <View
+      testID={`ach-grade-${grade.id}`}
+      accessible
+      accessibilityLabel={`등급 ${grade.name}`}
+      style={{
+        flexShrink: 0,
+        alignSelf: 'center',
+        // 웹은 안쪽 1px 테두리(inset)라 칸이 늘지 않는다 — 여백에서 1px씩 뺀다.
+        paddingVertical: (large ? 4 : 2) - 1,
+        paddingHorizontal: (large ? 12 : 8) - 1,
+        borderRadius: 99,
+        borderWidth: 1,
+        borderColor: alpha(g, 0.45),
+        backgroundColor: alpha(g, 0.18),
+      }}
+    >
+      <Txt
+        numberOfLines={1}
+        style={{
+          fontSize: fs,
+          lineHeight: fs * 1.4,
+          fontWeight: '800',
+          letterSpacing: 0.02 * fs,
+          color: mix(g, c.ink, 0.65),
+        }}
+      >
+        {grade.name}
+      </Txt>
     </View>
   );
 }

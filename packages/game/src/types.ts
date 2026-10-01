@@ -329,6 +329,11 @@ export interface HofEntry {
   title?: string | undefined;
   /** T-10-076. 서버의 영구결번 심사 결과(null = 자격 없음). 업로드 응답을 받기 전·옛 항목에는 없다. */
   rn?: RetiredNumberResult | null;
+  /**
+   * T-11-029. 서버가 정한 선수의 서비스 시즌(0 = 프리시즌) — 은퇴 업로드 응답으로 받아 남긴다. 업로드 전이거나 옛
+   * 항목에는 없다(없으면 프리시즌으로 센다 — mySeason.ts).
+   */
+  season?: number | undefined;
 }
 
 /** 은퇴 리포트(레전드 점수 구성·시즌별 기록·수상·여정)가 읽는 필드. 진행 중인 GameState와 저장된

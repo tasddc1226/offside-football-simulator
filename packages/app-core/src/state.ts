@@ -16,8 +16,8 @@ import type { GameState, HofEntry, LegendSource } from '@offside/game/types';
 import type { Candidate } from '@offside/game/candidates';
 import type { PhaseReport } from './sheets.js';
 
-/** 기록실(하단 메뉴 'hof')의 탭. */
-export type HofTab = 'legends' | 'rn' | 'teams';
+/** 기록실(하단 메뉴 'hof')의 탭. T-11-028 'ach' = 업적 랭킹. */
+export type HofTab = 'legends' | 'rn' | 'teams' | 'ach';
 /**
  * 기록실 화면 상태. season: 서비스 시즌 순위(T-10-090). null이면 전체 명예의 전당. team: 라이브 랭킹에서 연 팀
  * 프로필(T-10-092).

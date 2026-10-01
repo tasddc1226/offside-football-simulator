@@ -129,7 +129,7 @@ export const { onOwnerConflict, adoptCareer, keepOnDevice } = createOwnerConflic
 
 Outbox.configureOutbox({
   onConflict: onOwnerConflict,
-  onRetiredNumber: (e) => recordRn(e.careerId, e.result),
+  onRetiredNumber: (e) => recordRn(e.careerId, e.result, e.serviceSeason),
 });
 
 /** 프로필을 다시 받아 캐시에 둔다. 실패는 'error'(서버에 연결하지 못함). 토큰이 무효(폐기·만료·탈퇴)면 버리고

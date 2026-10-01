@@ -3,13 +3,24 @@
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import { ATTR_KEYS } from '@offside/game/data';
 import {
+  ACH_CATEGORIES,
+  ACH_CATEGORY_NAME,
   LINEUP_SIZE,
   YOUTH_OVR,
+  achGradeOf,
   slotFit,
   slotRating,
+  type AchCategory,
+  type AchGrade,
   type DetailPos,
 } from '@offside/contracts/owner-team';
-import type { ClubAchievement, OwnerTeam, TeamMatch, TeamPlayer } from './api/team.js';
+import type {
+  ClubAchievement,
+  ClubAchievementGroup,
+  OwnerTeam,
+  TeamMatch,
+  TeamPlayer,
+} from './api/team.js';
 import { num } from './teamText.js';
 
 /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
@@ -130,6 +141,107 @@ export const achState = (i: ClubAchievement): string =>
       : i.done
         ? '달성 완료'
         : '미달성';
+
+/** 열린 단계 전체의 달성 수 · 업적 수(잠긴 단계는 빼고 센다). */
+export function achTotal(groups: readonly ClubAchievementGroup[]): { done: number; total: number } {
+  const items = groups.filter((g) => !g.locked).flatMap((g) => g.items);
+  return { done: achDone(items), total: items.length };
+}
+
+export type AchNear = { group: string; item: ClubAchievement; ratio: number };
+// T-11-028 같은 진행률이면 얻는 점수가 큰 것을 먼저 보인다.
+/** 다음 목표에 가장 가까운 업적 n개 — 숫자로 진행을 셀 수 있는 것만(단계 업적은 다음 단계까지, 최고 단계는 뺀다). */
+export function achNear(groups: readonly ClubAchievementGroup[], n = 3): AchNear[] {
+  return groups
+    .filter((g) => !g.locked)
+    .flatMap((g) =>
+      g.items.flatMap((item) => {
+        const goal = item.level !== undefined ? item.next : item.done ? null : item.max;
+        if (goal == null || item.cur === undefined) return [];
+        return [{ group: g.title, item, ratio: Math.min(1, item.cur / goal) }];
+      }),
+    )
+    .sort((a, b) => b.ratio - a.ratio || b.item.worth - a.item.worth)
+    .slice(0, n);
+}
+
+/** 업적 한 줄의 점수 표시 — 얻은 점수가 있으면 '+30점', 아직 없으면 얻을 수 있는 점수 '50점'. */
+export const achPoints = (i: ClubAchievement): string =>
+  i.points > 0 ? `+${num(i.points)}점` : `${num(i.worth)}점`;
+
+// T-11-028 업적 분류(선수·팀·구단주·감독)와 시즌 등급.
+export type AchSection = {
+  id: AchCategory;
+  name: string;
+  groups: ClubAchievementGroup[];
+  score: number;
+  done: number;
+  total: number;
+  /** 아직 열리지 않은 분류(감독 — 감독 시뮬레이션이 열리면 공개). */
+  locked: boolean;
+};
+
+/** 분류별 묶음(선수 → 팀 → 구단주 → 감독). 지난 시즌에 팀이 없었으면 팀 분류는 빠진다. */
+export function achSections(groups: readonly ClubAchievementGroup[]): AchSection[] {
+  return ACH_CATEGORIES.flatMap((id) => {
+    const gs = groups.filter((g) => g.category === id);
+    if (!gs.length) return [];
+    const items = gs.filter((g) => !g.locked).flatMap((g) => g.items);
+    return [
+      {
+        id,
+        name: ACH_CATEGORY_NAME[id],
+        groups: gs,
+        score: items.reduce((t, i) => t + i.points, 0),
+        done: achDone(items),
+        total: items.length,
+        locked: gs.every((g) => g.locked),
+      },
+    ];
+  });
+}
+
+export type AchGradeView = {
+  grade: AchGrade;
+  next: AchGrade | null;
+  /** 다음 등급까지 남은 점수(맨 위면 0). */
+  toNext: number;
+  /** 지금 등급 안에서 다음 등급까지 온 비율(0–1, 맨 위면 1). */
+  ratio: number;
+};
+export function achGradeView(score: number): AchGradeView {
+  const { grade, next } = achGradeOf(score);
+  if (!next) return { grade, next, toNext: 0, ratio: 1 };
+  return {
+    grade,
+    next,
+    toNext: next.min - score,
+    ratio: (score - grade.min) / (next.min - grade.min),
+  };
+}
+
+/** 업적 랭킹 순위 표시('12위 · 297명 중' / 점수가 없으면 안내). */
+export const achRankText = (rank: number | null, ranked: number): string =>
+  rank === null ? '업적을 하나 달성하면 랭킹에 올라요' : `${num(rank)}위 · ${num(ranked)}명 중`;
+
+/** 처음 펼쳐 둘 단계 — 아직 다 채우지 못한 첫 단계. */
+export const achOpenGroup = (groups: readonly ClubAchievementGroup[]): string | null =>
+  groups.find((g) => !g.locked && achDone(g.items) < g.items.length)?.id ?? null;
+
+/** 팀 화면 '경기' 탭에서 경기를 막는 이유 — 휴식기 · 지난 시즌 · 그 밖은 playHintOf. */
+const REST_HINT = '시즌 사이 휴식기예요. 다음 시즌이 열리면 경기할 수 있어요.';
+export function matchHintOf(
+  team: OwnerTeam | null,
+  dirty: boolean,
+  matchesLeft: number,
+  season: number,
+  current: number | null,
+): string | null {
+  if (current === null) return REST_HINT;
+  if (season !== current)
+    return '지난 시즌 팀은 보기만 할 수 있어요. 지금 시즌을 고르면 경기할 수 있어요.';
+  return playHintOf(team, dirty, matchesLeft);
+}
 
 // ───────── 경기 결과 ─────────
 export type Outcome = '승' | '무' | '패';

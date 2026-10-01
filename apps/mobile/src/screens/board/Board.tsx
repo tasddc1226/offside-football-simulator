@@ -142,7 +142,9 @@ export default function Board() {
   const [liking, setLiking] = useState(false);
   /** 관리자 편집기. id가 없으면 새 글. */
   const [editing, setEditing] = useState<Draft | null>(null);
-  const view = editing ? 'edit' : (detail?.post.id ?? 'list');
+  /** 홈 등에서 글을 바로 열며 들어온 동안 — 목록을 그리지 않는다(목록이 비쳤다 글로 한 번 더 넘어가지 않게). */
+  const [entering, setEntering] = useState(!!appState.boardOpenId);
+  const view = editing ? 'edit' : (detail?.post.id ?? (entering ? boardOpenId : null) ?? 'list');
   const [commentText, setCommentText] = useState('');
   const [busy, setBusy] = useState(false);
   /** 신고·차단 패널을 펼친 댓글. */
@@ -179,6 +181,7 @@ export default function Board() {
     appState.boardOpenId = loadingId.current = id;
     const r = await api.fetchPost(id);
     if (loadingId.current === id) loadingId.current = null;
+    setEntering(false);
     if (appState.boardOpenId !== id) return; // 기다리는 사이 다른 글·목록으로 옮겼다.
     if (!r.ok) {
       appState.boardOpenId = null;
@@ -363,7 +366,7 @@ export default function Board() {
               소식
             </Txt>
           </View>
-          {!detail && !editing ? (
+          {!detail && !editing && !entering ? (
             <Seg cols={2} label="게시판" style={{ marginBottom: 6 }}>
               {BOARD_KEYS.map((k) => (
                 <TabOpt
@@ -679,13 +682,13 @@ export default function Board() {
             </>
           ) : (
             <>
-              {admin ? (
+              {admin && !entering ? (
                 <Btn kind="accent" testID="new-post" onPress={() => startEdit()}>
                   새 글 쓰기
                 </Btn>
               ) : null}
               <LoadState
-                status={status}
+                status={entering ? 'loading' : status}
                 failText="소식을 불러오지 못했어요."
                 retry={() => void load()}
               >

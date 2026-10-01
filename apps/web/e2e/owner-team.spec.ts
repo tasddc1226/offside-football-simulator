@@ -262,8 +262,11 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="team"]').click();
   await expect(page.locator('h1')).toHaveText('팀 만들기');
-  // 저장 전에는 경기할 수 없다.
-  await expect(page.locator('[data-act="team-play"]')).toBeDisabled();
+  // 저장 전에는 경기할 수 없다 — 하단 '경기' 탭은 상대 대신 이유를 보인다.
+  await page.locator('[data-team-tab="opponents"]').click();
+  await expect(page.locator('[data-match-hint]')).toContainText('저장');
+  await expect(page.locator('[data-opponent]')).toHaveCount(0);
+  await page.locator('[data-team-tab="team"]').click();
 
   // 구단주 화면을 오가도 같은 요청을 다시 하지 않는다(메모).
   await page.locator('[data-act="team-back"]').click();
@@ -306,9 +309,9 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(page.locator('#toast')).toContainText('팀을 만들었어요');
   await expect(page.locator('h1')).toHaveText('우리 동네 FC');
   expect(body).toMatchObject({ name: '우리 동네 FC', manager: '홍감독', formation: '4-3-3' });
-  await expect(page.locator('[data-team-record]')).toContainText('레이팅 1,000');
+  await expect(page.locator('[data-team-record] dd').nth(1)).toHaveText('1,000');
 
-  await page.locator('[data-act="team-play"]').click();
+  await page.locator('[data-team-tab="opponents"]').click();
   await expect(page.locator('[data-opponent]')).toContainText('라이벌 FC');
   await page.locator('[data-act="team-challenge"]').click();
   expect(played).toEqual({ opponentTeamId: 'tem_00000000-0000-4000-8000-000000000002' });
@@ -330,10 +333,12 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
   await live.locator('[data-act="live-skip"]').click();
   await result.getByRole('button', { name: '내 팀' }).click();
-  await expect(page.locator('[data-team-record]')).toContainText('레이팅 1,016');
+  await expect(page.locator('[data-team-record] dd').nth(1)).toHaveText('1,016');
 });
 
-test('시즌 업적 — 단계별로 달성 수를 보이고, 펼치면 업적마다 상태를 보인다', async ({ page }) => {
+test('시즌 업적 — 등급·점수·랭킹 순위, 분류별 단계 묶음과 업적마다 상태·점수를 보인다', async ({
+  page,
+}) => {
   await stubOwner(page, true);
   await page.route(ownerTeamUrl, (route) =>
     route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS })),
@@ -348,25 +353,70 @@ test('시즌 업적 — 단계별로 달성 수를 보이고, 펼치면 업적�
         season,
         seasons: SEASONS,
         players: season ? 2 : 5,
+        score: 340,
+        rank: 12,
+        ranked: 297,
         groups: [
           {
             id: 'first',
+            category: 'player',
             stage: '0단계',
             title: '축구 인생 출발',
             items: [
-              { id: 'retire-FW', label: '공격수 1명 은퇴', done: true },
-              { id: 'all-dpos', label: '전 세부 포지션 선수 배출', done: false, cur: 2, max: 8 },
+              { id: 'retire-FW', label: '공격수 1명 은퇴', done: true, points: 10, worth: 0 },
+              {
+                id: 'all-dpos',
+                label: '전 세부 포지션 선수 배출',
+                done: false,
+                cur: 2,
+                max: 8,
+                points: 0,
+                worth: 10,
+              },
             ],
           },
           {
             id: 'records',
+            category: 'player',
             stage: '1단계',
             title: '기록 쌓기',
             items: [
-              { id: 'goals', label: '골', done: true, cur: 370, level: 2, next: 1000, unit: '골' },
+              {
+                id: 'goals',
+                label: '골',
+                done: true,
+                cur: 370,
+                level: 2,
+                next: 1000,
+                unit: '골',
+                points: 30,
+                worth: 40,
+              },
             ],
           },
-          { id: 'locked-3', stage: '3단계', title: 'LOCKED', items: [], locked: true },
+          {
+            id: 'owner',
+            category: 'owner',
+            stage: 'OWNER',
+            title: '구단 운영',
+            items: [
+              {
+                id: 'owner-nickname',
+                label: '공개 닉네임 정하기',
+                done: true,
+                points: 10,
+                worth: 0,
+              },
+            ],
+          },
+          {
+            id: 'manager',
+            category: 'manager',
+            stage: 'MANAGER',
+            title: '감독 커리어',
+            items: [],
+            locked: true,
+          },
         ],
       }),
     );
@@ -374,23 +424,118 @@ test('시즌 업적 — 단계별로 달성 수를 보이고, 펼치면 업적�
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="team"]').click();
-  await page.locator('[data-act="team-achievements"]').click();
+  await page.locator('[data-team-tab="achievements"]').click();
   const box = page.locator('[data-club-achievements]');
   await expect(box).toContainText('시즌 1에 처음 뛰어 은퇴한 내 선수 2명');
+  // T-11-028 맨 위 요약 — 등급·점수·다음 등급까지·업적 랭킹 순위, 그리고 다음 목표(얻을 점수).
+  const sum = box.locator('[data-ach-summary]');
+  await expect(sum).toContainText('브론즈');
+  await expect(sum).toContainText('340');
+  await expect(sum).toContainText('실버까지 160점 · 업적 3/4 달성');
+  await expect(sum).toContainText('12위 · 297명 중');
+  await expect(box.locator('[data-ach-near]')).toContainText('전 세부 포지션 선수 배출');
+  await expect(box.locator('[data-ach-near]')).toContainText('+40점');
+  // 분류 탭: 처음은 선수, 다 채우지 못한 첫 단계는 펼쳐 둔다.
+  await expect(box.locator('[data-ach-cat]')).toHaveCount(3);
+  await expect(box.locator('[data-ach-cat="player"]')).toHaveAttribute('aria-selected', 'true');
   const first = box.locator('[data-ach-group="first"]');
-  await expect(first).toContainText('1 / 2');
-  await first.locator('summary').click();
+  await expect(first).toContainText('1/2');
+  await expect(first).toHaveAttribute('open', '');
   await expect(first).toContainText('달성 완료');
+  await expect(first).toContainText('+10점');
   await expect(first).toContainText('2 / 8');
   const records = box.locator('[data-ach-group="records"]');
   await records.locator('summary').click();
   await expect(records).toContainText('2단계 · 370골 · NEXT 1,000');
-  await expect(box.locator('[data-ach-group="locked-3"]')).toContainText('아직 발견하지 못했어요');
+  await box.locator('[data-ach-cat="owner"]').click();
+  await expect(box.locator('[data-ach-group="owner"]')).toContainText('공개 닉네임 정하기');
+  await expect(box.locator('[data-ach-group="first"]')).toHaveCount(0);
+  // 감독 업적은 감독 시뮬레이션이 열릴 때까지 잠금으로 예고만 한다.
+  await box.locator('[data-ach-cat="manager"]').click();
+  await expect(box.locator('[data-ach-group="manager"]')).toContainText('감독 시뮬레이션이 열리면');
   await expectNoA11yViolations(page);
 
   await box.getByLabel('시즌').selectOption({ label: '프리시즌' });
   await expect(box).toContainText('프리시즌에 처음 뛰어 은퇴한 내 선수 5명');
   expect(seasons).toEqual([1, 0]);
+});
+
+test('업적 랭킹 — 내 업적 요약에서 기록실 업적 랭킹으로 가고, 팀이 있는 줄은 팀 프로필을 연다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  await page.route(ownerTeamUrl, (route) =>
+    route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS })),
+  );
+  await page.route(`${API}/v1/owner-team/achievements**`, (route) =>
+    route.fulfill(
+      ok({
+        season: 1,
+        seasons: SEASONS,
+        players: 0,
+        score: 0,
+        rank: null,
+        ranked: 2,
+        // 서버는 선수 업적과 잠긴 감독 업적을 늘 보낸다.
+        groups: [
+          {
+            id: 'first',
+            category: 'player',
+            stage: '0단계',
+            title: '첫 발자국',
+            items: [{ id: 'first-retire', label: '첫 은퇴', done: false, points: 0, worth: 10 }],
+          },
+          {
+            id: 'manager',
+            category: 'manager',
+            stage: 'MANAGER',
+            title: '감독 커리어',
+            items: [],
+            locked: true,
+          },
+        ],
+      }),
+    ),
+  );
+  await page.route(`${API}/v1/achievements/ranking**`, (route) =>
+    route.fulfill(
+      ok({
+        season: 1,
+        seasons: SEASONS,
+        page: 1,
+        total: 2,
+        items: [
+          {
+            rank: 1,
+            nickname: '하람아빠',
+            team: { id: RIVAL, name: '하람 유나이티드' },
+            score: 2450,
+            done: 40,
+            players: 30,
+          },
+          { rank: 2, nickname: null, team: null, score: 120, done: 4, players: 3 },
+        ],
+      }),
+    ),
+  );
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-team-tab="achievements"]').click();
+  await expect(page.locator('[data-ach-summary]')).toContainText(
+    '업적을 하나 달성하면 랭킹에 올라요',
+  );
+  await page.locator('[data-act="ach-ranking"]').click();
+  await expect(page.locator('[data-hof-tab="ach"]')).toHaveAttribute('aria-pressed', 'true');
+  const board = page.locator('[data-ach-ranking]');
+  await expect(board).toContainText('구단주 2명');
+  await expect(board.locator('[data-ach-rank="1"]')).toContainText('하람아빠');
+  await expect(board.locator('[data-ach-rank="1"]')).toContainText('다이아');
+  await expect(board.locator('[data-ach-rank="2"]')).toContainText('익명 구단주');
+  await expect(board.locator('[data-ach-rank="2"]')).toContainText('루키');
+  await expectNoA11yViolations(page);
+  await board.locator('[data-ach-rank="1"]').click();
+  await expect(page.locator('[data-hof-tab="teams"]')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹에서 팀 프로필을 열어 좋아요를 누른다', async ({
@@ -511,7 +656,7 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await expect(page.locator('h1')).toHaveText('프리 FC');
   await expect(page.locator('[data-team-readonly]')).toBeVisible();
   await expect(page.locator('[data-act="team-save"]')).toHaveCount(0);
-  await expect(page.locator('[data-team-record]')).toContainText('레이팅 1,040');
+  await expect(page.locator('[data-team-record] dd').nth(1)).toHaveText('1,040');
   await expect(page.locator('button[data-slot]')).toHaveCount(0);
   await expect(page.locator('div[data-slot="9"]')).toContainText('공개 골잡이');
   await expectNoA11yViolations(page);

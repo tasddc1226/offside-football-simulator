@@ -1,4 +1,7 @@
 import {
+  AchRankQuerySchema,
+  AchRankResponseSchema,
+  type AchRankResponse,
   TeamIdSchema,
   TeamLikeResponseSchema,
   TeamProfileResponseSchema,
@@ -6,7 +9,11 @@ import {
   TeamRankResponseSchema,
   type TeamRankResponse,
 } from '@offside/contracts';
-import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
+import {
+  ACH_RANK_PER_PAGE,
+  TEAM_RANK_PER_PAGE,
+  type FormationId,
+} from '@offside/contracts/owner-team';
 import { teamSeasonClosed, teamSeasonName } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { NO_STORE, nowIso, ok, teamNotFound, teamSeasonParam } from './shared.js';
@@ -21,13 +28,15 @@ import {
   setTeamLike,
   slotIdsOf,
 } from '../db/repos/ownerTeams.js';
-import { edgeCached } from '../edgeCache.js';
+import { listAchievementRanking } from '../db/repos/ownerAchievements.js';
+import { edgeCached, waitUntil } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { teamBadges } from '../team/badges.js';
+import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { buildLineup, lineupOvr } from '../team/sim.js';
 import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 
@@ -71,6 +80,36 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       },
     );
     return ok(c, TeamRankResponseSchema, data, 200, RANK_CACHE);
+  });
+
+  // T-11-028 업적 랭킹(기록실). 시즌 업적 점수 순 — 구단주는 공개 닉네임과 그 시즌 팀 이름으로만 보인다. 팀 랭킹처럼 5분마다.
+  app.get('/v1/achievements/ranking', async (c) => {
+    const now = nowIso();
+    const q = parseWithAppError(AchRankQuerySchema, c.req.query());
+    const season = teamSeasonParam(q.season, now);
+    const data = await edgeCached(
+      c,
+      EDGE.achRank(season, q.page),
+      RANK_TTL,
+      async (): Promise<AchRankResponse> => {
+        const { rows, total } = await listAchievementRanking(getDb(c), season, q.page);
+        return {
+          season,
+          seasons: seasonOptions(now),
+          page: q.page,
+          total,
+          items: rows.map((r, i) => ({
+            rank: (q.page - 1) * ACH_RANK_PER_PAGE + i + 1,
+            nickname: r.nickname,
+            team: r.teamId && r.teamName ? { id: r.teamId, name: r.teamName } : null,
+            score: r.score,
+            done: r.done,
+            players: r.players,
+          })),
+        };
+      },
+    );
+    return ok(c, AchRankResponseSchema, data, 200, RANK_CACHE);
   });
 
   // 팀 프로필. 좋아요 여부가 사람마다 달라 캐시하지 않는다.
@@ -151,8 +190,25 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           details: { reason: 'OWN_TEAM' },
         });
       }
+      // T-11-029 닫힌 시즌 팀의 좋아요는 굳는다 — 누르기도 거두기도 막아 끝난 시즌의 순위가 흔들리지 않게 한다.
+      if (teamSeasonClosed(found.team.season, nowIso())) {
+        throw new AppError({
+          code: 'VALIDATION_FAILED',
+          status: 409,
+          message: '끝난 시즌의 팀에는 좋아요를 바꿀 수 없어요.',
+          details: { reason: 'SEASON_CLOSED' },
+        });
+      }
       const likes = await setTeamLike(db, id, profileId, like, nowIso());
       if (likes === undefined) throw teamNotFound();
+      // T-11-028 받은 좋아요(팀 업적)와 누른 좋아요(구단주 업적) — 두 구단주 점수를 응답 뒤에 다시 센다.
+      waitUntil(
+        c,
+        Promise.all([
+          refreshAfterChange(db, found.team.profileId, found.team.season),
+          refreshAfterChange(db, profileId, found.team.season),
+        ]),
+      );
       return ok(c, TeamLikeResponseSchema, { liked: like, likes });
     });
   }

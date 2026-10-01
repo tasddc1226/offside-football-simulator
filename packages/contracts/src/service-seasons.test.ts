@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { HofSeasonQuerySchema } from './careers.js';
+import { HofSeasonQuerySchema, SeasonPickQuerySchema } from './careers.js';
 import {
   activeSeason,
+  displaySeasonAt,
   openTeamSeasons,
+  PRESEASON,
+  previewSeasonAt,
+  seasonById,
   SERVICE_SEASONS,
   teamSeasonAt,
   teamSeasonClosed,
@@ -24,6 +28,8 @@ describe('서비스 시즌 (T-10-090)', () => {
   it('시즌 쿼리는 있는 시즌만 받는다', () => {
     expect(HofSeasonQuerySchema.parse(undefined)).toBeUndefined();
     expect(HofSeasonQuerySchema.parse('1')).toBe(s1);
+    // T-11-029 0은 프리시즌(마감 없음).
+    expect(HofSeasonQuerySchema.parse('0')).toBe(PRESEASON);
     expect(HofSeasonQuerySchema.safeParse('99').success).toBe(false);
     expect(HofSeasonQuerySchema.safeParse('x').success).toBe(false);
   });
@@ -42,5 +48,27 @@ describe('T-10-092 팀 시즌', () => {
     expect(teamSeasonClosed(0, '2026-09-30T00:00:00.000Z')).toBe(false);
     expect(teamSeasonClosed(0, S1)).toBe(true);
     expect(teamSeasonClosed(1, '2030-01-01T00:00:00.000Z')).toBe(false);
+  });
+});
+
+describe('T-11-029 시즌별 기록의 기본 시즌', () => {
+  const S1 = SERVICE_SEASONS[0]!.startsAt;
+  it('개막 전은 프리시즌(0), 개막 뒤는 시즌 id — 휴식기엔 마지막 시즌', () => {
+    expect(displaySeasonAt('2026-09-30T00:00:00.000Z')).toBe(0);
+    expect(displaySeasonAt(S1)).toBe(1);
+    expect(seasonById(0)).toBe(PRESEASON);
+    expect(seasonById(1)).toBe(SERVICE_SEASONS[0]);
+    expect(seasonById(9)).toBeUndefined();
+  });
+  it('홈 명예의 전당 미리보기는 개막 전엔 시즌 없이(= 프리시즌 전체), 개막 뒤엔 지금 시즌', () => {
+    expect(previewSeasonAt('2026-09-30T00:00:00.000Z')).toBeNull();
+    expect(previewSeasonAt(S1)).toBe(1);
+  });
+  it('?season= 쿼리는 프리시즌(0)과 있는 시즌만 받는다', () => {
+    expect(SeasonPickQuerySchema.parse(undefined)).toBeUndefined();
+    expect(SeasonPickQuerySchema.parse('0')).toBe(0);
+    expect(SeasonPickQuerySchema.parse('1')).toBe(1);
+    expect(SeasonPickQuerySchema.safeParse('9').success).toBe(false);
+    expect(SeasonPickQuerySchema.safeParse('-1').success).toBe(false);
   });
 });

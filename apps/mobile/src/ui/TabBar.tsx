@@ -1,4 +1,5 @@
-// 하단 탭바(웹 .tabs) — 게임 탭(시즌·선수·홈·커리어·트로피)과 홈 하단 메뉴(기록실·소식·홈·구단주·설정)가 같은 모양.
+// 하단 탭바(웹 .tabs) — 게임 탭(시즌·선수·홈·커리어·트로피), 홈 하단 메뉴(기록실·소식·홈·구단주·설정), 내 팀 메뉴
+// (편성·경기·구단주·업적·기록, T-11-026)가 같은 모양.
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../theme/useColors';
@@ -12,6 +13,8 @@ export interface TabItem {
   label: string;
   active: boolean;
   onPress: () => void;
+  /** 기본은 tab-{key}. */
+  testID?: string;
 }
 
 export const TABBAR_H = 60;
@@ -46,7 +49,7 @@ export function TabBar({ items, label }: { items: TabItem[]; label: string }) {
             accessibilityRole="tab"
             accessibilityState={{ selected: t.active }}
             onPress={t.onPress}
-            testID={`tab-${t.key}`}
+            testID={t.testID ?? `tab-${t.key}`}
             style={(pressed) => ({
               flex: 1,
               minHeight: 44,

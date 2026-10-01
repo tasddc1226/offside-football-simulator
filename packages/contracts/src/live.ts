@@ -66,6 +66,8 @@ export type LiveRetiredNumber = {
   club: string;
   number: number;
   seq: number;
+  /** T-11-029 결번이 속한 시즌(0 = 프리시즌). */
+  season: number;
   at: string;
 };
 

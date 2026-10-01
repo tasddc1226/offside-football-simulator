@@ -58,7 +58,7 @@ test('홈 카드 → 서버 최초 기록 화면(연대기·분류 탭·내 선�
       holder: null,
     },
   ];
-  await page.route(`${API}/v1/firsts`, (r) => r.fulfill(ok({ items: items(cid), records })));
+  await page.route(`${API}/v1/firsts*`, (r) => r.fulfill(ok({ items: items(cid), records })));
   await page.goto('/');
 
   const card = page.locator('[data-act="firsts"]');
@@ -101,7 +101,7 @@ test('홈 카드 → 서버 최초 기록 화면(연대기·분류 탭·내 선�
 });
 
 test('서버에 연결하지 못하면 안내 문구를 보여 준다', async ({ page }) => {
-  await page.route(`${API}/v1/firsts`, (r) =>
+  await page.route(`${API}/v1/firsts*`, (r) =>
     r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }),
   );
   await page.goto('/');

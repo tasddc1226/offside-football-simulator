@@ -20,6 +20,8 @@ import { lifeSeasons } from '../../plausibility.js';
 // 처음 배포될 때는 기존 공개 은퇴 기록을 은퇴 시각 순서로 한 번 훑어 결번을 채운다(서버 최초 기록처럼 RESCAN_CHUNK명씩,
 // 진행 위치는 app_meta). 다 훑기 전의 은퇴 PUT은 한 조각을 진행시키고 pending을 돌려준다 — 은퇴 시각이 더 늦은 새
 // 은퇴가 옛 은퇴보다 먼저 자리를 잡지 않게.
+// T-11-029 결번은 시즌마다 따로 센다. 시즌은 커리어의 service_season(NULL이면 0 = 프리시즌) — 시즌 1 선수도 프리시즌
+// 선수와 같은 구단·번호를 받고, seq도 시즌 안에서 센다.
 const BACKFILL_VERSION = '1';
 const META_KEY = 'retired_numbers_backfill';
 /** 다시 훑는 중이면 마지막으로 판정한 `${retiredAt}\t${id}`. */
@@ -37,6 +39,7 @@ const judgeColumns = {
   shirtNumber: careers.shirtNumber,
   retireAge: careers.retireAge,
   retiredAt: careers.retiredAt,
+  serviceSeason: careers.serviceSeason,
 };
 type JudgeRow = Pick<typeof careers.$inferSelect, keyof typeof judgeColumns>;
 
@@ -69,10 +72,14 @@ function candidatesOf(
   return clubs.length ? { number, clubs } : null;
 }
 
+/** 결번 시즌 — 커리어가 처음 올라온 시즌(NULL = 시즌 사이 휴식기는 프리시즌으로 센다). */
+const seasonOf = (row: Pick<JudgeRow, 'serviceSeason'>) => row.serviceSeason ?? 0;
+
 /** 후보 구단 순서대로 자리를 잡는 문장들. 앞 문장이 자리를 잡으면 뒤 문장은 career_id 유일성에 걸려 아무것도 하지 않는다. */
 const claimStatements = (
   db: Db,
   careerId: string,
+  season: number,
   c: { number: number; clubs: RnClub[] },
   at: string,
 ) =>
@@ -80,12 +87,13 @@ const claimStatements = (
     db
       .insert(retiredNumbers)
       .values({
+        season,
         clubId: club.clubId!,
         number: c.number,
         careerId,
         club: club.club,
         score: Math.round(club.score),
-        seq: sql`(select coalesce(max(${retiredNumbers.seq}), 0) + 1 from ${retiredNumbers})`,
+        seq: sql`(select coalesce(max(${retiredNumbers.seq}), 0) + 1 from ${retiredNumbers} where ${retiredNumbers.season} = ${season})`,
         grantedAt: at,
       })
       .onConflictDoNothing(),
@@ -141,7 +149,7 @@ export async function ensureRetiredNumbersBackfilled(
   ]);
   const statements = rows.flatMap((r) => {
     const c = candidatesOf(r, seasons.get(r.id), customs.get(r.profileId));
-    return c ? claimStatements(db, r.id, c, r.retiredAt!) : [];
+    return c ? claimStatements(db, r.id, seasonOf(r), c, r.retiredAt!) : [];
   });
   const done = rows.length < chunk;
   const last = rows.at(-1);
@@ -157,6 +165,23 @@ export async function ensureRetiredNumbersBackfilled(
   return !done;
 }
 
+const slotOf = ({
+  clubId,
+  club,
+  number,
+  seq,
+}: {
+  clubId: string;
+  club: string;
+  number: number;
+  seq: number;
+}) => ({
+  clubId,
+  club,
+  number,
+  seq,
+});
+
 const slotColumns = {
   clubId: retiredNumbers.clubId,
   club: retiredNumbers.club,
@@ -164,13 +189,23 @@ const slotColumns = {
   seq: retiredNumbers.seq,
 };
 
-/** 심사 결과. claimed는 이번 심사가 막 자리를 잡았을 때만 있다(홈 라이브로 알린다). */
-type Judged = { result: RetiredNumberResult | null; claimed?: LiveRetiredNumber };
+/**
+ * 심사 결과. season은 결번이 속한 시즌(자리를 가졌거나 잡았을 때만 — 지울 목록 캐시의 시즌). claimed는 이번 심사가
+ * 막 자리를 잡았을 때만 있다(홈 라이브로 알린다).
+ */
+type Judged = {
+  result: RetiredNumberResult | null;
+  season?: number;
+  claimed?: LiveRetiredNumber;
+};
 
 /** 은퇴 PUT 뒤에 부른다. 자격이 없으면(또는 공개 명예의 전당 밖의 짧은 커리어면) result가 null. */
 export async function judgeRetiredNumber(db: Db, careerId: string, now: string): Promise<Judged> {
   const heldBy = () =>
-    db.select(slotColumns).from(retiredNumbers).where(eq(retiredNumbers.careerId, careerId));
+    db
+      .select({ ...slotColumns, season: retiredNumbers.season })
+      .from(retiredNumbers)
+      .where(eq(retiredNumbers.careerId, careerId));
   const [meta, held, [row]] = await db.batch([
     backfillMeta(db),
     heldBy(),
@@ -183,7 +218,9 @@ export async function judgeRetiredNumber(db: Db, careerId: string, now: string):
     return { result: { kind: 'pending' } };
   }
   // 이미 가진 자리는 이름을 다시 숨겨도 그대로다.
-  if (held[0]) return { result: { kind: 'granted', ...held[0] } };
+  if (held[0]) {
+    return { result: { kind: 'granted', ...slotOf(held[0]) }, season: held[0].season };
+  }
   if (!row) return { result: null };
   const [customs, seasons] = await Promise.all([
     clubsJsonOf(db, [row.profileId]),
@@ -192,29 +229,37 @@ export async function judgeRetiredNumber(db: Db, careerId: string, now: string):
   const c = candidatesOf(row, seasons.get(careerId), customs.get(row.profileId));
   if (!c) return { result: null };
   const best = c.clubs[0]!;
+  const season = seasonOf(row);
   const slot = { clubId: best.clubId!, club: best.club, number: c.number };
   if (!row.publicName) return { result: { kind: 'anonymous', ...slot } };
   // 자리 잡기와 결과 확인을 한 번에 보낸다(batch는 한 트랜잭션이라 뒤의 select가 앞의 insert를 본다).
   const results = await runBatch(db, [
-    ...claimStatements(db, careerId, c, now),
+    ...claimStatements(db, careerId, season, c, now),
     heldBy(),
     db
       .select({ name: careers.publicName })
       .from(retiredNumbers)
       .innerJoin(careers, eq(careers.id, retiredNumbers.careerId))
-      .where(and(eq(retiredNumbers.clubId, slot.clubId), eq(retiredNumbers.number, slot.number))),
+      .where(
+        and(
+          eq(retiredNumbers.season, season),
+          eq(retiredNumbers.clubId, slot.clubId),
+          eq(retiredNumbers.number, slot.number),
+        ),
+      ),
   ]);
-  const [mine] = results.at(-2) as typeof held;
+  const [heldNow] = results.at(-2) as typeof held;
   const [holder] = results.at(-1) as { name: string | null }[];
-  if (mine) {
-    const claimed = { careerId, name: row.publicName, pos: row.pos, ...mine, at: now };
-    return { result: { kind: 'granted', ...mine }, claimed };
+  if (heldNow) {
+    const mine = slotOf(heldNow);
+    const claimed = { careerId, name: row.publicName, pos: row.pos, ...mine, season, at: now };
+    return { result: { kind: 'granted', ...mine }, season, claimed };
   }
   return { result: { kind: 'taken', ...slot, holder: holder?.name ?? null } };
 }
 
-/** 서버 전체 영구결번(결번 순). */
-export async function listRetiredNumbers(db: Db): Promise<RetiredNumbersResponse> {
+/** 한 시즌의 영구결번(결번 순). */
+export async function listRetiredNumbers(db: Db, season: number): Promise<RetiredNumbersResponse> {
   const items = await db
     .select({
       ...slotColumns,
@@ -225,6 +270,7 @@ export async function listRetiredNumbers(db: Db): Promise<RetiredNumbersResponse
     })
     .from(retiredNumbers)
     .innerJoin(careers, eq(careers.id, retiredNumbers.careerId))
+    .where(eq(retiredNumbers.season, season))
     .orderBy(retiredNumbers.seq);
-  return { items };
+  return { season, items };
 }
