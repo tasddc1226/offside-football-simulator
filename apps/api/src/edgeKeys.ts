@@ -1,3 +1,4 @@
+import { SERVICE_SEASONS } from '@offside/contracts/service-seasons';
 import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 
 // T-10-047. 엣지에 담는 공개 조회의 경로(= 캐시 키)와, 쓰기가 낡게 만드는 키를 한곳에 둔다.
@@ -7,7 +8,8 @@ import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 export const EDGE = {
   balance: '/v1/balance',
   adminStats: '/v1/admin/stats',
-  firsts: '/v1/firsts',
+  /** T-11-029 서버 최초 기록·서버 기록은 시즌마다 따로다(시즌 id를 푼 경로). */
+  firsts: (season: number) => `/v1/firsts?season=${season}`,
   /** T-11-029 영구결번은 시즌마다 따로다(시즌 id를 푼 경로). */
   retiredNumbers: (season: number) => `/v1/retired-numbers?season=${season}`,
   live: '/v1/live',
@@ -23,15 +25,17 @@ export const EDGE = {
   boardFirstPage: (board: string) => `/v1/boards/${board}/posts?limit=${BOARD_PAGE_LIMIT}`,
 } as const;
 
+/** 기록이 어느 시즌 것인지 쓰기에서 따지지 않고 모든 시즌(프리시즌 + 시즌들)의 키를 지운다. */
+const allFirsts = () => [0, ...SERVICE_SEASONS.map((s) => s.id)].map(EDGE.firsts);
 const allBoardLists = () => BOARD_KEYS.map(EDGE.boardFirstPage);
 
 /** 쓰기 → 지울 엣지 키. */
 export const STALE = {
   balanceActivated: () => [EDGE.balance],
-  firstsChanged: () => [EDGE.firsts],
+  firstsChanged: allFirsts,
   retiredNumbersChanged: (season: number) => [EDGE.retiredNumbers(season)],
   /** 이름 공개 토글이 바로 보이게(최초 기록의 이름 포함). */
-  retirementPut: (careerId: string) => [EDGE.hofDetail(careerId), EDGE.firsts],
+  retirementPut: (careerId: string) => [EDGE.hofDetail(careerId), ...allFirsts()],
   /** 글·댓글 쓰기/지우기 — 목록의 글과 댓글 수가 바뀐다. */
   boardChanged: (board: string) => [EDGE.boardFirstPage(board)],
   commentsPurged: allBoardLists,

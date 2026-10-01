@@ -1,5 +1,5 @@
 import { TickerResponseSchema, successEnvelope } from '@offside/contracts';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
@@ -33,6 +33,7 @@ describe('홈 전광판 /v1/ticker (T-10-122)', () => {
     cookie = (await issueCookie(ctx)).cookie;
   });
   afterEach(async () => {
+    vi.useRealTimers();
     await ctx.dispose();
   });
 
@@ -79,5 +80,15 @@ describe('홈 전광판 /v1/ticker (T-10-122)', () => {
       if (f.kind === 'record') expect(f.value).not.toBeNull();
       else expect(f).toMatchObject({ value: null, unit: null });
     }
+  });
+
+  it('T-11-029: 최초 기록·신기록 줄은 지금 시즌 것만 — 시즌 1이 열리면 프리시즌 기록은 빠진다', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z')); // 프리시즌
+    await putSeasonsFor(ctx.env, cookie, A);
+    expect((await read(ctx)).firsts.length).toBeGreaterThan(0);
+
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1 — 아직 아무도 시즌 1 기록이 없다.
+    expect((await read(ctx)).firsts).toEqual([]);
   });
 });

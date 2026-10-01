@@ -439,31 +439,41 @@ export const balanceVersions = sqliteTable(
 );
 
 /** T-10-027 서버 최초 기록. 기록 id(src/firsts.ts firstsCatalog)마다 가장 먼저 달성한 커리어 한 줄. 커리어가 지워지면
- * 함께 지워지고, 다음 재계산(app_meta 버전) 때 그다음으로 이른 커리어가 채운다. */
+ * 함께 지워지고, 다음 재계산(app_meta 버전) 때 그다음으로 이른 커리어가 채운다.
+ * T-11-029 시즌마다 따로 겨룬다 — season은 커리어의 service_season(NULL이면 0, 0 = 프리시즌), 키는 (season, id). */
 export const serverFirsts = sqliteTable(
   'server_firsts',
   {
-    id: text('id').primaryKey(),
+    season: integer('season').notNull().default(0),
+    id: text('id').notNull(),
     careerId: text('career_id')
       .notNull()
       .references(() => careers.id, { onDelete: 'cascade' }),
     achievedAt: text('achieved_at').notNull(),
     year: integer('year'),
   },
-  (table) => [index('server_firsts_achieved_idx').on(table.achievedAt)],
+  (table) => [
+    primaryKey({ columns: [table.season, table.id] }),
+    index('server_firsts_achieved_idx').on(table.achievedAt),
+  ],
 );
 
 /** T-10-056 서버 기록(깨질 수 있는 최고 기록) 한 줄씩. 보유 커리어가 지워지면 함께 지워지고, 다음 재계산이
- * 그다음 보유자를 채운다. */
-export const serverRecords = sqliteTable('server_records', {
-  id: text('id').primaryKey(),
-  careerId: text('career_id')
-    .notNull()
-    .references(() => careers.id, { onDelete: 'cascade' }),
-  value: integer('value').notNull(),
-  achievedAt: text('achieved_at').notNull(),
-  year: integer('year'),
-});
+ * 그다음 보유자를 채운다. T-11-029 서버 최초 기록처럼 시즌마다 따로다 — 키는 (season, id). */
+export const serverRecords = sqliteTable(
+  'server_records',
+  {
+    season: integer('season').notNull().default(0),
+    id: text('id').notNull(),
+    careerId: text('career_id')
+      .notNull()
+      .references(() => careers.id, { onDelete: 'cascade' }),
+    value: integer('value').notNull(),
+    achievedAt: text('achieved_at').notNull(),
+    year: integer('year'),
+  },
+  (table) => [primaryKey({ columns: [table.season, table.id] })],
+);
 
 /**
  * T-10-076 영구결번. 구단(club_id)·등번호마다 한 명 — 먼저 자격을 채운 커리어가 가져가고 취소되지 않는다(보유

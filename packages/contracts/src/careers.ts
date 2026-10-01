@@ -501,10 +501,12 @@ export const ServerRecordSchema = z.strictObject({
 export type ServerRecord = z.infer<typeof ServerRecordSchema>;
 
 /**
- * `GET /v1/firsts`. items는 규칙 순서 그대로(미달성 포함 — 달성 개수는 holder로 센다). 끝없는 단계는 달성된
+ * `GET /v1/firsts?season=`. items는 규칙 순서 그대로(미달성 포함 — 달성 개수는 holder로 센다). 끝없는 단계는 달성된
  * 단계와 그 위 다음 목표 하나까지만 담는다(T-10-056). records는 서버 기록.
+ * T-11-029 기록은 시즌마다 따로 겨룬다 — season은 이 목록의 시즌(0 = 프리시즌).
  */
 export const FirstsResponseSchema = z.strictObject({
+  season: z.number().int().nonnegative(),
   items: z.array(ServerFirstSchema),
   records: z.array(ServerRecordSchema),
 });

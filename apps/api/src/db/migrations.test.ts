@@ -197,9 +197,9 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
     'activated_at',
   ],
-  server_firsts: ['id', 'career_id', 'achieved_at', 'year'],
+  server_firsts: ['season', 'id', 'career_id', 'achieved_at', 'year'],
   app_meta: ['key', 'value'],
-  server_records: ['id', 'career_id', 'value', 'achieved_at', 'year'],
+  server_records: ['season', 'id', 'career_id', 'value', 'achieved_at', 'year'],
   retired_numbers: [
     'season',
     'club_id',

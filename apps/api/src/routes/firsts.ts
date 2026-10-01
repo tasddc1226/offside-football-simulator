@@ -1,10 +1,12 @@
-import { FirstsResponseSchema } from '@offside/contracts';
+import { FirstsResponseSchema, SeasonPickQuerySchema } from '@offside/contracts';
+import { displaySeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
-import { ok } from './shared.js';
 import { ensureFirstsBackfilled, listFirsts, recordCareerFirsts } from '../db/repos/firsts.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
+import { parseWithAppError } from '../errors.js';
+import { nowIso, ok } from './shared.js';
 
 // T-10-027 서버 최초 기록 · T-10-056 서버 기록. 로그인 없이 누구나 읽는다 — 응답엔 기록 문장·시각과 명예의 전당에
 // 이름 공개를 고른 이름만 있다. 목록은 새 기록이 1분 안에 보이게 짧게 캐시하고, 기록이 바뀌면 지운다.
@@ -28,17 +30,20 @@ export async function recordFirsts(
 }
 
 export function registerFirstsRoutes(app: Hono<AppEnv>): void {
-  app.get(EDGE.firsts, async (c) => {
+  app.get('/v1/firsts', async (c) => {
+    // T-11-029 시즌별 기록 — ?season= 없으면 지금 시즌(개막 전이면 프리시즌, 휴식기면 마지막 시즌). 캐시 키는 시즌을 푼 경로다.
+    const season =
+      parseWithAppError(SeasonPickQuerySchema, c.req.query('season')) ?? displaySeasonAt(nowIso());
     // 다시 훑는 중이면 캐시하지 않는다 — 캐시하면 데이터센터마다 1분에 한 조각씩만 나아간다.
     let rescanning = false;
     const data = await edgeCached(
       c,
-      EDGE.firsts,
+      EDGE.firsts(season),
       TTL,
       async () => {
         const db = getDb(c);
         rescanning = await ensureFirstsBackfilled(db);
-        return listFirsts(db);
+        return listFirsts(db, season);
       },
       () => !rescanning,
     );

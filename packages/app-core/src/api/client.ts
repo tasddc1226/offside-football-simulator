@@ -262,9 +262,12 @@ export function checkRetiredNumber(
     `/v1/careers/${encodeURIComponent(careerId)}/retired-number`,
   );
 }
-/** T-10-027 서버 최초 기록(로그인 불필요). */
-export function getFirsts(): Promise<ApiResult<FirstsResponse>> {
-  return cachedGet<FirstsResponse>('/v1/firsts', 60_000);
+/** T-10-027 서버 최초 기록(로그인 불필요). T-11-029 시즌마다 따로 — season(0 = 프리시즌)을 안 주면 서버가 지금 시즌을 쓴다. */
+export function getFirsts(season?: number): Promise<ApiResult<FirstsResponse>> {
+  return cachedGet<FirstsResponse>(
+    `/v1/firsts${season === undefined ? '' : `?season=${season}`}`,
+    60_000,
+  );
 }
 /** T-10-030 홈 라이브 현황(로그인 불필요). 홈이 1분마다 묻는다 — 서버 엣지 캐시와 같은 간격(T-10-045). */
 export function getLive(): Promise<ApiResult<LiveResponse>> {
