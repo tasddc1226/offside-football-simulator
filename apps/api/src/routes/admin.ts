@@ -6,6 +6,8 @@ import {
   AdminNameReportListSchema,
   AdminNameReportResolveSchema,
   AdminStatsSchema,
+  AnomalyReportSchema,
+  CareerHiddenInputSchema,
   AutomationHoursSchema,
   AutomationReportSchema,
 } from '@offside/contracts';
@@ -14,6 +16,7 @@ import { requireAdmin } from '../auth/admin.js';
 import { getAdminStats, listRecentComments, purgeCommentsBy } from '../db/repos/admin.js';
 import { listOpenNameReports, resolveNameReports } from '../db/repos/nameReports.js';
 import { getActiveBalance } from '../db/repos/balance.js';
+import { anomalyReport, setCareerHidden } from '../db/repos/anomalies.js';
 import { automationReport } from '../db/repos/automation.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -47,6 +50,23 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
     const hours = parseWithAppError(AutomationHoursSchema, c.req.query('hours'));
     const data = await automationReport(getDb(c), new Date(), hours);
     return ok(c, AutomationReportSchema, data, 200, 'private, no-store');
+  });
+
+  // 비정상 기록: 검토 대상과 숨겨진 커리어. 매일 cron(repos/anomalies.ts)이 확실한 것은 이미 숨긴다.
+  app.get('/v1/admin/anomalies', async (c) => {
+    await requireAdmin(c);
+    const data = await anomalyReport(c.env.DB, Date.now());
+    return ok(c, AnomalyReportSchema, data, 200, 'private, no-store');
+  });
+
+  // 명예의 전당 상세·서버 기록 캐시는 바로 지우고, 목록은 TTL(1분)로 바뀐다.
+  app.post('/v1/admin/careers/hidden', async (c) => {
+    await requireAdmin(c);
+    const { careerId, hidden } = readBody(c, CareerHiddenInputSchema);
+    if (!(await setCareerHidden(c.env.DB, careerId, hidden, Date.now())))
+      throw notFoundError('커리어를 찾을 수 없어요.', 'CAREER_NOT_FOUND');
+    purgeEdge(c, STALE.retirementPut(careerId));
+    return c.body(null, 204);
   });
 
   app.get('/v1/admin/comments', async (c) => {
