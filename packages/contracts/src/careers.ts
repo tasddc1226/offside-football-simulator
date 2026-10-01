@@ -3,7 +3,7 @@ import { bodyError } from './body.js';
 import { NATION_BY_CODE } from './nations.js';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
-import { serviceSeason } from './service-seasons.js';
+import { seasonById } from './service-seasons.js';
 import { DETAIL_POSITIONS, FACE_ATTRS, type DetailPos, type FaceAttr } from './positions.js';
 
 /**
@@ -447,12 +447,15 @@ export const HofSearchQuerySchema = z
   .max(20)
   .optional()
   .transform((v) => v || undefined);
-/** T-10-090 `GET /v1/hof?season=` 서비스 시즌 순위(service-seasons.ts의 id → 그 시즌). 없으면 전체 명예의 전당. */
+/**
+ * T-10-090 `GET /v1/hof?season=` 서비스 시즌 순위(service-seasons.ts의 id → 그 시즌). 없으면 전체 명예의 전당.
+ * T-11-029 season=0은 프리시즌(개막 전에 처음 올라온 선수 — 개막 뒤에 은퇴해도 포함).
+ */
 export const HofSeasonQuerySchema = z.coerce
   .number()
   .int()
-  .refine((id) => serviceSeason(id) !== undefined, '없는 시즌입니다.')
-  .transform((id) => serviceSeason(id)!)
+  .refine((id) => seasonById(id) !== undefined, '없는 시즌입니다.')
+  .transform((id) => seasonById(id)!)
   .optional();
 /**
  * T-11-029 `?season=` 시즌 id(0 = 프리시즌, 그 밖엔 service-seasons.ts의 id). 없으면 서버가 지금 시즌을 쓴다
@@ -461,7 +464,7 @@ export const HofSeasonQuerySchema = z.coerce
 export const SeasonPickQuerySchema = z.coerce
   .number()
   .int()
-  .refine((id) => id === 0 || serviceSeason(id) !== undefined, '없는 시즌입니다.')
+  .refine((id) => seasonById(id) !== undefined, '없는 시즌입니다.')
   .optional();
 /** T-11-018 `GET /v1/hof?pos=` 그 포지션 선수만(포지션별 순위). 없으면 모든 포지션. */
 export const HofPosQuerySchema = CareerPosSchema.optional();

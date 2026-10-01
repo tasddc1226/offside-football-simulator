@@ -17,7 +17,7 @@ export const EDGE = {
   ticker: '/v1/ticker',
   hofDetail: (careerId: string) => `/v1/hof/${careerId}`,
   hofList: (limit: number, page: number, sort: string, season?: number, q?: string, pos?: string) =>
-    `/v1/hof?limit=${limit}&page=${page}&sort=${sort}${season ? `&season=${season}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${pos ? `&pos=${pos}` : ''}`,
+    `/v1/hof?limit=${limit}&page=${page}&sort=${sort}${season !== undefined ? `&season=${season}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${pos ? `&pos=${pos}` : ''}`,
   /** T-10-092 라이브 랭킹(팀 랭킹). TTL로만 새로 읽는다(원작처럼 5분마다 갱신). */
   teamRank: (season: number, sort: string, page: number) =>
     `/v1/teams?season=${season}&sort=${sort}&page=${page}`,

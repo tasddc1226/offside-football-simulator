@@ -2,6 +2,7 @@
 // '내 선수' 표시를 단다. 홈에서는 레전드 점수 TOP 3만 보여 주고, '전체 보기'(full)에서는 순위 유형(득점·도움·발롱도르…)을
 // 골라 10명씩 페이지로 나눠 보여 준다. score가 아닌 유형은 그 기록이 0인 선수를 뺀다(서버와 같은 규칙).
 // T-10-090 전체 보기는 '전체 / 시즌 1'을 고른다. 시즌 순위엔 개막 뒤 새로 만든 선수만 오른다(프리시즌 선수 제외).
+// T-11-029 '프리시즌' 탭은 개막 전에 만든 선수만 모은다(개막 뒤에 은퇴해도 포함). 홈 미리보기는 지금 시즌 TOP이다.
 // T-11-018 포지션별 순위 — 레전드 점수 상위권을 공격수가 채우므로 포지션 안에서도 겨루게 한다.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -9,7 +10,12 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
 import { POS_GROUPS, POS_LABEL } from '@offside/contracts/positions';
-import { SERVICE_SEASONS, serviceSeason } from '@offside/contracts/service-seasons';
+import {
+  PRESEASON,
+  SERVICE_SEASONS,
+  previewSeasonAt,
+  seasonById,
+} from '@offside/contracts/service-seasons';
 import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { anonName, fmtValue, iGa } from '@offside/app-core/format';
 import { getHof } from '@offside/app-core/api/client';
@@ -73,10 +79,12 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   const page = full ? snap.hof.page : 1;
   const sort: HofSort = full ? snap.hof.sort : 'score';
   const by = SORTS[sort];
-  const season = full ? snap.hof.season : null;
+  // 홈 미리보기는 지금 시즌 고정(개막 전엔 프리시즌 = 전체와 같아 시즌 없이 같은 요청·캐시를 쓴다).
+  const homeSeason = useMemo(() => previewSeasonAt(new Date().toISOString()), []);
+  const season = full ? snap.hof.season : homeSeason;
   const q = full ? snap.hof.q : '';
   const pos = full ? snap.hof.pos : null;
-  const ss = season === null ? undefined : serviceSeason(season);
+  const ss = season === null ? undefined : seasonById(season);
   /** 고른 시즌이 아직 개막 전이면 그 시즌(목록 대신 개막 안내). */
   const upcoming = ss && notOpen(ss) ? ss : undefined;
   /** 문구 앞에 붙는 시즌·포지션 이름('시즌 1 수비수 '). 둘 다 전체면 빈 문자열. */
@@ -212,14 +220,14 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
       ) : null}
       {full ? (
         <>
-          <Seg cols={2} label="시즌" style={{ marginTop: 4, marginBottom: 6 }}>
+          <Seg cols={3} label="시즌" style={{ marginTop: 4, marginBottom: 6 }}>
             <TabOpt
               title="전체"
               selected={season === null}
               testID="hof-season-all"
               onPress={() => pickSeason(null)}
             />
-            {SERVICE_SEASONS.map((s) => (
+            {[PRESEASON, ...SERVICE_SEASONS].map((s) => (
               <TabOpt
                 key={s.id}
                 title={s.name}
@@ -297,8 +305,8 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
             {`${upcoming.name}은 ${kstMonthDayHour(upcoming.startsAt)}(한국 시각)에 개막해요.`}
           </Txt>
           <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-            개막 뒤 새로 만든 선수가 은퇴하면 여기에 올라요. 지금(프리시즌) 만든 선수는 전체 명예의
-            전당에 남아요.
+            개막 뒤 새로 만든 선수가 은퇴하면 여기에 올라요. 지금(프리시즌) 만든 선수는 '프리시즌'과
+            '전체' 명예의 전당에 남아요.
           </Txt>
         </View>
       ) : all === null && !failed ? (
@@ -316,6 +324,11 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           {full ? (
             <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 6 }}>
               {`${scope && `${scope}· `}${q ? `'${q}' 검색 ` : ''}${sort === 'score' ? '은퇴 선수' : `${by.label} 기록이 있는 선수`} ${total}명 · ${by.label} 순`}
+            </Txt>
+          ) : null}
+          {!full && ss ? (
+            <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 6 }}>
+              {`${ss.name} · 레전드 점수 순`}
             </Txt>
           ) : null}
           {all.map((h, i) => {
