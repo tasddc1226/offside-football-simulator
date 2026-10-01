@@ -2,7 +2,7 @@
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import type { Tab } from '@offside/app-core/state';
 
-export type TabIconName = Tab | 'home' | 'hof' | 'board' | 'owner' | 'settings';
+export type TabIconName = Tab | 'home' | 'hof' | 'board' | 'owner' | 'settings' | 'lineup';
 
 export function TabIcon({
   name,
@@ -70,6 +70,12 @@ export function TabIcon({
             d="M10.3 3.5h3.4l.5 2.4 1.7 1 2.3-.8 1.7 2.9-1.8 1.6v2l1.8 1.6-1.7 2.9-2.3-.8-1.7 1-.5 2.4h-3.4l-.5-2.4-1.7-1-2.3.8-1.7-2.9 1.8-1.6v-2L4.1 9l1.7-2.9 2.3.8 1.7-1Z"
             {...p}
           />
+        </>
+      ) : name === 'lineup' ? (
+        <>
+          <Rect x="4.5" y="3.5" width="15" height="17" rx="2" {...p} />
+          <Path d="M4.5 12h15M9.5 3.5v2.6h5V3.5M9.5 20.5v-2.6h5v2.6" {...p} />
+          <Circle cx="12" cy="12" r="2.2" {...p} />
         </>
       ) : (
         <>

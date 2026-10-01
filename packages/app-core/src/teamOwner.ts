@@ -9,7 +9,13 @@ import {
   slotRating,
   type DetailPos,
 } from '@offside/contracts/owner-team';
-import type { ClubAchievement, OwnerTeam, TeamMatch, TeamPlayer } from './api/team.js';
+import type {
+  ClubAchievement,
+  ClubAchievementGroup,
+  OwnerTeam,
+  TeamMatch,
+  TeamPlayer,
+} from './api/team.js';
 import { num } from './teamText.js';
 
 /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
@@ -130,6 +136,56 @@ export const achState = (i: ClubAchievement): string =>
       : i.done
         ? '달성 완료'
         : '미달성';
+
+/** 열린 단계 전체의 달성 수 · 업적 수(잠긴 단계는 빼고 센다). */
+export function achTotal(groups: readonly ClubAchievementGroup[]): { done: number; total: number } {
+  const items = groups.filter((g) => !g.locked).flatMap((g) => g.items);
+  return { done: achDone(items), total: items.length };
+}
+
+export type AchNear = { group: string; item: ClubAchievement; ratio: number };
+/** 다음 목표에 가장 가까운 업적 n개 — 숫자로 진행을 셀 수 있는 것만(단계 업적은 다음 단계까지, 최고 단계는 뺀다). */
+export function achNear(groups: readonly ClubAchievementGroup[], n = 3): AchNear[] {
+  return groups
+    .filter((g) => !g.locked)
+    .flatMap((g) =>
+      g.items.flatMap((item) => {
+        const goal = item.level !== undefined ? item.next : item.done ? null : item.max;
+        if (goal == null || item.cur === undefined) return [];
+        return [{ group: g.title, item, ratio: Math.min(1, item.cur / goal) }];
+      }),
+    )
+    .sort((a, b) => b.ratio - a.ratio)
+    .slice(0, n);
+}
+
+/** 잠긴 단계를 한 줄로 묶은 표시('3–5단계'). 없으면 null. */
+export function achLockedRange(groups: readonly ClubAchievementGroup[]): string | null {
+  const locked = groups.filter((g) => g.locked);
+  if (!locked.length) return null;
+  const first = locked[0]!.stage;
+  const last = locked[locked.length - 1]!.stage;
+  return first === last ? first : `${first.replace(/단계$/, '')}–${last}`;
+}
+
+/** 처음 펼쳐 둘 단계 — 아직 다 채우지 못한 첫 단계. */
+export const achOpenGroup = (groups: readonly ClubAchievementGroup[]): string | null =>
+  groups.find((g) => !g.locked && achDone(g.items) < g.items.length)?.id ?? null;
+
+/** 팀 화면 '경기' 탭에서 경기를 막는 이유 — 휴식기 · 지난 시즌 · 그 밖은 playHintOf. */
+export const REST_HINT = '시즌 사이 휴식기예요. 다음 시즌이 열리면 경기할 수 있어요.';
+export function matchHintOf(
+  team: OwnerTeam | null,
+  dirty: boolean,
+  matchesLeft: number,
+  season: number,
+  current: number | null,
+): string | null {
+  if (current === null) return REST_HINT;
+  if (season !== current)
+    return '지난 시즌 팀은 보기만 할 수 있어요. 지금 시즌을 고르면 경기할 수 있어요.';
+  return playHintOf(team, dirty, matchesLeft);
+}
 
 // ───────── 경기 결과 ─────────
 export type Outcome = '승' | '무' | '패';

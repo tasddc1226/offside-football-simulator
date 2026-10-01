@@ -262,8 +262,11 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="team"]').click();
   await expect(page.locator('h1')).toHaveText('팀 만들기');
-  // 저장 전에는 경기할 수 없다.
-  await expect(page.locator('[data-act="team-play"]')).toBeDisabled();
+  // 저장 전에는 경기할 수 없다 — 하단 '경기' 탭은 상대 대신 이유를 보인다.
+  await page.locator('[data-team-tab="opponents"]').click();
+  await expect(page.locator('[data-match-hint]')).toContainText('저장');
+  await expect(page.locator('[data-opponent]')).toHaveCount(0);
+  await page.locator('[data-team-tab="team"]').click();
 
   // 구단주 화면을 오가도 같은 요청을 다시 하지 않는다(메모).
   await page.locator('[data-act="team-back"]').click();
@@ -306,9 +309,9 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(page.locator('#toast')).toContainText('팀을 만들었어요');
   await expect(page.locator('h1')).toHaveText('우리 동네 FC');
   expect(body).toMatchObject({ name: '우리 동네 FC', manager: '홍감독', formation: '4-3-3' });
-  await expect(page.locator('[data-team-record]')).toContainText('레이팅 1,000');
+  await expect(page.locator('[data-team-record] dd').nth(1)).toHaveText('1,000');
 
-  await page.locator('[data-act="team-play"]').click();
+  await page.locator('[data-team-tab="opponents"]').click();
   await expect(page.locator('[data-opponent]')).toContainText('라이벌 FC');
   await page.locator('[data-act="team-challenge"]').click();
   expect(played).toEqual({ opponentTeamId: 'tem_00000000-0000-4000-8000-000000000002' });
@@ -330,7 +333,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
   await live.locator('[data-act="live-skip"]').click();
   await result.getByRole('button', { name: '내 팀' }).click();
-  await expect(page.locator('[data-team-record]')).toContainText('레이팅 1,016');
+  await expect(page.locator('[data-team-record] dd').nth(1)).toHaveText('1,016');
 });
 
 test('시즌 업적 — 단계별로 달성 수를 보이고, 펼치면 업적마다 상태를 보인다', async ({ page }) => {
@@ -374,18 +377,24 @@ test('시즌 업적 — 단계별로 달성 수를 보이고, 펼치면 업적�
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="team"]').click();
-  await page.locator('[data-act="team-achievements"]').click();
+  await page.locator('[data-team-tab="achievements"]').click();
   const box = page.locator('[data-club-achievements]');
   await expect(box).toContainText('시즌 1에 처음 뛰어 은퇴한 내 선수 2명');
+  // T-11-026 맨 위 요약(열린 단계의 달성 수)과 다음 목표.
+  await expect(box.locator('[data-ach-summary]')).toContainText('2/ 3 달성');
+  await expect(box.locator('[data-ach-near]')).toContainText('전 세부 포지션 선수 배출');
+  // 다 채우지 못한 첫 단계는 펼쳐 둔다.
   const first = box.locator('[data-ach-group="first"]');
-  await expect(first).toContainText('1 / 2');
-  await first.locator('summary').click();
+  await expect(first).toContainText('1/2');
+  await expect(first).toHaveAttribute('open', '');
   await expect(first).toContainText('달성 완료');
   await expect(first).toContainText('2 / 8');
   const records = box.locator('[data-ach-group="records"]');
   await records.locator('summary').click();
   await expect(records).toContainText('2단계 · 370골 · NEXT 1,000');
-  await expect(box.locator('[data-ach-group="locked-3"]')).toContainText('아직 발견하지 못했어요');
+  const locked = box.locator('[data-ach-group="locked"]');
+  await expect(locked).toContainText('3단계');
+  await expect(locked).toContainText('아직 발견하지 못했어요');
   await expectNoA11yViolations(page);
 
   await box.getByLabel('시즌').selectOption({ label: '프리시즌' });
@@ -511,7 +520,7 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await expect(page.locator('h1')).toHaveText('프리 FC');
   await expect(page.locator('[data-team-readonly]')).toBeVisible();
   await expect(page.locator('[data-act="team-save"]')).toHaveCount(0);
-  await expect(page.locator('[data-team-record]')).toContainText('레이팅 1,040');
+  await expect(page.locator('[data-team-record] dd').nth(1)).toHaveText('1,040');
   await expect(page.locator('button[data-slot]')).toHaveCount(0);
   await expect(page.locator('div[data-slot="9"]')).toContainText('공개 골잡이');
   await expectNoA11yViolations(page);

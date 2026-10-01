@@ -161,3 +161,49 @@ export function Grid2({
     </View>
   );
 }
+
+/** 숫자 칸 줄(웹 .owner-stats · .tm-stats). first는 첫 칸 너비 비율(전적처럼 긴 값). */
+export function Stats({
+  items,
+  small,
+  first = 1,
+}: {
+  items: [string, string][];
+  small?: boolean;
+  first?: number;
+}) {
+  const c = useColors();
+  return (
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      {items.map(([k, v], i) => (
+        <View
+          key={k}
+          accessible
+          accessibilityLabel={`${k} ${v}`}
+          style={{
+            flex: i === 0 ? first : 1,
+            minWidth: 0,
+            gap: 2,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 12,
+            backgroundColor: c.surface2,
+          }}
+        >
+          <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+            {k}
+          </Txt>
+          <Txt
+            style={{
+              fontFamily: DISPLAY[700],
+              fontSize: rem(small ? 1.0625 : 1.25),
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {v}
+          </Txt>
+        </View>
+      ))}
+    </View>
+  );
+}

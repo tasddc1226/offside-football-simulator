@@ -16,6 +16,7 @@ import { apiFetch, cachedGet } from './client.js';
 
 export type {
   ClubAchievement,
+  ClubAchievementGroup,
   ClubAchievementsResponse,
   OwnerTeam,
   OwnerTeamResponse,

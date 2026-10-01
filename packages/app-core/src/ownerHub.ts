@@ -1,7 +1,7 @@
 // T-11-026 구단주 화면(웹 Owner.svelte · 앱 screens/owner/Owner.tsx 공용) — 화면 맨 위 구단주 요약과 '내 팀' 카드가
 // 그리기 전에 계산하는 것만 둔다.
 import type { OwnerTeamResponse } from './api/team.js';
-import { playHintOf } from './teamOwner.js';
+import { matchHintOf } from './teamOwner.js';
 
 /** 구단주 요약 — 은퇴 선수 수 · 레전드 점수 합 · 영구결번 수. */
 export type OwnerSummary = { players: number; score: number; retired: number };
@@ -28,16 +28,13 @@ export type OwnerTeamCard = {
 };
 
 export function ownerTeamCard(d: OwnerTeamResponse): OwnerTeamCard {
-  const open = d.current !== null && d.season === d.current;
   return {
     season: d.seasons.find((o) => o.id === d.season)?.name ?? '',
     team: d.team,
     players: d.players.length,
     left: d.matchesLeft,
     perDay: d.matchesPerDay,
-    playHint: open
-      ? playHintOf(d.team, false, d.matchesLeft)
-      : '시즌 사이 휴식기예요. 다음 시즌이 열리면 경기할 수 있어요.',
+    playHint: matchHintOf(d.team, false, d.matchesLeft, d.season, d.current),
   };
 }
 

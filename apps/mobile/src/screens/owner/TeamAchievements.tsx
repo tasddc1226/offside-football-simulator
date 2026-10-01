@@ -1,8 +1,16 @@
-// 시즌 업적 탭(웹 team/Team.svelte 의 [data-club-achievements]) — 단계별 묶음을 접었다 펴고, 아직 못 찾은 단계는 LOCKED.
+// 시즌 업적 탭(웹 team/Team.svelte 의 [data-club-achievements]) — 맨 위 달성 요약 · 다음 목표, 단계별 묶음은 접었다 펴고
+// (다 채우지 못한 첫 단계만 펼쳐 둔다), 아직 못 찾은 단계는 LOCKED 한 줄로 묶는다.
 import { useState } from 'react';
 import { View } from 'react-native';
 import type { ClubAchievementsResponse } from '@offside/app-core/api/team';
-import { achDone, achState } from '@offside/app-core/teamOwner';
+import {
+  achDone,
+  achLockedRange,
+  achNear,
+  achOpenGroup,
+  achState,
+  achTotal,
+} from '@offside/app-core/teamOwner';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -28,15 +36,48 @@ function Stage({ children }: { children: string }) {
   );
 }
 
-function Group({ g }: { g: ClubAchievementsResponse['groups'][number] }) {
+/** 진행 막대(웹 .tm-bar). */
+function Bar({ ratio, sm }: { ratio: number; sm?: boolean }) {
   const c = useColors();
-  const [open, setOpen] = useState(false);
+  return (
+    <View
+      style={{
+        height: sm ? 6 : 8,
+        width: sm ? 64 : undefined,
+        borderRadius: 99,
+        overflow: 'hidden',
+        backgroundColor: sm ? c.line : c.surface2,
+      }}
+    >
+      <View
+        style={{
+          width: `${Math.round(ratio * 100)}%`,
+          height: '100%',
+          borderRadius: 99,
+          backgroundColor: c.accent,
+        }}
+      />
+    </View>
+  );
+}
+
+function Group({
+  g,
+  initialOpen,
+  lockedRange,
+}: {
+  g: ClubAchievementsResponse['groups'][number];
+  initialOpen: boolean;
+  lockedRange: string | null;
+}) {
+  const c = useColors();
+  const [open, setOpen] = useState(initialOpen);
   if (g.locked)
     return (
       <View
-        testID={`ach-group-${g.id}`}
+        testID="ach-group-locked"
         accessible
-        accessibilityLabel={`${g.stage} 잠김, 아직 발견하지 못했어요`}
+        accessibilityLabel={`${lockedRange ?? g.stage} 잠김, 아직 발견하지 못했어요`}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -51,7 +92,7 @@ function Group({ g }: { g: ClubAchievementsResponse['groups'][number] }) {
           backgroundColor: c.surface2,
         }}
       >
-        <Stage>{g.stage}</Stage>
+        <Stage>{lockedRange ?? g.stage}</Stage>
         <Txt tone="muted" bold style={{ flex: 1 }}>
           LOCKED
         </Txt>
@@ -68,7 +109,7 @@ function Group({ g }: { g: ClubAchievementsResponse['groups'][number] }) {
       <Press
         scale={0.99}
         onPress={() => setOpen(!open)}
-        accessibilityLabel={`${g.stage} ${g.title} ${achDone(g.items)} / ${g.items.length}`}
+        accessibilityLabel={`${g.stage} ${g.title} ${achDone(g.items)}/${g.items.length} 달성`}
         accessibilityState={{ expanded: open }}
         style={{
           flexDirection: 'row',
@@ -84,7 +125,7 @@ function Group({ g }: { g: ClubAchievementsResponse['groups'][number] }) {
           {g.title}
         </Txt>
         <Txt tone="accent" style={{ fontFamily: DISPLAY[700] }}>
-          {`${achDone(g.items)} / ${g.items.length}`}
+          {`${achDone(g.items)}/${g.items.length}`}
         </Txt>
       </Press>
       {open ? (
@@ -131,7 +172,13 @@ export function TeamAchievements({
   status: LoadStatus;
   load: (season?: number) => void;
 }) {
+  const c = useColors();
   const seasonName = ach?.seasons.find((o) => o.id === ach.season)?.name ?? '';
+  const tot = ach ? achTotal(ach.groups) : null;
+  const near = ach ? achNear(ach.groups) : [];
+  const openId = ach ? achOpenGroup(ach.groups) : null;
+  const lockedRange = ach ? achLockedRange(ach.groups) : null;
+  const firstLocked = ach?.groups.find((g) => g.locked)?.id;
   return (
     <Card gap={12}>
       <TmTitle
@@ -155,15 +202,65 @@ export function TeamAchievements({
         failText="업적을 불러오지 못했어요."
         retry={() => load(ach?.season)}
       >
-        {ach ? (
+        {ach && tot ? (
           <>
-            <Txt
-              tone="muted"
-              v="sm"
-            >{`${seasonName}에 처음 뛰어 은퇴한 내 선수 ${ach.players}명의 기록으로 채워요.`}</Txt>
-            {ach.groups.map((g) => (
-              <Group key={g.id} g={g} />
-            ))}
+            <View style={{ gap: 8 }} testID="ach-summary">
+              <View
+                style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}
+                accessible
+                accessibilityLabel={`시즌 업적 ${tot.total}개 중 ${tot.done}개 달성`}
+              >
+                <Txt
+                  tone="accent"
+                  style={{ fontFamily: DISPLAY[700], fontSize: rem(2), lineHeight: rem(2) * 1.1 }}
+                >
+                  {tot.done}
+                </Txt>
+                <Txt tone="muted">{`/ ${tot.total} 달성`}</Txt>
+              </View>
+              <Bar ratio={tot.total ? tot.done / tot.total : 0} />
+              <Txt
+                tone="muted"
+                v="sm"
+              >{`${seasonName}에 처음 뛰어 은퇴한 내 선수 ${ach.players}명의 기록으로 채워요.`}</Txt>
+            </View>
+            {near.length ? (
+              <View style={{ gap: 6 }} testID="ach-near">
+                <Txt v="eyebrow">다음 목표</Txt>
+                {near.map((n) => (
+                  <View
+                    key={n.item.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      paddingVertical: 8,
+                      paddingHorizontal: 10,
+                      borderRadius: 10,
+                      backgroundColor: c.surface2,
+                    }}
+                  >
+                    <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                      <Txt bold>{n.item.label}</Txt>
+                      <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                        {`${n.group} · ${achState(n.item)}`}
+                      </Txt>
+                    </View>
+                    <Bar ratio={n.ratio} sm />
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {ach.groups.map((g) =>
+              g.locked && g.id !== firstLocked ? null : (
+                <Group
+                  key={`${ach.season}-${g.id}`}
+                  g={g}
+                  initialOpen={g.id === openId}
+                  lockedRange={lockedRange}
+                />
+              ),
+            )}
           </>
         ) : null}
       </LoadState>

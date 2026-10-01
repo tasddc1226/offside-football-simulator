@@ -29,7 +29,7 @@ import { Btn, Card, Screen, Topbar, Txt } from '../../ui';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
-import { Grid2, OvrBadge } from './TeamParts';
+import { Grid2, OvrBadge, Stats } from './TeamParts';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 
 function openTeam(v: TeamView = 'team') {
@@ -38,42 +38,6 @@ function openTeam(v: TeamView = 'team') {
 }
 
 /** 숫자 칸 셋(웹 .owner-stats). */
-function Stats({ items, small }: { items: [string, string][]; small?: boolean }) {
-  const c = useColors();
-  return (
-    <View style={{ flexDirection: 'row', gap: 8 }}>
-      {items.map(([k, v]) => (
-        <View
-          key={k}
-          accessible
-          accessibilityLabel={`${k} ${v}`}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            gap: 2,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderRadius: 12,
-            backgroundColor: c.surface2,
-          }}
-        >
-          <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-            {k}
-          </Txt>
-          <Txt
-            style={{
-              fontFamily: DISPLAY[700],
-              fontSize: rem(small ? 1.0625 : 1.25),
-              fontVariant: ['tabular-nums'],
-            }}
-          >
-            {v}
-          </Txt>
-        </View>
-      ))}
-    </View>
-  );
-}
 
 /** 잠긴 내 팀 — 흐린 그라운드에 11자리(4-3-3)만 찍고 가운데에 자물쇠 표시(웹 .owner-lock). */
 function LockedPitch() {
