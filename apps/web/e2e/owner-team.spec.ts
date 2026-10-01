@@ -469,7 +469,32 @@ test('업적 랭킹 — 내 업적 요약에서 기록실 업적 랭킹으로 �
   );
   await page.route(`${API}/v1/owner-team/achievements**`, (route) =>
     route.fulfill(
-      ok({ season: 1, seasons: SEASONS, players: 0, score: 0, rank: null, ranked: 2, groups: [] }),
+      ok({
+        season: 1,
+        seasons: SEASONS,
+        players: 0,
+        score: 0,
+        rank: null,
+        ranked: 2,
+        // 서버는 선수 업적과 잠긴 감독 업적을 늘 보낸다.
+        groups: [
+          {
+            id: 'first',
+            category: 'player',
+            stage: '0단계',
+            title: '첫 발자국',
+            items: [{ id: 'first-retire', label: '첫 은퇴', done: false, points: 0, worth: 10 }],
+          },
+          {
+            id: 'manager',
+            category: 'manager',
+            stage: 'MANAGER',
+            title: '감독 커리어',
+            items: [],
+            locked: true,
+          },
+        ],
+      }),
     ),
   );
   await page.route(`${API}/v1/achievements/ranking**`, (route) =>

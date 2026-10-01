@@ -29,13 +29,14 @@ import {
   slotIdsOf,
 } from '../db/repos/ownerTeams.js';
 import { listAchievementRanking } from '../db/repos/ownerAchievements.js';
-import { edgeCached } from '../edgeCache.js';
+import { edgeCached, waitUntil } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { teamBadges } from '../team/badges.js';
+import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { buildLineup, lineupOvr } from '../team/sim.js';
 import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 
@@ -200,6 +201,14 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       }
       const likes = await setTeamLike(db, id, profileId, like, nowIso());
       if (likes === undefined) throw teamNotFound();
+      // T-11-028 받은 좋아요(팀 업적)와 누른 좋아요(구단주 업적) — 두 구단주 점수를 응답 뒤에 다시 센다.
+      waitUntil(
+        c,
+        Promise.all([
+          refreshAfterChange(db, found.team.profileId, found.team.season),
+          refreshAfterChange(db, profileId, found.team.season),
+        ]),
+      );
       return ok(c, TeamLikeResponseSchema, { liked: like, likes });
     });
   }

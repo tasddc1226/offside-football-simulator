@@ -19,8 +19,8 @@ import {
 // 다시 훑기는 더 이른 달성·더 큰 값만 더한다 — 규칙이 늘어날 때는 BACKFILL_VERSION만 올리면 되지만, 규칙을
 // 좁히거나 없애면 기존 행이 남으므로 마이그레이션으로 해당 행을 지운 뒤 버전을 올린다.
 // T-11-029 기록은 시즌마다 따로 겨룬다 — 커리어는 자기 시즌(service_season, NULL이면 0 = 프리시즌)의 기록만 노린다. 시즌을
-// 가르는 마이그레이션(0045)이 기존 행에 시즌을 채웠고, 버전 3은 그때 이미 시즌 1 선수가 있었다면 시즌별로 다시 판정한다.
-export const BACKFILL_VERSION = '3';
+// 가르는 마이그레이션(0045)이 기존 행에 시즌을 채웠다 — 개막 전 배포라 시즌 1 선수가 없어 다시 훑지 않는다(버전 그대로).
+export const BACKFILL_VERSION = '2';
 const META_KEY = 'server_firsts_backfill';
 /** 다시 훑는 중이면 마지막으로 판정한 careers rowid. */
 const CURSOR_KEY = 'server_firsts_cursor';

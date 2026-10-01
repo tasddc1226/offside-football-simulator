@@ -302,7 +302,7 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
   await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(3);
 });
 
-test('구단주 내 선수: 10명까지 보이고 모두 보기로 펼친다', async ({ page }) => {
+test('구단주 내 선수: 3명까지 보이고 모두 보기로 펼친다', async ({ page }) => {
   await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [], total: 0 })));
   await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   await page.addInitScript(() => {
@@ -334,7 +334,7 @@ test('구단주 내 선수: 10명까지 보이고 모두 보기로 펼친다', a
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-my-player]')).toHaveCount(10);
+  await expect(page.locator('[data-my-player]')).toHaveCount(3);
   await expect(page.locator('[data-my-player="0"]')).toContainText('기기선수1');
   await page.locator('[data-act="my-players-all"]').click();
   await expect(page.locator('[data-my-player]')).toHaveCount(12);

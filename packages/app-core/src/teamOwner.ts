@@ -229,7 +229,7 @@ export const achOpenGroup = (groups: readonly ClubAchievementGroup[]): string | 
   groups.find((g) => !g.locked && achDone(g.items) < g.items.length)?.id ?? null;
 
 /** 팀 화면 '경기' 탭에서 경기를 막는 이유 — 휴식기 · 지난 시즌 · 그 밖은 playHintOf. */
-export const REST_HINT = '시즌 사이 휴식기예요. 다음 시즌이 열리면 경기할 수 있어요.';
+const REST_HINT = '시즌 사이 휴식기예요. 다음 시즌이 열리면 경기할 수 있어요.';
 export function matchHintOf(
   team: OwnerTeam | null,
   dirty: boolean,

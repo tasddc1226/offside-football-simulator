@@ -127,16 +127,22 @@ export async function ownerActivityIn(
   season: number,
   teamId: string | null,
 ) {
+  const likes = db
+    .select({ n: count() })
+    .from(teamLikes)
+    .innerJoin(ownerTeams, eq(ownerTeams.id, teamLikes.teamId))
+    .where(and(eq(teamLikes.profileId, profileId), eq(ownerTeams.season, season)));
+  // 팀이 없으면 건 경기도 없다 — 구단주의 지난 시즌 경기까지 읽지 않게 건너뛴다.
+  if (teamId === null) {
+    const [l] = await likes;
+    return { matchDays: 0, likesGiven: Number(l?.n ?? 0) };
+  }
   const [[m], [l]] = await db.batch([
     db
       .select({ n: countDistinct(sql`date(${teamMatches.createdAt}, '+9 hours')`) })
       .from(teamMatches)
-      .where(and(eq(teamMatches.profileId, profileId), eq(teamMatches.homeTeamId, teamId ?? ''))),
-    db
-      .select({ n: count() })
-      .from(teamLikes)
-      .innerJoin(ownerTeams, eq(ownerTeams.id, teamLikes.teamId))
-      .where(and(eq(teamLikes.profileId, profileId), eq(ownerTeams.season, season))),
+      .where(and(eq(teamMatches.profileId, profileId), eq(teamMatches.homeTeamId, teamId))),
+    likes,
   ]);
   return { matchDays: Number(m?.n ?? 0), likesGiven: Number(l?.n ?? 0) };
 }

@@ -207,7 +207,6 @@ export const ACH_GRADES = [
   { id: 'legend', name: '레전드', min: 3500 },
 ] as const;
 export type AchGrade = (typeof ACH_GRADES)[number];
-export type AchGradeId = AchGrade['id'];
 
 /** 점수의 등급과 다음 등급(맨 위면 null). */
 export function achGradeOf(score: number): { grade: AchGrade; next: AchGrade | null } {

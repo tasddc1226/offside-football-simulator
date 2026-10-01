@@ -37,8 +37,6 @@ function openTeam(v: TeamView = 'team') {
   go('team');
 }
 
-/** 숫자 칸 셋(웹 .owner-stats). */
-
 /** 잠긴 내 팀 — 흐린 그라운드에 11자리(4-3-3)만 찍고 가운데에 자물쇠 표시(웹 .owner-lock). */
 function LockedPitch() {
   const c = useColors();

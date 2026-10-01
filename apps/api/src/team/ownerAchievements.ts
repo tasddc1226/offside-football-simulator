@@ -103,8 +103,11 @@ export async function refreshAfterChange(db: Db, profileId: string, season: numb
   await refreshOwnerAchievements(db, profile, season, new Date().toISOString(), true);
 }
 
-/** 매일 cron: 놓친 구단주의 점수를 다시 센다(한 번에 limit명 — 남으면 다음 날 이어서). */
-export async function rebuildStaleAchievements(db: Db, now: string, limit = 200) {
+/**
+ * 매일 cron: 놓친 구단주의 점수를 다시 센다(한 번에 limit명 — 남으면 다음 날 이어서). 구단주마다 D1을 6번쯤 부르므로
+ * 한 번 호출의 하위 요청 한도(1,000) 안에 들도록 100명으로 끊는다.
+ */
+export async function rebuildStaleAchievements(db: Db, now: string, limit = 100) {
   const season = teamSeasonAt(now);
   if (season === null) return { season, refreshed: 0 };
   const ids = await staleAchievementOwners(db, season, limit);

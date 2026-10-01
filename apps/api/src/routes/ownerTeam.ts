@@ -436,7 +436,14 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         now,
       }),
     ]);
-    waitUntil(c, refreshAfterChange(db, me.id, season));
+    // 상대 팀 기록(승패·레이팅)도 바뀌어 두 구단주 점수를 함께 센다.
+    waitUntil(
+      c,
+      Promise.all([
+        refreshAfterChange(db, me.id, season),
+        refreshAfterChange(db, opp.team.profileId, season),
+      ]),
+    );
     const names = new Map<string, string>();
     for (const s of [...home, ...away])
       if (s.careerId && s.publicName) names.set(s.careerId, s.publicName);
