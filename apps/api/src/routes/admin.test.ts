@@ -1,4 +1,9 @@
-import { type AdminCommentList, type AdminStats, type AutomationReport } from '@offside/contracts';
+import {
+  type AdminCommentList,
+  type AdminStats,
+  type AnomalyReport,
+  type AutomationReport,
+} from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { kstDays } from '../db/repos/admin.js';
@@ -53,6 +58,8 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       ['GET', '/v1/admin/comments'],
       ['POST', '/v1/admin/comments/purge'],
       ['GET', '/v1/admin/automation'],
+      ['GET', '/v1/admin/anomalies'],
+      ['POST', '/v1/admin/careers/hidden'],
     ] as const) {
       expect((await call(method, path)).status, path).toBe(401);
       expect(
@@ -61,6 +68,42 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
         path,
       ).toBe(403);
     }
+  });
+
+  it('비정상 기록: 숨겨진 커리어를 보고 되돌리거나 다시 숨긴다', async () => {
+    const admin = await makeAdmin();
+    const user = await googleUser('팬');
+    const now = new Date().toISOString();
+    await ctx.db.insert(careers).values({
+      id: 'car-x',
+      profileId: user.profileId,
+      pos: 'FW',
+      foot: '오른발',
+      type: 'poacher',
+      trait: 'late',
+      startYear: 2026,
+      appVersion: 'test',
+      status: 'retired',
+      retiredAt: now,
+      hidden: 1,
+      legendScore: 4480,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const report = async () =>
+      data<AnomalyReport>(await call('GET', '/v1/admin/anomalies', { cookie: admin.cookie }));
+    expect((await report()).hidden.map((c) => c.careerId)).toEqual(['car-x']);
+
+    const toggle = (hidden: boolean, careerId = 'car-x') =>
+      call('POST', '/v1/admin/careers/hidden', {
+        cookie: admin.cookie,
+        body: { careerId, hidden },
+      });
+    expect((await toggle(false)).status).toBe(204);
+    expect((await report()).hidden).toEqual([]);
+    expect((await toggle(true)).status).toBe(204);
+    expect((await report()).hidden.map((c) => c.careerId)).toEqual(['car-x']);
+    expect((await toggle(true, 'nope')).status).toBe(404);
   });
 
   it('대시보드: 가입·활동·커리어·댓글 수와 최근 14일(KST) 추이', async () => {

@@ -25,8 +25,9 @@ export const SEASON_CAP = {
  * 서버 밸런스의 성장 수치(growthScale 등)를 올리면 이 표도 다시 구해야 한다 — 안 그러면 정상 선수가 잘려 저장된다.
  * 시즌 값에 실린 나이를 그대로 믿으므로 나이까지 꾸민 기록은 막지 못한다(시즌별 성장 폭 검사는 후속 과제).
  */
-const OVR_CAP_BY_AGE = [81, 87, 91, 94, 97, 97];
-const ovrCapAt = (age: number): number => OVR_CAP_BY_AGE[Math.max(age, 18) - 18] ?? SEASON_CAP.ovr;
+export const OVR_CAP_BY_AGE = [81, 87, 91, 94, 97, 97];
+export const ovrCapAt = (age: number): number =>
+  OVR_CAP_BY_AGE[Math.max(age, 18) - 18] ?? SEASON_CAP.ovr;
 /** 생애 나이 범위(고3 데뷔 전 · 41세 강제 은퇴 뒤까지 여유). */
 const MIN_AGE = 14;
 const MAX_AGE = 45;

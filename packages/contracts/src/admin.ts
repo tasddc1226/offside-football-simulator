@@ -165,3 +165,39 @@ export const AutomationReportSchema = z.object({
 });
 export type AutomationReport = z.infer<typeof AutomationReportSchema>;
 export const AutomationHoursSchema = z.coerce.number().int().min(1).max(24).default(6);
+
+export const AnomalyReasonSchema = z.enum([
+  /** 나이별 OVR 상한을 크게 넘음(자동 숨김). */
+  'ovrFar',
+  /** 나이별 OVR 상한을 조금 넘음(검토). */
+  'ovrHigh',
+  /** 한 시즌에 OVR이 정상 최대 상승 폭보다 많이 오름(자동 숨김). */
+  'jump',
+  /** 레전드 점수가 정상 상위권을 넘음(검토). */
+  'legend',
+]);
+export type AnomalyReason = z.infer<typeof AnomalyReasonSchema>;
+
+export const AnomalyCareerSchema = z.object({
+  careerId: z.string(),
+  status: z.enum(['active', 'retired']),
+  legendScore: z.number().int().nullable(),
+  peak: z.number().int().nullable(),
+  reasons: z.array(AnomalyReasonSchema),
+});
+export type AnomalyCareer = z.infer<typeof AnomalyCareerSchema>;
+
+/** `GET /v1/admin/anomalies` 운영자가 볼 비정상 기록: 검토 대상(숨기지 않은 의심)과 지금 숨겨진 커리어. */
+export const AnomalyReportSchema = z.object({
+  generatedAt: IsoUtcSchema,
+  review: z.array(AnomalyCareerSchema),
+  hidden: z.array(AnomalyCareerSchema),
+});
+export type AnomalyReport = z.infer<typeof AnomalyReportSchema>;
+
+/** `POST /v1/admin/careers/hidden` 커리어를 공개 순위에서 숨기거나(true) 되돌린다(false). 되돌리면 자동 숨김이 다시 걸지 않는다. */
+export const CareerHiddenInputSchema = z.object({
+  careerId: z.string().min(1).max(64),
+  hidden: z.boolean(),
+});
+export type CareerHiddenInput = z.infer<typeof CareerHiddenInputSchema>;
