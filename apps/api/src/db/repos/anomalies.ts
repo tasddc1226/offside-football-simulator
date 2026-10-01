@@ -21,7 +21,7 @@ export const ANOMALY = {
   legend: 3600,
 } as const;
 
-const SWEPT_AT_KEY = 'anomaly_sweep_at';
+export const SWEPT_AT_KEY = 'anomaly_sweep_at';
 const CLEARED_PREFIX = 'anomaly_cleared:';
 const clearedKey = (careerId: string) => `${CLEARED_PREFIX}${careerId}`;
 const HOUR_MS = 3_600_000;
@@ -87,6 +87,10 @@ async function findAnomalies(d1: D1Database, since: string): Promise<Found> {
   return found;
 }
 
+/** 숨기지 않았고 운영자가 되돌려 두지도 않은, 점검 대상으로 남은 커리어. */
+const openOnly = (found: Found, cleared: Set<string>) =>
+  [...found.values()].filter((f) => !f.info.hidden && !cleared.has(f.info.id));
+
 /** 운영자가 되돌려 둔 커리어 id. 자동 점검과 검토 목록에서 뺀다. */
 async function clearedIds(d1: D1Database): Promise<Set<string>> {
   const { results } = await d1
@@ -118,7 +122,7 @@ export async function sweepAnomalies(d1: D1Database, now: number): Promise<Sweep
   // 점검이 밀려도 놓치지 않게 한 시간 겹친다.
   const since = last ? new Date(Date.parse(last.value) - HOUR_MS).toISOString() : '';
   const [found, cleared] = await Promise.all([findAnomalies(d1, since), clearedIds(d1)]);
-  const open = [...found.values()].filter((f) => !f.info.hidden && !cleared.has(f.info.id));
+  const open = openOnly(found, cleared);
   const toHide = open.filter((f) => f.reasons.has('ovrFar') || f.reasons.has('jump'));
   for (let i = 0; i < toHide.length; i += HIDE_CHUNK)
     await runBatch(
@@ -157,8 +161,7 @@ export async function anomalyReport(d1: D1Database, now: number): Promise<Anomal
     (b.legendScore ?? 0) - (a.legendScore ?? 0);
   return {
     generatedAt: new Date(now).toISOString(),
-    review: [...found.values()]
-      .filter((f) => !f.info.hidden && !cleared.has(f.info.id))
+    review: openOnly(found, cleared)
       .map((f) => toCareer(f.info, f.reasons))
       .sort(byScore)
       .slice(0, LIST_LIMIT),

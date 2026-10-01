@@ -151,7 +151,7 @@ describe('비정상 기록 정기 점검', () => {
 
     expect(await setCareerHidden(ctx.env.DB, 'far', false, NOW)).toBe(true);
     expect(await hiddenOf('far')).toBe(0);
-    await ctx.env.DB.prepare('DELETE FROM app_meta WHERE key = ?1').bind('anomaly_sweep_at').run();
+    await ctx.env.DB.prepare('DELETE FROM app_meta WHERE key = ?1').bind(SWEPT_AT_KEY).run();
     expect((await sweepAnomalies(ctx.env.DB, NOW + DAY)).hidden).toBe(0); // 전부 다시 훑어도 되돌린 건 둔다
     expect((await anomalyReport(ctx.env.DB, NOW)).review).toEqual([]);
 
