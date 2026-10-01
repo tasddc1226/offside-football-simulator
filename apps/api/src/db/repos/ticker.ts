@@ -17,7 +17,7 @@ export async function tickerTransfers(db: Db, nowMs: number): Promise<TickerTran
     from career_seasons s
     join career_seasons p on p.career_id = s.career_id and p.year = s.year - 1
     join careers c on c.id = s.career_id
-    where s.created_at >= ${since} and s.mil = 0 and p.mil = 0
+    where s.created_at >= ${since} and c.hidden = 0 and s.mil = 0 and p.mil = 0
       and s.club_id is not null and p.club_id is not null and s.club_id <> p.club_id
     order by s.created_at desc
     limit ${TICKER_TRANSFERS_MAX * 4}`);
