@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONTROL_BASE, CONTROL_CAP, LEGEND_W_DETAIL } from '@offside/contracts/hof-rules';
-import { boundRetirement, type StoredSeason } from './plausibility.js';
+import type { CareerSeasonPayload } from '@offside/contracts';
+import { boundRetirement, sanitizeSeason, type StoredSeason } from './plausibility.js';
 
 const seasons: StoredSeason[] = Array.from({ length: 10 }, (_, i) => ({
   year: 2030 + i,
@@ -37,5 +38,33 @@ describe('boundRetirement 경기 장악 (T-11-021)', () => {
       1,
     );
     expect(boundRetirement('FW', summary, seasons, 'W')!.legendScore).toBeLessThan(cm);
+  });
+});
+
+describe('나이별 OVR 상한 (T-11-023)', () => {
+  const row = (age: number, ovr: number) =>
+    sanitizeSeason({
+      year: 2026 + age - 18,
+      age,
+      club: '테스트 FC',
+      league: '리그',
+      apps: 30,
+      goals: 10,
+      assists: 5,
+      rating: 7,
+      rank: 1,
+      ovr,
+      honors: [],
+    } as unknown as CareerSeasonPayload).ovr;
+
+  it('만 18~23세에 OVR 99로 올라온 기록은 나이별 상한으로 자른다', () => {
+    expect([18, 19, 20, 21, 22, 23, 24].map((age) => row(age, 99))).toEqual([
+      81, 87, 91, 94, 97, 97, 99,
+    ]);
+  });
+
+  it('운영 실측 최고(18세 78·19세 84·20세 88)와 성인 OVR은 그대로 둔다', () => {
+    expect([row(18, 78), row(19, 84), row(20, 88)]).toEqual([78, 84, 88]);
+    expect(row(30, 97)).toBe(97);
   });
 });
