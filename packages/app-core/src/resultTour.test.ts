@@ -13,7 +13,11 @@ describe('rankSlideSpan', () => {
   });
   it('접힌 표에서는 보이는 줄 안에서 이전 순위에 가장 가까운 자리까지', () => {
     // 1 2 3 ⋯ 10 11 [12] — 2위에서 12위로
-    expect(rankSlideSpan(rows([1, 2, 3, null, 10, 11, 12], 12), 2, 12)).toEqual({ me: 6, from: 1, up: false });
+    expect(rankSlideSpan(rows([1, 2, 3, null, 10, 11, 12], 12), 2, 12)).toEqual({
+      me: 6,
+      from: 1,
+      up: false,
+    });
   });
   it('변동이 없거나 내 팀이 없으면 null', () => {
     expect(rankSlideSpan(rows([1, 2, 3], 2), 2, 2)).toBeNull();

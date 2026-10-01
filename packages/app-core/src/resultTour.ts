@@ -36,8 +36,10 @@ export function rankSlideSpan(
   const me = rows.findIndex((r) => r.me);
   if (me < 0 || before === after) return null;
   const up = before > after;
-  const passed = (r: { rank?: number }) => r.rank === undefined || (up ? r.rank <= before : r.rank >= before);
+  const passed = (r: { rank?: number }) =>
+    r.rank === undefined || (up ? r.rank <= before : r.rank >= before);
   let from = me;
-  for (let i = me + (up ? 1 : -1); i >= 0 && i < rows.length && passed(rows[i]!); i += up ? 1 : -1) from = i;
+  for (let i = me + (up ? 1 : -1); i >= 0 && i < rows.length && passed(rows[i]!); i += up ? 1 : -1)
+    from = i;
   return from === me ? null : { me, from, up };
 }
