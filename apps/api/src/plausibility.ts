@@ -1,6 +1,6 @@
 import type { CareerPos, CareerSeasonPayload, RetirementSummary } from '@offside/contracts';
 import { isDefaultClubId } from '@offside/contracts/club-names';
-import { legendTerms } from '@offside/contracts/hof-rules';
+import { controlPoints, legendTerms } from '@offside/contracts/hof-rules';
 import type { PeakProfile } from '@offside/contracts/positions';
 
 // 클라이언트가 보낸 기록 값의 현실성 검사. 게임은 브라우저에서 돌고 서버는 결과만 받으므로, 모양(zod)만 맞으면
@@ -65,6 +65,8 @@ export interface StoredSeason {
   apps: number;
   goals: number;
   assists: number;
+  /** 시즌 평균 평점(경기 장악 점수). */
+  rating: number;
   cs: number | null;
   caps: number | null;
   ovr: number;
@@ -144,6 +146,7 @@ export function boundRetirement(
         // 발롱도르 순위 점수(1위 30점)는 시즌 기록에 남지 않아 뛴 해마다 1위로 친다.
         ballonRankPoints: life.length * 30,
         worldCups: count('FIFA 월드컵 우승'),
+        control: controlPoints(life),
       },
       dpos,
     ),

@@ -512,6 +512,7 @@ const storedSeasonColumns = {
   apps: careerSeasons.apps,
   goals: careerSeasons.goals,
   assists: careerSeasons.assists,
+  rating: careerSeasons.rating,
   cs: careerSeasons.cs,
   caps: careerSeasons.caps,
   ovr: careerSeasons.ovr,

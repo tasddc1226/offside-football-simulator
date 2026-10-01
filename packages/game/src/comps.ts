@@ -1,7 +1,7 @@
 // ───────── 실제 대회 구조: 국내 컵 · 슈퍼컵 · 대륙 클럽 대회 · 시상식 · 커리어 여정 ─────────
 import { ovr } from './attributes.js';
 import { clamp, ri, chance, gauss, rnd } from './rng.js';
-import { clubRef, sameClub } from './data.js';
+import { clubRef, sameClub, type Pos } from './data.js';
 import {
   leagueOf,
   clubsIn,
@@ -333,6 +333,25 @@ const TOP_G = 0.57,
   BALLON_BAR = 164.8,
   MULLER_BAR = 36,
   SHOE_BAR = 56.5;
+/**
+ * T-11-021 발롱도르 점수·FIFPRO 월드 11의 포지션 보정. atk: 골·도움 항 배수, bonus: 포지션 기본 점수, fifpro: FIFPRO
+ * 월드 11 발롱도르 순위 컷. 세부 포지션 선수(시즌 1부터)는 골·도움 항이 공격수에게 쏠리지 않게 줄이고 포지션마다
+ * 기본 점수를 준다. FIFPRO는 포메이션 자리(GK 1 · DF 4 · MF 3 · FW 3)를 순위 컷으로 옮긴 값이다 — 한 선수만
+ * 시뮬레이션하므로 후보가 몰린 공격수는 더 높은 순위여야 한다. 프리시즌 선수는 옛 보정(DF +2 · GK +3, 전원 12위)이다.
+ */
+type BallonPos = Record<Pos, { atk: number; bonus: number; fifpro: number }>;
+const BALLON_POS: BallonPos = {
+  FW: { atk: 0.8, bonus: 0, fifpro: 8 },
+  MF: { atk: 1, bonus: 5, fifpro: 13 },
+  DF: { atk: 1, bonus: 6, fifpro: 13 },
+  GK: { atk: 1, bonus: 5, fifpro: 5 },
+};
+const BALLON_POS_PRESEASON: BallonPos = {
+  FW: { atk: 1, bonus: 0, fifpro: 12 },
+  MF: { atk: 1, bonus: 0, fifpro: 12 },
+  DF: { atk: 1, bonus: 2, fifpro: 12 },
+  GK: { atk: 1, bonus: 3, fifpro: 12 },
+};
 export function seasonAwards(
   s: GameState,
   ctx: { rank: number; avg: number; trophies: string[]; tours: NatTourResult[] },
@@ -379,18 +398,17 @@ export function seasonAwards(
       0,
     );
   const cont = (S.comps ?? []).find((c) => c.type === 'cont');
+  const bp = (s.dpos ? BALLON_POS : BALLON_POS_PRESEASON)[s.pos];
   const score =
     o +
-    S.goals * 0.45 +
-    S.assists * 0.28 +
-    (cont ? cont.g * 0.7 + cont.a * 0.3 : 0) +
+    (S.goals * 0.45 + S.assists * 0.28 + (cont ? cont.g * 0.7 + cont.a * 0.3 : 0)) * bp.atk +
     avg * 5 +
     L.tier * 1.2 +
     big('UEFA 챔피언스리그 우승') * 12 +
     (rank === 1 ? 6 : 0) +
     ntBonus +
     (cont && cont.key === 'UCL' && /4강|결승|준우승/.test(cont.stage) ? 4 : 0) +
-    (s.pos === 'GK' ? 3 : s.pos === 'DF' ? 2 : 0) +
+    bp.bonus +
     gauss() * 3;
   const ballonRank = clamp(Math.round(1 + (BALLON_BAR - score) / 0.8), 1, 99);
   if (L.tier >= 4 && ballonRank <= 30 && enough) {
@@ -400,15 +418,17 @@ export function seasonAwards(
     if (s.age <= 21) awards.push('코파 트로피');
     if (s.pos === 'GK' && ballonRank <= 25 && chance(0.6)) awards.push('야신 트로피');
     if (ballonRank <= 2 && chance(0.7)) awards.push('FIFA 더 베스트 남자 선수');
-    if (ballonRank <= 12 && chance(0.8)) awards.push('FIFPRO 월드 11');
+    if (ballonRank <= bp.fifpro && chance(0.8)) awards.push('FIFPRO 월드 11');
   }
   if (L.tier >= 4 && allG >= MULLER_BAR + gauss() * 3) awards.push('게르트 뮐러 트로피');
   const shoe = S.goals * (L.tier >= 5 ? 2 : 1.5);
   if (L.tier >= 4 && shoe >= SHOE_BAR + gauss() * 4) awards.push('유러피언 골든슈');
   if (s.pos === 'DF' && L.tier >= 5 && enough && avg >= 7.15 && rank <= 3 && chance(0.45))
     awards.push(`${L.name} 올해의 수비수`);
-  if (s.pos === 'GK' && enough && avg >= 7.1 && rank <= 4 && chance(0.45))
-    awards.push(`${L.name} 올해의 골키퍼`);
+  // T-11-021 미드필더(세부 포지션 선수)도 골키퍼와 같은 조건으로 포지션 상을 받는다.
+  const posAward = s.pos === 'GK' ? '골키퍼' : s.dpos && s.pos === 'MF' ? '미드필더' : null;
+  if (posAward && enough && avg >= 7.1 && rank <= 4 && chance(0.45))
+    awards.push(`${L.name} 올해의 ${posAward}`);
   const kfa = s.nat.caps > 0 && (ballonRank <= 30 || (o >= 80 && avg >= 7.2)) && chance(0.5);
   if (kfa) awards.push(federationPoty(s));
   // AFC 올해의 선수는 아시아 리그 소속, 국제선수상은 아시아 밖(유럽 · MLS)에서 뛰는 선수 몫이다.

@@ -362,6 +362,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
       awards: s.awards.length,
       ballon: s.awards.filter((x) => x.t === '발롱도르').length,
       ballonBest: ballonBest === 99 ? '' : ballonBest,
+      fifpro: s.awards.filter((x) => x.t === 'FIFPRO 월드 11').length,
       wc: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length,
       ucl: s.trophies.filter((x) => x.t === 'UEFA 챔피언스리그 우승').length,
       mil: s.mil.exempt ? 'exempt' : s.mil.served ? s.mil.type! : 'none',
