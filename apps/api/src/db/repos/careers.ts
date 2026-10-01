@@ -178,8 +178,6 @@ export type PutRetirementInput = {
   snapshot?: LegendSnapshot | undefined;
   /** T-10-092 최고 시점 능력치(plausibility.ts boundProfile로 자른 값). 옛 클라이언트는 없다. */
   profile?: PeakProfile | undefined;
-  /** 시즌 신호가 자동 플레이로 판정돼 공개 순위에서 뺀다(careers.hidden). */
-  hidden?: boolean;
   now: string;
 };
 
@@ -193,7 +191,7 @@ export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
  * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
-  const { careerId, summary, publicName, snapshot, profile, hidden, now } = input;
+  const { careerId, summary, publicName, snapshot, profile, now } = input;
   await runBatch(db, [
     // 처음 은퇴할 때만 센다 — 같은 커리어의 첫 은퇴가 동시에 두 번 와도 retired_at이 이미 있으면 아무 행도 넣지
     // 않는다. 같은 트랜잭션에서 아래 update보다 먼저 돌아야 retired_at이 비어 있는 것을 본다.
@@ -229,7 +227,6 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
         caps: summary.caps,
         ballon: summary.ballon,
         lastClub: summary.lastClub,
-        ...(hidden ? { hidden: 1 } : {}),
         // 옛 클라이언트는 칭호·클럽 id를 보내지 않는다 — 보낸 경우에만 쓴다.
         ...(summary.title !== undefined ? { title: summary.title } : {}),
         ...(summary.lastClubId !== undefined ? { lastClubId: summary.lastClubId } : {}),
@@ -572,13 +569,4 @@ export async function getCareer(db: Db, careerId: string): Promise<CareerRow | u
 
 export async function listCareerSeasons(db: Db, careerId: string) {
   return db.select().from(careerSeasons).where(eq(careerSeasons.careerId, careerId));
-}
-
-/** 한 커리어의 시즌 신호(자동 플레이 판정용). */
-export async function seasonSignalsOf(db: Db, careerId: string): Promise<(string | null)[]> {
-  const rows = await db
-    .select({ signalsJson: careerSeasons.signalsJson })
-    .from(careerSeasons)
-    .where(eq(careerSeasons.careerId, careerId));
-  return rows.map((r) => r.signalsJson);
 }

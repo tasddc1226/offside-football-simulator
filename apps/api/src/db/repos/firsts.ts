@@ -1,6 +1,7 @@
 import type { FirstsResponse } from '@offside/contracts';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
+import { isAutomatedCareer } from './automation.js';
 import { runBatch } from './batch.js';
 import { appMeta, careers, careerSeasons, serverFirsts, serverRecords } from '../schema.js';
 import {
@@ -74,6 +75,7 @@ const seasonColumns = {
   honorsJson: careerSeasons.honorsJson,
   mil: careerSeasons.mil,
   createdAt: careerSeasons.createdAt,
+  signalsJson: careerSeasons.signalsJson,
 };
 type SeasonRow = Pick<typeof careerSeasons.$inferSelect, keyof typeof seasonColumns>;
 
@@ -176,6 +178,11 @@ export async function recordCareerFirsts(
       ]);
   const [career] = toCareers(cs, rows);
   if (!career) return false;
+  // 방금 올라온 시즌까지 모은 신호가 자동 플레이로 확실하면 기록을 쥐지 못하게 뺀다(모든 시즌 업로드가 여기를 지난다).
+  if (isAutomatedCareer(rows.map((r) => r.signalsJson))) {
+    await runBatch(db, hideCareerStatements(db, careerId));
+    return true;
+  }
   const statements = await claimStatements(db, [career]);
   await runBatch(db, statements);
   return statements.length > 0;
@@ -186,12 +193,20 @@ export async function recordCareerFirsts(
 export const resetFirstsBackfillStatement = (db: Db) =>
   db.delete(appMeta).where(inArray(appMeta.key, [META_KEY, CURSOR_KEY]));
 
-/** 커리어를 공개 순위에서 뺀다(careers.hidden) — 쥐고 있던 서버 최초 기록·서버 기록을 비우고 다시 훑게 해 실제 달성자에게 넘긴다. */
+/** 커리어를 공개 순위에서 뺀다(careers.hidden) — 쥐고 있던 서버 최초 기록·서버 기록을 비우고, 쥐고 있던 게 있으면 다시 훑게 해
+ * 실제 달성자에게 넘긴다. 재계산 표시는 지우기 전에 확인해야 하므로 batch 맨 앞에 둔다. */
 export const hideCareerStatements = (db: Db, careerId: string) => [
+  db
+    .delete(appMeta)
+    .where(
+      and(
+        inArray(appMeta.key, [META_KEY, CURSOR_KEY]),
+        sql`(exists (select 1 from server_firsts where career_id = ${careerId}) or exists (select 1 from server_records where career_id = ${careerId}))`,
+      ),
+    ),
   db.update(careers).set({ hidden: 1 }).where(eq(careers.id, careerId)),
   db.delete(serverFirsts).where(eq(serverFirsts.careerId, careerId)),
   db.delete(serverRecords).where(eq(serverRecords.careerId, careerId)),
-  resetFirstsBackfillStatement(db),
 ];
 
 export const setMeta = (db: Db, key: string, value: string) =>

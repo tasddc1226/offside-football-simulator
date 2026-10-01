@@ -16,7 +16,6 @@ import {
   listOwnHof,
   putCareerSeason,
   putRetirement,
-  seasonSignalsOf,
   storedSeasonsOf,
   updateRetired,
 } from '../db/repos/careers.js';
@@ -30,9 +29,7 @@ import { recordFirsts } from './firsts.js';
 import { judgeRetirement } from './retiredNumbers.js';
 import { STALE } from '../edgeKeys.js';
 import { publishLive } from '../live/publish.js';
-import { isAutomatedCareer, isHeadless } from '../db/repos/automation.js';
-import { hideCareerStatements } from '../db/repos/firsts.js';
-import { runBatch } from '../db/repos/batch.js';
+import { isHeadless } from '../db/repos/automation.js';
 import { isAcceptablePublicName, toPublicName } from '@offside/contracts/content-filter';
 
 /** 소유권 확인: careerId가 이미 다른 프로필 소유면 409. 없으면(새 커리어) 통과. */
@@ -45,13 +42,6 @@ async function assertOwnable(
   if (owner !== undefined && owner !== profileId) {
     throw careerOwnerMismatch();
   }
-}
-
-/** 시즌 신호가 자동 플레이로 확실하면 커리어를 공개 순위에서 뺀다. 뺐으면 true. */
-async function hideIfAutomated(db: ReturnType<typeof getDb>, careerId: string): Promise<boolean> {
-  if (!isAutomatedCareer(await seasonSignalsOf(db, careerId))) return false;
-  await runBatch(db, hideCareerStatements(db, careerId));
-  return true;
 }
 
 export function registerCareerRoutes(app: Hono<AppEnv>): void {
@@ -94,18 +84,6 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       now,
     });
 
-    // 입력 없는 진행·자동화 표시가 든 시즌이 올라오면 그 커리어의 신호를 모아 보고, 자동 플레이면 기록을 쥐지 못하게 뺀다.
-    const sig = body.signals;
-    const suspicious =
-      !!sig &&
-      (sig.clicks + sig.keys + sig.touches === 0 ||
-        sig.webdriver ||
-        sig.synthetic > 0 ||
-        isHeadless(c.req.header('User-Agent')));
-    if (suspicious && (await hideIfAutomated(db, careerId))) {
-      publishLive(c, 'season', careerId, now);
-      return ok(c, CareerUpsertResponseSchema, { careerId, year, status: 'active' });
-    }
     await recordFirsts(c, careerId);
     publishLive(c, 'season', careerId, now);
     const career = await getCareer(db, careerId);
@@ -156,18 +134,15 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
           details: { reason: 'NO_SEASONS' },
         });
       }
-      const automated = isAutomatedCareer(await seasonSignalsOf(db, careerId));
       await putRetirement(db, {
         careerId,
         summary,
         publicName,
         snapshot,
         profile: profile && boundProfile(profile, summary.peak),
-        hidden: automated,
         now,
       });
-      if (automated) await runBatch(db, hideCareerStatements(db, careerId));
-      else await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
+      await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
     }
     // T-10-076 영구결번 심사. 이름 공개 토글 재전송도 여기로 온다 — 이름을 공개하는 순간 자리를 잡는다.
     const retiredNumber = await judgeRetirement(c, careerId, now);
