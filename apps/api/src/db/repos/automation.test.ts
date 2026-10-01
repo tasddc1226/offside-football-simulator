@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isHeadless, judgeAutomation, type SeasonRow } from './automation.js';
+import { isAutomatedCareer, isHeadless, judgeAutomation, type SeasonRow } from './automation.js';
 
 const T0 = Date.parse('2026-09-28T00:00:00.000Z');
 const human = {
@@ -92,5 +92,29 @@ describe('자동 플레이 탐지', () => {
       false,
     );
     expect(isHeadless(undefined)).toBe(false);
+  });
+});
+
+describe('공개 순위에서 뺄 자동 플레이 판정 (T-11-024)', () => {
+  const json = (o: object = {}) => JSON.stringify({ ...human, ms: 40_000, ...o });
+  const idle = { clicks: 0, moves: 0 };
+
+  it('사람 입력이 있는 시즌, 신호 없는 옛 시즌은 자동으로 보지 않는다', () => {
+    expect(isAutomatedCareer([json(), json(), json()])).toBe(false);
+    expect(isAutomatedCareer([null, null, null])).toBe(false);
+    expect(isAutomatedCareer([json(idle), null, json()])).toBe(false); // 입력 없는 시즌 1개는 밀린 업로드일 수 있다
+  });
+
+  it('입력 없는 시즌 2개 이상·자동화 브라우저·스크립트 클릭·헤드리스는 자동으로 본다', () => {
+    expect(isAutomatedCareer([json(idle), json(), json(idle)])).toBe(true);
+    expect(isAutomatedCareer([json({ webdriver: true })])).toBe(true);
+    expect(isAutomatedCareer([json({ headless: true })])).toBe(true);
+    expect(isAutomatedCareer([json({ clicks: 1, synthetic: 30 })])).toBe(true);
+  });
+
+  it('간격이 일정하거나 커서 이동이 없는 것만으로는 빼지 않는다', () => {
+    expect(
+      isAutomatedCareer(Array.from({ length: 12 }, () => json({ clicks: 25, moves: 5 }))),
+    ).toBe(false);
   });
 });

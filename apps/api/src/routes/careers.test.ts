@@ -428,6 +428,44 @@ describe('조작된 기록 보정', () => {
     expect(new Set(honors).size).toBe(20);
   });
 
+  it('T-11-024: 입력 없이 시즌만 올라온(자동 플레이) 커리어는 공개 순위에서 빼고, 사람 입력이 있으면 그대로 둔다', async () => {
+    const signals = (clicks: number) => ({
+      ms: 14_000,
+      clicks,
+      keys: 0,
+      touches: 0,
+      moves: 0,
+      synthetic: 0,
+      hiddenMs: 0,
+      webdriver: false,
+    });
+    const upload = (careerId: string, clicks: number) =>
+      [2026, 2027].map(async (year) => {
+        const body = seasonBody({ signals: signals(clicks) });
+        return put(`/v1/careers/${careerId}/seasons/${year}`, {
+          ...body,
+          season: { ...body.season, age: 29 + year - 2026 },
+        });
+      });
+    const idle = CAREER_ID;
+    const human = '1b6f3c52-0d6e-4a9e-8c1a-6c7a2d1f9e10';
+    for (const r of await Promise.all(upload(idle, 0))) expect(r.status).toBe(200);
+    for (const r of await Promise.all(upload(human, 14))) expect(r.status).toBe(200);
+    const hiddenOf = async (id: string) =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, id)))[0]!.hidden;
+    expect(await hiddenOf(idle)).toBe(1);
+    expect(await hiddenOf(human)).toBe(0);
+
+    expect((await put(`/v1/careers/${idle}/retirement`, retirementBody())).status).toBe(200);
+    expect((await put(`/v1/careers/${human}/retirement`, retirementBody())).status).toBe(200);
+    const list = await createApp().request('/v1/hof', {}, ctx.env);
+    const ids = ((await list.json()) as { data: { entries: { id: string }[] } }).data.entries.map(
+      (e) => e.id,
+    );
+    expect(ids).toContain(human);
+    expect(ids).not.toContain(idle);
+  });
+
   it('포지션·유형 같은 커리어 메타는 처음 값을 지킨다', async () => {
     await put(`/v1/careers/${CAREER_ID}/seasons/2026`, seasonBody());
     await put(`/v1/careers/${CAREER_ID}/seasons/2027`, {
