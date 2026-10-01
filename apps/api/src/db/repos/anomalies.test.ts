@@ -9,6 +9,7 @@ import {
   seasonReasons,
   setCareerHidden,
   sweepAnomalies,
+  SWEPT_AT_KEY,
 } from './anomalies.js';
 
 const NOW = Date.parse('2026-10-02T19:00:00.000Z');
