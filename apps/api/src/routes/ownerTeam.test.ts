@@ -216,11 +216,10 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(item(pre, 'retire-DF')?.done).toBe(false);
     expect(item(pre, 'all-dpos')).toBeUndefined();
     expect(pre.groups.at(-1)?.id).toBe('team'); // 지금 시즌(프리시즌) — 팀이 없어도 팀 업적 목록은 보인다
-    expect(pre.groups.filter((g) => g.locked).map((g) => g.stage)).toEqual([
-      '3단계',
-      '4단계',
-      '5단계',
-    ]);
+    // T-11-026 3~5단계가 열렸다 — 잠긴 단계 없이 시즌 요약(국적·은퇴 나이·시즌 골)까지 읽어 판정한다.
+    expect(pre.groups.some((g) => g.locked)).toBe(false);
+    expect(pre.groups.map((g) => g.stage).slice(3, 6)).toEqual(['3단계', '4단계', '5단계']);
+    expect(item(pre, 'one-club')?.done).toBe(false);
     expect((await read('?season=1')).status).toBe(400); // 아직 열리지 않은 시즌
 
     vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1

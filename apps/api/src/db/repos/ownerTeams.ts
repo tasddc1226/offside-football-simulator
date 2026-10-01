@@ -36,6 +36,7 @@ import {
   teamMatches,
 } from '../schema.js';
 import { accountLinkedSql } from './profiles.js';
+import type { AchievementSeason } from '../../team/achievements.js';
 import type { LineupCareer, PlayerRef } from '../../team/sim.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀)·팀 경기·라이브 랭킹.
@@ -517,6 +518,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         goals: careers.goals,
         assists: careers.assists,
         legendScore: careers.legendScore,
+        nation: careers.nation,
+        retireAge: careers.retireAge,
         rn: retiredNumbers.careerId,
       })
       .from(careers)
@@ -528,16 +531,26 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         careerId: careerSeasons.careerId,
         league: careerSeasons.league,
         honorsJson: careerSeasons.honorsJson,
+        club: careerSeasons.club,
+        clubId: careerSeasons.clubId,
+        goals: careerSeasons.goals,
+        cs: careerSeasons.cs,
       })
       .from(careerSeasons)
       .where(
         inArray(careerSeasons.careerId, db.select({ id: careers.id }).from(careers).where(mine)),
       ),
   ]);
-  const byCareer = new Map<string, { league: string; honors: string[] }[]>();
+  const byCareer = new Map<string, AchievementSeason[]>();
   for (const r of seasons) {
     const list = byCareer.get(r.careerId) ?? [];
-    list.push({ league: r.league, honors: honorsOf(r.honorsJson) });
+    list.push({
+      league: r.league,
+      honors: honorsOf(r.honorsJson),
+      club: r.clubId ?? r.club,
+      goals: r.goals,
+      cs: r.cs,
+    });
     byCareer.set(r.careerId, list);
   }
   return rows.map((r) => ({
@@ -555,6 +568,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     assists: r.assists ?? 0,
     legendScore: r.legendScore ?? 0,
     retiredNumber: r.rn !== null,
+    nation: r.nation,
+    retireAge: r.retireAge ?? 0,
     seasons: byCareer.get(r.id) ?? [],
   }));
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   clubAchievements,
   type AchievementCareer,
+  type AchievementSeason,
   type AchievementTeamSlot,
 } from './achievements.js';
 
@@ -17,7 +18,17 @@ const career = (over: Partial<AchievementCareer> = {}): AchievementCareer => ({
   assists: 0,
   legendScore: 0,
   retiredNumber: false,
+  nation: null,
+  retireAge: 35,
   seasons: [],
+  ...over,
+});
+const season = (over: Partial<AchievementSeason> = {}): AchievementSeason => ({
+  league: '프리미어리그',
+  honors: [],
+  club: 'pl-0',
+  goals: 0,
+  cs: null,
   ...over,
 });
 const slot = (over: Partial<AchievementTeamSlot> = {}): AchievementTeamSlot => ({
@@ -38,11 +49,11 @@ describe('구단 시즌 업적', () => {
       'first',
       'records',
       'collection',
-      'locked-3',
-      'locked-4',
-      'locked-5',
+      'legend',
+      'world',
+      'immortal',
     ]);
-    expect(g.filter((x) => x.locked).every((x) => x.items.length === 0)).toBe(true);
+    expect(g.some((x) => x.locked)).toBe(false);
     expect(g.flatMap((x) => x.items).every((i) => !i.done)).toBe(true);
   });
 
@@ -55,8 +66,8 @@ describe('구단 시즌 업적', () => {
           ballon: 1,
           retiredNumber: true,
           seasons: [
-            { league: '프리미어리그', honors: ['프리미어리그 우승', 'PFA 올해의 선수'] },
-            { league: '라리가', honors: ['FIFA 월드컵 우승', '피치치 트로피'] },
+            season({ honors: ['프리미어리그 우승', 'PFA 올해의 선수'] }),
+            season({ league: '라리가', honors: ['FIFA 월드컵 우승', '피치치 트로피'] }),
           ],
         }),
         career({ pos: 'GK', dpos: 'GK' }),
@@ -111,5 +122,93 @@ describe('구단 시즌 업적', () => {
     expect(item(m, 'team-club')?.done).toBe(false);
     expect(item(m, 'team-fit')?.done).toBe(false);
     expect(item(m, 'team-caps')?.done).toBe(true);
+  });
+
+  it('3단계: 한 선수의 위업 — 원클럽맨 · 한 시즌 기록 · 트레블', () => {
+    const pro = (n: number, club: string) =>
+      Array.from({ length: n }, () => season({ league: 'K리그1', club }));
+    const g = clubAchievements({
+      careers: [
+        career({ seasons: [season({ league: '고교 리그', club: 'hs-0' }), ...pro(10, 'k1-0')] }),
+        career({ caps: 150, goals: 500, retireAge: 40, ballon: 3 }),
+        career({ pos: 'GK', seasons: [season({ cs: 20 })] }),
+        career({ seasons: [season({ goals: 50 })] }),
+      ],
+      team: null,
+      teamWins: 0,
+      detail: true,
+    });
+    const legend = g.find((x) => x.id === 'legend')!;
+    expect(legend.items.filter((i) => !i.done).map((i) => i.id)).toEqual(['treble']);
+    // 9시즌이거나 두 구단을 거치면 원클럽맨이 아니다. 필드 선수의 무실점은 세지 않는다.
+    const not = clubAchievements({
+      careers: [
+        career({ seasons: pro(9, 'k1-0') }),
+        career({ seasons: [...pro(9, 'k1-0'), ...pro(2, 'k1-1')] }),
+        career({ seasons: [season({ cs: 25 })] }),
+      ],
+      team: null,
+      teamWins: 0,
+      detail: true,
+    });
+    expect(item(not, 'one-club')?.done).toBe(false);
+    expect(item(not, 'gk-cs-20')?.done).toBe(false);
+  });
+
+  it('트레블은 그 시즌 리그 · 대륙 대회 우승을 포함한 클럽 우승 3개(슈퍼컵 · 대표팀 제외)', () => {
+    const t = (honors: string[]) =>
+      item(
+        clubAchievements({
+          careers: [career({ seasons: [season({ honors })] })],
+          team: null,
+          teamWins: 0,
+          detail: true,
+        }),
+        'treble',
+      )?.done;
+    expect(t(['프리미어리그 우승', 'FA컵 우승', 'UEFA 챔피언스리그 우승'])).toBe(true);
+    expect(t(['프리미어리그 우승', 'FA 커뮤니티 실드 우승', 'UEFA 챔피언스리그 우승'])).toBe(false);
+    expect(t(['프리미어리그 우승', 'FA컵 우승', 'EFL컵 우승'])).toBe(false);
+    expect(t(['라리가 우승', 'FA컵 우승', 'UEFA 챔피언스리그 우승'])).toBe(false);
+    expect(t(['프리미어리그 우승', 'FIFA 월드컵 우승', 'UEFA 챔피언스리그 우승'])).toBe(false);
+  });
+
+  it('4단계: 세계 무대 우승과 국적 수, 5단계: 구단 전체 합', () => {
+    const g = clubAchievements({
+      careers: [
+        career({
+          nation: 'KR',
+          ballon: 10,
+          retiredNumber: true,
+          seasons: [
+            season({ honors: ['FIFA 월드컵 우승', 'UEFA 챔피언스리그 우승', '유러피언 골든슈'] }),
+            season({ honors: ['FIFA 월드컵 우승', 'AFC 아시안컵 우승', '올림픽 금메달'] }),
+          ],
+        }),
+        career({ pos: 'GK', nation: 'JP', ballon: 1, retiredNumber: true }),
+        career({ nation: 'KR', goals: 800, legendScore: 3000 }),
+      ],
+      team: null,
+      teamWins: 0,
+      detail: true,
+    });
+    for (const id of [
+      'world-cup',
+      'conf-cup',
+      'olympic',
+      'ucl',
+      'golden-shoe',
+      'ballon-10',
+      'goals-800',
+      'legend-3000',
+    ])
+      expect(item(g, id)?.done, id).toBe(true);
+    expect(item(g, 'club-wc')?.done).toBe(false);
+    expect(item(g, 'all-continental')).toMatchObject({ cur: 1, max: 3 });
+    expect(item(g, 'nations')).toMatchObject({ cur: 2, max: 5 });
+    expect(item(g, 'rn-11')).toMatchObject({ cur: 2, max: 11 });
+    expect(item(g, 'ballon-30')).toMatchObject({ cur: 11, max: 30 });
+    expect(item(g, 'ballon-pos')).toMatchObject({ cur: 2, max: 4 });
+    expect(item(g, 'world-cup-3')).toMatchObject({ cur: 2, max: 3 });
   });
 });

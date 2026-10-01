@@ -1,5 +1,7 @@
 // T-10-092 구단 시즌 업적(클럽하우스). 그 시즌에 처음 올라와(careers.service_season) 은퇴한 내 선수들의 기록과 그 시즌
 // 내 팀·팀 경기로 판정하는 순수 함수다. 판정 재료는 서버가 이미 받은 시즌 요약(career_seasons)·은퇴 요약(careers)뿐이다.
+// T-11-026 잠겨 있던 3~5단계를 연다 — 3단계 한 선수의 위업, 4단계 세계 무대 우승, 5단계 구단 전체의 불멸 기록.
+// 목표치는 운영 은퇴 기록 분포(2026-10-01, 은퇴 8천여 명)로 3단계는 선수 몇십 명 중 하나, 5단계는 손꼽히는 구단주만 닿게 잡았다.
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
 import { DETAIL_POSITIONS, type DetailPos, type PosGroup } from '@offside/contracts/positions';
@@ -17,8 +19,22 @@ export type AchievementCareer = {
   assists: number;
   legendScore: number;
   retiredNumber: boolean;
-  /** 받아 둔 시즌(리그 이름 · 우승·수상 이름). */
-  seasons: readonly { league: string; honors: readonly string[] }[];
+  /** 국적(옛 기록은 null). */
+  nation: string | null;
+  retireAge: number;
+  /** 받아 둔 시즌. */
+  seasons: readonly AchievementSeason[];
+};
+
+export type AchievementSeason = {
+  league: string;
+  /** 우승·수상 이름. */
+  honors: readonly string[];
+  /** 소속(클럽 id, 옛 기록은 이름). */
+  club: string;
+  goals: number;
+  /** 무실점 경기(옛 기록은 null). */
+  cs: number | null;
 };
 
 /** 내 팀 선발(업적 판정에 쓰는 것만). 빈 자리는 careerId null. */
@@ -79,6 +95,32 @@ const YOUNG = [
   'K리그2 영플레이어상',
   'J리그 베스트 영플레이어상',
 ];
+
+const AMATEUR = new Set(LEAGUE_BASE.filter((l) => l.amateur).map((l) => l.name));
+/** 대륙 클럽 대회 우승(game/comps.ts 대륙 대회 이름). */
+const CONTINENTAL = [
+  'UEFA 챔피언스리그 우승',
+  'AFC 챔피언스리그 엘리트 우승',
+  'CONCACAF 챔피언스컵 우승',
+];
+const CONF_CUPS = NATIONAL_WINS.filter(
+  (n) => n !== 'FIFA 월드컵 우승' && n !== '아시안게임 금메달' && n !== '올림픽 금메달',
+);
+/** 트레블에서 세지 않는 우승(단판 슈퍼컵 · 대표팀 · 클럽 월드컵). */
+const NOT_TREBLE = /슈퍼컵|수페르코파|실드|샹피옹|클럽 월드컵/;
+const NATIONAL = new Set(NATIONAL_WINS);
+/** 한 시즌 트레블 — 그 시즌 리그 우승과 대륙 클럽 대회 우승을 포함해 클럽 우승 3개. */
+const treble = (s: AchievementSeason) =>
+  s.honors.includes(`${s.league} 우승`) &&
+  CONTINENTAL.some((h) => s.honors.includes(h)) &&
+  s.honors.filter((h) => h.endsWith(' 우승') && !NATIONAL.has(h) && !NOT_TREBLE.test(h)).length >=
+    3;
+/** 원클럽맨 — 프로로 10시즌 넘게 뛰며 한 구단에만 있었다. */
+const oneClub = (c: AchievementCareer) => {
+  const pro = c.seasons.filter((s) => !AMATEUR.has(s.league));
+  return pro.length >= 10 && new Set(pro.map((s) => s.club)).size === 1;
+};
+const POS: PosGroup[] = ['FW', 'MF', 'DF', 'GK'];
 
 const POS_FIRST: [PosGroup, string][] = [
   ['FW', '공격수 1명 은퇴'],
@@ -155,6 +197,12 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
   const dposOf = (pred: (c: AchievementCareer) => boolean) =>
     new Set(careers.filter(pred).flatMap((c) => (c.dpos ? [c.dpos] : []))).size;
   const sum = (get: (c: AchievementCareer) => number) => careers.reduce((t, c) => t + get(c), 0);
+  const anyone = (pred: (c: AchievementCareer) => boolean) => careers.some(pred);
+  const anySeason = (pred: (s: AchievementSeason, c: AchievementCareer) => boolean) =>
+    careers.some((c) => c.seasons.some((s) => pred(s, c)));
+  /** 모든 선수의 시즌에서 그 이름을 받은 횟수. */
+  const honorCount = (name: string) =>
+    sum((c) => c.seasons.filter((s) => s.honors.includes(name)).length);
 
   const first: ClubAchievement[] = [
     ...POS_FIRST.map(([pos, label]) =>
@@ -226,14 +274,110 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
       items: TIERS.map((t) => tier(t.id, t.label, t.unit, sum(t.get), t.steps)),
     },
     { id: 'collection', stage: '2단계', title: '기록 조각 모으기', items: collection },
-    // 3~5단계는 원작처럼 잠금으로 예고만 한다(아직 발견하지 못한 업적).
-    ...[3, 4, 5].map((n) => ({
-      id: `locked-${n}`,
-      stage: `${n}단계`,
-      title: 'LOCKED',
-      items: [],
-      locked: true,
-    })),
+    {
+      id: 'legend',
+      stage: '3단계',
+      title: '전설의 한 명',
+      items: [
+        once('one-club', '원클럽맨 — 프로 10시즌 넘게 한 구단', anyone(oneClub)),
+        once(
+          'caps-150',
+          'A매치 150경기 선수',
+          anyone((c) => c.caps >= 150),
+        ),
+        once(
+          'goals-500',
+          '통산 500골 선수',
+          anyone((c) => c.goals >= 500),
+        ),
+        once(
+          'season-50',
+          '한 시즌 50골',
+          anySeason((s) => s.goals >= 50),
+        ),
+        once(
+          'gk-cs-20',
+          '골키퍼 한 시즌 무실점 20경기',
+          anySeason((s, c) => c.pos === 'GK' && (s.cs ?? 0) >= 20),
+        ),
+        once(
+          'treble',
+          '한 시즌 트레블',
+          anySeason((s) => treble(s)),
+        ),
+        once(
+          'age-40',
+          '40세까지 현역',
+          anyone((c) => c.retireAge >= 40),
+        ),
+        once(
+          'ballon-3',
+          '발롱도르 3회 선수',
+          anyone((c) => c.ballon >= 3),
+        ),
+      ],
+    },
+    {
+      id: 'world',
+      stage: '4단계',
+      title: '세계 무대 정복',
+      items: [
+        once('world-cup', 'FIFA 월드컵 우승', honors.has('FIFA 월드컵 우승')),
+        once('conf-cup', '대륙컵 우승', has(CONF_CUPS) > 0),
+        once('olympic', '올림픽 금메달', honors.has('올림픽 금메달')),
+        once('ucl', 'UEFA 챔피언스리그 우승', honors.has('UEFA 챔피언스리그 우승')),
+        once('club-wc', 'FIFA 클럽 월드컵 우승', honors.has('FIFA 클럽 월드컵 우승')),
+        once('golden-shoe', '유러피언 골든슈', honors.has('유러피언 골든슈')),
+        collect(
+          'all-continental',
+          '대륙 클럽 대회 모두 우승',
+          has(CONTINENTAL),
+          CONTINENTAL.length,
+        ),
+        collect(
+          'nations',
+          '국적이 다른 선수 5명',
+          new Set(careers.flatMap((c) => (c.nation ? [c.nation] : []))).size,
+          5,
+        ),
+      ],
+    },
+    {
+      id: 'immortal',
+      stage: '5단계',
+      title: '불멸의 구단',
+      items: [
+        collect('rn-11', '영구결번 11명', careers.filter((c) => c.retiredNumber).length, 11),
+        collect(
+          'ballon-30',
+          '발롱도르 합계 30회',
+          sum((c) => c.ballon),
+          30,
+        ),
+        collect(
+          'ballon-pos',
+          '네 포지션 모두 발롱도르',
+          POS.filter((p) => anyone((c) => c.pos === p && c.ballon > 0)).length,
+          POS.length,
+        ),
+        collect('world-cup-3', '월드컵 우승 3번', honorCount('FIFA 월드컵 우승'), 3),
+        once(
+          'ballon-10',
+          '발롱도르 10회 선수',
+          anyone((c) => c.ballon >= 10),
+        ),
+        once(
+          'goals-800',
+          '통산 800골 선수',
+          anyone((c) => c.goals >= 800),
+        ),
+        once(
+          'legend-3000',
+          '레전드 점수 3,000점 선수',
+          anyone((c) => c.legendScore >= 3000),
+        ),
+      ],
+    },
   ];
 
   if (team) {
