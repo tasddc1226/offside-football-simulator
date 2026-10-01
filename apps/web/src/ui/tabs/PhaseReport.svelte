@@ -37,7 +37,7 @@
   ]);
 </script>
 
-<section class="card report" data-report aria-labelledby="report-title" style="--after:{afterDots}ms">
+<section class="card report" data-report data-tour="report" aria-labelledby="report-title" style="--after:{afterDots}ms">
   <div class="row" style="justify-content:space-between;align-items:flex-start">
     <div>
       <div class="eyebrow">{r.eyebrow}</div>

@@ -2,14 +2,13 @@
   // ui.ts renderGame() 포트 (207~222줄)
   import { fly } from 'svelte/transition';
   import { Tween } from 'svelte/motion';
-  import { posLabel, LAST_PHASE } from '@offside/game/data';
+  import { posLabel } from '@offside/game/data';
   import { ovr } from '@offside/game/attributes';
-  import { leagueOf, roleOf, fmtMoney, potLabel, potScouted, blockMatches, focusOf, labelOf } from '@offside/game/engine';
+  import { leagueOf, roleOf, fmtMoney, potLabel, potScouted, focusOf, labelOf } from '@offside/game/engine';
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
-  import { advance, nextPending } from './actions.js';
   import { loadGameSheets } from './sheets/gameSheets.svelte.js';
-  import { buzz, dur } from './motion.js';
+  import { dur } from './motion.js';
   import ClubBadge from './ClubBadge.svelte';
   import Topbar from './Topbar.svelte';
   import TabIcon from './TabIcon.svelte';
@@ -45,18 +44,6 @@
   }
   const focusName = $derived(`주력 ${focusOf(s).map((k) => labelOf(s, k)).join('·')}`);
 
-  // 엄지 영역 스티키 액션바: "시즌" 탭에서만 노출되는 메인 진행 버튼(원래 SeasonTab 안에 있던
-  // 버튼을 화면 어디서나 손 닿는 위치로 끌어올린다). 다른 탭에서 시즌 진행 중 이벤트가 대기 중이면
-  // 계속 노출해 사용자가 놓치지 않게 한다.
-  const busy = $derived(!!s.pending);
-  const phase = $derived(Math.min(s.phase, LAST_PHASE));
-  const btnLabel = $derived(
-    phase === 0 ? '프리시즌 훈련 진행' : `훈련 후 ${phase >= LAST_PHASE ? leagueOf(s.leagueId).matches - s.season.played : Math.min(blockMatches(s), leagueOf(s.leagueId).matches - s.season.played)}경기 진행`,
-  );
-  // T-10-024: 구간 결과는 시즌 탭 리포트로 보여 주고, 이어지는 이벤트·시즌 결산은 이 버튼으로 연다.
-  const pendingLabel = $derived(s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기');
-  const showAction = $derived(appState.tab === 'season' || busy);
-
   const tabs: [Tab, string][] = [
     ['season', '시즌'],
     ['player', '선수'],
@@ -65,20 +52,20 @@
   ];
 
   // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
+  // T-11-025 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(시즌 탭 맨 아래 버튼을 누른 뒤 결과로 돌아가기 쉽게).
   function switchTab(k: Tab) {
-    if (appState.tab === k) return;
+    if (appState.tab === k) {
+      window.scrollTo({ top: 0, left: 0, behavior: dur(1) ? 'smooth' : 'instant' });
+      return;
+    }
     appState.tab = k;
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }
 
-  function onAdvanceClick() {
-    buzz();
-    if (busy) nextPending();
-    else void advance();
-  }
 </script>
 
-<div class="wrap" class:has-tabbar={!showAction} class:has-actionbar={showAction}>
+<!-- T-11-025 진행·이벤트 확인 버튼은 고정 바 없이 시즌 탭 맨 아래에 있다(SeasonTab). -->
+<div class="wrap has-tabbar">
   <Topbar sticky />
   <section class="player">
     <div class="chalk"></div>
@@ -115,15 +102,6 @@
   {/key}
 </div>
 
-{#if showAction}
-  <div class="action-bar" transition:fly={{ y: 20, duration: dur(180) }}>
-    <div class="action-bar-inner">
-      <button class="btn btn-block {busy ? 'btn-accent' : 'btn-primary'}" data-act={busy ? 'resume' : 'advance'} onclick={onAdvanceClick}>
-        {busy ? pendingLabel : btnLabel} →
-      </button>
-    </div>
-  </div>
-{/if}
 <!-- 게임 탭 4개 + 가운데 홈. 홈은 화면을 떠나는 버튼이라 tablist 밖에 두고, CSS order로 가운데에 놓는다
      (.tabs-inner는 display: contents라 탭들이 .tabs 그리드에 그대로 들어간다). -->
 <nav class="tabs" aria-label="게임 메뉴">

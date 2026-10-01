@@ -4,6 +4,7 @@ import type { ScrollView } from 'react-native';
 
 let view: ScrollView | null = null;
 let y = 0;
+let h = 0;
 
 export function registerScroll(v: ScrollView | null) {
   view = v;
@@ -11,6 +12,12 @@ export function registerScroll(v: ScrollView | null) {
 }
 export const noteScrollY = (next: number) => void (y = next);
 export const scrollY = () => y;
+/** 스크롤 창 높이(탭바·하단 바를 뺀 보이는 높이). */
+export const noteViewH = (next: number) => void (h = next);
+export const viewH = () => h;
 export function scrollTo(next: number, animated = false) {
   view?.scrollTo({ y: next, animated });
+}
+export function scrollToEnd(animated = false) {
+  view?.scrollToEnd({ animated });
 }
