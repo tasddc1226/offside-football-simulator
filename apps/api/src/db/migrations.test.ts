@@ -236,6 +236,15 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'views',
   ],
   team_likes: ['team_id', 'profile_id', 'created_at'],
+  owner_achievements: [
+    'profile_id',
+    'season',
+    'score',
+    'done',
+    'players',
+    'reached_at',
+    'updated_at',
+  ],
   team_matches: [
     'id',
     'profile_id',

@@ -1,4 +1,5 @@
 import {
+  AchRankResponseSchema,
   ClubAchievementsResponseSchema,
   ErrorEnvelopeSchema,
   OwnerTeamResponseSchema,
@@ -17,6 +18,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { careers, ownerTeams, teamMatches } from '../db/schema.js';
+import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
 
@@ -26,6 +28,7 @@ const OppRes = successEnvelope(TeamOpponentsResponseSchema);
 const PlayRes = successEnvelope(PlayTeamMatchResponseSchema);
 const MatchesRes = successEnvelope(TeamMatchesResponseSchema);
 const AchRes = successEnvelope(ClubAchievementsResponseSchema);
+const AchRankRes = successEnvelope(AchRankResponseSchema);
 
 type Pos = 'FW' | 'MF' | 'DF' | 'GK';
 let seq = 0;
@@ -215,9 +218,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(item(pre, 'retire-GK')?.done).toBe(true);
     expect(item(pre, 'retire-DF')?.done).toBe(false);
     expect(item(pre, 'all-dpos')).toBeUndefined();
-    expect(pre.groups.at(-1)?.id).toBe('team'); // 지금 시즌(프리시즌) — 팀이 없어도 팀 업적 목록은 보인다
+    // 지금 시즌(프리시즌) — 팀이 없어도 팀 업적 목록은 보인다. T-11-028 선수 → 팀 → 구단주 → 감독(잠금) 순.
+    expect(pre.groups.map((g) => g.id).slice(6)).toEqual(['team', 'race', 'owner', 'manager']);
     // T-11-026 3~5단계가 열렸다 — 잠긴 단계 없이 시즌 요약(국적·은퇴 나이·시즌 골)까지 읽어 판정한다.
-    expect(pre.groups.some((g) => g.locked)).toBe(false);
+    expect(pre.groups.filter((g) => g.locked).map((g) => g.id)).toEqual(['manager']);
+    // T-11-028 점수(첫 골키퍼 은퇴 10점)와 업적 랭킹 순위.
+    expect(pre).toMatchObject({ score: 10, rank: 1, ranked: 1 });
     expect(pre.groups.map((g) => g.stage).slice(3, 6)).toEqual(['3단계', '4단계', '5단계']);
     expect(item(pre, 'one-club')?.done).toBe(false);
     expect((await read('?season=1')).status).toBe(400); // 아직 열리지 않은 시즌
@@ -233,6 +239,54 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const past = AchRes.parse((await read('?season=0')).body).data;
     expect(past).toMatchObject({ season: 0, players: 1 });
     expect(past.groups.some((g) => g.id === 'team')).toBe(false); // 프리시즌에는 팀을 만들지 않았다
+  });
+
+  it('T-11-028 업적 랭킹: 시즌 점수 순, 닉네임과 그 시즌 팀 이름만 보인다', async () => {
+    const a = await issueGoogleCookie(ctx);
+    const b = await issueGoogleCookie(ctx);
+    await addCareer(a.profileId, { pos: 'GK', peak: 70 });
+    await addCareer(b.profileId, { pos: 'GK', peak: 70 });
+    await addCareer(b.profileId, { pos: 'FW', peak: 70 });
+    const st = await addCareer(b.profileId, { pos: 'DF', peak: 70 });
+    await putTeam(b.cookie, { slots: slots(null, st) });
+    // 점수는 업적 화면을 열 때(그리고 은퇴·팀 저장·경기 응답 뒤) 다시 센다.
+    for (const who of [a, b])
+      await call('GET', '/v1/owner-team/achievements', { cookie: who.cookie });
+
+    const res = await call('GET', '/v1/achievements/ranking');
+    expect(res.status).toBe(200);
+    const body = AchRankRes.parse(await res.json()).data;
+    expect(body).toMatchObject({ season: 0, page: 1, total: 2 });
+    expect(body.items.map((i) => i.rank)).toEqual([1, 2]);
+    expect(body.items[0]).toMatchObject({ players: 3, team: { name: expect.any(String) } });
+    expect(body.items[0]!.score).toBeGreaterThan(body.items[1]!.score);
+    expect(body.items[1]).toMatchObject({ players: 1, team: null, score: 10 });
+    expect(JSON.stringify(body)).not.toContain(b.profileId);
+  });
+
+  it('T-11-028 매일 cron은 점수보다 새 은퇴·팀 기록이 있는 구단주만 다시 센다', async () => {
+    const a = await issueGoogleCookie(ctx);
+    const anon = await issueCookie(ctx);
+    await addCareer(a.profileId, { pos: 'GK', peak: 70 });
+    await addCareer(anon.profileId, { pos: 'GK', peak: 70 }); // 로그인하지 않은 프로필은 구단주가 아니다
+    const db = ctx.db;
+    const now = new Date().toISOString();
+    expect(await rebuildStaleAchievements(db, now)).toEqual({ season: 0, refreshed: 1 });
+    expect(await rebuildStaleAchievements(db, now)).toEqual({ season: 0, refreshed: 0 });
+    vi.setSystemTime(new Date('2026-09-30T01:00:00.000Z'));
+    const fw = await addCareer(a.profileId, { pos: 'FW', peak: 70 });
+    await ctx.db
+      .update(careers)
+      .set({ retiredAt: new Date().toISOString() })
+      .where(eq(careers.id, fw));
+    expect(await rebuildStaleAchievements(db, new Date().toISOString())).toEqual({
+      season: 0,
+      refreshed: 1,
+    });
+    const body = AchRankRes.parse(
+      await (await call('GET', '/v1/achievements/ranking')).json(),
+    ).data;
+    expect(body.items).toMatchObject([{ rank: 1, score: 20, players: 2 }]);
   });
 
   it('팀을 만들고 고친다 — 빈 자리는 유스 선수, 시즌마다 한 팀', async () => {

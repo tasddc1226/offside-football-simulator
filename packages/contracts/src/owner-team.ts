@@ -181,3 +181,40 @@ export function teamOvr(ratings: readonly (number | null)[]): number {
   for (let i = 0; i < LINEUP_SIZE; i++) sum += ratings[i] ?? YOUTH_OVR;
   return Math.round(sum / LINEUP_SIZE);
 }
+
+// T-11-028 시즌 업적 점수·등급. 업적은 선수·팀·구단주·감독(감독 시뮬레이션이 열리면 공개) 넷으로 나뉘고, 달성한 업적의
+// 점수 합이 그 시즌 구단주 등급이 된다. 시즌마다 처음부터 다시 쌓으므로 등급도 시즌마다 새로 오른다.
+export const ACH_CATEGORIES = ['player', 'team', 'owner', 'manager'] as const;
+export type AchCategory = (typeof ACH_CATEGORIES)[number];
+export const ACH_CATEGORY_NAME: Record<AchCategory, string> = {
+  player: '선수 업적',
+  team: '팀 업적',
+  owner: '구단주 업적',
+  manager: '감독 업적',
+};
+
+/**
+ * 시즌 등급(오름차순 min = 그 등급에 필요한 점수). 프리시즌 구단주 297명의 점수(2026-10-01)로 잡았다 — 중앙값 실버,
+ * 상위 25% 골드, 상위 5% 플래티넘, 상위 1% 다이아. 레전드는 팀·구단주 업적까지 시즌 내내 채워야 닿는다.
+ */
+export const ACH_GRADES = [
+  { id: 'rookie', name: '루키', min: 0 },
+  { id: 'bronze', name: '브론즈', min: 200 },
+  { id: 'silver', name: '실버', min: 500 },
+  { id: 'gold', name: '골드', min: 1000 },
+  { id: 'platinum', name: '플래티넘', min: 1600 },
+  { id: 'diamond', name: '다이아', min: 2400 },
+  { id: 'legend', name: '레전드', min: 3500 },
+] as const;
+export type AchGrade = (typeof ACH_GRADES)[number];
+export type AchGradeId = AchGrade['id'];
+
+/** 점수의 등급과 다음 등급(맨 위면 null). */
+export function achGradeOf(score: number): { grade: AchGrade; next: AchGrade | null } {
+  let i = 0;
+  while (i + 1 < ACH_GRADES.length && score >= ACH_GRADES[i + 1]!.min) i++;
+  return { grade: ACH_GRADES[i]!, next: ACH_GRADES[i + 1] ?? null };
+}
+
+/** 업적 랭킹 한 페이지의 구단주 수. */
+export const ACH_RANK_PER_PAGE = 20;

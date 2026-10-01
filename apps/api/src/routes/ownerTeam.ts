@@ -19,7 +19,6 @@ import {
   ratingChange,
   type FormationId,
 } from '@offside/contracts/owner-team';
-import { detailPosInSeason } from '@offside/contracts/positions';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { NO_STORE, nowIso, ok, readBody, teamNotFound, teamSeasonParam } from './shared.js';
@@ -41,22 +40,22 @@ import {
   peakOf,
   publicNamesOf,
   recordMatchStatements,
-  seasonCareersOf,
   slotIdsOf,
   toLineupCareer,
   type MatchDetail,
   type OwnerTeamRow,
   type TeamMatchRow,
 } from '../db/repos/ownerTeams.js';
+import { achievementRankOf } from '../db/repos/ownerAchievements.js';
 import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
 import { ownerTeams } from '../db/schema.js';
-import { purgeEdge } from '../edgeCache.js';
+import { purgeEdge, waitUntil } from '../edgeCache.js';
 import { STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
-import { clubAchievements } from '../team/achievements.js';
+import { refreshAfterChange, refreshOwnerAchievements } from '../team/ownerAchievements.js';
 import {
   buildLineup,
   filledCount,
@@ -285,6 +284,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       .onConflictDoUpdate({ target: [ownerTeams.profileId, ownerTeams.season], set: values })
       .returning();
     purgeEdge(c, STALE.teamSaved(season));
+    waitUntil(c, refreshAfterChange(db, me.id, season));
     return ok(c, PutOwnerTeamResponseSchema, { team: toOwnerTeam(row!, lineup) });
   });
 
@@ -436,6 +436,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         now,
       }),
     ]);
+    waitUntil(c, refreshAfterChange(db, me.id, season));
     const names = new Map<string, string>();
     for (const s of [...home, ...away])
       if (s.careerId && s.publicName) names.set(s.careerId, s.publicName);
@@ -464,48 +465,18 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   });
 
   // 구단 시즌 업적(클럽하우스). season 없으면 지금 시즌, 0이면 프리시즌. 팀 업적은 그 시즌 팀으로 판정한다(지난 시즌에 팀이
-  // 없었으면 보이지 않는다).
+  // 없었으면 보이지 않는다). T-11-028 점수를 다시 세어 적고 업적 랭킹 순위를 함께 준다.
   app.get('/v1/owner-team/achievements', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const [careersIn, [team]] = await Promise.all([
-      seasonCareersOf(db, me.id, season),
-      myTeamIn(db, me.id, season),
-    ]);
-    // 그 시즌 팀에 넣을 수 있는 선수 = 이 시즌 은퇴 선수라 선발도 careersIn에서 만든다.
-    const byId = new Map(careersIn.map((r) => [r.id, r]));
-    const slots = team
-      ? buildLineup(
-          team.formation as FormationId,
-          slotIdsOf(team),
-          new Map(careersIn.map((r) => [r.id, r.lineup])),
-        ).map((s) => {
-          const r = s.careerId ? byId.get(s.careerId) : undefined;
-          return {
-            careerId: s.careerId,
-            fit: s.fit,
-            lastClubId: r?.lastClubId ?? null,
-            caps: r?.caps ?? 0,
-            retiredNumber: r?.retiredNumber ?? false,
-          };
-        })
-      : null;
+    const { groups, row, players } = await refreshOwnerAchievements(db, me, season, now, false);
+    const { rank, ranked } = await achievementRankOf(db, row);
     return ok(
       c,
       ClubAchievementsResponseSchema,
-      {
-        season,
-        seasons: seasonOptions(now),
-        players: careersIn.length,
-        groups: clubAchievements({
-          careers: careersIn,
-          team: slots ?? (season === teamSeasonAt(now) ? [] : null),
-          teamWins: team?.wins ?? 0,
-          detail: detailPosInSeason(season),
-        }),
-      },
+      { season, seasons: seasonOptions(now), players, groups, score: row.score, rank, ranked },
       200,
       NO_STORE,
     );

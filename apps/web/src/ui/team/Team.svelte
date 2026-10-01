@@ -18,6 +18,7 @@
     lineStrength,
     slotRating,
     teamOvr,
+    type AchCategory,
     type FormationId,
   } from '@offside/contracts/owner-team';
   import {
@@ -51,9 +52,11 @@
   import TeamLines from './TeamLines.svelte';
   import TeamLive from './TeamLive.svelte';
   import TeamPitch from './TeamPitch.svelte';
+  import AchGradeBadge from './AchGradeBadge.svelte';
   import { num, recordText, signedNum } from '@offside/app-core/teamText';
   import {
-    OUTCOME_TITLE, PICK_SORTS, achDone, achLockedRange, achNear, achOpenGroup, achState, achTotal, assignSlot,
+    OUTCOME_TITLE, PICK_SORTS, achDone, achGradeView, achNear, achOpenGroup, achPoints, achRankText, achSections,
+    achState, achTotal, assignSlot,
     attrLine, autoFillSlots, matchHintOf, outcomeOf as outcome, pct, pickCandidates, type PickSort,
   } from '@offside/app-core/teamOwner';
 
@@ -95,6 +98,8 @@
   let histStatus = $state<LoadStatus>('loading');
   let ach = $state<ClubAchievementsResponse | null>(null);
   let achStatus = $state<LoadStatus>('loading');
+  /** T-11-028 업적 화면에서 보고 있는 분류(선수·팀·구단주·감독). */
+  let achCat = $state<AchCategory>('player');
   /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
   let pickSort = $state<PickSort>('fit');
 
@@ -161,6 +166,11 @@
   function pickSeason(id: number) {
     show('team');
     void load(id);
+  }
+  /** T-11-028 기록실 업적 랭킹. */
+  function openAchRanking() {
+    appState.hof = { ...hofStart(), tab: 'ach' };
+    go('hof');
   }
   /** 기록실 라이브 랭킹에서 팀 프로필을 연다(id 없으면 랭킹 목록). */
   function openRanking(id: string | null = null) {
@@ -330,16 +340,26 @@
         <LoadState status={achStatus} failText="업적을 불러오지 못했어요." retry={() => void loadAchievements(ach?.season)}>
           {#if ach}
             {@const tot = achTotal(ach.groups)}
+            {@const gv = achGradeView(ach.score)}
+            {@const sections = achSections(ach.groups)}
+            {@const sec = sections.find((x) => x.id === achCat) ?? sections[0]!}
             {@const near = achNear(ach.groups)}
-            {@const openId = achOpenGroup(ach.groups)}
-            {@const locked = achLockedRange(ach.groups)}
-            {@const firstLocked = ach.groups.find((g) => g.locked)?.id}
+            {@const openId = achOpenGroup(sec.groups)}
             <div class="tm-ach-sum" data-ach-summary>
-              <div class="tm-ach-total"><b>{tot.done}</b><span class="muted">/ {tot.total} 달성</span></div>
-              <div class="tm-bar" role="progressbar" aria-label="시즌 업적 달성" aria-valuemin={0} aria-valuemax={tot.total} aria-valuenow={tot.done}>
-                <span style:width="{tot.total ? (tot.done / tot.total) * 100 : 0}%"></span>
+              <div class="tm-ach-head">
+                <AchGradeBadge grade={gv.grade} large />
+                <div class="tm-ach-total"><b>{num(ach.score)}</b><span class="muted">점</span></div>
+                <button class="tm-ach-rank" data-act="ach-ranking" onclick={openAchRanking}>
+                  <small class="muted">업적 랭킹</small><span>{achRankText(ach.rank, ach.ranked)}</span>
+                </button>
               </div>
-              <p class="muted fs-sm">{ach.seasons.find((o) => o.id === ach?.season)?.name ?? ''}에 처음 뛰어 은퇴한 내 선수 {ach.players}명의 기록으로 채워요.</p>
+              <div class="tm-bar" role="progressbar" aria-label="다음 등급까지" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(gv.ratio * 100)}>
+                <span style:width="{gv.ratio * 100}%"></span>
+              </div>
+              <p class="muted fs-sm" data-ach-next>
+                {gv.next ? `${gv.next.name}까지 ${num(gv.toNext)}점` : '최고 등급이에요'} · 업적 {tot.done}/{tot.total} 달성
+              </p>
+              <p class="muted fs-xs">{ach.seasons.find((o) => o.id === ach?.season)?.name ?? ''}에 처음 뛰어 은퇴한 내 선수 {ach.players}명과 이 시즌 팀·구단 활동으로 채워요. 시즌마다 처음부터 다시 쌓아요.</p>
             </div>
             {#if near.length}
               <div class="tm-near" data-ach-near>
@@ -348,14 +368,28 @@
                   {#each near as n (n.item.id)}
                     <li>
                       <span class="tm-near-txt"><b>{n.item.label}</b><small class="muted">{n.group} · {achState(n.item)}</small></span>
+                      <span class="tm-pts">+{num(n.item.worth)}점</span>
                       <span class="tm-bar sm" aria-hidden="true"><span style:width="{n.ratio * 100}%"></span></span>
                     </li>
                   {/each}
                 </ul>
               </div>
             {/if}
-            {#each ach.groups as g (g.id)}
-              {#if !g.locked}
+            <div class="tm-ach-cats" role="tablist" aria-label="업적 분류" style:grid-template-columns="repeat({sections.length}, minmax(0, 1fr))">
+              {#each sections as x (x.id)}
+                <button role="tab" aria-selected={sec.id === x.id} data-ach-cat={x.id} onclick={() => (achCat = x.id)}>
+                  <span>{x.name.replace(' 업적', '')}</span>
+                  <small class="num">{x.locked ? '🔒︎' : num(x.score)}</small>
+                </button>
+              {/each}
+            </div>
+            {#if sec.locked}
+              <div class="tm-ach tm-ach-locked tm-ach-soon" data-ach-group="manager">
+                <div class="tm-ach-head"><span class="tm-ach-stage">SOON</span><b>감독 커리어</b></div>
+                <small class="muted">감독 시뮬레이션이 열리면 감독으로 거둔 성적도 업적이 돼요. 선수·팀·구단주 업적처럼 시즌마다 새로 쌓여요.</small>
+              </div>
+            {:else}
+              {#each sec.groups as g (`${ach.season}-${g.id}`)}
                 <details class="tm-ach" data-ach-group={g.id} open={g.id === openId}>
                   <summary>
                     <span class="tm-ach-stage">{g.stage}</span>
@@ -364,18 +398,15 @@
                   </summary>
                   <ul>
                     {#each g.items as i (i.id)}
-                      <li class:done={i.done}><span>{i.label}</span><small>{achState(i)}</small></li>
+                      <li class:done={i.done}>
+                        <span class="tm-ach-txt"><span>{i.label}</span><small>{achState(i)}</small></span>
+                        <span class="tm-pts" class:got={i.points > 0}>{achPoints(i)}</span>
+                      </li>
                     {/each}
                   </ul>
                 </details>
-              {:else if g.id === firstLocked}
-                <div class="tm-ach tm-ach-locked" data-ach-group="locked">
-                  <span class="tm-ach-stage">{locked}</span>
-                  <b>LOCKED</b>
-                  <small class="muted">아직 발견하지 못했어요</small>
-                </div>
-              {/if}
-            {/each}
+              {/each}
+            {/if}
           {/if}
         </LoadState>
       </section>
@@ -687,10 +718,92 @@
   .tm-ach-sum p {
     margin: 0;
   }
+  .tm-ach-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
   .tm-ach-total {
     display: flex;
     align-items: baseline;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+  .tm-ach-rank {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .tm-ach-rank small {
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+  .tm-ach-cats {
+    display: grid;
     gap: 6px;
+  }
+  .tm-ach-cats button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    min-height: 48px;
+    padding: 6px 4px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .tm-ach-cats button small {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .tm-ach-cats button[aria-selected='true'] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  }
+  .tm-ach-cats button[aria-selected='true'] small {
+    color: var(--accent-text);
+  }
+  .tm-ach-txt {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+  .tm-ach-txt small {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  .tm-pts {
+    flex: none;
+    font-family: var(--display);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .tm-pts.got,
+  .tm-near .tm-pts {
+    color: var(--accent-text);
   }
   .tm-ach-total b {
     font-family: var(--display);
@@ -706,8 +819,7 @@
     overflow: hidden;
   }
   .tm-bar.sm {
-    flex: none;
-    width: 64px;
+    grid-column: 1 / -1;
     height: 6px;
     background: var(--line);
   }
@@ -726,9 +838,10 @@
     gap: 6px;
   }
   .tm-near li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 6px 10px;
     padding: 8px 10px;
     border-radius: 10px;
     background: var(--surface-2);
@@ -794,18 +907,13 @@
   .tm-ach li {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     gap: 10px;
     padding: 8px 10px;
     border-radius: 10px;
     background: var(--surface-2);
   }
-  .tm-ach li small {
-    flex: none;
-    color: var(--muted);
-    text-align: right;
-  }
-  .tm-ach li.done small {
+  .tm-ach li.done .tm-ach-txt small {
     color: var(--accent-text);
     font-weight: 700;
   }
@@ -821,6 +929,15 @@
   }
   .tm-ach-locked b {
     flex: 1;
+  }
+  .tm-ach-soon {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 12px;
+  }
+  .tm-ach-soon b {
+    color: var(--ink);
   }
   .tm-names {
     display: grid;

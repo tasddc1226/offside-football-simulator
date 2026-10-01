@@ -600,6 +600,30 @@ export const teamMatches = sqliteTable(
   ],
 );
 
+/**
+ * T-11-028 구단주 시즌 업적 점수(업적 랭킹). 업적은 은퇴 기록·팀에서 그때그때 계산하고, 랭킹을 세려고 점수만 여기에
+ * 적어 둔다 — 업적 화면을 열 때·은퇴·팀 저장·팀 경기 뒤와 매일 cron이 다시 센다. 점수가 0이면 행을 두지 않는다.
+ * reached_at은 점수가 바뀐 시각이라 같은 점수면 먼저 닿은 구단주가 앞선다.
+ */
+export const ownerAchievements = sqliteTable(
+  'owner_achievements',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    season: integer('season').notNull(),
+    score: integer('score').notNull(),
+    done: integer('done').notNull(),
+    players: integer('players').notNull(),
+    reachedAt: text('reached_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.profileId, table.season] }),
+    index('owner_achievements_season_score_idx').on(table.season, table.score, table.reachedAt),
+  ],
+);
+
 /** T-11-015 채팅 신고. 프로필 하나가 메시지 하나에 한 번. 메시지는 채팅방(Durable Object)에 7일만 남으므로 신고할
  *  때 작성자·닉네임·본문 사본을 함께 적어 둔다(운영자 확인용, 90일 뒤 cron이 지운다). 운영자가 처리하면
  *  resolved_at을 채운다. */

@@ -498,6 +498,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     eq(careers.status, 'retired'),
     isNotNull(careers.peak),
     eq(careers.serviceSeason, season),
+    // T-11-028 업적 점수가 공개 랭킹이 되므로 공개 순위에서 뺀 기록(자동 플레이)은 세지 않는다.
+    eq(careers.hidden, 0),
   );
   const [rows, seasons] = await db.batch([
     db
@@ -520,6 +522,7 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         legendScore: careers.legendScore,
         nation: careers.nation,
         retireAge: careers.retireAge,
+        retiredAt: careers.retiredAt,
         rn: retiredNumbers.careerId,
       })
       .from(careers)
@@ -570,6 +573,7 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     retiredNumber: r.rn !== null,
     nation: r.nation,
     retireAge: r.retireAge ?? 0,
+    retiredAt: r.retiredAt,
     seasons: byCareer.get(r.id) ?? [],
   }));
 }
