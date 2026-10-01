@@ -1,4 +1,5 @@
 // ───────── 앱 시작 (웹 main.ts · ui/boot.ts와 같은 순서) ─────────
+import { nativeAnalytics } from '../analytics';
 import { AccessibilityInfo, AppState } from 'react-native';
 import { setLatestBalance } from '@offside/game/balance';
 import type { BalanceConfig } from '@offside/contracts';
@@ -28,6 +29,7 @@ export async function boot(): Promise<void> {
   // 유저 클럽 이름을 먼저 CLUBS에 반영해야 세이브를 읽을 때 현재 소속 이름이 커스텀 이름을 읽는다.
   loadClubCustom();
   appState.G = restoreGame({ uploadRetirement, uploadLegacyRetirement });
+  nativeAnalytics.initialize(appState.screen, appState.G?.cid ?? null);
 
   void AccessibilityInfo.isReduceMotionEnabled().then((on) => (prefs.motionOK = !on));
   AccessibilityInfo.addEventListener('reduceMotionChanged', (on) => (prefs.motionOK = !on));

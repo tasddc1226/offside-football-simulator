@@ -1,6 +1,7 @@
 // ───────── 앱 쪽 연결 (T-11-005) ─────────
 // 게임 진행·시트 연출·업로드·선수 상세·클럽 커스텀·영구결번·새 소식은 웹과 같은 @offside/app-core 로직을 쓴다.
 // 여기서는 앱 상태(valtio)와 화면 쪽 동작(스크롤·토스트·햅틱)을 넘겨 한 벌씩 만든다.
+import { analytics, trackPage } from '../analytics';
 import * as Haptics from 'expo-haptics';
 import { createSheetController } from '@offside/app-core/sheet-controller';
 import { createGameActions } from '@offside/app-core/game-actions';
@@ -85,9 +86,8 @@ export const {
   scrollTop: (smooth) => scrollTo(0, smooth && prefs.motionOK),
   uploadSeason,
   uploadRetirement,
-  // 앱은 분석을 붙이지 않는다(웹도 설정한 빌드에서만 켠다).
-  analytics: { replace() {}, start() {}, play() {}, firstSeason() {}, retire() {} },
-  trackPage() {},
+  analytics,
+  trackPage,
 });
 
 // ───────── 클럽 커스텀 · 선수 상세 · 영구결번 · 새 소식 · 소유권 충돌 ─────────
