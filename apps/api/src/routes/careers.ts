@@ -149,6 +149,11 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     purgeEdge(c, STALE.retirementPut(careerId));
     publishLive(c, 'retire', careerId, now);
 
-    return ok(c, RetirementResponseSchema, { careerId, status: 'retired', retiredNumber });
+    return ok(c, RetirementResponseSchema, {
+      careerId,
+      status: 'retired',
+      retiredNumber,
+      serviceSeason: career.serviceSeason,
+    });
   });
 }

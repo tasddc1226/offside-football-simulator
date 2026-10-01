@@ -240,6 +240,11 @@ export const RetirementResponseSchema = z.strictObject({
   status: z.literal('retired'),
   /** T-10-076 영구결번 심사. 자격이 없으면 null(배포 전 응답엔 없다). */
   retiredNumber: RetiredNumberResultSchema.nullable().optional(),
+  /**
+   * T-11-029 이 커리어가 속한 서비스 시즌(0 = 프리시즌, 휴식기에 올라왔으면 null). 기기가 은퇴 기록(ft_hof)에 남겨
+   * '내 선수'를 시즌별로 거른다(배포 전 응답엔 없다).
+   */
+  serviceSeason: z.number().int().nonnegative().nullable().optional(),
 });
 export type RetirementResponse = z.infer<typeof RetirementResponseSchema>;
 
@@ -393,6 +398,11 @@ export const PublicHofEntrySchema = z.strictObject({
   retiredNumber: RetiredSlotSchema.extend({ seq: z.number().int() }).nullable().optional(),
   /** T-10-100 은퇴 가치(만 원). 아직 소급하지 못한 옛 기록은 null(배포 전 엣지 캐시 응답엔 없다). */
   value: z.number().int().nullable().optional(),
+  /**
+   * T-11-029 이 선수가 속한 서비스 시즌(careers.service_season — 처음 올라온 시각의 시즌, 0 = 프리시즌, 시즌 사이
+   * 휴식기에 올라왔으면 null). 배포 전 엣지 캐시 응답엔 없다.
+   */
+  season: z.number().int().nonnegative().nullable().optional(),
   /** T-10-101 이름 검색 결과에만: 고른 순위 유형·시즌에서의 실제 순위(1부터). */
   rank: z.number().int().min(1).optional(),
 });

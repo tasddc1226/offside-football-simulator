@@ -17,7 +17,7 @@ export const { recordRn, fillGranted, rnOf, watchRetiredNumberAlerts } = createR
 
 export function watchRetiredNumbers() {
   window.addEventListener(RETIRED_NUMBER_EVENT, (e) => {
-    const { careerId, result } = (e as CustomEvent<RetiredNumberEvent>).detail;
-    recordRn(careerId, result);
+    const { careerId, result, serviceSeason } = (e as CustomEvent<RetiredNumberEvent>).detail;
+    recordRn(careerId, result, serviceSeason);
   });
 }
