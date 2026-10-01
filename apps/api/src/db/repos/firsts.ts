@@ -1,6 +1,7 @@
 import type { FirstsResponse } from '@offside/contracts';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
+import { isAutomatedCareer } from './automation.js';
 import { runBatch } from './batch.js';
 import { appMeta, careers, careerSeasons, serverFirsts, serverRecords } from '../schema.js';
 import {
@@ -74,6 +75,7 @@ const seasonColumns = {
   honorsJson: careerSeasons.honorsJson,
   mil: careerSeasons.mil,
   createdAt: careerSeasons.createdAt,
+  signalsJson: careerSeasons.signalsJson,
 };
 type SeasonRow = Pick<typeof careerSeasons.$inferSelect, keyof typeof seasonColumns>;
 
@@ -158,6 +160,9 @@ async function claimStatements(db: Db, list: FirstCareer[]) {
   return [...wins.map((g) => upsertFirst(db, g)), ...broken.map((r) => upsertRecord(db, r))];
 }
 
+/** 공개 순위에서 뺀(자동 플레이로 판정된) 커리어는 기록을 쥘 수 없다. */
+const shown = (careerId: string) => and(eq(careers.id, careerId), eq(careers.hidden, 0));
+
 /** 한 커리어를 다시 판정해 더 나은 기록이면 반영한다. 바뀐 게 있으면 true(목록 캐시를 지울지 판단용).
  * legendOnly: 은퇴 때는 새로 가능해지는 기록이 레전드 점수뿐이라 시즌을 읽지 않는다. */
 export async function recordCareerFirsts(
@@ -166,13 +171,18 @@ export async function recordCareerFirsts(
   { legendOnly = false } = {},
 ): Promise<boolean> {
   const [cs, rows] = legendOnly
-    ? [await db.select(careerColumns).from(careers).where(eq(careers.id, careerId)), []]
+    ? [await db.select(careerColumns).from(careers).where(shown(careerId)), []]
     : await db.batch([
-        db.select(careerColumns).from(careers).where(eq(careers.id, careerId)),
+        db.select(careerColumns).from(careers).where(shown(careerId)),
         db.select(seasonColumns).from(careerSeasons).where(eq(careerSeasons.careerId, careerId)),
       ]);
   const [career] = toCareers(cs, rows);
   if (!career) return false;
+  // 방금 올라온 시즌까지 모은 신호가 자동 플레이로 확실하면 기록을 쥐지 못하게 뺀다(모든 시즌 업로드가 여기를 지난다).
+  if (isAutomatedCareer(rows.map((r) => r.signalsJson))) {
+    await runBatch(db, hideCareerStatements(db, careerId));
+    return true;
+  }
   const statements = await claimStatements(db, [career]);
   await runBatch(db, statements);
   return statements.length > 0;
@@ -182,6 +192,22 @@ export async function recordCareerFirsts(
  * 기록은 그다음 최고값)에게 가야 한다 — 재계산 표시를 지워 공개 목록 조회가 전체를 다시 훑게 한다. */
 export const resetFirstsBackfillStatement = (db: Db) =>
   db.delete(appMeta).where(inArray(appMeta.key, [META_KEY, CURSOR_KEY]));
+
+/** 커리어를 공개 순위에서 뺀다(careers.hidden) — 쥐고 있던 서버 최초 기록·서버 기록을 비우고, 쥐고 있던 게 있으면 다시 훑게 해
+ * 실제 달성자에게 넘긴다. 재계산 표시는 지우기 전에 확인해야 하므로 batch 맨 앞에 둔다. */
+export const hideCareerStatements = (db: Db, careerId: string) => [
+  db
+    .delete(appMeta)
+    .where(
+      and(
+        inArray(appMeta.key, [META_KEY, CURSOR_KEY]),
+        sql`(exists (select 1 from server_firsts where career_id = ${careerId}) or exists (select 1 from server_records where career_id = ${careerId}))`,
+      ),
+    ),
+  db.update(careers).set({ hidden: 1 }).where(eq(careers.id, careerId)),
+  db.delete(serverFirsts).where(eq(serverFirsts.careerId, careerId)),
+  db.delete(serverRecords).where(eq(serverRecords.careerId, careerId)),
+];
 
 export const setMeta = (db: Db, key: string, value: string) =>
   db
@@ -202,14 +228,14 @@ export async function ensureFirstsBackfilled(db: Db, chunk = RESCAN_CHUNK): Prom
     db
       .select({ ...careerColumns, rowid: sql<number>`rowid` })
       .from(careers)
-      .where(sql`rowid > ${cursor}`)
+      .where(sql`rowid > ${cursor} and hidden = 0`)
       .orderBy(sql`rowid`)
       .limit(chunk),
     db
       .select(seasonColumns)
       .from(careerSeasons)
       .where(
-        sql`${careerSeasons.careerId} in (select id from careers where rowid > ${cursor} order by rowid limit ${chunk})`,
+        sql`${careerSeasons.careerId} in (select id from careers where rowid > ${cursor} and hidden = 0 order by rowid limit ${chunk})`,
       ),
   ]);
   const statements = await claimStatements(db, toCareers(cs, rows));

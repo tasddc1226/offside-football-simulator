@@ -121,6 +121,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
         eq(careers.profileId, profileId),
         eq(careers.status, 'retired'),
         isNotNull(careers.peak),
+        eq(careers.hidden, 0),
         eq(careers.serviceSeason, season),
       ),
     )
@@ -179,6 +180,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       number: careers.shirtNumber,
       publicName: careers.publicName,
       serviceSeason: careers.serviceSeason,
+      hidden: careers.hidden,
     })
     .from(careers)
     .where(inArray(careers.id, ids));
@@ -190,7 +192,7 @@ export function eligibleMap(rows: readonly CareerLite[], ownerId: string, season
   const map = new Map<string, LineupCareer>();
   for (const r of rows) {
     if (r.profileId !== ownerId || r.status !== 'retired' || r.peak === null) continue;
-    if (r.serviceSeason !== season) continue;
+    if (r.serviceSeason !== season || r.hidden) continue;
     map.set(r.id, toLineupCareer(r));
   }
   return map;

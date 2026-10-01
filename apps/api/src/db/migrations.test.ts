@@ -118,6 +118,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'weight',
     'value',
     'name_hidden_at',
+    'hidden',
   ],
   career_seasons: [
     'career_id',

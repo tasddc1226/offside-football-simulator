@@ -124,7 +124,12 @@ export async function liveEventOf(
 ): Promise<LiveEvent | undefined> {
   if (kind === 'season') {
     const [row] = await seasonRows(db).where(
-      and(eq(careers.id, careerId), eq(careers.status, 'active'), eq(careerSeasons.createdAt, now)),
+      and(
+        eq(careers.id, careerId),
+        eq(careers.status, 'active'),
+        eq(careers.hidden, 0),
+        eq(careerSeasons.createdAt, now),
+      ),
     );
     return row && seasonEvent(row);
   }
@@ -143,6 +148,7 @@ export async function liveFeed(db: Db, nowMs: number): Promise<LiveEvent[]> {
       .where(
         and(
           eq(careers.status, 'active'),
+          eq(careers.hidden, 0),
           gte(careers.updatedAt, since),
           gte(sql`+${careerSeasons.createdAt}`, since),
         ),

@@ -101,6 +101,7 @@ export const authAttempts = sqliteTable(
         'BOARD_COMMENT',
         'APP_SESSION',
         'APPLE_SIGNIN',
+        'PROFILE_CREATE',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -200,6 +201,8 @@ export const careers = sqliteTable(
     value: integer('value'),
     // 운영자가 이름 신고를 받고 가린 시각. 있으면 시즌·은퇴 업로드가 공개 이름을 다시 채우지 않는다.
     nameHiddenAt: text('name_hidden_at'),
+    // 1이면 공개 순위(명예의 전당·서버 기록·결번·홈 소식)에서 뺀다. 은퇴 때 시즌 신호가 자동 플레이로 판정되면 서버가 켠다.
+    hidden: integer('hidden').notNull().default(0),
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),

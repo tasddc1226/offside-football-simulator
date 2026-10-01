@@ -302,6 +302,13 @@
       "when": 1790754858877,
       "tag": "0042_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1790845232325,
+      "tag": "0043_career_hidden",
+      "breakpoints": true
     }
   ]
 }

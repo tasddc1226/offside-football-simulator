@@ -72,17 +72,8 @@ function rhythm(gapsMs: number[]): { medianGapSec: number | null; cv: number | n
   return { medianGapSec, cv: Math.round((sd / mean) * 100) / 100 };
 }
 
-function judgeCareer(rows: SeasonRow[]) {
-  const sorted = [...rows].sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
-  const sigs = sorted.map((r) => parseSignals(r.signalsJson));
-  const measured = sigs.filter((s): s is Signals => !!s);
-  // 기기가 잰 시즌 시간이 절반 넘게 있으면 그것을, 아니면 서버 도착 간격을 쓴다(밀린 업로드는 간격이 0에 가깝다).
-  const gaps =
-    measured.length * 2 > sorted.length
-      ? measured.map((s) => s.ms - s.hiddenMs)
-      : sorted.slice(1).map((r, i) => Date.parse(r.createdAt) - Date.parse(sorted[i]!.createdAt));
-  const { medianGapSec, cv } = rhythm(gaps);
-
+/** 기기 조작 요약만으로 보는 자동 플레이 이유(관찰 점수와 공개 순위 제외가 같이 쓴다). */
+function signalReasons(measured: Signals[]): Set<AutomationReason> {
   const reasons = new Set<AutomationReason>();
   const sum = (k: 'clicks' | 'touches' | 'moves' | 'synthetic') =>
     measured.reduce((s, x) => s + x[k], 0);
@@ -96,6 +87,30 @@ function judgeCareer(rows: SeasonRow[]) {
   if (measured.filter((s) => s.clicks + s.keys + s.touches === 0).length >= 2)
     reasons.add('noInput');
   if (touches === 0 && clicks >= 20 && moves < clicks * 2) reasons.add('noMoves');
+  return reasons;
+}
+
+/** 공개 순위에서 뺄 만큼 확실한 이유 — 자동화 브라우저, 스크립트 클릭, 입력 없는 시즌 진행. 간격·이름·커서 이동은 약해서 뺀다. */
+const BLOCKING: readonly AutomationReason[] = ['webdriver', 'headless', 'synthetic', 'noInput'];
+
+/** 한 커리어의 시즌 신호(signals_json)들이 자동 플레이로 확실한가. 신호 없는 옛 시즌은 판단에서 빠진다. */
+export function isAutomatedCareer(signalsJsons: readonly (string | null)[]): boolean {
+  const reasons = signalReasons(signalsJsons.map(parseSignals).filter((s): s is Signals => !!s));
+  return BLOCKING.some((r) => reasons.has(r));
+}
+
+function judgeCareer(rows: SeasonRow[]) {
+  const sorted = [...rows].sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+  const sigs = sorted.map((r) => parseSignals(r.signalsJson));
+  const measured = sigs.filter((s): s is Signals => !!s);
+  // 기기가 잰 시즌 시간이 절반 넘게 있으면 그것을, 아니면 서버 도착 간격을 쓴다(밀린 업로드는 간격이 0에 가깝다).
+  const gaps =
+    measured.length * 2 > sorted.length
+      ? measured.map((s) => s.ms - s.hiddenMs)
+      : sorted.slice(1).map((r, i) => Date.parse(r.createdAt) - Date.parse(sorted[i]!.createdAt));
+  const { medianGapSec, cv } = rhythm(gaps);
+
+  const reasons = signalReasons(measured);
   if (cv !== null && cv < 0.08) reasons.add('metronome');
   else if (cv !== null && cv < 0.12) reasons.add('steady');
   const name = sorted.at(-1)!.name;
