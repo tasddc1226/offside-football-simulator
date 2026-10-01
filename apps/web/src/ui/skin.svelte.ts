@@ -1,8 +1,8 @@
 // T-11-022 업무 모드: PC 브라우저에서 게임을 스프레드시트 화면처럼 보이게 한다. 설정에서 켜고 이 기기에 저장한다.
-// 마우스로 쓰는 넓은 화면에서만 적용한다 — 휴대폰·태블릿은 켜 둬도 원래 화면이다(창을 좁히면 그 자리에서 풀린다).
+// 마우스로 쓰는 넓은 화면에서만 적용한다 — 휴대폰·태블릿은 켜 둬도 원래 화면이다(창을 640px 아래로 좁히면 그 자리에서 풀린다).
 // 첫 페인트 전 적용은 index.html의 인라인 스크립트가 같은 키·같은 매체 쿼리로 한다. 모양은 style.css의 [data-skin='sheet'].
 const KEY = 'ft_skin';
-export const SHEET_MEDIA = '(hover: hover) and (pointer: fine) and (min-width: 900px)';
+export const SHEET_MEDIA = '(hover: hover) and (pointer: fine) and (min-width: 640px)';
 /** 업무 모드 문서 제목·파비콘(녹색 표 아이콘). */
 export const SHEET_TITLE = '4분기 업무 정리_v3 - 스프레드시트';
 const SHEET_ICON =

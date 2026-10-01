@@ -5389,6 +5389,8 @@ html:root[data-skin='sheet'] {
   --sx-col: 100px;
   --sx-head: 46px;
   --sx-foot: 37px;
+  /* 본문 폭: A~G 7칸, 창이 좁으면 행 머리글 옆 남은 폭 */
+  --sx-body: min(calc(var(--sx-col) * 7), calc(100vw - var(--sx-head) - 24px));
   --sx-grid: #e2e3e3;
   --sx-chrome: #f9fbfd;
   --sx-blue: #1a73e8;
@@ -5447,7 +5449,7 @@ html:root[data-skin='sheet'] {
 }
 /* 본문은 A열부터 7칸 폭. 카드는 둥근 모서리·그림자 없이 칸 테두리처럼. */
 :root[data-skin='sheet'] .wrap {
-  max-width: calc(var(--sx-col) * 7);
+  max-width: var(--sx-body);
   margin: 0 0 0 var(--sx-head);
   padding: 6px 8px 32px;
   gap: 10px;
@@ -5578,7 +5580,7 @@ html:root[data-skin='sheet'] {
 :root[data-skin='sheet'] .action-bar {
   left: var(--sx-head);
   right: auto;
-  width: calc(var(--sx-col) * 7);
+  width: var(--sx-body);
   max-width: none;
   margin: 0;
   bottom: var(--sx-foot);
