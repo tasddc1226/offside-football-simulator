@@ -308,6 +308,10 @@ describe('공개 명예의 전당 /v1/hof', () => {
     const season = await read('season=1');
     expect(season.total).toBe(1);
     expect(season.entries.map((e) => e.id)).toEqual([s1]);
+    // T-11-029 season=0은 프리시즌 — 개막 뒤에 은퇴한 프리시즌 선수는 여기 오르고 시즌 1 선수는 빠진다.
+    const preseason = await read('season=0');
+    expect(preseason.total).toBe(1);
+    expect(preseason.entries.map((e) => e.id)).toEqual([pre]);
     expect((await createApp().request('/v1/hof?season=9', {}, ctx.env)).status).toBe(400);
     // 시즌 번호는 처음 올라온 시각으로 한 번 정해져 컬럼에 남는다(시즌 기간을 고쳐도 소급하지 않는다).
     const stamped = await ctx.db

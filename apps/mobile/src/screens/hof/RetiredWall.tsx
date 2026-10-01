@@ -1,11 +1,17 @@
 // T-10-076 기록실 '영구결번' 탭(웹 RetiredWall.svelte) — 서버의 모든 결번을 구단별(결번 많은 구단 먼저) 또는 최신순으로 본다.
 // 유니폼은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
+// T-11-029 결번은 시즌마다 따로 — 개막한 시즌이 둘 이상이면 시즌 탭을 보인다(웹과 같다).
 import { useEffect, useId, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { proxy, useSnapshot } from 'valtio';
 import type { RetiredNumbersResponse } from '@offside/contracts';
 import { defaultClubName, leagueOfClub } from '@offside/contracts/club-names';
+import {
+  displaySeasonAt,
+  openTeamSeasons,
+  teamSeasonName,
+} from '@offside/contracts/service-seasons';
 import { getRetiredNumbers } from '@offside/app-core/api/client';
 import { anonName } from '@offside/app-core/format';
 import { RN_DEFAULT, rnColors } from '@offside/app-core/rnStyle';
@@ -20,12 +26,16 @@ import { Card } from '../../ui/Card';
 import { ClubMark } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
-import { SortChips } from '../board/parts';
+import { Seg, SortChips, TabOpt } from '../board/parts';
 
 type Item = RetiredNumbersResponse['items'][number];
 
-// 구단별·최신순 선택은 선수 상세에 다녀와도 그대로 둔다(화면이 다시 그려져도 모듈 값은 남는다).
-const view = proxy<{ order: 'club' | 'recent' }>({ order: 'club' });
+// 구단별·최신순, 시즌 선택은 선수 상세에 다녀와도 그대로 둔다(화면이 다시 그려져도 모듈 값은 남는다).
+// season이 null이면 지금 시즌(개막 전이면 프리시즌).
+const view = proxy<{ order: 'club' | 'recent'; season: number | null }>({
+  order: 'club',
+  season: null,
+});
 
 const leagueOf = (clubId: string) => leagueOfClub(clubId)?.name ?? '';
 /** 결번 당시 기록된 이름은 유저가 바꿔 부른 이름일 수 있다 — 모두가 보는 벽에는 게임 기본 이름을 건다. */
@@ -182,12 +192,17 @@ function Tiles({
 
 export default function RetiredWall() {
   const c = useColors();
-  const { order } = useSnapshot(view);
+  const { order, season: picked } = useSnapshot(view);
+  const now = useMemo(() => new Date().toISOString(), []);
+  const seasons = useMemo(() => openTeamSeasons(now), [now]);
+  const season = picked ?? displaySeasonAt(now);
   const [items, setItems] = useState<Item[] | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
-    let live = true;
-    void getRetiredNumbers().then((r) => {
+    setItems(null);
+    setFailed(false);
+    let live = true; // 더 늦게 고른 시즌의 응답만 쓴다.
+    void getRetiredNumbers(season).then((r) => {
       if (!live) return;
       if (r.ok) setItems(r.data.items);
       else setFailed(true);
@@ -195,7 +210,7 @@ export default function RetiredWall() {
     return () => {
       live = false;
     };
-  }, []);
+  }, [season]);
 
   const myIds = useMemo(() => new Set(loadHOF().flatMap((h) => (h.id ? [h.id] : []))), []);
   /** 구단별 — 결번이 많은 구단 먼저, 같으면 먼저 결번을 낸 구단. 구단 안에서는 번호 순. */
@@ -256,6 +271,20 @@ export default function RetiredWall() {
           번호에 한 명뿐입니다.
         </Txt>
       </View>
+
+      {seasons.length > 1 ? (
+        <Seg cols={Math.min(seasons.length, 3)} label="시즌" style={{ marginBottom: 10 }}>
+          {seasons.map((id) => (
+            <TabOpt
+              key={id}
+              title={teamSeasonName(id)}
+              selected={season === id}
+              testID={`rn-season-${id}`}
+              onPress={() => (view.season = id)}
+            />
+          ))}
+        </Seg>
+      ) : null}
 
       {items === null && !failed ? (
         <Txt
@@ -347,7 +376,7 @@ export default function RetiredWall() {
         </>
       ) : (
         empty(
-          '아직 영구결번이 없습니다. 한 구단의 전설이 되어 첫 번째 결번의 주인공이 되어 보세요.',
+          `아직 ${teamSeasonName(season)} 영구결번이 없습니다. 한 구단의 전설이 되어 첫 번째 결번의 주인공이 되어 보세요.`,
         )
       )}
     </Card>

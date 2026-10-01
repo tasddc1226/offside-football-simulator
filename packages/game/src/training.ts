@@ -113,9 +113,6 @@ export function trainingHelp(s: GameState, t: TrainingDef): string {
     .filter(Boolean)
     .join(' ');
 }
-/** 모든 훈련 공통 — 성장 폭을 정하는 요소(값은 숨긴다). */
-export const TRAINING_NOTE =
-  '성장 폭은 나이가 어릴수록, 잠재력까지 남은 여유가 클수록, 사기가 높을수록 커집니다.';
 /** 연봉 비례 비용(만 원, 10 단위) — 최소 금액이 있어 아마추어·저연봉도 0이 아니다. 개인 코치·자기 투자가 같이 쓴다. */
 const salaryCost = (s: GameState, rate: number, min: number, mult = 1) =>
   Math.round((Math.max(min, (s.contract ? s.contract.salary : 0) * rate) * mult) / 10) * 10;
@@ -200,8 +197,6 @@ export const INVESTS: InvestDef[] = [
   { id: 'medical', label: '메디컬 케어', rate: 0.06, min: 200 },
   { id: 'mental', label: '멘탈 코칭', rate: 0.04, min: 150 },
 ];
-export const INVEST_NOTE =
-  '훈련과 따로, 구간마다 한 번 적용됩니다. 고른 투자는 바꾸기 전까지 이어져요.';
 const SPECIAL_COND = -3;
 const MEDICAL = { cond: 15, injury: 3 };
 const MENTAL_MORALE = 10;

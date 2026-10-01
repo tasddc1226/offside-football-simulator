@@ -222,7 +222,7 @@ export function getHof(
   name = '',
   pos: CareerPos | null = null,
 ): Promise<ApiResult<HofListResponse>> {
-  const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}${season ? `&season=${season}` : ''}${name ? `&q=${encodeURIComponent(name)}` : ''}${pos ? `&pos=${pos}` : ''}`;
+  const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}${season !== null ? `&season=${season}` : ''}${name ? `&q=${encodeURIComponent(name)}` : ''}${pos ? `&pos=${pos}` : ''}`;
   return cachedGet<HofListResponse>(`/v1/hof?${q}`, 60_000);
 }
 /** T-10-013. 이 계정의 은퇴 선수. 익명 프로필이면 linked=false. */
@@ -232,9 +232,27 @@ export function getMyCareers(): Promise<ApiResult<MyCareersResponse>> {
 export function getHofDetail(careerId: string): Promise<ApiResult<HofDetailResponse>> {
   return cachedGet<HofDetailResponse>(`/v1/hof/${encodeURIComponent(careerId)}`, 300_000);
 }
-/** T-10-076 서버 전체 영구결번(로그인 불필요). 내 선수 목록이 결번 배지를 붙일 때 쓴다. */
-export function getRetiredNumbers(): Promise<ApiResult<RetiredNumbersResponse>> {
-  return cachedGet<RetiredNumbersResponse>('/v1/retired-numbers', 60_000);
+/**
+ * T-10-076 영구결번(로그인 불필요). 내 선수 목록이 결번 배지를 붙일 때도 쓴다.
+ * T-11-029 결번은 시즌마다 따로다 — season(0 = 프리시즌)을 안 주면 서버가 지금 시즌을 쓴다.
+ */
+export function getRetiredNumbers(season?: number): Promise<ApiResult<RetiredNumbersResponse>> {
+  return cachedGet<RetiredNumbersResponse>(
+    `/v1/retired-numbers${season === undefined ? '' : `?season=${season}`}`,
+    60_000,
+  );
+}
+/** T-11-029 여러 시즌의 결번 항목을 한 목록으로(내 선수 배지용). 하나라도 실패하면 실패다. */
+export async function getRetiredNumbersIn(
+  seasons: readonly number[],
+): Promise<ApiResult<RetiredNumbersResponse['items']>> {
+  const rs = await Promise.all([...new Set(seasons)].map((n) => getRetiredNumbers(n)));
+  const items: RetiredNumbersResponse['items'] = [];
+  for (const r of rs) {
+    if (!r.ok) return r;
+    items.push(...r.data.items);
+  }
+  return { ok: true, data: items };
 }
 /** T-10-076 내 선수의 결번 심사 결과(소급 결번·이미 찬 자리). 메모하지 않는다 — 결과는 ft_hof에 남긴다. */
 export function checkRetiredNumber(
@@ -244,9 +262,12 @@ export function checkRetiredNumber(
     `/v1/careers/${encodeURIComponent(careerId)}/retired-number`,
   );
 }
-/** T-10-027 서버 최초 기록(로그인 불필요). */
-export function getFirsts(): Promise<ApiResult<FirstsResponse>> {
-  return cachedGet<FirstsResponse>('/v1/firsts', 60_000);
+/** T-10-027 서버 최초 기록(로그인 불필요). T-11-029 시즌마다 따로 — season(0 = 프리시즌)을 안 주면 서버가 지금 시즌을 쓴다. */
+export function getFirsts(season?: number): Promise<ApiResult<FirstsResponse>> {
+  return cachedGet<FirstsResponse>(
+    `/v1/firsts${season === undefined ? '' : `?season=${season}`}`,
+    60_000,
+  );
 }
 /** T-10-030 홈 라이브 현황(로그인 불필요). 홈이 1분마다 묻는다 — 서버 엣지 캐시와 같은 간격(T-10-045). */
 export function getLive(): Promise<ApiResult<LiveResponse>> {

@@ -4,6 +4,8 @@ import type { Bindings } from '../env.js';
 import { sweepAnomalies, type SweepResult } from '../db/repos/anomalies.js';
 import { backupToR2, type BackupResult } from './backup.js';
 import { cleanupExpired, type CleanupResult } from './cleanup.js';
+import { createDb } from '../db/client.js';
+import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
 
 export type DailyResult = {
   cleanup: CleanupResult | { error: string };
@@ -11,6 +13,8 @@ export type DailyResult = {
   anomalies: SweepResult | { error: string };
   /** R2 바인딩(BACKUP)이 없으면(로컬·staging) 건너뛴다. */
   backup: BackupResult | { error: string } | 'skipped';
+  /** T-11-028 놓친 구단주 업적 점수 다시 세기. */
+  achievements: Awaited<ReturnType<typeof rebuildStaleAchievements>> | { error: string };
 };
 
 /** 요청 로그(middleware/logger.ts)처럼 메시지는 500자까지. */
@@ -27,8 +31,16 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
   const backup = env.BACKUP
     ? await backupToR2(env.DB, env.BACKUP, env.ENVIRONMENT, now).catch(errorOf)
     : ('skipped' as const);
+  // 이상 점검이 숨긴 커리어가 빠지도록 업적 점수는 점검 뒤에 센다.
+  const achievements = await rebuildStaleAchievements(
+    createDb(env.DB),
+    new Date(now).toISOString(),
+  ).catch(errorOf);
   const failed =
-    'error' in cleanup || 'error' in anomalies || (typeof backup === 'object' && 'error' in backup);
+    'error' in cleanup ||
+    'error' in anomalies ||
+    (typeof backup === 'object' && 'error' in backup) ||
+    'error' in achievements;
   console.log(
     JSON.stringify({
       level: failed ? 'error' : 'info',
@@ -37,8 +49,9 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
       cleanup,
       anomalies,
       backup,
+      achievements,
       durationMs: Date.now() - startedAt,
     }),
   );
-  return { cleanup, anomalies, backup };
+  return { cleanup, anomalies, backup, achievements };
 }

@@ -1,13 +1,17 @@
 <script lang="ts" module>
-  // 구단별·최신순 선택은 선수 상세에 다녀와도 그대로 둔다(화면이 다시 그려져도 모듈 값은 남는다).
-  const view = $state<{ order: 'club' | 'recent' }>({ order: 'club' });
+  // 구단별·최신순, 시즌 선택은 선수 상세에 다녀와도 그대로 둔다(화면이 다시 그려져도 모듈 값은 남는다).
+  // season이 null이면 지금 시즌(개막 전이면 프리시즌).
+  const view = $state<{ order: 'club' | 'recent'; season: number | null }>({ order: 'club', season: null });
 </script>
 
 <script lang="ts">
   // T-10-076 기록실 '영구결번' 탭 — 서버의 모든 결번을 구단별(결번 많은 구단 먼저) 또는 최신순으로 본다.
   // 유니폼은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
+  // T-11-029 결번은 시즌마다 따로 — 프리시즌 선수가 찬 번호도 시즌 1에서는 새로 받을 수 있다. 개막한 시즌이 둘 이상이면
+  // 시즌 탭을 보인다.
   import type { RetiredNumbersResponse } from '@offside/contracts';
   import { defaultClubName, leagueOfClub } from '@offside/contracts/club-names';
+  import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
   import { getRetiredNumbers } from '@offside/app-core/api/client';
   import { POS } from '@offside/game/data';
   import { loadHOF } from '@offside/game/season';
@@ -18,11 +22,20 @@
 
   type Item = RetiredNumbersResponse['items'][number];
 
+  const now = new Date().toISOString();
+  const seasons = openTeamSeasons(now);
+  const season = $derived(view.season ?? displaySeasonAt(now));
   let items = $state<Item[] | null>(null);
   let failed = $state(false);
-  void getRetiredNumbers().then((r) => {
-    if (r.ok) items = r.data.items;
-    else failed = true;
+  $effect(() => {
+    const se = season;
+    items = null;
+    failed = false;
+    void getRetiredNumbers(se).then((r) => {
+      if (se !== season) return; // 더 늦게 고른 시즌의 응답만 쓴다.
+      if (r.ok) items = r.data.items;
+      else failed = true;
+    });
   });
 
   const myIds = new Set(loadHOF().map((h) => h.id).filter(Boolean));
@@ -70,6 +83,14 @@
   <h1 style="margin-bottom:6px">영구결번</h1>
   <p class="muted fs-sm rn-wall-lead">한 구단에서 오래, 크게 빛난 선수의 등번호는 그 구단에서 다시 쓰지 않습니다. 구단마다 한 번호에 한 명뿐입니다.</p>
 
+  {#if seasons.length > 1}
+    <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
+      {#each seasons as id (id)}
+        <button class="opt" aria-pressed={season === id} data-rn-season={id} onclick={() => (view.season = id)}>{teamSeasonName(id)}</button>
+      {/each}
+    </div>
+  {/if}
+
   {#if items === null && !failed}
     <p class="empty">불러오는 중…</p>
   {:else if failed}
@@ -105,6 +126,6 @@
       </div>
     {/if}
   {:else}
-    <p class="empty">아직 영구결번이 없습니다. 한 구단의 전설이 되어 첫 번째 결번의 주인공이 되어 보세요.</p>
+    <p class="empty">아직 {teamSeasonName(season)} 영구결번이 없습니다. 한 구단의 전설이 되어 첫 번째 결번의 주인공이 되어 보세요.</p>
   {/if}
 </section>

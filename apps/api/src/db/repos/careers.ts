@@ -269,6 +269,7 @@ const publicColumns = {
   hasDetail: sql<number>`${careers.snapshotJson} is not null`,
   title: careers.title,
   value: careers.value,
+  serviceSeason: careers.serviceSeason,
   // T-10-076 영구결번(retired_numbers를 left join한 쿼리에서만 쓴다).
   rnClubId: retiredNumbers.clubId,
   rnClub: retiredNumbers.club,
@@ -302,6 +303,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     hasDetail: Boolean(r.hasDetail),
     title: (r.title as string | null) ?? null,
     value: r.value == null ? null : Number(r.value),
+    season: r.serviceSeason == null ? null : Number(r.serviceSeason),
     retiredNumber:
       r.rnClubId == null
         ? null
@@ -555,6 +557,7 @@ export async function getCareerHead(db: Db, careerId: string) {
       status: careers.status,
       pos: careers.pos,
       dpos: careers.dpos,
+      serviceSeason: careers.serviceSeason,
     })
     .from(careers)
     .where(eq(careers.id, careerId));

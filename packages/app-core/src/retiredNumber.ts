@@ -14,13 +14,19 @@ export type RnResults = Record<string, RetiredNumberResult | null>;
 export type RnAlert = { item: LiveRetiredNumber | null };
 
 export function createRetiredNumbers(rnResults: RnResults, rnAlert: RnAlert) {
-  /** 심사 결과를 반응형 맵과 이 기기의 은퇴 기록에 남긴다. */
-  function recordRn(careerId: string, result: RetiredNumberResult | null) {
+  /** 심사 결과를 반응형 맵과 이 기기의 은퇴 기록에 남긴다. serviceSeason(T-11-029)이 오면 기록의 시즌도 남긴다. */
+  function recordRn(
+    careerId: string,
+    result: RetiredNumberResult | null,
+    serviceSeason?: number | null,
+  ) {
     rnResults[careerId] = result;
     const hof = loadHOF();
     const h = hof.find((x) => x.id === careerId);
     if (!h) return;
     h.rn = result;
+    // 휴식기에 올라온 선수(null)는 결번처럼 프리시즌으로 센다.
+    if (serviceSeason !== undefined) h.season = serviceSeason ?? 0;
     saveKey('ft_hof', hof);
   }
 

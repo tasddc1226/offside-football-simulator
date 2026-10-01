@@ -124,14 +124,14 @@ export function Account({ admin = false }: { admin?: boolean }) {
       </View>
     );
   if (!profile || !isMember(profile))
-    // T-10-102 비로그인은 안내만 — 로그인 버튼은 구단주 화면이 카드 밖에 하나만 둔다.
+    // T-10-102 비로그인은 안내만 — 로그인 버튼은 구단주 화면이 카드 밖에 하나만 둔다(T-11-026 잠긴 '내 팀' 카드 안).
     return (
       <View style={head}>
         <View style={who}>
           <Txt style={bTitle}>로그인하지 않았어요</Txt>
           <Txt tone="muted" style={bMuted}>
-            로그인하면 은퇴한 선수로 내 팀을 꾸려 다른 구단주와 겨루고, 선수 기록과 구단 이름을 다른
-            기기에서도 볼 수 있어요. 게임 진행은 이 기기에만 저장됩니다.
+            게임 진행은 이 기기에만 저장돼요. 로그인하면 선수 기록과 구단 이름을 다른 기기에서도 볼
+            수 있어요.
           </Txt>
         </View>
       </View>

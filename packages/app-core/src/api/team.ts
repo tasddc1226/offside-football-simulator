@@ -1,5 +1,6 @@
 // T-10-092 구단주 팀 · 라이브 랭킹 API. 팀 화면·기록실(지연 청크)만 import한다. 타입은 type-only import라 번들에 zod가 들어가지 않는다.
 import type {
+  AchRankResponse,
   ClubAchievementsResponse,
   OwnerTeamResponse,
   PlayTeamMatchResponse,
@@ -15,7 +16,10 @@ import type {
 import { apiFetch, cachedGet } from './client.js';
 
 export type {
+  AchRankItem,
+  AchRankResponse,
   ClubAchievement,
+  ClubAchievementGroup,
   ClubAchievementsResponse,
   OwnerTeam,
   OwnerTeamResponse,
@@ -56,6 +60,12 @@ export const fetchClubAchievements = (season?: number) =>
 export const fetchTeamRanking = (season: number | undefined, sort: TeamRankSort, page: number) =>
   cachedGet<TeamRankResponse>(
     `/v1/teams?${season === undefined ? '' : `season=${season}&`}sort=${sort}&page=${page}`,
+    60_000,
+  );
+/** T-11-028 업적 랭킹(기록실). 서버가 5분마다 새로 센다. */
+export const fetchAchRanking = (season: number | undefined, page: number) =>
+  cachedGet<AchRankResponse>(
+    `/v1/achievements/ranking?${season === undefined ? '' : `season=${season}&`}page=${page}`,
     60_000,
   );
 /** 팀 프로필(좋아요 여부가 사람마다 달라 메모하지 않는다). */

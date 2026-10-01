@@ -18,6 +18,8 @@ import {
 // 넘으므로 RESCAN_CHUNK명씩 나눠 공개 목록 조회 때마다 한 조각씩 진행한다(진행 위치는 app_meta).
 // 다시 훑기는 더 이른 달성·더 큰 값만 더한다 — 규칙이 늘어날 때는 BACKFILL_VERSION만 올리면 되지만, 규칙을
 // 좁히거나 없애면 기존 행이 남으므로 마이그레이션으로 해당 행을 지운 뒤 버전을 올린다.
+// T-11-029 기록은 시즌마다 따로 겨룬다 — 커리어는 자기 시즌(service_season, NULL이면 0 = 프리시즌)의 기록만 노린다. 시즌을
+// 가르는 마이그레이션(0045)이 기존 행에 시즌을 채웠다 — 개막 전 배포라 시즌 1 선수가 없어 다시 훑지 않는다(버전 그대로).
 export const BACKFILL_VERSION = '2';
 const META_KEY = 'server_firsts_backfill';
 /** 다시 훑는 중이면 마지막으로 판정한 careers rowid. */
@@ -27,7 +29,7 @@ const RESCAN_CHUNK = 40;
 /** D1 바인딩 변수 한도(100) 아래로 IN 목록을 나눈다. */
 const IN_CHUNK = 90;
 
-type Claim = { id: string; careerId: string; at: string; year: number | null };
+type Claim = { season: number; id: string; careerId: string; at: string; year: number | null };
 type RecordClaim = Claim & { value: number };
 
 /** 같은 기록은 시각이 더 이른 쪽만 남긴다(동시 업로드·재계산 순서와 상관없이 결과가 같다). */
@@ -35,9 +37,9 @@ function upsertFirst(db: Db, c: Claim) {
   const set = { careerId: c.careerId, achievedAt: c.at, year: c.year };
   return db
     .insert(serverFirsts)
-    .values({ id: c.id, ...set })
+    .values({ season: c.season, id: c.id, ...set })
     .onConflictDoUpdate({
-      target: serverFirsts.id,
+      target: [serverFirsts.season, serverFirsts.id],
       set,
       setWhere: sql`excluded.achieved_at < ${serverFirsts.achievedAt}`,
     });
@@ -48,9 +50,9 @@ function upsertRecord(db: Db, r: RecordClaim) {
   const set = { careerId: r.careerId, value: r.value, achievedAt: r.at, year: r.year };
   return db
     .insert(serverRecords)
-    .values({ id: r.id, ...set })
+    .values({ season: r.season, id: r.id, ...set })
     .onConflictDoUpdate({
-      target: serverRecords.id,
+      target: [serverRecords.season, serverRecords.id],
       set,
       setWhere: sql`excluded.value > ${serverRecords.value}`,
     });
@@ -88,11 +90,21 @@ export function honorsOf(json: string): string[] {
   }
 }
 
+/** 판정할 커리어 + 그 커리어가 겨루는 시즌(service_season, NULL이면 0). */
+type SeasonCareer = FirstCareer & { season: number };
+
 function toCareers(
-  cs: { id: string; legendScore: number | null; retiredAt: string | null }[],
+  cs: {
+    id: string;
+    legendScore: number | null;
+    retiredAt: string | null;
+    serviceSeason: number | null;
+  }[],
   rows: SeasonRow[],
-): FirstCareer[] {
-  const by = new Map<string, FirstCareer>(cs.map((c) => [c.id, { ...c, seasons: [] }]));
+): SeasonCareer[] {
+  const by = new Map<string, SeasonCareer>(
+    cs.map(({ serviceSeason, ...c }) => [c.id, { ...c, season: serviceSeason ?? 0, seasons: [] }]),
+  );
   for (const r of rows) {
     by.get(r.careerId)?.seasons.push({
       year: r.year,
@@ -119,28 +131,37 @@ const careerColumns = {
   id: careers.id,
   legendScore: careers.legendScore,
   retiredAt: careers.retiredAt,
+  serviceSeason: careers.serviceSeason,
 };
 
 /** 여러 커리어를 판정해, 지금 가진 기록보다 나은 것만 쓰는 문장들. */
-async function claimStatements(db: Db, list: FirstCareer[]) {
+async function claimStatements(db: Db, list: SeasonCareer[]) {
+  // 기록 자리는 (시즌, 기록 id) — 같은 기록도 시즌마다 따로 겨룬다.
+  const key = (season: number, id: string) => `${season}\t${id}`;
   const firsts = new Map<string, Claim>();
   const records = new Map<string, RecordClaim>();
   for (const c of list) {
     for (const g of evaluateCareer(c)) {
-      const b = firsts.get(g.id);
-      if (!b || g.at < b.at) firsts.set(g.id, { ...g, careerId: c.id });
+      const b = firsts.get(key(c.season, g.id));
+      if (!b || g.at < b.at)
+        firsts.set(key(c.season, g.id), { ...g, season: c.season, careerId: c.id });
     }
     for (const r of evaluateRecords(c)) {
-      const b = records.get(r.id);
-      if (!b || r.value > b.value) records.set(r.id, { ...r, careerId: c.id });
+      const b = records.get(key(c.season, r.id));
+      if (!b || r.value > b.value) {
+        records.set(key(c.season, r.id), { ...r, season: c.season, careerId: c.id });
+      }
     }
   }
   if (!firsts.size && !records.size) return [];
   const [heldRecords, ...heldFirsts] = await db.batch([
-    db.select({ id: serverRecords.id, value: serverRecords.value }).from(serverRecords),
-    ...chunks([...firsts.keys()]).map((ids) =>
+    db
+      .select({ season: serverRecords.season, id: serverRecords.id, value: serverRecords.value })
+      .from(serverRecords),
+    ...chunks([...new Set([...firsts.values()].map((g) => g.id))]).map((ids) =>
       db
         .select({
+          season: serverFirsts.season,
           id: serverFirsts.id,
           careerId: serverFirsts.careerId,
           at: serverFirsts.achievedAt,
@@ -149,14 +170,14 @@ async function claimStatements(db: Db, list: FirstCareer[]) {
         .where(inArray(serverFirsts.id, ids)),
     ),
   ]);
-  const cur = new Map(heldFirsts.flat().map((h) => [h.id, h]));
-  const top = new Map(heldRecords.map((r) => [r.id, r.value]));
+  const cur = new Map(heldFirsts.flat().map((h) => [key(h.season, h.id), h]));
+  const top = new Map(heldRecords.map((r) => [key(r.season, r.id), r.value]));
   // 이미 이 커리어가 가졌거나 더 이른 기록이 있으면 쓰지 않는다.
   const wins = [...firsts.values()].filter((g) => {
-    const h = cur.get(g.id);
+    const h = cur.get(key(g.season, g.id));
     return !h || (h.careerId !== g.careerId && g.at < h.at);
   });
-  const broken = [...records.values()].filter((r) => r.value > (top.get(r.id) ?? 0));
+  const broken = [...records.values()].filter((r) => r.value > (top.get(key(r.season, r.id)) ?? 0));
   return [...wins.map((g) => upsertFirst(db, g)), ...broken.map((r) => upsertRecord(db, r))];
 }
 
@@ -252,8 +273,9 @@ export async function ensureFirstsBackfilled(db: Db, chunk = RESCAN_CHUNK): Prom
   return true;
 }
 
-/** 공개 목록: 규칙 전체(미달성 포함, 끝없는 단계는 다음 목표까지) + 서버 기록. 이름은 유저가 공개를 켠 경우에만(T-10-065부터 진행 중 커리어 포함). */
-export async function listFirsts(db: Db): Promise<FirstsResponse> {
+/** 공개 목록: 규칙 전체(미달성 포함, 끝없는 단계는 다음 목표까지) + 서버 기록. 이름은 유저가 공개를 켠 경우에만(T-10-065부터 진행 중 커리어 포함).
+ * T-11-029 한 시즌의 기록만(0 = 프리시즌). */
+export async function listFirsts(db: Db, season: number): Promise<FirstsResponse> {
   const holder = { name: careers.publicName, pos: careers.pos, number: careers.shirtNumber };
   const [firstRows, recordRows] = await db.batch([
     db
@@ -264,7 +286,8 @@ export async function listFirsts(db: Db): Promise<FirstsResponse> {
         ...holder,
       })
       .from(serverFirsts)
-      .innerJoin(careers, eq(careers.id, serverFirsts.careerId)),
+      .innerJoin(careers, eq(careers.id, serverFirsts.careerId))
+      .where(eq(serverFirsts.season, season)),
     db
       .select({
         id: serverRecords.id,
@@ -274,7 +297,8 @@ export async function listFirsts(db: Db): Promise<FirstsResponse> {
         ...holder,
       })
       .from(serverRecords)
-      .innerJoin(careers, eq(careers.id, serverRecords.careerId)),
+      .innerJoin(careers, eq(careers.id, serverRecords.careerId))
+      .where(eq(serverRecords.season, season)),
   ]);
   const holderOf = (r: (typeof firstRows)[number]) => ({
     careerId: r.careerId,
@@ -285,6 +309,7 @@ export async function listFirsts(db: Db): Promise<FirstsResponse> {
   const firsts = new Map(firstRows.map((r) => [r.id, r]));
   const records = new Map(recordRows.map((r) => [r.id, r]));
   return {
+    season,
     items: firstsCatalog(firsts.keys()).map((d) => {
       const r = firsts.get(d.id);
       return {

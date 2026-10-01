@@ -1,6 +1,11 @@
-import { ErrorEnvelopeSchema, MyCareersResponseSchema, successEnvelope } from '@offside/contracts';
+import {
+  ErrorEnvelopeSchema,
+  MyCareersResponseSchema,
+  RetirementResponseSchema,
+  successEnvelope,
+} from '@offside/contracts';
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { careers, careerSeasons, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -211,6 +216,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       careerId: CAREER_ID,
       status: 'retired',
       retiredNumber: null,
+      serviceSeason: expect.any(Number),
     });
 
     const retiredRow = (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0];
@@ -309,6 +315,7 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     await ctx.dispose();
   });
 
@@ -372,6 +379,43 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
       [high, 300],
       [low, 100],
     ]);
+  });
+
+  it('T-11-029: 내 선수 항목과 은퇴 응답이 선수의 서비스 시즌(0 = 프리시즌)을 알려 준다', async () => {
+    const me = await issueCookie(ctx);
+    await ctx.db.update(profiles).set({ googleSub: 'sub-me' }).where(eq(profiles.id, me.profileId));
+    const pre = '55555555-5555-4555-8555-555555555555';
+    const s1 = '66666666-6666-4666-8666-666666666666';
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z')); // 프리시즌
+    await putSeasonsFor(ctx.env, me.cookie, pre, retirementBody());
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
+    await putSeasonsFor(ctx.env, me.cookie, s1, retirementBody());
+    // 프리시즌 선수가 시즌 중에 은퇴해도 시즌은 첫 업로드 때 정해진 그대로다.
+    const retireRes = async (id: string) =>
+      successEnvelope(RetirementResponseSchema).parse(
+        await (
+          await createApp().request(
+            `/v1/careers/${id}/retirement`,
+            jsonInit({
+              method: 'PUT',
+              body: { ...retirementBody(), legendScore: id === pre ? 100 : 200 },
+              cookie: me.cookie,
+            }),
+            ctx.env,
+          )
+        ).json(),
+      ).data;
+    expect((await retireRes(pre)).serviceSeason).toBe(0);
+    expect((await retireRes(s1)).serviceSeason).toBe(1);
+
+    const data = successEnvelope(MyCareersResponseSchema).parse(
+      await (await mine(me.cookie)).json(),
+    ).data;
+    expect(Object.fromEntries(data.entries.map((e) => [e.id, e.season]))).toEqual({
+      [pre]: 0,
+      [s1]: 1,
+    });
   });
 });
 
