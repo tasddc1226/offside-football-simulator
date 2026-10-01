@@ -210,6 +210,35 @@ describe('T-10-013 소유권 충돌', () => {
     expect(dispatched()).toEqual([]);
   });
 
+  it('T-11-029 은퇴 응답의 영구결번 결과와 서비스 시즌을 함께 알린다(옛 응답은 시즌 없이)', async () => {
+    const withData = (data: object) =>
+      new Response(JSON.stringify({ data, meta: { requestId: 'r' } }), { status: 200 });
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(ok()) // GET /v1/profile
+        .mockResolvedValueOnce(withData({ retiredNumber: null, serviceSeason: 1 }))
+        .mockResolvedValueOnce(withData({ retiredNumber: null })),
+    );
+    const dispatched = await stubDispatch();
+    const { enqueueRetirement, flushOutbox } = await import('./outbox.js');
+    enqueueRetirement('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', summary);
+    await flushOutbox();
+    enqueueRetirement('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', summary);
+    await flushOutbox();
+    expect(dispatched()).toEqual([
+      [
+        'offside:retired-number',
+        { careerId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', result: null, serviceSeason: 1 },
+      ],
+      [
+        'offside:retired-number',
+        { careerId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', result: null },
+      ],
+    ]);
+  });
+
   it('pendingRetirementIds는 큐에 남은 은퇴 기록의 커리어 ID다', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
     const { enqueueRetirement, pendingRetirementIds } = await import('./outbox.js');

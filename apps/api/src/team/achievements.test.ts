@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  achievementScore,
   clubAchievements,
   type AchievementCareer,
+  type AchievementOwner,
+  type AchievementTeam,
+  type AchievementSeason,
   type AchievementTeamSlot,
 } from './achievements.js';
 
@@ -17,7 +21,17 @@ const career = (over: Partial<AchievementCareer> = {}): AchievementCareer => ({
   assists: 0,
   legendScore: 0,
   retiredNumber: false,
+  nation: null,
+  retireAge: 35,
   seasons: [],
+  ...over,
+});
+const season = (over: Partial<AchievementSeason> = {}): AchievementSeason => ({
+  league: '프리미어리그',
+  honors: [],
+  club: 'pl-0',
+  goals: 0,
+  cs: null,
   ...over,
 });
 const slot = (over: Partial<AchievementTeamSlot> = {}): AchievementTeamSlot => ({
@@ -28,22 +42,45 @@ const slot = (over: Partial<AchievementTeamSlot> = {}): AchievementTeamSlot => (
   retiredNumber: true,
   ...over,
 });
+const OWNER: AchievementOwner = { retireDays: 0, matchDays: 0, likesGiven: 0, nickname: false };
+const teamOf = (
+  slots: AchievementTeamSlot[],
+  over: Partial<AchievementTeam> = {},
+): AchievementTeam => ({
+  slots,
+  wins: 0,
+  bestStreak: 0,
+  bestMargin: 0,
+  goalsFor: 0,
+  rating: 1000,
+  likes: 0,
+  ...over,
+});
 const item = (groups: ReturnType<typeof clubAchievements>, id: string) =>
   groups.flatMap((g) => g.items).find((i) => i.id === id);
 
 describe('구단 시즌 업적', () => {
   it('선수가 없으면 모두 미달성이고, 팀을 넘기지 않으면 팀 업적이 없다', () => {
-    const g = clubAchievements({ careers: [], team: null, teamWins: 0, detail: true });
+    const g = clubAchievements({ careers: [], team: null, owner: OWNER, detail: true });
     expect(g.map((x) => x.id)).toEqual([
       'first',
       'records',
       'collection',
-      'locked-3',
-      'locked-4',
-      'locked-5',
+      'legend',
+      'world',
+      'immortal',
+      'owner',
+      'manager',
     ]);
-    expect(g.filter((x) => x.locked).every((x) => x.items.length === 0)).toBe(true);
-    expect(g.flatMap((x) => x.items).every((i) => !i.done)).toBe(true);
+    expect(g.map((x) => x.category)).toEqual([
+      ...Array<string>(6).fill('player'),
+      'owner',
+      'manager',
+    ]);
+    // 감독 업적은 감독 시뮬레이션이 열릴 때까지 잠금으로 예고만 한다.
+    expect(g.filter((x) => x.locked).map((x) => x.id)).toEqual(['manager']);
+    expect(g.flatMap((x) => x.items).every((i) => !i.done && i.points === 0)).toBe(true);
+    expect(achievementScore(g)).toEqual({ score: 0, done: 0 });
   });
 
   it('첫 업적·모으기는 시즌 기록의 리그·영예 이름으로 판정한다', () => {
@@ -55,14 +92,14 @@ describe('구단 시즌 업적', () => {
           ballon: 1,
           retiredNumber: true,
           seasons: [
-            { league: '프리미어리그', honors: ['프리미어리그 우승', 'PFA 올해의 선수'] },
-            { league: '라리가', honors: ['FIFA 월드컵 우승', '피치치 트로피'] },
+            season({ honors: ['프리미어리그 우승', 'PFA 올해의 선수'] }),
+            season({ league: '라리가', honors: ['FIFA 월드컵 우승', '피치치 트로피'] }),
           ],
         }),
         career({ pos: 'GK', dpos: 'GK' }),
       ],
       team: null,
-      teamWins: 0,
+      owner: OWNER,
       detail: true,
     });
     expect(item(g, 'retire-MF')?.done).toBe(true);
@@ -78,7 +115,7 @@ describe('구단 시즌 업적', () => {
   });
 
   it('프리시즌에는 세부 포지션 업적을 보이지 않는다', () => {
-    const g = clubAchievements({ careers: [], team: null, teamWins: 0, detail: false });
+    const g = clubAchievements({ careers: [], team: null, owner: OWNER, detail: false });
     expect(item(g, 'all-dpos')).toBeUndefined();
     expect(item(g, 'all-dpos-ballon')).toBeUndefined();
   });
@@ -87,7 +124,7 @@ describe('구단 시즌 업적', () => {
     const g = clubAchievements({
       careers: [career({ goals: 250 }), career({ goals: 120 })],
       team: null,
-      teamWins: 0,
+      owner: OWNER,
       detail: true,
     });
     expect(item(g, 'goals')).toMatchObject({ cur: 370, level: 2, next: 1000, done: true });
@@ -95,21 +132,169 @@ describe('구단 시즌 업적', () => {
   });
 
   it('팀 업적: 빈 팀은 채우기 미달성, 11명이 모두 조건을 채워야 달성', () => {
-    const empty = clubAchievements({ careers: [], team: [], teamWins: 0, detail: true });
+    const empty = clubAchievements({ careers: [], team: teamOf([]), owner: OWNER, detail: true });
     expect(item(empty, 'team-full')?.done).toBe(false);
     expect(item(empty, 'team-one')?.done).toBe(false);
 
     const full = Array.from({ length: 11 }, () => slot());
-    const g = clubAchievements({ careers: [], team: full, teamWins: 12, detail: true });
+    const g = clubAchievements({
+      careers: [],
+      team: teamOf(full, { wins: 12 }),
+      owner: OWNER,
+      detail: true,
+    });
     for (const id of ['team-one', 'team-full', 'team-fit', 'team-club', 'team-caps', 'team-rn'])
       expect(item(g, id)?.done, id).toBe(true);
     expect(item(g, 'team-wins')).toMatchObject({ level: 1, next: 30 });
     expect(item(g, 'team-win')?.done).toBe(true);
 
     const mixed = [...full.slice(0, 10), slot({ lastClubId: 'll-0', fit: 0.9 })];
-    const m = clubAchievements({ careers: [], team: mixed, teamWins: 0, detail: true });
+    const m = clubAchievements({ careers: [], team: teamOf(mixed), owner: OWNER, detail: true });
     expect(item(m, 'team-club')?.done).toBe(false);
     expect(item(m, 'team-fit')?.done).toBe(false);
     expect(item(m, 'team-caps')?.done).toBe(true);
+  });
+
+  it('3단계: 한 선수의 위업 — 원클럽맨 · 한 시즌 기록 · 트레블', () => {
+    const pro = (n: number, club: string) =>
+      Array.from({ length: n }, () => season({ league: 'K리그1', club }));
+    const g = clubAchievements({
+      careers: [
+        career({ seasons: [season({ league: '고교 리그', club: 'hs-0' }), ...pro(10, 'k1-0')] }),
+        career({ caps: 150, goals: 500, retireAge: 40, ballon: 3 }),
+        career({ pos: 'GK', seasons: [season({ cs: 20 })] }),
+        career({ seasons: [season({ goals: 50 })] }),
+      ],
+      team: null,
+      owner: OWNER,
+      detail: true,
+    });
+    const legend = g.find((x) => x.id === 'legend')!;
+    expect(legend.items.filter((i) => !i.done).map((i) => i.id)).toEqual(['treble']);
+    // 9시즌이거나 두 구단을 거치면 원클럽맨이 아니다. 필드 선수의 무실점은 세지 않는다.
+    const not = clubAchievements({
+      careers: [
+        career({ seasons: pro(9, 'k1-0') }),
+        career({ seasons: [...pro(9, 'k1-0'), ...pro(2, 'k1-1')] }),
+        career({ seasons: [season({ cs: 25 })] }),
+      ],
+      team: null,
+      owner: OWNER,
+      detail: true,
+    });
+    expect(item(not, 'one-club')?.done).toBe(false);
+    expect(item(not, 'gk-cs-20')?.done).toBe(false);
+  });
+
+  it('트레블은 그 시즌 리그 · 대륙 대회 우승을 포함한 클럽 우승 3개(슈퍼컵 · 대표팀 제외)', () => {
+    const t = (honors: string[]) =>
+      item(
+        clubAchievements({
+          careers: [career({ seasons: [season({ honors })] })],
+          team: null,
+          owner: OWNER,
+          detail: true,
+        }),
+        'treble',
+      )?.done;
+    expect(t(['프리미어리그 우승', 'FA컵 우승', 'UEFA 챔피언스리그 우승'])).toBe(true);
+    expect(t(['프리미어리그 우승', 'FA 커뮤니티 실드 우승', 'UEFA 챔피언스리그 우승'])).toBe(false);
+    expect(t(['프리미어리그 우승', 'FA컵 우승', 'EFL컵 우승'])).toBe(false);
+    expect(t(['라리가 우승', 'FA컵 우승', 'UEFA 챔피언스리그 우승'])).toBe(false);
+    expect(t(['프리미어리그 우승', 'FIFA 월드컵 우승', 'UEFA 챔피언스리그 우승'])).toBe(false);
+  });
+
+  it('4단계: 세계 무대 우승과 국적 수, 5단계: 구단 전체 합', () => {
+    const g = clubAchievements({
+      careers: [
+        career({
+          nation: 'KR',
+          ballon: 10,
+          retiredNumber: true,
+          seasons: [
+            season({ honors: ['FIFA 월드컵 우승', 'UEFA 챔피언스리그 우승', '유러피언 골든슈'] }),
+            season({ honors: ['FIFA 월드컵 우승', 'AFC 아시안컵 우승', '올림픽 금메달'] }),
+          ],
+        }),
+        career({ pos: 'GK', nation: 'JP', ballon: 1, retiredNumber: true }),
+        career({ nation: 'KR', goals: 800, legendScore: 3000 }),
+      ],
+      team: null,
+      owner: OWNER,
+      detail: true,
+    });
+    for (const id of [
+      'world-cup',
+      'conf-cup',
+      'olympic',
+      'ucl',
+      'golden-shoe',
+      'ballon-10',
+      'goals-800',
+      'legend-3000',
+    ])
+      expect(item(g, id)?.done, id).toBe(true);
+    expect(item(g, 'club-wc')?.done).toBe(false);
+    expect(item(g, 'all-continental')).toMatchObject({ cur: 1, max: 3 });
+    expect(item(g, 'nations')).toMatchObject({ cur: 2, max: 5 });
+    expect(item(g, 'rn-11')).toMatchObject({ cur: 2, max: 11 });
+    expect(item(g, 'ballon-30')).toMatchObject({ cur: 11, max: 30 });
+    expect(item(g, 'ballon-pos')).toMatchObject({ cur: 2, max: 4 });
+    expect(item(g, 'world-cup-3')).toMatchObject({ cur: 2, max: 3 });
+  });
+
+  it('점수: 한 번 달성은 단계별 점수, 단계 업적은 넘은 단계의 합, worth는 다음에 더 얻는 점수', () => {
+    const g = clubAchievements({
+      careers: [career({ goals: 370, ballon: 3 })],
+      team: null,
+      owner: OWNER,
+      detail: false,
+    });
+    expect(item(g, 'retire-FW')).toMatchObject({ points: 10, worth: 0 });
+    expect(item(g, 'retire-GK')).toMatchObject({ points: 0, worth: 10 });
+    expect(item(g, 'goals')).toMatchObject({ level: 2, points: 30, worth: 40 });
+    expect(item(g, 'ballon-3')).toMatchObject({ done: true, points: 50 });
+    expect(item(g, 'world-cup')).toMatchObject({ points: 0, worth: 80 });
+    expect(item(g, 'ballon-10')).toMatchObject({ points: 0, worth: 150 });
+    const { score, done } = achievementScore(g);
+    expect(score).toBe(g.flatMap((x) => x.items).reduce((t, i) => t + i.points, 0));
+    expect(done).toBe(g.flatMap((x) => x.items).filter((i) => i.done).length);
+  });
+
+  it('팀 업적은 편성(나만의 최강 팀)과 시즌 레이스(경기 기록)로 나뉜다', () => {
+    const g = clubAchievements({
+      careers: [],
+      team: teamOf([], {
+        wins: 31,
+        bestStreak: 5,
+        bestMargin: 5,
+        goalsFor: 60,
+        rating: 1210,
+        likes: 1,
+      }),
+      owner: OWNER,
+      detail: true,
+    });
+    expect(g.filter((x) => x.category === 'team').map((x) => x.id)).toEqual(['team', 'race']);
+    expect(item(g, 'team-wins')).toMatchObject({ level: 2, points: 60, worth: 80 });
+    expect(item(g, 'team-streak')).toMatchObject({ level: 2, next: 10 });
+    expect(item(g, 'team-margin')?.done).toBe(true);
+    expect(item(g, 'team-goals')).toMatchObject({ level: 1 });
+    expect(item(g, 'team-rating')).toMatchObject({ level: 2, next: 1300 });
+    expect(item(g, 'team-likes')).toMatchObject({ level: 1, next: 5 });
+  });
+
+  it('구단주 업적은 은퇴시킨 선수·날, 팀 경기한 날, 응원, 닉네임으로 센다', () => {
+    const g = clubAchievements({
+      careers: Array.from({ length: 10 }, () => career()),
+      team: null,
+      owner: { retireDays: 7, matchDays: 3, likesGiven: 5, nickname: true },
+      detail: true,
+    });
+    expect(item(g, 'owner-nickname')?.done).toBe(true);
+    expect(item(g, 'owner-players')).toMatchObject({ cur: 10, level: 2, next: 30 });
+    expect(item(g, 'owner-retire-days')).toMatchObject({ level: 2, next: 14 });
+    expect(item(g, 'owner-match-days')).toMatchObject({ level: 1, next: 7 });
+    expect(item(g, 'owner-likes')).toMatchObject({ level: 2, next: 20 });
   });
 });

@@ -24,6 +24,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'club_customs',
   'idempotency',
   'name_reports',
+  'owner_achievements',
   'owner_teams',
   'profiles',
   'retired_numbers',

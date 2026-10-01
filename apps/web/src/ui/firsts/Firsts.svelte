@@ -2,7 +2,9 @@
   // T-10-027 서버 최초 기록 — 모든 플레이어를 통틀어 처음 세운 기록. 로그인 없이 누구나 본다.
   // 최근 기록 탭은 날짜별 연대기, 분류 탭은 규칙 전체(아직 아무도 못 세운 기록 포함)를 보여 준다. 끝없는 단계는
   // 누가 넘을 때마다 다음 목표가 열린다. 서버 기록 탭은 더 큰 기록이 나오면 주인이 바뀌는 최다·최고 기록(T-10-056).
+  // T-11-029 기록은 시즌마다 따로 겨룬다 — 개막한 시즌이 둘 이상이면 시즌 탭을 보인다(기본은 지금 시즌).
   import type { FirstsResponse, ServerFirst } from '@offside/contracts';
+  import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
   import { getFirsts } from '@offside/app-core/api/client';
   import { localCareerNames } from '@offside/game/season';
   import { goHome } from '../nav.js';
@@ -15,8 +17,16 @@
   let data = $state<FirstsResponse | null>(null);
   let failed = $state(false);
   let tab = $state<FirstsTab>('recent');
+  const now = new Date().toISOString();
+  const seasons = openTeamSeasons(now);
+  let picked = $state<number | null>(null);
+  const season = $derived(picked ?? displaySeasonAt(now));
   $effect(() => {
-    void getFirsts().then((r) => {
+    const se = season;
+    data = null;
+    failed = false;
+    void getFirsts(se).then((r) => {
+      if (se !== season) return; // 더 늦게 고른 시즌의 응답만 쓴다.
       if (r.ok) data = r.data;
       else failed = true;
     });
@@ -56,6 +66,13 @@
         ? '모든 플레이어 중 가장 높은 기록이에요. 더 큰 기록이 나오면 주인이 바뀌어요.'
         : '모든 플레이어를 통틀어 가장 먼저 세운 기록만 남아요.'} 이름은 명예의 전당에 이름을 공개한 선수만 보여요.
     </p>
+    {#if seasons.length > 1}
+      <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
+        {#each seasons as id (id)}
+          <button class="opt" aria-pressed={season === id} data-firsts-season={id} onclick={() => (picked = id)}>{teamSeasonName(id)}</button>
+        {/each}
+      </div>
+    {/if}
     <div class="hof-sorts" role="group" aria-label="기록 분류">
       {#each FIRSTS_TABS as t (t.id)}
         <button class="hof-sort" aria-pressed={tab === t.id} data-firsts-tab={t.id} onclick={() => (tab = t.id)}>{t.label}</button>

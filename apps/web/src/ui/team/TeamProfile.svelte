@@ -8,6 +8,7 @@
     viewTeam,
     type TeamProfile,
   } from '@offside/app-core/api/team';
+  import { teamSeasonClosed } from '@offside/contracts/service-seasons';
   import { localCareerNames } from '@offside/game/season';
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
@@ -24,6 +25,8 @@
   let liked = $state(false);
   let mine = $state(false);
   let liking = $state(false);
+  // T-11-029 끝난 시즌의 팀은 좋아요가 굳는다(서버가 409로 거절한다).
+  const closed = $derived(!!team && teamSeasonClosed(team.season, new Date().toISOString()));
 
   // 내 팀이면 이 기기에 남은 (비공개) 이름으로 보여 준다.
   const localNames = localCareerNames();
@@ -89,7 +92,7 @@
     <section class="card stack" style="gap:12px">
       <TeamLines lines={team.lines} />
       <div class="tp-social">
-        <button class="tp-like" aria-pressed={liked} disabled={mine || liking} onclick={toggleLike} data-act="team-like" aria-label="좋아요 {team.likes}">
+        <button class="tp-like" aria-pressed={liked} disabled={mine || liking || closed} onclick={toggleLike} data-act="team-like" aria-label="좋아요 {team.likes}">
           <span aria-hidden="true">{liked ? '♥' : '♡'}</span> {n(team.likes)}
         </button>
         <span class="muted">조회수 <b>{n(team.views)}</b></span>

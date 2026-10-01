@@ -15,8 +15,15 @@ import { apiAuth, apiBaseUrl, clearApiCache, noteSession } from './api/client.js
 const OUTBOX_KEY = 'ft_outbox';
 const OUTBOX_CAP = 100;
 
-/** T-10-076 영구결번 심사 결과 이벤트. result가 null이면 자격 없음. */
-export type RetiredNumberEvent = { careerId: string; result: RetiredNumberResult | null };
+/**
+ * T-10-076 영구결번 심사 결과 이벤트. result가 null이면 자격 없음.
+ * T-11-029 serviceSeason은 서버가 정한 선수의 시즌(0 = 프리시즌, 휴식기에 올라왔으면 null, 옛 응답엔 없다).
+ */
+export type RetiredNumberEvent = {
+  careerId: string;
+  result: RetiredNumberResult | null;
+  serviceSeason?: number | null;
+};
 
 export type OutboxItem =
   | { kind: 'season'; careerId: string; year: number; body: PutCareerSeasonBody }
@@ -64,11 +71,16 @@ async function ensureProfile(): Promise<boolean> {
 /** T-10-076 은퇴 응답의 영구결번 심사 결과를 UI에 알린다(배포 전 서버 응답엔 필드가 없어 알리지 않는다). */
 async function announceRetiredNumber(careerId: string, res: Response): Promise<void> {
   const body = (await res.json().catch(() => null)) as {
-    data?: { retiredNumber?: RetiredNumberResult | null };
+    data?: { retiredNumber?: RetiredNumberResult | null; serviceSeason?: number | null };
   } | null;
   const result = body?.data?.retiredNumber;
   if (result === undefined) return;
-  host.onRetiredNumber?.({ careerId, result });
+  const serviceSeason = body?.data?.serviceSeason;
+  host.onRetiredNumber?.({
+    careerId,
+    result,
+    ...(serviceSeason !== undefined ? { serviceSeason } : {}),
+  });
 }
 
 /** retry: 이 커리어만 다음 회차로 미룬다(5xx). abort: 이번 회차를 멈춘다(오프라인·세션 만료 — 뒤 항목도 같은 결과다). */

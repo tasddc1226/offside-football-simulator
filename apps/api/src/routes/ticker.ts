@@ -1,5 +1,6 @@
 import { TickerResponseSchema } from '@offside/contracts';
 import { TICKER_POLL_SEC } from '@offside/contracts/polling';
+import { displaySeasonAt } from '@offside/contracts/service-seasons';
 import type { Hono } from 'hono';
 import { ok } from './shared.js';
 import { tickerFirsts, tickerTransfers } from '../db/repos/ticker.js';
@@ -14,7 +15,12 @@ export function registerTickerRoutes(app: Hono<AppEnv>): void {
     const data = await edgeCached(c, EDGE.ticker, TICKER_POLL_SEC, async () => {
       const db = getDb(c);
       const now = Date.now();
-      const [transfers, firsts] = await Promise.all([tickerTransfers(db, now), tickerFirsts(db)]);
+      // T-11-029 최초 기록·신기록 줄은 지금 시즌 것만(개막 전이면 프리시즌).
+      const season = displaySeasonAt(new Date(now).toISOString());
+      const [transfers, firsts] = await Promise.all([
+        tickerTransfers(db, now),
+        tickerFirsts(db, season),
+      ]);
       return { now: new Date(now).toISOString(), transfers, firsts };
     });
     return ok(c, TickerResponseSchema, data, 200, `public, max-age=${TICKER_POLL_SEC}`);

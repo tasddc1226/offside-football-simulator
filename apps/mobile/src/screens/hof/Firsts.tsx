@@ -4,6 +4,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import type { FirstsResponse, ServerFirst } from '@offside/contracts';
+import {
+  displaySeasonAt,
+  openTeamSeasons,
+  teamSeasonName,
+} from '@offside/contracts/service-seasons';
 import { getFirsts } from '@offside/app-core/api/client';
 import { kstParts } from '@offside/app-core/boardText';
 import {
@@ -24,7 +29,7 @@ import { Pill } from '../../ui/bits';
 import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
-import { SortChips } from '../board/parts';
+import { Seg, SortChips, TabOpt } from '../board/parts';
 
 type Holder = NonNullable<ServerFirst['holder']>;
 
@@ -105,9 +110,16 @@ export default function Firsts() {
   const [data, setData] = useState<FirstsResponse | null>(null);
   const [failed, setFailed] = useState(false);
   const [tab, setTab] = useState<FirstsTab>('recent');
+  // T-11-029 기록은 시즌마다 따로 — 개막한 시즌이 둘 이상이면 시즌 탭을 보인다(기본은 지금 시즌).
+  const now = useMemo(() => new Date().toISOString(), []);
+  const seasons = useMemo(() => openTeamSeasons(now), [now]);
+  const [picked, setPicked] = useState<number | null>(null);
+  const season = picked ?? displaySeasonAt(now);
   useEffect(() => {
-    let live = true;
-    void getFirsts().then((r) => {
+    setData(null);
+    setFailed(false);
+    let live = true; // 더 늦게 고른 시즌의 응답만 쓴다.
+    void getFirsts(season).then((r) => {
       if (!live) return;
       if (r.ok) setData(r.data);
       else setFailed(true);
@@ -115,7 +127,7 @@ export default function Firsts() {
     return () => {
       live = false;
     };
-  }, []);
+  }, [season]);
 
   // 내 선수: 진행 중인 커리어 + 이 기기의 은퇴 선수. 서버엔 이름 공개를 끈 선수의 이름이 없으니 여기서 채운다.
   const mine = useMemo<ReadonlyMap<string, string>>(() => {
@@ -180,6 +192,19 @@ export default function Firsts() {
             } 이름은 명예의 전당에 이름을 공개한 선수만 보여요.`}
           </Txt>
         </View>
+        {seasons.length > 1 ? (
+          <Seg cols={Math.min(seasons.length, 3)} label="시즌" style={{ marginBottom: 10 }}>
+            {seasons.map((id) => (
+              <TabOpt
+                key={id}
+                title={teamSeasonName(id)}
+                selected={season === id}
+                testID={`firsts-season-${id}`}
+                onPress={() => setPicked(id)}
+              />
+            ))}
+          </Seg>
+        ) : null}
         <SortChips
           label="기록 분류"
           testIDPrefix="firsts-tab"

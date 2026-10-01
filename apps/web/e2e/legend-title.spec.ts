@@ -20,7 +20,7 @@ async function seed(page: Page, style?: Record<string, unknown>) {
     ),
   );
   await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
-  await page.route(`${API}/v1/retired-numbers`, (r) => r.fulfill(ok({ items: [] })));
+  await page.route(`${API}/v1/retired-numbers*`, (r) => r.fulfill(ok({ items: [] })));
   await page.route(`${API}/v1/careers/${ID}/retired-number`, (r) =>
     r.fulfill(ok({ retiredNumber: null })),
   );

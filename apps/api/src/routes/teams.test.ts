@@ -180,4 +180,24 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     expect((await profile(a.team.id)).team.likes).toBe(0);
     expect(await ctx.db.select().from(teamLikes)).toEqual([]);
   });
+
+  it('T-11-029: 끝난 시즌(프리시즌은 시즌 1 개막에 끝난다) 팀의 좋아요는 누르기도 거두기도 409로 거절한다', async () => {
+    const a = await team(1, 80);
+    const fan = await issueCookie(ctx);
+    const like = (method: string) =>
+      call(method, `/v1/teams/${a.team.id}/like`, { cookie: fan.cookie });
+    expect((await like('PUT')).status).toBe(200); // 진행 중인 시즌에는 누를 수 있다.
+
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1 — 프리시즌 팀은 닫혔다.
+    for (const method of ['PUT', 'DELETE']) {
+      const res = await like(method);
+      expect(res.status).toBe(409);
+      expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({
+        reason: 'SEASON_CLOSED',
+      });
+    }
+    // 좋아요는 굳은 채 그대로다.
+    expect((await profile(a.team.id, fan.cookie)).team.likes).toBe(1);
+    expect((await profile(a.team.id, fan.cookie)).liked).toBe(true);
+  });
 });
