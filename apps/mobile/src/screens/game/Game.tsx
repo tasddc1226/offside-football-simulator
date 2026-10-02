@@ -6,15 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { posLabel } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
-import {
-  leagueOf,
-  roleOf,
-  fmtMoney,
-  potLabel,
-  potScouted,
-  focusOf,
-  labelOf,
-} from '@offside/game/engine';
+import { leagueOf, roleOf, fmtMoney, focusOf, labelOf } from '@offside/game/engine';
 import { mainTitle } from '@offside/game/titles';
 import { marketValue } from '@offside/game/season';
 import type { GameState } from '@offside/game/types';
@@ -306,7 +298,6 @@ export default function Game() {
               <HeroPill {...(role === '주전' ? { fill: 'accent' as const } : {})}>{role}</HeroPill>
               {s.injury ? <HeroPill danger>{`부상 ${s.injury}경기`}</HeroPill> : null}
               <HeroPill>{focusName}</HeroPill>
-              <HeroPill>{`잠재력 ${potScouted(s) ? potLabel(s) : '평가 전'}`}</HeroPill>
             </View>
           </PitchCard>
 

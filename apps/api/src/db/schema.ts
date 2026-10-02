@@ -205,7 +205,7 @@ export const careers = sqliteTable(
     nameHiddenAt: text('name_hidden_at'),
     // 1이면 공개 순위(명예의 전당·서버 기록·결번·홈 소식)에서 뺀다. 은퇴 때 시즌 신호가 자동 플레이로 판정되면 서버가 켠다.
     hidden: integer('hidden').notNull().default(0),
-    // T-11-030 잠재력 관찰(어디에도 보이지 않는다). pot: 처음 스카우트 평가(첫 시즌 업로드), potReal: 은퇴 때 공개된 실제 잠재력.
+    // T-11-030 잠재력 관찰. pot은 비공개 최초 스카우트 평가, potReal은 은퇴 리포트·기록실에 공개하는 은퇴 시점 값.
     pot: integer('pot'),
     potReal: integer('pot_real'),
   },

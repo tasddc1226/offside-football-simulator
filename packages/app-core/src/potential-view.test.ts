@@ -1,0 +1,152 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import fixture from '../../game/src/__fixtures__/save-fw26.json';
+import { migrateSave } from '@offside/game/save';
+import { getActiveRng } from '@offside/game/rng';
+import { retire, saveKey } from '@offside/game/season';
+import type { GameState } from '@offside/game/types';
+import { createLegends } from './legend.js';
+import { initialAppState } from './state.js';
+import { retirementPotential, visibleCareerLog, visibleSeasonNotes } from './potential-view.js';
+
+function setup() {
+  const items = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => items.get(key) ?? null,
+    setItem: (key: string, value: string) => items.set(key, value),
+  });
+  const state = initialAppState();
+  const legends = createLegends({
+    state,
+    rnOf: () => null,
+    toast: vi.fn(),
+    uploadRetirement: vi.fn(),
+    scrollTop: vi.fn(),
+  });
+  const s = structuredClone(fixture) as unknown as GameState;
+  migrateSave(s);
+  return { legends, s, state };
+}
+afterEach(() => vi.unstubAllGlobals());
+
+describe('은퇴 잠재력 표시', () => {
+  it('기록된 반올림 수치의 등급 경계와 없는 과거 데이터를 구분한다', () => {
+    expect([69, 70, 77, 78, 83, 84, 89, 90].map((v) => retirementPotential(v)?.real)).toEqual([
+      'D',
+      'C',
+      'C',
+      'B',
+      'B',
+      'A',
+      'A',
+      'S',
+    ]);
+    for (const value of [undefined, null, NaN, Infinity, -1, 151, 89.8])
+      expect(retirementPotential(value)).toBeUndefined();
+  });
+
+  it('첫 은퇴 화면·저장 후 재열람이 같은 값이며 현재 능력이나 RNG를 바꾸지 않는다', () => {
+    const { legends, s } = setup();
+    // 89.8은 기존 업로드/로컬 HOF와 같이 90으로 기록된다. 두 화면 모두 기록값을 쓴다.
+    s.pot = 90;
+    s.bloom = -0.2;
+    s.flags.potBonus = 0;
+    const h = retire(s);
+    const before = structuredClone(s);
+    const rng = getActiveRng().getState();
+    expect(legends.viewFromGame(s).pot).toEqual({ real: 'S', value: 90 });
+    expect(legends.viewFromEntry(JSON.parse(JSON.stringify(h))).pot).toEqual(
+      legends.viewFromGame(s).pot,
+    );
+    expect(s).toEqual(before);
+    expect(getActiveRng().getState()).toEqual(rng);
+  });
+
+  it('진행 중 세이브에서는 공개하지 않고, 없는 옛 은퇴 값은 최고 OVR로 추정하지 않는다', () => {
+    const { legends, s } = setup();
+    expect(legends.viewFromGame(s).pot).toBeUndefined();
+    const h = retire(s);
+    delete h.pot;
+    expect(legends.viewFromEntry(h).pot).toBeUndefined();
+    expect(legends.viewFromEntry(h).peak).toBe(h.peak);
+  });
+
+  it('공개 HOF 상세의 저장된 값도 재열람하고, 옛 서버 응답은 카드가 없다', async () => {
+    const { legends, s } = setup();
+    const h = retire(s);
+    const entry = {
+      id: h.id!,
+      name: null,
+      pos: h.pos,
+      number: h.number,
+      retireAge: h.age,
+      peak: h.peak,
+      legendScore: h.score,
+      apps: h.apps,
+      goals: h.goals,
+      assists: h.assists,
+      trophies: h.trophies,
+      awards: h.awards,
+      caps: h.caps,
+      ballon: h.ballon,
+      lastClub: h.lastClub,
+      retiredAt: '2026-10-02',
+      hasDetail: false,
+      title: null,
+      potReal: 84,
+    };
+    saveKey('ft_hof', []);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ data: { entry, snapshot: null }, meta: { requestId: 'test' } }),
+            { status: 200 },
+          ),
+      ),
+    );
+    expect(await legends.loadSharedLegend('public-with-pot')).toMatchObject({
+      pot: { real: 'A', value: 84 },
+      peak: h.peak,
+    });
+    const old = { ...entry, potReal: undefined };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ data: { entry: old, snapshot: null }, meta: { requestId: 'test' } }),
+            { status: 200 },
+          ),
+      ),
+    );
+    const result = await legends.loadSharedLegend('public-old-no-pot');
+    expect(typeof result).toBe('object');
+    if (typeof result === 'object') expect(result.pot).toBeUndefined();
+  });
+});
+
+describe('옛 로그·시즌 결산의 등급 누출 차단', () => {
+  it('기존/신규 로그와 결산을 표시할 때만 가리고 원본·RNG는 보존한다', () => {
+    const { s } = setup();
+    const notes = ['스카우트 재평가 · 잠재력 S → A', '군 복무 종료'];
+    s.log.unshift({
+      t: '2029 시즌 종료',
+      text: '스카우트 재평가: 잠재력 S → A등급. 성장 곡선이 예상보다 일찍 꺾였다는 평가입니다.',
+      kind: 'bad',
+    });
+    s.log.unshift({ t: '2029 시즌 종료', text: '몸의 한계치가 올라간 느낌입니다.', kind: 'good' });
+    const before = structuredClone(s);
+    const rng = getActiveRng().getState();
+    expect(visibleSeasonNotes(notes)).toEqual(['군 복무 종료']);
+    expect(visibleCareerLog(s.log).some((l) => l.text.startsWith('스카우트 재평가'))).toBe(false);
+    expect(visibleCareerLog(s.log)[0]?.text).toBe('몸의 한계치가 올라간 느낌입니다.');
+    expect(s).toEqual(before);
+    expect(notes[0]).toContain('S → A');
+    expect(getActiveRng().getState()).toEqual(rng);
+    const old = structuredClone(s);
+    delete (old as Partial<GameState>).bloom;
+    migrateSave(old);
+    expect(visibleCareerLog(old.log).some((l) => l.text.startsWith('스카우트 재평가'))).toBe(false);
+  });
+});

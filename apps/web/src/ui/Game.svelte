@@ -4,7 +4,7 @@
   import { Tween } from 'svelte/motion';
   import { posLabel } from '@offside/game/data';
   import { ovr } from '@offside/game/attributes';
-  import { leagueOf, roleOf, fmtMoney, potLabel, potScouted, focusOf, labelOf } from '@offside/game/engine';
+  import { leagueOf, roleOf, fmtMoney, focusOf, labelOf } from '@offside/game/engine';
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
   import { advance, nextPending } from './actions.js';
@@ -101,7 +101,7 @@
     <div class="foot">
       <span class="pill role-{role}">{role}</span>
       {#if s.injury}<span class="pill" style="background:var(--bad);border-color:var(--bad)">부상 {s.injury}경기</span>{/if}
-      <span class="pill">{focusName}</span><span class="pill">잠재력 {potScouted(s) ? potLabel(s) : '평가 전'}</span>
+      <span class="pill">{focusName}</span>
     </div>
   </section>
   <!-- 탭 전환 모션(T-10-003 goal 3): appState.tab을 key로 써서 탭이 바뀔 때만 새로 마운트해
