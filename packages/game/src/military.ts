@@ -146,8 +146,14 @@ export function serveArmy(s: GameState) {
   if (s.contract) s.contract.years = 0;
   s.cond = 80;
   s.morale = 60;
-  const next = abroad ? `${s.club.name}과(와)의 계약은 입대 때 해지돼 새 팀을 찾아야 합니다.` : `${L.name} 복귀에 도전합니다.`;
-  log(s, `18개월의 현역 복무를 마치고 만기 전역했습니다. 몸을 다시 만들어야 합니다. ${next}`, 'big');
+  const next = abroad
+    ? `${s.club.name}과(와)의 계약은 입대 때 해지돼 새 팀을 찾아야 합니다.`
+    : `${L.name} 복귀에 도전합니다.`;
+  log(
+    s,
+    `18개월의 현역 복무를 마치고 만기 전역했습니다. 몸을 다시 만들어야 합니다. ${next}`,
+    'big',
+  );
 }
 export function milSeasonEnd(s: GameState): string | null {
   if (s.mil.applied) {
