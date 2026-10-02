@@ -14,6 +14,11 @@ pnpm --filter @offside/mobile start     # 이후엔 번들러만 띄우고 설�
 
 `ios/`·`android/`는 `app.json`에서 만들어지는 산출물이다(깃에 없다). 네이티브 설정은 `app.json`·config plugin으로 한다.
 
+워크트리마다 iOS를 처음부터 빌드하면 8분쯤 걸린다. `tooling/scripts/ios-sim.sh [시뮬레이터]`는 네이티브 지문(OTA 런타임과
+같은 값)별로 빌드한 앱을 `~/Library/Caches/offside-ios`에 두고, 지문이 같으면 빌드 없이 설치만 한다(새 워크트리도 몇 초).
+지문이 바뀌었을 때만 빌드하며 DerivedData를 캐시에 남기고 ccache(`brew install ccache`)가 있으면 켠다. `ios/`는 지문에
+들어가지 않아 그대로 둬도 된다.
+
 ## 구조
 
 - `src/platform/setup.ts` — 앱 시작 때 `crypto.randomUUID` 폴리필과 세이브 저장소(MMKV)를 엔진에 넣는다. 세이브 키는 웹과 같다.
