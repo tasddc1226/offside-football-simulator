@@ -1,7 +1,7 @@
 import type { AnomalyCareer, AnomalyReason, AnomalyReport } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { OVR_CAP_BY_AGE, ovrCapAt } from '../../plausibility.js';
-import { createDb } from '../client.js';
+import { createDb, type Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { hideCareerStatements, resetFirstsBackfillStatement, setMeta } from './firsts.js';
 import { appMeta, careers } from '../schema.js';
@@ -15,10 +15,12 @@ import { appMeta, careers } from '../schema.js';
 export const ANOMALY = {
   /** 한 시즌에 이만큼 이상 오르면 숨긴다(정상 최대 22 위). */
   jump: 25,
-  /** 나이별 OVR 상한(plausibility)을 이만큼 넘으면 숨긴다. 못 넘더라도 상한 위면 검토로 올린다. */
-  farMargin: 5,
-  /** 은퇴 레전드 점수가 이 이상이면 검토로 올린다(자동 숨김 없음). */
+  /** 나이별 OVR 상한(plausibility)을 이만큼 넘으면 숨긴다. 못 넘더라도 상한 위면 검토로 올린다. 정상 선수는 상한을 한 번도 넘지 않았다(T-11-037 실측). */
+  farMargin: 2,
+  /** 은퇴 레전드 점수가 이 이상이면 검토로 올린다. */
   legend: 3600,
+  /** 은퇴 레전드 점수가 이 이상이면 숨긴다(정상 최고 3,300대보다 20% 이상 위). */
+  legendHide: 4000,
 } as const;
 
 export const SWEPT_AT_KEY = 'anomaly_sweep_at';
@@ -109,6 +111,15 @@ export type SweepResult = {
   detail: { career: string; reasons: AnomalyReason[] }[];
 };
 
+/** 시즌 값이 나이별 OVR 상한을 크게 넘으면 true. 서버는 저장할 때 값을 상한으로 자르므로(sanitizeSeason) 저장된 행에는 이 신호가
+ * 남지 않는다 — 올라오는 순간에 본다. */
+export const exceedsOvrCap = (age: number, ovr: number): boolean =>
+  seasonReasons(age, ovr, null).includes('ovrFar');
+
+/** 커리어를 공개 순위에서 뺀다(시즌 업로드가 불가능한 값을 보냈을 때). 쥐고 있던 서버 기록도 비운다. */
+export const hideCareer = (db: Db, careerId: string) =>
+  runBatch(db, hideCareerStatements(db, careerId));
+
 /** cron 한 번의 D1 batch에 담는 커리어 수(커리어마다 문장 4개). */
 const HIDE_CHUNK = 20;
 
@@ -123,7 +134,12 @@ export async function sweepAnomalies(d1: D1Database, now: number): Promise<Sweep
   const since = last ? new Date(Date.parse(last.value) - HOUR_MS).toISOString() : '';
   const [found, cleared] = await Promise.all([findAnomalies(d1, since), clearedIds(d1)]);
   const open = openOnly(found, cleared);
-  const toHide = open.filter((f) => f.reasons.has('ovrFar') || f.reasons.has('jump'));
+  const toHide = open.filter(
+    (f) =>
+      f.reasons.has('ovrFar') ||
+      f.reasons.has('jump') ||
+      (f.reasons.has('legend') && (f.info.legend_score ?? 0) >= ANOMALY.legendHide),
+  );
   for (let i = 0; i < toHide.length; i += HIDE_CHUNK)
     await runBatch(
       db,

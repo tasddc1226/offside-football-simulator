@@ -6,6 +6,7 @@ import { issueCookie } from '../../test/http.js';
 import {
   ANOMALY,
   anomalyReport,
+  exceedsOvrCap,
   seasonReasons,
   setCareerHidden,
   sweepAnomalies,
@@ -30,6 +31,14 @@ describe('seasonReasons', () => {
   it('한 시즌 상승 폭이 정상 최대(22)보다 크면 숨김 이유', () => {
     expect(seasonReasons(25, 80, 22)).toEqual([]);
     expect(seasonReasons(25, 90, ANOMALY.jump)).toEqual(['jump']);
+  });
+});
+
+describe('exceedsOvrCap', () => {
+  it('상한을 farMargin 넘게 넘길 때만 참이다', () => {
+    expect(exceedsOvrCap(18, ovrCapAt(18) + ANOMALY.farMargin)).toBe(false);
+    expect(exceedsOvrCap(18, ovrCapAt(18) + ANOMALY.farMargin + 1)).toBe(true);
+    expect(exceedsOvrCap(30, 99)).toBe(false);
   });
 });
 
@@ -138,6 +147,16 @@ describe('비정상 기록 정기 점검', () => {
     expect((await sweepAnomalies(ctx.env.DB, NOW)).hidden).toBe(0);
     const report = await anomalyReport(ctx.env.DB, NOW);
     expect(report.review).toMatchObject([{ careerId: 'star', reasons: ['legend'] }]);
+  });
+
+  it('은퇴 레전드 점수가 정상 최고보다 크게 높으면 숨긴다', async () => {
+    await career('fake', [[18, 60]], {
+      status: 'retired',
+      retireAge: 35,
+      legendScore: ANOMALY.legendHide,
+    });
+    expect((await sweepAnomalies(ctx.env.DB, NOW)).hidden).toBe(1);
+    expect(await hiddenOf('fake')).toBe(1);
   });
 
   it('숨김 처리하면 쥐고 있던 서버 기록을 비우고, 되돌린 커리어는 다시 걸지 않는다', async () => {

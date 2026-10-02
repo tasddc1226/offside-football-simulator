@@ -27,6 +27,7 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { purgeEdge, waitUntil } from '../edgeCache.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { recordFirsts } from './firsts.js';
+import { exceedsOvrCap, hideCareer } from '../db/repos/anomalies.js';
 import { judgeRetirement } from './retiredNumbers.js';
 import { STALE } from '../edgeKeys.js';
 import { publishLive } from '../live/publish.js';
@@ -85,6 +86,11 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       now,
     });
 
+    // 나이별 OVR 상한을 크게 넘은 값은 sanitizeSeason이 잘라 저장해 매일 점검에 남지 않으므로 이 자리에서 숨긴다.
+    if (exceedsOvrCap(body.season.age, body.season.ovr)) {
+      await hideCareer(db, careerId);
+      purgeEdge(c, STALE.firstsChanged());
+    }
     await recordFirsts(c, careerId);
     publishLive(c, 'season', careerId, now);
     const career = await getCareer(db, careerId);
