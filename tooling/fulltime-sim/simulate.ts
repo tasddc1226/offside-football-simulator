@@ -65,6 +65,8 @@ const mgRoll = (E: EventDef, idx: number): number | undefined =>
 // T-10-096 NATION=<국가 코드>: 그 국적으로 만든 선수. BODY=tall|short|heavy|light|default: 포지션 기본 체격
 // (BODY_DEFAULT)에서 한쪽 끝으로 간 체격. 둘 다 없으면 예전 선수 그대로(RNG 소비도 같다).
 const NATION = process.env.NATION;
+// T-11-045 RETIRE_AT=<나이>: 그 서비스 시즌에 만든 선수(은퇴 나이 — 시즌 1은 45). 없으면 프리시즌 선수(41세).
+const RETIRE_AT = process.env.RETIRE_AT ? +process.env.RETIRE_AT : undefined;
 const BODY = process.env.BODY as 'tall' | 'short' | 'heavy' | 'light' | 'default' | undefined;
 function bodyFor(pos: keyof typeof BODY_DEFAULT) {
   if (!BODY) return undefined;
@@ -156,7 +158,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
     // T-10-091 DPOS=1: 세부 포지션을 고른 시즌 1 선수(주력 능력치는 그 포지션의 기본값).
     const dpos = DETAIL ? pick(DETAILS_OF[pos]) : undefined;
     const seed = nextSeed();
-    const extra = { nation: NATION, body: bodyFor(pos) };
+    const extra = { nation: NATION, body: bodyFor(pos), retireAt: RETIRE_AT };
     const s = dpos
       ? newGame(
           {
