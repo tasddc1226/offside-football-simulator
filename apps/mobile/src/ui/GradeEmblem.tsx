@@ -1,10 +1,9 @@
 // T-11-033 시즌 업적 등급 엠블럼(웹 team/GradeEmblem.svelte · 모양은 app-core/gradeEmblem.ts). 장식이라 접근성 트리에서 숨긴다.
-import { useMemo } from 'react';
 import Svg, { Path } from 'react-native-svg';
 import { gradeEmblem } from '@offside/app-core/gradeEmblem';
 
 export function GradeEmblem({ id, size = 20 }: { id: string; size?: number }) {
-  const { layers, palette } = useMemo(() => gradeEmblem(id), [id]);
+  const { layers, palette } = gradeEmblem(id);
   return (
     <Svg
       width={size}

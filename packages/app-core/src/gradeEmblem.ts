@@ -228,8 +228,11 @@ export const EMBLEM_PALETTE: Record<AchGrade['id'], EmblemPalette> = {
   },
 };
 
-/** 등급 엠블럼 레이어(아래부터 그린다). 모르는 등급은 루키 모양. */
+const cache = new Map<string, { layers: EmblemLayer[]; palette: EmblemPalette }>();
+/** 등급 엠블럼 레이어(아래부터 그린다). 모르는 등급은 루키 모양. 등급마다 한 번만 만든다. */
 export function gradeEmblem(id: string): { layers: EmblemLayer[]; palette: EmblemPalette } {
   const key = (id in EMBLEMS ? id : 'rookie') as AchGrade['id'];
-  return { layers: EMBLEMS[key](), palette: EMBLEM_PALETTE[key] };
+  let e = cache.get(key);
+  if (!e) cache.set(key, (e = { layers: EMBLEMS[key](), palette: EMBLEM_PALETTE[key] }));
+  return e;
 }

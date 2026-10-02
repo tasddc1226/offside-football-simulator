@@ -3,13 +3,12 @@
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
+import { num as n } from '@offside/app-core/teamText';
 import { useColors } from '../theme/useColors';
 import { rem } from '../theme/type';
 import { GradeEmblem } from '../ui/GradeEmblem';
 import { Txt } from '../ui/Txt';
 import { Pop } from './anim';
-
-const n = (x: number) => x.toLocaleString('ko-KR');
 
 export function Achieve({ v }: { v: Extract<SheetView, { kind: 'achieve' }> }) {
   const s = useSnapshot(v);

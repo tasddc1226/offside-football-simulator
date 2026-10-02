@@ -10,10 +10,9 @@ import type {
   RetiredNumberResult,
 } from '@offside/contracts';
 import { loadKey, saveKey } from '@offside/game/season';
-import { markAchDirty } from './achDirty.js';
+import { OUTBOX_KEY, markAchDirty } from './achDirty.js';
 import { apiAuth, apiBaseUrl, clearApiCache, noteSession } from './api/client.js';
 
-const OUTBOX_KEY = 'ft_outbox';
 const OUTBOX_CAP = 100;
 
 /**

@@ -1,10 +1,10 @@
 <script lang="ts">
   // T-11-034 업적 달성 알림 본문 — 등급 엠블럼(올랐으면 크게, 이전 → 지금), 새 업적과 얻은 점수, 지금 점수·다음 등급까지.
   import type { SheetView } from '@offside/app-core/sheets';
+  import { num as n } from '@offside/app-core/teamText';
   import GradeEmblem from '../team/GradeEmblem.svelte';
 
   let { v }: { v: Extract<SheetView, { kind: 'achieve' }> } = $props();
-  const n = (x: number) => x.toLocaleString('ko-KR');
 </script>
 
 <div class="eyebrow">{v.eyebrow}</div>

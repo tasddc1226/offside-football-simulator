@@ -5,13 +5,12 @@
 import { achGradeOf, type AchGrade } from '@offside/contracts/owner-team';
 import type { ClubAchievementsResponse } from '@offside/contracts';
 import { loadKey, saveKey } from '@offside/game/season';
-import { ACH_SEEN_KEY as SEEN_KEY, achUnseenCount, clearAchDirty, isAchDirty } from './achDirty.js';
+import { ACH_SEEN_KEY, OUTBOX_KEY, achUnseenCount, clearAchDirty, isAchDirty } from './achDirty.js';
 import type { ApiResult } from './api/client.js';
 import type { SheetButton, SheetView } from './sheets.js';
 import type { AppState } from './state.js';
+import { num } from './teamText.js';
 
-/** 업로드 큐(outbox.ts OUTBOX_KEY) — 웹은 큐 모듈을 지연 로드해 여기서 import하지 않고 저장값만 읽는다. */
-const OUTBOX_KEY = 'ft_outbox';
 /** 이 기기에 본 기록이 없을 때(기능이 나오기 전부터 쌓은 구단주) 이보다 많이 새로 보이면 알리지 않고 기준만 잡는다. */
 export const FIRST_RUN_MAX = 3;
 /** 시트에 이름을 늘어놓는 업적 수(나머지는 '외 N개'). */
@@ -90,7 +89,7 @@ export function achieveView(n: AchNudge): Extract<SheetView, { kind: 'achieve' }
     more: n.fresh.length - shown.length,
     gained: n.fresh.reduce((s, f) => s + f.gained, 0),
     score: n.score,
-    next: n.next ? `${n.next.name}까지 ${(n.next.min - n.score).toLocaleString('ko-KR')}점` : null,
+    next: n.next ? `${n.next.name}까지 ${num(n.next.min - n.score)}점` : null,
   };
 }
 
@@ -107,9 +106,9 @@ export interface AchNudgeHost {
 
 export function createAchNudge(host: AchNudgeHost) {
   const { state } = host;
-  const loadSeen = () => loadKey<AchSeen>(SEEN_KEY);
+  const loadSeen = () => loadKey<AchSeen>(ACH_SEEN_KEY);
   const saveSeen = (s: AchSeen) => {
-    void saveKey(SEEN_KEY, s);
+    void saveKey(ACH_SEEN_KEY, s);
     state.achNew = s.unseen.length;
   };
   let busy = false;
