@@ -311,7 +311,7 @@ function contPhase(s: GameState, c: SeasonComp, lines: { t: string; k: string }[
       c.alive = false;
       c.stage = '우승';
       S.trophiesMid!.push(`${c.name} 우승`);
-      lines.push({ t: `${c.name} 우승!!`, k: 'good' });
+      lines.push({ t: `${c.name} 우승!`, k: 'good' });
       return;
     }
     c.stage = r === '16강' ? '8강 진출' : `${r} 통과`;

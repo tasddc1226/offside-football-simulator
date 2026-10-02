@@ -132,14 +132,14 @@
       <div><b><CountUp value={caps} animate={playing} run={seen.highlights} /></b><span>A매치</span></div>
       <div><b><CountUp value={v.totals.trophies} animate={playing} run={seen.highlights} /></b><span>트로피</span></div>
     </section>
-    {#if !d}<p class="film-note">시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 드립니다.</p>{/if}
+    {#if !d}<p class="film-note">시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 줘요.</p>{/if}
     {#if playing && !seen.journey}<div class="film-cue" aria-hidden="true">스크롤해서 커리어 돌아보기<i>↓</i></div>{/if}
   </section>
 
   {#if chapters.length}
     <header class="film-head" data-credit="journey" use:reveal>
       <div class="eyebrow film-kicker">The Journey</div>
-      <h2>커리어 여정</h2>
+      <h2>구단별 커리어</h2>
     </header>
     <ol class="film-rail">
       {#each chapters as c, i (i)}

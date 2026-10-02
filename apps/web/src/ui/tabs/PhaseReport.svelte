@@ -86,7 +86,7 @@
         {#each x.games as m, j (j)}<p class:hl={m.hl}>{m.line} <span class="muted">· {m.detail}</span></p>{/each}
       {:else}
         <div class="eyebrow" style="margin-bottom:6px">{x.name}</div>
-        <p class="muted">이번 A매치 명단에서 제외됐습니다.</p>
+        <p class="muted">이번 A매치 명단에서 빠졌어요.</p>
       {/if}
     </div>
   {/each}

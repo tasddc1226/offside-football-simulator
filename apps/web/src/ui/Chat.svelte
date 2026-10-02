@@ -154,7 +154,7 @@
           {/if}
         </li>
       {:else}
-        <li class="muted fs-sm chat-empty">{view.status === 'open' ? '아직 조용해요. 첫 인사를 건네 보세요!' : '불러오는 중…'}</li>
+        <li class="muted fs-sm chat-empty">{view.status === 'open' ? '아직 조용해요.' : '불러오는 중…'}</li>
       {/each}
     </ol>
 

@@ -119,14 +119,14 @@
   });
 </script>
 
-<div class="eyebrow">드래그 슛 · 골문 쪽으로 튕기듯 끌어 올리세요</div>
+<div class="eyebrow">드래그 슛 · 골문 쪽으로 끌어 올리세요</div>
 <h2>{v.label}</h2>
 <div
   class="mg-stage mg-drag"
   class:dragging
   bind:this={area}
   role="application"
-  aria-label="드래그 슛 — 공에서 골문 쪽으로 끌었다가 떼면 찹니다"
+  aria-label="드래그 슛. 공에서 골문 쪽으로 끌었다가 떼면 찹니다"
   data-drag-shot
   onpointerdown={down}
   onpointermove={move}

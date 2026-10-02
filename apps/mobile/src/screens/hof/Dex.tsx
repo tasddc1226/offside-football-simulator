@@ -170,7 +170,7 @@ export default function Dex() {
           </Txt>
           <Txt tone="muted" style={{ fontSize: rem(0.8125), marginTop: 6 }}>
             선택지의 성공 확률은 선수 상태로 계산돼요. 게임 코드에서 직접 뽑은 범위와 영향 요인을
-            그대로 공개합니다.
+            그대로 공개해요.
           </Txt>
         </View>
 

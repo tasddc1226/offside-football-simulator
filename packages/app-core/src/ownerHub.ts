@@ -42,7 +42,7 @@ export function ownerTeamCard(d: OwnerTeamResponse): OwnerTeamCard {
 export const ownerTeamEmptyText = (c: OwnerTeamCard) =>
   c.players > 0
     ? `${c.season}에 은퇴한 내 선수 ${c.players}명으로 팀을 꾸릴 수 있어요. 빈 자리는 유스 선수가 채워요.`
-    : `${c.season}에 뛰고 은퇴한 선수가 생기면 팀을 꾸릴 수 있어요. 커리어를 끝까지 뛰어 보세요.`;
+    : `${c.season}에 뛰고 은퇴한 선수가 생기면 팀을 꾸릴 수 있어요.`;
 
 /** 비로그인 구단주에게 보이는 잠긴 '내 팀' 카드의 안내. */
 export const ownerLockedText = (players: number) =>

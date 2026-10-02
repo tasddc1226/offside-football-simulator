@@ -81,7 +81,7 @@
 <section class="card" data-rn-wall>
   <div class="eyebrow">Retired Numbers</div>
   <h1 style="margin-bottom:6px">영구결번</h1>
-  <p class="muted fs-sm rn-wall-lead">한 구단에서 오래, 크게 빛난 선수의 등번호는 그 구단에서 다시 쓰지 않습니다. 구단마다 한 번호에 한 명뿐입니다.</p>
+  <p class="muted fs-sm rn-wall-lead">한 구단에서 오래 크게 활약한 선수의 등번호는 그 구단에서 다시 쓰지 않습니다. 구단마다 한 번호에 한 명뿐입니다.</p>
 
   {#if seasons.length > 1}
     <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
@@ -94,7 +94,7 @@
   {#if items === null && !failed}
     <p class="empty">불러오는 중…</p>
   {:else if failed}
-    <p class="empty">영구결번을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+    <p class="empty">영구결번을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
   {:else if items?.length}
     <div class="rn-wall-sum">
       <div><b class="num">{items.length}</b><small>결번</small></div>
@@ -126,6 +126,6 @@
       </div>
     {/if}
   {:else}
-    <p class="empty">아직 {teamSeasonName(season)} 영구결번이 없습니다. 한 구단의 전설이 되어 첫 번째 결번의 주인공이 되어 보세요.</p>
+    <p class="empty">아직 {teamSeasonName(season)} 영구결번이 없어요.</p>
   {/if}
 </section>

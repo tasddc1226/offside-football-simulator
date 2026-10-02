@@ -69,7 +69,7 @@ async function doDeleteFlow() {
 function askDelete() {
   Alert.alert(
     '계정 삭제',
-    '정말 계정을 삭제할까요? 이 기기의 게임 저장 데이터는 남지만, 계정 연동은 완전히 사라집니다.',
+    '정말 계정을 삭제할까요? 이 기기의 게임 저장 데이터는 남지만, 계정 연동은 완전히 사라져요.',
     [
       { text: '취소', style: 'cancel' },
       { text: '삭제', style: 'destructive', onPress: () => void doDeleteFlow() },
@@ -114,8 +114,8 @@ export function Account({ admin = false }: { admin?: boolean }) {
         <View style={who}>
           <Txt style={bTitle}>연결할 수 없어요</Txt>
           <Txt tone="muted" style={bMuted}>
-            서버에 연결하지 못해 로그인 상태를 확인하지 못했어요. 게임은 계속 즐길 수 있고, 저장은
-            이 기기에 남습니다.
+            서버에 연결하지 못해 로그인 상태를 확인하지 못했어요. 게임은 그대로 할 수 있고, 저장은
+            이 기기에 남아요.
           </Txt>
         </View>
         <Btn sm onPress={() => void load()} testID="account-retry">
@@ -153,7 +153,9 @@ export function Account({ admin = false }: { admin?: boolean }) {
       </View>
       <View style={{ gap: 6 }}>
         <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-          {`댓글 닉네임${profile.nickname ? '' : ' — 정하면 소식 게시판에 댓글을 쓸 수 있어요'}`}
+          {profile.nickname
+            ? '댓글 닉네임'
+            : '댓글 닉네임을 정하면 소식 게시판에 댓글을 쓸 수 있어요'}
         </Txt>
         {admin ? (
           <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>

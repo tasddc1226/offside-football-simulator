@@ -89,11 +89,11 @@ export default function Shared() {
                 <View>
                   <Txt v="eyebrow">Your Turn</Txt>
                   <Txt v="h2" accessibilityRole="header">
-                    이제 당신의 차례예요
+                    이번엔 내 선수를 키울 차례예요
                   </Txt>
                 </View>
                 <Txt v="sm" tone="muted">
-                  유스에서 시작해 은퇴할 때까지, 나만의 축구 커리어를 만들어 보세요.
+                  고3 킥오프부터 은퇴 휘슬까지, 내 선수의 커리어를 직접 정해요.
                 </Txt>
                 <Btn kind="primary" block testID="shared-start" onPress={leave}>
                   {cta}

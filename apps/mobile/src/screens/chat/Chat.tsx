@@ -327,7 +327,7 @@ export default function Chat() {
             ))
           ) : (
             <Txt tone="muted" style={{ margin: 'auto', fontSize: rem(0.8125) }}>
-              {view.status === 'open' ? '아직 조용해요. 첫 인사를 건네 보세요!' : '불러오는 중…'}
+              {view.status === 'open' ? '아직 조용해요.' : '불러오는 중…'}
             </Txt>
           )}
         </ScrollView>

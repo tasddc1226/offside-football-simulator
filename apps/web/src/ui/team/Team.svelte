@@ -441,7 +441,7 @@
           <p class="muted">{seasonName}에는 팀을 꾸리지 않았어요.</p>
         {/if}
         {#if !editable && team}
-          <p class="muted fs-sm" data-team-readonly>지난 시즌 팀이에요 — 보기만 할 수 있어요.</p>
+          <p class="muted fs-sm" data-team-readonly>지난 시즌 팀이라 보기만 할 수 있어요.</p>
         {/if}
         {#if editable && (!team || renaming)}
           <div class="tm-names">

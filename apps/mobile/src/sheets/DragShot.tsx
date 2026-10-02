@@ -140,14 +140,14 @@ export function DragShot({ v }: { v: Extract<SheetView, { kind: 'dragShot' }> })
 
   return (
     <>
-      <Txt v="eyebrow">드래그 슛 · 골문 쪽으로 튕기듯 끌어 올리세요</Txt>
+      <Txt v="eyebrow">드래그 슛 · 골문 쪽으로 끌어 올리세요</Txt>
       <Txt v="h2" accessibilityRole="header">
         {s.label}
       </Txt>
       <View
         testID="drag-shot"
         accessible
-        accessibilityLabel="드래그 슛 — 공에서 골문 쪽으로 끌었다가 떼면 찹니다"
+        accessibilityLabel="드래그 슛. 공에서 골문 쪽으로 끌었다가 떼면 찹니다"
         onLayout={(e) => {
           const { width, height } = e.nativeEvent.layout;
           size.current = { w: width, h: height };

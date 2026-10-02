@@ -162,7 +162,7 @@ export function liveScript(
     minute: 90,
     extra: 2 + Math.floor(rnd() * 4),
     kind: 'ft',
-    text: `경기 종료! ${team.home} ${h} : ${a} ${team.away} — ${my > their ? '승리를 거둡니다!' : my < their ? '아쉬운 패배입니다.' : '승부를 가리지 못했습니다.'}`,
+    text: `경기 종료! ${team.home} ${h} : ${a} ${team.away}. ${my > their ? '승리를 거둡니다!' : my < their ? '아쉬운 패배입니다.' : '승부를 가리지 못했습니다.'}`,
   });
 
   // 시계 순서(같은 분이면 빌드업 → 골 → 나머지, 추가시간 줄은 그 분의 맨 뒤).

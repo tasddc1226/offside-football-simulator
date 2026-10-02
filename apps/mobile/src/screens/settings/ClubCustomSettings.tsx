@@ -23,11 +23,11 @@ import { Btn, ClubBadge, Press, Row, Txt } from '../../ui';
 import { SelectField, SettingsCard, SettingsLabel, SettingsTrigger, TextField } from './parts';
 
 const SYNC_TEXT = {
-  local: '이 기기에만 저장됩니다 — 구글 계정으로 로그인하면 다른 기기와 동기화돼요.',
+  local: '이 기기에만 저장돼요. 구글 계정으로 로그인하면 다른 기기와 동기화돼요.',
   syncing: '계정과 동기화하는 중…',
-  synced: '계정에 저장됨 — 같은 계정으로 로그인한 기기에서 함께 쓰여요.',
-  error: '동기화하지 못했어요 — 이 기기에는 저장됐고, 다음에 다시 시도합니다.',
-  full: '엠블럼 이미지가 너무 많아 계정과 동기화하지 못해요 — 이 기기에는 저장됐어요. 이미지를 몇 개 지우면 다시 동기화돼요.',
+  synced: '계정에 저장됐어요. 같은 계정으로 로그인한 기기에서도 쓰여요.',
+  error: '동기화하지 못했어요. 이 기기에는 저장됐고, 다음에 다시 시도해요.',
+  full: '엠블럼 이미지가 너무 많아 계정과 동기화하지 못해요. 이 기기에는 저장됐어요. 이미지를 몇 개 지우면 다시 동기화돼요.',
 } as const;
 
 const fail = () => toast('저장 공간이 부족해 저장하지 못했어요');
@@ -317,7 +317,7 @@ export function ClubCustomSettings() {
         >
           <Txt tone="muted" v="sm">
             클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새
-            이름이 쓰입니다.
+            이름이 쓰여요.
           </Txt>
           <Txt tone="muted" v="xs" accessibilityLiveRegion="polite" testID={`club-sync-${status}`}>
             {SYNC_TEXT[status]}

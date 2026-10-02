@@ -573,7 +573,7 @@ export default function Board() {
                   ))
                 ) : (
                   <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                    첫 댓글을 남겨 보세요.
+                    아직 댓글이 없어요.
                   </Txt>
                 )}
                 {detail.blocks.length ? (

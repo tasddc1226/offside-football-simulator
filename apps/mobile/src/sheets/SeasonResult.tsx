@@ -65,7 +65,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           ))}
         </View>
       ) : (
-        <Txt tone="muted">이번 시즌 수상은 없었습니다.</Txt>
+        <Txt tone="muted">이번 시즌 수상은 없었어요.</Txt>
       )}
       {s.scout ? (
         <Pop ms={350} delay={160}>
@@ -139,7 +139,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
       {s.miles.length ? (
         <View>
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
-            커리어 여정
+            커리어 이정표
           </Txt>
           {s.miles.map((m, i) => (
             <Txt key={i}>{`· ${m}`}</Txt>
@@ -176,7 +176,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           ))}
         </View>
       </View>
-      <Txt tone="muted">{`나이 ${s.age}세가 되었습니다. 이제 다음 시즌을 준비합니다.`}</Txt>
+      <Txt tone="muted">{`${s.age}세가 됐어요. 이제 다음 시즌을 준비해요.`}</Txt>
     </>
   );
 }

@@ -25,7 +25,7 @@
     if (saved) saved.title = id;
     saveKey('ft_hof', hof);
     uploadRetirement(h.id, h);
-    toast(`대표 칭호를 ‘${titleById(id)?.name ?? id}’(으)로 바꿨습니다.`);
+    toast(`대표 칭호를 ‘${titleById(id)?.name ?? id}’(으)로 바꿨어요.`);
   }
 </script>
 
@@ -51,6 +51,6 @@
         </ul>
       {/if}
     </details>
-    <p class="muted fs-xs">고른 칭호는 선수 카드와 명예의 전당·공유 링크에 표시됩니다.</p>
+    <p class="muted fs-xs">고른 칭호는 선수 카드와 명예의 전당·공유 링크에 표시돼요.</p>
   </section>
 {/if}

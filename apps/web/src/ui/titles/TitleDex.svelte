@@ -40,7 +40,7 @@
     <p class="title-main">대표 칭호 <TitleTag name={main.name} rarity={main.rarity} /> <span class="muted">{s.titleSel ? '직접 고름' : '자동'}</span></p>
   {/if}
   {#if earned.length}
-    <p class="muted fs-xs">칭호를 누르면 대표 칭호로 정해져 선수 카드와 명예의 전당에 표시됩니다.</p>
+    <p class="muted fs-xs">칭호를 누르면 대표 칭호로 정해져 선수 카드와 명예의 전당에 표시돼요.</p>
     <ul class="title-list">
       {#each earned as x (x.d.id)}
         <li>
@@ -53,7 +53,7 @@
       {/each}
     </ul>
   {:else}
-    <p class="empty">아직 얻은 칭호가 없습니다. 프로 데뷔가 첫 번째 칭호예요.</p>
+    <p class="empty">아직 얻은 칭호가 없어요. 프로 데뷔가 첫 번째 칭호예요.</p>
   {/if}
   {#if locked.length}
     <details class="title-locked">

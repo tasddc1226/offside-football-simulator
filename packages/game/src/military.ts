@@ -106,8 +106,8 @@ export function enlistSangmu(s: GameState) {
   log(
     s,
     abroad
-      ? `국군체육부대 입대. ${s.mil.prevClub.club.name}과(와)의 계약을 해지하고 귀국해 김천 상무 유니폼을 입습니다. (복무 2시즌)`
-      : '국군체육부대 최종 합격! 김천 상무 유니폼을 입습니다. (복무 2시즌)',
+      ? `국군체육부대 입대. ${s.mil.prevClub.club.name}과(와)의 계약을 해지하고 귀국해 김천 상무 유니폼을 입습니다. 복무 기간은 2시즌입니다.`
+      : '국군체육부대 최종 합격! 김천 상무 유니폼을 입습니다. 복무 기간은 2시즌입니다.',
     'big',
   );
 }
@@ -148,7 +148,7 @@ export function serveArmy(s: GameState) {
   s.morale = 60;
   log(
     s,
-    `18개월의 현역 복무를 마치고 만기 전역했습니다. 몸을 다시 만들어야 합니다. (${abroad ? `${s.club.name}과(와)의 계약은 입대 때 해지됨 · 새 팀을 찾아야 합니다` : `${L.name} 복귀 도전`})`,
+    `18개월의 현역 복무를 마치고 만기 전역했습니다. 몸을 다시 만들어야 합니다. ${abroad ? `${s.club.name}과(와)의 계약은 입대 때 해지돼 새 팀을 찾아야 합니다.` : `${L.name} 복귀에 도전합니다.`}`,
     'big',
   );
 }
@@ -243,7 +243,7 @@ export function acceptMilitary(
     return {
       text: opt.first
         ? '김천 상무에 입대했습니다. 2시즌 동안 K리그1 무대에서 뛰며 병역을 이행합니다.'
-        : `김천 상무 복무를 이어갑니다. (전역까지 ${s.mil.left}시즌)`,
+        : `김천 상무 복무를 이어갑니다. 전역까지 ${s.mil.left}시즌 남았습니다.`,
       ok: true,
     };
   }
@@ -327,7 +327,7 @@ const MIL_DEFER = {
   ok: {
     text: (s: GameState) =>
       milExemptHope(s).length
-        ? '대표팀 명단과 메달을 향해 달립니다. 실패하면 기한에 쫓기게 됩니다.'
+        ? '대표팀 명단에 들어 메달을 노립니다. 실패하면 입영 기한에 쫓기게 됩니다.'
         : '올해는 지원하지 않습니다. 입영 기한이 한 해 더 가까워졌습니다.',
     fx: (s: GameState) => {
       addStat(s, 'trust', 0.5);

@@ -13,8 +13,8 @@ import { rem } from '../../theme/type';
 import { ActionBar } from '../../ui/ActionBar';
 import { Btn } from '../../ui/Btn';
 
-const SHARE_TITLE = '오프사이드 — 은퇴 커리어';
-const SHARE_TEXT = '내 선수의 축구 인생 — 오프사이드 offside-lab.com';
+const SHARE_TITLE = '오프사이드 은퇴 커리어';
+const SHARE_TEXT = '내 선수의 축구 인생. 오프사이드 offside-lab.com';
 
 export function ShareBar({ id }: { id: string }) {
   const c = useColors();

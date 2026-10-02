@@ -270,7 +270,7 @@ export default function RetiredWall() {
           영구결번
         </Txt>
         <Txt tone="muted" style={{ fontSize: rem(0.8125), marginBottom: 14 }}>
-          한 구단에서 오래, 크게 빛난 선수의 등번호는 그 구단에서 다시 쓰지 않습니다. 구단마다 한
+          한 구단에서 오래 크게 활약한 선수의 등번호는 그 구단에서 다시 쓰지 않습니다. 구단마다 한
           번호에 한 명뿐입니다.
         </Txt>
       </View>
@@ -298,7 +298,7 @@ export default function RetiredWall() {
           불러오는 중…
         </Txt>
       ) : failed ? (
-        empty('영구결번을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+        empty('영구결번을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
       ) : items?.length ? (
         <>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
@@ -378,9 +378,7 @@ export default function RetiredWall() {
           )}
         </>
       ) : (
-        empty(
-          `아직 ${teamSeasonName(season)} 영구결번이 없습니다. 한 구단의 전설이 되어 첫 번째 결번의 주인공이 되어 보세요.`,
-        )
+        empty(`아직 ${teamSeasonName(season)} 영구결번이 없어요.`)
       )}
     </Card>
   );

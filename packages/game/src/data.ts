@@ -392,7 +392,7 @@ export const TRAITS: TraitDef[] = [
   {
     id: 'early',
     name: '조기 성장',
-    desc: '어릴 때 빠르게 크고 일찍 주목받지만, 일찍 꺾입니다.',
+    desc: '어릴 때 빠르게 크고 일찍 주목받지만, 전성기도 일찍 끝나요.',
     icon: '⚡',
     short: '빨리 크고 일찍 꺾여요',
   },
@@ -406,14 +406,14 @@ export const TRAITS: TraitDef[] = [
   {
     id: 'iron',
     name: '강철 체력',
-    desc: '부상 확률이 크게 낮습니다.',
+    desc: '부상 확률이 크게 낮아요.',
     icon: '🛡️',
     short: '부상이 크게 줄어요',
   },
   {
     id: 'star',
     name: '스타성',
-    desc: '인기와 스폰서가 잘 따라옵니다.',
+    desc: '인기와 스폰서가 잘 따라와요.',
     icon: '⭐',
     short: '인기·스폰서가 따라와요',
   },

@@ -89,7 +89,7 @@ export const STORY_EVENTS: EventDef[] = [
         }),
         p: (s) => clamp(0.5 - rv(s).gap * 0.06 + (s.cond - 70) / 200, 0.15, 0.85),
         ok: {
-          text: '완승. 한 단계 올라선 느낌입니다. 경기 후 인터뷰에서 기자들이 당신 이름만 불렀습니다.',
+          text: '완승. 경기 후 인터뷰에서 기자들이 당신 이름만 불렀습니다.',
           fx: (s) => {
             rv(s).gap -= 3;
             addAttr(s, bestKey(s), 1.5);
@@ -142,7 +142,7 @@ export const STORY_EVENTS: EventDef[] = [
         label: '끝까지 경쟁한다',
         p: (s) => clamp(0.45 - rv(s).gap * 0.12 + (s.cond - 60) / 300, 0.08, 0.9),
         ok: {
-          text: '주전 조끼는 당신의 것이었습니다. 긴 경쟁의 끝에서 한 단계 더 성장했습니다.',
+          text: '주전 조끼는 당신 몫이었습니다. 경쟁하는 사이 경기력도 한 단계 올라왔습니다.',
           fx: (s) => {
             addAttr(s, bestKey(s), 3);
             addStat(s, 'fame', 8);
@@ -152,7 +152,7 @@ export const STORY_EVENTS: EventDef[] = [
           },
         },
         fail: {
-          text: '이번에도 한 끗 차이. 하지만 그 한 끗이 당신을 계속 달리게 합니다.',
+          text: '이번에도 한 끗 차이로 밀렸습니다. 훈련 때 부족한 부분만 자꾸 눈에 들어옵니다.',
           fx: (s) => {
             addStat(s, 'morale', -8);
             addStat(s, 'trust', -1);
@@ -240,7 +240,7 @@ export const STORY_EVENTS: EventDef[] = [
     w: 0,
     cond: () => true,
     text: (s) =>
-      `재활 센터의 하루하루가 길기만 합니다. 팀은 당신 없이 경기를 치르고 있습니다.${s.injury ? ` (남은 결장 ${s.injury}경기)` : ''}`,
+      `재활 센터의 하루하루가 길기만 합니다. 팀은 당신 없이 경기를 치르고 있습니다.${s.injury ? ` 남은 결장은 ${s.injury}경기입니다.` : ''}`,
     choices: [
       {
         label: '조기 복귀를 강행한다',
@@ -313,10 +313,10 @@ export const STORY_EVENTS: EventDef[] = [
         },
         fail: {
           text: byPos<string>({
-            FW: '골은 없었지만, 다시 뛸 수 있다는 것만으로도 충분했습니다.',
-            MF: '골은 없었지만, 다시 뛸 수 있다는 것만으로도 충분했습니다.',
-            DF: '실점은 막지 못했지만, 다시 뛸 수 있다는 것만으로도 충분했습니다.',
-            GK: '실점은 막지 못했지만, 다시 골문 앞에 섰다는 것만으로도 충분했습니다.',
+            FW: '골은 없었지만 다친 곳 없이 끝까지 뛰었습니다.',
+            MF: '골은 없었지만 다친 곳 없이 끝까지 뛰었습니다.',
+            DF: '실점은 막지 못했지만 다친 곳 없이 끝까지 뛰었습니다.',
+            GK: '실점은 막지 못했지만 다친 곳 없이 끝까지 골문을 지켰습니다.',
           }),
           fx: (s) => {
             addStat(s, 'morale', 3);
@@ -327,7 +327,7 @@ export const STORY_EVENTS: EventDef[] = [
       {
         label: '천천히 감각을 되찾는다',
         ok: {
-          text: '무리하지 않았습니다. 긴 터널의 끝이 보입니다.',
+          text: '무리하지 않았습니다. 훈련 강도를 천천히 올리며 경기 감각을 되찾고 있습니다.',
           fx: (s) => {
             addStat(s, 'morale', 8);
             addStat(s, 'cond', 10);
@@ -471,8 +471,8 @@ export const STORY_EVENTS: EventDef[] = [
         ok: {
           text: (s) =>
             s.contract && s.contract.years >= 3
-              ? '꿈은 잠시 접어두었습니다. 구단은 당신의 충성심에 감동했습니다.'
-              : '꿈은 잠시 접어두었습니다. 다만 계약 만료를 앞둔 터라 구단의 반응은 미지근합니다.',
+              ? '유럽 도전은 잠시 미뤘습니다. 구단은 잔류 결정을 반겼습니다.'
+              : '유럽 도전은 잠시 미뤘습니다. 다만 계약 만료를 앞둔 터라 구단의 반응은 미지근합니다.',
           fx: (s) => {
             addStat(s, 'trust', s.contract && s.contract.years >= 3 ? 2 : 0.5);
             addStat(s, 'morale', 2);
@@ -518,7 +518,7 @@ export const STORY_EVENTS: EventDef[] = [
         label: '실력으로만 소통한다',
         p: (s) => clamp(0.5 + (ovr(s) - s.club.str) * 0.06 + (s.cond - 60) / 200, 0.15, 0.85),
         ok: {
-          text: '공은 만국 공통어였습니다. 감독이 당신을 전술의 중심에 세웠고, 홈 팬들은 응원가를 만들었습니다.',
+          text: '말은 서툴러도 경기력으로 인정받았습니다. 감독이 당신을 전술의 중심에 세웠고, 홈 팬들은 응원가를 만들었습니다.',
           fx: (s) => {
             addStat(s, 'fame', 6);
             addStat(s, 'trust', 2);
@@ -553,7 +553,7 @@ export const STORY_EVENTS: EventDef[] = [
         label: '새로운 역할을 받아들인다',
         p: (s) => clamp(0.9 - (s.age - 20) * 0.05, 0.25, 0.85),
         ok: {
-          text: '약점이 무기가 되기 시작했습니다.',
+          text: '약점으로 꼽히던 부분이 경기에서 통하기 시작했습니다.',
           fx: (s) => {
             addAttr(s, weakKey(s), 3);
             addStat(s, 'trust', 1.5);
