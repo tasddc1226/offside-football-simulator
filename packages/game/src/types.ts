@@ -239,6 +239,11 @@ export interface GameState {
   nation?: string | undefined;
   /** T-10-096 키(cm)·몸무게(kg). 기능 이전 저장엔 없다. */
   body?: Body | undefined;
+  /**
+   * T-11-045 은퇴 나이 — 이 나이가 되는 이적 시장에서 은퇴한다. 만들 때의 서비스 시즌(service-seasons retireAt)으로
+   * 정해져 바뀌지 않는다. 없으면 프리시즌 선수(41세) — 옛 저장과 프리시즌 선수는 이 필드가 없다.
+   */
+  retireAt?: number | undefined;
   foot: Foot;
   /** 주력 조합에서 파생된 호환용 유형 id(역할·이벤트 조건·서버 meta). */
   type: string;

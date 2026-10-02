@@ -68,3 +68,25 @@ describe('나이별 OVR 상한 (T-11-023)', () => {
     expect(row(30, 97)).toBe(97);
   });
 });
+
+describe('커리어 은퇴 나이 (T-11-045)', () => {
+  // 18세부터 44세까지 뛴 기록.
+  const long: StoredSeason[] = Array.from({ length: 27 }, (_, i) => ({
+    ...seasons[0]!,
+    year: 2026 + i,
+    age: 18 + i,
+  }));
+  const sent = { ...summary, retireAge: 45, apps: 99_999 };
+
+  it('시즌 1 선수(45세)는 44세 시즌까지 생애에 넣는다', () => {
+    const r = boundRetirement('MF', sent, long, null, 45)!;
+    expect(r.retireAge).toBe(45);
+    expect(r.apps).toBe(27 * 30);
+  });
+
+  it('프리시즌 선수(41세)는 41세 이후 시즌을 빼고 41세 은퇴로 맞춘다', () => {
+    const r = boundRetirement('MF', sent, long, null, 41)!;
+    expect(r.retireAge).toBe(41);
+    expect(r.apps).toBe(23 * 30);
+  });
+});
