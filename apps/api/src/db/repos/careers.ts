@@ -180,6 +180,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           eventsJson,
           ...detail,
           ...signals,
+          ...growth,
           // 같은 시즌을 다시 보내면 덮어써 결과는 같다(멱등). createdAt은 최초값을 유지한다.
         },
         // 은퇴한 커리어의 시즌은 고치지 않는다(은퇴 요약·결번 판정의 근거). 늦게 도착한 빠진 시즌은 새 행이라 들어간다.
