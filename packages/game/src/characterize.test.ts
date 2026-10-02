@@ -17,11 +17,13 @@ import type { GameState } from './types.js';
 
 const CAREERS = 10;
 
+// 실수는 유효숫자 10자리로 줄여 해시한다 — CI(x64)와 로컬(arm64)의 Math.log·exp 등이 끝자리에서 달라
+// 흐름은 같아도 해시가 갈린다. 리팩터링 회귀(난수 순서·분기 변화)는 이 정도 반올림으로 가려지지 않는다.
+const stable = (k: string, x: unknown): unknown =>
+  k === 'cid' ? '' : typeof x === 'number' && !Number.isInteger(x) ? Number(x.toPrecision(10)) : x;
+
 function hash(v: unknown): string {
-  return createHash('sha256')
-    .update(JSON.stringify(v, (k, x: unknown) => (k === 'cid' ? '' : x)))
-    .digest('hex')
-    .slice(0, 16);
+  return createHash('sha256').update(JSON.stringify(v, stable)).digest('hex').slice(0, 16);
 }
 const clone = (s: GameState): GameState => structuredClone(s);
 const attempt = <T>(fn: () => T): T | '!' => {
