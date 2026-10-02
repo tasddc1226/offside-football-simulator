@@ -4,8 +4,8 @@
 import { useState } from 'react';
 import { Platform, Share, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { getHofDetail } from '@offside/app-core/api/client';
 import { flushOutbox } from '@offside/app-core/outbox';
+import { checkShareLink, SHARE_TEXT, SHARE_TITLE } from '@offside/app-core/shareLink';
 import { shareUrl, toast } from '../../game/host';
 import { goHome } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
@@ -13,28 +13,13 @@ import { rem } from '../../theme/type';
 import { ActionBar } from '../../ui/ActionBar';
 import { Btn } from '../../ui/Btn';
 
-const SHARE_TITLE = '오프사이드 은퇴 커리어';
-const SHARE_TEXT = '내 선수의 축구 인생. 오프사이드 offside-lab.com';
-
 export function ShareBar({ id }: { id: string }) {
   const c = useColors();
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
 
   // 링크를 서버에 확인한 뒤 공유한다.
-  async function checkLink(): Promise<string> {
-    // 은퇴 기록이 아직 서버에 안 올라갔으면(오프라인이었거나 막 은퇴한 직후) 링크가 404다 — 먼저 보내 본다.
-    await flushOutbox().catch(() => {});
-    const r = await getHofDetail(id);
-    if (!r.ok) {
-      throw new Error(
-        r.error.reason === 'HOF_NOT_FOUND'
-          ? '기록을 아직 서버에 올리지 못했어요. 잠시 후 다시 시도해 주세요.'
-          : '서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.',
-      );
-    }
-    return shareUrl(id);
-  }
+  const checkLink = () => checkShareLink(id, { flush: flushOutbox, url: shareUrl });
 
   // 공유 시트를 못 쓰거나 실패했을 때: 클립보드로 복사한다.
   async function copyLink(link: string) {

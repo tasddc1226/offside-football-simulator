@@ -2,7 +2,8 @@
 // Create.svelte의 라이브 카드·후보 카드가 쓰는 순수 함수. .svelte.ts 상태를 import하지 않아
 // vitest에서 바로 검증할 수 있다.
 import { ATTR_KEYS, attrLabels, type AttrKey, type Pos } from '@offside/game/data';
-import { legacyOvr } from '@offside/game/attributes';
+import { bodyMods, GK_SUBS, legacyOvr, SUBS } from '@offside/game/attributes';
+import type { Body } from '@offside/contracts/body';
 import { iGa } from './format.js';
 
 // 가장 높은 능력치 하나로 스카우트가 붙이는 선수 유형 이름.
@@ -57,4 +58,17 @@ export function scoutLine(pos: Pos, attrs: Record<AttrKey, number>): string {
 /** 주력이 아닌 능력치 중 가장 높은 것 — 주력은 세 후보 모두 비슷해서, 닫힌 카드의 힌트로는 이쪽이 변별력이 있다. */
 export function hiddenStrength(attrs: Record<AttrKey, number>, focus: readonly AttrKey[]): AttrKey {
   return ATTR_KEYS.filter((k) => !focus.includes(k)).sort((a, b) => attrs[b] - attrs[a])[0]!;
+}
+
+// 골키퍼에게 보여 줄 체격 보정(나머지는 골키퍼 능력치에 거의 안 쓰인다).
+const GK_BODY = ['div', 'han', 'jmp', 'str', 'ref', 'rea'];
+
+/** 체격 보정 요약: 포지션에 쓰이는 세부 능력치 중 보정이 큰 4개("민첩성 +2 · 몸싸움 −1"). 보정이 없으면 빈 문자열. */
+export function bodyNote(pos: Pos, body: Body): string {
+  return Object.entries(bodyMods({ pos, body }))
+    .filter(([k]) => (pos === 'GK' ? GK_BODY.includes(k) : !GK_SUBS.includes(k)))
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+    .slice(0, 4)
+    .map(([k, v]) => `${SUBS[k]} ${v > 0 ? '+' : '−'}${Math.abs(v)}`)
+    .join(' · ');
 }

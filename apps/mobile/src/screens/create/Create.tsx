@@ -29,9 +29,8 @@ import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
 import { baseline } from '@offside/game/candidates';
 import { CONFEDS, flagOf } from '@offside/contracts/nations';
 import { BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
-import { bodyMods, GK_SUBS, SUBS } from '@offside/game/attributes';
 import { isKorean, nationOf } from '@offside/game/nation';
-import { hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
+import { bodyNote, hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
 import { withRo } from '@offside/app-core/format';
 import { detailOpenNow, draftBody, draftDpos, randomName } from '@offside/app-core/state';
 import { rollCandidates, startCareer } from '../../game/host';
@@ -50,8 +49,6 @@ import { BodyInput, Field, Seg, SegCell, mixHex, useInputStyle } from './parts';
 const posKeys = Object.keys(POS) as Pos[];
 const feet = ['오른발', '왼발', '양발'] as const;
 const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
-// 골키퍼에게 보여 줄 체격 보정(나머지는 골키퍼 능력치에 거의 안 쓰인다).
-const GK_BODY = ['div', 'han', 'jmp', 'str', 'ref', 'rea'];
 
 // ── 입력을 원본 상태(appState.C)에 쓰는 동작들 ──
 // 세부 포지션을 바꾸면 주력 능력치도 그 포지션의 기본값으로 다시 켠다.
@@ -171,12 +168,7 @@ export default function Create() {
   const foreign = !isKorean(C);
   const body = draftBody(C);
   const bodyErr = bodyError(body);
-  const bodyNote = Object.entries(bodyMods({ pos: C.pos, body }))
-    .filter(([k]) => (C.pos === 'GK' ? GK_BODY.includes(k) : !GK_SUBS.includes(k)))
-    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-    .slice(0, 4)
-    .map(([k, v]) => `${SUBS[k]} ${v > 0 ? '+' : '−'}${Math.abs(v)}`)
-    .join(' · ');
+  const note = bodyNote(C.pos, body);
   const def = BODY_DEFAULT[C.pos];
 
   // 후보를 바로 보여 주지 않고 스카우트가 추리는 연출(약 3초)이 끝난 뒤에 뽑는다.
@@ -405,7 +397,7 @@ export default function Create() {
               >
                 {bodyErr
                   ? bodyErr
-                  : `BMI ${bmiOf(body).toFixed(1)}${bodyNote ? ` · ${bodyNote}` : ' · 포지션 평균 체격'}. 시작 OVR은 같고, 세부 능력치 분포만 조금 달라져요.`}
+                  : `BMI ${bmiOf(body).toFixed(1)}${note ? ` · ${note}` : ' · 포지션 평균 체격'}. 시작 OVR은 같고, 세부 능력치 분포만 조금 달라져요.`}
               </Txt>
             </Field>
 
