@@ -107,6 +107,103 @@ export function rollScoring(
   const a = poisson(P.assist * scoreBoost(cre, o, perf, oppAvg) * (mins / 90));
   return { g, a };
 }
+type Res = 'W' | 'D' | 'L';
+const isKeeperLine = (s: GameState) => s.pos === 'DF' || s.pos === 'GK';
+
+/** 한 경기 출전 시간(부상 중이면 0). 선발이면 18% 확률로 교체 아웃, 아니면 교체 투입을 굴린다. */
+function rollMinutes(s: GameState, startP: number, subP: number): { mins: number; inj: boolean } {
+  const inj = s.injury > 0;
+  if (inj) {
+    s.injury--;
+    return { mins: 0, inj };
+  }
+  const sp = startP * (s.cond < COND_LOW_START ? 0.6 : 1);
+  if (chance(sp)) {
+    s.season.starts++;
+    return { mins: chance(0.18) ? ri(60, 85) : 90, inj };
+  }
+  return { mins: chance(subP) ? ri(8, 35) : 0, inj };
+}
+
+/** 팀 결과. 구단 전력이 바탕이고, 출전했으면 내 경기력·골이 승률을 조금 올린다. */
+function rollResult(s: GameState, avg: number, mins: number, perf: number, g: number): Res {
+  const wp = clamp(
+    0.38 + (s.club.str - avg) * 0.024 + (mins ? perf * 0.035 + g * 0.12 : 0),
+    0.07,
+    0.88,
+  );
+  const dp = (1 - wp) * 0.38;
+  const x = rnd();
+  return x < wp ? 'W' : x < wp + dp ? 'D' : 'L';
+}
+
+/** 경기 평점(4.5~10, 0.1 단위). */
+function rateMatch(
+  s: GameState,
+  avg: number,
+  m: { g: number; a: number; perf: number; cs: boolean; res: Res },
+): number {
+  const rating =
+    6.2 +
+    m.g * 0.9 +
+    m.a * 0.5 +
+    m.perf * 0.35 +
+    (m.cs ? 0.45 : 0) +
+    (isKeeperLine(s) ? (s.attrs.def - avg) / 25 : 0) +
+    // T-10-091 수비형 미드필더는 수비 기여를 평점에 절반만큼 받는다(골·도움이 적은 몫).
+    (s.dpos === 'DM' ? (s.attrs.def - avg) / 50 : 0) +
+    (m.res === 'W' ? 0.2 : m.res === 'L' ? -0.2 : 0) +
+    gauss() * 0.25;
+  return clamp(Math.round(rating * 10) / 10, 4.5, 10);
+}
+
+/** 그 경기의 하이라이트 줄(해트트릭·멀티골·MOM·GK 슈퍼 세이브). */
+function matchHighlights(
+  s: GameState,
+  rd: number,
+  g: number,
+  rating: number,
+  cs: boolean,
+): string[] {
+  const hl: string[] = [];
+  if (g >= 3) hl.push(`${rd}R 해트트릭! ${g}골 폭발 (평점 ${rating})`);
+  else if (g === 2) hl.push(`${rd}R 멀티골 (평점 ${rating})`);
+  else if (rating >= 8.5) hl.push(`${rd}R 경기 최우수 선수 선정 (평점 ${rating})`);
+  if (cs && s.pos === 'GK' && rating >= 8)
+    hl.push(`${rd}R 슈퍼 세이브 쇼, 무실점 (평점 ${rating})`);
+  return hl;
+}
+
+/** 경기 중 부상. 다쳤으면 결장 경기 수를 정하고 하이라이트 줄을 돌려준다. */
+function rollInjury(s: GameState, rd: number): string | null {
+  const ip =
+    BAL.injuryRate *
+    (s.cond < COND_LOW_INJURY ? 2.5 : 1) *
+    (s.trait === 'iron' ? 0.35 : 1) *
+    (s.age >= 31 ? 1.4 : 1);
+  if (!chance(ip)) return null;
+  const big = chance(BAL.bigInjuryShare);
+  s.injury = big ? ri(8, 18) : ri(1, 5);
+  return `${rd}R ${big ? '심각한 부상' : '부상'}으로 교체 아웃… ${s.injury}경기 결장 예상`;
+}
+
+/** 구간을 마친 뒤: 출전 비율만큼 성장, 활약에 따라 명성·사기·감독 신뢰, 연봉 지급. */
+function afterBlock(s: GameState, r: BlockResult, tier: number) {
+  const g = growthFactor(s);
+  if (r.apps)
+    for (const k of ATTR_KEYS) if (chance(wOf(s)[k] * 2)) addAttr(s, k, rnd() * g * (r.apps / r.n));
+  const avg = r.apps ? r.rs / r.apps : 0;
+  const tierF = (tier + 1) / 4;
+  if (r.apps) {
+    addStat(s, 'fame', (r.goals * 0.5 + r.assists * 0.25 + Math.max(0, avg - 6.6) * 2) * tierF);
+    addStat(s, 'morale', (avg - 6.7) * 6 + (r.w - r.l) / 2);
+    if (avg >= 7.1) addStat(s, 'trust', 1.2);
+    else if (avg < 6.3) addStat(s, 'trust', -1);
+  } else addStat(s, 'morale', -4);
+  if (s.contract) addStat(s, 'money', s.contract.salary / LAST_PHASE);
+}
+
+/** 리그 한 구간(여러 경기)을 치른다. 경기마다 출전 → 골·도움 → 팀 결과 → 무실점 → 평점 → 부상 순으로 굴린다(RNG 순서). */
 export function simBlock(s: GameState): BlockResult {
   const L = leagueOf(s.leagueId),
     S = s.season;
@@ -134,16 +231,7 @@ export function simBlock(s: GameState): BlockResult {
 
   for (let i = 0; i < n; i++) {
     S.played++;
-    let mins = 0;
-    const inj = s.injury > 0;
-    if (inj) s.injury--;
-    else {
-      const sp = startP * (s.cond < COND_LOW_START ? 0.6 : 1);
-      if (chance(sp)) {
-        mins = chance(0.18) ? ri(60, 85) : 90;
-        S.starts++;
-      } else if (chance(subP)) mins = ri(8, 35);
-    }
+    const { mins, inj } = rollMinutes(s, startP, subP);
     let perf = 0,
       g = 0,
       a = 0,
@@ -152,21 +240,14 @@ export function simBlock(s: GameState): BlockResult {
       perf = (o - L.avg) / 10 + gauss() * 0.8 + (s.cond - 70) / 60 + (s.morale - 60) / 90;
       ({ g, a } = rollScoring(s, power, perf, L.avg, mins));
     }
-    const wp = clamp(
-      0.38 + (s.club.str - L.avg) * 0.024 + (mins ? perf * 0.035 + g * 0.12 : 0),
-      0.07,
-      0.88,
-    );
-    const dp = (1 - wp) * 0.38;
-    const x = rnd();
-    const res: 'W' | 'D' | 'L' = x < wp ? 'W' : x < wp + dp ? 'D' : 'L';
+    const res = rollResult(s, L.avg, mins, perf, g);
     const k = res === 'W' ? 'w' : res === 'D' ? 'd' : 'l';
     S[k] = (S[k] ?? 0) + 1;
     r[k] = (r[k] ?? 0) + 1;
     S.pts += res === 'W' ? 3 : res === 'D' ? 1 : 0;
     if (mins > 0) {
       if (
-        (s.pos === 'DF' || s.pos === 'GK') &&
+        isKeeperLine(s) &&
         res !== 'L' &&
         chance(0.32 + (s.club.str - L.avg) * 0.015 + (s.attrs.def - L.avg) * 0.006)
       ) {
@@ -174,18 +255,7 @@ export function simBlock(s: GameState): BlockResult {
         r.cs++;
         S.cs++;
       }
-      let rating =
-        6.2 +
-        g * 0.9 +
-        a * 0.5 +
-        perf * 0.35 +
-        (cs ? 0.45 : 0) +
-        (s.pos === 'DF' || s.pos === 'GK' ? (s.attrs.def - L.avg) / 25 : 0) +
-        // T-10-091 수비형 미드필더는 수비 기여를 평점에 절반만큼 받는다(골·도움이 적은 몫).
-        (s.dpos === 'DM' ? (s.attrs.def - L.avg) / 50 : 0) +
-        (res === 'W' ? 0.2 : res === 'L' ? -0.2 : 0) +
-        gauss() * 0.25;
-      rating = clamp(Math.round(rating * 10) / 10, 4.5, 10);
+      const rating = rateMatch(s, L.avg, { g, a, perf, cs, res });
       S.apps++;
       S.mins += mins;
       S.goals += g;
@@ -195,41 +265,18 @@ export function simBlock(s: GameState): BlockResult {
       r.goals += g;
       r.assists += a;
       r.rs += rating;
-      if (g >= 3) r.hl.push(`${S.played}R 해트트릭! ${g}골 폭발 (평점 ${rating})`);
-      else if (g === 2) r.hl.push(`${S.played}R 멀티골 (평점 ${rating})`);
-      else if (rating >= 8.5) r.hl.push(`${S.played}R 경기 최우수 선수 선정 (평점 ${rating})`);
-      if (cs && s.pos === 'GK' && rating >= 8)
-        r.hl.push(`${S.played}R 슈퍼 세이브 쇼, 무실점 (평점 ${rating})`);
+      r.hl.push(...matchHighlights(s, S.played, g, rating, cs));
       addStat(s, 'cond', -(mins / 90) * 3.2);
       r.games.push({ rd: S.played, res, mins, g, a, rating, cs });
-      const ip =
-        BAL.injuryRate *
-        (s.cond < COND_LOW_INJURY ? 2.5 : 1) *
-        (s.trait === 'iron' ? 0.35 : 1) *
-        (s.age >= 31 ? 1.4 : 1);
-      if (chance(ip)) {
-        const big = chance(BAL.bigInjuryShare);
-        s.injury = big ? ri(8, 18) : ri(1, 5);
+      const hurt = rollInjury(s, S.played);
+      if (hurt) {
         r.injured = true;
-        r.hl.push(
-          `${S.played}R ${big ? '심각한 부상' : '부상'}으로 교체 아웃… ${s.injury}경기 결장 예상`,
-        );
+        r.hl.push(hurt);
       }
     }
     if (!mins) r.games.push({ rd: S.played, res, mins: 0, inj });
     addStat(s, 'cond', 1.1);
   }
-  const g = growthFactor(s);
-  if (r.apps)
-    for (const k of ATTR_KEYS) if (chance(wOf(s)[k] * 2)) addAttr(s, k, rnd() * g * (r.apps / n));
-  const avg = r.apps ? r.rs / r.apps : 0;
-  const tierF = (L.tier + 1) / 4;
-  if (r.apps) {
-    addStat(s, 'fame', (r.goals * 0.5 + r.assists * 0.25 + Math.max(0, avg - 6.6) * 2) * tierF);
-    addStat(s, 'morale', (avg - 6.7) * 6 + (r.w - r.l) / 2);
-    if (avg >= 7.1) addStat(s, 'trust', 1.2);
-    else if (avg < 6.3) addStat(s, 'trust', -1);
-  } else addStat(s, 'morale', -4);
-  if (s.contract) addStat(s, 'money', s.contract.salary / LAST_PHASE);
+  afterBlock(s, r, L.tier);
   return r;
 }

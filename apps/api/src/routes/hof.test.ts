@@ -8,7 +8,7 @@ import { createApp } from '../app.js';
 import { careers } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
 import { retireValue, valueFor } from '@offside/contracts/market-value';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
 
 const CAREER_ID = '3b1d6c1e-2a4f-4f7e-9a0b-7c8d9e0f1a2b';
@@ -451,14 +451,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
   });
 
   it('공개 목록은 쿠키가 있어도 세션·프로필을 읽지 않는다(T-10-015)', async () => {
-    const seen: string[] = [];
-    const DB = new Proxy(ctx.env.DB, {
-      get(target, key) {
-        if (key === 'prepare') return (query: string) => (seen.push(query), target.prepare(query));
-        const v = Reflect.get(target, key) as unknown;
-        return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v;
-      },
-    });
+    const { DB, seen } = spyDb(ctx.env.DB);
     const res = await createApp().request(
       '/v1/hof',
       { headers: { Cookie: cookie } },

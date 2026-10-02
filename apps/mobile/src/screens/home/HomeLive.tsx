@@ -6,11 +6,30 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Animated, AppState, Easing, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
-import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
-import { LIVE_FEED_MAX, LIVE_POLL_SEC } from '@offside/contracts/polling';
+import { LIVE_POLL_SEC } from '@offside/contracts/polling';
 import { getLive } from '@offside/app-core/api/client';
 import { onLive } from '@offside/app-core/api/liveSocket';
-import { agoKo, anonName } from '@offside/app-core/format';
+import { agoKo } from '@offside/app-core/format';
+import {
+  LIVE_STEP_MS,
+  LIVE_VISIBLE,
+  STATS,
+  advanceCursor,
+  applyLoad,
+  applyPush,
+  emptyHomeLive,
+  feedOf,
+  isRolling,
+  keyOf,
+  rowKey,
+  statTiles,
+  statsOf,
+  tone as toneOf,
+  visibleRows,
+  what,
+  who,
+  type HomeLiveState,
+} from '@offside/app-core/homeLive';
 import { CountUp } from '../../components/CountUp';
 import { openPublicLegendById } from '../../game/host';
 import { prefs } from '../../store';
@@ -19,91 +38,15 @@ import { useColors } from '../../theme/useColors';
 import { Btn, Card, ClubMark, Press, Txt } from '../../ui';
 
 const POLL_MS = LIVE_POLL_SEC * 1000;
-const STEP_MS = 3_500;
-const VISIBLE = 3;
+const STEP_MS = LIVE_STEP_MS;
+const VISIBLE = LIVE_VISIBLE;
 /** 한 줄 높이 — 세 줄 창 높이(ROW × 3)와 올라가는 거리. */
 const ROW = 44;
-
-const STATS = [
-  { key: 'playing', label: '지금 뛰는 중', of: (s: LiveStats) => s.playing },
-  { key: 'seasons', label: '오늘 치른 시즌', of: (s: LiveStats) => s.seasonsToday },
-  { key: 'new', label: '오늘 새 선수', of: (s: LiveStats) => s.newToday },
-  { key: 'retired', label: '오늘 은퇴', of: (s: LiveStats) => s.retiredToday },
-];
-
-interface Live {
-  data: LiveResponse | null;
-  /** 소켓으로 받은 소식(최신순). 마지막 조회(data.now) 뒤에 올라온 것만 둔다 — 조회 결과 위에 얹는다. */
-  pushed: LiveEvent[];
-  /** 방금 받은 새 소식(점이 한 번 튄다). */
-  fresh: ReadonlySet<string>;
-  cursor: number;
-}
-
-const keyOf = (e: LiveEvent) =>
-  `${e.kind}:${e.at}:${e.kind === 'retire' ? e.careerId : `${e.club}:${e.goals}:${e.apps}`}`;
-const feedOf = (l: Live): LiveEvent[] =>
-  l.data ? [...l.pushed, ...l.data.feed].slice(0, LIVE_FEED_MAX) : [];
-
-/** 조회 결과를 받았다: 새로 생긴 소식이 있으면 맨 위(가장 최근)부터 다시 보여 준다. */
-function applyLoad(prev: Live, r: LiveResponse): Live {
-  const before = new Set(feedOf(prev).map(keyOf));
-  const added = prev.data ? r.feed.map(keyOf).filter((k) => !before.has(k)) : [];
-  return {
-    data: r,
-    pushed: prev.pushed.filter((e) => e.at > r.now),
-    fresh: new Set(added),
-    cursor: added.length ? 0 : prev.cursor,
-  };
-}
-/** 소켓 소식. 첫 조회 전이거나, 이미 조회에 담긴(그 시각 이전) 소식이거나, 이미 보이는 소식이면 버린다. */
-function applyPush(prev: Live, e: LiveEvent): Live {
-  const key = keyOf(e);
-  if (!prev.data || e.at <= prev.data.now || feedOf(prev).some((f) => keyOf(f) === key))
-    return prev;
-  return {
-    ...prev,
-    pushed: [e, ...prev.pushed].slice(0, LIVE_FEED_MAX),
-    fresh: new Set([key]),
-    cursor: 0,
-  };
-}
-
-/** 조회 숫자에 아직 담기지 않은 소식만큼 더한다('지금 뛰는 중'은 조회로만 바뀐다). */
-function statsOf(l: Live): LiveStats | null {
-  if (!l.data) return null;
-  const s = { ...l.data.stats };
-  for (const e of l.pushed) {
-    if (e.kind === 'retire') s.retiredToday++;
-    else {
-      s.seasonsToday++;
-      if (e.first) s.newToday++;
-    }
-  }
-  return s;
-}
-
-const who = (e: LiveEvent) => e.name ?? anonName(e.pos, e.kind === 'retire' ? e.number : null);
-function what(e: LiveEvent): string {
-  if (e.kind === 'retire') return `은퇴 · 레전드 점수 ${e.score}`;
-  if (e.first) return `${e.club}에서 첫 시즌을 마쳤어요`;
-  if (e.honor) return `${e.honor} · ${e.club}`;
-  if ((e.pos === 'GK' || e.pos === 'DF') && e.cs)
-    return `${e.club} 시즌 ${e.apps}경기 무실점 ${e.cs}`;
-  return `${e.club} 시즌 ${e.goals}골 ${e.assists}도움`;
-}
-const toneOf = (e: LiveEvent) =>
-  e.kind === 'retire' ? 'retire' : e.first ? 'first' : e.honor ? 'honor' : '';
 
 export function HomeLive() {
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
-  const [live, setLive] = useState<Live>({
-    data: null,
-    pushed: [],
-    fresh: new Set(),
-    cursor: 0,
-  });
+  const [live, setLive] = useState<HomeLiveState>(emptyHomeLive);
   /** 조회가 실패한 적이 있다. 받은 데이터가 없을 때만 안내 문구를 띄우는 데 쓴다. */
   const [failed, setFailed] = useState(false);
   /** 서버 시각 - 이 기기 시각. '몇 분 전'을 서버 기준으로 센다. */
@@ -117,15 +60,10 @@ export function HomeLive() {
 
   const { data, cursor, fresh } = live;
   const feed = feedOf(live);
-  const liveStats = statsOf(live);
-  const rolling = motionOK && feed.length > VISIBLE;
+  const rolling = isRolling(motionOK, feed.length);
   // 한 줄 더 그려 두고(가려짐) 올라가는 동안 아래에서 들어오게 한다.
-  const rows = rolling
-    ? Array.from({ length: VISIBLE + 1 }, (_, k) => feed[(cursor + k) % feed.length]!)
-    : feed.slice(0, VISIBLE);
-  const stats = liveStats
-    ? STATS.map((s) => ({ ...s, n: s.of(liveStats) })).filter((s) => s.n > 0)
-    : [];
+  const rows = visibleRows(feed, cursor, rolling);
+  const stats = statTiles(statsOf(live));
   /** 첫 응답 전 — 같은 높이의 자리표시 카드를 그린다. */
   const pending = !data && !failed;
   const ago = (at: string) => agoKo(now + skew - Date.parse(at));
@@ -184,7 +122,7 @@ export function HomeLive() {
       shiftAnim.current = anim;
       anim.start(({ finished }) => {
         if (!finished) return;
-        setLive((p) => ({ ...p, cursor: (p.cursor + 1) % Math.max(1, feedOf(p).length) }));
+        setLive(advanceCursor);
         setShifting(false);
       });
     }, STEP_MS);
@@ -194,9 +132,6 @@ export function HomeLive() {
   useLayoutEffect(() => {
     if (!shifting) shiftY.setValue(0);
   }, [cursor, shifting, shiftY]);
-
-  const rowKey = (e: LiveEvent, i: number) =>
-    keyOf(e) + (rolling ? `#${(cursor + i) % feed.length}` : '');
 
   return (
     <View
@@ -285,7 +220,7 @@ export function HomeLive() {
                   const hidden = rolling && i === VISIBLE && !shifting;
                   return (
                     <View
-                      key={rowKey(e, i)}
+                      key={rowKey(e, i, rolling, cursor, feed.length)}
                       testID={`live-row-${e.kind}`}
                       accessibilityElementsHidden={hidden}
                       importantForAccessibility={hidden ? 'no-hide-descendants' : 'auto'}

@@ -16,7 +16,7 @@ import {
 } from '@offside/contracts/owner-team';
 import { teamSeasonClosed, teamSeasonName } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
-import { NO_STORE, nowIso, ok, teamNotFound, teamSeasonParam } from './shared.js';
+import { NO_STORE, nowIso, ok, teamNotFound, teamSeasonParam, conflictError } from './shared.js';
 import {
   addTeamView,
   careersByIds,
@@ -32,7 +32,7 @@ import { listAchievementRanking } from '../db/repos/ownerAchievements.js';
 import { edgeCached, waitUntil } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
-import { AppError, parseWithAppError } from '../errors.js';
+import { parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { teamBadges } from '../team/badges.js';
@@ -183,21 +183,11 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       const [found] = await liveTeam(db, id);
       if (!found) throw teamNotFound();
       if (found.team.profileId === profileId) {
-        throw new AppError({
-          code: 'VALIDATION_FAILED',
-          status: 409,
-          message: '내 팀에는 좋아요를 누를 수 없어요.',
-          details: { reason: 'OWN_TEAM' },
-        });
+        throw conflictError('내 팀에는 좋아요를 누를 수 없어요.', 'OWN_TEAM');
       }
       // T-11-029 닫힌 시즌 팀의 좋아요는 굳는다 — 누르기도 거두기도 막아 끝난 시즌의 순위가 흔들리지 않게 한다.
       if (teamSeasonClosed(found.team.season, nowIso())) {
-        throw new AppError({
-          code: 'VALIDATION_FAILED',
-          status: 409,
-          message: '끝난 시즌의 팀에는 좋아요를 바꿀 수 없어요.',
-          details: { reason: 'SEASON_CLOSED' },
-        });
+        throw conflictError('끝난 시즌의 팀에는 좋아요를 바꿀 수 없어요.', 'SEASON_CLOSED');
       }
       const likes = await setTeamLike(db, id, profileId, like, nowIso());
       if (likes === undefined) throw teamNotFound();

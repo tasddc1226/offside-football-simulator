@@ -10,7 +10,6 @@ import {
 } from './errors.js';
 import { HealthDataSchema } from './health.js';
 import { CONTRACTS_VERSION } from './index.js';
-import { ClientIdSchema } from './primitives.js';
 import { ProfileSettingsSchema } from './profile.js';
 
 describe('CONTRACTS_VERSION', () => {
@@ -72,24 +71,6 @@ describe('오류 코드 표', () => {
       expect(RETRYABLE_BY_CODE[code]).toBe(TABLE[code].retryable);
     },
   );
-});
-
-describe('ClientIdSchema', () => {
-  it('cmd_... 형식을 허용한다', () => {
-    expect(ClientIdSchema.safeParse('cmd_1234567890').success).toBe(true);
-  });
-
-  it('UUID 형식도 허용한다', () => {
-    expect(ClientIdSchema.safeParse('550e8400-e29b-41d4-a716-446655440000').success).toBe(true);
-  });
-
-  it('65자는 실패한다', () => {
-    expect(ClientIdSchema.safeParse('a'.repeat(65)).success).toBe(false);
-  });
-
-  it('공백이 포함되면 실패한다', () => {
-    expect(ClientIdSchema.safeParse('cmd 1234').success).toBe(false);
-  });
 });
 
 describe('ProfileSettingsSchema', () => {

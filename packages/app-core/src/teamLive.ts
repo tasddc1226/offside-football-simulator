@@ -186,3 +186,93 @@ export function liveScript(
 /** 중계 줄 앞에 붙는 시계 표기(45+2'). */
 export const clockText = (l: Pick<LiveLine, 'minute' | 'extra'>) =>
   l.extra ? `${l.minute}+${l.extra}'` : `${l.minute}'`;
+
+// ── 재생 계획 ─────────────────────────────────────────────────────────────────────────────
+// 웹 TeamLive.svelte · 모바일 TeamLive.tsx가 같이 쓰는 순수 부분. 어떤 순서로 무엇을 보여 주고 얼마나 기다릴지만 정하고,
+// 타이머·상태 반영은 각 앱이 맡는다.
+
+export type LivePhase = '1st' | 'ht' | '2nd' | 'ft';
+export const PHASE_LABEL: Record<LivePhase, string> = {
+  '1st': '전반',
+  ht: '하프타임',
+  '2nd': '후반',
+  ft: '경기 종료',
+};
+
+/** 골 배너·전광판 번쩍임이 유지되는 시간(ms). */
+export const FLASH_MS = 1800;
+/** '빠르게'(fast)를 켰을 때 대기 시간을 나누는 배수. */
+const FAST_DIVISOR = 2.5;
+
+/** 대기 시간. fast면 2.5배 빠르게. */
+export const waitMs = (ms: number, fast: boolean) => (fast ? Math.round(ms / FAST_DIVISOR) : ms);
+
+/** 경기 흐름 초기값(0 = 원정 쪽이 몰아침, 1 = 홈 쪽이 몰아침). */
+export const MOMENTUM_START = 0.5;
+
+/** 한 줄이 보인 뒤의 경기 흐름. 홈 줄은 +, 원정 줄은 -, 코너킥·중립 줄은 그대로. */
+export function momentumAfter(momentum: number, l: Pick<LiveLine, 'kind' | 'side'>): number {
+  if (!l.side || l.kind === 'corner') return momentum;
+  const push = l.kind === 'goal' ? 0.3 : l.kind === 'build' ? 0.2 : 0.12;
+  return Math.min(0.9, Math.max(0.1, momentum + (l.side === 'home' ? push : -push)));
+}
+
+/** 분이 지날 때마다 흐름은 조금씩 가운데로 돌아온다. */
+export const momentumDecay = (momentum: number) => momentum + (MOMENTUM_START - momentum) * 0.08;
+
+/** 골이 나온 분들(중계 줄 기준). */
+export const goalMinutesOf = (script: readonly LiveLine[]) =>
+  script.filter((l) => l.kind === 'goal').map((l) => l.minute);
+
+/** 그 줄을 보여 준 뒤 기다리는 시간(ms) — 골 1700, 빌드업 900, 나머지 520. */
+export const lineWaitMs = (kind: LiveKind) =>
+  kind === 'goal' ? 1700 : kind === 'build' ? 900 : 520;
+
+/** 추가시간 시계가 1씩 올라가는 간격(ms). */
+export const EXTRA_TICK_MS = 260;
+/** 하프타임에 멈춰 있는 시간(ms). */
+export const HT_PAUSE_MS = 1600;
+/** 골이 2분 안에 있으면 시계가 느려진다 — 그 분을 넘기기 전 기다리는 시간(ms). */
+export const minuteWaitMs = (near: boolean) => (near ? 700 : 240);
+
+/**
+ * 재생 한 단계. 필드가 있는 것만 순서대로(clock → extra → show → phase → decay) 반영하고, wait(ms)가 0보다 크면 그만큼
+ * 기다린다(fast면 waitMs로 줄인다). show는 script의 인덱스.
+ */
+export type PlayStep = {
+  clock?: number;
+  extra?: number;
+  phase?: LivePhase;
+  show?: number;
+  decay?: boolean;
+  wait: number;
+};
+
+/**
+ * 대본 전체의 재생 순서(0분부터 90분까지). 한 분마다 시계 → 그 분의 줄(추가시간 줄은 그 분의 끝: 추가시간 시계가 올라간 뒤
+ * 줄이 나온다) → 흐름 복귀와 대기. 46분에 후반으로 넘어가고, 하프타임 줄에서 멈췄다 이어진다. 끝나면(마지막 단계 뒤)
+ * 앱이 경기 종료를 알린다. 앱은 단계마다 '아직 보고 있는지'를 확인하면 된다.
+ */
+export function playbackPlan(script: readonly LiveLine[]): PlayStep[] {
+  const goalMinutes = goalMinutesOf(script);
+  const steps: PlayStep[] = [];
+  let i = 0;
+  for (let min = 0; min <= 90; min++) {
+    steps.push({ clock: min, extra: 0, ...(min === 46 ? { phase: '2nd' as const } : {}), wait: 0 });
+    while (i < script.length && script[i]!.minute === min && !script[i]!.extra) {
+      const k = script[i]!.kind;
+      steps.push({ show: i++, wait: lineWaitMs(k) });
+    }
+    while (i < script.length && script[i]!.minute === min && script[i]!.extra) {
+      const l = script[i]!;
+      for (let x = 1; x <= l.extra!; x++) steps.push({ extra: x, wait: EXTRA_TICK_MS });
+      const idx = i++;
+      if (l.kind === 'ht') steps.push({ show: idx, phase: 'ht', wait: HT_PAUSE_MS });
+      else if (l.kind === 'ft') steps.push({ show: idx, phase: 'ft', wait: 0 });
+      else steps.push({ show: idx, wait: 0 });
+    }
+    const near = goalMinutes.some((g) => g > min && g - min <= 2);
+    steps.push({ decay: true, wait: minuteWaitMs(near) });
+  }
+  return steps;
+}

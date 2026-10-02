@@ -6,7 +6,6 @@ import { View } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { proxy, useSnapshot } from 'valtio';
 import type { RetiredNumbersResponse } from '@offside/contracts';
-import { defaultClubName, leagueOfClub } from '@offside/contracts/club-names';
 import {
   displaySeasonAt,
   openTeamSeasons,
@@ -15,6 +14,13 @@ import {
 import { getRetiredNumbers } from '@offside/app-core/api/client';
 import { anonName } from '@offside/app-core/format';
 import { RN_DEFAULT, rnColors } from '@offside/app-core/rnStyle';
+import {
+  rnByClub,
+  rnClubName as clubName,
+  rnDay as day,
+  rnLeagueName as leagueOf,
+  rnRecent,
+} from '@offside/app-core/retiredWall';
 import { POS } from '@offside/game/data';
 import { loadHOF } from '@offside/game/season';
 import { RnShirt } from '../../components/RnJersey';
@@ -36,14 +42,6 @@ const view = proxy<{ order: 'club' | 'recent'; season: number | null }>({
   order: 'club',
   season: null,
 });
-
-const leagueOf = (clubId: string) => leagueOfClub(clubId)?.name ?? '';
-/** 결번 당시 기록된 이름은 유저가 바꿔 부른 이름일 수 있다 — 모두가 보는 벽에는 게임 기본 이름을 건다. */
-const clubName = (it: Item) => defaultClubName(it.clubId) ?? it.club;
-const day = (iso: string) => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
-};
 
 const GAP = 8;
 const MIN_TILE = 90;
@@ -216,19 +214,8 @@ export default function RetiredWall() {
   }, [season]);
 
   const myIds = useMemo(() => new Set(loadHOF().flatMap((h) => (h.id ? [h.id] : []))), []);
-  /** 구단별 — 결번이 많은 구단 먼저, 같으면 먼저 결번을 낸 구단. 구단 안에서는 번호 순. */
-  const clubs = useMemo(() => {
-    const by: Record<string, Item[]> = {};
-    for (const it of items ?? []) (by[it.clubId] ??= []).push(it);
-    return Object.values(by)
-      .map((list) => list.sort((a, b) => a.number - b.number))
-      .sort(
-        (a, b) =>
-          b.length - a.length ||
-          Math.min(...a.map((x) => x.seq)) - Math.min(...b.map((x) => x.seq)),
-      );
-  }, [items]);
-  const recent = useMemo(() => [...(items ?? [])].sort((a, b) => b.seq - a.seq), [items]);
+  const clubs = useMemo(() => rnByClub(items ?? []), [items]);
+  const recent = useMemo(() => rnRecent(items ?? []), [items]);
 
   const empty = (text: string) => (
     <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>

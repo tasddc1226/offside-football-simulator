@@ -30,8 +30,6 @@ export type Bindings = {
   LIVE?: DurableObjectNamespace<LiveHub>;
   /** T-11-015 채팅방(src/chat/room.ts). 테스트엔 없다 — 없으면 채팅 소켓은 503, 입장권은 SERVICE_UNAVAILABLE. */
   CHAT?: DurableObjectNamespace<ChatRoom>;
-  /** T-10-076 영구결번을 여는 시각(ISO, UTC). 운영에만 둔다 — 없으면 바로 열려 있다. 오픈 뒤 지운다. */
-  RETIRED_NUMBERS_OPEN_AT?: string;
 };
 
 export type SessionContext = {

@@ -26,7 +26,7 @@ import {
 } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
-import { kstDays } from './admin.js';
+import { kstDay } from '../../time.js';
 import { honorsOf, hideCareerStatements } from './firsts.js';
 import { appMeta, careers, careerSeasons, goalsPlusAssists, retiredNumbers } from '../schema.js';
 
@@ -205,7 +205,7 @@ export type PutRetirementInput = {
  * 커리어 수만큼 행을 읽으므로(T-10-055), 은퇴할 때 이 키를 1 올리고 현황은 한 행만 읽는다. 프로필 삭제로
  * 커리어가 지워져도 빼지 않는다(홈 현황 숫자라 허용).
  */
-export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`;
+export const retiredCountKey = (at: Date) => `retired:${kstDay(at.toISOString())}`;
 
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
  * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
@@ -584,12 +584,8 @@ export async function getCareerHead(db: Db, careerId: string) {
   return row;
 }
 
-/** 테스트 전용 헬퍼: 특정 커리어의 존재 여부·상태 확인. */
+/** 커리어 한 행(존재 여부·상태 확인). */
 export async function getCareer(db: Db, careerId: string): Promise<CareerRow | undefined> {
   const [row] = await db.select().from(careers).where(eq(careers.id, careerId));
   return row;
-}
-
-export async function listCareerSeasons(db: Db, careerId: string) {
-  return db.select().from(careerSeasons).where(eq(careerSeasons.careerId, careerId));
 }

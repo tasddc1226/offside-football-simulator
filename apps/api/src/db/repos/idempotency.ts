@@ -1,4 +1,4 @@
-import { and, eq, lte } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { idempotency } from '../schema.js';
 
@@ -38,12 +38,4 @@ export async function putIdempotent(db: Db, input: PutIdempotentInput): Promise<
     .insert(idempotency)
     .values(input)
     .onConflictDoNothing({ target: [idempotency.ownerProfileId, idempotency.key] });
-}
-
-export async function purgeExpired(db: Db, now: string): Promise<number> {
-  const deleted = await db
-    .delete(idempotency)
-    .where(lte(idempotency.expiresAt, now))
-    .returning({ key: idempotency.key });
-  return deleted.length;
 }

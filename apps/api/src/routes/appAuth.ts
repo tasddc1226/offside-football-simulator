@@ -16,7 +16,7 @@ import { pkceChallenge, randomToken } from '../auth/base64url.js';
 import { selectGoogleOidc } from '../auth/google-oidc.js';
 import { issueSession, rotateSession } from '../auth/session.js';
 import { createAppAuthTicket, takeReadyTicket } from '../db/repos/appAuthTickets.js';
-import { tryAttempt, type AuthAttemptKind } from '../db/repos/authAttempts.js';
+import type { AuthAttemptKind } from '../db/repos/authAttempts.js';
 import { createProfile } from '../db/repos/profiles.js';
 import { getDb, type AppEnv, type SessionContext } from '../env.js';
 import { AppError } from '../errors.js';
@@ -25,17 +25,14 @@ import type { SignInOutcome } from '../profile/google-link.js';
 import { resolveAppleSignIn } from '../profile/apple-link.js';
 import { resolveRequestHostPair } from '../production-hosts.js';
 import { GOOGLE_START_RATE_LIMIT_MAX } from './auth.js';
-import { clientIp, nowIso, ok, readBody } from './shared.js';
+import { clientIp, nowIso, ok, readBody, enforceLimit } from './shared.js';
 
 /** IP당 시간당 — 앱 설치·재설치 한 번에 한 세션이면 넉넉하다. */
 const APP_SESSION_RATE_LIMIT_MAX = 20;
 const APPLE_SIGNIN_RATE_LIMIT_MAX = 30;
 
-async function limitByIp(c: Context<AppEnv>, kind: AuthAttemptKind, max: number, now: string) {
-  if (!(await tryAttempt(getDb(c), kind, clientIp(c), max, now))) {
-    throw new AppError({ code: 'RATE_LIMITED', message: '잠시 후 다시 시도해 주세요.' });
-  }
-}
+const limitByIp = (c: Context<AppEnv>, kind: AuthAttemptKind, max: number, now: string) =>
+  enforceLimit(getDb(c), kind, clientIp(c), max, now, '잠시 후 다시 시도해 주세요.');
 
 const loginFailed = (reason: string) =>
   new AppError({

@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { generateCandidates } from '@offside/game/candidates';
 import { defaultFocus, type Pos } from '@offside/game/data';
 import { newGame } from '@offside/game/engine';
-import { ovr } from '@offside/game/attributes';
+import { GK_SUBS, ovr, SUBS } from '@offside/game/attributes';
+import { BODY_DEFAULT } from '@offside/contracts/body';
 import { createRng, setActiveRng } from '@offside/game/rng';
-import { hiddenStrength, scoutLine, startOvr } from './create-view.js';
+import { bodyNote, hiddenStrength, scoutLine, startOvr } from './create-view.js';
 import { iGa, polyPoints } from './format.js';
 
 describe('선수 생성 표시 로직', () => {
@@ -57,5 +58,27 @@ describe('선수 생성 표시 로직', () => {
     const pts = polyPoints([100, 100, 100, 100, 100, 100], 10, 10).split(' ');
     expect(pts).toHaveLength(6);
     expect(pts[0]).toBe('10.0,0.0');
+  });
+});
+
+describe('bodyNote', () => {
+  const names = (note: string) => note.split(' · ').map((p) => p.replace(/ [+−][\d.]+$/, ''));
+
+  it('포지션 평균 체격이면 보정이 없어 빈 문자열이다', () => {
+    expect(bodyNote('FW', BODY_DEFAULT.FW)).toBe('');
+  });
+
+  it('필드 선수는 골키퍼 능력치를 빼고 큰 보정 4개까지 "이름 +n" 꼴로 보인다', () => {
+    const note = bodyNote('FW', { h: 195, w: 95 });
+    expect(note).toMatch(/^[^·]+ [+−][\d.]+( · [^·]+ [+−][\d.]+){0,3}$/);
+    const gk = GK_SUBS.map((k) => SUBS[k]);
+    for (const n of names(note)) expect(gk).not.toContain(n);
+  });
+
+  it('골키퍼는 골키퍼에게 쓰이는 체격 보정만 보인다', () => {
+    const note = bodyNote('GK', { h: 200, w: 98 });
+    const allowed = ['div', 'han', 'jmp', 'str', 'ref', 'rea'].map((k) => SUBS[k]);
+    expect(note).not.toBe('');
+    for (const n of names(note)) expect(allowed).toContain(n);
   });
 });

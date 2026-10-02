@@ -1,6 +1,6 @@
 import { ATTR_KEYS, type AttrKey, type Pos } from './data.js';
 import { wOf } from './attributes.js';
-import { ri, pick, chance, rnd } from './rng.js';
+import { ri, pick, chance, rnd, weightedIndex } from './rng.js';
 import { EVENTS, eventById } from './events-data.js';
 import { BAL, choiceOdds, eventWeight } from './balance.js';
 import type { GameState, Choice, EventDef } from './types.js';
@@ -105,9 +105,7 @@ export function rollEvent(s: GameState): string | null {
   if (!pool.length) return null;
   const weightOf = (e: EventDef) =>
     (e.w * eventWeight(e.id)) / (1 + (seen[e.id] ? seen[e.id]!.n : 0));
-  const tot = pool.reduce((a, e) => a + weightOf(e), 0);
-  let x = rnd() * tot;
-  const ev = pool.find((e) => (x -= weightOf(e)) <= 0) || pool[0]!;
+  const ev = pool[Math.max(0, weightedIndex(pool, weightOf))]!;
   s.flags.lastEvent = ev.id;
   seen[ev.id] = { t, n: (seen[ev.id] ? seen[ev.id]!.n : 0) + 1 };
   return ev.id;

@@ -12,30 +12,12 @@ import {
   type SectionListData,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CONFEDS, CONF_ORDER, DEFAULT_NATION, NATIONS } from '@offside/contracts/nations';
-import { KR, flagOf, nationOf, type Nation } from '@offside/game/nation';
-import { koMatchAt } from '@offside/app-core/koSearch';
+import { flagOf, nationOf, type Nation } from '@offside/game/nation';
+import { nationGroups, type NationGroup } from '@offside/app-core/nationSearch';
 import { alpha } from '../../theme/colors';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Press, Txt } from '../../ui';
-
-const byKo = new Intl.Collator('ko').compare;
-interface Group {
-  key: string;
-  label: string;
-  data: Nation[];
-}
-const GROUPS: Group[] = [
-  { key: 'KR', label: '기본', data: [KR] },
-  ...CONF_ORDER.map((conf) => ({
-    key: conf,
-    label: `${CONFEDS[conf].region} (${conf})`,
-    data: NATIONS.filter((n) => n.conf === conf && n.code !== DEFAULT_NATION).sort((a, b) =>
-      byKo(a.ko, b.ko),
-    ),
-  })),
-];
 
 export function NationPicker({
   value,
@@ -53,15 +35,7 @@ export function NationPicker({
   const selected = nationOf({ nation: value });
 
   // 검색 중엔 연맹 묶음 대신 한 목록으로, 이름이 검색어로 시작하는 나라부터.
-  const groups = useMemo<Group[]>(() => {
-    if (!query) return GROUPS;
-    const hits = NATIONS.map((n) => ({ n, at: koMatchAt(n.ko, query) }))
-      .filter((h) => h.at >= 0)
-      .sort((a, b) => a.at - b.at || byKo(a.n.ko, b.n.ko));
-    return hits.length
-      ? [{ key: 'hits', label: `검색 결과 ${hits.length}`, data: hits.map((h) => h.n) }]
-      : [];
-  }, [query]);
+  const groups = useMemo(() => nationGroups(query), [query]);
 
   const show = () => {
     setQuery('');
@@ -177,14 +151,18 @@ export function NationPicker({
                 </Txt>
               </Press>
             </View>
-            <SectionList<Nation, Group>
+            <SectionList<Nation, NationGroup>
               sections={groups}
               keyExtractor={(n) => n.code}
               keyboardShouldPersistTaps="handled"
               stickySectionHeadersEnabled
               initialNumToRender={24}
               contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 8 }}
-              renderSectionHeader={({ section }: { section: SectionListData<Nation, Group> }) => (
+              renderSectionHeader={({
+                section,
+              }: {
+                section: SectionListData<Nation, NationGroup>;
+              }) => (
                 <View
                   style={{
                     paddingTop: 8,

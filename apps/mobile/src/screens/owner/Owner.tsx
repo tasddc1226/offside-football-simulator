@@ -21,7 +21,7 @@ import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { loadHOF } from '@offside/game/season';
 import { accountCache, appState } from '../../store';
-import { isMember } from '../../game/account';
+import { isMember } from '@offside/app-core/account';
 import { go } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';

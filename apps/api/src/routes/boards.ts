@@ -15,7 +15,6 @@ import {
 } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
 import { getViewer, requireAdmin } from '../auth/admin.js';
-import { getAttemptCount, recordAttempt } from '../db/repos/authAttempts.js';
 import {
   addView,
   blockAuthor,
@@ -36,7 +35,7 @@ import {
   updatePost,
 } from '../db/repos/boards.js';
 import { getDb, type AppEnv } from '../env.js';
-import { notFoundError, ok, readBody, nowIso } from './shared.js';
+import { notFoundError, ok, readBody, nowIso, enforceLimit } from './shared.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
@@ -186,13 +185,14 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const profileId = getSessionOrThrow(c).profileId;
     const now = nowIso();
     if (!viewer.admin) {
-      if ((await getAttemptCount(db, 'BOARD_COMMENT', profileId, now)) >= COMMENT_LIMIT) {
-        throw new AppError({
-          code: 'RATE_LIMITED',
-          message: '댓글을 너무 자주 쓰고 있어요. 잠시 뒤에 다시 시도해 주세요.',
-        });
-      }
-      await recordAttempt(db, 'BOARD_COMMENT', profileId, now);
+      await enforceLimit(
+        db,
+        'BOARD_COMMENT',
+        profileId,
+        COMMENT_LIMIT,
+        now,
+        '댓글을 너무 자주 쓰고 있어요. 잠시 뒤에 다시 시도해 주세요.',
+      );
     }
     const id = await createComment(
       db,

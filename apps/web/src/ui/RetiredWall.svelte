@@ -10,7 +10,6 @@
   // T-11-029 결번은 시즌마다 따로 — 프리시즌 선수가 찬 번호도 시즌 1에서는 새로 받을 수 있다. 개막한 시즌이 둘 이상이면
   // 시즌 탭을 보인다.
   import type { RetiredNumbersResponse } from '@offside/contracts';
-  import { defaultClubName, leagueOfClub } from '@offside/contracts/club-names';
   import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
   import { getRetiredNumbers } from '@offside/app-core/api/client';
   import { POS } from '@offside/game/data';
@@ -19,6 +18,7 @@
   import { anonName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';
   import { RN_SHIRT, RN_TRIM, rnStyle } from '@offside/app-core/rnStyle';
+  import { rnByClub, rnClubName as clubName, rnDay as day, rnLeagueName as leagueOf, rnRecent } from '@offside/app-core/retiredWall';
 
   type Item = RetiredNumbersResponse['items'][number];
 
@@ -39,27 +39,8 @@
   });
 
   const myIds = new Set(loadHOF().map((h) => h.id).filter(Boolean));
-  const leagueOf = (clubId: string) => leagueOfClub(clubId)?.name ?? '';
-  /** 결번 당시 기록된 이름은 유저가 바꿔 부른 이름일 수 있다 — 모두가 보는 벽에는 게임 기본 이름을 건다. */
-  const clubName = (it: Item) => defaultClubName(it.clubId) ?? it.club;
-  const day = (iso: string) => {
-    const d = new Date(iso);
-    return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
-  };
-
-  /** 구단별 — 결번이 많은 구단 먼저, 같으면 먼저 결번을 낸 구단. 구단 안에서는 번호 순. */
-  const clubs = $derived.by(() => {
-    const by: Record<string, Item[]> = {};
-    for (const it of items ?? []) (by[it.clubId] ??= []).push(it);
-    return Object.values(by)
-      .map((list) => list.sort((a, b) => a.number - b.number))
-      .sort(
-        (a, b) =>
-          b.length - a.length ||
-          Math.min(...a.map((x) => x.seq)) - Math.min(...b.map((x) => x.seq)),
-      );
-  });
-  const recent = $derived([...(items ?? [])].sort((a, b) => b.seq - a.seq));
+  const clubs = $derived(rnByClub(items ?? []));
+  const recent = $derived(rnRecent(items ?? []));
 </script>
 
 {#snippet tile(it: Item, withClub: boolean)}

@@ -266,42 +266,6 @@ describe('영구결번 (T-10-076)', () => {
       holder: '옛레전드',
     });
   });
-  it('오픈 전엔 심사·소급·알림 없이 pending·빈 목록, 오픈 뒤 첫 목록 조회가 그 사이 은퇴를 심사한다', async () => {
-    const hub = fakeHub();
-    const openAt = new Date(Date.now() + 30 * 60_000).toISOString();
-    const closed = { ...ctx.env, LIVE: hub.ns, RETIRED_NUMBERS_OPEN_AT: openAt };
-    expect(await retire(A, skyBlue(10), '오픈전', cookie, closed)).toEqual({ kind: 'pending' });
-    const check = await callJson(closed, 'GET', `/v1/careers/${A}/retired-number`, { cookie });
-    expect(
-      successEnvelope(RetiredNumberCheckResponseSchema).parse(await check.json()).data
-        .retiredNumber,
-    ).toEqual({ kind: 'pending' });
-    const res = await createApp().request('/v1/retired-numbers', {}, closed);
-    expect(res.headers.get('cache-control')).toBe('public, max-age=60');
-    expect(
-      successEnvelope(RetiredNumbersResponseSchema).parse(await res.json()).data.items,
-    ).toEqual([]);
-    // 오픈 20초 전이면 캐시도 20초만 — 오픈 시각을 넘겨 빈 목록을 보여 주지 않는다.
-    const soon = {
-      ...closed,
-      RETIRED_NUMBERS_OPEN_AT: new Date(Date.now() + 20_000).toISOString(),
-    };
-    const cc = (await createApp().request('/v1/retired-numbers', {}, soon)).headers.get(
-      'cache-control',
-    );
-    expect(Number(cc?.match(/max-age=(\d+)/)?.[1])).toBeLessThanOrEqual(20);
-    expect(hub.retiredNumbers).toEqual([]);
-    expect(
-      await ctx.env.DB.prepare("SELECT key FROM app_meta WHERE key LIKE 'retired_numbers_%'").all(),
-    ).toMatchObject({ results: [] });
-
-    const opened = {
-      ...closed,
-      RETIRED_NUMBERS_OPEN_AT: new Date(Date.now() - 1000).toISOString(),
-    };
-    expect(await list(opened)).toMatchObject([{ careerId: A, name: '오픈전', seq: 1 }]);
-  });
-
   it('내 선수 심사 조회: 소급으로 받은 결번·이미 찬 자리를 알려 주고, 남의 커리어는 거부한다', async () => {
     const other = (await issueCookie(ctx)).cookie;
     await retire(B, skyBlue(10), '옛레전드', other);

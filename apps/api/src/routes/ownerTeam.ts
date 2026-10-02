@@ -21,9 +21,18 @@ import {
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
-import { NO_STORE, nowIso, ok, readBody, teamNotFound, teamSeasonParam } from './shared.js';
+import {
+  NO_STORE,
+  nowIso,
+  ok,
+  readBody,
+  teamNotFound,
+  teamSeasonParam,
+  conflictError,
+  rateLimited,
+} from './shared.js';
 import { newId } from '../db/ids.js';
-import { kstDays } from '../db/repos/admin.js';
+import { kstDays } from '../time.js';
 import { runBatch } from '../db/repos/batch.js';
 import {
   careersByIds,
@@ -70,13 +79,7 @@ import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 /** 상대 목록에 보여 줄 팀 수. */
 const OPPONENTS_SHOWN = 5;
 
-const teamRequired = () =>
-  new AppError({
-    code: 'VALIDATION_FAILED',
-    status: 409,
-    message: '먼저 이번 시즌 팀을 만들어 주세요.',
-    details: { reason: 'TEAM_REQUIRED' },
-  });
+const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
 
 /** 구글 로그인한(삭제되지 않은) 프로필만 구단주다. 익명 프로필은 403 GOOGLE_LOGIN_REQUIRED — 웹이 로그인 안내를 띄운다. */
 async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
@@ -95,12 +98,10 @@ async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
 function currentSeasonOrThrow(now: string): number {
   const season = teamSeasonAt(now);
   if (season === null) {
-    throw new AppError({
-      code: 'VALIDATION_FAILED',
-      status: 409,
-      message: '지금은 시즌 사이 휴식기예요. 다음 시즌이 열리면 새 팀을 꾸릴 수 있어요.',
-      details: { reason: 'SEASON_CLOSED' },
-    });
+    throw conflictError(
+      '지금은 시즌 사이 휴식기예요. 다음 시즌이 열리면 새 팀을 꾸릴 수 있어요.',
+      'SEASON_CLOSED',
+    );
   }
   return season;
 }
@@ -339,20 +340,18 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     if (!mine) throw teamRequired();
     const usedToday = challenged.length;
     if (usedToday >= TEAM_MATCHES_PER_DAY) {
-      throw new AppError({
-        code: 'RATE_LIMITED',
-        message: `오늘 경기는 모두 치렀어요(하루 ${TEAM_MATCHES_PER_DAY}경기). 한국 시각 자정에 다시 열려요.`,
-        details: { reason: 'TEAM_MATCH_DAILY_LIMIT' },
-      });
+      throw rateLimited(
+        `오늘 경기는 모두 치렀어요(하루 ${TEAM_MATCHES_PER_DAY}경기). 한국 시각 자정에 다시 열려요.`,
+        'TEAM_MATCH_DAILY_LIMIT',
+      );
     }
     if (!opp || opp.team.profileId === me.id || opp.team.season !== season) throw teamNotFound();
     // T-10-095 같은 상대에게는 하루 한 번만 건다(받은 경기는 세지 않는다 — 받은 쪽은 되갚을 수 있다).
     if (challenged.some((m) => m.teamId === opp.team.id)) {
-      throw new AppError({
-        code: 'RATE_LIMITED',
-        message: '이 팀과는 오늘 이미 겨뤘어요. 한국 시각 자정에 다시 도전할 수 있어요.',
-        details: { reason: 'TEAM_OPPONENT_DAILY_LIMIT' },
-      });
+      throw rateLimited(
+        '이 팀과는 오늘 이미 겨뤘어요. 한국 시각 자정에 다시 도전할 수 있어요.',
+        'TEAM_OPPONENT_DAILY_LIMIT',
+      );
     }
 
     const mySlots = slotIdsOf(mine);
@@ -374,12 +373,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       eligibleMap(rows, opp.team.profileId, season),
     );
     if (filledCount(home) === 0) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        status: 409,
-        message: '은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.',
-        details: { reason: 'TEAM_EMPTY' },
-      });
+      throw conflictError('은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.', 'TEAM_EMPTY');
     }
     if (filledCount(away) === 0) throw teamNotFound();
 

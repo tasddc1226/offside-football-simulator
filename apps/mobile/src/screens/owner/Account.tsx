@@ -12,7 +12,7 @@ import {
   unlinkGoogle,
 } from '@offside/app-core/api/client';
 import { accountCache } from '../../store';
-import { isMember } from '../../game/account';
+import { accountLabel, isMember } from '@offside/app-core/account';
 import { closeSheet, refreshAccount, showSheet } from '../../game/host';
 import { setSessionToken } from '../../platform/session';
 import { rem } from '../../theme/type';
@@ -136,15 +136,14 @@ export function Account({ admin = false }: { admin?: boolean }) {
         </View>
       </View>
     );
+  const label = accountLabel(profile);
   return (
     <View style={{ gap: 12 }}>
       <View style={head}>
         <View style={who}>
-          <Txt style={bTitle}>
-            {profile.linked.google ? (profile.googleEmailMasked ?? '구글 계정') : 'Apple 계정'}
-          </Txt>
+          <Txt style={bTitle}>{label.title}</Txt>
           <Txt tone="muted" style={bMuted}>
-            {profile.linked.google ? 'Google' : 'Apple'} 계정으로 로그인했어요.
+            {label.via}
           </Txt>
         </View>
         <Btn kind="primary" sm onPress={askLogout} testID="logout">
