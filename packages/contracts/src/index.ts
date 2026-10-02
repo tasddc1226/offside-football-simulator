@@ -68,6 +68,8 @@ export {
   CareerSeasonPayloadSchema,
   SeasonCompSchema,
   type SeasonComp,
+  SeasonGrowthSchema,
+  type SeasonGrowth,
   EventLogEntrySchema,
   PlaySignalsSchema,
   PutCareerSeasonBodySchema,

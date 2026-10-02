@@ -259,7 +259,7 @@ export const GROUP_W: Record<string, Record<AttrKey, number>> = Object.fromEntri
 );
 export const wOf = (s: GameState): Record<AttrKey, number> => GROUP_W[mainRole(s)]!;
 
-export function ovrRole(s: GameState, role: string): number {
+export function ovrRole(s: Pick<GameState, 'sub'>, role: string): number {
   let t = 0;
   for (const [k, v] of Object.entries(ROLES[role]!)) t += (s.sub[k] ?? 0) * v;
   return t;

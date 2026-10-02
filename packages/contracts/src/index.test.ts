@@ -114,3 +114,26 @@ describe('envelope', () => {
     expect(schema.safeParse({ data: { ok: true }, meta: {} }).success).toBe(false);
   });
 });
+
+describe('T-11-048 SeasonGrowthSchema', () => {
+  const ok = {
+    v: 1,
+    o0: 55,
+    ph: [55, 57, 59],
+    a0: [50, 51, 52, 53, 54, 55],
+    a1: [51, 52, 53, 54, 55, 56],
+    s0: [50.5, 51],
+    s1: [51.5, 52],
+    pot: { s: 74, b: 0, bl: -1.2, r: 0 },
+  };
+  it('정상 값은 통과하고, 능력치 개수·구간 수·키·버전이 어긋나면 거부한다', async () => {
+    const { SeasonGrowthSchema } = await import('./careers.js');
+    expect(SeasonGrowthSchema.safeParse(ok).success).toBe(true);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, a0: [1, 2, 3] }).success).toBe(false);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, ph: [1, 2, 3, 4, 5] }).success).toBe(false);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, s1: Array(65).fill(50) }).success).toBe(false);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, v: 2 }).success).toBe(false);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, extra: 1 }).success).toBe(false);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, o0: 55.5 }).success).toBe(false);
+  });
+});
