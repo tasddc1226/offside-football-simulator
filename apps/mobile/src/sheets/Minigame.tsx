@@ -1,11 +1,13 @@
 // 원터치 미니게임(웹 sheets/Minigame.svelte, T-10-089). 게이지 위를 왕복하는 바늘을 한 번 탭해 멈춘다(장면 전체가 버튼 하나).
-// 탭한 순간의 바늘 위치는 마지막으로 그린 프레임이 아니라 입력 시각으로 계산한다 — 프레임 간격만큼 판정이 밀리지
-// 않게. 손가락이 닿는 순간(onPressIn)을 입력으로 보고, 스크린 리더 활성화(onPress)는 같은 함수를 부른다.
+// T-11-047 바늘은 UI 스레드(네이티브 드라이버)에서 움직이고, 판정은 탭할 때 멈춘 바늘의 실제 값으로 한다 — 보이는 자리가
+// 곧 판정 자리다. 예전엔 JS가 프레임마다 위치를 고쳐 그리고 판정은 입력 시각으로 따로 계산했는데, 안드로이드(새 구조의
+// requestAnimationFrame은 vsync가 아니라 setTimeout 0)에선 그려진 바늘이 실제 시각보다 뒤처져 탭하는 순간 판정 위치로
+// 튀었다. 손가락이 닿는 순간(onPressIn)을 입력으로 보고, 스크린 리더 활성화(onPress)는 같은 함수를 부른다.
 // 판정이 나면(v.ok, sheet-controller가 채운다) 공이 날아가는 결과 장면을 두 단계로 그린다.
-import { useEffect, useRef, useState, type RefObject } from 'react';
-import { Pressable, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import { markerAt, MG_TAP } from '@offside/game/minigame';
+import { markerAt, MG_TAP, SWEEP_MS } from '@offside/game/minigame';
 import type { SheetView } from '@offside/app-core/sheets';
 import { alpha } from '../theme/colors';
 import { useColors } from '../theme/useColors';
@@ -23,34 +25,29 @@ import {
   type KeeperPose,
 } from './PitchScene';
 
-/** 게이지 위를 왕복하는 바늘. 멈추면(frozen) 그 자리에 선다 — 안 그릴 때는 자기 프레임 루프만 돈다. */
-function Needle({ t0, frozen }: { t0: RefObject<number>; frozen: number | null }) {
+/**
+ * 게이지 위를 왕복하는 바늘. k는 0→2를 한 번 왕복(SWEEP_MS × 2) 동안 고르게 오르고, 화면엔 0→1→0으로 그린다 —
+ * markerAt(k × SWEEP_MS)와 같은 위치다. 폭(width)은 게이지를 잰 값이다.
+ */
+function Needle({ k, width }: { k: Animated.Value; width: Animated.Value }) {
   const c = useColors();
-  const [pos, setPos] = useState(0);
-  useEffect(() => {
-    if (frozen !== null) return;
-    let raf = 0;
-    const frame = (now: number) => {
-      setPos(markerAt(now - t0.current));
-      raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
-  }, [frozen, t0]);
-  const p = frozen ?? pos;
+  const [x] = useState(() =>
+    Animated.multiply(k.interpolate({ inputRange: [0, 1, 2], outputRange: [0, 1, 0] }), width),
+  );
   return (
-    <View
+    <Animated.View
       style={{
         position: 'absolute',
         top: -5,
         bottom: -5,
-        left: `${p * 100}%`,
+        left: 0,
         marginLeft: -3,
         width: 8,
         borderWidth: 2,
         borderColor: c.pitch,
         borderRadius: 4,
         backgroundColor: c.chalk,
+        transform: [{ translateX: x }],
       }}
     />
   );
@@ -60,12 +57,12 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
   const s = useSnapshot(v);
   const c = useColors();
   const [tapped, setTapped] = useState(false);
-  const [frozen, setFrozen] = useState<number | null>(null);
   /** 결과 장면 단계: 0 겨냥 · 1 공이 날아가는 중 · 2 마무리. */
   const [stage, setStage] = useState(0);
   /** 제한 시간이 지나도록 누르지 않았다 — 공은 그대로, 실패. */
   const [late, setLate] = useState(false);
-  const t0 = useRef(0);
+  const k = useRef(new Animated.Value(0)).current;
+  const gauge = useRef(new Animated.Value(0)).current;
   const done = useRef(false);
   /** 공이 향할 쪽(-1 왼쪽 · 1 오른쪽). 선택지가 정하지 않았으면 무작위(화면 연출이라 게임 RNG를 쓰지 않는다). */
   const [rs] = useState<-1 | 1>(() => (Math.random() < 0.5 ? -1 : 1));
@@ -74,8 +71,17 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
   const side = s.side || rs;
 
   useEffect(() => {
-    t0.current = performance.now();
-  }, []);
+    const sweep = Animated.loop(
+      Animated.timing(k, {
+        toValue: 2,
+        duration: SWEEP_MS * 2,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    sweep.start();
+    return () => sweep.stop();
+  }, [k]);
 
   useEffect(() => {
     if (s.ok === null) return;
@@ -84,19 +90,19 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
     return () => clearTimeout(t);
   }, [s.ok]);
 
-  function tap(at: number) {
+  function tap() {
     if (done.current) return;
     done.current = true;
     setTapped(true);
-    const pos = markerAt(at - t0.current);
-    setFrozen(pos);
-    v.onTap(pos);
+    // 멈춘 바늘의 값(네이티브 값이면 UI 스레드에서 읽어 온다)으로 판정한다.
+    k.stopAnimation((at) => v.onTap(markerAt(at * SWEEP_MS)));
   }
   function expire() {
     if (done.current) return;
     done.current = true;
     setTapped(true);
     setLate(true);
+    k.stopAnimation();
     v.onTap(null);
   }
 
@@ -179,8 +185,8 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
         testID="mg-tap"
         accessibilityRole="button"
         accessibilityLabel={label}
-        onPressIn={() => tap(performance.now())}
-        onPress={() => tap(performance.now())}
+        onPressIn={tap}
+        onPress={tap}
         // 웹 .mg-stage: 초록 그라운드 바탕 위에 장면·게이지·문구가 전부 들어간다(--r3는 색 토큰이라 모서리는 각졌다).
         style={{ backgroundColor: c.pitch, paddingBottom: 12, overflow: 'hidden' }}
       >
@@ -218,6 +224,7 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
         <View
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
+          onLayout={(e) => gauge.setValue(e.nativeEvent.layout.width)}
           style={{
             height: 16,
             marginTop: 10,
@@ -239,7 +246,7 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
               borderColor: alpha('#ffffff', 0.13),
             }}
           />
-          <Needle t0={t0} frozen={frozen} />
+          <Needle k={k} width={gauge} />
         </View>
         <Txt
           center
