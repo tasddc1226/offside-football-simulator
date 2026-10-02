@@ -584,12 +584,8 @@ export async function getCareerHead(db: Db, careerId: string) {
   return row;
 }
 
-/** 테스트 전용 헬퍼: 특정 커리어의 존재 여부·상태 확인. */
+/** 커리어 한 행(존재 여부·상태 확인). */
 export async function getCareer(db: Db, careerId: string): Promise<CareerRow | undefined> {
   const [row] = await db.select().from(careers).where(eq(careers.id, careerId));
   return row;
-}
-
-export async function listCareerSeasons(db: Db, careerId: string) {
-  return db.select().from(careerSeasons).where(eq(careerSeasons.careerId, careerId));
 }

@@ -148,11 +148,6 @@ export async function getProfileByRecoveryCodeHash(
   return row ? toRecord(row) : undefined;
 }
 
-/** API-PRO-005: `deleted_at` 기록만 한다. 연결 데이터 삭제는 라우트가 트랜잭션으로 처리한다. */
-export async function softDeleteProfile(db: Db, id: string, at: string): Promise<void> {
-  await db.update(profiles).set({ deletedAt: at }).where(eq(profiles.id, id));
-}
-
 /**
  * D-21. 삭제된 프로필(`deletedAt` not null)도 존재 여부 판정을 위해 그대로 돌려준다 — 콜백은 그
  * sub를 "처음 보는 sub"로 취급해 재연결을 허용한다(delete-profile.ts가 삭제 시 google_sub를 이미

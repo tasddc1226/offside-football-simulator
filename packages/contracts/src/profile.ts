@@ -42,13 +42,3 @@ export type PutNicknameBody = z.infer<typeof PutNicknameBodySchema>;
 /** API-PRO-002. */
 export const PatchProfileSettingsBodySchema = ProfileSettingsSchema.partial();
 export type PatchProfileSettingsBody = z.infer<typeof PatchProfileSettingsBodySchema>;
-
-/** API-AUTH-005. */
-export const TossSessionBodySchema = z.strictObject({ anonKey: z.string().min(1) });
-export type TossSessionBody = z.infer<typeof TossSessionBodySchema>;
-
-export const TossSessionResponseSchema = z.strictObject({
-  sessionToken: z.string().min(1),
-  expiresAt: IsoUtcSchema,
-});
-export type TossSessionResponse = z.infer<typeof TossSessionResponseSchema>;

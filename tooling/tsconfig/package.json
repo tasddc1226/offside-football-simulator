@@ -4,13 +4,11 @@
   "version": "0.0.0",
   "files": [
     "base.json",
-    "pure.json",
     "browser.json",
     "worker.json"
   ],
   "exports": {
     "./base.json": "./base.json",
-    "./pure.json": "./pure.json",
     "./browser.json": "./browser.json",
     "./worker.json": "./worker.json"
   }

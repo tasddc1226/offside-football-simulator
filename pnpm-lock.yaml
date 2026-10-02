@@ -51,12 +51,6 @@ importers:
       drizzle-kit:
         specifier: 0.31.10
         version: 0.31.10
-      esbuild:
-        specifier: 0.28.1
-        version: 0.28.1
-      miniflare:
-        specifier: 5.20260828.0-alpha
-        version: 5.20260828.0-alpha
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -221,9 +215,6 @@ importers:
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
-      eslint-plugin-svelte:
-        specifier: ^3.23.0
-        version: 3.23.0(eslint@10.9.1(jiti@2.7.0)(supports-color@10.2.2))(svelte@5.57.1(@typescript-eslint/types@8.69.0))
       sharp:
         specifier: 0.35.2
         version: 0.35.2

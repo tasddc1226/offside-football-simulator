@@ -52,11 +52,6 @@ export async function revokeSession(db: Db, id: string, at: string): Promise<voi
   await db.update(sessions).set({ revokedAt: at }).where(eq(sessions.id, id));
 }
 
-export async function getSessionById(db: Db, id: string): Promise<SessionRecord | undefined> {
-  const [row] = await db.select().from(sessions).where(eq(sessions.id, id));
-  return row;
-}
-
 /** D-14 복구: 토큰은 그대로 두고 현재 세션을 대상 프로필로 재바인딩한다. */
 export async function rebindSessionProfile(
   db: Db,

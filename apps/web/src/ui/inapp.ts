@@ -6,17 +6,6 @@ export type InAppName =
 export type InAppOs = 'ios' | 'android' | 'other';
 export type InAppInfo = { app: InAppName; os: InAppOs };
 
-/** 앱 이름(한글) — 안내 문구용. */
-export const IN_APP_LABEL: Record<InAppName, string> = {
-  kakao: '카카오톡',
-  instagram: '인스타그램',
-  threads: '스레드',
-  facebook: '페이스북',
-  naver: '네이버',
-  line: '라인',
-  'other-webview': '앱',
-};
-
 function osOf(ua: string): InAppOs {
   if (/iPhone|iPad|iPod/.test(ua)) return 'ios';
   if (/Android/.test(ua)) return 'android';
