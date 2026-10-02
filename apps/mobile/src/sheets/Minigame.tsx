@@ -4,7 +4,7 @@
 // requestAnimationFrame은 vsync가 아니라 setTimeout 0)에선 그려진 바늘이 실제 시각보다 뒤처져 탭하는 순간 판정 위치로
 // 튀었다. 손가락이 닿는 순간(onPressIn)을 입력으로 보고, 스크린 리더 활성화(onPress)는 같은 함수를 부른다.
 // 판정이 나면(v.ok, sheet-controller가 채운다) 공이 날아가는 결과 장면을 두 단계로 그린다.
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { markerAt, MG_TAP, SWEEP_MS } from '@offside/game/minigame';
@@ -25,14 +25,23 @@ import {
   type KeeperPose,
 } from './PitchScene';
 
+/** 바늘 진행값 k의 꺾이는 점. markerAt은 이 점들 사이에서 곧은 삼각파라, 이 점에서 잰 값으로 화면 모양을 만든다. */
+const SWEEP_K = [0, 1, 2];
+
 /**
- * 게이지 위를 왕복하는 바늘. k는 0→2를 한 번 왕복(SWEEP_MS × 2) 동안 고르게 오르고, 화면엔 0→1→0으로 그린다 —
- * markerAt(k × SWEEP_MS)와 같은 위치다. 폭(width)은 게이지를 잰 값이다.
+ * 게이지 위를 왕복하는 바늘. k는 0→2를 한 번 왕복(SWEEP_MS × 2) 동안 고르게 오르고, 화면엔 markerAt(k × SWEEP_MS)
+ * 위치로 그린다(0→1→0). 폭(width)은 게이지를 잰 값이다.
  */
-function Needle({ k, width }: { k: Animated.Value; width: Animated.Value }) {
+const Needle = memo(function Needle({ k, width }: { k: Animated.Value; width: Animated.Value }) {
   const c = useColors();
   const [x] = useState(() =>
-    Animated.multiply(k.interpolate({ inputRange: [0, 1, 2], outputRange: [0, 1, 0] }), width),
+    Animated.multiply(
+      k.interpolate({
+        inputRange: SWEEP_K,
+        outputRange: SWEEP_K.map((at) => markerAt(at * SWEEP_MS)),
+      }),
+      width,
+    ),
   );
   return (
     <Animated.View
@@ -51,7 +60,7 @@ function Needle({ k, width }: { k: Animated.Value; width: Animated.Value }) {
       }}
     />
   );
-}
+});
 
 export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> }) {
   const s = useSnapshot(v);
