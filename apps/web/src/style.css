@@ -73,6 +73,8 @@
   --space-5: 24px;
   --space-6: 32px;
   --tabbar-h: 60px;
+  /* T-11-036 게임 화면 고정 진행 바(준비 요약 줄 + 버튼) 높이 */
+  --actionbar-h: 96px;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
   /* T-10-117 가로 모드 노치·둥근 모서리: 본문 좌우 여백(16px)을 안전 영역 이하로 줄이지 않는다(세로에선 그대로 16px). */
@@ -185,9 +187,12 @@ select:focus-visible {
     padding-block: 8px calc(32px + var(--safe-b));
   }
 }
-/* 하단 고정 탭바가 있는 화면은 그만큼 스크롤 여백을 더 둔다 */
+/* 하단 고정 탭바/진행 바가 있는 화면은 그만큼 스크롤 여백을 더 둔다 */
 .wrap.has-tabbar {
   padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 20px);
+}
+.wrap.has-actionbar {
+  padding-bottom: calc(var(--tabbar-h) + var(--actionbar-h) + var(--safe-b) + 20px);
 }
 /* T-10-067 아래에 고정된 바(ActionBar — 공유 바·이전으로 바)만큼 비운다. 높이는 ActionBar가 바를 재서 넣는다(링크 칸이
    열려도 맞다). 바는 화면·기록에 따라 뜨거나 안 뜨므로 .wrap 여백 클래스 대신 바와 함께 그려지는 자리 요소를 쓴다. */
@@ -1484,6 +1489,91 @@ body:has(.main-nav) .wrap {
 .tabs button:is([aria-selected='true'], [aria-current='page']) .tab-ic {
   transform: translateY(-1px) scale(1.06);
 }
+/* T-11-034 아직 보지 않은 새 업적 — 하단 '구단주'·내 팀 '업적' 아이콘 오른쪽 위의 점. */
+.tabs button {
+  position: relative;
+}
+.tab-dot {
+  position: absolute;
+  top: 5px;
+  left: calc(50% + 6px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bad, #e5484d);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+/* T-11-031 하단 메뉴가 세 벌(메인 · 게임 · 내 팀)이라 바뀐 걸 알아보게 한다. 메뉴가 새로 붙으면 칸들이 왼쪽부터 차례로
+   올라오고(--i), 게임·내 팀 메뉴(.sub-nav)는 위쪽 강조선과 가운데 나가기 버튼의 둥근 바탕으로 메인 메뉴와 구분한다.
+   transform만 움직여 글자 명도 대비는 그대로다. */
+.tabs > button,
+.tabs-inner > button {
+  animation: tab-rise 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+@keyframes tab-rise {
+  from {
+    transform: translateY(14px);
+  }
+}
+.tabs.sub-nav {
+  border-top: 2px solid var(--accent);
+}
+.sub-nav .tab-home .tab-ic {
+  box-sizing: content-box;
+  padding: 4px;
+  margin: -4px 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+/* 처음 볼 때 말풍선(NavIntro)이 떠 있는 동안 가운데 나가기 버튼이 고리를 그리며 깜빡인다. */
+.tabs:has(.nav-intro) .tab-home .tab-ic {
+  animation: tab-ping 1.2s ease-out 3;
+}
+@keyframes tab-ping {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+.nav-intro {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 7;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 32px));
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+  translate: -50% 0;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+}
+.nav-intro::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  translate: -50% 0;
+  border: 7px solid transparent;
+  border-top-color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabs > button,
+  .tabs-inner > button,
+  .tabs:has(.nav-intro) .tab-home .tab-ic {
+    animation: none;
+  }
+}
 /* 누르는 동안 탭 둥근 바탕이 옅게 깔린다(들어가는 효과는 전역 T-10-121). */
 .tabs button:active {
   background-color: color-mix(in srgb, var(--ink) 7%, transparent);
@@ -1593,13 +1683,30 @@ body:has(.main-nav) .wrap {
     box-shadow: 0 0 0 3px var(--accent);
   }
 }
-/* T-11-025 시즌 탭 맨 아래 버튼(구간 진행 · 이벤트 확인 · 시즌 결산) — 진행이면 고른 훈련·투자를 한 줄로 다시 보여 준다 */
-.advance-go {
+/* T-11-036 고정 진행 바 위 한 줄 준비 요약(훈련 · 자기 투자 · 컨디션) — 누르면 시즌 탭 '다음 구간 준비' 카드로 간다 */
+.season-bar .action-bar-inner {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+}
+.season-prep {
+  display: block;
+  width: 100%;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8125rem;
   text-align: center;
-  border-radius: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.season-prep:active {
+  background-color: color-mix(in srgb, var(--ink) 7%, transparent);
 }
 .track {
   display: grid;
@@ -3616,13 +3723,19 @@ th.n {
     min-width: 5.5em;
   }
 }
-/* 게임 화면에서는 토스트가 하단 탭바를 가리지 않게 그 위로 올린다. */
+/* 게임 화면에서는 토스트가 하단 탭바(·진행 바)를 가리지 않게 그 위로 올린다. */
 body:has(nav.tabs) .toast {
   bottom: calc(var(--tabbar-h) + var(--safe-b) + 12px);
 }
-/* 게임 화면: 포커스 이동·scrollIntoView로 내려간 요소가 하단 고정 탭바 밑에 숨지 않게 그만큼 비우고 멈춘다. */
+body:has(.wrap.has-actionbar) .toast {
+  bottom: calc(var(--tabbar-h) + var(--actionbar-h) + var(--safe-b) + 12px);
+}
+/* 게임 화면: 포커스 이동·scrollIntoView로 내려간 요소가 하단 고정 탭바(·진행 바) 밑에 숨지 않게 그만큼 비우고 멈춘다. */
 html:has(nav.tabs) {
   scroll-padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 12px);
+}
+html:has(.wrap.has-actionbar) {
+  scroll-padding-bottom: calc(var(--tabbar-h) + var(--actionbar-h) + var(--safe-b) + 12px);
 }
 
 /* ───────── 새 버전 안내 배너 (T-10-023) ───────── */
@@ -3753,24 +3866,26 @@ html:has(nav.tabs) {
   text-align: center;
   word-break: keep-all;
 }
-/* T-11-028 시즌 업적 등급 배지 — 등급 색(--g)을 옅게 깔고 글자는 잉크와 섞어 밝기 모드 모두에서 읽히게. */
+/* T-11-028 시즌 업적 등급 배지 — T-11-033부터 엠블럼(GradeEmblem) + 등급 이름. 글자는 등급 색(--g)을 잉크와 섞어 밝기 모드 모두에서 읽히게. */
 .ach-grade {
-  --g: #8a96a3;
+  --g: #7f9a86;
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   flex: none;
-  padding: 2px 8px;
-  border-radius: 99px;
   font-size: 0.6875rem;
   font-weight: 800;
   letter-spacing: 0.02em;
-  background: color-mix(in srgb, var(--g) 18%, transparent);
+  line-height: 1.2;
   color: color-mix(in srgb, var(--g) 65%, var(--ink));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--g) 45%, transparent);
 }
 .ach-grade.large {
-  padding: 4px 12px;
-  font-size: 0.875rem;
+  gap: 8px;
+  font-size: 1rem;
+}
+.grade-emblem {
+  flex: none;
+  display: block;
 }
 .ach-grade[data-grade='bronze'] {
   --g: #c27a3e;
@@ -3796,9 +3911,14 @@ html:has(nav.tabs) {
 }
 .ach-rank-value {
   display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ach-rank-value > div {
+  display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
+  gap: 2px;
 }
 .ach-grades {
   margin-top: 12px;
@@ -5466,12 +5586,13 @@ button.what {
   display: flex;
   flex-direction: column;
 }
-/* T-11-015 라운지 채팅. 홈의 떠 있는 버튼은 하단 메뉴 위, 데스크톱에선 본문(560px) 오른쪽 끝에 맞춘다. */
+/* T-11-015 라운지 채팅. 홈의 떠 있는 버튼은 하단 메뉴 위, 데스크톱에선 본문(560px) 오른쪽 끝에 맞춘다.
+   T-11-034 시트(.modal 10)보다는 아래 — 홈에 뜨는 시트의 버튼을 가리지 않게. */
 .chat-fab {
   position: fixed;
   right: max(16px, calc(50% - 280px + 16px));
   bottom: calc(var(--tabbar-h) + var(--safe-b) + 16px);
-  z-index: 15;
+  z-index: 9;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -5724,7 +5845,8 @@ html:root[data-skin='sheet'] {
   padding-bottom: 6px;
 }
 :root[data-skin='sheet'] body:has(.main-nav) .wrap,
-:root[data-skin='sheet'] .wrap.has-tabbar {
+:root[data-skin='sheet'] .wrap.has-tabbar,
+:root[data-skin='sheet'] .wrap.has-actionbar {
   padding-bottom: 32px;
 }
 :root[data-skin='sheet'] .modal {

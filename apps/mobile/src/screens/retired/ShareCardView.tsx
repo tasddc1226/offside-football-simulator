@@ -5,7 +5,7 @@ import { Text, View, type TextStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CARD_H, CARD_W, TAGLINE, type ShareCardData } from '@offside/app-core/shareCard';
 import { RnColorContext, RnJersey } from '../../components/RnJersey';
-import { DISPLAY } from '../../theme/type';
+import { DISPLAY, fitLine } from '../../theme/type';
 
 const C = {
   bg0: '#0c1c14',
@@ -56,7 +56,7 @@ function T({
   return (
     <Text
       numberOfLines={1}
-      style={{
+      style={fitLine({
         position: 'absolute',
         top: y - size * 0.82,
         left: x,
@@ -67,7 +67,7 @@ function T({
         color,
         ...(display ? { fontFamily: DISPLAY[display] } : { fontWeight: weight }),
         ...(gap ? { letterSpacing: gap, paddingLeft: align === 'center' ? gap : 0 } : {}),
-      }}
+      })}
     >
       {children}
     </Text>
@@ -282,13 +282,13 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
             >
               <Text
                 numberOfLines={1}
-                style={{
+                style={fitLine({
                   maxWidth: 430,
                   fontSize: 34,
                   lineHeight: 34,
                   fontWeight: '600',
                   color: C.ink,
-                }}
+                })}
               >
                 {s.club}
               </Text>
@@ -378,7 +378,7 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 24, flexShrink: 1 }}>
-          <Text style={{ fontSize: 36, lineHeight: 36, fontWeight: '700', color: C.ink }}>
+          <Text style={fitLine({ fontSize: 36, lineHeight: 36, fontWeight: '700', color: C.ink })}>
             오프사이드
           </Text>
           <Text
@@ -388,7 +388,9 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
             {TAGLINE}
           </Text>
         </View>
-        <Text style={{ fontFamily: DISPLAY[600], fontSize: 36, lineHeight: 36, color: C.gold }}>
+        <Text
+          style={fitLine({ fontFamily: DISPLAY[600], fontSize: 36, lineHeight: 36, color: C.gold })}
+        >
           offside-lab.com
         </Text>
       </View>

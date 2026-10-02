@@ -11,6 +11,8 @@
   import NewsBanner from './NewsBanner.svelte';
   import MainNav, { hasMainNav } from './MainNav.svelte';
   import { rnAlert } from './retiredNumber.svelte.js';
+  import { achCheckable, achUnseenCount, isAchDirty, onAchDirty } from '@offside/app-core/achDirty';
+  import { sheetState } from './sheetState.svelte.js';
   import type { Component } from 'svelte';
 
   // T-10-119 화면 전환 방향. 선수 생성은 1·2단계를 다른 화면으로 친다(상태는 appState에 있어 다시 그려도 된다).
@@ -29,6 +31,18 @@
         takePopDir() ??
         ((main(to) && !main(from)) || (from === 'create:2' && to === 'create:1') ? -1 : 1);
     });
+  });
+
+  // T-11-034 업적 달성 알림 — 업적이 바뀌었을 수 있는 쓰기(은퇴 업로드·팀·좋아요·닉네임) 뒤 홈·기록실·구단주·내 팀에 오면
+  // 한 번 업적을 받아 새 업적을 시트로 알린다(경기 결과를 보는 중이나 다른 시트가 떠 있으면 닫힌 뒤). 은퇴 업로드는 화면을
+  // 옮기지 않아도 끝나는 대로 확인하게 dirty 신호로 다시 돈다. 보지 않은 새 업적 수(하단 점)는 앱을 열 때 되살린다.
+  let achTick = $state(0);
+  appState.achNew = achUnseenCount();
+  $effect(() => onAchDirty(() => achTick++));
+  $effect(() => {
+    void achTick;
+    if (!achCheckable(appState.screen, appState.teamView, sheetState.open)) return;
+    if (untrack(isAchDirty)) void import('./achNudge.js').then((m) => m.achNudge.check());
   });
 
   // T-10-104: 게임 화면(엔진·탭·액션)은 홈에서 안 쓰니 처음 '계속하기'·'새 커리어'를 누를 때 불러온다.

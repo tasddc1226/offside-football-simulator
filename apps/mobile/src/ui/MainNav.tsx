@@ -32,7 +32,7 @@ const OPEN: Record<(typeof MAIN_SCREENS)[number], () => void> = {
 };
 
 export function MainNav() {
-  const { screen } = useSnapshot(appState);
+  const { screen, achNew } = useSnapshot(appState);
   return (
     <TabBar
       label="메인 메뉴"
@@ -41,6 +41,7 @@ export function MainNav() {
         label: LABEL[k],
         active: screen === k,
         onPress: OPEN[k],
+        ...(k === 'owner' ? { dot: achNew } : {}),
       }))}
     />
   );

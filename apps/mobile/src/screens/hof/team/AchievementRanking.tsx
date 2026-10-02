@@ -18,6 +18,7 @@ import { scrollTo } from '../../../ui/scroll';
 import { Txt } from '../../../ui/Txt';
 import { Seg, TabOpt } from '../../board/parts';
 import { AchGradeBadge } from '../../owner/TeamParts';
+import { GradeEmblem } from '../../../ui/GradeEmblem';
 
 export default function AchievementRanking() {
   const c = useColors();
@@ -108,8 +109,9 @@ export default function AchievementRanking() {
                       {`${team ? `${team.name} · ` : ''}업적 ${n(r.done)}개 · 선수 ${n(r.players)}명`}
                     </Txt>
                   </View>
-                  <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                    <AchGradeBadge grade={achGradeOf(r.score).grade} />
+                  <GradeEmblem id={achGradeOf(r.score).grade.id} size={34} />
+                  <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                    <AchGradeBadge grade={achGradeOf(r.score).grade} emblem={false} />
                     <Txt
                       num
                       numberOfLines={1}

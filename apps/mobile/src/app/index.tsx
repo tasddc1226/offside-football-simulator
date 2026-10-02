@@ -4,8 +4,10 @@
 import { useEffect, type ComponentType } from 'react';
 import { BackHandler, View } from 'react-native';
 import { subscribe, useSnapshot } from 'valtio';
+import { achCheckable, isAchDirty, onAchDirty } from '@offside/app-core/achDirty';
 import type { Screen } from '@offside/app-core/state';
 import { appState, sheetState } from '../store';
+import { achNudge } from '../game/achNudge';
 import { closeSheet, navStack } from '../game/host';
 import { MainNav, hasMainNav } from '../ui/MainNav';
 import { BarBelow } from '../ui/Screen';
@@ -50,6 +52,11 @@ const SCREENS: Record<Screen, ComponentType> = {
   admin: Admin,
 };
 
+const checkAch = () => {
+  if (achCheckable(appState.screen, appState.teamView, sheetState.open) && isAchDirty())
+    void achNudge.check();
+};
+
 export default function App() {
   const snap = useSnapshot(appState);
   const c = useColors();
@@ -66,6 +73,17 @@ export default function App() {
     });
     return () => sub.remove();
   }, []);
+
+  // T-11-034 업적 달성 알림(웹 App.svelte) — 업적이 바뀌었을 수 있는 쓰기 뒤 홈·기록실·구단주·내 팀에 오면 한 번 업적을
+  // 받아 새 업적을 시트로 알린다(경기 결과를 보는 중이거나 다른 시트가 떠 있으면 닫힌 뒤). 은퇴 업로드가 끝나면 화면을
+  // 옮기지 않아도 다시 본다. 보지 않은 새 업적 수(하단 점)는 앱을 열 때 되살린다. 시트는 구독으로 봐서 루트가 시트마다
+  // 다시 그려지지 않게 한다.
+  useEffect(() => {
+    achNudge.restore();
+    const offs = [onAchDirty(checkAch), subscribe(sheetState, checkAch)];
+    return () => offs.forEach((off) => off());
+  }, []);
+  useEffect(checkAch, [snap.screen, snap.teamView]);
 
   const Current = SCREENS[snap.screen];
   const main = hasMainNav(snap.screen);

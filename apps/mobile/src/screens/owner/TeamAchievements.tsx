@@ -1,7 +1,7 @@
 // 시즌 업적 탭(웹 team/Team.svelte 의 [data-club-achievements]) — 맨 위 시즌 등급 · 점수 · 업적 랭킹 · 다음 등급 막대, 다음 목표,
 // 분류(선수·팀·구단주·감독) 탭, 고른 분류의 단계별 묶음은 접었다 펴고(다 채우지 못한 첫 단계만 펼쳐 둔다), 감독 분류는
 // 잠금 카드로 예고한다. T-11-028 업적마다 점수가 있고 점수 합이 등급이 된다.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { AchCategory } from '@offside/contracts/owner-team';
 import type { ClubAchievementsResponse } from '@offside/app-core/api/team';
@@ -99,9 +99,11 @@ function Pts({ children, got }: { children: string; got: boolean }) {
 function Group({
   g,
   initialOpen,
+  newIds,
 }: {
   g: ClubAchievementsResponse['groups'][number];
   initialOpen: boolean;
+  newIds: ReadonlySet<string>;
 }) {
   const c = useColors();
   const [open, setOpen] = useState(initialOpen);
@@ -149,7 +151,10 @@ function Group({
               }}
             >
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                <Txt>{i.label}</Txt>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Txt style={{ flexShrink: 1 }}>{i.label}</Txt>
+                  {newIds.has(i.id) ? <NewChip /> : null}
+                </View>
                 <Txt
                   tone={i.done ? 'accent' : 'muted'}
                   style={{ fontSize: rem(0.75), fontWeight: i.done ? '700' : '400' }}
@@ -162,6 +167,29 @@ function Group({
           ))}
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/** T-11-034 지난번 업적 탭을 본 뒤 새로 오른 업적 표시(웹 .tm-ach-new). */
+function NewChip() {
+  const c = useColors();
+  return (
+    <View
+      testID="ach-new"
+      style={{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, backgroundColor: c.bad }}
+    >
+      <Txt
+        style={{
+          color: '#fff',
+          fontSize: rem(0.625),
+          lineHeight: rem(0.625) * 1.3,
+          fontWeight: '800',
+          letterSpacing: 0.04 * rem(0.625),
+        }}
+      >
+        NEW
+      </Txt>
     </View>
   );
 }
@@ -201,21 +229,31 @@ function ManagerSoon() {
 export function TeamAchievements({
   ach,
   status,
+  newIds,
   load,
 }: {
   ach: ClubAchievementsResponse | null;
   status: LoadStatus;
+  /** T-11-034 새로 오른 업적(NEW) — 그 분류·단계를 먼저 펼친다. */
+  newIds: ReadonlySet<string>;
   load: (season?: number) => void;
 }) {
   const c = useColors();
   const [cat, setCat] = useState<AchCategory>('player');
+  useEffect(() => {
+    const first = ach?.groups.find((g) => g.items.some((i) => newIds.has(i.id)));
+    if (first) setCat(first.category);
+  }, [ach, newIds]);
   const seasonName = ach?.seasons.find((o) => o.id === ach.season)?.name ?? '';
   const tot = ach ? achTotal(ach.groups) : null;
   const gv = ach ? achGradeView(ach.score) : null;
   const sections = ach ? achSections(ach.groups) : [];
   const sec = sections.find((x) => x.id === cat) ?? sections[0];
   const near = ach ? achNear(ach.groups) : [];
-  const openId = sec ? achOpenGroup(sec.groups) : null;
+  const openId = sec
+    ? (sec.groups.find((g) => g.items.some((i) => newIds.has(i.id)))?.id ??
+      achOpenGroup(sec.groups))
+    : null;
   /** 기록실 업적 랭킹 탭을 연다. */
   function openAchRanking() {
     appState.hof = { ...hofStart(), tab: 'ach' };
@@ -383,7 +421,12 @@ export function TeamAchievements({
               <ManagerSoon />
             ) : (
               sec.groups.map((g) => (
-                <Group key={`${ach.season}-${g.id}`} g={g} initialOpen={g.id === openId} />
+                <Group
+                  key={`${ach.season}-${g.id}`}
+                  g={g}
+                  initialOpen={g.id === openId}
+                  newIds={newIds}
+                />
               ))
             )}
           </>

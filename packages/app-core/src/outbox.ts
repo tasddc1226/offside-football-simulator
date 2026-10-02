@@ -10,9 +10,9 @@ import type {
   RetiredNumberResult,
 } from '@offside/contracts';
 import { loadKey, saveKey } from '@offside/game/season';
+import { OUTBOX_KEY, markAchDirty } from './achDirty.js';
 import { apiAuth, apiBaseUrl, clearApiCache, noteSession } from './api/client.js';
 
-const OUTBOX_KEY = 'ft_outbox';
 const OUTBOX_CAP = 100;
 
 /**
@@ -100,6 +100,7 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
       // 은퇴가 올라가면 명예의 전당 · 내 선수 메모가 낡는다(T-10-015).
       if (item.kind === 'retirement') {
         clearApiCache();
+        markAchDirty(); // T-11-034 은퇴로 오른 업적을 다음 화면에서 알린다.
         await announceRetiredNumber(item.careerId, res);
       }
       return 'ok';

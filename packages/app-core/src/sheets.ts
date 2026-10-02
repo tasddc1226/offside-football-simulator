@@ -179,6 +179,19 @@ export type SheetView =
       }[];
     }
   | {
+      /** T-11-034 업적 달성 알림(achNudge.ts achieveView). from이 있으면 등급이 올랐다. */
+      kind: 'achieve';
+      eyebrow: string;
+      title: string;
+      grade: { id: string; name: string };
+      from: { id: string; name: string } | null;
+      items: { label: string; gained: number }[];
+      more: number;
+      gained: number;
+      score: number;
+      next: string | null;
+    }
+  | {
       kind: 'notice';
       eyebrow: string;
       title?: string;

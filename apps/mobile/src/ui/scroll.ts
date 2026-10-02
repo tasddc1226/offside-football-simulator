@@ -18,6 +18,3 @@ export const viewH = () => h;
 export function scrollTo(next: number, animated = false) {
   view?.scrollTo({ y: next, animated });
 }
-export function scrollToEnd(animated = false) {
-  view?.scrollToEnd({ animated });
-}

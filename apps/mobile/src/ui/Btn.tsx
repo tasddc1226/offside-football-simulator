@@ -77,6 +77,7 @@ export function Btn({
     >
       {typeof children === 'string' ? (
         <Text
+          lineBreakStrategyIOS="hangul-word"
           style={{
             color: palette.fg,
             fontSize: rem(small ? 0.875 : 0.9375),

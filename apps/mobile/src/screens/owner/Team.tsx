@@ -48,6 +48,7 @@ import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines, TeamPitch } from '../../components/TeamPitch';
 import { toast } from '../../game/host';
 import { go } from '../../game/nav';
+import { achNudge } from '../../game/achNudge';
 import { appState, prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -78,7 +79,7 @@ const NAV: [TeamView, string, TabIconName][] = [
 
 export default function Team() {
   const c = useColors();
-  const { teamView } = useSnapshot(appState);
+  const { teamView, achNew } = useSnapshot(appState);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [needLogin, setNeedLogin] = useState(false);
   const [team, setTeam] = useState<OwnerTeam | null>(null);
@@ -114,6 +115,8 @@ export default function Team() {
   const [histStatus, setHistStatus] = useState<LoadStatus>('loading');
   const [ach, setAch] = useState<ClubAchievementsResponse | null>(null);
   const [achStatus, setAchStatus] = useState<LoadStatus>('loading');
+  /** T-11-034 지난번 업적 탭을 본 뒤 새로 오른 업적(NEW). */
+  const [achNewIds, setAchNewIds] = useState<ReadonlySet<string>>(new Set());
 
   // T-10-130 팀 안의 화면은 appState.teamView — 뒤로 가기로 오간다. 결과는 이 화면에만 있어 다시 들어왔을 때(앞으로
   // 가기) 없으면 팀을 보여 준다.
@@ -256,6 +259,9 @@ export default function Team() {
     const r = await fetchClubAchievements(want);
     if (!r.ok) return setAchStatus('error');
     setAch(r.data);
+    // T-11-034 가장 최근 시즌을 열면 본 것으로 적고, 지난번 뒤로 새로 오른 업적에 NEW를 붙인다(웹 Team.svelte).
+    const latest = Math.max(r.data.season, ...r.data.seasons.map((o) => o.id));
+    setAchNewIds(r.data.season === latest ? achNudge.viewed(r.data) : new Set());
     setAchStatus('ready');
   }
 
@@ -298,6 +304,7 @@ export default function Team() {
     active: navOn === k,
     onPress: () => switchView(k),
     testID: `team-tab-${k}`,
+    ...(k === 'achievements' ? { dot: achNew } : {}),
   }));
   navItems.splice(2, 0, {
     key: 'owner',
@@ -320,7 +327,14 @@ export default function Team() {
       </Card>
     );
   } else if (view === 'achievements') {
-    body = <TeamAchievements ach={ach} status={achStatus} load={(s) => void loadAchievements(s)} />;
+    body = (
+      <TeamAchievements
+        ach={ach}
+        status={achStatus}
+        newIds={achNewIds}
+        load={(s) => void loadAchievements(s)}
+      />
+    );
   } else if (view === 'team') {
     body = (
       <>
@@ -555,7 +569,7 @@ export default function Team() {
               {body}
             </LoadState>
           </Screen>
-          {needLogin ? null : <TabBar label="내 팀 메뉴" items={navItems} />}
+          {needLogin ? null : <TabBar label="내 팀 메뉴" items={navItems} sub="team" />}
         </View>
       </BarBelow.Provider>
       <TeamPicker

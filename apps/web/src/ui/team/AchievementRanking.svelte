@@ -8,6 +8,7 @@
   import Laurel from '../Laurel.svelte';
   import { appState } from '../state.svelte.js';
   import AchGradeBadge from './AchGradeBadge.svelte';
+  import GradeEmblem from './GradeEmblem.svelte';
 
   const MEDAL = ['gold', 'silver', 'bronze'];
   /** undefined = 지금 시즌(서버가 정한다). */
@@ -66,8 +67,11 @@
           <div class="muted fs-xs">{r.team ? `${r.team.name} · ` : ''}업적 {n(r.done)}개 · 선수 {n(r.players)}명</div>
         </div>
         <div class="ach-rank-value">
-          <AchGradeBadge {grade} />
-          <span class="num hof-value">{n(r.score)}</span>
+          <GradeEmblem id={grade.id} size={34} />
+          <div>
+            <AchGradeBadge {grade} emblem={false} />
+            <span class="num hof-value">{n(r.score)}</span>
+          </div>
         </div>
       {/snippet}
       {#if r.team}
