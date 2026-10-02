@@ -4,10 +4,11 @@ import {
   RetirementResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
-import { careers, careerSeasons, profiles } from '../db/schema.js';
+import { UPLOAD_LIMIT } from './careers.js';
+import { authAttempts, careers, careerSeasons, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {
   deleteProfile,
@@ -225,6 +226,35 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       season: { ...body.season, clubId: '<script>' },
     });
     expect(res.status).toBe(400);
+  });
+
+  it('T-11-040: 프로필당 시간당 시즌 업로드 한도를 넘으면 429, 다른 프로필은 영향이 없다', async () => {
+    const heavy = await issueCookie(ctx);
+    const other = await issueCookie(ctx);
+    const app = createApp();
+    const put = (cookie: string, careerId: string) =>
+      app.request(
+        `/v1/careers/${careerId}/seasons/2026`,
+        jsonInit({ method: 'PUT', body: seasonBody(), cookie }),
+        ctx.env,
+      );
+    // 한도 직전까지 쓴 상태를 바로 만든다 — 120번 PUT은 느리다. 그 한 번은 통과하고 다음부터 429다.
+    expect((await put(heavy.cookie, CAREER_ID)).status).toBe(200);
+    await ctx.db
+      .update(authAttempts)
+      .set({ count: UPLOAD_LIMIT.CAREER_SEASON - 1 })
+      .where(
+        and(eq(authAttempts.kind, 'CAREER_SEASON'), eq(authAttempts.subject, heavy.profileId)),
+      );
+    expect((await put(heavy.cookie, CAREER_ID)).status).toBe(200);
+    const limited = await put(heavy.cookie, CAREER_ID);
+    expect(limited.status).toBe(429);
+    expect(ErrorEnvelopeSchema.parse(await limited.json()).error).toMatchObject({
+      code: 'RATE_LIMITED',
+      retryable: true,
+    });
+    const otherId = '7a1c9b1a-6f0f-4a4b-9c3a-1e2f3a4b5c6e';
+    expect((await put(other.cookie, otherId)).status).toBe(200);
   });
 
   it('happy path: 시즌 upsert 후 은퇴까지 정상 처리된다', async () => {
