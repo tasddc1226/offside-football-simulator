@@ -1,6 +1,7 @@
 // 시트 본문 고르기(웹 sheets/SheetBody.svelte + PlaySheets.svelte). 종류마다 한 컴포넌트.
 // 웹은 이벤트·결산·이적시장·미니게임 본문을 첫 화면 번들 밖에서 지연 로드했지만 앱은 한 번들이라 바로 고른다.
 import type { SheetView } from '@offside/app-core/sheets';
+import { Achieve } from './Achieve';
 import { Block } from './Block';
 import { DragShot } from './DragShot';
 import { EventChoice } from './EventChoice';
@@ -34,5 +35,7 @@ export function SheetBody({ v }: { v: SheetView }) {
       return <Market v={v} />;
     case 'notice':
       return <Notice v={v} />;
+    case 'achieve':
+      return <Achieve v={v} />;
   }
 }

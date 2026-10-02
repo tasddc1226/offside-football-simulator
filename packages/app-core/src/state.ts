@@ -168,6 +168,8 @@ export interface AppState {
   sharedCareer: string | null;
   /** T-10-024. 방금 끝난 구간 리포트(시즌 탭 맨 위). 저장하지 않는다 — 새로고침하면 사라진다. */
   report: PhaseReport | null;
+  /** T-11-034 업적 탭에서 아직 보지 않은 새 업적 수 — 하단 '구단주'·내 팀 '업적' 탭의 점(achNudge.ts). */
+  achNew: number;
 }
 
 /** 앱을 열 때의 상태. */
@@ -201,4 +203,5 @@ export const initialAppState = (): AppState => ({
   teamView: 'team',
   sharedCareer: null,
   report: null,
+  achNew: 0,
 });

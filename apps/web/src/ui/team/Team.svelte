@@ -54,6 +54,7 @@
   import TeamLive from './TeamLive.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import AchGradeBadge from './AchGradeBadge.svelte';
+  import { achNudge } from '../achNudge.js';
   import { num, recordText, signedNum } from '@offside/app-core/teamText';
   import {
     OUTCOME_TITLE, PICK_SORTS, achDone, achGradeView, achNear, achOpenGroup, achPoints, achRankText, achSections,
@@ -101,6 +102,8 @@
   let achStatus = $state<LoadStatus>('loading');
   /** T-11-028 업적 화면에서 보고 있는 분류(선수·팀·구단주·감독). */
   let achCat = $state<AchCategory>('player');
+  /** T-11-034 지난번 업적 탭을 본 뒤 새로 오른 업적(NEW). */
+  let achNewIds = $state<ReadonlySet<string>>(new Set());
   /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
   let pickSort = $state<PickSort>('fit');
 
@@ -257,6 +260,11 @@
       return;
     }
     ach = r.data;
+    // T-11-034 가장 최근 시즌을 열면 본 것으로 적고, 지난번 뒤로 새로 오른 업적에 NEW를 붙여 그 분류·단계를 펼친다.
+    const latest = Math.max(r.data.season, ...r.data.seasons.map((o) => o.id));
+    achNewIds = r.data.season === latest ? achNudge.viewed(r.data) : new Set();
+    const first = r.data.groups.find((g) => g.items.some((i) => achNewIds.has(i.id)));
+    if (first) achCat = first.category;
     achStatus = 'ready';
   }
 
@@ -345,7 +353,7 @@
             {@const sections = achSections(ach.groups)}
             {@const sec = sections.find((x) => x.id === achCat) ?? sections[0]!}
             {@const near = achNear(ach.groups)}
-            {@const openId = achOpenGroup(sec.groups)}
+            {@const openId = sec.groups.find((g) => g.items.some((i) => achNewIds.has(i.id)))?.id ?? achOpenGroup(sec.groups)}
             <div class="tm-ach-sum" data-ach-summary>
               <div class="tm-ach-head">
                 <AchGradeBadge grade={gv.grade} large />
@@ -400,7 +408,7 @@
                   <ul>
                     {#each g.items as i (i.id)}
                       <li class:done={i.done}>
-                        <span class="tm-ach-txt"><span>{i.label}</span><small>{achState(i)}</small></span>
+                        <span class="tm-ach-txt"><span>{i.label}{#if achNewIds.has(i.id)}<em class="tm-ach-new">NEW</em>{/if}</span><small>{achState(i)}</small></span>
                         <span class="tm-pts" class:got={i.points > 0}>{achPoints(i)}</span>
                       </li>
                     {/each}
@@ -601,6 +609,7 @@
       {#each NAV as [k, l, icon], i (k)}
         <button role="tab" data-team-tab={k} aria-selected={navOn === k} style:--i={i < 2 ? i : i + 1} onclick={() => switchView(k)}>
           <TabIcon name={icon} />{l}
+          {#if k === 'achievements' && appState.achNew}<span class="tab-dot"><span class="sr-only">새 업적 {appState.achNew}개</span></span>{/if}
         </button>
       {/each}
     </div>
@@ -790,6 +799,18 @@
     gap: 2px;
     flex: 1;
     min-width: 0;
+  }
+  .tm-ach-new {
+    margin-left: 6px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--bad, #e5484d);
+    color: #fff;
+    font-style: normal;
+    font-size: 0.625rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    vertical-align: 1px;
   }
   .tm-ach-txt small {
     color: var(--muted);

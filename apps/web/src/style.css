@@ -1489,6 +1489,20 @@ body:has(.main-nav) .wrap {
 .tabs button:is([aria-selected='true'], [aria-current='page']) .tab-ic {
   transform: translateY(-1px) scale(1.06);
 }
+/* T-11-034 아직 보지 않은 새 업적 — 하단 '구단주'·내 팀 '업적' 아이콘 오른쪽 위의 점. */
+.tabs button {
+  position: relative;
+}
+.tab-dot {
+  position: absolute;
+  top: 5px;
+  left: calc(50% + 6px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bad, #e5484d);
+  box-shadow: 0 0 0 2px var(--surface);
+}
 /* T-11-031 하단 메뉴가 세 벌(메인 · 게임 · 내 팀)이라 바뀐 걸 알아보게 한다. 메뉴가 새로 붙으면 칸들이 왼쪽부터 차례로
    올라오고(--i), 게임·내 팀 메뉴(.sub-nav)는 위쪽 강조선과 가운데 나가기 버튼의 둥근 바탕으로 메인 메뉴와 구분한다.
    transform만 움직여 글자 명도 대비는 그대로다. */
@@ -5572,12 +5586,13 @@ button.what {
   display: flex;
   flex-direction: column;
 }
-/* T-11-015 라운지 채팅. 홈의 떠 있는 버튼은 하단 메뉴 위, 데스크톱에선 본문(560px) 오른쪽 끝에 맞춘다. */
+/* T-11-015 라운지 채팅. 홈의 떠 있는 버튼은 하단 메뉴 위, 데스크톱에선 본문(560px) 오른쪽 끝에 맞춘다.
+   T-11-034 시트(.modal 10)보다는 아래 — 홈에 뜨는 시트의 버튼을 가리지 않게. */
 .chat-fab {
   position: fixed;
   right: max(16px, calc(50% - 280px + 16px));
   bottom: calc(var(--tabbar-h) + var(--safe-b) + 16px);
-  z-index: 15;
+  z-index: 9;
   display: inline-flex;
   align-items: center;
   gap: 6px;

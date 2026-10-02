@@ -1,11 +1,13 @@
 // ───────── 화면 고르기 (웹 App.svelte) ─────────
 // 웹처럼 주소가 아니라 appState.screen으로 화면을 그린다(expo-router는 딥링크 입구만 맡는다). 화면이 바뀔 때마다
 // 방문 기록을 쌓아 Android 뒤로 버튼이 이전 화면으로 간다(마지막이면 앱을 닫는다).
-import { useEffect, type ComponentType } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import { BackHandler, View } from 'react-native';
 import { subscribe, useSnapshot } from 'valtio';
+import { isAchDirty, onAchDirty } from '@offside/app-core/achDirty';
 import type { Screen } from '@offside/app-core/state';
 import { appState, sheetState } from '../store';
+import { achNudge } from '../game/achNudge';
 import { closeSheet, navStack } from '../game/host';
 import { MainNav, hasMainNav } from '../ui/MainNav';
 import { BarBelow } from '../ui/Screen';
@@ -50,8 +52,11 @@ const SCREENS: Record<Screen, ComponentType> = {
   admin: Admin,
 };
 
+const ACH_SCREENS: Screen[] = ['home', 'hof', 'owner', 'team'];
+
 export default function App() {
   const snap = useSnapshot(appState);
+  const { open: sheetOpen } = useSnapshot(sheetState);
   const c = useColors();
   // 상태가 바뀔 때마다(묶어서) 기록 단위가 바뀌었는지 본다 — 같으면 track()이 아무것도 안 한다.
   useEffect(() => subscribe(appState, () => navStack.track()), []);
@@ -66,6 +71,21 @@ export default function App() {
     });
     return () => sub.remove();
   }, []);
+
+  // T-11-034 업적 달성 알림(웹 App.svelte) — 업적이 바뀌었을 수 있는 쓰기 뒤 홈·기록실·구단주·내 팀에 오면 한 번 업적을
+  // 받아 새 업적을 시트로 알린다(경기 결과를 보는 중이거나 다른 시트가 떠 있으면 닫힌 뒤). 은퇴 업로드가 끝나면 화면을
+  // 옮기지 않아도 다시 본다. 보지 않은 새 업적 수(하단 점)는 앱을 열 때 되살린다.
+  const [achTick, setAchTick] = useState(0);
+  useEffect(() => {
+    achNudge.restore();
+    return onAchDirty(() => setAchTick((n) => n + 1));
+  }, []);
+  useEffect(() => {
+    const { screen, teamView } = snap;
+    if (sheetOpen || !ACH_SCREENS.includes(screen) || (screen === 'team' && teamView === 'result'))
+      return;
+    if (isAchDirty()) void achNudge.check();
+  }, [snap.screen, snap.teamView, sheetOpen, achTick]);
 
   const Current = SCREENS[snap.screen];
   const main = hasMainNav(snap.screen);

@@ -23,6 +23,8 @@ export interface TabItem {
   onPress: () => void;
   /** 기본은 tab-{key}. */
   testID?: string;
+  /** T-11-034 아직 보지 않은 새 업적 수 — 있으면 아이콘 오른쪽 위에 점(웹 .tab-dot). */
+  dot?: number;
 }
 
 export const TABBAR_H = 60;
@@ -186,6 +188,7 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
             <Press
               accessibilityRole="tab"
               accessibilityState={{ selected: t.active }}
+              accessibilityLabel={t.dot ? `${t.label}, 새 업적 ${t.dot}개` : undefined}
               onPress={t.onPress}
               testID={t.testID ?? `tab-${t.key}`}
               style={(pressed) => ({
@@ -203,6 +206,22 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
                 style={t.active ? { transform: [{ translateY: -1 }, { scale: 1.06 }] } : undefined}
               >
                 {sub && i === 2 ? <ExitChip ping={ping}>{icon}</ExitChip> : icon}
+                {t.dot ? (
+                  <View
+                    testID={`${t.testID ?? `tab-${t.key}`}-dot`}
+                    style={{
+                      position: 'absolute',
+                      top: -4,
+                      right: -8,
+                      width: 12,
+                      height: 12,
+                      borderRadius: 6,
+                      backgroundColor: c.bad,
+                      borderWidth: 2,
+                      borderColor: c.surface,
+                    }}
+                  />
+                ) : null}
               </View>
               <Txt
                 style={{

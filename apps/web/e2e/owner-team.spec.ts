@@ -690,3 +690,77 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await page.locator('[data-act="team-profile-back"]').click();
   await expect(list).toBeVisible();
 });
+
+// T-11-034 업적 달성 알림: 업적이 바뀌었을 수 있는 쓰기 뒤(dirty) 홈에 오면 업적을 받아 지난번 본 기록과 비교한다 —
+// 새 업적이 있으면 시트(등급이 올랐으면 승급)와 하단 '구단주' 점, 업적 탭을 열면 NEW를 붙이고 점을 지운다.
+test('업적 달성 알림 — 쓰기 뒤 홈에서 승급 시트, 업적 보기로 NEW를 보고 점이 사라진다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  await page.route(ownerTeamUrl, (route) =>
+    route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS })),
+  );
+  let calls = 0;
+  await page.route(`${API}/v1/owner-team/achievements**`, (route) => {
+    calls++;
+    return route.fulfill(
+      ok({
+        season: 1,
+        seasons: SEASONS,
+        players: 2,
+        score: 210,
+        rank: 40,
+        ranked: 297,
+        groups: [
+          {
+            id: 'first',
+            category: 'player',
+            stage: '0단계',
+            title: '축구 인생 출발',
+            items: [
+              { id: 'retire-FW', label: '공격수 1명 은퇴', done: true, points: 190, worth: 0 },
+              { id: 'retire-GK', label: '골키퍼 1명 은퇴', done: true, points: 20, worth: 0 },
+            ],
+          },
+        ],
+      }),
+    );
+  });
+  await page.addInitScript(() => {
+    // 새로고침에도 다시 심지 않게 첫 로드에만.
+    if (sessionStorage.getItem('__ach_seeded')) return;
+    sessionStorage.setItem('__ach_seeded', '1');
+    localStorage.setItem(
+      'ft_ach_seen',
+      JSON.stringify({ season: 1, pts: { 'retire-FW': 190 }, score: 190, unseen: [] }),
+    );
+    localStorage.setItem('ft_ach_dirty', 'true');
+  });
+  await page.goto('/');
+  const sheet = page.locator('[data-ach-sheet]');
+  await expect(sheet).toContainText('브론즈 등급이 됐어요');
+  await expect(sheet).toHaveAttribute('class', /grade/);
+  await expect(page.locator('.sheet')).toContainText('골키퍼 1명 은퇴');
+  await expect(page.locator('.sheet')).toContainText('실버까지 290점');
+  await expect(page.locator('[data-act="owner"] .tab-dot')).toContainText('새 업적 1개');
+  // 시트가 떠오르는 모션(페이드·엠블럼 팝)이 끝난 뒤 명도 대비를 잰다.
+  await page.waitForFunction(() =>
+    document
+      .querySelector('.modal')!
+      .getAnimations({ subtree: true })
+      .every((a) => a.playState !== 'running'),
+  );
+  await expectNoA11yViolations(page);
+
+  await page.getByRole('button', { name: '업적 보기' }).click();
+  const box = page.locator('[data-club-achievements]');
+  await expect(box.locator('.tm-ach-new')).toHaveCount(1);
+  await expect(box.locator('[data-ach-group="first"]')).toContainText('골키퍼 1명 은퇴NEW');
+  await expect(page.locator('.tab-dot')).toHaveCount(0);
+  // 알림 확인 한 번 + 업적 탭 한 번. 본 기록을 적었으니 다시 열어도 점·시트가 돌아오지 않는다.
+  expect(calls).toBe(2);
+  await page.reload();
+  await expect(page.locator('[data-club-achievements], [data-act="owner"]').first()).toBeVisible();
+  await expect(page.locator('.tab-dot')).toHaveCount(0);
+  await expect(page.locator('[data-ach-sheet]')).toHaveCount(0);
+});

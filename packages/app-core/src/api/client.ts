@@ -14,6 +14,7 @@ import type {
   TickerResponse,
 } from '@offside/contracts';
 import { storage } from '@offside/game/storage';
+import { markAchDirty, touchesAchievements } from '../achDirty.js';
 
 // API 클라이언트 (웹·앱 공용, T-11-002). 게임 상태는 전부 기기 저장소에 남고, 서버로는 계정·공개 기록 요청만 나간다.
 // `@offside/contracts` 전체를 값으로 가져오면 zod까지 번들에 들어오므로, 헤더 이름은 zod 없는 `./headers`
@@ -113,6 +114,8 @@ export async function apiFetch<T>(
   }
 
   if (isMutation && response.ok && !keepCache) clearApiCache();
+  // T-11-034 업적이 바뀌었을 수 있는 쓰기 — 다음 화면에서 업적을 한 번 받아 새 업적을 알린다.
+  if (isMutation && response.ok && touchesAchievements(path)) markAchDirty();
   if (response.status === 204) return { ok: true, data: undefined as T };
 
   let json: unknown;
