@@ -171,8 +171,10 @@ export type SheetView =
       kind: 'market';
       eyebrow: string;
       note: string;
+      assessment?: string | undefined;
       options: {
         clubId?: string;
+        reason?: string | undefined;
         name: string;
         lg: string;
         salary: string | null;

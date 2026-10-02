@@ -8,6 +8,7 @@
   // T-11-025 순서: 방금 끝난 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·누적 기록·
   // 순위표·대회) → 스토리 → 최근 소식. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다. T-11-036 진행·이벤트 확인 버튼은
   // 화면 아래 고정 바(Game.svelte)에 있다 — 탭 맨 아래에 두니 구간마다 끝까지 내려야 해 불편했다.
+  import { coachFeedback } from '@offside/app-core/career-feedback';
   import { visibleCareerLog } from '@offside/app-core/potential-view';
   import { PHASES, LAST_PHASE } from '@offside/game/data';
   import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, trainingHelp, INVESTS, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
@@ -23,6 +24,7 @@
 
   const { s }: { s: GameState } = $props();
 
+  const coach = $derived(coachFeedback(s));
   const S = $derived(s.season);
   const avg = $derived(S.apps ? (S.ratingSum / S.apps).toFixed(2) : '-');
   const phase = $derived(Math.min(s.phase, LAST_PHASE));
@@ -176,6 +178,11 @@
     <div class="meter"><span>컨디션</span><div class="bar"><i class={meterCls(s.cond, 40, 65)} style="width:{Math.round(s.cond)}%"></i></div><span class="v">{Math.round(s.cond)}</span></div>
     <div class="meter"><span>사기</span><div class="bar"><i class={meterCls(s.morale, 40, 60)} style="width:{Math.round(s.morale)}%"></i></div><span class="v">{Math.round(s.morale)}</span></div>
     <div class="meter"><span>인기</span><div class="bar"><i class="acc" style="width:{Math.min(100, Math.round(s.fame))}%"></i></div><span class="v">{Math.round(s.fame)}</span></div>
+  </div>
+  <div class="stack" style="gap:6px" data-coach-feedback>
+    <h3 class="sub-title">코치 메모</h3>
+    <p class="fs-sm">{coach.summary}</p>
+    {#each coach.notes as note (note)}<p class="muted fs-sm">{note}</p>{/each}
   </div>
   <h3 class="sub-title">훈련 방향</h3>
   {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">이번 구간 훈련을 고르면 다음으로 넘어가요</p>{/if}

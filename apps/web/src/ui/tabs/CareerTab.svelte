@@ -4,7 +4,7 @@
   import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
   import ClubMark from '../ClubMark.svelte';
   import ValueChart from '../ValueChart.svelte';
-  import { nextMilestones } from '@offside/game/records';
+  import { careerGoals, GOALS_NOTE } from '@offside/app-core/career-feedback';
   import { peakValue, seasonValue } from '@offside/contracts/market-value';
 
   // 은퇴 상세(LegendSource)에는 '다음 목표'가 없다 — 진행 중인 커리어(GameState)에서만 계산한다.
@@ -13,7 +13,7 @@
   const t = $derived(totals(s));
   const rows = $derived(s.career.slice().reverse());
   const miles = $derived((s.miles || []).slice().reverse());
-  const next = $derived('attrs' in s && !s.retired ? nextMilestones(s) : []);
+  const next = $derived('attrs' in s && !s.retired ? careerGoals(s) : []);
   const peakV = $derived(chart ? peakValue(s.career) : null);
 </script>
 
@@ -35,13 +35,14 @@
   {/if}
 </section>
 {#if next.length}
-  <section class="card stack">
+  <section class="card stack" data-career-goals>
     <div><div class="eyebrow">Next Goals</div><h2>다음 목표</h2></div>
+    <p class="muted fs-sm">{GOALS_NOTE}</p>
     <div class="mile-next">
       {#each next as m, i (m.key)}
         <div class="mile-row">
           <div class="mile-lbl"><b>{m.label}</b><span>{m.have} / {m.target} · 남은 {m.remaining}</span></div>
-          <div class="legend-bar"><i style="width:{Math.min(100, Math.round((m.have / m.target) * 100))}%;--d:{i * 90}ms"></i></div>
+          <div class="legend-bar" role="progressbar" aria-label={m.label} aria-valuemin={0} aria-valuemax={m.target} aria-valuenow={m.have}><i style="width:{Math.min(100, Math.round((m.have / m.target) * 100))}%;--d:{i * 90}ms"></i></div>
         </div>
       {/each}
     </div>

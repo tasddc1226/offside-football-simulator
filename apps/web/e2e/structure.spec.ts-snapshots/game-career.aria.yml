@@ -20,7 +20,19 @@
     - paragraph: /최고 몸값 \d+억 9천만 · \d+-\d+ 리버풀 토피스/
     - text: Next Goals
     - heading "다음 목표" [level=2]
-    - text: /통산 \d+골 \d+ \/ \d+ · 남은 4 통산 \d+경기 출전 \d+ \/ \d+ · 남은 \d+ 우승 트로피 5회 4 \/ 5 · 남은 1 통산 \d+도움 \d+ \/ \d+ · 남은 \d+/
+    - paragraph: 출전·골·도움은 마친 시즌 기준이에요. 대표팀 출전과 우승도 커리어에 남아요.
+    - text: /통산 \d+골 \d+ \/ \d+ · 남은 4/
+    - progressbar /통산 \d+골/
+    - text: /통산 \d+경기 출전 \d+ \/ \d+ · 남은 \d+/
+    - progressbar /통산 \d+경기 출전/
+    - text: 우승 트로피 5회 4 / 5 · 남은 1
+    - progressbar "우승 트로피 5회"
+    - text: /통산 \d+도움 \d+ \/ \d+ · 남은 \d+/
+    - progressbar /통산 \d+도움/
+    - text: /A매치 \d+경기 출전 \d+ \/ \d+ · 남은 \d+/
+    - progressbar /A매치 \d+경기 출전/
+    - text: /런던 해머스에서 \d+경기 출전 0 \/ \d+ · 남은 \d+/
+    - progressbar /런던 해머스에서 \d+경기 출전/
     - table:
         - rowgroup:
             - row "시즌 소속 경기 골 도움 평점 순위 OVR":
