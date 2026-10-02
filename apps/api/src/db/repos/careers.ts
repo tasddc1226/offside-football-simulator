@@ -27,7 +27,7 @@ import {
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { kstDays } from './admin.js';
-import { honorsOf } from './firsts.js';
+import { honorsOf, hideCareerStatements } from './firsts.js';
 import { appMeta, careers, careerSeasons, goalsPlusAssists, retiredNumbers } from '../schema.js';
 
 export type CareerRow = typeof careers.$inferSelect;
@@ -64,6 +64,8 @@ export type PutCareerSeasonInput = {
   publicName?: string | null | undefined;
   /** 자동 플레이 탐지용 조작 요약(JSON). undefined(옛 클라이언트·다시 보낸 기록)면 그대로 둔다. */
   signalsJson?: string | undefined;
+  /** 나이별 OVR 상한을 크게 넘겨 보낸 시즌이면 같은 batch에서 커리어를 숨긴다(저장 땐 상한으로 잘려 나중엔 알 수 없다, T-11-037). */
+  hide?: boolean | undefined;
   now: string;
 };
 
@@ -74,8 +76,18 @@ export type PutCareerSeasonInput = {
  * 이미 확인했다고 가정한다.
  */
 export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Promise<void> {
-  const { careerId, profileId, year, meta, season, eventsJson, publicName, signalsJson, now } =
-    input;
+  const {
+    careerId,
+    profileId,
+    year,
+    meta,
+    season,
+    eventsJson,
+    publicName,
+    signalsJson,
+    hide,
+    now,
+  } = input;
   const signals = signalsJson !== undefined ? { signalsJson } : {};
   const name = publicName !== undefined ? { publicName } : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
@@ -170,6 +182,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         // 은퇴한 커리어의 시즌은 고치지 않는다(은퇴 요약·결번 판정의 근거). 늦게 도착한 빠진 시즌은 새 행이라 들어간다.
         setWhere: sql`(select ${careers.status} from ${careers} where ${careers.id} = ${careerId}) <> 'retired'`,
       }),
+    // 맨 뒤에 둔다 — 위 upsert가 행을 만든 뒤여야 숨김이 새 커리어에도 닿는다.
+    ...(hide ? hideCareerStatements(db, careerId) : []),
   ]);
 }
 

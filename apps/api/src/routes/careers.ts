@@ -27,7 +27,7 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { purgeEdge, waitUntil } from '../edgeCache.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { recordFirsts } from './firsts.js';
-import { exceedsOvrCap, hideCareer } from '../db/repos/anomalies.js';
+import { exceedsOvrCap } from '../db/repos/anomalies.js';
 import { judgeRetirement } from './retiredNumbers.js';
 import { STALE } from '../edgeKeys.js';
 import { publishLive } from '../live/publish.js';
@@ -70,6 +70,8 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
 
     const body = readBody(c, PutCareerSeasonBodySchema);
     const now = nowIso();
+    // 나이별 OVR 상한을 크게 넘긴 값은 sanitizeSeason이 잘라 저장해 매일 점검에 남지 않으므로 저장과 함께 숨긴다.
+    const overCap = exceedsOvrCap(body.season.age, body.season.ovr);
 
     await putCareerSeason(db, {
       careerId,
@@ -83,15 +85,12 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       signalsJson:
         body.signals &&
         JSON.stringify({ ...body.signals, headless: isHeadless(c.req.header('User-Agent')) }),
+      hide: overCap,
       now,
     });
 
-    // 나이별 OVR 상한을 크게 넘은 값은 sanitizeSeason이 잘라 저장해 매일 점검에 남지 않으므로 이 자리에서 숨긴다.
-    if (exceedsOvrCap(body.season.age, body.season.ovr)) {
-      await hideCareer(db, careerId);
-      purgeEdge(c, STALE.firstsChanged());
-    }
-    await recordFirsts(c, careerId);
+    if (overCap) purgeEdge(c, STALE.firstsChanged());
+    else await recordFirsts(c, careerId);
     publishLive(c, 'season', careerId, now);
     const career = await getCareer(db, careerId);
     return ok(c, CareerUpsertResponseSchema, {

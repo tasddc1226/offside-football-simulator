@@ -1,7 +1,7 @@
 import type { AnomalyCareer, AnomalyReason, AnomalyReport } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { OVR_CAP_BY_AGE, ovrCapAt } from '../../plausibility.js';
-import { createDb, type Db } from '../client.js';
+import { createDb } from '../client.js';
 import { runBatch } from './batch.js';
 import { hideCareerStatements, resetFirstsBackfillStatement, setMeta } from './firsts.js';
 import { appMeta, careers } from '../schema.js';
@@ -38,7 +38,7 @@ type Info = {
 };
 type Found = Map<string, { info: Info; reasons: Set<AnomalyReason> }>;
 
-/** 시즌 한 줄(나이·OVR·직전 시즌 대비 상승)의 이유. */
+/** 시즌 한 줄(나이·OVR·직전 시즌 대비 상승)의 이유. 저장된 행의 `ovrFar`·`ovrHigh`는 상한으로 자르기 전(T-11-023 이전) 기록에만 남는다. */
 export function seasonReasons(age: number, ovr: number, jump: number | null): AnomalyReason[] {
   const out: AnomalyReason[] = [];
   const over = ovr - ovrCapAt(age);
@@ -114,11 +114,7 @@ export type SweepResult = {
 /** 시즌 값이 나이별 OVR 상한을 크게 넘으면 true. 서버는 저장할 때 값을 상한으로 자르므로(sanitizeSeason) 저장된 행에는 이 신호가
  * 남지 않는다 — 올라오는 순간에 본다. */
 export const exceedsOvrCap = (age: number, ovr: number): boolean =>
-  seasonReasons(age, ovr, null).includes('ovrFar');
-
-/** 커리어를 공개 순위에서 뺀다(시즌 업로드가 불가능한 값을 보냈을 때). 쥐고 있던 서버 기록도 비운다. */
-export const hideCareer = (db: Db, careerId: string) =>
-  runBatch(db, hideCareerStatements(db, careerId));
+  ovr - ovrCapAt(age) > ANOMALY.farMargin;
 
 /** cron 한 번의 D1 batch에 담는 커리어 수(커리어마다 문장 4개). */
 const HIDE_CHUNK = 20;
