@@ -186,6 +186,29 @@ describe('구단 시즌 업적', () => {
     expect(item(not, 'gk-cs-20')?.done).toBe(false);
   });
 
+  it('은퇴 직전까지 현역은 그 시즌 은퇴 나이의 한 살 아래 — 프리시즌 40세 그대로, 시즌 1(45세 은퇴) 44세', () => {
+    const age = (retireAge: number, retireAt?: number) =>
+      item(
+        clubAchievements({
+          careers: [career({ retireAge })],
+          team: null,
+          owner: OWNER,
+          detail: retireAt !== undefined,
+          ...(retireAt === undefined ? {} : { retireAt }),
+        }),
+        'age-40',
+      );
+    // 은퇴 나이를 넘기지 않으면 프리시즌 기준(41세 은퇴 → 40세).
+    expect(age(40)).toMatchObject({ label: '40세까지 현역', done: true });
+    expect(age(39)?.done).toBe(false);
+    expect(age(40, 41)).toMatchObject({ label: '40세까지 현역', done: true });
+    expect(age(39, 41)?.done).toBe(false);
+    expect(age(44, 45)).toMatchObject({ label: '44세까지 현역', done: true });
+    expect(age(45, 45)?.done).toBe(true);
+    expect(age(43, 45)?.done).toBe(false);
+    expect(age(40, 45)?.done).toBe(false);
+  });
+
   it('트레블은 그 시즌 리그 · 대륙 대회 우승을 포함한 클럽 우승 3개(슈퍼컵 · 대표팀 제외)', () => {
     const t = (honors: string[]) =>
       item(

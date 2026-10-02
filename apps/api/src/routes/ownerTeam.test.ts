@@ -403,6 +403,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(pre).toMatchObject({ score: 10, rank: 1, ranked: 1 });
     expect(pre.groups.map((g) => g.stage).slice(3, 6)).toEqual(['3단계', '4단계', '5단계']);
     expect(item(pre, 'one-club')?.done).toBe(false);
+    expect(item(pre, 'age-40')).toMatchObject({ label: '40세까지 현역', done: false });
     expect((await read('?season=1')).status).toBe(400); // 아직 열리지 않은 시즌
 
     vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
@@ -413,6 +414,8 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(item(cur, 'retire-DF')?.done).toBe(true);
     expect(item(cur, 'all-dpos')).toMatchObject({ cur: 1, max: 8 });
     expect(item(cur, 'team-one')?.done).toBe(true);
+    // T-11-046 시즌 1 선수는 45세에 은퇴하므로 은퇴 직전까지 현역도 44세다.
+    expect(item(cur, 'age-40')).toMatchObject({ label: '44세까지 현역', done: false });
     const past = AchRes.parse((await read('?season=0')).body).data;
     expect(past).toMatchObject({ season: 0, players: 1 });
     expect(past.groups.some((g) => g.id === 'team')).toBe(false); // 프리시즌에는 팀을 만들지 않았다
