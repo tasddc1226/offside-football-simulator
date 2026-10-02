@@ -1,5 +1,12 @@
 /** Native consent boundary. No action replay, retries or game-save writes. */
-import { emptyLedger, PAGES, type Consent, type Ledger, type Params } from './analytics-model.js';
+import {
+  emptyLedger,
+  PAGES,
+  type Career,
+  type Consent,
+  type Ledger,
+  type Params,
+} from './analytics-model.js';
 import { createTracker } from './analytics-tracker.js';
 
 export type NativeAnalyticsSDK = {
@@ -58,45 +65,34 @@ export function createNativeAnalytics(io: IO) {
     enqueue(async () => {
       sdk ??= await io.load();
       if (!sdk) return;
+      const s = sdk;
+      const stale = () => epoch !== generation || consent !== 'granted';
+      const deny = async () => {
+        await s.consent(false);
+        await s.reset();
+      };
       // Always close collection before changing SDK consent or clearing queued data.
-      await sdk.collect(false);
-      if (epoch !== generation || consent !== 'granted') {
-        await sdk.consent(false);
-        await sdk.reset();
-        return;
-      }
-      await sdk.consent(true);
-      if (epoch !== generation || consent !== 'granted') {
-        await sdk.consent(false);
-        await sdk.reset();
-        return;
-      }
-      await sdk.collect(true);
-      if (epoch !== generation || consent !== 'granted') {
-        await sdk.collect(false);
-        await sdk.consent(false);
-        await sdk.reset();
-        return;
+      await s.collect(false);
+      if (stale()) return deny();
+      await s.consent(true);
+      if (stale()) return deny();
+      await s.collect(true);
+      if (stale()) {
+        await s.collect(false);
+        return deny();
       }
       ready = true;
       pageView();
     });
   }
+  const makeTracker = (id: string | null) =>
+    createTracker({ allowed, read: io.readLedger, write: io.writeLedger, now: io.now, send }, id);
   return {
     initialize(initialScreen: string, restoredId: string | null) {
       if (initialized) return;
       initialized = true;
       screen = initialScreen;
-      tracker = createTracker(
-        {
-          allowed,
-          read: io.readLedger,
-          write: io.writeLedger,
-          now: io.now,
-          send,
-        },
-        restoredId,
-      );
+      tracker = makeTracker(restoredId);
       try {
         consent = io.readConsent();
       } catch {
@@ -106,16 +102,7 @@ export function createNativeAnalytics(io: IO) {
     },
     // Backup restoration does not emit events; only subsequent gameplay may resume.
     restored(id: string | null) {
-      tracker = createTracker(
-        {
-          allowed,
-          read: io.readLedger,
-          write: io.writeLedger,
-          now: io.now,
-          send,
-        },
-        id,
-      );
+      tracker = makeTracker(id);
     },
     enabled: io.enabled,
     getConsent: () => consent,
@@ -156,16 +143,12 @@ export function createNativeAnalytics(io: IO) {
     },
     analytics: {
       replace: () => tracker?.replace(),
-      start: (...args: Parameters<ReturnType<typeof createTracker>['start']>) =>
-        tracker?.start(...args),
-      play: (...args: Parameters<ReturnType<typeof createTracker>['play']>) =>
-        tracker?.play(...args),
-      firstSeason: (...args: Parameters<ReturnType<typeof createTracker>['firstSeason']>) =>
-        tracker?.firstSeason(...args),
-      retire: (...args: Parameters<ReturnType<typeof createTracker>['retire']>) =>
-        tracker?.retire(...args),
+      start: (s: Career, previous: Career | null) => tracker?.start(s, previous),
+      play: (s: Career, firstAction = false) => tracker?.play(s, firstAction),
+      firstSeason: (s: Career) => tracker?.firstSeason(s),
+      retire: (s: Career) => tracker?.retire(s),
     },
-    // Allows deterministic tests and a UI to await SDK shutdown if needed.
+    // Tests await SDK shutdown through this.
     async settled() {
       await pending;
       await pending;

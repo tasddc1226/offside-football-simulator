@@ -54,7 +54,7 @@ Backup restoration only rebinds the restored career ID; no backfill. Transmissio
 
 ## Build and validation
 
-Native SDK/framework changes require a **new development/store binary**, retaining `runtimeVersion: { policy: "fingerprint" }`. Do not OTA this to launched build 3. No build submission, OTA, production traffic or merge was performed; source changes are available for review in draft PR #411.
+Native SDK/framework changes require a **new development/store binary**, retaining `runtimeVersion: { policy: "fingerprint" }`. Do not OTA this to launched build 3.
 
 From repo root (Node >=22.13):
 
@@ -74,23 +74,6 @@ pnpm exec expo install --check
 
 After approved **test** config is supplied, prebuild an isolated copy with Expo CNG, compile/install a test binary, and verify only in the test property's DebugView. Cover fresh install/no consent, grant, event names/params, repeat calls/relaunch, backup restore, replace/retire, withdrawal including relaunch and delayed SDK calls, offline behavior, and a subsequently disabled binary. Check generated platform config, firebase.json build-script application, iOS no-ad-ID linking, Android permission removal, privacy manifests, native dependency linking, and changed fingerprint. Do not send synthetic gameplay to production GA4.
 
-Review the public privacy notice, App Store privacy answers and Google Play Data Safety declaration against actual SDK behavior before shipping. This work does not publish or change those settings.
+Review the public privacy notice, App Store privacy answers and Google Play Data Safety declaration against actual SDK behavior before shipping. App Store privacy answers were updated on 2026-10-02 (Device ID, Product Interaction, Coarse Location — analytics, not linked, no tracking); Play Data Safety is unchanged while Android has no Firebase registration.
 
 References: [Expo Firebase](https://docs.expo.dev/guides/using-firebase/), [Expo 57](https://docs.expo.dev/versions/v57.0.0/), [RNFirebase Expo](https://rnfirebase.io/#expo), [RNFirebase Analytics](https://rnfirebase.io/analytics/usage), [Firebase collection](https://firebase.google.com/docs/analytics/ios/configure-data-collection).
-
-## Verification in this implementation
-
-Executed with Node 22.23.1 in an isolated feature checkout based on main `246894871c966b8917557efa0aac6ad2ec7cfb59`:
-
-- app-core: 106 tests passed, including 30 shared/native analytics cases; typecheck passed.
-- web: 36 tests passed, full typecheck (including e2e TypeScript and Svelte diagnostics) and production Vite build passed.
-- mobile: TypeScript check and lint passed; 4 native config tests passed.
-- Expo introspection (disabled/no client config): passed; generated iOS/Android collection deactivation and Android AD_ID permission removal verified.
-- iOS/Android JS/Hermes exports: passed (1675/1757 modules). This is bundling, **not** signed native compilation or device execution.
-- Expo doctor: 20/21 passed; SDK patch-version check requests Expo 57.0.26, constants 57.0.20, router 57.0.24, updates 57.0.24 instead of existing 57.0.25/19/23/23. These unrelated preexisting versions were preserved. Offline `expo install --check` passed using its local map, with an unreliable-offline-validation warning.
-
-Actual production-config iOS prebuild and CocoaPods/SPM integration passed with collection permanently deactivated for local validation. Native SDK startup/withdrawal over relaunch, fingerprint comparison against the launched binary, and GA4 delivery/DebugView remain unexecuted pending separate approved test config and a new test binary. No production or test GA4 traffic was generated.
-
-Local native iOS simulator compilation **passed** with Xcode 26.6, CocoaPods 1.16.2 and code signing disabled. The universal app binary contains arm64 and x86_64 simulator architectures and links RNFBApp/RNFBAnalytics and FirebaseCore. The actual client project/app IDs match the registered iOS app. Generated Info.plist confirms permanent collection deactivation, analytics collection/storage and ad storage disabled, and automatic screen reporting disabled; generated Podfile enables Analytics without Ad ID support. The app was not launched and no GA4 traffic was generated. This verifies compilation/linking, not signed-device operation, consent persistence or event delivery.
-
-The Documents/File Provider checkout repeatedly added FinderInfo to ExpoModulesJSI's generated framework, failing its nested signing step. An isolated `/tmp` source/dependency copy without extended attributes resolved the environment issue; no source fix, generated-native edit or security-setting change was needed. Build log: `/tmp/offside-native-clean-build.log` (`BUILD SUCCEEDED`). Private client files and generated native outputs remain uncommitted.

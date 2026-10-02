@@ -4,8 +4,8 @@ import { createNativeAnalytics, type NativeAnalyticsSDK } from '@offside/app-cor
 import {
   CONSENT_KEY,
   LEDGER_KEY,
-  emptyLedger,
-  type Ledger,
+  parseConsent,
+  parseLedger,
 } from '@offside/app-core/analytics-model';
 import { kv } from '../platform/setup';
 
@@ -43,43 +43,12 @@ async function load(): Promise<NativeAnalyticsSDK | null> {
     return null;
   } // Expo Go, old binaries, missing native app or service configuration.
 }
-function readLedger(): Ledger {
-  const raw = kv.getString(LEDGER_KEY);
-  if (!raw) return emptyLedger();
-  try {
-    const value = JSON.parse(raw) as Ledger;
-    if (
-      !value ||
-      !Array.isArray(value.entries) ||
-      typeof value.seenStart !== 'boolean' ||
-      !value.entries.every((e) => e && typeof e.id === 'string' && Number.isFinite(e.at))
-    )
-      return emptyLedger();
-    if (
-      value.next &&
-      value.next.kind !== 'replace_active' &&
-      !(
-        value.next.kind === 'after_retirement' &&
-        typeof value.next.id === 'string' &&
-        typeof value.next.pos === 'string' &&
-        typeof value.next.trait === 'string'
-      )
-    )
-      value.next = null;
-    return value;
-  } catch {
-    return emptyLedger();
-  }
-}
 export const nativeAnalytics = createNativeAnalytics({
   enabled,
   load,
-  readConsent: () => {
-    const value = kv.getString(CONSENT_KEY);
-    return value === 'granted' || value === 'denied' ? value : 'unknown';
-  },
+  readConsent: () => parseConsent(kv.getString(CONSENT_KEY)),
   writeConsent: (value) => kv.set(CONSENT_KEY, value),
-  readLedger,
+  readLedger: () => parseLedger(kv.getString(LEDGER_KEY)),
   writeLedger: (value) => kv.set(LEDGER_KEY, JSON.stringify(value)),
   now: Date.now,
   appVersion: Constants.expoConfig?.version ?? 'unknown',

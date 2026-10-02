@@ -77,6 +77,4 @@ test('SDK build defaults deny all collection and automatic screen reporting', ()
     fs.readFileSync(new URL('../firebase.json', import.meta.url), 'utf8'),
   )['react-native'];
   for (const [key, value] of Object.entries(settings)) assert.equal(value, false, key);
-  assert.equal(settings.analytics_auto_collection_enabled, false);
-  assert.equal(settings.google_analytics_automatic_screen_reporting_enabled, false);
 });

@@ -1,5 +1,5 @@
 import { enabled } from './config.js';
-import type { Career } from './model.js';
+import type { Career } from '@offside/app-core/analytics-model';
 export { enabled } from './config.js';
 let adapter: typeof import('./browser.js') | undefined;
 let screen = 'home';

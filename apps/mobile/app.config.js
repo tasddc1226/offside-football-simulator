@@ -18,7 +18,7 @@ module.exports = ({ config }) => {
   if (requested && !iosFile && !androidFile) {
     throw new Error('Native analytics requires a registered Firebase platform configuration');
   }
-  // Only include native setup when genuine client configuration has been supplied.
+  // The analytics SDK plugins are always applied; @react-native-firebase/app needs a genuine client configuration.
   const plugins = [
     ...(config.plugins ?? []),
     ['@react-native-firebase/analytics', { ios: { withoutAdIdSupport: true } }],

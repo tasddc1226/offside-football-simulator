@@ -129,6 +129,37 @@ export type Ledger = {
     | { kind: 'after_retirement'; id: string; pos: string; trait: string };
 };
 export const emptyLedger = (): Ledger => ({ entries: [], seenStart: false, next: null });
+/** Stored consent (web localStorage / native MMKV); anything else is unknown. */
+export const parseConsent = (v: unknown): Consent =>
+  v === 'granted' || v === 'denied' ? v : 'unknown';
+/** Stored ledger (web localStorage / native MMKV); malformed data starts over, a bad `next` is dropped. */
+export function parseLedger(raw: string | null | undefined): Ledger {
+  if (!raw) return emptyLedger();
+  try {
+    const value = JSON.parse(raw) as Ledger;
+    if (
+      !value ||
+      !Array.isArray(value.entries) ||
+      typeof value.seenStart !== 'boolean' ||
+      !value.entries.every((e) => e && typeof e.id === 'string' && Number.isFinite(e.at))
+    )
+      return emptyLedger();
+    if (
+      value.next &&
+      value.next.kind !== 'replace_active' &&
+      !(
+        value.next.kind === 'after_retirement' &&
+        typeof value.next.id === 'string' &&
+        typeof value.next.pos === 'string' &&
+        typeof value.next.trait === 'string'
+      )
+    )
+      value.next = null;
+    return value;
+  } catch {
+    return emptyLedger();
+  }
+}
 export function prune(ledger: Ledger, now: number, active: string | null): Ledger {
   ledger.entries = ledger.entries
     .filter((e) => e.id === active || e.at >= now - 30 * 86400000)
