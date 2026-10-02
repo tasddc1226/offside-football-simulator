@@ -3852,24 +3852,26 @@ html:has(.wrap.has-actionbar) {
   text-align: center;
   word-break: keep-all;
 }
-/* T-11-028 시즌 업적 등급 배지 — 등급 색(--g)을 옅게 깔고 글자는 잉크와 섞어 밝기 모드 모두에서 읽히게. */
+/* T-11-028 시즌 업적 등급 배지 — T-11-033부터 엠블럼(GradeEmblem) + 등급 이름. 글자는 등급 색(--g)을 잉크와 섞어 밝기 모드 모두에서 읽히게. */
 .ach-grade {
-  --g: #8a96a3;
+  --g: #7f9a86;
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   flex: none;
-  padding: 2px 8px;
-  border-radius: 99px;
   font-size: 0.6875rem;
   font-weight: 800;
   letter-spacing: 0.02em;
-  background: color-mix(in srgb, var(--g) 18%, transparent);
+  line-height: 1.2;
   color: color-mix(in srgb, var(--g) 65%, var(--ink));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--g) 45%, transparent);
 }
 .ach-grade.large {
-  padding: 4px 12px;
-  font-size: 0.875rem;
+  gap: 8px;
+  font-size: 1rem;
+}
+.grade-emblem {
+  flex: none;
+  display: block;
 }
 .ach-grade[data-grade='bronze'] {
   --g: #c27a3e;
@@ -3895,9 +3897,14 @@ html:has(.wrap.has-actionbar) {
 }
 .ach-rank-value {
   display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ach-rank-value > div {
+  display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
+  gap: 2px;
 }
 .ach-grades {
   margin-top: 12px;

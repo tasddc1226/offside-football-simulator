@@ -6,6 +6,7 @@ import { alpha, mix } from '../../theme/colors';
 import { useColors, useIsDark } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Press, Txt } from '../../ui';
+import { GradeEmblem } from '../../ui/GradeEmblem';
 
 /** 고르기 버튼 한 칸(웹 .opt · aria-pressed). Opt와 같은 모양에 e2e 식별자를 받는다. */
 export function SegBtn({
@@ -209,8 +210,9 @@ export function Stats({
   );
 }
 
-/** T-11-028 등급 색(웹 style.css .ach-grade[data-grade] --g). 모르는 등급은 회색. */
+/** T-11-028 등급 색(웹 style.css .ach-grade[data-grade] --g) — 등급 이름 글자에 잉크와 섞어 쓴다. 모르는 등급은 루키 색. */
 const GRADE_COLOR: Record<string, string> = {
+  rookie: '#7f9a86',
   bronze: '#c27a3e',
   silver: '#9aa6b1',
   gold: '#d9a21b',
@@ -219,11 +221,22 @@ const GRADE_COLOR: Record<string, string> = {
   legend: '#c04cff',
 };
 
-/** 시즌 업적 등급 배지(웹 AchGradeBadge.svelte) — 등급 색을 옅게 깔고 글자는 잉크와 섞어 밝기 모드 모두에서 읽히게. 요약·업적 랭킹 공용. */
-export function AchGradeBadge({ grade, large }: { grade: AchGrade; large?: boolean }) {
+/**
+ * 시즌 업적 등급 배지(웹 AchGradeBadge.svelte) — T-11-033부터 엠블럼 + 등급 이름. 요약(large)·업적 랭킹 공용.
+ * emblem=false면 이름만(엠블럼을 옆에 따로 크게 그리는 업적 랭킹 줄).
+ */
+export function AchGradeBadge({
+  grade,
+  large,
+  emblem = true,
+}: {
+  grade: AchGrade;
+  large?: boolean;
+  emblem?: boolean;
+}) {
   const c = useColors();
-  const g = GRADE_COLOR[grade.id] ?? '#8a96a3';
-  const fs = rem(large ? 0.875 : 0.6875);
+  const g = GRADE_COLOR[grade.id] ?? GRADE_COLOR.rookie!;
+  const fs = rem(large ? 1 : 0.6875);
   return (
     <View
       testID={`ach-grade-${grade.id}`}
@@ -231,21 +244,18 @@ export function AchGradeBadge({ grade, large }: { grade: AchGrade; large?: boole
       accessibilityLabel={`등급 ${grade.name}`}
       style={{
         flexShrink: 0,
-        alignSelf: 'center',
-        // 웹은 안쪽 1px 테두리(inset)라 칸이 늘지 않는다 — 여백에서 1px씩 뺀다.
-        paddingVertical: (large ? 4 : 2) - 1,
-        paddingHorizontal: (large ? 12 : 8) - 1,
-        borderRadius: 99,
-        borderWidth: 1,
-        borderColor: alpha(g, 0.45),
-        backgroundColor: alpha(g, 0.18),
+        alignSelf: emblem ? 'center' : 'flex-end',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: large ? 8 : 4,
       }}
     >
+      {emblem ? <GradeEmblem id={grade.id} size={large ? 44 : 20} /> : null}
       <Txt
         numberOfLines={1}
         style={{
           fontSize: fs,
-          lineHeight: fs * 1.4,
+          lineHeight: fs * 1.2,
           fontWeight: '800',
           letterSpacing: 0.02 * fs,
           color: mix(g, c.ink, 0.65),
