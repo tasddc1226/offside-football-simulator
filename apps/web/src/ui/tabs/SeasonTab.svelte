@@ -6,7 +6,7 @@
 <script lang="ts">
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
   // T-11-025 순서: 방금 끝난 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·누적 기록·
-  // 순위표·대회) → 스토리 → 최근 소식. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다. T-11-030 진행·이벤트 확인 버튼은
+  // 순위표·대회) → 스토리 → 최근 소식. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다. T-11-036 진행·이벤트 확인 버튼은
   // 화면 아래 고정 바(Game.svelte)에 있다 — 탭 맨 아래에 두니 구간마다 끝까지 내려야 해 불편했다.
   import { PHASES, LAST_PHASE } from '@offside/game/data';
   import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, trainingHelp, INVESTS, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
@@ -88,7 +88,7 @@
       const step = steps[i];
       if (!step) return stop();
       const { k, el, wait } = step;
-      // T-11-030 마지막 단계(go)는 화면 아래 고정 진행 버튼이라 내려가지 않고 초점만 옮긴다.
+      // T-11-036 마지막 단계(go)는 화면 아래 고정 진행 버튼이라 내려가지 않고 초점만 옮긴다.
       if (k === 'go') el.focus({ preventScroll: true });
       else if (i) {
         const head = document.querySelector<HTMLElement>('.topbar')?.offsetHeight ?? 0;

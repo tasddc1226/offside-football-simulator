@@ -130,7 +130,7 @@ export default function Game() {
     .map((k) => labelOf(s, k))
     .join('·')}`;
 
-  // T-11-030 엄지 영역 고정 진행 바(웹 Game.svelte와 같다): 시즌 탭에서는 구간 진행 버튼과 그 위 한 줄 준비 요약(훈련·자기
+  // T-11-036 엄지 영역 고정 진행 바(웹 Game.svelte와 같다): 시즌 탭에서는 구간 진행 버튼과 그 위 한 줄 준비 요약(훈련·자기
   // 투자·컨디션)을, 다른 탭에서도 이벤트·시즌 결산이 대기 중이면 그걸 여는 버튼을 띄운다. 요약을 누르면 '다음 구간 준비' 카드로 간다.
   const act = seasonAction(s);
   const showAction = tab === 'season' || act.kind === 'pending';

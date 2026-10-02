@@ -73,7 +73,7 @@
   --space-5: 24px;
   --space-6: 32px;
   --tabbar-h: 60px;
-  /* T-11-030 게임 화면 고정 진행 바(준비 요약 줄 + 버튼) 높이 */
+  /* T-11-036 게임 화면 고정 진행 바(준비 요약 줄 + 버튼) 높이 */
   --actionbar-h: 96px;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -1683,7 +1683,7 @@ body:has(.main-nav) .wrap {
     box-shadow: 0 0 0 3px var(--accent);
   }
 }
-/* T-11-030 고정 진행 바 위 한 줄 준비 요약(훈련 · 자기 투자 · 컨디션) — 누르면 시즌 탭 '다음 구간 준비' 카드로 간다 */
+/* T-11-036 고정 진행 바 위 한 줄 준비 요약(훈련 · 자기 투자 · 컨디션) — 누르면 시즌 탭 '다음 구간 준비' 카드로 간다 */
 .season-bar .action-bar-inner {
   display: flex;
   flex-direction: column;
