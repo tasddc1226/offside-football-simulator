@@ -360,6 +360,9 @@ const B64 = [
 ].join('');
 
 const ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+/** 글자 코드 → 6비트 값(없으면 255). */
+const SIX = new Uint8Array(128).fill(255);
+for (let i = 0; i < ABC.length; i++) SIX[ABC.charCodeAt(i)] = i;
 let bits: Uint8Array | null = null;
 /** 처음 쓸 때 한 번만 푼다(웹·앱 어디서나 같은 결과 — atob에 기대지 않는다). */
 function decode(): Uint8Array {
@@ -367,9 +370,9 @@ function decode(): Uint8Array {
   let acc = 0,
     n = 0,
     j = 0;
-  for (const ch of B64) {
-    const v = ABC.indexOf(ch);
-    if (v < 0) continue;
+  for (let i = 0; i < B64.length; i++) {
+    const v = SIX[B64.charCodeAt(i)] ?? 255;
+    if (v === 255) continue;
     acc = (acc << 6) | v;
     n += 6;
     if (n >= 8) {

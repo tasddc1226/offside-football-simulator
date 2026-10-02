@@ -1,49 +1,45 @@
 // 해외 이적 비행 시트(웹 sheets/Flight.svelte, T-11-039): 육지 점 지도 위로 지금 나라 공항에서 새 리그 나라 공항까지
 // 비행기가 날아가고, 지나간 경로가 그려진다. 도착하면 도착 공항에 고리가 퍼진다. 동작 줄이기면 경로·비행기를 도착한
 // 모습으로만 그린다. 진행률 p는 requestAnimationFrame으로 올리고, 매 프레임 바뀌는 건 경로·비행기·진행 막대뿐이라
-// 큰 정적 문자열인 육지 점 path는 memo로 다시 그리지 않는다.
-import { memo, useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+// 육지 점·점선 밑그림은 따로 겹친 Svg(memo)에 그려 프레임마다 다시 그리지 않는다.
+import { memo, useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, G, Path, Text as SvgText } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
-import { alongRoute, flightProgress, type FlightMap } from '@offside/app-core/flight';
+import { alongRoute, PLANE_PATH, type FlightMap } from '@offside/app-core/flight';
+import { flightProgress } from '@offside/app-core/flight-time';
 import type { SheetView } from '@offside/app-core/sheets';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
-import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
+import { SkipLink } from './parts';
 
-/** 웹 Flight.svelte의 비행기 모양(코가 +x). */
-const PLANE =
-  'M10 0 3.5-1.4-1-8h-2.6l2.2 6.6H-5.6L-7.8-4h-1.8l1.3 4-1.3 4h1.8l2.2-2.6h4.2L-3.6 8H-1l4.5-6.6Z';
 /** 도착 고리가 한 번 퍼지는 시간(웹 ping 0.9s). */
 const PING_MS = 900;
 
-/** 육지 점 + 점선 밑그림 경로 — 장면 동안 안 바뀐다. */
+/** 육지 점 + 점선 밑그림 경로 — 장면 동안 안 바뀌어 위 레이어와 다른 Svg에 그린다. */
 const Backdrop = memo(function Backdrop({
-  dots,
-  route,
+  map: m,
   land,
   ghost,
 }: {
-  dots: string;
-  route: string;
+  map: FlightMap;
   land: string;
   ghost: string;
 }) {
   return (
-    <>
-      <Path d={dots} fill={land} />
+    <Svg style={StyleSheet.absoluteFill} viewBox={`0 0 ${m.w} ${m.h}`}>
+      <Path d={m.dots} fill="none" stroke={land} strokeWidth={m.dotW} strokeLinecap="round" />
       <Path
-        d={route}
+        d={m.route}
         fill="none"
         stroke={ghost}
         strokeOpacity={0.35}
         strokeWidth={1.2}
         strokeDasharray={[3, 4]}
       />
-    </>
+    </Svg>
   );
 });
 
@@ -73,18 +69,6 @@ function Ping({ color, motionOK }: { color: string; motionOK: boolean }) {
   );
 }
 
-/** 2차 베지어 경로 길이 — react-native-svg는 pathLength가 미덥지 않아 점 41개를 이어 어림한다. */
-function routeLength(m: Pick<FlightMap, 'from' | 'to' | 'ctrl'>): number {
-  let len = 0;
-  let prev = alongRoute(m, 0);
-  for (let i = 1; i <= 40; i++) {
-    const q = alongRoute(m, i / 40);
-    len += Math.hypot(q.x - prev.x, q.y - prev.y);
-    prev = q;
-  }
-  return len;
-}
-
 export function Flight({ v }: { v: Extract<SheetView, { kind: 'flight' }> }) {
   const s = useSnapshot(v);
   const c = useColors();
@@ -109,9 +93,8 @@ export function Flight({ v }: { v: Extract<SheetView, { kind: 'flight' }> }) {
   }, [motionOK, v]);
 
   const m = s.map;
-  const len = useMemo(() => routeLength(m), [m]);
-  // 끝점이 어림 길이보다 살짝 모자라지 않게 여유를 둔다.
-  const dash = len + 2;
+  // react-native-svg는 pathLength가 미덥지 않아 어림 길이(m.len)로 dash를 잡는다 — 끝점이 모자라지 않게 여유를 둔다.
+  const dash = m.len + 2;
   const plane = alongRoute(m, p);
   const arrived = p >= 1;
 
@@ -135,8 +118,8 @@ export function Flight({ v }: { v: Extract<SheetView, { kind: 'flight' }> }) {
           aspectRatio: 320 / 190,
         }}
       >
-        <Svg width="100%" height="100%" viewBox={`0 0 ${m.w} ${m.h}`}>
-          <Backdrop dots={m.dots} route={m.route} land={c.chalk} ghost={c.onPitch} />
+        <Backdrop map={m} land={c.chalk} ghost={c.onPitch} />
+        <Svg style={StyleSheet.absoluteFill} viewBox={`0 0 ${m.w} ${m.h}`}>
           <Path
             d={m.route}
             fill="none"
@@ -156,7 +139,7 @@ export function Flight({ v }: { v: Extract<SheetView, { kind: 'flight' }> }) {
             <Hub code={s.to.code} fill={c.onPitch} />
           </G>
           <G transform={`translate(${plane.x} ${plane.y}) rotate(${plane.deg})`}>
-            <Path d={PLANE} fill={c.onPitch} stroke={c.pitch} strokeWidth={0.8} />
+            <Path d={PLANE_PATH} fill={c.onPitch} stroke={c.pitch} strokeWidth={0.8} />
           </G>
         </Svg>
       </View>
@@ -176,28 +159,25 @@ export function Flight({ v }: { v: Extract<SheetView, { kind: 'flight' }> }) {
             overflow: 'hidden',
           }}
         >
-          <View style={{ width: `${p * 100}%`, height: '100%', backgroundColor: c.accent }} />
+          {/* 폭 대신 scaleX — 프레임마다 레이아웃을 다시 하지 않는다. */}
+          <View
+            style={{
+              height: '100%',
+              backgroundColor: c.accent,
+              transformOrigin: 'left',
+              transform: [{ scaleX: p }],
+            }}
+          />
         </View>
         <Airport code={s.to.code} city={s.to.city} end />
       </View>
-      {s.skip ? (
-        <Press
-          testID="an-skip"
-          onPress={() => v.skip?.()}
-          hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
-          style={{ alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 2 }}
-        >
-          <Txt tone="muted" style={{ fontSize: rem(0.75), textDecorationLine: 'underline' }}>
-            건너뛰기
-          </Txt>
-        </Press>
-      ) : null}
+      {s.done ? null : <SkipLink onPress={v.skip} />}
     </>
   );
 }
 
 /** 지도 위 공항 코드(웹 .hub text) — 점 아래 16에 가운데 맞춤(비행기가 위에서 내려와 겹치지 않게). */
-function Hub({ code, fill }: { code: string; fill: string }) {
+const Hub = memo(function Hub({ code, fill }: { code: string; fill: string }) {
   return (
     <SvgText
       y={16}
@@ -210,10 +190,18 @@ function Hub({ code, fill }: { code: string; fill: string }) {
       {code}
     </SvgText>
   );
-}
+});
 
 /** 탑승권 줄의 공항 한쪽: 큰 코드 + 도시. */
-function Airport({ code, city, end }: { code: string; city: string; end?: boolean }) {
+const Airport = memo(function Airport({
+  code,
+  city,
+  end,
+}: {
+  code: string;
+  city: string;
+  end?: boolean;
+}) {
   return (
     <View style={{ alignItems: end ? 'flex-end' : 'flex-start' }}>
       <Txt
@@ -231,4 +219,4 @@ function Airport({ code, city, end }: { code: string; city: string; end?: boolea
       </Txt>
     </View>
   );
-}
+});

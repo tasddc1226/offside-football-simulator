@@ -8,6 +8,7 @@ import type { BlockResult, MatchGame } from '@offside/game/match';
 import type { GameState } from '@offside/game/types';
 import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
+import { FLIGHT_MS, FLIGHT_STILL_MS } from './flight-time.js';
 import type { SheetButton, SheetView, TickerRow } from './sheets.js';
 
 type ViewOf<K extends SheetView['kind']> = Extract<SheetView, { kind: K }>;
@@ -301,7 +302,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
     );
   }
   /**
-   * T-11-039 해외 이적 비행 장면을 view.ms 동안 띄운다(그동안 닫히지 않는다). 건너뛰기는 바로 도착 장면을 잠깐
+   * T-11-039 해외 이적 비행 장면을 FLIGHT_MS(감속 모션이면 정지 장면 FLIGHT_STILL_MS) 동안 띄운다(그동안 닫히지 않는다). 건너뛰기는 바로 도착 장면을 잠깐
    * 보여 주고 끝낸다. 본문이 그려진 뒤부터 잰다 — 비행기가 날기 시작하는 시각과 맞춘다.
    */
   function playFlight(view: Omit<ViewOf<'flight'>, 'kind' | 'done' | 'skip'>): Promise<void> {
@@ -321,8 +322,8 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
         ...view,
         done: false,
         skip: () => {
+          if (v.done) return;
           v.done = true;
-          v.skip = null;
           clearTimeout(timer);
           timer = setTimeout(end, ARRIVE_MS);
         },
@@ -331,7 +332,8 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
         .tick()
         .then(ui.painted)
         .then(() => {
-          if (!v.done) timer = setTimeout(end, view.ms + ARRIVE_MS);
+          const ms = ui.motionOK() ? FLIGHT_MS : FLIGHT_STILL_MS;
+          if (!v.done) timer = setTimeout(end, ms + ARRIVE_MS);
         });
     });
   }

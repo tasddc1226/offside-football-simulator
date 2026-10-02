@@ -207,7 +207,7 @@ export type SheetView =
       onClose: () => void;
     }
   | {
-      /** T-11-039 해외 이적 비행(로딩 장면). 본문이 ms 동안 비행기를 경로 따라 옮긴다. done이면 바로 도착 장면. */
+      /** T-11-039 해외 이적 비행(로딩 장면). 본문이 FLIGHT_MS 동안 비행기를 경로 따라 옮긴다. done이면(건너뛰기) 바로 도착 장면. */
       kind: 'flight';
       eyebrow: string;
       title: string;
@@ -215,9 +215,8 @@ export type SheetView =
       from: { code: string; city: string };
       to: { code: string; city: string };
       map: FlightMap;
-      ms: number;
       done: boolean;
-      skip: (() => void) | null;
+      skip: () => void;
     }
   | {
       kind: 'notice';

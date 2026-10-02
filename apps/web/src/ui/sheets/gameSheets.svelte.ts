@@ -4,20 +4,11 @@
 import type { Component } from 'svelte';
 import type { SheetView } from '@offside/app-core/sheets';
 
-export type GameSheetView = Extract<
-  SheetView,
-  { kind: 'event' | 'eventResult' | 'season' | 'market' | 'contract' | 'flight' }
->;
-const GAME_KINDS = new Set<SheetView['kind']>([
-  'event',
-  'eventResult',
-  'season',
-  'market',
-  'contract',
-  'flight',
-]);
+const GAME_KINDS = ['event', 'eventResult', 'season', 'market', 'contract', 'flight'] as const;
+export type GameSheetView = Extract<SheetView, { kind: (typeof GAME_KINDS)[number] }>;
 /** 게임 청크가 필요한 시트인지. */
-export const isGameSheet = (v: SheetView): v is GameSheetView => GAME_KINDS.has(v.kind);
+export const isGameSheet = (v: SheetView): v is GameSheetView =>
+  (GAME_KINDS as readonly string[]).includes(v.kind);
 
 export const gameSheets = $state<{ C: Component<{ v: GameSheetView }> | null }>({ C: null });
 

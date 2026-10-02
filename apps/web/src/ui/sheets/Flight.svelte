@@ -2,7 +2,8 @@
   // T-11-039 해외 이적 비행 — 육지 점 지도 위로 지금 나라 공항에서 새 리그 나라 공항까지 비행기가 날아가고, 지나간
   // 경로가 그려진다. 도착하면 도착 공항에 고리가 퍼진다. 감속 모션이면 경로·비행기를 도착한 모습으로만 그린다.
   import { onMount } from 'svelte';
-  import { alongRoute, flightProgress } from '@offside/app-core/flight';
+  import { alongRoute, PLANE_PATH } from '@offside/app-core/flight';
+  import { flightProgress } from '@offside/app-core/flight-time';
   import { motionOK } from '../motion.js';
   import type { SheetView } from '@offside/app-core/sheets';
 
@@ -28,10 +29,13 @@
 <div class="eyebrow">{v.eyebrow}</div>
 <h2>{v.title}</h2>
 <p class="muted fs-sm flight-sub">{v.sub}</p>
-<div class="flight-map">
-  <svg viewBox="0 0 {v.map.w} {v.map.h}" role="img" aria-label="{v.from.city}에서 {v.to.city}까지 비행 경로">
-    <path class="land" d={v.map.dots} />
+<div class="flight-map" role="img" aria-label="{v.from.city}에서 {v.to.city}까지 비행 경로">
+  <!-- 육지 점·점선 밑그림은 장면 동안 안 바뀌어 따로 그린다 — 프레임마다 다시 그리는 건 위 레이어(경로·비행기)뿐. -->
+  <svg viewBox="0 0 {v.map.w} {v.map.h}" aria-hidden="true">
+    <path class="land" d={v.map.dots} stroke-width={v.map.dotW} />
     <path class="route-ghost" d={v.map.route} />
+  </svg>
+  <svg viewBox="0 0 {v.map.w} {v.map.h}" aria-hidden="true">
     <path class="route" d={v.map.route} pathLength="1" stroke-dasharray="1" stroke-dashoffset={1 - p} />
     <g class="hub" transform="translate({v.map.from.x} {v.map.from.y})">
       <circle r="3.5" />
@@ -43,9 +47,7 @@
       <text y="16">{v.to.code}</text>
     </g>
     <g class="plane" transform="translate({plane.x} {plane.y}) rotate({plane.deg})">
-      <path
-        d="M10 0 3.5-1.4-1-8h-2.6l2.2 6.6H-5.6L-7.8-4h-1.8l1.3 4-1.3 4h1.8l2.2-2.6h4.2L-3.6 8H-1l4.5-6.6Z"
-      />
+      <path d={PLANE_PATH} />
     </g>
   </svg>
 </div>
@@ -54,7 +56,7 @@
   <div class="flight-bar"><i style:width="{p * 100}%"></i></div>
   <div class="end"><b>{v.to.code}</b><span>{v.to.city}</span></div>
 </div>
-{#if v.skip}
+{#if !v.done}
   <button class="link-btn skip" id="an-skip" onclick={v.skip}>건너뛰기</button>
 {/if}
 
@@ -63,18 +65,22 @@
     margin: -6px 0 0;
   }
   .flight-map {
+    position: relative;
     border-radius: 16px;
     overflow: hidden;
     background: var(--pitch);
     aspect-ratio: 320 / 190;
   }
   .flight-map svg {
-    display: block;
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
   }
   .land {
-    fill: var(--chalk);
+    fill: none;
+    stroke: var(--chalk);
+    stroke-linecap: round;
   }
   .route-ghost {
     fill: none;

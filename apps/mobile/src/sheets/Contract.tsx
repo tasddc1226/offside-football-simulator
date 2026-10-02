@@ -4,11 +4,19 @@
 // 웹은 canvas에 그렸지만 앱은 획마다 점을 모아 react-native-svg Path로 그린다. 터치는 패드 위에 덮은 투명 View 하나가
 // PanResponder로 잡는다(DragShot과 같다 — 터치 대상이 늘 그 View라 locationX/Y가 패드 기준으로 일정하고, 바깥 스크롤이
 // 제스처를 가져가지 못한다).
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Easing, PanResponder, StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import Svg, { ClipPath, Defs, G, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
+import {
+  MIN_INK,
+  REVEAL_MS,
+  SKEW_X,
+  SKEW_Y,
+  STAMP_MS,
+  signFlourish,
+} from '@offside/app-core/signature';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
@@ -18,31 +26,12 @@ import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
 import { Enter } from './anim';
 
-/** 이만큼(px) 그어야 사인으로 친다 — 점 하나 찍고 넘어가지 않게. */
-const MIN_INK = 40;
-const STAMP_MS = 650;
-const REVEAL_MS = 600;
 /** 웹 stamp 키프레임의 cubic-bezier(0.2, 1.6, 0.4, 1). */
 const STAMP_EASE = Easing.bezier(0.2, 1.6, 0.4, 1);
 
 interface Pt {
   x: number;
   y: number;
-}
-
-/** 점들을 이어 부드러운 곡선 path로 — 웹처럼 두 점의 가운데를 끝점으로, 앞 점을 제어점으로 하는 2차 곡선. */
-function strokePath(pts: Pt[]): string {
-  const f = pts[0];
-  if (!f) return '';
-  if (pts.length === 1) return `M${f.x},${f.y}l0.01,0`;
-  let d = `M${f.x},${f.y}`;
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1]!,
-      b = pts[i]!;
-    d += `Q${a.x},${a.y} ${(a.x + b.x) / 2},${(a.y + b.y) / 2}`;
-  }
-  const l = pts[pts.length - 1]!;
-  return `${d}L${l.x},${l.y}`;
 }
 
 /** 굵은 이탤릭 글자 폭 어림(RN엔 measureText가 없다) — 한글·한자는 글자 크기만큼, 그 밖은 0.58배. */
@@ -52,7 +41,64 @@ function textWidth(text: string, size: number): number {
   return w * size;
 }
 
-export function Contract({ v }: { v: Extract<SheetView, { kind: 'contract' }> }) {
+type ContractView = Extract<SheetView, { kind: 'contract' }>;
+
+/** 구단 배지 + 계약 조건 — 사인하는 동안(획마다 다시 그려진다) 함께 다시 그리지 않는다. */
+const Terms = memo(function Terms({
+  club,
+  terms,
+}: {
+  club: ContractView['club'];
+  terms: readonly { label: string; value: string }[];
+}) {
+  const c = useColors();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        backgroundColor: c.surface2,
+      }}
+    >
+      <ClubBadge club={club} size={34} />
+      <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', rowGap: 4, columnGap: 16 }}>
+        {terms.map((t) => (
+          <View key={t.label}>
+            <Txt tone="muted" style={{ fontSize: rem(0.6875), lineHeight: rem(0.6875) * 1.4 }}>
+              {t.label}
+            </Txt>
+            <Txt bold style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.4 }}>
+              {t.value}
+            </Txt>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+});
+
+function Stroke({ d, color }: { d: string; color: string }) {
+  return (
+    <Path
+      d={d}
+      fill="none"
+      stroke={color}
+      strokeWidth={2.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  );
+}
+/** 다 그은 획들 — 긋는 중인 획만 바뀌므로 따로 둔다. */
+const Strokes = memo(function Strokes({ paths, color }: { paths: string[]; color: string }) {
+  return paths.map((d, i) => <Stroke key={i} d={d} color={color} />);
+});
+
+export function Contract({ v }: { v: ContractView }) {
   const s = useSnapshot(v);
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
@@ -60,31 +106,35 @@ export function Contract({ v }: { v: Extract<SheetView, { kind: 'contract' }> })
 
   const [done, setDone] = useState<string[]>([]);
   const [cur, setCur] = useState('');
-  const [ink, setInk] = useState(0);
+  const [inked, setInked] = useState(false);
+  const [enough, setEnough] = useState(false);
   const [named, setNamed] = useState(false);
   const [reveal, setReveal] = useState(1);
   const [sealed, setSealed] = useState(false);
   const [size, setSize] = useState({ w: 0, h: 150 });
-  const ready = named || ink >= MIN_INK;
+  const ready = named || enough;
 
   // 터치 핸들러는 한 번만 만들어 쓰므로 최신 값은 ref로 읽는다.
-  const pts = useRef<Pt[]>([]);
+  // 긋는 중인 획: 지금까지의 곡선(body)과 마지막 점. 움직일 때마다 새 구간만 덧붙인다(웹처럼 두 점의 가운데를
+  // 끝점으로, 앞 점을 제어점으로 하는 2차 곡선). 그은 길이(ink)는 확정 버튼을 켤 만큼인지만 화면에 알린다.
+  const body = useRef('');
+  const lastPt = useRef<Pt | null>(null);
+  const ink = useRef(0);
   const sealedRef = useRef(false);
   const namedRef = useRef(false);
   const raf = useRef(0);
-  const motionRef = useRef(motionOK);
-  useEffect(() => {
-    motionRef.current = motionOK;
-  }, [motionOK]);
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
 
   const clear = useCallback(() => {
     cancelAnimationFrame(raf.current);
-    pts.current = [];
+    body.current = '';
+    lastPt.current = null;
+    ink.current = 0;
     namedRef.current = false;
     setDone([]);
     setCur('');
-    setInk(0);
+    setInked(false);
+    setEnough(false);
     setNamed(false);
     setReveal(1);
   }, []);
@@ -95,10 +145,10 @@ export function Contract({ v }: { v: Extract<SheetView, { kind: 'contract' }> })
       y: Math.round(e.nativeEvent.locationY * 10) / 10,
     });
     const end = () => {
-      const p = pts.current;
-      if (!p.length) return;
-      const d = strokePath(p);
-      pts.current = [];
+      const l = lastPt.current;
+      if (!l) return;
+      const d = `${body.current}L${l.x},${l.y}`;
+      lastPt.current = null;
       setDone((a) => [...a, d]);
       setCur('');
     };
@@ -108,18 +158,23 @@ export function Contract({ v }: { v: Extract<SheetView, { kind: 'contract' }> })
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (e) => {
         if (namedRef.current) clear();
-        pts.current = [at(e)];
-        setCur(strokePath(pts.current));
+        const p = at(e);
+        lastPt.current = p;
+        body.current = `M${p.x},${p.y}`;
+        setCur(`${body.current}l0.01,0`);
+        setInked(true);
       },
       onPanResponderMove: (e) => {
         const p = at(e);
-        const last = pts.current[pts.current.length - 1];
-        if (!last) return;
-        const d = Math.hypot(p.x - last.x, p.y - last.y);
+        const a = lastPt.current;
+        if (!a) return;
+        const d = Math.hypot(p.x - a.x, p.y - a.y);
         if (d < 1) return;
-        pts.current.push(p);
-        setInk((n) => n + d);
-        setCur(strokePath(pts.current));
+        body.current += `Q${a.x},${a.y} ${(a.x + p.x) / 2},${(a.y + p.y) / 2}`;
+        lastPt.current = p;
+        setCur(`${body.current}L${p.x},${p.y}`);
+        ink.current += d;
+        if (ink.current >= MIN_INK) setEnough(true);
       },
       onPanResponderRelease: end,
       onPanResponderTerminate: end,
@@ -133,11 +188,7 @@ export function Contract({ v }: { v: Extract<SheetView, { kind: 'contract' }> })
     const tw = textWidth(s.name, fs);
     if (tw > W * 0.7) fs *= (W * 0.7) / tw;
     const half = Math.min(W * 0.42, textWidth(s.name, fs) / 2 + fs * 0.9);
-    const flourish =
-      `M${-half},${fs * 0.32}` +
-      `C${-half * 0.3},${fs * 0.12} ${half * 0.4},${fs * 0.5} ${half},${fs * 0.05}` +
-      `Q${half * 0.8},${fs * 0.6} ${half * 0.55},${fs * 0.3}`;
-    return { fs, flourish };
+    return { fs, flourish: signFlourish(half, fs) };
   }, [s.name, W, H]);
 
   /** 선수 이름을 기울여 흘려 쓰고 밑줄 꼬리를 붙인다. 동작 줄이기가 아니면 왼쪽부터 써 나간다. */
@@ -146,7 +197,7 @@ export function Contract({ v }: { v: Extract<SheetView, { kind: 'contract' }> })
     clear();
     namedRef.current = true;
     setNamed(true);
-    if (!motionRef.current) return;
+    if (!motionOK) return;
     setReveal(0);
     const t0 = performance.now();
     const step = () => {
@@ -163,7 +214,7 @@ export function Contract({ v }: { v: Extract<SheetView, { kind: 'contract' }> })
     cancelAnimationFrame(raf.current);
     setReveal(1);
     setSealed(true);
-    setTimeout(() => v.onSign(), motionRef.current ? STAMP_MS : 0);
+    setTimeout(() => v.onSign(), motionOK ? STAMP_MS : 0);
   }
 
   return (
@@ -198,31 +249,7 @@ export function Contract({ v }: { v: Extract<SheetView, { kind: 'contract' }> })
       <Txt tone="muted" style={{ marginTop: -4, fontSize: rem(0.9375) }}>
         {s.text}
       </Txt>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 12,
-          paddingVertical: 10,
-          paddingHorizontal: 12,
-          borderRadius: 12,
-          backgroundColor: c.surface2,
-        }}
-      >
-        <ClubBadge club={s.club} size={34} />
-        <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', rowGap: 4, columnGap: 16 }}>
-          {s.terms.map((t) => (
-            <View key={t.label}>
-              <Txt tone="muted" style={{ fontSize: rem(0.6875), lineHeight: rem(0.6875) * 1.4 }}>
-                {t.label}
-              </Txt>
-              <Txt bold style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.4 }}>
-                {t.value}
-              </Txt>
-            </View>
-          ))}
-        </View>
-      </View>
+      <Terms club={s.club} terms={s.terms} />
       <View
         accessibilityLabel="선수 사인 입력 영역"
         onLayout={(e) => {
@@ -242,27 +269,8 @@ export function Contract({ v }: { v: Extract<SheetView, { kind: 'contract' }> })
         }}
       >
         <Svg width="100%" height="100%" pointerEvents="none">
-          {done.map((d, i) => (
-            <Path
-              key={i}
-              d={d}
-              fill="none"
-              stroke={c.ink}
-              strokeWidth={2.6}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ))}
-          {cur ? (
-            <Path
-              d={cur}
-              fill="none"
-              stroke={c.ink}
-              strokeWidth={2.6}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ) : null}
+          <Strokes paths={done} color={c.ink} />
+          {cur ? <Stroke d={cur} color={c.ink} /> : null}
           {named && W > 0 ? (
             <>
               <Defs>
@@ -271,7 +279,9 @@ export function Contract({ v }: { v: Extract<SheetView, { kind: 'contract' }> })
                 </ClipPath>
               </Defs>
               <G clipPath={`url(#${clip})`}>
-                <G transform={`translate(${W / 2} ${H * 0.56}) matrix(1 -0.06 -0.28 1 0 0)`}>
+                <G
+                  transform={`translate(${W / 2} ${H * 0.56}) matrix(1 ${SKEW_Y} ${SKEW_X} 1 0 0)`}
+                >
                   <SvgText
                     x={0}
                     y={0}
@@ -295,7 +305,7 @@ export function Contract({ v }: { v: Extract<SheetView, { kind: 'contract' }> })
             </>
           ) : null}
         </Svg>
-        {ink > 0 || named ? null : (
+        {inked || named ? null : (
           <View
             pointerEvents="none"
             style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}

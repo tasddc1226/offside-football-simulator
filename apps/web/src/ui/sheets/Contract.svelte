@@ -4,33 +4,45 @@
   import { onMount } from 'svelte';
   import ClubBadge from '../ClubBadge.svelte';
   import { motionOK } from '../motion.js';
+  import { MIN_INK, REVEAL_MS, SKEW_X, SKEW_Y, STAMP_MS, signFlourish } from '@offside/app-core/signature';
   import type { SheetView } from '@offside/app-core/sheets';
 
   let { v }: { v: Extract<SheetView, { kind: 'contract' }> } = $props();
 
-  /** 이만큼(px) 그어야 사인으로 친다 — 점 하나 찍고 넘어가지 않게. */
-  const MIN_INK = 40;
-  const STAMP_MS = 650;
-
   let canvas = $state<HTMLCanvasElement | null>(null);
-  let ink = $state(0);
+  /** 그은 길이 — 매 이벤트 늘어나므로 상태가 아닌 값으로 두고, 화면은 inked·enough만 본다. */
+  let ink = 0;
+  let inked = $state(false);
+  let enough = $state(false);
   let named = $state(false);
   let sealed = $state(false);
-  const ready = $derived(named || ink >= MIN_INK);
+  const ready = $derived(named || enough);
 
   let ctx: CanvasRenderingContext2D | null = null;
   let dpr = 1;
   let raf = 0;
   let last: { x: number; y: number; t: number; w: number } | null = null;
   let mid: { x: number; y: number } | null = null;
+  /** 획을 시작할 때 한 번 읽어 두는 패드 위치 — 긋는 동안 이벤트마다 레이아웃을 묻지 않는다. */
+  let rect: DOMRect | null = null;
 
   const inkColor = () => getComputedStyle(canvas!).color;
 
+  /** 캔버스 해상도를 화면 크기에 맞춘다(크기가 그대로면 지우기만 한다). */
   function fit() {
     if (!canvas) return;
     dpr = Math.min(3, devicePixelRatio || 1);
-    canvas.width = Math.round(canvas.clientWidth * dpr);
-    canvas.height = Math.round(canvas.clientHeight * dpr);
+    const w = Math.round(canvas.clientWidth * dpr),
+      h = Math.round(canvas.clientHeight * dpr);
+    if (ctx && canvas.width === w && canvas.height === h) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      ctx.restore();
+      return;
+    }
+    canvas.width = w;
+    canvas.height = h;
     ctx = canvas.getContext('2d');
     ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
@@ -51,22 +63,22 @@
     cancelAnimationFrame(raf);
     fit();
     ink = 0;
-    named = false;
+    inked = enough = named = false;
     last = mid = null;
   }
 
-  const at = (e: PointerEvent) => {
-    const r = canvas!.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top, t: e.timeStamp };
-  };
+  const at = (e: PointerEvent) => ({ x: e.clientX - rect!.left, y: e.clientY - rect!.top, t: e.timeStamp });
   function down(e: PointerEvent) {
     if (sealed || !ctx) return;
     if (named) clear();
     canvas!.setPointerCapture(e.pointerId);
+    rect = canvas!.getBoundingClientRect();
     const p = at(e);
     last = { ...p, w: 2.6 };
     mid = p;
-    ctx.fillStyle = inkColor();
+    inked = true;
+    ctx.fillStyle = ctx.strokeStyle = inkColor();
+    ctx.lineCap = ctx.lineJoin = 'round';
     ctx.beginPath();
     ctx.arc(p.x, p.y, 1.3, 0, Math.PI * 2);
     ctx.fill();
@@ -81,9 +93,7 @@
       const speed = d / Math.max(1, p.t - last.t);
       const w: number = last.w * 0.7 + Math.min(3.4, Math.max(1.2, 3.6 - speed * 1.1)) * 0.3;
       const m = { x: (last.x + p.x) / 2, y: (last.y + p.y) / 2 };
-      ctx.strokeStyle = inkColor();
       ctx.lineWidth = w;
-      ctx.lineCap = ctx.lineJoin = 'round';
       ctx.beginPath();
       ctx.moveTo(mid.x, mid.y);
       ctx.quadraticCurveTo(last.x, last.y, m.x, m.y);
@@ -92,6 +102,7 @@
       last = { ...p, w };
       mid = m;
     }
+    if (!enough && ink >= MIN_INK) enough = true;
   }
   const up = () => (last = mid = null);
 
@@ -102,11 +113,14 @@
     const c = ctx!;
     const W = canvas.clientWidth,
       H = canvas.clientHeight;
-    const font = getComputedStyle(canvas).fontFamily;
-    let size = H * 0.42;
-    c.font = `italic 500 ${size}px ${font}`;
-    const tw = c.measureText(v.name).width;
-    if (tw > W * 0.7) size *= (W * 0.7) / tw;
+    const family = getComputedStyle(canvas).fontFamily;
+    c.font = `italic 500 ${H * 0.42}px ${family}`;
+    // 폭 70%를 넘으면 글자를 줄인다.
+    const size = H * 0.42 * Math.min(1, (W * 0.7) / c.measureText(v.name).width);
+    c.font = `italic 500 ${size}px ${family}`;
+    const half = Math.min(W * 0.42, c.measureText(v.name).width / 2 + size * 0.9);
+    const flourish = new Path2D(signFlourish(half, size));
+    const color = inkColor();
     const draw = (reveal: number) => {
       c.save();
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -114,28 +128,22 @@
       c.beginPath();
       c.rect(0, 0, W * reveal, H);
       c.clip();
-      c.fillStyle = c.strokeStyle = inkColor();
+      c.fillStyle = c.strokeStyle = color;
       c.translate(W / 2, H * 0.56);
-      c.transform(1, -0.06, -0.28, 1, 0, 0);
-      c.font = `italic 500 ${size}px ${font}`;
+      c.transform(1, SKEW_Y, SKEW_X, 1, 0, 0);
       c.textAlign = 'center';
       c.textBaseline = 'alphabetic';
       c.fillText(v.name, 0, 0);
-      const half = Math.min(W * 0.42, c.measureText(v.name).width / 2 + size * 0.9);
       c.lineWidth = 2.2;
       c.lineCap = 'round';
-      c.beginPath();
-      c.moveTo(-half, size * 0.32);
-      c.bezierCurveTo(-half * 0.3, size * 0.12, half * 0.4, size * 0.5, half, size * 0.05);
-      c.quadraticCurveTo(half * 0.8, size * 0.6, half * 0.55, size * 0.3);
-      c.stroke();
+      c.stroke(flourish);
       c.restore();
     };
     named = true;
     if (!motionOK) return draw(1);
     const t0 = performance.now();
     const step = (now: number) => {
-      const t = Math.min(1, (now - t0) / 600);
+      const t = Math.min(1, (now - t0) / REVEAL_MS);
       draw(1 - Math.pow(1 - t, 2));
       if (t < 1) raf = requestAnimationFrame(step);
     };
@@ -162,7 +170,7 @@
       {/each}
     </dl>
   </div>
-  <div class="sign-pad" class:inked={ink > 0 || named}>
+  <div class="sign-pad" class:inked={inked || named}>
     <canvas
       bind:this={canvas}
       aria-label="선수 사인 입력 영역"
@@ -170,7 +178,6 @@
       onpointermove={move}
       onpointerup={up}
       onpointercancel={up}
-      ontouchstart={(e) => e.stopPropagation()}
     ></canvas>
     <span class="sign-hint" aria-hidden="true">이곳에 사인해 주세요</span>
     <i aria-hidden="true"></i>

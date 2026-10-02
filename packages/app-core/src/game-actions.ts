@@ -48,13 +48,17 @@ import type {
   GameState,
   HofEntry,
   MarketResult,
+  MarketOption,
   OfferOption,
 } from '@offside/game/types';
 import { markDexSeen } from './dex.js';
 import { pushEvLog, seasonLabel } from './career.js';
 import { publicNameOf } from './namePublic.js';
 import { fmtValue, seasonLabelOf, waGwa, withRo } from './format.js';
-import { crossesBorder, FLIGHT_MS, FLIGHT_STILL_MS, flightKm, flightMap, hubOf } from './flight.js';
+import { crossesBorder, flightHours, hubOf } from './flight.js';
+
+/** 비행 지도는 육지 데이터가 커서 해외 이적일 때만 불러온다(계약서를 여는 순간 미리 받아 둔다). */
+const loadFlightMap = () => import('./flight-map.js');
 import { matchRows, type SheetController } from './sheet-controller.js';
 import {
   draftBody,
@@ -443,15 +447,15 @@ export function createGameActions(host: GameHost) {
     const o = options[i];
     if (!o || !appState.G) return;
     // T-11-039 다른 구단의 오퍼는 계약서에 사인해야 확정된다(×로 닫으면 이적시장으로 돌아온다).
-    if (o.kind === 'offer') return showContract(i, o);
-    if (settleOption(i)) startSeason();
+    if (o.kind === 'offer') return showContract(i, o, options);
+    if (settleOption(i, o, options)) startSeason();
   }
 
   /** T-11-039 계약서. 아마추어(고교·대학)에서 처음 프로 구단에 가면 입단 계약, 그 밖에는 이적 계약. */
-  function showContract(i: number, o: OfferOption) {
+  function showContract(i: number, o: OfferOption, options: MarketOption[]) {
     const G = appState.G!;
     const rookie = !!leagueOf(G.leagueId).amateur;
-    let signed = false;
+    if (crossesBorder(G.leagueId, o.leagueId)) void loadFlightMap().catch(() => {});
     sheet.showSheet({
       kind: 'contract',
       eyebrow: rookie ? 'Rookie Contract' : 'Transfer Contract',
@@ -466,42 +470,40 @@ export function createGameActions(host: GameHost) {
       ],
       name: G.name,
       cta: rookie ? '사인하고 프로 입단' : '사인하고 이적',
-      onSign: () => {
-        if (signed) return;
-        signed = true;
-        void signOffer(i, o);
-      },
+      // 두 번 눌러도 한 번만 부른다(본문이 도장을 찍으며 버튼을 잠근다).
+      onSign: () => void signOffer(i, o, options),
       onClose: nextPending,
     });
   }
 
   /** 사인한 오퍼를 확정하고, 나라가 바뀌면 새 리그의 나라로 날아가는 장면을 보여 준 뒤 시즌을 연다. */
-  async function signOffer(i: number, o: OfferOption) {
+  async function signOffer(i: number, o: OfferOption, options: MarketOption[]) {
     const fromLg = appState.G!.leagueId;
-    if (!settleOption(i)) return;
+    if (!settleOption(i, o, options)) return;
     if (crossesBorder(fromLg, o.leagueId)) {
       const from = hubOf(fromLg),
         to = hubOf(o.leagueId);
-      const km = flightKm(from, to);
-      await sheet.playFlight({
-        eyebrow: 'Transfer Flight',
-        title: `${withRo(to.city)} 날아가는 중`,
-        sub: `${to.country} · ${leagueOf(o.leagueId).name} · 약 ${Math.max(1, Math.round(km / 850))}시간 비행`,
-        from: { code: from.code, city: from.city },
-        to: { code: to.code, city: to.city },
-        map: flightMap(from, to),
-        ms: sheet.motionOK() ? FLIGHT_MS : FLIGHT_STILL_MS,
-      });
+      // 지도를 못 불러오면(오프라인 등) 비행 장면만 건너뛴다 — 이적은 이미 확정됐다.
+      const map = await loadFlightMap().then(
+        (m) => m.flightMap(from, to),
+        () => null,
+      );
+      if (map)
+        await sheet.playFlight({
+          eyebrow: 'Transfer Flight',
+          title: `${withRo(to.city)} 날아가는 중`,
+          sub: `${to.country} · ${leagueOf(o.leagueId).name} · 약 ${flightHours(from, to)}시간 비행`,
+          from: { code: from.code, city: from.city },
+          to: { code: to.code, city: to.city },
+          map,
+        });
     }
     startSeason();
   }
 
   /** 고른 옵션을 확정·저장한다. 병역 결과처럼 따로 시트를 띄웠으면 false(시즌 시작은 그 시트가 맡는다). */
-  function settleOption(i: number): boolean {
+  function settleOption(i: number, o: MarketOption, options: MarketOption[]): boolean {
     const G = appState.G!;
-    const p = G.pending;
-    const options = p?.type === 'market' ? (p.m?.options ?? []) : [];
-    const o = options[i]!;
     const r = acceptOption(G, o, options);
     const logEntry: EventLogEntry = {
       k: o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' ? 'mil' : 'mkt',

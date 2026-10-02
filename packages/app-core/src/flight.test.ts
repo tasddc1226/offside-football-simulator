@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { alongRoute, crossesBorder, flightMap, flightProgress, hubOf } from './flight.js';
+import { alongRoute, crossesBorder, flightHours, hubOf } from './flight.js';
+import { flightMap } from './flight-map.js';
+import { flightProgress } from './flight-time.js';
 import { landAt } from './land.js';
 
 describe('land', () => {
@@ -47,6 +49,11 @@ describe('flight', () => {
     expect(apex.y).toBeLessThanOrEqual(mid.y);
     expect(apex.y).toBeGreaterThan(0);
     expect(m.dots.length).toBeGreaterThan(200);
+  });
+
+  it('비행시간을 어림한다', () => {
+    expect(flightHours(hubOf('k1'), hubOf('pl'))).toBe(10);
+    expect(flightHours(hubOf('ere'), hubOf('l1'))).toBe(1);
   });
 
   it('인천 → 뉴욕은 태평양을 건넌다(동쪽으로)', () => {
