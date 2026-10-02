@@ -108,7 +108,7 @@ test('로그인하지 않아도 공유 버튼이 화면 아래에 고정돼 링�
   const card = page.locator('[data-share="login"]');
   await expect(card).toContainText('로그인하고 기록 지키기');
   await card.getByRole('button', { name: '구글로 로그인' }).click();
-  await expect(page.getByText('구글 계정을 연결했습니다.')).toBeVisible();
+  await expect(page.getByText('구글 계정을 연결했어요.')).toBeVisible();
   await expect(page).toHaveURL(/\/$/);
   // 설정 화면이 아니라 방금 은퇴한 선수 상세로 돌아오고, 공유 버튼은 그대로 있다.
   await expect(page.locator('.film-open h1')).toBeVisible();

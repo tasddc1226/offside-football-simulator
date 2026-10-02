@@ -45,7 +45,7 @@ test('/settings?google=linked: 토스트 표시 후 URL 정리', async ({ page }
 
   await page.goto('/settings?google=linked');
 
-  await expect(page.locator('#toast')).toContainText('구글 계정을 연결했습니다');
+  await expect(page.locator('#toast')).toContainText('구글 계정을 연결했어요');
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator('h1')).toHaveText('구단주');
 
@@ -70,7 +70,7 @@ test('/settings?google=error&reason=state: 실패 토스트가 이유와 함께 
   );
 
   await page.goto('/settings?google=error&reason=state');
-  await expect(page.locator('#toast')).toContainText('구글 로그인에 실패했습니다');
+  await expect(page.locator('#toast')).toContainText('구글 로그인에 실패했어요');
   await expect(page.locator('#toast')).toContainText('state');
   await expect(page).toHaveURL(/\/$/);
 });
@@ -145,7 +145,7 @@ test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받�
   await expect(account).toContainText('로그인하지 않았어요');
   calls.length = 0;
   await page.locator('[data-act="google-login"]').click();
-  await expect(page.locator('#toast')).toContainText('구글 계정을 연결했습니다');
+  await expect(page.locator('#toast')).toContainText('구글 계정을 연결했어요');
   expect(calls.slice(0, 2)).toEqual(['profile', 'start']);
 });
 
@@ -240,7 +240,7 @@ test('소식에서 댓글을 쓰려고 로그인하면, 돌아와서 보던 글�
   await page.goto('/');
   await page.locator(`[data-home-news="release"] [data-post-row="${POST}"]`).click();
   await page.locator('[data-act="comment-login"]').click();
-  await expect(page.locator('#toast')).toContainText('구글 계정을 연결했습니다');
+  await expect(page.locator('#toast')).toContainText('구글 계정을 연결했어요');
   await expect(page.locator('[data-board]')).toHaveAttribute('data-board', 'release');
   await expect(page.locator(`[data-post="${POST}"] h2`)).toHaveText('260926 릴리즈 노트');
 });
