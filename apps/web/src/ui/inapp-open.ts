@@ -22,8 +22,8 @@ export function currentInApp(): InAppInfo | null {
   return cached;
 }
 
-/** 주소를 클립보드에 복사한다. 성공 여부를 돌려준다. */
-async function copyUrl(text: string): Promise<boolean> {
+/** 글을 클립보드에 복사한다. 성공 여부를 돌려준다. */
+export async function copyText(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     return true;
@@ -58,7 +58,7 @@ export async function openExternal(info: InAppInfo | null = currentInApp()) {
     window.location.href = url;
     return;
   }
-  const copied = await copyUrl(href);
+  const copied = await copyText(href);
   showSheet(
     {
       kind: 'notice',
