@@ -23,7 +23,7 @@
 | 6 | game 특성화 테스트 `characterize.test.ts`: 커리어 10개의 중간 상태 528개 + 변형(대표팀·병역 마감)에서 `simBlock`·`natWindow`·`rollEvent`·`endSeason`(seasonAwards·natSeasonEnd·milSeasonEnd)·시장 선택(병역 7종)·이벤트×선택지 `p` 격자(58개 중 53개 도달) 해시 고정 | 완료 |
 | 7 | 웹·앱 중복 순수 로직 → app-core(+테스트 34개): 홈 라이브 피드 `homeLive`, 팀 라이브 재생 계획 `teamLive.playbackPlan`, 영구결번 벽 `retiredWall`, 국적 검색 `nationSearch`, 공유 링크 `shareLink`, 체격 보정 `create-view.bodyNote`. 동작 차이 없음 | 완료 |
 | 8 | app-core 미테스트 핵심 특성화 테스트 88개: `teamOwner`(라인업 배치·후보 정렬·힌트), `navHistory`, `legendReport`, `news` | 완료 |
-| 9 | game 큰 함수 분리(6 다음): `simBlock`, `endSeason`, `market`, `runTournament`, 가중치 룰렛 3중복 | 예정 |
+| 9 | game 큰 함수 분리: `simBlock`(출전·결과·평점·하이라이트·부상·구간 뒤), `endSeason`(클럽 월드컵·시즌 기록·한 해 넘기기), `market`(병역·고교·대학·프로 선반), `runTournament`(대진·병역 특례·명성 표), 가중 룰렛 3곳 → `rng.weightedIndex`. 골든·특성화 해시 그대로 | 완료 |
 | 10 | 웹 `Team.svelte`(1135줄)를 앱처럼 하위 컴포넌트로 분리 | 예정 |
 
 ## 보류(결정 필요·범위 큼)

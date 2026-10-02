@@ -482,6 +482,61 @@ function squadRole(
   return { role: sc >= 85 || s.nat.captain ? 'starter' : chance(0.5) ? 'starter' : 'sub', why: '' };
 }
 
+/** 대회 성적별 명성(명단에 든 경우). 표에 없는 단계는 2. */
+const TOUR_FAME: Record<string, number> = {
+  '조별리그 탈락': 1,
+  '32강': 3,
+  '16강': 4,
+  '8강': 7,
+  '4강': 10,
+  동메달: 10,
+  '4위': 8,
+  준우승: 12,
+  은메달: 12,
+  우승: 18,
+  금메달: 18,
+};
+const won = (m: IntlResult) => m.res === 'W' || m.res === 'PW';
+
+/** 조별리그 → 토너먼트를 치르고 최종 단계를 돌려준다. 올림픽 4강 탈락은 동메달 결정전을 치른다. */
+function playBracket(
+  T: TournamentDef,
+  key: string,
+  play: (opp: [string, number], stage: string) => IntlResult,
+): string {
+  let pts = 0;
+  for (const opp of T.group()) {
+    const m = play(opp, '');
+    pts += m.res === 'W' ? 3 : m.res === 'D' ? 1 : 0;
+  }
+  if (!T.adv(pts)) return '조별리그 탈락';
+  let stage = '조별리그 탈락';
+  for (const [name, pool] of T.rounds) {
+    stage = name;
+    const m = play(pick(pool), name);
+    if (name === '결승') return won(m) ? '우승' : '준우승';
+    if (!won(m)) {
+      if (key === 'olympic' && name === '4강')
+        return won(play(pick(T.bronze!), '동메달 결정전')) ? '동메달' : '4위';
+      return stage;
+    }
+  }
+  return stage;
+}
+
+/** 병역 특례(대한민국 국적만, T-10-096) — 아시안게임 금메달·올림픽 메달. */
+function grantExemption(s: GameState, key: string, stage: string) {
+  s.mil.exempt = key === 'ag' ? '아시안게임 금메달' : `올림픽 ${stage}`;
+  log(
+    s,
+    `병역 특례 대상! (${s.mil.exempt}) 기초군사훈련 3주와 544시간 봉사활동으로 병역을 대신합니다.${s.mil.serving ? ' 복무 중이던 김천 상무에서는 시즌 종료 후 조기 전역합니다.' : ''}`,
+    'big',
+  );
+  s.mil.applied = false;
+  s.mil.accepted = false;
+  s.mil.armyNext = false;
+}
+
 function runTournament(s: GameState, key: string) {
   const T = tournaments(natSide(s))[key]!,
     y = s.year;
@@ -492,31 +547,7 @@ function runTournament(s: GameState, key: string) {
     matches.push(m);
     return m;
   };
-  let pts = 0;
-  for (const opp of T.group()) {
-    const m = play(opp, '');
-    pts += m.res === 'W' ? 3 : m.res === 'D' ? 1 : 0;
-  }
-  let stage = '조별리그 탈락';
-  if (T.adv(pts)) {
-    for (let i = 0; i < T.rounds.length; i++) {
-      const [name, pool] = T.rounds[i]!;
-      stage = name;
-      const m = play(pick(pool), name);
-      const won = m.res === 'W' || m.res === 'PW';
-      if (name === '결승') {
-        stage = won ? '우승' : '준우승';
-        break;
-      }
-      if (!won) {
-        if (key === 'olympic' && name === '4강') {
-          const b = play(pick(T.bronze!), '동메달 결정전');
-          stage = b.res === 'W' || b.res === 'PW' ? '동메달' : '4위';
-        }
-        break;
-      }
-    }
-  }
+  let stage = playBracket(T, key, play);
   if (key === 'olympic')
     stage = stage === '우승' ? '금메달' : stage === '준우승' ? '은메달' : stage;
   const inSquad = role !== 'none';
@@ -539,38 +570,8 @@ function runTournament(s: GameState, key: string) {
       : inSquad && key === 'olympic' && ['은메달', '동메달'].includes(stage)
         ? `올림픽 ${stage}`
         : null;
-  if (inSquad)
-    addStat(
-      s,
-      'fame',
-      (
-        {
-          '조별리그 탈락': 1,
-          '32강': 3,
-          '16강': 4,
-          '8강': 7,
-          '4강': 10,
-          동메달: 10,
-          '4위': 8,
-          준우승: 12,
-          은메달: 12,
-          우승: 18,
-          금메달: 18,
-        } as Record<string, number>
-      )[stage] ?? 2,
-    );
-  // 병역 특례는 대한민국 국적만(T-10-096).
-  if (inSquad && T.exempt && T.exempt(stage) && !milDone(s)) {
-    s.mil.exempt = key === 'ag' ? '아시안게임 금메달' : `올림픽 ${stage}`;
-    log(
-      s,
-      `병역 특례 대상! (${s.mil.exempt}) 기초군사훈련 3주와 544시간 봉사활동으로 병역을 대신합니다.${s.mil.serving ? ' 복무 중이던 김천 상무에서는 시즌 종료 후 조기 전역합니다.' : ''}`,
-      'big',
-    );
-    s.mil.applied = false;
-    s.mil.accepted = false;
-    s.mil.armyNext = false;
-  }
+  if (inSquad) addStat(s, 'fame', TOUR_FAME[stage] ?? 2);
+  if (inSquad && T.exempt && T.exempt(stage) && !milDone(s)) grantExemption(s, key, stage);
   return { rec, trophy };
 }
 
