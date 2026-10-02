@@ -6,7 +6,7 @@
 
 ## 저장 위치
 
-`career_seasons`에 시즌마다 한 줄. `ovr_start`(정수, 조회용)와 `growth_json`(아래 JSON). 성장 기록이 없는 옛 행·옛 클라이언트
+`career_seasons`에 시즌마다 한 줄. `growth_json`(아래 JSON). 성장 기록이 없는 옛 행·옛 클라이언트
 업로드는 NULL이다. 같은 시즌을 성장 기록 없이 다시 올려도 이미 쌓인 값은 지워지지 않는다(coalesce).
 
 | 키        | 내용                                                                                               |
@@ -33,12 +33,12 @@
 
 ```sql
 -- 시즌 시작 OVR과 첫 시즌 말 OVR, 잠재력(숨김 제외)
-SELECT s.ovr_start, s.ovr AS ovr_end, c.pot
+SELECT json_extract(s.growth_json, '$.o0'), s.ovr AS ovr_end, c.pot
 FROM career_seasons s JOIN careers c ON c.id = s.career_id
-WHERE s.age = 18 AND s.ovr_start IS NOT NULL AND c.hidden = 0;
+WHERE s.age = 18 AND json_extract(s.growth_json, '$.o0') IS NOT NULL AND c.hidden = 0;
 
 -- 나이별 평균 시즌 성장(시작 → 끝)
-SELECT age, count(*) n, round(avg(ovr - ovr_start), 2) gain
+SELECT age, count(*) n, round(avg(ovr - json_extract(growth_json, '$.o0')), 2) gain
 FROM career_seasons s JOIN careers c ON c.id = s.career_id
-WHERE ovr_start IS NOT NULL AND c.hidden = 0 GROUP BY age ORDER BY age;
+WHERE growth_json IS NOT NULL AND c.hidden = 0 GROUP BY age ORDER BY age;
 ```

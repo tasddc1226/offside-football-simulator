@@ -286,17 +286,15 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       (await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID)))[0]!;
 
     expect((await send({ growth })).status).toBe(200);
-    expect((await row()).ovrStart).toBe(52);
     expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
 
     // 옛 시즌 재전송(성장 기록 없음)은 이미 쌓인 기록을 그대로 둔다.
     expect((await send({})).status).toBe(200);
-    expect((await row()).ovrStart).toBe(52);
     expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
 
     // 새 성장 기록이 오면 덮어쓴다.
     expect((await send({ growth: { ...growth, o0: 53 } })).status).toBe(200);
-    expect((await row()).ovrStart).toBe(53);
+    expect(JSON.parse((await row()).growthJson!).o0).toBe(53);
   });
 
   it('T-11-048: 성장 기록 없이 올라온 첫 시즌은 NULL이고, 모양이 틀리면 400', async () => {
@@ -313,7 +311,6 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       .select()
       .from(careerSeasons)
       .where(eq(careerSeasons.careerId, CAREER_ID));
-    expect(r!.ovrStart).toBeNull();
     expect(r!.growthJson).toBeNull();
     const bad = await app.request(
       `/v1/careers/${CAREER_ID}/seasons/2027`,

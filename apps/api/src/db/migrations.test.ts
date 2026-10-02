@@ -146,7 +146,6 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'ch_json',
     'club_id',
     'signals_json',
-    'ovr_start',
     'growth_json',
   ],
   club_customs: ['profile_id', 'clubs_json', 'updated_at'],

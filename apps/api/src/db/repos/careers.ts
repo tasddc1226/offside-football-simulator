@@ -89,11 +89,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
     now,
   } = input;
   const signals = signalsJson !== undefined ? { signalsJson } : {};
-  // T-11-048 시즌 성장 기록. 성장 기록 없이 다시 올라온 시즌(옛 시즌 재전송)이 이미 쌓인 기록을 지우지 않게 coalesce로 둔다.
-  const growth = {
-    ovrStart: season.growth?.o0 ?? null,
-    growthJson: season.growth ? JSON.stringify(season.growth) : null,
-  };
+  // T-11-048 시즌 성장 기록. 없으면 건드리지 않아, 성장 기록 없이 다시 올라온 옛 시즌이 이미 쌓인 기록을 지우지 않는다.
+  const growth = season.growth ? { growthJson: JSON.stringify(season.growth) } : {};
   const name = publicName !== undefined ? { publicName } : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
   const detail = {
@@ -183,8 +180,6 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           eventsJson,
           ...detail,
           ...signals,
-          ovrStart: sql`coalesce(${growth.ovrStart}, ${careerSeasons.ovrStart})`,
-          growthJson: sql`coalesce(${growth.growthJson}, ${careerSeasons.growthJson})`,
           // 같은 시즌을 다시 보내면 덮어써 결과는 같다(멱등). createdAt은 최초값을 유지한다.
         },
         // 은퇴한 커리어의 시즌은 고치지 않는다(은퇴 요약·결번 판정의 근거). 늦게 도착한 빠진 시즌은 새 행이라 들어간다.

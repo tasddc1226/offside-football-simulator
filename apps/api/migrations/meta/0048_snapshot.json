@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "cc963645-b75b-47c4-b30f-ac89a97afc31",
+  "id": "5de00dd6-0f2d-404e-9398-11bcea74c906",
   "prevId": "608f04d1-0858-48e4-9844-8d25fb149359",
   "tables": {
     "app_auth_tickets": {
@@ -844,13 +844,6 @@
         "signals_json": {
           "name": "signals_json",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "ovr_start": {
-          "name": "ovr_start",
-          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
