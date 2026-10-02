@@ -1,3 +1,4 @@
+import { coachFeedback } from '@offside/app-core/career-feedback';
 // 시즌 탭(웹 tabs/SeasonTab.svelte, T-11-025): 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·
 // 누적 기록·순위표·대회) → 스토리 → 최근 소식. 진행·이벤트 확인 버튼은 화면 아래 고정 바(Game.tsx, T-11-036)에 있다.
 // 리포트와 겹치는 숫자·소식은 다시 그리지 않는다.
@@ -391,6 +392,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
   const { report: rep } = useSnapshot(appState);
   const report = rep && rep.year === s.year ? (rep as PhaseReportData) : null;
   const [feedAll, setFeedAll] = useState(false);
+  const coach = coachFeedback(s);
   const S = s.season;
   const avg = S.apps ? (S.ratingSum / S.apps).toFixed(2) : '-';
   const phase = Math.min(s.phase, LAST_PHASE);
@@ -471,6 +473,15 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
             <Meter label="컨디션" value={s.cond} tone={meterTone(s.cond, 40, 65)} />
             <Meter label="사기" value={s.morale} tone={meterTone(s.morale, 40, 60)} />
             <Meter label="인기" value={s.fame} tone="acc" />
+          </View>
+          <View style={{ gap: 6 }} testID="coach-feedback">
+            <SubTitle>코치 메모</SubTitle>
+            <Txt v="sm">{coach.summary}</Txt>
+            {coach.notes.map((note) => (
+              <Txt key={note} v="sm" tone="muted">
+                {note}
+              </Txt>
+            ))}
           </View>
           <SubTitle>훈련 방향</SubTitle>
           {wait === 'train' ? <TourHint>이번 구간 훈련을 고르면 다음으로 넘어가요</TourHint> : null}

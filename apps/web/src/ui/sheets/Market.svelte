@@ -8,6 +8,7 @@
 <div class="eyebrow">{v.eyebrow}</div>
 <h2>다음 시즌, 어디서 뛸까요?</h2>
 <p class="muted">{v.note}</p>
+{#if v.assessment}<p class="fs-sm" data-market-feedback>{v.assessment}</p>{/if}
 <div class="stack">
   {#each v.options as o, i (i)}
     <button class="offer" data-opt={i} onclick={() => pickOption(i)}>
@@ -16,6 +17,7 @@
         <div class="sal">{o.salary}<div class="lg" style="text-align:right">연봉</div></div>
         <div class="sub">{o.sub}</div>
       {/if}
+      {#if o.reason}<div class="sub" data-offer-feedback>{o.reason}</div>{/if}
     </button>
   {/each}
 </div>

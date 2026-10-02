@@ -1,3 +1,4 @@
+import { marketFeedback, offerFeedback } from './career-feedback.js';
 // ───────── 게임 진행 액션 (웹·앱 공용, T-11-002) ─────────
 // 게임 로직을 호출하고, 그 결과를 시트 뷰 모델(sheets.ts)로 바꿔 시트에 띄운다. 상태·시트·저장·업로드·분석은
 // 클라이언트가 host로 넘긴다(웹은 Svelte `$state` 프록시, 앱은 자기 스토어 — 넘긴 객체를 그대로 고친다).
@@ -414,6 +415,7 @@ export function createGameActions(host: GameHost) {
     sheet.showSheet(
       {
         kind: 'market',
+        assessment: marketFeedback(G, m),
         eyebrow: `${seasonLabel(G)} Transfer Window`,
         note: m.note,
         options: m.options.map((o) => {
@@ -421,6 +423,7 @@ export function createGameActions(host: GameHost) {
             const extra = `${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtValue(o.fee)}` : G.contract && !leagueOf(G.leagueId).amateur ? ' · 자유계약(FA)' : ''}`;
             return {
               clubId: o.clubId,
+              reason: offerFeedback(G, o),
               name: o.name,
               lg: `${leagueOf(o.leagueId).name} · 팀 전력 ${o.str}`,
               salary: fmtMoney(o.salary),
