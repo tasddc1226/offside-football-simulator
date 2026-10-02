@@ -75,6 +75,23 @@ describe('밸런스 설정 (T-10-016)', () => {
     expect(adoptLatestBalance(s)).toBe(false);
   });
 
+  it('T-11-030 잠재력 추첨은 서버 밸런스를 따르고, 기본값이면 예전과 같다', () => {
+    const draw = () => Array.from({ length: 400 }, (_, i) => game(100 + i).pot);
+    const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    const base = draw();
+    expect(base.every((p) => p >= 55 && p <= 96)).toBe(true);
+    // 새 커리어는 첫 시즌 전에 최신 설정을 쓴다(잠재력을 시즌 시작 전에 뽑으므로).
+    setLatestBalance({ version: 1, values: { potMean: 80 } });
+    expect(mean(draw())).toBeGreaterThan(mean(base) + 3);
+    setLatestBalance({ version: 2, values: { potSd: 4 } });
+    const narrow = draw();
+    expect(Math.max(...narrow) - Math.min(...narrow)).toBeLessThan(
+      Math.max(...base) - Math.min(...base),
+    );
+    setLatestBalance(null);
+    expect(draw()).toEqual(base);
+  });
+
   it('선택지 확률 보정과 이벤트 가중치', () => {
     const s = game();
     setLatestBalance({

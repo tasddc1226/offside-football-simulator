@@ -53,3 +53,41 @@ describe('T-10-006 seasonPayload', () => {
     expect(withComps).toBeGreaterThan(0);
   });
 });
+
+describe('T-11-030 잠재력 관찰 업로드', () => {
+  it('처음 스카우트 평가는 첫 시즌 기록에만 싣고, 은퇴 때 실제 잠재력을 싣는다', async () => {
+    const { PutCareerSeasonBodySchema, PutRetirementBodySchema } =
+      await import('@offside/contracts');
+    const g = await import('@offside/game/index');
+    const { createRng, setActiveRng } = await import('@offside/game/rng');
+    const { createUploader } = await import('./upload.js');
+    const sent: { season: unknown[]; retire: unknown[] } = { season: [], retire: [] };
+    const up = createUploader({
+      appVersion: 'test',
+      outbox: async () =>
+        ({
+          enqueueSeason: (_id: string, _y: number, body: unknown) => void sent.season.push(body),
+          enqueueRetirement: (_id: string, body: unknown) => void sent.retire.push(body),
+        }) as never,
+    });
+    setActiveRng(createRng(7));
+    const s = g.newGame(
+      { name: 'T', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      7,
+    );
+    const first = s.pot;
+    for (let y = 0; y < 2; y++) {
+      for (let ph = 0; ph <= g.LAST_PHASE; ph++) g.playPhase(s);
+      const rec = g.endSeason(s);
+      up.uploadSeason(s, rec.rec);
+    }
+    await new Promise((r) => setTimeout(r, 0));
+    const bodies = sent.season.map((b) => PutCareerSeasonBodySchema.parse(b));
+    expect(bodies[0]!.career.pot).toBe(first);
+    expect(bodies[1]!.career.pot).toBeUndefined();
+    const entry = g.retire(s);
+    up.uploadRetirement(s.cid, entry);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(PutRetirementBodySchema.parse(sent.retire[0]).potReal).toBe(Math.round(g.truePot(s)));
+  });
+});

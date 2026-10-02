@@ -106,6 +106,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         startYear: meta.startYear,
         status: 'active',
         appVersion: meta.appVersion,
+        pot: meta.pot ?? null,
         ...name,
         // 처음 올라온 시각의 시즌(0 = 프리시즌, 시즌 사이 휴식기면 NULL) — onConflict set에 없어 바뀌지 않는다.
         serviceSeason: teamSeasonAt(now),
@@ -118,6 +119,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           // 포지션·주발·유형·특성·시작 연도는 커리어를 만들 때 정해져 바뀌지 않는다 — 처음 값을 지킨다(뒤늦게
           // 포지션을 바꿔 레전드 점수·결번 가중을 고르지 못하게).
           appVersion: meta.appVersion,
+          // 처음 스카우트 평가는 비어 있을 때만 채운다(첫 시즌 업로드가 늦게 와도 한 번만).
+          ...(meta.pot !== undefined && { pot: sql`coalesce(${careers.pot}, ${meta.pot})` }),
           // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
           ...publicNameSet(publicName, { keepRetired: true }),
           updatedAt: now,
@@ -178,6 +181,8 @@ export type PutRetirementInput = {
   snapshot?: LegendSnapshot | undefined;
   /** T-10-092 최고 시점 능력치(plausibility.ts boundProfile로 자른 값). 옛 클라이언트는 없다. */
   profile?: PeakProfile | undefined;
+  /** T-11-030 은퇴 때 공개된 실제 잠재력(관찰 전용). 옛 클라이언트는 없다. */
+  potReal?: number | undefined;
   now: string;
 };
 
@@ -191,7 +196,7 @@ export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
  * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
-  const { careerId, summary, publicName, snapshot, profile, now } = input;
+  const { careerId, summary, publicName, snapshot, profile, potReal, now } = input;
   await runBatch(db, [
     // 처음 은퇴할 때만 센다 — 같은 커리어의 첫 은퇴가 동시에 두 번 와도 retired_at이 이미 있으면 아무 행도 넣지
     // 않는다. 같은 트랜잭션에서 아래 update보다 먼저 돌아야 retired_at이 비어 있는 것을 본다.
@@ -239,6 +244,7 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
             }
           : {}),
         ...(profile ? { peakProfile: JSON.stringify(profile) } : {}),
+        ...(potReal !== undefined ? { potReal } : {}),
       })
       .where(eq(careers.id, careerId)),
   ]);

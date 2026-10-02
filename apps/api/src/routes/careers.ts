@@ -141,6 +141,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
         publicName,
         snapshot,
         profile: profile && boundProfile(profile, summary.peak),
+        potReal: sent.potReal,
         now,
       });
       await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.

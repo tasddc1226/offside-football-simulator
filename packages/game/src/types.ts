@@ -306,6 +306,8 @@ export interface HofEntry {
   peak: number;
   /** T-10-092 서버로 보내는 최고 시점 능력치. 옛 기록엔 없다. */
   profile?: PeakProfile | undefined;
+  /** T-11-030 은퇴 때 공개되는 실제 잠재력(서버 관찰용). 옛 기록엔 없다. */
+  pot?: number | undefined;
   age: number;
   apps: number;
   goals: number;

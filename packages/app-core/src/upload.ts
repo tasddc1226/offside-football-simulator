@@ -72,6 +72,8 @@ export function createUploader(host: UploaderHost) {
         trait: s.trait,
         startYear: s.career[0]?.year ?? rec.year,
         appVersion: host.appVersion,
+        // T-11-030 처음 스카우트 평가는 첫 시즌 기록과 함께만 보낸다(재평가가 21세에 pot을 바꾸기 전 값).
+        ...(rec === s.career[0] && (s.flags.rescout ?? 0) === 0 && { pot: s.pot }),
       },
       season: seasonPayload(rec),
       events,
@@ -137,5 +139,6 @@ function retirementBody(entry: HofEntry): PutRetirementBody {
     publicName: entry.public ? toPublicName(entry.name) : null,
     ...(entry.detail ? { snapshot: entry.detail } : {}),
     ...(entry.profile ? { profile: entry.profile } : {}),
+    ...(entry.pot !== undefined ? { potReal: entry.pot } : {}),
   };
 }
