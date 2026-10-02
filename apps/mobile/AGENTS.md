@@ -45,4 +45,6 @@ Docs: https://docs.expo.dev/eas/index.md
 - `runtimeVersion`은 `fingerprint` 정책이라 OTA는 같은 런타임 해시로 빌드된 스토어 앱에만 내려간다.
 - **`eas.json`은 어떤 필드든(`submit` 포함) 고치면 런타임이 바뀐다.** `ascAppId` 같은 submit 전용 설정도 다음 스토어 빌드 때 함께 넣는다.
   `.fingerprintignore`로 `eas.json`을 빼는 것도 그 자체로 해시를 바꾸므로 새 스토어 빌드와 같은 PR에서만 한다.
+- `app.json`의 `version`도 런타임에 들어간다. 버전은 `1.<시즌>.<빌드>`(1.0.x 프리시즌, 1.1.x 시즌 1)이고 새 스토어 빌드 때만 올린다 —
+  런북의 "앱 버전 규칙".
 - 사고 경위·확인 방법: [`docs/operations/production-release.md`](../../docs/operations/production-release.md)의 "앱 OTA" 항목.
