@@ -293,14 +293,14 @@ export function TabOpt({
   testID: string;
   /** 좌우 여백을 줄인다(칸이 좁은 탭). */
   tight?: boolean;
-  /** T-11-028 글자를 작게(웹 .hof-tabs .opt 0.8125rem) 한 줄에 맞춘다 — 칸보다 길면 글자가 줄어든다. */
+  /** T-11-028 글자를 작게(웹 .hof-tabs .opt 0.8125rem). */
   fit?: boolean;
   children?: ReactNode;
 }) {
   return (
     <View testID={testID}>
       <Opt
-        {...(fit ? { accessibilityLabel: title } : { title })}
+        accessibilityLabel={title}
         selected={selected}
         onPress={onPress}
         style={{
@@ -308,16 +308,17 @@ export function TabOpt({
           ...(tight || fit ? { paddingHorizontal: 4, paddingVertical: 8 } : null),
         }}
       >
-        {fit ? (
-          <Txt
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.8}
-            style={{ fontSize: rem(0.8125), fontWeight: '600' }}
-          >
-            {title}
-          </Txt>
-        ) : null}
+        {/* T-11-038 제목은 늘 한 줄 — 큰 글씨 설정에서 '프리시즌'·'미드필더'가 두 줄로 꺾였다.
+            확대는 1.3배까지(칩마다 줄어드는 비율이 달라 크기가 들쭉날쭉했다), 그래도 칸보다 길면 글자가 줄어든다. */}
+        <Txt
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.3}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+          style={{ fontWeight: '600', ...(fit ? { fontSize: rem(0.8125) } : null) }}
+        >
+          {title}
+        </Txt>
         {children}
       </Opt>
     </View>
