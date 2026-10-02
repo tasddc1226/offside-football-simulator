@@ -56,7 +56,7 @@ function attrInfo(s: GameState, k: AttrKey) {
   const bf = balanceFactor(s, k);
   return { focus: focusOf(s).includes(k), bf, lopsided: bf < 0.95 };
 }
-/** T-10-074 훈련 카드: 무엇이 오르고 무엇을 치르는지(effect, 항목별)와 눈여겨볼 한 가지(tag — 주력·치우침·비용·수입). */
+/** T-10-074 훈련 카드: 무엇이 오르고 무엇을 치르는지(effect, 항목별)와 눈여겨볼 한 가지(tag — 주력·너무 앞섬·비용·수입). */
 export function trainingCard(s: GameState, t: TrainingDef): { effect: string[]; tag: string } {
   if (t.id === 'rest')
     return { effect: [`컨디션 ${signed(REST.cond)}`, `사기 ${signed(REST.morale)}`], tag: '' };
@@ -81,7 +81,7 @@ export function trainingCard(s: GameState, t: TrainingDef): { effect: string[]; 
   const up = k === 'phy' ? `${labelOf(s, k)}·${labelOf(s, 'pac')} ▲` : `${labelOf(s, k)} ▲`;
   const tags = [
     focus ? `주력 성장 +${pct(FOCUS_GROWTH - 1)}%` : '',
-    lopsided ? `치우침 성장 −${pct(1 - bf)}%` : '',
+    lopsided ? `너무 앞서 성장 −${pct(1 - bf)}%` : '',
   ];
   return { effect: [up, `컨디션 ${signed(trainCond(k))}`], tag: tags.filter(Boolean).join(' · ') };
 }
