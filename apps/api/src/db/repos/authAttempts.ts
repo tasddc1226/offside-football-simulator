@@ -30,7 +30,7 @@ export async function getAttemptCount(
 }
 
 /**
- * 시도 1회를 기록한다. 윈도우가 지났으면 새 윈도우로 리셋한다.
+ * 시도 1회를 기록하고 현재 윈도우의 시도 횟수를 돌려준다. 윈도우가 지났으면 새 윈도우로 리셋한다.
  *
  * SELECT 후 INSERT/UPDATE로 나누면 동시 요청 사이에 lost update가 생겨
  * 레이트리밋을 우회할 수 있으므로, 단일 UPSERT 문으로 원자적으로 처리한다.
@@ -41,9 +41,9 @@ export async function recordAttempt(
   subject: string,
   now: string,
   windowMs: number = RATE_LIMIT_WINDOW_MS,
-): Promise<void> {
+): Promise<number> {
   const threshold = new Date(Date.parse(now) - windowMs).toISOString();
-  await db
+  const [row] = await db
     .insert(authAttempts)
     .values({ id: newId('att'), kind, subject, windowStart: now, count: 1 })
     .onConflictDoUpdate({
@@ -52,7 +52,9 @@ export async function recordAttempt(
         windowStart: sql`CASE WHEN ${authAttempts.windowStart} <= ${threshold} THEN ${now} ELSE ${authAttempts.windowStart} END`,
         count: sql`CASE WHEN ${authAttempts.windowStart} <= ${threshold} THEN 1 ELSE ${authAttempts.count} + 1 END`,
       },
-    });
+    })
+    .returning({ count: authAttempts.count });
+  return row!.count;
 }
 
 /** 한도 안이면 시도 1회를 기록하고 true, 이미 한도면 기록하지 않고 false. */

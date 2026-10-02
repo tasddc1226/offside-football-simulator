@@ -102,6 +102,8 @@ export const authAttempts = sqliteTable(
         'APP_SESSION',
         'APPLE_SIGNIN',
         'PROFILE_CREATE',
+        'CAREER_SEASON',
+        'CAREER_RETIRE',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
