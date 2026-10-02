@@ -141,7 +141,10 @@ function Tile({
             borderColor: c.line,
           }}
         >
+          {/* T-11-038 한 줄 고정, 확대 1.2배까지(큰 글씨에서 꺾여 이름을 덮지 않게). */}
           <Txt
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
             style={{
               fontSize: rem(0.625),
               lineHeight: rem(0.625) * 1.6,

@@ -223,7 +223,11 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
                   />
                 ) : null}
               </View>
+              {/* T-11-038 아주 큰 글씨 설정에서 탭 이름이 옆 칸까지 번져 겹쳤다 — 한 줄, 확대는 1.3배까지. */}
               <Txt
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.3}
+                adjustsFontSizeToFit
                 style={{
                   fontSize: rem(0.6875),
                   lineHeight: rem(0.6875) * 1.3,

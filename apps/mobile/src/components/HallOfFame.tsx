@@ -237,30 +237,41 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
               >
                 {notOpen(s) ? (
                   // T-10-103 개막 전 시즌 버튼에 'Coming soon' — 버튼 높이는 그대로, 오른쪽 위 테두리에 걸친다.
+                  // T-11-038 right만 준 절대 배지는 버튼 안쪽 폭에 묶여 큰 글씨에서 꺾였다 — 틀을 버튼 폭으로 펴고 오른쪽에 붙인다.
                   <View
-                    testID="hof-soon"
                     style={{
                       position: 'absolute',
                       top: -9,
+                      left: 0,
                       right: 10,
-                      paddingVertical: 2,
-                      paddingHorizontal: 8,
-                      borderRadius: 999,
-                      backgroundColor: c.accent,
+                      alignItems: 'flex-end',
                     }}
                   >
-                    <Txt
+                    <View
+                      testID="hof-soon"
                       style={{
-                        fontSize: rem(0.625),
-                        lineHeight: rem(0.625) * 1.4,
-                        fontWeight: '800',
-                        letterSpacing: 0.06 * rem(0.625),
-                        textTransform: 'uppercase',
-                        color: c.accentInk,
+                        paddingVertical: 2,
+                        paddingHorizontal: 8,
+                        borderRadius: 999,
+                        backgroundColor: c.accent,
                       }}
                     >
-                      Coming soon
-                    </Txt>
+                      <Txt
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        maxFontSizeMultiplier={1.2}
+                        style={{
+                          fontSize: rem(0.625),
+                          lineHeight: rem(0.625) * 1.4,
+                          fontWeight: '800',
+                          letterSpacing: 0.06 * rem(0.625),
+                          textTransform: 'uppercase',
+                          color: c.accentInk,
+                        }}
+                      >
+                        Coming soon
+                      </Txt>
+                    </View>
                   </View>
                 ) : null}
               </TabOpt>
