@@ -197,7 +197,8 @@ test('라이브 응답이 늦어도 첫 화면이 밀리지 않는다', async ({
   await page.goto('/');
   await expect(page.locator('[data-home-live] [data-live-stat="playing"]')).toContainText('3');
   await page.waitForTimeout(300);
-  // 카드가 끼어들던 때는 모바일에서 0.23+였다. 남는 값은 웹폰트 교체로 히어로 문단 줄바꿈이 바뀌는 몫(~0.04)이다.
+  // 카드가 끼어들던 때는 모바일에서 0.23+였다. 웹폰트 교체로 히어로 줄 수가 바뀌던 몫은 제목 줄 고정·문단 폭 em(T-11-050)으로
+  // 없앴다(CI 리눅스엔 한글 폰트가 없어 교체 전 글꼴 폭이 크게 다르다). 남는 값은 글꼴 메트릭 차이와 라이브 자리표시 칸 수 변화다.
   expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBeLessThan(
     0.1,
   );

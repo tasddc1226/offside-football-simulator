@@ -114,7 +114,7 @@ export default function Home() {
                   color: c.onPitch,
                 }}
               >
-                {'이번 생은 축구다\n고3부터 은퇴까지, 한 선수로 살아요'}
+                {'이번 생은 축구다\n고3부터 은퇴까지,\n한 선수로 살아요'}
               </Txt>
               <Txt style={{ ...p, color: alpha(c.onPitch, 0.8) }}>
                 훈련과 이적, 이벤트마다 고른 선택이 쌓여 한 선수의 커리어가 돼요.

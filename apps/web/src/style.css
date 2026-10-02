@@ -523,7 +523,8 @@ button.what:active {
 .hero-home p {
   margin-top: 6px;
   opacity: 0.8;
-  max-width: 30ch;
+  /* T-11-050 글자 폭(ch)은 웹폰트가 늦게 오면 대체 글꼴 기준으로 바뀌어 줄바꿈이 흔들린다. 웹폰트의 30ch와 같은 18em. */
+  max-width: 18em;
 }
 .hero-home .btn {
   margin-top: 18px;

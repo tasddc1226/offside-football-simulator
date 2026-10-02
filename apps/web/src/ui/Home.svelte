@@ -47,7 +47,7 @@
     <section class="hero-home">
       <div class="chalk"></div>
       <div class="eyebrow">Kick-off · 0′</div>
-      <h1>이번 생은 축구다<br />고3부터 은퇴까지, 한 선수로 살아요</h1>
+      <h1>이번 생은 축구다<br />고3부터 은퇴까지,<br />한 선수로 살아요</h1>
       <p>훈련과 이적, 이벤트마다 고른 선택이 쌓여 한 선수의 커리어가 돼요.</p>
       <button class="btn btn-accent btn-block" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>새 커리어 킥오프 →</button>
     </section>
