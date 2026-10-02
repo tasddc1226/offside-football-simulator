@@ -34,6 +34,7 @@ import { nationOf } from './nation.js';
 import { detectCareerHighs } from './records.js';
 import { noteMarket } from './playStyle.js';
 import type { LegendSnapshot } from '@offside/contracts';
+import { PRESEASON_RETIRE_AT } from '@offside/contracts/service-seasons';
 import { controlPoints, legendAwardCount, legendTerms } from '@offside/contracts/hof-rules';
 import type {
   GameState,
@@ -282,6 +283,27 @@ export function makeOffers(s: GameState) {
     list.push({ ...offerFrom(s, coach), role: '은사의 부름 · 감독 신뢰 두터움', trust: 3 });
   return list.sort((a, b) => b.str - a.str);
 }
+/** T-11-045 이 선수의 은퇴 나이(이 나이가 되는 시장에서 은퇴). 옛 저장·프리시즌 선수는 41세. */
+export const retireAge = (s: Pick<GameState, 'retireAt'>): number =>
+  s.retireAt ?? PRESEASON_RETIRE_AT;
+/** T-11-045 베테랑(프리시즌 은퇴 나이 이상)은 1년 계약만 — 은퇴 나이를 넘겨 계약이 남지 않는다. */
+const isVeteran = (s: GameState) => s.age >= PRESEASON_RETIRE_AT;
+/**
+ * T-11-045 베테랑 재계약: 기존 재계약 능력 기준 + 지난(비군복무) 시즌 출전·평균 평점(6.8 = 오퍼 평가의 보통 시즌).
+ * 시뮬(4,000커리어, 끝까지 뛰는 정책)에서 41세 도달자의 약 20%가 45세까지 뛰고 은퇴 나이가 41~45세에 고르게 퍼진다
+ * (docs/analysis/retire-age-45-sim-2026-10-02.md).
+ */
+export const VETERAN_RENEW = { apps: 10, rating: 6.8 } as const;
+function veteranRenewOk(s: GameState, o: number): boolean {
+  const last = s.career.filter((r) => !r.mil).pop();
+  return (
+    !!last &&
+    o >= s.club.str - 7 &&
+    last.apps >= VETERAN_RENEW.apps &&
+    last.rating >= VETERAN_RENEW.rating
+  );
+}
+
 export function offerFrom(s: GameState, c: (typeof CLUBS)[number]): OfferOption {
   const o = ovr(s),
     old = s.age >= 31;
@@ -292,7 +314,7 @@ export function offerFrom(s: GameState, c: (typeof CLUBS)[number]): OfferOption 
     name: c.name,
     leagueId: c.leagueId,
     str: c.str,
-    years: ri(old ? 1 : 2, old ? 2 : 5),
+    years: Math.min(ri(old ? 1 : 2, old ? 2 : 5), isVeteran(s) ? 1 : 5),
     salary: Math.round((salaryFor(c.leagueId, o) * (0.85 + rnd() * 0.35)) / 10) * 10,
     role: d >= 1 ? '주전 보장' : d >= -5 ? '로테이션' : '벤치 경쟁',
     fee:
@@ -366,7 +388,10 @@ function universityShelf(s: GameState, offers: MarketOption[], o: number): Shelf
   return { options, note };
 }
 
-/** 프로: 계약 중이면 잔류 + 제의, 만료면 재계약(전력 차 7 이내·38세 미만) + 제의, 아무것도 없으면 하부 리그 재기 도전. */
+/**
+ * 프로: 계약 중이면 잔류 + 제의, 만료면 재계약(전력 차 7 이내·38세 미만) + 제의, 아무것도 없으면 하부 리그 재기 도전.
+ * T-11-045 41세부터(은퇴 나이가 더 높은 선수만 닿는다)는 지난 시즌에 뛴 만큼 1년 재계약(VETERAN_RENEW).
+ */
 function proShelf(s: GameState, offers: MarketOption[], o: number, leagueId: string): Shelf {
   const options: MarketOption[] = [];
   if (s.contract && s.contract.years > 0) {
@@ -379,14 +404,15 @@ function proShelf(s: GameState, offers: MarketOption[], o: number, leagueId: str
     options.push(...offers);
     return { options, note: `${s.club.name}와의 계약이 ${contract.years}년 남았습니다.` };
   }
-  if (o >= s.club.str - 7 && s.age < 38) {
+  const veteran = isVeteran(s);
+  if (veteran ? veteranRenewOk(s, o) : o >= s.club.str - 7 && s.age < 38) {
     const sal = Math.round((salaryFor(s.leagueId, o) * (1 + s.trust * 0.03)) / 10) * 10;
     options.push({
       kind: 'renew',
       name: `${s.club.name} 재계약`,
       years: s.age >= 31 ? 1 : ri(2, 4),
       salary: sal,
-      desc: '',
+      desc: veteran ? '베테랑 재계약' : '',
     });
   }
   options.push(...offers);
@@ -416,10 +442,17 @@ export function market(s: GameState): MarketResult {
   if (!L.amateur) options.push(...milOptions(s));
   const lastUni = s.leagueId === 'uni' && s.uniYears >= 4;
   const canRetire = (!L.amateur && (s.age >= 30 || L.tier === 0 || !options.length)) || lastUni;
-  const forced = s.age >= 41 || (!options.length && (!L.amateur || lastUni));
+  const capped = s.age >= retireAge(s);
+  const forced = capped || (!options.length && (!L.amateur || lastUni));
   return {
     options: forced ? [] : options,
-    note: forced ? '더 이상 불러주는 팀이 없습니다. 은퇴를 결정할 시간입니다.' : note,
+    note: capped
+      ? `${s.age}세가 되어 더 이상 현역으로 뛸 수 없습니다. 은퇴를 결정할 시간입니다.`
+      : forced
+        ? '더 이상 불러주는 팀이 없습니다. 은퇴를 결정할 시간입니다.'
+        : isVeteran(s)
+          ? `${note} ${retireAge(s)}세가 되면 은퇴합니다.`
+          : note,
     canRetire: canRetire || forced,
   };
 }

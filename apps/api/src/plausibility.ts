@@ -28,7 +28,7 @@ export const SEASON_CAP = {
 export const OVR_CAP_BY_AGE = [81, 87, 91, 94, 97, 97];
 export const ovrCapAt = (age: number): number =>
   OVR_CAP_BY_AGE[Math.max(age, 18) - 18] ?? SEASON_CAP.ovr;
-/** 생애 나이 범위(고3 데뷔 전 · 41세 강제 은퇴 뒤까지 여유). */
+/** 생애 나이 범위(고3 데뷔 전 · 은퇴 나이 뒤까지 여유). 커리어별 은퇴 나이(T-11-045)는 boundRetirement가 맞춘다. */
 const MIN_AGE = 14;
 const MAX_AGE = 45;
 /** 시즌 영예에 없이 따로 쌓이는 수상(푸스카스상 등)의 여유 — 실측 0–2개. */
@@ -110,8 +110,10 @@ export function boundRetirement(
   rows: readonly StoredSeason[],
   /** T-10-091 세부 포지션(레전드 점수 가중 보정). */
   dpos?: string | null,
+  /** T-11-045 커리어 서비스 시즌의 은퇴 나이. 주면 그 나이 이후 시즌은 생애에서 뺀다(프리시즌 선수는 41세). */
+  retireAt?: number,
 ): RetirementSummary | null {
-  const life = lifeSeasons(rows);
+  const life = lifeSeasons(rows, retireAt);
   const last = life.at(-1);
   if (!last) return null;
   const sum = (get: (r: StoredSeason) => number) => life.reduce((t, r) => t + get(r), 0);

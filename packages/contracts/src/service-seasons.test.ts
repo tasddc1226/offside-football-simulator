@@ -5,7 +5,10 @@ import {
   displaySeasonAt,
   openTeamSeasons,
   PRESEASON,
+  PRESEASON_RETIRE_AT,
   previewSeasonAt,
+  retireAtNow,
+  retireAtOf,
   seasonById,
   SERVICE_SEASONS,
   teamSeasonAt,
@@ -70,5 +73,19 @@ describe('T-11-029 시즌별 기록의 기본 시즌', () => {
     expect(SeasonPickQuerySchema.parse('1')).toBe(1);
     expect(SeasonPickQuerySchema.safeParse('9').success).toBe(false);
     expect(SeasonPickQuerySchema.safeParse('-1').success).toBe(false);
+  });
+});
+
+describe('T-11-045 시즌별 은퇴 나이', () => {
+  const open = SERVICE_SEASONS[0]!.startsAt;
+  it('프리시즌(0·NULL)은 41세, 시즌 1은 45세', () => {
+    expect(retireAtOf(0)).toBe(PRESEASON_RETIRE_AT);
+    expect(retireAtOf(null)).toBe(41);
+    expect(retireAtOf(1)).toBe(45);
+    expect(retireAtOf(99)).toBe(41);
+  });
+  it('새 선수는 개막 전이면 41세, 개막부터 45세', () => {
+    expect(retireAtNow('2026-10-05T14:59:59.999Z')).toBe(41);
+    expect(retireAtNow(open)).toBe(45);
   });
 });

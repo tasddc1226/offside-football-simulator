@@ -63,6 +63,7 @@ import { matchRows, type SheetController } from './sheet-controller.js';
 import {
   draftBody,
   draftDpos,
+  draftRetireAt,
   randomName,
   randomNumber,
   type AppState,
@@ -430,7 +431,7 @@ export function createGameActions(host: GameHost) {
               name: o.name,
               lg: leagueOf(G.leagueId).name,
               salary: fmtMoney(o.salary),
-              sub: `${o.years}년 계약`,
+              sub: `${o.years}년 계약${o.desc ? ` · ${o.desc}` : ''}`,
             };
           return { name: o.name, lg: o.desc ?? '', salary: null, sub: null };
         }),
@@ -624,6 +625,7 @@ export function createGameActions(host: GameHost) {
         ...appState.C,
         dpos: draftDpos(appState.C),
         body: draftBody(appState.C),
+        retireAt: draftRetireAt(),
         name: finalName,
         number: finalNumber,
       },

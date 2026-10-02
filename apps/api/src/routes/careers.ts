@@ -34,6 +34,7 @@ import { STALE } from '../edgeKeys.js';
 import { publishLive } from '../live/publish.js';
 import { isHeadless } from '../db/repos/automation.js';
 import { isAcceptablePublicName, toPublicName } from '@offside/contracts/content-filter';
+import { retireAtOf } from '@offside/contracts/service-seasons';
 
 /** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다. */
 export const UPLOAD_LIMIT = { CAREER_SEASON: 120, CAREER_RETIRE: 30 } as const;
@@ -148,7 +149,13 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     } else {
       // 은퇴 요약은 받아 둔 시즌 기록에 맞춘다 — 보낸 숫자를 그대로 믿지 않는다.
       const seasons = (await storedSeasonsOf(db, [careerId])).get(careerId) ?? [];
-      const summary = boundRetirement(career.pos, sent, seasons, career.dpos);
+      const summary = boundRetirement(
+        career.pos,
+        sent,
+        seasons,
+        career.dpos,
+        retireAtOf(career.serviceSeason),
+      );
       if (!summary) {
         throw new AppError({
           code: 'VALIDATION_FAILED',
