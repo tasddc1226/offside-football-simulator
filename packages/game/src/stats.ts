@@ -49,7 +49,6 @@ export function potAchText(ach: number): string {
   if (ach >= 92) return '조금은 남겨 두고 떠났어요.';
   return '다 피우지 못한 재능이었어요.';
 }
-export const BLOOM_SCOUT = 3;
 const BLOOM_DRIFT = 1.2,
   BLOOM_AGE = 25;
 export function bloomTick(s: GameState): string | null {

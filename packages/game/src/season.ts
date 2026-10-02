@@ -14,6 +14,7 @@ import {
   addAttr,
   log,
   bloomTick,
+  truePot,
   newSeason,
   finalRank,
   fameEff,
@@ -517,6 +518,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     id: s.cid,
     detail: legendSnapshot(s),
     profile: s.peakProfile ?? peakProfileOf(s, s.peak - ovr(s)),
+    pot: Math.round(truePot(s)),
     public: isPublic,
   };
   // T-10-107 같은 커리어가 다시 은퇴하면(탭 두 개로 같은 저장 등) 이전 기록을 바꾼다 — 겹치면 '내 선수' 목록이 깨진다.

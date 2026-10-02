@@ -165,6 +165,31 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(row?.lastClubId).toBe('pl-15');
   });
 
+  it('T-11-030: 처음 스카우트 평가는 한 번만 저장하고, 은퇴 때 실제 잠재력을 저장한다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
+    const base = seasonBody();
+    const withPot = (pot: unknown) => ({ ...base, career: { ...base.career, pot } });
+    // pot 없이 먼저 올라온 옛 기록 → 나중에 pot이 오면 채운다 → 그다음 값은 무시한다.
+    expect((await put(`/v1/careers/${CAREER_ID}/seasons/2026`, base)).status).toBe(200);
+    const potOf = async () =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0]!;
+    expect((await potOf()).pot).toBeNull();
+    expect((await put(`/v1/careers/${CAREER_ID}/seasons/2026`, withPot(78))).status).toBe(200);
+    expect((await put(`/v1/careers/${CAREER_ID}/seasons/2027`, withPot(90))).status).toBe(200);
+    expect((await potOf()).pot).toBe(78);
+    // 범위 밖·잘못된 모양은 기록을 막지 않고 버린다.
+    expect((await put(`/v1/careers/${CAREER_ID}/seasons/2028`, withPot(500))).status).toBe(200);
+    expect((await potOf()).pot).toBe(78);
+
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());
+    expect(
+      (await put(`/v1/careers/${CAREER_ID}/retirement`, { ...retirementBody(), potReal: 84 }))
+        .status,
+    ).toBe(200);
+    expect((await potOf()).potReal).toBe(84);
+  });
+
   it('T-10-066: 클럽 id 형식이 틀리면 400', async () => {
     const { cookie } = await issueCookie(ctx);
     const body = seasonBody();
