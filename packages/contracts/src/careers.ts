@@ -149,7 +149,8 @@ export const CareerSeasonPayloadSchema = z.strictObject({
   /** 이 시즌에 경신한 커리어 하이 지표 키(goals/assists/apps/rating/cs). */
   ch: z.array(z.string().min(1).max(12)).max(10).optional(),
   /** T-11-048 시즌 성장 기록. 옛 클라이언트·다시 올린 옛 시즌에는 없다. */
-  growth: SeasonGrowthSchema.optional(),
+  // 관찰 전용이라 모양이 틀리면 이 값만 버리고 시즌은 받는다(미래 버전·조작된 값이 시즌 업로드를 막지 않게).
+  growth: SeasonGrowthSchema.optional().catch(undefined),
 });
 export type CareerSeasonPayload = z.infer<typeof CareerSeasonPayloadSchema>;
 
