@@ -24,7 +24,7 @@
 | 7 | 웹·앱 중복 순수 로직 → app-core(+테스트 34개): 홈 라이브 피드 `homeLive`, 팀 라이브 재생 계획 `teamLive.playbackPlan`, 영구결번 벽 `retiredWall`, 국적 검색 `nationSearch`, 공유 링크 `shareLink`, 체격 보정 `create-view.bodyNote`. 동작 차이 없음 | 완료 |
 | 8 | app-core 미테스트 핵심 특성화 테스트 88개: `teamOwner`(라인업 배치·후보 정렬·힌트), `navHistory`, `legendReport`, `news` | 완료 |
 | 9 | game 큰 함수 분리: `simBlock`(출전·결과·평점·하이라이트·부상·구간 뒤), `endSeason`(클럽 월드컵·시즌 기록·한 해 넘기기), `market`(병역·고교·대학·프로 선반), `runTournament`(대진·병역 특례·명성 표), 가중 룰렛 3곳 → `rng.weightedIndex`. 골든·특성화 해시 그대로 | 완료 |
-| 10 | 웹 `Team.svelte`(1135줄)를 앱처럼 하위 컴포넌트로 분리 | 예정 |
+| 10 | 웹 `Team.svelte` 1135줄 → 411줄: `TeamHead`·`TeamLineup`·`TeamPicker`·`TeamOpponents`·`TeamResult`·`TeamAchievements`·`TeamHistory`·`TeamNav`(앱과 같은 경계). 로드 성공 때 `needLogin`을 되돌리는 drift 수정(앱과 같게) | 완료 |
 
 ## 보류(결정 필요·범위 큼)
 
@@ -35,3 +35,6 @@
 - 관리자 라우트 `adminOnly` 미들웨어, `ok()` 기본 Cache-Control `private, no-store` — 응답 헤더가 바뀌어 별도 검토.
 - 모바일 테스트 러너(vitest node 환경) 도입 여부, `testID` 449개를 Maestro로 쓸지 지울지.
 - 모바일 `ui/` 정리(`Seg`·`Field` 4중복, 글자 크기·그림자·애니메이션 래퍼).
+- 남은 웹·앱 drift(동작 결정 필요): 결과 투어의 'go' 포커스 단계는 웹에만 있다.
+- 감사에서 나온 나머지 중복(게시판·채팅 모더레이션·명예의 전당·내 선수·미니게임 장면·관리자 표 등)은 화면 컨트롤러라
+  앱 테스트 러너가 생긴 뒤 옮긴다.
