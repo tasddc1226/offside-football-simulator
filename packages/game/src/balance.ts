@@ -26,6 +26,11 @@ export function setLatestBalance(cfg: { version: number; values: unknown } | nul
   latest = cfg ? { v: cfg.version, values: sanitizeBalance(cfg.values) } : null;
 }
 
+/** 새 커리어를 만들 때(newGame): 첫 시즌 전에 정하는 값(잠재력 추첨)이 최신 설정을 쓰게 한다. 서버에 못 닿았으면 기본값. */
+export function applyLatestBalance(): void {
+  applyBalance(latest?.values);
+}
+
 /** 저장된 커리어를 불러올 때: 그 커리어의 값으로 맞춘다. */
 export function useCareerBalance(s: GameState | null): void {
   applyBalance(s?.bal?.values);

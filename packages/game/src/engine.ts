@@ -18,10 +18,10 @@ import {
 } from './data.js';
 import { ovr, initSubs, legacyOvr, peakProfileOf } from './attributes.js';
 import { clamp, ri, pick, gauss } from './rng.js';
-import { adoptLatestBalance } from './balance.js';
+import { adoptLatestBalance, applyLatestBalance, BAL } from './balance.js';
 import type { GameState, Season, LogEntry } from './types.js';
 import { leagueOf, clubsIn } from './player.js';
-import { BLOOM_SCOUT, log } from './stats.js';
+import { log } from './stats.js';
 import { nationOf } from './nation.js';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { Body } from '@offside/contracts/body';
@@ -68,8 +68,10 @@ export function newGame(
       attrs[k] = clamp(POS[o.pos].base[k] + (mod[k] ?? 0) + (dmod[k] ?? 0) + ri(-4, 4), 20, 70);
   }
   const club = pick(clubsIn('hs'));
-  const pot = clamp(Math.round(74 + gauss() * 8), 55, 96);
-  const scouted = clamp(Math.round(pot + gauss() * BLOOM_SCOUT), 55, 96);
+  // 잠재력 추첨은 첫 시즌(newSeason) 전이라 최신 서버 밸런스를 먼저 맞춘다 — RNG는 쓰지 않는다.
+  applyLatestBalance();
+  const pot = clamp(Math.round(BAL.potMean + gauss() * BAL.potSd), 55, 96);
+  const scouted = clamp(Math.round(pot + gauss() * BAL.potScoutSd), 55, 96);
   // sub/season/seasonStartSub은 initSubs()/newSeason() 호출로만 실제 값이 정해진다(둘 다 RNG를
   // 소모하므로, 그 호출 순서를 바꾸지 않기 위해 이 시점엔 아직 실행하지 않는다). 여기서는 타입을
   // 만족하는 빈 기본값을 채워 두고, 아래에서 원래 순서 그대로 덮어쓴다 — 캐스팅(타입 우회) 없이도

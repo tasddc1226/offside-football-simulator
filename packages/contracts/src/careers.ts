@@ -56,6 +56,11 @@ export const CareerMetaSchema = z
     trait: ShortStringSchema,
     startYear: z.number().int().min(2000).max(2200),
     appVersion: ShortStringSchema,
+    /**
+     * T-11-030 새 선수의 처음 스카우트 평가 잠재력(55~96). 첫 시즌 업로드에만 싣고, 서버는 커리어를 만들 때(또는 비어 있을 때)
+     * 한 번만 저장한다. 관찰 전용 — 어디에도 보이지 않고 점수·순위에 쓰지 않는다. 옛 클라이언트·옛 커리어엔 없다.
+     */
+    pot: z.number().int().min(55).max(96).optional().catch(undefined),
     /** T-10-096 국적(nations.ts 코드). 옛 클라이언트·옛 커리어엔 없다 = 대한민국. */
     nation: z
       .string()
@@ -364,6 +369,8 @@ export const PutRetirementBodySchema = RetirementSummarySchema.extend({
   snapshot: LegendSnapshotSchema.optional(),
   /** T-10-092 최고 시점 능력치. 옛 클라이언트는 없다 — 모양이 틀려도 은퇴는 받는다. */
   profile: PeakProfileSchema.optional().catch(undefined),
+  /** T-11-030 은퇴 때 공개되는 실제 잠재력(스카우트 평가 + 숨은 성장). 관찰 전용 — 옛 클라이언트는 없고, 모양이 틀려도 은퇴는 받는다. */
+  potReal: z.number().int().min(0).max(150).optional().catch(undefined),
 });
 export type PutRetirementBody = z.infer<typeof PutRetirementBodySchema>;
 
