@@ -21,6 +21,7 @@ export function useCountUp(value: number, { animate = true, run = true, ms = 120
     if (instant) return show(value);
     if (!run) return show(0);
     const from = shown.current;
+    if (from === value) return;
     let raf = 0;
     const t0 = Date.now();
     const step = () => {
