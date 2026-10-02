@@ -7,7 +7,8 @@ import { isHofEligible } from '@offside/contracts/hof-rules';
 import { legendScore, loadHOF, saveKey } from '@offside/game/season';
 import type { GameState, HofEntry } from '@offside/game/types';
 import { mainTitle } from '@offside/game/titles';
-import { potReveal } from '@offside/game/stats';
+import { truePot } from '@offside/game/stats';
+import { retirementPotential } from './potential-view.js';
 import { getHofDetail, getMyCareers } from './api/client.js';
 import { anonName, totals } from './format.js';
 import type { AppState, LegendView } from './state.js';
@@ -53,6 +54,7 @@ function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
     shareId: null,
     reportId: e.name ? e.id : null,
     title: e.title ?? null,
+    pot: retirementPotential(e.potReal),
     rn: e.retiredNumber ? { kind: 'granted', ...e.retiredNumber } : null,
   };
 }
@@ -82,6 +84,7 @@ export function createLegends(host: LegendHost) {
       shareId: ownShareId(h),
       reportId: null,
       title: h.title ?? null,
+      pot: retirementPotential(h.pot),
       rn: host.rnOf(h.id, h.rn),
     };
   }
@@ -113,7 +116,7 @@ export function createLegends(host: LegendHost) {
       shareId: ownShareId(own),
       reportId: null,
       title: mainTitle(s)?.id ?? null,
-      pot: potReveal(s),
+      pot: s.retired ? retirementPotential(own?.pot ?? Math.round(truePot(s))) : undefined,
       rn: host.rnOf(s.cid, own?.rn),
     };
   }
@@ -123,7 +126,10 @@ export function createLegends(host: LegendHost) {
   function viewFromPublic(e: PublicHofEntry, d: LegendView['d'], mine: boolean): LegendView {
     // 내 기기에 있는 선수면 로컬 항목을 우선한다(이름 공개 토글 가능).
     const own = loadHOF().find((x) => x.id === e.id);
-    if (own) return viewFromEntry(own);
+    if (own) {
+      const local = viewFromEntry(own);
+      return { ...local, pot: local.pot ?? retirementPotential(e.potReal) };
+    }
     const v = publicView(e, d);
     return mine ? { ...v, shareId: e.id, reportId: null } : v;
   }

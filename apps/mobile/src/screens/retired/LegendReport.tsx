@@ -3,6 +3,7 @@
 // T-10-062: 정보 나열 대신 한 편의 엔딩 크레딧처럼 — 타이틀 → 통산 기록 → 클럽별 챕터(우승·이정표·이야기) →
 // 대표팀 → 우승·수상 롤 → 마지막 휘슬. 사용자가 스크롤해 내려가는 대로 장면이 화면에 들어올 때 하나씩 올라온다
 // (credit.tsx Reveal). 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
+import { RETIREMENT_POTENTIAL_NOTE } from '@offside/app-core/potential-view';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   Animated,
@@ -22,9 +23,8 @@ import {
   type HonourLine,
 } from '@offside/game/retirement-report';
 import { POS_LABEL } from '@offside/game/pos-label';
-import { potAchText } from '@offside/game/stats';
 import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
-import { EVENT_ICON, potVerdict, yearsOf } from '@offside/app-core/legendReport';
+import { EVENT_ICON, yearsOf } from '@offside/app-core/legendReport';
 import { peakValue, retireValue } from '@offside/contracts/market-value';
 import { titleById } from '@offside/game/titles';
 import type { LegendView } from '@offside/app-core/state';
@@ -383,13 +383,16 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
             <View testID="legend-pot" style={{ alignItems: 'center', gap: 4 }}>
               <Kicker>Scout Report</Kicker>
               <FText tone="muted" size={0.9375} center>
-                끝까지 숨겨져 있던 잠재력
+                은퇴 시점 잠재력 평가
               </FText>
               <FText tone="gold" display={700} size={4} lh={1}>
                 {v.pot.real}
               </FText>
               <FText tone="muted" size={0.9375} center>
-                {potVerdict(v.pot)}
+                잠재력 {v.pot.value} · 은퇴 시점에 기록한 값
+              </FText>
+              <FText tone="muted" size={0.9375} center>
+                {RETIREMENT_POTENTIAL_NOTE}
               </FText>
               <View
                 testID="legend-ach"
@@ -405,13 +408,10 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                 }}
               >
                 <FText tone="muted" size={0.8125}>
-                  잠재력 달성도
+                  최고 OVR
                 </FText>
                 <FText display={700} size={2} lh={1.05}>
-                  {v.pot.ach}%
-                </FText>
-                <FText tone="muted" size={0.8125} center>
-                  최고 OVR {v.peak} · {potAchText(v.pot.ach)}
+                  {v.peak}
                 </FText>
               </View>
             </View>

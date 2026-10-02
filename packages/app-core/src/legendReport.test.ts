@@ -8,7 +8,6 @@ import {
   luckNote,
   luckText,
   pct,
-  potVerdict,
   rnClubStats,
   rnSlotOf,
   valuePoints,
@@ -51,18 +50,6 @@ describe('yearsOf', () => {
 describe('EVENT_ICON', () => {
   it('여정 종류마다 아이콘이 있다', () => {
     expect(Object.keys(EVENT_ICON).sort()).toEqual(['mile', 'story', 'trophy']);
-  });
-});
-
-describe('potVerdict', () => {
-  it('잠재력 정보가 없으면 빈 문자열', () => {
-    expect(potVerdict(undefined)).toBe('');
-  });
-  it('실제 잠재력이 평가보다 높으면 큰 재능, 낮으면 못 폈다, 같으면 정확', () => {
-    const pot = (gap: number) => ({ real: 'A', scout: 'B', gap, ach: 0 });
-    expect(potVerdict(pot(3))).toBe('스카우트 평가(B)보다 큰 재능이었어요.');
-    expect(potVerdict(pot(-1))).toBe('스카우트 평가(B)만큼은 피지 못했어요.');
-    expect(potVerdict(pot(0))).toBe('스카우트의 눈이 정확했어요(평가 B).');
   });
 });
 

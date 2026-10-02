@@ -74,7 +74,7 @@
     `${posLabel({ pos: C.pos, dpos })} 후보군 추리기`,
     `주력 ${C.focus.map((k) => labels[k]).join('·')} 대조`,
     `체격 ${body.h}cm · ${body.w}kg 비교`,
-    '잠재력 평가 · 후보 3명 확정',
+    '능력치 확인 · 후보 3명 확정',
   ]);
   function scouted() {
     rollCandidates();
@@ -237,7 +237,7 @@
           {/each}
         </div>
       </div>
-      <p class="muted fs-sm">잠재력은 숨겨져 있어요. 고3 시즌을 마치면 스카우트의 첫 평가가 나와요.</p>
+      <p class="muted fs-sm">잠재력 평가는 은퇴할 때 공개돼요.</p>
     </section>
 
     <div class="action-bar at-bottom">

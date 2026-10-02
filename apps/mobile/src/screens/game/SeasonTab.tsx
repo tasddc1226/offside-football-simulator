@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
+import { visibleCareerLog } from '@offside/app-core/potential-view';
 import { PHASES, LAST_PHASE } from '@offside/game/data';
 import {
   roundRange,
@@ -405,7 +406,9 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
   const showTotals = S.played > 0 && !(report?.block && S.played === report.games.length);
   // 최근 소식: 리포트에 이미 나온 구간 기록은 빼고 5줄만, '더 보기'로 14줄까지.
   const hide = report ? logLabel(report.year, report.ph) : null;
-  const feed = s.log.filter((l) => l.t !== hide).slice(0, FEED_LONG);
+  const feed = visibleCareerLog(s.log)
+    .filter((l) => l.t !== hide)
+    .slice(0, FEED_LONG);
   // 안내가 단계마다 탭을 다시 그리므로 선택지 카드 계산은 게임 상태가 바뀔 때만 한다(설명 칸도 같은 값을 쓴다).
   const trainCards = useMemo(
     () => new Map(TRAININGS.map((tr) => [tr.id, trainingCard(s, tr)])),

@@ -136,8 +136,8 @@ export interface LegendView {
   reportId: string | null;
   /** T-10-026 대표 칭호 id. */
   title: string | null;
-  /** T-10-073 은퇴 직후(진행 중 세이브)에만 — 실제 잠재력 공개. 저장된 기록에는 없다. */
-  pot?: { real: string; scout: string; gap: number; ach: number } | undefined;
+  /** 은퇴 시점의 기록된 잠재력(반올림한 truePot). 값이 없는 옛 기록에는 표시하지 않는다. */
+  pot?: { real: string; value: number } | undefined;
   /** T-10-076 영구결번 심사 결과. null = 자격 없음, undefined = 아직 모름(업로드 전·옛 기록). */
   rn?: RetiredNumberResult | null | undefined;
 }

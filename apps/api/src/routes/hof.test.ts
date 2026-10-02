@@ -90,6 +90,33 @@ describe('공개 명예의 전당 /v1/hof', () => {
     vi.useRealTimers();
   });
 
+  it('은퇴 잠재력은 저장된 값만 공개하고 진행 중·값 없는 과거 기록은 만들지 않는다', async () => {
+    const app = createApp();
+    // 조회만으로 진행 커리어의 잠재력이 공개되지 않는다.
+    await ctx.db.update(careers).set({ pot: 95, potReal: 84 }).where(eq(careers.id, CAREER_ID));
+    expect((await app.request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).status).toBe(404);
+    const active = successEnvelope(HofListResponseSchema).parse(
+      await (await app.request('/v1/hof', {}, ctx.env)).json(),
+    ).data;
+    expect(active.entries).toHaveLength(0);
+    await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
+      ...summary,
+      snapshot,
+      potReal: 84,
+    });
+    const detail = successEnvelope(HofDetailResponseSchema).parse(
+      await (await app.request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).json(),
+    ).data;
+    expect(detail.entry.potReal).toBe(84);
+    expect(detail.entry).not.toHaveProperty('pot');
+    await ctx.db.update(careers).set({ potReal: null }).where(eq(careers.id, CAREER_ID));
+    const old = successEnvelope(HofDetailResponseSchema).parse(
+      await (await app.request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).json(),
+    ).data;
+    expect(old.entry).not.toHaveProperty('potReal');
+    expect(old.entry.peak).toBe(detail.entry.peak);
+  });
+
   it('로그인 없이 목록을 읽고, 이름은 공개를 고르기 전엔 익명이다', async () => {
     expect(
       (
