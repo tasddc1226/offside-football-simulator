@@ -131,7 +131,7 @@ export const BASE_EVENTS: EventDef[] = [
       {
         label: '축구에만 집중한다',
         ok: {
-          text: '팬들은 당신의 진지함을 좋아합니다.',
+          text: '팬들은 축구에만 집중하는 모습을 좋게 봅니다.',
           fx: (s) => {
             addStat(s, 'morale', 4);
             addStat(s, 'trust', 0.8);
@@ -197,7 +197,7 @@ export const BASE_EVENTS: EventDef[] = [
         label: '훈련 강도를 두 배로 올린다',
         p: (s) => clamp(0.2 + s.cond / 130 - Math.max(0, s.age - 26) * 0.03, 0.15, 0.85),
         ok: {
-          text: '경쟁이 당신을 더 날카롭게 만들었습니다.',
+          text: '경쟁이 붙자 훈련에서 감각이 날카로워졌습니다.',
           fx: (s) => {
             for (const k of ATTR_KEYS) if (wOf(s)[k] > 0.15) addAttr(s, k, 2);
             addStat(s, 'cond', -12);
@@ -463,7 +463,7 @@ export const BASE_EVENTS: EventDef[] = [
       {
         label: '흔쾌히 간다',
         ok: {
-          text: '아이들의 눈빛에서 초심을 되찾았습니다.',
+          text: '아이들과 한참 공을 찼습니다. 오랜만에 부담 없이 웃었습니다.',
           fx: (s) => {
             addStat(s, 'morale', 8);
             addStat(s, 'fame', 3);
@@ -517,7 +517,7 @@ export const BASE_EVENTS: EventDef[] = [
         label: '혼자 이겨낸다',
         p: (s) => clamp(0.15 + (s.age - 20) * 0.045, 0.15, 0.8),
         ok: {
-          text: '스스로 벽을 넘었습니다. 한층 단단해졌습니다. 감독도 달라진 눈빛을 알아챘습니다.',
+          text: '혼자 버텨 냈습니다. 훈련에서 달라진 모습을 감독도 알아챘습니다.',
           fx: (s) => {
             addStat(s, 'morale', 20);
             addStat(s, 'trust', 1);
@@ -601,7 +601,7 @@ export const BASE_EVENTS: EventDef[] = [
         p: (s) => clamp(0.3 + (s.attrs.def - 78) * 0.012 + (s.age - 26) * 0.01, 0.12, 0.7),
         mg: { kind: 'save', side: 0 },
         ok: {
-          text: '침착함이 빛났습니다. 정면 슈팅을 잡아냈습니다!',
+          text: '끝까지 기다렸다가 정면 슈팅을 잡아냈습니다!',
           fx: (s) => {
             addStat(s, 'fame', 7);
             addStat(s, 'morale', 10);
@@ -742,7 +742,7 @@ export const BASE_EVENTS: EventDef[] = [
           },
         },
         fail: {
-          text: '준우승. 눈물이 났지만, 아직 끝이 아닙니다.',
+          text: '준우승. 눈물이 났지만, 결승까지 오른 경기력으로 눈도장을 받았습니다.',
           fx: (s) => {
             s.flags['final' + s.year] = 1;
             addStat(s, 'fame', 4);

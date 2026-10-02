@@ -230,14 +230,14 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
           </Txt>
         )}
         <Txt v="xs" tone="muted">
-          경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다. 몸값은 시즌을 마친 때의
-          리그·OVR·나이로 매긴 추정치(이적료 기준)예요.
+          경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록이에요. 몸값은 시즌을 마친 때의
+          리그·OVR·나이로 매긴 이적료 기준 추정치예요.
         </Txt>
       </Card>
       <Card gap={0}>
         <Txt v="eyebrow">Journey</Txt>
         <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 4 }}>
-          커리어 여정
+          커리어 이정표
         </Txt>
         {miles.length ? (
           miles.map((m, i) => (
@@ -267,7 +267,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
           ))
         ) : (
           <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-            프로 데뷔부터 여정이 기록됩니다.
+            프로 데뷔부터 이정표가 쌓여요.
           </Txt>
         )}
       </Card>

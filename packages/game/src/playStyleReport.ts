@@ -58,21 +58,21 @@ const TYPES: (StyleType & { hit: (x: Signals) => boolean })[] = [
     key: 'oneclub',
     icon: '🏠',
     name: '원클럽 순정파',
-    line: '다른 유니폼은 생각해 본 적도 없다. 한 팀, 한 사랑.',
+    line: '다른 유니폼은 입어 본 적이 없다. 한 팀에서 끝까지 뛰었다.',
     hit: (x) => x.clubs === 1 && x.proSeasons >= 8,
   },
   {
     key: 'lucky',
     icon: '🍀',
     name: '타고난 강운',
-    line: '주사위가 늘 편이었다. 확률표를 비웃은 커리어.',
+    line: '낮은 확률에 건 선택이 자꾸 들어맞았다. 주사위가 늘 편이었다.',
     hit: (x) => x.luck >= 3,
   },
   {
     key: 'allin',
     icon: '🎲',
     name: '올인 승부사',
-    line: '안 될 것 같을수록 걸었다. 낮은 확률은 도전장이었다.',
+    line: '확률이 낮을수록 더 걸었다. 안 되면 그만이었다.',
     hit: (x) => x.st.longshots >= 4 && x.st.longshots / x.choices >= 0.25,
   },
   {
@@ -86,14 +86,14 @@ const TYPES: (StyleType & { hit: (x: Signals) => boolean })[] = [
     key: 'unlucky',
     icon: '🌧️',
     name: '비운의 사나이',
-    line: '확률은 늘 반대편이었다. 그래도 끝까지 뛰었다.',
+    line: '낮은 확률에 건 선택이 번번이 빗나갔다. 그래도 계속 걸었다.',
     hit: (x) => x.luck <= -3,
   },
   {
     key: 'climber',
     icon: '🚀',
     name: '사다리 등반가',
-    line: '더 큰 무대, 더 높은 리그. 멈추는 법을 몰랐다.',
+    line: '이적할 때마다 리그 수준이 올라갔다. 늘 한 단계 위만 봤다.',
     hit: (x) => x.st.tierUp >= 4,
   },
   {
@@ -129,7 +129,7 @@ const BALANCED: StyleType = {
   key: 'balanced',
   icon: '⚖️',
   name: '균형 잡힌 현실주의자',
-  line: '걸 때와 물러설 때를 알았다. 흔들림 없는 커리어.',
+  line: '걸 때와 물러설 때를 가렸다. 큰 기복 없는 커리어.',
 };
 
 /** 성향 카드. 선택 기록이 없거나 너무 적으면 null. */

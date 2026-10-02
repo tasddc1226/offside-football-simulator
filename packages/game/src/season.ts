@@ -316,7 +316,7 @@ export function market(s: GameState): MarketResult {
   if (s.leagueId === 'hs') {
     note = offers.length
       ? '졸업을 앞두고 프로 구단의 입단 제의가 도착했습니다.'
-      : '아직 프로 스카우트의 눈에 띄지 못했습니다. 대학에서 기량을 키워보세요.';
+      : '아직 프로 스카우트의 눈에 띄지 못했습니다. 대학에서 기량을 더 키워야 합니다.';
     options.push(...offers, {
       kind: 'uni',
       name: '대학 진학',
@@ -402,7 +402,7 @@ export function acceptOption(
   } else if (opt.kind === 'renew') {
     s.contract = { years: opt.years, salary: opt.salary };
     addStat(s, 'trust', 1);
-    log(s, `${s.club.name}와 ${opt.years}년 재계약 (연봉 ${fmtMoney(opt.salary)})`, 'big');
+    log(s, `${s.club.name}와 ${opt.years}년 재계약, 연봉 ${fmtMoney(opt.salary)}`, 'big');
   } else if (opt.kind === 'offer') {
     const c = CLUBS.find((x) => x.id === opt.clubId)!;
     const from = s.club.name,

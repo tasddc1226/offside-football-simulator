@@ -35,7 +35,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
     if (saved) saved.title = id;
     saveKey('ft_hof', hof);
     uploadRetirement(h.id, liveEntry(h));
-    toast(`대표 칭호를 ‘${titleById(id)?.name ?? id}’(으)로 바꿨습니다.`);
+    toast(`대표 칭호를 ‘${titleById(id)?.name ?? id}’(으)로 바꿨어요.`);
   }
 
   if (earned.length <= 1) return null;
@@ -106,7 +106,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
         </View>
       ) : null}
       <Txt v="xs" tone="muted">
-        고른 칭호는 선수 카드와 명예의 전당·공유 링크에 표시됩니다.
+        고른 칭호는 선수 카드와 명예의 전당·공유 링크에 표시돼요.
       </Txt>
     </Card>
   );

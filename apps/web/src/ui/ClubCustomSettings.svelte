@@ -4,6 +4,7 @@
   import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
   import { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
   import { clubsIn } from '@offside/game/engine';
+  import { CLUB_SYNC_TEXT } from '@offside/app-core/clubCustom';
   import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
   import { toast } from './helpers.js';
   import { doneOnEnter } from './inputDone.js';
@@ -16,13 +17,6 @@
   const clubs = $derived((void clubCustom.map, clubsIn(leagueId).map((c) => ({ ...c }))));
 
   const fail = () => toast('저장 공간이 부족해 저장하지 못했어요');
-  const SYNC_TEXT = {
-    local: '이 기기에만 저장됩니다 — 구글 계정으로 로그인하면 다른 기기와 동기화돼요.',
-    syncing: '계정과 동기화하는 중…',
-    synced: '계정에 저장됨 — 같은 계정으로 로그인한 기기에서 함께 쓰여요.',
-    error: '동기화하지 못했어요 — 이 기기에는 저장됐고, 다음에 다시 시도합니다.',
-    full: '엠블럼 이미지가 너무 많아 계정과 동기화하지 못해요 — 이 기기에는 저장됐어요. 이미지를 몇 개 지우면 다시 동기화돼요.',
-  } as const;
 
   function rename(id: string, value: string) {
     if (!setClubCustom(id, { name: value })) fail();
@@ -56,7 +50,7 @@
       if (!img.startsWith('data:image/webp') || img.length > CLUB_CUSTOM_IMG_MAX) img = canvas.toDataURL('image/jpeg', 0.8);
       if (img.length > CLUB_CUSTOM_IMG_MAX) return toast('이미지가 너무 복잡해 저장할 수 없어요');
       const others = clubImgTotal(clubCustom.map) - (clubCustom.map[club.id]?.logo?.img?.length ?? 0);
-      if (others + img.length > CLUB_CUSTOM_IMG_TOTAL_MAX) return toast('엠블럼 이미지를 더 저장할 공간이 없어요 — 다른 클럽 이미지를 지운 뒤 올려 주세요');
+      if (others + img.length > CLUB_CUSTOM_IMG_TOTAL_MAX) return toast('엠블럼 이미지를 더 저장할 공간이 없어요. 다른 클럽 이미지를 지운 뒤 올려 주세요');
       editLogo(club, { img });
     } catch {
       toast('이미지를 읽지 못했어요');
@@ -98,8 +92,8 @@
   </button>
   {#if clubsOpen}
     <div class="stack settings-body" id="settings-clubs" style="gap:10px">
-      <p class="muted fs-sm" style="margin:0">클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새 이름이 쓰입니다.</p>
-      <p class="muted fs-xs" style="margin:0" data-club-sync={clubCustom.status} aria-live="polite">{SYNC_TEXT[clubCustom.status]}</p>
+      <p class="muted fs-sm" style="margin:0">클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새 이름이 쓰여요.</p>
+      <p class="muted fs-xs" style="margin:0" data-club-sync={clubCustom.status} aria-live="polite">{CLUB_SYNC_TEXT[clubCustom.status]}</p>
       <div class="field">
         <label for="club-league">리그</label>
         <select id="club-league" bind:value={leagueId} onchange={() => (open = null)}>

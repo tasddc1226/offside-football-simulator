@@ -114,11 +114,10 @@ export default function Home() {
                   color: c.onPitch,
                 }}
               >
-                {'이번 생은 축구다\n나만의 커리어를 시작하세요'}
+                {'이번 생은 축구다\n고3부터 은퇴까지, 한 선수로 살아요'}
               </Txt>
               <Txt style={{ ...p, color: alpha(c.onPitch, 0.8) }}>
-                고교 3학년의 킥오프부터 은퇴의 종료 휘슬까지. 오프사이드에서 훈련·이적·이벤트
-                선택으로 나만의 축구선수 커리어를 만들어 보세요.
+                훈련과 이적, 이벤트마다 고른 선택이 쌓여 한 선수의 커리어가 돼요.
               </Txt>
               <Btn kind="accent" block testID="new" onPress={goNew} style={{ marginTop: 18 }}>
                 새 커리어 킥오프 →

@@ -168,7 +168,7 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
     ];
   })();
 
-  const label = `${MG_TAP[s.mg]} — 바늘이 초록 구간에 올 때 누르세요`;
+  const label = `${MG_TAP[s.mg]}. 바늘이 초록 구간에 올 때 누르세요`;
   return (
     <>
       <Txt v="eyebrow">원터치 · 초록 구간에서 멈추세요</Txt>

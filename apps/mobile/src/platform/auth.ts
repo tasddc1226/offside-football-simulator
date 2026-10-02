@@ -68,9 +68,7 @@ export async function startGoogleLogin(back: LoginReturn | null): Promise<void> 
     const ticket = typeof q.ticket === 'string' ? q.ticket : null;
     if (google === 'error' || !ticket) {
       const reason = typeof q.reason === 'string' ? q.reason : '';
-      return toast(
-        FAIL_MSG[reason] ?? `구글 로그인에 실패했습니다${reason ? ` (${reason})` : ''}.`,
-      );
+      return toast(FAIL_MSG[reason] ?? `구글 로그인에 실패했어요${reason ? ` (${reason})` : ''}.`);
     }
     const ex = await apiFetch<AuthResult>('/v1/auth/app/exchange', {
       method: 'POST',
@@ -125,9 +123,7 @@ export async function startAppleLogin(back: LoginReturn | null): Promise<void> {
 async function finishLogin(r: AuthResult, back: LoginReturn | null, via: string) {
   await setSessionToken(r.token);
   clearApiCache();
-  toast(
-    r.result === 'linked' ? `${via} 계정을 연결했습니다.` : `다른 ${via} 계정으로 전환했습니다.`,
-  );
+  toast(r.result === 'linked' ? `${via} 계정을 연결했어요.` : `다른 ${via} 계정으로 바꿨어요.`);
   await refreshAccount();
   void syncClubCustom().catch(() => {});
   void flushOutbox();

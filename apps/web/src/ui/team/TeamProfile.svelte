@@ -112,7 +112,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="empty">첫 기록을 기다리고 있어요. 팀 경기와 시즌 순위의 배지가 이곳에 쌓여요.</p>
+        <p class="empty">아직 기록이 없어요. 팀 경기와 시즌 순위 배지가 여기에 쌓여요.</p>
       {/if}
     </section>
     {#if !mine}<NameReport kind="team" id={team.id} name={team.name} />{/if}

@@ -88,7 +88,7 @@ export function careerChapters(s: LegendSource): Chapter[] {
     inYear(st.year)?.events.push({
       year: st.year,
       kind: 'story',
-      text: `${st.name} — ${st.ending}`,
+      text: `「${st.name}」 ${st.ending}`,
       years: [st.year],
     });
   }

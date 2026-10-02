@@ -149,10 +149,10 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   const offset = (page - 1) * PER_PAGE;
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const emptyText = q
-    ? `'${q}'${iGa(q)} 들어간 이름의 ${scope}선수가 없습니다.`
+    ? `'${q}'${iGa(q)} 들어간 이름의 ${scope}선수가 없어요.`
     : sort === 'score'
-      ? `아직 ${scope}은퇴 선수가 없습니다. ${scope}첫 번째 레전드가 되어보세요.`
-      : `아직 ${by.label} 기록이 있는 ${scope}은퇴 선수가 없습니다.`;
+      ? `아직 ${scope}은퇴 선수가 없어요.`
+      : `아직 ${by.label} 기록이 있는 ${scope}은퇴 선수가 없어요.`;
 
   const empty = (text: string) => (
     <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
@@ -329,7 +329,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           불러오는 중…
         </Txt>
       ) : failed ? (
-        empty('명예의 전당을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+        empty('명예의 전당을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
       ) : all && all.length ? (
         <>
           {full ? (

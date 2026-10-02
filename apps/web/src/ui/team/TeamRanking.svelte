@@ -60,7 +60,7 @@
       {/each}
     </div>
     {#if failed}
-      <p class="empty">랭킹을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+      <p class="empty">랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
     {:else if !data}
       <p class="empty">불러오는 중…</p>
     {:else if data.items.length}

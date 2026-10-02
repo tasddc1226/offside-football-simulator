@@ -71,7 +71,7 @@
           return toast((e as Error).message);
         }
         url = l;
-        const data = { title: '오프사이드 — 은퇴 커리어', text: '내 선수의 축구 인생 — 오프사이드 offside-lab.com', url: l };
+        const data = { title: '오프사이드 은퇴 커리어', text: '내 선수의 축구 인생. 오프사이드 offside-lab.com', url: l };
         if (navigator.canShare?.(data) !== false) {
           try {
             await navigator.share(data);

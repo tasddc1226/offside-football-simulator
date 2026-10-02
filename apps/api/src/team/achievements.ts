@@ -357,7 +357,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
     ),
     group('player', 'collection', '2단계', '기록 조각 모으기', collection),
     group('player', 'legend', '3단계', '전설의 한 명', [
-      feat('one-club', '원클럽맨 — 프로 10시즌 넘게 한 구단', anyone(oneClub)),
+      feat('one-club', '프로 10시즌 넘게 한 구단에서 뛴 원클럽맨', anyone(oneClub)),
       feat(
         'caps-150',
         'A매치 150경기 선수',

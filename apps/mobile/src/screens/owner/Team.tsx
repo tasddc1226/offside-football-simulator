@@ -367,7 +367,7 @@ export default function Team() {
           )}
           {!editable && team ? (
             <Txt tone="muted" v="sm" testID="team-readonly">
-              지난 시즌 팀이에요 — 보기만 할 수 있어요.
+              지난 시즌 팀이라 보기만 할 수 있어요.
             </Txt>
           ) : null}
           {editable && (!team || renaming) ? (

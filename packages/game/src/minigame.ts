@@ -52,7 +52,7 @@ export function offsetToRoll(d: number, p: number): number {
 
 /** 결과 시트에 붙는 한 줄. */
 export function timingNote(d: number): string {
-  if (!Number.isFinite(d)) return `시간 초과 — ${MG_TIME_MS / 1000}초 안에 누르지 않았어요`;
+  if (!Number.isFinite(d)) return `시간 초과. ${MG_TIME_MS / 1000}초 안에 누르지 않았어요`;
   if (d <= 0.25) return '완벽한 타이밍!';
   if (d <= 1) return '타이밍 성공';
   if (d <= 1.6) return '아깝게 빗나간 타이밍';

@@ -110,7 +110,7 @@ export async function apiFetch<T>(
       ...auth,
     });
   } catch {
-    return failure('NETWORK_ERROR', '서버에 연결할 수 없습니다.', true);
+    return failure('NETWORK_ERROR', '서버에 연결하지 못했어요.', true);
   }
 
   if (isMutation && response.ok && !keepCache) clearApiCache();
@@ -122,7 +122,7 @@ export async function apiFetch<T>(
   try {
     json = await response.json();
   } catch {
-    return failure('INVALID_RESPONSE', '서버 응답을 해석할 수 없습니다.', false);
+    return failure('INVALID_RESPONSE', '서버 응답을 읽지 못했어요.', false);
   }
 
   if (!response.ok) {

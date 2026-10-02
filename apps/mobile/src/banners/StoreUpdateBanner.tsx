@@ -14,7 +14,7 @@ export function StoreUpdateBanner() {
     <TopBanner testID="store-update-banner" label="앱 업데이트 알림" style={style}>
       <BannerText
         title="새 버전이 스토어에 나왔어요"
-        body="업데이트해야 앞으로의 개선을 계속 받을 수 있어요."
+        body="업데이트하지 않으면 이후 수정이 이 앱에 들어가지 않아요."
       />
       <Btn kind="accent" sm testID="store-update-open" onPress={openStore}>
         업데이트

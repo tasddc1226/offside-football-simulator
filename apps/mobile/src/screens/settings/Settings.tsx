@@ -97,7 +97,7 @@ export default function Settings() {
           <SettingsLabel
             eyebrow="Display"
             title="다크 모드"
-            muted="어두운 화면으로 봐요. 이 기기에 저장됩니다."
+            muted="어두운 화면으로 봐요. 이 기기에 저장돼요."
           />
           <Switch value={dark} onChange={setDark} label="다크 모드" testID="dark" />
         </SettingsRow>
@@ -108,7 +108,7 @@ export default function Settings() {
           <SettingsLabel
             eyebrow="Privacy"
             title="선수 이름 공개"
-            muted="홈 라이브 현황·명예의 전당·서버 최초 업적에 선수 이름이 보여요. 끄면 '익명의 공격수'처럼 표시되고, 다음 시즌 기록부터 반영돼요. 실명은 쓰지 않는 것을 권장합니다."
+            muted="홈 라이브 현황·명예의 전당·서버 최초 업적에 선수 이름이 보여요. 끄면 '익명의 공격수'처럼 표시되고, 다음 시즌 기록부터 반영돼요. 실명은 쓰지 않는 게 좋아요."
           />
           <Switch
             value={namePublic}

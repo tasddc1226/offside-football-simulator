@@ -169,7 +169,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         label: '직접 감아 찬다',
         p: (s) => clamp(0.22 + (s.attrs.sho - 60) * 0.008 + (s.attrs.pas - 60) * 0.008, 0.1, 0.55),
         ok: {
-          text: '벽을 넘어 골대 구석에 꽂힌 환상적인 프리킥! 이제 전담 키커는 당신입니다.',
+          text: '벽을 넘긴 프리킥이 골대 구석에 꽂혔습니다! 이제 전담 키커는 당신입니다.',
           fx: (s) => {
             s.season.goals++;
             addStat(s, 'fame', 6);
@@ -533,7 +533,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
       {
         label: '골키퍼는 막는 게 먼저라고 말한다',
         ok: {
-          text: '선방에 집중했습니다. 감독과의 거리는 조금 멀어졌지만, 선방 능력만큼은 한 단계 올라섰습니다.',
+          text: '선방 훈련에 집중했습니다. 감독과는 조금 멀어졌지만 선방은 한 단계 올라왔습니다.',
           fx: (s) => {
             addAttr(s, 'def', 2);
             addStat(s, 'trust', -0.5);
@@ -627,7 +627,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         },
       },
       {
-        label: '경쟁자와 함께 성장하기로 한다',
+        label: '경쟁자와 같이 훈련한다',
         ok: {
           text: '서로 슈팅을 막아주며 둘 다 성장했습니다.',
           fx: (s) => {

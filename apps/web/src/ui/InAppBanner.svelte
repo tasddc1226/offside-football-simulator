@@ -15,7 +15,7 @@
 
 {#if !hidden}
   <section class="card inapp-hint" data-inapp-hint aria-label="외부 브라우저 안내">
-    <p>카톡·인스타 안에서 열린 화면이에요. 기록은 이 앱 안에만 저장돼요 — 외부 브라우저로 열면 로그인과 저장이 더 안전해요.</p>
+    <p>카톡·인스타 안에서 열린 화면이에요. 기록은 이 앱 안에만 저장돼요. 외부 브라우저로 열면 로그인과 저장이 더 안전해요.</p>
     <button class="btn btn-accent" data-act="inapp-open" onclick={() => void openExternal(info)}>외부 브라우저로 열기</button>
     <button class="icon-btn inapp-close" data-act="inapp-close" aria-label="안내 닫기" onclick={dismiss}>✕</button>
   </section>

@@ -321,7 +321,7 @@
               {/if}
             </div>
           {:else}
-            <p class="muted fs-sm" style="margin:0">첫 댓글을 남겨 보세요.</p>
+            <p class="muted fs-sm" style="margin:0">아직 댓글이 없어요.</p>
           {/each}
           {#if detail.blocks.length}
             <details class="board-blocks" data-board-blocks>

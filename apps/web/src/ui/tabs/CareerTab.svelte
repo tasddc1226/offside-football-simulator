@@ -74,16 +74,16 @@
   {:else}
     <p class="empty">첫 시즌을 마치면 기록이 쌓입니다.</p>
   {/if}
-  <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다. 몸값은 시즌을 마친 때의 리그·OVR·나이로 매긴 추정치(이적료 기준)예요.</p>
+  <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록이에요. 몸값은 시즌을 마친 때의 리그·OVR·나이로 매긴 이적료 기준 추정치예요.</p>
 </section>
 <section class="card">
   <div class="eyebrow">Journey</div>
-  <h2 style="margin-bottom:4px">커리어 여정</h2>
+  <h2 style="margin-bottom:4px">커리어 이정표</h2>
   {#if miles.length}
     {#each miles as m, i (i)}
       <div class="trophy"><span class="y">{m.year}</span><div><b>{m.t}</b></div></div>
     {/each}
   {:else}
-    <p class="empty">프로 데뷔부터 여정이 기록됩니다.</p>
+    <p class="empty">프로 데뷔부터 이정표가 쌓여요.</p>
   {/if}
 </section>

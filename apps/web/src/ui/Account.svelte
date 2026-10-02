@@ -53,7 +53,7 @@
     );
   }
   async function doDeleteFlow() {
-    if (!window.confirm('정말 계정을 삭제할까요? 이 기기의 게임 저장 데이터는 남지만, 계정 연동은 완전히 사라집니다.')) return;
+    if (!window.confirm('정말 계정을 삭제할까요? 이 기기의 게임 저장 데이터는 남지만, 계정 연동은 완전히 사라져요.')) return;
     const start = await startProfileDeletion();
     if (!start.ok) return set('error');
     const confirmResult = await confirmProfileDeletion(start.data.confirmToken);
@@ -65,7 +65,7 @@
   <div class="account-card"><div class="who"><b>계정</b><span class="muted">확인 중…</span></div></div>
 {:else if profile === 'error'}
   <div class="account-card">
-    <div class="who"><b>연결할 수 없어요</b><span class="muted">서버에 연결하지 못해 로그인 상태를 확인하지 못했어요. 게임은 계속 즐길 수 있고, 저장은 이 기기에 남습니다.</span></div>
+    <div class="who"><b>연결할 수 없어요</b><span class="muted">서버에 연결하지 못해 로그인 상태를 확인하지 못했어요. 게임은 그대로 할 수 있고, 저장은 이 기기에 남아요.</span></div>
     <button class="btn btn-sm" onclick={() => load()}>다시 시도</button>
   </div>
 {:else if !profile || !profile.linked.google}
@@ -79,7 +79,7 @@
     <button class="btn btn-primary btn-sm" data-act="logout" onclick={askLogout}>로그아웃</button>
   </div>
   <div class="account-nick">
-    <span class="muted">댓글 닉네임{profile.nickname ? '' : ' — 정하면 소식 게시판에 댓글을 쓸 수 있어요'}</span>
+    <span class="muted">{profile.nickname ? '댓글 닉네임' : '댓글 닉네임을 정하면 소식 게시판에 댓글을 쓸 수 있어요'}</span>
     {#if admin}<b>{profile.nickname} · 운영자 계정은 고정이에요</b>
     {:else}{#key profile.nickname}<NicknameForm current={profile.nickname} />{/key}{/if}
   </div>

@@ -267,7 +267,7 @@ export function createGameActions(host: GameHost) {
     const label = txt(c.label, s);
     if (!c.p)
       return isSafe(ev, c)
-        ? { label, odds: '안전', hint: '확정이지만 보상이 줄고 가끔 대가가 따릅니다' }
+        ? { label, odds: '안전', hint: '확정이지만 보상이 줄고, 가끔 대가가 따라요' }
         : { label, odds: '확정' };
     const odds = choiceOdds(c.p(s), ev.id, i);
     const mg = activeMg(c);
@@ -602,8 +602,8 @@ export function createGameActions(host: GameHost) {
   function retireAsk(onCancel: () => void = sheet.closeSheet) {
     // T-10-032: 짧은 커리어는 전체 명예의 전당에 오르지 않는다 — 은퇴 전에 미리 알린다.
     const text = isHofEligible(appState.G!.age)
-      ? '은퇴하면 이 선수의 커리어는 명예의 전당에 기록되고 더 이상 플레이할 수 없습니다.'
-      : `은퇴하면 더 이상 플레이할 수 없습니다. ${SHORT_CAREER_NOTE}`;
+      ? '은퇴하면 이 선수의 커리어는 명예의 전당에 기록되고, 더 이상 플레이할 수 없어요.'
+      : `은퇴하면 더 이상 플레이할 수 없어요. ${SHORT_CAREER_NOTE}`;
     sheet.showSheet(
       { kind: 'notice', eyebrow: 'Retirement', title: '정말 은퇴하시겠어요?', muted: true, text },
       [

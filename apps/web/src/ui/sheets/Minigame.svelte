@@ -136,7 +136,7 @@
   class="mg-stage"
   data-sheet="mg"
   data-mg-tap
-  aria-label="{MG_TAP[v.mg]} — 바늘이 초록 구간에 올 때 누르세요"
+  aria-label="{MG_TAP[v.mg]}. 바늘이 초록 구간에 올 때 누르세요"
   onpointerdown={(e) => tap(e.timeStamp)}
   onclick={() => tap(performance.now())}
 >

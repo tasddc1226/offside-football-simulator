@@ -39,6 +39,6 @@ describe('내 선수 시즌 거르기 (T-11-029)', () => {
   it('빈 시즌 안내는 다른 시즌에 있는 선수 수를 알려 준다', () => {
     expect(emptySeasonText(1, 3)).toContain('시즌 1에 은퇴한 선수가 아직 없어요');
     expect(emptySeasonText(1, 3)).toContain('3명');
-    expect(emptySeasonText(0, 0)).toContain('첫 커리어');
+    expect(emptySeasonText(0, 0)).toContain('은퇴까지 마치면');
   });
 });

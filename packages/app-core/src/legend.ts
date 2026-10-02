@@ -156,7 +156,7 @@ export function createLegends(host: LegendHost) {
   async function openPublicLegendById(careerId: string) {
     const [r, mine] = await Promise.all([getHofDetail(careerId), isMyCareer(careerId)]);
     if (!r.ok) {
-      host.toast('상세 기록을 불러오지 못했습니다.');
+      host.toast('상세 기록을 불러오지 못했어요.');
       return;
     }
     show(viewFromPublic(r.data.entry, r.data.snapshot, mine));
@@ -169,7 +169,7 @@ export function createLegends(host: LegendHost) {
   function setLegendPublic(h: HofEntry, on: boolean): boolean {
     if (!h.id) return false;
     if (on && !toPublicName(h.name)) {
-      host.toast('이 이름은 공개할 수 없어요 — 링크나 욕설이 들어간 이름은 익명으로만 올라갑니다.');
+      host.toast('링크나 욕설이 들어간 이름은 공개할 수 없어요. 익명으로만 올라가요.');
       return false;
     }
     const hof = loadHOF();
@@ -178,7 +178,7 @@ export function createLegends(host: LegendHost) {
     saveKey('ft_hof', hof);
     h.public = on;
     host.uploadRetirement(h.id, h);
-    host.toast(on ? '명예의 전당에 이름을 공개했습니다.' : '명예의 전당에서 익명으로 바꿨습니다.');
+    host.toast(on ? '명예의 전당에 이름을 공개했어요.' : '명예의 전당에서 익명으로 바꿨어요.');
     return true;
   }
 

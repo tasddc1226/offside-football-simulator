@@ -54,11 +54,11 @@ export function handleOAuthReturn() {
   const reason = url.searchParams.get('reason');
   const msg =
     google === 'linked'
-      ? '구글 계정을 연결했습니다.'
+      ? '구글 계정을 연결했어요.'
       : google === 'switched'
-        ? '다른 구글 계정으로 전환했습니다.'
+        ? '다른 구글 계정으로 바꿨어요.'
         : ((reason && FAIL_MSG[reason]) ??
-          `구글 로그인에 실패했습니다${reason ? ` (${reason})` : ''}.`);
+          `구글 로그인에 실패했어요${reason ? ` (${reason})` : ''}.`);
   toast(msg);
   window.history.replaceState({}, '', '/');
   const back = takeLoginReturn();

@@ -28,7 +28,7 @@
     - button "Events 확률 이벤트 선택지마다 성공 확률 공개 · 확률 도감 보기 →"
     - text: Legends
     - heading "명예의 전당" [level=2]
-    - paragraph: 명예의 전당을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+    - paragraph: 명예의 전당을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
     - text: Notice
     - heading "공지사항" [level=2]
     - paragraph: 소식을 불러오지 못했어요.

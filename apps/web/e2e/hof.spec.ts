@@ -131,12 +131,12 @@ test('내 선수 탭: 상세 없는 옛 기록은 요약만 보여 준다', asyn
   });
   await page.goto('/');
   await expect(page.locator('.card').filter({ hasText: '명예의 전당' })).toContainText(
-    '불러오지 못했습니다',
+    '불러오지 못했어요',
   );
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('.film-open h1')).toHaveText('옛선수');
-  await expect(page.getByText('요약만 보여 드립니다')).toBeVisible();
+  await expect(page.getByText('요약만 보여 줘요')).toBeVisible();
 });
 
 // T-10-013: 계정에 연결돼 있으면 '내 선수'는 계정 기록이다. 이 기기 기록이 있으면 그 이름을 쓰고,
@@ -421,7 +421,7 @@ test('명예의 전당 이름 검색', async ({ page }) => {
     .poll(() => asked.at(-1))
     .toBe(`?limit=10&sort=goals&q=${encodeURIComponent('오프')}`);
   await search.fill('없는사람');
-  await expect(full.locator('.empty')).toHaveText("'없는사람'이 들어간 이름의 선수가 없습니다.");
+  await expect(full.locator('.empty')).toHaveText("'없는사람'이 들어간 이름의 선수가 없어요.");
   await search.fill('');
   await expect.poll(() => asked.at(-1)).toBe('?limit=10&sort=goals');
   // 검색어를 둔 채 닫으면 검색도 풀린다.

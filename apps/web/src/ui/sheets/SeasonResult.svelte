@@ -20,7 +20,7 @@
 {#if v.honors.length}
   <div class="stack">{#each v.honors as t, i (i)}<p class="hl"><b>{t}</b></p>{/each}</div>
 {:else}
-  <p class="muted">이번 시즌 수상은 없었습니다.</p>
+  <p class="muted">이번 시즌 수상은 없었어요.</p>
 {/if}
 {#if v.scout}
   <div class="story-end scout-card pop" data-scout-first>
@@ -54,7 +54,7 @@
 {/if}
 {#if v.miles.length}
   <div>
-    <div class="eyebrow" style="margin-bottom:6px">커리어 여정</div>
+    <div class="eyebrow" style="margin-bottom:6px">커리어 이정표</div>
     {#each v.miles as m, i (i)}<p>· {m}</p>{/each}
   </div>
 {/if}
@@ -66,4 +66,4 @@
     {#each v.fans as f, i (i)}<div class="fan-line in" style="--d:{200 + i * 110}ms"><span class="fan-heart" aria-hidden="true">💗</span>{f}</div>{/each}
   </div>
 </div>
-<p class="muted">나이 {v.age}세가 되었습니다. 이제 다음 시즌을 준비합니다.</p>
+<p class="muted">{v.age}세가 됐어요. 이제 다음 시즌을 준비해요.</p>
