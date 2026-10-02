@@ -2,6 +2,7 @@
 // 시작(startGoogleLogin), 로그인 뒤 돌아올 곳 기억, OAuth 콜백(/settings?google=linked|switched|error) 처리.
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { getProfile, googleStartUrl } from '@offside/app-core/api/client';
+import { LOGIN_OFFLINE_TEXT, googleFailText, loginDoneText } from '@offside/app-core/loginText';
 import { loadHOF } from '@offside/game/season';
 import { toast } from './helpers.js';
 import { currentInApp, showInAppLoginNotice } from './inapp-open.js';
@@ -37,29 +38,19 @@ export async function startGoogleLogin(back: LoginReturn | null) {
   const inApp = currentInApp();
   if (inApp) return showInAppLoginNotice(inApp);
   rememberLoginReturn(back);
-  if (!(await getProfile()).ok)
-    return toast('서버에 연결하지 못해 로그인을 시작하지 못했어요. 잠시 뒤 다시 눌러 주세요.');
+  if (!(await getProfile()).ok) return toast(LOGIN_OFFLINE_TEXT);
   window.location.assign(googleStartUrl());
 }
-/** 로그인 시작(/v1/auth/google/start)이 설정 화면으로 돌려보낸 이유별 안내. */
-const FAIL_MSG: Record<string, string> = {
-  session: '로그인 준비가 끝나지 않았어요. 구글로 로그인을 한 번 더 눌러 주세요.',
-  rate_limited: '로그인 시도가 너무 많아요. 잠시 뒤 다시 시도해 주세요.',
-  unavailable: '지금은 구글 로그인을 사용할 수 없어요. 잠시 뒤 다시 시도해 주세요.',
-};
 export function handleOAuthReturn() {
   const url = new URL(window.location.href);
   const google = url.searchParams.get('google');
   if (!google) return;
   const reason = url.searchParams.get('reason');
-  const msg =
-    google === 'linked'
-      ? '구글 계정을 연결했어요.'
-      : google === 'switched'
-        ? '다른 구글 계정으로 바꿨어요.'
-        : ((reason && FAIL_MSG[reason]) ??
-          `구글 로그인에 실패했어요${reason ? ` (${reason})` : ''}.`);
-  toast(msg);
+  toast(
+    google === 'linked' || google === 'switched'
+      ? loginDoneText(google, '구글')
+      : googleFailText(reason),
+  );
   window.history.replaceState({}, '', '/');
   const back = takeLoginReturn();
   if (back && google !== 'error') {
