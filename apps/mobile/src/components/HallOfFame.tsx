@@ -237,8 +237,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
               >
                 {notOpen(s) ? (
                   // T-10-103 개막 전 시즌 버튼에 'Coming soon' — 버튼 높이는 그대로, 오른쪽 위 테두리에 걸친다.
-                  // T-11-038 절대 위치 배지는 버튼 안쪽 폭 - right 만큼만 받아 큰 글씨에서 두 줄로 꺾여 버튼 글자를 덮었다 —
-                  // 바깥 틀을 버튼 폭으로 펴고 배지를 오른쪽에 붙인다. 글자는 한 줄, 확대는 1.2배까지.
+                  // T-11-038 right만 준 절대 배지는 버튼 안쪽 폭에 묶여 큰 글씨에서 꺾였다 — 틀을 버튼 폭으로 펴고 오른쪽에 붙인다.
                   <View
                     style={{
                       position: 'absolute',

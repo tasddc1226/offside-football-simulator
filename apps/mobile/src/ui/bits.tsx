@@ -96,10 +96,8 @@ export function Chip({ text, dir }: { text: string; dir?: 'up' | 'down' | '' | u
   );
 }
 
-/** 선택 버튼(웹 .opt · aria-pressed) — 제목 + 작은 설명. */
+/** 선택 버튼(웹 .opt · aria-pressed). 내용은 children. */
 export function Opt({
-  title,
-  sub,
   selected,
   onPress,
   style,
@@ -108,8 +106,6 @@ export function Opt({
   testID,
   accessibilityLabel,
 }: {
-  title?: string;
-  sub?: string | undefined;
   selected?: boolean;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
@@ -145,12 +141,6 @@ export function Opt({
         style,
       ]}
     >
-      {title ? <Txt style={{ fontWeight: '600' }}>{title}</Txt> : null}
-      {sub ? (
-        <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
-          {sub}
-        </Txt>
-      ) : null}
       {children}
     </Press>
   );

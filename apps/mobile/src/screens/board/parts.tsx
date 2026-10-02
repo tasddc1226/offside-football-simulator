@@ -308,8 +308,7 @@ export function TabOpt({
           ...(tight || fit ? { paddingHorizontal: 4, paddingVertical: 8 } : null),
         }}
       >
-        {/* T-11-038 제목은 늘 한 줄 — 큰 글씨 설정에서 '프리시즌'·'미드필더'가 두 줄로 꺾였다.
-            확대는 1.3배까지(칩마다 줄어드는 비율이 달라 크기가 들쭉날쭉했다), 그래도 칸보다 길면 글자가 줄어든다. */}
+        {/* T-11-038 한 줄 고정, 확대 1.3배까지 — 그래도 칸보다 길면 글자가 줄어든다. */}
         <Txt
           numberOfLines={1}
           maxFontSizeMultiplier={1.3}
