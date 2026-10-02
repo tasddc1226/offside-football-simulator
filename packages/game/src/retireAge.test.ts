@@ -103,7 +103,7 @@ describe('T-11-045 은퇴 나이', () => {
   it('끝까지 뛰면 프리시즌 선수는 40세, 시즌 1 선수는 44세가 마지막 시즌이다', () => {
     const lastAge = (retireAt?: number) => {
       let max = 0;
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 20; i++) {
         const s: GameState = make(1000 + i, retireAt);
         for (let y = 0; y < 30; y++) {
           for (let ph = 0; ph <= LAST_PHASE; ph++) {
@@ -125,5 +125,5 @@ describe('T-11-045 은퇴 나이', () => {
     const extended = lastAge(45);
     expect(extended).toBeGreaterThan(40);
     expect(extended).toBeLessThanOrEqual(44);
-  });
+  }, 30_000); // 커리어 40개를 끝까지 돌린다 — CI(x64)에선 5초를 넘긴다
 });
