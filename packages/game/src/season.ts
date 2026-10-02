@@ -229,8 +229,10 @@ const DOWN: Record<string, string> = {
   ll: 'bl',
   pl: 'sa',
 };
+/** 마지막으로 뛴(군 복무가 아닌) 시즌 기록. */
+const lastPlayed = (s: GameState) => s.career.filter((r) => !r.mil).pop();
 export function makeOffers(s: GameState) {
-  const last = s.career.filter((r) => !r.mil).pop();
+  const last = lastPlayed(s);
   const o = ovr(s);
   const value =
     o +
@@ -286,22 +288,21 @@ export function makeOffers(s: GameState) {
 /** T-11-045 이 선수의 은퇴 나이(이 나이가 되는 시장에서 은퇴). 옛 저장·프리시즌 선수는 41세. */
 export const retireAge = (s: Pick<GameState, 'retireAt'>): number =>
   s.retireAt ?? PRESEASON_RETIRE_AT;
-/** T-11-045 베테랑(프리시즌 은퇴 나이 이상)은 1년 계약만 — 은퇴 나이를 넘겨 계약이 남지 않는다. */
-const isVeteran = (s: GameState) => s.age >= PRESEASON_RETIRE_AT;
 /**
- * T-11-045 베테랑 재계약: 기존 재계약 능력 기준 + 지난(비군복무) 시즌 출전·평균 평점(6.8 = 오퍼 평가의 보통 시즌).
+ * T-11-045 베테랑 나이: 이적 제의는 1년 계약만(은퇴 나이를 넘겨 계약이 남지 않는다), 재계약은 지난 시즌 활약으로.
+ * 프리시즌 은퇴 나이와 같은 41이지만 다른 값이다 — 프리시즌 선수는 이 나이에 은퇴하므로 시즌 1부터의 선수만 닿는다.
+ */
+const VETERAN_AGE = 41;
+const isVeteran = (s: GameState) => s.age >= VETERAN_AGE;
+/**
+ * T-11-045 베테랑 재계약: 기존 재계약 능력 기준(전력 차 7 이내)에 더해 지난(비군복무) 시즌 출전·평균 평점(6.8 = 오퍼 평가의 보통 시즌).
  * 시뮬(4,000커리어, 끝까지 뛰는 정책)에서 41세 도달자의 약 20%가 45세까지 뛰고 은퇴 나이가 41~45세에 고르게 퍼진다
  * (docs/analysis/retire-age-45-sim-2026-10-02.md).
  */
 export const VETERAN_RENEW = { apps: 10, rating: 6.8 } as const;
-function veteranRenewOk(s: GameState, o: number): boolean {
-  const last = s.career.filter((r) => !r.mil).pop();
-  return (
-    !!last &&
-    o >= s.club.str - 7 &&
-    last.apps >= VETERAN_RENEW.apps &&
-    last.rating >= VETERAN_RENEW.rating
-  );
+function veteranSeasonOk(s: GameState): boolean {
+  const last = lastPlayed(s);
+  return !!last && last.apps >= VETERAN_RENEW.apps && last.rating >= VETERAN_RENEW.rating;
 }
 
 export function offerFrom(s: GameState, c: (typeof CLUBS)[number]): OfferOption {
@@ -405,7 +406,7 @@ function proShelf(s: GameState, offers: MarketOption[], o: number, leagueId: str
     return { options, note: `${s.club.name}와의 계약이 ${contract.years}년 남았습니다.` };
   }
   const veteran = isVeteran(s);
-  if (veteran ? veteranRenewOk(s, o) : o >= s.club.str - 7 && s.age < 38) {
+  if (o >= s.club.str - 7 && (veteran ? veteranSeasonOk(s) : s.age < 38)) {
     const sal = Math.round((salaryFor(s.leagueId, o) * (1 + s.trust * 0.03)) / 10) * 10;
     options.push({
       kind: 'renew',
@@ -442,17 +443,21 @@ export function market(s: GameState): MarketResult {
   if (!L.amateur) options.push(...milOptions(s));
   const lastUni = s.leagueId === 'uni' && s.uniYears >= 4;
   const canRetire = (!L.amateur && (s.age >= 30 || L.tier === 0 || !options.length)) || lastUni;
-  const capped = s.age >= retireAge(s);
-  const forced = capped || (!options.length && (!L.amateur || lastUni));
+  if (s.age >= retireAge(s)) {
+    return {
+      options: [],
+      note: `${s.age}세가 되어 더 이상 현역으로 뛸 수 없습니다. 은퇴를 결정할 시간입니다.`,
+      canRetire: true,
+    };
+  }
+  const forced = !options.length && (!L.amateur || lastUni);
   return {
     options: forced ? [] : options,
-    note: capped
-      ? `${s.age}세가 되어 더 이상 현역으로 뛸 수 없습니다. 은퇴를 결정할 시간입니다.`
-      : forced
-        ? '더 이상 불러주는 팀이 없습니다. 은퇴를 결정할 시간입니다.'
-        : isVeteran(s)
-          ? `${note} ${retireAge(s)}세가 되면 은퇴합니다.`
-          : note,
+    note: forced
+      ? '더 이상 불러주는 팀이 없습니다. 은퇴를 결정할 시간입니다.'
+      : isVeteran(s)
+        ? `${note} ${retireAge(s)}세가 되면 은퇴합니다.`
+        : note,
     canRetire: canRetire || forced,
   };
 }

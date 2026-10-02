@@ -3,6 +3,7 @@ import {
   evaluateCareer,
   evaluateRecords,
   firstsCatalog,
+  RETIRE_CAP_FIRST,
   type FirstCareer,
   type FirstSeason,
 } from './firsts.js';
@@ -171,5 +172,26 @@ describe('서버 최초 기록 규칙 (T-10-027)', () => {
       career([season()], { legendScore: 100_000, retiredAt: '2026-09-26T01:00:00.000Z' }),
     );
     expect(got.filter((g) => g.id.startsWith('legend')).length).toBe(40);
+  });
+
+  it('은퇴 나이 해금(T-11-045): 시즌 선수가 그 시즌 은퇴 나이로 은퇴하면 은퇴 시각으로 잡는다', () => {
+    const at = '2026-11-01T00:00:00.000Z';
+    const played = [season({ age: 44 })];
+    const retired = (svc: number, retireAge: number) =>
+      evaluateCareer(career(played, { retiredAt: at, retireAge, season: svc })).find(
+        (g) => g.id === RETIRE_CAP_FIRST,
+      );
+    expect(retired(1, 45)).toEqual({ id: RETIRE_CAP_FIRST, at, year: null });
+    expect(retired(1, 44)).toBeUndefined();
+    expect(retired(0, 41)).toBeUndefined(); // 프리시즌은 해금이 없다
+    expect(ids(career(played, { retireAge: 45, season: 1 }))).not.toContain(RETIRE_CAP_FIRST); // 은퇴 전
+  });
+
+  it('은퇴 나이 해금 문장은 시즌의 은퇴 나이와 다음 시즌 나이를 쓰고, 프리시즌 목록엔 없다', () => {
+    const label = (season?: number) =>
+      firstsCatalog([], season).find((d) => d.id === RETIRE_CAP_FIRST)?.label;
+    expect(label(1)).toBe('45세 은퇴 최초 달성! 다음 시즌 은퇴 나이 46세 해금');
+    expect(label(0)).toBeUndefined();
+    expect(label()).toBe('은퇴 나이까지 뛰고 은퇴 최초 달성!');
   });
 });

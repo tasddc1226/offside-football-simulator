@@ -2,6 +2,7 @@ import type { CareerPos, CareerSeasonPayload, RetirementSummary } from '@offside
 import { isDefaultClubId } from '@offside/contracts/club-names';
 import { controlPoints, legendTerms } from '@offside/contracts/hof-rules';
 import type { PeakProfile } from '@offside/contracts/positions';
+import { MAX_RETIRE_AT } from '@offside/contracts/service-seasons';
 
 // 클라이언트가 보낸 기록 값의 현실성 검사. 게임은 브라우저에서 돌고 서버는 결과만 받으므로, 모양(zod)만 맞으면
 // 어떤 숫자든 들어올 수 있다. 거부하면 기기의 업로드 큐가 그 기록을 버리므로(400) 게임에서 나올 수 없는 값은
@@ -28,9 +29,12 @@ export const SEASON_CAP = {
 export const OVR_CAP_BY_AGE = [81, 87, 91, 94, 97, 97];
 export const ovrCapAt = (age: number): number =>
   OVR_CAP_BY_AGE[Math.max(age, 18) - 18] ?? SEASON_CAP.ovr;
-/** 생애 나이 범위(고3 데뷔 전 · 은퇴 나이 뒤까지 여유). 커리어별 은퇴 나이(T-11-045)는 boundRetirement가 맞춘다. */
+/**
+ * 생애 나이 범위(고3 데뷔 전 · 정의된 시즌의 가장 높은 은퇴 나이까지 — 다음 시즌 은퇴 나이가 오르면 함께 오른다).
+ * 커리어별 은퇴 나이(T-11-045)는 boundRetirement가 맞춘다.
+ */
 const MIN_AGE = 14;
-const MAX_AGE = 45;
+const MAX_AGE = MAX_RETIRE_AT;
 /** 시즌 영예에 없이 따로 쌓이는 수상(푸스카스상 등)의 여유 — 실측 0–2개. */
 const EXTRA_HONORS = 3;
 

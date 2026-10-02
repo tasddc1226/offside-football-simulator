@@ -19,7 +19,7 @@ const make = (seed: number, retireAt?: number) => {
       foot: '오른발',
       type: 'poacher',
       trait: 'late',
-      ...(retireAt && { retireAt }),
+      retireAt,
     },
     seed,
   );
