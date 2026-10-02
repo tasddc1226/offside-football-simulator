@@ -7,10 +7,9 @@ import type { SheetView } from '@offside/app-core/sheets';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, fitLine, rem } from '../theme/type';
-import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
 import { Enter } from './anim';
-import { ProgBar, StatGrid } from './parts';
+import { ProgBar, SkipLink, StatGrid } from './parts';
 import { TickerLine } from './TickerLine';
 
 /** 값이 바뀔 때마다 커졌다 돌아오는 숫자(웹 tally b.bump: 40%에서 1.25배 + 금색). 0·'-'은 그대로. */
@@ -104,18 +103,7 @@ export function Block({ v }: { v: Extract<SheetView, { kind: 'block' }> }) {
           </Txt>
         ))}
       </View>
-      {s.skip ? (
-        <Press
-          testID="an-skip"
-          onPress={() => v.skip?.()}
-          hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
-          style={{ alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 2 }}
-        >
-          <Txt tone="muted" style={{ fontSize: rem(0.75), textDecorationLine: 'underline' }}>
-            건너뛰기
-          </Txt>
-        </Press>
-      ) : null}
+      {s.skip ? <SkipLink onPress={() => v.skip?.()} /> : null}
     </>
   );
 }
