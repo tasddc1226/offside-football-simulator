@@ -79,7 +79,8 @@ describe('T-11-030 잠재력 관찰 업로드', () => {
     for (let y = 0; y < 2; y++) {
       for (let ph = 0; ph <= g.LAST_PHASE; ph++) g.playPhase(s);
       const rec = g.endSeason(s);
-      up.uploadSeason(s, rec.rec);
+      // 웹의 $state 프록시처럼 s.career[0]과 다른 객체(같은 기록)가 넘어와도 첫 시즌으로 알아본다.
+      up.uploadSeason(s, { ...rec.rec });
     }
     await new Promise((r) => setTimeout(r, 0));
     const bodies = sent.season.map((b) => PutCareerSeasonBodySchema.parse(b));

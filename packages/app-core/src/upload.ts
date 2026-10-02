@@ -73,7 +73,8 @@ export function createUploader(host: UploaderHost) {
         startYear: s.career[0]?.year ?? rec.year,
         appVersion: host.appVersion,
         // T-11-030 처음 스카우트 평가는 첫 시즌 기록과 함께만 보낸다(재평가가 21세에 pot을 바꾸기 전 값).
-        ...(rec === s.career[0] && (s.flags.rescout ?? 0) === 0 && { pot: s.pot }),
+        // 웹은 s가 $state 프록시라 s.career[0]과 rec가 같은 객체여도 ===가 거짓이므로 연도로 비교한다.
+        ...(rec.year === s.career[0]?.year && (s.flags.rescout ?? 0) === 0 && { pot: s.pot }),
       },
       season: seasonPayload(rec),
       events,
