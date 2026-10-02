@@ -5,7 +5,7 @@ import { clamp, gauss, rnd } from './rng.js';
 import type { GameState } from './types.js';
 import { labelOf } from './player.js';
 
-const gradeOf = (p: number) =>
+export const gradeOf = (p: number) =>
   p >= 90 ? 'S' : p >= 84 ? 'A' : p >= 78 ? 'B' : p >= 70 ? 'C' : 'D';
 /** 등급 서열 — 클수록 높다(S 4 … D 0). */
 export const gradeRank = (g: string): number => 'DCBAS'.indexOf(g);
