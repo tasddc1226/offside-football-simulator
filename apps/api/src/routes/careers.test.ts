@@ -257,6 +257,76 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect((await put(other.cookie, otherId)).status).toBe(200);
   });
 
+  it('T-11-048: 시즌 성장 기록을 저장하고, 기록 없이 다시 올라온 같은 시즌은 지우지 않는다', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const growth = {
+      v: 1,
+      o0: 52,
+      ph: [52, 54, 55],
+      a0: [50, 51, 52, 53, 54, 55],
+      a1: [52, 53, 54, 55, 56, 57],
+      s0: [50.5, 51],
+      s1: [52.5, 53],
+      pot: { s: 74, b: 1, bl: -2.4, r: 0 },
+    };
+    const send = (extra: Record<string, unknown>) => {
+      const b = seasonBody();
+      return app.request(
+        `/v1/careers/${CAREER_ID}/seasons/2026`,
+        jsonInit({
+          method: 'PUT',
+          body: { ...b, season: { ...b.season, ...extra } },
+          cookie: owner.cookie,
+        }),
+        ctx.env,
+      );
+    };
+    const row = async () =>
+      (await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID)))[0]!;
+
+    expect((await send({ growth })).status).toBe(200);
+    expect((await row()).ovrStart).toBe(52);
+    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
+
+    // 옛 시즌 재전송(성장 기록 없음)은 이미 쌓인 기록을 그대로 둔다.
+    expect((await send({})).status).toBe(200);
+    expect((await row()).ovrStart).toBe(52);
+    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
+
+    // 새 성장 기록이 오면 덮어쓴다.
+    expect((await send({ growth: { ...growth, o0: 53 } })).status).toBe(200);
+    expect((await row()).ovrStart).toBe(53);
+  });
+
+  it('T-11-048: 성장 기록 없이 올라온 첫 시즌은 NULL이고, 모양이 틀리면 400', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const b = seasonBody();
+    const res = await app.request(
+      `/v1/careers/${CAREER_ID}/seasons/2026`,
+      jsonInit({ method: 'PUT', body: b, cookie: owner.cookie }),
+      ctx.env,
+    );
+    expect(res.status).toBe(200);
+    const [r] = await ctx.db
+      .select()
+      .from(careerSeasons)
+      .where(eq(careerSeasons.careerId, CAREER_ID));
+    expect(r!.ovrStart).toBeNull();
+    expect(r!.growthJson).toBeNull();
+    const bad = await app.request(
+      `/v1/careers/${CAREER_ID}/seasons/2027`,
+      jsonInit({
+        method: 'PUT',
+        body: { ...b, season: { ...b.season, growth: { v: 1, o0: 50 } } },
+        cookie: owner.cookie,
+      }),
+      ctx.env,
+    );
+    expect(bad.status).toBe(400);
+  });
+
   it('happy path: 시즌 upsert 후 은퇴까지 정상 처리된다', async () => {
     const owner = await issueCookie(ctx);
     const app = createApp();

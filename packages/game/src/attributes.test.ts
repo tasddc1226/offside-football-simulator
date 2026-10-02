@@ -49,3 +49,47 @@ describe('능력치 불변식', () => {
     });
   }
 });
+
+describe('SUB_KEYS 순서 (T-11-048)', () => {
+  // 서버의 시즌 성장 기록(growth_json s0·s1)은 SUB_KEYS 순서의 배열이다. 키는 맨 뒤에만 더하고, 순서를 바꾸거나
+  // 키를 빼면 이미 쌓인 기록의 해석이 어긋난다 — 그때는 SeasonGrowth.v를 올리고 이 목록을 함께 고친다.
+  it('세부 능력치 키 순서가 고정되어 있다', async () => {
+    const { SUB_KEYS } = await import('./attributes.js');
+    expect(SUB_KEYS).toEqual([
+      'acc',
+      'spr',
+      'pos',
+      'fin',
+      'pow',
+      'lng',
+      'vol',
+      'pen',
+      'vis',
+      'cro',
+      'fk',
+      'spa',
+      'lpa',
+      'cur',
+      'agi',
+      'bal',
+      'rea',
+      'bc',
+      'drb',
+      'com',
+      'int',
+      'hea',
+      'awa',
+      'stt',
+      'sli',
+      'jmp',
+      'stm',
+      'str',
+      'agg',
+      'div',
+      'han',
+      'kic',
+      'gkp',
+      'ref',
+    ]);
+  });
+});

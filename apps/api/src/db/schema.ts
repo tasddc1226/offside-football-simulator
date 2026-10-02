@@ -265,6 +265,10 @@ export const careerSeasons = sqliteTable(
     chJson: text('ch_json'),
     /** 자동 플레이 탐지(관찰 전용): 기기가 보낸 조작 요약(PlaySignals) + 서버가 본 headless 여부. 옛 기록은 null. */
     signalsJson: text('signals_json'),
+    /** T-11-048 시즌 시작 OVR(조회용). 성장 기록(SeasonGrowth)이 없는 옛 행·옛 클라이언트는 NULL. */
+    ovrStart: integer('ovr_start'),
+    /** T-11-048 시즌 성장 기록(SeasonGrowth JSON: 시즌 시작·종료 능력치·세부 능력치, 구간별 OVR, 잠재력). 관찰 전용. */
+    growthJson: text('growth_json'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [

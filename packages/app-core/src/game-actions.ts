@@ -2,6 +2,7 @@
 // 게임 로직을 호출하고, 그 결과를 시트 뷰 모델(sheets.ts)로 바꿔 시트에 띄운다. 상태·시트·저장·업로드·분석은
 // 클라이언트가 host로 넘긴다(웹은 Svelte `$state` 프록시, 앱은 자기 스토어 — 넘긴 객체를 그대로 고친다).
 // 게임 로직 호출 순서(=RNG 소비 순서)는 포팅 전 ui.ts와 동일하게 유지한다.
+import type { SeasonGrowth } from '@offside/contracts';
 import { isHofEligible, SHORT_CAREER_NOTE } from '@offside/contracts/hof-rules';
 import { PHASES, LAST_PHASE, type AttrKey } from '@offside/game/data';
 import { clamp, createRng, freshSeed, setActiveRng } from '@offside/game/rng';
@@ -53,6 +54,7 @@ import type {
 } from '@offside/game/types';
 import { markDexSeen } from './dex.js';
 import { pushEvLog, seasonLabel } from './career.js';
+import { recordPhaseOvr, takeSeasonGrowth } from './growth.js';
 import { publicNameOf } from './namePublic.js';
 import { fmtValue, seasonLabelOf, waGwa, withRo } from './format.js';
 import { crossesBorder, flightHours, hubOf } from './flight.js';
@@ -79,7 +81,7 @@ export interface GameHost {
   toast(text: string): void;
   /** 화면 맨 위로(smooth: 부드럽게 — 감속 모션이면 클라이언트가 바로 옮긴다). */
   scrollTop(smooth: boolean): void;
-  uploadSeason(s: GameState, rec: CareerRecord): void;
+  uploadSeason(s: GameState, rec: CareerRecord, growth?: SeasonGrowth): void;
   uploadRetirement(careerId: string, entry: HofEntry): void;
   analytics: {
     replace(): void;
@@ -150,6 +152,7 @@ export function createGameActions(host: GameHost) {
     const before = snapshot(s);
     const rankBefore = teamRank(s);
     // T-10-046: 한 구간의 게임 로직(훈련 → 경기 → 대회 → A매치 → 이벤트 추첨 → 칭호)은 game/turn.ts가 진행한다.
+    recordPhaseOvr(s); // T-11-048 구간에 들어갈 때의 OVR(성장 기록).
     const r = playPhase(s);
     const { block: b, comp, nt, ev } = r;
     const chips = diffChips(s, before, r.after);
@@ -236,8 +239,9 @@ export function createGameActions(host: GameHost) {
     if (p.type === 'seasonEnd') {
       if (sheet.state.busy) return;
       appState.report = null;
+      const growth = takeSeasonGrowth(s); // endSeason이 시즌 끝 값을 다음 시즌으로 넘기기 전에 뜬다.
       const res = endSeason(s);
-      host.uploadSeason(s, res.rec);
+      host.uploadSeason(s, res.rec, growth);
       s.pending = { type: 'market', res, m: null };
       host.save();
       host.analytics.play(s);

@@ -92,3 +92,42 @@ describe('T-11-030 잠재력 관찰 업로드', () => {
     expect(PutRetirementBodySchema.parse(sent.retire[0]).potReal).toBe(Math.round(g.truePot(s)));
   });
 });
+
+describe('T-11-048 시즌 성장 기록 업로드', () => {
+  it('성장 기록은 시즌 본문에 실리고 계약을 통과하며, 없으면 싣지 않는다', async () => {
+    const { PutCareerSeasonBodySchema } = await import('@offside/contracts');
+    const g = await import('@offside/game/index');
+    const { createRng, setActiveRng } = await import('@offside/game/rng');
+    const { createUploader } = await import('./upload.js');
+    const { recordPhaseOvr, takeSeasonGrowth } = await import('./growth.js');
+    const sent: unknown[] = [];
+    const up = createUploader({
+      appVersion: 'test',
+      outbox: async () =>
+        ({
+          enqueueSeason: (_id: string, _y: number, body: unknown) => void sent.push(body),
+          enqueueRetirement: () => {},
+        }) as never,
+    });
+    setActiveRng(createRng(5));
+    const s = g.newGame(
+      { name: 'T', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+      5,
+    );
+    for (let y = 0; y < 2; y++) {
+      for (let ph = 0; ph <= g.LAST_PHASE; ph++) {
+        recordPhaseOvr(s);
+        g.playPhase(s);
+      }
+      const growth = y === 0 ? takeSeasonGrowth(s) : undefined;
+      const { rec } = g.endSeason(s);
+      up.uploadSeason(s, rec, growth);
+      const m = g.market(s);
+      if (m.options.length) g.acceptOption(s, m.options[0]!);
+    }
+    await new Promise((r) => setTimeout(r, 0));
+    const bodies = sent.map((b) => PutCareerSeasonBodySchema.parse(b));
+    expect(bodies[0]!.season.growth?.v).toBe(1);
+    expect(bodies[1]!.season.growth).toBeUndefined();
+  });
+});

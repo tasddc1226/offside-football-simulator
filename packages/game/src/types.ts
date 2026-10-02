@@ -301,6 +301,9 @@ export interface GameState {
   /** T-9-009. 이번 시즌 버퍼링된 선택 로그(`ft_save`와 함께 자동 저장). 시즌 종료 시 업로드 페이로드로
    * 옮겨지고 비워진다. 최대 300개, 넘치면 가장 오래된 것부터 버린다. */
   evBuf?: EventLogEntry[];
+  /** T-11-048. 이번 시즌 구간(프리시즌·전반기·후반기)에 들어갈 때의 OVR. 시즌 종료 업로드(`takeSeasonGrowth`)가
+   * 옮겨 가고 비운다. 관찰용 기록이라 게임 진행에는 쓰이지 않고 RNG도 쓰지 않는다. */
+  ovrBuf?: number[];
 }
 
 export interface HofEntry {

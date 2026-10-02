@@ -92,6 +92,36 @@ export const SeasonCompSchema = z.strictObject({
 });
 export type SeasonComp = z.infer<typeof SeasonCompSchema>;
 
+/**
+ * T-11-048 시즌 성장 기록(관찰 전용). 시즌 시작·종료 시점의 능력치와 세부 능력치, 구간별 OVR, 잠재력 평가를 남긴다.
+ * 기기가 보낸 값이라 순위·판정에는 쓰지 않는다. 배열은 키 순서를 따른다:
+ * - a0·a1: 능력치 6개 = game `ATTR_KEYS`(pac, sho, pas, dri, def, phy)
+ * - s0·s1: 세부 능력치 = game `SUB_KEYS`. 키를 더할 때는 맨 뒤에만 더하고(순서 고정), 순서를 바꿔야 하면 v를 올린다.
+ */
+const GrowthStatSchema = z.number().min(0).max(200);
+export const SeasonGrowthSchema = z.strictObject({
+  v: z.literal(1),
+  /** 시즌 시작 OVR(그 시즌 시작 시점 세부 능력치로 낸 값). 첫 시즌은 선수를 만든 직후 OVR이다. */
+  o0: z.number().int().min(0).max(200),
+  /** 구간(프리시즌·전반기·후반기)에 들어갈 때마다의 OVR. 중간에 이어서 시작한 시즌은 앞이 비어 있을 수 있다. */
+  ph: z.array(z.number().int().min(0).max(200)).max(4),
+  a0: z.array(GrowthStatSchema).length(6),
+  a1: z.array(GrowthStatSchema).length(6),
+  s0: z.array(GrowthStatSchema).max(64),
+  s1: z.array(GrowthStatSchema).max(64),
+  pot: z.strictObject({
+    /** 기본 스카우트 평가(GameState.pot). */
+    s: z.number().min(0).max(200),
+    /** 훈련·이벤트로 붙은 잠재력 보너스(flags.potBonus). */
+    b: z.number().min(-100).max(100),
+    /** 숨은 성장분(bloom). 실제 잠재력 = s + b + bl. */
+    bl: z.number().min(-100).max(100),
+    /** 지금까지 받은 재평가 횟수(21·24세). */
+    r: z.number().int().min(0).max(5),
+  }),
+});
+export type SeasonGrowth = z.infer<typeof SeasonGrowthSchema>;
+
 /** season.ts `endSeason()`이 만드는 `CareerRecord`에서 뽑아낸 한 시즌 요약. */
 export const CareerSeasonPayloadSchema = z.strictObject({
   age: z.number().int().min(0).max(100),
@@ -118,6 +148,8 @@ export const CareerSeasonPayloadSchema = z.strictObject({
   comps: z.array(SeasonCompSchema).max(10).optional(),
   /** 이 시즌에 경신한 커리어 하이 지표 키(goals/assists/apps/rating/cs). */
   ch: z.array(z.string().min(1).max(12)).max(10).optional(),
+  /** T-11-048 시즌 성장 기록. 옛 클라이언트·다시 올린 옛 시즌에는 없다. */
+  growth: SeasonGrowthSchema.optional(),
 });
 export type CareerSeasonPayload = z.infer<typeof CareerSeasonPayloadSchema>;
 

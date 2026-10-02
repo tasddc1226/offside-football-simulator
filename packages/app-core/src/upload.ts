@@ -6,6 +6,7 @@ import type {
   PlaySignals,
   PutCareerSeasonBody,
   PutRetirementBody,
+  SeasonGrowth,
 } from '@offside/contracts';
 import { toPublicName } from '@offside/contracts/content-filter';
 import type { CareerRecord, GameState, HofEntry } from '@offside/game/types';
@@ -60,6 +61,7 @@ export function createUploader(host: UploaderHost) {
     s: GameState,
     rec: CareerRecord,
     events: PutCareerSeasonBody['events'],
+    growth?: SeasonGrowth,
   ): PutCareerSeasonBody {
     return {
       career: {
@@ -76,20 +78,20 @@ export function createUploader(host: UploaderHost) {
         // 웹은 s가 $state 프록시라 s.career[0]과 rec가 같은 객체여도 ===가 거짓이므로 연도로 비교한다.
         ...(rec.year === s.career[0]?.year && (s.flags.rescout ?? 0) === 0 && { pot: s.pot }),
       },
-      season: seasonPayload(rec),
+      season: { ...seasonPayload(rec), ...(growth && { growth }) },
       events,
       publicName: publicNameOf(s.name),
     };
   }
 
   // T-9-009: 시즌 종료 직후(RNG 소모 없는 지점) 커리어 요약 + 버퍼링된 선택 로그를 업로드 큐에 넣는다.
-  function uploadSeason(s: GameState, rec: CareerRecord) {
+  function uploadSeason(s: GameState, rec: CareerRecord, growth?: SeasonGrowth) {
     const events = (s.evBuf || []).slice();
     s.evBuf = [];
     const signals = host.signals?.();
     void host.outbox().then((m) =>
       m.enqueueSeason(s.cid, rec.year, {
-        ...seasonBody(s, rec, events),
+        ...seasonBody(s, rec, events, growth),
         ...(signals && { signals }),
       }),
     );
