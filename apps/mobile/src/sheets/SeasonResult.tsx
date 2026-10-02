@@ -2,6 +2,7 @@
 // 모션(CH 배지 팝, 스카우트 카드 팝, 팬 반응 순차 등장)은 웹 CSS 애니메이션 자리 — 동작 줄이기면 바로 보인다.
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
+import { visibleSeasonNotes } from '@offside/app-core/potential-view';
 import type { SheetView } from '@offside/app-core/sheets';
 import { NewTitles } from '../screens/game/NewTitles';
 import { alpha } from '../theme/colors';
@@ -14,6 +15,7 @@ import { Hl, StatGrid, mixColor } from './parts';
 export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> }) {
   const s = useSnapshot(v);
   const c = useColors();
+  const notes = visibleSeasonNotes(s.notes);
   return (
     <>
       <Txt v="eyebrow">{s.eyebrow}</Txt>
@@ -67,30 +69,6 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
       ) : (
         <Txt tone="muted">이번 시즌 수상은 없었어요.</Txt>
       )}
-      {s.scout ? (
-        <Pop ms={350} delay={160}>
-          <View
-            testID="scout-first"
-            style={{
-              gap: 2,
-              paddingVertical: 12,
-              paddingHorizontal: 14,
-              borderRadius: 12,
-              backgroundColor: mixColor(c.accent, c.surface, 12),
-              borderWidth: 1,
-              borderColor: alpha(c.accent, 0.5),
-            }}
-          >
-            <Txt v="eyebrow">First Scouting Report</Txt>
-            <Txt
-              style={{ fontSize: rem(1.0625), fontWeight: '700', color: c.accentText }}
-            >{`스카우트 잠재력 평가 ${s.scout}등급`}</Txt>
-            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-              고3 시즌을 지켜본 스카우트의 첫 평가예요. 21·24세 재평가 때 좁혀져요.
-            </Txt>
-          </View>
-        </Pop>
-      ) : null}
       {s.comps.length ? (
         <View>
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
@@ -147,7 +125,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
         </View>
       ) : null}
       <NewTitles titles={s.titles} pop />
-      {s.notes.length ? <Txt tone="muted">{s.notes.join(' · ')}</Txt> : null}
+      {notes.length ? <Txt tone="muted">{notes.join(' · ')}</Txt> : null}
       <View>
         <Txt v="eyebrow" style={{ marginBottom: 6 }}>
           팬 반응

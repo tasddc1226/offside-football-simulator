@@ -8,6 +8,7 @@
   // T-11-025 순서: 방금 끝난 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·누적 기록·
   // 순위표·대회) → 스토리 → 최근 소식. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다. T-11-036 진행·이벤트 확인 버튼은
   // 화면 아래 고정 바(Game.svelte)에 있다 — 탭 맨 아래에 두니 구간마다 끝까지 내려야 해 불편했다.
+  import { visibleCareerLog } from '@offside/app-core/potential-view';
   import { PHASES, LAST_PHASE } from '@offside/game/data';
   import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, trainingHelp, INVESTS, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
   import { eventById } from '@offside/game/events-data';
@@ -41,7 +42,7 @@
   let feedAll = $state(false);
   const feed = $derived.by(() => {
     const hide = report ? logLabel(report.year, report.ph) : null;
-    return s.log.filter((l) => l.t !== hide).slice(0, FEED_LONG);
+    return visibleCareerLog(s.log).filter((l) => l.t !== hide).slice(0, FEED_LONG);
   });
 
   // T-11-025 결과 안내 스크롤(순서·시간은 app-core resultTour): 중계 시트를 닫고 새 리포트가 뜨면, 리포트를 읽을 시간을 준 뒤

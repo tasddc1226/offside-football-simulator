@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { visibleSeasonNotes } from '@offside/app-core/potential-view';
   import type { SheetView } from '@offside/app-core/sheets';
   import NewTitles from '../titles/NewTitles.svelte';
   let { v }: { v: Extract<SheetView, { kind: 'season' }> } = $props();
+  const notes = $derived(visibleSeasonNotes(v.notes));
 </script>
 
 <div class="eyebrow">{v.eyebrow}</div>
@@ -21,13 +23,6 @@
   <div class="stack">{#each v.honors as t, i (i)}<p class="hl"><b>{t}</b></p>{/each}</div>
 {:else}
   <p class="muted">이번 시즌 수상은 없었어요.</p>
-{/if}
-{#if v.scout}
-  <div class="story-end scout-card pop" data-scout-first>
-    <span class="eyebrow">First Scouting Report</span>
-    <b>스카우트 잠재력 평가 {v.scout}등급</b>
-    <span class="muted fs-sm">고3 시즌을 지켜본 스카우트의 첫 평가예요. 21·24세 재평가 때 좁혀져요.</span>
-  </div>
 {/if}
 {#if v.comps.length}
   <div>
@@ -59,7 +54,7 @@
   </div>
 {/if}
 <NewTitles titles={v.titles} pop />
-{#if v.notes.length}<p class="muted">{v.notes.join(' · ')}</p>{/if}
+{#if notes.length}<p class="muted">{notes.join(' · ')}</p>{/if}
 <div>
   <div class="eyebrow" style="margin-bottom:6px">팬 반응</div>
   <div class="fan-feed">

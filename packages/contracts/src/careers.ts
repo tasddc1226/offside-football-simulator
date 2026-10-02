@@ -419,6 +419,8 @@ export const PublicHofEntrySchema = z.strictObject({
   number: z.number().int().nullable(),
   retireAge: z.number().int(),
   peak: z.number().int(),
+  /** 은퇴 때 저장한 잠재력. 옛 기록·옛 서버 응답에는 없다. 진행 중 커리어에는 공개하지 않는다. */
+  potReal: z.number().int().min(0).max(150).nullable().optional(),
   legendScore: z.number().int(),
   apps: z.number().int(),
   goals: z.number().int(),

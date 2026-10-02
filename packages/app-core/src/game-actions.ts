@@ -21,7 +21,6 @@ import {
   STORIES,
   teamRank,
   roundRange,
-  potLabel,
 } from '@offside/game/engine';
 import { playPhase, type PhaseResult } from '@offside/game/turn';
 import { eventById } from '@offside/game/events-data';
@@ -354,7 +353,7 @@ export function createGameActions(host: GameHost) {
     // pending.res로 복원된 옛 세이브에는 뒤에 추가된 필드(titles 등)가 없을 수 있다.
     const { rec, trophies, awards, notes, gala = [], tours = [], miles = [], titles = [] } = res;
     const s = appState.G!;
-    // T-10-112 고3 첫 시즌이 끝났다 — 스카우트 첫 평가를 공개하고, 다음 커리어는 새 후보를 받는다.
+    // T-10-112 고3 첫 시즌이 끝났다. 다음 커리어는 새 후보를 받는다.
     const firstScout = s.career.length === 1;
     if (firstScout) releaseScoutSeed();
     const [col, colLabel] =
@@ -392,7 +391,6 @@ export function createGameActions(host: GameHost) {
         miles,
         titles,
         notes,
-        scout: firstScout ? potLabel(s) : null,
         fans,
         age: s.age,
       },
