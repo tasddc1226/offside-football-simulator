@@ -13,7 +13,7 @@ import {
   type ProfileSettings,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { clientIp, ok, readBody, readJson, nowIso } from './shared.js';
+import { clientIp, ok, readBody, readJson, nowIso, enforceLimit, conflictError } from './shared.js';
 import { commentIdentity } from '../auth/admin.js';
 import { issueSession, readSessionToken, sessionCookie } from '../auth/session.js';
 import { sha256Hex } from '../db/hash.js';
@@ -26,7 +26,6 @@ import {
   type ProfileRecord,
 } from '../db/repos/profiles.js';
 import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
-import { tryAttempt } from '../db/repos/authAttempts.js';
 import { revokeSession } from '../db/repos/sessions.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
@@ -83,12 +82,14 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
 
     if (!record) {
       // 한 주소에서 새 프로필을 계속 만들어 내는 스크립트를 늦춘다.
-      if (!(await tryAttempt(db, 'PROFILE_CREATE', clientIp(c), PROFILE_CREATE_LIMIT, now))) {
-        throw new AppError({
-          code: 'RATE_LIMITED',
-          message: '새 프로필을 너무 자주 만들고 있어요. 잠시 뒤에 다시 시도해 주세요.',
-        });
-      }
+      await enforceLimit(
+        db,
+        'PROFILE_CREATE',
+        clientIp(c),
+        PROFILE_CREATE_LIMIT,
+        now,
+        '새 프로필을 너무 자주 만들고 있어요. 잠시 뒤에 다시 시도해 주세요.',
+      );
       record = await createProfile(db);
       const { token } = await issueSession(db, { profileId: record.id, channel: 'web', now });
       c.header('Set-Cookie', sessionCookie(token));
@@ -151,12 +152,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     }
     const updated = await setNickname(db, profile.id, nickname);
     if (updated === 'taken') {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        status: 409,
-        message: '이미 쓰고 있는 닉네임이에요.',
-        details: { reason: 'NICKNAME_TAKEN' },
-      });
+      throw conflictError('이미 쓰고 있는 닉네임이에요.', 'NICKNAME_TAKEN');
     }
     return ok(c, ProfileSchema, buildProfileResponse(updated, c.env.ADMIN_EMAILS));
   });
@@ -176,7 +172,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     const session = getSessionOrThrow(c);
     const parsed = readBody(c, RecoverProfileBodySchema);
     const now = nowIso();
-    const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
+    const ip = clientIp(c);
 
     const result = await recoverProfile(db, {
       code: parsed.code,

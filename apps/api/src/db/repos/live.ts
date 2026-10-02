@@ -4,7 +4,7 @@ import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { appMeta, careers, careerSeasons } from '../schema.js';
 import { isPublicRetired, retiredCountKey } from './careers.js';
-import { kstDays } from './admin.js';
+import { kstDays } from '../../time.js';
 import { honorsOf } from './firsts.js';
 
 // T-10-030 홈 라이브 현황. 시각은 모두 ISO 문자열(UTC)이라 문자열 비교가 곧 시간 비교다.

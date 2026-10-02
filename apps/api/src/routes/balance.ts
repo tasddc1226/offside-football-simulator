@@ -19,7 +19,7 @@ import {
 } from '../db/repos/balance.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
-import { ok, readBody, nowIso } from './shared.js';
+import { ok, readBody, nowIso, conflictError } from './shared.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 
@@ -39,21 +39,17 @@ const notFound = () =>
     details: { reason: 'BALANCE_NOT_FOUND' },
   });
 const notDraft = () =>
-  new AppError({
-    code: 'VALIDATION_FAILED',
-    status: 409,
-    message: '초안만 고치거나 지울 수 있습니다. 복제해서 새 초안을 만드세요.',
-    details: { reason: 'BALANCE_NOT_DRAFT' },
-  });
+  conflictError(
+    '초안만 고치거나 지울 수 있습니다. 복제해서 새 초안을 만드세요.',
+    'BALANCE_NOT_DRAFT',
+  );
 
 /** T-10-090 시즌 중에는 밸런스를 바꾸지 않는다(시즌 경쟁 조건 고정). */
 const seasonLocked = (name: string) =>
-  new AppError({
-    code: 'VALIDATION_FAILED',
-    status: 409,
-    message: `${name} 진행 중에는 밸런스를 바꿀 수 없습니다. 시즌이 끝난 뒤 적용하세요.`,
-    details: { reason: 'SEASON_BALANCE_LOCKED' },
-  });
+  conflictError(
+    `${name} 진행 중에는 밸런스를 바꿀 수 없습니다. 시즌이 끝난 뒤 적용하세요.`,
+    'SEASON_BALANCE_LOCKED',
+  );
 
 async function versionOr404(c: Context<AppEnv>, version: number) {
   const v = await getBalanceVersion(getDb(c), version);

@@ -26,7 +26,7 @@ import {
 } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
-import { kstDays } from './admin.js';
+import { kstDays } from '../../time.js';
 import { honorsOf, hideCareerStatements } from './firsts.js';
 import { appMeta, careers, careerSeasons, goalsPlusAssists, retiredNumbers } from '../schema.js';
 

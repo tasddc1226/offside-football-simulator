@@ -2,6 +2,7 @@ import type { AdminComment, AdminStats } from '@offside/contracts';
 import { and, desc, eq, isNotNull, isNull, lt, sql, type SQL } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import type { Db } from '../client.js';
+import { kstDays } from '../../time.js';
 import { insertAuditLog } from './auditLog.js';
 import { accountLinkedSql } from './profiles.js';
 import {
@@ -18,7 +19,6 @@ import {
 const DAY_MS = 86_400_000;
 const DAILY_DAYS = 14;
 const AUDIT_RECENT = 10;
-const KST_MS = 9 * 3_600_000;
 
 const n = (v: unknown) => Number(v ?? 0);
 // D1 batch는 결과 행을 컬럼 이름으로 옮긴다 — 식이 같은 텍스트면(파라미터만 다른 sum 등) 서로 덮어쓰므로
@@ -29,19 +29,6 @@ const since = (col: SQLiteColumn, iso: string, as: string) => sumOf(sql`${col} >
 /** SQL에서 UTC ISO → KST 날짜(YYYY-MM-DD). */
 const kstDay = (col: SQLiteColumn) =>
   sql<string>`substr(datetime(${col}, '+9 hours'), 1, 10)`.as('day');
-
-/** now 기준 최근 days일의 KST 날짜(오래된 날부터)와 그 첫날 0시(KST)의 UTC ISO. */
-export function kstDays(now: Date, days: number): { days: string[]; startIso: string } {
-  const today = new Date(now.getTime() + KST_MS);
-  today.setUTCHours(0, 0, 0, 0);
-  const list = Array.from({ length: days }, (_, i) =>
-    new Date(today.getTime() - (days - 1 - i) * DAY_MS).toISOString().slice(0, 10),
-  );
-  return {
-    days: list,
-    startIso: new Date(today.getTime() - (days - 1) * DAY_MS - KST_MS).toISOString(),
-  };
-}
 
 export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats, 'balance'>> {
   const t24 = new Date(now.getTime() - DAY_MS).toISOString();

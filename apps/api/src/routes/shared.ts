@@ -2,6 +2,8 @@ import { successEnvelope, TeamSeasonQuerySchema } from '@offside/contracts';
 import { openTeamSeasons, teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context } from 'hono';
 import type { AppEnv } from '../env.js';
+import type { Db } from '../db/client.js';
+import { tryAttempt, type AuthAttemptKind } from '../db/repos/authAttempts.js';
 import { AppError, parseWithAppError, type SchemaLike } from '../errors.js';
 
 export const nowIso = () => new Date().toISOString();
@@ -15,6 +17,25 @@ export const NO_STORE = 'private, no-store';
 /** 404 — 없는 대상. reason은 클라이언트가 구분할 때 쓰는 코드. */
 export const notFoundError = (message: string, reason: string) =>
   new AppError({ code: 'VALIDATION_FAILED', status: 404, message, details: { reason } });
+
+/** 409 — 지금 상태에서는 할 수 없는 요청. reason은 클라이언트가 구분할 때 쓰는 코드. */
+export const conflictError = (message: string, reason: string) =>
+  new AppError({ code: 'VALIDATION_FAILED', status: 409, message, details: { reason } });
+
+/** 429 — 속도 제한. */
+export const rateLimited = (message: string) => new AppError({ code: 'RATE_LIMITED', message });
+
+/** 한도 안이면 시도 1회를 세고 통과, 이미 한도면 세지 않고 429. */
+export async function enforceLimit(
+  db: Db,
+  kind: AuthAttemptKind,
+  subject: string,
+  max: number,
+  now: string,
+  message: string,
+): Promise<void> {
+  if (!(await tryAttempt(db, kind, subject, max, now))) throw rateLimited(message);
+}
 
 export const teamNotFound = () => notFoundError('팀을 찾을 수 없어요.', 'TEAM_NOT_FOUND');
 

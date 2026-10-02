@@ -21,9 +21,17 @@ import {
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
-import { NO_STORE, nowIso, ok, readBody, teamNotFound, teamSeasonParam } from './shared.js';
+import {
+  NO_STORE,
+  nowIso,
+  ok,
+  readBody,
+  teamNotFound,
+  teamSeasonParam,
+  conflictError,
+} from './shared.js';
 import { newId } from '../db/ids.js';
-import { kstDays } from '../db/repos/admin.js';
+import { kstDays } from '../time.js';
 import { runBatch } from '../db/repos/batch.js';
 import {
   careersByIds,
@@ -70,13 +78,7 @@ import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 /** 상대 목록에 보여 줄 팀 수. */
 const OPPONENTS_SHOWN = 5;
 
-const teamRequired = () =>
-  new AppError({
-    code: 'VALIDATION_FAILED',
-    status: 409,
-    message: '먼저 이번 시즌 팀을 만들어 주세요.',
-    details: { reason: 'TEAM_REQUIRED' },
-  });
+const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
 
 /** 구글 로그인한(삭제되지 않은) 프로필만 구단주다. 익명 프로필은 403 GOOGLE_LOGIN_REQUIRED — 웹이 로그인 안내를 띄운다. */
 async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
@@ -95,12 +97,10 @@ async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
 function currentSeasonOrThrow(now: string): number {
   const season = teamSeasonAt(now);
   if (season === null) {
-    throw new AppError({
-      code: 'VALIDATION_FAILED',
-      status: 409,
-      message: '지금은 시즌 사이 휴식기예요. 다음 시즌이 열리면 새 팀을 꾸릴 수 있어요.',
-      details: { reason: 'SEASON_CLOSED' },
-    });
+    throw conflictError(
+      '지금은 시즌 사이 휴식기예요. 다음 시즌이 열리면 새 팀을 꾸릴 수 있어요.',
+      'SEASON_CLOSED',
+    );
   }
   return season;
 }
@@ -374,12 +374,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       eligibleMap(rows, opp.team.profileId, season),
     );
     if (filledCount(home) === 0) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        status: 409,
-        message: '은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.',
-        details: { reason: 'TEAM_EMPTY' },
-      });
+      throw conflictError('은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.', 'TEAM_EMPTY');
     }
     if (filledCount(away) === 0) throw teamNotFound();
 

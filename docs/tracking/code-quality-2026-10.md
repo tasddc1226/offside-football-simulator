@@ -18,7 +18,7 @@
 | 1 | 안 쓰는 코드·의존성 제거(영구결번 오픈 게이트, 토스 스키마, 죽은 repo 함수, Placeholder, 죽은 스크립트, devDeps 3개) | 완료 |
 | 2 | 회원 판정 공용화 `app-core/account` — 웹이 애플 전용 계정을 게스트로 보던 drift 수정 | 완료 |
 | 3 | 로그인 안내 문구 공용화 `app-core/loginText` — session 안내 drift 수정 | 완료 |
-| 4 | API 공통 헬퍼: 속도 제한 `enforceLimit`, 오류 팩토리(`conflictError` 등), KST 시간 `time.ts`, 작은 우회(`auditLogStatement`, `clientIp`, `getDb`) | 예정 |
+| 4 | API 공통 헬퍼: 속도 제한 `enforceLimit`, 오류 팩토리(`conflictError`·`rateLimited`), KST 시간 `time.ts`, 작은 우회(`auditLogStatement`, `clientIp`). 관리자 통계는 원본 D1이 필요해 `c.env.DB` 그대로 | 완료 |
 | 5 | 공개 GET이 세션을 안 건드리는지 표 기반 테스트(현재 /v1/hof만 있음) | 예정 |
 | 6 | game 특성화 테스트: `simBlock`·`seasonAwards`·`natSeasonEnd`·`rollEvent`·병역 흐름·이벤트×선택지 `p` 격자 스냅샷 | 예정 |
 | 7 | 웹·앱 중복 순수 로직 → app-core(+테스트): 홈 라이브 피드, 팀 라이브 재생 계획, 영구결번 구단별 묶기, 국적 검색, 공유 링크, `bodyNote` | 예정 |

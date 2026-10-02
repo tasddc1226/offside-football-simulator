@@ -8,7 +8,7 @@ import {
   RetirementResponseSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { careerOwnerMismatch, ok, readBody, nowIso } from './shared.js';
+import { careerOwnerMismatch, ok, readBody, nowIso, rateLimited } from './shared.js';
 import {
   getCareer,
   getCareerHead,
@@ -45,10 +45,7 @@ async function limitUpload(
   profileId: string,
 ): Promise<void> {
   if ((await recordAttempt(db, kind, profileId, nowIso())) > UPLOAD_LIMIT[kind]) {
-    throw new AppError({
-      code: 'RATE_LIMITED',
-      message: '기록을 너무 자주 올리고 있어요. 잠시 뒤에 다시 시도해 주세요.',
-    });
+    throw rateLimited('기록을 너무 자주 올리고 있어요. 잠시 뒤에 다시 시도해 주세요.');
   }
 }
 

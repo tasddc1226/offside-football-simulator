@@ -14,10 +14,9 @@ import { myTeamIn, seasonCareersOf, slotIdsOf } from '../db/repos/ownerTeams.js'
 import { getProfile, hasAccount } from '../db/repos/profiles.js';
 import { achievementScore, clubAchievements } from './achievements.js';
 import { buildLineup } from './sim.js';
+import { kstDay } from '../time.js';
 
 /** 한국 시각 날짜(YYYY-MM-DD). */
-const kstDay = (iso: string) =>
-  new Date(Date.parse(iso) + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 /**
  * 그 시즌 업적을 계산해 점수를 적고 업적·점수 행을 돌려준다. touch면 점수가 그대로여도 갱신 시각을 남긴다
