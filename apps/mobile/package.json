@@ -54,6 +54,7 @@
     "ios": "expo run:ios",
     "android": "expo run:android",
     "lint": "eslint .",
+    "test": "node --test scripts/analytics-config.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "private": true

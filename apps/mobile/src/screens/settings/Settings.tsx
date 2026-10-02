@@ -130,7 +130,7 @@ export default function Settings() {
             <SettingsLabel
               eyebrow="Privacy"
               title="앱 이용 분석 동의 (선택)"
-              muted="동의하면 Google Analytics로 화면 방문과 커리어 시작·진행·은퇴를 분석해요. 선수 이름·계정 정보·저장 파일은 보내지 않아요. 언제든 끌 수 있고, 동의 전 활동은 전송하지 않아요."
+              muted="동의하면 Google Analytics로 화면 방문과 커리어 시작·진행·은퇴, 기기·앱 버전·세션 정보를 분석해요. 선수 이름·계정 정보·저장 파일은 보내지 않아요. 언제든 끌 수 있고, 동의 전 활동은 전송하지 않아요."
             />
             <Switch
               value={consent === 'granted'}
