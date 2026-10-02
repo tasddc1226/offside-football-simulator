@@ -59,13 +59,14 @@ export interface SeasonEndResult {
 }
 /** 지난 시즌 대륙 챔피언이면 4년마다 열리는 FIFA 클럽 월드컵 결과(무작위 단계). 해당 없으면 null. */
 function clubWorldCup(s: GameState, tier: number): string | null {
+  if (s.year % 4 !== 1) return null;
   const champ = s.career.some(
     (r) =>
       r.year === s.year - 1 &&
       sameClub(r, clubRef(s.club)) &&
       r.honors.some((h) => /챔피언스(리그( 엘리트)?|컵) 우승/.test(h)),
   );
-  if (s.year % 4 !== 1 || !champ) return null;
+  if (!champ) return null;
   return pick(['조별리그 탈락', '16강', '8강', '4강', '준우승', '우승'].slice(tier >= 5 ? 2 : 0));
 }
 

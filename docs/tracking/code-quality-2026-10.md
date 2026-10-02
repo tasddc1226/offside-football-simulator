@@ -38,3 +38,11 @@
 - 남은 웹·앱 drift(동작 결정 필요): 결과 투어의 'go' 포커스 단계는 웹에만 있다.
 - 감사에서 나온 나머지 중복(게시판·채팅 모더레이션·명예의 전당·내 선수·미니게임 장면·관리자 표 등)은 화면 컨트롤러라
   앱 테스트 러너가 생긴 뒤 옮긴다.
+- /simplify 검토에서 미룬 것:
+  - `tryAttempt`를 원자적 조건부 UPSERT로 바꾸기(지금은 읽고 쓰는 두 단계라 동시 요청이 한도를 넘을 수 있다).
+  - 오류 팩토리·`enforceLimit`을 `errors.ts`·`authAttempts.ts` 쪽으로 내려 `profile/issue-recovery-code.ts`도 쓰게 하기.
+  - 공개 GET 목록을 손으로 적지 않고 라우트 표에서 뽑아 "공개/세션" 분류를 강제하기.
+  - 서버 `CommentIdentity.google` → `member` 이름 정리와 응답 `member` 필드, `isLoginRequired` 공용화.
+  - 팀 라이브 재생 인터프리터 `runPlayback`과 팀 로드 해석 `interpretOwnerTeamLoad`의 app-core 이전.
+  - 명예의 전당 조회 실패 문구 3벌 공용화.
+  - Team 하위 컴포넌트의 공유 CSS(`.tm-title`·`.tm-season`·`.tm-actions`·`.tm-opp-info`) 전역화.

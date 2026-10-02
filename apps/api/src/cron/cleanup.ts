@@ -3,11 +3,11 @@
 // 시간 한도에 걸리므로 CHUNK씩 나눠 지운다.
 
 import { RATE_LIMIT_WINDOW_MS } from '../db/repos/authAttempts.js';
+import { DAY_MS } from '../time.js';
 
 const CHUNK = 5000;
 /** 한 번의 cron에서 표마다 지울 최대 묶음 수 — 남은 건 다음 날 이어서 지운다. */
 const MAX_CHUNKS = 40;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** 표마다: 이 열이 (지금 - keepMs)보다 이르면 지운다. 열마다 인덱스가 있어 묶음마다 표 전체를 훑지 않는다
  * (auth_attempts는 (kind, subject)당 한 행이라 작다). */

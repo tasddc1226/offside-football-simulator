@@ -29,6 +29,7 @@ import {
   teamNotFound,
   teamSeasonParam,
   conflictError,
+  rateLimited,
 } from './shared.js';
 import { newId } from '../db/ids.js';
 import { kstDays } from '../time.js';
@@ -339,20 +340,18 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     if (!mine) throw teamRequired();
     const usedToday = challenged.length;
     if (usedToday >= TEAM_MATCHES_PER_DAY) {
-      throw new AppError({
-        code: 'RATE_LIMITED',
-        message: `오늘 경기는 모두 치렀어요(하루 ${TEAM_MATCHES_PER_DAY}경기). 한국 시각 자정에 다시 열려요.`,
-        details: { reason: 'TEAM_MATCH_DAILY_LIMIT' },
-      });
+      throw rateLimited(
+        `오늘 경기는 모두 치렀어요(하루 ${TEAM_MATCHES_PER_DAY}경기). 한국 시각 자정에 다시 열려요.`,
+        'TEAM_MATCH_DAILY_LIMIT',
+      );
     }
     if (!opp || opp.team.profileId === me.id || opp.team.season !== season) throw teamNotFound();
     // T-10-095 같은 상대에게는 하루 한 번만 건다(받은 경기는 세지 않는다 — 받은 쪽은 되갚을 수 있다).
     if (challenged.some((m) => m.teamId === opp.team.id)) {
-      throw new AppError({
-        code: 'RATE_LIMITED',
-        message: '이 팀과는 오늘 이미 겨뤘어요. 한국 시각 자정에 다시 도전할 수 있어요.',
-        details: { reason: 'TEAM_OPPONENT_DAILY_LIMIT' },
-      });
+      throw rateLimited(
+        '이 팀과는 오늘 이미 겨뤘어요. 한국 시각 자정에 다시 도전할 수 있어요.',
+        'TEAM_OPPONENT_DAILY_LIMIT',
+      );
     }
 
     const mySlots = slotIdsOf(mine);

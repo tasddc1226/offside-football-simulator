@@ -22,8 +22,9 @@ export const notFoundError = (message: string, reason: string) =>
 export const conflictError = (message: string, reason: string) =>
   new AppError({ code: 'VALIDATION_FAILED', status: 409, message, details: { reason } });
 
-/** 429 — 속도 제한. */
-export const rateLimited = (message: string) => new AppError({ code: 'RATE_LIMITED', message });
+/** 429 — 속도 제한. reason은 클라이언트가 구분할 때 쓰는 코드(있을 때만). */
+export const rateLimited = (message: string, reason?: string) =>
+  new AppError({ code: 'RATE_LIMITED', message, ...(reason ? { details: { reason } } : {}) });
 
 /** 한도 안이면 시도 1회를 세고 통과, 이미 한도면 세지 않고 429. */
 export async function enforceLimit(

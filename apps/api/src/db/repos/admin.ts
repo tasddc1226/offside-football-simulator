@@ -2,7 +2,7 @@ import type { AdminComment, AdminStats } from '@offside/contracts';
 import { and, desc, eq, isNotNull, isNull, lt, sql, type SQL } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import type { Db } from '../client.js';
-import { kstDays } from '../../time.js';
+import { DAY_MS, kstDays } from '../../time.js';
 import { insertAuditLog } from './auditLog.js';
 import { accountLinkedSql } from './profiles.js';
 import {
@@ -16,7 +16,6 @@ import {
 
 // T-10-016 운영 도구. 관리자만 드물게 여는 화면이라 집계는 테이블을 한 번씩 훑는다(쿼리당 한 번,
 // 한 번의 D1 왕복으로 묶는다). 라우트가 결과를 60초 엣지 캐시에 둔다.
-const DAY_MS = 86_400_000;
 const DAILY_DAYS = 14;
 const AUDIT_RECENT = 10;
 
@@ -27,7 +26,7 @@ const count = (as: string) => sql<number>`count(*)`.as(as);
 const sumOf = (cond: SQL, as: string) => sql<number>`coalesce(sum(${cond}), 0)`.as(as);
 const since = (col: SQLiteColumn, iso: string, as: string) => sumOf(sql`${col} >= ${iso}`, as);
 /** SQL에서 UTC ISO → KST 날짜(YYYY-MM-DD). */
-const kstDay = (col: SQLiteColumn) =>
+const kstDaySql = (col: SQLiteColumn) =>
   sql<string>`substr(datetime(${col}, '+9 hours'), 1, 10)`.as('day');
 
 export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats, 'balance'>> {
@@ -65,17 +64,17 @@ export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats,
       .from(boardComments)
       .where(isNull(boardComments.deletedAt)),
     db
-      .select({ day: kstDay(profiles.createdAt), n: count('n') })
+      .select({ day: kstDaySql(profiles.createdAt), n: count('n') })
       .from(profiles)
       .where(sql`${profiles.createdAt} >= ${startIso}`)
       .groupBy(sql`1`),
     db
-      .select({ day: kstDay(careers.createdAt), n: count('n') })
+      .select({ day: kstDaySql(careers.createdAt), n: count('n') })
       .from(careers)
       .where(sql`${careers.createdAt} >= ${startIso}`)
       .groupBy(sql`1`),
     db
-      .select({ day: kstDay(careers.retiredAt), n: count('n') })
+      .select({ day: kstDaySql(careers.retiredAt), n: count('n') })
       .from(careers)
       .where(sql`${careers.retiredAt} >= ${startIso}`)
       .groupBy(sql`1`),

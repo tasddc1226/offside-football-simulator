@@ -26,13 +26,12 @@ import {
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
+import { DAY_MS } from '../time.js';
 import { NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
 
 // T-11-015 실시간 채팅(라운지 방 하나). 누구나 읽고, 계정 로그인 + 닉네임이 있으면 쓴다. 메시지는 채팅방
 // Durable Object(chat/room.ts)에 있고 여기선 입장권 발급과 신고·차단(앱스토어 UGC 정책)·운영자 가리기·정지를 한다.
 // 서로 다른 CHAT_REPORT_HIDE명이 신고하면 운영자를 기다리지 않고 가린다.
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 function room(c: Context<AppEnv>) {
   if (!c.env.CHAT)

@@ -136,13 +136,14 @@ export function Account({ admin = false }: { admin?: boolean }) {
         </View>
       </View>
     );
+  const label = accountLabel(profile);
   return (
     <View style={{ gap: 12 }}>
       <View style={head}>
         <View style={who}>
-          <Txt style={bTitle}>{accountLabel(profile).title}</Txt>
+          <Txt style={bTitle}>{label.title}</Txt>
           <Txt tone="muted" style={bMuted}>
-            {accountLabel(profile).via}
+            {label.via}
           </Txt>
         </View>
         <Btn kind="primary" sm onPress={askLogout} testID="logout">

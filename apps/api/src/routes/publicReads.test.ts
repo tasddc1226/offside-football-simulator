@@ -1,7 +1,7 @@
 import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { issueCookie } from '../test/http.js';
 
 // T-10-015 공개 GET은 엣지 캐시에 담기므로 쿠키가 있어도 보는 사람의 세션을 읽으면 안 된다(누구에게나 같은 응답).
@@ -27,21 +27,15 @@ describe('공개 GET은 쿠키가 있어도 세션을 읽지 않는다', () => {
   let ctx: TestD1;
   let cookie: string;
 
-  beforeEach(async () => {
+  // 읽기만 하므로 D1 하나를 모든 경로가 함께 쓴다.
+  beforeAll(async () => {
     ctx = await createTestD1();
     cookie = (await issueCookie(ctx)).cookie;
   });
-  afterEach(() => ctx.dispose());
+  afterAll(() => ctx.dispose());
 
   it.each(PUBLIC_GETS)('%s', async (path) => {
-    const seen: string[] = [];
-    const DB = new Proxy(ctx.env.DB, {
-      get(target, key) {
-        if (key === 'prepare') return (query: string) => (seen.push(query), target.prepare(query));
-        const v = Reflect.get(target, key) as unknown;
-        return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v;
-      },
-    });
+    const { DB, seen } = spyDb(ctx.env.DB);
     const res = await createApp().request(
       path,
       { headers: { Cookie: cookie } },

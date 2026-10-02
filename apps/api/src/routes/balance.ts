@@ -19,8 +19,8 @@ import {
 } from '../db/repos/balance.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
-import { ok, readBody, nowIso, conflictError } from './shared.js';
-import { AppError, parseWithAppError } from '../errors.js';
+import { ok, readBody, nowIso, conflictError, notFoundError } from './shared.js';
+import { parseWithAppError } from '../errors.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 
 // T-10-016 서버 밸런스 설정. 게임은 GET /v1/balance를 앱을 열 때 한 번 받고, 새 버전은 각 커리어의
@@ -31,13 +31,7 @@ const versionParam = (c: Context<AppEnv>) =>
   parseWithAppError(BalanceVersionParamSchema, c.req.param('version'));
 const draftInput = (c: Context<AppEnv>) => readBody(c, BalanceDraftInputSchema);
 
-const notFound = () =>
-  new AppError({
-    code: 'VALIDATION_FAILED',
-    status: 404,
-    message: '밸런스 버전을 찾을 수 없습니다.',
-    details: { reason: 'BALANCE_NOT_FOUND' },
-  });
+const notFound = () => notFoundError('밸런스 버전을 찾을 수 없습니다.', 'BALANCE_NOT_FOUND');
 const notDraft = () =>
   conflictError(
     '초안만 고치거나 지울 수 있습니다. 복제해서 새 초안을 만드세요.',

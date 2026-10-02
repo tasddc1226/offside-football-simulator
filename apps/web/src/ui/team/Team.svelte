@@ -33,12 +33,12 @@
     type TeamPlayer,
   } from '@offside/app-core/api/team';
   import { localCareerNames } from '@offside/game/season';
-    import { go } from '../nav.js';
+  import { go } from '../nav.js';
   import { anonName } from '@offside/game/pos-label';
   import { toast } from '../helpers.js';
   import { dur } from '../motion.js';
   import { lockScroll } from '../scrollLock.js';
-    import { startGoogleLogin } from '../login.js';
+  import { startGoogleLogin } from '../login.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import { appState, hofStart, type TeamView } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
