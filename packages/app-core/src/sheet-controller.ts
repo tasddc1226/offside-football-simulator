@@ -68,6 +68,8 @@ function fakeScore(m: MatchGame): string {
 
 /** 탭 뒤 결과 장면(공이 날아가고 멈추는 연출)을 보여 주는 시간. */
 const MG_SCENE_MS = 1300;
+/** 비행 장면이 끝나고(또는 건너뛴 뒤) 도착 표시를 보여 주는 시간. */
+const ARRIVE_MS = 450;
 /** 건너뛰기로 남은 경기를 한 번에 채울 때 막대가 끝까지 차는 시간. */
 const SKIP_FILL_MS = 240;
 
@@ -298,6 +300,42 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
       MG_SCENE_MS + 300,
     );
   }
+  /**
+   * T-11-039 해외 이적 비행 장면을 view.ms 동안 띄운다(그동안 닫히지 않는다). 건너뛰기는 바로 도착 장면을 잠깐
+   * 보여 주고 끝낸다. 본문이 그려진 뒤부터 잰다 — 비행기가 날기 시작하는 시각과 맞춘다.
+   */
+  function playFlight(view: Omit<ViewOf<'flight'>, 'kind' | 'done' | 'skip'>): Promise<void> {
+    return new Promise((resolve) => {
+      state.busy = true;
+      let timer: ReturnType<typeof setTimeout> | undefined,
+        ended = false;
+      const end = () => {
+        if (ended) return;
+        ended = true;
+        clearTimeout(timer);
+        state.busy = false;
+        resolve();
+      };
+      const v = showSheet<ViewOf<'flight'>>({
+        kind: 'flight',
+        ...view,
+        done: false,
+        skip: () => {
+          v.done = true;
+          v.skip = null;
+          clearTimeout(timer);
+          timer = setTimeout(end, ARRIVE_MS);
+        },
+      });
+      void ui
+        .tick()
+        .then(ui.painted)
+        .then(() => {
+          if (!v.done) timer = setTimeout(end, view.ms + ARRIVE_MS);
+        });
+    });
+  }
+
   /** 성공 확률 막대 위에서 바늘이 흔들리다 실제 판정값(roll)에 멈춘다. */
   function playJudge(label: string, p: number, roll: number): Promise<void> {
     return new Promise((resolve) => {
@@ -335,6 +373,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
     playMinigame,
     playDragShot,
     playJudge,
+    playFlight,
   };
 }
 

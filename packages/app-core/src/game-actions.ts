@@ -48,11 +48,13 @@ import type {
   GameState,
   HofEntry,
   MarketResult,
+  OfferOption,
 } from '@offside/game/types';
 import { markDexSeen } from './dex.js';
 import { pushEvLog, seasonLabel } from './career.js';
 import { publicNameOf } from './namePublic.js';
-import { fmtValue, seasonLabelOf } from './format.js';
+import { fmtValue, seasonLabelOf, waGwa, withRo } from './format.js';
+import { crossesBorder, FLIGHT_MS, FLIGHT_STILL_MS, flightKm, flightMap, hubOf } from './flight.js';
 import { matchRows, type SheetController } from './sheet-controller.js';
 import {
   draftBody,
@@ -440,30 +442,91 @@ export function createGameActions(host: GameHost) {
     const options = p?.type === 'market' ? (p.m?.options ?? []) : [];
     const o = options[i];
     if (!o || !appState.G) return;
-    const r = acceptOption(appState.G, o, options);
+    // T-11-039 다른 구단의 오퍼는 계약서에 사인해야 확정된다(×로 닫으면 이적시장으로 돌아온다).
+    if (o.kind === 'offer') return showContract(i, o);
+    if (settleOption(i)) startSeason();
+  }
+
+  /** T-11-039 계약서. 아마추어(고교·대학)에서 처음 프로 구단에 가면 입단 계약, 그 밖에는 이적 계약. */
+  function showContract(i: number, o: OfferOption) {
+    const G = appState.G!;
+    const rookie = !!leagueOf(G.leagueId).amateur;
+    let signed = false;
+    sheet.showSheet({
+      kind: 'contract',
+      eyebrow: rookie ? 'Rookie Contract' : 'Transfer Contract',
+      title: rookie ? '프로 계약서에 사인하시겠습니까?' : '이적 계약서에 사인하시겠습니까?',
+      text: `${o.name}${waGwa(o.name)} 함께 ${rookie ? '첫 프로 시즌을' : '새 시즌을'} 시작합니다.`,
+      club: { id: o.clubId, name: o.name },
+      terms: [
+        { label: '연봉', value: fmtMoney(o.salary) },
+        { label: '계약 기간', value: `${o.years}년` },
+        ...(o.fee ? [{ label: '이적료', value: `약 ${fmtValue(o.fee)}` }] : []),
+        ...(o.role ? [{ label: '역할', value: o.role }] : []),
+      ],
+      name: G.name,
+      cta: rookie ? '사인하고 프로 입단' : '사인하고 이적',
+      onSign: () => {
+        if (signed) return;
+        signed = true;
+        void signOffer(i, o);
+      },
+      onClose: nextPending,
+    });
+  }
+
+  /** 사인한 오퍼를 확정하고, 나라가 바뀌면 새 리그의 나라로 날아가는 장면을 보여 준 뒤 시즌을 연다. */
+  async function signOffer(i: number, o: OfferOption) {
+    const fromLg = appState.G!.leagueId;
+    if (!settleOption(i)) return;
+    if (crossesBorder(fromLg, o.leagueId)) {
+      const from = hubOf(fromLg),
+        to = hubOf(o.leagueId);
+      const km = flightKm(from, to);
+      await sheet.playFlight({
+        eyebrow: 'Transfer Flight',
+        title: `${withRo(to.city)} 날아가는 중`,
+        sub: `${to.country} · ${leagueOf(o.leagueId).name} · 약 ${Math.max(1, Math.round(km / 850))}시간 비행`,
+        from: { code: from.code, city: from.city },
+        to: { code: to.code, city: to.city },
+        map: flightMap(from, to),
+        ms: sheet.motionOK() ? FLIGHT_MS : FLIGHT_STILL_MS,
+      });
+    }
+    startSeason();
+  }
+
+  /** 고른 옵션을 확정·저장한다. 병역 결과처럼 따로 시트를 띄웠으면 false(시즌 시작은 그 시트가 맡는다). */
+  function settleOption(i: number): boolean {
+    const G = appState.G!;
+    const p = G.pending;
+    const options = p?.type === 'market' ? (p.m?.options ?? []) : [];
+    const o = options[i]!;
+    const r = acceptOption(G, o, options);
     const logEntry: EventLogEntry = {
       k: o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' ? 'mil' : 'mkt',
       id: o.kind,
       c: o.kind === 'offer' ? o.clubId : i,
-      h: appState.G.phase,
+      h: G.phase,
     };
     if (r?.ok !== undefined) logEntry.ok = r.ok;
-    pushEvLog(appState.G, logEntry);
+    pushEvLog(G, logEntry);
     if (r) {
-      appState.G.training = 'rest';
+      G.training = 'rest';
       if (r.reopen) {
-        appState.G.pending = { type: 'market', res: null, m: market(appState.G) };
+        G.pending = { type: 'market', res: null, m: market(G) };
         host.save();
-        host.analytics.play(appState.G);
-        return sheet.showSheet({ kind: 'notice', eyebrow: '병역', text: r.text }, [
+        host.analytics.play(G);
+        sheet.showSheet({ kind: 'notice', eyebrow: '병역', text: r.text }, [
           { label: '이적 시장으로 →', cls: 'btn-primary', fn: nextPending },
         ]);
+        return false;
       }
-      appState.G.pending = null;
+      G.pending = null;
       host.save();
-      host.analytics.play(appState.G);
+      host.analytics.play(G);
       appState.tab = 'season';
-      return sheet.showSheet(
+      sheet.showSheet(
         {
           kind: 'notice',
           eyebrow: '병역',
@@ -472,20 +535,25 @@ export function createGameActions(host: GameHost) {
         },
         [
           {
-            label: `${appState.G.year} 시즌 시작 →`,
+            label: `${G.year} 시즌 시작 →`,
             cls: 'btn-primary',
             fn: () => sheet.closeSheet(),
           },
         ],
       );
+      return false;
     }
-    appState.G.pending = null;
-    appState.G.training = 'rest';
+    G.pending = null;
+    G.training = 'rest';
     host.save();
-    host.analytics.play(appState.G);
+    host.analytics.play(G);
+    return true;
+  }
+
+  function startSeason() {
     sheet.closeSheet();
     appState.tab = 'season';
-    host.toast(`${appState.G.year} 시즌 시작!`);
+    host.toast(`${appState.G!.year} 시즌 시작!`);
   }
 
   function doRetire() {

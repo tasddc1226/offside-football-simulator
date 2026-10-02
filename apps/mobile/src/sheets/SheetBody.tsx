@@ -3,9 +3,11 @@
 import type { SheetView } from '@offside/app-core/sheets';
 import { Achieve } from './Achieve';
 import { Block } from './Block';
+import { Contract } from './Contract';
 import { DragShot } from './DragShot';
 import { EventChoice } from './EventChoice';
 import { EventResult } from './EventResult';
+import { Flight } from './Flight';
 import { Judge } from './Judge';
 import { Market } from './Market';
 import { Minigame } from './Minigame';
@@ -33,6 +35,10 @@ export function SheetBody({ v }: { v: SheetView }) {
       return <SeasonResult v={v} />;
     case 'market':
       return <Market v={v} />;
+    case 'contract':
+      return <Contract v={v} />;
+    case 'flight':
+      return <Flight v={v} />;
     case 'notice':
       return <Notice v={v} />;
     case 'achieve':

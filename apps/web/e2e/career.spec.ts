@@ -9,6 +9,9 @@ async function clickWhateverIsNext(page: Page): Promise<boolean> {
     '#an-skip',
     '.choice:visible',
     '[data-opt]:visible',
+    // T-11-039 오퍼를 고르면 계약서가 뜬다 — 이름 사인을 넣고 확정한다.
+    '#sheet [data-sign="ok"]:enabled',
+    '#sheet [data-sign="name"]:enabled',
     '#sheet [data-sheet]:visible',
     '[data-act="resume"]:visible',
     '[data-act="advance"]:visible',
