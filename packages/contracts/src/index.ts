@@ -165,3 +165,4 @@ export * from './ticker.js';
 export * from './teams.js';
 
 export * from './app-auth.js';
+export * from './app-version.js';

@@ -1,11 +1,12 @@
 // 새 공지사항·릴리즈 노트 알림(웹 NewsBanner.svelte, news.svelte.ts). 소식 화면을 보고 있을 때는 띄우지 않는다.
-// 이미 본 글이 고쳐져도 같은 자리에 알린다. 새 버전 배너(UpdateBanner)가 떠 있으면 그쪽을 먼저 보인다(웹과 같다).
+// 이미 본 글이 고쳐져도 같은 자리에 알린다. 새 버전 배너(UpdateBanner)·스토어 업데이트 안내가 떠 있으면 그쪽을 먼저 보인다.
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { PostSummary } from '@offside/app-core/api/boards';
 import { dismissNews } from '../game/host';
 import { openBoard } from '../game/nav';
+import { useStoreUpdateShown } from '../platform/storeUpdate';
 import { useUpdatePending } from '../platform/updates';
 import { appState, newsState } from '../store';
 import { alpha } from '../theme/colors';
@@ -20,7 +21,8 @@ export function NewsBanner() {
   const news = useSnapshot(newsState);
   const { screen } = useSnapshot(appState);
   const updatePending = useUpdatePending();
-  const show = !!news.post && screen !== 'board' && !updatePending;
+  const storeShown = useStoreUpdateShown();
+  const show = !!news.post && screen !== 'board' && !updatePending && !storeShown;
   const { mounted, style } = useFly(show, 200);
   // 사라지는 동안에도 글자가 남도록 마지막 글을 붙들어 둔다.
   const [last, setLast] = useState<{
