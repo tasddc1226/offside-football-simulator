@@ -256,6 +256,15 @@ jobs:
         if: env.EXPO_TOKEN != ''
       - run: pnpm install --frozen-lockfile --filter @offside/mobile...
         if: env.EXPO_TOKEN != ''
+      # T-11-037 앱 GA4 설정(app.config.js)은 EAS production 환경 변수(OFFSIDE_*)를 읽는다. eas는 로컬 명령에서 파일 변수(iOS
+      # plist)를 불러오지 않아 설정 평가가 실패하므로, 스토어 빌드와 같은 값을 여기서 받아 이후 단계에 넘긴다 — 빌드와 지문이
+      # 같아야 OTA가 설치된 앱에 닿는다.
+      - name: Pull EAS production env (including file variables)
+        if: env.EXPO_TOKEN != ''
+        working-directory: apps/mobile
+        run: |
+          eas env:pull production --non-interactive --path "$RUNNER_TEMP/eas-production.env"
+          grep -E '^OFFSIDE_[A-Z_]+=' "$RUNNER_TEMP/eas-production.env" >> "$GITHUB_ENV" || true
       # eas --json이어도 stdout에 안내 줄("No environment variables …")이 먼저 찍힐 수 있어 JSON 시작 줄({ 또는 [)부터 읽는다.
       # stderr는 버리지 않는다 — eas가 실패하면 원인이 로그에 남아야 한다.
       - name: Skip when app code is unchanged since the last OTA
