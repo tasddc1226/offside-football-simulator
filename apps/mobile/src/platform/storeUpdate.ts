@@ -18,7 +18,7 @@ export const openStore = () => {
   if (storeUpdate.url) void Linking.openURL(storeUpdate.url);
 };
 
-/** 스토어 업데이트 배너가 떠 있다 — 새 버전(OTA)·새 소식 배너는 그동안 물러난다. */
+/** 스토어 업데이트 배너를 띄울 때다(배너 사이 순서는 banners/useTopBanner). */
 export const useStoreUpdateShown = () => {
   const s = useSnapshot(storeUpdate);
   return !!s.url && !s.closed;

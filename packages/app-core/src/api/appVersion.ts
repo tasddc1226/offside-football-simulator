@@ -2,10 +2,8 @@
 import type { AppVersionResponse } from '@offside/contracts';
 import { cachedGet } from './client.js';
 
-/** 켤 때·돌아올 때 묻는다 — 이 간격 안에서는 받아 둔 값을 쓴다. */
-const TTL_MS = 10 * 60_000;
-
-export const fetchAppVersion = () => cachedGet<AppVersionResponse>('/v1/app/version', TTL_MS);
+/** 켤 때·돌아올 때 묻는다. 서버 응답 캐시(max-age=300)와 같은 5분 안에서는 받아 둔 값을 쓴다. */
+export const fetchAppVersion = () => cachedGet<AppVersionResponse>('/v1/app/version', 5 * 60_000);
 
 /** `1.2.3` 꼴 버전 비교(a < b면 음수). 모자란 자리는 0으로 본다. */
 export function compareVersions(a: string, b: string): number {
