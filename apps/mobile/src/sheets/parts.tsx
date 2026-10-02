@@ -6,6 +6,7 @@ import { useSnapshot } from 'valtio';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
+import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
 
 /** 웹 color-mix(in srgb, A pct%, B) — #rrggbb 두 색을 섞는다. */
@@ -19,6 +20,22 @@ export function mixColor(a: string, b: string, pctA: number): string {
   const k = pctA / 100;
   const m = (x: number, y: number) => Math.round(x * k + y * (1 - k));
   return `rgb(${m(ar, br)},${m(ag, bg)},${m(ab, bb)})`;
+}
+
+/** 연출 시트 아래 '건너뛰기' 밑줄 링크(웹 .link-btn.skip). */
+export function SkipLink({ onPress }: { onPress: () => void }) {
+  return (
+    <Press
+      testID="an-skip"
+      onPress={onPress}
+      hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
+      style={{ alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 2 }}
+    >
+      <Txt tone="muted" style={{ fontSize: rem(0.75), textDecorationLine: 'underline' }}>
+        건너뛰기
+      </Txt>
+    </Press>
+  );
 }
 
 /** 강조 한 줄(웹 .hl): 왼쪽에 금색 세로줄. */

@@ -165,6 +165,33 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(row?.lastClubId).toBe('pl-15');
   });
 
+  it('T-11-037: 나이별 OVR 상한을 크게 넘은 시즌은 잘라 저장하고 커리어를 숨긴다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
+    const body = seasonBody();
+    const rowOf = async () =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0]!;
+    // 18세 상한(81)에 딱 붙은 값은 정상이다.
+    expect(
+      (
+        await put(`/v1/careers/${CAREER_ID}/seasons/2026`, {
+          ...body,
+          season: { ...body.season, ovr: 81 },
+        })
+      ).status,
+    ).toBe(200);
+    expect((await rowOf()).hidden).toBe(0);
+    expect(
+      (
+        await put(`/v1/careers/${CAREER_ID}/seasons/2027`, {
+          ...body,
+          season: { ...body.season, ovr: 86 },
+        })
+      ).status,
+    ).toBe(200);
+    expect((await rowOf()).hidden).toBe(1);
+  });
+
   it('T-11-030: 처음 스카우트 평가는 한 번만 저장하고, 은퇴 때 실제 잠재력을 저장한다', async () => {
     const { cookie } = await issueCookie(ctx);
     const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);

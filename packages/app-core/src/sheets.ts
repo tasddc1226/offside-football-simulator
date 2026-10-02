@@ -5,6 +5,7 @@ import type { TitleView } from '@offside/game/titles';
 import type { ResolveResult } from '@offside/game/event-runner';
 import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
+import type { FlightMap } from './flight.js';
 
 export type { Chip };
 export type SheetButton = { label: string; cls?: string; fn: () => void };
@@ -190,6 +191,32 @@ export type SheetView =
       gained: number;
       score: number;
       next: string | null;
+    }
+  | {
+      /** T-11-039 이적시장에서 고른 구단과의 계약서. 사인하면 onSign, ×는 onClose(이적시장으로 돌아간다). */
+      kind: 'contract';
+      eyebrow: string;
+      title: string;
+      text: string;
+      club: { id: string; name: string };
+      terms: { label: string; value: string }[];
+      /** '이름 사인 사용'으로 그릴 선수 이름. */
+      name: string;
+      cta: string;
+      onSign: () => void;
+      onClose: () => void;
+    }
+  | {
+      /** T-11-039 해외 이적 비행(로딩 장면). 본문이 FLIGHT_MS 동안 비행기를 경로 따라 옮긴다. done이면(건너뛰기) 바로 도착 장면. */
+      kind: 'flight';
+      eyebrow: string;
+      title: string;
+      sub: string;
+      from: { code: string; city: string };
+      to: { code: string; city: string };
+      map: FlightMap;
+      done: boolean;
+      skip: () => void;
     }
   | {
       kind: 'notice';
