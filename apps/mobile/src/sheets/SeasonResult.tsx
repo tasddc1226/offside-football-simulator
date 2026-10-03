@@ -131,7 +131,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
             스카우트 한마디
           </Txt>
-          <Txt>{s.scoutHint}</Txt>
+          <Txt>{`“${s.scoutHint}”`}</Txt>
         </View>
       ) : null}
       <View>

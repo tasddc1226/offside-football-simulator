@@ -58,7 +58,7 @@
 {#if v.scoutHint}
   <div>
     <div class="eyebrow" style="margin-bottom:6px">스카우트 한마디</div>
-    <p>{v.scoutHint}</p>
+    <p>“{v.scoutHint}”</p>
   </div>
 {/if}
 <div>
