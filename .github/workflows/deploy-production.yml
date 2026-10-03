@@ -98,6 +98,7 @@ jobs:
       - name: Validate critical compatibility
         run: |
           pnpm --filter @offside/scripts exec vitest run production-release.test.mjs
+          node .github/scripts/publish-release-notes.mjs validate .release-notes
           pnpm --filter @offside/api typecheck
           pnpm --filter @offside/web typecheck
 
@@ -354,3 +355,30 @@ jobs:
           if [ -n "$PREVIOUS" ]; then args+=(--notes-start-tag "$PREVIOUS"); fi
           gh release create "$TAG" "${args[@]}"
           echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)" >> "$GITHUB_STEP_SUMMARY"
+
+  # API・웹・OTA・릴리즈 태그 성공 후에만 사용자 공지를 게시한다. preflight에서는 쓰지 않는다.
+  # 같은 항목은 서버의 영구 이력으로 중복을 막아, 실패한 잡만 다시 실행해도 안전하다.
+  release-notes:
+    name: Publish in-game release notes
+    needs: [production-release, app-update, release-tag]
+    if: inputs.mode == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Publish reviewed entries from the deployed commit
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: node .github/scripts/publish-release-notes.mjs publish .release-notes
