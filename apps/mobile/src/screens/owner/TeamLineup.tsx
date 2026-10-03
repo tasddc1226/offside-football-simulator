@@ -16,7 +16,7 @@ import { prefs } from '../../store';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { scrollTo, scrollY, viewH } from '../../ui/scroll';
 import { TextField } from '../settings/parts';
-import { SortChips } from '../board/parts';
+import { RecordsChips as SortChips } from '../hof/RecordsControls';
 
 type Drag = {
   index: number | null;

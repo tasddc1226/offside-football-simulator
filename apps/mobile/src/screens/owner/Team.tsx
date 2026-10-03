@@ -65,7 +65,7 @@ import { TeamDialog } from '../../components/TeamDialog';
 import type { TeamLogo as Logo } from '@offside/contracts/team-logo';
 import type { PutOwnerTeamBody } from '@offside/contracts';
 import { readTeamDraft, writeTeamDraft, teamDraftBase, type TeamDraft } from './teamDraft';
-import { SortChips } from '../board/parts';
+import { RecordsChips as SortChips } from '../hof/RecordsControls';
 import { TeamResult } from './TeamResult';
 
 const between = (v: string, min: number, max: number) =>
