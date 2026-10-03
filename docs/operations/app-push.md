@@ -4,7 +4,8 @@
 
 공지·릴리즈 노트 푸시의 기기 연결과 관리자 본인 테스트를 구현했다. staging API·웹·DB는
 최신 메인 위의 구현으로 배포하고, 등록·해제·비관리자 발송 차단과 개인정보 안내 페이지를 확인했다.
-운영 API 배포, 새 빌드 설치, 실기기 수신 확인은 아직 하지 않았다. 자동 발송은 구현 전이다.
+iOS·Android 테스트 빌드는 성공했고 iOS 설치와 staging 실제 Google 로그인을 확인했다.
+시뮬레이터 실행 장애로 앱 UI·실제 푸시 수신은 아직 확인하지 못했다. 운영 API 배포와 자동 발송은 미완료다.
 기존 게임 내 새 소식 배너와 릴리즈 노트 자동 게시는 그대로 사용한다.
 
 ## 확정한 발송 정책
@@ -86,7 +87,7 @@ Android 앱의 공개 클라이언트 설정인 `google-services.json`만 넣는
 - staging API version: `28605ea3-4a6c-4266-b8c9-28aebc87c064` (이후 관리자 secret 설정도 배포로 기록된다).
 - staging 웹 version: `14eda15b-cf47-49a6-8982-01a7e7f6b46f`. 기존 누락된 OG staging Worker도 프로젝트 배포 스크립트로 준비했다.
 - Android 내부 테스트 빌드: `25d41c0f-5521-4c96-a199-1e9684c47a8b`, `push-test` 프로필·채널, staging API를 사용한다. 생성 당시 빌드 중이며 완료·설치를 별도로 확인해야 한다.
-- iOS는 사용자 지시로 로컬 시뮬레이터 검증으로 변경했다. staging 테스트 전용 Google OAuth 생성은 승인되었으며, Google 사용자 데이터 정책 동의 확인을 기다린다.
+- iOS는 사용자 지시로 로컬 시뮬레이터 검증으로 변경했다. staging 테스트 전용 Google OAuth 생성과 Google 사용자 데이터 정책 동의를 확인받고 진행했다.
 - API·계정 관련 테스트 총 49건, app-core 6건, 정적 페이지 9건이 통과했다. 계정 테스트는 장비 부하로 10초 hook timeout에 실패한 뒤, 로컬 CLI의 hook 대기를 60초로 늘려 재실행해 통과했다. 저장소의 전역 테스트 제한은 변경하지 않았다.
 - API/mobile/app-core 타입 검사, 변경 파일 ESLint·서식, 공개 저장소 위생 검사, staging API·웹/OG dry-run을 통과했다. 기기 UI·실제 수신·스토어 심사·운영 푸시 배포 검증은 수행 전이다.
 
@@ -96,6 +97,33 @@ Android 앱의 공개 클라이언트 설정인 `google-services.json`만 넣는
 - staging API 최종 코드 version: `2661df80-c22d-41db-ba73-6d74f42b08b2`.
 - Android 최종 테스트 빌드: `9d985df4-2485-4b14-9057-3b363dac0567` (`push-test`).
 - iOS 시뮬레이터 빌드: `becd6faa-4c9e-45ad-af77-c30da4ffff08` (`push-test-simulator`).
-- 두 빌드는 생성 후 `IN_PROGRESS`를 확인했다. 런타임 해시와 설치·수신 성공은 아직 확인 전이다.
+- 두 빌드 모두 `FINISHED`를 확인했다. 실제 앱 실행·수신은 아직 확인 전이다.
 - 격리된 iOS 18.1 기기: `OFFSIDE Push Test iPhone 16`, `4C89C694-C807-4EAD-8533-B397DF7FF65E`.
 - 모바일 전체 린트·타입 검사가 통과했다. 테스트 대상 외 기기와 운영 채널은 변경하지 않았다.
+
+### OAuth 연결과 실제 인증 확인
+
+- Google Cloud 기존 OFFSIDE 프로젝트에 테스트 전용 웹 클라이언트 `OFFSIDE Push Test`를 생성했다.
+- 외부/테스트 모드를 유지하고 지정된 소유자 계정 한 개만 테스트 사용자로 등록했다.
+- 리디렉션 URI는 staging API의 `/v1/auth/google/callback` 한 개다. 운영 OAuth 설정은 변경하지 않았다.
+- client ID/secret은 staging Worker secret으로만 설정했다. 개인 비밀정보는 저장소 밖 0600 파일에 보관했다.
+- secret 설정 후 staging API version: `11c0200b-acd2-4e85-a0bd-03e83cfe461d`.
+- 앱 OAuth 시작 요청에서 테스트 client ID, staging 콜백, `openid email` scope를 원격 확인했다.
+- staging 웹에서 실제 Google 로그인과 운영자 계정 표시까지 확인했다. 가짜 Google 로그인을 사용하지 않았다.
+- staging 웹의 API 빌드 환경 누락을 고쳐 재배포했다. version: `0301cf5c-7f57-4c38-ad02-a40ef052b895`.
+  staging 빌드에는 `VITE_API_BASE_URL=https://offside-api-staging.tasddc1569.workers.dev`를 설정해야 한다.
+- iOS 빌드 runtime: `03fc5c14d328f5cd28ce035e8e97ba922e4b6ceb`.
+- Android 빌드 runtime: `0a236c7e7de6afcb2eccd672c4d7eca459a8e12b`.
+- iOS 빌드 파일 다운로드·설치를 완료했다. iOS 18.1과 26.5 전용 기기에서 앱 실행이
+  `NSPOSIXErrorDomain code 3`으로 실패하고, Safari도 정상 화면을 표시하지 못하는 상태를 관찰했다.
+  Mac load average가 600 이상이었다. 부하가 원인인지 확정하지 않았으며, 앱 수신 성공으로 기록하지 않는다.
+- iOS 26.5 격리 기기: `OFFSIDE Push Test iPhone 17`, `0891CEE3-0F94-48AF-8207-1E5C734E0C16`.
+  iOS 18.1 전용 기기는 종료했다. 다른 작업의 기기·프로세스는 변경하지 않았다.
+
+### 실행 환경 복구 대기
+
+- 기존 작업이 사용하는 iOS 기기가 함께 실행 중이어서 CoreSimulator 서비스 재시작 승인을 요청했다.
+  확인 전에는 공유 서비스나 다른 작업의 기기를 종료하지 않는다.
+- Android 최종 내부 빌드 완료 시각: `2026-10-03T14:23:45.017Z`.
+- Android 테스트 APK는 staging에 연결하고 운영 앱과 같은 `com.offsidelab.app` 식별자를 사용한다.
+  운영 앱이 설치된 실기기에 덮어 설치하지 않고 격리된 테스트 환경에서 먼저 검증한다.
