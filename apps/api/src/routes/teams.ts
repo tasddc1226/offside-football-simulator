@@ -28,6 +28,8 @@ import {
   ratingRankOf,
   setTeamLike,
   slotIdsOf,
+  layoutOf,
+  logoOf,
 } from '../db/repos/ownerTeams.js';
 import { listAchievementRanking } from '../db/repos/ownerAchievements.js';
 import { edgeCached, waitUntil } from '../edgeCache.js';
@@ -138,6 +140,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       t.formation as FormationId,
       ids,
       eligibleMap(rows, t.profileId, t.season),
+      layoutOf(t),
     );
     const now = nowIso();
     const seasonName = teamSeasonName(t.season);
@@ -154,6 +157,8 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           manager: t.manager,
           formation: t.formation as FormationId,
           slots: slotsOf(lineup),
+          layout: layoutOf(t),
+          logo: logoOf(t),
           ovr: lineupOvr(lineup),
           lines: linesOf(lineup),
           rating: t.rating,

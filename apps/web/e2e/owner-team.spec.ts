@@ -1,4 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
+import type { TeamLayout } from '@offside/contracts/owner-team';
+import type { TeamLogo } from '@offside/contracts/team-logo';
 import AxeBuilder from '@axe-core/playwright';
 import { API, fail, ok } from './helpers.js';
 
@@ -16,7 +18,7 @@ const profile = (google: boolean) =>
 
 const PLAYERS = [
   {
-    careerId: 'c-st',
+    careerId: '00000000-0000-4000-8000-000000000011',
     pos: 'FW',
     dpos: 'ST',
     peak: 90,
@@ -27,7 +29,7 @@ const PLAYERS = [
     legendScore: 500,
   },
   {
-    careerId: 'c-gk',
+    careerId: '00000000-0000-4000-8000-000000000012',
     pos: 'GK',
     dpos: null,
     peak: 80,
@@ -68,6 +70,8 @@ function teamFrom(body: {
   manager?: string;
   formation: string;
   slots: (string | null)[];
+  layout?: TeamLayout | null;
+  logo?: TeamLogo | null;
 }) {
   return {
     id: MY_TEAM,
@@ -75,6 +79,8 @@ function teamFrom(body: {
     name: body.name,
     manager: body.manager ?? '홍감독',
     formation: body.formation,
+    layout: body.layout ?? null,
+    logo: body.logo ?? null,
     slots: FORMATION_433.map((slot, i) => {
       const id = body.slots[i] ?? null;
       return {
@@ -226,7 +232,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
                 side: 'home',
                 scorer: '공개 골잡이',
                 assist: null,
-                scorerId: 'c-st',
+                scorerId: '00000000-0000-4000-8000-000000000011',
                 assistId: null,
               },
               {
@@ -243,7 +249,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
                 scorer: '유스 선수',
                 assist: '공개 골잡이',
                 scorerId: null,
-                assistId: 'c-st',
+                assistId: '00000000-0000-4000-8000-000000000011',
               },
             ],
             mine: 'home',
@@ -293,17 +299,22 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await page.locator('[data-formation="4-3-3"]').click();
   await expectNoA11yViolations(page);
 
-  // 자리를 눌러 고르는 시트 — 그 자리 능력치로 센 실력 순이다(스트라이커의 윙어 실력 84 = 최고 90의 93%).
+  // 라커룸에서 선발도 보여 주고 선택한 선수를 다른 자리에 배치한다.
+  const locker = page.locator('[data-team-locker]');
+  await locker.getByLabel('선발 선수 포함').check();
+  await locker
+    .locator('[data-locker-player="00000000-0000-4000-8000-000000000011"] .locker-select')
+    .click();
+  await expect(page.locator('[data-act="team-to-pitch"]')).toBeVisible();
   await page.locator('[data-slot="10"]').click();
-  const sheet = page.getByRole('dialog');
-  await expect(sheet).toContainText('윙어');
-  await expect(sheet.locator('[data-pick]').nth(1)).toContainText('84');
-  await expect(sheet.locator('[data-pick]').nth(1)).toContainText('적합 93%');
-  await expect(sheet.locator('[data-pick]').nth(1)).toContainText('SHO 91');
-  await sheet.locator('[data-pick-sort="score"]').click();
-  await expect(sheet.locator('[data-pick]').nth(1)).toContainText('공개 골잡이');
-  await sheet.getByRole('button', { name: '닫기' }).first().click();
-  await expect(sheet).toHaveCount(0);
+  await expect(page.locator('[data-slot="10"]')).toContainText('84');
+  await expect(page.locator('[data-slot="9"]')).toContainText('유스 선수');
+  await expect(locker).toContainText('LS');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.locator('[data-act="team-logo-open"]').click();
+  await page.locator('[data-logo-text]').fill('FC');
+  await page.locator('[data-logo-shape="r"]').click();
+  await page.locator('[data-act="team-logo-apply"]').click();
 
   await page.locator('[data-act="team-save"]').click();
   await expect(page.locator('#toast')).toContainText('팀을 만들었어요');
@@ -332,7 +343,7 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await result.locator('[data-act="team-replay"]').click();
   await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
   await live.locator('[data-act="live-skip"]').click();
-  await result.getByRole('button', { name: '내 팀' }).click();
+  await result.getByRole('button', { name: '편성으로' }).click();
   await expect(page.locator('[data-team-record] dd').nth(1)).toHaveText('1,016');
 });
 
@@ -563,7 +574,11 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
     ...teamFrom({
       name: '프리 FC',
       formation: '4-3-3',
-      slots: ['c-gk', ...Array(8).fill(null), 'c-st'],
+      slots: [
+        '00000000-0000-4000-8000-000000000012',
+        ...Array(8).fill(null),
+        '00000000-0000-4000-8000-000000000011',
+      ],
     }),
     record: { w: 5, d: 1, l: 2 },
     rating: 1040,
@@ -678,8 +693,10 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await expect(page.locator('div[data-slot="9"]')).toContainText('공개 골잡이');
   await expectNoA11yViolations(page);
 
-  // 라이브 랭킹 → 다른 팀 프로필(조회수 한 번) → 좋아요.
-  await page.locator('[data-act="team-ranking"]').click();
+  // 기록실의 팀 랭킹 → 다른 팀 프로필(조회수 한 번) → 좋아요.
+  await page.locator('[data-act="team-back"]').click();
+  await page.locator('[data-act="hof"]').click();
+  await page.locator('[data-hof-tab="teams"]').click();
   await expect(page.locator('[data-hof-tab="teams"]')).toHaveAttribute('aria-selected', 'true');
   const list = page.locator('[data-team-ranking]');
   await expect(list.locator('[data-rank-team]')).toHaveCount(2);
@@ -781,4 +798,52 @@ test('업적 달성 알림 — 쓰기 뒤 홈에서 승급 시트, 업적 보기
   await expect(page.locator('[data-club-achievements], [data-act="owner"]').first()).toBeVisible();
   await expect(page.locator('.tab-dot')).toHaveCount(0);
   await expect(page.locator('[data-ach-sheet]')).toHaveCount(0);
+});
+
+test('모바일 편성 초안은 화면 왕복·새로고침에도 복원되고 저장 실패에는 남는다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  let saved = teamFrom({
+    name: '우리 FC',
+    manager: '홍감독',
+    formation: '4-3-3',
+    slots: Array(11).fill(null),
+  });
+  let failSave = true;
+  let puts = 0;
+  await page.route(ownerTeamUrl, async (route) => {
+    if (route.request().method() === 'GET') return route.fulfill(ownerTeam({ team: saved }));
+    puts++;
+    if (failSave)
+      return route.fulfill(fail(503, 'SERVICE_UNAVAILABLE', '잠시 뒤 다시 저장해 주세요.'));
+    saved = teamFrom(route.request().postDataJSON());
+    return route.fulfill(ok({ team: saved }));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await expect(page.locator('[data-act="team-save"]')).toHaveCount(0);
+  await page
+    .locator('[data-locker-player="00000000-0000-4000-8000-000000000011"] .locker-select')
+    .click();
+  await page.locator('[data-slot="9"]').click();
+  await expect(page.locator('[data-act="team-save"]')).toBeVisible();
+  await page.locator('[data-act="team-back"]').click();
+  await page.locator('[data-act="team"]').click();
+  await expect(page.locator('[data-slot="9"]')).toContainText('공개 골잡이');
+  await expect(page.locator('[data-act="team-draft-discard"]')).toBeVisible();
+  await page.reload();
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await expect(page.locator('[data-slot="9"]')).toContainText('공개 골잡이');
+  await page.locator('[data-act="team-save"]').click();
+  await expect(page.locator('#toast')).toContainText('잠시 뒤');
+  await expect(page.locator('[data-slot="9"]')).toContainText('공개 골잡이');
+  await expect(page.locator('[data-act="team-save"]')).toBeEnabled();
+  failSave = false;
+  await page.locator('[data-act="team-save"]').click();
+  await expect(page.locator('[data-act="team-save"]')).toHaveCount(0);
+  expect(puts).toBe(2);
+  await expectNoA11yViolations(page);
 });

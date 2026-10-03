@@ -17,6 +17,9 @@
     onchallenge,
     onmore,
     ontoTeam,
+    onsave,
+    saving = false,
+    saveDisabled = false,
   }: {
     ovr: number;
     matchesLeft: number;
@@ -32,6 +35,9 @@
     onmore: () => void;
     /** 편성 화면으로(편집할 수 있을 때만 넘긴다). */
     ontoTeam?: (() => void) | undefined;
+    onsave?: (() => void) | undefined;
+    saving?: boolean;
+    saveDisabled?: boolean;
   } = $props();
 </script>
 
@@ -43,8 +49,11 @@
     <p class="muted fs-xs">같은 팀에는 하루 한 번 도전할 수 있어요. 최근 {TEAM_REPEAT_WINDOW_DAYS}일 안에 다시 만난 팀이면 레이팅이 덜 움직여요.</p>
   </div>
   {#if hint}
-    <p class="muted" data-match-hint>{hint}</p>
-    {#if ontoTeam}<button class="btn self-start" onclick={ontoTeam}>편성으로</button>{/if}
+    <p class="muted" data-match-hint>{onsave ? '바꾼 내용을 저장하면 상대를 볼 수 있어요.' : hint}</p>
+    <div class="tm-match-actions">
+      {#if onsave}<button class="btn btn-primary" onclick={onsave} disabled={saving || saveDisabled} data-act="team-save-opponents">{saving ? '저장 중…' : '변경 저장 후 상대 보기'}</button>{/if}
+      {#if ontoTeam}<button class="btn" onclick={ontoTeam}>편성으로</button>{/if}
+    </div>
   {:else}
   <LoadState {status} failText="상대를 불러오지 못했어요." retry={onreload}>
     {#each opponents as o (o.teamId)}
@@ -65,6 +74,7 @@
 </section>
 
 <style>
+  .tm-match-actions {display:flex;flex-wrap:wrap;gap:8px;}
   .tm-opp {
     display: flex;
     align-items: center;

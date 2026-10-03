@@ -537,6 +537,8 @@ export const ownerTeams = sqliteTable(
     manager: text('manager').notNull().default(''),
     formation: text('formation').notNull(),
     slotsJson: text('slots_json').notNull(),
+    layoutJson: text('layout_json'),
+    logoJson: text('logo_json'),
     filled: integer('filled').notNull(),
     ovr: integer('ovr').notNull(),
     /** 팀 레이팅(경기 결과로 오르내린다, TEAM_RATING_START에서 시작). */

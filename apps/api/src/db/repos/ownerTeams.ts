@@ -1,3 +1,4 @@
+import { TeamLayoutSchema, TeamLogoSchema } from '@offside/contracts';
 import type { TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import {
@@ -63,6 +64,27 @@ export function peakOf(json: string | null): PeakProfile | null {
 /** 팀 행의 선발 11자리(커리어 id, 빈 자리 null). */
 export const slotIdsOf = (row: Pick<OwnerTeamRow, 'slotsJson'>): (string | null)[] =>
   JSON.parse(row.slotsJson) as (string | null)[];
+
+/** 기존 팀(null)은 포메이션 그대로 읽고, 새 팀의 자유 배치만 덧붙인다. */
+export function layoutOf(row: Pick<OwnerTeamRow, 'layoutJson'>) {
+  if (!row.layoutJson) return null;
+  try {
+    const result = TeamLayoutSchema.safeParse(JSON.parse(row.layoutJson));
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export function logoOf(row: Pick<OwnerTeamRow, 'logoJson'>) {
+  if (!row.logoJson) return null;
+  try {
+    const result = TeamLogoSchema.safeParse(JSON.parse(row.logoJson));
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
 
 /** 선발 맵에 넣는 커리어 모양(careers 행 → 팀 선수). */
 type LineupRow = {

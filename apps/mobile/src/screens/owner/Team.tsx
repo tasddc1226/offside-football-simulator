@@ -1,12 +1,13 @@
 // T-10-092 구단주 팀(웹 team/Team.svelte) — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가
 // 채운다) 같은 시즌 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 경기 결과는 서버가 정한다(앱은 보여 주기만).
 // 편성·후보·업적 표기 같은 순수 계산은 웹과 같은 @offside/app-core/teamOwner.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import {
   FORMATION_IDS,
-  FORMATIONS,
+  presetLayout,
+  type TeamPosition,
   LINEUP_SIZE,
   MANAGER_NAME_MAX,
   MANAGER_NAME_MIN,
@@ -33,25 +34,18 @@ import {
   type TeamOpponent,
   type TeamPlayer,
 } from '@offside/app-core/api/team';
-import { hofStart, type TeamView } from '@offside/app-core/state';
+import { type TeamView } from '@offside/app-core/state';
 import { recordText, num } from '@offside/app-core/teamText';
-import {
-  assignSlot,
-  autoFillSlots,
-  matchHintOf,
-  pickCandidates,
-  type PickSort,
-} from '@offside/app-core/teamOwner';
+import { autoFillSlots, matchHintOf } from '@offside/app-core/teamOwner';
 import { anonName } from '@offside/game/pos-label';
 import { localCareerNames } from '@offside/game/season';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
-import { TeamLines, TeamPitch } from '../../components/TeamPitch';
+import { TeamLines } from '../../components/TeamPitch';
 import { toast } from '../../game/host';
 import { go } from '../../game/nav';
 import { achNudge } from '../../game/achNudge';
-import { appState, prefs } from '../../store';
+import { accountCache, appState, prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
-import { DISPLAY, rem } from '../../theme/type';
 import { BackBar, Btn, Card, Screen, Topbar, Txt, scrollTo } from '../../ui';
 import { BarBelow } from '../../ui/Screen';
 import { TabBar, type TabItem } from '../../ui/TabBar';
@@ -62,8 +56,16 @@ import { TeamAchievements } from './TeamAchievements';
 import { TeamHistory } from './TeamHistory';
 import { TeamLive } from './TeamLive';
 import { TeamOpponents } from './TeamOpponents';
-import { Grid2, OvrBadge, Seg, SegBtn, Stats, TmTitle } from './TeamParts';
-import { TeamPicker } from './TeamPicker';
+import { OvrBadge } from './TeamParts';
+import { TeamLineup } from './TeamLineup';
+import { TeamLogo } from '../../components/TeamLogo';
+import { TeamLogoEditor } from './TeamLogoEditor';
+import { TeamShare, type TeamShareData } from './TeamShare';
+import { TeamDialog } from '../../components/TeamDialog';
+import type { TeamLogo as Logo } from '@offside/contracts/team-logo';
+import type { PutOwnerTeamBody } from '@offside/contracts';
+import { readTeamDraft, writeTeamDraft, teamDraftBase, type TeamDraft } from './teamDraft';
+import { RecordsChips as SortChips } from '../hof/RecordsControls';
 import { TeamResult } from './TeamResult';
 
 const between = (v: string, min: number, max: number) =>
@@ -74,7 +76,7 @@ const NAV: [TeamView, string, TabIconName][] = [
   ['team', '편성', 'lineup'],
   ['opponents', '경기', 'season'],
   ['achievements', '업적', 'trophy'],
-  ['history', '기록', 'career'],
+  ['history', '경기 기록', 'career'],
 ];
 
 export default function Team() {
@@ -102,8 +104,20 @@ export default function Team() {
   const [saving, setSaving] = useState(false);
   /** 팀이 있으면 이름 칸은 '이름 바꾸기'를 눌렀을 때만 펼친다. */
   const [renaming, setRenaming] = useState(false);
-  const [picking, setPicking] = useState<number | null>(null);
-  const [pickSort, setPickSort] = useState<PickSort>('fit');
+  const [layout, setLayout] = useState<TeamPosition[] | null>(null);
+  const [logo, setLogo] = useState<Logo | null>(null);
+  const [editingLogo, setEditingLogo] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [share, setShare] = useState<TeamShareData | null>(null);
+  const jump = useRef<(() => void) | null>(null);
+  const [draftKey, setDraftKey] = useState<string | null>(null);
+  const [pendingDraft, setPendingDraft] = useState<TeamDraft | null>(null);
+  const [restored, setRestored] = useState(false);
+  const loadSequence = useRef(0);
+  const savingRef = useRef(false);
+  const draftNow = useRef<PutOwnerTeamBody | null>(null);
 
   const [opponents, setOpponents] = useState<TeamOpponent[]>([]);
   const [oppStatus, setOppStatus] = useState<LoadStatus>('loading');
@@ -111,6 +125,7 @@ export default function Team() {
   const [result, setResult] = useState<TeamMatch | null>(null);
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   const [live, setLive] = useState(false);
+  const [resultOrigin, setResultOrigin] = useState<'opponents' | 'history'>('opponents');
   const [history, setHistory] = useState<TeamMatch[]>([]);
   const [histStatus, setHistStatus] = useState<LoadStatus>('loading');
   const [ach, setAch] = useState<ClubAchievementsResponse | null>(null);
@@ -132,7 +147,8 @@ export default function Team() {
     localNames.get(p.careerId) ?? p.publicName ?? anonName(p.pos, p.number);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
 
-  const slotCodes = FORMATIONS[formation];
+  const positions = layout ?? presetLayout(formation);
+  const slotCodes = positions.map((p) => p.slot);
   const ratings: (number | null)[] = slotCodes.map((slot, i) => {
     const id = slots[i];
     const p = id ? byId.get(id) : undefined;
@@ -146,6 +162,8 @@ export default function Team() {
     !team ||
     name.trim() !== team.name ||
     manager.trim() !== team.manager ||
+    JSON.stringify(logo) !== JSON.stringify(team.logo ?? null) ||
+    JSON.stringify(layout) !== JSON.stringify(team.layout ?? null) ||
     formation !== team.formation ||
     slots.some((id, i) => id !== (team.slots[i]?.careerId ?? null));
   const nameOk =
@@ -153,21 +171,61 @@ export default function Team() {
     between(manager, MANAGER_NAME_MIN, MANAGER_NAME_MAX);
   const cells = slots.map((id, i) => {
     const p = id ? byId.get(id) : undefined;
-    return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p };
+    return {
+      rating: ratings[i] ?? YOUTH_OVR,
+      name: p ? nameOf(p) : YOUTH_NAME,
+      youth: !p,
+      ...(p ? { peak: p.peak, number: p.number, legendScore: p.legendScore } : {}),
+    };
   });
   const matchHint = matchHintOf(team, dirty, matchesLeft, season, current);
+  const draftValue: PutOwnerTeamBody = { name, manager, logo, formation, slots, layout };
+  draftNow.current = draftValue;
+  useEffect(() => {
+    if (status !== 'ready' || !editable || !draftKey || pendingDraft) return;
+    writeTeamDraft(draftKey, dirty ? { base: teamDraftBase(team), value: draftValue } : null);
+  }, [
+    name,
+    manager,
+    logo,
+    formation,
+    slots,
+    layout,
+    status,
+    editable,
+    draftKey,
+    pendingDraft,
+    team,
+  ]);
+  function applyDraft(value: PutOwnerTeamBody) {
+    setName(value.name);
+    setManager(value.manager);
+    setLogo(value.logo ?? null);
+    setFormation(value.formation);
+    setSlots([...value.slots]);
+    setLayout(value.layout ? [...value.layout] : null);
+    setRestored(true);
+  }
 
   function applyTeam(t: OwnerTeam | null, lm: string | null = lastManager) {
     setTeam(t);
     setName(t?.name ?? '');
     setManager(t?.manager || lm || '');
     setFormation(t?.formation ?? '4-3-3');
+    setLayout(t?.layout ? [...t.layout] : null);
+    setLogo(t?.logo ?? null);
+    setSelected(null);
     setSlots(t ? t.slots.map((s) => s.careerId) : Array(LINEUP_SIZE).fill(null));
   }
 
   async function load(want?: number) {
+    const sequence = ++loadSequence.current;
+    setDraftKey(null);
+    setPendingDraft(null);
+    setRestored(false);
     setStatus('loading');
     const r = await fetchOwnerTeam(want);
+    if (sequence !== loadSequence.current) return;
     if (!r.ok) {
       const login =
         r.error.reason === 'GOOGLE_LOGIN_REQUIRED' || r.error.code === 'PROFILE_REQUIRED';
@@ -185,6 +243,18 @@ export default function Team() {
     setPerDay(d.matchesPerDay);
     setNeedLogin(false);
     applyTeam(d.team, d.lastManager);
+    const profile = accountCache.value;
+    const key =
+      d.team?.id ??
+      (profile && typeof profile === 'object' ? `new:${profile.id}:${d.season}` : null);
+    if (d.season === d.current && key) {
+      const draft = readTeamDraft(key);
+      setDraftKey(key);
+      if (draft) {
+        if (draft.base === teamDraftBase(d.team)) applyDraft(draft.value);
+        else setPendingDraft(draft);
+      }
+    }
     setStatus('ready');
   }
   /** 시즌을 바꿔 본다(지난 시즌 팀은 보기만). */
@@ -192,37 +262,46 @@ export default function Team() {
     show('team');
     void load(id);
   }
-  /** 기록실 라이브 랭킹에서 팀 프로필을 연다(id 없으면 랭킹 목록). */
-  function openRanking(id: string | null = null) {
-    appState.hof = { ...hofStart(), tab: 'teams', team: id };
-    go('hof');
-  }
   useEffect(() => {
     void load();
     // 처음 한 번만.
   }, []);
 
   // ───────── 편성 ─────────
-  const candidates =
-    picking === null ? [] : pickCandidates(slotCodes, picking, players, slots, pickSort);
-
-  /** 고른 자리에 선수를 넣는다. 이미 다른 자리에 있던 선수면 두 자리를 맞바꾼다. */
-  function assign(id: string | null) {
-    if (picking === null) return;
-    setSlots(assignSlot(slots, picking, id));
-    setPicking(null);
-  }
-
-  async function save() {
-    if (saving || !nameOk) return;
+  async function save(): Promise<boolean> {
+    if (savingRef.current || !nameOk) return false;
+    savingRef.current = true;
     setSaving(true);
-    const r = await saveOwnerTeam({ name: name.trim(), manager: manager.trim(), formation, slots });
-    setSaving(false);
-    if (!r.ok) return toast(r.error.message);
-    const created = !team;
-    applyTeam(r.data.team);
-    setRenaming(false);
-    toast(created ? '팀을 만들었어요' : '편성을 저장했어요');
+    const snapshot = JSON.stringify(draftNow.current);
+    const body = { ...draftValue, name: name.trim(), manager: manager.trim() };
+    try {
+      const r = await saveOwnerTeam(body);
+      if (!r.ok) {
+        toast(r.error.message);
+        return false;
+      }
+      const unchanged = JSON.stringify(draftNow.current) === snapshot;
+      const created = !team;
+      if (unchanged) {
+        applyTeam(r.data.team);
+        setRenaming(false);
+        setRestored(false);
+      } else setTeam(r.data.team);
+      if (draftKey)
+        writeTeamDraft(
+          draftKey,
+          unchanged ? null : { base: teamDraftBase(r.data.team), value: draftNow.current! },
+        );
+      setDraftKey(r.data.team.id);
+      toast(created ? '팀을 만들었어요' : '편성을 저장했어요');
+      return unchanged;
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  }
+  async function saveAndFind() {
+    if (await save()) await loadOpponents();
   }
 
   // ───────── 경기 ─────────
@@ -245,6 +324,7 @@ export default function Team() {
         setOpponents((list) => list.filter((x) => x.teamId !== o.teamId));
       return toast(r.error.message);
     }
+    setResultOrigin('opponents');
     setResult(r.data.match);
     setLive(true);
     setMatchesLeft(r.data.matchesLeft);
@@ -297,7 +377,7 @@ export default function Team() {
     show(v);
     scrollTo(0);
   }
-  const navOn = view === 'result' ? 'opponents' : view;
+  const navOn = view === 'result' ? resultOrigin : view;
   const navItems: TabItem[] = NAV.map(([k, label, icon]) => ({
     key: icon,
     label,
@@ -338,166 +418,198 @@ export default function Team() {
   } else if (view === 'team') {
     body = (
       <>
-        <Card gap={12}>
-          <TmTitle
-            eyebrow={`My team · ${seasonName}`}
-            title={team?.name ?? (editable ? '팀 만들기' : '팀 없음')}
-            right={<OvrBadge ovr={ovr} />}
-          />
-          {team ? (
-            <Txt tone="muted" v="sm" style={{ marginTop: -8 }}>
-              {`${team.manager} 감독`}
-            </Txt>
-          ) : null}
-          {team ? (
-            <View testID="team-record">
-              <Stats
-                first={1.5}
-                items={[
-                  ['전적', recordText(team.record)],
-                  ['레이팅', num(team.rating)],
-                  editable ? ['오늘 경기', `${matchesLeft}/${perDay}`] : ['시즌', '지난 시즌'],
-                ]}
-              />
-            </View>
-          ) : editable ? (
-            <Txt tone="muted">{`${seasonName}에 뛰고 은퇴한 내 선수로 11명을 꾸려요. 빈 자리는 유스 선수(OVR ${YOUTH_OVR})가 채워서, 한 명만 넣어도 경기할 수 있어요. 팀은 시즌마다 새로 꾸려요.`}</Txt>
+        <Card gap={10}>
+          {seasons.length > 1 ? (
+            <SelectField
+              label="시즌"
+              testID="team-season"
+              value={season}
+              options={seasons.map((o) => ({
+                value: o.id,
+                label: `${o.name}${o.id === current ? ' (지금)' : ''}`,
+              }))}
+              onChange={pickSeason}
+            />
           ) : (
-            <Txt tone="muted">{`${seasonName}에는 팀을 꾸리지 않았어요.`}</Txt>
+            <Txt v="eyebrow">{`My team · ${seasonName}`}</Txt>
           )}
-          {!editable && team ? (
-            <Txt tone="muted" v="sm" testID="team-readonly">
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+            <TeamLogo name={name || team?.name || 'FC'} logo={logo} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Txt v="h2" accessibilityRole="header">
+                {name || team?.name || (editable ? '팀 만들기' : '팀 없음')}
+              </Txt>
+              <Txt
+                v="sm"
+                tone="muted"
+              >{`${manager || team?.manager || '나의'} 감독${dirty && team ? ' · 저장 전' : ''}`}</Txt>
+            </View>
+            <OvrBadge ovr={ovr} />
+          </View>
+          {team ? (
+            <Txt
+              v="sm"
+              tone="muted"
+              testID="team-record"
+            >{`${recordText(team.record)} · 레이팅 ${num(team.rating)} · ${editable ? `오늘 ${matchesLeft}/${perDay}경기` : '지난 시즌'}`}</Txt>
+          ) : (
+            <Txt v="sm" tone="muted">
+              빈 자리는 유스 선수(OVR {YOUTH_OVR})가 채워요. 한 명만 넣어도 경기할 수 있어요.
+            </Txt>
+          )}
+          {editable ? (
+            <Btn sm kind="ghost" testID="team-more" onPress={() => setMenu(true)}>
+              더보기
+            </Btn>
+          ) : (
+            <Txt v="sm" tone="muted" testID="team-readonly">
               지난 시즌 팀이라 보기만 할 수 있어요.
             </Txt>
-          ) : null}
+          )}
           {editable && (!team || renaming) ? (
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Field label="팀 이름" style={{ flex: 1 }}>
+            <View style={{ gap: 10 }}>
+              <Field label="팀 이름">
                 <TextField
                   value={name}
                   onChangeText={setName}
                   maxLength={TEAM_NAME_MAX}
-                  placeholder={`${TEAM_NAME_MIN}~${TEAM_NAME_MAX}자`}
                   testID="team-name"
                   accessibilityLabel="팀 이름"
-                  spellCheck={false}
                 />
               </Field>
-              <Field label="감독 이름" style={{ flex: 1 }}>
+              <Field label="감독 이름">
                 <TextField
                   value={manager}
                   onChangeText={setManager}
                   maxLength={MANAGER_NAME_MAX}
-                  placeholder={`${MANAGER_NAME_MIN}~${MANAGER_NAME_MAX}자`}
                   testID="team-manager"
                   accessibilityLabel="감독 이름"
-                  spellCheck={false}
                 />
               </Field>
             </View>
           ) : null}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-            {seasons.length > 1 ? (
-              <SelectField
-                label="시즌"
-                testID="team-season"
-                value={season}
-                options={seasons.map((o) => ({
-                  value: o.id,
-                  label: `${o.name}${o.id === current ? ' (지금)' : ''}`,
-                }))}
-                onChange={pickSeason}
-                style={{ minHeight: 40 }}
-              />
-            ) : null}
-            {editable && team && !renaming ? (
-              <Btn sm onPress={() => setRenaming(true)} testID="team-rename">
-                이름 바꾸기
-              </Btn>
-            ) : null}
-            {team ? (
-              <Btn sm onPress={() => openRanking(team.id)} testID="team-profile">
-                팀 프로필 · 순위
-              </Btn>
-            ) : null}
-            <Btn sm onPress={() => openRanking()} testID="team-ranking">
-              라이브 랭킹
-            </Btn>
-          </View>
         </Card>
-
+        {pendingDraft ? (
+          <Card>
+            <Txt v="sm">저장된 팀이 바뀌었어요. 이 기기에 남아 있는 편성을 불러올까요?</Txt>
+            <Btn
+              onPress={() => {
+                applyDraft(pendingDraft.value);
+                setPendingDraft(null);
+              }}
+            >
+              이 기기 편성 불러오기
+            </Btn>
+            <Btn
+              kind="ghost"
+              onPress={() => {
+                if (draftKey) writeTeamDraft(draftKey, null);
+                setPendingDraft(null);
+              }}
+            >
+              저장된 팀 유지
+            </Btn>
+          </Card>
+        ) : restored ? (
+          <Card>
+            <Txt v="sm">저장 전 편성을 복원했어요. 편성 저장을 누르면 팀에 반영돼요.</Txt>
+            <Btn
+              sm
+              kind="ghost"
+              onPress={() => {
+                applyTeam(team);
+                setRestored(false);
+                if (draftKey) writeTeamDraft(draftKey, null);
+              }}
+            >
+              저장된 팀으로 되돌리기
+            </Btn>
+          </Card>
+        ) : null}
         {editable || team ? (
           <>
-            <Card gap={10}>
-              <Seg label="포메이션">
-                {FORMATION_IDS.map((f) => (
-                  <SegBtn
-                    key={f}
-                    center
-                    selected={formation === f}
-                    disabled={!editable}
-                    testID={`formation-${f}`}
-                    label={`포메이션 ${f}`}
-                    onPress={() => setFormation(f)}
-                  >
-                    <Txt
-                      style={{
-                        fontFamily: DISPLAY[700],
-                        fontSize: rem(1.0625),
-                        lineHeight: rem(1.0625) * 1.3,
-                      }}
-                    >
-                      {f}
-                    </Txt>
-                  </SegBtn>
-                ))}
-              </Seg>
-              <TeamLines lines={lines} />
+            <Card gap={8}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Txt v="h2">그라운드</Txt>
+                <Txt v="sm" tone="muted">{`선발 ${filled} · 유스 ${LINEUP_SIZE - filled}`}</Txt>
+              </View>
               {editable ? (
-                <Txt tone="muted" v="sm">
-                  포메이션을 바꾸면 공격·중원·수비 무게가 옮겨 가요. 선수는 자리마다 그 자리
-                  능력치로 뛰어요.
+                <SortChips
+                  label="포메이션 기본 배치"
+                  value={layout ? 'custom' : formation}
+                  items={FORMATION_IDS.map((key) => ({ key, label: key }))}
+                  onPick={(key) => {
+                    setFormation(key as FormationId);
+                    setLayout(null);
+                  }}
+                  testIDPrefix="formation"
+                />
+              ) : null}
+              <TeamLines lines={lines} />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {editable ? (
+                  <Btn
+                    sm
+                    testID="team-auto"
+                    disabled={!players.length}
+                    style={{ flex: 1 }}
+                    onPress={() => setSlots(autoFillSlots(slotCodes, players))}
+                  >
+                    자동 배치
+                  </Btn>
+                ) : null}
+                <Btn
+                  sm
+                  testID="team-share"
+                  style={{ flex: 1 }}
+                  onPress={() =>
+                    setShare({
+                      name: name || team?.name || '나의 팀',
+                      manager,
+                      logo,
+                      formation,
+                      layout: positions,
+                      cells,
+                      ovr,
+                      lines,
+                      draft: dirty,
+                      season: seasonName,
+                    })
+                  }
+                >
+                  이미지 공유
+                </Btn>
+              </View>
+              {editable ? (
+                <Txt v="xs" tone="muted">
+                  그라운드 카드를 길게 눌러 자유롭게 옮길 수 있어요.
                 </Txt>
               ) : null}
             </Card>
-            <TeamPitch
+            <TeamLineup
               formation={formation}
+              layout={positions}
+              slots={slots}
               cells={cells}
-              onpick={editable ? (i) => setPicking(i) : undefined}
+              players={players}
+              editable={editable}
+              nameOf={nameOf}
+              selected={selected}
+              select={setSelected}
+              dragging={setDragging}
+              jumpRef={jump}
+              change={(nextSlots, nextLayout) => {
+                setSlots(nextSlots);
+                setLayout(nextLayout);
+              }}
             />
           </>
-        ) : null}
-
-        {editable ? (
-          <Card gap={10}>
-            {players.length === 0 ? (
-              <Txt tone="muted">{`${seasonName}에 뛰고 은퇴한 선수가 아직 없어요. 이번 시즌에 커리어를 끝까지 뛰면 팀에 넣을 수 있어요.`}</Txt>
-            ) : (
-              <Txt
-                tone="muted"
-                v="sm"
-              >{`선수 ${filled}명 · 유스 ${LINEUP_SIZE - filled}명. 자리를 누르면 선수를 바꿀 수 있어요.`}</Txt>
-            )}
-            <Grid2>
-              <Btn
-                block
-                onPress={() => setSlots(autoFillSlots(slotCodes, players))}
-                disabled={players.length === 0}
-                testID="team-auto"
-              >
-                자동 배치
-              </Btn>
-              <Btn
-                block
-                kind="primary"
-                onPress={() => void save()}
-                disabled={saving || !nameOk || !dirty}
-                testID="team-save"
-              >
-                {team ? (dirty ? '편성 저장' : '저장됨') : '팀 만들기'}
-              </Btn>
-            </Grid2>
-          </Card>
         ) : null}
       </>
     );
@@ -514,6 +626,9 @@ export default function Team() {
         challenge={(o) => void challenge(o)}
         hint={matchHint}
         toTeam={editable ? () => switchView('team') : undefined}
+        saveAndFind={editable && dirty && team ? () => void saveAndFind() : undefined}
+        saving={saving}
+        canSave={nameOk}
       />
     );
   } else if (view === 'result' && result) {
@@ -533,7 +648,8 @@ export default function Team() {
         team={team}
         eventName={eventName}
         matchesLeft={matchesLeft}
-        toTeam={() => show('team')}
+        toTeam={() => show(resultOrigin === 'history' ? 'history' : 'team')}
+        backLabel={resultOrigin === 'history' ? '기록으로 돌아가기' : '편성으로'}
         replay={() => setLive(true)}
         again={() => open('opponents')}
       />
@@ -545,6 +661,7 @@ export default function Team() {
         status={histStatus}
         reload={() => void loadHistory()}
         open={(m) => {
+          setResultOrigin('history');
           setResult(m);
           setLive(false);
           show('result');
@@ -558,9 +675,48 @@ export default function Team() {
       <BarBelow.Provider value={!needLogin}>
         <View style={{ flex: 1, backgroundColor: c.bg }}>
           <Screen
+            scrollEnabled={!dragging}
             footer={
               needLogin ? (
                 <BackBar fallback={() => (appState.screen = 'owner')} testID="team-back" />
+              ) : view === 'team' && editable && (selected || dirty) ? (
+                <View
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    gap: 6,
+                    borderTopWidth: 1,
+                    borderColor: c.line,
+                    backgroundColor: c.surface,
+                  }}
+                >
+                  {selected ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Txt v="sm" numberOfLines={1} style={{ flex: 1 }}>
+                        {players.find((p) => p.careerId === selected)
+                          ? nameOf(players.find((p) => p.careerId === selected)!)
+                          : '선수 선택'}
+                      </Txt>
+                      <Btn sm onPress={() => jump.current?.()}>
+                        그라운드로
+                      </Btn>
+                      <Btn sm kind="ghost" onPress={() => setSelected(null)}>
+                        취소
+                      </Btn>
+                    </View>
+                  ) : null}
+                  {dirty ? (
+                    <Btn
+                      kind="primary"
+                      block
+                      testID="team-save"
+                      disabled={saving || !nameOk || !!pendingDraft}
+                      onPress={() => void save()}
+                    >
+                      {saving ? '저장 중…' : team ? '편성 저장' : '팀 만들기'}
+                    </Btn>
+                  ) : null}
+                </View>
               ) : undefined
             }
           >
@@ -572,17 +728,38 @@ export default function Team() {
           {needLogin ? null : <TabBar label="내 팀 메뉴" items={navItems} sub="team" />}
         </View>
       </BarBelow.Provider>
-      <TeamPicker
-        slot={picking === null ? null : (slotCodes[picking] ?? null)}
-        slotCodes={slotCodes}
-        current={picking === null ? null : (slots[picking] ?? null)}
-        sort={pickSort}
-        setSort={setPickSort}
-        candidates={candidates}
-        nameOf={nameOf}
-        onAssign={assign}
-        onClose={() => setPicking(null)}
-      />
+      {menu ? (
+        <TeamDialog title="내 팀 설정" close={() => setMenu(false)}>
+          <Btn
+            testID="team-logo-edit"
+            onPress={() => {
+              setMenu(false);
+              setEditingLogo(true);
+            }}
+          >
+            로고 설정
+          </Btn>
+          <Btn
+            testID="team-rename"
+            onPress={() => {
+              setMenu(false);
+              setRenaming(true);
+              scrollTo(0);
+            }}
+          >
+            이름 바꾸기
+          </Btn>
+        </TeamDialog>
+      ) : null}
+      {editingLogo ? (
+        <TeamLogoEditor
+          name={name}
+          logo={logo}
+          apply={setLogo}
+          close={() => setEditingLogo(false)}
+        />
+      ) : null}
+      {share ? <TeamShare data={share} close={() => setShare(null)} /> : null}
     </>
   );
 }

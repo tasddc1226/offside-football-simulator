@@ -351,6 +351,20 @@
       "when": 1791009183133,
       "tag": "0049_absent_maria_hill",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "6",
+      "when": 1791012312943,
+      "tag": "0050_team_layout",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "6",
+      "when": 1791012360537,
+      "tag": "0051_team_logo",
+      "breakpoints": true
     }
   ]
 }

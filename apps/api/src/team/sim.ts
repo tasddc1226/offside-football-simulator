@@ -11,6 +11,7 @@ import {
   teamOvr,
   type DetailPos,
   type FormationId,
+  type TeamLayout,
   type LineStrength,
   type PeakProfile,
   type PosGroup,
@@ -50,8 +51,9 @@ export function buildLineup(
   formation: FormationId,
   slotIds: readonly (string | null)[],
   eligible: ReadonlyMap<string, LineupCareer>,
+  layout?: TeamLayout | null,
 ): LineupSlot[] {
-  return FORMATIONS[formation].map((slot, i) => {
+  return (layout?.map((p) => p.slot) ?? FORMATIONS[formation]).map((slot, i) => {
     const id = slotIds[i] ?? null;
     const c = id ? eligible.get(id) : undefined;
     if (!c) {

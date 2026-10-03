@@ -20,6 +20,9 @@ export function TeamOpponents({
   challenge,
   hint,
   toTeam,
+  saveAndFind,
+  saving = false,
+  canSave = true,
 }: {
   ovr: number;
   matchesLeft: number;
@@ -31,7 +34,10 @@ export function TeamOpponents({
   challenge: (o: TeamOpponent) => void;
   hint: string | null;
   /** 편성 탭으로(지금 시즌이면). */
-  toTeam?: () => void;
+  toTeam?: (() => void) | undefined;
+  saveAndFind?: (() => void) | undefined;
+  saving?: boolean;
+  canSave?: boolean;
 }) {
   const c = useColors();
   return (
@@ -57,6 +63,16 @@ export function TeamOpponents({
           <Txt tone="muted" testID="match-hint">
             {hint}
           </Txt>
+          {saveAndFind ? (
+            <Btn
+              kind="primary"
+              disabled={saving || !canSave}
+              onPress={saveAndFind}
+              testID="team-save-find"
+            >
+              {saving ? '저장 중…' : '변경 저장 후 상대 보기'}
+            </Btn>
+          ) : null}
           {toTeam ? (
             <Btn sm style={{ alignSelf: 'flex-start' }} onPress={toTeam}>
               편성으로
