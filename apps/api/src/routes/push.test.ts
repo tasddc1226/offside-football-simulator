@@ -52,6 +52,33 @@ afterEach(async () => {
   await ctx.dispose();
 });
 describe('app push registration and admin-only test', () => {
+  it('does not remove a newer registration after an old in-flight token is rejected', async () => {
+    const a = await identity();
+    const b = await identity();
+    await linkGoogle(ctx, a.session.profileId, { email: 'admin@example.com' });
+    ctx.env.ADMIN_EMAILS = 'admin@example.com';
+    ctx.env.PUSH_TEST_ENABLED = '1';
+    await call(a.token, 'PUT', '/v1/push/device', INPUT);
+    let finish!: (response: Response) => void;
+    const send = vi.fn<typeof fetch>().mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    vi.stubGlobal('fetch', send);
+    const pending = call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledOnce());
+    await call(b.token, 'PUT', '/v1/push/device', {
+      ...INPUT,
+      token: 'ExpoPushToken[new_session_token]',
+    });
+    finish(Response.json({ data: { status: 'error', details: { error: 'DeviceNotRegistered' } } }));
+    expect((await pending).status).toBe(503);
+    expect(await ownPushDevice(ctx.env.DB, b.session, INSTALL, new Date().toISOString())).toEqual({
+      token: 'ExpoPushToken[new_session_token]',
+    });
+  });
   it('atomically removes a deleted profile’s tokens while preserving other profiles', async () => {
     const a = await identity();
     const b = await identity();

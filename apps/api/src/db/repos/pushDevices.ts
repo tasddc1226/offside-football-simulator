@@ -35,7 +35,20 @@ export async function registerPushDevice(
 }
 
 /** 설치 식별자는 보안 저장소에만 있다. 새 익명 세션에서도 이 기기의 이전 등록을 철회할 수 있다. */
-export async function unregisterPushDevice(db: D1Database, installationId: string) {
+export async function unregisterPushDevice(
+  db: D1Database,
+  installationId: string,
+  expected?: { token: string; sessionId: string },
+) {
+  if (expected) {
+    await db
+      .prepare(
+        'DELETE FROM push_devices WHERE installation_hash = ? AND token = ? AND session_id = ?',
+      )
+      .bind(await sha256Hex(installationId), expected.token, expected.sessionId)
+      .run();
+    return;
+  }
   await db
     .prepare('DELETE FROM push_devices WHERE installation_hash = ?')
     .bind(await sha256Hex(installationId))

@@ -7,11 +7,15 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": { "simulator": true }
+      "ios": {
+        "simulator": true
+      }
     },
     "preview": {
       "distribution": "internal",
-      "android": { "buildType": "apk" }
+      "android": {
+        "buildType": "apk"
+      }
     },
     "push-test": {
       "extends": "preview",
@@ -28,12 +32,23 @@
         "EXPO_PUBLIC_API_URL": "https://api.offside-lab.com",
         "EXPO_PUBLIC_WEB_ORIGIN": "https://offside-lab.com"
       }
+    },
+    "push-test-simulator": {
+      "extends": "push-test",
+      "ios": {
+        "simulator": true
+      }
     }
   },
   "submit": {
     "production": {
-      "ios": { "ascAppId": "6817463687" },
-      "android": { "track": "alpha", "releaseStatus": "draft" }
+      "ios": {
+        "ascAppId": "6817463687"
+      },
+      "android": {
+        "track": "alpha",
+        "releaseStatus": "draft"
+      }
     }
   }
 }

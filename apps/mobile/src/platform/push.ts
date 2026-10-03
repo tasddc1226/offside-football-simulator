@@ -36,19 +36,23 @@ async function installationId() {
   return identity;
 }
 let expoToken: { token: string; until: number } | undefined;
+let tokenRevision = 0;
 async function register() {
   const appVersion = Constants.expoConfig?.version;
   if (!appVersion || !/^\d+\.\d+\.\d+$/.test(appVersion)) throw new Error('No app version');
   if (!(await ensureSession())) throw new Error('No app session');
   if (!expoToken || expoToken.until < Date.now()) {
+    const revision = tokenRevision;
     const projectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
     if (!projectId) throw new Error('No EAS project');
     const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-    expoToken = { token, until: Date.now() + 3_600_000 };
+    expoToken = { token, until: revision === tokenRevision ? Date.now() + 3_600_000 : 0 };
   }
+  const deviceToken = expoToken.token;
+  const revision = tokenRevision;
   const fingerprint = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
-    `${expoToken.token}|${sessionToken()}|${appVersion}`,
+    `${deviceToken}|${sessionToken()}|${appVersion}`,
   );
   const saved = kv.getString(REGISTERED);
   if (saved === fingerprint && Date.now() - (kv.getNumber(`${REGISTERED}_at`) ?? 0) < 86400_000)
@@ -57,14 +61,16 @@ async function register() {
     method: 'PUT',
     body: JSON.stringify({
       installationId: await installationId(),
-      token: expoToken.token,
+      token: deviceToken,
       platform: Platform.OS,
       appVersion,
     }),
   });
   if (!r.ok) throw new Error('Could not register device');
-  kv.set(REGISTERED, fingerprint);
-  kv.set(`${REGISTERED}_at`, Date.now());
+  if (revision === tokenRevision) {
+    kv.set(REGISTERED, fingerprint);
+    kv.set(`${REGISTERED}_at`, Date.now());
+  }
 }
 export const pushRegistration = createPushRegistration(pushState, {
   wanted: () => kv.getBoolean(WANTED) ?? false,
@@ -134,6 +140,7 @@ export function startPush() {
     void Notifications.clearLastNotificationResponseAsync().catch(() => {});
   });
   Notifications.addPushTokenListener(() => {
+    tokenRevision++;
     expoToken = undefined;
     kv.remove(REGISTERED);
     void pushRegistration.restore();

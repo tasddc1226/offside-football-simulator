@@ -78,7 +78,10 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
         e instanceof AppError &&
         (e.details as { reason?: string } | undefined)?.reason === 'PUSH_DEVICE_NOT_REGISTERED'
       )
-        await unregisterPushDevice(c.env.DB, installationId);
+        await unregisterPushDevice(c.env.DB, installationId, {
+          token: device.token,
+          sessionId: session.id,
+        });
       throw e;
     }
     return ok(c, PushTestResultSchema, { accepted: true }, 200, NO_STORE);
