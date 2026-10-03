@@ -101,6 +101,8 @@ const HOME_REQUESTS = [
   'GET /v1/hof?limit=3',
   'GET /v1/live',
   'GET /v1/ticker',
+  // 미읽음 알림용 연결을 처음 한 번 열고, 화면을 옮길 때는 그대로 재사용한다.
+  'POST /v1/chat/ticket',
 ];
 
 async function continueGame(page: Page) {
