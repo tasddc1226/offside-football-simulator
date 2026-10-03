@@ -20,7 +20,7 @@ export const EDGE = {
     `/v1/hof?limit=${limit}&page=${page}&sort=${sort}${season !== undefined ? `&season=${season}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${pos ? `&pos=${pos}` : ''}`,
   /** T-10-092 라이브 랭킹(팀 랭킹). TTL로만 새로 읽는다(원작처럼 5분마다 갱신). */
   teamRank: (season: number, sort: string, page: number) =>
-    `/v1/teams?season=${season}&sort=${sort}&page=${page}`,
+    `/v1/teams?season=${season}&sort=${sort}&page=${page}&form=5`,
   /** T-11-028 업적 랭킹(기록실). TTL로만 새로 읽는다. */
   achRank: (season: number, page: number) =>
     `/v1/achievements/ranking?season=${season}&page=${page}`,

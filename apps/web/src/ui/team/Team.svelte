@@ -165,7 +165,7 @@
     show('team');
     void load(id);
   }
-  /** T-11-028 기록실 업적 랭킹. */
+  /** T-11-028 기록실 구단주 랭킹. */
   function openAchRanking() {
     appState.hof = { ...hofStart(), tab: 'ach' };
     go('hof');

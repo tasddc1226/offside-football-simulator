@@ -1,4 +1,4 @@
-import type { TeamRankSort } from '@offside/contracts';
+import type { TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import {
   DETAIL_POSITIONS,
@@ -276,6 +276,37 @@ export async function listTeamRanking(db: Db, season: number, sort: TeamRankSort
       .where(rankedIn(season)),
   ]);
   return { rows: rows.map((r) => r.team), total: Number(total?.n ?? 0) };
+}
+
+/** 한 페이지의 최근 전적을 한 쿼리로 읽는다. 인덱스로 팀마다 홈·원정 각 5개만 읽고 합친다. */
+export async function listTeamRecentForm(db: Db, teamIds: readonly string[]) {
+  const forms = new Map<string, TeamRankItem['recentForm']>();
+  if (teamIds.length === 0) return forms;
+  const matches = await db.all<{ teamId: string; result: TeamRankItem['recentForm'][number] }>(sql`
+    WITH requested AS (SELECT value AS teamId FROM json_each(${JSON.stringify(teamIds)}))
+    SELECT teamId, result FROM (
+      SELECT t.teamId, m.id, m.created_at AS createdAt,
+        CASE WHEN m.home_goals > m.away_goals THEN 'W' WHEN m.home_goals = m.away_goals THEN 'D' ELSE 'L' END AS result
+      FROM requested t JOIN team_matches m ON m.id IN (
+        SELECT id FROM team_matches WHERE home_team_id = t.teamId
+        ORDER BY created_at DESC, id DESC LIMIT 5
+      )
+      UNION ALL
+      SELECT t.teamId, m.id, m.created_at AS createdAt,
+        CASE WHEN m.away_goals > m.home_goals THEN 'W' WHEN m.away_goals = m.home_goals THEN 'D' ELSE 'L' END AS result
+      FROM requested t JOIN team_matches m ON m.id IN (
+        SELECT id FROM team_matches WHERE away_team_id = t.teamId
+        ORDER BY created_at DESC, id DESC LIMIT 5
+      )
+    )
+    ORDER BY createdAt DESC, id DESC
+  `);
+  for (const match of matches) {
+    const form = forms.get(match.teamId) ?? [];
+    if (form.length < 5) form.push(match.result);
+    forms.set(match.teamId, form);
+  }
+  return forms;
 }
 
 /** 레이팅 순위(랭킹과 같은 순서 — 레이팅 · OVR · 먼저 만든 팀). 랭킹에 오르지 않은 팀(선수 0명)이면 null. */

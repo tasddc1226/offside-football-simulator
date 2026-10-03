@@ -278,6 +278,11 @@ export const TeamRankItemSchema = z.strictObject({
   record: TeamRecordSchema,
   likes: count,
   createdAt: IsoUtcSchema,
+  /** 최근 경기부터, 홈·원정을 합친 최대 5경기. 이전 API 응답에는 없을 수 있다. */
+  recentForm: z
+    .array(z.enum(['W', 'D', 'L']))
+    .max(5)
+    .default([]),
 });
 export type TeamRankItem = z.infer<typeof TeamRankItemSchema>;
 
