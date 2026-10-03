@@ -111,7 +111,7 @@
           <div><dt>오늘 경기</dt><dd>{card.left}/{card.perDay}</dd></div>
         </dl>
         <div class="owner-actions">
-          <button class="btn" data-act="team" onclick={() => openTeam()}>내 팀 · 업적</button>
+          <button class="btn" data-act="team" onclick={() => openTeam()}>내 팀</button>
           <button class="btn btn-accent" data-act="owner-play" disabled={!!card.playHint} onclick={() => openTeam('opponents')}>경기하기</button>
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
@@ -120,7 +120,7 @@
           {card ? ownerTeamEmptyText(card) : cardFailed ? '시즌마다 은퇴한 선수로 팀을 꾸려 겨루고, 라이브 랭킹과 구단 업적을 채워요.' : '불러오는 중…'}
         </p>
         <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={() => openTeam()}>
-          {card && card.players > 0 ? '팀 만들기' : '내 팀 · 시즌 업적'}
+          {card && card.players > 0 ? '팀 만들기' : '내 팀'}
         </button>
       {/if}
     </section>

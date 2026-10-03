@@ -240,7 +240,7 @@ export default function Owner() {
               />
               <Grid2>
                 <Btn block testID="team" onPress={() => openTeam()}>
-                  내 팀 · 업적
+                  내 팀
                 </Btn>
                 <Btn
                   kind="accent"

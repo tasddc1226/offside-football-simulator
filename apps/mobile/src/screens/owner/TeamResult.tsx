@@ -16,6 +16,7 @@ export function TeamResult({
   toTeam,
   replay,
   again,
+  backLabel = '내 팀',
 }: {
   m: TeamMatch;
   team: OwnerTeam | null;
@@ -24,6 +25,7 @@ export function TeamResult({
   toTeam: () => void;
   replay: () => void;
   again: () => void;
+  backLabel?: string;
 }) {
   const gain = m[m.mine].ratingChange;
   const side = (s: TeamMatch['home'], away: boolean, mine: boolean) => (
@@ -108,7 +110,7 @@ export function TeamResult({
       ) : null}
       <Grid2>
         <Btn block onPress={toTeam} testID="team-result-team">
-          내 팀
+          {backLabel}
         </Btn>
         <Btn block onPress={replay} testID="team-replay">
           중계 다시 보기

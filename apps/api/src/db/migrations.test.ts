@@ -219,6 +219,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'name',
     'formation',
     'slots_json',
+    'layout_json',
+    'logo_json',
     'filled',
     'ovr',
     'wins',

@@ -24,6 +24,7 @@ export function Screen({
   style,
   refreshControl,
   fixed,
+  scrollEnabled = true,
 }: {
   children: ReactNode;
   /** 화면 아래 고정 버튼 줄(ActionBar). */
@@ -33,6 +34,7 @@ export function Screen({
   refreshControl?: React.ComponentProps<typeof ScrollView>['refreshControl'];
   /** 화면을 스크롤하지 않고 한 화면에 맞춘다(채팅처럼 안쪽 목록만 스크롤할 때). 키보드가 오르면 그만큼 줄인다. */
   fixed?: boolean;
+  scrollEnabled?: boolean;
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -58,6 +60,7 @@ export function Screen({
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView
         ref={keyboardScroll.ref}
+        scrollEnabled={scrollEnabled}
         onScroll={(e) => noteScrollY(e.nativeEvent.contentOffset.y)}
         onLayout={(e) => {
           noteViewH(e.nativeEvent.layout.height);
