@@ -6,7 +6,7 @@ import {
   type Career,
   type Ledger,
   type Params,
-} from './model.js';
+} from './analytics-model.js';
 
 type IO = {
   allowed: () => boolean;
@@ -18,12 +18,13 @@ type IO = {
 /** Best-effort local dedupe, re-read on every action for other tabs. No retries or game-save writes. */
 export function createTracker(io: IO, restoredCareerId: string | null = null) {
   let fallback = emptyLedger();
+  let storageFailed = false;
   const run = (s: Career | null, fn: (ledger: Ledger) => void) => {
     try {
       if (!io.allowed()) return;
       let ledger: Ledger;
       try {
-        ledger = io.read();
+        ledger = storageFailed ? fallback : io.read();
       } catch {
         ledger = fallback;
       }
@@ -38,8 +39,9 @@ export function createTracker(io: IO, restoredCareerId: string | null = null) {
     fallback = l;
     try {
       io.write(l);
+      storageFailed = false;
     } catch {
-      /* quota/private mode */
+      storageFailed = true; // Keep in-memory dedupe when reads succeed but writes fail.
     }
   };
   const once = (

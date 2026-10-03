@@ -7,8 +7,8 @@ import {
   safeReferrer,
   type Career,
   type Params,
-} from './model.js';
-import { createTracker } from './tracker.js';
+} from './analytics-model.js';
+import { createTracker } from './analytics-tracker.js';
 const career = (cid = 'local-only-uuid'): Career => ({
   cid,
   pos: 'FW',
@@ -289,4 +289,17 @@ describe('priority-one gameplay measurement', () => {
     t.firstSeason(s);
     expect(attempts).toBe(1);
   });
+});
+
+it('retains in-memory dedupe if storage is readable but ledger writes fail', () => {
+  const h = setup();
+  const t = createTracker({
+    ...h.io,
+    write: () => {
+      throw new Error('quota');
+    },
+  });
+  t.start(career(), null);
+  t.start(career(), null);
+  expect(h.events.map((e) => e.name)).toEqual(['career_start']);
 });

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { enabled, getConsent, onConsent, setConsent } from '../analytics/browser.js';
-  import type { Consent } from '../analytics/model.js';
+  import type { Consent } from '@offside/app-core/analytics-model';
   const { settings = false }: { settings?: boolean } = $props();
   let available = $state(false);
   let choice = $state<Consent>('unknown');

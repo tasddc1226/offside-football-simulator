@@ -5,5 +5,8 @@ packages:
 allowBuilds:
   esbuild: true
   workerd: true
+  # Browser Firebase transitive packages: native analytics does not need their install scripts.
+  '@firebase/util': false
+  protobufjs: false
 minimumReleaseAgeExclude:
   - '@sveltejs/vite-plugin-svelte@7.3.1'
