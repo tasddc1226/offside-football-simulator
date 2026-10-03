@@ -30,11 +30,11 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
   ],
   "대표팀": {
     "accepted": {
-      "hash": "007024addf58bcb6",
+      "hash": "757061b650b0bd63",
       "n": 176,
     },
     "options": {
-      "hash": "3b52686f1d3e8951",
+      "hash": "083b00afa8411b16",
       "n": 176,
     },
   },
@@ -50,11 +50,11 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
   },
   "원본": {
     "accepted": {
-      "hash": "bf21cd682cb8c050",
+      "hash": "8ae35b90f8fceebd",
       "n": 176,
     },
     "options": {
-      "hash": "22dc3bb74abdc97e",
+      "hash": "29b05ecc5b098420",
       "n": 176,
     },
   },

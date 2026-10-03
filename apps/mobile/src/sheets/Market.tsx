@@ -29,7 +29,7 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
           <Press
             key={i}
             testID={`opt-${i}`}
-            accessibilityLabel={`${o.name}, ${o.lg}${o.salary !== null ? `, 연봉 ${o.salary}` : ''}${o.reason ? `, ${o.reason}` : ''}`}
+            accessibilityLabel={`${o.name}, ${o.lg}${o.salary !== null ? `, 연봉 ${o.salary}` : ''}${o.sub ? `, ${o.sub}` : ''}${o.reason ? `, ${o.reason}` : ''}`}
             onPress={() => {
               buzz();
               pickOption(i);

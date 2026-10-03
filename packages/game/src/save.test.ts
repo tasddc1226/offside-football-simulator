@@ -7,6 +7,7 @@ import './event-registry.js';
 import { createRng, rnd } from './rng.js';
 import { loadSave, migrateSave } from './save.js';
 import type { GameState } from './types.js';
+import { acceptOption } from './season.js';
 
 // T-10-046: 저장본 마이그레이션. 지금 형식의 저장본은 그대로 두고, 옛 형식은 빠진 필드를 채운다.
 // 저장 형식을 바꾸면 여기에 그 이전 형식의 사례를 더한다.
@@ -22,6 +23,34 @@ function legacy(edit: (g: Record<string, unknown>) => void = () => {}): GameStat
 }
 
 describe('migrateSave (T-10-046)', () => {
+  it('T-11-054 옛 만료 제안은 총기간 그대로, 조기 제안은 추가기간을 포함해 복원한다', () => {
+    for (const early of [false, true]) {
+      const G = current();
+      G.contract = { years: early ? 1 : 0, salary: 1000 };
+      const option = {
+        kind: 'renew' as const,
+        name: '재계약',
+        years: early ? 3 : 2,
+        salary: 2000,
+        desc: '',
+        ...(early ? { extension: { years: 2, clubId: G.club.id, year: G.year } } : {}),
+      };
+      G.pending = {
+        type: 'market',
+        res: null,
+        m: { options: [option], note: '', canRetire: false },
+      };
+      const saved = JSON.parse(JSON.stringify(G));
+      const restored = loadSave(saved)!.G;
+      expect(restored.pending).toEqual(G.pending);
+      const p = restored.pending!;
+      if (p.type !== 'market') throw new Error('market');
+      const r = p.m!.options[0]!;
+      if (!early) expect(r).not.toHaveProperty('extension');
+      acceptOption(restored, r);
+      expect(restored.contract).toEqual({ years: early ? 3 : 2, salary: 2000 });
+    }
+  });
   it('지금 형식의 저장본은 바꾸지 않고, 저장된 시드로 RNG를 되돌린다', () => {
     expect(current().v).toBe(SAVE_VERSION);
     const G = current();
