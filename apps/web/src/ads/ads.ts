@@ -16,7 +16,6 @@ const slots: Partial<Record<AdPlace, string>> = (() => {
 export const preview = env.DEV && env.VITE_ADSENSE_PREVIEW === '1';
 
 export function enabled(): boolean {
-  if (typeof window === 'undefined') return false;
   return /^ca-pub-\d{16}$/.test(client) && hostname !== '' && window.location.hostname === hostname;
 }
 /** 광고 단위 ID. AdSense에서 위치별로 만든 단위를 VITE_ADSENSE_SLOTS({"records-bottom":"123…"})로 넘긴다. */
@@ -40,13 +39,10 @@ function load(): Promise<void> {
   return loading;
 }
 
+// 위치별 마지막 요청 시각. 안 채워진 위치는 Infinity로 둬 이 세션에서 다시 요청하지 않는다.
 const lastShown = new Map<AdPlace, number>();
-const unfilled = new Set<AdPlace>();
-export const sessionOf = (place: AdPlace) => ({
-  lastShown: lastShown.get(place),
-  unfilled: unfilled.has(place),
-});
-export const markUnfilled = (place: AdPlace) => unfilled.add(place);
+export const lastShownOf = (place: AdPlace) => lastShown.get(place);
+export const markUnfilled = (place: AdPlace) => lastShown.set(place, Infinity);
 
 /** 칸 하나를 채워 달라고 요청한다. 맞춤 광고 동의는 아직 받지 않아(기획 7절 2) 비개인화 광고만 요청한다. */
 export async function request(place: AdPlace, ins: HTMLElement): Promise<boolean> {
@@ -56,11 +52,11 @@ export async function request(place: AdPlace, ins: HTMLElement): Promise<boolean
     w.adsbygoogle ??= [];
     w.adsbygoogle.requestNonPersonalizedAds = 1;
     await load();
-    if (!ins.isConnected) return false;
+    // 그새 화면을 떠났으면 요청만 건너뛴다(안 채워짐으로 치지 않는다).
+    if (!ins.isConnected) return true;
     w.adsbygoogle.push({});
     return true;
   } catch {
-    markUnfilled(place);
     return false;
   }
 }

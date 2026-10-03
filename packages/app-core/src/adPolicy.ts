@@ -3,36 +3,18 @@
 
 export type AdPlace = 'records-bottom' | 'board-bottom' | 'legend-bottom';
 
-export interface AdPlaceRule {
-  /** 켜는 순서(기획 5절). 지금 켠 단계(AD_STAGE) 이하만 보인다. */
-  stage: number;
-  /** 위치별 끄기 스위치 — 지표가 나빠지면 여기서 끈다(기획 6절). */
-  on: boolean;
-}
-
-export const AD_PLACES: Record<AdPlace, AdPlaceRule> = {
-  'records-bottom': { stage: 1, on: true },
-  'board-bottom': { stage: 1, on: true },
-  'legend-bottom': { stage: 1, on: true },
+/** 위치별 켜기 스위치 — 지표가 나빠지면 여기서 끈다(기획 6절). 다음 단계 위치는 여기에 더한다(5절). */
+export const AD_PLACES: Record<AdPlace, boolean> = {
+  'records-bottom': true,
+  'board-bottom': true,
+  'legend-bottom': true,
 };
 
-/** 지금 켠 단계. */
-export const AD_STAGE = 1;
 /** 같은 위치는 세션 안에서 이 간격 안에 다시 요청하지 않는다. */
 export const AD_REPEAT_MS = 5 * 60_000;
 
-export interface AdContext {
-  /** 업무 모드(스프레드시트 위장)면 칸을 그리지 않는다. */
-  sheet: boolean;
-  now: number;
-  /** 이 세션에서 그 위치를 마지막으로 요청한 시각. */
-  lastShown?: number | undefined;
-  /** 이 세션에서 안 채워진 위치는 다시 요청하지 않는다. */
-  unfilled?: boolean | undefined;
-}
-
-export function shouldShow(place: AdPlace, ctx: AdContext): boolean {
-  const rule = AD_PLACES[place];
-  if (!rule.on || rule.stage > AD_STAGE || ctx.sheet || ctx.unfilled) return false;
-  return ctx.lastShown === undefined || ctx.now - ctx.lastShown >= AD_REPEAT_MS;
+/** lastShown: 이 세션에서 그 위치를 마지막으로 요청한 시각. 안 채워진 위치는 Infinity로 둬 다시 요청하지 않는다. */
+export function shouldShow(place: AdPlace, now: number, lastShown?: number): boolean {
+  if (!AD_PLACES[place]) return false;
+  return lastShown === undefined || now - lastShown >= AD_REPEAT_MS;
 }

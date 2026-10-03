@@ -43,13 +43,12 @@
       <RetiredWall />
     {:else if appState.hof.tab === 'teams'}
       <TeamRanking />
+      <AdSlot place="records-bottom" />
     {:else if appState.hof.tab === 'ach'}
       <AchievementRanking />
     {:else}
       <HallOfFame full />
-    {/if}
-    {#if appState.hof.tab === 'legends' || appState.hof.tab === 'teams'}
-      {#key appState.hof.tab}<AdSlot place="records-bottom" />{/key}
+      <AdSlot place="records-bottom" />
     {/if}
   </div>
 </div>
