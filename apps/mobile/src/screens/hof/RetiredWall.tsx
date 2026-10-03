@@ -182,7 +182,8 @@ function Tiles({
 }) {
   const [w, setW] = useState(0);
   const cols = Math.max(1, Math.floor((w + GAP) / (MIN_TILE + GAP)));
-  const tile = (w - GAP * (cols - 1)) / cols;
+  // Android의 소수점 너비 반올림으로 마지막 열이 다음 줄로 밀리지 않게 한다.
+  const tile = Math.floor((w - GAP * (cols - 1)) / cols);
   return (
     <View
       onLayout={(e) => setW(e.nativeEvent.layout.width)}
