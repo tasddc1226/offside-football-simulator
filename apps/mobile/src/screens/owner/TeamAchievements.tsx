@@ -1,4 +1,4 @@
-// 시즌 업적 탭(웹 team/Team.svelte 의 [data-club-achievements]) — 맨 위 시즌 등급 · 점수 · 업적 랭킹 · 다음 등급 막대, 다음 목표,
+// 시즌 업적 탭(웹 team/Team.svelte 의 [data-club-achievements]) — 맨 위 시즌 등급 · 점수 · 구단주 랭킹 · 다음 등급 막대, 다음 목표,
 // 분류(선수·팀·구단주·감독) 탭, 고른 분류의 단계별 묶음은 접었다 펴고(다 채우지 못한 첫 단계만 펼쳐 둔다), 감독 분류는
 // 잠금 카드로 예고한다. T-11-028 업적마다 점수가 있고 점수 합이 등급이 된다.
 import { useEffect, useState } from 'react';
@@ -254,7 +254,7 @@ export function TeamAchievements({
     ? (sec.groups.find((g) => g.items.some((i) => newIds.has(i.id)))?.id ??
       achOpenGroup(sec.groups))
     : null;
-  /** 기록실 업적 랭킹 탭을 연다. */
+  /** 기록실 구단주 랭킹 탭을 연다. */
   function openAchRanking() {
     appState.hof = { ...hofStart(), tab: 'ach' };
     go('hof');
@@ -311,7 +311,7 @@ export function TeamAchievements({
                   scale={0.97}
                   testID="ach-ranking"
                   onPress={openAchRanking}
-                  accessibilityLabel={`업적 랭킹 ${achRankText(ach.rank, ach.ranked)}`}
+                  accessibilityLabel={`구단주 랭킹 ${achRankText(ach.rank, ach.ranked)}`}
                   style={{
                     maxWidth: '50%',
                     minHeight: 44,
@@ -327,7 +327,7 @@ export function TeamAchievements({
                   }}
                 >
                   <Txt tone="muted" style={{ fontSize: rem(0.6875), fontWeight: '600' }}>
-                    업적 랭킹
+                    구단주 랭킹
                   </Txt>
                   <Txt style={{ fontSize: rem(0.8125), fontWeight: '700', textAlign: 'right' }}>
                     {achRankText(ach.rank, ach.ranked)}

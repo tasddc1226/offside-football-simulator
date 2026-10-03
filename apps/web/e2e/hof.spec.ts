@@ -249,7 +249,7 @@ test('구단주 내 선수: 계정에 연결되지 않았으면 이 기기 기�
     '명예의 전당',
     '영구결번',
     '팀 랭킹',
-    '업적 랭킹',
+    '구단주 랭킹',
   ]);
 });
 
@@ -282,8 +282,15 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
 
   await home.locator('[data-act="hof-all"]').click();
   const full = page.locator('[data-hof="full"]');
-  await expect(full.locator('h1')).toHaveText('명예의 전당');
-  await expect(full.locator('.hof-row')).toHaveCount(10);
+  await expect(full.locator('h1')).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: '명예의 전당' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(full.locator('[data-hof-podium-rank]')).toHaveCount(3);
+  await expect(full.locator('.hof-row')).toHaveCount(7);
+  await expect(full.locator('[data-hof-id]')).toHaveCount(10);
+  await expect(full.locator('[data-hof-nation]')).toHaveCount(10);
   await expect(full.locator('.hof-pager')).toContainText('1 / 2');
   await expect(full.locator('[data-hof-page="prev"]')).toBeDisabled();
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
@@ -363,22 +370,29 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
   await expect(page.locator('[data-hof="home"] [data-hof-sort]')).toHaveCount(0);
   await page.locator('[data-act="hof-all"]').click();
   const full = page.locator('[data-hof="full"]');
+  await full.locator('[data-hof-filters]').click();
   await expect(full.locator('[data-hof-sort="score"]')).toHaveAttribute('aria-pressed', 'true');
 
+  if ((await full.locator('[data-hof-filters]').getAttribute('aria-expanded')) === 'false')
+    await full.locator('[data-hof-filters]').click();
   await full.locator('[data-hof-sort="goals"]').click();
   await expect(full.locator('.hof-source')).toContainText('득점 기록이 있는 선수 2명 · 득점 순');
-  await expect(full.locator('.hof-row').first().locator('.hof-value')).toHaveText('401골');
+  await expect(full.locator('.hof-value, .hof-podium-value').first()).toHaveText('401골');
   expect(asked.at(-1)).toBe('?limit=10&sort=goals');
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
+  if ((await full.locator('[data-hof-filters]').getAttribute('aria-expanded')) === 'false')
+    await full.locator('[data-hof-filters]').click();
   await full.locator('[data-hof-sort="ballon"]').click();
   await expect(full.locator('[data-hof-sort="ballon"]')).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => asked.at(-1)).toBe('?limit=10&sort=ballon');
 
   // T-10-100 은퇴 가치 순: 오른쪽에 큰 두 단위(억·천만)로 적는다.
+  if ((await full.locator('[data-hof-filters]').getAttribute('aria-expanded')) === 'false')
+    await full.locator('[data-hof-filters]').click();
   await full.locator('[data-hof-sort="value"]').click();
   await expect.poll(() => asked.at(-1)).toBe('?limit=10&sort=value');
-  await expect(full.locator('.hof-row').first().locator('.hof-value')).toHaveText('1,115억 3천만');
+  await expect(full.locator('.hof-value, .hof-podium-value').first()).toHaveText('1,115억 3천만');
   await expect(full.locator('.hof-source')).toContainText('은퇴 가치 순');
 });
 
@@ -416,6 +430,8 @@ test('명예의 전당 이름 검색', async ({ page }) => {
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
   // 유형을 바꿔도 검색어는 그대로, 없는 이름은 안내.
+  if ((await full.locator('[data-hof-filters]').getAttribute('aria-expanded')) === 'false')
+    await full.locator('[data-hof-filters]').click();
   await full.locator('[data-hof-sort="goals"]').click();
   await expect
     .poll(() => asked.at(-1))
@@ -438,6 +454,7 @@ test('명예의 전당: 은퇴 가치 칩에 NEW 표시(기한까지만)', async
   await page.clock.setFixedTime(new Date('2026-10-01T00:00:00+09:00'));
   await page.goto('/');
   await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-hof-filters]').click();
   const chip = page.locator('[data-hof="full"] [data-hof-sort="value"]');
   await expect(chip.locator('.hof-new')).toHaveText('NEW');
   await expect(page.locator('[data-hof="full"] .hof-new')).toHaveCount(1);
@@ -445,34 +462,29 @@ test('명예의 전당: 은퇴 가치 칩에 NEW 표시(기한까지만)', async
   await page.clock.setFixedTime(new Date('2026-10-14T00:00:00+09:00'));
   await page.reload();
   await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-hof-filters]').click();
   await expect(chip).toBeVisible();
   await expect(chip.locator('.hof-new')).toHaveCount(0);
 });
 
 // T-10-103 개막 전 시즌 버튼엔 'Coming soon' — 개막하면 사라진다. 눌러 보면 개막 안내.
-test('명예의 전당: 개막 전 시즌에 Coming soon 표시', async ({ page }) => {
+test('명예의 전당: 컴팩트 시즌 선택에서 개막 예정 시즌을 안내한다', async ({ page }) => {
   await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry], total: 1 })));
   await page.clock.setFixedTime(new Date('2026-10-01T00:00:00+09:00'));
   await page.goto('/');
   await page.locator('[data-act="hof-all"]').click();
   const full = page.locator('[data-hof="full"]');
-  const s1 = full.locator('[data-hof-season="1"]');
-  await expect(s1.locator('[data-soon]')).toHaveText('Coming soon');
-  await expect(full.locator('[data-hof-season="all"] [data-soon]')).toHaveCount(0);
-  const [tag, btn] = await Promise.all([
-    s1.locator('[data-soon]').boundingBox(),
-    full.locator('[data-hof-season="all"]').boundingBox(),
-  ]);
-  expect(tag!.y).toBeLessThan(btn!.y); // 버튼 높이는 그대로, 위 테두리에 걸친다.
-  await s1.click();
+  const season = full.locator('[data-hof-season-select]');
+  await expect(season.locator('option[value="1"]')).toContainText('개막 예정');
+  expect((await season.boundingBox())!.height).toBeLessThanOrEqual(40);
+  await season.selectOption('1');
   await expect(full.locator('[data-hof-upcoming]')).toContainText('시즌 1은');
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
   await page.clock.setFixedTime(new Date('2026-10-06T00:00:00+09:00'));
   await page.reload();
   await page.locator('[data-act="hof-all"]').click();
-  await expect(full.locator('[data-hof-season="1"]')).toBeVisible();
-  await expect(full.locator('[data-soon]')).toHaveCount(0);
+  await expect(season.locator('option[value="1"]')).not.toContainText('개막 예정');
 });
 
 // T-10-015: 화면을 오가도 같은 공개 조회는 다시 보내지 않는다(메모 60초).

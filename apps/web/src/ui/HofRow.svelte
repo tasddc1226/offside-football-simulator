@@ -33,6 +33,8 @@
     rn = null,
     nation = null,
     flow = false,
+    compact = false,
+    showPosition = true,
   }: {
     /** 0부터. 0~2는 금·은·동 월계관. */
     rank: number;
@@ -54,12 +56,14 @@
     clubId?: string | null | undefined;
     /** T-10-076 영구결번 등번호. */
     rn?: number | null | undefined;
-    /** T-10-096 국적 코드 — 대한민국이 아니면 이름 앞에 국기를 붙인다. */
+    /** 국적 코드 — 없는 예전 커리어는 대한민국으로 표시한다. */
     nation?: string | null | undefined;
     /** T-10-125 기록 요약이 칸보다 길면 말줄임 대신 홈 전광판처럼 오른쪽에서 왼쪽으로 흘린다. */
     flow?: boolean;
+    compact?: boolean;
+    showPosition?: boolean;
   } = $props();
-  const foreign = $derived(nation && nation !== DEFAULT_NATION ? NATION_BY_CODE.get(nation) : undefined);
+  const country = $derived(NATION_BY_CODE.get(nation || DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION)!);
   const tt = $derived(titleById(titleId));
   // 글자 값('1,115억 3천만')은 큰 단위 아래에 작은 단위를 한 줄 더 — 오른쪽 칸이 좁아 이름 줄이 덜 밀린다.
   const [valueHead, valueSub] = $derived(typeof value === 'string' ? value.split(' ') : []);
@@ -80,18 +84,26 @@
   <div class="hof-rank">{rank + 1}</div>
 {/if}
 <!-- 두 줄: 윗줄은 이름·포지션·칭호와 오른쪽 값, 아랫줄 기록 요약은 값 밑까지 넓게 쓰고 넘치면 말줄임(T-10-105). -->
-<div class="hof-main">
-  <ClubMark name={club} id={clubId} size={18} />{#if foreign}<span class="hof-flag" role="img" aria-label={foreign.ko} title={foreign.ko} data-hof-nation={foreign.code}>{flagOf(foreign.code)}</span>{/if}<b>{name}</b> <span class="pill">{posLabel({ pos, dpos })}</span>
-  {#if rn != null}<span class="pill pill-rn" data-rn-chip title="영구결번 {rn}번">👑 영결 {rn}</span>{/if}
-  {#if tag}<span class="pill">{tag}</span>{/if}
-  {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
+<div class="hof-main" class:hof-main-compact={compact}>
+  <span class="hof-identity"><ClubMark name={club} id={clubId} size={18} /><span class="hof-flag" role="img" aria-label={country.ko} title={country.ko} data-hof-nation={country.code}>{flagOf(country.code)}</span><b>{name}</b></span>
+  {#if showPosition || rn != null || tag || tt}
+    <span class="hof-badges">{#if showPosition}<span class="pill">{posLabel({ pos, dpos })}</span>{/if}
+      {#if rn != null}<span class="pill pill-rn" data-rn-chip title="영구결번 {rn}번">👑 영결 {rn}</span>{/if}
+      {#if tag}<span class="pill">{tag}</span>{/if}
+      {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
+    </span>
+  {/if}
 </div>
-<div class="num hof-value" class:hof-value-text={typeof value === 'string'}>{#if valueSub}{valueHead} <small class="hof-value-sub">{valueSub}</small>{:else}{value}{/if}{#if unit}<small>{unit}</small>{/if}</div>
+<div class="num hof-value" class:hof-value-text={typeof value === 'string'}>{#if valueSub}{valueHead} <small class="hof-value-sub">{valueSub}</small>{:else}{compact && typeof value === 'number' ? value.toLocaleString('ko-KR') : value}{/if}{#if unit}<small>{unit}</small>{/if}</div>
 {#if flow}
   <div class="muted fs-xs hof-stats" class:flowing bind:clientWidth={boxW}>
     <div class="hof-flow" style:animation-duration={flowing ? `${copyW / FLOW_SPEED}s` : null}>
       <span bind:clientWidth={copyW} style:padding-right="{FLOW_GAP}px">{stats}</span>{#if flowing}<span aria-hidden="true" style:padding-right="{FLOW_GAP}px">{stats}</span>{/if}
     </div>
+  </div>
+{:else if compact}
+  <div class="muted hof-stats hof-stats-compact">
+    <span>{t.apps.toLocaleString('ko-KR')}경기</span><span>{t.goals.toLocaleString('ko-KR')}골</span><span>{t.assists.toLocaleString('ko-KR')}도움</span>
   </div>
 {:else}
   <div class="muted fs-xs hof-stats">{stats}</div>

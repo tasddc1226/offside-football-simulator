@@ -24,6 +24,7 @@ import {
   isTeamLiked,
   liveTeam,
   listTeamRanking,
+  listTeamRecentForm,
   ratingRankOf,
   setTeamLike,
   slotIdsOf,
@@ -58,6 +59,10 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       RANK_TTL,
       async (): Promise<TeamRankResponse> => {
         const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, q.page);
+        const forms = await listTeamRecentForm(
+          getDb(c),
+          rows.map((t) => t.id),
+        );
         return {
           season,
           seasons: seasonOptions(now),
@@ -75,6 +80,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
             record: recordOf(t),
             likes: t.likes,
             createdAt: t.createdAt,
+            recentForm: forms.get(t.id) ?? [],
           })),
         };
       },

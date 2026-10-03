@@ -604,6 +604,8 @@ export const teamMatches = sqliteTable(
   (table) => [
     index('team_matches_profile_created_idx').on(table.profileId, table.createdAt),
     index('team_matches_away_created_idx').on(table.awayTeamId, table.createdAt),
+    index('team_matches_home_recent_idx').on(table.homeTeamId, table.createdAt, table.id),
+    index('team_matches_away_recent_idx').on(table.awayTeamId, table.createdAt, table.id),
   ],
 );
 

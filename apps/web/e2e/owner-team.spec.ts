@@ -526,16 +526,22 @@ test('업적 랭킹 — 내 업적 요약에서 기록실 업적 랭킹으로 �
     '업적을 하나 달성하면 랭킹에 올라요',
   );
   await page.locator('[data-act="ach-ranking"]').click();
-  await expect(page.locator('[data-hof-tab="ach"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-hof-tab="ach"]')).toHaveAttribute('aria-selected', 'true');
   const board = page.locator('[data-ach-ranking]');
   await expect(board).toContainText('구단주 2명');
   await expect(board.locator('[data-ach-rank="1"]')).toContainText('하람아빠');
-  await expect(board.locator('[data-ach-rank="1"]')).toContainText('다이아');
+  await expect(board.locator('[data-ach-rank="1"] [data-ach-grade]')).toHaveAttribute(
+    'aria-label',
+    '다이아',
+  );
   await expect(board.locator('[data-ach-rank="2"]')).toContainText('익명 구단주');
-  await expect(board.locator('[data-ach-rank="2"]')).toContainText('루키');
+  await expect(board.locator('[data-ach-rank="2"] [data-ach-grade]')).toHaveAttribute(
+    'aria-label',
+    '루키',
+  );
   await expectNoA11yViolations(page);
   await board.locator('[data-ach-rank="1"]').click();
-  await expect(page.locator('[data-hof-tab="teams"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-hof-tab="teams"]')).toHaveAttribute('aria-selected', 'true');
 });
 
 test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹에서 팀 프로필을 열어 좋아요를 누른다', async ({
@@ -663,7 +669,7 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
 
   // 라이브 랭킹 → 다른 팀 프로필(조회수 한 번) → 좋아요.
   await page.locator('[data-act="team-ranking"]').click();
-  await expect(page.locator('[data-hof-tab="teams"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-hof-tab="teams"]')).toHaveAttribute('aria-selected', 'true');
   const list = page.locator('[data-team-ranking]');
   await expect(list.locator('[data-rank-team]')).toHaveCount(2);
   await expect(list.locator('[data-rank-team]').first()).toContainText('라이벌 FC');
@@ -748,6 +754,7 @@ test('업적 달성 알림 — 쓰기 뒤 홈에서 승급 시트, 업적 보기
     document
       .querySelector('.modal')!
       .getAnimations({ subtree: true })
+      .filter((a) => a.effect?.getTiming().iterations !== Infinity)
       .every((a) => a.playState !== 'running'),
   );
   await expectNoA11yViolations(page);

@@ -347,6 +347,7 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
   const axe = await new AxeBuilder({ page }).include('[data-rn-wall]').analyze();
   expect(axe.violations.map((v) => v.id)).toEqual([]);
 
+  await wall.locator('[data-rn-filters]').click();
   await wall.locator('[data-rn-order="recent"]').click();
   await expect(wall.locator('[data-rn-tile]')).toHaveCount(3);
   await expect(wall.locator('[data-rn-tile]').first()).toHaveAttribute('data-rn-tile', '3');
@@ -355,6 +356,7 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
   await wall.locator('[data-rn-tile="3"]').click();
   await expect(page.locator('.film-open h1')).toHaveText('박결번');
   await page.locator('[data-act="hof-back"]').click();
-  await expect(page.locator('[data-hof-tab="rn"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-hof-tab="rn"]')).toHaveAttribute('aria-selected', 'true');
+  await wall.locator('[data-rn-filters]').click();
   await expect(wall.locator('[data-rn-order="recent"]')).toHaveAttribute('aria-pressed', 'true');
 });
