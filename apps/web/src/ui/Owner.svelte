@@ -79,7 +79,7 @@
           <span class="muted fs-sm">{guest ? '기록은 이 기기에만 저장돼요' : card?.team ? `${card.team.name} · ${card.season}` : 'Google 계정으로 로그인했어요'}</span>
         </div>
       </div>
-      {#if summary?.players === 0}
+      {#if (guest && localCount === 0) || summary?.players === 0}
         <p class="muted fs-sm owner-empty">첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.</p>
       {:else}
       <dl class="owner-stats">
