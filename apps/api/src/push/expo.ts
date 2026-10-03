@@ -10,7 +10,8 @@ export async function sendPushTest(
   try {
     response = await fetchImpl('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
-      redirect: 'error',
+      // workerd는 'error'를 지원하지 않는다. 3xx를 따라가지 않고 아래 HTTP 검사에서 거절한다.
+      redirect: 'manual',
       signal: AbortSignal.timeout(10_000),
       headers: {
         'Content-Type': 'application/json',

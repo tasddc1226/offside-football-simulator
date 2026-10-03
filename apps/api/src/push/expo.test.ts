@@ -9,7 +9,7 @@ describe('Expo test request', () => {
     expect(send).toHaveBeenCalledOnce();
     const [url, init] = send.mock.calls[0]!;
     expect(url).toBe('https://exp.host/--/api/v2/push/send');
-    expect(init?.redirect).toBe('error');
+    expect(init?.redirect).toBe('manual');
     expect(JSON.parse(init!.body as string).data).toEqual({
       type: 'offside-news',
       board: 'notice',
@@ -22,6 +22,18 @@ describe('Expo test request', () => {
       sendPushTest('ExpoPushToken[own_device]', 'private-secret', send),
     ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
     expect(send).toHaveBeenCalledOnce();
+  });
+  it('rejects redirects without following or retrying the request', async () => {
+    const send = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        new Response(null, { status: 307, headers: { Location: 'https://redirect.invalid/' } }),
+      );
+    await expect(sendPushTest('ExpoPushToken[own_device]', undefined, send)).rejects.toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+    });
+    expect(send).toHaveBeenCalledOnce();
+    expect(send.mock.calls[0]![1]?.redirect).toBe('manual');
   });
   it('identifies invalid tokens for removal', async () => {
     const send = vi
