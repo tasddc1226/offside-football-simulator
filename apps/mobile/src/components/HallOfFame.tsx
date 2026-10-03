@@ -22,7 +22,7 @@ import { getHof } from '@offside/app-core/api/client';
 import { loadHOF } from '@offside/game/season';
 import { openHof } from '../game/nav';
 import { openPublicLegend } from '../game/host';
-import { Seg, SortChips, TabOpt, TextBox } from '../screens/board/parts';
+import { TextBox } from '../screens/board/parts';
 import { appState } from '../store';
 import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
@@ -32,6 +32,8 @@ import { Press } from '../ui/Press';
 import { scrollTo } from '../ui/scroll';
 import { Txt } from '../ui/Txt';
 import { HofRow, type RowStats } from './HofRow';
+import { HofPodium } from './HofPodium';
+import { RecordsSelect, RecordsFilters, RecordsChips } from '../screens/hof/RecordsControls';
 
 const TOP = 3;
 const PER_PAGE = 10;
@@ -89,6 +91,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   const upcoming = ss && notOpen(ss) ? ss : undefined;
   /** 문구 앞에 붙는 시즌·포지션 이름('시즌 1 수비수 '). 둘 다 전체면 빈 문자열. */
   const scope = `${ss ? `${ss.name} ` : ''}${pos ? `${POS_LABEL[pos]} ` : ''}`;
+  const [filtering, setFiltering] = useState(false);
   const [all, setAll] = useState<PublicHofEntry[] | null>(null);
   const [total, setTotal] = useState(0);
   const [failed, setFailed] = useState(false);
@@ -101,6 +104,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   }
   function pickSort(s: HofSort) {
     appState.hof = { ...appState.hof, sort: s, page: 1 };
+    setFiltering(false);
   }
 
   // 타자를 멈추고 0.3초 뒤에 찾는다(글자마다 서버를 부르지 않게).
@@ -148,6 +152,11 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   const myIds = useMemo(() => new Set(loadHOF().flatMap((h) => (h.id ? [h.id] : []))), []);
   const offset = (page - 1) * PER_PAGE;
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const podiumEntries =
+    full && page === 1 && !q
+      ? (all ?? []).slice(0, TOP).filter((entry, i) => (entry.rank ?? i + 1) <= TOP)
+      : [];
+  const podiumIds = new Set(podiumEntries.map((entry) => entry.id));
   const emptyText = q
     ? `'${q}'${iGa(q)} 들어간 이름의 ${scope}선수가 없어요.`
     : sort === 'score'
@@ -172,35 +181,18 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           gap: 8,
         }}
       >
-        <View style={{ flex: 1 }}>
-          <Txt v="eyebrow">Legends</Txt>
-          <Txt v={full ? 'h1' : 'h2'} accessibilityRole="header" style={{ marginBottom: 8 }}>
-            명예의 전당
-          </Txt>
-        </View>
+        {!full ? (
+          <View style={{ flex: 1 }}>
+            <Txt v="eyebrow">Legends</Txt>
+            <Txt v={full ? 'h1' : 'h2'} accessibilityRole="header" style={{ marginBottom: 8 }}>
+              명예의 전당
+            </Txt>
+          </View>
+        ) : null}
         {!full && all?.length ? (
           <Btn sm testID="hof-all" onPress={openHof}>
             전체 보기
           </Btn>
-        ) : full && !upcoming ? (
-          <Press
-            testID="hof-search"
-            accessibilityLabel="선수 이름 검색"
-            accessibilityState={{ expanded: searching }}
-            onPress={toggleSearch}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: searching ? c.ink : c.line,
-              backgroundColor: searching ? c.ink : c.surface2,
-            }}
-          >
-            <SearchIcon color={searching ? c.surface : c.ink} />
-          </Press>
         ) : null}
       </View>
       {full && searching && !upcoming ? (
@@ -219,95 +211,63 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
         />
       ) : null}
       {full ? (
-        <>
-          <Seg cols={3} label="시즌" style={{ marginTop: 4, marginBottom: 6 }}>
-            <TabOpt
-              title="전체"
-              selected={season === null}
-              testID="hof-season-all"
-              onPress={() => pickSeason(null)}
+        <RecordsFilters
+          testID="hof-filters"
+          open={filtering}
+          onToggle={() => setFiltering(!filtering)}
+          label={`${pos ? POS_LABEL[pos] : '전체 포지션'} · ${by.label}`}
+          season={
+            <RecordsSelect
+              label="시즌"
+              testID="hof-season-select"
+              value={season ?? 'all'}
+              onChange={(id) => pickSeason(id === 'all' ? null : Number(id))}
+              options={[
+                { value: 'all', label: '전체 시즌' },
+                ...[PRESEASON, ...SERVICE_SEASONS].map((s) => ({
+                  value: s.id,
+                  label: `${s.name}${notOpen(s) ? ' (개막 예정)' : ''}`,
+                })),
+              ]}
             />
-            {[PRESEASON, ...SERVICE_SEASONS].map((s) => (
-              <TabOpt
-                key={s.id}
-                title={s.name}
-                selected={season === s.id}
-                testID={`hof-season-${s.id}`}
-                onPress={() => pickSeason(s.id)}
-              >
-                {notOpen(s) ? (
-                  // T-10-103 개막 전 시즌 버튼에 'Coming soon' — 버튼 높이는 그대로, 오른쪽 위 테두리에 걸친다.
-                  // T-11-038 right만 준 절대 배지는 버튼 안쪽 폭에 묶여 큰 글씨에서 꺾였다 — 틀을 버튼 폭으로 펴고 오른쪽에 붙인다.
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: -9,
-                      left: 0,
-                      right: 10,
-                      alignItems: 'flex-end',
-                    }}
-                  >
-                    <View
-                      testID="hof-soon"
-                      style={{
-                        paddingVertical: 2,
-                        paddingHorizontal: 8,
-                        borderRadius: 999,
-                        backgroundColor: c.accent,
-                      }}
-                    >
-                      <Txt
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                        maxFontSizeMultiplier={1.2}
-                        style={{
-                          fontSize: rem(0.625),
-                          lineHeight: rem(0.625) * 1.4,
-                          fontWeight: '800',
-                          letterSpacing: 0.06 * rem(0.625),
-                          textTransform: 'uppercase',
-                          color: c.accentInk,
-                        }}
-                      >
-                        Coming soon
-                      </Txt>
-                    </View>
-                  </View>
-                ) : null}
-              </TabOpt>
-            ))}
-          </Seg>
+          }
+        >
           {!upcoming ? (
-            <Seg cols={5} gap={6} label="포지션" style={{ marginBottom: 6 }}>
-              <TabOpt
-                tight
-                title="전체"
-                selected={pos === null}
-                testID="hof-pos-all"
-                onPress={() => pickPos(null)}
+            <>
+              <RecordsChips
+                label="포지션"
+                testIDPrefix="hof-pos"
+                value={pos ?? 'all'}
+                onPick={(key) => pickPos(key === 'all' ? null : (key as CareerPos))}
+                items={[
+                  { key: 'all', label: '전체' },
+                  ...POS_GROUPS.map((key) => ({ key, label: POS_LABEL[key] })),
+                ]}
               />
-              {POS_GROUPS.map((k) => (
-                <TabOpt
-                  key={k}
-                  tight
-                  title={POS_LABEL[k]}
-                  selected={pos === k}
-                  testID={`hof-pos-${k}`}
-                  onPress={() => pickPos(k)}
-                />
-              ))}
-            </Seg>
+              <RecordsChips
+                label="순위 유형"
+                testIDPrefix="hof-sort"
+                value={sort}
+                onPick={(key) => pickSort(key as HofSort)}
+                items={SORT_KEYS.map((key) => ({
+                  key,
+                  label: SORTS[key].label,
+                  isNew: isNew(key),
+                }))}
+              />
+              <Press
+                scale={1}
+                testID="hof-search"
+                accessibilityState={{ expanded: searching }}
+                onPress={toggleSearch}
+                style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
+                <SearchIcon color={c.ink} />
+                <Txt style={{ fontSize: 13 }}>선수 이름 검색</Txt>
+              </Press>
+            </>
           ) : null}
-          {!upcoming ? (
-            <SortChips
-              label="순위 유형"
-              testIDPrefix="hof-sort"
-              value={sort}
-              onPick={(k) => pickSort(k as HofSort)}
-              items={SORT_KEYS.map((k) => ({ key: k, label: SORTS[k].label, isNew: isNew(k) }))}
-            />
-          ) : null}
-        </>
+        </RecordsFilters>
       ) : null}
 
       {upcoming ? (
@@ -342,7 +302,17 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
               {`${ss.name} · 레전드 점수 순`}
             </Txt>
           ) : null}
+          {podiumEntries.length > 0 ? (
+            <HofPodium
+              players={podiumEntries}
+              showPosition={pos === null}
+              myIds={myIds}
+              metric={(h) => by.get({ ...h, score: h.legendScore })}
+              unit={by.unit}
+            />
+          ) : null}
           {all.map((h, i) => {
+            if (podiumIds.has(h.id)) return null;
             const t = { ...h, score: h.legendScore };
             return (
               <Press
@@ -368,7 +338,9 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                   showScore={sort !== 'score'}
                   flow={!full}
                   compact
-                  first={i === 0}
+                  plain={full}
+                  showPosition={!full || pos === null}
+                  first={i === podiumEntries.length}
                 />
               </Press>
             );

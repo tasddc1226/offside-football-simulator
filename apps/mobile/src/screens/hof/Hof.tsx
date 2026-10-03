@@ -7,7 +7,11 @@ import { appState } from '../../store';
 import { BackBar } from '../../ui/ActionBar';
 import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
-import { Seg, TabOpt } from '../board/parts';
+import { View } from 'react-native';
+import { Press } from '../../ui/Press';
+import { Txt } from '../../ui/Txt';
+import { useColors } from '../../theme/useColors';
+import { RECORDS_TOUCH } from './RecordsControls';
 import RetiredWall from './RetiredWall';
 import AchievementRanking from './team/AchievementRanking';
 import TeamRanking from './team/TeamRanking';
@@ -20,6 +24,7 @@ const TABS: Record<HofTab, string> = {
 };
 
 export default function Hof() {
+  const c = useColors();
   const { hof } = useSnapshot(appState);
   const profile = hof.tab === 'teams' && !!hof.team;
   return (
@@ -34,18 +39,48 @@ export default function Hof() {
       }
     >
       <Topbar />
-      <Seg cols={4} label="기록실" style={{ marginBottom: 12 }}>
-        {(Object.entries(TABS) as [HofTab, string][]).map(([k, label]) => (
-          <TabOpt
-            key={k}
-            title={label}
-            selected={hof.tab === k}
-            testID={`hof-tab-${k}`}
-            fit
-            onPress={() => (appState.hof.tab = k)}
-          />
+      <View
+        accessibilityRole="tablist"
+        accessibilityLabel="기록실"
+        style={{
+          flexDirection: 'row',
+          marginBottom: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: c.line,
+        }}
+      >
+        {(Object.entries(TABS) as [HofTab, string][]).map(([key, label]) => (
+          <Press
+            key={key}
+            testID={`hof-tab-${key}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: hof.tab === key }}
+            scale={1}
+            onPress={() => {
+              appState.hof.tab = key;
+            }}
+            style={{
+              flex: 1,
+              minHeight: RECORDS_TOUCH,
+              justifyContent: 'center',
+              paddingVertical: 10,
+              borderBottomWidth: 2,
+              borderBottomColor: hof.tab === key ? c.tabOn : 'transparent',
+            }}
+          >
+            <Txt
+              center
+              style={{
+                fontSize: 12,
+                fontWeight: hof.tab === key ? '700' : '500',
+                color: hof.tab === key ? c.ink : c.muted,
+              }}
+            >
+              {label}
+            </Txt>
+          </Press>
         ))}
-      </Seg>
+      </View>
       {hof.tab === 'rn' ? (
         <RetiredWall />
       ) : hof.tab === 'teams' ? (
