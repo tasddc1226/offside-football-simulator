@@ -539,6 +539,17 @@ test('업적 랭킹 — 내 업적 요약에서 기록실 업적 랭킹으로 �
     'aria-label',
     '루키',
   );
+  await expect(board.locator('.achievement-row .grade-badge')).toHaveCount(2);
+  await expect(board.locator('.achievement-row .ach-grade')).toHaveCount(0);
+  await expect(board.locator('[data-ach-preview-toggle]')).toHaveCount(0);
+  await board.locator('.ach-grades summary').click();
+  await expect(board.locator('.ach-grades .grade-badge')).toHaveCount(7);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(board.locator('.ach-grades .badge-orbit').first()).toHaveCSS(
+    'animation-name',
+    'none',
+  );
+  await expect(board.locator('.achievement-row .badge-shine').first()).toBeHidden();
   await expectNoA11yViolations(page);
   await board.locator('[data-ach-rank="1"]').click();
   await expect(page.locator('[data-hof-tab="teams"]')).toHaveAttribute('aria-selected', 'true');

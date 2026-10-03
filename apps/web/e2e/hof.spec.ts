@@ -377,7 +377,11 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
     await full.locator('[data-hof-filters]').click();
   await full.locator('[data-hof-sort="goals"]').click();
   await expect(full.locator('.hof-source')).toContainText('득점 기록이 있는 선수 2명 · 득점 순');
-  await expect(full.locator('.hof-value, .hof-podium-value').first()).toHaveText('401골');
+  await expect(
+    full
+      .locator('[data-hof-podium-rank="1"] .hof-podium-value, .hof-ranking-list .hof-value')
+      .first(),
+  ).toHaveText('401골');
   expect(asked.at(-1)).toBe('?limit=10&sort=goals');
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
@@ -392,7 +396,11 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
     await full.locator('[data-hof-filters]').click();
   await full.locator('[data-hof-sort="value"]').click();
   await expect.poll(() => asked.at(-1)).toBe('?limit=10&sort=value');
-  await expect(full.locator('.hof-value, .hof-podium-value').first()).toHaveText('1,115억 3천만');
+  await expect(
+    full
+      .locator('[data-hof-podium-rank="1"] .hof-podium-value, .hof-ranking-list .hof-value')
+      .first(),
+  ).toHaveText('1,115억 3천만');
   await expect(full.locator('.hof-source')).toContainText('은퇴 가치 순');
 });
 
