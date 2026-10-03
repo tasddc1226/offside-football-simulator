@@ -162,7 +162,7 @@ export type SheetView =
       miles: string[];
       titles: TitleView[];
       notes: string[];
-      /** 옛 시트 호환용. 은퇴 전에는 화면에 표시하지 않는다. */
+      /** 옛 시트 호환용. 은퇴 전에는 화면에 표시하지 않는다. 육성 중 안내는 scoutHint가 맡는다. */
       scout?: string | null;
       /** 스카우트 한마디(scoutHint). 잠재력 등급 대신 수준만 문장으로 알려 준다. */
       scoutHint?: string | null;

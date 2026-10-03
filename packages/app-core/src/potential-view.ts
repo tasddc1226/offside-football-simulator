@@ -1,6 +1,7 @@
 // 잠재력 등급·수치는 은퇴 기록에서만 표시한다. 계산·원본 로그·서버 관측값은 바꾸지 않는다.
 // 육성 중에는 시즌 결산에 스카우트 한마디(scoutHint)로 대략적인 수준만 알려 준다.
-import { gradeOf, potGrade, potScouted } from '@offside/game/stats';
+import { hashStr } from '@offside/game/hash';
+import { gradeOf, potFogged, potGrade, potScouted } from '@offside/game/stats';
 import type { GameState, LogEntry } from '@offside/game/types';
 
 export const POTENTIAL_NOTICE = '잠재력 평가는 은퇴할 때 공개돼요.';
@@ -74,11 +75,9 @@ const HINT_LATE: Record<string, readonly string[]> = {
 export function scoutHint(s: GameState, year: number): string | null {
   if (!potScouted(s)) return null;
   const g = potGrade(s);
-  const pool =
-    (s.flags.rescout ?? 0) >= 2
-      ? HINT_LATE[g]!
-      : HINT_EARLY[g === 'S' || g === 'A' ? 'high' : g === 'D' ? 'low' : 'mid'];
-  let seed = 0;
-  for (const ch of s.name) seed = (seed * 31 + ch.charCodeAt(0)) % 9973;
-  return pool[(seed + year) % pool.length]!;
+  const pool = potFogged(s)
+    ? HINT_EARLY[g === 'S' || g === 'A' ? 'high' : g === 'D' ? 'low' : 'mid']
+    : HINT_LATE[g]!;
+  // 이름으로 시작 문장을 정하고 시즌마다 다음 문장으로 넘긴다. 연속한 두 시즌은 같은 문장이 나오지 않는다.
+  return pool[(hashStr(s.name) + year) % pool.length]!;
 }
