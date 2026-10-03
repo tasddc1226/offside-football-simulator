@@ -284,6 +284,19 @@ describe('migrations', () => {
     }
   });
 
+  it('T-11-064: 내 선수·구단주 팀 조회는 profile_id 인덱스로 시작한다(은퇴 선수 전체를 훑지 않는다)', async () => {
+    const plans = [
+      "select id from careers where profile_id = 'p' and status = 'retired' and peak is not null and hidden = 0 and service_season = 1 order by peak desc limit 5",
+      "select id from careers where profile_id = 'p' and status = 'retired' and legend_score is not null order by legend_score desc, retired_at limit 5",
+    ];
+    for (const sql of plans) {
+      const result = await ctx.db.$client
+        .prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .all<{ detail: string }>();
+      expect(result.results.map((r) => r.detail).join('\n'), sql).toMatch(/\(profile_id=\?/);
+    }
+  });
+
   it('전체 마이그레이션을 적용한 최종 테이블 집합은 정확히 EXPECTED_COLUMNS의 테이블뿐이다', async () => {
     const result = await ctx.db.$client
       .prepare(
