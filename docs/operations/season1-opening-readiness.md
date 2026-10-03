@@ -30,9 +30,11 @@
 - [x] API 첫 업로드 직전/정각과 이전 선수 재전송. 로컬 D1에서 확인하며 운영 선수를 만들지 않는다.
 - [x] 최신 엔진 2,000 smart careers, SEED=61006, STRICT=1, DPOS=1, RETIRE_AT=45, RETIRE_AGE=45, INVEST=1, errors=0. 실제 이용자 전체나 희귀 성취의 확정 근거는 아니다.
 - [x] 2026-10-04 KST 운영 조회에서 active balance 행 없음. 공개 설정은 version 0/기본값으로 대체한다. SELECT만 실행했고 rows_written=0이다. 과거 누적 분석을 최신 집계로 취급하지 않는다.
-- [ ] PR 필수 CI 전체, 최신 main 반영과 리뷰.
+- [x] PR 필수 CI 전체 통과. 최신 main의 app-ads.txt 작업을 반영하고 변경 범위를 리뷰했다. 단위/SEO 1,119건, 개막 웹 E2E 4건을 통과했다.
 - [ ] 운영 웹/API의 배포 SHA·자산 read-back.
-- [ ] iOS/Android 대응 runtime OTA 공개·네이티브 화면 확인.
+- [x] iOS 네이티브 저장 검증: 개막 전 선수의 ID·41세 규칙 복구, 열린 생성 화면의 자정 전환·주력 유지, ST·45세 생성 및 저장 복원. 별도 QA 앱 식별자와 오프라인 API 주소를 썼다.
+- [ ] Android 네이티브 저장·화면 검증.
+- [ ] iOS/Android 대응 runtime OTA 공개·read-back.
 
 ## 기존 앱 호환 경로
 
