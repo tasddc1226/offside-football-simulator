@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../theme/useColors';
-import { noteScrollY, noteViewH, registerScroll } from './scroll';
+import { noteScrollY, noteViewH, revealFocusedInput } from './scroll';
+import { useFormKeyboardScroll } from './useFormKeyboardScroll';
 
 /** 화면 아래에 탭바가 붙어 있다(탭바가 아래 안전 영역을 채운다). 루트·게임 화면이 넣는다. */
 export const BarBelow = createContext(false);
@@ -36,10 +37,11 @@ export function Screen({
   const c = useColors();
   const insets = useSafeAreaInsets();
   const barBelow = useContext(BarBelow);
+  const keyboardScroll = useFormKeyboardScroll();
   const pad = {
     paddingTop: insets.top,
     paddingHorizontal: 16,
-    paddingBottom: 24 + (footer || barBelow ? 0 : insets.bottom),
+    paddingBottom: 24 + (footer || barBelow ? 0 : insets.bottom) + keyboardScroll.bottomInset,
     gap,
   };
   if (fixed)
@@ -55,9 +57,13 @@ export function Screen({
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView
-        ref={registerScroll}
+        ref={keyboardScroll.ref}
         onScroll={(e) => noteScrollY(e.nativeEvent.contentOffset.y)}
-        onLayout={(e) => noteViewH(e.nativeEvent.layout.height)}
+        onLayout={(e) => {
+          noteViewH(e.nativeEvent.layout.height);
+          keyboardScroll.onLayout();
+        }}
+        onContentSizeChange={revealFocusedInput}
         scrollEventThrottle={64}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"

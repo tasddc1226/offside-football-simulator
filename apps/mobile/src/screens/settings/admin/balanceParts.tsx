@@ -1,6 +1,6 @@
 // 밸런스 편집 화면의 입력 부품 — 숫자 입력 칸(웹 input[type=number])과 고르기 칸(웹 <select>).
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Modal, View } from 'react-native';
+import { FlatList, Keyboard, Modal, View } from 'react-native';
 import { alpha } from '../../../theme/colors';
 import { rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
@@ -85,7 +85,10 @@ export function PickerField({
         accessibilityLabel={accessibilityLabel}
         accessibilityHint="눌러서 고르기"
         disabled={disabled}
-        onPress={() => setOpen(true)}
+        onPress={() => {
+          Keyboard.dismiss();
+          setOpen(true);
+        }}
         style={{
           flex: 1,
           minWidth: 0,

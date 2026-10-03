@@ -18,15 +18,20 @@ import { useColors } from '../../theme/useColors';
 import { Opt } from '../../ui/bits';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
+import { revealFocusedInput } from '../../ui/scroll';
 
 /** 입력 칸(웹 input[type=text] · textarea) — 16px 글자(iOS가 작은 칸에 초점이 가면 확대한다), surface-2 바탕. */
-export function TextBox({ style, multiline, ...rest }: TextInputProps) {
+export function TextBox({ style, multiline, onFocus, ...rest }: TextInputProps) {
   const c = useColors();
   return (
     <TextInput
       placeholderTextColor={c.muted}
       multiline={multiline}
       {...rest}
+      onFocus={(e) => {
+        onFocus?.(e);
+        revealFocusedInput();
+      }}
       style={[
         {
           borderWidth: 1,
