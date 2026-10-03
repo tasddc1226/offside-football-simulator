@@ -2,8 +2,9 @@
 
 ## 현재 단계
 
-공지·릴리즈 노트 푸시의 기기 연결과 관리자 본인 테스트를 구현했다. 운영 API 배포,
-새 네이티브 빌드 설치, 실기기 수신 확인은 아직 하지 않았다. 자동 발송은 구현 전이다.
+공지·릴리즈 노트 푸시의 기기 연결과 관리자 본인 테스트를 구현했다. staging API·웹·DB는
+최신 메인 위의 구현으로 배포하고, 등록·해제·비관리자 발송 차단과 개인정보 안내 페이지를 확인했다.
+운영 API 배포, 새 빌드 설치, 실기기 수신 확인은 아직 하지 않았다. 자동 발송은 구현 전이다.
 기존 게임 내 새 소식 배너와 릴리즈 노트 자동 게시는 그대로 사용한다.
 
 ## 확정한 발송 정책
@@ -76,3 +77,14 @@ TestFlight 경로를 별도로 준비해야 한다. 다른 작업이 소유한 �
 참고: [Expo 설정](https://docs.expo.dev/push-notifications/push-notifications-setup/),
 [Expo 발송·receipt](https://docs.expo.dev/push-notifications/sending-notifications/),
 [FCM v1 자격](https://docs.expo.dev/push-notifications/fcm-credentials/).
+
+### 2026-10-03 테스트 환경 준비 기록
+
+- 최신 메인 `7f8d39ec`를 포함한 준비 커밋: `03b59ed4`.
+- D1 staging 백업 후 기존 미적용 마이그레이션과 `0053_curvy_blue_blade.sql`까지 적용했다. 운영 DB는 변경하지 않았다.
+- staging API version: `28605ea3-4a6c-4266-b8c9-28aebc87c064` (이후 관리자 secret 설정도 배포로 기록된다).
+- staging 웹 version: `14eda15b-cf47-49a6-8982-01a7e7f6b46f`. 기존 누락된 OG staging Worker도 프로젝트 배포 스크립트로 준비했다.
+- Android 내부 테스트 빌드: `25d41c0f-5521-4c96-a199-1e9684c47a8b`, `push-test` 프로필·채널, staging API를 사용한다. 생성 당시 빌드 중이며 완료·설치를 별도로 확인해야 한다.
+- iPhone·Android 실기기를 사용하기로 결정했다. iPhone 등록 완료와 staging Google OAuth 생성 확인을 기다린다. staging은 Google client ID/secret이 없어 실제 Google 로그인을 아직 검증할 수 없다.
+- API·계정 관련 테스트 총 48건, app-core 6건, 정적 페이지 9건이 통과했다. 계정 테스트는 장비 부하로 10초 hook timeout에 실패한 뒤, 로컬 CLI의 hook 대기를 60초로 늘려 재실행해 통과했다. 저장소의 전역 테스트 제한은 변경하지 않았다.
+- API/mobile/app-core 타입 검사, 변경 파일 ESLint·서식, 공개 저장소 위생 검사, staging API·웹/OG dry-run을 통과했다. 기기 UI·실제 수신·스토어 심사·운영 푸시 배포 검증은 수행 전이다.
