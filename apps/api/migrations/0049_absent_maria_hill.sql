@@ -1,0 +1,2 @@
+CREATE INDEX `team_matches_home_recent_idx` ON `team_matches` (`home_team_id`,`created_at`,`id`);--> statement-breakpoint
+CREATE INDEX `team_matches_away_recent_idx` ON `team_matches` (`away_team_id`,`created_at`,`id`);

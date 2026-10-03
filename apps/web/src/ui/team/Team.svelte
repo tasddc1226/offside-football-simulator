@@ -2,7 +2,7 @@
   // T-10-092 구단주 팀 — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가 채운다) 같은 시즌
   // 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 구단주 화면에서 처음 열 때 불러오는 지연 청크다. 경기 결과는
   // 서버가 정한다(웹은 보여 주기만).
-  import { onMount, untrack } from 'svelte';
+  import { onDestroy, onMount, untrack } from 'svelte';
   import {
     FORMATIONS,
     LINEUP_SIZE,
@@ -17,6 +17,7 @@
     teamOvr,
     type AchCategory,
     type FormationId,
+    type TeamPosition,
   } from '@offside/contracts/owner-team';
   import {
     fetchClubAchievements,
@@ -33,11 +34,12 @@
     type TeamPlayer,
   } from '@offside/app-core/api/team';
   import { localCareerNames } from '@offside/game/season';
+  import type { TeamLogo } from '@offside/contracts/team-logo';
+  import TeamLogoEditor from './TeamLogoEditor.svelte';
   import { go } from '../nav.js';
   import { anonName } from '@offside/game/pos-label';
   import { toast } from '../helpers.js';
   import { dur } from '../motion.js';
-  import { lockScroll } from '../scrollLock.js';
   import { startGoogleLogin } from '../login.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import { appState, hofStart, type TeamView } from '../state.svelte.js';
@@ -50,10 +52,11 @@
   import TeamLive from './TeamLive.svelte';
   import TeamNav from './TeamNav.svelte';
   import TeamOpponents from './TeamOpponents.svelte';
-  import TeamPicker from './TeamPicker.svelte';
   import TeamResult from './TeamResult.svelte';
   import { achNudge } from '../achNudge.js';
-  import { assignSlot, autoFillSlots, matchHintOf, pickCandidates, type PickSort } from '@offside/app-core/teamOwner';
+  import { assignSlot, autoFillSlots, matchHintOf } from '@offside/app-core/teamOwner';
+  import { accountCache } from '../account-state.svelte.js';
+  import { readTeamDraft, teamDraftBase, writeTeamDraft, type TeamDraft } from './teamDraft.js';
 
   let status = $state<LoadStatus>('loading');
   let needLogin = $state(false);
@@ -72,17 +75,24 @@
   // 편집 초안 — 저장하기 전까지 이 기기에만 있다.
   let name = $state('');
   let manager = $state('');
+  let logo = $state<TeamLogo | null>(null);
+  let editingLogo = $state(false);
   let formation = $state<FormationId>('4-3-3');
+  let layout = $state<TeamPosition[] | null>(null);
   let slots = $state<(string | null)[]>(Array(LINEUP_SIZE).fill(null));
   let saving = $state(false);
   /** 팀이 있으면 이름 칸은 '이름 바꾸기'를 눌렀을 때만 펼친다. */
   let renaming = $state(false);
-  let picking = $state<number | null>(null);
+  let draftKey = $state<string | null>(null);
+  let pendingDraft = $state<TeamDraft | null>(null);
+  let restoredDraft = $state(false);
+  let loadSequence = 0;
 
   let opponents = $state<TeamOpponent[]>([]);
   let oppStatus = $state<LoadStatus>('loading');
   let playing = $state(false);
   let result = $state<TeamMatch | null>(null);
+  let resultOrigin = $state<'opponents' | 'history'>('opponents');
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   let live = $state(false);
   // T-10-130 팀 안의 화면은 appState.teamView — 뒤로 가기로 오간다. 결과는 이 화면에만 있어 다시 들어왔을 때(앞으로 가기)
@@ -97,8 +107,6 @@
   let achCat = $state<AchCategory>('player');
   /** T-11-034 지난번 업적 탭을 본 뒤 새로 오른 업적(NEW). */
   let achNewIds = $state<ReadonlySet<string>>(new Set());
-  /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
-  let pickSort = $state<PickSort>('fit');
 
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = localCareerNames();
@@ -107,7 +115,7 @@
     localNames.get(p.careerId) ?? p.publicName ?? anonName(p.pos, p.number);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
 
-  const slotCodes = $derived(FORMATIONS[formation]);
+  const slotCodes = $derived(layout?.map((p) => p.slot) ?? FORMATIONS[formation]);
   const ratings: (number | null)[] = $derived(
     slotCodes.map((slot, i) => {
       const id = slots[i];
@@ -123,7 +131,9 @@
     !team ||
       name.trim() !== team.name ||
       manager.trim() !== team.manager ||
+      JSON.stringify(logo) !== JSON.stringify(team.logo ?? null) ||
       formation !== team.formation ||
+      JSON.stringify(layout) !== JSON.stringify(team.layout ?? null) ||
       slots.some((id, i) => id !== (team?.slots[i]?.careerId ?? null)),
   );
   const between = (v: string, min: number, max: number) => v.trim().length >= min && v.trim().length <= max;
@@ -133,22 +143,53 @@
   const cells = $derived(
     slots.map((id, i) => {
       const p = id ? byId.get(id) : undefined;
-      return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p };
+      return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p, player: p };
     }),
   );
   const matchHint = $derived(matchHintOf(team, dirty, matchesLeft, season, current));
+
+  const draftValue = () => ({ name, manager, logo, formation, layout, slots });
+  function preserveDraft() {
+    if (status !== 'ready' || !editable || !draftKey || pendingDraft) return;
+    const hasChanges = team ? dirty : !!name || !!logo || !!layout || slots.some(Boolean) || formation !== '4-3-3' || manager !== (lastManager ?? '');
+    writeTeamDraft(draftKey, hasChanges ? { base: teamDraftBase(team), value: draftValue() } : null);
+  }
+  $effect(preserveDraft);
+  onDestroy(preserveDraft);
+
+  function restoreDraft(draft: TeamDraft) {
+    ({ name, manager, formation, slots } = draft.value);
+    logo = draft.value.logo ?? null;
+    layout = draft.value.layout ?? null;
+    renaming = !!team && (name !== team.name || manager !== team.manager);
+    pendingDraft = null;
+    restoredDraft = true;
+  }
+  function discardDraft() {
+    if (draftKey) writeTeamDraft(draftKey, null);
+    pendingDraft = null;
+    restoredDraft = false;
+    applyTeam(team);
+    renaming = false;
+  }
 
   function applyTeam(t: OwnerTeam | null) {
     team = t;
     name = t?.name ?? '';
     manager = t?.manager || lastManager || '';
+    logo = t?.logo ?? null;
+    editingLogo = false;
     formation = t?.formation ?? '4-3-3';
+    layout = t?.layout?.map((p) => ({ ...p })) ?? null;
     slots = t ? t.slots.map((s) => s.careerId) : Array(LINEUP_SIZE).fill(null);
   }
 
   async function load(want?: number) {
+    preserveDraft();
+    const sequence = ++loadSequence;
     status = 'loading';
     const r = await fetchOwnerTeam(want);
+    if (sequence !== loadSequence) return;
     if (!r.ok) {
       needLogin = r.error.reason === 'GOOGLE_LOGIN_REQUIRED' || r.error.code === 'PROFILE_REQUIRED';
       status = needLogin ? 'ready' : 'error';
@@ -158,6 +199,15 @@
     perDay = r.data.matchesPerDay;
     needLogin = false;
     applyTeam(r.data.team);
+    const account = accountCache.value;
+    draftKey = team?.id ?? (account && account !== 'error' ? `${account.id}:${season}` : null);
+    pendingDraft = null;
+    restoredDraft = false;
+    const draft = editable && draftKey ? readTeamDraft(draftKey) : null;
+    if (draft) {
+      if (draft.base === teamDraftBase(team)) restoreDraft(draft);
+      else pendingDraft = draft;
+    }
     status = 'ready';
   }
   /** 시즌을 바꿔 본다(지난 시즌 팀은 보기만). */
@@ -165,28 +215,17 @@
     show('team');
     void load(id);
   }
-  /** T-11-028 기록실 업적 랭킹. */
+  /** T-11-028 기록실 구단주 랭킹. */
   function openAchRanking() {
     appState.hof = { ...hofStart(), tab: 'ach' };
-    go('hof');
-  }
-  /** 기록실 라이브 랭킹에서 팀 프로필을 연다(id 없으면 랭킹 목록). */
-  function openRanking(id: string | null = null) {
-    appState.hof = { ...hofStart(), tab: 'teams', team: id };
     go('hof');
   }
   onMount(() => void load());
 
   // ───────── 편성 ─────────
-  const candidates = $derived(
-    picking === null ? [] : pickCandidates(slotCodes, picking, players, slots, pickSort),
-  );
-
-  /** 고른 자리에 선수를 넣는다. 이미 다른 자리에 있던 선수면 두 자리를 맞바꾼다. */
-  function assign(id: string | null) {
-    if (picking === null) return;
-    slots = assignSlot(slots, picking, id);
-    picking = null;
+  /** 라커룸에서 넣거나, 이미 선발인 선수의 두 자리를 바꾼다. */
+  function assign(index: number, id: string | null) {
+    slots = assignSlot(slots, index, id);
   }
 
   /** 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만). */
@@ -194,21 +233,39 @@
     slots = autoFillSlots(slotCodes, players);
   }
 
-  async function save() {
-    if (saving || !nameOk) return;
+  async function save(): Promise<boolean> {
+    if (saving || !nameOk || !editable || pendingDraft) return false;
+    const key = draftKey;
+    const sequence = loadSequence;
+    const submitted = JSON.parse(JSON.stringify(draftValue())) as ReturnType<typeof draftValue>;
     saving = true;
     const r = await saveOwnerTeam({
-      name: name.trim(),
-      manager: manager.trim(),
-      formation,
-      slots,
+      ...submitted, name: submitted.name.trim(), manager: submitted.manager.trim(),
     });
     saving = false;
-    if (!r.ok) return toast(r.error.message);
+    if (!r.ok) { toast(r.error.message); return false; }
+    if (sequence !== loadSequence) { if (key) writeTeamDraft(key, null); return false; }
     const created = !team;
+    const unchanged = JSON.stringify(submitted) === JSON.stringify(draftValue());
+    if (!unchanged) {
+      team = r.data.team;
+      preserveDraft();
+      toast('저장했어요. 그 뒤에 바꾼 내용은 아직 저장 전이에요.');
+      return false;
+    }
+    if (key) writeTeamDraft(key, null);
     applyTeam(r.data.team);
+    draftKey = r.data.team.id;
+    pendingDraft = null;
+    restoredDraft = false;
     renaming = false;
-    toast(created ? '팀을 만들었어요' : '편성을 저장했어요');
+    toast(created ? '팀을 만들었어요' : '변경 사항을 저장했어요');
+    return true;
+  }
+
+  async function saveAndFindOpponents() {
+    if (!await save()) return;
+    if (appState.screen === 'team' && view === 'opponents' && !matchHint) await loadOpponents();
   }
 
   // ───────── 경기 ─────────
@@ -235,6 +292,7 @@
       return toast(r.error.message);
     }
     result = r.data.match;
+    resultOrigin = 'opponents';
     live = true;
     matchesLeft = r.data.matchesLeft;
     if (team) {
@@ -288,26 +346,16 @@
     if (status !== 'ready' || needLogin) return;
     if (v in LOAD) untrack(() => void LOAD[v as keyof typeof LOAD]());
   });
-  const navOn = $derived(view === 'result' ? 'opponents' : view);
+  const navOn = $derived(view === 'result' ? resultOrigin : view);
   /** 탭을 바꾸면 맨 위에서 시작하고, 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(게임 화면 탭과 같다). */
   function switchView(v: TeamView) {
     if (view === v) return window.scrollTo({ top: 0, behavior: dur(1) ? 'smooth' : 'instant' });
     show(v);
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
-  // T-10-117 선수 고르기 시트가 열린 동안 뒤 페이지 스크롤을 잠근다(스크롤 위치는 그대로).
-  $effect(() => {
-    if (picking === null) return;
-    return lockScroll();
-  });
-  function onKey(e: KeyboardEvent) {
-    if (e.key === 'Escape' && picking !== null) picking = null;
-  }
 </script>
 
-<svelte:window onkeydown={onKey} />
-
-<div class="wrap" class:has-tabbar={!needLogin}>
+<div class="wrap" class:has-tabbar={!needLogin} class:lineup-editor={view === 'team' && !needLogin}>
   <Topbar />
 
   <LoadState {status} failText="팀을 불러오지 못했어요." retry={load}>
@@ -321,10 +369,21 @@
     {:else if view === 'achievements'}
       <TeamAchievements {ach} status={achStatus} newIds={achNewIds} bind:cat={achCat} load={(s) => void loadAchievements(s)} onrank={openAchRanking} />
     {:else if view === 'team'}
+      {#if pendingDraft}
+        <section class="card draft-notice" role="status">
+          <p>저장된 팀이 바뀌었어요. 이전에 수정하던 초안도 남아 있어요.</p>
+          <div><button class="btn btn-sm" onclick={() => pendingDraft && restoreDraft(pendingDraft)} data-act="team-draft-restore">초안 불러오기</button><button class="btn btn-sm" onclick={discardDraft}>저장된 팀 유지</button></div>
+        </section>
+      {:else if restoredDraft && dirty}
+        <section class="card draft-notice" role="status"><p>이 탭에서 수정하던 내용을 불러왔어요. 아직 저장 전이에요.</p><button class="btn btn-sm" onclick={discardDraft} data-act="team-draft-discard">저장된 팀으로</button></section>
+      {/if}
       <TeamHead
         {team}
+        {logo}
+        onlogo={() => (editingLogo = true)}
         {seasonName}
         {editable}
+        {dirty}
         {ovr}
         {matchesLeft}
         {perDay}
@@ -335,21 +394,27 @@
         bind:manager
         bind:renaming
         onseason={pickSeason}
-        onranking={openRanking}
       />
+      {#if editingLogo && editable}<TeamLogoEditor {logo} name={name.trim() || '내 팀'} onapply={(value) => { logo = value; editingLogo = false; }} onclose={() => (editingLogo = false)} />{/if}
       <TeamLineup
         {team}
+        teamLogo={logo}
+        teamName={name.trim()}
+        managerName={manager.trim()}
         {editable}
         bind:formation
+        bind:layout
+        {slots}
+        {nameOf}
         {lines}
         {cells}
         {players}
         {seasonName}
         {filled}
         {saving}
-        {nameOk}
+        nameOk={nameOk && !pendingDraft}
         {dirty}
-        onpick={(i) => (picking = i)}
+        onassign={assign}
         onauto={autoFill}
         onsave={save}
       />
@@ -366,6 +431,9 @@
         onchallenge={(o) => void challenge(o)}
         onmore={() => open('opponents')}
         ontoTeam={editable ? () => switchView('team') : undefined}
+        onsave={editable && dirty && filled > 0 && matchesLeft > 0 ? () => void saveAndFindOpponents() : undefined}
+        {saving}
+        saveDisabled={!nameOk || !!pendingDraft}
       />
     {:else if view === 'result' && result}
       {#if live}
@@ -378,9 +446,10 @@
           {team}
           {eventName}
           {matchesLeft}
-          ontoTeam={() => show('team')}
+          ontoTeam={() => switchView('team')}
           onreplay={() => (live = true)}
           onagain={() => open('opponents')}
+          onhistory={resultOrigin === 'history' ? () => switchView('history') : undefined}
         />
       {/if}
     {:else if view === 'history'}
@@ -388,7 +457,7 @@
         {history}
         status={histStatus}
         onreload={() => void loadHistory()}
-        onopen={(m) => ((result = m), (live = false), show('result'))}
+        onopen={(m) => { result = m; resultOrigin = 'history'; live = false; switchView('result'); }}
       />
     {/if}
   </LoadState>
@@ -399,13 +468,10 @@
   <TeamNav {navOn} onswitch={switchView} />
 {/if}
 
-<TeamPicker
-  {picking}
-  {slotCodes}
-  {slots}
-  bind:sort={pickSort}
-  {candidates}
-  {nameOf}
-  onassign={assign}
-  onclose={() => (picking = null)}
-/>
+<style>
+  .lineup-editor { max-width: 880px; }
+  .draft-notice {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;}
+  .draft-notice p {margin:0;font-size:13px;flex:1 1 200px;}
+  .draft-notice > div {display:flex;flex-wrap:wrap;gap:8px;}
+  .draft-notice .btn {min-height:44px;}
+</style>

@@ -1,6 +1,7 @@
 import '../platform/setup';
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import {
@@ -36,9 +37,9 @@ export default function RootLayout() {
   }, [show]);
   if (!show) return null;
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style={dark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }} />
-    </>
+    </GestureHandlerRootView>
   );
 }

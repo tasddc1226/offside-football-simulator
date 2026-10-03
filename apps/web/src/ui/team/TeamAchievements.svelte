@@ -25,7 +25,7 @@
     cat: AchCategory;
     /** 시즌을 지정해 다시 불러온다(없으면 보고 있는 시즌). */
     load: (season?: number) => void;
-    /** 기록실 업적 랭킹을 연다. */
+    /** 기록실 구단주 랭킹을 연다. */
     onrank: () => void;
   } = $props();
 </script>
@@ -57,7 +57,7 @@
           <AchGradeBadge grade={gv.grade} large />
           <div class="tm-ach-total"><b>{num(ach.score)}</b><span class="muted">점</span></div>
           <button class="tm-ach-rank" data-act="ach-ranking" onclick={onrank}>
-            <small class="muted">업적 랭킹</small><span>{achRankText(ach.rank, ach.ranked)}</span>
+            <small class="muted">구단주 랭킹</small><span>{achRankText(ach.rank, ach.ranked)}</span>
           </button>
         </div>
         <div class="tm-bar" role="progressbar" aria-label="다음 등급까지" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(gv.ratio * 100)}>

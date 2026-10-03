@@ -79,7 +79,7 @@
           <span class="muted fs-sm">{guest ? '기록은 이 기기에만 저장돼요' : card?.team ? `${card.team.name} · ${card.season}` : 'Google 계정으로 로그인했어요'}</span>
         </div>
       </div>
-      {#if summary?.players === 0}
+      {#if (guest && localCount === 0) || summary?.players === 0}
         <p class="muted fs-sm owner-empty">첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.</p>
       {:else}
       <dl class="owner-stats">
@@ -111,7 +111,7 @@
           <div><dt>오늘 경기</dt><dd>{card.left}/{card.perDay}</dd></div>
         </dl>
         <div class="owner-actions">
-          <button class="btn" data-act="team" onclick={() => openTeam()}>내 팀 · 업적</button>
+          <button class="btn" data-act="team" onclick={() => openTeam()}>내 팀</button>
           <button class="btn btn-accent" data-act="owner-play" disabled={!!card.playHint} onclick={() => openTeam('opponents')}>경기하기</button>
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
@@ -120,7 +120,7 @@
           {card ? ownerTeamEmptyText(card) : cardFailed ? '시즌마다 은퇴한 선수로 팀을 꾸려 겨루고, 라이브 랭킹과 구단 업적을 채워요.' : '불러오는 중…'}
         </p>
         <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={() => openTeam()}>
-          {card && card.players > 0 ? '팀 만들기' : '내 팀 · 시즌 업적'}
+          {card && card.players > 0 ? '팀 만들기' : '내 팀'}
         </button>
       {/if}
     </section>

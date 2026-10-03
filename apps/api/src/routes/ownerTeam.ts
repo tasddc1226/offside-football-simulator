@@ -39,6 +39,7 @@ import {
   challengedSince,
   countMatchesSince,
   eligibleMap,
+  estimatedAttrsOf,
   listEligibleCareers,
   listMyTeams,
   listOpponentCandidates,
@@ -50,6 +51,8 @@ import {
   publicNamesOf,
   recordMatchStatements,
   slotIdsOf,
+  layoutOf,
+  logoOf,
   toLineupCareer,
   type MatchDetail,
   type OwnerTeamRow,
@@ -140,6 +143,8 @@ function toOwnerTeam(row: OwnerTeamRow, lineup: LineupSlot[]): OwnerTeam {
     manager: row.manager,
     formation: row.formation as FormationId,
     slots: slotsOf(lineup),
+    layout: layoutOf(row),
+    logo: logoOf(row),
     ovr: lineupOvr(lineup),
     lines: linesOf(lineup),
     rating: row.rating,
@@ -203,7 +208,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const team = teams.find((t) => t.season === season) ?? null;
     const picks = players.map((p) => {
       const profile = peakOf(p.peakProfile);
-      return { p, profile, career: toLineupCareer(p, profile) };
+      const estimatedAttrs = profile ? null : estimatedAttrsOf(p.cardAttrsJson);
+      return { p, profile, estimatedAttrs, career: toLineupCareer(p, profile) };
     });
     const eligible = new Map(picks.map(({ career }) => [career.id, career]));
     // 은퇴 선수가 목록 상한보다 많으면 선발에 든 선수가 목록 밖에 있을 수 있다 — 그 선수만 따로 읽는다.
@@ -222,15 +228,19 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         current: teamSeasonAt(now),
         seasons: seasonOptions(now),
         team: team
-          ? toOwnerTeam(team, buildLineup(team.formation as FormationId, slotIdsOf(team), eligible))
+          ? toOwnerTeam(
+              team,
+              buildLineup(team.formation as FormationId, slotIdsOf(team), eligible, layoutOf(team)),
+            )
           : null,
-        players: picks.map(({ p, profile, career }) => ({
+        players: picks.map(({ p, profile, estimatedAttrs, career }) => ({
           careerId: p.id,
           pos: p.pos,
           dpos: career.dpos,
           peak: career.peak,
           roles: career.roles,
-          attrs: profile?.attrs ?? null,
+          attrs: profile?.attrs ?? estimatedAttrs,
+          attrsEstimated: estimatedAttrs !== null,
           number: p.number,
           publicName: p.publicName,
           legendScore: p.legendScore,
@@ -253,6 +263,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const season = currentSeasonOrThrow(now);
     checkName(input.name, '팀 이름');
     checkName(input.manager, '감독 이름');
+    if (input.logo?.text) checkName(input.logo.text, '로고 글자');
     const ids = input.slots.filter((x): x is string => x !== null);
     if (new Set(ids).size !== ids.length) {
       throw new AppError({
@@ -269,12 +280,26 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'PLAYER_NOT_ELIGIBLE' },
       });
     }
-    const lineup = buildLineup(input.formation, input.slots, eligible);
+    // 이전 클라이언트가 좌표를 보내지 않으면 기존 자유 편성을 보존한다.
+    // 포메이션을 바꾼 요청만 새 기본 배치로 돌아간다.
+    const previous = input.layout === undefined ? (await myTeamIn(db, me.id, season))[0] : null;
+    const layout =
+      input.layout === undefined
+        ? previous?.formation === input.formation
+          ? layoutOf(previous)
+          : null
+        : input.layout;
+    const lineup = buildLineup(input.formation, input.slots, eligible, layout);
     const values = {
       name: input.name,
       manager: input.manager,
       formation: input.formation,
       slotsJson: JSON.stringify(input.slots),
+      layoutJson: layout ? JSON.stringify(layout) : null,
+      // 로고를 모르는 이전 클라이언트의 저장은 기존 로고를 보존한다.
+      ...(input.logo !== undefined
+        ? { logoJson: input.logo ? JSON.stringify(input.logo) : null }
+        : {}),
       filled: filledCount(lineup),
       ovr: lineupOvr(lineup),
       updatedAt: now,
@@ -366,11 +391,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       mine.formation as FormationId,
       mySlots,
       eligibleMap(rows, me.id, season),
+      layoutOf(mine),
     );
     const away = buildLineup(
       opp.team.formation as FormationId,
       oppSlots,
       eligibleMap(rows, opp.team.profileId, season),
+      layoutOf(opp.team),
     );
     if (filledCount(home) === 0) {
       throw conflictError('은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.', 'TEAM_EMPTY');

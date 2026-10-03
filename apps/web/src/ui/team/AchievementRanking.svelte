@@ -1,30 +1,59 @@
 <script lang="ts">
-  // T-11-028 업적 랭킹 — 기록실 탭. 구단주의 시즌 업적 점수 순(같은 점수면 먼저 닿은 구단주가 앞선다). 구단주는 공개
+  // T-11-028 구단주 랭킹 — 기록실 탭. 구단주의 시즌 업적 점수 순(같은 점수면 먼저 닿은 구단주가 앞선다). 구단주는 공개
   // 닉네임과 그 시즌 팀 이름으로만 보이고, 팀이 있으면 줄을 눌러 팀 프로필을 연다. 서버가 5분마다 새로 센다.
   import { ACH_GRADES, ACH_RANK_PER_PAGE, achGradeOf } from '@offside/contracts/owner-team';
+  import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
   import { fetchAchRanking, type AchRankResponse } from '@offside/app-core/api/team';
   import { hofStart } from '@offside/app-core/state';
   import { num as n } from '@offside/app-core/teamText';
-  import Laurel from '../Laurel.svelte';
   import { appState } from '../state.svelte.js';
   import AchGradeBadge from './AchGradeBadge.svelte';
   import GradeEmblem from './GradeEmblem.svelte';
 
-  const MEDAL = ['gold', 'silver', 'bronze'];
+  const PREVIEW_KEY = 'offside:achievement-grade-preview';
+  const canPreview = import.meta.env.DEV && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+  let preview = $state(canPreview && sessionStorage.getItem(PREVIEW_KEY) === '1');
   /** undefined = 지금 시즌(서버가 정한다). */
   let season = $state<number | undefined>(undefined);
   let page = $state(1);
   let data = $state<AchRankResponse | null>(null);
   let failed = $state(false);
+  let loading = $state(true);
+  const now = new Date().toISOString();
+  const seasons = $derived(data?.seasons ?? openTeamSeasons(now).map((id) => ({ id, name: teamSeasonName(id) })));
+  const selectedSeason = $derived(season ?? data?.season ?? displaySeasonAt(now));
 
   $effect(() => {
-    const [se, p] = [season, page];
+    const [se, p, example] = [season, page, preview];
+    let live = true;
     failed = false;
+    loading = true;
+    if (example) {
+      // 화면에서만 쓰는 예시. 서버·DB·실제 랭킹에는 넣지 않는다.
+      data = {
+        season: se ?? displaySeasonAt(now),
+        seasons: openTeamSeasons(now).map((id) => ({ id, name: teamSeasonName(id) })),
+        page: 1,
+        total: ACH_GRADES.length,
+        items: [...ACH_GRADES].reverse().map((grade, i) => ({
+          rank: i + 1,
+          nickname: `테스트 구단주 ${i + 1}`,
+          team: null,
+          score: grade.min,
+          done: Math.round(grade.min / 50),
+          players: Math.ceil(grade.min / 250),
+        })),
+      };
+      loading = false;
+      return;
+    }
     void fetchAchRanking(se, p).then((r) => {
-      if (se !== season || p !== page) return; // 더 늦게 고른 조건의 응답만 쓴다.
+      if (!live || se !== season || p !== page) return;
+      loading = false;
       if (r.ok) data = r.data;
       else failed = true;
     });
+    return () => { live = false; };
   });
 
   const pages = $derived(data ? Math.max(1, Math.ceil(data.total / ACH_RANK_PER_PAGE)) : 1);
@@ -36,50 +65,62 @@
     appState.hof = { ...hofStart(), tab: 'teams', team: id };
     window.scrollTo(0, 0);
   }
+  function togglePreview() {
+    if (!canPreview) return;
+    preview = !preview;
+    page = 1;
+    if (preview) sessionStorage.setItem(PREVIEW_KEY, '1');
+    else sessionStorage.removeItem(PREVIEW_KEY);
+  }
 </script>
 
 <section class="card" data-ach-ranking>
-  <div class="eyebrow">Achievement ranking</div>
-  <h1 style="margin-bottom:8px">업적 랭킹</h1>
-  {#if data && data.seasons.length > 1}
-    <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
-      {#each data.seasons as s (s.id)}
-        <button class="opt" aria-pressed={data.season === s.id} data-ach-season={s.id} onclick={() => ((season = s.id), (page = 1))}>{s.name}</button>
-      {/each}
+  {#if canPreview}
+    <div class="achievement-preview">
+      {#if preview}<span class="muted">예시 데이터 · 7개 등급</span>{/if}
+      <button class="hof-sort" data-ach-preview-toggle aria-pressed={preview} onclick={togglePreview}>{preview ? '실제 랭킹 보기' : '뱃지 미리보기'}</button>
     </div>
   {/if}
+  <div class="hof-toolbar achievement-toolbar">
+    <label class="hof-season-picker">
+      <span class="hof-filter-label">시즌</span>
+      <select aria-label="구단주 랭킹 시즌" data-ach-season-select value={String(selectedSeason)} onchange={(e) => ((season = Number(e.currentTarget.value)), (page = 1))}>
+        {#each seasons as s (s.id)}<option value={String(s.id)}>{s.name}</option>{/each}
+      </select>
+    </label>
+    {#if data && !loading && !failed}<span class="achievement-total muted">참여 구단주 <b class="num">{n(data.total)}</b>명</span>{/if}
+  </div>
   {#if failed}
     <p class="empty">랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
-  {:else if !data}
-    <p class="empty">불러오는 중…</p>
+  {:else if loading || !data}
+    <p class="empty" role="status">불러오는 중…</p>
   {:else if data.items.length}
-    <p class="muted hof-source">{data.seasons.find((s) => s.id === data?.season)?.name} · 구단주 {n(data.total)}명 · 업적 점수 순</p>
-    {#each data.items as r (r.rank)}
-      {@const grade = achGradeOf(r.score).grade}
-      {#snippet row()}
-        {#if r.rank <= MEDAL.length}
-          <div class="hof-rank medal {MEDAL[r.rank - 1]}"><Laurel /><span>{r.rank}</span></div>
-        {:else}
-          <div class="hof-rank">{r.rank}</div>
-        {/if}
-        <div>
-          <b>{r.nickname ?? '익명 구단주'}</b>
-          <div class="muted fs-xs">{r.team ? `${r.team.name} · ` : ''}업적 {n(r.done)}개 · 선수 {n(r.players)}명</div>
-        </div>
-        <div class="ach-rank-value">
-          <GradeEmblem id={grade.id} size={34} />
-          <div>
-            <AchGradeBadge {grade} emblem={false} />
-            <span class="num hof-value">{n(r.score)}</span>
-          </div>
-        </div>
-      {/snippet}
-      {#if r.team}
-        <button class="hof-row" data-ach-rank={r.rank} onclick={() => r.team && openTeam(r.team.id)}>{@render row()}</button>
-      {:else}
-        <div class="hof-row" data-ach-rank={r.rank}>{@render row()}</div>
-      {/if}
-    {/each}
+    <div class="achievement-columns achievement-header" aria-hidden="true">
+      <span class="achievement-heading">구단주</span><span>등급</span><span title="달성 업적">업적</span><b>점수</b>
+    </div>
+    <ol class="achievement-list" start={data.items[0]!.rank} aria-label="업적 점수 순 구단주 랭킹">
+      {#each data.items as r (r.rank)}
+        {@const grade = achGradeOf(r.score).grade}
+        {@const name = r.nickname ?? '익명 구단주'}
+        {@const label = `${r.rank}위 ${name}, ${grade.name}, 업적 ${n(r.done)}개 달성, ${n(r.score)}점`}
+        {#snippet row()}
+          <span class="achievement-owner">
+            <span class="achievement-rank num">{r.rank}</span>
+            <span class="achievement-identity"><b title={name}>{name}</b><small class="muted" title={r.team?.name}>{r.team?.name ?? '팀 없음'}</small></span>
+          </span>
+          <span class="achievement-grade" data-ach-grade={grade.id} role="img" aria-label={grade.name} title={grade.name}><GradeEmblem id={grade.id} size={32} /></span>
+          <span class="num achievement-done" title="업적 {n(r.done)}개 달성">{n(r.done)}</span>
+          <strong class="num achievement-score" title="{n(r.score)}점">{n(r.score)}</strong>
+        {/snippet}
+        <li value={r.rank}>
+          {#if r.team}
+            <button class="achievement-columns achievement-row" data-ach-rank={r.rank} aria-label="{label}, 팀 상세 보기" onclick={() => r.team && openTeam(r.team.id)}>{@render row()}</button>
+          {:else}
+            <div class="achievement-columns achievement-row" data-ach-rank={r.rank} role="group" aria-label={label}>{@render row()}</div>
+          {/if}
+        </li>
+      {/each}
+    </ol>
     {#if pages > 1}
       <nav class="hof-pager" aria-label="랭킹 페이지">
         <button class="icon-btn" data-ach-page="prev" disabled={page <= 1} onclick={() => goPage(page - 1)}>← 이전</button>
@@ -90,13 +131,157 @@
   {:else}
     <p class="empty">아직 랭킹에 오른 구단주가 없어요. 은퇴한 선수로 시즌 업적을 달성하면 여기에 올라요.</p>
   {/if}
-  <details class="ach-grades">
-    <summary class="muted fs-sm">등급 기준</summary>
-    <ul>
-      {#each ACH_GRADES as g (g.id)}
-        <li><AchGradeBadge grade={g} /><span class="num muted">{n(g.min)}점부터</span></li>
-      {/each}
-    </ul>
-  </details>
-  <p class="muted fs-xs" style="margin-top:10px">시즌마다 처음부터 다시 쌓아요. 선수·팀·구단주 업적 점수의 합이고, 랭킹은 5분마다 새로 세요.</p>
+  <div class="achievement-notes">
+    <details class="ach-grades">
+      <summary class="muted fs-sm">등급 기준</summary>
+      <ul>
+        {#each ACH_GRADES as g (g.id)}
+          <li><AchGradeBadge grade={g} /><span class="num muted">{n(g.min)}점부터</span></li>
+        {/each}
+      </ul>
+    </details>
+    <p class="muted">시즌마다 처음부터 다시 쌓아요.</p>
+    <p class="muted">선수·팀·구단주 업적 점수의 합이고, 랭킹은 5분마다 새로 세요.</p>
+  </div>
 </section>
+
+<style>
+  .achievement-preview {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+  .achievement-preview > span {
+    margin-right: auto;
+  }
+  .achievement-toolbar {
+    margin-bottom: 12px;
+  }
+  .achievement-total {
+    text-align: right;
+    padding-bottom: 10px;
+    font-size: 12px;
+  }
+  .achievement-total b {
+    color: var(--ink);
+    font-size: 16px;
+  }
+  .achievement-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 40px 32px 50px;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+  }
+  .achievement-header {
+    min-height: 36px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .achievement-heading {
+    padding-left: 26px;
+    text-align: left;
+  }
+  .achievement-header b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .achievement-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .achievement-list > li + li {
+    border-top: 1px solid var(--line);
+  }
+  .achievement-row {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    font-size: 14px;
+  }
+  button.achievement-row:active {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .achievement-owner {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    text-align: left;
+  }
+  .achievement-rank {
+    flex: 0 0 20px;
+    color: var(--muted);
+    text-align: center;
+    font-size: 13px;
+  }
+  .achievement-identity {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .achievement-identity b,
+  .achievement-identity small {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .achievement-identity b {
+    font-weight: 600;
+  }
+  .achievement-identity small {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .achievement-grade {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    min-height: 40px;
+  }
+  .achievement-done,
+  .achievement-score {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .achievement-score {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .achievement-notes {
+    margin-top: 16px;
+    padding-top: 4px;
+    border-top: 1px solid var(--line);
+  }
+  .achievement-notes .ach-grades {
+    margin-top: 0;
+  }
+  .achievement-notes summary {
+    min-height: 44px;
+    padding: 12px 0;
+  }
+  .achievement-notes p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  @media (min-width: 400px) {
+    .achievement-columns {
+      grid-template-columns: minmax(0, 1fr) 48px 44px 60px;
+      gap: 6px;
+    }
+  }
+</style>

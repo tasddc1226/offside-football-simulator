@@ -1,6 +1,7 @@
 // 선수 생성 화면 안에서만 쓰는 작은 부품 — 입력 칸·격자·두 색 섞기.
 import { useState, type ReactNode } from 'react';
 import { TextInput, View, type TextStyle } from 'react-native';
+import { revealFocusedInput } from '../../ui/scroll';
 import { useColors } from '../../theme/useColors';
 import { Txt } from '../../ui';
 
@@ -102,7 +103,10 @@ export function BodyInput({
         placeholder={String(fallback)}
         placeholderTextColor={c.muted}
         value={text ?? String(value ?? fallback)}
-        onFocus={() => setText(String(value ?? fallback))}
+        onFocus={() => {
+          setText(String(value ?? fallback));
+          revealFocusedInput();
+        }}
         onBlur={() => setText(null)}
         onChangeText={(t) => {
           const digits = t.replace(/\D/g, '');

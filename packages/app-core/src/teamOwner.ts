@@ -67,7 +67,8 @@ export function pickCandidates(
 /** 최고 시점 대표 능력치 한 줄(골키퍼는 골키퍼 능력치 이름). */
 export const attrLine = (p: TeamPlayer): string | null =>
   p.attrs
-    ? ATTR_KEYS.map((k) => `${(p.pos === 'GK' ? GK_ABBR : FACE_ABBR)[k]} ${p.attrs![k]}`).join(
+    ? (p.attrsEstimated ? '추정 능력치 · ' : '') +
+      ATTR_KEYS.map((k) => `${(p.pos === 'GK' ? GK_ABBR : FACE_ABBR)[k]} ${p.attrs![k]}`).join(
         ' · ',
       )
     : null;

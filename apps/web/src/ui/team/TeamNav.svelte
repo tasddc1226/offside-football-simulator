@@ -11,7 +11,7 @@
     ['team', '편성', 'lineup'],
     ['opponents', '경기', 'season'],
     ['achievements', '업적', 'trophy'],
-    ['history', '기록', 'career'],
+    ['history', '경기 기록', 'career'],
   ];
 </script>
 

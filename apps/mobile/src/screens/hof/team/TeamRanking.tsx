@@ -9,8 +9,7 @@ import {
   type TeamRankResponse,
   type TeamRankSort,
 } from '@offside/app-core/api/team';
-import { num as n, recordText } from '@offside/app-core/teamText';
-import { RowFrame } from '../../../components/HofRow';
+import { num as n } from '@offside/app-core/teamText';
 import { appState } from '../../../store';
 import { rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
@@ -19,7 +18,12 @@ import { Card } from '../../../ui/Card';
 import { Press } from '../../../ui/Press';
 import { scrollTo } from '../../../ui/scroll';
 import { Txt } from '../../../ui/Txt';
-import { Seg, SortChips, TabOpt } from '../../board/parts';
+import {
+  displaySeasonAt,
+  openTeamSeasons,
+  teamSeasonName,
+} from '@offside/contracts/service-seasons';
+import { RecordsSelect, RecordsChips } from '../RecordsControls';
 import TeamProfile from './TeamProfile';
 
 const SORTS: [TeamRankSort, string][] = [
@@ -35,13 +39,16 @@ export default function TeamRanking() {
   const [sort, setSort] = useState<TeamRankSort>('rating');
   const [page, setPage] = useState(1);
   const [data, setData] = useState<TeamRankResponse | null>(null);
+  const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     setFailed(false);
+    setLoading(true);
     let live = true; // 더 늦게 고른 조건의 응답만 쓴다.
     void fetchTeamRanking(season, sort, page).then((r) => {
       if (!live) return;
+      setLoading(false);
       if (r.ok) setData(r.data);
       else setFailed(true);
     });
@@ -69,42 +76,48 @@ export default function TeamRanking() {
     </Txt>
   );
   return (
-    <Card gap={0}>
-      <View testID="team-ranking">
-        <Txt v="eyebrow">Live ranking</Txt>
-        <Txt v="h1" accessibilityRole="header" style={{ marginBottom: 8 }}>
-          라이브 랭킹
-        </Txt>
+    <Card gap={0} style={{ paddingHorizontal: 12, paddingVertical: 16 }}>
+      <View
+        testID="team-ranking"
+        style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 10 }}
+      >
+        <RecordsSelect
+          label="시즌"
+          testID="rank-season-select"
+          value={season ?? data?.season ?? displaySeasonAt(new Date().toISOString())}
+          options={
+            data?.seasons.map((s) => ({ value: s.id, label: s.name })) ??
+            openTeamSeasons(new Date().toISOString()).map((id) => ({
+              value: id,
+              label: teamSeasonName(id),
+            }))
+          }
+          onChange={(id) => {
+            setSeason(id);
+            setPage(1);
+          }}
+        />
+        <Txt
+          tone="muted"
+          style={{ flex: 1, textAlign: 'right', fontSize: 12, paddingBottom: 10 }}
+        >{`팀 ${n(data?.total ?? 0)}개`}</Txt>
       </View>
-      {data && data.seasons.length > 1 ? (
-        <Seg cols={2} label="시즌" style={{ marginTop: 4, marginBottom: 6 }}>
-          {data.seasons.map((s) => (
-            <TabOpt
-              key={s.id}
-              title={s.name}
-              selected={data.season === s.id}
-              testID={`rank-season-${s.id}`}
-              onPress={() => {
-                setSeason(s.id);
-                setPage(1);
-              }}
-            />
-          ))}
-        </Seg>
-      ) : null}
-      <SortChips
+      <RecordsChips
         label="순위 유형"
         testIDPrefix="rank-sort"
         value={sort}
-        onPick={(k) => {
-          setSort(k as TeamRankSort);
+        items={SORTS.map(([key, label]) => ({ key, label }))}
+        onPick={(key) => {
+          setSort(key as TeamRankSort);
           setPage(1);
         }}
-        items={SORTS.map(([key, label]) => ({ key, label }))}
       />
+      <Txt tone="muted" style={{ fontSize: 12, marginVertical: 8 }}>
+        최근 5경기 · 왼쪽이 최신 경기예요.
+      </Txt>
       {failed ? (
         empty('랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
-      ) : !data ? (
+      ) : loading || !data ? (
         <Txt
           tone="muted"
           accessibilityLiveRegion="polite"
@@ -114,36 +127,109 @@ export default function TeamRanking() {
         </Txt>
       ) : data.items.length ? (
         <>
-          <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 6 }}>
-            {`${data.seasons.find((s) => s.id === data.season)?.name} · 팀 ${n(data.total)}개 · ${sort === 'rating' ? '레이팅' : '팀 OVR'} 순`}
-          </Txt>
-          {data.items.map((t, i) => (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingVertical: 8,
+              borderBottomWidth: 1,
+              borderBottomColor: c.line,
+            }}
+            accessibilityElementsHidden
+          >
+            <Txt tone="muted" style={{ flex: 1, fontSize: 12 }}>
+              팀
+            </Txt>
+            {['경기', '승', '무', '패'].map((label, i) => (
+              <Txt
+                key={label}
+                tone="muted"
+                center
+                style={{ width: i === 0 ? 28 : 22, fontSize: 12 }}
+              >
+                {label}
+              </Txt>
+            ))}
+            <Txt bold center style={{ width: 48, fontSize: 12 }}>
+              {sort === 'rating' ? '레이팅' : 'OVR'}
+            </Txt>
+          </View>
+          {data.items.map((t) => (
             <Press
               key={t.teamId}
-              scale={0.985}
+              scale={1}
               testID={`rank-team-${t.teamId}`}
               onPress={() => open(t.teamId)}
+              accessibilityLabel={`${t.rank}위 ${t.name}, ${t.record.w + t.record.d + t.record.l}경기 ${t.record.w}승 ${t.record.d}무 ${t.record.l}패, ${sort === 'rating' ? `레이팅 ${t.rating}` : `팀 OVR ${t.ovr}`}, 최근 경기부터 ${t.recentForm.length ? t.recentForm.map((r) => ({ W: '승리', D: '무승부', L: '패배' })[r]).join(', ') : '경기 기록 없음'}, 팀 상세 보기`}
+              style={{
+                paddingVertical: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: c.line,
+                gap: 6,
+              }}
             >
-              <RowFrame rank={t.rank - 1} first={i === 0}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Txt>
-                      <Txt bold>{t.name}</Txt>
-                      <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>{` · ${t.manager}`}</Txt>
-                    </Txt>
-                    <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                      {`${t.formation} · ${recordText(t.record)} · OVR ${t.ovr}${t.likes ? ` · ♥ ${n(t.likes)}` : ''}`}
-                    </Txt>
-                  </View>
-                  <Txt
-                    num
-                    numberOfLines={1}
-                    style={{ fontSize: rem(1.375), lineHeight: rem(1.375) * 1.2 }}
-                  >
-                    {sort === 'rating' ? n(t.rating) : t.ovr}
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                >
+                  <Txt num tone="muted" center style={{ width: 22, fontSize: 14 }}>
+                    {t.rank}
+                  </Txt>
+                  <Txt bold numberOfLines={1} style={{ flex: 1, fontSize: 13 }}>
+                    {t.name}
                   </Txt>
                 </View>
-              </RowFrame>
+                {[t.record.w + t.record.d + t.record.l, t.record.w, t.record.d, t.record.l].map(
+                  (value, i) => (
+                    <Txt key={i} num center style={{ width: i === 0 ? 28 : 22, fontSize: 14 }}>
+                      {n(value)}
+                    </Txt>
+                  ),
+                )}
+                <Txt num bold center style={{ width: 48, fontSize: 17 }}>
+                  {sort === 'rating' ? n(t.rating) : t.ovr}
+                </Txt>
+              </View>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 27 }}
+              >
+                <Txt tone="muted" numberOfLines={1} style={{ flex: 1, fontSize: 12 }}>
+                  {t.manager}
+                </Txt>
+                <View
+                  testID={`rank-team-form-${t.teamId}`}
+                  style={{ flexDirection: 'row', gap: 4 }}
+                >
+                  {[0, 1, 2, 3, 4].map((i) => {
+                    const result = t.recentForm[i];
+                    const color = result === 'W' ? c.good : result === 'L' ? c.bad : c.muted;
+                    return (
+                      <View
+                        key={i}
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 9,
+                          borderWidth: 1,
+                          borderColor: result ? color : c.line,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Txt accessible={false} style={{ fontSize: 12, lineHeight: 16, color }}>
+                          {result ? { W: '✓', D: '−', L: '×' }[result] : ''}
+                        </Txt>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
             </Press>
           ))}
           {pages > 1 ? (

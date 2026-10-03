@@ -3,6 +3,7 @@
 // 창(Modal)에 검색 칸 + 목록을 띄우고 KeyboardAvoidingView로 키보드 위에 맞춘다.
 import { useMemo, useState } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -38,10 +39,13 @@ export function NationPicker({
   const groups = useMemo(() => nationGroups(query), [query]);
 
   const show = () => {
+    // 이름·체격 입력의 포커스를 남기면 검색 창을 닫을 때 그 키보드가 다시 올라온다.
+    Keyboard.dismiss();
     setQuery('');
     setOpen(true);
   };
   const hide = () => {
+    Keyboard.dismiss();
     setOpen(false);
     setQuery('');
   };
@@ -144,7 +148,12 @@ export function NationPicker({
               <Press
                 onPress={hide}
                 accessibilityLabel="닫기"
-                style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 6 }}
+                style={{
+                  minWidth: 48,
+                  minHeight: 48,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
               >
                 <Txt tone="muted" bold>
                   닫기
@@ -155,6 +164,7 @@ export function NationPicker({
               sections={groups}
               keyExtractor={(n) => n.code}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
               stickySectionHeadersEnabled
               initialNumToRender={24}
               contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 8 }}

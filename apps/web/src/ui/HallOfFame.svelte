@@ -16,6 +16,7 @@
   import { anonName, fmtValue, iGa } from '@offside/app-core/format';
   import { openHof } from './nav.js';
   import HofRow, { type RowStats } from './HofRow.svelte';
+  import HofPodium from './HofPodium.svelte';
   import { appState } from './state.svelte.js';
 
   let { full = false }: { full?: boolean } = $props();
@@ -59,6 +60,7 @@
   let all = $state<PublicHofEntry[] | null>(null);
   let total = $state(0);
   let failed = $state(false);
+  let filtering = $state(false);
 
   function pickSeason(id: number | null) {
     appState.hof = { ...appState.hof, season: id, page: 1 };
@@ -68,6 +70,7 @@
   }
   function pickSort(s: HofSort) {
     appState.hof = { ...appState.hof, sort: s, page: 1 };
+    filtering = false;
   }
   // 타자를 멈추고 0.3초 뒤에 찾는다(글자마다 서버를 부르지 않게).
   let draft = $state(appState.hof.q);
@@ -89,14 +92,6 @@
     }
   }
   const focusIn = (el: HTMLElement) => el.focus();
-  /** 한 줄 가로 스크롤 칩에서 고른 유형이 보이게 가운데로 민다(상세에서 돌아와도). */
-  function keepPicked(el: HTMLElement) {
-    $effect(() => {
-      void sort;
-      const c = el.querySelector<HTMLElement>('[aria-pressed="true"]');
-      if (c && el.scrollWidth > el.clientWidth) el.scrollLeft = c.offsetLeft - (el.clientWidth - c.offsetWidth) / 2;
-    });
-  }
   function goPage(p: number) {
     appState.hof.page = p;
     window.scrollTo(0, 0);
@@ -119,6 +114,17 @@
   const myIds = new Set(loadHOF().map((h) => h.id).filter(Boolean));
   const offset = $derived((page - 1) * PER_PAGE);
   const pages = $derived(Math.max(1, Math.ceil(total / PER_PAGE)));
+  const podium = $derived(
+    full && page === 1 && !q
+      ? (all ?? []).slice(0, TOP).map((h, i) => ({
+          entry: h,
+          rank: h.rank ?? i + 1,
+          value: by.get({ ...h, score: h.legendScore }),
+          own: myIds.has(h.id),
+        })).filter((h) => h.rank <= TOP)
+      : [],
+  );
+  const podiumIds = $derived(new Set(podium.map((h) => h.entry.id)));
   const emptyText = $derived(
     q
       ? `'${q}'${iGa(q)} 들어간 이름의 ${scope}선수가 없어요.`
@@ -138,41 +144,85 @@
   {/if}
 {/snippet}
 
+{#snippet playerRow(h: PublicHofEntry, i: number)}
+  {@const t = { ...h, score: h.legendScore }}
+  <button class="hof-row" data-hof-id={h.id} onclick={() => void openPublicLegend(h)}>
+    <HofRow
+      rank={h.rank ? h.rank - 1 : offset + i}
+      name={h.name ?? anonName(h.pos, h.number)}
+      pos={h.pos}
+      dpos={h.dpos}
+      nation={h.nation}
+      club={h.lastClub}
+      clubId={h.lastClubId}
+      rn={h.retiredNumber?.number}
+      tag={myIds.has(h.id) ? '내 선수' : null}
+      {t}
+      titleId={h.title}
+      value={by.get(t)}
+      unit={by.unit}
+      showScore={sort !== 'score'}
+      flow={!full}
+      compact={full}
+      showPosition={pos === null}
+    />
+  </button>
+{/snippet}
+
 <section class="card" data-hof={full ? 'full' : 'home'}>
-  <div class="hof-head">
-    <div>
-      <div class="eyebrow">Legends</div>
-      {#if full}<h1 style="margin-bottom:8px">명예의 전당</h1>{:else}<h2 style="margin-bottom:8px">명예의 전당</h2>{/if}
+  {#if !full}
+    <div class="hof-head">
+      <div>
+        <div class="eyebrow">Legends</div>
+        <h2 style="margin-bottom:8px">명예의 전당</h2>
+      </div>
+      {#if all?.length}
+        <button class="icon-btn" data-act="hof-all" onclick={openHof}>전체 보기</button>
+      {/if}
     </div>
-    {#if !full && all?.length}
-      <button class="icon-btn" data-act="hof-all" onclick={openHof}>전체 보기</button>
-    {:else if full && !upcoming}
-      <button class="hof-search-btn" aria-label="선수 이름 검색" aria-expanded={searching} data-act="hof-search" onclick={toggleSearch}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
-      </button>
-    {/if}
-  </div>
+  {/if}
+  {#if full}
+    <div class="hof-toolbar">
+      <label class="hof-season-picker">
+        <span class="hof-filter-label">시즌</span>
+        <select aria-label="기록 시즌" data-hof-season-select value={season === null ? 'all' : String(season)} onchange={(e) => pickSeason(e.currentTarget.value === 'all' ? null : Number(e.currentTarget.value))}>
+          <option value="all">전체 시즌</option>
+          {#each [PRESEASON, ...SERVICE_SEASONS] as s (s.id)}
+            <option value={String(s.id)}>{s.name}{notOpen(s) ? ' (개막 예정)' : ''}</option>
+          {/each}
+        </select>
+      </label>
+      {#if !upcoming}
+        <div class="hof-filter-picker">
+          <span class="hof-filter-label" aria-hidden="true">필터</span>
+          <button class="hof-filter-trigger" aria-label="필터, {pos ? POS_LABEL[pos] : '전체 포지션'}, {by.label}" aria-expanded={filtering} aria-controls="hof-filter-panel" data-hof-filters onclick={() => (filtering = !filtering)}>
+            <span class="hof-filter-current">{pos ? `${POS_LABEL[pos]} · ` : ''}{by.label}</span>
+            <svg class="hof-filter-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+        </div>
+        <button class="hof-search-btn" aria-label="선수 이름 검색" aria-expanded={searching} data-act="hof-search" onclick={toggleSearch}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+        </button>
+      {/if}
+    </div>
   {#if full && searching && !upcoming}
     <input class="hof-search" type="search" placeholder="선수 이름 검색" aria-label="선수 이름 검색" maxlength="20" enterkeyhint="search" data-hof-search bind:value={draft} oninput={onSearch} use:focusIn />
   {/if}
-  {#if full}
-    <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
-      <button class="opt" aria-pressed={season === null} data-hof-season="all" onclick={() => pickSeason(null)}>전체</button>
-      {#each [PRESEASON, ...SERVICE_SEASONS] as s (s.id)}
-        <button class="opt" aria-pressed={season === s.id} data-hof-season={s.id} onclick={() => pickSeason(s.id)}>{s.name}{#if notOpen(s)}<span class="soon-tag" data-soon>Coming soon</span>{/if}</button>
-      {/each}
-    </div>
     {#if !upcoming}
-      <div class="seg hof-pos" role="group" aria-label="포지션">
-        <button class="opt" aria-pressed={pos === null} data-hof-pos="all" onclick={() => pickPos(null)}>전체</button>
-        {#each POS_GROUPS as k (k)}
-          <button class="opt" aria-pressed={pos === k} data-hof-pos={k} onclick={() => pickPos(k)}>{POS_LABEL[k]}</button>
-        {/each}
-      </div>
-      <div class="hof-sorts" role="group" aria-label="순위 유형" use:keepPicked>
-        {#each SORT_KEYS as k (k)}
-          <button class="hof-sort" aria-pressed={sort === k} data-hof-sort={k} onclick={() => pickSort(k)}>{SORTS[k].label}{#if isNew(k)}<small class="hof-new" aria-hidden="true">NEW</small>{/if}</button>
-        {/each}
+      <div class="hof-filter-panel" id="hof-filter-panel" hidden={!filtering}>
+        <p class="hof-filter-label">포지션</p>
+        <div class="seg hof-pos" role="group" aria-label="포지션">
+          <button class="hof-sort" aria-pressed={pos === null} data-hof-pos="all" onclick={() => pickPos(null)}>전체</button>
+          {#each POS_GROUPS as k (k)}
+            <button class="hof-sort" aria-pressed={pos === k} data-hof-pos={k} onclick={() => pickPos(k)}>{POS_LABEL[k]}</button>
+          {/each}
+        </div>
+        <p class="hof-filter-label">순위 기준</p>
+        <div class="hof-sorts" role="group" aria-label="순위 유형">
+          {#each SORT_KEYS as k (k)}
+            <button class="hof-sort" aria-pressed={sort === k} data-hof-sort={k} onclick={() => pickSort(k)}>{SORTS[k].label}{#if isNew(k)}<small class="hof-new" aria-hidden="true">NEW</small>{/if}</button>
+          {/each}
+        </div>
       </div>
     {/if}
   {/if}
@@ -189,28 +239,25 @@
   {:else if all && all.length}
     {#if full}<p class="muted hof-source">{scope && `${scope}· `}{q ? `'${q}' 검색 ` : ''}{sort === 'score' ? '은퇴 선수' : `${by.label} 기록이 있는 선수`} {total}명 · {by.label} 순</p>{/if}
     {#if !full && ss}<p class="muted hof-source">{ss.name} · 레전드 점수 순</p>{/if}
-    {#each all as h, i (h.id)}
-      {@const t = { ...h, score: h.legendScore }}
-      <button class="hof-row" data-hof-id={h.id} onclick={() => void openPublicLegend(h)}>
-        <HofRow
-          rank={h.rank ? h.rank - 1 : offset + i}
-          name={h.name ?? anonName(h.pos, h.number)}
-          pos={h.pos}
-          dpos={h.dpos}
-          nation={h.nation}
-          club={h.lastClub}
-          clubId={h.lastClubId}
-          rn={h.retiredNumber?.number}
-          tag={myIds.has(h.id) ? '내 선수' : null}
-          {t}
-          titleId={h.title}
-          value={by.get(t)}
-          unit={by.unit}
-          showScore={sort !== 'score'}
-          flow={!full}
-        />
-      </button>
-    {/each}
+    {#if podium.length}
+      <HofPodium players={podium} label={by.label} unit={by.unit} showPosition={pos === null} />
+    {/if}
+    {#if full}
+      {#if all.length > podium.length}
+        <div class="hof-list-head"><span>선수</span><span>{by.label}</span></div>
+      {/if}
+      <ol class="hof-ranking-list" start={offset + podium.length + 1}>
+        {#each all as h, i (h.id)}
+          {#if !podiumIds.has(h.id)}
+            <li>{@render playerRow(h, i)}</li>
+          {/if}
+        {/each}
+      </ol>
+    {:else}
+      {#each all as h, i (h.id)}
+        {@render playerRow(h, i)}
+      {/each}
+    {/if}
     {@render pager()}
   {:else}
     <p class="empty">{emptyText}</p>

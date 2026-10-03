@@ -1,4 +1,5 @@
-import type { TeamRankSort } from '@offside/contracts';
+import { PeakProfileSchema, TeamLayoutSchema, TeamLogoSchema } from '@offside/contracts';
+import type { TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import {
   DETAIL_POSITIONS,
@@ -60,9 +61,43 @@ export function peakOf(json: string | null): PeakProfile | null {
   }
 }
 
+/** 백필한 수치는 카드에서만 읽는다. 원본 능력치가 있으면 호출하지 않는다. */
+export function estimatedAttrsOf(json: string | null): PeakProfile['attrs'] | null {
+  if (!json) return null;
+  try {
+    const p = JSON.parse(json) as { v?: unknown; source?: unknown; attrs?: unknown };
+    if (p?.v !== 1 || p.source !== 'estimated') return null;
+    const attrs = PeakProfileSchema.shape.attrs.safeParse(p.attrs);
+    return attrs.success ? attrs.data : null;
+  } catch {
+    return null;
+  }
+}
+
 /** 팀 행의 선발 11자리(커리어 id, 빈 자리 null). */
 export const slotIdsOf = (row: Pick<OwnerTeamRow, 'slotsJson'>): (string | null)[] =>
   JSON.parse(row.slotsJson) as (string | null)[];
+
+/** 기존 팀(null)은 포메이션 그대로 읽고, 새 팀의 자유 배치만 덧붙인다. */
+export function layoutOf(row: Pick<OwnerTeamRow, 'layoutJson'>) {
+  if (!row.layoutJson) return null;
+  try {
+    const result = TeamLayoutSchema.safeParse(JSON.parse(row.layoutJson));
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export function logoOf(row: Pick<OwnerTeamRow, 'logoJson'>) {
+  if (!row.logoJson) return null;
+  try {
+    const result = TeamLogoSchema.safeParse(JSON.parse(row.logoJson));
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
 
 /** 선발 맵에 넣는 커리어 모양(careers 행 → 팀 선수). */
 type LineupRow = {
@@ -112,6 +147,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       dpos: careers.dpos,
       peak: careers.peak,
       peakProfile: careers.peakProfile,
+      cardAttrsJson: careers.cardAttrsJson,
       number: careers.shirtNumber,
       publicName: careers.publicName,
       legendScore: careers.legendScore,
@@ -276,6 +312,37 @@ export async function listTeamRanking(db: Db, season: number, sort: TeamRankSort
       .where(rankedIn(season)),
   ]);
   return { rows: rows.map((r) => r.team), total: Number(total?.n ?? 0) };
+}
+
+/** 한 페이지의 최근 전적을 한 쿼리로 읽는다. 인덱스로 팀마다 홈·원정 각 5개만 읽고 합친다. */
+export async function listTeamRecentForm(db: Db, teamIds: readonly string[]) {
+  const forms = new Map<string, TeamRankItem['recentForm']>();
+  if (teamIds.length === 0) return forms;
+  const matches = await db.all<{ teamId: string; result: TeamRankItem['recentForm'][number] }>(sql`
+    WITH requested AS (SELECT value AS teamId FROM json_each(${JSON.stringify(teamIds)}))
+    SELECT teamId, result FROM (
+      SELECT t.teamId, m.id, m.created_at AS createdAt,
+        CASE WHEN m.home_goals > m.away_goals THEN 'W' WHEN m.home_goals = m.away_goals THEN 'D' ELSE 'L' END AS result
+      FROM requested t JOIN team_matches m ON m.id IN (
+        SELECT id FROM team_matches WHERE home_team_id = t.teamId
+        ORDER BY created_at DESC, id DESC LIMIT 5
+      )
+      UNION ALL
+      SELECT t.teamId, m.id, m.created_at AS createdAt,
+        CASE WHEN m.away_goals > m.home_goals THEN 'W' WHEN m.away_goals = m.home_goals THEN 'D' ELSE 'L' END AS result
+      FROM requested t JOIN team_matches m ON m.id IN (
+        SELECT id FROM team_matches WHERE away_team_id = t.teamId
+        ORDER BY created_at DESC, id DESC LIMIT 5
+      )
+    )
+    ORDER BY createdAt DESC, id DESC
+  `);
+  for (const match of matches) {
+    const form = forms.get(match.teamId) ?? [];
+    if (form.length < 5) form.push(match.result);
+    forms.set(match.teamId, form);
+  }
+  return forms;
 }
 
 /** 레이팅 순위(랭킹과 같은 순서 — 레이팅 · OVR · 먼저 만든 팀). 랭킹에 오르지 않은 팀(선수 0명)이면 null. */

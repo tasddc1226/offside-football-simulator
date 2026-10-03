@@ -188,7 +188,7 @@ export default function Owner() {
               </Txt>
             </View>
           </View>
-          {summary?.players === 0 ? (
+          {(guest && localCount === 0) || summary?.players === 0 ? (
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
               첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.
             </Txt>
@@ -240,7 +240,7 @@ export default function Owner() {
               />
               <Grid2>
                 <Btn block testID="team" onPress={() => openTeam()}>
-                  내 팀 · 업적
+                  내 팀
                 </Btn>
                 <Btn
                   kind="accent"

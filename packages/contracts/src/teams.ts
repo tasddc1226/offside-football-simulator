@@ -12,14 +12,50 @@ import {
   LINEUP_SIZE,
   MANAGER_NAME_MAX,
   MANAGER_NAME_MIN,
+  positionRole,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
 } from './owner-team.js';
 import { IsoUtcSchema } from './primitives.js';
+import { TEAM_LOGO_IMG_MAX, TEAM_LOGO_PATTERNS, TEAM_LOGO_SHAPES } from './team-logo.js';
 
 // T-10-092 구단주 팀(팀 슬롯). 값(포메이션·적합도)은 zod 없는 `./owner-team.ts`에 있다.
 
 export const FormationIdSchema = z.enum(FORMATION_IDS);
+
+export const TeamLogoSchema = z.strictObject({
+  shape: z.enum(TEAM_LOGO_SHAPES),
+  pattern: z.enum(TEAM_LOGO_PATTERNS),
+  text: z
+    .string()
+    .trim()
+    .max(3)
+    .refine((text) => !text || PUBLIC_NAME_CHARS.test(text), '로고에 쓸 수 없는 글자예요.'),
+  bg: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  fg: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  img: z
+    .string()
+    .max(TEAM_LOGO_IMG_MAX)
+    .regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/)
+    .optional(),
+});
+
+export const TeamLayoutSchema = z
+  .array(
+    z.strictObject({
+      x: z.number().min(8).max(92),
+      y: z.number().min(8).max(94),
+      slot: DetailPosSchema,
+    }),
+  )
+  .length(LINEUP_SIZE)
+  .refine(
+    (layout) =>
+      layout[0]?.slot === 'GK' &&
+      layout[0].y >= 84 &&
+      layout.slice(1).every((p, i) => p.y <= 82 && p.slot === positionRole(p.x, p.y, i + 1)),
+    '골키퍼는 첫 자리 하나이고 필드 선수는 골문 앞까지 배치할 수 있어요.',
+  );
 
 /** 팀 이름: 2~12자, 제어 문자·꺾쇠 없이. 욕설·링크·운영자 사칭은 서버가 따로 거른다. */
 export const TeamNameSchema = z
@@ -60,8 +96,10 @@ export const TeamPlayerSchema = z.strictObject({
   peak: z.number().int(),
   /** 최고 시점의 자리별 실력(T-10-092). 이 기능 전에 은퇴한 선수는 null — 최고 OVR × 적합도로 센다. */
   roles: PeakProfileSchema.shape.roles.nullable(),
-  /** 최고 시점 대표 능력치 6개(선수 고르기 표시용). 이 기능 전에 은퇴한 선수는 null. */
+  /** 카드 표시용 대표 능력치 6개. 원본을 우선하고, 옛 기록은 attrsEstimated인 추정치 또는 null. */
   attrs: PeakProfileSchema.shape.attrs.nullable(),
+  /** 원본이 없는 옛 선수의 카드 표시용 추정치. 구버전 응답에는 없다. 경기 계산에는 쓰지 않는다. */
+  attrsEstimated: z.boolean().optional(),
   number: z.number().int().nullable(),
   publicName: z.string().nullable(),
   legendScore: z.number().int().nullable(),
@@ -95,8 +133,10 @@ export const OwnerTeamSchema = z.strictObject({
   season: TeamSeasonSchema,
   name: z.string(),
   manager: z.string(),
+  logo: TeamLogoSchema.nullable().optional(),
   formation: FormationIdSchema,
   slots: z.array(TeamSlotSchema).length(LINEUP_SIZE),
+  layout: TeamLayoutSchema.nullable().optional(),
   ovr: z.number().int(),
   lines: TeamLinesSchema,
   /** 팀 레이팅(경기 결과로 오르내린다). */
@@ -131,8 +171,10 @@ export type OwnerTeamResponse = z.infer<typeof OwnerTeamResponseSchema>;
 export const PutOwnerTeamBodySchema = z.strictObject({
   name: TeamNameSchema,
   manager: ManagerNameSchema,
+  logo: TeamLogoSchema.nullable().optional(),
   formation: FormationIdSchema,
   slots: z.array(CareerIdParamSchema.nullable()).length(LINEUP_SIZE),
+  layout: TeamLayoutSchema.nullable().optional(),
 });
 export type PutOwnerTeamBody = z.infer<typeof PutOwnerTeamBodySchema>;
 
@@ -278,6 +320,11 @@ export const TeamRankItemSchema = z.strictObject({
   record: TeamRecordSchema,
   likes: count,
   createdAt: IsoUtcSchema,
+  /** 최근 경기부터, 홈·원정을 합친 최대 5경기. 이전 API 응답에는 없을 수 있다. */
+  recentForm: z
+    .array(z.enum(['W', 'D', 'L']))
+    .max(5)
+    .default([]),
 });
 export type TeamRankItem = z.infer<typeof TeamRankItemSchema>;
 
@@ -336,8 +383,10 @@ export const TeamProfileSchema = z.strictObject({
   rank: z.number().int().min(1).nullable(),
   name: z.string(),
   manager: z.string(),
+  logo: TeamLogoSchema.nullable().optional(),
   formation: FormationIdSchema,
   slots: z.array(TeamSlotSchema).length(LINEUP_SIZE),
+  layout: TeamLayoutSchema.nullable().optional(),
   ovr: z.number().int(),
   lines: TeamLinesSchema,
   rating: z.number().int(),

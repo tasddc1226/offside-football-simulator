@@ -13,6 +13,7 @@
     ontoTeam,
     onreplay,
     onagain,
+    onhistory,
   }: {
     m: TeamMatch;
     team: OwnerTeam | null;
@@ -21,6 +22,7 @@
     ontoTeam: () => void;
     onreplay: () => void;
     onagain: () => void;
+    onhistory?: (() => void) | undefined;
   } = $props();
 
   const gain = $derived(m[m.mine].ratingChange);
@@ -60,7 +62,7 @@
     <p class="fs-sm" data-rating-change>내 팀 레이팅 <b>{signedNum(gain)}</b></p>
   {/if}
   <div class="tm-actions">
-    <button class="btn" onclick={ontoTeam}>내 팀</button>
+    {#if onhistory}<button class="btn" onclick={onhistory} data-act="team-result-history">기록으로 돌아가기</button>{:else}<button class="btn" onclick={ontoTeam}>편성으로</button>{/if}
     <button class="btn" onclick={onreplay} data-act="team-replay">중계 다시 보기</button>
     <button class="btn btn-primary" onclick={onagain} disabled={matchesLeft === 0}>다시 경기하기</button>
   </div>
