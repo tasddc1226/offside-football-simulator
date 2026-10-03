@@ -41,6 +41,10 @@ jobs:
       # Empty until the consent notice and GA4 console setup are approved for release.
       VITE_GA4_MEASUREMENT_ID: ${{ vars.VITE_GA4_MEASUREMENT_ID }}
       VITE_GA4_HOSTNAME: ${{ vars.VITE_GA4_HOSTNAME }}
+      # T-11-061 web ads. Empty until the AdSense site is approved and ad units exist; no slots render without them.
+      VITE_ADSENSE_CLIENT: ${{ vars.VITE_ADSENSE_CLIENT }}
+      VITE_ADSENSE_HOSTNAME: ${{ vars.VITE_ADSENSE_HOSTNAME }}
+      VITE_ADSENSE_SLOTS: ${{ vars.VITE_ADSENSE_SLOTS }}
     steps:
       - name: Require main and explicit deploy confirmation
         env:
