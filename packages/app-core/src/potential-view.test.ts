@@ -6,7 +6,12 @@ import { retire, saveKey } from '@offside/game/season';
 import type { GameState } from '@offside/game/types';
 import { createLegends } from './legend.js';
 import { initialAppState } from './state.js';
-import { retirementPotential, visibleCareerLog, visibleSeasonNotes } from './potential-view.js';
+import {
+  retirementPotential,
+  scoutHint,
+  visibleCareerLog,
+  visibleSeasonNotes,
+} from './potential-view.js';
 
 function setup() {
   const items = new Map<string, string>();
@@ -148,5 +153,35 @@ describe('옛 로그·시즌 결산의 등급 누출 차단', () => {
     delete (old as Partial<GameState>).bloom;
     migrateSave(old);
     expect(visibleCareerLog(old.log).some((l) => l.text.startsWith('스카우트 재평가'))).toBe(false);
+  });
+});
+
+describe('시즌 결산 스카우트 한마디', () => {
+  const at = (pot: number, rescout: number) => {
+    const s = structuredClone(fixture) as unknown as GameState;
+    migrateSave(s);
+    s.pot = pot;
+    s.flags.potBonus = 0;
+    s.flags.rescout = rescout;
+    return s;
+  };
+  it('첫 시즌을 마치기 전에는 보여 주지 않는다', () => {
+    const s = at(80, 0);
+    s.career = [];
+    expect(scoutHint(s, 2026)).toBeNull();
+  });
+  it('재평가 전에는 상·중·하 3단계, 끝나면 5단계 문장을 고른다', () => {
+    const early = [92, 86, 80, 72, 60].map((p) => scoutHint(at(p, 1), 2026));
+    expect(early[0]).toBe(scoutHint(at(86, 1), 2026));
+    expect(early[2]).toBe(scoutHint(at(72, 1), 2026));
+    expect(new Set(early).size).toBe(3);
+    const late = [92, 86, 80, 72, 60].map((p) => scoutHint(at(p, 2), 2026));
+    expect(new Set(late).size).toBe(5);
+  });
+  it('같은 시즌은 같은 문장, 다음 시즌은 다른 문장이고 등급 글자를 쓰지 않는다', () => {
+    const s = at(80, 2);
+    expect(scoutHint(s, 2027)).toBe(scoutHint(s, 2027));
+    expect(scoutHint(s, 2028)).not.toBe(scoutHint(s, 2027));
+    for (let y = 2026; y < 2040; y++) expect(scoutHint(s, y)).not.toMatch(/[SABCD]/);
   });
 });

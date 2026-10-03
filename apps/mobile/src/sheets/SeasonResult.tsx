@@ -126,6 +126,14 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
       ) : null}
       <NewTitles titles={s.titles} pop />
       {notes.length ? <Txt tone="muted">{notes.join(' · ')}</Txt> : null}
+      {s.scoutHint ? (
+        <View>
+          <Txt v="eyebrow" style={{ marginBottom: 6 }}>
+            스카우트 한마디
+          </Txt>
+          <Txt>{`“${s.scoutHint}”`}</Txt>
+        </View>
+      ) : null}
       <View>
         <Txt v="eyebrow" style={{ marginBottom: 6 }}>
           팬 반응
