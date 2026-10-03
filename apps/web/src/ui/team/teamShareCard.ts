@@ -40,7 +40,7 @@ export async function makeTeamShareFile(data: TeamShareData): Promise<File> {
     data.manager,
     data.seasonName,
     ...data.cells.map((c) => c.name),
-    '오프사이드 감독 선발 최고 OVR 배치 공격 중원 수비 골문 자유0123456789',
+    '오프사이드 감독 선발 최고 OVR 포지션 배치 공격 중원 수비 골문 자유0123456789',
   ].join('');
   await Promise.all([
     document.fonts.load(`700 60px ${BODY}`, sample),
@@ -207,7 +207,7 @@ export function drawTeamShareCard(
     name.lines.forEach((line, j) =>
       text(line, 73, top + j * lineHeight, name.size, ink, 'center', BODY, 126),
     );
-    text(`배치 ${cell.rating}`, 73, 161, 17, ink, 'center');
+    text(`포지션 OVR ${cell.rating}`, 73, 161, 17, ink, 'center');
     ctx.restore();
   }
   ctx.restore();
@@ -223,7 +223,7 @@ export function drawTeamShareCard(
     text(label, x - 18, 1221, 25, '#a9b8ae', 'right');
     text(String(Math.round(value)), x + 2, 1223, 42, '#eef4ef', 'left', DISPLAY);
   });
-  text('카드: 최고 OVR · 배치: 경기 실력', 60, 1284, 22, '#a9b8ae');
+  text('카드: 최고 OVR · 포지션 OVR: 경기 실력', 60, 1284, 22, '#a9b8ae');
   text('offside-lab.com', 1020, 1285, 32, '#f0b437', 'right', DISPLAY);
 }
 

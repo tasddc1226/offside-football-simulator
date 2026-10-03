@@ -2,11 +2,13 @@
   import { onMount } from 'svelte';
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
-  import { FACE_ATTRS, type DetailPos } from '@offside/contracts/positions';
+  import type { DetailPos } from '@offside/contracts/positions';
 
   let { player, name, rating, role, compact = false, youth = false, deploymentRating, ratingLabel = '최고 OVR' }:
     { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; compact?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
   const tier = $derived(youth ? 'youth' : (player?.legendScore ?? 0) >= 1000 ? 'legend' : (player?.peak ?? rating) >= 80 ? 'gold' : 'silver');
+  const statKeys = $derived(player?.pos === 'GK' ? ['def', 'phy', 'pas', 'pac', 'sho', 'dri'] as const : ['pac', 'sho', 'dri', 'pas', 'def', 'phy'] as const);
+  const statLabels = $derived(player?.pos === 'GK' ? GK_ABBR : FACE_ABBR);
   let nameViewport: HTMLElement;
   let viewportWidth = $state(0);
   let nameWidth = $state(0);
@@ -22,7 +24,7 @@
 
 <div class="player-card" class:compact class:youth class:deployed={deploymentRating !== undefined} data-tier={tier}>
   <div class="card-face">
-    <div class="card-rating" title="{ratingLabel} {rating}">{#if !compact}<small>{ratingLabel}</small>{/if}<b>{rating}</b><span>{role}</span></div>
+    <div class="card-rating" title="{ratingLabel} {rating}"><b>{rating}</b><span>{role}</span></div>
     <div class="card-art" aria-hidden="true">
       <svg viewBox="0 0 100 96"><path d="M30 10 15 17 3 38 20 48 26 36 24 90 76 90 74 36 80 48 97 38 85 17 70 10 62 5Q50 16 38 5Z" /><path class="shirt-trim" d="M38 5Q50 25 62 5M25 73H75M34 12V87M66 12V87" /></svg>
       <span class="shirt-number">{player?.number ?? (youth ? '+' : name.slice(0, 1))}</span>
@@ -31,17 +33,16 @@
       bind:this={nameViewport} bind:clientWidth={viewportWidth} style:--name-offset="-{nameOverflow}px" style:--name-duration="{nameDuration}s">
       <span class="name-track" bind:offsetWidth={nameWidth}>{name}</span>
     </strong>
-    {#if deploymentRating !== undefined}<span class="card-deployment" title="배치 실력 {deploymentRating}">배치 <b>{deploymentRating}</b></span>{/if}
+    {#if deploymentRating !== undefined}<span class="card-deployment" title="포지션 OVR {deploymentRating}"><span>포지션 OVR</span><b>{deploymentRating}</b></span>{/if}
     {#if !compact}
       <div class="card-divider"></div>
-      {#if player?.attrs}
-        <dl class="card-attributes">
-          {#each FACE_ATTRS as key (key)}<div><dt>{(player.pos === 'GK' ? GK_ABBR : FACE_ABBR)[key]}</dt><dd>{player.attrs[key]}</dd></div>{/each}
-        </dl>
-      {:else}
-        <div class="card-career"><span title="레전드 점수">LS</span><b>{(player?.legendScore ?? 0).toLocaleString()}</b></div>
-      {/if}
-      <div class="card-foot">{tier === 'legend' ? '레전드 커리어' : '나의 커리어'}</div>
+      <div class="card-career"><span title="레전드 점수">LS</span><b>{(player?.legendScore ?? 0).toLocaleString()}</b></div>
+      <dl class="card-attributes" aria-label="선수 능력치">
+        {#each statKeys as key (key)}
+          <div><dt>{statLabels[key]}</dt><dd>{player?.attrs ? Math.round(player.attrs[key]) : '—'}</dd></div>
+        {/each}
+      </dl>
+      <div class="card-foot">{!player?.attrs ? '능력치 기록 없음' : player.attrsEstimated ? '추정 능력치' : tier === 'legend' ? '레전드 커리어' : '나의 커리어'}</div>
     {/if}
   </div>
 </div>
@@ -51,12 +52,12 @@
   .player-card[data-tier='legend'] { --card-base:#28382e; --card-light:#51614b; --card-dark:#101e17; --card-ink:#fce7b1; --card-line:#d1ac5f; }
   .player-card[data-tier='silver'] { --card-base:#d6dfe0; --card-light:#f8faf6; --card-dark:#83989c; --card-ink:#243339; --card-line:#9fb3b6; }
   .player-card[data-tier='youth'] { --card-base:#d5e4d8; --card-light:#eaf3e9; --card-dark:#9bae9b; --card-ink:#365342; --card-line:#8cab97; opacity:.82; }
-  .card-face { position:relative; overflow:hidden; min-height:183px; padding:17px 10px 19px; clip-path:inherit; background:linear-gradient(135deg,transparent 34%,#ffffff25 34.5%,transparent 35%,transparent 62%,#ffffff1c 62.5%,transparent 63%),radial-gradient(ellipse at 80% 10%,var(--card-light),transparent 70%),linear-gradient(165deg,var(--card-base),var(--card-dark)); color:var(--card-ink); }
-  .card-rating { position:absolute; top:17px; left:11px; display:flex; flex-direction:column; align-items:center; z-index:1; }
+  .card-face { position:relative; overflow:hidden; min-height:183px; padding:28px 10px 20px; clip-path:inherit; background:linear-gradient(135deg,transparent 34%,#ffffff25 34.5%,transparent 35%,transparent 62%,#ffffff1c 62.5%,transparent 63%),radial-gradient(ellipse at 80% 10%,var(--card-light),transparent 70%),linear-gradient(165deg,var(--card-base),var(--card-dark)); color:var(--card-ink); }
+  .card-rating { position:absolute; top:28px; left:11px; display:flex; flex-direction:column; align-items:center; z-index:1; }
   .card-rating b { font-family:var(--display); font-size:2.3rem; font-weight:800; line-height:.9; }
   .card-rating span { font-family:var(--display); font-size:.82rem; font-weight:700; margin-top:4px; }
-  .card-rating small {font-size:.55rem;line-height:1.4;margin-bottom:3px;white-space:nowrap;}
-  .card-deployment {display:block;text-align:center;font-size:11px;line-height:1.3;}
+  .card-deployment {display:flex;flex-direction:column;align-items:center;font-size:8px;line-height:10px;}
+  .card-deployment b {font-family:var(--display);font-size:12px;line-height:13px;}
   .card-art { position:relative; height:72px; margin-left:26px; }
   .card-art svg { width:100%; height:100%; fill:var(--card-dark); stroke:var(--card-ink); stroke-opacity:.4; stroke-width:1.4; }
   .card-art .shirt-trim { fill:none; stroke:var(--card-light); stroke-width:2; stroke-opacity:.65; }
@@ -76,11 +77,11 @@
     .card-name::-webkit-scrollbar {display:none;}
   }
   .card-divider { height:1px; background:var(--card-ink); opacity:.25; margin:4px 0 6px; }
-  .card-attributes { display:grid; grid-template-columns:1fr 1fr; gap:2px 10px; margin:0; }
-  .card-attributes div { display:flex; flex-direction:row-reverse; justify-content:space-between; font-size:.7rem; }
-  .card-attributes dt { opacity:.8; } .card-attributes dd { margin:0; font-weight:700; }
-  .card-career { display:flex; flex-direction:column; align-items:center; font-size:.72rem; padding:8px 0; }
+  .card-career { display:flex;justify-content:center;align-items:baseline;gap:4px;font-size:.72rem; }
   .card-career b { font-family:var(--display); font-size:1.15rem; }
+  .card-attributes {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 4px;margin:8px 0 0;text-align:center;}
+  .card-attributes dt {font-size:10px;line-height:1.3;font-weight:600;}
+  .card-attributes dd {margin:0;font-family:var(--display);font-size:1.25rem;line-height:1.1;font-weight:700;}
   .card-foot { font-size:.6rem; text-align:center; margin-top:7px; opacity:.8; }
   .compact .card-face { min-height:0; height:100px; padding:11px 4px 13px; }
   .compact .card-rating { top:14px; left:7px; }

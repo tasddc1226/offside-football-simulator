@@ -127,7 +127,7 @@ export function TeamPitch({
                 <Press
                   testID={`slot-${i}`}
                   onPress={onpick ? () => onpick(i) : undefined}
-                  accessibilityLabel={`${pos.slot} · ${cell.name} · 배치 OVR ${cell.rating}${ondrag ? ' · 길게 눌러 이동' : ''}`}
+                  accessibilityLabel={`${pos.slot} · ${cell.name} · 포지션 OVR ${cell.rating}${ondrag ? ' · 길게 눌러 이동' : ''}`}
                   accessibilityState={{ selected: selected === i }}
                   style={{
                     borderRadius: 10,

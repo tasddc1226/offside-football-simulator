@@ -7,7 +7,7 @@ import {
   type TeamPosition,
 } from '@offside/contracts/owner-team';
 import type { TeamPlayer } from '@offside/app-core/api/team';
-import { assignSlot } from '@offside/app-core/teamOwner';
+import { assignSlot, attrLine } from '@offside/app-core/teamOwner';
 import { DragPlayer, type PlayerDrag } from '../../components/DragPlayer';
 import { PlayerCard } from '../../components/PlayerCard';
 import { TeamPitch, type PitchCell } from '../../components/TeamPitch';
@@ -343,18 +343,19 @@ export function TeamLineup({
             </Press>
             {guide ? (
               <Txt v="sm" tone="muted">
-                라커룸의 OVR은 커리어 최고 실력이에요. 그라운드의 ‘배치’는 해당 자리에서 뛰는
-                실력으로, 포지션별 능력치와 적합도에 따라 달라져요. 팀 OVR과 경기에는 배치 OVR이
-                반영돼요.
+                라커룸의 OVR은 커리어 최고 실력이에요. 그라운드의 ‘포지션 OVR’은 해당 자리에서 뛰는
+                실력으로, 포지션별 능력치와 적합도에 따라 달라져요. 팀 OVR과 경기에는 포지션 OVR이
+                반영돼요. ‘추정 능력치’는 같은 포지션·유형의 은퇴 기록과 최고 OVR을 참고해 계산한
+                값이에요. 카드 표시용이라 경기 실력에는 영향을 주지 않아요.
               </Txt>
             ) : null}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {visible.slice(0, limit).map((p) => (
-                <View key={p.careerId} style={{ width: '31.5%' }}>
+                <View key={p.careerId} style={{ width: '48%' }}>
                   <DragPlayer index={null} id={p.careerId} drag={drag}>
                     <Press
                       testID={`locker-${p.careerId}`}
-                      accessibilityLabel={`${nameOf(p)} · 최고 OVR ${p.peak} · LS ${p.legendScore ?? 0}`}
+                      accessibilityLabel={`${nameOf(p)} · 최고 OVR ${p.peak} · LS ${p.legendScore ?? 0} · ${attrLine(p) ?? '능력치 기록 없음'}`}
                       accessibilityState={{ selected: selected === p.careerId }}
                       onPress={() => select(selected === p.careerId ? null : p.careerId)}
                       style={{
@@ -370,6 +371,7 @@ export function TeamLineup({
                           number: p.number,
                           legendScore: p.legendScore,
                           attrs: p.attrs,
+                          attrsEstimated: p.attrsEstimated,
                           pos: p.pos,
                           youth: false,
                         }}

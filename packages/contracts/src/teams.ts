@@ -96,8 +96,10 @@ export const TeamPlayerSchema = z.strictObject({
   peak: z.number().int(),
   /** 최고 시점의 자리별 실력(T-10-092). 이 기능 전에 은퇴한 선수는 null — 최고 OVR × 적합도로 센다. */
   roles: PeakProfileSchema.shape.roles.nullable(),
-  /** 최고 시점 대표 능력치 6개(선수 고르기 표시용). 이 기능 전에 은퇴한 선수는 null. */
+  /** 카드 표시용 대표 능력치 6개. 원본을 우선하고, 옛 기록은 attrsEstimated인 추정치 또는 null. */
   attrs: PeakProfileSchema.shape.attrs.nullable(),
+  /** 원본이 없는 옛 선수의 카드 표시용 추정치. 구버전 응답에는 없다. 경기 계산에는 쓰지 않는다. */
+  attrsEstimated: z.boolean().optional(),
   number: z.number().int().nullable(),
   publicName: z.string().nullable(),
   legendScore: z.number().int().nullable(),
