@@ -85,10 +85,16 @@ describe('배포 후 릴리즈 게시 스크립트', () => {
       'publication failed (409)',
     );
   });
-  it('새 항목이 없으면 인증이나 게시 요청을 보내지 않는다', async () => {
-    const fetch = vi.fn();
-    expect(await publish([], env, fetch)).toMatchObject({ updated: false });
-    expect(fetch).not.toHaveBeenCalled();
+  it('새 항목이 없어도 운영 인증 경로를 확인하고 글과 알림은 갱신하지 않는다', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ value: 'signed-token' })))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: { postId: null, publishedIds: [], updated: false } })),
+      );
+    expect(await publish([], env, fetch, vi.fn())).toMatchObject({ updated: false });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetch.mock.calls[1][1].body).entries).toEqual([]);
   });
   it('모든 배포 잡 성공 뒤 deploy 모드에서만 게시하고 production OIDC 권한을 한 잡에 둔다', () => {
     const workflow = readFileSync(resolve(root, '.github/workflows/deploy-production.yml'), 'utf8');

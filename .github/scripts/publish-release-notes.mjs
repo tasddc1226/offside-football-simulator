@@ -48,7 +48,7 @@ export function readEntries(directory) {
 export async function publish(entries, env, fetchImpl = fetch, mask = console.log) {
   const sha = env.EXPECTED_SHA ?? '';
   if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error('EXPECTED_SHA must be a full commit SHA.');
-  if (!entries.length) return { postId: null, publishedIds: [], updated: false };
+  // 빈 목록도 배포 전용 인증 경로를 확인한다. 서버는 DB 조회·쓰기 없이 반환한다.
   if (!env.ACTIONS_ID_TOKEN_REQUEST_URL || !env.ACTIONS_ID_TOKEN_REQUEST_TOKEN)
     throw new Error('GitHub Actions OIDC is required.');
   const url = new URL(env.ACTIONS_ID_TOKEN_REQUEST_URL);
