@@ -207,9 +207,10 @@ function ChatFab() {
         position: 'absolute',
         right: 16,
         bottom: 16,
-        flexDirection: 'row',
+        minWidth: 48,
+        minHeight: 48,
         alignItems: 'center',
-        gap: 6,
+        justifyContent: 'center',
         paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 999,
@@ -221,13 +222,12 @@ function ChatFab() {
         elevation: 6,
       }}
     >
-      <Svg width={20} height={20} viewBox="0 0 24 24">
+      <Svg width={20} height={20} viewBox="0 0 24 24" accessible={false}>
         <Path
           d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z"
           fill={c.accentInk}
         />
       </Svg>
-      <Txt style={{ color: c.accentInk, fontWeight: '700' }}>채팅</Txt>
     </Press>
   );
 }

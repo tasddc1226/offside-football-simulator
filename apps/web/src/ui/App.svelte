@@ -1,6 +1,8 @@
 <script lang="ts">
   // ui.ts render()의 화면 라우팅 포트 (148~153줄)
-  import { untrack } from 'svelte';
+  import { onMount, untrack } from 'svelte';
+  import { startChatNotifications } from './chat-state.svelte.js';
+  onMount(startChatNotifications);
   import { appState } from './state.svelte.js';
   import { screenIn } from './motion.js';
   import { takePopDir } from './history.svelte.js';
