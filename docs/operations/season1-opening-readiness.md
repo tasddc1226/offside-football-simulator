@@ -33,8 +33,8 @@
 - [x] PR 필수 CI 전체 통과. 최신 main의 app-ads.txt 작업을 반영하고 변경 범위를 리뷰했다. 단위/SEO 1,119건, 개막 웹 E2E 4건을 통과했다.
 - [ ] 운영 웹/API의 배포 SHA·자산 read-back.
 - [x] iOS 네이티브 저장 검증: 개막 전 선수의 ID·41세 규칙 복구, 열린 생성 화면의 자정 전환·주력 유지, ST·45세 생성 및 저장 복원. 별도 QA 앱 식별자와 오프라인 API 주소를 썼다.
-- [ ] Android 네이티브 저장·화면 검증.
-- [ ] iOS/Android 대응 runtime OTA 공개·read-back.
+- [ ] Android 네이티브 저장·화면 검증. 별도 QA debug APK 빌드는 완료됐지만 기존 테스트 기기의 ADB 응답 시간 초과와 새 AVD 생성 공간 부족으로 실행을 확인하지 못했다. 기존 기기/저장 데이터는 지우지 않는다.
+- [ ] iOS/Android 대응 runtime OTA 공개·read-back. Android 실제 검증을 완료할 때까지 운영 배포·OTA는 보류한다.
 
 ## 기존 앱 호환 경로
 
