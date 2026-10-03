@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { startCareer, API } from './helpers.js';
+import { clearPendingEvent, startCareer, API } from './helpers.js';
 
 test.skip(
   process.env.E2E_ANALYTICS !== '1',
@@ -92,6 +92,7 @@ test('opt-in normalizes URL, tracks once per screen and new career, withdraws ac
     .poll(() => page.evaluate((key) => localStorage.getItem(key), consentKey))
     .toBe('denied');
   expect(await page.evaluate((key) => localStorage.getItem(key), ledgerKey)).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('offside_player_metrics_v1'))).toBeNull();
   expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(save);
   expect(
     await page.evaluate(() =>
@@ -128,9 +129,12 @@ test('actual play measures first action, milestones and a resumed career without
   const events = async (name: string) =>
     (await commands(page)).filter((x) => x[0] === 'event' && x[1] === name);
   expect(await events('first_action_complete')).toHaveLength(0);
+  expect(await events('play_complete')).toHaveLength(0);
+  expect(await events('player_first_play')).toHaveLength(0);
   await page.locator('[data-act="advance"]').click();
   await expect.poll(async () => (await events('first_action_complete')).length).toBe(1);
   expect(await events('career_resume')).toHaveLength(0);
+  expect(await events('play_complete')).toHaveLength(0); // preseason has no league block
   await page.reload();
   await page.locator('[data-act="continue"]').click();
   expect(await events('career_resume')).toHaveLength(0);
@@ -161,6 +165,19 @@ test('actual play measures first action, milestones and a resumed career without
     await step();
   expect(await events('first_action_complete')).toHaveLength(0);
   expect(await events('first_season_complete')).toHaveLength(1);
+  expect(await events('player_first_play')).toHaveLength(1);
+  expect(await events('player_first_season')).toHaveLength(1);
+  expect((await events('player_first_play'))[0]?.[2]).toMatchObject({
+    cohort_origin: 'observed_new',
+    test_marker: 'qa',
+    client_platform: 'web',
+  });
+  expect((await events('play_complete')).length).toBeGreaterThanOrEqual(6);
+  expect(
+    (await events('game_operation')).every(
+      (x) => (x[2] as { outcome: string }).outcome !== 'failed',
+    ),
+  ).toBe(true);
   expect(await events('career_progress_milestone')).toHaveLength(1);
   expect((await events('career_progress_milestone'))[0]?.[2]).toMatchObject({
     milestone_seasons: 3,
@@ -184,6 +201,50 @@ test('actual play measures first action, milestones and a resumed career without
   const wire = JSON.stringify(await commands(page));
   const cid = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).cid);
   expect(wire).not.toContain(cid);
+});
+
+test('two tabs completing the same half and repeated clicks emit one player milestone', async ({
+  page,
+  context,
+}) => {
+  await prepare(page);
+  await page.addInitScript((key) => localStorage.setItem(key, 'granted'), consentKey);
+  await startCareer(page);
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
+  await page.locator('[data-act="advance"]').click();
+  await expect
+    .poll(async () => (await commands(page)).filter((x) => x[1] === 'first_action_complete').length)
+    .toBe(1);
+  if (await page.locator('#an-skip').isVisible()) await page.locator('#an-skip').click();
+  await expect(page.locator('#sheet')).toBeHidden();
+  await clearPendingEvent(page);
+  const tab = await context.newPage();
+  await prepare(tab);
+  await tab.goto('/');
+  await tab.locator('[data-act="continue"]').click();
+  await expect(tab.locator('script[data-offside-analytics]')).toHaveCount(1);
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).phase);
+  expect(before).toBe(1);
+  await Promise.all(
+    [page, tab].map((p) =>
+      p.locator('[data-act="advance"]').evaluate((el) => {
+        (el as HTMLElement).click();
+        (el as HTMLElement).click();
+      }),
+    ),
+  );
+  const combined = async () => [...(await commands(page)), ...(await commands(tab))];
+  await expect
+    .poll(async () => (await combined()).filter((x) => x[1] === 'play_complete').length)
+    .toBe(1);
+  const all = await combined();
+  expect(all.filter((x) => x[1] === 'player_first_play')).toHaveLength(1);
+  expect(
+    all.filter(
+      (x) => x[1] === 'game_operation' && (x[2] as { operation: string }).operation === 'progress',
+    ),
+  ).toHaveLength(3);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).phase)).toBe(2);
 });
 
 for (const [source, campaign, content] of [

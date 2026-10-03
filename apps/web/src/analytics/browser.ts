@@ -1,4 +1,10 @@
 import {
+  createPlayerMetrics,
+  PLAYER_METRICS_KEY,
+  type Progress,
+} from '@offside/app-core/player-metrics';
+import type { OperationResult } from '@offside/app-core/measurement';
+import {
   campaignQuery,
   CONSENT_KEY,
   emptyLedger,
@@ -11,6 +17,35 @@ import {
   type Params,
 } from './model.js';
 import type { createTracker } from './tracker.js';
+let metricEpoch = 0;
+const playerMetrics = createPlayerMetrics({
+  allowed: () => allowed() && loaded && screen !== 'admin',
+  read: () => localStorage.getItem(PLAYER_METRICS_KEY),
+  write: (raw) => localStorage.setItem(PLAYER_METRICS_KEY, raw),
+  send: (name, params) => send(name, { ...params, identity_scope: 'device' }),
+});
+let metricQueue = Promise.resolve();
+function metric(fn: () => void) {
+  if (!allowed() || !loaded || screen === 'admin') return;
+  const epoch = metricEpoch;
+  // No cross-tab read/write race: unavailable locks fail closed for new player milestones.
+  if (!navigator.locks) return;
+  metricQueue = metricQueue
+    .then(() =>
+      navigator.locks.request(PLAYER_METRICS_KEY, () => {
+        if (epoch === metricEpoch && allowed()) fn();
+      }),
+    )
+    .catch(() => {});
+}
+const initialOperations: OperationResult[] = [];
+export function trackOperation(result: OperationResult) {
+  if (!loaded && allowed()) {
+    if (initialOperations.length < 20) initialOperations.push(result);
+    return;
+  }
+  send('game_operation', { ...result, data_loss_status: 'unconfirmed' });
+}
 let tracker: ReturnType<typeof createTracker> | undefined;
 
 declare const __APP_VERSION__: string | undefined;
@@ -71,7 +106,9 @@ function send(event: string, params: Params = {}) {
   if (!allowed() || !loaded || screen === 'admin') return;
   tag('event', event, {
     ...pageParams(),
-    measurement_version: '2',
+    measurement_version: '3',
+    test_marker: env.VITE_GA4_TEST_MARKER === 'qa' || id !== prodId ? 'qa' : 'live',
+    client_platform: 'web',
     app_version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev',
     ...params,
     send_to: id,
@@ -117,6 +154,8 @@ async function loadTag() {
   });
   tag('set', {
     ...pageParams(),
+    measurement_version: '3',
+    test_marker: env.VITE_GA4_TEST_MARKER === 'qa' || id !== prodId ? 'qa' : 'live',
     allow_google_signals: false,
     allow_ad_personalization_signals: false,
     url_passthrough: false,
@@ -146,15 +185,20 @@ async function loadTag() {
   // Consent withdrawal disables an in-flight load too.
   document.head.append(script);
   pageView();
+  for (const result of initialOperations.splice(0)) trackOperation(result);
 }
 function stop() {
   if (!enabled()) return;
   Reflect.set(window, `ga-disable-${id}`, true);
   lastPage = '';
   analytics.reset();
+  metricEpoch++;
+  initialOperations.length = 0;
+  playerMetrics.reset();
   if (w().dataLayer) w().dataLayer!.length = 0;
   try {
     localStorage.removeItem(LEDGER_KEY);
+    localStorage.removeItem(PLAYER_METRICS_KEY);
   } catch {
     /* denied storage */
   }
@@ -250,10 +294,34 @@ function readLedger(): Ledger {
 export const analytics = {
   reset: () => tracker?.reset(),
   replace: () => tracker?.replace(),
-  start: (s: Career, previous: Career | null) => tracker?.start(s, previous),
+  start: (s: Career, previous: Career | null) => {
+    let eligible = false;
+    try {
+      const prior = readLedger();
+      eligible = !previous && !prior.seenStart && prior.entries.length === 0;
+    } catch {
+      /* cohort origin stays unknown */
+    }
+    tracker?.start(s, previous);
+    const { cid } = s;
+    const year = s.year;
+    if (typeof year !== 'number') return;
+    metric(() => playerMetrics.start(cid, year, eligible));
+  },
+  complete: (p: Progress) => {
+    const snapshot = { ...p };
+    metric(() => playerMetrics.complete(snapshot));
+  },
   play: (s: Career, firstAction = false) => tracker?.play(s, firstAction),
-  firstSeason: (s: Career) => tracker?.firstSeason(s),
-  retire: (s: Career) => tracker?.retire(s),
+  firstSeason: (s: Career) => {
+    tracker?.firstSeason(s);
+    metric(() => playerMetrics.season());
+  },
+  retire: (s: Career) => {
+    tracker?.retire(s);
+    const cid = s.cid;
+    metric(() => playerMetrics.retire(cid));
+  },
 };
 export const trackShareClick = () => {
   try {
