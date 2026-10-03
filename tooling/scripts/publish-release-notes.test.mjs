@@ -19,12 +19,20 @@ const env = {
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token',
 };
 describe('배포 후 릴리즈 게시 스크립트', () => {
-  it('오늘 추가 초안의 모든 항목이 서버 스키마와 일치하고 앱 예정 상태가 명시돼 있다', () => {
+  it('수동 게시한 초안은 활성 목록에서 제외하고 보관된 문구도 서버 스키마와 일치한다', () => {
     const entries = readEntries(resolve(root, '.release-notes'));
+    const archived = readEntries(resolve(root, '.release-notes/archive/2026-10-03-manual'));
+    expect(archived).toHaveLength(7);
+    expect(entries.some((entry) => archived.some((old) => old.id === entry.id))).toBe(false);
+    expect(
+      PublishReleaseNotesSchema.safeParse({ sha: env.EXPECTED_SHA, entries: archived }).success,
+    ).toBe(true);
     expect(PublishReleaseNotesSchema.safeParse({ sha: env.EXPECTED_SHA, entries }).success).toBe(
       true,
     );
-    for (const entry of entries.filter((e) => e.availability === 'web-app-pending'))
+    for (const entry of [...entries, ...archived].filter(
+      (e) => e.availability === 'web-app-pending',
+    ))
       expect(entry.appVersion).toMatch(/^\d+\.\d+\.\d+$/);
   });
   it('잘못된 파일과 중복 ID는 게시 전에 실패한다', () => {
