@@ -3,7 +3,7 @@ import { createApp } from '../app.js';
 import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
 import { issueCookie, callJson } from '../test/http.js';
 import { sha256Hex } from '../db/hash.js';
-import { ownPushDevice } from '../db/repos/pushDevices.js';
+import { ownPushDevice, rememberPushTestTicket } from '../db/repos/pushDevices.js';
 import { cleanupExpired } from '../cron/cleanup.js';
 import type { SessionContext } from '../env.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
@@ -52,6 +52,57 @@ afterEach(async () => {
   await ctx.dispose();
 });
 describe('app push registration and admin-only test', () => {
+  it('keeps receipt evidence private and clears it on token or account changes', async () => {
+    const a = await identity();
+    const b = await identity();
+    await linkGoogle(ctx, a.session.profileId, { email: 'admin@example.com' });
+    ctx.env.ADMIN_EMAILS = 'admin@example.com';
+    ctx.env.PUSH_TEST_ENABLED = '1';
+    await call(a.token, 'PUT', '/v1/push/device', INPUT);
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(Response.json({ data: { status: 'ok', id: 'private-ticket' } })),
+    );
+    const response = await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL });
+    expect(await response.json()).toMatchObject({ data: { accepted: true } });
+    const receipt = () =>
+      ctx.env.DB.prepare(
+        'SELECT last_test_ticket_id AS ticket, last_test_sent_at AS sent FROM push_devices',
+      ).first();
+    expect(await receipt()).toMatchObject({ ticket: 'private-ticket', sent: expect.any(String) });
+    await call(a.token, 'PUT', '/v1/push/device', INPUT);
+    expect(await receipt()).toMatchObject({ ticket: 'private-ticket' });
+    await call(a.token, 'PUT', '/v1/push/device', { ...INPUT, token: 'ExpoPushToken[rotated]' });
+    expect(await receipt()).toEqual({ ticket: null, sent: null });
+    // A late result from the old token must not overwrite the new registration.
+    await rememberPushTestTicket(
+      ctx.env.DB,
+      INSTALL,
+      { token: INPUT.token, sessionId: a.session.id },
+      'stale-ticket',
+      new Date().toISOString(),
+    );
+    expect(await receipt()).toEqual({ ticket: null, sent: null });
+    await rememberPushTestTicket(
+      ctx.env.DB,
+      INSTALL,
+      { token: 'ExpoPushToken[rotated]', sessionId: a.session.id },
+      'current-ticket',
+      new Date().toISOString(),
+    );
+    await call(b.token, 'PUT', '/v1/push/device', { ...INPUT, token: 'ExpoPushToken[rotated]' });
+    expect(await receipt()).toEqual({ ticket: null, sent: null });
+    await rememberPushTestTicket(
+      ctx.env.DB,
+      INSTALL,
+      { token: 'ExpoPushToken[rotated]', sessionId: a.session.id },
+      'previous-account-ticket',
+      new Date().toISOString(),
+    );
+    expect(await receipt()).toEqual({ ticket: null, sent: null });
+  });
   it('does not remove a newer registration after an old in-flight token is rejected', async () => {
     const a = await identity();
     const b = await identity();

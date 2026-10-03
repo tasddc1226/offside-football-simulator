@@ -13,6 +13,7 @@ import {
   registerPushDevice,
   unregisterPushDevice,
   ownPushDevice,
+  rememberPushTestTicket,
 } from '../db/repos/pushDevices.js';
 import { sendPushTest } from '../push/expo.js';
 import { enforceLimit, NO_STORE, nowIso, ok, readBody, notFoundError } from './shared.js';
@@ -72,7 +73,14 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
     if (!device)
       throw notFoundError('이 기기의 알림 받기를 먼저 켜 주세요.', 'PUSH_DEVICE_MISSING');
     try {
-      await sendPushTest(device.token, c.env.EXPO_PUSH_ACCESS_TOKEN);
+      const ticketId = await sendPushTest(device.token, c.env.EXPO_PUSH_ACCESS_TOKEN);
+      await rememberPushTestTicket(
+        c.env.DB,
+        installationId,
+        { token: device.token, sessionId: session.id },
+        ticketId,
+        now,
+      );
     } catch (e) {
       if (
         e instanceof AppError &&

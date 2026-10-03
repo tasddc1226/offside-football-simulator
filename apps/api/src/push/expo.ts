@@ -5,7 +5,7 @@ export async function sendPushTest(
   token: string,
   accessToken?: string,
   fetchImpl: typeof fetch = fetch,
-): Promise<void> {
+): Promise<string> {
   let response: Response;
   try {
     response = await fetchImpl('https://exp.host/--/api/v2/push/send', {
@@ -34,7 +34,7 @@ export async function sendPushTest(
   }
   if (!response.ok)
     throw new AppError({ code: 'SERVICE_UNAVAILABLE', message: '알림 요청을 보내지 못했어요.' });
-  let result: { data?: { status?: string; details?: { error?: string } } };
+  let result: { data?: { status?: string; id?: string; details?: { error?: string } } };
   try {
     result = (await response.json()) ?? {};
   } catch {
@@ -54,4 +54,10 @@ export async function sendPushTest(
             : 'PUSH_SEND_FAILED',
       },
     });
+  if (typeof result.data.id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(result.data.id))
+    throw new AppError({
+      code: 'SERVICE_UNAVAILABLE',
+      message: '알림 접수 번호를 확인하지 못했어요.',
+    });
+  return result.data.id;
 }

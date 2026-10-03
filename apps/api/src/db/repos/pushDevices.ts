@@ -16,6 +16,8 @@ export async function registerPushDevice(
       `INSERT INTO push_devices (installation_hash, session_id, profile_id, token, platform, app_version, updated_at)
     SELECT ?, ?, ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM push_devices WHERE token = ? AND installation_hash <> ?)
     ON CONFLICT(installation_hash) DO UPDATE SET session_id = excluded.session_id, profile_id = excluded.profile_id,
+    last_test_ticket_id = CASE WHEN token = excluded.token AND session_id = excluded.session_id THEN last_test_ticket_id ELSE NULL END,
+    last_test_sent_at = CASE WHEN token = excluded.token AND session_id = excluded.session_id THEN last_test_sent_at ELSE NULL END,
     token = excluded.token, platform = excluded.platform, app_version = excluded.app_version, updated_at = excluded.updated_at`,
     )
     .bind(
@@ -32,6 +34,23 @@ export async function registerPushDevice(
     .run();
   if (r.meta.changes !== 1)
     throw conflictError('이 기기의 알림을 다시 연결해 주세요.', 'PUSH_TOKEN_CONFLICT');
+}
+
+/** 발송 중 계정·토큰이 바뀌면 이전 요청의 접수 번호를 새 등록에 남기지 않는다. */
+export async function rememberPushTestTicket(
+  db: D1Database,
+  installationId: string,
+  expected: { token: string; sessionId: string },
+  ticketId: string,
+  sentAt: string,
+) {
+  await db
+    .prepare(
+      `UPDATE push_devices SET last_test_ticket_id = ?, last_test_sent_at = ?
+       WHERE installation_hash = ? AND token = ? AND session_id = ?`,
+    )
+    .bind(ticketId, sentAt, await sha256Hex(installationId), expected.token, expected.sessionId)
+    .run();
 }
 
 /** 설치 식별자는 보안 저장소에만 있다. 새 익명 세션에서도 이 기기의 이전 등록을 철회할 수 있다. */

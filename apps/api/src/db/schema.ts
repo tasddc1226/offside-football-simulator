@@ -130,6 +130,9 @@ export const pushDevices = sqliteTable(
     platform: text('platform', { enum: ['ios', 'android'] }).notNull(),
     appVersion: text('app_version').notNull(),
     updatedAt: text('updated_at').notNull(),
+    /** 마지막 본인 테스트 접수 번호. 토큰·세션이 바뀌면 지우고 전달 결과 조회에만 쓴다. */
+    lastTestTicketId: text('last_test_ticket_id'),
+    lastTestSentAt: text('last_test_sent_at'),
   },
   (t) => [
     uniqueIndex('push_devices_token_unique').on(t.token),

@@ -5,7 +5,7 @@ describe('Expo test request', () => {
     const send = vi
       .fn<typeof fetch>()
       .mockResolvedValue(Response.json({ data: { status: 'ok', id: 'ticket' } }));
-    await sendPushTest('ExpoPushToken[own_device]', 'private-secret', send);
+    expect(await sendPushTest('ExpoPushToken[own_device]', 'private-secret', send)).toBe('ticket');
     expect(send).toHaveBeenCalledOnce();
     const [url, init] = send.mock.calls[0]!;
     expect(url).toBe('https://exp.host/--/api/v2/push/send');
@@ -49,6 +49,8 @@ describe('Expo test request', () => {
     for (const response of [
       new Response('failed', { status: 503 }),
       Response.json({ data: {} }),
+      Response.json({ data: { status: 'ok' } }),
+      Response.json({ data: { status: 'ok', id: '<unsafe>' } }),
       Response.json(null),
       new Response('invalid json'),
     ]) {
