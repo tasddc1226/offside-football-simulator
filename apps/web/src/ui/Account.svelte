@@ -8,6 +8,7 @@
     unlinkGoogle, logout, startProfileDeletion, confirmProfileDeletion,
   } from '@offside/app-core/api/client';
   import { accountCache, refreshAccount } from './account-state.svelte.js';
+  import { refreshChatIdentity } from './chat-state.svelte.js';
   import { accountLabel, isMember } from '@offside/app-core/account';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
   import NicknameForm from './NicknameForm.svelte';
@@ -36,12 +37,16 @@
 
   async function doUnlink() {
     const r = await unlinkGoogle();
-    if (r.ok) await load();
+    if (r.ok) {
+      refreshChatIdentity();
+      await load();
+    }
     else set('error');
   }
   async function doLogout() {
     closeSheet();
     await logout();
+    refreshChatIdentity();
     set(null);
   }
   function askLogout() {
@@ -58,6 +63,7 @@
     const start = await startProfileDeletion();
     if (!start.ok) return set('error');
     const confirmResult = await confirmProfileDeletion(start.data.confirmToken);
+    if (confirmResult.ok) refreshChatIdentity();
     set(confirmResult.ok ? null : 'error');
   }
 </script>
