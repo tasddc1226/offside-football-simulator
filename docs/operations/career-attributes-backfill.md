@@ -96,4 +96,19 @@ pnpm --filter @offside/api exec wrangler d1 execute offside-local --local --pers
 
 최종 조회 기준 은퇴 16,500명 중 원본 12,511명, 추정 3,989명이며 누락과 잘못된
 추정값은 각각 0건이다. 진행 중인 선수의 추정값도 0건이고 운영 API는 정상 응답했다.
-이 작업은 DB 적용만 수행했다. 운영 화면 표시는 추정 표기 코드 배포 후 적용된다.
+DB 적용에 이어 [PR #438](https://github.com/tasddc1226/offside-football-simulator/pull/438)의
+추정 표기 코드를 [v2026.10.03.13](https://github.com/tasddc1226/offside-football-simulator/releases/tag/v2026.10.03.13)으로
+운영 API·웹과 iOS·Android production OTA에 배포했다. 양 플랫폼 OTA의 커밋은
+배포 커밋 `7f8d39e`와 일치하며, 기존 1.0.2 production 빌드와 런타임이 호환된다.
+앱 버전 번호는 1.0.2를 유지한다. 배포 확인 시점 iOS 1.0.2는 심사 대기이며,
+공개 중인 1.0.1은 스토어에서 1.0.2로 업데이트한 뒤 이번 OTA를 받을 수 있다.
+
+배포 후 읽기 전용 집계는 은퇴 17,002명, 원본 13,013명, 추정 3,989명,
+누락 0명이며 진행 중인 선수의 추정값도 0건이다. 새 은퇴 기록에도 원본 능력치가
+저장되고 있다. 운영 API 정상 응답과 웹 산출물 22개의 일치를 확인했다.
+
+배포 전 CI에서 단위 테스트 1,081개, 웹 E2E 156개(9개 제외), 동의 흐름 9개,
+2,000회 커리어 스모크를 통과했다. 로컬 모바일 웹의 카드와 추정 표기는 확인했으나,
+iOS·Android의 최종 화면 재확인은 시뮬레이터 응답 지연으로 완료하지 못했다.
+[배포 실행과 검증 결과](https://github.com/tasddc1226/offside-football-simulator/actions/runs/37126161986)를
+기준으로 운영 반영을 기록한다.
