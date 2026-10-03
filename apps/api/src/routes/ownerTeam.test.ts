@@ -183,6 +183,58 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     });
   });
 
+  it('추정 능력치 백필은 카드에서만 보이고 기존 편성과 경기 실력을 바꾸지 않는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const fw = await addCareer(me.profileId, { peak: 80 });
+    const teamBefore = PutRes.parse(
+      await (await putTeam(me.cookie, { slots: slots(null, null, fw) })).json(),
+    ).data.team;
+    const attrs = { pac: 83, sho: 86, pas: 65, dri: 76, def: 35, phy: 72 };
+    await ctx.db
+      .update(careers)
+      .set({
+        cardAttrsJson: JSON.stringify({ v: 1, source: 'estimated', attrs }),
+      })
+      .where(eq(careers.id, fw));
+    const data = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(data.players[0]).toMatchObject({ attrs, attrsEstimated: true, roles: null });
+    expect(data.team).toEqual(teamBefore);
+    const [stored] = await ctx.db.select().from(careers).where(eq(careers.id, fw));
+    expect(stored).toMatchObject({ peak: 80, peakProfile: null, legendScore: 300 });
+  });
+
+  it('원본 능력치가 추정치보다 우선하고 모양이 잘못된 추정치는 표시하지 않는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const roles = { GK: 22, CB: 83, FB: 79, DM: 74, CM: 66, AM: 58, W: 55, ST: 52 };
+    const original = await addCareer(me.profileId, { peak: 90, roles });
+    const invalid = await addCareer(me.profileId, { peak: 80 });
+    const estimate = JSON.stringify({
+      v: 1,
+      source: 'estimated',
+      attrs: { pac: 99, sho: 99, pas: 99, dri: 99, def: 99, phy: 99 },
+    });
+    await ctx.db.update(careers).set({ cardAttrsJson: estimate }).where(eq(careers.id, original));
+    await ctx.db
+      .update(careers)
+      .set({ cardAttrsJson: JSON.stringify({ v: 1, source: 'estimated', attrs: { pac: 120 } }) })
+      .where(eq(careers.id, invalid));
+    const data = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(data.players.find((p) => p.careerId === original)).toMatchObject({
+      attrsEstimated: false,
+      roles,
+      attrs: { pac: 80, sho: 70 },
+    });
+    expect(data.players.find((p) => p.careerId === invalid)).toMatchObject({
+      attrsEstimated: false,
+      attrs: null,
+      roles: null,
+    });
+  });
+
   it('T-10-092 최고 시점 능력치가 있으면 자리마다 그 자리 실력으로 뛰고, 팀 줄 힘을 돌려준다', async () => {
     const me = await issueGoogleCookie(ctx);
     const roles = { GK: 22, CB: 83, FB: 79, DM: 74, CM: 66, AM: 58, W: 55, ST: 52 };

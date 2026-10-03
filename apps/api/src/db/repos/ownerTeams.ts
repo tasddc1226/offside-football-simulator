@@ -1,4 +1,4 @@
-import { TeamLayoutSchema, TeamLogoSchema } from '@offside/contracts';
+import { PeakProfileSchema, TeamLayoutSchema, TeamLogoSchema } from '@offside/contracts';
 import type { TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import {
@@ -56,6 +56,19 @@ export function peakOf(json: string | null): PeakProfile | null {
       FACE_ATTRS.every((k) => Number.isFinite(p.attrs![k]))
       ? (p as PeakProfile)
       : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 백필한 수치는 카드에서만 읽는다. 원본 능력치가 있으면 호출하지 않는다. */
+export function estimatedAttrsOf(json: string | null): PeakProfile['attrs'] | null {
+  if (!json) return null;
+  try {
+    const p = JSON.parse(json) as { v?: unknown; source?: unknown; attrs?: unknown };
+    if (p?.v !== 1 || p.source !== 'estimated') return null;
+    const attrs = PeakProfileSchema.shape.attrs.safeParse(p.attrs);
+    return attrs.success ? attrs.data : null;
   } catch {
     return null;
   }
@@ -134,6 +147,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       dpos: careers.dpos,
       peak: careers.peak,
       peakProfile: careers.peakProfile,
+      cardAttrsJson: careers.cardAttrsJson,
       number: careers.shirtNumber,
       publicName: careers.publicName,
       legendScore: careers.legendScore,

@@ -3,6 +3,7 @@
   import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, presetLayout, positionRole, slotRating, slotFit, type FormationId, type TeamPosition } from '@offside/contracts/owner-team';
   import { POS_LABEL, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
+  import { attrLine } from '@offside/app-core/teamOwner';
   import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import PlayerCard from './PlayerCard.svelte';
@@ -157,7 +158,7 @@
         {:else if selectedSlot !== null}
           <div class="selected-head">
             <div class="selected-info"><span><b>{selectedCell?.name}</b> · {DETAIL_LABEL[positions[selectedSlot]!.slot]}</span>
-              <span class="rating-comparison">{#if selectedCell?.player}최고 OVR {selectedCell.player.peak} → {/if}<b>배치 실력 {selectedCell?.rating}</b>{#if selectedFit !== null} · 적합도 {selectedFit}%{/if}</span>
+              <span class="rating-comparison">{#if selectedCell?.player}최고 OVR {selectedCell.player.peak} → {/if}<b>포지션 OVR {selectedCell?.rating}</b>{#if selectedFit !== null} · 적합도 {selectedFit}%{/if}</span>
             </div>
             <button class="close-selection" aria-label="선수 선택 해제" onclick={() => (selectedSlot = null)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button>
           </div>
@@ -166,10 +167,11 @@
       </div>
     {/if}
     <div class="rating-guide">
-      <details><summary>최고 OVR · 배치 실력 안내</summary>
-        <p>카드 숫자는 선수의 <b>최고 OVR</b>이에요. 카드 아래의 <b>배치 실력</b>이 팀 전력과 경기에 반영돼요.</p>
+      <details><summary>최고 OVR · 포지션 OVR 안내</summary>
+        <p>카드 숫자는 선수의 <b>최고 OVR</b>이에요. 카드 아래의 <b>포지션 OVR</b>이 팀 전력과 경기에 반영돼요.</p>
         <p>옮긴 위치에 따라 포지션이 바뀌어요. 선수의 자리별 능력치가 있으면 그 값을, 없으면 최고 OVR에 포지션 적합도를 곱해요.</p>
-        <p>세부 포지션 기록이 없는 선수는 같은 포지션 계열에서도 95%를 적용해요. 예를 들어 최고 OVR이 85면 배치 실력은 81이에요.</p>
+        <p>세부 포지션 기록이 없는 선수는 같은 포지션 계열에서도 95%를 적용해요. 예를 들어 최고 OVR이 85면 포지션 OVR은 81이에요.</p>
+        <p>‘추정 능력치’는 같은 포지션·유형의 은퇴 기록과 최고 OVR을 참고해 계산한 값이에요. 카드 표시용이라 경기 실력에는 영향을 주지 않아요.</p>
       </details>
     </div>
   </section>
@@ -194,7 +196,7 @@
         {#each roster as p (p.careerId)}
           {@const at = slots.indexOf(p.careerId)}
           <article class="locker-player" class:chosen={selectedPlayer === p.careerId} data-locker-player={p.careerId}>
-            <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label="{nameOf(p)} · {POS_LABEL[p.pos]} · 최고 OVR {p.peak} 선택" onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
+            <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label="{nameOf(p)} · {POS_LABEL[p.pos]} · 최고 OVR {p.peak} · {attrLine(p) ?? '능력치 기록 없음'} 선택" onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
               <PlayerCard player={p} name={nameOf(p)} rating={p.peak} role={p.dpos ?? (p.pos === 'FW' ? 'ST' : p.pos === 'MF' ? 'CM' : p.pos === 'DF' ? 'CB' : 'GK')} />
             </button>
             <span class="roster-state" class:starting={at >= 0}>{at >= 0 ? `선발 · ${positions[at]!.slot}` : '대기'}</span>
@@ -267,7 +269,7 @@
   .locker-filters .hof-sort {position:relative;}
   .locker-filters .hof-sort::after {content:'';position:absolute;inset:-6px 0;}
   .starter-toggle {display:flex;align-items:center;gap:7px;font-size:.8rem;color:var(--muted);min-height:44px;margin:5px 0;}
-  .locker-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:16px 12px;align-items:start;} .locker-player {position:relative;max-width:170px;width:100%;justify-self:center;}
+  .locker-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(144px,1fr));gap:16px 12px;align-items:start;} .locker-player {position:relative;max-width:170px;width:100%;justify-self:center;}
   .locker-select {width:100%;display:block;border:0;border-radius:12px;background:none;padding:0;cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none;}
   .locker-select:focus-visible {outline:3px solid var(--accent);outline-offset:3px;} .locker-player.chosen .locker-select {filter:drop-shadow(0 0 5px var(--accent));}
   .roster-state {display:block;text-align:center;font-size:.7rem;color:var(--muted);padding-top:6px;} .roster-state.starting {color:var(--good);font-weight:600;}
@@ -285,5 +287,5 @@
   :global([data-pitch-frame]) {scroll-margin-top:16px;}
   .drag-ghost {position:fixed;width:82px;transform:translate(-50%,-55%);z-index:75;pointer-events:none;filter:drop-shadow(0 10px 12px #0005);}
   .sr-only {position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
-  @media(max-width:440px) { .locker-room {padding:14px;} .locker-grid {grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 8px;} .locker-tools {grid-template-columns:1fr;} .locker-tools select {max-width:none;min-height:44px;} }
+  @media(max-width:440px) { .locker-room {padding:14px;} .locker-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 8px;} .locker-tools {grid-template-columns:1fr;} .locker-tools select {max-width:none;min-height:44px;} }
 </style>

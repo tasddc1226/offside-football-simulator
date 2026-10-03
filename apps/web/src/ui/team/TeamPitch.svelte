@@ -22,17 +22,17 @@
   {#each positions as point, i (i)}
     {@const c = cells[i]}
     {#if c}
-      {@const ratingLabel = c.player ? `최고 OVR ${c.player.peak} · 배치 실력 ${c.rating} · 적합도 ${Math.round(slotFit(point.slot, c.player, c.rating) * 100)}%` : `배치 실력 ${c.rating}`}
+      {@const ratingLabel = c.player ? `최고 OVR ${c.player.peak} · 포지션 OVR ${c.rating} · 적합도 ${Math.round(slotFit(point.slot, c.player, c.rating) * 100)}%` : `포지션 OVR ${c.rating}`}
       {#if onpick}
         <button class="tm-slot" class:chosen={selected === i} class:dragging={dragging === i} data-slot={i}
           style:left="{point.x}%" style:top="{point.y}%" aria-pressed={selected === i}
           aria-label="{DETAIL_LABEL[point.slot]} · {c.name} · {ratingLabel}" onclick={() => onpick?.(i)}
           onpointerdown={(e) => onstart?.(e, i)} onkeydown={(e) => onkey?.(e, i)}>
-          <PlayerCard player={c.player} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? '최고 OVR' : '배치 실력'} compact />
+          <PlayerCard player={c.player} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? '최고 OVR' : '포지션 OVR'} compact />
         </button>
       {:else}
         <div class="tm-slot" data-slot={i} style:left="{point.x}%" style:top="{point.y}%" role="group" aria-label="{DETAIL_LABEL[point.slot]} · {c.name} · {ratingLabel}">
-          <PlayerCard player={c.player} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? '최고 OVR' : '배치 실력'} compact />
+          <PlayerCard player={c.player} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? '최고 OVR' : '포지션 OVR'} compact />
         </div>
       {/if}
     {/if}

@@ -39,6 +39,7 @@ import {
   challengedSince,
   countMatchesSince,
   eligibleMap,
+  estimatedAttrsOf,
   listEligibleCareers,
   listMyTeams,
   listOpponentCandidates,
@@ -207,7 +208,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const team = teams.find((t) => t.season === season) ?? null;
     const picks = players.map((p) => {
       const profile = peakOf(p.peakProfile);
-      return { p, profile, career: toLineupCareer(p, profile) };
+      const estimatedAttrs = profile ? null : estimatedAttrsOf(p.cardAttrsJson);
+      return { p, profile, estimatedAttrs, career: toLineupCareer(p, profile) };
     });
     const eligible = new Map(picks.map(({ career }) => [career.id, career]));
     // 은퇴 선수가 목록 상한보다 많으면 선발에 든 선수가 목록 밖에 있을 수 있다 — 그 선수만 따로 읽는다.
@@ -231,13 +233,14 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
               buildLineup(team.formation as FormationId, slotIdsOf(team), eligible, layoutOf(team)),
             )
           : null,
-        players: picks.map(({ p, profile, career }) => ({
+        players: picks.map(({ p, profile, estimatedAttrs, career }) => ({
           careerId: p.id,
           pos: p.pos,
           dpos: career.dpos,
           peak: career.peak,
           roles: career.roles,
-          attrs: profile?.attrs ?? null,
+          attrs: profile?.attrs ?? estimatedAttrs,
+          attrsEstimated: estimatedAttrs !== null,
           number: p.number,
           publicName: p.publicName,
           legendScore: p.legendScore,
