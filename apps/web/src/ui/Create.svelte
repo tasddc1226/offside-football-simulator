@@ -1,6 +1,8 @@
 <script lang="ts">
   // 선수 생성(T-10-022): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
   // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
+  import { onMount } from 'svelte';
+  import { watchDetailOpening } from '@offside/app-core/season-opening';
   import { cubicOut } from 'svelte/easing';
   import { fly } from 'svelte/transition';
   import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '@offside/game/data';
@@ -26,8 +28,13 @@
   const feet = ['오른발', '왼발', '양발'] as const;
   const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
   // T-10-091 세부 포지션은 시즌 1 개막부터 고른다. 프리시즌엔 선택지를 보이지 않고, 저장된 선택도 쓰지 않는다.
-  const detailOpen = detailOpenNow();
-  if (detailOpen && !draftDpos(C)) pickDetail(DETAILS_OF[C.pos][0]!);
+  let detailOpen = $state(detailOpenNow());
+  if (detailOpenNow() && !draftDpos(C)) pickDetail(DETAILS_OF[C.pos][0]!);
+  onMount(() => watchDetailOpening(() => {
+    detailOpen = true;
+    // 개막 전 골라 둔 주력·후보 능력치는 유지한다.
+    if (!draftDpos(C)) C.dpos = DETAILS_OF[C.pos][0]!;
+  }));
   const dpos = $derived(draftDpos(C));
   const focusLeft = $derived(FOCUS_PICK - C.focus.length);
   // 고른 조합이 시작 분포를 어떻게 바꾸는지 버튼마다 미리 보여준다(주력 ▲ / 가장 덜 쓰는 능력치 ▼).

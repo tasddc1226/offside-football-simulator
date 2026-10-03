@@ -24,6 +24,7 @@ import { BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
 import { isKorean, nationOf } from '@offside/game/nation';
 import { bodyNote, hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
 import { withRo } from '@offside/app-core/format';
+import { watchDetailOpening } from '@offside/app-core/season-opening';
 import { detailOpenNow, draftBody, draftDpos, randomName } from '@offside/app-core/state';
 import { rollCandidates, startCareer } from '../../game/host';
 import { goHome } from '../../game/nav';
@@ -140,10 +141,19 @@ export default function Create() {
   const input = useInputStyle();
 
   // 세부 포지션은 시즌 1 개막부터 고른다. 프리시즌엔 선택지를 보이지 않고, 저장된 선택도 쓰지 않는다.
-  const [detailOpen] = useState(() => detailOpenNow());
+  const [detailOpen, setDetailOpen] = useState(() => detailOpenNow());
   useEffect(() => {
     if (detailOpen && !draftDpos(appState.C)) pickDetail(DETAILS_OF[appState.C.pos][0]!);
   }, [detailOpen]);
+  useEffect(
+    () =>
+      watchDetailOpening(() => {
+        // 개막 전 골라 둔 주력·후보 능력치는 유지한다.
+        if (!draftDpos(appState.C)) appState.C.dpos = DETAILS_OF[appState.C.pos][0]!;
+        setDetailOpen(true);
+      }),
+    [],
+  );
   const dpos = draftDpos(C);
   const focusLeft = FOCUS_PICK - C.focus.length;
   // 고른 조합이 시작 분포를 어떻게 바꾸는지 버튼마다 미리 보여준다(주력 ▲ / 가장 덜 쓰는 능력치 ▼).

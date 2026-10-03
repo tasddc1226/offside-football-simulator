@@ -791,3 +791,42 @@ describe('조작된 기록 보정', () => {
     });
   });
 });
+
+describe('T-11-062 개막 첫 업로드 경계', () => {
+  let ctx: TestD1;
+  beforeEach(async () => {
+    ctx = await createTestD1();
+  });
+  afterEach(async () => {
+    vi.useRealTimers();
+    await ctx.dispose();
+  });
+
+  it('개막 직전/정각의 첫 업로드를 구분하고 늦은 재전송이 소속 시즌을 바꾸지 않는다', async () => {
+    const me = await issueCookie(ctx);
+    const app = createApp();
+    const pre = '77777777-7777-4777-8777-777777777777';
+    const s1 = '88888888-8888-4888-8888-888888888888';
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-05T14:59:59.999Z'));
+    const upload = async (id: string, body = seasonBody()) => {
+      const res = await app.request(
+        `/v1/careers/${id}/seasons/2026`,
+        jsonInit({ method: 'PUT', body, cookie: me.cookie }),
+        ctx.env,
+      );
+      expect(res.status).toBe(200);
+    };
+    await upload(pre);
+    vi.setSystemTime(new Date('2026-10-05T15:00:00.000Z'));
+    await upload(s1, seasonBody({ career: { ...TEST_CAREER, dpos: 'ST' } }));
+    await upload(pre);
+    const rows = await ctx.db
+      .select({ id: careers.id, season: careers.serviceSeason, dpos: careers.dpos })
+      .from(careers);
+    expect(Object.fromEntries(rows.map((r) => [r.id, [r.season, r.dpos]]))).toEqual({
+      [pre]: [0, null],
+      [s1]: [1, 'ST'],
+    });
+  });
+});

@@ -7,7 +7,7 @@ import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { HofSort, RetiredNumberResult } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason, retireAtNow } from '@offside/contracts/service-seasons';
-import { detailPosOpen, dposFor } from '@offside/contracts/positions';
+import { detailPosOpen, dposFor, DETAILS_OF } from '@offside/contracts/positions';
 import type { OutboxItem } from './outbox.js';
 import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
 import { pick, ri } from '@offside/game/rng';
@@ -93,11 +93,24 @@ export const draftBody = (c: Pick<DraftCharacter, 'pos' | 'height' | 'weight'>):
 export const detailOpenNow = (): boolean => detailPosOpen(new Date().toISOString());
 
 /** 새 커리어에 넣을 세부 포지션 — 프리시즌이거나 큰 포지션과 어긋나면 넣지 않는다. */
-export const draftDpos = (c: Pick<DraftCharacter, 'pos' | 'dpos'>): DetailPos | undefined =>
-  (detailOpenNow() && dposFor(c.pos, c.dpos)) || undefined;
+export const draftDpos = (
+  c: Pick<DraftCharacter, 'pos' | 'dpos'>,
+  now = new Date().toISOString(),
+): DetailPos | undefined => (detailPosOpen(now) && dposFor(c.pos, c.dpos)) || undefined;
 
 /** T-11-045 새 커리어의 은퇴 나이 — 지금 시즌(개막 전이면 프리시즌)의 값으로 정해져 커리어에 고정된다. */
 export const draftRetireAt = (): number => retireAtNow(new Date().toISOString());
+
+/** 생성 확정 시각을 한 번만 읽는다. 자정을 넘긴 초안도 화면과 같은 기본 세부 포지션을 받는다. */
+export function draftCareerRules(
+  c: Pick<DraftCharacter, 'pos' | 'dpos'>,
+  now = new Date().toISOString(),
+): { dpos: DetailPos | undefined; retireAt: number } {
+  return {
+    dpos: draftDpos(c, now) ?? (detailPosOpen(now) ? DETAILS_OF[c.pos][0] : undefined),
+    retireAt: retireAtNow(now),
+  };
+}
 
 export function randomName(): string {
   return pick(SURNAMES) + pick(GIVEN);
