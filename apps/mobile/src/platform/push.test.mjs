@@ -9,9 +9,13 @@ const f = vi.hoisted(() => {
     requests: [],
     releaseType: 5,
     platform: 'ios',
+    rejectNullRegistration: false,
   };
   fixture.getReleaseType = vi.fn(async () => fixture.releaseType);
-  fixture.autoRegistration = vi.fn(async () => {});
+  fixture.autoRegistration = vi.fn(async () => {
+    if (fixture.rejectNullRegistration) throw new Error('Native iOS String rejects null');
+  });
+  fixture.nativeRegistration = vi.fn(async () => {});
   fixture.getExpo = vi.fn(async (options) => {
     // getDevicePushTokenAsync emits even when the APNs token has not changed.
     // Stop an unfixed recursive listener so this regression fails without hanging the runner.
@@ -66,6 +70,13 @@ vi.mock('expo-application', () => ({
   ApplicationReleaseType: { SIMULATOR: 1 },
   getIosApplicationReleaseTypeAsync: f.getReleaseType,
 }));
+vi.mock('expo-modules-core', () => ({
+  requireNativeModule: (name) => {
+    if (name !== 'NotificationsServerRegistrationModule')
+      throw new Error('Unexpected native module');
+    return { setRegistrationInfoAsync: f.nativeRegistration };
+  },
+}));
 vi.mock('react-native', () => ({
   Platform: {
     get OS() {
@@ -103,6 +114,7 @@ beforeEach(() => {
   f.requests.length = 0;
   f.releaseType = 5;
   f.platform = 'ios';
+  f.rejectNullRegistration = false;
 });
 async function app() {
   const p = await import('./push.ts');
@@ -111,6 +123,18 @@ async function app() {
   return p;
 }
 describe('native push token event registration', () => {
+  it('handles the actual iOS String-only registration bridge when SDK disable sends null', async () => {
+    f.releaseType = 1;
+    f.rejectNullRegistration = true;
+    const p = await app();
+    expect(p.pushState).toMatchObject({ enabled: true, busy: false, failed: false });
+    expect(f.nativeRegistration).toHaveBeenCalledWith('{"isEnabled":false}');
+    expect(f.nativeRegistration.mock.invocationCallOrder[0]).toBeLessThan(
+      f.getExpo.mock.invocationCallOrder[0],
+    );
+    expect(f.getExpo.mock.calls[0][0].development).toBe(true);
+    expect(f.api).toHaveBeenCalledOnce();
+  });
   it('registers an iOS simulator in APNs sandbox and stops SDK production auto-updates', async () => {
     f.releaseType = 1;
     const p = await app();

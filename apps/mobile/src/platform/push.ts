@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import Constants from 'expo-constants';
 import * as Application from 'expo-application';
+import { requireNativeModule } from 'expo-modules-core';
 import { AppState, Platform } from 'react-native';
 import { proxy } from 'valtio';
 import { apiFetch } from '@offside/app-core/api/client';
@@ -53,7 +54,18 @@ async function register() {
         Application.ApplicationReleaseType.SIMULATOR;
     // 시뮬레이터에는 provisioning profile이 없어 SDK가 APNs 환경을 production으로 추정한다.
     // SDK 자동 갱신도 같은 추정을 하므로 끄고, 이 어댑터의 토큰 이벤트 갱신을 사용한다.
-    if (simulator) await Notifications.setAutoServerRegistrationEnabledAsync(false);
+    if (simulator) {
+      try {
+        await Notifications.setAutoServerRegistrationEnabledAsync(false);
+      } catch {
+        // SDK 57 iOS의 String 매개변수는 SDK JS가 보내는 null을 받지 못한다.
+        // 위 호출은 진행 중 자동 갱신을 중지하므로, 문자열로 꺼진 상태를 저장한다.
+        const registration = requireNativeModule<{
+          setRegistrationInfoAsync(info: string): Promise<void>;
+        }>('NotificationsServerRegistrationModule');
+        await registration.setRegistrationInfoAsync(JSON.stringify({ isEnabled: false }));
+      }
+    }
     const token = (
       await Notifications.getExpoPushTokenAsync({
         projectId,
