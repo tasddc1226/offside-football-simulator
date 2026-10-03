@@ -9,6 +9,7 @@
     "@offside/game": "workspace:*",
     "expo": "~57.0.25",
     "expo-apple-authentication": "~57.0.2",
+    "expo-application": "~57.0.3",
     "expo-clipboard": "~57.0.2",
     "expo-constants": "~57.0.19",
     "expo-crypto": "~57.0.3",

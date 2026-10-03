@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import Constants from 'expo-constants';
+import * as Application from 'expo-application';
 import { AppState, Platform } from 'react-native';
 import { proxy } from 'valtio';
 import { apiFetch } from '@offside/app-core/api/client';
@@ -46,8 +47,21 @@ async function register() {
     const revision = tokenRevision;
     const projectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
     if (!projectId) throw new Error('No EAS project');
+    const simulator =
+      Platform.OS === 'ios' &&
+      (await Application.getIosApplicationReleaseTypeAsync()) ===
+        Application.ApplicationReleaseType.SIMULATOR;
+    // 시뮬레이터에는 provisioning profile이 없어 SDK가 APNs 환경을 production으로 추정한다.
+    // SDK 자동 갱신도 같은 추정을 하므로 끄고, 이 어댑터의 토큰 이벤트 갱신을 사용한다.
+    if (simulator) await Notifications.setAutoServerRegistrationEnabledAsync(false);
     const token = (
-      await Notifications.getExpoPushTokenAsync({ projectId, devicePushToken: nativeToken })
+      await Notifications.getExpoPushTokenAsync({
+        projectId,
+        devicePushToken: nativeToken,
+        ...(simulator
+          ? { development: true, url: 'https://exp.host/--/api/v2/push/getExpoPushToken' }
+          : {}),
+      })
     ).data;
     expoToken = { token, until: revision === tokenRevision ? Date.now() + 3_600_000 : 0 };
   }

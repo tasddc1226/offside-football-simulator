@@ -7,7 +7,11 @@ const f = vi.hoisted(() => {
     nativeReads: 0,
     token: 'native-a',
     requests: [],
+    releaseType: 5,
+    platform: 'ios',
   };
+  fixture.getReleaseType = vi.fn(async () => fixture.releaseType);
+  fixture.autoRegistration = vi.fn(async () => {});
   fixture.getExpo = vi.fn(async (options) => {
     // getDevicePushTokenAsync emits even when the APNs token has not changed.
     // Stop an unfixed recursive listener so this regression fails without hanging the runner.
@@ -32,6 +36,9 @@ const f = vi.hoisted(() => {
 });
 vi.mock('expo-notifications', () => ({
   getExpoPushTokenAsync: f.getExpo,
+  setAutoServerRegistrationEnabledAsync: f.autoRegistration,
+  setNotificationChannelAsync: async () => {},
+  AndroidImportance: { DEFAULT: 3 },
   getPermissionsAsync: async () => ({ granted: true, canAskAgain: true }),
   requestPermissionsAsync: async () => ({ granted: true, canAskAgain: true }),
   setNotificationHandler: () => {},
@@ -55,7 +62,18 @@ vi.mock('expo-crypto', () => ({
 vi.mock('expo-constants', () => ({
   default: { expoConfig: { version: '1.0.2' }, easConfig: { projectId: 'test-project' } },
 }));
-vi.mock('react-native', () => ({ Platform: { OS: 'ios' }, AppState: { addEventListener() {} } }));
+vi.mock('expo-application', () => ({
+  ApplicationReleaseType: { SIMULATOR: 1 },
+  getIosApplicationReleaseTypeAsync: f.getReleaseType,
+}));
+vi.mock('react-native', () => ({
+  Platform: {
+    get OS() {
+      return f.platform;
+    },
+  },
+  AppState: { addEventListener() {} },
+}));
 vi.mock('valtio', () => ({ proxy: (state) => state }));
 vi.mock('@offside/app-core/api/client', () => ({ apiFetch: f.api }));
 vi.mock('./session', () => ({
@@ -83,6 +101,8 @@ beforeEach(() => {
   f.nativeReads = 0;
   f.token = 'native-a';
   f.requests.length = 0;
+  f.releaseType = 5;
+  f.platform = 'ios';
 });
 async function app() {
   const p = await import('./push.ts');
@@ -91,6 +111,33 @@ async function app() {
   return p;
 }
 describe('native push token event registration', () => {
+  it('registers an iOS simulator in APNs sandbox and stops SDK production auto-updates', async () => {
+    f.releaseType = 1;
+    const p = await app();
+    expect(p.pushState).toMatchObject({ enabled: true, busy: false, failed: false });
+    expect(f.autoRegistration).toHaveBeenCalledWith(false);
+    expect(f.autoRegistration.mock.invocationCallOrder[0]).toBeLessThan(
+      f.getExpo.mock.invocationCallOrder[0],
+    );
+    expect(f.getExpo).toHaveBeenLastCalledWith({
+      projectId: 'test-project',
+      devicePushToken: undefined,
+      development: true,
+      url: 'https://exp.host/--/api/v2/push/getExpoPushToken',
+    });
+    f.listener({ type: 'ios', data: 'native-b' });
+    await vi.waitFor(() => expect(p.pushState.busy).toBe(false));
+    expect(f.getExpo.mock.calls.at(-1)[0].development).toBe(true);
+    expect(f.api).toHaveBeenCalledTimes(2);
+  });
+  it('leaves Android token routing to the SDK without querying iOS release type', async () => {
+    f.platform = 'android';
+    await app();
+    expect(f.getReleaseType).not.toHaveBeenCalled();
+    expect(f.autoRegistration).not.toHaveBeenCalled();
+    expect(f.getExpo.mock.calls[0][0]).not.toHaveProperty('development');
+    expect(f.getExpo.mock.calls[0][0]).not.toHaveProperty('url');
+  });
   it('initial and duplicate APNs events settle with one registration', async () => {
     const p = await app();
     f.listener({ type: 'ios', data: 'native-a' });
@@ -100,6 +147,8 @@ describe('native push token event registration', () => {
     expect(f.getExpo).toHaveBeenCalledTimes(1);
     expect(f.api).toHaveBeenCalledTimes(1);
     expect(f.nativeReads).toBe(1);
+    expect(f.autoRegistration).not.toHaveBeenCalled();
+    expect(f.getExpo.mock.calls[0][0]).not.toHaveProperty('development');
   });
   it('a real rotation registers once using the delivered native token, without reading it again', async () => {
     const p = await app();
