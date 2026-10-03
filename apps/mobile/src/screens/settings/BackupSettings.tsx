@@ -2,6 +2,7 @@
 // 다시 불러온다. 기기를 바꿀 때 쓴다. 형식·검증·쓰는 키는 웹과 같은 @offside/app-core/backup.
 // 앱은 파일을 직접 쓰거나 고르지 못한다(expo-file-system 없음) — 내보내기는 시스템 공유 시트(JSON 글)·클립보드 복사,
 // 가져오기는 붙여넣기(칸 · '클립보드에서 붙여넣기')로 바꿨다.
+import { nativeAnalytics } from '../../analytics';
 import { useState } from 'react';
 import { Alert, Platform, Share, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -53,6 +54,7 @@ function reloadGame() {
   // 유저 클럽 이름을 먼저 CLUBS에 반영해야 세이브를 읽을 때 현재 소속 이름이 커스텀 이름을 읽는다.
   loadClubCustom();
   appState.G = restoreGame({ uploadRetirement, uploadLegacyRetirement });
+  nativeAnalytics.restored(appState.G?.cid ?? null);
 }
 
 export function BackupSettings() {

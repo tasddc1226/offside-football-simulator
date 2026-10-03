@@ -1,6 +1,7 @@
 // ───────── 화면 고르기 (웹 App.svelte) ─────────
 // 웹처럼 주소가 아니라 appState.screen으로 화면을 그린다(expo-router는 딥링크 입구만 맡는다). 화면이 바뀔 때마다
 // 방문 기록을 쌓아 Android 뒤로 버튼이 이전 화면으로 간다(마지막이면 앱을 닫는다).
+import { trackPage } from '../analytics';
 import { useEffect, type ComponentType } from 'react';
 import { BackHandler, View } from 'react-native';
 import { subscribe, useSnapshot } from 'valtio';
@@ -61,6 +62,7 @@ const checkAch = () => {
 export default function App() {
   const snap = useSnapshot(appState);
   const c = useColors();
+  useEffect(() => trackPage(snap.screen), [snap.screen]);
   // 상태가 바뀔 때마다(묶어서) 기록 단위가 바뀌었는지 본다 — 같으면 track()이 아무것도 안 한다.
   useEffect(() => subscribe(appState, () => navStack.track()), []);
   useEffect(() => {
