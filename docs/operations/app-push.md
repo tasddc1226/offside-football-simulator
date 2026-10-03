@@ -89,3 +89,13 @@ Android 앱의 공개 클라이언트 설정인 `google-services.json`만 넣는
 - iOS는 사용자 지시로 로컬 시뮬레이터 검증으로 변경했다. staging 테스트 전용 Google OAuth 생성은 승인되었으며, Google 사용자 데이터 정책 동의 확인을 기다린다.
 - API·계정 관련 테스트 총 49건, app-core 6건, 정적 페이지 9건이 통과했다. 계정 테스트는 장비 부하로 10초 hook timeout에 실패한 뒤, 로컬 CLI의 hook 대기를 60초로 늘려 재실행해 통과했다. 저장소의 전역 테스트 제한은 변경하지 않았다.
 - API/mobile/app-core 타입 검사, 변경 파일 ESLint·서식, 공개 저장소 위생 검사, staging API·웹/OG dry-run을 통과했다. 기기 UI·실제 수신·스토어 심사·운영 푸시 배포 검증은 수행 전이다.
+
+### 최종 테스트 빌드 준비
+
+- 토큰 교체 경쟁 방어와 최종 빌드 설정 커밋: `15318031`.
+- staging API 최종 코드 version: `2661df80-c22d-41db-ba73-6d74f42b08b2`.
+- Android 최종 테스트 빌드: `9d985df4-2485-4b14-9057-3b363dac0567` (`push-test`).
+- iOS 시뮬레이터 빌드: `becd6faa-4c9e-45ad-af77-c30da4ffff08` (`push-test-simulator`).
+- 두 빌드는 생성 후 `IN_PROGRESS`를 확인했다. 런타임 해시와 설치·수신 성공은 아직 확인 전이다.
+- 격리된 iOS 18.1 기기: `OFFSIDE Push Test iPhone 16`, `4C89C694-C807-4EAD-8533-B397DF7FF65E`.
+- 모바일 전체 린트·타입 검사가 통과했다. 테스트 대상 외 기기와 운영 채널은 변경하지 않았다.
