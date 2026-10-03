@@ -3920,7 +3920,7 @@ html:has(.wrap.has-actionbar) {
   font-weight: 800;
   letter-spacing: 0.02em;
   line-height: 1.2;
-  color: color-mix(in srgb, var(--g) 65%, var(--ink));
+  color: color-mix(in srgb, var(--g) 40%, var(--ink));
 }
 .ach-grade.large {
   gap: 8px;

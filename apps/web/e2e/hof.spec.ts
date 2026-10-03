@@ -1,6 +1,26 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { ok, API } from './helpers.js';
+
+async function expectAccessible(page: Page) {
+  // Wait for finite entrance transitions; decorative badge loops intentionally keep running.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+      .every((animation) => animation.playState !== 'running'),
+  );
+  const result = await new AxeBuilder({ page }).analyze();
+  expect(
+    result.violations.map((violation) => ({
+      id: violation.id,
+      nodes: violation.nodes.map((node) => ({
+        target: node.target,
+        summary: node.failureSummary,
+      })),
+    })),
+  ).toEqual([]);
+}
 
 // T-10-005 공개 명예의 전당: 전체 목록(API 스텁) → 다른 유저 선수 상세 → 돌아오기, 내 선수 탭 → 상세.
 const ID = '3b1d6c1e-2a4f-4f7e-9a0b-7c8d9e0f1a2b';
@@ -293,7 +313,7 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
   await expect(full.locator('[data-hof-nation]')).toHaveCount(10);
   await expect(full.locator('.hof-pager')).toContainText('1 / 2');
   await expect(full.locator('[data-hof-page="prev"]')).toBeDisabled();
-  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+  await expectAccessible(page);
 
   await full.locator('[data-hof-page="next"]').click();
   await expect(full.locator('.hof-row')).toHaveCount(5);
@@ -383,7 +403,7 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
       .first(),
   ).toHaveText('401골');
   expect(asked.at(-1)).toBe('?limit=10&sort=goals');
-  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+  await expectAccessible(page);
 
   if ((await full.locator('[data-hof-filters]').getAttribute('aria-expanded')) === 'false')
     await full.locator('[data-hof-filters]').click();
@@ -435,7 +455,7 @@ test('명예의 전당 이름 검색', async ({ page }) => {
   expect(asked.filter((a) => a.includes('q='))).toHaveLength(1); // 글자마다 묻지 않는다.
   await expect(full.locator('.hof-row .hof-rank')).toHaveText(['7', '42']);
   await expect(full.locator('.hof-source')).toContainText("'오프' 검색 은퇴 선수 2명");
-  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+  await expectAccessible(page);
 
   // 유형을 바꿔도 검색어는 그대로, 없는 이름은 안내.
   if ((await full.locator('[data-hof-filters]').getAttribute('aria-expanded')) === 'false')
@@ -487,7 +507,7 @@ test('명예의 전당: 컴팩트 시즌 선택에서 개막 예정 시즌을 �
   expect((await season.boundingBox())!.height).toBeLessThanOrEqual(40);
   await season.selectOption('1');
   await expect(full.locator('[data-hof-upcoming]')).toContainText('시즌 1은');
-  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+  await expectAccessible(page);
 
   await page.clock.setFixedTime(new Date('2026-10-06T00:00:00+09:00'));
   await page.reload();
