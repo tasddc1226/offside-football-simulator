@@ -1,3 +1,5 @@
+import { measureOperation } from './measurement.js';
+import type { Progress } from './player-metrics.js';
 import { marketFeedback, offerFeedback } from './career-feedback.js';
 // ───────── 게임 진행 액션 (웹·앱 공용, T-11-002) ─────────
 // 게임 로직을 호출하고, 그 결과를 시트 뷰 모델(sheets.ts)로 바꿔 시트에 띄운다. 상태·시트·저장·업로드·분석은
@@ -87,6 +89,7 @@ export interface GameHost {
   uploadSeason(s: GameState, rec: CareerRecord, growth?: SeasonGrowth): void;
   uploadRetirement(careerId: string, entry: HofEntry): void;
   analytics: {
+    complete?(p: Progress): void;
     replace(): void;
     start(s: GameState, previous: GameState | null): void;
     play(s: GameState, firstAction?: boolean): void;
@@ -148,86 +151,108 @@ export function createGameActions(host: GameHost) {
 
   // T-10-024: 구간 진행 시트(T-10-028부터 경기는 중계 시트)를 닫은 뒤, 결과를 시즌 탭 맨 위 리포트 카드로
   // 그린다. 이벤트·시즌 결산은 액션바 버튼으로 이어서 연다(nextPending).
+  let advancing = false;
   async function advance() {
-    if (sheet.state.busy || !appState.G) return;
-    const s = appState.G,
-      ph = s.phase;
-    const before = snapshot(s);
-    const rankBefore = teamRank(s);
-    // T-10-046: 한 구간의 게임 로직(훈련 → 경기 → 대회 → A매치 → 이벤트 추첨 → 칭호)은 game/turn.ts가 진행한다.
-    recordPhaseOvr(s); // T-11-048 구간에 들어갈 때의 OVR(성장 기록).
-    const r = playPhase(s);
-    const { block: b, comp, nt, ev } = r;
-    const chips = diffChips(s, before, r.after);
-    const titles = r.titles.map(titleView);
-    const title = ph === 0 ? '프리시즌 완료' : `${PHASES[ph]} 결과`;
-    s.pending = ev
-      ? { type: 'event', id: ev, then: s.phase > LAST_PHASE ? 'seasonEnd' : null }
-      : s.phase > LAST_PHASE
-        ? { type: 'seasonEnd' }
-        : null;
-    host.save();
-    host.analytics.play(s, ph === 0 && s.career.length === 0);
-    const extras = [
-      ...(comp.length ? ['컵 · 대륙 대회 결과 집계'] : []),
-      ...(nt ? ['A매치 소집 명단 발표'] : []),
-      ...(ev ? ['주변에서 무언가 일이 벌어지고 있습니다…'] : []),
-    ];
-    const games = b ? matchRows(s, b) : [];
-    const range = b ? roundRange(s, ph) : '';
-    const back = s.pos === 'DF' || s.pos === 'GK';
-    // T-10-028: 경기는 중계 시트로 한 경기씩 보여 주고(승무패·스코어가 쌓이는 맛), 끝나면 리포트로 넘어간다.
-    if (b) {
-      await sheet.playBlock(
-        {
-          eyebrow: `${s.year} · ${PHASES[ph]} 진행 중`,
-          title: `${range} · ${b.n}경기`,
-          back,
-          matches: leagueOf(s.leagueId).matches,
-        },
-        b,
+    if (
+      advancing ||
+      sheet.state.busy ||
+      !appState.G ||
+      appState.G.retired ||
+      appState.G.pending ||
+      appState.G.phase > LAST_PHASE
+    )
+      return;
+    advancing = true;
+    try {
+      const s = appState.G,
+        ph = s.phase;
+      const before = snapshot(s);
+      const rankBefore = teamRank(s);
+      // T-10-046: 한 구간의 게임 로직(훈련 → 경기 → 대회 → A매치 → 이벤트 추첨 → 칭호)은 game/turn.ts가 진행한다.
+      recordPhaseOvr(s); // T-11-048 구간에 들어갈 때의 OVR(성장 기록).
+      let r: PhaseResult;
+      try {
+        r = playPhase(s);
+        measureOperation('progress', 'success');
+      } catch (error) {
+        measureOperation('progress', 'failed', 'progress_blocked');
+        throw error;
+      }
+      host.analytics.complete?.({ cid: s.cid, year: s.year, phase: ph, matches: r.block?.n ?? 0 });
+      const { block: b, comp, nt, ev } = r;
+      const chips = diffChips(s, before, r.after);
+      const titles = r.titles.map(titleView);
+      const title = ph === 0 ? '프리시즌 완료' : `${PHASES[ph]} 결과`;
+      s.pending = ev
+        ? { type: 'event', id: ev, then: s.phase > LAST_PHASE ? 'seasonEnd' : null }
+        : s.phase > LAST_PHASE
+          ? { type: 'seasonEnd' }
+          : null;
+      host.save();
+      host.analytics.play(s, ph === 0 && s.career.length === 0);
+      const extras = [
+        ...(comp.length ? ['컵 · 대륙 대회 결과 집계'] : []),
+        ...(nt ? ['A매치 소집 명단 발표'] : []),
+        ...(ev ? ['주변에서 무언가 일이 벌어지고 있습니다…'] : []),
+      ];
+      const games = b ? matchRows(s, b) : [];
+      const range = b ? roundRange(s, ph) : '';
+      const back = s.pos === 'DF' || s.pos === 'GK';
+      // T-10-028: 경기는 중계 시트로 한 경기씩 보여 주고(승무패·스코어가 쌓이는 맛), 끝나면 리포트로 넘어간다.
+      if (b) {
+        await sheet.playBlock(
+          {
+            eyebrow: `${s.year} · ${PHASES[ph]} 진행 중`,
+            title: `${range} · ${b.n}경기`,
+            back,
+            matches: leagueOf(s.leagueId).matches,
+          },
+          b,
+          games,
+          extras,
+        );
+      } else
+        await sheet.playSteps(`${s.year} · 프리시즌 진행 중`, [
+          isPro(s) ? '전지훈련 캠프 입소' : '동계 훈련 시작',
+          '체력 테스트',
+          '전술 훈련',
+          '연습 경기',
+          ...extras,
+        ]);
+      sheet.closeSheet();
+      appState.report = {
+        key: Date.now(),
+        year: s.year,
+        ph,
+        eyebrow: `${s.year} · ${title}`,
+        title: b ? `${range} · ${b.n}경기` : '시즌 준비를 마쳤습니다',
+        back,
+        block: b
+          ? {
+              w: b.w,
+              d: b.d,
+              l: b.l,
+              apps: b.apps,
+              goals: b.goals,
+              assists: b.assists,
+              rating: b.apps ? (b.rs / b.apps).toFixed(2) : null,
+              cs: b.cs,
+              hl: b.hl,
+            }
+          : null,
         games,
-        extras,
-      );
-    } else
-      await sheet.playSteps(`${s.year} · 프리시즌 진행 중`, [
-        isPro(s) ? '전지훈련 캠프 입소' : '동계 훈련 시작',
-        '체력 테스트',
-        '전술 훈련',
-        '연습 경기',
-        ...extras,
-      ]);
-    sheet.closeSheet();
-    appState.report = {
-      key: Date.now(),
-      year: s.year,
-      ph,
-      eyebrow: `${s.year} · ${title}`,
-      title: b ? `${range} · ${b.n}경기` : '시즌 준비를 마쳤습니다',
-      back,
-      block: b
-        ? {
-            w: b.w,
-            d: b.d,
-            l: b.l,
-            apps: b.apps,
-            goals: b.goals,
-            assists: b.assists,
-            rating: b.apps ? (b.rs / b.apps).toFixed(2) : null,
-            cs: b.cs,
-            hl: b.hl,
-          }
-        : null,
-      games,
-      rank: { before: rankBefore, after: teamRank(s) },
-      role: roleOf(s),
-      comps: comp.map((c) => ({ t: c.t, good: c.k === 'good' })),
-      nat: natViews(nt),
-      chips,
-      titles,
-    };
-    appState.tab = 'season';
-    host.scrollTop(true);
+        rank: { before: rankBefore, after: teamRank(s) },
+        role: roleOf(s),
+        comps: comp.map((c) => ({ t: c.t, good: c.k === 'good' })),
+        nat: natViews(nt),
+        chips,
+        titles,
+      };
+      appState.tab = 'season';
+      host.scrollTop(true);
+    } finally {
+      advancing = false;
+    }
   }
 
   function nextPending() {
@@ -596,6 +621,7 @@ export function createGameActions(host: GameHost) {
   }
 
   function doRetire() {
+    if (!appState.G || appState.G.retired) return;
     appState.lastRetired = retire(appState.G!, publicNameOf(appState.G!.name) !== null);
     host.uploadRetirement(appState.G!.cid, appState.lastRetired);
     appState.G!.pending = null;
