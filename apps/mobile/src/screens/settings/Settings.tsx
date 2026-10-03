@@ -14,6 +14,7 @@ import { Card, Press, Screen, Topbar, Txt } from '../../ui';
 import { BackupSettings } from './BackupSettings';
 import { ClubCustomSettings } from './ClubCustomSettings';
 import { PushSettings } from './PushSettings';
+import { ReviewSettings } from './ReviewSettings';
 import { SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
 
 /** 정책·가이드는 웹 페이지를 앱 안 브라우저로 연다. */
@@ -126,6 +127,7 @@ export default function Settings() {
       {/* T-10-116 진행 중 커리어 백업·불러오기 */}
       <BackupSettings />
       <PushSettings />
+      <ReviewSettings />
       <ClubCustomSettings />
 
       <Group eyebrow="Help" title="도움말">

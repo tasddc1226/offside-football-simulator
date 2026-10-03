@@ -6,6 +6,7 @@ import { Btn, Txt } from '../../ui';
 import { SettingsCard, SettingsLabel } from './parts';
 import { cachedGet } from '@offside/app-core/api/client';
 import { WEB_ORIGIN } from '../../platform/config';
+import { dismissPushOffer } from '../../platform/pushOffer';
 
 export function PushSettings() {
   const state = useSnapshot(pushState);
@@ -39,6 +40,7 @@ export function PushSettings() {
           }
           onPress={() => {
             setTestMessage('');
+            dismissPushOffer();
             void pushRegistration.setEnabled(!state.enabled);
           }}
         >
