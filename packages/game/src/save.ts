@@ -19,6 +19,8 @@ export function loadSave(raw: GameState | null): { G: GameState; newCid: boolean
 /** 저장본을 제자리에서 고치고 활성 RNG를 저장된 시드로 되돌린다. newCid: 커리어 ID를 이번에 새로 만들었는지
  * (부른 쪽이 바로 저장해야 한다 — 안 그러면 다음 부팅 때 또 다른 ID가 생겨 서버 기록과 어긋난다). */
 export function migrateSave(G: GameState): { newCid: boolean } {
+  // T-11-054: pending.m의 renew.extension은 선택 필드다. 없는 옛 재계약은 만료 뒤의 총기간 그대로,
+  // 있는 조기 제안은 그때 제시한 추가기간·연도·구단을 그대로 복원한다. 시장 재생성이나 기간 추정은 하지 않는다.
   // 구버전 저장에는 RNG 상태가 없습니다 — 새 시드로 이어서 플레이합니다.
   if (G.rng && typeof G.rng.seed === 'number') setActiveRng(createRng(G.rng.seed));
   else {

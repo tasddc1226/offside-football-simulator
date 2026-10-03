@@ -195,7 +195,7 @@ export type SheetView =
       next: string | null;
     }
   | {
-      /** T-11-039 이적시장에서 고른 구단과의 계약서. 사인하면 onSign, ×는 onClose(이적시장으로 돌아간다). */
+      /** 이적·조기 연장 계약서. 사인하면 onSign, ×는 onClose(저장된 이적시장으로 돌아간다). */
       kind: 'contract';
       eyebrow: string;
       title: string;

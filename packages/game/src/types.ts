@@ -180,6 +180,8 @@ export interface RenewOption {
   years: number;
   salary: number;
   desc: string;
+  /** 조기 연장: years는 잔여 1년을 포함한 총기간. 없는 옛 제안은 만료 재계약이다. */
+  extension?: { years: number; clubId: string; year: number };
 }
 export type MilOptionKind = 'sangmu' | 'army' | 'serve';
 /** military.ts의 병역 관련 선택지. market()이 다루는 MarketOption의 한 갈래이기도 하다. */
