@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Animated,
+  Keyboard,
   Modal,
   Pressable,
   ScrollView,
@@ -17,6 +18,7 @@ import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Card, Press, Txt } from '../../ui';
+import { revealFocusedInput } from '../../ui/scroll';
 
 /** 설정 카드(웹 .card.settings-card: 안쪽 여백 16×18). */
 export function SettingsCard({
@@ -200,6 +202,7 @@ export function Switch({
 export function TextField({
   style,
   multiline,
+  onFocus,
   ...rest
 }: TextInputProps & { style?: StyleProp<ViewStyle> }) {
   const c = useColors();
@@ -211,6 +214,10 @@ export function TextField({
       autoCorrect={false}
       multiline={multiline}
       {...rest}
+      onFocus={(e) => {
+        onFocus?.(e);
+        revealFocusedInput();
+      }}
       style={[
         {
           borderWidth: 1,
@@ -313,7 +320,11 @@ export function SelectField<V extends string | number>({
         testID={testID}
         accessibilityLabel={`${label}, ${cur?.label ?? ''}`}
         accessibilityHint="눌러서 바꿔요"
-        onPress={() => setOpen(true)}
+        onPress={() => {
+          // 리그·시즌을 고르는 동안 이전 입력칸의 키보드가 되살아나지 않게 한다.
+          Keyboard.dismiss();
+          setOpen(true);
+        }}
         style={[
           {
             flexDirection: 'row',

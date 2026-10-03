@@ -5712,7 +5712,15 @@ button.what {
 .chat-msg.mine .chat-meta {
   flex-direction: row-reverse;
 }
+.chat-body-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+}
 .chat-bubble {
+  min-width: 0;
   margin: 0;
   padding: 10px 13px;
   border: 1px solid var(--line);
@@ -5737,11 +5745,19 @@ button.what {
 }
 .chat-more {
   width: 44px;
-  min-height: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
   padding: 0;
   border: 0;
   background: transparent;
-  font-size: 1.125rem;
+  color: var(--muted);
+}
+.chat-more:hover,
+.chat-more[aria-expanded='true'] {
+  color: var(--ink);
+  background: var(--surface-2);
 }
 .chat-msg .report-panel {
   width: 100%;

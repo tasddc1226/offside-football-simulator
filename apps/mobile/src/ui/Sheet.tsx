@@ -1,6 +1,6 @@
 // 아래에서 올라오는 시트(웹 Sheet.svelte). 선택이 필수인 시트(진행 중·이벤트 대기)는 배경 누르기·끌어 내리기·
 // Android 뒤로로 닫히지 않는다. 본문은 SheetBody가 뷰 종류별로 그리고, 버튼은 sheetState.buttons 그대로.
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Keyboard, Modal, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { sheetLabel, type SheetView } from '@offside/app-core/sheets';
@@ -25,6 +25,7 @@ export function Sheet() {
       animationType={motionOK ? 'slide' : 'none'}
       statusBarTranslucent
       navigationBarTranslucent
+      onShow={Keyboard.dismiss}
       onRequestClose={close}
     >
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>

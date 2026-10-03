@@ -1,5 +1,5 @@
 // 선수 고르기 시트(웹 team/Team.svelte 의 .tm-sheet) — 고른 자리에 넣을 은퇴 선수. 정렬 셋 · 유스 선수(자리 비우기).
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Keyboard, Modal, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { DETAIL_LABEL, YOUTH_NAME, YOUTH_OVR, type DetailPos } from '@offside/contracts/owner-team';
@@ -67,6 +67,7 @@ export function TeamPicker({
       transparent
       animationType={motionOK ? 'slide' : 'none'}
       statusBarTranslucent
+      onShow={Keyboard.dismiss}
       onRequestClose={onClose}
     >
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
