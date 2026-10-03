@@ -792,7 +792,7 @@ describe('조작된 기록 보정', () => {
   });
 });
 
-describe('T-11-062 개막 첫 업로드 경계', () => {
+describe('T-11-063 개막 첫 업로드 경계', () => {
   let ctx: TestD1;
   beforeEach(async () => {
     ctx = await createTestD1();
