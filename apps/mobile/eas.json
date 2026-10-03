@@ -13,6 +13,14 @@
       "distribution": "internal",
       "android": { "buildType": "apk" }
     },
+    "push-test": {
+      "extends": "preview",
+      "channel": "push-test",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://offside-api-staging.tasddc1569.workers.dev",
+        "EXPO_PUBLIC_WEB_ORIGIN": "https://offside-web-staging.tasddc1569.workers.dev"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "channel": "production",
