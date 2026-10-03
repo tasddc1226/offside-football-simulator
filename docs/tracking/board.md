@@ -24,7 +24,7 @@
 | T-11-057 | 앱 기록실을 웹과 동일한 탭·시즌/상세 필터·시상대·국적/포지션·영구결번·팀 최근 전적·구단주 순위표로 이전 | 배포 검증 중 |
 | T-11-058 | [릴리즈 노트 자동 게시](../operations/release-notes-automation.md): 운영 배포 성공 후 PR의 공개 문구를 오늘 글에 추가, 중복·수동 수정 보존, GitHub OIDC 인증, 기존 게임 내 소식 알림 연동 | 구현·관련 테스트 67건 통과, 운영 배포 전 |
 | T-11-059 | 웹·앱 선수 카드의 숫자 능력치·포지션 OVR 안내, 앱 카드 디자인과 2열 라커룸, 원본 없는 은퇴 선수의 표시용 추정 능력치 백필 | 운영 DB 3,989명 백필 완료, 코드 배포 검증 중 |
-| T-11-060 | [앱 새 소식 푸시 준비](../operations/app-push.md): 설정 동의·기기 등록/해제·계정 전환·관리자 본인 테스트, APNs/FCM 자격 연결. 정책: KST 게시판별 첫 신규 공지 하루 1회 | staging 웹·iOS 실제 Google 인증, 등록 안정화·Expo 테스트 접수 확인. APNs 반복 등록·Cloudflare 발송 수정, 관련 테스트 73건 통과. 실제 미수신에서 APNs BadDeviceToken 확인·시뮬레이터 sandbox 수정, 테스트 OTA 검증 중 |
+| T-11-060 | [앱 새 소식 푸시 준비](../operations/app-push.md): 설정 동의·기기 등록/해제·계정 전환·관리자 본인 테스트, APNs/FCM 자격 연결. 정책: KST 게시판별 첫 신규 공지 하루 1회 | staging 웹·iOS 실제 Google 인증, 등록 안정화·Expo 테스트 접수 확인. APNs 반복 등록·Cloudflare 발송 수정, 관련 테스트 73건 통과. APNs BadDeviceToken·시뮬레이터 sandbox/SDK 호환성 수정, 테스트 OTA 적용·iOS 실제 원격 푸시 수신 확인. 알림 탭·Android 검증 중 |
 
 ## Phase 11: 네이티브 앱 (2026-09-30, [ADR-014](../adr/ADR-014-native-app.md))
 
