@@ -51,11 +51,13 @@ function CardName({ name, color, animate }: { name: string; color: string; anima
       <Animated.Text
         accessibilityLabel={name}
         numberOfLines={1}
+        adjustsFontSizeToFit={!animate}
+        minimumFontScale={0.5}
         style={[
           style,
           {
-            width: Math.max(width, textWidth),
-            textAlign: textWidth > width ? 'left' : 'center',
+            width: animate ? Math.max(width, textWidth) : width,
+            textAlign: animate && textWidth > width ? 'left' : 'center',
             transform: [{ translateX: offset }],
           },
         ]}
@@ -144,7 +146,7 @@ export function PlayerCard({
       {cell.peak !== undefined ? (
         <Text
           style={{ color: ink, fontSize: 9, lineHeight: 14 }}
-        >{`배치 ${cell.rating}${cell.legendScore != null ? ` · LS ${cell.legendScore}` : ''}`}</Text>
+        >{`배치 ${cell.rating}${!compact && cell.legendScore != null ? ` · LS ${cell.legendScore}` : ''}`}</Text>
       ) : !compact && cell.legendScore != null ? (
         <Text style={{ color: ink, fontSize: 9 }}>{`LS ${cell.legendScore}`}</Text>
       ) : null}

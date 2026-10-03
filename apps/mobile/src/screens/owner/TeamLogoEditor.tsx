@@ -16,7 +16,7 @@ import { TeamLogo } from '../../components/TeamLogo';
 import { toast } from '../../game/host';
 import { Btn, Press, Txt } from '../../ui';
 import { Field, TextField } from '../settings/parts';
-import { SortChips } from '../board/parts';
+import { RecordsChips as SortChips } from '../hof/RecordsControls';
 export function TeamLogoEditor({
   name,
   logo,
@@ -128,7 +128,7 @@ export function TeamLogoEditor({
             {TEAM_LOGO_COLORS.map((color) => (
               <Press
                 key={color.bg}
-                onPress={() => patch(color)}
+                onPress={() => patch({ bg: color.bg, fg: color.fg })}
                 accessibilityLabel={color.name}
                 accessibilityState={{ selected: value.bg === color.bg && value.fg === color.fg }}
                 style={{
