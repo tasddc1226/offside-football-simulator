@@ -178,3 +178,46 @@ Android 앱의 공개 클라이언트 설정인 `google-services.json`만 넣는
 - 수정 서버로 관리자 본인 기기 테스트를 한 번 요청해 Expo 접수 성공 UI를 확인했다.
   이 결과는 APNs 전달·OS 표시·알림 탭 성공을 보장하지 않는다. 실제 수신은 별도로 확인한다.
   전체 사용자나 운영 환경에 발송하지 않았다.
+
+### 미수신 진단과 APNs sandbox 수정
+
+- 사용자가 iOS 알림센터에 테스트 알림이 없음을 확인했다. 접수 성공을 수신 성공으로 기록하지 않는다.
+- 수정 `78f3b1d8`: 마지막 본인 테스트 ticket ID와 발송 시각을 등록 행에 보관한다.
+  토큰·세션 교체 시 지우고, 발송 중 교체되면 과거 결과가 새 등록을 덮어쓰지 않는다.
+  공개 응답·로그에는 ticket나 토큰을 노출하지 않는다. migration `0054_common_the_leader.sql`을
+  staging에만 적용했다. API 테스트 17건, API 타입·변경 파일 린트·서식 검사가 통과했다.
+- staging API version: `79a7b202-2586-4ff2-9373-413c9b5b9905`.
+- 앱 재실행이 시뮬레이터에서 지연되어, 유효한 관리자 iOS 등록 한 대에 한정해 실제 발송 모듈을
+  사용하는 운영자 진단 CLI로 한 번 발송했다. 토큰·ticket는 저장소 밖 비공개 파일에서 처리했다.
+- Expo receipt의 실제 결과는 `error`, `DeveloperError`, APNs `BadDeviceToken`(400)이었다.
+  Expo 접수 후 Apple이 토큰을 거절한 것을 확인했다.
+- SDK의 iOS provisioning profile 조회는 시뮬레이터에서 null이며, Expo 토큰 등록 기본값은
+  APNs production이다. 시뮬레이터 sandbox 토큰의 환경 불일치와 일치하는 코드 경로다.
+- 수정 `889101a3`: 네이티브 release type이 SIMULATOR일 때만 `development: true`로 등록한다.
+  SDK의 production 자동 갱신도 끄고 기존 어댑터의 실제 토큰 이벤트 갱신을 사용한다.
+  실기기 iOS와 Android의 SDK 환경 판별은 유지한다. 기존 포함된 `expo-application`을 직접 의존성으로 선언했다.
+- 네이티브 회귀 테스트 5건, 모바일 타입·변경 파일 린트·서식 검사가 통과했다.
+  테스트 빌드의 iOS fingerprint `03fc5c14d328f5cd28ce035e8e97ba922e4b6ceb`와 일치해
+  `push-test` iOS 채널에만 OTA를 게시한다. 운영 채널은 변경하지 않는다.
+- 현재 실제 OS 수신·알림 탭은 수정 OTA 적용 뒤 다시 확인해야 한다.
+
+- 최초 sandbox 테스트 OTA group: `6b219af7-32b0-4901-877d-092a57dc38c2`,
+  iOS update: `01a10292-3f4a-751d-89b4-0209da7e901d`. 앱 내부 업데이트 DB에서
+  성공 실행 횟수 1·실패 횟수 0을 확인했다. 이 기록은 푸시 등록·수신 성공의 증거는 아니다.
+- 설치된 SDK의 `setAutoServerRegistrationEnabledAsync(false)`는 JS에서 null을 전달하지만
+  iOS 네이티브 `setRegistrationInfoAsync`는 String 매개변수를 요구하는 추가 호환성 문제가 있다.
+- 수정 `484dcc34`: SDK 해제 호출이 실패하면 같은 네이티브 모듈에 `isEnabled: false`를
+  JSON 문자열로 저장한다. SDK가 시작한 자동 갱신은 먼저 중지하고, simulator만 이 경로를 사용한다.
+  이미 포함된 `expo-modules-core`를 직접 의존성으로 선언했다.
+- 실제 String-only 브리지 거절을 재현하는 테스트를 추가해 네이티브 테스트 6건, 모바일 타입·린트
+  검사가 통과했다. iOS runtime은 기존 테스트 앱과 일치한다. 후속 테스트 OTA로 이 호환성 처리를
+  게시한다. 화면 제어 도구가 반복 시간 초과되어 실제 OS 표시·알림 탭 확인은 아직 끝나지 않았다.
+
+- 호환성 보완 후 테스트 OTA group: `bf814d4a-6544-4921-accc-f359a80f7dc7`,
+  iOS update: `01a1029c-7bc2-7eac-b779-3090fec048f0`, 게시 시각 `2026-10-03T16:32:52.162Z`.
+  채널 `push-test`, 플랫폼 iOS, runtime `03fc5c14d328f5cd28ce035e8e97ba922e4b6ceb`다.
+
+- 최신 호환성 OTA는 전용 iOS 기기의 업데이트 DB에 다운로드 완료(status 1)로 확인했다.
+  이 시점 최신 OTA 성공 실행 횟수는 0이며, 이전 sandbox OTA는 성공 3·실패 0이었다.
+  제어 도구의 반복 시간 초과로 사용자에게 최신 OTA 재시작·본인 테스트 1회 확인을 요청했다.
+  최초 BadDeviceToken 이후 수정본의 APNs receipt·OS 실제 수신 성공을 아직 기록하지 않는다.
