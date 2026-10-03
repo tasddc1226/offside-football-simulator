@@ -37,6 +37,7 @@ async function installationId() {
 }
 let expoToken: { token: string; until: number } | undefined;
 let tokenRevision = 0;
+let nativeToken: Notifications.NativeDevicePushToken | undefined;
 async function register() {
   const appVersion = Constants.expoConfig?.version;
   if (!appVersion || !/^\d+\.\d+\.\d+$/.test(appVersion)) throw new Error('No app version');
@@ -45,7 +46,9 @@ async function register() {
     const revision = tokenRevision;
     const projectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
     if (!projectId) throw new Error('No EAS project');
-    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    const token = (
+      await Notifications.getExpoPushTokenAsync({ projectId, devicePushToken: nativeToken })
+    ).data;
     expoToken = { token, until: revision === tokenRevision ? Date.now() + 3_600_000 : 0 };
   }
   const deviceToken = expoToken.token;
@@ -139,7 +142,14 @@ export function startPush() {
     openNotification(response);
     void Notifications.clearLastNotificationResponseAsync().catch(() => {});
   });
-  Notifications.addPushTokenListener(() => {
+  Notifications.addPushTokenListener((token) => {
+    if ((token.type !== 'ios' && token.type !== 'android') || typeof token.data !== 'string')
+      return;
+    if (nativeToken?.type === token.type && nativeToken.data === token.data) return;
+    const previous = nativeToken;
+    nativeToken = { type: token.type, data: token.data };
+    // 첫 조회도 토큰 이벤트를 발생시킨다. 처음 받은 값은 기준값이고, 이후 실제 변경만 재연결한다.
+    if (!previous) return;
     tokenRevision++;
     expoToken = undefined;
     kv.remove(REGISTERED);
