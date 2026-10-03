@@ -5,6 +5,9 @@ import { useSnapshot } from 'valtio';
 import { prefs } from '../store';
 import { DISPLAY } from '../theme/type';
 import { RnShirt } from './RnJersey';
+import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
+import { FACE_ATTRS } from '@offside/contracts/positions';
+import type { TeamPlayer } from '@offside/app-core/api/team';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({ name, color, animate }: { name: string; color: string; animate: boolean }) {
@@ -69,6 +72,8 @@ export type PlayerCardData = {
   peak?: number;
   number?: number | null;
   legendScore?: number | null;
+  attrs?: TeamPlayer['attrs'];
+  pos?: TeamPlayer['pos'];
   youth: boolean;
 };
 export function PlayerCard({
@@ -82,9 +87,10 @@ export function PlayerCard({
   compact?: boolean;
   animate?: boolean;
 }) {
-  const gold = !cell.youth && (cell.legendScore ?? 0) >= 1000;
-  const ink = cell.youth ? '#e9eee8' : gold ? '#4c3914' : '#24352d';
-  const height = compact ? 88 : 126;
+  const legend = !cell.youth && (cell.legendScore ?? 0) >= 1000;
+  const gold = !cell.youth && !legend && (cell.peak ?? cell.rating) >= 80;
+  const ink = legend ? '#fce7b1' : cell.youth ? '#e9eee8' : gold ? '#4c3914' : '#24352d';
+  const height = compact ? 88 : cell.attrs ? 174 : 140;
   return (
     <View
       style={{ width: '100%', height, paddingHorizontal: 6, paddingTop: 7, alignItems: 'center' }}
@@ -98,14 +104,20 @@ export function PlayerCard({
       >
         <Defs>
           <LinearGradient id="face" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={cell.youth ? '#29563f' : gold ? '#f6dda2' : '#ecf0eb'} />
-            <Stop offset="1" stopColor={cell.youth ? '#163625' : gold ? '#c49a44' : '#a9bab0'} />
+            <Stop
+              offset="0"
+              stopColor={legend ? '#51614b' : cell.youth ? '#29563f' : gold ? '#f6dda2' : '#ecf0eb'}
+            />
+            <Stop
+              offset="1"
+              stopColor={legend ? '#101e17' : cell.youth ? '#163625' : gold ? '#c49a44' : '#a9bab0'}
+            />
           </LinearGradient>
         </Defs>
         <Path
           d="M4 12L28 4H72L96 12V108L78 130L50 138L22 130L4 108Z"
           fill="url(#face)"
-          stroke={cell.youth ? '#8aa990' : gold ? '#ecc46a' : '#cfdbd0'}
+          stroke={legend ? '#d1ac5f' : cell.youth ? '#8aa990' : gold ? '#ecc46a' : '#cfdbd0'}
           strokeWidth="2"
         />
         <Path d="M6 106H94M12 15L50 6L88 15" fill="none" stroke={ink} opacity=".16" />
@@ -135,6 +147,26 @@ export function PlayerCard({
         >{`배치 ${cell.rating}${cell.legendScore != null ? ` · LS ${cell.legendScore}` : ''}`}</Text>
       ) : !compact && cell.legendScore != null ? (
         <Text style={{ color: ink, fontSize: 9 }}>{`LS ${cell.legendScore}`}</Text>
+      ) : null}
+      {!compact && cell.attrs ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: '100%', marginTop: 4 }}>
+          {FACE_ATTRS.map((key) => (
+            <View
+              key={key}
+              style={{
+                width: '50%',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                paddingHorizontal: 3,
+              }}
+            >
+              <Text style={{ color: ink, fontSize: 9 }}>
+                {(cell.pos === 'GK' ? GK_ABBR : FACE_ABBR)[key]}
+              </Text>
+              <Text style={{ color: ink, fontSize: 9, fontWeight: '700' }}>{cell.attrs![key]}</Text>
+            </View>
+          ))}
+        </View>
       ) : null}
     </View>
   );

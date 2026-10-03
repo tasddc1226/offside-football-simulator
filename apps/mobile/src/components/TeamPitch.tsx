@@ -20,6 +20,7 @@ export function TeamPitch({
   selected,
   animate = true,
   onplace,
+  height = 450,
 }: {
   formation: FormationId;
   cells: readonly PitchCell[];
@@ -30,11 +31,12 @@ export function TeamPitch({
   selected?: number | null;
   animate?: boolean;
   onplace?: ((x: number, y: number) => void) | undefined;
+  height?: number;
 }) {
   const c = useColors();
   const positions = layout ?? presetLayout(formation);
   return (
-    <View testID="team-pitch" style={{ height: 450, borderRadius: 16, backgroundColor: c.pitch }}>
+    <View testID="team-pitch" style={{ height, borderRadius: 16, backgroundColor: c.pitch }}>
       <View
         pointerEvents="none"
         style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 16 }}
@@ -44,8 +46,8 @@ export function TeamPitch({
             key={i}
             style={{
               position: 'absolute',
-              top: i * 90 + 45,
-              height: 45,
+              top: ((i + 0.5) * height) / 5,
+              height: height / 10,
               left: 0,
               right: 0,
               backgroundColor: c.pitch2,
@@ -66,7 +68,7 @@ export function TeamPitch({
         <View
           style={{
             position: 'absolute',
-            top: 185,
+            top: height / 2 - 40,
             left: '50%',
             marginLeft: -40,
             width: 80,

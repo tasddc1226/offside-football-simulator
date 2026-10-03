@@ -25,6 +25,7 @@ type Drag = {
   y: number;
   rect: { x: number; y: number; w: number; h: number; scroll: number };
   root: { x: number; y: number };
+  locker: { y: number; h: number } | null;
 };
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 export function TeamLineup({
@@ -58,6 +59,7 @@ export function TeamLineup({
   const { height } = useWindowDimensions();
   const pitch = useRef<View>(null);
   const root = useRef<View>(null);
+  const locker = useRef<View>(null);
   const active = useRef<Drag | null>(null);
   const gestureVersion = useRef(0);
   const [ghost, setGhost] = useState<Drag | null>(null);
@@ -121,16 +123,22 @@ export function TeamLineup({
       root.current?.measureInWindow((rx, ry) =>
         pitch.current?.measureInWindow((px, py, w, h) => {
           if (version !== gestureVersion.current || !w || !h) return;
-          active.current = {
-            index,
-            id,
-            x,
-            y,
-            root: { x: rx, y: ry },
-            rect: { x: px, y: py, w, h, scroll: scrollY() },
+          const begin = (ly?: number, lh?: number) => {
+            if (version !== gestureVersion.current) return;
+            active.current = {
+              index,
+              id,
+              x,
+              y,
+              root: { x: rx, y: ry },
+              rect: { x: px, y: py, w, h, scroll: scrollY() },
+              locker: ly !== undefined && lh !== undefined ? { y: ly, h: lh } : null,
+            };
+            setGhost(active.current);
+            dragging(true);
           };
-          setGhost(active.current);
-          dragging(true);
+          if (locker.current) locker.current.measureInWindow((_x, ly, _w, lh) => begin(ly, lh));
+          else begin();
         }),
       );
     },
@@ -140,7 +148,12 @@ export function TeamLineup({
       const d = active.current;
       if (d && success) {
         const state = latest.current;
-        if (d.index !== null)
+        const lockerTop = d.locker ? d.locker.y - (scrollY() - d.rect.scroll) : Infinity;
+        if (d.index !== null && d.locker && y >= lockerTop && y <= lockerTop + d.locker.h) {
+          state.change(assignSlot(state.slots, d.index, null), state.layout);
+          select(null);
+          setFocus(null);
+        } else if (d.index !== null)
           state.change(
             state.slots,
             state.layout.map((p, i) => (i === d.index ? point(d, x, y) : p)),
@@ -265,119 +278,127 @@ export function TeamLineup({
         </View>
       ) : null}
       {editable ? (
-        <Card gap={12}>
-          <View
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <Txt v="h2">라커룸</Txt>
-            <Txt tone="muted" v="sm">{`${visible.length}명`}</Txt>
-          </View>
-          <Txt v="sm" tone="muted">
-            선수를 길게 눌러 그라운드로 끌거나, 고른 뒤 자리를 눌러 주세요.
-          </Txt>
-          <TextField
-            value={query}
-            onChangeText={setQuery}
-            placeholder="선수 이름 검색"
-            accessibilityLabel="선수 이름 검색"
-            testID="locker-search"
-          />
-          <SortChips
-            label="포지션"
-            items={['all', 'GK', 'DF', 'MF', 'FW'].map((value) => ({
-              key: value,
-              label: (
-                { all: '전체', GK: '골키퍼', DF: '수비', MF: '중원', FW: '공격' } as Record<
-                  string,
-                  string
-                >
-              )[value]!,
-            }))}
-            value={position}
-            onPick={setPosition}
-            testIDPrefix="locker-position"
-          />
-          <SortChips
-            label="정렬"
-            items={[
-              { key: 'ovr', label: 'OVR' },
-              { key: 'ls', label: 'LS' },
-              { key: 'fit', label: `${code} 적합` },
-            ]}
-            value={sort}
-            onPick={setSort}
-            testIDPrefix="locker-sort"
-          />
-          <Press
-            onPress={() => setStarters(!starters)}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: starters }}
-            style={{ minHeight: 44, justifyContent: 'center' }}
-          >
-            <Txt v="sm">{`${starters ? '☑' : '□'} 선발 선수도 보기`}</Txt>
-          </Press>
-          <Press
-            onPress={() => setGuide(!guide)}
-            accessibilityState={{ expanded: guide }}
-            style={{ minHeight: 44, justifyContent: 'center' }}
-          >
-            <Txt v="sm" tone="muted">{`OVR이 달라지는 이유 ${guide ? '−' : '+'}`}</Txt>
-          </Press>
-          {guide ? (
+        <View ref={locker} collapsable={false}>
+          <Card gap={12}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Txt v="h2">라커룸</Txt>
+              <Txt tone="muted" v="sm">{`${visible.length}명`}</Txt>
+            </View>
             <Txt v="sm" tone="muted">
-              라커룸의 OVR은 커리어 최고 실력이에요. 그라운드의 ‘배치’는 해당 자리에서 뛰는
-              실력으로, 포지션별 능력치와 적합도에 따라 달라져요. 팀 OVR과 경기에는 배치 OVR이
-              반영돼요.
+              선수를 길게 눌러 그라운드로 끌거나, 고른 뒤 자리를 눌러 주세요.
             </Txt>
-          ) : null}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {visible.slice(0, limit).map((p) => (
-              <View key={p.careerId} style={{ width: '31.5%' }}>
-                <DragPlayer index={null} id={p.careerId} drag={drag}>
-                  <Press
-                    testID={`locker-${p.careerId}`}
-                    accessibilityLabel={`${nameOf(p)} · 최고 OVR ${p.peak} · LS ${p.legendScore ?? 0}`}
-                    accessibilityState={{ selected: selected === p.careerId }}
-                    onPress={() => select(selected === p.careerId ? null : p.careerId)}
-                    style={{
-                      borderRadius: 12,
-                      borderWidth: selected === p.careerId ? 2 : 0,
-                      borderColor: c.accent,
-                    }}
+            <TextField
+              value={query}
+              onChangeText={setQuery}
+              placeholder="선수 이름 검색"
+              accessibilityLabel="선수 이름 검색"
+              testID="locker-search"
+            />
+            <SortChips
+              label="포지션"
+              items={['all', 'GK', 'DF', 'MF', 'FW'].map((value) => ({
+                key: value,
+                label: (
+                  { all: '전체', GK: '골키퍼', DF: '수비', MF: '중원', FW: '공격' } as Record<
+                    string,
+                    string
                   >
-                    <PlayerCard
-                      cell={{
-                        name: nameOf(p),
-                        rating: p.peak,
-                        number: p.number,
-                        legendScore: p.legendScore,
-                        youth: false,
+                )[value]!,
+              }))}
+              value={position}
+              onPick={setPosition}
+              testIDPrefix="locker-position"
+            />
+            <SortChips
+              label="정렬"
+              items={[
+                { key: 'ovr', label: 'OVR' },
+                { key: 'ls', label: 'LS' },
+                { key: 'fit', label: `${code} 적합` },
+              ]}
+              value={sort}
+              onPick={setSort}
+              testIDPrefix="locker-sort"
+            />
+            <Press
+              onPress={() => setStarters(!starters)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: starters }}
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
+              <Txt v="sm">{`${starters ? '☑' : '□'} 선발 선수도 보기`}</Txt>
+            </Press>
+            <Press
+              onPress={() => setGuide(!guide)}
+              accessibilityState={{ expanded: guide }}
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
+              <Txt v="sm" tone="muted">{`OVR이 달라지는 이유 ${guide ? '−' : '+'}`}</Txt>
+            </Press>
+            {guide ? (
+              <Txt v="sm" tone="muted">
+                라커룸의 OVR은 커리어 최고 실력이에요. 그라운드의 ‘배치’는 해당 자리에서 뛰는
+                실력으로, 포지션별 능력치와 적합도에 따라 달라져요. 팀 OVR과 경기에는 배치 OVR이
+                반영돼요.
+              </Txt>
+            ) : null}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {visible.slice(0, limit).map((p) => (
+                <View key={p.careerId} style={{ width: '31.5%' }}>
+                  <DragPlayer index={null} id={p.careerId} drag={drag}>
+                    <Press
+                      testID={`locker-${p.careerId}`}
+                      accessibilityLabel={`${nameOf(p)} · 최고 OVR ${p.peak} · LS ${p.legendScore ?? 0}`}
+                      accessibilityState={{ selected: selected === p.careerId }}
+                      onPress={() => select(selected === p.careerId ? null : p.careerId)}
+                      style={{
+                        borderRadius: 12,
+                        borderWidth: selected === p.careerId ? 2 : 0,
+                        borderColor: c.accent,
                       }}
-                      code={p.dpos ?? p.pos}
-                    />
-                  </Press>
-                </DragPlayer>
-                <Txt v="xs" tone="muted" style={{ textAlign: 'center' }}>
-                  {slots.includes(p.careerId)
-                    ? `선발 · ${layout[slots.indexOf(p.careerId)]?.slot}`
-                    : '대기'}
-                </Txt>
-              </View>
-            ))}
-          </View>
-          {visible.length > limit ? (
-            <Btn sm onPress={() => setLimit(limit + 24)}>
-              선수 더 보기
-            </Btn>
-          ) : null}
-          {!visible.length ? (
-            <Txt tone="muted" v="sm">
-              {players.length
-                ? '조건에 맞는 대기 선수가 없어요. 선발 선수도 보거나 필터를 바꿔 주세요.'
-                : '이번 시즌에 커리어를 끝까지 뛰고 은퇴한 선수를 배치할 수 있어요.'}
-            </Txt>
-          ) : null}
-        </Card>
+                    >
+                      <PlayerCard
+                        cell={{
+                          name: nameOf(p),
+                          rating: p.peak,
+                          number: p.number,
+                          legendScore: p.legendScore,
+                          attrs: p.attrs,
+                          pos: p.pos,
+                          youth: false,
+                        }}
+                        code={p.dpos ?? p.pos}
+                      />
+                    </Press>
+                  </DragPlayer>
+                  <Txt v="xs" tone="muted" style={{ textAlign: 'center' }}>
+                    {slots.includes(p.careerId)
+                      ? `선발 · ${layout[slots.indexOf(p.careerId)]?.slot}`
+                      : '대기'}
+                  </Txt>
+                </View>
+              ))}
+            </View>
+            {visible.length > limit ? (
+              <Btn sm onPress={() => setLimit(limit + 24)}>
+                선수 더 보기
+              </Btn>
+            ) : null}
+            {!visible.length ? (
+              <Txt tone="muted" v="sm">
+                {players.length
+                  ? '조건에 맞는 대기 선수가 없어요. 선발 선수도 보거나 필터를 바꿔 주세요.'
+                  : '이번 시즌에 커리어를 끝까지 뛰고 은퇴한 선수를 배치할 수 있어요.'}
+              </Txt>
+            ) : null}
+          </Card>
+        </View>
       ) : null}
       {ghost && ghostCell ? (
         <View

@@ -577,6 +577,7 @@ export default function Team() {
                       layout: positions,
                       cells,
                       ovr,
+                      lines,
                       draft: dirty,
                       season: seasonName,
                     })
@@ -648,7 +649,7 @@ export default function Team() {
         eventName={eventName}
         matchesLeft={matchesLeft}
         toTeam={() => show(resultOrigin === 'history' ? 'history' : 'team')}
-        backLabel={resultOrigin === 'history' ? '기록으로 돌아가기' : '내 팀'}
+        backLabel={resultOrigin === 'history' ? '기록으로 돌아가기' : '편성으로'}
         replay={() => setLive(true)}
         again={() => open('opponents')}
       />

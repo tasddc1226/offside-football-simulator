@@ -5,6 +5,7 @@ import * as Sharing from 'expo-sharing';
 import { captureRef, releaseCapture } from 'react-native-view-shot';
 import type { FormationId, TeamLayout } from '@offside/contracts/owner-team';
 import type { TeamLogo as Logo } from '@offside/contracts/team-logo';
+import type { TeamLines } from '@offside/app-core/api/team';
 import { TeamDialog } from '../../components/TeamDialog';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TeamPitch, type PitchCell } from '../../components/TeamPitch';
@@ -18,6 +19,7 @@ export type TeamShareData = {
   layout: TeamLayout;
   cells: PitchCell[];
   ovr: number;
+  lines: TeamLines;
   draft: boolean;
   season: string;
 };
@@ -124,9 +126,9 @@ export function TeamShare({ data, close }: { data: TeamShareData; close: () => v
           ref={ref}
           collapsable={false}
           onLayout={() => setReady(true)}
-          style={{ width: 540, height: 675, padding: 20, backgroundColor: '#e9eee8', gap: 12 }}
+          style={{ width: 540, height: 675, padding: 16, backgroundColor: '#e9eee8', gap: 8 }}
         >
-          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', height: 90 }}>
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', height: 70 }}>
             <TeamLogo name={data.name} logo={data.logo} size={58} />
             <View style={{ flex: 1 }}>
               <Txt style={{ color: '#5c6b62', fontSize: 12 }}>{`OFFSIDE · ${data.season}`}</Txt>
@@ -144,7 +146,18 @@ export function TeamShare({ data, close }: { data: TeamShareData; close: () => v
             layout={data.layout}
             cells={data.cells}
             animate={false}
+            height={370}
           />
+          <View style={{ flexDirection: 'row', gap: 8, height: 34 }}>
+            {(['atk', 'mid', 'def', 'gk'] as const).map((key, i) => (
+              <Txt
+                key={key}
+                style={{ flex: 1, textAlign: 'center', color: '#14201a', fontSize: 13 }}
+              >
+                {`${['공격', '중원', '수비', '골문'][i]} ${Math.round(data.lines[key])}`}
+              </Txt>
+            ))}
+          </View>
           <Txt style={{ color: '#5c6b62', fontSize: 12 }}>
             카드 OVR은 최고 실력 · 배치는 해당 자리 실력
           </Txt>
