@@ -54,6 +54,7 @@ import type {
 } from '@offside/game/types';
 import { markDexSeen } from './dex.js';
 import { pushEvLog, seasonLabel } from './career.js';
+import { scoutHint } from './potential-view.js';
 import { recordPhaseOvr, takeSeasonGrowth } from './growth.js';
 import { publicNameOf } from './namePublic.js';
 import { fmtValue, seasonLabelOf, waGwa, withRo } from './format.js';
@@ -392,6 +393,7 @@ export function createGameActions(host: GameHost) {
         miles,
         titles,
         notes,
+        scoutHint: scoutHint(s, rec.year),
         fans,
         age: s.age,
       },
