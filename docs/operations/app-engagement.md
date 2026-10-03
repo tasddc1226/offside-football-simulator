@@ -43,7 +43,7 @@ Android 알림창에 가려졌을 때, 키보드·시트·토스트·다른 알�
 
 정책 10건과 실제 네이티브 어댑터 mock 테스트 11건, 기존 푸시 토큰 회귀 6건을 통과했다.
 모바일 타입 검사와 변경 파일 ESLint를 통과했다. 전체 배포 검증은 아직 실행하지 않았다.
-새 빌드 설치 후 홈 카드·설정 버튼의 실제 모바일 화면 확인을 진행한다.
+새 빌드의 홈 카드·설정 버튼에 대한 실제 모바일 화면 확인은 아직 완료하지 않았다.
 
 스토어 기본 리뷰 창은 OS가 표시 여부를 결정하므로 API 완료를 리뷰 작성 성공으로 기록하지 않는다.
 iOS 시뮬레이터의 기본 창 확인은 실제 App Store 제출 증거가 아니다. 현재 Google APIs Android
@@ -53,3 +53,34 @@ iOS 시뮬레이터의 기본 창 확인은 실제 App Store 제출 증거가 �
 참고: [Expo SDK 57 StoreReview](https://docs.expo.dev/versions/v57.0.0/sdk/storereview/),
 [Google Play 리뷰 지침](https://developer.android.com/guide/playcore/in-app-review).
 PR 준비 시 새 스토어 버전에 맞춘 앱 적용 예정 릴리즈 노트를 함께 추가한다.
+
+### 내부 테스트 빌드
+
+- 구현 커밋: `112963a9`. 깨끗한 작업 트리에서 기존 staging 테스트 프로필로 업로드했다.
+- iOS: [f5c3357d-83c4-43fe-8357-48135c6b8b31](https://expo.dev/accounts/tasddc1569/projects/offside/builds/f5c3357d-83c4-43fe-8357-48135c6b8b31),
+  `push-test-simulator`, runtime `0bbafe19d474aebcbb4e549549429a837374c73a`.
+- Android: [6361fa13-3511-44f5-993c-ba1598333551](https://expo.dev/accounts/tasddc1569/projects/offside/builds/6361fa13-3511-44f5-993c-ba1598333551),
+  `push-test`, runtime `07eb3c0f5042e9d6add077682ac5c8a344cecac6`.
+- 두 플랫폼 모두 `FINISHED`다. iOS 완료 시각은 `2026-10-03T17:29:01.617Z`,
+  Android는 `2026-10-03T17:45:21.773Z`다. iOS 실행 파일에 `ExpoStoreReview`가
+  포함된 것을 확인하고 아래 전용 기기에 설치했다.
+- 홈 안내의 첫 표시 확인용 빈 iOS 18.1 기기 `OFFSIDE Engagement Test iPhone 16`를 새로 만들었다.
+  기존 로그인·알림 연결 기기의 저장 데이터를 초기화하지 않는다.
+- 새 기기의 앱 실행 요청이 `NSPOSIXErrorDomain 3`으로 종료되거나 지연되고, 화면이 검게 남았다.
+  호스트 load average도 735 이상으로 측정됐다. 새 기기만 종료·재부팅했으며 앱 데이터는 지우지 않았다.
+  최초 카드·설정 버튼의 실제 iOS 화면은 아직 검증 완료로 기록하지 않는다.
+- 이전 수신 검증 기기 `4C89C694-C807-4EAD-8533-B397DF7FF65E`가 현재 시뮬레이터 목록에 없었다.
+  해당 기기로 전환하는 시도는 `Invalid device`로 종료됐고, 현재 다른 작업의 기기로 대체 설치하지 않았다.
+- Android APK는 `/Users/suyoung/Downloads/OFFSIDE-engagement-test-1.0.2.apk`에 받았다.
+  전용 `OFFSIDE_Push_Test_API_36` (`emulator-5556`)의 ADB가 offline 상태여서 해당 기기만
+  종료·재시작했다. 재시작 중 이전 크래시 보고 대화상자로 부팅이 멈춰, 공식
+  `-crash-report-mode never` 옵션으로 다시 실행했다. 데이터 삭제·앱 제거는 하지 않았다.
+  정상 부팅 후 `adb install -r`가 `Success`로 끝났고 `MainActivity` 실행 및 앱 프로세스
+  생존을 확인했다. 최근 로그의 ReactNativeJS/AndroidRuntime 오류는 0줄이었다.
+  이 확인은 알림 재수신·로그인 유지·리뷰 창 표시를 검증한 것으로 간주하지 않는다.
+  현재 컴퓨터 조작 도구가 Android Qt 창을 `Invalid app`으로 처리하므로 화면 검증은 남아 있다.
+- 빌드는 성공했지만 자동 Expo Doctor의 두 검사에는 경고/실패가 남았다.
+  `expo-modules-core` 직접 의존성 검사와 기존 Expo 패치 버전 권장값 검사다.
+  `expo`, `expo-constants`, `expo-modules-core`, `expo-router`, `expo-updates`의 선언은
+  UI 작업 직전 `8fbf25d2`와 동일하다. 새 `expo-store-review`에는 버전 불일치가 기록되지 않았다.
+  운영 배포 전 SDK 정합성을 정리하고 최종 runtime·스토어 버전과 함께 다시 검증한다.
