@@ -43,6 +43,7 @@ import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { hasProfanity } from '@offside/contracts/content-filter';
+import { kickNewsPush } from '../push/dispatch.js';
 
 // T-10-011 게시판(공지·릴리즈 노트). 읽기는 누구나, 글은 관리자만, 댓글은 프로필이 있는 누구나.
 // T-10-058 조회수는 웹이 기기마다 글 하나에 한 번 보내고, 좋아요는 프로필이 있는 누구나(구글 로그인 없이도).
@@ -140,6 +141,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const input = readBody(c, PostInputSchema);
     const id = await createPost(getDb(c), board, input, viewer.profileId!, nowIso());
     purgeList(c, board);
+    kickNewsPush(c);
     return ok(c, PostSchema, await postOr404(c, id), 201);
   });
 

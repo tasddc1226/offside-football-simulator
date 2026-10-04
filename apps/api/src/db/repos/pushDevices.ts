@@ -59,19 +59,17 @@ export async function unregisterPushDevice(
   installationId: string,
   expected?: { token: string; sessionId: string },
 ) {
-  if (expected) {
-    await db
-      .prepare(
-        'DELETE FROM push_devices WHERE installation_hash = ? AND token = ? AND session_id = ?',
-      )
-      .bind(await sha256Hex(installationId), expected.token, expected.sessionId)
-      .run();
-    return;
-  }
-  await db
-    .prepare('DELETE FROM push_devices WHERE installation_hash = ?')
-    .bind(await sha256Hex(installationId))
-    .run();
+  const hash = await sha256Hex(installationId);
+  // 철회 시 이미 저장된 발송용 토큰 사본도 같은 트랜잭션에서 제거한다.
+  const predicate = expected
+    ? 'installation_hash = ? AND token = ? AND session_id = ?'
+    : 'installation_hash = ?';
+  const values = expected ? [hash, expected.token, expected.sessionId] : [hash];
+  await db.batch(
+    ['push_devices', 'push_news_deliveries'].map((table) =>
+      db.prepare(`DELETE FROM ${table} WHERE ${predicate}`).bind(...values),
+    ),
+  );
 }
 
 export async function ownPushDevice(

@@ -16,6 +16,7 @@ import {
   boardPosts,
 } from '../schema.js';
 import { runBatch } from './batch.js';
+import { newsPushStatements } from '../../push/enqueue.js';
 
 const COMMENTS_MAX = 200;
 
@@ -89,15 +90,27 @@ export async function createPost(
   now: string,
 ) {
   const id = newId('pst');
-  await db.insert(boardPosts).values({
-    id,
-    board,
-    ...fields,
-    version: fields.version || null,
-    authorProfileId,
-    createdAt: now,
-    updatedAt: now,
-  });
+  const d1 = db.$client;
+  await d1.batch([
+    d1
+      .prepare(
+        `INSERT INTO board_posts
+      (id, board, title, body, version, pinned, author_profile_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        id,
+        board,
+        fields.title,
+        fields.body,
+        fields.version || null,
+        fields.pinned ? 1 : 0,
+        authorProfileId,
+        now,
+        now,
+      ),
+    ...newsPushStatements(d1, id, board, now),
+  ]);
   return id;
 }
 

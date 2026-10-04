@@ -61,6 +61,7 @@ describe('T-10-070 매일 정리', () => {
     await run(mute, 'prf_muted', later(DAY));
 
     expect(await cleanupExpired(ctx.env.DB, NOW)).toEqual({
+      push_news_events: 0,
       push_devices: 0,
       idempotency: 1,
       auth_attempts: 1,

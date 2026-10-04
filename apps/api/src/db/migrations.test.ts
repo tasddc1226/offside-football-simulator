@@ -40,6 +40,22 @@ function firstProfilesCreateStatement(): string {
  * 5개뿐이다. 컬럼 목록은 schema.ts와 같다(snake_case).
  */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
+  push_news_events: ['id', 'board', 'day', 'post_id', 'title', 'created_at', 'expires_at'],
+  push_news_deliveries: [
+    'id',
+    'event_id',
+    'installation_hash',
+    'session_id',
+    'profile_id',
+    'token',
+    'state',
+    'attempts',
+    'receipt_attempts',
+    'due_at',
+    'lease_id',
+    'ticket_id',
+    'updated_at',
+  ],
   push_devices: [
     'installation_hash',
     'session_id',

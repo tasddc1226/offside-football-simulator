@@ -7,6 +7,7 @@ import { STALE } from '../edgeKeys.js';
 import type { AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { NO_STORE, nowIso, ok, readBody } from './shared.js';
+import { kickNewsPush } from '../push/dispatch.js';
 
 export function registerReleaseNoteRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/internal/release-notes', async (c) => {
@@ -22,7 +23,10 @@ export function registerReleaseNoteRoutes(app: Hono<AppEnv>): void {
       });
     }
     const result = await publishReleaseNotes(c.env.DB, input, nowIso());
-    if (result.updated) purgeEdge(c, STALE.boardChanged('release'));
+    if (result.updated) {
+      purgeEdge(c, STALE.boardChanged('release'));
+      kickNewsPush(c);
+    }
     return ok(c, PublishedReleaseNotesSchema, result, 200, NO_STORE);
   });
 }

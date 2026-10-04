@@ -204,6 +204,15 @@ jobs:
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_API_URL/v1/profile" >/dev/null
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_WEB_URL/" | grep -qF '오프사이드'
 
+      - name: Inspect announcement push outbox counts
+        if: inputs.mode == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT board, day, COUNT(*) event_count FROM push_news_events GROUP BY board, day ORDER BY day DESC LIMIT 10; SELECT state, COUNT(*) delivery_count FROM push_news_deliveries GROUP BY state;" > .release/news-push.json
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -214,6 +223,7 @@ jobs:
             .release/counts-before.json
             .release/counts-after.json
             .release/schema-after.json
+            .release/news-push.json
           if-no-files-found: ignore
           retention-days: 30
 
