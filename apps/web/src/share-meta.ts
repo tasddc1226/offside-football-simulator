@@ -31,7 +31,7 @@ export function careerShareMeta(e: PublicHofEntry, origin: string): ShareMeta {
   const club = e.lastClub ? ` · 마지막 소속 ${e.lastClub}` : '';
   return {
     title: `${who} · ${band.name} (레전드 ${e.legendScore}점)`,
-    description: `${e.retireAge}세 은퇴 · ${e.apps}경기 ${e.goals}골 ${e.assists}도움 · 트로피 ${e.trophies}개${club}. 오프사이드에서 내 선수의 커리어도 키워 보세요.`,
+    description: `${e.retireAge}세 은퇴 · ${e.apps}경기 ${e.goals}골 ${e.assists}도움 · 트로피 ${e.trophies}개${club}.`,
     image: `${origin}${ogCardPath(e.id)}?v=${cardVersion(e)}`,
     url: `${origin}/career/${e.id}`,
   };

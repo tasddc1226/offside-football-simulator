@@ -270,7 +270,7 @@ export default function TeamRanking() {
         )
       )}
       <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 10 }}>
-        레이팅은 팀 경기 결과로 오르내려요. 랭킹은 5분마다 새로 세요.
+        레이팅은 팀 경기 결과로 오르내려요. 랭킹은 5분마다 갱신돼요.
       </Txt>
     </Card>
   );

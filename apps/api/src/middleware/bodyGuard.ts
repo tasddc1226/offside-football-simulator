@@ -8,7 +8,7 @@ const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 function bodyTooLarge(): never {
   throw new AppError({
     code: 'VALIDATION_FAILED',
-    message: '요청 본문이 너무 큽니다.',
+    message: '요청 데이터가 너무 커요.',
     details: { reason: 'BODY_TOO_LARGE' },
   });
 }
@@ -20,7 +20,7 @@ export const bodyGuard = createMiddleware<AppEnv>(async (c, next) => {
     if (!contentType.toLowerCase().startsWith('application/json')) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
-        message: '요청 본문은 JSON이어야 합니다.',
+        message: '요청 데이터 형식이 올바르지 않아요.',
         details: { reason: 'JSON_BODY_REQUIRED' },
       });
     }

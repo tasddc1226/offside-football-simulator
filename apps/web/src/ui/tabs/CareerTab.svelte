@@ -73,7 +73,7 @@
       </table>
     </div>
   {:else}
-    <p class="empty">첫 시즌을 마치면 기록이 쌓입니다.</p>
+    <p class="empty">첫 시즌을 마치면 기록이 쌓여요.</p>
   {/if}
   <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록이에요. 몸값은 시즌을 마친 때의 리그·OVR·나이로 매긴 이적료 기준 추정치예요.</p>
 </section>

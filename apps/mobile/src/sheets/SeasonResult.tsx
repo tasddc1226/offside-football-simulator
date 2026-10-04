@@ -88,8 +88,8 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
             <Txt
               v="sm"
               tone="muted"
-            >{`이번 시즌 1위로 ${s.promo.club}의 승격이 확정됐어요. 다음 시즌에는 K리그1에서 새로운 도전을 시작해요.`}</Txt>
-            <Txt v="xs" tone="muted">{`자리를 내준 ${s.promo.down} · K리그2 강등`}</Txt>
+            >{`이번 시즌 1위로 ${s.promo.club}의 승격이 확정됐어요. 다음 시즌은 K리그1에서 뛰어요.`}</Txt>
+            <Txt v="xs" tone="muted">{`${s.promo.down} · K리그2 강등`}</Txt>
           </View>
         </Pop>
       ) : null}
@@ -186,7 +186,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           ))}
         </View>
       </View>
-      <Txt tone="muted">{`${s.age}세가 됐어요. 이제 다음 시즌을 준비해요.`}</Txt>
+      <Txt tone="muted">{`${s.age}세가 됐어요. 다음 시즌을 준비해요.`}</Txt>
     </>
   );
 }

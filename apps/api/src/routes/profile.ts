@@ -68,7 +68,10 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
 
     // 결정 3: Bearer가 왔는데 무효면 쿠키로 폴백하지 않고 401이다.
     if (!existingSession && bearerPresent) {
-      throw new AppError({ code: 'PROFILE_REQUIRED', message: '세션이 유효하지 않습니다.' });
+      throw new AppError({
+        code: 'PROFILE_REQUIRED',
+        message: '접속 정보가 만료됐어요. 다시 연결해 주세요.',
+      });
     }
 
     let record: ProfileRecord | undefined = existingSession
@@ -125,7 +128,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     if (!profile || !identity.google) {
       throw new AppError({
         code: 'FORBIDDEN',
-        message: '구글로 로그인하면 닉네임을 정할 수 있어요.',
+        message: '로그인하면 닉네임을 정할 수 있어요.',
         details: { reason: 'GOOGLE_LOGIN_REQUIRED' },
       });
     }
@@ -192,7 +195,10 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const rawToken = readSessionToken(c);
     if (!rawToken) {
-      throw new AppError({ code: 'PROFILE_REQUIRED', message: '프로필 세션이 필요합니다.' });
+      throw new AppError({
+        code: 'PROFILE_REQUIRED',
+        message: '접속 정보가 없어요. 다시 연결해 주세요.',
+      });
     }
     const sessionTokenHash = await sha256Hex(rawToken);
 

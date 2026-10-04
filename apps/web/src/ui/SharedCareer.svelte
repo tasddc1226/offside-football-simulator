@@ -44,7 +44,7 @@
       {#snippet end()}
         <section class="card stack">
           <div><div class="eyebrow">Your Turn</div><h2>이번엔 내 선수를 키울 차례예요</h2></div>
-          <p class="muted fs-sm">고3 킥오프부터 은퇴 휘슬까지, 내 선수의 커리어를 직접 정해요.</p>
+          <p class="muted fs-sm">고3부터 은퇴까지, 내 선수를 키워요.</p>
           <button class="btn btn-primary btn-block" data-act="shared-start" onclick={leave}>{cta}</button>
         </section>
       {/snippet}

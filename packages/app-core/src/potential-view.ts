@@ -6,7 +6,7 @@ import type { GameState, LogEntry } from '@offside/game/types';
 
 export const POTENTIAL_NOTICE = '잠재력 평가는 은퇴할 때 공개돼요.';
 export const RETIREMENT_POTENTIAL_NOTE =
-  '은퇴 시점의 성장 기준값이에요. 고정된 최대 OVR은 아니며, 최고 OVR이 이 값을 넘을 수 있어요.';
+  '은퇴 시점의 성장 기준값이에요. 최대 OVR을 뜻하지 않아 최고 OVR이 이 값을 넘을 수 있어요.';
 
 /** 이미 저장된 은퇴 수치(반올림한 truePot)만 사용한다. 없는 과거 값은 추정하지 않는다. */
 export function retirementPotential(value: number | null | undefined) {
@@ -26,7 +26,7 @@ export const visibleCareerLog = (entries: readonly LogEntry[]): LogEntry[] =>
 const HINT_EARLY: Record<'high' | 'mid' | 'low', readonly string[]> = {
   high: [
     '이 녀석, 물건이군. 제대로만 크면 큰 무대에서도 통하겠군.',
-    '또래 중에선 천장이 제일 높아 보이는군. 계속 지켜봐야겠군.',
+    '또래 중에선 성장 가능성이 가장 높아 보이는군.',
     '리포트에 별표를 쳐 둬야겠군. 이런 선수는 흔치 않군.',
     '이 속도라면 몇 년 안에 이름을 날리겠군.',
   ],
@@ -47,7 +47,7 @@ const HINT_LATE: Record<string, readonly string[]> = {
   S: [
     '몇 년에 한 번 나올까 말까 한 재능이군. 내 경력에서도 손에 꼽겠군.',
     '이 친구는 세계 최고 무대에 서야 할 선수로군.',
-    '같은 세대에서 이만한 천장은 처음 보는군.',
+    '같은 세대에서 이만한 성장 가능성은 처음 보는군.',
   ],
   A: [
     '빅리그에서도 충분히 통하겠군.',

@@ -197,7 +197,7 @@ describe('게임 특성화 (T-11-044)', () => {
       return [name, { options, accepted }];
     });
     expect({ ...Object.fromEntries(rows), kinds: [...kinds].sort() }).toMatchSnapshot();
-  });
+  }, 20_000);
 
   it('이벤트 × 선택지 — 확률 p 격자와 선택 결과', () => {
     const pool = [

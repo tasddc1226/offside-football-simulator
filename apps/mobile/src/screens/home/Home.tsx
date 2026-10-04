@@ -41,9 +41,9 @@ export default function Home() {
                 Current career
               </Txt>
               <View style={{ marginTop: 6, gap: 2 }} accessible accessibilityRole="header">
-                <Txt style={{ ...heroSub, color: alpha(c.onPitch, 0.8) }}>이번 커리어는</Txt>
+                <Txt style={{ ...heroSub, color: alpha(c.onPitch, 0.8) }}>진행 중인 커리어</Txt>
                 <Txt style={{ ...heroB, color: c.onPitch }}>
-                  <Txt style={{ ...heroName, color: c.onPitch }}>{G.name}</Txt> 입니다
+                  <Txt style={{ ...heroName, color: c.onPitch }}>{G.name}</Txt>
                 </Txt>
               </View>
               <Txt style={{ ...p, color: alpha(c.onPitch, 0.8) }}>
@@ -118,7 +118,7 @@ export default function Home() {
                 {'이번 생은 축구다\n고3부터 은퇴까지,\n한 선수로 살아요'}
               </Txt>
               <Txt style={{ ...p, color: alpha(c.onPitch, 0.8) }}>
-                훈련과 이적, 이벤트마다 고른 선택이 쌓여 한 선수의 커리어가 돼요.
+                훈련·이적·이벤트에서 고른 선택으로 커리어가 달라져요.
               </Txt>
               <Btn kind="accent" block testID="new" onPress={goNew} style={{ marginTop: 18 }}>
                 새 커리어 킥오프 →

@@ -103,7 +103,7 @@ export function RetiredNumberCredit({
               영구결번이 확정됩니다.
             </FText>
             <FText tone="muted" size={0.875} lh={1.5} center>
-              결번은 이름을 공개한 순서대로 주어져요. 먼저 공개한 선수가 그 번호를 가져갑니다.
+              먼저 이름을 공개한 선수가 그 번호를 받아요.
             </FText>
             {v.own ? (
               <Btn

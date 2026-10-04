@@ -5,7 +5,7 @@
     - heading "환경설정" [level=1]
     - text: Display
     - strong: 다크 모드
-    - text: 어두운 화면으로 봐요. 이 기기에 저장돼요.
+    - text: 어두운 화면으로 바꿔요. 이 기기에 저장돼요.
     - switch "다크 모드"
     - text: Sound
     - strong: 효과음

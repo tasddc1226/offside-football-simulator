@@ -74,7 +74,7 @@ export const CareerMetaSchema = z
     const { height: h, weight: w } = ctx.value;
     if (h === undefined && w === undefined) return;
     const err =
-      h === undefined || w === undefined ? '키·몸무게는 함께 보낸다' : bodyError({ h, w });
+      h === undefined || w === undefined ? '키와 몸무게를 모두 입력해 주세요' : bodyError({ h, w });
     if (err) ctx.issues.push({ code: 'custom', message: err, input: ctx.value, path: ['height'] });
   });
 export type CareerMeta = z.infer<typeof CareerMetaSchema>;
@@ -177,7 +177,7 @@ export const PublicNameSchema = z
   .trim()
   .min(1)
   .max(PUBLIC_NAME_MAX)
-  .regex(PUBLIC_NAME_CHARS, '이름에 사용할 수 없는 문자가 있습니다.');
+  .regex(PUBLIC_NAME_CHARS, '이름에 쓸 수 없는 문자가 있어요.');
 
 /**
  * 자동 플레이 탐지(관찰용)를 위한 그 시즌의 조작 요약. 입력 내용은 담지 않고 횟수만 센다. 게임에는 영향이 없다 —
@@ -506,7 +506,7 @@ export const HofSearchQuerySchema = z
 export const HofSeasonQuerySchema = z.coerce
   .number()
   .int()
-  .refine((id) => seasonById(id) !== undefined, '없는 시즌입니다.')
+  .refine((id) => seasonById(id) !== undefined, '시즌을 찾을 수 없어요.')
   .transform((id) => seasonById(id)!)
   .optional();
 /**
@@ -516,7 +516,7 @@ export const HofSeasonQuerySchema = z.coerce
 export const SeasonPickQuerySchema = z.coerce
   .number()
   .int()
-  .refine((id) => seasonById(id) !== undefined, '없는 시즌입니다.')
+  .refine((id) => seasonById(id) !== undefined, '시즌을 찾을 수 없어요.')
   .optional();
 /** T-11-018 `GET /v1/hof?pos=` 그 포지션 선수만(포지션별 순위). 없으면 모든 포지션. */
 export const HofPosQuerySchema = CareerPosSchema.optional();

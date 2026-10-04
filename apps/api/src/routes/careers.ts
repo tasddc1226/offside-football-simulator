@@ -125,7 +125,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     if (career === undefined) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
-        message: '존재하지 않는 커리어입니다.',
+        message: '커리어를 찾을 수 없어요.',
         details: { reason: 'CAREER_NOT_FOUND' },
       });
     }
@@ -137,7 +137,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     if (publicName && !isAcceptablePublicName(publicName)) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
-        message: '공개할 수 없는 이름입니다.',
+        message: '공개할 수 없는 이름이에요.',
         details: { reason: 'PUBLIC_NAME_REJECTED' },
       });
     }
@@ -159,7 +159,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       if (!summary) {
         throw new AppError({
           code: 'VALIDATION_FAILED',
-          message: '시즌 기록이 없는 커리어는 은퇴를 기록할 수 없습니다.',
+          message: '시즌 기록이 있어야 은퇴를 기록할 수 있어요.',
           details: { reason: 'NO_SEASONS' },
         });
       }

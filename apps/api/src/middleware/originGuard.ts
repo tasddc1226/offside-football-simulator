@@ -29,7 +29,10 @@ export const originGuard = createMiddleware<AppEnv>(async (c, next) => {
   ) {
     const origin = c.req.header('Origin');
     if (!origin || !allowedOriginsFor(c.req.url, c.env).includes(origin)) {
-      throw new AppError({ code: 'ORIGIN_NOT_ALLOWED', message: '허용되지 않은 origin입니다.' });
+      throw new AppError({
+        code: 'ORIGIN_NOT_ALLOWED',
+        message: '이 접속 경로에서는 요청할 수 없어요.',
+      });
     }
   }
   await next();

@@ -121,7 +121,7 @@
       </div>
     </div>
   {/if}
-  <p class="muted fs-sm rn-wall-lead">한 구단에서 오래 크게 활약한 선수의 등번호는 그 구단에서 다시 쓰지 않습니다. 구단마다 한 번호에 한 명뿐입니다.</p>
+  <p class="muted fs-sm rn-wall-lead">한 구단에서 오래 활약한 선수의 등번호는 다시 쓰지 않아요. 구단마다 한 번호에 한 명뿐이에요.</p>
 
   {#if upcoming}
     <div class="empty hof-season-note" data-rn-upcoming><b>{upcoming.name}은 {kstMonthDayHour(upcoming.startsAt)}(한국 시각)에 개막해요.</b></div>

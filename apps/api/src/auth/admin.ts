@@ -49,7 +49,10 @@ export async function getViewer(c: Context<AppEnv>): Promise<Viewer> {
 export async function requireAdmin(c: Context<AppEnv>): Promise<Viewer> {
   const viewer = await getViewer(c);
   if (!viewer.profileId)
-    throw new AppError({ code: 'PROFILE_REQUIRED', message: '프로필 세션이 필요합니다.' });
-  if (!viewer.admin) throw new AppError({ code: 'FORBIDDEN', message: '관리자만 할 수 있습니다.' });
+    throw new AppError({
+      code: 'PROFILE_REQUIRED',
+      message: '접속 정보가 없어요. 다시 연결해 주세요.',
+    });
+  if (!viewer.admin) throw new AppError({ code: 'FORBIDDEN', message: '운영자만 할 수 있어요.' });
   return viewer;
 }

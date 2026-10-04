@@ -128,7 +128,7 @@ export async function restoreAdFree() {
     }
     if (found) {
       grant();
-      adFree.message = '구매를 복원했어요. 광고가 꺼져요.';
+      adFree.message = '구매를 복원해 광고를 껐어요.';
     } else {
       adFree.message = '이 스토어 계정에는 광고 제거 구매 기록이 없어요.';
     }

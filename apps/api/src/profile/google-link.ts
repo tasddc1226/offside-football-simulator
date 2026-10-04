@@ -50,7 +50,7 @@ export async function resolveSignIn(
     const current =
       target?.id === input.currentProfileId ? target : await getProfile(db, input.currentProfileId);
     if (!current) {
-      throw new AppError({ code: 'PROFILE_REQUIRED', message: '프로필을 찾을 수 없습니다.' });
+      throw new AppError({ code: 'PROFILE_REQUIRED', message: '프로필을 찾을 수 없어요.' });
     }
     await input.link(current);
     return { kind: 'linked', profileId: current.id };

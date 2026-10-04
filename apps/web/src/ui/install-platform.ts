@@ -21,7 +21,7 @@ export const INSTALL_STEPS: Record<Exclude<Platform, 'inapp'>, string[]> = {
     "'추가'를 누르면 끝이에요.",
   ],
   other: [
-    '휴대폰 브라우저로 offside-lab.com 에 들어와요.',
+    '휴대폰 브라우저로 offside-lab.com에 들어와요.',
     "공유 버튼(또는 ⋮ 메뉴)에서 '홈 화면에 추가'를 골라요.",
     "'추가'를 누르면 끝이에요.",
   ],

@@ -13,7 +13,7 @@ export function AdFreeSettings() {
       <SettingsLabel
         eyebrow="Ads"
         title="광고 제거"
-        muted="기록실·소식·레전드 맨 아래 광고를 영구히 꺼요. 한 번 사면 같은 스토어 계정의 다른 기기에서도 구매 복원으로 되살릴 수 있어요."
+        muted="기록실·소식·레전드 맨 아래 광고를 영구히 꺼요. 같은 스토어 계정의 다른 기기에서도 구매를 복원할 수 있어요."
       />
       {s.owned ? (
         <Txt testID="ad-free-owned">광고 제거를 구매했어요. 고마워요.</Txt>

@@ -58,7 +58,7 @@ export function teamSeasonParam(raw: unknown, now: string): number {
 export const careerOwnerMismatch = () =>
   new AppError({
     code: 'CAREER_OWNER_MISMATCH',
-    message: '이 커리어 ID는 다른 프로필 소유입니다.',
+    message: '이 커리어는 다른 계정에 기록돼 있어요.',
   });
 
 // api는 zod에 직접 의존하지 않는다 — data 타입(z.input<S>와 같은 값)은 스키마 타입의 _zod.input에서 읽는다.
@@ -86,7 +86,7 @@ export function readJson(c: Context<AppEnv>): unknown {
   } catch {
     throw new AppError({
       code: 'VALIDATION_FAILED',
-      message: '요청 본문이 올바른 JSON이 아닙니다.',
+      message: '요청 데이터를 읽지 못했어요. 다시 시도해 주세요.',
     });
   }
 }
