@@ -54,8 +54,14 @@ const COMMENT_LIMIT = 10;
 const notFound = (what: string) =>
   notFoundError(`${what}을(를) 찾을 수 없습니다.`, 'BOARD_NOT_FOUND');
 
-const idParam = (c: Context<AppEnv>, name: string) =>
-  parseWithAppError(BoardIdParamSchema, c.req.param(name));
+// 자동 릴리즈 노트는 KST 날짜로 고정된 ID를 쓴다. 기존 글·댓글·차단의 UUID 검증은 유지한다.
+const idParam = (c: Context<AppEnv>, name: string) => {
+  const value = c.req.param(name);
+  if (name === 'postId' && typeof value === 'string' && /^pst_release_\d{8}$/.test(value)) {
+    return value;
+  }
+  return parseWithAppError(BoardIdParamSchema, value);
+};
 /** 목록은 첫 페이지만 엣지에 담는다 — 키와 지우는 규칙은 edgeKeys.ts. '더 보기'(before)나 다른 limit은 드물어 그냥 읽는다. */
 const LIST_TTL = 60;
 const purgeList = (c: Context<AppEnv>, board: string) => purgeEdge(c, STALE.boardChanged(board));
