@@ -1,7 +1,7 @@
 import { configureMeasurement, type OperationResult } from '@offside/app-core/measurement';
 import type { Progress } from '@offside/app-core/player-metrics';
 import { enabled } from './config.js';
-import type { Career } from './model.js';
+import type { Career } from '@offside/app-core/analytics-model';
 export { enabled } from './config.js';
 let adapter: typeof import('./browser.js') | undefined;
 let screen = 'home';

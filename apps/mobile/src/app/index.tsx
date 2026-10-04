@@ -6,6 +6,7 @@ import { BackHandler, View } from 'react-native';
 import { subscribe, useSnapshot } from 'valtio';
 import { achCheckable, isAchDirty, onAchDirty } from '@offside/app-core/achDirty';
 import type { Screen } from '@offside/app-core/state';
+import { trackPage } from '../analytics';
 import { appState, sheetState } from '../store';
 import { achNudge } from '../game/achNudge';
 import { closeSheet, navStack } from '../game/host';
@@ -62,6 +63,7 @@ const checkAch = () => {
 export default function App() {
   const snap = useSnapshot(appState);
   const c = useColors();
+  useEffect(() => trackPage(snap.screen), [snap.screen]);
   // 상태가 바뀔 때마다(묶어서) 기록 단위가 바뀌었는지 본다 — 같으면 track()이 아무것도 안 한다.
   useEffect(() => subscribe(appState, () => navStack.track()), []);
   useEffect(() => {

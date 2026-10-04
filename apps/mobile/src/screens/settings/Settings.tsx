@@ -1,7 +1,8 @@
 // 환경설정 화면(웹 Settings.svelte, T-10-009 · T-10-021) — 다크 모드 · 선수 이름 공개(T-10-065) 켜기/끄기, 백업,
 // 구단 이름·엠블럼, 도움말·서비스 정책 링크. 이 설정들은 이 기기에만 저장된다. 계정·운영 도구는 구단주 화면에 있다.
-// 앱에서 뺀 것(웹 전용): 효과음·배경음악·음량·음악 출처, 분석 동의, '홈 화면에 추가하기' 안내.
-import { useState } from 'react';
+// 앱에서 뺀 것(웹 전용): 효과음·배경음악·음량·음악 출처, '홈 화면에 추가하기' 안내.
+import { nativeAnalytics } from '../../analytics';
+import { useState, useSyncExternalStore } from 'react';
 import { View } from 'react-native';
 import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
 import { saveKey } from '@offside/game/season';
@@ -76,6 +77,7 @@ function Group({
 
 export default function Settings() {
   const dark = useIsDark();
+  const consent = useSyncExternalStore(nativeAnalytics.onConsent, nativeAnalytics.getConsent);
   const [namePublic, setNamePublicState] = useState(namePublicEnabled());
 
   /** 다크 모드: 고른 테마를 이 기기에 저장한다(고르지 않았으면 시스템 설정을 따른다). */
@@ -124,6 +126,24 @@ export default function Settings() {
           />
         </SettingsRow>
       </SettingsCard>
+
+      {nativeAnalytics.enabled() ? (
+        <SettingsCard>
+          <SettingsRow>
+            <SettingsLabel
+              eyebrow="Privacy"
+              title="앱 이용 분석 동의 (선택)"
+              muted="동의하면 Google Analytics로 화면 방문과 커리어 시작·진행·은퇴, 기기·앱 버전·세션 정보를 분석해요. 선수 이름·계정 정보·저장 파일은 보내지 않아요. 언제든 끌 수 있고, 동의 전 활동은 전송하지 않아요."
+            />
+            <Switch
+              value={consent === 'granted'}
+              onChange={(on) => nativeAnalytics.setConsent(on ? 'granted' : 'denied')}
+              label="앱 이용 분석 동의 (선택)"
+              testID="analytics-consent"
+            />
+          </SettingsRow>
+        </SettingsCard>
+      ) : null}
 
       {/* T-10-116 진행 중 커리어 백업·불러오기 */}
       <BackupSettings />

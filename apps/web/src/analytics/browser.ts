@@ -7,16 +7,17 @@ import type { OperationResult } from '@offside/app-core/measurement';
 import {
   campaignQuery,
   CONSENT_KEY,
-  emptyLedger,
   LEDGER_KEY,
   PAGES,
+  parseConsent,
+  parseLedger,
   safeReferrer,
   type Career,
   type Consent,
   type Ledger,
   type Params,
-} from './model.js';
-import type { createTracker } from './tracker.js';
+} from '@offside/app-core/analytics-model';
+import type { createTracker } from '@offside/app-core/analytics-tracker';
 let metricEpoch = 0;
 const playerMetrics = createPlayerMetrics({
   allowed: () => allowed() && loaded && screen !== 'admin',
@@ -69,8 +70,7 @@ const listeners = new Set<() => void>();
 const w = () => window as TagWindow;
 function readConsent(): Consent {
   try {
-    const v = localStorage.getItem(CONSENT_KEY);
-    return v === 'granted' || v === 'denied' ? v : 'unknown';
+    return parseConsent(localStorage.getItem(CONSENT_KEY));
   } catch {
     return consent;
   }
@@ -123,7 +123,7 @@ function pageView() {
 async function loadTag() {
   if (!allowed()) return;
   // Tracking logic is unnecessary before consent; keep it out of the game's initial payload.
-  tracker ??= (await import('./tracker.js')).createTracker(
+  tracker ??= (await import('@offside/app-core/analytics-tracker')).createTracker(
     {
       allowed,
       read: readLedger,
@@ -267,29 +267,7 @@ export function trackPage(next: string) {
   pageView();
 }
 function readLedger(): Ledger {
-  const raw = localStorage.getItem(LEDGER_KEY);
-  if (!raw) return emptyLedger();
-  try {
-    const value = JSON.parse(raw) as Ledger;
-    if (!value || !Array.isArray(value.entries) || typeof value.seenStart !== 'boolean')
-      return emptyLedger();
-    if (!value.entries.every((e) => typeof e.id === 'string' && Number.isFinite(e.at)))
-      return emptyLedger();
-    if (
-      value.next &&
-      value.next.kind !== 'replace_active' &&
-      !(
-        value.next.kind === 'after_retirement' &&
-        typeof value.next.id === 'string' &&
-        typeof value.next.pos === 'string' &&
-        typeof value.next.trait === 'string'
-      )
-    )
-      value.next = null;
-    return value;
-  } catch {
-    return emptyLedger();
-  }
+  return parseLedger(localStorage.getItem(LEDGER_KEY));
 }
 export const analytics = {
   reset: () => tracker?.reset(),

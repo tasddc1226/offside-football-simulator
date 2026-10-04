@@ -294,6 +294,15 @@ jobs:
             [ -n "$BASE" ] || echo "::notice::직전 production OTA 커밋을 읽지 못해 변경 여부와 상관없이 게시해요."
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
+      # T-11-037 앱 GA4 설정(app.config.js)은 EAS production 환경 변수(OFFSIDE_*)를 읽는다. eas는 로컬 명령에서 파일 변수(iOS
+      # plist)를 불러오지 않아 설정 평가가 실패하므로, 스토어 빌드와 같은 값을 여기서 받아 이후 단계에 넘긴다 — 빌드와 지문이
+      # 같아야 OTA가 설치된 앱에 닿는다.
+      - name: Pull EAS production env (including file variables)
+        if: steps.changed.outputs.publish == 'true'
+        working-directory: apps/mobile
+        run: |
+          eas env:pull production --non-interactive --path "$RUNNER_TEMP/eas-production.env"
+          grep -E '^OFFSIDE_[A-Z_]+=' "$RUNNER_TEMP/eas-production.env" >> "$GITHUB_ENV" || true
       # 이번 OTA의 runtimeVersion(fingerprint)을 가진 스토어 빌드가 없으면 설치된 앱 누구도 받지 못한다(T-11-013 사고:
       # eas.json 수정으로 런타임이 바뀜). 네이티브 변경은 다음 스토어 빌드 전까지 원래 그럴 수 있어 막지 않고 경고만 남긴다.
       - name: Warn when no store build has this runtime
