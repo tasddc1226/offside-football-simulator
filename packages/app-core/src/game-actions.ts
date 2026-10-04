@@ -32,6 +32,7 @@ import { choiceOdds } from '@offside/game/balance';
 import { offsetToRoll, tapOffset, timingNote, zoneLabel, zoneWidth } from '@offside/game/minigame';
 import { isHiddenEvent } from '@offside/game/dexGroups';
 import { scoreLine, type NatTourResult } from '@offside/game/national';
+import { isMilOption } from '@offside/game/military';
 import {
   endSeason,
   market,
@@ -116,13 +117,19 @@ function natViews(nt: PhaseResult['nt']): NatView[] {
       : [],
   }));
 }
+// T-11-077 명단에 없던 선수는 대표팀이 우승해도 메달·병역 특례가 없다. 우승 표시만 보고 특례로 읽지 않게 적는다.
+const MEDAL_STAGES = new Set(['우승', '금메달', '은메달', '동메달']);
 function tourView(x: NatTourResult): TourView {
   // 저장된 결산 시트(pending.res)에서 복원한 옛 세이브는 필드가 비어 있을 수 있다.
   const matches = x.matches ?? [];
   return {
     name: x.name,
     stage: x.stage,
-    note: x.inSquad ? '' : x.why ? x.why : matches.length ? '명단 외' : '',
+    note: x.inSquad
+      ? ''
+      : [x.why || (matches.length ? '명단 외' : ''), MEDAL_STAGES.has(x.stage) ? '메달 없음' : '']
+          .filter(Boolean)
+          .join(' · '),
     lines: x.inSquad
       ? matches.map(
           (m) =>
@@ -588,7 +595,7 @@ export function createGameActions(host: GameHost) {
     if (o.kind === 'renew' && !canAcceptRenewal(G, o)) return false;
     const r = acceptOption(G, o, options);
     const logEntry: EventLogEntry = {
-      k: o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' ? 'mil' : 'mkt',
+      k: isMilOption(o) ? 'mil' : 'mkt',
       id: o.kind,
       c: o.kind === 'offer' ? o.clubId : i,
       h: G.phase,

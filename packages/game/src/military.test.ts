@@ -5,6 +5,7 @@ import { newGame, newSeason } from './engine.js';
 import {
   grantSportsService,
   enlistSangmu,
+  isMilOption,
   milDone,
   milDue,
   milCanApply,
@@ -14,6 +15,7 @@ import {
   milStatusText,
 } from './military.js';
 import { natSeasonEnd } from './national.js';
+import { acceptOption, endSeason, market } from './season.js';
 import { createRng, setActiveRng } from './rng.js';
 import { loadSave } from './save.js';
 import { checkTitles } from './titles.js';
@@ -182,6 +184,50 @@ describe('T-11-062 체육요원 특례', () => {
     expect(milSeasonEnd(s)).toContain('상무 만기 전역');
     expect(s.mil.served).toBe(true);
     expect(s.mil.sportsService).toBeUndefined();
+  });
+
+  it('T-11-077 상무 합격자는 특례 대회를 앞둬도 입대하고, 상무 소속으로 메달을 따면 체육요원으로 전환된다', () => {
+    // 2030 아시안게임 시즌을 앞둔 23세 상무 합격자(실제 사례: 2023 항저우 조영욱)
+    const s = player(1, 2030, 70, 23);
+    const club = { ...s.club };
+    s.mil.accepted = true;
+    const m = market(s);
+    expect(m.options.map((o) => o.kind)).toEqual(['serve']);
+    expect(m.note).toContain('복무 기간에 2030 아시안게임이 열립니다');
+    expect(m.note).toContain('상무 소속으로도 대표팀에 뽑힐 수 있습니다');
+    expect(m.options[0]).toMatchObject({
+      desc: expect.stringContaining('메달을 따면 체육요원으로 전환'),
+    });
+    expect(s.mil).toMatchObject({ serving: true, type: 'sangmu' });
+    acceptOption(s, m.options[0]!, m.options);
+    expect(grantSportsService(s, 'ag', '우승', true)).toBe(true);
+    expect(milSeasonEnd(s)).toContain('체육요원 전환');
+    expect(s.club).toEqual(club);
+
+    // 겹치는 대회가 없으면 안내도 없다(2032 올림픽 땐 24세)
+    const n = player(1, 2031, 70, 23);
+    n.mil.accepted = true;
+    const nm = market(n);
+    expect(nm.note).toBe('국군체육부대 최종 합격자 명단에 이름이 올랐습니다.');
+    expect(nm.options[0]).not.toMatchObject({ desc: expect.stringContaining('체육요원') });
+
+    // 현역 입영 예약은 그대로 입대한다
+    const a = player(1, 2030, 70, 23);
+    a.mil.armyNext = true;
+    expect(market(a).options.map((o) => o.kind)).toEqual(['army']);
+  });
+
+  it('T-11-077 시즌 정산에서 금메달로 편입되면 결산 노트에 알리고, 이후 상무 모집·병역 선택지가 없다', () => {
+    for (let seed = 1; seed <= 400; seed++) {
+      const s = player(seed, 2030, 90, 22);
+      const r = endSeason(s);
+      if (!s.mil.exempt) continue;
+      expect(r.notes).toContain('병역 특례(입대 면제) · 아시안게임 금메달');
+      expect(milCanApply(s)).toBe(false);
+      expect(market(s).options.some(isMilOption)).toBe(false);
+      return;
+    }
+    throw new Error('금메달 표본 없음');
   });
 
   it('실제 대회 정산에서 와일드카드 메달은 나이와 관계없이 특례로 연결한다', () => {

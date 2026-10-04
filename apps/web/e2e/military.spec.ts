@@ -23,6 +23,7 @@ for (const [name, service, expected] of [
     await page.locator('[data-tab="player"]').click();
     await expect(page.locator('#app')).toContainText(expected);
     const guide = page.locator('[data-military-guide]');
+    await expect(guide).toContainText('상무나 현역 입대 없이');
     await expect(guide).toContainText('출전 경기 수는 조건이 아니고');
     await expect(guide).toContainText('34개월');
     await expect(guide).toContainText('544시간');
@@ -50,4 +51,30 @@ test('외국 선수의 선수 탭에는 병역 특례 안내를 표시하지 않
   await page.locator('[data-tab="player"]').click();
   await expect(page.locator('[data-nation]')).toContainText('일본');
   await expect(page.locator('[data-military-guide]')).toHaveCount(0);
+});
+
+test('T-11-077 아시안게임 시즌을 앞둔 상무 합격자에게 상무 소속으로도 대표팀에 뽑힐 수 있다고 알린다', async ({
+  page,
+}) => {
+  await resumeWithSave(page, {
+    ...fixture,
+    year: 2030,
+    age: 23,
+    pending: { type: 'market', res: null, m: null },
+    mil: {
+      exempt: null,
+      served: false,
+      serving: false,
+      left: 0,
+      type: null,
+      prevClub: null,
+      accepted: true,
+      applied: false,
+    },
+  });
+  const sheet = page.locator('#sheet');
+  await expect(sheet).toContainText('복무 기간에 2030 아시안게임이 열립니다');
+  await expect(sheet).toContainText('상무 소속으로도 대표팀에 뽑힐 수 있습니다');
+  await expect(sheet.locator('[data-opt="0"]')).toContainText('메달을 따면 체육요원으로 전환');
+  await expect(sheet.locator('[data-opt]')).toHaveCount(1);
 });
