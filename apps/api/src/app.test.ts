@@ -95,7 +95,7 @@ describe('오류 봉투', () => {
     const parsed = ErrorEnvelopeSchema.parse(body);
     expect(parsed.error.code).toBe('SERVICE_UNAVAILABLE');
     expect(parsed.error.retryable).toBe(true);
-    expect(parsed.error.message).toBe('일시적인 오류입니다. 잠시 후 다시 시도해 주세요.');
+    expect(parsed.error.message).toBe('일시적인 오류가 생겼어요. 잠시 후 다시 시도해 주세요.');
     expect(parsed.error.message).not.toContain('boom');
     expect(JSON.stringify(body)).not.toContain('.ts:');
   });

@@ -27,7 +27,7 @@ export function PushSettings() {
       <SettingsLabel
         eyebrow="Notifications"
         title="새 소식 알림"
-        muted="공지·릴리즈 노트 알림을 준비하고 있어요. 이 기기의 수신 권한을 연결할 수 있어요. 정식 발송은 아직 시작하지 않았어요."
+        muted="공지·릴리즈 노트 알림을 준비하고 있어요. 기기를 미리 등록할 수 있고, 정식 발송은 아직 시작하지 않았어요."
       />
       <Txt tone="muted">알림 연결을 위해 푸시 토큰과 기기 종류·앱 버전을 저장해요.</Txt>
       <View style={{ gap: 8 }}>

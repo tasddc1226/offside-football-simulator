@@ -45,7 +45,7 @@ export function parseWithAppError<T>(schema: SchemaLike<T>, data: unknown): T {
   if (!result.success) {
     throw new AppError({
       code: 'VALIDATION_FAILED',
-      message: '입력값이 올바르지 않습니다.',
+      message: '입력 내용을 확인해 주세요.',
       details: {
         issues: result.error.issues.map((issue) => ({ path: issue.path, message: issue.message })),
       },
@@ -56,7 +56,7 @@ export function parseWithAppError<T>(schema: SchemaLike<T>, data: unknown): T {
 
 /** T-2-015: unknown error(AppError 아님)는 원문(예: SQL 전문)을 응답에 절대 담지 않는다. 원문은
  * middleware/logger.ts가 서버 로그로만 남긴다. */
-const UNKNOWN_ERROR_MESSAGE = '일시적인 오류입니다. 잠시 후 다시 시도해 주세요.';
+const UNKNOWN_ERROR_MESSAGE = '일시적인 오류가 생겼어요. 잠시 후 다시 시도해 주세요.';
 
 export function toErrorEnvelope(
   err: unknown,
@@ -93,7 +93,11 @@ export function errorHandler(err: Error, c: Context<AppEnv>): Response {
 
 export function notFoundHandler(c: Context<AppEnv>): Response {
   const body: ErrorEnvelope = {
-    error: { code: 'VALIDATION_FAILED', message: '알 수 없는 경로입니다.', retryable: false },
+    error: {
+      code: 'VALIDATION_FAILED',
+      message: '요청한 경로를 찾을 수 없어요.',
+      retryable: false,
+    },
     meta: { requestId: c.get('requestId') },
   };
   return c.json(body, 404);

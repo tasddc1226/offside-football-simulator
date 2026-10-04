@@ -18,7 +18,7 @@
       <div class="trophy"><span class="y">{x.year}</span><div><b>{x.t}</b><span class="muted fs-xs"><ClubMark name={x.club} id={x.clubId} size={14} /> {x.club}</span></div></div>
     {/each}
   {:else}
-    <p class="empty">아직 없습니다.</p>
+    <p class="empty">아직 없어요.</p>
   {/if}
 </section>
 
@@ -30,7 +30,7 @@
       <div class="trophy"><span class="y">{x.year}</span><div><b>{x.t}</b></div></div>
     {/each}
   {:else}
-    <p class="empty">아직 없습니다.</p>
+    <p class="empty">아직 없어요.</p>
   {/if}
 </section>
 
@@ -52,6 +52,6 @@
       <div class="trophy"><span class="y">{x.year}</span><div><b>{x.ending}</b><span class="muted fs-xs">{x.name}</span></div></div>
     {/each}
   {:else}
-    <p class="empty">아직 없습니다.</p>
+    <p class="empty">아직 없어요.</p>
   {/if}
 </section>

@@ -37,7 +37,7 @@
       <div class="eyebrow">Odds</div>
       <h1>확률 도감</h1>
       <p class="muted fs-sm" style="margin:6px 0 0">
-        선택지의 성공 확률은 선수 상태로 계산돼요. 게임 코드에서 직접 뽑은 범위와 영향 요인을 그대로 공개해요.
+        선수 상태에 따라 성공 확률이 달라져요. 가능한 범위와 영향 요인을 보여 줘요.
       </p>
     </div>
 
@@ -104,7 +104,7 @@
           </li>
         {/each}
       </ul>
-      <p class="muted fs-xs" style="margin:0">▲는 값이 클수록 성공 확률이 오르고, ▼는 내려가요. 범위는 가능한 선수 상태 전체에서 나올 수 있는 최저~최고예요.</p>
+      <p class="muted fs-xs" style="margin:0">▲는 값이 클수록 성공 확률이 오르고, ▼는 내려가요. 범위는 선수 상태에 따라 나올 수 있는 최저~최고 확률이에요.</p>
     {/if}
   </section>
   <BackBar act="home" fallback={goHome} />

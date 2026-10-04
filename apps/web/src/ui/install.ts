@@ -38,7 +38,7 @@ export function showInstallGuide(withOptOut = false) {
       eyebrow: 'Home screen',
       title: '홈 화면에 추가하고 앱처럼 열기',
       steps: INSTALL_STEPS[platform],
-      text: '홈 화면에 생긴 오프사이드 아이콘을 누르면 주소를 입력하지 않고 바로 이어서 할 수 있어요. 이 안내는 설정 > 도움말에서 다시 볼 수 있어요.',
+      text: '홈 화면의 오프사이드 아이콘으로 바로 열어요. 이 안내는 설정 > 도움말에서 다시 볼 수 있어요.',
       muted: true,
       ...(withOptOut
         ? { check: { label: '다시 보지 않기', onChange: (on: boolean) => saveKey(HIDE_KEY, on) } }

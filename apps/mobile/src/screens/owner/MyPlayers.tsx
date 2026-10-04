@@ -173,7 +173,7 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
               ? '계정에 기록된 선수예요. 다른 기기에서도 똑같이 보여요.'
               : source === 'offline'
                 ? '서버에 연결하지 못해 이 기기에 저장된 선수를 보여 줘요.'
-                : '이 기기에 저장된 선수예요. 구글 계정을 연결하면 계정에 모아 볼 수 있어요.'}
+                : '이 기기에 저장된 선수예요. 로그인하면 계정에 모아 볼 수 있어요.'}
           </Txt>
           {seasons.length > 1 ? (
             <Seg cols={Math.min(seasons.length, 3)} label="시즌" style={{ marginBottom: 8 }}>

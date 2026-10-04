@@ -86,7 +86,7 @@ export function TeamLogoEditor({
         <TeamLogo name={name} logo={value} size={88} />
       </View>
       <Txt tone="muted" v="xs">
-        적용 후 변경 저장을 누르면 내 팀·랭킹·경기 화면에 보여요.
+        적용 후 편성을 저장하면 내 팀·랭킹·경기 화면에 보여요.
       </Txt>
       <Btn testID="team-logo-upload" onPress={() => void pickImage()} disabled={busy}>
         {busy ? '이미지 준비 중…' : '사진에서 이미지 선택'}

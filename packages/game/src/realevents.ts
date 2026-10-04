@@ -310,7 +310,7 @@ export const REAL_EVENTS: EventDef[] = [
           },
         },
         fail: {
-          text: '수상은 불발됐고, 지나친 투표 독려가 입길에 올랐습니다. 그래도 골 영상은 조회수 수백만을 넘겼습니다.',
+          text: '수상은 불발됐고, 지나친 투표 독려가 입길에 올랐습니다. 그래도 골 영상은 조회 수 수백만 회를 넘겼습니다.',
           fx: (s) => {
             s.flags['puskas' + s.year] = 1;
             addStat(s, 'fame', 2);
@@ -353,7 +353,7 @@ export const REAL_EVENTS: EventDef[] = [
           },
         },
         fail: {
-          text: '무리하다 종아리가 올라왔습니다. 캠프 막판을 재활로 보냈습니다.',
+          text: '무리하다 종아리에 통증이 생겼습니다. 캠프 막판을 재활로 보냈습니다.',
           fx: (s) => {
             s.injury = ri(1, 3);
             addStat(s, 'cond', -10);

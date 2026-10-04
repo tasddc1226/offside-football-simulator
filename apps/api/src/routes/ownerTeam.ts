@@ -91,7 +91,7 @@ async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
   if (!profile || !hasAccount(profile) || profile.deletedAt) {
     throw new AppError({
       code: 'FORBIDDEN',
-      message: '구글로 로그인한 구단주만 팀을 만들 수 있어요.',
+      message: '로그인하면 팀을 만들 수 있어요.',
       details: { reason: 'GOOGLE_LOGIN_REQUIRED' },
     });
   }

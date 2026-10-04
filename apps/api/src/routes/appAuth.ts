@@ -86,7 +86,7 @@ export function registerAppAuthRoutes(app: Hono<AppEnv>): void {
     if (!oidc) {
       throw new AppError({
         code: 'SERVICE_UNAVAILABLE',
-        message: 'Google 로그인을 사용할 수 없습니다.',
+        message: '지금은 구글 로그인을 사용할 수 없어요. 잠시 후 다시 시도해 주세요.',
       });
     }
     const now = nowIso();

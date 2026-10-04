@@ -17,7 +17,7 @@ export const idempotency = createMiddleware<AppEnv>(async (c, next) => {
   if (!key || !IDEMPOTENCY_KEY_PATTERN.test(key)) {
     throw new AppError({
       code: 'VALIDATION_FAILED',
-      message: 'Idempotency-Key가 필요합니다.',
+      message: '요청 식별 정보가 없어요. 다시 시도해 주세요.',
       details: { reason: 'IDEMPOTENCY_KEY_REQUIRED' },
     });
   }
@@ -33,7 +33,7 @@ export const idempotency = createMiddleware<AppEnv>(async (c, next) => {
     if (existing.requestHash !== requestHash) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
-        message: '같은 Idempotency-Key가 다른 요청에 재사용되었습니다.',
+        message: '요청 식별 정보가 겹쳤어요. 다시 시도해 주세요.',
         details: { reason: 'IDEMPOTENCY_KEY_REUSED' },
       });
     }

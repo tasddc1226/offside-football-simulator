@@ -151,7 +151,7 @@ test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받�
 
 test('세션 없이 로그인 시작에서 돌아오면 다시 누르라고 알린다', async ({ page }) => {
   await page.goto('/settings?google=error&reason=session');
-  await expect(page.locator('#toast')).toContainText('한 번 더 눌러 주세요');
+  await expect(page.locator('#toast')).toContainText('다시 눌러 주세요');
 });
 
 test('계정 카드에서 댓글 닉네임을 정하고 바꾼다 (T-10-028)', async ({ page }) => {

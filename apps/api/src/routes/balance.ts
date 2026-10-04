@@ -31,17 +31,17 @@ const versionParam = (c: Context<AppEnv>) =>
   parseWithAppError(BalanceVersionParamSchema, c.req.param('version'));
 const draftInput = (c: Context<AppEnv>) => readBody(c, BalanceDraftInputSchema);
 
-const notFound = () => notFoundError('밸런스 버전을 찾을 수 없습니다.', 'BALANCE_NOT_FOUND');
+const notFound = () => notFoundError('밸런스 버전을 찾을 수 없어요.', 'BALANCE_NOT_FOUND');
 const notDraft = () =>
   conflictError(
-    '초안만 고치거나 지울 수 있습니다. 복제해서 새 초안을 만드세요.',
+    '초안만 고치거나 지울 수 있어요. 복제해서 새 초안을 만들어 주세요.',
     'BALANCE_NOT_DRAFT',
   );
 
 /** T-10-090 시즌 중에는 밸런스를 바꾸지 않는다(시즌 경쟁 조건 고정). */
 const seasonLocked = (name: string) =>
   conflictError(
-    `${name} 진행 중에는 밸런스를 바꿀 수 없습니다. 시즌이 끝난 뒤 적용하세요.`,
+    `${name} 진행 중에는 밸런스를 바꿀 수 없어요. 시즌이 끝난 뒤 적용해 주세요.`,
     'SEASON_BALANCE_LOCKED',
   );
 

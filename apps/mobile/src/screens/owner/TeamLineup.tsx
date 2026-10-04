@@ -345,10 +345,9 @@ export function TeamLineup({
             </Press>
             {guide ? (
               <Txt v="sm" tone="muted">
-                라커룸의 OVR은 커리어 최고 실력이에요. 그라운드의 ‘포지션 OVR’은 해당 자리에서 뛰는
-                실력으로, 포지션별 능력치와 적합도에 따라 달라져요. 팀 OVR과 경기에는 포지션 OVR이
-                반영돼요. ‘추정 능력치’는 같은 포지션·유형의 은퇴 기록과 최고 OVR을 참고해 계산한
-                값이에요. 카드 표시용이라 경기 실력에는 영향을 주지 않아요.
+                라커룸 OVR은 커리어 최고 OVR이에요. 포지션 OVR은 자리별 능력치와 적합도로 계산하며,
+                팀 OVR과 경기에 반영돼요. ‘추정 능력치’는 같은 포지션·유형의 은퇴 기록과 최고 OVR로
+                계산한 카드 표시용 값이에요. 경기에는 영향을 주지 않아요.
               </Txt>
             ) : null}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

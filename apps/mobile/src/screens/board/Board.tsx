@@ -279,7 +279,7 @@ export default function Board() {
   async function removePost(post: Post) {
     if (
       !(await confirmAsync(
-        `'${post.title}' 글을 지울까요? 댓글도 함께 숨겨집니다.`,
+        `'${post.title}' 글을 지울까요? 댓글도 함께 숨겨져요.`,
         undefined,
         '삭제',
       ))

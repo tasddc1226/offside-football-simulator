@@ -35,7 +35,7 @@ export const NicknameSchema = z
   .trim()
   .min(2)
   .max(COMMENT_NICKNAME_MAX)
-  .regex(/^[^\p{Cc}<>]+$/u, '닉네임에 쓸 수 없는 문자가 있습니다.');
+  .regex(/^[^\p{Cc}<>]+$/u, '닉네임에 쓸 수 없는 문자가 있어요.');
 export const PutNicknameBodySchema = z.strictObject({ nickname: NicknameSchema });
 export type PutNicknameBody = z.infer<typeof PutNicknameBodySchema>;
 

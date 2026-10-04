@@ -76,7 +76,7 @@ export async function executeProfileDeletion(
   if (!verified.ok) {
     throw new AppError({
       code: 'VALIDATION_FAILED',
-      message: '삭제 확인 토큰이 올바르지 않습니다.',
+      message: '삭제 확인 정보가 올바르지 않아요. 삭제 요청부터 다시 진행해 주세요.',
       details: { reason: 'CONFIRM_TOKEN_INVALID' },
     });
   }

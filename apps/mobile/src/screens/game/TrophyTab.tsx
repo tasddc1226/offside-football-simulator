@@ -50,7 +50,7 @@ export function TrophyRow({
 /** 카드 안 빈 목록 문구(웹 .empty). */
 const Empty = () => (
   <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-    아직 없습니다.
+    아직 없어요.
   </Txt>
 );
 

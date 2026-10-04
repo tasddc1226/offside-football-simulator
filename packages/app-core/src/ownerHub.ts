@@ -46,4 +46,4 @@ export const ownerTeamEmptyText = (c: OwnerTeamCard) =>
 
 /** 비로그인 구단주에게 보이는 잠긴 '내 팀' 카드의 안내. */
 export const ownerLockedText = (players: number) =>
-  `로그인하면 ${players > 0 ? `은퇴한 선수 ${players}명으로` : '은퇴한 선수로'} 팀을 꾸려 다른 구단주와 겨뤄요. 하루 경기와 라이브 랭킹, 시즌 업적이 열려요.`;
+  `로그인하면 ${players > 0 ? `은퇴한 선수 ${players}명으로` : '은퇴한 선수로'} 팀을 꾸려 다른 구단주와 겨뤄요. 하루 경기·라이브 랭킹·시즌 업적이 열려요.`;

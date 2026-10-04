@@ -49,7 +49,7 @@
     comments = comments.filter((x) => x.id !== c.id);
   }
   async function purge(c: AdminComment) {
-    if (!confirm(`'${c.nickname}' 작성자(${short(c.profileId)})의 댓글을 모두 지울까요?\n되돌릴 수 없습니다.`)) return;
+    if (!confirm(`'${c.nickname}' 작성자(${short(c.profileId)})의 댓글을 모두 지울까요?\n되돌릴 수 없어요.`)) return;
     busy = true;
     const r = await api.purgeComments(c.profileId);
     busy = false;

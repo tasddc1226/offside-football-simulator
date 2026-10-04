@@ -193,7 +193,7 @@ export function createGameActions(host: GameHost) {
       const extras = [
         ...(comp.length ? ['컵 · 대륙 대회 결과 집계'] : []),
         ...(nt ? ['A매치 소집 명단 발표'] : []),
-        ...(ev ? ['주변에서 무언가 일이 벌어지고 있습니다…'] : []),
+        ...(ev ? ['새로운 소식이 들려옵니다…'] : []),
       ];
       const games = b ? matchRows(s, b) : [];
       const range = b ? roundRange(s, ph) : '';
@@ -300,7 +300,7 @@ export function createGameActions(host: GameHost) {
     const label = txt(c.label, s);
     if (!c.p)
       return isSafe(ev, c)
-        ? { label, odds: '안전', hint: '확정이지만 보상이 줄고, 가끔 대가가 따라요' }
+        ? { label, odds: '안전', hint: '결과는 확정이지만 보상이 줄고, 가끔 대가가 따라요' }
         : { label, odds: '확정' };
     const odds = choiceOdds(c.p(s), ev.id, i);
     const mg = activeMg(c);
@@ -522,8 +522,8 @@ export function createGameActions(host: GameHost) {
       title: extension
         ? '연장 계약서에 사인할까요?'
         : rookie
-          ? '프로 계약서에 사인하시겠습니까?'
-          : '이적 계약서에 사인하시겠습니까?',
+          ? '프로 계약서에 사인할까요?'
+          : '이적 계약서에 사인할까요?',
       text: extension
         ? '남은 계약에 기간을 더해요. 새 연봉은 이번 시즌부터 적용돼요.'
         : `${o.name}${waGwa(o.name)} 함께 ${rookie ? '첫 프로 시즌을' : '새 시즌을'} 시작합니다.`,
@@ -658,9 +658,9 @@ export function createGameActions(host: GameHost) {
       {
         kind: 'notice',
         eyebrow: 'New Life',
-        title: '새로 시작하시겠습니까?',
+        title: '새로 시작할까요?',
         muted: true,
-        text: `진행 중인 ${appState.G!.name} 선수의 커리어는 사라집니다. 명예의 전당에는 은퇴한 선수만 남습니다.`,
+        text: `진행 중인 ${appState.G!.name} 선수의 커리어는 사라져요. 명예의 전당에는 은퇴한 선수만 남아요.`,
       },
       [
         {
@@ -721,7 +721,7 @@ export function createGameActions(host: GameHost) {
     appState.candidates = null;
     appState.report = null;
     host.scrollTop(false);
-    host.toast('고교 마지막 시즌이 시작됩니다');
+    host.toast('고교 마지막 시즌이 시작돼요');
   }
 
   function rollCandidates() {

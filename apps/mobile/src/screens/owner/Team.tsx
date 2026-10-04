@@ -404,7 +404,7 @@ export default function Team() {
         <Txt v="h1" accessibilityRole="header">
           내 팀
         </Txt>
-        <Txt tone="muted">구글로 로그인한 구단주만 은퇴한 선수로 팀을 꾸릴 수 있어요.</Txt>
+        <Txt tone="muted">로그인한 구단주만 은퇴한 선수로 팀을 꾸릴 수 있어요.</Txt>
         <LoginButtons block={false} />
       </Card>
     );
@@ -590,7 +590,7 @@ export default function Team() {
               </View>
               {editable ? (
                 <Txt v="xs" tone="muted">
-                  그라운드 카드를 길게 눌러 자유롭게 옮길 수 있어요.
+                  선수 카드를 길게 눌러 옮겨요.
                 </Txt>
               ) : null}
             </Card>
