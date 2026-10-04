@@ -396,8 +396,8 @@ export const marketListings = sqliteTable(
       .on(table.careerId)
       .where(sql`${table.status} = 'open'`),
     index('market_listings_new_idx').on(table.status, table.season, table.createdAt),
-    index('market_listings_price_idx').on(table.status, table.season, table.price),
-    index('market_listings_seller_idx').on(table.sellerId, table.status),
+    index('market_listings_price_idx').on(table.status, table.season, table.price, table.createdAt),
+    index('market_listings_seller_idx').on(table.sellerId, table.status, table.closedAt),
     index('market_listings_buyer_idx').on(table.buyerId, table.closedAt),
   ],
 );

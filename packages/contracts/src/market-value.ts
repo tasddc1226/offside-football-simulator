@@ -107,3 +107,6 @@ export function priceBand(cardValue: number, r: { priceMin: number; priceMax: nu
 }
 /** 판매 수수료(만 원). 팔리면 판매자는 가격에서 이만큼 빼고 받는다. */
 export const marketFee = (price: number, feeRate: number) => Math.round(price * feeRate);
+/** T-11-080 방출 지급액(만 원, 천만 단위 반올림). 서버 repos/market.ts releaseCards의 SQL과 같은 계산. */
+export const releasePayout = (retireValue: number, rate: number) =>
+  Math.round((retireValue * rate) / 1000) * 1000;

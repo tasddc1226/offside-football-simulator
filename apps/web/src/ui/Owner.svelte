@@ -8,7 +8,7 @@
   import Topbar from './Topbar.svelte';
   import { fetchBoardViewer } from '@offside/app-core/api/boards';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
-  import { fetchMarketMe, type MarketMeResponse } from '@offside/app-core/api/market';
+  import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
   import { fundsText } from '@offside/app-core/market';
   import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
@@ -63,10 +63,10 @@
   });
   // T-11-080 구단 자금 · 구단 가치(자금 + 직접 키운 선수 은퇴 가치 + 영입한 선수 기준가)는 서버가 센다. 이적시장 화면과
   // 같은 응답(1분 메모)이라 이적시장에 들어가도 다시 묻지 않는다. 비로그인이면 이 기기 기록의 은퇴 가치 합을 쓴다.
-  let market = $state<MarketMeResponse | null>(null);
+  let market = $state<MarketFundsResponse | null>(null);
   $effect(() => {
     if (!linked) return;
-    void fetchMarketMe().then((r) => {
+    void fetchMarketFunds().then((r) => {
       if (r.ok) market = r.data;
     });
   });

@@ -132,7 +132,8 @@ function checkName(value: string, what: string) {
 }
 
 /** 오늘(한국 시각 자정부터)의 시작 UTC ISO. */
-const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
+/** 한국 시각 오늘 0시(UTC ISO). 하루 경기·영입 상한의 기준. */
+export const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
 /** 재대결 감쇠를 세는 기간의 시작(오늘 포함 TEAM_REPEAT_WINDOW_DAYS일, 한국 시각 자정 기준). */
 const repeatWindowStart = (now: string) => kstDays(new Date(now), TEAM_REPEAT_WINDOW_DAYS).startIso;
 

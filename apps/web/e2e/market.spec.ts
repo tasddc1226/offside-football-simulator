@@ -20,12 +20,10 @@ const card = {
   careerId: '00000000-0000-4000-8000-000000000041',
   pos: 'FW',
   dpos: 'ST',
-  nation: null,
   peak: 88,
   number: 9,
   publicName: '시장 골잡이',
   legendScore: 420,
-  attrs: null,
   cardValue: 100_000,
   transfers: 1,
   season: 0,
@@ -76,6 +74,10 @@ async function stub(page: Page) {
   await page.route(`${API}/v1/boards/viewer`, (r) =>
     r.fulfill(ok({ admin: false, google: true, nickname: '구단주' })),
   );
+  // 구단주 화면 요약은 가벼운 /funds만 부른다(이적시장 화면의 /me와 따로).
+  await page.route(`${API}/v1/market/funds`, (r) =>
+    r.fulfill(ok({ balance: 200_000, clubValue: 500_000 })),
+  );
   await page.route(`${API}/v1/careers/mine**`, (r) => r.fulfill(ok({ linked: true, entries: [] })));
   await page.route(
     (u) => u.href.startsWith(API) && u.pathname === '/v1/owner-team',
@@ -115,9 +117,7 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
     (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
     (r) => {
       calls.list++;
-      return r.fulfill(
-        ok({ season: 0, items: bought ? [] : [listing], hasMore: false, rules: RULES }),
-      );
+      return r.fulfill(ok({ season: 0, items: bought ? [] : [listing], hasMore: false }));
     },
   );
   await page.route(`${API}/v1/market/listings/${LISTING}/buy`, (r) => {
@@ -146,7 +146,7 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
   await page.locator(`[data-listing="${LISTING}"]`).click();
   await expect(page.getByRole('dialog', { name: '선수 영입' })).toContainText('영입 뒤 자금');
   await page.locator('[data-act="buy"]').click();
-  await expect(page.getByRole('status')).toHaveText('선수를 영입했어요.');
+  await expect(page.locator('#toast')).toHaveText('선수를 영입했어요.');
   expect(bought).toEqual({ price: 120_000 });
   await expect(page.locator('[data-market-funds]')).toContainText('8억');
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toHaveCount(0);
@@ -239,7 +239,7 @@ test('내 선수 — 이번 시즌 선수를 내놓고, 직접 키운 선수만 
   await expect(sell).toContainText('팔리면 받는 돈');
   await expect(sell).toContainText('9억 5천만');
   await page.locator('[data-act="list"]').click();
-  await expect(page.getByRole('status')).toHaveText('시장에 내놓았어요.');
+  await expect(page.locator('#toast')).toHaveText('시장에 내놓았어요.');
   expect(listed).toEqual({ careerId: RAISED, price: 100_000 });
 
   // 방출 — 받을 자금과 되돌릴 수 없다는 안내를 보이고 확인을 받는다.
@@ -251,6 +251,6 @@ test('내 선수 — 이번 시즌 선수를 내놓고, 직접 키운 선수만 
   await expect(page.getByRole('dialog', { name: '선수 방출' })).toContainText('25억');
   await expectNoA11yViolations(page);
   await page.locator('[data-act="release-confirm"]').click();
-  await expect(page.getByRole('status')).toHaveText('1명을 방출했어요.');
+  await expect(page.locator('#toast')).toHaveText('1명을 방출했어요.');
   expect(released).toEqual({ careerIds: [RAISED] });
 });

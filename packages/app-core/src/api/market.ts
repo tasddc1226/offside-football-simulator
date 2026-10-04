@@ -3,6 +3,7 @@ import type {
   BuyListingResponse,
   CareerPos,
   CreateListingResponse,
+  MarketFundsResponse,
   MarketListResponse,
   MarketMeResponse,
   MarketSort,
@@ -12,6 +13,7 @@ import { apiFetch, cachedGet, clearApiCache, type ApiResult } from './client.js'
 
 export type {
   MarketCard,
+  MarketFundsResponse,
   MarketListing,
   MarketListResponse,
   MarketMeResponse,
@@ -26,7 +28,9 @@ export const fetchMarket = (sort: MarketSort, pos: CareerPos | undefined, page: 
     `/v1/market?sort=${sort}${pos ? `&pos=${pos}` : ''}${page ? `&page=${page}` : ''}`,
     30_000,
   );
-/** 내 자금 · 구단 가치 · 열린 등록 · 최근 거래(구글 연결 구단주만). */
+/** 구단주 화면 요약: 구단 자금 · 구단 가치만(구글 연결 구단주만). */
+export const fetchMarketFunds = () => cachedGet<MarketFundsResponse>('/v1/market/funds', 60_000);
+/** 내 자금 · 구단 가치 · 열린 등록 · 최근 거래(구글 연결 구단주만). 이적시장 화면을 열 때만. */
 export const fetchMarketMe = () => cachedGet<MarketMeResponse>('/v1/market/me', 60_000);
 export const createListing = (careerId: string, price: number) =>
   apiFetch<CreateListingResponse>('/v1/market/listings', {
@@ -52,5 +56,3 @@ export const releaseCards = (careerIds: string[]) =>
     method: 'POST',
     body: JSON.stringify({ careerIds }),
   });
-
-export { marketFee, priceBand } from '@offside/contracts/market-value';

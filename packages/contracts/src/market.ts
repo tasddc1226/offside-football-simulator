@@ -1,10 +1,5 @@
 import { z } from 'zod';
-import {
-  CareerIdParamSchema,
-  CareerPosSchema,
-  DetailPosSchema,
-  PeakProfileSchema,
-} from './careers.js';
+import { CareerIdParamSchema, CareerPosSchema, DetailPosSchema } from './careers.js';
 import { IsoUtcSchema } from './primitives.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 설계: docs/tracking/owner-funds-card-market-plan.md.
@@ -25,12 +20,10 @@ export const MarketCardSchema = z.strictObject({
   careerId: z.string(),
   pos: CareerPosSchema,
   dpos: DetailPosSchema.nullable(),
-  nation: z.string().nullable(),
   peak: z.number().int(),
   number: z.number().int().nullable(),
   publicName: z.string().nullable(),
   legendScore: z.number().int(),
-  attrs: PeakProfileSchema.shape.attrs.nullable(),
   /** 기준가(만 원). */
   cardValue: man,
   /** 지금까지 팔린 횟수. */
@@ -61,7 +54,7 @@ export type MarketRules = z.infer<typeof MarketRulesSchema>;
 export const MarketListQuerySchema = z.strictObject({
   pos: CareerPosSchema.optional(),
   sort: z.enum(MARKET_SORTS).default('new'),
-  page: z.coerce.number().int().min(0).max(50).default(0),
+  page: z.coerce.number().int().min(0).max(10).default(0),
 });
 
 /**
@@ -72,7 +65,6 @@ export const MarketListResponseSchema = z.strictObject({
   season: z.number().int().min(0).nullable(),
   items: z.array(MarketListingSchema),
   hasMore: z.boolean(),
-  rules: MarketRulesSchema,
 });
 export type MarketListResponse = z.infer<typeof MarketListResponseSchema>;
 
@@ -91,6 +83,10 @@ export const MarketTradeSchema = z.strictObject({
   }),
 });
 export type MarketTrade = z.infer<typeof MarketTradeSchema>;
+
+/** GET /v1/market/funds — 구단주 화면 요약용 구단 자금 · 구단 가치(이적시장 화면은 /v1/market/me). */
+export const MarketFundsResponseSchema = z.strictObject({ balance: man, clubValue: man });
+export type MarketFundsResponse = z.infer<typeof MarketFundsResponseSchema>;
 
 /** GET /v1/market/me — 내 자금 · 구단 가치 · 열린 등록 · 최근 거래. */
 export const MarketMeResponseSchema = z.strictObject({

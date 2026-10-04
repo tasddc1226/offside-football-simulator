@@ -10,7 +10,6 @@ import type { PosGroup } from '@offside/contracts/positions';
 import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
-import { peakOf } from './ownerTeams.js';
 import { cards, careers, marketListings, ownerFunds } from '../schema.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 설계: docs/tracking/owner-funds-card-market-plan.md 5~7절.
@@ -29,17 +28,14 @@ export async function marketRules(db: Db): Promise<MarketRules> {
   };
 }
 
-/** 판매가 범위(만 원). 백만 원 단위로 맞춘다. */
 const cardCols = {
   careerId: cards.careerId,
   pos: cards.pos,
   dpos: cards.dpos,
-  nation: cards.nation,
   peak: cards.peak,
   number: cards.number,
   publicName: careers.publicName,
   legendScore: cards.legendScore,
-  peakProfile: cards.peakProfile,
   cardValue: cards.cardValue,
   transfers: cards.transfers,
   season: cards.serviceSeason,
@@ -64,12 +60,10 @@ const toListing = (r: ListingRow): MarketListing => ({
     careerId: r.careerId as string,
     pos: r.pos as PosGroup,
     dpos: (r.dpos as MarketListing['card']['dpos']) ?? null,
-    nation: (r.nation as string | null) ?? null,
     peak: r.peak as number,
     number: (r.number as number | null) ?? null,
     publicName: (r.publicName as string | null) ?? null,
     legendScore: r.legendScore as number,
-    attrs: peakOf(r.peakProfile as string | null)?.attrs ?? null,
     cardValue: (r.cardValue as number | null) ?? 0,
     transfers: r.transfers as number,
     season: r.season as number,
@@ -117,7 +111,6 @@ export async function getListing(db: Db, id: string) {
       ...listingCols,
       status: marketListings.status,
       sellerId: marketListings.sellerId,
-      listingSeason: marketListings.season,
       hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
     })
     .from(marketListings)
@@ -147,33 +140,50 @@ export async function cardForListing(db: Db, careerId: string) {
   return row;
 }
 
-export const countOpenListingsOf = (db: Db, sellerId: string) =>
-  db
+export async function countOpenListingsOf(db: Db, sellerId: string): Promise<number> {
+  const [row] = await db
     .select({ n: sql<number>`count(*)` })
     .from(marketListings)
     .where(and(eq(marketListings.sellerId, sellerId), eq(marketListings.status, 'open')));
+  return row?.n ?? 0;
+}
 
-export const countBuysSince = (db: Db, buyerId: string, sinceIso: string) =>
-  db
+export async function countBuysSince(db: Db, buyerId: string, sinceIso: string): Promise<number> {
+  const [row] = await db
     .select({ n: sql<number>`count(*)` })
     .from(marketListings)
     .where(and(eq(marketListings.buyerId, buyerId), gte(marketListings.closedAt, sinceIso)));
+  return row?.n ?? 0;
+}
 
-export const fundsOf = (db: Db, profileId: string) =>
-  db
+export async function fundsOf(db: Db, profileId: string): Promise<number> {
+  const [row] = await db
     .select({ balance: ownerFunds.balance })
     .from(ownerFunds)
     .where(eq(ownerFunds.profileId, profileId));
+  return row?.balance ?? 0;
+}
 
 /** 구단 가치에 더하는 선수 몫: 직접 키운 선수는 은퇴 가치, 영입한 선수는 기준가. */
-export const ownedCardsValue = (db: Db, profileId: string) =>
-  db
+async function ownedCardsValue(db: Db, profileId: string): Promise<number> {
+  const [row] = await db
     .select({
       v: sql<number>`coalesce(sum(case when ${careers.profileId} = ${profileId} then ${cards.retireValue} else coalesce(${cards.cardValue}, 0) end), 0)`,
     })
     .from(cards)
     .leftJoin(careers, eq(careers.id, cards.careerId))
     .where(eq(cards.ownerId, profileId));
+  return row?.v ?? 0;
+}
+
+/** 구단 자금과 구단 가치(자금 + 내가 가진 카드 몫). */
+export async function marketFunds(db: Db, profileId: string) {
+  const [balance, owned] = await Promise.all([
+    fundsOf(db, profileId),
+    ownedCardsValue(db, profileId),
+  ]);
+  return { balance, clubValue: balance + owned };
+}
 
 export async function myOpenListings(db: Db, sellerId: string): Promise<MarketListing[]> {
   const rows = await db
@@ -311,12 +321,12 @@ export async function cancelListing(db: Db, id: string, sellerId: string, now: s
 /**
  * 구매. 1) 등록을 잡고(열려 있고 · 본 가격 그대로 · 내가 판 게 아닐 때) 2) 구매자 출금 3) 판매자 입금 4) 카드 주인을 바꾼다.
  * 2~4는 1이 남긴 표식(buyer_id · closed_at)이 있을 때만 바꾼다. 잔액이 모자라면 CHECK 위반으로 batch 전체가 되돌아간다.
- * 'won' = 샀다, 'lost' = 이미 팔렸거나 내렸거나 가격이 바뀌었다.
+ * won = 샀다(아니면 이미 팔렸거나 내렸거나 가격이 바뀌었다). balance = 구매 뒤 내 잔액.
  */
 export async function buyListing(
   db: Db,
   b: { id: string; buyerId: string; price: number; fee: number; now: string },
-): Promise<'won' | 'lost'> {
+): Promise<{ won: boolean; balance: number }> {
   const d1 = db.$client;
   const won = `EXISTS (SELECT 1 FROM market_listings WHERE id = ? AND buyer_id = ? AND closed_at = ?)`;
   const mark = [b.id, b.buyerId, b.now] as const;
@@ -346,13 +356,15 @@ export async function buyListing(
            AND owner_id = (SELECT seller_id FROM market_listings WHERE id = ?) AND ${won}`,
       )
       .bind(b.buyerId, b.now, b.id, b.id, ...mark),
+    d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(b.buyerId),
   ]);
-  return results[0]!.meta.changes === 1 ? 'won' : 'lost';
+  const bal = results[4]!.results[0] as { balance: number } | undefined;
+  return { won: results[0]!.meta.changes === 1, balance: bal?.balance ?? 0 };
 }
 
 /**
  * 방출: 지금 내가 가진 카드 중 내가 키웠고 숨김 아니고 판매 중이 아닌 것만. 받은 자금(은퇴 가치 × 지급률, 천만 단위)을
- * 잔액에 더한다. 2)는 1)이 방금 남긴 released_at 표식으로 고른다.
+ * 잔액에 더한다.
  */
 export async function releaseCards(
   db: Db,
@@ -361,7 +373,10 @@ export async function releaseCards(
   const d1 = db.$client;
   // 이 batch가 방출한 카드는 released_value = -1로 잠깐 표시한다. D1 batch는 하나의 트랜잭션이고 서로 끼어들지 않으므로
   // -1은 언제나 이 요청의 카드뿐이다(released_at = now 같은 시각 표시는 같은 밀리초의 다른 방출과 겹칠 수 있다).
+  // 뒤 문장들도 요청한 카드(기본키)로 좁혀 표 전체를 훑지 않는다. 금액은 contracts releasePayout과 같은 계산.
   const amountOf = `CAST(round(retire_value * ? / 1000.0) AS INTEGER) * 1000`;
+  const ids = JSON.stringify(r.careerIds);
+  const mine = `career_id IN (SELECT value FROM json_each(?)) AND released_value = -1`;
   const results = await d1.batch([
     d1
       .prepare(
@@ -370,22 +385,20 @@ export async function releaseCards(
            AND EXISTS (SELECT 1 FROM careers c WHERE c.id = cards.career_id AND c.profile_id = ? AND c.hidden = 0)
            AND NOT EXISTS (SELECT 1 FROM market_listings l WHERE l.career_id = cards.career_id AND l.status = 'open')`,
       )
-      .bind(r.now, r.now, JSON.stringify(r.careerIds), r.profileId, r.profileId),
+      .bind(r.now, r.now, ids, r.profileId, r.profileId),
     d1
       .prepare(
         `INSERT INTO owner_funds (profile_id, balance, updated_at)
-         SELECT ?, sum(${amountOf}), ? FROM cards WHERE released_value = -1 HAVING count(*) > 0
+         SELECT ?, sum(${amountOf}), ? FROM cards WHERE ${mine} HAVING count(*) > 0
          ON CONFLICT (profile_id) DO UPDATE SET balance = balance + excluded.balance, updated_at = excluded.updated_at`,
       )
-      .bind(r.profileId, r.rate, r.now),
+      .bind(r.profileId, r.rate, r.now, ids),
     d1
       .prepare(
-        `SELECT count(*) AS n, coalesce(sum(${amountOf}), 0) AS amount FROM cards WHERE released_value = -1`,
+        `SELECT count(*) AS n, coalesce(sum(${amountOf}), 0) AS amount FROM cards WHERE ${mine}`,
       )
-      .bind(r.rate),
-    d1
-      .prepare(`UPDATE cards SET released_value = ${amountOf} WHERE released_value = -1`)
-      .bind(r.rate),
+      .bind(r.rate, ids),
+    d1.prepare(`UPDATE cards SET released_value = ${amountOf} WHERE ${mine}`).bind(r.rate, ids),
     d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(r.profileId),
   ]);
   const sum = results[2]!.results[0] as { n: number; amount: number };

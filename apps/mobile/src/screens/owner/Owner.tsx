@@ -9,7 +9,7 @@ import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { fetchBoardViewer } from '@offside/app-core/api/boards';
 import { fetchOwnerTeam } from '@offside/app-core/api/team';
-import { fetchMarketMe, type MarketMeResponse } from '@offside/app-core/api/market';
+import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
 import { fundsText } from '@offside/app-core/market';
 import {
   ownerLockedText,
@@ -131,7 +131,7 @@ export default function Owner() {
   const [cardFailed, setCardFailed] = useState(false);
   // T-11-080 구단 자금 · 구단 가치(자금 + 직접 키운 선수 은퇴 가치 + 영입한 선수 기준가)는 서버가 센다. 이적시장 화면과
   // 같은 응답(1분 메모)이라 이적시장에 들어가도 다시 묻지 않는다. 비로그인이면 이 기기 기록의 은퇴 가치 합을 쓴다.
-  const [market, setMarket] = useState<MarketMeResponse | null>(null);
+  const [market, setMarket] = useState<MarketFundsResponse | null>(null);
 
   useEffect(() => {
     if (!linked) {
@@ -145,7 +145,7 @@ export default function Owner() {
       if (r.ok) setCard(ownerTeamCard(r.data));
       else setCardFailed(true);
     });
-    void fetchMarketMe().then((r) => alive && r.ok && setMarket(r.data));
+    void fetchMarketFunds().then((r) => alive && r.ok && setMarket(r.data));
     return () => {
       alive = false;
     };

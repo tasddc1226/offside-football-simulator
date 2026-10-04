@@ -41,6 +41,7 @@
   import Topbar from './Topbar.svelte';
   import BackBar from './BackBar.svelte';
   import { go } from './nav.js';
+  import { toast } from './helpers.js';
 
   const local = localCareerNames();
   let tab = $state<MarketTab>('market');
@@ -135,15 +136,9 @@
     }
     closeSheets();
     picked = new Set();
-    toast = done;
+    toast(done);
     await refresh();
   }
-  let toast = $state<string | null>(null);
-  $effect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => (toast = null), 2400);
-    return () => clearTimeout(t);
-  });
 
   const posOf = (c: { dpos: keyof typeof DETAIL_LABEL | null; pos: CareerPos }) => (c.dpos ? DETAIL_LABEL[c.dpos] : POS_LABEL[c.pos]);
 </script>
@@ -288,7 +283,6 @@
     </section>
   {/if}
 
-  {#if toast}<p class="mk-toast" role="status">{toast}</p>{/if}
   <BackBar act="owner" fallback={() => go('owner')} />
 </div>
 
@@ -537,19 +531,6 @@
   .mk-err {
     color: var(--bad);
     font-weight: 600;
-  }
-  .mk-toast {
-    position: fixed;
-    left: 50%;
-    bottom: calc(84px + var(--safe-b));
-    z-index: 70;
-    transform: translateX(-50%);
-    padding: 8px 14px;
-    border-radius: 999px;
-    background: var(--ink);
-    color: var(--surface);
-    font-size: 0.875rem;
-    font-weight: 700;
   }
   .tm-scrim {
     position: fixed;

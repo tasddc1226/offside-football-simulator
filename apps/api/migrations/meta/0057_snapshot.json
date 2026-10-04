@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c00f9268-b018-43c0-840a-23197c9644af",
+  "id": "bb5ac5c7-30cf-4b47-8da6-d52aad5d4db0",
   "prevId": "5b634b62-f837-478b-9e0d-55ade2630e42",
   "tables": {
     "app_auth_tickets": {
@@ -1867,7 +1867,8 @@
           "columns": [
             "status",
             "season",
-            "price"
+            "price",
+            "created_at"
           ],
           "isUnique": false
         },
@@ -1875,7 +1876,8 @@
           "name": "market_listings_seller_idx",
           "columns": [
             "seller_id",
-            "status"
+            "status",
+            "closed_at"
           ],
           "isUnique": false
         },

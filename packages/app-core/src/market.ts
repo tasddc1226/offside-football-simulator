@@ -3,7 +3,8 @@ import type { CareerPos } from '@offside/contracts';
 import { anonName, fmtValue, withEulReul } from './format.js';
 import type { MarketCard, MarketRules, MarketTrade } from './api/market.js';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
-import { marketFee, priceBand } from './api/market.js';
+import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
+import { POS_GROUPS } from '@offside/contracts/positions';
 
 /** 구단 자금 표기(0이면 '0원' — fmtValue는 0을 '-'로 쓴다). */
 export const fundsText = (man: number) => (man > 0 ? fmtValue(man) : '0원');
@@ -15,13 +16,7 @@ export const MARKET_TABS: readonly [MarketTab, string][] = [
   ['trades', '내 거래'],
 ];
 export const MARKET_SORT_LABEL = { new: '최신순', price: '낮은 가격순' } as const;
-export const MARKET_POS_FILTERS: readonly (CareerPos | undefined)[] = [
-  undefined,
-  'FW',
-  'MF',
-  'DF',
-  'GK',
-];
+export const MARKET_POS_FILTERS: readonly (CareerPos | undefined)[] = [undefined, ...POS_GROUPS];
 
 /** 이 기기에서 키운 선수면 이 기기의 이름, 아니면 공개 이름, 없으면 익명 표기. */
 export const marketName = (
@@ -103,6 +98,6 @@ export const marketEmptyText = (season: number | null, filtered: boolean) =>
       ? '이 포지션에는 아직 나온 선수가 없어요.'
       : '아직 시장에 나온 선수가 없어요. 이번 시즌에 은퇴한 선수가 나오면 여기에 올라와요.';
 
-/** 방출하면 받을 자금(서버와 같은 계산: 은퇴 가치 × 지급률을 천 단위로 반올림, 만 원). */
+/** 방출하면 받을 자금(서버와 같은 releasePayout). */
 export const releaseAmount = (players: readonly Pick<TeamPlayer, 'retireValue'>[], rate: number) =>
-  players.reduce((s, p) => s + Math.round(((p.retireValue ?? 0) * rate) / 1000) * 1000, 0);
+  players.reduce((s, p) => s + releasePayout(p.retireValue ?? 0, rate), 0);
