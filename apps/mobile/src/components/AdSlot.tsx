@@ -3,9 +3,10 @@
 // EEA·영국·스위스는 AdMob 'OFFSIDE 유럽 동의' 메시지(UMP)를 첫 광고 칸에서 한 번 띄우고, 광고 요청은 그 뒤에 한다.
 import { useEffect, useState } from 'react';
 import { Platform, View } from 'react-native';
-import { AdsConsent, BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
+import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { useSnapshot } from 'valtio';
 import { shouldShow, type AdPlace } from '@offside/app-core/adPolicy';
+import { askConsent } from '../platform/adConsent';
 import { adFree } from '../platform/adFree';
 import { rem } from '../theme/type';
 import { Txt } from '../ui/Txt';
@@ -28,13 +29,6 @@ function claim(place: AdPlace) {
   lastShown.set(place, now);
   return true;
 }
-
-// 동의 확인은 앱 실행마다 한 번. 대상 지역이 아니면 창 없이 바로 끝난다. 확인에 실패하면 광고를 요청하지 않는다.
-let consent: Promise<boolean> | undefined;
-const askConsent = () =>
-  (consent ??= AdsConsent.gatherConsent()
-    .then((info) => info.canRequestAds)
-    .catch(() => false));
 
 export function AdSlot({ place }: { place: AdPlace }) {
   // 노출 여부는 마운트할 때 한 번 정한다 — 화면에 있는 동안 칸이 생기거나 사라지지 않게.

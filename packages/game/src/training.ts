@@ -114,7 +114,7 @@ export function trainingHelp(s: GameState, t: TrainingDef): string {
     .join(' ');
 }
 /** 연봉 비례 비용(만 원, 10 단위) — 최소 금액이 있어 아마추어·저연봉도 0이 아니다. 개인 코치·자기 투자가 같이 쓴다. */
-const salaryCost = (s: GameState, rate: number, min: number, mult = 1) =>
+export const salaryCost = (s: GameState, rate: number, min: number, mult = 1) =>
   Math.round((Math.max(min, (s.contract ? s.contract.salary : 0) * rate) * mult) / 10) * 10;
 export function coachCost(s: GameState): number {
   return salaryCost(s, 0.06, 200);

@@ -119,6 +119,28 @@ export const SeasonGrowthSchema = z.strictObject({
     /** 지금까지 받은 재평가 횟수(21·24세). */
     r: z.number().int().min(0).max(5),
   }),
+  /**
+   * T-11-083 잠재력 강화. 시즌 끝의 단계·실패 보정·자금과 그 시즌의 시도. 강화 기능 전 클라이언트는 없다.
+   * 자금(m)과 다음 비용(c)을 함께 남겨 '돈이 모자라 못 한 시즌'을 서버에서 셀 수 있게 한다.
+   */
+  bst: z
+    .strictObject({
+      l: z.number().int().min(0).max(10),
+      f: z.number().int().min(0).max(100),
+      m: z.number().min(-1e9).max(1e12),
+      c: z.number().int().min(0).max(1e9),
+      t: z
+        .array(
+          z.strictObject({
+            lv: z.number().int().min(0).max(10),
+            p: z.number().int().min(0).max(100),
+            c: z.number().int().min(0).max(1e9),
+            ok: z.boolean(),
+          }),
+        )
+        .max(4),
+    })
+    .optional(),
 });
 export type SeasonGrowth = z.infer<typeof SeasonGrowthSchema>;
 
