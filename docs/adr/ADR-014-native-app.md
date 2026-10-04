@@ -29,6 +29,7 @@
      앱 Bearer)·UI 알림은 `configureOutbox`로 넣는다.
    - 의존 방향: `@offside/app-core` → `@offside/game`·`@offside/contracts`. 웹·앱 → `@offside/app-core`.
 4. **v1 범위는 웹과 같은 기능이다.** 화면을 모두 옮긴 뒤 출시한다.
+   - 2026-10-04 덧붙임(T-11-084): 결제(IAP)·푸시·보상형 광고는 앱 전용이다. 앱이 출시돼도 웹은 유지하며 게임 기능은 웹·앱에 함께 낸다([결정 로그](../tracking/decision-log.md)).
 5. **로그인은 앱에서도 구글을 유지하고 Apple로 로그인을 더한다**(앱스토어 가이드라인 4.8). 앱은 쿠키 대신 토큰 세션을 쓴다.
    계정 삭제는 앱 안에서 할 수 있어야 한다(가이드라인 5.1.1(v), `/v1/profile/delete`).
 
