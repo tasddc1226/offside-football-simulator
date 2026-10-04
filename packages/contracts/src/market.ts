@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { CareerIdParamSchema, CareerPosSchema, DetailPosSchema } from './careers.js';
+import {
+  CareerIdParamSchema,
+  CareerPosSchema,
+  DetailPosSchema,
+  PeakProfileSchema,
+} from './careers.js';
 import { IsoUtcSchema } from './primitives.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 설계: docs/tracking/owner-funds-card-market-plan.md.
@@ -20,10 +25,14 @@ export const MarketCardSchema = z.strictObject({
   careerId: z.string(),
   pos: CareerPosSchema,
   dpos: DetailPosSchema.nullable(),
+  /** 선수 국적(없으면 기본 국적). 카드 상세에 그린다. */
+  nation: z.string().nullable(),
   peak: z.number().int(),
   number: z.number().int().nullable(),
   publicName: z.string().nullable(),
   legendScore: z.number().int(),
+  /** 카드 능력치 6개(옛 기록은 null). */
+  attrs: PeakProfileSchema.shape.attrs.nullable(),
   /** 기준가(만 원). */
   cardValue: man,
   /** 지금까지 팔린 횟수. */
@@ -57,6 +66,17 @@ export const MarketListQuerySchema = z.strictObject({
   page: z.coerce.number().int().min(0).max(10).default(0),
 });
 
+/** 이번 시즌에 팔린 선수(이적시장 화면의 '방금 이적' 띠). 판 사람·산 사람은 싣지 않는다. */
+export const MarketSaleSchema = z.strictObject({
+  id: ListingIdSchema,
+  price: man,
+  soldAt: IsoUtcSchema,
+  card: MarketCardSchema,
+});
+export type MarketSale = z.infer<typeof MarketSaleSchema>;
+/** '방금 이적' 띠에 싣는 최근 거래 수. */
+export const MARKET_RECENT = 10;
+
 /**
  * GET /v1/market — 지금 시즌의 열린 등록. 시즌 사이 휴식기면 season null · 빈 목록. 모두에게 같은 응답이라 엣지에
  * 담는다 — 내 등록인지는 화면이 /v1/market/me의 listings와 id로 맞춘다.
@@ -65,6 +85,8 @@ export const MarketListResponseSchema = z.strictObject({
   season: z.number().int().min(0).nullable(),
   items: z.array(MarketListingSchema),
   hasMore: z.boolean(),
+  /** 첫 페이지에만 싣는다(다음 페이지는 빈 배열). */
+  recent: z.array(MarketSaleSchema),
 });
 export type MarketListResponse = z.infer<typeof MarketListResponseSchema>;
 

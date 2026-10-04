@@ -43,6 +43,11 @@ export const DETAILS_OF: Record<PosGroup, readonly DetailPos[]> = {
   GK: ['GK'],
 };
 
+/** 세부 포지션이 없는 선수(시즌 0 선수 등)를 카드에 그릴 때 쓰는 대표 세부 포지션. */
+const CARD_DETAIL: Record<PosGroup, DetailPos> = { FW: 'ST', MF: 'CM', DF: 'CB', GK: 'GK' };
+export const detailPosOf = (c: { pos: PosGroup; dpos?: DetailPos | null | undefined }): DetailPos =>
+  c.dpos ?? CARD_DETAIL[c.pos];
+
 /** 세부 포지션을 고를 수 있게 되는 서비스 시즌. */
 const DETAIL_POS_SEASON = 1;
 

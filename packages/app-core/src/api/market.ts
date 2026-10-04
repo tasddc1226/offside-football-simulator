@@ -18,6 +18,7 @@ export type {
   MarketListResponse,
   MarketMeResponse,
   MarketRules,
+  MarketSale,
   MarketSort,
   MarketTrade,
 } from '@offside/contracts';
@@ -37,10 +38,12 @@ export const createListing = (careerId: string, price: number) =>
     method: 'POST',
     body: JSON.stringify({ careerId, price }),
   });
-/** 이미 팔렸거나 내렸거나 가격이 바뀐 등록 — 실패한 쓰기는 메모를 비우지 않으니 여기서 비워 목록을 새로 받게 한다. */
+/** 이미 팔렸거나 내렸거나 가격이 바뀐 등록이라 실패했나(화면은 목록을 새로 받는다). */
+export const isStaleListing = (e: { reason?: string | undefined }) =>
+  e.reason === 'LISTING_GONE' || e.reason === 'PRICE_CHANGED';
+/** 실패한 쓰기는 메모를 비우지 않으니 낡은 등록이면 여기서 비워 목록을 새로 받게 한다. */
 function dropStale<T>(r: ApiResult<T>): ApiResult<T> {
-  if (!r.ok && (r.error.reason === 'LISTING_GONE' || r.error.reason === 'PRICE_CHANGED'))
-    clearApiCache();
+  if (!r.ok && isStaleListing(r.error)) clearApiCache();
   return r;
 }
 export const cancelListing = (id: string) =>

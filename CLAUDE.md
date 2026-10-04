@@ -137,6 +137,12 @@ pnpm --filter @offside/fulltime-sim analyze
 이벤트 결과는 장면으로 끝내기, 웹·앱 문구는 같이 고치기.
 엔딩 라벨(`stories.ts` endStory ↔ `titles.ts` STORY_ENDINGS)은 칭호 키이자 세이브 저장값이라 문구만 바꾸면 안 된다.
 
+## 웹·앱 병행 규칙 (2026-10-04, T-11-084)
+
+- 앱(안드로이드·iOS)이 출시돼도 웹(offside-lab.com)을 내리지 않는다. 웹을 줄이는 일은 사용자가 데이터를 보고 정한다.
+- 새 게임 기능은 규칙·문구를 `packages/game`·`packages/app-core`에 두고 웹·앱에 함께 낸다.
+- 결제(IAP)·푸시·보상형 광고만 앱 전용이다. 배경과 축소 검토 기준은 [결정 로그](docs/tracking/decision-log.md)(2026-10-04)를 본다.
+
 ## 문서 정본 우선순위
 
 문서 충돌 시: [`docs/adr/`](docs/adr/README.md)(ADR-001~014) >

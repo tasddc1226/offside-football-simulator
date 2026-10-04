@@ -171,6 +171,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(market.items.map((l) => [l.id, l.price, l.card.cardValue])).toEqual([
       [listingId, 1_200_000, 1_000_000],
     ]);
+    expect(market.recent).toEqual([]);
 
     const buy = (cookie: string, price: number) =>
       call('POST', `/v1/market/listings/${listingId}/buy`, {
@@ -187,6 +188,12 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(ok.status).toBe(200);
     expect(((await ok.json()) as { data: unknown }).data).toEqual({ balance: 800_000 });
     expect(await reason(await buy(buyer.cookie, 1_200_000))).toBe('LISTING_GONE');
+    // 팔린 선수는 '방금 이적' 띠(첫 페이지 recent)에 오른다. 엣지 캐시를 피하려고 다른 정렬로 묻는다.
+    const after = ListRes.parse(await (await call('GET', '/v1/market?sort=price')).json()).data;
+    expect(after.items).toEqual([]);
+    expect(after.recent.map((r) => [r.id, r.price, r.card.careerId])).toEqual([
+      [listingId, 1_200_000, card],
+    ]);
 
     const [c] = await ctx.db.select().from(cards).where(eq(cards.careerId, card));
     expect(c).toMatchObject({ ownerId: buyer.profileId, transfers: 1 });

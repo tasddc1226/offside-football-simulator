@@ -29,6 +29,7 @@ import {
   marketRules,
   myOpenListings,
   myTrades,
+  recentSales,
   releaseCards,
 } from '../db/repos/market.js';
 import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
@@ -70,8 +71,22 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     });
     const season = teamSeasonAt(nowIso());
     if (season === null)
-      return ok(c, MarketListResponseSchema, { season, items: [], hasMore: false }, 200, CACHE);
-    const load = async () => ({ season, ...(await listOpenListings(getDb(c), season, q)) });
+      return ok(
+        c,
+        MarketListResponseSchema,
+        { season, items: [], hasMore: false, recent: [] },
+        200,
+        CACHE,
+      );
+    // 첫 페이지에는 '방금 이적' 띠(최근 거래)를 함께 싣는다 — 따로 부르지 않고 같은 엣지 캐시를 탄다.
+    const load = async () => {
+      const db = getDb(c);
+      const [list, recent] = await Promise.all([
+        listOpenListings(db, season, q),
+        q.page === 0 ? recentSales(db, season) : Promise.resolve([]),
+      ]);
+      return { season, ...list, recent };
+    };
     const data =
       q.page === 0
         ? await edgeCached(c, EDGE.marketList(season, q.sort, q.pos), LIST_TTL, load)
