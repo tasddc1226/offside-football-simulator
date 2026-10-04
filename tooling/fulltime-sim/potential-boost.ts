@@ -262,7 +262,7 @@ function boostSeason(
 ) {
   if (s.age > c.maxAge || s.career.length === 0) return;
   for (let t = 0; t < c.perSeason && b.level < c.p.length; t++) {
-    const cost = boostCost(s, c, b.level);
+    const cost = cfgCost(s, c, b.level);
     if (s.money < cost * c.reserve) return;
     s.money -= cost;
     b.spent += cost;
@@ -581,7 +581,9 @@ function modeBoost(n: number) {
     );
     // 서버 plausibility의 나이별 OVR 상한(만 18~23세)을 넘는 시즌 수 — 넘으면 서버가 잘라 저장한다.
     const over = (cs: Career[]) =>
-      cs.flatMap((a) => a.seasons).filter((r) => r.age <= 23 && r.ovr > OVR_CAP_BY_AGE[Math.max(r.age, 18) - 18]!).length;
+      cs
+        .flatMap((a) => a.seasons)
+        .filter((r) => r.age <= 23 && r.ovr > OVR_CAP_BY_AGE[Math.max(r.age, 18) - 18]!).length;
     console.log(`  서버 나이별 OVR 상한 초과 시즌 ${over(arm)} (강화 없음 ${over(base)})`);
     console.log(`  +1 OVR당 지출 ${eok(mean(B.map((b) => b.spent)) / Math.max(0.01, mean(dp)))}`);
   }

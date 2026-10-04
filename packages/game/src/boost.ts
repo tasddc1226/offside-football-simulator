@@ -6,6 +6,7 @@
 import { rnd } from './rng.js';
 import { fmtMoney } from './player.js';
 import { log, potScouted } from './stats.js';
+import { salaryCost } from './training.js';
 import type { BoostState, GameState } from './types.js';
 
 export const BOOST = {
@@ -19,6 +20,8 @@ export const BOOST = {
   maxAge: 29,
 } as const;
 export const BOOST_MAX = BOOST.p.length;
+/** 실패 보정(%p, 정수) — 화면 문구용. */
+export const BOOST_PITY_PCT = Math.round(BOOST.pity * 100);
 
 export const boostState = (s: GameState): BoostState => s.boost ?? { lv: 0, fails: 0, log: [] };
 
@@ -26,8 +29,7 @@ export const boostState = (s: GameState): BoostState => s.boost ?? { lv: 0, fail
 export function boostCost(s: GameState): number {
   const L = boostState(s).lv;
   if (L >= BOOST_MAX) return 0;
-  const salary = s.contract?.salary ?? 0;
-  return Math.round(Math.max(BOOST.min[L]!, salary * BOOST.rate[L]!) / 10) * 10;
+  return salaryCost(s, BOOST.rate[L]!, BOOST.min[L]!);
 }
 
 /** 다음 시도 성공 확률(%, 정수). 화면에 그대로 보여 준다. */

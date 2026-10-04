@@ -13,6 +13,8 @@
   let done = $state(false);
   let p = $state(0);
   let closeBtn = $state<HTMLButtonElement>();
+  // 강화 중에는 결과 전 단계, 결과에서는 결과 단계를 켠다.
+  const lit = $derived(done || !out.ok ? out.lv : out.lv - 1);
 
   onMount(() => {
     const t0 = performance.now();
@@ -44,7 +46,7 @@
     <div class="eyebrow">Potential</div>
     <div class="bf-steps" aria-hidden="true">
       {#each { length: out.max } as _, i (i)}
-        <i class:on={i < (done ? out.lv : out.ok ? out.lv - 1 : out.lv)} class:new={done && out.ok && i === out.lv - 1}></i>
+        <i class:on={i < lit} class:new={done && out.ok && i === out.lv - 1}></i>
       {/each}
     </div>
     {#if !done}

@@ -3,6 +3,7 @@
 import {
   BOOST,
   BOOST_MAX,
+  BOOST_PITY_PCT,
   boostChance,
   boostCost,
   boostState,
@@ -28,7 +29,7 @@ export interface BoostView {
   history: string[];
 }
 
-export const BOOST_NOTE = `시즌마다 한 번, ${BOOST.maxAge}세까지 시도할 수 있어요. 실패하면 자금만 잃고 다음 확률이 ${Math.round(BOOST.pity * 100)}%p 올라요.`;
+export const BOOST_NOTE = `시즌마다 한 번, ${BOOST.maxAge}세까지 시도할 수 있어요. 실패하면 자금만 잃고 다음 확률이 ${BOOST_PITY_PCT}%p 올라요.`;
 
 /** 카드를 숨길지 — 나이 제한을 넘겼고 한 번도 시도하지 않은 선수에게는 보이지 않는다. */
 export const boostHidden = (s: GameState): boolean =>
@@ -97,6 +98,6 @@ export function doBoost(s: GameState): BoostOutcome | null {
       ? r.lv >= BOOST_MAX
         ? '최고 단계에 닿았어요. 성장 한계가 한 뼘 더 올라갔어요.'
         : '성장 한계가 한 뼘 더 올라갔어요.'
-      : `성공 확률 ${r.chance}%였어요. 자금은 돌려받지 못하고, 다음 시도 확률이 ${Math.round(BOOST.pity * 100)}%p 올라요.`,
+      : `성공 확률 ${r.chance}%였어요. 자금은 돌려받지 못하고, 다음 시도 확률이 ${BOOST_PITY_PCT}%p 올라요.`,
   };
 }

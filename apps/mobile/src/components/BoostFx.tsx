@@ -30,13 +30,10 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
     roll.start(({ finished }) => {
       if (!finished) return;
       setDone(true);
-      if (motionOK)
-        void Haptics.notificationAsync(
-          out.ok
-            ? Haptics.NotificationFeedbackType.Success
-            : Haptics.NotificationFeedbackType.Error,
-        ).catch(() => {});
       if (!motionOK) return;
+      void Haptics.notificationAsync(
+        out.ok ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
+      ).catch(() => {});
       if (out.ok) {
         pop.setValue(0.4);
         Animated.spring(pop, { toValue: 1, friction: 4, useNativeDriver: true }).start();
