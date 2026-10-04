@@ -41,15 +41,15 @@ const team = (filled: boolean) => ({
 });
 
 describe('ownerSummary', () => {
-  it('선수 수 · 점수 합 · 결번 수', () => {
-    expect(ownerSummary([])).toEqual({ players: 0, score: 0, retired: 0 });
+  it('선수 수 · 점수 합 · 결번 수 · 구단 가치', () => {
+    expect(ownerSummary([])).toEqual({ players: 0, score: 0, retired: 0, value: 0 });
     expect(
       ownerSummary([
-        { stats: { score: 100 }, rn: 7 },
-        { stats: { score: 50 }, rn: null },
-        { stats: { score: 25 } },
+        { stats: { score: 100 }, rn: 7, value: 300_000 },
+        { stats: { score: 50 }, rn: null, value: 51_000 },
+        { stats: { score: 25 }, value: 0 },
       ]),
-    ).toEqual({ players: 3, score: 175, retired: 1 });
+    ).toEqual({ players: 3, score: 175, retired: 1, value: 351_000 });
   });
 });
 

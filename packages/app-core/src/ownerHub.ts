@@ -3,16 +3,17 @@
 import type { OwnerTeamResponse } from './api/team.js';
 import { matchHintOf } from './teamOwner.js';
 
-/** 구단주 요약 — 은퇴 선수 수 · 레전드 점수 합 · 영구결번 수. */
-export type OwnerSummary = { players: number; score: number; retired: number };
+/** 구단주 요약 — 은퇴 선수 수 · 레전드 점수 합 · 영구결번 수 · 구단 가치(은퇴 가치 합, 만 원). */
+export type OwnerSummary = { players: number; score: number; retired: number; value: number };
 
 export function ownerSummary(
-  rows: readonly { stats: { score: number }; rn?: number | null | undefined }[],
+  rows: readonly { stats: { score: number }; rn?: number | null | undefined; value: number }[],
 ): OwnerSummary {
   return {
     players: rows.length,
     score: rows.reduce((s, r) => s + r.stats.score, 0),
     retired: rows.filter((r) => r.rn != null).length,
+    value: rows.reduce((s, r) => s + r.value, 0),
   };
 }
 
