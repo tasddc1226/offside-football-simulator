@@ -185,8 +185,8 @@ id 목록은 JSON 한 바인딩(`json_each`)으로 넘겨 D1 바인딩 100개 �
 | `careersByIds` · `eligibleMap` | 커리어 소유자 확인 | `lineupCards`로 대체 |
 | `toLineupCareer` | `careers` 행 | `cards` 행 |
 | `seasonCareersOf`(구단 업적)·명예의 전당·영구결번·시즌 순위 | `careers` | 그대로. 키운 기록이다 |
-| `moveCareers`(구글 연결 때 익명 커리어 합치기) | `careers.profile_id`만 옮김 | `cards.owner_id`도 같이 옮긴다 |
-| 계정 삭제 | 커리어·팀 삭제 | 더해서: 내 열린 등록 취소, `owner_funds` 행 삭제. 내가 가진 카드는 그대로 둔다(삭제된 구단주의 팀은 이미 `liveTeam`이 숨기고, 닫힌 시즌 팀 조회만 읽는다) |
+| `moveCareers`(구글 연결 때 익명 커리어 합치기) | `careers.profile_id`만 옮김 | `cards.owner_id`도 같이 옮긴다(1단계에서 반영) |
+| 계정 삭제 | 커리어·팀 삭제 | 더해서: 내가 지금 가진 카드 삭제(1단계에서 반영), 내 열린 등록 취소, `owner_funds` 행 삭제. 다른 구단주에게 넘어간 카드는 그 구단주의 것이라 남는다 |
 
 방출도 이적시장과 같이 **구글 연결된 구단주만** 할 수 있다(`requireOwner`). 그래서 익명 프로필에는 자금이 생기지 않고, 계정 합치기에서 옮길 것은 카드 소유자뿐이다.
 

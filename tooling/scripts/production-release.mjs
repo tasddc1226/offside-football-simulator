@@ -17,6 +17,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'board_comments',
   'board_post_likes',
   'board_posts',
+  'cards',
   'careers',
   'career_seasons',
   'chat_mutes',

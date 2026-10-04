@@ -262,6 +262,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           number: p.number,
           publicName: p.publicName,
           legendScore: p.legendScore,
+          cardValue: p.cardValue,
         })),
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - Number(played?.n ?? 0)),
