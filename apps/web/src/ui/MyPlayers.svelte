@@ -7,7 +7,7 @@
   import type { PublicHofEntry } from '@offside/contracts';
   import { loadHOF } from '@offside/game/season';
   import type { HofEntry } from '@offside/game/types';
-  import { myPlayerNation } from '@offside/app-core/myPlayers';
+  import { myPlayerNation, myPlayerValue } from '@offside/app-core/myPlayers';
   import { getMyCareers, getRetiredNumbersIn } from '@offside/app-core/api/client';
   import { deviceSeasonOf, emptySeasonText, myDefaultSeason, mySeasonOptions, serverSeasonOf } from '@offside/app-core/mySeason';
   import { fillGranted } from './retiredNumber.svelte.js';
@@ -19,7 +19,7 @@
   /** T-11-026 구단주 화면이 요약(선수 수·점수 합·결번 수)을 세도록 불러온 목록을 알려 준다. T-11-029 고른 시즌 것만. */
   let { onrows }: { onrows?: (rows: readonly MineRow[]) => void } = $props();
 
-  type MineRow = { nation?: string | undefined; key: string; name: string; pos: keyof typeof POS; dpos?: DetailPos | null | undefined; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; season: number; open: () => void };
+  type MineRow = { nation?: string | undefined; key: string; name: string; pos: keyof typeof POS; dpos?: DetailPos | null | undefined; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; season: number; value: number; open: () => void };
   /** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다(T-11-026 구단주 화면 위쪽을 내 팀에 내주려 상위 3명만). */
   const SHOW = 3;
 
@@ -40,6 +40,7 @@
     stats: h,
     title: h.title ?? null,
     season: deviceSeasonOf(h, pendingIds, now),
+    value: myPlayerValue(h),
     open: () => openLocalLegend(h),
   });
   const serverRow = (e: PublicHofEntry): MineRow => ({
@@ -55,6 +56,7 @@
     stats: { ...e, score: e.legendScore },
     title: e.title ?? null,
     season: serverSeasonOf(e),
+    value: myPlayerValue(undefined, e),
     open: () => void openPublicLegend(e),
   });
 
@@ -86,7 +88,7 @@
         ...r.data.entries.map((e) => {
           const row = byId.get(e.id);
           // 이 기기 기록이 있어도 결번(T-10-076)은 서버 값을 쓴다 — 소급으로 받은 결번은 기기에 없다.
-          return row ? { ...row, nation: myPlayerNation(row, e), rn: row.rn ?? e.retiredNumber?.number, season: serverSeasonOf(e) } : serverRow(e);
+          return row ? { ...row, nation: myPlayerNation(row, e), rn: row.rn ?? e.retiredNumber?.number, season: serverSeasonOf(e), value: e.value ?? row.value } : serverRow(e);
         }),
         ...[...byId].filter(([id]) => !onServer.has(id) && pending.has(id)).map(([, row]) => row),
       ];
