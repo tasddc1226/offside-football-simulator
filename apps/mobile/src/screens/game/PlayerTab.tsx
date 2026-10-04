@@ -75,7 +75,7 @@ export function PlayerTab({ s }: { s: GameState }) {
   const owned = useSnapshot(adFree).owned;
   const peek = useSnapshot(potPeek);
   const pot = peekView(s, peek.peek, owned);
-  const showPeek = pot.kind === 'shown' || peekAvailable();
+  const showPeek = pot.kind !== 'shown' && peekAvailable();
 
   const info: Row[] = [
     { k: '국적', testID: 'nation', v: `${flagOf(nation.code)} ${nation.ko}` },
@@ -107,7 +107,7 @@ export function PlayerTab({ s }: { s: GameState }) {
           선수 정보
         </Txt>
         <Kv rows={info} />
-        {showPeek && pot.kind !== 'shown' ? (
+        {showPeek ? (
           <View style={{ marginTop: 10, gap: 6 }} testID="pot-peek">
             <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
               {peek.message || pot.text}
