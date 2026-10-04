@@ -7,6 +7,7 @@ import {
   boardCommentReports,
   boardComments,
   boardPostLikes,
+  boardPosts,
   profiles,
 } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -46,6 +47,68 @@ describe('게시판 /v1/boards', () => {
   });
   afterEach(async () => {
     await ctx.dispose();
+  });
+
+  it('자동 릴리즈 노트의 날짜형 ID로 조회·조회수·댓글·좋아요·관리자 수정이 가능하고 권한을 유지한다', async () => {
+    const admin = await makeAdmin();
+    const original = await writePost(admin.cookie, 'release', { title: '261004 릴리즈노트' });
+    const id = 'pst_release_20261004';
+    await ctx.db.update(boardPosts).set({ id }).where(eq(boardPosts.id, original));
+
+    const read = await call('GET', `/v1/boards/posts/${id}`);
+    expect(read.status).toBe(200);
+    expect(((await read.json()) as { data: { post: { id: string } } }).data.post.id).toBe(id);
+    expect((await call('POST', `/v1/boards/posts/${id}/views`)).status).toBe(204);
+    expect((await call('PUT', `/v1/boards/posts/${id}/like`)).status).toBe(401);
+
+    const reader = await googleUser('독자');
+    expect(
+      (await call('PUT', `/v1/boards/posts/${id}/like`, { cookie: reader.cookie })).status,
+    ).toBe(200);
+    expect(
+      (
+        await call('POST', `/v1/boards/posts/${id}/comments`, {
+          cookie: reader.cookie,
+          body: { body: '업데이트 감사합니다.' },
+        })
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await call('PUT', `/v1/boards/posts/${id}`, {
+          cookie: reader.cookie,
+          body: { title: '수정', body: '수정' },
+        })
+      ).status,
+    ).toBe(403);
+    expect((await call('DELETE', `/v1/boards/posts/${id}`, { cookie: reader.cookie })).status).toBe(
+      403,
+    );
+    expect(
+      (
+        await call('PUT', `/v1/boards/posts/${id}`, {
+          cookie: admin.cookie,
+          body: { title: '261004 릴리즈노트', body: '업데이트 안내' },
+        })
+      ).status,
+    ).toBe(200);
+  });
+
+  it('날짜형 ID는 자동 릴리즈 글에만 허용하고 잘못된 형식은 거부한다', async () => {
+    for (const id of [
+      'pst_release_2026100',
+      'pst_release_2026100a',
+      'pst_release_20261004_extra',
+      'cmt_release_20261004',
+    ]) {
+      expect((await call('GET', `/v1/boards/posts/${id}`)).status).toBe(400);
+    }
+    expect((await call('GET', '/v1/boards/posts/pst_release_20261005')).status).toBe(404);
+    const reader = await googleUser('독자');
+    expect(
+      (await call('DELETE', '/v1/boards/comments/cmt_release_20261004', { cookie: reader.cookie }))
+        .status,
+    ).toBe(400);
   });
 
   it('관리자만 글을 쓴다 — 세션 없음 401, 일반 프로필 403, 관리자 201', async () => {

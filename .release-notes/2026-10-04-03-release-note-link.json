@@ -1,0 +1,6 @@
+{
+  "id": "release-note-date-id-compat",
+  "title": "릴리즈 노트 열기 오류 수정",
+  "items": ["자동으로 게시한 릴리즈 노트를 목록에서 열 수 없던 문제를 고쳤어요."],
+  "availability": "web-app"
+}
