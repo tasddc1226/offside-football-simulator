@@ -33,6 +33,10 @@
 
 | T-11-067 | [앱 푸시 연결](../operations/app-push.md)·[수신 동의와 리뷰 안내](../operations/app-engagement.md): APNs/FCM, 기기 등록·해제, 첫 커리어 완료 리뷰 요청. 자동 전체 발송은 후속 작업 | PR·운영 배포 검증 중, 새 스토어 빌드 1.0.3 준비 |
 
+| T-11-068 | 앱 광고(AdMob): iOS·Android 앱 등록·배너 단위, 기록실·소식·레전드 맨 아래 배너(비개인화, app-core adPolicy 공용), app-ads.txt, EEA·영국·스위스 UMP 동의 메시지(첫 광고 칸에서 한 번), 개인정보처리방침 8절을 웹·앱 광고로 확장. 네이티브 모듈이라 새 스토어 빌드와 함께 나간다 | 구현 · iOS AdMob 승인(10/4) · 스토어 빌드 대기 · Android는 Play 공개 후 등록 |
+
+| T-11-069 | 앱 광고 제거 인앱 상품(비소모성 `com.offsidelab.app.remove_ads`, ₩3,300): expo-iap, 서버 없이 스토어 구매 기록으로 판단·기기에 캐시, 설정 화면 구매·구매 복원, 산 뒤 광고 칸·동의 창 생략, 개인정보처리방침 8절·이용약관 1절. T-11-068 광고 빌드와 함께 나간다 | 구현 · App Store Connect·Play Console 상품 등록 대기 |
+
 ## Phase 11: 네이티브 앱 (2026-09-30, [ADR-014](../adr/ADR-014-native-app.md))
 
 | 작업      | 범위                                                                                                                                                                                              | 상태                                                    |

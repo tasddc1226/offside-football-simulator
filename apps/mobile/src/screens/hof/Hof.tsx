@@ -2,6 +2,7 @@
 // T-10-092), 구단주 랭킹(T-11-028)을 탭으로 오간다. 팀 프로필을 열면 아래 고정 막대에 '← 이전으로'(웹 TeamProfile의 BackBar, 탭바 위)를 둔다.
 import { useSnapshot } from 'valtio';
 import type { HofTab } from '@offside/app-core/state';
+import { AdSlot } from '../../components/AdSlot';
 import { HallOfFame } from '../../components/HallOfFame';
 import { appState } from '../../store';
 import { BackBar } from '../../ui/ActionBar';
@@ -84,11 +85,17 @@ export default function Hof() {
       {hof.tab === 'rn' ? (
         <RetiredWall />
       ) : hof.tab === 'teams' ? (
-        <TeamRanking />
+        <>
+          <TeamRanking />
+          {profile ? null : <AdSlot place="records-bottom" />}
+        </>
       ) : hof.tab === 'ach' ? (
         <AchievementRanking />
       ) : (
-        <HallOfFame full />
+        <>
+          <HallOfFame full />
+          <AdSlot place="records-bottom" />
+        </>
       )}
     </Screen>
   );
