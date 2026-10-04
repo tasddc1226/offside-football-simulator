@@ -8,6 +8,7 @@ import { RN_SHIRT, RN_TRIM } from '@offside/app-core/rnStyle';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
+import { cardFootNote } from '@offside/app-core/format';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({
@@ -175,6 +176,8 @@ export type PlayerCardData = {
   legendScore?: number | null;
   attrs?: TeamPlayer['attrs'];
   attrsEstimated?: boolean;
+  /** T-11-080 카드 기준가(만 원). */
+  cardValue?: number | null | undefined;
   pos?: TeamPlayer['pos'];
   youth: boolean;
 };
@@ -187,6 +190,7 @@ const CARD_STATS = {
 function CardAttributes({ cell, color }: { cell: PlayerCardData; color: string }) {
   const order = CARD_STATS[cell.pos === 'GK' ? 'GK' : 'field'];
   const labels = cell.pos === 'GK' ? GK_ABBR : FACE_ABBR;
+  const foot = cardFootNote(cell);
   return (
     <View style={{ width: '100%', marginTop: 8 }}>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 4 }}>
@@ -221,12 +225,12 @@ function CardAttributes({ cell, color }: { cell: PlayerCardData; color: string }
           </View>
         ))}
       </View>
-      {!cell.attrs || cell.attrsEstimated ? (
+      {foot ? (
         <Text
           maxFontSizeMultiplier={1.15}
           style={{ color, fontSize: 10, lineHeight: 14, textAlign: 'center', marginTop: 4 }}
         >
-          {cell.attrsEstimated ? '추정 능력치' : '능력치 기록 없음'}
+          {foot}
         </Text>
       ) : null}
     </View>

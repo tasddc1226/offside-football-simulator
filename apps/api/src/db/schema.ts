@@ -334,6 +334,42 @@ export const careers = sqliteTable(
 );
 
 /**
+ * T-11-080 은퇴 선수 카드(자산). 기록(careers)은 키운 사람의 것이라 계정을 지우면 같이 지워지지만, 카드는 방출·
+ * 이적으로 주인이 바뀌므로 따로 둔다. 은퇴 뒤 바뀌지 않는 경기용 값만 복사하고, 공개 이름·숨김·키운 사람은
+ * careers를 PK로 붙여 읽는다(기록이 지워졌으면 익명·키운 사람 없음). 다른 구단주가 산 카드가 남아야 해서 FK는 없다.
+ * 설계: docs/tracking/owner-funds-card-market-plan.md 5절.
+ */
+export const cards = sqliteTable(
+  'cards',
+  {
+    careerId: text('career_id').primaryKey(),
+    // 지금 가진 구단주. 방출하면 NULL.
+    ownerId: text('owner_id'),
+    // 출신 서비스 시즌(0 = 프리시즌). careers.service_season이 NULL(휴식기)이면 0.
+    serviceSeason: integer('service_season').notNull(),
+    pos: text('pos', { enum: ['FW', 'MF', 'DF', 'GK'] }).notNull(),
+    dpos: text('dpos'),
+    nation: text('nation'),
+    number: integer('number'),
+    peak: integer('peak').notNull(),
+    legendScore: integer('legend_score').notNull(),
+    // 최고 시점 능력치(PeakProfile JSON). NULL이면 옛 기록.
+    peakProfile: text('peak_profile'),
+    // 기준가(만 원, contracts market-value cardValue). NULL이면 스냅샷이 없는 옛 기록이라 거래하지 않는다.
+    cardValue: integer('card_value'),
+    // 은퇴 가치(만 원, careers.value). 방출 지급 기준.
+    retireValue: integer('retire_value').notNull(),
+    // 팔린 횟수.
+    transfers: integer('transfers').notNull().default(0),
+    releasedAt: text('released_at'),
+    releasedValue: integer('released_value'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [index('cards_owner_season_idx').on(table.ownerId, table.serviceSeason, table.peak)],
+);
+
+/**
  * T-9-009. 시즌 한 줄 요약 + 그 시즌에 버퍼링된 선택 로그(`eventsJson`). D1 free plan은 행 단위로
  * 쓰기를 과금하므로 이벤트별 행을 만들지 않고 시즌당 한 행에 JSON TEXT로 합친다.
  */

@@ -8,7 +8,7 @@ import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { UPLOAD_LIMIT } from './careers.js';
-import { authAttempts, careers, careerSeasons, profiles } from '../db/schema.js';
+import { authAttempts, cards, careers, careerSeasons, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {
   deleteProfile,
@@ -447,8 +447,25 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       ctx.env,
     );
 
+    // T-11-080 지금 가진 카드도 지운다. 다른 구단주가 가진 카드는 남는다.
+    const at = new Date().toISOString();
+    const card = {
+      serviceSeason: 1,
+      pos: 'FW',
+      peak: 80,
+      legendScore: 0,
+      retireValue: 0,
+      createdAt: at,
+      updatedAt: at,
+    } as const;
+    await ctx.db.insert(cards).values([
+      { ...card, careerId: CAREER_ID, ownerId: owner.profileId },
+      { ...card, careerId: 'sold-card', ownerId: 'someone-else' },
+    ]);
+
     expect((await deleteProfile(ctx.env, owner.cookie, 'idem-del')).status).toBe(204);
 
+    expect((await ctx.db.select().from(cards)).map((c) => c.careerId)).toEqual(['sold-card']);
     const careerRows = await ctx.db
       .select()
       .from(careers)

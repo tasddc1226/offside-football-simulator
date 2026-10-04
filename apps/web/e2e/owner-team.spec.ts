@@ -27,6 +27,7 @@ const PLAYERS = [
     number: 9,
     publicName: '공개 골잡이',
     legendScore: 500,
+    cardValue: 543_000,
   },
   {
     careerId: '00000000-0000-4000-8000-000000000012',
@@ -320,6 +321,8 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await expect(page.locator('[data-slot="10"]')).toContainText('84');
   await expect(page.locator('[data-slot="9"]')).toContainText('유스 선수');
   await expect(locker).toContainText('LS');
+  // T-11-080 카드 기준가. 기준가가 없는 선수(능력치 기록 없음)는 그 안내가 먼저다.
+  await expect(locker).toContainText('기준가 54억 3천만');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.locator('[data-act="team-logo-open"]').click();
   await page.locator('[data-logo-text]').fill('FC');

@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import type { Bindings } from '../env.js';
-import { auditLog, careers, profiles, sessions } from '../db/schema.js';
+import { auditLog, cards, careers, profiles, sessions } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { extractCookie, issueCookie, ORIGIN } from '../test/http.js';
 
@@ -429,10 +429,25 @@ describe('GET /v1/auth/google/callback', () => {
     const a = await issueCookie(ctx);
     await insertCareer('c-anon', a.profileId);
     await insertCareer('c-b', b.profileId);
+    // T-11-080 익명 때 은퇴한 선수의 카드도 같이 옮긴다.
+    const at = new Date().toISOString();
+    await ctx.db.insert(cards).values({
+      careerId: 'c-anon',
+      ownerId: a.profileId,
+      serviceSeason: 1,
+      pos: 'FW',
+      peak: 80,
+      legendScore: 0,
+      retireValue: 0,
+      createdAt: at,
+      updatedAt: at,
+    });
 
     const location = await linkGoogle(ctx, a.cookie, 'sub-merge');
     expect(location.searchParams.get('google')).toBe('switched');
     expect(await ownerOf('c-anon')).toBe(b.profileId);
+    const [card] = await ctx.db.select().from(cards).where(eq(cards.careerId, 'c-anon'));
+    expect(card?.ownerId).toBe(b.profileId);
     expect(await ownerOf('c-b')).toBe(b.profileId);
     const merged = (
       await ctx.db.select().from(auditLog).where(eq(auditLog.profileId, b.profileId))
