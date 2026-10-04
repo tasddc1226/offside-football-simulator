@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { COMMENT_REPORT_REASONS, NAME_REPORT_KINDS } from '@offside/contracts/board-limits';
 import {
   index,
   primaryKey,
@@ -9,6 +10,70 @@ import {
   real,
   type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
+
+/** T-11-070 게시판별 KST 하루 첫 글. 삭제·수정·재배포로 발송 이력을 다시 만들지 않는다. */
+export const pushNewsEvents = sqliteTable(
+  'push_news_events',
+  {
+    id: text('id').primaryKey(),
+    board: text('board', { enum: ['notice', 'release'] }).notNull(),
+    day: text('day').notNull(),
+    postId: text('post_id').notNull(),
+    title: text('title').notNull(),
+    createdAt: text('created_at').notNull(),
+    expiresAt: text('expires_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_news_events_day_unique').on(t.board, t.day),
+    index('push_news_events_expires_idx').on(t.expiresAt),
+  ],
+);
+
+/** 기기별 outbox. 접수 결과가 불명확하면 재발송하지 않아 중복 알림을 피한다. */
+export const pushNewsDeliveries = sqliteTable(
+  'push_news_deliveries',
+  {
+    id: text('id').primaryKey(),
+    eventId: text('event_id')
+      .notNull()
+      .references(() => pushNewsEvents.id, { onDelete: 'cascade' }),
+    installationHash: text('installation_hash').notNull(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    state: text('state', {
+      enum: [
+        'pending',
+        'sending',
+        'accepted',
+        'checking',
+        'confirmed',
+        'failed',
+        'unknown',
+        'cancelled',
+      ],
+    })
+      .notNull()
+      .default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    receiptAttempts: integer('receipt_attempts').notNull().default(0),
+    dueAt: text('due_at').notNull(),
+    leaseId: text('lease_id'),
+    ticketId: text('ticket_id'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_news_deliveries_device_unique').on(t.eventId, t.installationHash),
+    index('push_news_deliveries_due_idx').on(t.state, t.dueAt),
+    index('push_news_deliveries_session_idx').on(t.sessionId),
+    index('push_news_deliveries_profile_idx').on(t.profileId),
+    index('push_news_deliveries_installation_idx').on(t.installationHash),
+  ],
+);
 
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
 export const profiles = sqliteTable(
@@ -29,15 +94,19 @@ export const profiles = sqliteTable(
     deletedAt: text('deleted_at'),
     /** T-10-028 댓글에 쓰는 닉네임(구글 로그인한 프로필만 정한다). 대소문자만 다른 닉네임도 겹치지 못한다. */
     nickname: text('nickname'),
+    /** T-11-003 Sign in with Apple 사용자 id(앱). 구글과 따로 연결된다. */
+    appleSub: text('apple_sub'),
+    appleLinkedAt: text('apple_linked_at'),
   },
   (table) => [
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
+    uniqueIndex('profiles_apple_sub_unique').on(table.appleSub),
     uniqueIndex('profiles_nickname_unique').on(sql`lower(${table.nickname})`),
     uniqueIndex('profiles_toss_anon_key_hash_unique').on(table.tossAnonKeyHash),
   ],
 );
 
-/** ADR-002 세션. web은 쿠키, toss는 Bearer 토큰이지만 세션 테이블은 같다. */
+/** ADR-002 세션. web은 쿠키, toss·app(T-11-003 네이티브 앱)은 Bearer 토큰이지만 세션 테이블은 같다. */
 export const sessions = sqliteTable(
   'sessions',
   {
@@ -45,7 +114,7 @@ export const sessions = sqliteTable(
     profileId: text('profile_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    channel: text('channel', { enum: ['web', 'toss'] }).notNull(),
+    channel: text('channel', { enum: ['web', 'toss', 'app'] }).notNull(),
     tokenHash: text('token_hash').notNull(),
     createdAt: text('created_at').notNull(),
     expiresAt: text('expires_at').notNull(),
@@ -89,13 +158,78 @@ export const authAttempts = sqliteTable(
   {
     id: text('id').primaryKey(),
     kind: text('kind', {
-      enum: ['RECOVERY_ISSUE', 'RECOVERY_REDEEM', 'GOOGLE_START', 'BOARD_COMMENT'],
+      enum: [
+        'RECOVERY_ISSUE',
+        'RECOVERY_REDEEM',
+        'GOOGLE_START',
+        'BOARD_COMMENT',
+        'APP_SESSION',
+        'APPLE_SIGNIN',
+        'PROFILE_CREATE',
+        'CAREER_SEASON',
+        'CAREER_RETIRE',
+        'PUSH_DEVICE',
+        'PUSH_TEST',
+      ],
     }).notNull(),
     subject: text('subject').notNull(),
     windowStart: text('window_start').notNull(),
     count: integer('count').notNull(),
   },
   (table) => [uniqueIndex('auth_attempts_kind_subject_unique').on(table.kind, table.subject)],
+);
+
+/** T-11-059 동의한 앱 기기만 등록한다. 세션 폐기·탈퇴·계정 전환 시 이전 계정으로 보내지 않는다. */
+export const pushDevices = sqliteTable(
+  'push_devices',
+  {
+    installationHash: text('installation_hash').primaryKey(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    platform: text('platform', { enum: ['ios', 'android'] }).notNull(),
+    appVersion: text('app_version').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    /** 마지막 본인 테스트 접수 번호. 토큰·세션이 바뀌면 지우고 전달 결과 조회에만 쓴다. */
+    lastTestTicketId: text('last_test_ticket_id'),
+    lastTestSentAt: text('last_test_sent_at'),
+  },
+  (t) => [
+    uniqueIndex('push_devices_token_unique').on(t.token),
+    index('push_devices_session_idx').on(t.sessionId),
+    index('push_devices_profile_idx').on(t.profileId),
+    index('push_devices_updated_idx').on(t.updatedAt),
+  ],
+);
+
+/**
+ * T-11-003 앱 구글 로그인 표. 앱은 쿠키가 없어 시스템 브라우저로 구글 로그인을 거친다 — 앱이 PKCE 챌린지를 내면 서버가
+ * 이 표(id = 구글 OAuth state)를 앱 세션에 묶어 만들고 구글 인증 주소를 돌려준다. 콜백은 state로 표를 찾아 로그인할
+ * 프로필을 적고 offside://auth로 보낸다. 앱이 표 id와 verifier를 내면 표를 지우고 새 앱 세션 토큰을 준다. 10분 뒤 만료.
+ */
+export const appAuthTickets = sqliteTable(
+  'app_auth_tickets',
+  {
+    id: text('id').primaryKey(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    /** 앱의 PKCE 챌린지: base64url(SHA-256(verifier)). */
+    challenge: text('challenge').notNull(),
+    /** 구글 OAuth PKCE verifier(웹은 oauth 쿠키에 둔다). */
+    codeVerifier: text('code_verifier').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    /** 콜백이 정한 로그인 프로필. NULL이면 아직 콜백 전. 티켓 세션의 프로필과 같으면 연결, 다르면 전환. */
+    profileId: text('profile_id'),
+  },
+  (table) => [
+    index('app_auth_tickets_expires_at_idx').on(table.expiresAt),
+    index('app_auth_tickets_session_id_idx').on(table.sessionId),
+  ],
 );
 
 /**
@@ -154,15 +288,32 @@ export const careers = sqliteTable(
     // T-10-092 최고 시점 능력치(contracts PeakProfile JSON — 대표 능력치 6개 + 세부 포지션 8자리 실력). 구단주 팀이
     // 자리마다 실력을 센다. 이 기능 전에 은퇴한 기록·옛 클라이언트는 NULL.
     peakProfile: text('peak_profile'),
+    // 원본이 없는 옛 은퇴 선수의 카드 표시용 추정 능력치. 경기용 peakProfile·roles와 분리한다.
+    cardAttrsJson: text('card_attrs_json'),
     // 서비스 시즌 번호(contracts service-seasons). 서버에 처음 올라온(첫 시즌 업로드) 시각에 진행 중인 시즌으로 한 번
     // 정해져 바뀌지 않는다 — 나중에 시즌 기간을 고쳐도 이미 뛴 선수의 시즌이 소급해 바뀌지 않는다. 0 = 프리시즌, NULL = 시즌 사이 휴식기.
     serviceSeason: integer('service_season'),
     // T-10-100 은퇴 가치(만 원, contracts market-value retireValue). 은퇴 PUT의 스냅샷으로 매기고, 이 기능 전 은퇴는
     // 명예의 전당 조회 때 스냅샷으로 소급한다(db/repos/careerValues.ts). 스냅샷이 없으면 0.
     value: integer('value'),
+    // 운영자가 이름 신고를 받고 가린 시각. 있으면 시즌·은퇴 업로드가 공개 이름을 다시 채우지 않는다.
+    nameHiddenAt: text('name_hidden_at'),
+    // 1이면 공개 순위(명예의 전당·서버 기록·결번·홈 소식)에서 뺀다. 은퇴 때 시즌 신호가 자동 플레이로 판정되면 서버가 켠다.
+    hidden: integer('hidden').notNull().default(0),
+    // T-11-030 잠재력 관찰. pot은 비공개 최초 스카우트 평가, potReal은 은퇴 리포트·기록실에 공개하는 은퇴 시점 값.
+    pot: integer('pot'),
+    potReal: integer('pot_real'),
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),
+    // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
+    index('careers_profile_status_season_idx').on(
+      table.profileId,
+      table.status,
+      table.serviceSeason,
+      table.peak,
+    ),
+    index('careers_profile_status_legend_idx').on(table.profileId, table.status, table.legendScore),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
     // 명예의 전당 순위 유형(GET /v1/hof?sort=): status로 은퇴만 좁히고 기록 내림차순 → 레전드 점수로 동점을 가린다.
     index('careers_hof_goals_idx').on(table.status, table.goals, table.legendScore),
@@ -217,6 +368,8 @@ export const careerSeasons = sqliteTable(
     chJson: text('ch_json'),
     /** 자동 플레이 탐지(관찰 전용): 기기가 보낸 조작 요약(PlaySignals) + 서버가 본 headless 여부. 옛 기록은 null. */
     signalsJson: text('signals_json'),
+    /** T-11-048 시즌 성장 기록(SeasonGrowth JSON: 시즌 시작·종료 능력치·세부 능력치, 구간별 OVR, 잠재력). 관찰 전용. */
+    growthJson: text('growth_json'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [
@@ -237,9 +390,11 @@ export const auditLog = sqliteTable(
         'RECOVERY_CODE_ISSUED',
         'GOOGLE_LINKED',
         'GOOGLE_UNLINKED',
+        'APPLE_LINKED',
         'CAREERS_MERGED',
         'BALANCE_ACTIVATED',
         'COMMENTS_PURGED',
+        'NAME_REPORT_RESOLVED',
       ],
     }).notNull(),
     profileId: text('profile_id').notNull(),
@@ -320,6 +475,61 @@ export const boardComments = sqliteTable(
   ],
 );
 
+/** 댓글 신고(앱스토어 UGC 정책). 프로필 하나가 댓글 하나에 한 번. 신고한 사람 화면에서는 그 댓글이 숨겨지고,
+ *  운영자는 관리 화면에서 신고 수로 본다. 댓글을 지워도(deleted_at) 기록은 남는다. */
+export const boardCommentReports = sqliteTable(
+  'board_comment_reports',
+  {
+    commentId: text('comment_id')
+      .notNull()
+      .references(() => boardComments.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id').notNull(),
+    reason: text('reason', { enum: COMMENT_REPORT_REASONS }).notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.commentId, table.profileId] }),
+    index('board_comment_reports_profile_idx').on(table.profileId),
+  ],
+);
+
+/** 공개 이름 신고(앱스토어 UGC 정책) — 명예의 전당 선수 이름(career)과 구단 이름·감독 이름(team). 프로필 하나가
+ *  대상 하나에 한 줄. name은 신고할 때 보인 이름이다. 운영자가 처리(가리기·기각)하면 resolved_at을 채우고,
+ *  그 뒤 같은 사람이 다시 신고하면 다시 열린다. */
+export const nameReports = sqliteTable(
+  'name_reports',
+  {
+    kind: text('kind', { enum: NAME_REPORT_KINDS }).notNull(),
+    targetId: text('target_id').notNull(),
+    profileId: text('profile_id').notNull(),
+    name: text('name').notNull(),
+    createdAt: text('created_at').notNull(),
+    resolvedAt: text('resolved_at'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.kind, table.targetId, table.profileId] }),
+    index('name_reports_resolved_idx').on(table.resolvedAt, table.createdAt),
+    index('name_reports_profile_idx').on(table.profileId),
+  ],
+);
+
+/** 댓글 작성자 차단. 차단한 사람(profile_id)에게는 그 작성자의 댓글을 보내지 않는다. nickname은 차단할 때의
+ *  이름(차단 목록에 보여 준다). */
+export const boardBlocks = sqliteTable(
+  'board_blocks',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    blockedProfileId: text('blocked_profile_id').notNull(),
+    nickname: text('nickname').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('board_blocks_pair_unique').on(table.profileId, table.blockedProfileId),
+    index('board_blocks_blocked_idx').on(table.blockedProfileId),
+  ],
+);
+
 /** T-10-016. 서버에서 조정하는 게임 밸런스 설정. version이 곧 버전 번호다. 초안(draft)만 고칠 수 있고,
  * 활성(active)은 늘 하나다 — 다른 버전을 활성화하면 이전 활성은 archived가 된다(되돌리기 = 옛 버전 재활성화).
  * values_json은 기본값과 다른 값만 담는다(@offside/contracts/balance). */
@@ -339,39 +549,52 @@ export const balanceVersions = sqliteTable(
 );
 
 /** T-10-027 서버 최초 기록. 기록 id(src/firsts.ts firstsCatalog)마다 가장 먼저 달성한 커리어 한 줄. 커리어가 지워지면
- * 함께 지워지고, 다음 재계산(app_meta 버전) 때 그다음으로 이른 커리어가 채운다. */
+ * 함께 지워지고, 다음 재계산(app_meta 버전) 때 그다음으로 이른 커리어가 채운다.
+ * T-11-029 시즌마다 따로 겨룬다 — season은 커리어의 service_season(NULL이면 0, 0 = 프리시즌), 키는 (season, id). */
 export const serverFirsts = sqliteTable(
   'server_firsts',
   {
-    id: text('id').primaryKey(),
+    season: integer('season').notNull().default(0),
+    id: text('id').notNull(),
     careerId: text('career_id')
       .notNull()
       .references(() => careers.id, { onDelete: 'cascade' }),
     achievedAt: text('achieved_at').notNull(),
     year: integer('year'),
   },
-  (table) => [index('server_firsts_achieved_idx').on(table.achievedAt)],
+  (table) => [
+    primaryKey({ columns: [table.season, table.id] }),
+    index('server_firsts_achieved_idx').on(table.achievedAt),
+  ],
 );
 
 /** T-10-056 서버 기록(깨질 수 있는 최고 기록) 한 줄씩. 보유 커리어가 지워지면 함께 지워지고, 다음 재계산이
- * 그다음 보유자를 채운다. */
-export const serverRecords = sqliteTable('server_records', {
-  id: text('id').primaryKey(),
-  careerId: text('career_id')
-    .notNull()
-    .references(() => careers.id, { onDelete: 'cascade' }),
-  value: integer('value').notNull(),
-  achievedAt: text('achieved_at').notNull(),
-  year: integer('year'),
-});
+ * 그다음 보유자를 채운다. T-11-029 서버 최초 기록처럼 시즌마다 따로다 — 키는 (season, id). */
+export const serverRecords = sqliteTable(
+  'server_records',
+  {
+    season: integer('season').notNull().default(0),
+    id: text('id').notNull(),
+    careerId: text('career_id')
+      .notNull()
+      .references(() => careers.id, { onDelete: 'cascade' }),
+    value: integer('value').notNull(),
+    achievedAt: text('achieved_at').notNull(),
+    year: integer('year'),
+  },
+  (table) => [primaryKey({ columns: [table.season, table.id] })],
+);
 
 /**
  * T-10-076 영구결번. 구단(club_id)·등번호마다 한 명 — 먼저 자격을 채운 커리어가 가져가고 취소되지 않는다(보유
  * 커리어가 지워지면 함께 지워져 자리가 빈다). 한 커리어는 한 자리만 가진다. seq는 서버에서 몇 번째 결번인지.
+ * T-11-029 시즌마다 따로 센다 — season은 커리어의 service_season(NULL이면 0, 0 = 프리시즌)이라 시즌 1 선수도
+ * 프리시즌 선수와 같은 구단·번호를 받고, seq도 시즌 안에서 센다.
  */
 export const retiredNumbers = sqliteTable(
   'retired_numbers',
   {
+    season: integer('season').notNull().default(0),
     clubId: text('club_id').notNull(),
     number: integer('number').notNull(),
     careerId: text('career_id')
@@ -384,7 +607,7 @@ export const retiredNumbers = sqliteTable(
     grantedAt: text('granted_at').notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.clubId, table.number] }),
+    primaryKey({ columns: [table.season, table.clubId, table.number] }),
     uniqueIndex('retired_numbers_career_idx').on(table.careerId),
   ],
 );
@@ -417,6 +640,8 @@ export const ownerTeams = sqliteTable(
     manager: text('manager').notNull().default(''),
     formation: text('formation').notNull(),
     slotsJson: text('slots_json').notNull(),
+    layoutJson: text('layout_json'),
+    logoJson: text('logo_json'),
     filled: integer('filled').notNull(),
     ovr: integer('ovr').notNull(),
     /** 팀 레이팅(경기 결과로 오르내린다, TEAM_RATING_START에서 시작). */
@@ -484,5 +709,67 @@ export const teamMatches = sqliteTable(
   (table) => [
     index('team_matches_profile_created_idx').on(table.profileId, table.createdAt),
     index('team_matches_away_created_idx').on(table.awayTeamId, table.createdAt),
+    index('team_matches_home_recent_idx').on(table.homeTeamId, table.createdAt, table.id),
+    index('team_matches_away_recent_idx').on(table.awayTeamId, table.createdAt, table.id),
   ],
+);
+
+/**
+ * T-11-028 구단주 시즌 업적 점수(업적 랭킹). 업적은 은퇴 기록·팀에서 그때그때 계산하고, 랭킹을 세려고 점수만 여기에
+ * 적어 둔다 — 업적 화면을 열 때·은퇴·팀 저장·팀 경기 뒤와 매일 cron이 다시 센다. 점수가 0이면 행을 두지 않는다.
+ * reached_at은 점수가 바뀐 시각이라 같은 점수면 먼저 닿은 구단주가 앞선다.
+ */
+export const ownerAchievements = sqliteTable(
+  'owner_achievements',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    season: integer('season').notNull(),
+    score: integer('score').notNull(),
+    done: integer('done').notNull(),
+    players: integer('players').notNull(),
+    reachedAt: text('reached_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.profileId, table.season] }),
+    index('owner_achievements_season_score_idx').on(table.season, table.score, table.reachedAt),
+  ],
+);
+
+/** T-11-015 채팅 신고. 프로필 하나가 메시지 하나에 한 번. 메시지는 채팅방(Durable Object)에 7일만 남으므로 신고할
+ *  때 작성자·닉네임·본문 사본을 함께 적어 둔다(운영자 확인용, 90일 뒤 cron이 지운다). 운영자가 처리하면
+ *  resolved_at을 채운다. */
+export const chatReports = sqliteTable(
+  'chat_reports',
+  {
+    messageId: text('message_id').notNull(),
+    profileId: text('profile_id').notNull(),
+    reason: text('reason', { enum: COMMENT_REPORT_REASONS }).notNull(),
+    authorProfileId: text('author_profile_id').notNull(),
+    nickname: text('nickname').notNull(),
+    body: text('body').notNull(),
+    createdAt: text('created_at').notNull(),
+    /** 운영자가 처리(가리기·기각·정지)한 시각. 처리 전엔 null. */
+    resolvedAt: text('resolved_at'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.messageId, table.profileId] }),
+    index('chat_reports_created_idx').on(table.createdAt),
+    index('chat_reports_open_idx').on(table.resolvedAt, table.createdAt),
+    index('chat_reports_profile_idx').on(table.profileId),
+    index('chat_reports_author_idx').on(table.authorProfileId),
+  ],
+);
+
+/** T-11-015 채팅 정지. 프로필당 한 줄, until까지 입장권(쓰기)을 주지 않는다. 지난 줄은 cron이 지운다. */
+export const chatMutes = sqliteTable(
+  'chat_mutes',
+  {
+    profileId: text('profile_id').primaryKey(),
+    until: text('until').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('chat_mutes_until_idx').on(table.until)],
 );

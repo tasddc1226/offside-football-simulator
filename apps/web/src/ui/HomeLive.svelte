@@ -4,81 +4,62 @@
   // 소켓으로 바로 받아 맨 위에 끼운다(T-10-072 — 다음 조회가 그 소식을 담으면 조회 결과로 넘긴다). 티커는 3.5초마다 한 줄씩 올라간다 — 감속 모션이면
   // 움직이지 않고 최신 3줄만, 마우스를 올리거나 포커스가 있거나 일시정지를 누르면 멈춘다.
   import { onMount } from 'svelte';
-  import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
-  import { getLive } from '../api/client.js';
-  import { onLive } from '../api/liveSocket.js';
-  import { anonName } from './format.js';
+  import type { LiveEvent } from '@offside/contracts';
+  import { getLive } from '@offside/app-core/api/client';
+  import { onLive } from '@offside/app-core/api/liveSocket';
+  import { agoKo } from '@offside/app-core/format';
+  import {
+    LIVE_STEP_MS,
+    LIVE_VISIBLE,
+    STATS,
+    advanceCursor,
+    applyLoad,
+    applyPush,
+    emptyHomeLive,
+    feedOf,
+    isRolling,
+    keyOf,
+    rowKey,
+    statTiles,
+    statsOf,
+    tone,
+    visibleRows,
+    what,
+    who,
+  } from '@offside/app-core/homeLive';
   import { openPublicLegendById } from './legend.js';
   import { motionOK } from './motion.js';
   import CountUp from './CountUp.svelte';
   import ClubMark from './ClubMark.svelte';
-  import { LIVE_FEED_MAX, LIVE_POLL_SEC } from '@offside/contracts/polling';
+  import { LIVE_POLL_SEC } from '@offside/contracts/polling';
 
   const POLL_MS = LIVE_POLL_SEC * 1000;
-  const STEP_MS = 3_500;
-  const VISIBLE = 3;
+  const STEP_MS = LIVE_STEP_MS;
+  const VISIBLE = LIVE_VISIBLE;
 
-  let data = $state<LiveResponse | null>(null);
+  // 순수 상태(조회 결과 · 소켓 소식 · 새 소식 · 커서)는 app-core homeLive가 계산한다. 통째로 갈아 끼우므로 raw.
+  let live = $state.raw(emptyHomeLive());
   /** 조회가 실패한 적이 있다. 받은 데이터가 없을 때만 안내 문구를 띄우는 데 쓴다. */
   let failed = $state(false);
   /** 서버 시각 - 이 기기 시각. '몇 분 전'을 서버 기준으로 센다. */
   let skew = 0;
   let now = $state(Date.now());
-  let cursor = $state(0);
   let shifting = $state(false);
   let paused = $state(false);
   let holding = $state(false);
-  /** 방금 받은 새 소식(점이 한 번 튄다). */
-  let fresh = $state(new Set<string>());
-  /** 소켓으로 받은 소식(최신순). 마지막 조회(data.now) 뒤에 올라온 것만 둔다 — 조회 결과 위에 얹는다. */
-  let pushed = $state<LiveEvent[]>([]);
 
-  const feed = $derived(data ? [...pushed, ...data.feed].slice(0, LIVE_FEED_MAX) : []);
-  /** 조회 숫자에 아직 담기지 않은 소식만큼 더한다('지금 뛰는 중'은 조회로만 바뀐다). */
-  const liveStats = $derived.by((): LiveStats | null => {
-    if (!data) return null;
-    const s = { ...data.stats };
-    for (const e of pushed) {
-      if (e.kind === 'retire') s.retiredToday++;
-      else {
-        s.seasonsToday++;
-        if (e.first) s.newToday++;
-      }
-    }
-    return s;
-  });
-  const rolling = $derived(motionOK && feed.length > VISIBLE);
+  const data = $derived(live.data);
+  const cursor = $derived(live.cursor);
+  const fresh = $derived(live.fresh);
+  const feed = $derived(feedOf(live));
+  const rolling = $derived(isRolling(motionOK, feed.length));
   // 한 줄 더 그려 두고(가려짐) 올라가는 동안 아래에서 들어오게 한다.
-  const rows = $derived(
-    rolling ? Array.from({ length: VISIBLE + 1 }, (_, k) => feed[(cursor + k) % feed.length]!) : feed.slice(0, VISIBLE),
-  );
-  const STATS = [
-    { key: 'playing', label: '지금 뛰는 중', of: (s: LiveStats) => s.playing },
-    { key: 'seasons', label: '오늘 치른 시즌', of: (s: LiveStats) => s.seasonsToday },
-    { key: 'new', label: '오늘 새 선수', of: (s: LiveStats) => s.newToday },
-    { key: 'retired', label: '오늘 은퇴', of: (s: LiveStats) => s.retiredToday },
-  ];
-  const stats = $derived(liveStats ? STATS.map((s) => ({ ...s, n: s.of(liveStats!) })).filter((s) => s.n > 0) : []);
+  const rows = $derived(visibleRows(feed, cursor, rolling));
+  const stats = $derived(statTiles(statsOf(live)));
   /** 첫 응답 전 — 같은 높이의 자리표시 카드를 그린다. */
   const pending = $derived(!data && !failed);
 
-  const keyOf = (e: LiveEvent) => `${e.kind}:${e.at}:${e.kind === 'retire' ? e.careerId : `${e.club}:${e.goals}:${e.apps}`}`;
-  const who = (e: LiveEvent) => e.name ?? anonName(e.pos, e.kind === 'retire' ? e.number : null);
-  function what(e: LiveEvent): string {
-    if (e.kind === 'retire') return `은퇴 · 레전드 점수 ${e.score}`;
-    if (e.first) return `${e.club}에서 첫 시즌을 마쳤어요`;
-    if (e.honor) return `${e.honor} · ${e.club}`;
-    if ((e.pos === 'GK' || e.pos === 'DF') && e.cs) return `${e.club} 시즌 ${e.apps}경기 무실점 ${e.cs}`;
-    return `${e.club} 시즌 ${e.goals}골 ${e.assists}도움`;
-  }
-  const tone = (e: LiveEvent) => (e.kind === 'retire' ? 'retire' : e.first ? 'first' : e.honor ? 'honor' : '');
-  function ago(at: string): string {
-    const s = Math.max(0, (now + skew - Date.parse(at)) / 1000);
-    if (s < 60) return '방금';
-    if (s < 3600) return `${Math.floor(s / 60)}분 전`;
-    if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
-    return s < 172800 ? '어제' : `${Math.floor(s / 86400)}일 전`;
-  }
+  const ago = (at: string) => agoKo(now + skew - Date.parse(at));
 
   async function load() {
     const r = await getLive();
@@ -87,24 +68,16 @@
       return;
     }
     skew = Date.parse(r.data.now) - Date.now();
-    const before = new Set(feed.map(keyOf));
-    const added = data ? r.data.feed.map(keyOf).filter((k) => !before.has(k)) : [];
-    fresh = new Set(added);
-    // 새 소식이 오면 맨 위(가장 최근)부터 다시 보여 준다.
-    if (added.length) cursor = 0;
     shifting = false;
-    data = r.data;
-    pushed = pushed.filter((e) => e.at > r.data.now);
+    live = applyLoad(live, r.data);
     now = Date.now();
   }
 
-  /** 소켓 소식. 첫 조회 전이거나, 이미 조회에 담긴(그 시각 이전) 소식이거나, 이미 보이는 소식이면 버린다. */
+  /** 소켓 소식. 걸러지면(첫 조회 전·이미 조회에 담김·이미 보임) applyPush가 같은 상태를 돌려준다. */
   function onPush(e: LiveEvent) {
-    const key = keyOf(e);
-    if (!data || e.at <= data.now || feed.some((f) => keyOf(f) === key)) return;
-    pushed = [e, ...pushed].slice(0, LIVE_FEED_MAX);
-    fresh = new Set([key]);
-    cursor = 0;
+    const next = applyPush(live, e);
+    if (next === live) return;
+    live = next;
     shifting = false;
     now = Date.now();
   }
@@ -131,7 +104,7 @@
 
   function shifted(e: TransitionEvent) {
     if (e.target !== e.currentTarget || !shifting) return;
-    cursor = (cursor + 1) % feed.length;
+    live = advanceCursor(live);
     shifting = false;
   }
 </script>
@@ -193,7 +166,7 @@
         onfocusout={() => (holding = false)}
       >
         <ul class="live-rows" class:shift={shifting} ontransitionend={shifted}>
-          {#each rows as e, i (keyOf(e) + (rolling ? `#${(cursor + i) % feed.length}` : ''))}
+          {#each rows as e, i (rowKey(e, i, rolling, cursor, feed.length))}
             {@const hidden = rolling && i === VISIBLE && !shifting}
             <li class="live-row" class:fresh={fresh.has(keyOf(e))} data-live-kind={e.kind} aria-hidden={hidden || undefined}>
               <span class="live-kind {tone(e)}" aria-hidden="true"></span>

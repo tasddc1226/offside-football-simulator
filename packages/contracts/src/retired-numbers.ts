@@ -11,7 +11,7 @@
  * 판정은 서버가 받아 둔 시즌 기록(career_seasons)으로만 한다. 클라이언트가 값을 지어 보내도 크게 부풀지 않게, 구단은
  * 게임에 있는 클럽 id로만 인정하고 리그는 그 클럽의 리그로 정하며, 한 시즌의 영예 점수는 RN_SEASON_HONOR_CAP까지만 센다.
  */
-import { isDefaultClubId, LEAGUE_BASE, type LeagueBase } from './club-names.js';
+import { isDefaultClubId, LEAGUE_BASE, leagueOfClub, type LeagueBase } from './club-names.js';
 import { LEGEND_W } from './hof-rules.js';
 import { CONFEDS } from './nations.js';
 
@@ -23,11 +23,6 @@ export const RN_MIN_SEASONS = 6;
 type Pos = 'FW' | 'MF' | 'DF' | 'GK';
 
 const LEAGUE_BY_NAME = new Map<string, LeagueBase>(LEAGUE_BASE.map((l) => [l.name, l]));
-const LEAGUE_BY_ID = new Map<string, LeagueBase>(LEAGUE_BASE.map((l) => [l.id, l]));
-/** 클럽 id 앞부분이 리그 id다(처음 소속 리그). T-10-110부터 커리어 안에서 K2 우승 구단이 K1으로 승격하고 K1 한
- * 구단이 K2로 내려가지만, 결번 점수는 클라이언트가 적어 보낸 리그를 믿지 않고 이 정적 리그로 센다 — 승격 구단의
- * K1 시즌은 K2 배수로 조금 낮게, 강등 구단의 K2 시즌은 K1 배수로 조금 높게 잡힌다(결번 자격 기준이 높아 영향이 작다). */
-const leagueOfClub = (id: string) => LEAGUE_BY_ID.get(id.slice(0, id.lastIndexOf('-')));
 /**
  * 구단 애착 가산(경기·영예 점수에 곱하는 비율). 서버가 받아 둔 시즌 기록만으로 정한다 — 인지도·감독 신뢰 같은
  * 기기 값은 검증할 수 없어 쓰지 않는다. 원클럽맨이면 나머지는 이미 담겨 있어 원클럽맨 몫만 준다.

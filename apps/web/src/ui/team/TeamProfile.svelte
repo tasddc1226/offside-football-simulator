@@ -7,13 +7,17 @@
     likeTeam,
     viewTeam,
     type TeamProfile,
-  } from '../../api/team.js';
-  import { localCareerNames } from '../../game/season.js';
+  } from '@offside/app-core/api/team';
+  import { teamSeasonClosed } from '@offside/contracts/service-seasons';
+  import { localCareerNames } from '@offside/game/season';
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
+  import BackBar from '../BackBar.svelte';
+  import NameReport from '../NameReport.svelte';
   import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
-  import { num as n, recordText } from './teamText.js';
+  import TeamLogo from './TeamLogo.svelte';
+  import { num as n, recordText } from '@offside/app-core/teamText';
 
   let { id, onback }: { id: string; onback: () => void } = $props();
 
@@ -22,6 +26,8 @@
   let liked = $state(false);
   let mine = $state(false);
   let liking = $state(false);
+  // T-11-029 끝난 시즌의 팀은 좋아요가 굳는다(서버가 409로 거절한다).
+  const closed = $derived(!!team && teamSeasonClosed(team.season, new Date().toISOString()));
 
   // 내 팀이면 이 기기에 남은 (비공개) 이름으로 보여 준다.
   const localNames = localCareerNames();
@@ -55,6 +61,7 @@
   const cells = $derived(
     team?.slots.map((s) => ({
       rating: s.rating,
+      nation: s.nation,
       name: (mine && s.careerId && localNames.get(s.careerId)) || s.name,
       youth: s.careerId === null,
     })) ?? [],
@@ -65,15 +72,14 @@
   {#if team}
     <section class="card stack tp-head" style="gap:10px" data-team-profile={team.id}>
       <div class="tp-top">
-        <button class="icon-btn" onclick={onback} data-act="team-profile-back">← 랭킹</button>
         <span class="eyebrow">Team profile{team.rank ? ` · #${team.rank}` : ''}</span>
       </div>
       <div class="tp-title">
-        <div>
+        <div class="tp-identity"><TeamLogo logo={team.logo} name={team.name} size={56} /><div class="tp-names">
           <small class="muted">{team.seasonName}{team.rank ? ` · RANK #${team.rank}` : ''}</small>
           <h1>{team.name}</h1>
           <p class="muted fs-sm">감독 <b class="tp-manager">{team.manager}</b>{mine ? ' · 내 팀' : ''}</p>
-        </div>
+        </div></div>
         <div class="tp-rating" aria-label="팀 레이팅 {team.rating}"><small>RATING</small><b>{n(team.rating)}</b></div>
       </div>
       <dl class="tp-stats">
@@ -83,12 +89,12 @@
       </dl>
     </section>
 
-    <TeamPitch formation={team.formation} {cells} />
+    <TeamPitch formation={team.formation} layout={team.layout} {cells} />
 
     <section class="card stack" style="gap:12px">
       <TeamLines lines={team.lines} />
       <div class="tp-social">
-        <button class="tp-like" aria-pressed={liked} disabled={mine || liking} onclick={toggleLike} data-act="team-like" aria-label="좋아요 {team.likes}">
+        <button class="tp-like" aria-pressed={liked} disabled={mine || liking || closed} onclick={toggleLike} data-act="team-like" aria-label="좋아요 {team.likes}">
           <span aria-hidden="true">{liked ? '♥' : '♡'}</span> {n(team.likes)}
         </button>
         <span class="muted">조회수 <b>{n(team.views)}</b></span>
@@ -108,11 +114,14 @@
           {/each}
         </ul>
       {:else}
-        <p class="empty">첫 기록을 기다리고 있어요. 팀 경기와 시즌 순위의 배지가 이곳에 쌓여요.</p>
+        <p class="empty">아직 기록이 없어요. 팀 경기와 시즌 순위 배지가 여기에 쌓여요.</p>
       {/if}
     </section>
+    {#if !mine}<NameReport kind="team" id={team.id} name={team.name} />{/if}
   {/if}
 </LoadState>
+<!-- T-10-130 '← 랭킹'은 화면 아래(탭바 위)로. 뒤로 가기로도 랭킹에 돌아간다. -->
+<BackBar act="team-profile-back" fallback={onback} atBottom={false} />
 
 <style>
   .tp-top {
@@ -130,6 +139,8 @@
   .tp-title h1 {
     overflow-wrap: anywhere;
   }
+  .tp-identity {display:flex;align-items:center;gap:10px;min-width:0;}
+  .tp-names {min-width:0;}
   .tp-manager {
     color: var(--ink);
   }

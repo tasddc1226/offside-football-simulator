@@ -1,5 +1,7 @@
-import type { TeamRankSort } from '@offside/contracts';
+import { PeakProfileSchema, TeamLayoutSchema, TeamLogoSchema } from '@offside/contracts';
+import type { TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
+import { DEFAULT_NATION } from '@offside/contracts/nations';
 import {
   DETAIL_POSITIONS,
   FACE_ATTRS,
@@ -35,6 +37,8 @@ import {
   teamLikes,
   teamMatches,
 } from '../schema.js';
+import { accountLinkedSql } from './profiles.js';
+import type { AchievementSeason } from '../../team/achievements.js';
 import type { LineupCareer, PlayerRef } from '../../team/sim.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀)·팀 경기·라이브 랭킹.
@@ -58,14 +62,59 @@ export function peakOf(json: string | null): PeakProfile | null {
   }
 }
 
+/** 백필한 수치는 카드에서만 읽는다. 원본 능력치가 있으면 호출하지 않는다. */
+export function estimatedAttrsOf(json: string | null): PeakProfile['attrs'] | null {
+  if (!json) return null;
+  try {
+    const p = JSON.parse(json) as { v?: unknown; source?: unknown; attrs?: unknown };
+    if (p?.v !== 1 || p.source !== 'estimated') return null;
+    const attrs = PeakProfileSchema.shape.attrs.safeParse(p.attrs);
+    return attrs.success ? attrs.data : null;
+  } catch {
+    return null;
+  }
+}
+
 /** 팀 행의 선발 11자리(커리어 id, 빈 자리 null). */
 export const slotIdsOf = (row: Pick<OwnerTeamRow, 'slotsJson'>): (string | null)[] =>
   JSON.parse(row.slotsJson) as (string | null)[];
+
+/** 기존 팀(null)은 포메이션 그대로 읽고, 새 팀의 자유 배치만 덧붙인다. */
+export function layoutOf(row: Pick<OwnerTeamRow, 'layoutJson'>) {
+  if (!row.layoutJson) return null;
+  try {
+    const result = TeamLayoutSchema.safeParse(JSON.parse(row.layoutJson));
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export function logoOf(row: Pick<OwnerTeamRow, 'logoJson'>) {
+  if (!row.logoJson) return null;
+  try {
+    const result = TeamLogoSchema.safeParse(JSON.parse(row.logoJson));
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 경기 목록에 필요한 현재 로고만 한 번에 읽는다. 옛 경기 JSON은 바꾸지 않는다. */
+export async function teamLogosByIds(db: Db, ids: readonly string[]) {
+  if (ids.length === 0) return new Map<string, ReturnType<typeof logoOf>>();
+  const rows = await db
+    .select({ id: ownerTeams.id, logoJson: ownerTeams.logoJson })
+    .from(ownerTeams)
+    .where(inArray(ownerTeams.id, [...new Set(ids)]));
+  return new Map(rows.map((row) => [row.id, logoOf(row)]));
+}
 
 /** 선발 맵에 넣는 커리어 모양(careers 행 → 팀 선수). */
 type LineupRow = {
   id: string;
   pos: PosGroup;
+  nation?: string | null;
   dpos: string | null;
   peak: number | null;
   peakProfile: string | null;
@@ -75,9 +124,11 @@ type LineupRow = {
 export const toLineupCareer = (
   r: LineupRow,
   profile: PeakProfile | null = peakOf(r.peakProfile),
-): LineupCareer => ({
+): LineupCareer & { nation: string } => ({
   id: r.id,
   pos: r.pos,
+  // 대한민국·국적 기능 이전 커리어는 DB에서 NULL로 저장한다.
+  nation: r.nation ?? DEFAULT_NATION,
   dpos: dposFor(r.pos, r.dpos),
   peak: r.peak ?? 0,
   roles: profile?.roles ?? null,
@@ -107,9 +158,11 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
     .select({
       id: careers.id,
       pos: careers.pos,
+      nation: careers.nation,
       dpos: careers.dpos,
       peak: careers.peak,
       peakProfile: careers.peakProfile,
+      cardAttrsJson: careers.cardAttrsJson,
       number: careers.shirtNumber,
       publicName: careers.publicName,
       legendScore: careers.legendScore,
@@ -120,6 +173,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
         eq(careers.profileId, profileId),
         eq(careers.status, 'retired'),
         isNotNull(careers.peak),
+        eq(careers.hidden, 0),
         eq(careers.serviceSeason, season),
       ),
     )
@@ -172,12 +226,14 @@ export async function careersByIds(db: Db, ids: string[]) {
       profileId: careers.profileId,
       status: careers.status,
       pos: careers.pos,
+      nation: careers.nation,
       dpos: careers.dpos,
       peak: careers.peak,
       peakProfile: careers.peakProfile,
       number: careers.shirtNumber,
       publicName: careers.publicName,
       serviceSeason: careers.serviceSeason,
+      hidden: careers.hidden,
     })
     .from(careers)
     .where(inArray(careers.id, ids));
@@ -186,10 +242,10 @@ export type CareerLite = Awaited<ReturnType<typeof careersByIds>>[number];
 
 /** 이 구단주의 그 시즌 팀에 넣을 수 있는 커리어만 골라 선발 맵으로(본인 소유 · 은퇴 · 은퇴 요약 있음 · 그 시즌 선수). */
 export function eligibleMap(rows: readonly CareerLite[], ownerId: string, season: number) {
-  const map = new Map<string, LineupCareer>();
+  const map = new Map<string, ReturnType<typeof toLineupCareer>>();
   for (const r of rows) {
     if (r.profileId !== ownerId || r.status !== 'retired' || r.peak === null) continue;
-    if (r.serviceSeason !== season) continue;
+    if (r.serviceSeason !== season || r.hidden) continue;
     map.set(r.id, toLineupCareer(r));
   }
   return map;
@@ -201,16 +257,14 @@ export const liveTeam = (db: Db, teamId: string) =>
     .select({ team: ownerTeams })
     .from(ownerTeams)
     .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-    .where(
-      and(eq(ownerTeams.id, teamId), isNotNull(profiles.googleSub), isNull(profiles.deletedAt)),
-    );
+    .where(and(eq(ownerTeams.id, teamId), accountLinkedSql(), isNull(profiles.deletedAt)));
 
 /** 랭킹·상대에 오르는 팀: 그 시즌 · 선수가 한 명 이상 · 구글 연결이 살아 있는(삭제되지 않은) 구단주. */
 const rankedIn = (season: number) =>
   and(
     eq(ownerTeams.season, season),
     gt(ownerTeams.filled, 0),
-    isNotNull(profiles.googleSub),
+    accountLinkedSql(),
     isNull(profiles.deletedAt),
   );
 
@@ -274,6 +328,37 @@ export async function listTeamRanking(db: Db, season: number, sort: TeamRankSort
       .where(rankedIn(season)),
   ]);
   return { rows: rows.map((r) => r.team), total: Number(total?.n ?? 0) };
+}
+
+/** 한 페이지의 최근 전적을 한 쿼리로 읽는다. 인덱스로 팀마다 홈·원정 각 5개만 읽고 합친다. */
+export async function listTeamRecentForm(db: Db, teamIds: readonly string[]) {
+  const forms = new Map<string, TeamRankItem['recentForm']>();
+  if (teamIds.length === 0) return forms;
+  const matches = await db.all<{ teamId: string; result: TeamRankItem['recentForm'][number] }>(sql`
+    WITH requested AS (SELECT value AS teamId FROM json_each(${JSON.stringify(teamIds)}))
+    SELECT teamId, result FROM (
+      SELECT t.teamId, m.id, m.created_at AS createdAt,
+        CASE WHEN m.home_goals > m.away_goals THEN 'W' WHEN m.home_goals = m.away_goals THEN 'D' ELSE 'L' END AS result
+      FROM requested t JOIN team_matches m ON m.id IN (
+        SELECT id FROM team_matches WHERE home_team_id = t.teamId
+        ORDER BY created_at DESC, id DESC LIMIT 5
+      )
+      UNION ALL
+      SELECT t.teamId, m.id, m.created_at AS createdAt,
+        CASE WHEN m.away_goals > m.home_goals THEN 'W' WHEN m.away_goals = m.home_goals THEN 'D' ELSE 'L' END AS result
+      FROM requested t JOIN team_matches m ON m.id IN (
+        SELECT id FROM team_matches WHERE away_team_id = t.teamId
+        ORDER BY created_at DESC, id DESC LIMIT 5
+      )
+    )
+    ORDER BY createdAt DESC, id DESC
+  `);
+  for (const match of matches) {
+    const form = forms.get(match.teamId) ?? [];
+    if (form.length < 5) form.push(match.result);
+    forms.set(match.teamId, form);
+  }
+  return forms;
 }
 
 /** 레이팅 순위(랭킹과 같은 순서 — 레이팅 · OVR · 먼저 만든 팀). 랭킹에 오르지 않은 팀(선수 0명)이면 null. */
@@ -496,6 +581,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     eq(careers.status, 'retired'),
     isNotNull(careers.peak),
     eq(careers.serviceSeason, season),
+    // T-11-028 업적 점수가 공개 랭킹이 되므로 공개 순위에서 뺀 기록(자동 플레이)은 세지 않는다.
+    eq(careers.hidden, 0),
   );
   const [rows, seasons] = await db.batch([
     db
@@ -516,6 +603,9 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         goals: careers.goals,
         assists: careers.assists,
         legendScore: careers.legendScore,
+        nation: careers.nation,
+        retireAge: careers.retireAge,
+        retiredAt: careers.retiredAt,
         rn: retiredNumbers.careerId,
       })
       .from(careers)
@@ -527,16 +617,26 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         careerId: careerSeasons.careerId,
         league: careerSeasons.league,
         honorsJson: careerSeasons.honorsJson,
+        club: careerSeasons.club,
+        clubId: careerSeasons.clubId,
+        goals: careerSeasons.goals,
+        cs: careerSeasons.cs,
       })
       .from(careerSeasons)
       .where(
         inArray(careerSeasons.careerId, db.select({ id: careers.id }).from(careers).where(mine)),
       ),
   ]);
-  const byCareer = new Map<string, { league: string; honors: string[] }[]>();
+  const byCareer = new Map<string, AchievementSeason[]>();
   for (const r of seasons) {
     const list = byCareer.get(r.careerId) ?? [];
-    list.push({ league: r.league, honors: honorsOf(r.honorsJson) });
+    list.push({
+      league: r.league,
+      honors: honorsOf(r.honorsJson),
+      club: r.clubId ?? r.club,
+      goals: r.goals,
+      cs: r.cs,
+    });
     byCareer.set(r.careerId, list);
   }
   return rows.map((r) => ({
@@ -554,6 +654,9 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     assists: r.assists ?? 0,
     legendScore: r.legendScore ?? 0,
     retiredNumber: r.rn !== null,
+    nation: r.nation,
+    retireAge: r.retireAge ?? 0,
+    retiredAt: r.retiredAt,
     seasons: byCareer.get(r.id) ?? [],
   }));
 }

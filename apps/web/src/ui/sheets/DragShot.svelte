@@ -1,11 +1,11 @@
 <script lang="ts">
   // T-10-089 드래그 슛(프로토타입). 장면 위에서 골문 쪽으로 끌어 올렸다가 떼면 찬다. 경로는 장면 좌표(viewBox
   // 300×170)로 모은다 — 화면 크기와 상관없이 같은 손짓이 같은 슛이 되게. 판정은 game/dragShot.ts.
-  import { isShot, type DragPoint } from '../../game/dragShot.js';
-  import { MG_TIME_MS } from '../../game/minigame.js';
+  import { isShot, type DragPoint } from '@offside/game/dragShot';
+  import { MG_TIME_MS } from '@offside/game/minigame';
   import MgTimer from './MgTimer.svelte';
   import PitchScene, { REST, SPOT_POSE, type BallPose, type KeeperPose } from './PitchScene.svelte';
-  import type { SheetView } from './types.js';
+  import type { SheetView } from '@offside/app-core/sheets';
 
   let { v }: { v: Extract<SheetView, { kind: 'dragShot' }> } = $props();
 
@@ -119,14 +119,14 @@
   });
 </script>
 
-<div class="eyebrow">드래그 슛 · 골문 쪽으로 튕기듯 끌어 올리세요</div>
+<div class="eyebrow">드래그 슛 · 골문 쪽으로 끌어 올리세요</div>
 <h2>{v.label}</h2>
 <div
   class="mg-stage mg-drag"
   class:dragging
   bind:this={area}
   role="application"
-  aria-label="드래그 슛 — 공에서 골문 쪽으로 끌었다가 떼면 찹니다"
+  aria-label="드래그 슛. 공에서 골문 쪽으로 끌었다가 떼면 찹니다"
   data-drag-shot
   onpointerdown={down}
   onpointermove={move}

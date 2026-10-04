@@ -2,23 +2,16 @@
   // 시즌별 몸값 꺾은선 그래프(T-10-106): 커리어 탭과 은퇴 크레딧이 같이 쓴다.
   // 화면에 들어오면 선이 왼쪽부터 그려지고 점이 차례로 올라온다(감속 모션이면 처음부터 다 보인다).
   // 시즌마다 세로 한 칸이 버튼이라, 칸을 누르면 그 시즌 값을 위에 보여 준다.
-  import type { CareerRecord } from '../game/types.js';
-  import { fmtValue, seasonLabelOf } from './format.js';
-  import { peakValue, seasonValue } from '@offside/contracts/market-value';
+  import type { CareerRecord } from '@offside/game/types';
+  import { fmtValue, seasonLabelOf } from '@offside/app-core/format';
+  import { peakValue } from '@offside/contracts/market-value';
+  import { valuePoints } from '@offside/app-core/legendReport';
   import { motionOK } from './motion.js';
 
   let { rows }: { rows: CareerRecord[] } = $props();
 
   const peakV = $derived(peakValue(rows));
-  const pts = $derived.by(() => {
-    const max = peakV?.value || 1;
-    const n = rows.length;
-    // 맨 위 20%는 최고 몸값 꼬리표 자리로 비워 둔다.
-    return rows.map((r, i) => {
-      const v = seasonValue(r);
-      return { r, v, x: n > 1 ? i / (n - 1) : 0.5, y: 100 - (v / max) * 80 };
-    });
-  });
+  const pts = $derived(valuePoints(rows, peakV?.value ?? 0));
   const line = $derived(pts.map((p, i) => `${i ? 'L' : 'M'}${p.x * 100},${p.y}`).join(''));
   let pick = $state<number | null>(null);
   const picked = $derived(pick == null ? null : pts[pick]);

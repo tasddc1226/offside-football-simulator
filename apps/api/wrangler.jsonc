@@ -14,9 +14,18 @@
   ],
   // T-10-070 로컬(테스트·wrangler dev)은 Miniflare가 흉내 내는 R2. 운영 버킷은 env.production에만 둔다.
   "r2_buckets": [{ "binding": "BACKUP", "bucket_name": "offside-backup-local" }],
-  // T-10-072 홈 라이브 실시간 허브(src/live/hub.ts). 바인딩은 환경마다 다시 적어야 한다(상속되지 않는다).
-  "durable_objects": { "bindings": [{ "name": "LIVE", "class_name": "LiveHub" }] },
-  "migrations": [{ "tag": "v1-live-hub", "new_sqlite_classes": ["LiveHub"] }],
+  // T-10-072 홈 라이브 실시간 허브(src/live/hub.ts), T-11-015 채팅방(src/chat/room.ts). 바인딩은 환경마다 다시
+  // 적어야 한다(상속되지 않는다).
+  "durable_objects": {
+    "bindings": [
+      { "name": "LIVE", "class_name": "LiveHub" },
+      { "name": "CHAT", "class_name": "ChatRoom" },
+    ],
+  },
+  "migrations": [
+    { "tag": "v1-live-hub", "new_sqlite_classes": ["LiveHub"] },
+    { "tag": "v2-chat-room", "new_sqlite_classes": ["ChatRoom"] },
+  ],
   // 로컬 기본값. 원격 origin은 staging/production 환경에만 둔다. 비밀값 없음.
   "vars": {
     "ENVIRONMENT": "local",
@@ -26,11 +35,18 @@
     "WEB_APP_URL": "http://localhost:5173",
     "GOOGLE_REDIRECT_URI": "http://localhost:8787/v1/auth/google/callback",
     "GOOGLE_FAKE": "1",
+    // T-11-003 APPLE_FAKE=1이면 로컬에서 'fake:<sub>' 신원 토큰을 받는다(실제 Apple 검증 없이).
+    "APPLE_FAKE": "1",
   },
   "env": {
     "staging": {
       "name": "offside-api-staging",
-      "durable_objects": { "bindings": [{ "name": "LIVE", "class_name": "LiveHub" }] },
+      "durable_objects": {
+        "bindings": [
+          { "name": "LIVE", "class_name": "LiveHub" },
+          { "name": "CHAT", "class_name": "ChatRoom" },
+        ],
+      },
       "d1_databases": [
         {
           "binding": "DB",
@@ -40,22 +56,34 @@
         },
       ],
       "vars": {
+        "PUSH_TEST_ENABLED": "1",
         "ENVIRONMENT": "staging",
         "ALLOWED_ORIGINS": "https://offside-web-staging.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web-staging.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api-staging.tasddc1569.workers.dev/v1/auth/google/callback",
         "GOOGLE_FAKE": "0",
+        "APPLE_FAKE": "0",
       },
     },
     "production": {
       "name": "offside-api",
       "workers_dev": true,
       "routes": [{ "pattern": "api.offside-lab.com", "custom_domain": true }],
+      "observability": {
+        "enabled": true,
+        "logs": { "enabled": true },
+        "traces": { "enabled": true, "head_sampling_rate": 0.01 },
+      },
       // T-10-070 매일 KST 04:00 정리·D1 백업(src/cron/daily.ts).
-      "triggers": { "crons": ["0 19 * * *"] },
+      "triggers": { "crons": ["0 19 * * *", "*/5 * * * *"] },
       // T-10-071 백업 사본(docs/operations/d1-backup.md).
       "r2_buckets": [{ "binding": "BACKUP", "bucket_name": "offside-d1-backup" }],
-      "durable_objects": { "bindings": [{ "name": "LIVE", "class_name": "LiveHub" }] },
+      "durable_objects": {
+        "bindings": [
+          { "name": "LIVE", "class_name": "LiveHub" },
+          { "name": "CHAT", "class_name": "ChatRoom" },
+        ],
+      },
       // 백업은 DB 전체를 SQL로 굽고 압축한다 — DB가 커져도 중간에 끊기지 않게 CPU 한도를 기본(30초)보다 늘린다.
       "limits": { "cpu_ms": 120000 },
       "d1_databases": [
@@ -68,12 +96,12 @@
       ],
       "vars": {
         "ENVIRONMENT": "production",
+        "NEWS_PUSH_ENABLED": "1",
         "ALLOWED_ORIGINS": "https://offside-lab.com,https://offside-web.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",
         "GOOGLE_FAKE": "0",
-        // T-10-076 영구결번 오픈 = KST 2026-09-28 18:30. 오픈 뒤 이 줄과 게이트 코드를 지운다.
-        "RETIRED_NUMBERS_OPEN_AT": "2026-09-28T09:30:00.000Z",
+        "APPLE_FAKE": "0",
       },
     },
   },

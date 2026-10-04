@@ -17,7 +17,7 @@
   onMount(load);
 
   function leave() {
-    window.history.replaceState({}, '', '/');
+    window.history.replaceState(window.history.state, '', '/'); // 방문 기록(T-10-114)은 그대로 둔다.
     appState.sharedCareer = null;
     goHome();
     window.scrollTo(0, 0);
@@ -43,8 +43,8 @@
     <LegendReport {v}>
       {#snippet end()}
         <section class="card stack">
-          <div><div class="eyebrow">Your Turn</div><h2>이제 당신의 차례예요</h2></div>
-          <p class="muted fs-sm">유스에서 시작해 은퇴할 때까지, 나만의 축구 커리어를 만들어 보세요.</p>
+          <div><div class="eyebrow">Your Turn</div><h2>이번엔 내 선수를 키울 차례예요</h2></div>
+          <p class="muted fs-sm">고3 킥오프부터 은퇴 휘슬까지, 내 선수의 커리어를 직접 정해요.</p>
           <button class="btn btn-primary btn-block" data-act="shared-start" onclick={leave}>{cta}</button>
         </section>
       {/snippet}

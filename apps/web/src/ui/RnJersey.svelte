@@ -1,7 +1,7 @@
 <script lang="ts">
   // T-10-076 은퇴 세리머니의 결번 유니폼(등 쪽). 3D 엔진 없이 SVG 음영(몸통 원통 음영·소매·주름·원단 결)과
   // CSS 원근 회전으로 입체감을 낸다. 도안은 공유 이미지와 같은 JERSEY, 색은 부모의 --rn-*(rnStyle).
-  import { JERSEY as J } from './rnStyle.js';
+  import { JERSEY as J } from '@offside/app-core/rnStyle';
 
   const { name, number }: { name: string; number: number } = $props();
   const id = $props.id();

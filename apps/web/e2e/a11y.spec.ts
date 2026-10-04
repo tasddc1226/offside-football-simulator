@@ -94,8 +94,18 @@ for (const scheme of ['light', 'dark'] as const) {
     await expectNoViolations(page, 'legend');
     await page.locator('[data-act="hof-back"]').click();
     await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();
+    // 처음 열 때 지연 로드되는 생성 화면이 그려진 뒤 접근성을 검사한다.
+    await expect(
+      page.getByRole('heading', { level: 1, name: '고교 3학년, 나는 어떤 선수인가' }),
+    ).toBeVisible();
     await expectNoViolations(page, 'create-profile');
     await page.locator('[data-act="next-candidates"]').click();
+    // T-10-111 스카우트 연출: 페이드인이 끝난 뒤 한 번, 연출이 닫히고 후보 카드가 다 들어온 뒤 한 번 검사한다.
+    const scan = page.locator('[data-scout-scan]');
+    await expect(scan).toHaveCSS('opacity', '1');
+    await expectNoViolations(page, 'create-scouting');
+    await expect(scan).toBeHidden();
+    await expect(page.locator('[data-cand="2"]')).toHaveCSS('opacity', '1');
     await expectNoViolations(page, 'create-candidates');
     await startCareer(page);
     for (const tab of ['season', 'player', 'career', 'trophy']) {

@@ -298,6 +298,13 @@ export const CLUB_NAMES: Record<string, string[]> = {
 /** 클럽 id = `${리그}-${배열 위치}`. */
 export const clubIdOf = (leagueId: string, i: number): string => `${leagueId}-${i}`;
 
+const LEAGUE_BY_ID = new Map<string, LeagueBase>(LEAGUE_BASE.map((l) => [l.id, l]));
+/** 클럽 id(clubIdOf) 앞부분이 리그 id다(처음 소속 리그). T-10-110부터 커리어 안에서 K2 우승 구단이 K1으로 승격하고 K1 한 구단이 K2로 내려가지만, 결번 점수는 클라이언트가 적어 보낸 리그를 믿지 않고 이 정적 리그로 센다. 승격 구단의 K1 시즌은 K2 배수로 조금 낮게, 강등 구단의 K2 시즌은 K1 배수로 조금 높게 잡히며 결번 자격 기준이 높아 영향이 작다. */
+export const leagueOfClub = (id: string): LeagueBase | undefined =>
+  LEAGUE_BY_ID.get(id.slice(0, id.lastIndexOf('-')));
+/** T-10-122 클럽 id가 고교·대학(아마추어) 리그 클럽인지. */
+export const isAmateurClubId = (id: string): boolean => !!leagueOfClub(id)?.amateur;
+
 /** 게임에 있는 클럽 id(`${리그}-${배열 위치}`)의 기본 이름. 유저가 바꿔 부른 이름이 아니라 게임 원래 이름이다. 모르는 id면 null. */
 export function defaultClubName(id: string): string | null {
   const m = /^([a-z0-9]+)-(\d+)$/.exec(id);

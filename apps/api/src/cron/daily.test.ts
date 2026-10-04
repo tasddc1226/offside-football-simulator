@@ -50,12 +50,29 @@ describe('T-10-070 매일 정리', () => {
     await run(ses, 'ses_revoked_not_expired', ago(90 * DAY), later(DAY), ago(40 * DAY));
     await run(ses, 'ses_expired_recently', ago(40 * DAY), ago(DAY), null);
     await run(ses, 'ses_live', ago(DAY), later(DAY), null);
+    const tkt = `INSERT INTO app_auth_tickets (id, session_id, challenge, code_verifier, expires_at) VALUES (?1, 'ses_live', 'c', 'v', ?2)`;
+    await run(tkt, 'tkt_old', ago(2 * DAY));
+    await run(tkt, 'tkt_new', ago(HOUR));
+    const rep = `INSERT INTO chat_reports (message_id, profile_id, reason, author_profile_id, nickname, body, created_at) VALUES (?1, 'prf_1', 'spam', 'prf_2', 'n', 'b', ?2)`;
+    await run(rep, 'msg_old', ago(91 * DAY));
+    await run(rep, 'msg_new', ago(89 * DAY));
+    const mute = `INSERT INTO chat_mutes (profile_id, until, created_at) VALUES (?1, ?2, ?2)`;
+    await run(mute, 'prf_done', ago(HOUR));
+    await run(mute, 'prf_muted', later(DAY));
 
     expect(await cleanupExpired(ctx.env.DB, NOW)).toEqual({
+      push_news_events: 0,
+      push_devices: 0,
       idempotency: 1,
       auth_attempts: 1,
       sessions: 1,
+      app_auth_tickets: 1,
+      chat_reports: 1,
+      chat_mutes: 1,
     });
+    expect(await count('chat_reports')).toBe(1);
+    expect(await count('chat_mutes')).toBe(1);
+    expect(await count('app_auth_tickets')).toBe(1);
     expect(await count('idempotency')).toBe(1);
     expect(await count('auth_attempts')).toBe(1);
     const left = await ctx.env.DB.prepare('SELECT id FROM sessions ORDER BY id').all<{
@@ -151,5 +168,6 @@ describe('T-10-070 D1 → R2 백업', () => {
     const r = await runDaily(noBackup, NOW);
     expect(r.backup).toBe('skipped');
     expect(r.cleanup).not.toHaveProperty('error');
+    expect(r.anomalies).not.toHaveProperty('error');
   });
 });

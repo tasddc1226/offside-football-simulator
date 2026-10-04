@@ -2,9 +2,9 @@
   // ui.ts renderGame() 포트 (207~222줄)
   import { fly } from 'svelte/transition';
   import { Tween } from 'svelte/motion';
-  import { posLabel, LAST_PHASE } from '../game/data.js';
-  import { ovr } from '../game/attributes.js';
-  import { leagueOf, roleOf, fmtMoney, potLabel, blockMatches, focusOf, labelOf } from '../game/engine.js';
+  import { posLabel } from '@offside/game/data';
+  import { ovr } from '@offside/game/attributes';
+  import { leagueOf, roleOf, fmtMoney, focusOf, labelOf } from '@offside/game/engine';
   import { appState, type Tab } from './state.svelte.js';
   import { goHome } from './nav.js';
   import { advance, nextPending } from './actions.js';
@@ -13,14 +13,16 @@
   import ClubBadge from './ClubBadge.svelte';
   import Topbar from './Topbar.svelte';
   import TabIcon from './TabIcon.svelte';
+  import NavIntro from './NavIntro.svelte';
   import SeasonTab from './tabs/SeasonTab.svelte';
   import PlayerTab from './tabs/PlayerTab.svelte';
   import CareerTab from './tabs/CareerTab.svelte';
   import TrophyTab from './tabs/TrophyTab.svelte';
   import TitleDex from './titles/TitleDex.svelte';
-  import { mainTitle } from '../game/titles.js';
-  import { marketValue } from '../game/season.js';
-  import { fmtValue } from './format.js';
+  import { mainTitle } from '@offside/game/titles';
+  import { marketValue } from '@offside/game/season';
+  import { fmtValue } from '@offside/app-core/format';
+  import { seasonAction } from '@offside/app-core/seasonAction';
 
   // T-10-104: 이벤트·결산·이적시장 시트 본문도 게임 청크다 — 첫 시트가 뜨기 전에 미리 받아 둔다.
   void loadGameSheets().catch(() => {});
@@ -45,18 +47,6 @@
   }
   const focusName = $derived(`주력 ${focusOf(s).map((k) => labelOf(s, k)).join('·')}`);
 
-  // 엄지 영역 스티키 액션바: "시즌" 탭에서만 노출되는 메인 진행 버튼(원래 SeasonTab 안에 있던
-  // 버튼을 화면 어디서나 손 닿는 위치로 끌어올린다). 다른 탭에서 시즌 진행 중 이벤트가 대기 중이면
-  // 계속 노출해 사용자가 놓치지 않게 한다.
-  const busy = $derived(!!s.pending);
-  const phase = $derived(Math.min(s.phase, LAST_PHASE));
-  const btnLabel = $derived(
-    phase === 0 ? '프리시즌 훈련 진행' : `훈련 후 ${phase >= LAST_PHASE ? leagueOf(s.leagueId).matches - s.season.played : Math.min(blockMatches(s), leagueOf(s.leagueId).matches - s.season.played)}경기 진행`,
-  );
-  // T-10-024: 구간 결과는 시즌 탭 리포트로 보여 주고, 이어지는 이벤트·시즌 결산은 이 버튼으로 연다.
-  const pendingLabel = $derived(s.pending?.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기');
-  const showAction = $derived(appState.tab === 'season' || busy);
-
   const tabs: [Tab, string][] = [
     ['season', '시즌'],
     ['player', '선수'],
@@ -64,11 +54,37 @@
     ['trophy', '트로피'],
   ];
 
-  function onAdvanceClick() {
+  // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
+  // T-11-036 엄지 영역 고정 진행 바: 시즌 탭에서는 구간 진행 버튼과 그 위 한 줄 준비 요약(훈련·자기 투자·컨디션)을, 다른
+  // 탭에서도 이벤트·시즌 결산이 대기 중이면 그걸 여는 버튼을 띄운다. 요약을 누르면 시즌 탭의 '다음 구간 준비' 카드로 간다.
+  const act = $derived(seasonAction(s));
+  const showAction = $derived(appState.tab === 'season' || act.kind === 'pending');
+
+  function onAct() {
     buzz();
-    if (busy) nextPending();
+    if (act.kind === 'pending') nextPending();
     else void advance();
   }
+
+  // 준비 요약은 시즌 탭에서만 보이니(대기 중엔 버튼만) 탭은 그대로 두고 카드로 스크롤만 한다.
+  function openPrep() {
+    const el = document.querySelector<HTMLElement>('[data-prep]');
+    if (!el) return;
+    const head = document.querySelector<HTMLElement>('.topbar')?.offsetHeight ?? 0;
+    const top = el.getBoundingClientRect().top + scrollY - head - 12;
+    window.scrollTo({ top: Math.max(0, top), behavior: dur(1) ? 'smooth' : 'instant' });
+  }
+
+  // T-11-025 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다.
+  function switchTab(k: Tab) {
+    if (appState.tab === k) {
+      window.scrollTo({ top: 0, left: 0, behavior: dur(1) ? 'smooth' : 'instant' });
+      return;
+    }
+    appState.tab = k;
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }
+
 </script>
 
 <div class="wrap" class:has-tabbar={!showAction} class:has-actionbar={showAction}>
@@ -85,7 +101,7 @@
     <div class="foot">
       <span class="pill role-{role}">{role}</span>
       {#if s.injury}<span class="pill" style="background:var(--bad);border-color:var(--bad)">부상 {s.injury}경기</span>{/if}
-      <span class="pill">{focusName}</span><span class="pill">잠재력 {potLabel(s)}</span>
+      <span class="pill">{focusName}</span>
     </div>
   </section>
   <!-- 탭 전환 모션(T-10-003 goal 3): appState.tab을 key로 써서 탭이 바뀔 때만 새로 마운트해
@@ -109,25 +125,31 @@
 </div>
 
 {#if showAction}
-  <div class="action-bar" transition:fly={{ y: 20, duration: dur(180) }}>
+  <div class="action-bar season-bar" transition:fly={{ y: 20, duration: dur(180) }}>
     <div class="action-bar-inner">
-      <button class="btn btn-block {busy ? 'btn-accent' : 'btn-primary'}" data-act={busy ? 'resume' : 'advance'} onclick={onAdvanceClick}>
-        {busy ? pendingLabel : btnLabel} →
+      {#if act.kind === 'advance'}
+        <button class="season-prep" data-act="prep" aria-label="다음 구간 준비 보기: {act.prep}" onclick={openPrep}>{act.prep}</button>
+      {/if}
+      <button class="btn btn-block {act.kind === 'pending' ? 'btn-accent' : 'btn-primary'}" data-act={act.kind === 'pending' ? 'resume' : 'advance'} data-tour="go" onclick={onAct}>
+        {act.label} →
       </button>
     </div>
   </div>
 {/if}
 <!-- 게임 탭 4개 + 가운데 홈. 홈은 화면을 떠나는 버튼이라 tablist 밖에 두고, CSS order로 가운데에 놓는다
      (.tabs-inner는 display: contents라 탭들이 .tabs 그리드에 그대로 들어간다). -->
-<nav class="tabs" aria-label="게임 메뉴">
+<!-- T-11-031 메인 메뉴와 구분되게 위쪽 강조선(sub-nav)·가운데 나가기 버튼 둥근 바탕을 두고, 처음 볼 때 한 번 말풍선으로 알린다.
+     --i는 메뉴가 올라오는 순서(왼쪽부터 화면 순서). -->
+<nav class="tabs sub-nav" aria-label="게임 메뉴">
   <div class="tabs-inner" role="tablist">
-    {#each tabs as [k, l] (k)}
-      <button role="tab" data-tab={k} aria-selected={appState.tab === k} onclick={() => (appState.tab = k)}>
+    {#each tabs as [k, l], i (k)}
+      <button role="tab" data-tab={k} aria-selected={appState.tab === k} style:--i={i < 2 ? i : i + 1} onclick={() => switchTab(k)}>
         <TabIcon name={k} />{l}
       </button>
     {/each}
   </div>
-  <button class="tab-home" data-act="home" onclick={goHome}>
+  <button class="tab-home" data-act="home" style:--i={2} onclick={goHome}>
     <TabIcon name="home" />홈
   </button>
+  <NavIntro kind="game" />
 </nav>

@@ -7,9 +7,12 @@ import { API, ok } from './helpers.js';
 // 스크린샷과 달리 OS·폰트와 무관해 CI(ubuntu)와 로컬(macOS)에서 같다. 화면을 의도해서 바꿨다면
 // `pnpm e2e structure.spec.ts --update-snapshots`로 갱신하고 diff를 리뷰한다.
 //
-// 세이브(fixtures/save-fw26.json)는 시드 20260926 공격수를 8시즌 돌린 GameState다(26세·프리미어리그).
+// 세이브(packages/game/src/__fixtures__/save-fw26.json)는 시드 20260926 공격수를 8시즌 돌린 GameState다(26세·프리미어리그).
 // 게임 로직이 바뀌어도 이 데이터는 그대로라 밸런스 변경이 스냅샷을 흔들지 않는다.
-const SAVE = readFileSync(new URL('./fixtures/save-fw26.json', import.meta.url), 'utf8');
+const SAVE = readFileSync(
+  new URL('../../../packages/game/src/__fixtures__/save-fw26.json', import.meta.url),
+  'utf8',
+);
 const NOW = new Date('2026-09-26T12:00:00.000Z');
 const ago = (min: number) => new Date(NOW.getTime() - min * 60_000).toISOString();
 const profile = {
@@ -97,6 +100,9 @@ const HOME_REQUESTS = [
   'GET /v1/firsts',
   'GET /v1/hof?limit=3',
   'GET /v1/live',
+  'GET /v1/ticker',
+  // 미읽음 알림용 연결을 처음 한 번 열고, 화면을 옮길 때는 그대로 재사용한다.
+  'POST /v1/chat/ticket',
 ];
 
 async function continueGame(page: Page) {

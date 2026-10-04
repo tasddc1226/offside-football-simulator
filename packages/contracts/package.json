@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./headers": "./src/headers.ts",
     "./board-limits": "./src/board-limits.ts",
+    "./chat": "./src/chat-limits.ts",
     "./balance": "./src/balance-spec.ts",
     "./hof-rules": "./src/hof-rules.ts",
     "./content-filter": "./src/content-filter.ts",
@@ -19,6 +20,7 @@
     "./service-seasons": "./src/service-seasons.ts",
     "./positions": "./src/positions.ts",
     "./owner-team": "./src/owner-team.ts",
+    "./team-logo": "./src/team-logo.ts",
     "./nations": "./src/nations.ts",
     "./nations-en": "./src/nations-en.ts",
     "./body": "./src/body.ts"

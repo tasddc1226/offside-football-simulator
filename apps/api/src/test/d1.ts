@@ -69,3 +69,16 @@ export async function linkGoogle(
     })
     .where(eq(profiles.id, profileId));
 }
+
+/** 지나간 SQL을 `seen`에 모으는 D1 — 어떤 표를 읽는지 확인하는 테스트용. */
+export function spyDb(db: D1Database): { DB: D1Database; seen: string[] } {
+  const seen: string[] = [];
+  const DB = new Proxy(db, {
+    get(target, key) {
+      if (key === 'prepare') return (query: string) => (seen.push(query), target.prepare(query));
+      const v = Reflect.get(target, key) as unknown;
+      return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v;
+    },
+  });
+  return { DB, seen };
+}

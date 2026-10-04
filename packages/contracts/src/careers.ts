@@ -3,7 +3,7 @@ import { bodyError } from './body.js';
 import { NATION_BY_CODE } from './nations.js';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
-import { serviceSeason } from './service-seasons.js';
+import { seasonById } from './service-seasons.js';
 import { DETAIL_POSITIONS, FACE_ATTRS, type DetailPos, type FaceAttr } from './positions.js';
 
 /**
@@ -56,6 +56,11 @@ export const CareerMetaSchema = z
     trait: ShortStringSchema,
     startYear: z.number().int().min(2000).max(2200),
     appVersion: ShortStringSchema,
+    /**
+     * T-11-030 새 선수의 처음 스카우트 평가 잠재력(55~96). 첫 시즌 업로드에만 싣고, 서버는 커리어를 만들 때(또는 비어 있을 때)
+     * 한 번만 저장한다. 관찰 전용 — 어디에도 보이지 않고 점수·순위에 쓰지 않는다. 옛 클라이언트·옛 커리어엔 없다.
+     */
+    pot: z.number().int().min(55).max(96).optional().catch(undefined),
     /** T-10-096 국적(nations.ts 코드). 옛 클라이언트·옛 커리어엔 없다 = 대한민국. */
     nation: z
       .string()
@@ -87,6 +92,36 @@ export const SeasonCompSchema = z.strictObject({
 });
 export type SeasonComp = z.infer<typeof SeasonCompSchema>;
 
+/**
+ * T-11-048 시즌 성장 기록(관찰 전용). 시즌 시작·종료 시점의 능력치와 세부 능력치, 구간별 OVR, 잠재력 평가를 남긴다.
+ * 기기가 보낸 값이라 순위·판정에는 쓰지 않는다. 배열은 키 순서를 따른다:
+ * - a0·a1: 능력치 6개 = game `ATTR_KEYS`(pac, sho, pas, dri, def, phy)
+ * - s0·s1: 세부 능력치 = game `SUB_KEYS`. 키를 더할 때는 맨 뒤에만 더하고(순서 고정), 순서를 바꿔야 하면 v를 올린다.
+ */
+const GrowthStatSchema = z.number().min(0).max(200);
+export const SeasonGrowthSchema = z.strictObject({
+  v: z.literal(1),
+  /** 시즌 시작 OVR(그 시즌 시작 시점 세부 능력치로 낸 값). 첫 시즌은 선수를 만든 직후 OVR이다. */
+  o0: z.number().int().min(0).max(200),
+  /** 구간(프리시즌·전반기·후반기)에 들어갈 때마다의 OVR. 중간에 이어서 시작한 시즌은 앞이 비어 있을 수 있다. */
+  ph: z.array(z.number().int().min(0).max(200)).max(4),
+  a0: z.array(GrowthStatSchema).length(6),
+  a1: z.array(GrowthStatSchema).length(6),
+  s0: z.array(GrowthStatSchema).max(64),
+  s1: z.array(GrowthStatSchema).max(64),
+  pot: z.strictObject({
+    /** 기본 스카우트 평가(GameState.pot). */
+    s: z.number().min(0).max(200),
+    /** 훈련·이벤트로 붙은 잠재력 보너스(flags.potBonus). */
+    b: z.number().min(-100).max(100),
+    /** 숨은 성장분(bloom). 실제 잠재력 = s + b + bl. */
+    bl: z.number().min(-100).max(100),
+    /** 지금까지 받은 재평가 횟수(21·24세). */
+    r: z.number().int().min(0).max(5),
+  }),
+});
+export type SeasonGrowth = z.infer<typeof SeasonGrowthSchema>;
+
 /** season.ts `endSeason()`이 만드는 `CareerRecord`에서 뽑아낸 한 시즌 요약. */
 export const CareerSeasonPayloadSchema = z.strictObject({
   age: z.number().int().min(0).max(100),
@@ -113,6 +148,9 @@ export const CareerSeasonPayloadSchema = z.strictObject({
   comps: z.array(SeasonCompSchema).max(10).optional(),
   /** 이 시즌에 경신한 커리어 하이 지표 키(goals/assists/apps/rating/cs). */
   ch: z.array(z.string().min(1).max(12)).max(10).optional(),
+  /** T-11-048 시즌 성장 기록. 옛 클라이언트·다시 올린 옛 시즌에는 없다. */
+  // 관찰 전용이라 모양이 틀리면 이 값만 버리고 시즌은 받는다(미래 버전·조작된 값이 시즌 업로드를 막지 않게).
+  growth: SeasonGrowthSchema.optional().catch(undefined),
 });
 export type CareerSeasonPayload = z.infer<typeof CareerSeasonPayloadSchema>;
 
@@ -240,6 +278,11 @@ export const RetirementResponseSchema = z.strictObject({
   status: z.literal('retired'),
   /** T-10-076 영구결번 심사. 자격이 없으면 null(배포 전 응답엔 없다). */
   retiredNumber: RetiredNumberResultSchema.nullable().optional(),
+  /**
+   * T-11-029 이 커리어가 속한 서비스 시즌(0 = 프리시즌, 휴식기에 올라왔으면 null). 기기가 은퇴 기록(ft_hof)에 남겨
+   * '내 선수'를 시즌별로 거른다(배포 전 응답엔 없다).
+   */
+  serviceSeason: z.number().int().nonnegative().nullable().optional(),
 });
 export type RetirementResponse = z.infer<typeof RetirementResponseSchema>;
 
@@ -359,6 +402,8 @@ export const PutRetirementBodySchema = RetirementSummarySchema.extend({
   snapshot: LegendSnapshotSchema.optional(),
   /** T-10-092 최고 시점 능력치. 옛 클라이언트는 없다 — 모양이 틀려도 은퇴는 받는다. */
   profile: PeakProfileSchema.optional().catch(undefined),
+  /** T-11-030 은퇴 때 공개되는 실제 잠재력(스카우트 평가 + 숨은 성장). 관찰 전용 — 옛 클라이언트는 없고, 모양이 틀려도 은퇴는 받는다. */
+  potReal: z.number().int().min(0).max(150).optional().catch(undefined),
 });
 export type PutRetirementBody = z.infer<typeof PutRetirementBodySchema>;
 
@@ -374,6 +419,8 @@ export const PublicHofEntrySchema = z.strictObject({
   number: z.number().int().nullable(),
   retireAge: z.number().int(),
   peak: z.number().int(),
+  /** 은퇴 때 저장한 잠재력. 옛 기록·옛 서버 응답에는 없다. 진행 중 커리어에는 공개하지 않는다. */
+  potReal: z.number().int().min(0).max(150).nullable().optional(),
   legendScore: z.number().int(),
   apps: z.number().int(),
   goals: z.number().int(),
@@ -393,6 +440,11 @@ export const PublicHofEntrySchema = z.strictObject({
   retiredNumber: RetiredSlotSchema.extend({ seq: z.number().int() }).nullable().optional(),
   /** T-10-100 은퇴 가치(만 원). 아직 소급하지 못한 옛 기록은 null(배포 전 엣지 캐시 응답엔 없다). */
   value: z.number().int().nullable().optional(),
+  /**
+   * T-11-029 이 선수가 속한 서비스 시즌(careers.service_season — 처음 올라온 시각의 시즌, 0 = 프리시즌, 시즌 사이
+   * 휴식기에 올라왔으면 null). 배포 전 엣지 캐시 응답엔 없다.
+   */
+  season: z.number().int().nonnegative().nullable().optional(),
   /** T-10-101 이름 검색 결과에만: 고른 순위 유형·시즌에서의 실제 순위(1부터). */
   rank: z.number().int().min(1).optional(),
 });
@@ -447,13 +499,27 @@ export const HofSearchQuerySchema = z
   .max(20)
   .optional()
   .transform((v) => v || undefined);
-/** T-10-090 `GET /v1/hof?season=` 서비스 시즌 순위(service-seasons.ts의 id → 그 시즌). 없으면 전체 명예의 전당. */
+/**
+ * T-10-090 `GET /v1/hof?season=` 서비스 시즌 순위(service-seasons.ts의 id → 그 시즌). 없으면 전체 명예의 전당.
+ * T-11-029 season=0은 프리시즌(개막 전에 처음 올라온 선수 — 개막 뒤에 은퇴해도 포함).
+ */
 export const HofSeasonQuerySchema = z.coerce
   .number()
   .int()
-  .refine((id) => serviceSeason(id) !== undefined, '없는 시즌입니다.')
-  .transform((id) => serviceSeason(id)!)
+  .refine((id) => seasonById(id) !== undefined, '없는 시즌입니다.')
+  .transform((id) => seasonById(id)!)
   .optional();
+/**
+ * T-11-029 `?season=` 시즌 id(0 = 프리시즌, 그 밖엔 service-seasons.ts의 id). 없으면 서버가 지금 시즌을 쓴다
+ * (displaySeasonAt — 개막 전이면 프리시즌, 휴식기면 마지막 시즌).
+ */
+export const SeasonPickQuerySchema = z.coerce
+  .number()
+  .int()
+  .refine((id) => seasonById(id) !== undefined, '없는 시즌입니다.')
+  .optional();
+/** T-11-018 `GET /v1/hof?pos=` 그 포지션 선수만(포지션별 순위). 없으면 모든 포지션. */
+export const HofPosQuerySchema = CareerPosSchema.optional();
 
 // ───────── T-10-027 서버 최초 기록 ─────────
 
@@ -490,17 +556,23 @@ export const ServerRecordSchema = z.strictObject({
 export type ServerRecord = z.infer<typeof ServerRecordSchema>;
 
 /**
- * `GET /v1/firsts`. items는 규칙 순서 그대로(미달성 포함 — 달성 개수는 holder로 센다). 끝없는 단계는 달성된
+ * `GET /v1/firsts?season=`. items는 규칙 순서 그대로(미달성 포함 — 달성 개수는 holder로 센다). 끝없는 단계는 달성된
  * 단계와 그 위 다음 목표 하나까지만 담는다(T-10-056). records는 서버 기록.
+ * T-11-029 기록은 시즌마다 따로 겨룬다 — season은 이 목록의 시즌(0 = 프리시즌).
  */
 export const FirstsResponseSchema = z.strictObject({
+  season: z.number().int().nonnegative(),
   items: z.array(ServerFirstSchema),
   records: z.array(ServerRecordSchema),
 });
 export type FirstsResponse = z.infer<typeof FirstsResponseSchema>;
 
-/** T-10-076 `GET /v1/retired-numbers` 서버 전체 영구결번(결번 순). 이름은 공개를 고른 경우에만. */
+/**
+ * T-10-076 `GET /v1/retired-numbers?season=` 한 시즌의 영구결번(결번 순). 이름은 공개를 고른 경우에만.
+ * T-11-029 결번은 시즌마다 따로다 — season은 이 목록의 시즌(0 = 프리시즌).
+ */
 export const RetiredNumbersResponseSchema = z.strictObject({
+  season: z.number().int().nonnegative(),
   items: z.array(
     RetiredSlotSchema.extend({
       seq: z.number().int(),

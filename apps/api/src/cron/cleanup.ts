@@ -3,15 +3,18 @@
 // 시간 한도에 걸리므로 CHUNK씩 나눠 지운다.
 
 import { RATE_LIMIT_WINDOW_MS } from '../db/repos/authAttempts.js';
+import { DAY_MS } from '../time.js';
 
 const CHUNK = 5000;
 /** 한 번의 cron에서 표마다 지울 최대 묶음 수 — 남은 건 다음 날 이어서 지운다. */
 const MAX_CHUNKS = 40;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** 표마다: 이 열이 (지금 - keepMs)보다 이르면 지운다. 열마다 인덱스가 있어 묶음마다 표 전체를 훑지 않는다
  * (auth_attempts는 (kind, subject)당 한 행이라 작다). */
 const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
+  // 만료 30일 뒤 토큰·접수 번호를 정리한다. day PK가 지워져도 과거 글을 재발송하지 않는다.
+  { table: 'push_news_events', column: 'expires_at', keepMs: 30 * DAY_MS },
+  { table: 'push_devices', column: 'updated_at', keepMs: 90 * DAY_MS },
   { table: 'idempotency', column: 'expires_at', keepMs: 0 },
   // 윈도(1시간)보다 넉넉히.
   {
@@ -21,6 +24,11 @@ const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
   },
   // 만료된 세션도 한 달은 둔다(문의가 오면 언제 로그인했는지 볼 수 있게). 폐기된 세션은 만료 뒤에 지워진다.
   { table: 'sessions', column: 'expires_at', keepMs: 30 * DAY_MS },
+  // T-11-003 앱 로그인 티켓은 10분이면 끝난다.
+  { table: 'app_auth_tickets', column: 'expires_at', keepMs: DAY_MS },
+  // T-11-015 채팅 신고 사본은 90일, 끝난 채팅 정지는 바로.
+  { table: 'chat_reports', column: 'created_at', keepMs: 90 * DAY_MS },
+  { table: 'chat_mutes', column: 'until', keepMs: 0 },
 ];
 
 export type CleanupResult = Record<string, number>;

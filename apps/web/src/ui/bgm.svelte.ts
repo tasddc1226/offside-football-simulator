@@ -2,9 +2,10 @@
 // 때만 튼다. 같은 곡의 화면끼리 오가는 동안은 끊지 않고 이어서 튼다. 음원은 처음 틀 때 받는다. 브라우저(특히
 // 아이폰)는 사용자 동작 안에서 부른 play()만 허락하므로, 재생기는 지연 로드하지 않고 터치 처리 안에서 바로 부른다.
 // 켜 둔 채 새로 열었으면 첫 터치에 시작한다.
-import { loadKey, saveKey } from '../game/season.js';
+import { loadKey, saveKey } from '@offside/game/season';
 import { createBgm, type Bgm, type BgmTrack } from './bgmEngine.js';
 import { appState, type Screen } from './state.svelte.js';
+import { sheetOn } from './skin.svelte.js';
 
 const KEY = 'ft_bgm';
 const VOLUME_KEY = 'ft_bgm_volume';
@@ -31,13 +32,15 @@ export const bgm = $state({
 
 let engine: Bgm | null = null;
 
-/** 지금 틀 곡. 꺼져 있거나 탭이 가려졌거나 음악 없는 화면이면 null. */
-const wanted = () => (bgm.on && !document.hidden && TRACK_OF[appState.screen]) || null;
+/** 지금 틀 곡. 꺼져 있거나 탭이 가려졌거나 음악 없는 화면이거나 업무 모드(T-11-022)면 null. */
+const wanted = () =>
+  (bgm.on && !document.hidden && !sheetOn() && TRACK_OF[appState.screen]) || null;
 
 function sync() {
   const track = wanted();
   if (track) (engine ??= createBgm()).play(track, bgm.volume / 100);
-  else engine?.pause();
+  // 업무 모드로 바뀌면 소리가 남지 않게 바로 끊는다.
+  else engine?.pause(sheetOn());
 }
 
 export function setBgm(on: boolean) {
@@ -56,7 +59,7 @@ export function setBgmVolume(volume: number) {
 export function watchBgm() {
   $effect.root(() => {
     $effect(() => {
-      void [bgm.on, appState.screen];
+      void [bgm.on, appState.screen, sheetOn()];
       sync();
     });
   });

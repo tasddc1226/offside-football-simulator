@@ -9,8 +9,8 @@ import {
 } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { careers, ownerTeams, teamLikes } from '../db/schema.js';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { careers, ownerTeams, teamLikes, teamMatches } from '../db/schema.js';
+import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
 
 const PutRes = successEnvelope(PutOwnerTeamResponseSchema);
@@ -107,6 +107,51 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     expect((await call('GET', '/v1/teams?sort=goals')).status).toBe(400);
   });
 
+  it('최근 5경기는 홈·원정을 합쳐 최신순으로 읽고 상대 결과는 뒤집는다', async () => {
+    const a = await team(1, 80);
+    const b = await team(1, 75);
+    const idle = await team(1, 70);
+    const results = ['W', 'D', 'L', 'W', 'D', 'L', 'W'] as const;
+    await ctx.db.insert(teamMatches).values(
+      results.map((result, i) => {
+        const homeA = i % 2 === 0;
+        const ownGoals = result === 'W' ? 2 : result === 'D' ? 1 : 0;
+        return {
+          id: `form-${i}`,
+          profileId: homeA ? a.profileId : b.profileId,
+          homeTeamId: homeA ? a.team.id : b.team.id,
+          awayTeamId: homeA ? b.team.id : a.team.id,
+          homeGoals: homeA ? ownGoals : 1,
+          awayGoals: homeA ? 1 : ownGoals,
+          detailJson: '{}',
+          // Last two matches share a timestamp: ID breaks the tie deterministically.
+          createdAt: `2026-09-29T00:00:0${Math.min(i, 5)}.000Z`,
+        };
+      }),
+    );
+    const { DB, seen } = spyDb(ctx.env.DB);
+    const res = await callJson({ ...ctx.env, DB }, 'GET', '/v1/teams');
+    expect(res.status).toBe(200);
+    const { data } = RankRes.parse(await res.json());
+    expect(data.items.find((x) => x.teamId === a.team.id)?.recentForm).toEqual([
+      'W',
+      'L',
+      'D',
+      'W',
+      'L',
+    ]);
+    expect(data.items.find((x) => x.teamId === b.team.id)?.recentForm).toEqual([
+      'L',
+      'W',
+      'D',
+      'L',
+      'W',
+    ]);
+    expect(data.items.find((x) => x.teamId === idle.team.id)?.recentForm).toEqual([]);
+    expect(seen.filter((query) => query.includes('WITH requested'))).toHaveLength(1);
+    expect(seen.filter((query) => query.includes('sessions'))).toEqual([]);
+  });
+
   it('팀 프로필은 누구나 보고, 순위·선수 공개 이름·배지를 보인다', async () => {
     const a = await team(3, 88, '홍감독');
     const b = await team(1, 60);
@@ -179,5 +224,25 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     expect((await deleteProfile(ctx.env, google.cookie, 'teams-like-del')).status).toBe(204);
     expect((await profile(a.team.id)).team.likes).toBe(0);
     expect(await ctx.db.select().from(teamLikes)).toEqual([]);
+  });
+
+  it('T-11-029: 끝난 시즌(프리시즌은 시즌 1 개막에 끝난다) 팀의 좋아요는 누르기도 거두기도 409로 거절한다', async () => {
+    const a = await team(1, 80);
+    const fan = await issueCookie(ctx);
+    const like = (method: string) =>
+      call(method, `/v1/teams/${a.team.id}/like`, { cookie: fan.cookie });
+    expect((await like('PUT')).status).toBe(200); // 진행 중인 시즌에는 누를 수 있다.
+
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1 — 프리시즌 팀은 닫혔다.
+    for (const method of ['PUT', 'DELETE']) {
+      const res = await like(method);
+      expect(res.status).toBe(409);
+      expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({
+        reason: 'SEASON_CLOSED',
+      });
+    }
+    // 좋아요는 굳은 채 그대로다.
+    expect((await profile(a.team.id, fan.cookie)).team.likes).toBe(1);
+    expect((await profile(a.team.id, fan.cookie)).liked).toBe(true);
   });
 });

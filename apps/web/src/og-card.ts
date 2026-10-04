@@ -1,11 +1,11 @@
 // T-10-068 공유 링크(/career/<id>) 미리보기 이미지. 선수마다 엠블럼·이름·레전드 점수를 담은 1200×630 카드를
 // SVG로 그린다(PNG 변환은 워커의 og-render.ts). 워커 번들에 게임 로직을 끌어오지 않게 순수 데이터 모듈만 쓴다.
 import type { PublicHofEntry } from '@offside/contracts';
-import { crestOf, crestSvg } from './game/crests.js';
-import { CLUBS } from './game/data.js';
-import { legendBand } from './game/legend-bands.js';
-import { anonName, POS_LABEL } from './game/pos-label.js';
-import { escXml } from './xml.js';
+import { crestOf, crestSvg } from '@offside/game/crests';
+import { CLUBS } from '@offside/game/data';
+import { legendBand } from '@offside/game/legend-bands';
+import { anonName, POS_LABEL } from '@offside/game/pos-label';
+import { escXml } from '@offside/game/xml';
 
 const OG_W = 1200;
 const OG_H = 630;
@@ -34,7 +34,7 @@ function lines(e: PublicHofEntry): Line[] {
   const who = e.name ?? anonName(e.pos, e.number);
   // 한글은 글자 폭이 대략 글자 크기와 같다 — 오른쪽 칸(660px)에 들어가게 줄인다.
   const nameSize = Math.min(88, Math.floor(660 / Math.max(1, [...who].length)));
-  const band = legendBand(e.legendScore);
+  const band = legendBand(e.legendScore, e.dpos);
   const tagX = X + String(e.legendScore).length * 62 + 28; // 점수 숫자 오른쪽
   return [
     {

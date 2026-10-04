@@ -1,0 +1,167 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`게임 특성화 (T-11-044) > endSeason — 시즌 정산(seasonAwards·natSeasonEnd·milSeasonEnd 포함) 1`] = `
+{
+  "대표팀": {
+    "hash": "8ede32f249d931f7",
+    "n": 176,
+  },
+  "병역": {
+    "hash": "b43c299a88677da7",
+    "n": 176,
+  },
+  "원본": {
+    "hash": "e961efd0a55fee62",
+    "n": 176,
+  },
+}
+`;
+
+exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지와 선택마다의 결과(병역 흐름 포함) 1`] = `
+{
+  "kinds": [
+    "army",
+    "offer",
+    "renew",
+    "sangmu",
+    "serve",
+    "stay",
+    "uni",
+  ],
+  "대표팀": {
+    "accepted": {
+      "hash": "81f1e0f93025c4e2",
+      "n": 176,
+    },
+    "options": {
+      "hash": "6064dc1d2279ab2a",
+      "n": 176,
+    },
+  },
+  "병역": {
+    "accepted": {
+      "hash": "76b9f9bfd0446167",
+      "n": 176,
+    },
+    "options": {
+      "hash": "585ba0585c593092",
+      "n": 176,
+    },
+  },
+  "원본": {
+    "accepted": {
+      "hash": "124b06b532793761",
+      "n": 176,
+    },
+    "options": {
+      "hash": "f2b6e773661863a1",
+      "n": 176,
+    },
+  },
+}
+`;
+
+exports[`게임 특성화 (T-11-044) > natWindow — A매치·국제대회 창 1`] = `
+{
+  "대표팀": {
+    "hash": "96cb23e1d312e859",
+    "n": 528,
+  },
+  "원본": {
+    "hash": "c601536d44058139",
+    "n": 528,
+  },
+}
+`;
+
+exports[`게임 특성화 (T-11-044) > rollEvent — 이벤트 추첨 1`] = `
+{
+  "distinct": 46,
+  "hash": "7530e0ff3e2a7a75",
+  "n": 528,
+}
+`;
+
+exports[`게임 특성화 (T-11-044) > simBlock — 리그 구간 경기 결과 1`] = `
+{
+  "대표팀": {
+    "hash": "8d376e6a5a74bf23",
+    "n": 354,
+  },
+  "병역": {
+    "hash": "d744fa43758537a3",
+    "n": 354,
+  },
+  "원본": {
+    "hash": "09d3934666ae4658",
+    "n": 354,
+  },
+}
+`;
+
+exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격자와 선택 결과 1`] = `
+{
+  "events": 58,
+  "reached": 54,
+  "table": {
+    "ad": "758 2a63b09d540efeae",
+    "ag-release": "3 44cd7308eee4ae44",
+    "asia-tour": "0 155cad1fc4d9cff1",
+    "bench-talk": "24 2083cea5f376f0ad",
+    "charity": "880 bf6b37e0ab329488",
+    "derby": "325 712341263add620c",
+    "df-header": "92 7565af7b39f544cd",
+    "df-lastman": "92 03379a92664f25df",
+    "df-marking": "92 6d233d7af346a687",
+    "df-overlap": "0 b9040095f6c3c036",
+    "diet": "880 6ab9eee6bed1cb8b",
+    "europe-2": "880 6f89e502cb94ee74",
+    "europe-3": "0 71049308ceb77612",
+    "family": "880 a0b264231bff6567",
+    "final": "14 bcf8689e152b4dfc",
+    "fw-drought": "3 db6158a664bac865",
+    "fw-one-on-one": "146 8342e66f0818a767",
+    "fw-target": "192 b329ebb2b4d0344f",
+    "gk-cross": "96 0da2809fc4acf3ca",
+    "gk-error": "108 b23a665ea91afde0",
+    "gk-no1": "8 eba2cdde9b105f11",
+    "gk-pk": "96 64e460807188aef8",
+    "gk-sweeper": "136 6e7167477bb6c640",
+    "haters": "90 dde94a307b5d9eef",
+    "interview": "880 2d959665ed1de922",
+    "knock": "778 a1380e78a47f4b38",
+    "mentor": "880 b2a73f7bf54c12ba",
+    "mentor-2": "810 5ed48a4c2417c0e8",
+    "mentor-3": "810 3d33dcfb06f1441a",
+    "mf-freekick": "132 03e9f05819391baa",
+    "mf-press": "132 6f565feda5e448f8",
+    "mf-role": "192 e72bdc830b8a8ba2",
+    "mil-notice": "59 076037afd4a78bbf",
+    "mil-notice-low": "8 086ab0e52cdd2e2b",
+    "newcoach": "490 6ff565cb8885fe07",
+    "oly-release": "3 ccb901f463d2ce44",
+    "party": "803 8d52ef3ef991eaf8",
+    "penalty": "278 b3bbb07c4f5d2b7c",
+    "pk-save": "108 960c5599efb308fd",
+    "puskas": "117 084d006b4380f15f",
+    "racism": "0 ec86f2247d90e708",
+    "rehab-1": "6 399c8640e716b3af",
+    "rehab-2": "880 a98aa5009dd39e59",
+    "rehab-3": "778 acb500bdba01074c",
+    "rival": "640 f4e2ffbcfc1d88e4",
+    "rival-1": "84 025191bff101e855",
+    "rival-2": "880 10d482b601bd4813",
+    "rival-3": "880 748bf16e4b872a74",
+    "rumor": "726 b6eea7b41df7cd82",
+    "scandal-2": "880 b08ee7b19e0f0d37",
+    "scandal-3": "880 58400c476bbaee86",
+    "scout": "748 580616ab535709c1",
+    "slump": "1 db5e47e0cff9deb9",
+    "team-k": "158 19727184da4b345f",
+    "trainer": "415 dbf1a660d7f8f1d6",
+    "var": "490 694d907ceeddc481",
+    "winter-camp": "320 1f7c34f59c2102a7",
+    "winter-window": "250 805c92f264b272c2",
+  },
+}
+`;

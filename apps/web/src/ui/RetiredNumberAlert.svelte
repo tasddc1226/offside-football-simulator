@@ -6,7 +6,7 @@
   import { defaultClubName } from '@offside/contracts/club-names';
   import { rnAlert } from './retiredNumber.svelte.js';
   import { openPublicLegendById } from './legend.js';
-  import { RN_SHIRT, RN_TRIM, rnStyle } from './rnStyle.js';
+  import { RN_SHIRT, RN_TRIM, rnStyle } from '@offside/app-core/rnStyle';
   import { dur } from './motion.js';
 
   const SHOW_MS = 9_000;

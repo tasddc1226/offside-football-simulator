@@ -1,7 +1,7 @@
 <script lang="ts">
   // T-10-028 경기 중계 시트 — 구간 경기가 한 경기씩 올라오며 승무패·출전 기록이 쌓인다.
   import TickerLine from './TickerLine.svelte';
-  import type { SheetView } from './types.js';
+  import type { SheetView } from '@offside/app-core/sheets';
   let { v }: { v: Extract<SheetView, { kind: 'block' }> } = $props();
   const tally = $derived([
     { k: v.tally.apps, l: '출전' },
@@ -13,7 +13,7 @@
 
 <div class="eyebrow">{v.eyebrow}</div>
 <h2>{v.title}</h2>
-<div class="prog"><i style="width:{v.progress * 100}%"></i></div>
+<div class="prog"><i style:width="{v.progress * 100}%" style:transition-duration="{v.fill}ms"></i></div>
 <div class="prog-meta"><span>{v.round}</span><span data-block-wdl>{v.wdl.w}승 {v.wdl.d}무 {v.wdl.l}패</span></div>
 <div class="tally">
   {#each tally as t (t.l)}

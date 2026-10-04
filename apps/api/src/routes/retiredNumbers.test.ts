@@ -83,6 +83,7 @@ describe('영구결번 (T-10-076)', () => {
     cookie = (await issueCookie(ctx)).cookie;
   });
   afterEach(async () => {
+    vi.useRealTimers();
     await ctx.dispose();
   });
 
@@ -115,8 +116,8 @@ describe('영구결번 (T-10-076)', () => {
     expect(res.status).toBe(200);
     return successEnvelope(RetirementResponseSchema).parse(await res.json()).data.retiredNumber;
   };
-  const list = async (env = ctx.env) => {
-    const res = await createApp().request('/v1/retired-numbers', {}, env);
+  const list = async (env = ctx.env, query = '') => {
+    const res = await createApp().request(`/v1/retired-numbers${query}`, {}, env);
     expect(res.status).toBe(200);
     return successEnvelope(RetiredNumbersResponseSchema).parse(await res.json()).data.items;
   };
@@ -156,6 +157,7 @@ describe('영구결번 (T-10-076)', () => {
       club: '맨체스터 스카이블루',
       number: 10,
       seq: 1,
+      season: expect.any(Number),
       at: expect.any(String),
     });
     await retire(A, skyBlue(10), '김결번', cookie, env);
@@ -264,42 +266,6 @@ describe('영구결번 (T-10-076)', () => {
       holder: '옛레전드',
     });
   });
-  it('오픈 전엔 심사·소급·알림 없이 pending·빈 목록, 오픈 뒤 첫 목록 조회가 그 사이 은퇴를 심사한다', async () => {
-    const hub = fakeHub();
-    const openAt = new Date(Date.now() + 30 * 60_000).toISOString();
-    const closed = { ...ctx.env, LIVE: hub.ns, RETIRED_NUMBERS_OPEN_AT: openAt };
-    expect(await retire(A, skyBlue(10), '오픈전', cookie, closed)).toEqual({ kind: 'pending' });
-    const check = await callJson(closed, 'GET', `/v1/careers/${A}/retired-number`, { cookie });
-    expect(
-      successEnvelope(RetiredNumberCheckResponseSchema).parse(await check.json()).data
-        .retiredNumber,
-    ).toEqual({ kind: 'pending' });
-    const res = await createApp().request('/v1/retired-numbers', {}, closed);
-    expect(res.headers.get('cache-control')).toBe('public, max-age=60');
-    expect(
-      successEnvelope(RetiredNumbersResponseSchema).parse(await res.json()).data.items,
-    ).toEqual([]);
-    // 오픈 20초 전이면 캐시도 20초만 — 오픈 시각을 넘겨 빈 목록을 보여 주지 않는다.
-    const soon = {
-      ...closed,
-      RETIRED_NUMBERS_OPEN_AT: new Date(Date.now() + 20_000).toISOString(),
-    };
-    const cc = (await createApp().request('/v1/retired-numbers', {}, soon)).headers.get(
-      'cache-control',
-    );
-    expect(Number(cc?.match(/max-age=(\d+)/)?.[1])).toBeLessThanOrEqual(20);
-    expect(hub.retiredNumbers).toEqual([]);
-    expect(
-      await ctx.env.DB.prepare("SELECT key FROM app_meta WHERE key LIKE 'retired_numbers_%'").all(),
-    ).toMatchObject({ results: [] });
-
-    const opened = {
-      ...closed,
-      RETIRED_NUMBERS_OPEN_AT: new Date(Date.now() - 1000).toISOString(),
-    };
-    expect(await list(opened)).toMatchObject([{ careerId: A, name: '오픈전', seq: 1 }]);
-  });
-
   it('내 선수 심사 조회: 소급으로 받은 결번·이미 찬 자리를 알려 주고, 남의 커리어는 거부한다', async () => {
     const other = (await issueCookie(ctx)).cookie;
     await retire(B, skyBlue(10), '옛레전드', other);
@@ -353,5 +319,55 @@ describe('영구결번 (T-10-076)', () => {
       years(2030, 8).map((y) => legendSeason(y, '가짜 구단', 'pl-99')),
     );
     expect(await retire(B, fake, '가짜')).toBeNull();
+  });
+
+  it('T-11-029: 시즌 1 선수는 프리시즌 선수와 같은 구단·번호의 결번을 받고, seq도 시즌마다 센다', async () => {
+    const hub = fakeHub();
+    const env = { ...ctx.env, LIVE: hub.ns };
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z')); // 프리시즌
+    expect(await retire(A, skyBlue(10), '프리시즌', cookie, env)).toMatchObject({
+      kind: 'granted',
+      number: 10,
+      seq: 1,
+    });
+    expect(await retire(B, skyBlue(7), '프리일곱', cookie, env)).toMatchObject({ seq: 2 });
+    // 개막 전 기본 목록은 프리시즌.
+    expect(await list()).toMatchObject([{ careerId: A }, { careerId: B }]);
+
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
+    // 프리시즌 선수가 시즌 중에 자리를 차지했어도 시즌 1 선수가 같은 번호를 받는다.
+    expect(await retire(C, skyBlue(10), '시즌일', cookie, env)).toMatchObject({
+      kind: 'granted',
+      clubId: 'pl-0',
+      number: 10,
+      seq: 1,
+    });
+    await vi.waitFor(() => expect(hub.retiredNumbers.map((r) => r.season)).toEqual([0, 0, 1]));
+    // 시즌 안에서는 여전히 먼저 잡은 쪽이 영구 보유한다.
+    const D = '0c000000-0000-4000-8000-00000000000d';
+    expect(await retire(D, skyBlue(10), '시즌이', cookie, env)).toMatchObject({
+      kind: 'taken',
+      holder: '시즌일',
+    });
+    // 기본 목록은 지금 시즌, ?season=으로 프리시즌 목록.
+    expect(await list()).toMatchObject([{ careerId: C, seq: 1 }]);
+    expect(await list(ctx.env, '?season=1')).toMatchObject([{ careerId: C, seq: 1 }]);
+    expect(await list(ctx.env, '?season=0')).toMatchObject([
+      { careerId: A, seq: 1 },
+      { careerId: B, seq: 2 },
+    ]);
+    const res = await createApp().request('/v1/retired-numbers?season=0', {}, ctx.env);
+    expect(successEnvelope(RetiredNumbersResponseSchema).parse(await res.json()).data.season).toBe(
+      0,
+    );
+    expect((await createApp().request('/v1/retired-numbers?season=9', {}, ctx.env)).status).toBe(
+      400,
+    );
+    // 명예의 전당 상세의 결번은 그 선수 시즌 것이다.
+    const detail = await createApp().request(`/v1/hof/${C}`, {}, ctx.env);
+    expect(
+      successEnvelope(HofDetailResponseSchema).parse(await detail.json()).data.entry.retiredNumber,
+    ).toMatchObject({ number: 10, seq: 1 });
   });
 });

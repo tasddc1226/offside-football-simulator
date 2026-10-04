@@ -8,14 +8,25 @@
   import { bgm, setBgm, setBgmVolume } from './bgm.svelte.js';
   import { volumeAdjustable } from './bgmEngine.js';
   import { isDark, setDark } from './theme.js';
+  import { setSheetSkin, skin } from './skin.svelte.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
-  import { namePublicEnabled, setNamePublic } from './namePublic.js';
+  import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
+  import BackupSettings from './BackupSettings.svelte';
+  import { toast } from './helpers.js';
+  import { copyText } from './inapp-open.js';
+
+  // T-11-051 개발자 후원 계좌. 앱 스토어는 개발자 후원을 인앱 결제로만 허용해서 웹에만 둔다.
+  const DONATE_ACCOUNT = '토스뱅크 1000-1599-4723 양*영';
 
   let sfx = $state(sfxEnabled());
   let dark = $state(isDark());
   let namePublic = $state(namePublicEnabled());
+
+  async function copyAccount() {
+    toast((await copyText(DONATE_ACCOUNT)) ? '계좌번호를 복사했어요. 고마워요' : '복사하지 못했어요. 아래 계좌번호를 직접 적어 주세요');
+  }
 </script>
 
 <div class="wrap">
@@ -30,10 +41,19 @@
       <div class="settings-label">
         <small class="eyebrow">Display</small>
         <strong id="dark-label">다크 모드</strong>
-        <span class="muted">어두운 화면으로 봐요. 이 기기에 저장됩니다.</span>
+        <span class="muted">어두운 화면으로 봐요. 이 기기에 저장돼요.</span>
       </div>
       <button class="switch" role="switch" aria-checked={dark} aria-labelledby="dark-label" data-setting="dark" onclick={() => setDark((dark = !dark))}></button>
     </div>
+    {#if skin.desktop}
+    <div class="settings-row">
+      <div class="settings-label">
+        <strong id="sheet-label">업무 모드</strong>
+        <span class="muted">게임 화면을 스프레드시트처럼 보이게 하고 배경음악·효과음을 꺼요. 키보드 <kbd>`</kbd>(숫자 1 왼쪽 키)로 언제든 바로 켜고 끌 수 있어요. PC 브라우저에서만 적용되고 이 기기에 저장돼요.</span>
+      </div>
+      <button class="switch" role="switch" aria-checked={skin.pref} aria-labelledby="sheet-label" data-setting="sheet-skin" onclick={() => setSheetSkin(!skin.pref)}></button>
+    </div>
+    {/if}
   </section>
 
   <section class="card settings-card">
@@ -80,12 +100,14 @@
       <div class="settings-label">
         <small class="eyebrow">Privacy</small>
         <strong id="name-public-label">선수 이름 공개</strong>
-        <span class="muted">홈 라이브 현황·명예의 전당·서버 최초 업적에 선수 이름이 보여요. 끄면 '익명의 공격수'처럼 표시되고, 다음 시즌 기록부터 반영돼요. 실명은 쓰지 않는 것을 권장합니다.</span>
+        <span class="muted">홈 라이브 현황·명예의 전당·서버 최초 업적에 선수 이름이 보여요. 끄면 '익명의 공격수'처럼 표시되고, 다음 시즌 기록부터 반영돼요. 실명은 쓰지 않는 게 좋아요.</span>
       </div>
       <button class="switch" role="switch" aria-checked={namePublic} aria-labelledby="name-public-label" data-setting="name-public" onclick={() => setNamePublic((namePublic = !namePublic))}></button>
     </div>
   </section>
 
+  <!-- T-10-116 진행 중 커리어 백업·불러오기 -->
+  <BackupSettings />
   <ClubCustomSettings />
   <AnalyticsConsent settings />
 
@@ -106,6 +128,17 @@
       <a href="/legal/terms/">이용약관 <span aria-hidden="true">›</span></a>
       <a href="/legal/privacy/">개인정보 처리방침 <span aria-hidden="true">›</span></a>
     </nav>
+  </section>
+
+  <section class="settings-group" aria-labelledby="settings-support">
+    <div class="eyebrow">Support</div>
+    <h2 id="settings-support">개발자 응원하기</h2>
+    <div class="card settings-links">
+      <button data-act="coffee" onclick={copyAccount}>☕ 커피 한잔 사주기 <span aria-hidden="true">›</span></button>
+    </div>
+    <p class="muted fs-xs settings-credit">
+      재밌게 즐기셨다면 커피 한잔 사 주세요. 누르면 계좌번호가 복사돼요.<br />{DONATE_ACCOUNT}
+    </p>
   </section>
 
   <SiteFooter />

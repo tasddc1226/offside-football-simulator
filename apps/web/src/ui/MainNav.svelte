@@ -21,7 +21,8 @@
   };
   const OPEN: Record<(typeof MAIN_SCREENS)[number], () => void> = {
     hof: openHof,
-    board: () => openBoard('notice'),
+    // T-10-113 소식 화면에서 다시 누르면 보고 있던 게시판의 목록으로 돌아간다.
+    board: () => (appState.screen === 'board' ? appState.boardTop++ : openBoard('notice')),
     home: () => (goHome(), window.scrollTo(0, 0)),
     owner: () => go('owner'),
     settings: () => go('settings'),
@@ -29,9 +30,10 @@
 </script>
 
 <nav class="tabs main-nav" aria-label="메인 메뉴">
-  {#each MAIN_SCREENS as k (k)}
-    <button data-act={k} aria-current={appState.screen === k ? 'page' : undefined} onclick={OPEN[k]}>
+  {#each MAIN_SCREENS as k, i (k)}
+    <button data-act={k} aria-current={appState.screen === k ? 'page' : undefined} style:--i={i} onclick={OPEN[k]}>
       <TabIcon name={k} />{LABEL[k]}
+      {#if k === 'owner' && appState.achNew}<span class="tab-dot"><span class="sr-only">새 업적 {appState.achNew}개</span></span>{/if}
     </button>
   {/each}
 </nav>

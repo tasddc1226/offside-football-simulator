@@ -1,19 +1,22 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { signConfirmToken, verifyConfirmToken } from '../auth/confirm-token.js';
 import type { Db } from '../db/client.js';
-import { newId } from '../db/ids.js';
+import { auditLogStatement } from '../db/repos/auditLog.js';
 import { runBatch } from '../db/repos/batch.js';
 import { deleteBoardActivityStatements } from '../db/repos/boards.js';
+import { deleteChatActivityStatements } from '../db/repos/chat.js';
+import { deleteNameReportsStatement } from '../db/repos/nameReports.js';
 import { deleteCareersStatements } from '../db/repos/careers.js';
 import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
 import { resetFirstsBackfillStatement } from '../db/repos/firsts.js';
 import { deleteOwnerTeamsStatements } from '../db/repos/ownerTeams.js';
 import {
-  auditLog,
   boardComments,
   careers,
   idempotency,
   profiles,
+  pushDevices,
+  pushNewsDeliveries,
   serverFirsts,
   serverRecords,
   sessions,
@@ -100,25 +103,36 @@ export async function executeProfileDeletion(
     // (profiles_google_sub_unique)가 같은 Google 계정의 재연결을 막는다.
     db
       .update(profiles)
-      .set({ deletedAt: input.now, googleSub: null, email: null, linkedAt: null, nickname: null })
+      .set({
+        deletedAt: input.now,
+        googleSub: null,
+        email: null,
+        linkedAt: null,
+        nickname: null,
+        appleSub: null,
+        appleLinkedAt: null,
+      })
       .where(eq(profiles.id, input.profileId)),
     // T-9-009: profiles는 소프트 삭제(deletedAt만 세팅)라 FK ON DELETE CASCADE가 트리거되지 않는다.
     // 커리어·시즌 데이터는 이 batch에서 명시적으로 지운다.
+    deleteNameReportsStatement(db, input.profileId),
     ...deleteCareersStatements(db, input.profileId),
     deleteClubCustomStatement(db, input.profileId),
     // T-10-092 구단주 팀(팀 경기는 팀 FK CASCADE로 함께 지워진다).
     ...deleteOwnerTeamsStatements(db, input.profileId),
     ...deleteBoardActivityStatements(db, input.profileId),
+    ...deleteChatActivityStatements(db, input.profileId),
+    db.delete(pushDevices).where(eq(pushDevices.profileId, input.profileId)),
+    db.delete(pushNewsDeliveries).where(eq(pushNewsDeliveries.profileId, input.profileId)),
     db.delete(idempotency).where(eq(idempotency.ownerProfileId, input.profileId)),
     db
       .update(sessions)
       .set({ revokedAt: input.now })
       .where(and(eq(sessions.profileId, input.profileId), isNull(sessions.revokedAt))),
-    db.insert(auditLog).values({
-      id: newId('aud'),
+    auditLogStatement(db, {
       kind: 'PROFILE_DELETED',
       profileId: input.profileId,
-      payloadJson: '{}',
+      payload: {},
       createdAt: input.now,
     }),
     // 가진 최초·서버 기록이 있었으면 재계산 표시를 지워, 공개 조회가 전체를 다시 훑어 실제 다음 보유자에게 돌려준다.

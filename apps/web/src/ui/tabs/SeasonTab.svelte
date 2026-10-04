@@ -1,19 +1,32 @@
+<script lang="ts" module>
+  /** 마지막으로 안내 스크롤을 돈 리포트 — 탭을 오가며 다시 마운트돼도 같은 리포트로 또 돌지 않는다. */
+  let touredKey = 0;
+</script>
+
 <script lang="ts">
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
-  import { PHASES, LAST_PHASE } from '../../game/data.js';
-  import { teamRank, roundRange, TRAININGS, trainingLabel, trainingCard, trainingHelp, TRAINING_NOTE, STORIES, turnNo } from '../../game/engine.js';
-  import { eventById } from '../../game/events-data.js';
-  import type { GameState } from '../../game/types.js';
-  import { save, seasonLabel } from '../helpers.js';
+  // T-11-025 순서: 방금 끝난 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·누적 기록·
+  // 순위표·대회) → 스토리 → 최근 소식. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다. T-11-036 진행·이벤트 확인 버튼은
+  // 화면 아래 고정 바(Game.svelte)에 있다 — 탭 맨 아래에 두니 구간마다 끝까지 내려야 해 불편했다.
+  import { coachFeedback } from '@offside/app-core/career-feedback';
+  import { visibleCareerLog } from '@offside/app-core/potential-view';
+  import { PHASES, LAST_PHASE } from '@offside/game/data';
+  import { roundRange, logLabel, TRAININGS, trainingLabel, trainingCard, trainingHelp, INVESTS, investCard, investHelp, investDef, fmtMoney, STORIES, turnNo } from '@offside/game/engine';
+  import { eventById } from '@offside/game/events-data';
+  import type { GameState } from '@offside/game/types';
+  import { save } from '../helpers.js';
+  import { seasonLabel } from '@offside/app-core/career';
+  import { RESULT_TOUR, TOUR_PICK_MS, TOUR_RANK_DELAY, TOUR_RANK_MS, type TourGate } from '@offside/app-core/resultTour';
   import { appState } from '../state.svelte.js';
+  import { dur } from '../motion.js';
   import PhaseReport from './PhaseReport.svelte';
   import LeagueTable from './LeagueTable.svelte';
 
   const { s }: { s: GameState } = $props();
 
+  const coach = $derived(coachFeedback(s));
   const S = $derived(s.season);
   const avg = $derived(S.apps ? (S.ratingSum / S.apps).toFixed(2) : '-');
-  const rank = $derived(teamRank(s));
   const phase = $derived(Math.min(s.phase, LAST_PHASE));
   const label = $derived(phase === 0 ? '프리시즌' : `${PHASES[phase]} · ${roundRange(s, phase)}`);
   const lastCol = $derived((s.pos === 'GK' || s.pos === 'DF' ? ['무실점', S.cs] : ['도움', S.assists]) as [string, number]);
@@ -21,14 +34,116 @@
   const activeStories = $derived(Object.entries(s.story || {}).filter(([, v]) => !v.done));
   const t = $derived(turnNo(s));
   const picked = $derived(TRAININGS.find((x) => x.id === s.training));
+  const invest = $derived(investDef(s));
+  const report = $derived(appState.report && appState.report.year === s.year ? appState.report : null);
+  // 리포트가 개막 후 첫 구간이면 시즌 누적 = 구간 기록이라 누적 칸을 숨긴다. 개막 전(0경기)에도 숨긴다.
+  const showTotals = $derived(S.played > 0 && !(report?.block && S.played === report.games.length));
+  // 최근 소식: 리포트에 이미 나온 구간 기록은 빼고 5줄만, '더 보기'로 14줄까지.
+  const FEED_SHORT = 5;
+  const FEED_LONG = 14;
+  let feedAll = $state(false);
+  const feed = $derived.by(() => {
+    const hide = report ? logLabel(report.year, report.ph) : null;
+    return visibleCareerLog(s.log).filter((l) => l.t !== hide).slice(0, FEED_LONG);
+  });
+
+  // T-11-025 결과 안내 스크롤(순서·시간은 app-core resultTour): 중계 시트를 닫고 새 리포트가 뜨면, 리포트를 읽을 시간을 준 뒤
+  // 아래 카드들([data-tour])을 차례로 화면 위쪽에 맞춰 부드럽게 내려가며 잠깐씩 강조하고, 아래 고정 진행 바(Game.svelte)를 비추고 멈춘다. 훈련·자기
+  // 투자 카드에서는 시간 대신 사용자가 하나를 고를 때까지 기다렸다가(고른 카드가 톡 튄다) 넘어가고, 시즌 현황에서는 순위표의
+  // 내 팀 순위 변동을 움직여 보여 준다. 기다리는 카드 밖의 단계에서 사용자가 손대면(휠·터치·클릭·키) 바로 그만둔다.
+  // 감속 모션·업무 모드에서는 돌지 않는다.
+  let tourWait = $state<TourGate | null>(null);
+  let resume: ((btn: HTMLElement) => void) | null = null;
+  let table = $state<ReturnType<typeof LeagueTable>>();
+  $effect(() => {
+    const k = report?.key;
+    if (!k || k === touredKey) return;
+    touredKey = k;
+    if (!dur(1)) return;
+    return tour();
+  });
+
+  function tour(): () => void {
+    const timers: number[] = [];
+    const later = (fn: () => void, ms: number) => void timers.push(window.setTimeout(fn, ms));
+    let lit: HTMLElement | null = null;
+    const light = (el: HTMLElement | null) => {
+      if (lit) delete lit.dataset.tourSpot;
+      lit = el;
+      if (el) el.dataset.tourSpot = '';
+    };
+    const evs = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
+    // 고르기를 기다리는 동안에는 스크롤·탭으로 카드를 살펴볼 수 있어야 하니 멈추지 않는다.
+    const onUser = () => void (tourWait || stop());
+    const stop = () => {
+      timers.forEach(clearTimeout);
+      light(null);
+      tourWait = null;
+      resume = null;
+      for (const e of evs) removeEventListener(e, onUser, true);
+    };
+    for (const e of evs) addEventListener(e, onUser, { capture: true, passive: true });
+    const steps = RESULT_TOUR.flatMap(([k, wait]) => {
+      const el = document.querySelector<HTMLElement>(`[data-tour="${k}"]`);
+      return el ? [{ k, el, wait }] : [];
+    });
+    const go = (i: number) => {
+      const step = steps[i];
+      if (!step) return stop();
+      const { k, el, wait } = step;
+      // T-11-036 마지막 단계(go)는 화면 아래 고정 진행 버튼이라 내려가지 않고 초점만 옮긴다.
+      if (k === 'go') el.focus({ preventScroll: true });
+      else if (i) {
+        const head = document.querySelector<HTMLElement>('.topbar')?.offsetHeight ?? 0;
+        const box = el.getBoundingClientRect();
+        let y = box.top + scrollY - head - 12;
+        // 고르기를 기다리는 카드가 화면보다 길면 선택지·설명이 있는 아래쪽이 보이게, 아래 고정 진행 바 바로 위에 바닥을 맞춘다.
+        if (typeof wait !== 'number') {
+          const floor = document.querySelector('.season-bar, .tabs')?.getBoundingClientRect().top ?? innerHeight;
+          y = Math.max(y, box.bottom + scrollY - (floor - 12));
+        }
+        scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+      }
+      light(el);
+      if (typeof wait !== 'number') {
+        tourWait = wait;
+        resume = (btn) => {
+          tourWait = null;
+          resume = null;
+          btn.dataset.picked = '';
+          later(() => {
+            delete btn.dataset.picked;
+            go(i + 1);
+          }, TOUR_PICK_MS);
+        };
+        return;
+      }
+      let ms = wait;
+      const rank = report?.rank;
+      if (k === 'status' && rank?.before && rank.before !== rank.after) {
+        later(() => table?.playRank(rank.before), TOUR_RANK_DELAY);
+        ms += TOUR_RANK_MS;
+      }
+      later(() => go(i + 1), ms);
+    };
+    go(0);
+    return stop;
+  }
 
   function meterCls(v: number, badAt: number, warnAt: number): string {
     return v < badAt ? 'bad' : v < warnAt ? 'warn' : '';
   }
 
-  function setTraining(id: string) {
+  function setTraining(id: string, btn: HTMLElement) {
     s.training = id;
     save();
+    if (tourWait === 'train') resume?.(btn);
+  }
+
+  function setInvest(id: string, btn: HTMLElement) {
+    s.invest = id;
+    save();
+    if (tourWait === 'invest') resume?.(btn);
   }
 
   function waitText(k: string): string {
@@ -41,60 +156,105 @@
   }
 </script>
 
-{#if appState.report && appState.report.year === s.year}
-  {#key appState.report.key}
-    <PhaseReport r={appState.report} />
+{#if report}
+  {#key report.key}
+    <PhaseReport r={report} />
   {/key}
 {/if}
 
-<section class="card">
+<!-- 훈련·자기 투자 카드 공통 내용. T-11-025 카드에는 무엇이 오르는지(첫 효과)와 눈여겨볼 한 가지(주력·비용 등)만 두고,
+     컨디션 소모 같은 나머지 효과와 자세한 설명은 고른 카드의 설명 칸에서만 보여 준다. -->
+{#snippet optBody(label: string, c: { effect: string[]; tag: string })}
+  <b>{label}</b><small>{c.effect[0]}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
+{/snippet}
+{#snippet helpBody(title: string, c: { effect: string[] }, body: string)}
+  <b>{title} <span class="muted">· {c.effect.join(' · ')}</span></b>
+  <p>{body}</p>
+{/snippet}
+
+<section class="card stack" data-prep data-tour="prep">
+  <div><div class="eyebrow">Next · {label}</div><h2>다음 구간 준비</h2></div>
+  <div class="meters">
+    <div class="meter"><span>컨디션</span><div class="bar"><i class={meterCls(s.cond, 40, 65)} style="width:{Math.round(s.cond)}%"></i></div><span class="v">{Math.round(s.cond)}</span></div>
+    <div class="meter"><span>사기</span><div class="bar"><i class={meterCls(s.morale, 40, 60)} style="width:{Math.round(s.morale)}%"></i></div><span class="v">{Math.round(s.morale)}</span></div>
+    <div class="meter"><span>인기</span><div class="bar"><i class="acc" style="width:{Math.min(100, Math.round(s.fame))}%"></i></div><span class="v">{Math.round(s.fame)}</span></div>
+  </div>
+  <div class="stack" style="gap:6px" data-coach-feedback>
+    <h3 class="sub-title">코치 메모</h3>
+    <p class="fs-sm">{coach.summary}</p>
+    {#each coach.notes as note (note)}<p class="muted fs-sm">{note}</p>{/each}
+  </div>
+  <h3 class="sub-title">훈련 방향</h3>
+  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">이번 구간 훈련을 고르면 다음으로 넘어가요</p>{/if}
+  <div class="train">
+    {#each TRAININGS as tr (tr.id)}
+      {@const c = trainingCard(s, tr)}
+      <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={(e) => setTraining(tr.id, e.currentTarget)}>
+        {@render optBody(trainingLabel(s, tr), c)}
+      </button>
+    {/each}
+  </div>
+  {#if picked}
+    <div class="train-help" data-train-help aria-live="polite">
+      {@render helpBody(trainingLabel(s, picked), trainingCard(s, picked), trainingHelp(s, picked))}
+    </div>
+  {/if}
+</section>
+
+<section class="card stack" data-invest-card data-tour="invest">
   <div class="row" style="justify-content:space-between">
-    <div><div class="eyebrow">{seasonLabel(s)} Season</div><h2>{label}</h2></div>
-    <span class="pill">{rank ? `팀 ${rank}위` : '개막 전'} · {S.w}승 {S.d}무 {S.l}패</span>
+    <div><div class="eyebrow">Invest</div><h2>자기 투자</h2></div>
+    <span class="pill" data-invest-money>보유 {fmtMoney(s.money)}원</span>
   </div>
-  <div class="track">
-    {#each [0, 1, 2] as i (i)}
-      <div class={i < phase ? 'done' : i === phase ? 'now' : ''}></div>
+  {#if tourWait === 'invest'}<p class="tour-hint" aria-live="polite">투자를 고르면 넘어가요 · 아끼려면 투자 안 함</p>{/if}
+  <div class="train">
+    {#each INVESTS as d (d.id)}
+      {@const c = investCard(s, d)}
+      <button class="opt" data-invest={d.id} aria-pressed={invest.id === d.id} disabled={!c.affordable} onclick={(e) => setInvest(d.id, e.currentTarget)}>
+        {@render optBody(d.label, c)}
+      </button>
     {/each}
   </div>
-  <div class="track-lbl">
-    {#each ['프리시즌', '전반기', '후반기'] as tl (tl)}
-      <span>{tl}</span>
-    {/each}
-  </div>
-  <div class="stats">
-    <div><b>{S.apps}</b><span>출전</span></div>
-    <div><b>{S.goals}</b><span>골</span></div>
-    <div><b>{s.pos === 'GK' || s.pos === 'DF' ? S.assists : S.starts}</b><span>{s.pos === 'GK' || s.pos === 'DF' ? '도움' : '선발'}</span></div>
-    <div><b>{lastCol[1]}</b><span>{lastCol[0]}</span></div>
-    <div><b>{avg}</b><span>평점</span></div>
+  <div class="train-help" data-invest-help aria-live="polite">
+    {@render helpBody(invest.label, investCard(s, invest), investHelp(s, invest))}
   </div>
 </section>
 
-<LeagueTable {s} />
-
-<section class="card meters">
-  <div class="meter"><span>컨디션</span><div class="bar"><i class={meterCls(s.cond, 40, 65)} style="width:{Math.round(s.cond)}%"></i></div><span class="v">{Math.round(s.cond)}</span></div>
-  <div class="meter"><span>사기</span><div class="bar"><i class={meterCls(s.morale, 40, 60)} style="width:{Math.round(s.morale)}%"></i></div><span class="v">{Math.round(s.morale)}</span></div>
-  <div class="meter"><span>인기</span><div class="bar"><i class="acc" style="width:{Math.min(100, Math.round(s.fame))}%"></i></div><span class="v">{Math.round(s.fame)}</span></div>
+<section class="card stack" data-season-status data-tour="status">
+  <div>
+    <div class="eyebrow">{seasonLabel(s)} Season</div>
+    <h2>{label}</h2>
+    <div class="track">
+      {#each [0, 1, 2] as i (i)}
+        <div class={i < phase ? 'done' : i === phase ? 'now' : ''}></div>
+      {/each}
+    </div>
+    <div class="track-lbl">
+      {#each ['프리시즌', '전반기', '후반기'] as tl (tl)}
+        <span>{tl}</span>
+      {/each}
+    </div>
+  </div>
+  {#if showTotals}
+    <p class="muted fs-sm" data-season-totals>시즌 누적 · {S.w}승 {S.d}무 {S.l}패 · 출전 {S.apps} · {S.goals}골 · {lastCol[0]} {lastCol[1]} · 평점 {avg}</p>
+  {/if}
+  <LeagueTable {s} bind:this={table} />
+  {#if comps.length}
+    <div>
+      <h3 class="sub-title" style="margin-bottom:2px">이번 시즌 대회</h3>
+      {#each comps as c (c.name)}
+        <div class="story-row">
+          <b>{c.name}</b>
+          <span class="muted">{c.stage || (c.type === 'super' ? '개막 전 단판' : '1구간 시작')}{c.alive && c.stage ? ' · 진행 중' : ''}</span>
+          <span class="muted">{c.apps}경기 {c.g}골</span>
+        </div>
+      {/each}
+    </div>
+  {/if}
 </section>
-
-{#if comps.length}
-  <section class="card">
-    <div class="eyebrow">Competitions</div>
-    <h2 style="margin-bottom:6px">이번 시즌 대회</h2>
-    {#each comps as c (c.name)}
-      <div class="story-row">
-        <b>{c.name}</b>
-        <span class="muted">{c.stage || (c.type === 'super' ? '개막 전 단판' : '1구간 시작')}{c.alive && c.stage ? ' · 진행 중' : ''}</span>
-        <span class="muted">{c.apps}경기 {c.g}골</span>
-      </div>
-    {/each}
-  </section>
-{/if}
 
 {#if activeStories.length}
-  <section class="card">
+  <section class="card" data-stories data-tour="stories">
     <div class="eyebrow">Storylines</div>
     <h2 style="margin-bottom:6px">진행 중인 스토리</h2>
     {#each activeStories as [k, v] (k)}
@@ -111,32 +271,18 @@
   </section>
 {/if}
 
-<section class="card stack">
-  <div><div class="eyebrow">Training</div><h2>이번 구간 훈련 방향</h2></div>
-  <div class="train">
-    {#each TRAININGS as tr (tr.id)}
-      {@const c = trainingCard(s, tr)}
-      <button class="opt" data-train={tr.id} aria-pressed={s.training === tr.id} onclick={() => setTraining(tr.id)}>
-        <b>{trainingLabel(s, tr)}</b><small>{#each c.effect as part, i (i)}{i ? ' · ' : ''}<span class="nowrap">{part}</span>{/each}</small>{#if c.tag}<small class="train-tag">{c.tag}</small>{/if}
-      </button>
-    {/each}
-  </div>
-  {#if picked}
-    <div class="train-help" data-train-help aria-live="polite">
-      <b>{trainingLabel(s, picked)}</b>
-      <p>{trainingHelp(s, picked)}</p>
-      <p class="muted fs-xs">{TRAINING_NOTE}</p>
+{#if feed.length}
+  <section class="card" data-feed data-tour="feed">
+    <div class="eyebrow">Timeline</div>
+    <h2 style="margin-bottom:6px">최근 소식</h2>
+    <div class="feed">
+      {#each feedAll ? feed : feed.slice(0, FEED_SHORT) as l, i (i)}
+        <div><time>{l.t}</time><span class={l.kind}>{l.text}</span></div>
+      {/each}
     </div>
-  {/if}
-  <p class="muted fs-xs">진행 버튼은 화면 아래 고정 액션바에 있습니다.</p>
-</section>
+    {#if feed.length > FEED_SHORT}
+      <button class="icon-btn" style="margin-top:8px" data-act="feed-more" aria-expanded={feedAll} onclick={() => (feedAll = !feedAll)}>{feedAll ? '접기' : '더 보기'}</button>
+    {/if}
+  </section>
+{/if}
 
-<section class="card">
-  <div class="eyebrow">Timeline</div>
-  <h2 style="margin-bottom:6px">최근 소식</h2>
-  <div class="feed">
-    {#each s.log.slice(0, 14) as l, i (i)}
-      <div><time>{l.t}</time><span class={l.kind}>{l.text}</span></div>
-    {/each}
-  </div>
-</section>

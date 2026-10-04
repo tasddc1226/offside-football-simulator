@@ -26,6 +26,22 @@ describe('GET /v1/profile', () => {
     await ctx.dispose();
   });
 
+  it('T-11-024: 한 주소에서 새 프로필을 시간당 30개 넘게 만들면 429, 다른 주소와 쿠키 있는 요청은 막지 않는다', async () => {
+    const app = createApp();
+    const fresh = (ip: string) =>
+      app.request('/v1/profile', { headers: { 'CF-Connecting-IP': ip } }, ctx.env);
+    for (let i = 0; i < 30; i++) expect((await fresh('203.0.113.7')).status).toBe(200);
+    expect((await fresh('203.0.113.7')).status).toBe(429);
+    expect((await fresh('203.0.113.8')).status).toBe(200);
+    const cookie = (await issueCookie(ctx)).cookie;
+    const res = await app.request(
+      '/v1/profile',
+      { headers: { 'CF-Connecting-IP': '203.0.113.7', Cookie: cookie } },
+      ctx.env,
+    );
+    expect(res.status).toBe(200);
+  });
+
   it('쿠키가 없으면 새 프로필과 세션을 발급한다', async () => {
     const app = createApp();
     const res = await app.request('/v1/profile', {}, ctx.env);
@@ -40,7 +56,7 @@ describe('GET /v1/profile', () => {
     expect(setCookie).toContain('Max-Age=31536000');
 
     const body = successEnvelope(ProfileSchema).parse(await res.json());
-    expect(body.data.linked).toEqual({ google: false, toss: false });
+    expect(body.data.linked).toEqual({ google: false, toss: false, apple: false });
 
     const profileRows = await ctx.db.select().from(profiles);
     const sessionRows = await ctx.db.select().from(sessions);

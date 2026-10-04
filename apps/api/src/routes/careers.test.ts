@@ -1,8 +1,14 @@
-import { ErrorEnvelopeSchema, MyCareersResponseSchema, successEnvelope } from '@offside/contracts';
-import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  ErrorEnvelopeSchema,
+  MyCareersResponseSchema,
+  RetirementResponseSchema,
+  successEnvelope,
+} from '@offside/contracts';
+import { and, eq } from 'drizzle-orm';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
-import { careers, careerSeasons, profiles } from '../db/schema.js';
+import { UPLOAD_LIMIT } from './careers.js';
+import { authAttempts, careers, careerSeasons, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {
   deleteProfile,
@@ -160,6 +166,58 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(row?.lastClubId).toBe('pl-15');
   });
 
+  it('T-11-037: 나이별 OVR 상한을 크게 넘은 시즌은 잘라 저장하고 커리어를 숨긴다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
+    const body = seasonBody();
+    const rowOf = async () =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0]!;
+    // 18세 상한(81)에 딱 붙은 값은 정상이다.
+    expect(
+      (
+        await put(`/v1/careers/${CAREER_ID}/seasons/2026`, {
+          ...body,
+          season: { ...body.season, ovr: 81 },
+        })
+      ).status,
+    ).toBe(200);
+    expect((await rowOf()).hidden).toBe(0);
+    expect(
+      (
+        await put(`/v1/careers/${CAREER_ID}/seasons/2027`, {
+          ...body,
+          season: { ...body.season, ovr: 86 },
+        })
+      ).status,
+    ).toBe(200);
+    expect((await rowOf()).hidden).toBe(1);
+  });
+
+  it('T-11-030: 처음 스카우트 평가는 한 번만 저장하고, 은퇴 때 실제 잠재력을 저장한다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
+    const base = seasonBody();
+    const withPot = (pot: unknown) => ({ ...base, career: { ...base.career, pot } });
+    // pot 없이 먼저 올라온 옛 기록 → 나중에 pot이 오면 채운다 → 그다음 값은 무시한다.
+    expect((await put(`/v1/careers/${CAREER_ID}/seasons/2026`, base)).status).toBe(200);
+    const potOf = async () =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0]!;
+    expect((await potOf()).pot).toBeNull();
+    expect((await put(`/v1/careers/${CAREER_ID}/seasons/2026`, withPot(78))).status).toBe(200);
+    expect((await put(`/v1/careers/${CAREER_ID}/seasons/2027`, withPot(90))).status).toBe(200);
+    expect((await potOf()).pot).toBe(78);
+    // 범위 밖·잘못된 모양은 기록을 막지 않고 버린다.
+    expect((await put(`/v1/careers/${CAREER_ID}/seasons/2028`, withPot(500))).status).toBe(200);
+    expect((await potOf()).pot).toBe(78);
+
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());
+    expect(
+      (await put(`/v1/careers/${CAREER_ID}/retirement`, { ...retirementBody(), potReal: 84 }))
+        .status,
+    ).toBe(200);
+    expect((await potOf()).potReal).toBe(84);
+  });
+
   it('T-10-066: 클럽 id 형식이 틀리면 400', async () => {
     const { cookie } = await issueCookie(ctx);
     const body = seasonBody();
@@ -168,6 +226,108 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       season: { ...body.season, clubId: '<script>' },
     });
     expect(res.status).toBe(400);
+  });
+
+  it('T-11-040: 프로필당 시간당 시즌 업로드 한도를 넘으면 429, 다른 프로필은 영향이 없다', async () => {
+    const heavy = await issueCookie(ctx);
+    const other = await issueCookie(ctx);
+    const app = createApp();
+    const put = (cookie: string, careerId: string) =>
+      app.request(
+        `/v1/careers/${careerId}/seasons/2026`,
+        jsonInit({ method: 'PUT', body: seasonBody(), cookie }),
+        ctx.env,
+      );
+    // 한도 직전까지 쓴 상태를 바로 만든다 — 120번 PUT은 느리다. 그 한 번은 통과하고 다음부터 429다.
+    expect((await put(heavy.cookie, CAREER_ID)).status).toBe(200);
+    await ctx.db
+      .update(authAttempts)
+      .set({ count: UPLOAD_LIMIT.CAREER_SEASON - 1 })
+      .where(
+        and(eq(authAttempts.kind, 'CAREER_SEASON'), eq(authAttempts.subject, heavy.profileId)),
+      );
+    expect((await put(heavy.cookie, CAREER_ID)).status).toBe(200);
+    const limited = await put(heavy.cookie, CAREER_ID);
+    expect(limited.status).toBe(429);
+    expect(ErrorEnvelopeSchema.parse(await limited.json()).error).toMatchObject({
+      code: 'RATE_LIMITED',
+      retryable: true,
+    });
+    const otherId = '7a1c9b1a-6f0f-4a4b-9c3a-1e2f3a4b5c6e';
+    expect((await put(other.cookie, otherId)).status).toBe(200);
+  });
+
+  it('T-11-048: 시즌 성장 기록을 저장하고, 기록 없이 다시 올라온 같은 시즌은 지우지 않는다', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const growth = {
+      v: 1,
+      o0: 52,
+      ph: [52, 54, 55],
+      a0: [50, 51, 52, 53, 54, 55],
+      a1: [52, 53, 54, 55, 56, 57],
+      s0: [50.5, 51],
+      s1: [52.5, 53],
+      pot: { s: 74, b: 1, bl: -2.4, r: 0 },
+    };
+    const send = (extra: Record<string, unknown>) => {
+      const b = seasonBody();
+      return app.request(
+        `/v1/careers/${CAREER_ID}/seasons/2026`,
+        jsonInit({
+          method: 'PUT',
+          body: { ...b, season: { ...b.season, ...extra } },
+          cookie: owner.cookie,
+        }),
+        ctx.env,
+      );
+    };
+    const row = async () =>
+      (await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID)))[0]!;
+
+    expect((await send({ growth })).status).toBe(200);
+    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
+
+    // 옛 시즌 재전송(성장 기록 없음)은 이미 쌓인 기록을 그대로 둔다.
+    expect((await send({})).status).toBe(200);
+    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
+
+    // 새 성장 기록이 오면 덮어쓴다.
+    expect((await send({ growth: { ...growth, o0: 53 } })).status).toBe(200);
+    expect(JSON.parse((await row()).growthJson!).o0).toBe(53);
+  });
+
+  it('T-11-048: 성장 기록 없이 올라온 첫 시즌은 NULL이고, 모양이 틀린 기록은 버리되 시즌은 받는다', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const b = seasonBody();
+    const res = await app.request(
+      `/v1/careers/${CAREER_ID}/seasons/2026`,
+      jsonInit({ method: 'PUT', body: b, cookie: owner.cookie }),
+      ctx.env,
+    );
+    expect(res.status).toBe(200);
+    const [r] = await ctx.db
+      .select()
+      .from(careerSeasons)
+      .where(eq(careerSeasons.careerId, CAREER_ID));
+    expect(r!.growthJson).toBeNull();
+    // 모양이 틀린 성장 기록은 시즌을 막지 않고 이 값만 버린다.
+    const bad = await app.request(
+      `/v1/careers/${CAREER_ID}/seasons/2027`,
+      jsonInit({
+        method: 'PUT',
+        body: { ...b, season: { ...b.season, growth: { v: 2, o0: 50 } } },
+        cookie: owner.cookie,
+      }),
+      ctx.env,
+    );
+    expect(bad.status).toBe(200);
+    const rows = await ctx.db
+      .select()
+      .from(careerSeasons)
+      .where(eq(careerSeasons.careerId, CAREER_ID));
+    expect(rows.map((x) => x.growthJson)).toEqual([null, null]);
   });
 
   it('happy path: 시즌 upsert 후 은퇴까지 정상 처리된다', async () => {
@@ -211,6 +371,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       careerId: CAREER_ID,
       status: 'retired',
       retiredNumber: null,
+      serviceSeason: expect.any(Number),
     });
 
     const retiredRow = (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0];
@@ -309,6 +470,7 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     await ctx.dispose();
   });
 
@@ -373,6 +535,43 @@ describe('GET /v1/careers/mine (T-10-013)', () => {
       [low, 100],
     ]);
   });
+
+  it('T-11-029: 내 선수 항목과 은퇴 응답이 선수의 서비스 시즌(0 = 프리시즌)을 알려 준다', async () => {
+    const me = await issueCookie(ctx);
+    await ctx.db.update(profiles).set({ googleSub: 'sub-me' }).where(eq(profiles.id, me.profileId));
+    const pre = '55555555-5555-4555-8555-555555555555';
+    const s1 = '66666666-6666-4666-8666-666666666666';
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z')); // 프리시즌
+    await putSeasonsFor(ctx.env, me.cookie, pre, retirementBody());
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
+    await putSeasonsFor(ctx.env, me.cookie, s1, retirementBody());
+    // 프리시즌 선수가 시즌 중에 은퇴해도 시즌은 첫 업로드 때 정해진 그대로다.
+    const retireRes = async (id: string) =>
+      successEnvelope(RetirementResponseSchema).parse(
+        await (
+          await createApp().request(
+            `/v1/careers/${id}/retirement`,
+            jsonInit({
+              method: 'PUT',
+              body: { ...retirementBody(), legendScore: id === pre ? 100 : 200 },
+              cookie: me.cookie,
+            }),
+            ctx.env,
+          )
+        ).json(),
+      ).data;
+    expect((await retireRes(pre)).serviceSeason).toBe(0);
+    expect((await retireRes(s1)).serviceSeason).toBe(1);
+
+    const data = successEnvelope(MyCareersResponseSchema).parse(
+      await (await mine(me.cookie)).json(),
+    ).data;
+    expect(Object.fromEntries(data.entries.map((e) => [e.id, e.season]))).toEqual({
+      [pre]: 0,
+      [s1]: 1,
+    });
+  });
 });
 
 // 브라우저에서 값을 고쳐 보낸 기록이 서버 기록·순위를 부풀리지 못한다.
@@ -426,6 +625,44 @@ describe('조작된 기록 보정', () => {
     const honors = JSON.parse(s!.honorsJson) as string[];
     expect(honors).toHaveLength(20);
     expect(new Set(honors).size).toBe(20);
+  });
+
+  it('T-11-024: 입력 없이 시즌만 올라온(자동 플레이) 커리어는 공개 순위에서 빼고, 사람 입력이 있으면 그대로 둔다', async () => {
+    const signals = (clicks: number) => ({
+      ms: 14_000,
+      clicks,
+      keys: 0,
+      touches: 0,
+      moves: 0,
+      synthetic: 0,
+      hiddenMs: 0,
+      webdriver: false,
+    });
+    const upload = (careerId: string, clicks: number) =>
+      [2026, 2027].map(async (year) => {
+        const body = seasonBody({ signals: signals(clicks) });
+        return put(`/v1/careers/${careerId}/seasons/${year}`, {
+          ...body,
+          season: { ...body.season, age: 29 + year - 2026 },
+        });
+      });
+    const idle = CAREER_ID;
+    const human = '1b6f3c52-0d6e-4a9e-8c1a-6c7a2d1f9e10';
+    for (const r of await Promise.all(upload(idle, 0))) expect(r.status).toBe(200);
+    for (const r of await Promise.all(upload(human, 14))) expect(r.status).toBe(200);
+    const hiddenOf = async (id: string) =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, id)))[0]!.hidden;
+    expect(await hiddenOf(idle)).toBe(1);
+    expect(await hiddenOf(human)).toBe(0);
+
+    expect((await put(`/v1/careers/${idle}/retirement`, retirementBody())).status).toBe(200);
+    expect((await put(`/v1/careers/${human}/retirement`, retirementBody())).status).toBe(200);
+    const list = await createApp().request('/v1/hof', {}, ctx.env);
+    const ids = ((await list.json()) as { data: { entries: { id: string }[] } }).data.entries.map(
+      (e) => e.id,
+    );
+    expect(ids).toContain(human);
+    expect(ids).not.toContain(idle);
   });
 
   it('포지션·유형 같은 커리어 메타는 처음 값을 지킨다', async () => {

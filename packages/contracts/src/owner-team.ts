@@ -92,6 +92,45 @@ export const FORMATION_ROWS: Record<FormationId, readonly number[]> = {
   '3-5-2': [1, 3, 5, 2],
 };
 
+/** 자유 편성 좌표(공격이 위, 가로·세로 0~100)와 그 자리의 경기 포지션. */
+export type TeamPosition = { x: number; y: number; slot: DetailPos };
+export type TeamLayout = readonly TeamPosition[];
+
+/** 옛 팀은 저장된 포메이션으로 좌표를 만든다. */
+export function presetLayout(formation: FormationId): TeamPosition[] {
+  const rows = FORMATION_ROWS[formation];
+  let at = 0;
+  return rows.flatMap((count) =>
+    Array.from({ length: count }, (_, col) => {
+      const slot = FORMATIONS[formation][at++]!;
+      const x = (100 * (col + 1)) / (count + 1);
+      return {
+        x:
+          slot === 'FB' || slot === 'W'
+            ? col < count / 2
+              ? 18
+              : 82
+            : slot === 'CB'
+              ? Math.max(30, Math.min(70, x))
+              : x,
+        y: { GK: 91, FB: 75, CB: 75, DM: 62, CM: 49, AM: 37, W: 25, ST: 16 }[slot],
+        slot,
+      };
+    }),
+  );
+}
+
+/** 옮긴 필드 위치를 경기 포지션으로 해석한다. 골키퍼는 첫 자리 하나로 유지한다. */
+export function positionRole(x: number, y: number, index: number): DetailPos {
+  if (index === 0) return 'GK';
+  const wide = x < 28 || x > 72;
+  if (y < 28) return wide ? 'W' : 'ST';
+  if (y < 43) return 'AM';
+  if (y < 56) return 'CM';
+  if (y < 67) return 'DM';
+  return wide ? 'FB' : 'CB';
+}
+
 /**
  * 최고 시점 능력치(PeakProfile)가 없는 선수(이 기능 전에 은퇴한 선수)가 그 자리에서 내는 비율. 세부 포지션이
  * 같으면 1.0, 세부 포지션을 모르고(null) 같은 계열이면 0.95, 같은 계열의 다른 세부 포지션이면 0.9, 필드
@@ -181,3 +220,39 @@ export function teamOvr(ratings: readonly (number | null)[]): number {
   for (let i = 0; i < LINEUP_SIZE; i++) sum += ratings[i] ?? YOUTH_OVR;
   return Math.round(sum / LINEUP_SIZE);
 }
+
+// T-11-028 시즌 업적 점수·등급. 업적은 선수·팀·구단주·감독(감독 시뮬레이션이 열리면 공개) 넷으로 나뉘고, 달성한 업적의
+// 점수 합이 그 시즌 구단주 등급이 된다. 시즌마다 처음부터 다시 쌓으므로 등급도 시즌마다 새로 오른다.
+export const ACH_CATEGORIES = ['player', 'team', 'owner', 'manager'] as const;
+export type AchCategory = (typeof ACH_CATEGORIES)[number];
+export const ACH_CATEGORY_NAME: Record<AchCategory, string> = {
+  player: '선수 업적',
+  team: '팀 업적',
+  owner: '구단주 업적',
+  manager: '감독 업적',
+};
+
+/**
+ * 시즌 등급(오름차순 min = 그 등급에 필요한 점수). 프리시즌 구단주 297명의 점수(2026-10-01)로 잡았다 — 중앙값 실버,
+ * 상위 25% 골드, 상위 5% 플래티넘, 상위 1% 다이아. 레전드는 팀·구단주 업적까지 시즌 내내 채워야 닿는다.
+ */
+export const ACH_GRADES = [
+  { id: 'rookie', name: '루키', min: 0 },
+  { id: 'bronze', name: '브론즈', min: 200 },
+  { id: 'silver', name: '실버', min: 500 },
+  { id: 'gold', name: '골드', min: 1000 },
+  { id: 'platinum', name: '플래티넘', min: 1600 },
+  { id: 'diamond', name: '다이아', min: 2400 },
+  { id: 'legend', name: '레전드', min: 3500 },
+] as const;
+export type AchGrade = (typeof ACH_GRADES)[number];
+
+/** 점수의 등급과 다음 등급(맨 위면 null). */
+export function achGradeOf(score: number): { grade: AchGrade; next: AchGrade | null } {
+  let i = 0;
+  while (i + 1 < ACH_GRADES.length && score >= ACH_GRADES[i + 1]!.min) i++;
+  return { grade: ACH_GRADES[i]!, next: ACH_GRADES[i + 1] ?? null };
+}
+
+/** 업적 랭킹 한 페이지의 구단주 수. */
+export const ACH_RANK_PER_PAGE = 20;

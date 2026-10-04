@@ -2,10 +2,10 @@
   // ───────── 하단 탭바 SVG 아이콘 (T-10-003) ─────────
   // 기존 이모지(⚽🧑📋🏆)를 대체하는 stroke 아이콘 세트. currentColor를 써서 라이트/다크와
   // 활성 탭 색상(.tabs button[aria-selected="true"] { color: ... })을 그대로 상속한다.
-  // 게임 탭 4개 + 홈, 그리고 홈 화면 하단 메뉴(기록실·소식·구단주·설정)가 같은 세트를 쓴다.
+  // 게임 탭 4개 + 홈, 홈 화면 하단 메뉴(기록실·소식·구단주·설정), 내 팀 하단 메뉴(편성, T-11-026)가 같은 세트를 쓴다.
   import type { Tab } from './state.svelte.js';
 
-  const { name }: { name: Tab | 'home' | 'hof' | 'board' | 'owner' | 'settings' } = $props();
+  const { name }: { name: Tab | 'home' | 'hof' | 'board' | 'owner' | 'settings' | 'lineup' } = $props();
 </script>
 
 {#if name === 'season'}
@@ -50,6 +50,12 @@
   <svg class="tab-ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="2.8" />
     <path d="M10.3 3.5h3.4l.5 2.4 1.7 1 2.3-.8 1.7 2.9-1.8 1.6v2l1.8 1.6-1.7 2.9-2.3-.8-1.7 1-.5 2.4h-3.4l-.5-2.4-1.7-1-2.3.8-1.7-2.9 1.8-1.6v-2L4.1 9l1.7-2.9 2.3.8 1.7-1Z" />
+  </svg>
+{:else if name === 'lineup'}
+  <svg class="tab-ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="4.5" y="3.5" width="15" height="17" rx="2" />
+    <path d="M4.5 12h15M9.5 3.5v2.6h5V3.5M9.5 20.5v-2.6h5v2.6" />
+    <circle cx="12" cy="12" r="2.2" />
   </svg>
 {:else}
   <svg class="tab-ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

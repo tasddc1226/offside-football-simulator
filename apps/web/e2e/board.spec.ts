@@ -355,13 +355,25 @@ test('소식: 조회수는 기기마다 한 번, 좋아요를 누르고 거둔�
   await like.click();
   await expect(like).toHaveAttribute('aria-pressed', 'false');
   await expect(like.locator('[data-like-count]')).toHaveText('3');
+  // T-10-113 글자 없이 하트와 숫자만 — 화면 읽기 프로그램에는 '좋아요 3'으로 읽힌다.
+  await expect(like).toHaveAccessibleName('좋아요 3');
 
   // 같은 기기에서 다시 열면 조회수를 보내지 않는다.
-  await page.locator('[data-act="back-list"]').click();
+  // T-10-113 글 상세에서 목록으로는 하단 '소식'을 다시 눌러 간다('← 목록' 버튼은 없앴다).
+  await page.locator('.main-nav [data-act="board"]').click();
   await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
   await expect(post).toBeVisible();
   expect(sent.views).toHaveLength(1);
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+
+  await expect(page.locator('[data-act="back-list"]')).toHaveCount(0);
+
+  // T-10-114 브라우저 뒤로 가기(모바일 가장자리 밀기)로 글에서 목록으로, 앞으로 가기로 다시 글로.
+  await page.goBack();
+  await expect(post).toBeHidden();
+  await expect(page.locator(`[data-post-row="${NOTICE.id}"]`)).toBeVisible();
+  await page.goForward();
+  await expect(post).toBeVisible();
 });
 
 test('새 소식 알림: 마지막으로 본 뒤 올라온 글을 화면 위에 알리고, 보면 다시 뜨지 않는다', async ({

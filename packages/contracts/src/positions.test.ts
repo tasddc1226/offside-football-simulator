@@ -1,6 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { legendTerms, type LegendTotals } from './hof-rules.js';
+import {
+  AWARDS_PER_SEASON,
+  CONTROL_BASE,
+  CONTROL_CAP,
+  controlPoints,
+  legendAwardCount,
+  legendTerms,
+  type LegendTotals,
+} from './hof-rules.js';
 import { DETAIL_GROUP, DETAIL_POSITIONS, DETAILS_OF, detailPosOpen } from './positions.js';
+
+const ZERO: LegendTotals = {
+  goals: 0,
+  assists: 0,
+  cs: 0,
+  apps: 0,
+  trophies: 0,
+  awards: 0,
+  caps: 0,
+  peak: 0,
+  ballon: 0,
+  ballonRankPoints: 0,
+  worldCups: 0,
+  control: 0,
+};
 
 describe('세부 포지션 (T-10-091)', () => {
   it('세부 포지션 8종은 모두 큰 포지션 하나에 속하고, 큰 포지션 목록과 겹치지 않는다', () => {
@@ -16,22 +39,30 @@ describe('세부 포지션 (T-10-091)', () => {
   });
 
   it('레전드 점수는 윙어·수비형 미드필더만 가중을 보정한다', () => {
-    const t: LegendTotals = {
-      goals: 100,
-      assists: 100,
-      cs: 0,
-      apps: 0,
-      trophies: 0,
-      awards: 0,
-      caps: 0,
-      peak: 0,
-      ballon: 0,
-      ballonRankPoints: 0,
-      worldCups: 0,
-    };
+    const t = { ...ZERO, goals: 100, assists: 100 };
     expect(legendTerms('FW', t, 'ST')).toEqual(legendTerms('FW', t));
     expect(legendTerms('FW', t, null)).toEqual(legendTerms('FW', t));
     expect(legendTerms('FW', t, 'W').assists).toBeGreaterThan(legendTerms('FW', t).assists);
     expect(legendTerms('MF', t, 'DM').goals).toBeGreaterThan(legendTerms('MF', t).goals);
+  });
+
+  it('경기 장악은 중앙 미드필더(CM·DM·AM)만, 평점이 기준을 넘는 몫을 상한까지 센다', () => {
+    const seasons = [
+      { apps: 30, rating: CONTROL_BASE + 0.25 },
+      { apps: 30, rating: CONTROL_BASE + 3 },
+      { apps: 30, rating: CONTROL_BASE - 0.5 },
+    ];
+    expect(controlPoints(seasons)).toBeCloseTo(30 * 0.25 + 30 * CONTROL_CAP);
+    const t = { ...ZERO, control: controlPoints(seasons) };
+    for (const d of ['CM', 'DM', 'AM']) expect(legendTerms('MF', t, d).control).toBeGreaterThan(0);
+    expect(legendTerms('MF', t).control).toBe(0);
+    expect(legendTerms('FW', t, 'W').control).toBe(0);
+    expect(legendTerms('DF', t, 'CB').control).toBe(0);
+  });
+
+  it(`세부 포지션 선수는 개인상을 시즌당 ${AWARDS_PER_SEASON}개까지 센다`, () => {
+    const awards = [2030, 2030, 2030, 2030, 2030, 2031].map((year) => ({ year }));
+    expect(legendAwardCount(awards)).toBe(6);
+    expect(legendAwardCount(awards, 'ST')).toBe(AWARDS_PER_SEASON + 1);
   });
 });

@@ -5,6 +5,7 @@
 
 import type { ServerFirstCat as FirstCat } from '@offside/contracts';
 import { CONFEDS, CONF_ORDER, cupTrophy } from '@offside/contracts/nations';
+import { nextRetireAt, retireAtOf } from '@offside/contracts/service-seasons';
 
 export interface FirstSeason {
   year: number;
@@ -26,6 +27,9 @@ export interface FirstCareer {
   id: string;
   legendScore: number | null;
   retiredAt: string | null;
+  /** T-11-045 서버가 시즌 기록에 맞춘 은퇴 나이와 커리어의 서비스 시즌(0 = 프리시즌). */
+  retireAge?: number | null;
+  season?: number;
   /** 연도 오름차순 */
   seasons: FirstSeason[];
 }
@@ -36,7 +40,12 @@ export interface FirstDef {
   label: string;
   /** 처음 조건을 채운 시각(시즌 created_at 또는 은퇴 시각). 못 채웠으면 null. */
   at: (c: FirstCareer) => { at: string; year: number | null } | null;
+  /** 시즌마다 다른 문장. null이면 그 시즌 목록에서 뺀다. 없으면 label 그대로. */
+  seasonLabel?: (season: number) => string | null;
 }
+
+/** T-11-045 은퇴 나이 해금 기록 id. */
+export const RETIRE_CAP_FIRST = 'retirecap';
 
 const n = (v: number) => v.toLocaleString('en-US');
 const isTrophy = (h: string) => /(우승|메달)$/.test(h);
@@ -165,6 +174,29 @@ const TOP_CONT_WIN = ['UEFA 챔피언스리그', 'AFC 챔피언스리그 엘리�
   (c) => `${c} 우승`,
 );
 const hasAny = (honors: string[], names: string[]) => honors.some((h) => names.includes(h));
+
+/**
+ * T-11-045 은퇴 나이 해금. 시즌 선수가 그 시즌 은퇴 나이까지 뛰고 은퇴하면(은퇴 나이는 서버가 시즌 기록으로 맞춘 값)
+ * 다음 시즌 은퇴 나이가 한 살 오른다(nextRetireAt). 프리시즌은 해금이 없어 목록에서 뺀다. 판정에 시즌 행을 쓰지 않아
+ * 은퇴 업로드(legendOnly)에서 잡힌다.
+ */
+const RETIRE_CAP: FirstDef = {
+  id: RETIRE_CAP_FIRST,
+  cat: 'honor',
+  label: '은퇴 나이까지 뛰고 은퇴 최초 달성!',
+  at: (c) =>
+    c.retiredAt && c.season && c.retireAge === retireAtOf(c.season)
+      ? { at: c.retiredAt, year: null }
+      : null,
+  seasonLabel: (season) => {
+    if (season === 0) return null;
+    const cap = retireAtOf(season),
+      next = nextRetireAt(cap, true);
+    return next > cap
+      ? `${cap}세 은퇴 최초 달성! 다음 시즌 은퇴 나이 ${next}세 해금`
+      : `${cap}세 은퇴 최초 달성!`;
+  },
+};
 
 const SPECS: FirstSpec[] = [
   // 통산
@@ -389,6 +421,7 @@ const SPECS: FirstSpec[] = [
         c.retiredAt && c.legendScore ? { value: c.legendScore, at: c.retiredAt, year: null } : null,
     },
   }),
+  RETIRE_CAP,
 ];
 
 /** 군 복무를 뺀, i번째 시즌까지 그 시즌 클럽에서 뛴 시즌 수. */
@@ -444,16 +477,20 @@ const toDef = (l: FirstLadder, v: number): FirstDef => ({
 
 /**
  * 화면에 보일 규칙 목록(순서 고정). 끝없는 단계는 기본 단계 + 이미 달성된 단계 + 그 위의 다음 목표 하나.
- * achieved: 지금까지 누군가 달성한 id.
+ * achieved: 지금까지 누군가 달성한 id. season: 그 시즌 목록(seasonLabel을 푼다).
  */
-export function firstsCatalog(achieved: Iterable<string>): FirstDef[] {
+export function firstsCatalog(achieved: Iterable<string>, season?: number): FirstDef[] {
   const got = new Map<FirstLadder, Set<number>>();
   for (const id of achieved) {
     const p = parseLadderId(id);
     if (p) got.set(p.l, (got.get(p.l) ?? new Set()).add(p.v));
   }
   return SPECS.flatMap((x) => {
-    if (!isLadder(x)) return [x];
+    if (!isLadder(x)) {
+      if (season === undefined || !x.seasonLabel) return [x];
+      const label = x.seasonLabel(season);
+      return label === null ? [] : [{ ...x, label }];
+    }
     const done = got.get(x) ?? new Set<number>();
     const vals = new Set([...x.base, ...done]);
     const next = nextStep(x, Math.max(0, ...done));

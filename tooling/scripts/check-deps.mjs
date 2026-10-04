@@ -11,8 +11,14 @@ export const ALLOWED_DEPENDENCIES = {
   // T-9-001c: T-9-001a/b가 @offside/domain·content·engine-client·fixtures·ui·platform을 모두
   // 삭제했다. 남은 워크스페이스는 web(클라이언트 전용, localStorage 저장)·api(프로필/Google 로그인)·
   // contracts뿐이다.
-  '@offside/web': ['@offside/contracts'],
+  '@offside/web': ['@offside/contracts', '@offside/game', '@offside/app-core'],
+  // T-11-004 Expo 네이티브 앱. 웹과 같은 엔진·계약을 쓴다.
+  '@offside/mobile': ['@offside/contracts', '@offside/game', '@offside/app-core'],
   '@offside/api': ['@offside/contracts'],
+  // T-11-001 게임 엔진(순수 TS). 웹·앱·fulltime-sim이 함께 쓴다.
+  // T-11-002 클라이언트 공용 층(앱 상태·게임 진행 액션·시트 연출·업로드 큐). 프레임워크를 모른다.
+  '@offside/app-core': ['@offside/contracts', '@offside/game'],
+  '@offside/game': ['@offside/contracts'],
   '@offside/contracts': [],
 };
 

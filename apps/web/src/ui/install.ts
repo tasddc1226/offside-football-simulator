@@ -1,28 +1,43 @@
 // T-10-021 '홈 화면에 추가' 안내. 주소를 입력하지 않고 아이콘으로 바로 열 수 있게, 모바일 브라우저로 홈 화면에
 // 다시 들어올 때마다 보여 준다('다시 보지 않기'를 체크하면 이 브라우저에서는 그만). 홈 화면 앱으로 연 경우와 데스크톱은
 // 띄우지 않고, 설정 > 도움말에서는 언제든 다시 연다.
-import { hasKey, loadKey, saveKey } from '../game/season.js';
+import { hasKey, loadKey, saveKey } from '@offside/game/season';
 import { closeSheet, showSheet } from './sheetState.svelte.js';
+import { currentInApp, isStandalone, openExternal } from './inapp-open.js';
 import { INSTALL_STEPS, detectPlatform } from './install-platform.js';
 import { appState } from './state.svelte.js';
 
 const HIDE_KEY = 'ft_install_hide';
 
-/** 홈 화면 아이콘(웹 앱)으로 연 상태인지. */
-function isStandalone(): boolean {
-  return (
-    matchMedia('(display-mode: standalone)').matches ||
-    (navigator as { standalone?: boolean }).standalone === true
-  );
-}
-
 export function showInstallGuide(withOptOut = false) {
+  const platform = detectPlatform(navigator.userAgent, isStandalone());
+  // T-10-115 앱 안 브라우저(카톡·인스타 등)에는 홈 화면 추가 메뉴가 없다 — 단계 대신 외부 브라우저로 여는 길을 보인다.
+  if (platform === 'inapp') {
+    showSheet(
+      {
+        kind: 'notice',
+        eyebrow: 'Home screen',
+        title: '홈 화면에 추가하고 앱처럼 열기',
+        text: '외부 브라우저(Safari/Chrome)에서 열어야 홈 화면에 추가할 수 있어요.',
+        muted: true,
+      },
+      [
+        {
+          label: '외부 브라우저로 열기',
+          cls: 'btn-primary',
+          fn: () => void openExternal(currentInApp()),
+        },
+        { label: '닫기', fn: closeSheet },
+      ],
+    );
+    return;
+  }
   showSheet(
     {
       kind: 'notice',
       eyebrow: 'Home screen',
       title: '홈 화면에 추가하고 앱처럼 열기',
-      steps: INSTALL_STEPS[detectPlatform(navigator.userAgent)],
+      steps: INSTALL_STEPS[platform],
       text: '홈 화면에 생긴 오프사이드 아이콘을 누르면 주소를 입력하지 않고 바로 이어서 할 수 있어요. 이 안내는 설정 > 도움말에서 다시 볼 수 있어요.',
       muted: true,
       ...(withOptOut
@@ -41,7 +56,7 @@ export function maybeShowInstallOnboarding() {
     appState.screen !== 'home' ||
     loadKey<boolean>(HIDE_KEY) ||
     isStandalone() ||
-    detectPlatform(navigator.userAgent) === 'other'
+    ['other', 'inapp'].includes(detectPlatform(navigator.userAgent)) // T-10-115 앱 안 브라우저엔 띄우지 않는다(홈의 안내 배너가 대신한다)
   )
     return;
   if (!hasKey('ft_save')) return;

@@ -1,10 +1,23 @@
 <script lang="ts">
+  import TeamLogo from './TeamLogo.svelte';
   // T-10-097 팀 경기 문자중계 — 한 화면에서 시계가 0'부터 90'+까지 흐르며 중계 줄이 하나씩 올라온다. 골이 가까우면
   // 시계가 느려지고, 골이 들어가면 전광판이 번쩍인다. 결과는 이미 서버가 정했고 여기서는 보여 주기만 한다.
   // 감속 모션이어도 진행 템포는 그대로 두고(읽는 시간) 움직임 효과만 뺀다. '결과 바로 보기'로 언제든 끝낼 수 있다.
   import { onDestroy, onMount } from 'svelte';
-  import type { TeamMatch } from '../../api/team.js';
-  import { clockText, liveScript, type LiveLine } from './teamLive.js';
+  import type { TeamMatch } from '@offside/app-core/api/team';
+  import {
+    FLASH_MS,
+    MOMENTUM_START,
+    PHASE_LABEL,
+    clockText,
+    liveScript,
+    momentumAfter,
+    momentumDecay,
+    playbackPlan,
+    waitMs,
+    type LiveLine,
+    type LivePhase,
+  } from '@offside/app-core/teamLive';
 
   let {
     match,
@@ -19,75 +32,50 @@
   // 경기 하나에 한 번 만든다(부모가 경기마다 {#key}로 새로 그린다).
   // svelte-ignore state_referenced_locally
   const script = liveScript(match, name);
-  const goalMinutes = script.filter((l) => l.kind === 'goal').map((l) => l.minute);
+  const plan = playbackPlan(script);
 
   let shown = $state<number[]>([]);
   let clock = $state(0);
   let extra = $state(0);
-  let phase = $state<'1st' | 'ht' | '2nd' | 'ft'>('1st');
+  let phase = $state<LivePhase>('1st');
   let score = $state<[number, number]>([0, 0]);
   let flash = $state<'home' | 'away' | null>(null);
   /** 경기 흐름(0 = 원정 쪽이 몰아침, 1 = 홈 쪽이 몰아침). */
-  let momentum = $state(0.5);
+  let momentum = $state(MOMENTUM_START);
   let fast = $state(false);
   let alive = true;
   let flashTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const sleep = (ms: number) =>
-    new Promise<void>((r) => setTimeout(r, fast ? Math.round(ms / 2.5) : ms));
+  const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, waitMs(ms, fast)));
 
   const scored = $derived(
     shown.map((i) => script[i]!).filter((l): l is LiveLine & { side: 'home' | 'away' } => l.kind === 'goal' && !!l.side),
   );
   const clockLabel = $derived(extra ? `${clock}+${extra}'` : `${clock}'`);
-  const phaseLabel = $derived(
-    { '1st': '전반', ht: '하프타임', '2nd': '후반', ft: '경기 종료' }[phase],
-  );
+  const phaseLabel = $derived(PHASE_LABEL[phase]);
 
   function show(i: number) {
     const l = script[i]!;
     shown = [i, ...shown];
-    if (l.side && l.kind !== 'corner') {
-      const push = l.kind === 'goal' ? 0.3 : l.kind === 'build' ? 0.2 : 0.12;
-      momentum = Math.min(0.9, Math.max(0.1, momentum + (l.side === 'home' ? push : -push)));
-    }
+    momentum = momentumAfter(momentum, l);
     if (l.kind === 'goal' && l.score) {
       score = l.score;
       flash = l.side ?? null;
       clearTimeout(flashTimer);
-      flashTimer = setTimeout(() => (flash = null), 1800);
+      flashTimer = setTimeout(() => (flash = null), FLASH_MS);
     }
   }
 
+  // 순서·대기 시간은 app-core playbackPlan이 정한다. 여기서는 단계마다 상태를 반영하고 기다린다.
   async function run() {
-    let i = 0;
-    for (let min = 0; min <= 90; min++) {
+    for (const step of plan) {
       if (!alive) return;
-      clock = min;
-      extra = 0;
-      if (min === 46) phase = '2nd';
-      // 그 분의 줄(추가시간 줄은 그 분의 끝).
-      while (alive && i < script.length && script[i]!.minute === min && !script[i]!.extra) {
-        const k = script[i]!.kind;
-        show(i++);
-        await sleep(k === 'goal' ? 1700 : k === 'build' ? 900 : 520);
-      }
-      while (alive && i < script.length && script[i]!.minute === min && script[i]!.extra) {
-        const l = script[i]!;
-        for (let x = 1; x <= l.extra! && alive; x++) {
-          extra = x;
-          await sleep(260);
-        }
-        show(i++);
-        if (l.kind === 'ht') {
-          phase = 'ht';
-          await sleep(1600);
-        } else if (l.kind === 'ft') phase = 'ft';
-      }
-      // 흐름은 조금씩 가운데로 돌아온다. 골이 2분 안에 있으면 시계가 느려진다.
-      momentum += (0.5 - momentum) * 0.08;
-      const near = goalMinutes.some((g) => g > min && g - min <= 2);
-      await sleep(near ? 700 : 240);
+      if (step.clock !== undefined) clock = step.clock;
+      if (step.extra !== undefined) extra = step.extra;
+      if (step.show !== undefined) show(step.show);
+      if (step.phase) phase = step.phase;
+      if (step.decay) momentum = momentumDecay(momentum);
+      if (step.wait > 0) await sleep(step.wait);
     }
     finish();
   }
@@ -115,13 +103,13 @@
     </div>
     <div class="tl-score">
       <div class="tl-team" class:mine={match.mine === 'home'} class:hit={flash === 'home'}>
-        <b>{match.home.name}</b><small>{match.home.owner}</small>
+        <TeamLogo logo={match.home.logo} name={match.home.name} size={40} decorative /><b>{match.home.name}</b><small>{match.home.owner}</small>
       </div>
       <div class="tl-goals" aria-live="polite" data-live-score>
         <b>{score[0]}</b><span aria-hidden="true">:</span><b>{score[1]}</b>
       </div>
       <div class="tl-team away" class:mine={match.mine === 'away'} class:hit={flash === 'away'}>
-        <b>{match.away.name}</b><small>{match.away.owner}</small>
+        <TeamLogo logo={match.away.logo} name={match.away.name} size={40} decorative /><b>{match.away.name}</b><small>{match.away.owner}</small>
       </div>
     </div>
     <div class="tl-bar" aria-hidden="true">
@@ -232,6 +220,7 @@
   }
   .tl-team.away {
     text-align: right;
+    justify-items: end;
   }
   .tl-team b {
     overflow-wrap: anywhere;

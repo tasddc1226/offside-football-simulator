@@ -1,6 +1,6 @@
 <script lang="ts">
   // 경기 한 줄(라운드·승무패·상대·스코어·내 기록). 경기 중계 시트와 구간 리포트의 경기별 기록이 함께 쓴다.
-  import { RES_LABEL, type TickerRow } from './types.js';
+  import { RES_LABEL, type TickerRow } from '@offside/app-core/sheets';
   let { m }: { m: TickerRow } = $props();
 </script>
 

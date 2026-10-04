@@ -3,18 +3,18 @@
 // (/og/career/<id>.png, T-10-068)이고, 굽지 못하면 빌드 때 만든 레전드 등급별 카드(scripts/seo.mjs
 // CAREER_OG_BANDS)로 돌려보낸다. 게임 코드를 끌어오지 않게 순수 함수로만 둔다.
 import type { PublicHofEntry } from '@offside/contracts';
-import { legendBand } from './game/legend-bands.js';
-import { anonName } from './game/pos-label.js';
-import { hashStr } from './game/hash.js';
+import { legendBand } from '@offside/game/legend-bands';
+import { anonName } from '@offside/game/pos-label';
+import { hashStr } from '@offside/game/hash';
 import { ogCardPath } from './share-path.js';
-import { escXml } from './xml.js';
+import { escXml } from '@offside/game/xml';
 
 /** scripts/seo.mjs BRAND_VERSION과 같다(미리보기 이미지 파일명). */
 export const OG_VERSION = 'v6';
 
 /** 선수 카드를 굽지 못했을 때 쓰는 레전드 등급별 정적 카드. */
-export const bandCardPath = (score: number) =>
-  `/og-career-${legendBand(score).id}-${OG_VERSION}.png`;
+export const bandCardPath = (score: number, dpos: string | null | undefined) =>
+  `/og-career-${legendBand(score, dpos).id}-${OG_VERSION}.png`;
 
 /** og-card.ts 카드 모양이 바뀌면 올린다 — 이미지 URL이 바뀌어 미리보기 캐시(카카오톡 등)가 새로 받는다. */
 const CARD_VERSION = 1;
@@ -27,11 +27,11 @@ export type ShareMeta = { title: string; description: string; image: string; url
 
 export function careerShareMeta(e: PublicHofEntry, origin: string): ShareMeta {
   const who = e.name ?? anonName(e.pos, e.number);
-  const band = legendBand(e.legendScore);
+  const band = legendBand(e.legendScore, e.dpos);
   const club = e.lastClub ? ` · 마지막 소속 ${e.lastClub}` : '';
   return {
     title: `${who} · ${band.name} (레전드 ${e.legendScore}점)`,
-    description: `${e.retireAge}세 은퇴 · ${e.apps}경기 ${e.goals}골 ${e.assists}도움 · 트로피 ${e.trophies}개${club}. 오프사이드에서 나만의 축구 커리어를 만들어 보세요.`,
+    description: `${e.retireAge}세 은퇴 · ${e.apps}경기 ${e.goals}골 ${e.assists}도움 · 트로피 ${e.trophies}개${club}. 오프사이드에서 내 선수의 커리어도 키워 보세요.`,
     image: `${origin}${ogCardPath(e.id)}?v=${cardVersion(e)}`,
     url: `${origin}/career/${e.id}`,
   };

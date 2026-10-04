@@ -40,6 +40,33 @@ function firstProfilesCreateStatement(): string {
  * 5개뿐이다. 컬럼 목록은 schema.ts와 같다(snake_case).
  */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
+  push_news_events: ['id', 'board', 'day', 'post_id', 'title', 'created_at', 'expires_at'],
+  push_news_deliveries: [
+    'id',
+    'event_id',
+    'installation_hash',
+    'session_id',
+    'profile_id',
+    'token',
+    'state',
+    'attempts',
+    'receipt_attempts',
+    'due_at',
+    'lease_id',
+    'ticket_id',
+    'updated_at',
+  ],
+  push_devices: [
+    'installation_hash',
+    'session_id',
+    'profile_id',
+    'token',
+    'platform',
+    'app_version',
+    'updated_at',
+    'last_test_ticket_id',
+    'last_test_sent_at',
+  ],
   profiles: [
     'id',
     'recovery_code_hash',
@@ -54,6 +81,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'last_seen_at',
     'deleted_at',
     'nickname',
+    'apple_sub',
+    'apple_linked_at',
   ],
   sessions: [
     'id',
@@ -66,6 +95,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'last_seen_at',
   ],
   auth_attempts: ['id', 'kind', 'subject', 'window_start', 'count'],
+  app_auth_tickets: ['id', 'session_id', 'challenge', 'code_verifier', 'expires_at', 'profile_id'],
   audit_log: ['id', 'kind', 'profile_id', 'payload_json', 'created_at'],
   idempotency: [
     'owner_profile_id',
@@ -108,12 +138,17 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'title',
     'last_club_id',
     'peak_profile',
+    'card_attrs_json',
     'service_season',
     // T-10-096 국적·체격.
     'nation',
     'height',
     'weight',
     'value',
+    'name_hidden_at',
+    'hidden',
+    'pot',
+    'pot_real',
   ],
   career_seasons: [
     'career_id',
@@ -139,6 +174,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'ch_json',
     'club_id',
     'signals_json',
+    'growth_json',
   ],
   club_customs: ['profile_id', 'clubs_json', 'updated_at'],
   // T-10-011: 게시판.
@@ -168,6 +204,20 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
     'deleted_at',
   ],
+  board_comment_reports: ['comment_id', 'profile_id', 'reason', 'created_at'],
+  board_blocks: ['id', 'profile_id', 'blocked_profile_id', 'nickname', 'created_at'],
+  name_reports: ['kind', 'target_id', 'profile_id', 'name', 'created_at', 'resolved_at'],
+  chat_reports: [
+    'message_id',
+    'profile_id',
+    'reason',
+    'author_profile_id',
+    'nickname',
+    'body',
+    'created_at',
+    'resolved_at',
+  ],
+  chat_mutes: ['profile_id', 'until', 'created_at'],
   balance_versions: [
     'version',
     'status',
@@ -178,16 +228,27 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
     'activated_at',
   ],
-  server_firsts: ['id', 'career_id', 'achieved_at', 'year'],
+  server_firsts: ['season', 'id', 'career_id', 'achieved_at', 'year'],
   app_meta: ['key', 'value'],
-  server_records: ['id', 'career_id', 'value', 'achieved_at', 'year'],
-  retired_numbers: ['club_id', 'number', 'career_id', 'club', 'score', 'seq', 'granted_at'],
+  server_records: ['season', 'id', 'career_id', 'value', 'achieved_at', 'year'],
+  retired_numbers: [
+    'season',
+    'club_id',
+    'number',
+    'career_id',
+    'club',
+    'score',
+    'seq',
+    'granted_at',
+  ],
   owner_teams: [
     'id',
     'profile_id',
     'name',
     'formation',
     'slots_json',
+    'layout_json',
+    'logo_json',
     'filled',
     'ovr',
     'wins',
@@ -208,6 +269,15 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'views',
   ],
   team_likes: ['team_id', 'profile_id', 'created_at'],
+  owner_achievements: [
+    'profile_id',
+    'season',
+    'score',
+    'done',
+    'players',
+    'reached_at',
+    'updated_at',
+  ],
   team_matches: [
     'id',
     'profile_id',
@@ -238,6 +308,19 @@ describe('migrations', () => {
         .all<{ name: string }>();
       const columns = result.results.map((row) => row.name).sort();
       expect(columns, `table ${table}`).toEqual([...expectedColumns].sort());
+    }
+  });
+
+  it('T-11-064: 내 선수·구단주 팀 조회는 profile_id 인덱스로 시작한다(은퇴 선수 전체를 훑지 않는다)', async () => {
+    const plans = [
+      "select id from careers where profile_id = 'p' and status = 'retired' and peak is not null and hidden = 0 and service_season = 1 order by peak desc limit 5",
+      "select id from careers where profile_id = 'p' and status = 'retired' and legend_score is not null order by legend_score desc, retired_at limit 5",
+    ];
+    for (const sql of plans) {
+      const result = await ctx.db.$client
+        .prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .all<{ detail: string }>();
+      expect(result.results.map((r) => r.detail).join('\n'), sql).toMatch(/\(profile_id=\?/);
     }
   });
 
@@ -317,6 +400,70 @@ describe('migrations', () => {
           "SELECT count(*) AS count FROM career_archives WHERE career_id = 'career'",
         ).first(),
       ).toMatchObject({ count: 1 });
+      expect((await proxy.env.DB.prepare('PRAGMA foreign_key_check').all()).results).toEqual([]);
+    } finally {
+      await proxy.dispose();
+    }
+  });
+
+  it('0044: 기존 영구결번에 커리어의 service_season(NULL이면 0)을 채우고 seq를 시즌마다 다시 센다', async () => {
+    const proxy = await getPlatformProxy<Bindings>({
+      configPath: WRANGLER_CONFIG_PATH,
+      persist: false,
+    });
+    try {
+      const names = readdirSync(MIGRATIONS_DIR)
+        .filter((name) => name.endsWith('.sql') && name < '0044')
+        .sort();
+      for (const name of names) {
+        for (const statement of migrationStatements(name)) await proxy.env.DB.exec(statement);
+      }
+      await proxy.env.DB.exec(
+        "INSERT INTO profiles (id, settings_json, created_at, last_seen_at) VALUES ('profile', '{}', '2026-09-01T00:00:00Z', '2026-09-01T00:00:00Z')",
+      );
+      // c-null: 시즌 NULL(휴식기), c-pre: 프리시즌, c-s1: 시즌 1.
+      for (const [id, season] of [
+        ['c-null', 'NULL'],
+        ['c-pre', '0'],
+        ['c-s1', '1'],
+      ] as const) {
+        await proxy.env.DB.exec(
+          `INSERT INTO careers (id, profile_id, pos, foot, type, trait, start_year, status, app_version, service_season, created_at, updated_at) VALUES ('${id}', 'profile', 'FW', '오른발', 'poacher', 'late', 2026, 'retired', '1.0.0', ${season}, '2026-09-01T00:00:00Z', '2026-09-01T00:00:00Z')`,
+        );
+      }
+      for (const [id, seq] of [
+        ['c-pre', 1],
+        ['c-s1', 2],
+        ['c-null', 3],
+      ] as const) {
+        await proxy.env.DB.exec(
+          `INSERT INTO retired_numbers (club_id, number, career_id, club, score, seq, granted_at) VALUES ('pl-${seq}', 10, '${id}', '구단', 900, ${seq}, '2026-09-01T00:00:00Z')`,
+        );
+      }
+
+      await proxy.env.DB.batch(
+        migrationStatements('0044_season_split.sql').map((statement) =>
+          proxy.env.DB.prepare(statement),
+        ),
+      );
+
+      const rows = await proxy.env.DB.prepare(
+        'SELECT career_id, season, seq FROM retired_numbers ORDER BY career_id',
+      ).all<{ career_id: string; season: number; seq: number }>();
+      expect(rows.results).toEqual([
+        { career_id: 'c-null', season: 0, seq: 2 },
+        { career_id: 'c-pre', season: 0, seq: 1 },
+        { career_id: 'c-s1', season: 1, seq: 1 },
+      ]);
+      // 시즌이 다르면 같은 구단·번호도 들어간다. 한 커리어는 한 자리(unique)를 유지한다.
+      await proxy.env.DB.exec(
+        "INSERT INTO retired_numbers (season, club_id, number, career_id, club, score, seq, granted_at) VALUES (1, 'pl-1', 10, 'c-s1', '구단', 900, 9, '2026-09-01T00:00:00Z')",
+      ).then(
+        () => {
+          throw new Error('한 커리어가 두 자리를 가졌다');
+        },
+        () => undefined,
+      );
       expect((await proxy.env.DB.prepare('PRAGMA foreign_key_check').all()).results).toEqual([]);
     } finally {
       await proxy.dispose();

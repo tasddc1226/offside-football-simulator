@@ -1,8 +1,8 @@
 <script lang="ts">
   // T-10-026 칭호 도감(트로피 탭). 얻은 칭호는 눌러서 대표 칭호로 고르고(다시 누르면 자동 선택으로),
   // 못 얻은 칭호는 접힌 목록에서 조건·진행도를 본다. 숨김 칭호는 얻기 전까지 이름을 가린다.
-  import { TITLES, TITLE_CATS, RARITY_LABEL, mainTitle, titleById, type TitleDef } from '../../game/titles.js';
-  import type { GameState } from '../../game/types.js';
+  import { TITLES, TITLE_CATS, RARITY_LABEL, mainTitle, titleById, type TitleDef } from '@offside/game/titles';
+  import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
   import TitleTag from './TitleTag.svelte';
 
@@ -40,7 +40,7 @@
     <p class="title-main">대표 칭호 <TitleTag name={main.name} rarity={main.rarity} /> <span class="muted">{s.titleSel ? '직접 고름' : '자동'}</span></p>
   {/if}
   {#if earned.length}
-    <p class="muted fs-xs">칭호를 누르면 대표 칭호로 정해져 선수 카드와 명예의 전당에 표시됩니다.</p>
+    <p class="muted fs-xs">칭호를 누르면 대표 칭호로 정해져 선수 카드와 명예의 전당에 표시돼요.</p>
     <ul class="title-list">
       {#each earned as x (x.d.id)}
         <li>
@@ -53,7 +53,7 @@
       {/each}
     </ul>
   {:else}
-    <p class="empty">아직 얻은 칭호가 없습니다. 프로 데뷔가 첫 번째 칭호예요.</p>
+    <p class="empty">아직 얻은 칭호가 없어요. 프로 데뷔가 첫 번째 칭호예요.</p>
   {/if}
   {#if locked.length}
     <details class="title-locked">

@@ -17,7 +17,9 @@
     "deploy:production": "wrangler deploy -c wrangler.og.jsonc --env production && wrangler deploy --env production"
   },
   "dependencies": {
+    "@offside/app-core": "workspace:*",
     "@offside/contracts": "workspace:*",
+    "@offside/game": "workspace:*",
     "@resvg/resvg-wasm": "2.6.2"
   },
   "devDependencies": {
@@ -26,7 +28,6 @@
     "@playwright/test": "1.62.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/node": "22.20.1",
-    "eslint-plugin-svelte": "^3.23.0",
     "sharp": "0.35.2",
     "svelte": "^5.57.1",
     "svelte-check": "^4.7.6",

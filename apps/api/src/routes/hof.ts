@@ -4,19 +4,20 @@ import {
   HofListQuerySchema,
   HofListResponseSchema,
   HofPageQuerySchema,
+  HofPosQuerySchema,
   HofSearchQuerySchema,
   HofSeasonQuerySchema,
   HofSortSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { ok } from './shared.js';
+import { notFoundError, ok } from './shared.js';
 import { getPublicHof, listPublicHof } from '../db/repos/careers.js';
 import { ensureClubIdsBackfilled } from '../db/repos/clubIds.js';
 import { ensureCareerValuesBackfilled } from '../db/repos/careerValues.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
-import { AppError, parseWithAppError } from '../errors.js';
+import { parseWithAppError } from '../errors.js';
 
 // T-10-005 공개 명예의 전당. 로그인 없이 누구나 읽는다 — 응답에는 유저가 공개를 고른 이름과 커리어
 // 기록만 있고 프로필·계정 정보는 없다. D1 읽기를 줄이려고 짧게 캐시한다.
@@ -34,11 +35,13 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
     const season = parseWithAppError(HofSeasonQuerySchema, c.req.query('season'));
     // T-10-101 공개 이름 검색.
     const q = parseWithAppError(HofSearchQuerySchema, c.req.query('q'));
+    // T-11-018 포지션별 순위.
+    const pos = parseWithAppError(HofPosQuerySchema, c.req.query('pos'));
     // T-10-081 옛 기록 구단 id 채우기가 끝날 때까지는 캐시하지 않는다(데이터센터마다 1분에 한 조각씩만 나아가지 않게).
     let filling = false;
     const data = await edgeCached(
       c,
-      EDGE.hofList(limit, page, sort, season?.id, q),
+      EDGE.hofList(limit, page, sort, season?.id, q, pos),
       LIST_TTL,
       async () => {
         const db = getDb(c);
@@ -48,7 +51,7 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
           ensureCareerValuesBackfilled(db),
         ]);
         filling = clubIds || values;
-        return listPublicHof(db, limit, page, sort, season, q);
+        return listPublicHof(db, limit, page, sort, season, q, pos);
       },
       () => !filling,
     );
@@ -60,14 +63,7 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
     const found = await edgeCached(c, EDGE.hofDetail(careerId), DETAIL_TTL, () =>
       getPublicHof(getDb(c), careerId),
     );
-    if (!found) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        status: 404,
-        message: '명예의 전당에 없는 선수입니다.',
-        details: { reason: 'HOF_NOT_FOUND' },
-      });
-    }
+    if (!found) throw notFoundError('명예의 전당에 없는 선수입니다.', 'HOF_NOT_FOUND');
     return ok(c, HofDetailResponseSchema, found, 200, CACHE);
   });
 }

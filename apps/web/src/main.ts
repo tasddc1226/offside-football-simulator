@@ -1,3 +1,4 @@
+import './api/setup.js';
 import { initializeAnalytics } from './analytics/index.js';
 import { appState } from './ui/state.svelte.js';
 import { hydrate, mount } from 'svelte';
@@ -5,29 +6,41 @@ import './style.css';
 import App from './ui/App.svelte';
 import Sheet from './ui/Sheet.svelte';
 import Toast from './ui/Toast.svelte';
+import SheetChrome from './ui/SheetChrome.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
+import { keepStorage } from './ui/helpers.js';
 import { handleOAuthReturn } from './ui/login.js';
-import { hasSessionHint } from './api/client.js';
+import { hasSessionHint } from '@offside/app-core/api/client';
 import { routeSharedCareer } from './ui/legend.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';
 import { watchRetiredNumberAlerts, watchRetiredNumbers } from './ui/retiredNumber.svelte.js';
 import { installClickSound } from './ui/sfx.js';
 import { watchBgm } from './ui/bgm.svelte.js';
-import { installPlaySignals } from './game/playSignals.js';
+import { installPlaySignals } from './sync/playSignals.js';
 import { watchForUpdates } from './ui/update.svelte.js';
 import { watchNews } from './ui/news.svelte.js';
 import { warmGame } from './ui/nav.js';
+import { initHistory } from './ui/history.svelte.js';
+import { installSheetKey } from './ui/skin.svelte.js';
 
 installClickSound();
 // 자동 플레이 탐지(관찰 전용): 시즌마다 조작 횟수만 센다.
 installPlaySignals();
 loadGame();
+// T-10-116 이어 할 세이브가 있으면 브라우저에 '영구 저장'을 요청한다(새 커리어는 첫 저장 때, helpers.save).
+if (appState.G) keepStorage();
 // OAuth 복귀는 세이브를 읽은 뒤에 처리한다 — 돌아갈 곳이 로컬 명예의 전당 선수일 수 있고, loadGame이
 // 옛 은퇴 선수에 커리어 id를 붙인다(ft_hof).
 handleOAuthReturn();
 routeSharedCareer();
 initializeAnalytics(appState.screen, appState.G && !appState.G.retired ? appState.G.cid : null);
 syncBalance();
+// T-10-114 모바일 뒤로 가기(iOS 가장자리 밀기·Android 뒤로)가 앱 안의 이전 화면으로 가게 한다.
+initHistory();
+// T-11-022 업무 모드 단축키.
+installSheetKey();
+// T-10-121 iOS Safari·Chrome은 문서에 touchstart 리스너가 없으면 터치로 :active(누름 효과)를 걸지 않는다.
+document.addEventListener('touchstart', () => {}, { passive: true });
 
 // T-10-041: index.html의 첫 화면은 빌드 때 넣은 App 서버 렌더 결과다(scripts/app-shell.mjs). 지우고 다시
 // 그리지 않고 hydrate로 이어받아야 첫 페인트의 제목이 LCP로 남는다. 셸이 없거나(app-shell.html) 상태가 달라도
@@ -42,6 +55,8 @@ modalEl.innerHTML = '';
 mount(Sheet, { target: modalEl });
 
 mount(Toast, { target: document.getElementById('toast')! });
+// T-11-022 업무 모드 틀(꺼져 있으면 아무것도 그리지 않는다).
+mount(SheetChrome, { target: document.body.appendChild(document.createElement('div')) });
 
 // T-10-010: 클럽 커스텀을 계정과 맞춘다. 세션이 있었던 기기만 — 첫 방문자는 로컬 모드 그대로다(T-10-037).
 if (hasSessionHint())
@@ -61,7 +76,7 @@ watchNews();
 // T-10-021: 모바일 브라우저로 홈 화면을 열면 '홈 화면에 추가' 안내를 띄운다('다시 보지 않기' 전까지).
 void import('./ui/install.js').then((m) => m.maybeShowInstallOnboarding()).catch(() => {});
 // T-9-009: 이전 세션에서 못 보낸 업로드를 앱 시작 시 한 번 재시도한다(실패해도 게임은 계속된다).
-void import('./game/outbox.js').then((m) => m.flushOutbox()).catch(() => {});
+void import('./sync/outbox.js').then((m) => m.flushOutbox()).catch(() => {});
 // T-10-104: 게임 화면·액션·게임 시트는 첫 화면 번들 밖(지연 청크)이다. 이어 할 커리어가 있으면 첫 페인트 뒤 브라우저가
 // 한가할 때 미리 받아 둬 '계속하기'를 눌렀을 때 기다리지 않게 한다(기록만 보러 온 방문자는 받지 않는다 — 새 커리어는
 // 선수 생성 화면을 여는 순간 받는다, nav.goNew). index.html modulepreload에는 넣지 않는다 — 첫 화면 예산 밖.

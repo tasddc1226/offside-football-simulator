@@ -1,5 +1,6 @@
 import type {
   CareerMeta,
+  CareerPos,
   CareerSeasonPayload,
   HofSort,
   LegendSnapshot,
@@ -25,8 +26,8 @@ import {
 } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
-import { kstDays } from './admin.js';
-import { honorsOf } from './firsts.js';
+import { kstDay } from '../../time.js';
+import { honorsOf, hideCareerStatements } from './firsts.js';
 import { appMeta, careers, careerSeasons, goalsPlusAssists, retiredNumbers } from '../schema.js';
 
 export type CareerRow = typeof careers.$inferSelect;
@@ -37,6 +38,19 @@ export async function getCareerOwner(db: Db, careerId: string): Promise<string |
     .from(careers)
     .where(eq(careers.id, careerId));
   return row?.profileId;
+}
+
+/** 공개 이름 갱신(upsert·update의 set). undefined(옛 클라이언트)면 그대로 두고, 운영자가 가린 이름(이름 신고,
+ *  name_hidden_at)은 다시 채우지 않는다. keepRetired면 은퇴한 커리어의 이름도 그대로 둔다. */
+function publicNameSet(
+  publicName: string | null | undefined,
+  opts: { keepRetired?: boolean } = {},
+) {
+  if (publicName === undefined) return {};
+  const locked = opts.keepRetired
+    ? sql`${careers.nameHiddenAt} is not null or ${careers.status} = 'retired'`
+    : sql`${careers.nameHiddenAt} is not null`;
+  return { publicName: sql`case when ${locked} then ${careers.publicName} else ${publicName} end` };
 }
 
 export type PutCareerSeasonInput = {
@@ -50,6 +64,8 @@ export type PutCareerSeasonInput = {
   publicName?: string | null | undefined;
   /** 자동 플레이 탐지용 조작 요약(JSON). undefined(옛 클라이언트·다시 보낸 기록)면 그대로 둔다. */
   signalsJson?: string | undefined;
+  /** 나이별 OVR 상한을 크게 넘겨 보낸 시즌이면 같은 batch에서 커리어를 숨긴다(저장 땐 상한으로 잘려 나중엔 알 수 없다, T-11-037). */
+  hide?: boolean | undefined;
   now: string;
 };
 
@@ -60,17 +76,22 @@ export type PutCareerSeasonInput = {
  * 이미 확인했다고 가정한다.
  */
 export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Promise<void> {
-  const { careerId, profileId, year, meta, season, eventsJson, publicName, signalsJson, now } =
-    input;
+  const {
+    careerId,
+    profileId,
+    year,
+    meta,
+    season,
+    eventsJson,
+    publicName,
+    signalsJson,
+    hide,
+    now,
+  } = input;
   const signals = signalsJson !== undefined ? { signalsJson } : {};
+  // T-11-048 시즌 성장 기록. 없으면 건드리지 않아, 성장 기록 없이 다시 올라온 옛 시즌이 이미 쌓인 기록을 지우지 않는다.
+  const growth = season.growth ? { growthJson: JSON.stringify(season.growth) } : {};
   const name = publicName !== undefined ? { publicName } : {};
-  // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
-  const keepRetiredName =
-    publicName !== undefined
-      ? {
-          publicName: sql`case when ${careers.status} = 'retired' then ${careers.publicName} else ${publicName} end`,
-        }
-      : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
   const detail = {
     cs: season.cs ?? null,
@@ -99,6 +120,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         startYear: meta.startYear,
         status: 'active',
         appVersion: meta.appVersion,
+        pot: meta.pot ?? null,
         ...name,
         // 처음 올라온 시각의 시즌(0 = 프리시즌, 시즌 사이 휴식기면 NULL) — onConflict set에 없어 바뀌지 않는다.
         serviceSeason: teamSeasonAt(now),
@@ -111,7 +133,10 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           // 포지션·주발·유형·특성·시작 연도는 커리어를 만들 때 정해져 바뀌지 않는다 — 처음 값을 지킨다(뒤늦게
           // 포지션을 바꿔 레전드 점수·결번 가중을 고르지 못하게).
           appVersion: meta.appVersion,
-          ...keepRetiredName,
+          // 처음 스카우트 평가는 비어 있을 때만 채운다(첫 시즌 업로드가 늦게 와도 한 번만).
+          ...(meta.pot !== undefined && { pot: sql`coalesce(${careers.pot}, ${meta.pot})` }),
+          // 은퇴한 커리어의 공개 이름은 은퇴 PUT(명예의 전당 토글)만 바꾼다 — 늦게 도착한 시즌 업로드가 되돌리지 않게.
+          ...publicNameSet(publicName, { keepRetired: true }),
           updatedAt: now,
           // status는 의도적으로 뺀다 — 이미 retired인 커리어가 이 라우트로 다시 active가 되지 않는다.
         },
@@ -135,6 +160,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         eventsJson,
         ...detail,
         ...signals,
+        ...growth,
         createdAt: now,
       })
       .onConflictDoUpdate({
@@ -154,11 +180,14 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           eventsJson,
           ...detail,
           ...signals,
+          ...growth,
           // 같은 시즌을 다시 보내면 덮어써 결과는 같다(멱등). createdAt은 최초값을 유지한다.
         },
         // 은퇴한 커리어의 시즌은 고치지 않는다(은퇴 요약·결번 판정의 근거). 늦게 도착한 빠진 시즌은 새 행이라 들어간다.
         setWhere: sql`(select ${careers.status} from ${careers} where ${careers.id} = ${careerId}) <> 'retired'`,
       }),
+    // 맨 뒤에 둔다 — 위 upsert가 행을 만든 뒤여야 숨김이 새 커리어에도 닿는다.
+    ...(hide ? hideCareerStatements(db, careerId) : []),
   ]);
 }
 
@@ -170,6 +199,8 @@ export type PutRetirementInput = {
   snapshot?: LegendSnapshot | undefined;
   /** T-10-092 최고 시점 능력치(plausibility.ts boundProfile로 자른 값). 옛 클라이언트는 없다. */
   profile?: PeakProfile | undefined;
+  /** T-11-030 은퇴 때 공개된 실제 잠재력(관찰 전용). 옛 클라이언트는 없다. */
+  potReal?: number | undefined;
   now: string;
 };
 
@@ -178,12 +209,12 @@ export type PutRetirementInput = {
  * 커리어 수만큼 행을 읽으므로(T-10-055), 은퇴할 때 이 키를 1 올리고 현황은 한 행만 읽는다. 프로필 삭제로
  * 커리어가 지워져도 빼지 않는다(홈 현황 숫자라 허용).
  */
-export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`;
+export const retiredCountKey = (at: Date) => `retired:${kstDay(at.toISOString())}`;
 
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
  * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
-  const { careerId, summary, publicName, snapshot, profile, now } = input;
+  const { careerId, summary, publicName, snapshot, profile, potReal, now } = input;
   await runBatch(db, [
     // 처음 은퇴할 때만 센다 — 같은 커리어의 첫 은퇴가 동시에 두 번 와도 retired_at이 이미 있으면 아무 행도 넣지
     // 않는다. 같은 트랜잭션에서 아래 update보다 먼저 돌아야 retired_at이 비어 있는 것을 본다.
@@ -222,7 +253,7 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
         // 옛 클라이언트는 칭호·클럽 id를 보내지 않는다 — 보낸 경우에만 쓴다.
         ...(summary.title !== undefined ? { title: summary.title } : {}),
         ...(summary.lastClubId !== undefined ? { lastClubId: summary.lastClubId } : {}),
-        ...(publicName !== undefined ? { publicName } : {}),
+        ...publicNameSet(publicName),
         ...(snapshot
           ? {
               snapshotJson: JSON.stringify(snapshot),
@@ -231,6 +262,7 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
             }
           : {}),
         ...(profile ? { peakProfile: JSON.stringify(profile) } : {}),
+        ...(potReal !== undefined ? { potReal } : {}),
       })
       .where(eq(careers.id, careerId)),
   ]);
@@ -247,6 +279,7 @@ const publicColumns = {
   number: careers.shirtNumber,
   retireAge: careers.retireAge,
   peak: careers.peak,
+  potReal: careers.potReal,
   legendScore: careers.legendScore,
   apps: careers.apps,
   goals: careers.goals,
@@ -261,6 +294,7 @@ const publicColumns = {
   hasDetail: sql<number>`${careers.snapshotJson} is not null`,
   title: careers.title,
   value: careers.value,
+  serviceSeason: careers.serviceSeason,
   // T-10-076 영구결번(retired_numbers를 left join한 쿼리에서만 쓴다).
   rnClubId: retiredNumbers.clubId,
   rnClub: retiredNumbers.club,
@@ -280,6 +314,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     number: r.number == null ? null : Number(r.number),
     retireAge: n(r.retireAge),
     peak: n(r.peak),
+    ...(r.potReal != null ? { potReal: Number(r.potReal) } : {}),
     legendScore: n(r.legendScore),
     apps: n(r.apps),
     goals: n(r.goals),
@@ -294,6 +329,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     hasDetail: Boolean(r.hasDetail),
     title: (r.title as string | null) ?? null,
     value: r.value == null ? null : Number(r.value),
+    season: r.serviceSeason == null ? null : Number(r.serviceSeason),
     retiredNumber:
       r.rnClubId == null
         ? null
@@ -310,7 +346,11 @@ const withRetiredNumber = eq(retiredNumbers.careerId, careers.id);
 /** 공개 명예의 전당(목록·상세·공유 링크·홈 라이브 은퇴 소식)에 오르는 은퇴. 짧은 커리어(T-10-032)는 내 선수에만 남는다. */
 /** 내 선수 목록은 짧은 커리어도 보여 준다. */
 const isOwnRetired = and(eq(careers.status, 'retired'), isNotNull(careers.legendScore));
-export const isPublicRetired = and(isOwnRetired, gte(careers.retireAge, HOF_MIN_RETIRE_AGE));
+export const isPublicRetired = and(
+  isOwnRetired,
+  gte(careers.retireAge, HOF_MIN_RETIRE_AGE),
+  eq(careers.hidden, 0),
+);
 
 const HOF_SORT: Record<HofSort, AnyColumn | SQL> = {
   score: careers.legendScore,
@@ -328,7 +368,8 @@ const HOF_SORT: Record<HofSort, AnyColumn | SQL> = {
 
 /** 전체 유저의 은퇴 선수를 sort 기록 순으로(같으면 레전드 점수 · 먼저 은퇴), page(1부터)번째 limit명과 전체 인원.
  * score가 아니면 그 기록이 0인 선수는 뺀다(발롱도르 0회끼리 순위를 매기지 않는다).
- * T-10-101 q가 있으면 공개 이름에 q가 들어간 선수만 — 각 선수에 검색 전 순위(rank)를 붙인다. */
+ * T-10-101 q가 있으면 공개 이름에 q가 들어간 선수만 — 각 선수에 검색 전 순위(rank)를 붙인다.
+ * T-11-018 pos가 있으면 그 포지션 안의 순위다. */
 export async function listPublicHof(
   db: Db,
   limit: number,
@@ -336,12 +377,14 @@ export async function listPublicHof(
   sort: HofSort = 'score',
   season?: ServiceSeason,
   q?: string,
+  pos?: CareerPos,
 ): Promise<{ entries: PublicHofEntry[]; total: number }> {
   const by = HOF_SORT[sort];
   const ranked = and(
     isPublicRetired,
     sort === 'score' ? undefined : sql`${by} > 0`,
     season && inSeason(season),
+    pos && eq(careers.pos, pos),
   );
   const where = q
     ? and(
@@ -475,7 +518,7 @@ export async function updateRetired(
     .update(careers)
     .set({
       updatedAt: now,
-      ...(publicName !== undefined ? { publicName } : {}),
+      ...publicNameSet(publicName),
       ...(title
         ? {
             title: sql`case when exists (select 1 from json_each(${careers.snapshotJson}, '$.titles') where json_extract(value, '$.id') = ${title}) then ${title} else ${careers.title} end`,
@@ -501,6 +544,7 @@ const storedSeasonColumns = {
   apps: careerSeasons.apps,
   goals: careerSeasons.goals,
   assists: careerSeasons.assists,
+  rating: careerSeasons.rating,
   cs: careerSeasons.cs,
   caps: careerSeasons.caps,
   ovr: careerSeasons.ovr,
@@ -539,18 +583,15 @@ export async function getCareerHead(db: Db, careerId: string) {
       status: careers.status,
       pos: careers.pos,
       dpos: careers.dpos,
+      serviceSeason: careers.serviceSeason,
     })
     .from(careers)
     .where(eq(careers.id, careerId));
   return row;
 }
 
-/** 테스트 전용 헬퍼: 특정 커리어의 존재 여부·상태 확인. */
+/** 커리어 한 행(존재 여부·상태 확인). */
 export async function getCareer(db: Db, careerId: string): Promise<CareerRow | undefined> {
   const [row] = await db.select().from(careers).where(eq(careers.id, careerId));
   return row;
-}
-
-export async function listCareerSeasons(db: Db, careerId: string) {
-  return db.select().from(careerSeasons).where(eq(careerSeasons.careerId, careerId));
 }

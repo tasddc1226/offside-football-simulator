@@ -1,21 +1,11 @@
 <script lang="ts">
   // T-10-099 국적 고르기: 한글·초성으로 찾는 콤보박스. 연맹별로 묶어 가나다순, 대한민국은 맨 위.
-  import { CONFEDS, CONF_ORDER, DEFAULT_NATION, NATIONS } from '@offside/contracts/nations';
-  import { KR, flagOf, nationOf, type Nation } from '../game/nation.js';
-  import { koMatchAt } from './koSearch.js';
+  import { flagOf, nationOf, type Nation } from '@offside/game/nation';
+  import { nationGroups } from '@offside/app-core/nationSearch';
   import { motionOK } from './motion.js';
+  import { trackViewport } from './viewport.js';
 
   let { id, value = $bindable() }: { id: string; value: string } = $props();
-
-  const byKo = new Intl.Collator('ko').compare;
-  const GROUPS = [
-    { key: 'KR', label: '기본', list: [KR] },
-    ...CONF_ORDER.map((conf) => ({
-      key: conf,
-      label: `${CONFEDS[conf].region} (${conf})`,
-      list: NATIONS.filter((n) => n.conf === conf && n.code !== DEFAULT_NATION).sort((a, b) => byKo(a.ko, b.ko)),
-    })),
-  ];
 
   let open = $state(false);
   // null = 아직 안 쳤다(선택된 이름을 보여 주고 전체 목록).
@@ -27,14 +17,8 @@
 
   const selected = $derived(nationOf({ nation: value }));
   // 검색 중엔 연맹 묶음 대신 한 목록으로, 이름이 검색어로 시작하는 나라부터.
-  const groups = $derived.by(() => {
-    if (!query) return GROUPS;
-    const hits = NATIONS.map((n) => ({ n, at: koMatchAt(n.ko, query!) }))
-      .filter((h) => h.at >= 0)
-      .sort((a, b) => a.at - b.at || byKo(a.n.ko, b.n.ko));
-    return hits.length ? [{ key: 'hits', label: `검색 결과 ${hits.length}`, list: hits.map((h) => h.n) }] : [];
-  });
-  const flat = $derived(groups.flatMap((g) => g.list));
+  const groups = $derived(nationGroups(query));
+  const flat = $derived(groups.flatMap((g) => g.data));
   const cur = $derived<Nation | undefined>(flat[active]);
   const optId = (n: Nation) => `${id}-o-${n.code}`;
 
@@ -70,6 +54,11 @@
       hide();
     }
   }
+
+  // T-10-118 iOS 의 vh 는 키보드를 빼지 않아 목록이 키보드 뒤로 밀린다 — 열려 있는 동안 보이는 높이(--vvh)로 상한을 잡는다.
+  $effect(() => {
+    if (open) return trackViewport(root);
+  });
 
   // 키보드로 움직인 항목이 목록 밖으로 나가지 않게.
   $effect(() => {
@@ -109,7 +98,7 @@
       {#each groups as g (g.key)}
         <div role="group" aria-labelledby="{id}-g-{g.key}">
           <div class="combo-group" id="{id}-g-{g.key}">{g.label}</div>
-          {#each g.list as n (n.code)}
+          {#each g.data as n (n.code)}
             <!-- 목록을 누르는 동안 입력 칸이 초점을 잃지 않게 pointerdown을 막는다. 키보드 선택은 입력 칸이 맡는다. -->
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <div
@@ -168,7 +157,8 @@
     top: calc(100% + 6px);
     left: 0;
     right: 0;
-    max-height: min(300px, 40vh);
+    /* --vvh 는 T-10-118 (키보드가 올라오면 보이는 높이, viewport.ts). 없으면 100vh 라 기존 40vh 와 같다. */
+    max-height: min(300px, calc(var(--vvh, 100vh) * 0.4));
     overflow-y: auto;
     overscroll-behavior: contain;
     background: var(--surface);

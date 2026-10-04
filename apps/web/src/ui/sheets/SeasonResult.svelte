@@ -1,7 +1,9 @@
 <script lang="ts">
-  import type { SheetView } from './types.js';
+  import { visibleSeasonNotes } from '@offside/app-core/potential-view';
+  import type { SheetView } from '@offside/app-core/sheets';
   import NewTitles from '../titles/NewTitles.svelte';
   let { v }: { v: Extract<SheetView, { kind: 'season' }> } = $props();
+  const notes = $derived(visibleSeasonNotes(v.notes));
 </script>
 
 <div class="eyebrow">{v.eyebrow}</div>
@@ -20,13 +22,13 @@
 {#if v.honors.length}
   <div class="stack">{#each v.honors as t, i (i)}<p class="hl"><b>{t}</b></p>{/each}</div>
 {:else}
-  <p class="muted">이번 시즌 수상은 없었습니다.</p>
+  <p class="muted">이번 시즌 수상은 없었어요.</p>
 {/if}
 {#if v.promo}
   <div class="story-end promo-card pop" style="--d:160ms" data-promo>
     <div class="eyebrow">Promotion</div>
     <b>K리그1 승격 확정</b>
-    <p class="muted fs-sm">이번 시즌 1위로 {v.promo.club}의 승격이 확정됐습니다. 다음 시즌에는 K리그1에서 새로운 도전을 시작합니다.</p>
+    <p class="muted fs-sm">이번 시즌 1위로 {v.promo.club}의 승격이 확정됐어요. 다음 시즌에는 K리그1에서 새로운 도전을 시작해요.</p>
     <p class="muted fs-xs">자리를 내준 {v.promo.down} · K리그2 강등</p>
   </div>
 {/if}
@@ -55,16 +57,22 @@
 {/if}
 {#if v.miles.length}
   <div>
-    <div class="eyebrow" style="margin-bottom:6px">커리어 여정</div>
+    <div class="eyebrow" style="margin-bottom:6px">커리어 이정표</div>
     {#each v.miles as m, i (i)}<p>· {m}</p>{/each}
   </div>
 {/if}
 <NewTitles titles={v.titles} pop />
-{#if v.notes.length}<p class="muted">{v.notes.join(' · ')}</p>{/if}
+{#if notes.length}<p class="muted">{notes.join(' · ')}</p>{/if}
+{#if v.scoutHint}
+  <div>
+    <div class="eyebrow" style="margin-bottom:6px">스카우트 한마디</div>
+    <p>“{v.scoutHint}”</p>
+  </div>
+{/if}
 <div>
   <div class="eyebrow" style="margin-bottom:6px">팬 반응</div>
   <div class="fan-feed">
     {#each v.fans as f, i (i)}<div class="fan-line in" style="--d:{200 + i * 110}ms"><span class="fan-heart" aria-hidden="true">💗</span>{f}</div>{/each}
   </div>
 </div>
-<p class="muted">나이 {v.age}세가 되었습니다. 이제 다음 시즌을 준비합니다.</p>
+<p class="muted">{v.age}세가 됐어요. 이제 다음 시즌을 준비해요.</p>

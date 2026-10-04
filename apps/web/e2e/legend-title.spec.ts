@@ -20,7 +20,7 @@ async function seed(page: Page, style?: Record<string, unknown>) {
     ),
   );
   await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
-  await page.route(`${API}/v1/retired-numbers`, (r) => r.fulfill(ok({ items: [] })));
+  await page.route(`${API}/v1/retired-numbers*`, (r) => r.fulfill(ok({ items: [] })));
   await page.route(`${API}/v1/careers/${ID}/retired-number`, (r) =>
     r.fulfill(ok({ retiredNumber: null })),
   );
@@ -116,8 +116,8 @@ test('은퇴한 내 선수의 대표 칭호를 받은 칭호 중에서 바꾼다
   await expect(page.locator('[data-legend-title]')).toHaveText('‘원클럽맨’');
   await expect.poll(() => bodies.at(-1)?.title).toBe('oneclub');
 
-  // 기기 기록에 남아 다시 열어도 그대로다.
-  await page.locator('[data-act="hof-back"]').click();
+  // 기기 기록에 남아 다시 열어도 그대로다. 내 선수 상세는 뒤로 가기로 돌아간다(T-10-126).
+  await page.goBack();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-title]')).toHaveText('‘원클럽맨’');
 });

@@ -165,7 +165,7 @@ async function seedOldLegend(page: Page) {
 
 test('소급으로 받은 결번이 이 기기의 내 선수 배지와 상세 세리머니에 보인다', async ({ page }) => {
   await seedOldLegend(page);
-  await page.route(`${API}/v1/retired-numbers`, (r) =>
+  await page.route(`${API}/v1/retired-numbers*`, (r) =>
     r.fulfill(
       ok({
         items: [
@@ -193,7 +193,7 @@ test('자리를 못 받은 옛 기록은 상세를 열 때 서버에 물어 명�
   page,
 }) => {
   await seedOldLegend(page);
-  await page.route(`${API}/v1/retired-numbers`, (r) => r.fulfill(ok({ items: [] })));
+  await page.route(`${API}/v1/retired-numbers*`, (r) => r.fulfill(ok({ items: [] })));
   let asked = 0;
   await page.route(`${API}/v1/careers/${OLD_ID}/retired-number`, (r) => {
     asked++;
@@ -203,8 +203,8 @@ test('자리를 못 받은 옛 기록은 상세를 열 때 서버에 물어 명�
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-rn="taken"]')).toContainText('김선배');
-  // 결과를 기기에 남겨 다시 열어도 묻지 않는다.
-  await page.locator('[data-act="hof-back"]').click();
+  // 결과를 기기에 남겨 다시 열어도 묻지 않는다. 내 선수 상세는 뒤로 가기로 돌아간다(T-10-128).
+  await page.goBack();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-rn="taken"]')).toContainText('김선배');
   expect(asked).toBe(1);
@@ -288,7 +288,7 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
     pos: 'FW',
     ...o,
   });
-  await page.route(`${API}/v1/retired-numbers`, (r) =>
+  await page.route(`${API}/v1/retired-numbers*`, (r) =>
     r.fulfill(
       ok({
         items: [
@@ -347,6 +347,7 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
   const axe = await new AxeBuilder({ page }).include('[data-rn-wall]').analyze();
   expect(axe.violations.map((v) => v.id)).toEqual([]);
 
+  await wall.locator('[data-rn-filters]').click();
   await wall.locator('[data-rn-order="recent"]').click();
   await expect(wall.locator('[data-rn-tile]')).toHaveCount(3);
   await expect(wall.locator('[data-rn-tile]').first()).toHaveAttribute('data-rn-tile', '3');
@@ -355,6 +356,7 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
   await wall.locator('[data-rn-tile="3"]').click();
   await expect(page.locator('.film-open h1')).toHaveText('박결번');
   await page.locator('[data-act="hof-back"]').click();
-  await expect(page.locator('[data-hof-tab="rn"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-hof-tab="rn"]')).toHaveAttribute('aria-selected', 'true');
+  await wall.locator('[data-rn-filters]').click();
   await expect(wall.locator('[data-rn-order="recent"]')).toHaveAttribute('aria-pressed', 'true');
 });

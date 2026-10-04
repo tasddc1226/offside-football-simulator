@@ -1,5 +1,5 @@
 // 풀타임(fulltime) 원본 analysis/simulate.js 를 포팅한 TS 시뮬레이션 러너.
-// 포트된(ported) apps/web/src/game/* ES 모듈을 그대로 import 해서, DOM/UI 없이
+// 포트된(ported) 게임 엔진(packages/game) ES 모듈을 그대로 import 해서, DOM/UI 없이
 // N개의 랜덤(또는 "스마트") 정책 커리어를 은퇴까지 헤드리스로 돌리고
 // 커리어별 CSV + 집계 JSON 을 저장한다. 원본과 동일한 정책 로직을 그대로 옮겼다.
 //
@@ -28,16 +28,13 @@ import {
   legendTitle,
   eventById,
   playPhase,
-} from '../../apps/web/src/game/index.js';
-import { pick, ri, createRng, setActiveRng, freshSeed } from '../../apps/web/src/game/rng.js';
-import { setLatestBalance } from '../../apps/web/src/game/balance.js';
+  investCost,
+  INVESTS,
+} from '@offside/game/index';
+import { pick, ri, rnd, createRng, setActiveRng, freshSeed } from '@offside/game/rng';
+import { setLatestBalance } from '@offside/game/balance';
 import { BODY_DEFAULT, BODY_LIMITS } from '../../packages/contracts/src/body.js';
-import type {
-  EventDef,
-  GameState,
-  MarketOption,
-  OfferOption,
-} from '../../apps/web/src/game/types.js';
+import type { EventDef, GameState, MarketOption, OfferOption } from '@offside/game/types';
 
 // ───────── Node 환경에 localStorage 스텁 (retire()/HOF 저장용, season.ts 는 이미 try/catch 로 감싸지만 예외 비용을 피한다) ─────────
 if (typeof (globalThis as Record<string, unknown>).localStorage === 'undefined') {
@@ -55,9 +52,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // SEED=<정수>: 같은 시드면 같은 결과(코드 변경 전후를 잡음 없이 비교할 때).
 // BALANCE=<json 파일>: 그 밸런스 값으로 돌린다 — 어드민 초안의 values(또는 {values}) 그대로(T-10-016).
 const DETAIL = !!process.env.DPOS;
+// T-11-012 INVEST=1: 자금으로 자기 투자를 한다(다치거나 지쳤으면 메디컬, 사기가 낮으면 멘탈, 아니면 약점 보강 특훈 —
+// 비용의 두 배 이상 있을 때만). 없으면 예전처럼 투자하지 않는다(RNG 소비도 같다).
+const INVEST = process.env.INVEST === '1';
+// T-11-018 운영 유저에 맞춘 정책. RETIRE_AGE=<나이>: 그 나이부터 스스로 은퇴(기본 35 — 41이면 강제 은퇴까지 뛴다).
+// MG=<0~1>: 원터치 미니게임 장면(페널티킥·1대1·승부차기)을 손으로 가린 것처럼 이 확률로 성공한다(능력치 확률 대신).
+// MG가 없으면 예전처럼 난수로 판정한다(RNG 소비도 같다).
+const RETIRE_AGE = +(process.env.RETIRE_AGE || 35);
+const MG = process.env.MG === undefined ? null : +process.env.MG;
+const mgRoll = (E: EventDef, idx: number): number | undefined =>
+  MG === null || !E.choices[idx]?.mg ? undefined : rnd() < MG ? 0 : 0.999999;
 // T-10-096 NATION=<국가 코드>: 그 국적으로 만든 선수. BODY=tall|short|heavy|light|default: 포지션 기본 체격
 // (BODY_DEFAULT)에서 한쪽 끝으로 간 체격. 둘 다 없으면 예전 선수 그대로(RNG 소비도 같다).
 const NATION = process.env.NATION;
+// T-11-045 RETIRE_AT=<나이>: 그 서비스 시즌에 만든 선수(은퇴 나이 — 시즌 1은 45). 없으면 프리시즌 선수(41세).
+const RETIRE_AT = process.env.RETIRE_AT ? +process.env.RETIRE_AT : undefined;
 const BODY = process.env.BODY as 'tall' | 'short' | 'heavy' | 'light' | 'default' | undefined;
 function bodyFor(pos: keyof typeof BODY_DEFAULT) {
   if (!BODY) return undefined;
@@ -157,7 +166,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
     // T-10-091 DPOS=1: 세부 포지션을 고른 시즌 1 선수(주력 능력치는 그 포지션의 기본값).
     const dpos = DETAIL ? pick(DETAILS_OF[pos]) : undefined;
     const seed = nextSeed();
-    const extra = { nation: NATION, body: bodyFor(pos) };
+    const extra = { nation: NATION, body: bodyFor(pos), retireAt: RETIRE_AT };
     const s = dpos
       ? newGame(
           {
@@ -187,6 +196,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
       for (let y = 0; y < 30 && !s.retired; y++) {
         for (let ph = 0; ph <= LAST_PHASE; ph++) {
           s.training = pickTraining(s);
+          if (INVEST) s.invest = pickInvest(s);
           // T-10-046: 화면과 같은 game/turn.ts playPhase로 진행한다(칭호 판정 포함 — 전에는 빠져 있었다).
           const { block: b, condBeforeMatches, ev: e } = playPhase(s);
           if (b) {
@@ -200,7 +210,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
           if (e) {
             const E = eventById(e)!;
             const idx = pickChoice(s, E);
-            const r = resolveChoice(s, e, idx);
+            const r = resolveChoice(s, e, idx, mgRoll(E, idx));
             events++;
             if (r.ok) evOk++;
             if (seen[e]) (A.repeats as number)++;
@@ -254,9 +264,11 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
           }
           if (
             m.canRetire &&
-            (s.age >= 35 || (s.age >= 28 && !m.options.some(realJob)) || !m.options.some(anyJob))
+            (s.age >= RETIRE_AGE ||
+              (s.age >= 28 && !m.options.some(realJob)) ||
+              !m.options.some(anyJob))
           ) {
-            retireReason = s.age >= 35 ? 'age35' : 'washout';
+            retireReason = s.age >= RETIRE_AGE ? 'age35' : 'washout';
             retire(s);
             break;
           }
@@ -294,7 +306,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
     const first = pro[0] ? pro[0].league : 'none';
     const ballonBest = (s.ballon || []).reduce((b, x) => Math.min(b, x.rank), 99);
     const score = legendScore(s),
-      title = legendTitle(score);
+      title = legendTitle(score, s.dpos);
     s.trophies.forEach((t) => inc(A.trophies as Record<string, number>, t.t));
     s.awards.forEach((t) => inc(A.awards as Record<string, number>, t.t));
     (s.storyLog || []).forEach((x) =>
@@ -371,6 +383,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
       awards: s.awards.length,
       ballon: s.awards.filter((x) => x.t === '발롱도르').length,
       ballonBest: ballonBest === 99 ? '' : ballonBest,
+      fifpro: s.awards.filter((x) => x.t === 'FIFPRO 월드 11').length,
       wc: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length,
       ucl: s.trophies.filter((x) => x.t === 'UEFA 챔피언스리그 우승').length,
       mil: s.mil.exempt ? 'exempt' : s.mil.served ? s.mil.type! : 'none',
@@ -396,6 +409,11 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
         (a, b) =>
           s.attrs[a] - (POS[s.pos].w[a] ?? 0) * 40 - (s.attrs[b] - (POS[s.pos].w[b] ?? 0) * 40),
       )[0]!;
+  }
+  function pickInvest(s: GameState): string {
+    const want = s.injury > 0 || s.cond < 50 ? 'medical' : s.morale < 45 ? 'mental' : 'weak';
+    const d = INVESTS.find((x) => x.id === want)!;
+    return s.money >= investCost(s, d) * 2 ? want : 'none';
   }
   function value(x: GameState): number {
     const S = x.season || ({} as GameState['season']);
@@ -425,7 +443,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
       let v = 0;
       for (let k = 0; k < 8; k++) {
         const x = JSON.parse(snap) as GameState;
-        resolveChoice(x, E.id, i);
+        resolveChoice(x, E.id, i, mgRoll(E, i));
         v += value(x);
       }
       if (v > bv) {

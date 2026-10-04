@@ -105,6 +105,29 @@ async function mockApi(page: Page, opts: { linked: boolean; admin: boolean }) {
       ok({ comments: comments.filter((c) => !profile || c.profileId === profile), hasMore: false }),
     );
   });
+  const nameReports = [
+    {
+      kind: 'team',
+      targetId: 'tm_bad',
+      name: '나쁜 구단 · 나쁜 감독',
+      reports: 2,
+      lastReportedAt: T,
+    },
+  ];
+  await page.route(`${API}/v1/admin/name-reports**`, (route) => {
+    const req = route.request();
+    const path = new URL(req.url()).pathname;
+    sent.push({
+      method: req.method(),
+      path,
+      body: req.method() === 'GET' ? null : req.postDataJSON(),
+    });
+    if (path === '/v1/admin/name-reports/resolve') {
+      nameReports.length = 0;
+      return route.fulfill({ status: 204 });
+    }
+    return route.fulfill(ok({ items: nameReports }));
+  });
   await page.route(`${API}/v1/balance`, (route) =>
     route.fulfill(ok({ version: 1, values: { koreaStr: 76 }, activatedAt: T })),
   );
@@ -220,6 +243,18 @@ test('운영 도구: 대시보드가 기본 탭이고, 댓글 탭에서 작성�
   await expect(page.locator('[data-admin-comment]')).toHaveCount(1);
   expect(sent.find((s) => s.path === '/v1/admin/comments/purge')?.body).toEqual({
     profileId: SPAMMER,
+  });
+
+  // 이름 신고는 같은 탭 위쪽에서 대상마다 한 줄로 보고 기각·가리기를 한다.
+  const named = page.locator('[data-name-report="tm_bad"]');
+  await expect(named).toContainText('신고 2');
+  await named.locator('[data-act="name-dismiss"]').click();
+  await expect(page.locator('#toast')).toContainText('신고를 기각했어요');
+  await expect(page.locator('[data-name-report]')).toHaveCount(0);
+  expect(sent.find((s) => s.path === '/v1/admin/name-reports/resolve')?.body).toEqual({
+    kind: 'team',
+    id: 'tm_bad',
+    action: 'dismiss',
   });
 });
 

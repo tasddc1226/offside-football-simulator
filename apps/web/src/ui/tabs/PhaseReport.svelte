@@ -8,7 +8,7 @@
   import NewTitles from '../titles/NewTitles.svelte';
   import { dur } from '../motion.js';
   import TickerLine from '../sheets/TickerLine.svelte';
-  import { RES_LABEL as RES, type PhaseReport } from '../sheets/types.js';
+  import { RES_LABEL as RES, type PhaseReport } from '@offside/app-core/sheets';
 
   const { r }: { r: PhaseReport } = $props();
   const DOT_MS = 60;
@@ -37,7 +37,7 @@
   ]);
 </script>
 
-<section class="card report" data-report aria-labelledby="report-title" style="--after:{afterDots}ms">
+<section class="card report" data-report data-tour="report" aria-labelledby="report-title" style="--after:{afterDots}ms">
   <div class="row" style="justify-content:space-between;align-items:flex-start">
     <div>
       <div class="eyebrow">{r.eyebrow}</div>
@@ -86,7 +86,7 @@
         {#each x.games as m, j (j)}<p class:hl={m.hl}>{m.line} <span class="muted">· {m.detail}</span></p>{/each}
       {:else}
         <div class="eyebrow" style="margin-bottom:6px">{x.name}</div>
-        <p class="muted">이번 A매치 명단에서 제외됐습니다.</p>
+        <p class="muted">이번 A매치 명단에서 빠졌어요.</p>
       {/if}
     </div>
   {/each}

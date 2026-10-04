@@ -8,9 +8,10 @@
   import { fly } from 'svelte/transition';
   import { closeSheet, registerSheetEl, sheetState } from './sheetState.svelte.js';
   import SheetBody from './sheets/SheetBody.svelte';
-  import { sheetLabel } from './sheets/types.js';
+  import { sheetLabel } from '@offside/app-core/sheets';
   import { appState } from './state.svelte.js';
   import { buzz, dur } from './motion.js';
+  import { lockScroll } from './scrollLock.js';
 
   // T-10-003: 진입/퇴장은 Svelte transition(패널: fly, 배경: opacity 클래스)이 맡는다. #modal은
   // index.html에 정적으로 있는 노드(SEO 정규식 대상)라 계속 hidden 속성으로 보이기/숨기기를
@@ -52,6 +53,12 @@
     return () => clearTimeout(hideTimer);
   });
 
+  // T-10-117 시트가 열려 있는 동안 뒤 페이지 스크롤을 잠근다(스크롤 위치는 그대로).
+  $effect(() => {
+    if (!sheetState.open) return;
+    return lockScroll();
+  });
+
   $effect(() => {
     const modal = hostRoot?.parentElement;
     if (!modal) return;
@@ -78,9 +85,17 @@
     const dy = e.touches[0]!.clientY - startY;
     if (dy > 0) {
       dragY = dy;
-      e.preventDefault();
+      if (e.cancelable) e.preventDefault();
     }
   }
+  // T-10-117 Svelte 5는 on:touchmove를 passive로 등록해 preventDefault가 무시됐다 — 끌어 내리는 동안 시트·뒤 페이지가
+  // 같이 스크롤되지 않게 non-passive 리스너를 직접 붙인다(드래그 동작은 그대로).
+  $effect(() => {
+    const el = sheetEl;
+    if (!el) return;
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onTouchMove);
+  });
   function onTouchEnd() {
     if (!dragging) return;
     dragging = false;
@@ -110,7 +125,6 @@
       style={dragY ? `transform:translateY(${dragY}px)` : undefined}
       transition:fly={{ y: 60, duration: dur(SHEET_MS) }}
       ontouchstart={onTouchStart}
-      ontouchmove={onTouchMove}
       ontouchend={onTouchEnd}
       ontouchcancel={onTouchEnd}
     >

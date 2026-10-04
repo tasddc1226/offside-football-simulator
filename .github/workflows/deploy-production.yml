@@ -41,6 +41,10 @@ jobs:
       # Empty until the consent notice and GA4 console setup are approved for release.
       VITE_GA4_MEASUREMENT_ID: ${{ vars.VITE_GA4_MEASUREMENT_ID }}
       VITE_GA4_HOSTNAME: ${{ vars.VITE_GA4_HOSTNAME }}
+      # T-11-061 web ads. Empty until the AdSense site is approved and ad units exist; no slots render without them.
+      VITE_ADSENSE_CLIENT: ${{ vars.VITE_ADSENSE_CLIENT }}
+      VITE_ADSENSE_HOSTNAME: ${{ vars.VITE_ADSENSE_HOSTNAME }}
+      VITE_ADSENSE_SLOTS: ${{ vars.VITE_ADSENSE_SLOTS }}
     steps:
       - name: Require main and explicit deploy confirmation
         env:
@@ -98,6 +102,7 @@ jobs:
       - name: Validate critical compatibility
         run: |
           pnpm --filter @offside/scripts exec vitest run production-release.test.mjs
+          node .github/scripts/publish-release-notes.mjs validate .release-notes
           pnpm --filter @offside/api typecheck
           pnpm --filter @offside/web typecheck
 
@@ -199,6 +204,15 @@ jobs:
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_API_URL/v1/profile" >/dev/null
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_WEB_URL/" | grep -qF '오프사이드'
 
+      - name: Inspect announcement push outbox counts
+        if: inputs.mode == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT board, day, COUNT(*) event_count FROM push_news_events GROUP BY board, day ORDER BY day DESC LIMIT 10; SELECT state, COUNT(*) delivery_count FROM push_news_deliveries GROUP BY state;" > .release/news-push.json
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -209,8 +223,115 @@ jobs:
             .release/counts-before.json
             .release/counts-after.json
             .release/schema-after.json
+            .release/news-push.json
           if-no-files-found: ignore
           retention-days: 30
+
+  # T-11-010 웹·API 배포가 끝까지 성공하면 같은 커밋의 앱 JS 번들을 EAS Update production 채널로 내보낸다.
+  # 스토어 앱은 다음 실행 때(또는 '다시 시작' 배너로) 받는다. 직전 OTA 이후 앱이 쓰는 코드(apps/mobile·packages·lockfile)가
+  # 그대로면 게시하지 않는다(새 버전 배너가 괜히 뜨지 않게). runtimeVersion(fingerprint)이 맞는 빌드에만 내려가므로
+  # 네이티브가 바뀐 커밋은 새 스토어 빌드가 나올 때까지 기존 앱에 적용되지 않는다 — 그런 런타임이면 게시 전에 경고를 남긴다.
+  # EXPO_TOKEN이 없으면 경고만 남기고 건너뛴다.
+  app-update:
+    name: Publish app OTA update
+    needs: production-release
+    if: inputs.mode == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+    steps:
+      - name: Require EXPO_TOKEN
+        if: env.EXPO_TOKEN == ''
+        run: |
+          echo "::warning::EXPO_TOKEN secret not set; app OTA update was NOT published."
+          echo "⚠️ EXPO_TOKEN이 없어 앱 OTA를 게시하지 않았어요." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@v6
+        if: env.EXPO_TOKEN != ''
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        if: env.EXPO_TOKEN != ''
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: expo/expo-github-action@v8
+        if: env.EXPO_TOKEN != ''
+        with:
+          eas-version: 24.8.0
+          token: ${{ secrets.EXPO_TOKEN }}
+      # eas는 app.json 플러그인(expo-router 등)을 풀어야 해서 update:list 조회 전에 설치가 필요하다.
+      # 설치 없이 돌면 stdout에 "Failed to resolve plugin …"이 찍혀 jq가 깨지고 늘 게시로 빠졌다(T-11-014).
+      - uses: pnpm/action-setup@v4
+        if: env.EXPO_TOKEN != ''
+      - run: pnpm install --frozen-lockfile --filter @offside/mobile...
+        if: env.EXPO_TOKEN != ''
+      # eas --json이어도 stdout에 안내 줄("No environment variables …")이 먼저 찍힐 수 있어 JSON 시작 줄({ 또는 [)부터 읽는다.
+      # stderr는 버리지 않는다 — eas가 실패하면 원인이 로그에 남아야 한다.
+      - name: Skip when app code is unchanged since the last OTA
+        id: changed
+        if: env.EXPO_TOKEN != ''
+        working-directory: apps/mobile
+        run: |
+          json() { sed -n '/^[{[][]}]\{0,1\}$/,$p'; }
+          # 목록에는 커밋이 없어 최신 그룹을 다시 본다(update:view에 gitCommitHash가 있다).
+          GROUP="$(eas update:list --branch production --limit 1 --json | json | jq -r '.currentPage[0].group // empty' || true)"
+          BASE=""
+          if [ -n "$GROUP" ]; then
+            BASE="$(eas update:view "$GROUP" --json | json \
+              | jq -r '[.. | objects | .gitCommitHash? // empty] | first // empty' || true)"
+          fi
+          if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null \
+            && git diff --quiet "$BASE" HEAD -- . ../../packages ../../package.json ../../pnpm-lock.yaml; then
+            echo "앱 코드가 직전 OTA(${BASE:0:7}) 이후 그대로라 게시하지 않았어요." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            [ -n "$BASE" ] || echo "::notice::직전 production OTA 커밋을 읽지 못해 변경 여부와 상관없이 게시해요."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+      # 이번 OTA의 runtimeVersion(fingerprint)을 가진 스토어 빌드가 없으면 설치된 앱 누구도 받지 못한다(T-11-013 사고:
+      # eas.json 수정으로 런타임이 바뀜). 네이티브 변경은 다음 스토어 빌드 전까지 원래 그럴 수 있어 막지 않고 경고만 남긴다.
+      - name: Warn when no store build has this runtime
+        if: steps.changed.outputs.publish == 'true'
+        working-directory: apps/mobile
+        run: |
+          json() { sed -n '/^[{[][]}]\{0,1\}$/,$p'; }
+          warn() { echo "::warning::$1"; echo "⚠️ $1" >> "$GITHUB_STEP_SUMMARY"; }
+          for P in ios android; do
+            FP="$(eas fingerprint:generate --platform "$P" --environment production --json --non-interactive \
+              | json | jq -r '.hash // empty' || true)"
+            if [ -z "$FP" ]; then
+              warn "$P: fingerprint를 계산하지 못해 스토어 빌드와 대조하지 못했어요."
+              continue
+            fi
+            FOUND="$(eas build:list --json --non-interactive --status finished --build-profile production \
+              --platform "$P" --runtime-version "$FP" --limit 1 | json | jq -r 'length' || true)"
+            case "$FOUND" in
+              1) echo "$P runtime ${FP:0:8} — 완료된 production 빌드와 일치해요." ;;
+              0) warn "$P: OTA runtime ${FP:0:8}인 production 빌드가 없어 설치된 앱은 이 OTA를 받지 못해요(새 스토어 빌드 전까지)." ;;
+              *) warn "$P: build:list 조회에 실패해 runtime ${FP:0:8}을 대조하지 못했어요." ;;
+            esac
+          done
+      # eas update는 eas.json 빌드 프로필의 env를 쓰지 않는다 — 번들에 들어갈 주소를 여기서 넣는다(eas.json production과 같은 값).
+      - name: Publish production update
+        if: steps.changed.outputs.publish == 'true'
+        working-directory: apps/mobile
+        # bash explicitly enables pipefail, so tee cannot hide an EAS export/upload failure.
+        shell: bash
+        env:
+          EXPO_PUBLIC_API_URL: https://api.offside-lab.com
+          EXPO_PUBLIC_WEB_ORIGIN: https://offside-lab.com
+        run: |
+          # Expo's "all" export includes web SSR. The web client is Svelte, so publish only native bundles.
+          for PLATFORM in ios android; do
+            eas update --channel production --environment production --non-interactive --platform "$PLATFORM" \
+              --message "운영 배포 ${EXPECTED_SHA:0:7}" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
 
   # 운영 배포가 끝까지 성공했을 때만 릴리즈 태그(KST 날짜 + 그날 순번, 예: v2026.09.25.1)와
   # GitHub 릴리즈를 만든다. 같은 커밋을 다시 배포하면 새 태그를 만들지 않는다.
@@ -253,3 +374,30 @@ jobs:
           if [ -n "$PREVIOUS" ]; then args+=(--notes-start-tag "$PREVIOUS"); fi
           gh release create "$TAG" "${args[@]}"
           echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)" >> "$GITHUB_STEP_SUMMARY"
+
+  # API・웹・OTA・릴리즈 태그 성공 후에만 사용자 공지를 게시한다. preflight에서는 쓰지 않는다.
+  # 같은 항목은 서버의 영구 이력으로 중복을 막아, 실패한 잡만 다시 실행해도 안전하다.
+  release-notes:
+    name: Publish in-game release notes
+    needs: [production-release, app-update, release-tag]
+    if: inputs.mode == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Publish reviewed entries from the deployed commit
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: node .github/scripts/publish-release-notes.mjs publish .release-notes

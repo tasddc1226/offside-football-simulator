@@ -2,9 +2,9 @@
   // T-10-016 운영 대시보드: 가입·활동·커리어·댓글 수와 최근 14일(KST) 추이. 집계는 서버에서 1분 캐시된다.
   import { onMount } from 'svelte';
   import type { LoadStatus } from '../LoadState.svelte';
-  import * as api from '../../api/admin.js';
-  import type { AdminStats } from '../../api/admin.js';
-  import { kstDateTime as kst } from '../boardText.js';
+  import * as api from '@offside/app-core/api/admin';
+  import type { AdminStats } from '@offside/app-core/api/admin';
+  import { kstDateTime as kst } from '@offside/app-core/boardText';
 
   const AUDIT: Record<string, string> = {
     PROFILE_DELETED: '프로필 삭제',

@@ -1,5 +1,5 @@
 import { ProfileSettingsSchema, type ProfileSettings } from '@offside/contracts';
-import { eq } from 'drizzle-orm';
+import { eq, isNotNull, or } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
 import { profiles } from '../schema.js';
@@ -18,11 +18,19 @@ export type ProfileRecord = {
   lastSeenAt: string;
   deletedAt: string | null;
   nickname: string | null;
+  appleSub: string | null;
+  appleLinkedAt: string | null;
 };
 
-/** 로그인 수단(구글·토스)이 연결된 프로필. */
+/** 구단주 계정(구글·애플 로그인) — 팀·댓글·닉네임 자격. SQL 조건은 accountLinkedSql. */
+export const hasAccount = (p: Pick<ProfileRecord, 'googleSub' | 'appleSub'>): boolean =>
+  p.googleSub !== null || p.appleSub !== null;
+export const accountLinkedSql = () =>
+  or(isNotNull(profiles.googleSub), isNotNull(profiles.appleSub));
+
+/** 로그인 수단(구글·토스·애플)이 연결된 프로필. */
 export const isLinked = (p: ProfileRecord): boolean =>
-  p.googleSub !== null || p.tossAnonKeyHash !== null;
+  p.googleSub !== null || p.tossAnonKeyHash !== null || p.appleSub !== null;
 
 const DEFAULT_SETTINGS: ProfileSettings = ProfileSettingsSchema.parse({
   reducedMotion: 'SYSTEM',
@@ -46,6 +54,8 @@ function toRecord(row: typeof profiles.$inferSelect): ProfileRecord {
     lastSeenAt: row.lastSeenAt,
     deletedAt: row.deletedAt,
     nickname: row.nickname,
+    appleSub: row.appleSub,
+    appleLinkedAt: row.appleLinkedAt,
   };
 }
 
@@ -138,11 +148,6 @@ export async function getProfileByRecoveryCodeHash(
   return row ? toRecord(row) : undefined;
 }
 
-/** API-PRO-005: `deleted_at` 기록만 한다. 연결 데이터 삭제는 라우트가 트랜잭션으로 처리한다. */
-export async function softDeleteProfile(db: Db, id: string, at: string): Promise<void> {
-  await db.update(profiles).set({ deletedAt: at }).where(eq(profiles.id, id));
-}
-
 /**
  * D-21. 삭제된 프로필(`deletedAt` not null)도 존재 여부 판정을 위해 그대로 돌려준다 — 콜백은 그
  * sub를 "처음 보는 sub"로 취급해 재연결을 허용한다(delete-profile.ts가 삭제 시 google_sub를 이미
@@ -173,5 +178,25 @@ export async function unlinkGoogleAccount(db: Db, id: string): Promise<void> {
   await db
     .update(profiles)
     .set({ googleSub: null, email: null, linkedAt: null })
+    .where(eq(profiles.id, id));
+}
+
+export async function getProfileByAppleSub(
+  db: Db,
+  sub: string,
+): Promise<ProfileRecord | undefined> {
+  const [row] = await db.select().from(profiles).where(eq(profiles.appleSub, sub));
+  return row ? toRecord(row) : undefined;
+}
+
+/** T-11-003 Sign in with Apple 연결. */
+export async function linkAppleAccount(
+  db: Db,
+  id: string,
+  input: { appleSub: string; linkedAt: string },
+): Promise<void> {
+  await db
+    .update(profiles)
+    .set({ appleSub: input.appleSub, appleLinkedAt: input.linkedAt })
     .where(eq(profiles.id, id));
 }

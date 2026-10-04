@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-10-026 구간 리포트·시즌 결산의 "새 칭호" 줄.
-  import type { TitleView } from '../../game/titles.js';
+  import type { TitleView } from '@offside/game/titles';
   import TitleTag from './TitleTag.svelte';
 
   const { titles, pop = false }: { titles: TitleView[]; pop?: boolean } = $props();

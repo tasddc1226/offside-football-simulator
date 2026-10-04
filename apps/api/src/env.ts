@@ -1,9 +1,16 @@
 import type { Context } from 'hono';
 import { createDb, type Db } from './db/client.js';
 import type { SessionChannel } from './db/repos/sessions.js';
+import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  /** 공지·릴리즈 노트 하루 첫 게시 자동 푸시. 운영에만 켠다. */
+  NEWS_PUSH_ENABLED?: string;
+  /** 관리자 자신의 등록 기기만 테스트. 기본 off. 전체 발송 기능과 별개다. */
+  PUSH_TEST_ENABLED?: string;
+  /** Expo enhanced push security용 secret. 클라이언트에는 넣지 않는다. */
+  EXPO_PUSH_ACCESS_TOKEN?: string;
   DB: D1Database;
   /** local|staging|production. */
   ENVIRONMENT: string;
@@ -17,14 +24,18 @@ export type Bindings = {
   WEB_APP_URL: string;
   /** 로컬 전용. `'1'`이면 ENVIRONMENT === 'local'과 함께 가짜 OIDC를 쓴다. */
   GOOGLE_FAKE?: string;
+  /** T-11-003 로컬 전용. `'1'`이면 ENVIRONMENT === 'local'과 함께 'fake:<sub>' Apple 신원 토큰을 받는다. */
+  APPLE_FAKE?: string;
+  /** T-11-003 Apple 신원 토큰의 aud(앱 번들 id). 없으면 com.offsidelab.app. */
+  APPLE_BUNDLE_ID?: string;
   /** T-10-011. secret. 쉼표 구분 관리자 구글 이메일(게시판 글쓰기). 비어 있으면 관리자가 없다. */
   ADMIN_EMAILS?: string;
   /** T-10-070 D1 매일 백업을 두는 R2 버킷. 운영에만 있다 — 없으면 백업을 건너뛴다. */
   BACKUP?: R2Bucket;
   /** T-10-072 홈 라이브 실시간 허브. 테스트(getPlatformProxy)엔 없다 — 없으면 소켓은 503, 소식은 보내지 않는다. */
   LIVE?: DurableObjectNamespace<LiveHub>;
-  /** T-10-076 영구결번을 여는 시각(ISO, UTC). 운영에만 둔다 — 없으면 바로 열려 있다. 오픈 뒤 지운다. */
-  RETIRED_NUMBERS_OPEN_AT?: string;
+  /** T-11-015 채팅방(src/chat/room.ts). 테스트엔 없다 — 없으면 채팅 소켓은 503, 입장권은 SERVICE_UNAVAILABLE. */
+  CHAT?: DurableObjectNamespace<ChatRoom>;
 };
 
 export type SessionContext = {
