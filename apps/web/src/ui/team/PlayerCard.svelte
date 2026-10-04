@@ -4,12 +4,12 @@
   import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
   import type { DetailPos } from '@offside/contracts/positions';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
-  import { cardFootNote } from '@offside/app-core/format';
+  import { cardFootNote, cardTier } from '@offside/app-core/format';
 
   let { player, name, rating, role, nation, compact = false, youth = false, deploymentRating, ratingLabel = '최고 OVR' }:
     { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; compact?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
   const country = $derived(!youth ? NATION_BY_CODE.get(nation ?? player?.nation ?? DEFAULT_NATION) : undefined);
-  const tier = $derived(youth ? 'youth' : (player?.legendScore ?? 0) >= 1000 ? 'legend' : (player?.peak ?? rating) >= 80 ? 'gold' : 'silver');
+  const tier = $derived(youth ? 'youth' : cardTier(player?.legendScore, player?.peak ?? rating));
   const statKeys = $derived(player?.pos === 'GK' ? ['def', 'phy', 'pas', 'pac', 'sho', 'dri'] as const : ['pac', 'sho', 'dri', 'pas', 'def', 'phy'] as const);
   const statLabels = $derived(player?.pos === 'GK' ? GK_ABBR : FACE_ABBR);
   let nameViewport: HTMLElement;

@@ -8,7 +8,7 @@ import { RN_SHIRT, RN_TRIM } from '@offside/app-core/rnStyle';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
-import { cardFootNote } from '@offside/app-core/format';
+import { cardFootNote, cardTier } from '@offside/app-core/format';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({
@@ -93,7 +93,7 @@ function CardName({
 }
 
 /** Collectible-card materials stay readable against both app themes and the pitch. */
-const CARD_TONES = {
+export const CARD_TONES = {
   silver: {
     light: '#f5f8fa',
     base: '#d8e2e6',
@@ -248,10 +248,9 @@ export function PlayerCard({
   compact?: boolean;
   animate?: boolean;
 }) {
-  const legend = !cell.youth && (cell.legendScore ?? 0) >= 1000;
   const country = !cell.youth ? NATION_BY_CODE.get(cell.nation ?? DEFAULT_NATION) : undefined;
-  const gold = !cell.youth && !legend && (cell.peak ?? cell.rating) >= 80;
-  const tone = CARD_TONES[cell.youth ? 'youth' : legend ? 'legend' : gold ? 'gold' : 'silver'];
+  const tone =
+    CARD_TONES[cell.youth ? 'youth' : cardTier(cell.legendScore, cell.peak ?? cell.rating)];
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [cardWidth, setCardWidth] = useState(compact ? 62 : 100);
   const shirtWidth = compact ? 25 : Math.min(43, Math.max(24, cardWidth - 56));
