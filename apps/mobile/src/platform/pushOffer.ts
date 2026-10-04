@@ -16,7 +16,12 @@ export function checkPushOffer() {
     if (pushOffer.handled || (Platform.OS !== 'ios' && Platform.OS !== 'android')) return;
     try {
       const permission = await Notifications.getPermissionsAsync();
-      pushOffer.eligible = permission.granted || permission.status === 'undetermined';
+      // Android 13+는 첫 요청 전에도 areNotificationsEnabled=false라 status=denied를 반환한다.
+      // 명시적인 선택은 HANDLED로 보존하고, OS가 재요청을 막은 기기는 안내하지 않는다.
+      pushOffer.eligible =
+        permission.granted ||
+        permission.status === 'undetermined' ||
+        (Platform.OS === 'android' && permission.status === 'denied' && permission.canAskAgain);
     } catch {
       pushOffer.eligible = false;
     }

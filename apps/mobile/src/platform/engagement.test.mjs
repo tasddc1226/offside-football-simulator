@@ -88,6 +88,32 @@ describe('native push consent offer', () => {
     await p.checkPushOffer();
     expect(p.pushOffer.eligible).toBe(true);
   });
+  it('offers on fresh Android when notifications are disabled but OS permission can still be requested', async () => {
+    f.platform = 'android';
+    f.permission = { granted: false, status: 'denied', canAskAgain: true };
+    const p = await import('./pushOffer.ts');
+    await p.checkPushOffer();
+    expect(p.pushOffer.eligible).toBe(true);
+    p.dismissPushOffer();
+    vi.resetModules();
+    const reopened = await import('./pushOffer.ts');
+    await reopened.checkPushOffer();
+    expect(reopened.pushOffer.handled).toBe(true);
+    expect(f.permissions).toHaveBeenCalledOnce();
+  });
+  it.each(['ios', 'android'])('hides a blocked OS permission on %s', async (platform) => {
+    f.platform = platform;
+    f.permission = { granted: false, status: 'denied', canAskAgain: false };
+    const p = await import('./pushOffer.ts');
+    await p.checkPushOffer();
+    expect(p.pushOffer.eligible).toBe(false);
+  });
+  it('does not treat an iOS denial as a fresh Android permission', async () => {
+    f.permission = { granted: false, status: 'denied', canAskAgain: true };
+    const p = await import('./pushOffer.ts');
+    await p.checkPushOffer();
+    expect(p.pushOffer.eligible).toBe(false);
+  });
 });
 
 describe('native store review adapter', () => {
