@@ -4,7 +4,9 @@
 import { useEffect, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { AdsConsent, BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
+import { useSnapshot } from 'valtio';
 import { shouldShow, type AdPlace } from '@offside/app-core/adPolicy';
+import { adFree } from '../platform/adFree';
 import { rem } from '../theme/type';
 import { Txt } from '../ui/Txt';
 
@@ -22,7 +24,7 @@ const lastShown = new Map<AdPlace, number>();
 /** 이 위치에 지금 칸을 둘지 정하고, 두면 요청 시각을 남긴다. */
 function claim(place: AdPlace) {
   const now = Date.now();
-  if (!UNIT || !shouldShow(place, now, lastShown.get(place))) return false;
+  if (!UNIT || adFree.owned || !shouldShow(place, now, lastShown.get(place))) return false;
   lastShown.set(place, now);
   return true;
 }
@@ -49,7 +51,9 @@ export function AdSlot({ place }: { place: AdPlace }) {
       alive = false;
     };
   }, [phase]);
-  if (phase === 'off' || !UNIT) return null;
+  // T-11-069 광고 제거를 사면 보고 있던 칸도 바로 접는다.
+  const { owned } = useSnapshot(adFree);
+  if (phase === 'off' || owned || !UNIT) return null;
   return (
     <View
       accessibilityLabel="광고"

@@ -14,6 +14,7 @@ import {
 } from '@expo-google-fonts/barlow-condensed';
 import { boot } from '../game/boot';
 import { startPush } from '../platform/push';
+import { syncAdFree } from '../platform/adFree';
 import { useColors, useIsDark } from '../theme/useColors';
 
 void SplashScreen.preventAutoHideAsync();
@@ -34,7 +35,9 @@ export default function RootLayout() {
   }, []);
   const show = ready && fonts;
   useEffect(() => {
-    if (show) startPush();
+    if (!show) return;
+    startPush();
+    void syncAdFree();
   }, [show]);
   useEffect(() => {
     if (show) void SplashScreen.hideAsync();
