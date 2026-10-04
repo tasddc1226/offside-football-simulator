@@ -63,7 +63,7 @@ export const TeamNameSchema = z
   .trim()
   .min(TEAM_NAME_MIN)
   .max(TEAM_NAME_MAX)
-  .regex(PUBLIC_NAME_CHARS, '팀 이름에 쓸 수 없는 문자가 있습니다.');
+  .regex(PUBLIC_NAME_CHARS, '팀 이름에 쓸 수 없는 문자가 있어요.');
 
 /** 감독 이름: 2~10자, 팀 이름과 같은 문자 규칙. */
 export const ManagerNameSchema = z
@@ -71,7 +71,7 @@ export const ManagerNameSchema = z
   .trim()
   .min(MANAGER_NAME_MIN)
   .max(MANAGER_NAME_MAX)
-  .regex(PUBLIC_NAME_CHARS, '감독 이름에 쓸 수 없는 문자가 있습니다.');
+  .regex(PUBLIC_NAME_CHARS, '감독 이름에 쓸 수 없는 문자가 있어요.');
 
 /** 팀 시즌: 서비스 시즌 id, 0 = 프리시즌(첫 시즌 개막 전). */
 export const TeamSeasonSchema = z.number().int().min(0);

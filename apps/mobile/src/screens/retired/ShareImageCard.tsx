@@ -115,7 +115,7 @@ export function ShareImageCard({ v }: { v: LegendView }) {
       ) : (
         <>
           <Txt v="sm" tone="muted">
-            인스타그램·카카오톡에 바로 올릴 수 있는 한 장짜리 커리어 카드를 만들어요.
+            인스타그램·카카오톡에 공유할 커리어 카드를 만들어요.
           </Txt>
           <Btn
             kind="primary"

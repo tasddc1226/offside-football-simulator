@@ -229,7 +229,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
           </ScrollView>
         ) : (
           <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-            첫 시즌을 마치면 기록이 쌓입니다.
+            첫 시즌을 마치면 기록이 쌓여요.
           </Txt>
         )}
         <Txt v="xs" tone="muted">

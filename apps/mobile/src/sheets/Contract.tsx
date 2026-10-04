@@ -357,7 +357,7 @@ export function Contract({ v }: { v: ContractView }) {
         center
         style={{ marginTop: -6, fontSize: rem(0.75), lineHeight: rem(0.75) * 1.5 }}
       >
-        게임 속 선수의 가상 사인입니다
+        게임 속 선수의 가상 사인이에요
       </Txt>
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Btn sm testID="sign-clear" disabled={sealed} onPress={clear} style={{ flex: 1 }}>

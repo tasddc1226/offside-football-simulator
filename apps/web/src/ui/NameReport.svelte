@@ -9,7 +9,7 @@
   let busy = $state(false);
 
   async function send() {
-    if (busy || !confirm(`'${name}' 이름을 신고할까요? 운영자가 확인하고 가립니다.`)) return;
+    if (busy || !confirm(`'${name}' 이름을 신고할까요? 운영자가 확인 후 처리해요.`)) return;
     busy = true;
     const r = await reportName({ kind, id });
     busy = false;

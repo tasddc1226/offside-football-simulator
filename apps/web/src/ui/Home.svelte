@@ -32,7 +32,7 @@
     <section class="hero-home hero-current" data-home-current>
       <div class="chalk"></div>
       <div class="eyebrow">Current career</div>
-      <h1><span>이번 커리어는</span><b><strong>{G.name}</strong> 입니다</b></h1>
+      <h1><span>진행 중인 커리어</span><b><strong>{G.name}</strong></b></h1>
       <p>{G.club.name} · {G.age}세 · {posLabel(G)}</p>
       <p class="hero-meta num">{G.year} 시즌 {PHASES[Math.min(G.phase, LAST_PHASE + 1)]} · OVR {ovr(G)}</p>
       <!-- T-10-124 한 줄에 왼쪽 새 커리어, 오른쪽 이어하기(주 버튼이라 더 넓게). -->
@@ -49,7 +49,7 @@
       <div class="chalk"></div>
       <div class="eyebrow">Kick-off · 0′</div>
       <h1>이번 생은 축구다<br />고3부터 은퇴까지,<br />한 선수로 살아요</h1>
-      <p>훈련과 이적, 이벤트마다 고른 선택이 쌓여 한 선수의 커리어가 돼요.</p>
+      <p>훈련·이적·이벤트에서 고른 선택으로 커리어가 달라져요.</p>
       <button class="btn btn-accent btn-block" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>새 커리어 킥오프 →</button>
     </section>
   {/if}
@@ -67,7 +67,7 @@
   <div class="tiles">
     <HomeFirsts />
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
-      <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted fs-sm">선택지마다 성공 확률 공개 · 확률 도감 보기 →</span>
+      <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted fs-sm">선택지별 성공 확률 보기 →</span>
     </button>
     <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일, T-11-016 옆에 안드로이드 테스터 모집(구글 폼). -->
     <a class="tile tile-link" data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">

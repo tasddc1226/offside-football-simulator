@@ -197,14 +197,14 @@ export const BASE_EVENTS: EventDef[] = [
         label: '훈련 강도를 두 배로 올린다',
         p: (s) => clamp(0.2 + s.cond / 130 - Math.max(0, s.age - 26) * 0.03, 0.15, 0.85),
         ok: {
-          text: '경쟁이 붙자 훈련에서 감각이 날카로워졌습니다.',
+          text: '경쟁이 붙자 훈련에 더 집중했습니다.',
           fx: (s) => {
             for (const k of ATTR_KEYS) if (wOf(s)[k] > 0.15) addAttr(s, k, 2);
             addStat(s, 'cond', -12);
           },
         },
         fail: {
-          text: '무리한 훈련 끝에 근육이 올라왔습니다.',
+          text: '무리한 훈련 끝에 근육에 통증이 생겼습니다.',
           fx: (s) => {
             s.injury = ri(3, 6);
             addStat(s, 'cond', -10);
@@ -243,7 +243,7 @@ export const BASE_EVENTS: EventDef[] = [
         }),
         p: (s) => clamp(0.3 + (ovr(s) - 62) * 0.03 + (s.cond - 60) / 200, 0.1, 0.85),
         ok: {
-          text: '스카우트 수첩에 당신 이름이 크게 적혔습니다. 이적시장이 기대됩니다.',
+          text: '스카우트 수첩에 당신 이름이 크게 적혔습니다. 이적 시장을 앞두고 관심을 받았습니다.',
           fx: (s) => {
             if (!s.story?.europe && leagueOf(s.leagueId).tier < 4) {
               startStory(s, 'europe');
@@ -255,7 +255,7 @@ export const BASE_EVENTS: EventDef[] = [
         },
         fail: {
           text: byPos<string>({
-            FW: '욕심이 과했습니다. 무리한 슈팅만 난사하다 교체됐습니다.',
+            FW: '욕심이 과했습니다. 무리한 슈팅을 반복하다 교체됐습니다.',
             MF: '욕심이 과했습니다. 무리한 드리블이 끊기며 역습을 허용했습니다.',
             DF: '공격 가담 욕심에 뒷공간을 내줬습니다.',
             GK: '무리한 전진 패스가 끊기며 실점의 빌미가 됐습니다.',
@@ -433,7 +433,7 @@ export const BASE_EVENTS: EventDef[] = [
           },
         },
         fail: {
-          text: '지친 몸에 프로그램이 과했습니다. 비용은 비용대로 나가고 근육까지 올라왔습니다.',
+          text: '지친 몸에 훈련이 과했습니다. 비용을 쓰고도 근육에 통증이 생겼습니다.',
           fx: (s) => {
             addStat(s, 'money', -trainerFee(s));
             s.injury = Math.max(s.injury, ri(2, 4));
@@ -752,7 +752,7 @@ export const BASE_EVENTS: EventDef[] = [
       {
         label: '동료를 살리는 플레이',
         ok: {
-          text: '팀이 하나로 뭉쳤습니다. 감독은 "진짜 에이스는 동료를 빛나게 한다"며 당신을 추천서 맨 위에 올렸습니다.',
+          text: '팀이 하나로 뭉쳤습니다. 감독은 "진짜 에이스는 동료를 살린다"며 당신을 추천서 맨 위에 올렸습니다.',
           fx: (s) => {
             s.flags['final' + s.year] = 1;
             addStat(s, 'fame', 6);

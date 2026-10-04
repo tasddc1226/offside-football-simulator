@@ -63,7 +63,7 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
     const found = await edgeCached(c, EDGE.hofDetail(careerId), DETAIL_TTL, () =>
       getPublicHof(getDb(c), careerId),
     );
-    if (!found) throw notFoundError('명예의 전당에 없는 선수입니다.', 'HOF_NOT_FOUND');
+    if (!found) throw notFoundError('명예의 전당에서 선수를 찾지 못했어요.', 'HOF_NOT_FOUND');
     return ok(c, HofDetailResponseSchema, found, 200, CACHE);
   });
 }

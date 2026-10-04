@@ -141,19 +141,19 @@ export async function apiFetch<T>(
       if (e.code === 'PROFILE_REQUIRED') noteSession(false);
       return failure(
         e.code ?? 'UNKNOWN',
-        e.message ?? '요청이 실패했습니다.',
+        e.message ?? '요청을 처리하지 못했어요.',
         !!e.retryable,
         reason,
       );
     }
     return failure(
       'INVALID_RESPONSE',
-      `요청이 실패했습니다(${response.status}).`,
+      `요청을 처리하지 못했어요(${response.status}).`,
       response.status >= 500,
     );
   }
   if (typeof json !== 'object' || json === null || !('data' in json)) {
-    return failure('INVALID_RESPONSE', '서버 응답 형식이 올바르지 않습니다.', false);
+    return failure('INVALID_RESPONSE', '서버 응답 형식이 올바르지 않아요.', false);
   }
   return { ok: true, data: (json as { data: unknown }).data as T };
 }

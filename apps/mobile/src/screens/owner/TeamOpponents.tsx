@@ -57,7 +57,7 @@ export function TeamOpponents({
         <Txt
           tone="muted"
           v="xs"
-        >{`같은 팀에는 하루 한 번 도전할 수 있어요. 최근 ${TEAM_REPEAT_WINDOW_DAYS}일 안에 다시 만난 팀이면 레이팅이 덜 움직여요.`}</Txt>
+        >{`같은 팀에는 하루 한 번 도전할 수 있어요. 최근 ${TEAM_REPEAT_WINDOW_DAYS}일 안에 만난 팀과 다시 경기하면 레이팅 변화가 줄어요.`}</Txt>
       </View>
       {hint ? (
         <>

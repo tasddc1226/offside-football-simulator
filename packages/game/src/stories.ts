@@ -42,7 +42,7 @@ export const STORY_EVENTS: EventDef[] = [
     w: 2,
     cond: (s) => !s.story?.rival && s.age <= 24 && s.phase > 0,
     text: (s) =>
-      `같은 나이, 같은 ${POS[s.pos].label}. 언론이 당신과 ${rivalName(s)}을(를) 나란히 비교하기 시작했습니다.`,
+      `같은 나이, 같은 ${POS[s.pos].label}. 언론이 당신과 라이벌 ${rivalName(s)} 사이의 경쟁을 주목하기 시작했습니다.`,
     choices: [
       {
         label: '공개적으로 선전포고한다',
@@ -78,7 +78,7 @@ export const STORY_EVENTS: EventDef[] = [
     w: 0,
     cond: () => true,
     text: (s) =>
-      `${rivalName(s)}과(와) 정면으로 맞붙는 날. ${rv(s).tone === 'loud' ? '선전포고 이후 첫 대결이라 경기장이 매진됐습니다.' : '두 사람의 첫 공식 맞대결입니다.'}`,
+      `라이벌 ${rivalName(s)}에게 맞서는 날. ${rv(s).tone === 'loud' ? '선전포고 이후 첫 대결이라 경기장이 매진됐습니다.' : '두 사람의 첫 공식 맞대결입니다.'}`,
     choices: [
       {
         label: byPos<string>({
@@ -136,7 +136,7 @@ export const STORY_EVENTS: EventDef[] = [
     w: 0,
     cond: () => true,
     text: (s) =>
-      `대표팀 ${POS[s.pos].label} 자리는 하나. ${rv(s).gap <= 0 ? '이제는 당신이 한 발 앞서 있습니다.' : `아직은 ${rivalName(s)}이(가) 한 발 앞서 있습니다.`}`,
+      `대표팀 ${POS[s.pos].label} 자리는 하나. ${rv(s).gap <= 0 ? '이제는 당신이 한 발 앞서 있습니다.' : `아직은 라이벌 ${rivalName(s)} 쪽이 한 발 앞서 있습니다.`}`,
     choices: [
       {
         label: '끝까지 경쟁한다',
@@ -261,7 +261,7 @@ export const STORY_EVENTS: EventDef[] = [
           },
         },
         fail: {
-          text: '너무 서둘렀습니다. 같은 부위가 다시 올라왔습니다.',
+          text: '너무 서둘렀습니다. 같은 부위에 통증이 재발했습니다.',
           fx: (s) => {
             s.injury += ri(3, 6);
             addStat(s, 'morale', -10);
@@ -271,7 +271,7 @@ export const STORY_EVENTS: EventDef[] = [
         },
       },
       {
-        label: '완벽하게 회복한 뒤 돌아간다',
+        label: '충분히 회복한 뒤 돌아간다',
         ok: {
           text: '재활 기간 동안 상체 웨이트까지 끝냈습니다. 몸이 이전보다 단단합니다.',
           fx: (s) => {
@@ -410,7 +410,7 @@ export const STORY_EVENTS: EventDef[] = [
       {
         label: '자선 경기에 참가한다',
         ok: {
-          text: '아이들과 찍은 사진 한 장이 모든 기사를 덮었습니다.',
+          text: '아이들과 찍은 사진이 기사에 실렸습니다.',
           fx: (s) => {
             addStat(s, 'fame', 8);
             addStat(s, 'morale', 8);
@@ -455,7 +455,7 @@ export const STORY_EVENTS: EventDef[] = [
       {
         label: '에이전트와 계약한다',
         ok: {
-          text: '"다음 이적시장, 기대해도 좋습니다." 유럽 구단 리스트가 도착했습니다.',
+          text: '"다음 이적 시장, 기대해도 좋습니다." 유럽 구단 목록이 도착했습니다.',
           fx: (s) => {
             addStat(s, 'money', -agentFee(s));
             s.flags.agent = true;

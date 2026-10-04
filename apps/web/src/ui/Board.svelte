@@ -157,7 +157,7 @@
     await open(r.data.id);
   }
   async function removePost(post: Post) {
-    if (!confirm(`'${post.title}' 글을 지울까요? 댓글도 함께 숨겨집니다.`)) return;
+    if (!confirm(`'${post.title}' 글을 지울까요? 댓글도 함께 숨겨져요.`)) return;
     const r = await api.deletePost(post.id);
     if (!r.ok) return toast(r.error.message);
     toast('글을 지웠어요');

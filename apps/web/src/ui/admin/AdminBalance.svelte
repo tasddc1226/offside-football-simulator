@@ -122,8 +122,8 @@
     if (v.status === 'draft' && dirty && !(await save())) return;
     const lines = diffLines(v.status === 'draft' ? work.values : v.values);
     const what = v.status === 'archived' ? `${withRo(`v${v.version}`)} 되돌릴까요?` : `${withEulReul(`v${v.version}`)} 적용할까요?`;
-    const body = lines.length ? lines.join('\n') : '적용 중인 버전과 값이 같습니다.';
-    if (!confirm(`${what}\n\n${body}\n\n진행 중인 커리어는 다음 시즌부터, 새 커리어는 바로 적용됩니다.`)) return;
+    const body = lines.length ? lines.join('\n') : '적용 중인 버전과 값이 같아요.';
+    if (!confirm(`${what}\n\n${body}\n\n진행 중인 커리어는 다음 시즌부터, 새 커리어는 바로 적용돼요.`)) return;
     if (!(await run(api.activateBalance(v.version)))) return;
     toast(`${withEulReul(`v${v.version}`)} 적용했어요`);
     await load(v.version);
@@ -143,7 +143,7 @@
     <h2 style="margin:0">밸런스 설정</h2>
     <p class="muted fs-sm" style="margin:0">
       {#if active}적용 중: <b>v{active.version}</b> · {dateOf(active.activatedAt)}{:else}적용 중: <b>기본값</b> (서버 설정 없음){/if}
-      — 진행 중인 커리어는 다음 시즌부터, 새 커리어는 바로 적용됩니다.
+      진행 중인 커리어는 다음 시즌부터, 새 커리어는 바로 적용돼요.
     </p>
   </div>
 
@@ -175,7 +175,7 @@
       <section class="stack admin-editor" style="gap:14px" aria-label="v{current.version} 설정" data-editing={current.version}>
         <div class="row" style="gap:8px;justify-content:space-between">
           <h3 style="margin:0">v{current.version} <span class="pill {STATUS[current.status][1]}">{STATUS[current.status][0]}</span></h3>
-          {#if !editable}<span class="muted fs-xs">초안만 고칠 수 있어요 — 복제해 새 초안을 만드세요.</span>{/if}
+          {#if !editable}<span class="muted fs-xs">초안만 고칠 수 있어요. 복제해 새 초안을 만드세요.</span>{/if}
         </div>
         <div class="field">
           <label for="bal-note">메모</label>

@@ -10,7 +10,7 @@ describe('toErrorEnvelope unknown errors (T-2-015)', () => {
 
     expect(status).toBe(503);
     expect(body.error.code).toBe('SERVICE_UNAVAILABLE');
-    expect(body.error.message).toBe('일시적인 오류입니다. 잠시 후 다시 시도해 주세요.');
+    expect(body.error.message).toBe('일시적인 오류가 생겼어요. 잠시 후 다시 시도해 주세요.');
     expect(body.error.message).not.toContain('insert');
   });
 
@@ -18,6 +18,6 @@ describe('toErrorEnvelope unknown errors (T-2-015)', () => {
     const { status, body } = toErrorEnvelope('boom', 'req_test');
 
     expect(status).toBe(503);
-    expect(body.error.message).toBe('일시적인 오류입니다. 잠시 후 다시 시도해 주세요.');
+    expect(body.error.message).toBe('일시적인 오류가 생겼어요. 잠시 후 다시 시도해 주세요.');
   });
 });

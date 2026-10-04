@@ -90,7 +90,7 @@ export function trainingHelp(s: GameState, t: TrainingDef): string {
   if (t.id === 'rest')
     return `훈련을 쉬고 몸을 추슬러요. 컨디션이 ${COND_LOW_INJURY} 밑으로 떨어지면 부상 위험이 크게 늘고, ${COND_LOW_START} 밑이면 선발로 나서기 어려워요.`;
   if (t.id === 'coach')
-    return 'OVR에 반영되는 능력치가 모두 조금씩 올라요. 한 능력치를 집중 훈련할 때보다 폭은 작지만 고르게 자라요. 자금이 모자라면 자율 훈련(컨디션 회복)으로 바뀌어요.';
+    return 'OVR에 반영되는 능력치를 고르게 조금씩 키워요. 자금이 모자라면 컨디션을 회복하는 자율 훈련으로 바뀌어요.';
   if (t.id === 'media')
     return `인터뷰·광고로 이름을 알려요. 인기가 높을수록 대표팀 발탁·이적 제안·광고 제의에 유리해요.${s.contract ? ' 계약 중이라 출연료도 들어와요.' : ''}`;
   const k = t.attr!;
@@ -98,13 +98,13 @@ export function trainingHelp(s: GameState, t: TrainingDef): string {
   const w = wOf(s)[k];
   const { focus, bf, lopsided } = attrInfo(s, k);
   return [
-    `${name} 능력치가 크게 오르고, 절반 확률로 다른 능력치도 하나 조금 올라요.`,
+    `${name} 능력치가 크게 오르고, 50% 확률로 다른 능력치 하나도 조금 올라요.`,
     k === 'phy' ? `${labelOf(s, 'pac')}도 함께 오르는 대신 컨디션이 더 떨어져요.` : '',
     focus
       ? `주력 능력치라 성장이 ${pct(FOCUS_GROWTH - 1)}% 빨라요.`
       : `주력 능력치가 아니라 성장이 ${pct(1 - OFF_FOCUS_GROWTH)}% 느려요.`,
     lopsided
-      ? `다른 핵심 능력치보다 너무 앞서 있어 성장이 ${pct(1 - bf)}% 줄었어요. 다른 능력치를 키우면 다시 풀립니다.`
+      ? `다른 핵심 능력치보다 너무 앞서 있어 성장이 ${pct(1 - bf)}% 줄었어요. 다른 능력치를 키우면 제한이 풀려요.`
       : '',
     w < 0.05
       ? `지금 포지션의 OVR에는 거의 반영되지 않아요.`
@@ -243,9 +243,9 @@ export function investHelp(s: GameState, d: InvestDef): string {
     d.id === 'weak'
       ? `가장 낮은 핵심 능력치(${name})를 따로 끌어올려요.`
       : `가장 높은 핵심 능력치(${name})를 더 다듬어요.`,
-    `훈련과 별개로 오르고, 오르는 폭은 능력치 훈련 한 번의 ${pct(BAL.investGain)}% 정도예요.`,
+    `훈련과 별개로, 능력치 훈련 한 번의 ${pct(BAL.investGain)}% 정도 올라요.`,
     lopsided ? `다른 능력치보다 너무 앞서 있어 성장이 ${pct(1 - bf)}% 줄었어요.` : '',
-    '자금이 모자라면 건너뛰고 투자 안 함으로 바뀌어요.',
+    '자금이 모자라면 투자를 건너뛰고 ‘투자 안 함’으로 바뀌어요.',
   ]
     .filter(Boolean)
     .join(' ');
@@ -257,7 +257,7 @@ export function applyInvest(s: GameState) {
   if (id === 'none') return;
   const cost = investCost(s, d);
   if (s.money < cost) {
-    log(s, `자금이 부족해 이번 구간 자기 투자(${d.label})를 하지 못했습니다. 투자를 멈춥니다.`);
+    log(s, `자금이 부족해 ${d.label} 투자를 중단했습니다.`);
     s.invest = 'none';
     return;
   }

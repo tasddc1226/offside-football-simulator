@@ -120,7 +120,7 @@
     {:else}
       <p class="empty">아직 랭킹에 오른 팀이 없어요. 구단주 화면에서 은퇴한 선수로 팀을 꾸리면 여기에 올라요.</p>
     {/if}
-    <p class="muted fs-xs" style="margin-top:10px">레이팅은 팀 경기 결과로 오르내려요. 랭킹은 5분마다 새로 세요.</p>
+    <p class="muted fs-xs" style="margin-top:10px">레이팅은 팀 경기 결과로 오르내려요. 랭킹은 5분마다 갱신돼요.</p>
 </section>
 {/if}
 

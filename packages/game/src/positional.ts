@@ -468,7 +468,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
     w: 2,
     cond: (s) => posIs('GK')(s) && s.phase > 0,
     text: () =>
-      '평범한 백패스 처리 도중 공이 발밑을 빠져나가 그대로 골문으로 굴러 들어갔습니다. 실수 장면이 전 세계로 퍼지고 있습니다.',
+      '평범한 백패스 처리 도중 공이 발밑을 빠져나가 그대로 골문으로 굴러 들어갔습니다. 실수 장면이 해외 매체에도 퍼지고 있습니다.',
     choices: [
       {
         label: '다음 경기에 바로 나선다',
@@ -622,14 +622,14 @@ export const POSITIONAL_EVENTS: EventDef[] = [
           },
         },
         fail: {
-          text: '경쟁자가 먼저 기회를 잡았습니다. 당분간 컵 대회 출전에 만족해야 합니다.',
+          text: '경쟁자가 먼저 기회를 잡았습니다. 당분간 컵 대회에서 뜁니다.',
           fx: (s) => addStat(s, 'morale', -6),
         },
       },
       {
         label: '경쟁자와 같이 훈련한다',
         ok: {
-          text: '서로 슈팅을 막아주며 둘 다 성장했습니다.',
+          text: '번갈아 슈팅을 막으며 둘 다 성장했습니다.',
           fx: (s) => {
             addAttr(s, 'def', 1.5);
             addStat(s, 'morale', 3);

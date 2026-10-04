@@ -2,10 +2,9 @@
     - text: '풀타임: 휘슬이 울릴 때까지 오프사이드'
     - switch "배경음악"
     - text: Current career
-    - heading "이번 커리어는 구조테스트 입니다" [level=1]:
-        - text: ''
+    - heading "진행 중인 커리어 구조테스트" [level=1]:
+        - text: 진행 중인 커리어
         - strong: 구조테스트
-        - text: ''
     - paragraph: /런던 해머스 · \d+세 · 공격수/
     - paragraph: /\d+ 시즌 프리시즌 · OVR \d+/
     - button "새 커리어 시작"
@@ -25,7 +24,7 @@
                 - text: 익명의 골키퍼 K리그1 우승 · 테스트 FC
                 - time: /\d+분 전/
     - button "Server firsts 서버 최초 기록 모든 플레이어 중 첫 기록 보기 →"
-    - button "Events 확률 이벤트 선택지마다 성공 확률 공개 · 확률 도감 보기 →"
+    - button "Events 확률 이벤트 선택지별 성공 확률 보기 →"
     - text: Legends
     - heading "명예의 전당" [level=2]
     - paragraph: 명예의 전당을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.

@@ -32,7 +32,7 @@ import { useColors } from '../../theme/useColors';
 const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
 const FAIL_TEXT: Record<DecodeFail, string> = {
-  empty: '백업 코드를 붙여넣거나 백업 글을 붙여넣어 주세요',
+  empty: '백업 코드나 내보낸 백업 글을 붙여넣어 주세요',
   format: '백업 코드가 올바르지 않아요. 코드를 끝까지 복사했는지 확인해 주세요',
   version: '이 백업은 지금 게임과 형식이 맞지 않아 불러올 수 없어요',
   saveVersion: '이 백업은 지금 게임 버전과 맞지 않아 불러올 수 없어요',
@@ -83,7 +83,7 @@ export function BackupSettings() {
     try {
       await Share.share({ title: 'OFFSIDE 커리어 백업', message: b.json });
     } catch {
-      toast('공유하지 못했어요. 코드 복사를 써 주세요');
+      toast('공유하지 못했어요. 코드를 복사해 주세요');
     }
   }
 

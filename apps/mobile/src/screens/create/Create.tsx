@@ -526,7 +526,7 @@ export default function Create() {
           <>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
               <Txt v="sm" tone="muted" style={{ flex: 1 }}>
-                세 후보는 능력치 총합이 같고 분포만 달라요. 카드를 눌러 리포트를 열어 보세요.
+                세 후보는 능력치 총합이 같고 분포만 달라요. 카드를 눌러 비교해 보세요.
               </Txt>
               {s.candidatesOpen.some((o) => !o) ? (
                 <Btn sm testID="open-all" onPress={openAll}>
@@ -735,7 +735,7 @@ export default function Create() {
             {bodyErr
               ? '키·몸무게를 확인해 주세요'
               : focusLeft > 0
-                ? `주력 능력치를 ${focusLeft}개 더 골라주세요`
+                ? `주력 능력치를 ${focusLeft}개 더 골라 주세요`
                 : '후보 3명 보기 →'}
           </Btn>
         </ActionBar>
@@ -752,7 +752,7 @@ export default function Create() {
             style={{ flex: 1, minWidth: 0 }}
           >
             {s.candidatePick == null
-              ? '후보를 한 명 골라주세요'
+              ? '후보를 한 명 골라 주세요'
               : `${withRo(`후보 ${s.candidatePick + 1}`)} 킥오프 →`}
           </Btn>
         </ActionBar>

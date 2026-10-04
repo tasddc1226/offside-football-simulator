@@ -228,7 +228,7 @@
         </div>
       {:else if view.me.reason === 'nickname'}
         <div class="comment-gate" data-chat-gate="nickname">
-          <p class="muted">채팅에 쓸 닉네임을 먼저 정해 주세요. 댓글 닉네임과 같아요.</p>
+          <p class="muted">채팅과 댓글에 쓸 닉네임을 정해 주세요.</p>
           <NicknameForm onsaved={connect} />
         </div>
       {:else}

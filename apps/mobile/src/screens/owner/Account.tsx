@@ -50,7 +50,7 @@ function askLogout() {
       eyebrow: 'Account',
       title: '로그아웃할까요?',
       muted: true,
-      text: '이 기기에 저장된 게임 진행은 그대로 남아요. 같은 구글 계정으로 다시 로그인하면 계정에 저장된 기록을 다시 볼 수 있어요.',
+      text: '이 기기에 저장된 게임 진행은 그대로 남아요. 같은 계정으로 다시 로그인하면 저장된 기록을 볼 수 있어요.',
     },
     [
       { label: '로그아웃', cls: 'btn-primary', fn: () => void doLogout() },
@@ -69,7 +69,7 @@ async function doDeleteFlow() {
 function askDelete() {
   Alert.alert(
     '계정 삭제',
-    '정말 계정을 삭제할까요? 이 기기의 게임 저장 데이터는 남지만, 계정 연동은 완전히 사라져요.',
+    '계정과 서버에 저장된 선수 기록·팀·댓글·채팅을 삭제할까요? 되돌릴 수 없어요. 이 기기의 게임 진행은 남아요.',
     [
       { text: '취소', style: 'cancel' },
       { text: '삭제', style: 'destructive', onPress: () => void doDeleteFlow() },
@@ -114,8 +114,8 @@ export function Account({ admin = false }: { admin?: boolean }) {
         <View style={who}>
           <Txt style={bTitle}>연결할 수 없어요</Txt>
           <Txt tone="muted" style={bMuted}>
-            서버에 연결하지 못해 로그인 상태를 확인하지 못했어요. 게임은 그대로 할 수 있고, 저장은
-            이 기기에 남아요.
+            서버에 연결하지 못해 로그인 상태를 확인할 수 없어요. 게임은 계속할 수 있고, 진행 상황은
+            이 기기에 저장돼요.
           </Txt>
         </View>
         <Btn sm onPress={() => void load()} testID="account-retry">

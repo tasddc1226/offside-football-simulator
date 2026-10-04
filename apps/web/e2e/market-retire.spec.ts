@@ -47,7 +47,7 @@ test('만 30세가 넘어 은퇴하면 명예의 전당에 기록된다고 묻�
   await pot.scrollIntoViewIfNeeded();
   await expect(pot).toBeVisible();
   await expect(pot).toContainText(/은퇴 시점 잠재력 평가\s*[SABCD]/);
-  await expect(pot).toContainText('고정된 최대 OVR은 아니며');
+  await expect(pot).toContainText('최대 OVR을 뜻하지 않아');
   await expect(pot.locator('[data-legend-ach]')).toContainText(/최고 OVR\s*\d+/);
   await expect(pot).not.toContainText('스카우트 평가');
   await expect(pot).not.toContainText('달성도');

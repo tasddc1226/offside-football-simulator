@@ -251,13 +251,13 @@
       <div class="action-bar-inner with-back">
         <button class="btn" data-act="home" onclick={goHome}>취소</button>
         <button class="btn btn-primary" data-act="next-candidates" disabled={focusLeft > 0 || !!bodyErr} onclick={() => (scouting = true)}>
-          {bodyErr ? '키·몸무게를 확인해 주세요' : focusLeft > 0 ? `주력 능력치를 ${focusLeft}개 더 골라주세요` : '후보 3명 보기 →'}
+          {bodyErr ? '키·몸무게를 확인해 주세요' : focusLeft > 0 ? `주력 능력치를 ${focusLeft}개 더 골라 주세요` : '후보 3명 보기 →'}
         </button>
       </div>
     </div>
   {:else if appState.candidates}
     <div class="row cand-intro">
-      <p class="muted">세 후보는 능력치 총합이 같고 분포만 달라요. 카드를 눌러 리포트를 열어 보세요.</p>
+      <p class="muted">세 후보는 능력치 총합이 같고 분포만 달라요. 카드를 눌러 비교해 보세요.</p>
       {#if appState.candidatesOpen.some((o) => !o)}
         <button class="icon-btn" data-act="open-all" onclick={openAll}>모두 열기</button>
       {/if}
@@ -303,7 +303,7 @@
       <div class="action-bar-inner with-back">
         <button class="btn" data-act="home" onclick={backToForm}>← 다시 입력</button>
         <button class="btn btn-primary" data-act="start" disabled={appState.candidatePick == null} onclick={confirmPick}>
-          {appState.candidatePick == null ? '후보를 한 명 골라주세요' : `${withRo(`후보 ${appState.candidatePick + 1}`)} 킥오프 →`}
+          {appState.candidatePick == null ? '후보를 한 명 골라 주세요' : `${withRo(`후보 ${appState.candidatePick + 1}`)} 킥오프 →`}
         </button>
       </div>
     </div>

@@ -363,7 +363,7 @@
       <section class="card stack" style="gap:10px">
         <div class="eyebrow">My team</div>
         <h1>내 팀</h1>
-        <p class="muted">구글로 로그인한 구단주만 은퇴한 선수로 팀을 꾸릴 수 있어요.</p>
+        <p class="muted">로그인한 구단주만 은퇴한 선수로 팀을 꾸릴 수 있어요.</p>
         <button class="btn btn-primary self-start" onclick={() => void startGoogleLogin(null)}>구글로 로그인</button>
       </section>
     {:else if view === 'achievements'}

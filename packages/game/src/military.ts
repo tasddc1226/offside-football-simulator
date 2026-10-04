@@ -183,7 +183,7 @@ export function enlistSangmu(s: GameState) {
   log(
     s,
     abroad
-      ? `국군체육부대 입대. ${s.mil.prevClub.club.name}과(와)의 계약을 해지하고 귀국해 김천 상무 유니폼을 입습니다. 복무 기간은 2시즌입니다.`
+      ? `국군체육부대 입대. ${s.mil.prevClub.club.name} 구단과의 계약을 해지하고 귀국해 김천 상무 유니폼을 입습니다. 복무 기간은 2시즌입니다.`
       : '국군체육부대 최종 합격! 김천 상무 유니폼을 입습니다. 복무 기간은 2시즌입니다.',
     'big',
   );
@@ -224,7 +224,7 @@ export function serveArmy(s: GameState) {
   s.cond = 80;
   s.morale = 60;
   const next = abroad
-    ? `${s.club.name}과(와)의 계약은 입대 때 해지돼 새 팀을 찾아야 합니다.`
+    ? `${s.club.name} 구단과의 계약은 입대 때 해지돼 새 팀을 찾아야 합니다.`
     : `${L.name} 복귀에 도전합니다.`;
   log(
     s,
@@ -272,8 +272,8 @@ export function milSeasonEnd(s: GameState): string | null {
   log(
     s,
     prev.abroad
-      ? `${how}! 계약이 해지됐던 ${s.club.name}와(과) 복귀 협상에 나섭니다.`
-      : `${how}! 원소속팀 ${s.club.name}(으)로 돌아갑니다.`,
+      ? `${how}! 계약이 해지됐던 ${s.club.name} 구단과 복귀 협상에 나섭니다.`
+      : `${how}! 원소속팀인 ${s.club.name} 구단으로 돌아갑니다.`,
     'big',
   );
   return `${early ? '체육요원 전환' : '상무 만기 전역'} → ${s.club.name} ${prev.abroad ? '복귀 협상' : '복귀'}`;
@@ -323,7 +323,7 @@ export function milEnlistMarket(s: GameState): MarketResult | null {
         kind: 'serve',
         first: true,
         name: '김천 상무 입대',
-        desc: `복무 2시즌 · K리그1 출전${abroad ? ` · ${from}과(와)의 계약 해지` : ` · 전역 후 ${from} 복귀`}${clash.length ? ' · 복무 중 메달을 따면 체육요원으로 전환' : ''}`,
+        desc: `복무 2시즌 · K리그1 출전${abroad ? ` · ${from} 계약 해지` : ` · 전역 후 ${from} 복귀`}${clash.length ? ' · 복무 중 메달을 따면 체육요원으로 전환' : ''}`,
       },
       ...defer('상무 합격을 포기합니다'),
     ],
@@ -424,10 +424,10 @@ const milNoticeText = (s: GameState): string => {
   return (
     `올해 김천 상무 선수 모집 공고가 났습니다. 입영 연기 기한(만 ${MIL_AGE}세)까지 ${left}년.` +
     (abroad
-      ? ` 해외파는 국내 경기 기록이 부족해 심사에서 불리하고, 합격하면 ${s.club.name}과(와)의 계약을 해지하고 귀국해야 합니다.`
+      ? ` 해외파는 국내 경기 기록이 부족해 심사에서 불리하고, 합격하면 ${s.club.name} 구단과의 계약을 해지하고 귀국해야 합니다.`
       : ' K리그 소속 선수는 출전 기록 심사에서 유리합니다.') +
     (hope.length ? ` 아직 ${hope.join(' · ')} 특례 기회가 남아 있습니다.` : '') +
-    (sangmuChance(s) < MIL_LOW ? ' 냉정하게 보면 합격 가능성은 높지 않습니다.' : '')
+    (sangmuChance(s) < MIL_LOW ? ' 합격 가능성은 높지 않습니다.' : '')
   );
 };
 const MIL_APPLY = {
