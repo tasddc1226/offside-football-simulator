@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { myPlayerNation } from './myPlayers.js';
+import { retireValue } from '@offside/contracts/market-value';
+import { localPlayerValue, myPlayerNation } from './myPlayers.js';
 
 describe('내 은퇴 선수 국적', () => {
   it.each(['BR', 'GB-ENG', 'KR'])('새 로컬·다른 기기 계정·병합 기록의 %s를 보존한다', (nation) => {
@@ -17,5 +18,17 @@ describe('내 은퇴 선수 국적', () => {
     expect(myPlayerNation({ nation: 'invalid' }, { nation: 'GB-ENG' })).toBe('GB-ENG');
     expect(myPlayerNation({ nation: 'invalid' })).toBeUndefined();
     expect(myPlayerNation()).toBeUndefined();
+  });
+});
+
+describe('이 기기 은퇴 기록의 은퇴 가치', () => {
+  const career = [
+    { league: 'K리그1', ovr: 70, age: 24 },
+    { league: 'K리그1', ovr: 75, age: 27 },
+  ];
+  it('시즌 기록으로 계산하고, 없으면 0', () => {
+    expect(localPlayerValue({ score: 300, detail: { career } })).toBe(retireValue(career, 300));
+    expect(localPlayerValue({ score: 300, detail: { career } })).toBeGreaterThan(0);
+    expect(localPlayerValue({ score: 300 })).toBe(0);
   });
 });
