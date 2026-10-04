@@ -45,5 +45,7 @@ example
 # Firebase client configuration is supplied privately per build environment.
 GoogleService-Info*.plist
 google-services*.json
+# 푸시(FCM)용 공개 클라이언트 설정은 커밋한다. EAS는 무시된 파일을 올리지 않는다.
+!/google-services.json
 # eas env:pull이 받은 파일 변수(Firebase plist 등)
 .eas/
