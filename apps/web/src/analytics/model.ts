@@ -2,6 +2,7 @@
 export type Params = Record<string, string | number | boolean>;
 export type Career = {
   cid: string;
+  year?: number;
   pos: string;
   trait: string;
   bal?: { v: number };
