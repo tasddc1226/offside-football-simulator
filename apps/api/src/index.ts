@@ -20,8 +20,10 @@ export default {
     return app.fetch(req, env, ctx);
   },
   // T-10-070 매일 정리·백업(wrangler.jsonc triggers.crons).
-  scheduled(controller: ScheduledController, env: Bindings, ctx: ExecutionContext) {
-    if (controller.cron === '0 19 * * *') ctx.waitUntil(runDaily(env, controller.scheduledTime));
-    else ctx.waitUntil(runNewsPush(env));
+  // T-11-082 끝까지 await한다. waitUntil로 넘기면 핸들러가 끝난 뒤 30초만 더 살아서, DB가 커진 09-30부터 백업이 매일
+  // 중간에 끊겼다(실행 기록은 success). 핸들러가 기다리면 cron은 15분까지 돈다.
+  async scheduled(controller: ScheduledController, env: Bindings) {
+    if (controller.cron === '0 19 * * *') await runDaily(env, controller.scheduledTime);
+    else await runNewsPush(env);
   },
 };
