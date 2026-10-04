@@ -53,17 +53,147 @@ T-10-078의 "기존 카드를 삭제하는 방식으로 신규 수요를 만들�
 3. 그래도 0이면(프로 경력 없음) **최저가**를 쓴다. 기본값 1억(1만 만 원), 운영 수치로 둔다.
 4. 스냅샷이 없는 옛 기록은 기준가를 매기지 않는다 → 거래 대상에서 뺀다(방출은 은퇴 가치로 가능).
 
-`contracts/market-value.ts`에 `cardValue(career, peak)`로 두고 웹·서버가 같이 쓴다. 서버는 `careers.card_value`에 저장한다. 새 은퇴는 은퇴 업로드 때, 기존 은퇴는 `careerValues.ts`처럼 스냅샷으로 한 번 소급한다.
+`contracts/market-value.ts`에 `cardValue(career, peak)`로 두고 웹·서버가 같이 쓴다. 서버는 `cards.card_value`에 저장한다(5절). 새 은퇴는 은퇴 업로드 때, 기존 은퇴는 `careerValues.ts`처럼 스냅샷으로 한 번 소급한다.
 
-## 5. 카드 소유권 모델
+## 5. 데이터 모델
 
-키운 사람과 지금 가진 사람을 나눈다.
+### 5.1 왜 `careers`에 소유자 컬럼을 더하지 않는가
 
-- `careers.profile_id` = **키운 사람**. 바뀌지 않는다. 명예의 전당·시즌 순위·구단 업적·영구결번은 계속 이 값을 따른다.
-- `careers.owner_id` = **지금 가진 사람**(새 컬럼). 마이그레이션 때 `profile_id`로 채운다. 방출하면 NULL.
-- `careers.released_at` = 방출 시각(새 컬럼).
-- 팀 편성 자격의 "내 선수"를 `profile_id = 나`에서 `owner_id = 나`로 바꾼다. 인덱스 `(owner_id, status, service_season, peak)`를 함께 낸다.
-- 지난 시즌 팀 화면은 팀을 꾸릴 때 넣은 선수를 그대로 보여 줘야 한다. 지금은 조회 때마다 소유자를 다시 확인하므로(`eligibleMap`), 지난 시즌 팀 조회는 소유 확인을 빼거나 편성 당시 목록을 쓰도록 바꾼다. 이걸 안 하면 판 선수가 지난 시즌 팀에서 사라진다.
+계정을 지우면 그 사람의 `careers`·`career_seasons` 행이 실제로 지워진다(`db/repos/careers.ts` `deleteCareersStatements`).
+`careers`에 소유자만 붙이면, 키운 사람이 계정을 지울 때 다른 구단주가 산 카드가 같이 사라진다.
+그래서 **기록(`careers`)과 자산(`cards`)을 나눈다.** 카드는 은퇴 때 경기에 쓰는 값만 복사해 두고, 키운 사람의 기록이 지워져도 남는다.
+
+나누는 기준:
+
+- 은퇴 뒤 바뀌지 않는 경기용 값(포지션·국적·등번호·최고 OVR·최고 시점 능력치·기준가·은퇴 가치)은 `cards`에 복사한다.
+- 은퇴 뒤 바뀔 수 있는 값(공개 이름·숨김·대표 칭호)은 복사하지 않고 `careers`를 LEFT JOIN해 읽는다. 기록이 지워졌으면 익명·숨김 아님으로 본다.
+
+### 5.2 테이블
+
+**`cards`**: 은퇴 선수 한 명당 한 장. 라커룸·팀 편성·방출·시장이 모두 이 테이블을 본다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `career_id` | text PK | 커리어 id. PK라서 커리어당 카드 한 장이 보장된다. 기록이 지워져도 남아야 해서 FK는 걸지 않는다 |
+| `creator_id` | text NULL | 키운 구단주. 그 사람이 계정을 지우면 NULL |
+| `owner_id` | text NULL | 지금 가진 구단주. 방출하면 NULL |
+| `state` | text | `owned` · `listed` · `released` |
+| `service_season` | int | 출신 서비스 시즌(0 = 프리시즌). `careers.service_season` NULL은 0으로 |
+| `pos` · `dpos` · `nation` · `number` | | 은퇴 때 값 복사 |
+| `peak` | int | 최고 OVR |
+| `legend_score` | int | 카드 등급(레전드 테두리) 표시용 |
+| `peak_profile` | text NULL | 최고 시점 능력치 JSON. NULL이면 옛 기록 |
+| `card_attrs_json` | text NULL | 옛 기록의 표시용 추정 능력치 |
+| `card_value` | int NULL | 기준가(만 원). NULL이면 거래 불가 |
+| `retire_value` | int | 은퇴 가치(만 원). 방출 지급 기준 |
+| `transfers` | int | 팔린 횟수 |
+| `created_at` · `updated_at` · `released_at` | text | ISO UTC |
+
+인덱스:
+- `(owner_id, state, service_season, peak)`: 라커룸·팀 편성. 지금 `careers_profile_status_season_idx`가 하는 일을 옮겨 온다.
+- `(creator_id)`: 계정 병합·삭제.
+
+**`market_listings`**: 판매 등록. 팔린 등록이 곧 이적 이력이라 이력 테이블을 따로 두지 않는다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | text PK | `newId('lst')` |
+| `career_id` | text | 카드 |
+| `seller_id` · `buyer_id` | text · text NULL | |
+| `price` | int | 판매가(만 원) |
+| `base_value` | int | 등록할 때의 기준가. 기준가 대비 표시용 |
+| `season` · `pos` · `peak` | | 목록 필터·정렬용 복사본(카드 JOIN 없이 인덱스만으로 정렬) |
+| `status` | text | `open` · `sold` · `cancelled` |
+| `fee` | int | 수수료(팔렸을 때) |
+| `created_at` · `closed_at` | text | |
+
+인덱스:
+- `UNIQUE (career_id) WHERE status = 'open'`: 카드 한 장에 열린 등록은 하나.
+- `(status, season, created_at)` 최신순, `(status, season, price)` 가격순, `(status, season, peak)` OVR순. 포지션 필터는 정렬 인덱스 범위 안에서 거른다(목록이 작을 때). 매물이 수천 건을 넘으면 `(status, season, pos, created_at)`를 더한다.
+- `(seller_id, created_at)` · `(buyer_id, closed_at)`: 내 거래 내역과 하루 상한.
+
+**`owner_funds`**: 구단주 잔액.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `profile_id` | text PK | FK `profiles.id` |
+| `balance` | int | `CHECK (balance >= 0)` |
+| `updated_at` | text | |
+
+**`fund_ledger`**: 자금이 움직일 때마다 한 줄. 잔액은 원장 합과 같아야 한다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | text PK | |
+| `profile_id` | text | |
+| `delta` | int | 증감(만 원) |
+| `kind` | text | `release` · `sale` · `purchase` · `admin` |
+| `career_id` · `listing_id` | text NULL | 참조 |
+| `ref` | text | 한 요청의 묶음 id(일괄 방출 한 번 = 같은 ref) |
+| `created_at` | text | |
+
+인덱스: `(profile_id, created_at)`.
+수수료는 따로 줄을 만들지 않는다. 판매 줄의 `delta`가 `price − fee`이고 `fee`는 등록에 남는다.
+
+**운영 수치**: 방출 지급률·수수료율·가격 범위·최저가·하루 상한은 `app_meta`의 `market:config` 한 줄(JSON)에 두고, 키·기본값·범위는 `packages/contracts/src/market-spec.ts`에 둔다. 게임 밸런스(`balance_versions`)는 클라이언트 게임 수치라 섞지 않는다.
+
+### 5.3 카드 행이 생기는 때
+
+- **새 은퇴:** 은퇴 업로드(`PUT` 은퇴 요약) batch에 `INSERT OR IGNORE INTO cards`를 더한다. 기준가는 그 요청의 스냅샷으로 `cardValue`를 계산해 넣는다. 같은 커리어를 다시 보내도 PK라 한 장뿐이다.
+- **기존 은퇴:** 마이그레이션에서 `INSERT INTO cards SELECT … FROM careers WHERE status = 'retired' AND peak IS NOT NULL`로 한 번에 만든다. 기준가는 JS 계산이 필요해서 NULL로 두고, `careerValues.ts`처럼 스냅샷을 읽어 채우는 백필을 운영 도구에서 돌린다.
+- 프리시즌 선수도 카드를 만든다(방출해서 자금을 만들 수 있어야 한다). 시장 등록만 지금 시즌으로 막는다.
+
+### 5.4 쓰기 흐름
+
+D1 `batch`는 한 트랜잭션이다. 문장 하나라도 실패하면 전부 되돌린다. 이 성질을 두 가지로 쓴다.
+
+- 잔액 부족은 `CHECK (balance >= 0)` 위반으로 batch 전체를 실패시킨다.
+- "이번 요청이 이겼는가"는 첫 문장의 조건부 UPDATE가 남긴 표식(`buyer_id`·`closed_at`, 또는 `released_at`·`ref`)으로 판정하고, 뒤 문장은 모두 그 표식이 있을 때만 바꾼다. `changes()`를 이어 쓰는 것보다 읽기 쉽고, 순서가 바뀌어도 안전하다. 기존 `releaseNotes.ts`의 CAS와 같은 생각이다.
+
+구매:
+
+```sql
+-- 0) 구매자 잔액 행 보장(없으면 0으로). 이게 없으면 2)가 0행으로 지나가 공짜 구매가 된다
+INSERT OR IGNORE INTO owner_funds (profile_id, balance, updated_at) VALUES (:buyer, 0, :now);
+-- 1) 등록을 잡는다(열려 있고, 내가 판 게 아닐 때만)
+UPDATE market_listings SET status='sold', buyer_id=:buyer, closed_at=:now, fee=:fee
+ WHERE id=:id AND status='open' AND seller_id<>:buyer;
+-- 2) 구매자 출금. 잔액이 모자라면 CHECK 위반으로 batch 전체(1 포함)가 되돌아간다
+UPDATE owner_funds SET balance=balance-:price, updated_at=:now
+ WHERE profile_id=:buyer
+   AND EXISTS(SELECT 1 FROM market_listings WHERE id=:id AND buyer_id=:buyer AND closed_at=:now);
+-- 3) 판매자 입금(UPSERT) 4) 카드 owner_id·state·transfers 갱신 5) 원장 두 줄. 모두 같은 EXISTS 조건
+```
+
+1)의 변경 수가 0이면 "이미 팔렸거나 내린 선수예요"(409). CHECK 위반이면 "자금이 모자라요"(409).
+`:price`는 클라이언트 값이 아니라 서버가 등록을 읽어 넣은 값이고, 1)의 WHERE에 `price=:price`도 걸어 읽은 뒤 가격이 바뀐 경우를 막는다.
+
+방출(일괄):
+
+```sql
+-- 1) 내가 키웠고 지금 가진, 숨김 아닌 카드만 방출
+UPDATE cards SET state='released', owner_id=NULL, released_at=:now, updated_at=:now
+ WHERE career_id IN (SELECT value FROM json_each(:ids))
+   AND owner_id=:me AND creator_id=:me AND state='owned'
+   AND NOT EXISTS (SELECT 1 FROM careers c WHERE c.id=cards.career_id AND c.hidden=1);
+-- 2) 원장: 방금 방출된 카드마다 한 줄(retire_value × 지급률)
+INSERT INTO fund_ledger (...) SELECT … FROM cards WHERE released_at=:now AND career_id IN (…) AND state='released';
+-- 3) 잔액: 2)의 같은 ref 합만큼 더한다(UPSERT)
+```
+
+id 목록은 JSON 한 바인딩(`json_each`)으로 넘겨 D1 바인딩 100개 제한을 피한다. 지금 시즌 선발에 든 카드는 batch 전에 팀 행을 읽어 거른다.
+
+### 5.5 기존 코드에서 바뀌는 곳
+
+| 곳 | 지금 | 바뀐 뒤 |
+|---|---|---|
+| `listEligibleCareers` | `careers.profile_id = 나` | `cards.owner_id = 나 AND state = 'owned'` + `careers` LEFT JOIN(공개 이름·숨김) |
+| `careersByIds` · `eligibleMap` | 커리어 소유자 확인 | 카드 소유자·상태 확인. **지난 시즌 팀 조회는 소유를 확인하지 않는다**(판 선수가 지난 팀에서 사라지지 않게) |
+| `toLineupCareer` | `careers` 행 | `cards` 행 |
+| `seasonCareersOf`(구단 업적) | 키운 사람 기준 | 그대로. 업적은 키운 기록이다 |
+| 명예의 전당·영구결번·시즌 순위 | `careers` | 그대로 |
+| `moveCareers`(구글 연결 때 익명 커리어 합치기) | `careers.profile_id`만 옮김 | `cards.creator_id`·`owner_id`도 같이 옮긴다 |
+| 계정 삭제 | 커리어·팀 삭제 | 더해서: 내 열린 등록 취소, 내가 가진 카드 방출 상태(지급 없음), 내가 키운 카드의 `creator_id` NULL, `owner_funds`·`fund_ledger` 내 행 삭제 |
 
 ## 6. 방출
 
@@ -104,7 +234,7 @@ T-10-078의 "기존 카드를 삭제하는 방식으로 신규 수요를 만들�
 
 ### 원자성
 
-구매 한 건은 D1 `batch` 한 번(트랜잭션)으로 처리한다. 등록 상태가 열려 있고 구매자 잔액이 가격 이상일 때만 갱신하는 조건부 UPDATE로 시작하고, 영향 행이 0이면 나머지 문이 아무것도 바꾸지 않게 같은 조건을 건다. 판매자 입금·구매자 출금·수수료·소유자 변경·등록 종료·원장 기록·이적 이력이 한 번에 같이 반영되거나 같이 실패해야 한다. 동시 구매, 재전송, 취소와 구매 경쟁에서 이중 지출·카드 복제가 없는지 테스트로 고정한다.
+구매·방출은 각각 D1 `batch` 한 번으로 처리한다(5.4). 동시 구매, 재전송, 취소와 구매 경쟁에서 이중 지출·카드 복제가 없는지 테스트로 고정한다.
 
 ## 8. 자금과 악용 방지
 
@@ -133,8 +263,8 @@ T-10-078의 "기존 카드를 삭제하는 방식으로 신규 수요를 만들�
 
 | 단계 | 내용 | 완료 기준 |
 |---|---|---|
-| 1. 기준가 | `cardValue`, `careers.card_value` 컬럼·소급, 라커룸 카드에 기준가 표시 | 3절 분포를 운영 소급 결과로 다시 확인 |
-| 2. 소유권 | `owner_id`·`released_at`, 팀 편성 자격 전환, 지난 시즌 팀 조회 보존 | 기존 팀·업적·랭킹 결과가 바뀌지 않음 |
+| 1. 기준가 | `cardValue`, `cards` 테이블·기존 은퇴 백필, 라커룸 카드에 기준가 표시 | 3절 분포를 운영 소급 결과로 다시 확인 |
+| 2. 소유권 | 라커룸·팀 편성을 `cards`로 전환(5.5), 지난 시즌 팀 조회 보존, 계정 병합·삭제 | 기존 팀·업적·랭킹 결과가 바뀌지 않음 |
 | 3. 방출·자금 | 방출 API(단건·일괄), `owner_funds`·`fund_ledger`, 자금 표시 | 원장 합 = 잔액, 되돌리기 불가 확인 창 |
 | 4. 이적시장 | 등록·취소·목록·구매, 수수료, 하루 상한, 웹·앱 화면 | 동시 구매 테스트, 요청 횟수 e2e |
 | 5. 운영 도구 | 지급률·수수료율·가격 범위·최저가 조정, 잔액 분포·반복 거래 조회 | 배포 없이 수치 조정 |
@@ -149,4 +279,4 @@ T-10-078의 "기존 카드를 삭제하는 방식으로 신규 수요를 만들�
 2. 방출 지급률 시작값. 은퇴 가치 그대로(1.0)면 3절처럼 기준가의 4배 안팎이 풀린다.
 3. 가격 범위(50%~300%)와 수수료(5%).
 4. 이미 다른 구단주에게 판 카드의 키운 사람 표시를 어디까지 보여 줄지(공개 이름을 끈 사람은 "익명").
-5. 계정 삭제 시 내가 가진 카드(산 카드 포함)를 어떻게 처리할지. 기본안: 시장 등록은 내리고 카드는 방출과 같은 상태로 둔다(자금 지급 없음).
+5. 계정 삭제 시 처리. 기본안은 5.5 표 마지막 줄.
