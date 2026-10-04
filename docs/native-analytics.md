@@ -19,6 +19,8 @@ Build variables (see apps/mobile/.env.example):
 - `OFFSIDE_FIREBASE_IOS_FILE`: genuine iOS client plist path
 - `OFFSIDE_FIREBASE_ANDROID_FILE`: genuine Android client JSON path
 
+The committed `apps/mobile/google-services.json` (app.json `android.googleServicesFile`) is the push (FCM) client config from T-11-067, not an analytics opt-in: Android collection stays deactivated unless `OFFSIDE_FIREBASE_ANDROID_FILE` is set.
+
 Only configured platforms expose opt-in. Enabled-without-config or nonexistent files fail configuration evaluation; missing native modules/default app fail closed at runtime. Disabled/unconfigured builds permanently deactivate collection in generated platform config. These native flags are baked into the binary: keep them consistent for subsequent OTAs targeting it. Collection cannot be enabled by OTA alone.
 
 ## EAS production environment (T-11-037)

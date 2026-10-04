@@ -27,11 +27,18 @@ module.exports = ({ config }) => {
   if (iosFile || androidFile) plugins.push('@react-native-firebase/app');
   plugins.push((nativeConfig) =>
     withAndroidManifest(nativeConfig, (mod) => {
-      const app = mod.modResults.manifest.application[0];
+      const { manifest } = mod.modResults;
+      const app = manifest.application[0];
       const key = 'firebase_analytics_collection_deactivated';
+      // @react-native-firebase/analytics 라이브러리 매니페스트도 같은 키를 firebase.json 값으로 넣는다. 앱 값이 이기게 한다.
+      manifest.$['xmlns:tools'] ??= 'http://schemas.android.com/tools';
       app['meta-data'] = (app['meta-data'] ?? []).filter((item) => item.$['android:name'] !== key);
       app['meta-data'].push({
-        $: { 'android:name': key, 'android:value': String(!requested || !androidFile) },
+        $: {
+          'android:name': key,
+          'android:value': String(!requested || !androidFile),
+          'tools:replace': 'android:value',
+        },
       });
       return mod;
     }),

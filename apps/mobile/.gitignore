@@ -42,8 +42,10 @@ example
 /ios
 /android
 
-# Firebase client configuration is supplied privately per build environment.
+# Firebase 분석용 클라이언트 설정은 빌드 환경마다 따로 넣는다.
+# 푸시(FCM)용 google-services.json만 커밋한다. EAS는 무시된 파일을 올리지 않는다.
 GoogleService-Info*.plist
 google-services*.json
+!/google-services.json
 # eas env:pull이 받은 파일 변수(Firebase plist 등)
 .eas/
