@@ -15,8 +15,8 @@
       <div class="offer-club">{#if o.clubId}<ClubBadge club={{ id: o.clubId, name: o.name }} size={30} />{/if}<div><b>{o.name}</b><div class="lg">{o.lg}</div></div></div>
       {#if o.salary !== null}
         <div class="sal">{o.salary}<div class="lg" style="text-align:right">연봉</div></div>
-        <div class="sub">{o.sub}</div>
       {/if}
+      {#if o.sub}<div class="sub">{o.sub}</div>{/if}
       {#if o.reason}<div class="sub" data-offer-feedback>{o.reason}</div>{/if}
     </button>
   {/each}

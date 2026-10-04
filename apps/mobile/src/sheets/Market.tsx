@@ -67,7 +67,7 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
                 </View>
               ) : null}
             </View>
-            {o.salary !== null ? (
+            {o.sub ? (
               <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
                 {o.sub}
               </Txt>

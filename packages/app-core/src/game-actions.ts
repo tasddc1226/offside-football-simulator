@@ -12,6 +12,7 @@ import { clamp, createRng, freshSeed, setActiveRng } from '@offside/game/rng';
 import { generateCandidates } from '@offside/game/candidates';
 import {
   leagueOf,
+  clubsIn,
   fmtMoney,
   snapshot,
   diffChips,
@@ -451,6 +452,16 @@ export function createGameActions(host: GameHost) {
 
   function showMarket(m: MarketResult) {
     const G = appState.G!;
+    // T-11-076 구단 전력 옆에 그 리그 평균 전력(커리어 승강 반영)을 붙여 리그 안 수준을 가늠하게 한다.
+    // 지금 구단(잔류·재계약·연장)도 제의처럼 팀 전력을 보여 줘야 비교할 수 있다.
+    const avg = new Map<string, number>();
+    const strLine = (leagueId: string, str: number) => {
+      if (!avg.has(leagueId)) {
+        const cs = clubsIn(leagueId, G);
+        avg.set(leagueId, Math.round(cs.reduce((t, c) => t + c.str, 0) / Math.max(1, cs.length)));
+      }
+      return `${leagueOf(leagueId).name} · 팀 전력 ${str} (리그 평균 ${avg.get(leagueId)})`;
+    };
     sheet.showSheet(
       {
         kind: 'market',
@@ -464,7 +475,7 @@ export function createGameActions(host: GameHost) {
               clubId: o.clubId,
               reason: offerFeedback(G, o),
               name: o.name,
-              lg: `${leagueOf(o.leagueId).name} · 팀 전력 ${o.str}`,
+              lg: strLine(o.leagueId, o.str),
               salary: fmtMoney(o.salary),
               sub: `${o.years}년 계약${extra}`,
             };
@@ -473,11 +484,19 @@ export function createGameActions(host: GameHost) {
             return {
               clubId: G.club.id,
               name: o.name,
-              lg: leagueOf(G.leagueId).name,
+              lg: strLine(G.leagueId, G.club.str),
               salary: fmtMoney(o.salary),
               sub: o.extension
                 ? `1년 남음 · ${o.extension.years}년 연장 · 총 ${o.years}년. ${o.desc}`
                 : `${o.years}년 계약${o.desc ? ` · ${o.desc}` : ''}`,
+            };
+          if (o.kind === 'stay')
+            return {
+              clubId: G.club.id,
+              name: o.name,
+              lg: strLine(G.leagueId, G.club.str),
+              salary: null,
+              sub: o.desc,
             };
           return { name: o.name, lg: o.desc ?? '', salary: null, sub: null };
         }),
