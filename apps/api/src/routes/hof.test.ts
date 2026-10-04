@@ -5,9 +5,10 @@ import {
 } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
-import { careers } from '../db/schema.js';
+import { cards, careers } from '../db/schema.js';
+import { ensureCardValuesBackfilled } from '../db/repos/cardValues.js';
 import { eq, inArray } from 'drizzle-orm';
-import { retireValue, valueFor } from '@offside/contracts/market-value';
+import { cardValue, retireValue, valueFor } from '@offside/contracts/market-value';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
 
@@ -598,6 +599,49 @@ describe('공개 명예의 전당 /v1/hof', () => {
     );
     // 스냅샷 없는 기록은 소급해도 0 — 가치 순에서 빠지고, 레전드 점수 순에는 남는다.
     expect((await read('sort=score')).entries.find((e) => e.id === rows[2]!.id)?.value).toBe(0);
+  });
+
+  it('T-11-080: 은퇴하면 카드가 한 장 생기고, 기존 카드의 기준가는 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {
+    const pro = (ovr: number, age: number) => ({ ...snapshot.career[0]!, ovr, age });
+    const rows = [
+      { id: '0c000000-0000-4000-8000-000000000011', career: [pro(summary.peak, 31)] },
+      { id: '0c000000-0000-4000-8000-000000000012', career: null }, // 스냅샷 없음
+      { id: '0c000000-0000-4000-8000-000000000013', career: [pro(summary.peak, 24)] },
+    ];
+    for (const { id, career } of rows) {
+      await putSeasonsFor(ctx.env, cookie, id, summary);
+      await putJson(ctx, cookie, `/v1/careers/${id}/retirement`, {
+        ...summary,
+        ...(career ? { publicName: null, snapshot: { ...snapshot, career } } : {}),
+      });
+    }
+    const cardRows = () =>
+      ctx.db
+        .select({ id: cards.careerId, cardValue: cards.cardValue, retireValue: cards.retireValue })
+        .from(cards)
+        .where(
+          inArray(
+            cards.careerId,
+            rows.map((r) => r.id),
+          ),
+        )
+        .orderBy(cards.careerId);
+    const want = rows.map(({ id, career }) => ({
+      id,
+      cardValue: career ? cardValue(career, summary.peak) : null,
+      retireValue: career ? retireValue(career, summary.legendScore) : 0,
+    }));
+    expect(await cardRows()).toEqual(want);
+    // 다시 보낸 은퇴는 카드를 늘리지 않는다.
+    await putJson(ctx, cookie, `/v1/careers/${rows[0]!.id}/retirement`, { ...summary });
+    expect(await cardRows()).toHaveLength(3);
+
+    // 마이그레이션이 만든 기존 카드: 기준가 null·은퇴 가치 0. 스냅샷 있는 카드만 한 장씩 채운다(없는 카드는 null로 남는다).
+    await ctx.db.update(cards).set({ cardValue: null, retireValue: 0 });
+    for (let i = 0; i < 2; i++) expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(true);
+    expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(true); // 빈 조각 → 끝 표시
+    expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(false);
+    expect(await cardRows()).toEqual(want);
   });
 
   it('T-10-100: 이 기능 전 은퇴 기록(value 없음)은 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {

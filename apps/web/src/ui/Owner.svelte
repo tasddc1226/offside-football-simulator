@@ -8,6 +8,8 @@
   import Topbar from './Topbar.svelte';
   import { fetchBoardViewer } from '@offside/app-core/api/boards';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
+  import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
+  import { fundsText } from '@offside/app-core/market';
   import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
   import { fmtValue } from '@offside/app-core/format';
@@ -59,6 +61,16 @@
       else cardFailed = true;
     });
   });
+  // T-11-080 구단 자금 · 구단 가치(자금 + 직접 키운 선수 은퇴 가치 + 영입한 선수 기준가)는 서버가 센다. 이적시장 화면과
+  // 같은 응답(1분 메모)이라 이적시장에 들어가도 다시 묻지 않는다. 비로그인이면 이 기기 기록의 은퇴 가치 합을 쓴다.
+  let market = $state<MarketFundsResponse | null>(null);
+  $effect(() => {
+    if (!linked) return;
+    void fetchMarketFunds().then((r) => {
+      if (r.ok) market = r.data;
+    });
+  });
+  const clubValue = $derived(market?.clubValue ?? summary?.value ?? null);
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
@@ -81,11 +93,11 @@
           <span class="muted fs-sm">{guest ? '기록은 이 기기에만 저장돼요' : card?.team ? `${card.team.name} · ${card.season}` : 'Google 계정으로 로그인했어요'}</span>
         </div>
       </div>
-      {#if (guest && localCount === 0) || summary?.players === 0}
+      {#if (guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue)}
         <p class="muted fs-sm owner-empty">첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.</p>
       {:else}
       <dl class="owner-stats">
-        <div class="owner-value" data-owner-value><dt>구단 가치</dt><dd>{summary ? fmtValue(summary.value) : '–'}</dd></div>
+        <div class="owner-value" data-owner-value><dt>구단 가치</dt><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
         <div><dt>은퇴 선수</dt><dd>{summary ? `${num(summary.players)}명` : '–'}</dd></div>
         <div><dt>레전드 점수</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
         <div><dt>영구결번</dt><dd>{summary ? `${summary.retired}개` : '–'}</dd></div>
@@ -127,6 +139,14 @@
           {card && card.players > 0 ? '팀 만들기' : '내 팀'}
         </button>
       {/if}
+    </section>
+    <section class="card owner-market" aria-label="이적시장" data-owner-market>
+      <div class="owner-who">
+        <small class="eyebrow">Transfer market</small>
+        <h2>이적시장</h2>
+        <span class="muted fs-sm">구단 자금 {market ? fundsText(market.balance) : '–'} · 이번 시즌 선수를 사고팔아요</span>
+      </div>
+      <button class="btn" data-act="market" onclick={() => go('market')}>열기</button>
     </section>
   {:else if guest}
     <section class="card owner-team" aria-label="내 팀" data-owner-team-locked>
@@ -314,6 +334,18 @@
     font-weight: 700;
     white-space: nowrap;
     box-shadow: 0 2px 10px rgb(0 0 0 / 0.2);
+  }
+  .owner-market {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .owner-market h2 {
+    margin: 0;
+  }
+  .owner-market .btn {
+    flex: none;
   }
   .owner-admin {
     margin-top: 12px;

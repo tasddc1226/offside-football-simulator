@@ -86,7 +86,7 @@ const OPPONENTS_SHOWN = 5;
 const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
 
 /** 구글 로그인한(삭제되지 않은) 프로필만 구단주다. 익명 프로필은 403 GOOGLE_LOGIN_REQUIRED — 웹이 로그인 안내를 띄운다. */
-async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
+export async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
   const profile = await getProfile(getDb(c), getSessionOrThrow(c).profileId);
   if (!profile || !hasAccount(profile) || profile.deletedAt) {
     throw new AppError({
@@ -132,7 +132,8 @@ function checkName(value: string, what: string) {
 }
 
 /** 오늘(한국 시각 자정부터)의 시작 UTC ISO. */
-const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
+/** 한국 시각 오늘 0시(UTC ISO). 하루 경기·영입 상한의 기준. */
+export const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
 /** 재대결 감쇠를 세는 기간의 시작(오늘 포함 TEAM_REPEAT_WINDOW_DAYS일, 한국 시각 자정 기준). */
 const repeatWindowStart = (now: string) => kstDays(new Date(now), TEAM_REPEAT_WINDOW_DAYS).startIso;
 
@@ -233,7 +234,12 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       (id): id is string => !!id && !eligible.has(id),
     );
     if (missing.length) {
-      for (const [id, career] of eligibleMap(await careersByIds(db, missing), me.id, season))
+      for (const [id, career] of eligibleMap(
+        await careersByIds(db, missing),
+        me.id,
+        season,
+        season === teamSeasonAt(now),
+      ))
         eligible.set(id, career);
     }
     return ok(
@@ -262,6 +268,10 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           number: p.number,
           publicName: p.publicName,
           legendScore: p.legendScore,
+          cardValue: p.cardValue,
+          raised: !!p.raised,
+          ...(p.raised ? { retireValue: p.retireValue } : {}),
+          listing: p.listingId ? { id: p.listingId, price: p.listPrice! } : null,
         })),
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - Number(played?.n ?? 0)),
@@ -290,7 +300,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'DUPLICATE_PLAYER' },
       });
     }
-    const eligible = eligibleMap(await careersByIds(db, ids), me.id, season);
+    const eligible = eligibleMap(await careersByIds(db, ids), me.id, season, true);
     if (ids.some((id) => !eligible.has(id))) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
@@ -409,13 +419,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const home = buildLineup(
       mine.formation as FormationId,
       mySlots,
-      eligibleMap(rows, me.id, season),
+      eligibleMap(rows, me.id, season, true),
       layoutOf(mine),
     );
     const away = buildLineup(
       opp.team.formation as FormationId,
       oppSlots,
-      eligibleMap(rows, opp.team.profileId, season),
+      eligibleMap(rows, opp.team.profileId, season, true),
       layoutOf(opp.team),
     );
     if (filledCount(home) === 0) {

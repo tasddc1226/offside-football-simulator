@@ -8,7 +8,7 @@ import type {
   RetirementSummary,
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
-import { retireValue } from '@offside/contracts/market-value';
+import { cardValue, retireValue } from '@offside/contracts/market-value';
 import { teamSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
 import { dposFor, type PeakProfile } from '@offside/contracts/positions';
 import {
@@ -28,7 +28,14 @@ import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { kstDay } from '../../time.js';
 import { honorsOf, hideCareerStatements } from './firsts.js';
-import { appMeta, careers, careerSeasons, goalsPlusAssists, retiredNumbers } from '../schema.js';
+import {
+  appMeta,
+  cards,
+  careers,
+  careerSeasons,
+  goalsPlusAssists,
+  retiredNumbers,
+} from '../schema.js';
 
 export type CareerRow = typeof careers.$inferSelect;
 
@@ -265,6 +272,36 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
         ...(potReal !== undefined ? { potReal } : {}),
       })
       .where(eq(careers.id, careerId)),
+    // T-11-080 카드 한 장. 위 update가 쓴 값을 복사한다(같은 커리어를 다시 보내도 PK라 한 장뿐).
+    db
+      .insert(cards)
+      .select(
+        db
+          .select({
+            careerId: careers.id,
+            ownerId: careers.profileId,
+            serviceSeason: sql<number>`coalesce(${careers.serviceSeason}, 0)`.as('service_season'),
+            pos: careers.pos,
+            dpos: careers.dpos,
+            nation: careers.nation,
+            number: careers.shirtNumber,
+            peak: sql<number>`${careers.peak}`.as('peak'),
+            legendScore: sql<number>`coalesce(${careers.legendScore}, 0)`.as('legend_score'),
+            peakProfile: careers.peakProfile,
+            cardValue: sql<
+              number | null
+            >`${snapshot ? cardValue(snapshot.career, summary.peak) : null}`.as('card_value'),
+            retireValue: sql<number>`coalesce(${careers.value}, 0)`.as('retire_value'),
+            transfers: sql<number>`0`.as('transfers'),
+            releasedAt: sql<string | null>`null`.as('released_at'),
+            releasedValue: sql<number | null>`null`.as('released_value'),
+            createdAt: sql<string>`${now}`.as('created_at'),
+            updatedAt: sql<string>`${now}`.as('updated_at'),
+          })
+          .from(careers)
+          .where(and(eq(careers.id, careerId), isNotNull(careers.peak))),
+      )
+      .onConflictDoNothing(),
   ]);
 }
 
@@ -481,11 +518,15 @@ export async function moveCareers(
   fromProfileId: string,
   toProfileId: string,
 ): Promise<number> {
-  const moved = await db
-    .update(careers)
-    .set({ profileId: toProfileId })
-    .where(eq(careers.profileId, fromProfileId))
-    .returning({ id: careers.id });
+  // T-11-080 카드 주인도 같이 옮긴다(익명 프로필에는 방출·이적이 없어 카드는 모두 직접 키운 선수다).
+  const [moved] = await db.batch([
+    db
+      .update(careers)
+      .set({ profileId: toProfileId })
+      .where(eq(careers.profileId, fromProfileId))
+      .returning({ id: careers.id }),
+    db.update(cards).set({ ownerId: toProfileId }).where(eq(cards.ownerId, fromProfileId)),
+  ]);
   return moved.length;
 }
 
@@ -499,6 +540,8 @@ export function deleteCareersStatements(db: Db, profileId: string) {
   return [
     db.delete(careerSeasons).where(inArray(careerSeasons.careerId, ownedCareerIds)),
     db.delete(careers).where(eq(careers.profileId, profileId)),
+    // T-11-080 지금 가진 카드도 지운다. 다른 구단주에게 넘어간 카드는 그 구단주의 것이라 남는다.
+    db.delete(cards).where(eq(cards.ownerId, profileId)),
   ] as const;
 }
 

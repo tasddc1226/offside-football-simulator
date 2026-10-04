@@ -10,7 +10,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { careers, ownerTeams, teamLikes, teamMatches } from '../db/schema.js';
-import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
+import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
 
 const PutRes = successEnvelope(PutOwnerTeamResponseSchema);
@@ -64,6 +64,7 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
       });
       s[[9, 8, 10][i]!] = id;
     }
+    await syncCards(ctx);
     const res = await call('PUT', '/v1/owner-team', {
       cookie: who.cookie,
       body: { name: `팀${++seq}`, manager, formation: '4-3-3', slots: s },

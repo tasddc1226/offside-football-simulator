@@ -21,7 +21,7 @@ import {
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { careers, ownerTeams, teamMatches } from '../db/schema.js';
+import { cards, careers, ownerTeams, teamMatches } from '../db/schema.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
@@ -99,6 +99,28 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
           })
         : null,
     });
+    // T-11-080 팀에 넣을 수 있는 건 카드다(은퇴 업로드가 만든다).
+    if (retired)
+      await ctx.db.insert(cards).values({
+        careerId: id,
+        ownerId: profileId,
+        serviceSeason: over.serviceSeason ?? 0,
+        pos: over.pos ?? 'FW',
+        dpos: over.dpos ?? null,
+        nation: over.nation ?? null,
+        number: 9,
+        peak: over.peak ?? 80,
+        legendScore: 300,
+        peakProfile: over.roles
+          ? JSON.stringify({
+              attrs: { pac: 80, sho: 70, pas: 70, dri: 75, def: 60, phy: 70 },
+              roles: over.roles,
+            })
+          : null,
+        retireValue: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
     return id;
   }
 
@@ -220,6 +242,8 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       attrs: { pac: 99, sho: 99, pas: 99, dri: 99, def: 99, phy: 99 },
     });
     await ctx.db.update(careers).set({ cardAttrsJson: estimate }).where(eq(careers.id, original));
+    // T-11-080 카드 기준가는 cards에서 붙인다(소급 전이면 null).
+    await ctx.db.update(cards).set({ cardValue: 123_000 }).where(eq(cards.careerId, original));
     await ctx.db
       .update(careers)
       .set({ cardAttrsJson: JSON.stringify({ v: 1, source: 'estimated', attrs: { pac: 120 } }) })
@@ -228,11 +252,13 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
     ).data;
     expect(data.players.find((p) => p.careerId === original)).toMatchObject({
+      cardValue: 123_000,
       attrsEstimated: false,
       roles,
       attrs: { pac: 80, sho: 70 },
     });
     expect(data.players.find((p) => p.careerId === invalid)).toMatchObject({
+      cardValue: null,
       attrsEstimated: false,
       attrs: null,
       roles: null,

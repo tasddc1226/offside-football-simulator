@@ -29,7 +29,9 @@ import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { honorsOf } from './firsts.js';
 import {
+  cards,
   careerSeasons,
+  marketListings,
   careers,
   ownerTeams,
   profiles,
@@ -152,32 +154,43 @@ export const myTeamIn = (db: Db, profileId: string, season: number) =>
     .from(ownerTeams)
     .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)));
 
-/** 그 시즌에 넣을 수 있는 내 은퇴 선수(그 시즌에 처음 올라온 선수, 최고 OVR 순). 은퇴 요약이 없는 기록(peak null)은 뺀다. */
+/**
+ * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌에 처음 올라온 선수, 최고 OVR 순). T-11-080부터 직접 키운 선수 + 영입한
+ * 선수 — 소유는 cards.owner_id다. 공개 이름·숨김·옛 추정 능력치·키운 사람은 careers에서 붙인다(기록이 지워졌으면 익명).
+ */
 export function listEligibleCareers(db: Db, profileId: string, season: number, limit = 300) {
   return db
     .select({
-      id: careers.id,
-      pos: careers.pos,
-      nation: careers.nation,
-      dpos: careers.dpos,
-      peak: careers.peak,
-      peakProfile: careers.peakProfile,
+      id: cards.careerId,
+      pos: cards.pos,
+      nation: cards.nation,
+      dpos: cards.dpos,
+      peak: cards.peak,
+      peakProfile: cards.peakProfile,
       cardAttrsJson: careers.cardAttrsJson,
-      number: careers.shirtNumber,
+      number: cards.number,
       publicName: careers.publicName,
-      legendScore: careers.legendScore,
+      legendScore: cards.legendScore,
+      cardValue: cards.cardValue,
+      retireValue: cards.retireValue,
+      raised: sql<number>`${careers.profileId} = ${profileId}`,
+      listingId: marketListings.id,
+      listPrice: marketListings.price,
     })
-    .from(careers)
+    .from(cards)
+    .leftJoin(careers, eq(careers.id, cards.careerId))
+    .leftJoin(
+      marketListings,
+      and(eq(marketListings.careerId, cards.careerId), eq(marketListings.status, 'open')),
+    )
     .where(
       and(
-        eq(careers.profileId, profileId),
-        eq(careers.status, 'retired'),
-        isNotNull(careers.peak),
-        eq(careers.hidden, 0),
-        eq(careers.serviceSeason, season),
+        eq(cards.ownerId, profileId),
+        eq(cards.serviceSeason, season),
+        sql`coalesce(${careers.hidden}, 0) = 0`,
       ),
     )
-    .orderBy(desc(careers.peak))
+    .orderBy(desc(cards.peak))
     .limit(limit);
 }
 
@@ -217,34 +230,42 @@ export const challengedSince = (db: Db, profileId: string, sinceIso: string) =>
     .from(teamMatches)
     .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
 
-/** 여러 팀 선발의 커리어를 한 번에 읽는다. 소유자·은퇴 여부는 부르는 쪽이 팀마다 확인한다. */
+/** 여러 팀 선발의 카드를 한 번에 읽는다. 소유자는 부르는 쪽이 팀마다 확인한다(eligibleMap). */
 export async function careersByIds(db: Db, ids: string[]) {
   if (ids.length === 0) return [];
   return db
     .select({
-      id: careers.id,
-      profileId: careers.profileId,
-      status: careers.status,
-      pos: careers.pos,
-      nation: careers.nation,
-      dpos: careers.dpos,
-      peak: careers.peak,
-      peakProfile: careers.peakProfile,
-      number: careers.shirtNumber,
+      id: cards.careerId,
+      ownerId: cards.ownerId,
+      pos: cards.pos,
+      nation: cards.nation,
+      dpos: cards.dpos,
+      peak: cards.peak,
+      peakProfile: cards.peakProfile,
+      number: cards.number,
       publicName: careers.publicName,
-      serviceSeason: careers.serviceSeason,
-      hidden: careers.hidden,
+      serviceSeason: cards.serviceSeason,
+      hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
     })
-    .from(careers)
-    .where(inArray(careers.id, ids));
+    .from(cards)
+    .leftJoin(careers, eq(careers.id, cards.careerId))
+    .where(inArray(cards.careerId, ids));
 }
 export type CareerLite = Awaited<ReturnType<typeof careersByIds>>[number];
 
-/** 이 구단주의 그 시즌 팀에 넣을 수 있는 커리어만 골라 선발 맵으로(본인 소유 · 은퇴 · 은퇴 요약 있음 · 그 시즌 선수). */
-export function eligibleMap(rows: readonly CareerLite[], ownerId: string, season: number) {
+/**
+ * 그 구단주의 그 시즌 팀에 넣을 수 있는 카드만 골라 선발 맵으로(그 시즌 선수 · 숨김 아님). T-11-080 소유 규칙: 지금
+ * 시즌 팀(open)은 지금 주인인지 확인하고, 닫힌 시즌 팀은 그 뒤 방출·이적과 상관없이 id로 읽기만 한다.
+ */
+export function eligibleMap(
+  rows: readonly CareerLite[],
+  ownerId: string,
+  season: number,
+  open: boolean,
+) {
   const map = new Map<string, ReturnType<typeof toLineupCareer>>();
   for (const r of rows) {
-    if (r.profileId !== ownerId || r.status !== 'retired' || r.peak === null) continue;
+    if (open && r.ownerId !== ownerId) continue;
     if (r.serviceSeason !== season || r.hidden) continue;
     map.set(r.id, toLineupCareer(r));
   }

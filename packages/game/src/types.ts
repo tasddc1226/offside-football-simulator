@@ -138,6 +138,28 @@ export interface ChainEvent {
   until: number;
 }
 
+/** T-11-083 잠재력 강화 시도 한 번(관찰·기록용). */
+export interface BoostTry {
+  y: number;
+  age: number;
+  /** 시도 전 단계. */
+  lv: number;
+  /** 시도한 확률(%). */
+  p: number;
+  /** 쓴 자금(만 원). */
+  c: number;
+  ok: boolean;
+}
+export interface BoostState {
+  /** 지금 단계(성공 횟수). flags.potBonus에 같은 만큼 더해져 있다. */
+  lv: number;
+  /** 지금 단계에서 연속으로 실패한 횟수(실패 보정). */
+  fails: number;
+  /** 마지막으로 시도한 시즌(시즌마다 한 번). */
+  year?: number | undefined;
+  log: BoostTry[];
+}
+
 export interface Flags {
   potBonus?: number;
   rescout?: number;
@@ -297,6 +319,8 @@ export interface GameState {
   training: string;
   /** T-11-012 자기 투자(training.ts INVESTS). 훈련과 따로 구간마다 자금을 쓴다. 기능 전 저장엔 없다 — 없으면 '투자 안 함'. */
   invest?: string | undefined;
+  /** T-11-083 잠재력 강화(boost.ts). 기능 전 저장·시도하지 않은 커리어엔 없다. */
+  boost?: BoostState | undefined;
   retired: boolean;
   chains: ChainEvent[];
   story: Record<string, StoryState>;

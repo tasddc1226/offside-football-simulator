@@ -33,6 +33,7 @@ import Board from '../screens/board/Board';
 import Chat from '../screens/chat/Chat';
 import Owner from '../screens/owner/Owner';
 import Team from '../screens/owner/Team';
+import Market from '../screens/owner/Market';
 import Settings from '../screens/settings/Settings';
 import Admin from '../screens/settings/Admin';
 import { ReviewNudge } from '../components/ReviewNudge';
@@ -51,6 +52,7 @@ const SCREENS: Record<Screen, ComponentType> = {
   chat: Chat,
   owner: Owner,
   team: Team,
+  market: Market,
   settings: Settings,
   admin: Admin,
 };

@@ -61,6 +61,18 @@ export function retireValue(career: ValueRow[], legendScore: number): number {
   return Math.round((avg * (1 + Math.max(0, legendScore) / LEGACY_PER)) / 1000) * 1000;
 }
 
+/** 프로 경력이 없어 몸값을 매길 수 없는 카드의 기준가(만 원) — 1억. */
+export const CARD_VALUE_FLOOR = 10_000;
+
+/**
+ * T-11-080 카드 기준가(만 원): 최고 OVR을 찍은 시즌 중 마지막 시즌의 몸값. 카드 능력치가 같은 OVR이면 나중 시즌을
+ * 남기는 것과 맞춘다. 그 시즌이 대학·현역 복무라 0이면 가장 비쌌던 프로 시즌, 프로 경력이 없으면 CARD_VALUE_FLOOR.
+ */
+export function cardValue(career: ValueRow[], peak: number): number {
+  const last = career.findLast((r) => r.ovr === peak);
+  return (last && seasonValue(last)) || peakValue(career)?.value || CARD_VALUE_FLOOR;
+}
+
 /**
  * 몸값·이적료 표기(T-10-100): 큰 두 단위까지만 — '1조 2,346억' · '263억 1천만' · '5천 3백만'.
  * 아래 단위에서 반올림하고, 반올림으로 자리가 올라가면(9,999억 6천만 → 1조) 윗 단위로 쓴다. 0 이하는 '-'.
@@ -85,3 +97,16 @@ export function fmtValue(man: number): string {
       .join(' ') + tail
   );
 }
+
+/** T-11-080 판매가로 고를 수 있는 범위(만 원, 100 단위). priceMin·priceMax는 기준가에 곱하는 비율(밸런스 설정). */
+export function priceBand(cardValue: number, r: { priceMin: number; priceMax: number }) {
+  return {
+    min: Math.max(100, Math.ceil((cardValue * r.priceMin) / 100) * 100),
+    max: Math.floor((cardValue * r.priceMax) / 100) * 100,
+  };
+}
+/** 판매 수수료(만 원). 팔리면 판매자는 가격에서 이만큼 빼고 받는다. */
+export const marketFee = (price: number, feeRate: number) => Math.round(price * feeRate);
+/** T-11-080 방출 지급액(만 원, 천만 단위 반올림). 서버 repos/market.ts releaseCards의 SQL과 같은 계산. */
+export const releasePayout = (retireValue: number, rate: number) =>
+  Math.round((retireValue * rate) / 1000) * 1000;

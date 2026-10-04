@@ -374,6 +374,7 @@ export function TeamLineup({
                           legendScore: p.legendScore,
                           attrs: p.attrs,
                           attrsEstimated: p.attrsEstimated,
+                          cardValue: p.cardValue,
                           pos: p.pos,
                           youth: false,
                         }}

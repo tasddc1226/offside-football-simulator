@@ -1,3 +1,4 @@
+import { marketDeleteStatements } from '../db/repos/market.js';
 import { and, eq, isNull } from 'drizzle-orm';
 import { signConfirmToken, verifyConfirmToken } from '../auth/confirm-token.js';
 import type { Db } from '../db/client.js';
@@ -117,6 +118,8 @@ export async function executeProfileDeletion(
     // 커리어·시즌 데이터는 이 batch에서 명시적으로 지운다.
     deleteNameReportsStatement(db, input.profileId),
     ...deleteCareersStatements(db, input.profileId),
+    // T-11-080 내 열린 판매 등록을 내리고 구단 자금 행을 지운다.
+    ...marketDeleteStatements(db, input.profileId, input.now),
     deleteClubCustomStatement(db, input.profileId),
     // T-10-092 구단주 팀(팀 경기는 팀 FK CASCADE로 함께 지워진다).
     ...deleteOwnerTeamsStatements(db, input.profileId),

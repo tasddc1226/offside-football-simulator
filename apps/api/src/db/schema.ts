@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { COMMENT_REPORT_REASONS, NAME_REPORT_KINDS } from '@offside/contracts/board-limits';
 import {
+  check,
   index,
   primaryKey,
   sqliteTable,
@@ -331,6 +332,88 @@ export const careers = sqliteTable(
     index('careers_created_idx').on(table.createdAt),
     index('careers_status_retired_idx').on(table.status, table.retiredAt),
   ],
+);
+
+/**
+ * T-11-080 은퇴 선수 카드(자산). 기록(careers)은 키운 사람의 것이라 계정을 지우면 같이 지워지지만, 카드는 방출·
+ * 이적으로 주인이 바뀌므로 따로 둔다. 은퇴 뒤 바뀌지 않는 경기용 값만 복사하고, 공개 이름·숨김·키운 사람은
+ * careers를 PK로 붙여 읽는다(기록이 지워졌으면 익명·키운 사람 없음). 다른 구단주가 산 카드가 남아야 해서 FK는 없다.
+ * 설계: docs/tracking/owner-funds-card-market-plan.md 5절.
+ */
+export const cards = sqliteTable(
+  'cards',
+  {
+    careerId: text('career_id').primaryKey(),
+    // 지금 가진 구단주. 방출하면 NULL.
+    ownerId: text('owner_id'),
+    // 출신 서비스 시즌(0 = 프리시즌). careers.service_season이 NULL(휴식기)이면 0.
+    serviceSeason: integer('service_season').notNull(),
+    pos: text('pos', { enum: ['FW', 'MF', 'DF', 'GK'] }).notNull(),
+    dpos: text('dpos'),
+    nation: text('nation'),
+    number: integer('number'),
+    peak: integer('peak').notNull(),
+    legendScore: integer('legend_score').notNull(),
+    // 최고 시점 능력치(PeakProfile JSON). NULL이면 옛 기록.
+    peakProfile: text('peak_profile'),
+    // 기준가(만 원, contracts market-value cardValue). NULL이면 스냅샷이 없는 옛 기록이라 거래하지 않는다.
+    cardValue: integer('card_value'),
+    // 은퇴 가치(만 원, careers.value). 방출 지급 기준.
+    retireValue: integer('retire_value').notNull(),
+    // 팔린 횟수.
+    transfers: integer('transfers').notNull().default(0),
+    releasedAt: text('released_at'),
+    releasedValue: integer('released_value'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [index('cards_owner_season_idx').on(table.ownerId, table.serviceSeason, table.peak)],
+);
+
+/**
+ * T-11-080 이적시장 판매 등록. 팔린 등록이 곧 이적 이력이자 판매·영입 자금 내역이라 원장 테이블을 따로 두지 않는다.
+ * 포지션·OVR·기준가는 복사하지 않고 cards를 PK로 붙여 읽는다.
+ */
+export const marketListings = sqliteTable(
+  'market_listings',
+  {
+    id: text('id').primaryKey(),
+    careerId: text('career_id').notNull(),
+    sellerId: text('seller_id').notNull(),
+    buyerId: text('buyer_id'),
+    // 카드 출신 시즌(cards.service_season). 목록 필터용.
+    season: integer('season').notNull(),
+    price: integer('price').notNull(),
+    // 팔렸을 때 뗀 수수료(만 원). 열려 있거나 내린 등록은 0.
+    fee: integer('fee').notNull().default(0),
+    status: text('status', { enum: ['open', 'sold', 'cancelled'] }).notNull(),
+    createdAt: text('created_at').notNull(),
+    closedAt: text('closed_at'),
+  },
+  (table) => [
+    // 카드 한 장에 열린 등록은 하나.
+    uniqueIndex('market_listings_open_card_unique')
+      .on(table.careerId)
+      .where(sql`${table.status} = 'open'`),
+    index('market_listings_new_idx').on(table.status, table.season, table.createdAt),
+    index('market_listings_price_idx').on(table.status, table.season, table.price, table.createdAt),
+    index('market_listings_seller_idx').on(table.sellerId, table.status, table.closedAt),
+    index('market_listings_buyer_idx').on(table.buyerId, table.closedAt),
+    index('market_listings_sold_idx').on(table.status, table.season, table.closedAt),
+  ],
+);
+
+/** T-11-080 구단 자금(만 원). 처음 자금을 받을 때(방출·판매) 행을 만든다. 잔액이 모자라면 CHECK로 batch 전체가 되돌아간다. */
+export const ownerFunds = sqliteTable(
+  'owner_funds',
+  {
+    profileId: text('profile_id')
+      .primaryKey()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    balance: integer('balance').notNull().default(0),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [check('owner_funds_balance_check', sql`${table.balance} >= 0`)],
 );
 
 /**
