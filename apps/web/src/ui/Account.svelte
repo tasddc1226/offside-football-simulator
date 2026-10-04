@@ -8,6 +8,8 @@
     unlinkGoogle, logout, startProfileDeletion, confirmProfileDeletion,
   } from '@offside/app-core/api/client';
   import { accountCache, refreshAccount } from './account-state.svelte.js';
+  import { refreshChatIdentity } from './chat-state.svelte.js';
+  import { accountLabel, isMember } from '@offside/app-core/account';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
   import NicknameForm from './NicknameForm.svelte';
 
@@ -35,12 +37,16 @@
 
   async function doUnlink() {
     const r = await unlinkGoogle();
-    if (r.ok) await load();
+    if (r.ok) {
+      refreshChatIdentity();
+      await load();
+    }
     else set('error');
   }
   async function doLogout() {
     closeSheet();
     await logout();
+    refreshChatIdentity();
     set(null);
   }
   function askLogout() {
@@ -53,10 +59,11 @@
     );
   }
   async function doDeleteFlow() {
-    if (!window.confirm('정말 계정을 삭제할까요? 이 기기의 게임 저장 데이터는 남지만, 계정 연동은 완전히 사라집니다.')) return;
+    if (!window.confirm('정말 계정을 삭제할까요? 이 기기의 게임 저장 데이터는 남지만, 계정 연동은 완전히 사라져요.')) return;
     const start = await startProfileDeletion();
     if (!start.ok) return set('error');
     const confirmResult = await confirmProfileDeletion(start.data.confirmToken);
+    if (confirmResult.ok) refreshChatIdentity();
     set(confirmResult.ok ? null : 'error');
   }
 </script>
@@ -65,27 +72,30 @@
   <div class="account-card"><div class="who"><b>계정</b><span class="muted">확인 중…</span></div></div>
 {:else if profile === 'error'}
   <div class="account-card">
-    <div class="who"><b>연결할 수 없어요</b><span class="muted">서버에 연결하지 못해 로그인 상태를 확인하지 못했어요. 게임은 계속 즐길 수 있고, 저장은 이 기기에 남습니다.</span></div>
+    <div class="who"><b>연결할 수 없어요</b><span class="muted">서버에 연결하지 못해 로그인 상태를 확인하지 못했어요. 게임은 그대로 할 수 있고, 저장은 이 기기에 남아요.</span></div>
     <button class="btn btn-sm" onclick={() => load()}>다시 시도</button>
   </div>
-{:else if !profile || !profile.linked.google}
+{:else if !profile || !isMember(profile)}
   <!-- T-10-102 비로그인은 안내만 — 구글 로그인 버튼은 구단주 화면이 카드 밖에 하나만 둔다(T-11-026 잠긴 '내 팀' 카드 안). -->
   <div class="account-card">
     <div class="who"><b>로그인하지 않았어요</b><span class="muted">게임 진행은 이 기기에만 저장돼요. 로그인하면 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요.</span></div>
   </div>
 {:else}
+  {@const label = accountLabel(profile)}
   <div class="account-card">
-    <div class="who"><b>{profile.googleEmailMasked ?? '구글 계정'}</b><span class="muted">Google 계정으로 로그인했어요.</span></div>
+    <div class="who"><b>{label.title}</b><span class="muted">{label.via}</span></div>
     <button class="btn btn-primary btn-sm" data-act="logout" onclick={askLogout}>로그아웃</button>
   </div>
   <div class="account-nick">
-    <span class="muted">댓글 닉네임{profile.nickname ? '' : ' — 정하면 소식 게시판에 댓글을 쓸 수 있어요'}</span>
+    <span class="muted">{profile.nickname ? '댓글 닉네임' : '댓글 닉네임을 정하면 소식 게시판에 댓글을 쓸 수 있어요'}</span>
     {#if admin}<b>{profile.nickname} · 운영자 계정은 고정이에요</b>
     {:else}{#key profile.nickname}<NicknameForm current={profile.nickname} />{/key}{/if}
   </div>
   <div class="account-more">
-    <button class="link-btn" onclick={doUnlink}>구글 연동 해제</button>
-    <span aria-hidden="true">·</span>
+    {#if profile.linked.google}
+      <button class="link-btn" onclick={doUnlink}>구글 연동 해제</button>
+      <span aria-hidden="true">·</span>
+    {/if}
     <button class="link-btn bad" onclick={doDeleteFlow}>계정 삭제</button>
   </div>
 {/if}

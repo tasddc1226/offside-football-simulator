@@ -1,5 +1,6 @@
 // 최근 경기(웹 team/Team.svelte 의 view === 'history') — 누르면 그 경기 결과로.
 import { View } from 'react-native';
+import { TeamLogo } from '../../components/TeamLogo';
 import type { TeamMatch } from '@offside/app-core/api/team';
 import { kstMonthDayTime } from '@offside/app-core/boardText';
 import { outcomeOf } from '@offside/app-core/teamOwner';
@@ -62,6 +63,7 @@ export function TeamHistory({
                     {out}
                   </Txt>
                 </View>
+                <TeamLogo logo={opp.logo} name={opp.name} size={28} decorative />
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Txt bold>{`${m[m.mine].goals} : ${opp.goals} ${opp.name}`}</Txt>
                   <Txt tone="muted" v="sm">

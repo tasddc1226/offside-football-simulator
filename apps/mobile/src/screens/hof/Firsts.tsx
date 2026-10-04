@@ -248,7 +248,7 @@ export default function Firsts() {
               </View>
             ))
           ) : (
-            empty('아직 세워진 서버 최초 기록이 없어요. 첫 주인공이 되어 보세요!')
+            empty('아직 세워진 서버 최초 기록이 없어요.')
           )
         ) : tab === 'records' ? (
           <View>

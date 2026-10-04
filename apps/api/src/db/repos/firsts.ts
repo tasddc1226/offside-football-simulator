@@ -20,6 +20,7 @@ import {
 // 좁히거나 없애면 기존 행이 남으므로 마이그레이션으로 해당 행을 지운 뒤 버전을 올린다.
 // T-11-029 기록은 시즌마다 따로 겨룬다 — 커리어는 자기 시즌(service_season, NULL이면 0 = 프리시즌)의 기록만 노린다. 시즌을
 // 가르는 마이그레이션(0045)이 기존 행에 시즌을 채웠다 — 개막 전 배포라 시즌 1 선수가 없어 다시 훑지 않는다(버전 그대로).
+// T-11-045 은퇴 나이 해금(retirecap)은 시즌 1부터라 개막 전 배포에선 해당 커리어가 없다 — 다시 훑지 않는다(버전 그대로).
 export const BACKFILL_VERSION = '2';
 const META_KEY = 'server_firsts_backfill';
 /** 다시 훑는 중이면 마지막으로 판정한 careers rowid. */
@@ -98,6 +99,7 @@ function toCareers(
     id: string;
     legendScore: number | null;
     retiredAt: string | null;
+    retireAge: number | null;
     serviceSeason: number | null;
   }[],
   rows: SeasonRow[],
@@ -131,6 +133,7 @@ const careerColumns = {
   id: careers.id,
   legendScore: careers.legendScore,
   retiredAt: careers.retiredAt,
+  retireAge: careers.retireAge,
   serviceSeason: careers.serviceSeason,
 };
 
@@ -310,7 +313,7 @@ export async function listFirsts(db: Db, season: number): Promise<FirstsResponse
   const records = new Map(recordRows.map((r) => [r.id, r]));
   return {
     season,
-    items: firstsCatalog(firsts.keys()).map((d) => {
+    items: firstsCatalog(firsts.keys(), season).map((d) => {
       const r = firsts.get(d.id);
       return {
         id: d.id,

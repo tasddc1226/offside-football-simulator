@@ -8,7 +8,8 @@ import { natInit } from './national.js';
 import { createRng, freshSeed, setActiveRng } from './rng.js';
 import { ensureTitles } from './titles.js';
 import { SAVE_VERSION } from './data.js';
-import type { GameState } from './types.js';
+import type { GameState, HofEntry } from './types.js';
+import { NATION_BY_CODE } from '@offside/contracts/nations';
 
 /** 불러온 저장본을 받을지 정하고 지금 형식으로 고친다. 버전이 다르면(또는 없으면) null — 새로 시작한다. */
 export function loadSave(raw: GameState | null): { G: GameState; newCid: boolean } | null {
@@ -19,6 +20,8 @@ export function loadSave(raw: GameState | null): { G: GameState; newCid: boolean
 /** 저장본을 제자리에서 고치고 활성 RNG를 저장된 시드로 되돌린다. newCid: 커리어 ID를 이번에 새로 만들었는지
  * (부른 쪽이 바로 저장해야 한다 — 안 그러면 다음 부팅 때 또 다른 ID가 생겨 서버 기록과 어긋난다). */
 export function migrateSave(G: GameState): { newCid: boolean } {
+  // T-11-054: pending.m의 renew.extension은 선택 필드다. 없는 옛 재계약은 만료 뒤의 총기간 그대로,
+  // 있는 조기 제안은 그때 제시한 추가기간·연도·구단을 그대로 복원한다. 시장 재생성이나 기간 추정은 하지 않는다.
   // 구버전 저장에는 RNG 상태가 없습니다 — 새 시드로 이어서 플레이합니다.
   if (G.rng && typeof G.rng.seed === 'number') setActiveRng(createRng(G.rng.seed));
   else {
@@ -27,6 +30,10 @@ export function migrateSave(G: GameState): { newCid: boolean } {
     G.rng = { seed };
   }
   natInit(G);
+  // T-11-062: 기간이 없던 기존 특례는 복무 일수/편입일을 추정하거나 의무를 다시 부과하지 않는다.
+  // 군필·진행 중 상무·메달·입대 취소 등 기존 상태를 그대로 보존한다.
+  if (G.mil.exempt && !G.mil.sportsService)
+    G.mil.sportsService = { monthsLeft: null, lastYear: G.year };
   // 세부 능력치 도입 이전 저장 데이터: 카드 능력치와 기존 OVR 을 기준으로 세부 능력치를 만듭니다
   // (활성 RNG를 쓰므로 RNG 복원 뒤에 한다).
   if (!G.sub) {
@@ -56,9 +63,24 @@ export function migrateSave(G: GameState): { newCid: boolean } {
   ensureTitles(G);
   // 구단 이름이 바뀌어도 기존 저장의 현재 소속은 최신 이름으로
   const gClubId = G.club.id;
-  const c = clubsIn(G.leagueId)
+  const c = clubsIn(G.leagueId, G)
     .concat(clubsIn('hs'))
     .find((x) => x.id === gClubId);
   if (c) G.club.name = c.name;
   return { newCid };
+}
+
+/** 옛 은퇴 기록은 같은 cid의 은퇴 저장본에 명시된 국적만 보완한다. 원본·칭호·스냅샷은 바꾸지 않는다. */
+export function migrateHofEntry(h: HofEntry, source: GameState | null): HofEntry {
+  if (
+    h.nation !== undefined ||
+    !h.id ||
+    source?.v !== SAVE_VERSION ||
+    !source.retired ||
+    h.id !== source.cid ||
+    !source.nation ||
+    !NATION_BY_CODE.has(source.nation)
+  )
+    return h;
+  return { ...h, nation: source.nation };
 }

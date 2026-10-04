@@ -14,6 +14,9 @@ import { rem } from '../../theme/type';
 import { Card, Press, Screen, Topbar, Txt } from '../../ui';
 import { BackupSettings } from './BackupSettings';
 import { ClubCustomSettings } from './ClubCustomSettings';
+import { AdFreeSettings } from './AdFreeSettings';
+import { PushSettings } from './PushSettings';
+import { ReviewSettings } from './ReviewSettings';
 import { SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
 
 /** 정책·가이드는 웹 페이지를 앱 안 브라우저로 연다. */
@@ -99,7 +102,7 @@ export default function Settings() {
           <SettingsLabel
             eyebrow="Display"
             title="다크 모드"
-            muted="어두운 화면으로 봐요. 이 기기에 저장됩니다."
+            muted="어두운 화면으로 봐요. 이 기기에 저장돼요."
           />
           <Switch value={dark} onChange={setDark} label="다크 모드" testID="dark" />
         </SettingsRow>
@@ -110,7 +113,7 @@ export default function Settings() {
           <SettingsLabel
             eyebrow="Privacy"
             title="선수 이름 공개"
-            muted="홈 라이브 현황·명예의 전당·서버 최초 업적에 선수 이름이 보여요. 끄면 '익명의 공격수'처럼 표시되고, 다음 시즌 기록부터 반영돼요. 실명은 쓰지 않는 것을 권장합니다."
+            muted="홈 라이브 현황·명예의 전당·서버 최초 업적에 선수 이름이 보여요. 끄면 '익명의 공격수'처럼 표시되고, 다음 시즌 기록부터 반영돼요. 실명은 쓰지 않는 게 좋아요."
           />
           <Switch
             value={namePublic}
@@ -144,6 +147,9 @@ export default function Settings() {
 
       {/* T-10-116 진행 중 커리어 백업·불러오기 */}
       <BackupSettings />
+      <AdFreeSettings />
+      <PushSettings />
+      <ReviewSettings />
       <ClubCustomSettings />
 
       <Group eyebrow="Help" title="도움말">

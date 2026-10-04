@@ -1,6 +1,9 @@
 # Working agreement
 
+- Mobile first (2026-10-03): 모든 UI 작업은 모바일 최적화를 우선한다. 좁은 화면의 가독성, 터치 배치·조작, 하단 메뉴와 저장 버튼의 가림, 가로 넘침을 실제 로컬 모바일 화면에서 확인한다. 작은 수정은 핵심 화면·동작만 확인하고 전체 검증·테스트는 사용자의 운영 배포 요청 시 진행한다.
 - Implementation is done directly by the Claude Code main session (2026-09-24; supersedes the "delegate to Sonnet 5" rule). Subagents are used only for independent, parallelizable work (copy writing, test backfill, unrelated features) and must implement directly without re-delegating.
 - The main session reviews, verifies, merges and deploys its own changes.
 - Protect the backend (2026-09-25): request data only when it is actually needed. Load on open, never refetch the same data on every screen entry, and avoid N+1 and polling. Web GETs go through `cachedGet`. Public reads never look up the session (`resolveSession` only where required). Shared public GETs use `edgeCached` with a `purgeEdge` on every write that changes them. New sort/filter queries ship with an index. See "백엔드 보호 · 요청 최소화 규칙" in `CLAUDE.md`.
+- User-facing copy (2026-10-02): follow `docs/tracking/copy-style.md` (canonical). Ending labels are save keys; never rename them without a migration.
+- Release notes (2026-10-03): user-visible changes include a reviewed `.release-notes/*.json` entry in the same PR. Follow `.release-notes/README.md`; use a new stable ID and state web/app availability truthfully. Production deploy publishes only unseen entries and preserves manually written notes.
 - Preserve immutable old saves: any change to the save format must ship the matching migration code in `packages/game/src` so existing `localStorage` saves keep loading. Preserve unrelated user work.

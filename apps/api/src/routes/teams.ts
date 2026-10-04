@@ -16,7 +16,7 @@ import {
 } from '@offside/contracts/owner-team';
 import { teamSeasonClosed, teamSeasonName } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
-import { NO_STORE, nowIso, ok, teamNotFound, teamSeasonParam } from './shared.js';
+import { NO_STORE, nowIso, ok, teamNotFound, teamSeasonParam, conflictError } from './shared.js';
 import {
   addTeamView,
   careersByIds,
@@ -24,15 +24,18 @@ import {
   isTeamLiked,
   liveTeam,
   listTeamRanking,
+  listTeamRecentForm,
   ratingRankOf,
   setTeamLike,
   slotIdsOf,
+  layoutOf,
+  logoOf,
 } from '../db/repos/ownerTeams.js';
 import { listAchievementRanking } from '../db/repos/ownerAchievements.js';
 import { edgeCached, waitUntil } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
-import { AppError, parseWithAppError } from '../errors.js';
+import { parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { teamBadges } from '../team/badges.js';
@@ -58,6 +61,10 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       RANK_TTL,
       async (): Promise<TeamRankResponse> => {
         const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, q.page);
+        const forms = await listTeamRecentForm(
+          getDb(c),
+          rows.map((t) => t.id),
+        );
         return {
           season,
           seasons: seasonOptions(now),
@@ -68,6 +75,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
             rank: (q.page - 1) * TEAM_RANK_PER_PAGE + i + 1,
             teamId: t.id,
             name: t.name,
+            logo: logoOf(t),
             manager: t.manager,
             formation: t.formation as FormationId,
             ovr: t.ovr,
@@ -75,6 +83,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
             record: recordOf(t),
             likes: t.likes,
             createdAt: t.createdAt,
+            recentForm: forms.get(t.id) ?? [],
           })),
         };
       },
@@ -101,7 +110,10 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           items: rows.map((r, i) => ({
             rank: (q.page - 1) * ACH_RANK_PER_PAGE + i + 1,
             nickname: r.nickname,
-            team: r.teamId && r.teamName ? { id: r.teamId, name: r.teamName } : null,
+            team:
+              r.teamId && r.teamName
+                ? { id: r.teamId, name: r.teamName, logo: logoOf({ logoJson: r.logoJson }) }
+                : null,
             score: r.score,
             done: r.done,
             players: r.players,
@@ -128,11 +140,8 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       ratingRankOf(db, t),
       session ? isTeamLiked(db, t.id, session.profileId) : false,
     ]);
-    const lineup = buildLineup(
-      t.formation as FormationId,
-      ids,
-      eligibleMap(rows, t.profileId, t.season),
-    );
+    const eligible = eligibleMap(rows, t.profileId, t.season);
+    const lineup = buildLineup(t.formation as FormationId, ids, eligible, layoutOf(t));
     const now = nowIso();
     const seasonName = teamSeasonName(t.season);
     return ok(
@@ -147,7 +156,9 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           name: t.name,
           manager: t.manager,
           formation: t.formation as FormationId,
-          slots: slotsOf(lineup),
+          slots: slotsOf(lineup, eligible),
+          layout: layoutOf(t),
+          logo: logoOf(t),
           ovr: lineupOvr(lineup),
           lines: linesOf(lineup),
           rating: t.rating,
@@ -183,21 +194,11 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       const [found] = await liveTeam(db, id);
       if (!found) throw teamNotFound();
       if (found.team.profileId === profileId) {
-        throw new AppError({
-          code: 'VALIDATION_FAILED',
-          status: 409,
-          message: '내 팀에는 좋아요를 누를 수 없어요.',
-          details: { reason: 'OWN_TEAM' },
-        });
+        throw conflictError('내 팀에는 좋아요를 누를 수 없어요.', 'OWN_TEAM');
       }
       // T-11-029 닫힌 시즌 팀의 좋아요는 굳는다 — 누르기도 거두기도 막아 끝난 시즌의 순위가 흔들리지 않게 한다.
       if (teamSeasonClosed(found.team.season, nowIso())) {
-        throw new AppError({
-          code: 'VALIDATION_FAILED',
-          status: 409,
-          message: '끝난 시즌의 팀에는 좋아요를 바꿀 수 없어요.',
-          details: { reason: 'SEASON_CLOSED' },
-        });
+        throw conflictError('끝난 시즌의 팀에는 좋아요를 바꿀 수 없어요.', 'SEASON_CLOSED');
       }
       const likes = await setTeamLike(db, id, profileId, like, nowIso());
       if (likes === undefined) throw teamNotFound();

@@ -96,7 +96,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="empty">아직 세워진 서버 최초 기록이 없어요. 첫 주인공이 되어 보세요!</p>
+        <p class="empty">아직 세워진 서버 최초 기록이 없어요.</p>
       {/each}
     {:else if tab === 'records'}
       <ul class="first-list">

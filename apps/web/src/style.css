@@ -523,7 +523,8 @@ button.what:active {
 .hero-home p {
   margin-top: 6px;
   opacity: 0.8;
-  max-width: 30ch;
+  /* T-11-050 글자 폭(ch)은 웹폰트가 늦게 오면 대체 글꼴 기준으로 바뀌어 줄바꿈이 흔들린다. 웹폰트의 30ch와 같은 18em. */
+  max-width: 18em;
 }
 .hero-home .btn {
   margin-top: 18px;
@@ -654,6 +655,21 @@ button.what:active {
   align-items: center;
   gap: 3px 5px;
   min-width: 0;
+}
+.hof-identity,
+.hof-badges {
+  display: contents;
+}
+.hof-stats-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  font-size: max(0.75rem, 12px);
+  line-height: 1.6;
+  white-space: normal;
+}
+.hof-stats-compact > span {
+  white-space: nowrap;
 }
 .hof-row .hof-value {
   grid-area: value;
@@ -3568,6 +3584,14 @@ th.n {
     transform: scale(0.4);
   }
 }
+/* T-10-110 K리그2 우승 승격 카드(.story-end 강조 카드 + 팝) */
+.promo-card b {
+  color: var(--accent-text);
+}
+.promo-card.pop {
+  animation: pop-in 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation-delay: var(--d, 0ms);
+}
 .fan-line.in {
   animation: slide-in 0.32s ease-out both;
   animation-delay: var(--d, 0ms);
@@ -3588,6 +3612,7 @@ th.n {
 }
 @media (prefers-reduced-motion: reduce) {
   .badge-ch.pop,
+  .promo-card.pop,
   .fan-line.in,
   .mile-row .legend-bar i {
     animation: none;
@@ -3855,16 +3880,43 @@ html:has(.wrap.has-actionbar) {
 }
 /* T-10-076 기록실 영구결번 탭 — 구단 색 유니폼 타일을 구단별로 건다. */
 .hof-tabs {
-  /* T-11-028 네 칸(업적 랭킹) — 폰 폭에서는 글자를 줄이고 필요하면 두 줄로. */
+  display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  position: sticky;
+  top: var(--safe-t, 0px);
+  z-index: 10;
   margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
 }
-.hof-tabs .opt {
-  padding: 6px 4px;
-  font-size: 0.8125rem;
+.hof-tabs [role='tab'] {
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  padding: 10px 2px 8px;
+  font: inherit;
+  font-size: clamp(12px, 2.9vw, 14px);
+  font-weight: 500;
+  color: var(--muted);
   text-align: center;
-  word-break: keep-all;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.hof-tabs [aria-selected='true'] {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+  font-weight: 700;
+}
+.hof-tabs [role='tab']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+#hof-tab-panel:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 /* T-11-028 시즌 업적 등급 배지 — T-11-033부터 엠블럼(GradeEmblem) + 등급 이름. 글자는 등급 색(--g)을 잉크와 섞어 밝기 모드 모두에서 읽히게. */
 .ach-grade {
@@ -3877,7 +3929,7 @@ html:has(.wrap.has-actionbar) {
   font-weight: 800;
   letter-spacing: 0.02em;
   line-height: 1.2;
-  color: color-mix(in srgb, var(--g) 65%, var(--ink));
+  color: color-mix(in srgb, var(--g) 40%, var(--ink));
 }
 .ach-grade.large {
   gap: 8px;
@@ -4024,11 +4076,239 @@ html:has(.wrap.has-actionbar) {
 .hof-season-note b {
   color: var(--ink);
 }
+.hof-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 12px;
+  margin: 4px 0 8px;
+}
+.hof-toolbar:has(.hof-search-btn) {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px;
+}
+.hof-toolbar .hof-search-btn {
+  width: 40px;
+  height: 40px;
+}
+.hof-season-picker,
+.hof-filter-picker {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.hof-season-picker select,
+.hof-filter-trigger {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+}
+.hof-season-picker select {
+  padding: 4px 10px;
+  font-size: max(1rem, 16px);
+}
+.hof-filter-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.hof-filter-trigger[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+.hof-filter-trigger:focus-visible,
+.hof-season-picker select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.hof-filter-label {
+  flex: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.hof-filter-current {
+  min-width: 0;
+  font-size: max(0.875rem, 14px);
+  text-align: left;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hof-filter-chevron {
+  flex: none;
+}
+.hof-filter-trigger[aria-expanded='true'] .hof-filter-chevron {
+  transform: rotate(180deg);
+}
+.hof-filter-panel {
+  padding: 8px 0 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.hof-filter-panel > .hof-filter-label {
+  margin: 12px 0 8px;
+  color: var(--muted);
+}
+.hof-filter-panel > .hof-filter-label:first-child {
+  margin-top: 4px;
+}
+.hof-filter-panel .hof-pos,
+.hof-filter-panel .hof-sorts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  mask-image: none;
+}
+@media (max-width: 599px) {
+  .hof-toolbar {
+    gap: 8px;
+  }
+  [data-hof='full'] .hof-row {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: 6px 8px;
+    padding-block: 12px;
+  }
+  [data-hof='full'] .hof-rank {
+    text-align: center;
+  }
+  [data-hof='full'] .hof-rank.medal {
+    width: 32px;
+    height: 36px;
+  }
+  .hof-main-compact {
+    display: grid;
+    gap: 6px;
+  }
+  .hof-main-compact .hof-identity {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+  }
+  .hof-main-compact .hof-identity > b {
+    min-width: 0;
+    font-size: max(1rem, 16px);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .hof-main-compact .hof-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+  [data-hof='full'] .hof-value {
+    align-self: start;
+    max-width: 100px;
+    font-size: 1.25rem;
+    text-align: right;
+    line-height: 1.3;
+  }
+  [data-hof='full'] .hof-value-text {
+    font-size: 1rem;
+  }
+  [data-hof='full'] .hof-source {
+    font-size: max(0.75rem, 12px);
+    line-height: 1.5;
+  }
+}
+@media (max-width: 359px) {
+  .hof-toolbar {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+}
 .hof-season-note p {
   margin: 4px 0 0;
 }
+.hof-list-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0 8px 36px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+.hof-ranking-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.hof-ranking-list > li + li {
+  border-top: 1px solid var(--line);
+}
+.hof-ranking-list .hof-row {
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.hof-ranking-list .hof-rank {
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--muted);
+}
+.hof-ranking-list .hof-rank.medal {
+  width: 26px;
+  height: 30px;
+  color: var(--medal-text);
+}
+.hof-ranking-list .hof-main-compact {
+  display: grid;
+  gap: 4px;
+}
+.hof-ranking-list .hof-identity {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.hof-ranking-list .hof-identity > b {
+  min-width: 0;
+  font-size: 16px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.hof-ranking-list .hof-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.hof-ranking-list .hof-value {
+  align-self: start;
+  max-width: 100px;
+  font-size: 20px;
+  text-align: right;
+  line-height: 1.3;
+}
+.hof-ranking-list .hof-value-text {
+  font-size: 16px;
+}
+.hof-ranking-list .hof-stats-compact {
+  gap: 0 10px;
+  line-height: 1.5;
+}
 .rn-wall-lead {
   margin: 0 0 14px;
+}
+.rn-club-picker {
+  margin-top: 12px;
 }
 .rn-wall-sum {
   display: grid;
@@ -5558,37 +5838,84 @@ button.what {
   }
 }
 
-/* T-11-017 채팅 화면은 한 화면에 맞춘다 — 페이지는 스크롤하지 않고, 카드가 남은 높이를 채워 메시지 목록만 스크롤한다.
-   T-11-019 높이·위치는 키보드를 뺀 보이는 영역(--vvh·--vvtop, viewport.ts)을 따른다. 고정 위치라 iOS Safari가 페이지를
-   밀어 올려도 밀리지 않고, 밀린 만큼 따라 내려온다. */
+/* 채팅은 보이는 뷰포트에 맞추고 목록만 줄인다. 입력·닉네임 칸은 키보드 위에 남는다. */
 .wrap.chat-wrap {
   position: fixed;
   inset-inline: 0;
   top: var(--vvtop, 0px);
   height: 100vh;
   height: var(--vvh, 100dvh);
-  overflow-y: auto; /* 아주 낮은 화면에서 로그인·닉네임 칸이 넘쳐도 닿게 */
+  padding: var(--safe-t) 0 var(--safe-b);
+  gap: 0;
+  overflow: hidden;
   overscroll-behavior: contain;
-  padding-bottom: var(--safe-b); /* 아래 고정 바 자리는 action-bar-space가 맡는다 */
-}
-/* 폰에서 입력 중(키보드가 떠 있다)엔 머리글·안내·이전으로 바를 접어 메시지 목록을 남긴다. */
-@media (pointer: coarse) {
-  .chat-wrap:has([data-chat-input]:focus) {
-    padding-block: calc(8px + var(--safe-t)) 8px;
-  }
-  .chat-wrap:has([data-chat-input]:focus) :is(.topbar, .chat-fold, .action-bar, .action-bar-space) {
-    display: none;
-  }
 }
 .chat-card {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+.chat-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.chat-back,
+.chat-rules summary {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+}
+.chat-heading {
+  flex: 1;
+  min-width: 0;
+}
+.chat-heading h1 {
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+.chat-rules {
+  position: relative;
+}
+.chat-rules summary {
+  list-style: none;
+  border-radius: 50%;
+}
+.chat-rules summary::-webkit-details-marker {
+  display: none;
+}
+.chat-rules summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.chat-rules p {
+  position: absolute;
+  z-index: 2;
+  top: 100%;
+  right: 0;
+  width: min(280px, 75vw);
+  margin: 4px 0 0;
+  padding: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
 }
 /* T-11-015 라운지 채팅. 홈의 떠 있는 버튼은 하단 메뉴 위, 데스크톱에선 본문(560px) 오른쪽 끝에 맞춘다.
    T-11-034 시트(.modal 10)보다는 아래 — 홈에 뜨는 시트의 버튼을 가리지 않게. */
 .chat-fab {
+  min-height: 44px;
   position: fixed;
   right: max(16px, calc(50% - 280px + 16px));
   bottom: calc(var(--tabbar-h) + var(--safe-b) + 16px);
@@ -5604,53 +5931,171 @@ button.what {
   font-weight: 700;
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
 }
+.chat-unread {
+  min-width: 22px;
+  height: 22px;
+  padding-inline: 5px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+.chat-fab .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .chat-list {
   list-style: none;
-  margin: 0 0 10px;
-  padding: 0 2px 0 0;
+  margin: 0;
+  padding: 14px 12px;
   flex: 1;
-  min-height: 120px;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  scrollbar-width: thin;
 }
 .chat-msg {
-  border-top: 1px solid var(--line);
-  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+  align-items: flex-start;
+  max-width: 85%;
+  flex-shrink: 0;
+  min-width: 0;
 }
-.chat-msg p {
-  margin: 2px 0 0;
-  white-space: pre-wrap;
+.chat-msg.mine {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+.chat-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  font-size: 0.8125rem;
+}
+.chat-meta b {
   overflow-wrap: anywhere;
 }
-.chat-msg.mine b {
-  color: var(--accent-text);
+.chat-msg.mine .chat-meta {
+  flex-direction: row-reverse;
+}
+.chat-body-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+}
+.chat-bubble {
+  min-width: 0;
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 4px 16px 16px;
+  background: var(--surface-2);
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.chat-msg.mine .chat-bubble {
+  background: var(--pitch);
+  color: var(--on-pitch);
+  border-color: var(--pitch);
+  border-radius: 16px 4px 16px 16px;
+}
+.chat-time {
+  margin-top: 3px;
+  padding-inline: 2px;
+  font-size: 0.75rem;
 }
 .chat-more {
-  margin-left: auto;
-  min-height: 0;
-  padding: 0 8px;
-  font-size: 0.875rem;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.chat-more:hover,
+.chat-more[aria-expanded='true'] {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.chat-msg .report-panel {
+  width: 100%;
 }
 .chat-empty {
   margin: auto;
 }
 .chat-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 6px;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
   border-radius: 50%;
   background: var(--good);
 }
+.chat-composer {
+  flex: none;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  max-height: 65%;
+  overflow-y: auto;
+}
+.chat-composer p {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+}
 .chat-form {
+  display: flex;
+  align-items: flex-end;
   gap: 8px;
 }
-.chat-form input {
+.chat-form textarea {
   flex: 1;
   min-width: 0;
+  min-height: 44px;
+  max-height: 112px;
+  margin: 0;
+  padding: 10px 12px;
+  line-height: 1.5;
+  border-radius: 20px;
+  resize: none;
+  overflow-y: auto;
+  scroll-margin-block: 12px;
+}
+.chat-send {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+@media (min-width: 720px) {
+  .chat-card {
+    border-inline: 1px solid var(--line);
+  }
 }
 
 /* ───────── T-11-022 업무 모드(스프레드시트 화면) ─────────

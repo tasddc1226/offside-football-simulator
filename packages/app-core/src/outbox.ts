@@ -110,8 +110,8 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
       const body = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;
       if (body?.error?.code === 'CAREER_OWNER_MISMATCH') return 'conflict';
     }
-    // 4xx(검증 실패·409 소유권 충돌 포함)는 재시도해도 같은 결과이므로 버린다.
-    if (res.status >= 500) return 'retry';
+    // 4xx(검증 실패·409 소유권 충돌 포함)는 재시도해도 같은 결과이므로 버린다. 429(업로드 한도)는 시간이 지나면 풀리므로 큐에 남긴다.
+    if (res.status >= 500 || res.status === 429) return 'retry';
     // 세션 만료: 다음 flush에서 프로필을 다시 확인하고 재시도한다(버리지 않는다).
     if (res.status === 401) {
       profileReady = false;

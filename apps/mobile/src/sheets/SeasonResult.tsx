@@ -2,6 +2,7 @@
 // 모션(CH 배지 팝, 스카우트 카드 팝, 팬 반응 순차 등장)은 웹 CSS 애니메이션 자리 — 동작 줄이기면 바로 보인다.
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
+import { visibleSeasonNotes } from '@offside/app-core/potential-view';
 import type { SheetView } from '@offside/app-core/sheets';
 import { NewTitles } from '../screens/game/NewTitles';
 import { alpha } from '../theme/colors';
@@ -14,6 +15,7 @@ import { Hl, StatGrid, mixColor } from './parts';
 export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> }) {
   const s = useSnapshot(v);
   const c = useColors();
+  const notes = visibleSeasonNotes(s.notes);
   return (
     <>
       <Txt v="eyebrow">{s.eyebrow}</Txt>
@@ -65,29 +67,29 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           ))}
         </View>
       ) : (
-        <Txt tone="muted">이번 시즌 수상은 없었습니다.</Txt>
+        <Txt tone="muted">이번 시즌 수상은 없었어요.</Txt>
       )}
-      {s.scout ? (
-        <Pop ms={350} delay={160}>
+      {s.promo ? (
+        <Pop from={0.4} ms={400} delay={160}>
           <View
-            testID="scout-first"
             style={{
-              gap: 2,
-              paddingVertical: 12,
-              paddingHorizontal: 14,
+              gap: 4,
+              padding: 12,
               borderRadius: 12,
-              backgroundColor: mixColor(c.accent, c.surface, 12),
+              backgroundColor: mixColor(c.accent, c.surface, 14),
               borderWidth: 1,
-              borderColor: alpha(c.accent, 0.5),
+              borderColor: alpha(c.accent, 0.55),
             }}
           >
-            <Txt v="eyebrow">First Scouting Report</Txt>
-            <Txt
-              style={{ fontSize: rem(1.0625), fontWeight: '700', color: c.accentText }}
-            >{`스카우트 잠재력 평가 ${s.scout}등급`}</Txt>
-            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-              고3 시즌을 지켜본 스카우트의 첫 평가예요. 21·24세 재평가 때 좁혀져요.
+            <Txt v="eyebrow">Promotion</Txt>
+            <Txt bold style={{ color: c.accentText }}>
+              K리그1 승격 확정
             </Txt>
+            <Txt
+              v="sm"
+              tone="muted"
+            >{`이번 시즌 1위로 ${s.promo.club}의 승격이 확정됐어요. 다음 시즌에는 K리그1에서 새로운 도전을 시작해요.`}</Txt>
+            <Txt v="xs" tone="muted">{`자리를 내준 ${s.promo.down} · K리그2 강등`}</Txt>
           </View>
         </Pop>
       ) : null}
@@ -139,7 +141,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
       {s.miles.length ? (
         <View>
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
-            커리어 여정
+            커리어 이정표
           </Txt>
           {s.miles.map((m, i) => (
             <Txt key={i}>{`· ${m}`}</Txt>
@@ -147,7 +149,15 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
         </View>
       ) : null}
       <NewTitles titles={s.titles} pop />
-      {s.notes.length ? <Txt tone="muted">{s.notes.join(' · ')}</Txt> : null}
+      {notes.length ? <Txt tone="muted">{notes.join(' · ')}</Txt> : null}
+      {s.scoutHint ? (
+        <View>
+          <Txt v="eyebrow" style={{ marginBottom: 6 }}>
+            스카우트 한마디
+          </Txt>
+          <Txt>{`“${s.scoutHint}”`}</Txt>
+        </View>
+      ) : null}
       <View>
         <Txt v="eyebrow" style={{ marginBottom: 6 }}>
           팬 반응
@@ -176,7 +186,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           ))}
         </View>
       </View>
-      <Txt tone="muted">{`나이 ${s.age}세가 되었습니다. 이제 다음 시즌을 준비합니다.`}</Txt>
+      <Txt tone="muted">{`${s.age}세가 됐어요. 이제 다음 시즌을 준비해요.`}</Txt>
     </>
   );
 }

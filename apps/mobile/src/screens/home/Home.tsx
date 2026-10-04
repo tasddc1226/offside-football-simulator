@@ -20,6 +20,7 @@ import { HomeLive } from './HomeLive';
 import { HomeNews } from './HomeNews';
 import { HomeTicker } from './HomeTicker';
 import { Tile } from './Tile';
+import { PushOptInCard } from './PushOptInCard';
 
 export default function Home() {
   const s = useSnapshot(appState);
@@ -114,11 +115,10 @@ export default function Home() {
                   color: c.onPitch,
                 }}
               >
-                {'이번 생은 축구다\n나만의 커리어를 시작하세요'}
+                {'이번 생은 축구다\n고3부터 은퇴까지,\n한 선수로 살아요'}
               </Txt>
               <Txt style={{ ...p, color: alpha(c.onPitch, 0.8) }}>
-                고교 3학년의 킥오프부터 은퇴의 종료 휘슬까지. 오프사이드에서 훈련·이적·이벤트
-                선택으로 나만의 축구선수 커리어를 만들어 보세요.
+                훈련과 이적, 이벤트마다 고른 선택이 쌓여 한 선수의 커리어가 돼요.
               </Txt>
               <Btn kind="accent" block testID="new" onPress={goNew} style={{ marginTop: 18 }}>
                 새 커리어 킥오프 →
@@ -126,6 +126,7 @@ export default function Home() {
             </View>
           </PitchCard>
         )}
+        <PushOptInCard />
         {G && s.ownerConflict ? (
           <View testID="owner-conflict">
             <Card gap={8} style={{ borderWidth: 1, borderColor: alpha(c.warn, 0.45) }}>
@@ -208,9 +209,10 @@ function ChatFab() {
         position: 'absolute',
         right: 16,
         bottom: 16,
-        flexDirection: 'row',
+        minWidth: 48,
+        minHeight: 48,
         alignItems: 'center',
-        gap: 6,
+        justifyContent: 'center',
         paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 999,
@@ -222,13 +224,12 @@ function ChatFab() {
         elevation: 6,
       }}
     >
-      <Svg width={20} height={20} viewBox="0 0 24 24">
+      <Svg width={20} height={20} viewBox="0 0 24 24" accessible={false}>
         <Path
           d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z"
           fill={c.accentInk}
         />
       </Svg>
-      <Txt style={{ color: c.accentInk, fontWeight: '700' }}>채팅</Txt>
     </Press>
   );
 }

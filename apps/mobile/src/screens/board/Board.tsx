@@ -29,6 +29,7 @@ import {
 import type { CommentReportReason } from '@offside/contracts/board-limits';
 import { touchedAt } from '@offside/app-core/news';
 import { loadKey, saveKey } from '@offside/game/season';
+import { AdSlot } from '../../components/AdSlot';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { NicknameForm } from '../../components/NicknameForm';
 import { markNewsSeen, toast } from '../../game/host';
@@ -573,7 +574,7 @@ export default function Board() {
                   ))
                 ) : (
                   <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                    첫 댓글을 남겨 보세요.
+                    아직 댓글이 없어요.
                   </Txt>
                 )}
                 {detail.blocks.length ? (
@@ -735,6 +736,7 @@ export default function Board() {
                     더 보기
                   </Btn>
                 ) : null}
+                <AdSlot place="board-bottom" />
               </LoadState>
             </>
           )}

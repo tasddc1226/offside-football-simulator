@@ -8,7 +8,7 @@ import {
   RetirementResponseSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { careerOwnerMismatch, ok, readBody, nowIso } from './shared.js';
+import { careerOwnerMismatch, ok, readBody, nowIso, rateLimited } from './shared.js';
 import {
   getCareer,
   getCareerHead,
@@ -21,6 +21,7 @@ import {
 } from '../db/repos/careers.js';
 import { boundProfile, boundRetirement, sanitizeSeason } from '../plausibility.js';
 import { getProfile, isLinked } from '../db/repos/profiles.js';
+import { recordAttempt } from '../db/repos/authAttempts.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
@@ -33,6 +34,21 @@ import { STALE } from '../edgeKeys.js';
 import { publishLive } from '../live/publish.js';
 import { isHeadless } from '../db/repos/automation.js';
 import { isAcceptablePublicName, toPublicName } from '@offside/contracts/content-filter';
+import { retireAtOf } from '@offside/contracts/service-seasons';
+
+/** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다. */
+export const UPLOAD_LIMIT = { CAREER_SEASON: 120, CAREER_RETIRE: 30 } as const;
+
+/** 검증을 통과한 업로드만 센다 — 잘못된 요청이 쿼터를 쓰지 않게, D1 쓰기 직전에 부른다. */
+async function limitUpload(
+  db: ReturnType<typeof getDb>,
+  kind: keyof typeof UPLOAD_LIMIT,
+  profileId: string,
+): Promise<void> {
+  if ((await recordAttempt(db, kind, profileId, nowIso())) > UPLOAD_LIMIT[kind]) {
+    throw rateLimited('기록을 너무 자주 올리고 있어요. 잠시 뒤에 다시 시도해 주세요.');
+  }
+}
 
 /** 소유권 확인: careerId가 이미 다른 프로필 소유면 409. 없으면(새 커리어) 통과. */
 async function assertOwnable(
@@ -66,9 +82,9 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
     const year = parseWithAppError(CareerYearParamSchema, c.req.param('year'));
 
-    await assertOwnable(db, careerId, session.profileId);
-
     const body = readBody(c, PutCareerSeasonBodySchema);
+    await assertOwnable(db, careerId, session.profileId);
+    await limitUpload(db, 'CAREER_SEASON', session.profileId);
     const now = nowIso();
     // 나이별 OVR 상한을 크게 넘긴 값은 sanitizeSeason이 잘라 저장해 매일 점검에 남지 않으므로 저장과 함께 숨긴다.
     const overCap = exceedsOvrCap(body.season.age, body.season.ovr);
@@ -125,6 +141,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'PUBLIC_NAME_REJECTED' },
       });
     }
+    await limitUpload(db, 'CAREER_RETIRE', session.profileId);
     const now = nowIso();
 
     if (career.status === 'retired') {
@@ -132,7 +149,13 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     } else {
       // 은퇴 요약은 받아 둔 시즌 기록에 맞춘다 — 보낸 숫자를 그대로 믿지 않는다.
       const seasons = (await storedSeasonsOf(db, [careerId])).get(careerId) ?? [];
-      const summary = boundRetirement(career.pos, sent, seasons, career.dpos);
+      const summary = boundRetirement(
+        career.pos,
+        sent,
+        seasons,
+        career.dpos,
+        retireAtOf(career.serviceSeason),
+      );
       if (!summary) {
         throw new AppError({
           code: 'VALIDATION_FAILED',

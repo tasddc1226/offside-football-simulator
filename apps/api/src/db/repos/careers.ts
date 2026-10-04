@@ -26,7 +26,7 @@ import {
 } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
-import { kstDays } from './admin.js';
+import { kstDay } from '../../time.js';
 import { honorsOf, hideCareerStatements } from './firsts.js';
 import { appMeta, careers, careerSeasons, goalsPlusAssists, retiredNumbers } from '../schema.js';
 
@@ -89,6 +89,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
     now,
   } = input;
   const signals = signalsJson !== undefined ? { signalsJson } : {};
+  // T-11-048 시즌 성장 기록. 없으면 건드리지 않아, 성장 기록 없이 다시 올라온 옛 시즌이 이미 쌓인 기록을 지우지 않는다.
+  const growth = season.growth ? { growthJson: JSON.stringify(season.growth) } : {};
   const name = publicName !== undefined ? { publicName } : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
   const detail = {
@@ -158,6 +160,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         eventsJson,
         ...detail,
         ...signals,
+        ...growth,
         createdAt: now,
       })
       .onConflictDoUpdate({
@@ -177,6 +180,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           eventsJson,
           ...detail,
           ...signals,
+          ...growth,
           // 같은 시즌을 다시 보내면 덮어써 결과는 같다(멱등). createdAt은 최초값을 유지한다.
         },
         // 은퇴한 커리어의 시즌은 고치지 않는다(은퇴 요약·결번 판정의 근거). 늦게 도착한 빠진 시즌은 새 행이라 들어간다.
@@ -205,7 +209,7 @@ export type PutRetirementInput = {
  * 커리어 수만큼 행을 읽으므로(T-10-055), 은퇴할 때 이 키를 1 올리고 현황은 한 행만 읽는다. 프로필 삭제로
  * 커리어가 지워져도 빼지 않는다(홈 현황 숫자라 허용).
  */
-export const retiredCountKey = (at: Date) => `retired:${kstDays(at, 1).days[0]}`;
+export const retiredCountKey = (at: Date) => `retired:${kstDay(at.toISOString())}`;
 
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
  * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
@@ -275,6 +279,7 @@ const publicColumns = {
   number: careers.shirtNumber,
   retireAge: careers.retireAge,
   peak: careers.peak,
+  potReal: careers.potReal,
   legendScore: careers.legendScore,
   apps: careers.apps,
   goals: careers.goals,
@@ -309,6 +314,7 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     number: r.number == null ? null : Number(r.number),
     retireAge: n(r.retireAge),
     peak: n(r.peak),
+    ...(r.potReal != null ? { potReal: Number(r.potReal) } : {}),
     legendScore: n(r.legendScore),
     apps: n(r.apps),
     goals: n(r.goals),
@@ -584,12 +590,8 @@ export async function getCareerHead(db: Db, careerId: string) {
   return row;
 }
 
-/** 테스트 전용 헬퍼: 특정 커리어의 존재 여부·상태 확인. */
+/** 커리어 한 행(존재 여부·상태 확인). */
 export async function getCareer(db: Db, careerId: string): Promise<CareerRow | undefined> {
   const [row] = await db.select().from(careers).where(eq(careers.id, careerId));
   return row;
-}
-
-export async function listCareerSeasons(db: Db, careerId: string) {
-  return db.select().from(careerSeasons).where(eq(careerSeasons.careerId, careerId));
 }

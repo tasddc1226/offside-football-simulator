@@ -7,6 +7,7 @@
   import type { PublicHofEntry } from '@offside/contracts';
   import { loadHOF } from '@offside/game/season';
   import type { HofEntry } from '@offside/game/types';
+  import { myPlayerNation } from '@offside/app-core/myPlayers';
   import { getMyCareers, getRetiredNumbersIn } from '@offside/app-core/api/client';
   import { deviceSeasonOf, emptySeasonText, myDefaultSeason, mySeasonOptions, serverSeasonOf } from '@offside/app-core/mySeason';
   import { fillGranted } from './retiredNumber.svelte.js';
@@ -18,7 +19,7 @@
   /** T-11-026 구단주 화면이 요약(선수 수·점수 합·결번 수)을 세도록 불러온 목록을 알려 준다. T-11-029 고른 시즌 것만. */
   let { onrows }: { onrows?: (rows: readonly MineRow[]) => void } = $props();
 
-  type MineRow = { key: string; name: string; pos: keyof typeof POS; dpos?: DetailPos | null | undefined; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; season: number; open: () => void };
+  type MineRow = { nation?: string | undefined; key: string; name: string; pos: keyof typeof POS; dpos?: DetailPos | null | undefined; club: string; clubId?: string | null | undefined; rn?: number | null | undefined; tag: string | null; stats: RowStats; title: string | null; season: number; open: () => void };
   /** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다(T-11-026 구단주 화면 위쪽을 내 팀에 내주려 상위 3명만). */
   const SHOW = 3;
 
@@ -27,6 +28,7 @@
   /** 업로드 대기 중인 은퇴 기록(onMount에서 채운다) — 시즌을 아직 못 받은 기록은 지금 시즌으로 센다. */
   let pendingIds: ReadonlySet<string> = new Set();
   const localRow = (h: HofEntry, i: number): MineRow => ({
+    nation: myPlayerNation(h),
     key: h.id ?? h.name + i,
     name: h.name,
     pos: h.pos,
@@ -41,6 +43,7 @@
     open: () => openLocalLegend(h),
   });
   const serverRow = (e: PublicHofEntry): MineRow => ({
+    nation: myPlayerNation(undefined, e),
     key: e.id,
     name: e.name ?? anonName(e.pos, e.number),
     pos: e.pos,
@@ -83,7 +86,7 @@
         ...r.data.entries.map((e) => {
           const row = byId.get(e.id);
           // 이 기기 기록이 있어도 결번(T-10-076)은 서버 값을 쓴다 — 소급으로 받은 결번은 기기에 없다.
-          return row ? { ...row, rn: row.rn ?? e.retiredNumber?.number, season: serverSeasonOf(e) } : serverRow(e);
+          return row ? { ...row, nation: myPlayerNation(row, e), rn: row.rn ?? e.retiredNumber?.number, season: serverSeasonOf(e) } : serverRow(e);
         }),
         ...[...byId].filter(([id]) => !onServer.has(id) && pending.has(id)).map(([, row]) => row),
       ];
@@ -127,7 +130,7 @@
     {/if}
     {#each shown as r, i (r.key)}
       <button class="hof-row" data-my-player={i} onclick={r.open}>
-        <HofRow rank={i} name={r.name} pos={r.pos} dpos={r.dpos} club={r.club} clubId={r.clubId} rn={r.rn} tag={r.tag} t={r.stats} titleId={r.title} />
+        <HofRow nation={r.nation} showNation={r.nation !== undefined} rank={i} name={r.name} pos={r.pos} dpos={r.dpos} club={r.club} clubId={r.clubId} rn={r.rn} tag={r.tag} t={r.stats} titleId={r.title} />
       </button>
     {:else}
       <p class="empty">{emptySeasonText(season, seasons.length > 1 ? rows.length : 0)}</p>

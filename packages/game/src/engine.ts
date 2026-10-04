@@ -25,6 +25,7 @@ import { log } from './stats.js';
 import { nationOf } from './nation.js';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { Body } from '@offside/contracts/body';
+import { PRESEASON_RETIRE_AT } from '@offside/contracts/service-seasons';
 
 export * from './player.js';
 export * from './stats.js';
@@ -50,6 +51,8 @@ export function newGame(
     /** T-10-096 국적·체격. 없으면(또는 대한민국이면) 예전과 같은 선수 — RNG 소비 순서도 같다. */
     nation?: string | undefined;
     body?: Body | undefined;
+    /** T-11-045 은퇴 나이(서비스 시즌 retireAt). 없거나 프리시즌 값이면 예전과 같은 선수 — RNG도 쓰지 않는다. */
+    retireAt?: number | undefined;
     foot: GameState['foot'];
     trait: string;
   } & ({ type: string; focus?: undefined } | { type?: undefined; focus: AttrKey[] }),
@@ -87,6 +90,7 @@ export function newGame(
     ...(o.dpos && { dpos: o.dpos }),
     ...(o.nation && o.nation !== DEFAULT_NATION && { nation: o.nation }),
     ...(o.body && { body: { ...o.body } }),
+    ...(o.retireAt && o.retireAt !== PRESEASON_RETIRE_AT && { retireAt: o.retireAt }),
     foot: o.foot,
     type: typeId,
     focus,

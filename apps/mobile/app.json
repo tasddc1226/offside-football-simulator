@@ -27,6 +27,7 @@
     },
     "android": {
       "package": "com.offsidelab.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#1c4a35",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -40,6 +41,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "expo-notifications",
       "expo-router",
       [
         "expo-splash-screen",
@@ -52,7 +54,23 @@
       "expo-sharing",
       "expo-secure-store",
       "expo-apple-authentication",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "팀 로고에 사용할 사진을 선택할 수 있도록 사진 접근을 허용해 주세요.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-iap",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3797087216173591~9704816739",
+          "iosAppId": "ca-app-pub-3797087216173591~4994406373"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -65,5 +83,8 @@
       }
     },
     "owner": "tasddc1569"
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-3797087216173591~9704816739"
   }
 }

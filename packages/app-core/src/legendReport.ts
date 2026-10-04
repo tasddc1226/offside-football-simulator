@@ -19,15 +19,6 @@ export const EVENT_ICON: Record<ChapterEvent['kind'], string> = {
   story: '✦',
 };
 
-/** T-10-073 은퇴 직후에만: 숨겨져 있던 실제 잠재력을 마지막 스카우트 평가와 견준다. */
-export function potVerdict(pot: LegendView['pot']): string {
-  if (!pot) return '';
-  const { gap } = pot;
-  if (gap > 0) return `스카우트 평가(${pot.scout})보다 큰 재능이었어요.`;
-  if (gap < 0) return `스카우트 평가(${pot.scout})만큼은 피지 못했어요.`;
-  return `스카우트의 눈이 정확했어요(평가 ${pot.scout}).`;
-}
-
 type Granted = Extract<RetiredNumberResult, { kind: 'granted' }>;
 
 /** 결번 장면에 그릴 슬롯: 심사 중이 아니고, 이름을 숨긴 결번(anonymous)은 내 선수에게만 보인다. */

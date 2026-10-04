@@ -70,7 +70,7 @@ export function EventResult({ v }: { v: Extract<SheetView, { kind: 'eventResult'
             {'📖 도감 새 항목 · '}
             <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>{s.dexNew}</Txt>
             <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-              {' — 홈의 확률 도감에서 볼 수 있어요'}
+              {' · 홈의 확률 도감에서 볼 수 있어요'}
             </Txt>
           </Txt>
         </View>
@@ -110,10 +110,10 @@ export function EventResult({ v }: { v: Extract<SheetView, { kind: 'eventResult'
                   <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
                     {s.story.name}
                   </Txt>
-                  {' — '}
+                  {'. '}
                 </>
               ) : null}
-              {'이 이야기는 다음에 이어집니다…'}
+              {'이야기는 다음 구간에 이어져요.'}
             </Txt>
           </View>
         )

@@ -5,7 +5,13 @@ import {
   displaySeasonAt,
   openTeamSeasons,
   PRESEASON,
+  MAX_RETIRE_AT,
+  nextRetireAt,
+  PRESEASON_RETIRE_AT,
   previewSeasonAt,
+  RETIRE_AT_LIMIT,
+  retireAtNow,
+  retireAtOf,
   seasonById,
   SERVICE_SEASONS,
   teamSeasonAt,
@@ -70,5 +76,34 @@ describe('T-11-029 시즌별 기록의 기본 시즌', () => {
     expect(SeasonPickQuerySchema.parse('1')).toBe(1);
     expect(SeasonPickQuerySchema.safeParse('9').success).toBe(false);
     expect(SeasonPickQuerySchema.safeParse('-1').success).toBe(false);
+  });
+});
+
+describe('T-11-045 시즌별 은퇴 나이', () => {
+  const open = SERVICE_SEASONS[0]!.startsAt;
+  it('프리시즌(0·NULL)은 41세, 시즌 1은 45세', () => {
+    expect(retireAtOf(0)).toBe(PRESEASON_RETIRE_AT);
+    expect(retireAtOf(null)).toBe(41);
+    expect(retireAtOf(1)).toBe(45);
+    expect(retireAtOf(99)).toBe(41);
+  });
+  it('새 선수는 개막 전이면 41세, 개막부터 45세', () => {
+    expect(retireAtNow('2026-10-05T14:59:59.999Z')).toBe(41);
+    expect(retireAtNow(open)).toBe(45);
+  });
+  it('다음 시즌 은퇴 나이는 누가 은퇴 나이까지 뛰었으면 +1, 아니면 그대로, 59세에서 멈춘다', () => {
+    expect(nextRetireAt(45, true)).toBe(46);
+    expect(nextRetireAt(46, false)).toBe(46);
+    expect(nextRetireAt(58, true)).toBe(59);
+    expect(nextRetireAt(RETIRE_AT_LIMIT, true)).toBe(59);
+  });
+  it('시즌 정의는 해금 규칙을 지킨다 — 시즌 1은 45세, 시즌마다 그대로거나 +1, 59세 이하', () => {
+    expect(SERVICE_SEASONS[0]!.retireAt).toBe(45);
+    // 시즌 2부터 — 새 시즌을 더할 때 은퇴 나이를 잘못 적으면 여기서 막힌다.
+    SERVICE_SEASONS.slice(1).forEach((s, i) => {
+      const prev = SERVICE_SEASONS[i]!.retireAt;
+      expect([prev, nextRetireAt(prev, true)]).toContain(s.retireAt);
+    });
+    expect(MAX_RETIRE_AT).toBe(45);
   });
 });

@@ -6,7 +6,7 @@
 // 랭킹이 된다 — 시즌마다 처음부터 다시 쌓는다. 팀은 편성(나만의 최강 팀)과 경기 성적(시즌 레이스)으로, 구단주는 시즌 동안
 // 꾸준히 찾아온 활동(은퇴시킨 선수·날, 팀 경기한 날, 응원)으로 센다. 팀·구단주 목표치는 프리시즌 팀 53개 분포(2026-10-01)로 잡았다.
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
-import type { AchCategory } from '@offside/contracts/owner-team';
+import { LINEUP_SIZE, type AchCategory } from '@offside/contracts/owner-team';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
 import { DETAIL_POSITIONS, type DetailPos, type PosGroup } from '@offside/contracts/positions';
 import { NATIONAL_WINS } from '@offside/contracts/nations';
@@ -357,7 +357,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
     ),
     group('player', 'collection', '2단계', '기록 조각 모으기', collection),
     group('player', 'legend', '3단계', '전설의 한 명', [
-      feat('one-club', '원클럽맨 — 프로 10시즌 넘게 한 구단', anyone(oneClub)),
+      feat('one-club', '프로 10시즌 넘게 한 구단에서 뛴 원클럽맨', anyone(oneClub)),
       feat(
         'caps-150',
         'A매치 150경기 선수',
@@ -462,7 +462,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
 
   if (team) {
     const players = team.slots.filter((s) => s.careerId !== null);
-    const full = team.slots.length > 0 && players.length === team.slots.length;
+    const full = team.slots.length === LINEUP_SIZE && players.length === LINEUP_SIZE;
     const all = (pred: (s: AchievementTeamSlot) => boolean) => full && players.every(pred);
     const club = players[0]?.lastClubId;
     groups.push(

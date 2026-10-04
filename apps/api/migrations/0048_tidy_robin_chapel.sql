@@ -1,0 +1,1 @@
+ALTER TABLE `career_seasons` ADD `growth_json` text;

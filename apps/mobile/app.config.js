@@ -48,11 +48,8 @@ module.exports = ({ config }) => {
     },
     android: {
       ...config.android,
+      // AD_ID 권한은 AdMob이 쓰므로 막지 않는다. GA4의 광고 ID 미수집은 firebase.json이 맡는다.
       ...(androidFile ? { googleServicesFile: androidFile } : {}),
-      blockedPermissions: [
-        ...(config.android?.blockedPermissions ?? []),
-        'com.google.android.gms.permission.AD_ID',
-      ],
     },
     plugins,
     extra: {

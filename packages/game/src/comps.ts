@@ -142,8 +142,11 @@ export function seasonSetup(s: GameState, S: Season) {
   }));
   if (L.amateur || s.club.id === 'sangmu') return;
   const last = s.career[s.career.length - 1];
-  const same = last && sameClub(last, clubRef(s.club)) && last.league === L.name;
-  const league = clubsIn(s.leagueId).sort((a, b) => b.str - a.str);
+  const stayed = last && sameClub(last, clubRef(s.club));
+  const same = stayed && last.league === L.name;
+  // T-10-110 구단과 함께 승격한 첫 시즌 — 지난 순위는 아래 리그의 것이라 대륙 대회에 나가지 않는다.
+  if (stayed && !same) return;
+  const league = clubsIn(s.leagueId, s).sort((a, b) => b.str - a.str);
   const idx = league.findIndex((c) => c.id === s.club.id);
   const rank = same ? (last!.rank as number) : expectedRank(idx, league.length);
   let acc = 0;
@@ -311,7 +314,7 @@ function contPhase(s: GameState, c: SeasonComp, lines: { t: string; k: string }[
       c.alive = false;
       c.stage = '우승';
       S.trophiesMid!.push(`${c.name} 우승`);
-      lines.push({ t: `${c.name} 우승!!`, k: 'good' });
+      lines.push({ t: `${c.name} 우승!`, k: 'good' });
       return;
     }
     c.stage = r === '16강' ? '8강 진출' : `${r} 통과`;

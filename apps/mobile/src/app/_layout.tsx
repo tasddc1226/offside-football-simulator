@@ -1,6 +1,7 @@
 import '../platform/setup';
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import {
@@ -12,6 +13,8 @@ import {
   BarlowCondensed_800ExtraBold,
 } from '@expo-google-fonts/barlow-condensed';
 import { boot } from '../game/boot';
+import { startPush } from '../platform/push';
+import { syncAdFree } from '../platform/adFree';
 import { useColors, useIsDark } from '../theme/useColors';
 
 void SplashScreen.preventAutoHideAsync();
@@ -32,13 +35,18 @@ export default function RootLayout() {
   }, []);
   const show = ready && fonts;
   useEffect(() => {
+    if (!show) return;
+    startPush();
+    void syncAdFree();
+  }, [show]);
+  useEffect(() => {
     if (show) void SplashScreen.hideAsync();
   }, [show]);
   if (!show) return null;
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style={dark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }} />
-    </>
+    </GestureHandlerRootView>
   );
 }

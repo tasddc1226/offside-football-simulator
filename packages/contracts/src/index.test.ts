@@ -10,7 +10,6 @@ import {
 } from './errors.js';
 import { HealthDataSchema } from './health.js';
 import { CONTRACTS_VERSION } from './index.js';
-import { ClientIdSchema } from './primitives.js';
 import { ProfileSettingsSchema } from './profile.js';
 
 describe('CONTRACTS_VERSION', () => {
@@ -74,24 +73,6 @@ describe('오류 코드 표', () => {
   );
 });
 
-describe('ClientIdSchema', () => {
-  it('cmd_... 형식을 허용한다', () => {
-    expect(ClientIdSchema.safeParse('cmd_1234567890').success).toBe(true);
-  });
-
-  it('UUID 형식도 허용한다', () => {
-    expect(ClientIdSchema.safeParse('550e8400-e29b-41d4-a716-446655440000').success).toBe(true);
-  });
-
-  it('65자는 실패한다', () => {
-    expect(ClientIdSchema.safeParse('a'.repeat(65)).success).toBe(false);
-  });
-
-  it('공백이 포함되면 실패한다', () => {
-    expect(ClientIdSchema.safeParse('cmd 1234').success).toBe(false);
-  });
-});
-
 describe('ProfileSettingsSchema', () => {
   it('textScale: 110은 실패한다', () => {
     const result = ProfileSettingsSchema.safeParse({
@@ -131,5 +112,28 @@ describe('envelope', () => {
   it('meta.requestId 없으면 실패한다', () => {
     const schema = envelope(HealthDataSchema);
     expect(schema.safeParse({ data: { ok: true }, meta: {} }).success).toBe(false);
+  });
+});
+
+describe('T-11-048 SeasonGrowthSchema', () => {
+  const ok = {
+    v: 1,
+    o0: 55,
+    ph: [55, 57, 59],
+    a0: [50, 51, 52, 53, 54, 55],
+    a1: [51, 52, 53, 54, 55, 56],
+    s0: [50.5, 51],
+    s1: [51.5, 52],
+    pot: { s: 74, b: 0, bl: -1.2, r: 0 },
+  };
+  it('정상 값은 통과하고, 능력치 개수·구간 수·키·버전이 어긋나면 거부한다', async () => {
+    const { SeasonGrowthSchema } = await import('./careers.js');
+    expect(SeasonGrowthSchema.safeParse(ok).success).toBe(true);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, a0: [1, 2, 3] }).success).toBe(false);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, ph: [1, 2, 3, 4, 5] }).success).toBe(false);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, s1: Array(65).fill(50) }).success).toBe(false);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, v: 2 }).success).toBe(false);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, extra: 1 }).success).toBe(false);
+    expect(SeasonGrowthSchema.safeParse({ ...ok, o0: 55.5 }).success).toBe(false);
   });
 });

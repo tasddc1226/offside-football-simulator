@@ -7,6 +7,7 @@
   import ShareBar from './ShareBar.svelte';
   import NameReport from './NameReport.svelte';
   import BackBar from './BackBar.svelte';
+  import AdSlot from '../ads/AdSlot.svelte';
   import { motionOK } from './motion.js';
   import { rollCredits } from './creditRoll.js';
 
@@ -33,6 +34,7 @@
     <LegendReport {v} />
     {#if v.own?.id}<OwnHofCards {v} />{/if}
     {#if v.reportId}<NameReport kind="career" id={v.reportId} name={v.name} />{/if}
+    <AdSlot place="legend-bottom" />
   {/if}
   <!-- T-10-128 위쪽 '이전으로' 대신 아래 바: 공유할 수 있는 내 선수는 홈으로 + 공유하기, 그 밖은 '← 이전으로' 하나. -->
   {#if v?.shareId}

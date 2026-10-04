@@ -26,11 +26,14 @@ function config(values = {}) {
     }
   }
 }
-test('unconfigured builds deactivate collection and remove advertising permission', () => {
+test('unconfigured builds deactivate collection and keep the advertising permission for AdMob', () => {
   const c = config();
   assert.equal(c.extra.nativeAnalytics.enabled, false);
   assert.equal(c.ios.infoPlist.FIREBASE_ANALYTICS_COLLECTION_DEACTIVATED, true);
-  assert.ok(c.android.blockedPermissions.includes('com.google.android.gms.permission.AD_ID'));
+  // AD_ID 는 막지 않는다(AdMob이 사용). GA4 쪽 광고 ID 미수집은 firebase.json 단언이 지킨다.
+  assert.ok(
+    !(c.android.blockedPermissions ?? []).includes('com.google.android.gms.permission.AD_ID'),
+  );
   assert.ok(!c.plugins.includes('@react-native-firebase/app'));
   assert.deepEqual(c.runtimeVersion, { policy: 'fingerprint' });
 });
@@ -77,4 +80,5 @@ test('SDK build defaults deny all collection and automatic screen reporting', ()
     fs.readFileSync(new URL('../firebase.json', import.meta.url), 'utf8'),
   )['react-native'];
   for (const [key, value] of Object.entries(settings)) assert.equal(value, false, key);
+  assert.equal(settings.google_analytics_adid_collection_enabled, false);
 });

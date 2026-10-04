@@ -33,11 +33,6 @@ export interface TitleDef {
   /** T-10-096 이 선수가 얻을 수 있는 칭호인지(국적·연맹). 없으면 누구나. 도감은 얻을 수 없는 칭호를 감춘다. */
   avail?: (s: Pick<GameState, 'nation'>) => boolean;
 }
-export interface EarnedTitle {
-  id: string;
-  /** 획득 연도. 0이면 칭호 시스템 이전 저장에서 옮겨 온 기록(연도 모름). */
-  year: number;
-}
 
 export const TITLE_CATS: { id: TitleCat; label: string }[] = [
   { id: 'record', label: '기록' },

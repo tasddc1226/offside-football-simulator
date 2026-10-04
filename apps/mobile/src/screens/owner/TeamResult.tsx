@@ -1,5 +1,6 @@
 // 경기 결과(웹 team/Team.svelte 의 view === 'result', 중계가 끝난 뒤) — 스코어 · 득점 · 레이팅 변화.
 import { View } from 'react-native';
+import { TeamLogo } from '../../components/TeamLogo';
 import type { OwnerTeam, TeamMatch } from '@offside/app-core/api/team';
 import { kstMonthDayTime } from '@offside/app-core/boardText';
 import { OUTCOME_TITLE, outcomeOf } from '@offside/app-core/teamOwner';
@@ -16,6 +17,7 @@ export function TeamResult({
   toTeam,
   replay,
   again,
+  backLabel = '내 팀',
 }: {
   m: TeamMatch;
   team: OwnerTeam | null;
@@ -24,10 +26,12 @@ export function TeamResult({
   toTeam: () => void;
   replay: () => void;
   again: () => void;
+  backLabel?: string;
 }) {
   const gain = m[m.mine].ratingChange;
   const side = (s: TeamMatch['home'], away: boolean, mine: boolean) => (
     <View style={{ flex: 1, minWidth: 0, gap: 2, alignItems: away ? 'flex-end' : 'flex-start' }}>
+      <TeamLogo logo={s.logo} name={s.name} size={40} decorative />
       <Txt bold tone={mine ? 'accent' : 'ink'} style={{ textAlign: away ? 'right' : 'left' }}>
         {s.name}
       </Txt>
@@ -108,7 +112,7 @@ export function TeamResult({
       ) : null}
       <Grid2>
         <Btn block onPress={toTeam} testID="team-result-team">
-          내 팀
+          {backLabel}
         </Btn>
         <Btn block onPress={replay} testID="team-replay">
           중계 다시 보기

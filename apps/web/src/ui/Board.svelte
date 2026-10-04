@@ -27,6 +27,7 @@
   import Topbar from './Topbar.svelte';
   import NicknameForm from './NicknameForm.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
+  import AdSlot from '../ads/AdSlot.svelte';
 
   // 게시판 하나를 보여 준다. 위의 공지사항 · 릴리즈 노트 버튼으로 바꾸면 App이 이 화면을 새로 그린다.
   const board = appState.board;
@@ -321,7 +322,7 @@
               {/if}
             </div>
           {:else}
-            <p class="muted fs-sm" style="margin:0">첫 댓글을 남겨 보세요.</p>
+            <p class="muted fs-sm" style="margin:0">아직 댓글이 없어요.</p>
           {/each}
           {#if detail.blocks.length}
             <details class="board-blocks" data-board-blocks>
@@ -377,6 +378,7 @@
             {/each}
           </ul>
           {#if hasMore}<button class="icon-btn" onclick={() => load(true)}>더 보기</button>{/if}
+          <AdSlot place="board-bottom" />
         </LoadState>
       {/if}
     </section>

@@ -40,13 +40,9 @@ export {
   PatchProfileSettingsBodySchema,
   PutNicknameBodySchema,
   type PutNicknameBody,
-  TossSessionBodySchema,
-  TossSessionResponseSchema,
   type ProfileSettings,
   type Profile,
   type PatchProfileSettingsBody,
-  type TossSessionBody,
-  type TossSessionResponse,
 } from './profile.js';
 
 export {
@@ -60,12 +56,7 @@ export {
   REQUEST_BODY_MAX_BYTES,
 } from './headers.js';
 
-export {
-  HealthDataSchema,
-  HealthResponseSchema,
-  type HealthData,
-  type HealthResponse,
-} from './health.js';
+export { HealthDataSchema } from './health.js';
 
 export {
   CareerPosSchema,
@@ -77,6 +68,8 @@ export {
   CareerSeasonPayloadSchema,
   SeasonCompSchema,
   type SeasonComp,
+  SeasonGrowthSchema,
+  type SeasonGrowth,
   EventLogEntrySchema,
   PlaySignalsSchema,
   PutCareerSeasonBodySchema,
@@ -154,7 +147,7 @@ export {
   type ClubCustomResponse,
 } from './clubs.js';
 
-export { IsoUtcSchema, Hex64Schema, Uint32Schema, ClientIdSchema } from './primitives.js';
+export { IsoUtcSchema } from './primitives.js';
 
 export * from './boards.js';
 export * from './chat.js';
@@ -165,3 +158,6 @@ export * from './ticker.js';
 export * from './teams.js';
 
 export * from './app-auth.js';
+export * from './app-version.js';
+export * from './release-notes.js';
+export * from './push.js';

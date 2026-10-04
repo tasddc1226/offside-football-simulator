@@ -8,6 +8,7 @@ import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
 import { useColors, useIsDark } from '../../theme/useColors';
 import { rem } from '../../theme/type';
+import { AdSlot } from '../../components/AdSlot';
 import { NameReport } from '../../components/NameReport';
 import { BackBar } from '../../ui/ActionBar';
 import { Press } from '../../ui/Press';
@@ -42,6 +43,7 @@ export default function Legend() {
           <LegendReport v={v} />
           {v.own?.id ? <OwnHofCards v={v} /> : null}
           {v.reportId ? <NameReport kind="career" id={v.reportId} name={v.name} /> : null}
+          <AdSlot place="legend-bottom" />
         </>
       ) : null}
     </CreditScreen>

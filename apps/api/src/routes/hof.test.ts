@@ -8,7 +8,7 @@ import { createApp } from '../app.js';
 import { careers } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
 import { retireValue, valueFor } from '@offside/contracts/market-value';
-import { createTestD1, type TestD1 } from '../test/d1.js';
+import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
 
 const CAREER_ID = '3b1d6c1e-2a4f-4f7e-9a0b-7c8d9e0f1a2b';
@@ -88,6 +88,33 @@ describe('공개 명예의 전당 /v1/hof', () => {
   afterEach(async () => {
     await ctx.dispose();
     vi.useRealTimers();
+  });
+
+  it('은퇴 잠재력은 저장된 값만 공개하고 진행 중·값 없는 과거 기록은 만들지 않는다', async () => {
+    const app = createApp();
+    // 조회만으로 진행 커리어의 잠재력이 공개되지 않는다.
+    await ctx.db.update(careers).set({ pot: 95, potReal: 84 }).where(eq(careers.id, CAREER_ID));
+    expect((await app.request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).status).toBe(404);
+    const active = successEnvelope(HofListResponseSchema).parse(
+      await (await app.request('/v1/hof', {}, ctx.env)).json(),
+    ).data;
+    expect(active.entries).toHaveLength(0);
+    await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
+      ...summary,
+      snapshot,
+      potReal: 84,
+    });
+    const detail = successEnvelope(HofDetailResponseSchema).parse(
+      await (await app.request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).json(),
+    ).data;
+    expect(detail.entry.potReal).toBe(84);
+    expect(detail.entry).not.toHaveProperty('pot');
+    await ctx.db.update(careers).set({ potReal: null }).where(eq(careers.id, CAREER_ID));
+    const old = successEnvelope(HofDetailResponseSchema).parse(
+      await (await app.request(`/v1/hof/${CAREER_ID}`, {}, ctx.env)).json(),
+    ).data;
+    expect(old.entry).not.toHaveProperty('potReal');
+    expect(old.entry.peak).toBe(detail.entry.peak);
   });
 
   it('로그인 없이 목록을 읽고, 이름은 공개를 고르기 전엔 익명이다', async () => {
@@ -451,14 +478,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
   });
 
   it('공개 목록은 쿠키가 있어도 세션·프로필을 읽지 않는다(T-10-015)', async () => {
-    const seen: string[] = [];
-    const DB = new Proxy(ctx.env.DB, {
-      get(target, key) {
-        if (key === 'prepare') return (query: string) => (seen.push(query), target.prepare(query));
-        const v = Reflect.get(target, key) as unknown;
-        return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v;
-      },
-    });
+    const { DB, seen } = spyDb(ctx.env.DB);
     const res = await createApp().request(
       '/v1/hof',
       { headers: { Cookie: cookie } },

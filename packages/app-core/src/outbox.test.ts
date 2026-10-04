@@ -153,6 +153,32 @@ describe('T-10-034 전송 중 enqueue', () => {
   });
 });
 
+describe('T-11-040 업로드 한도(429)', () => {
+  it('429는 버리지 않고 큐에 남겨 다음 회차에 다시 보낸다', async () => {
+    const limited = () =>
+      new Response(
+        JSON.stringify({ error: { code: 'RATE_LIMITED', message: 'x', retryable: true } }),
+        {
+          status: 429,
+        },
+      );
+    // 첫 호출은 프로필 확인, 두 번째가 시즌 PUT이다.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(ok())
+      .mockResolvedValueOnce(limited())
+      .mockResolvedValue(ok());
+    vi.stubGlobal('fetch', fetchMock);
+    const { enqueueSeason, flushOutbox } = await import('./outbox.js');
+    enqueueSeason('88888888-8888-8888-8888-888888888888', 2026, seasonBody); // 큐에 넣으면 회차가 한 번 돈다.
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(queue()).toHaveLength(1);
+    await flushOutbox();
+    expect(queue()).toEqual([]);
+  });
+});
+
 describe('T-10-013 소유권 충돌', () => {
   const conflict = (code: string) =>
     new Response(JSON.stringify({ error: { code, message: 'x', retryable: false } }), {

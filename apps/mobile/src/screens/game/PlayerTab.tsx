@@ -1,11 +1,16 @@
 // 선수 탭(웹 tabs/PlayerTab.svelte): 능력치 카드 · 선수 정보 · 국가대표 · 은퇴 선언(32세부터).
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import { POTENTIAL_NOTICE } from '@offside/app-core/potential-view';
 import { TRAITS } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
-import { potFogged, potLabel, potScouted, leagueOf, fmtMoney } from '@offside/game/engine';
+import { leagueOf, fmtMoney } from '@offside/game/engine';
 import { marketValue } from '@offside/game/season';
-import { milStatusText } from '@offside/game/military';
+import {
+  milStatusText,
+  SPORTS_SERVICE_NOTICE,
+  SPORTS_SERVICE_LEGACY_NOTICE,
+} from '@offside/game/military';
 import { nextWC, HOSTS } from '@offside/game/national';
 import type { GameState } from '@offside/game/types';
 import { flagOf, isKorean, nationOf } from '@offside/game/nation';
@@ -54,12 +59,6 @@ function Kv({
   );
 }
 
-const Small = ({ children }: { children: string }) => (
-  <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '400' }}>
-    {children}
-  </Txt>
-);
-
 export function PlayerTab({ s }: { s: GameState }) {
   const c = useColors();
   const L = leagueOf(s.leagueId);
@@ -78,26 +77,7 @@ export function PlayerTab({ s }: { s: GameState }) {
     { k: '체격', testID: 'body', v: `${body.h}cm · ${body.w}kg` },
     { k: '주발', v: s.foot },
     { k: '성장 특성', v: traitName },
-    {
-      k: '스카우트 잠재력 평가',
-      testID: 'pot',
-      v: !potScouted(s) ? (
-        <>
-          {'평가 전 '}
-          <Small>· 고3 시즌을 마치면 첫 평가가 나와요</Small>
-        </>
-      ) : (
-        <>
-          {`${potLabel(s)}등급`}
-          {potFogged(s) ? (
-            <>
-              {' '}
-              <Small>· 21·24세 재평가 때 좁혀져요</Small>
-            </>
-          ) : null}
-        </>
-      ),
-    },
+    { k: '잠재력 평가', testID: 'pot', v: POTENTIAL_NOTICE },
     { k: '최고 OVR', v: String(Math.max(s.peak, ovr(s))) },
     { k: '감독 신뢰', v: s.trust >= 2 ? '두터움' : s.trust >= 0 ? '보통' : '냉랭함' },
     {
@@ -172,6 +152,16 @@ export function PlayerTab({ s }: { s: GameState }) {
             { k: '다음 월드컵', v: `${nextWcYear} · ${nextWcHost}` },
           ]}
         />
+        {isKorean(s) && (
+          <Txt tone="muted" style={{ marginTop: 10, fontSize: rem(0.875) }} testID="military-guide">
+            {SPORTS_SERVICE_NOTICE}
+          </Txt>
+        )}
+        {isKorean(s) && s.mil.exempt && s.mil.sportsService?.monthsLeft == null && (
+          <Txt tone="muted" style={{ marginTop: 8, fontSize: rem(0.875) }} testID="military-legacy">
+            {SPORTS_SERVICE_LEGACY_NOTICE}
+          </Txt>
+        )}
         {tours.length ? (
           <View style={{ marginTop: 8 }}>
             {tours

@@ -68,7 +68,7 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
   it('로그인 없이 읽고, 아무 기록도 없으면 모든 항목이 미달성이다', async () => {
     const data = await read(ctx);
     expect(achieved(data)).toBe(0);
-    expect(data.items.map((x) => x.id)).toEqual(firstsCatalog([]).map((d) => d.id));
+    expect(data.items.map((x) => x.id)).toEqual(firstsCatalog([], data.season).map((d) => d.id));
     expect(data.items.every((x) => x.holder === null && x.achievedAt === null)).toBe(true);
   });
 
@@ -238,5 +238,32 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     // 첫 조회가 한 조각(전체)을 판정한다.
     expect(holderOf(await read(ctx, '?season=1'), 'sgoals30')?.careerId).toBe(B);
     expect(holderOf(await read(ctx, '?season=0'), 'sgoals30')?.careerId).toBe(A);
+  });
+
+  it('T-11-045: 시즌 1 선수가 45세에 은퇴하면 은퇴 나이 해금 기록이 생긴다 — 프리시즌 41세 은퇴는 해당 없다', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const veteran = async (id: string, ages: number[], retireAge: number) => {
+      for (const [i, age] of ages.entries())
+        await putJson(ctx, cookie, `/v1/careers/${id}/seasons/${2060 + i}`, seasonBody({ age }));
+      return putJson(ctx, cookie, `/v1/careers/${id}/retirement`, {
+        ...summary,
+        retireAge,
+        publicName: null,
+      });
+    };
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z')); // 프리시즌
+    expect((await veteran(A, [39, 40], 41)).status).toBe(200);
+    expect((await read(ctx, '?season=0')).items.some((x) => x.id === 'retirecap')).toBe(false);
+
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
+    expect((await veteran(B, [43], 44)).status).toBe(200); // 은퇴 나이 전에 그만둠
+    expect(holderOf(await read(ctx, '?season=1'), 'retirecap')).toBeNull();
+    // 은퇴 나이를 부풀려 보내도 서버는 마지막 시즌 + 1로 맞춘다.
+    expect((await veteran(C, [43, 44], 50)).status).toBe(200);
+    const s1 = await read(ctx, '?season=1');
+    expect(s1.items.find((x) => x.id === 'retirecap')).toMatchObject({
+      label: '45세 은퇴 최초 달성! 다음 시즌 은퇴 나이 46세 해금',
+      holder: { careerId: C },
+    });
   });
 });

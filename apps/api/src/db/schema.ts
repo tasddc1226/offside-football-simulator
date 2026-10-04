@@ -11,6 +11,70 @@ import {
   type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
 
+/** T-11-070 게시판별 KST 하루 첫 글. 삭제·수정·재배포로 발송 이력을 다시 만들지 않는다. */
+export const pushNewsEvents = sqliteTable(
+  'push_news_events',
+  {
+    id: text('id').primaryKey(),
+    board: text('board', { enum: ['notice', 'release'] }).notNull(),
+    day: text('day').notNull(),
+    postId: text('post_id').notNull(),
+    title: text('title').notNull(),
+    createdAt: text('created_at').notNull(),
+    expiresAt: text('expires_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_news_events_day_unique').on(t.board, t.day),
+    index('push_news_events_expires_idx').on(t.expiresAt),
+  ],
+);
+
+/** 기기별 outbox. 접수 결과가 불명확하면 재발송하지 않아 중복 알림을 피한다. */
+export const pushNewsDeliveries = sqliteTable(
+  'push_news_deliveries',
+  {
+    id: text('id').primaryKey(),
+    eventId: text('event_id')
+      .notNull()
+      .references(() => pushNewsEvents.id, { onDelete: 'cascade' }),
+    installationHash: text('installation_hash').notNull(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    state: text('state', {
+      enum: [
+        'pending',
+        'sending',
+        'accepted',
+        'checking',
+        'confirmed',
+        'failed',
+        'unknown',
+        'cancelled',
+      ],
+    })
+      .notNull()
+      .default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    receiptAttempts: integer('receipt_attempts').notNull().default(0),
+    dueAt: text('due_at').notNull(),
+    leaseId: text('lease_id'),
+    ticketId: text('ticket_id'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_news_deliveries_device_unique').on(t.eventId, t.installationHash),
+    index('push_news_deliveries_due_idx').on(t.state, t.dueAt),
+    index('push_news_deliveries_session_idx').on(t.sessionId),
+    index('push_news_deliveries_profile_idx').on(t.profileId),
+    index('push_news_deliveries_installation_idx').on(t.installationHash),
+  ],
+);
+
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
 export const profiles = sqliteTable(
   'profiles',
@@ -102,6 +166,10 @@ export const authAttempts = sqliteTable(
         'APP_SESSION',
         'APPLE_SIGNIN',
         'PROFILE_CREATE',
+        'CAREER_SEASON',
+        'CAREER_RETIRE',
+        'PUSH_DEVICE',
+        'PUSH_TEST',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -109,6 +177,33 @@ export const authAttempts = sqliteTable(
     count: integer('count').notNull(),
   },
   (table) => [uniqueIndex('auth_attempts_kind_subject_unique').on(table.kind, table.subject)],
+);
+
+/** T-11-059 동의한 앱 기기만 등록한다. 세션 폐기·탈퇴·계정 전환 시 이전 계정으로 보내지 않는다. */
+export const pushDevices = sqliteTable(
+  'push_devices',
+  {
+    installationHash: text('installation_hash').primaryKey(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    platform: text('platform', { enum: ['ios', 'android'] }).notNull(),
+    appVersion: text('app_version').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    /** 마지막 본인 테스트 접수 번호. 토큰·세션이 바뀌면 지우고 전달 결과 조회에만 쓴다. */
+    lastTestTicketId: text('last_test_ticket_id'),
+    lastTestSentAt: text('last_test_sent_at'),
+  },
+  (t) => [
+    uniqueIndex('push_devices_token_unique').on(t.token),
+    index('push_devices_session_idx').on(t.sessionId),
+    index('push_devices_profile_idx').on(t.profileId),
+    index('push_devices_updated_idx').on(t.updatedAt),
+  ],
 );
 
 /**
@@ -193,6 +288,8 @@ export const careers = sqliteTable(
     // T-10-092 최고 시점 능력치(contracts PeakProfile JSON — 대표 능력치 6개 + 세부 포지션 8자리 실력). 구단주 팀이
     // 자리마다 실력을 센다. 이 기능 전에 은퇴한 기록·옛 클라이언트는 NULL.
     peakProfile: text('peak_profile'),
+    // 원본이 없는 옛 은퇴 선수의 카드 표시용 추정 능력치. 경기용 peakProfile·roles와 분리한다.
+    cardAttrsJson: text('card_attrs_json'),
     // 서비스 시즌 번호(contracts service-seasons). 서버에 처음 올라온(첫 시즌 업로드) 시각에 진행 중인 시즌으로 한 번
     // 정해져 바뀌지 않는다 — 나중에 시즌 기간을 고쳐도 이미 뛴 선수의 시즌이 소급해 바뀌지 않는다. 0 = 프리시즌, NULL = 시즌 사이 휴식기.
     serviceSeason: integer('service_season'),
@@ -203,12 +300,20 @@ export const careers = sqliteTable(
     nameHiddenAt: text('name_hidden_at'),
     // 1이면 공개 순위(명예의 전당·서버 기록·결번·홈 소식)에서 뺀다. 은퇴 때 시즌 신호가 자동 플레이로 판정되면 서버가 켠다.
     hidden: integer('hidden').notNull().default(0),
-    // T-11-030 잠재력 관찰(어디에도 보이지 않는다). pot: 처음 스카우트 평가(첫 시즌 업로드), potReal: 은퇴 때 공개된 실제 잠재력.
+    // T-11-030 잠재력 관찰. pot은 비공개 최초 스카우트 평가, potReal은 은퇴 리포트·기록실에 공개하는 은퇴 시점 값.
     pot: integer('pot'),
     potReal: integer('pot_real'),
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),
+    // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
+    index('careers_profile_status_season_idx').on(
+      table.profileId,
+      table.status,
+      table.serviceSeason,
+      table.peak,
+    ),
+    index('careers_profile_status_legend_idx').on(table.profileId, table.status, table.legendScore),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
     // 명예의 전당 순위 유형(GET /v1/hof?sort=): status로 은퇴만 좁히고 기록 내림차순 → 레전드 점수로 동점을 가린다.
     index('careers_hof_goals_idx').on(table.status, table.goals, table.legendScore),
@@ -263,6 +368,8 @@ export const careerSeasons = sqliteTable(
     chJson: text('ch_json'),
     /** 자동 플레이 탐지(관찰 전용): 기기가 보낸 조작 요약(PlaySignals) + 서버가 본 headless 여부. 옛 기록은 null. */
     signalsJson: text('signals_json'),
+    /** T-11-048 시즌 성장 기록(SeasonGrowth JSON: 시즌 시작·종료 능력치·세부 능력치, 구간별 OVR, 잠재력). 관찰 전용. */
+    growthJson: text('growth_json'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [
@@ -533,6 +640,8 @@ export const ownerTeams = sqliteTable(
     manager: text('manager').notNull().default(''),
     formation: text('formation').notNull(),
     slotsJson: text('slots_json').notNull(),
+    layoutJson: text('layout_json'),
+    logoJson: text('logo_json'),
     filled: integer('filled').notNull(),
     ovr: integer('ovr').notNull(),
     /** 팀 레이팅(경기 결과로 오르내린다, TEAM_RATING_START에서 시작). */
@@ -600,6 +709,8 @@ export const teamMatches = sqliteTable(
   (table) => [
     index('team_matches_profile_created_idx').on(table.profileId, table.createdAt),
     index('team_matches_away_created_idx').on(table.awayTeamId, table.createdAt),
+    index('team_matches_home_recent_idx').on(table.homeTeamId, table.createdAt, table.id),
+    index('team_matches_away_recent_idx').on(table.awayTeamId, table.createdAt, table.id),
   ],
 );
 

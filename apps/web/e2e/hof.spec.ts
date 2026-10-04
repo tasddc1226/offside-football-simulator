@@ -1,6 +1,26 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { ok, API } from './helpers.js';
+
+async function expectAccessible(page: Page) {
+  // Wait for finite entrance transitions; decorative badge loops intentionally keep running.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+      .every((animation) => animation.playState !== 'running'),
+  );
+  const result = await new AxeBuilder({ page }).analyze();
+  expect(
+    result.violations.map((violation) => ({
+      id: violation.id,
+      nodes: violation.nodes.map((node) => ({
+        target: node.target,
+        summary: node.failureSummary,
+      })),
+    })),
+  ).toEqual([]);
+}
 
 // T-10-005 공개 명예의 전당: 전체 목록(API 스텁) → 다른 유저 선수 상세 → 돌아오기, 내 선수 탭 → 상세.
 const ID = '3b1d6c1e-2a4f-4f7e-9a0b-7c8d9e0f1a2b';
@@ -131,12 +151,12 @@ test('내 선수 탭: 상세 없는 옛 기록은 요약만 보여 준다', asyn
   });
   await page.goto('/');
   await expect(page.locator('.card').filter({ hasText: '명예의 전당' })).toContainText(
-    '불러오지 못했습니다',
+    '불러오지 못했어요',
   );
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('.film-open h1')).toHaveText('옛선수');
-  await expect(page.getByText('요약만 보여 드립니다')).toBeVisible();
+  await expect(page.getByText('요약만 보여 줘요')).toBeVisible();
 });
 
 // T-10-013: 계정에 연결돼 있으면 '내 선수'는 계정 기록이다. 이 기기 기록이 있으면 그 이름을 쓰고,
@@ -249,7 +269,7 @@ test('구단주 내 선수: 계정에 연결되지 않았으면 이 기기 기�
     '명예의 전당',
     '영구결번',
     '팀 랭킹',
-    '업적 랭킹',
+    '구단주 랭킹',
   ]);
 });
 
@@ -282,11 +302,18 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
 
   await home.locator('[data-act="hof-all"]').click();
   const full = page.locator('[data-hof="full"]');
-  await expect(full.locator('h1')).toHaveText('명예의 전당');
-  await expect(full.locator('.hof-row')).toHaveCount(10);
+  await expect(full.locator('h1')).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: '명예의 전당' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(full.locator('[data-hof-podium-rank]')).toHaveCount(3);
+  await expect(full.locator('.hof-row')).toHaveCount(7);
+  await expect(full.locator('[data-hof-id]')).toHaveCount(10);
+  await expect(full.locator('[data-hof-nation]')).toHaveCount(10);
   await expect(full.locator('.hof-pager')).toContainText('1 / 2');
   await expect(full.locator('[data-hof-page="prev"]')).toBeDisabled();
-  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+  await expectAccessible(page);
 
   await full.locator('[data-hof-page="next"]').click();
   await expect(full.locator('.hof-row')).toHaveCount(5);
@@ -363,22 +390,37 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
   await expect(page.locator('[data-hof="home"] [data-hof-sort]')).toHaveCount(0);
   await page.locator('[data-act="hof-all"]').click();
   const full = page.locator('[data-hof="full"]');
+  await full.locator('[data-hof-filters]').click();
   await expect(full.locator('[data-hof-sort="score"]')).toHaveAttribute('aria-pressed', 'true');
 
+  if ((await full.locator('[data-hof-filters]').getAttribute('aria-expanded')) === 'false')
+    await full.locator('[data-hof-filters]').click();
   await full.locator('[data-hof-sort="goals"]').click();
   await expect(full.locator('.hof-source')).toContainText('득점 기록이 있는 선수 2명 · 득점 순');
-  await expect(full.locator('.hof-row').first().locator('.hof-value')).toHaveText('401골');
+  await expect(
+    full
+      .locator('[data-hof-podium-rank="1"] .hof-podium-value, .hof-ranking-list .hof-value')
+      .first(),
+  ).toHaveText('401골');
   expect(asked.at(-1)).toBe('?limit=10&sort=goals');
-  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+  await expectAccessible(page);
 
+  if ((await full.locator('[data-hof-filters]').getAttribute('aria-expanded')) === 'false')
+    await full.locator('[data-hof-filters]').click();
   await full.locator('[data-hof-sort="ballon"]').click();
   await expect(full.locator('[data-hof-sort="ballon"]')).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => asked.at(-1)).toBe('?limit=10&sort=ballon');
 
   // T-10-100 은퇴 가치 순: 오른쪽에 큰 두 단위(억·천만)로 적는다.
+  if ((await full.locator('[data-hof-filters]').getAttribute('aria-expanded')) === 'false')
+    await full.locator('[data-hof-filters]').click();
   await full.locator('[data-hof-sort="value"]').click();
   await expect.poll(() => asked.at(-1)).toBe('?limit=10&sort=value');
-  await expect(full.locator('.hof-row').first().locator('.hof-value')).toHaveText('1,115억 3천만');
+  await expect(
+    full
+      .locator('[data-hof-podium-rank="1"] .hof-podium-value, .hof-ranking-list .hof-value')
+      .first(),
+  ).toHaveText('1,115억 3천만');
   await expect(full.locator('.hof-source')).toContainText('은퇴 가치 순');
 });
 
@@ -413,15 +455,17 @@ test('명예의 전당 이름 검색', async ({ page }) => {
   expect(asked.filter((a) => a.includes('q='))).toHaveLength(1); // 글자마다 묻지 않는다.
   await expect(full.locator('.hof-row .hof-rank')).toHaveText(['7', '42']);
   await expect(full.locator('.hof-source')).toContainText("'오프' 검색 은퇴 선수 2명");
-  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+  await expectAccessible(page);
 
   // 유형을 바꿔도 검색어는 그대로, 없는 이름은 안내.
+  if ((await full.locator('[data-hof-filters]').getAttribute('aria-expanded')) === 'false')
+    await full.locator('[data-hof-filters]').click();
   await full.locator('[data-hof-sort="goals"]').click();
   await expect
     .poll(() => asked.at(-1))
     .toBe(`?limit=10&sort=goals&q=${encodeURIComponent('오프')}`);
   await search.fill('없는사람');
-  await expect(full.locator('.empty')).toHaveText("'없는사람'이 들어간 이름의 선수가 없습니다.");
+  await expect(full.locator('.empty')).toHaveText("'없는사람'이 들어간 이름의 선수가 없어요.");
   await search.fill('');
   await expect.poll(() => asked.at(-1)).toBe('?limit=10&sort=goals');
   // 검색어를 둔 채 닫으면 검색도 풀린다.
@@ -438,6 +482,7 @@ test('명예의 전당: 은퇴 가치 칩에 NEW 표시(기한까지만)', async
   await page.clock.setFixedTime(new Date('2026-10-01T00:00:00+09:00'));
   await page.goto('/');
   await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-hof-filters]').click();
   const chip = page.locator('[data-hof="full"] [data-hof-sort="value"]');
   await expect(chip.locator('.hof-new')).toHaveText('NEW');
   await expect(page.locator('[data-hof="full"] .hof-new')).toHaveCount(1);
@@ -445,34 +490,29 @@ test('명예의 전당: 은퇴 가치 칩에 NEW 표시(기한까지만)', async
   await page.clock.setFixedTime(new Date('2026-10-14T00:00:00+09:00'));
   await page.reload();
   await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-hof-filters]').click();
   await expect(chip).toBeVisible();
   await expect(chip.locator('.hof-new')).toHaveCount(0);
 });
 
 // T-10-103 개막 전 시즌 버튼엔 'Coming soon' — 개막하면 사라진다. 눌러 보면 개막 안내.
-test('명예의 전당: 개막 전 시즌에 Coming soon 표시', async ({ page }) => {
+test('명예의 전당: 컴팩트 시즌 선택에서 개막 예정 시즌을 안내한다', async ({ page }) => {
   await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry], total: 1 })));
   await page.clock.setFixedTime(new Date('2026-10-01T00:00:00+09:00'));
   await page.goto('/');
   await page.locator('[data-act="hof-all"]').click();
   const full = page.locator('[data-hof="full"]');
-  const s1 = full.locator('[data-hof-season="1"]');
-  await expect(s1.locator('[data-soon]')).toHaveText('Coming soon');
-  await expect(full.locator('[data-hof-season="all"] [data-soon]')).toHaveCount(0);
-  const [tag, btn] = await Promise.all([
-    s1.locator('[data-soon]').boundingBox(),
-    full.locator('[data-hof-season="all"]').boundingBox(),
-  ]);
-  expect(tag!.y).toBeLessThan(btn!.y); // 버튼 높이는 그대로, 위 테두리에 걸친다.
-  await s1.click();
+  const season = full.locator('[data-hof-season-select]');
+  await expect(season.locator('option[value="1"]')).toContainText('개막 예정');
+  expect((await season.boundingBox())!.height).toBeLessThanOrEqual(40);
+  await season.selectOption('1');
   await expect(full.locator('[data-hof-upcoming]')).toContainText('시즌 1은');
-  expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
+  await expectAccessible(page);
 
   await page.clock.setFixedTime(new Date('2026-10-06T00:00:00+09:00'));
   await page.reload();
   await page.locator('[data-act="hof-all"]').click();
-  await expect(full.locator('[data-hof-season="1"]')).toBeVisible();
-  await expect(full.locator('[data-soon]')).toHaveCount(0);
+  await expect(season.locator('option[value="1"]')).not.toContainText('개막 예정');
 });
 
 // T-10-015: 화면을 오가도 같은 공개 조회는 다시 보내지 않는다(메모 60초).
@@ -500,4 +540,113 @@ test('홈 ↔ 전체 보기 ↔ 상세를 오가도 같은 목록을 다시 요�
   expect(count(`/v1/hof/${ID}`)).toBe(1);
   expect(count('/v1/boards/notice/posts')).toBe(1);
   expect(count('/v1/boards/release/posts')).toBe(1);
+});
+
+test('내 선수 국적: 계정 응답으로 옛 로컬 기록을 보완하고 다른 기기 국적·한국·미기록을 구분한다', async ({
+  page,
+}) => {
+  const ids = [
+    ID,
+    '00000000-0000-4000-8000-000000000021',
+    '00000000-0000-4000-8000-000000000022',
+    '00000000-0000-4000-8000-000000000023',
+  ];
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [] })));
+  await page.route(`${API}/v1/careers/mine`, (r) =>
+    r.fulfill(
+      ok({
+        linked: true,
+        entries: ids.map((id, i) => ({
+          ...entry,
+          id,
+          name: ['브라질', '잉글랜드', '한국', '옛 기록'][i],
+          nation: ['BR', 'GB-ENG', 'KR', null][i],
+          legendScore: 400 - i,
+        })),
+      }),
+    ),
+  );
+  await page.addInitScript(
+    (id) =>
+      localStorage.setItem(
+        'ft_hof',
+        JSON.stringify([
+          {
+            id,
+            name: '로컬 브라질',
+            pos: 'FW',
+            number: 7,
+            age: 35,
+            peak: 91,
+            score: 400,
+            apps: 540,
+            goals: 301,
+            assists: 120,
+            trophies: 9,
+            awards: 5,
+            caps: 88,
+            ballon: 1,
+            lastClub: '테스트 FC',
+            date: '2026-09-24',
+          },
+        ]),
+      ),
+    ID,
+  );
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="my-players-all"]').click();
+  const rows = page.locator('[data-my-player]');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(0)).toContainText('로컬 브라질');
+  for (const [i, nation] of ['BR', 'GB-ENG', 'KR'].entries()) {
+    await expect(rows.nth(i).locator('[data-hof-nation]')).toHaveAttribute(
+      'data-hof-nation',
+      nation,
+    );
+  }
+  await expect(rows.nth(3).locator('[data-hof-nation]')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('이 기기 내 선수: 새 로컬 국적을 전달하고 국적 없는 옛 저장은 국기 없이 계속 연다', async ({
+  page,
+}) => {
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [] })));
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
+  await page.addInitScript(() => {
+    const base = {
+      pos: 'FW',
+      number: 7,
+      age: 35,
+      peak: 80,
+      apps: 540,
+      goals: 301,
+      assists: 120,
+      trophies: 9,
+      awards: 5,
+      caps: 88,
+      ballon: 1,
+      lastClub: '테스트 FC',
+      date: '2026-09-24',
+    };
+    localStorage.setItem(
+      'ft_hof',
+      JSON.stringify([
+        { ...base, name: '새 브라질', nation: 'BR', score: 500 },
+        { ...base, name: '옛 기록', score: 300 },
+      ]),
+    );
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-my-player="0"] [data-hof-nation]')).toHaveAttribute(
+    'data-hof-nation',
+    'BR',
+  );
+  await expect(page.locator('[data-my-player="1"] [data-hof-nation]')).toHaveCount(0);
+  await page.locator('[data-my-player="1"]').click();
+  await expect(page.locator('.film-open h1')).toHaveText('옛 기록');
+  await expect(page.getByText('요약만 보여 줘요')).toBeVisible();
 });

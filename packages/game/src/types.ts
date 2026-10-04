@@ -51,6 +51,8 @@ export interface Season {
   comps?: SeasonComp[];
   trophiesMid?: string[];
   capsStart?: number;
+  /** T-10-110 승격으로 s.leagueId가 바뀐 뒤에도 이 시즌의 순위표가 뛴 리그로 남도록, 승격한 시즌에만 적는다. */
+  leagueId?: string;
 }
 
 export interface CareerRecord {
@@ -100,7 +102,10 @@ export interface NatState {
 }
 
 export interface MilState {
+  /** 특례를 받은 메달. 기존 저장 키를 유지하며 완전 면제를 뜻하지 않는다. */
   exempt: string | null;
+  /** 시즌 단위 체육요원 복무. null은 기간 기록이 없는 기존 특례 저장이다. */
+  sportsService?: { monthsLeft: number | null; lastYear: number };
   served: boolean;
   serving: boolean;
   left: number;
@@ -180,6 +185,8 @@ export interface RenewOption {
   years: number;
   salary: number;
   desc: string;
+  /** 조기 연장: years는 잔여 1년을 포함한 총기간. 없는 옛 제안은 만료 재계약이다. */
+  extension?: { years: number; clubId: string; year: number };
 }
 export type MilOptionKind = 'sangmu' | 'army' | 'serve';
 /** military.ts의 병역 관련 선택지. market()이 다루는 MarketOption의 한 갈래이기도 하다. */
@@ -239,6 +246,11 @@ export interface GameState {
   nation?: string | undefined;
   /** T-10-096 키(cm)·몸무게(kg). 기능 이전 저장엔 없다. */
   body?: Body | undefined;
+  /**
+   * T-11-045 은퇴 나이 — 이 나이가 되는 이적 시장에서 은퇴한다. 만들 때의 서비스 시즌(service-seasons retireAt)으로
+   * 정해져 바뀌지 않는다. 없으면 프리시즌 선수(41세) — 옛 저장과 프리시즌 선수는 이 필드가 없다.
+   */
+  retireAt?: number | undefined;
   foot: Foot;
   /** 주력 조합에서 파생된 호환용 유형 id(역할·이벤트 조건·서버 meta). */
   type: string;
@@ -258,6 +270,10 @@ export interface GameState {
   money: number;
   leagueId: string;
   club: Club;
+  /** T-10-110 이 커리어에서 리그를 옮긴 구단(K2 우승 승격·그 자리를 비운 K1 구단 강등) — 구단 id → 지금 리그 id.
+   * 정적 CLUBS 소속은 그대로 두고 커리어마다 따로 둔다. 없으면 모든 구단이 정적 소속이다. 지금 리그는 leagueId가
+   * 정본이고, club.leagueId는 CLUBS에서 복사한 정적 값이다(읽지 않는다). */
+  leagueMoves?: Record<string, string>;
   contract: Contract | null;
   phase: number;
   uniYears: number;
@@ -296,9 +312,14 @@ export interface GameState {
   /** T-9-009. 이번 시즌 버퍼링된 선택 로그(`ft_save`와 함께 자동 저장). 시즌 종료 시 업로드 페이로드로
    * 옮겨지고 비워진다. 최대 300개, 넘치면 가장 오래된 것부터 버린다. */
   evBuf?: EventLogEntry[];
+  /** T-11-048. 이번 시즌 구간(프리시즌·전반기·후반기)에 들어갈 때의 OVR. 시즌 종료 업로드(`takeSeasonGrowth`)가
+   * 옮겨 가고 비운다. 관찰용 기록이라 게임 진행에는 쓰이지 않고 RNG도 쓰지 않는다. */
+  ovrBuf?: number[];
 }
 
 export interface HofEntry {
+  /** T-11-072 은퇴 때 남긴 국적. 옛 로컬 기록에는 없어 국적을 추측하지 않는다. */
+  nation?: string | undefined;
   name: string;
   pos: Pos;
   dpos?: DetailPos | undefined;
@@ -306,7 +327,7 @@ export interface HofEntry {
   peak: number;
   /** T-10-092 서버로 보내는 최고 시점 능력치. 옛 기록엔 없다. */
   profile?: PeakProfile | undefined;
-  /** T-11-030 은퇴 때 공개되는 실제 잠재력(서버 관찰용). 옛 기록엔 없다. */
+  /** T-11-030 은퇴 때 기록한 실제 잠재력(반올림). 리포트·기록실·서버 관찰에 쓰며 옛 기록엔 없다. */
   pot?: number | undefined;
   age: number;
   apps: number;

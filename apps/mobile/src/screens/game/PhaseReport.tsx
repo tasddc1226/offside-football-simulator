@@ -162,7 +162,7 @@ export function PhaseReport({ r }: { r: Report }) {
               <Txt v="eyebrow" style={{ marginBottom: 6 }}>
                 {x.name}
               </Txt>
-              <Txt tone="muted">이번 A매치 명단에서 제외됐습니다.</Txt>
+              <Txt tone="muted">이번 A매치 명단에서 빠졌어요.</Txt>
             </>
           )}
         </Later>

@@ -2,7 +2,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Animated,
+  Keyboard,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   TextInput,
@@ -17,6 +19,7 @@ import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Card, Press, Txt } from '../../ui';
+import { revealFocusedInput } from '../../ui/scroll';
 
 /** 설정 카드(웹 .card.settings-card: 안쪽 여백 16×18). */
 export function SettingsCard({
@@ -200,6 +203,7 @@ export function Switch({
 export function TextField({
   style,
   multiline,
+  onFocus,
   ...rest
 }: TextInputProps & { style?: StyleProp<ViewStyle> }) {
   const c = useColors();
@@ -211,6 +215,10 @@ export function TextField({
       autoCorrect={false}
       multiline={multiline}
       {...rest}
+      onFocus={(e) => {
+        onFocus?.(e);
+        revealFocusedInput();
+      }}
       style={[
         {
           borderWidth: 1,
@@ -293,7 +301,9 @@ export function SelectField<V extends string | number>({
   label,
   testID,
   style,
+  compact = false,
 }: {
+  compact?: boolean;
   value: V;
   options: readonly SelectOption<V>[];
   onChange: (v: V) => void;
@@ -313,14 +323,19 @@ export function SelectField<V extends string | number>({
         testID={testID}
         accessibilityLabel={`${label}, ${cur?.label ?? ''}`}
         accessibilityHint="눌러서 바꿔요"
-        onPress={() => setOpen(true)}
+        accessibilityState={{ expanded: open }}
+        onPress={() => {
+          // 리그·시즌을 고르는 동안 이전 입력칸의 키보드가 되살아나지 않게 한다.
+          Keyboard.dismiss();
+          setOpen(true);
+        }}
         style={[
           {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 8,
-            minHeight: 44,
+            minHeight: compact && Platform.OS === 'android' ? 48 : 44,
             paddingHorizontal: 12,
             borderWidth: 1,
             borderColor: c.line,
@@ -330,7 +345,7 @@ export function SelectField<V extends string | number>({
           style,
         ]}
       >
-        <Txt numberOfLines={1} style={{ flexShrink: 1 }}>
+        <Txt numberOfLines={1} style={{ flexShrink: 1, ...(compact ? { fontSize: 13 } : {}) }}>
           {cur?.label ?? ''}
         </Txt>
         <Txt tone="muted" accessible={false} style={{ fontSize: rem(0.75) }}>

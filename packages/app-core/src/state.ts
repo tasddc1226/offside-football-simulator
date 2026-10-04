@@ -6,7 +6,7 @@ import { BODY_DEFAULT, type Body } from '@offside/contracts/body';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { HofSort, RetiredNumberResult } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
-import { activeSeason } from '@offside/contracts/service-seasons';
+import { activeSeason, retireAtNow } from '@offside/contracts/service-seasons';
 import { detailPosOpen, dposFor } from '@offside/contracts/positions';
 import type { OutboxItem } from './outbox.js';
 import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
@@ -96,6 +96,9 @@ export const detailOpenNow = (): boolean => detailPosOpen(new Date().toISOString
 export const draftDpos = (c: Pick<DraftCharacter, 'pos' | 'dpos'>): DetailPos | undefined =>
   (detailOpenNow() && dposFor(c.pos, c.dpos)) || undefined;
 
+/** T-11-045 새 커리어의 은퇴 나이 — 지금 시즌(개막 전이면 프리시즌)의 값으로 정해져 커리어에 고정된다. */
+export const draftRetireAt = (): number => retireAtNow(new Date().toISOString());
+
 export function randomName(): string {
   return pick(SURNAMES) + pick(GIVEN);
 }
@@ -133,8 +136,8 @@ export interface LegendView {
   reportId: string | null;
   /** T-10-026 대표 칭호 id. */
   title: string | null;
-  /** T-10-073 은퇴 직후(진행 중 세이브)에만 — 실제 잠재력 공개. 저장된 기록에는 없다. */
-  pot?: { real: string; scout: string; gap: number; ach: number } | undefined;
+  /** 은퇴 시점의 기록된 잠재력(반올림한 truePot). 값이 없는 옛 기록에는 표시하지 않는다. */
+  pot?: { real: string; value: number } | undefined;
   /** T-10-076 영구결번 심사 결과. null = 자격 없음, undefined = 아직 모름(업로드 전·옛 기록). */
   rn?: RetiredNumberResult | null | undefined;
 }

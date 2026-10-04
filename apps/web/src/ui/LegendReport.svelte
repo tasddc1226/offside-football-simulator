@@ -4,11 +4,11 @@
   // T-10-062: 정보 나열 대신 한 편의 엔딩 크레딧처럼 — 타이틀 → 통산 기록 → 클럽별 챕터(우승·이정표·이야기) →
   // 대표팀 → 우승·수상 롤 → 마지막 휘슬. 은퇴 직후든 다시 볼 때든 사용자가 스크롤해 내려가는 대로 장면이
   // 화면에 들어올 때 하나씩 올라온다. 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
+  import { RETIREMENT_POTENTIAL_NOTE } from '@offside/app-core/potential-view';
   import type { Snippet } from 'svelte';
   import { legendScoreBreakdown, legendTitle } from '@offside/game/season';
   import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '@offside/game/retirement-report';
   import { POS_LABEL } from '@offside/game/pos-label';
-  import { potAchText } from '@offside/game/stats';
   import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
   import { peakValue, retireValue } from '@offside/contracts/market-value';
   import type { LegendView } from './state.svelte.js';
@@ -20,7 +20,7 @@
   import { motionOK } from './motion.js';
   import ClubMark from './ClubMark.svelte';
   import { rnOf } from './retiredNumber.svelte.js';
-  import { EVENT_ICON as ICON, potVerdict as verdictOf, yearsOf } from '@offside/app-core/legendReport';
+  import { EVENT_ICON as ICON, yearsOf } from '@offside/app-core/legendReport';
 
   // end: 리포트 맨 아래(다음 행동 버튼 등).
   const { v, end }: { v: LegendView; end?: Snippet } = $props();
@@ -82,8 +82,6 @@
   });
   const rnGranted = $derived(rnv?.kind === 'granted' ? rnv : null);
 
-  // T-10-073 은퇴 직후에만: 숨겨져 있던 실제 잠재력을 마지막 스카우트 평가와 견준다.
-  const potVerdict = $derived(verdictOf(v.pot));
 </script>
 
 {#snippet event(e: ChapterEvent, j: number)}
@@ -132,14 +130,14 @@
       <div><b><CountUp value={caps} animate={playing} run={seen.highlights} /></b><span>A매치</span></div>
       <div><b><CountUp value={v.totals.trophies} animate={playing} run={seen.highlights} /></b><span>트로피</span></div>
     </section>
-    {#if !d}<p class="film-note">시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 드립니다.</p>{/if}
+    {#if !d}<p class="film-note">시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 줘요.</p>{/if}
     {#if playing && !seen.journey}<div class="film-cue" aria-hidden="true">스크롤해서 커리어 돌아보기<i>↓</i></div>{/if}
   </section>
 
   {#if chapters.length}
     <header class="film-head" data-credit="journey" use:reveal>
       <div class="eyebrow film-kicker">The Journey</div>
-      <h2>커리어 여정</h2>
+      <h2>구단별 커리어</h2>
     </header>
     <ol class="film-rail">
       {#each chapters as c, i (i)}
@@ -204,12 +202,12 @@
   {#if v.pot}
     <section class="film-pot" data-credit="pot" data-legend-pot use:reveal>
       <div class="eyebrow film-kicker">Scout Report</div>
-      <p>끝까지 숨겨져 있던 잠재력</p>
+      <p>은퇴 시점 잠재력 평가</p>
       <b>{v.pot.real}</b>
-      <p>{potVerdict}</p>
+      <p>잠재력 {v.pot.value} · 은퇴 시점에 기록한 값</p>
+      <p>{RETIREMENT_POTENTIAL_NOTE}</p>
       <div class="film-pot-ach" data-legend-ach>
-        <span>잠재력 달성도</span><strong>{v.pot.ach}%</strong>
-        <small>최고 OVR {v.peak} · {potAchText(v.pot.ach)}</small>
+        <span>최고 OVR</span><strong>{v.peak}</strong>
       </div>
     </section>
   {/if}

@@ -1,187 +1,150 @@
-// T-10-092 팀 선발 그라운드(웹 team/TeamPitch.svelte · TeamLines.svelte). 공격이 위. 내 팀 편성(자리를 눌러 선수 고르기)과
-// 팀 프로필(보기만)이 함께 쓴다. TeamLines는 팀의 공격·중원·수비·골문 힘.
-import { useState } from 'react';
-import { View } from 'react-native';
-import {
-  DETAIL_LABEL,
-  FORMATION_ROWS,
-  FORMATIONS,
-  type FormationId,
-} from '@offside/contracts/owner-team';
+import type { RefObject } from 'react';
+import { Pressable, View } from 'react-native';
+import { presetLayout, type FormationId, type TeamLayout } from '@offside/contracts/owner-team';
 import type { TeamLines as Lines } from '@offside/app-core/api/team';
-import { alpha } from '../theme/colors';
-import { DISPLAY, rem } from '../theme/type';
+import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
-import { useShadow } from '../ui/Card';
 import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
+import { PlayerCard, type PlayerCardData } from './PlayerCard';
+import { DragPlayer, type PlayerDrag } from './DragPlayer';
+import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
 
-export type PitchCell = { rating: number; name: string; youth: boolean };
-
-function Slot({
-  code,
-  cell,
-  index,
-  onpick,
-}: {
-  code: string;
-  cell: PitchCell;
-  index: number;
-  onpick?: ((i: number) => void) | undefined;
-}) {
-  const c = useColors();
-  const label = `${DETAIL_LABEL[code as keyof typeof DETAIL_LABEL]} · ${cell.name} · ${cell.rating}`;
-  const style = {
-    flex: 1,
-    flexBasis: 0,
-    maxWidth: 76,
-    minWidth: 0,
-    minHeight: 64,
-    alignItems: 'center',
-    gap: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 2,
-    borderWidth: 1,
-    borderStyle: cell.youth ? 'dashed' : 'solid',
-    borderColor: alpha(c.onPitch, 0.35),
-    borderRadius: 12,
-    backgroundColor: cell.youth ? 'transparent' : 'rgba(0,0,0,0.22)',
-  } as const;
-  const inner = (
-    <>
-      <Txt
-        style={{
-          fontFamily: DISPLAY[400],
-          fontSize: rem(0.6875),
-          lineHeight: rem(0.6875) * 1.4,
-          letterSpacing: 0.08 * rem(0.6875),
-          color: c.onPitch,
-        }}
-      >
-        {code}
-      </Txt>
-      <Txt
-        style={{
-          fontFamily: DISPLAY[700],
-          fontVariant: ['tabular-nums'],
-          fontSize: rem(1.25),
-          lineHeight: rem(1.25),
-          color: cell.youth ? c.onPitch : c.pitchAccent,
-        }}
-      >
-        {cell.rating}
-      </Txt>
-      <Txt
-        numberOfLines={1}
-        style={{
-          maxWidth: '100%',
-          fontSize: rem(0.6875),
-          lineHeight: rem(0.6875) * 1.4,
-          color: c.onPitch,
-        }}
-      >
-        {cell.name}
-      </Txt>
-    </>
-  );
-  return onpick ? (
-    <Press
-      testID={`slot-${index}`}
-      accessibilityLabel={label}
-      onPress={() => onpick(index)}
-      style={style}
-    >
-      {inner}
-    </Press>
-  ) : (
-    <View
-      testID={`slot-${index}`}
-      accessible
-      accessibilityRole="none"
-      accessibilityLabel={label}
-      style={style}
-    >
-      {inner}
-    </View>
-  );
-}
-
+export type PitchCell = PlayerCardData;
 export function TeamPitch({
   formation,
   cells,
+  layout,
   onpick,
+  ondrag,
+  pitchRef,
+  selected,
+  animate = true,
+  onplace,
+  height = 450,
 }: {
   formation: FormationId;
   cells: readonly PitchCell[];
+  layout?: TeamLayout | null;
   onpick?: ((i: number) => void) | undefined;
+  ondrag?: PlayerDrag | undefined;
+  pitchRef?: RefObject<View | null>;
+  selected?: number | null;
+  animate?: boolean;
+  onplace?: ((x: number, y: number) => void) | undefined;
+  height?: number;
 }) {
   const c = useColors();
-  const shadow = useShadow();
-  const [h, setH] = useState(0);
-  const codes = FORMATIONS[formation];
-  /** 그라운드 줄(공격이 위). 각 줄은 자리 인덱스 목록. */
-  const rows = (() => {
-    let at = 0;
-    return FORMATION_ROWS[formation]
-      .map((n) => {
-        const row = Array.from({ length: n }, (_, k) => at + k);
-        at += n;
-        return row;
-      })
-      .reverse();
-  })();
-  const filled = cells.filter((x) => !x.youth).length;
+  const positions = layout ?? presetLayout(formation);
   return (
-    <View
-      accessibilityLabel={`선발 ${filled}명 · 나머지 유스 선수`}
-      style={[{ borderRadius: 16, backgroundColor: c.pitch }, shadow]}
-    >
+    <View testID="team-pitch" style={{ height, borderRadius: 16, backgroundColor: c.pitch }}>
       <View
-        onLayout={(e) => setH(e.nativeEvent.layout.height)}
-        style={{
-          borderRadius: 16,
-          overflow: 'hidden',
-          gap: 10,
-          paddingVertical: 14,
-          paddingHorizontal: 6,
-        }}
+        pointerEvents="none"
+        style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 16 }}
       >
-        {/* 잔디 줄무늬(44px씩 번갈아)와 하프라인. */}
-        {Array.from({ length: Math.ceil(h / 88) }, (_, k) => (
+        {Array.from({ length: 5 }, (_, i) => (
           <View
-            key={k}
-            pointerEvents="none"
+            key={i}
             style={{
               position: 'absolute',
+              top: ((i + 0.5) * height) / 5,
+              height: height / 10,
               left: 0,
               right: 0,
-              top: k * 88 + 44,
-              height: 44,
               backgroundColor: c.pitch2,
             }}
           />
         ))}
+        <View style={{ position: 'absolute', inset: 12, borderWidth: 1, borderColor: c.chalk }} />
         <View
-          pointerEvents="none"
           style={{
             position: 'absolute',
-            left: 0,
-            right: 0,
-            top: Math.floor(h / 2),
+            top: '50%',
+            left: 12,
+            right: 12,
             height: 1,
             backgroundColor: c.chalk,
           }}
         />
-        {rows.map((row, r) => (
-          <View key={r} style={{ flexDirection: 'row', justifyContent: 'space-around', gap: 4 }}>
-            {row.map((i) => {
-              const cell = cells[i];
-              return cell ? (
-                <Slot key={i} code={codes[i]!} cell={cell} index={i} onpick={onpick} />
-              ) : null;
-            })}
-          </View>
+        <View
+          style={{
+            position: 'absolute',
+            top: height / 2 - 40,
+            left: '50%',
+            marginLeft: -40,
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            borderWidth: 1,
+            borderColor: c.chalk,
+          }}
+        />
+        {[true, false].map((top) => (
+          <View
+            key={String(top)}
+            style={{
+              position: 'absolute',
+              left: '25%',
+              right: '25%',
+              height: 60,
+              ...(top ? { top: 12 } : { bottom: 12 }),
+              borderWidth: 1,
+              borderColor: c.chalk,
+            }}
+          />
         ))}
+      </View>
+      <View
+        ref={pitchRef}
+        collapsable={false}
+        style={{ position: 'absolute', top: 20, bottom: 20, left: 12, right: 12 }}
+      >
+        {onplace ? (
+          <Pressable
+            testID="pitch-space"
+            accessibilityLabel="선택한 선수를 그라운드 빈 공간에 배치"
+            onPress={(e) => onplace(e.nativeEvent.locationX, e.nativeEvent.locationY)}
+            style={{ position: 'absolute', inset: 0 }}
+          />
+        ) : null}
+        {positions.map((pos, i) => {
+          const cell = cells[i];
+          if (!cell) return null;
+          const country = !cell.youth
+            ? NATION_BY_CODE.get(cell.nation ?? DEFAULT_NATION)
+            : undefined;
+          return (
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                left: `${pos.x}%`,
+                top: `${pos.y}%`,
+                width: 62,
+                height: 88,
+                marginLeft: -31,
+                marginTop: -44,
+                zIndex: selected === i ? 2 : 1,
+              }}
+            >
+              <DragPlayer index={i} id={null} drag={ondrag}>
+                <Press
+                  testID={`slot-${i}`}
+                  onPress={onpick ? () => onpick(i) : undefined}
+                  accessibilityLabel={`${pos.slot} · ${cell.name}${country ? ` · ${country.ko}` : ''} · 포지션 OVR ${cell.rating}${ondrag ? ' · 길게 눌러 이동' : ''}`}
+                  accessibilityState={{ selected: selected === i }}
+                  style={{
+                    borderRadius: 10,
+                    borderWidth: selected === i ? 2 : 0,
+                    borderColor: c.pitchAccent,
+                  }}
+                >
+                  <PlayerCard cell={cell} code={pos.slot} compact animate={animate} />
+                </Press>
+              </DragPlayer>
+            </View>
+          );
+        })}
       </View>
     </View>
   );

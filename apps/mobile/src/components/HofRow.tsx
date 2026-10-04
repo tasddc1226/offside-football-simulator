@@ -46,13 +46,17 @@ export interface HofRowProps {
   clubId?: string | null | undefined;
   /** T-10-076 영구결번 등번호. */
   rn?: number | null | undefined;
-  /** T-10-096 국적 코드 — 대한민국이 아니면 이름 앞에 국기를 붙인다. */
+  /** T-10-096 국적 코드 — 없는 예전 커리어는 대한민국으로 표시한다. */
   nation?: string | null | undefined;
+  /** 국적을 모르는 옛 로컬 기록에는 국기를 표시하지 않는다. */
+  showNation?: boolean;
   /** T-10-125 기록 요약이 칸보다 길면 말줄임 대신 홈 전광판처럼 오른쪽에서 왼쪽으로 흘린다. */
   flow?: boolean;
   /** 모바일 기록실 줄(웹 .card[data-hof] .hof-row) — 순위 칸 34px, 좌우 여백 2px. */
   compact?: boolean;
   /** 맨 위 줄이면 위 구분선을 뺀다(웹 .hof-row:first-child). 기본은 rank가 0일 때. */
+  plain?: boolean;
+  showPosition?: boolean;
   first?: boolean;
 }
 
@@ -185,15 +189,17 @@ export function RowFrame({
   rank,
   compact = false,
   first,
+  plain = false,
   children,
 }: {
   rank: number;
   compact?: boolean;
   first?: boolean | undefined;
+  plain?: boolean;
   children: ReactNode;
 }) {
   const c = useColors();
-  const medal = MEDAL_NAMES[rank];
+  const medal = plain ? undefined : MEDAL_NAMES[rank];
   const noTop = first ?? rank === 0;
   return (
     <View
@@ -223,7 +229,13 @@ export function RowFrame({
           style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: 10 }}
         />
       ) : null}
-      <RankBadge rank={rank + 1} width={compact ? 34 : 40} />
+      {plain ? (
+        <Txt num tone="muted" center style={{ width: 24, fontSize: 15 }}>
+          {rank + 1}
+        </Txt>
+      ) : (
+        <RankBadge rank={rank + 1} width={compact ? 34 : 40} />
+      )}
       <View style={{ flex: 1, minWidth: 0 }}>{children}</View>
     </View>
   );
@@ -244,12 +256,17 @@ export function HofRow({
   clubId = null,
   rn = null,
   nation = null,
+  showNation = true,
   flow = false,
   compact = false,
   first,
+  plain = false,
+  showPosition = true,
 }: HofRowProps) {
   const c = useColors();
-  const foreign = nation && nation !== DEFAULT_NATION ? NATION_BY_CODE.get(nation) : undefined;
+  const country = showNation
+    ? (NATION_BY_CODE.get(nation ?? DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION))
+    : undefined;
   const tt = titleById(titleId);
   const stats = useMemo(
     () =>
@@ -257,7 +274,7 @@ export function HofRow({
     [t, showScore],
   );
   return (
-    <RowFrame rank={rank} compact={compact} first={first}>
+    <RowFrame rank={rank} compact={compact} first={first} plain={plain}>
       {/* 두 줄: 윗줄은 이름·포지션·칭호와 오른쪽 값, 아랫줄 기록 요약은 값 밑까지 넓게 쓰고 넘치면 말줄임(T-10-105). */}
       <View style={{ gap: 3 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 10 }}>
@@ -272,21 +289,32 @@ export function HofRow({
               rowGap: 3,
             }}
           >
-            <ClubMark name={club} id={clubId} size={18} />
-            {foreign ? (
-              <Txt
-                accessibilityRole="image"
-                accessibilityLabel={foreign.ko}
-                testID={`hof-nation-${foreign.code}`}
-                style={{ fontSize: rem(1) }}
-              >
-                {flagOf(foreign.code)}
+            <View
+              style={[
+                { flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 0 },
+                plain ? { width: '100%' } : { flexShrink: 1 },
+              ]}
+            >
+              <ClubMark name={club} id={clubId} size={18} />
+              {country ? (
+                <Txt
+                  accessibilityRole="image"
+                  accessibilityLabel={country.ko}
+                  testID={`hof-nation-${country.code}`}
+                  style={{ fontSize: rem(1) }}
+                >
+                  {flagOf(country.code)}
+                </Txt>
+              ) : null}
+              <Txt bold numberOfLines={plain ? 1 : undefined} style={{ flexShrink: 1 }}>
+                {name}
+              </Txt>
+            </View>
+            {showPosition ? (
+              <Txt tone="muted" style={{ fontSize: 12 }}>
+                {posLabel({ pos, dpos })}
               </Txt>
             ) : null}
-            <Txt bold style={{ flexShrink: 1 }}>
-              {name}
-            </Txt>
-            <Pill>{posLabel({ pos, dpos })}</Pill>
             {rn != null ? (
               <View
                 accessibilityLabel={`영구결번 ${rn}번`}
@@ -312,7 +340,21 @@ export function HofRow({
           </View>
           <Value value={value} unit={unit} />
         </View>
-        <StatsLine text={stats} flow={flow} />
+        {plain ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingTop: 3 }}>
+            {[
+              `${t.apps.toLocaleString('ko-KR')}경기`,
+              `${t.goals.toLocaleString('ko-KR')}골`,
+              `${t.assists.toLocaleString('ko-KR')}도움`,
+            ].map((text) => (
+              <Txt key={text} tone="muted" style={{ fontSize: 12 }}>
+                {text}
+              </Txt>
+            ))}
+          </View>
+        ) : (
+          <StatsLine text={stats} flow={flow} />
+        )}
       </View>
     </RowFrame>
   );

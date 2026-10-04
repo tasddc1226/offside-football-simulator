@@ -5,6 +5,12 @@ import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  /** 공지·릴리즈 노트 하루 첫 게시 자동 푸시. 운영에만 켠다. */
+  NEWS_PUSH_ENABLED?: string;
+  /** 관리자 자신의 등록 기기만 테스트. 기본 off. 전체 발송 기능과 별개다. */
+  PUSH_TEST_ENABLED?: string;
+  /** Expo enhanced push security용 secret. 클라이언트에는 넣지 않는다. */
+  EXPO_PUSH_ACCESS_TOKEN?: string;
   DB: D1Database;
   /** local|staging|production. */
   ENVIRONMENT: string;
@@ -30,8 +36,6 @@ export type Bindings = {
   LIVE?: DurableObjectNamespace<LiveHub>;
   /** T-11-015 채팅방(src/chat/room.ts). 테스트엔 없다 — 없으면 채팅 소켓은 503, 입장권은 SERVICE_UNAVAILABLE. */
   CHAT?: DurableObjectNamespace<ChatRoom>;
-  /** T-10-076 영구결번을 여는 시각(ISO, UTC). 운영에만 둔다 — 없으면 바로 열려 있다. 오픈 뒤 지운다. */
-  RETIRED_NUMBERS_OPEN_AT?: string;
 };
 
 export type SessionContext = {

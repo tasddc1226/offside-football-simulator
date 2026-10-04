@@ -1,6 +1,7 @@
 // 상대 고르기(웹 team/Team.svelte 의 view === 'opponents') — 내 팀 OVR과 비슷한 다른 구단주의 팀에 도전한다.
 // 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
 import { View } from 'react-native';
+import { TeamLogo } from '../../components/TeamLogo';
 import { TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
 import type { TeamOpponent } from '@offside/app-core/api/team';
 import { recordText } from '@offside/app-core/teamText';
@@ -20,6 +21,9 @@ export function TeamOpponents({
   challenge,
   hint,
   toTeam,
+  saveAndFind,
+  saving = false,
+  canSave = true,
 }: {
   ovr: number;
   matchesLeft: number;
@@ -31,7 +35,10 @@ export function TeamOpponents({
   challenge: (o: TeamOpponent) => void;
   hint: string | null;
   /** 편성 탭으로(지금 시즌이면). */
-  toTeam?: () => void;
+  toTeam?: (() => void) | undefined;
+  saveAndFind?: (() => void) | undefined;
+  saving?: boolean;
+  canSave?: boolean;
 }) {
   const c = useColors();
   return (
@@ -57,6 +64,16 @@ export function TeamOpponents({
           <Txt tone="muted" testID="match-hint">
             {hint}
           </Txt>
+          {saveAndFind ? (
+            <Btn
+              kind="primary"
+              disabled={saving || !canSave}
+              onPress={saveAndFind}
+              testID="team-save-find"
+            >
+              {saving ? '저장 중…' : '변경 저장 후 상대 보기'}
+            </Btn>
+          ) : null}
           {toTeam ? (
             <Btn sm style={{ alignSelf: 'flex-start' }} onPress={toTeam}>
               편성으로
@@ -79,6 +96,7 @@ export function TeamOpponents({
                   borderTopColor: c.line,
                 }}
               >
+                <TeamLogo logo={o.logo} name={o.name} size={32} decorative />
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Txt bold>{o.name}</Txt>
                   <Txt

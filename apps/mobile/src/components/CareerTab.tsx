@@ -5,7 +5,7 @@ import { Animated, Easing, ScrollView, View, type TextStyle } from 'react-native
 import { useSnapshot } from 'valtio';
 import type { GameState, LegendSource } from '@offside/game/types';
 import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
-import { nextMilestones } from '@offside/game/records';
+import { careerGoals, GOALS_NOTE } from '@offside/app-core/career-feedback';
 import { peakValue, seasonValue } from '@offside/contracts/market-value';
 import { prefs } from '../store';
 import { alpha } from '../theme/colors';
@@ -26,7 +26,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
   const t = totals(s);
   const rows = s.career.slice().reverse();
   const miles = (s.miles || []).slice().reverse();
-  const next = 'attrs' in s && !s.retired ? nextMilestones(s) : [];
+  const next = 'attrs' in s && !s.retired ? careerGoals(s) : [];
   const peakV = chart ? peakValue(s.career) : null;
   const back = s.pos === 'GK' || s.pos === 'DF';
   const totalCells: [number, string][] = [
@@ -92,10 +92,13 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
               다음 목표
             </Txt>
           </View>
-          <View style={{ gap: 10 }}>
+          <Txt v="sm" tone="muted">
+            {GOALS_NOTE}
+          </Txt>
+          <View style={{ gap: 10 }} testID="career-goals">
             {next.map((m, i) => (
               <View key={m.key} style={{ gap: 4 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <View style={{ gap: 4 }}>
                   <Txt v="sm" style={{ fontWeight: '600' }}>
                     {m.label}
                   </Txt>
@@ -230,14 +233,14 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
           </Txt>
         )}
         <Txt v="xs" tone="muted">
-          경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다. 몸값은 시즌을 마친 때의
-          리그·OVR·나이로 매긴 추정치(이적료 기준)예요.
+          경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록이에요. 몸값은 시즌을 마친 때의
+          리그·OVR·나이로 매긴 이적료 기준 추정치예요.
         </Txt>
       </Card>
       <Card gap={0}>
         <Txt v="eyebrow">Journey</Txt>
         <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 4 }}>
-          커리어 여정
+          커리어 이정표
         </Txt>
         {miles.length ? (
           miles.map((m, i) => (
@@ -267,7 +270,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
           ))
         ) : (
           <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-            프로 데뷔부터 여정이 기록됩니다.
+            프로 데뷔부터 이정표가 쌓여요.
           </Txt>
         )}
       </Card>

@@ -1,9 +1,25 @@
+import { configureMeasurement, type OperationResult } from '@offside/app-core/measurement';
+import type { Progress } from '@offside/app-core/player-metrics';
 import { enabled } from './config.js';
 import type { Career } from '@offside/app-core/analytics-model';
 export { enabled } from './config.js';
 let adapter: typeof import('./browser.js') | undefined;
 let screen = 'home';
 let initializing = false;
+const pending: OperationResult[] = [];
+configureMeasurement((result) => {
+  if (adapter) return adapter.trackOperation(result);
+  try {
+    if (
+      enabled() &&
+      localStorage.getItem('offside_analytics_consent_v1') === 'granted' &&
+      pending.length < 20
+    )
+      pending.push(result);
+  } catch {
+    /* storage denied */
+  }
+});
 // Optional analytics never blocks mounting, game actions or save recovery. No action replay.
 export function initializeAnalytics(initialScreen: string, restoredCareerId: string | null = null) {
   screen = initialScreen;
@@ -13,6 +29,7 @@ export function initializeAnalytics(initialScreen: string, restoredCareerId: str
     .then((m) => {
       adapter = m;
       m.initializeAnalytics(screen, restoredCareerId);
+      for (const result of pending.splice(0)) m.trackOperation(result);
     })
     .catch(() => {});
 }
@@ -21,6 +38,7 @@ export function trackPage(next: string) {
   adapter?.trackPage(next);
 }
 export const analytics = {
+  complete: (p: Progress) => adapter?.analytics.complete(p),
   replace: () => adapter?.analytics.replace(),
   start: (s: Career, previous: Career | null) => adapter?.analytics.start(s, previous),
   play: (s: Career, firstAction = false) => adapter?.analytics.play(s, firstAction),

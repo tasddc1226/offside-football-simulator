@@ -4,6 +4,7 @@
   import { COMMENT_NICKNAME_MAX } from '@offside/contracts/board-limits';
   import { putNickname } from '@offside/app-core/api/client';
   import { accountCache } from './account-state.svelte.js';
+  import { refreshChatIdentity } from './chat-state.svelte.js';
   import { toast } from './helpers.js';
   import { doneOnEnter } from './inputDone.js';
 
@@ -22,6 +23,7 @@
     accountCache.value = r.data;
     accountCache.fetchedAt = Date.now();
     value = r.data.nickname ?? value;
+    refreshChatIdentity();
     toast('닉네임을 정했어요');
     onsaved?.(value);
   }
@@ -46,4 +48,3 @@
     {current ? '바꾸기' : '정하기'}
   </button>
 </form>
-

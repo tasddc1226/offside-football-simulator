@@ -19,12 +19,17 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
         다음 시즌, 어디서 뛸까요?
       </Txt>
       <Txt tone="muted">{s.note}</Txt>
+      {s.assessment ? (
+        <Txt v="sm" testID="market-feedback">
+          {s.assessment}
+        </Txt>
+      ) : null}
       <View style={{ gap: 10 }}>
         {s.options.map((o, i) => (
           <Press
             key={i}
             testID={`opt-${i}`}
-            accessibilityLabel={`${o.name}, ${o.lg}${o.salary !== null ? `, 연봉 ${o.salary}` : ''}`}
+            accessibilityLabel={`${o.name}, ${o.lg}${o.salary !== null ? `, 연봉 ${o.salary}` : ''}${o.sub ? `, ${o.sub}` : ''}${o.reason ? `, ${o.reason}` : ''}`}
             onPress={() => {
               buzz();
               pickOption(i);
@@ -65,6 +70,11 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
             {o.salary !== null ? (
               <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
                 {o.sub}
+              </Txt>
+            ) : null}
+            {o.reason ? (
+              <Txt v="sm" tone="muted" testID={`offer-feedback-${i}`}>
+                {o.reason}
               </Txt>
             ) : null}
           </Press>

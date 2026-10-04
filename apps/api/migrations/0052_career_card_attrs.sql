@@ -1,0 +1,1 @@
+ALTER TABLE `careers` ADD `card_attrs_json` text;

@@ -6,7 +6,7 @@ import {
 } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { kstDays } from '../db/repos/admin.js';
+import { kstDays } from '../time.js';
 import { auditLog, careers } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {

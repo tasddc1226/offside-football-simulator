@@ -12,8 +12,10 @@
   import { num, recordText } from '@offside/app-core/teamText';
   import { appState, type TeamView } from './state.svelte.js';
   import { accountCache } from './account-state.svelte.js';
+  import { isMember } from '@offside/app-core/account';
   import Account from './Account.svelte';
   import MyPlayers from './MyPlayers.svelte';
+  import TeamLogo from './team/TeamLogo.svelte';
   import { loadHOF } from '@offside/game/season';
   import { startGoogleLogin } from './login.js';
   import { go } from './nav.js';
@@ -25,14 +27,14 @@
   let admin = $state(false);
   const linked = $derived.by(() => {
     const acct = accountCache.value;
-    return !!acct && acct !== 'error' && acct.linked.google;
+    return !!acct && acct !== 'error' && isMember(acct);
   });
   // T-10-103 비로그인으로 확인됐고 이 기기에 은퇴한 선수도 없으면 빈 '내 선수'를 숨긴다(확인 중·연결 실패면 그대로 둔다).
   const localCount = loadHOF().length;
   // 로그인 안 함(익명 프로필이거나 세션 없음). 확인 중·연결 실패는 아니다.
   const guest = $derived.by(() => {
     const acct = accountCache.value;
-    return acct === null || (!!acct && acct !== 'error' && !acct.linked.google);
+    return acct === null || (!!acct && acct !== 'error' && !isMember(acct));
   });
   const nickname = $derived.by(() => {
     const acct = accountCache.value;
@@ -78,7 +80,7 @@
           <span class="muted fs-sm">{guest ? '기록은 이 기기에만 저장돼요' : card?.team ? `${card.team.name} · ${card.season}` : 'Google 계정으로 로그인했어요'}</span>
         </div>
       </div>
-      {#if summary?.players === 0}
+      {#if (guest && localCount === 0) || summary?.players === 0}
         <p class="muted fs-sm owner-empty">첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.</p>
       {:else}
       <dl class="owner-stats">
@@ -94,6 +96,7 @@
   {#if linked}
     <section class="card owner-team" aria-label="내 팀" data-owner-team>
       <div class="owner-team-head">
+        {#if card?.team}<TeamLogo logo={card.team.logo} name={card.team.name} size={44} decorative />{/if}
         <div class="owner-who">
           <small class="eyebrow">My team{card?.season ? ` · ${card.season}` : ''}</small>
           <h2>{card?.team?.name ?? '내 팀'}</h2>
@@ -110,7 +113,7 @@
           <div><dt>오늘 경기</dt><dd>{card.left}/{card.perDay}</dd></div>
         </dl>
         <div class="owner-actions">
-          <button class="btn" data-act="team" onclick={() => openTeam()}>내 팀 · 업적</button>
+          <button class="btn" data-act="team" onclick={() => openTeam()}>내 팀</button>
           <button class="btn btn-accent" data-act="owner-play" disabled={!!card.playHint} onclick={() => openTeam('opponents')}>경기하기</button>
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
@@ -119,7 +122,7 @@
           {card ? ownerTeamEmptyText(card) : cardFailed ? '시즌마다 은퇴한 선수로 팀을 꾸려 겨루고, 라이브 랭킹과 구단 업적을 채워요.' : '불러오는 중…'}
         </p>
         <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={() => openTeam()}>
-          {card && card.players > 0 ? '팀 만들기' : '내 팀 · 시즌 업적'}
+          {card && card.players > 0 ? '팀 만들기' : '내 팀'}
         </button>
       {/if}
     </section>
@@ -237,6 +240,7 @@
     align-items: flex-start;
     gap: 12px;
   }
+  .owner-team-head .owner-who { flex: 1; min-width: 0; }
   .owner-ovr {
     flex: none;
     display: grid;

@@ -2,6 +2,7 @@
 // 웹(ui/sheets/*.svelte)·앱 시트 컴포넌트가 그대로 그린다(컴포넌트는 게임 로직을 직접 부르지 않는다).
 import type { Chip } from '@offside/game/stats';
 import type { TitleView } from '@offside/game/titles';
+import type { Promotion } from '@offside/game/promotion';
 import type { ResolveResult } from '@offside/game/event-runner';
 import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
@@ -161,9 +162,13 @@ export type SheetView =
       gala: string[];
       miles: string[];
       titles: TitleView[];
+      /** T-10-110 K리그2 우승 승격. */
+      promo: Promotion | undefined;
       notes: string[];
-      /** T-10-112 고3 첫 시즌 뒤 처음 공개하는 스카우트 잠재력 평가(그 외 시즌은 null). */
-      scout: string | null;
+      /** 옛 시트 호환용. 은퇴 전에는 화면에 표시하지 않는다. 육성 중 안내는 scoutHint가 맡는다. */
+      scout?: string | null;
+      /** 스카우트 한마디(scoutHint). 잠재력 등급 대신 수준만 문장으로 알려 준다. */
+      scoutHint?: string | null;
       fans: string[];
       age: number;
     }
@@ -171,8 +176,10 @@ export type SheetView =
       kind: 'market';
       eyebrow: string;
       note: string;
+      assessment?: string | undefined;
       options: {
         clubId?: string;
+        reason?: string | undefined;
         name: string;
         lg: string;
         salary: string | null;
@@ -193,7 +200,7 @@ export type SheetView =
       next: string | null;
     }
   | {
-      /** T-11-039 이적시장에서 고른 구단과의 계약서. 사인하면 onSign, ×는 onClose(이적시장으로 돌아간다). */
+      /** 이적·조기 연장 계약서. 사인하면 onSign, ×는 onClose(저장된 이적시장으로 돌아간다). */
       kind: 'contract';
       eyebrow: string;
       title: string;

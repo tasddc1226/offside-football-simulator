@@ -2,7 +2,7 @@
   // T-10-092 팀의 공격·중원·수비·골문 힘(내 팀 편성 · 팀 프로필).
   import type { TeamLines } from '@offside/app-core/api/team';
 
-  let { lines }: { lines: TeamLines } = $props();
+  let { lines, compact = false }: { lines: TeamLines; compact?: boolean } = $props();
 
   const CELLS = [
     ['atk', '공격'],
@@ -12,7 +12,7 @@
   ] as const;
 </script>
 
-<dl class="team-lines" data-team-lines>
+<dl class="team-lines" class:compact data-team-lines>
   {#each CELLS as [k, label] (k)}
     <div><dt>{label}</dt><dd>{Math.round(lines[k])}</dd></div>
   {/each}
@@ -42,4 +42,9 @@
     font-size: 1.25rem;
     font-weight: 700;
   }
+  .team-lines.compact {gap:0;}
+  .team-lines.compact div {display:flex;justify-content:center;gap:6px;padding:10px 0;background:none;border-radius:0;border-right:1px solid var(--line);}
+  .team-lines.compact div:last-child {border-right:0;}
+  .team-lines.compact dt {font-size:12px;}
+  .team-lines.compact dd {font-size:20px;line-height:1;}
 </style>

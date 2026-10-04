@@ -51,6 +51,11 @@ export function pick<T>(a: readonly T[]): T {
   return a[Math.floor(rnd() * a.length)] as T;
 }
 export const chance = (p: number): boolean => rnd() < p;
+/** 가중 룰렛 — 난수 하나로 weight 비율에 따라 칸 번호를 고른다. 부동소수 오차로 끝까지 못 고르면 -1(부르는 쪽이 정한다). */
+export function weightedIndex<T>(list: readonly T[], weight: (x: T) => number): number {
+  let x = rnd() * list.reduce((t, c) => t + weight(c), 0);
+  return list.findIndex((c) => (x -= weight(c)) <= 0);
+}
 /** 정규분포 난수(Box–Muller). r: 난수원 — 화면 연출(드래그 슛)은 게임 RNG 대신 Math.random을 넘긴다. */
 export function gauss(r: () => number = rnd): number {
   let u = 0,

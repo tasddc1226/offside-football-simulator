@@ -40,7 +40,7 @@
   async function share() {
     if (!shot) return;
     try {
-      await navigator.share({ files: [shot.file], text: `${h.name}의 축구 인생 — 오프사이드 offside-lab.com` });
+      await navigator.share({ files: [shot.file], text: `${h.name}의 축구 인생. 오프사이드 offside-lab.com` });
     } catch (e) {
       // 공유 시트를 닫은 건 실패가 아니다.
       if ((e as DOMException)?.name !== 'AbortError') save();

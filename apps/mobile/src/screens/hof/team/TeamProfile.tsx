@@ -14,6 +14,7 @@ import { num as n, recordText } from '@offside/app-core/teamText';
 import { localCareerNames } from '@offside/game/season';
 import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { NameReport } from '../../../components/NameReport';
+import { TeamLogo } from '../../../components/TeamLogo';
 import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
 import { toast } from '../../../game/host';
 import { DISPLAY, rem } from '../../../theme/type';
@@ -66,6 +67,7 @@ export default function TeamProfile({ id }: { id: string }) {
   const cells =
     team?.slots.map((s) => ({
       rating: s.rating,
+      nation: s.nation,
       name: (mine && s.careerId && localNames.get(s.careerId)) || s.name,
       youth: s.careerId === null,
     })) ?? [];
@@ -86,6 +88,7 @@ export default function TeamProfile({ id }: { id: string }) {
                 gap: 12,
               }}
             >
+              <TeamLogo name={team.name} logo={team.logo} size={48} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Txt tone="muted" style={{ fontSize: rem(0.8333) }}>
                   {`${team.seasonName}${team.rank ? ` · RANK #${team.rank}` : ''}`}
@@ -169,7 +172,7 @@ export default function TeamProfile({ id }: { id: string }) {
             </View>
           </Card>
 
-          <TeamPitch formation={team.formation} cells={cells} />
+          <TeamPitch layout={team.layout} formation={team.formation} cells={cells} />
 
           <Card gap={12}>
             <TeamLines lines={team.lines} />
@@ -244,7 +247,7 @@ export default function TeamProfile({ id }: { id: string }) {
               />
             ) : (
               <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-                첫 기록을 기다리고 있어요. 팀 경기와 시즌 순위의 배지가 이곳에 쌓여요.
+                아직 기록이 없어요. 팀 경기와 시즌 순위 배지가 여기에 쌓여요.
               </Txt>
             )}
           </Card>

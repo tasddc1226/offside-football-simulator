@@ -6,20 +6,25 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, ScrollView, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { TeamMatch } from '@offside/app-core/api/team';
-import { clockText, liveScript, type LiveLine } from '@offside/app-core/teamLive';
+import {
+  FLASH_MS,
+  MOMENTUM_START,
+  PHASE_LABEL,
+  clockText,
+  liveScript,
+  momentumAfter,
+  momentumDecay,
+  playbackPlan,
+  waitMs,
+  type LiveLine,
+  type LivePhase,
+} from '@offside/app-core/teamLive';
 import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Txt } from '../../ui';
 import { Grid2 } from './TeamParts';
-
-type Phase = '1st' | 'ht' | '2nd' | 'ft';
-const PHASE_LABEL: Record<Phase, string> = {
-  '1st': '전반',
-  ht: '하프타임',
-  '2nd': '후반',
-  ft: '경기 종료',
-};
+import { TeamLogo } from '../../components/TeamLogo';
 
 /** 중계 줄 하나 — 나타날 때 위에서 살짝 내려앉는다(웹 tl-in). */
 function FeedRow({ l, motionOK }: { l: LiveLine; motionOK: boolean }) {
@@ -111,18 +116,16 @@ export function TeamLive({
   const { motionOK } = useSnapshot(prefs);
   // 경기 하나에 한 번 만든다(부모가 경기마다 key로 새로 그린다).
   const [script] = useState(() => liveScript(match, name));
-  const [goalMinutes] = useState(() =>
-    script.filter((l) => l.kind === 'goal').map((l) => l.minute),
-  );
+  const [plan] = useState(() => playbackPlan(script));
 
   const [shown, setShown] = useState<number[]>([]);
   const [clock, setClock] = useState(0);
   const [extra, setExtra] = useState(0);
-  const [phase, setPhase] = useState<Phase>('1st');
+  const [phase, setPhase] = useState<LivePhase>('1st');
   const [score, setScore] = useState<[number, number]>([0, 0]);
   const [flash, setFlash] = useState<'home' | 'away' | null>(null);
   /** 경기 흐름(0 = 원정 쪽이 몰아침, 1 = 홈 쪽이 몰아침). */
-  const [momentum, setMomentum] = useState(0.5);
+  const [momentum, setMomentum] = useState(MOMENTUM_START);
   const [fast, setFast] = useState(false);
   const fastRef = useRef(false);
   const runRef = useRef({ alive: true });
@@ -136,7 +139,7 @@ export function TeamLive({
   const banner = useRef(new Animated.Value(0)).current;
   const bump = useRef(new Animated.Value(1)).current;
   const pulse = useRef(new Animated.Value(1)).current;
-  const mom = useRef(new Animated.Value(0.5)).current;
+  const mom = useRef(new Animated.Value(MOMENTUM_START)).current;
 
   useEffect(() => {
     if (!motionOK) return;
@@ -176,52 +179,30 @@ export function TeamLive({
     const run = { alive: true };
     runRef.current = run;
     const sleep = (ms: number) =>
-      new Promise<void>((r) => setTimeout(r, fastRef.current ? Math.round(ms / 2.5) : ms));
+      new Promise<void>((r) => setTimeout(r, waitMs(ms, fastRef.current)));
 
     function show(i: number) {
       const l = script[i]!;
       setShown((prev) => [i, ...prev]);
-      if (l.side && l.kind !== 'corner') {
-        const push = l.kind === 'goal' ? 0.3 : l.kind === 'build' ? 0.2 : 0.12;
-        setMomentum((m) => Math.min(0.9, Math.max(0.1, m + (l.side === 'home' ? push : -push))));
-      }
+      setMomentum((m) => momentumAfter(m, l));
       if (l.kind === 'goal' && l.score) {
         setScore(l.score);
         setFlash(l.side ?? null);
         clearTimeout(flashTimer.current);
-        flashTimer.current = setTimeout(() => setFlash(null), 1800);
+        flashTimer.current = setTimeout(() => setFlash(null), FLASH_MS);
       }
     }
 
+    // 순서·대기 시간은 app-core playbackPlan이 정한다. 여기서는 단계마다 상태를 반영하고 기다린다.
     async function loop() {
-      let i = 0;
-      for (let min = 0; min <= 90; min++) {
+      for (const step of plan) {
         if (!run.alive) return;
-        setClock(min);
-        setExtra(0);
-        if (min === 46) setPhase('2nd');
-        // 그 분의 줄(추가시간 줄은 그 분의 끝).
-        while (run.alive && i < script.length && script[i]!.minute === min && !script[i]!.extra) {
-          const k = script[i]!.kind;
-          show(i++);
-          await sleep(k === 'goal' ? 1700 : k === 'build' ? 900 : 520);
-        }
-        while (run.alive && i < script.length && script[i]!.minute === min && script[i]!.extra) {
-          const l = script[i]!;
-          for (let x = 1; x <= l.extra! && run.alive; x++) {
-            setExtra(x);
-            await sleep(260);
-          }
-          show(i++);
-          if (l.kind === 'ht') {
-            setPhase('ht');
-            await sleep(1600);
-          } else if (l.kind === 'ft') setPhase('ft');
-        }
-        // 흐름은 조금씩 가운데로 돌아온다. 골이 2분 안에 있으면 시계가 느려진다.
-        setMomentum((m) => m + (0.5 - m) * 0.08);
-        const near = goalMinutes.some((g) => g > min && g - min <= 2);
-        await sleep(near ? 700 : 240);
+        if (step.clock !== undefined) setClock(step.clock);
+        if (step.extra !== undefined) setExtra(step.extra);
+        if (step.show !== undefined) show(step.show);
+        if (step.phase) setPhase(step.phase);
+        if (step.decay) setMomentum(momentumDecay);
+        if (step.wait > 0) await sleep(step.wait);
       }
       finish();
     }
@@ -339,6 +320,7 @@ export function TeamLive({
               transform: [{ scale: flash === 'home' && motionOK ? 1.06 : 1 }],
             }}
           >
+            <TeamLogo logo={match.home.logo} name={match.home.name} size={40} decorative />
             <Txt
               style={{
                 fontWeight: '700',
@@ -405,6 +387,7 @@ export function TeamLive({
               transform: [{ scale: flash === 'away' && motionOK ? 1.06 : 1 }],
             }}
           >
+            <TeamLogo logo={match.away.logo} name={match.away.name} size={40} decorative />
             <Txt
               style={{
                 fontWeight: '700',

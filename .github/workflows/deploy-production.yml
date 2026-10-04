@@ -41,6 +41,10 @@ jobs:
       # Empty until the consent notice and GA4 console setup are approved for release.
       VITE_GA4_MEASUREMENT_ID: ${{ vars.VITE_GA4_MEASUREMENT_ID }}
       VITE_GA4_HOSTNAME: ${{ vars.VITE_GA4_HOSTNAME }}
+      # T-11-061 web ads. Empty until the AdSense site is approved and ad units exist; no slots render without them.
+      VITE_ADSENSE_CLIENT: ${{ vars.VITE_ADSENSE_CLIENT }}
+      VITE_ADSENSE_HOSTNAME: ${{ vars.VITE_ADSENSE_HOSTNAME }}
+      VITE_ADSENSE_SLOTS: ${{ vars.VITE_ADSENSE_SLOTS }}
     steps:
       - name: Require main and explicit deploy confirmation
         env:
@@ -98,6 +102,7 @@ jobs:
       - name: Validate critical compatibility
         run: |
           pnpm --filter @offside/scripts exec vitest run production-release.test.mjs
+          node .github/scripts/publish-release-notes.mjs validate .release-notes
           pnpm --filter @offside/api typecheck
           pnpm --filter @offside/web typecheck
 
@@ -199,6 +204,15 @@ jobs:
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_API_URL/v1/profile" >/dev/null
           curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-max-time 90 --retry-all-errors "$PRODUCTION_WEB_URL/" | grep -qF '오프사이드'
 
+      - name: Inspect announcement push outbox counts
+        if: inputs.mode == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT board, day, COUNT(*) event_count FROM push_news_events GROUP BY board, day ORDER BY day DESC LIMIT 10; SELECT state, COUNT(*) delivery_count FROM push_news_deliveries GROUP BY state;" > .release/news-push.json
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -209,6 +223,7 @@ jobs:
             .release/counts-before.json
             .release/counts-after.json
             .release/schema-after.json
+            .release/news-push.json
           if-no-files-found: ignore
           retention-days: 30
 
@@ -315,12 +330,17 @@ jobs:
       - name: Publish production update
         if: steps.changed.outputs.publish == 'true'
         working-directory: apps/mobile
+        # bash explicitly enables pipefail, so tee cannot hide an EAS export/upload failure.
+        shell: bash
         env:
           EXPO_PUBLIC_API_URL: https://api.offside-lab.com
           EXPO_PUBLIC_WEB_ORIGIN: https://offside-lab.com
         run: |
-          eas update --channel production --environment production --non-interactive \
-            --message "운영 배포 ${EXPECTED_SHA:0:7}" | tee -a "$GITHUB_STEP_SUMMARY"
+          # Expo's "all" export includes web SSR. The web client is Svelte, so publish only native bundles.
+          for PLATFORM in ios android; do
+            eas update --channel production --environment production --non-interactive --platform "$PLATFORM" \
+              --message "운영 배포 ${EXPECTED_SHA:0:7}" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
 
   # 운영 배포가 끝까지 성공했을 때만 릴리즈 태그(KST 날짜 + 그날 순번, 예: v2026.09.25.1)와
   # GitHub 릴리즈를 만든다. 같은 커밋을 다시 배포하면 새 태그를 만들지 않는다.
@@ -363,3 +383,30 @@ jobs:
           if [ -n "$PREVIOUS" ]; then args+=(--notes-start-tag "$PREVIOUS"); fi
           gh release create "$TAG" "${args[@]}"
           echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)" >> "$GITHUB_STEP_SUMMARY"
+
+  # API・웹・OTA・릴리즈 태그 성공 후에만 사용자 공지를 게시한다. preflight에서는 쓰지 않는다.
+  # 같은 항목은 서버의 영구 이력으로 중복을 막아, 실패한 잡만 다시 실행해도 안전하다.
+  release-notes:
+    name: Publish in-game release notes
+    needs: [production-release, app-update, release-tag]
+    if: inputs.mode == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Publish reviewed entries from the deployed commit
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: node .github/scripts/publish-release-notes.mjs publish .release-notes

@@ -21,7 +21,7 @@ import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { loadHOF } from '@offside/game/season';
 import { accountCache, appState } from '../../store';
-import { isMember } from '../../game/account';
+import { isMember } from '@offside/app-core/account';
 import { go } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -30,6 +30,7 @@ import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
 import { Grid2, OvrBadge, Stats } from './TeamParts';
+import { TeamLogo } from '../../components/TeamLogo';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 
 function openTeam(v: TeamView = 'team') {
@@ -188,7 +189,7 @@ export default function Owner() {
               </Txt>
             </View>
           </View>
-          {summary?.players === 0 ? (
+          {(guest && localCount === 0) || summary?.players === 0 ? (
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
               첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.
             </Txt>
@@ -215,6 +216,7 @@ export default function Owner() {
               gap: 12,
             }}
           >
+            {team ? <TeamLogo logo={team.logo} name={team.name} size={44} decorative /> : null}
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
               <Txt v="eyebrow">{`My team${card?.season ? ` · ${card.season}` : ''}`}</Txt>
               <Txt v="h2" accessibilityRole="header">
@@ -240,7 +242,7 @@ export default function Owner() {
               />
               <Grid2>
                 <Btn block testID="team" onPress={() => openTeam()}>
-                  내 팀 · 업적
+                  내 팀
                 </Btn>
                 <Btn
                   kind="accent"

@@ -38,5 +38,5 @@ export function emptySeasonText(season: number, total: number): string {
   const name = teamSeasonName(season);
   return total > 0
     ? `${name}에 은퇴한 선수가 아직 없어요. 다른 시즌 선수 ${total}명은 위 시즌 탭에서 볼 수 있어요.`
-    : '아직 은퇴한 선수가 없어요. 첫 커리어를 끝까지 뛰어 보세요.';
+    : '아직 은퇴한 선수가 없어요. 커리어를 은퇴까지 마치면 여기에 올라와요.';
 }

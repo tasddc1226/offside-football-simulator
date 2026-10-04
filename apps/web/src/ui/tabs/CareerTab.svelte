@@ -4,7 +4,7 @@
   import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
   import ClubMark from '../ClubMark.svelte';
   import ValueChart from '../ValueChart.svelte';
-  import { nextMilestones } from '@offside/game/records';
+  import { careerGoals, GOALS_NOTE } from '@offside/app-core/career-feedback';
   import { peakValue, seasonValue } from '@offside/contracts/market-value';
 
   // 은퇴 상세(LegendSource)에는 '다음 목표'가 없다 — 진행 중인 커리어(GameState)에서만 계산한다.
@@ -13,7 +13,7 @@
   const t = $derived(totals(s));
   const rows = $derived(s.career.slice().reverse());
   const miles = $derived((s.miles || []).slice().reverse());
-  const next = $derived('attrs' in s && !s.retired ? nextMilestones(s) : []);
+  const next = $derived('attrs' in s && !s.retired ? careerGoals(s) : []);
   const peakV = $derived(chart ? peakValue(s.career) : null);
 </script>
 
@@ -35,13 +35,14 @@
   {/if}
 </section>
 {#if next.length}
-  <section class="card stack">
+  <section class="card stack" data-career-goals>
     <div><div class="eyebrow">Next Goals</div><h2>다음 목표</h2></div>
+    <p class="muted fs-sm">{GOALS_NOTE}</p>
     <div class="mile-next">
       {#each next as m, i (m.key)}
         <div class="mile-row">
           <div class="mile-lbl"><b>{m.label}</b><span>{m.have} / {m.target} · 남은 {m.remaining}</span></div>
-          <div class="legend-bar"><i style="width:{Math.min(100, Math.round((m.have / m.target) * 100))}%;--d:{i * 90}ms"></i></div>
+          <div class="legend-bar" role="progressbar" aria-label={m.label} aria-valuemin={0} aria-valuemax={m.target} aria-valuenow={m.have}><i style="width:{Math.min(100, Math.round((m.have / m.target) * 100))}%;--d:{i * 90}ms"></i></div>
         </div>
       {/each}
     </div>
@@ -74,16 +75,16 @@
   {:else}
     <p class="empty">첫 시즌을 마치면 기록이 쌓입니다.</p>
   {/if}
-  <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록입니다. 몸값은 시즌을 마친 때의 리그·OVR·나이로 매긴 추정치(이적료 기준)예요.</p>
+  <p class="muted fs-xs">경기·골·도움은 리그·컵·대륙 대회를 합친 공식전 기록이에요. 몸값은 시즌을 마친 때의 리그·OVR·나이로 매긴 이적료 기준 추정치예요.</p>
 </section>
 <section class="card">
   <div class="eyebrow">Journey</div>
-  <h2 style="margin-bottom:4px">커리어 여정</h2>
+  <h2 style="margin-bottom:4px">커리어 이정표</h2>
   {#if miles.length}
     {#each miles as m, i (i)}
       <div class="trophy"><span class="y">{m.year}</span><div><b>{m.t}</b></div></div>
     {/each}
   {:else}
-    <p class="empty">프로 데뷔부터 여정이 기록됩니다.</p>
+    <p class="empty">프로 데뷔부터 이정표가 쌓여요.</p>
   {/if}
 </section>

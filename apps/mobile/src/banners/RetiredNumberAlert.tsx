@@ -16,7 +16,8 @@ import { prefs, rnAlert } from '../store';
 import { alpha } from '../theme/colors';
 import { DISPLAY, rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
-import { Btn, Press, Txt } from '../ui';
+import { Btn, Txt } from '../ui';
+import { BannerClose } from './TopBanner';
 import { useFly } from './useFly';
 
 const SHOW_MS = 9_000;
@@ -191,22 +192,7 @@ function AlertCard({
           <Btn kind="accent" sm testID="rn-alert-open" onPress={open}>
             보기
           </Btn>
-          <Press
-            testID="rn-alert-close"
-            accessibilityLabel="알림 닫기"
-            onPress={close}
-            hitSlop={4}
-            style={{
-              width: 36,
-              height: 36,
-              marginLeft: -4,
-              borderRadius: 10,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Txt style={{ fontSize: rem(1), color: c.onPitch }}>✕</Txt>
-          </Press>
+          <BannerClose testID="rn-alert-close" onPress={close} />
           {/* 한 번 지나가는 빛 */}
           {motionOK ? (
             <Animated.View

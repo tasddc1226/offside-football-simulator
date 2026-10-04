@@ -1,15 +1,7 @@
 // 선수 생성(웹 Create.svelte): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
 // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
 import { useEffect, useState, type ReactNode } from 'react';
-import {
-  Animated,
-  Easing,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TextInput,
-  View,
-} from 'react-native';
+import { Animated, Easing, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import {
@@ -29,9 +21,8 @@ import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
 import { baseline } from '@offside/game/candidates';
 import { CONFEDS, flagOf } from '@offside/contracts/nations';
 import { BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
-import { bodyMods, GK_SUBS, SUBS } from '@offside/game/attributes';
 import { isKorean, nationOf } from '@offside/game/nation';
-import { hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
+import { bodyNote, hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
 import { withRo } from '@offside/app-core/format';
 import { detailOpenNow, draftBody, draftDpos, randomName } from '@offside/app-core/state';
 import { rollCandidates, startCareer } from '../../game/host';
@@ -41,7 +32,8 @@ import { alpha } from '../../theme/colors';
 import { DISPLAY, num, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { ActionBar, Btn, Card, Opt, Pill, Press, Row, Topbar, Txt, useShadow } from '../../ui';
-import { noteScrollY, registerScroll } from '../../ui/scroll';
+import { noteScrollY, revealFocusedInput } from '../../ui/scroll';
+import { useFormKeyboardScroll } from '../../ui/useFormKeyboardScroll';
 import { MiniRadar } from './MiniRadar';
 import { NationPicker } from './NationPicker';
 import { ScoutScan } from './ScoutScan';
@@ -50,8 +42,6 @@ import { BodyInput, Field, Seg, SegCell, mixHex, useInputStyle } from './parts';
 const posKeys = Object.keys(POS) as Pos[];
 const feet = ['오른발', '왼발', '양발'] as const;
 const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
-// 골키퍼에게 보여 줄 체격 보정(나머지는 골키퍼 능력치에 거의 안 쓰인다).
-const GK_BODY = ['div', 'han', 'jmp', 'str', 'ref', 'rea'];
 
 // ── 입력을 원본 상태(appState.C)에 쓰는 동작들 ──
 // 세부 포지션을 바꾸면 주력 능력치도 그 포지션의 기본값으로 다시 켠다.
@@ -144,6 +134,7 @@ export default function Create() {
   const s = useSnapshot(appState, { sync: true });
   const C = s.C;
   const c = useColors();
+  const keyboardScroll = useFormKeyboardScroll();
   const insets = useSafeAreaInsets();
   const shadow = useShadow();
   const input = useInputStyle();
@@ -171,12 +162,7 @@ export default function Create() {
   const foreign = !isKorean(C);
   const body = draftBody(C);
   const bodyErr = bodyError(body);
-  const bodyNote = Object.entries(bodyMods({ pos: C.pos, body }))
-    .filter(([k]) => (C.pos === 'GK' ? GK_BODY.includes(k) : !GK_SUBS.includes(k)))
-    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-    .slice(0, 4)
-    .map(([k, v]) => `${SUBS[k]} ${v > 0 ? '+' : '−'}${Math.abs(v)}`)
-    .join(' · ');
+  const note = bodyNote(C.pos, body);
   const def = BODY_DEFAULT[C.pos];
 
   // 후보를 바로 보여 주지 않고 스카우트가 추리는 연출(약 3초)이 끝난 뒤에 뽑는다.
@@ -186,7 +172,7 @@ export default function Create() {
     `${posLabel({ pos: C.pos, dpos })} 후보군 추리기`,
     `주력 ${C.focus.map((k) => labels[k]).join('·')} 대조`,
     `체격 ${body.h}cm · ${body.w}kg 비교`,
-    '잠재력 평가 · 후보 3명 확정',
+    '능력치 확인 · 후보 3명 확정',
   ];
   const scouted = () => {
     rollCandidates();
@@ -197,20 +183,25 @@ export default function Create() {
   const small = { fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: c.bg }}
-    >
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       {/* 라이브 카드가 위에 붙어 다니려면 스크롤 밖 위쪽 안전 영역을 따로 비운다 */}
       <View style={{ height: insets.top, backgroundColor: c.bg }} />
       <ScrollView
-        ref={registerScroll}
+        ref={keyboardScroll.ref}
+        onLayout={keyboardScroll.onLayout}
+        onContentSizeChange={revealFocusedInput}
         onScroll={(e) => noteScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={64}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        // iOS는 스크롤 여백만 키보드에 맞춘다. 하단 버튼 줄은 화면 끝에 고정한다.
+        automaticallyAdjustKeyboardInsets
         stickyHeaderIndices={step === 'form' ? [2] : undefined}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, gap: 14 }}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingBottom: 24 + keyboardScroll.bottomInset,
+          gap: 14,
+        }}
       >
         <Topbar />
 
@@ -322,6 +313,7 @@ export default function Create() {
                       returnKeyType="done"
                       value={C.name}
                       onChangeText={(t) => (appState.C.name = t)}
+                      onFocus={revealFocusedInput}
                       style={[input, { paddingRight: 48 }]}
                     />
                     <Press
@@ -355,6 +347,7 @@ export default function Create() {
                     placeholderTextColor={c.muted}
                     value={C.number ? String(C.number) : ''}
                     onChangeText={(t) => (appState.C.number = +t.replace(/\D/g, '') || 0)}
+                    onFocus={revealFocusedInput}
                     style={input}
                   />
                 </Field>
@@ -370,7 +363,7 @@ export default function Create() {
               <Txt v="sm" tone="muted" testID="nation-note">
                 {foreign
                   ? `한국 고교로 축구 유학을 온 선수로 시작해요. ${nation.ko} 대표팀에 뽑히고 대륙컵은 ${CONFEDS[nation.conf].cup}예요. 병역은 없어요. `
-                  : '대표팀 대륙컵은 AFC 아시안컵이에요. 병역(상무·현역)이 있고, 아시안게임·올림픽 메달로 특례를 받을 수 있어요. '}
+                  : '대표팀 대륙컵은 AFC 아시안컵이에요. 병역(상무·현역)이 있고, 아시안게임 금메달·올림픽 금·은·동메달로 체육요원 특례를 받을 수 있어요. '}
                 대표팀 발탁 기준은 어느 나라든 같아요.
               </Txt>
             </Field>
@@ -405,7 +398,7 @@ export default function Create() {
               >
                 {bodyErr
                   ? bodyErr
-                  : `BMI ${bmiOf(body).toFixed(1)}${bodyNote ? ` · ${bodyNote}` : ' · 포지션 평균 체격'}. 시작 OVR은 같고, 세부 능력치 분포만 조금 달라져요.`}
+                  : `BMI ${bmiOf(body).toFixed(1)}${note ? ` · ${note}` : ' · 포지션 평균 체격'}. 시작 OVR은 같고, 세부 능력치 분포만 조금 달라져요.`}
               </Txt>
             </Field>
 
@@ -516,7 +509,7 @@ export default function Create() {
               </Seg>
             </Field>
             <Txt v="sm" tone="muted">
-              잠재력은 숨겨져 있어요. 고3 시즌을 마치면 스카우트의 첫 평가가 나와요.
+              잠재력 평가는 은퇴할 때 공개돼요.
             </Txt>
           </Card>
         ) : s.candidates ? (
@@ -755,7 +748,7 @@ export default function Create() {
         </ActionBar>
       ) : null}
       {scouting ? <ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} /> : null}
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

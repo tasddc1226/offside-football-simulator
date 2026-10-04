@@ -130,6 +130,13 @@ pnpm --filter @offside/fulltime-sim analyze
   받는다"는 순수성 규칙은 더 이상 적용되지 않는다 — `packages/game/src`은
   일반 TypeScript 모듈이며, RNG 시드는 게임 상태의 일부로 저장·복원된다.
 
+## 화면 문구 규칙 (2026-10-02, T-11-043)
+
+문구를 쓰거나 고치거나 리뷰할 때는 [`docs/tracking/copy-style.md`](docs/tracking/copy-style.md)(정본)를 먼저 연다.
+핵심만: UI는 해요체, 문장을 ` — `로 잇지 않기, 미사여구·번역투 금지, 빈 화면에 "~해 보세요" 꼬리 금지,
+이벤트 결과는 장면으로 끝내기, 웹·앱 문구는 같이 고치기.
+엔딩 라벨(`stories.ts` endStory ↔ `titles.ts` STORY_ENDINGS)은 칭호 키이자 세이브 저장값이라 문구만 바꾸면 안 된다.
+
 ## 문서 정본 우선순위
 
 문서 충돌 시: [`docs/adr/`](docs/adr/README.md)(ADR-001~014) >

@@ -3,6 +3,7 @@
   import { PHASES, LAST_PHASE, posLabel } from '@offside/game/data';
   import { ovr } from '@offside/game/attributes';
   import { appState } from './state.svelte.js';
+  import { chatState } from './chat-state.svelte.js';
   import { goNew, goContinue, go, warmGame } from './nav.js';
   import Topbar from './Topbar.svelte';
   import InAppBanner from './InAppBanner.svelte';
@@ -47,8 +48,8 @@
     <section class="hero-home">
       <div class="chalk"></div>
       <div class="eyebrow">Kick-off · 0′</div>
-      <h1>이번 생은 축구다<br />나만의 커리어를 시작하세요</h1>
-      <p>고교 3학년의 킥오프부터 은퇴의 종료 휘슬까지. 오프사이드에서 훈련·이적·이벤트 선택으로 나만의 축구선수 커리어를 만들어 보세요.</p>
+      <h1>이번 생은 축구다<br />고3부터 은퇴까지,<br />한 선수로 살아요</h1>
+      <p>훈련과 이적, 이벤트마다 고른 선택이 쌓여 한 선수의 커리어가 돼요.</p>
       <button class="btn btn-accent btn-block" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>새 커리어 킥오프 →</button>
     </section>
   {/if}
@@ -81,8 +82,9 @@
   <HomeNews board="release" eyebrow="Release notes" title="릴리즈 노트" />
   <SiteFooter />
   <!-- T-11-015 라운지 채팅으로 가는 떠 있는 버튼(하단 메뉴 위). -->
-  <button class="chat-fab" data-act="chat" onclick={() => go('chat')}>
+  <button class="chat-fab" data-act="chat" aria-label={chatState.unread ? `채팅, 읽지 않은 메시지 ${chatState.unread}개` : '채팅'} onclick={() => go('chat')}>
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z" fill="currentColor"/></svg>
-    채팅
+    {#if chatState.unread}<span class="chat-unread num" data-chat-unread aria-hidden="true">{chatState.unread > 99 ? '99+' : chatState.unread}</span>{/if}
+    <span class="visually-hidden" role="status" aria-atomic="true">{chatState.unread ? `읽지 않은 채팅 메시지 ${chatState.unread}개` : ''}</span>
   </button>
 </div>

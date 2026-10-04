@@ -222,8 +222,8 @@ const GRADE_COLOR: Record<string, string> = {
 };
 
 /**
- * 시즌 업적 등급 배지(웹 AchGradeBadge.svelte) — T-11-033부터 엠블럼 + 등급 이름. 요약(large)·업적 랭킹 공용.
- * emblem=false면 이름만(엠블럼을 옆에 따로 크게 그리는 업적 랭킹 줄).
+ * 시즌 업적 등급 배지(웹 AchGradeBadge.svelte) — T-11-033부터 엠블럼 + 등급 이름. 요약(large)·구단주 랭킹 공용.
+ * emblem=false면 이름만(엠블럼을 옆에 따로 크게 그리는 구단주 랭킹 줄).
  */
 export function AchGradeBadge({
   grade,

@@ -4,6 +4,7 @@
   // 못하면 숨긴다.
   import { onMount } from 'svelte';
   import { accountCache, refreshAccount } from './account-state.svelte.js';
+  import { isMember } from '@offside/app-core/account';
   import { startGoogleLogin } from './login.js';
 
   const { id }: { id: string } = $props();
@@ -14,7 +15,7 @@
   });
 </script>
 
-{#if profile && profile !== 'error' && !profile.linked.google}
+{#if profile && profile !== 'error' && !isMember(profile)}
   <section class="card stack" data-share="login">
     <div><div class="eyebrow">Account</div><h2>로그인하고 기록 지키기</h2></div>
     <p class="muted fs-sm">

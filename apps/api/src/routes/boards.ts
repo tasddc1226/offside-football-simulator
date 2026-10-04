@@ -15,7 +15,6 @@ import {
 } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
 import { getViewer, requireAdmin } from '../auth/admin.js';
-import { getAttemptCount, recordAttempt } from '../db/repos/authAttempts.js';
 import {
   addView,
   blockAuthor,
@@ -36,7 +35,7 @@ import {
   updatePost,
 } from '../db/repos/boards.js';
 import { getDb, type AppEnv } from '../env.js';
-import { notFoundError, ok, readBody, nowIso } from './shared.js';
+import { notFoundError, ok, readBody, nowIso, enforceLimit } from './shared.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
@@ -44,6 +43,7 @@ import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { hasProfanity } from '@offside/contracts/content-filter';
+import { kickNewsPush } from '../push/dispatch.js';
 
 // T-10-011 게시판(공지·릴리즈 노트). 읽기는 누구나, 글은 관리자만, 댓글은 프로필이 있는 누구나.
 // T-10-058 조회수는 웹이 기기마다 글 하나에 한 번 보내고, 좋아요는 프로필이 있는 누구나(구글 로그인 없이도).
@@ -55,8 +55,14 @@ const COMMENT_LIMIT = 10;
 const notFound = (what: string) =>
   notFoundError(`${what}을(를) 찾을 수 없습니다.`, 'BOARD_NOT_FOUND');
 
-const idParam = (c: Context<AppEnv>, name: string) =>
-  parseWithAppError(BoardIdParamSchema, c.req.param(name));
+// 자동 릴리즈 노트는 KST 날짜로 고정된 ID를 쓴다. 기존 글·댓글·차단의 UUID 검증은 유지한다.
+const idParam = (c: Context<AppEnv>, name: string) => {
+  const value = c.req.param(name);
+  if (name === 'postId' && typeof value === 'string' && /^pst_release_\d{8}$/.test(value)) {
+    return value;
+  }
+  return parseWithAppError(BoardIdParamSchema, value);
+};
 /** 목록은 첫 페이지만 엣지에 담는다 — 키와 지우는 규칙은 edgeKeys.ts. '더 보기'(before)나 다른 limit은 드물어 그냥 읽는다. */
 const LIST_TTL = 60;
 const purgeList = (c: Context<AppEnv>, board: string) => purgeEdge(c, STALE.boardChanged(board));
@@ -135,6 +141,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const input = readBody(c, PostInputSchema);
     const id = await createPost(getDb(c), board, input, viewer.profileId!, nowIso());
     purgeList(c, board);
+    kickNewsPush(c);
     return ok(c, PostSchema, await postOr404(c, id), 201);
   });
 
@@ -186,13 +193,14 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const profileId = getSessionOrThrow(c).profileId;
     const now = nowIso();
     if (!viewer.admin) {
-      if ((await getAttemptCount(db, 'BOARD_COMMENT', profileId, now)) >= COMMENT_LIMIT) {
-        throw new AppError({
-          code: 'RATE_LIMITED',
-          message: '댓글을 너무 자주 쓰고 있어요. 잠시 뒤에 다시 시도해 주세요.',
-        });
-      }
-      await recordAttempt(db, 'BOARD_COMMENT', profileId, now);
+      await enforceLimit(
+        db,
+        'BOARD_COMMENT',
+        profileId,
+        COMMENT_LIMIT,
+        now,
+        '댓글을 너무 자주 쓰고 있어요. 잠시 뒤에 다시 시도해 주세요.',
+      );
     }
     const id = await createComment(
       db,

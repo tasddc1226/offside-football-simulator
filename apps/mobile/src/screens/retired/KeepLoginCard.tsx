@@ -4,7 +4,7 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import { isMember } from '../../game/account';
+import { isMember } from '@offside/app-core/account';
 import { refreshAccount } from '../../game/host';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
 import { AppleLoginButton, useAppleLogin } from '../../ui/AppleLoginButton';

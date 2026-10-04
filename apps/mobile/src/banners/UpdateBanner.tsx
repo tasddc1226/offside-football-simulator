@@ -1,14 +1,15 @@
 // 새 버전 알림(웹 UpdateBanner.svelte). 받아 둔 OTA 번들이 있으면 '다시 시작'으로 바로 적용한다.
 import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
-import { applyUpdate, useUpdatePending } from '../platform/updates';
+import { applyUpdate } from '../platform/updates';
 import { Btn, Txt } from '../ui';
 import { TopBanner } from './TopBanner';
 import { useFly } from './useFly';
+import { useTopBanner } from './useTopBanner';
 
 export function UpdateBanner() {
   const c = useColors();
-  const { mounted, style } = useFly(useUpdatePending(), 200);
+  const { mounted, style } = useFly(useTopBanner() === 'update', 200);
   if (!mounted) return null;
   return (
     <TopBanner testID="update-banner" label="업데이트 알림" style={style}>

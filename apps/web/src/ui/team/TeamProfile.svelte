@@ -16,6 +16,7 @@
   import NameReport from '../NameReport.svelte';
   import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
+  import TeamLogo from './TeamLogo.svelte';
   import { num as n, recordText } from '@offside/app-core/teamText';
 
   let { id, onback }: { id: string; onback: () => void } = $props();
@@ -60,6 +61,7 @@
   const cells = $derived(
     team?.slots.map((s) => ({
       rating: s.rating,
+      nation: s.nation,
       name: (mine && s.careerId && localNames.get(s.careerId)) || s.name,
       youth: s.careerId === null,
     })) ?? [],
@@ -73,11 +75,11 @@
         <span class="eyebrow">Team profile{team.rank ? ` · #${team.rank}` : ''}</span>
       </div>
       <div class="tp-title">
-        <div>
+        <div class="tp-identity"><TeamLogo logo={team.logo} name={team.name} size={56} /><div class="tp-names">
           <small class="muted">{team.seasonName}{team.rank ? ` · RANK #${team.rank}` : ''}</small>
           <h1>{team.name}</h1>
           <p class="muted fs-sm">감독 <b class="tp-manager">{team.manager}</b>{mine ? ' · 내 팀' : ''}</p>
-        </div>
+        </div></div>
         <div class="tp-rating" aria-label="팀 레이팅 {team.rating}"><small>RATING</small><b>{n(team.rating)}</b></div>
       </div>
       <dl class="tp-stats">
@@ -87,7 +89,7 @@
       </dl>
     </section>
 
-    <TeamPitch formation={team.formation} {cells} />
+    <TeamPitch formation={team.formation} layout={team.layout} {cells} />
 
     <section class="card stack" style="gap:12px">
       <TeamLines lines={team.lines} />
@@ -112,7 +114,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="empty">첫 기록을 기다리고 있어요. 팀 경기와 시즌 순위의 배지가 이곳에 쌓여요.</p>
+        <p class="empty">아직 기록이 없어요. 팀 경기와 시즌 순위 배지가 여기에 쌓여요.</p>
       {/if}
     </section>
     {#if !mine}<NameReport kind="team" id={team.id} name={team.name} />{/if}
@@ -137,6 +139,8 @@
   .tp-title h1 {
     overflow-wrap: anywhere;
   }
+  .tp-identity {display:flex;align-items:center;gap:10px;min-width:0;}
+  .tp-names {min-width:0;}
   .tp-manager {
     color: var(--ink);
   }

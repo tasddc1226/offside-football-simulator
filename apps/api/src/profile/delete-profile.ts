@@ -1,7 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { signConfirmToken, verifyConfirmToken } from '../auth/confirm-token.js';
 import type { Db } from '../db/client.js';
-import { newId } from '../db/ids.js';
+import { auditLogStatement } from '../db/repos/auditLog.js';
 import { runBatch } from '../db/repos/batch.js';
 import { deleteBoardActivityStatements } from '../db/repos/boards.js';
 import { deleteChatActivityStatements } from '../db/repos/chat.js';
@@ -11,11 +11,12 @@ import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
 import { resetFirstsBackfillStatement } from '../db/repos/firsts.js';
 import { deleteOwnerTeamsStatements } from '../db/repos/ownerTeams.js';
 import {
-  auditLog,
   boardComments,
   careers,
   idempotency,
   profiles,
+  pushDevices,
+  pushNewsDeliveries,
   serverFirsts,
   serverRecords,
   sessions,
@@ -121,16 +122,17 @@ export async function executeProfileDeletion(
     ...deleteOwnerTeamsStatements(db, input.profileId),
     ...deleteBoardActivityStatements(db, input.profileId),
     ...deleteChatActivityStatements(db, input.profileId),
+    db.delete(pushDevices).where(eq(pushDevices.profileId, input.profileId)),
+    db.delete(pushNewsDeliveries).where(eq(pushNewsDeliveries.profileId, input.profileId)),
     db.delete(idempotency).where(eq(idempotency.ownerProfileId, input.profileId)),
     db
       .update(sessions)
       .set({ revokedAt: input.now })
       .where(and(eq(sessions.profileId, input.profileId), isNull(sessions.revokedAt))),
-    db.insert(auditLog).values({
-      id: newId('aud'),
+    auditLogStatement(db, {
       kind: 'PROFILE_DELETED',
       profileId: input.profileId,
-      payloadJson: '{}',
+      payload: {},
       createdAt: input.now,
     }),
     // 가진 최초·서버 기록이 있었으면 재계산 표시를 지워, 공개 조회가 전체를 다시 훑어 실제 다음 보유자에게 돌려준다.

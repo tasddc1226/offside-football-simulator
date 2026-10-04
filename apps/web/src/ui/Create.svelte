@@ -9,11 +9,10 @@
   import { appState, detailOpenNow, draftBody, draftDpos, randomName } from './state.svelte.js';
   import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
-  import { bodyMods, GK_SUBS, SUBS } from '@offside/game/attributes';
   import { isKorean, nationOf } from '@offside/game/nation';
   import { startCareer, rollCandidates } from './actions.js';
   import { goHome } from './nav.js';
-  import { hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
+  import { bodyNote, hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
   import { dur } from './motion.js';
   import { withRo } from '@offside/app-core/format';
   import Topbar from './Topbar.svelte';
@@ -44,17 +43,9 @@
   // T-10-096 국적·체격
   const nation = $derived(nationOf(C));
   const foreign = $derived(!isKorean(C));
-  // 골키퍼에게 보여 줄 체격 보정(나머지는 골키퍼 능력치에 거의 안 쓰인다).
-  const GK_BODY = ['div', 'han', 'jmp', 'str', 'ref', 'rea'];
   const body = $derived(draftBody(C));
   const bodyErr = $derived(bodyError(body));
-  const bodyNote = $derived.by(() => {
-    const mods = Object.entries(bodyMods({ pos: C.pos, body }))
-      .filter(([k]) => (C.pos === 'GK' ? GK_BODY.includes(k) : !GK_SUBS.includes(k)))
-      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-      .slice(0, 4);
-    return mods.map(([k, v]) => `${SUBS[k]} ${v > 0 ? '+' : '−'}${Math.abs(v)}`).join(' · ');
-  });
+  const note = $derived(bodyNote(C.pos, body));
   const L = BODY_LIMITS;
 
   function setPos(v: Pos) {
@@ -83,7 +74,7 @@
     `${posLabel({ pos: C.pos, dpos })} 후보군 추리기`,
     `주력 ${C.focus.map((k) => labels[k]).join('·')} 대조`,
     `체격 ${body.h}cm · ${body.w}kg 비교`,
-    '잠재력 평가 · 후보 3명 확정',
+    '능력치 확인 · 후보 3명 확정',
   ]);
   function scouted() {
     rollCandidates();
@@ -161,7 +152,7 @@
           {#if foreign}
             한국 고교로 축구 유학을 온 선수로 시작해요. {nation.ko} 대표팀에 뽑히고 대륙컵은 {CONFEDS[nation.conf].cup}예요. 병역은 없어요.
           {:else}
-            대표팀 대륙컵은 AFC 아시안컵이에요. 병역(상무·현역)이 있고, 아시안게임·올림픽 메달로 특례를 받을 수 있어요.
+            대표팀 대륙컵은 AFC 아시안컵이에요. 병역(상무·현역)이 있고, 아시안게임 금메달·올림픽 금·은·동메달로 체육요원 특례를 받을 수 있어요.
           {/if}
           대표팀 발탁 기준은 어느 나라든 같아요.
         </p>
@@ -185,7 +176,7 @@
           {#if bodyErr}
             {bodyErr}
           {:else}
-            BMI {bmiOf(body).toFixed(1)}{bodyNote ? ` · ${bodyNote}` : ' · 포지션 평균 체격'}. 시작 OVR은 같고, 세부 능력치 분포만 조금 달라져요.
+            BMI {bmiOf(body).toFixed(1)}{note ? ` · ${note}` : ' · 포지션 평균 체격'}. 시작 OVR은 같고, 세부 능력치 분포만 조금 달라져요.
           {/if}
         </p>
       </div>
@@ -246,7 +237,7 @@
           {/each}
         </div>
       </div>
-      <p class="muted fs-sm">잠재력은 숨겨져 있어요. 고3 시즌을 마치면 스카우트의 첫 평가가 나와요.</p>
+      <p class="muted fs-sm">잠재력 평가는 은퇴할 때 공개돼요.</p>
     </section>
 
     <div class="action-bar at-bottom">
