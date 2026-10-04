@@ -20,6 +20,11 @@
       "config": {
         "usesNonExemptEncryption": false
       },
+      "icon": {
+        "light": "./assets/images/icon.png",
+        "dark": "./assets/images/icon-dark.png",
+        "tinted": "./assets/images/icon-tinted.png"
+      },
       "usesAppleSignIn": true,
       "infoPlist": {
         "CFBundleName": "오프사이드"
@@ -29,7 +34,7 @@
       "package": "com.offsidelab.app",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#1c4a35",
+        "backgroundColor": "#d6f24a",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -46,9 +51,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1c4a35",
+          "backgroundColor": "#d6f24a",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 160
+          "imageWidth": 220,
+          "dark": {
+            "backgroundColor": "#0f2219",
+            "image": "./assets/images/splash-icon-dark.png"
+          }
         }
       ],
       "expo-sharing",

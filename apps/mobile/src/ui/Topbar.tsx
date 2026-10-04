@@ -1,12 +1,15 @@
-// 상단 브랜드 줄(웹 Topbar.svelte): 깃발 배지 + '풀타임: 휘슬이 울릴 때까지 / 오프사이드'. right에 스위치 등을 둔다.
+// 상단 브랜드 줄(웹 Topbar.svelte): 앱 아이콘 배지(라이트·다크) + '풀타임: 휘슬이 울릴 때까지 / 오프사이드'. right에 스위치 등을 둔다.
 import type { ReactNode } from 'react';
 import { Image } from 'expo-image';
 import { View } from 'react-native';
+import { useIsDark } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
 import { Txt } from './Txt';
-import flag from '../../assets/brand/offside-flag-v6-180.png';
+import badgeDark from '../../assets/brand/offside-icon-v7-dark-180.png';
+import badgeLight from '../../assets/brand/offside-icon-v7-180.png';
 
 export function Topbar({ right }: { right?: ReactNode }) {
+  const dark = useIsDark();
   return (
     <View
       style={{
@@ -18,7 +21,7 @@ export function Topbar({ right }: { right?: ReactNode }) {
       }}
     >
       <Image
-        source={flag}
+        source={dark ? badgeDark : badgeLight}
         style={{ width: 38, height: 38, borderRadius: 10 }}
         accessibilityIgnoresInvertColors
       />
