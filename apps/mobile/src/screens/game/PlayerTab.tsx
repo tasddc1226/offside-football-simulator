@@ -1,8 +1,10 @@
 // 선수 탭(웹 tabs/PlayerTab.svelte): 능력치 카드 · 선수 정보 · 국가대표 · 은퇴 선언(32세부터).
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
+import { useSnapshot } from 'valtio';
 import { POTENTIAL_NOTICE } from '@offside/app-core/potential-view';
 import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
+import { peekView } from '@offside/app-core/potential-peek';
 import { TRAITS } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
 import { leagueOf, fmtMoney } from '@offside/game/engine';
@@ -21,6 +23,8 @@ import { fmtValue } from '@offside/app-core/format';
 import { retireAsk, save } from '../../game/host';
 import { BoostFx } from '../../components/BoostFx';
 import { appState } from '../../store';
+import { adFree } from '../../platform/adFree';
+import { openPeek, peekAvailable, potPeek } from '../../platform/rewardedPeek';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn } from '../../ui/Btn';
@@ -29,14 +33,10 @@ import { Txt } from '../../ui/Txt';
 import { AttrCard } from './AttrCard';
 import { TrophyRow } from './TrophyTab';
 
+type Row = { k: string; v: ReactNode; testID?: string };
+
 /** 이름(왼쪽, muted) · 값(오른쪽, 굵게) 목록(웹 dl.kv). */
-function Kv({
-  rows,
-  mt = 0,
-}: {
-  rows: { k: string; v: ReactNode; testID?: string }[];
-  mt?: number;
-}) {
+function Kv({ rows, mt = 0 }: { rows: Row[]; mt?: number }) {
   return (
     <View style={{ gap: 8, marginTop: mt }}>
       {rows.map((r) => (
@@ -160,13 +160,18 @@ export function PlayerTab({ s }: { s: GameState }) {
   const nation = nationOf(s);
   // 체격 입력 이전 선수는 포지션 표준 체격으로 보여 준다(표시만 — 능력치 보정은 없다).
   const body = s.body ?? BODY_DEFAULT[s.pos];
+  // T-11-079 보상형 광고로 이번 시즌 스카우트 평가 보기. 광고 단위도 광고 제거도 없으면 예전 안내만 둔다.
+  const owned = useSnapshot(adFree).owned;
+  const peek = useSnapshot(potPeek);
+  const pot = peekView(s, peek.peek, owned);
+  const showPeek = pot.kind !== 'shown' && peekAvailable();
 
-  const info: { k: string; v: ReactNode; testID?: string }[] = [
+  const info: Row[] = [
     { k: '국적', testID: 'nation', v: `${flagOf(nation.code)} ${nation.ko}` },
     { k: '체격', testID: 'body', v: `${body.h}cm · ${body.w}kg` },
     { k: '주발', v: s.foot },
     { k: '성장 특성', v: traitName },
-    { k: '잠재력 평가', testID: 'pot', v: POTENTIAL_NOTICE },
+    { k: '잠재력 평가', testID: 'pot', v: pot.kind === 'shown' ? pot.text : POTENTIAL_NOTICE },
     { k: '최고 OVR', v: String(Math.max(s.peak, ovr(s))) },
     { k: '감독 신뢰', v: s.trust >= 2 ? '두터움' : s.trust >= 0 ? '보통' : '냉랭함' },
     {
@@ -191,6 +196,24 @@ export function PlayerTab({ s }: { s: GameState }) {
           선수 정보
         </Txt>
         <Kv rows={info} />
+        {showPeek ? (
+          <View style={{ marginTop: 10, gap: 6 }} testID="pot-peek">
+            <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+              {peek.message || pot.text}
+            </Txt>
+            {pot.kind === 'available' ? (
+              <Btn
+                sm
+                block
+                disabled={peek.busy}
+                testID="pot-peek-btn"
+                onPress={() => void openPeek(s)}
+              >
+                {peek.busy ? '광고 불러오는 중…' : pot.button}
+              </Btn>
+            ) : null}
+          </View>
+        ) : null}
       </Card>
 
       {boostHidden(s) ? null : <BoostCard s={s} />}
