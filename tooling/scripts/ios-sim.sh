@@ -49,14 +49,12 @@ echo "네이티브 지문 $fp · 시뮬레이터 $udid"
 
 if [ "$rebuild" = 1 ] || [ ! -d "$app" ]; then
   start=$SECONDS
-  # ios/가 현재 지문으로 만든 게 아니면(없음·예전 지문·표시 없음) 또는 --rebuild면 새로 만든다. --clean이 Pods까지 지우므로
-  # 아래 Manifest.lock 비교에서 pod install이 다시 돈다.
+  # ios/가 현재 지문으로 만든 게 아니면 새로 만든다(EXPO_NO_GIT_STATUS: 작업 중인 변경이 있어도 --clean이 멈추지 않게).
   marker="$MOBILE/ios/.offside-fingerprint"
-  if [ "$rebuild" = 1 ] || [ "$(cat "$marker" 2>/dev/null)" != "$fp" ]; then
+  if [ "$(cat "$marker" 2>/dev/null)" != "$fp" ]; then
     (cd "$MOBILE" && CI=1 EXPO_NO_GIT_STATUS=1 npx expo prebuild --platform ios --clean --no-install)
     printf '%s\n' "$fp" >"$marker"
   fi
-  # prebuild가 Podfile.properties.json을 새로 쓰므로 ccache 설정은 매번 다시 확인해 넣는다.
   props="$MOBILE/ios/Podfile.properties.json"
   pods_stale=0
   if command -v ccache >/dev/null && [ "$(jq -r '."apple.ccacheEnabled" // ""' "$props")" != true ]; then
