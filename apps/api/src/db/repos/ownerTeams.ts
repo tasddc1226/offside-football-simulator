@@ -1,6 +1,7 @@
 import { PeakProfileSchema, TeamLayoutSchema, TeamLogoSchema } from '@offside/contracts';
 import type { TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
+import { DEFAULT_NATION } from '@offside/contracts/nations';
 import {
   DETAIL_POSITIONS,
   FACE_ATTRS,
@@ -99,10 +100,21 @@ export function logoOf(row: Pick<OwnerTeamRow, 'logoJson'>) {
   }
 }
 
+/** 경기 목록에 필요한 현재 로고만 한 번에 읽는다. 옛 경기 JSON은 바꾸지 않는다. */
+export async function teamLogosByIds(db: Db, ids: readonly string[]) {
+  if (ids.length === 0) return new Map<string, ReturnType<typeof logoOf>>();
+  const rows = await db
+    .select({ id: ownerTeams.id, logoJson: ownerTeams.logoJson })
+    .from(ownerTeams)
+    .where(inArray(ownerTeams.id, [...new Set(ids)]));
+  return new Map(rows.map((row) => [row.id, logoOf(row)]));
+}
+
 /** 선발 맵에 넣는 커리어 모양(careers 행 → 팀 선수). */
 type LineupRow = {
   id: string;
   pos: PosGroup;
+  nation?: string | null;
   dpos: string | null;
   peak: number | null;
   peakProfile: string | null;
@@ -112,9 +124,11 @@ type LineupRow = {
 export const toLineupCareer = (
   r: LineupRow,
   profile: PeakProfile | null = peakOf(r.peakProfile),
-): LineupCareer => ({
+): LineupCareer & { nation: string } => ({
   id: r.id,
   pos: r.pos,
+  // 대한민국·국적 기능 이전 커리어는 DB에서 NULL로 저장한다.
+  nation: r.nation ?? DEFAULT_NATION,
   dpos: dposFor(r.pos, r.dpos),
   peak: r.peak ?? 0,
   roles: profile?.roles ?? null,
@@ -144,6 +158,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
     .select({
       id: careers.id,
       pos: careers.pos,
+      nation: careers.nation,
       dpos: careers.dpos,
       peak: careers.peak,
       peakProfile: careers.peakProfile,
@@ -211,6 +226,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       profileId: careers.profileId,
       status: careers.status,
       pos: careers.pos,
+      nation: careers.nation,
       dpos: careers.dpos,
       peak: careers.peak,
       peakProfile: careers.peakProfile,
@@ -226,7 +242,7 @@ export type CareerLite = Awaited<ReturnType<typeof careersByIds>>[number];
 
 /** 이 구단주의 그 시즌 팀에 넣을 수 있는 커리어만 골라 선발 맵으로(본인 소유 · 은퇴 · 은퇴 요약 있음 · 그 시즌 선수). */
 export function eligibleMap(rows: readonly CareerLite[], ownerId: string, season: number) {
-  const map = new Map<string, LineupCareer>();
+  const map = new Map<string, ReturnType<typeof toLineupCareer>>();
   for (const r of rows) {
     if (r.profileId !== ownerId || r.status !== 'retired' || r.peak === null) continue;
     if (r.serviceSeason !== season || r.hidden) continue;

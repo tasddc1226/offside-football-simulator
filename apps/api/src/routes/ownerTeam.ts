@@ -53,6 +53,7 @@ import {
   slotIdsOf,
   layoutOf,
   logoOf,
+  teamLogosByIds,
   toLineupCareer,
   type MatchDetail,
   type OwnerTeamRow,
@@ -135,14 +136,18 @@ const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
 /** 재대결 감쇠를 세는 기간의 시작(오늘 포함 TEAM_REPEAT_WINDOW_DAYS일, 한국 시각 자정 기준). */
 const repeatWindowStart = (now: string) => kstDays(new Date(now), TEAM_REPEAT_WINDOW_DAYS).startIso;
 
-function toOwnerTeam(row: OwnerTeamRow, lineup: LineupSlot[]): OwnerTeam {
+function toOwnerTeam(
+  row: OwnerTeamRow,
+  lineup: LineupSlot[],
+  players: ReadonlyMap<string, { nation?: string | null }>,
+): OwnerTeam {
   return {
     id: row.id,
     season: row.season,
     name: row.name,
     manager: row.manager,
     formation: row.formation as FormationId,
-    slots: slotsOf(lineup),
+    slots: slotsOf(lineup, players),
     layout: layoutOf(row),
     logo: logoOf(row),
     ovr: lineupOvr(lineup),
@@ -163,13 +168,24 @@ function toMatch(
   d: MatchDetail,
   myTeamId: string,
   names: ReadonlyMap<string, string>,
+  logos: ReadonlyMap<string, ReturnType<typeof logoOf>>,
 ): TeamMatch {
   const label = (p: PlayerRef) => (p.careerId ? (names.get(p.careerId) ?? p.anon) : p.anon);
   const mine = row.homeTeamId === myTeamId ? 'home' : 'away';
   return {
     id: row.id,
-    home: { ...d.home, goals: row.homeGoals, ratingChange: d.home.ratingChange ?? null },
-    away: { ...d.away, goals: row.awayGoals, ratingChange: d.away.ratingChange ?? null },
+    home: {
+      ...d.home,
+      logo: logos.get(d.home.teamId) ?? null,
+      goals: row.homeGoals,
+      ratingChange: d.home.ratingChange ?? null,
+    },
+    away: {
+      ...d.away,
+      logo: logos.get(d.away.teamId) ?? null,
+      goals: row.awayGoals,
+      ratingChange: d.away.ratingChange ?? null,
+    },
     events: d.events.map((e) => ({
       minute: e.minute,
       side: e.side,
@@ -231,11 +247,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           ? toOwnerTeam(
               team,
               buildLineup(team.formation as FormationId, slotIdsOf(team), eligible, layoutOf(team)),
+              eligible,
             )
           : null,
         players: picks.map(({ p, profile, estimatedAttrs, career }) => ({
           careerId: p.id,
           pos: p.pos,
+          nation: career.nation,
           dpos: career.dpos,
           peak: career.peak,
           roles: career.roles,
@@ -311,7 +329,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       .returning();
     purgeEdge(c, STALE.teamSaved(season));
     waitUntil(c, refreshAfterChange(db, me.id, season));
-    return ok(c, PutOwnerTeamResponseSchema, { team: toOwnerTeam(row!, lineup) });
+    return ok(c, PutOwnerTeamResponseSchema, { team: toOwnerTeam(row!, lineup, eligible) });
   });
 
   // 경기 상대 후보: 같은 시즌에서 내 팀 OVR에 가까운 다른 구단주의 팀 몇 개를 섞어서.
@@ -340,6 +358,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       .map((team) => ({
         teamId: team.id,
         name: team.name,
+        logo: logoOf(team),
         owner: team.manager,
         formation: team.formation as FormationId,
         ovr: team.ovr,
@@ -479,7 +498,16 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       c,
       PlayTeamMatchResponseSchema,
       {
-        match: toMatch(head, detail, mine.id, names),
+        match: toMatch(
+          head,
+          detail,
+          mine.id,
+          names,
+          new Map([
+            [mine.id, logoOf(mine)],
+            [opp.team.id, logoOf(opp.team)],
+          ]),
+        ),
         record: {
           w: mine.wins + (score === 1 ? 1 : 0),
           d: mine.draws + (score === 0.5 ? 1 : 0),
@@ -518,11 +546,17 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const [team] = await myTeamIn(db, me.id, season);
     const rows = team ? await listRecentMatches(db, me.id, team.id) : [];
     const details = rows.map((r) => JSON.parse(r.detailJson) as MatchDetail);
-    const names = await publicNamesOf(db, careerIdsIn(details));
+    const [names, logos] = await Promise.all([
+      publicNamesOf(db, careerIdsIn(details)),
+      teamLogosByIds(
+        db,
+        details.flatMap((d) => [d.home.teamId, d.away.teamId]),
+      ),
+    ]);
     return ok(
       c,
       TeamMatchesResponseSchema,
-      { items: team ? rows.map((r, i) => toMatch(r, details[i]!, team.id, names)) : [] },
+      { items: team ? rows.map((r, i) => toMatch(r, details[i]!, team.id, names, logos)) : [] },
       200,
       NO_STORE,
     );

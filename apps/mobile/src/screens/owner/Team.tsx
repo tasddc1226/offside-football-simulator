@@ -175,7 +175,9 @@ export default function Team() {
       rating: ratings[i] ?? YOUTH_OVR,
       name: p ? nameOf(p) : YOUTH_NAME,
       youth: !p,
-      ...(p ? { peak: p.peak, number: p.number, legendScore: p.legendScore } : {}),
+      ...(p
+        ? { peak: p.peak, number: p.number, legendScore: p.legendScore, nation: p.nation }
+        : {}),
     };
   });
   const matchHint = matchHintOf(team, dirty, matchesLeft, season, current);

@@ -23,6 +23,7 @@ import {
 import { RecordsSelect, RECORDS_TOUCH } from '../RecordsControls';
 import { AchGradeBadge } from '../../owner/TeamParts';
 import { GradeEmblem } from '../../../ui/GradeEmblem';
+import { TeamLogo } from '../../../components/TeamLogo';
 
 export default function AchievementRanking() {
   const c = useColors();
@@ -143,6 +144,7 @@ export default function AchievementRanking() {
                 <Txt num tone="muted" center style={{ width: 24, fontSize: 15 }}>
                   {r.rank}
                 </Txt>
+                {team ? <TeamLogo logo={team.logo} name={team.name} size={24} decorative /> : null}
                 <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
                   <Txt bold numberOfLines={1} style={{ fontSize: 14 }}>
                     {r.nickname ?? '익명 구단주'}

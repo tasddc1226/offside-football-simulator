@@ -1,15 +1,15 @@
 <script lang="ts">
   import { CREST_SHAPES, CREST_PATTERNS } from '@offside/game/crests';
   import { defaultTeamLogo, type TeamLogo } from '@offside/contracts/team-logo';
-  let { logo, name, size = 48 }: { logo?: TeamLogo | null | undefined; name: string; size?: number } = $props();
+  let { logo, name, size = 48, decorative = false }: { logo?: TeamLogo | null | undefined; name: string; size?: number; decorative?: boolean } = $props();
   const value = $derived(logo ?? defaultTeamLogo(name));
   let failedImage = $state('');
   const clip = $props.id();
 </script>
 
-<span class="team-logo" style:width="{size}px" style:height="{size}px">
+<span class="team-logo" style:width="{size}px" style:height="{size}px" aria-hidden={decorative}>
   {#if value.img && failedImage !== value.img}
-    <img src={value.img} alt="{name} 로고" width={size} height={size} onerror={() => (failedImage = value.img ?? '')} />
+    <img src={value.img} alt={decorative ? '' : `${name} 로고`} width={size} height={size} onerror={() => (failedImage = value.img ?? '')} />
   {:else}
     <svg viewBox="0 0 64 64" width={size} height={size} role="img" aria-label="{name} 로고">
       <defs><clipPath id={clip}><path d={CREST_SHAPES[value.shape]} /></clipPath></defs>

@@ -75,6 +75,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
             rank: (q.page - 1) * TEAM_RANK_PER_PAGE + i + 1,
             teamId: t.id,
             name: t.name,
+            logo: logoOf(t),
             manager: t.manager,
             formation: t.formation as FormationId,
             ovr: t.ovr,
@@ -109,7 +110,10 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           items: rows.map((r, i) => ({
             rank: (q.page - 1) * ACH_RANK_PER_PAGE + i + 1,
             nickname: r.nickname,
-            team: r.teamId && r.teamName ? { id: r.teamId, name: r.teamName } : null,
+            team:
+              r.teamId && r.teamName
+                ? { id: r.teamId, name: r.teamName, logo: logoOf({ logoJson: r.logoJson }) }
+                : null,
             score: r.score,
             done: r.done,
             players: r.players,
@@ -136,12 +140,8 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       ratingRankOf(db, t),
       session ? isTeamLiked(db, t.id, session.profileId) : false,
     ]);
-    const lineup = buildLineup(
-      t.formation as FormationId,
-      ids,
-      eligibleMap(rows, t.profileId, t.season),
-      layoutOf(t),
-    );
+    const eligible = eligibleMap(rows, t.profileId, t.season);
+    const lineup = buildLineup(t.formation as FormationId, ids, eligible, layoutOf(t));
     const now = nowIso();
     const seasonName = teamSeasonName(t.season);
     return ok(
@@ -156,7 +156,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           name: t.name,
           manager: t.manager,
           formation: t.formation as FormationId,
-          slots: slotsOf(lineup),
+          slots: slotsOf(lineup, eligible),
           layout: layoutOf(t),
           logo: logoOf(t),
           ovr: lineupOvr(lineup),

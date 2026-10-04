@@ -15,6 +15,7 @@
   import { isMember } from '@offside/app-core/account';
   import Account from './Account.svelte';
   import MyPlayers from './MyPlayers.svelte';
+  import TeamLogo from './team/TeamLogo.svelte';
   import { loadHOF } from '@offside/game/season';
   import { startGoogleLogin } from './login.js';
   import { go } from './nav.js';
@@ -95,6 +96,7 @@
   {#if linked}
     <section class="card owner-team" aria-label="내 팀" data-owner-team>
       <div class="owner-team-head">
+        {#if card?.team}<TeamLogo logo={card.team.logo} name={card.team.name} size={44} decorative />{/if}
         <div class="owner-who">
           <small class="eyebrow">My team{card?.season ? ` · ${card.season}` : ''}</small>
           <h2>{card?.team?.name ?? '내 팀'}</h2>
@@ -238,6 +240,7 @@
     align-items: flex-start;
     gap: 12px;
   }
+  .owner-team-head .owner-who { flex: 1; min-width: 0; }
   .owner-ovr {
     flex: none;
     display: grid;

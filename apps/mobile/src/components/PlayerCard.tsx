@@ -7,6 +7,7 @@ import { DISPLAY } from '../theme/type';
 import { RN_SHIRT, RN_TRIM } from '@offside/app-core/rnStyle';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import type { TeamPlayer } from '@offside/app-core/api/team';
+import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({
@@ -167,6 +168,7 @@ function CardShirt({
 
 export type PlayerCardData = {
   name: string;
+  nation?: string | null;
   rating: number;
   peak?: number;
   number?: number | null;
@@ -243,11 +245,12 @@ export function PlayerCard({
   animate?: boolean;
 }) {
   const legend = !cell.youth && (cell.legendScore ?? 0) >= 1000;
+  const country = !cell.youth ? NATION_BY_CODE.get(cell.nation ?? DEFAULT_NATION) : undefined;
   const gold = !cell.youth && !legend && (cell.peak ?? cell.rating) >= 80;
   const tone = CARD_TONES[cell.youth ? 'youth' : legend ? 'legend' : gold ? 'gold' : 'silver'];
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [cardWidth, setCardWidth] = useState(compact ? 62 : 100);
-  const shirtWidth = compact ? 27 : Math.min(43, Math.max(24, cardWidth - 56));
+  const shirtWidth = compact ? 25 : Math.min(43, Math.max(24, cardWidth - 56));
   const height = compact ? 88 : 242 + (cell.peak !== undefined ? 31 : 0);
   const shield = 'M2 14H17L25 5L50 1L75 5L83 14H98L97 149L88 161L50 173L12 161L3 149Z';
   return (
@@ -303,15 +306,18 @@ export function PlayerCard({
           justifyContent: 'space-between',
         }}
       >
-        <View style={{ alignItems: 'center', minWidth: compact ? 23 : 36 }}>
+        <View style={{ alignItems: 'center', width: compact ? 25 : 36 }}>
           <Text
             numberOfLines={1}
-            adjustsFontSizeToFit
+            adjustsFontSizeToFit={!compact}
+            minimumFontScale={0.8}
             maxFontSizeMultiplier={1.1}
             style={{
               fontFamily: DISPLAY[800],
-              fontSize: compact ? 22 : 32,
+              fontSize: compact ? ((cell.peak ?? cell.rating) >= 100 ? 17 : 22) : 32,
               lineHeight: compact ? 24 : 39,
+              width: '100%',
+              textAlign: 'center',
               color: tone.ink,
               includeFontPadding: false,
             }}
@@ -331,6 +337,15 @@ export function PlayerCard({
           >
             {code}
           </Text>
+          {!compact && country ? (
+            <Text
+              accessibilityLabel={`국적 ${country.ko}`}
+              maxFontSizeMultiplier={1.1}
+              style={{ fontSize: 18, lineHeight: 18, marginTop: 2, includeFontPadding: false }}
+            >
+              {flagOf(country.code)}
+            </Text>
+          ) : null}
         </View>
         <View
           style={{
@@ -365,6 +380,22 @@ export function PlayerCard({
           ) : null}
         </View>
       </View>
+      {compact && country ? (
+        <Text
+          accessibilityLabel={`국적 ${country.ko}`}
+          maxFontSizeMultiplier={1.1}
+          style={{
+            position: 'absolute',
+            top: 11,
+            right: 5,
+            fontSize: 11,
+            lineHeight: 13,
+            includeFontPadding: false,
+          }}
+        >
+          {flagOf(country.code)}
+        </Text>
+      ) : null}
       <View
         style={{
           width: '100%',

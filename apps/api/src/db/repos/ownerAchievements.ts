@@ -93,6 +93,7 @@ export async function listAchievementRanking(db: Db, season: number, page: numbe
         nickname: profiles.nickname,
         teamId: ownerTeams.id,
         teamName: ownerTeams.name,
+        logoJson: ownerTeams.logoJson,
       })
       .from(ownerAchievements)
       .innerJoin(profiles, eq(profiles.id, ownerAchievements.profileId))
