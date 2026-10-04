@@ -109,7 +109,8 @@ function digest(states: GameState[], fn: (s: GameState) => unknown): { n: number
   return { n: rows.length, hash: hash(rows) };
 }
 
-describe('게임 특성화 (T-11-044)', () => {
+// 상태 모음 전체를 여러 번 도는 무거운 테스트들이라 느린 CI 러너에선 vitest 기본 5초를 넘길 수 있다.
+describe('게임 특성화 (T-11-044)', { timeout: 20_000 }, () => {
   const corpus = buildCorpus();
   const leaguePhases = corpus.phase.filter((s) => s.phase > 0);
 
