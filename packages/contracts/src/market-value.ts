@@ -107,6 +107,11 @@ export function priceBand(cardValue: number, r: { priceMin: number; priceMax: nu
 }
 /** 판매 수수료(만 원). 팔리면 판매자는 가격에서 이만큼 빼고 받는다. */
 export const marketFee = (price: number, feeRate: number) => Math.round(price * feeRate);
+/** T-11-080e 시세 집계 비율: 판매가 ÷ 기준가(천분율, 1000 = 기준가 그대로). 0059_market_daily.sql의 지난 거래 채우기와 같은 계산. */
+export const marketRatio = (price: number, cardValue: number) =>
+  Math.round((price * 1000) / cardValue);
+/** T-11-080e 시세 집계 OVR대: 최고 OVR을 5 단위로 내린 값(84 → 80). */
+export const ovrBand = (peak: number) => Math.floor(peak / 5) * 5;
 /** T-11-080 방출 지급액(만 원, 천만 단위 반올림). 서버 repos/market.ts releaseCards의 SQL과 같은 계산. */
 export const releasePayout = (retireValue: number, rate: number) =>
   Math.round((retireValue * rate) / 1000) * 1000;

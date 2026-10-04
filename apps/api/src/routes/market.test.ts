@@ -5,6 +5,7 @@ import {
   OwnerTeamResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
+import { readFileSync } from 'node:fs';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cards, careers, marketDaily, marketListings, ownerFunds } from '../db/schema.js';
@@ -232,6 +233,19 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
       ratioMin: 900,
       ratioMax: 1200,
     });
+    // 0059 마이그레이션의 지난 거래 채우기 SELECT도 같은 행을 만든다(두 계산이 어긋나지 않게 묶는다).
+    const migration = readFileSync(
+      new URL('../../migrations/0059_market_daily.sql', import.meta.url),
+      'utf8',
+    );
+    const backfill = migration
+      .slice(migration.lastIndexOf('INSERT INTO'))
+      .replace(/^INSERT INTO[^\n]*\n/, '')
+      .replace(/;\s*$/, '');
+    const recomputed = await ctx.db.$client.prepare(backfill).all();
+    expect(recomputed.results.map((r) => Object.values(r as object))).toEqual(
+      daily.map((r) => Object.values(r)),
+    );
     // 실패한 영입(이미 팔림)은 집계에 더하지 않는다.
     expect(await reason(await buy(buyer.cookie, 1_200_000))).toBe('LISTING_GONE');
     expect((await ctx.db.select().from(marketDaily))[0]!.trades).toBe(2);

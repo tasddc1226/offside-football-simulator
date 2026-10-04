@@ -343,15 +343,20 @@ export async function cancelListing(db: Db, id: string, sellerId: string, now: s
 
 /**
  * 구매. 1) 등록을 잡고(열려 있고 · 본 가격 그대로 · 내가 판 게 아닐 때) 2) 구매자 출금 3) 판매자 입금 4) 카드 주인을 바꾼다.
- * 2~4는 1이 남긴 표식(buyer_id · closed_at)이 있을 때만 바꾼다. 잔액이 모자라면 CHECK 위반으로 batch 전체가 되돌아간다.
+ * 2~5는 1이 남긴 표식(buyer_id · closed_at)이 있을 때만 바꾼다. 5) 시세 집계(market_daily)에 한 건 더한다. 잔액이 모자라면 CHECK 위반으로 batch 전체가 되돌아간다.
  * won = 샀다(아니면 이미 팔렸거나 내렸거나 가격이 바뀌었다). balance = 구매 뒤 내 잔액.
  */
-/** 판매가 ÷ 기준가(천분율). 0059_market_daily.sql의 지난 거래 채우기와 같은 계산. */
-const RATIO = `CAST(round(l.price * 1000.0 / c.card_value) AS INTEGER)`;
-
 export async function buyListing(
   db: Db,
-  b: { id: string; buyerId: string; price: number; fee: number; now: string },
+  b: {
+    id: string;
+    buyerId: string;
+    price: number;
+    fee: number;
+    now: string;
+    /** 시세 집계 묶음과 이 거래의 비율(라우트가 이미 읽은 카드로 계산한다). */
+    daily: { season: number; posGroup: string; band: number; day: string; ratio: number };
+  },
 ): Promise<{ won: boolean; balance: number }> {
   const d1 = db.$client;
   const won = `EXISTS (SELECT 1 FROM market_listings WHERE id = ? AND buyer_id = ? AND closed_at = ?)`;
@@ -386,17 +391,23 @@ export async function buyListing(
     d1
       .prepare(
         `INSERT INTO market_daily (season, pos_group, ovr_band, day, trades, volume, ratio_sum, ratio_min, ratio_max)
-         SELECT l.season, c.pos, (c.peak / 5) * 5, date(l.closed_at, '+9 hours'), 1, l.price, ${RATIO}, ${RATIO}, ${RATIO}
-         FROM market_listings l JOIN cards c ON c.career_id = l.career_id
-         WHERE l.id = ? AND l.buyer_id = ? AND l.closed_at = ? AND c.card_value > 0
+         SELECT ?, ?, ?, ?, 1, ?, ?, ?, ? WHERE ${won}
          ON CONFLICT (season, pos_group, ovr_band, day) DO UPDATE SET
            trades = trades + 1, volume = volume + excluded.volume, ratio_sum = ratio_sum + excluded.ratio_sum,
            ratio_min = min(ratio_min, excluded.ratio_min), ratio_max = max(ratio_max, excluded.ratio_max)`,
       )
-      .bind(...mark),
+      .bind(
+        b.daily.season,
+        b.daily.posGroup,
+        b.daily.band,
+        b.daily.day,
+        b.price,
+        ...Array(3).fill(b.daily.ratio),
+        ...mark,
+      ),
     d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(b.buyerId),
   ]);
-  const bal = results[5]!.results[0] as { balance: number } | undefined;
+  const bal = results.at(-1)!.results[0] as { balance: number } | undefined;
   return { won: results[0]!.meta.changes === 1, balance: bal?.balance ?? 0 };
 }
 

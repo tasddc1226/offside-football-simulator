@@ -11,7 +11,7 @@ import {
   ReleaseCardsBodySchema,
   ReleaseCardsResponseSchema,
 } from '@offside/contracts';
-import { marketFee, priceBand } from '@offside/contracts/market-value';
+import { marketFee, marketRatio, ovrBand, priceBand } from '@offside/contracts/market-value';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { newId } from '../db/ids.js';
@@ -38,6 +38,7 @@ import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
+import { kstDay } from '../time.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { kstTodayStart, requireOwner } from './ownerTeam.js';
 import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
@@ -191,6 +192,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     ]);
     if (!found || found.status !== 'open' || found.hidden || found.listing.card.season !== season)
       throw listingGone();
+    const card = found.listing.card;
     if (found.sellerId === me.id) throw conflictError('내가 내놓은 선수예요.', 'OWN_LISTING');
     if (found.price !== input.price)
       throw conflictError('판매가가 바뀌었어요. 다시 확인해 주세요.', 'PRICE_CHANGED');
@@ -209,6 +211,13 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         price: input.price,
         fee: marketFee(input.price, rules.feeRate),
         now,
+        daily: {
+          season,
+          posGroup: card.pos,
+          band: ovrBand(card.peak),
+          day: kstDay(now),
+          ratio: marketRatio(input.price, card.cardValue),
+        },
       });
     } catch (e) {
       // 같은 구단주가 동시에 두 선수를 사서 잔액이 모자라게 되면 CHECK 위반으로 batch 전체가 되돌아간다.

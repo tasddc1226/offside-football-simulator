@@ -11,7 +11,8 @@ CREATE TABLE `market_daily` (
 	PRIMARY KEY(`season`, `pos_group`, `ovr_band`, `day`)
 );
 --> statement-breakpoint
--- T-11-080e 집계를 시작하기 전에 성사된 거래를 채운다(buyListing의 UPSERT와 같은 계산).
+-- T-11-080e 집계를 시작하기 전에 성사된 거래를 채운다. 비율·OVR대는 contracts market-value의 marketRatio·ovrBand와,
+-- 일자는 time.ts kstDay와 같은 계산이다(market.test.ts가 이 SELECT와 영입 때 쌓인 행을 맞춰 본다).
 INSERT INTO `market_daily` (`season`, `pos_group`, `ovr_band`, `day`, `trades`, `volume`, `ratio_sum`, `ratio_min`, `ratio_max`)
 SELECT `season`, `pos`, `band`, `day`, count(*), sum(`price`), sum(`r`), min(`r`), max(`r`)
 FROM (
