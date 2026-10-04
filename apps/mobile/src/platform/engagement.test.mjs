@@ -142,7 +142,7 @@ describe('native store review adapter', () => {
       await r.openReviewStore();
       expect(f.open).toHaveBeenCalledWith(
         platform === 'ios'
-          ? 'https://apps.apple.com/app/id6817463687?action=write-review'
+          ? 'https://apps.apple.com/kr/app/id6817463687?action=write-review'
           : 'https://play.google.com/store/apps/details?id=com.offsidelab.app&showAllReviews=true',
       );
       expect(f.request).not.toHaveBeenCalled();

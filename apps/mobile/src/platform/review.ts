@@ -26,7 +26,7 @@ export const reviewPrompt = createReviewPrompt({
 });
 
 export function reviewUrl(platform: string): string | null {
-  if (platform === 'ios') return 'https://apps.apple.com/app/id6817463687?action=write-review';
+  if (platform === 'ios') return 'https://apps.apple.com/kr/app/id6817463687?action=write-review';
   if (platform === 'android')
     return 'https://play.google.com/store/apps/details?id=com.offsidelab.app&showAllReviews=true';
   return null;

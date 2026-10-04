@@ -68,7 +68,7 @@ export function PushOptInCard() {
       ) : null}
       <Btn
         kind="ghost"
-        block
+        style={{ alignSelf: 'flex-start' }}
         testID="push-opt-in-privacy"
         onPress={() => void Linking.openURL(`${WEB_ORIGIN}/legal/privacy/#push`)}
       >
