@@ -3,7 +3,7 @@
 // T-11-029 결번은 시즌마다 따로 — 개막한 시즌이 둘 이상이면 시즌 탭을 보인다(웹과 같다).
 import { memo, useEffect, useId, useMemo, useState } from 'react';
 import { View } from 'react-native';
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, G, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { proxy, useSnapshot } from 'valtio';
 import type { CareerPos, RetiredNumbersResponse } from '@offside/contracts';
 import {
@@ -25,10 +25,11 @@ import {
 } from '@offside/app-core/retiredWall';
 import { POS } from '@offside/game/data';
 import { loadHOF } from '@offside/game/season';
-import { RnShirt } from '../../components/RnJersey';
+import { RnShirtShape } from '../../components/RnJersey';
 import { openPublicLegendById } from '../../game/host';
 import { alpha } from '../../theme/colors';
 import { rem } from '../../theme/type';
+import { type Colors } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Card } from '../../ui/Card';
 import { ClubMark } from '../../ui/ClubBadge';
@@ -58,10 +59,12 @@ const GAP = 8;
 const MIN_TILE = 90;
 /** T-11-081 타일을 한 번에 다 그리면(수백 장 · 장마다 SVG 둘) 앱이 수 초 멈춘다 — 첫 화면만큼 먼저, 나머지는 프레임마다 더 그린다. */
 const FIRST_TILES = 24;
-const STEP_TILES = 36;
+const STEP_TILES = 24;
+const SHIRT_W = 52;
+const SHIRT_H = (SHIRT_W * 124) / 120;
 
-/** 목록(key)이 바뀌면 FIRST_TILES부터 다시, total까지 프레임마다 STEP_TILES씩 늘린다. */
-function useTileBudget(key: unknown, total: number): number {
+/** 목록(key: 시즌·정렬·필터)이 바뀌면 FIRST_TILES부터 다시, total까지 프레임마다 STEP_TILES씩 늘린다. */
+function useTileBudget(key: string, total: number): number {
   const [budget, setBudget] = useState({ key, n: FIRST_TILES });
   // 목록이 바뀐 렌더에서 바로 줄인다(effect로 줄이면 한 번은 전부 그린다).
   const n = budget.key === key ? budget.n : FIRST_TILES;
@@ -74,25 +77,28 @@ function useTileBudget(key: unknown, total: number): number {
   return n;
 }
 
-/** 유니폼 타일 한 장 — 구단 색이 은은히 비치는 바탕(웹 radial-gradient). 필터 상태는 부모가 넘긴다(타일마다 구독하지 않게). */
+type TileOpts = {
+  c: Colors;
+  width: number;
+  myIds: ReadonlySet<string>;
+  filteredPos: boolean;
+  filteredClub: boolean;
+};
+
+/** 유니폼 타일 한 장 — 구단 색이 은은히 비치는 바탕(웹 radial-gradient). 바탕과 유니폼을 한 Svg에 그리고, 색·필터 상태는
+ * 부모가 넘긴다(수백 장이라 타일마다 Svg를 하나 더 두거나 구독하지 않게). */
 const Tile = memo(function Tile({
   it,
   withClub,
   mine,
+  c,
   width,
   filteredPos,
   filteredClub,
-}: {
-  it: Item;
-  withClub: boolean;
-  mine: boolean;
-  width: number;
-  filteredPos: boolean;
-  filteredClub: boolean;
-}) {
-  const c = useColors();
+}: Omit<TileOpts, 'myIds'> & { it: Item; withClub: boolean; mine: boolean }) {
   const gid = useId().replace(/[^a-zA-Z0-9]/g, '');
-  const base = (rnColors(it.clubId) ?? RN_DEFAULT).base;
+  const col = rnColors(it.clubId) ?? RN_DEFAULT;
+  const base = col.base;
   const name = it.name ?? anonName(it.pos, it.number);
   return (
     <Press
@@ -127,10 +133,12 @@ const Tile = memo(function Tile({
           </RadialGradient>
         </Defs>
         <Rect width="100%" height="100%" fill={`url(#${gid})`} />
+        {/* 유니폼: 아래 자리(paddingTop 10, 가운데)에 맞춰 120×124 도안을 줄여 그린다. */}
+        <G transform={`translate(${(width - SHIRT_W) / 2} 10) scale(${SHIRT_W / 120})`}>
+          <RnShirtShape number={it.number} col={col} />
+        </G>
       </Svg>
-      <View style={{ marginBottom: 4 }}>
-        <RnShirt number={it.number} width={52} clubId={it.clubId} />
-      </View>
+      <View style={{ width: SHIRT_W, height: SHIRT_H, marginBottom: 4 }} />
       <Txt
         bold
         numberOfLines={1}
@@ -190,37 +198,13 @@ const Tile = memo(function Tile({
   );
 });
 
-/** 웹 grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)). w는 목록 폭(벽에서 한 번 잰다). */
-function Tiles({
-  items,
-  withClub,
-  myIds,
-  w,
-  filteredPos,
-  filteredClub,
-}: {
-  items: Item[];
-  withClub: boolean;
-  myIds: ReadonlySet<string>;
-  w: number;
-  filteredPos: boolean;
-  filteredClub: boolean;
-}) {
-  const cols = Math.max(1, Math.floor((w + GAP) / (MIN_TILE + GAP)));
-  // Android의 소수점 너비 반올림으로 마지막 열이 다음 줄로 밀리지 않게 한다.
-  const tile = Math.floor((w - GAP * (cols - 1)) / cols);
+/** 웹 grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) — 타일 폭은 벽에서 한 번 정한다. */
+function Tiles({ items, withClub, ...o }: TileOpts & { items: Item[]; withClub: boolean }) {
+  const { myIds, ...rest } = o;
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: GAP, paddingBottom: 10 }}>
       {items.map((it) => (
-        <Tile
-          key={it.seq}
-          it={it}
-          withClub={withClub}
-          mine={myIds.has(it.careerId)}
-          width={tile}
-          filteredPos={filteredPos}
-          filteredClub={filteredClub}
-        />
+        <Tile key={it.seq} it={it} withClub={withClub} mine={myIds.has(it.careerId)} {...rest} />
       ))}
     </View>
   );
@@ -267,15 +251,13 @@ export default function RetiredWall() {
   );
   const clubs = useMemo(() => rnByClub(filtered), [filtered]);
   const recent = useMemo(() => rnRecent(filtered), [filtered]);
-  // 구단별일 때 각 구단 앞에 그려지는 타일 수(그릴 몫을 나누는 데 쓴다).
-  const clubStarts = useMemo(() => {
-    let n = 0;
-    return clubs.map((l) => (n += l.length) - l.length);
-  }, [clubs]);
-  const listKey = order === 'club' ? clubs : recent;
-  const budget = useTileBudget(listKey, filtered.length);
+  const budget = useTileBudget(`${season}|${order}|${pos}|${clubId}`, filtered.length);
   const [w, setW] = useState(0);
-  const tileProps = { myIds, w, filteredPos: !!pos, filteredClub: !!clubId };
+  const cols = Math.max(1, Math.floor((w + GAP) / (MIN_TILE + GAP)));
+  // Android의 소수점 너비 반올림으로 마지막 열이 다음 줄로 밀리지 않게 한다.
+  const tileW = Math.floor((w - GAP * (cols - 1)) / cols);
+  const tileOpts = { c, width: tileW, myIds, filteredPos: !!pos, filteredClub: !!clubId };
+  let left = budget; // 구단별: 앞 구단부터 그릴 몫을 나눠 쓴다
 
   const empty = (text: string) => (
     <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
@@ -377,9 +359,10 @@ export default function RetiredWall() {
             style={{ fontSize: 12, marginBottom: 10 }}
           >{`${filtered.length}개 결번 · ${clubs.length}개 구단${pos || clubId ? ` · 전체 ${items?.length ?? 0}개` : ''}`}</Txt>
           {w === 0 ? null : order === 'club' ? (
-            clubs.map((list, i) => {
-              const before = clubStarts[i]!;
-              if (before >= budget) return null;
+            clubs.map((list) => {
+              if (left <= 0) return null;
+              const part = list.slice(0, left);
+              left -= part.length;
               const first = list[0]!;
               return (
                 <View
@@ -431,12 +414,12 @@ export default function RetiredWall() {
                       </Txt>
                     </View>
                   </View>
-                  <Tiles items={list.slice(0, budget - before)} withClub={false} {...tileProps} />
+                  <Tiles items={part} withClub={false} {...tileOpts} />
                 </View>
               );
             })
           ) : (
-            <Tiles items={recent.slice(0, budget)} withClub {...tileProps} />
+            <Tiles items={recent.slice(0, budget)} withClub {...tileOpts} />
           )}
         </View>
       ) : (
