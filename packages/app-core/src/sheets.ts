@@ -2,6 +2,7 @@
 // 웹(ui/sheets/*.svelte)·앱 시트 컴포넌트가 그대로 그린다(컴포넌트는 게임 로직을 직접 부르지 않는다).
 import type { Chip } from '@offside/game/stats';
 import type { TitleView } from '@offside/game/titles';
+import type { Promotion } from '@offside/game/promotion';
 import type { ResolveResult } from '@offside/game/event-runner';
 import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
@@ -161,6 +162,8 @@ export type SheetView =
       gala: string[];
       miles: string[];
       titles: TitleView[];
+      /** T-10-110 K리그2 우승 승격. */
+      promo: Promotion | undefined;
       notes: string[];
       /** 옛 시트 호환용. 은퇴 전에는 화면에 표시하지 않는다. 육성 중 안내는 scoutHint가 맡는다. */
       scout?: string | null;

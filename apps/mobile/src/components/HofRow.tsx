@@ -48,6 +48,8 @@ export interface HofRowProps {
   rn?: number | null | undefined;
   /** T-10-096 국적 코드 — 없는 예전 커리어는 대한민국으로 표시한다. */
   nation?: string | null | undefined;
+  /** 국적을 모르는 옛 로컬 기록에는 국기를 표시하지 않는다. */
+  showNation?: boolean;
   /** T-10-125 기록 요약이 칸보다 길면 말줄임 대신 홈 전광판처럼 오른쪽에서 왼쪽으로 흘린다. */
   flow?: boolean;
   /** 모바일 기록실 줄(웹 .card[data-hof] .hof-row) — 순위 칸 34px, 좌우 여백 2px. */
@@ -254,6 +256,7 @@ export function HofRow({
   clubId = null,
   rn = null,
   nation = null,
+  showNation = true,
   flow = false,
   compact = false,
   first,
@@ -261,8 +264,9 @@ export function HofRow({
   showPosition = true,
 }: HofRowProps) {
   const c = useColors();
-  const country =
-    NATION_BY_CODE.get(nation ?? DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION);
+  const country = showNation
+    ? (NATION_BY_CODE.get(nation ?? DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION))
+    : undefined;
   const tt = titleById(titleId);
   const stats = useMemo(
     () =>

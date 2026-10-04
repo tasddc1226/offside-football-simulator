@@ -7,7 +7,7 @@
 // 꾸준히 찾아온 활동(은퇴시킨 선수·날, 팀 경기한 날, 응원)으로 센다. 팀·구단주 목표치는 프리시즌 팀 53개 분포(2026-10-01)로 잡았다.
 // T-11-046 '은퇴 직전까지 현역'은 그 시즌 은퇴 나이(T-11-045)의 한 살 아래다 — 프리시즌 40세, 시즌 1 44세.
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
-import type { AchCategory } from '@offside/contracts/owner-team';
+import { LINEUP_SIZE, type AchCategory } from '@offside/contracts/owner-team';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
 import { DETAIL_POSITIONS, type DetailPos, type PosGroup } from '@offside/contracts/positions';
 import { NATIONAL_WINS } from '@offside/contracts/nations';
@@ -467,7 +467,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
 
   if (team) {
     const players = team.slots.filter((s) => s.careerId !== null);
-    const full = team.slots.length > 0 && players.length === team.slots.length;
+    const full = team.slots.length === LINEUP_SIZE && players.length === LINEUP_SIZE;
     const all = (pred: (s: AchievementTeamSlot) => boolean) => full && players.every(pred);
     const club = players[0]?.lastClubId;
     groups.push(

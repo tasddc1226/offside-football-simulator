@@ -51,6 +51,8 @@ export interface Season {
   comps?: SeasonComp[];
   trophiesMid?: string[];
   capsStart?: number;
+  /** T-10-110 승격으로 s.leagueId가 바뀐 뒤에도 이 시즌의 순위표가 뛴 리그로 남도록, 승격한 시즌에만 적는다. */
+  leagueId?: string;
 }
 
 export interface CareerRecord {
@@ -268,6 +270,10 @@ export interface GameState {
   money: number;
   leagueId: string;
   club: Club;
+  /** T-10-110 이 커리어에서 리그를 옮긴 구단(K2 우승 승격·그 자리를 비운 K1 구단 강등) — 구단 id → 지금 리그 id.
+   * 정적 CLUBS 소속은 그대로 두고 커리어마다 따로 둔다. 없으면 모든 구단이 정적 소속이다. 지금 리그는 leagueId가
+   * 정본이고, club.leagueId는 CLUBS에서 복사한 정적 값이다(읽지 않는다). */
+  leagueMoves?: Record<string, string>;
   contract: Contract | null;
   phase: number;
   uniYears: number;
@@ -312,6 +318,8 @@ export interface GameState {
 }
 
 export interface HofEntry {
+  /** T-11-072 은퇴 때 남긴 국적. 옛 로컬 기록에는 없어 국적을 추측하지 않는다. */
+  nation?: string | undefined;
   name: string;
   pos: Pos;
   dpos?: DetailPos | undefined;

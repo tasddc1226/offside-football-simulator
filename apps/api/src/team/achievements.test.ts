@@ -182,6 +182,20 @@ describe('구단 시즌 업적', () => {
     expect(item(m, 'team-caps')?.done).toBe(true);
   });
 
+  it('팀 적합도 업적은 정확히 11명, 유스 없이 모두 1.00일 때만 달성한다', () => {
+    const done = (slots: AchievementTeamSlot[]) =>
+      item(
+        clubAchievements({ careers: [], team: teamOf(slots), owner: OWNER, detail: true }),
+        'team-fit',
+      )?.done;
+    for (const count of [0, 1, 10, 12])
+      expect(done(Array.from({ length: count }, () => slot()))).toBe(false);
+    const full = Array.from({ length: 11 }, () => slot());
+    expect(done(full)).toBe(true);
+    expect(done([...full.slice(0, 10), slot({ fit: 0.99 })])).toBe(false);
+    expect(done([...full.slice(0, 10), slot({ careerId: null, fit: 1 })])).toBe(false);
+  });
+
   it('3단계: 한 선수의 위업 — 원클럽맨 · 한 시즌 기록 · 트레블', () => {
     const pro = (n: number, club: string) =>
       Array.from({ length: n }, () => season({ league: 'K리그1', club }));

@@ -32,6 +32,7 @@
     clubId = null,
     rn = null,
     nation = null,
+    showNation = true,
     flow = false,
     compact = false,
     showPosition = true,
@@ -58,12 +59,14 @@
     rn?: number | null | undefined;
     /** 국적 코드 — 없는 예전 커리어는 대한민국으로 표시한다. */
     nation?: string | null | undefined;
+    /** 국적을 모르는 옛 로컬 기록에는 국기를 표시하지 않는다. */
+    showNation?: boolean;
     /** T-10-125 기록 요약이 칸보다 길면 말줄임 대신 홈 전광판처럼 오른쪽에서 왼쪽으로 흘린다. */
     flow?: boolean;
     compact?: boolean;
     showPosition?: boolean;
   } = $props();
-  const country = $derived(NATION_BY_CODE.get(nation || DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION)!);
+  const country = $derived(showNation ? (NATION_BY_CODE.get(nation || DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION)!) : undefined);
   const tt = $derived(titleById(titleId));
   // 글자 값('1,115억 3천만')은 큰 단위 아래에 작은 단위를 한 줄 더 — 오른쪽 칸이 좁아 이름 줄이 덜 밀린다.
   const [valueHead, valueSub] = $derived(typeof value === 'string' ? value.split(' ') : []);
@@ -85,7 +88,7 @@
 {/if}
 <!-- 두 줄: 윗줄은 이름·포지션·칭호와 오른쪽 값, 아랫줄 기록 요약은 값 밑까지 넓게 쓰고 넘치면 말줄임(T-10-105). -->
 <div class="hof-main" class:hof-main-compact={compact}>
-  <span class="hof-identity"><ClubMark name={club} id={clubId} size={18} /><span class="hof-flag" role="img" aria-label={country.ko} title={country.ko} data-hof-nation={country.code}>{flagOf(country.code)}</span><b>{name}</b></span>
+  <span class="hof-identity"><ClubMark name={club} id={clubId} size={18} />{#if country}<span class="hof-flag" role="img" aria-label={country.ko} title={country.ko} data-hof-nation={country.code}>{flagOf(country.code)}</span>{/if}<b>{name}</b></span>
   {#if showPosition || rn != null || tag || tt}
     <span class="hof-badges">{#if showPosition}<span class="pill">{posLabel({ pos, dpos })}</span>{/if}
       {#if rn != null}<span class="pill pill-rn" data-rn-chip title="영구결번 {rn}번">👑 영결 {rn}</span>{/if}
