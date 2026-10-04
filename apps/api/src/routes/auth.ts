@@ -121,7 +121,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
     if (hostPair === null) {
       throw new AppError({
         code: 'SERVICE_UNAVAILABLE',
-        message: 'Google 로그인을 사용할 수 없습니다.',
+        message: '지금은 구글 로그인을 사용할 수 없어요. 잠시 후 다시 시도해 주세요.',
       });
     }
     // 주소창으로 여는 경로라 실패는 JSON 대신 설정 화면으로 돌려보낸다. 세션이 없으면(로그아웃 직후의 옛 화면
@@ -157,7 +157,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
     if (hostPair === null) {
       throw new AppError({
         code: 'SERVICE_UNAVAILABLE',
-        message: 'Google 로그인을 사용할 수 없습니다.',
+        message: '지금은 구글 로그인을 사용할 수 없어요. 잠시 후 다시 시도해 주세요.',
       });
     }
     const callbackWebOrigin = hostPair.webOrigin;

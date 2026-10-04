@@ -41,7 +41,7 @@
       <div class="settings-label">
         <small class="eyebrow">Display</small>
         <strong id="dark-label">다크 모드</strong>
-        <span class="muted">어두운 화면으로 봐요. 이 기기에 저장돼요.</span>
+        <span class="muted">어두운 화면으로 바꿔요. 이 기기에 저장돼요.</span>
       </div>
       <button class="switch" role="switch" aria-checked={dark} aria-labelledby="dark-label" data-setting="dark" onclick={() => setDark((dark = !dark))}></button>
     </div>
@@ -49,7 +49,7 @@
     <div class="settings-row">
       <div class="settings-label">
         <strong id="sheet-label">업무 모드</strong>
-        <span class="muted">게임 화면을 스프레드시트처럼 보이게 하고 배경음악·효과음을 꺼요. 키보드 <kbd>`</kbd>(숫자 1 왼쪽 키)로 언제든 바로 켜고 끌 수 있어요. PC 브라우저에서만 적용되고 이 기기에 저장돼요.</span>
+        <span class="muted">게임 화면을 스프레드시트로 바꾸고 소리를 꺼요. <kbd>`</kbd>(숫자 1 왼쪽 키)로 켜고 꺼요. PC 브라우저 전용이며 이 기기에 저장돼요.</span>
       </div>
       <button class="switch" role="switch" aria-checked={skin.pref} aria-labelledby="sheet-label" data-setting="sheet-skin" onclick={() => setSheetSkin(!skin.pref)}></button>
     </div>
@@ -68,7 +68,7 @@
     <div class="settings-row">
       <div class="settings-label">
         <strong id="bgm-label">배경음악</strong>
-        <span class="muted">게임을 하는 동안 음악을 틀어요. 기록실과 선수 상세에서는 다른 곡이 흘러요. 화면 위쪽 스피커 버튼으로도 켜고 끌 수 있어요.</span>
+        <span class="muted">기록실·선수 상세에서는 다른 곡이 나와요. 화면 위 스피커 버튼으로도 켜고 꺼요.</span>
       </div>
       <button class="switch" role="switch" aria-checked={bgm.on} aria-labelledby="bgm-label" data-setting="bgm" onclick={() => setBgm(!bgm.on)}></button>
     </div>

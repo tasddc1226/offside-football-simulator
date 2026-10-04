@@ -25,7 +25,7 @@
     if (saved) saved.title = id;
     saveKey('ft_hof', hof);
     uploadRetirement(h.id, h);
-    toast(`대표 칭호를 ‘${titleById(id)?.name ?? id}’(으)로 바꿨어요.`);
+    toast(`대표 칭호를 바꿨어요: ${titleById(id)?.name ?? id}`);
   }
 </script>
 

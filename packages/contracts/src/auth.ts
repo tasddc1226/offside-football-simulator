@@ -46,7 +46,7 @@ export const RecoveryCodeInputSchema = z.string().transform((value, ctx) => {
   if (normalized.length !== 12 || !isRecoveryCodeAlphabet(normalized)) {
     ctx.addIssue({
       code: 'custom',
-      message: '복구 코드는 OFS-XXXX-XXXX-XXXX 형식(I L O U 0 1 제외)이어야 한다.',
+      message: '복구 코드는 OFS-XXXX-XXXX-XXXX 형식이에요. I·L·O·U·0·1은 쓰지 않아요.',
     });
     return z.NEVER;
   }
@@ -55,7 +55,9 @@ export const RecoveryCodeInputSchema = z.string().transform((value, ctx) => {
 
 /** API-PRO-003 응답. 원문 코드는 발급 응답에 한 번만 담긴다(D-14). */
 export const IssueRecoveryCodeResponseSchema = z.strictObject({
-  code: z.string().regex(RECOVERY_CODE_DISPLAY_PATTERN, 'OFS-XXXX-XXXX-XXXX 형식이어야 한다.'),
+  code: z
+    .string()
+    .regex(RECOVERY_CODE_DISPLAY_PATTERN, 'OFS-XXXX-XXXX-XXXX 형식으로 입력해 주세요.'),
   issuedAt: IsoUtcSchema,
 });
 export type IssueRecoveryCodeResponse = z.infer<typeof IssueRecoveryCodeResponseSchema>;

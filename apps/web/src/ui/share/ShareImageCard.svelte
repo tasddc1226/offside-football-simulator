@@ -67,7 +67,7 @@
       {/if}
     </div>
   {:else}
-    <p class="muted fs-sm">인스타그램·카카오톡에 바로 올릴 수 있는 한 장짜리 커리어 카드를 만들어요.</p>
+    <p class="muted fs-sm">인스타그램·카카오톡에 공유할 커리어 카드를 만들어요.</p>
     <button class="btn btn-primary btn-block" data-act="share-image-make" onclick={make} disabled={busy}>
       {busy ? '만드는 중…' : '공유 이미지 만들기'}
     </button>

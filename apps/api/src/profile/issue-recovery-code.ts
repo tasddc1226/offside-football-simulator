@@ -16,7 +16,10 @@ export async function issueRecoveryCode(
 ): Promise<IssueRecoveryCodeResult> {
   const attempts = await getAttemptCount(db, 'RECOVERY_ISSUE', input.profileId, input.now);
   if (attempts >= RATE_LIMIT_MAX) {
-    throw new AppError({ code: 'RATE_LIMITED', message: '복구 코드 발급 횟수를 초과했습니다.' });
+    throw new AppError({
+      code: 'RATE_LIMITED',
+      message: '복구 코드를 너무 자주 발급했어요. 잠시 후 다시 시도해 주세요.',
+    });
   }
   await recordAttempt(db, 'RECOVERY_ISSUE', input.profileId, input.now);
 

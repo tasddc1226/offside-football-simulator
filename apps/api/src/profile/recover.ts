@@ -29,7 +29,10 @@ export async function recoverProfile(
   const subject = `${input.ip}:${input.sessionId}`;
   const attempts = await getAttemptCount(db, 'RECOVERY_REDEEM', subject, input.now);
   if (attempts >= RATE_LIMIT_MAX) {
-    throw new AppError({ code: 'RATE_LIMITED', message: '복구 시도 횟수를 초과했습니다.' });
+    throw new AppError({
+      code: 'RATE_LIMITED',
+      message: '복구를 너무 자주 시도했어요. 잠시 후 다시 시도해 주세요.',
+    });
   }
 
   const hash = await sha256Hex(normalizeRecoveryCode(input.code));
@@ -39,7 +42,7 @@ export async function recoverProfile(
     await recordAttempt(db, 'RECOVERY_REDEEM', subject, input.now);
     throw new AppError({
       code: 'RECOVERY_CODE_INVALID',
-      message: '복구 코드가 올바르지 않습니다.',
+      message: '복구 코드가 올바르지 않아요.',
     });
   }
 

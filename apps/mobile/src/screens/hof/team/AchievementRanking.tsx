@@ -265,7 +265,7 @@ export default function AchievementRanking() {
         ) : null}
       </View>
       <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 10 }}>
-        시즌마다 처음부터 다시 쌓아요. 선수·팀·구단주 업적 점수의 합이고, 랭킹은 5분마다 새로 세요.
+        시즌마다 처음부터 다시 쌓아요. 선수·팀·구단주 업적 점수의 합이고, 랭킹은 5분마다 갱신돼요.
       </Txt>
     </Card>
   );

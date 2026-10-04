@@ -66,7 +66,7 @@
       <div class="rn-ceremony rn-anon">
         <div class="eyebrow film-kicker">Retired Number</div>
         <p class="rn-line">이름을 공개하면<br /><b>{rnSlot.club} {rnSlot.number}번</b> 영구결번이 확정됩니다.</p>
-        <p class="rn-stats">결번은 이름을 공개한 순서대로 주어져요. 먼저 공개한 선수가 그 번호를 가져갑니다.</p>
+        <p class="rn-stats">먼저 이름을 공개한 선수가 그 번호를 받아요.</p>
         {#if v.own}
           <button class="btn btn-primary" data-act="rn-public" onclick={() => v.own && setLegendPublic(v.own, true)}>이름 공개하고 결번 받기</button>
         {/if}

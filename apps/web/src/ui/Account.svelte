@@ -72,7 +72,7 @@
   <div class="account-card"><div class="who"><b>계정</b><span class="muted">확인 중…</span></div></div>
 {:else if profile === 'error'}
   <div class="account-card">
-    <div class="who"><b>연결할 수 없어요</b><span class="muted">서버에 연결하지 못해 로그인 상태를 확인하지 못했어요. 게임은 그대로 할 수 있고, 저장은 이 기기에 남아요.</span></div>
+    <div class="who"><b>연결할 수 없어요</b><span class="muted">서버에 연결하지 못해 로그인 상태를 확인할 수 없어요. 게임은 계속할 수 있고, 진행 상황은 이 기기에 저장돼요.</span></div>
     <button class="btn btn-sm" onclick={() => load()}>다시 시도</button>
   </div>
 {:else if !profile || !isMember(profile)}

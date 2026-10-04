@@ -18,7 +18,7 @@ export function NameReport({ kind, id, name }: { kind: NameReportKind; id: strin
     if (busy) return;
     const ok = await confirmAsync(
       `'${name}' 이름을 신고할까요?`,
-      '운영자가 확인하고 가립니다.',
+      '운영자가 확인한 뒤 가려요.',
       '신고',
     );
     if (!ok) return;

@@ -65,7 +65,7 @@ const TYPES: (StyleType & { hit: (x: Signals) => boolean })[] = [
     key: 'lucky',
     icon: '🍀',
     name: '타고난 강운',
-    line: '낮은 확률에 건 선택이 자꾸 들어맞았다. 주사위가 늘 편이었다.',
+    line: '낮은 확률에 건 선택이 자꾸 들어맞았다. 운도 따라줬다.',
     hit: (x) => x.luck >= 3,
   },
   {
@@ -86,7 +86,7 @@ const TYPES: (StyleType & { hit: (x: Signals) => boolean })[] = [
     key: 'unlucky',
     icon: '🌧️',
     name: '비운의 사나이',
-    line: '낮은 확률에 건 선택이 번번이 빗나갔다. 그래도 계속 걸었다.',
+    line: '될 만한 선택도 자꾸 빗나갔다. 운이 따라주지 않았다.',
     hit: (x) => x.luck <= -3,
   },
   {

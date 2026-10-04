@@ -167,7 +167,7 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
   },
   W: {
     label: DETAIL_LABEL.W,
-    blurb: '측면을 찢고 올린다',
+    blurb: '측면을 돌파해 크로스를 올린다',
     role: 'RW',
     mod: { pac: 4, dri: 3, sho: -3, phy: -4 },
     focus: ['pac', 'dri'],
@@ -413,9 +413,9 @@ export const TRAITS: TraitDef[] = [
   {
     id: 'star',
     name: '스타성',
-    desc: '인기와 스폰서가 잘 따라와요.',
+    desc: '인기가 빨리 오르고 스폰서 제의도 늘어요.',
     icon: '⭐',
-    short: '인기·스폰서가 따라와요',
+    short: '인기·스폰서 제의가 늘어요',
   },
 ];
 

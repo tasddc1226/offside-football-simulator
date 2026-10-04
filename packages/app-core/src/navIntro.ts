@@ -8,8 +8,8 @@ export type SubNav = 'game' | 'team';
 const KEY = 'ft_nav_intro';
 /** 말풍선 문구 — 가운데 버튼이 이 메뉴에서 나가는 자리라는 걸 알린다. */
 export const NAV_INTRO: Record<SubNav, string> = {
-  game: '게임 메뉴로 바뀌었어요 · 가운데 홈으로 나가요',
-  team: '내 팀 메뉴로 바뀌었어요 · 가운데 구단주로 나가요',
+  game: '게임 메뉴예요. 가운데 홈 버튼으로 나가요.',
+  team: '내 팀 메뉴예요. 가운데 구단주 버튼으로 나가요.',
 };
 /** 말풍선이 떠 있는 시간(ms). 그 전에 화면을 만지면 바로 닫는다. */
 export const NAV_INTRO_MS = 5000;

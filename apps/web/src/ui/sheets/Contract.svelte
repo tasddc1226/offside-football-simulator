@@ -185,7 +185,7 @@
       <div class="stamp" aria-hidden="true"><b>SIGNED</b><span>{v.club.name}</span></div>
     {/if}
   </div>
-  <p class="sign-note">게임 속 선수의 가상 사인입니다</p>
+  <p class="sign-note">게임 속 선수의 가상 사인이에요</p>
   <div class="sign-tools">
     <button class="btn btn-sm" data-sign="clear" disabled={sealed} onclick={clear}>다시 쓰기</button>
     <button class="btn btn-sm" data-sign="name" disabled={sealed} onclick={nameSign}>이름 사인 사용</button>

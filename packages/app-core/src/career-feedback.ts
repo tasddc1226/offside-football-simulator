@@ -57,11 +57,11 @@ export function coachFeedback(s: GameState): { summary: string; notes: string[] 
     .sort((a, b) => a.f - b.f)[0];
   if (lopsided)
     notes.push(
-      `${labelOf(s, lopsided.k)}이 다른 핵심 능력치보다 앞서 있어 이 능력치의 훈련 성장이 줄어요. 다른 핵심 능력치를 보완하면 치우침을 줄일 수 있어요.`,
+      `${labelOf(s, lopsided.k)}이 다른 핵심 능력치보다 앞서 있어 이 능력치의 훈련 성장이 줄어요. 다른 핵심 능력치를 보완해 주세요.`,
     );
   if (!notes.length)
     notes.push('OVR은 반올림한 종합 수치예요. OVR이 같아도 세부 능력치는 달라질 수 있어요.');
-  notes.push('이 메모만으로 성장 정체의 원인이나 앞으로의 한계를 단정할 수는 없어요.');
+  notes.push('이 메모만으로 성장 정체의 원인이나 한계를 단정할 수는 없어요.');
   return { summary, notes };
 }
 
