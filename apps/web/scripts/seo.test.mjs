@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
+import { brandSvg } from '../brand/build-icons.mjs';
 import {
   BRAND_VERSION,
   stripAppBundle,
@@ -8,7 +9,6 @@ import {
   createHeadMarkup,
   createRobotsTxt,
   createSitemapXml,
-  maskableSvg,
   pageHtml,
   parsePublicSiteUrl,
   resolveSeoConfig,
@@ -35,11 +35,15 @@ test('accepts only an HTTPS origin', () => {
   assert.equal(parsePublicSiteUrl('https://play.example.com/path'), undefined);
 });
 
-test('brand discovery uses the versioned approved flag assets', () => {
+test('brand discovery uses the versioned approved icon assets', () => {
   const head = createHeadMarkup({ origin: undefined, indexingEnabled: false });
-  assert.match(head, /offside-flag-v6-64\.png/);
-  assert.match(head, /offside-flag-v6-180\.png/);
-  assert.match(head, /og-offside-flag-v6\.png/);
+  assert.match(head, /offside-icon-v7-64\.png/);
+  assert.match(
+    head,
+    /offside-icon-v7-dark-64\.png" type="image\/png" sizes="64x64" media="\(prefers-color-scheme: dark\)"/,
+  );
+  assert.match(head, /offside-icon-v7-180\.png/);
+  assert.match(head, /og-offside-v7\.png/);
   assert.match(head, /site\.webmanifest/);
   assert.doesNotMatch(head, /favicon\.svg/);
 });
@@ -109,7 +113,8 @@ test('stripAppBundle은 속성 순서와 무관하게 앱 스크립트·modulepr
 test('in-app badge uses the current brand version', () => {
   // T-10-001: 인앱 배지 마크업은 ui.ts에서 Topbar.svelte로 옮겨졌다.
   const topbar = readFileSync(new URL('../src/ui/Topbar.svelte', import.meta.url), 'utf8');
-  assert.match(topbar, new RegExp(`/brand/offside-flag-${BRAND_VERSION}-64\\.png`));
+  assert.match(topbar, new RegExp(`/brand/offside-icon-${BRAND_VERSION}-64\\.png`));
+  assert.match(topbar, new RegExp(`/brand/offside-icon-${BRAND_VERSION}-dark-64\\.png`));
 });
 
 test('structured data: home is a free web game, FAQ mirrors visible Q&A, no-index shells get none', () => {
@@ -121,10 +126,9 @@ test('structured data: home is a free web game, FAQ mirrors visible Q&A, no-inde
   assert.doesNotMatch(createHeadMarkup(config, '/', true), /ld\+json/);
 });
 
-test('T-10-118 maskable 아이콘은 모서리 없는 배경에 로고만 80%로 줄인다', () => {
-  const svg = readFileSync(new URL('../brand/offside-app-icon-fulltime-v6.svg', import.meta.url));
-  const out = maskableSvg(svg);
-  assert.doesNotMatch(out, /rx="112"/);
-  assert.match(out, /<g transform="translate\(51\.2 51\.2\) scale\(0\.8\)"><rect x="146"/);
-  assert.throws(() => maskableSvg('<svg></svg>'), /maskable/);
+test('T-10-118 maskable 아이콘은 모서리 없는 배경에 서클·글자만 80%로 줄인다', () => {
+  const out = brandSvg('light', { rounded: false, artScale: 0.8 });
+  assert.doesNotMatch(out, /rx="224"/);
+  assert.match(out, /<g transform="translate\(102\.4 102\.4\) scale\(0\.8\)">/);
+  assert.match(brandSvg('light'), /rx="224"/);
 });
