@@ -15,18 +15,72 @@ import { BAL } from './balance.js';
 import type { EventDef, GameState, MarketResult, MilOption } from './types.js';
 import { isKorean } from './nation.js';
 
-export const SANGMU = {
-  id: 'sangmu',
-  name: '김천 상무 (국군체육부대)',
-  leagueId: 'k1',
-  str: 63,
-};
+export const SANGMU = { id: 'sangmu', name: '김천 상무 (국군체육부대)', leagueId: 'k1', str: 63 };
 const MIL_AGE = 28;
 const SANGMU_MIN_AGE = 22;
+const SPORTS_MONTHS = 34;
 
-/** 병역을 마쳤거나 면제·특례를 받았는지. 외국 국적 선수는 병역이 없다(T-10-096) — 상무·현역 선택지가 뜨지 않는다. */
+export const SPORTS_SERVICE_NOTICE =
+  '대한민국 선수는 대회 명단에 들어 아시안게임 금메달이나 올림픽 금·은·동메달을 받으면 체육요원으로 편입돼요. 출전 경기 수는 조건이 아니고, 아시안컵·월드컵 우승은 대상이 아니에요. 완전 면제가 아니라 34개월 동안 선수 활동을 이어 가며 군사교육과 544시간 공익복무를 이행해요. 게임에서는 시즌 단위로 복무 기간이 지나고 교육·공익복무는 자동 이행돼요. 상무에서 전환하면 남은 복무 비율에 따라 기간과 공익복무가 줄고, 이미 마친 군사교육은 반복하지 않아요.';
+export const SPORTS_SERVICE_LEGACY_NOTICE =
+  '기존 특례 기록에는 복무 기간이 없어 남은 기간을 표시하지 않아요. 특례와 선수 활동은 그대로 유지돼요.';
+
+/** 상무·현역 입대가 더 필요 없는지. 체육요원 편입은 복무 완료와 다르다. */
 export function milDone(s: GameState): boolean {
   return !isKorean(s) || !!(s.mil.exempt || s.mil.served);
+}
+
+/** 현행 메달 기준. 단체종목 실제 출전 요건은 2020-06-30 삭제됐다. */
+export function grantSportsService(
+  s: GameState,
+  key: string,
+  stage: string,
+  inSquad: boolean,
+): boolean {
+  const medal =
+    key === 'ag' && stage === '우승'
+      ? '아시안게임 금메달'
+      : key === 'olympic' && ['금메달', '은메달', '동메달'].includes(stage)
+        ? `올림픽 ${stage}`
+        : null;
+  if (!inSquad || !medal || milDone(s)) return false;
+  const m = s.mil;
+  m.exempt = medal;
+  // 상무 2시즌 모델에서 이번 시즌을 마친 뒤 남은 복무 비율을 적용한다.
+  // 실제 제92조의2의 일수 계산은 저장에 입대일이 없어 시즌 비율로 근사한다.
+  const monthsLeft =
+    m.serving && m.type === 'sangmu'
+      ? (SPORTS_MONTHS * Math.max(0, m.left - 1)) / 2
+      : SPORTS_MONTHS;
+  m.sportsService = { monthsLeft, lastYear: s.year };
+  m.applied = false;
+  m.accepted = false;
+  m.armyNext = false;
+  log(
+    s,
+    `체육요원 편입 대상입니다. ${medal}을 받았습니다. 선수 활동을 이어 가며 체육요원으로 복무합니다.${m.serving ? ' 이번 시즌 상무 복무를 마친 뒤 전환하며, 남은 복무 비율에 따라 기간과 공익복무가 줄어듭니다. 이미 마친 군사교육은 반복하지 않습니다.' : ' 의무복무 기간은 34개월이며 군사교육과 544시간 공익복무를 이행합니다.'}`,
+    'big',
+  );
+  return true;
+}
+
+/** 새 특례는 시즌마다 12개월씩 자동 이행. 취득한 시즌·같은 해 재정산은 차감하지 않는다. */
+function sportsSeasonEnd(s: GameState): string | null {
+  const service = s.mil.sportsService;
+  if (
+    !isKorean(s) ||
+    !service ||
+    service.monthsLeft == null ||
+    service.monthsLeft <= 0 ||
+    s.year <= service.lastYear
+  )
+    return null;
+  service.monthsLeft = Math.max(0, service.monthsLeft - (s.year - service.lastYear) * 12);
+  service.lastYear = s.year;
+  if (service.monthsLeft > 0) return null;
+  s.mil.served = true;
+  log(s, '체육요원 의무복무를 마쳤습니다. 군사교육과 공익복무도 이행했습니다.', 'big');
+  return '체육요원 복무 완료';
 }
 export function milAbroad(s: GameState): boolean {
   return leagueOf(s.leagueId).tier >= 3;
@@ -58,7 +112,15 @@ export function milCanApply(s: GameState): boolean {
 export function milStatusText(s: GameState): string {
   if (!isKorean(s)) return '해당 없음 (외국 국적)';
   const m = s.mil;
-  if (m.exempt) return `병역 특례 (${m.exempt})`;
+  if (m.exempt) {
+    if (m.serving) return `체육요원 편입 예정 · 시즌 종료 후 상무 전환 (${m.exempt})`;
+    const left = m.sportsService?.monthsLeft;
+    return left == null
+      ? `체육요원 특례 · 기존 기록 (${m.exempt})`
+      : left > 0
+        ? `체육요원 복무 중 · 약 ${Math.ceil(left / 12)}시즌 남음 (${m.exempt})`
+        : `체육요원 복무 완료 (${m.exempt})`;
+  }
   if (m.serving) return `상무 복무 중 · 전역까지 ${m.left}시즌`;
   if (m.served) return m.type === 'army' ? '현역 만기 전역' : '상무 만기 전역';
   if (m.accepted) return '상무 최종 합격 · 입대 대기';
@@ -161,6 +223,7 @@ export function serveArmy(s: GameState) {
   );
 }
 export function milSeasonEnd(s: GameState): string | null {
+  const sports = sportsSeasonEnd(s);
   if (s.mil.applied) {
     s.mil.applied = false;
     s.flags['sangmuTry' + (s.year + 1)] = 1;
@@ -178,14 +241,15 @@ export function milSeasonEnd(s: GameState): string | null {
       schedule(s, 'mil-notice', 2, 1);
       schedule(s, 'mil-notice-low', 2, 1);
     }
-    return null;
+    return sports;
   }
   s.mil.left--;
   const early = !!s.mil.exempt;
   if (s.mil.left > 0 && !early) return '상무 복무 1시즌 남음';
   const prev = s.mil.prevClub!;
   s.mil.serving = false;
-  s.mil.served = true;
+  s.mil.served =
+    !early || s.mil.sportsService?.monthsLeft == null || s.mil.sportsService.monthsLeft === 0;
   s.mil.left = 0;
   s.club = { ...prev.club };
   s.leagueId = prev.leagueId;
@@ -193,7 +257,7 @@ export function milSeasonEnd(s: GameState): string | null {
   s.contract = prev.contract
     ? { ...prev.contract, years: prev.contract.years + 1 }
     : { years: 0, salary: salaryFor(prev.leagueId, ovrCalc(s)) };
-  const how = early ? '병역 특례로 조기 전역' : '김천 상무에서 만기 전역';
+  const how = early ? '상무 복무를 마치고 체육요원으로 전환' : '김천 상무에서 만기 전역';
   log(
     s,
     prev.abroad
@@ -201,7 +265,7 @@ export function milSeasonEnd(s: GameState): string | null {
       : `${how}! 원소속팀 ${s.club.name}(으)로 돌아갑니다.`,
     'big',
   );
-  return `${early ? '조기 전역' : '상무 만기 전역'} → ${s.club.name} ${prev.abroad ? '복귀 협상' : '복귀'}`;
+  return `${early ? '체육요원 전환' : '상무 만기 전역'} → ${s.club.name} ${prev.abroad ? '복귀 협상' : '복귀'}`;
 }
 
 export function milEnlistMarket(s: GameState): MarketResult | null {
@@ -281,17 +345,11 @@ export function acceptMilitary(
       };
     s.season = newSeason(s);
     s.phase = 0;
-    return {
-      text: '상무 불합격. 현 소속팀에서 한 시즌 더 뛰며 다시 도전합니다.',
-      ok: false,
-    };
+    return { text: '상무 불합격. 현 소속팀에서 한 시즌 더 뛰며 다시 도전합니다.', ok: false };
   }
   if (opt.kind === 'army') {
     serveArmy(s);
-    return {
-      text: '현역으로 입대했습니다. 18개월 뒤 전역해 복귀를 준비합니다.',
-      reopen: true,
-    };
+    return { text: '현역으로 입대했습니다. 18개월 뒤 전역해 복귀를 준비합니다.', reopen: true };
   }
   return null;
 }
@@ -379,26 +437,3 @@ export const MILITARY_EVENTS: EventDef[] = [
     choices: [MIL_APPLY, MIL_DEFER, MIL_ARMY],
   },
 ];
-
-/** 대회 메달·명단에 따른 체육요원 특례 판정. */
-export function grantSportsService(
-  s: GameState,
-  key: string,
-  stage: string,
-  inSquad: boolean,
-): boolean {
-  const eligible =
-    (key === 'ag' && stage === '우승') ||
-    (key === 'olympic' && ['금메달', '은메달', '동메달'].includes(stage));
-  if (!inSquad || !eligible || milDone(s)) return false;
-  s.mil.exempt = key === 'ag' ? '아시안게임 금메달' : `올림픽 ${stage}`;
-  log(
-    s,
-    `병역 특례 대상! (${s.mil.exempt}) 기초군사훈련 3주와 544시간 봉사활동으로 병역을 대신합니다.${s.mil.serving ? ' 복무 중이던 김천 상무에서는 시즌 종료 후 조기 전역합니다.' : ''}`,
-    'big',
-  );
-  s.mil.applied = false;
-  s.mil.accepted = false;
-  s.mil.armyNext = false;
-  return true;
-}
