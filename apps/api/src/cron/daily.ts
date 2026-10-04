@@ -5,6 +5,7 @@ import { sweepAnomalies, type SweepResult } from '../db/repos/anomalies.js';
 import { backupToR2, type BackupResult } from './backup.js';
 import { cleanupExpired, type CleanupResult } from './cleanup.js';
 import { createDb } from '../db/client.js';
+import { setMeta } from '../db/repos/firsts.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
 
 export type DailyResult = {
@@ -21,6 +22,9 @@ export type DailyResult = {
 const errorOf = (e: unknown) => ({
   error: (e instanceof Error ? e.message : String(e)).slice(0, 500),
 });
+
+/** app_meta에 남기는 마지막 매일 작업 결과(JSON 한 줄). */
+export const DAILY_META_KEY = 'cron:daily:last';
 
 export async function runDaily(env: Bindings, now: number): Promise<DailyResult> {
   const startedAt = Date.now();
@@ -41,17 +45,22 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     'error' in anomalies ||
     (typeof backup === 'object' && 'error' in backup) ||
     'error' in achievements;
-  console.log(
-    JSON.stringify({
-      level: failed ? 'error' : 'info',
-      ts: new Date().toISOString(),
-      job: 'daily',
-      cleanup,
-      anomalies,
-      backup,
-      achievements,
-      durationMs: Date.now() - startedAt,
-    }),
+  const log = JSON.stringify({
+    level: failed ? 'error' : 'info',
+    ts: new Date().toISOString(),
+    job: 'daily',
+    cleanup,
+    anomalies,
+    backup,
+    achievements,
+    durationMs: Date.now() - startedAt,
+  });
+  console.log(log);
+  // T-11-082 Workers Logs는 하루를 못 넘기고 지워진다 — 마지막 결과를 D1에도 남겨 나중에 조회한다.
+  await setMeta(createDb(env.DB), DAILY_META_KEY, log).catch((e: unknown) =>
+    console.error(JSON.stringify({ level: 'error', job: 'daily', meta: errorOf(e) })),
   );
+  // 단계마다 오류를 잡아 나머지는 끝까지 돌리지만, 하나라도 실패했으면 실행을 실패로 남긴다(호출 기록에서 보이게).
+  if (failed) throw new Error(`daily job failed: ${log.slice(0, 300)}`);
   return { cleanup, anomalies, backup, achievements };
 }
