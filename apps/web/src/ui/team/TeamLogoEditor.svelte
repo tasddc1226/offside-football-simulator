@@ -57,7 +57,7 @@
 <dialog bind:this={dialog} aria-labelledby="team-logo-title" onclose={onclose} onkeydown={trapTab} data-team-logo-editor>
   <header><h2 id="team-logo-title">팀 로고</h2><button class="close" bind:this={closeButton} aria-label="팀 로고 설정 닫기" onclick={() => dialog.close()}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button></header>
   <div class="body">
-    <div class="preview"><TeamLogo logo={preview} {name} size={96} /><div><b>{name}</b><p>적용 후 변경 저장을 누르면<br />팀 프로필과 공유 이미지에도 보여요.</p></div></div>
+    <div class="preview"><TeamLogo logo={preview} {name} size={96} /><div><b>{name}</b><p>적용 후 변경 저장을 누르면<br />내 팀·랭킹·경기 화면에 보여요.</p></div></div>
     <div class="hof-sorts modes" role="group" aria-label="로고 설정 방식">
       <button class="hof-sort" aria-pressed={mode === 'preset'} disabled={busy} onclick={() => { mode = 'preset'; error = ''; }}>기본 엠블럼</button>
       <button class="hof-sort" aria-pressed={mode === 'image'} disabled={busy} onclick={() => { mode = 'image'; error = ''; }}>내 이미지</button>

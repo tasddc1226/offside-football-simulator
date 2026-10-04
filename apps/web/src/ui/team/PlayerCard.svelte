@@ -3,9 +3,11 @@
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
   import type { DetailPos } from '@offside/contracts/positions';
+  import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
 
-  let { player, name, rating, role, compact = false, youth = false, deploymentRating, ratingLabel = '최고 OVR' }:
-    { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; compact?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
+  let { player, name, rating, role, nation, compact = false, youth = false, deploymentRating, ratingLabel = '최고 OVR' }:
+    { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; compact?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
+  const country = $derived(!youth ? NATION_BY_CODE.get(nation ?? player?.nation ?? DEFAULT_NATION) : undefined);
   const tier = $derived(youth ? 'youth' : (player?.legendScore ?? 0) >= 1000 ? 'legend' : (player?.peak ?? rating) >= 80 ? 'gold' : 'silver');
   const statKeys = $derived(player?.pos === 'GK' ? ['def', 'phy', 'pas', 'pac', 'sho', 'dri'] as const : ['pac', 'sho', 'dri', 'pas', 'def', 'phy'] as const);
   const statLabels = $derived(player?.pos === 'GK' ? GK_ABBR : FACE_ABBR);
@@ -25,6 +27,7 @@
 <div class="player-card" class:compact class:youth class:deployed={deploymentRating !== undefined} data-tier={tier}>
   <div class="card-face">
     <div class="card-rating" title="{ratingLabel} {rating}"><b>{rating}</b><span>{role}</span></div>
+    {#if country}<span class="card-nation" role="img" aria-label="국적 {country.ko}" title={country.ko}>{flagOf(country.code)}</span>{/if}
     <div class="card-art" aria-hidden="true">
       <svg viewBox="0 0 100 96"><path d="M30 10 15 17 3 38 20 48 26 36 24 90 76 90 74 36 80 48 97 38 85 17 70 10 62 5Q50 16 38 5Z" /><path class="shirt-trim" d="M38 5Q50 25 62 5M25 73H75M34 12V87M66 12V87" /></svg>
       <span class="shirt-number">{player?.number ?? (youth ? '+' : name.slice(0, 1))}</span>
@@ -55,7 +58,8 @@
   .card-face { position:relative; overflow:hidden; min-height:183px; padding:28px 10px 20px; clip-path:inherit; background:linear-gradient(135deg,transparent 34%,#ffffff25 34.5%,transparent 35%,transparent 62%,#ffffff1c 62.5%,transparent 63%),radial-gradient(ellipse at 80% 10%,var(--card-light),transparent 70%),linear-gradient(165deg,var(--card-base),var(--card-dark)); color:var(--card-ink); }
   .card-rating { position:absolute; top:28px; left:11px; display:flex; flex-direction:column; align-items:center; z-index:1; }
   .card-rating b { font-family:var(--display); font-size:2.3rem; font-weight:800; line-height:.9; }
-  .card-rating span { font-family:var(--display); font-size:.82rem; font-weight:700; margin-top:4px; }
+  .card-rating span { font-family:var(--display); font-size:.82rem; font-weight:700; line-height:1; margin-top:4px; }
+  .card-nation {position:absolute;top:82px;left:11px;z-index:1;width:36px;text-align:center;font-family:system-ui,sans-serif;font-size:18px;line-height:18px;}
   .card-deployment {display:flex;flex-direction:column;align-items:center;font-size:8px;line-height:10px;}
   .card-deployment b {font-family:var(--display);font-size:12px;line-height:13px;}
   .card-art { position:relative; height:72px; margin-left:26px; }
@@ -87,6 +91,7 @@
   .compact .card-rating { top:14px; left:7px; }
   .compact .card-rating b { font-size:1.6rem; }
   .compact .card-rating span { font-size:.62rem; margin-top:2px; }
+  .compact .card-nation {top:13px;left:auto;right:5px;width:16px;font-size:12px;line-height:14px;}
   .compact .card-art { height:48px; margin:10px 0 0 17px; }
   .compact .shirt-number { font-size:1.15rem; }
   .compact .card-name { font-size:11px; margin-top:3px; }

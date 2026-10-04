@@ -10,6 +10,7 @@
   import TeamShare from './TeamShare.svelte';
   import type { TeamShareData } from './teamShareCard.js';
   import type { TeamLogo } from '@offside/contracts/team-logo';
+  import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
   import { dur } from '../motion.js';
 
   let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, onassign, onauto, onsave }:
@@ -195,8 +196,9 @@
       <div class="locker-grid">
         {#each roster as p (p.careerId)}
           {@const at = slots.indexOf(p.careerId)}
+          {@const country = NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)}
           <article class="locker-player" class:chosen={selectedPlayer === p.careerId} data-locker-player={p.careerId}>
-            <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label="{nameOf(p)} · {POS_LABEL[p.pos]} · 최고 OVR {p.peak} · {attrLine(p) ?? '능력치 기록 없음'} 선택" onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
+            <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label="{nameOf(p)}{country ? ` · ${country.ko}` : ''} · {POS_LABEL[p.pos]} · 최고 OVR {p.peak} · {attrLine(p) ?? '능력치 기록 없음'} 선택" onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
               <PlayerCard player={p} name={nameOf(p)} rating={p.peak} role={p.dpos ?? (p.pos === 'FW' ? 'ST' : p.pos === 'MF' ? 'CM' : p.pos === 'DF' ? 'CB' : 'GK')} />
             </button>
             <span class="roster-state" class:starting={at >= 0}>{at >= 0 ? `선발 · ${positions[at]!.slot}` : '대기'}</span>

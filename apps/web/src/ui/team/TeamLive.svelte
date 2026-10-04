@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TeamLogo from './TeamLogo.svelte';
   // T-10-097 팀 경기 문자중계 — 한 화면에서 시계가 0'부터 90'+까지 흐르며 중계 줄이 하나씩 올라온다. 골이 가까우면
   // 시계가 느려지고, 골이 들어가면 전광판이 번쩍인다. 결과는 이미 서버가 정했고 여기서는 보여 주기만 한다.
   // 감속 모션이어도 진행 템포는 그대로 두고(읽는 시간) 움직임 효과만 뺀다. '결과 바로 보기'로 언제든 끝낼 수 있다.
@@ -102,13 +103,13 @@
     </div>
     <div class="tl-score">
       <div class="tl-team" class:mine={match.mine === 'home'} class:hit={flash === 'home'}>
-        <b>{match.home.name}</b><small>{match.home.owner}</small>
+        <TeamLogo logo={match.home.logo} name={match.home.name} size={40} decorative /><b>{match.home.name}</b><small>{match.home.owner}</small>
       </div>
       <div class="tl-goals" aria-live="polite" data-live-score>
         <b>{score[0]}</b><span aria-hidden="true">:</span><b>{score[1]}</b>
       </div>
       <div class="tl-team away" class:mine={match.mine === 'away'} class:hit={flash === 'away'}>
-        <b>{match.away.name}</b><small>{match.away.owner}</small>
+        <TeamLogo logo={match.away.logo} name={match.away.name} size={40} decorative /><b>{match.away.name}</b><small>{match.away.owner}</small>
       </div>
     </div>
     <div class="tl-bar" aria-hidden="true">
@@ -219,6 +220,7 @@
   }
   .tl-team.away {
     text-align: right;
+    justify-items: end;
   }
   .tl-team b {
     overflow-wrap: anywhere;

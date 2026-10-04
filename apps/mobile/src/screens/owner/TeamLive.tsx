@@ -24,6 +24,7 @@ import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Txt } from '../../ui';
 import { Grid2 } from './TeamParts';
+import { TeamLogo } from '../../components/TeamLogo';
 
 /** 중계 줄 하나 — 나타날 때 위에서 살짝 내려앉는다(웹 tl-in). */
 function FeedRow({ l, motionOK }: { l: LiveLine; motionOK: boolean }) {
@@ -319,6 +320,7 @@ export function TeamLive({
               transform: [{ scale: flash === 'home' && motionOK ? 1.06 : 1 }],
             }}
           >
+            <TeamLogo logo={match.home.logo} name={match.home.name} size={40} decorative />
             <Txt
               style={{
                 fontWeight: '700',
@@ -385,6 +387,7 @@ export function TeamLive({
               transform: [{ scale: flash === 'away' && motionOK ? 1.06 : 1 }],
             }}
           >
+            <TeamLogo logo={match.away.logo} name={match.away.name} size={40} decorative />
             <Txt
               style={{
                 fontWeight: '700',

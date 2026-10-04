@@ -91,6 +91,8 @@ export type TeamRecord = z.infer<typeof TeamRecordSchema>;
 export const TeamPlayerSchema = z.strictObject({
   careerId: z.string(),
   pos: CareerPosSchema,
+  /** 선수 국적. 옛 응답의 null/누락은 기본 국적(대한민국)으로 읽는다. */
+  nation: z.string().nullable().optional(),
   /** 세부 포지션(T-10-091). 아직 모르면 null. */
   dpos: DetailPosSchema.nullable(),
   peak: z.number().int(),
@@ -113,6 +115,7 @@ export const TeamSlotSchema = z.strictObject({
   /** 표시 이름 — 공개 이름, 없으면 익명 표기, 유스 선수면 '유스 선수'. */
   name: z.string(),
   pos: CareerPosSchema.nullable(),
+  nation: z.string().nullable().optional(),
   /** 그 자리에서의 실력(자리별 실력, 없으면 최고 OVR × 적합도). */
   rating: z.number().int(),
   fit: z.number(),
@@ -185,6 +188,7 @@ export type PutOwnerTeamResponse = z.infer<typeof PutOwnerTeamResponseSchema>;
 export const TeamOpponentSchema = z.strictObject({
   teamId: TeamIdSchema,
   name: z.string(),
+  logo: TeamLogoSchema.nullable().optional(),
   /** 감독 이름. */
   owner: z.string(),
   formation: FormationIdSchema,
@@ -203,6 +207,7 @@ export type PlayTeamMatchBody = z.infer<typeof PlayTeamMatchBodySchema>;
 export const TeamMatchSideSchema = z.strictObject({
   teamId: z.string(),
   name: z.string(),
+  logo: TeamLogoSchema.nullable().optional(),
   owner: z.string(),
   formation: FormationIdSchema,
   ovr: z.number().int(),
@@ -313,6 +318,7 @@ export const TeamRankItemSchema = z.strictObject({
   rank: z.number().int().min(1),
   teamId: TeamIdSchema,
   name: z.string(),
+  logo: TeamLogoSchema.nullable().optional(),
   manager: z.string(),
   formation: FormationIdSchema,
   ovr: z.number().int(),
@@ -349,7 +355,13 @@ export const AchRankQuerySchema = z.strictObject({
 export const AchRankItemSchema = z.strictObject({
   rank: z.number().int().min(1),
   nickname: z.string().nullable(),
-  team: z.strictObject({ id: TeamIdSchema, name: z.string() }).nullable(),
+  team: z
+    .strictObject({
+      id: TeamIdSchema,
+      name: z.string(),
+      logo: TeamLogoSchema.nullable().optional(),
+    })
+    .nullable(),
   score: count,
   /** 달성한 업적 수. */
   done: count,

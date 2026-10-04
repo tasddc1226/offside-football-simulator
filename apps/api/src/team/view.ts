@@ -11,12 +11,16 @@ export const recordOf = (t: Pick<OwnerTeamRow, 'wins' | 'draws' | 'losses'>): Te
 });
 
 /** 선발 11자리 표시 — 이름은 공개 이름, 없으면 익명 표기(유스 선수 포함). */
-export const slotsOf = (lineup: readonly LineupSlot[]): TeamSlot[] =>
+export const slotsOf = (
+  lineup: readonly LineupSlot[],
+  players?: ReadonlyMap<string, { nation?: string | null }>,
+): TeamSlot[] =>
   lineup.map((s) => ({
     slot: s.slot,
     careerId: s.careerId,
     name: s.publicName ?? s.ref.anon,
     pos: s.pos,
+    nation: s.careerId ? (players?.get(s.careerId)?.nation ?? null) : null,
     rating: s.rating,
     fit: s.fit,
   }));
