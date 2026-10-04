@@ -51,3 +51,37 @@ test('외국 선수의 선수 탭에는 병역 특례 안내를 표시하지 않
   await expect(page.locator('[data-nation]')).toContainText('일본');
   await expect(page.locator('[data-military-guide]')).toHaveCount(0);
 });
+
+test('T-11-077 아시안게임 시즌을 앞둔 상무 합격자는 입대를 미루고 이적 시장으로 돌아갈 수 있다', async ({
+  page,
+}) => {
+  await resumeWithSave(page, {
+    ...fixture,
+    year: 2030,
+    age: 23,
+    pending: { type: 'market', res: null, m: null },
+    mil: {
+      exempt: null,
+      served: false,
+      serving: false,
+      left: 0,
+      type: null,
+      prevClub: null,
+      accepted: true,
+      applied: false,
+    },
+  });
+  const sheet = page.locator('#sheet');
+  await expect(sheet).toContainText('복무 기간에 2030 아시안게임이 열립니다');
+  await expect(sheet.locator('[data-opt="0"]')).toContainText('김천 상무 입대');
+  await sheet
+    .locator('[data-opt="1"]')
+    .filter({ hasText: '입대를 미루고 2030 아시안게임에 도전' })
+    .click();
+  await expect(sheet).toContainText('입대를 미뤘습니다');
+  await sheet.getByRole('button', { name: '이적 시장으로 →' }).click();
+  await expect(sheet).toContainText('다음 시즌, 어디서 뛸까요?');
+  await expect(sheet).not.toContainText('김천 상무 입대');
+  const mil = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).mil);
+  expect(mil).toMatchObject({ accepted: false, serving: false });
+});
