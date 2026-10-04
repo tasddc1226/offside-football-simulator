@@ -100,4 +100,25 @@ describe('T-11-048 시즌 성장 기록', () => {
     expect(takeSeasonGrowth(s)).toBeUndefined();
     expect(s.ovrBuf).toEqual([]);
   });
+
+  it('T-11-083 첫 시즌엔 강화 기록이 없고, 강화를 할 수 있는 시즌부터 그 시즌의 시도·자금·비용을 싣는다', () => {
+    const s = fresh();
+    playSeason(s, true);
+    expect(takeSeasonGrowth(s)!.bst).toBeUndefined();
+    g.endSeason(s);
+    s.money = 50_000;
+    s.age = 21;
+    s.contract = { years: 2, salary: 10_000 };
+    playSeason(s, true);
+    expect(g.tryBoost(s)).not.toBeNull();
+    const growth = takeSeasonGrowth(s)!;
+    expect(SeasonGrowthSchema.safeParse(growth).success).toBe(true);
+    expect(growth.bst).toEqual({
+      l: s.boost!.lv,
+      f: s.boost!.fails,
+      m: s.money,
+      c: g.boostCost(s),
+      t: [{ lv: 0, p: 50, c: 7000, ok: s.boost!.lv === 1 }],
+    });
+  });
 });

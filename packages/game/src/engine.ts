@@ -30,6 +30,7 @@ import { PRESEASON_RETIRE_AT } from '@offside/contracts/service-seasons';
 export * from './player.js';
 export * from './stats.js';
 export * from './training.js';
+export * from './boost.js';
 export * from './match.js';
 export * from './table.js';
 export * from './story.js';
