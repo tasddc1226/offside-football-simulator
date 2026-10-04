@@ -33,6 +33,7 @@
     - progressbar /A매치 \d+경기 출전/
     - text: /런던 해머스에서 \d+경기 출전 0 \/ \d+ · 남은 \d+/
     - progressbar /런던 해머스에서 \d+경기 출전/
+    - paragraph: /한 구단에서 오래 활약하고 은퇴하면 그 구단의 \d+번이 영구결번될 수 있어요\./
     - table:
         - rowgroup:
             - row "시즌 소속 경기 골 도움 평점 순위 OVR":
