@@ -172,8 +172,8 @@ export function endSeason(s: GameState): SeasonEndResult {
   const exemptBefore = s.mil.exempt;
   const nat = natSeasonEnd(s);
   trophies.push(...nat.trophies);
-  // T-11-077 이번 대회로 체육요원에 편입됐으면 결산에도 알린다(로그에만 있으면 놓치기 쉽다).
-  if (s.mil.exempt && !exemptBefore) notes.push(`체육요원 편입 · ${s.mil.exempt}`);
+  // T-11-077 이번 대회로 병역 특례(체육요원 편입)를 받았으면 결산에도 알린다(로그에만 있으면 놓치기 쉽다).
+  if (s.mil.exempt && !exemptBefore) notes.push(`병역 특례(입대 면제) · ${s.mil.exempt}`);
   const tours = nat.tours;
 
   const { awards, gala } = seasonAwards(s, { rank, avg, trophies, tours });

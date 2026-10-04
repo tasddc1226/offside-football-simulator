@@ -23,6 +23,7 @@ for (const [name, service, expected] of [
     await page.locator('[data-tab="player"]').click();
     await expect(page.locator('#app')).toContainText(expected);
     const guide = page.locator('[data-military-guide]');
+    await expect(guide).toContainText('상무나 현역 입대 없이');
     await expect(guide).toContainText('출전 경기 수는 조건이 아니고');
     await expect(guide).toContainText('34개월');
     await expect(guide).toContainText('544시간');

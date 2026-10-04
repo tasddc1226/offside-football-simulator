@@ -235,7 +235,7 @@ describe('T-11-062 체육요원 특례', () => {
       const s = player(seed, 2030, 90, 22);
       const r = endSeason(s);
       if (!s.mil.exempt) continue;
-      expect(r.notes).toContain('체육요원 편입 · 아시안게임 금메달');
+      expect(r.notes).toContain('병역 특례(입대 면제) · 아시안게임 금메달');
       expect(milCanApply(s)).toBe(false);
       expect(market(s).options.some(isMilOption)).toBe(false);
       return;
