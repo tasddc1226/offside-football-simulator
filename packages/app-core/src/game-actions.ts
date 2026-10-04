@@ -578,7 +578,10 @@ export function createGameActions(host: GameHost) {
     if (o.kind === 'renew' && !canAcceptRenewal(G, o)) return false;
     const r = acceptOption(G, o, options);
     const logEntry: EventLogEntry = {
-      k: o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' ? 'mil' : 'mkt',
+      k:
+        o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' || o.kind === 'defer'
+          ? 'mil'
+          : 'mkt',
       id: o.kind,
       c: o.kind === 'offer' ? o.clubId : i,
       h: G.phase,

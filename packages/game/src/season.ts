@@ -545,7 +545,12 @@ export function acceptOption(
 ): { text: string; ok?: boolean; reopen?: boolean } | null {
   if (opt.kind === 'renew' && !canAcceptRenewal(s, opt)) return null;
   noteMarket(s, opt, options);
-  if (opt.kind === 'sangmu' || opt.kind === 'army' || opt.kind === 'serve') {
+  if (
+    opt.kind === 'sangmu' ||
+    opt.kind === 'army' ||
+    opt.kind === 'serve' ||
+    opt.kind === 'defer'
+  ) {
     return acceptMilitary(s, opt);
   }
   if (opt.kind === 'uni') {

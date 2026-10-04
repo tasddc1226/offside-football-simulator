@@ -14,6 +14,7 @@ import {
   milStatusText,
 } from './military.js';
 import { natSeasonEnd } from './national.js';
+import { acceptOption, market } from './season.js';
 import { createRng, setActiveRng } from './rng.js';
 import { loadSave } from './save.js';
 import { checkTitles } from './titles.js';
@@ -182,6 +183,50 @@ describe('T-11-062 체육요원 특례', () => {
     expect(milSeasonEnd(s)).toContain('상무 만기 전역');
     expect(s.mil.served).toBe(true);
     expect(s.mil.sportsService).toBeUndefined();
+  });
+
+  it('T-11-077 복무와 특례 대회가 겹치면 상무 합격·현역 입영을 미루고 소속팀에 남을 수 있다', () => {
+    // 2030 아시안게임 시즌을 앞둔 23세 상무 합격자
+    const s = player(1, 2030, 70, 23);
+    const club = { ...s.club };
+    s.mil.accepted = true;
+    const m = market(s);
+    expect(m.options.map((o) => o.kind)).toEqual(['serve', 'defer']);
+    expect(m.note).toContain('2030 아시안게임');
+    expect(s.mil).toMatchObject({ accepted: true, serving: false }); // 고르기 전엔 입대하지 않는다
+    const r = acceptOption(s, m.options[1]!, m.options);
+    expect(r).toMatchObject({ reopen: true });
+    expect(s.mil).toMatchObject({ accepted: false, serving: false });
+    expect(s.club).toEqual(club);
+    expect(market(s).options.map((o) => o.kind)).not.toContain('serve');
+
+    // 현역 입영 예약도 같다
+    const a = player(1, 2030, 70, 23);
+    a.mil.armyNext = true;
+    const am = market(a);
+    expect(am.options.map((o) => o.kind)).toEqual(['army', 'defer']);
+    acceptOption(a, am.options[1]!, am.options);
+    expect(a.mil).toMatchObject({ armyNext: false, served: false });
+    expect(a.career.some((r) => r.mil)).toBe(false);
+  });
+
+  it('T-11-077 겹치는 특례 대회가 없으면 합격자는 상무 입대만 고르고, 고를 때 입대한다', () => {
+    const s = player(1, 2031, 70, 23); // 2032 올림픽 땐 24세라 U-23 대상이 아니다
+    s.mil.accepted = true;
+    const m = market(s);
+    expect(m.options.map((o) => o.kind)).toEqual(['serve']);
+    expect(s.mil.serving).toBe(false);
+    acceptOption(s, m.options[0]!, m.options);
+    expect(s.mil).toMatchObject({ serving: true, accepted: false, left: 2, type: 'sangmu' });
+    expect(s.club.id).toBe('sangmu');
+
+    // 옛 저장: 시장을 열 때 이미 입대한 상태라면 다시 입대시키지 않는다
+    const old = player(1, 2031, 70, 23);
+    enlistSangmu(old);
+    const prev = structuredClone(old.mil.prevClub);
+    acceptOption(old, { kind: 'serve', first: true, name: '김천 상무 입대' }, []);
+    expect(old.mil.prevClub).toEqual(prev);
+    expect(old.mil.left).toBe(2);
   });
 
   it('실제 대회 정산에서 와일드카드 메달은 나이와 관계없이 특례로 연결한다', () => {

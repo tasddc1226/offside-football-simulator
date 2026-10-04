@@ -188,7 +188,8 @@ export interface RenewOption {
   /** 조기 연장: years는 잔여 1년을 포함한 총기간. 없는 옛 제안은 만료 재계약이다. */
   extension?: { years: number; clubId: string; year: number };
 }
-export type MilOptionKind = 'sangmu' | 'army' | 'serve';
+/** defer: 상무 합격·현역 입영을 미루고 특례 대회에 도전한다(T-11-077). */
+export type MilOptionKind = 'sangmu' | 'army' | 'serve' | 'defer';
 /** military.ts의 병역 관련 선택지. market()이 다루는 MarketOption의 한 갈래이기도 하다. */
 export interface MilOption {
   kind: MilOptionKind;
