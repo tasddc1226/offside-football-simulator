@@ -7,6 +7,7 @@ import {
   achPoints,
   achRankText,
   achSections,
+  achState,
   achTotal,
   matchHintOf,
 } from './teamOwner.js';
@@ -81,6 +82,13 @@ describe('시즌 업적 요약', () => {
   it('처음 펼칠 단계는 다 채우지 못한 첫 단계', () => {
     expect(achOpenGroup(groups)).toBe('first');
     expect(achOpenGroup([groups[2]!])).toBeNull();
+  });
+  it('제자리 업적은 못 이뤘을 때만 조건을 안내한다', () => {
+    expect(achState(it_({ id: 'team-fit', done: false }))).toBe(
+      '미달성 · 유스 선수 없이 11명 모두 적합도 1.00이어야 해요',
+    );
+    expect(achState(it_({ id: 'team-fit', done: true }))).toBe('달성 완료');
+    expect(achState(it_({ id: 'team-caps', done: false }))).toBe('미달성');
   });
 });
 
