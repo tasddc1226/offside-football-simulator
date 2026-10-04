@@ -49,7 +49,10 @@ migration은 이 목록도 함께 고친다.
     (`--generate-notes`). 같은 SHA를 다시 배포하면 새 태그를 만들지 않는다. 이 잡만 `contents: write`
     권한을 갖는다.
 12. **앱 OTA** (`app-update` 잡, T-11-010, 위 배포가 성공했을 때만): 같은 커밋의 앱 JS 번들을
-    `eas update --channel production --environment production`으로 EAS Update에 올린다. 스토어 앱은 다음
+    `eas update --channel production --environment production --platform ios`와 같은 명령의
+    `--platform android`로 EAS Update에 올린다. Svelte 웹은 별도로 배포하므로 Expo의 웹 SSR을
+    함께 내보내지 않는다. 게시 단계는 명시적 `shell: bash`의 `pipefail`로 내보내기·업로드 실패를
+    감지하고, 실패하면 사용자 릴리즈 노트 게시를 막는다. 스토어 앱은 다음
     실행 때 받거나, 앱으로 돌아올 때 받아 두고 '다시 시작' 배너로 바로 적용한다.
     - 직전 production OTA 커밋 이후 `apps/mobile`·`packages`·루트 `package.json`·`pnpm-lock.yaml`이 그대로면
       게시하지 않는다(웹·API만 바뀐 배포에 새 버전 배너가 뜨지 않게).

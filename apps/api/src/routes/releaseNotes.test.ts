@@ -93,7 +93,10 @@ describe('배포 전용 릴리즈 노트 경로', () => {
       expect(((await again.json()) as { data: { updated: boolean } }).data.updated).toBe(false);
       await flushEdge();
       expect(edge.purged).toHaveLength(count);
-      expect(spy.seen.some((s) => /(?:sessions|profiles)/.test(s))).toBe(false);
+      // 배포 인증은 사용자 세션을 조회하지 않는다. outbox INSERT의 수신 기기 JOIN은 별개다.
+      expect(
+        spy.seen.filter((s) => /^SELECT\b/i.test(s)).some((s) => /(?:sessions|profiles)/.test(s)),
+      ).toBe(false);
     } finally {
       edge.uninstall();
     }

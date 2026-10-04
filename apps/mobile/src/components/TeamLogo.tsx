@@ -7,10 +7,12 @@ export function TeamLogo({
   logo,
   name,
   size = 48,
+  decorative = false,
 }: {
   logo?: Logo | null;
   name: string;
   size?: number;
+  decorative?: boolean;
 }) {
   const value = logo ?? defaultTeamLogo(name);
   const clip = useId().replace(/:/g, '');
@@ -20,13 +22,24 @@ export function TeamLogo({
       <Image
         source={{ uri: value.img }}
         onError={() => setFailed(value.img ?? '')}
-        accessibilityLabel={`${name} 로고`}
+        accessible={!decorative}
+        accessibilityElementsHidden={decorative}
+        importantForAccessibility={decorative ? 'no-hide-descendants' : 'auto'}
+        accessibilityLabel={decorative ? undefined : `${name} 로고`}
         contentFit="contain"
         style={{ width: size, height: size, borderRadius: size * 0.12 }}
       />
     );
   return (
-    <Svg width={size} height={size} viewBox="0 0 64 64" accessibilityLabel={`${name} 로고`}>
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      accessible={!decorative}
+      accessibilityElementsHidden={decorative}
+      importantForAccessibility={decorative ? 'no-hide-descendants' : 'auto'}
+      accessibilityLabel={decorative ? undefined : `${name} 로고`}
+    >
       <Defs>
         <ClipPath id={clip}>
           <Path d={CREST_SHAPES[value.shape]} />

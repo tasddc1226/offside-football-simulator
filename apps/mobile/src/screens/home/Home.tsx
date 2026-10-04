@@ -20,6 +20,7 @@ import { HomeLive } from './HomeLive';
 import { HomeNews } from './HomeNews';
 import { HomeTicker } from './HomeTicker';
 import { Tile } from './Tile';
+import { PushOptInCard } from './PushOptInCard';
 
 export default function Home() {
   const s = useSnapshot(appState);
@@ -125,6 +126,7 @@ export default function Home() {
             </View>
           </PitchCard>
         )}
+        <PushOptInCard />
         {G && s.ownerConflict ? (
           <View testID="owner-conflict">
             <Card gap={8} style={{ borderWidth: 1, borderColor: alpha(c.warn, 0.45) }}>

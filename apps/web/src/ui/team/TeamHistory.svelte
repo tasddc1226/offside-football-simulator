@@ -4,6 +4,7 @@
   import { kstMonthDayTime } from '@offside/app-core/boardText';
   import { outcomeOf as outcome } from '@offside/app-core/teamOwner';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
+  import TeamLogo from './TeamLogo.svelte';
 
   let {
     history,
@@ -28,6 +29,7 @@
       {@const opp = m[m.mine === 'home' ? 'away' : 'home']}
       <button class="tm-hist" onclick={() => onopen(m)} data-team-match={m.id}>
         <span class="tm-out" data-out={outcome(m)}>{outcome(m)}</span>
+        <TeamLogo logo={opp.logo} name={opp.name} size={28} decorative />
         <span class="tm-opp-info">
           <b>{m[m.mine].goals} : {opp.goals} {opp.name}</b>
           <span class="muted fs-sm">{m.mine === 'home' ? '도전' : '도전받음'} · {opp.owner} · {kstMonthDayTime(m.createdAt)}</span>

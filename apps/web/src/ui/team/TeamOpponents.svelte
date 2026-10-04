@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TeamLogo from './TeamLogo.svelte';
   // 상대 고르기 — 내 팀 OVR과 비슷한 다른 구단주의 팀에 도전한다. 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
   import { TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
   import type { TeamOpponent } from '@offside/app-core/api/team';
@@ -58,6 +59,7 @@
   <LoadState {status} failText="상대를 불러오지 못했어요." retry={onreload}>
     {#each opponents as o (o.teamId)}
       <div class="tm-opp" data-opponent={o.teamId}>
+        <TeamLogo logo={o.logo} name={o.name} size={32} decorative />
         <div class="tm-opp-info">
           <b>{o.name}</b>
           <span class="muted fs-sm">{o.owner} · {o.formation} · {recordText(o.record)}</span>

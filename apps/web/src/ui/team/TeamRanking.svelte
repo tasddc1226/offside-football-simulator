@@ -6,6 +6,7 @@
   import { fetchTeamRanking, type TeamRankResponse, type TeamRankSort } from '@offside/app-core/api/team';
   import { appState } from '../state.svelte.js';
   import TeamProfile from './TeamProfile.svelte';
+  import TeamLogo from './TeamLogo.svelte';
   import { num as n } from '@offside/app-core/teamText';
 
   const SORTS: [TeamRankSort, string][] = [
@@ -89,7 +90,7 @@
               {@const played = t.record.w + t.record.d + t.record.l}
               <li value={t.rank}>
                 <button class="team-standings-columns team-standings-row" data-rank-team={t.teamId} aria-label="{t.rank}위 {t.name}, {n(played)}경기 {n(t.record.w)}승 {n(t.record.d)}무 {n(t.record.l)}패, {metricLabel} {sort === 'rating' ? n(t.rating) : t.ovr}, 최근 경기부터 {formText(t.recentForm)}, 팀 상세 보기" onclick={() => open(t.teamId)}>
-                  <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span><b title={t.name}>{t.name}</b></span>
+                  <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span><TeamLogo logo={t.logo} name={t.name} size={24} decorative /><b title={t.name}>{t.name}</b></span>
                   <span class="num" title="{n(played)}경기">{n(played)}</span>
                   <span class="num" title="{n(t.record.w)}승">{n(t.record.w)}</span>
                   <span class="num" title="{n(t.record.d)}무">{n(t.record.d)}</span>
@@ -152,12 +153,13 @@
   }
   .team-standings-columns {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) repeat(4, var(--stat-width)) var(--score-width);
+    grid-template-columns: minmax(0, 1fr) max(28px, var(--stat-width)) repeat(3, var(--stat-width)) var(--score-width);
     align-items: center;
     gap: 4px;
     text-align: center;
   }
   .team-standings-header {
+    white-space: nowrap;
     min-height: 36px;
     border-bottom: 1px solid var(--line);
     color: var(--muted);

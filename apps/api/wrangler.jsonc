@@ -56,6 +56,7 @@
         },
       ],
       "vars": {
+        "PUSH_TEST_ENABLED": "1",
         "ENVIRONMENT": "staging",
         "ALLOWED_ORIGINS": "https://offside-web-staging.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web-staging.tasddc1569.workers.dev",
@@ -68,8 +69,13 @@
       "name": "offside-api",
       "workers_dev": true,
       "routes": [{ "pattern": "api.offside-lab.com", "custom_domain": true }],
+      "observability": {
+        "enabled": true,
+        "logs": { "enabled": true },
+        "traces": { "enabled": true, "head_sampling_rate": 0.01 },
+      },
       // T-10-070 매일 KST 04:00 정리·D1 백업(src/cron/daily.ts).
-      "triggers": { "crons": ["0 19 * * *"] },
+      "triggers": { "crons": ["0 19 * * *", "*/5 * * * *"] },
       // T-10-071 백업 사본(docs/operations/d1-backup.md).
       "r2_buckets": [{ "binding": "BACKUP", "bucket_name": "offside-d1-backup" }],
       "durable_objects": {
@@ -90,6 +96,7 @@
       ],
       "vars": {
         "ENVIRONMENT": "production",
+        "NEWS_PUSH_ENABLED": "1",
         "ALLOWED_ORIGINS": "https://offside-lab.com,https://offside-web.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",

@@ -8,6 +8,7 @@ import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
 import { PlayerCard, type PlayerCardData } from './PlayerCard';
 import { DragPlayer, type PlayerDrag } from './DragPlayer';
+import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
 
 export type PitchCell = PlayerCardData;
 export function TeamPitch({
@@ -109,6 +110,9 @@ export function TeamPitch({
         {positions.map((pos, i) => {
           const cell = cells[i];
           if (!cell) return null;
+          const country = !cell.youth
+            ? NATION_BY_CODE.get(cell.nation ?? DEFAULT_NATION)
+            : undefined;
           return (
             <View
               key={i}
@@ -127,7 +131,7 @@ export function TeamPitch({
                 <Press
                   testID={`slot-${i}`}
                   onPress={onpick ? () => onpick(i) : undefined}
-                  accessibilityLabel={`${pos.slot} · ${cell.name} · 포지션 OVR ${cell.rating}${ondrag ? ' · 길게 눌러 이동' : ''}`}
+                  accessibilityLabel={`${pos.slot} · ${cell.name}${country ? ` · ${country.ko}` : ''} · 포지션 OVR ${cell.rating}${ondrag ? ' · 길게 눌러 이동' : ''}`}
                   accessibilityState={{ selected: selected === i }}
                   style={{
                     borderRadius: 10,

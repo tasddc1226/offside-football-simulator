@@ -69,6 +69,30 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
       ) : (
         <Txt tone="muted">이번 시즌 수상은 없었어요.</Txt>
       )}
+      {s.promo ? (
+        <Pop from={0.4} ms={400} delay={160}>
+          <View
+            style={{
+              gap: 4,
+              padding: 12,
+              borderRadius: 12,
+              backgroundColor: mixColor(c.accent, c.surface, 14),
+              borderWidth: 1,
+              borderColor: alpha(c.accent, 0.55),
+            }}
+          >
+            <Txt v="eyebrow">Promotion</Txt>
+            <Txt bold style={{ color: c.accentText }}>
+              K리그1 승격 확정
+            </Txt>
+            <Txt
+              v="sm"
+              tone="muted"
+            >{`이번 시즌 1위로 ${s.promo.club}의 승격이 확정됐어요. 다음 시즌에는 K리그1에서 새로운 도전을 시작해요.`}</Txt>
+            <Txt v="xs" tone="muted">{`자리를 내준 ${s.promo.down} · K리그2 강등`}</Txt>
+          </View>
+        </Pop>
+      ) : null}
       {s.comps.length ? (
         <View>
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>

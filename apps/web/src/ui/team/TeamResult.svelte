@@ -4,6 +4,7 @@
   import { kstMonthDayTime } from '@offside/app-core/boardText';
   import { OUTCOME_TITLE, outcomeOf as outcome } from '@offside/app-core/teamOwner';
   import { recordText, signedNum } from '@offside/app-core/teamText';
+  import TeamLogo from './TeamLogo.svelte';
 
   let {
     m,
@@ -35,10 +36,12 @@
   </div>
   <div class="tm-score">
     <div class="tm-side" class:mine={m.mine === 'home'}>
+      <TeamLogo logo={m.home.logo} name={m.home.name} size={40} decorative />
       <b>{m.home.name}</b><small class="muted">{m.home.owner} · OVR {m.home.ovr}</small>
     </div>
     <div class="tm-goals"><b>{m.home.goals}</b><span aria-hidden="true">:</span><b>{m.away.goals}</b></div>
     <div class="tm-side away" class:mine={m.mine === 'away'}>
+      <TeamLogo logo={m.away.logo} name={m.away.name} size={40} decorative />
       <b>{m.away.name}</b><small class="muted">{m.away.owner} · OVR {m.away.ovr}</small>
     </div>
   </div>
@@ -89,6 +92,7 @@
   }
   .tm-side.away {
     text-align: right;
+    align-items: flex-end;
   }
   .tm-side.mine b {
     color: var(--accent-text);

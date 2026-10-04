@@ -17,6 +17,7 @@ import { Btn, Card, Press, Txt } from '../../ui';
 import { scrollTo, scrollY, viewH } from '../../ui/scroll';
 import { TextField } from '../settings/parts';
 import { RecordsChips as SortChips } from '../hof/RecordsControls';
+import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
 
 type Drag = {
   index: number | null;
@@ -206,6 +207,7 @@ export function TeamLineup({
       : ghostPlayer
         ? {
             name: nameOf(ghostPlayer),
+            nation: ghostPlayer.nation,
             rating: ghostPlayer.peak,
             peak: ghostPlayer.peak,
             number: ghostPlayer.number,
@@ -355,7 +357,7 @@ export function TeamLineup({
                   <DragPlayer index={null} id={p.careerId} drag={drag}>
                     <Press
                       testID={`locker-${p.careerId}`}
-                      accessibilityLabel={`${nameOf(p)} · 최고 OVR ${p.peak} · LS ${p.legendScore ?? 0} · ${attrLine(p) ?? '능력치 기록 없음'}`}
+                      accessibilityLabel={`${nameOf(p)}${NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION) ? ` · ${NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)!.ko}` : ''} · 최고 OVR ${p.peak} · LS ${p.legendScore ?? 0} · ${attrLine(p) ?? '능력치 기록 없음'}`}
                       accessibilityState={{ selected: selected === p.careerId }}
                       onPress={() => select(selected === p.careerId ? null : p.careerId)}
                       style={{
@@ -367,6 +369,7 @@ export function TeamLineup({
                       <PlayerCard
                         cell={{
                           name: nameOf(p),
+                          nation: p.nation,
                           rating: p.peak,
                           number: p.number,
                           legendScore: p.legendScore,

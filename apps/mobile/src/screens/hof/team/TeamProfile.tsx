@@ -67,6 +67,7 @@ export default function TeamProfile({ id }: { id: string }) {
   const cells =
     team?.slots.map((s) => ({
       rating: s.rating,
+      nation: s.nation,
       name: (mine && s.careerId && localNames.get(s.careerId)) || s.name,
       youth: s.careerId === null,
     })) ?? [];

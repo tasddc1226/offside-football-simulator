@@ -2,7 +2,8 @@
   import { DETAIL_LABEL, presetLayout, slotFit, type FormationId, type TeamLayout } from '@offside/contracts/owner-team';
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import PlayerCard from './PlayerCard.svelte';
-  type Cell = { rating: number; name: string; youth: boolean; player?: TeamPlayer | undefined };
+  import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
+  type Cell = { rating: number; name: string; youth: boolean; nation?: string | null | undefined; player?: TeamPlayer | undefined };
   let { formation, cells, layout, selected = null, dragging = null, element = $bindable(), onpick, onstart, onkey, onplace }:
     { formation: FormationId; cells: readonly Cell[]; layout?: TeamLayout | null | undefined; selected?: number | null; dragging?: number | null;
       element?: HTMLElement | undefined; onpick?: ((i: number) => void) | undefined; onstart?: ((e: PointerEvent, i: number) => void) | undefined;
@@ -22,17 +23,18 @@
   {#each positions as point, i (i)}
     {@const c = cells[i]}
     {#if c}
+      {@const country = !c.youth ? NATION_BY_CODE.get(c.nation ?? c.player?.nation ?? DEFAULT_NATION) : undefined}
       {@const ratingLabel = c.player ? `최고 OVR ${c.player.peak} · 포지션 OVR ${c.rating} · 적합도 ${Math.round(slotFit(point.slot, c.player, c.rating) * 100)}%` : `포지션 OVR ${c.rating}`}
       {#if onpick}
         <button class="tm-slot" class:chosen={selected === i} class:dragging={dragging === i} data-slot={i}
           style:left="{point.x}%" style:top="{point.y}%" aria-pressed={selected === i}
-          aria-label="{DETAIL_LABEL[point.slot]} · {c.name} · {ratingLabel}" onclick={() => onpick?.(i)}
+          aria-label="{DETAIL_LABEL[point.slot]} · {c.name}{country ? ` · ${country.ko}` : ''} · {ratingLabel}" onclick={() => onpick?.(i)}
           onpointerdown={(e) => onstart?.(e, i)} onkeydown={(e) => onkey?.(e, i)}>
-          <PlayerCard player={c.player} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? '최고 OVR' : '포지션 OVR'} compact />
+          <PlayerCard player={c.player} nation={c.nation} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? '최고 OVR' : '포지션 OVR'} compact />
         </button>
       {:else}
-        <div class="tm-slot" data-slot={i} style:left="{point.x}%" style:top="{point.y}%" role="group" aria-label="{DETAIL_LABEL[point.slot]} · {c.name} · {ratingLabel}">
-          <PlayerCard player={c.player} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? '최고 OVR' : '포지션 OVR'} compact />
+        <div class="tm-slot" data-slot={i} style:left="{point.x}%" style:top="{point.y}%" role="group" aria-label="{DETAIL_LABEL[point.slot]} · {c.name}{country ? ` · ${country.ko}` : ''} · {ratingLabel}">
+          <PlayerCard player={c.player} nation={c.nation} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? '최고 OVR' : '포지션 OVR'} compact />
         </div>
       {/if}
     {/if}

@@ -133,15 +133,18 @@ export function playHintOf(
 
 // ───────── 시즌 업적 ─────────
 export const achDone = (items: ClubAchievement[]) => items.filter((i) => i.done).length;
+/** 이름만으론 조건이 안 읽히는 업적의 안내. 미달성일 때만 붙는다. 조건은 api team/achievements.ts와 같이 고친다. */
+const ACH_HINT = new Map([['team-fit', '유스 선수 없이 11명 모두 적합도 1.00이어야 해요']]);
+
 /** 업적 한 줄의 오른쪽 표시. */
-export const achState = (i: ClubAchievement): string =>
-  i.level !== undefined
-    ? `${i.level}단계 · ${num(i.cur ?? 0)}${i.unit ?? ''}${i.next != null ? ` · NEXT ${num(i.next)}` : ' · 최고 단계'}`
-    : i.max !== undefined
-      ? `${i.cur ?? 0} / ${i.max}`
-      : i.done
-        ? '달성 완료'
-        : '미달성';
+export function achState(i: ClubAchievement): string {
+  if (i.level !== undefined)
+    return `${i.level}단계 · ${num(i.cur ?? 0)}${i.unit ?? ''}${i.next != null ? ` · NEXT ${num(i.next)}` : ' · 최고 단계'}`;
+  if (i.max !== undefined) return `${i.cur ?? 0} / ${i.max}`;
+  if (i.done) return '달성 완료';
+  const hint = ACH_HINT.get(i.id);
+  return hint ? `미달성 · ${hint}` : '미달성';
+}
 
 /** 열린 단계 전체의 달성 수 · 업적 수(잠긴 단계는 빼고 센다). */
 export function achTotal(groups: readonly ClubAchievementGroup[]): { done: number; total: number } {

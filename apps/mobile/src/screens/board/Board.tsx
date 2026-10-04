@@ -29,6 +29,7 @@ import {
 import type { CommentReportReason } from '@offside/contracts/board-limits';
 import { touchedAt } from '@offside/app-core/news';
 import { loadKey, saveKey } from '@offside/game/season';
+import { AdSlot } from '../../components/AdSlot';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { NicknameForm } from '../../components/NicknameForm';
 import { markNewsSeen, toast } from '../../game/host';
@@ -735,6 +736,7 @@ export default function Board() {
                     더 보기
                   </Btn>
                 ) : null}
+                <AdSlot place="board-bottom" />
               </LoadState>
             </>
           )}

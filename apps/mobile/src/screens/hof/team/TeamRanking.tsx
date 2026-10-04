@@ -25,6 +25,7 @@ import {
 } from '@offside/contracts/service-seasons';
 import { RecordsSelect, RecordsChips } from '../RecordsControls';
 import TeamProfile from './TeamProfile';
+import { TeamLogo } from '../../../components/TeamLogo';
 
 const SORTS: [TeamRankSort, string][] = [
   ['rating', '레이팅'],
@@ -181,6 +182,7 @@ export default function TeamRanking() {
                   <Txt num tone="muted" center style={{ width: 22, fontSize: 14 }}>
                     {t.rank}
                   </Txt>
+                  <TeamLogo logo={t.logo} name={t.name} size={24} decorative />
                   <Txt bold numberOfLines={1} style={{ flex: 1, fontSize: 13 }}>
                     {t.name}
                   </Txt>

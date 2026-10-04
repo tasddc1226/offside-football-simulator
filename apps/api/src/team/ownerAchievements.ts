@@ -2,7 +2,7 @@
 // 같은 길로 센다.
 import type { FormationId } from '@offside/contracts/owner-team';
 import { detailPosInSeason } from '@offside/contracts/positions';
-import { teamSeasonAt } from '@offside/contracts/service-seasons';
+import { retireAtOf, teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Db } from '../db/client.js';
 import {
   achievementRowOf,
@@ -10,7 +10,7 @@ import {
   saveAchievementScore,
   staleAchievementOwners,
 } from '../db/repos/ownerAchievements.js';
-import { myTeamIn, seasonCareersOf, slotIdsOf } from '../db/repos/ownerTeams.js';
+import { layoutOf, myTeamIn, seasonCareersOf, slotIdsOf } from '../db/repos/ownerTeams.js';
 import { getProfile, hasAccount } from '../db/repos/profiles.js';
 import { achievementScore, clubAchievements } from './achievements.js';
 import { buildLineup } from './sim.js';
@@ -40,6 +40,7 @@ export async function refreshOwnerAchievements(
         team.formation as FormationId,
         slotIdsOf(team),
         new Map(careersIn.map((r) => [r.id, r.lineup])),
+        layoutOf(team),
       ).map((s) => {
         const r = s.careerId ? byId.get(s.careerId) : undefined;
         return {
@@ -77,6 +78,7 @@ export async function refreshOwnerAchievements(
       nickname: !!owner.nickname,
     },
     detail: detailPosInSeason(season),
+    retireAt: retireAtOf(season),
   });
   const row = await saveAchievementScore(
     db,

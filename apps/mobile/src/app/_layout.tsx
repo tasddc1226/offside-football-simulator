@@ -13,6 +13,8 @@ import {
   BarlowCondensed_800ExtraBold,
 } from '@expo-google-fonts/barlow-condensed';
 import { boot } from '../game/boot';
+import { startPush } from '../platform/push';
+import { syncAdFree } from '../platform/adFree';
 import { useColors, useIsDark } from '../theme/useColors';
 
 void SplashScreen.preventAutoHideAsync();
@@ -32,6 +34,11 @@ export default function RootLayout() {
     void boot().finally(() => setReady(true));
   }, []);
   const show = ready && fonts;
+  useEffect(() => {
+    if (!show) return;
+    startPush();
+    void syncAdFree();
+  }, [show]);
   useEffect(() => {
     if (show) void SplashScreen.hideAsync();
   }, [show]);

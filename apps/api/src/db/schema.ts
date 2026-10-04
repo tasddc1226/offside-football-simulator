@@ -11,6 +11,70 @@ import {
   type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
 
+/** T-11-070 게시판별 KST 하루 첫 글. 삭제·수정·재배포로 발송 이력을 다시 만들지 않는다. */
+export const pushNewsEvents = sqliteTable(
+  'push_news_events',
+  {
+    id: text('id').primaryKey(),
+    board: text('board', { enum: ['notice', 'release'] }).notNull(),
+    day: text('day').notNull(),
+    postId: text('post_id').notNull(),
+    title: text('title').notNull(),
+    createdAt: text('created_at').notNull(),
+    expiresAt: text('expires_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_news_events_day_unique').on(t.board, t.day),
+    index('push_news_events_expires_idx').on(t.expiresAt),
+  ],
+);
+
+/** 기기별 outbox. 접수 결과가 불명확하면 재발송하지 않아 중복 알림을 피한다. */
+export const pushNewsDeliveries = sqliteTable(
+  'push_news_deliveries',
+  {
+    id: text('id').primaryKey(),
+    eventId: text('event_id')
+      .notNull()
+      .references(() => pushNewsEvents.id, { onDelete: 'cascade' }),
+    installationHash: text('installation_hash').notNull(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    state: text('state', {
+      enum: [
+        'pending',
+        'sending',
+        'accepted',
+        'checking',
+        'confirmed',
+        'failed',
+        'unknown',
+        'cancelled',
+      ],
+    })
+      .notNull()
+      .default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    receiptAttempts: integer('receipt_attempts').notNull().default(0),
+    dueAt: text('due_at').notNull(),
+    leaseId: text('lease_id'),
+    ticketId: text('ticket_id'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_news_deliveries_device_unique').on(t.eventId, t.installationHash),
+    index('push_news_deliveries_due_idx').on(t.state, t.dueAt),
+    index('push_news_deliveries_session_idx').on(t.sessionId),
+    index('push_news_deliveries_profile_idx').on(t.profileId),
+    index('push_news_deliveries_installation_idx').on(t.installationHash),
+  ],
+);
+
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
 export const profiles = sqliteTable(
   'profiles',
@@ -104,6 +168,8 @@ export const authAttempts = sqliteTable(
         'PROFILE_CREATE',
         'CAREER_SEASON',
         'CAREER_RETIRE',
+        'PUSH_DEVICE',
+        'PUSH_TEST',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -111,6 +177,33 @@ export const authAttempts = sqliteTable(
     count: integer('count').notNull(),
   },
   (table) => [uniqueIndex('auth_attempts_kind_subject_unique').on(table.kind, table.subject)],
+);
+
+/** T-11-059 동의한 앱 기기만 등록한다. 세션 폐기·탈퇴·계정 전환 시 이전 계정으로 보내지 않는다. */
+export const pushDevices = sqliteTable(
+  'push_devices',
+  {
+    installationHash: text('installation_hash').primaryKey(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    platform: text('platform', { enum: ['ios', 'android'] }).notNull(),
+    appVersion: text('app_version').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    /** 마지막 본인 테스트 접수 번호. 토큰·세션이 바뀌면 지우고 전달 결과 조회에만 쓴다. */
+    lastTestTicketId: text('last_test_ticket_id'),
+    lastTestSentAt: text('last_test_sent_at'),
+  },
+  (t) => [
+    uniqueIndex('push_devices_token_unique').on(t.token),
+    index('push_devices_session_idx').on(t.sessionId),
+    index('push_devices_profile_idx').on(t.profileId),
+    index('push_devices_updated_idx').on(t.updatedAt),
+  ],
 );
 
 /**
@@ -213,6 +306,14 @@ export const careers = sqliteTable(
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),
+    // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
+    index('careers_profile_status_season_idx').on(
+      table.profileId,
+      table.status,
+      table.serviceSeason,
+      table.peak,
+    ),
+    index('careers_profile_status_legend_idx').on(table.profileId, table.status, table.legendScore),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
     // 명예의 전당 순위 유형(GET /v1/hof?sort=): status로 은퇴만 좁히고 기록 내림차순 → 레전드 점수로 동점을 가린다.
     index('careers_hof_goals_idx').on(table.status, table.goals, table.legendScore),

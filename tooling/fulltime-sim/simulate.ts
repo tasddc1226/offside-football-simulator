@@ -125,6 +125,14 @@ function newAgg(): Agg {
     injBlocks: 0,
     benchSeasons: 0,
     proSeasons: 0,
+    // T-10-110 K2 우승 승격
+    k2Seasons: 0,
+    k2Wins: 0,
+    promotions: 0,
+    promoStay: 0,
+    promoK1Seasons: 0,
+    promoK1Apps: 0,
+    promoK1Goals: 0,
   };
 }
 const inc = (o: Record<string, number>, k: string | number, v = 1) => {
@@ -224,6 +232,16 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
           if (proDebutAge === null && rec.apps) proDebutAge = rec.age;
         }
         if (L && L.tier >= 4 && euAge === null) euAge = rec.age;
+        if (rec.league === 'K리그2') {
+          (A.k2Seasons as number)++;
+          if (rec.rank === 1) (A.k2Wins as number)++;
+        }
+        if (res.promo) (A.promotions as number)++;
+        if (rec.league === 'K리그1' && rec.clubId && s.leagueMoves?.[rec.clubId] === 'k1') {
+          (A.promoK1Seasons as number)++;
+          (A.promoK1Apps as number) += rec.apps;
+          (A.promoK1Goals as number) += rec.goals;
+        }
         clubs.add(rec.club);
         inc(A.ovrByAge as Record<string, number>, rec.age, rec.ovr);
         inc(A.nByAge as Record<string, number>, rec.age);
@@ -256,6 +274,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
           }
           const opt = pickOption(s, m);
           const r = acceptOption(s, opt, m.options);
+          if (res.promo && !s.retired && s.club.name === res.promo.club) (A.promoStay as number)++;
           if (r?.reopen && g++ < 5) {
             m = market(s);
             continue;

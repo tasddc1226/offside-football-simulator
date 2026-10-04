@@ -40,6 +40,33 @@ function firstProfilesCreateStatement(): string {
  * 5개뿐이다. 컬럼 목록은 schema.ts와 같다(snake_case).
  */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
+  push_news_events: ['id', 'board', 'day', 'post_id', 'title', 'created_at', 'expires_at'],
+  push_news_deliveries: [
+    'id',
+    'event_id',
+    'installation_hash',
+    'session_id',
+    'profile_id',
+    'token',
+    'state',
+    'attempts',
+    'receipt_attempts',
+    'due_at',
+    'lease_id',
+    'ticket_id',
+    'updated_at',
+  ],
+  push_devices: [
+    'installation_hash',
+    'session_id',
+    'profile_id',
+    'token',
+    'platform',
+    'app_version',
+    'updated_at',
+    'last_test_ticket_id',
+    'last_test_sent_at',
+  ],
   profiles: [
     'id',
     'recovery_code_hash',
@@ -281,6 +308,19 @@ describe('migrations', () => {
         .all<{ name: string }>();
       const columns = result.results.map((row) => row.name).sort();
       expect(columns, `table ${table}`).toEqual([...expectedColumns].sort());
+    }
+  });
+
+  it('T-11-064: 내 선수·구단주 팀 조회는 profile_id 인덱스로 시작한다(은퇴 선수 전체를 훑지 않는다)', async () => {
+    const plans = [
+      "select id from careers where profile_id = 'p' and status = 'retired' and peak is not null and hidden = 0 and service_season = 1 order by peak desc limit 5",
+      "select id from careers where profile_id = 'p' and status = 'retired' and legend_score is not null order by legend_score desc, retired_at limit 5",
+    ];
+    for (const sql of plans) {
+      const result = await ctx.db.$client
+        .prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .all<{ detail: string }>();
+      expect(result.results.map((r) => r.detail).join('\n'), sql).toMatch(/\(profile_id=\?/);
     }
   });
 

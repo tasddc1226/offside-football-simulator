@@ -6,7 +6,11 @@ import { TRAITS } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
 import { leagueOf, fmtMoney } from '@offside/game/engine';
 import { marketValue } from '@offside/game/season';
-import { milStatusText } from '@offside/game/military';
+import {
+  milStatusText,
+  SPORTS_SERVICE_NOTICE,
+  SPORTS_SERVICE_LEGACY_NOTICE,
+} from '@offside/game/military';
 import { nextWC, HOSTS } from '@offside/game/national';
 import type { GameState } from '@offside/game/types';
 import { flagOf, isKorean, nationOf } from '@offside/game/nation';
@@ -148,6 +152,16 @@ export function PlayerTab({ s }: { s: GameState }) {
             { k: '다음 월드컵', v: `${nextWcYear} · ${nextWcHost}` },
           ]}
         />
+        {isKorean(s) && (
+          <Txt tone="muted" style={{ marginTop: 10, fontSize: rem(0.875) }} testID="military-guide">
+            {SPORTS_SERVICE_NOTICE}
+          </Txt>
+        )}
+        {isKorean(s) && s.mil.exempt && s.mil.sportsService?.monthsLeft == null && (
+          <Txt tone="muted" style={{ marginTop: 8, fontSize: rem(0.875) }} testID="military-legacy">
+            {SPORTS_SERVICE_LEGACY_NOTICE}
+          </Txt>
+        )}
         {tours.length ? (
           <View style={{ marginTop: 8 }}>
             {tours

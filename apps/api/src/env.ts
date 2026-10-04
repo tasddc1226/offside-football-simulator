@@ -5,6 +5,12 @@ import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  /** 공지·릴리즈 노트 하루 첫 게시 자동 푸시. 운영에만 켠다. */
+  NEWS_PUSH_ENABLED?: string;
+  /** 관리자 자신의 등록 기기만 테스트. 기본 off. 전체 발송 기능과 별개다. */
+  PUSH_TEST_ENABLED?: string;
+  /** Expo enhanced push security용 secret. 클라이언트에는 넣지 않는다. */
+  EXPO_PUSH_ACCESS_TOKEN?: string;
   DB: D1Database;
   /** local|staging|production. */
   ENVIRONMENT: string;

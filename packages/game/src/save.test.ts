@@ -5,8 +5,8 @@ import { SAVE_VERSION } from './data.js';
 import { leagueOf } from './engine.js';
 import './event-registry.js';
 import { createRng, rnd } from './rng.js';
-import { loadSave, migrateSave } from './save.js';
-import type { GameState } from './types.js';
+import { loadSave, migrateHofEntry, migrateSave } from './save.js';
+import type { GameState, HofEntry } from './types.js';
 import { acceptOption } from './season.js';
 
 // T-10-046: 저장본 마이그레이션. 지금 형식의 저장본은 그대로 두고, 옛 형식은 빠진 필드를 채운다.
@@ -114,5 +114,78 @@ describe('migrateSave (T-10-046)', () => {
     G.club.name = '옛 이름';
     migrateSave(G);
     expect(G.club.name).toBe(name);
+  });
+});
+
+describe('T-11-062 체육요원 저장 호환성', () => {
+  it.each(['미필', '군필', '상무복무', '전환대기', '기존특례', '기존특례군필', '외국국적'])(
+    '%s 옛 저장의 병역·국적·예약·계약·RNG를 보존하고 반복 이관은 동일하다',
+    (kind) => {
+      const G = current();
+      if (kind === '군필' || kind === '기존특례군필') G.mil.served = true;
+      if (kind === '상무복무' || kind === '전환대기') {
+        G.mil.serving = true;
+        G.mil.type = 'sangmu';
+        G.mil.left = 2;
+        G.mil.prevClub = {
+          club: { ...G.club },
+          leagueId: G.leagueId,
+          contract: { ...G.contract! },
+          abroad: false,
+        };
+      }
+      if (['전환대기', '기존특례', '기존특례군필'].includes(kind))
+        G.mil.exempt = '아시안게임 금메달';
+      if (kind === '외국국적') G.nation = 'JP';
+      Object.assign(G.mil, { applied: false, accepted: false, armyNext: false });
+      const before = structuredClone(G);
+      const loaded = loadSave(JSON.parse(JSON.stringify(G)))!.G;
+      const expected = structuredClone(before);
+      if (expected.mil.exempt) expected.mil.sportsService = { monthsLeft: null, lastYear: G.year };
+      expect(loaded).toEqual(expected);
+      expect(loadSave(JSON.parse(JSON.stringify(loaded)))!.G).toEqual(loaded);
+    },
+  );
+});
+
+describe('T-11-072 옛 은퇴 기록 국적 호환성', () => {
+  const entry = (): HofEntry =>
+    ({
+      id: current().cid,
+      name: '옛 선수',
+      age: 35,
+      peak: 80,
+      title: '원클럽맨',
+      detail: { storyLog: [{ ending: '옛 엔딩' }] },
+    }) as unknown as HofEntry;
+
+  it('같은 cid의 은퇴 저장본에 명시된 국적만 보완하고 원본·스냅샷·칭호를 보존한다', () => {
+    const h = entry();
+    const before = structuredClone(h);
+    const s = { ...current(), retired: true, nation: 'BR' };
+    const migrated = migrateHofEntry(h, s);
+    expect(migrated).toEqual({ ...before, nation: 'BR' });
+    expect(migrated.detail).toBe(h.detail);
+    expect(h).toEqual(before);
+    expect(migrateHofEntry(migrated, s)).toBe(migrated);
+    expect(migrateHofEntry({ ...h, nation: 'GB-ENG' }, s).nation).toBe('GB-ENG');
+  });
+
+  it('원본 없음·다른 cid·진행 중·미기록·잘못된 국적은 추정하지 않고 옛 기록을 그대로 읽는다', () => {
+    const h = entry();
+    const s = { ...current(), retired: true, nation: 'BR' };
+    for (const source of [
+      null,
+      { ...s, cid: 'other' },
+      { ...s, retired: false },
+      { ...s, nation: undefined },
+      { ...s, nation: 'invalid' },
+      { ...s, v: 2 } as unknown as GameState,
+    ]) {
+      expect(migrateHofEntry(h, source)).toBe(h);
+    }
+    const noId = { ...h };
+    delete noId.id;
+    expect(migrateHofEntry(noId, s)).toBe(noId);
   });
 });

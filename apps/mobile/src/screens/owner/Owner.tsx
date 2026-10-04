@@ -30,6 +30,7 @@ import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
 import { Grid2, OvrBadge, Stats } from './TeamParts';
+import { TeamLogo } from '../../components/TeamLogo';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 
 function openTeam(v: TeamView = 'team') {
@@ -215,6 +216,7 @@ export default function Owner() {
               gap: 12,
             }}
           >
+            {team ? <TeamLogo logo={team.logo} name={team.name} size={44} decorative /> : null}
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
               <Txt v="eyebrow">{`My team${card?.season ? ` · ${card.season}` : ''}`}</Txt>
               <Txt v="h2" accessibilityRole="header">

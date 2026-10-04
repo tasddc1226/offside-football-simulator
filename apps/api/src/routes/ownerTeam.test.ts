@@ -8,6 +8,7 @@ import {
   TeamMatchesResponseSchema,
   TeamOpponentsResponseSchema,
   TeamProfileResponseSchema,
+  TeamRankResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
 import {
@@ -16,6 +17,7 @@ import {
   matchScore,
   ratingChange,
   presetLayout,
+  FORMATIONS,
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -61,6 +63,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       peak?: number;
       status?: 'active' | 'retired';
       publicName?: string | null;
+      nation?: string | null;
       roles?: Record<string, number>;
       serviceSeason?: number | null;
     } = {},
@@ -72,6 +75,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       id,
       profileId,
       pos: over.pos ?? 'FW',
+      nation: over.nation ?? null,
       dpos: over.dpos ?? null,
       foot: '오른발',
       type: 'poacher',
@@ -242,11 +246,11 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const data = GetRes.parse(
       await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
     ).data;
-    expect(data.players[0]).toMatchObject({ careerId: cb, roles });
+    expect(data.players[0]).toMatchObject({ careerId: cb, roles, nation: 'KR' });
     // 4-3-3: 1번 칸 FB, 2번 칸 CB, 5번 칸 DM.
     const res = await putTeam(me.cookie, { slots: slots(null, cb) });
     const team = PutRes.parse(await res.json()).data.team;
-    expect(team.slots[1]).toMatchObject({ slot: 'FB', rating: 79, fit: 0.96 });
+    expect(team.slots[1]).toMatchObject({ slot: 'FB', rating: 79, fit: 0.96, nation: 'KR' });
     const moved = PutRes.parse(
       await (await putTeam(me.cookie, { slots: slots(null, null, cb) })).json(),
     ).data.team;
@@ -258,7 +262,13 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
   it('자유 배치와 로고를 저장하고 공개 프로필·경기에 같은 자리 실력을 쓴다', async () => {
     const me = await issueGoogleCookie(ctx);
     const roles = { GK: 22, CB: 83, FB: 79, DM: 74, CM: 66, AM: 58, W: 55, ST: 52 };
-    const cb = await addCareer(me.profileId, { pos: 'DF', dpos: 'CB', peak: 82, roles });
+    const cb = await addCareer(me.profileId, {
+      pos: 'DF',
+      dpos: 'CB',
+      peak: 82,
+      roles,
+      nation: 'BR',
+    });
     const layout = presetLayout('4-3-3');
     layout[2] = { x: 50, y: 60, slot: 'DM' };
     const logo = { shape: 'r', pattern: 'sash', text: 'FC', bg: '#174386', fg: '#ffffff' };
@@ -267,13 +277,37 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(res.status).toBe(200);
     const team = PutRes.parse(await res.json()).data.team;
     expect(team).toMatchObject({ layout, logo });
-    expect(team.slots[2]).toMatchObject({ slot: 'DM', rating: 74 });
+    expect(team.slots[2]).toMatchObject({ slot: 'DM', rating: 74, nation: 'BR' });
+    expect(team.slots[0]?.nation).toBeNull();
+    const mine = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(mine.players.find((p) => p.careerId === cb)?.nation).toBe('BR');
+    expect(mine.team?.slots[2]?.nation).toBe('BR');
     const profile = successEnvelope(TeamProfileResponseSchema).parse(
       await (await call('GET', `/v1/teams/${team.id}`)).json(),
     ).data.team;
     expect(profile).toMatchObject({ layout, logo });
-    expect(profile.slots[2]).toMatchObject({ slot: 'DM', rating: 74 });
+    expect(profile.slots[2]).toMatchObject({ slot: 'DM', rating: 74, nation: 'BR' });
     const rival = await ownerWithTeam(1);
+    const rivalLogo = { ...logo, text: 'RV', bg: '#a52e37' };
+    await ctx.db
+      .update(ownerTeams)
+      .set({ logoJson: JSON.stringify(rivalLogo) })
+      .where(eq(ownerTeams.id, rival.team.id));
+    const ranking = successEnvelope(TeamRankResponseSchema).parse(
+      await (await call('GET', '/v1/teams')).json(),
+    ).data.items;
+    expect(ranking.find((t) => t.teamId === team.id)?.logo).toEqual(logo);
+    const opponents = OppRes.parse(
+      await (await call('GET', '/v1/owner-team/opponents', { cookie: me.cookie })).json(),
+    ).data.items;
+    expect(opponents.find((t) => t.teamId === rival.team.id)?.logo).toEqual(rivalLogo);
+    await rebuildStaleAchievements(ctx.db, new Date().toISOString());
+    const achievements = AchRankRes.parse(
+      await (await call('GET', '/v1/achievements/ranking')).json(),
+    ).data.items;
+    expect(achievements.find((r) => r.team?.id === team.id)?.team?.logo).toEqual(logo);
     const match = PlayRes.parse(
       await (
         await call('POST', '/v1/owner-team/matches', {
@@ -284,6 +318,33 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       ).json(),
     ).data.match;
     expect(match.home.ovr).toBe(team.ovr);
+    expect(match.home.logo).toEqual(logo);
+    expect(match.away.logo).toEqual(rivalLogo);
+    // 로고를 저장하지 않았던 옛 경기에도 현재 로고를 붙인다. 경기 원본은 덮어쓰지 않는다.
+    const [storedBefore] = await ctx.db
+      .select()
+      .from(teamMatches)
+      .where(eq(teamMatches.id, match.id));
+    expect(JSON.parse(storedBefore!.detailJson).home).not.toHaveProperty('logo');
+    const nextLogo = { ...logo, text: 'NEW' };
+    await ctx.db
+      .update(ownerTeams)
+      .set({ logoJson: JSON.stringify(nextLogo) })
+      .where(eq(ownerTeams.id, team.id));
+    const history = MatchesRes.parse(
+      await (await call('GET', '/v1/owner-team/matches', { cookie: me.cookie })).json(),
+    ).data.items;
+    expect(history[0]!.home.logo).toEqual(nextLogo);
+    expect(history[0]!.away.logo).toEqual(rivalLogo);
+    const [storedAfter] = await ctx.db
+      .select()
+      .from(teamMatches)
+      .where(eq(teamMatches.id, match.id));
+    expect(storedAfter!.detailJson).toBe(storedBefore!.detailJson);
+    await ctx.db
+      .update(ownerTeams)
+      .set({ logoJson: JSON.stringify(logo) })
+      .where(eq(ownerTeams.id, team.id));
     // 옛 앱이 새 필드를 생략해도 저장된 값은 보존한다.
     const legacy = PutRes.parse(await (await putTeam(me.cookie, { slots: ids })).json()).data.team;
     expect(legacy).toMatchObject({ layout, logo });
@@ -318,6 +379,66 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(await ctx.db.select().from(ownerTeams)).toHaveLength(0);
   });
 
+  it.each([
+    { label: '기본 배치', free: false, cb: 99, dm: 70, youth: false, done: true, fit: 1 },
+    { label: '자유배치 미달성 회귀', free: true, cb: 70, dm: 99, youth: false, done: true, fit: 1 },
+    {
+      label: '자유배치 잘못된 달성 회귀',
+      free: true,
+      cb: 99,
+      dm: 70,
+      youth: false,
+      done: false,
+      fit: 0.71,
+    },
+    {
+      label: '1.00 바로 아래 경계',
+      free: true,
+      cb: 99,
+      dm: 98,
+      youth: false,
+      done: false,
+      fit: 0.99,
+    },
+    { label: '유스 적합도 1 제외', free: true, cb: 70, dm: 99, youth: true, done: false, fit: 1 },
+  ])('$label: 실제 팀 자리와 업적의 적합도 판정을 일치시킨다', async (scenario) => {
+    const me = await issueGoogleCookie(ctx);
+    const group = {
+      GK: 'GK',
+      FB: 'DF',
+      CB: 'DF',
+      DM: 'MF',
+      CM: 'MF',
+      AM: 'MF',
+      W: 'FW',
+      ST: 'FW',
+    } as const;
+    const ids: (string | null)[] = [];
+    for (const [i, role] of FORMATIONS['4-3-3'].entries()) {
+      const roles = { GK: 70, CB: 70, FB: 70, DM: 70, CM: 70, AM: 70, W: 70, ST: 70, [role]: 99 };
+      if (i === 2) Object.assign(roles, { CB: scenario.cb, DM: scenario.dm });
+      ids.push(await addCareer(me.profileId, { pos: group[role], peak: 99, roles }));
+    }
+    if (scenario.youth) ids[10] = null;
+    const layout = presetLayout('4-3-3');
+    layout[2] = { x: 50, y: 60, slot: 'DM' };
+    const res = await putTeam(me.cookie, { slots: ids, ...(scenario.free ? { layout } : {}) });
+    expect(res.status).toBe(200);
+    const saved = PutRes.parse(await res.json()).data.team;
+    expect(saved.slots[2]?.fit).toBe(scenario.fit);
+    const shown = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data.team!;
+    expect(shown.slots.map((s) => s.fit)).toEqual(saved.slots.map((s) => s.fit));
+    const ach = AchRes.parse(
+      await (await call('GET', '/v1/owner-team/achievements', { cookie: me.cookie })).json(),
+    ).data;
+    expect(ach.groups.flatMap((g) => g.items).find((i) => i.id === 'team-fit')?.done).toBe(
+      scenario.done,
+    );
+    expect(shown.slots.every((s) => s.careerId !== null && s.fit >= 1)).toBe(scenario.done);
+  });
+
   it('구단 시즌 업적은 그 시즌에 처음 올라온 내 은퇴 선수와 그 시즌 팀으로 판정한다', async () => {
     const me = await issueGoogleCookie(ctx);
     await addCareer(me.profileId, { pos: 'GK', peak: 70 });
@@ -343,6 +464,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(pre).toMatchObject({ score: 10, rank: 1, ranked: 1 });
     expect(pre.groups.map((g) => g.stage).slice(3, 6)).toEqual(['3단계', '4단계', '5단계']);
     expect(item(pre, 'one-club')?.done).toBe(false);
+    expect(item(pre, 'age-40')).toMatchObject({ label: '40세까지 현역', done: false });
     expect((await read('?season=1')).status).toBe(400); // 아직 열리지 않은 시즌
 
     vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
@@ -353,6 +475,8 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(item(cur, 'retire-DF')?.done).toBe(true);
     expect(item(cur, 'all-dpos')).toMatchObject({ cur: 1, max: 8 });
     expect(item(cur, 'team-one')?.done).toBe(true);
+    // T-11-046 시즌 1 선수는 45세에 은퇴하므로 은퇴 직전까지 현역도 44세다.
+    expect(item(cur, 'age-40')).toMatchObject({ label: '44세까지 현역', done: false });
     const past = AchRes.parse((await read('?season=0')).body).data;
     expect(past).toMatchObject({ season: 0, players: 1 });
     expect(past.groups.some((g) => g.id === 'team')).toBe(false); // 프리시즌에는 팀을 만들지 않았다

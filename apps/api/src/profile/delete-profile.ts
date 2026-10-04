@@ -15,6 +15,8 @@ import {
   careers,
   idempotency,
   profiles,
+  pushDevices,
+  pushNewsDeliveries,
   serverFirsts,
   serverRecords,
   sessions,
@@ -120,6 +122,8 @@ export async function executeProfileDeletion(
     ...deleteOwnerTeamsStatements(db, input.profileId),
     ...deleteBoardActivityStatements(db, input.profileId),
     ...deleteChatActivityStatements(db, input.profileId),
+    db.delete(pushDevices).where(eq(pushDevices.profileId, input.profileId)),
+    db.delete(pushNewsDeliveries).where(eq(pushNewsDeliveries.profileId, input.profileId)),
     db.delete(idempotency).where(eq(idempotency.ownerProfileId, input.profileId)),
     db
       .update(sessions)

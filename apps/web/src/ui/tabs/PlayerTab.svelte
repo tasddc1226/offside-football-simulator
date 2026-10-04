@@ -5,7 +5,7 @@
   import { ovr } from '@offside/game/attributes';
   import { leagueOf, fmtMoney } from '@offside/game/engine';
   import { marketValue } from '@offside/game/season';
-  import { milStatusText } from '@offside/game/military';
+  import { milStatusText, SPORTS_SERVICE_NOTICE, SPORTS_SERVICE_LEGACY_NOTICE } from '@offside/game/military';
   import { nextWC, HOSTS } from '@offside/game/national';
   import type { GameState } from '@offside/game/types';
   import { flagOf, isKorean, nationOf } from '@offside/game/nation';
@@ -61,10 +61,16 @@
   <dl class="kv" style="margin-top:10px">
     <dt>A매치 데뷔</dt><dd>{s.nat.debutYear || '미발탁'}</dd>
     {#if isKorean(s)}
-      <dt>병역</dt><dd>{milTxt}</dd>
+      <dt>병역</dt><dd style="overflow-wrap:anywhere" data-military-status>{milTxt}</dd>
     {/if}
     <dt>다음 월드컵</dt><dd>{nextWcYear} · {nextWcHost}</dd>
   </dl>
+  {#if isKorean(s)}
+    <p class="muted fs-sm" style="margin-top:10px" data-military-guide>{SPORTS_SERVICE_NOTICE}</p>
+    {#if s.mil.exempt && s.mil.sportsService?.monthsLeft == null}
+      <p class="muted fs-sm" data-military-legacy>{SPORTS_SERVICE_LEGACY_NOTICE}</p>
+    {/if}
+  {/if}
   {#if tours.length}
     <div style="margin-top:8px">
       {#each tours.slice().reverse() as x (x.year + x.name)}

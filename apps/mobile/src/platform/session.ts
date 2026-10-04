@@ -6,6 +6,11 @@ import { apiFetch } from '@offside/app-core/api/client';
 
 const KEY = 'offside_session';
 let token: string | null = null;
+const sessionListeners = new Set<() => void>();
+export function onSessionChanged(fn: () => void) {
+  sessionListeners.add(fn);
+  return () => sessionListeners.delete(fn);
+}
 
 export async function loadSession(): Promise<void> {
   try {
@@ -18,6 +23,7 @@ export async function loadSession(): Promise<void> {
 export const sessionToken = () => token;
 
 export async function setSessionToken(next: string | null): Promise<void> {
+  const changed = token !== next;
   token = next;
   try {
     if (next) await SecureStore.setItemAsync(KEY, next);
@@ -25,6 +31,7 @@ export async function setSessionToken(next: string | null): Promise<void> {
   } catch {
     // 보안 저장소를 못 쓰면 이번 실행 동안만 쓴다.
   }
+  if (changed) sessionListeners.forEach((fn) => fn());
 }
 
 export const authHeaders = (): Record<string, string> =>

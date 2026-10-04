@@ -7,6 +7,7 @@
 // 담는 키: `ft_save`(필수)와 `ft_hof`(이 기기 은퇴 선수 기록, 있으면). `ft_scout_seed`는 선수 생성 후보의 시드라
 // 커리어가 시작된 세이브에는 쓸모가 없어 뺐다. 로그인·세션·프로필·설정 키는 절대 담지 않는다.
 // 가져올 때는 아래 WRITE_KEYS 두 개만 쓴다 — 백업에 다른 키가 있어도 무시한다.
+import { measureOperation } from './measurement.js';
 import { SAVE_VERSION } from '@offside/game/data';
 import { getActiveRng, setActiveRng } from '@offside/game/rng';
 import { loadSave } from '@offside/game/save';
@@ -105,7 +106,7 @@ const hofEntryOk = (h: unknown): h is HofEntry =>
   typeof h.pos === 'string';
 
 /** 백업 코드(base64) 또는 백업 파일(JSON) 글을 검증해 되돌린다. 저장소는 건드리지 않는다. */
-export function decodeBackup(text: string): DecodeResult {
+function decodeBackupValue(text: string): DecodeResult {
   const t = text.trim();
   if (!t) return { ok: false, reason: 'empty' };
   if (t.length > MAX_TEXT) return { ok: false, reason: 'tooLarge' };
@@ -143,7 +144,7 @@ export function mergeHof(mine: HofEntry[], incoming: HofEntry[]): HofEntry[] {
 }
 
 /** 검증된 백업을 화이트리스트 키(WRITE_KEYS)에만 쓴다. 세이브를 못 쓰면(용량) 원래대로 되돌리고 false. */
-export function applyBackup(b: Backup, currentHof: HofEntry[]): boolean {
+function applyBackupValue(b: Backup, currentHof: HofEntry[]): boolean {
   let prev: string | null;
   try {
     prev = storage().getItem('ft_save');
@@ -161,4 +162,15 @@ export function applyBackup(b: Backup, currentHof: HofEntry[]): boolean {
   // 기록 합치기는 덤이다 — 실패해도 세이브는 이미 옮겨졌다.
   if (b.hof) saveKey('ft_hof', mergeHof(currentHof, b.hof));
   return true;
+}
+
+export function decodeBackup(text: string): DecodeResult {
+  const result = decodeBackupValue(text);
+  if (!result.ok) measureOperation('load', 'failed', 'invalid_backup', 'backup');
+  return result;
+}
+export function applyBackup(b: Backup, currentHof: HofEntry[]): boolean {
+  const ok = applyBackupValue(b, currentHof);
+  measureOperation('load', ok ? 'success' : 'failed', ok ? 'none' : 'save_risk', 'backup');
+  return ok;
 }

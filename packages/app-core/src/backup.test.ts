@@ -24,6 +24,18 @@ const hofEntry = (o: Partial<HofEntry> = {}): HofEntry =>
 afterEach(() => vi.unstubAllGlobals());
 
 describe('encodeBackup / decodeBackup', () => {
+  it('국적 있는 새 은퇴 기록과 국적 없는 옛 기록을 같은 백업 형식으로 보존한다', () => {
+    const entries = [
+      hofEntry({ id: 'new', nation: 'BR', title: '기존 칭호' }),
+      hofEntry({ id: 'old' }),
+    ];
+    const decoded = decodeBackup(encodeBackup(save(), entries).code);
+    expect(decoded.ok).toBe(true);
+    if (!decoded.ok) return;
+    expect(decoded.backup.hof).toEqual(entries);
+    expect(decoded.backup.hof?.[1]).not.toHaveProperty('nation');
+  });
+
   it('코드(base64)를 되돌리면 같은 세이브가 나온다 — 한글 이름도', () => {
     const s = { ...save(), name: '홍길동' };
     const { code } = encodeBackup(s, [hofEntry()], new Date('2026-09-29T00:00:00Z'));
