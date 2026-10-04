@@ -11,7 +11,6 @@ import type { AchCategory } from '@offside/contracts/owner-team';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
 import { DETAIL_POSITIONS, type DetailPos, type PosGroup } from '@offside/contracts/positions';
 import { NATIONAL_WINS } from '@offside/contracts/nations';
-import { PRESEASON_RETIRE_AT } from '@offside/contracts/service-seasons';
 
 export type AchievementCareer = {
   pos: PosGroup;
@@ -82,8 +81,8 @@ export type AchievementInput = {
   owner: AchievementOwner;
   /** 세부 포지션이 있는 시즌(시즌 1부터)인가. */
   detail: boolean;
-  /** T-11-046 그 시즌 선수의 은퇴 나이(retireAtOf). 없으면 프리시즌 은퇴 나이(41세). */
-  retireAt?: number;
+  /** T-11-046 그 시즌 선수의 은퇴 나이(retireAtOf). */
+  retireAt: number;
 };
 
 // 리그는 contracts LEAGUE_BASE(프로 리그 · 유럽 = 등급 4 이상 · 5대 리그 = 등급 5 이상). 상 이름은 web game/comps.ts
@@ -269,9 +268,8 @@ export function achievementScore(groups: readonly ClubAchievementGroup[]) {
 }
 
 export function clubAchievements(input: AchievementInput): ClubAchievementGroup[] {
-  const { careers, team, owner, detail } = input;
-  /** 은퇴 나이 한 살 아래까지 뛰면 '끝까지 현역'(프리시즌 41세 은퇴 → 40세). */
-  const veteranAge = (input.retireAt ?? PRESEASON_RETIRE_AT) - 1;
+  const { careers, team, owner, detail, retireAt } = input;
+  const veteranAge = retireAt - 1;
   const honors = new Set(careers.flatMap((c) => c.seasons.flatMap((s) => s.honors)));
   const leagues = new Set(careers.flatMap((c) => c.seasons.map((s) => s.league)));
   const has = (names: readonly string[]) => names.filter((n) => honors.has(n)).length;
