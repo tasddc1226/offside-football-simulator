@@ -21,7 +21,7 @@ import {
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { careers, ownerTeams, teamMatches } from '../db/schema.js';
+import { cards, careers, ownerTeams, teamMatches } from '../db/schema.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
@@ -220,6 +220,19 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       attrs: { pac: 99, sho: 99, pas: 99, dri: 99, def: 99, phy: 99 },
     });
     await ctx.db.update(careers).set({ cardAttrsJson: estimate }).where(eq(careers.id, original));
+    // T-11-080 카드 기준가는 cards에서 붙인다(카드가 없거나 소급 전이면 null).
+    await ctx.db.insert(cards).values({
+      careerId: original,
+      ownerId: me.profileId,
+      serviceSeason: 0,
+      pos: 'FW',
+      peak: 90,
+      legendScore: 300,
+      cardValue: 123_000,
+      retireValue: 456_000,
+      createdAt: '2026-09-28T00:00:00.000Z',
+      updatedAt: '2026-09-28T00:00:00.000Z',
+    });
     await ctx.db
       .update(careers)
       .set({ cardAttrsJson: JSON.stringify({ v: 1, source: 'estimated', attrs: { pac: 120 } }) })
@@ -228,11 +241,13 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
     ).data;
     expect(data.players.find((p) => p.careerId === original)).toMatchObject({
+      cardValue: 123_000,
       attrsEstimated: false,
       roles,
       attrs: { pac: 80, sho: 70 },
     });
     expect(data.players.find((p) => p.careerId === invalid)).toMatchObject({
+      cardValue: null,
       attrsEstimated: false,
       attrs: null,
       roles: null,

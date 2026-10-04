@@ -29,6 +29,7 @@ import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { honorsOf } from './firsts.js';
 import {
+  cards,
   careerSeasons,
   careers,
   ownerTeams,
@@ -166,8 +167,11 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       number: careers.shirtNumber,
       publicName: careers.publicName,
       legendScore: careers.legendScore,
+      // T-11-080 카드 기준가(옛 기록·소급 전이면 null).
+      cardValue: cards.cardValue,
     })
     .from(careers)
+    .leftJoin(cards, eq(cards.careerId, careers.id))
     .where(
       and(
         eq(careers.profileId, profileId),

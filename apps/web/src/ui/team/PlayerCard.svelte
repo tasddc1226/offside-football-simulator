@@ -4,6 +4,7 @@
   import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
   import type { DetailPos } from '@offside/contracts/positions';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
+  import { fmtValue } from '@offside/app-core/format';
 
   let { player, name, rating, role, nation, compact = false, youth = false, deploymentRating, ratingLabel = '최고 OVR' }:
     { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; compact?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
@@ -45,7 +46,7 @@
           <div><dt>{statLabels[key]}</dt><dd>{player?.attrs ? Math.round(player.attrs[key]) : '—'}</dd></div>
         {/each}
       </dl>
-      <div class="card-foot">{!player?.attrs ? '능력치 기록 없음' : player.attrsEstimated ? '추정 능력치' : tier === 'legend' ? '레전드 커리어' : '나의 커리어'}</div>
+      <div class="card-foot">{!player?.attrs ? '능력치 기록 없음' : player.attrsEstimated ? '추정 능력치' : player.cardValue ? `기준가 ${fmtValue(player.cardValue)}` : tier === 'legend' ? '레전드 커리어' : '나의 커리어'}</div>
     {/if}
   </div>
 </div>
