@@ -10,6 +10,7 @@ import {
   ReleaseCardsBodySchema,
   ReleaseCardsResponseSchema,
 } from '@offside/contracts';
+import { marketFee, priceBand } from '@offside/contracts/market-value';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { newId } from '../db/ids.js';
@@ -27,12 +28,11 @@ import {
   myOpenListings,
   myTrades,
   ownedCardsValue,
-  priceBand,
   releaseCards,
 } from '../db/repos/market.js';
 import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
-import { edgeCached, purgeEdge } from '../edgeCache.js';
-import { EDGE, STALE } from '../edgeKeys.js';
+import { edgeCached } from '../edgeCache.js';
+import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
@@ -44,7 +44,7 @@ import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './
 // T-11-080 이적시장 · 구단 자금 · 방출. 거래는 지금 팀 시즌 카드끼리만 한다(프리시즌이면 프리시즌 카드).
 // 방출·시장은 구글 연결된 구단주만(requireOwner) — 익명 프로필에는 자금이 생기지 않는다.
 
-/** 목록 엣지 캐시(초). 쓰기는 이 데이터센터의 첫 페이지 사본을 지우고, 다른 곳은 TTL 안에 새로 읽는다. */
+/** 목록 엣지 캐시(초). purgeEdge는 그 데이터센터 사본만 지우므로 쓰지 않고 짧은 TTL로 둔다(이미 팔린 매물은 409). */
 const LIST_TTL = 15;
 const CACHE = `public, max-age=${LIST_TTL}`;
 
@@ -151,7 +151,6 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       }))
     )
       throw conflictError('이미 내놓았거나 방출한 선수예요.', 'CARD_LISTED');
-    purgeEdge(c, STALE.marketChanged(season));
     const listing = (await getListing(db, id))!.listing;
     return ok(c, CreateListingResponseSchema, { listing }, 201, NO_STORE);
   });
@@ -164,7 +163,6 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     const found = await getListing(db, id);
     if (!found || found.sellerId !== me.id || found.status !== 'open') throw listingGone();
     if (!(await cancelListing(db, id, me.id, nowIso()))) throw listingGone();
-    purgeEdge(c, STALE.marketChanged(found.listingSeason));
     return c.body(null, 204);
   });
 
@@ -200,7 +198,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         id,
         buyerId: me.id,
         price: input.price,
-        fee: Math.round(input.price * rules.feeRate),
+        fee: marketFee(input.price, rules.feeRate),
         now,
       });
     } catch (e) {
@@ -209,7 +207,6 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       throw e;
     }
     if (result === 'lost') throw listingGone();
-    purgeEdge(c, STALE.marketChanged(season));
     const [after] = await fundsOf(db, me.id);
     return ok(c, BuyListingResponseSchema, { balance: after?.balance ?? 0 }, 200, NO_STORE);
   });

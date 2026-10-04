@@ -23,6 +23,7 @@ export const PAGES: Record<string, string> = {
   settings: 'settings',
   legend: 'legend',
   team: 'team',
+  market: 'market',
   board: 'board',
   dex: 'dex',
   firsts: 'firsts',

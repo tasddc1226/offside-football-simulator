@@ -172,6 +172,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       publicName: careers.publicName,
       legendScore: cards.legendScore,
       cardValue: cards.cardValue,
+      retireValue: cards.retireValue,
       raised: sql<number>`${careers.profileId} = ${profileId}`,
       listingId: marketListings.id,
       listPrice: marketListings.price,

@@ -97,3 +97,13 @@ export function fmtValue(man: number): string {
       .join(' ') + tail
   );
 }
+
+/** T-11-080 판매가로 고를 수 있는 범위(만 원, 100 단위). priceMin·priceMax는 기준가에 곱하는 비율(밸런스 설정). */
+export function priceBand(cardValue: number, r: { priceMin: number; priceMax: number }) {
+  return {
+    min: Math.max(100, Math.ceil((cardValue * r.priceMin) / 100) * 100),
+    max: Math.floor((cardValue * r.priceMax) / 100) * 100,
+  };
+}
+/** 판매 수수료(만 원). 팔리면 판매자는 가격에서 이만큼 빼고 받는다. */
+export const marketFee = (price: number, feeRate: number) => Math.round(price * feeRate);

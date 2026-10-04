@@ -1,7 +1,5 @@
 import { SERVICE_SEASONS } from '@offside/contracts/service-seasons';
 import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
-import { MARKET_SORTS } from '@offside/contracts';
-import { POS_GROUPS } from '@offside/contracts/positions';
 
 // T-10-047. 엣지에 담는 공개 조회의 경로(= 캐시 키)와, 쓰기가 낡게 만드는 키를 한곳에 둔다.
 // 새 조회를 엣지에 담으면 EDGE에 키를 더하고, 그 데이터를 바꾸는 쓰기를 STALE에 적는다. 와일드카드 퍼지는
@@ -53,11 +51,6 @@ export const STALE = {
     EDGE.teamRank(season, 'ovr', 1),
     EDGE.achRank(season, 1),
   ],
-  /** T-11-080 판매 등록 · 취소 · 영입 — 그 시즌 목록 첫 페이지(정렬 2 × 포지션 5). */
-  marketChanged: (season: number) =>
-    MARKET_SORTS.flatMap((sort) =>
-      [undefined, ...POS_GROUPS].map((pos) => EDGE.marketList(season, sort, pos)),
-    ),
   profileDeleted: (careerIds: string[], hadComments: boolean) => [
     ...careerIds.map(EDGE.hofDetail),
     ...(hadComments ? allBoardLists() : []),

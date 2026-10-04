@@ -112,11 +112,13 @@ export const CreateListingBodySchema = z.strictObject({
 });
 export type CreateListingBody = z.infer<typeof CreateListingBodySchema>;
 export const CreateListingResponseSchema = z.strictObject({ listing: MarketListingSchema });
+export type CreateListingResponse = z.infer<typeof CreateListingResponseSchema>;
 
 /** 구매는 화면에서 본 가격을 함께 보낸다 — 그 사이 값이 바뀌었으면 사지 않는다. */
 export const BuyListingBodySchema = z.strictObject({ price: z.number().int().min(1) });
 export type BuyListingBody = z.infer<typeof BuyListingBodySchema>;
 export const BuyListingResponseSchema = z.strictObject({ balance: man });
+export type BuyListingResponse = z.infer<typeof BuyListingResponseSchema>;
 
 export const ReleaseCardsBodySchema = z.strictObject({
   careerIds: z.array(CareerIdParamSchema).min(1).max(RELEASE_MAX),

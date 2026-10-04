@@ -269,6 +269,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           legendScore: p.legendScore,
           cardValue: p.cardValue,
           raised: !!p.raised,
+          ...(p.raised ? { retireValue: p.retireValue } : {}),
           listing: p.listingId ? { id: p.listingId, price: p.listPrice! } : null,
         })),
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,

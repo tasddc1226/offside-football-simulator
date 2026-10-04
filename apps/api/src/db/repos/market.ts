@@ -30,13 +30,6 @@ export async function marketRules(db: Db): Promise<MarketRules> {
 }
 
 /** 판매가 범위(만 원). 백만 원 단위로 맞춘다. */
-export function priceBand(cardValue: number, r: Pick<MarketRules, 'priceMin' | 'priceMax'>) {
-  return {
-    min: Math.max(100, Math.ceil((cardValue * r.priceMin) / 100) * 100),
-    max: Math.floor((cardValue * r.priceMax) / 100) * 100,
-  };
-}
-
 const cardCols = {
   careerId: cards.careerId,
   pos: cards.pos,
