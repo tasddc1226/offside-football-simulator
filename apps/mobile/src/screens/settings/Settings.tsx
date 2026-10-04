@@ -15,7 +15,6 @@ import { Card, Press, Screen, Topbar, Txt } from '../../ui';
 import { BackupSettings } from './BackupSettings';
 import { ClubCustomSettings } from './ClubCustomSettings';
 import { AdFreeSettings } from './AdFreeSettings';
-import { PushSettings } from './PushSettings';
 import { ReviewSettings } from './ReviewSettings';
 import { SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
 
@@ -148,7 +147,6 @@ export default function Settings() {
       {/* T-10-116 진행 중 커리어 백업·불러오기 */}
       <BackupSettings />
       <AdFreeSettings />
-      <PushSettings />
       <ReviewSettings />
       <ClubCustomSettings />
 
