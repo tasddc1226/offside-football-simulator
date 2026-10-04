@@ -40,6 +40,25 @@ function firstProfilesCreateStatement(): string {
  * 5개뿐이다. 컬럼 목록은 schema.ts와 같다(snake_case).
  */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
+  cards: [
+    'career_id',
+    'owner_id',
+    'service_season',
+    'pos',
+    'dpos',
+    'nation',
+    'number',
+    'peak',
+    'legend_score',
+    'peak_profile',
+    'card_value',
+    'retire_value',
+    'transfers',
+    'released_at',
+    'released_value',
+    'created_at',
+    'updated_at',
+  ],
   push_news_events: ['id', 'board', 'day', 'post_id', 'title', 'created_at', 'expires_at'],
   push_news_deliveries: [
     'id',
@@ -465,6 +484,67 @@ describe('migrations', () => {
         () => undefined,
       );
       expect((await proxy.env.DB.prepare('PRAGMA foreign_key_check').all()).results).toEqual([]);
+    } finally {
+      await proxy.dispose();
+    }
+  });
+
+  it('0056: 은퇴 요약이 있는 기존 은퇴 선수마다 카드를 한 장 만든다(기준가는 비워 둔다)', async () => {
+    const proxy = await getPlatformProxy<Bindings>({
+      configPath: WRANGLER_CONFIG_PATH,
+      persist: false,
+    });
+    try {
+      const names = readdirSync(MIGRATIONS_DIR)
+        .filter((name) => name.endsWith('.sql') && name < '0056')
+        .sort();
+      for (const name of names) {
+        for (const statement of migrationStatements(name)) await proxy.env.DB.exec(statement);
+      }
+      await proxy.env.DB.exec(
+        "INSERT INTO profiles (id, settings_json, created_at, last_seen_at) VALUES ('profile', '{}', '2026-09-01T00:00:00Z', '2026-09-01T00:00:00Z')",
+      );
+      // c-old: 시즌 NULL·가치 NULL인 옛 은퇴, c-s1: 시즌 1 은퇴, c-live: 현역, c-nosum: 은퇴 요약 없음.
+      for (const [id, status, season, peak, value] of [
+        ['c-old', 'retired', 'NULL', 80, 'NULL'],
+        ['c-s1', 'retired', '1', 88, '500000'],
+        ['c-live', 'active', '1', 'NULL', 'NULL'],
+        ['c-nosum', 'retired', '1', 'NULL', 'NULL'],
+      ] as const) {
+        await proxy.env.DB.exec(
+          `INSERT INTO careers (id, profile_id, pos, foot, type, trait, start_year, status, app_version, service_season, peak, legend_score, value, retired_at, created_at, updated_at) VALUES ('${id}', 'profile', 'FW', '오른발', 'poacher', 'late', 2026, '${status}', '1.0.0', ${season}, ${peak}, 300, ${value}, '2026-09-02T00:00:00Z', '2026-09-01T00:00:00Z', '2026-09-03T00:00:00Z')`,
+        );
+      }
+
+      await proxy.env.DB.batch(
+        migrationStatements('0056_cards.sql').map((statement) => proxy.env.DB.prepare(statement)),
+      );
+
+      const rows = await proxy.env.DB.prepare(
+        'SELECT career_id, owner_id, service_season, peak, card_value, retire_value, transfers, created_at FROM cards ORDER BY career_id',
+      ).all();
+      expect(rows.results).toEqual([
+        {
+          career_id: 'c-old',
+          owner_id: 'profile',
+          service_season: 0,
+          peak: 80,
+          card_value: null,
+          retire_value: 0,
+          transfers: 0,
+          created_at: '2026-09-02T00:00:00Z',
+        },
+        {
+          career_id: 'c-s1',
+          owner_id: 'profile',
+          service_season: 1,
+          peak: 88,
+          card_value: null,
+          retire_value: 500000,
+          transfers: 0,
+          created_at: '2026-09-02T00:00:00Z',
+        },
+      ]);
     } finally {
       await proxy.dispose();
     }

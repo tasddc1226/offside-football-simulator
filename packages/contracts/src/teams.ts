@@ -105,6 +105,8 @@ export const TeamPlayerSchema = z.strictObject({
   number: z.number().int().nullable(),
   publicName: z.string().nullable(),
   legendScore: z.number().int().nullable(),
+  /** T-11-080 카드 기준가(만 원). 스냅샷이 없는 옛 기록·소급 전이면 null, 구버전 응답에는 없다. */
+  cardValue: z.number().int().nullable().optional(),
 });
 export type TeamPlayer = z.infer<typeof TeamPlayerSchema>;
 
