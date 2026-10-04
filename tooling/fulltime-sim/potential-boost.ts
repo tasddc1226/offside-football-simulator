@@ -251,7 +251,7 @@ function career(seed: number, hook?: Hook, cfg?: BoostConfig): Career {
   };
 }
 
-export const boostCost = (s: GameState, c: BoostConfig, L: number) =>
+export const cfgCost = (s: GameState, c: BoostConfig, L: number) =>
   Math.round(Math.max(c.min[L]!, (s.contract?.salary ?? 0) * c.rate[L]!) / 10) * 10;
 
 function boostSeason(
