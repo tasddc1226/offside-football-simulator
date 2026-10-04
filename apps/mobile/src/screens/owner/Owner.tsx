@@ -19,7 +19,7 @@ import {
 } from '@offside/app-core/ownerHub';
 import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
-import { fmtValue } from '@offside/contracts/market-value';
+import { fmtValue } from '@offside/app-core/format';
 import { loadHOF } from '@offside/game/season';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
@@ -196,25 +196,7 @@ export default function Owner() {
             </Txt>
           ) : (
             <View style={{ gap: 8 }}>
-              <View
-                testID="owner-value"
-                accessible
-                accessibilityLabel={`구단 가치 ${summary ? fmtValue(summary.value) : '–'}`}
-                style={{
-                  gap: 2,
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                  borderRadius: 12,
-                  backgroundColor: c.surface2,
-                }}
-              >
-                <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                  구단 가치
-                </Txt>
-                <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.75), color: c.accentText }}>
-                  {summary ? fmtValue(summary.value) : '–'}
-                </Txt>
-              </View>
+              <Stats accent items={[['구단 가치', summary ? fmtValue(summary.value) : '–']]} />
               <Stats
                 items={[
                   ['은퇴 선수', summary ? `${num(summary.players)}명` : '–'],

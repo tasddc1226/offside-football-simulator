@@ -8,7 +8,7 @@ import type { PublicHofEntry } from '@offside/contracts';
 import type { DetailPos, POS } from '@offside/game/data';
 import { loadHOF } from '@offside/game/season';
 import type { HofEntry } from '@offside/game/types';
-import { myPlayerNation, myPlayerValue } from '@offside/app-core/myPlayers';
+import { localPlayerValue, myPlayerNation } from '@offside/app-core/myPlayers';
 import { getMyCareers, getRetiredNumbersIn } from '@offside/app-core/api/client';
 import {
   deviceSeasonOf,
@@ -57,7 +57,7 @@ const localRow = (h: HofEntry, i: number, pending: ReadonlySet<string>, now: str
   stats: h,
   title: h.title ?? null,
   season: deviceSeasonOf(h, pending, now),
-  value: myPlayerValue(h),
+  value: localPlayerValue(h),
   open: () => openLocalLegend(h),
 });
 const serverRow = (e: PublicHofEntry): MineRow => ({
@@ -73,7 +73,7 @@ const serverRow = (e: PublicHofEntry): MineRow => ({
   stats: { ...e, score: e.legendScore },
   title: e.title ?? null,
   season: serverSeasonOf(e),
-  value: myPlayerValue(undefined, e),
+  value: e.value ?? 0,
   open: () => void openPublicLegend(e),
 });
 

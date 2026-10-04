@@ -12,12 +12,12 @@ export function myPlayerNation(
 }
 
 /**
- * T-11-080a 내 선수 은퇴 가치(만 원). 계정 응답 값이 있으면 그 값을, 없으면(게스트·업로드 대기·소급 전) 이 기기 은퇴
- * 기록의 시즌 기록으로 계산한다. 둘 다 없으면 0.
+ * T-11-080a 이 기기 은퇴 기록의 은퇴 가치(만 원). 계정 응답에 값이 있으면 그 값을 먼저 쓰고, 이건 게스트·업로드 대기·
+ * 소급 전 기록에만 쓰인다. 시즌 기록이 없으면 0.
  */
-export function myPlayerValue(
-  local?: { score: number; detail?: { career: ValueRow[] } | undefined },
-  account?: { value?: number | null | undefined },
-): number {
-  return account?.value ?? (local?.detail ? retireValue(local.detail.career, local.score) : 0);
+export function localPlayerValue(h: {
+  score: number;
+  detail?: { career: ValueRow[] } | undefined;
+}): number {
+  return h.detail ? retireValue(h.detail.career, h.score) : 0;
 }

@@ -10,7 +10,7 @@
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
-  import { fmtValue } from '@offside/contracts/market-value';
+  import { fmtValue } from '@offside/app-core/format';
   import { appState, type TeamView } from './state.svelte.js';
   import { accountCache } from './account-state.svelte.js';
   import { isMember } from '@offside/app-core/account';
