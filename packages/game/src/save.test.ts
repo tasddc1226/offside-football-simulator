@@ -5,8 +5,8 @@ import { SAVE_VERSION } from './data.js';
 import { leagueOf } from './engine.js';
 import './event-registry.js';
 import { createRng, rnd } from './rng.js';
-import { loadSave, migrateSave } from './save.js';
-import type { GameState } from './types.js';
+import { loadSave, migrateHofEntry, migrateSave } from './save.js';
+import type { GameState, HofEntry } from './types.js';
 import { acceptOption } from './season.js';
 
 // T-10-046: 저장본 마이그레이션. 지금 형식의 저장본은 그대로 두고, 옛 형식은 빠진 필드를 채운다.
@@ -146,4 +146,46 @@ describe('T-11-062 체육요원 저장 호환성', () => {
       expect(loadSave(JSON.parse(JSON.stringify(loaded)))!.G).toEqual(loaded);
     },
   );
+});
+
+describe('T-11-072 옛 은퇴 기록 국적 호환성', () => {
+  const entry = (): HofEntry =>
+    ({
+      id: current().cid,
+      name: '옛 선수',
+      age: 35,
+      peak: 80,
+      title: '원클럽맨',
+      detail: { storyLog: [{ ending: '옛 엔딩' }] },
+    }) as unknown as HofEntry;
+
+  it('같은 cid의 은퇴 저장본에 명시된 국적만 보완하고 원본·스냅샷·칭호를 보존한다', () => {
+    const h = entry();
+    const before = structuredClone(h);
+    const s = { ...current(), retired: true, nation: 'BR' };
+    const migrated = migrateHofEntry(h, s);
+    expect(migrated).toEqual({ ...before, nation: 'BR' });
+    expect(migrated.detail).toBe(h.detail);
+    expect(h).toEqual(before);
+    expect(migrateHofEntry(migrated, s)).toBe(migrated);
+    expect(migrateHofEntry({ ...h, nation: 'GB-ENG' }, s).nation).toBe('GB-ENG');
+  });
+
+  it('원본 없음·다른 cid·진행 중·미기록·잘못된 국적은 추정하지 않고 옛 기록을 그대로 읽는다', () => {
+    const h = entry();
+    const s = { ...current(), retired: true, nation: 'BR' };
+    for (const source of [
+      null,
+      { ...s, cid: 'other' },
+      { ...s, retired: false },
+      { ...s, nation: undefined },
+      { ...s, nation: 'invalid' },
+      { ...s, v: 2 } as unknown as GameState,
+    ]) {
+      expect(migrateHofEntry(h, source)).toBe(h);
+    }
+    const noId = { ...h };
+    delete noId.id;
+    expect(migrateHofEntry(noId, s)).toBe(noId);
+  });
 });

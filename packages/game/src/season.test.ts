@@ -178,3 +178,58 @@ describe('로컬 명예의 전당 30명 한도', () => {
     expect(loadHOF().filter((h) => h.id === again.id)).toHaveLength(1);
   });
 });
+
+describe('T-11-072 은퇴 선수 국적 저장', () => {
+  it.each(['BR', 'GB-ENG', 'KR'])(
+    '%s 국적을 새 은퇴 기록에 명시하고 기존 스냅샷 계약을 유지한다',
+    async (nation) => {
+      const { retire, loadHOF } = await import('./season.js');
+      const { LegendSnapshotSchema } = await import('@offside/contracts');
+      setActiveRng(createRng(5));
+      const g = newGame(
+        {
+          name: '국적 확인',
+          number: 7,
+          pos: 'FW',
+          foot: '오른발',
+          type: 'poacher',
+          trait: 'late',
+          nation,
+        },
+        5,
+      );
+      const h = retire(g);
+      expect(h.nation).toBe(nation);
+      expect(loadHOF().find((x) => x.id === h.id)?.nation).toBe(nation);
+      expect(LegendSnapshotSchema.parse(h.detail)).toEqual(h.detail);
+      expect(h.detail).not.toHaveProperty('nation');
+    },
+  );
+
+  it('loadHOF는 같은 커리어 원본으로만 보완하고 저장된 옛 기록을 덮어쓰지 않는다', async () => {
+    const { loadHOF } = await import('./season.js');
+    setActiveRng(createRng(5));
+    const g = newGame(
+      {
+        name: '국적 확인',
+        number: 7,
+        pos: 'FW',
+        foot: '오른발',
+        type: 'poacher',
+        trait: 'late',
+        nation: 'BR',
+      },
+      5,
+    );
+    g.retired = true;
+    saveKey('ft_save', g);
+    const old = [
+      { id: g.cid, name: g.name, score: 100, title: '기존 칭호' },
+      { id: 'other', name: g.name, score: 50 },
+    ];
+    saveKey('ft_hof', old);
+    expect(loadHOF()[0]).toEqual({ ...old[0], nation: 'BR' });
+    expect(loadHOF()[1]).toEqual(old[1]);
+    expect(loadKey('ft_hof')).toEqual(old);
+  });
+});

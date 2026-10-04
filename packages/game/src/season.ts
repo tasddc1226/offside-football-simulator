@@ -47,6 +47,7 @@ import type {
   RenewOption,
 } from './types.js';
 import { storage } from './storage.js';
+import { migrateHofEntry } from './save.js';
 
 /** 시즌 결산 결과 — 결산 시트가 그린다. tours는 명단에 들었거나 경기가 없던(예선 결과) 대회와 우승 대회만. */
 export interface SeasonEndResult {
@@ -641,6 +642,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     p: 0,
   });
   const entry: HofEntry = {
+    nation: nationOf(s).code,
     name: s.name,
     pos: s.pos,
     ...(s.dpos && { dpos: s.dpos }),
@@ -757,7 +759,10 @@ export function loadHOF(): HofEntry[] {
   const hof = loadKey<HofEntry[]>('ft_hof') || loadKey<HofEntry[]>('sl_hof') || [];
   // T-10-107 예전에 겹쳐 저장된 같은 커리어는 하나만(점수 순이라 앞의 것).
   const seen = new Set<string>();
-  return hof.filter((h) => !h.id || (!seen.has(h.id) && !!seen.add(h.id)));
+  const source = loadKey<GameState>('ft_save');
+  return hof
+    .filter((h) => !h.id || (!seen.has(h.id) && !!seen.add(h.id)))
+    .map((h) => migrateHofEntry(h, source));
 }
 /** 이 기기에 남은 은퇴 선수 이름(커리어 id → 이름). 서버엔 이름 공개를 끈 선수의 이름이 없어 화면이 이것으로 채운다. */
 export const localCareerNames = (): Map<string, string> =>

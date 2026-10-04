@@ -312,6 +312,8 @@ export interface GameState {
 }
 
 export interface HofEntry {
+  /** T-11-072 은퇴 때 남긴 국적. 옛 로컬 기록에는 없어 국적을 추측하지 않는다. */
+  nation?: string | undefined;
   name: string;
   pos: Pos;
   dpos?: DetailPos | undefined;
