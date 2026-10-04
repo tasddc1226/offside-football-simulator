@@ -82,3 +82,14 @@ export function spyDb(db: D1Database): { DB: D1Database; seen: string[] } {
   });
   return { DB, seen };
 }
+
+/** T-11-080 테스트가 careers에 바로 넣은 은퇴 선수의 카드를 만든다(마이그레이션 0056·은퇴 업로드와 같은 복사). */
+export async function syncCards(ctx: TestD1, cardValue: number | null = null): Promise<void> {
+  await ctx.env.DB.prepare(
+    `INSERT OR IGNORE INTO cards (career_id, owner_id, service_season, pos, dpos, nation, number, peak, legend_score, peak_profile, card_value, retire_value, created_at, updated_at)
+     SELECT id, profile_id, coalesce(service_season, 0), pos, dpos, nation, shirt_number, peak, coalesce(legend_score, 0), peak_profile, ?, coalesce(value, 0), coalesce(retired_at, updated_at), coalesce(retired_at, updated_at)
+     FROM careers WHERE status = 'retired' AND peak IS NOT NULL`,
+  )
+    .bind(cardValue)
+    .run();
+}

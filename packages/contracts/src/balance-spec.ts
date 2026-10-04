@@ -12,6 +12,8 @@ export const BALANCE_GROUPS = {
   transfer: '이적',
   national: '대표팀',
   military: '병역',
+  // T-11-080 이적시장. 게임(웹)은 읽지 않고, 서버가 방출·등록·구매 요청 때 활성 버전을 바로 읽는다(커리어별 고정 아님).
+  market: '이적시장',
 } as const;
 export type BalanceGroup = keyof typeof BALANCE_GROUPS;
 
@@ -197,6 +199,60 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 1,
     step: 0.01,
+  },
+  marketReleaseRate: {
+    group: 'market',
+    label: '방출 지급률',
+    desc: '선수를 방출하면 은퇴 가치에 이 값을 곱한 만큼 구단 자금이 생긴다',
+    def: 1,
+    min: 0,
+    max: 2,
+    step: 0.05,
+  },
+  marketFeeRate: {
+    group: 'market',
+    label: '거래 수수료율',
+    desc: '선수가 팔리면 판매가에서 이 비율만큼 떼고 판매자에게 준다',
+    def: 0.05,
+    min: 0,
+    max: 0.5,
+    step: 0.01,
+  },
+  marketPriceMin: {
+    group: 'market',
+    label: '최저 판매가(기준가 배수)',
+    desc: '판매가를 기준가의 이 배수 아래로 정할 수 없다',
+    def: 0.5,
+    min: 0.1,
+    max: 1,
+    step: 0.05,
+  },
+  marketPriceMax: {
+    group: 'market',
+    label: '최고 판매가(기준가 배수)',
+    desc: '판매가를 기준가의 이 배수 위로 정할 수 없다',
+    def: 3,
+    min: 1,
+    max: 10,
+    step: 0.1,
+  },
+  marketListLimit: {
+    group: 'market',
+    label: '동시 판매 등록 수',
+    desc: '한 구단주가 한 번에 올려 둘 수 있는 판매 등록 수',
+    def: 10,
+    min: 1,
+    max: 50,
+    step: 1,
+  },
+  marketDailyBuys: {
+    group: 'market',
+    label: '하루 영입 수',
+    desc: '한 구단주가 하루(한국 시각)에 영입할 수 있는 선수 수',
+    def: 20,
+    min: 1,
+    max: 100,
+    step: 1,
   },
 } as const satisfies Record<string, BalanceKnob>;
 

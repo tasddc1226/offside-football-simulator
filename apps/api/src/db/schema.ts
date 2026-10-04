@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { COMMENT_REPORT_REASONS, NAME_REPORT_KINDS } from '@offside/contracts/board-limits';
 import {
+  check,
   index,
   primaryKey,
   sqliteTable,
@@ -367,6 +368,51 @@ export const cards = sqliteTable(
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [index('cards_owner_season_idx').on(table.ownerId, table.serviceSeason, table.peak)],
+);
+
+/**
+ * T-11-080 이적시장 판매 등록. 팔린 등록이 곧 이적 이력이자 판매·영입 자금 내역이라 원장 테이블을 따로 두지 않는다.
+ * 포지션·OVR·기준가는 복사하지 않고 cards를 PK로 붙여 읽는다.
+ */
+export const marketListings = sqliteTable(
+  'market_listings',
+  {
+    id: text('id').primaryKey(),
+    careerId: text('career_id').notNull(),
+    sellerId: text('seller_id').notNull(),
+    buyerId: text('buyer_id'),
+    // 카드 출신 시즌(cards.service_season). 목록 필터용.
+    season: integer('season').notNull(),
+    price: integer('price').notNull(),
+    // 팔렸을 때 뗀 수수료(만 원). 열려 있거나 내린 등록은 0.
+    fee: integer('fee').notNull().default(0),
+    status: text('status', { enum: ['open', 'sold', 'cancelled'] }).notNull(),
+    createdAt: text('created_at').notNull(),
+    closedAt: text('closed_at'),
+  },
+  (table) => [
+    // 카드 한 장에 열린 등록은 하나.
+    uniqueIndex('market_listings_open_card_unique')
+      .on(table.careerId)
+      .where(sql`${table.status} = 'open'`),
+    index('market_listings_new_idx').on(table.status, table.season, table.createdAt),
+    index('market_listings_price_idx').on(table.status, table.season, table.price),
+    index('market_listings_seller_idx').on(table.sellerId, table.status),
+    index('market_listings_buyer_idx').on(table.buyerId, table.closedAt),
+  ],
+);
+
+/** T-11-080 구단 자금(만 원). 처음 자금을 받을 때(방출·판매) 행을 만든다. 잔액이 모자라면 CHECK로 batch 전체가 되돌아간다. */
+export const ownerFunds = sqliteTable(
+  'owner_funds',
+  {
+    profileId: text('profile_id')
+      .primaryKey()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    balance: integer('balance').notNull().default(0),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [check('owner_funds_balance_check', sql`${table.balance} >= 0`)],
 );
 
 /**

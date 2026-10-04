@@ -86,7 +86,7 @@ const OPPONENTS_SHOWN = 5;
 const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
 
 /** 구글 로그인한(삭제되지 않은) 프로필만 구단주다. 익명 프로필은 403 GOOGLE_LOGIN_REQUIRED — 웹이 로그인 안내를 띄운다. */
-async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
+export async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
   const profile = await getProfile(getDb(c), getSessionOrThrow(c).profileId);
   if (!profile || !hasAccount(profile) || profile.deletedAt) {
     throw new AppError({
@@ -233,7 +233,12 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       (id): id is string => !!id && !eligible.has(id),
     );
     if (missing.length) {
-      for (const [id, career] of eligibleMap(await careersByIds(db, missing), me.id, season))
+      for (const [id, career] of eligibleMap(
+        await careersByIds(db, missing),
+        me.id,
+        season,
+        season === teamSeasonAt(now),
+      ))
         eligible.set(id, career);
     }
     return ok(
@@ -263,6 +268,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           publicName: p.publicName,
           legendScore: p.legendScore,
           cardValue: p.cardValue,
+          raised: !!p.raised,
+          listing: p.listingId ? { id: p.listingId, price: p.listPrice! } : null,
         })),
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - Number(played?.n ?? 0)),
@@ -291,7 +298,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'DUPLICATE_PLAYER' },
       });
     }
-    const eligible = eligibleMap(await careersByIds(db, ids), me.id, season);
+    const eligible = eligibleMap(await careersByIds(db, ids), me.id, season, true);
     if (ids.some((id) => !eligible.has(id))) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
@@ -410,13 +417,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const home = buildLineup(
       mine.formation as FormationId,
       mySlots,
-      eligibleMap(rows, me.id, season),
+      eligibleMap(rows, me.id, season, true),
       layoutOf(mine),
     );
     const away = buildLineup(
       opp.team.formation as FormationId,
       oppSlots,
-      eligibleMap(rows, opp.team.profileId, season),
+      eligibleMap(rows, opp.team.profileId, season, true),
       layoutOf(opp.team),
     );
     if (filledCount(home) === 0) {
