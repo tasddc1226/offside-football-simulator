@@ -15,15 +15,18 @@
     type MarketSale,
     type MarketMeResponse,
     type MarketSort,
+    isStaleListing,
   } from '@offside/app-core/api/market';
   import { fetchOwnerTeam, type OwnerTeamResponse, type TeamPlayer } from '@offside/app-core/api/team';
   import {
     MARKET_POS_FILTERS,
     MARKET_SORT_LABEL,
     MARKET_TICKER_MS,
+    MARKET_TOAST,
     MARKET_TABS,
     TRADE_LABEL,
     buyBlock,
+    cardMeta,
     fundsText,
     lineupOf,
     marketEmptyText,
@@ -33,17 +36,19 @@
     releaseAmount,
     releaseConfirmText,
     releaseLock,
+    releaseValue,
     saleText,
     sellNote,
+    sellSlider,
+    sellable,
     sellQuote,
     tradeAmount,
     type MarketView,
   } from '@offside/app-core/market';
   import { agoKo, cardTier, fmtValue } from '@offside/app-core/format';
-  import { releasePayout } from '@offside/contracts/market-value';
   import { localCareerNames } from '@offside/game/season';
   import { POS_LABEL } from '@offside/game/pos-label';
-  import type { DetailPos } from '@offside/contracts/positions';
+  import { detailPosOf, type DetailPos } from '@offside/contracts/positions';
   import Topbar from './Topbar.svelte';
   import BackBar from './BackBar.svelte';
   import PlayerCard from './team/PlayerCard.svelte';
@@ -80,7 +85,8 @@
   const live = $derived(recent.length ? recent[tick % recent.length] : undefined);
   $effect(() => {
     if (view !== 'market' || liveOpen || recent.length < 2) return;
-    const t = setInterval(() => tick++, MARKET_TICKER_MS);
+    // 탭이 가려져 있으면 넘기지 않는다.
+    const t = setInterval(() => !document.hidden && tick++, MARKET_TICKER_MS);
     return () => clearInterval(t);
   });
   async function loadList(next = 0) {
@@ -88,10 +94,8 @@
     const r = await fetchMarket(sort, pos, next);
     if (!r.ok) return void (listStatus = 'error');
     items = next === 0 ? r.data.items : [...items, ...r.data.items];
-    if (next === 0) {
-      recent = r.data.recent ?? [];
-      tick = 0;
-    }
+    // 정렬·포지션을 바꿔도 띠는 이어서 넘긴다(tick을 되돌리지 않는다). 배포 직후 옛 엣지 응답에는 recent가 없다.
+    if (next === 0) recent = r.data.recent ?? [];
     page = next;
     hasMore = r.data.hasMore;
     season = r.data.season;
@@ -169,7 +173,7 @@
     if (!r.ok) {
       error = r.error.message;
       // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받는다.
-      if (r.error.reason === 'LISTING_GONE' || r.error.reason === 'PRICE_CHANGED') void loadList(0);
+      if (isStaleListing(r.error)) void loadList(0);
       return;
     }
     closeSheets();
@@ -179,13 +183,12 @@
     await refresh();
   }
 
-  const roleOf = (c: { dpos: DetailPos | null; pos: CareerPos }): DetailPos => c.dpos ?? (c.pos === 'FW' ? 'ST' : c.pos === 'MF' ? 'CM' : c.pos === 'DF' ? 'CB' : 'GK');
   const asPlayer = (c: MarketCard): TeamPlayer => ({ ...c, roles: null });
 </script>
 
 {#snippet mini(c: { peak: number; legendScore: number | null; dpos: DetailPos | null; pos: CareerPos }, dim = false)}
   <span class="mk-mini" data-tier={cardTier(c.legendScore, c.peak)} class:dim aria-hidden="true">
-    <b>{c.peak}</b><small>{roleOf(c)}</small>
+    <b>{c.peak}</b><small>{detailPosOf(c)}</small>
   </span>
 {/snippet}
 
@@ -244,7 +247,7 @@
                   <strong class="mk-name">{nameOfPlayer(p)}</strong>
                   <small class:mk-lock={!!lock}>{lock ?? `레전드 ${(p.legendScore ?? 0).toLocaleString()} · 은퇴 가치`}</small>
                 </span>
-                {#if !lock && me}<b class="mk-rel-value">{fundsText(releasePayout(p.retireValue ?? 0, me.rules.releaseRate))}</b>{/if}
+                {#if !lock && me}<b class="mk-rel-value">{fundsText(releaseValue(p, me.rules.releaseRate))}</b>{/if}
               </label>
             </li>
           {:else}
@@ -322,7 +325,7 @@
                   {@render mini(l.card)}
                   <span class="mk-info">
                     <span class="mk-name">{marketName(l.card, local)}{#if myListingIds.has(l.id)}<em class="mk-tag">내 등록</em>{/if}</span>
-                    <small>레전드 {l.card.legendScore.toLocaleString()} · 이적 {l.card.transfers}회</small>
+                    <small>{cardMeta(l.card)}</small>
                   </span>
                   <span class="mk-price"><b>{fmtValue(l.price)}</b><small class="mk-{diff.tone}">{diff.text}</small></span>
                 </button>
@@ -345,7 +348,7 @@
           <div class="mk-pick-grid">
             {#each team.players as p (p.careerId)}
               {@const note = sellNote(p, lineup)}
-              {@const off = !!p.listing || p.cardValue == null}
+              {@const off = !sellable(p)}
               <button class="mk-pick" aria-pressed={selling?.careerId === p.careerId} disabled={off} data-sell-pick={p.careerId} onclick={() => pickSell(p)}>
                 {@render mini(p, off)}
                 <span class="mk-pick-name">{nameOfPlayer(p)}</span>
@@ -356,24 +359,25 @@
         {/if}
         {#if selling && quote && me}
           {@const diff = priceDiff(sellPrice, selling.cardValue!)}
+          {@const range = sellSlider(me.rules)}
           <div class="mk-price-box">
-            <h2 class="mk-step">2. 가격 정하기 · {nameOfPlayer(selling)} {roleOf(selling)} {selling.peak}</h2>
+            <h2 class="mk-step">2. 가격 정하기 · {nameOfPlayer(selling)} {detailPosOf(selling)} {selling.peak}</h2>
             <div class="mk-presets">
               <button aria-pressed={pct === 100} onclick={() => (pct = 100)}><span>기준가 그대로</span><b>{fmtValue(selling.cardValue!)}</b></button>
               <button aria-pressed={pct !== 100} onclick={() => (pct = pct === 100 ? 110 : pct)}><span>직접 정하기</span><b>{pct === 100 ? '슬라이더로' : fmtValue(sellPrice)}</b></button>
             </div>
             <label class="mk-slider">
               <span class="mk-slider-top"><span>판매가</span><b>{fmtValue(sellPrice)} <small class="mk-{diff.tone}">{diff.text}</small></b></span>
-              <input type="range" min={Math.round(me.rules.priceMin * 100)} max={Math.round(me.rules.priceMax * 100)} step="5" bind:value={pct} aria-label="기준가 대비 판매가(%)" data-sell-pct />
-              <span class="mk-slider-ends"><span>{fmtValue(quote.band.min)} ({Math.round(me.rules.priceMin * 100)}%)</span><span>{fmtValue(quote.band.max)} ({Math.round(me.rules.priceMax * 100)}%)</span></span>
+              <input type="range" min={range.minPct} max={range.maxPct} step={range.step} bind:value={pct} aria-label="기준가 대비 판매가(%)" data-sell-pct />
+              <span class="mk-slider-ends"><span>{fmtValue(quote.band.min)} ({range.minPct}%)</span><span>{fmtValue(quote.band.max)} ({range.maxPct}%)</span></span>
             </label>
             <dl class="mk-lines">
-              <div><dt>수수료 {Math.round(me.rules.feeRate * 100)}%</dt><dd>−{fmtValue(quote.fee)}</dd></div>
+              <div><dt>수수료 {range.feePct}%</dt><dd>−{fmtValue(quote.fee)}</dd></div>
               <div class="strong"><dt>팔리면 받는 자금</dt><dd>{fmtValue(quote.gets)}</dd></div>
             </dl>
             <p class="muted fs-sm">팔리기 전까지는 팀에서 계속 뛰어요. 팔리면 선발 자리는 유스 선수가 채워요. 언제든 내릴 수 있어요.</p>
             {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
-            <button class="btn btn-primary btn-block" data-act="list" disabled={busy || !!quote.error} onclick={() => run(() => createListing(selling!.careerId, sellPrice), '시장에 내놓았어요.')}>
+            <button class="btn btn-primary btn-block" data-act="list" disabled={busy || !!quote.error} onclick={() => run(() => createListing(selling!.careerId, sellPrice), MARKET_TOAST.listed)}>
               {fmtValue(sellPrice)}에 내놓기
             </button>
           </div>
@@ -393,7 +397,7 @@
                   <span class="mk-name">{marketName(l.card, local)}</span>
                   <small>{fmtValue(l.price)} · {agoKo(Date.now() - Date.parse(l.createdAt))} 등록</small>
                 </span>
-                <button class="icon-btn" disabled={busy} data-act="cancel-listing" onclick={() => run(() => cancelListing(l.id), '판매를 내렸어요.')}>내리기</button>
+                <button class="icon-btn" disabled={busy} data-act="cancel-listing" onclick={() => run(() => cancelListing(l.id), MARKET_TOAST.unlisted)}>내리기</button>
               </li>
             {:else}
               <li class="muted">내놓은 선수가 없어요.</li>
@@ -429,7 +433,7 @@
   <div class="mk-sheet" role="dialog" aria-modal="true" aria-label="선수 영입">
     <div class="mk-detail">
       <div class="mk-detail-card">
-        <PlayerCard player={asPlayer(buying.card)} name={marketName(buying.card, local)} rating={buying.card.peak} role={roleOf(buying.card)} nation={buying.card.nation} />
+        <PlayerCard player={asPlayer(buying.card)} name={marketName(buying.card, local)} rating={buying.card.peak} role={detailPosOf(buying.card)} nation={buying.card.nation} />
       </div>
       <dl class="mk-detail-stats">
         <div><dt>레전드 점수</dt><dd>{buying.card.legendScore.toLocaleString()}</dd></div>
@@ -452,9 +456,9 @@
       <div class="mk-actions">
         <button class="btn" onclick={closeSheets}>닫기</button>
         {#if myListingIds.has(buying.id)}
-          <button class="btn" disabled={busy} onclick={() => run(() => cancelListing(buying!.id), '판매를 내렸어요.')}>판매 내리기</button>
+          <button class="btn" disabled={busy} onclick={() => run(() => cancelListing(buying!.id), MARKET_TOAST.unlisted)}>판매 내리기</button>
         {:else}
-          <button class="btn btn-accent" data-act="buy" disabled={busy || !!block} onclick={() => run(() => buyListing(buying!.id, buying!.price), '선수를 영입했어요.')}>
+          <button class="btn btn-accent" data-act="buy" disabled={busy || !!block} onclick={() => run(() => buyListing(buying!.id, buying!.price), MARKET_TOAST.bought)}>
             {fmtValue(buying.price)}에 영입하기
           </button>
         {/if}
@@ -471,7 +475,7 @@
     {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
     <div class="mk-actions">
       <button class="btn" onclick={closeSheets}>닫기</button>
-      <button class="btn mk-danger" data-act="release-confirm" disabled={busy} onclick={() => run(() => releaseCards(pickedPlayers.map((p) => p.careerId)), `${pickedPlayers.length}명을 방출했어요.`)}>
+      <button class="btn mk-danger" data-act="release-confirm" disabled={busy} onclick={() => run(() => releaseCards(pickedPlayers.map((p) => p.careerId)), MARKET_TOAST.released(pickedPlayers.length))}>
         {pickedPlayers.length}명 방출하기
       </button>
     </div>

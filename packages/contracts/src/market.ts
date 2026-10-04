@@ -66,10 +66,6 @@ export const MarketListQuerySchema = z.strictObject({
   page: z.coerce.number().int().min(0).max(10).default(0),
 });
 
-/**
- * GET /v1/market — 지금 시즌의 열린 등록. 시즌 사이 휴식기면 season null · 빈 목록. 모두에게 같은 응답이라 엣지에
- * 담는다 — 내 등록인지는 화면이 /v1/market/me의 listings와 id로 맞춘다.
- */
 /** 이번 시즌에 팔린 선수(이적시장 화면의 '방금 이적' 띠). 판 사람·산 사람은 싣지 않는다. */
 export const MarketSaleSchema = z.strictObject({
   id: ListingIdSchema,
@@ -81,6 +77,10 @@ export type MarketSale = z.infer<typeof MarketSaleSchema>;
 /** '방금 이적' 띠에 싣는 최근 거래 수. */
 export const MARKET_RECENT = 10;
 
+/**
+ * GET /v1/market — 지금 시즌의 열린 등록. 시즌 사이 휴식기면 season null · 빈 목록. 모두에게 같은 응답이라 엣지에
+ * 담는다 — 내 등록인지는 화면이 /v1/market/me의 listings와 id로 맞춘다.
+ */
 export const MarketListResponseSchema = z.strictObject({
   season: z.number().int().min(0).nullable(),
   items: z.array(MarketListingSchema),

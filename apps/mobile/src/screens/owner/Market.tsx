@@ -7,8 +7,7 @@ import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import type { CareerPos } from '@offside/contracts';
-import type { DetailPos } from '@offside/contracts/positions';
-import { releasePayout } from '@offside/contracts/market-value';
+import { detailPosOf, type DetailPos } from '@offside/contracts/positions';
 import {
   buyListing,
   cancelListing,
@@ -20,6 +19,7 @@ import {
   type MarketSale,
   type MarketMeResponse,
   type MarketSort,
+  isStaleListing,
 } from '@offside/app-core/api/market';
 import {
   fetchOwnerTeam,
@@ -30,9 +30,11 @@ import {
   MARKET_POS_FILTERS,
   MARKET_SORT_LABEL,
   MARKET_TICKER_MS,
+  MARKET_TOAST,
   MARKET_TABS,
   TRADE_LABEL,
   buyBlock,
+  cardMeta,
   fundsText,
   lineupOf,
   marketEmptyText,
@@ -42,13 +44,16 @@ import {
   releaseAmount,
   releaseConfirmText,
   releaseLock,
+  releaseValue,
   saleText,
   sellNote,
+  sellSlider,
+  sellable,
   sellQuote,
   tradeAmount,
   type MarketView,
 } from '@offside/app-core/market';
-import { agoKo, cardTier, fmtValue, type CardTier } from '@offside/app-core/format';
+import { agoKo, cardTier, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/season';
 import { POS_LABEL } from '@offside/game/pos-label';
 import { appState, prefs } from '../../store';
@@ -57,22 +62,13 @@ import { useColors } from '../../theme/useColors';
 import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { ActionBar, BackBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
-import { PlayerCard } from '../../components/PlayerCard';
+import { CARD_TONES, PlayerCard } from '../../components/PlayerCard';
 
 type Sent<T> = Promise<
   { ok: true; data: T } | { ok: false; error: { message: string; reason?: string | undefined } }
 >;
 
 const SORT_KEYS = Object.keys(MARKET_SORT_LABEL) as MarketSort[];
-const roleOf = (c: { dpos: DetailPos | null; pos: CareerPos }): DetailPos =>
-  c.dpos ?? (c.pos === 'FW' ? 'ST' : c.pos === 'MF' ? 'CM' : c.pos === 'DF' ? 'CB' : 'GK');
-
-/** 작은 방패 카드 색(웹 .mk-mini · PlayerCard 등급과 같다). */
-const MINI: Record<CardTier, { a: string; b: string; ink: string }> = {
-  gold: { a: '#e8d5a8', b: '#8a6324', ink: '#392b14' },
-  legend: { a: '#28382e', b: '#101e17', ink: '#fce7b1' },
-  silver: { a: '#d6dfe0', b: '#83989c', ink: '#243339' },
-};
 const SHIELD = 'M0 9H16L25 2L50 0L75 2L84 9H100L98 84L86 93L50 100L14 93L2 84Z';
 
 /** 작은 방패 카드(OVR · 세부 포지션). */
@@ -85,7 +81,8 @@ function Mini({
   size?: number;
   dim?: boolean;
 }) {
-  const t = MINI[cardTier(card.legendScore, card.peak)];
+  const tone = CARD_TONES[cardTier(card.legendScore, card.peak)];
+  const t = { a: tone.base, b: tone.line, ink: tone.ink };
   const h = Math.round(size * 1.15);
   const id = `mk${t.a.slice(1)}`;
   return (
@@ -121,7 +118,7 @@ function Mini({
           {card.peak}
         </Txt>
         <Txt style={{ fontFamily: DISPLAY[700], fontSize: size * 0.21, color: t.ink }}>
-          {roleOf(card)}
+          {detailPosOf(card)}
         </Txt>
       </View>
     </View>
@@ -151,6 +148,7 @@ function MarketSheet({
       transparent
       animationType={motionOK ? 'slide' : 'none'}
       statusBarTranslucent
+      navigationBarTranslucent
       onRequestClose={onClose}
     >
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
@@ -163,7 +161,7 @@ function MarketSheet({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.45)',
+            backgroundColor: c.scrim,
           }}
         />
         <View
@@ -311,7 +309,7 @@ function PctSlider({
   );
 }
 
-function Chip({
+function FilterChip({
   on,
   label,
   onPress,
@@ -387,7 +385,6 @@ function LiveStrip({
   const [openAll, setOpenAll] = useState(false);
   const fade = useRef(new Animated.Value(1)).current;
   const pulse = useRef(new Animated.Value(0)).current;
-  useEffect(() => setTick(0), [recent]);
   useEffect(() => {
     if (openAll || recent.length < 2) return;
     const t = setInterval(() => setTick((n) => n + 1), MARKET_TICKER_MS);
@@ -540,6 +537,7 @@ export default function Market() {
       if (req !== listReq.current) return;
       if (!r.ok) return setListStatus('error');
       setItems((prev) => (next === 0 ? r.data.items : [...prev, ...r.data.items]));
+      // 배포 직후 옛 엣지 응답에는 recent가 없다.
       if (next === 0) setRecent(r.data.recent ?? []);
       setPage(next);
       setHasMore(r.data.hasMore);
@@ -621,7 +619,7 @@ export default function Market() {
     if (!r.ok) {
       setError(r.error.message);
       // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받는다.
-      if (r.error.reason === 'LISTING_GONE' || r.error.reason === 'PRICE_CHANGED') void loadList(0);
+      if (isStaleListing(r.error)) void loadList(0);
       return;
     }
     closeSheets();
@@ -636,6 +634,9 @@ export default function Market() {
       {error}
     </Txt>
   ) : null;
+  const range = me ? sellSlider(me.rules) : null;
+  const sellDiff = selling?.cardValue ? priceDiff(sellPrice, selling.cardValue) : null;
+  const buyDiff = buying ? priceDiff(buying.price, buying.card.cardValue) : null;
   const buyBlocked =
     buying && me
       ? myListingIds.has(buying.id)
@@ -805,7 +806,7 @@ export default function Market() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {(team?.seasons ?? []).map((o) => (
-                  <Chip
+                  <FilterChip
                     key={o.id}
                     on={team?.season === o.id}
                     label={`${o.name} 선수`}
@@ -874,7 +875,7 @@ export default function Market() {
                     </View>
                     {!lock && me ? (
                       <Txt bold style={small}>
-                        {fundsText(releasePayout(p.retireValue ?? 0, me.rules.releaseRate))}
+                        {fundsText(releaseValue(p, me.rules.releaseRate))}
                       </Txt>
                     ) : null}
                   </Press>
@@ -929,7 +930,7 @@ export default function Market() {
                 <LiveStrip recent={recent} local={local} />
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                   {MARKET_POS_FILTERS.map((p) => (
-                    <Chip
+                    <FilterChip
                       key={p ?? 'all'}
                       on={pos === p}
                       label={p ? POS_LABEL[p] : '전체'}
@@ -1020,7 +1021,7 @@ export default function Market() {
                                 ) : null}
                               </Txt>
                               <Txt tone="muted" style={tiny}>
-                                {`레전드 ${l.card.legendScore.toLocaleString()} · 이적 ${l.card.transfers}회`}
+                                {cardMeta(l.card)}
                               </Txt>
                             </View>
                             <View style={{ alignItems: 'flex-end', gap: 2 }}>
@@ -1072,7 +1073,7 @@ export default function Market() {
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {team.players.map((p) => {
                       const on = selling?.careerId === p.careerId;
-                      const off = !!p.listing || p.cardValue == null;
+                      const off = !sellable(p);
                       return (
                         <Press
                           key={p.careerId}
@@ -1123,7 +1124,7 @@ export default function Market() {
                 {selling && quote && me ? (
                   <View style={{ ...box, borderRadius: 16, gap: 12, padding: 14 }}>
                     <Txt bold style={small}>
-                      {`2. 가격 정하기 · ${nameOfPlayer(selling)} ${roleOf(selling)} ${selling.peak}`}
+                      {`2. 가격 정하기 · ${nameOfPlayer(selling)} ${detailPosOf(selling)} ${selling.peak}`}
                     </Txt>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                       {(
@@ -1183,36 +1184,33 @@ export default function Market() {
                             style={{
                               fontSize: rem(0.6875),
                               fontWeight: '600',
-                              color: toneColor(c, priceDiff(sellPrice, selling.cardValue!).tone),
+                              color: toneColor(c, sellDiff!.tone),
                             }}
                           >
-                            {priceDiff(sellPrice, selling.cardValue!).text}
+                            {sellDiff!.text}
                           </Txt>
                         </Txt>
                       </View>
                       <PctSlider
-                        min={Math.round(me.rules.priceMin * 100)}
-                        max={Math.round(me.rules.priceMax * 100)}
-                        step={5}
+                        min={range!.minPct}
+                        max={range!.maxPct}
+                        step={range!.step}
                         value={pct}
                         onChange={setPct}
                       />
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                         <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
-                          {`${fmtValue(quote.band.min)} (${Math.round(me.rules.priceMin * 100)}%)`}
+                          {`${fmtValue(quote.band.min)} (${range!.minPct}%)`}
                         </Txt>
                         <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
-                          {`${fmtValue(quote.band.max)} (${Math.round(me.rules.priceMax * 100)}%)`}
+                          {`${fmtValue(quote.band.max)} (${range!.maxPct}%)`}
                         </Txt>
                       </View>
                     </View>
                     <View
                       style={{ gap: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: c.line }}
                     >
-                      <Line
-                        label={`수수료 ${Math.round(me.rules.feeRate * 100)}%`}
-                        value={`−${fmtValue(quote.fee)}`}
-                      />
+                      <Line label={`수수료 ${range!.feePct}%`} value={`−${fmtValue(quote.fee)}`} />
                       <Line strong label="팔리면 받는 자금" value={fmtValue(quote.gets)} />
                     </View>
                     <Txt tone="muted" style={small}>
@@ -1228,7 +1226,7 @@ export default function Market() {
                       onPress={() =>
                         void run(
                           () => createListing(selling.careerId, sellPrice),
-                          '시장에 내놓았어요.',
+                          MARKET_TOAST.listed,
                         )
                       }
                     >
@@ -1274,7 +1272,9 @@ export default function Market() {
                             sm
                             disabled={busy}
                             testID={`market-unlist-${l.id}`}
-                            onPress={() => void run(() => cancelListing(l.id), '판매를 내렸어요.')}
+                            onPress={() =>
+                              void run(() => cancelListing(l.id), MARKET_TOAST.unlisted)
+                            }
                           >
                             내리기
                           </Btn>
@@ -1379,7 +1379,7 @@ export default function Market() {
               <View style={{ width: 188 }}>
                 <PlayerCard
                   animate={false}
-                  code={roleOf(buying.card)}
+                  code={detailPosOf(buying.card)}
                   cell={{
                     name: marketName(buying.card, local),
                     nation: buying.card.nation,
@@ -1434,10 +1434,10 @@ export default function Market() {
                       style={{
                         fontSize: rem(0.6875),
                         fontWeight: '600',
-                        color: toneColor(c, priceDiff(buying.price, buying.card.cardValue).tone),
+                        color: toneColor(c, buyDiff!.tone),
                       }}
                     >
-                      {` ${priceDiff(buying.price, buying.card.cardValue).text}`}
+                      {` ${buyDiff!.text}`}
                     </Txt>
                   }
                 />
@@ -1471,7 +1471,7 @@ export default function Market() {
                   <Btn
                     style={{ flex: 2 }}
                     disabled={busy}
-                    onPress={() => void run(() => cancelListing(buying.id), '판매를 내렸어요.')}
+                    onPress={() => void run(() => cancelListing(buying.id), MARKET_TOAST.unlisted)}
                   >
                     판매 내리기
                   </Btn>
@@ -1482,7 +1482,7 @@ export default function Market() {
                     testID="market-buy"
                     disabled={busy || !!buyBlocked}
                     onPress={() =>
-                      void run(() => buyListing(buying.id, buying.price), '선수를 영입했어요.')
+                      void run(() => buyListing(buying.id, buying.price), MARKET_TOAST.bought)
                     }
                   >
                     {`${fmtValue(buying.price)}에 영입하기`}
@@ -1520,7 +1520,7 @@ export default function Market() {
               onPress={() =>
                 void run(
                   () => releaseCards(pickedPlayers.map((p) => p.careerId)),
-                  `${pickedPlayers.length}명을 방출했어요.`,
+                  MARKET_TOAST.released(pickedPlayers.length),
                 )
               }
             >

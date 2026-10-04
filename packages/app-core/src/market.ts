@@ -4,7 +4,7 @@ import { anonName, fmtValue, withEulReul } from './format.js';
 import type { MarketCard, MarketRules, MarketSale, MarketTrade } from './api/market.js';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
-import { POS_GROUPS } from '@offside/contracts/positions';
+import { POS_GROUPS, detailPosOf } from '@offside/contracts/positions';
 
 /** 구단 자금 표기(0이면 '0원' — fmtValue는 0을 '-'로 쓴다). */
 export const fundsText = (man: number) => (man > 0 ? fmtValue(man) : '0원');
@@ -26,7 +26,7 @@ export const marketName = (
 ) => local.get(c.careerId) ?? c.publicName ?? anonName(c.pos, c.number);
 
 /** 판매가 대비 기준가(%). 100보다 크면 기준가보다 비싸다. */
-export const priceRatio = (price: number, cardValue: number) =>
+const priceRatio = (price: number, cardValue: number) =>
   cardValue > 0 ? Math.round((price / cardValue) * 100) : 100;
 
 /** 판매가 옆 표시: 기준가와 같으면 '기준가', 아니면 차이(%). 비싸면 up, 싸면 down. */
@@ -38,6 +38,14 @@ export function priceDiff(
   if (d === 0) return { text: '기준가', tone: 'same' };
   return d > 0 ? { text: `기준가 +${d}%`, tone: 'up' } : { text: `기준가 −${-d}%`, tone: 'down' };
 }
+
+/** 판매가 슬라이더 범위(기준가의 %)와 한 칸, 수수료(%). priceAtPct와 같은 규칙을 쓴다. */
+export const sellSlider = (rules: MarketRules) => ({
+  minPct: Math.round(rules.priceMin * 100),
+  maxPct: Math.round(rules.priceMax * 100),
+  step: 5,
+  feePct: Math.round(rules.feeRate * 100),
+});
 
 /** 판매가 슬라이더(기준가의 %)를 만 원으로. 100 단위로 맞추고 고를 수 있는 범위 안에 둔다. */
 export function priceAtPct(cardValue: number, pct: number, rules: MarketRules): number {
@@ -74,6 +82,9 @@ export const lineupOf = (d: OwnerTeamResponse): ReadonlySet<string> =>
       : [],
   );
 
+/** 팔기 탭에서 고를 수 있는 선수: 판매 중이 아니고 기준가가 있다. */
+export const sellable = (p: TeamPlayer) => !p.listing && p.cardValue != null;
+
 /** 팔기 탭 카드 아래 한 줄: 판매 중이면 막고, 선발이면 알려 준다(팔리면 유스 선수가 채운다). */
 export function sellNote(p: TeamPlayer, lineup: ReadonlySet<string>): string {
   if (p.listing) return '판매 중';
@@ -93,7 +104,7 @@ export function releaseLock(p: TeamPlayer, lineup: ReadonlySet<string>): string 
 export const MARKET_TICKER_MS = 3500;
 /** '방금 이적' 한 줄: 누가 얼마에 팔렸는지. 산 사람·판 사람은 없다. */
 export const saleText = (s: MarketSale, local: ReadonlyMap<string, string>) =>
-  `${marketName(s.card, local)} ${s.card.dpos ?? s.card.pos} ${s.card.peak} · ${fmtValue(s.price)}에 이적`;
+  `${marketName(s.card, local)} ${detailPosOf(s.card)} ${s.card.peak} · ${fmtValue(s.price)}에 이적`;
 
 export const TRADE_LABEL: Record<MarketTrade['kind'], string> = {
   sold: '판매',
@@ -116,6 +127,21 @@ export const marketEmptyText = (season: number | null, filtered: boolean) =>
       ? '이 포지션에는 아직 나온 선수가 없어요.'
       : '아직 시장에 나온 선수가 없어요. 이번 시즌에 은퇴한 선수가 나오면 여기에 올라와요.';
 
-/** 방출하면 받을 자금(서버와 같은 releasePayout). */
+/** 한 선수를 방출하면 받을 자금(서버와 같은 releasePayout). */
+export const releaseValue = (p: Pick<TeamPlayer, 'retireValue'>, rate: number) =>
+  releasePayout(p.retireValue ?? 0, rate);
+/** 여러 선수를 방출하면 받을 자금. */
 export const releaseAmount = (players: readonly Pick<TeamPlayer, 'retireValue'>[], rate: number) =>
-  players.reduce((s, p) => s + releasePayout(p.retireValue ?? 0, rate), 0);
+  players.reduce((s, p) => s + releaseValue(p, rate), 0);
+
+/** 쓰기가 끝나면 띄우는 알림(웹·앱 같은 문구). */
+export const MARKET_TOAST = {
+  listed: '시장에 내놓았어요.',
+  unlisted: '판매를 내렸어요.',
+  bought: '선수를 영입했어요.',
+  released: (n: number) => `${n}명을 방출했어요.`,
+} as const;
+
+/** 시장 줄 아래 한 줄(레전드 점수 · 이적 횟수). */
+export const cardMeta = (c: Pick<MarketCard, 'legendScore' | 'transfers'>) =>
+  `레전드 ${c.legendScore.toLocaleString()} · 이적 ${c.transfers}회`;
