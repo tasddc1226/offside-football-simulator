@@ -13,7 +13,7 @@ import {
 } from './engine.js';
 import { ovr as ovrCalc } from './attributes.js';
 import { BAL } from './balance.js';
-import type { EventDef, GameState, MarketResult, MilOption } from './types.js';
+import type { EventDef, GameState, MarketOption, MarketResult, MilOption } from './types.js';
 import { isKorean } from './nation.js';
 
 export const SANGMU = { id: 'sangmu', name: '김천 상무 (국군체육부대)', leagueId: 'k1', str: 63 };
@@ -25,6 +25,15 @@ export const SPORTS_SERVICE_NOTICE =
   '대한민국 선수는 대회 명단에 들어 아시안게임 금메달이나 올림픽 금·은·동메달을 받으면 체육요원으로 편입돼요. 출전 경기 수는 조건이 아니고, 아시안컵·월드컵 우승은 대상이 아니에요. 완전 면제가 아니라 34개월 동안 선수 활동을 이어 가며 군사교육과 544시간 공익복무를 이행해요. 게임에서는 시즌 단위로 복무 기간이 지나고 교육·공익복무는 자동 이행돼요. 상무에서 전환하면 남은 복무 비율에 따라 기간과 공익복무가 줄고, 이미 마친 군사교육은 반복하지 않아요.';
 export const SPORTS_SERVICE_LEGACY_NOTICE =
   '기존 특례 기록에는 복무 기간이 없어 남은 기간을 표시하지 않아요. 특례와 선수 활동은 그대로 유지돼요.';
+
+const MIL_KINDS: ReadonlySet<string> = new Set<MilOption['kind']>([
+  'sangmu',
+  'army',
+  'serve',
+  'defer',
+]);
+/** 이적 시장 선택지 중 병역 선택지(acceptMilitary가 처리한다). */
+export const isMilOption = (o: MarketOption): o is MilOption => MIL_KINDS.has(o.kind);
 
 /** 상무·현역 입대가 더 필요 없는지. 체육요원 편입은 복무 완료와 다르다. */
 export function milDone(s: GameState): boolean {
@@ -271,8 +280,8 @@ export function milSeasonEnd(s: GameState): string | null {
 }
 
 export function milEnlistMarket(s: GameState): MarketResult | null {
-  // T-11-077 입대하면 복무(이번·다음 시즌)와 겹치는 특례 대회가 있으면 입대를 미룰 수 있게 한다.
-  const clash = milExemptHope(s, 1);
+  // T-11-077 입대하면 복무와 겹치는 특례 대회가 있으면 입대를 미룰 수 있게 한다.
+  const clash = milServiceClash(s);
   const defer = (what: string): MilOption[] =>
     clash.length
       ? [
@@ -330,8 +339,8 @@ export function acceptMilitary(
   opt: MilOption,
 ): { text: string; ok?: boolean; reopen?: boolean } | null {
   if (opt.kind === 'serve') {
-    // 옛 저장은 시장을 열 때 이미 입대했다(serving).
-    if (opt.first && s.mil.accepted && !s.mil.serving) enlistSangmu(s);
+    // 옛 저장은 시장을 열 때 이미 입대해 accepted가 꺼져 있다.
+    if (opt.first && s.mil.accepted) enlistSangmu(s);
     s.season = newSeason(s);
     s.phase = 0;
     return {
@@ -374,10 +383,10 @@ export function acceptMilitary(
     return { text: '현역으로 입대했습니다. 18개월 뒤 전역해 복귀를 준비합니다.', reopen: true };
   }
   if (opt.kind === 'defer') {
-    const hope = milExemptHope(s, 1).join(' · ');
+    const hope = milServiceClash(s).join(' · ');
+    // 현역 입영 예약(armyNext)은 milEnlistMarket이 시장을 열 때 이미 껐다.
     const sangmu = s.mil.accepted;
     s.mil.accepted = false;
-    s.mil.armyNext = false;
     log(
       s,
       sangmu
@@ -405,6 +414,8 @@ function milExemptHope(s: GameState, span = 2): string[] {
   }
   return out;
 }
+/** 지금 입대하면 복무 기간(상무·현역 모두 이번·다음 시즌)에 열리는 특례 대회. */
+const milServiceClash = (s: GameState): string[] => milExemptHope(s, 1);
 const MIL_LOW = 0.35;
 const milNoticeText = (s: GameState): string => {
   const left = MIL_AGE - s.age,

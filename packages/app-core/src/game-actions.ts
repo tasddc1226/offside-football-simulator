@@ -31,6 +31,7 @@ import { choiceOdds } from '@offside/game/balance';
 import { offsetToRoll, tapOffset, timingNote, zoneLabel, zoneWidth } from '@offside/game/minigame';
 import { isHiddenEvent } from '@offside/game/dexGroups';
 import { scoreLine, type NatTourResult } from '@offside/game/national';
+import { isMilOption } from '@offside/game/military';
 import {
   endSeason,
   market,
@@ -578,10 +579,7 @@ export function createGameActions(host: GameHost) {
     if (o.kind === 'renew' && !canAcceptRenewal(G, o)) return false;
     const r = acceptOption(G, o, options);
     const logEntry: EventLogEntry = {
-      k:
-        o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' || o.kind === 'defer'
-          ? 'mil'
-          : 'mkt',
+      k: isMilOption(o) ? 'mil' : 'mkt',
       id: o.kind,
       c: o.kind === 'offer' ? o.clubId : i,
       h: G.phase,
