@@ -1,0 +1,77 @@
+// T-11-068 앱 광고 칸(웹 ads/AdSlot.svelte). 위치 이름만 받고 노출 규칙은 app-core adPolicy가 정한다. 목록·페이지 맨 끝에만 둔다.
+// 맞춤 광고 동의를 받지 않아 비개인화 광고만 요청한다(그래서 iOS 추적 동의 창도 띄우지 않는다). 개발 빌드는 구글 테스트 광고를 쓴다.
+// EEA·영국·스위스는 AdMob 'OFFSIDE 유럽 동의' 메시지(UMP)를 첫 광고 칸에서 한 번 띄우고, 광고 요청은 그 뒤에 한다.
+import { useEffect, useState } from 'react';
+import { Platform, View } from 'react-native';
+import { AdsConsent, BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
+import { shouldShow, type AdPlace } from '@offside/app-core/adPolicy';
+import { rem } from '../theme/type';
+import { Txt } from '../ui/Txt';
+
+/** AdMob 배너 단위. 위치마다 나누지 않고 플랫폼별 하나를 같이 쓴다. */
+const UNIT = __DEV__
+  ? TestIds.BANNER
+  : Platform.select({
+      ios: 'ca-app-pub-3797087216173591/1505753355',
+      android: 'ca-app-pub-3797087216173591/2033201114',
+    });
+
+// 위치별 마지막 요청 시각. 안 채워진 위치는 Infinity로 둬 이 세션에서 다시 요청하지 않는다.
+const lastShown = new Map<AdPlace, number>();
+
+/** 이 위치에 지금 칸을 둘지 정하고, 두면 요청 시각을 남긴다. */
+function claim(place: AdPlace) {
+  const now = Date.now();
+  if (!UNIT || !shouldShow(place, now, lastShown.get(place))) return false;
+  lastShown.set(place, now);
+  return true;
+}
+
+// 동의 확인은 앱 실행마다 한 번. 대상 지역이 아니면 창 없이 바로 끝난다. 확인에 실패하면 광고를 요청하지 않는다.
+let consent: Promise<boolean> | undefined;
+const askConsent = () =>
+  (consent ??= AdsConsent.gatherConsent()
+    .then((info) => info.canRequestAds)
+    .catch(() => false));
+
+export function AdSlot({ place }: { place: AdPlace }) {
+  // 노출 여부는 마운트할 때 한 번 정한다 — 화면에 있는 동안 칸이 생기거나 사라지지 않게.
+  const [phase, setPhase] = useState<'off' | 'consent' | 'ready'>(() =>
+    claim(place) ? 'consent' : 'off',
+  );
+  // 적응형 배너는 기본이 기기 전체 폭이라 화면 여백만큼 밖으로 나간다. 칸 폭을 재서 넘긴다.
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    if (phase !== 'consent') return;
+    let alive = true;
+    void askConsent().then((ok) => alive && setPhase(ok ? 'ready' : 'off'));
+    return () => {
+      alive = false;
+    };
+  }, [phase]);
+  if (phase === 'off' || !UNIT) return null;
+  return (
+    <View
+      accessibilityLabel="광고"
+      testID={`ad-${place}`}
+      style={{ marginTop: 24, gap: 6 }}
+      onLayout={(e) => setWidth(Math.floor(e.nativeEvent.layout.width))}
+    >
+      <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+        광고
+      </Txt>
+      {phase === 'ready' && width > 0 && (
+        <BannerAd
+          unitId={UNIT}
+          width={width}
+          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+          requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+          onAdFailedToLoad={() => {
+            lastShown.set(place, Infinity);
+            setPhase('off');
+          }}
+        />
+      )}
+    </View>
+  );
+}

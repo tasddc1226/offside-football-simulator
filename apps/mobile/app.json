@@ -62,6 +62,13 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3797087216173591~9704816739",
+          "iosAppId": "ca-app-pub-3797087216173591~4994406373"
+        }
       ]
     ],
     "experiments": {
