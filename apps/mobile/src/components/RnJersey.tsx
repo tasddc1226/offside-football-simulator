@@ -35,6 +35,26 @@ export const useRnColors = (clubId?: string | null): RnColors => {
   return (clubId ? rnColors(clubId) : null) ?? inherited;
 };
 
+/** 납작한 유니폼 도안(120×124 좌표). 다른 Svg 안에 그릴 때 쓴다(기록실 타일은 바탕 그라디언트와 한 Svg로 그린다). */
+export function RnShirtShape({ number, col }: { number: number; col: RnColors }) {
+  return (
+    <>
+      <Path d={RN_SHIRT} fill={col.base} stroke={col.accent} strokeWidth={2} />
+      <Path d={RN_TRIM} fill="none" stroke={col.accent} strokeWidth={4} />
+      <SvgText
+        x={60}
+        y={92}
+        textAnchor="middle"
+        fontFamily={DISPLAY[400]}
+        fontSize={46}
+        fill={col.ink}
+      >
+        {String(number)}
+      </SvgText>
+    </>
+  );
+}
+
 /** 납작한 결번 유니폼(웹 .rn-tile-shirt · 영구결번 알림) — 윤곽 + 깃 띠 + 등번호. width는 px(높이는 도안 비율). */
 export function RnShirt({
   number,
@@ -54,18 +74,7 @@ export function RnShirt({
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Path d={RN_SHIRT} fill={col.base} stroke={col.accent} strokeWidth={2} />
-      <Path d={RN_TRIM} fill="none" stroke={col.accent} strokeWidth={4} />
-      <SvgText
-        x={60}
-        y={92}
-        textAnchor="middle"
-        fontFamily={DISPLAY[400]}
-        fontSize={46}
-        fill={col.ink}
-      >
-        {String(number)}
-      </SvgText>
+      <RnShirtShape number={number} col={col} />
     </Svg>
   );
 }
