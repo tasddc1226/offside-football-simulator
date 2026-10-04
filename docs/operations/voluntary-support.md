@@ -20,3 +20,9 @@
 작업 기준은 원격 main `1565488ba471b33861352c3f3cdaf612b0d9dae0`, [운영 release v2026.10.04.21](https://github.com/tasddc1226/offside-football-simulator/releases/tag/v2026.10.04.21)이다. [한국 App Store 공개 페이지](https://apps.apple.com/kr/app/id6817463687)는 2026-10-04 확인 당시 1.0.2를 표시했다. 저장소 앱 설정은 1.1.0이며 공개 스토어 버전과 같다고 보지 않는다. Android 비공개 테스트 배포 버전 및 현재 스토어 제출/심사 상태는 확인하지 못했다. 공개 release의 OTA 완료와 실제 기기 수신은 별개다.
 
 열린 앱 PR #475(영구결번 성능), #470(보상형 스카우트 광고)는 작업 기준에 병합되지 않았다. 원본 체크아웃의 변경과 Simulator/Xcode를 건드리지 않았다. 이번 변경은 웹·앱 메인 UI 구현이며 배포·실제 기기 수신 완료를 주장하지 않는다.
+
+## 현재 OTA 런타임 제약
+
+[운영 배포 실행](https://github.com/tasddc1226/offside-football-simulator/actions/runs/37202172381)의 2026-10-04 21:30 KST 대조 결과, iOS `55f5823c8cb4c8b7476a9836552fcb233fca32f7`과 일치하는 완료 production 빌드가 없다는 경고가 있었다. Android `f527ee4f7f00bc3d64540ebf4fd76b70f79676c2`는 완료 production 빌드와 일치했다. 이는 이 PR 최종 fingerprint나 기기 수신 확인이 아니다.
+
+따라서 이 UI 자체가 JS 변경이라는 사실과 현재 iOS 1.0.2에 최신 main OTA가 전달되는지는 분리한다. iOS는 기존 런타임 호환 기반으로 별도 backport하거나 호환 바이너리 출시가 필요하다. 이번 작업에서 버전·네이티브 설정을 되돌리거나 새 바이너리를 제출하지 않았다. Android도 실제 사용자 설치 버전과 수신은 별도 확인한다. 공지 availability는 `web-app-pending`, appVersion은 현재 소스 기준 `1.1.0`으로 두어 앱 출시 완료로 안내하지 않는다.

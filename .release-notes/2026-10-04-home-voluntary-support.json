@@ -6,5 +6,6 @@
     "웹 환경설정의 후원 안내는 메인 화면으로 옮겼어요",
     "후원은 선택이며 게임 혜택이나 광고 제거는 제공하지 않아요"
   ],
-  "availability": "web-app"
+  "availability": "web-app-pending",
+  "appVersion": "1.1.0"
 }
