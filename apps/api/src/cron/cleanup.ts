@@ -12,6 +12,7 @@ const MAX_CHUNKS = 40;
 /** 표마다: 이 열이 (지금 - keepMs)보다 이르면 지운다. 열마다 인덱스가 있어 묶음마다 표 전체를 훑지 않는다
  * (auth_attempts는 (kind, subject)당 한 행이라 작다). */
 const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
+  { table: 'push_devices', column: 'updated_at', keepMs: 90 * DAY_MS },
   { table: 'idempotency', column: 'expires_at', keepMs: 0 },
   // 윈도(1시간)보다 넉넉히.
   {

@@ -27,6 +27,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'owner_achievements',
   'owner_teams',
   'profiles',
+  'push_devices',
   'retired_numbers',
   'server_firsts',
   'server_records',

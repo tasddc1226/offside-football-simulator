@@ -2,7 +2,7 @@
   "expo": {
     "name": "오프사이드",
     "slug": "offside",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "offside",
@@ -27,6 +27,7 @@
     },
     "android": {
       "package": "com.offsidelab.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#1c4a35",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -40,6 +41,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "expo-notifications",
       "expo-router",
       [
         "expo-splash-screen",

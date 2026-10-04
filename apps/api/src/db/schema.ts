@@ -104,6 +104,8 @@ export const authAttempts = sqliteTable(
         'PROFILE_CREATE',
         'CAREER_SEASON',
         'CAREER_RETIRE',
+        'PUSH_DEVICE',
+        'PUSH_TEST',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -111,6 +113,33 @@ export const authAttempts = sqliteTable(
     count: integer('count').notNull(),
   },
   (table) => [uniqueIndex('auth_attempts_kind_subject_unique').on(table.kind, table.subject)],
+);
+
+/** T-11-059 동의한 앱 기기만 등록한다. 세션 폐기·탈퇴·계정 전환 시 이전 계정으로 보내지 않는다. */
+export const pushDevices = sqliteTable(
+  'push_devices',
+  {
+    installationHash: text('installation_hash').primaryKey(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    platform: text('platform', { enum: ['ios', 'android'] }).notNull(),
+    appVersion: text('app_version').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    /** 마지막 본인 테스트 접수 번호. 토큰·세션이 바뀌면 지우고 전달 결과 조회에만 쓴다. */
+    lastTestTicketId: text('last_test_ticket_id'),
+    lastTestSentAt: text('last_test_sent_at'),
+  },
+  (t) => [
+    uniqueIndex('push_devices_token_unique').on(t.token),
+    index('push_devices_session_idx').on(t.sessionId),
+    index('push_devices_profile_idx').on(t.profileId),
+    index('push_devices_updated_idx').on(t.updatedAt),
+  ],
 );
 
 /**
