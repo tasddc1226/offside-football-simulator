@@ -1,5 +1,7 @@
 import {
   MARKET_PER_PAGE,
+  MARKET_RECENT,
+  type MarketSale,
   resolveBalance,
   type MarketListing,
   type MarketRules,
@@ -10,6 +12,7 @@ import type { PosGroup } from '@offside/contracts/positions';
 import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
+import { peakOf } from './ownerTeams.js';
 import { cards, careers, marketListings, ownerFunds } from '../schema.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 설계: docs/tracking/owner-funds-card-market-plan.md 5~7절.
@@ -32,10 +35,12 @@ const cardCols = {
   careerId: cards.careerId,
   pos: cards.pos,
   dpos: cards.dpos,
+  nation: cards.nation,
   peak: cards.peak,
   number: cards.number,
   publicName: careers.publicName,
   legendScore: cards.legendScore,
+  peakProfile: cards.peakProfile,
   cardValue: cards.cardValue,
   transfers: cards.transfers,
   season: cards.serviceSeason,
@@ -60,10 +65,12 @@ const toListing = (r: ListingRow): MarketListing => ({
     careerId: r.careerId as string,
     pos: r.pos as PosGroup,
     dpos: (r.dpos as MarketListing['card']['dpos']) ?? null,
+    nation: (r.nation as string | null) ?? null,
     peak: r.peak as number,
     number: (r.number as number | null) ?? null,
     publicName: (r.publicName as string | null) ?? null,
     legendScore: r.legendScore as number,
+    attrs: peakOf(r.peakProfile as string | null)?.attrs ?? null,
     cardValue: (r.cardValue as number | null) ?? 0,
     transfers: r.transfers as number,
     season: r.season as number,
@@ -102,6 +109,22 @@ export async function listOpenListings(
     items: rows.slice(0, MARKET_PER_PAGE).map(toListing),
     hasMore: rows.length > MARKET_PER_PAGE,
   };
+}
+
+/** 이번 시즌 최근에 팔린 선수(최신순). market_listings_sold_idx가 받친다. */
+export async function recentSales(db: Db, season: number): Promise<MarketSale[]> {
+  const rows = await db
+    .select({ ...listingCols, soldAt: marketListings.closedAt })
+    .from(marketListings)
+    .innerJoin(cards, eq(cards.careerId, marketListings.careerId))
+    .leftJoin(careers, eq(careers.id, marketListings.careerId))
+    .where(and(eq(marketListings.status, 'sold'), eq(marketListings.season, season), notHidden))
+    .orderBy(desc(marketListings.closedAt))
+    .limit(MARKET_RECENT);
+  return rows.map((r) => {
+    const { id, price, card } = toListing(r);
+    return { id, price, card, soldAt: r.soldAt as string };
+  });
 }
 
 /** 한 등록(카드 포함). 열려 있지 않아도 돌려준다. */

@@ -18,6 +18,7 @@ export type {
   MarketListResponse,
   MarketMeResponse,
   MarketRules,
+  MarketSale,
   MarketSort,
   MarketTrade,
 } from '@offside/contracts';

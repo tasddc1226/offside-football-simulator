@@ -1,7 +1,7 @@
 // T-11-080 이적시장 화면(웹 ui/market · 앱 screens/owner/Market.tsx 공용) — 그리기 전에 계산하는 것과 문구만 둔다.
 import type { CareerPos } from '@offside/contracts';
 import { anonName, fmtValue, withEulReul } from './format.js';
-import type { MarketCard, MarketRules, MarketTrade } from './api/market.js';
+import type { MarketCard, MarketRules, MarketSale, MarketTrade } from './api/market.js';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
 import { POS_GROUPS } from '@offside/contracts/positions';
@@ -9,13 +9,14 @@ import { POS_GROUPS } from '@offside/contracts/positions';
 /** 구단 자금 표기(0이면 '0원' — fmtValue는 0을 '-'로 쓴다). */
 export const fundsText = (man: number) => (man > 0 ? fmtValue(man) : '0원');
 
-export type MarketTab = 'market' | 'mine' | 'trades';
-export const MARKET_TABS: readonly [MarketTab, string][] = [
-  ['market', '시장'],
-  ['mine', '내 선수'],
+/** 탭 셋 + '자금 만들기'(방출) 화면. 방출은 탭이 아니라 자금 옆 버튼으로 연다. */
+export type MarketView = 'market' | 'sell' | 'trades' | 'release';
+export const MARKET_TABS: readonly [Exclude<MarketView, 'release'>, string][] = [
+  ['market', '선수 사기'],
+  ['sell', '팔기'],
   ['trades', '내 거래'],
 ];
-export const MARKET_SORT_LABEL = { new: '최신순', price: '낮은 가격순' } as const;
+export const MARKET_SORT_LABEL = { new: '최신 등록 순', price: '가격 낮은 순' } as const;
 export const MARKET_POS_FILTERS: readonly (CareerPos | undefined)[] = [undefined, ...POS_GROUPS];
 
 /** 이 기기에서 키운 선수면 이 기기의 이름, 아니면 공개 이름, 없으면 익명 표기. */
@@ -27,6 +28,22 @@ export const marketName = (
 /** 판매가 대비 기준가(%). 100보다 크면 기준가보다 비싸다. */
 export const priceRatio = (price: number, cardValue: number) =>
   cardValue > 0 ? Math.round((price / cardValue) * 100) : 100;
+
+/** 판매가 옆 표시: 기준가와 같으면 '기준가', 아니면 차이(%). 비싸면 up, 싸면 down. */
+export function priceDiff(
+  price: number,
+  cardValue: number,
+): { text: string; tone: 'up' | 'down' | 'same' } {
+  const d = priceRatio(price, cardValue) - 100;
+  if (d === 0) return { text: '기준가', tone: 'same' };
+  return d > 0 ? { text: `기준가 +${d}%`, tone: 'up' } : { text: `기준가 −${-d}%`, tone: 'down' };
+}
+
+/** 판매가 슬라이더(기준가의 %)를 만 원으로. 100 단위로 맞추고 고를 수 있는 범위 안에 둔다. */
+export function priceAtPct(cardValue: number, pct: number, rules: MarketRules): number {
+  const band = priceBand(cardValue, rules);
+  return Math.min(band.max, Math.max(band.min, Math.round((cardValue * pct) / 100 / 100) * 100));
+}
 
 /** 판매 시트 — 고를 수 있는 범위, 수수료, 받을 돈. 가격이 범위를 벗어나면 error. */
 export function sellQuote(cardValue: number, price: number, rules: MarketRules) {
@@ -40,14 +57,6 @@ export function sellQuote(cardValue: number, price: number, rules: MarketRules) 
         : null;
   return { band, fee, gets: price - fee, error };
 }
-
-/** 판매가 입력(억 단위, 소수 허용) → 만 원. 빈 값·숫자 아님은 NaN. */
-export const parseEok = (s: string) => {
-  const v = Number(s.replace(/,/g, '').trim());
-  return s.trim() === '' || !Number.isFinite(v) ? NaN : Math.round(v * 10_000);
-};
-/** 만 원 → 판매가 입력칸 값(억). */
-export const toEok = (man: number) => String(Math.round(man / 100) / 100);
 
 /** 영입 시트 — 살 수 있으면 null, 아니면 막는 이유. */
 export function buyBlock(price: number, balance: number, buysLeft: number): string | null {
@@ -65,17 +74,26 @@ export const lineupOf = (d: OwnerTeamResponse): ReadonlySet<string> =>
       : [],
   );
 
-/** 내 선수 탭의 한 줄 상태. current: 보고 있는 시즌이 지금 시즌인가(지금 시즌 선수만 내놓을 수 있다). */
-export function mineState(p: TeamPlayer, lineup: ReadonlySet<string>, current: boolean) {
-  return {
-    listed: !!p.listing,
-    starter: lineup.has(p.careerId),
-    /** 방출할 수 있다: 직접 키웠고, 판매 중이 아니고, 지금 시즌 선발에 없다. */
-    releasable: !!p.raised && !p.listing && !lineup.has(p.careerId),
-    /** 내놓을 수 있다: 지금 시즌이고, 기준가가 있고, 판매 중이 아니다. */
-    listable: current && p.cardValue != null && !p.listing,
-  };
+/** 팔기 탭 카드 아래 한 줄: 판매 중이면 막고, 선발이면 알려 준다(팔리면 유스 선수가 채운다). */
+export function sellNote(p: TeamPlayer, lineup: ReadonlySet<string>): string {
+  if (p.listing) return '판매 중';
+  if (p.cardValue == null) return '기준가 없음';
+  return lineup.has(p.careerId) ? '선발' : '';
 }
+
+/** 방출 화면에서 고를 수 없는 이유(고를 수 있으면 null). */
+export function releaseLock(p: TeamPlayer, lineup: ReadonlySet<string>): string | null {
+  if (!p.raised) return '영입한 선수는 방출할 수 없어요';
+  if (p.listing) return '판매 중이에요. 내린 뒤 방출할 수 있어요';
+  if (lineup.has(p.careerId)) return '선발이에요. 팀에서 뺀 뒤 방출할 수 있어요';
+  return null;
+}
+
+/** '방금 이적' 띠가 다음 거래로 넘어가는 간격(ms). 화면 안에서만 돌고 서버를 다시 부르지 않는다. */
+export const MARKET_TICKER_MS = 3500;
+/** '방금 이적' 한 줄: 누가 얼마에 팔렸는지. 산 사람·판 사람은 없다. */
+export const saleText = (s: MarketSale, local: ReadonlyMap<string, string>) =>
+  `${marketName(s.card, local)} ${s.card.dpos ?? s.card.pos} ${s.card.peak} · ${fmtValue(s.price)}에 이적`;
 
 export const TRADE_LABEL: Record<MarketTrade['kind'], string> = {
   sold: '판매',
