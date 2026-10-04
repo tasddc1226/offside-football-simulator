@@ -2,10 +2,9 @@
     - text: '풀타임: 휘슬이 울릴 때까지 오프사이드'
     - switch "배경음악"
     - text: Current career
-    - heading "이번 커리어는 구조테스트 입니다" [level=1]:
+    - heading "진행 중인 커리어 구조테스트" [level=1]:
         - text: ''
         - strong: 구조테스트
-        - text: ''
     - paragraph: /런던 해머스 · \d+세 · 공격수/
     - paragraph: /\d+ 시즌 프리시즌 · OVR \d+/
     - button "새 커리어 시작"

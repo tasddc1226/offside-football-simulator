@@ -41,9 +41,9 @@ export default function Home() {
                 Current career
               </Txt>
               <View style={{ marginTop: 6, gap: 2 }} accessible accessibilityRole="header">
-                <Txt style={{ ...heroSub, color: alpha(c.onPitch, 0.8) }}>이번 커리어는</Txt>
+                <Txt style={{ ...heroSub, color: alpha(c.onPitch, 0.8) }}>진행 중인 커리어</Txt>
                 <Txt style={{ ...heroB, color: c.onPitch }}>
-                  <Txt style={{ ...heroName, color: c.onPitch }}>{G.name}</Txt> 선수예요
+                  <Txt style={{ ...heroName, color: c.onPitch }}>{G.name}</Txt>
                 </Txt>
               </View>
               <Txt style={{ ...p, color: alpha(c.onPitch, 0.8) }}>

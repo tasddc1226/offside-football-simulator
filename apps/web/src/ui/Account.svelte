@@ -59,7 +59,7 @@
     );
   }
   async function doDeleteFlow() {
-    if (!window.confirm('정말 계정을 삭제할까요? 이 기기의 게임 저장 데이터는 남지만, 계정 연동은 완전히 사라져요.')) return;
+    if (!window.confirm('계정과 서버에 저장된 선수 기록·팀·댓글·채팅을 삭제할까요? 되돌릴 수 없어요. 이 기기의 게임 진행은 남아요.')) return;
     const start = await startProfileDeletion();
     if (!start.ok) return set('error');
     const confirmResult = await confirmProfileDeletion(start.data.confirmToken);

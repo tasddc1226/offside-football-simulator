@@ -69,7 +69,7 @@ async function doDeleteFlow() {
 function askDelete() {
   Alert.alert(
     '계정 삭제',
-    '정말 계정을 삭제할까요? 이 기기의 게임 저장 데이터는 남지만, 계정 연동은 완전히 사라져요.',
+    '계정과 서버에 저장된 선수 기록·팀·댓글·채팅을 삭제할까요? 되돌릴 수 없어요. 이 기기의 게임 진행은 남아요.',
     [
       { text: '취소', style: 'cancel' },
       { text: '삭제', style: 'destructive', onPress: () => void doDeleteFlow() },

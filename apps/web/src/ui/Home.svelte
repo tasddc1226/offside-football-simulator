@@ -32,7 +32,7 @@
     <section class="hero-home hero-current" data-home-current>
       <div class="chalk"></div>
       <div class="eyebrow">Current career</div>
-      <h1><span>이번 커리어는</span><b><strong>{G.name}</strong> 선수예요</b></h1>
+      <h1><span>진행 중인 커리어</span><b><strong>{G.name}</strong></b></h1>
       <p>{G.club.name} · {G.age}세 · {posLabel(G)}</p>
       <p class="hero-meta num">{G.year} 시즌 {PHASES[Math.min(G.phase, LAST_PHASE + 1)]} · OVR {ovr(G)}</p>
       <!-- T-10-124 한 줄에 왼쪽 새 커리어, 오른쪽 이어하기(주 버튼이라 더 넓게). -->
