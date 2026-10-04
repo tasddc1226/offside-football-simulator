@@ -8,7 +8,7 @@ test('확률 도감: 홈 타일 → 공통 규칙 · 선택지 확률 · 잠긴 
   );
   await page.goto('/');
   const tile = page.locator('[data-act="dex"]');
-  await expect(tile).toContainText('확률 도감 보기');
+  await expect(tile).toContainText('선택지별 성공 확률 보기');
   await tile.click();
 
   await expect(page.getByRole('heading', { name: '확률 도감' })).toBeVisible();
