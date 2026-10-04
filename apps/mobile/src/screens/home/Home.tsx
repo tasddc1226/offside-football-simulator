@@ -21,7 +21,6 @@ import { HomeNews } from './HomeNews';
 import { HomeTicker } from './HomeTicker';
 import { Tile } from './Tile';
 import { PushOptInCard } from './PushOptInCard';
-import { VoluntarySupport } from './VoluntarySupport';
 
 export default function Home() {
   const s = useSnapshot(appState);
@@ -190,7 +189,6 @@ export default function Home() {
         <HallOfFame />
         <HomeNews board="notice" eyebrow="Notice" title="공지사항" />
         <HomeNews board="release" eyebrow="Release notes" title="릴리즈 노트" />
-        <VoluntarySupport />
         <SiteFooter />
       </Screen>
       <ChatFab />

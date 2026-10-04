@@ -4,6 +4,7 @@ import { toast } from '../../game/host';
 import { Btn, Card, Txt } from '../../ui';
 
 // 웹과 같은 기존 공개 후원 정보. 게임 혜택·광고 제거 구매와 연결하지 않는다.
+// 아직 홈에 붙이지 않는다(T-11-085): Apple 3.1.1은 개발자 팁을 인앱 결제로만 허용한다. 팁 IAP 상품을 만든 뒤 연다.
 const ACCOUNT = '토스뱅크 1000-1599-4723 양*영';
 
 export function VoluntarySupport() {
