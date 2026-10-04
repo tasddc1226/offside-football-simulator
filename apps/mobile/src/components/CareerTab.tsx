@@ -5,7 +5,7 @@ import { Animated, Easing, ScrollView, View, type TextStyle } from 'react-native
 import { useSnapshot } from 'valtio';
 import type { GameState, LegendSource } from '@offside/game/types';
 import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
-import { careerGoals, GOALS_NOTE } from '@offside/app-core/career-feedback';
+import { careerGoals, GOALS_NOTE, retiredNumberHint } from '@offside/app-core/career-feedback';
 import { peakValue, seasonValue } from '@offside/contracts/market-value';
 import { prefs } from '../store';
 import { alpha } from '../theme/colors';
@@ -27,6 +27,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
   const rows = s.career.slice().reverse();
   const miles = (s.miles || []).slice().reverse();
   const next = 'attrs' in s && !s.retired ? careerGoals(s) : [];
+  const rnHint = 'attrs' in s && !s.retired ? retiredNumberHint(s) : null;
   const peakV = chart ? peakValue(s.career) : null;
   const back = s.pos === 'GK' || s.pos === 'DF';
   const totalCells: [number, string][] = [
@@ -84,7 +85,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
           </>
         ) : null}
       </Card>
-      {next.length ? (
+      {next.length || rnHint ? (
         <Card>
           <View>
             <Txt v="eyebrow">Next Goals</Txt>
@@ -110,6 +111,11 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
               </View>
             ))}
           </View>
+          {rnHint ? (
+            <Txt v="sm" tone="muted" testID="rn-hint">
+              {rnHint}
+            </Txt>
+          ) : null}
         </Card>
       ) : null}
       <Card>
