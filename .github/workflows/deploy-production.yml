@@ -311,12 +311,17 @@ jobs:
       - name: Publish production update
         if: steps.changed.outputs.publish == 'true'
         working-directory: apps/mobile
+        # bash explicitly enables pipefail, so tee cannot hide an EAS export/upload failure.
+        shell: bash
         env:
           EXPO_PUBLIC_API_URL: https://api.offside-lab.com
           EXPO_PUBLIC_WEB_ORIGIN: https://offside-lab.com
         run: |
-          eas update --channel production --environment production --non-interactive \
-            --message "운영 배포 ${EXPECTED_SHA:0:7}" | tee -a "$GITHUB_STEP_SUMMARY"
+          # Expo's "all" export includes web SSR. The web client is Svelte, so publish only native bundles.
+          for PLATFORM in ios android; do
+            eas update --channel production --environment production --non-interactive --platform "$PLATFORM" \
+              --message "운영 배포 ${EXPECTED_SHA:0:7}" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
 
   # 운영 배포가 끝까지 성공했을 때만 릴리즈 태그(KST 날짜 + 그날 순번, 예: v2026.09.25.1)와
   # GitHub 릴리즈를 만든다. 같은 커밋을 다시 배포하면 새 태그를 만들지 않는다.
