@@ -1,0 +1,1 @@
+CREATE INDEX `market_listings_sold_idx` ON `market_listings` (`status`,`season`,`closed_at`);

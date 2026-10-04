@@ -1,6 +1,7 @@
 <script lang="ts">
   // T-11-080 이적시장 — 지금 시즌 은퇴 선수 카드를 구단 자금으로 사고판다. 구단주 화면의 '이적시장'으로 연다.
-  // 탭 셋: 시장(열린 등록) · 내 선수(내놓기 · 방출) · 내 거래(판매 중 · 최근 거래). 탭을 처음 열 때만 불러온다.
+  // T-11-080d 시안(이적시장 모바일 시안)대로: 초록 머리에 구단 자금과 '자금 만들기', 탭 셋(선수 사기 · 팔기 · 내 거래),
+  // 카드 모양 목록, 카드 상세 영입 시트, 카드 고르기 + 슬라이더 판매, 방출 화면. 각 화면은 처음 열 때만 불러온다.
   import type { CareerPos } from '@offside/contracts';
   import {
     buyListing,
@@ -9,42 +10,53 @@
     fetchMarket,
     fetchMarketMe,
     releaseCards,
+    type MarketCard,
     type MarketListing,
+    type MarketSale,
     type MarketMeResponse,
     type MarketSort,
+    isStaleListing,
   } from '@offside/app-core/api/market';
   import { fetchOwnerTeam, type OwnerTeamResponse, type TeamPlayer } from '@offside/app-core/api/team';
   import {
     MARKET_POS_FILTERS,
     MARKET_SORT_LABEL,
+    MARKET_TICKER_MS,
+    MARKET_TOAST,
     MARKET_TABS,
     TRADE_LABEL,
     buyBlock,
+    cardMeta,
     fundsText,
     lineupOf,
     marketEmptyText,
     marketName,
-    mineState,
-    parseEok,
-    priceRatio,
+    priceAtPct,
+    priceDiff,
     releaseAmount,
     releaseConfirmText,
+    releaseLock,
+    releaseValue,
+    saleText,
+    sellNote,
+    sellSlider,
+    sellable,
     sellQuote,
-    toEok,
     tradeAmount,
-    type MarketTab,
+    type MarketView,
   } from '@offside/app-core/market';
-  import { agoKo, fmtValue } from '@offside/app-core/format';
+  import { agoKo, cardTier, fmtValue } from '@offside/app-core/format';
   import { localCareerNames } from '@offside/game/season';
   import { POS_LABEL } from '@offside/game/pos-label';
-  import { DETAIL_LABEL } from '@offside/contracts/owner-team';
+  import { detailPosOf, type DetailPos } from '@offside/contracts/positions';
   import Topbar from './Topbar.svelte';
   import BackBar from './BackBar.svelte';
+  import PlayerCard from './team/PlayerCard.svelte';
   import { go } from './nav.js';
   import { toast } from './helpers.js';
 
   const local = localCareerNames();
-  let tab = $state<MarketTab>('market');
+  let view = $state<MarketView>('market');
   let error = $state<string | null>(null);
   let busy = $state(false);
 
@@ -58,7 +70,7 @@
   }
   void loadMe();
 
-  // 시장 목록 — 정렬·포지션이 바뀌면 첫 페이지부터.
+  // 선수 사기 — 정렬·포지션이 바뀌면 첫 페이지부터.
   let sort = $state<MarketSort>('new');
   let pos = $state<CareerPos | undefined>(undefined);
   let items = $state<MarketListing[]>([]);
@@ -66,11 +78,24 @@
   let hasMore = $state(false);
   let season = $state<number | null>(null);
   let listStatus = $state<'loading' | 'ok' | 'error'>('loading');
+  // '방금 이적' — 첫 페이지 응답에 함께 온 최근 거래. 화면 안에서 한 줄씩 넘기기만 하고 서버는 다시 부르지 않는다.
+  let recent = $state<MarketSale[]>([]);
+  let tick = $state(0);
+  let liveOpen = $state(false);
+  const live = $derived(recent.length ? recent[tick % recent.length] : undefined);
+  $effect(() => {
+    if (view !== 'market' || liveOpen || recent.length < 2) return;
+    // 탭이 가려져 있으면 넘기지 않는다.
+    const t = setInterval(() => !document.hidden && tick++, MARKET_TICKER_MS);
+    return () => clearInterval(t);
+  });
   async function loadList(next = 0) {
     if (next === 0) listStatus = 'loading';
     const r = await fetchMarket(sort, pos, next);
     if (!r.ok) return void (listStatus = 'error');
     items = next === 0 ? r.data.items : [...items, ...r.data.items];
+    // 정렬·포지션을 바꿔도 띠는 이어서 넘긴다(tick을 되돌리지 않는다). 배포 직후 옛 엣지 응답에는 recent가 없다.
+    if (next === 0) recent = r.data.recent ?? [];
     page = next;
     hasMore = r.data.hasMore;
     season = r.data.season;
@@ -78,50 +103,67 @@
   }
   // 정렬·포지션을 바꾸면 첫 페이지부터 다시 받는다(loadList가 둘을 읽어 의존한다).
   $effect(() => {
-    if (tab === 'market') void loadList(0);
+    if (view === 'market') void loadList(0);
   });
   const myListingIds = $derived(new Set(me?.listings.map((l) => l.id) ?? []));
 
-  // 내 선수 — 시즌을 골라 본다(기본은 지금 시즌).
+  // 팔기는 지금 시즌 선수, 방출은 시즌을 골라 본다(기본은 지금 시즌).
   let team = $state<OwnerTeamResponse | null>(null);
   let teamSeason = $state<number | undefined>(undefined);
   let teamFailed = $state(false);
   async function loadTeam() {
-    const r = await fetchOwnerTeam(teamSeason);
+    const r = await fetchOwnerTeam(view === 'sell' ? undefined : teamSeason);
     teamFailed = !r.ok;
     if (r.ok) team = r.data;
   }
   $effect(() => {
-    if (tab === 'mine') void loadTeam();
+    if (view === 'sell' || view === 'release') void loadTeam();
   });
   const lineup = $derived(team ? lineupOf(team) : new Set<string>());
   const isCurrent = $derived(!!team && team.season === team.current);
   const nameOfPlayer = (p: TeamPlayer) => marketName(p, local);
+  const seasonName = $derived(team?.seasons.find((o) => o.id === team?.season)?.name ?? '');
 
-  // 일괄 방출 — 고른 선수.
+  // 방출 — 고른 선수.
   let picked = $state<ReadonlySet<string>>(new Set());
-  const pickedPlayers = $derived(team?.players.filter((p) => picked.has(p.careerId)) ?? []);
+  const releasable = $derived(team?.players.filter((p) => !releaseLock(p, lineup)) ?? []);
+  const pickedPlayers = $derived(releasable.filter((p) => picked.has(p.careerId)));
   const pickedAmount = $derived(me ? releaseAmount(pickedPlayers, me.rules.releaseRate) : 0);
   function togglePick(id: string) {
     picked = picked.has(id) ? new Set([...picked].filter((x) => x !== id)) : new Set([...picked, id]);
   }
+  const allPicked = $derived(releasable.length > 0 && pickedPlayers.length === releasable.length);
+  const pickAll = () => (picked = allPicked ? new Set() : new Set(releasable.map((p) => p.careerId)));
 
-  // 시트: 영입 · 내놓기 · 방출 확인.
-  let buying = $state<MarketListing | null>(null);
+  // 팔기 — 고른 선수와 판매가(기준가의 %).
   let selling = $state<TeamPlayer | null>(null);
-  let sellInput = $state('');
-  let confirmRelease = $state(false);
-  const sellPrice = $derived(parseEok(sellInput));
+  let pct = $state(100);
+  const sellPrice = $derived(selling?.cardValue && me ? priceAtPct(selling.cardValue, pct, me.rules) : 0);
   const quote = $derived(selling?.cardValue && me ? sellQuote(selling.cardValue, sellPrice, me.rules) : null);
+  function pickSell(p: TeamPlayer) {
+    selling = p;
+    pct = 100;
+    error = null;
+  }
 
+  // 시트: 영입 · 방출 확인.
+  let buying = $state<MarketListing | null>(null);
+  let confirmRelease = $state(false);
+
+  function open(v: MarketView) {
+    view = v;
+    error = null;
+    picked = new Set();
+    selling = null;
+    teamSeason = undefined;
+  }
   function closeSheets() {
     buying = null;
-    selling = null;
     confirmRelease = false;
     error = null;
   }
   async function refresh() {
-    await Promise.all([loadMe(), tab === 'market' ? loadList(0) : tab === 'mine' ? loadTeam() : null]);
+    await Promise.all([loadMe(), view === 'market' ? loadList(0) : view === 'sell' || view === 'release' ? loadTeam() : null]);
   }
   async function run<T>(send: () => Promise<{ ok: true; data: T } | { ok: false; error: { message: string; reason?: string } }>, done: string) {
     busy = true;
@@ -131,156 +173,254 @@
     if (!r.ok) {
       error = r.error.message;
       // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받는다.
-      if (r.error.reason === 'LISTING_GONE' || r.error.reason === 'PRICE_CHANGED') void loadList(0);
+      if (isStaleListing(r.error)) void loadList(0);
       return;
     }
     closeSheets();
     picked = new Set();
+    selling = null;
     toast(done);
     await refresh();
   }
 
-  const posOf = (c: { dpos: keyof typeof DETAIL_LABEL | null; pos: CareerPos }) => (c.dpos ? DETAIL_LABEL[c.dpos] : POS_LABEL[c.pos]);
+  const asPlayer = (c: MarketCard): TeamPlayer => ({ ...c, roles: null });
 </script>
+
+{#snippet mini(c: { peak: number; legendScore: number | null; dpos: DetailPos | null; pos: CareerPos }, dim = false)}
+  <span class="mk-mini" data-tier={cardTier(c.legendScore, c.peak)} class:dim aria-hidden="true">
+    <b>{c.peak}</b><small>{detailPosOf(c)}</small>
+  </span>
+{/snippet}
 
 <div class="wrap market">
   <Topbar />
-  <header class="settings-head">
-    <div class="eyebrow">Transfer market</div>
-    <h1>이적시장</h1>
-  </header>
 
-  <section class="card mk-funds" aria-label="구단 자금" data-market-funds>
+  <section class="mk-hero" aria-label="구단 자금" data-market-funds>
+    <div class="mk-hero-head">
+      <div class="eyebrow">Transfer market</div>
+      <h1>이적시장</h1>
+    </div>
+    <div class="mk-wallet">
+      <div class="mk-wallet-sum">
+        <span>구단 자금</span>
+        <b>{me ? fundsText(me.balance) : '–'}</b>
+      </div>
+      <button class="mk-make" data-act="open-release" aria-pressed={view === 'release'} onclick={() => open('release')}>자금 만들기</button>
+    </div>
     {#if me}
-      <dl>
-        <div class="mk-balance"><dt>구단 자금</dt><dd>{fundsText(me.balance)}</dd></div>
+      <dl class="mk-hero-stats">
         <div><dt>구단 가치</dt><dd>{fmtValue(me.clubValue)}</dd></div>
-        <div><dt>오늘 남은 영입</dt><dd>{me.buysLeft}/{me.rules.dailyBuys}</dd></div>
+        <div><dt>오늘 영입</dt><dd>{me.rules.dailyBuys - me.buysLeft} / {me.rules.dailyBuys}</dd></div>
+        <div><dt>내놓은 선수</dt><dd>{me.listings.length} / {me.rules.listLimit}</dd></div>
       </dl>
-      <p class="muted fs-sm">직접 키운 선수를 방출하면 자금이 생겨요. 판매 대금의 {Math.round(me.rules.feeRate * 100)}%는 수수료로 빠져요.</p>
-    {:else}
-      <p class="muted fs-sm">{meFailed ?? '불러오는 중…'}</p>
+    {:else if meFailed}
+      <p class="mk-hero-note">{meFailed}</p>
     {/if}
   </section>
 
-  <div class="seg three mk-tabs" role="group" aria-label="이적시장">
-    {#each MARKET_TABS as [k, label] (k)}
-      <button class="opt" aria-pressed={tab === k} data-market-tab={k} onclick={() => (tab = k)}>{label}</button>
-    {/each}
-  </div>
-
-  {#if tab === 'market'}
-    <section class="card mk-list" aria-label="시장 목록">
-      <div class="mk-filters">
-        <div class="seg hof-pos" role="group" aria-label="포지션">
-          {#each MARKET_POS_FILTERS as p (p ?? 'all')}
-            <button class="opt" aria-pressed={pos === p} data-market-pos={p ?? 'all'} onclick={() => (pos = p)}>{p ? POS_LABEL[p] : '전체'}</button>
-          {/each}
-        </div>
-        <div class="seg two" role="group" aria-label="정렬">
-          {#each Object.entries(MARKET_SORT_LABEL) as [k, label] (k)}
-            <button class="opt" aria-pressed={sort === k} data-market-sort={k} onclick={() => (sort = k as MarketSort)}>{label}</button>
-          {/each}
-        </div>
+  {#if view === 'release'}
+    <section class="mk-pane" aria-label="방출해서 자금 만들기">
+      <div class="mk-pane-head">
+        <h2>방출해서 자금 만들기</h2>
+        <button class="mk-link" onclick={() => open('market')}>이적시장으로</button>
       </div>
-      {#if listStatus === 'loading'}
-        <p class="muted">불러오는 중…</p>
-      {:else if listStatus === 'error'}
-        <p class="muted">시장을 불러오지 못했어요.</p>
-        <button class="btn btn-block" onclick={() => loadList(0)}>다시 불러오기</button>
-      {:else}
-        {#each items as l (l.id)}
-          <button class="mk-row" data-listing={l.id} onclick={() => ((buying = l), (error = null))}>
-            <b class="mk-ovr">{l.card.peak}</b>
-            <span class="mk-info">
-              <span class="mk-name">{marketName(l.card, local)}{#if myListingIds.has(l.id)}<em class="mk-tag">내 등록</em>{/if}</span>
-              <small class="muted">{posOf(l.card)} · 기준가 {fmtValue(l.card.cardValue)}{l.card.transfers ? ` · 이적 ${l.card.transfers}회` : ''}</small>
-            </span>
-            <span class="mk-price"><b>{fmtValue(l.price)}</b><small class="muted">기준가 {priceRatio(l.price, l.card.cardValue)}%</small></span>
-          </button>
-        {:else}
-          <p class="muted">{marketEmptyText(season, !!pos)}</p>
-        {/each}
-        {#if hasMore}<button class="btn btn-block" onclick={() => loadList(page + 1)}>더 보기</button>{/if}
-      {/if}
-    </section>
-  {:else if tab === 'mine'}
-    <section class="card mk-list" aria-label="내 선수">
-      {#if team && team.seasons.length > 1}
-        <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
-          {#each team.seasons as o (o.id)}
-            <button class="opt" aria-pressed={team.season === o.id} onclick={() => ((teamSeason = o.id), (picked = new Set()))}>{o.name}</button>
+      <p class="muted fs-sm">직접 키운 선수를 내보내면 은퇴 가치만큼 구단 자금이 생겨요. 명예의 전당 기록은 그대로 남아요.</p>
+      <div class="mk-chips-row">
+        <div class="mk-chips" role="group" aria-label="시즌">
+          {#each team?.seasons ?? [] as o (o.id)}
+            <button class="mk-chip" aria-pressed={team?.season === o.id} onclick={() => ((teamSeason = o.id), (picked = new Set()))}>{o.name} 선수</button>
           {/each}
         </div>
-      {/if}
+        {#if releasable.length > 0}<button class="mk-link" data-act="pick-all" onclick={pickAll}>{allPicked ? '선택 해제' : '전체 선택'}</button>{/if}
+      </div>
       {#if !team}
         <p class="muted">{teamFailed ? '내 선수를 불러오지 못했어요.' : '불러오는 중…'}</p>
       {:else}
-        <p class="muted fs-sm">{isCurrent ? '이번 시즌 선수는 시장에 내놓을 수 있어요. 직접 키운 선수는 방출해 자금으로 바꿀 수 있어요.' : '지난 시즌 선수는 시장에 내놓을 수 없어요. 직접 키운 선수는 방출해 자금으로 바꿀 수 있어요.'}</p>
-        {#each team.players as p (p.careerId)}
-          {@const st = mineState(p, lineup, isCurrent)}
-          <div class="mk-row mk-mine" data-mine={p.careerId}>
-            {#if st.releasable}
-              <input type="checkbox" class="mk-check" aria-label="{nameOfPlayer(p)} 방출할 선수로 고르기" checked={picked.has(p.careerId)} onchange={() => togglePick(p.careerId)} />
-            {:else}
-              <span class="mk-check" aria-hidden="true"></span>
-            {/if}
-            <b class="mk-ovr">{p.peak}</b>
-            <span class="mk-info">
-              <span class="mk-name">{nameOfPlayer(p)}</span>
-              <small class="muted">{posOf(p)}{p.cardValue ? ` · 기준가 ${fmtValue(p.cardValue)}` : ''}{p.raised ? '' : ' · 영입'}{st.starter ? ' · 선발' : ''}{p.listing ? ` · ${fmtValue(p.listing.price)}에 판매 중` : ''}</small>
-            </span>
-            {#if p.listing}
-              <button class="icon-btn" disabled={busy} data-act="cancel-listing" onclick={() => run(() => cancelListing(p.listing!.id), '판매를 내렸어요.')}>내리기</button>
-            {:else if st.listable}
-              <button class="icon-btn" data-act="sell" onclick={() => ((selling = p), (sellInput = toEok(p.cardValue!)), (error = null))}>내놓기</button>
-            {/if}
-          </div>
-        {:else}
-          <p class="muted">이 시즌에 은퇴한 내 선수가 없어요.</p>
-        {/each}
+        <ul class="mk-rel-list">
+          {#each team.players as p (p.careerId)}
+            {@const lock = releaseLock(p, lineup)}
+            <li>
+              <label class="mk-rel" class:on={picked.has(p.careerId)} class:locked={!!lock} data-mine={p.careerId}>
+                <input type="checkbox" checked={picked.has(p.careerId)} disabled={!!lock} aria-label="{nameOfPlayer(p)} 방출할 선수로 고르기" onchange={() => togglePick(p.careerId)} />
+                {@render mini(p, !!lock)}
+                <span class="mk-info">
+                  <strong class="mk-name">{nameOfPlayer(p)}</strong>
+                  <small class:mk-lock={!!lock}>{lock ?? `레전드 ${(p.legendScore ?? 0).toLocaleString()} · 은퇴 가치`}</small>
+                </span>
+                {#if !lock && me}<b class="mk-rel-value">{fundsText(releaseValue(p, me.rules.releaseRate))}</b>{/if}
+              </label>
+            </li>
+          {:else}
+            <li class="muted">{seasonName}에 은퇴한 내 선수가 없어요.</li>
+          {/each}
+        </ul>
       {/if}
     </section>
-    {#if picked.size > 0}
-      <div class="mk-bulk card">
-        <span><b>{picked.size}명</b> 고름 · 받을 자금 {fmtValue(pickedAmount)}</span>
-        <button class="btn btn-accent" data-act="release" onclick={() => ((confirmRelease = true), (error = null))}>방출</button>
+    {#if pickedPlayers.length > 0}
+      <div class="mk-dock" aria-label="방출 확인">
+        <div class="mk-dock-sum"><span>{pickedPlayers.length}명 방출 · 받는 자금</span><b>+{fundsText(pickedAmount)}</b></div>
+        <p class="mk-warn">방출한 선수는 다시 데려올 수 없어요.</p>
+        <button class="btn btn-block mk-danger" data-act="release" onclick={() => ((confirmRelease = true), (error = null))}>{pickedPlayers.length}명 방출하기</button>
       </div>
     {/if}
   {:else}
-    <section class="card mk-list" aria-label="내 거래">
-      {#if !me}
-        <p class="muted">{meFailed ?? '불러오는 중…'}</p>
-      {:else}
-        <h2 class="mk-sub">판매 중 {me.listings.length}/{me.rules.listLimit}</h2>
-        {#each me.listings as l (l.id)}
-          <div class="mk-row">
-            <b class="mk-ovr">{l.card.peak}</b>
-            <span class="mk-info">
-              <span class="mk-name">{marketName(l.card, local)}</span>
-              <small class="muted">{posOf(l.card)} · {agoKo(Date.now() - Date.parse(l.createdAt))} 등록</small>
-            </span>
-            <span class="mk-price"><b>{fmtValue(l.price)}</b></span>
-            <button class="icon-btn" disabled={busy} onclick={() => run(() => cancelListing(l.id), '판매를 내렸어요.')}>내리기</button>
+    <nav class="mk-tabs" aria-label="이적시장 메뉴">
+      {#each MARKET_TABS as [k, label] (k)}
+        <button aria-pressed={view === k} data-market-tab={k} onclick={() => open(k)}>{label}</button>
+      {/each}
+    </nav>
+
+    {#if view === 'market'}
+      <section class="mk-pane" aria-label="선수 사기">
+        {#if live}
+          <div class="mk-live" data-market-live>
+            <button class="mk-live-bar" aria-expanded={liveOpen} aria-label="방금 이적 {recent.length}건 모두 보기" onclick={() => (liveOpen = !liveOpen)}>
+              <span class="mk-live-dot" aria-hidden="true"></span>
+              <b>방금 이적</b>
+              {#key tick}
+                <span class="mk-live-line">{saleText(live, local)}</span>
+              {/key}
+              <small>{agoKo(Date.now() - Date.parse(live.soldAt))}</small>
+            </button>
+            {#if liveOpen}
+              <ul class="mk-live-list">
+                {#each recent as s (s.id)}
+                  <li>
+                    {@render mini(s.card)}
+                    <span class="mk-info">
+                      <span class="mk-name">{marketName(s.card, local)}</span>
+                      <small>{agoKo(Date.now() - Date.parse(s.soldAt))} · 기준가 {fmtValue(s.card.cardValue)}</small>
+                    </span>
+                    <b>{fmtValue(s.price)}</b>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
           </div>
+        {/if}
+        <div class="mk-chips" role="group" aria-label="포지션">
+          {#each MARKET_POS_FILTERS as p (p ?? 'all')}
+            <button class="mk-chip" aria-pressed={pos === p} data-market-pos={p ?? 'all'} onclick={() => (pos = p)}>{p ? POS_LABEL[p] : '전체'}</button>
+          {/each}
+        </div>
+        <div class="mk-sort">
+          <span class="muted fs-sm">{season === null ? '' : `이번 시즌 선수 ${items.length}${hasMore ? '+' : ''}명`}</span>
+          <label class="fs-sm">정렬
+            <select bind:value={sort} data-market-sort>
+              {#each Object.entries(MARKET_SORT_LABEL) as [k, label] (k)}<option value={k}>{label}</option>{/each}
+            </select>
+          </label>
+        </div>
+        {#if listStatus === 'loading'}
+          <p class="muted">불러오는 중…</p>
+        {:else if listStatus === 'error'}
+          <p class="muted">시장을 불러오지 못했어요.</p>
+          <button class="btn btn-block" onclick={() => loadList(0)}>다시 불러오기</button>
         {:else}
-          <p class="muted">판매 중인 선수가 없어요.</p>
-        {/each}
-        <h2 class="mk-sub">최근 거래</h2>
-        {#each me.trades as t (t.id)}
-          <div class="mk-row" data-trade={t.kind}>
-            <em class="mk-kind mk-{t.kind}">{TRADE_LABEL[t.kind]}</em>
-            <span class="mk-info">
-              <span class="mk-name">{marketName(t.card, local)}</span>
-              <small class="muted">{POS_LABEL[t.card.pos]} · 최고 {t.card.peak} · {agoKo(Date.now() - Date.parse(t.at))}</small>
-            </span>
-            <span class="mk-price mk-{t.kind}"><b>{tradeAmount(t)}</b></span>
+          <ul class="mk-rows">
+            {#each items as l (l.id)}
+              {@const diff = priceDiff(l.price, l.card.cardValue)}
+              <li>
+                <button class="mk-row" data-listing={l.id} onclick={() => ((buying = l), (error = null))}>
+                  {@render mini(l.card)}
+                  <span class="mk-info">
+                    <span class="mk-name">{marketName(l.card, local)}{#if myListingIds.has(l.id)}<em class="mk-tag">내 등록</em>{/if}</span>
+                    <small>{cardMeta(l.card)}</small>
+                  </span>
+                  <span class="mk-price"><b>{fmtValue(l.price)}</b><small class="mk-{diff.tone}">{diff.text}</small></span>
+                </button>
+              </li>
+            {:else}
+              <li class="muted">{marketEmptyText(season, !!pos)}</li>
+            {/each}
+          </ul>
+          {#if hasMore}<button class="btn btn-block" onclick={() => loadList(page + 1)}>더 보기</button>{/if}
+        {/if}
+      </section>
+    {:else if view === 'sell'}
+      <section class="mk-pane" aria-label="팔기">
+        <h2 class="mk-step">1. 내놓을 선수 <small>({seasonName || '이번 시즌'} 선수만)</small></h2>
+        {#if !team}
+          <p class="muted">{teamFailed ? '내 선수를 불러오지 못했어요.' : '불러오는 중…'}</p>
+        {:else if !isCurrent || team.players.length === 0}
+          <p class="muted">이번 시즌에 은퇴한 내 선수가 없어요. 지난 시즌 선수는 방출해서 자금으로 바꿀 수 있어요.</p>
+        {:else}
+          <div class="mk-pick-grid">
+            {#each team.players as p (p.careerId)}
+              {@const note = sellNote(p, lineup)}
+              {@const off = !sellable(p)}
+              <button class="mk-pick" aria-pressed={selling?.careerId === p.careerId} disabled={off} data-sell-pick={p.careerId} onclick={() => pickSell(p)}>
+                {@render mini(p, off)}
+                <span class="mk-pick-name">{nameOfPlayer(p)}</span>
+                <small>{selling?.careerId === p.careerId ? '선택' : note}</small>
+              </button>
+            {/each}
           </div>
+        {/if}
+        {#if selling && quote && me}
+          {@const diff = priceDiff(sellPrice, selling.cardValue!)}
+          {@const range = sellSlider(me.rules)}
+          <div class="mk-price-box">
+            <h2 class="mk-step">2. 가격 정하기 · {nameOfPlayer(selling)} {detailPosOf(selling)} {selling.peak}</h2>
+            <div class="mk-presets">
+              <button aria-pressed={pct === 100} onclick={() => (pct = 100)}><span>기준가 그대로</span><b>{fmtValue(selling.cardValue!)}</b></button>
+              <button aria-pressed={pct !== 100} onclick={() => (pct = pct === 100 ? 110 : pct)}><span>직접 정하기</span><b>{pct === 100 ? '슬라이더로' : fmtValue(sellPrice)}</b></button>
+            </div>
+            <label class="mk-slider">
+              <span class="mk-slider-top"><span>판매가</span><b>{fmtValue(sellPrice)} <small class="mk-{diff.tone}">{diff.text}</small></b></span>
+              <input type="range" min={range.minPct} max={range.maxPct} step={range.step} bind:value={pct} aria-label="기준가 대비 판매가(%)" data-sell-pct />
+              <span class="mk-slider-ends"><span>{fmtValue(quote.band.min)} ({range.minPct}%)</span><span>{fmtValue(quote.band.max)} ({range.maxPct}%)</span></span>
+            </label>
+            <dl class="mk-lines">
+              <div><dt>수수료 {range.feePct}%</dt><dd>−{fmtValue(quote.fee)}</dd></div>
+              <div class="strong"><dt>팔리면 받는 자금</dt><dd>{fmtValue(quote.gets)}</dd></div>
+            </dl>
+            <p class="muted fs-sm">팔리기 전까지는 팀에서 계속 뛰어요. 팔리면 선발 자리는 유스 선수가 채워요. 언제든 내릴 수 있어요.</p>
+            {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
+            <button class="btn btn-primary btn-block" data-act="list" disabled={busy || !!quote.error} onclick={() => run(() => createListing(selling!.careerId, sellPrice), MARKET_TOAST.listed)}>
+              {fmtValue(sellPrice)}에 내놓기
+            </button>
+          </div>
+        {/if}
+      </section>
+    {:else}
+      <section class="mk-pane" aria-label="내 거래">
+        {#if !me}
+          <p class="muted">{meFailed ?? '불러오는 중…'}</p>
         {:else}
-          <p class="muted">아직 거래가 없어요.</p>
-        {/each}
-      {/if}
-    </section>
+          <h2 class="mk-step">내놓은 선수</h2>
+          <ul class="mk-rows">
+            {#each me.listings as l (l.id)}
+              <li class="mk-row mk-row-static">
+                {@render mini(l.card)}
+                <span class="mk-info">
+                  <span class="mk-name">{marketName(l.card, local)}</span>
+                  <small>{fmtValue(l.price)} · {agoKo(Date.now() - Date.parse(l.createdAt))} 등록</small>
+                </span>
+                <button class="icon-btn" disabled={busy} data-act="cancel-listing" onclick={() => run(() => cancelListing(l.id), MARKET_TOAST.unlisted)}>내리기</button>
+              </li>
+            {:else}
+              <li class="muted">내놓은 선수가 없어요.</li>
+            {/each}
+          </ul>
+          <h2 class="mk-step">자금 내역</h2>
+          <ul class="mk-log">
+            {#each me.trades as t (t.id)}
+              <li data-trade={t.kind}>
+                <span class="mk-badge mk-badge-{t.kind}">{TRADE_LABEL[t.kind]}</span>
+                <span class="mk-info">
+                  <span>{marketName(t.card, local)} {POS_LABEL[t.card.pos]} {t.card.peak}</span>
+                  <small>{agoKo(Date.now() - Date.parse(t.at))}{t.kind === 'sold' ? ' · 수수료 뺌' : ''}</small>
+                </span>
+                <b class:mk-plus={t.kind !== 'bought'}>{tradeAmount(t)}</b>
+              </li>
+            {:else}
+              <li class="muted">아직 거래가 없어요.</li>
+            {/each}
+          </ul>
+        {/if}
+      </section>
+    {/if}
   {/if}
 
   <BackBar act="owner" fallback={() => go('owner')} />
@@ -288,175 +428,444 @@
 
 {#if buying && me}
   {@const block = myListingIds.has(buying.id) ? '내가 내놓은 선수예요.' : buyBlock(buying.price, me.balance, me.buysLeft)}
-  <button class="tm-scrim" aria-label="닫기" onclick={closeSheets}></button>
-  <div class="tm-sheet" role="dialog" aria-modal="true" aria-label="선수 영입">
-    <div class="tm-sheet-head">
-      <div>
-        <div class="eyebrow">{posOf(buying.card)} · 최고 OVR {buying.card.peak}</div>
-        <h2>{marketName(buying.card, local)}</h2>
+  {@const diff = priceDiff(buying.price, buying.card.cardValue)}
+  <button class="mk-scrim" aria-label="닫기" onclick={closeSheets}></button>
+  <div class="mk-sheet" role="dialog" aria-modal="true" aria-label="선수 영입">
+    <div class="mk-detail">
+      <div class="mk-detail-card">
+        <PlayerCard player={asPlayer(buying.card)} name={marketName(buying.card, local)} rating={buying.card.peak} role={detailPosOf(buying.card)} nation={buying.card.nation} />
       </div>
-      <button class="icon-btn" onclick={closeSheets}>닫기</button>
-    </div>
-    <dl class="mk-quote">
-      <div><dt>판매가</dt><dd>{fmtValue(buying.price)}</dd></div>
-      <div><dt>기준가</dt><dd>{fmtValue(buying.card.cardValue)} ({priceRatio(buying.price, buying.card.cardValue)}%)</dd></div>
-      <div><dt>레전드 점수</dt><dd>{buying.card.legendScore}</dd></div>
-      <div><dt>이적</dt><dd>{buying.card.transfers}회</dd></div>
-      <div><dt>영입 뒤 자금</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : '모자라요'}</dd></div>
-    </dl>
-    <p class="muted fs-sm">영입한 선수는 바로 팀에 넣을 수 있어요. 다시 팔 수는 있지만 방출할 수는 없어요.</p>
-    {#if block}<p class="mk-err">{block}</p>{/if}
-    {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
-    {#if myListingIds.has(buying.id)}
-      <button class="btn btn-block" disabled={busy} onclick={() => run(() => cancelListing(buying!.id), '판매를 내렸어요.')}>판매 내리기</button>
-    {:else}
-      <button class="btn btn-primary btn-block" data-act="buy" disabled={busy || !!block} onclick={() => run(() => buyListing(buying!.id, buying!.price), '선수를 영입했어요.')}>
-        {fmtValue(buying.price)}에 영입하기
-      </button>
-    {/if}
-  </div>
-{/if}
-
-{#if selling && me && quote}
-  <button class="tm-scrim" aria-label="닫기" onclick={closeSheets}></button>
-  <div class="tm-sheet" role="dialog" aria-modal="true" aria-label="선수 내놓기">
-    <div class="tm-sheet-head">
-      <div>
-        <div class="eyebrow">{posOf(selling)} · 최고 OVR {selling.peak}</div>
-        <h2>{nameOfPlayer(selling)}</h2>
-      </div>
-      <button class="icon-btn" onclick={closeSheets}>닫기</button>
-    </div>
-    <label class="mk-price-in">
-      <span>판매가(억)</span>
-      <input type="text" inputmode="decimal" bind:value={sellInput} data-sell-price />
-    </label>
-    <p class="muted fs-sm">기준가 {fmtValue(selling.cardValue!)} · {fmtValue(quote.band.min)}부터 {fmtValue(quote.band.max)}까지 정할 수 있어요.</p>
-    {#if !Number.isNaN(sellPrice) && !quote.error}
-      <dl class="mk-quote">
-        <div><dt>수수료</dt><dd>{fmtValue(quote.fee)}</dd></div>
-        <div><dt>팔리면 받는 돈</dt><dd>{fmtValue(quote.gets)}</dd></div>
+      <dl class="mk-detail-stats">
+        <div><dt>레전드 점수</dt><dd>{buying.card.legendScore.toLocaleString()}</dd></div>
+        <div><dt>이적</dt><dd>{buying.card.transfers}회</dd></div>
+        <div><dt>포지션</dt><dd>{POS_LABEL[buying.card.pos]}</dd></div>
       </dl>
-    {/if}
-    {#if quote.error && sellInput.trim()}<p class="mk-err">{quote.error}</p>{/if}
-    {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
-    <p class="muted fs-sm">팔리기 전까지는 팀에서 계속 뛰어요. 팔리면 선발 자리는 유스 선수가 채워요.</p>
-    <button class="btn btn-primary btn-block" data-act="list" disabled={busy || Number.isNaN(sellPrice) || !!quote.error} onclick={() => run(() => createListing(selling!.careerId, sellPrice), '시장에 내놓았어요.')}>
-      시장에 내놓기
-    </button>
+    </div>
+    <div class="mk-confirm">
+      <h2>이 선수를 영입할까요?</h2>
+      <dl class="mk-lines">
+        <div><dt>기준가 (최고 OVR 시즌 몸값)</dt><dd>{fmtValue(buying.card.cardValue)}</dd></div>
+        <div class="big"><dt>판매가</dt><dd>{fmtValue(buying.price)} <small class="mk-{diff.tone}">{diff.text}</small></dd></div>
+        <div class="rule"></div>
+        <div><dt>지금 구단 자금</dt><dd>{fundsText(me.balance)}</dd></div>
+        <div class="strong"><dt>영입 뒤 남는 자금</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : '모자라요'}</dd></div>
+      </dl>
+      <p class="mk-note">영입한 선수는 바로 팀에 넣을 수 있어요. 다시 팔 수는 있지만 방출해서 자금으로 바꿀 수는 없어요.</p>
+      {#if block}<p class="mk-err">{block}</p>{/if}
+      {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
+      <div class="mk-actions">
+        <button class="btn" onclick={closeSheets}>닫기</button>
+        {#if myListingIds.has(buying.id)}
+          <button class="btn" disabled={busy} onclick={() => run(() => cancelListing(buying!.id), MARKET_TOAST.unlisted)}>판매 내리기</button>
+        {:else}
+          <button class="btn btn-accent" data-act="buy" disabled={busy || !!block} onclick={() => run(() => buyListing(buying!.id, buying!.price), MARKET_TOAST.bought)}>
+            {fmtValue(buying.price)}에 영입하기
+          </button>
+        {/if}
+      </div>
+    </div>
   </div>
 {/if}
 
 {#if confirmRelease && me}
-  <button class="tm-scrim" aria-label="닫기" onclick={closeSheets}></button>
-  <div class="tm-sheet" role="dialog" aria-modal="true" aria-label="선수 방출">
-    <div class="tm-sheet-head">
-      <h2>선수 방출</h2>
-      <button class="icon-btn" onclick={closeSheets}>닫기</button>
-    </div>
-    <p>{releaseConfirmText(picked.size, pickedAmount)}</p>
+  <button class="mk-scrim" aria-label="닫기" onclick={closeSheets}></button>
+  <div class="mk-sheet mk-confirm" role="dialog" aria-modal="true" aria-label="선수 방출">
+    <h2>선수 방출</h2>
+    <p>{releaseConfirmText(pickedPlayers.length, pickedAmount)}</p>
     {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
-    <button class="btn btn-accent btn-block" data-act="release-confirm" disabled={busy} onclick={() => run(() => releaseCards([...picked]), `${picked.size}명을 방출했어요.`)}>
-      {picked.size}명 방출하기
-    </button>
+    <div class="mk-actions">
+      <button class="btn" onclick={closeSheets}>닫기</button>
+      <button class="btn mk-danger" data-act="release-confirm" disabled={busy} onclick={() => run(() => releaseCards(pickedPlayers.map((p) => p.careerId)), MARKET_TOAST.released(pickedPlayers.length))}>
+        {pickedPlayers.length}명 방출하기
+      </button>
+    </div>
   </div>
 {/if}
 
 <style>
-  .mk-funds dl {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin: 0 0 8px;
+  /* 초록 머리 — 구단 자금 · 자금 만들기 · 요약 셋 */
+  .mk-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--pitch);
+    color: var(--on-pitch);
   }
-  .mk-funds dl div,
-  .mk-quote div {
+  .mk-hero-head h1 {
+    margin: 0;
+    font-size: 1.375rem;
+  }
+  .mk-hero-head .eyebrow {
+    color: var(--on-pitch);
+    opacity: 0.75;
+  }
+  .mk-wallet {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgb(255 255 255 / 0.08);
+    border: 1px solid rgb(255 255 255 / 0.16);
+  }
+  .mk-wallet-sum {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: var(--surface-2);
     min-width: 0;
   }
-  .mk-funds dt,
-  .mk-quote dt {
+  .mk-wallet-sum span {
     font-size: 0.75rem;
-    color: var(--muted);
+    opacity: 0.8;
   }
-  .mk-funds dd,
-  .mk-quote dd {
+  .mk-wallet-sum b {
+    font-family: var(--display);
+    font-size: 1.875rem;
+    line-height: 1;
+    color: var(--pitch-accent);
+    overflow-wrap: anywhere;
+  }
+  .mk-make {
+    flex: none;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--pitch-accent);
+    color: var(--accent-ink);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .mk-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
     margin: 0;
+    text-align: center;
+  }
+  .mk-hero-stats div {
+    padding: 8px 4px;
+    border-radius: 12px;
+    background: rgb(255 255 255 / 0.08);
+    min-width: 0;
+  }
+  .mk-hero-stats dt {
+    font-size: 0.6875rem;
+    opacity: 0.8;
+  }
+  .mk-hero-stats dd {
+    margin: 2px 0 0;
     font-family: var(--display);
     font-size: 1.125rem;
     font-weight: 700;
-    font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
-  .mk-balance {
-    grid-column: 1 / -1;
-  }
-  .mk-funds .mk-balance dd {
-    font-size: 1.75rem;
-    color: var(--accent-text);
-  }
-  .mk-funds p {
+  .mk-hero-note {
     margin: 0;
+    font-size: 0.8125rem;
+    opacity: 0.85;
   }
+
+  /* 밑줄 탭 */
   .mk-tabs {
-    margin: 12px 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 12px 0 0;
+    border-radius: 14px 14px 0 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
   }
-  .mk-tabs .opt {
+  .mk-tabs button {
+    min-height: 46px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  .mk-tabs button[aria-pressed='true'] {
+    color: var(--ink);
+    font-weight: 700;
+    border-bottom-color: var(--accent);
+  }
+  .mk-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 0;
+  }
+  .mk-pane-head {
+    display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .mk-pane-head h2,
+  .mk-step {
+    margin: 0;
+    font-size: 0.875rem;
     font-weight: 700;
   }
-  .mk-filters {
+  .mk-step small {
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .mk-pane p {
+    margin: 0;
+  }
+  .mk-link {
+    min-height: 34px;
+    padding: 0 4px;
+    border: 0;
+    background: none;
+    color: var(--accent-text);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* 방금 이적 — 살아 있는 점 + 한 줄씩 넘어가는 최근 거래 */
+  .mk-live {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .mk-live-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.8125rem;
+    text-align: left;
+    cursor: pointer;
+  }
+  .mk-live-bar b {
+    flex: none;
+    color: var(--bad);
+    font-size: 0.75rem;
+  }
+  .mk-live-bar small {
+    flex: none;
+    color: var(--muted);
+    font-size: 0.6875rem;
+  }
+  .mk-live-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--bad);
+    animation: mk-pulse 1.6s ease-out infinite;
+  }
+  .mk-live-line {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    animation: mk-tick 0.35s ease-out;
+  }
+  @keyframes mk-pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--bad) 55%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 8px transparent;
+    }
+  }
+  @keyframes mk-tick {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mk-live-dot,
+    .mk-live-line {
+      animation: none;
+    }
+  }
+  .mk-live-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 12px 4px;
+    border-top: 1px solid var(--line);
+  }
+  .mk-live-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .mk-live-list li:last-child {
+    border-bottom: 0;
+  }
+  .mk-live-list .mk-mini {
+    width: 34px;
+    height: 40px;
+  }
+  .mk-live-list .mk-mini b {
+    font-size: 1rem;
+  }
+  .mk-live-list li > b {
+    flex: none;
+    font-size: 0.875rem;
+  }
+
+  /* 칩 · 정렬 */
+  .mk-chips-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mk-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+  }
+  .mk-chip {
+    min-height: 34px;
+    padding: 0 13px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.8125rem;
+    cursor: pointer;
+  }
+  .mk-chip[aria-pressed='true'] {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--surface);
+    font-weight: 600;
+  }
+  .mk-sort {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .mk-sort label {
+    flex: none;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--muted);
+  }
+  .mk-sort select {
+    font: inherit;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: 4px 6px;
+  }
+
+  /* 작은 방패 카드(OVR · 세부 포지션) — 카드 색은 PlayerCard와 같은 등급 */
+  .mk-mini {
+    --mk-a: #e8d5a8;
+    --mk-b: #8a6324;
+    --mk-ink: #392b14;
+    flex: none;
+    width: 52px;
+    height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: linear-gradient(165deg, var(--mk-a), var(--mk-b));
+    color: var(--mk-ink);
+    clip-path: polygon(0 9%, 16% 9%, 25% 2%, 50% 0, 75% 2%, 84% 9%, 100% 9%, 98% 84%, 86% 93%, 50% 100%, 14% 93%, 2% 84%);
+  }
+  .mk-mini[data-tier='legend'] {
+    --mk-a: #28382e;
+    --mk-b: #101e17;
+    --mk-ink: #fce7b1;
+  }
+  .mk-mini[data-tier='silver'] {
+    --mk-a: #d6dfe0;
+    --mk-b: #83989c;
+    --mk-ink: #243339;
+  }
+  .mk-mini.dim {
+    opacity: 0.45;
+  }
+  .mk-mini b {
+    font-family: var(--display);
+    font-size: 1.375rem;
+    line-height: 1;
+    font-weight: 800;
+  }
+  .mk-mini small {
+    font-family: var(--display);
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+
+  /* 목록 줄 */
+  .mk-rows,
+  .mk-rel-list,
+  .mk-log {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-bottom: 8px;
-  }
-  .mk-filters .seg.hof-pos {
-    margin-top: 0;
   }
   .mk-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     width: 100%;
-    padding: 10px 0;
-    border: 0;
-    border-top: 1px solid var(--line);
-    background: none;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
     color: inherit;
-    text-align: left;
     font: inherit;
+    text-align: left;
   }
   button.mk-row {
     cursor: pointer;
-  }
-  .mk-ovr {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: var(--pitch);
-    color: var(--pitch-accent);
-    font-family: var(--display);
-    font-size: 1.125rem;
   }
   .mk-info {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     min-width: 0;
+  }
+  .mk-info small {
+    font-size: 0.75rem;
+    color: var(--muted);
   }
   .mk-name {
     font-weight: 700;
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .mk-tag {
     margin-left: 6px;
@@ -474,100 +883,395 @@
     flex-direction: column;
     align-items: flex-end;
     gap: 2px;
-    font-variant-numeric: tabular-nums;
   }
-  .mk-check {
-    flex: none;
-    width: 20px;
-    height: 20px;
+  .mk-price b {
+    font-family: var(--display);
+    font-size: 1.1875rem;
+    line-height: 1.1;
   }
-  .mk-kind {
-    flex: none;
-    width: 40px;
-    font-style: normal;
-    font-weight: 700;
-    font-size: 0.8125rem;
-    text-align: center;
+  .mk-price small,
+  .mk-slider small,
+  .mk-lines small {
+    font-size: 0.6875rem;
+    font-weight: 600;
   }
-  .mk-sold,
-  .mk-released {
+  .mk-up {
+    color: var(--warn);
+  }
+  .mk-down {
     color: var(--good);
   }
-  .mk-bought {
-    color: var(--bad);
+  .mk-same {
+    color: var(--muted);
   }
-  .mk-sub {
-    margin: 12px 0 4px;
-    font-size: 1rem;
+
+  /* 팔기 — 카드 고르기 + 가격 */
+  .mk-pick-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
   }
-  .mk-sub:first-child {
-    margin-top: 0;
-  }
-  .mk-bulk {
-    position: sticky;
-    bottom: calc(76px + var(--safe-b));
+  .mk-pick {
+    min-height: 104px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 12px;
-    box-shadow: var(--shadow);
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 4px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+    min-width: 0;
   }
-  .mk-quote {
+  .mk-pick[aria-pressed='true'] {
+    border: 2px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  }
+  .mk-pick:disabled {
+    cursor: default;
+  }
+  .mk-pick-name {
+    max-width: 100%;
+    font-size: 0.6875rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mk-pick small {
+    min-height: 13px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .mk-pick[aria-pressed='true'] small {
+    color: var(--accent-text);
+  }
+  .mk-price-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface);
+  }
+  .mk-presets {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin: 4px 0 10px;
   }
-  .mk-price-in {
+  .mk-presets button {
+    min-height: 56px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+  }
+  .mk-presets button[aria-pressed='true'] {
+    border: 2px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  }
+  .mk-presets span {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .mk-presets b {
+    font-size: 0.875rem;
+  }
+  .mk-slider {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.8125rem;
+  }
+  .mk-slider-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .mk-slider-top b {
+    font-family: var(--display);
+    font-size: 1.375rem;
+  }
+  .mk-slider input {
+    width: 100%;
+    height: 28px;
+    margin: 0;
+    accent-color: var(--accent);
+  }
+  .mk-slider-ends {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6875rem;
+    color: var(--muted);
+  }
+  .mk-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    font-size: 0.875rem;
+  }
+  .mk-lines div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .mk-lines dt {
+    color: var(--muted);
+  }
+  .mk-lines dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .mk-lines .strong {
     font-weight: 700;
   }
-  .mk-price-in input {
-    font-size: 1.25rem;
+  .mk-lines .strong dt {
+    color: var(--ink);
   }
-  .mk-err {
+  .mk-lines .big dd {
+    font-family: var(--display);
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .mk-lines .rule {
+    height: 1px;
+    background: var(--line);
+  }
+  .mk-price-box .mk-lines {
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* 방출 */
+  .mk-rel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 64px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    cursor: pointer;
+  }
+  .mk-rel.on {
+    border-color: color-mix(in srgb, var(--bad) 35%, var(--line));
+    background: color-mix(in srgb, var(--bad) 7%, var(--surface));
+  }
+  .mk-rel.locked {
+    cursor: default;
+  }
+  .mk-rel input {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    accent-color: var(--bad);
+  }
+  .mk-rel .mk-mini {
+    width: 40px;
+    height: 46px;
+  }
+  .mk-rel .mk-mini b {
+    font-size: 1.125rem;
+  }
+  .mk-lock {
+    color: var(--bad) !important;
+  }
+  .mk-rel-value {
+    flex: none;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+  .mk-dock {
+    position: sticky;
+    bottom: calc(var(--tabbar-h) + var(--safe-b) + 8px);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .mk-dock-sum {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 0.875rem;
+  }
+  .mk-dock-sum b {
+    font-family: var(--display);
+    font-size: 1.75rem;
+    color: var(--accent-text);
+  }
+  .mk-warn {
+    margin: 0;
+    font-size: 0.75rem;
     color: var(--bad);
-    font-weight: 600;
   }
-  .tm-scrim {
+  .mk-danger {
+    border: 0;
+    background: var(--bad);
+    color: #fff;
+  }
+
+  /* 내 거래 */
+  .mk-row-static .icon-btn {
+    flex: none;
+  }
+  .mk-log {
+    gap: 0;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+  .mk-log li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .mk-log li:last-child {
+    border-bottom: 0;
+  }
+  .mk-log b {
+    flex: none;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+  .mk-plus {
+    color: var(--good);
+  }
+  .mk-badge {
+    flex: none;
+    min-width: 36px;
+    padding: 3px 6px;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+  .mk-badge-bought {
+    background: color-mix(in srgb, #1f4f8f 14%, var(--surface));
+    color: color-mix(in srgb, #1f4f8f 80%, var(--ink));
+  }
+  .mk-badge-sold {
+    background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+    color: var(--accent-text);
+  }
+  .mk-badge-released {
+    background: color-mix(in srgb, var(--bad) 12%, var(--surface));
+    color: var(--bad);
+  }
+
+  /* 시트 — 영입(카드 상세 + 확인) · 방출 확인 */
+  .mk-scrim {
     position: fixed;
     inset: 0;
     z-index: 60;
     border: 0;
     padding: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgb(0 0 0 / 0.45);
   }
-  .tm-sheet {
+  .mk-sheet {
     position: fixed;
     z-index: 61;
     left: 50%;
     bottom: 0;
     transform: translateX(-50%);
     width: min(100%, 560px);
-    max-height: 78vh;
+    max-height: 92vh;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 16px 16px calc(12px + var(--safe-b));
-    border-radius: 18px 18px 0 0;
+    border-radius: 22px 22px 0 0;
     background: var(--surface);
     color: var(--ink);
     box-shadow: var(--shadow);
   }
-  .tm-sheet-head {
+  .mk-detail {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
     gap: 12px;
+    padding: 20px 16px 16px;
+    background: var(--pitch);
+    color: var(--on-pitch);
   }
-  .tm-sheet-head h2 {
+  .mk-detail-card {
+    width: 188px;
+  }
+  .mk-detail-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    text-align: center;
+  }
+  .mk-detail-stats div {
+    padding: 8px 4px;
+    border-radius: 12px;
+    background: rgb(255 255 255 / 0.08);
+  }
+  .mk-detail-stats dt {
+    font-size: 0.6875rem;
+    opacity: 0.8;
+  }
+  .mk-detail-stats dd {
+    margin: 2px 0 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  .mk-confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 20px calc(16px + var(--safe-b));
+  }
+  .mk-confirm h2 {
+    margin: 0;
+    font-size: 1.0625rem;
+  }
+  .mk-confirm p {
     margin: 0;
   }
-  .tm-sheet p {
-    margin: 0;
+  .mk-note {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+  .mk-actions {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 8px;
+  }
+  .mk-actions .btn {
+    min-height: 50px;
+  }
+  .mk-err {
+    color: var(--bad);
+    font-weight: 600;
   }
 </style>

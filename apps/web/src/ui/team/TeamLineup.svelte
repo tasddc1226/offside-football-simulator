@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, presetLayout, positionRole, slotRating, slotFit, type FormationId, type TeamPosition } from '@offside/contracts/owner-team';
-  import { POS_LABEL, type PosGroup } from '@offside/contracts/positions';
+  import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
   import { attrLine } from '@offside/app-core/teamOwner';
   import TeamLines from './TeamLines.svelte';
@@ -199,7 +199,7 @@
           {@const country = NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)}
           <article class="locker-player" class:chosen={selectedPlayer === p.careerId} data-locker-player={p.careerId}>
             <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label="{nameOf(p)}{country ? ` · ${country.ko}` : ''} · {POS_LABEL[p.pos]} · 최고 OVR {p.peak} · {attrLine(p) ?? '능력치 기록 없음'} 선택" onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
-              <PlayerCard player={p} name={nameOf(p)} rating={p.peak} role={p.dpos ?? (p.pos === 'FW' ? 'ST' : p.pos === 'MF' ? 'CM' : p.pos === 'DF' ? 'CB' : 'GK')} />
+              <PlayerCard player={p} name={nameOf(p)} rating={p.peak} role={detailPosOf(p)} />
             </button>
             <span class="roster-state" class:starting={at >= 0}>{at >= 0 ? `선발 · ${positions[at]!.slot}` : '대기'}</span>
             <button class="drag-handle" aria-label="{nameOf(p)} 끌어 배치" onpointerdown={(e) => start(e, p.careerId, null)} onclick={() => pickPlayer(p.careerId)}><svg viewBox="0 0 18 12" aria-hidden="true"><path d="M3 2h2M3 6h2M3 10h2M8 2h2M8 6h2M8 10h2M13 2h2M13 6h2M13 10h2" /></svg><span>끌어 배치</span></button>

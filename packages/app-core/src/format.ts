@@ -20,6 +20,11 @@ export { anonName } from '@offside/game/pos-label';
 import { fmtValue } from '@offside/contracts/market-value';
 export { fmtValue };
 
+/** 선수 카드 등급(카드 색): 레전드 점수 1,000 이상 레전드, 최고 OVR 80 이상 골드, 나머지 실버. */
+export type CardTier = 'legend' | 'gold' | 'silver';
+export const cardTier = (legendScore: number | null | undefined, peak: number): CardTier =>
+  (legendScore ?? 0) >= 1000 ? 'legend' : peak >= 80 ? 'gold' : 'silver';
+
 /** 구단주 팀 선수 카드 아랫줄(웹·앱 같이): 능력치 안내가 먼저, 없으면 T-11-080 카드 기준가. 둘 다 없으면 null. */
 export function cardFootNote(p: {
   attrs?: object | null | undefined;

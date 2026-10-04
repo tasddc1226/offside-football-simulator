@@ -27,6 +27,8 @@ const card = {
   cardValue: 100_000,
   transfers: 1,
   season: 0,
+  nation: null,
+  attrs: null,
 };
 const listing = { id: LISTING, price: 120_000, createdAt: '2026-10-04T00:00:00.000Z', card };
 
@@ -117,7 +119,27 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
     (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
     (r) => {
       calls.list++;
-      return r.fulfill(ok({ season: 0, items: bought ? [] : [listing], hasMore: false }));
+      return r.fulfill(
+        ok({
+          season: 0,
+          items: bought ? [] : [listing],
+          hasMore: false,
+          recent: [
+            {
+              id: `${LISTING.slice(0, -1)}9`,
+              price: 70_000,
+              soldAt: new Date().toISOString(),
+              card: { ...card, publicName: '팔린 수비수', pos: 'DF', dpos: 'CB' },
+            },
+            {
+              id: `${LISTING.slice(0, -1)}8`,
+              price: 50_000,
+              soldAt: '2026-10-04T00:00:00.000Z',
+              card,
+            },
+          ],
+        }),
+      );
     },
   );
   await page.route(`${API}/v1/market/listings/${LISTING}/buy`, (r) => {
@@ -134,7 +156,14 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
   await page.locator('[data-act="market"]').click();
   await expect(page.locator('[data-market-funds]')).toContainText('20억');
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toContainText('시장 골잡이');
-  await expect(page.locator(`[data-listing="${LISTING}"]`)).toContainText('기준가 120%');
+  await expect(page.locator(`[data-listing="${LISTING}"]`)).toContainText('기준가 +20%');
+  // 방금 이적 — 최근 거래가 한 줄씩 넘어가고, 누르면 모두 펼친다(서버는 다시 부르지 않는다).
+  await expect(page.locator('[data-market-live]')).toContainText('팔린 수비수 CB 88 · 7억에 이적');
+  await expect(page.locator('[data-market-live]')).toContainText('시장 골잡이 ST 88 · 5억에 이적', {
+    timeout: 6000,
+  });
+  await page.locator('[data-market-live] button').click();
+  await expect(page.locator('.mk-live-list li')).toHaveCount(2);
   await expectNoA11yViolations(page);
 
   // 구단주로 돌아갔다가 다시 와도 자금·목록을 다시 묻지 않는다(메모).
@@ -144,7 +173,7 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
   expect(calls).toEqual({ me: 1, list: 1 });
 
   await page.locator(`[data-listing="${LISTING}"]`).click();
-  await expect(page.getByRole('dialog', { name: '선수 영입' })).toContainText('영입 뒤 자금');
+  await expect(page.getByRole('dialog', { name: '선수 영입' })).toContainText('영입 뒤 남는 자금');
   await page.locator('[data-act="buy"]').click();
   await expect(page.locator('#toast')).toHaveText('선수를 영입했어요.');
   expect(bought).toEqual({ price: 120_000 });
@@ -202,7 +231,9 @@ test('자금이 모자라면 영입 버튼이 잠기고, 이미 팔린 선수는
   await expect.poll(() => listCalls).toBe(2);
 });
 
-test('내 선수 — 이번 시즌 선수를 내놓고, 직접 키운 선수만 골라 방출한다', async ({ page }) => {
+test('팔기 — 이번 시즌 선수를 슬라이더로 값을 정해 내놓고, 자금 만들기에서 직접 키운 선수만 방출한다', async ({
+  page,
+}) => {
   await stub(page);
   let listed: unknown = null;
   let released: unknown = null;
@@ -222,28 +253,28 @@ test('내 선수 — 이번 시즌 선수를 내놓고, 직접 키운 선수만 
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="market"]').click();
-  await page.locator('[data-market-tab="mine"]').click();
+  await page.locator('[data-market-tab="sell"]').click();
 
-  // 영입한 선수는 방출할 수 없다(고르는 칸이 없다).
-  await expect(page.locator(`[data-mine="${BOUGHT}"] input[type="checkbox"]`)).toHaveCount(0);
-  await expect(page.locator(`[data-mine="${BOUGHT}"]`)).toContainText('영입');
-
-  // 내놓기 — 기본값은 기준가, 범위를 벗어나면 막는다.
-  await page.locator(`[data-mine="${RAISED}"] [data-act="sell"]`).click();
-  const sell = page.getByRole('dialog', { name: '선수 내놓기' });
-  await expect(page.locator('[data-sell-price]')).toHaveValue('8');
-  await page.locator('[data-sell-price]').fill('30');
-  await expect(sell).toContainText('24억까지 정할 수 있어요.');
-  await expect(page.locator('[data-act="list"]')).toBeDisabled();
-  await page.locator('[data-sell-price]').fill('10');
-  await expect(sell).toContainText('팔리면 받는 돈');
-  await expect(sell).toContainText('9억 5천만');
+  // 카드를 고르면 기준가 그대로가 기본값, 슬라이더로 기준가의 %를 정한다.
+  await page.locator(`[data-sell-pick="${RAISED}"]`).click();
+  await expect(page.locator('[data-act="list"]')).toHaveText('8억에 내놓기');
+  await page.locator('[data-sell-pct]').fill('125');
+  await expect(page.locator('[data-act="list"]')).toHaveText('10억에 내놓기');
+  await expect(page.locator('.mk-price-box')).toContainText('팔리면 받는 자금');
+  await expect(page.locator('.mk-price-box')).toContainText('9억 5천만');
+  await expectNoA11yViolations(page);
   await page.locator('[data-act="list"]').click();
   await expect(page.locator('#toast')).toHaveText('시장에 내놓았어요.');
   expect(listed).toEqual({ careerId: RAISED, price: 100_000 });
 
-  // 방출 — 받을 자금과 되돌릴 수 없다는 안내를 보이고 확인을 받는다.
+  // 방출 — 영입한 선수는 고를 수 없다. 받을 자금과 되돌릴 수 없다는 안내를 보이고 확인을 받는다.
+  await page.locator('[data-act="open-release"]').click();
+  await expect(page.locator(`[data-mine="${BOUGHT}"] input[type="checkbox"]`)).toBeDisabled();
+  await expect(page.locator(`[data-mine="${BOUGHT}"]`)).toContainText(
+    '영입한 선수는 방출할 수 없어요',
+  );
   await page.locator(`[data-mine="${RAISED}"] input[type="checkbox"]`).check();
+  await expect(page.locator('.mk-dock')).toContainText('+25억');
   await page.locator('[data-act="release"]').click();
   await expect(page.getByRole('dialog', { name: '선수 방출' })).toContainText(
     '다시 데려올 수 없어요',
