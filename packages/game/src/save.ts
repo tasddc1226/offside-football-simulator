@@ -63,7 +63,7 @@ export function migrateSave(G: GameState): { newCid: boolean } {
   ensureTitles(G);
   // 구단 이름이 바뀌어도 기존 저장의 현재 소속은 최신 이름으로
   const gClubId = G.club.id;
-  const c = clubsIn(G.leagueId)
+  const c = clubsIn(G.leagueId, G)
     .concat(clubsIn('hs'))
     .find((x) => x.id === gClubId);
   if (c) G.club.name = c.name;

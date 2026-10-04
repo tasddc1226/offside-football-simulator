@@ -3,7 +3,7 @@
 // 한 묶음이라 카드 테두리 없이 작은 제목을 단다. 칸은 순위·팀·경기·승점만(승·무·패는 리포트·시즌 누적 줄에 있다).
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, View } from 'react-native';
-import { leagueOf, leagueTable } from '@offside/game/engine';
+import { leagueOf, leagueTable, seasonLeagueId } from '@offside/game/engine';
 import type { GameState } from '@offside/game/types';
 import { RANK_SLIDE_MS, rankSlideSpan } from '@offside/app-core/resultTour';
 import { alpha } from '../../theme/colors';
@@ -106,7 +106,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
       <View
         style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}
       >
-        <SubTitle>{`${leagueOf(s.leagueId).name} 순위`}</SubTitle>
+        <SubTitle>{`${leagueOf(seasonLeagueId(s)).name} 순위`}</SubTitle>
         {s.season.played && (folded || full) ? (
           <Btn
             sm

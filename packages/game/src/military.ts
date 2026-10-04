@@ -2,6 +2,7 @@
 import { clamp, ri, chance } from './rng.js';
 import {
   leagueOf,
+  clubLeagueId,
   log,
   salaryFor,
   schedule,
@@ -252,11 +253,12 @@ export function milSeasonEnd(s: GameState): string | null {
     !early || s.mil.sportsService?.monthsLeft == null || s.mil.sportsService.monthsLeft === 0;
   s.mil.left = 0;
   s.club = { ...prev.club };
-  s.leagueId = prev.leagueId;
+  // T-10-110 복무하는 동안 구단이 리그를 옮겼을 수도 있다 — 구단의 지금 리그로 돌아간다.
+  s.leagueId = clubLeagueId(prev.club, s);
   s.trust = 0;
   s.contract = prev.contract
     ? { ...prev.contract, years: prev.contract.years + 1 }
-    : { years: 0, salary: salaryFor(prev.leagueId, ovrCalc(s)) };
+    : { years: 0, salary: salaryFor(s.leagueId, ovrCalc(s)) };
   const how = early ? '상무 복무를 마치고 체육요원으로 전환' : '김천 상무에서 만기 전역';
   log(
     s,

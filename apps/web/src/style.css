@@ -3584,6 +3584,14 @@ th.n {
     transform: scale(0.4);
   }
 }
+/* T-10-110 K리그2 우승 승격 카드(.story-end 강조 카드 + 팝) */
+.promo-card b {
+  color: var(--accent-text);
+}
+.promo-card.pop {
+  animation: pop-in 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation-delay: var(--d, 0ms);
+}
 .fan-line.in {
   animation: slide-in 0.32s ease-out both;
   animation-delay: var(--d, 0ms);
@@ -3604,6 +3612,7 @@ th.n {
 }
 @media (prefers-reduced-motion: reduce) {
   .badge-ch.pop,
+  .promo-card.pop,
   .fan-line.in,
   .mile-row .legend-bar i {
     animation: none;

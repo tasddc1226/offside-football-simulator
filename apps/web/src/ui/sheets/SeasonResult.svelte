@@ -24,6 +24,14 @@
 {:else}
   <p class="muted">이번 시즌 수상은 없었어요.</p>
 {/if}
+{#if v.promo}
+  <div class="story-end promo-card pop" style="--d:160ms" data-promo>
+    <div class="eyebrow">Promotion</div>
+    <b>K리그1 승격 확정</b>
+    <p class="muted fs-sm">이번 시즌 1위로 {v.promo.club}의 승격이 확정됐어요. 다음 시즌에는 K리그1에서 새로운 도전을 시작해요.</p>
+    <p class="muted fs-xs">자리를 내준 {v.promo.down} · K리그2 강등</p>
+  </div>
+{/if}
 {#if v.comps.length}
   <div>
     <div class="eyebrow" style="margin-bottom:6px">대회별 성적</div>
