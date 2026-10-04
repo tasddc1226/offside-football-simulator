@@ -13,7 +13,7 @@ import {
 } from './engine.js';
 import { ovr as ovrCalc } from './attributes.js';
 import { BAL } from './balance.js';
-import type { EventDef, GameState, MarketResult, MilOption } from './types.js';
+import type { EventDef, GameState, MarketOption, MarketResult, MilOption } from './types.js';
 import { isKorean } from './nation.js';
 
 export const SANGMU = { id: 'sangmu', name: '김천 상무 (국군체육부대)', leagueId: 'k1', str: 63 };
@@ -22,9 +22,13 @@ const SANGMU_MIN_AGE = 22;
 const SPORTS_MONTHS = 34;
 
 export const SPORTS_SERVICE_NOTICE =
-  '대한민국 선수는 대회 명단에 들어 아시안게임 금메달이나 올림픽 금·은·동메달을 받으면 체육요원으로 편입돼요. 출전 경기 수는 조건이 아니고, 아시안컵·월드컵 우승은 대상이 아니에요. 완전 면제가 아니라 34개월 동안 선수 활동을 이어 가며 군사교육과 544시간 공익복무를 이행해요. 게임에서는 시즌 단위로 복무 기간이 지나고 교육·공익복무는 자동 이행돼요. 상무에서 전환하면 남은 복무 비율에 따라 기간과 공익복무가 줄고, 이미 마친 군사교육은 반복하지 않아요.';
+  '대한민국 선수는 대회 명단에 들어 아시안게임 금메달이나 올림픽 금·은·동메달을 받으면 병역 특례를 받아요. 상무나 현역 입대 없이 선수 생활을 이어 가요. 출전 경기 수는 조건이 아니고, 아시안컵·월드컵 우승은 대상이 아니에요. 법적으로는 체육요원 편입이라 기초군사훈련과 544시간 봉사활동을 하고, 34개월 동안 선수로 뛰면 복무를 마쳐요. 게임에서는 시즌이 지나면 자동으로 채워져요. 상무에서 전환하면 남은 복무 비율만큼 기간과 봉사 시간이 줄고, 이미 마친 군사교육은 다시 받지 않아요.';
 export const SPORTS_SERVICE_LEGACY_NOTICE =
   '기존 특례 기록에는 복무 기간이 없어 남은 기간을 표시하지 않아요. 특례와 선수 활동은 그대로 유지돼요.';
+
+const MIL_KINDS: ReadonlySet<string> = new Set<MilOption['kind']>(['sangmu', 'army', 'serve']);
+/** 이적 시장 선택지 중 병역 선택지(acceptMilitary가 처리한다). */
+export const isMilOption = (o: MarketOption): o is MilOption => MIL_KINDS.has(o.kind);
 
 /** 상무·현역 입대가 더 필요 없는지. 체육요원 편입은 복무 완료와 다르다. */
 export function milDone(s: GameState): boolean {
@@ -59,7 +63,7 @@ export function grantSportsService(
   m.armyNext = false;
   log(
     s,
-    `체육요원 편입 대상입니다. ${medal}을 받았습니다. 선수 활동을 이어 가며 체육요원으로 복무합니다.${m.serving ? ' 이번 시즌 상무 복무를 마친 뒤 전환하며, 남은 복무 비율에 따라 기간과 공익복무가 줄어듭니다. 이미 마친 군사교육은 반복하지 않습니다.' : ' 의무복무 기간은 34개월이며 군사교육과 544시간 공익복무를 이행합니다.'}`,
+    `병역 특례 대상입니다. ${medal}을 받아 상무나 현역 입대 없이 선수 생활을 이어 갑니다.${m.serving ? ' 이번 시즌 상무 복무를 마친 뒤 체육요원으로 전환합니다. 남은 복무 비율만큼 기간과 봉사 시간이 줄고, 이미 마친 군사교육은 다시 받지 않습니다.' : ' 법적으로는 체육요원 편입이라 기초군사훈련과 544시간 봉사활동을 하고, 34개월 동안 선수로 뛰면 복무를 마칩니다.'}`,
     'big',
   );
   return true;
@@ -80,7 +84,7 @@ function sportsSeasonEnd(s: GameState): string | null {
   service.lastYear = s.year;
   if (service.monthsLeft > 0) return null;
   s.mil.served = true;
-  log(s, '체육요원 의무복무를 마쳤습니다. 군사교육과 공익복무도 이행했습니다.', 'big');
+  log(s, '체육요원 복무 기간을 마쳤습니다. 기초군사훈련과 봉사활동도 모두 마쳤습니다.', 'big');
   return '체육요원 복무 완료';
 }
 export function milAbroad(s: GameState): boolean {
@@ -119,8 +123,8 @@ export function milStatusText(s: GameState): string {
     return left == null
       ? `체육요원 특례 · 기존 기록 (${m.exempt})`
       : left > 0
-        ? `체육요원 복무 중 · 약 ${Math.ceil(left / 12)}시즌 남음 (${m.exempt})`
-        : `체육요원 복무 완료 (${m.exempt})`;
+        ? `병역 특례 · 체육요원 복무 중 · 약 ${Math.ceil(left / 12)}시즌 남음 (${m.exempt})`
+        : `병역 특례 · 체육요원 복무 완료 (${m.exempt})`;
   }
   if (m.serving) return `상무 복무 중 · 전역까지 ${m.left}시즌`;
   if (m.served) return m.type === 'army' ? '현역 만기 전역' : '상무 만기 전역';
@@ -271,6 +275,9 @@ export function milSeasonEnd(s: GameState): string | null {
 }
 
 export function milEnlistMarket(s: GameState): MarketResult | null {
+  // T-11-077 복무 기간에 특례 대회가 열리면 알린다. 실제로도 상무 소속으로 대표팀에 뽑혀 메달을 따면 조기 전역한다
+  // (2023 항저우 조영욱). 현역은 복무 중 대회에 나갈 수 없다.
+  const clash = milServiceClash(s);
   if (s.mil.armyNext) {
     s.mil.armyNext = false;
     if (!milDone(s))
@@ -299,10 +306,12 @@ export function milEnlistMarket(s: GameState): MarketResult | null {
         kind: 'serve',
         first: true,
         name: '김천 상무 입대',
-        desc: `복무 2시즌 · K리그1 출전${abroad ? ` · ${from} 계약 해지` : ` · 전역 후 ${from} 복귀`}`,
+        desc: `복무 2시즌 · K리그1 출전${abroad ? ` · ${from} 계약 해지` : ` · 전역 후 ${from} 복귀`}${clash.length ? ' · 복무 중에도 대표팀에 뽑힐 수 있고, 메달을 따면 체육요원으로 전환' : ''}`,
       },
     ],
-    note: '국군체육부대 최종 합격자 명단에 이름이 올랐습니다.',
+    note: clash.length
+      ? `국군체육부대 최종 합격자 명단에 이름이 올랐습니다. 복무 기간에 ${clash.join(' · ')}이 열립니다. 상무 소속으로도 대표팀에 뽑힐 수 있습니다.`
+      : '국군체육부대 최종 합격자 명단에 이름이 올랐습니다.',
     canRetire: false,
   };
 }
@@ -357,9 +366,10 @@ export function acceptMilitary(
 }
 
 // ───────── 시즌 중 상무 모집 공고 ─────────
-function milExemptHope(s: GameState): string[] {
+/** 앞으로 span년 안에 U-23 나이로 나갈 수 있는 특례 대회(아시안게임·올림픽). */
+function milExemptHope(s: GameState, span = 2): string[] {
   const out: string[] = [];
-  for (let y = s.year; y <= s.year + 2; y++) {
+  for (let y = s.year; y <= s.year + span; y++) {
     const age = s.age + (y - s.year);
     if (age > 23) break;
     if (y % 4 === 2) out.push(`${y} 아시안게임`);
@@ -367,6 +377,8 @@ function milExemptHope(s: GameState): string[] {
   }
   return out;
 }
+/** 지금 입대하면 복무 기간(상무·현역 모두 이번·다음 시즌)에 열리는 특례 대회. */
+const milServiceClash = (s: GameState): string[] => milExemptHope(s, 1);
 const MIL_LOW = 0.35;
 const milNoticeText = (s: GameState): string => {
   const left = MIL_AGE - s.age,
@@ -385,9 +397,12 @@ const MIL_APPLY = {
   label: (s: GameState) => `지원서를 낸다 (예상 합격률 ${Math.round(sangmuChance(s) * 100)}%)`,
   ok: {
     text: (s: GameState) =>
-      milAbroad(s)
+      (milAbroad(s)
         ? '지원서를 제출했습니다. 구단은 떠날 준비를 하는 당신을 서운해합니다. 결과는 시즌이 끝난 뒤 발표됩니다.'
-        : '지원서를 제출했습니다. 결과는 시즌이 끝난 뒤 발표됩니다. 마음이 한결 가벼워졌습니다.',
+        : '지원서를 제출했습니다. 결과는 시즌이 끝난 뒤 발표됩니다. 마음이 한결 가벼워졌습니다.') +
+      (milExemptHope(s).length
+        ? ' 상무에서도 대표팀에 뽑힐 수 있고, 메달을 따면 체육요원으로 전환돼 조기 전역합니다.'
+        : ''),
     fx: (s: GameState) => {
       s.mil.applied = true;
       if (milAbroad(s)) addStat(s, 'trust', -2);
@@ -409,10 +424,17 @@ const MIL_DEFER = {
     },
   },
 };
+/** 시즌 끝에 현역으로 입대하면 복무(다음 두 시즌) 중에 열려 못 나가는 특례 대회. */
+const armyMissed = (s: GameState): string[] =>
+  milExemptHope(s).filter((h) => !h.startsWith(`${s.year} `));
 const MIL_ARMY = {
   label: '시즌이 끝나면 현역으로 먼저 다녀온다',
   ok: {
-    text: '젊을 때 빨리 해결하기로 했습니다. 시즌이 끝나면 입대합니다. 18개월의 공백은 각오해야 합니다.',
+    text: (s: GameState) =>
+      '젊을 때 빨리 해결하기로 했습니다. 시즌이 끝나면 입대합니다. 18개월의 공백은 각오해야 합니다.' +
+      (armyMissed(s).length
+        ? ` 복무하는 동안 열리는 ${armyMissed(s).join(' · ')}에는 나갈 수 없습니다.`
+        : ''),
     fx: (s: GameState) => {
       s.mil.armyNext = true;
       addStat(s, 'morale', 2);

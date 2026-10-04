@@ -168,10 +168,13 @@ export function Grid2({
 export function Stats({
   items,
   small,
+  accent,
   first = 1,
 }: {
   items: [string, string][];
   small?: boolean;
+  /** 한 칸을 크게·강조색으로(구단주 요약의 구단 가치). */
+  accent?: boolean;
   first?: number;
 }) {
   const c = useColors();
@@ -198,8 +201,9 @@ export function Stats({
           <Txt
             style={{
               fontFamily: DISPLAY[700],
-              fontSize: rem(small ? 1.0625 : 1.25),
+              fontSize: rem(accent ? 1.75 : small ? 1.0625 : 1.25),
               fontVariant: ['tabular-nums'],
+              ...(accent ? { color: c.accentText } : null),
             }}
           >
             {v}

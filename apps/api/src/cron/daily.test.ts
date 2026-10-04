@@ -5,7 +5,7 @@ import { createTestD1, type TestD1 } from '../test/d1.js';
 import type { Bindings } from '../env.js';
 import { backupKey, backupToR2 } from './backup.js';
 import { cleanupExpired } from './cleanup.js';
-import { runDaily } from './daily.js';
+import { DAILY_META_KEY, runDaily } from './daily.js';
 
 const NOW = Date.parse('2026-09-28T19:00:00.000Z');
 const ago = (ms: number) => new Date(NOW - ms).toISOString();
@@ -169,5 +169,28 @@ describe('T-10-070 D1 → R2 백업', () => {
     expect(r.backup).toBe('skipped');
     expect(r.cleanup).not.toHaveProperty('error');
     expect(r.anomalies).not.toHaveProperty('error');
+  });
+
+  it('T-11-082 마지막 결과를 app_meta에 남긴다', async () => {
+    await runDaily(ctx.env, NOW);
+    const row = await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key = ?1')
+      .bind(DAILY_META_KEY)
+      .first<{ value: string }>();
+    expect(JSON.parse(row!.value)).toMatchObject({
+      job: 'daily',
+      level: 'info',
+      backup: { key: backupKey(ctx.env.ENVIRONMENT, NOW) },
+    });
+  });
+
+  it('T-11-082 단계가 실패하면 결과를 남긴 뒤 실행을 실패로 끝낸다', async () => {
+    const broken = {
+      createMultipartUpload: () => Promise.reject(new Error('r2 down')),
+    } as unknown as R2Bucket;
+    await expect(runDaily({ ...ctx.env, BACKUP: broken }, NOW)).rejects.toThrow('daily job failed');
+    const row = await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key = ?1')
+      .bind(DAILY_META_KEY)
+      .first<{ value: string }>();
+    expect(JSON.parse(row!.value)).toMatchObject({ level: 'error', backup: { error: 'r2 down' } });
   });
 });

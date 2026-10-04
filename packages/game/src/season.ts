@@ -31,7 +31,14 @@ import {
 import { legendBand } from './legend-bands.js';
 import { checkTitles, mainTitle, titleView, type TitleView } from './titles.js';
 import { natInit, natSeasonEnd, NATIONAL_TROPHIES, type NatTourResult } from './national.js';
-import { milSeasonEnd, milDue, milOptions, milEnlistMarket, acceptMilitary } from './military.js';
+import {
+  milSeasonEnd,
+  milDue,
+  milOptions,
+  milEnlistMarket,
+  acceptMilitary,
+  isMilOption,
+} from './military.js';
 import { nationOf } from './nation.js';
 import { detectCareerHighs } from './records.js';
 import { noteMarket } from './playStyle.js';
@@ -162,8 +169,11 @@ export function endSeason(s: GameState): SeasonEndResult {
     notes.push(`FIFA 클럽 월드컵 ${cwc}`);
     if (cwc === '우승') trophies.push('FIFA 클럽 월드컵 우승');
   }
+  const exemptBefore = s.mil.exempt;
   const nat = natSeasonEnd(s);
   trophies.push(...nat.trophies);
+  // T-11-077 이번 대회로 병역 특례(체육요원 편입)를 받았으면 결산에도 알린다(로그에만 있으면 놓치기 쉽다).
+  if (s.mil.exempt && !exemptBefore) notes.push(`병역 특례(입대 면제) · ${s.mil.exempt}`);
   const tours = nat.tours;
 
   const { awards, gala } = seasonAwards(s, { rank, avg, trophies, tours });
@@ -545,9 +555,7 @@ export function acceptOption(
 ): { text: string; ok?: boolean; reopen?: boolean } | null {
   if (opt.kind === 'renew' && !canAcceptRenewal(s, opt)) return null;
   noteMarket(s, opt, options);
-  if (opt.kind === 'sangmu' || opt.kind === 'army' || opt.kind === 'serve') {
-    return acceptMilitary(s, opt);
-  }
+  if (isMilOption(opt)) return acceptMilitary(s, opt);
   if (opt.kind === 'uni') {
     const c = pick(clubsIn('uni'));
     // T-10-034: 마친 학년 수. endSeason이 시즌마다 1씩 올린다 — 1로 시작하면 3시즌 만에 4학년 졸업이 됐다.
