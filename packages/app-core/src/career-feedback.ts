@@ -82,6 +82,13 @@ export function offerFeedback(s: GameState, o: MarketOption): string | undefined
   return `현재 OVR ${ovr(s)} · 팀 전력 ${o.str}. 제시된 출전 조건은 ${o.role || '별도 안내 없음'}이에요. 실제 출전은 컨디션·부상·감독 신뢰 등에 따라 달라져요.`;
 }
 
+/**
+ * T-11-078 진행 중인 커리어에서도 영구결번이 있다는 걸 알린다. 심사 기준(시즌 수·점수)은 서버만 알고
+ * 수치 힌트도 주지 않는다 — 조건을 말로만 짧게.
+ */
+export const retiredNumberHint = (s: GameState): string =>
+  `한 구단에서 오래 활약하고 은퇴하면 그 구단의 ${s.number}번이 영구결번될 수 있어요.`;
+
 /** 기존 목표 전부 + 현재 구단의 출전 기록. 보상·칭호·저장 필드는 추가하지 않는다. */
 export function careerGoals(s: GameState): NextMilestone[] {
   if (s.retired) return [];
