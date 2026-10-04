@@ -29,6 +29,10 @@ export function migrateSave(G: GameState): { newCid: boolean } {
     G.rng = { seed };
   }
   natInit(G);
+  // T-11-062: 기간이 없던 기존 특례는 복무 일수/편입일을 추정하거나 의무를 다시 부과하지 않는다.
+  // 군필·진행 중 상무·메달·입대 취소 등 기존 상태를 그대로 보존한다.
+  if (G.mil.exempt && !G.mil.sportsService)
+    G.mil.sportsService = { monthsLeft: null, lastYear: G.year };
   // 세부 능력치 도입 이전 저장 데이터: 카드 능력치와 기존 OVR 을 기준으로 세부 능력치를 만듭니다
   // (활성 RNG를 쓰므로 RNG 복원 뒤에 한다).
   if (!G.sub) {

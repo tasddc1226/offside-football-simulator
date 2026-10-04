@@ -116,3 +116,34 @@ describe('migrateSave (T-10-046)', () => {
     expect(G.club.name).toBe(name);
   });
 });
+
+describe('T-11-062 체육요원 저장 호환성', () => {
+  it.each(['미필', '군필', '상무복무', '전환대기', '기존특례', '기존특례군필', '외국국적'])(
+    '%s 옛 저장의 병역·국적·예약·계약·RNG를 보존하고 반복 이관은 동일하다',
+    (kind) => {
+      const G = current();
+      if (kind === '군필' || kind === '기존특례군필') G.mil.served = true;
+      if (kind === '상무복무' || kind === '전환대기') {
+        G.mil.serving = true;
+        G.mil.type = 'sangmu';
+        G.mil.left = 2;
+        G.mil.prevClub = {
+          club: { ...G.club },
+          leagueId: G.leagueId,
+          contract: { ...G.contract! },
+          abroad: false,
+        };
+      }
+      if (['전환대기', '기존특례', '기존특례군필'].includes(kind))
+        G.mil.exempt = '아시안게임 금메달';
+      if (kind === '외국국적') G.nation = 'JP';
+      Object.assign(G.mil, { applied: false, accepted: false, armyNext: false });
+      const before = structuredClone(G);
+      const loaded = loadSave(JSON.parse(JSON.stringify(G)))!.G;
+      const expected = structuredClone(before);
+      if (expected.mil.exempt) expected.mil.sportsService = { monthsLeft: null, lastYear: G.year };
+      expect(loaded).toEqual(expected);
+      expect(loadSave(JSON.parse(JSON.stringify(loaded)))!.G).toEqual(loaded);
+    },
+  );
+});
