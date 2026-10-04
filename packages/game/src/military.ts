@@ -26,12 +26,7 @@ export const SPORTS_SERVICE_NOTICE =
 export const SPORTS_SERVICE_LEGACY_NOTICE =
   '기존 특례 기록에는 복무 기간이 없어 남은 기간을 표시하지 않아요. 특례와 선수 활동은 그대로 유지돼요.';
 
-const MIL_KINDS: ReadonlySet<string> = new Set<MilOption['kind']>([
-  'sangmu',
-  'army',
-  'serve',
-  'defer',
-]);
+const MIL_KINDS: ReadonlySet<string> = new Set<MilOption['kind']>(['sangmu', 'army', 'serve']);
 /** 이적 시장 선택지 중 병역 선택지(acceptMilitary가 처리한다). */
 export const isMilOption = (o: MarketOption): o is MilOption => MIL_KINDS.has(o.kind);
 
@@ -280,18 +275,9 @@ export function milSeasonEnd(s: GameState): string | null {
 }
 
 export function milEnlistMarket(s: GameState): MarketResult | null {
-  // T-11-077 입대하면 복무와 겹치는 특례 대회가 있으면 입대를 미룰 수 있게 한다.
+  // T-11-077 복무 기간에 특례 대회가 열리면 알린다. 실제로도 상무 소속으로 대표팀에 뽑혀 메달을 따면 조기 전역한다
+  // (2023 항저우 조영욱). 현역은 복무 중 대회에 나갈 수 없다.
   const clash = milServiceClash(s);
-  const defer = (what: string): MilOption[] =>
-    clash.length
-      ? [
-          {
-            kind: 'defer',
-            name: `입대를 미루고 ${clash[0]}에 도전`,
-            desc: `${what} · 소속팀에 남아 대표팀 발탁을 노립니다 · 입영 기한(만 ${MIL_AGE}세)은 그대로입니다`,
-          },
-        ]
-      : [];
   if (s.mil.armyNext) {
     s.mil.armyNext = false;
     if (!milDone(s))
@@ -302,11 +288,8 @@ export function milEnlistMarket(s: GameState): MarketResult | null {
             name: '현역 입대',
             desc: `18개월 복무 · 2시즌 동안 공식 경기 출전 불가${milAbroad(s) ? ' · 해외 구단과의 계약 해지' : ''}, 전역 후 원소속팀 복귀 협상`,
           },
-          ...defer('입영을 연기합니다'),
         ],
-        note: clash.length
-          ? `입영 통지서가 도착했습니다. 입대하면 ${clash.join(' · ')}에 나갈 수 없습니다.`
-          : '입영 통지서가 도착했습니다. 약속대로 현역으로 입대합니다.',
+        note: '입영 통지서가 도착했습니다. 약속대로 현역으로 입대합니다.',
         canRetire: false,
       };
   }
@@ -314,21 +297,20 @@ export function milEnlistMarket(s: GameState): MarketResult | null {
     s.mil.accepted = false;
     return null;
   }
-  // 입대는 '김천 상무 입대'를 고를 때 한다(acceptMilitary). 합격을 포기할 수도 있어서다.
   const from = s.club.name,
     abroad = milAbroad(s);
+  enlistSangmu(s);
   return {
     options: [
       {
         kind: 'serve',
         first: true,
         name: '김천 상무 입대',
-        desc: `복무 2시즌 · K리그1 출전${abroad ? ` · ${from} 계약 해지` : ` · 전역 후 ${from} 복귀`}${clash.length ? ' · 복무 중 메달을 따면 체육요원으로 전환' : ''}`,
+        desc: `복무 2시즌 · K리그1 출전${abroad ? ` · ${from} 계약 해지` : ` · 전역 후 ${from} 복귀`}${clash.length ? ' · 복무 중에도 대표팀에 뽑힐 수 있고, 메달을 따면 체육요원으로 전환' : ''}`,
       },
-      ...defer('상무 합격을 포기합니다'),
     ],
     note: clash.length
-      ? `국군체육부대 최종 합격자 명단에 이름이 올랐습니다. 복무 기간에 ${clash.join(' · ')}이 열립니다.`
+      ? `국군체육부대 최종 합격자 명단에 이름이 올랐습니다. 복무 기간에 ${clash.join(' · ')}이 열립니다. 상무 소속으로도 대표팀에 뽑힐 수 있습니다.`
       : '국군체육부대 최종 합격자 명단에 이름이 올랐습니다.',
     canRetire: false,
   };
@@ -339,8 +321,6 @@ export function acceptMilitary(
   opt: MilOption,
 ): { text: string; ok?: boolean; reopen?: boolean } | null {
   if (opt.kind === 'serve') {
-    // 옛 저장은 시장을 열 때 이미 입대해 accepted가 꺼져 있다.
-    if (opt.first && s.mil.accepted) enlistSangmu(s);
     s.season = newSeason(s);
     s.phase = 0;
     return {
@@ -382,23 +362,6 @@ export function acceptMilitary(
     serveArmy(s);
     return { text: '현역으로 입대했습니다. 18개월 뒤 전역해 복귀를 준비합니다.', reopen: true };
   }
-  if (opt.kind === 'defer') {
-    const hope = milServiceClash(s).join(' · ');
-    // 현역 입영 예약(armyNext)은 milEnlistMarket이 시장을 열 때 이미 껐다.
-    const sangmu = s.mil.accepted;
-    s.mil.accepted = false;
-    log(
-      s,
-      sangmu
-        ? `국군체육부대 합격을 포기하고 입대를 미뤘습니다. ${hope} 메달을 노립니다.`
-        : `현역 입대를 미뤘습니다. ${hope} 메달을 노립니다.`,
-      'big',
-    );
-    return {
-      text: `입대를 미뤘습니다. ${hope} 대표팀 명단에 들어 메달을 노립니다. 메달을 놓치면 입영 기한에 쫓기게 됩니다.`,
-      reopen: true,
-    };
-  }
   return null;
 }
 
@@ -438,7 +401,7 @@ const MIL_APPLY = {
         ? '지원서를 제출했습니다. 구단은 떠날 준비를 하는 당신을 서운해합니다. 결과는 시즌이 끝난 뒤 발표됩니다.'
         : '지원서를 제출했습니다. 결과는 시즌이 끝난 뒤 발표됩니다. 마음이 한결 가벼워졌습니다.') +
       (milExemptHope(s).length
-        ? ' 합격해도 복무 기간에 특례 대회가 열리면 입대를 미룰지 고를 수 있습니다.'
+        ? ' 상무에서도 대표팀에 뽑힐 수 있고, 메달을 따면 체육요원으로 전환돼 조기 전역합니다.'
         : ''),
     fx: (s: GameState) => {
       s.mil.applied = true;
@@ -461,10 +424,17 @@ const MIL_DEFER = {
     },
   },
 };
+/** 시즌 끝에 현역으로 입대하면 복무(다음 두 시즌) 중에 열려 못 나가는 특례 대회. */
+const armyMissed = (s: GameState): string[] =>
+  milExemptHope(s).filter((h) => !h.startsWith(`${s.year} `));
 const MIL_ARMY = {
   label: '시즌이 끝나면 현역으로 먼저 다녀온다',
   ok: {
-    text: '젊을 때 빨리 해결하기로 했습니다. 시즌이 끝나면 입대합니다. 18개월의 공백은 각오해야 합니다.',
+    text: (s: GameState) =>
+      '젊을 때 빨리 해결하기로 했습니다. 시즌이 끝나면 입대합니다. 18개월의 공백은 각오해야 합니다.' +
+      (armyMissed(s).length
+        ? ` 복무하는 동안 열리는 ${armyMissed(s).join(' · ')}에는 나갈 수 없습니다.`
+        : ''),
     fx: (s: GameState) => {
       s.mil.armyNext = true;
       addStat(s, 'morale', 2);

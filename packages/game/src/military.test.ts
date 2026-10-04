@@ -186,48 +186,35 @@ describe('T-11-062 체육요원 특례', () => {
     expect(s.mil.sportsService).toBeUndefined();
   });
 
-  it('T-11-077 복무와 특례 대회가 겹치면 상무 합격·현역 입영을 미루고 소속팀에 남을 수 있다', () => {
-    // 2030 아시안게임 시즌을 앞둔 23세 상무 합격자
+  it('T-11-077 상무 합격자는 특례 대회를 앞둬도 입대하고, 상무 소속으로 메달을 따면 체육요원으로 전환된다', () => {
+    // 2030 아시안게임 시즌을 앞둔 23세 상무 합격자(실제 사례: 2023 항저우 조영욱)
     const s = player(1, 2030, 70, 23);
     const club = { ...s.club };
     s.mil.accepted = true;
     const m = market(s);
-    expect(m.options.map((o) => o.kind)).toEqual(['serve', 'defer']);
-    expect(m.note).toContain('2030 아시안게임');
-    expect(s.mil).toMatchObject({ accepted: true, serving: false }); // 고르기 전엔 입대하지 않는다
-    const r = acceptOption(s, m.options[1]!, m.options);
-    expect(r).toMatchObject({ reopen: true });
-    expect(s.mil).toMatchObject({ accepted: false, serving: false });
+    expect(m.options.map((o) => o.kind)).toEqual(['serve']);
+    expect(m.note).toContain('복무 기간에 2030 아시안게임이 열립니다');
+    expect(m.note).toContain('상무 소속으로도 대표팀에 뽑힐 수 있습니다');
+    expect(m.options[0]).toMatchObject({
+      desc: expect.stringContaining('메달을 따면 체육요원으로 전환'),
+    });
+    expect(s.mil).toMatchObject({ serving: true, type: 'sangmu' });
+    acceptOption(s, m.options[0]!, m.options);
+    expect(grantSportsService(s, 'ag', '우승', true)).toBe(true);
+    expect(milSeasonEnd(s)).toContain('체육요원 전환');
     expect(s.club).toEqual(club);
-    expect(market(s).options.map((o) => o.kind)).not.toContain('serve');
 
-    // 현역 입영 예약도 같다
+    // 겹치는 대회가 없으면 안내도 없다(2032 올림픽 땐 24세)
+    const n = player(1, 2031, 70, 23);
+    n.mil.accepted = true;
+    const nm = market(n);
+    expect(nm.note).toBe('국군체육부대 최종 합격자 명단에 이름이 올랐습니다.');
+    expect(nm.options[0]).not.toMatchObject({ desc: expect.stringContaining('체육요원') });
+
+    // 현역 입영 예약은 그대로 입대한다
     const a = player(1, 2030, 70, 23);
     a.mil.armyNext = true;
-    const am = market(a);
-    expect(am.options.map((o) => o.kind)).toEqual(['army', 'defer']);
-    acceptOption(a, am.options[1]!, am.options);
-    expect(a.mil).toMatchObject({ armyNext: false, served: false });
-    expect(a.career.some((r) => r.mil)).toBe(false);
-  });
-
-  it('T-11-077 겹치는 특례 대회가 없으면 합격자는 상무 입대만 고르고, 고를 때 입대한다', () => {
-    const s = player(1, 2031, 70, 23); // 2032 올림픽 땐 24세라 U-23 대상이 아니다
-    s.mil.accepted = true;
-    const m = market(s);
-    expect(m.options.map((o) => o.kind)).toEqual(['serve']);
-    expect(s.mil.serving).toBe(false);
-    acceptOption(s, m.options[0]!, m.options);
-    expect(s.mil).toMatchObject({ serving: true, accepted: false, left: 2, type: 'sangmu' });
-    expect(s.club.id).toBe('sangmu');
-
-    // 옛 저장: 시장을 열 때 이미 입대한 상태라면 다시 입대시키지 않는다
-    const old = player(1, 2031, 70, 23);
-    enlistSangmu(old);
-    const prev = structuredClone(old.mil.prevClub);
-    acceptOption(old, { kind: 'serve', first: true, name: '김천 상무 입대' }, []);
-    expect(old.mil.prevClub).toEqual(prev);
-    expect(old.mil.left).toBe(2);
+    expect(market(a).options.map((o) => o.kind)).toEqual(['army']);
   });
 
   it('T-11-077 시즌 정산에서 금메달로 편입되면 결산 노트에 알리고, 이후 상무 모집·병역 선택지가 없다', () => {

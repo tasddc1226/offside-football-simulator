@@ -53,7 +53,7 @@ test('외국 선수의 선수 탭에는 병역 특례 안내를 표시하지 않
   await expect(page.locator('[data-military-guide]')).toHaveCount(0);
 });
 
-test('T-11-077 아시안게임 시즌을 앞둔 상무 합격자는 입대를 미루고 이적 시장으로 돌아갈 수 있다', async ({
+test('T-11-077 아시안게임 시즌을 앞둔 상무 합격자에게 상무 소속으로도 대표팀에 뽑힐 수 있다고 알린다', async ({
   page,
 }) => {
   await resumeWithSave(page, {
@@ -74,15 +74,7 @@ test('T-11-077 아시안게임 시즌을 앞둔 상무 합격자는 입대를 �
   });
   const sheet = page.locator('#sheet');
   await expect(sheet).toContainText('복무 기간에 2030 아시안게임이 열립니다');
-  await expect(sheet.locator('[data-opt="0"]')).toContainText('김천 상무 입대');
-  await sheet
-    .locator('[data-opt="1"]')
-    .filter({ hasText: '입대를 미루고 2030 아시안게임에 도전' })
-    .click();
-  await expect(sheet).toContainText('입대를 미뤘습니다');
-  await sheet.getByRole('button', { name: '이적 시장으로 →' }).click();
-  await expect(sheet).toContainText('다음 시즌, 어디서 뛸까요?');
-  await expect(sheet).not.toContainText('김천 상무 입대');
-  const mil = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).mil);
-  expect(mil).toMatchObject({ accepted: false, serving: false });
+  await expect(sheet).toContainText('상무 소속으로도 대표팀에 뽑힐 수 있습니다');
+  await expect(sheet.locator('[data-opt="0"]')).toContainText('메달을 따면 체육요원으로 전환');
+  await expect(sheet.locator('[data-opt]')).toHaveCount(1);
 });
