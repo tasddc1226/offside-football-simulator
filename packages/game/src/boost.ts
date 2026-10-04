@@ -1,0 +1,96 @@
+// ───────── T-11-083 잠재력 강화 ─────────
+// 커리어 중 쌓인 자금으로 잠재력 보너스(flags.potBonus)를 한 단계씩 올린다. 시즌마다 한 번, 첫 시즌을 마친 뒤부터
+// 29세까지. 비용은 연봉 비례(최소 금액이 있다)라 자금이 많은 선수와 적은 선수의 부담이 같고, 확률은 단계마다 낮아진다.
+// 실패하면 비용만 잃고 같은 단계의 다음 시도 확률이 오른다. 밸런스 근거: docs/tracking/potential-boost-plan.md.
+// 판정은 게임 RNG(세이브에 저장된다)를 한 번 쓴다 — 다시 불러와도 같은 결과다. 시도하지 않은 커리어는 RNG를 쓰지 않는다.
+import { rnd } from './rng.js';
+import { fmtMoney } from './player.js';
+import { log, potScouted } from './stats.js';
+import type { BoostState, GameState } from './types.js';
+
+export const BOOST = {
+  /** 단계(0부터)별 기본 성공 확률. 길이가 최대 단계(+4). */
+  p: [0.5, 0.35, 0.25, 0.15],
+  /** 단계별 비용 = max(min, 연봉 × rate)(만 원). */
+  min: [2000, 4000, 8000, 15000],
+  rate: [0.7, 1.2, 1.8, 2.5],
+  /** 같은 단계에서 실패할 때마다 다음 확률에 더한다. 성공하면 처음으로 돌아간다. */
+  pity: 0.05,
+  maxAge: 29,
+} as const;
+export const BOOST_MAX = BOOST.p.length;
+
+export const boostState = (s: GameState): BoostState => s.boost ?? { lv: 0, fails: 0, log: [] };
+
+/** 다음 단계 비용(만 원, 10 단위). 최대 단계면 0. */
+export function boostCost(s: GameState): number {
+  const L = boostState(s).lv;
+  if (L >= BOOST_MAX) return 0;
+  const salary = s.contract?.salary ?? 0;
+  return Math.round(Math.max(BOOST.min[L]!, salary * BOOST.rate[L]!) / 10) * 10;
+}
+
+/** 다음 시도 성공 확률(%, 정수). 화면에 그대로 보여 준다. */
+export function boostChance(s: GameState): number {
+  const b = boostState(s);
+  if (b.lv >= BOOST_MAX) return 0;
+  return Math.round(Math.min(1, BOOST.p[b.lv]! + BOOST.pity * b.fails) * 100);
+}
+
+export type BoostStatus =
+  /** 첫 시즌 전 — 스카우트 평가가 없다. */
+  | 'locked'
+  /** 나이 제한(29세)을 넘었다. */
+  | 'aged'
+  | 'max'
+  /** 이번 시즌에 이미 시도했다. */
+  | 'done'
+  /** 자금이 모자라다. */
+  | 'short'
+  | 'ready';
+
+export function boostStatus(s: GameState): BoostStatus {
+  const b = boostState(s);
+  if (!potScouted(s)) return 'locked';
+  if (b.lv >= BOOST_MAX) return 'max';
+  if (s.age > BOOST.maxAge) return 'aged';
+  if (b.year === s.year) return 'done';
+  if (s.money < boostCost(s)) return 'short';
+  return 'ready';
+}
+
+export interface BoostResult {
+  ok: boolean;
+  /** 시도 뒤 단계. */
+  lv: number;
+  cost: number;
+  /** 시도한 확률(%). */
+  chance: number;
+}
+
+/** 강화를 시도한다. 시도할 수 없으면 null(상태를 바꾸지 않는다). */
+export function tryBoost(s: GameState): BoostResult | null {
+  if (boostStatus(s) !== 'ready') return null;
+  const b = boostState(s);
+  const cost = boostCost(s);
+  const chance = boostChance(s);
+  const ok = rnd() * 100 < chance;
+  s.money -= cost;
+  const next: BoostState = {
+    lv: ok ? b.lv + 1 : b.lv,
+    fails: ok ? 0 : b.fails + 1,
+    year: s.year,
+    log: [...b.log, { y: s.year, age: s.age, lv: b.lv, p: chance, c: cost, ok }],
+  };
+  s.boost = next;
+  if (ok) s.flags.potBonus = (s.flags.potBonus ?? 0) + 1;
+  // 잠재력 등급은 은퇴 때 공개한다 — 소식에도 단계만 남긴다.
+  log(
+    s,
+    ok
+      ? `잠재력 강화 성공. ${next.lv}단계가 되었습니다(${fmtMoney(cost)}원).`
+      : `잠재력 강화 실패(${fmtMoney(cost)}원). 다음 시도 확률이 오릅니다.`,
+    ok ? 'good' : 'bad',
+  );
+  return { ok, lv: next.lv, cost, chance };
+}

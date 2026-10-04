@@ -1,7 +1,8 @@
 // 선수 탭(웹 tabs/PlayerTab.svelte): 능력치 카드 · 선수 정보 · 국가대표 · 은퇴 선언(32세부터).
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { POTENTIAL_NOTICE } from '@offside/app-core/potential-view';
+import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
 import { TRAITS } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
 import { leagueOf, fmtMoney } from '@offside/game/engine';
@@ -17,7 +18,9 @@ import { flagOf, isKorean, nationOf } from '@offside/game/nation';
 import { BODY_DEFAULT } from '@offside/contracts/body';
 import { NATION_EN } from '@offside/contracts/nations-en';
 import { fmtValue } from '@offside/app-core/format';
-import { retireAsk } from '../../game/host';
+import { retireAsk, save } from '../../game/host';
+import { BoostFx } from '../../components/BoostFx';
+import { appState } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn } from '../../ui/Btn';
@@ -56,6 +59,92 @@ function Kv({
         </View>
       ))}
     </View>
+  );
+}
+
+/** T-11-083 잠재력 강화(웹 PlayerTab.svelte data-boost). 자금을 쓰는 시도라 버튼을 한 번 더 눌러야 한다. */
+function BoostCard({ s }: { s: GameState }) {
+  const c = useColors();
+  const [arming, setArming] = useState(false);
+  const [fx, setFx] = useState<BoostOutcome | null>(null);
+  const v = boostView(s);
+  const onBoost = () => {
+    if (!arming) return setArming(true);
+    setArming(false);
+    // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다.
+    const out = doBoost(appState.G!);
+    if (!out) return;
+    // 결과를 먼저 저장하고 연출을 연다 — 연출 중에 앱을 꺼도 결과는 그대로다.
+    save();
+    setFx(out);
+  };
+  return (
+    <Card gap={0} testID="boost">
+      {fx ? <BoostFx out={fx} onDone={() => setFx(null)} /> : null}
+      <Txt v="eyebrow">Potential</Txt>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 6,
+        }}
+      >
+        <Txt v="h2" accessibilityRole="header">
+          잠재력 강화
+        </Txt>
+        <View
+          accessible
+          accessibilityLabel={`${v.max}단계 중 ${v.lv}단계`}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+        >
+          {Array.from({ length: v.max }, (_, i) => (
+            <View
+              key={i}
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 5,
+                borderWidth: 1.5,
+                borderColor: i < v.lv ? c.accent : c.line,
+                backgroundColor: i < v.lv ? c.accent : 'transparent',
+              }}
+            />
+          ))}
+          <Txt style={{ marginLeft: 4, fontWeight: '700' }}>+{v.lv}</Txt>
+        </View>
+      </View>
+      <Txt v="sm" testID="boost-line">
+        {v.line}
+      </Txt>
+      {v.button ? (
+        <View style={{ marginVertical: 8, gap: 8 }}>
+          {arming ? (
+            <Txt v="sm" style={{ color: c.bad }} testID="boost-confirm">
+              {v.confirm}
+            </Txt>
+          ) : null}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Btn kind="primary" style={{ flex: 1 }} testID="boost-btn" onPress={onBoost}>
+              {arming ? '강화하기' : v.button}
+            </Btn>
+            {arming ? (
+              <Btn testID="boost-cancel" onPress={() => setArming(false)}>
+                취소
+              </Btn>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+      <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 4 }}>
+        {v.note}
+      </Txt>
+      {v.history.map((h, i) => (
+        <Txt key={i} tone="muted" style={{ fontSize: rem(0.75), marginTop: 2 }}>
+          {`· ${h}`}
+        </Txt>
+      ))}
+    </Card>
   );
 }
 
@@ -103,6 +192,8 @@ export function PlayerTab({ s }: { s: GameState }) {
         </Txt>
         <Kv rows={info} />
       </Card>
+
+      {boostHidden(s) ? null : <BoostCard s={s} />}
 
       <Card gap={0}>
         {/* 영어 나라 이름은 웹에서 첫 화면 번들 밖에서 불러왔지만 앱은 한 번들이라 바로 쓴다. */}

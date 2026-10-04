@@ -4,6 +4,8 @@
 import type { SeasonGrowth } from '@offside/contracts';
 import { ATTR_KEYS, LAST_PHASE } from '@offside/game/data';
 import { SUB_KEYS, mainRole, ovr, ovrRole } from '@offside/game/attributes';
+import { BOOST, boostCost, boostState } from '@offside/game/boost';
+import { potScouted } from '@offside/game/stats';
 import type { GameState } from '@offside/game/types';
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
@@ -42,5 +44,18 @@ export function takeSeasonGrowth(s: GameState): SeasonGrowth | undefined {
       bl: s.bloom ?? 0,
       r: s.flags.rescout ?? 0,
     },
+    // T-11-083 강화를 했거나 할 수 있는 나이(첫 시즌 뒤 ~ 29세)면 싣는다 — 시도하지 않은 시즌의 자금·비용도 남긴다.
+    ...(s.boost || (potScouted(s) && s.age <= BOOST.maxAge) ? { bst: boostLog(s) } : {}),
+  };
+}
+
+function boostLog(s: GameState): NonNullable<SeasonGrowth['bst']> {
+  const b = boostState(s);
+  return {
+    l: b.lv,
+    f: b.fails,
+    m: Math.round(s.money),
+    c: boostCost(s),
+    t: b.log.filter((x) => x.y === s.year).map(({ lv, p, c, ok }) => ({ lv, p, c, ok })),
   };
 }
