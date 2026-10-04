@@ -541,3 +541,112 @@ test('홈 ↔ 전체 보기 ↔ 상세를 오가도 같은 목록을 다시 요�
   expect(count('/v1/boards/notice/posts')).toBe(1);
   expect(count('/v1/boards/release/posts')).toBe(1);
 });
+
+test('내 선수 국적: 계정 응답으로 옛 로컬 기록을 보완하고 다른 기기 국적·한국·미기록을 구분한다', async ({
+  page,
+}) => {
+  const ids = [
+    ID,
+    '00000000-0000-4000-8000-000000000021',
+    '00000000-0000-4000-8000-000000000022',
+    '00000000-0000-4000-8000-000000000023',
+  ];
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [] })));
+  await page.route(`${API}/v1/careers/mine`, (r) =>
+    r.fulfill(
+      ok({
+        linked: true,
+        entries: ids.map((id, i) => ({
+          ...entry,
+          id,
+          name: ['브라질', '잉글랜드', '한국', '옛 기록'][i],
+          nation: ['BR', 'GB-ENG', 'KR', null][i],
+          legendScore: 400 - i,
+        })),
+      }),
+    ),
+  );
+  await page.addInitScript(
+    (id) =>
+      localStorage.setItem(
+        'ft_hof',
+        JSON.stringify([
+          {
+            id,
+            name: '로컬 브라질',
+            pos: 'FW',
+            number: 7,
+            age: 35,
+            peak: 91,
+            score: 400,
+            apps: 540,
+            goals: 301,
+            assists: 120,
+            trophies: 9,
+            awards: 5,
+            caps: 88,
+            ballon: 1,
+            lastClub: '테스트 FC',
+            date: '2026-09-24',
+          },
+        ]),
+      ),
+    ID,
+  );
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="my-players-all"]').click();
+  const rows = page.locator('[data-my-player]');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(0)).toContainText('로컬 브라질');
+  for (const [i, nation] of ['BR', 'GB-ENG', 'KR'].entries()) {
+    await expect(rows.nth(i).locator('[data-hof-nation]')).toHaveAttribute(
+      'data-hof-nation',
+      nation,
+    );
+  }
+  await expect(rows.nth(3).locator('[data-hof-nation]')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('이 기기 내 선수: 새 로컬 국적을 전달하고 국적 없는 옛 저장은 국기 없이 계속 연다', async ({
+  page,
+}) => {
+  await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [] })));
+  await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
+  await page.addInitScript(() => {
+    const base = {
+      pos: 'FW',
+      number: 7,
+      age: 35,
+      peak: 80,
+      apps: 540,
+      goals: 301,
+      assists: 120,
+      trophies: 9,
+      awards: 5,
+      caps: 88,
+      ballon: 1,
+      lastClub: '테스트 FC',
+      date: '2026-09-24',
+    };
+    localStorage.setItem(
+      'ft_hof',
+      JSON.stringify([
+        { ...base, name: '새 브라질', nation: 'BR', score: 500 },
+        { ...base, name: '옛 기록', score: 300 },
+      ]),
+    );
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-my-player="0"] [data-hof-nation]')).toHaveAttribute(
+    'data-hof-nation',
+    'BR',
+  );
+  await expect(page.locator('[data-my-player="1"] [data-hof-nation]')).toHaveCount(0);
+  await page.locator('[data-my-player="1"]').click();
+  await expect(page.locator('.film-open h1')).toHaveText('옛 기록');
+  await expect(page.getByText('요약만 보여 줘요')).toBeVisible();
+});

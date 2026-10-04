@@ -8,6 +8,7 @@ import type { PublicHofEntry } from '@offside/contracts';
 import type { DetailPos, POS } from '@offside/game/data';
 import { loadHOF } from '@offside/game/season';
 import type { HofEntry } from '@offside/game/types';
+import { myPlayerNation } from '@offside/app-core/myPlayers';
 import { getMyCareers, getRetiredNumbersIn } from '@offside/app-core/api/client';
 import {
   deviceSeasonOf,
@@ -25,6 +26,7 @@ import { Btn, Card, Press, Txt } from '../../ui';
 import { Seg, TabOpt } from '../board/parts';
 
 type MineRow = {
+  nation?: string | undefined;
   key: string;
   name: string;
   pos: keyof typeof POS;
@@ -42,6 +44,7 @@ type MineRow = {
 const SHOW = 3;
 
 const localRow = (h: HofEntry, i: number, pending: ReadonlySet<string>, now: string): MineRow => ({
+  nation: myPlayerNation(h),
   key: h.id ?? h.name + i,
   name: h.name,
   pos: h.pos,
@@ -56,6 +59,7 @@ const localRow = (h: HofEntry, i: number, pending: ReadonlySet<string>, now: str
   open: () => openLocalLegend(h),
 });
 const serverRow = (e: PublicHofEntry): MineRow => ({
+  nation: myPlayerNation(undefined, e),
   key: e.id,
   name: e.name ?? anonName(e.pos, e.number),
   pos: e.pos,
@@ -113,7 +117,12 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
             const row = byId.get(e.id);
             // 이 기기 기록이 있어도 결번(T-10-076)은 서버 값을 쓴다 — 소급으로 받은 결번은 기기에 없다.
             return row
-              ? { ...row, rn: row.rn ?? e.retiredNumber?.number, season: serverSeasonOf(e) }
+              ? {
+                  ...row,
+                  nation: myPlayerNation(row, e),
+                  rn: row.rn ?? e.retiredNumber?.number,
+                  season: serverSeasonOf(e),
+                }
               : serverRow(e);
           }),
           ...[...byId].filter(([id]) => !onServer.has(id) && pending.has(id)).map(([, row]) => row),
@@ -192,6 +201,8 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
                 onPress={r.open}
               >
                 <HofRow
+                  nation={r.nation}
+                  showNation={r.nation !== undefined}
                   rank={i}
                   name={r.name}
                   pos={r.pos}

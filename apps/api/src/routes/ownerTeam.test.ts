@@ -17,6 +17,7 @@ import {
   matchScore,
   ratingChange,
   presetLayout,
+  FORMATIONS,
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -376,6 +377,66 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     };
     expect((await putTeam(me.cookie, { slots: slots(), logo })).status).toBe(400);
     expect(await ctx.db.select().from(ownerTeams)).toHaveLength(0);
+  });
+
+  it.each([
+    { label: '기본 배치', free: false, cb: 99, dm: 70, youth: false, done: true, fit: 1 },
+    { label: '자유배치 미달성 회귀', free: true, cb: 70, dm: 99, youth: false, done: true, fit: 1 },
+    {
+      label: '자유배치 잘못된 달성 회귀',
+      free: true,
+      cb: 99,
+      dm: 70,
+      youth: false,
+      done: false,
+      fit: 0.71,
+    },
+    {
+      label: '1.00 바로 아래 경계',
+      free: true,
+      cb: 99,
+      dm: 98,
+      youth: false,
+      done: false,
+      fit: 0.99,
+    },
+    { label: '유스 적합도 1 제외', free: true, cb: 70, dm: 99, youth: true, done: false, fit: 1 },
+  ])('$label: 실제 팀 자리와 업적의 적합도 판정을 일치시킨다', async (scenario) => {
+    const me = await issueGoogleCookie(ctx);
+    const group = {
+      GK: 'GK',
+      FB: 'DF',
+      CB: 'DF',
+      DM: 'MF',
+      CM: 'MF',
+      AM: 'MF',
+      W: 'FW',
+      ST: 'FW',
+    } as const;
+    const ids: (string | null)[] = [];
+    for (const [i, role] of FORMATIONS['4-3-3'].entries()) {
+      const roles = { GK: 70, CB: 70, FB: 70, DM: 70, CM: 70, AM: 70, W: 70, ST: 70, [role]: 99 };
+      if (i === 2) Object.assign(roles, { CB: scenario.cb, DM: scenario.dm });
+      ids.push(await addCareer(me.profileId, { pos: group[role], peak: 99, roles }));
+    }
+    if (scenario.youth) ids[10] = null;
+    const layout = presetLayout('4-3-3');
+    layout[2] = { x: 50, y: 60, slot: 'DM' };
+    const res = await putTeam(me.cookie, { slots: ids, ...(scenario.free ? { layout } : {}) });
+    expect(res.status).toBe(200);
+    const saved = PutRes.parse(await res.json()).data.team;
+    expect(saved.slots[2]?.fit).toBe(scenario.fit);
+    const shown = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data.team!;
+    expect(shown.slots.map((s) => s.fit)).toEqual(saved.slots.map((s) => s.fit));
+    const ach = AchRes.parse(
+      await (await call('GET', '/v1/owner-team/achievements', { cookie: me.cookie })).json(),
+    ).data;
+    expect(ach.groups.flatMap((g) => g.items).find((i) => i.id === 'team-fit')?.done).toBe(
+      scenario.done,
+    );
+    expect(shown.slots.every((s) => s.careerId !== null && s.fit >= 1)).toBe(scenario.done);
   });
 
   it('구단 시즌 업적은 그 시즌에 처음 올라온 내 은퇴 선수와 그 시즌 팀으로 판정한다', async () => {
