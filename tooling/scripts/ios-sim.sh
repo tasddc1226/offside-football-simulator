@@ -5,7 +5,8 @@
 # Metro가 내려 준다. 그래서 지문별로 빌드한 app.app을 워크트리 밖 캐시에 두고, 같은 지문이면 빌드 없이 설치만 한다
 # (워크트리를 새로 만들어도 몇 초). 지문이 바뀐 경우(네이티브 패키지·app.json 변경)만 빌드하고, 그때도 DerivedData를
 # 캐시에 계속 두고 ccache(있으면)로 C/C++/ObjC 컴파일을 재사용한다. 생성되는 apps/mobile/ios/는 .gitignore라 지문에
-# 들어가지 않는다.
+# 들어가지 않는다 — 대신 ios/를 만든 지문을 ios/.offside-fingerprint에 적어 두고, 지문이 다르면 prebuild --clean으로 다시
+# 만든다(예전 지문의 ios/를 그대로 쓰면 새 네이티브 모듈이 Podfile.lock에 없어 실행 때 'Cannot find native module'로 죽는다).
 #
 # 사용: tooling/scripts/ios-sim.sh [시뮬레이터 이름|UDID]   (먼저 Metro: pnpm --dir apps/mobile exec expo start --dev-client)
 #   --rebuild  캐시를 무시하고 다시 빌드
@@ -48,7 +49,12 @@ echo "네이티브 지문 $fp · 시뮬레이터 $udid"
 
 if [ "$rebuild" = 1 ] || [ ! -d "$app" ]; then
   start=$SECONDS
-  [ -d "$MOBILE/ios" ] || (cd "$MOBILE" && CI=1 npx expo prebuild --platform ios --no-install)
+  # ios/가 현재 지문으로 만든 게 아니면 새로 만든다(EXPO_NO_GIT_STATUS: 작업 중인 변경이 있어도 --clean이 멈추지 않게).
+  marker="$MOBILE/ios/.offside-fingerprint"
+  if [ "$(cat "$marker" 2>/dev/null)" != "$fp" ]; then
+    (cd "$MOBILE" && CI=1 EXPO_NO_GIT_STATUS=1 npx expo prebuild --platform ios --clean --no-install)
+    printf '%s\n' "$fp" >"$marker"
+  fi
   props="$MOBILE/ios/Podfile.properties.json"
   pods_stale=0
   if command -v ccache >/dev/null && [ "$(jq -r '."apple.ccacheEnabled" // ""' "$props")" != true ]; then
