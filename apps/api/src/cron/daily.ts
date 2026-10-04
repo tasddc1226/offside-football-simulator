@@ -57,8 +57,10 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
   });
   console.log(log);
   // T-11-082 Workers Logs는 하루를 못 넘기고 지워진다 — 마지막 결과를 D1에도 남겨 나중에 조회한다.
-  await setMeta(createDb(env.DB), DAILY_META_KEY, log)
-    .run()
-    .catch(() => {});
+  await setMeta(createDb(env.DB), DAILY_META_KEY, log).catch((e: unknown) =>
+    console.error(JSON.stringify({ level: 'error', job: 'daily', meta: errorOf(e) })),
+  );
+  // 단계마다 오류를 잡아 나머지는 끝까지 돌리지만, 하나라도 실패했으면 실행을 실패로 남긴다(호출 기록에서 보이게).
+  if (failed) throw new Error(`daily job failed: ${log.slice(0, 300)}`);
   return { cleanup, anomalies, backup, achievements };
 }

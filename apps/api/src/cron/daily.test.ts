@@ -182,4 +182,15 @@ describe('T-10-070 D1 → R2 백업', () => {
       backup: { key: backupKey(ctx.env.ENVIRONMENT, NOW) },
     });
   });
+
+  it('T-11-082 단계가 실패하면 결과를 남긴 뒤 실행을 실패로 끝낸다', async () => {
+    const broken = {
+      createMultipartUpload: () => Promise.reject(new Error('r2 down')),
+    } as unknown as R2Bucket;
+    await expect(runDaily({ ...ctx.env, BACKUP: broken }, NOW)).rejects.toThrow('daily job failed');
+    const row = await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key = ?1')
+      .bind(DAILY_META_KEY)
+      .first<{ value: string }>();
+    expect(JSON.parse(row!.value)).toMatchObject({ level: 'error', backup: { error: 'r2 down' } });
+  });
 });
