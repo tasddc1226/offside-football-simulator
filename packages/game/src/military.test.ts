@@ -5,6 +5,7 @@ import { newGame, newSeason } from './engine.js';
 import {
   grantSportsService,
   enlistSangmu,
+  isMilOption,
   milDone,
   milDue,
   milCanApply,
@@ -14,7 +15,7 @@ import {
   milStatusText,
 } from './military.js';
 import { natSeasonEnd } from './national.js';
-import { acceptOption, market } from './season.js';
+import { acceptOption, endSeason, market } from './season.js';
 import { createRng, setActiveRng } from './rng.js';
 import { loadSave } from './save.js';
 import { checkTitles } from './titles.js';
@@ -227,6 +228,19 @@ describe('T-11-062 체육요원 특례', () => {
     acceptOption(old, { kind: 'serve', first: true, name: '김천 상무 입대' }, []);
     expect(old.mil.prevClub).toEqual(prev);
     expect(old.mil.left).toBe(2);
+  });
+
+  it('T-11-077 시즌 정산에서 금메달로 편입되면 결산 노트에 알리고, 이후 상무 모집·병역 선택지가 없다', () => {
+    for (let seed = 1; seed <= 400; seed++) {
+      const s = player(seed, 2030, 90, 22);
+      const r = endSeason(s);
+      if (!s.mil.exempt) continue;
+      expect(r.notes).toContain('체육요원 편입 · 아시안게임 금메달');
+      expect(milCanApply(s)).toBe(false);
+      expect(market(s).options.some(isMilOption)).toBe(false);
+      return;
+    }
+    throw new Error('금메달 표본 없음');
   });
 
   it('실제 대회 정산에서 와일드카드 메달은 나이와 관계없이 특례로 연결한다', () => {

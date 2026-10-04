@@ -3,7 +3,7 @@
 exports[`게임 특성화 (T-11-044) > endSeason — 시즌 정산(seasonAwards·natSeasonEnd·milSeasonEnd 포함) 1`] = `
 {
   "대표팀": {
-    "hash": "4e02df04da6ce472",
+    "hash": "d0a604759b2a5374",
     "n": 176,
   },
   "병역": {
