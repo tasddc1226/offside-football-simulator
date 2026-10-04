@@ -10,6 +10,7 @@
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
+  import { fmtValue } from '@offside/app-core/format';
   import { appState, type TeamView } from './state.svelte.js';
   import { accountCache } from './account-state.svelte.js';
   import { isMember } from '@offside/app-core/account';
@@ -84,6 +85,7 @@
         <p class="muted fs-sm owner-empty">첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.</p>
       {:else}
       <dl class="owner-stats">
+        <div class="owner-value" data-owner-value><dt>구단 가치</dt><dd>{summary ? fmtValue(summary.value) : '–'}</dd></div>
         <div><dt>은퇴 선수</dt><dd>{summary ? `${num(summary.players)}명` : '–'}</dd></div>
         <div><dt>레전드 점수</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
         <div><dt>영구결번</dt><dd>{summary ? `${summary.retired}개` : '–'}</dd></div>
@@ -219,6 +221,13 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
+  }
+  .owner-value {
+    grid-column: 1 / -1;
+  }
+  .owner-stats .owner-value dd {
+    font-size: 1.75rem;
+    color: var(--accent-text);
   }
   .owner-empty {
     margin: 0;

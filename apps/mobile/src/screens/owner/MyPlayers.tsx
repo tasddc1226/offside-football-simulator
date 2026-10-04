@@ -8,7 +8,7 @@ import type { PublicHofEntry } from '@offside/contracts';
 import type { DetailPos, POS } from '@offside/game/data';
 import { loadHOF } from '@offside/game/season';
 import type { HofEntry } from '@offside/game/types';
-import { myPlayerNation } from '@offside/app-core/myPlayers';
+import { localPlayerValue, myPlayerNation } from '@offside/app-core/myPlayers';
 import { getMyCareers, getRetiredNumbersIn } from '@offside/app-core/api/client';
 import {
   deviceSeasonOf,
@@ -38,6 +38,7 @@ type MineRow = {
   stats: RowStats;
   title: string | null;
   season: number;
+  value: number;
   open: () => void;
 };
 /** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다(T-11-026 구단주 화면 위쪽을 내 팀에 내주려 상위 3명만). */
@@ -56,6 +57,7 @@ const localRow = (h: HofEntry, i: number, pending: ReadonlySet<string>, now: str
   stats: h,
   title: h.title ?? null,
   season: deviceSeasonOf(h, pending, now),
+  value: localPlayerValue(h),
   open: () => openLocalLegend(h),
 });
 const serverRow = (e: PublicHofEntry): MineRow => ({
@@ -71,6 +73,7 @@ const serverRow = (e: PublicHofEntry): MineRow => ({
   stats: { ...e, score: e.legendScore },
   title: e.title ?? null,
   season: serverSeasonOf(e),
+  value: e.value ?? 0,
   open: () => void openPublicLegend(e),
 });
 
@@ -122,6 +125,7 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
                   nation: myPlayerNation(row, e),
                   rn: row.rn ?? e.retiredNumber?.number,
                   season: serverSeasonOf(e),
+                  value: e.value ?? row.value,
                 }
               : serverRow(e);
           }),
