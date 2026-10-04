@@ -8,7 +8,7 @@ import { RN_SHIRT, RN_TRIM } from '@offside/app-core/rnStyle';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
-import { fmtValue } from '@offside/app-core/format';
+import { cardFootNote } from '@offside/app-core/format';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({
@@ -190,14 +190,7 @@ const CARD_STATS = {
 function CardAttributes({ cell, color }: { cell: PlayerCardData; color: string }) {
   const order = CARD_STATS[cell.pos === 'GK' ? 'GK' : 'field'];
   const labels = cell.pos === 'GK' ? GK_ABBR : FACE_ABBR;
-  // 능력치 안내가 먼저, 없으면 T-11-080 카드 기준가.
-  const foot = cell.attrsEstimated
-    ? '추정 능력치'
-    : !cell.attrs
-      ? '능력치 기록 없음'
-      : cell.cardValue
-        ? `기준가 ${fmtValue(cell.cardValue)}`
-        : null;
+  const foot = cardFootNote(cell);
   return (
     <View style={{ width: '100%', marginTop: 8 }}>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 4 }}>

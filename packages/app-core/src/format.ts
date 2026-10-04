@@ -17,7 +17,19 @@ import {
 import type { CareerRecord, GameState } from '@offside/game/types';
 
 export { anonName } from '@offside/game/pos-label';
-export { fmtValue } from '@offside/contracts/market-value';
+import { fmtValue } from '@offside/contracts/market-value';
+export { fmtValue };
+
+/** 구단주 팀 선수 카드 아랫줄(웹·앱 같이): 능력치 안내가 먼저, 없으면 T-11-080 카드 기준가. 둘 다 없으면 null. */
+export function cardFootNote(p: {
+  attrs?: object | null | undefined;
+  attrsEstimated?: boolean | undefined;
+  cardValue?: number | null | undefined;
+}): string | null {
+  if (!p.attrs) return '능력치 기록 없음';
+  if (p.attrsEstimated) return '추정 능력치';
+  return p.cardValue ? `기준가 ${fmtValue(p.cardValue)}` : null;
+}
 
 export function seasonLabelOf(r: CareerRecord): string {
   const L = LEAGUES.find((l) => l.name === r.league);

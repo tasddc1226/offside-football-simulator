@@ -636,9 +636,9 @@ describe('공개 명예의 전당 /v1/hof', () => {
     await putJson(ctx, cookie, `/v1/careers/${rows[0]!.id}/retirement`, { ...summary });
     expect(await cardRows()).toHaveLength(3);
 
-    // 마이그레이션이 만든 기존 카드: 기준가 null·은퇴 가치 0. 스냅샷 없는 카드를 커서로 건너뛰며 한 장씩 채운다.
+    // 마이그레이션이 만든 기존 카드: 기준가 null·은퇴 가치 0. 스냅샷 있는 카드만 한 장씩 채운다(없는 카드는 null로 남는다).
     await ctx.db.update(cards).set({ cardValue: null, retireValue: 0 });
-    for (let i = 0; i < 3; i++) expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(true);
+    for (let i = 0; i < 2; i++) expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(true);
     expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(true); // 빈 조각 → 끝 표시
     expect(await ensureCardValuesBackfilled(ctx.db, 1)).toBe(false);
     expect(await cardRows()).toEqual(want);
