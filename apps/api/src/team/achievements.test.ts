@@ -185,7 +185,13 @@ describe('구단 시즌 업적', () => {
   it('팀 적합도 업적은 정확히 11명, 유스 없이 모두 1.00일 때만 달성한다', () => {
     const done = (slots: AchievementTeamSlot[]) =>
       item(
-        clubAchievements({ careers: [], team: teamOf(slots), owner: OWNER, detail: true }),
+        clubAchievements({
+          careers: [],
+          team: teamOf(slots),
+          owner: OWNER,
+          detail: true,
+          retireAt: 41,
+        }),
         'team-fit',
       )?.done;
     for (const count of [0, 1, 10, 12])
