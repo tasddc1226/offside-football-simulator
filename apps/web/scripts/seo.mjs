@@ -1,13 +1,11 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { APP_SHELL_MARK } from './app-shell.mjs';
 
-const BRAND_SOURCE = fileURLToPath(
-  new URL('../brand/offside-app-icon-fulltime-v6.svg', import.meta.url),
-);
-export const BRAND_VERSION = 'v6';
+// T-11-073 아이콘 도형은 brand/build-icons.mjs 한 곳에 있다(라이트·다크 두 벌).
+import { BRAND_VERSION, brandSvg as iconSvg } from '../brand/build-icons.mjs';
+export { BRAND_VERSION };
 // T-10-031 공유 링크(/career/<id>) 미리보기 카드 — 레전드 등급(src/game/legend-bands.ts LEGEND_BANDS)마다 한 장.
 // CI에 한글 폰트가 없을 수 있어 이미지 글자는 영어로 두고, 선수 이름·기록은 워커가 og:title/description에 넣는다.
 export const CAREER_OG_BANDS = [
@@ -99,7 +97,7 @@ export function createStructuredData(origin, path) {
         name: '오프사이드',
         description: PUBLIC_PAGES['/'].description,
         url,
-        image: `${origin}/og-offside-flag-${BRAND_VERSION}.png`,
+        image: `${origin}/og-offside-${BRAND_VERSION}.png`,
         inLanguage: 'ko',
         genre: ['스포츠', '시뮬레이션'],
         gamePlatform: 'Web browser',
@@ -146,7 +144,7 @@ export function createHeadMarkup(config, path = '/', forceNoIndex = false) {
       ? 'index, follow'
       : 'noindex, nofollow';
   const canonical = forceNoIndex ? undefined : absoluteUrl(config.origin, path);
-  const imagePath = `/og-offside-flag-${BRAND_VERSION}.png`;
+  const imagePath = `/og-offside-${BRAND_VERSION}.png`;
   const image = config.origin ? `${config.origin}${imagePath}` : imagePath;
   return `<!-- offside-seo:start --><script>document.documentElement.dataset.publicRobots=${JSON.stringify(robots)}</script><meta name="description" content="${escapeHtml(page.description)}" />
     <meta name="robots" content="${robots}" />
@@ -155,8 +153,9 @@ export function createHeadMarkup(config, path = '/', forceNoIndex = false) {
     <meta property="og:image" content="${escapeHtml(image)}" /><meta property="og:image:width" content="1200" /><meta property="og:image:height" content="630" />
     ${canonical ? `<meta property="og:url" content="${escapeHtml(canonical)}" /><link rel="canonical" href="${escapeHtml(canonical)}" />` : ''}
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="icon" href="/brand/offside-flag-${BRAND_VERSION}-64.png" type="image/png" sizes="64x64" />
-    <link rel="apple-touch-icon" href="/brand/offside-flag-${BRAND_VERSION}-180.png" sizes="180x180" />
+    <link rel="icon" href="/brand/offside-icon-${BRAND_VERSION}-64.png" type="image/png" sizes="64x64" />
+    <link rel="icon" href="/brand/offside-icon-${BRAND_VERSION}-dark-64.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: dark)" />
+    <link rel="apple-touch-icon" href="/brand/offside-icon-${BRAND_VERSION}-180.png" sizes="180x180" />
     <link rel="manifest" href="/site.webmanifest" />${canonical && path in PUBLIC_PAGES ? jsonLd(config.origin, path) : ''}<!-- offside-seo:end -->`;
 }
 export function createRobotsTxt({ origin, indexingEnabled }) {
@@ -253,36 +252,26 @@ export function pageHtml(
       `<div id="app"><main id="game-content">${body}</main></div>\n<div id="modal"`,
     );
 }
-// T-10-118 maskable 아이콘: 배경은 모서리 없이 꽉 채우고(OS 가 마스크로 깎는다) 깃발·깃대만 80% 로 줄여 안전 영역 안에 둔다.
-// 원본 SVG 구조(둥근 배경 rect · 깃대 rect 부터가 로고)에 기대므로 바뀌면 조용히 틀어지지 않게 던진다.
-export function maskableSvg(svg) {
-  const text = svg.toString();
-  const BG = ' rx="112"';
-  const LOGO = '<rect x="146" y="96"';
-  if (!text.includes(BG) || !text.includes(LOGO) || !text.includes('</svg>')) {
-    throw new Error('brand SVG 구조가 바뀌어 maskable 아이콘을 만들 수 없습니다.');
-  }
-  return text
-    .replace(BG, '')
-    .replace(LOGO, `<g transform="translate(51.2 51.2) scale(0.8)">${LOGO}`)
-    .replace('</svg>', '</g></svg>');
-}
 async function createBrandAssets(outputDirectory) {
   const sizes = [64, 180, 192, 512];
   const resized = new Map();
-  const brandSvg = await readFile(BRAND_SOURCE);
+  const brandSvg = Buffer.from(iconSvg('light'));
   for (const size of sizes) {
     const buffer = await sharp(brandSvg).resize(size, size).png().toBuffer();
     resized.set(size, buffer);
     await writeFile(
-      join(outputDirectory, 'brand', `offside-flag-${BRAND_VERSION}-${size}.png`),
+      join(outputDirectory, 'brand', `offside-icon-${BRAND_VERSION}-${size}.png`),
       buffer,
     );
   }
-  await sharp(Buffer.from(maskableSvg(brandSvg)))
+  await sharp(Buffer.from(iconSvg('dark')))
+    .resize(64, 64)
+    .png()
+    .toFile(join(outputDirectory, 'brand', `offside-icon-${BRAND_VERSION}-dark-64.png`));
+  await sharp(Buffer.from(iconSvg('light', { rounded: false, artScale: 0.8 })))
     .resize(512, 512)
     .png()
-    .toFile(join(outputDirectory, 'brand', `offside-flag-${BRAND_VERSION}-maskable-512.png`));
+    .toFile(join(outputDirectory, 'brand', `offside-icon-${BRAND_VERSION}-maskable-512.png`));
   await writeFile(join(outputDirectory, 'favicon.svg'), brandSvg);
   await writeFile(join(outputDirectory, 'favicon.png'), resized.get(64));
   // PNG를 그대로 담은 단일 이미지 ICO — /favicon.ico를 직접 요청하는 크롤러·브라우저용.
@@ -297,7 +286,7 @@ async function createBrandAssets(outputDirectory) {
   ico.writeUInt32LE(png.length, 14);
   ico.writeUInt32LE(22, 18);
   await writeFile(join(outputDirectory, 'favicon.ico'), Buffer.concat([ico, png]));
-  const ogPath = join(outputDirectory, `og-offside-flag-${BRAND_VERSION}.png`);
+  const ogPath = join(outputDirectory, `og-offside-${BRAND_VERSION}.png`);
   await sharp({ create: { width: 1200, height: 630, channels: 4, background: BRAND_BG } })
     .composite([
       { input: await sharp(brandSvg).resize(260, 260).png().toBuffer(), left: 84, top: 185 },
@@ -348,17 +337,17 @@ async function createBrandAssets(outputDirectory) {
       theme_color: BRAND_BG,
       icons: [
         {
-          src: `/brand/offside-flag-${BRAND_VERSION}-192.png`,
+          src: `/brand/offside-icon-${BRAND_VERSION}-192.png`,
           sizes: '192x192',
           type: 'image/png',
         },
         {
-          src: `/brand/offside-flag-${BRAND_VERSION}-512.png`,
+          src: `/brand/offside-icon-${BRAND_VERSION}-512.png`,
           sizes: '512x512',
           type: 'image/png',
         },
         {
-          src: `/brand/offside-flag-${BRAND_VERSION}-maskable-512.png`,
+          src: `/brand/offside-icon-${BRAND_VERSION}-maskable-512.png`,
           sizes: '512x512',
           type: 'image/png',
           purpose: 'maskable',

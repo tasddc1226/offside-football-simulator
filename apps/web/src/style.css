@@ -225,6 +225,23 @@ select:focus-visible {
   display: block;
   object-fit: cover;
 }
+.badge.on-dark {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .badge.on-light {
+    display: none;
+  }
+  :root:not([data-theme='light']) .badge.on-dark {
+    display: block;
+  }
+}
+:root[data-theme='dark'] .badge.on-light {
+  display: none;
+}
+:root[data-theme='dark'] .badge.on-dark {
+  display: block;
+}
 .brand small {
   display: block;
   font-size: 0.75rem;

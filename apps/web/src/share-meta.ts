@@ -10,7 +10,7 @@ import { ogCardPath } from './share-path.js';
 import { escXml } from '@offside/game/xml';
 
 /** scripts/seo.mjs BRAND_VERSION과 같다(미리보기 이미지 파일명). */
-export const OG_VERSION = 'v6';
+export const OG_VERSION = 'v7';
 
 /** 선수 카드를 굽지 못했을 때 쓰는 레전드 등급별 정적 카드. */
 export const bandCardPath = (score: number, dpos: string | null | undefined) =>
