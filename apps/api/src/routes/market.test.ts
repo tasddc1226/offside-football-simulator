@@ -7,7 +7,7 @@ import {
 } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cards, careers, marketListings, ownerFunds } from '../db/schema.js';
+import { cards, careers, marketDaily, marketListings, ownerFunds } from '../db/schema.js';
 import { createApp } from '../app.js';
 import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueGoogleCookie } from '../test/http.js';
@@ -212,6 +212,29 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
       body: { careerIds: [card] },
     });
     expect(await reason(rel)).toBe('NOTHING_TO_RELEASE');
+
+    // 시세 집계(T-11-080e): 산 선수를 기준가 90%에 되팔면 같은 날 · 같은 포지션군 · OVR대 묶음에 한 건 더한다.
+    const resale = await list(buyer.cookie, card, 900_000);
+    const resaleId = ((await resale.json()) as { data: { listing: { id: string } } }).data.listing
+      .id;
+    const back = await call('POST', `/v1/market/listings/${resaleId}/buy`, {
+      cookie: seller.cookie,
+      headers: idem(),
+      body: { price: 900_000 },
+    });
+    expect(back.status).toBe(200);
+    const daily = await ctx.db.select().from(marketDaily);
+    expect(daily).toHaveLength(1);
+    expect(daily[0]).toMatchObject({
+      trades: 2,
+      volume: 2_100_000,
+      ratioSum: 1200 + 900,
+      ratioMin: 900,
+      ratioMax: 1200,
+    });
+    // 실패한 영입(이미 팔림)은 집계에 더하지 않는다.
+    expect(await reason(await buy(buyer.cookie, 1_200_000))).toBe('LISTING_GONE');
+    expect((await ctx.db.select().from(marketDaily))[0]!.trades).toBe(2);
   });
 
   it('다른 시즌 카드는 내놓을 수 없고, 내 등록은 내릴 수 있다', async () => {

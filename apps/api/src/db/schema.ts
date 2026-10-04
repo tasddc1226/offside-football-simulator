@@ -417,6 +417,27 @@ export const ownerFunds = sqliteTable(
 );
 
 /**
+ * T-11-080e 이적시장 시세 집계. 같은 시즌 · 포지션군 · OVR대(최고 OVR 5 단위) 선수가 그날(KST) 기준가의 몇 %에
+ * 팔렸는지 모은다. 영입 batch가 한 문장으로 갱신하고, 시세 차트는 이 표만 읽는다(거래 기록을 다시 훑지 않음).
+ * 비율은 기준가 대비 천분율(1000 = 기준가 그대로), 거래 대금은 만 원.
+ */
+export const marketDaily = sqliteTable(
+  'market_daily',
+  {
+    season: integer('season').notNull(),
+    posGroup: text('pos_group', { enum: ['FW', 'MF', 'DF', 'GK'] }).notNull(),
+    ovrBand: integer('ovr_band').notNull(),
+    day: text('day').notNull(),
+    trades: integer('trades').notNull(),
+    volume: integer('volume').notNull(),
+    ratioSum: integer('ratio_sum').notNull(),
+    ratioMin: integer('ratio_min').notNull(),
+    ratioMax: integer('ratio_max').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.season, table.posGroup, table.ovrBand, table.day] })],
+);
+
+/**
  * T-9-009. 시즌 한 줄 요약 + 그 시즌에 버퍼링된 선택 로그(`eventsJson`). D1 free plan은 행 단위로
  * 쓰기를 과금하므로 이벤트별 행을 만들지 않고 시즌당 한 행에 JSON TEXT로 합친다.
  */

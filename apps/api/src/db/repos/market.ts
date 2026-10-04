@@ -346,6 +346,9 @@ export async function cancelListing(db: Db, id: string, sellerId: string, now: s
  * 2~4는 1이 남긴 표식(buyer_id · closed_at)이 있을 때만 바꾼다. 잔액이 모자라면 CHECK 위반으로 batch 전체가 되돌아간다.
  * won = 샀다(아니면 이미 팔렸거나 내렸거나 가격이 바뀌었다). balance = 구매 뒤 내 잔액.
  */
+/** 판매가 ÷ 기준가(천분율). 0059_market_daily.sql의 지난 거래 채우기와 같은 계산. */
+const RATIO = `CAST(round(l.price * 1000.0 / c.card_value) AS INTEGER)`;
+
 export async function buyListing(
   db: Db,
   b: { id: string; buyerId: string; price: number; fee: number; now: string },
@@ -379,9 +382,21 @@ export async function buyListing(
            AND owner_id = (SELECT seller_id FROM market_listings WHERE id = ?) AND ${won}`,
       )
       .bind(b.buyerId, b.now, b.id, b.id, ...mark),
+    // 시세 집계(market_daily): 이 batch가 판 등록일 때만 그날(KST) 묶음에 한 건 더한다.
+    d1
+      .prepare(
+        `INSERT INTO market_daily (season, pos_group, ovr_band, day, trades, volume, ratio_sum, ratio_min, ratio_max)
+         SELECT l.season, c.pos, (c.peak / 5) * 5, date(l.closed_at, '+9 hours'), 1, l.price, ${RATIO}, ${RATIO}, ${RATIO}
+         FROM market_listings l JOIN cards c ON c.career_id = l.career_id
+         WHERE l.id = ? AND l.buyer_id = ? AND l.closed_at = ? AND c.card_value > 0
+         ON CONFLICT (season, pos_group, ovr_band, day) DO UPDATE SET
+           trades = trades + 1, volume = volume + excluded.volume, ratio_sum = ratio_sum + excluded.ratio_sum,
+           ratio_min = min(ratio_min, excluded.ratio_min), ratio_max = max(ratio_max, excluded.ratio_max)`,
+      )
+      .bind(...mark),
     d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(b.buyerId),
   ]);
-  const bal = results[4]!.results[0] as { balance: number } | undefined;
+  const bal = results[5]!.results[0] as { balance: number } | undefined;
   return { won: results[0]!.meta.changes === 1, balance: bal?.balance ?? 0 };
 }
 

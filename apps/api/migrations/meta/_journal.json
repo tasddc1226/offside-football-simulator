@@ -414,6 +414,13 @@
       "when": 1791123404007,
       "tag": "0058_market_sold_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "6",
+      "when": 1791141288944,
+      "tag": "0059_market_daily",
+      "breakpoints": true
     }
   ]
 }
