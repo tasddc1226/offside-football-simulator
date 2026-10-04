@@ -33,6 +33,7 @@ export function promoteClub(s: GameState, rank: number): Promotion | undefined {
   const moves = (s.leagueMoves ??= {});
   setMove(moves, me, 'k1');
   setMove(moves, down, 'k2');
+  s.season.leagueId = s.leagueId;
   s.leagueId = 'k1';
   const k1 = leagueOf('k1').name;
   log(s, `${s.club.name} ${k1} 승격 확정! 다음 시즌은 ${k1}에서 뜁니다 (${down.name} 강등)`, 'big');

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CLUBS } from './data.js';
-import { clubsIn, leagueTable, newGame, newSeason } from './engine.js';
+import { clubsIn, leagueTable, newGame, newSeason, seasonLeagueId } from './engine.js';
 import { createRng, setActiveRng } from './rng.js';
 import { acceptOption, endSeason, market, offerFrom } from './season.js';
 import { seasonSetup } from './comps.js';
@@ -72,6 +72,21 @@ describe('K2 우승 승격', () => {
     expect(k2).toContain(down);
     expect(k2).not.toContain(me);
     expect(s.log.some((l) => l.text.includes('K리그1 승격 확정'))).toBe(true);
+  });
+
+  it('승격 직후 이적 시장이 떠 있는 동안 순위표는 끝난 K2 시즌 그대로, 잔류하면 새 시즌은 K1 표다', () => {
+    const s = k2Player();
+    finishSeason(s, 200);
+    endSeason(s);
+    expect(s.leagueId).toBe('k1');
+    expect(seasonLeagueId(s)).toBe('k2');
+    const rows = leagueTable(s);
+    expect(rows).toHaveLength(clubsIn('k2').length);
+    expect(rows.find((r) => r.me)!.pts).toBe(200);
+    expect(rows.some((r) => r.id === 'k1-10')).toBe(true);
+    stay(s);
+    expect(s.season.leagueId).toBeUndefined();
+    expect(seasonLeagueId(s)).toBe('k1');
   });
 
   it('2위 이하·K1·아마추어 리그는 승격하지 않는다', () => {

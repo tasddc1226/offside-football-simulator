@@ -10,10 +10,13 @@ import { leagueOf, clubsIn } from './player.js';
 // RNG 소비(finalRank의 난수)는 19개 모두에 대해 그대로 일어난다.
 const basePpg = (L: League, str: number) => 1.35 + (str - L.avg) * 0.06;
 
+/** 지금 보이는 시즌 기록이 뛴 리그. 승격 직후 이적 시장이 떠 있는 동안은 s.leagueId(새 리그)와 다르다(T-10-110). */
+export const seasonLeagueId = (s: GameState): string => s.season.leagueId ?? s.leagueId;
+
 /** 순위에 들어가는 상대 인덱스(S.rivals 기준, 강한 순). */
 function rankedRivals(s: GameState): number[] {
   const R = s.season.rivals;
-  const n = Math.max(1, Math.min(R.length, clubsIn(s.leagueId, s).length - 1));
+  const n = Math.max(1, Math.min(R.length, clubsIn(seasonLeagueId(s), s).length - 1));
   return R.map((_, i) => i)
     .sort((a, b) => R[b]! - R[a]!)
     .slice(0, n);
@@ -34,10 +37,10 @@ export interface TableRow {
 /** 현재까지의 리그 순위표. 상대 팀 승점은 전력으로 매긴 기대 승점에 팀별 고정 편차를 더한 값이고(난수 없음), 승점이 같으면
  * 내 팀이 위다. 상대 팀 이름은 리그 클럽을 전력 순으로 짝지어 붙인다. */
 export function leagueTable(s: GameState): TableRow[] {
-  const L = leagueOf(s.leagueId),
+  const L = leagueOf(seasonLeagueId(s)),
     S = s.season,
     P = S.played;
-  const clubs = clubsIn(s.leagueId, s)
+  const clubs = clubsIn(seasonLeagueId(s), s)
     .filter((c) => c.id !== s.club.id)
     .sort((a, b) => b.str - a.str);
   const rows: TableRow[] = rankedRivals(s).map((ri, k) => {

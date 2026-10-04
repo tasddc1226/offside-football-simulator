@@ -51,6 +51,8 @@ export interface Season {
   comps?: SeasonComp[];
   trophiesMid?: string[];
   capsStart?: number;
+  /** T-10-110 승격으로 s.leagueId가 바뀐 뒤에도 이 시즌의 순위표가 뛴 리그로 남도록, 승격한 시즌에만 적는다. */
+  leagueId?: string;
 }
 
 export interface CareerRecord {

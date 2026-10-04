@@ -3,15 +3,15 @@
 exports[`게임 특성화 (T-11-044) > endSeason — 시즌 정산(seasonAwards·natSeasonEnd·milSeasonEnd 포함) 1`] = `
 {
   "대표팀": {
-    "hash": "8ede32f249d931f7",
+    "hash": "b5897eec7dc6901e",
     "n": 176,
   },
   "병역": {
-    "hash": "b43c299a88677da7",
+    "hash": "b963568b0735d6ce",
     "n": 176,
   },
   "원본": {
-    "hash": "e961efd0a55fee62",
+    "hash": "439cfb3afda4c799",
     "n": 176,
   },
 }
@@ -30,31 +30,31 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
   ],
   "대표팀": {
     "accepted": {
-      "hash": "81f1e0f93025c4e2",
+      "hash": "03a54774492cefec",
       "n": 176,
     },
     "options": {
-      "hash": "6064dc1d2279ab2a",
+      "hash": "cf1fd442a1dd6cdc",
       "n": 176,
     },
   },
   "병역": {
     "accepted": {
-      "hash": "76b9f9bfd0446167",
+      "hash": "e99f90be0455d906",
       "n": 176,
     },
     "options": {
-      "hash": "585ba0585c593092",
+      "hash": "d77e0bde72acfbed",
       "n": 176,
     },
   },
   "원본": {
     "accepted": {
-      "hash": "124b06b532793761",
+      "hash": "081451cdf9a76a45",
       "n": 176,
     },
     "options": {
-      "hash": "f2b6e773661863a1",
+      "hash": "05f7627eb5147ecb",
       "n": 176,
     },
   },
