@@ -1,7 +1,9 @@
 // ───────── 커리어 공용 헬퍼 (웹·앱 공용, T-11-002) ─────────
+import { measureOperation } from './measurement.js';
+import { storage } from '@offside/game/storage';
 import { leagueOf } from '@offside/game/engine';
 import { createRng, freshSeed, getActiveRng, setActiveRng } from '@offside/game/rng';
-import { legendSnapshot, loadHOF, loadKey, saveKey } from '@offside/game/season';
+import { legendSnapshot, loadHOF, saveKey } from '@offside/game/season';
 import { loadSave } from '@offside/game/save';
 import { useCareerBalance } from '@offside/game/balance';
 import type { EventLogEntry, GameState, HofEntry } from '@offside/game/types';
@@ -23,7 +25,9 @@ export const seasonLabel = (s: GameState, y = s.year): string =>
 /** 진행 중 세이브(ft_save)를 쓴다. 지금 RNG 상태를 함께 넣어 이어 하기가 같은 흐름을 탄다. null이면 지운다. 실패하면 false. */
 export function saveGame(s: GameState | null): boolean {
   if (s) s.rng = getActiveRng().getState();
-  return saveKey('ft_save', s);
+  const ok = saveKey('ft_save', s);
+  measureOperation('save', ok ? 'success' : 'failed', ok ? 'none' : 'save_risk');
+  return ok;
 }
 
 /**
@@ -34,7 +38,20 @@ export function restoreGame(upload: {
   uploadRetirement(careerId: string, entry: HofEntry): void;
   uploadLegacyRetirement(s: GameState, entry: HofEntry): void;
 }): GameState | null {
-  const loaded = loadSave(loadKey<GameState>('ft_save'));
+  let loaded: ReturnType<typeof loadSave>;
+  try {
+    const raw = storage().getItem('ft_save');
+    loaded = loadSave(raw == null ? null : (JSON.parse(raw) as GameState));
+    measureOperation(
+      'load',
+      loaded ? 'success' : raw == null || raw === 'null' ? 'empty' : 'failed',
+      loaded || raw == null || raw === 'null' ? 'none' : 'restore_unavailable',
+      'startup',
+    );
+  } catch {
+    measureOperation('load', 'failed', 'restore_unavailable', 'startup');
+    loaded = null;
+  }
   const G = loaded?.G ?? null;
   if (loaded) {
     const { G: s, newCid } = loaded;

@@ -48,6 +48,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'platform',
     'app_version',
     'updated_at',
+    'last_test_ticket_id',
+    'last_test_sent_at',
   ],
   profiles: [
     'id',
@@ -290,6 +292,19 @@ describe('migrations', () => {
         .all<{ name: string }>();
       const columns = result.results.map((row) => row.name).sort();
       expect(columns, `table ${table}`).toEqual([...expectedColumns].sort());
+    }
+  });
+
+  it('T-11-064: 내 선수·구단주 팀 조회는 profile_id 인덱스로 시작한다(은퇴 선수 전체를 훑지 않는다)', async () => {
+    const plans = [
+      "select id from careers where profile_id = 'p' and status = 'retired' and peak is not null and hidden = 0 and service_season = 1 order by peak desc limit 5",
+      "select id from careers where profile_id = 'p' and status = 'retired' and legend_score is not null order by legend_score desc, retired_at limit 5",
+    ];
+    for (const sql of plans) {
+      const result = await ctx.db.$client
+        .prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .all<{ detail: string }>();
+      expect(result.results.map((r) => r.detail).join('\n'), sql).toMatch(/\(profile_id=\?/);
     }
   });
 

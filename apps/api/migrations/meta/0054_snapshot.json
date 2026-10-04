@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e9ad90e6-9236-4592-9f68-6cfdccf70ede",
-  "prevId": "5bcc7bfa-27d1-4538-be4a-e879544753fa",
+  "id": "fee58211-d784-4413-8852-e793fc0c7eef",
+  "prevId": "498f3d44-1bf1-4df1-a04b-035025facc58",
   "tables": {
     "app_auth_tickets": {
       "name": "app_auth_tickets",
@@ -1189,6 +1189,25 @@
           "name": "careers_profile_id_idx",
           "columns": [
             "profile_id"
+          ],
+          "isUnique": false
+        },
+        "careers_profile_status_season_idx": {
+          "name": "careers_profile_status_season_idx",
+          "columns": [
+            "profile_id",
+            "status",
+            "service_season",
+            "peak"
+          ],
+          "isUnique": false
+        },
+        "careers_profile_status_legend_idx": {
+          "name": "careers_profile_status_legend_idx",
+          "columns": [
+            "profile_id",
+            "status",
+            "legend_score"
           ],
           "isUnique": false
         },

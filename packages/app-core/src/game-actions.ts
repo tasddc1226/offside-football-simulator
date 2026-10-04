@@ -1,3 +1,5 @@
+import { measureOperation } from './measurement.js';
+import type { Progress } from './player-metrics.js';
 import { marketFeedback, offerFeedback } from './career-feedback.js';
 // ───────── 게임 진행 액션 (웹·앱 공용, T-11-002) ─────────
 // 게임 로직을 호출하고, 그 결과를 시트 뷰 모델(sheets.ts)로 바꿔 시트에 띄운다. 상태·시트·저장·업로드·분석은
@@ -33,6 +35,7 @@ import {
   endSeason,
   market,
   acceptOption,
+  canAcceptRenewal,
   retire,
   loadKey,
   saveKey,
@@ -51,9 +54,11 @@ import type {
   MarketResult,
   MarketOption,
   OfferOption,
+  RenewOption,
 } from '@offside/game/types';
 import { markDexSeen } from './dex.js';
 import { pushEvLog, seasonLabel } from './career.js';
+import { scoutHint } from './potential-view.js';
 import { recordPhaseOvr, takeSeasonGrowth } from './growth.js';
 import { publicNameOf } from './namePublic.js';
 import { fmtValue, seasonLabelOf, waGwa, withRo } from './format.js';
@@ -84,6 +89,7 @@ export interface GameHost {
   uploadSeason(s: GameState, rec: CareerRecord, growth?: SeasonGrowth): void;
   uploadRetirement(careerId: string, entry: HofEntry): void;
   analytics: {
+    complete?(p: Progress): void;
     replace(): void;
     start(s: GameState, previous: GameState | null): void;
     play(s: GameState, firstAction?: boolean): void;
@@ -145,86 +151,108 @@ export function createGameActions(host: GameHost) {
 
   // T-10-024: 구간 진행 시트(T-10-028부터 경기는 중계 시트)를 닫은 뒤, 결과를 시즌 탭 맨 위 리포트 카드로
   // 그린다. 이벤트·시즌 결산은 액션바 버튼으로 이어서 연다(nextPending).
+  let advancing = false;
   async function advance() {
-    if (sheet.state.busy || !appState.G) return;
-    const s = appState.G,
-      ph = s.phase;
-    const before = snapshot(s);
-    const rankBefore = teamRank(s);
-    // T-10-046: 한 구간의 게임 로직(훈련 → 경기 → 대회 → A매치 → 이벤트 추첨 → 칭호)은 game/turn.ts가 진행한다.
-    recordPhaseOvr(s); // T-11-048 구간에 들어갈 때의 OVR(성장 기록).
-    const r = playPhase(s);
-    const { block: b, comp, nt, ev } = r;
-    const chips = diffChips(s, before, r.after);
-    const titles = r.titles.map(titleView);
-    const title = ph === 0 ? '프리시즌 완료' : `${PHASES[ph]} 결과`;
-    s.pending = ev
-      ? { type: 'event', id: ev, then: s.phase > LAST_PHASE ? 'seasonEnd' : null }
-      : s.phase > LAST_PHASE
-        ? { type: 'seasonEnd' }
-        : null;
-    host.save();
-    host.analytics.play(s, ph === 0 && s.career.length === 0);
-    const extras = [
-      ...(comp.length ? ['컵 · 대륙 대회 결과 집계'] : []),
-      ...(nt ? ['A매치 소집 명단 발표'] : []),
-      ...(ev ? ['주변에서 무언가 일이 벌어지고 있습니다…'] : []),
-    ];
-    const games = b ? matchRows(s, b) : [];
-    const range = b ? roundRange(s, ph) : '';
-    const back = s.pos === 'DF' || s.pos === 'GK';
-    // T-10-028: 경기는 중계 시트로 한 경기씩 보여 주고(승무패·스코어가 쌓이는 맛), 끝나면 리포트로 넘어간다.
-    if (b) {
-      await sheet.playBlock(
-        {
-          eyebrow: `${s.year} · ${PHASES[ph]} 진행 중`,
-          title: `${range} · ${b.n}경기`,
-          back,
-          matches: leagueOf(s.leagueId).matches,
-        },
-        b,
+    if (
+      advancing ||
+      sheet.state.busy ||
+      !appState.G ||
+      appState.G.retired ||
+      appState.G.pending ||
+      appState.G.phase > LAST_PHASE
+    )
+      return;
+    advancing = true;
+    try {
+      const s = appState.G,
+        ph = s.phase;
+      const before = snapshot(s);
+      const rankBefore = teamRank(s);
+      // T-10-046: 한 구간의 게임 로직(훈련 → 경기 → 대회 → A매치 → 이벤트 추첨 → 칭호)은 game/turn.ts가 진행한다.
+      recordPhaseOvr(s); // T-11-048 구간에 들어갈 때의 OVR(성장 기록).
+      let r: PhaseResult;
+      try {
+        r = playPhase(s);
+        measureOperation('progress', 'success');
+      } catch (error) {
+        measureOperation('progress', 'failed', 'progress_blocked');
+        throw error;
+      }
+      host.analytics.complete?.({ cid: s.cid, year: s.year, phase: ph, matches: r.block?.n ?? 0 });
+      const { block: b, comp, nt, ev } = r;
+      const chips = diffChips(s, before, r.after);
+      const titles = r.titles.map(titleView);
+      const title = ph === 0 ? '프리시즌 완료' : `${PHASES[ph]} 결과`;
+      s.pending = ev
+        ? { type: 'event', id: ev, then: s.phase > LAST_PHASE ? 'seasonEnd' : null }
+        : s.phase > LAST_PHASE
+          ? { type: 'seasonEnd' }
+          : null;
+      host.save();
+      host.analytics.play(s, ph === 0 && s.career.length === 0);
+      const extras = [
+        ...(comp.length ? ['컵 · 대륙 대회 결과 집계'] : []),
+        ...(nt ? ['A매치 소집 명단 발표'] : []),
+        ...(ev ? ['주변에서 무언가 일이 벌어지고 있습니다…'] : []),
+      ];
+      const games = b ? matchRows(s, b) : [];
+      const range = b ? roundRange(s, ph) : '';
+      const back = s.pos === 'DF' || s.pos === 'GK';
+      // T-10-028: 경기는 중계 시트로 한 경기씩 보여 주고(승무패·스코어가 쌓이는 맛), 끝나면 리포트로 넘어간다.
+      if (b) {
+        await sheet.playBlock(
+          {
+            eyebrow: `${s.year} · ${PHASES[ph]} 진행 중`,
+            title: `${range} · ${b.n}경기`,
+            back,
+            matches: leagueOf(s.leagueId).matches,
+          },
+          b,
+          games,
+          extras,
+        );
+      } else
+        await sheet.playSteps(`${s.year} · 프리시즌 진행 중`, [
+          isPro(s) ? '전지훈련 캠프 입소' : '동계 훈련 시작',
+          '체력 테스트',
+          '전술 훈련',
+          '연습 경기',
+          ...extras,
+        ]);
+      sheet.closeSheet();
+      appState.report = {
+        key: Date.now(),
+        year: s.year,
+        ph,
+        eyebrow: `${s.year} · ${title}`,
+        title: b ? `${range} · ${b.n}경기` : '시즌 준비를 마쳤습니다',
+        back,
+        block: b
+          ? {
+              w: b.w,
+              d: b.d,
+              l: b.l,
+              apps: b.apps,
+              goals: b.goals,
+              assists: b.assists,
+              rating: b.apps ? (b.rs / b.apps).toFixed(2) : null,
+              cs: b.cs,
+              hl: b.hl,
+            }
+          : null,
         games,
-        extras,
-      );
-    } else
-      await sheet.playSteps(`${s.year} · 프리시즌 진행 중`, [
-        isPro(s) ? '전지훈련 캠프 입소' : '동계 훈련 시작',
-        '체력 테스트',
-        '전술 훈련',
-        '연습 경기',
-        ...extras,
-      ]);
-    sheet.closeSheet();
-    appState.report = {
-      key: Date.now(),
-      year: s.year,
-      ph,
-      eyebrow: `${s.year} · ${title}`,
-      title: b ? `${range} · ${b.n}경기` : '시즌 준비를 마쳤습니다',
-      back,
-      block: b
-        ? {
-            w: b.w,
-            d: b.d,
-            l: b.l,
-            apps: b.apps,
-            goals: b.goals,
-            assists: b.assists,
-            rating: b.apps ? (b.rs / b.apps).toFixed(2) : null,
-            cs: b.cs,
-            hl: b.hl,
-          }
-        : null,
-      games,
-      rank: { before: rankBefore, after: teamRank(s) },
-      role: roleOf(s),
-      comps: comp.map((c) => ({ t: c.t, good: c.k === 'good' })),
-      nat: natViews(nt),
-      chips,
-      titles,
-    };
-    appState.tab = 'season';
-    host.scrollTop(true);
+        rank: { before: rankBefore, after: teamRank(s) },
+        role: roleOf(s),
+        comps: comp.map((c) => ({ t: c.t, good: c.k === 'good' })),
+        nat: natViews(nt),
+        chips,
+        titles,
+      };
+      appState.tab = 'season';
+      host.scrollTop(true);
+    } finally {
+      advancing = false;
+    }
   }
 
   function nextPending() {
@@ -392,6 +420,7 @@ export function createGameActions(host: GameHost) {
         miles,
         titles,
         notes,
+        scoutHint: scoutHint(s, rec.year),
         fans,
         age: s.age,
       },
@@ -436,7 +465,9 @@ export function createGameActions(host: GameHost) {
               name: o.name,
               lg: leagueOf(G.leagueId).name,
               salary: fmtMoney(o.salary),
-              sub: `${o.years}년 계약${o.desc ? ` · ${o.desc}` : ''}`,
+              sub: o.extension
+                ? `1년 남음 · ${o.extension.years}년 연장 · 총 ${o.years}년. ${o.desc}`
+                : `${o.years}년 계약${o.desc ? ` · ${o.desc}` : ''}`,
             };
           return { name: o.name, lg: o.desc ?? '', salary: null, sub: null };
         }),
@@ -453,40 +484,61 @@ export function createGameActions(host: GameHost) {
     const o = options[i];
     if (!o || !appState.G) return;
     // T-11-039 다른 구단의 오퍼는 계약서에 사인해야 확정된다(×로 닫으면 이적시장으로 돌아온다).
-    if (o.kind === 'offer') return showContract(i, o, options);
+    if (o.kind === 'offer' || (o.kind === 'renew' && o.extension))
+      return showContract(i, o, options);
     if (settleOption(i, o, options)) startSeason();
   }
 
   /** T-11-039 계약서. 아마추어(고교·대학)에서 처음 프로 구단에 가면 입단 계약, 그 밖에는 이적 계약. */
-  function showContract(i: number, o: OfferOption, options: MarketOption[]) {
+  function showContract(i: number, o: OfferOption | RenewOption, options: MarketOption[]) {
     const G = appState.G!;
-    const rookie = !!leagueOf(G.leagueId).amateur;
-    if (crossesBorder(G.leagueId, o.leagueId)) void loadFlightMap().catch(() => {});
+    const extension = o.kind === 'renew' ? o.extension : undefined;
+    const rookie = o.kind === 'offer' && !!leagueOf(G.leagueId).amateur;
+    if (o.kind === 'offer' && crossesBorder(G.leagueId, o.leagueId))
+      void loadFlightMap().catch(() => {});
     sheet.showSheet({
       kind: 'contract',
-      eyebrow: rookie ? 'Rookie Contract' : 'Transfer Contract',
-      title: rookie ? '프로 계약서에 사인하시겠습니까?' : '이적 계약서에 사인하시겠습니까?',
-      text: `${o.name}${waGwa(o.name)} 함께 ${rookie ? '첫 프로 시즌을' : '새 시즌을'} 시작합니다.`,
-      club: { id: o.clubId, name: o.name },
+      eyebrow: extension ? 'Extension Contract' : rookie ? 'Rookie Contract' : 'Transfer Contract',
+      title: extension
+        ? '연장 계약서에 사인할까요?'
+        : rookie
+          ? '프로 계약서에 사인하시겠습니까?'
+          : '이적 계약서에 사인하시겠습니까?',
+      text: extension
+        ? '남은 계약에 기간을 더해요. 새 연봉은 이번 시즌부터 적용돼요.'
+        : `${o.name}${waGwa(o.name)} 함께 ${rookie ? '첫 프로 시즌을' : '새 시즌을'} 시작합니다.`,
+      club: {
+        id: o.kind === 'offer' ? o.clubId : G.club.id,
+        name: o.kind === 'offer' ? o.name : G.club.name,
+      },
       terms: [
         { label: '연봉', value: fmtMoney(o.salary) },
-        { label: '계약 기간', value: `${o.years}년` },
-        ...(o.fee ? [{ label: '이적료', value: `약 ${fmtValue(o.fee)}` }] : []),
-        ...(o.role ? [{ label: '역할', value: o.role }] : []),
+        ...(extension
+          ? [
+              { label: '남은 계약', value: '1년' },
+              { label: '추가 연장', value: `${extension.years}년` },
+              { label: '총 계약 기간', value: `${o.years}년` },
+            ]
+          : [{ label: '계약 기간', value: `${o.years}년` }]),
+        ...(o.kind === 'offer' && o.fee
+          ? [{ label: '이적료', value: `약 ${fmtValue(o.fee)}` }]
+          : []),
+        ...(o.kind === 'offer' && o.role ? [{ label: '역할', value: o.role }] : []),
       ],
       name: G.name,
-      cta: rookie ? '사인하고 프로 입단' : '사인하고 이적',
+      cta: extension ? '사인하고 계약 연장' : rookie ? '사인하고 프로 입단' : '사인하고 이적',
       // 두 번 눌러도 한 번만 부른다(본문이 도장을 찍으며 버튼을 잠근다).
-      onSign: () => void signOffer(i, o, options),
+      onSign: () => void signContract(i, o, options),
       onClose: nextPending,
     });
   }
 
   /** 사인한 오퍼를 확정하고, 나라가 바뀌면 새 리그의 나라로 날아가는 장면을 보여 준 뒤 시즌을 연다. */
-  async function signOffer(i: number, o: OfferOption, options: MarketOption[]) {
-    const fromLg = appState.G!.leagueId;
+  async function signContract(i: number, o: OfferOption | RenewOption, options: MarketOption[]) {
+    const fromLg = appState.G?.leagueId;
+    if (!fromLg) return;
     if (!settleOption(i, o, options)) return;
-    if (crossesBorder(fromLg, o.leagueId)) {
+    if (o.kind === 'offer' && crossesBorder(fromLg, o.leagueId)) {
       const from = hubOf(fromLg),
         to = hubOf(o.leagueId);
       // 지도를 못 불러오면(오프라인 등) 비행 장면만 건너뛴다 — 이적은 이미 확정됐다.
@@ -509,7 +561,11 @@ export function createGameActions(host: GameHost) {
 
   /** 고른 옵션을 확정·저장한다. 병역 결과처럼 따로 시트를 띄웠으면 false(시즌 시작은 그 시트가 맡는다). */
   function settleOption(i: number, o: MarketOption, options: MarketOption[]): boolean {
-    const G = appState.G!;
+    const G = appState.G;
+    const p = G?.pending;
+    // 계약서의 오래된 콜백·중복 사인은 이미 소비한 시장을 다시 확정할 수 없다.
+    if (!G || p?.type !== 'market' || p.m?.options !== options || options[i] !== o) return false;
+    if (o.kind === 'renew' && !canAcceptRenewal(G, o)) return false;
     const r = acceptOption(G, o, options);
     const logEntry: EventLogEntry = {
       k: o.kind === 'sangmu' || o.kind === 'army' || o.kind === 'serve' ? 'mil' : 'mkt',
@@ -565,6 +621,7 @@ export function createGameActions(host: GameHost) {
   }
 
   function doRetire() {
+    if (!appState.G || appState.G.retired) return;
     appState.lastRetired = retire(appState.G!, publicNameOf(appState.G!.name) !== null);
     host.uploadRetirement(appState.G!.cid, appState.lastRetired);
     appState.G!.pending = null;

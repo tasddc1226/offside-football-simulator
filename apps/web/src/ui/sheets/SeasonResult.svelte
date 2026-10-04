@@ -55,6 +55,12 @@
 {/if}
 <NewTitles titles={v.titles} pop />
 {#if notes.length}<p class="muted">{notes.join(' · ')}</p>{/if}
+{#if v.scoutHint}
+  <div>
+    <div class="eyebrow" style="margin-bottom:6px">스카우트 한마디</div>
+    <p>“{v.scoutHint}”</p>
+  </div>
+{/if}
 <div>
   <div class="eyebrow" style="margin-bottom:6px">팬 반응</div>
   <div class="fan-feed">

@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { requireOptionalNativeModule } from 'expo-modules-core';
+import { requireOptionalNativeModule } from 'expo';
 import { Linking, Platform } from 'react-native';
 import { loadKey, saveKey } from '@offside/game/season';
 import { createReviewPrompt } from '@offside/app-core/reviewPrompt';

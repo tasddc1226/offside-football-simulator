@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5bcc7bfa-27d1-4538-be4a-e879544753fa",
+  "id": "498f3d44-1bf1-4df1-a04b-035025facc58",
   "prevId": "f4ae9c0b-4c76-41b8-9ca7-f7665cf4a85a",
   "tables": {
     "app_auth_tickets": {
@@ -1192,6 +1192,25 @@
           ],
           "isUnique": false
         },
+        "careers_profile_status_season_idx": {
+          "name": "careers_profile_status_season_idx",
+          "columns": [
+            "profile_id",
+            "status",
+            "service_season",
+            "peak"
+          ],
+          "isUnique": false
+        },
+        "careers_profile_status_legend_idx": {
+          "name": "careers_profile_status_legend_idx",
+          "columns": [
+            "profile_id",
+            "status",
+            "legend_score"
+          ],
+          "isUnique": false
+        },
         "careers_status_legend_idx": {
           "name": "careers_status_legend_idx",
           "columns": [
@@ -2148,121 +2167,6 @@
         }
       },
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "push_devices": {
-      "name": "push_devices",
-      "columns": {
-        "installation_hash": {
-          "name": "installation_hash",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "session_id": {
-          "name": "session_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "profile_id": {
-          "name": "profile_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "token": {
-          "name": "token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "platform": {
-          "name": "platform",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "app_version": {
-          "name": "app_version",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "push_devices_token_unique": {
-          "name": "push_devices_token_unique",
-          "columns": [
-            "token"
-          ],
-          "isUnique": true
-        },
-        "push_devices_session_idx": {
-          "name": "push_devices_session_idx",
-          "columns": [
-            "session_id"
-          ],
-          "isUnique": false
-        },
-        "push_devices_profile_idx": {
-          "name": "push_devices_profile_idx",
-          "columns": [
-            "profile_id"
-          ],
-          "isUnique": false
-        },
-        "push_devices_updated_idx": {
-          "name": "push_devices_updated_idx",
-          "columns": [
-            "updated_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "push_devices_session_id_sessions_id_fk": {
-          "name": "push_devices_session_id_sessions_id_fk",
-          "tableFrom": "push_devices",
-          "tableTo": "sessions",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "push_devices_profile_id_profiles_id_fk": {
-          "name": "push_devices_profile_id_profiles_id_fk",
-          "tableFrom": "push_devices",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

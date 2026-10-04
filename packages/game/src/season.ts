@@ -2,7 +2,7 @@
 import { CLUBS, clubRef, sameClub, type Club } from './data.js';
 import { BAL } from './balance.js';
 import { ovr, peakProfileOf } from './attributes.js';
-import { clamp, ri, pick, rnd, weightedIndex } from './rng.js';
+import { clamp, ri, pick, rnd, weightedIndex, createRng, getActiveRng } from './rng.js';
 import {
   leagueOf,
   clubsIn,
@@ -44,6 +44,7 @@ import type {
   MarketOption,
   MarketResult,
   OfferOption,
+  RenewOption,
 } from './types.js';
 import { storage } from './storage.js';
 
@@ -315,7 +316,10 @@ export function offerFrom(s: GameState, c: (typeof CLUBS)[number]): OfferOption 
     name: c.name,
     leagueId: c.leagueId,
     str: c.str,
-    years: Math.min(ri(old ? 1 : 2, old ? 2 : 5), isVeteran(s) ? 1 : 5),
+    years: Math.max(
+      1,
+      Math.min(ri(old ? 1 : 2, old ? 2 : 5), isVeteran(s) ? 1 : 5, retireAge(s) - s.age),
+    ),
     salary: Math.round((salaryFor(c.leagueId, o) * (0.85 + rnd() * 0.35)) / 10) * 10,
     role: d >= 1 ? '주전 보장' : d >= -5 ? '로테이션' : '벤치 경쟁',
     fee:
@@ -354,6 +358,46 @@ function militaryMarket(s: GameState): MarketResult | null {
 }
 
 type Shelf = { options: MarketOption[]; note: string };
+
+/** 기존 재계약 정책. 조기 제안은 RNG 사본으로 기간만 읽어 성장·경기 난수열을 진행시키지 않는다. */
+function renewalYears(s: GameState, preview = false): number {
+  if (s.age >= 31) return 1;
+  return preview ? 2 + Math.floor(createRng(getActiveRng().getState().seed).next() * 3) : ri(2, 4);
+}
+
+function renewalSalary(s: GameState, o: number): number {
+  return Math.round((salaryFor(s.leagueId, o) * (1 + s.trust * 0.03)) / 10) * 10;
+}
+
+/** 38~40세 공백과 41세 이상 매년 성적 심사는 그대로 둔다. */
+function earlyRenewalEligible(s: GameState, o: number): boolean {
+  return (
+    !s.retired &&
+    !leagueOf(s.leagueId).amateur &&
+    !s.mil.serving &&
+    !s.mil.accepted &&
+    !s.mil.armyNext &&
+    !milDue(s) &&
+    s.contract?.years === 1 &&
+    s.age < 38 &&
+    o >= s.club.str - 7
+  );
+}
+
+/** 조기 제안은 해당 연도·구단·잔여기간에만 쓸 수 있다(중복·오래된 계약서 방어). */
+export function canAcceptRenewal(s: GameState, opt: RenewOption): boolean {
+  const e = opt.extension;
+  if (!e) return true; // 옛 저장의 만료 재계약 의미를 유지한다.
+  return (
+    earlyRenewalEligible(s, ovr(s)) &&
+    e.clubId === s.club.id &&
+    e.year === s.year &&
+    Number.isInteger(e.years) &&
+    e.years > 0 &&
+    opt.years === 1 + e.years &&
+    opt.years <= retireAge(s) - s.age
+  );
+}
 
 /** 고3 졸업: 프로 입단 제의 + 대학 진학. */
 function highSchoolShelf(offers: MarketOption[]): Shelf {
@@ -402,16 +446,28 @@ function proShelf(s: GameState, offers: MarketOption[], o: number, leagueId: str
       name: `${s.club.name} 잔류`,
       desc: `연봉 ${fmtMoney(contract.salary)} · 계약 ${contract.years}년 남음`,
     });
+    if (earlyRenewalEligible(s, o)) {
+      const extra = Math.min(renewalYears(s, true), retireAge(s) - s.age - contract.years);
+      if (extra > 0)
+        options.push({
+          kind: 'renew',
+          name: `${s.club.name} 연장 계약`,
+          years: contract.years + extra,
+          salary: renewalSalary(s, o),
+          desc: '새 연봉은 이번 시즌부터 적용돼요.',
+          extension: { years: extra, clubId: s.club.id, year: s.year },
+        });
+    }
     options.push(...offers);
     return { options, note: `${s.club.name}와의 계약이 ${contract.years}년 남았습니다.` };
   }
   const veteran = isVeteran(s);
   if (o >= s.club.str - 7 && (veteran ? veteranSeasonOk(s) : s.age < 38)) {
-    const sal = Math.round((salaryFor(s.leagueId, o) * (1 + s.trust * 0.03)) / 10) * 10;
+    const sal = renewalSalary(s, o);
     options.push({
       kind: 'renew',
       name: `${s.club.name} 재계약`,
-      years: s.age >= 31 ? 1 : ri(2, 4),
+      years: Math.min(renewalYears(s), Math.max(1, retireAge(s) - s.age)),
       salary: sal,
       desc: veteran ? '베테랑 재계약' : '',
     });
@@ -468,6 +524,7 @@ export function acceptOption(
   /** 이번 이적 시장의 선택지 전부(플레이 성향 — 제의를 뿌리친 잔류를 센다). */
   options: readonly MarketOption[] = [],
 ): { text: string; ok?: boolean; reopen?: boolean } | null {
+  if (opt.kind === 'renew' && !canAcceptRenewal(s, opt)) return null;
   noteMarket(s, opt, options);
   if (opt.kind === 'sangmu' || opt.kind === 'army' || opt.kind === 'serve') {
     return acceptMilitary(s, opt);
@@ -483,7 +540,13 @@ export function acceptOption(
   } else if (opt.kind === 'renew') {
     s.contract = { years: opt.years, salary: opt.salary };
     addStat(s, 'trust', 1);
-    log(s, `${s.club.name}와 ${opt.years}년 재계약, 연봉 ${fmtMoney(opt.salary)}`, 'big');
+    log(
+      s,
+      opt.extension
+        ? `${s.club.name}와 ${opt.extension.years}년 연장, 잔여 계약 포함 총 ${opt.years}년. 이번 시즌부터 연봉 ${fmtMoney(opt.salary)}`
+        : `${s.club.name}와 ${opt.years}년 재계약, 연봉 ${fmtMoney(opt.salary)}`,
+      'big',
+    );
   } else if (opt.kind === 'offer') {
     const c = CLUBS.find((x) => x.id === opt.clubId)!;
     const from = s.club.name,

@@ -70,7 +70,7 @@ vi.mock('expo-application', () => ({
   ApplicationReleaseType: { SIMULATOR: 1 },
   getIosApplicationReleaseTypeAsync: f.getReleaseType,
 }));
-vi.mock('expo-modules-core', () => ({
+vi.mock('expo', () => ({
   requireNativeModule: (name) => {
     if (name !== 'NotificationsServerRegistrationModule')
       throw new Error('Unexpected native module');

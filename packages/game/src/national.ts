@@ -9,7 +9,7 @@ import { leagueOf, addStat, log, fameEff, atkOf, creOf } from './engine.js';
 import { BAL } from './balance.js';
 import type { GameState, NatTour } from './types.js';
 import { isKorean, KR, nationOf, RIVAL, type Confed } from './nation.js';
-import { milDone } from './military.js';
+import { grantSportsService } from './military.js';
 
 const NT_THRESHOLD = 80;
 const AFC_NT: [string, number][] = [
@@ -360,7 +360,6 @@ interface TournamentDef {
   rounds: [string, [string, number][]][];
   trophy: string;
   bronze?: [string, number][];
-  exempt?: (stage: string) => boolean;
 }
 function pickDistinct<T>(pool: T[], n: number): T[] {
   const p = pool.slice(),
@@ -422,7 +421,6 @@ function buildTournaments(side: NatSide): Record<string, TournamentDef> {
         ['결승', afc.slice(0, 3).map(u23)],
       ],
       trophy: '아시안게임 금메달',
-      exempt: (stage) => stage === '우승',
     },
     olympic: {
       label: (y) => `${y} 올림픽 남자축구 (${HOSTS.olympic[y] ?? '개최지 미정'})`,
@@ -441,7 +439,6 @@ function buildTournaments(side: NatSide): Record<string, TournamentDef> {
       ],
       bronze: world.slice(0, 14).map(u23),
       trophy: '올림픽 금메달',
-      exempt: (stage) => ['금메달', '은메달', '동메달'].includes(stage),
     },
   };
 }
@@ -524,19 +521,6 @@ function playBracket(
   return stage;
 }
 
-/** 병역 특례(대한민국 국적만, T-10-096) — 아시안게임 금메달·올림픽 메달. */
-function grantExemption(s: GameState, key: string, stage: string) {
-  s.mil.exempt = key === 'ag' ? '아시안게임 금메달' : `올림픽 ${stage}`;
-  log(
-    s,
-    `병역 특례 대상! (${s.mil.exempt}) 기초군사훈련 3주와 544시간 봉사활동으로 병역을 대신합니다.${s.mil.serving ? ' 복무 중이던 김천 상무에서는 시즌 종료 후 조기 전역합니다.' : ''}`,
-    'big',
-  );
-  s.mil.applied = false;
-  s.mil.accepted = false;
-  s.mil.armyNext = false;
-}
-
 function runTournament(s: GameState, key: string) {
   const T = tournaments(natSide(s))[key]!,
     y = s.year;
@@ -571,7 +555,7 @@ function runTournament(s: GameState, key: string) {
         ? `올림픽 ${stage}`
         : null;
   if (inSquad) addStat(s, 'fame', TOUR_FAME[stage] ?? 2);
-  if (inSquad && T.exempt && T.exempt(stage) && !milDone(s)) grantExemption(s, key, stage);
+  grantSportsService(s, key, stage, inSquad);
   return { rec, trophy };
 }
 

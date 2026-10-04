@@ -6,6 +6,8 @@ CREATE TABLE `push_devices` (
 	`platform` text NOT NULL,
 	`app_version` text NOT NULL,
 	`updated_at` text NOT NULL,
+	`last_test_ticket_id` text,
+	`last_test_sent_at` text,
 	FOREIGN KEY (`session_id`) REFERENCES `sessions`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`profile_id`) REFERENCES `profiles`(`id`) ON UPDATE no action ON DELETE cascade
 );

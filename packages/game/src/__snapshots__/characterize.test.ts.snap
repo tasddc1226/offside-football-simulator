@@ -3,15 +3,15 @@
 exports[`게임 특성화 (T-11-044) > endSeason — 시즌 정산(seasonAwards·natSeasonEnd·milSeasonEnd 포함) 1`] = `
 {
   "대표팀": {
-    "hash": "3663395da8411c28",
+    "hash": "c82115ee7f25dd1c",
     "n": 176,
   },
   "병역": {
-    "hash": "d7a905d6b40bfa73",
+    "hash": "ff5a0be2d4159a03",
     "n": 176,
   },
   "원본": {
-    "hash": "bb457c8391039d35",
+    "hash": "26607da4b1e377ac",
     "n": 176,
   },
 }
@@ -30,31 +30,31 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
   ],
   "대표팀": {
     "accepted": {
-      "hash": "007024addf58bcb6",
+      "hash": "0a2f2fbc8eeef9f3",
       "n": 176,
     },
     "options": {
-      "hash": "3b52686f1d3e8951",
+      "hash": "1587a43cf39af7f3",
       "n": 176,
     },
   },
   "병역": {
     "accepted": {
-      "hash": "b9d2f34b56555c42",
+      "hash": "cb173c385e8a040d",
       "n": 176,
     },
     "options": {
-      "hash": "6329adeb608ba3a5",
+      "hash": "a8c6b93bf37a37b0",
       "n": 176,
     },
   },
   "원본": {
     "accepted": {
-      "hash": "bf21cd682cb8c050",
+      "hash": "e610e1e2fa8bc07b",
       "n": 176,
     },
     "options": {
-      "hash": "22dc3bb74abdc97e",
+      "hash": "2d8f5d463e9c4bc5",
       "n": 176,
     },
   },
@@ -64,11 +64,11 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
 exports[`게임 특성화 (T-11-044) > natWindow — A매치·국제대회 창 1`] = `
 {
   "대표팀": {
-    "hash": "feab4996feae460a",
+    "hash": "f839f904c9ba377a",
     "n": 528,
   },
   "원본": {
-    "hash": "012f8025789d0bd8",
+    "hash": "b1a003b4003a7c0d",
     "n": 528,
   },
 }
@@ -77,7 +77,7 @@ exports[`게임 특성화 (T-11-044) > natWindow — A매치·국제대회 창 1
 exports[`게임 특성화 (T-11-044) > rollEvent — 이벤트 추첨 1`] = `
 {
   "distinct": 46,
-  "hash": "69bf6ca3f569166e",
+  "hash": "118635a09705f8b0",
   "n": 528,
 }
 `;
@@ -85,15 +85,15 @@ exports[`게임 특성화 (T-11-044) > rollEvent — 이벤트 추첨 1`] = `
 exports[`게임 특성화 (T-11-044) > simBlock — 리그 구간 경기 결과 1`] = `
 {
   "대표팀": {
-    "hash": "b8eb5a520a466319",
+    "hash": "5be6495e342f4dbe",
     "n": 354,
   },
   "병역": {
-    "hash": "9d1aa498a92a656a",
+    "hash": "eba60f90291c35ff",
     "n": 354,
   },
   "원본": {
-    "hash": "6ee97e4dac718e93",
+    "hash": "31c15ee030ef2045",
     "n": 354,
   },
 }
@@ -143,7 +143,7 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
     "party": "803 8d52ef3ef991eaf8",
     "penalty": "279 e5f092679d48090a",
     "pk-save": "108 c16a8a36c971f628",
-    "puskas": "118 317a9a756d070c37",
+    "puskas": "118 4ed36232b6a4d8d2",
     "racism": "0 ec86f2247d90e708",
     "rehab-1": "4 71d77cc0f60544ab",
     "rehab-2": "880 9787885f7f1cbb9a",
@@ -153,13 +153,13 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
     "rival-2": "880 2e5d5228d978da8a",
     "rival-3": "880 895d0406049155f0",
     "rumor": "726 b6eea7b41df7cd82",
-    "scandal-2": "880 82178eea3451da13",
+    "scandal-2": "880 b619501a873c6c01",
     "scandal-3": "880 a1182aed44d3a296",
     "scout": "748 dddd023e6ce19378",
     "slump": "0 71049308ceb77612",
     "team-k": "158 e955d3311e77fcbc",
     "trainer": "415 ee53f32bc16e1020",
-    "var": "490 ea72b23cc73f31fc",
+    "var": "490 2a18d616512a2b8e",
     "winter-camp": "320 87a236b1c8827d47",
     "winter-window": "252 eac25b83ebca2d81",
   },

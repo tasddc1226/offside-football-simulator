@@ -75,7 +75,7 @@ PR 준비 시 새 스토어 버전에 맞춘 앱 적용 예정 릴리즈 노트�
   최초 카드·설정 버튼의 실제 iOS 화면은 아직 검증 완료로 기록하지 않는다.
 - 이전 수신 검증 기기 `4C89C694-C807-4EAD-8533-B397DF7FF65E`가 현재 시뮬레이터 목록에 없었다.
   해당 기기로 전환하는 시도는 `Invalid device`로 종료됐고, 현재 다른 작업의 기기로 대체 설치하지 않았다.
-- Android APK는 `/Users/suyoung/Downloads/OFFSIDE-engagement-test-1.0.2.apk`에 받았다.
+- Android APK는 `[로컬 비공개 경로]`에 받았다.
   전용 `OFFSIDE_Push_Test_API_36` (`emulator-5556`)의 ADB가 offline 상태여서 해당 기기만
   종료·재시작했다. 재시작 중 이전 크래시 보고 대화상자로 부팅이 멈춰, 공식
   `-crash-report-mode never` 옵션으로 다시 실행했다. 데이터 삭제·앱 제거는 하지 않았다.
@@ -108,7 +108,7 @@ iOS 18.1은 재부팅·동일 앱 재설치 뒤에도 프로세스 생성 단계
 지연되고 호스트 load average가 414 이상이어서 종료했다. 기존 기기나 앱 데이터를 지우지 않았다.
 iOS 새 UI 검증과 OS 기본 리뷰 창 표시는 완료로 기록하지 않는다.
 
-Android 화면 증거: `/Users/suyoung/Downloads/OFFSIDE-engagement-ui-20261004`.
+Android 화면 증거: `[로컬 비공개 경로]`.
 추가로 스크롤된 기존 설정 내용이 상태 표시줄 뒤에 보이는 것을 관찰했다.
 이는 새 리뷰 카드의 가로 잘림이나 하단 탭 가림과 구분되는 공통 화면 확인 사항이다.
 
@@ -156,6 +156,15 @@ iOS 테스트 OTA 그룹 `1f42969f-2b73-41c1-a1f3-9e07dd77ad09`, 업데이트
 읽기 전용으로 확인했다. 회귀 21건·타입 검사·변경 파일 ESLint를 통과했다.
 확인 후 전용 앱을 홈으로 돌리고 Orca helper만 종료했다. iOS 기기는 켜 두었다.
 
-첫 표시 증거: `/Users/suyoung/Downloads/OFFSIDE-engagement-ui-20261004/ios-push-first-offer.png`.
+첫 표시 증거: `[로컬 비공개 경로]`.
 운영 배포·main 병합·실제 리뷰 제출은 수행하지 않았다. 커리어 완료 후 OS 기본 리뷰 창,
 화면 회전·최대 글자 크기·양 테마의 전체 검증도 완료로 간주하지 않는다.
+
+### 운영 배포 준비
+
+사용자가 iOS 실기기에서 App Store 이동을 확인했다고 보고했다. 시뮬레이터 오류와 구분한다.
+최신 main을 합치며 기존 careers 인덱스 migration 0053을 보존하고 푸시 migration을
+0054_grey_anthem으로 다시 생성했다. 이는 staging 테스트에 쓴 두 migration의 합본이며
+이미 해당 두 migration이 적용된 staging DB에 그대로 재적용하지 않는다.
+새 모듈은 기존 production 1.0.2 빌드에 없어 이번 스토어 빌드는 1.0.3으로 준비한다.
+전체 사용자 자동 푸시 발송은 이 배포에 포함하지 않는다.

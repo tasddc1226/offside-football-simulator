@@ -242,6 +242,14 @@ export const careers = sqliteTable(
   },
   (table) => [
     index('careers_profile_id_idx').on(table.profileId),
+    // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
+    index('careers_profile_status_season_idx').on(
+      table.profileId,
+      table.status,
+      table.serviceSeason,
+      table.peak,
+    ),
+    index('careers_profile_status_legend_idx').on(table.profileId, table.status, table.legendScore),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
     // 명예의 전당 순위 유형(GET /v1/hof?sort=): status로 은퇴만 좁히고 기록 내림차순 → 레전드 점수로 동점을 가린다.
     index('careers_hof_goals_idx').on(table.status, table.goals, table.legendScore),

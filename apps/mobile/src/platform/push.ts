@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import Constants from 'expo-constants';
 import * as Application from 'expo-application';
-import { requireNativeModule } from 'expo-modules-core';
+import { requireNativeModule } from 'expo';
 import { AppState, Platform } from 'react-native';
 import { proxy } from 'valtio';
 import { apiFetch } from '@offside/app-core/api/client';

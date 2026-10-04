@@ -1,0 +1,2 @@
+CREATE INDEX `careers_profile_status_season_idx` ON `careers` (`profile_id`,`status`,`service_season`,`peak`);--> statement-breakpoint
+CREATE INDEX `careers_profile_status_legend_idx` ON `careers` (`profile_id`,`status`,`legend_score`);

@@ -22,7 +22,7 @@ vi.mock('react-native', () => ({
 }));
 vi.mock('valtio', () => ({ proxy: (state) => state }));
 vi.mock('expo-constants', () => ({ default: { expoConfig: { version: '1.0.2' } } }));
-vi.mock('expo-modules-core', () => ({ requireOptionalNativeModule: () => (f.native ? {} : null) }));
+vi.mock('expo', () => ({ requireOptionalNativeModule: () => (f.native ? {} : null) }));
 vi.mock('expo-store-review', () => ({ isAvailableAsync: f.available, requestReview: f.request }));
 vi.mock('@offside/game/season', () => ({ loadKey: () => f.history, saveKey: f.save }));
 vi.mock('./setup', () => ({
