@@ -10,6 +10,7 @@
   import HallOfFame from './HallOfFame.svelte';
   import HomeNews from './HomeNews.svelte';
   import SiteFooter from './SiteFooter.svelte';
+  import VoluntarySupport from './VoluntarySupport.svelte';
   import HomeFirsts from './firsts/HomeFirsts.svelte';
   import HomeLive from './HomeLive.svelte';
   import HomeTicker from './HomeTicker.svelte';
@@ -80,6 +81,7 @@
   <HallOfFame />
   <HomeNews board="notice" eyebrow="Notice" title="공지사항" />
   <HomeNews board="release" eyebrow="Release notes" title="릴리즈 노트" />
+  <VoluntarySupport />
   <SiteFooter />
   <!-- T-11-015 라운지 채팅으로 가는 떠 있는 버튼(하단 메뉴 위). -->
   <button class="chat-fab" data-act="chat" aria-label={chatState.unread ? `채팅, 읽지 않은 메시지 ${chatState.unread}개` : '채팅'} onclick={() => go('chat')}>
