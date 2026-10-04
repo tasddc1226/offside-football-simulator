@@ -1,5 +1,4 @@
 import Constants from 'expo-constants';
-import { requireOptionalNativeModule } from 'expo';
 import { Linking, Platform } from 'react-native';
 import { loadKey, saveKey } from '@offside/game/season';
 import { createReviewPrompt } from '@offside/app-core/reviewPrompt';
@@ -13,16 +12,10 @@ export const reviewPrompt = createReviewPrompt({
   version: () => Constants.expoConfig?.version ?? '',
   now: () => Date.now(),
   async available() {
-    if (Platform.OS !== 'ios' && Platform.OS !== 'android') return false;
-    // 옛 네이티브 빌드에도 설정의 스토어 링크는 쓸 수 있다. 자동 요청은 새 모듈이 있을 때만 한다.
-    if (!requireOptionalNativeModule('ExpoStoreReview')) return false;
-    const review = await import('expo-store-review');
-    return review.isAvailableAsync();
+    // 1.0.2 호환 번들: 이 빌드에는 expo-store-review가 없다. 설정의 스토어 링크만 쓴다.
+    return false;
   },
-  async request() {
-    const review = await import('expo-store-review');
-    await review.requestReview();
-  },
+  async request() {},
 });
 
 export function reviewUrl(platform: string): string | null {
