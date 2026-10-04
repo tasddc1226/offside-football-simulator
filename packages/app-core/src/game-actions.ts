@@ -69,8 +69,7 @@ const loadFlightMap = () => import('./flight-map.js');
 import { matchRows, type SheetController } from './sheet-controller.js';
 import {
   draftBody,
-  draftDpos,
-  draftRetireAt,
+  draftCareerRules,
   randomName,
   randomNumber,
   type AppState,
@@ -696,9 +695,8 @@ export function createGameActions(host: GameHost) {
     appState.G = newGame(
       {
         ...appState.C,
-        dpos: draftDpos(appState.C),
+        ...draftCareerRules(appState.C),
         body: draftBody(appState.C),
-        retireAt: draftRetireAt(),
         name: finalName,
         number: finalNumber,
       },
@@ -720,7 +718,7 @@ export function createGameActions(host: GameHost) {
     appState.candidates = generateCandidates(
       appState.C.pos,
       appState.C.focus,
-      draftDpos(appState.C),
+      draftCareerRules(appState.C).dpos,
       scoutSeed(),
     );
     appState.candidatesOpen = [false, false, false];
