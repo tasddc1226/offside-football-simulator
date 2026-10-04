@@ -27,6 +27,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
   const rows = s.career.slice().reverse();
   const miles = (s.miles || []).slice().reverse();
   const next = 'attrs' in s && !s.retired ? careerGoals(s) : [];
+  // 진행 중인 커리어에만 있다. 다음 목표 카드도 이 값으로 보인다.
   const rnHint = 'attrs' in s && !s.retired ? retiredNumberHint(s) : null;
   const peakV = chart ? peakValue(s.career) : null;
   const back = s.pos === 'GK' || s.pos === 'DF';
@@ -85,7 +86,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
           </>
         ) : null}
       </Card>
-      {next.length || rnHint ? (
+      {rnHint ? (
         <Card>
           <View>
             <Txt v="eyebrow">Next Goals</Txt>
@@ -111,11 +112,9 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
               </View>
             ))}
           </View>
-          {rnHint ? (
-            <Txt v="sm" tone="muted" testID="rn-hint">
-              {rnHint}
-            </Txt>
-          ) : null}
+          <Txt v="sm" tone="muted" testID="rn-hint">
+            {rnHint}
+          </Txt>
         </Card>
       ) : null}
       <Card>

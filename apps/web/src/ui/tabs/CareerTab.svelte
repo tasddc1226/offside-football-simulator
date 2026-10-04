@@ -14,6 +14,7 @@
   const rows = $derived(s.career.slice().reverse());
   const miles = $derived((s.miles || []).slice().reverse());
   const next = $derived('attrs' in s && !s.retired ? careerGoals(s) : []);
+  // 진행 중인 커리어에만 있다. 다음 목표 카드도 이 값으로 보인다.
   const rnHint = $derived('attrs' in s && !s.retired ? retiredNumberHint(s) : null);
   const peakV = $derived(chart ? peakValue(s.career) : null);
 </script>
@@ -35,7 +36,7 @@
     <p class="muted fs-sm" data-peak-value>최고 몸값 <b>{fmtValue(peakV.value)}</b> · {seasonLabelOf(peakV.row)} {peakV.row.club}</p>
   {/if}
 </section>
-{#if next.length || rnHint}
+{#if rnHint}
   <section class="card stack" data-career-goals>
     <div><div class="eyebrow">Next Goals</div><h2>다음 목표</h2></div>
     <p class="muted fs-sm">{GOALS_NOTE}</p>
@@ -47,7 +48,7 @@
         </div>
       {/each}
     </div>
-    {#if rnHint}<p class="muted fs-sm" data-rn-hint>{rnHint}</p>{/if}
+    <p class="muted fs-sm" data-rn-hint>{rnHint}</p>
   </section>
 {/if}
 <section class="card stack">
