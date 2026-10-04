@@ -9,6 +9,8 @@ import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { fetchBoardViewer } from '@offside/app-core/api/boards';
 import { fetchOwnerTeam } from '@offside/app-core/api/team';
+import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
+import { fundsText } from '@offside/app-core/market';
 import {
   ownerLockedText,
   ownerSummary,
@@ -127,6 +129,9 @@ export default function Owner() {
   // 내 팀 카드 — 팀 화면과 같은 응답(1분 메모)이라 팀 화면에 들어가도 다시 묻지 않는다.
   const [card, setCard] = useState<OwnerTeamCard | null>(null);
   const [cardFailed, setCardFailed] = useState(false);
+  // T-11-080 구단 자금 · 구단 가치(자금 + 직접 키운 선수 은퇴 가치 + 영입한 선수 기준가)는 서버가 센다. 이적시장 화면과
+  // 같은 응답(1분 메모)이라 이적시장에 들어가도 다시 묻지 않는다. 비로그인이면 이 기기 기록의 은퇴 가치 합을 쓴다.
+  const [market, setMarket] = useState<MarketFundsResponse | null>(null);
 
   useEffect(() => {
     if (!linked) {
@@ -140,10 +145,12 @@ export default function Owner() {
       if (r.ok) setCard(ownerTeamCard(r.data));
       else setCardFailed(true);
     });
+    void fetchMarketFunds().then((r) => alive && r.ok && setMarket(r.data));
     return () => {
       alive = false;
     };
   }, [linked]);
+  const clubValue = market?.clubValue ?? summary?.value ?? null;
 
   const team = card?.team;
   const sub = guest
@@ -190,13 +197,16 @@ export default function Owner() {
               </Txt>
             </View>
           </View>
-          {(guest && localCount === 0) || summary?.players === 0 ? (
+          {(guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue) ? (
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
               첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.
             </Txt>
           ) : (
             <View style={{ gap: 8 }}>
-              <Stats accent items={[['구단 가치', summary ? fmtValue(summary.value) : '–']]} />
+              <Stats
+                accent
+                items={[['구단 가치', clubValue !== null ? fmtValue(clubValue) : '–']]}
+              />
               <Stats
                 items={[
                   ['은퇴 선수', summary ? `${num(summary.players)}명` : '–'],
@@ -211,79 +221,97 @@ export default function Owner() {
 
       {/* T-10-092 내 팀: 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. */}
       {linked ? (
-        <Card gap={12} testID="owner-team">
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: 12,
-            }}
-          >
-            {team ? <TeamLogo logo={team.logo} name={team.name} size={44} decorative /> : null}
-            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-              <Txt v="eyebrow">{`My team${card?.season ? ` · ${card.season}` : ''}`}</Txt>
-              <Txt v="h2" accessibilityRole="header">
-                {team?.name ?? '내 팀'}
-              </Txt>
-              {team ? (
-                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                  {`${team.manager} 감독 · ${team.formation}`}
+        <>
+          <Card gap={12} testID="owner-team">
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: 12,
+              }}
+            >
+              {team ? <TeamLogo logo={team.logo} name={team.name} size={44} decorative /> : null}
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Txt v="eyebrow">{`My team${card?.season ? ` · ${card.season}` : ''}`}</Txt>
+                <Txt v="h2" accessibilityRole="header">
+                  {team?.name ?? '내 팀'}
                 </Txt>
-              ) : null}
+                {team ? (
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {`${team.manager} 감독 · ${team.formation}`}
+                  </Txt>
+                ) : null}
+              </View>
+              {team ? <OvrBadge ovr={team.ovr} /> : null}
             </View>
-            {team ? <OvrBadge ovr={team.ovr} /> : null}
-          </View>
-          {team && card ? (
-            <>
-              <Stats
-                small
-                items={[
-                  ['전적', recordText(team.record)],
-                  ['레이팅', num(team.rating)],
-                  ['오늘 경기', `${card.left}/${card.perDay}`],
-                ]}
-              />
-              <Grid2>
-                <Btn block testID="team" onPress={() => openTeam()}>
-                  내 팀
-                </Btn>
-                <Btn
-                  kind="accent"
-                  block
-                  testID="owner-play"
-                  disabled={!!card.playHint}
-                  onPress={() => openTeam('opponents')}
-                >
-                  경기하기
-                </Btn>
-              </Grid2>
-              {card.playHint ? (
+            {team && card ? (
+              <>
+                <Stats
+                  small
+                  items={[
+                    ['전적', recordText(team.record)],
+                    ['레이팅', num(team.rating)],
+                    ['오늘 경기', `${card.left}/${card.perDay}`],
+                  ]}
+                />
+                <Grid2>
+                  <Btn block testID="team" onPress={() => openTeam()}>
+                    내 팀
+                  </Btn>
+                  <Btn
+                    kind="accent"
+                    block
+                    testID="owner-play"
+                    disabled={!!card.playHint}
+                    onPress={() => openTeam('opponents')}
+                  >
+                    경기하기
+                  </Btn>
+                </Grid2>
+                {card.playHint ? (
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {card.playHint}
+                  </Txt>
+                ) : null}
+              </>
+            ) : (
+              <>
                 <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                  {card.playHint}
+                  {card
+                    ? ownerTeamEmptyText(card)
+                    : cardFailed
+                      ? '시즌마다 은퇴한 선수로 팀을 꾸려 겨루고, 라이브 랭킹과 구단 업적을 채워요.'
+                      : '불러오는 중…'}
                 </Txt>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                {card
-                  ? ownerTeamEmptyText(card)
-                  : cardFailed
-                    ? '시즌마다 은퇴한 선수로 팀을 꾸려 겨루고, 라이브 랭킹과 구단 업적을 채워요.'
-                    : '불러오는 중…'}
-              </Txt>
-              <Btn
-                kind={card && card.players > 0 ? 'primary' : 'default'}
-                block
-                testID="team"
-                onPress={() => openTeam()}
-              >
-                {card && card.players > 0 ? '팀 만들기' : '내 팀 · 시즌 업적'}
+                <Btn
+                  kind={card && card.players > 0 ? 'primary' : 'default'}
+                  block
+                  testID="team"
+                  onPress={() => openTeam()}
+                >
+                  {card && card.players > 0 ? '팀 만들기' : '내 팀 · 시즌 업적'}
+                </Btn>
+              </>
+            )}
+          </Card>
+          <Card gap={12} testID="owner-market">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Txt v="eyebrow">Transfer market</Txt>
+                <Txt v="h2" accessibilityRole="header">
+                  이적시장
+                </Txt>
+                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                  {`구단 자금 ${market ? fundsText(market.balance) : '–'} · 이번 시즌 선수를 사고팔아요`}
+                </Txt>
+              </View>
+              <Btn testID="market" onPress={() => go('market')}>
+                열기
               </Btn>
-            </>
-          )}
-        </Card>
+            </View>
+          </Card>
+        </>
       ) : guest ? (
         <Card gap={12} testID="owner-team-locked">
           <View style={{ gap: 2 }}>

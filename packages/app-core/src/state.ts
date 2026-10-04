@@ -56,6 +56,8 @@ export type Screen =
   | 'owner'
   /** T-10-092 구단주 팀(구단주 화면에서 연다). */
   | 'team'
+  /** T-11-080 이적시장(구단주 화면에서 연다). */
+  | 'market'
   | 'board'
   | 'dex'
   | 'hof'

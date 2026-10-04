@@ -14,7 +14,7 @@ import {
   TEAM_RANK_PER_PAGE,
   type FormationId,
 } from '@offside/contracts/owner-team';
-import { teamSeasonClosed, teamSeasonName } from '@offside/contracts/service-seasons';
+import { teamSeasonAt, teamSeasonClosed, teamSeasonName } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { NO_STORE, nowIso, ok, teamNotFound, teamSeasonParam, conflictError } from './shared.js';
 import {
@@ -140,9 +140,9 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       ratingRankOf(db, t),
       session ? isTeamLiked(db, t.id, session.profileId) : false,
     ]);
-    const eligible = eligibleMap(rows, t.profileId, t.season);
-    const lineup = buildLineup(t.formation as FormationId, ids, eligible, layoutOf(t));
     const now = nowIso();
+    const eligible = eligibleMap(rows, t.profileId, t.season, t.season === teamSeasonAt(now));
+    const lineup = buildLineup(t.formation as FormationId, ids, eligible, layoutOf(t));
     const seasonName = teamSeasonName(t.season);
     return ok(
       c,

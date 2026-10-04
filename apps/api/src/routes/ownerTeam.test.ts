@@ -99,6 +99,28 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
           })
         : null,
     });
+    // T-11-080 팀에 넣을 수 있는 건 카드다(은퇴 업로드가 만든다).
+    if (retired)
+      await ctx.db.insert(cards).values({
+        careerId: id,
+        ownerId: profileId,
+        serviceSeason: over.serviceSeason ?? 0,
+        pos: over.pos ?? 'FW',
+        dpos: over.dpos ?? null,
+        nation: over.nation ?? null,
+        number: 9,
+        peak: over.peak ?? 80,
+        legendScore: 300,
+        peakProfile: over.roles
+          ? JSON.stringify({
+              attrs: { pac: 80, sho: 70, pas: 70, dri: 75, def: 60, phy: 70 },
+              roles: over.roles,
+            })
+          : null,
+        retireValue: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
     return id;
   }
 
@@ -220,19 +242,8 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       attrs: { pac: 99, sho: 99, pas: 99, dri: 99, def: 99, phy: 99 },
     });
     await ctx.db.update(careers).set({ cardAttrsJson: estimate }).where(eq(careers.id, original));
-    // T-11-080 카드 기준가는 cards에서 붙인다(카드가 없거나 소급 전이면 null).
-    await ctx.db.insert(cards).values({
-      careerId: original,
-      ownerId: me.profileId,
-      serviceSeason: 0,
-      pos: 'FW',
-      peak: 90,
-      legendScore: 300,
-      cardValue: 123_000,
-      retireValue: 456_000,
-      createdAt: '2026-09-28T00:00:00.000Z',
-      updatedAt: '2026-09-28T00:00:00.000Z',
-    });
+    // T-11-080 카드 기준가는 cards에서 붙인다(소급 전이면 null).
+    await ctx.db.update(cards).set({ cardValue: 123_000 }).where(eq(cards.careerId, original));
     await ctx.db
       .update(careers)
       .set({ cardAttrsJson: JSON.stringify({ v: 1, source: 'estimated', attrs: { pac: 120 } }) })

@@ -107,6 +107,12 @@ export const TeamPlayerSchema = z.strictObject({
   legendScore: z.number().int().nullable(),
   /** T-11-080 카드 기준가(만 원). 스냅샷이 없는 옛 기록·소급 전이면 null, 구버전 응답에는 없다. */
   cardValue: z.number().int().nullable().optional(),
+  /** T-11-080 내가 직접 키운 선수(방출할 수 있다). 영입한 선수는 false. 구버전 응답에는 없다. */
+  raised: z.boolean().optional(),
+  /** T-11-080 직접 키운 선수의 은퇴 가치(만 원) — 방출하면 이것 × 지급률을 받는다. 영입한 선수에는 없다. */
+  retireValue: z.number().int().optional(),
+  /** T-11-080 판매 등록 중이면 그 등록. */
+  listing: z.strictObject({ id: z.string(), price: z.number().int() }).nullable().optional(),
 });
 export type TeamPlayer = z.infer<typeof TeamPlayerSchema>;
 
