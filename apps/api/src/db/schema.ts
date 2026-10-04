@@ -11,6 +11,70 @@ import {
   type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
 
+/** T-11-070 게시판별 KST 하루 첫 글. 삭제·수정·재배포로 발송 이력을 다시 만들지 않는다. */
+export const pushNewsEvents = sqliteTable(
+  'push_news_events',
+  {
+    id: text('id').primaryKey(),
+    board: text('board', { enum: ['notice', 'release'] }).notNull(),
+    day: text('day').notNull(),
+    postId: text('post_id').notNull(),
+    title: text('title').notNull(),
+    createdAt: text('created_at').notNull(),
+    expiresAt: text('expires_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_news_events_day_unique').on(t.board, t.day),
+    index('push_news_events_expires_idx').on(t.expiresAt),
+  ],
+);
+
+/** 기기별 outbox. 접수 결과가 불명확하면 재발송하지 않아 중복 알림을 피한다. */
+export const pushNewsDeliveries = sqliteTable(
+  'push_news_deliveries',
+  {
+    id: text('id').primaryKey(),
+    eventId: text('event_id')
+      .notNull()
+      .references(() => pushNewsEvents.id, { onDelete: 'cascade' }),
+    installationHash: text('installation_hash').notNull(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    state: text('state', {
+      enum: [
+        'pending',
+        'sending',
+        'accepted',
+        'checking',
+        'confirmed',
+        'failed',
+        'unknown',
+        'cancelled',
+      ],
+    })
+      .notNull()
+      .default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    receiptAttempts: integer('receipt_attempts').notNull().default(0),
+    dueAt: text('due_at').notNull(),
+    leaseId: text('lease_id'),
+    ticketId: text('ticket_id'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_news_deliveries_device_unique').on(t.eventId, t.installationHash),
+    index('push_news_deliveries_due_idx').on(t.state, t.dueAt),
+    index('push_news_deliveries_session_idx').on(t.sessionId),
+    index('push_news_deliveries_profile_idx').on(t.profileId),
+    index('push_news_deliveries_installation_idx').on(t.installationHash),
+  ],
+);
+
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
 export const profiles = sqliteTable(
   'profiles',

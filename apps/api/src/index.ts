@@ -5,6 +5,7 @@ import { runDaily } from './cron/daily.js';
 import type { Bindings } from './env.js';
 import { chatSocket } from './chat/socket.js';
 import { liveSocket } from './live/socket.js';
+import { runNewsPush } from './push/dispatch.js';
 
 export { app };
 export { LiveHub } from './live/hub.js';
@@ -20,6 +21,7 @@ export default {
   },
   // T-10-070 매일 정리·백업(wrangler.jsonc triggers.crons).
   scheduled(controller: ScheduledController, env: Bindings, ctx: ExecutionContext) {
-    ctx.waitUntil(runDaily(env, controller.scheduledTime));
+    if (controller.cron === '0 19 * * *') ctx.waitUntil(runDaily(env, controller.scheduledTime));
+    else ctx.waitUntil(runNewsPush(env));
   },
 };

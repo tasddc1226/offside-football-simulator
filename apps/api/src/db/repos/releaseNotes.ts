@@ -2,6 +2,7 @@ import type { PublishReleaseNotes, ReleaseNote } from '@offside/contracts';
 import { POST_BODY_MAX } from '@offside/contracts/board-limits';
 import { conflictError } from '../../routes/shared.js';
 import { sha256Hex } from '../hash.js';
+import { newsPushStatements } from '../../push/enqueue.js';
 
 const keyOf = (id: string) => `release-note:${id}`;
 type DailyPost = { id: string; body: string; updated_at: string; deleted_at: string | null };
@@ -142,6 +143,8 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
           })),
         ),
       ),
+    // 기존 글에 항목을 추가해도 푸시를 다시 보내지 않는다.
+    ...(!post ? newsPushStatements(db, postId, 'release', now) : []),
   ]);
   if (results[0]!.meta.changes !== 1)
     throw conflictError(
