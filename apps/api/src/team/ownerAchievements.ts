@@ -2,7 +2,7 @@
 // 같은 길로 센다.
 import type { FormationId } from '@offside/contracts/owner-team';
 import { detailPosInSeason } from '@offside/contracts/positions';
-import { teamSeasonAt } from '@offside/contracts/service-seasons';
+import { retireAtOf, teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Db } from '../db/client.js';
 import {
   achievementRowOf,
@@ -78,6 +78,7 @@ export async function refreshOwnerAchievements(
       nickname: !!owner.nickname,
     },
     detail: detailPosInSeason(season),
+    retireAt: retireAtOf(season),
   });
   const row = await saveAchievementScore(
     db,

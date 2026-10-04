@@ -5,6 +5,7 @@
 // T-11-028 업적을 선수·팀·구단주·감독(준비 중)으로 나누고 업적마다 점수를 매긴다. 점수 합이 그 시즌 구단주 등급과 업적
 // 랭킹이 된다 — 시즌마다 처음부터 다시 쌓는다. 팀은 편성(나만의 최강 팀)과 경기 성적(시즌 레이스)으로, 구단주는 시즌 동안
 // 꾸준히 찾아온 활동(은퇴시킨 선수·날, 팀 경기한 날, 응원)으로 센다. 팀·구단주 목표치는 프리시즌 팀 53개 분포(2026-10-01)로 잡았다.
+// T-11-046 '은퇴 직전까지 현역'은 그 시즌 은퇴 나이(T-11-045)의 한 살 아래다 — 프리시즌 40세, 시즌 1 44세.
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import { LINEUP_SIZE, type AchCategory } from '@offside/contracts/owner-team';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
@@ -80,6 +81,8 @@ export type AchievementInput = {
   owner: AchievementOwner;
   /** 세부 포지션이 있는 시즌(시즌 1부터)인가. */
   detail: boolean;
+  /** T-11-046 그 시즌 선수의 은퇴 나이(retireAtOf). */
+  retireAt: number;
 };
 
 // 리그는 contracts LEAGUE_BASE(프로 리그 · 유럽 = 등급 4 이상 · 5대 리그 = 등급 5 이상). 상 이름은 web game/comps.ts
@@ -265,7 +268,8 @@ export function achievementScore(groups: readonly ClubAchievementGroup[]) {
 }
 
 export function clubAchievements(input: AchievementInput): ClubAchievementGroup[] {
-  const { careers, team, owner, detail } = input;
+  const { careers, team, owner, detail, retireAt } = input;
+  const veteranAge = retireAt - 1;
   const honors = new Set(careers.flatMap((c) => c.seasons.flatMap((s) => s.honors)));
   const leagues = new Set(careers.flatMap((c) => c.seasons.map((s) => s.league)));
   const has = (names: readonly string[]) => names.filter((n) => honors.has(n)).length;
@@ -383,10 +387,11 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         '한 시즌 트레블',
         anySeason((s) => treble(s)),
       ),
+      // id는 그대로 둔다(프리시즌 기준 이름).
       feat(
         'age-40',
-        '40세까지 현역',
-        anyone((c) => c.retireAge >= 40),
+        `${veteranAge}세까지 현역`,
+        anyone((c) => c.retireAge >= veteranAge),
       ),
       feat(
         'ballon-3',
