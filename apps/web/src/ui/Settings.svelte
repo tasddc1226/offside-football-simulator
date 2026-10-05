@@ -14,19 +14,10 @@
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
   import BackupSettings from './BackupSettings.svelte';
-  import { toast } from './helpers.js';
-  import { copyText } from './inapp-open.js';
-
-  // T-11-051 개발자 후원 계좌. 앱 스토어는 개발자 후원을 인앱 결제로만 허용해서 웹에만 둔다.
-  const DONATE_ACCOUNT = '토스뱅크 1000-1599-4723 양*영';
-
   let sfx = $state(sfxEnabled());
   let dark = $state(isDark());
   let namePublic = $state(namePublicEnabled());
 
-  async function copyAccount() {
-    toast((await copyText(DONATE_ACCOUNT)) ? '계좌번호를 복사했어요. 고마워요' : '복사하지 못했어요. 아래 계좌번호를 직접 적어 주세요');
-  }
 </script>
 
 <div class="wrap">
@@ -128,17 +119,6 @@
       <a href="/legal/terms/">이용약관 <span aria-hidden="true">›</span></a>
       <a href="/legal/privacy/">개인정보 처리방침 <span aria-hidden="true">›</span></a>
     </nav>
-  </section>
-
-  <section class="settings-group" aria-labelledby="settings-support">
-    <div class="eyebrow">Support</div>
-    <h2 id="settings-support">개발자 응원하기</h2>
-    <div class="card settings-links">
-      <button data-act="coffee" onclick={copyAccount}>☕ 커피 한잔 사주기 <span aria-hidden="true">›</span></button>
-    </div>
-    <p class="muted fs-xs settings-credit">
-      재밌게 즐기셨다면 커피 한잔 사 주세요. 누르면 계좌번호가 복사돼요.<br />{DONATE_ACCOUNT}
-    </p>
   </section>
 
   <SiteFooter />

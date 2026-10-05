@@ -8,9 +8,11 @@
     cancelListing,
     createListing,
     fetchMarket,
+    fetchMarketChart,
     fetchMarketMe,
     releaseCards,
     type MarketCard,
+    type MarketChartPoint,
     type MarketListing,
     type MarketSale,
     type MarketMeResponse,
@@ -52,6 +54,8 @@
   import Topbar from './Topbar.svelte';
   import BackBar from './BackBar.svelte';
   import PlayerCard from './team/PlayerCard.svelte';
+  import MarketChart from './MarketChart.svelte';
+  import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
   import { go } from './nav.js';
   import { toast } from './helpers.js';
 
@@ -105,6 +109,15 @@
   $effect(() => {
     if (view === 'market') void loadList(0);
   });
+  // 시장 지수(최근 7일 · 시장 전체). 선수 사기 탭을 처음 볼 때 한 번(1분 메모).
+  let indexPoints = $state<MarketChartPoint[]>([]);
+  let indexAsked = false;
+  $effect(() => {
+    if (view !== 'market' || indexAsked) return;
+    indexAsked = true;
+    void fetchMarketChart('week').then((r) => r.ok && (indexPoints = r.data.points));
+  });
+  const index = $derived(marketIndex(indexPoints));
   const myListingIds = $derived(new Set(me?.listings.map((l) => l.id) ?? []));
 
   // 팔기는 지금 시즌 선수, 방출은 시즌을 골라 본다(기본은 지금 시즌).
@@ -272,6 +285,20 @@
 
     {#if view === 'market'}
       <section class="mk-pane" aria-label="선수 사기">
+        {#if index}
+          <div class="mk-index mk-idx-{index.tone}" data-market-index>
+            <span class="mk-info">
+              <small>{CHART_COPY.index}</small>
+              <b>{index.pct}</b>
+              <small>{CHART_COPY.indexSub(index.trades)}</small>
+            </span>
+              <svg class="mk-spark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <line x1="0" x2="100" y1={index.spark.base} y2={index.spark.base} />
+                <path d={index.spark.line} />
+              </svg>
+            <em>{index.change}</em>
+          </div>
+        {/if}
         {#if live}
           <div class="mk-live" data-market-live>
             <button class="mk-live-bar" aria-expanded={liveOpen} aria-label="방금 이적 {recent.length}건 모두 보기" onclick={() => (liveOpen = !liveOpen)}>
@@ -450,6 +477,7 @@
         <div><dt>지금 구단 자금</dt><dd>{fundsText(me.balance)}</dd></div>
         <div class="strong"><dt>영입 뒤 남는 자금</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : '모자라요'}</dd></div>
       </dl>
+      <MarketChart card={buying.card} />
       <p class="mk-note">영입한 선수는 바로 팀에 넣을 수 있어요. 다시 팔 수는 있지만 방출해서 자금으로 바꿀 수는 없어요.</p>
       {#if block}<p class="mk-err">{block}</p>{/if}
       {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
@@ -894,6 +922,58 @@
   .mk-lines small {
     font-size: 0.6875rem;
     font-weight: 600;
+  }
+  /* 시장 지수 한 줄(T-11-080f). 국내 증권 관례대로 오름 빨강 · 내림 파랑. */
+  .mk-index {
+    --tone: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .mk-idx-up {
+    --tone: var(--up);
+  }
+  .mk-idx-down {
+    --tone: var(--down);
+  }
+  .mk-index b {
+    font-family: var(--display);
+    font-size: 1.375rem;
+    line-height: 1.1;
+  }
+  .mk-index small {
+    color: var(--muted);
+    font-size: 0.6875rem;
+  }
+  .mk-index em {
+    font-style: normal;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: var(--tone);
+    white-space: nowrap;
+  }
+  .mk-spark {
+    width: 72px;
+    height: 32px;
+    flex: none;
+    overflow: visible;
+  }
+  .mk-spark path {
+    fill: none;
+    stroke: var(--tone);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+    stroke-linejoin: round;
+  }
+  .mk-spark line {
+    stroke: var(--muted);
+    stroke-dasharray: 3 3;
+    vector-effect: non-scaling-stroke;
   }
   .mk-up {
     color: var(--warn);

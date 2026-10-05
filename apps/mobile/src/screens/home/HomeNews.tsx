@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { fetchPosts, type BoardKey, type PostSummary } from '@offside/app-core/api/boards';
 import { postMeta } from '@offside/app-core/boardText';
 import { openBoard } from '../../game/nav';
+import { hiddenPost } from '../../platform/storeText';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Btn, Card, Pill, Press, Row, Txt } from '../../ui';
@@ -28,7 +29,7 @@ export function HomeNews({
     let alive = true;
     void fetchPosts(board).then((r) => {
       if (!alive) return;
-      if (r.ok) setPosts(r.data.posts);
+      if (r.ok) setPosts(r.data.posts.filter((p) => !hiddenPost(p)));
       else setFailed(true);
     });
     return () => {
