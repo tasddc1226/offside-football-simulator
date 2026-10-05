@@ -8,6 +8,9 @@
  */
 
 import { DETAIL_GROUP, type DetailPos, type PeakProfile, type PosGroup } from './positions.js';
+import type { TeamSynergy } from './team-synergy.js';
+
+export * from './team-synergy.js';
 
 /** 팀 이름 길이(앞뒤 공백 제외). */
 export const TEAM_NAME_MIN = 2;
@@ -202,16 +205,20 @@ export const SLOT_LINES: Record<Exclude<DetailPos, 'GK'>, Record<Line, number>> 
 export const LINE_BASE: Record<Line, number> = { atk: 3.25, mid: 2.85, def: 3.9 };
 export const LINE_PRESENCE_K = 4;
 
-/** 11자리 실력 → 공격·중원·수비(몫 가중 평균 + 인원 보정)와 골키퍼. 빈 자리는 유스 선수로 센다. */
+/**
+ * 11자리 실력 → 공격·중원·수비(몫 가중 평균 + 인원 보정)와 골키퍼. 빈 자리는 유스 선수로 센다. synergy를 주면(T-11-105)
+ * 자리 실력에 주발 보정을, 줄 힘에 듀오·팀 색깔 보정을 더한다.
+ */
 export function lineStrength(
   formation: readonly DetailPos[],
   ratings: readonly (number | null)[],
+  synergy?: Pick<TeamSynergy, 'foot' | 'lines'> | null,
 ): LineStrength {
   const sum: Record<Line, number> = { atk: 0, mid: 0, def: 0 };
   const w: Record<Line, number> = { atk: 0, mid: 0, def: 0 };
   let gk = YOUTH_OVR;
   formation.forEach((slot, i) => {
-    const r = ratings[i] ?? YOUTH_OVR;
+    const r = (ratings[i] ?? YOUTH_OVR) + (synergy?.foot[i] ?? 0);
     if (slot === 'GK') {
       gk = r;
       return;
@@ -224,7 +231,13 @@ export function lineStrength(
   });
   const line = (l: Line) =>
     (w[l] ? sum[l] / w[l] : YOUTH_OVR) + LINE_PRESENCE_K * (w[l] - LINE_BASE[l]);
-  return { atk: line('atk'), mid: line('mid'), def: line('def'), gk };
+  const b = synergy?.lines;
+  return {
+    atk: line('atk') + (b?.atk ?? 0),
+    mid: line('mid') + (b?.mid ?? 0),
+    def: line('def') + (b?.def ?? 0),
+    gk: gk + (b?.gk ?? 0),
+  };
 }
 
 /** 팀 OVR = 11자리 실력의 평균(반올림). 빈 자리는 유스 선수(YOUTH_OVR)로 센다. */

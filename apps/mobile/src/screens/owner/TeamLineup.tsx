@@ -42,6 +42,8 @@ export function TeamLineup({
   change,
   dragging,
   jumpRef,
+  synLinks,
+  synFocus,
 }: {
   formation: FormationId;
   layout: TeamPosition[];
@@ -55,6 +57,9 @@ export function TeamLineup({
   change: (slots: (string | null)[], layout: TeamPosition[]) => void;
   dragging: (value: boolean) => void;
   jumpRef: React.RefObject<(() => void) | null>;
+  /** T-11-105 시너지 연결선·고른 시너지의 선수 자리. */
+  synLinks: readonly { members: readonly number[]; on: boolean }[];
+  synFocus: readonly number[] | null;
 }) {
   const c = useColors();
   const { height } = useWindowDimensions();
@@ -253,6 +258,8 @@ export function TeamLineup({
         cells={cells}
         pitchRef={pitch}
         selected={focus}
+        links={synLinks}
+        focus={synFocus}
         ondrag={editable ? drag : undefined}
         onpick={
           editable
