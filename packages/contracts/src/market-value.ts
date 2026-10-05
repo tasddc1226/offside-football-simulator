@@ -115,3 +115,13 @@ export const ovrBand = (peak: number) => Math.floor(peak / 5) * 5;
 /** T-11-080 방출 지급액(만 원, 천만 단위 반올림). 서버 repos/market.ts releaseCards의 SQL과 같은 계산. */
 export const releasePayout = (retireValue: number, rate: number) =>
   Math.round((retireValue * rate) / 1000) * 1000;
+
+/** T-11-080f 시세 차트 기간: 최근 7일 · 30일 · 이번 시즌 전체. */
+export const MARKET_CHART_RANGES = ['week', 'month', 'season'] as const;
+export type MarketChartRange = (typeof MARKET_CHART_RANGES)[number];
+/** 기간별 날짜 수(서버 조회 시작일 · 클라이언트 가로축이 같이 쓴다). 시즌은 처음부터. */
+export const MARKET_CHART_DAYS: Record<MarketChartRange, number | null> = {
+  week: 7,
+  month: 30,
+  season: null,
+};

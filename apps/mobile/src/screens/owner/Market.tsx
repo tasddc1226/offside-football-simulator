@@ -13,8 +13,10 @@ import {
   cancelListing,
   createListing,
   fetchMarket,
+  fetchMarketChart,
   fetchMarketMe,
   releaseCards,
+  type MarketChartPoint,
   type MarketListing,
   type MarketSale,
   type MarketMeResponse,
@@ -63,6 +65,7 @@ import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { ActionBar, BackBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
 import { CARD_TONES, PlayerCard } from '../../components/PlayerCard';
+import { MarketChart, MarketIndex } from './MarketChart';
 
 type Sent<T> = Promise<
   { ok: true; data: T } | { ok: false; error: { message: string; reason?: string | undefined } }
@@ -549,6 +552,14 @@ export default function Market() {
   useEffect(() => {
     if (view === 'market') void loadList(0);
   }, [view, loadList]);
+  // 시장 지수(최근 7일 · 시장 전체). 선수 사기 탭을 처음 볼 때 한 번(1분 메모).
+  const [indexPoints, setIndexPoints] = useState<MarketChartPoint[]>([]);
+  const indexAsked = useRef(false);
+  useEffect(() => {
+    if (view !== 'market' || indexAsked.current) return;
+    indexAsked.current = true;
+    void fetchMarketChart('week').then((r) => r.ok && setIndexPoints(r.data.points));
+  }, [view]);
   const myListingIds = useMemo(() => new Set(me?.listings.map((l) => l.id) ?? []), [me]);
 
   // 팔기는 지금 시즌 선수, 방출은 시즌을 골라 본다(기본은 지금 시즌).
@@ -927,6 +938,7 @@ export default function Market() {
 
             {view === 'market' ? (
               <View testID="market-list" style={{ gap: 10 }}>
+                <MarketIndex points={indexPoints} />
                 <LiveStrip recent={recent} local={local} />
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                   {MARKET_POS_FILTERS.map((p) => (
@@ -1451,6 +1463,7 @@ export default function Market() {
                   }
                 />
               </View>
+              <MarketChart card={buying.card} />
               <View style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}>
                 <Txt tone="muted" style={tiny}>
                   영입한 선수는 바로 팀에 넣을 수 있어요. 다시 팔 수는 있지만 방출해서 자금으로 바꿀

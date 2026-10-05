@@ -1,9 +1,14 @@
 import {
   BuyListingBodySchema,
   BuyListingResponseSchema,
+  CareerIdParamSchema,
   CreateListingBodySchema,
   CreateListingResponseSchema,
   ListingIdSchema,
+  MARKET_CHART_DAYS,
+  MarketCardTradesResponseSchema,
+  MarketChartQuerySchema,
+  MarketChartResponseSchema,
   MarketListQuerySchema,
   MarketFundsResponseSchema,
   MarketListResponseSchema,
@@ -19,12 +24,14 @@ import {
   buyListing,
   cancelListing,
   cardForListing,
+  cardTrades,
   countBuysSince,
   countOpenListingsOf,
   fundsOf,
   getListing,
   insertListing,
   listOpenListings,
+  marketChart,
   marketFunds,
   marketRules,
   myOpenListings,
@@ -38,7 +45,7 @@ import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
-import { kstDay } from '../time.js';
+import { kstDay, kstDays } from '../time.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { kstTodayStart, requireOwner } from './ownerTeam.js';
 import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
@@ -49,6 +56,9 @@ import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './
 /** 목록 엣지 캐시(초). purgeEdge는 그 데이터센터 사본만 지우므로 쓰지 않고 짧은 TTL로 둔다(이미 팔린 매물은 409). */
 const LIST_TTL = 15;
 const CACHE = `public, max-age=${LIST_TTL}`;
+/** 시세 차트 엣지 캐시(초). 하루치 집계라 1분이면 충분하다. */
+const CHART_TTL = 60;
+const CHART_CACHE = `public, max-age=${CHART_TTL}`;
 
 function seasonOrThrow(now: string): number {
   const season = teamSeasonAt(now);
@@ -93,6 +103,42 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         ? await edgeCached(c, EDGE.marketList(season, q.sort, q.pos), LIST_TTL, load)
         : await load();
     return ok(c, MarketListResponseSchema, data, 200, CACHE);
+  });
+
+  // T-11-080f 시세 차트(공개 · 세션 조회 없음). 묶음(포지션군 · OVR대) 또는 시장 전체의 하루치 시세.
+  // 키는 시즌 · 기간 · 묶음뿐이라(포지션 4 × OVR대 21 × 기간 3 + 시장 전체 3) 엣지에 담는다. 새 거래는 1분 안에 보인다.
+  app.get('/v1/market/chart', async (c) => {
+    const q = parseWithAppError(MarketChartQuerySchema, {
+      range: c.req.query('range') || undefined,
+      pos: c.req.query('pos') || undefined,
+      band: c.req.query('band') || undefined,
+    });
+    const now = nowIso();
+    const season = teamSeasonAt(now);
+    if (season === null)
+      return ok(c, MarketChartResponseSchema, { season, points: [] }, 200, CHART_CACHE);
+    const group = q.pos !== undefined && q.band !== undefined ? { pos: q.pos, band: q.band } : null;
+    const days = MARKET_CHART_DAYS[q.range];
+    const since = days ? kstDays(new Date(now), days).days[0]! : null;
+    const data = await edgeCached(
+      c,
+      EDGE.marketChart(season, q.range, group ?? undefined),
+      CHART_TTL,
+      async () => ({ season, points: await marketChart(getDb(c), season, since, group) }),
+    );
+    return ok(c, MarketChartResponseSchema, data, 200, CHART_CACHE);
+  });
+
+  // 이 선수가 팔린 기록(공개). 카드마다 키가 생기므로 엣지에는 담지 않고 브라우저 캐시만 둔다.
+  app.get('/v1/market/cards/:careerId/trades', async (c) => {
+    const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
+    return ok(
+      c,
+      MarketCardTradesResponseSchema,
+      { trades: await cardTrades(getDb(c), careerId) },
+      200,
+      CHART_CACHE,
+    );
   });
 
   // 구단주 화면 요약: 구단 자금 · 구단 가치(쿼리 둘).
