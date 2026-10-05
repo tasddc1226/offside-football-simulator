@@ -110,6 +110,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
     chJson: season.ch ? JSON.stringify(season.ch) : null,
   };
 
+  const dpos = dposFor(meta.pos, meta.dpos);
+
   await runBatch(db, [
     db
       .insert(careers)
@@ -117,7 +119,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         id: careerId,
         profileId,
         pos: meta.pos,
-        dpos: dposFor(meta.pos, meta.dpos),
+        dpos,
         nation: meta.nation ?? null,
         height: meta.height ?? null,
         weight: meta.weight ?? null,
@@ -131,7 +133,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         ...name,
         // 처음 올라온 시각의 시즌(0 = 프리시즌, 시즌 사이 휴식기면 NULL) — onConflict set에 없어 바뀌지 않는다.
         // T-11-095 세부 포지션 없이 만든 프리시즌 선수는 개막 뒤에 처음 올라와도 프리시즌이다.
-        serviceSeason: firstUploadSeasonAt(now, meta.dpos !== undefined),
+        serviceSeason: firstUploadSeasonAt(now, dpos !== null),
         createdAt: now,
         updatedAt: now,
       })

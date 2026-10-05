@@ -824,6 +824,7 @@ describe('T-11-063 개막 첫 업로드 경계', () => {
     const app = createApp();
     const pre = '77777777-7777-4777-8777-777777777777';
     const s1 = '88888888-8888-4888-8888-888888888888';
+    const late = '99999999-9999-4999-8999-999999999999';
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-05T14:59:59.999Z'));
     const upload = async (id: string, body = seasonBody()) => {
@@ -838,30 +839,16 @@ describe('T-11-063 개막 첫 업로드 경계', () => {
     vi.setSystemTime(new Date('2026-10-05T15:00:00.000Z'));
     await upload(s1, seasonBody({ career: { ...TEST_CAREER, dpos: 'ST' } }));
     await upload(pre);
+    // T-11-095 세부 포지션 없이 만든(프리시즌 규칙) 선수는 개막 뒤에 처음 올라와도 프리시즌이다.
+    await upload(late);
     const rows = await ctx.db
       .select({ id: careers.id, season: careers.serviceSeason, dpos: careers.dpos })
       .from(careers);
     expect(Object.fromEntries(rows.map((r) => [r.id, [r.season, r.dpos]]))).toEqual({
       [pre]: [0, null],
       [s1]: [1, 'ST'],
+      [late]: [0, null],
     });
   });
 
-  it('T-11-095 세부 포지션 없이 만든 프리시즌 선수는 개막 뒤에 처음 올라와도 프리시즌이다', async () => {
-    const me = await issueCookie(ctx);
-    const late = '99999999-9999-4999-8999-999999999999';
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date('2026-10-06T03:00:00.000Z')); // 자정을 넘겨 첫 시즌을 마침
-    const res = await createApp().request(
-      `/v1/careers/${late}/seasons/2026`,
-      jsonInit({ method: 'PUT', body: seasonBody({ career: TEST_CAREER }), cookie: me.cookie }),
-      ctx.env,
-    );
-    expect(res.status).toBe(200);
-    const [row] = await ctx.db
-      .select({ season: careers.serviceSeason })
-      .from(careers)
-      .where(eq(careers.id, late));
-    expect(row?.season).toBe(0);
-  });
 });
