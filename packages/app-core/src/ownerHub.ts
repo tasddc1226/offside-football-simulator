@@ -10,13 +10,17 @@ import { matchHintOf } from './teamOwner.js';
 export type OwnerSummary = { players: number; score: number; retired: number; value: number };
 
 export function ownerSummary(
-  rows: readonly { stats: { score: number }; rn?: number | null | undefined; card?: number }[],
+  rows: readonly {
+    stats: { score: number };
+    rn?: number | null | undefined;
+    value?: number | undefined;
+  }[],
 ): OwnerSummary {
   return {
     players: rows.length,
     score: rows.reduce((s, r) => s + r.stats.score, 0),
     retired: rows.filter((r) => r.rn != null).length,
-    value: rows.reduce((s, r) => s + (r.card ?? 0), 0),
+    value: rows.reduce((s, r) => s + (r.value ?? 0), 0),
   };
 }
 
