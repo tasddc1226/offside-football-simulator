@@ -78,7 +78,7 @@
     <div class="mc-foot">
       <span>{model.from}</span>
       <span class="mc-legend">
-        <i class="l-line"></i>{CHART_COPY.legendLine}
+        {#if model.line}<i class="l-line"></i>{CHART_COPY.legendLine}{/if}
         <i class="l-base"></i>{CHART_COPY.legendBase}
         {#if model.dots.length}<i class="l-dot"></i>{CHART_COPY.legendDot}{/if}
       </span>

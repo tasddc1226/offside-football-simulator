@@ -337,10 +337,14 @@ export function MarketChart({ card }: { card: MarketCard }) {
               {model.from}
             </Txt>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
-              <View style={{ width: 12, height: 2, backgroundColor: c.muted }} />
-              <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
-                {CHART_COPY.legendLine}
-              </Txt>
+              {model.line ? (
+                <>
+                  <View style={{ width: 12, height: 2, backgroundColor: c.muted }} />
+                  <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                    {CHART_COPY.legendLine}
+                  </Txt>
+                </>
+              ) : null}
               {model.dots.length ? (
                 <>
                   <View
