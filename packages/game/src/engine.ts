@@ -76,8 +76,8 @@ export function newGame(
   // 잠재력 추첨은 첫 시즌(newSeason) 전이라 최신 서버 밸런스를 먼저 맞춘다 — RNG는 쓰지 않는다.
   applyLatestBalance();
   // T-11-093 시즌에 만든 선수만 서버 설정(기본 75·6)으로 뽑는다. 프리시즌 선수는 예전 값 그대로.
-  const season = !!o.retireAt && o.retireAt !== PRESEASON_RETIRE_AT;
-  const potDraw = season ? { mean: BAL.potMean, sd: BAL.potSd } : PRESEASON_POT;
+  const retireAt = o.retireAt !== PRESEASON_RETIRE_AT ? o.retireAt : undefined;
+  const potDraw = retireAt ? { mean: BAL.potMean, sd: BAL.potSd } : PRESEASON_POT;
   const pot = clamp(Math.round(potDraw.mean + gauss() * potDraw.sd), 55, 96);
   const scouted = clamp(Math.round(pot + gauss() * BAL.potScoutSd), 55, 96);
   // sub/season/seasonStartSub은 initSubs()/newSeason() 호출로만 실제 값이 정해진다(둘 다 RNG를
@@ -95,7 +95,7 @@ export function newGame(
     ...(o.dpos && { dpos: o.dpos }),
     ...(o.nation && o.nation !== DEFAULT_NATION && { nation: o.nation }),
     ...(o.body && { body: { ...o.body } }),
-    ...(o.retireAt && o.retireAt !== PRESEASON_RETIRE_AT && { retireAt: o.retireAt }),
+    ...(retireAt && { retireAt }),
     foot: o.foot,
     type: typeId,
     focus,

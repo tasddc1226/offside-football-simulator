@@ -28,11 +28,7 @@ export interface BalanceKnob {
   step: number;
 }
 
-/**
- * T-11-093 프리시즌 선수의 잠재력 추첨(평균·편차). 시즌 1부터 기본값을 75·6으로 좁혔다 — 운영 은퇴 기록에서 처음 잠재력이
- * LS를 너무 많이 정했다(상관 0.68, LS 상위 1%가 모두 S·A·B). 프리시즌에 만든 선수는 서버 설정과 상관없이 이 값을 써서
- * 예전과 같은 선수가 나온다.
- */
+/** T-11-093 프리시즌에 만든 선수의 잠재력 추첨(평균·편차). 서버 설정과 상관없이 고정이라 예전과 같은 선수가 나온다. */
 export const PRESEASON_POT = { mean: 74, sd: 8 } as const;
 
 export const BALANCE_SPEC = {
