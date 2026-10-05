@@ -3,7 +3,7 @@ import { unstable_splitSqlQuery as splitSqlQuery } from 'wrangler';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import type { Bindings } from '../env.js';
-import { backupKey, backupToR2 } from './backup.js';
+import { backupKey, backupToR2, fixedParts } from './backup.js';
 import { cleanupExpired } from './cleanup.js';
 import { DAILY_META_KEY, runDaily } from './daily.js';
 
@@ -120,6 +120,23 @@ describe('T-10-070 D1 → R2 백업', () => {
     } finally {
       await fresh.dispose();
     }
+  });
+
+  // T-11-088 로컬 R2는 조각 크기를 검사하지 않고 로컬 gzip은 조각 경계에 딱 맞게 나와서, 운영처럼 들쭉날쭉한
+  // 덩어리를 직접 넣어 본다. 운영 R2는 마지막 말고 크기가 다른 조각이 있으면 complete를 거부한다.
+  it('조각은 마지막 말고 모두 같은 크기로 자른다', async () => {
+    const chunks = [7, 3, 11, 1, 9, 5].map((n, i) => new Uint8Array(n).fill(i));
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        chunks.forEach((x) => c.enqueue(x));
+        c.close();
+      },
+    });
+    const parts: Blob[] = [];
+    for await (const p of fixedParts(stream, 8)) parts.push(p);
+    expect(parts.map((p) => p.size)).toEqual([8, 8, 8, 8, 4]);
+    const joined = new Uint8Array(await new Blob(parts).arrayBuffer());
+    expect([...joined]).toEqual(chunks.flatMap((x) => [...x]));
   });
 
   // 8MiB 넘게 만들고 압축한다 — CI 러너에서는 기본 5초를 넘긴다.

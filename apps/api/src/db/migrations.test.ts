@@ -59,6 +59,17 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
     'updated_at',
   ],
+  market_daily: [
+    'season',
+    'pos_group',
+    'ovr_band',
+    'day',
+    'trades',
+    'volume',
+    'ratio_sum',
+    'ratio_min',
+    'ratio_max',
+  ],
   market_listings: [
     'id',
     'career_id',

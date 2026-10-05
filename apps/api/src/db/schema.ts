@@ -400,6 +400,10 @@ export const marketListings = sqliteTable(
     index('market_listings_seller_idx').on(table.sellerId, table.status, table.closedAt),
     index('market_listings_buyer_idx').on(table.buyerId, table.closedAt),
     index('market_listings_sold_idx').on(table.status, table.season, table.closedAt),
+    // 선수별 판매 기록(시세 차트의 점). 팔린 행만 담아 등록 · 취소 때는 쓰지 않는다.
+    index('market_listings_card_idx')
+      .on(table.careerId, table.closedAt)
+      .where(sql`${table.status} = 'sold'`),
   ],
 );
 
@@ -414,6 +418,31 @@ export const ownerFunds = sqliteTable(
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [check('owner_funds_balance_check', sql`${table.balance} >= 0`)],
+);
+
+/**
+ * T-11-080e 이적시장 시세 집계. 같은 시즌 · 포지션군 · OVR대(최고 OVR 5 단위) 선수가 그날(KST) 기준가의 몇 %에
+ * 팔렸는지 모은다. 영입 batch가 한 문장으로 갱신하고, 시세 차트는 이 표만 읽는다(거래 기록을 다시 훑지 않음).
+ * 비율은 기준가 대비 천분율(1000 = 기준가 그대로), 거래 대금은 만 원.
+ */
+export const marketDaily = sqliteTable(
+  'market_daily',
+  {
+    season: integer('season').notNull(),
+    posGroup: text('pos_group', { enum: ['FW', 'MF', 'DF', 'GK'] }).notNull(),
+    ovrBand: integer('ovr_band').notNull(),
+    day: text('day').notNull(),
+    trades: integer('trades').notNull(),
+    volume: integer('volume').notNull(),
+    ratioSum: integer('ratio_sum').notNull(),
+    ratioMin: integer('ratio_min').notNull(),
+    ratioMax: integer('ratio_max').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.season, table.posGroup, table.ovrBand, table.day] }),
+    // 시장 전체 지수(일자별 합). 키 열은 갱신 때 바뀌지 않아 거래마다 인덱스를 다시 쓰지 않는다.
+    index('market_daily_day_idx').on(table.season, table.day),
+  ],
 );
 
 /**

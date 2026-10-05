@@ -142,6 +142,34 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
       );
     },
   );
+  // 시세 차트(T-11-080f): 날짜는 오늘(KST) 기준으로 만든다.
+  const kstDay = (back: number) =>
+    new Date(Date.now() + 9 * 3_600_000 - back * 86_400_000).toISOString().slice(0, 10);
+  const charts: string[] = [];
+  await page.route(`${API}/v1/market/chart**`, (r) => {
+    const q = new URL(r.request().url()).search;
+    charts.push(q);
+    const day = (back: number, avg: number) => ({
+      day: kstDay(back),
+      trades: 3,
+      volume: 300_000,
+      avg,
+      min: avg - 50,
+      max: avg + 50,
+    });
+    return r.fulfill(
+      ok({
+        season: 0,
+        points: q.includes('pos=') && q.includes('month') ? [] : [day(1, 1000), day(0, 1030)],
+      }),
+    );
+  });
+  await page.route(`${API}/v1/market/cards/${card.careerId}/trades`, (r) => {
+    charts.push('trades');
+    return r.fulfill(
+      ok({ trades: [{ price: 110_000, ratio: 1100, soldAt: new Date().toISOString() }] }),
+    );
+  });
   await page.route(`${API}/v1/market/listings/${LISTING}/buy`, (r) => {
     bought = r.request().postDataJSON();
     balance -= 120_000;
@@ -157,6 +185,9 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
   await expect(page.locator('[data-market-funds]')).toContainText('20억');
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toContainText('시장 골잡이');
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toContainText('기준가 +20%');
+  // 시장 지수 — 마지막 거래일 평균과 그 전 거래일과의 차이(오름은 빨강).
+  await expect(page.locator('[data-market-index]')).toContainText('103%');
+  await expect(page.locator('[data-market-index]')).toContainText('▲ 3%p');
   // 방금 이적 — 최근 거래가 한 줄씩 넘어가고, 누르면 모두 펼친다(서버는 다시 부르지 않는다).
   await expect(page.locator('[data-market-live]')).toContainText('팔린 수비수 CB 88 · 7억에 이적');
   await expect(page.locator('[data-market-live]')).toContainText('시장 골잡이 ST 88 · 5억에 이적', {
@@ -174,11 +205,47 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
 
   await page.locator(`[data-listing="${LISTING}"]`).click();
   await expect(page.getByRole('dialog', { name: '선수 영입' })).toContainText('영입 뒤 남는 자금');
+  // 카드 상세 시세 — 같은 포지션군 · OVR대(85~89) 하루 평균 점 둘과 이 선수 거래 점 하나. 점을 누르면 그날 값.
+  const chart = page.locator('[data-market-chart]');
+  await expect(chart).toContainText('공격수 OVR 85~89');
+  await expect(chart.locator('.mc-day')).toHaveCount(2);
+  await chart.locator('[data-chart-trade]').click();
+  await expect(chart.locator('.mc-pick')).toContainText('이 선수 · 110%');
+  await expectNoA11yViolations(page);
+  await chart.locator('[data-chart-range="month"]').click();
+  await expect(chart.locator('.mc-day')).toHaveCount(0);
+  await expect(chart.locator('[data-chart-trade]')).toHaveCount(1);
+  // 기간을 되돌리면 메모를 쓴다(지수 1 · 묶음 1주 · 선수 거래 · 묶음 1달).
+  await chart.locator('[data-chart-range="week"]').click();
+  await expect(chart.locator('.mc-day')).toHaveCount(2);
+  expect(charts).toEqual([
+    '?range=week',
+    '?range=week&pos=FW&band=85',
+    'trades',
+    '?range=month&pos=FW&band=85',
+  ]);
   await page.locator('[data-act="buy"]').click();
   await expect(page.locator('#toast')).toHaveText('선수를 영입했어요.');
   expect(bought).toEqual({ price: 120_000 });
   await expect(page.locator('[data-market-funds]')).toContainText('8억');
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toHaveCount(0);
+});
+
+test('홈 타일에서 이적시장으로 바로 가고, 이전으로 누르면 홈으로 돌아온다', async ({ page }) => {
+  await stub(page);
+  await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(200_000)));
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
+    (r) => r.fulfill(ok({ season: 0, items: [listing], hasMore: false, recent: [] })),
+  );
+  await page.route(`${API}/v1/market/chart**`, (r) => r.fulfill(ok({ season: 0, points: [] })));
+  await page.goto('/');
+  await page.locator('[data-act="home-market"]').click();
+  await expect(page.locator(`[data-listing="${LISTING}"]`)).toBeVisible();
+  // 거래가 없으면 시장 지수 줄을 두지 않는다.
+  await expect(page.locator('[data-market-index]')).toHaveCount(0);
+  await page.locator('[data-back-bar] button').click();
+  await expect(page.locator('[data-act="home-market"]')).toBeVisible();
 });
 
 test('자금이 모자라면 영입 버튼이 잠기고, 이미 팔린 선수는 목록을 새로 받는다', async ({

@@ -3,6 +3,9 @@ import type {
   BuyListingResponse,
   CareerPos,
   CreateListingResponse,
+  MarketCardTradesResponse,
+  MarketChartRange,
+  MarketChartResponse,
   MarketFundsResponse,
   MarketListResponse,
   MarketMeResponse,
@@ -13,6 +16,8 @@ import { apiFetch, cachedGet, clearApiCache, type ApiResult } from './client.js'
 
 export type {
   MarketCard,
+  MarketChartPoint,
+  MarketChartRange,
   MarketFundsResponse,
   MarketListing,
   MarketListResponse,
@@ -29,6 +34,18 @@ export const fetchMarket = (sort: MarketSort, pos: CareerPos | undefined, page: 
     `/v1/market?sort=${sort}${pos ? `&pos=${pos}` : ''}${page ? `&page=${page}` : ''}`,
     30_000,
   );
+/** 시세 차트(T-11-080f). pos·band가 없으면 시장 전체. 서버가 1분 엣지 캐시하니 메모도 1분. */
+export const fetchMarketChart = (
+  range: MarketChartRange,
+  group?: { pos: CareerPos; band: number },
+) =>
+  cachedGet<MarketChartResponse>(
+    `/v1/market/chart?range=${range}${group ? `&pos=${group.pos}&band=${group.band}` : ''}`,
+    60_000,
+  );
+/** 이 선수가 팔린 기록(카드 상세 차트의 점). 영입 시트를 열 때만. */
+export const fetchCardTrades = (careerId: string) =>
+  cachedGet<MarketCardTradesResponse>(`/v1/market/cards/${careerId}/trades`, 60_000);
 /** 구단주 화면 요약: 구단 자금 · 구단 가치만(구글 연결 구단주만). */
 export const fetchMarketFunds = () => cachedGet<MarketFundsResponse>('/v1/market/funds', 60_000);
 /** 내 자금 · 구단 가치 · 열린 등록 · 최근 거래(구글 연결 구단주만). 이적시장 화면을 열 때만. */

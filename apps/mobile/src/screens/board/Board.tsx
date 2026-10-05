@@ -36,6 +36,7 @@ import { markNewsSeen, toast } from '../../game/host';
 import { openBoard } from '../../game/nav';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
 import { openWeb } from '../../platform/openWeb';
+import { hiddenPost, shownBody, shownComments } from '../../platform/storeText';
 import { AppleLoginButton, useAppleLogin } from '../../ui/AppleLoginButton';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
@@ -356,6 +357,9 @@ export default function Board() {
   }
 
   const small = { fontSize: rem(0.75) } as const;
+  const comments = detail ? shownComments(detail.comments) : [];
+  const listed = posts.filter((p) => !hiddenPost(p));
+
   return (
     <Screen>
       <Slide view={view} dir={view === 'list' ? -1 : 1}>
@@ -407,7 +411,7 @@ export default function Board() {
                   </Txt>
                 </View>
                 <View>
-                  {parseBody(detail.post.body).map((b, i) =>
+                  {parseBody(shownBody(detail.post.body)).map((b, i) =>
                     b.kind === 'h' ? (
                       <Txt
                         key={i}
@@ -484,10 +488,10 @@ export default function Board() {
               </View>
               <View accessibilityLabel="댓글" style={{ gap: 10 }}>
                 <Txt v="h3" accessibilityRole="header">
-                  {`댓글 ${detail.comments.length}`}
+                  {`댓글 ${comments.length}`}
                 </Txt>
-                {detail.comments.length ? (
-                  detail.comments.map((cm) => (
+                {comments.length ? (
+                  comments.map((cm) => (
                     <View
                       key={cm.id}
                       testID={`comment-${cm.id}`}
@@ -694,8 +698,8 @@ export default function Board() {
                 retry={() => void load()}
               >
                 <View>
-                  {posts.length ? (
-                    posts.map((p) => (
+                  {listed.length ? (
+                    listed.map((p) => (
                       <Press
                         key={p.id}
                         scale={0.985}
