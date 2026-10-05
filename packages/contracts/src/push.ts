@@ -11,5 +11,8 @@ export const RegisterPushDeviceSchema = PushDeviceIdentitySchema.extend({
   appVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
 }).strict();
 export const PushDeviceResultSchema = z.object({ enabled: z.boolean() });
-export const PushTestResultSchema = z.object({ accepted: z.literal(true) });
+export const PushTestResultSchema = z.object({
+  accepted: z.literal(true),
+  nextTestAt: z.iso.datetime().optional(),
+});
 export type RegisterPushDevice = z.infer<typeof RegisterPushDeviceSchema>;

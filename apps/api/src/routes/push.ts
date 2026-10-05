@@ -5,7 +5,6 @@ import {
   PushTestResultSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { requireAdmin } from '../auth/admin.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
@@ -16,6 +15,7 @@ import {
   rememberPushTestTicket,
 } from '../db/repos/pushDevices.js';
 import { sendPushTest } from '../push/expo.js';
+import { reservePushTest } from '../push/testLimit.js';
 import { enforceLimit, NO_STORE, nowIso, ok, readBody, notFoundError } from './shared.js';
 
 export function registerPushRoutes(app: Hono<AppEnv>) {
@@ -56,22 +56,14 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
   });
   app.post('/v1/push/test', requireProfile, async (c) => {
     const session = appSession(c);
-    await requireAdmin(c);
     const { installationId } = readBody(c, PushDeviceIdentitySchema);
     if (c.env.PUSH_TEST_ENABLED !== '1')
       throw new AppError({ code: 'SERVICE_UNAVAILABLE', message: '알림 테스트 준비 중이에요.' });
     const now = nowIso();
-    await enforceLimit(
-      getDb(c),
-      'PUSH_TEST',
-      session.id,
-      5,
-      now,
-      '알림 테스트는 잠시 뒤 다시 시도해 주세요.',
-    );
     const device = await ownPushDevice(c.env.DB, session, installationId, now);
     if (!device)
       throw notFoundError('이 기기의 알림 받기를 먼저 켜 주세요.', 'PUSH_DEVICE_MISSING');
+    const nextTestAt = await reservePushTest(c.env.DB, installationId, session.profileId, now);
     try {
       const ticketId = await sendPushTest(device.token, c.env.EXPO_PUSH_ACCESS_TOKEN);
       await rememberPushTestTicket(
@@ -92,6 +84,6 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
         });
       throw e;
     }
-    return ok(c, PushTestResultSchema, { accepted: true }, 200, NO_STORE);
+    return ok(c, PushTestResultSchema, { accepted: true, nextTestAt }, 200, NO_STORE);
   });
 }

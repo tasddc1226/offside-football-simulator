@@ -11,6 +11,8 @@ import { createPushRegistration } from '@offside/app-core/pushRegistration';
 import { ensureSession, onSessionChanged, sessionToken } from './session';
 import { kv } from './setup';
 import { openBoard } from '../game/nav';
+import { PUSH_TEST_COOLDOWN_MS } from '@offside/contracts/push-limits';
+import { DAY_MS, kstDay } from '@offside/contracts/kst';
 
 const DEVICE_KEY = 'offside_push_installation';
 const WANTED = 'offside_push_wanted';
@@ -190,11 +192,39 @@ export function startPush() {
   void pushRegistration.restore();
 }
 
+const TEST_NEXT = 'offside_push_test_next';
+export const pushTestState = proxy({
+  busy: false,
+  nextTestAt: kv.getNumber(TEST_NEXT) ?? 0,
+});
+function saveTestNext(at: number) {
+  pushTestState.nextTestAt = at;
+  kv.set(TEST_NEXT, at);
+}
 export async function testOwnPush() {
   if (!pushState.enabled) throw new Error('먼저 알림 받기를 켜 주세요.');
-  const r = await apiFetch('/v1/push/test', {
-    method: 'POST',
-    body: JSON.stringify({ installationId: await installationId() }),
-  });
-  if (!r.ok) throw new Error(r.error.message);
+  if (pushTestState.busy || Date.now() < pushTestState.nextTestAt)
+    throw new Error('테스트 알림은 잠시 뒤 다시 보낼 수 있어요.');
+  pushTestState.busy = true;
+  try {
+    const r = await apiFetch<{ accepted: true; nextTestAt?: string }>('/v1/push/test', {
+      method: 'POST',
+      body: JSON.stringify({ installationId: await installationId() }),
+    });
+    const cooldown = Date.now() + PUSH_TEST_COOLDOWN_MS;
+    if (!r.ok) {
+      // 불명확한 발송 결과도 즉시 재요청하지 않는다. 서버가 기기·계정 예산을 최종 판정한다.
+      if (['RATE_LIMITED', 'SERVICE_UNAVAILABLE', 'NETWORK_ERROR'].includes(r.error.code)) {
+        const tomorrow = Date.parse(`${kstDay(new Date().toISOString())}T00:00:00+09:00`) + DAY_MS;
+        saveTestNext(
+          r.error.reason === 'PUSH_TEST_DAILY_LIMIT' ? Math.max(cooldown, tomorrow) : cooldown,
+        );
+      }
+      throw new Error(r.error.message);
+    }
+    const next = r.data.nextTestAt ? Date.parse(r.data.nextTestAt) : cooldown;
+    saveTestNext(Number.isFinite(next) ? next : cooldown);
+  } finally {
+    pushTestState.busy = false;
+  }
 }
