@@ -80,6 +80,9 @@ describe('영구결번 (T-10-076)', () => {
   let cookie: string;
 
   beforeEach(async () => {
+    // 기본 데이터는 프리시즌 선수다. 실제 시즌 개막과 무관하게 같은 기준으로 검증한다.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z'));
     ctx = await createTestD1();
     cookie = (await issueCookie(ctx)).cookie;
   });

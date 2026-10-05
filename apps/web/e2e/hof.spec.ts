@@ -1,4 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
+
+// 기본 선수 기록은 프리시즌이다. 개막을 확인하는 테스트는 자기 시각을 따로 지정한다.
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-30T00:00:00.000Z'));
+});
 import AxeBuilder from '@axe-core/playwright';
 import { ok, API } from './helpers.js';
 
