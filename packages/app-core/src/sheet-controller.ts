@@ -93,17 +93,31 @@ export function matchRows(s: GameState, b: BlockResult): TickerRow[] {
 
 export function createSheetController(state: SheetState, ui: SheetUi) {
   /** 뷰를 띄우고, 이후에 고칠 뷰(state에 들어간 반응형 사본)를 돌려준다. 넘긴 원본을 고치면 화면이 바뀌지 않는다. */
-  function showSheet<V extends SheetView>(view: V, buttons: SheetButton[] = []): V {
+  // T-11-090 바깥을 누르거나 끌어내려 닫을 때 할 일. 다른 시트를 띄우거나 버튼으로 닫으면 버린다.
+  let onDismiss: (() => void) | undefined;
+  function showSheet<V extends SheetView>(
+    view: V,
+    buttons: SheetButton[] = [],
+    dismissed?: () => void,
+  ): V {
     state.view = view;
     state.buttons = buttons;
     state.open = true;
+    onDismiss = dismissed;
     void ui.tick().then(() => ui.afterShow?.());
     return state.view as V;
   }
   function closeSheet() {
+    onDismiss = undefined;
     state.open = false;
     state.view = null;
     state.buttons = [];
+  }
+  /** 사용자가 시트를 바깥 탭·끌어내리기로 닫는다. 결과 시트는 버튼을 누른 것과 같은 곳으로 돌아간다. */
+  function dismissSheet() {
+    const fn = onDismiss;
+    closeSheet();
+    fn?.();
   }
 
   /** 단계 목록을 하나씩 켰다 끄며 진행률 막대를 채운다. 막대는 단계마다 그 단계 길이 동안 고르게 차오른다(T-10-123). */
@@ -370,6 +384,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
     motionOK: ui.motionOK,
     showSheet,
     closeSheet,
+    dismissSheet,
     playSteps,
     playBlock,
     playMinigame,
