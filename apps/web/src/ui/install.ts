@@ -1,11 +1,13 @@
 // T-10-021 '홈 화면에 추가' 안내. 주소를 입력하지 않고 아이콘으로 바로 열 수 있게, 모바일 브라우저로 홈 화면에
 // 다시 들어올 때마다 보여 준다('다시 보지 않기'를 체크하면 이 브라우저에서는 그만). 홈 화면 앱으로 연 경우와 데스크톱은
-// 띄우지 않고, 설정 > 도움말에서는 언제든 다시 연다.
+// 띄우지 않고, 설정 > 도움말에서는 언제든 다시 연다. T-11-092 아이폰은 iPhone 앱(App Store)을 먼저 권한다.
 import { hasKey, loadKey, saveKey } from '@offside/game/season';
 import { closeSheet, showSheet } from './sheetState.svelte.js';
 import { currentInApp, isStandalone, openExternal } from './inapp-open.js';
-import { INSTALL_STEPS, detectPlatform } from './install-platform.js';
+import { INSTALL_STEPS, detectPlatform, type Platform } from './install-platform.js';
 import { appState } from './state.svelte.js';
+import { APP_PROMO } from '@offside/app-core/appPromo';
+import { openAppStore } from './appStore.js';
 
 const HIDE_KEY = 'ft_install_hide';
 
@@ -32,6 +34,42 @@ export function showInstallGuide(withOptOut = false) {
     );
     return;
   }
+  // T-11-092 아이폰은 App Store 앱을 먼저 권하고, 원하면 홈 화면 추가 단계로 넘어간다.
+  if (platform === 'ios-safari' || platform === 'ios-chrome') {
+    showSheet(
+      {
+        kind: 'notice',
+        eyebrow: APP_PROMO.sheet.eyebrow,
+        title: APP_PROMO.sheet.title,
+        text: APP_PROMO.sheet.text,
+        muted: true,
+        ...optOutCheck(withOptOut),
+      },
+      [
+        {
+          label: APP_PROMO.sheet.store,
+          cls: 'btn-primary',
+          fn: () => {
+            closeSheet();
+            openAppStore('sheet');
+          },
+        },
+        // 다시 보지 않기는 앞 시트에서 이미 물었다.
+        { label: APP_PROMO.sheet.homeScreen, fn: () => homeScreenSteps(platform, false) },
+        { label: '닫기', fn: closeSheet },
+      ],
+    );
+    return;
+  }
+  homeScreenSteps(platform, withOptOut);
+}
+
+const optOutCheck = (withOptOut: boolean) =>
+  withOptOut
+    ? { check: { label: '다시 보지 않기', onChange: (on: boolean) => saveKey(HIDE_KEY, on) } }
+    : {};
+
+function homeScreenSteps(platform: Exclude<Platform, 'inapp'>, withOptOut: boolean) {
   showSheet(
     {
       kind: 'notice',
@@ -40,9 +78,7 @@ export function showInstallGuide(withOptOut = false) {
       steps: INSTALL_STEPS[platform],
       text: '홈 화면의 오프사이드 아이콘으로 바로 열어요. 이 안내는 설정 > 도움말에서 다시 볼 수 있어요.',
       muted: true,
-      ...(withOptOut
-        ? { check: { label: '다시 보지 않기', onChange: (on: boolean) => saveKey(HIDE_KEY, on) } }
-        : {}),
+      ...optOutCheck(withOptOut),
     },
     [{ label: '확인했어요', cls: 'btn-primary', fn: closeSheet }],
   );

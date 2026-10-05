@@ -14,6 +14,7 @@
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
   import BackupSettings from './BackupSettings.svelte';
+  import AppMoveCard from './AppMoveCard.svelte';
   let sfx = $state(sfxEnabled());
   let dark = $state(isDark());
   let namePublic = $state(namePublicEnabled());
@@ -97,6 +98,8 @@
     </div>
   </section>
 
+  <!-- T-11-092 iPhone 앱으로 옮기기(바로 아래 백업 코드와 이어진다) -->
+  <AppMoveCard />
   <!-- T-10-116 진행 중 커리어 백업·불러오기 -->
   <BackupSettings />
   <ClubCustomSettings />

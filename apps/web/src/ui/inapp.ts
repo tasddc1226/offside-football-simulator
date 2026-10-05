@@ -6,7 +6,7 @@ export type InAppName =
 export type InAppOs = 'ios' | 'android' | 'other';
 export type InAppInfo = { app: InAppName; os: InAppOs };
 
-function osOf(ua: string): InAppOs {
+export function osOf(ua: string): InAppOs {
   if (/iPhone|iPad|iPod/.test(ua)) return 'ios';
   if (/Android/.test(ua)) return 'android';
   return 'other';
