@@ -9,6 +9,12 @@ import { en } from './en/index';
 const files = readdirSync(new URL('./ko', import.meta.url))
   .filter((f) => f.endsWith('.ts'))
   .map((f) => f.slice(0, -3));
+// 게임 엔진의 네임스페이스(packages/game/src/i18n/ko)도 묶음에 함께 실린다 — 이름이 겹치면 안 된다.
+const gameNames = new Set(
+  readdirSync(new URL('../../../game/src/i18n/ko', import.meta.url))
+    .filter((f) => f.endsWith('.ts'))
+    .map((f) => f.slice(0, -3)),
+);
 const enFiles: Record<string, Record<string, unknown>> = {};
 for (const f of files) {
   await import(`./ko/${f}.ts`);
@@ -47,10 +53,13 @@ describe('영어 사전', () => {
   it('파일 이름과 네임스페이스 이름이 같고, en/index.ts가 모두 묶는다', () => {
     const names = [...koSources().keys()].filter((n) => !n.startsWith('__'));
     expect(names.sort()).toEqual([...files].sort());
-    expect(Object.keys(en).sort()).toEqual([...files].sort());
-    // 묶음은 생성 스크립트 결과와 같아야 한다(pnpm --filter @offside/app-core i18n:index).
+    expect(files.filter((f) => gameNames.has(f))).toEqual([]);
+    expect(Object.keys(en).filter((k) => !k.startsWith('__') && !gameNames.has(k)).sort()).toEqual(
+      [...files].sort(),
+    );
+    // 묶음은 생성 스크립트 결과와 같아야 한다(node tooling/scripts/i18n-index.mjs).
     execFileSync('node', [
-      new URL('../../scripts/i18n-index.mjs', import.meta.url).pathname,
+      new URL('../../../../tooling/scripts/i18n-index.mjs', import.meta.url).pathname,
       '--check',
     ]);
   });
