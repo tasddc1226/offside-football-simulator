@@ -1,0 +1,6 @@
+{
+  "id": "fix-mobile-national-career-text-20261005",
+  "title": "은퇴 기록 국가대표 이정표 표시 수정",
+  "items": ["앱의 은퇴 기록에서 국가대표 이정표의 내용과 연도가 보이지 않던 문제를 고쳤어요."],
+  "availability": "web-app"
+}
