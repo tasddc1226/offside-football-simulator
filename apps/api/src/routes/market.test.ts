@@ -104,7 +104,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(seen.filter((q) => /"sessions"|"profiles"/.test(q))).toEqual([]);
   });
 
-  it('직접 키운 선수를 방출하면 은퇴 가치 × 지급률만큼 자금이 생기고 라커룸에서 빠진다', async () => {
+  it('직접 키운 선수를 방출하면 카드 기준가 × 지급률만큼 자금이 생기고 라커룸에서 빠진다(T-11-104)', async () => {
     const owner = await issueGoogleCookie(ctx);
     const a = await addCard(owner.profileId);
     const b = await addCard(owner.profileId);
@@ -116,21 +116,21 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(res.status).toBe(200);
     expect(((await res.json()) as { data: unknown }).data).toEqual({
       released: 1,
-      amount: 3_000_000,
-      balance: 3_000_000,
+      amount: 1_000_000,
+      balance: 1_000_000,
     });
     const data = await me(owner.cookie);
-    expect(data.balance).toBe(3_000_000);
+    expect(data.balance).toBe(1_000_000);
     expect(data.rules).toMatchObject({ releaseRate: 1, feeRate: 0.05, priceMin: 0.5, priceMax: 3 });
     // 구단주 화면 요약은 가벼운 /funds로 같은 값을 받는다.
     const funds = await call('GET', '/v1/market/funds', { cookie: owner.cookie });
     expect(((await funds.json()) as { data: unknown }).data).toEqual({
-      balance: 3_000_000,
-      clubValue: 6_000_000,
+      balance: 1_000_000,
+      clubValue: 4_000_000,
     });
     // 구단 가치 = 자금 + 남은 직접 키운 선수 은퇴 가치(방출한 선수는 두 번 세지 않는다)
-    expect(data.clubValue).toBe(6_000_000);
-    expect(data.trades).toMatchObject([{ kind: 'released', amount: 3_000_000 }]);
+    expect(data.clubValue).toBe(4_000_000);
+    expect(data.trades).toMatchObject([{ kind: 'released', amount: 1_000_000 }]);
     const team = TeamRes.parse(
       await (await call('GET', '/v1/owner-team', { cookie: owner.cookie })).json(),
     ).data;
