@@ -10,8 +10,9 @@ import { ok } from './shared.js';
  */
 export const APP_VERSIONS: AppVersionResponse = {
   ios: { min: '1.1.0', url: 'https://apps.apple.com/kr/app/id6817463687' },
+  // T-11-096 Play 비공개 테스트(alpha)가 1.1.0(빌드 12)을 내준다(2026-10-05 확인).
   android: {
-    min: '1.0.0',
+    min: '1.1.0',
     url: 'https://play.google.com/store/apps/details?id=com.offsidelab.app',
   },
 };
