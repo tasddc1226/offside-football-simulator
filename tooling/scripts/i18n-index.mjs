@@ -29,8 +29,8 @@ const targets = {
     extra: ['__events: events', '__names: names'],
   }),
   'app-core': render('app-core', {
-    imports: [`import { en as game } from '@offside/game/i18n/en/index';`],
-    spread: ['game'],
+    imports: [`import { en as gameEngine } from '@offside/game/i18n/en/index';`],
+    spread: ['gameEngine'],
   }),
 };
 
