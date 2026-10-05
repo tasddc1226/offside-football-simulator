@@ -149,9 +149,11 @@ export async function queueNotification(
           `INSERT OR IGNORE INTO push_deliveries
     (id, notification_id, installation_hash, session_id, profile_id, token, due_at, expires_at, updated_at)
     SELECT ? || ':' || d.installation_hash, ?, d.installation_hash, d.session_id, d.profile_id, d.token, ?, ?, ?
-    FROM push_devices d JOIN sessions s ON s.id = d.session_id
-    WHERE changes() = 1 AND d.profile_id = ? AND d.engagement_enabled = 1 AND s.channel = 'app' AND s.profile_id = d.profile_id
-    AND s.revoked_at IS NULL AND s.expires_at > ? AND d.updated_at >= ?`,
+    FROM push_devices d JOIN sessions s ON s.id = d.session_id LEFT JOIN push_preferences pref ON pref.profile_id = d.profile_id
+    WHERE changes() = 1 AND d.profile_id = ? AND s.channel = 'app' AND s.profile_id = d.profile_id
+    AND s.revoked_at IS NULL AND s.expires_at > ? AND d.updated_at >= ?
+    AND CASE ? WHEN 'team' THEN COALESCE(pref.team, 1) WHEN 'market' THEN COALESCE(pref.market, 1)
+      WHEN 'social' THEN COALESCE(pref.social, 1) ELSE 1 END = 1`,
         )
         .bind(
           id,
@@ -162,6 +164,7 @@ export async function queueNotification(
           input.profileId,
           input.now,
           new Date(Date.parse(input.now) - RETENTION_MS).toISOString(),
+          content.kind,
         ),
     );
   statements.push(

@@ -77,6 +77,17 @@ export const pushNewsDeliveries = sqliteTable(
 );
 
 /** 프로필별 알림함. OS 전달 상태와 읽음 상태는 별개이며 기기·세션 교체에도 기록을 유지한다. */
+export const pushPreferences = sqliteTable('push_preferences', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  notice: integer('notice', { mode: 'boolean' }).notNull().default(true),
+  release: integer('release', { mode: 'boolean' }).notNull().default(true),
+  team: integer('team', { mode: 'boolean' }).notNull().default(true),
+  market: integer('market', { mode: 'boolean' }).notNull().default(true),
+  social: integer('social', { mode: 'boolean' }).notNull().default(true),
+});
+
 export const notifications = sqliteTable(
   'notifications',
   {
@@ -99,6 +110,7 @@ export const notifications = sqliteTable(
     index('notifications_profile_created_idx').on(t.profileId, t.createdAt, t.id),
     index('notifications_profile_read_created_idx').on(t.profileId, t.readAt, t.createdAt, t.id),
     index('notifications_expires_idx').on(t.expiresAt),
+    index('notifications_created_idx').on(t.createdAt),
     index('notifications_profile_push_reserved_idx').on(t.profileId, t.pushReservedAt),
   ],
 );
@@ -137,6 +149,30 @@ export const pushDeliveries = sqliteTable(
     index('push_deliveries_expires_idx').on(t.expiresAt),
   ],
 );
+
+/** 토큰·기기·세션을 복사하지 않는 발송 결과. 알림함과 함께 90일 보관한다. */
+export const pushResults = sqliteTable(
+  'push_results',
+  {
+    id: text('id').primaryKey(),
+    notificationId: text('notification_id')
+      .notNull()
+      .references(() => notifications.id, { onDelete: 'cascade' }),
+    state: text('state').notNull(),
+    acceptedAt: text('accepted_at'),
+    confirmedAt: text('confirmed_at'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('push_results_notification_idx').on(t.notificationId)],
+);
+
+export const pushInteractions = sqliteTable('push_interactions', {
+  notificationId: text('notification_id')
+    .primaryKey()
+    .references(() => notifications.id, { onDelete: 'cascade' }),
+  clickedAt: text('clicked_at').notNull(),
+  targetOpenedAt: text('target_opened_at'),
+});
 
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
 export const profiles = sqliteTable(
@@ -235,6 +271,7 @@ export const authAttempts = sqliteTable(
         'CAREER_SEASON',
         'CAREER_RETIRE',
         'PUSH_DEVICE',
+        'PUSH_PREFERENCES',
         'PUSH_TEST',
         'FRIEND_REQUEST',
       ],

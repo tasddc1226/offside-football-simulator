@@ -12,8 +12,9 @@ import type {
   BalanceDraftInput,
   BalanceVersion,
   BalanceVersionList,
+  PushPerformance,
 } from '@offside/contracts';
-import { apiFetch, cachedGet } from './client.js';
+import { apiFetch, cachedGet, invalidateApiCache } from './client.js';
 
 export type { AdminComment, AdminNameReport, AdminStats, AutomationReport, BalanceVersion };
 
@@ -62,3 +63,17 @@ export const resolveNameReport = (input: AdminNameReportResolve) =>
 /** 자동 플레이 탐지(관찰 전용). 열 때만, 늘 새로 읽는다. */
 export const fetchAutomation = (hours: number) =>
   apiFetch<AutomationReport>(`/v1/admin/automation?hours=${hours}`);
+
+export const fetchPushPerformance = (
+  days: number,
+  tests = false,
+  page = 0,
+  fresh = false,
+  through?: string,
+) => {
+  if (fresh) invalidateApiCache('/v1/admin/push-performance');
+  return cachedGet<PushPerformance>(
+    `/v1/admin/push-performance?days=${days}&page=${page}${tests ? '&tests=1' : ''}${through ? `&through=${encodeURIComponent(through)}` : ''}`,
+    60_000,
+  );
+};

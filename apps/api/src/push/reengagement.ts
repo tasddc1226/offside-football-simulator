@@ -1,6 +1,6 @@
 import type { Bindings } from '../env.js';
 
-/** 별도 동의만 사용한다. 하루 최대 1회 갱신하는 기기 등록을 방문의 보수적 근거로 삼는다. */
+/** 새 소식 알림을 켜 등록된 기기를 사용한다. 하루 최대 1회 갱신하는 기기 등록을 방문의 보수적 근거로 삼는다. */
 export async function queueReengagement(env: Bindings, time = Date.now()) {
   if (
     env.ENVIRONMENT !== 'production' ||
@@ -20,7 +20,7 @@ export async function queueReengagement(env: Bindings, time = Date.now()) {
       `WITH inactive AS (
       SELECT d.profile_id, MAX(d.updated_at) AS last_active
       FROM push_devices d JOIN sessions s ON s.id = d.session_id JOIN profiles p ON p.id = d.profile_id
-      WHERE d.engagement_enabled = 1 AND d.updated_at <= ? AND d.updated_at >= ?
+      WHERE d.updated_at <= ? AND d.updated_at >= ?
         AND s.channel = 'app' AND s.profile_id = d.profile_id AND s.revoked_at IS NULL AND s.expires_at > ? AND p.deleted_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM push_devices active WHERE active.profile_id = d.profile_id AND active.updated_at > ?)
       GROUP BY d.profile_id), candidates AS (
@@ -38,7 +38,7 @@ export async function queueReengagement(env: Bindings, time = Date.now()) {
       SELECT n.id || ':' || d.installation_hash, n.id, d.installation_hash, d.session_id, d.profile_id, d.token, ?, ?, ?
       FROM notifications n JOIN push_devices d ON d.profile_id = n.profile_id JOIN sessions s ON s.id = d.session_id
       WHERE changes() > 0 AND n.kind = 'return' AND n.created_at = ? AND n.read_at IS NULL
-        AND d.engagement_enabled = 1 AND d.updated_at >= ? AND s.channel = 'app' AND s.profile_id = d.profile_id
+        AND d.updated_at >= ? AND s.channel = 'app' AND s.profile_id = d.profile_id
         AND s.revoked_at IS NULL AND s.expires_at > ?`,
     ).bind(now, iso(time + 86400_000), now, now, oldest, now),
   ]);

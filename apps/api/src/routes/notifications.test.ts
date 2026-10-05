@@ -7,6 +7,9 @@ import { runPersonalPush } from '../push/personal.js';
 import { queueReengagement } from '../push/reengagement.js';
 import { newsPushStatements } from '../push/enqueue.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
+import { commitNotifiedEvent } from '../push/events.js';
+import { eq } from 'drizzle-orm';
+import { profiles } from '../db/schema.js';
 
 const NOW = Date.parse('2026-10-05T06:00:00.000Z'); // KST 15:00
 const iso = (at = NOW) => new Date(at).toISOString();
@@ -85,6 +88,17 @@ function enable() {
   ctx.env.PERSONAL_PUSH_ENABLED = '1';
   ctx.env.REENGAGEMENT_PUSH_ENABLED = '1';
 }
+function preferences(a: Awaited<ReturnType<typeof identity>>, body: unknown) {
+  return createApp().request(
+    '/v1/push/preferences',
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${a.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    ctx.env,
+  );
+}
 const send = () =>
   vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
     const body = JSON.parse(init!.body as string) as unknown[];
@@ -157,11 +171,16 @@ describe('private notification inbox', () => {
     const first = await queue(a, 'dedupe', NOW, true);
     expect(await queue(a, 'dedupe', NOW, true)).toEqual({ id: first.id, created: false });
     await queue(b, 'dedupe', NOW, true);
+    await preferences(a, { social: false });
+    await preferences(b, { market: false });
     expect(await deliveries()).toHaveLength(3);
     const args = { sessionId: a.id, sessionTokenHash: await sha256Hex(a.token), now: iso() };
     const { confirmToken } = await issueDeleteConfirmToken(args);
     await executeProfileDeletion(ctx.db, { ...args, profileId: a.profileId, confirmToken });
     expect(await deliveries()).toHaveLength(1);
+    expect(
+      (await ctx.env.DB.prepare('SELECT profile_id FROM push_preferences').all()).results,
+    ).toEqual([{ profile_id: b.profileId }]);
     expect(
       (await ctx.env.DB.prepare('SELECT profile_id FROM notifications').all()).results,
     ).toEqual([{ profile_id: b.profileId }]);
@@ -185,7 +204,7 @@ describe('private notification inbox', () => {
   });
 });
 describe('personal event delivery infrastructure', () => {
-  it('requires optional consent, sends all devices once, then confirms receipts without resending', async () => {
+  it('includes legacy subscribers without a separate engagement opt-in and confirms all device receipts once', async () => {
     const a = await identity();
     await device(a, 1);
     await device(a, 2);
@@ -196,20 +215,26 @@ describe('personal event delivery infrastructure', () => {
     await runPersonalPush(ctx.env, NOW, fetcher);
     expect(fetcher).toHaveBeenCalledOnce();
     const payload = JSON.parse(fetcher.mock.calls[0]![1]!.body as string);
-    expect(payload).toHaveLength(2);
+    expect(payload).toHaveLength(3);
     expect(payload[0].data).toEqual({ type: 'offside-notification', notificationId: n.id });
     expect(await deliveries()).toEqual([
       { state: 'accepted', token: expect.any(String) },
       { state: 'accepted', token: expect.any(String) },
+      { state: 'accepted', token: expect.any(String) },
     ]);
-    const receipt = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(
-        Response.json({ data: { ticket_0: { status: 'ok' }, ticket_1: { status: 'ok' } } }),
-      );
+    const receipt = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        data: {
+          ticket_0: { status: 'ok' },
+          ticket_1: { status: 'ok' },
+          ticket_2: { status: 'ok' },
+        },
+      }),
+    );
     await runPersonalPush(ctx.env, NOW + 16 * 60_000, receipt);
     expect(receipt.mock.calls[0]![0]).toContain('getReceipts');
     expect(await deliveries()).toEqual([
+      { state: 'confirmed', token: '' },
       { state: 'confirmed', token: '' },
       { state: 'confirmed', token: '' },
     ]);
@@ -228,7 +253,16 @@ describe('personal event delivery infrastructure', () => {
     expect(fetcher).not.toHaveBeenCalled();
     expect(await deliveries()).toEqual([{ state: 'cancelled', token: '' }]);
     await queue(a, 'off', NOW, true);
-    await device(a, 1, false);
+    const removal = await createApp().request(
+      '/v1/push/device',
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${a.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ installationId: '00000000-0000-4000-8000-000000000001' }),
+      },
+      ctx.env,
+    );
+    expect(removal.status).toBe(200);
     await runPersonalPush(ctx.env, NOW, fetcher);
     expect(fetcher).not.toHaveBeenCalled();
   });
@@ -267,10 +301,10 @@ describe('personal event delivery infrastructure', () => {
       ).results,
     ).toHaveLength(2);
   });
-  it('queues a return only once per absence, excludes active other devices, and cancels on return', async () => {
+  it('queues a return for a legacy subscriber once per absence, excludes active other devices, and cancels on return', async () => {
     const a = await identity(),
       b = await identity();
-    await device(a, 1);
+    await device(a, 1, false);
     await device(b, 2);
     await device(b, 3);
     enable();
@@ -389,5 +423,172 @@ describe('personal event delivery infrastructure', () => {
     expect(await (await call(a.token, `/v1/notifications/${n.id}`)).json()).toMatchObject({
       data: { id: n.id },
     });
+  });
+});
+
+describe('feature push preferences and atomic events', () => {
+  it.each(['request', 'accepted'] as const)(
+    'delivers a still valid friend %s event to the recipient',
+    async (event) => {
+      const from = await identity(),
+        to = await identity();
+      await device(to);
+      await ctx.env.DB.prepare(
+        'INSERT INTO friends (profile_id, friend_id, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+      )
+        .bind(
+          to.profileId,
+          from.profileId,
+          event === 'request' ? 'received' : 'accepted',
+          iso(),
+          iso(),
+        )
+        .run();
+      await queueNotification(ctx.env.DB, {
+        profileId: to.profileId,
+        sourceKey: `friend-${event}:${from.profileId}:one`,
+        content: { ...content, kind: 'social' },
+        now: iso(),
+        push: true,
+      });
+      enable();
+      const transport = send();
+      await runPersonalPush(ctx.env, NOW, transport);
+      expect(transport).toHaveBeenCalledTimes(1);
+      expect(await deliveries()).toEqual([{ state: 'accepted', token: 'ExpoPushToken[test_1]' }]);
+    },
+  );
+  it.each(['removed', 'accepted', 'blocked'] as const)(
+    'cancels a stale friend request after it is %s',
+    async (change) => {
+      const from = await identity(),
+        to = await identity();
+      await device(to);
+      await ctx.env.DB.prepare(
+        "INSERT INTO friends (profile_id, friend_id, state, created_at, updated_at) VALUES (?, ?, 'received', ?, ?)",
+      )
+        .bind(to.profileId, from.profileId, iso(), iso())
+        .run();
+      await queueNotification(ctx.env.DB, {
+        profileId: to.profileId,
+        sourceKey: `friend-request:${from.profileId}:one`,
+        content: { ...content, kind: 'social' },
+        now: iso(),
+        push: true,
+      });
+      if (change === 'removed') await ctx.env.DB.prepare('DELETE FROM friends').run();
+      if (change === 'accepted')
+        await ctx.env.DB.prepare("UPDATE friends SET state = 'accepted'").run();
+      if (change === 'blocked')
+        await ctx.env.DB.prepare(
+          "INSERT INTO board_blocks (id, profile_id, blocked_profile_id, nickname, created_at) VALUES ('blk_test', ?, ?, '구단주', ?)",
+        )
+          .bind(to.profileId, from.profileId, iso())
+          .run();
+      enable();
+      const transport = send();
+      await runPersonalPush(ctx.env, NOW, transport);
+      expect(transport).not.toHaveBeenCalled();
+      expect(await deliveries()).toEqual([{ state: 'cancelled', token: '' }]);
+    },
+  );
+  it('keeps defaults and partial changes per account and rejects unauthenticated, empty and unknown-key writes', async () => {
+    const a = await identity(),
+      b = await identity();
+    expect(await (await call(a.token, '/v1/push/preferences')).json()).toMatchObject({
+      data: { notice: true, release: true, team: true, market: true, social: true },
+    });
+    expect((await preferences(a, { market: false })).status).toBe(200);
+    expect(await (await preferences(a, { social: false })).json()).toMatchObject({
+      data: { notice: true, release: true, team: true, market: false, social: false },
+    });
+    expect(await (await call(b.token, '/v1/push/preferences')).json()).toMatchObject({
+      data: { market: true, social: true },
+    });
+    expect((await preferences(a, {})).status).toBe(400);
+    expect((await preferences(a, { engagementEnabled: true })).status).toBe(400);
+    expect((await preferences(a, { team: 'false' })).status).toBe(400);
+    expect((await createApp().request('/v1/push/preferences', {}, ctx.env)).status).toBe(401);
+  });
+  it.each(['team', 'market', 'social'] as const)(
+    'preserves %s inbox records without queueing opted-out device tokens or replaying them after opt-in',
+    async (kind) => {
+      const a = await identity();
+      await device(a);
+      await preferences(a, { [kind]: false });
+      const input = {
+        profileId: a.profileId,
+        sourceKey: 'feature:one',
+        content: { ...content, kind },
+        now: iso(),
+        push: true,
+      };
+      const n = await queueNotification(ctx.env.DB, input);
+      expect(n.created).toBe(true);
+      expect(await deliveries()).toEqual([]);
+      await preferences(a, { [kind]: true });
+      expect(await queueNotification(ctx.env.DB, input)).toEqual({ id: n.id, created: false });
+      expect(await deliveries()).toEqual([]);
+      await queueNotification(ctx.env.DB, { ...input, sourceKey: 'feature:two' });
+      expect(await deliveries()).toHaveLength(1);
+      expect((await ctx.env.DB.prepare('SELECT id FROM notifications').all()).results).toHaveLength(
+        2,
+      );
+    },
+  );
+  it('cancels an already queued delivery when its category is disabled before dispatch', async () => {
+    const a = await identity();
+    await device(a);
+    await queue(a, 'pending-category', NOW, true);
+    await preferences(a, { team: false });
+    enable();
+    const transport = send();
+    await runPersonalPush(ctx.env, NOW, transport);
+    expect(transport).not.toHaveBeenCalled();
+    expect(await deliveries()).toEqual([{ state: 'cancelled', token: '' }]);
+    expect((await ctx.env.DB.prepare('SELECT id FROM notifications').all()).results).toHaveLength(
+      1,
+    );
+  });
+  it('separates notice and release preferences while retaining both news inbox records', async () => {
+    const a = await identity();
+    await device(a);
+    await preferences(a, { notice: false });
+    for (const board of ['notice', 'release'] as const) {
+      const id = `pst_pref_${board}`;
+      await ctx.env.DB.batch([
+        ctx.env.DB.prepare(
+          'INSERT INTO board_posts (id, board, author_profile_id, title, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        ).bind(id, board, a.profileId, '새 소식', '내용', iso(), iso()),
+        ...newsPushStatements(ctx.env.DB, id, board, iso()),
+      ]);
+    }
+    expect(
+      (await ctx.env.DB.prepare('SELECT event_id FROM push_news_deliveries').all()).results,
+    ).toEqual([{ event_id: 'release:2026-10-05' }]);
+    expect((await ctx.env.DB.prepare('SELECT id FROM notifications').all()).results).toHaveLength(
+      2,
+    );
+  });
+  it('rolls back the business mutation and inbox when the atomic delivery insert fails', async () => {
+    const a = await identity();
+    await device(a);
+    await ctx.env.DB.exec(
+      "CREATE TRIGGER fail_push_insert BEFORE INSERT ON push_deliveries BEGIN SELECT RAISE(ABORT, 'test queue failure'); END",
+    );
+    await expect(
+      commitNotifiedEvent(
+        ctx.db,
+        [ctx.db.update(profiles).set({ nickname: 'changed' }).where(eq(profiles.id, a.profileId))],
+        { profileId: a.profileId, sourceKey: 'atomic-fail', content, now: iso() },
+      ),
+    ).rejects.toThrow();
+    expect(
+      await ctx.env.DB.prepare('SELECT nickname FROM profiles WHERE id = ?')
+        .bind(a.profileId)
+        .first(),
+    ).toEqual({ nickname: null });
+    expect((await ctx.env.DB.prepare('SELECT id FROM notifications').all()).results).toEqual([]);
+    expect(await deliveries()).toEqual([]);
   });
 });

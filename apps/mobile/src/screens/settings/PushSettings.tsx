@@ -1,25 +1,35 @@
 import { useEffect, useState } from 'react';
 import { AppState, Linking, View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import {
-  pushState,
-  pushTestState,
-  pushRegistration,
-  testOwnPush,
-  engagementPushState,
-  setEngagementPush,
-} from '../../platform/push';
+import { pushState, pushTestState, pushRegistration, testOwnPush } from '../../platform/push';
 import { openInbox } from '../../platform/inbox';
 import { Btn, Txt } from '../../ui';
-import { SettingsCard, SettingsLabel } from './parts';
+import { SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
 import { WEB_ORIGIN } from '../../platform/config';
 import { dismissPushOffer } from '../../platform/pushOffer';
+import {
+  loadPushPreferences,
+  pushPreferencesState,
+  setPushPreference,
+} from '../../platform/pushPreferences';
+import type { PushPreferences } from '@offside/contracts';
+
+const categories: { key: keyof PushPreferences; title: string; description: string }[] = [
+  { key: 'notice', title: '공지', description: '운영 공지와 이벤트 안내' },
+  { key: 'release', title: '업데이트', description: '새 버전과 기능 업데이트' },
+  { key: 'team', title: '내 팀', description: '상대가 건 경기 결과' },
+  { key: 'market', title: '이적시장', description: '등록한 선수의 판매 완료' },
+  { key: 'social', title: '친구', description: '친구 신청·수락과 친선전 결과' },
+];
 
 export function PushSettings() {
   const state = useSnapshot(pushState);
+  const preferences = useSnapshot(pushPreferencesState);
+  useEffect(() => {
+    void loadPushPreferences();
+  }, [preferences.sessionRevision]);
   const [testMessage, setTestMessage] = useState('');
   const test = useSnapshot(pushTestState);
-  const engagement = useSnapshot(engagementPushState);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const refresh = () => setNow(Date.now());
@@ -36,28 +46,69 @@ export function PushSettings() {
   const waiting = now < test.nextTestAt;
   return (
     <SettingsCard gap={12}>
-      <SettingsLabel
-        eyebrow="Notifications"
-        title="새 소식 알림"
-        muted="공지·릴리즈 노트의 새 글을 알려 드려요. 게시판마다 하루 한 번 보내요."
-      />
-      <Txt tone="muted">알림 연결을 위해 푸시 토큰과 기기 종류·앱 버전을 저장해요.</Txt>
-      <View style={{ gap: 8 }}>
-        <Btn
-          block
-          disabled={state.busy}
+      <SettingsRow>
+        <SettingsLabel
+          eyebrow="Notifications"
+          title="앱 알림 받기"
+          muted="이 기기의 전체 알림을 켜고 꺼요."
+        />
+        <Switch
+          value={state.enabled}
+          busy={state.busy}
           testID="push-toggle"
-          accessibilityLabel={
-            state.enabled ? '이 기기의 새 소식 알림 끄기' : '이 기기의 새 소식 알림 받기'
-          }
-          onPress={() => {
+          label="앱 알림 받기"
+          onChange={(on) => {
             setTestMessage('');
             dismissPushOffer();
-            void pushRegistration.setEnabled(!state.enabled);
+            void pushRegistration.setEnabled(on);
           }}
-        >
-          {state.busy ? '알림 설정 중…' : state.enabled ? '알림 끄기' : '알림 받기'}
-        </Btn>
+        />
+      </SettingsRow>
+      <View style={{ gap: 12 }}>
+        <Txt tone="muted">
+          종류별 선택은 계정에 저장돼요. 전체 알림을 꺼도 아래 선택은 유지돼요.
+        </Txt>
+        {categories.map(({ key, title, description }) => (
+          <SettingsRow key={key}>
+            <SettingsLabel title={title} muted={description} />
+            <Switch
+              value={preferences.values[key]}
+              label={`${title} 알림`}
+              testID={`push-${key}-toggle`}
+              busy={preferences.saving === key}
+              disabled={!preferences.loaded || preferences.loading || preferences.saving !== null}
+              onChange={(on) => {
+                void setPushPreference(key, on);
+              }}
+            />
+          </SettingsRow>
+        ))}
+        {preferences.loading ? (
+          <Txt tone="muted" accessibilityLiveRegion="polite">
+            알림 종류를 불러오는 중…
+          </Txt>
+        ) : null}
+        {preferences.error ? (
+          <Txt tone="muted" accessibilityLiveRegion="polite">
+            {preferences.error}
+          </Txt>
+        ) : null}
+        {!preferences.loaded && !preferences.loading ? (
+          <Btn block onPress={() => void loadPushPreferences()}>
+            알림 종류 다시 불러오기
+          </Btn>
+        ) : null}
+      </View>
+      <Txt tone="muted">
+        알림 연결을 위해 푸시 토큰과 기기 종류·앱 버전을 저장해요. 발송 결과·알림 클릭·연결 화면
+        이동은 서비스 운영을 위해 서버에 90일간 보관해요.
+      </Txt>
+      <View style={{ gap: 8 }}>
+        {state.busy ? (
+          <Txt tone="muted" accessibilityLiveRegion="polite">
+            알림 설정 중…
+          </Txt>
+        ) : null}
         {state.blocked ? (
           <Btn block onPress={() => void Linking.openSettings()}>
             기기 알림 설정 열기
@@ -75,18 +126,6 @@ export function PushSettings() {
         ) : null}
         {state.enabled ? (
           <>
-            <Txt bold>재방문 안내 (선택)</Txt>
-            <Txt tone="muted">
-              7일 이상 방문하지 않았을 때 다시 시작할 안내를 받아요. 오전 9시부터 오후 8시 사이에만
-              보내요.
-            </Txt>
-            <Btn
-              block
-              disabled={state.busy}
-              onPress={() => void setEngagementPush(!engagement.enabled)}
-            >
-              {engagement.enabled ? '재방문 안내 끄기' : '재방문 안내 받기'}
-            </Btn>
             <Txt tone="muted">
               테스트 알림은 이 기기에만 보내요. 기기·계정마다 10분에 한 번, 하루 3회까지 요청할 수
               있어요.

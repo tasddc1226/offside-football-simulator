@@ -5,6 +5,8 @@ import { API, ok } from './helpers.js';
 const ID = '0d000000-0000-4000-8000-00000000000d';
 
 test('은퇴한 내 선수의 공유 이미지를 만들어 저장한다', async ({ page }) => {
+  // 아래 저장 기록은 프리시즌 선수다.
+  await page.clock.setFixedTime(new Date('2026-09-30T00:00:00.000Z'));
   await page.route(`${API}/v1/profile`, (r) =>
     r.fulfill(
       ok({

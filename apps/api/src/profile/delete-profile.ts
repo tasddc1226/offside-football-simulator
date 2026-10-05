@@ -21,6 +21,7 @@ import {
   pushNewsDeliveries,
   notifications,
   pushDeliveries,
+  pushPreferences,
   serverFirsts,
   serverRecords,
   sessions,
@@ -135,6 +136,7 @@ export async function executeProfileDeletion(
     db.delete(pushNewsDeliveries).where(eq(pushNewsDeliveries.profileId, input.profileId)),
     db.delete(pushDeliveries).where(eq(pushDeliveries.profileId, input.profileId)),
     db.delete(notifications).where(eq(notifications.profileId, input.profileId)),
+    db.delete(pushPreferences).where(eq(pushPreferences.profileId, input.profileId)),
     db.delete(idempotency).where(eq(idempotency.ownerProfileId, input.profileId)),
     db
       .update(sessions)
