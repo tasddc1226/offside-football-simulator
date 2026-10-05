@@ -59,6 +59,7 @@ import { agoKo, cardTier, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/season';
 import { POS_LABEL } from '@offside/game/pos-label';
 import { appState, prefs } from '../../store';
+import { notificationDestination } from '../../platform/notificationDestination';
 import { toast } from '../../game/host';
 import { useColors } from '../../theme/useColors';
 import type { Colors } from '../../theme/colors';
@@ -504,7 +505,8 @@ export default function Market() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const local = useMemo(() => localCareerNames(), []);
-  const [view, setView] = useState<MarketView>('market');
+  const destination = useSnapshot(notificationDestination);
+  const [view, setView] = useState<MarketView>(destination.market ? 'trades' : 'market');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -518,9 +520,18 @@ export default function Market() {
       setMeFailed(null);
     } else setMeFailed(r.error.message);
   }, []);
+  const meLoaded = useRef(false);
   useEffect(() => {
-    void loadMe();
-  }, [loadMe]);
+    if (destination.market) {
+      notificationDestination.market = false;
+      setView('trades');
+      meLoaded.current = true;
+      void loadMe();
+    } else if (!meLoaded.current) {
+      meLoaded.current = true;
+      void loadMe();
+    }
+  }, [loadMe, destination.market]);
 
   // 선수 사기 — 정렬·포지션이 바뀌면 첫 페이지부터.
   const [sort, setSort] = useState<MarketSort>('new');

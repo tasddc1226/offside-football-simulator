@@ -64,6 +64,7 @@ export function useFriends() {
   const [busy, setBusy] = useState(false);
   const dataRef = useRef<FriendsResponse | null>(null);
   const sequence = useRef(0);
+  const loadingRef = useRef(false);
   const busyRef = useRef(false);
 
   function put(d: FriendsResponse | null) {
@@ -72,9 +73,11 @@ export function useFriends() {
   }
   async function load(silent = false) {
     const seq = ++sequence.current;
+    loadingRef.current = true;
     if (!silent) setStatus('loading');
     const r = await fetchFriends();
     if (seq !== sequence.current) return;
+    loadingRef.current = false;
     if (!r.ok) {
       if (!silent) setStatus('error');
       return;
@@ -84,7 +87,7 @@ export function useFriends() {
   }
   /** 칸을 열 때. 이미 불러온 데이터가 있으면 다시 부르지 않는다. */
   function ensure() {
-    if (!dataRef.current) void load();
+    if (!dataRef.current && !loadingRef.current) void load();
   }
   /** 쓰기 하나를 한 번에 하나씩. 성공하면 목록을 다시 불러온다. */
   async function write<T>(

@@ -51,6 +51,7 @@ import { toast } from '../../game/host';
 import { go } from '../../game/nav';
 import { achNudge } from '../../game/achNudge';
 import { accountCache, appState, prefs } from '../../store';
+import { notificationDestination } from '../../platform/notificationDestination';
 import { useColors } from '../../theme/useColors';
 import { BackBar, Btn, Card, Screen, Topbar, Txt, scrollTo } from '../../ui';
 import { BarBelow } from '../../ui/Screen';
@@ -132,8 +133,21 @@ export default function Team() {
   const teamNow = useRef<OwnerTeam | null>(null);
 
   /** T-11-098 '경기' 탭의 두 칸(랭크 경기 · 친구). 친구 칸은 처음 열 때만 불러온다. */
-  const [oppTab, setOppTab] = useState<OppTab>('ranked');
+  const destination = useSnapshot(notificationDestination);
+  const [oppTab, setOppTab] = useState<OppTab>(destination.friends ? 'friends' : 'ranked');
   const friends = useFriends();
+  useEffect(() => {
+    if (status !== 'ready' || needLogin) return;
+    if (destination.friends) {
+      setOppTab('friends');
+      notificationDestination.friends = false;
+      friends.reload();
+    }
+    if (destination.history) {
+      notificationDestination.history = false;
+      void loadHistory();
+    }
+  }, [destination.friends, destination.history, status, needLogin]);
   const oppLoaded = useRef(false);
   const [opponents, setOpponents] = useState<TeamOpponent[]>([]);
   const [oppStatus, setOppStatus] = useState<LoadStatus>('loading');
@@ -405,7 +419,11 @@ export default function Team() {
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 effect가, 이미 그 화면이면 open이 다시 불러온다.
   const LOAD = {
     opponents: () =>
-      oppTab === 'friends' ? friends.ensure() : matchHint ? undefined : loadOpponents(),
+      destination.friends || oppTab === 'friends'
+        ? friends.ensure()
+        : matchHint
+          ? undefined
+          : loadOpponents(),
     achievements: () => loadAchievements(),
     history: loadHistory,
   };
@@ -415,6 +433,7 @@ export default function Team() {
   }
   useEffect(() => {
     if (status !== 'ready' || needLogin) return;
+    if (destination.friends || destination.history) return;
     if (teamView === 'opponents') void LOAD.opponents();
     else if (teamView === 'achievements') void loadAchievements();
     else if (teamView === 'history') void loadHistory();

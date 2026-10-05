@@ -80,7 +80,7 @@ describe('영구결번 (T-10-076)', () => {
   let cookie: string;
 
   beforeEach(async () => {
-    // 프리시즌 결번을 보는 테스트들이다 — 실제 시각이 시즌 1로 넘어가도 프리시즌에서 돈다(시즌을 넘는 테스트는 직접 옮긴다).
+    // 기본 데이터는 프리시즌 선수다. 실제 시즌 개막과 무관하게 같은 기준으로 검증한다.
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z'));
     ctx = await createTestD1();
@@ -313,7 +313,8 @@ describe('영구결번 (T-10-076)', () => {
       db.prepare('DELETE FROM retired_numbers'),
       db.prepare("DELETE FROM app_meta WHERE key LIKE 'retired_numbers_%'"),
     ]);
-    vi.setSystemTime(Date.now() + 60_000); // 옛 은퇴가 먼저다
+    // 고정된 시각에서도 새 은퇴가 기존 은퇴보다 뒤임을 명시한다.
+    vi.setSystemTime(new Date(Date.now() + 1000));
     expect(await retire(A, skyBlue(10), '새레전드')).toMatchObject({
       kind: 'taken',
       holder: '옛레전드',

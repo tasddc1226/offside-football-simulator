@@ -1,8 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
-import { API, atPreseason, ok } from './helpers.js';
 
-// 시즌 1 개막 뒤에도 프리시즌 기준으로 돈다(시각을 직접 옮기는 테스트는 그 값이 이긴다).
-test.beforeEach(({ page }) => atPreseason(page));
+// 이 기기의 은퇴 기록은 프리시즌 데이터다. 개막 날짜와 무관하게 같은 목록을 검증한다.
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-30T00:00:00.000Z'));
+});
+import { API, ok } from './helpers.js';
 
 // 은퇴한 내 선수의 대표 칭호를 그 선수가 받은 칭호 중에서 다시 고른다(내 선수 상세 아래 카드).
 const ID = '0d000000-0000-4000-8000-00000000000c';

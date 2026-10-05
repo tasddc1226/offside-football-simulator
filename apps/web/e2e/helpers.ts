@@ -7,12 +7,6 @@ export const ok = (data: unknown, status = 200) => ({
   status,
   json: { data, meta: { requestId: 'req_e2e' } },
 });
-/**
- * 프리시즌 데이터로 짠 테스트는 브라우저 시각을 프리시즌으로 옮겨 둔다 — 실제 시각이 시즌 1(2026-10-06 KST)을
- * 넘으면 화면이 시즌 1을 기본으로 골라 스텁·기대값과 어긋난다. 시각은 거기서부터 흐른다.
- */
-export const atPreseason = (page: Page): Promise<void> =>
-  page.clock.setSystemTime(new Date('2026-09-30T00:00:00+09:00'));
 /** 오류 응답(route.fulfill 인자). */
 export const fail = (status: number, code: string, message: string) => ({
   status,

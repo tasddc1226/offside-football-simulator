@@ -1,9 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
-import { API, atPreseason, ok } from './helpers.js';
 
-// 시즌 1 개막 뒤에도 프리시즌 기준으로 돈다(시각을 직접 옮기는 테스트는 그 값이 이긴다).
-test.beforeEach(({ page }) => atPreseason(page));
+// 기본 선수 기록은 프리시즌이다. 개막을 확인하는 테스트는 자기 시각을 따로 지정한다.
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-30T00:00:00.000Z'));
+});
+import AxeBuilder from '@axe-core/playwright';
+import { ok, API } from './helpers.js';
 
 async function expectAccessible(page: Page) {
   // Wait for finite entrance transitions; decorative badge loops intentionally keep running.
