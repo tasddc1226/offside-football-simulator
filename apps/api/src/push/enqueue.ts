@@ -45,5 +45,18 @@ export function newsPushStatements(db: D1Database, postId: string, board: BoardK
         now,
         new Date(Date.parse(now) - 90 * 86400_000).toISOString(),
       ),
+    // 기기 여러 대로 받아도 알림함에는 프로필별 원본 이벤트 하나만 남긴다.
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO notifications
+      (id, profile_id, source_key, kind, title, body, target_json, created_at, expires_at)
+      SELECT 'ntf_' || lower(hex(randomblob(16))), q.profile_id, 'news:' || e.id, 'news',
+        CASE e.board WHEN 'notice' THEN '오프사이드 공지' ELSE '오프사이드 릴리즈 노트' END,
+        e.title, json_object('type', 'board', 'board', e.board, 'postId', e.post_id), ?, ?
+      FROM push_news_deliveries q JOIN push_news_events e ON e.id = q.event_id
+      WHERE changes() > 0 AND e.id = ? AND e.post_id = ? AND e.created_at = ?
+      GROUP BY q.profile_id`,
+      )
+      .bind(now, new Date(Date.parse(now) + 90 * 86400_000).toISOString(), eventId, postId, now),
   ];
 }

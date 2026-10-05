@@ -63,6 +63,8 @@ describe('T-10-070 매일 정리', () => {
 
     expect(await cleanupExpired(ctx.env.DB, NOW)).toEqual({
       push_news_events: 0,
+      notifications: 0,
+      push_deliveries: 0,
       push_devices: 0,
       idempotency: 1,
       auth_attempts: 1,

@@ -26,7 +26,11 @@ vi.mock('expo', () => ({ requireOptionalNativeModule: () => (f.native ? {} : nul
 vi.mock('expo-store-review', () => ({ isAvailableAsync: f.available, requestReview: f.request }));
 vi.mock('@offside/game/season', () => ({ loadKey: () => f.history, saveKey: f.save }));
 vi.mock('./setup', () => ({
-  kv: { getBoolean: (key) => f.values.get(key), set: (key, value) => f.values.set(key, value) },
+  kv: {
+    getBoolean: (key) => f.values.get(key),
+    getNumber: (key) => f.values.get(key),
+    set: (key, value) => f.values.set(key, value),
+  },
 }));
 
 beforeEach(() => {
@@ -62,6 +66,59 @@ describe('native push consent offer', () => {
     p = await import('./pushOffer.ts');
     await p.checkPushOffer();
     expect(p.pushOffer.handled).toBe(true);
+    expect(f.permissions).not.toHaveBeenCalled();
+  });
+  it('keeps later hidden across restart, then offers again after seven days', async () => {
+    let now = 1_800_000_000_000;
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    try {
+      let p = await import('./pushOffer.ts');
+      await p.checkPushOffer();
+      p.snoozePushOffer();
+      expect(p.pushOffer.handled).toBe(false);
+      expect(p.pushOffer.eligible).toBe(false);
+      const until = now + p.PUSH_OFFER_SNOOZE_MS;
+      vi.resetModules();
+      p = await import('./pushOffer.ts');
+      now = until - 1;
+      await p.checkPushOffer();
+      expect(p.pushOffer.eligible).toBe(false);
+      expect(f.permissions).toHaveBeenCalledOnce();
+      now = until;
+      await p.checkPushOffer();
+      expect(p.pushOffer.eligible).toBe(true);
+      expect(f.permissions).toHaveBeenCalledTimes(2);
+      await p.checkPushOffer();
+      expect(f.permissions).toHaveBeenCalledTimes(2);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+  it('checks blocked permission again when a snooze expires without restarting', async () => {
+    let now = 1_800_000_000_000;
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    try {
+      const p = await import('./pushOffer.ts');
+      await p.checkPushOffer();
+      p.snoozePushOffer();
+      f.permission = { granted: false, status: 'denied', canAskAgain: false };
+      now += p.PUSH_OFFER_SNOOZE_MS;
+      await p.checkPushOffer();
+      expect(p.pushOffer.eligible).toBe(false);
+      expect(f.permissions).toHaveBeenCalledTimes(2);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+  it('preserves explicit and legacy permanent dismissal even after a snooze expires', async () => {
+    const p = await import('./pushOffer.ts');
+    p.snoozePushOffer();
+    p.dismissPushOffer();
+    f.values.set('offside_push_offer_snoozed_until', 0);
+    vi.resetModules();
+    const reopened = await import('./pushOffer.ts');
+    await reopened.checkPushOffer();
+    expect(reopened.pushOffer.handled).toBe(true);
     expect(f.permissions).not.toHaveBeenCalled();
   });
   it('does not re-prompt an OS denial, unsupported platform or permission error', async () => {
