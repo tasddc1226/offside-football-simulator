@@ -245,8 +245,12 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       await runBatch(db, [...requestStatements(db, me.id, targetId, now)]);
       state = 'sent';
     }
-    // 코드가 아직 없는 사람(팀 프로필에서 신청했고 친구 화면을 안 열어 본 사람)이면 지금 만든다.
-    const code = await ensureFriendCode(db, targetId, target?.friendCode ?? null);
+    // 친구 목록은 사람을 코드로 가리키므로 코드가 없는 쪽(팀 프로필에서만 신청하고 친구 화면은 안 열어 본 사람)은 지금 만든다.
+    // 신청자 코드가 없으면 받은 쪽 목록에 신청이 보이지 않는다.
+    const [code] = await Promise.all([
+      ensureFriendCode(db, targetId, target?.friendCode ?? null),
+      ensureFriendCode(db, me.id, me.friendCode ?? null),
+    ]);
     const friend = await personOf(
       db,
       { profileId: targetId, code, nickname: target?.nickname ?? null, row: mine },

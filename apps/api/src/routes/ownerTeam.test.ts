@@ -1009,6 +1009,8 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       });
       expect(await view(a.cookie, b.team.id)).toBe('sent');
       expect(await view(b.cookie, a.team.id)).toBe('received');
+      // 친구 화면을 연 적 없는(코드가 없던) 신청자도 받은 쪽 목록에 보인다.
+      expect((await friendsOf(b.cookie)).received.map((p) => p.team?.id)).toEqual([a.team.id]);
       const back = await request(b.cookie, { teamId: a.team.id });
       expect(FriendReqRes.parse(await back.json()).data.state).toBe('accepted');
       expect(await view(a.cookie, b.team.id)).toBe('accepted');
