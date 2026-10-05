@@ -620,11 +620,11 @@ export async function storedSeasonsOf(
   return out;
 }
 
-/** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). */
 /** T-11-097 저장하는 성장 기록 — 세부 능력치(s0·s1)를 뺀다. */
-export const slimGrowth = ({ s0: _s0, s1: _s1, ...kept }: SeasonGrowth) => kept;
+const slimGrowth = ({ s0: _s0, s1: _s1, ...kept }: SeasonGrowth) => kept;
 
-/** T-11-097 한 시즌의 저장된 OVR(성장 기록 조작 판정의 '지난 시즌'). 없으면 null. */
+/** T-11-097 한 시즌의 저장된 OVR(성장 기록 조작 판정의 '지난 시즌'). 없으면 null. 업로드마다 부르므로 storedSeasonsOf처럼
+ * 커리어 시즌 전부를 읽지 않고 기본 키 한 줄만 읽는다. */
 export async function storedSeasonOvr(db: Db, careerId: string, year: number) {
   const [row] = await db
     .select({ ovr: careerSeasons.ovr })
@@ -633,6 +633,7 @@ export async function storedSeasonOvr(db: Db, careerId: string, year: number) {
   return row?.ovr ?? null;
 }
 
+/** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). */
 export async function getCareerHead(db: Db, careerId: string) {
   const [row] = await db
     .select({

@@ -136,8 +136,12 @@ export function growthTampered(
   if (!growth) return false;
   if (prevOvr !== null && growth.o0 - prevOvr >= ANOMALY.growthCarry) return true;
   if (!growth.ph.length) return false;
-  const steps = [growth.o0, ...growth.ph, endOvr];
-  return steps.some((v, i) => i > 0 && v - steps[i - 1]! >= ANOMALY.growthStep);
+  let at = growth.o0;
+  for (const v of [...growth.ph, endOvr]) {
+    if (v - at >= ANOMALY.growthStep) return true;
+    at = v;
+  }
+  return false;
 }
 
 /** cron 한 번의 D1 batch에 담는 커리어 수(커리어마다 문장 4개). */
