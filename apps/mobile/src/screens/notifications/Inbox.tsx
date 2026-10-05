@@ -50,7 +50,7 @@ export default function Inbox() {
         }
         style={{ alignSelf: 'flex-start' }}
       >
-        ← {id ? '알림함' : '이전으로'}
+        {`← ${id ? '알림함' : '이전으로'}`}
       </Btn>
       <View style={{ gap: 6, paddingVertical: 8 }}>
         <Txt v="h1" accessibilityRole="header">
@@ -100,7 +100,7 @@ export default function Inbox() {
               disabled={state.busy}
               onPress={() => void loadInbox({ unread: true })}
             >
-              읽지 않음 {state.unreadCount}
+              {`읽지 않음 ${state.unreadCount}`}
             </Btn>
           </View>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
