@@ -144,11 +144,11 @@ export const releaseConfirmText = (count: number, amount: number) =>
 export const marketEmptyText = (season: number | null, filtered: boolean) =>
   season === null ? L.emptyClosed : filtered ? L.emptyFiltered : L.empty;
 
-/** 한 선수를 방출하면 받을 자금(서버와 같은 releasePayout). */
-export const releaseValue = (p: Pick<TeamPlayer, 'retireValue'>, rate: number) =>
-  releasePayout(p.retireValue ?? 0, rate);
+/** 한 선수를 방출하면 받을 자금(서버와 같은 releasePayout — 카드 기준가 × 지급률). */
+export const releaseValue = (p: Pick<TeamPlayer, 'cardValue'>, rate: number) =>
+  releasePayout(p.cardValue, rate);
 /** 여러 선수를 방출하면 받을 자금. */
-export const releaseAmount = (players: readonly Pick<TeamPlayer, 'retireValue'>[], rate: number) =>
+export const releaseAmount = (players: readonly Pick<TeamPlayer, 'cardValue'>[], rate: number) =>
   players.reduce((s, p) => s + releaseValue(p, rate), 0);
 
 /** 쓰기가 끝나면 띄우는 알림(웹·앱 같은 문구). */

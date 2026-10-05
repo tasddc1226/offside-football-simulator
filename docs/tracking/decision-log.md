@@ -13,6 +13,14 @@
 - 라이브러리 없이 app-core에 작은 사전을 둔다(웹 첫 화면 예산 138KB). 영어 사전은 웹에서 영어 사용자만 지연 청크로 받는다.
   앱은 기기 언어를 `Intl`로 읽는다(새 네이티브 모듈 없이 옛 빌드에 OTA 가능). 가이드는 [i18n](../operations/i18n.md).
 
+## 2026-10-05 (T-11-103 팀 업적 유지 · T-11-104 방출 지급 기준)
+
+- 사용자 결정: **팀 업적(TEAM·RACE)은 그 시즌 한 번 닿으면 남긴다.** 선수를 팔거나 방출하려고 선발을 바꿔도, 레이팅·좋아요가
+  내려가도 점수가 빠지지 않는다(`owner_achievements.team_kept`). 업적 판정 선발은 화면과 같이 카드로 읽어 영입 선수도 센다.
+- 사용자 결정: **방출 지급 기준을 은퇴 가치에서 카드 기준가로 바꾼다.** 운영 카드의 은퇴 가치는 기준가의 평균 4.8배(OVR 80대 8.6배,
+  90+ 14.8배)였고 판매 상한은 기준가의 3배라, OVR 70 이상 선수는 최고가에 팔아도 방출보다 손해였다. 지급률(기본 1.0)은 그대로다.
+  이미 방출로 받은 자금은 되돌리지 않는다. 구단 가치(직접 키운 선수는 은퇴 가치)는 바꾸지 않는다.
+
 ## 2026-10-04 (T-11-084 웹·앱 병행)
 
 - 사용자 결정: **앱(안드로이드·iOS)이 출시돼도 웹을 내리지 않는다.** 웹은 유입 창구(인스타그램 CTA·GeekNews·커리어 공유 링크와 미리보기 카드),
@@ -215,7 +223,7 @@
   대륙컵(아시안컵·유로·코파 아메리카·아프리카 네이션스컵·골드컵·OFC 네이션스컵)은 어느 나라든 4년에 한 번이다.
   아시안게임은 아시아 연맹만. 대륙·협회 올해의 선수상은 조건·확률이 같고 이름만 다르다.
 - **외국 국적도 한국 고3(축구 유학)에서 시작하고, 병역은 대한민국만(사용자 결정).**
-- **체격은 약한 능력치 영향(사용자 결정).** 키 160~200cm · 몸무게 55~100kg · BMI 18.5~30. 포지션 기본 체격과의 차이로
+- **체격은 약한 능력치 영향(사용자 결정).** 키 160~~200cm · 몸무게 55~~100kg · BMI 18.5~30. 포지션 기본 체격과의 차이로
   세부 능력치를 ±3 안에서 옮기고(큰 키 → 헤딩·점프·힘·다이빙, 작은 키 → 가속·민첩·질주), 역할 OVR을 다시 맞춰 시작 OVR은
   체격과 무관하다.
 - **대한민국(국적 없는 옛 저장 포함)은 예전과 바이트까지 같다** — 표·확률·시드 RNG 순서 그대로, 골든 테스트 통과.
@@ -430,6 +438,7 @@
    오케스트레이션·리뷰·검증은 Claude 메인 세션이 맡는다. `AGENTS.md`의 기존
    "Luna에게 위임" 규칙을 대체한다.
 5. **가상 구단 별칭 유지.** 풀타임의 가상 구단 이름을 그대로 쓴다.
+
 - 작업 ID 규칙: T-8(WORLD STAGE)은 취소·무효이므로, 이 마이그레이션은
   **Phase 9, T-9-001**로 배정하고 서브트랙 a(api)·b(web)·c(CI/운영)·d(문서)로
   나눈다.
@@ -437,7 +446,7 @@
 ## 2026-09-16 (D-82 — 첫 계약 흐름 단축(룰셋 1.7.2/팩 0.6.6 승격)·플레이 리뷰 기반 개선 이슈 19건 — 사용자 결정)
 
 - 사용자: "처음 선수를 만들고 처음 제안을 받는 흐름이 너무 어색하다" → 3안 중 **원작식으로 짧게(진로 선택 → 제안 → 계약)**. 실측: KICKOFF 뒤 진로 선택 → 무관한 일반 사건 2개(라커룸 갈등·훈련 코칭) → 설명 없는 "받은 제안". 원인: 계약 전 구간의 `season.step`이 12로 고정돼 일반 사건 트리거(step≥4/5)가 늘 통과.
-- 구현(PR #238): 룰셋 1.7.2 선택 키 `offerRules.preContract { maxEventsBeforeFirstOffer, bridgeEventIds }` — 도메인 `advance()`는 계약 전 구간에서만 사건 수 상한·허용 id를 적용, 키 없는 룰셋은 원본 경로 그대로(1.7.1 이하 골든·해시 불변). 팩 0.6.6은 두 일반 사건 트리거에 "계약 있음" 조건. 진로(EVT-CON-020~022)→스카우트 평가 브리지(023~028) followUps 재사용. 웹: 첫 제안 eyebrow "스카우트 평가 뒤 도착한 제안"·"왜 이 팀이 제안했나" 한 줄·브리지 사건 라벨 — **룰셋 키 유무로 게이팅**(리뷰 차단: 옛 룰셋 커리어에 거짓 서사 → 수정).
+- 구현(PR #238): 룰셋 1.7.2 선택 키 `offerRules.preContract { maxEventsBeforeFirstOffer, bridgeEventIds }` — 도메인 `advance()`는 계약 전 구간에서만 사건 수 상한·허용 id를 적용, 키 없는 룰셋은 원본 경로 그대로(1.7.1 이하 골든·해시 불변). 팩 0.6.6은 두 일반 사건 트리거에 "계약 있음" 조건. 진로(EVT-CON-020~~022)→스카우트 평가 브리지(023~~028) followUps 재사용. 웹: 첫 제안 eyebrow "스카우트 평가 뒤 도착한 제안"·"왜 이 팀이 제안했나" 한 줄·브리지 사건 라벨 — **룰셋 키 유무로 게이팅**(리뷰 차단: 옛 룰셋 커리어에 거짓 서사 → 수정).
 - 릴리스 e2e에서 발견: 허용 목록에 입단 테스트 `EVT-CON-003`(SCR-008)이 빠져 도달 불가 → 추가했으나 브리지 023~028이 `입단테스트_완료` 태그를 같은 outcome에서 조기 부여해 원래부터 도달 불가였던 잠재 결함(0.6.5 이하에도 존재, 바이트 불변이라 미수정) 확인 → 0.6.6에서 태그 제거·상한 3(진로+브리지+입단 테스트). `load-content-pack.ts`가 0.6.6 이벤트를 전용 import로 읽도록 배선. 활성 버전 상승에 따른 e2e seed 드리프트(SCR-012 `rc-seed-8`, INTEREST 시장 seed) 갱신.
 - 절차 교훈: 스택 PR(#239, base=feat 브랜치)은 base PR 머지 직후 head 브랜치를 지우면 GitHub이 PR을 닫고 다시 열 수 없다 → base 머지 전에 `gh pr edit --base main`으로 옮긴 뒤 브랜치를 지운다. 이번엔 고유 diff를 main 위에 재적용해 #240으로 머지.
 - 승격: preflight 34992863238 → deploy 34993007861 `1f18d06`, 운영 시즌 1 manifest 1.7.2/0.6.6.
@@ -456,11 +465,11 @@
 ## 2026-09-14 (D-80 — 밸런스 조정 1라운드 목표값 확정, 새 룰셋 1.6.1 — 사용자 승인)
 
 - 요청(9/14 18:02): 1만 회 기준선(D-79) 뒤 오케스트레이터가 낸 조정 목표 제안표에 사용자가 "제안대로 진행".
-- 결정: **1라운드는 세 지표만, 한 번에 하나씩** — (3) OVR 정점 연령 평균 34.1세 → 28~30세(p90 33 이하) → (2) 은퇴 심사 도달 9% → 70% 이상, 심사 나이 중앙값 34~37세 → (1) Legacy 상위 밴드(LEGEND+ICON) 80% → 30~40%, 포지션 편차 10pp 이내(현재 DF 97·GK 92·FW 75·MF 56). 순서를 3→2→1로 두는 이유는 정점 연령이 은퇴·Legacy·잠재 도달을 함께 움직여 동시에 손대면 원인 분리가 안 되기 때문. 각 단계마다 1.5.0 기준선과 같은 seed 접두어(`base-150`)로 1만 커리어를 돌려 목표 도달을 확인한다.
-- 2라운드 후보(이번 라운드 제외): 잠재 도달률 89.7 → 55~65%, RESERVE 41 → 30% 이하·출전 점유 50% 이상, 부상 1.24 → 0.6~0.8/시즌·중상 25% 이하, 5시즌 내 1부 진입 9 → 15% 이상. 주장 경험·임대 비중은 재측정만.
+- 결정: **1라운드는 세 지표만, 한 번에 하나씩** — (3) OVR 정점 연령 평균 34.1세 → 28~~30세(p90 33 이하) → (2) 은퇴 심사 도달 9% → 70% 이상, 심사 나이 중앙값 34~~37세 → (1) Legacy 상위 밴드(LEGEND+ICON) 80% → 30~40%, 포지션 편차 10pp 이내(현재 DF 97·GK 92·FW 75·MF 56). 순서를 3→2→1로 두는 이유는 정점 연령이 은퇴·Legacy·잠재 도달을 함께 움직여 동시에 손대면 원인 분리가 안 되기 때문. 각 단계마다 1.5.0 기준선과 같은 seed 접두어(`base-150`)로 1만 커리어를 돌려 목표 도달을 확인한다.
+- 2라운드 후보(이번 라운드 제외): 잠재 도달률 89.7 → 55~~65%, RESERVE 41 → 30% 이하·출전 점유 50% 이상, 부상 1.24 → 0.6~~0.8/시즌·중상 25% 이하, 5시즌 내 1부 진입 9 → 15% 이상. 주장 경험·임대 비중은 재측정만.
 - 방식: 룰셋은 1.6.0(구단 면담 포함) 위에 **1.6.1**을 새로 만든다(1.5.0·1.6.0 불변, ACTIVE는 유지·승격은 별도 결정). 룰셋 JSON만으로 못 바꾸는 값(도메인 상수)이 있으면 도메인 수정은 별도 작업으로 분리해 결정론·골든 fixture 영향을 먼저 본다. 작업 ID는 사용자 브랜치 T-7-022~024를 피해 **T-7-030**부터.
 - 다음: 룰셋 레버 조사(읽기 전용 워커) → T-7-030 브리프(정점 연령) → 워커 → 1만 회 → 판정 → T-7-031(은퇴 심사) → T-7-032(Legacy) → 10만 회 최종.
-- 작업 ID: 사용자 Codex 세션이 T-7-022~025를 순차 사용 중(`tasddc1226/T-7-025-league-context` 17:39)이라 오케스트레이터 작업은 **T-7-030부터** 배정한다(18:25, 원래 T-7-025~027로 적었던 것을 T-7-030~032로 변경). 새 ID를 잡기 전 `git branch -r | grep T-7-`로 충돌을 확인한다.
+- 작업 ID: 사용자 Codex 세션이 T-7-022~~025를 순차 사용 중(`tasddc1226/T-7-025-league-context` 17:39)이라 오케스트레이터 작업은 **T-7-030부터** 배정한다(18:25, 원래 T-7-025~~027로 적었던 것을 T-7-030~032로 변경). 새 ID를 잡기 전 `git branch -r | grep T-7-`로 충돌을 확인한다.
 - 18:52 T-7-030 워커 반환(브랜치 `T-7-030-ruleset-1-6-1-peak-age` `04fcd9a`, 팩 0.6.2 신설): 2차 값(전 구간 -2세)으로 1천 커리어 정점 29.3세(p90 31) 달성, 1만 회 실행 중. 워커 발견 2건 — (a) 1.6.0/0.6.1은 `clubMeetingRules` 때문에 1.5.0과 stateHash가 200커리어 0% 일치(D-79의 "1.6.0 == 1.5.0"은 집계 지표 동등이지 해시 동등이 아님, 정정); (b) 1.6.1/0.6.2는 Legacy 활성화 화이트리스트 밖이라 Legacy 1.0.0이 적용됨 — T-7-031에서 1.1.0으로 맞춘다.
 - 19:0x Codex 오케스트레이터(run_73df4d69d1a6)와 조율: 사용자 PR #222(리그 원장, 룰셋 1.7.0)도 팩 0.6.2를 신설(0.6.1 복사, compat [1.7.0]) — 내 0.6.2와 파일·checksum 동일, manifest compat 배열과 로더 등록만 충돌. 제안: 0.6.2 하나에 compat ["1.6.1","1.7.0"], 나중에 머지되는 쪽이 rebase로 합침(순서는 사용자 결정). 1.7.0이 1.6.0 기반이라 1라운드 조정값 반영 여부는 사용자 결정으로 남김.
 - 19:35 T-7-030 1만 회 판정 **통과**(정점 29.31세·p90 31, peakOvr 68.3, 19세 61.5, 40세 48.3). 잠재 도달률 70.7%로 2라운드 목표(55~65)에 근접. 1.6.1/0.6.2의 Legacy는 1.0.0 정책이 적용돼 밴드 분포(ICON 5%)는 기준선과 비교 불가 — T-7-031에서 화이트리스트 정정. 증거 `evidence/sim-round1-2026-09-14/`.
@@ -507,9 +516,9 @@
 - 로컬라이제이션 기획은 사용자 지시로 대기(12:26 요청분은 클라우드플레어 국가 조회까지 답변).
 - 후속(14:12 사용자): "200회는 기준으로 삼기엔 너무 적다, 원작은 약 10만 회까지 돌렸다" + "Codex 세션의 오픈 PR을 모두 main까지 넣은 버전으로 다시 시뮬". 프로파일(30시즌 6커리어): sha256Hex 49%·canonical 38%·GC 5%, 시뮬 로직 2% 미만 → [T-7-020](../archive/offside/tracking/briefs/T-7-020.md) 해시 공급자 주입(도메인 순수성 유지, 값 동일)으로 3배 목표. 10만 회 비용: 현재 커리어당 3.3초(30시즌) → 92 CPU시간(이 맥 8 P코어 ≈ 12시간), 가속 뒤 ≈ 4시간. 반복 조정은 1만 회(≈ 25분), 최종 확인만 10만 회로 나눈다. 오픈 PR 순서: #214(web 문구) → #217(룰셋 1.6.0/팩 0.6.1 구단 면담) → #213(e2e, 브리프 파일 add/add 충돌은 T-7-019 재부여로 해소).
 - 적용(13:11~13:58): T-7-019(PR 표기 T-7-017) 워커 1차(75c779c) → PR #216(REST 개설) → 리뷰 후속 2회 — (a) 100건 중 2건 실패의 원인은 커리어 이벤트 상한이 아니라 도메인 은퇴 심사(`simulate.ts` `RETIREMENT_DECISION_REQUIRED`) 미처리: 심사 시 RETIRE 강제, `--to-retirement`는 `retirementContinuationOptions`로 이어가기, `retireReason`(CAP·REVIEW·CONTINUED) 컬럼, `ms` 컬럼 제거로 CSV 바이트 결정론(c39af4d); (b) `--jobs>1`에서 shard CSV 되읽기 때 `leagueTier` 타입이 바뀌어 `tierBySeasonIndex`가 전부 0 — 헤더별 숫자 컬럼 목록으로 정규화(d14d8d2). 전체 체인 통과, e2e 새 실패 0 → squash 머지 `c78b6f1`.
-- 1.5.0 기준선(오케스트레이터, 200커리어·opportunity·은퇴까지·상한 30시즌·`--jobs 6` 2분 15초, 실패 0): 나이별 OVR 평균 19세 61 → 25세 67 → 30세 69(정점 33~36세, 잠재 평균 70.2·도달률 90%) → 40세 62 → 48세 42. 은퇴 심사(REVIEW)는 14/200뿐이라 186명이 30시즌 상한(49세)까지 현역 — 도메인이 은퇴를 사실상 강제하지 않는다. 1부 도달 33%(시즌 15 이후 포화), 시즌당 부상 1.24(커리어당 36.6·중상 17.6), 계약 4.1개·구단 이동 평균 3.0회(무이동 18%), 시즌의 40%가 RESERVE 역할로 끝나고 출전 시간 점유 평균 42%·평균 평점 5.7, Legacy 밴드 LEGEND 46·ICON 109·REMEMBERED 37·SOLID 8. **조정 후보(사용자 확인 대기)**: 성장 정점 27~30세로 앞당기고 노쇠 33세부터, 은퇴 심사 압력(나이·시장) 강화로 은퇴 나이 33~37세 중심, 부상 빈도·중상 비율 하향, RESERVE 고착(출전 점유 42%) 완화, Legacy 밴드 임계. 조정은 룰셋 1.5.1 + 팩 `compatibleRulesetVersions` 추가로만.
-- 적용(9/14 15:10~17:13, [T-7-021](../archive/offside/tracking/briefs/T-7-021.md) 1만 회 기준선): 워커는 10~12분이면 강제 반환돼 장시간 실행을 못 기다린다 → 실행은 nohup 드라이버(`tooling/sim-out/run-rest.sh`)가 순차로 돌리고 오케스트레이터가 백그라운드로 대기, 집계·보고는 짧은 워커로 분할. **1.5.0/0.6.0 1만 커리어**(opportunity·은퇴까지·상한 30시즌, 54분, 실패 0, 커리어당 평균 2.39초 — 다른 세션과 겹쳐 단독 벤치 1.1초의 2배): 200회 기준선과 핵심 수치가 같다(정점 34.1세, 부상 1.24/시즌, RESERVE 41%, LEGEND+ICON 80%; 1부 도달 33%→29.7%는 200회 표본오차 안). 새로 드러난 것 — 상한 도달 91%·심사 은퇴 9%(평균 43.7세), 잠재 도달률 89.7%, 시즌 5/10/15/20 누적 1부 진입 9.3/17.8/22.9/26.0%(1부 체류는 시즌 11 이후 8%에서 정체), 승격·강등 대칭(3.4/3.6%), 주장 경험 중앙값 0, 임대 3.6%, **Legacy 상위 밴드의 포지션 편향**(DF 97%·GK 92%·FW 75%·MF 56%, 센터백 98% vs 와이드 크리에이터 11% — 정점 OVR은 FW가 최고인데 Legacy는 수비가 압도). **1.6.0/0.6.1 1만 커리어**(67분, 실패 0): 표본오차를 넘는 차이 없음(최대 1부 도달률 -0.8pp) — 구단 면담·목표 보상은 `REQUEST_CLUB_MEETING` 명령이 있어야 발화하고 헤드리스 정책은 보내지 않으므로 자동 진행 커리어에는 영향이 정확히 0. 브리프가 두 실행에 다른 seed 접두어(base-150/base-160)를 줘 짝지은 비교가 아니었다 — 룰셋 A/B는 앞으로 같은 접두어로 돌린다. 집계 스크립트 `career-sim-report.mjs` 수정 3건(루트 `pnpm sim:report` 경로 해석, 시즌N 누적 1부 도달률이 전체값을 내던 버그, 비교표 비율 지표 차이 열 누락). 발견: careers.csv `contracts`가 `clubs`와 같은 식(`clubHistory.length`)이라 재계약을 세지 않음(별도 작업). 정책 민감도(random·first 2천)는 진행 중.
-- 적용(9/14 17:56, T-7-021 완료): 정책 민감도(1.5.0, 2천씩) — random은 아무 제안이나 받아 구단 이동 9.9회·1부 도달 85%지만 RESERVE 50%·출전 점유 27%로 커리어 질이 나쁘고, first는 이동 1회·1부 0%·주장 1.9시즌. opportunity(1부 29.7%·이동 4회)가 사람 플레이에 가장 가까워 조정 기준선으로 확정. PR #223 `891307a` squash 머지(집계 스크립트 + 루트 `sim:report`; 리뷰 게이트 `/review:pr` 이슈 0, 체인 통과·e2e 새 실패 4건 단독 통과). 보고 원본은 `docs/tracking/evidence/sim-baseline-10k-2026-09-14/`. 사용자 PR #213(e2e 안정화 + 1.5.0 seed 드리프트 수정 d22f6bd) `cb513e6` 머지로 오픈 PR 3건(#214·#217·#213) 모두 main 반영 — 사용자 지시(14:12) 충족. **조정 목표 제안(사용자 답 대기)**: 1순위 Legacy 상위 밴드 80%→30~40%·포지션 편차 10pp 이내(현재 DF 97·GK 92·FW 75·MF 56), 2순위 심사 은퇴 도달 9%→70%·심사 나이 중앙값 34~37세, 3순위 정점 연령 34.1→28~30세(p90 33 이하); 2라운드 잠재 도달 89.7→55~65%, RESERVE 41→30% 이하·출전 점유 50% 이상, 부상 1.24→0.6~0.8/시즌·중상 25% 이하, 5시즌 내 1부 진입 9→15% 이상. 1라운드는 3→2→1 순으로 하나씩 1만 회 확인(연쇄 효과 분리), 새 룰셋은 1.6.0 위 1.6.1, A/B는 같은 seed 접두어. 워크트리 정리(사용자 `/clean-merged-worktrees`, 15:40): 머지된 29개 제거, squash 머지된 워커 로컬 브랜치 21개는 `-d` 거부라 보존.
+- 1.5.0 기준선(오케스트레이터, 200커리어·opportunity·은퇴까지·상한 30시즌·`--jobs 6` 2분 15초, 실패 0): 나이별 OVR 평균 19세 61 → 25세 67 → 30세 69(정점 33~~36세, 잠재 평균 70.2·도달률 90%) → 40세 62 → 48세 42. 은퇴 심사(REVIEW)는 14/200뿐이라 186명이 30시즌 상한(49세)까지 현역 — 도메인이 은퇴를 사실상 강제하지 않는다. 1부 도달 33%(시즌 15 이후 포화), 시즌당 부상 1.24(커리어당 36.6·중상 17.6), 계약 4.1개·구단 이동 평균 3.0회(무이동 18%), 시즌의 40%가 RESERVE 역할로 끝나고 출전 시간 점유 평균 42%·평균 평점 5.7, Legacy 밴드 LEGEND 46·ICON 109·REMEMBERED 37·SOLID 8. **조정 후보(사용자 확인 대기)**: 성장 정점 27~~30세로 앞당기고 노쇠 33세부터, 은퇴 심사 압력(나이·시장) 강화로 은퇴 나이 33~37세 중심, 부상 빈도·중상 비율 하향, RESERVE 고착(출전 점유 42%) 완화, Legacy 밴드 임계. 조정은 룰셋 1.5.1 + 팩 `compatibleRulesetVersions` 추가로만.
+- 적용(9/14 15:10~~17:13, [T-7-021](../archive/offside/tracking/briefs/T-7-021.md) 1만 회 기준선): 워커는 10~~12분이면 강제 반환돼 장시간 실행을 못 기다린다 → 실행은 nohup 드라이버(`tooling/sim-out/run-rest.sh`)가 순차로 돌리고 오케스트레이터가 백그라운드로 대기, 집계·보고는 짧은 워커로 분할. **1.5.0/0.6.0 1만 커리어**(opportunity·은퇴까지·상한 30시즌, 54분, 실패 0, 커리어당 평균 2.39초 — 다른 세션과 겹쳐 단독 벤치 1.1초의 2배): 200회 기준선과 핵심 수치가 같다(정점 34.1세, 부상 1.24/시즌, RESERVE 41%, LEGEND+ICON 80%; 1부 도달 33%→29.7%는 200회 표본오차 안). 새로 드러난 것 — 상한 도달 91%·심사 은퇴 9%(평균 43.7세), 잠재 도달률 89.7%, 시즌 5/10/15/20 누적 1부 진입 9.3/17.8/22.9/26.0%(1부 체류는 시즌 11 이후 8%에서 정체), 승격·강등 대칭(3.4/3.6%), 주장 경험 중앙값 0, 임대 3.6%, **Legacy 상위 밴드의 포지션 편향**(DF 97%·GK 92%·FW 75%·MF 56%, 센터백 98% vs 와이드 크리에이터 11% — 정점 OVR은 FW가 최고인데 Legacy는 수비가 압도). **1.6.0/0.6.1 1만 커리어**(67분, 실패 0): 표본오차를 넘는 차이 없음(최대 1부 도달률 -0.8pp) — 구단 면담·목표 보상은 `REQUEST_CLUB_MEETING` 명령이 있어야 발화하고 헤드리스 정책은 보내지 않으므로 자동 진행 커리어에는 영향이 정확히 0. 브리프가 두 실행에 다른 seed 접두어(base-150/base-160)를 줘 짝지은 비교가 아니었다 — 룰셋 A/B는 앞으로 같은 접두어로 돌린다. 집계 스크립트 `career-sim-report.mjs` 수정 3건(루트 `pnpm sim:report` 경로 해석, 시즌N 누적 1부 도달률이 전체값을 내던 버그, 비교표 비율 지표 차이 열 누락). 발견: careers.csv `contracts`가 `clubs`와 같은 식(`clubHistory.length`)이라 재계약을 세지 않음(별도 작업). 정책 민감도(random·first 2천)는 진행 중.
+- 적용(9/14 17:56, T-7-021 완료): 정책 민감도(1.5.0, 2천씩) — random은 아무 제안이나 받아 구단 이동 9.9회·1부 도달 85%지만 RESERVE 50%·출전 점유 27%로 커리어 질이 나쁘고, first는 이동 1회·1부 0%·주장 1.9시즌. opportunity(1부 29.7%·이동 4회)가 사람 플레이에 가장 가까워 조정 기준선으로 확정. PR #223 `891307a` squash 머지(집계 스크립트 + 루트 `sim:report`; 리뷰 게이트 `/review:pr` 이슈 0, 체인 통과·e2e 새 실패 4건 단독 통과). 보고 원본은 `docs/tracking/evidence/sim-baseline-10k-2026-09-14/`. 사용자 PR #213(e2e 안정화 + 1.5.0 seed 드리프트 수정 d22f6bd) `cb513e6` 머지로 오픈 PR 3건(#214·#217·#213) 모두 main 반영 — 사용자 지시(14:12) 충족. **조정 목표 제안(사용자 답 대기)**: 1순위 Legacy 상위 밴드 80%→30~~40%·포지션 편차 10pp 이내(현재 DF 97·GK 92·FW 75·MF 56), 2순위 심사 은퇴 도달 9%→70%·심사 나이 중앙값 34~~37세, 3순위 정점 연령 34.1→28~~30세(p90 33 이하); 2라운드 잠재 도달 89.7→55~~65%, RESERVE 41→30% 이하·출전 점유 50% 이상, 부상 1.24→0.6~0.8/시즌·중상 25% 이하, 5시즌 내 1부 진입 9→15% 이상. 1라운드는 3→2→1 순으로 하나씩 1만 회 확인(연쇄 효과 분리), 새 룰셋은 1.6.0 위 1.6.1, A/B는 같은 seed 접두어. 워크트리 정리(사용자 `/clean-merged-worktrees`, 15:40): 머지된 29개 제거, squash 머지된 워커 로컬 브랜치 21개는 `-d` 거부라 보존.
 
 ## 2026-09-14 (D-78 — 상단 네비바 실시간 "플레이 중 인원" 배지, D1 세션 하트비트 방식 — 사용자 요청)
 
@@ -578,7 +587,7 @@
 - 결정: (1) T-7-011 PR 머지 → 전체 e2e 게이트 복원 확인 → 최종 main SHA로 `deploy-production.yml` **preflight → deploy**(`DEPLOY_PRODUCTION`, `season_starts_at=2026-09-05T15:00:00Z`, `season_ends_at` 비움, `challenge_set_id=cs_season_1`, 직전 9/7 01:52 배포 `939fe48`와 같은 입력). (2) **코드만 배포한다.** 릴리스 워크플로가 시즌 1 manifest `1.3.0/0.5.0`을 하드코딩으로 검사·유지하므로 운영 시즌 룰셋은 1.3.0 그대로이고 회복 규칙(1.4.0, #140)은 운영 플레이에 아직 적용되지 않는다. 1.4.0 승격은 릴리스 스크립트·워크플로 검사값 변경 + 사용자 승인이 필요한 별도 작업으로 남긴다(사용자에게 20:30 보고, 응답 대기). (3) 배포 뒤 health·current API·웹 응답 확인과 온보딩→생성 실제 플레이 확인(QA 이름·시각 기록, 기존 사용자 기록 미접촉)을 남긴다.
 - 사전 확인: 20:34 main `5086ad0`로 읽기 전용 preflight(run 34117318240)를 걸었으나 직후 이 결정 기록 커밋(`1e9ed8f`)을 푸시해 "Require exact current main SHA" 검사에서 중단됐다(워크플로 실행 중 main 푸시 금지 — 배포 실행 중에는 문서 커밋도 멈춘다). 20:38 `1e9ed8f`로 재실행한 preflight(run 34117660472)는 20:41 성공: 릴리스 입력·API 시즌 호환 vitest·운영 web 빌드·D1 Time Travel bookmark·시즌 메타데이터·집계 읽기 모두 통과. 배포 후 검증 스크립트(온보딩→생성→PUT 저장→새로고침→허브 노출)는 스테이징에서 예행 OK. 운영 current API는 `svc_season_1` ACTIVE / 1.3.0 / 0.5.0 / endsAt null(20:32 확인).
 - 적용(21:45): 마지막 P1 T-7-011이 머지돼(`45ff7b5`) 이 문서 커밋을 최종 main SHA로 preflight → deploy를 실행한다(실행 결과는 아래 항목에 추가).
-- 적용(21:48~21:52, 완료): preflight run 34123657025 성공 → **deploy run 34123837271 성공**(`308f9bc`, 약 2분 40초). API Worker `6b78751f-9b1c-40f0-8efa-9201be158340`, web `a37ab471-4172-4f4f-8c4a-e2314f3f3ba0`, manifest plan noop(1.3.0/0.5.0 유지), 신규 마이그레이션 없음, 집계 전후 동일. 배포 후 21:51: health ok, current API 동일(`svc_season_1` ACTIVE·endsAt null·1.3.0/0.5.0), web 200(번들 `index-CqqlZtGc` → `index-BEIKlKvF`), CORS 운영 origin 허용·타 origin 거부. 360px 플레이 검증(`QA배포2151`, career `46be888c…`): 랜딩 → 온보딩 → 생성 → KICKOFF → 복구 코드 200 → PUT 저장 200 → 새로고침 뒤 진로 화면 유지 → 허브 카드 노출. 기록은 `docs/operations/production-release.md`. 오늘 머지 13건(T-7-001~013)이 운영에 반영됐고, 운영 시즌 룰셋 1.4.0 승격은 별도 작업(사용자 결정 대기).
+- 적용(21:48~~21:52, 완료): preflight run 34123657025 성공 → **deploy run 34123837271 성공**(`308f9bc`, 약 2분 40초). API Worker `6b78751f-9b1c-40f0-8efa-9201be158340`, web `a37ab471-4172-4f4f-8c4a-e2314f3f3ba0`, manifest plan noop(1.3.0/0.5.0 유지), 신규 마이그레이션 없음, 집계 전후 동일. 배포 후 21:51: health ok, current API 동일(`svc_season_1` ACTIVE·endsAt null·1.3.0/0.5.0), web 200(번들 `index-CqqlZtGc` → `index-BEIKlKvF`), CORS 운영 origin 허용·타 origin 거부. 360px 플레이 검증(`QA배포2151`, career `46be888c…`): 랜딩 → 온보딩 → 생성 → KICKOFF → 복구 코드 200 → PUT 저장 200 → 새로고침 뒤 진로 화면 유지 → 허브 카드 노출. 기록은 `docs/operations/production-release.md`. 오늘 머지 13건(T-7-001~~013)이 운영에 반영됐고, 운영 시즌 룰셋 1.4.0 승격은 별도 작업(사용자 결정 대기).
 - 근거: 운영 배포는 `workflow_dispatch` 수동뿐이라 오늘 머지분은 스테이징에만 자동 배포돼 있었다(20:13 스테이징 스모크 1회 실패는 `service-seasons/current` 응답 대기 타임아웃, 이후 실행 성공).
 
 ## 2026-09-07 (17:15, D-70 — 전체 e2e 드리프트 발견·핫픽스·과도기 판정 규칙)
@@ -588,7 +597,7 @@
 - 부수: 워커가 남긴 workerd 좀비 94개(apps/api D1 테스트 타임아웃 시 dispose 안 됨)와 이전 세션 잔여 4개를 정리했다. 병렬 6워커 + 각자 전체 체인은 머신 부하(load 190+)를 만들어 api 테스트·e2e를 흔들었다 — 다음 웨이브부터 워커는 단위 테스트·lint·typecheck까지만 돌리고 전체 체인은 오케스트레이터가 순차로 돌리는 방식을 검토한다(D-59 병렬 상한 없음은 유지하되 체인은 직렬화).
 - PR 개설: 세션 훅이 `gh pr create`와 `gh api …/pulls`를 막아(`/simplify`·`/review:pr` 요구, 워커 브리프는 둘 다 금지) 오케스트레이터가 `curl`로 REST 호출해 #173~#178을 열었다. 워커 프롬프트의 "막히면 push + 본문 반환" 규칙이 그대로 작동했다.
 - 적용(17:20·17:32): PR #173은 e2e 실패 집합이 baseline과 동일해 머지(`ab8a88b`), 이어 T-7-002·003 투입. PR #177은 체인 녹색 + e2e 새 실패 1건(`service-season.spec:97` 선수 생성 `goToConfirm` URL 대기 30s 타임아웃, load 111)이었는데 생성 헬퍼·spec이 키보드 입력을 전혀 쓰지 않아 RadioGroup Enter 핸들러와 무관한 부하 플레이크로 판정하고 머지(`58ab25a`). 근거는 PR 코멘트, 조용한 머신에서 해당 spec 단독 재실행을 큐에 넣어 결과를 후속 코멘트로 남긴다. 실제 브라우저(dev 서버) 확인: Enter → `aria-checked=true`, Space·ArrowDown 유지, Enter가 단계를 넘기지 않음.
-- 적용(21:44, 핫픽스 종결): T-7-011 PR #189를 머지했다(`45ff7b5`). 워커는 `apps/web/e2e/**`만 고쳐 최종 코드로 전체 체인 3회(코드 검사~빌드 전부 통과, e2e 107/3·105/5·106/4), 오케스트레이터는 main과 합친 상태에서 e2e만 독립 실행해 **100 passed / 3 failed / 7 skipped**(load 27~44), baseline 60건 대비 새 실패 0·57건 해소. 남은 3건은 `.os-player-card-number` 대비(실제 axe 결함 → #180)와 충돌 대화상자 계열 부하 타임아웃 2건. transfer·retirement에 들어간 axe id 허용 필터(현재 14회 검사 위반 0으로 실효 없음)·SCR-012 KEEP 경로 커버리지·부하 안정화는 #190. #179 닫음. 이 시점부터 PR 판정은 "baseline 대비 새 실패 없음" 대신 **"이 3건 외 실패 없음"**으로 좁힌다.
+- 적용(21:44, 핫픽스 종결): T-7-011 PR #189를 머지했다(`45ff7b5`). 워커는 `apps/web/e2e/**`만 고쳐 최종 코드로 전체 체인 3회(코드 검사~~빌드 전부 통과, e2e 107/3·105/5·106/4), 오케스트레이터는 main과 합친 상태에서 e2e만 독립 실행해 **100 passed / 3 failed / 7 skipped**(load 27~~44), baseline 60건 대비 새 실패 0·57건 해소. 남은 3건은 `.os-player-card-number` 대비(실제 axe 결함 → #180)와 충돌 대화상자 계열 부하 타임아웃 2건. transfer·retirement에 들어간 axe id 허용 필터(현재 14회 검사 위반 0으로 실효 없음)·SCR-012 KEEP 경로 커버리지·부하 안정화는 #190. #179 닫음. 이 시점부터 PR 판정은 "baseline 대비 새 실패 없음" 대신 **"이 3건 외 실패 없음"**으로 좁힌다.
 
 ## 2026-09-07 (14:51, 1차 웨이브 투입 — 사용자 승인 "승인.")
 
@@ -597,7 +606,7 @@
 
 ## 2026-09-07 (14:50, 리뷰 후속 1차 웨이브 브리프 T-7-001~010 — 사용자 지시 "우선순위 높은 것부터 위임 전 브리프")
 
-- 대상: P1 #140(무출전 고착)·#141(협상 버튼 무결과)과 P2 중 표시 계층·UI로 닫히는 #142·#143·#105·#144·#146·#149·#150·#151·#152. P2 #145·#147·#148은 T-7-002와 같은 도메인 파일(`simulate.ts`·`market.ts`·`season.ts`)을 만지므로 2차 웨이브로 미뤘다. 브리프 10건은 [briefs/T-7-001](../archive/offside/tracking/briefs/T-7-001.md)~[T-7-010](../archive/offside/tracking/briefs/T-7-010.md), e2e 포트 5261~5270. 투입(Workflow Sonnet 5)은 사용자 승인 뒤.
+- 대상: P1 #140(무출전 고착)·#141(협상 버튼 무결과)과 P2 중 표시 계층·UI로 닫히는 #142·#143·#105·#144·#146·#149·#150·#151·#152. P2 #145·#147·#148은 T-7-002와 같은 도메인 파일(`simulate.ts`·`market.ts`·`season.ts`)을 만지므로 2차 웨이브로 미뤘다. 브리프 10건은 [briefs/T-7-001](../archive/offside/tracking/briefs/T-7-001.md)~~[T-7-010](../archive/offside/tracking/briefs/T-7-010.md), e2e 포트 5261~~5270. 투입(Workflow Sonnet 5)은 사용자 승인 뒤.
 - **D-67 룰셋 1.4.0 회복 규칙.** 원소속 잔류 중 무출전 고착의 코드 원인 4가지를 확인했다: (1) 회복 제안(`buildRecoveryOpportunity`)은 0분 시즌 **2회 연속** 뒤에만(`transferRules.recovery.zeroMinutesConsecutiveSeasons: 2`), (2) 결산 약속 미이행이 **선수의** 감독 신뢰를 -8(`relationshipCarry.managerTrustPromiseBreach`) 깎아 선발 점수를 더 낮춤, (3) 역할 제안 수락은 `context.squadStatus`만 올리고 `contract.rolePromise`는 그대로라 다음 경기부터 `playMatch`가 원래 값으로 되돌림(한 경기 효과), (4) 하향 제안 거절 -8(`roleProposal.declineTrustDelta`). 룰셋은 불변 아티팩트이므로(05-save-and-versioning) **1.4.0**을 1.3.0 복사로 만들어 (1) 2→1, (2) -8→0(위반 카운터·태그·로그·EVT-CON-012는 유지), (3)(4)는 새 선택 키 `roleProposal.acceptedRoleUpdatesPromise: true`·`declineDowngradeTrustDelta: 0`으로 넣고 도메인은 키 존재로 가드한다(D-43 패턴) — 1.0.0~1.3.0 재생·골든·해시 불변, 새 rng roll 없음. 팩 0.5.0은 `compatibleRulesetVersions`에 1.4.0만 추가(checksum은 파일 목록 대상이라 불변). 검증은 INSERT-only 로컬 QA 시즌(`svc_recovery_rules_qa`)으로 하고, **운영 시즌의 1.4.0 승격과 api CURRENT/PREVIOUS 전환은 사용자 결정**. 시즌 중 임대 요청 같은 새 행동은 엔진 지원이 확인되지 않아 넣지 않았다(2차 후보). 룰셋 수치 조정 금지(D-62)는 워커에 그대로 적용되고, 위 값들은 오케스트레이터 결정이다.
 - **D-68 승격은 순위 기록.** 구단 티어는 룰셋 정적 데이터이고 `legacy.promotion`은 "최종 순위 ≤ promotionSlots"라는 기록이며 리그 이동은 어디에도 없다. 이번에는 웹 문구를 "승격권"으로 맞추고 결산에 "리그가 바뀌지 않는다" 캡션을 붙인다(T-7-010). 실제 승강은 Phase 8(WORLD STAGE, 새 룰셋의 신규 커리어) 후보로 보류.
 - **D-69 협상 결과·불가 사유 표시 규칙.** 협상 결과(성공·실패·철회)는 제안이 목록에서 사라져도 항상 패널로 보이고 포커스를 받는다(`contract.tsx`의 `pending===null` 이른 반환이 마지막 제안 철회 시 빈 화면을 만드는 결함 수정). 비활성 버튼은 사유 문구를 함께 보여 준다(OPEN 아님 / 이 제안 유형에서는 열리지 않음 / 1회 사용 / 이미 주전). `negotiable` 생성 규칙·성공률(재계약 ROLE 0bp 등)은 룰셋이므로 바꾸지 않는다.
@@ -622,7 +631,7 @@
 ## 2026-09-07 (오전, 사용자 세션 2026-09-05 밤~09-07 새벽 출시 기록 반영 — 문서 세션)
 
 - 운영 출시 확인: 2026-09-06 12:33 `Production Release` run 34009144236(`82a46fc`)으로 첫 운영 배포, 9/7 01:51~01:52 `939fe48` 재배포. `GET /v1/service-seasons/current`는 `svc_season_1`·"시즌 1"·ACTIVE·isTest=false·endsAt null·룰셋 1.3.0·팩 0.5.0. staging은 여전히 `svc_line_test`(PRESEASON, 1.0.0/0.1.0) — 승격을 Phase 7 항목으로 등록.
-- Phase 표기: Phase 5는 PR #103·#106으로 종결(T-5-001~008 completed 표 추가), Phase 6(SEASON 1: KICKOFF)은 PR #102·#107~#111·#112·#114·#117~#119·#122·#127로 종결, Phase 7(운영·밸런스)을 진행 중으로. 사용자 세션 작업은 새 T- 번호를 만들지 않고 PR 번호·UX-xxx로 기록한다(번호 충돌 방지, 사용자 브랜치 미접촉). 현황판 생성기는 표가 없거나 부분적인 Phase의 상태를 `PHASE_OVERRIDE`로 고정하고, 머지 집계에 사용자 PR(feat/fix/UX)도 포함한다(docs 커밋 제외).
+- Phase 표기: Phase 5는 PR #103·#106으로 종결(T-5-001~~008 completed 표 추가), Phase 6(SEASON 1: KICKOFF)은 PR #102·#107~~#111·#112·#114·#117~#119·#122·#127로 종결, Phase 7(운영·밸런스)을 진행 중으로. 사용자 세션 작업은 새 T- 번호를 만들지 않고 PR 번호·UX-xxx로 기록한다(번호 충돌 방지, 사용자 브랜치 미접촉). 현황판 생성기는 표가 없거나 부분적인 Phase의 상태를 `PHASE_OVERRIDE`로 고정하고, 머지 집계에 사용자 PR(feat/fix/UX)도 포함한다(docs 커밋 제외).
 - 사용자 액션 갱신: U-001(도메인, PR #118)·U-010(운영자·문의 이메일·시행일, PR #108)·U-017(self-hosted runner, PR #96·#102·운영 배포 성공) completed. U-015 LINE TEST 테스터 모집은 시즌 1 공개 출시로 대체돼 deferred. U-014는 Free 플랜 출시 상태라 트래픽 관찰 뒤 결정으로 메모 갱신. U-003은 9/6 사용자 기록 유지(브랜딩 인증은 Phase 7).
 - 남은 항목(Phase 7 표): 이슈 #104(GK 관계 이벤트·NPC 이름)·#105(챕터 제목 내부 TAG), staging 승격, Google 브랜딩 인증·Search Console·네이버 등록, 실사용자 플레이 측정(D-62 실사용자 판정), U-014·U-004·U-005.
 - 이 세션 범위: 문서·현황판만(코드 수정 없음). 아티팩트는 같은 URL로 재게시.
@@ -699,6 +708,7 @@
 **T-4-015 DONE — PR #82 `db29402`**(훅 차단으로 REST 개설). F2-A `season.stats.*`를 `playerStats`에서 파생(rating은 `ratingSumTenths/ratedMatches` 내림·×10 스케일), F1 `recentFormAvg` sentinel(100) + DSL 필드 `season.stats.recentRatedMatches`로 EVT-SLUMP-010/011 게이트, F2-B EVT-CON-010 phase 매핑(windowOpen), F2-C 상수 필드 트리거 경고·F4 `checkInjuryPreview` 검증기. 기존 단언 2건만 갱신(D-61), 0.1.0 byte 불변, 워커 체인 그린.
 
 워커 질문에 대한 결정:
+
 - **EVT-SLUMP-011 임계 45 → 60 통일 수용.** 도메인 평점 클램프 [40,100]에서 `recentRatedMatches >= 3` 게이트를 더하면 45는 실질 미도달이라 500-seed 도달성 요건을 만족하지 못한다. 두 슬럼프 이벤트는 당분간 cooldown·weight로만 구분한다. 서사 강도 구분은 Phase 7(운영·밸런스)에서 도달 가능한 다른 지표(연속 미출전 등)로 재설계한다.
 - **EVT-CON-010(presentation RUMOUR) 미도달은 기지 공백 유지.** `passesBaseConditions`가 RUMOUR/INJURY/NATIONAL_TEAM presentation을 의도적으로 제외(T-4-003 D-52)하고 RUMOUR pending 생성기가 없다(T-3-005가 남긴 공백). 이번 phase 수정은 유효하되, RUMOUR 생성기는 Phase 4 완료 조건에 없으므로 백로그(Phase 5+ 또는 운영)로 넘긴다. 보드 T-4-015 행에 기록.
 - `docs/development/04-event-engine.md` 미수정은 적절(`season.stats.*` 와일드카드 행이 이미 포함).
@@ -777,7 +787,7 @@ PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)�
 
 **D-60(정정 결정, [phase-3-4-plan.md](../archive/offside/tracking/phase-3-4-plan.md))**: (1) D-50 감독 교체 roll은 결정 스트림 소비 대신 **독립 파생 시드** `seedRng('manager:…')`로 — 기존 골든 `draws` 유지, 상태 word 복사 방식 금지; (2) T-3-002 시장 경쟁자 요약 시드에서 careerId 제거(T-2-006 fork 불변식을 시장 골든에도 적용); (3) D-43 (a) 구현 규칙: step 7 재계약은 `nextContract`로 보관했다가 결산 약속 판정 뒤 교체, 재계약한 시즌은 시장 생략, EXPIRED 전부 거절 = 안전 잔류 체결, FIRST_CONTRACT 전부 거절 거부, 빈 CONTRACT pending은 `ADVANCE`; (4) D-45·D-46 보강: 임대→FA 경로 유령 stint 금지·팬 이월 1회·`toSeasonIndex >= fromSeasonIndex` 불변식, 임대 복귀 감독 이력 보존.
 
-**후속 브리프**: [T-4-012](../archive/offside/tracking/briefs/T-4-012.md) domain 묶음(C1~C7·C10·C12·C13·F6~F8·F10·F11, PR #72 머지 직후), [T-4-015](../archive/offside/tracking/briefs/T-4-015.md) content 묶음(F1·F2·F4·C14, T-4-008 머지 뒤), [T-4-016](../archive/offside/tracking/briefs/T-4-016.md) web 소수정(C8·F5, T-4-011 머지 뒤), [T-4-017](../archive/offside/tracking/briefs/T-4-017.md) api 해시 probe(career-12·13, PR #72 워커 질문 1의 답 — `apps/api`는 별도 작업으로 분리).
+**후속 브리프**: [T-4-012](../archive/offside/tracking/briefs/T-4-012.md) domain 묶음(C1~~C7·C10·C12·C13·F6~~F8·F10·F11, PR #72 머지 직후), [T-4-015](../archive/offside/tracking/briefs/T-4-015.md) content 묶음(F1·F2·F4·C14, T-4-008 머지 뒤), [T-4-016](../archive/offside/tracking/briefs/T-4-016.md) web 소수정(C8·F5, T-4-011 머지 뒤), [T-4-017](../archive/offside/tracking/briefs/T-4-017.md) api 해시 probe(career-12·13, PR #72 워커 질문 1의 답 — `apps/api`는 별도 작업으로 분리).
 
 **PR #72(T-4-006 domain, `00f9270`)·#73(T-4-013, `089716d`) 15:51~15:52 도착**: 테스트 전용 13파일(+2,897)과 타임아웃 2줄. 오케스트레이터 검증 체인을 `verify-72`(E2E 5301)·`verify-73`(E2E 5302)에서 병렬로 시작했다. PR #72 워커 질문 2(이전 워커 산출물을 그대로 채택)는 fixture·테스트 내용을 오케스트레이터가 diff로 확인하는 것으로 갈음한다(불변 property 200 seed sweep 60초·결정 예산 30초 타임아웃 확인).
 
@@ -798,6 +808,7 @@ PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)�
 **사용자 지시**: "병렬 진행을 최대로할 순 없나?" (Ultracode 켜짐). → **D-59**([phase-3-4-plan.md](../archive/offside/tracking/phase-3-4-plan.md)): 동시 워커 상한 3개를 없애고 파일 소유권(D-53)으로만 병렬을 제한한다. 같은 파일을 만지는 작업은 순서를 정해 뒤 작업이 `origin/main`을 merge한다. [README](README.md) 위임 워크플로 문단 갱신.
 
 **소유권 분할과 투입(11:48)**: 진행 중인 T-4-007(라우트·`packages/ui`·디자인 문서) ‖ T-4-006 domain(domain·contracts 테스트)에 더해 세 작업을 새로 브리프하고 Sonnet 5 워크플로(격리 worktree, `effort: xhigh`)로 투입했다.
+
 - [T-4-008](../archive/offside/tracking/briefs/T-4-008.md) 콘텐츠 팩 **0.3.0** 신규(`packages/content`만): 0.2.0 전체 복사 + 카탈로그 후보 승격(INJ-003·004, REL-003·005·008, MGR-003·004, SLUMP-011, ETH-011, MEDIA 2종, NAT-002)과 포지션 전용 MATCH 챕터 3종(`positionGroups`). 0.1.0·0.2.0은 바이트 무변경(활성 팩 기준선과 T-4-006 fixture 보호). 전용 생성기 전용 presentation(INJURY·NATIONAL_TEAM·RUMOUR)에는 두 번째 이벤트를 만들지 않는다(도달 불가). 도달성은 seed 500×2시즌 표로 증명.
 - [T-4-009](../archive/offside/tracking/briefs/T-4-009.md) Phase 4 화면 준비(`apps/web/src/engine`·`shared/labels.ts`·e2e helper 신규, 라우트 파일 금지): D-56 `resolveActiveContentPackVersion()`(엔진·싱글턴·Worker 동일 값, 기존 커리어 팩 보존, 프로덕션 dead code 확인), D-57 라벨 함수, `find-seed.ts` seed 탐색 도구(e2e helper 명령 순서 재현, FNV-1a seed 동일)와 `phase4-seeds.ts` 상수, presentation 7종 도달성 보고. T-4-005 브리프에 선행 2로 연결.
 - [T-2-016](../archive/offside/tracking/briefs/T-2-016.md) staging 리허설 자동화: 오케스트레이터 임시 worktree의 `playwright.staging.config.ts`·`staging-rehearsal.spec.ts`를 저장소로 이관, `e2e:staging` 스크립트, 기본 e2e·CI 미포함, 1회 실행 증거.
@@ -892,7 +903,7 @@ PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)�
 ## 2026-09-04 (오전, PR #48 머지 — Phase 3·4 타입 슬라이스, 후속 브리프 3종 작성)
 
 **결과**: PR #48(T-3-001, `d3ce9df` → squash `b756999`, 11:43) 리뷰 수정 요청 1건 — 브리프가 `contract.isLastSeason`을 `seasonsRemaining <= 1`로 적어 워커가 그대로 구현했으나, ADR-010 유도식(`lengthSeasons − 서명 이후 SEASON_STARTED 횟수` = 현 시즌 **이후** 잔여)에서는 진행 중 마지막 시즌의 잔여가 0이므로 `season !== null && seasonsRemaining === 0`으로 정정(브리프 오류, 오케스트레이터 책임). 리뷰 결정 3건: `stepSummaries` 길이 11 유지(결산 step은 요약 없음 — 브리프의 12도 오류), followUp 이벤트에도 presentation 제외 규칙 적용, 골든 멀티라인 포맷 수용. 검증 체인(origin/main + d3ce9df) 녹색 — e2e 68 통과, 골든 9종 draws 불변. 비용 $25.77·85분.
-**후속 브리프 3종(11:40, 오케스트레이터 작성)**: [T-4-001](../archive/offside/tracking/briefs/T-4-001.md)·[T-3-002](../archive/offside/tracking/briefs/T-3-002.md)·[T-3-006](../archive/offside/tracking/briefs/T-3-006.md). 브리프 수준에서 정한 것 — (1) **T-3-002는 생성기까지만**: `judgeMarketReason`(rng 없음)·`generateMarket`·`buildRenewalOffer`·`openMarketAfterSettlement`를 export하고 결산 배선·ACCEPT/REJECT/NEGOTIATE는 T-3-003이 한다(둘 사이 어떤 커리어도 막히지 않도록). step 7 RENEWAL 제안은 T-3-003 전까지 "미응답 = OFFER_EXPIRED 자동 통과" 임시 규칙. 안전 잔류 제안은 항상 **현 구단**(D-44의 tier 3 대안 미사용). D-45의 관계 이월 값은 트랙 B와의 파일 충돌을 피해 `transferRules.relationshipCarry`에 둔다(D-53 표의 `relationshipRules.transferCarry` 대신). `competitorSummary`는 파생 시드(`market:<careerId>:<revision>:<teamId>`)로 계산해 결정 스트림 draws를 늘리지 않는다. (2) **T-4-001**: `HEALTH` Effect는 SUM·IMMEDIATE·만료 없음·activeEffects 미저장으로 제한, `RELATION` 타깃에 `popularity`·`media`(→ `reputation.*Centi`) 추가하고 ADR-010 표를 같은 커밋에서 갱신. `START_SEASON`이 rng 없이 기본 감독(`${teamId}-mgr-1`, 이름은 teamId 코드포인트 합으로 선택, tenure = 같은 팀 연속 시즌 + 1)을 채워 `season.manager.*` DSL이 바로 값을 갖는다. `RESOLVE_EVENT` payload에 `rehabPlan?`·`callUp?`를 더해 INJURY·NATIONAL_TEAM pending을 닫고, `onMatchInjury`·`onSettlementRelations` 항등 훅을 `simulate.ts`에 미리 박아 T-4-002·T-4-003이 공용 파일을 다시 만지지 않게 한다. 트랙 B 룰셋 5개 섹션(자리표시자 값)은 `growthRules` 뒤, T-3-002의 `transferRules`는 `offerRules` 뒤에 넣어 같은 파일의 충돌 위치를 분리. (3) **T-3-006**: 팩 0.2.0을 새 디렉터리로 만들고 로더에 등록하되 **활성 팩은 0.1.0 유지**(전환은 T-3-005 또는 별도 작업 — 서비스 시즌 seed와 골든을 건드리지 않기 위해). 새 이벤트 5개는 전부 PRO 단계·`authoring: 'PROTOTYPE'`(이벤트 스키마에 선택 필드 추가)이며 루머 이벤트만 `presentation: 'RUMOUR'`. 팀 4개 추가(1부 1·2부 1·3부 2 → YOUTH 1·1부 3·2부 4·3부 4)로 첫 계약 추첨 풀이 바뀌어 골든 9종 재기록(draws 불변). narrative 토큰에 `agent` 키 추가.
+**후속 브리프 3종(11:40, 오케스트레이터 작성)**: [T-4-001](../archive/offside/tracking/briefs/T-4-001.md)·[T-3-002](../archive/offside/tracking/briefs/T-3-002.md)·[T-3-006](../archive/offside/tracking/briefs/T-3-006.md). 브리프 수준에서 정한 것 — (1) **T-3-002는 생성기까지만**: `judgeMarketReason`(rng 없음)·`generateMarket`·`buildRenewalOffer`·`openMarketAfterSettlement`를 export하고 결산 배선·ACCEPT/REJECT/NEGOTIATE는 T-3-003이 한다(둘 사이 어떤 커리어도 막히지 않도록). step 7 RENEWAL 제안은 T-3-003 전까지 "미응답 = OFFER_EXPIRED 자동 통과" 임시 규칙. 안전 잔류 제안은 항상 **현 구단**(D-44의 tier 3 대안 미사용). D-45의 관계 이월 값은 트랙 B와의 파일 충돌을 피해 `transferRules.relationshipCarry`에 둔다(D-53 표의 `relationshipRules.transferCarry` 대신). `competitorSummary`는 파생 시드(`market:<careerId>:<revision>:<teamId>`)로 계산해 결정 스트림 draws를 늘리지 않는다. (2) **T-4-001**: `HEALTH` Effect는 SUM·IMMEDIATE·만료 없음·activeEffects 미저장으로 제한, `RELATION` 타깃에 `popularity`·`media`(→ `reputation.*Centi`) 추가하고 ADR-010 표를 같은 커밋에서 갱신. `START_SEASON`이 rng 없이 기본 감독(`${teamId}-mgr-1`, 이름은 teamId 코드포인트 합으로 선택, tenure = 같은 팀 연속 시즌 + 1)을 채워 `season.manager.*`DSL이 바로 값을 갖는다.`RESOLVE_EVENT`payload에`rehabPlan?`·`callUp?`를 더해 INJURY·NATIONAL_TEAM pending을 닫고, `onMatchInjury`·`onSettlementRelations`항등 훅을`simulate.ts`에 미리 박아 T-4-002·T-4-003이 공용 파일을 다시 만지지 않게 한다. 트랙 B 룰셋 5개 섹션(자리표시자 값)은 `growthRules`뒤, T-3-002의`transferRules`는 `offerRules` 뒤에 넣어 같은 파일의 충돌 위치를 분리. (3) **T-3-006**: 팩 0.2.0을 새 디렉터리로 만들고 로더에 등록하되 **활성 팩은 0.1.0 유지**(전환은 T-3-005 또는 별도 작업 — 서비스 시즌 seed와 골든을 건드리지 않기 위해). 새 이벤트 5개는 전부 PRO 단계·`authoring: 'PROTOTYPE'`(이벤트 스키마에 선택 필드 추가)이며 루머 이벤트만 `presentation: 'RUMOUR'`. 팀 4개 추가(1부 1·2부 1·3부 2 → YOUTH 1·1부 3·2부 4·3부 4)로 첫 계약 추첨 풀이 바뀌어 골든 9종 재기록(draws 불변). narrative 토큰에 `agent` 키 추가.
 **투입 순서**: T-4-001·T-3-002 즉시(동시 워커 3개 상한 — T-2-012 진행 중), T-3-006은 T-2-012 머지 뒤. 7D 사용량 90%(9/5 21:00 리셋)라 상한에 걸리면 워커가 멈출 수 있음 — 그 경우 리셋 뒤 재개.
 
 ## 2026-09-04 (오전, 사용자 결정 4건 — PR #46 머지·ADR-010 승인·U-013 (A)·구단 12개, T-2-012·T-3-001 투입)
@@ -905,13 +916,13 @@ PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)�
 
 **결과**: PR #47(T-2-011, `0c27965`, 03:41) 리뷰 수정 요청 0건. 오케스트레이터 검증 체인(origin/main 5a16831 + 116dc62) 녹색 — lint·deps·typecheck·test·build·bundle·e2e 68 통과. [Phase 2 완료 조건 표](../archive/offside/tracking/phase-2-completion.md) 9행 전부 ✅: 포지션군 fixture 4종(GK 기존 + DF·MF·FW 신규, `@offside/fixtures` export·contracts 크기/스키마·api Node↔workerd 해시 등록), 시즌 결정론(같은 시드 2회 재생 stateHash 일치)·집계(playerStats ↔ matches 재합산), career-03-underdog 시즌 완주 + shadow-replay(선수 START 수 > COMP-W-2), selection A/B 시즌 B > A, FAST·CHAPTER 시즌 완주 자동화 시간·명령 수 기록, TEST-E2E-002·010(새로고침 전후 `rngState.draws` 동일), e2e 68건 3회 무결점(5187).
 **후속 정리**: (a) `generatePlayerProfile` truePotential ≥ baseOvr+1 불변식(roll 순서·소비 불변, 표본 7%의 역전 해소; career-04-gk·07-df golden 갱신 — 저장된 커리어는 생성 시점 값 유지, schemaVersion 1 그대로). (b) 워커 시뮬레이터 타임아웃을 요청당 예산으로(`rejectOne`; 포트 broken은 error/messageerror만, 늦은 응답은 무시). (d) `TrainingFocus`를 domain에서 re-export. (c) EVT-REL-001(가중치 100) vs EVT-CON-002(10) 가중치 관찰은 수정하지 않고 T-2-010 콘텐츠 입력으로 기록 — "사용자 확인"이 아니라 오케스트레이터 지시였음을 명시.
-**발견(범위 밖, 기록만)**: W 포지션 slots=2 구조상 "선수 선발 수 > COMP-W-1"은 성립 불가(선수 제외 경기에도 COMP-W-1이 rank 1 START) → 완료 조건 비교 대상을 전술 적합도에 밀려 벤치인 COMP-W-2로 고정. A/B 시즌 비교는 선발이 갈린 뒤 경기 RNG가 분기해 시즌 전체는 선발 수·출전 시간으로만 비교. 세션 자동화 시간은 FAST 2.9~4.5초·CHAPTER 3.0~4.7초(명령 4건) — 사람 기준 6분/12분 판정은 U-005 플레이테스트 결과와 합쳐 오케스트레이터가 낸다.
+**발견(범위 밖, 기록만)**: W 포지션 slots=2 구조상 "선수 선발 수 > COMP-W-1"은 성립 불가(선수 제외 경기에도 COMP-W-1이 rank 1 START) → 완료 조건 비교 대상을 전술 적합도에 밀려 벤치인 COMP-W-2로 고정. A/B 시즌 비교는 선발이 갈린 뒤 경기 RNG가 분기해 시즌 전체는 선발 수·출전 시간으로만 비교. 세션 자동화 시간은 FAST 2.9~~4.5초·CHAPTER 3.0~~4.7초(명령 4건) — 사람 기준 6분/12분 판정은 U-005 플레이테스트 결과와 합쳐 오케스트레이터가 낸다.
 **Phase 2 코드 작업 종료**: 남은 T-2-010(U-005)·T-2-012(U-002)·T-2-013(012 뒤)은 사용자 게이트. Phase 3·4는 U-012(ADR-010)·U-013 확인 뒤 투입하며 T-3-001 브리프를 먼저 쓴다. 7D 사용량 86%(9/5 21:00 리셋)라 브리프 작성은 오케스트레이터가 직접 하고 워커 투입은 리셋·승인 뒤로 둔다.
 **T-3-001 브리프 선작성(03:46, [briefs/T-3-001.md](../archive/offside/tracking/briefs/T-3-001.md))**: phase-3-4-plan D-44·D-45·D-53을 타입 슬라이스로 구체화하면서 네 가지를 브리프 수준에서 정했다 — (1) `appearancePromise`는 `{ minutesShareBp }`만 두고 역할은 기존 `rolePromise`로 갈음, (2) D-53 표의 `FootballSeason.market`은 두지 않고 시장 요약(`MarketSummary`)은 `pending.OFFERS/CONTRACT` 안에만, (3) step 7 사전 협상 pending은 `{ kind: 'CONTRACT'; step; offers; market }`(OFFERS와 같은 형태 + step)로 `ACCEPT_OFFER`/`REJECT_OFFER`를 재사용, (4) PR #45 후속 `SeasonResult.stepSummaries[]`는 T-3-001에 배정. `clubHistory`는 현 소속 항목(`toSeasonIndex: null`)을 포함하며 Phase 1 첫 계약이 첫 항목을 만든다. 룰셋 데이터·스키마는 T-3-001이 만지지 않는다(밸런스 수치 0건). 트랙 B pending(INJURY·NATIONAL_TEAM) 형태와 DSL 경로(`health.*`·`reputation.*`·`season.manager.*`)는 NOT_MODELED로 예약만.
 
 ## 2026-09-04 (새벽, Phase 3·4 병렬 계획 초안 D-43~D-53)
 
-**결과**: [phase-3-4-plan.md](../archive/offside/tracking/phase-3-4-plan.md) 작성(02:18). phase-03·04 정본, ADR-010, 로드맵 "Phase 3 이후 병렬화", 03·04·11 개발 명세, 현재 도메인 타입(Offer/Contract/Pending/FootballSeason/CareerState, offers.ts, season.ts 슬롯 규칙, contracts commands.ts의 CMD-CON 예약 리터럴)을 대조해 트랙 A(T-3-001~006)·트랙 B(T-4-001~006)로 분해했다. 주요 결정: (D-43) 팀 변경은 결산 뒤 이적시장에서만, step 7 창은 재계약 사전 협상·루머 태도만; (D-44) Offer v2(kind·유효 revision·출전 약속·협상 1회·안전 잔류 제안); (D-45) ACCEPT_OFFER 원자 전환과 context·관계 이월 표; (D-46) 임대 1시즌·LOAN_RETURN; (D-47) 약속 위반·배신 이적 Effect·태그; (D-48) Phase 3 태그 5종 코드화(구단 tier 실제 변경은 Phase 6·8); (D-49) 부상 모델(심각도·부위·범위·재활·재발·후유증은 확정 시점에만, 강제 사건 상한 2); (D-50) 관계 5축 + relationshipLog·memoryTags, season.manager와 결산 교체, reputation.popularityCenti; (D-51) 대표팀 기본 모듈·NATIONAL_DEBUT 챕터; (D-52) 새 명령은 CMD-CON-001~004뿐, 부상·대표팀·관계 결정은 RESOLVE_EVENT + presentation 변형; (D-53) 트랙별 파일·필드 소유권, 타임라인 kind 사전 예약, 타입 슬라이스 순차(T-3-001 → T-4-001), schemaVersion 1 유지. 열린 질문에 U-013(워커 PROTOTYPE 문구 작성 허용, 팀 풀 확장) 추가. PR #45 후속(결산 뒤 step 요약 유실)은 타입 슬라이스에 `SeasonResult.stepSummaries[]`로 배정.
+**결과**: [phase-3-4-plan.md](../archive/offside/tracking/phase-3-4-plan.md) 작성(02:18). phase-03·04 정본, ADR-010, 로드맵 "Phase 3 이후 병렬화", 03·04·11 개발 명세, 현재 도메인 타입(Offer/Contract/Pending/FootballSeason/CareerState, offers.ts, season.ts 슬롯 규칙, contracts commands.ts의 CMD-CON 예약 리터럴)을 대조해 트랙 A(T-3-001~~006)·트랙 B(T-4-001~~006)로 분해했다. 주요 결정: (D-43) 팀 변경은 결산 뒤 이적시장에서만, step 7 창은 재계약 사전 협상·루머 태도만; (D-44) Offer v2(kind·유효 revision·출전 약속·협상 1회·안전 잔류 제안); (D-45) ACCEPT_OFFER 원자 전환과 context·관계 이월 표; (D-46) 임대 1시즌·LOAN_RETURN; (D-47) 약속 위반·배신 이적 Effect·태그; (D-48) Phase 3 태그 5종 코드화(구단 tier 실제 변경은 Phase 6·8); (D-49) 부상 모델(심각도·부위·범위·재활·재발·후유증은 확정 시점에만, 강제 사건 상한 2); (D-50) 관계 5축 + relationshipLog·memoryTags, season.manager와 결산 교체, reputation.popularityCenti; (D-51) 대표팀 기본 모듈·NATIONAL_DEBUT 챕터; (D-52) 새 명령은 CMD-CON-001~004뿐, 부상·대표팀·관계 결정은 RESOLVE_EVENT + presentation 변형; (D-53) 트랙별 파일·필드 소유권, 타임라인 kind 사전 예약, 타입 슬라이스 순차(T-3-001 → T-4-001), schemaVersion 1 유지. 열린 질문에 U-013(워커 PROTOTYPE 문구 작성 허용, 팀 풀 확장) 추가. PR #45 후속(결산 뒤 step 요약 유실)은 타입 슬라이스에 `SeasonResult.stepSummaries[]`로 배정.
 
 ## 2026-09-04 (새벽, PR #44 검증 실패 — e2e 결함 2건, T-2-011 투입)
 
@@ -1103,13 +1114,13 @@ PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)�
 
 **기술 결정**: 기존 `Team` ID는 유지하고 ruleset 1.x의 `LegacyTeam`을 `WorldTeam`으로 정규화하는 로더를 둔다. 해외 이동은 Base OVR을 바꾸지 않으며 적응은 Context, 리그·대회 수준은 기록·시장가치·Legacy 정규화 입력이다. 해외 계약은 기존 `ACCEPT_OFFER` 명령 안에서 등록 재검증, 계약, 팀·국가 변경, 적응 상태, Timeline을 원자 확정한다. 등록 실패 시 기존 계약과 팀을 보존한다. 기존 Career를 새 ruleset으로 자동 승격하지 않는다.
 
-**추적**: FR-WLD-001~004, DATA-WLD-001~007, RULE-WLD-001~006, SCR-035~040, TEST-E2E-011~013. 구현 백로그는 T-8-001~010이며 정본은 [개발 명세](../archive/offside/development/15-world-stage-expansion.md)와 [Phase 8](../archive/offside/phases/phase-08-world-stage.md)이다.
+**추적**: FR-WLD-001~~004, DATA-WLD-001~~007, RULE-WLD-001~~006, SCR-035~~040, TEST-E2E-011~~013. 구현 백로그는 T-8-001~~010이며 정본은 [개발 명세](../archive/offside/development/15-world-stage-expansion.md)와 [Phase 8](../archive/offside/phases/phase-08-world-stage.md)이다.
 
 ## 2026-09-03 (새벽, Phase 2 계획과 Phase 3 이후 병렬화 — D-24~D-32)
 
 **사용자 결정**: "Phase 2까지 순차, 그 뒤 병렬"을 확인하고 그대로 진행하라고 했다. 로드맵에 "Phase 3 이후 병렬화" 절을 추가했다: Phase 2 종료 → 공유 계약(Effect 만료·중첩, 시장가치 입력, CareerTag 인터페이스) 확정 → Phase 3·4 병렬 → Phase 5·6 병렬. LINE TEST가 도는 동안 Phase 3·4의 도메인 골격은 먼저 만들고 밸런스 수치만 기준선 뒤로 미룬다. 트랙 상한 3개.
 
-**Phase 2 계획 초안**: [phase-2-plan.md](../archive/offside/tracking/phase-2-plan.md). 작업 14건(T-2-001~014), Wave 4개. 도메인 Wave 1·2(시즌 구조 → 선발 판정 → 통계 generator → 챕터·집계)는 순차, 화면 3건과 공유 계약 작업은 Wave 3에서 병렬, 검증·콘텐츠·LINE TEST 준비가 Wave 4. 설계 결정 D-24~D-32은 초안이며 각 Wave 투입 전에 확정한다. 열린 질문 3개(리그·컵 구조의 데이터화 정도, 경쟁자 아키타입 분포, Snapshot 크기)는 Wave 1 전에 닫는다.
+**Phase 2 계획 초안**: [phase-2-plan.md](../archive/offside/tracking/phase-2-plan.md). 작업 14건(T-2-001~~014), Wave 4개. 도메인 Wave 1·2(시즌 구조 → 선발 판정 → 통계 generator → 챕터·집계)는 순차, 화면 3건과 공유 계약 작업은 Wave 3에서 병렬, 검증·콘텐츠·LINE TEST 준비가 Wave 4. 설계 결정 D-24~~D-32은 초안이며 각 Wave 투입 전에 확정한다. 열린 질문 3개(리그·컵 구조의 데이터화 정도, 경쟁자 아키타입 분포, Snapshot 크기)는 Wave 1 전에 닫는다.
 
 **투입 시점**: Phase 순서 규칙대로 Phase 1 보드가 전부 done(또는 U 대기 blocked)이 된 뒤 T-2-001을 띄운다. 브리프는 미리 쓴다.
 
@@ -1139,7 +1150,7 @@ PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)�
 
 **후속(브리프에 반영)**: (1) 모션 감소 설정이 DOM에 반영되지 않음 → T-1-009에 `useReducedMotion`·`data-reduced-motion` 항목 추가. (2) `__root.tsx` 랜드마크·h1 부재로 axe moderate 2건 → T-1-008에 추가. (3) Worker가 죽으면 대기 중 simulate가 영원히 멈춤 → T-1-011에 `createWorkerSimulator` 오류·타임아웃 처리 추가. (4) `/career/$careerId` 로더가 모든 실패를 not-found로 처리(손상 스냅샷 구분 없음)와 `/` 로더 초기 실패 미처리는 `errorComponent`가 필요해 T-1-012(복구 UI) 때 함께 본다. (5) toss KV 스텁이 메모리 저장이라 새로고침에 잃는 것은 이미 알려진 보류 백로그(M-00x).
 
-**슬롯**: T-1-008(선수 만들기 SCR-002~004)·T-1-009(진로~계약·대시보드) 동시 투입. 활성 워커 2개.
+**슬롯**: T-1-008(선수 만들기 SCR-002~~004)·T-1-009(진로~~계약·대시보드) 동시 투입. 활성 워커 2개.
 
 ## 2026-09-02 (저녁, D-21·D-22 결정 — Google OIDC 연결, Phase 1 완료 판정 측정, T-1-013·014 브리프)
 
@@ -1246,6 +1257,7 @@ PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)�
 **상황**: T-0-015 PR #14(`createSyncClient`, 12 + golden 1 테스트, 전체 52 tests). 임시 워크트리에서 전체 체인 통과. 코드 리뷰에서 3건을 수정 요청했다.
 
 **요청한 수정**:
+
 1. 전송 중 확정된 명령이 유실되는 창: 사이클이 `buildSyncBody() === null`로 끝나는 순간과 `inFlight` 해제 사이에 `notifyCommitted`가 오면 예약이 사라진다. `dirty` 플래그로 사이클 종료 시 재예약.
 2. 409 뒤 `GET /careers/{id}` 응답을 PUT과 같은 기준으로 분류(401 → LOCAL_ONLY, 재시도 가능 코드 → RETRYING, 나머지 FAILED). 이전 구현은 200이 아니면 전부 FAILED.
 3. `markSynced`·`buildSyncBody` 예외를 `LocalStoreConstraintError`만 기록 제거로, 그 외 I/O 예외는 재시도로.
@@ -1257,8 +1269,9 @@ PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)�
 **상황**: Phase 1 다이제스트에서 설계 문서가 비워 둔 항목 14개(Position enum, 아키타입 카탈로그, 배경 효과, 역할 가중치, Contract/Offer, 제안 생성 규칙, Timeline, 복구 코드 형식·제한, API-PRO-003~005·AUTH 본문, `career.pathDecision`, SCR-004 API 오기, 잠금 표시 정본, 대학 경로, `relationships.family`)를 확인했다. 워커에게 결정을 남기지 않기 위해 오케스트레이터가 [phase-1-plan.md](../archive/offside/tracking/phase-1-plan.md)에 결정을 적었다.
 
 **결정 요지**:
+
 - 포지션 8종·묶음 4종(D-1). 아키타입은 포지션당 3개, 룰셋 데이터로(D-2). 인사이드 포워드 가중치는 프로토타입에서 결정력 14+슈팅력 6을 `shooting` 0.20으로 합쳐 fixture 능력으로 59.30 → golden 59(D-3·D-4).
-- 배경 3종은 `state/context/relationships` 초기값과 능력 보정을 통째로 정의하고, `club-academy`는 프로토타입 김서준 값과 같다(D-5). 잠재력은 아키타입 범위에서 굴리고 정찰 범위는 −(5~10)/+(3~8)(D-6).
+- 배경 3종은 `state/context/relationships` 초기값과 능력 보정을 통째로 정의하고, `club-academy`는 프로토타입 김서준 값과 같다(D-5). 잠재력은 아키타입 범위에서 굴리고 정찰 범위는 −(5~~10)/+(3~~8)(D-6).
 - DRAFT → `UPDATE_PLAYER_DRAFT` → `CONFIRM_PLAYER`에서만 rng 소비(23회). 확정 후 Phase 1은 유스 시즌을 건너뛰고 `currentStep 12`·`SETTLEMENT`에서 시작한다. Phase 2가 그 앞에 시즌을 넣는다(D-7).
 - 룰셋 데이터는 `packages/content/rulesets/1.0.0/ruleset.json`이고 domain은 `SimulationInput.ruleset`으로 받는다. 룰셋은 해시에 넣지 않는다(D-8).
 - 이벤트 **적격 판정은 클라이언트(content `selectEligibleEvents`)**, **선택은 도메인**이 `ADVANCE{eligibleEvents}`에서 굴려 `pending`에 기록한다. `RESOLVE_EVENT`는 pending과 일치해야 한다. 재생이 콘텐츠 평가 없이 성립한다(D-10). 이를 위해 ADR-005의 engine-client·web → content 허용 범위를 "스키마·조건 평가기·팩/룰셋 로더"로 넓혔다.
@@ -1381,7 +1394,7 @@ PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)�
 
 ## 2026-09-02 (오후, 범위 조정)
 
-- **미니앱 출시 시점 보류, 구조는 지금.** 사용자 지시: 웹 프로젝트를 언제든 미니앱 출시를 고려할 수 있는 구조로 작업. ADR-009의 구조 결정(어댑터, LocalStore 포트, Bearer 병행, 내부 라우트 약관)은 Phase 0~1에 적용하고, SDK 연동·빌드·세션 API·콘솔·등급분류는 보류 백로그 M-001~M-006으로 분리. U-007~U-011은 `deferred`.
+- **미니앱 출시 시점 보류, 구조는 지금.** 사용자 지시: 웹 프로젝트를 언제든 미니앱 출시를 고려할 수 있는 구조로 작업. ADR-009의 구조 결정(어댑터, LocalStore 포트, Bearer 병행, 내부 라우트 약관)은 Phase 0~~1에 적용하고, SDK 연동·빌드·세션 API·콘솔·등급분류는 보류 백로그 M-001~~M-006으로 분리. U-007~U-011은 `deferred`.
 
 ## 2026-09-02 (오후)
 
@@ -1403,15 +1416,15 @@ PR #78 체인의 `injury.spec.ts:134` 실패를 격리(`--workers=1`, load 23)�
 
 ## 열린 질문
 
-| 질문 | 필요 시점 | 담당 |
-|---|---|---|
-| 도메인 최종 선택 | Phase 0 CI 배포 전 | 사용자 |
-| 저장소 공개 여부(GitHub Actions 무료 분수 영향) | Phase 0 | 사용자 |
-| 카카오 로그인 추가 여부 | Season 2 설계 | 사용자 |
-| 리플레이 검증 ON 시점 | 경쟁 랭킹 설계 시(토스 리더보드 도입 시 필수) | 오케스트레이터 |
-| 앱인토스 미니앱 출시 결정 시점 | LINE TEST 결과 본 뒤 권장 | 사용자 |
-| 앱인토스 `appName`·제작자 이름 최종값 | U-007 등록 시 | 사용자 |
-| GRAC 등급분류 개인 신청 가능 여부, 수수료 | Phase 1 중 | 사용자 |
-| toss 채널 다크 팔레트가 검토를 통과하는지 | 첫 검토 요청 | 사용자·오케스트레이터 |
-| 토스 게임센터 리더보드 도입 여부(Phase 7) | Phase 6 말 | 사용자 |
-| WORLD STAGE 가상 리그명·국가별 축구 문화·24개 구단 브랜드 확정 | T-8-008 착수 전 | 사용자·콘텐츠 |
+| 질문                                                           | 필요 시점                                     | 담당                  |
+| -------------------------------------------------------------- | --------------------------------------------- | --------------------- |
+| 도메인 최종 선택                                               | Phase 0 CI 배포 전                            | 사용자                |
+| 저장소 공개 여부(GitHub Actions 무료 분수 영향)                | Phase 0                                       | 사용자                |
+| 카카오 로그인 추가 여부                                        | Season 2 설계                                 | 사용자                |
+| 리플레이 검증 ON 시점                                          | 경쟁 랭킹 설계 시(토스 리더보드 도입 시 필수) | 오케스트레이터        |
+| 앱인토스 미니앱 출시 결정 시점                                 | LINE TEST 결과 본 뒤 권장                     | 사용자                |
+| 앱인토스 `appName`·제작자 이름 최종값                          | U-007 등록 시                                 | 사용자                |
+| GRAC 등급분류 개인 신청 가능 여부, 수수료                      | Phase 1 중                                    | 사용자                |
+| toss 채널 다크 팔레트가 검토를 통과하는지                      | 첫 검토 요청                                  | 사용자·오케스트레이터 |
+| 토스 게임센터 리더보드 도입 여부(Phase 7)                      | Phase 6 말                                    | 사용자                |
+| WORLD STAGE 가상 리그명·국가별 축구 문화·24개 구단 브랜드 확정 | T-8-008 착수 전                               | 사용자·콘텐츠         |
