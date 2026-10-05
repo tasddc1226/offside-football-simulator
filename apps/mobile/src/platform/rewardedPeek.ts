@@ -15,13 +15,13 @@ import { askConsent } from './adConsent';
 import { adFree } from './adFree';
 import { kv } from './setup';
 
-/** AdMob 보상형 광고 단위(scout-peek-rewarded, 리워드 1 스카우트 평가). null이면 광고 제거 구매자만 열 수 있고 버튼을 숨긴다. */
-const UNIT: string | null = __DEV__
+/** AdMob 보상형 광고 단위(scout-peek-rewarded, 리워드 1 스카우트 평가). 단위가 없는 플랫폼은 광고 제거 구매자만 연다. */
+const UNIT = __DEV__
   ? TestIds.REWARDED
-  : (Platform.select<string | null>({
+  : Platform.select({
       ios: 'ca-app-pub-3797087216173591/6888876318',
       android: 'ca-app-pub-3797087216173591/3915228615',
-    }) ?? null);
+    });
 
 const KEY = 'offside_pot_peek';
 
