@@ -90,6 +90,46 @@ export const MarketListResponseSchema = z.strictObject({
 });
 export type MarketListResponse = z.infer<typeof MarketListResponseSchema>;
 
+/** T-11-080f 시세 차트 기간: 최근 7일 · 30일 · 이번 시즌 전체. */
+export const MARKET_CHART_RANGES = ['week', 'month', 'season'] as const;
+export type MarketChartRange = (typeof MARKET_CHART_RANGES)[number];
+
+/** 시세 차트 조회. pos·band를 함께 주면 그 묶음(포지션군 · OVR대), 둘 다 없으면 시장 전체. */
+export const MarketChartQuerySchema = z
+  .strictObject({
+    range: z.enum(MARKET_CHART_RANGES).default('week'),
+    pos: CareerPosSchema.optional(),
+    band: z.coerce.number().int().min(0).max(100).multipleOf(5).optional(),
+  })
+  .refine((q) => (q.pos === undefined) === (q.band === undefined), {
+    message: 'pos와 band는 함께 보낸다.',
+  });
+export type MarketChartQuery = z.infer<typeof MarketChartQuerySchema>;
+
+/** 하루치 시세(KST 일자). 비율은 기준가 대비 천분율(1000 = 기준가 그대로), 거래 대금은 만 원. */
+export const MarketChartPointSchema = z.strictObject({
+  day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  trades: z.number().int().min(1),
+  volume: man,
+  avg: z.number().int(),
+  min: z.number().int(),
+  max: z.number().int(),
+});
+export type MarketChartPoint = z.infer<typeof MarketChartPointSchema>;
+
+/** GET /v1/market/chart — 모두에게 같은 응답이라 엣지에 담는다(1분). 시즌 사이 휴식기면 season null · 빈 배열. */
+export const MarketChartResponseSchema = z.strictObject({
+  season: z.number().int().min(0).nullable(),
+  points: z.array(MarketChartPointSchema),
+});
+export type MarketChartResponse = z.infer<typeof MarketChartResponseSchema>;
+
+/** GET /v1/market/cards/:careerId/trades — 이 선수가 팔린 기록(최신순). 판 사람·산 사람은 싣지 않는다. */
+export const MarketCardTradesResponseSchema = z.strictObject({
+  trades: z.array(z.strictObject({ price: man, ratio: z.number().int(), soldAt: IsoUtcSchema })),
+});
+export type MarketCardTradesResponse = z.infer<typeof MarketCardTradesResponseSchema>;
+
 export const MarketTradeSchema = z.strictObject({
   id: z.string(),
   kind: z.enum(['sold', 'bought', 'released']),

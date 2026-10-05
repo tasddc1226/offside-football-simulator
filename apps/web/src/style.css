@@ -649,6 +649,9 @@ button.what:active {
 .tile b {
   font-size: 0.9375rem;
 }
+.tile-wide {
+  grid-column: 1 / -1;
+}
 /* 순위 | 이름 줄 + 값 / 기록 요약 줄(값 밑까지 넓게). T-10-105 */
 .hof-row {
   display: grid;

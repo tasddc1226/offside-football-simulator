@@ -421,6 +421,13 @@
       "when": 1791141288944,
       "tag": "0059_market_daily",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "6",
+      "when": 1791163330092,
+      "tag": "0060_market_chart_idx",
+      "breakpoints": true
     }
   ]
 }

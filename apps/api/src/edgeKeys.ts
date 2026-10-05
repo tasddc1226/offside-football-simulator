@@ -25,6 +25,8 @@ export const EDGE = {
   achRank: (season: number, page: number) =>
     `/v1/achievements/ranking?season=${season}&page=${page}&logo=1`,
   /** T-11-080 이적시장 목록은 첫 페이지만 담는다(시즌 · 정렬 · 포지션별). */
+  marketChart: (season: number, range: string, group?: { pos: string; band: number }) =>
+    `/v1/market/chart?season=${season}&range=${range}${group ? `&pos=${group.pos}&band=${group.band}` : ''}`,
   marketList: (season: number, sort: string, pos?: string) =>
     `/v1/market?season=${season}&sort=${sort}${pos ? `&pos=${pos}` : ''}`,
   /** 게시판 목록은 첫 페이지(웹 기본 limit)만 담는다. */

@@ -400,6 +400,7 @@ export const marketListings = sqliteTable(
     index('market_listings_seller_idx').on(table.sellerId, table.status, table.closedAt),
     index('market_listings_buyer_idx').on(table.buyerId, table.closedAt),
     index('market_listings_sold_idx').on(table.status, table.season, table.closedAt),
+    index('market_listings_card_idx').on(table.careerId, table.status, table.closedAt),
   ],
 );
 
@@ -434,7 +435,11 @@ export const marketDaily = sqliteTable(
     ratioMin: integer('ratio_min').notNull(),
     ratioMax: integer('ratio_max').notNull(),
   },
-  (table) => [primaryKey({ columns: [table.season, table.posGroup, table.ovrBand, table.day] })],
+  (table) => [
+    primaryKey({ columns: [table.season, table.posGroup, table.ovrBand, table.day] }),
+    // 시장 전체 지수(일자별 합). 키 열은 갱신 때 바뀌지 않아 거래마다 인덱스를 다시 쓰지 않는다.
+    index('market_daily_day_idx').on(table.season, table.day),
+  ],
 );
 
 /**
