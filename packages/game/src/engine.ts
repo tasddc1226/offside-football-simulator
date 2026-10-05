@@ -26,6 +26,7 @@ import { nationOf } from './nation.js';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { Body } from '@offside/contracts/body';
 import { PRESEASON_RETIRE_AT } from '@offside/contracts/service-seasons';
+import { PRESEASON_POT } from '@offside/contracts/balance';
 
 export * from './player.js';
 export * from './stats.js';
@@ -74,7 +75,10 @@ export function newGame(
   const club = pick(clubsIn('hs'));
   // 잠재력 추첨은 첫 시즌(newSeason) 전이라 최신 서버 밸런스를 먼저 맞춘다 — RNG는 쓰지 않는다.
   applyLatestBalance();
-  const pot = clamp(Math.round(BAL.potMean + gauss() * BAL.potSd), 55, 96);
+  // T-11-093 시즌에 만든 선수만 서버 설정(기본 75·6)으로 뽑는다. 프리시즌 선수는 예전 값 그대로.
+  const retireAt = o.retireAt !== PRESEASON_RETIRE_AT ? o.retireAt : undefined;
+  const potDraw = retireAt ? { mean: BAL.potMean, sd: BAL.potSd } : PRESEASON_POT;
+  const pot = clamp(Math.round(potDraw.mean + gauss() * potDraw.sd), 55, 96);
   const scouted = clamp(Math.round(pot + gauss() * BAL.potScoutSd), 55, 96);
   // sub/season/seasonStartSub은 initSubs()/newSeason() 호출로만 실제 값이 정해진다(둘 다 RNG를
   // 소모하므로, 그 호출 순서를 바꾸지 않기 위해 이 시점엔 아직 실행하지 않는다). 여기서는 타입을
@@ -91,7 +95,7 @@ export function newGame(
     ...(o.dpos && { dpos: o.dpos }),
     ...(o.nation && o.nation !== DEFAULT_NATION && { nation: o.nation }),
     ...(o.body && { body: { ...o.body } }),
-    ...(o.retireAt && o.retireAt !== PRESEASON_RETIRE_AT && { retireAt: o.retireAt }),
+    ...(retireAt && { retireAt }),
     foot: o.foot,
     type: typeId,
     focus,
