@@ -1,13 +1,6 @@
 import { z } from 'zod';
 import { FRIEND_CODE_RE } from './owner-team.js';
-import { IsoUtcSchema } from './primitives.js';
-import {
-  FormationIdSchema,
-  TeamIdSchema,
-  TeamLogoSchema,
-  TeamMatchSchema,
-  TeamRecordSchema,
-} from './teams.js';
+import { TeamIdSchema, TeamLogoSchema, TeamMatchSchema, TeamRecordSchema } from './teams.js';
 
 // T-11-098 친구 · 친선전. 친구는 로그인한 구단주끼리 신청 → 수락으로 맺는다. 사람은 친구 코드로만 가리킨다(프로필 id를
 // 밖에 내지 않는다). 친선전은 레이팅·전적·업적에 들어가지 않고 두 사람의 상대 전적만 남는다. 값은 `./owner-team.ts`.
@@ -19,9 +12,7 @@ export const FriendTeamSchema = z.strictObject({
   id: TeamIdSchema,
   name: z.string(),
   logo: TeamLogoSchema.nullable().optional(),
-  formation: FormationIdSchema,
   ovr: z.number().int(),
-  rating: z.number().int(),
   /** 선발에 든 은퇴 선수 수(0이면 친선전을 걸 수 없다). */
   filled: z.number().int().min(0),
 });
@@ -34,7 +25,6 @@ export const FriendPersonSchema = z.strictObject({
   team: FriendTeamSchema.nullable(),
   /** 친선전 상대 전적(내 쪽 기준). 신청 중이면 모두 0. */
   h2h: TeamRecordSchema,
-  createdAt: IsoUtcSchema,
 });
 export type FriendPerson = z.infer<typeof FriendPersonSchema>;
 

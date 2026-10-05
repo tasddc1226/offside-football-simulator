@@ -119,12 +119,14 @@ export async function setNickname(
     return toRecord(row!);
   } catch (err) {
     // lower(nickname) 유니크 인덱스가 겹침을 막는다(자기 자신의 같은 닉네임은 겹치지 않는다).
-    // drizzle는 D1 오류를 "Failed query: …"로 감싸고 원래 메시지를 cause에 둔다.
-    if (`${String(err)} ${String((err as { cause?: unknown }).cause ?? '')}`.includes('UNIQUE'))
-      return 'taken';
+    if (isUniqueError(err)) return 'taken';
     throw err;
   }
 }
+
+/** 유니크 인덱스 위반인가. drizzle는 D1 오류를 "Failed query: …"로 감싸고 원래 메시지를 cause에 둔다. */
+export const isUniqueError = (err: unknown) =>
+  `${String(err)} ${String((err as { cause?: unknown }).cause ?? '')}`.includes('UNIQUE');
 
 export async function touchLastSeen(db: Db, id: string, at: string): Promise<void> {
   await db.update(profiles).set({ lastSeenAt: at }).where(eq(profiles.id, id));

@@ -29,7 +29,7 @@ export function TeamResult({
   backLabel?: string;
 }) {
   const friendly = !!m.friendly;
-  const gain = friendly ? null : m[m.mine].ratingChange;
+  const gain = m[m.mine].ratingChange;
   const side = (s: TeamMatch['home'], away: boolean, mine: boolean) => (
     <View style={{ flex: 1, minWidth: 0, gap: 2, alignItems: away ? 'flex-end' : 'flex-start' }}>
       <TeamLogo logo={s.logo} name={s.name} size={40} decorative />

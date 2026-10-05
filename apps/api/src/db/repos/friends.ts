@@ -3,7 +3,7 @@ import { and, desc, eq, gte, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { boardBlocks, friendMatches, friends, ownerTeams, profiles } from '../schema.js';
 import type { MatchDetail } from './ownerTeams.js';
-import { accountLinkedSql } from './profiles.js';
+import { accountLinkedSql, isUniqueError } from './profiles.js';
 
 // T-11-098 친구 · 친선전. 친구 한 쌍은 두 줄(내 쪽·상대 쪽)이라 내 목록은 profile_id(PK 앞자리) 하나로 읽는다.
 
@@ -13,11 +13,18 @@ export type FriendMatchRow = typeof friendMatches.$inferSelect;
 /** 친구로 보일 수 있는 구단주: 계정(구글·애플)이 연결돼 있고 삭제되지 않았다. */
 const liveOwner = () => and(accountLinkedSql(), isNull(profiles.deletedAt));
 
+/** 고르게 뽑으려고 이 값 이상인 바이트는 버린다(31자라 256을 나누어떨어지지 않는다). */
+const CODE_BYTE_CEILING = 256 - (256 % FRIEND_CODE_CHARS.length);
+
 /** 새 친구 코드(무작위 8자). 겹치면 부르는 쪽이 다시 만든다. */
 export function newFriendCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(FRIEND_CODE_LENGTH));
   let code = '';
-  for (const b of bytes) code += FRIEND_CODE_CHARS[b % FRIEND_CODE_CHARS.length];
+  while (code.length < FRIEND_CODE_LENGTH) {
+    for (const b of crypto.getRandomValues(new Uint8Array(FRIEND_CODE_LENGTH))) {
+      if (b < CODE_BYTE_CEILING && code.length < FRIEND_CODE_LENGTH)
+        code += FRIEND_CODE_CHARS[b % FRIEND_CODE_CHARS.length];
+    }
+  }
   return code;
 }
 
@@ -32,14 +39,17 @@ export async function ensureFriendCode(
   if (current) return current;
   for (let i = 0; i < 5; i++) {
     try {
-      await db
+      const [made] = await db
         .update(profiles)
         .set({ friendCode: newFriendCode() })
-        .where(and(eq(profiles.id, profileId), isNull(profiles.friendCode)));
+        .where(and(eq(profiles.id, profileId), isNull(profiles.friendCode)))
+        .returning({ code: profiles.friendCode });
+      if (made?.code) return made.code;
     } catch (e) {
-      if (!String(e).includes('UNIQUE')) throw e;
+      if (!isUniqueError(e)) throw e;
       continue;
     }
+    // 고친 줄이 없다: 동시에 들어온 다른 요청이 먼저 만들었다.
     const [row] = await db
       .select({ code: profiles.friendCode })
       .from(profiles)
@@ -52,10 +62,10 @@ export async function ensureFriendCode(
 /** 친구 코드로 구단주를 찾는다(계정이 살아 있는 사람만). */
 export async function ownerByCode(db: Db, code: string) {
   const [row] = await db
-    .select({ id: profiles.id, code: profiles.friendCode })
+    .select({ id: profiles.id, nickname: profiles.nickname })
     .from(profiles)
     .where(and(eq(profiles.friendCode, code), liveOwner()));
-  return row ?? null;
+  return row ? { ...row, code } : null;
 }
 
 /** 내 친구·신청 줄 전부(상대가 계정을 끊었거나 지웠으면 빼고) + 상대의 코드·닉네임. FRIENDS_MAX개를 넘지 않는다. */

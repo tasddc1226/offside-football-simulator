@@ -15,7 +15,12 @@ import {
   type FriendsResponse,
 } from '@offside/app-core/api/friends';
 import type { TeamMatch } from '@offside/app-core/api/team';
-import { friendCodeLabel, friendInviteText, h2hText } from '@offside/app-core/friendText';
+import {
+  friendCodeLabel,
+  friendInviteText,
+  friendRequestText,
+  h2hText,
+} from '@offside/app-core/friendText';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { toast } from '../../game/host';
@@ -23,7 +28,6 @@ import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Txt } from '../../ui';
 import { TextField } from '../settings/parts';
-import { friendRequestMessage } from './friendToast';
 import { MatchRow } from './TeamHistory';
 import { Seg, SegBtn } from './TeamParts';
 
@@ -57,7 +61,6 @@ export function OppSwitch({ value, onPick }: { value: OppTab; onPick: (v: OppTab
 export function useFriends() {
   const [data, setData] = useState<FriendsResponse | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
-  const [playing, setPlaying] = useState(false);
   const [busy, setBusy] = useState(false);
   const dataRef = useRef<FriendsResponse | null>(null);
   const sequence = useRef(0);
@@ -103,10 +106,12 @@ export function useFriends() {
     return true;
   }
   async function play(f: FriendPerson): Promise<TeamMatch | null> {
-    if (playing) return null;
-    setPlaying(true);
+    if (busyRef.current) return null;
+    busyRef.current = true;
+    setBusy(true);
     const r = await playFriendly(f.code);
-    setPlaying(false);
+    busyRef.current = false;
+    setBusy(false);
     if (!r.ok) {
       if (r.error.reason === 'FRIENDLY_DAILY_LIMIT')
         put(dataRef.current && { ...dataRef.current, matchesLeft: 0 });
@@ -129,7 +134,6 @@ export function useFriends() {
   return {
     data,
     status,
-    playing,
     busy,
     reload: () => void load(),
     ensure,
@@ -137,12 +141,12 @@ export function useFriends() {
     request: (body: Parameters<typeof requestFriend>[0]) =>
       write(
         () => requestFriend(body),
-        (res) => toast(friendRequestMessage(res)),
+        (res) => toast(friendRequestText(res)),
       ),
     accept: (f: FriendPerson) =>
       write(
         () => acceptFriend(f.code),
-        (res) => toast(friendRequestMessage(res)),
+        (res) => toast(friendRequestText(res)),
       ),
     remove: (f: FriendPerson) => write(() => removeFriend(f.code)),
   };
@@ -197,7 +201,7 @@ export function TeamFriends({
   onOpen: (match: TeamMatch) => void;
 }) {
   const c = useColors();
-  const { data, status, playing, busy } = friends;
+  const { data, status, busy } = friends;
   const [input, setInput] = useState('');
 
   async function copyCode(code: string) {
@@ -361,7 +365,6 @@ export function TeamFriends({
                       testID="friend-play"
                       accessibilityLabel={`${f.name} 님과 친선전`}
                       disabled={
-                        playing ||
                         busy ||
                         data.matchesLeft === 0 ||
                         !data.canPlay ||
@@ -375,7 +378,7 @@ export function TeamFriends({
                     <Btn
                       sm
                       kind="ghost"
-                      disabled={busy || playing}
+                      disabled={busy}
                       testID="friend-remove"
                       accessibilityLabel={`${f.name} 님과 친구 끊기`}
                       onPress={() => askRemove(f)}

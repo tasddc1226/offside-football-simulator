@@ -14,6 +14,8 @@ CREATE TABLE `friend_matches` (
 --> statement-breakpoint
 CREATE INDEX `friend_matches_profile_created_idx` ON `friend_matches` (`profile_id`,`created_at`);--> statement-breakpoint
 CREATE INDEX `friend_matches_opponent_created_idx` ON `friend_matches` (`opponent_id`,`created_at`);--> statement-breakpoint
+CREATE INDEX `friend_matches_home_team_idx` ON `friend_matches` (`home_team_id`);--> statement-breakpoint
+CREATE INDEX `friend_matches_away_team_idx` ON `friend_matches` (`away_team_id`);--> statement-breakpoint
 CREATE TABLE `friends` (
 	`profile_id` text NOT NULL,
 	`friend_id` text NOT NULL,

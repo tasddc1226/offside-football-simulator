@@ -19,6 +19,7 @@
   import TeamPitch from './TeamPitch.svelte';
   import TeamLogo from './TeamLogo.svelte';
   import { num as n, recordText } from '@offside/app-core/teamText';
+  import { friendRequestText } from '@offside/app-core/friendText';
 
   let { id, onback }: { id: string; onback: () => void } = $props();
 
@@ -71,7 +72,7 @@
     befriending = false;
     if (!r.ok) return toast(r.error.message);
     friend = r.data.state;
-    toast(r.data.state === 'accepted' ? `${r.data.friend.name} 님과 친구가 됐어요` : '친구 신청을 보냈어요');
+    toast(friendRequestText(r.data));
   }
   const FRIEND_BUTTON: Record<FriendState, string> = {
     none: '친구 신청',

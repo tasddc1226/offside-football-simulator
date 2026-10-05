@@ -10,17 +10,23 @@
     removeFriend,
     requestFriend,
     type FriendPerson,
-    type FriendRequestResponse,
     type FriendsResponse,
   } from '@offside/app-core/api/friends';
   import type { TeamMatch } from '@offside/app-core/api/team';
-  import { friendCodeLabel, friendInviteText, friendInviteUrl, h2hText } from '@offside/app-core/friendText';
-  import { kstMonthDayTime } from '@offside/app-core/boardText';
-  import { outcomeOf as outcome } from '@offside/app-core/teamOwner';
+  import {
+    friendAcceptedText,
+    friendCodeLabel,
+    friendInviteText,
+    friendInviteUrl,
+    friendRequestText,
+    h2hText,
+  } from '@offside/app-core/friendText';
   import { toast } from '../helpers.js';
+  import { copyText } from '../inapp-open.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import { clearInvite, pendingInvite } from '../friendInvite.svelte.js';
   import TeamLogo from './TeamLogo.svelte';
+  import TeamMatchRow from './TeamMatchRow.svelte';
 
   let {
     onplayed,
@@ -69,16 +75,13 @@
     await load();
   }
 
-  const requested = (d: FriendRequestResponse) =>
-    toast(d.state === 'accepted' ? `${d.friend.name} 님과 친구가 됐어요` : '친구 신청을 보냈어요');
-
   function sendCode(raw: string, fromInvite = false) {
     const code = normalizeFriendCode(raw);
     if (!code) return toast('친구 코드 8자리를 확인해 주세요.');
     void run(
       () => requestFriend({ code }),
       (d) => {
-        requested(d);
+        toast(friendRequestText(d));
         codeInput = '';
         if (fromInvite) {
           clearInvite();
@@ -94,7 +97,7 @@
   }
 
   const accept = (p: FriendPerson) =>
-    run(() => acceptFriend(p.code), () => toast(`${p.name} 님과 친구가 됐어요`));
+    run(() => acceptFriend(p.code), () => toast(friendAcceptedText(p.name)));
   const remove = (p: FriendPerson, ask: string | null) => {
     if (ask && !confirm(ask)) return;
     void run(() => removeFriend(p.code));
@@ -114,27 +117,21 @@
 
   async function share() {
     if (!data) return;
-    const text = friendInviteText(data.code, window.location.origin);
-    try {
-      if (navigator.share) {
-        await navigator.share({ text });
-        return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: friendInviteText(data.code, window.location.origin) });
+      } catch (e) {
+        // 공유 시트를 닫은 것(AbortError)은 실패가 아니다.
+        if ((e as Error)?.name !== 'AbortError') toast('공유하지 못했어요');
       }
-      await navigator.clipboard.writeText(friendInviteUrl(data.code, window.location.origin));
-      toast('초대 링크를 복사했어요');
-    } catch (e) {
-      // 공유 시트를 닫은 것(AbortError)은 실패가 아니다.
-      if ((e as Error)?.name !== 'AbortError') toast('공유하지 못했어요');
+      return;
     }
+    const copied = await copyText(friendInviteUrl(data.code, window.location.origin));
+    toast(copied ? '초대 링크를 복사했어요' : '공유하지 못했어요');
   }
   async function copyCode() {
     if (!data) return;
-    try {
-      await navigator.clipboard.writeText(friendCodeLabel(data.code));
-      toast('코드를 복사했어요');
-    } catch {
-      toast('코드를 복사하지 못했어요');
-    }
+    toast((await copyText(friendCodeLabel(data.code))) ? '코드를 복사했어요' : '코드를 복사하지 못했어요');
   }
 
   const canChallenge = (p: FriendPerson) =>
@@ -225,15 +222,7 @@
       {#if data.recent.length}
         <h2 class="fr-h">최근 친선전</h2>
         {#each data.recent as m (m.id)}
-          {@const opp = m[m.mine === 'home' ? 'away' : 'home']}
-          <button class="fr-match" onclick={() => onopen(m, data!.matchesLeft)} data-friendly-match={m.id}>
-            <span class="tm-out" data-out={outcome(m)}>{outcome(m)}</span>
-            <TeamLogo logo={opp.logo} name={opp.name} size={28} decorative />
-            <span class="fr-info">
-              <b>{m[m.mine].goals} : {opp.goals} {opp.name}</b>
-              <span class="muted fs-sm">친선전 · {opp.owner} · {kstMonthDayTime(m.createdAt)}</span>
-            </span>
-          </button>
+          <TeamMatchRow {m} onopen={(x) => onopen(x, data!.matchesLeft)} />
         {/each}
       {/if}
     {/if}
@@ -291,40 +280,12 @@
     gap: 6px;
     flex: none;
   }
-  .fr-person,
-  .fr-match {
+  .fr-person {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 10px 0;
     border-top: 1px solid var(--line);
-  }
-  .fr-match {
-    width: 100%;
-    background: none;
-    border-inline: 0;
-    border-bottom: 0;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    min-height: 52px;
-  }
-  .tm-out {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    font-weight: 700;
-    background: var(--surface-2);
-  }
-  .tm-out[data-out='승'] {
-    color: var(--good);
-  }
-  .tm-out[data-out='패'] {
-    color: var(--bad);
   }
   .fr-info {
     display: flex;

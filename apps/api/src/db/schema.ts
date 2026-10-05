@@ -881,6 +881,9 @@ export const friendMatches = sqliteTable(
   (table) => [
     index('friend_matches_profile_created_idx').on(table.profileId, table.createdAt),
     index('friend_matches_opponent_created_idx').on(table.opponentId, table.createdAt),
+    // 팀을 지울 때(CASCADE) 친선전을 찾는다.
+    index('friend_matches_home_team_idx').on(table.homeTeamId),
+    index('friend_matches_away_team_idx').on(table.awayTeamId),
   ],
 );
 

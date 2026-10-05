@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "3c274b03-2511-495c-af5a-53ecbe535096",
+  "id": "8247372f-38ad-4ed2-98ff-3241964c5ba7",
   "prevId": "dd631b3f-b6e2-4d9b-b5eb-221f3e2c54fe",
   "tables": {
     "app_auth_tickets": {
@@ -1761,6 +1761,20 @@
           "columns": [
             "opponent_id",
             "created_at"
+          ],
+          "isUnique": false
+        },
+        "friend_matches_home_team_idx": {
+          "name": "friend_matches_home_team_idx",
+          "columns": [
+            "home_team_id"
+          ],
+          "isUnique": false
+        },
+        "friend_matches_away_team_idx": {
+          "name": "friend_matches_away_team_idx",
+          "columns": [
+            "away_team_id"
           ],
           "isUnique": false
         }

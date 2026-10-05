@@ -11,7 +11,6 @@ import {
   FRIENDLY_MATCHES_PER_DAY,
   FRIENDS_MAX,
   normalizeFriendCode,
-  type FormationId,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import { eq } from 'drizzle-orm';
@@ -27,13 +26,7 @@ import {
   readBody,
   teamNotFound,
 } from './shared.js';
-import {
-  careerIdsIn,
-  currentSeasonOrThrow,
-  kstTodayStart,
-  requireOwner,
-  toMatch,
-} from './ownerTeam.js';
+import { currentSeasonOrThrow, kstTodayStart, requireOwner } from './ownerTeam.js';
 import { newId } from '../db/ids.js';
 import { runBatch } from '../db/repos/batch.js';
 import {
@@ -53,26 +46,15 @@ import {
   unfriendStatements,
   type FriendRow,
 } from '../db/repos/friends.js';
-import {
-  careersByIds,
-  eligibleMap,
-  layoutOf,
-  liveTeam,
-  logoOf,
-  myTeamIn,
-  publicNamesOf,
-  slotIdsOf,
-  teamLogosByIds,
-  type MatchDetail,
-  type OwnerTeamRow,
-} from '../db/repos/ownerTeams.js';
+import { liveTeam, logoOf, myTeamIn, type OwnerTeamRow } from '../db/repos/ownerTeams.js';
 import type { Db } from '../db/client.js';
 import { profiles } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { buildLineup, filledCount, lineupOvr, simulateMatch } from '../team/sim.js';
+import { lineupsOf, matchDetailOf, matchViews, playedMatch } from '../team/match.js';
+import { filledCount, simulateMatch } from '../team/sim.js';
 
 // T-11-098 친구 · 친선전. 로그인한 구단주끼리 친구 코드(초대 링크)나 팀 프로필에서 신청하고 수락하면 친구가 된다. 친선전은
 // 랭크 경기와 따로 센다 — 레이팅·전적·업적·랭킹에 들어가지 않고 두 사람의 상대 전적만 남는다. 사람마다 다른 응답이라
@@ -84,13 +66,15 @@ const FRIEND_REQUESTS_PER_HOUR = 20;
 const friendNotFound = () =>
   notFoundError('친구 코드를 찾을 수 없어요. 코드를 다시 확인해 주세요.', 'FRIEND_NOT_FOUND');
 
-/** 경로의 친구 코드 → 계정이 살아 있는 구단주. */
-async function ownerOfCodeParam(c: Context<AppEnv>) {
-  const code = normalizeFriendCode(c.req.param('code') ?? '');
-  const owner = code ? await ownerByCode(getDb(c), code) : null;
-  if (!owner?.code) throw friendNotFound();
-  return { id: owner.id, code: owner.code };
+/** 사람이 넣은 친구 코드 → 계정이 살아 있는 구단주(id · 코드 · 닉네임). */
+async function ownerOfCode(db: Db, raw: string) {
+  const code = normalizeFriendCode(raw);
+  const owner = code ? await ownerByCode(db, code) : null;
+  if (!owner) throw friendNotFound();
+  return owner;
 }
+
+const ownerOfCodeParam = (c: Context<AppEnv>) => ownerOfCode(getDb(c), c.req.param('code') ?? '');
 
 const h2hOf = (row: Pick<FriendRow, 'wins' | 'draws' | 'losses'> | undefined): TeamRecord => ({
   w: row?.wins ?? 0,
@@ -102,16 +86,16 @@ type PersonInput = {
   profileId: string;
   code: string;
   nickname: string | null;
-  row: Pick<FriendRow, 'wins' | 'draws' | 'losses' | 'createdAt'> | undefined;
+  /** 내 쪽 줄(상대 전적). 아직 줄이 없으면(방금 보낸 신청) undefined. */
+  row: Pick<FriendRow, 'wins' | 'draws' | 'losses'> | undefined;
 };
 
-/** 친구 줄들에 지금 시즌 팀과 표시 이름(닉네임 → 최근 감독 이름 → '구단주')을 붙인다. 쿼리 2번. */
+/** 친구 줄들에 지금 시즌 팀과 표시 이름(닉네임 → 최근 감독 이름 → '구단주')을 붙인다. profileId → 사람. 쿼리 2번. */
 async function peopleOf(
   db: Db,
   inputs: readonly PersonInput[],
   season: number | null,
-  now: string,
-): Promise<FriendPerson[]> {
+): Promise<Map<string, FriendPerson>> {
   const ids = inputs.map((p) => p.profileId);
   const [teams, managers] = await Promise.all([
     season === null || ids.length === 0 ? [] : teamsOfOwners(db, ids, season),
@@ -121,25 +105,31 @@ async function peopleOf(
     ),
   ]);
   const teamOf = new Map(teams.map((t) => [t.profileId, t]));
-  return inputs.map((p) => {
-    const t = teamOf.get(p.profileId);
-    return {
-      code: p.code,
-      name: p.nickname ?? managers.get(p.profileId) ?? '구단주',
-      team: t ? teamSummary(t) : null,
-      h2h: h2hOf(p.row),
-      createdAt: p.row?.createdAt ?? now,
-    };
-  });
+  return new Map(
+    inputs.map((p) => {
+      const t = teamOf.get(p.profileId);
+      return [
+        p.profileId,
+        {
+          code: p.code,
+          name: p.nickname ?? managers.get(p.profileId) ?? '구단주',
+          team: t ? teamSummary(t) : null,
+          h2h: h2hOf(p.row),
+        },
+      ];
+    }),
+  );
 }
+
+/** 한 사람(신청·수락 응답). */
+const personOf = async (db: Db, input: PersonInput, now: string) =>
+  (await peopleOf(db, [input], teamSeasonAt(now))).get(input.profileId)!;
 
 const teamSummary = (t: OwnerTeamRow) => ({
   id: t.id,
   name: t.name,
   logo: logoOf(t),
-  formation: t.formation as FormationId,
   ovr: t.ovr,
-  rating: t.rating,
   filled: t.filled,
 });
 
@@ -150,13 +140,14 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = teamSeasonAt(now);
-    const [code, [rows, [played]], recentRows] = await Promise.all([
+    const [code, [rows, [played]], recentRows, [myTeam]] = await Promise.all([
       ensureFriendCode(db, me.id, me.friendCode ?? null),
       db.batch([listFriendRows(db, me.id), countFriendliesSince(db, me.id, kstTodayStart(now))]),
       listRecentFriendlies(db, me.id),
+      season === null ? [undefined] : myTeamIn(db, me.id, season),
     ]);
     const live = rows.filter((r): r is typeof r & { code: string } => !!r.code);
-    const [people, [myTeam]] = await Promise.all([
+    const [people, recent] = await Promise.all([
       peopleOf(
         db,
         live.map((r) => ({
@@ -166,19 +157,11 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
           row: r.row,
         })),
         season,
-        now,
       ),
-      season === null ? [undefined] : myTeamIn(db, me.id, season),
+      matchViews(db, recentRows, (r) => (r.profileId === me.id ? r.homeTeamId : r.awayTeamId)),
     ]);
-    const details = recentRows.map((r) => JSON.parse(r.detailJson) as MatchDetail);
-    const [names, logos] = await Promise.all([
-      publicNamesOf(db, careerIdsIn(details)),
-      teamLogosByIds(
-        db,
-        details.flatMap((d) => [d.home.teamId, d.away.teamId]),
-      ),
-    ]);
-    const byState = (s: FriendRow['state']) => people.filter((_, i) => live[i]!.row.state === s);
+    const byState = (s: FriendRow['state']) =>
+      live.filter((r) => r.row.state === s).map((r) => people.get(r.row.friendId)!);
     return ok(
       c,
       FriendsResponseSchema,
@@ -187,16 +170,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         friends: byState('accepted'),
         received: byState('received'),
         sent: byState('sent'),
-        recent: recentRows.map((r, i) => ({
-          ...toMatch(
-            r,
-            details[i]!,
-            r.profileId === me.id ? r.homeTeamId : r.awayTeamId,
-            names,
-            logos,
-          ),
-          friendly: true,
-        })),
+        recent: recent.map((m) => ({ ...m, friendly: true })),
         matchesLeft: Math.max(0, FRIENDLY_MATCHES_PER_DAY - Number(played?.n ?? 0)),
         matchesPerDay: FRIENDLY_MATCHES_PER_DAY,
         max: FRIENDS_MAX,
@@ -222,17 +196,11 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       now,
       '친구 신청을 너무 자주 보냈어요. 잠시 뒤에 다시 해 주세요.',
     );
-    let targetId: string;
-    if ('code' in input) {
-      const code = normalizeFriendCode(input.code);
-      const owner = code ? await ownerByCode(db, code) : null;
-      if (!owner) throw friendNotFound();
-      targetId = owner.id;
-    } else {
-      const [found] = await liveTeam(db, input.teamId);
-      if (!found) throw teamNotFound();
-      targetId = found.team.profileId;
-    }
+    const targetId =
+      'code' in input
+        ? (await ownerOfCode(db, input.code)).id
+        : (await liveTeam(db, input.teamId))[0]?.team.profileId;
+    if (!targetId) throw teamNotFound();
     if (targetId === me.id) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
@@ -240,11 +208,16 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'FRIEND_SELF' },
       });
     }
-    const [[mine], blocked, [myCount], [theirCount]] = await db.batch([
+    const [[mine], blocked, [myCount], [theirCount], [target]] = await db.batch([
       friendRowOf(db, me.id, targetId),
       blockBetween(db, me.id, targetId),
       friendCountOf(db, me.id),
       friendCountOf(db, targetId),
+      // 응답에 붙일 상대의 코드·닉네임.
+      db
+        .select({ friendCode: profiles.friendCode, nickname: profiles.nickname })
+        .from(profiles)
+        .where(eq(profiles.id, targetId)),
     ]);
     let state: 'sent' | 'accepted';
     if (mine?.state === 'received') {
@@ -272,22 +245,14 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       await runBatch(db, [...requestStatements(db, me.id, targetId, now)]);
       state = 'sent';
     }
-    const [[target], [row]] = await db.batch([
-      // 응답에 붙일 상대의 코드·닉네임. 코드가 아직 없는 사람(친구 화면을 안 열어 본 사람)이면 지금 만든다.
-      db
-        .select({ friendCode: profiles.friendCode, nickname: profiles.nickname })
-        .from(profiles)
-        .where(eq(profiles.id, targetId)),
-      friendRowOf(db, me.id, targetId),
-    ]);
+    // 코드가 아직 없는 사람(팀 프로필에서 신청했고 친구 화면을 안 열어 본 사람)이면 지금 만든다.
     const code = await ensureFriendCode(db, targetId, target?.friendCode ?? null);
-    const [friend] = await peopleOf(
+    const friend = await personOf(
       db,
-      [{ profileId: targetId, code, nickname: target?.nickname ?? null, row }],
-      teamSeasonAt(now),
+      { profileId: targetId, code, nickname: target?.nickname ?? null, row: mine },
       now,
     );
-    return ok(c, FriendRequestResponseSchema, { state, friend: friend! }, 201);
+    return ok(c, FriendRequestResponseSchema, { state, friend }, 201);
   });
 
   // 받은 신청 수락.
@@ -302,17 +267,12 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
     }
     if (mine.state === 'received')
       await runBatch(db, [...acceptStatements(db, me.id, target.id, now)]);
-    const [[row], [nick]] = await db.batch([
-      friendRowOf(db, me.id, target.id),
-      db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.id, target.id)),
-    ]);
-    const [friend] = await peopleOf(
+    const friend = await personOf(
       db,
-      [{ profileId: target.id, code: target.code, nickname: nick?.nickname ?? null, row }],
-      teamSeasonAt(now),
+      { profileId: target.id, code: target.code, nickname: target.nickname, row: mine },
       now,
     );
-    return ok(c, FriendRequestResponseSchema, { state: 'accepted', friend: friend! });
+    return ok(c, FriendRequestResponseSchema, { state: 'accepted', friend });
   });
 
   // 거절 · 신청 취소 · 친구 끊기(두 줄을 지운다). 상대 전적도 함께 사라진다.
@@ -356,54 +316,17 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       throw conflictError('친구가 아직 이번 시즌 팀을 꾸리지 않았어요.', 'FRIEND_TEAM_REQUIRED');
     }
 
-    const mySlots = slotIdsOf(mine);
-    const theirSlots = slotIdsOf(theirs);
-    const rows = await careersByIds(db, [
-      ...new Set([...mySlots, ...theirSlots].filter((x): x is string => x !== null)),
-    ]);
-    const home = buildLineup(
-      mine.formation as FormationId,
-      mySlots,
-      eligibleMap(rows, me.id, season, true),
-      layoutOf(mine),
-    );
-    const away = buildLineup(
-      theirs.formation as FormationId,
-      theirSlots,
-      eligibleMap(rows, target.id, season, true),
-      layoutOf(theirs),
-    );
-    if (filledCount(home) === 0) {
+    const lineups = await lineupsOf(db, season, mine, theirs);
+    if (filledCount(lineups.home) === 0) {
       throw conflictError('은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.', 'TEAM_EMPTY');
     }
-    if (filledCount(away) === 0) {
+    if (filledCount(lineups.away) === 0) {
       throw conflictError('친구가 아직 이번 시즌 팀을 꾸리지 않았어요.', 'FRIEND_TEAM_REQUIRED');
     }
 
     const id = newId('fmt');
-    const result = simulateMatch(id, home, away);
-    const detail: MatchDetail = {
-      home: {
-        teamId: mine.id,
-        name: mine.name,
-        owner: mine.manager,
-        formation: mine.formation as FormationId,
-        ovr: lineupOvr(home),
-      },
-      away: {
-        teamId: theirs.id,
-        name: theirs.name,
-        owner: theirs.manager,
-        formation: theirs.formation as FormationId,
-        ovr: lineupOvr(away),
-      },
-      events: result.events.map((e) => ({
-        minute: e.minute,
-        side: e.side,
-        scorer: e.scorer,
-        assist: e.assist,
-      })),
-    };
+    const result = simulateMatch(id, lineups.home, lineups.away);
+    const detail = matchDetailOf(mine, theirs, lineups, result);
     await runBatch(db, [
       ...recordFriendlyStatements(db, {
         id,
@@ -417,29 +340,15 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         now,
       }),
     ]);
-    const names = new Map<string, string>();
-    for (const s of [...home, ...away])
-      if (s.careerId && s.publicName) names.set(s.careerId, s.publicName);
     const gf = result.homeGoals;
     const ga = result.awayGoals;
     const before = h2hOf(link);
+    const head = { id, homeTeamId: mine.id, homeGoals: gf, awayGoals: ga, createdAt: now };
     return ok(
       c,
       PlayFriendlyResponseSchema,
       {
-        match: {
-          ...toMatch(
-            { id, homeTeamId: mine.id, homeGoals: gf, awayGoals: ga, createdAt: now },
-            detail,
-            mine.id,
-            names,
-            new Map([
-              [mine.id, logoOf(mine)],
-              [theirs.id, logoOf(theirs)],
-            ]),
-          ),
-          friendly: true,
-        },
+        match: { ...playedMatch(head, detail, lineups, mine, theirs), friendly: true },
         h2h: {
           w: before.w + (gf > ga ? 1 : 0),
           d: before.d + (gf === ga ? 1 : 0),

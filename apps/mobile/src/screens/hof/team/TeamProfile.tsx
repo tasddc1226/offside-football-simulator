@@ -17,6 +17,7 @@ import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { NameReport } from '../../../components/NameReport';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
+import { friendRequestText } from '@offside/app-core/friendText';
 import { toast } from '../../../game/host';
 import { DISPLAY, rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
@@ -25,7 +26,6 @@ import { Card } from '../../../ui/Card';
 import { Press } from '../../../ui/Press';
 import { Txt } from '../../../ui/Txt';
 import { AutoGrid } from '../../board/parts';
-import { friendRequestMessage } from '../../owner/friendToast';
 
 export default function TeamProfile({ id }: { id: string }) {
   const c = useColors();
@@ -78,7 +78,7 @@ export default function TeamProfile({ id }: { id: string }) {
     setRequesting(false);
     if (!r.ok) return toast(r.error.message);
     setFriend(r.data.state === 'sent' ? 'sent' : 'accepted');
-    toast(friendRequestMessage(r.data));
+    toast(friendRequestText(r.data));
   }
 
   const cells =

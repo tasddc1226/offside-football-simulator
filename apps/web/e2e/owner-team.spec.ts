@@ -56,7 +56,6 @@ const person = (code: string, name: string, over: Record<string, unknown> = {}) 
   name,
   team: null,
   h2h: REC,
-  createdAt: '2026-09-29T00:00:00.000Z',
   ...over,
 });
 
@@ -891,9 +890,7 @@ const FRIEND_TEAM = {
   id: RIVAL,
   name: '친구 FC',
   logo: null,
-  formation: '4-4-2',
   ovr: 61,
-  rating: 1030,
   filled: 4,
 };
 /** GET /v1/friends 응답. */

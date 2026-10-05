@@ -1,9 +1,8 @@
-// T-11-098 친구 초대 링크(`/?friend=코드`)와 팀 화면 '경기' 탭의 랭크 경기 · 친구 전환. 첫 화면 번들에 들어가므로
-// contracts·app-core를 import하지 않는다(코드 규칙은 contracts owner-team FRIEND_CODE_RE와 같다).
+// T-11-098 친구 초대 링크(`/?friend=코드`)와 팀 화면 '경기' 탭의 랭크 경기 · 친구 전환. 첫 화면 번들에 들어간다.
+import { FRIEND_INVITE_PARAM, normalizeFriendCode } from '@offside/contracts/friend-code';
 import { go } from './nav.js';
 import { appState } from './state.svelte.js';
 
-const PARAM = 'friend';
 const KEY = 'ft_friend_invite';
 /** 초대 링크로 들어온 코드는 하루 동안 기억한다(그 사이 로그인하고 돌아와도 신청할 수 있게). */
 const KEEP_MS = 24 * 60 * 60 * 1000;
@@ -13,11 +12,6 @@ let memo: string | null = null;
 
 /** '경기' 탭에서 보고 있는 쪽. */
 export const friendsUi = $state<{ mode: 'ranked' | 'friends' }>({ mode: 'ranked' });
-
-const normalize = (raw: string) => {
-  const code = raw.replace(/[\s-]/g, '').toUpperCase();
-  return /^[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{8}$/.test(code) ? code : null;
-};
 
 /** 초대 링크로 받은 코드(없거나 하루가 지났으면 null). */
 export function pendingInvite(): string | null {
@@ -29,7 +23,7 @@ export function pendingInvite(): string | null {
       localStorage.removeItem(KEY);
       return null;
     }
-    return normalize(code);
+    return normalizeFriendCode(code);
   } catch {
     return memo;
   }
@@ -53,11 +47,11 @@ export function openFriends() {
 
 /** 앱 시작 때 한 번: 초대 링크로 들어왔으면 코드를 기억하고 주소를 정리한 뒤 친구 화면을 연다. */
 export function routeFriendInvite() {
-  const raw = new URLSearchParams(window.location.search).get(PARAM);
+  const raw = new URLSearchParams(window.location.search).get(FRIEND_INVITE_PARAM);
   if (raw === null) return;
-  const code = normalize(raw);
+  const code = normalizeFriendCode(raw);
   const url = new URL(window.location.href);
-  url.searchParams.delete(PARAM);
+  url.searchParams.delete(FRIEND_INVITE_PARAM);
   window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
   if (!code) return;
   memo = code;
