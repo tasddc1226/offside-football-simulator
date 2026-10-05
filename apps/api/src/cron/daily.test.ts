@@ -6,7 +6,7 @@ import type { Bindings } from '../env.js';
 import { backupKey, backupToR2, fixedParts } from './backup.js';
 import { cleanupExpired } from './cleanup.js';
 import { DAILY_META_KEY, runDaily } from './daily.js';
-import { ARCHIVE_UNTIL_KEY, archiveGrowth, KEEP_DAYS } from './growthArchive.js';
+import { archiveGrowth, KEEP_DAYS } from './growthArchive.js';
 
 const NOW = Date.parse('2026-09-28T19:00:00.000Z');
 const ago = (ms: number) => new Date(NOW - ms).toISOString();
@@ -237,10 +237,8 @@ describe('T-11-100 오래된 성장 기록을 R2로 옮기기', () => {
     await season(2029, ago((KEEP_DAYS + 1) * DAY), null); // 성장 기록 없음
     await season(2030, ago(DAY), g(60)); // 아직 보관 기간 안
 
-    // 앞선 매일 작업 테스트가 이어 갈 시각을 이미 남겼다 — 처음 도는 날처럼 지운다.
-    await run('DELETE FROM app_meta WHERE key = ?1', ARCHIVE_UNTIL_KEY);
     const r = await archiveGrowth(ctx.env.DB, bucket(), 'test', NOW);
-    expect(r).toMatchObject({ rows: 3, until: ago(KEEP_DAYS * DAY) });
+    expect(r).toMatchObject({ rows: 3 });
     const lines = gunzipText(await (await bucket().get(r.key!))!.arrayBuffer())
       .trim()
       .split('\n')
@@ -260,16 +258,18 @@ describe('T-11-100 오래된 성장 기록을 R2로 옮기기', () => {
       [2029, 0],
       [2030, 1],
     ]);
-    const meta = await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key = ?1')
-      .bind(ARCHIVE_UNTIL_KEY)
-      .first<{ value: string }>();
-    expect(meta!.value).toBe(r.until);
-
     // 같은 날 다시 돌면 옮길 행이 없다(이미 올린 파일도 덮어쓰지 않는다).
     expect(await archiveGrowth(ctx.env.DB, bucket(), 'test', NOW)).toMatchObject({
       key: null,
       rows: 0,
     });
-    expect((await bucket().list({ prefix: 'growth/test/' })).objects).toHaveLength(1);
+    // 옮긴 뒤 옛 시즌이 성장 기록과 함께 다시 올라오면 다음 실행이 다시 옮긴다.
+    await run(
+      `UPDATE career_seasons SET growth_json = ?1 WHERE career_id = 'car_g' AND year = 2026`,
+      g(58),
+    );
+    const again = await archiveGrowth(ctx.env.DB, bucket(), 'test', NOW + 1);
+    expect(again.rows).toBe(1);
+    expect((await bucket().list({ prefix: 'growth/test/' })).objects).toHaveLength(2);
   });
 });

@@ -38,7 +38,7 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
   const backup = env.BACKUP
     ? await backupToR2(env.DB, env.BACKUP, env.ENVIRONMENT, now).catch(errorOf)
     : ('skipped' as const);
-  // 백업 다음에 돈다 — 그날 백업에는 비우기 전 성장 기록이 함께 남는다.
+  // 백업 다음에 돈다 — 백업이 성공했으면 그날 백업에도 비우기 전 성장 기록이 남는다. 옮기기는 R2에 올린 뒤에만 비우므로 백업과 상관없이 돈다.
   const growthArchive = env.BACKUP
     ? await archiveGrowth(env.DB, env.BACKUP, env.ENVIRONMENT, now).catch(errorOf)
     : ('skipped' as const);
