@@ -53,6 +53,8 @@
   import TeamNav from './TeamNav.svelte';
   import TeamOpponents from './TeamOpponents.svelte';
   import TeamResult from './TeamResult.svelte';
+  import TeamFriends from './TeamFriends.svelte';
+  import { friendsUi } from '../friendInvite.svelte.js';
   import { achNudge } from '../achNudge.js';
   import { assignSlot, autoFillSlots, matchHintOf } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
@@ -95,6 +97,8 @@
   let resultOrigin = $state<'opponents' | 'history'>('opponents');
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   let live = $state(false);
+  /** T-11-098 오늘 남은 친선전(친선전 결과 화면의 '다시 경기하기'). */
+  let friendlyLeft = $state(0);
   // T-10-130 팀 안의 화면은 appState.teamView — 뒤로 가기로 오간다. 결과는 이 화면에만 있어 다시 들어왔을 때(앞으로 가기)
   // 없으면 팀을 보여 준다.
   const view = $derived(appState.teamView === 'result' && !result ? 'team' : appState.teamView);
@@ -303,6 +307,16 @@
     window.scrollTo(0, 0);
   }
 
+  // T-11-098 친선전 결과(방금 치른 경기는 중계부터, 최근 친선전은 결과부터). 결과에서 돌아가면 '경기' 탭의 친구 쪽이다.
+  function openFriendly(m: TeamMatch, left: number, fresh: boolean) {
+    result = m;
+    resultOrigin = 'opponents';
+    live = fresh;
+    friendlyLeft = left;
+    show('result');
+    window.scrollTo(0, 0);
+  }
+
   // ───────── 시즌 업적 ─────────
   async function loadAchievements(want = season) {
     achStatus = 'loading';
@@ -333,7 +347,7 @@
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 $effect가, 이미 그 화면이면 open이 다시 불러온다.
   const LOAD = {
-    opponents: () => (matchHint ? undefined : loadOpponents()),
+    opponents: () => (matchHint || friendsUi.mode === 'friends' ? undefined : loadOpponents()),
     achievements: () => loadAchievements(),
     history: loadHistory,
   };
@@ -419,6 +433,13 @@
         onsave={save}
       />
     {:else if view === 'opponents'}
+      <div class="seg two tm-mode" role="group" aria-label="경기 종류">
+        <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>랭크 경기</button>
+        <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>친구</button>
+      </div>
+      {#if friendsUi.mode === 'friends'}
+        <TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} />
+      {:else}
       <TeamOpponents
         ovr={team?.ovr ?? ovr}
         {matchesLeft}
@@ -435,6 +456,7 @@
         {saving}
         saveDisabled={!nameOk || !!pendingDraft}
       />
+      {/if}
     {:else if view === 'result' && result}
       {#if live}
         {#key result.id}
@@ -445,7 +467,7 @@
           m={result}
           {team}
           {eventName}
-          {matchesLeft}
+          matchesLeft={result.friendly ? friendlyLeft : matchesLeft}
           ontoTeam={() => switchView('team')}
           onreplay={() => (live = true)}
           onagain={() => open('opponents')}
@@ -470,6 +492,7 @@
 
 <style>
   .lineup-editor { max-width: 880px; }
+  .tm-mode { margin-bottom: 12px; }
   .draft-notice {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;}
   .draft-notice p {margin:0;font-size:13px;flex:1 1 200px;}
   .draft-notice > div {display:flex;flex-wrap:wrap;gap:8px;}

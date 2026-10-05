@@ -243,6 +243,8 @@ export const TeamMatchSchema = z.strictObject({
   away: TeamMatchSideSchema,
   events: z.array(TeamMatchEventSchema),
   mine: z.enum(['home', 'away']),
+  /** T-11-098 친구와 치른 친선전(레이팅·전적에 들어가지 않는다). 랭크 경기와 구버전 응답에는 없다. */
+  friendly: z.boolean().optional(),
   createdAt: IsoUtcSchema,
 });
 export type TeamMatch = z.infer<typeof TeamMatchSchema>;
@@ -419,11 +421,19 @@ export const TeamProfileSchema = z.strictObject({
 });
 export type TeamProfile = z.infer<typeof TeamProfileSchema>;
 
-/** liked: 조회한 프로필이 좋아요를 눌렀는가. mine: 조회한 프로필의 팀인가(좋아요·조회수를 세지 않는다). */
+/** T-11-098 나와 그 구단주의 친구 상태. sent: 내가 보낸 신청 · received: 받은 신청 · accepted: 친구. */
+export const FriendStateSchema = z.enum(['none', 'sent', 'received', 'accepted']);
+export type FriendState = z.infer<typeof FriendStateSchema>;
+
+/**
+ * liked: 조회한 프로필이 좋아요를 눌렀는가. mine: 조회한 프로필의 팀인가(좋아요·조회수를 세지 않는다).
+ * friend(T-11-098): 로그인한 구단주가 남의 팀을 볼 때만 준다(그 밖에는 null, 구버전 응답에는 없다).
+ */
 export const TeamProfileResponseSchema = z.strictObject({
   team: TeamProfileSchema,
   liked: z.boolean(),
   mine: z.boolean(),
+  friend: FriendStateSchema.nullable().optional(),
 });
 export type TeamProfileResponse = z.infer<typeof TeamProfileResponseSchema>;
 

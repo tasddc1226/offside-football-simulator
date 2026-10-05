@@ -20,6 +20,8 @@ export type ProfileRecord = {
   nickname: string | null;
   appleSub: string | null;
   appleLinkedAt: string | null;
+  /** T-11-098 친구 코드(처음 친구 화면을 열 때 만든다). */
+  friendCode?: string | null;
 };
 
 /** 구단주 계정(구글·애플 로그인) — 팀·댓글·닉네임 자격. SQL 조건은 accountLinkedSql. */
@@ -56,6 +58,7 @@ function toRecord(row: typeof profiles.$inferSelect): ProfileRecord {
     nickname: row.nickname,
     appleSub: row.appleSub,
     appleLinkedAt: row.appleLinkedAt,
+    friendCode: row.friendCode,
   };
 }
 
@@ -116,12 +119,14 @@ export async function setNickname(
     return toRecord(row!);
   } catch (err) {
     // lower(nickname) 유니크 인덱스가 겹침을 막는다(자기 자신의 같은 닉네임은 겹치지 않는다).
-    // drizzle는 D1 오류를 "Failed query: …"로 감싸고 원래 메시지를 cause에 둔다.
-    if (`${String(err)} ${String((err as { cause?: unknown }).cause ?? '')}`.includes('UNIQUE'))
-      return 'taken';
+    if (isUniqueError(err)) return 'taken';
     throw err;
   }
 }
+
+/** 유니크 인덱스 위반인가. drizzle는 D1 오류를 "Failed query: …"로 감싸고 원래 메시지를 cause에 둔다. */
+export const isUniqueError = (err: unknown) =>
+  `${String(err)} ${String((err as { cause?: unknown }).cause ?? '')}`.includes('UNIQUE');
 
 export async function touchLastSeen(db: Db, id: string, at: string): Promise<void> {
   await db.update(profiles).set({ lastSeenAt: at }).where(eq(profiles.id, id));

@@ -12,6 +12,7 @@ import { keepStorage } from './ui/helpers.js';
 import { handleOAuthReturn } from './ui/login.js';
 import { hasSessionHint } from '@offside/app-core/api/client';
 import { routeSharedCareer } from './ui/legend.js';
+import { routeFriendInvite } from './ui/friendInvite.svelte.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';
 import { watchRetiredNumberAlerts, watchRetiredNumbers } from './ui/retiredNumber.svelte.js';
 import { installClickSound } from './ui/sfx.js';
@@ -33,6 +34,8 @@ if (appState.G) keepStorage();
 // 옛 은퇴 선수에 커리어 id를 붙인다(ft_hof).
 handleOAuthReturn();
 routeSharedCareer();
+// T-11-098 친구 초대 링크(`/?friend=코드`)로 들어왔으면 친구 화면을 연다.
+routeFriendInvite();
 initializeAnalytics(appState.screen, appState.G && !appState.G.retired ? appState.G.cid : null);
 syncBalance();
 // T-10-114 모바일 뒤로 가기(iOS 가장자리 밀기·Android 뒤로)가 앱 안의 이전 화면으로 가게 한다.

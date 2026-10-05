@@ -31,6 +31,7 @@ import {
   layoutOf,
   logoOf,
 } from '../db/repos/ownerTeams.js';
+import { friendStateOf } from '../db/repos/friends.js';
 import { listAchievementRanking } from '../db/repos/ownerAchievements.js';
 import { edgeCached, waitUntil } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
@@ -132,13 +133,15 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     if (!found) throw teamNotFound();
     const t = found.team;
     const ids = slotIdsOf(t);
-    const [rows, rank, liked] = await Promise.all([
+    const other = session && session.profileId !== t.profileId ? session.profileId : null;
+    const [rows, rank, liked, friend] = await Promise.all([
       careersByIds(
         db,
         ids.filter((x): x is string => !!x),
       ),
       ratingRankOf(db, t),
       session ? isTeamLiked(db, t.id, session.profileId) : false,
+      other ? friendStateOf(db, other, t.profileId) : null,
     ]);
     const now = nowIso();
     const eligible = eligibleMap(rows, t.profileId, t.season, t.season === teamSeasonAt(now));
@@ -171,6 +174,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         },
         liked,
         mine: session?.profileId === t.profileId,
+        friend,
       },
       200,
       NO_STORE,
