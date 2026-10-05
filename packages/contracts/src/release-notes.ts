@@ -22,7 +22,7 @@ export const ReleaseNoteSchema = z
       )
       .min(1)
       .max(12),
-    availability: z.enum(['web', 'web-app', 'web-app-pending']),
+    availability: z.enum(['web', 'app', 'web-app', 'web-app-pending']),
     appVersion: z
       .string()
       .regex(/^\d+\.\d+\.\d+$/)

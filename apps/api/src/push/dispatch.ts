@@ -1,11 +1,13 @@
 import type { Context } from 'hono';
 import type { AppEnv, Bindings } from '../env.js';
+import { postExpo } from './transport.js';
 
 const BATCH = 100;
 const MINUTE = 60_000;
 const iso = (time: number) => new Date(time).toISOString();
 type State = 'pending' | 'accepted' | 'confirmed' | 'failed' | 'unknown' | 'cancelled';
 type Delivery = {
+  notification_id: string | null;
   id: string;
   installation_hash: string;
   session_id: string;
@@ -46,7 +48,7 @@ async function claim(db: D1Database, receipts: boolean, now: number, lease: stri
     .run();
   const rows = await db
     .prepare(
-      `SELECT q.*, e.board, e.post_id, e.title, e.expires_at,
+      `SELECT q.*, e.board, e.post_id, e.title, e.expires_at, n.id AS notification_id,
       CASE WHEN d.installation_hash IS NOT NULL AND d.token = q.token AND d.session_id = q.session_id
         AND d.profile_id = q.profile_id AND d.updated_at >= ? AND s.channel = 'app'
         AND s.profile_id = q.profile_id AND s.revoked_at IS NULL AND s.expires_at > ?
@@ -56,6 +58,7 @@ async function claim(db: D1Database, receipts: boolean, now: number, lease: stri
     LEFT JOIN push_devices d ON d.installation_hash = q.installation_hash
     LEFT JOIN sessions s ON s.id = q.session_id LEFT JOIN profiles p ON p.id = q.profile_id
     LEFT JOIN board_posts b ON b.id = e.post_id
+    LEFT JOIN notifications n ON n.profile_id = q.profile_id AND n.source_key = 'news:' || e.id
     WHERE q.state = ? AND q.lease_id = ?`,
     )
     .bind(iso(now - 90 * 86400_000), iso(now), iso(now), to, lease)
@@ -125,26 +128,6 @@ async function finish(
   await db.batch(writes);
 }
 
-async function postExpo(
-  env: Bindings,
-  path: 'send' | 'getReceipts',
-  body: unknown,
-  transport: typeof fetch,
-) {
-  return transport(`https://exp.host/--/api/v2/push/${path}`, {
-    method: 'POST',
-    redirect: 'manual',
-    signal: AbortSignal.timeout(10_000),
-    headers: {
-      'Content-Type': 'application/json',
-      ...(env.EXPO_PUSH_ACCESS_TOKEN
-        ? { Authorization: `Bearer ${env.EXPO_PUSH_ACCESS_TOKEN}` }
-        : {}),
-    },
-    body: JSON.stringify(body),
-  });
-}
-
 async function send(
   env: Bindings,
   rows: Delivery[],
@@ -162,7 +145,12 @@ async function send(
         channelId: 'news',
         sound: 'default',
         ttl: 3600,
-        data: { type: 'offside-news', board: r.board, postId: r.post_id },
+        data: {
+          type: 'offside-news',
+          board: r.board,
+          postId: r.post_id,
+          ...(r.notification_id ? { notificationId: r.notification_id } : {}),
+        },
       })),
       transport,
     );

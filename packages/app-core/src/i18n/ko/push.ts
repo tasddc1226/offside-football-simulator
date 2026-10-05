@@ -14,6 +14,12 @@ const ko = {
   reconnect: '다시 연결',
   testNote:
     '테스트 알림은 이 기기에만 보내요. 기기·계정마다 10분에 한 번, 하루 3회까지 요청할 수 있어요.',
+  engagementTitle: '재방문 안내 (선택)',
+  engagementBody:
+    '7일 이상 방문하지 않았을 때 다시 시작할 안내를 받아요. 오전 9시부터 오후 8시 사이에만 보내요.',
+  engagementOff: '재방문 안내 끄기',
+  engagementOn: '재방문 안내 받기',
+  openInbox: '알림함 열기',
   testBusy: '요청 중…',
   testBtn: '내 기기로 테스트 알림 보내기',
   nextTest: '다음 테스트:',

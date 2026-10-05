@@ -1,0 +1,31 @@
+import type { Translation } from '../core';
+import type { InboxMsgs } from '../ko/inbox';
+
+export const inbox: Translation<InboxMsgs> = {
+  kindNews: 'News',
+  kindTest: 'Test',
+  kindReturn: 'Kick off again',
+  kindTeam: 'My team',
+  kindMarket: 'Transfer market',
+  kindSocial: 'Friends',
+  title: 'Inbox',
+  titleUnread: (p) => `Inbox, ${p.n} unread`,
+  back: 'Back',
+  keepNote: 'Notifications are kept for 90 days.',
+  viewRelated: 'View details',
+  markRead: 'Mark as read',
+  notFound: "We couldn't find this notification.",
+  all: 'All',
+  unreadN: (p) => `Unread ${p.n}`,
+  refresh: 'Refresh',
+  readAll: 'Mark all read',
+  unread: 'Unread',
+  unreadAria: 'Unread, ',
+  emptyUnread: 'No unread notifications.',
+  empty: 'No notifications yet.',
+  more: 'Load older notifications',
+  checking: 'Checking notifications…',
+  retry: 'Try again',
+  loadFailed: "Couldn't load notifications. Please try again.",
+  connectFailed: "Couldn't connect to your inbox. Please try again.",
+};

@@ -22,6 +22,7 @@ import { HomeNews } from './HomeNews';
 import { HomeTicker } from './HomeTicker';
 import { Tile } from './Tile';
 import { PushOptInCard } from './PushOptInCard';
+import { InboxButton } from '../../components/InboxButton';
 
 export default function Home() {
   const s = useSnapshot(appState);
@@ -31,7 +32,7 @@ export default function Home() {
   return (
     <View style={{ flex: 1 }}>
       <Screen>
-        <Topbar />
+        <Topbar right={<InboxButton />} />
         {/* 이적·서버 최초 기록이 흐르는 전광판 */}
         <HomeTicker />
         {G ? (

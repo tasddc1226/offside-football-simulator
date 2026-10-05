@@ -9,6 +9,7 @@ export const RegisterPushDeviceSchema = PushDeviceIdentitySchema.extend({
     .regex(/^(?:Expo|Exponent)PushToken\[[A-Za-z0-9_-]+\]$/),
   platform: z.enum(['ios', 'android']),
   appVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
+  engagementEnabled: z.boolean().optional(),
 }).strict();
 export const PushDeviceResultSchema = z.object({ enabled: z.boolean() });
 export const PushTestResultSchema = z.object({

@@ -7,8 +7,11 @@ import type { LiveHub } from './live/hub.js';
 export type Bindings = {
   /** 공지·릴리즈 노트 하루 첫 게시 자동 푸시. 운영에만 켠다. */
   NEWS_PUSH_ENABLED?: string;
-  /** 관리자 자신의 등록 기기만 테스트. 기본 off. 전체 발송 기능과 별개다. */
+  /** 현재 앱 세션의 등록 기기만 테스트. 기본 off. 자동 발송과 별개다. */
   PUSH_TEST_ENABLED?: string;
+  /** 개인 이벤트 푸시와 미접속 안내는 검증 후 별도로 활성화한다. */
+  PERSONAL_PUSH_ENABLED?: string;
+  REENGAGEMENT_PUSH_ENABLED?: string;
   /** Expo enhanced push security용 secret. 클라이언트에는 넣지 않는다. */
   EXPO_PUSH_ACCESS_TOKEN?: string;
   DB: D1Database;

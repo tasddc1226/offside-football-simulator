@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { AppState, Linking, View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import { pushState, pushTestState, pushRegistration, testOwnPush } from '../../platform/push';
+import {
+  pushState,
+  pushTestState,
+  pushRegistration,
+  testOwnPush,
+  engagementPushState,
+  setEngagementPush,
+} from '../../platform/push';
+import { openInbox } from '../../platform/inbox';
 import { Btn, Txt } from '../../ui';
 import { SettingsCard, SettingsLabel } from './parts';
 import { WEB_ORIGIN } from '../../platform/config';
@@ -12,6 +20,7 @@ export function PushSettings() {
   const state = useSnapshot(pushState);
   const [testMessage, setTestMessage] = useState('');
   const test = useSnapshot(pushTestState);
+  const engagement = useSnapshot(engagementPushState);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const refresh = () => setNow(Date.now());
@@ -61,6 +70,15 @@ export function PushSettings() {
         ) : null}
         {state.enabled ? (
           <>
+            <Txt bold>{L.engagementTitle}</Txt>
+            <Txt tone="muted">{L.engagementBody}</Txt>
+            <Btn
+              block
+              disabled={state.busy}
+              onPress={() => void setEngagementPush(!engagement.enabled)}
+            >
+              {engagement.enabled ? L.engagementOff : L.engagementOn}
+            </Btn>
             <Txt tone="muted">{L.testNote}</Txt>
             <Btn
               block
@@ -94,6 +112,9 @@ export function PushSettings() {
             {testMessage}
           </Txt>
         ) : null}
+        <Btn block onPress={() => openInbox()}>
+          {L.openInbox}
+        </Btn>
         <Btn block onPress={() => void Linking.openURL(`${WEB_ORIGIN}/legal/privacy/#push`)}>
           {L.privacy}
         </Btn>

@@ -366,7 +366,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
               {national.length ? (
                 <Events
                   list={national}
-                  style={{ marginTop: 14, maxWidth: 320, alignSelf: 'center' }}
+                  style={{ marginTop: 14, width: '100%', maxWidth: 320, alignSelf: 'center' }}
                 />
               ) : null}
             </View>

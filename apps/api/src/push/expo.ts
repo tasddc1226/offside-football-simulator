@@ -5,6 +5,7 @@ export async function sendPushTest(
   token: string,
   accessToken?: string,
   fetchImpl: typeof fetch = fetch,
+  notificationId?: string,
 ): Promise<string> {
   let response: Response;
   try {
@@ -23,7 +24,12 @@ export async function sendPushTest(
         body: '공지와 릴리즈 노트 알림이 연결됐어요.',
         channelId: 'news',
         sound: 'default',
-        data: { type: 'offside-news', board: 'notice', test: true },
+        data: {
+          type: 'offside-news',
+          board: 'notice',
+          test: true,
+          ...(notificationId ? { notificationId } : {}),
+        },
       }),
     });
   } catch {

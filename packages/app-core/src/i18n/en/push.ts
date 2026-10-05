@@ -14,6 +14,12 @@ export const push: Translation<PushMsgs> = {
   reconnect: 'Reconnect',
   testNote:
     'Test notifications are sent to this device only. You can request one every 10 minutes per device and account, up to 3 a day.',
+  engagementTitle: 'Comeback reminders (optional)',
+  engagementBody:
+    "Get a nudge to pick up where you left off if you haven't visited for 7 days or more. Sent only between 9 AM and 8 PM.",
+  engagementOff: 'Turn off comeback reminders',
+  engagementOn: 'Get comeback reminders',
+  openInbox: 'Open inbox',
   testBusy: 'Requesting…',
   testBtn: 'Send a test notification to my device',
   nextTest: 'Next test:',
