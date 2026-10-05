@@ -846,4 +846,22 @@ describe('T-11-063 개막 첫 업로드 경계', () => {
       [s1]: [1, 'ST'],
     });
   });
+
+  it('T-11-095 세부 포지션 없이 만든 프리시즌 선수는 개막 뒤에 처음 올라와도 프리시즌이다', async () => {
+    const me = await issueCookie(ctx);
+    const late = '99999999-9999-4999-8999-999999999999';
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-06T03:00:00.000Z')); // 자정을 넘겨 첫 시즌을 마침
+    const res = await createApp().request(
+      `/v1/careers/${late}/seasons/2026`,
+      jsonInit({ method: 'PUT', body: seasonBody({ career: TEST_CAREER }), cookie: me.cookie }),
+      ctx.env,
+    );
+    expect(res.status).toBe(200);
+    const [row] = await ctx.db
+      .select({ season: careers.serviceSeason })
+      .from(careers)
+      .where(eq(careers.id, late));
+    expect(row?.season).toBe(0);
+  });
 });

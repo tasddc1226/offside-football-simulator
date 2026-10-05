@@ -9,7 +9,7 @@ import type {
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
 import { cardValue, retireValue } from '@offside/contracts/market-value';
-import { teamSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
+import { firstUploadSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
 import { dposFor, type PeakProfile } from '@offside/contracts/positions';
 import {
   and,
@@ -130,7 +130,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         pot: meta.pot ?? null,
         ...name,
         // 처음 올라온 시각의 시즌(0 = 프리시즌, 시즌 사이 휴식기면 NULL) — onConflict set에 없어 바뀌지 않는다.
-        serviceSeason: teamSeasonAt(now),
+        // T-11-095 세부 포지션 없이 만든 프리시즌 선수는 개막 뒤에 처음 올라와도 프리시즌이다.
+        serviceSeason: firstUploadSeasonAt(now, meta.dpos !== undefined),
         createdAt: now,
         updatedAt: now,
       })

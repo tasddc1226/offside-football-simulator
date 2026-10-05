@@ -4,14 +4,14 @@ import { createApp } from '../app.js';
 import { ensureFirstsBackfilled } from '../db/repos/firsts.js';
 import { firstsCatalog } from '../firsts.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { deleteProfile, issueCookie, putJson, putSeasonsFor, TEST_CAREER } from '../test/http.js';
+import { deleteProfile, issueCookie, putJson, putSeasonsFor, testCareer } from '../test/http.js';
 
 const A = '0b000000-0000-4000-8000-00000000000a';
 const B = '0b000000-0000-4000-8000-00000000000b';
 const C = '0b000000-0000-4000-8000-00000000000c';
 
 const seasonBody = (over: Record<string, unknown> = {}) => ({
-  career: TEST_CAREER,
+  career: testCareer(),
   season: {
     age: 22,
     club: '테스트 FC',

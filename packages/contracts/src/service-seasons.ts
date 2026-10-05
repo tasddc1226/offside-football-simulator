@@ -115,3 +115,11 @@ export const MAX_RETIRE_AT = Math.max(
   PRESEASON_RETIRE_AT,
   ...SERVICE_SEASONS.map((s) => s.retireAt),
 );
+
+/**
+ * T-11-095 커리어가 서버에 처음 올라올 때 찍는 시즌. 세부 포지션이 없는 선수는 프리시즌 규칙(41세·세부 포지션 없음)으로
+ * 만든 선수라 개막 뒤에 처음 올라와도(자정을 넘긴 첫 시즌·오프라인 플레이) 프리시즌(0)이다. 세부 포지션이 있으면 올라온
+ * 시각의 시즌 — 기기 시계를 당겨 개막 전에 만든 선수가 시즌 순위에 먼저 들어오지 않게 서버 시각을 따른다.
+ */
+export const firstUploadSeasonAt = (now: string, seasonRules: boolean): number | null =>
+  seasonRules ? teamSeasonAt(now) : 0;
