@@ -12,6 +12,7 @@
   import { kstMonthDayHour } from '@offside/app-core/boardText';
   import { loadHOF } from '@offside/game/season';
   import { getHof } from '@offside/app-core/api/client';
+  import { watchSeasonClock } from '@offside/app-core/season-opening';
   import { openPublicLegend } from './legend.js';
   import { anonName, fmtValue, iGa } from '@offside/app-core/format';
   import { openHof } from './nav.js';
@@ -48,7 +49,11 @@
   const sort = $derived<HofSort>(full ? appState.hof.sort : 'score');
   const by = $derived(SORTS[sort]);
   // 홈 미리보기는 지금 시즌 고정(개막 전엔 프리시즌 = 전체와 같아 시즌 없이 같은 요청·캐시를 쓴다).
-  const homeSeason = previewSeasonAt(new Date().toISOString());
+  // T-11-107 홈을 띄운 채 개막을 넘기거나 탭으로 돌아오면 다시 고른다.
+  let homeSeason = $state(previewSeasonAt(new Date().toISOString()));
+  $effect(() => {
+    if (!full) return watchSeasonClock(() => (homeSeason = previewSeasonAt(new Date().toISOString())));
+  });
   const season = $derived(full ? appState.hof.season : homeSeason);
   const q = $derived(full ? appState.hof.q : '');
   const pos = $derived(full ? appState.hof.pos : null);
@@ -58,6 +63,8 @@
   /** 문구 앞에 붙는 시즌·포지션 이름('시즌 1 수비수 '). 둘 다 전체면 빈 문자열. */
   const scope = $derived(`${ss ? `${ss.name} ` : ''}${pos ? `${POS_LABEL[pos]} ` : ''}`);
   let all = $state<PublicHofEntry[] | null>(null);
+  /** 홈 미리보기의 '전체 보기' — 개막 뒤엔 시즌 은퇴 선수가 아직 없어도 기록실로 가는 길을 남긴다. */
+  const hasAll = $derived(!!all?.length || homeSeason !== null);
   let total = $state(0);
   let failed = $state(false);
   let filtering = $state(false);
@@ -176,7 +183,7 @@
         <div class="eyebrow">Legends</div>
         <h2 style="margin-bottom:8px">명예의 전당</h2>
       </div>
-      {#if all?.length}
+      {#if hasAll}
         <button class="icon-btn" data-act="hof-all" onclick={openHof}>전체 보기</button>
       {/if}
     </div>
