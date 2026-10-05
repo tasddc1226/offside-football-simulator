@@ -31,7 +31,7 @@
 
 <section class="card stack tm-result" style="gap:14px" data-team-result>
   <div>
-    <div class="eyebrow">Full time{#if m.friendly}{' · '}<span data-friendly>친선전</span>{/if}</div>
+    <div class="eyebrow">Full time{#if m.friendly}&nbsp;· <span data-friendly>친선전</span>{/if}</div>
     <h1>{OUTCOME_TITLE[outcome(m)]}</h1>
   </div>
   <div class="tm-score">
