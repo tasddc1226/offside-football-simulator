@@ -12,7 +12,6 @@ import {
   FOOT_BONUS,
   FOOT_BONUS_BOTH,
   HOMEGROWN_EFFECT,
-  SYNERGY_FROM_SEASON,
   TEAM_RULES,
   lineStrength,
   slotFit,
@@ -170,9 +169,7 @@ export const synergyEffectText = (
     .join(' · ') || (kind === 'duo' ? '상한에 걸려 효과 없음' : '경기 효과 없음');
 /** 시너지가 경기에 들어가는지 알리는 한 줄. */
 export const synergyNote = (season: number): string =>
-  synergyApplies(season)
-    ? '경기에 반영 중'
-    : `미리보기 · 시즌 ${SYNERGY_FROM_SEASON}부터 경기에 반영`;
+  synergyApplies(season) ? '경기에 반영돼요' : '프리시즌 경기에는 반영되지 않았어요';
 
 export type SynergyChip = {
   id: string;

@@ -254,8 +254,8 @@ describe('T-11-105 시너지', () => {
     const syn = synergyTeam('A');
     const opp = fullTeam('B', 75);
     for (let i = 0; i < 30; i++) {
-      const a = simulateMatch(`mat_s${i}`, plain, opp, 1);
-      const b = simulateMatch(`mat_s${i}`, syn, opp, 1);
+      const a = simulateMatch(`mat_s${i}`, plain, opp, 0);
+      const b = simulateMatch(`mat_s${i}`, syn, opp, 0);
       expect([b.homeGoals, b.awayGoals]).toEqual([a.homeGoals, a.awayGoals]);
       expect(b.synergy).toBeUndefined();
     }
@@ -263,7 +263,7 @@ describe('T-11-105 시너지', () => {
 
   it('시너지를 켜면 켜진 시너지를 결과에 남기고 줄 힘이 오른다', () => {
     const syn = synergyTeam('A');
-    const r = simulateMatch('mat_on', syn, fullTeam('B', 75), 2);
+    const r = simulateMatch('mat_on', syn, fullTeam('B', 75), 1);
     expect(r.synergy?.home).toEqual(expect.arrayContaining(['cross', 'engine', 'homegrown']));
     expect(r.synergy?.away).toEqual([]);
     expect(lineupLines(syn, lineupSynergy(syn)).atk).toBeGreaterThan(lineupLines(syn).atk);

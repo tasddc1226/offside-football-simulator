@@ -4,13 +4,13 @@
  *
  * 세 층 — 듀오(두 선수의 유형 조합), 주발 맞춤(풀백·윙어 한 명), 팀 색깔(선발 전체). 모두 더하기만 한다(벌점 없음).
  * 유스 선수(null)는 어디에도 들지 않는다. 흔한 듀오(거의 모든 팀이 가진 조합)는 작게, 드문 듀오는 크게 준다.
- * 경기에는 SYNERGY_FROM_SEASON 시즌부터 반영한다 — 시즌 1은 밸런스를 고정해 화면에서 미리보기만 한다.
+ * 경기에는 SYNERGY_FROM_SEASON 시즌(시즌 1)부터 반영한다. 이미 끝난 프리시즌 경기·기록은 그대로 둔다.
  */
 import { DEFAULT_NATION } from './nations.js';
 import type { DetailPos } from './positions.js';
 
 /** 시너지를 경기 계산에 넣기 시작하는 서비스 시즌. */
-export const SYNERGY_FROM_SEASON = 2;
+export const SYNERGY_FROM_SEASON = 1;
 export const synergyApplies = (season: number): boolean => season >= SYNERGY_FROM_SEASON;
 
 /** 시너지가 더하는 줄 힘(공격·중원·수비·골키퍼). */

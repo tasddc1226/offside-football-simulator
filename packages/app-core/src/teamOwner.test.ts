@@ -108,7 +108,7 @@ describe('matchHintOf', () => {
   });
 });
 
-describe('T-11-105 시너지 미리보기', () => {
+describe('T-11-105 편성 화면 시너지', () => {
   const base = {
     pos: 'FW',
     dpos: null,
@@ -145,17 +145,17 @@ describe('T-11-105 시너지 미리보기', () => {
     });
     expect(synergyFocus(s, null).members).toBeNull();
   });
-  it('줄 힘은 반영 시즌부터 시너지를 더한다', () => {
+  it('줄 힘은 시즌 1부터 시너지를 더한다(프리시즌 제외)', () => {
     const codes = layout.map((p) => p.slot);
     const r = Array(11).fill(70);
-    expect(draftLines(codes, r, s, 1).atk).toBeLessThan(draftLines(codes, r, s, 2).atk);
+    expect(draftLines(codes, r, s, 0).atk).toBeLessThan(draftLines(codes, r, s, 1).atk);
   });
   it('효과 표기 · 반영 시즌 안내 · 시너지 표', () => {
     expect(synergyEffectText({ atk: 1, mid: 0.5 })).toBe('공격 +1 · 중원 +0.5');
     expect(synergyEffectText({}, 'duo')).toBe('상한에 걸려 효과 없음');
     expect(synergyEffectText({}, 'badge')).toBe('경기 효과 없음');
-    expect(synergyNote(1)).toBe('미리보기 · 시즌 2부터 경기에 반영');
-    expect(synergyNote(2)).toBe('경기에 반영 중');
+    expect(synergyNote(0)).toBe('프리시즌 경기에는 반영되지 않았어요');
+    expect(synergyNote(1)).toBe('경기에 반영돼요');
     expect(SYNERGY_TABLE.at(-1)).toEqual([
       '주발 맞춤',
       '풀백은 같은 쪽 발, 윙어는 반대쪽 발',

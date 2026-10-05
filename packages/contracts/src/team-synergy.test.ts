@@ -137,7 +137,6 @@ describe('T-11-105 줄 힘·시즌', () => {
   });
   it(`경기 반영은 시즌 ${SYNERGY_FROM_SEASON}부터`, () => {
     expect(synergyApplies(0)).toBe(false);
-    expect(synergyApplies(1)).toBe(false);
     expect(synergyApplies(SYNERGY_FROM_SEASON)).toBe(true);
   });
 });
