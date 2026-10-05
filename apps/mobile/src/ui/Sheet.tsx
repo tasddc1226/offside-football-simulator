@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { sheetLabel, type SheetView } from '@offside/app-core/sheets';
 import { appState, prefs, sheetState } from '../store';
-import { buzz, closeSheet } from '../game/host';
+import { buzz, dismissSheet } from '../game/host';
 import { useColors } from '../theme/useColors';
 import { SheetBody } from '../sheets/SheetBody';
 import { Btn } from './Btn';
@@ -17,7 +17,7 @@ export function Sheet() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const dismissible = !s.busy && !G?.pending;
-  const close = () => dismissible && closeSheet();
+  const close = () => dismissible && dismissSheet();
   return (
     <Modal
       visible={s.open}
