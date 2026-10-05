@@ -46,4 +46,7 @@ export const analytics = {
   retire: (s: Career) => adapter?.analytics.retire(s),
 };
 export const trackShareClick = () => adapter?.trackShareClick();
+/** T-11-092 App Store 링크를 누른 곳. */
+export type AppStorePlace = 'home' | 'sheet' | 'settings';
+export const trackAppStoreClick = (place: AppStorePlace) => adapter?.trackAppStoreClick(place);
 export const trackShareSuccess = () => adapter?.trackShareSuccess();

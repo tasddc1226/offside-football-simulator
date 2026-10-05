@@ -16,9 +16,13 @@
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { withRo } from '@offside/app-core/format';
-  import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL } from '@offside/app-core/links';
+  import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL, IOS_APP_STORE_URL } from '@offside/app-core/links';
+  import { APP_PROMO } from '@offside/app-core/appPromo';
+  import { trackAppStoreClick } from '../analytics/index.js';
+  import { appTarget } from './appStore.js';
 
   const live = $derived(!!appState.G && !appState.G.retired);
+  const appFor = appTarget();
 </script>
 
 <div class="wrap">
@@ -74,12 +78,20 @@
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
       <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted fs-sm">선택지별 성공 확률 보기 →</span>
     </button>
-    <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일, T-11-016 옆에 안드로이드 테스터 모집(구글 폼). -->
-    <a class="tile tile-link" data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
+    <!-- T-11-092 기기에 맞는 앱 안내: iPhone은 App Store, 안드로이드는 비공개 테스터 모집(T-11-016), PC는 둘 다. -->
+    {#if appFor !== 'android'}
+      <a class="tile tile-link" data-act="app-store" href={IOS_APP_STORE_URL} target="_blank" rel="noopener noreferrer" onclick={() => trackAppStoreClick('home')}>
+        <span class="eyebrow">{APP_PROMO.tile.eyebrow}</span><b>{APP_PROMO.tile.title}</b><span class="muted fs-sm">{APP_PROMO.tile.sub}</span>
+      </a>
+    {/if}
+    {#if appFor !== 'ios'}
+      <a class="tile tile-link" data-act="android-tester" href={ANDROID_TESTER_FORM_URL} target="_blank" rel="noopener noreferrer">
+        <span class="eyebrow">Android</span><b>테스터 모집 ↗</b><span class="muted fs-sm">안드로이드 앱 비공개 테스트 신청하기</span>
+      </a>
+    {/if}
+    <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. 앱 타일이 둘이면 한 줄을 다 쓴다. -->
+    <a class="tile tile-link" class:tile-wide={appFor === 'both'} data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
       <span class="eyebrow">Community</span><b>마이너 갤러리 ↗</b><span class="muted fs-sm">디시인사이드에서 커리어 자랑 · 공략 · 건의</span>
-    </a>
-    <a class="tile tile-link" data-act="android-tester" href={ANDROID_TESTER_FORM_URL} target="_blank" rel="noopener noreferrer">
-      <span class="eyebrow">Android</span><b>테스터 모집 ↗</b><span class="muted fs-sm">안드로이드 앱 비공개 테스트 신청하기</span>
     </a>
   </div>
   <HallOfFame />
