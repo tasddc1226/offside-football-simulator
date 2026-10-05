@@ -2,6 +2,7 @@
 // 경기별 기록이 함께 쓴다. muted: 중계에서 지난 줄은 옅게(웹 .ticker.live div:not(:first-child)), bold: 최신 줄.
 import { Text, View } from 'react-native';
 import { RES_LABEL, type TickerRow } from '@offside/app-core/sheets';
+import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
 import { Txt } from '../ui/Txt';
@@ -63,22 +64,22 @@ export function TickerLine({
           {'· '}
           {m.mins ? (
             <>
-              {`${m.mins}분`}
+              {sheetCoreText.tickerMins({ n: m.mins })}
               {m.g ? (
                 <>
                   {' · '}
-                  <Txt
-                    style={{ fontSize: rem(0.8125), fontWeight: '700', color: fg }}
-                  >{`${m.g}골`}</Txt>
+                  <Txt style={{ fontSize: rem(0.8125), fontWeight: '700', color: fg }}>
+                    {sheetCoreText.tickerGoals({ n: m.g })}
+                  </Txt>
                 </>
               ) : null}
-              {m.a ? ` · ${m.a}도움` : ''}
+              {m.a ? ` · ${sheetCoreText.tickerAssists({ n: m.a })}` : ''}
               {` · ${m.rating}`}
             </>
           ) : m.inj ? (
-            '부상 결장'
+            sheetCoreText.tickerInjured
           ) : (
-            '출전 없음'
+            sheetCoreText.tickerNone
           )}
         </Txt>
       </Txt>

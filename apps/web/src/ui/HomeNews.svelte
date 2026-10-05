@@ -4,6 +4,8 @@
   import { fetchPosts, type BoardKey, type PostSummary } from '@offside/app-core/api/boards';
   import { postMeta } from '@offside/app-core/boardText';
   import { openBoard } from './nav.js';
+  import { homeText as L } from '@offside/app-core/i18n/ko/home';
+  import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 
   let { board, eyebrow, title }: { board: BoardKey; eyebrow: string; title: string } = $props();
   const SHOWN = 3;
@@ -26,22 +28,22 @@
       <h2 style="margin-bottom:4px">{title}</h2>
     </div>
     {#if posts}
-      <button class="icon-btn" data-act="news-all" onclick={() => openBoard(board)}>전체 보기</button>
+      <button class="icon-btn" data-act="news-all" onclick={() => openBoard(board)}>{L.newsAll}</button>
     {/if}
   </div>
   {#if failed}
-    <p class="empty">소식을 불러오지 못했어요.</p>
+    <p class="empty">{L.newsFailed}</p>
   {:else if !posts}
-    <p class="empty">불러오는 중…</p>
+    <p class="empty">{S.loading}</p>
   {:else if !posts.length}
-    <p class="empty">아직 올라온 글이 없어요.</p>
+    <p class="empty">{L.newsEmpty}</p>
   {:else}
     <ul class="board-list">
       {#each posts.slice(0, SHOWN) as p (p.id)}
         <li>
           <button class="board-row" data-post-row={p.id} onclick={() => openBoard(board, p.id)}>
             <span class="row" style="gap:6px;flex-wrap:wrap">
-              {#if p.pinned}<span class="pill warn">고정</span>{/if}
+              {#if p.pinned}<span class="pill warn">{L.pinned}</span>{/if}
               {#if p.version}<span class="pill">{p.version}</span>{/if}
               <b>{p.title}</b>
             </span>

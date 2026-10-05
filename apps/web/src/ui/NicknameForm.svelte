@@ -7,6 +7,7 @@
   import { refreshChatIdentity } from './chat-state.svelte.js';
   import { toast } from './helpers.js';
   import { doneOnEnter } from './inputDone.js';
+  import { hofOwnText as L } from '@offside/app-core/i18n/ko/hofOwn';
 
   let { current = null, onsaved }: { current?: string | null; onsaved?: (nickname: string) => void } = $props();
   // 처음 값만 받아 오고 이후엔 사용자가 고친다.
@@ -24,7 +25,7 @@
     accountCache.fetchedAt = Date.now();
     value = r.data.nickname ?? value;
     refreshChatIdentity();
-    toast('닉네임을 정했어요');
+    toast(L.nickSaved);
     onsaved?.(value);
   }
 </script>
@@ -32,8 +33,8 @@
 <form class="nick-form" onsubmit={(e) => (e.preventDefault(), void save())}>
   <input
     type="text"
-    aria-label="댓글 닉네임"
-    placeholder="댓글 닉네임 (2~{COMMENT_NICKNAME_MAX}자)"
+    aria-label={L.nickLabel}
+    placeholder={L.nickPlaceholder({ max: COMMENT_NICKNAME_MAX })}
     minlength="2"
     maxlength={COMMENT_NICKNAME_MAX}
     required
@@ -45,6 +46,6 @@
     bind:value
   />
   <button class="btn" type="submit" data-act="save-nickname" disabled={busy || value.trim() === (current ?? '')}>
-    {current ? '바꾸기' : '정하기'}
+    {current ? L.nickChange : L.nickSet}
   </button>
 </form>

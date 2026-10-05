@@ -8,6 +8,7 @@ import { RN_SHIRT, RN_TRIM } from '@offside/app-core/rnStyle';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { cardFootNote, cardTier } from '@offside/app-core/format';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
@@ -342,7 +343,7 @@ export function PlayerCard({
           </Text>
           {!compact && country ? (
             <Text
-              accessibilityLabel={`국적 ${country.ko}`}
+              accessibilityLabel={L.nationAria({ name: country.ko })}
               maxFontSizeMultiplier={1.1}
               style={{ fontSize: 18, lineHeight: 18, marginTop: 2, includeFontPadding: false }}
             >
@@ -385,7 +386,7 @@ export function PlayerCard({
       </View>
       {compact && country ? (
         <Text
-          accessibilityLabel={`국적 ${country.ko}`}
+          accessibilityLabel={L.nationAria({ name: country.ko })}
           maxFontSizeMultiplier={1.1}
           style={{
             position: 'absolute',
@@ -422,7 +423,7 @@ export function PlayerCard({
               includeFontPadding: false,
             }}
           >
-            포지션 OVR
+            {L.posOvrLabel}
           </Text>
           <Text
             maxFontSizeMultiplier={1.1}

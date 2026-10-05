@@ -4,6 +4,7 @@ import { TeamLogo } from '../../components/TeamLogo';
 import type { OwnerTeam, TeamMatch } from '@offside/app-core/api/team';
 import { kstMonthDayTime } from '@offside/app-core/boardText';
 import { OUTCOME_TITLE, outcomeOf } from '@offside/app-core/teamOwner';
+import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 import { recordText, signedNum } from '@offside/app-core/teamText';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Txt } from '../../ui';
@@ -17,7 +18,7 @@ export function TeamResult({
   toTeam,
   replay,
   again,
-  backLabel = '내 팀',
+  backLabel = L.backDefaultApp,
 }: {
   m: TeamMatch;
   team: OwnerTeam | null;
@@ -55,7 +56,7 @@ export function TeamResult({
         </Txt>
         {friendly ? (
           <Txt v="sm" tone="accent" bold testID="team-friendly-label">
-            친선전
+            {L.kindFriendly}
           </Txt>
         ) : null}
       </View>
@@ -63,7 +64,7 @@ export function TeamResult({
         {side(m.home, false, m.mine === 'home')}
         <View
           accessible
-          accessibilityLabel={`${m.home.goals} 대 ${m.away.goals}`}
+          accessibilityLabel={L.scoreAria({ h: m.home.goals, a: m.away.goals })}
           style={{ flexDirection: 'row', gap: 8 }}
         >
           <Txt style={goalStyle}>{m.home.goals}</Txt>
@@ -96,21 +97,23 @@ export function TeamResult({
               <View style={{ alignItems: e.side === 'away' ? 'flex-end' : 'flex-start' }}>
                 <Txt bold>{eventName(e.scorerId, e.scorer)}</Txt>
                 {e.assist ? (
-                  <Txt tone="muted" v="xs">{`도움 ${eventName(e.assistId, e.assist)}`}</Txt>
+                  <Txt tone="muted" v="xs">
+                    {L.assist({ name: eventName(e.assistId, e.assist) })}
+                  </Txt>
                 ) : null}
               </View>
             </View>
           ))}
         </View>
       ) : (
-        <Txt tone="muted">골 없이 비겼어요.</Txt>
+        <Txt tone="muted">{L.noGoals}</Txt>
       )}
       <Txt tone="muted" v="sm">
-        {`${kstMonthDayTime(m.createdAt)}${team && !friendly && m.mine === 'home' ? ` · 내 팀 ${recordText(team.record)}` : ''}`}
+        {`${kstMonthDayTime(m.createdAt)}${team && !friendly && m.mine === 'home' ? L.resultRecord({ record: recordText(team.record) }) : ''}`}
       </Txt>
       {gain != null ? (
         <Txt v="sm" testID="rating-change">
-          {'내 팀 레이팅 '}
+          {L.ratingChange}
           <Txt v="sm" bold>
             {signedNum(gain)}
           </Txt>
@@ -121,7 +124,7 @@ export function TeamResult({
           {backLabel}
         </Btn>
         <Btn block onPress={replay} testID="team-replay">
-          중계 다시 보기
+          {L.replay}
         </Btn>
         <Btn
           block
@@ -130,7 +133,7 @@ export function TeamResult({
           disabled={!friendly && matchesLeft === 0}
           testID="team-again"
         >
-          다시 경기하기
+          {L.again}
         </Btn>
       </Grid2>
     </Card>

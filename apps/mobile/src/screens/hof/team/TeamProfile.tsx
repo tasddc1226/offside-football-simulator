@@ -18,6 +18,8 @@ import { NameReport } from '../../../components/NameReport';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
 import { friendRequestText } from '@offside/app-core/friendText';
+import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
+import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 import { toast } from '../../../game/host';
 import { DISPLAY, rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
@@ -90,7 +92,7 @@ export default function TeamProfile({ id }: { id: string }) {
     })) ?? [];
 
   return (
-    <LoadState status={status} failText="팀을 불러오지 못했어요." retry={() => void load()}>
+    <LoadState status={status} failText={L.profLoadFail} retry={() => void load()}>
       {team ? (
         <>
           <Card gap={10}>
@@ -114,16 +116,16 @@ export default function TeamProfile({ id }: { id: string }) {
                   {team.name}
                 </Txt>
                 <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                  {'감독 '}
+                  {L.profManager}
                   <Txt bold style={{ fontSize: rem(0.8125) }}>
                     {team.manager}
                   </Txt>
-                  {mine ? ' · 내 팀' : ''}
+                  {mine ? L.profMine : ''}
                 </Txt>
               </View>
               <View
                 accessible
-                accessibilityLabel={`팀 레이팅 ${team.rating}`}
+                accessibilityLabel={L.profRatingAria({ n: team.rating })}
                 style={{
                   minWidth: 76,
                   alignItems: 'center',
@@ -160,9 +162,9 @@ export default function TeamProfile({ id }: { id: string }) {
             <View style={{ flexDirection: 'row', gap: 6 }}>
               {(
                 [
-                  ['팀 OVR', String(team.ovr)],
-                  ['전적', recordText(team.record)],
-                  ['득실', `${team.goals.for} : ${team.goals.against}`],
+                  [L.profStatOvr, String(team.ovr)],
+                  [L.profStatRecord, recordText(team.record)],
+                  [L.profStatGoals, `${team.goals.for} : ${team.goals.against}`],
                 ] as const
               ).map(([dt, dd]) => (
                 <View
@@ -196,7 +198,7 @@ export default function TeamProfile({ id }: { id: string }) {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <Press
                 testID="team-like"
-                accessibilityLabel={`좋아요 ${team.likes}`}
+                accessibilityLabel={L.profLikeAria({ n: team.likes })}
                 accessibilityState={{ selected: liked, disabled: mine || liking || closed }}
                 disabled={mine || liking || closed}
                 onPress={() => void toggleLike()}
@@ -219,7 +221,7 @@ export default function TeamProfile({ id }: { id: string }) {
                 <Txt bold>{n(team.likes)}</Txt>
               </Press>
               <Txt tone="muted">
-                {'조회수 '}
+                {L.profViews}
                 <Txt bold tone="muted">
                   {n(team.views)}
                 </Txt>
@@ -239,12 +241,12 @@ export default function TeamProfile({ id }: { id: string }) {
               onPress={() => void askFriend()}
             >
               {friend === 'none'
-                ? '친구 신청'
+                ? LF.reqNone
                 : friend === 'sent'
-                  ? '신청 보냄'
+                  ? LF.reqSent
                   : friend === 'received'
-                    ? '친구 수락'
-                    : '친구'}
+                    ? LF.reqReceived
+                    : LF.reqAccepted}
             </Btn>
           ) : null}
 
@@ -252,7 +254,7 @@ export default function TeamProfile({ id }: { id: string }) {
             <View testID="team-history">
               <Txt v="eyebrow">Team history</Txt>
               <Txt v="h2" accessibilityRole="header">
-                팀 히스토리
+                {L.profHistoryTitle}
               </Txt>
             </View>
             {team.badges.length ? (
@@ -282,7 +284,7 @@ export default function TeamProfile({ id }: { id: string }) {
               />
             ) : (
               <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-                아직 기록이 없어요. 팀 경기와 시즌 순위 배지가 여기에 쌓여요.
+                {L.profHistoryEmpty}
               </Txt>
             )}
           </Card>

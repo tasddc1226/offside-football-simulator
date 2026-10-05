@@ -10,6 +10,7 @@
   import AdSlot from '../ads/AdSlot.svelte';
   import { motionOK } from './motion.js';
   import { rollCredits } from './creditRoll.js';
+  import { retiredText as L } from '@offside/app-core/i18n/ko/retired';
 
   const v = $derived(appState.legend);
   let root: HTMLDivElement;
@@ -47,7 +48,7 @@
       <svg viewBox="0 0 24 24" aria-hidden="true">
         {#if rolling}<path d="M8 6h3v12H8zM13 6h3v12h-3z" />{:else}<path d="M8 5.5v13l10.5-6.5z" />{/if}
       </svg>
-      {rolling ? '멈춤' : '커리어 재생'}
+      {rolling ? L.stop : L.play}
     </button>
   {/if}
 </div>

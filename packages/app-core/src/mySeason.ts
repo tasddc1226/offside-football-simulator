@@ -9,6 +9,7 @@ import {
   teamSeasonName,
 } from '@offside/contracts/service-seasons';
 import type { HofEntry } from '@offside/game/types';
+import { gameMySeasonText as L } from './i18n/ko/gameMySeason';
 
 /** 계정 목록 항목의 시즌. 값이 없거나(옛 응답) null(휴식기에 올라온 선수)이면 프리시즌으로 센다. */
 export const serverSeasonOf = (e: Pick<PublicHofEntry, 'season'>): number => e.season ?? 0;
@@ -35,8 +36,5 @@ export const myDefaultSeason = (now: string): number => displaySeasonAt(now);
 
 /** 고른 시즌에 선수가 없을 때의 안내 — 다른 시즌에 있으면 그 수를 알려 준다. */
 export function emptySeasonText(season: number, total: number): string {
-  const name = teamSeasonName(season);
-  return total > 0
-    ? `${name}에 은퇴한 선수가 아직 없어요. 다른 시즌 선수 ${total}명은 위 시즌 탭에서 볼 수 있어요.`
-    : '아직 은퇴한 선수가 없어요. 커리어를 은퇴까지 마치면 여기에 올라와요.';
+  return total > 0 ? L.emptyOther({ name: teamSeasonName(season), total }) : L.emptyNone;
 }

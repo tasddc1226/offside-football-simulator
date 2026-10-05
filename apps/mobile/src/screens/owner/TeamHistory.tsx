@@ -3,7 +3,8 @@ import { View } from 'react-native';
 import { TeamLogo } from '../../components/TeamLogo';
 import type { TeamMatch } from '@offside/app-core/api/team';
 import { kstMonthDayTime } from '@offside/app-core/boardText';
-import { outcomeOf } from '@offside/app-core/teamOwner';
+import { outcomeLabel, outcomeOf } from '@offside/app-core/teamOwner';
+import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { useColors } from '../../theme/useColors';
 import { Card, Press, Txt } from '../../ui';
@@ -39,14 +40,14 @@ export function MatchRow({ m, open }: { m: TeamMatch; open: (m: TeamMatch) => vo
         }}
       >
         <Txt bold style={{ color: out === '승' ? c.good : out === '패' ? c.bad : c.ink }}>
-          {out}
+          {outcomeLabel(out)}
         </Txt>
       </View>
       <TeamLogo logo={opp.logo} name={opp.name} size={28} decorative />
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <Txt bold>{`${m[m.mine].goals} : ${opp.goals} ${opp.name}`}</Txt>
         <Txt tone="muted" v="sm">
-          {`${m.friendly ? '친선전' : m.mine === 'home' ? '도전' : '도전받음'} · ${opp.owner} · ${kstMonthDayTime(m.createdAt)}`}
+          {`${m.friendly ? L.kindFriendly : m.mine === 'home' ? L.kindChallenge : L.kindChallenged} · ${opp.owner} · ${kstMonthDayTime(m.createdAt)}`}
         </Txt>
       </View>
     </Press>
@@ -69,14 +70,14 @@ export function TeamHistory({
       <View>
         <Txt v="eyebrow">Matches</Txt>
         <Txt v="h1" accessibilityRole="header">
-          최근 경기
+          {L.historyTitle}
         </Txt>
       </View>
-      <LoadState status={status} failText="경기 기록을 불러오지 못했어요." retry={reload}>
+      <LoadState status={status} failText={L.historyFail} retry={reload}>
         {history.length ? (
           history.map((m) => <MatchRow key={m.id} m={m} open={open} />)
         ) : (
-          <Txt tone="muted">아직 치른 경기가 없어요.</Txt>
+          <Txt tone="muted">{L.historyEmpty}</Txt>
         )}
       </LoadState>
     </Card>

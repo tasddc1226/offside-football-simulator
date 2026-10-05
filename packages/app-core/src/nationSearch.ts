@@ -2,6 +2,7 @@
 // 연맹별로 묶어 가나다순, 대한민국은 맨 위. 검색은 한글·초성으로 찾는다(koSearch).
 import { CONFEDS, CONF_ORDER, DEFAULT_NATION, NATIONS } from '@offside/contracts/nations';
 import { KR, type Nation } from '@offside/game/nation';
+import { createText as L } from './i18n/ko/create.js';
 import { koMatchAt } from './koSearch.js';
 
 export interface NationGroup {
@@ -14,7 +15,14 @@ export interface NationGroup {
 const byKo = new Intl.Collator('ko').compare;
 
 export const NATION_GROUPS: NationGroup[] = [
-  { key: 'KR', label: '기본', data: [KR] },
+  {
+    key: 'KR',
+    // 모듈이 불릴 때가 아니라 읽을 때 지금 언어로(언어 등록 전에 굳지 않게).
+    get label() {
+      return L.groupBase;
+    },
+    data: [KR],
+  },
   ...CONF_ORDER.map((conf) => ({
     key: conf,
     label: `${CONFEDS[conf].region} (${conf})`,
@@ -31,6 +39,6 @@ export function nationGroups(query: string | null): NationGroup[] {
     .filter((h) => h.at >= 0)
     .sort((a, b) => a.at - b.at || byKo(a.n.ko, b.n.ko));
   return hits.length
-    ? [{ key: 'hits', label: `검색 결과 ${hits.length}`, data: hits.map((h) => h.n) }]
+    ? [{ key: 'hits', label: L.groupHits({ n: hits.length }), data: hits.map((h) => h.n) }]
     : [];
 }

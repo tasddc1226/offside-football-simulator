@@ -17,6 +17,7 @@ import { ClubMark } from '../ui/ClubBadge';
 import { Txt } from '../ui/Txt';
 import { MEDAL_GLOW, MEDAL_NAMES, RankBadge } from './Laurel';
 import { TitleTag } from './TitleTag';
+import { hofText as L } from '@offside/app-core/i18n/ko/hof';
 
 export type RowStats = Pick<
   PublicHofEntry,
@@ -269,8 +270,7 @@ export function HofRow({
     : undefined;
   const tt = titleById(titleId);
   const stats = useMemo(
-    () =>
-      `${t.apps}경기 ${t.goals}골 ${t.assists}도움 · 트로피 ${t.trophies} · 최고 OVR ${t.peak}${t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}${showScore ? ` · 레전드 ${t.score}` : ''}`,
+    () => L.rowStats({ ...t, score: showScore ? t.score : null }),
     [t, showScore],
   );
   return (
@@ -317,7 +317,7 @@ export function HofRow({
             ) : null}
             {rn != null ? (
               <View
-                accessibilityLabel={`영구결번 ${rn}번`}
+                accessibilityLabel={L.rnChipTitle({ number: rn })}
                 testID="rn-chip"
                 style={{
                   flexDirection: 'row',
@@ -331,7 +331,7 @@ export function HofRow({
                 }}
               >
                 <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: c.muted }}>
-                  {`👑 영결 ${rn}`}
+                  {L.rnChip({ number: rn })}
                 </Txt>
               </View>
             ) : null}
@@ -343,9 +343,9 @@ export function HofRow({
         {plain ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingTop: 3 }}>
             {[
-              `${t.apps.toLocaleString('ko-KR')}경기`,
-              `${t.goals.toLocaleString('ko-KR')}골`,
-              `${t.assists.toLocaleString('ko-KR')}도움`,
+              L.appsN({ n: t.apps.toLocaleString('ko-KR') }),
+              L.goalsN({ n: t.goals.toLocaleString('ko-KR') }),
+              L.assistsN({ n: t.assists.toLocaleString('ko-KR') }),
             ].map((text) => (
               <Txt key={text} tone="muted" style={{ fontSize: 12 }}>
                 {text}

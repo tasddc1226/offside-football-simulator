@@ -8,6 +8,7 @@
   import { openPublicLegendById } from './legend.js';
   import { RN_SHIRT, RN_TRIM, rnStyle } from '@offside/app-core/rnStyle';
   import { dur } from './motion.js';
+  import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
 
   const SHOW_MS = 9_000;
   const item = $derived(rnAlert.item);
@@ -45,11 +46,11 @@
         <text class="rn-jersey-num" x="60" y="92">{item.number}</text>
       </svg>
       <span class="news-text">
-        <b>👑 {item.name}, {item.number}번 영구결번</b>
-        <small>{defaultClubName(item.clubId) ?? item.club} · 서버 {item.seq}번째 결번</small>
+        <b>{L.alertTitle({ name: item.name, number: item.number })}</b>
+        <small>{L.alertSub({ club: defaultClubName(item.clubId) ?? item.club, seq: item.seq })}</small>
       </span>
-      <button class="btn btn-accent btn-sm" data-act="rn-alert-open" onclick={open}>보기</button>
-      <button class="news-close" aria-label="알림 닫기" data-act="rn-alert-close" onclick={close}>✕</button>
+      <button class="btn btn-accent btn-sm" data-act="rn-alert-open" onclick={open}>{L.alertOpen}</button>
+      <button class="news-close" aria-label={L.alertClose} data-act="rn-alert-close" onclick={close}>✕</button>
     </div>
   {/key}
 {/if}

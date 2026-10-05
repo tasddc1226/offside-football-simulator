@@ -2,6 +2,7 @@
 // (delay: 구간 리포트가 앞 요소가 나온 뒤로 늦춰 준다).
 import { View } from 'react-native';
 import type { TitleView } from '@offside/game/titles';
+import { titleText as L } from '@offside/app-core/i18n/ko/title';
 import { TitleTag } from '../../components/TitleTag';
 import { Txt } from '../../ui/Txt';
 
@@ -18,7 +19,7 @@ export function NewTitles({
   return (
     <View testID="new-titles">
       <Txt v="eyebrow" style={{ marginBottom: 6 }}>
-        새 칭호
+        {L.newTitles}
       </Txt>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {titles.map((x, i) => (

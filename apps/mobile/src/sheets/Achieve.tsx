@@ -3,6 +3,7 @@
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
+import { sheetAchieveText as L } from '@offside/app-core/i18n/ko/sheetAchieve';
 import { num as n } from '@offside/app-core/teamText';
 import { useColors } from '../theme/useColors';
 import { rem } from '../theme/type';
@@ -29,7 +30,7 @@ export function Achieve({ v }: { v: Extract<SheetView, { kind: 'achieve' }> }) {
         {s.from ? (
           <View
             accessible
-            accessibilityLabel={`${s.from.name}에서 ${s.grade.name}로`}
+            accessibilityLabel={L.fromTo({ from: s.from.name, to: s.grade.name })}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
           >
             <GradeEmblem id={s.from.id} size={20} />
@@ -72,14 +73,16 @@ export function Achieve({ v }: { v: Extract<SheetView, { kind: 'achieve' }> }) {
             }}
           >
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-              외 {s.more}개
+              {L.more({ n: s.more })}
             </Txt>
           </View>
         ) : null}
       </View>
       <Txt tone="muted" style={{ fontSize: rem(0.8125), textAlign: 'center', marginTop: 8 }}>
-        <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>+{n(s.gained)}점</Txt>
-        {` · 지금 ${n(s.score)}점${s.next ? ` · ${s.next}` : ''}`}
+        <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
+          {L.gainedPts({ n: n(s.gained) })}
+        </Txt>
+        {` · ${L.nowPts({ n: n(s.score) })}${s.next ? ` · ${s.next}` : ''}`}
       </Txt>
     </>
   );

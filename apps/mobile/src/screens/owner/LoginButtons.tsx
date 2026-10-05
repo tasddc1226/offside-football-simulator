@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
 import { Btn } from '../../ui';
 import { AppleLoginButton, useAppleLogin } from '../../ui/AppleLoginButton';
+import { accountText as L } from '@offside/app-core/i18n/ko/account';
 
 export function LoginButtons({ block = true }: { block?: boolean }) {
   const apple = useAppleLogin();
@@ -13,10 +14,10 @@ export function LoginButtons({ block = true }: { block?: boolean }) {
         kind="primary"
         block={block}
         testID="google-login"
-        accessibilityLabel="구글로 로그인"
+        accessibilityLabel={L.loginGoogle}
         onPress={() => void startGoogleLogin(null)}
       >
-        구글로 로그인
+        {L.loginGoogle}
       </Btn>
       {apple ? (
         <AppleLoginButton testID="apple-login" onPress={() => void startAppleLogin(null)} />

@@ -23,6 +23,7 @@ import { watchNews } from './ui/news.svelte.js';
 import { warmGame } from './ui/nav.js';
 import { initHistory } from './ui/history.svelte.js';
 import { installSheetKey } from './ui/skin.svelte.js';
+import { applyLocale, bootLocale } from './ui/locale.js';
 
 installClickSound();
 // 자동 플레이 탐지(관찰 전용): 시즌마다 조작 횟수만 센다.
@@ -45,21 +46,28 @@ installSheetKey();
 // T-10-121 iOS Safari·Chrome은 문서에 touchstart 리스너가 없으면 터치로 :active(누름 효과)를 걸지 않는다.
 document.addEventListener('touchstart', () => {}, { passive: true });
 
-// T-10-041: index.html의 첫 화면은 빌드 때 넣은 App 서버 렌더 결과다(scripts/app-shell.mjs). 지우고 다시
-// 그리지 않고 hydrate로 이어받아야 첫 페인트의 제목이 LCP로 남는다. 셸이 없거나(app-shell.html) 상태가 달라도
-// Svelte가 비우고 새로 그리거나 다른 갈래만 바꿔 복구한다.
-hydrate(App, { target: document.getElementById('app')! });
+function render() {
+  // T-10-041: index.html의 첫 화면은 빌드 때 넣은 App 서버 렌더 결과다(scripts/app-shell.mjs). 지우고 다시
+  // 그리지 않고 hydrate로 이어받아야 첫 페인트의 제목이 LCP로 남는다. 셸이 없거나(app-shell.html) 상태가 달라도
+  // Svelte가 비우고 새로 그리거나 다른 갈래만 바꿔 복구한다.
+  hydrate(App, { target: document.getElementById('app')! });
 
-// index.html의 정적 `<div id="modal" ...><div class="sheet" id="sheet">...</div></div>`는 SEO
-// 프리렌더 스크립트가 `#app` 뒤에 이어지는 `#modal`을 찾는 정규식 대상일 뿐, 실제 시트 마크업은
-// Sheet.svelte가 다시 그린다 — 마운트 전 자리표시자 자식을 비워 중복 id="sheet"를 막는다.
-const modalEl = document.getElementById('modal')!;
-modalEl.innerHTML = '';
-mount(Sheet, { target: modalEl });
+  // index.html의 정적 `<div id="modal" ...><div class="sheet" id="sheet">...</div></div>`는 SEO
+  // 프리렌더 스크립트가 `#app` 뒤에 이어지는 `#modal`을 찾는 정규식 대상일 뿐, 실제 시트 마크업은
+  // Sheet.svelte가 다시 그린다 — 마운트 전 자리표시자 자식을 비워 중복 id="sheet"를 막는다.
+  const modalEl = document.getElementById('modal')!;
+  modalEl.innerHTML = '';
+  mount(Sheet, { target: modalEl });
 
-mount(Toast, { target: document.getElementById('toast')! });
-// T-11-022 업무 모드 틀(꺼져 있으면 아무것도 그리지 않는다).
-mount(SheetChrome, { target: document.body.appendChild(document.createElement('div')) });
+  mount(Toast, { target: document.getElementById('toast')! });
+  // T-11-022 업무 모드 틀(꺼져 있으면 아무것도 그리지 않는다).
+  mount(SheetChrome, { target: document.body.appendChild(document.createElement('div')) });
+}
+
+// T-11-102 한국어는 바로 그린다(셸 hydrate·LCP 그대로). 영어는 사전을 받은 뒤 그린다.
+const locale = bootLocale();
+if (locale === 'ko') render();
+else void applyLocale(locale).finally(render);
 
 // T-10-010: 클럽 커스텀을 계정과 맞춘다. 세션이 있었던 기기만 — 첫 방문자는 로컬 모드 그대로다(T-10-037).
 if (hasSessionHint())

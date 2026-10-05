@@ -9,6 +9,7 @@ import { Animated, Easing, Pressable, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { markerAt, MG_TAP, SWEEP_MS } from '@offside/game/minigame';
 import type { SheetView } from '@offside/app-core/sheets';
+import { sheetMinigameText as L } from '@offside/app-core/i18n/ko/sheetMinigame';
 import { alpha } from '../theme/colors';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
@@ -163,10 +164,10 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
   const goal = stage === 2 && s.ok === (s.mg !== 'save');
   const caption = ((): string => {
     if (s.ok === null) return '';
-    if (late) return '시간 초과!';
-    if (s.mg === 'save') return s.ok ? '선방!' : '실점…';
-    if (s.ok) return '골!';
-    return s.mg === 'shot' ? '크로스바!' : s.mg === 'dribble' ? '너무 길었다!' : '막혔다!';
+    if (late) return L.late;
+    if (s.mg === 'save') return s.ok ? L.saveOk : L.saveFail;
+    if (s.ok) return L.goal;
+    return s.mg === 'shot' ? L.crossbar : s.mg === 'dribble' ? L.tooLong : L.blocked;
   })();
   /**
    * 제치기: 뒤쫓아 온 수비수 둘이 양옆에서 좁혀 온다. 탭하면 공 쪽으로 몸을 날리지만(슬라이딩) 이미 늦었다 —
@@ -183,10 +184,10 @@ export function Minigame({ v }: { v: Extract<SheetView, { kind: 'minigame' }> })
     ];
   })();
 
-  const label = `${MG_TAP[s.mg]}. 바늘이 초록 구간에 올 때 누르세요`;
+  const label = L.mgA11y({ tap: MG_TAP[s.mg] });
   return (
     <>
-      <Txt v="eyebrow">원터치 · 초록 구간에서 멈추세요</Txt>
+      <Txt v="eyebrow">{L.mgEyebrow}</Txt>
       <Txt v="h2" accessibilityRole="header">
         {s.label}
       </Txt>

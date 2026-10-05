@@ -6,6 +6,7 @@
   import { accountCache, refreshAccount } from './account-state.svelte.js';
   import { isMember } from '@offside/app-core/account';
   import { startGoogleLogin } from './login.js';
+  import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
   const { id }: { id: string } = $props();
   const profile = $derived(accountCache.value);
@@ -17,10 +18,10 @@
 
 {#if profile && profile !== 'error' && !isMember(profile)}
   <section class="card stack" data-share="login">
-    <div><div class="eyebrow">Account</div><h2>로그인하고 기록 지키기</h2></div>
+    <div><div class="eyebrow">Account</div><h2>{shellMoreText.keepLoginTitle}</h2></div>
     <p class="muted fs-sm">
-      로그인하면 은퇴 기록을 다른 기기에서도 볼 수 있어요. 공유 링크는 로그인 없이 만들어요.
+      {shellMoreText.keepLoginBody}
     </p>
-    <button class="btn btn-block" data-act="share-login" onclick={() => startGoogleLogin({ career: id })}>구글로 로그인</button>
+    <button class="btn btn-block" data-act="share-login" onclick={() => startGoogleLogin({ career: id })}>{shellMoreText.keepLoginGoogle}</button>
   </section>
 {/if}

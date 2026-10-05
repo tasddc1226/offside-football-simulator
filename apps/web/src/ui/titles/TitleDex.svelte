@@ -5,6 +5,7 @@
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
   import TitleTag from './TitleTag.svelte';
+  import { titleText as L } from '@offside/app-core/i18n/ko/title';
 
   const { s }: { s: GameState } = $props();
   const earned = $derived(
@@ -32,32 +33,32 @@
   <div class="row" style="justify-content:space-between;align-items:baseline">
     <div>
       <div class="eyebrow">Titles</div>
-      <h2>칭호 도감</h2>
+      <h2>{L.dexTitle}</h2>
     </div>
     <span class="muted num fs-sm">{earned.length} / {pool.length}</span>
   </div>
   {#if main}
-    <p class="title-main">대표 칭호 <TitleTag name={main.name} rarity={main.rarity} /> <span class="muted">{s.titleSel ? '직접 고름' : '자동'}</span></p>
+    <p class="title-main">{L.mainTitle} <TitleTag name={main.name} rarity={main.rarity} /> <span class="muted">{s.titleSel ? L.selManual : L.selAuto}</span></p>
   {/if}
   {#if earned.length}
-    <p class="muted fs-xs">칭호를 누르면 대표 칭호로 정해져 선수 카드와 명예의 전당에 표시돼요.</p>
+    <p class="muted fs-xs">{L.pickHint}</p>
     <ul class="title-list">
       {#each earned as x (x.d.id)}
         <li>
           <button class="title-item" data-title={x.d.id} aria-pressed={main?.id === x.d.id} onclick={() => pick(x.d.id)}>
             <TitleTag name={x.d.name} rarity={x.d.rarity} />
             <span class="title-desc">{x.d.desc}</span>
-            <span class="title-year num">{x.year ? x.year : '이전 기록'}</span>
+            <span class="title-year num">{x.year ? x.year : L.earlier}</span>
           </button>
         </li>
       {/each}
     </ul>
   {:else}
-    <p class="empty">아직 얻은 칭호가 없어요. 프로 데뷔가 첫 번째 칭호예요.</p>
+    <p class="empty">{L.emptyEarned}</p>
   {/if}
   {#if locked.length}
     <details class="title-locked">
-      <summary>아직 얻지 못한 칭호 {pool.length - earned.length}개</summary>
+      <summary>{L.lockedSummary({ n: pool.length - earned.length })}</summary>
       {#each locked as c (c.id)}
         <div class="eyebrow" style="margin:12px 0 4px">{c.label}</div>
         <ul class="title-list compact">
@@ -65,10 +66,10 @@
             {@const p = d.progress?.(s)}
             <li class="title-item locked" data-title-locked={d.id}>
               <span class="title-name">{d.hidden ? '???' : d.name}</span>
-              <span class="title-desc">{d.hidden ? '숨겨진 칭호' : d.desc} · {RARITY_LABEL[d.rarity]}</span>
+              <span class="title-desc">{d.hidden ? L.hiddenDesc : d.desc} · {RARITY_LABEL[d.rarity]}</span>
               {#if p && !d.hidden}
                 <span class="title-year num">{p[0]}/{p[1]}</span>
-                <span class="title-prog" role="progressbar" aria-label="{d.name} 진행도" aria-valuemin={0} aria-valuemax={p[1]} aria-valuenow={p[0]}
+                <span class="title-prog" role="progressbar" aria-label={L.progressLabel({ name: d.name })} aria-valuemin={0} aria-valuemax={p[1]} aria-valuenow={p[0]}
                   ><i style="width:{Math.round((p[0] / p[1]) * 100)}%"></i></span
                 >
               {/if}

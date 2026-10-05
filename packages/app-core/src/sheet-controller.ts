@@ -10,6 +10,7 @@ import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
 import { FLIGHT_MS, FLIGHT_STILL_MS } from './flight-time.js';
 import type { SheetButton, SheetView, TickerRow } from './sheets.js';
+import { shellText as L } from './i18n/ko/shell.js';
 
 type ViewOf<K extends SheetView['kind']> = Extract<SheetView, { kind: K }>;
 
@@ -81,7 +82,7 @@ export function matchRows(s: GameState, b: BlockResult): TickerRow[] {
     key: i,
     rd: m.rd,
     res: m.res,
-    opp: opps.length ? opps[m.rd % opps.length]!.name : '상대 팀',
+    opp: opps.length ? opps[m.rd % opps.length]!.name : L.opponent,
     score: fakeScore(m),
     mins: m.mins,
     g: m.g,
@@ -200,7 +201,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
         // 확인을 누를 때까지 busy로 두어 배경 클릭·스와이프로 닫히지 않게 한다.
         state.buttons = [
           {
-            label: '확인',
+            label: L.confirm,
             cls: 'btn-primary',
             fn: () => {
               state.busy = false;
@@ -217,7 +218,7 @@ export function createSheetController(state: SheetState, ui: SheetUi) {
         back: head.back,
         progress: 0,
         fill: step,
-        round: '킥오프',
+        round: L.kickoff,
         wdl: { w: 0, d: 0, l: 0 },
         tally: { apps: 0, g: 0, a: 0, cs: 0, rating: '-' },
         ticker: [],

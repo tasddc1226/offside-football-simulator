@@ -10,6 +10,7 @@ import {
   type TeamRankSort,
 } from '@offside/app-core/api/team';
 import { num as n } from '@offside/app-core/teamText';
+import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 import { appState } from '../../../store';
 import { rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
@@ -27,9 +28,9 @@ import { RecordsSelect, RecordsChips } from '../RecordsControls';
 import TeamProfile from './TeamProfile';
 import { TeamLogo } from '../../../components/TeamLogo';
 
-const SORTS: [TeamRankSort, string][] = [
-  ['rating', '레이팅'],
-  ['ovr', '팀 OVR'],
+const sorts = (): [TeamRankSort, string][] => [
+  ['rating', L.sortRating],
+  ['ovr', L.sortOvr],
 ];
 
 export default function TeamRanking() {
@@ -83,7 +84,7 @@ export default function TeamRanking() {
         style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 10 }}
       >
         <RecordsSelect
-          label="시즌"
+          label={L.seasonLabel}
           testID="rank-season-select"
           value={season ?? data?.season ?? displaySeasonAt(new Date().toISOString())}
           options={
@@ -98,33 +99,32 @@ export default function TeamRanking() {
             setPage(1);
           }}
         />
-        <Txt
-          tone="muted"
-          style={{ flex: 1, textAlign: 'right', fontSize: 12, paddingBottom: 10 }}
-        >{`팀 ${n(data?.total ?? 0)}개`}</Txt>
+        <Txt tone="muted" style={{ flex: 1, textAlign: 'right', fontSize: 12, paddingBottom: 10 }}>
+          {L.teamsApp({ n: n(data?.total ?? 0) })}
+        </Txt>
       </View>
       <RecordsChips
-        label="순위 유형"
+        label={L.sortGroupAria}
         testIDPrefix="rank-sort"
         value={sort}
-        items={SORTS.map(([key, label]) => ({ key, label }))}
+        items={sorts().map(([key, label]) => ({ key, label }))}
         onPick={(key) => {
           setSort(key as TeamRankSort);
           setPage(1);
         }}
       />
       <Txt tone="muted" style={{ fontSize: 12, marginVertical: 8 }}>
-        최근 5경기 · 왼쪽이 최신 경기예요.
+        {L.formGuide}
       </Txt>
       {failed ? (
-        empty('랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+        empty(L.rankFail)
       ) : loading || !data ? (
         <Txt
           tone="muted"
           accessibilityLiveRegion="polite"
           style={{ fontSize: rem(0.875), paddingVertical: 8 }}
         >
-          불러오는 중…
+          {L.loading}
         </Txt>
       ) : data.items.length ? (
         <>
@@ -139,9 +139,9 @@ export default function TeamRanking() {
             accessibilityElementsHidden
           >
             <Txt tone="muted" style={{ flex: 1, fontSize: 12 }}>
-              팀
+              {L.colTeam}
             </Txt>
-            {['경기', '승', '무', '패'].map((label, i) => (
+            {[L.colPlayed, L.colWin, L.colDraw, L.colLoss].map((label, i) => (
               <Txt
                 key={label}
                 tone="muted"
@@ -152,7 +152,7 @@ export default function TeamRanking() {
               </Txt>
             ))}
             <Txt bold center style={{ width: 48, fontSize: 12 }}>
-              {sort === 'rating' ? '레이팅' : 'OVR'}
+              {sort === 'rating' ? L.sortRating : L.colOvrApp}
             </Txt>
           </View>
           {data.items.map((t) => (
@@ -161,7 +161,21 @@ export default function TeamRanking() {
               scale={1}
               testID={`rank-team-${t.teamId}`}
               onPress={() => open(t.teamId)}
-              accessibilityLabel={`${t.rank}위 ${t.name}, ${t.record.w + t.record.d + t.record.l}경기 ${t.record.w}승 ${t.record.d}무 ${t.record.l}패, ${sort === 'rating' ? `레이팅 ${t.rating}` : `팀 OVR ${t.ovr}`}, 최근 경기부터 ${t.recentForm.length ? t.recentForm.map((r) => ({ W: '승리', D: '무승부', L: '패배' })[r]).join(', ') : '경기 기록 없음'}, 팀 상세 보기`}
+              accessibilityLabel={L.teamRowAria({
+                rank: t.rank,
+                name: t.name,
+                played: String(t.record.w + t.record.d + t.record.l),
+                w: String(t.record.w),
+                d: String(t.record.d),
+                l: String(t.record.l),
+                metric: sort === 'rating' ? L.sortRating : L.sortOvr,
+                value: String(sort === 'rating' ? t.rating : t.ovr),
+                form: t.recentForm.length
+                  ? t.recentForm
+                      .map((r) => ({ W: L.formWin, D: L.formDraw, L: L.formLoss })[r])
+                      .join(', ')
+                  : L.formNone,
+              })}
               style={{
                 paddingVertical: 10,
                 borderBottomWidth: 1,
@@ -236,7 +250,7 @@ export default function TeamRanking() {
           ))}
           {pages > 1 ? (
             <View
-              accessibilityLabel="랭킹 페이지"
+              accessibilityLabel={L.pagerAria}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -248,7 +262,7 @@ export default function TeamRanking() {
               }}
             >
               <Btn sm testID="rank-page-prev" disabled={page <= 1} onPress={() => goPage(page - 1)}>
-                ← 이전
+                {L.prev}
               </Btn>
               <Txt num accessibilityLiveRegion="polite" style={{ fontWeight: '700' }}>
                 {`${page} / ${pages}`}
@@ -259,18 +273,16 @@ export default function TeamRanking() {
                 disabled={page >= pages}
                 onPress={() => goPage(page + 1)}
               >
-                다음 →
+                {L.next}
               </Btn>
             </View>
           ) : null}
         </>
       ) : (
-        empty(
-          '아직 랭킹에 오른 팀이 없어요. 구단주 화면에서 은퇴한 선수로 팀을 꾸리면 여기에 올라요.',
-        )
+        empty(L.teamsEmpty)
       )}
       <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 10 }}>
-        레이팅은 팀 경기 결과로 오르내려요. 랭킹은 5분마다 갱신돼요.
+        {L.teamsFoot}
       </Txt>
     </Card>
   );

@@ -23,6 +23,7 @@
   import { marketValue } from '@offside/game/season';
   import { fmtValue } from '@offside/app-core/format';
   import { seasonAction } from '@offside/app-core/seasonAction';
+  import { gameText as T } from '@offside/app-core/i18n/ko/game';
 
   // T-10-104: 이벤트·결산·이적시장 시트 본문도 게임 청크다 — 첫 시트가 뜨기 전에 미리 받아 둔다.
   void loadGameSheets().catch(() => {});
@@ -35,7 +36,7 @@
   const role = $derived(roleOf(s));
   // T-10-100 연봉 옆에 몸값(이적료 기준)을 같이 둔다 — 연봉을 몸값으로 읽지 않게.
   const contract = $derived(
-    [s.contract ? `연봉 ${fmtMoney(s.contract.salary)}` : L.amateur ? '아마추어' : '', L.amateur ? '' : `몸값 ${fmtValue(marketValue(s))}`]
+    [s.contract ? T.salary({ v: fmtMoney(s.contract.salary) }) : L.amateur ? T.amateur : '', L.amateur ? '' : T.value({ v: fmtValue(marketValue(s)) })]
       .filter(Boolean)
       .join(' · '),
   );
@@ -45,13 +46,13 @@
     appState.tab = 'trophy';
     requestAnimationFrame(() => document.getElementById('titles')?.scrollIntoView({ block: 'start' }));
   }
-  const focusName = $derived(`주력 ${focusOf(s).map((k) => labelOf(s, k)).join('·')}`);
+  const focusName = $derived(T.focus({ names: focusOf(s).map((k) => labelOf(s, k)).join('·') }));
 
-  const tabs: [Tab, string][] = [
-    ['season', '시즌'],
-    ['player', '선수'],
-    ['career', '커리어'],
-    ['trophy', '트로피'],
+  const tabs = (): [Tab, string][] => [
+    ['season', T.tabSeason],
+    ['player', T.tabPlayer],
+    ['career', T.tabCareer],
+    ['trophy', T.tabTrophy],
   ];
 
   // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
@@ -93,14 +94,14 @@
     <div class="chalk"></div>
     <div>
       <div class="shirt">No.{s.number} · {posLabel(s)}</div>
-      {#if title}<button class="card-title r{title.rarity}" data-act="titles" aria-label="대표 칭호 {title.name}, 칭호 도감 열기" onclick={openTitles}>{title.name}</button>{/if}
+      {#if title}<button class="card-title r{title.rarity}" data-act="titles" aria-label={T.titleOpen({ name: title.name })} onclick={openTitles}>{title.name}</button>{/if}
       <h1>{s.name}</h1>
-      <div class="meta">{s.age}세 · <ClubBadge club={s.club} size={16} /> {s.club.name}<br />{L.name}{contract ? ` · ${contract}` : ''}</div>
+      <div class="meta">{T.age({ n: s.age })} · <ClubBadge club={s.club} size={16} /> {s.club.name}<br />{L.name}{contract ? ` · ${contract}` : ''}</div>
     </div>
     <div class="ovr"><div class="n num">{Math.round(ovrTween.current)}</div><div class="l">OVR</div></div>
     <div class="foot">
       <span class="pill role-{role}">{role}</span>
-      {#if s.injury}<span class="pill" style="background:var(--bad);border-color:var(--bad)">부상 {s.injury}경기</span>{/if}
+      {#if s.injury}<span class="pill" style="background:var(--bad);border-color:var(--bad)">{T.injury({ n: s.injury })}</span>{/if}
       <span class="pill">{focusName}</span>
     </div>
   </section>
@@ -128,7 +129,7 @@
   <div class="action-bar season-bar" transition:fly={{ y: 20, duration: dur(180) }}>
     <div class="action-bar-inner">
       {#if act.kind === 'advance'}
-        <button class="season-prep" data-act="prep" aria-label="다음 구간 준비 보기: {act.prep}" onclick={openPrep}>{act.prep}</button>
+        <button class="season-prep" data-act="prep" aria-label={T.prepOpen({ prep: act.prep })} onclick={openPrep}>{act.prep}</button>
       {/if}
       <button class="btn btn-block {act.kind === 'pending' ? 'btn-accent' : 'btn-primary'}" data-act={act.kind === 'pending' ? 'resume' : 'advance'} data-tour="go" onclick={onAct}>
         {act.label} →
@@ -140,16 +141,16 @@
      (.tabs-inner는 display: contents라 탭들이 .tabs 그리드에 그대로 들어간다). -->
 <!-- T-11-031 메인 메뉴와 구분되게 위쪽 강조선(sub-nav)·가운데 나가기 버튼 둥근 바탕을 두고, 처음 볼 때 한 번 말풍선으로 알린다.
      --i는 메뉴가 올라오는 순서(왼쪽부터 화면 순서). -->
-<nav class="tabs sub-nav" aria-label="게임 메뉴">
+<nav class="tabs sub-nav" aria-label={T.menuLabel}>
   <div class="tabs-inner" role="tablist">
-    {#each tabs as [k, l], i (k)}
+    {#each tabs() as [k, l], i (k)}
       <button role="tab" data-tab={k} aria-selected={appState.tab === k} style:--i={i < 2 ? i : i + 1} onclick={() => switchTab(k)}>
         <TabIcon name={k} />{l}
       </button>
     {/each}
   </div>
   <button class="tab-home" data-act="home" style:--i={2} onclick={goHome}>
-    <TabIcon name="home" />홈
+    <TabIcon name="home" />{T.tabHome}
   </button>
   <NavIntro kind="game" />
 </nav>

@@ -4,6 +4,7 @@
 import { LAST_PHASE } from '@offside/game/data';
 import { blockMatches, investDef, leagueOf, TRAININGS, trainingLabel } from '@offside/game/engine';
 import type { GameState } from '@offside/game/types';
+import { gameText as L } from './i18n/ko/game';
 
 export type SeasonAction =
   { kind: 'pending'; label: string } | { kind: 'advance'; label: string; prep: string };
@@ -12,17 +13,21 @@ export function seasonAction(s: GameState): SeasonAction {
   if (s.pending) {
     return {
       kind: 'pending',
-      label: s.pending.type === 'event' ? '⚡ 이벤트 확인' : '시즌 결산 보기',
+      label: s.pending.type === 'event' ? L.actEvent : L.actSeasonEnd,
     };
   }
   const phase = Math.min(s.phase, LAST_PHASE);
   const left = leagueOf(s.leagueId).matches - s.season.played;
   const label =
     phase === 0
-      ? '프리시즌 훈련 진행'
-      : `훈련 후 ${phase >= LAST_PHASE ? left : Math.min(blockMatches(s), left)}경기 진행`;
+      ? L.actPreseason
+      : L.actPlay({ n: phase >= LAST_PHASE ? left : Math.min(blockMatches(s), left) });
   const t = TRAININGS.find((x) => x.id === s.training);
   const inv = investDef(s);
-  const prep = `훈련 ${t ? trainingLabel(s, t) : '-'} · 투자 ${inv.id === 'none' ? '없음' : inv.label} · 컨디션 ${Math.round(s.cond)}`;
+  const prep = L.prep({
+    train: t ? trainingLabel(s, t) : '-',
+    invest: inv.id === 'none' ? L.investNone : inv.label,
+    cond: Math.round(s.cond),
+  });
   return { kind: 'advance', label, prep };
 }

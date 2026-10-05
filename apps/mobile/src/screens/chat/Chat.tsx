@@ -28,6 +28,7 @@ import { toast } from '../../game/host';
 import { goBack, goHome } from '../../game/nav';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
 import { openWeb } from '../../platform/openWeb';
+import { chatText as L } from '@offside/app-core/i18n/ko/chat';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { AppleLoginButton, useAppleLogin } from '../../ui/AppleLoginButton';
@@ -62,8 +63,8 @@ function ChatInput(props: {
     <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
       <TextBox
         testID="chat-input"
-        accessibilityLabel="채팅 메시지"
-        placeholder="메시지 입력"
+        accessibilityLabel={L.messageLabel}
+        placeholder={L.placeholder}
         multiline
         scrollEnabled={height >= 112}
         onFocus={props.onFocus}
@@ -85,7 +86,7 @@ function ChatInput(props: {
       />
       <Press
         testID="chat-send"
-        accessibilityLabel="보내기"
+        accessibilityLabel={L.send}
         accessibilityState={{ disabled: !text.trim() }}
         disabled={!text.trim()}
         onPress={submit}
@@ -179,7 +180,7 @@ export default function Chat() {
   const mine = (m: ChatMessage) => !!view.me && m.author === view.me.author;
   function send(body: string) {
     if (session.current?.send(body)) return true;
-    toast('연결 중이에요. 잠시 뒤 다시 보내 주세요.');
+    toast(L.sendWait);
     return false;
   }
   /** 요청 하나를 보내고 성공하면 패널을 닫고 알린다. */
@@ -193,26 +194,17 @@ export default function Chat() {
     return r;
   }
   async function report(m: ChatMessage, reason: CommentReportReason) {
-    if (await run(api.reportChat(m.id, { reason }), '신고했어요. 운영자가 확인할게요.'))
-      session.current?.drop(m.id);
+    if (await run(api.reportChat(m.id, { reason }), L.reportedToast)) session.current?.drop(m.id);
   }
   async function block(m: ChatMessage) {
-    const ok = await confirmAsync(
-      `${m.nickname}님을 차단할까요?`,
-      '이 사람의 메시지와 댓글이 더는 보이지 않아요.',
-      '차단',
-    );
+    const ok = await confirmAsync(L.blockTitle({ nick: m.nickname }), L.blockBody, L.blockOk);
     if (!ok) return;
-    const r = await run(api.blockChatAuthor(m.id), `${m.nickname}님을 차단했어요`);
+    const r = await run(api.blockChatAuthor(m.id), L.blockedToast({ nick: m.nickname }));
     if (r) session.current?.block(r.data.author);
   }
   async function mute(m: ChatMessage, days: (typeof CHAT_MUTE_DAYS)[number]) {
-    const ok = await confirmAsync(
-      `${m.nickname}님의 채팅을 ${days}일 정지할까요?`,
-      '이 메시지도 가려져요.',
-      '정지',
-    );
-    if (ok) await run(api.adminMuteChat(m.id, { days }), `${m.nickname}님을 ${days}일 정지했어요`);
+    const ok = await confirmAsync(L.muteTitle({ nick: m.nickname, days }), L.muteBody, L.muteOk);
+    if (ok) await run(api.adminMuteChat(m.id, { days }), L.mutedToast({ nick: m.nickname, days }));
   }
 
   const panel = {
@@ -259,7 +251,7 @@ export default function Chat() {
         >
           <Press
             testID="back"
-            accessibilityLabel="← 이전으로"
+            accessibilityLabel={L.back}
             onPress={() => goBack(goHome)}
             style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}
           >
@@ -276,24 +268,23 @@ export default function Chat() {
           </Press>
           <View style={{ flex: 1 }}>
             <Txt bold accessibilityRole="header" style={{ fontSize: rem(1.125) }}>
-              라운지 채팅
+              {L.title}
             </Txt>
             <Txt tone="muted" style={small} testID="chat-status">
               {view.status === 'open'
-                ? `● ${view.online}명 접속`
+                ? `● ${L.online({ n: view.online })}`
                 : view.status === 'retrying'
-                  ? '다시 연결하는 중…'
-                  : '연결하는 중…'}
+                  ? L.reconnecting
+                  : L.connecting}
             </Txt>
           </View>
           <Press
-            accessibilityLabel="채팅 이용 안내"
+            accessibilityLabel={L.rulesLabel}
             onPress={() =>
-              Alert.alert(
-                '채팅 이용 안내',
-                '모두가 보는 공개 채팅이에요. 링크는 보낼 수 없고, 욕설·비방·광고·개인정보는 가리고 이용을 제한해요.',
-                [{ text: '이용약관', onPress: () => openWeb('/legal/terms/') }, { text: '확인' }],
-              )
+              Alert.alert(L.rulesLabel, L.rulesBody, [
+                { text: L.terms, onPress: () => openWeb('/legal/terms/') },
+                { text: L.ok },
+              ])
             }
             style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}
           >
@@ -353,7 +344,7 @@ export default function Chat() {
                   {!mine(m) && (!m.admin || me?.admin) ? (
                     <Press
                       testID="chat-more"
-                      accessibilityLabel={`${m.nickname}님 메시지 신고·차단`}
+                      accessibilityLabel={L.moreLabel({ nick: m.nickname })}
                       onPress={() => setSelected(selected === m.id ? null : m.id)}
                       style={{
                         width: 48,
@@ -401,14 +392,14 @@ export default function Chat() {
                           alignItems: 'center',
                         }}
                       >
-                        <Txt style={{ fontSize: rem(0.8125) }}>운영</Txt>
+                        <Txt style={{ fontSize: rem(0.8125) }}>{L.adminLabel}</Txt>
                         <Btn
                           sm
                           testID="chat-hide"
                           disabled={busy}
-                          onPress={() => void run(api.adminHideChat(m.id), '메시지를 가렸어요')}
+                          onPress={() => void run(api.adminHideChat(m.id), L.hiddenToast)}
                         >
-                          가리기
+                          {L.hide}
                         </Btn>
                         {!m.admin
                           ? CHAT_MUTE_DAYS.map((d) => (
@@ -419,7 +410,7 @@ export default function Chat() {
                                 disabled={busy}
                                 onPress={() => void mute(m, d)}
                               >
-                                {`${d}일 정지`}
+                                {L.muteDays({ days: d })}
                               </Btn>
                             ))
                           : null}
@@ -427,9 +418,7 @@ export default function Chat() {
                     ) : null}
                     {!m.admin ? (
                       <>
-                        <Txt style={{ fontSize: rem(0.8125) }}>
-                          신고하는 이유를 골라 주세요. 신고한 메시지는 내 화면에서 숨겨요.
-                        </Txt>
+                        <Txt style={{ fontSize: rem(0.8125) }}>{L.reportPrompt}</Txt>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                           {COMMENT_REPORT_REASONS.map((reason) => (
                             <Btn
@@ -452,10 +441,10 @@ export default function Chat() {
                           }}
                         >
                           <Txt tone="muted" style={[small, { flex: 1 }]}>
-                            {`${m.nickname}님의 메시지를 모두 숨기려면`}
+                            {L.blockHint({ nick: m.nickname })}
                           </Txt>
                           <Btn sm testID="chat-block" disabled={busy} onPress={() => void block(m)}>
-                            작성자 차단
+                            {L.blockAuthor}
                           </Btn>
                         </View>
                       </>
@@ -466,7 +455,7 @@ export default function Chat() {
             ))
           ) : (
             <Txt tone="muted" style={{ margin: 'auto', fontSize: rem(0.8125) }}>
-              {view.status === 'open' ? '아직 조용해요.' : '불러오는 중…'}
+              {view.status === 'open' ? L.emptyOpen : L.loading}
             </Txt>
           )}
         </ScrollView>
@@ -497,16 +486,14 @@ export default function Chat() {
           ) : view.status !== 'open' ? null : !me || me.reason === 'login' ? (
             <View testID="chat-gate-login" style={gate}>
               <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                {apple
-                  ? '구글이나 Apple로 로그인하면 채팅에 참여할 수 있어요.'
-                  : '구글로 로그인하면 채팅에 참여할 수 있어요.'}
+                {apple ? L.gateLoginApple : L.gateLogin}
               </Txt>
               <Btn
                 kind="primary"
                 testID="chat-login"
                 onPress={() => void startGoogleLogin({ chat: true })}
               >
-                구글로 로그인
+                {L.loginGoogle}
               </Btn>
               {apple ? (
                 <AppleLoginButton
@@ -518,7 +505,7 @@ export default function Chat() {
           ) : me.reason === 'nickname' ? (
             <View testID="chat-gate-nickname" style={gate}>
               <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                채팅에 쓸 닉네임을 먼저 정해 주세요. 댓글 닉네임과 같아요.
+                {L.gateNicknameApp}
               </Txt>
               <NicknameForm onsaved={connect} />
             </View>

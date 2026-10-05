@@ -21,6 +21,7 @@
   import { dur } from '../motion.js';
   import PhaseReport from './PhaseReport.svelte';
   import LeagueTable from './LeagueTable.svelte';
+  import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
 
   const { s }: { s: GameState } = $props();
 
@@ -28,8 +29,8 @@
   const S = $derived(s.season);
   const avg = $derived(S.apps ? (S.ratingSum / S.apps).toFixed(2) : '-');
   const phase = $derived(Math.min(s.phase, LAST_PHASE));
-  const label = $derived(phase === 0 ? '프리시즌' : `${PHASES[phase]} · ${roundRange(s, phase)}`);
-  const lastCol = $derived((s.pos === 'GK' || s.pos === 'DF' ? ['무실점', S.cs] : ['도움', S.assists]) as [string, number]);
+  const label = $derived(phase === 0 ? L.preseason : `${PHASES[phase]} · ${roundRange(s, phase)}`);
+  const lastCol = $derived((s.pos === 'GK' || s.pos === 'DF' ? [L.colCs, S.cs] : [L.colAssists, S.assists]) as [string, number]);
   const comps = $derived(s.season.comps || []);
   const activeStories = $derived(Object.entries(s.story || {}).filter(([, v]) => !v.done));
   const t = $derived(turnNo(s));
@@ -152,7 +153,7 @@
       return e && e.story === k;
     });
     if (!c) return '';
-    return c.at <= t ? '곧 이어짐' : `약 ${c.at - t}구간 후`;
+    return c.at <= t ? L.storySoon : L.storyWait({ n: c.at - t });
   }
 </script>
 
@@ -173,19 +174,19 @@
 {/snippet}
 
 <section class="card stack" data-prep data-tour="prep">
-  <div><div class="eyebrow">Next · {label}</div><h2>다음 구간 준비</h2></div>
+  <div><div class="eyebrow">Next · {label}</div><h2>{L.prepTitle}</h2></div>
   <div class="meters">
-    <div class="meter"><span>컨디션</span><div class="bar"><i class={meterCls(s.cond, 40, 65)} style="width:{Math.round(s.cond)}%"></i></div><span class="v">{Math.round(s.cond)}</span></div>
-    <div class="meter"><span>사기</span><div class="bar"><i class={meterCls(s.morale, 40, 60)} style="width:{Math.round(s.morale)}%"></i></div><span class="v">{Math.round(s.morale)}</span></div>
-    <div class="meter"><span>인기</span><div class="bar"><i class="acc" style="width:{Math.min(100, Math.round(s.fame))}%"></i></div><span class="v">{Math.round(s.fame)}</span></div>
+    <div class="meter"><span>{L.condition}</span><div class="bar"><i class={meterCls(s.cond, 40, 65)} style="width:{Math.round(s.cond)}%"></i></div><span class="v">{Math.round(s.cond)}</span></div>
+    <div class="meter"><span>{L.morale}</span><div class="bar"><i class={meterCls(s.morale, 40, 60)} style="width:{Math.round(s.morale)}%"></i></div><span class="v">{Math.round(s.morale)}</span></div>
+    <div class="meter"><span>{L.fame}</span><div class="bar"><i class="acc" style="width:{Math.min(100, Math.round(s.fame))}%"></i></div><span class="v">{Math.round(s.fame)}</span></div>
   </div>
   <div class="stack" style="gap:6px" data-coach-feedback>
-    <h3 class="sub-title">코치 메모</h3>
+    <h3 class="sub-title">{L.coachMemo}</h3>
     <p class="fs-sm">{coach.summary}</p>
     {#each coach.notes as note (note)}<p class="muted fs-sm">{note}</p>{/each}
   </div>
-  <h3 class="sub-title">훈련 방향</h3>
-  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">이번 구간 훈련을 고르면 다음으로 넘어가요</p>{/if}
+  <h3 class="sub-title">{L.trainingTitle}</h3>
+  {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">{L.trainHint}</p>{/if}
   <div class="train">
     {#each TRAININGS as tr (tr.id)}
       {@const c = trainingCard(s, tr)}
@@ -203,10 +204,10 @@
 
 <section class="card stack" data-invest-card data-tour="invest">
   <div class="row" style="justify-content:space-between">
-    <div><div class="eyebrow">Invest</div><h2>자기 투자</h2></div>
-    <span class="pill" data-invest-money>보유 {fmtMoney(s.money)}원</span>
+    <div><div class="eyebrow">Invest</div><h2>{L.investTitle}</h2></div>
+    <span class="pill" data-invest-money>{L.funds({ v: `${fmtMoney(s.money)}원` })}</span>
   </div>
-  {#if tourWait === 'invest'}<p class="tour-hint" aria-live="polite">투자를 고르면 넘어가요 · 아끼려면 투자 안 함</p>{/if}
+  {#if tourWait === 'invest'}<p class="tour-hint" aria-live="polite">{L.investHint}</p>{/if}
   <div class="train">
     {#each INVESTS as d (d.id)}
       {@const c = investCard(s, d)}
@@ -230,23 +231,23 @@
       {/each}
     </div>
     <div class="track-lbl">
-      {#each ['프리시즌', '전반기', '후반기'] as tl (tl)}
+      {#each [L.preseason, L.phaseFirst, L.phaseSecond] as tl (tl)}
         <span>{tl}</span>
       {/each}
     </div>
   </div>
   {#if showTotals}
-    <p class="muted fs-sm" data-season-totals>시즌 누적 · {S.w}승 {S.d}무 {S.l}패 · 출전 {S.apps} · {S.goals}골 · {lastCol[0]} {lastCol[1]} · 평점 {avg}</p>
+    <p class="muted fs-sm" data-season-totals>{L.totals({ w: S.w, d: S.d, l: S.l, apps: S.apps, goals: S.goals, col: lastCol[0], colN: lastCol[1], rating: avg })}</p>
   {/if}
   <LeagueTable {s} bind:this={table} />
   {#if comps.length}
     <div>
-      <h3 class="sub-title" style="margin-bottom:2px">이번 시즌 대회</h3>
+      <h3 class="sub-title" style="margin-bottom:2px">{L.compsTitle}</h3>
       {#each comps as c (c.name)}
         <div class="story-row">
           <b>{c.name}</b>
-          <span class="muted">{c.stage || (c.type === 'super' ? '개막 전 단판' : '1구간 시작')}{c.alive && c.stage ? ' · 진행 중' : ''}</span>
-          <span class="muted">{c.apps}경기 {c.g}골</span>
+          <span class="muted">{c.stage || (c.type === 'super' ? L.compSuper : L.compStart)}{c.alive && c.stage ? ` · ${L.compAlive}` : ''}</span>
+          <span class="muted">{L.compLine({ apps: c.apps, g: c.g })}</span>
         </div>
       {/each}
     </div>
@@ -256,7 +257,7 @@
 {#if activeStories.length}
   <section class="card" data-stories data-tour="stories">
     <div class="eyebrow">Storylines</div>
-    <h2 style="margin-bottom:6px">진행 중인 스토리</h2>
+    <h2 style="margin-bottom:6px">{L.storiesTitle}</h2>
     {#each activeStories as [k, v] (k)}
       <div class="story-row">
         <b>{STORIES[k]!.name}</b>
@@ -274,14 +275,14 @@
 {#if feed.length}
   <section class="card" data-feed data-tour="feed">
     <div class="eyebrow">Timeline</div>
-    <h2 style="margin-bottom:6px">최근 소식</h2>
+    <h2 style="margin-bottom:6px">{L.feedTitle}</h2>
     <div class="feed">
       {#each feedAll ? feed : feed.slice(0, FEED_SHORT) as l, i (i)}
         <div><time>{l.t}</time><span class={l.kind}>{l.text}</span></div>
       {/each}
     </div>
     {#if feed.length > FEED_SHORT}
-      <button class="icon-btn" style="margin-top:8px" data-act="feed-more" aria-expanded={feedAll} onclick={() => (feedAll = !feedAll)}>{feedAll ? '접기' : '더 보기'}</button>
+      <button class="icon-btn" style="margin-top:8px" data-act="feed-more" aria-expanded={feedAll} onclick={() => (feedAll = !feedAll)}>{feedAll ? L.feedLess : L.feedMore}</button>
     {/if}
   </section>
 {/if}

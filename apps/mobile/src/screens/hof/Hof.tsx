@@ -14,15 +14,17 @@ import { Txt } from '../../ui/Txt';
 import { useColors } from '../../theme/useColors';
 import { RECORDS_TOUCH } from './RecordsControls';
 import RetiredWall from './RetiredWall';
+import { hofText as L } from '@offside/app-core/i18n/ko/hof';
 import AchievementRanking from './team/AchievementRanking';
 import TeamRanking from './team/TeamRanking';
 
-const TABS: Record<HofTab, string> = {
-  legends: '명예의 전당',
-  rn: '영구결번',
-  teams: '팀 랭킹',
-  ach: '구단주 랭킹',
-};
+// 문구는 그릴 때 읽어야 해서(언어 등록 뒤) 함수로 둔다.
+const tabs = (): Record<HofTab, string> => ({
+  legends: L.tabLegends,
+  rn: L.tabRn,
+  teams: L.tabTeams,
+  ach: L.tabAch,
+});
 
 export default function Hof() {
   const c = useColors();
@@ -42,7 +44,7 @@ export default function Hof() {
       <Topbar />
       <View
         accessibilityRole="tablist"
-        accessibilityLabel="기록실"
+        accessibilityLabel={L.tabsLabel}
         style={{
           flexDirection: 'row',
           marginBottom: 12,
@@ -50,7 +52,7 @@ export default function Hof() {
           borderBottomColor: c.line,
         }}
       >
-        {(Object.entries(TABS) as [HofTab, string][]).map(([key, label]) => (
+        {(Object.entries(tabs()) as [HofTab, string][]).map(([key, label]) => (
           <Press
             key={key}
             testID={`hof-tab-${key}`}

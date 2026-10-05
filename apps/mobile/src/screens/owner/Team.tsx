@@ -36,6 +36,7 @@ import {
 } from '@offside/app-core/api/team';
 import { type TeamView } from '@offside/app-core/state';
 import { recordText, num } from '@offside/app-core/teamText';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { autoFillSlots, matchHintOf } from '@offside/app-core/teamOwner';
 import { anonName } from '@offside/game/pos-label';
 import { localCareerNames } from '@offside/game/season';
@@ -73,11 +74,11 @@ const between = (v: string, min: number, max: number) =>
   v.trim().length >= min && v.trim().length <= max;
 
 // T-11-026 내 팀 하단 메뉴 — 편성 · 경기 · (가운데) 구단주 · 업적 · 기록. 경기 결과는 '경기' 탭 안이다.
-const NAV: [TeamView, string, TabIconName][] = [
-  ['team', '편성', 'lineup'],
-  ['opponents', '경기', 'season'],
-  ['achievements', '업적', 'trophy'],
-  ['history', '경기 기록', 'career'],
+const nav = (): [TeamView, string, TabIconName][] => [
+  ['team', L.navLineup, 'lineup'],
+  ['opponents', L.navMatches, 'season'],
+  ['achievements', L.navAch, 'trophy'],
+  ['history', L.navHistory, 'career'],
 ];
 
 export default function Team() {
@@ -300,7 +301,7 @@ export default function Team() {
           unchanged ? null : { base: teamDraftBase(r.data.team), value: draftNow.current! },
         );
       setDraftKey(r.data.team.id);
-      toast(created ? '팀을 만들었어요' : '편성을 저장했어요');
+      toast(created ? L.toastCreated : L.toastSavedApp);
       return unchanged;
     } finally {
       savingRef.current = false;
@@ -401,7 +402,7 @@ export default function Team() {
     scrollTo(0);
   }
   const navOn = view === 'result' ? resultOrigin : view;
-  const navItems: TabItem[] = NAV.map(([k, label, icon]) => ({
+  const navItems: TabItem[] = nav().map(([k, label, icon]) => ({
     key: icon,
     label,
     active: navOn === k,
@@ -411,7 +412,7 @@ export default function Team() {
   }));
   navItems.splice(2, 0, {
     key: 'owner',
-    label: '구단주',
+    label: L.navOwner,
     active: false,
     onPress: () => go('owner'),
     testID: 'team-back',
@@ -423,9 +424,9 @@ export default function Team() {
       <Card gap={10}>
         <Txt v="eyebrow">My team</Txt>
         <Txt v="h1" accessibilityRole="header">
-          내 팀
+          {L.myTeam}
         </Txt>
-        <Txt tone="muted">로그인한 구단주만 은퇴한 선수로 팀을 꾸릴 수 있어요.</Txt>
+        <Txt tone="muted">{L.loginOnly}</Txt>
         <LoginButtons block={false} />
       </Card>
     );
@@ -444,12 +445,12 @@ export default function Team() {
         <Card gap={10}>
           {seasons.length > 1 ? (
             <SelectField
-              label="시즌"
+              label={L.seasonLabel}
               testID="team-season"
               value={season}
               options={seasons.map((o) => ({
                 value: o.id,
-                label: `${o.name}${o.id === current ? ' (지금)' : ''}`,
+                label: `${o.name}${o.id === current ? L.seasonNow : ''}`,
               }))}
               onChange={pickSeason}
             />
@@ -460,53 +461,55 @@ export default function Team() {
             <TeamLogo name={name || team?.name || 'FC'} logo={logo} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Txt v="h2" accessibilityRole="header">
-                {name || team?.name || (editable ? '팀 만들기' : '팀 없음')}
+                {name || team?.name || (editable ? L.createTeam : L.noTeam)}
               </Txt>
               <Txt
                 v="sm"
                 tone="muted"
-              >{`${manager || team?.manager || '나의'} 감독${dirty && team ? ' · 저장 전' : ''}`}</Txt>
+              >{`${manager || team?.manager ? L.managerLine({ name: (manager || team?.manager)! }) : L.managerMine}${dirty && team ? ` · ${L.unsaved}` : ''}`}</Txt>
             </View>
             <OvrBadge ovr={ovr} />
           </View>
           {team ? (
-            <Txt
-              v="sm"
-              tone="muted"
-              testID="team-record"
-            >{`${recordText(team.record)} · 레이팅 ${num(team.rating)} · ${editable ? `오늘 ${matchesLeft}/${perDay}경기` : '지난 시즌'}`}</Txt>
+            <Txt v="sm" tone="muted" testID="team-record">
+              {L.recordLineApp({
+                record: recordText(team.record),
+                rating: num(team.rating),
+                tail: editable ? L.todayApp({ left: matchesLeft, per: perDay }) : L.statPast,
+              })}
+            </Txt>
           ) : (
             <Txt v="sm" tone="muted">
-              빈 자리는 유스 선수(OVR {YOUTH_OVR})가 채워요. 한 명만 넣어도 경기할 수 있어요.
+              {L.introApp({ ovr: YOUTH_OVR })}
             </Txt>
           )}
           {editable ? (
             <Btn sm kind="ghost" testID="team-more" onPress={() => setMenu(true)}>
-              더보기
+              {L.more}
             </Btn>
           ) : (
             <Txt v="sm" tone="muted" testID="team-readonly">
-              지난 시즌 팀이라 보기만 할 수 있어요.
+              {L.readonlyNote}
             </Txt>
           )}
           {editable && (!team || renaming) ? (
             <View style={{ gap: 10 }}>
-              <Field label="팀 이름">
+              <Field label={L.teamNameLabel}>
                 <TextField
                   value={name}
                   onChangeText={setName}
                   maxLength={TEAM_NAME_MAX}
                   testID="team-name"
-                  accessibilityLabel="팀 이름"
+                  accessibilityLabel={L.teamNameLabel}
                 />
               </Field>
-              <Field label="감독 이름">
+              <Field label={L.managerNameLabel}>
                 <TextField
                   value={manager}
                   onChangeText={setManager}
                   maxLength={MANAGER_NAME_MAX}
                   testID="team-manager"
-                  accessibilityLabel="감독 이름"
+                  accessibilityLabel={L.managerNameLabel}
                 />
               </Field>
             </View>
@@ -514,14 +517,14 @@ export default function Team() {
         </Card>
         {pendingDraft ? (
           <Card>
-            <Txt v="sm">저장된 팀이 바뀌었어요. 이 기기에 남아 있는 편성을 불러올까요?</Txt>
+            <Txt v="sm">{L.draftChangedApp}</Txt>
             <Btn
               onPress={() => {
                 applyDraft(pendingDraft.value);
                 setPendingDraft(null);
               }}
             >
-              이 기기 편성 불러오기
+              {L.draftLoadApp}
             </Btn>
             <Btn
               kind="ghost"
@@ -530,12 +533,12 @@ export default function Team() {
                 setPendingDraft(null);
               }}
             >
-              저장된 팀 유지
+              {L.draftKeep}
             </Btn>
           </Card>
         ) : restored ? (
           <Card>
-            <Txt v="sm">저장 전 편성을 복원했어요. 편성 저장을 누르면 팀에 반영돼요.</Txt>
+            <Txt v="sm">{L.draftRestoredApp}</Txt>
             <Btn
               sm
               kind="ghost"
@@ -545,7 +548,7 @@ export default function Team() {
                 if (draftKey) writeTeamDraft(draftKey, null);
               }}
             >
-              저장된 팀으로 되돌리기
+              {L.draftRevertApp}
             </Btn>
           </Card>
         ) : null}
@@ -559,12 +562,14 @@ export default function Team() {
                   alignItems: 'center',
                 }}
               >
-                <Txt v="h2">그라운드</Txt>
-                <Txt v="sm" tone="muted">{`선발 ${filled} · 유스 ${LINEUP_SIZE - filled}`}</Txt>
+                <Txt v="h2">{L.groundTitle}</Txt>
+                <Txt v="sm" tone="muted">
+                  {L.startersYouthApp({ n: filled, y: LINEUP_SIZE - filled })}
+                </Txt>
               </View>
               {editable ? (
                 <SortChips
-                  label="포메이션 기본 배치"
+                  label={L.formationLabelApp}
                   value={layout ? 'custom' : formation}
                   items={FORMATION_IDS.map((key) => ({ key, label: key }))}
                   onPick={(key) => {
@@ -584,7 +589,7 @@ export default function Team() {
                     style={{ flex: 1 }}
                     onPress={() => setSlots(autoFillSlots(slotCodes, players))}
                   >
-                    자동 배치
+                    {L.autoPlace}
                   </Btn>
                 ) : null}
                 <Btn
@@ -593,7 +598,7 @@ export default function Team() {
                   style={{ flex: 1 }}
                   onPress={() =>
                     setShare({
-                      name: name || team?.name || '나의 팀',
+                      name: name || team?.name || L.shareDefaultNameApp,
                       manager,
                       logo,
                       formation,
@@ -606,12 +611,12 @@ export default function Team() {
                     })
                   }
                 >
-                  이미지 공유
+                  {L.shareImageApp}
                 </Btn>
               </View>
               {editable ? (
                 <Txt v="xs" tone="muted">
-                  선수 카드를 길게 눌러 옮겨요.
+                  {L.dragHintApp}
                 </Txt>
               ) : null}
             </Card>
@@ -683,7 +688,7 @@ export default function Team() {
         eventName={eventName}
         matchesLeft={matchesLeft}
         toTeam={() => show(resultOrigin === 'history' ? 'history' : 'team')}
-        backLabel={resultOrigin === 'history' ? '기록으로 돌아가기' : '편성으로'}
+        backLabel={resultOrigin === 'history' ? L.backToHistoryApp : L.backToLineupApp}
         replay={() => setLive(true)}
         again={() => {
           if (result.friendly) {
@@ -738,13 +743,13 @@ export default function Team() {
                       <Txt v="sm" numberOfLines={1} style={{ flex: 1 }}>
                         {players.find((p) => p.careerId === selected)
                           ? nameOf(players.find((p) => p.careerId === selected)!)
-                          : '선수 선택'}
+                          : L.pickPlayerApp}
                       </Txt>
                       <Btn sm onPress={() => jump.current?.()}>
-                        그라운드로
+                        {L.toGround}
                       </Btn>
                       <Btn sm kind="ghost" onPress={() => setSelected(null)}>
-                        취소
+                        {L.cancel}
                       </Btn>
                     </View>
                   ) : null}
@@ -756,7 +761,7 @@ export default function Team() {
                       disabled={saving || !nameOk || !!pendingDraft}
                       onPress={() => void save()}
                     >
-                      {saving ? '저장 중…' : team ? '편성 저장' : '팀 만들기'}
+                      {saving ? L.saving : team ? L.saveLineupApp : L.createTeam}
                     </Btn>
                   ) : null}
                 </View>
@@ -764,15 +769,15 @@ export default function Team() {
             }
           >
             <Topbar />
-            <LoadState status={status} failText="팀을 불러오지 못했어요." retry={() => void load()}>
+            <LoadState status={status} failText={L.loadFail} retry={() => void load()}>
               {body}
             </LoadState>
           </Screen>
-          {needLogin ? null : <TabBar label="내 팀 메뉴" items={navItems} sub="team" />}
+          {needLogin ? null : <TabBar label={L.navLabel} items={navItems} sub="team" />}
         </View>
       </BarBelow.Provider>
       {menu ? (
-        <TeamDialog title="내 팀 설정" close={() => setMenu(false)}>
+        <TeamDialog title={L.menuTitleApp} close={() => setMenu(false)}>
           <Btn
             testID="team-logo-edit"
             onPress={() => {
@@ -780,7 +785,7 @@ export default function Team() {
               setEditingLogo(true);
             }}
           >
-            로고 설정
+            {L.menuLogo}
           </Btn>
           <Btn
             testID="team-rename"
@@ -790,7 +795,7 @@ export default function Team() {
               scrollTo(0);
             }}
           >
-            이름 바꾸기
+            {L.menuRename}
           </Btn>
         </TeamDialog>
       ) : null}

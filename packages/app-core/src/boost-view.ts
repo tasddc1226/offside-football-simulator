@@ -13,6 +13,7 @@ import {
 } from '@offside/game/boost';
 import { fmtMoney } from '@offside/game/player';
 import type { GameState } from '@offside/game/types';
+import { gameBoostText as L } from './i18n/ko/gameBoost';
 
 export interface BoostView {
   status: BoostStatus;
@@ -29,7 +30,8 @@ export interface BoostView {
   history: string[];
 }
 
-export const BOOST_NOTE = `시즌마다 한 번, ${BOOST.maxAge}세까지 시도할 수 있어요. 실패하면 자금만 잃고 다음 확률이 ${BOOST_PITY_PCT}%p 올라요.`;
+/** 안내 문구 — 언어가 정해진 뒤에 읽도록 함수로 둔다. */
+export const boostNote = (): string => L.note({ age: BOOST.maxAge, pct: BOOST_PITY_PCT });
 
 /** 카드를 숨길지 — 나이 제한을 넘겼고 한 번도 시도하지 않은 선수에게는 보이지 않는다. */
 export const boostHidden = (s: GameState): boolean =>
@@ -42,16 +44,16 @@ export function boostView(s: GameState): BoostView {
   const chance = boostChance(s);
   const line =
     status === 'locked'
-      ? '첫 시즌을 마치면 강화할 수 있어요.'
+      ? L.lineLocked
       : status === 'aged'
-        ? `${BOOST.maxAge}세가 지나 더는 강화할 수 없어요.`
+        ? L.lineAged({ age: BOOST.maxAge })
         : status === 'max'
-          ? `최고 단계(+${BOOST_MAX})에 닿았어요.`
+          ? L.lineMax({ lv: BOOST_MAX })
           : status === 'done'
-            ? '이번 시즌엔 이미 시도했어요. 다음 시즌에 다시 할 수 있어요.'
+            ? L.lineDone
             : status === 'short'
-              ? `자금이 모자라요. 다음 단계에 ${cost}이 필요해요.`
-              : `다음 단계 +${b.lv + 1} · 성공 확률 ${chance}% · ${cost}`;
+              ? L.lineShort({ cost })
+              : L.lineReady({ next: b.lv + 1, chance, cost });
   return {
     status,
     lv: b.lv,
@@ -59,17 +61,18 @@ export function boostView(s: GameState): BoostView {
     line,
     ...(status === 'ready'
       ? {
-          button: `${cost} 내고 강화하기 (${chance}%)`,
-          confirm: `${cost}을 쓰고 ${chance}% 확률로 시도해요. 실패하면 돌려받지 못해요.`,
+          button: L.button({ cost, chance }),
+          confirm: L.confirm({ cost, chance }),
         }
       : {}),
-    note: BOOST_NOTE,
+    note: boostNote(),
     history: b.log
       .slice(-4)
       .reverse()
-      .map(
-        (x) => `${x.y} · +${x.lv + 1}단계 ${x.p}% · ${fmtMoney(x.c)}원 · ${x.ok ? '성공' : '실패'}`,
-      ),
+      .map((x) => {
+        const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost: `${fmtMoney(x.c)}원` };
+        return x.ok ? L.historyOk(p) : L.historyFail(p);
+      }),
   };
 }
 
@@ -93,11 +96,11 @@ export function doBoost(s: GameState): BoostOutcome | null {
     lv: r.lv,
     max: BOOST_MAX,
     chance: r.chance,
-    title: r.ok ? `+${r.lv}단계 성공` : '강화 실패',
+    title: r.ok ? L.resultOkTitle({ lv: r.lv }) : L.resultFailTitle,
     text: r.ok
       ? r.lv >= BOOST_MAX
-        ? '최고 단계에 닿았어요. 성장 한계가 한 뼘 더 올라갔어요.'
-        : '성장 한계가 한 뼘 더 올라갔어요.'
-      : `성공 확률 ${r.chance}%였어요. 자금은 돌려받지 못하고, 다음 시도 확률이 ${BOOST_PITY_PCT}%p 올라요.`,
+        ? L.resultOkMax
+        : L.resultOk
+      : L.resultFail({ chance: r.chance, pct: BOOST_PITY_PCT }),
   };
 }

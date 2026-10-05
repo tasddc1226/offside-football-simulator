@@ -5,6 +5,7 @@ import { appState, toastState } from './state.svelte.js';
 import { takePlaySignals } from '../sync/playSignals.js';
 
 import { saveGame } from '@offside/app-core/career';
+import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 
 export { pushEvLog, seasonLabel } from '@offside/app-core/career';
 
@@ -22,7 +23,7 @@ export function save() {
   if (ok) return void keepStorage();
   if (saveWarned) return;
   saveWarned = true;
-  toast('저장 공간이 부족해 진행 상황을 저장하지 못했어요. 설정에서 백업해 두세요.');
+  toast(L.storageFull);
 }
 
 /** T-10-116 브라우저가 저장소를 함부로 지우지 않게 '영구 저장'을 한 번 요청한다(UI 없음, 실패해도 무시).

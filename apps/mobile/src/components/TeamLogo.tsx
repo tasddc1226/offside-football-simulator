@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import Svg, { ClipPath, Defs, G, Path, Rect, Text } from 'react-native-svg';
 import { CREST_SHAPES, CREST_PATTERNS } from '@offside/game/crests';
 import { defaultTeamLogo, type TeamLogo as Logo } from '@offside/contracts/team-logo';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 export function TeamLogo({
   logo,
   name,
@@ -25,7 +26,7 @@ export function TeamLogo({
         accessible={!decorative}
         accessibilityElementsHidden={decorative}
         importantForAccessibility={decorative ? 'no-hide-descendants' : 'auto'}
-        accessibilityLabel={decorative ? undefined : `${name} 로고`}
+        accessibilityLabel={decorative ? undefined : L.logoAlt({ name })}
         contentFit="contain"
         style={{ width: size, height: size, borderRadius: size * 0.12 }}
       />
@@ -38,7 +39,7 @@ export function TeamLogo({
       accessible={!decorative}
       accessibilityElementsHidden={decorative}
       importantForAccessibility={decorative ? 'no-hide-descendants' : 'auto'}
-      accessibilityLabel={decorative ? undefined : `${name} 로고`}
+      accessibilityLabel={decorative ? undefined : L.logoAlt({ name })}
     >
       <Defs>
         <ClipPath id={clip}>

@@ -1,0 +1,28 @@
+import type { Translation } from '../core';
+import type { LegendRnMsgs } from '../ko/legendRn';
+
+export const legendRn: Translation<LegendRnMsgs> = {
+  pending: 'The server is reviewing your retired number. Check the Hall of Fame in a moment.',
+  lineNum: (p) => `No. ${p.number}`,
+  lineNumAfter: ' is now',
+  lineNameAfter: '’s.',
+  stats: (p) =>
+    `${p.from}–${p.to} · ${p.seasons} season${p.seasons === 1 ? '' : 's'} · ${p.apps} apps ${p.goals} goal${p.goals === 1 ? '' : 's'} ${p.assists} assist${p.assists === 1 ? '' : 's'}`,
+  foot: (p) => `${p.club} retired number · server retirement No. ${p.seq}`,
+  takenA: (p) => `No. ${p.number} is already held by`,
+  anonLegend: 'an anonymous legend',
+  takenB: ',',
+  takenC: 'so the club has put',
+  takenD: ' on the Wall of Honour.',
+  anonA: 'Make your name public and',
+  anonSlot: (p) => `${p.club} No. ${p.number}`,
+  anonTail: 'will be retired for you.',
+  anonNote: 'The first player to make their name public gets the number.',
+  publish: 'Go public and claim the number',
+  alertTitle: (p) => `👑 ${p.name}: No. ${p.number} retired`,
+  alertSub: (p) => `${p.club} · server retirement No. ${p.seq}`,
+  alertLabel: (p) => `${p.name}, No. ${p.number} retired`,
+  alertOpen: 'View',
+  alertClose: 'Dismiss notification',
+  jerseyLabel: (p) => `${p.name} retired No. ${p.number} shirt`,
+};

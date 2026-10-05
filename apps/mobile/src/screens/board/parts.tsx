@@ -19,6 +19,7 @@ import { Opt } from '../../ui/bits';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
 import { revealFocusedInput } from '../../ui/scroll';
+import { boardText as L } from '@offside/app-core/i18n/ko/board';
 
 /** 입력 칸(웹 input[type=text] · textarea) — 16px 글자(iOS가 작은 칸에 초점이 가면 확대한다), surface-2 바탕. */
 export function TextBox({ style, multiline, onFocus, ...rest }: TextInputProps) {
@@ -234,13 +235,13 @@ export function SortChips({
 }
 
 /** 웹 confirm() — 확인/취소 창. 취소·바깥 탭은 false. */
-export function confirmAsync(title: string, message?: string, ok = '확인'): Promise<boolean> {
+export function confirmAsync(title: string, message?: string, ok = L.confirm): Promise<boolean> {
   return new Promise((resolve) => {
     Alert.alert(
       title,
       message,
       [
-        { text: '취소', style: 'cancel', onPress: () => resolve(false) },
+        { text: L.cancel, style: 'cancel', onPress: () => resolve(false) },
         { text: ok, onPress: () => resolve(true) },
       ],
       { cancelable: true, onDismiss: () => resolve(false) },

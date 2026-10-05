@@ -10,6 +10,7 @@ import type { ApiResult } from './api/client.js';
 import type { SheetButton, SheetView } from './sheets.js';
 import type { AppState } from './state.js';
 import { num } from './teamText.js';
+import { sheetAchieveText as L } from './i18n/ko/sheetAchieve.js';
 
 /** 이 기기에 본 기록이 없을 때(기능이 나오기 전부터 쌓은 구단주) 이보다 많이 새로 보이면 알리지 않고 기준만 잡는다. */
 export const FIRST_RUN_MAX = 3;
@@ -82,14 +83,14 @@ export function achieveView(n: AchNudge): Extract<SheetView, { kind: 'achieve' }
   return {
     kind: 'achieve',
     eyebrow: n.from ? 'Grade up' : 'Achievement',
-    title: n.from ? `${n.grade.name} 등급이 됐어요` : `업적 ${n.fresh.length}개를 달성했어요`,
+    title: n.from ? L.gradeUp({ grade: n.grade.name }) : L.achieved({ n: n.fresh.length }),
     grade: { id: n.grade.id, name: n.grade.name },
     from: n.from ? { id: n.from.id, name: n.from.name } : null,
     items: shown.map((f) => ({ label: f.label, gained: f.gained })),
     more: n.fresh.length - shown.length,
     gained: n.fresh.reduce((s, f) => s + f.gained, 0),
     score: n.score,
-    next: n.next ? `${n.next.name}까지 ${num(n.next.min - n.score)}점` : null,
+    next: n.next ? L.nextGrade({ name: n.next.name, pts: num(n.next.min - n.score) }) : null,
   };
 }
 
@@ -137,14 +138,14 @@ export function createAchNudge(host: AchNudgeHost) {
       if (!nudge || host.sheetOpen()) return;
       host.showSheet(achieveView(nudge), [
         {
-          label: '업적 보기',
+          label: L.viewAch,
           cls: 'btn-primary',
           fn: () => {
             host.closeSheet();
             host.openAchievements();
           },
         },
-        { label: '닫기', fn: host.closeSheet },
+        { label: L.close, fn: host.closeSheet },
       ]);
     } finally {
       busy = false;

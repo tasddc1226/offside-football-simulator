@@ -4,6 +4,7 @@
   // 간격만큼 판정이 밀리지 않게. 판정이 나면(v.ok) 공이 날아가는 결과 장면을 두 단계로 그린다.
   import { onMount } from 'svelte';
   import { markerAt, MG_TAP } from '@offside/game/minigame';
+  import { sheetMinigameText as L } from '@offside/app-core/i18n/ko/sheetMinigame';
   import MgTimer from './MgTimer.svelte';
   import PitchScene, {
     REST,
@@ -108,10 +109,10 @@
   const goal = $derived(stage === 2 && v.ok === (v.mg !== 'save'));
   const caption = $derived.by(() => {
     if (v.ok === null) return '';
-    if (late) return '시간 초과!';
-    if (v.mg === 'save') return v.ok ? '선방!' : '실점…';
-    if (v.ok) return '골!';
-    return v.mg === 'shot' ? '크로스바!' : v.mg === 'dribble' ? '너무 길었다!' : '막혔다!';
+    if (late) return L.late;
+    if (v.mg === 'save') return v.ok ? L.saveOk : L.saveFail;
+    if (v.ok) return L.goal;
+    return v.mg === 'shot' ? L.crossbar : v.mg === 'dribble' ? L.tooLong : L.blocked;
   });
   const me = $derived(v.mg === 'save');
   /**
@@ -130,13 +131,13 @@
   });
 </script>
 
-<div class="eyebrow">원터치 · 초록 구간에서 멈추세요</div>
+<div class="eyebrow">{L.mgEyebrow}</div>
 <h2>{v.label}</h2>
 <button
   class="mg-stage"
   data-sheet="mg"
   data-mg-tap
-  aria-label="{MG_TAP[v.mg]}. 바늘이 초록 구간에 올 때 누르세요"
+  aria-label={L.mgA11y({ tap: MG_TAP[v.mg] })}
   onpointerdown={(e) => tap(e.timeStamp)}
   onclick={() => tap(performance.now())}
 >

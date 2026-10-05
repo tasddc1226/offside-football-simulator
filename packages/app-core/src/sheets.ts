@@ -7,6 +7,7 @@ import type { ResolveResult } from '@offside/game/event-runner';
 import type { MgKind } from '@offside/game/minigame';
 import type { DragPoint, ShotResult } from '@offside/game/dragShot';
 import type { FlightMap } from './flight.js';
+import { shellText } from './i18n/ko/shell.js';
 
 export type { Chip };
 export type SheetButton = { label: string; cls?: string; fn: () => void };
@@ -30,7 +31,17 @@ export type TickerRow = {
   inj: boolean;
 };
 
-export const RES_LABEL = { W: '승', D: '무', L: '패' } as const;
+export const RES_LABEL = {
+  get W() {
+    return shellText.resWin;
+  },
+  get D() {
+    return shellText.resDraw;
+  },
+  get L() {
+    return shellText.resLoss;
+  },
+} as const;
 
 /** T-10-024: 구간(프리시즌·전반기·후반기)을 마친 뒤 시즌 탭 맨 위에 그리는 리포트. */
 export type PhaseReport = {
@@ -72,7 +83,7 @@ export function sheetLabel(v: SheetView): string {
     case 'eventResult':
       return v.label;
     case 'market':
-      return '다음 시즌, 어디서 뛸까요?';
+      return shellText.marketLabel;
     case 'notice':
       return v.title ?? v.eyebrow;
     default:

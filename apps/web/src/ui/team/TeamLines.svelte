@@ -1,19 +1,21 @@
 <script lang="ts">
   // T-10-092 팀의 공격·중원·수비·골문 힘(내 팀 편성 · 팀 프로필).
   import type { TeamLines } from '@offside/app-core/api/team';
+  import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
   let { lines, compact = false }: { lines: TeamLines; compact?: boolean } = $props();
 
-  const CELLS = [
-    ['atk', '공격'],
-    ['mid', '중원'],
-    ['def', '수비'],
-    ['gk', '골문'],
-  ] as const;
+  const cells = () =>
+    [
+      ['atk', L.lineAtk],
+      ['mid', L.lineMid],
+      ['def', L.lineDef],
+      ['gk', L.lineGk],
+    ] as const;
 </script>
 
 <dl class="team-lines" class:compact data-team-lines>
-  {#each CELLS as [k, label] (k)}
+  {#each cells() as [k, label] (k)}
     <div><dt>{label}</dt><dd>{Math.round(lines[k])}</dd></div>
   {/each}
 </dl>

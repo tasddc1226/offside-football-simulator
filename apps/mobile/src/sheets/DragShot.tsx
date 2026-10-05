@@ -9,6 +9,7 @@ import { useSnapshot } from 'valtio';
 import { isShot, type DragPoint } from '@offside/game/dragShot';
 import { MG_TIME_MS } from '@offside/game/minigame';
 import type { SheetView } from '@offside/app-core/sheets';
+import { sheetMinigameText as L } from '@offside/app-core/i18n/ko/sheetMinigame';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
 import { Txt } from '../ui/Txt';
@@ -16,14 +17,15 @@ import { Pop } from './anim';
 import { MgTimer } from './MgTimer';
 import { PitchScene, REST, SPOT_POSE, type BallPose, type KeeperPose } from './PitchScene';
 
-const CAPTION: Record<string, string> = {
-  goal: '골!',
-  saved: '선방에 막혔다!',
-  post: '골대를 때렸다!',
-  over: '하늘로 떴다…',
-  wide: '빗나갔다!',
-  late: '시간 초과!',
-};
+const captionOf = (outcome: string): string =>
+  ({
+    goal: L.goal,
+    saved: L.shotSaved,
+    post: L.shotPost,
+    over: L.shotOver,
+    wide: L.shotWide,
+    late: L.late,
+  })[outcome] ?? '';
 
 export function DragShot({ v }: { v: Extract<SheetView, { kind: 'dragShot' }> }) {
   const s = useSnapshot(v);
@@ -82,7 +84,7 @@ export function DragShot({ v }: { v: Extract<SheetView, { kind: 'dragShot' }> })
         const shot = path.current;
         stop();
         if (!isShot(shot)) {
-          setHint('골문 쪽(위)으로 더 길게 끌었다가 떼세요');
+          setHint(L.dragHint);
           return;
         }
         over.current = true;
@@ -129,25 +131,29 @@ export function DragShot({ v }: { v: Extract<SheetView, { kind: 'dragShot' }> })
     if (sh.keeper === 0) return { dx: 0, dy: -8, rot: 0 };
     return { dx: sh.keeper * 38, dy: -6, rot: sh.keeper * 68 };
   })();
-  const caption = s.shot && stage > 0 ? CAPTION[s.shot.outcome] : '';
+  const caption = s.shot && stage > 0 ? captionOf(s.shot.outcome) : '';
   const readout = ((): string => {
     const sh = s.shot;
     if (!sh) return '';
-    if (sh.outcome === 'late') return `${MG_TIME_MS / 1000}초 안에 차지 않았어요`;
-    const pw = sh.power < 0.6 ? '약함' : sh.power > 1.3 ? '과함' : '좋음';
-    return `세기 ${Math.round(sh.power * 100)}% (${pw}) · 곧게 차기 ${Math.round(sh.straight * 100)}%`;
+    if (sh.outcome === 'late') return L.lateReadout({ sec: MG_TIME_MS / 1000 });
+    const pw = sh.power < 0.6 ? L.powerWeak : sh.power > 1.3 ? L.powerOver : L.powerGood;
+    return L.readout({
+      power: Math.round(sh.power * 100),
+      label: pw,
+      straight: Math.round(sh.straight * 100),
+    });
   })();
 
   return (
     <>
-      <Txt v="eyebrow">드래그 슛 · 골문 쪽으로 끌어 올리세요</Txt>
+      <Txt v="eyebrow">{L.dragEyebrow}</Txt>
       <Txt v="h2" accessibilityRole="header">
         {s.label}
       </Txt>
       <View
         testID="drag-shot"
         accessible
-        accessibilityLabel="드래그 슛. 공에서 골문 쪽으로 끌었다가 떼면 찹니다"
+        accessibilityLabel={L.dragA11y}
         onLayout={(e) => {
           const { width, height } = e.nativeEvent.layout;
           size.current = { w: width, h: height };
@@ -195,7 +201,7 @@ export function DragShot({ v }: { v: Extract<SheetView, { kind: 'dragShot' }> })
             opacity: 0.9,
           }}
         >
-          {readout || hint || '↑ 위로 끌었다 떼기'}
+          {readout || hint || L.dragIdle}
         </Txt>
         <View style={StyleSheet.absoluteFill} {...pan.panHandlers} />
       </View>

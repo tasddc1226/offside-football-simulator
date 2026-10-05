@@ -3,7 +3,13 @@
 // 캔버스 값(도안 px)을 그대로 쓴다. 글자 자리는 baseline 대신 위 끝 기준이라 웹과 몇 px 어긋날 수 있다.
 import { Text, View, type TextStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CARD_H, CARD_W, TAGLINE, type ShareCardData } from '@offside/app-core/shareCard';
+import {
+  CARD_H,
+  CARD_W,
+  cardBrand,
+  tagline,
+  type ShareCardData,
+} from '@offside/app-core/shareCard';
 import { RnColorContext, RnJersey } from '../../components/RnJersey';
 import { DISPLAY, fitLine } from '../../theme/type';
 
@@ -379,13 +385,13 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
       >
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 24, flexShrink: 1 }}>
           <Text style={fitLine({ fontSize: 36, lineHeight: 36, fontWeight: '700', color: C.ink })}>
-            오프사이드
+            {cardBrand()}
           </Text>
           <Text
             numberOfLines={1}
             style={{ flexShrink: 1, fontSize: 26, lineHeight: 36, color: C.muted }}
           >
-            {TAGLINE}
+            {tagline()}
           </Text>
         </View>
         <Text

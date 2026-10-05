@@ -9,6 +9,7 @@ import { Txt } from '../ui/Txt';
 import { PlayerCard, type PlayerCardData } from './PlayerCard';
 import { DragPlayer, type PlayerDrag } from './DragPlayer';
 import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
 export type PitchCell = PlayerCardData;
 export function TeamPitch({
@@ -102,7 +103,7 @@ export function TeamPitch({
         {onplace ? (
           <Pressable
             testID="pitch-space"
-            accessibilityLabel="선택한 선수를 그라운드 빈 공간에 배치"
+            accessibilityLabel={L.placeAriaApp}
             onPress={(e) => onplace(e.nativeEvent.locationX, e.nativeEvent.locationY)}
             style={{ position: 'absolute', inset: 0 }}
           />
@@ -131,7 +132,11 @@ export function TeamPitch({
                 <Press
                   testID={`slot-${i}`}
                   onPress={onpick ? () => onpick(i) : undefined}
-                  accessibilityLabel={`${pos.slot} · ${cell.name}${country ? ` · ${country.ko}` : ''} · 포지션 OVR ${cell.rating}${ondrag ? ' · 길게 눌러 이동' : ''}`}
+                  accessibilityLabel={L.pitchSlotApp({
+                    head: `${pos.slot} · ${cell.name}${country ? ` · ${country.ko}` : ''}`,
+                    rating: cell.rating,
+                    drag: !!ondrag,
+                  })}
                   accessibilityState={{ selected: selected === i }}
                   style={{
                     borderRadius: 10,
@@ -151,18 +156,19 @@ export function TeamPitch({
 }
 
 /** 팀의 공격·중원·수비·골문 힘(내 팀 편성 · 팀 프로필). */
-const CELLS = [
-  ['atk', '공격'],
-  ['mid', '중원'],
-  ['def', '수비'],
-  ['gk', '골문'],
-] as const;
+const cells = () =>
+  [
+    ['atk', L.lineAtk],
+    ['mid', L.lineMid],
+    ['def', L.lineDef],
+    ['gk', L.lineGk],
+  ] as const;
 
 export function TeamLines({ lines }: { lines: Lines }) {
   const c = useColors();
   return (
     <View testID="team-lines" style={{ flexDirection: 'row', gap: 6 }}>
-      {CELLS.map(([k, label]) => (
+      {cells().map(([k, label]) => (
         <View
           key={k}
           accessible

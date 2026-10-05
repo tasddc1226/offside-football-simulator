@@ -2,7 +2,7 @@
 // 경기 id를 시드로 만든다 — 같은 경기는 다시 봐도 같은 중계가 나온다. 골이 아닌 줄(슈팅·선방·코너킥)은 연출이라 기록에
 // 남지 않는다.
 import type { TeamMatch } from './api/team.js';
-import { iGa, waGwa } from '@offside/app-core/format';
+import { teamLiveText as L } from './i18n/ko/teamLive.js';
 
 export type LiveKind =
   'kickoff' | 'chance' | 'save' | 'miss' | 'corner' | 'build' | 'goal' | 'ht' | 'ft';
@@ -37,32 +37,13 @@ function rngOf(seed: string): () => number {
 const pick = <T>(rnd: () => number, list: readonly T[]): T =>
   list[Math.floor(rnd() * list.length)]!;
 
-const CHANCE = [
-  (t: string) => `${t}, 오른쪽 측면을 파고들어 크로스를 올립니다.`,
-  (t: string) => `${t}의 빠른 역습! 수비 숫자가 모자랍니다.`,
-  (t: string) => `${t}, 중원에서 공을 끊어 내고 전진합니다.`,
-  (t: string) => `${t}${iGa(t)} 짧은 패스로 상대 진영을 흔듭니다.`,
-  (t: string) => `${t}, 왼쪽 측면에서 일대일 돌파를 시도합니다.`,
-] as const;
-const SAVE = [
-  (t: string) => `${t}의 강한 중거리 슛! 골키퍼가 몸을 날려 쳐 냅니다.`,
-  (t: string) => `${t}, 골문 앞 헤더! 골키퍼 정면으로 향합니다.`,
-  (t: string) => `${t}의 낮게 깔린 슈팅, 골키퍼가 발끝으로 막아 냅니다!`,
-] as const;
-const MISS = [
-  (t: string) => `${t}, 회심의 슈팅이 골대를 살짝 벗어납니다.`,
-  (t: string) => `${t}, 결정적인 기회였는데 크로스바를 넘기고 맙니다!`,
-  (t: string) => `${t}의 슛이 골대를 맞고 나옵니다! 아쉬움에 머리를 감싸 쥡니다.`,
-] as const;
-const CORNER = [
-  (t: string) => `${t}, 코너킥을 얻어 냅니다.`,
-  (t: string) => `${t}의 프리킥, 수비벽에 막힙니다.`,
-] as const;
-const BUILD = [
-  (t: string) => `${t}, 페널티 박스 안으로 파고듭니다…!`,
-  (t: string) => `${t}의 날카로운 침투 패스가 수비 뒷공간으로!`,
-  (t: string) => `${t}, 문전 혼전 상황입니다…!`,
-] as const;
+// 문구는 그릴 때 지금 언어로 읽는다(i18n/ko/teamLive.ts). 고르는 줄 수는 언어마다 같다 — 같은 경기는 같은 순서로 나온다.
+type Say = (p: { t: string }) => string;
+const chance = (): readonly Say[] => [L.chance1, L.chance2, L.chance3, L.chance4, L.chance5];
+const save = (): readonly Say[] => [L.save1, L.save2, L.save3];
+const miss = (): readonly Say[] => [L.miss1, L.miss2, L.miss3];
+const corner = (): readonly Say[] => [L.corner1, L.corner2];
+const build = (): readonly Say[] => [L.build1, L.build2, L.build3];
 
 /**
  * 한 경기의 중계 대본. name(careerId, fallback)은 선수 표시 이름(내 선수는 이 기기에 남은 이름). 줄은 시계 순서이고,
@@ -78,7 +59,7 @@ export function liveScript(
     {
       minute: 0,
       kind: 'kickoff',
-      text: `${team.home}${waGwa(team.home)} ${team.away}의 경기, 주심의 휘슬과 함께 킥오프!`,
+      text: L.kickoff({ home: team.home, away: team.away }),
     },
   ];
 
@@ -95,13 +76,13 @@ export function liveScript(
     const r = rnd();
     const [kind, list] =
       r < 0.35
-        ? (['chance', CHANCE] as const)
+        ? (['chance', chance()] as const)
         : r < 0.6
-          ? (['save', SAVE] as const)
+          ? (['save', save()] as const)
           : r < 0.8
-            ? (['miss', MISS] as const)
-            : (['corner', CORNER] as const);
-    lines.push({ minute, kind, side, text: pick(rnd, list)(team[side]) });
+            ? (['miss', miss()] as const)
+            : (['corner', corner()] as const);
+    lines.push({ minute, kind, side, text: pick(rnd, list)({ t: team[side] }) });
   }
 
   // 골 — 직전 분에 빌드업 한 줄, 그 분에 골 줄.
@@ -122,28 +103,28 @@ export function liveScript(
       minute: Math.max(1, e.minute - 1),
       kind: 'build',
       side: e.side,
-      text: pick(rnd, BUILD)(t),
+      text: pick(rnd, build())({ t }),
     });
     const mine = e.side === 'home' ? h : a;
     const theirs = e.side === 'home' ? a : h;
     const wasBehind = (e.side === 'home' ? before[0] - before[1] : before[1] - before[0]) < 0;
     const flavor =
       n === 3
-        ? ' 해트트릭 완성!'
+        ? L.flavorHat
         : e.minute >= 85 && mine === theirs
-          ? ' 극적인 동점골!'
+          ? L.flavorLateEq
           : e.minute >= 85 && mine === theirs + 1
-            ? ' 경기를 뒤집는 극장골!'
+            ? L.flavorLateWin
             : wasBehind && mine === theirs
-              ? ' 균형을 되찾습니다!'
+              ? L.flavorEq
               : wasBehind && mine > theirs
-                ? ' 역전입니다!'
+                ? L.flavorLead
                 : '';
     lines.push({
       minute: e.minute,
       kind: 'goal',
       side: e.side,
-      text: `골! ${t} ${scorer}!${assist ? ` ${assist}의 도움.` : ''}${flavor}`,
+      text: `${L.goal({ t, scorer })}${assist ? L.goalAssist({ assist }) : ''}${flavor}`,
       score: [h, a],
     });
   }
@@ -154,7 +135,7 @@ export function liveScript(
     minute: 45,
     extra: 1 + Math.floor(rnd() * 3),
     kind: 'ht',
-    text: `전반 종료. ${team.home} ${htScore[0]} : ${htScore[1]} ${team.away}`,
+    text: L.halfTime({ home: team.home, away: team.away, hs: htScore[0], as: htScore[1] }),
   });
   const my = m.mine === 'home' ? h : a;
   const their = m.mine === 'home' ? a : h;
@@ -162,7 +143,13 @@ export function liveScript(
     minute: 90,
     extra: 2 + Math.floor(rnd() * 4),
     kind: 'ft',
-    text: `경기 종료! ${team.home} ${h} : ${a} ${team.away}. ${my > their ? '승리를 거둡니다!' : my < their ? '아쉬운 패배입니다.' : '승부를 가리지 못했습니다.'}`,
+    text: L.fullTime({
+      home: team.home,
+      away: team.away,
+      h,
+      a,
+      result: my > their ? L.resultWin : my < their ? L.resultLoss : L.resultDraw,
+    }),
   });
 
   // 시계 순서(같은 분이면 빌드업 → 골 → 나머지, 추가시간 줄은 그 분의 맨 뒤).
@@ -193,10 +180,18 @@ export const clockText = (l: Pick<LiveLine, 'minute' | 'extra'>) =>
 
 export type LivePhase = '1st' | 'ht' | '2nd' | 'ft';
 export const PHASE_LABEL: Record<LivePhase, string> = {
-  '1st': '전반',
-  ht: '하프타임',
-  '2nd': '후반',
-  ft: '경기 종료',
+  get '1st'() {
+    return L.phase1st;
+  },
+  get ht() {
+    return L.phaseHt;
+  },
+  get '2nd'() {
+    return L.phase2nd;
+  },
+  get ft() {
+    return L.phaseFt;
+  },
 };
 
 /** 골 배너·전광판 번쩍임이 유지되는 시간(ms). */

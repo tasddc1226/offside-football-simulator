@@ -8,6 +8,7 @@ import { Animated, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { visibleCareerLog } from '@offside/app-core/potential-view';
+import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
 import { PHASES, LAST_PHASE } from '@offside/game/data';
 import {
   roundRange,
@@ -396,9 +397,9 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
   const S = s.season;
   const avg = S.apps ? (S.ratingSum / S.apps).toFixed(2) : '-';
   const phase = Math.min(s.phase, LAST_PHASE);
-  const label = phase === 0 ? '프리시즌' : `${PHASES[phase]} · ${roundRange(s, phase)}`;
+  const label = phase === 0 ? L.preseason : `${PHASES[phase]} · ${roundRange(s, phase)}`;
   const back = s.pos === 'GK' || s.pos === 'DF';
-  const lastCol = (back ? ['무실점', S.cs] : ['도움', S.assists]) as [string, number];
+  const lastCol = (back ? [L.colCs, S.cs] : [L.colAssists, S.assists]) as [string, number];
   const comps = s.season.comps || [];
   const activeStories = Object.entries(s.story || {}).filter(([, v]) => !v.done);
   const t = turnNo(s);
@@ -446,7 +447,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
       return e && e.story === k;
     });
     if (!ch) return '';
-    return ch.at <= t ? '곧 이어짐' : `약 ${ch.at - t}구간 후`;
+    return ch.at <= t ? L.storySoon : L.storyWait({ n: ch.at - t });
   }
 
   return (
@@ -466,16 +467,16 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
           <View>
             <Txt v="eyebrow">{`Next · ${label}`}</Txt>
             <Txt v="h2" accessibilityRole="header">
-              다음 구간 준비
+              {L.prepTitle}
             </Txt>
           </View>
           <View style={{ gap: 9 }}>
-            <Meter label="컨디션" value={s.cond} tone={meterTone(s.cond, 40, 65)} />
-            <Meter label="사기" value={s.morale} tone={meterTone(s.morale, 40, 60)} />
-            <Meter label="인기" value={s.fame} tone="acc" />
+            <Meter label={L.condition} value={s.cond} tone={meterTone(s.cond, 40, 65)} />
+            <Meter label={L.morale} value={s.morale} tone={meterTone(s.morale, 40, 60)} />
+            <Meter label={L.fame} value={s.fame} tone="acc" />
           </View>
           <View style={{ gap: 6 }} testID="coach-feedback">
-            <SubTitle>코치 메모</SubTitle>
+            <SubTitle>{L.coachMemo}</SubTitle>
             <Txt v="sm">{coach.summary}</Txt>
             {coach.notes.map((note) => (
               <Txt key={note} v="sm" tone="muted">
@@ -483,8 +484,8 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
               </Txt>
             ))}
           </View>
-          <SubTitle>훈련 방향</SubTitle>
-          {wait === 'train' ? <TourHint>이번 구간 훈련을 고르면 다음으로 넘어가요</TourHint> : null}
+          <SubTitle>{L.trainingTitle}</SubTitle>
+          {wait === 'train' ? <TourHint>{L.trainHint}</TourHint> : null}
           <ChoiceGrid
             testPrefix="train"
             popped={popped?.g === 'train' ? popped.id : null}
@@ -524,14 +525,12 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
             <View style={{ flex: 1 }}>
               <Txt v="eyebrow">Invest</Txt>
               <Txt v="h2" accessibilityRole="header">
-                자기 투자
+                {L.investTitle}
               </Txt>
             </View>
-            <Pill>{`보유 ${fmtMoney(s.money)}원`}</Pill>
+            <Pill>{L.funds({ v: `${fmtMoney(s.money)}원` })}</Pill>
           </View>
-          {wait === 'invest' ? (
-            <TourHint>투자를 고르면 넘어가요 · 아끼려면 투자 안 함</TourHint>
-          ) : null}
+          {wait === 'invest' ? <TourHint>{L.investHint}</TourHint> : null}
           <ChoiceGrid
             testPrefix="invest"
             popped={popped?.g === 'invest' ? popped.id : null}
@@ -578,7 +577,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
               ))}
             </View>
             <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
-              {['프리시즌', '전반기', '후반기'].map((tl) => (
+              {[L.preseason, L.phaseFirst, L.phaseSecond].map((tl) => (
                 <Txt key={tl} tone="muted" center style={{ flex: 1, fontSize: rem(0.6875) }}>
                   {tl}
                 </Txt>
@@ -587,20 +586,29 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
           </View>
           {showTotals ? (
             <Txt testID="season-totals" tone="muted" style={{ fontSize: rem(0.8125) }}>
-              {`시즌 누적 · ${S.w}승 ${S.d}무 ${S.l}패 · 출전 ${S.apps} · ${S.goals}골 · ${lastCol[0]} ${lastCol[1]} · 평점 ${avg}`}
+              {L.totals({
+                w: S.w,
+                d: S.d,
+                l: S.l,
+                apps: S.apps,
+                goals: S.goals,
+                col: lastCol[0],
+                colN: lastCol[1],
+                rating: avg,
+              })}
             </Txt>
           ) : null}
           <LeagueTable s={s} play={rankPlay} />
           {comps.length ? (
             <View>
-              <SubTitle>이번 시즌 대회</SubTitle>
+              <SubTitle>{L.compsTitle}</SubTitle>
               {comps.map((cp) => (
                 <StoryRow key={cp.name}>
                   <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>{cp.name}</Txt>
                   <RowMuted>
-                    {`${cp.stage || (cp.type === 'super' ? '개막 전 단판' : '1구간 시작')}${cp.alive && cp.stage ? ' · 진행 중' : ''}`}
+                    {`${cp.stage || (cp.type === 'super' ? L.compSuper : L.compStart)}${cp.alive && cp.stage ? ` · ${L.compAlive}` : ''}`}
                   </RowMuted>
-                  <RowMuted>{`${cp.apps}경기 ${cp.g}골`}</RowMuted>
+                  <RowMuted>{L.compLine({ apps: cp.apps, g: cp.g })}</RowMuted>
                 </StoryRow>
               ))}
             </View>
@@ -613,7 +621,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
           <Card gap={0}>
             <Txt v="eyebrow">Storylines</Txt>
             <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
-              진행 중인 스토리
+              {L.storiesTitle}
             </Txt>
             {activeStories.map(([k, v]) => (
               <StoryRow key={k}>
@@ -645,7 +653,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
           <Card gap={0}>
             <Txt v="eyebrow">Timeline</Txt>
             <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
-              최근 소식
+              {L.feedTitle}
             </Txt>
             <View>
               {(feedAll ? feed : feed.slice(0, FEED_SHORT)).map((l, i) => (
@@ -688,11 +696,11 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
               <Btn
                 sm
                 testID="feed-more"
-                accessibilityLabel={feedAll ? '최근 소식 접기' : '최근 소식 더 보기'}
+                accessibilityLabel={feedAll ? L.feedLessAria : L.feedMoreAria}
                 onPress={() => setFeedAll(!feedAll)}
                 style={{ alignSelf: 'flex-start', marginTop: 8 }}
               >
-                {feedAll ? '접기' : '더 보기'}
+                {feedAll ? L.feedLess : L.feedMore}
               </Btn>
             ) : null}
           </Card>

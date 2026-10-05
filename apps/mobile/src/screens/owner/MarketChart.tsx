@@ -13,7 +13,7 @@ import {
 } from '@offside/app-core/api/market';
 import {
   CHART_COPY,
-  CHART_RANGES,
+  chartRanges,
   chartModel,
   dayText,
   marketIndex,
@@ -27,6 +27,7 @@ import { useColors } from '../../theme/useColors';
 import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Press, Txt } from '../../ui';
+import { marketChartText as L } from '@offside/app-core/i18n/ko/marketChart';
 
 const chartTone = (c: Colors, tone: ChartTone) =>
   tone === 'up' ? c.up : tone === 'down' ? c.down : c.muted;
@@ -80,7 +81,7 @@ export function MarketIndex({ points }: { points: readonly MarketChartPoint[] })
     <View
       testID="market-index"
       accessible
-      accessibilityLabel={`${CHART_COPY.index} 기준가의 ${index.pct}, ${index.change}`}
+      accessibilityLabel={L.indexA11y({ pct: index.pct, change: index.change })}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -193,7 +194,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
         </View>
         <View
           accessibilityRole="radiogroup"
-          accessibilityLabel="기간"
+          accessibilityLabel={L.rangeGroup}
           style={{
             flexDirection: 'row',
             gap: 2,
@@ -203,7 +204,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
             alignSelf: 'flex-start',
           }}
         >
-          {CHART_RANGES.map(([k, label]) => (
+          {chartRanges().map(([k, label]) => (
             <Press
               key={k}
               testID={`chart-range-${k}`}
@@ -229,7 +230,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
         </View>
       </View>
       {points === null ? (
-        empty('불러오는 중…')
+        empty(L.loading)
       ) : failed ? (
         empty(CHART_COPY.failed)
       ) : !model ? (
@@ -275,7 +276,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
                 {(
                   [
                     [8, model.top],
-                    [model.base, '기준가'],
+                    [model.base, L.baseLabel],
                     [92, model.bottom],
                   ] as const
                 ).map(([y, label]) => (

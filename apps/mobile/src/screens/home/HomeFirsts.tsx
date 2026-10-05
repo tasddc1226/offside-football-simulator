@@ -4,6 +4,7 @@ import type { ServerFirst } from '@offside/contracts';
 import { getFirsts } from '@offside/app-core/api/client';
 import { achievedList } from '@offside/app-core/firsts';
 import { go } from '../../game/nav';
+import { homeText as L } from '@offside/app-core/i18n/ko/home';
 import { Tile } from './Tile';
 
 export function HomeFirsts() {
@@ -26,8 +27,8 @@ export function HomeFirsts() {
     <Tile
       testID="firsts"
       eyebrow="Server firsts"
-      title={latest ? latest.label : '서버 최초 기록'}
-      sub={`${count ? `서버 최초 업적 ${count.done} / ${count.total}` : '모든 플레이어 중 첫 기록 보기'} →`}
+      title={latest ? latest.label : L.firstsTitle}
+      sub={`${count ? L.firstsCount(count) : L.firstsEmpty} →`}
       subNum
       onPress={() => go('firsts')}
     />

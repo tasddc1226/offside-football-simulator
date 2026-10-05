@@ -4,6 +4,7 @@
   import { attrData } from '@offside/app-core/format';
   import type { GameState } from '@offside/game/types';
   import Radar from './Radar.svelte';
+  import { gameAttrText as L } from '@offside/app-core/i18n/ko/gameAttr';
 
   const { s }: { s: GameState } = $props();
   const d = $derived(attrData(s));
@@ -11,11 +12,11 @@
 
 <section class="card">
   <div class="eyebrow">Attributes</div>
-  <div class="attr-head"><h2>능력치</h2><span class="pill">{d.roleName} · OVR {ovr(s)}</span></div>
+  <div class="attr-head"><h2>{L.title}</h2><span class="pill">{d.roleName} · OVR {ovr(s)}</span></div>
   <Radar {s} />
-  <p class="radar-legend muted"><i class="lg-now"></i>현재 <i class="lg-prev"></i>시즌 시작</p>
+  <p class="radar-legend muted"><i class="lg-now"></i>{L.legendNow} <i class="lg-prev"></i>{L.legendPrev}</p>
   <div class="role-line">
-    <span class="muted">포지션별 OVR</span>
+    <span class="muted">{L.roleOvr}</span>
     {#each d.roles as r (r.role)}
       <span class={r.on ? 'on' : ''} title={r.title}>{r.role} <b class="num">{r.ovr}</b></span>
     {/each}
@@ -32,5 +33,5 @@
       </div>
     {/each}
   </div>
-  <p class="muted stat-note"><b>굵은 글씨</b>가 {d.roleName} OVR을 결정하는 능력치예요.</p>
+  <p class="muted stat-note"><b>{L.noteBold}</b>{L.noteRest({ role: d.roleName })}</p>
 </section>

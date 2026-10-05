@@ -15,6 +15,7 @@ import { rem } from '../theme/type';
 import { Press } from './Press';
 import { TabIcon, type TabIconName } from './TabIcon';
 import { Txt } from './Txt';
+import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 
 export interface TabItem {
   key: TabIconName;
@@ -188,7 +189,7 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
             <Press
               accessibilityRole="tab"
               accessibilityState={{ selected: t.active }}
-              accessibilityLabel={t.dot ? `${t.label}, 새 업적 ${t.dot}개` : undefined}
+              accessibilityLabel={t.dot ? `${t.label}, ${L.achNew({ n: t.dot })}` : undefined}
               onPress={t.onPress}
               testID={t.testID ?? `tab-${t.key}`}
               style={(pressed) => ({

@@ -11,10 +11,11 @@ import {
 } from '@offside/contracts/service-seasons';
 import { getFirsts } from '@offside/app-core/api/client';
 import { kstParts } from '@offside/app-core/boardText';
+import { firstsText as L } from '@offside/app-core/i18n/ko/firsts';
 import {
-  FIRSTS_TABS,
   achievedList,
   byDay,
+  firstsTabs,
   holderLabel,
   type FirstsTab,
 } from '@offside/app-core/firsts';
@@ -146,7 +147,7 @@ export default function Firsts() {
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <WhoText>{w.name}</WhoText>
-        {w.mine ? <Pill tone="good">내 선수</Pill> : null}
+        {w.mine ? <Pill tone="good">{L.mine}</Pill> : null}
       </View>
     );
   };
@@ -171,7 +172,7 @@ export default function Firsts() {
             <View>
               <Txt v="eyebrow">Server firsts</Txt>
               <Txt v="h1" accessibilityRole="header" style={{ marginBottom: 4 }}>
-                서버 최초 업적
+                {L.title}
               </Txt>
             </View>
             {data ? (
@@ -185,15 +186,15 @@ export default function Firsts() {
             ) : null}
           </View>
           <Txt tone="muted" style={{ fontSize: rem(0.8125), marginBottom: 10 }}>
-            {`${
-              tab === 'records'
-                ? '모든 플레이어 중 가장 높은 기록이에요. 더 큰 기록이 나오면 주인이 바뀌어요.'
-                : '모든 플레이어를 통틀어 가장 먼저 세운 기록만 남아요.'
-            } 이름은 명예의 전당에 이름을 공개한 선수만 보여요.`}
+            {L.introRecords({ records: tab === 'records' })}
           </Txt>
         </View>
         {seasons.length > 1 ? (
-          <Seg cols={Math.min(seasons.length, 3)} label="시즌" style={{ marginBottom: 10 }}>
+          <Seg
+            cols={Math.min(seasons.length, 3)}
+            label={L.seasonLabel}
+            style={{ marginBottom: 10 }}
+          >
             {seasons.map((id) => (
               <TabOpt
                 key={id}
@@ -206,22 +207,22 @@ export default function Firsts() {
           </Seg>
         ) : null}
         <SortChips
-          label="기록 분류"
+          label={L.tabsLabel}
           testIDPrefix="firsts-tab"
           value={tab}
           onPick={(k) => setTab(k as FirstsTab)}
-          items={FIRSTS_TABS.map((t) => ({ key: t.id, label: t.label }))}
+          items={firstsTabs().map((t) => ({ key: t.id, label: t.label }))}
         />
 
         {failed ? (
-          empty('서버 최초 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+          empty(L.loadFailed)
         ) : !data ? (
           <Txt
             tone="muted"
             accessibilityLiveRegion="polite"
             style={{ fontSize: rem(0.875), paddingVertical: 8 }}
           >
-            불러오는 중…
+            {L.loading}
           </Txt>
         ) : tab === 'recent' ? (
           days.length ? (
@@ -248,7 +249,7 @@ export default function Firsts() {
               </View>
             ))
           ) : (
-            empty('아직 세워진 서버 최초 기록이 없어요.')
+            empty(L.empty)
           )
         ) : tab === 'records' ? (
           <View>
@@ -270,7 +271,7 @@ export default function Firsts() {
                   r.holder && r.value !== null && r.achievedAt ? (
                     who(r.holder)
                   ) : (
-                    <WhoText>아직 기록 없음</WhoText>
+                    <WhoText>{L.noRecord}</WhoText>
                   )
                 }
                 bottomRight={
@@ -295,7 +296,7 @@ export default function Firsts() {
                     <TimeText>{kstParts(x.achievedAt).day}</TimeText>
                   ) : undefined
                 }
-                who={x.holder && x.achievedAt ? who(x.holder) : <WhoText>미달성</WhoText>}
+                who={x.holder && x.achievedAt ? who(x.holder) : <WhoText>{L.locked}</WhoText>}
               />
             ))}
           </View>

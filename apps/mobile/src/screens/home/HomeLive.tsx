@@ -36,6 +36,7 @@ import { prefs } from '../../store';
 import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, ClubMark, Press, Txt } from '../../ui';
+import { homeLiveText as L } from '@offside/app-core/i18n/ko/homeLive';
 
 const POLL_MS = LIVE_POLL_SEC * 1000;
 const STEP_MS = LIVE_STEP_MS;
@@ -146,7 +147,7 @@ export function HomeLive() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Txt v="eyebrow">Live</Txt>
               <Txt v="h2" accessibilityRole="header" style={{ fontSize: rem(1.0625) }}>
-                지금 오프사이드에서는
+                {L.title}
               </Txt>
             </View>
             {rolling ? (
@@ -154,7 +155,7 @@ export function HomeLive() {
               <Btn
                 sm
                 testID="live-pause"
-                accessibilityLabel="소식 일시정지"
+                accessibilityLabel={L.pause}
                 onPress={() => setPaused((v) => !v)}
                 style={{ width: 44, paddingHorizontal: 0 }}
               >
@@ -191,7 +192,7 @@ export function HomeLive() {
               >
                 {failed ? (
                   <Txt tone="muted" center style={{ fontSize: rem(0.8125) }}>
-                    지금은 현황을 불러오지 못했어요. 잠시 뒤 다시 확인할게요.
+                    {L.failed}
                   </Txt>
                 ) : null}
               </View>

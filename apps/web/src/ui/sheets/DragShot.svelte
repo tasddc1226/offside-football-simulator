@@ -3,6 +3,7 @@
   // 300×170)로 모은다 — 화면 크기와 상관없이 같은 손짓이 같은 슛이 되게. 판정은 game/dragShot.ts.
   import { isShot, type DragPoint } from '@offside/game/dragShot';
   import { MG_TIME_MS } from '@offside/game/minigame';
+  import { sheetMinigameText as L } from '@offside/app-core/i18n/ko/sheetMinigame';
   import MgTimer from './MgTimer.svelte';
   import PitchScene, { REST, SPOT_POSE, type BallPose, type KeeperPose } from './PitchScene.svelte';
   import type { SheetView } from '@offside/app-core/sheets';
@@ -69,7 +70,7 @@
     const shot = path;
     stop();
     if (!isShot(shot)) {
-      hint = '골문 쪽(위)으로 더 길게 끌었다가 떼세요';
+      hint = L.dragHint;
       return;
     }
     over = true;
@@ -101,32 +102,26 @@
     if (sh.keeper === 0) return { dx: 0, dy: -8, rot: 0 };
     return { dx: sh.keeper * 38, dy: -6, rot: sh.keeper * 68 };
   });
-  const CAPTION: Record<string, string> = {
-    goal: '골!',
-    saved: '선방에 막혔다!',
-    post: '골대를 때렸다!',
-    over: '하늘로 떴다…',
-    wide: '빗나갔다!',
-    late: '시간 초과!',
-  };
-  const caption = $derived(v.shot && stage > 0 ? CAPTION[v.shot.outcome] : '');
+  const captionOf = (outcome: string): string =>
+    ({ goal: L.goal, saved: L.shotSaved, post: L.shotPost, over: L.shotOver, wide: L.shotWide, late: L.late })[outcome] ?? '';
+  const caption = $derived(v.shot && stage > 0 ? captionOf(v.shot.outcome) : '');
   const readout = $derived.by(() => {
     const sh = v.shot;
     if (!sh) return '';
-    if (sh.outcome === 'late') return `${MG_TIME_MS / 1000}초 안에 차지 않았어요`;
-    const pw = sh.power < 0.6 ? '약함' : sh.power > 1.3 ? '과함' : '좋음';
-    return `세기 ${Math.round(sh.power * 100)}% (${pw}) · 곧게 차기 ${Math.round(sh.straight * 100)}%`;
+    if (sh.outcome === 'late') return L.lateReadout({ sec: MG_TIME_MS / 1000 });
+    const pw = sh.power < 0.6 ? L.powerWeak : sh.power > 1.3 ? L.powerOver : L.powerGood;
+    return L.readout({ power: Math.round(sh.power * 100), label: pw, straight: Math.round(sh.straight * 100) });
   });
 </script>
 
-<div class="eyebrow">드래그 슛 · 골문 쪽으로 끌어 올리세요</div>
+<div class="eyebrow">{L.dragEyebrow}</div>
 <h2>{v.label}</h2>
 <div
   class="mg-stage mg-drag"
   class:dragging
   bind:this={area}
   role="application"
-  aria-label="드래그 슛. 공에서 골문 쪽으로 끌었다가 떼면 찹니다"
+  aria-label={L.dragA11y}
   data-drag-shot
   onpointerdown={down}
   onpointermove={move}
@@ -136,5 +131,5 @@
   <MgTimer stopped={over} onexpire={expire} />
   <PitchScene {ball} spin={stage * 300} {kp} goal={stage === 2 && v.shot?.outcome === 'goal'} {trail} />
   {#if caption}<span class="mg-caption pop" class:ok={v.shot?.ok}>{caption}</span>{/if}
-  <span class="mg-tap mg-readout">{readout || hint || '↑ 위로 끌었다 떼기'}</span>
+  <span class="mg-tap mg-readout">{readout || hint || L.dragIdle}</span>
 </div>

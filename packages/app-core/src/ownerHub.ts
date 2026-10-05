@@ -2,6 +2,7 @@
 // 그리기 전에 계산하는 것만 둔다.
 import type { OwnerTeamResponse } from './api/team.js';
 import { matchHintOf } from './teamOwner.js';
+import { ownerText as L } from './i18n/ko/owner.js';
 
 /** 구단주 요약 — 은퇴 선수 수 · 레전드 점수 합 · 영구결번 수 · 구단 가치(은퇴 가치 합, 만 원). */
 export type OwnerSummary = { players: number; score: number; retired: number; value: number };
@@ -42,9 +43,8 @@ export function ownerTeamCard(d: OwnerTeamResponse): OwnerTeamCard {
 /** 팀이 없을 때 '내 팀' 카드의 안내. */
 export const ownerTeamEmptyText = (c: OwnerTeamCard) =>
   c.players > 0
-    ? `${c.season}에 은퇴한 내 선수 ${c.players}명으로 팀을 꾸릴 수 있어요. 빈 자리는 유스 선수가 채워요.`
-    : `${c.season}에 뛰고 은퇴한 선수가 생기면 팀을 꾸릴 수 있어요.`;
+    ? L.teamEmptyWith({ season: c.season, n: c.players })
+    : L.teamEmptyNone({ season: c.season });
 
 /** 비로그인 구단주에게 보이는 잠긴 '내 팀' 카드의 안내. */
-export const ownerLockedText = (players: number) =>
-  `로그인하면 ${players > 0 ? `은퇴한 선수 ${players}명으로` : '은퇴한 선수로'} 팀을 꾸려 다른 구단주와 겨뤄요. 하루 경기·라이브 랭킹·시즌 업적이 열려요.`;
+export const ownerLockedText = (players: number) => L.locked({ players });

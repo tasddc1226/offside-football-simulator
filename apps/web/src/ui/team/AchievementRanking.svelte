@@ -7,6 +7,8 @@
   import { fetchAchRanking, type AchRankResponse } from '@offside/app-core/api/team';
   import { hofStart } from '@offside/app-core/state';
   import { num as n } from '@offside/app-core/teamText';
+  import { achGradeName } from '@offside/app-core/teamOwner';
+  import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
   import { appState } from '../state.svelte.js';
   import AchGradeBadge from './AchGradeBadge.svelte';
   import GradeEmblem from './GradeEmblem.svelte';
@@ -84,39 +86,40 @@
   {/if}
   <div class="hof-toolbar achievement-toolbar">
     <label class="hof-season-picker">
-      <span class="hof-filter-label">시즌</span>
-      <select aria-label="구단주 랭킹 시즌" data-ach-season-select value={String(selectedSeason)} onchange={(e) => ((season = Number(e.currentTarget.value)), (page = 1))}>
+      <span class="hof-filter-label">{L.seasonLabel}</span>
+      <select aria-label={L.rankSeasonAria} data-ach-season-select value={String(selectedSeason)} onchange={(e) => ((season = Number(e.currentTarget.value)), (page = 1))}>
         {#each seasons as s (s.id)}<option value={String(s.id)}>{s.name}</option>{/each}
       </select>
     </label>
-    {#if data && !loading && !failed}<span class="achievement-total muted">참여 구단주 <b class="num">{n(data.total)}</b>명</span>{/if}
+    {#if data && !loading && !failed}<span class="achievement-total muted">{L.ownersBefore}<b class="num">{n(data.total)}</b>{L.ownersAfter}</span>{/if}
   </div>
   {#if failed}
-    <p class="empty">랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+    <p class="empty">{L.rankFail}</p>
   {:else if loading || !data}
-    <p class="empty" role="status">불러오는 중…</p>
+    <p class="empty" role="status">{L.loading}</p>
   {:else if data.items.length}
     <div class="achievement-columns achievement-header" aria-hidden="true">
-      <span class="achievement-heading">구단주</span><span>등급</span><span title="달성 업적">업적</span><b>점수</b>
+      <span class="achievement-heading">{L.hdrOwner}</span><span>{L.hdrGrade}</span><span title={L.hdrDoneTitle}>{L.hdrDone}</span><b>{L.hdrScore}</b>
     </div>
-    <ol class="achievement-list" start={data.items[0]!.rank} aria-label="업적 점수 순 구단주 랭킹">
+    <ol class="achievement-list" start={data.items[0]!.rank} aria-label={L.ownerListAria}>
       {#each data.items as r (r.rank)}
         {@const grade = achGradeOf(r.score).grade}
-        {@const name = r.nickname ?? '익명 구단주'}
-        {@const label = `${r.rank}위 ${name}, ${grade.name}, 업적 ${n(r.done)}개 달성, ${n(r.score)}점`}
+        {@const name = r.nickname ?? L.anonOwner}
+        {@const gradeName = achGradeName(grade)}
+        {@const label = L.rowAria({ rank: r.rank, name, grade: gradeName, done: n(r.done), score: n(r.score) })}
         {#snippet row()}
           <span class="achievement-owner">
             <span class="achievement-rank num">{r.rank}</span>
             {#if r.team}<TeamLogo logo={r.team.logo} name={r.team.name} size={24} decorative />{/if}
-            <span class="achievement-identity"><b title={name}>{name}</b><small class="muted" title={r.team?.name}>{r.team?.name ?? '팀 없음'}</small></span>
+            <span class="achievement-identity"><b title={name}>{name}</b><small class="muted" title={r.team?.name}>{r.team?.name ?? L.noTeam}</small></span>
           </span>
-          <span class="achievement-grade" data-ach-grade={grade.id} role="img" aria-label={grade.name} title={grade.name}><GradeEmblem id={grade.id} size={32} /></span>
-          <span class="num achievement-done" title="업적 {n(r.done)}개 달성">{n(r.done)}</span>
-          <strong class="num achievement-score" title="{n(r.score)}점">{n(r.score)}</strong>
+          <span class="achievement-grade" data-ach-grade={grade.id} role="img" aria-label={gradeName} title={gradeName}><GradeEmblem id={grade.id} size={32} /></span>
+          <span class="num achievement-done" title={L.doneTitle({ n: n(r.done) })}>{n(r.done)}</span>
+          <strong class="num achievement-score" title={L.scoreTitle({ n: n(r.score) })}>{n(r.score)}</strong>
         {/snippet}
         <li value={r.rank}>
           {#if r.team}
-            <button class="achievement-columns achievement-row" data-ach-rank={r.rank} aria-label="{label}, 팀 상세 보기" onclick={() => r.team && openTeam(r.team.id)}>{@render row()}</button>
+            <button class="achievement-columns achievement-row" data-ach-rank={r.rank} aria-label={L.rowAriaTeam({ label })} onclick={() => r.team && openTeam(r.team.id)}>{@render row()}</button>
           {:else}
             <div class="achievement-columns achievement-row" data-ach-rank={r.rank} role="group" aria-label={label}>{@render row()}</div>
           {/if}
@@ -124,26 +127,26 @@
       {/each}
     </ol>
     {#if pages > 1}
-      <nav class="hof-pager" aria-label="랭킹 페이지">
-        <button class="icon-btn" data-ach-page="prev" disabled={page <= 1} onclick={() => goPage(page - 1)}>← 이전</button>
+      <nav class="hof-pager" aria-label={L.pagerAria}>
+        <button class="icon-btn" data-ach-page="prev" disabled={page <= 1} onclick={() => goPage(page - 1)}>{L.prev}</button>
         <span class="num" aria-live="polite">{page} / {pages}</span>
-        <button class="icon-btn" data-ach-page="next" disabled={page >= pages} onclick={() => goPage(page + 1)}>다음 →</button>
+        <button class="icon-btn" data-ach-page="next" disabled={page >= pages} onclick={() => goPage(page + 1)}>{L.next}</button>
       </nav>
     {/if}
   {:else}
-    <p class="empty">아직 랭킹에 오른 구단주가 없어요. 은퇴한 선수로 시즌 업적을 달성하면 여기에 올라요.</p>
+    <p class="empty">{L.ownersEmpty}</p>
   {/if}
   <div class="achievement-notes">
     <details class="ach-grades">
-      <summary class="muted fs-sm">등급 기준</summary>
+      <summary class="muted fs-sm">{L.gradesTitle}</summary>
       <ul>
         {#each ACH_GRADES as g (g.id)}
-          <li><AchGradeBadge grade={g} /><span class="num muted">{n(g.min)}점부터</span></li>
+          <li><AchGradeBadge grade={g} /><span class="num muted">{L.gradeFrom({ n: n(g.min) })}</span></li>
         {/each}
       </ul>
     </details>
-    <p class="muted">시즌마다 처음부터 다시 쌓아요.</p>
-    <p class="muted">선수·팀·구단주 업적 점수의 합이고, 랭킹은 5분마다 갱신돼요.</p>
+    <p class="muted">{L.noteReset}</p>
+    <p class="muted">{L.noteSum}</p>
   </div>
 </section>
 

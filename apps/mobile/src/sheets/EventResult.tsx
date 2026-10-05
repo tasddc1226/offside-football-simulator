@@ -2,6 +2,7 @@
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
+import { sheetPlayText as L } from '@offside/app-core/i18n/ko/sheetPlay';
 import { alpha } from '../theme/colors';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
@@ -15,7 +16,7 @@ export function EventResult({ v }: { v: Extract<SheetView, { kind: 'eventResult'
   const c = useColors();
   return (
     <>
-      <Txt v="eyebrow">{`결과 · ${s.label}`}</Txt>
+      <Txt v="eyebrow">{L.eventResult({ label: s.label })}</Txt>
       <Pop ms={350} style={{ alignSelf: 'flex-start' }}>
         <Txt
           style={{
@@ -67,10 +68,10 @@ export function EventResult({ v }: { v: Extract<SheetView, { kind: 'eventResult'
           }}
         >
           <Txt style={{ fontSize: rem(0.8125) }}>
-            {'📖 도감 새 항목 · '}
+            {`${L.dexNew} · `}
             <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>{s.dexNew}</Txt>
             <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-              {' · 홈의 확률 도감에서 볼 수 있어요'}
+              {` · ${L.dexNote}`}
             </Txt>
           </Txt>
         </View>
@@ -88,7 +89,7 @@ export function EventResult({ v }: { v: Extract<SheetView, { kind: 'eventResult'
               borderColor: alpha(c.accent, 0.5),
             }}
           >
-            <Txt v="eyebrow">{`스토리 완결 · ${s.story.name}`}</Txt>
+            <Txt v="eyebrow">{L.storyEnd({ name: s.story.name })}</Txt>
             <Txt style={{ fontSize: rem(1.0625), fontWeight: '700' }}>{s.story.ending}</Txt>
           </View>
         ) : (
@@ -106,14 +107,14 @@ export function EventResult({ v }: { v: Extract<SheetView, { kind: 'eventResult'
             <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
               {s.story.started ? (
                 <>
-                  {'새 스토리 시작: '}
+                  {`${L.storyStarted} `}
                   <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '700' }}>
                     {s.story.name}
                   </Txt>
                   {'. '}
                 </>
               ) : null}
-              {'이야기는 다음 구간에 이어져요.'}
+              {L.storyNext}
             </Txt>
           </View>
         )

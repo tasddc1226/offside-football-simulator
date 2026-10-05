@@ -24,6 +24,7 @@ import { HofRow, type RowStats } from '../../components/HofRow';
 import { rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { Seg, TabOpt } from '../board/parts';
+import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
 
 type MineRow = {
   nation?: string | undefined;
@@ -53,7 +54,7 @@ const localRow = (h: HofEntry, i: number, pending: ReadonlySet<string>, now: str
   club: h.lastClub,
   clubId: h.lastClubId,
   rn: h.rn?.kind === 'granted' ? h.rn.number : null,
-  tag: h.public ? '공개' : null,
+  tag: h.public ? L.tagPublic : null,
   stats: h,
   title: h.title ?? null,
   season: deviceSeasonOf(h, pending, now),
@@ -69,7 +70,7 @@ const serverRow = (e: PublicHofEntry): MineRow => ({
   club: e.lastClub,
   clubId: e.lastClubId,
   rn: e.retiredNumber?.number,
-  tag: e.name ? '공개' : null,
+  tag: e.name ? L.tagPublic : null,
   stats: { ...e, score: e.legendScore },
   title: e.title ?? null,
   season: serverSeasonOf(e),
@@ -160,11 +161,11 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
     <Card gap={0}>
       <Txt v="eyebrow">My players</Txt>
       <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 8 }}>
-        내 선수
+        {L.title}
       </Txt>
       {source === 'loading' ? (
         <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-          불러오는 중…
+          {L.loading}
         </Txt>
       ) : (
         <>
@@ -174,13 +175,17 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
             style={{ fontSize: rem(0.75), marginBottom: 6 }}
           >
             {source === 'account'
-              ? '계정에 기록된 선수예요. 다른 기기에서도 똑같이 보여요.'
+              ? L.sourceAccount
               : source === 'offline'
-                ? '서버에 연결하지 못해 이 기기에 저장된 선수를 보여 줘요.'
-                : '이 기기에 저장된 선수예요. 로그인하면 계정에 모아 볼 수 있어요.'}
+                ? L.sourceOffline
+                : L.sourceDeviceApp}
           </Txt>
           {seasons.length > 1 ? (
-            <Seg cols={Math.min(seasons.length, 3)} label="시즌" style={{ marginBottom: 8 }}>
+            <Seg
+              cols={Math.min(seasons.length, 3)}
+              label={L.seasonGroup}
+              style={{ marginBottom: 8 }}
+            >
               {seasons.map((s) => (
                 <TabOpt
                   key={s.id}
@@ -201,7 +206,7 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
                 key={r.key}
                 scale={0.985}
                 testID={`my-player-${i}`}
-                accessibilityLabel={`${r.name} 선수 기록 열기`}
+                accessibilityLabel={L.openRecord({ name: r.name })}
                 onPress={r.open}
               >
                 <HofRow
@@ -232,7 +237,7 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
               style={{ alignSelf: 'flex-start', marginTop: 8 }}
               onPress={() => setExpanded(true)}
             >
-              {`모두 보기 (${inSeason.length}명)`}
+              {L.showAll({ n: inSeason.length })}
             </Btn>
           ) : null}
         </>

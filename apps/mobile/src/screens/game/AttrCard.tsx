@@ -1,6 +1,7 @@
 // 능력치 카드(웹 AttrCard.svelte): 레이더 · 범례 · 포지션별 OVR · 세부 능력치 목록(2단) · 안내.
 import { Text, View, useWindowDimensions } from 'react-native';
 import { attrData } from '@offside/app-core/format';
+import { gameAttrText as L } from '@offside/app-core/i18n/ko/gameAttr';
 import { ovr } from '@offside/game/attributes';
 import type { GameState } from '@offside/game/types';
 import { mixColor } from '../../sheets/parts';
@@ -115,7 +116,7 @@ export function AttrCard({ s }: { s: GameState }) {
         }}
       >
         <Txt v="h2" accessibilityRole="header">
-          능력치
+          {L.title}
         </Txt>
         <Pill>{`${d.roleName} · OVR ${ovr(s)}`}</Pill>
       </View>
@@ -127,7 +128,7 @@ export function AttrCard({ s }: { s: GameState }) {
       >
         <View style={{ width: 16, marginLeft: 8, borderTopWidth: 2, borderTopColor: c.accent }} />
         <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-          현재
+          {L.legendNow}
         </Txt>
         <View
           style={{
@@ -139,7 +140,7 @@ export function AttrCard({ s }: { s: GameState }) {
           }}
         />
         <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-          시즌 시작
+          {L.legendPrev}
         </Txt>
       </View>
       <View
@@ -156,7 +157,7 @@ export function AttrCard({ s }: { s: GameState }) {
         }}
       >
         <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-          포지션별 OVR
+          {L.roleOvr}
         </Txt>
         {d.roles.map((r) => {
           const color = r.on ? c.accentText : c.muted;
@@ -194,8 +195,8 @@ export function AttrCard({ s }: { s: GameState }) {
         ))}
       </View>
       <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-        <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>굵은 글씨</Txt>
-        {`가 ${d.roleName} OVR을 결정하는 능력치예요.`}
+        <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>{L.noteBold}</Txt>
+        {L.noteRest({ role: d.roleName })}
       </Txt>
     </Card>
   );

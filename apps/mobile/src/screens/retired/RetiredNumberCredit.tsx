@@ -14,6 +14,7 @@ import { ClubMark } from '../../ui/ClubBadge';
 import { Reveal } from './credit';
 import { FText, Kicker } from './film';
 import { ownOf } from './own';
+import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
 
 export function RetiredNumberCredit({
   v,
@@ -48,7 +49,7 @@ export function RetiredNumberCredit({
       <View testID={`legend-rn-${rn?.kind}`} style={{ alignItems: 'center', gap: 20 }}>
         {rn?.kind === 'pending' ? (
           <FText tone="muted" size={0.875} lh={1.5} center testID="rn-pending">
-            서버가 결번을 심사하고 있어요. 잠시 뒤 명예의 전당에서 확인할 수 있어요.
+            {L.pending}
           </FText>
         ) : rnSlot?.kind === 'granted' ? (
           <View style={{ alignItems: 'center', gap: 10 }}>
@@ -56,54 +57,55 @@ export function RetiredNumberCredit({
             <RnJersey name={v.name} number={rnSlot.number} clubId={rnSlot.clubId} />
             <FText size={1.1875} center>
               <FText tone="gold" bold size={1.1875}>
-                {rnSlot.number}번
+                {L.lineNum({ number: rnSlot.number })}
               </FText>
-              은 이제,{'\n'}
+              {L.lineNumAfter}
+              {'\n'}
               <FText tone="gold" bold size={1.1875}>
                 {v.name}
               </FText>
-              의 이름으로 남습니다.
+              {L.lineNameAfter}
             </FText>
             {rnClub ? (
               <FText tone="muted" size={0.875} lh={1.5} center>
-                {rnClub.from}–{rnClub.to} · {rnClub.seasons}시즌 · {rnClub.apps}경기 {rnClub.goals}
-                골 {rnClub.assists}도움
+                {L.stats(rnClub)}
               </FText>
             ) : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <ClubMark name={rnSlot.club} id={rnSlot.clubId} size={18} />
-              <FText size={0.875}>
-                {rnSlot.club} 영구결번 · 서버 {rnSlot.seq}번째 결번
-              </FText>
+              <FText size={0.875}>{L.foot({ club: rnSlot.club, seq: rnSlot.seq })}</FText>
             </View>
           </View>
         ) : rnSlot?.kind === 'taken' ? (
           <View style={{ alignItems: 'center', gap: 10 }}>
             <Kicker>Wall of Honour</Kicker>
             <FText size={1.1875} center>
-              {rnSlot.number}번은 이미{' '}
+              {L.takenA({ number: rnSlot.number })}{' '}
               <FText tone="gold" bold size={1.1875}>
-                {rnSlot.holder ?? '익명의 레전드'}
+                {rnSlot.holder ?? L.anonLegend}
               </FText>
-              의 이름으로 남아 있어,{'\n'}구단은{' '}
+              {L.takenB}
+              {'\n'}
+              {L.takenC}{' '}
               <FText tone="gold" bold size={1.1875}>
                 {v.name}
               </FText>
-              의 이름을 명예의 벽에 새겼습니다.
+              {L.takenD}
             </FText>
           </View>
         ) : rnSlot?.kind === 'anonymous' ? (
           <View style={{ alignItems: 'center', gap: 10 }}>
             <Kicker>Retired Number</Kicker>
             <FText size={1.1875} center>
-              이름을 공개하면{'\n'}
+              {L.anonA}
+              {'\n'}
               <FText tone="gold" bold size={1.1875}>
-                {rnSlot.club} {rnSlot.number}번
+                {L.anonSlot({ club: rnSlot.club, number: rnSlot.number })}
               </FText>{' '}
-              영구결번이 확정됩니다.
+              {L.anonTail}
             </FText>
             <FText tone="muted" size={0.875} lh={1.5} center>
-              먼저 이름을 공개한 선수가 그 번호를 받아요.
+              {L.anonNote}
             </FText>
             {v.own ? (
               <Btn
@@ -114,7 +116,7 @@ export function RetiredNumberCredit({
                   if (own) setLegendPublic(own, true);
                 }}
               >
-                이름 공개하고 결번 받기
+                {L.publish}
               </Btn>
             ) : null}
           </View>

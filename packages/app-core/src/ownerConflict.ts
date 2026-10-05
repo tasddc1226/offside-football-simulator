@@ -7,6 +7,7 @@ import type { GameState } from '@offside/game/types';
 import type { PutCareerSeasonBody } from '@offside/contracts';
 import type { OutboxItem } from './outbox.js';
 import type { AppState } from './state.js';
+import { ownerConflictText as L } from './i18n/ko/ownerConflict.js';
 
 /** '이 기기에만 두기'를 고른 커리어 ID — 이 커리어는 다시 묻지 않는다. */
 const SKIP_KEY = 'ft_conflict_skip';
@@ -27,11 +28,10 @@ export function createOwnerConflicts(host: OwnerConflictHost) {
     const G = state.G;
     const cid = G && !G.retired ? G.cid : null;
     const active = items.filter((i) => i.kind === 'season' && i.careerId === cid);
-    if (active.length < items.length)
-      host.toast('다른 계정의 선수라 서버에 반영하지 못했어요. 그 계정으로 로그인하면 반영돼요.');
+    if (active.length < items.length) host.toast(L.otherAccount);
     if (!active.length || loadKey<string>(SKIP_KEY) === cid) return;
     state.ownerConflict = [...(state.ownerConflict ?? []), ...active];
-    host.toast('이 커리어는 다른 계정에 기록돼 있어요. 홈에서 확인해 주세요.');
+    host.toast(L.recordedElsewhere);
   }
 
   /** 새 커리어 ID로 지금 계정에 처음부터 다시 기록한다(이미 다른 계정에 올라간 기록은 그대로 둔다). */
@@ -46,7 +46,7 @@ export function createOwnerConflicts(host: OwnerConflictHost) {
     host.save();
     host.enqueueAllSeasons(G, (year) => events.get(year) ?? []);
     state.ownerConflict = null;
-    host.toast('지금 계정으로 이어서 기록할게요.');
+    host.toast(L.adopted);
   }
 
   function keepOnDevice() {

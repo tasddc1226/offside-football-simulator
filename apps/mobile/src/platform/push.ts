@@ -13,6 +13,7 @@ import { kv } from './setup';
 import { openBoard } from '../game/nav';
 import { PUSH_TEST_COOLDOWN_MS } from '@offside/contracts/push-limits';
 import { DAY_MS, kstDay } from '@offside/contracts/kst';
+import { pushText as L } from '@offside/app-core/i18n/ko/push';
 
 const DEVICE_KEY = 'offside_push_installation';
 const WANTED = 'offside_push_wanted';
@@ -112,7 +113,7 @@ export const pushRegistration = createPushRegistration(pushState, {
     if (Platform.OS !== 'ios' && Platform.OS !== 'android') return 'blocked';
     if (request && Platform.OS === 'android')
       await Notifications.setNotificationChannelAsync('news', {
-        name: '공지·릴리즈 노트',
+        name: L.channelName,
         importance: Notifications.AndroidImportance.DEFAULT,
       });
     let status = await Notifications.getPermissionsAsync();
@@ -202,9 +203,8 @@ function saveTestNext(at: number) {
   kv.set(TEST_NEXT, at);
 }
 export async function testOwnPush() {
-  if (!pushState.enabled) throw new Error('먼저 알림 받기를 켜 주세요.');
-  if (pushTestState.busy || Date.now() < pushTestState.nextTestAt)
-    throw new Error('테스트 알림은 잠시 뒤 다시 보낼 수 있어요.');
+  if (!pushState.enabled) throw new Error(L.errTurnOnFirst);
+  if (pushTestState.busy || Date.now() < pushTestState.nextTestAt) throw new Error(L.errTestWait);
   pushTestState.busy = true;
   try {
     const r = await apiFetch<{ accepted: true; nextTestAt?: string }>('/v1/push/test', {

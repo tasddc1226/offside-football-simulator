@@ -27,6 +27,7 @@ import {
 } from '@offside/app-core/rnStyle';
 import { prefs } from '../store';
 import { DISPLAY } from '../theme/type';
+import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
 
 /** 부모가 색을 정해 주는 자리(웹 style="--rn-base:…"). clubId prop이 있으면 그쪽이 우선. */
 export const RnColorContext = createContext<RnColors>(RN_DEFAULT);
@@ -149,7 +150,7 @@ export function RnJersey({
     <View
       accessible
       accessibilityRole="image"
-      accessibilityLabel={`${name} ${number}번 영구결번 유니폼`}
+      accessibilityLabel={L.jerseyLabel({ name, number })}
       style={{ width: W, paddingTop: 6, paddingBottom: 18, alignSelf: 'center' }}
     >
       {/* 뒤 조명 */}
