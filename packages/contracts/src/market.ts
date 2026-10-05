@@ -153,7 +153,7 @@ export type MarketFundsResponse = z.infer<typeof MarketFundsResponseSchema>;
 export const MarketMeResponseSchema = z.strictObject({
   season: z.number().int().min(0).nullable(),
   balance: man,
-  /** 구단 가치 = 자금 + 내가 가진 직접 키운 선수 은퇴 가치 + 영입한 선수 기준가. */
+  /** 구단 가치 = 자금 + 내가 가진 카드의 기준가 합(T-11-109). */
   clubValue: man,
   listings: z.array(MarketListingSchema),
   trades: z.array(MarketTradeSchema),

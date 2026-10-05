@@ -189,14 +189,16 @@ export async function fundsOf(db: Db, profileId: string): Promise<number> {
   return row?.balance ?? 0;
 }
 
-/** 구단 가치에 더하는 선수 몫: 직접 키운 선수는 은퇴 가치, 영입한 선수는 기준가. */
+/**
+ * 구단 가치에 더하는 선수 몫: 가진 카드의 기준가(없으면 방출 지급과 같이 CARD_VALUE_FLOOR). T-11-109 전에는 직접 키운
+ * 선수를 은퇴 가치로 셌는데, 방출 지급이 기준가로 바뀌어(T-11-104) 같은 기준으로 맞춘다.
+ */
 async function ownedCardsValue(db: Db, profileId: string): Promise<number> {
   const [row] = await db
     .select({
-      v: sql<number>`coalesce(sum(case when ${careers.profileId} = ${profileId} then ${cards.retireValue} else coalesce(${cards.cardValue}, 0) end), 0)`,
+      v: sql<number>`coalesce(sum(coalesce(${cards.cardValue}, ${CARD_VALUE_FLOOR})), 0)`,
     })
     .from(cards)
-    .leftJoin(careers, eq(careers.id, cards.careerId))
     .where(eq(cards.ownerId, profileId));
   return row?.v ?? 0;
 }
