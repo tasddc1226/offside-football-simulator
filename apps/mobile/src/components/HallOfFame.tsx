@@ -19,7 +19,7 @@ import {
 import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { anonName, fmtValue, iGa } from '@offside/app-core/format';
 import { getHof } from '@offside/app-core/api/client';
-import { watchSeasonClock } from '@offside/app-core/season-opening';
+import { useSeasonNow } from '../ui/useSeasonNow';
 import { loadHOF } from '@offside/game/season';
 import { openHof } from '../game/nav';
 import { openPublicLegend } from '../game/host';
@@ -45,7 +45,6 @@ const isNew = (k: HofSort) => {
   return !!until && Date.now() < Date.parse(until);
 };
 /** 아직 개막 전인 시즌인지(ISO 문자열 비교). */
-const notOpen = (s: { startsAt: string }) => new Date().toISOString() < s.startsAt;
 
 const SORTS: Record<
   HofSort,
@@ -83,15 +82,10 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   const sort: HofSort = full ? snap.hof.sort : 'score';
   const by = SORTS[sort];
   // 홈 미리보기는 지금 시즌 고정(개막 전엔 프리시즌 = 전체와 같아 시즌 없이 같은 요청·캐시를 쓴다).
-  // T-11-107 홈을 띄운 채 개막을 넘기거나 앱으로 돌아오면 다시 고른다.
-  const [homeSeason, setHomeSeason] = useState(() => previewSeasonAt(new Date().toISOString()));
-  useEffect(
-    () =>
-      full
-        ? undefined
-        : watchSeasonClock(() => setHomeSeason(previewSeasonAt(new Date().toISOString()))),
-    [full],
-  );
+  // T-11-107·110 띄운 채 개막을 넘기면 홈 미리보기 시즌·'개막 예정' 표시를 다시 고른다.
+  const now = useSeasonNow();
+  const homeSeason = previewSeasonAt(now);
+  const notOpen = (s: { startsAt: string }) => now < s.startsAt;
   const season = full ? snap.hof.season : homeSeason;
   const q = full ? snap.hof.q : '';
   const pos = full ? snap.hof.pos : null;

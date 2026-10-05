@@ -12,7 +12,7 @@
   import { kstMonthDayHour } from '@offside/app-core/boardText';
   import { loadHOF } from '@offside/game/season';
   import { getHof } from '@offside/app-core/api/client';
-  import { watchSeasonClock } from '@offside/app-core/season-opening';
+  import { seasonNow } from './seasonNow.svelte.js';
   import { openPublicLegend } from './legend.js';
   import { anonName, fmtValue, iGa } from '@offside/app-core/format';
   import { openHof } from './nav.js';
@@ -27,7 +27,9 @@
   const NEW_UNTIL: Partial<Record<HofSort, string>> = { value: '2026-10-14T00:00:00+09:00' };
   const isNew = (k: HofSort) => !!NEW_UNTIL[k] && Date.now() < Date.parse(NEW_UNTIL[k]);
   /** 아직 개막 전인 시즌인지(ISO 문자열 비교). */
-  const notOpen = (s: { startsAt: string }) => new Date().toISOString() < s.startsAt;
+  // T-11-107·110 띄운 채 개막을 넘기면 홈 미리보기 시즌·'개막 예정' 표시를 다시 고른다.
+  const clock = seasonNow();
+  const notOpen = (s: { startsAt: string }) => clock.now < s.startsAt;
 
   const SORTS: Record<HofSort, { label: string; unit: string; get: (s: RowStats) => number | string }> = {
     score: { label: '레전드 점수', unit: '', get: (s) => s.score },
@@ -49,11 +51,7 @@
   const sort = $derived<HofSort>(full ? appState.hof.sort : 'score');
   const by = $derived(SORTS[sort]);
   // 홈 미리보기는 지금 시즌 고정(개막 전엔 프리시즌 = 전체와 같아 시즌 없이 같은 요청·캐시를 쓴다).
-  // T-11-107 홈을 띄운 채 개막을 넘기거나 탭으로 돌아오면 다시 고른다.
-  let homeSeason = $state(previewSeasonAt(new Date().toISOString()));
-  $effect(() => {
-    if (!full) return watchSeasonClock(() => (homeSeason = previewSeasonAt(new Date().toISOString())));
-  });
+  const homeSeason = $derived(previewSeasonAt(clock.now));
   const season = $derived(full ? appState.hof.season : homeSeason);
   const q = $derived(full ? appState.hof.q : '');
   const pos = $derived(full ? appState.hof.pos : null);
