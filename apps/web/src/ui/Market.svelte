@@ -237,7 +237,7 @@
         <h2>방출해서 자금 만들기</h2>
         <button class="mk-link" onclick={() => open('market')}>이적시장으로</button>
       </div>
-      <p class="muted fs-sm">직접 키운 선수를 내보내면 은퇴 가치만큼 구단 자금이 생겨요. 명예의 전당 기록은 그대로 남아요.</p>
+      <p class="muted fs-sm">직접 키운 선수를 내보내면 카드 기준가만큼 구단 자금이 생겨요. 명예의 전당 기록은 그대로 남아요.</p>
       <div class="mk-chips-row">
         <div class="mk-chips" role="group" aria-label="시즌">
           {#each team?.seasons ?? [] as o (o.id)}
@@ -258,7 +258,7 @@
                 {@render mini(p, !!lock)}
                 <span class="mk-info">
                   <strong class="mk-name">{nameOfPlayer(p)}</strong>
-                  <small class:mk-lock={!!lock}>{lock ?? `레전드 ${(p.legendScore ?? 0).toLocaleString()} · 은퇴 가치`}</small>
+                  <small class:mk-lock={!!lock}>{lock ?? `레전드 ${(p.legendScore ?? 0).toLocaleString()} · 기준가`}</small>
                 </span>
                 {#if !lock && me}<b class="mk-rel-value">{fundsText(releaseValue(p, me.rules.releaseRate))}</b>{/if}
               </label>
