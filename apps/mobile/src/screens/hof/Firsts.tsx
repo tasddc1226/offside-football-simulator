@@ -31,6 +31,7 @@ import { Txt } from '../../ui/Txt';
 import { Seg, SortChips, TabOpt } from '../board/parts';
 import { intlLocale } from '@offside/app-core/i18n/core';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
+import { useSeasonNow } from '../../ui/useSeasonNow';
 
 type Holder = NonNullable<ServerFirst['holder']>;
 
@@ -112,7 +113,7 @@ export default function Firsts() {
   const [failed, setFailed] = useState(false);
   const [tab, setTab] = useState<FirstsTab>('recent');
   // T-11-029 기록은 시즌마다 따로 — 개막한 시즌이 둘 이상이면 시즌 탭을 보인다(기본은 지금 시즌).
-  const now = useMemo(() => new Date().toISOString(), []);
+  const now = useSeasonNow();
   const seasons = useMemo(() => openTeamSeasons(now), [now]);
   const [picked, setPicked] = useState<number | null>(null);
   const season = picked ?? displaySeasonAt(now);

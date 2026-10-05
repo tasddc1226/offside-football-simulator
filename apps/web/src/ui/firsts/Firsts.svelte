@@ -12,6 +12,7 @@
   import { appState } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
   import { kstParts } from '@offside/app-core/boardText';
+  import { seasonNow } from '../seasonNow.svelte.js';
   import { achievedList, byDay, firstsTabs, holderLabel, type FirstsTab } from '@offside/app-core/firsts';
   import { firstsText as L } from '@offside/app-core/i18n/ko/firsts';
   import { tn } from '@offside/game/i18n/names';
@@ -21,8 +22,9 @@
   let data = $state<FirstsResponse | null>(null);
   let failed = $state(false);
   let tab = $state<FirstsTab>('recent');
-  const now = new Date().toISOString();
-  const seasons = openTeamSeasons(now);
+  const clock = seasonNow();
+  const now = $derived(clock.now);
+  const seasons = $derived(openTeamSeasons(now));
   let picked = $state<number | null>(null);
   const season = $derived(picked ?? displaySeasonAt(now));
   $effect(() => {

@@ -45,6 +45,7 @@ import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { RecordsSelect, RecordsChips, RECORDS_TOUCH } from './RecordsControls';
 import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
 import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
+import { useSeasonNow } from '../../ui/useSeasonNow';
 
 type Item = RetiredNumbersResponse['items'][number];
 type ClubSum = RetiredNumbersSummary['clubs'][number];
@@ -575,7 +576,7 @@ function RecentScreen({ season, myIds }: { season: number; myIds: ReadonlySet<st
 
 export default function RetiredWall() {
   const { season: picked, screen, clubId } = useSnapshot(view);
-  const now = useMemo(() => new Date().toISOString(), []);
+  const now = useSeasonNow();
   const seasons = [PRESEASON, ...SERVICE_SEASONS];
   const season = picked ?? displaySeasonAt(now);
   const selectedSeason = seasonById(season);

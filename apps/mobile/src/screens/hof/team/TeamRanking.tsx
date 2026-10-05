@@ -24,6 +24,7 @@ import { RecordsSelect, RecordsChips } from '../RecordsControls';
 import TeamProfile from './TeamProfile';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
+import { useSeasonNow } from '../../../ui/useSeasonNow';
 
 const sorts = (): [TeamRankSort, string][] => [
   ['rating', L.sortRating],
@@ -40,6 +41,9 @@ export default function TeamRanking() {
   const [data, setData] = useState<TeamRankResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const now = useSeasonNow();
+  /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
+  const shownSeason = season ?? displaySeasonAt(now);
 
   useEffect(() => {
     setFailed(false);
@@ -54,7 +58,7 @@ export default function TeamRanking() {
     return () => {
       live = false;
     };
-  }, [season, sort, page]);
+  }, [season, sort, page, shownSeason]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1;
   function goPage(p: number) {
@@ -83,10 +87,10 @@ export default function TeamRanking() {
         <RecordsSelect
           label={L.seasonLabel}
           testID="rank-season-select"
-          value={season ?? data?.season ?? displaySeasonAt(new Date().toISOString())}
+          value={season ?? data?.season ?? displaySeasonAt(now)}
           options={
             data?.seasons.map((s) => ({ value: s.id, label: seasonLabel(s.id, s.name) })) ??
-            openTeamSeasons(new Date().toISOString()).map((id) => ({
+            openTeamSeasons(now).map((id) => ({
               value: id,
               label: teamSeasonLabel(id),
             }))

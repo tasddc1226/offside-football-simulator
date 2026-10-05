@@ -7,7 +7,7 @@ import { loadSave } from '@offside/game/save';
 import { retireAge } from '@offside/game/season';
 import { createGameActions, type GameHost } from './game-actions.js';
 import { createSheetController, initialSheetState } from './sheet-controller.js';
-import { watchDetailOpening, watchSeasonClock } from './season-opening.js';
+import { watchDetailOpening, watchSeasonClock, watchSeasonNow } from './season-opening.js';
 import { draftCareerRules, initialAppState } from './state.js';
 
 const BEFORE = '2026-10-05T14:59:59.999Z';
@@ -122,6 +122,21 @@ describe('개막 선택지 알림', () => {
     expect(tick).toHaveBeenCalledOnce();
     expect(vi.getTimerCount()).toBe(0);
     stop();
+  });
+
+  it('T-11-110 시즌 시각: 새 시즌이 열렸을 때만 알리고, 그 뒤 화면 복귀로는 다시 알리지 않는다', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(BEFORE));
+    const changed = vi.fn();
+    const stop = watchSeasonNow(BEFORE, changed);
+    vi.advanceTimersByTime(1001);
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0]![0] >= OPEN).toBe(true);
+    stop();
+    // 이미 개막한 뒤 띄운 화면은 알릴 일이 없다.
+    const again = vi.fn();
+    watchSeasonNow(new Date().toISOString(), again)();
+    expect(again).not.toHaveBeenCalled();
   });
 
   it('개막 뒤에는 즉시 알리고 타이머를 남기지 않는다', () => {

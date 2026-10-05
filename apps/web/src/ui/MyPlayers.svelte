@@ -14,6 +14,7 @@
   import { openLocalLegend, openPublicLegend } from './legend.js';
   import { anonName } from '@offside/app-core/format';
   import HofRow, { type RowStats } from './HofRow.svelte';
+  import { seasonNow } from './seasonNow.svelte.js';
   import type { DetailPos, POS } from '@offside/game/data';
   import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
   import { seasonLabel } from './seasonName.js';
@@ -64,9 +65,11 @@
   let source = $state<'loading' | 'account' | 'device' | 'offline'>('loading');
   let rows = $state<MineRow[]>([]);
   let expanded = $state(false);
-  const seasons = mySeasonOptions(now);
+  // T-11-110 목록은 불러온 시각(now)으로, 시즌 탭·기본 시즌은 띄운 채 개막을 넘기면 다시 고른다.
+  const clock = seasonNow();
+  const seasons = $derived(mySeasonOptions(clock.now));
   let picked = $state<number | null>(null);
-  const season = $derived(picked ?? myDefaultSeason(now));
+  const season = $derived(picked ?? myDefaultSeason(clock.now));
   const inSeason = $derived(seasons.length > 1 ? rows.filter((r) => r.season === season) : rows);
   const shown = $derived(expanded ? inSeason : inSeason.slice(0, SHOW));
   $effect(() => {
