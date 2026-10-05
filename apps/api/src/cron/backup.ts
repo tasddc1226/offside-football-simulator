@@ -53,18 +53,28 @@ function byReferences(tables: SchemaRow[]): SchemaRow[] {
 /** 스트림을 정확히 size 바이트씩 잘라 내준다(마지막 조각만 작을 수 있다).
  * T-11-088 R2는 마지막 말고는 조각 크기가 모두 같아야 한다 — 넘친 만큼 통째로 올리면 complete에서 거부된다. */
 export async function* fixedParts(stream: ReadableStream<Uint8Array>, size: number) {
+  // 덩어리는 배열에 모으고 조각마다 Blob을 한 번만 만든다(읽을 때마다 합치면 조각 크기만큼 매번 복사한다).
   const reader = stream.getReader();
-  let pending = new Blob([]);
+  let buf: Uint8Array[] = [];
+  let len = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    pending = new Blob([pending, value]);
-    while (pending.size >= size) {
-      yield pending.slice(0, size);
-      pending = pending.slice(size);
+    let rest = value;
+    while (len + rest.byteLength >= size) {
+      const take = size - len;
+      buf.push(rest.subarray(0, take));
+      yield new Blob(buf);
+      rest = rest.subarray(take);
+      buf = [];
+      len = 0;
+    }
+    if (rest.byteLength) {
+      buf.push(rest);
+      len += rest.byteLength;
     }
   }
-  if (pending.size > 0) yield pending;
+  if (len > 0) yield new Blob(buf);
 }
 
 export const backupKey = (env: string, now: number) =>
