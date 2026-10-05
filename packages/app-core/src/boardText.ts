@@ -9,12 +9,14 @@ import type {
 export type Block =
   { kind: 'h'; text: string } | { kind: 'ul'; items: string[] } | { kind: 'p'; lines: string[] };
 
+const HEAD = /^#{1,3}\s+(.+)$/;
+
 export function parseBody(body: string): Block[] {
   const out: Block[] = [];
   for (const raw of body.replace(/\r\n?/g, '\n').split('\n')) {
     const line = raw.trimEnd();
     const last = out[out.length - 1];
-    const head = /^#{1,3}\s+(.+)$/.exec(line);
+    const head = HEAD.exec(line);
     const item = /^\s*[-*]\s+(.+)$/.exec(line);
     if (head) out.push({ kind: 'h', text: head[1]! });
     else if (item) {
@@ -37,7 +39,7 @@ export function hideLines(body: string, hide: RegExp): string {
     .replace(/\r\n?/g, '\n')
     .split('\n')
     .filter((line) => {
-      if (/^#{1,3}\s+/.test(line)) skipping = hide.test(line);
+      if (HEAD.test(line)) skipping = hide.test(line);
       return !skipping && !hide.test(line);
     })
     .join('\n');
