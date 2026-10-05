@@ -55,7 +55,7 @@
   import BackBar from './BackBar.svelte';
   import PlayerCard from './team/PlayerCard.svelte';
   import MarketChart from './MarketChart.svelte';
-  import { CHART_COPY, chartModel, marketIndex } from '@offside/app-core/marketChart';
+  import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
   import { go } from './nav.js';
   import { toast } from './helpers.js';
 
@@ -118,7 +118,6 @@
     void fetchMarketChart('week').then((r) => r.ok && (indexPoints = r.data.points));
   });
   const index = $derived(marketIndex(indexPoints));
-  const spark = $derived(index ? chartModel(indexPoints, [], 'season') : null);
   const myListingIds = $derived(new Set(me?.listings.map((l) => l.id) ?? []));
 
   // 팔기는 지금 시즌 선수, 방출은 시즌을 골라 본다(기본은 지금 시즌).
@@ -293,12 +292,10 @@
               <b>{index.pct}</b>
               <small>{CHART_COPY.indexSub(index.trades)}</small>
             </span>
-            {#if spark}
               <svg class="mk-spark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                <line x1="0" x2="100" y1={spark.base} y2={spark.base} />
-                <path d={spark.line} />
+                <line x1="0" x2="100" y1={index.spark.base} y2={index.spark.base} />
+                <path d={index.spark.line} />
               </svg>
-            {/if}
             <em>{index.change}</em>
           </div>
         {/if}
@@ -928,7 +925,6 @@
   }
   /* 시장 지수 한 줄(T-11-080f). 국내 증권 관례대로 오름 빨강 · 내림 파랑. */
   .mk-index {
-    --fall: var(--r2);
     --tone: var(--muted);
     display: flex;
     align-items: center;
@@ -940,10 +936,10 @@
     background: var(--surface);
   }
   .mk-idx-up {
-    --tone: var(--bad);
+    --tone: var(--up);
   }
   .mk-idx-down {
-    --tone: var(--fall);
+    --tone: var(--down);
   }
   .mk-index b {
     font-family: var(--display);

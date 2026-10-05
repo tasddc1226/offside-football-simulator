@@ -17,6 +17,9 @@ export const LIGHT = {
   good: '#1e7a50',
   bad: '#c0392f',
   warn: '#96600a',
+  /** T-11-080f 시세 오름 · 내림(웹 --up · --down, 국내 증권 관례: 빨강 · 파랑). */
+  up: '#c0392f',
+  down: '#1f63a8',
   /** 기본 엠블럼 바깥선(T-10-063). */
   crestHalo: 'rgba(20,32,26,0.16)',
   /** 탭바에서 고른 탭 색 — 라이트는 초록, 다크는 금색. */
@@ -46,6 +49,8 @@ export const DARK: typeof LIGHT = {
   good: '#4cc08a',
   bad: '#ef6b5f',
   warn: '#e9a83a',
+  up: '#ef6b5f',
+  down: '#72b4f2',
   crestHalo: 'rgba(238,244,239,0.3)',
   tabOn: '#f0b437',
   scrim: 'rgba(8,14,11,0.55)',

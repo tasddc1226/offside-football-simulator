@@ -5,7 +5,10 @@ import {
   DetailPosSchema,
   PeakProfileSchema,
 } from './careers.js';
+import { MARKET_CHART_RANGES } from './market-value.js';
 import { IsoUtcSchema } from './primitives.js';
+
+export { MARKET_CHART_DAYS, MARKET_CHART_RANGES, type MarketChartRange } from './market-value.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 설계: docs/tracking/owner-funds-card-market-plan.md.
 // 거래는 지금 팀 시즌(teamSeasonAt) 카드끼리만 한다. 금액은 모두 만 원 단위 정수.
@@ -89,10 +92,6 @@ export const MarketListResponseSchema = z.strictObject({
   recent: z.array(MarketSaleSchema),
 });
 export type MarketListResponse = z.infer<typeof MarketListResponseSchema>;
-
-/** T-11-080f 시세 차트 기간: 최근 7일 · 30일 · 이번 시즌 전체. */
-export const MARKET_CHART_RANGES = ['week', 'month', 'season'] as const;
-export type MarketChartRange = (typeof MARKET_CHART_RANGES)[number];
 
 /** 시세 차트 조회. pos·band를 함께 주면 그 묶음(포지션군 · OVR대), 둘 다 없으면 시장 전체. */
 export const MarketChartQuerySchema = z

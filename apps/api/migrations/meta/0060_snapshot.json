@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "728588f5-c5f4-497f-a054-de476edc9364",
+  "id": "dd631b3f-b6e2-4d9b-b5eb-221f3e2c54fe",
   "prevId": "5964c60e-62bf-4cbf-9fd4-492c27687813",
   "tables": {
     "app_auth_tickets": {
@@ -1994,10 +1994,10 @@
           "name": "market_listings_card_idx",
           "columns": [
             "career_id",
-            "status",
             "closed_at"
           ],
-          "isUnique": false
+          "isUnique": false,
+          "where": "\"market_listings\".\"status\" = 'sold'"
         }
       },
       "foreignKeys": {},

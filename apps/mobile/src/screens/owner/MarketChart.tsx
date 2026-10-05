@@ -2,7 +2,7 @@
 // 카드 상세: 같은 포지션군 · OVR대 하루 평균 선, 최저~최고 띠, 기준가 점선, 이 선수 거래 점. 영입 시트를 열 때만 부르고(1분 메모),
 // 기간을 바꾸면 그 기간만 새로 받는다. 점을 누르면 그날 값을 위에 보여 준다. 색은 국내 증권 관례대로 오름 빨강 · 내림 파랑.
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type ViewStyle } from 'react-native';
 import Svg, { Line as SvgLine, Path } from 'react-native-svg';
 import {
   fetchCardTrades,
@@ -29,16 +29,51 @@ import { DISPLAY, rem } from '../../theme/type';
 import { Press, Txt } from '../../ui';
 
 const chartTone = (c: Colors, tone: ChartTone) =>
-  tone === 'up' ? c.bad : tone === 'down' ? c.r2 : c.muted;
+  tone === 'up' ? c.up : tone === 'down' ? c.down : c.muted;
 
 const PLOT_H = 132;
 const AXIS_W = 40;
+
+/** 차트 위 누를 수 있는 점(28pt 터치 상자 가운데에 작은 원). */
+function Hit({
+  at,
+  label,
+  onPress,
+  dot,
+  testID,
+}: {
+  at: { left: number; top: number };
+  label: string;
+  onPress: () => void;
+  dot: ViewStyle;
+  testID?: string;
+}) {
+  return (
+    <Pressable
+      {...(testID ? { testID } : {})}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={{
+        position: 'absolute',
+        ...at,
+        width: 28,
+        height: 28,
+        marginLeft: -14,
+        marginTop: -14,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View style={{ borderRadius: 5, borderWidth: 2, ...dot }} />
+    </Pressable>
+  );
+}
 
 /** 이적시장 머리의 시장 지수 한 줄(최근 7일 · 시장 전체). */
 export function MarketIndex({ points }: { points: readonly MarketChartPoint[] }) {
   const c = useColors();
   const index = marketIndex(points);
-  const spark = useMemo(() => (index ? chartModel(points, [], 'season') : null), [index, points]);
   if (!index) return null;
   const tone = chartTone(c, index.tone);
   return (
@@ -67,20 +102,20 @@ export function MarketIndex({ points }: { points: readonly MarketChartPoint[] })
           {CHART_COPY.indexSub(index.trades)}
         </Txt>
       </View>
-      {spark ? (
+      {index.spark.line ? (
         <Svg width={72} height={32} viewBox="0 0 100 100" preserveAspectRatio="none">
           <SvgLine
             x1={0}
             x2={100}
-            y1={spark.base}
-            y2={spark.base}
+            y1={index.spark.base}
+            y2={index.spark.base}
             stroke={c.muted}
             strokeWidth={1}
             strokeDasharray="3 3"
             vectorEffect="non-scaling-stroke"
           />
           <Path
-            d={spark.line}
+            d={index.spark.line}
             fill="none"
             stroke={tone}
             strokeWidth={2}
@@ -118,25 +153,20 @@ export function MarketChart({ card }: { card: MarketCard }) {
       live = false;
     };
   }, [range, card.pos, band]);
+  // 한 번도 팔린 적 없는 선수(이적 0회)는 거래 기록을 묻지 않는다.
   useEffect(() => {
+    if (card.transfers === 0) return;
     let live = true;
     void fetchCardTrades(card.careerId).then((r) => live && setTrades(r.ok ? r.data.trades : []));
     return () => {
       live = false;
     };
-  }, [card.careerId]);
+  }, [card.careerId, card.transfers]);
 
   const model = useMemo(
     () => (points ? chartModel(points, trades, range) : null),
     [points, trades, range],
   );
-  const picked = useMemo(() => {
-    if (!model || !pick) return null;
-    const [kind, i] = pick.split(':');
-    const d = kind === 'd' ? model.days[Number(i)] : undefined;
-    const t = kind === 't' ? model.dots[Number(i)] : undefined;
-    return d ? dayText(d.p) : t ? tradeText(t.t) : null;
-  }, [model, pick]);
   const tone = model ? chartTone(c, model.tone) : c.muted;
   const plotW = Math.max(0, w - AXIS_W);
   const at = (x: number, y: number) => ({ left: (x / 100) * plotW, top: (y / 100) * PLOT_H });
@@ -207,7 +237,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
       ) : (
         <>
           <Txt accessibilityLiveRegion="polite" style={{ fontSize: rem(0.75), fontWeight: '600' }}>
-            {picked ?? ' '}
+            {pick ?? ' '}
           </Txt>
           <View style={{ height: PLOT_H }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
             {plotW > 0 ? (
@@ -262,64 +292,29 @@ export function MarketChart({ card }: { card: MarketCard }) {
                     {label}
                   </Txt>
                 ))}
-                {model.days.map((d, i) => (
-                  <Pressable
+                {model.days.map((d) => (
+                  <Hit
                     key={d.p.day}
-                    accessibilityRole="button"
-                    accessibilityLabel={dayText(d.p)}
-                    onPress={() => setPick(`d:${i}`)}
-                    style={{
-                      position: 'absolute',
-                      ...at(d.x, d.y),
-                      width: 28,
-                      height: 28,
-                      marginLeft: -14,
-                      marginTop: -14,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 7,
-                        height: 7,
-                        borderRadius: 4,
-                        borderWidth: 2,
-                        borderColor: tone,
-                        backgroundColor: c.surface,
-                      }}
-                    />
-                  </Pressable>
+                    at={at(d.x, d.y)}
+                    label={dayText(d.p)}
+                    onPress={() => setPick(dayText(d.p))}
+                    dot={{ width: 7, height: 7, borderColor: tone, backgroundColor: c.surface }}
+                  />
                 ))}
                 {model.dots.map((d, i) => (
-                  <Pressable
+                  <Hit
                     key={i}
                     testID="chart-trade"
-                    accessibilityRole="button"
-                    accessibilityLabel={tradeText(d.t)}
-                    onPress={() => setPick(`t:${i}`)}
-                    style={{
-                      position: 'absolute',
-                      ...at(d.x, d.y),
-                      width: 28,
-                      height: 28,
-                      marginLeft: -14,
-                      marginTop: -14,
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                    at={at(d.x, d.y)}
+                    label={tradeText(d.t)}
+                    onPress={() => setPick(tradeText(d.t))}
+                    dot={{
+                      width: 10,
+                      height: 10,
+                      borderColor: c.surface,
+                      backgroundColor: c.accent,
                     }}
-                  >
-                    <View
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: 5,
-                        borderWidth: 2,
-                        borderColor: c.surface,
-                        backgroundColor: c.accent,
-                      }}
-                    />
-                  </Pressable>
+                  />
                 ))}
               </>
             ) : null}

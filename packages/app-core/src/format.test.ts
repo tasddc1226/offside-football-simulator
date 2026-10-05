@@ -82,7 +82,7 @@ describe('시세 차트 (T-11-080f)', () => {
   it('시장 지수는 마지막 거래일 평균과 그 전 거래일과의 차이', () => {
     expect(marketIndex([])).toBeNull();
     expect(ratioPct(986)).toBe('98.6%');
-    expect(marketIndex([p('2026-10-04', 1000), p('2026-10-05', 986)])).toEqual({
+    expect(marketIndex([p('2026-10-04', 1000), p('2026-10-05', 986)])).toMatchObject({
       pct: '98.6%',
       tone: 'down',
       change: '▼ 1.4%p',

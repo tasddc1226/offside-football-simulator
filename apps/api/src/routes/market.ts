@@ -5,6 +5,7 @@ import {
   CreateListingBodySchema,
   CreateListingResponseSchema,
   ListingIdSchema,
+  MARKET_CHART_DAYS,
   MarketCardTradesResponseSchema,
   MarketChartQuerySchema,
   MarketChartResponseSchema,
@@ -44,7 +45,7 @@ import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
-import { DAY_MS, kstDay } from '../time.js';
+import { kstDay, kstDays } from '../time.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { kstTodayStart, requireOwner } from './ownerTeam.js';
 import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
@@ -105,7 +106,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
   });
 
   // T-11-080f 시세 차트(공개 · 세션 조회 없음). 묶음(포지션군 · OVR대) 또는 시장 전체의 하루치 시세.
-  // 키는 시즌 · 기간 · 묶음뿐이라(4 × 20 × 3 + 3) 엣지에 담는다. 새 거래는 1분 안에 보인다.
+  // 키는 시즌 · 기간 · 묶음뿐이라(포지션 4 × OVR대 21 × 기간 3 + 시장 전체 3) 엣지에 담는다. 새 거래는 1분 안에 보인다.
   app.get('/v1/market/chart', async (c) => {
     const q = parseWithAppError(MarketChartQuerySchema, {
       range: c.req.query('range') || undefined,
@@ -117,10 +118,8 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     if (season === null)
       return ok(c, MarketChartResponseSchema, { season, points: [] }, 200, CHART_CACHE);
     const group = q.pos !== undefined && q.band !== undefined ? { pos: q.pos, band: q.band } : null;
-    const days = q.range === 'week' ? 7 : q.range === 'month' ? 30 : null;
-    const since = days
-      ? kstDay(new Date(Date.parse(now) - (days - 1) * DAY_MS).toISOString())
-      : null;
+    const days = MARKET_CHART_DAYS[q.range];
+    const since = days ? kstDays(new Date(now), days).days[0]! : null;
     const data = await edgeCached(
       c,
       EDGE.marketChart(season, q.range, group ?? undefined),

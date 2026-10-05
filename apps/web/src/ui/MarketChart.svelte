@@ -26,17 +26,12 @@
       points = res.ok ? res.data.points : [];
     });
   });
+  // 한 번도 팔린 적 없는 선수(이적 0회)는 거래 기록을 묻지 않는다.
   $effect(() => {
-    void fetchCardTrades(card.careerId).then((res) => (trades = res.ok ? res.data.trades : []));
+    if (card.transfers > 0) void fetchCardTrades(card.careerId).then((res) => (trades = res.ok ? res.data.trades : []));
   });
 
   const model = $derived(points ? chartModel(points, trades, range) : null);
-  const picked = $derived.by(() => {
-    if (!model || !pick) return null;
-    const [kind, i] = pick.split(':');
-    const n = Number(i);
-    return kind === 'd' ? (model.days[n] ? dayText(model.days[n].p) : null) : model.dots[n] ? tradeText(model.dots[n].t) : null;
-  });
 </script>
 
 <section class="mc" aria-label={CHART_COPY.title} data-market-chart>
@@ -58,7 +53,7 @@
   {:else if !model}
     <p class="mc-empty" data-chart-empty>{CHART_COPY.empty}</p>
   {:else}
-    <p class="mc-pick" aria-live="polite">{picked ?? ' '}</p>
+    <p class="mc-pick" aria-live="polite">{pick ?? ' '}</p>
     <div class="mc-plot mc-{model.tone}">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         {#if model.band}<path class="mc-band" d={model.band} />{/if}
@@ -68,18 +63,17 @@
       <span class="mc-axis mc-top">{model.top}</span>
       <span class="mc-axis mc-bottom">{model.bottom}</span>
       <span class="mc-base-label" style:top="{model.base}%">기준가</span>
-      {#each model.days as d, i (d.p.day)}
-        <button class="mc-day" style:left="{d.x}%" style:top="{d.y}%" aria-label={dayText(d.p)} onclick={() => (pick = `d:${i}`)}></button>
+      {#each model.days as d (d.p.day)}
+        <button class="mc-day" style:left="{d.x}%" style:top="{d.y}%" aria-label={dayText(d.p)} onclick={() => (pick = dayText(d.p))}></button>
       {/each}
       {#each model.dots as d, i (i)}
-        <button class="mc-dot" style:left="{d.x}%" style:top="{d.y}%" aria-label={tradeText(d.t)} data-chart-trade onclick={() => (pick = `t:${i}`)}></button>
+        <button class="mc-dot" style:left="{d.x}%" style:top="{d.y}%" aria-label={tradeText(d.t)} data-chart-trade onclick={() => (pick = tradeText(d.t))}></button>
       {/each}
     </div>
     <div class="mc-foot">
       <span>{model.from}</span>
       <span class="mc-legend">
         {#if model.line}<i class="l-line"></i>{CHART_COPY.legendLine}{/if}
-        <i class="l-base"></i>{CHART_COPY.legendBase}
         {#if model.dots.length}<i class="l-dot"></i>{CHART_COPY.legendDot}{/if}
       </span>
       <span>{model.to}</span>
@@ -89,8 +83,6 @@
 
 <style>
   .mc {
-    --rise: var(--bad);
-    --fall: var(--r2);
     border-top: 1px solid var(--line);
     padding: 14px 0 4px;
   }
@@ -154,10 +146,10 @@
     --tone: var(--muted);
   }
   .mc-up {
-    --tone: var(--rise);
+    --tone: var(--up);
   }
   .mc-down {
-    --tone: var(--fall);
+    --tone: var(--down);
   }
   .mc-plot svg {
     position: absolute;
@@ -254,9 +246,6 @@
   .l-line {
     height: 2px;
     background: var(--muted);
-  }
-  .l-base {
-    border-top: 1px dashed var(--muted);
   }
   .l-dot {
     width: 8px !important;
