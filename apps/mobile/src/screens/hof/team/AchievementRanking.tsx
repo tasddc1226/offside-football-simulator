@@ -43,7 +43,7 @@ export default function AchievementRanking() {
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
     setFailed(false);
-    if (!pulled()) setLoading(true);
+    if (!pulled) setLoading(true);
     let live = true; // 더 늦게 고른 조건의 응답만 쓴다.
     void track(fetchAchRanking(season, page)).then((r) => {
       if (!live) return;

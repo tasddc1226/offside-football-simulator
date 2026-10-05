@@ -139,7 +139,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
     // T-11-111 당겨서 새로고침이면 보이던 목록을 두고 응답으로 바꾼다.
-    if (!pulled()) setAll(null);
+    if (!pulled) setAll(null);
     setFailed(false);
     if (upcoming) return;
     let live = true; // 더 늦게 고른 페이지·유형·시즌·검색어·포지션의 응답만 쓴다.

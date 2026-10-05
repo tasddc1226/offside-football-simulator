@@ -6,7 +6,7 @@ import { NotificationIdSchema, type AppNotification } from '@offside/contracts';
 import { inboxState, inbox, loadInbox, openInbox, openInboxTarget } from '../../platform/inbox';
 import { Btn, Card, Press, Screen, Txt } from '../../ui';
 import { useColors } from '../../theme/useColors';
-import { useRefresh } from '../../ui/refresh';
+import { useOnPull } from '../../ui/refresh';
 
 const labels: Record<AppNotification['kind'], string> = {
   news: '새 소식',
@@ -38,10 +38,7 @@ export default function Inbox() {
     });
   }, [id, state.revision]);
   // T-11-111 당겨서 새로고침 — 목록은 그대로 두고(loadInbox의 refresh는 비우지 않는다) 다시 받는다.
-  const { tick, track } = useRefresh();
-  useEffect(() => {
-    if (tick) void track(loadInbox({ refresh: true }));
-  }, [tick, track]);
+  useOnPull(() => loadInbox({ refresh: true }));
   const detail = id && state.detail?.id === id ? state.detail : null;
   return (
     <Screen>

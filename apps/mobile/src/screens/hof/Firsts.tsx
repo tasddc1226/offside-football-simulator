@@ -119,7 +119,7 @@ export default function Firsts() {
   const season = picked ?? displaySeasonAt(now);
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
-    if (!pulled()) setData(null);
+    if (!pulled) setData(null);
     setFailed(false);
     let live = true; // 더 늦게 고른 시즌의 응답만 쓴다.
     void track(getFirsts(season)).then((r) => {

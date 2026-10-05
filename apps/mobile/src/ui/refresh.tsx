@@ -27,26 +27,42 @@ const ControlScope = createContext<Control>({ on: false, refreshing: false, onRe
 
 /**
  * 서버에서 불러오는 effect의 deps에 tick을 넣고, 요청을 track으로 감싼다.
- * 예: useEffect(() => { if (!pulled()) setX(null); void track(getX()).then(...) }, [id, tick, track])
+ * 예: useEffect(() => { if (!pulled) setX(null); void track(getX()).then(...) }, [id, tick, track])
  */
 export function useRefresh() {
   const { tick, track, join } = useContext(DataScope);
   useEffect(join, [join]);
   const seen = useRef(tick);
-  /** 이번 effect가 당기기로 다시 돈 것인지(그러면 보이던 목록을 비우지 않는다). effect 하나에서 한 번만 부른다. */
-  const pulled = () => {
-    const p = seen.current !== tick;
+  /** 이번 렌더가 당기기로 tick이 오른 것인지 — 그러면 보이던 목록을 비우지 않는다. */
+  const pulled = seen.current !== tick;
+  useEffect(() => {
     seen.current = tick;
-    return p;
-  };
+  }, [tick]);
   return { tick, track, pulled };
+}
+
+/**
+ * 당길 때만 fn을 부른다(처음 그릴 때는 부르지 않는다) — 주기 조회·소켓처럼 effect를 다시 돌리면 안 되는 곳이나
+ * 이미 있는 reload 함수를 그대로 쓸 때. fn이 아무것도 돌려주지 않으면(저장 중 등) 건너뛴 것으로 본다.
+ */
+export function useOnPull(fn: () => Promise<unknown> | void) {
+  const { tick, track, join } = useContext(DataScope);
+  useEffect(join, [join]);
+  const latest = useRef(fn);
+  latest.current = fn;
+  useEffect(() => {
+    if (!tick) return;
+    const p = latest.current();
+    if (p) void track(p);
+  }, [tick, track]);
 }
 
 /** 화면 하나의 새로고침 범위. 화면이 바뀌면(key) 새로 연다. */
 export function RefreshRoot({ children }: { children: ReactNode }) {
   const [tick, setTick] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [members, setMembers] = useState(0);
+  const [on, setOn] = useState(false);
+  const members = useRef(0);
   const pending = useRef(new Set<Promise<unknown>>());
   const busy = useRef(false);
 
@@ -54,9 +70,12 @@ export function RefreshRoot({ children }: { children: ReactNode }) {
     if (busy.current) pending.current.add(p);
     return p;
   }, []);
+  // 참여 수는 ref로 세고, 0↔1이 바뀔 때만 다시 그린다.
   const join = useCallback(() => {
-    setMembers((n) => n + 1);
-    return () => setMembers((n) => n - 1);
+    if (members.current++ === 0) setOn(true);
+    return () => {
+      if (--members.current === 0) setOn(false);
+    };
   }, []);
 
   // 자식 effect가 먼저 돌아 요청을 track에 넣은 뒤에 모아서 기다린다(React는 자식 effect를 부모보다 먼저 부른다).
@@ -65,6 +84,7 @@ export function RefreshRoot({ children }: { children: ReactNode }) {
     const all = [...pending.current];
     pending.current.clear();
     void Promise.allSettled(all).then(() => {
+      pending.current.clear();
       busy.current = false;
       setRefreshing(false);
     });
@@ -81,8 +101,8 @@ export function RefreshRoot({ children }: { children: ReactNode }) {
 
   const data = useMemo<Data>(() => ({ tick, track, join }), [tick, track, join]);
   const control = useMemo<Control>(
-    () => ({ on: members > 0, refreshing, onRefresh }),
-    [members, refreshing, onRefresh],
+    () => ({ on, refreshing, onRefresh }),
+    [on, refreshing, onRefresh],
   );
   return (
     <DataScope.Provider value={data}>

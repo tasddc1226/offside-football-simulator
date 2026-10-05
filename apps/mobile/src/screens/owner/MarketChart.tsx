@@ -145,15 +145,14 @@ export function MarketChart({ card }: { card: MarketCard }) {
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
     let live = true;
-    const pull = pulled();
-    if (!pull) {
+    if (!pulled) {
       setFailed(false);
       setPick(null);
     }
     void track(fetchMarketChart(range, { pos: card.pos, band })).then((r) => {
       if (!live) return;
       // 당기다 실패하면 보이던 차트를 두고 넘어간다.
-      if (pull && !r.ok) return;
+      if (pulled && !r.ok) return;
       setFailed(!r.ok);
       setPoints(r.ok ? r.data.points : []);
     });
@@ -166,7 +165,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
     if (card.transfers === 0) return;
     let live = true;
     void track(fetchCardTrades(card.careerId)).then(
-      (r) => live && (r.ok || !tick) && setTrades(r.ok ? r.data.trades : []),
+      (r) => live && (r.ok || !pulled) && setTrades(r.ok ? r.data.trades : []),
     );
     return () => {
       live = false;

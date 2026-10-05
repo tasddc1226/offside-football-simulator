@@ -136,14 +136,22 @@ export default function Owner() {
   const [market, setMarket] = useState<MarketFundsResponse | null>(null);
 
   // T-11-111 당겨서 새로고침 — 보이는 값은 그대로 두고 응답이 오면 바꾼다.
-  const { tick, track } = useRefresh();
+  // 관리자 여부는 거의 안 바뀌므로 당겨도 다시 묻지 않는다.
   useEffect(() => {
     if (!linked) {
       setAdmin(false);
       return;
     }
     let alive = true;
-    void track(fetchBoardViewer()).then((r) => alive && r.ok && setAdmin(r.data.admin));
+    void fetchBoardViewer().then((r) => alive && r.ok && setAdmin(r.data.admin));
+    return () => {
+      alive = false;
+    };
+  }, [linked]);
+  const { tick, track } = useRefresh();
+  useEffect(() => {
+    if (!linked) return;
+    let alive = true;
     void track(fetchOwnerTeam()).then((r) => {
       if (!alive) return;
       if (r.ok) setCard(ownerTeamCard(r.data));

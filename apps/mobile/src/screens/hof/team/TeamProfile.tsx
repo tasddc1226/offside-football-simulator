@@ -25,7 +25,7 @@ import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
 import { Press } from '../../../ui/Press';
 import { Txt } from '../../../ui/Txt';
-import { useRefresh } from '../../../ui/refresh';
+import { useOnPull } from '../../../ui/refresh';
 import { AutoGrid } from '../../board/parts';
 
 export default function TeamProfile({ id }: { id: string }) {
@@ -65,11 +65,7 @@ export default function TeamProfile({ id }: { id: string }) {
     [id],
   );
   useEffect(() => void load(), [load]);
-  const { tick, track } = useRefresh();
-  useEffect(() => {
-    if (tick && !liking && !requesting) void track(load(true));
-    // tick이 바뀔 때만.
-  }, [tick]);
+  useOnPull(() => (liking || requesting ? undefined : load(true)));
 
   async function toggleLike() {
     if (!team || liking) return;

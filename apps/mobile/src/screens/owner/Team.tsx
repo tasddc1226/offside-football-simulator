@@ -54,7 +54,7 @@ import { accountCache, appState, prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { BackBar, Btn, Card, Screen, Topbar, Txt, scrollTo } from '../../ui';
 import { BarBelow } from '../../ui/Screen';
-import { useRefresh } from '../../ui/refresh';
+import { useOnPull } from '../../ui/refresh';
 import { TabBar, type TabItem } from '../../ui/TabBar';
 import type { TabIconName } from '../../ui/TabIcon';
 import { Field, SelectField, TextField } from '../settings/parts';
@@ -130,7 +130,6 @@ export default function Team() {
   // T-11-111 당겨서 새로고침이 편집 중인 초안·열려 있는 팀을 덮지 않도록 지금 값을 들고 있는다.
   const dirtyNow = useRef(false);
   const teamNow = useRef<OwnerTeam | null>(null);
-  const { tick, track } = useRefresh();
 
   /** T-11-098 '경기' 탭의 두 칸(랭크 경기 · 친구). 친구 칸은 처음 열 때만 불러온다. */
   const [oppTab, setOppTab] = useState<OppTab>('ranked');
@@ -253,22 +252,7 @@ export default function Team() {
     }
     const r = await fetchOwnerTeam(want);
     if (sequence !== loadSequence.current) return;
-    if (silent) {
-      if (!r.ok) return;
-      const d = r.data;
-      setSeason(d.season);
-      setCurrent(d.current);
-      setSeasons(d.seasons);
-      setLastManager(d.lastManager);
-      setPlayers(d.players);
-      setMatchesLeft(d.matchesLeft);
-      setPerDay(d.matchesPerDay);
-      if (JSON.stringify(d.team) !== JSON.stringify(teamNow.current)) {
-        if (dirtyNow.current) setTeam(d.team);
-        else applyTeam(d.team, d.lastManager);
-      }
-      return;
-    }
+    if (silent && !r.ok) return;
     if (!r.ok) {
       const login =
         r.error.reason === 'GOOGLE_LOGIN_REQUIRED' || r.error.code === 'PROFILE_REQUIRED';
@@ -284,6 +268,13 @@ export default function Team() {
     setPlayers(d.players);
     setMatchesLeft(d.matchesLeft);
     setPerDay(d.matchesPerDay);
+    if (silent) {
+      if (JSON.stringify(d.team) !== JSON.stringify(teamNow.current)) {
+        if (dirtyNow.current) setTeam(d.team);
+        else applyTeam(d.team, d.lastManager);
+      }
+      return;
+    }
     setNeedLogin(false);
     applyTeam(d.team, d.lastManager);
     const profile = accountCache.value;
@@ -432,16 +423,23 @@ export default function Team() {
 
   // T-11-111 당겨서 새로고침 — 팀(전적·남은 경기·선수)과 지금 보는 탭의 목록을 조용히 다시 받는다.
   // 저장·경기 중이면 건너뛰고, 아직 불러온 적 없는 탭은 열 때 불러오므로 건드리지 않는다.
-  useEffect(() => {
-    if (!tick || status !== 'ready' || needLogin || savingRef.current || playing) return;
-    void track(load(season, true));
-    if (teamView === 'opponents') {
-      if (oppTab === 'friends') void track(friends.refresh());
-      else if (oppLoaded.current && !matchHint) void track(loadOpponents(true));
-    } else if (teamView === 'achievements') void track(loadAchievements(season, true));
-    else if (teamView === 'history') void track(loadHistory(true));
-    // tick이 바뀔 때만.
-  }, [tick]);
+  useOnPull(() => {
+    if (status !== 'ready' || needLogin || savingRef.current || playing) return;
+    return Promise.all([
+      load(season, true),
+      teamView === 'opponents'
+        ? oppTab === 'friends'
+          ? friends.refresh()
+          : oppLoaded.current && !matchHint
+            ? loadOpponents(true)
+            : null
+        : teamView === 'achievements'
+          ? loadAchievements(season, true)
+          : teamView === 'history'
+            ? loadHistory(true)
+            : null,
+    ]);
+  });
 
   /** 탭을 바꾸면 맨 위에서 시작하고, 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다(게임 화면 탭과 같다). */
   function switchView(v: TeamView) {

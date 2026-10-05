@@ -64,7 +64,7 @@ import { useColors } from '../../theme/useColors';
 import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { ActionBar, BackBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
-import { useRefresh } from '../../ui/refresh';
+import { useOnPull } from '../../ui/refresh';
 import { CARD_TONES, PlayerCard } from '../../components/PlayerCard';
 import { MarketChart, MarketIndex } from './MarketChart';
 
@@ -621,28 +621,19 @@ export default function Market() {
     setConfirmRelease(false);
     setError(null);
   };
-  const refresh = async () => {
+  /** silent: T-11-111 당겨서 새로고침 — 목록을 비우지 않고, 시장 지수도 한 번 불러왔으면 다시 받는다. */
+  const refresh = async (silent = false) => {
     await Promise.all([
       loadMe(),
-      view === 'market' ? loadList(0) : view === 'sell' || view === 'release' ? loadTeam() : null,
+      view === 'market'
+        ? Promise.all([loadList(0, silent), silent && indexAsked.current ? loadIndex() : null])
+        : view === 'sell' || view === 'release'
+          ? loadTeam()
+          : null,
     ]);
   };
   // T-11-111 당겨서 새로고침 — 보이는 탭의 데이터만 조용히 다시 받는다(목록을 비우지 않는다). 사고파는 중에는 건너뛴다.
-  const { tick, track } = useRefresh();
-  useEffect(() => {
-    if (!tick || busy) return;
-    void track(
-      Promise.all([
-        loadMe(),
-        view === 'market'
-          ? Promise.all([loadList(0, true), indexAsked.current ? loadIndex() : null])
-          : view === 'sell' || view === 'release'
-            ? loadTeam()
-            : null,
-      ]),
-    );
-    // tick이 바뀔 때만.
-  }, [tick]);
+  useOnPull(() => (busy ? undefined : refresh(true)));
   async function run<T>(send: () => Sent<T>, done: string) {
     setBusy(true);
     setError(null);

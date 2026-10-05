@@ -50,8 +50,10 @@ export default function TeamRanking() {
 
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
+    // 팀 프로필을 연 채 당기면 가려진 목록은 다시 받지 않는다(프로필이 따로 받는다).
+    if (pulled && snap.hof.team) return;
     setFailed(false);
-    if (!pulled()) setLoading(true);
+    if (!pulled) setLoading(true);
     let live = true; // 더 늦게 고른 조건의 응답만 쓴다.
     void track(fetchTeamRanking(season, sort, page)).then((r) => {
       if (!live) return;

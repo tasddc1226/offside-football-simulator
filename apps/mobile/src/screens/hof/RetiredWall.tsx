@@ -331,7 +331,7 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
   const [failed, setFailed] = useState(false);
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
-    if (!pulled()) setSummary(null);
+    if (!pulled) setSummary(null);
     setFailed(false);
     let live = true; // 더 늦게 고른 시즌의 응답만 쓴다.
     void track(getRetiredNumbersSummary(season)).then((r) => {
@@ -425,7 +425,7 @@ function ClubScreen({
   const [failed, setFailed] = useState(false);
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
-    if (!pulled()) setItems(null);
+    if (!pulled) setItems(null);
     setFailed(false);
     let live = true;
     void track(getRetiredNumbersOfClub(season, clubId)).then((r) => {
@@ -515,7 +515,7 @@ function RecentScreen({ season, myIds }: { season: number; myIds: ReadonlySet<st
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
     const mine = ++gen.current;
-    if (!pulled()) {
+    if (!pulled) {
       setItems(null);
       setNext(null);
     }

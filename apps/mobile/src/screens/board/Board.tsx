@@ -44,7 +44,7 @@ import { useColors } from '../../theme/useColors';
 import { Btn } from '../../ui/Btn';
 import { Card } from '../../ui/Card';
 import { Pill } from '../../ui/bits';
-import { useRefresh } from '../../ui/refresh';
+import { useOnPull } from '../../ui/refresh';
 import { Press } from '../../ui/Press';
 import { Screen } from '../../ui/Screen';
 import { scrollTo } from '../../ui/scroll';
@@ -236,20 +236,10 @@ export default function Board() {
   }, [boardOpenId]);
   // T-11-111 당겨서 새로고침 — 목록은 비우지 않고 첫 페이지로 바꾸고, 글을 펼쳤으면 그 글(조회·좋아요·댓글)만 받는다.
   // 글을 쓰는 중이거나 글을 여는 중에는 건너뛴다.
-  const { tick, track } = useRefresh();
-  useEffect(() => {
-    if (!tick || editing || entering || busy || liking) return;
-    if (!detail) return void track(load(false, true));
-    const postId = detail.post.id;
-    void track(api.fetchPost(postId)).then((r) => {
-      if (!r.ok) return;
-      const { post, comments, blocks = [], liked } = r.data;
-      setDetail((d) =>
-        d && d.post.id === postId ? { ...d, post, comments, blocks, liked: !!liked } : d,
-      );
-    });
-    // tick이 바뀔 때만.
-  }, [tick]);
+  useOnPull(() => {
+    if (editing || entering || busy || liking) return;
+    return detail ? reloadPost(detail.post.id) : load(false, true);
+  });
   // T-10-113 하단 '소식'을 다시 누르면 목록 맨 위로(쓰던 글이 있으면 먼저 묻는다).
   const seenTop = useRef(appState.boardTop);
   useEffect(() => {
@@ -332,11 +322,14 @@ export default function Board() {
   }
 
   /** 차단·차단 해제 뒤 댓글과 차단 목록을 서버 기준으로 다시 받는다. */
-  async function reloadComments(postId: string) {
+  /** 펼친 글을 다시 받는다(조회·좋아요·댓글·차단). */
+  async function reloadPost(postId: string) {
     const r = await api.fetchPost(postId);
     if (!r.ok) return;
-    const { comments, blocks = [] } = r.data;
-    setDetail((d) => (d && d.post.id === postId ? { ...d, comments, blocks } : d));
+    const { post, comments, blocks = [], liked } = r.data;
+    setDetail((d) =>
+      d && d.post.id === postId ? { ...d, post, comments, blocks, liked: !!liked } : d,
+    );
   }
   async function report(cm: Comment, reason: CommentReportReason) {
     setBusy(true);
@@ -362,7 +355,7 @@ export default function Board() {
     if (!r.ok) return toast(r.error.message);
     setReporting(null);
     toast(`${r.data.nickname}님을 차단했어요`);
-    await reloadComments(postId);
+    await reloadPost(postId);
   }
   async function unblock(b: BoardBlock) {
     if (!detail) return;
@@ -370,7 +363,7 @@ export default function Board() {
     const r = await api.unblock(b.id);
     if (!r.ok) return toast(r.error.message);
     toast(`${b.nickname}님 차단을 풀었어요`);
-    await reloadComments(postId);
+    await reloadPost(postId);
   }
 
   const small = { fontSize: rem(0.75) } as const;
