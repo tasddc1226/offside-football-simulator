@@ -970,6 +970,8 @@ export const ownerAchievements = sqliteTable(
     score: integer('score').notNull(),
     done: integer('done').notNull(),
     players: integer('players').notNull(),
+    // T-11-103 그 시즌에 닿은 팀 업적(JSON {id: 값}). 선발이 바뀌어도 팀 업적을 남긴다. NULL이면 아직 없다.
+    teamKept: text('team_kept'),
     reachedAt: text('reached_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
