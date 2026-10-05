@@ -82,6 +82,9 @@ describe('공개 명예의 전당 /v1/hof', () => {
   let cookie: string;
 
   beforeEach(async () => {
+    // 기본 기록은 프리시즌이다. 개막 검증은 각 테스트에서 시각을 별도로 바꾼다.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z'));
     ctx = await createTestD1();
     cookie = (await issueCookie(ctx)).cookie;
     await putSeasonsFor(ctx.env, cookie, CAREER_ID, summary);
