@@ -1,7 +1,9 @@
-import type {
-  LiveRetiredNumber,
-  RetiredNumberResult,
-  RetiredNumbersResponse,
+import {
+  RETIRED_PAGE,
+  type LiveRetiredNumber,
+  type RetiredNumberResult,
+  type RetiredNumbersResponse,
+  type RetiredNumbersSummary,
 } from '@offside/contracts';
 import { defaultClubIds } from '@offside/contracts/club-names';
 import {
@@ -10,7 +12,7 @@ import {
   rnCut,
   type RnClub,
 } from '@offside/contracts/retired-numbers';
-import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, lt, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
 import { isPublicRetired, storedSeasonsOf, type StoredSeasonRow } from './careers.js';
@@ -264,19 +266,88 @@ export async function judgeRetiredNumber(db: Db, careerId: string, now: string):
   return { result: { kind: 'taken', ...slot, holder: holder?.name ?? null } };
 }
 
-/** 한 시즌의 영구결번(결번 순). */
-export async function listRetiredNumbers(db: Db, season: number): Promise<RetiredNumbersResponse> {
-  const items = await db
-    .select({
-      ...slotColumns,
-      grantedAt: retiredNumbers.grantedAt,
-      careerId: retiredNumbers.careerId,
-      name: careers.publicName,
-      pos: careers.pos,
-    })
+const itemColumns = {
+  ...slotColumns,
+  grantedAt: retiredNumbers.grantedAt,
+  careerId: retiredNumbers.careerId,
+  name: careers.publicName,
+  pos: careers.pos,
+};
+const itemsOf = (db: Db) =>
+  db
+    .select(itemColumns)
     .from(retiredNumbers)
-    .innerJoin(careers, eq(careers.id, retiredNumbers.careerId))
-    .where(eq(retiredNumbers.season, season))
+    .innerJoin(careers, eq(careers.id, retiredNumbers.careerId));
+
+/**
+ * 한 시즌의 영구결번(결번 순). T-11-101 clubId면 그 구단만. 벽 첫 화면은 요약(summarizeRetiredNumbers)만 받고,
+ * 전체 목록은 결번 심사 결과를 모르는 옛 기록(내 선수)과 아직 업데이트하지 않은 앱이 쓴다.
+ */
+export async function listRetiredNumbers(
+  db: Db,
+  season: number,
+  clubId?: string,
+): Promise<RetiredNumbersResponse> {
+  const items = await itemsOf(db)
+    .where(
+      and(
+        eq(retiredNumbers.season, season),
+        clubId === undefined ? undefined : eq(retiredNumbers.clubId, clubId),
+      ),
+    )
     .orderBy(retiredNumbers.seq);
   return { season, items };
+}
+
+/** T-11-101 최신순 한 페이지 — before(0이면 처음)보다 앞선 결번 RETIRED_PAGE개. next는 다음 페이지의 before. */
+export async function pageRetiredNumbers(
+  db: Db,
+  season: number,
+  before: number,
+): Promise<RetiredNumbersResponse> {
+  const rows = await itemsOf(db)
+    .where(
+      and(
+        eq(retiredNumbers.season, season),
+        before > 0 ? lt(retiredNumbers.seq, before) : undefined,
+      ),
+    )
+    .orderBy(desc(retiredNumbers.seq))
+    .limit(RETIRED_PAGE + 1);
+  const items = rows.slice(0, RETIRED_PAGE);
+  return { season, items, next: rows.length > RETIRED_PAGE ? items.at(-1)!.seq : null };
+}
+
+/** T-11-101 벽 첫 화면 — 구단별 결번 수(많은 구단 먼저, 같으면 먼저 결번을 낸 구단)와 최근 결번 몇 개. */
+export async function summarizeRetiredNumbers(
+  db: Db,
+  season: number,
+  recent = 8,
+): Promise<RetiredNumbersSummary> {
+  const count = sql<number>`count(*)`;
+  const firstSeq = sql<number>`min(${retiredNumbers.seq})`;
+  const [clubs, items] = await db.batch([
+    db
+      .select({
+        clubId: retiredNumbers.clubId,
+        club: sql<string>`min(${retiredNumbers.club})`,
+        count,
+        firstSeq,
+        lastAt: sql<string>`max(${retiredNumbers.grantedAt})`,
+      })
+      .from(retiredNumbers)
+      .where(eq(retiredNumbers.season, season))
+      .groupBy(retiredNumbers.clubId)
+      .orderBy(desc(count), asc(firstSeq)),
+    itemsOf(db)
+      .where(eq(retiredNumbers.season, season))
+      .orderBy(desc(retiredNumbers.seq))
+      .limit(recent),
+  ]);
+  return {
+    season,
+    total: clubs.reduce((n, c) => n + c.count, 0),
+    clubs,
+    recent: items,
+  };
 }

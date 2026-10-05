@@ -12,6 +12,12 @@ export const EDGE = {
   firsts: (season: number) => `/v1/firsts?season=${season}`,
   /** T-11-029 영구결번은 시즌마다 따로다(시즌 id를 푼 경로). */
   retiredNumbers: (season: number) => `/v1/retired-numbers?season=${season}`,
+  /** T-11-101 벽 첫 화면(구단별 수·최근 결번), 한 구단, 최신순 페이지. */
+  retiredNumbersSummary: (season: number) => `/v1/retired-numbers/summary?season=${season}`,
+  retiredNumbersClub: (season: number, clubId: string) =>
+    `/v1/retired-numbers?season=${season}&club=${clubId}`,
+  retiredNumbersPage: (season: number, before: number) =>
+    `/v1/retired-numbers?season=${season}&before=${before}`,
   live: '/v1/live',
   /** T-10-122 홈 전광판(이적·최초 기록). TTL로만 새로 읽는다. */
   ticker: '/v1/ticker',
@@ -42,7 +48,13 @@ const allBoardLists = () => BOARD_KEYS.map(EDGE.boardFirstPage);
 export const STALE = {
   balanceActivated: () => [EDGE.balance],
   firstsChanged: allFirsts,
-  retiredNumbersChanged: (season: number) => [EDGE.retiredNumbers(season)],
+  /** 새 결번·이름 공개 토글 — 그 시즌 전체 목록·요약·그 구단·최신순 첫 페이지(뒤 페이지는 TTL로만). */
+  retiredNumbersChanged: (season: number, clubId: string) => [
+    EDGE.retiredNumbers(season),
+    EDGE.retiredNumbersSummary(season),
+    EDGE.retiredNumbersClub(season, clubId),
+    EDGE.retiredNumbersPage(season, 0),
+  ],
   /** 이름 공개 토글이 바로 보이게(최초 기록의 이름 포함). */
   retirementPut: (careerId: string) => [EDGE.hofDetail(careerId), ...allFirsts()],
   /** 글·댓글 쓰기/지우기 — 목록의 글과 댓글 수가 바뀐다. */

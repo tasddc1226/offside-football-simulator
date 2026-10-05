@@ -1,7 +1,10 @@
 import {
   CareerIdParamSchema,
+  RetiredBeforeQuerySchema,
+  RetiredClubQuerySchema,
   RetiredNumberCheckResponseSchema,
   RetiredNumbersResponseSchema,
+  RetiredNumbersSummarySchema,
   SeasonPickQuerySchema,
   type RetiredNumberResult,
 } from '@offside/contracts';
@@ -9,10 +12,13 @@ import { displaySeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { careerOwnerMismatch, nowIso, ok } from './shared.js';
 import { getCareerOwner } from '../db/repos/careers.js';
+import type { Db } from '../db/client.js';
 import {
   ensureRetiredNumbersBackfilled,
   judgeRetiredNumber,
   listRetiredNumbers,
+  pageRetiredNumbers,
+  summarizeRetiredNumbers,
 } from '../db/repos/retiredNumbers.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
@@ -34,7 +40,7 @@ export async function judgeRetirement(
     const { result, season, claimed } = await judgeRetiredNumber(getDb(c), careerId, now);
     // 이미 가진 자리여도 이름 공개 토글이 목록의 이름을 바꾼다. 그 시즌의 목록만 낡는다(T-11-029).
     if (result?.kind === 'granted' && season !== undefined) {
-      purgeEdge(c, STALE.retiredNumbersChanged(season));
+      purgeEdge(c, STALE.retiredNumbersChanged(season, result.clubId));
     }
     if (claimed) publishRetiredNumber(c, claimed);
     return result;
@@ -58,24 +64,51 @@ export function registerRetiredNumberRoutes(app: Hono<AppEnv>): void {
     return ok(c, RetiredNumberCheckResponseSchema, { retiredNumber }, 200, 'private, no-store');
   });
 
-  app.get('/v1/retired-numbers', async (c) => {
-    // T-11-029 시즌별 목록 — ?season= 없으면 지금 시즌(개막 전이면 프리시즌, 휴식기면 마지막 시즌). 캐시 키는 시즌을 푼 경로다.
-    const now = nowIso();
-    const season =
-      parseWithAppError(SeasonPickQuerySchema, c.req.query('season')) ?? displaySeasonAt(now);
-    // 기존 은퇴를 훑는 중이면 캐시하지 않는다(서버 최초 기록과 같다 — 조회마다 한 조각씩 나아간다).
+  // T-11-029 ?season= 없으면 지금 시즌(개막 전이면 프리시즌, 휴식기면 마지막 시즌). 캐시 키는 시즌을 푼 경로다.
+  const seasonOf = (c: Context<AppEnv>) =>
+    parseWithAppError(SeasonPickQuerySchema, c.req.query('season')) ?? displaySeasonAt(nowIso());
+  // 기존 은퇴를 훑는 중이면 캐시하지 않는다(서버 최초 기록과 같다 — 조회마다 한 조각씩 나아간다).
+  const cachedRead = async <T>(c: Context<AppEnv>, path: string, read: (db: Db) => Promise<T>) => {
     let rescanning = false;
-    const data = await edgeCached(
+    return edgeCached(
       c,
-      EDGE.retiredNumbers(season),
+      path,
       TTL,
       async () => {
         const db = getDb(c);
         rescanning = await ensureRetiredNumbersBackfilled(db);
-        return listRetiredNumbers(db, season);
+        return read(db);
       },
       () => !rescanning,
     );
+  };
+
+  // T-11-101 벽 첫 화면 — 구단별 결번 수와 최근 결번만(결번 타일 전체를 받지 않는다).
+  app.get('/v1/retired-numbers/summary', async (c) => {
+    const season = seasonOf(c);
+    const data = await cachedRead(c, EDGE.retiredNumbersSummary(season), (db) =>
+      summarizeRetiredNumbers(db, season),
+    );
+    return ok(c, RetiredNumbersSummarySchema, data, 200, `public, max-age=${TTL}`);
+  });
+
+  // 한 시즌의 결번. T-11-101 ?club= 그 구단만, ?before= 최신순 한 페이지(0 = 처음). 둘 다 없으면 전체(옛 앱·내 선수).
+  app.get('/v1/retired-numbers', async (c) => {
+    const season = seasonOf(c);
+    const clubId = parseWithAppError(RetiredClubQuerySchema, c.req.query('club'));
+    const before = parseWithAppError(RetiredBeforeQuerySchema, c.req.query('before'));
+    const data =
+      clubId !== undefined
+        ? await cachedRead(c, EDGE.retiredNumbersClub(season, clubId), (db) =>
+            listRetiredNumbers(db, season, clubId),
+          )
+        : before !== undefined
+          ? await cachedRead(c, EDGE.retiredNumbersPage(season, before), (db) =>
+              pageRetiredNumbers(db, season, before),
+            )
+          : await cachedRead(c, EDGE.retiredNumbers(season), (db) =>
+              listRetiredNumbers(db, season),
+            );
     return ok(c, RetiredNumbersResponseSchema, data, 200, `public, max-age=${TTL}`);
   });
 }
