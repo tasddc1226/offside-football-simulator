@@ -24,6 +24,7 @@ import { RecordsSelect, RECORDS_TOUCH } from '../RecordsControls';
 import { AchGradeBadge } from '../../owner/TeamParts';
 import { GradeEmblem } from '../../../ui/GradeEmblem';
 import { TeamLogo } from '../../../components/TeamLogo';
+import { useSeasonNow } from '../../../ui/useSeasonNow';
 
 export default function AchievementRanking() {
   const c = useColors();
@@ -34,6 +35,7 @@ export default function AchievementRanking() {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [gradesOpen, setGradesOpen] = useState(false);
+  const now = useSeasonNow();
 
   useEffect(() => {
     setFailed(false);
@@ -48,7 +50,8 @@ export default function AchievementRanking() {
     return () => {
       live = false;
     };
-  }, [season, page]);
+    // now: 지금 시즌(season 없음)을 보는 중에 개막을 넘기면 다시 받는다.
+  }, [season, page, now]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / ACH_RANK_PER_PAGE)) : 1;
   function goPage(p: number) {
@@ -74,7 +77,7 @@ export default function AchievementRanking() {
         <RecordsSelect
           label="시즌"
           testID="ach-rank-season-select"
-          value={season ?? data?.season ?? displaySeasonAt(new Date().toISOString())}
+          value={season ?? data?.season ?? displaySeasonAt(now)}
           options={
             data?.seasons.map((s) => ({ value: s.id, label: s.name })) ??
             openTeamSeasons(new Date().toISOString()).map((id) => ({

@@ -24,6 +24,7 @@ import { HofRow, type RowStats } from '../../components/HofRow';
 import { rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { Seg, TabOpt } from '../board/parts';
+import { useSeasonNow } from '../../ui/useSeasonNow';
 
 type MineRow = {
   nation?: string | undefined;
@@ -84,9 +85,11 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
   const [rows, setRows] = useState<MineRow[]>([]);
   const [expanded, setExpanded] = useState(false);
   const now = useMemo(() => new Date().toISOString(), []);
-  const seasons = useMemo(() => mySeasonOptions(now), [now]);
+  // T-11-110 목록은 불러온 시각(now)으로, 시즌 탭·기본 시즌은 띄운 채 개막을 넘기면 다시 고른다.
+  const seasonNow = useSeasonNow();
+  const seasons = useMemo(() => mySeasonOptions(seasonNow), [seasonNow]);
   const [picked, setPicked] = useState<number | null>(null);
-  const season = picked ?? myDefaultSeason(now);
+  const season = picked ?? myDefaultSeason(seasonNow);
   const inSeason = useMemo(
     () => (seasons.length > 1 ? rows.filter((r) => r.season === season) : rows),
     [seasons, rows, season],

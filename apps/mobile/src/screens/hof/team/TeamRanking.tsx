@@ -26,6 +26,7 @@ import {
 import { RecordsSelect, RecordsChips } from '../RecordsControls';
 import TeamProfile from './TeamProfile';
 import { TeamLogo } from '../../../components/TeamLogo';
+import { useSeasonNow } from '../../../ui/useSeasonNow';
 
 const SORTS: [TeamRankSort, string][] = [
   ['rating', '레이팅'],
@@ -42,6 +43,7 @@ export default function TeamRanking() {
   const [data, setData] = useState<TeamRankResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const now = useSeasonNow();
 
   useEffect(() => {
     setFailed(false);
@@ -56,7 +58,8 @@ export default function TeamRanking() {
     return () => {
       live = false;
     };
-  }, [season, sort, page]);
+    // now: 지금 시즌(season 없음)을 보는 중에 개막을 넘기면 다시 받는다.
+  }, [season, sort, page, now]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1;
   function goPage(p: number) {
@@ -85,7 +88,7 @@ export default function TeamRanking() {
         <RecordsSelect
           label="시즌"
           testID="rank-season-select"
-          value={season ?? data?.season ?? displaySeasonAt(new Date().toISOString())}
+          value={season ?? data?.season ?? displaySeasonAt(now)}
           options={
             data?.seasons.map((s) => ({ value: s.id, label: s.name })) ??
             openTeamSeasons(new Date().toISOString()).map((id) => ({

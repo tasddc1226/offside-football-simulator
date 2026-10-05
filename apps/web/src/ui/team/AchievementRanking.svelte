@@ -7,6 +7,7 @@
   import { fetchAchRanking, type AchRankResponse } from '@offside/app-core/api/team';
   import { hofStart } from '@offside/app-core/state';
   import { num as n } from '@offside/app-core/teamText';
+  import { seasonNow } from '../seasonNow.svelte.js';
   import { appState } from '../state.svelte.js';
   import AchGradeBadge from './AchGradeBadge.svelte';
   import GradeEmblem from './GradeEmblem.svelte';
@@ -20,12 +21,14 @@
   let data = $state<AchRankResponse | null>(null);
   let failed = $state(false);
   let loading = $state(true);
-  const now = new Date().toISOString();
+  const clock = seasonNow();
+  const now = $derived(clock.now);
   const seasons = $derived(data?.seasons ?? openTeamSeasons(now).map((id) => ({ id, name: teamSeasonName(id) })));
   const selectedSeason = $derived(season ?? data?.season ?? displaySeasonAt(now));
 
   $effect(() => {
     const [se, p, example] = [season, page, preview];
+    void now; // 지금 시즌(season 없음)을 보는 중에 개막을 넘기면 다시 받는다.
     let live = true;
     failed = false;
     loading = true;

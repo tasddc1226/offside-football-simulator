@@ -1,4 +1,8 @@
-import { msUntilNextSeasonStart, serviceSeason } from '@offside/contracts/service-seasons';
+import {
+  SERVICE_SEASONS,
+  msUntilNextSeasonStart,
+  serviceSeason,
+} from '@offside/contracts/service-seasons';
 import { isVisible, watchVisibility } from './api/liveSocket.js';
 import { detailOpenNow } from './state.js';
 
@@ -43,4 +47,20 @@ export function watchSeasonClock(onTick: () => void): () => void {
     clearTimeout(timer);
     stop();
   };
+}
+
+const openedSeasons = (now: string) => SERVICE_SEASONS.filter((s) => s.startsAt <= now).length;
+
+/**
+ * T-11-110 기록실 화면용 시각 — since 뒤로 새 시즌이 열렸을 때만 그 시각을 알린다. 화면 복귀마다 `now`를 바꾸면
+ * 그 시각으로 다시 불러오는 화면(내 선수)이 매번 요청하므로, 시즌 기본값·'개막 예정'이 실제로 달라질 때만 부른다.
+ */
+export function watchSeasonNow(since: string, onChange: (now: string) => void): () => void {
+  let opened = openedSeasons(since);
+  return watchSeasonClock(() => {
+    const now = new Date().toISOString();
+    if (openedSeasons(now) === opened) return;
+    opened = openedSeasons(now);
+    onChange(now);
+  });
 }

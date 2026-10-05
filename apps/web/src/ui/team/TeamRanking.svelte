@@ -4,6 +4,7 @@
   import { TEAM_RANK_PER_PAGE } from '@offside/contracts/owner-team';
   import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
   import { fetchTeamRanking, type TeamRankResponse, type TeamRankSort } from '@offside/app-core/api/team';
+  import { seasonNow } from '../seasonNow.svelte.js';
   import { appState } from '../state.svelte.js';
   import TeamProfile from './TeamProfile.svelte';
   import TeamLogo from './TeamLogo.svelte';
@@ -24,7 +25,8 @@
   let data = $state<TeamRankResponse | null>(null);
   let failed = $state(false);
   let loading = $state(true);
-  const now = new Date().toISOString();
+  const clock = seasonNow();
+  const now = $derived(clock.now);
   const seasons = $derived(data?.seasons ?? openTeamSeasons(now).map((id) => ({ id, name: teamSeasonName(id) })));
   const selectedSeason = $derived(season ?? data?.season ?? displaySeasonAt(now));
   const metricLabel = $derived(sort === 'rating' ? '레이팅' : '팀 OVR');
@@ -32,6 +34,7 @@
 
   $effect(() => {
     const [se, so, p] = [season, sort, page];
+    void now; // 지금 시즌(season 없음)을 보는 중에 개막을 넘기면 다시 받는다.
     let live = true;
     failed = false;
     loading = true;
