@@ -4336,9 +4336,6 @@ html:has(.wrap.has-actionbar) {
 .rn-wall-lead {
   margin: 0 0 14px;
 }
-.rn-club-picker {
-  margin-top: 12px;
-}
 .rn-wall-sum {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -4365,10 +4362,6 @@ html:has(.wrap.has-actionbar) {
   font-size: 0.75rem;
   color: var(--muted);
 }
-.rn-club {
-  padding-block: 14px 4px;
-  border-top: 1px solid var(--line);
-}
 .rn-club-head {
   display: flex;
   align-items: center;
@@ -4390,6 +4383,77 @@ html:has(.wrap.has-actionbar) {
   border-radius: 999px;
   border: 1px solid var(--accent);
   background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+}
+/* T-11-101 첫 화면: 최근 결번 · 구단 목록(누르면 그 구단 결번만 불러온다) */
+.rn-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+.rn-sec-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.rn-club-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+.rn-club-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rn-club-row b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rn-club-row > .muted {
+  flex: none;
+}
+.rn-club-row .rn-club-count {
+  margin-left: auto;
+}
+.rn-club-go {
+  flex: none;
+  color: var(--muted);
+  font-size: 1.125rem;
+}
+.rn-league-head {
+  display: flex;
+  justify-content: space-between;
+  margin: 14px 0 4px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.rn-back {
+  margin-bottom: 6px;
+  text-decoration: none;
+}
+.rn-club-title {
+  margin-top: 4px;
+}
+.rn-recent-title {
+  margin: 4px 0 12px;
+  font-size: 1rem;
+}
+.rn-more {
+  margin-top: 4px;
 }
 .rn-tiles {
   display: grid;

@@ -11,6 +11,7 @@ import type {
   MyCareersResponse,
   RetiredNumberCheckResponse,
   RetiredNumbersResponse,
+  RetiredNumbersSummary,
   TickerResponse,
 } from '@offside/contracts';
 import { storage } from '@offside/game/storage';
@@ -242,6 +243,32 @@ export function getHofDetail(careerId: string): Promise<ApiResult<HofDetailRespo
 export function getRetiredNumbers(season?: number): Promise<ApiResult<RetiredNumbersResponse>> {
   return cachedGet<RetiredNumbersResponse>(
     `/v1/retired-numbers${season === undefined ? '' : `?season=${season}`}`,
+    60_000,
+  );
+}
+/** T-11-101 영구결번 벽 첫 화면 — 구단별 결번 수와 최근 결번만. */
+export function getRetiredNumbersSummary(
+  season: number,
+): Promise<ApiResult<RetiredNumbersSummary>> {
+  return cachedGet<RetiredNumbersSummary>(`/v1/retired-numbers/summary?season=${season}`, 60_000);
+}
+/** T-11-101 한 구단의 결번(등번호 순). */
+export function getRetiredNumbersOfClub(
+  season: number,
+  clubId: string,
+): Promise<ApiResult<RetiredNumbersResponse>> {
+  return cachedGet<RetiredNumbersResponse>(
+    `/v1/retired-numbers?season=${season}&club=${encodeURIComponent(clubId)}`,
+    60_000,
+  );
+}
+/** T-11-101 최신순 한 페이지 — before는 앞 페이지의 next(처음은 0). */
+export function getRetiredNumbersPage(
+  season: number,
+  before: number,
+): Promise<ApiResult<RetiredNumbersResponse>> {
+  return cachedGet<RetiredNumbersResponse>(
+    `/v1/retired-numbers?season=${season}&before=${before}`,
     60_000,
   );
 }

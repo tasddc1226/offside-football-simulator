@@ -3,6 +3,7 @@ import { bodyError } from './body.js';
 import { NATION_BY_CODE } from './nations.js';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
+import { isDefaultClubId } from './club-names.js';
 import { seasonById } from './service-seasons.js';
 import { DETAIL_POSITIONS, FACE_ATTRS, type DetailPos, type FaceAttr } from './positions.js';
 
@@ -593,19 +594,49 @@ export type FirstsResponse = z.infer<typeof FirstsResponseSchema>;
  * T-10-076 `GET /v1/retired-numbers?season=` 한 시즌의 영구결번(결번 순). 이름은 공개를 고른 경우에만.
  * T-11-029 결번은 시즌마다 따로다 — season은 이 목록의 시즌(0 = 프리시즌).
  */
+const RetiredNumberItemSchema = RetiredSlotSchema.extend({
+  seq: z.number().int(),
+  grantedAt: z.string(),
+  careerId: z.string(),
+  name: z.string().nullable(),
+  pos: CareerPosSchema,
+});
 export const RetiredNumbersResponseSchema = z.strictObject({
   season: z.number().int().nonnegative(),
-  items: z.array(
-    RetiredSlotSchema.extend({
-      seq: z.number().int(),
-      grantedAt: z.string(),
-      careerId: z.string(),
-      name: z.string().nullable(),
-      pos: CareerPosSchema,
-    }),
-  ),
+  items: z.array(RetiredNumberItemSchema),
+  /** T-11-101 최신순 페이지(`?before=`)일 때만 — 다음 페이지의 before(더 없으면 null). */
+  next: z.number().int().nullable().optional(),
 });
 export type RetiredNumbersResponse = z.infer<typeof RetiredNumbersResponseSchema>;
+
+/** T-11-101 `GET /v1/retired-numbers?club=` 한 구단의 결번만 — 결번은 게임에 있는 구단에만 있다(캐시 키를 마음대로 늘리지 못하게). */
+export const RetiredClubQuerySchema = ClubIdSchema.refine(
+  isDefaultClubId,
+  '게임에 없는 구단이에요.',
+).optional();
+/** T-11-101 `GET /v1/retired-numbers?before=` 최신순 페이지 — 이 순번보다 앞선 결번부터. 첫 페이지는 0. */
+export const RetiredBeforeQuerySchema = z.coerce.number().int().nonnegative().optional();
+/** T-11-101 최신순 한 페이지의 결번 수. */
+export const RETIRED_PAGE = 24;
+
+/**
+ * T-11-101 `GET /v1/retired-numbers/summary?season=` 벽 첫 화면 — 구단별 결번 수와 최근 결번 몇 개.
+ * 결번 타일은 구단을 고르거나(`?club=`) 최신순 페이지(`?before=`)를 열 때 받는다.
+ */
+export const RetiredNumbersSummarySchema = z.strictObject({
+  season: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+  /** 결번이 있는 구단 — 많은 구단 먼저, 같으면 먼저 결번을 낸 구단 먼저. */
+  clubs: z.array(
+    z.strictObject({
+      clubId: z.string().min(1),
+      club: z.string(),
+      count: z.number().int().positive(),
+    }),
+  ),
+  recent: z.array(RetiredNumberItemSchema),
+});
+export type RetiredNumbersSummary = z.infer<typeof RetiredNumbersSummarySchema>;
 
 /** T-10-076 `GET /v1/careers/:careerId/retired-number` 내 선수의 결번 심사 결과(소급으로 받은 결번·이미 찬 자리 포함). */
 export const RetiredNumberCheckResponseSchema = z.strictObject({

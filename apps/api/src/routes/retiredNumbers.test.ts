@@ -2,6 +2,7 @@ import {
   HofDetailResponseSchema,
   RetiredNumberCheckResponseSchema,
   RetiredNumbersResponseSchema,
+  RetiredNumbersSummarySchema,
   RetirementResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
@@ -183,6 +184,54 @@ describe('영구결번 (T-10-076)', () => {
     // 번호가 다르면 같은 구단이라도 받는다.
     const D = '0c000000-0000-4000-8000-00000000000d';
     expect(await retire(D, skyBlue(7), '일곱')).toMatchObject({ kind: 'granted', number: 7 });
+  });
+
+  it('T-11-101: 벽 첫 화면은 구단별 수·최근 결번만, 구단·최신순 페이지는 따로 받는다', async () => {
+    await retire(A, twoClubs(10), '먼저온'); // pl-0 10번, seq 1
+    await retire(B, twoClubs(10), '두번째'); // pl-1 10번, seq 2
+    const D = '0c000000-0000-4000-8000-00000000000d';
+    await retire(D, skyBlue(7), '일곱'); // pl-0 7번, seq 3
+    const res = await createApp().request('/v1/retired-numbers/summary?season=0', {}, ctx.env);
+    expect(res.status).toBe(200);
+    const sum = successEnvelope(RetiredNumbersSummarySchema).parse(await res.json()).data;
+    expect(sum).toMatchObject({
+      season: 0,
+      total: 3,
+      clubs: [
+        { clubId: 'pl-0', count: 2 },
+        { clubId: 'pl-1', count: 1 },
+      ],
+      recent: [{ careerId: D }, { careerId: B }, { careerId: A }],
+    });
+    // 한 구단은 등번호 순.
+    expect(await list(ctx.env, '?season=0&club=pl-0')).toMatchObject([
+      { careerId: D, number: 7 },
+      { careerId: A, number: 10 },
+    ]);
+    expect(await list(ctx.env, '?season=0&club=pl-9')).toEqual([]);
+    const page = async (before: number) => {
+      const r = await createApp().request(
+        `/v1/retired-numbers?season=0&before=${before}`,
+        {},
+        ctx.env,
+      );
+      return successEnvelope(RetiredNumbersResponseSchema).parse(await r.json()).data;
+    };
+    expect(await page(0)).toMatchObject({
+      items: [{ seq: 3 }, { seq: 2 }, { seq: 1 }],
+      next: null,
+    });
+    expect(await page(3)).toMatchObject({ items: [{ seq: 2 }, { seq: 1 }], next: null });
+    expect((await createApp().request('/v1/retired-numbers?club=PL 0', {}, ctx.env)).status).toBe(
+      400,
+    );
+    expect((await createApp().request('/v1/retired-numbers?before=-1', {}, ctx.env)).status).toBe(
+      400,
+    );
+    // 게임에 없는 구단은 캐시 키를 늘리지 않게 400.
+    expect((await createApp().request('/v1/retired-numbers?club=zz-0', {}, ctx.env)).status).toBe(
+      400,
+    );
   });
 
   it('익명이면 자리를 잡지 않고, 이름을 공개하는 순간 잡는다(나중에 숨겨도 유지)', async () => {
