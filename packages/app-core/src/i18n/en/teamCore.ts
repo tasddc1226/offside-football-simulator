@@ -10,7 +10,7 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   titleDraw: 'Draw',
   titleLoss: 'Defeat',
   sortFit: 'Position rating',
-  sortScore: 'Legend score',
+  sortScore: 'Legend Score',
   sortPeak: 'Peak OVR',
   attrEstimated: 'Estimated attributes · ',
   hintNoTeam: 'Save your team to play matches.',

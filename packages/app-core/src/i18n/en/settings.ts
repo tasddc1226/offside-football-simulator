@@ -39,7 +39,7 @@ export const settings: Translation<SettingsMsgs> = {
   consentTitle: 'Usage analytics to improve the game',
   consentOptional: '(optional)',
   consentBody1:
-    'If you agree, Google Analytics uses cookies to analyse how you arrive, screen navigation, and use of career start, season complete, retirement and share buttons. Names and career IDs are not sent. The game works the same if you decline.',
+    'If you agree, Google Analytics uses cookies to analyze where visitors come from, screen navigation, and use of career start, season complete, retirement and share buttons. Names and career IDs are not sent. The game works the same if you decline.',
   consentBody2:
     "Analytics data is processed on Google's overseas servers, and user and event data is kept for 2 months. You can change this anytime in Settings.",
   consentMore: 'Learn more',
@@ -52,7 +52,7 @@ export const settings: Translation<SettingsMsgs> = {
   consentRevokeNote:
     "If you withdraw, collection stops and this browser's analytics cookies and records are cleared. Data already sent is not deleted automatically.",
   reviewTitle: 'Store review',
-  reviewBody: 'Tell others what you think of the game on the store.',
+  reviewBody: 'Share what you think of the game on the store.',
   reviewOpening: 'Opening the store…',
   reviewBtn: 'Leave a store review',
   reviewFail: "Couldn't open the store. Please try again in a moment.",

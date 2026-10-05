@@ -12,7 +12,7 @@ export const homeLive: Translation<HomeLiveMsgs> = {
   pauseTitle: 'Pause',
   resumeTitle: 'Resume',
   failed: "Couldn't load the live feed. We'll check again shortly.",
-  whatRetire: (p) => `Retired · legend score ${p.score}`,
+  whatRetire: (p) => `Retired · Legend Score ${p.score}`,
   whatFirst: (p) => `Finished a first season at ${p.club}`,
   whatHonor: (p) => `${p.honor} · ${p.club}`,
   whatCleanSheets: (p) =>
@@ -23,7 +23,7 @@ export const homeLive: Translation<HomeLiveMsgs> = {
   baseValue: (p) => `Base value ${p.value}`,
   agoNow: 'just now',
   agoMin: (p) => `${p.n} min ago`,
-  agoHour: (p) => `${p.n} ${p.n === 1 ? 'hour' : 'hours'} ago`,
+  agoHour: (p) => `${plural(p.n, 'hour')} ago`,
   agoYesterday: 'yesterday',
-  agoDay: (p) => `${p.n} days ago`,
+  agoDay: (p) => `${plural(p.n, 'day')} ago`,
 };

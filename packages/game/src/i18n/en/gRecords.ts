@@ -8,7 +8,7 @@ export const gRecords: Translation<GRecordsMsgs> = {
   chRating: 'Career-high rating',
   chCs: 'Career-high clean sheets',
   msApps: (p) => `${p.n} career appearances`,
-  msCaps: (p) => `${p.n} senior international caps`,
+  msCaps: (p) => `${p.n} international caps`,
   msTrophy: (p) => `${p.n} ${p.n === 1 ? 'trophy' : 'trophies'}`,
   msGoals: (p) => `${p.n} career goals`,
   msAssists: (p) => `${p.n} career assists`,

@@ -41,6 +41,6 @@ test('언어: 영어로 커리어를 시작하면 게임 기록도 영어다', a
     () =>
       (JSON.parse(localStorage.getItem('ft_save')!) as { log: { text: string }[] }).log[0]!.text,
   );
-  expect(log).toMatch(/starts a football career/);
+  expect(log).toMatch(/begins a football career/);
   expect(log).not.toMatch(/[가-힣]/);
 });

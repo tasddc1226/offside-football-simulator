@@ -49,18 +49,18 @@ function release(o: {
     text: (s) => (isKorean(s) ? [o.text, o.mil, o.rest] : [o.text, o.rest]).join(' '),
     choices: [
       {
-        label: 'Take it straight to the club hierarchy',
+        label: "Go straight to the club's top brass",
         ok: o.blessing,
         fail: o.refusal,
       },
       {
         label: 'Trade a contract extension for a release',
-        ok: 'The club agreed to release you if you extend your contract by a year with no pay rise.',
+        ok: 'The club agreed to release you if you extend your contract by a year with no raise.',
         fail: o.missed,
       },
       {
         label: 'Stay and focus on the season',
-        ok: 'Your manager is grateful for the decision.',
+        ok: 'The manager appreciates your decision.',
       },
     ],
   };
@@ -70,27 +70,27 @@ export const events_real: Record<string, EventText> = {
   var: {
     title: 'VAR pitchside review',
     text: byPos<string>({
-      FW: 'Your shot looked like the winner. The referee puts a hand to his ear and jogs to the monitor. The offside lines are being drawn.',
+      FW: 'Your shot looked like the winner. The referee puts a hand to an ear and jogs to the monitor. The offside lines are being drawn.',
       MF: 'Your long-range strike ripples the net. But the referee heads for the monitor to check for a handball in the build-up.',
       DF: 'An opponent goes down under your tackle in the box. The referee runs to the monitor for a pitchside review.',
-      GK: 'One-on-one, you throw yourself down and smother the ball, but the striker goes over. The referee checks the monitor for a penalty.',
+      GK: 'One-on-one, you throw yourself at the ball and knock it away, but the striker goes down. The referee checks the monitor for a penalty.',
     }),
     choices: [
       {
-        label: 'Protest hard to the referee',
+        label: 'Protest strongly to the referee',
         ok: byPos<string>({
-          FW: 'The goal stands! You won the mind games too, and your teammates rally round you.',
-          MF: 'The goal stands! You won the mind games too, and your teammates rally round you.',
-          def: 'No penalty! You got the ball first. You did not back down in the mind games either.',
+          FW: 'The goal stands! You won the mind games too, and your teammates rally around you.',
+          MF: 'The goal stands! You won the mind games too, and your teammates rally around you.',
+          def: "No penalty! The referee rules you got the ball first. You didn't back down in the mind games either.",
         }),
         fail: byPos<string>({
-          FW: 'The goal is chalked off and you get a yellow card on top. Your manager shakes his head on the bench.',
-          MF: 'The goal is chalked off and you get a yellow card on top. Your manager shakes his head on the bench.',
-          def: 'Penalty given, and a yellow card for dissent. Your manager shakes his head on the bench.',
+          FW: 'The goal is chalked off and you get a yellow card on top. Your manager shakes their head on the bench.',
+          MF: 'The goal is chalked off and you get a yellow card on top. Your manager shakes their head on the bench.',
+          def: 'Penalty given, and a yellow card for dissent. Your manager shakes their head on the bench.',
         }),
       },
       {
-        label: 'Hold your hands together and wait',
+        label: 'Clasp your hands and wait',
         ok: byPos<string>({
           FW: '"GOAL!" flashes on the board after the VAR check. You get to celebrate it twice.',
           MF: '"GOAL!" flashes on the board after the VAR check. You get to celebrate it twice.',
@@ -108,28 +108,28 @@ export const events_real: Record<string, EventText> = {
   racism: {
     title: 'Racist abuse in the away end',
     text: () =>
-      'During an away match, you hear racist gestures and chants aimed at Asians from the stands. Your teammates gather around you.',
+      'During an away match, fans in the stands make racist gestures and chants aimed at Asians. Your teammates gather around you.',
     choices: [
       {
         label: 'Tell the referee and ask for the anti-racism protocol',
-        ok: 'The match is paused and a warning is read out over the tannoy. The club and the league issue official statements backing you.',
+        ok: 'The match was paused and a warning was read out over the PA. The club and the league issued official statements backing you.',
       },
       {
-        label: 'Answer with your football',
+        label: 'Answer on the pitch',
         ok: byPos<string>({
-          FW: 'You score and quietly point to the badge on your chest. Your name comes up among fans abroad too.',
-          MF: 'You set up the winner and quietly point to the badge on your chest. Your name comes up among fans abroad too.',
-          DF: 'You finish with a clean sheet and quietly point to the badge. Your name comes up among fans abroad too.',
-          GK: 'You make save after save, then quietly point to the badge. Your name comes up among fans abroad too.',
+          FW: 'You scored and quietly pointed to the crest on your chest. Your name came up among fans abroad too.',
+          MF: 'You set up the winner and quietly pointed to the crest on your chest. Your name came up among fans abroad too.',
+          DF: 'You finished with a clean sheet and quietly pointed to the crest. Your name came up among fans abroad too.',
+          GK: 'You made save after save, then quietly pointed to the crest. Your name came up among fans abroad too.',
         }),
-        fail: 'Your mind was elsewhere for the full 90 minutes. Your teammates stayed by your side to the end.',
+        fail: 'You were shaken for the full 90 minutes. Your teammates stayed by your side to the end.',
       },
     ],
   },
   'winter-window': {
     title: 'January transfer window',
     text: (s) =>
-      `The January window is open. Reports say a club from a league a level up has made an official enquiry to ${tn(s.club.name)}. The club's line is "no mid-season sales".`,
+      `The January window is open. Reports say a club from a league a level up has sent ${tn(s.club.name)} an official inquiry. The club's policy is "no mid-season transfers".`,
     choices: [
       {
         label: 'Ask the club for a transfer',
@@ -149,7 +149,7 @@ export const events_real: Record<string, EventText> = {
     rest: 'But the Asian Games are not a mandatory FIFA release window, so you need your club to agree to let you go mid-season.',
     blessing: '"Bring back the gold." The club agreed to release you.',
     refusal: 'The club refused, saying it cannot lose a regular starter in mid-season.',
-    missed: 'Talks broke down. You will be watching this Asian Games on TV.',
+    missed: "Talks broke down. You'll be watching these Asian Games on TV.",
   }),
   'oly-release': release({
     title: 'Olympics release talks',
@@ -158,17 +158,17 @@ export const events_real: Record<string, EventText> = {
     rest: "But Olympic men's football is not a mandatory FIFA release window either, so you need your club to agree to a release that clashes with pre-season.",
     blessing: '"Bring back a medal." The club agreed to release you.',
     refusal: 'The club refused, saying you cannot miss preparations for the new season.',
-    missed: 'Talks broke down. You will be watching this Olympics on TV.',
+    missed: "Talks broke down. You'll be watching these Olympics on TV.",
   }),
   puskas: {
     title: 'Wonder goal, Puskas Award nominee',
     text: () =>
-      'Your volley from 35 metres out found the corner of the net. FIFA has shortlisted the goal for the Puskas Award. The winner is decided by fan and expert votes.',
+      'Your volley from 35 meters out found the corner of the net. FIFA has shortlisted the goal for the Puskas Award. The winner is decided by fan and expert votes.',
     choices: [
       {
         label: 'Rally fan votes on social media',
         ok: 'FIFA Puskas Award winner! Your goal has been chosen as the most beautiful of the year.',
-        fail: 'You missed out, and the heavy vote-chasing drew some criticism. Still, the clip has passed millions of views.',
+        fail: 'You missed out, and the relentless campaigning for votes drew criticism. Still, the clip has racked up millions of views.',
       },
       {
         label: '"It was down to my teammates"',
@@ -179,11 +179,11 @@ export const events_real: Record<string, EventText> = {
   'winter-camp': {
     title: 'Winter training camp',
     text: (s) =>
-      `A three-week training camp begins in ${camp(s)}. It is the time of year when the coaching staff finalise their plans for the season.`,
+      `A three-week training camp begins in ${camp(s)}. It is when the coaching staff finalize their plans for the season.`,
     choices: [
       {
         label: 'Aim to top the fitness tests',
-        ok: 'First in the bleep test. The coaches mark you "excellent" on the assessment sheet.',
+        ok: 'First in the shuttle run. The coaches mark you "excellent" on the assessment sheet.',
         fail: 'You pushed too hard and felt pain in your calf. You spent the end of camp in rehab.',
       },
       {
@@ -200,12 +200,12 @@ export const events_real: Record<string, EventText> = {
       {
         label: 'Give everything in front of the European scouts',
         ok: byPos<string>({
-          FW: "A wonder goal rattled the big club's defence. After the match, the opposing manager asked who you were.",
-          MF: 'You shrugged off the press in a midfield full of world-class players. After the match, the opposing manager asked who you were.',
+          FW: "A wonder goal rattled the big club's defense. After the match, the opposing manager asked who you were.",
+          MF: 'You slipped the press time after time among world-class midfielders. After the match, the opposing manager asked who you were.',
           DF: 'You shut down a world-class striker. After the match, the opposing manager asked who you were.',
           GK: "You kept out shot after shot from the big club's attack. After the match, the opposing manager asked who you were.",
         }),
-        fail: 'You felt the gap to world level first-hand. Overdoing it has left your body heavy too.',
+        fail: 'You felt the gap to world level first-hand. Overdoing it left your body heavy too.',
       },
       {
         label: 'Enjoy the occasion',
@@ -214,27 +214,27 @@ export const events_real: Record<string, EventText> = {
     ],
   },
   derby: {
-    title: 'Rivalry derby',
+    title: 'Rival derby',
     text: (s) =>
       `${DERBY[s.leagueId]}. The whole city has been buzzing all week. The atmosphere in the stadium is unlike any other day.`,
     choices: [
       {
         label: byPos<string>({
           FW: 'Score and celebrate in front of the away end',
-          MF: 'Dominate the game and celebrate in front of the away end',
-          DF: 'Shut out their star player and taunt the away end',
+          MF: 'Dominate the match and celebrate in front of the away end',
+          DF: 'Shut down their star player and taunt the away end',
           GK: 'Keep a clean sheet and roar at the away end',
         }),
         ok: byPos<string>({
-          FW: 'A derby-winning goal! The away end fell silent, and the home fans sang your name at the top of their voices.',
-          MF: 'You assisted the derby winner! The home fans sang your name at the top of their voices.',
-          DF: 'Their star player did not have a single shot in a comfortable win. The home fans chant your name.',
+          FW: 'A derby-winning goal! The away end fell silent, and the home fans belted out your name.',
+          MF: 'You set up the derby winner! The home fans belted out your name.',
+          DF: "Their star player didn't have a single shot in a comfortable win. The home fans chant your name.",
           GK: 'A derby clean sheet, with a penalty save to boot! The home fans chant your name.',
         }),
         fail: 'A defeat. The rival fans mock your pre-match bravado.',
       },
       {
-        label: 'Focus on managing the game',
+        label: 'Focus on controlling the match',
         ok: 'You kept a cool head for 90 minutes. Your manager is pleased.',
       },
     ],
@@ -242,10 +242,10 @@ export const events_real: Record<string, EventText> = {
   'asia-tour': {
     title: 'Pre-season Asia tour',
     text: (s) =>
-      `${tn(s.club.name)} are playing their pre-season Asia tour in Seoul. Most of the 60,000 crowd are wearing your shirt.`,
+      `${tn(s.club.name)}'s pre-season Asia tour stops in Seoul. Most of the 60,000 fans are wearing your shirt.`,
     choices: [
       {
-        label: 'Do every signing session and event',
+        label: 'Do every autograph session and event',
         ok: "The cheers followed you from the airport to the stadium. Your shirt is the club's top seller, and the board is delighted.",
       },
       {

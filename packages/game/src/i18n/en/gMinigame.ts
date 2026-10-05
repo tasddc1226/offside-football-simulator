@@ -9,7 +9,7 @@ export const gMinigame: Translation<GMinigameMsgs> = {
   zoneWide: 'Wide',
   zoneMedium: 'Medium',
   zoneNarrow: 'Narrow',
-  timeout: (p) => `Time's up. You didn't tap within ${p.sec} seconds`,
+  timeout: (p) => `Time's up. You didn't tap within ${p.sec} seconds.`,
   perfect: 'Perfect timing!',
   good: 'Good timing',
   close: 'Just missed the timing',

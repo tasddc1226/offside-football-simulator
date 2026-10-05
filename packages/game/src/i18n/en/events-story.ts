@@ -26,7 +26,7 @@ export const events_story: Record<string, EventText> = {
   'rival-1': {
     title: 'A rival your age appears',
     text: (s) =>
-      `Same age, same position: ${POS_EN[s.pos]}. The press has started to focus on the rivalry between you and ${rivalName(s)}.`,
+      `Same age, same position: ${POS_EN[s.pos]}. The press has started to pick up on your rivalry with ${rivalName(s)}.`,
     choices: [
       {
         label: 'Declare war in public',
@@ -41,33 +41,33 @@ export const events_story: Record<string, EventText> = {
   'rival-2': {
     title: 'The showdown',
     text: (s) =>
-      `The day you face ${rivalName(s)}. ${rv(s).tone === 'loud' ? 'It is the first meeting since you declared war, and the stadium is sold out.' : 'It is the first official meeting between the two of you.'}`,
+      `The day you take on ${rivalName(s)}. ${rv(s).tone === 'loud' ? 'It is the first meeting since you declared war, and the stadium is sold out.' : 'It is the first official meeting between the two of you.'}`,
     choices: [
       {
         label: byPos<string>({
           FW: 'Go for a head-on one-on-one',
           MF: 'Go head-to-head in midfield',
           DF: 'Volunteer to mark your rival man-for-man',
-          GK: 'Vow to win the battle of the saves',
+          GK: 'Vow to win the shot-stopping duel',
         }),
         ok: 'A comfortable win. In the post-match interviews, reporters only called your name.',
         fail: byPos<string>({
           FW: 'Your rival scored the winner. The walk to the bench felt very long.',
           MF: "You lost the midfield battle. Your rival's killer pass led to the winner.",
-          DF: 'Your rival got past you and scored the winner. The highlights show your back as he goes.',
-          GK: 'Your rival kept a clean sheet and you conceded twice. The comparison pieces are pouring out.',
+          DF: 'Your rival got past you and scored the winner. The highlights catch only your back as he goes by.',
+          GK: 'Your rival kept a clean sheet and you conceded twice. The comparison articles are pouring out.',
         }),
       },
       {
         label: 'Stick to the team tactics',
-        ok: 'The personal duel ended level. Your manager rated your judgement highly.',
+        ok: 'The personal duel ended level. Your manager thought highly of your judgment.',
       },
     ],
   },
   'rival-3': {
-    title: 'One national team spot',
+    title: 'One spot on the national team',
     text: (s) =>
-      `There is only one ${POS_EN[s.pos]} spot in the national team. ${rv(s).gap <= 0 ? 'You are now a step ahead.' : `For now, ${rivalName(s)} is still a step ahead.`}`,
+      `The national team has room for just one ${POS_EN[s.pos]}. ${rv(s).gap <= 0 ? 'You are now a step ahead.' : `For now, ${rivalName(s)} is still a step ahead.`}`,
     choices: [
       {
         label: 'Compete to the end',
@@ -76,19 +76,19 @@ export const events_story: Record<string, EventText> = {
       },
       {
         label: 'Offer your hand first',
-        ok: '"I got here because of you." The two of you became national team roommates, and trained together, soaking up each other\'s strengths.',
-        fail: 'The outstretched hand hung awkwardly in the air. All that is left is whispers that you ducked the competition.',
+        ok: '"I got here because of you." The two of you became national team roommates and trained together, each absorbing the other\'s strengths.',
+        fail: 'The outstretched hand hung awkwardly in the air. Only whispers remain that you ducked the competition.',
       },
     ],
   },
   'rehab-1': {
     title: 'Long-term injury diagnosis',
     text: (s) =>
-      `The detailed scan results are in. You will miss at least ${s.injury} matches. The medical staff lay out two paths.`,
+      `The detailed scan results are in. You will miss at least ${s.injury} matches. The medical staff lay out two options.`,
     choices: [
       {
         label: 'Have the surgery',
-        ok: 'The surgery went well. Your return will be later, but the risk of a relapse is lower. The club welcomed the long-term decision.',
+        ok: 'The surgery went well. You will be back later, but the risk of a re-injury is lower. The club welcomed the long-term decision.',
       },
       {
         label: 'Go with conservative treatment',
@@ -100,7 +100,7 @@ export const events_story: Record<string, EventText> = {
   'rehab-2': {
     title: 'The rehab wall',
     text: (s) =>
-      `Every day at the rehab centre drags. The team is playing without you.${s.injury ? ` You have ${s.injury} matches left to miss.` : ''}`,
+      `Every day at the rehab center drags. The team is playing without you.${s.injury ? ` You have ${s.injury} matches left to miss.` : ''}`,
     choices: [
       {
         label: 'Force an early return',
@@ -109,7 +109,7 @@ export const events_story: Record<string, EventText> = {
       },
       {
         label: 'Come back only once fully recovered',
-        ok: 'You even finished your upper-body weights programme during rehab. Your body is stronger than before.',
+        ok: 'You even finished your upper-body weights program during rehab. Your body is stronger than before.',
       },
     ],
   },
@@ -120,7 +120,7 @@ export const events_story: Record<string, EventText> = {
       {
         label: byPos<string>({
           FW: 'Prove yourself with a comeback goal',
-          MF: 'Prove yourself with a goal contribution on your return',
+          MF: 'Prove yourself with a goal or assist on your return',
           DF: 'Prove yourself with a clean sheet at the back',
           GK: 'Prove yourself with a clean sheet',
         }),
@@ -128,8 +128,8 @@ export const events_story: Record<string, EventText> = {
         fail: byPos<string>({
           FW: 'No goal, but you played to the end without a knock.',
           MF: 'No goal, but you played to the end without a knock.',
-          DF: 'You could not stop a goal, but you played to the end without a knock.',
-          GK: 'You could not stop a goal, but you kept the net to the end without a knock.',
+          DF: 'You conceded a goal, but you played to the end without a knock.',
+          GK: 'You conceded, but you stayed in goal to the end without a knock.',
         }),
       },
       {
@@ -141,10 +141,10 @@ export const events_story: Record<string, EventText> = {
   'scandal-2': {
     title: 'Scandal fallout',
     text: () =>
-      "The early-morning photo story has been on the portal front page for a week. The club's PR team asks how you want to respond.",
+      "The early-morning photo story has been on the news portal's front page for a week. The club's PR team asks how you want to respond.",
     choices: [
       {
-        label: 'Apologise publicly at a press conference',
+        label: 'Apologize publicly at a press conference',
         ok: 'The heartfelt apology is slowly turning public opinion around.',
         fail: 'One word in the apology became a problem, and it backfired.',
       },
@@ -166,15 +166,15 @@ export const events_story: Record<string, EventText> = {
       },
       {
         label: 'Answer with your performances only',
-        ok: 'Goal contribution after goal contribution. Now nobody mentions that photo.',
-        fail: 'When your form dipped, the label stuck: "blame the private life".',
+        ok: 'Goals and assists, week after week. Now nobody mentions that photo.',
+        fail: 'When your form dipped, the label stuck: "his private life is to blame".',
       },
     ],
   },
   'europe-2': {
     title: 'A call from an agent',
     text: (s) =>
-      `A top agent who specialises in European moves has got in touch. His fee is ${fmtMoney(agentFee(s))}.`,
+      `A top agent who specializes in European moves has reached out. His fee is ${fmtMoney(agentFee(s))}.`,
     choices: [
       {
         label: 'Sign with the agent',
@@ -196,7 +196,7 @@ export const events_story: Record<string, EventText> = {
     choices: [
       {
         label: 'Learn the local language first',
-        ok: 'Within three months you could follow the dressing room banter.',
+        ok: 'Within three months you could follow the dressing-room banter.',
         fail: 'Language school on top of training left you far too tired.',
       },
       {
@@ -209,7 +209,7 @@ export const events_story: Record<string, EventText> = {
   'mentor-2': {
     title: "The manager's special project",
     text: (s) =>
-      `Your manager called you in. "Your ${labelOf(s, weakKey(s))} is lacking. Fix that and you become a bigger player."`,
+      `Your manager called you in. "${labelOf(s, weakKey(s))} is your weak spot. Fix that and you become a bigger player."`,
     choices: [
       {
         label: 'Accept the new role',
@@ -225,7 +225,7 @@ export const events_story: Record<string, EventText> = {
   'mentor-3': {
     title: 'Your mentor moves on',
     text: () =>
-      'The manager who developed you is taking over another club. The night before he leaves, he calls. "Come with me."',
+      'The manager who developed you is taking charge of another club. The night before he leaves, he calls. "Come with me."',
     choices: [
       {
         label: 'Follow your mentor',
@@ -233,7 +233,7 @@ export const events_story: Record<string, EventText> = {
       },
       {
         label: 'Stay and hold the team together',
-        ok: "A new manager is coming, but the club has handed you the vice-captain's armband for staying. The fans will remember that you did not leave.",
+        ok: "A new manager is coming, but the club has handed you the vice-captain's armband for staying. The fans will remember that you stayed.",
       },
     ],
   },

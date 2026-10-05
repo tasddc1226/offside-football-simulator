@@ -11,7 +11,7 @@ const EN: Record<string, string> = {
   '공지와 릴리즈 노트 알림이 연결됐어요.': 'Notices and release note alerts are connected.',
   '다시 킥오프할까요?': 'Ready to kick off again?',
   '오프사이드에서 이어갈 커리어와 새 소식을 확인해요.':
-    'Check the careers you can continue and the latest news in OFFSIDE.',
+    'Continue your career and catch up on the latest news in OFFSIDE.',
 };
 
 export const pushText = (ko: string, lang: Lang): string => (lang === 'en' ? (EN[ko] ?? ko) : ko);

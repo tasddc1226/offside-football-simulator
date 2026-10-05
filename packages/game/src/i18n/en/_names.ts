@@ -41,7 +41,7 @@ const TITLE_EN: Record<string, string> = {
   UEFA: 'King of Europe',
   CONMEBOL: 'King of South America',
   CAF: 'King of Africa',
-  CONCACAF: 'King of North America',
+  CONCACAF: 'King of North and Central America',
   OFC: 'King of Oceania',
 };
 const confeds: Record<string, string> = {};
@@ -59,7 +59,7 @@ const ROUND: Record<string, string> = {
   '8강': 'the quarter-finals',
   '4강': 'the semi-finals',
   결승: 'the final',
-  '1라운드': 'round 1',
+  '1라운드': 'the first round',
   '녹아웃 PO': 'the knockout play-off',
   '리그 페이즈': 'the league phase',
   조별리그: 'the group stage',
@@ -86,14 +86,14 @@ const HOST: Record<string, string> = {
 // 대표팀 라이벌전 이름(nation.ts RIVAL.label).
 const RIVALRY: Record<string, string> = {
   한일전: 'Korea v Japan',
-  '남미 최고의 라이벌전': 'South America’s great rivalry',
+  '남미 최고의 라이벌전': 'South American rivalry',
   '잉글랜드-독일전': 'England v Germany',
   '독일-네덜란드전': 'Germany v Netherlands',
   '네덜란드-독일전': 'Netherlands v Germany',
   '이베리아 더비': 'Iberian derby',
   '프랑스-이탈리아전': 'France v Italy',
   '이탈리아-프랑스전': 'Italy v France',
-  '북중미 라이벌전': 'CONCACAF rivalry',
+  '북중미 라이벌전': 'North American rivalry',
 };
 
 // ───────── 리그 · 구단 ─────────
@@ -406,7 +406,7 @@ const COMP: Record<string, string> = {
   올림픽: 'Olympics',
   '올림픽 남자축구': 'Olympic men’s football',
   'AFC U-23 아시안컵': 'AFC U-23 Asian Cup',
-  '친선 A매치': 'Friendly',
+  '친선 A매치': 'International friendly',
 };
 
 const AWARD: Record<string, string> = {
@@ -453,7 +453,7 @@ const STAGE: Record<string, string> = {
   '8강': 'Quarter-finals',
   '4강': 'Semi-finals',
   결승: 'Final',
-  '1라운드': 'Round 1',
+  '1라운드': 'First round',
   '녹아웃 PO': 'Knockout play-off',
   '리그 페이즈': 'League phase',
   조별리그: 'Group stage',
@@ -480,8 +480,8 @@ const MISC: Record<string, string> = {
   'A매치 데뷔골': 'First international goal',
   '센추리 클럽 가입 (A매치 100경기)': 'Joined the century club (100 caps)',
   '국가대표팀 주장 선임': 'Named national team captain',
-  '월드컵 본선 출전': 'Appeared at a World Cup finals',
-  '월드컵 본선 득점': 'Scored at a World Cup finals',
+  '월드컵 본선 출전': 'Played at a World Cup',
+  '월드컵 본선 득점': 'Scored at a World Cup',
   '발롱도르 30인 후보 선정': 'Named in the Ballon d’Or top 30',
   'A대표팀 은퇴 경기': 'National team farewell match',
   // 스토리 이름
@@ -499,7 +499,7 @@ const MISC: Record<string, string> = {
   '조용한 복귀': 'A quiet return',
   '긴 터널을 지나': 'Through the long tunnel',
   '없던 일로': 'As if it never happened',
-  '진심은 통한다': 'Sincerity gets through',
+  '진심은 통한다': 'Sincerity wins through',
   '실력이 곧 해명': 'Form is the answer',
   '지워지지 않는 꼬리표': 'A label that stuck',
   '완벽한 적응': 'A perfect fit',
@@ -507,7 +507,7 @@ const MISC: Record<string, string> = {
   '말보다 실력': 'Skill over words',
   '말보다 골': 'Goals over words',
   향수병: 'Homesick',
-  '이루지 못한 꿈': 'The dream that never came',
+  '이루지 못한 꿈': 'The dream that never came true',
   '은사와 함께': 'Together with the mentor',
   홀로서기: 'Standing on your own',
   '흐지부지 끝난 이야기': 'A story that fizzled out',
@@ -519,10 +519,10 @@ const MISC: Record<string, string> = {
   로테이션: 'Rotation',
   벤치: 'Bench',
   '주전 보장': 'Guaranteed starter',
-  '벤치 경쟁': 'Bench battle',
-  '은사의 부름 · 감독 신뢰 두터움': 'Called by your old mentor · the manager trusts you',
-  '입단 테스트 합격 · 세미프로': 'Passed the trial · semi-pro',
-  '하부 리그 · 재기 도전': 'Lower league · comeback attempt',
+  '벤치 경쟁': 'Fight for a place',
+  '은사의 부름 · 감독 신뢰 두터움': 'Old mentor calls · Strong manager trust',
+  '입단 테스트 합격 · 세미프로': 'Passed the trial · Semi-pro',
+  '하부 리그 · 재기 도전': 'Lower league · Comeback bid',
   // 발
   오른발: 'Right foot',
   왼발: 'Left foot',
@@ -602,7 +602,10 @@ const patterns: NamePattern[] = [
   [/^(.+) 도움왕$/, (m, tn) => `${tn(m[1]!)} top assister`],
   [/^(.+) 골든부트$/, (m, tn) => `${tn(m[1]!)} Golden Boot`],
   [/^(.+) MVP$/, (m, tn) => `${tn(m[1]!)} MVP`],
-  [/^발롱도르 (\d+)위 \(30인 후보\)$/, (m) => `Ballon d’Or: ${ordinal(Number(m[1]))} (top 30)`],
+  [
+    /^발롱도르 (\d+)위 \(30인 후보\)$/,
+    (m) => `Ballon d’Or: ${ordinal(Number(m[1]))} (30-player shortlist)`,
+  ],
   // 이정표
   [/^프로 데뷔 \((.+)\)$/, (m, tn) => `Pro debut (${tn(m[1]!)})`],
   [/^프로 통산 (\d+)경기 출전$/, (m) => `${m[1]} pro appearances`],
@@ -619,7 +622,7 @@ const patterns: NamePattern[] = [
     (m, tn) => `One-club man · ${tn(m[1]!)} tribute (No. ${m[2]})`,
   ],
   [/^(.+) 레전드 헌정$/, (m, tn) => `${tn(m[1]!)} legend tribute`],
-  [/^(.+) 홈구장에서 은퇴 경기$/, (m, tn) => `Farewell match at ${tn(m[1]!)}’s home ground`],
+  [/^(.+) 홈구장에서 은퇴 경기$/, (m, tn) => `Farewell match at ${tn(m[1]!)}’s home stadium`],
   // 스토리 · 병역 · 시즌 결산
   [/^「(.+)」 (.+)$/, (m, tn) => `${tn(m[1]!)}: ${tn(m[2]!)}`],
   [/^FIFA 클럽 월드컵 (.+)$/, (m, tn) => `FIFA Club World Cup: ${tn(m[1]!)}`],

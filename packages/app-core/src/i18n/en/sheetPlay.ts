@@ -16,7 +16,7 @@ export const sheetPlay: Translation<SheetPlayMsgs> = {
   noHonors: 'No awards this season.',
   promoTitle: 'Promotion to K League 1 confirmed',
   promoBodyWeb: (p) =>
-    `Finishing first this season confirmed promotion for ${p.club}. Next season you take on a new challenge in K League 1.`,
+    `Finishing first this season earned ${p.club} promotion. Next season brings a new challenge in K League 1.`,
   promoBodyApp: (p) =>
     `Finishing first this season confirmed promotion for ${p.club}. Next season you play in K League 1.`,
   promoDownWeb: (p) => `${p.club}, who gave up the spot · relegated to K League 2`,
@@ -27,6 +27,6 @@ export const sheetPlay: Translation<SheetPlayMsgs> = {
   miles: 'Career milestones',
   scoutHint: 'Scout comment',
   fans: 'Fan reaction',
-  ageWeb: (p) => `You are ${p.age} now. Time to get ready for next season.`,
-  ageApp: (p) => `You are ${p.age} now. Get ready for next season.`,
+  ageWeb: (p) => `You're now ${p.age}. Time to get ready for next season.`,
+  ageApp: (p) => `You're now ${p.age}. Get ready for next season.`,
 };

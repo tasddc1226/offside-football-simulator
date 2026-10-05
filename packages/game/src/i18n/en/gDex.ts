@@ -10,8 +10,8 @@ export const gDex: Translation<GDexMsgs> = {
   factorCond: 'Fitness',
   factorAge: 'Age',
   factorInjury: 'Injury severity',
-  factorContract: 'Contract years left',
+  factorContract: 'Contract years remaining',
   factorOvr: 'Overall rating (OVR)',
   factorTrait: (p) => `Trait: ${p.name}`,
-  labelVaries: '(Option changes with the situation)',
+  labelVaries: '(Choice varies by situation)',
 };

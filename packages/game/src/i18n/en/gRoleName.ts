@@ -8,7 +8,7 @@ export const gRoleName: Translation<GRoleNameMsgs> = {
   CAM: 'Attacking midfielder',
   CM: 'Central midfielder',
   CDM: 'Defensive midfielder',
-  RB: 'Full-back',
-  CB: 'Centre-back',
+  RB: 'Fullback',
+  CB: 'Center-back',
   GK: 'Goalkeeper',
 };

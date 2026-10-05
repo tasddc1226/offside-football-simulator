@@ -19,7 +19,7 @@ export const gPlayStyle: Translation<GPlayStyleMsgs> = {
   loyal: 'Loyal to the end',
   loyalLine: 'Bigger clubs came calling and you still said no.',
   safe: 'Safety first',
-  safeLine: 'You tested every bridge before crossing it. Lasting without injury is a skill.',
+  safeLine: 'You looked before every leap. Staying injury-free for years is a skill.',
   calculated: 'Calculated risk-taker',
   calculatedLine: 'You took chances, but only when the odds were worth it.',
   balanced: 'Balanced realist',

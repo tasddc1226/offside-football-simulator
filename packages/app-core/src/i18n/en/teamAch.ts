@@ -12,7 +12,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   topGrade: "You're at the top grade",
   achProgress: (p) => `${p.head} · ${p.done}/${p.total} achievements completed`,
   achAbout: (p) =>
-    `Made up of the ${p.n} retired players of yours who first played in ${p.season}, plus this season's team and club activity. It starts from zero every season.`,
+    `Built from your ${p.n} retired players who first played in ${p.season}, plus this season's team and club activity. It starts from zero every season.`,
   nextGoal: 'Next goals',
   worthPlus: (p) => `+${p.n} pts`,
   catsAria: 'Achievement categories',
@@ -90,7 +90,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   winTitle: (p) => `${p.n} won`,
   drawTitle: (p) => `${p.n} drawn`,
   lossTitle: (p) => `${p.n} lost`,
-  formDot: (p) => `Match ${p.i} back: ${p.label}`,
+  formDot: (p) => `Recent match ${p.i}: ${p.label}`,
   teamsEmpty:
     'No teams are ranked yet. Build a team from retired players on the Owner screen to appear here.',
   teamsFoot: 'Rating moves with team match results. The ranking updates every 5 minutes.',
@@ -100,7 +100,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   profRatingAria: (p) => `Team rating ${p.n}`,
   profStatOvr: 'Team OVR',
   profStatRecord: 'Record',
-  profStatGoals: 'Goals',
+  profStatGoals: 'GF : GA',
   profLikeAria: (p) => `Likes ${p.n}`,
   profViews: 'Views ',
   profHistoryTitle: 'Team history',

@@ -85,7 +85,7 @@ const EXACT: Record<string, string> = {
   '내 팀에는 좋아요를 누를 수 없어요.': "You can't like your own team.",
   '끝난 시즌의 팀에는 좋아요를 바꿀 수 없어요.':
     "You can't change likes on a team from a finished season.",
-  '먼저 이번 시즌 팀을 만들어 주세요.': 'Create this season’s team first.',
+  '먼저 이번 시즌 팀을 만들어 주세요.': "Create this season's team first.",
   '로그인하면 팀을 만들 수 있어요.': 'Sign in to create a team.',
   '지금은 시즌 사이 휴식기예요. 다음 시즌이 열리면 새 팀을 꾸릴 수 있어요.':
     "It's the off-season. You can build a new team when the next season opens.",
@@ -109,11 +109,11 @@ const EXACT: Record<string, string> = {
   // 이적시장
   '지금은 시즌 사이 휴식기라 이적시장이 닫혀 있어요.':
     'The transfer market is closed during the off-season.',
-  '이미 팔렸거나 내린 선수예요.': 'That player has already been sold or withdrawn.',
+  '이미 팔렸거나 내린 선수예요.': 'That player has already been sold or unlisted.',
   '구단 자금이 모자라요.': "You don't have enough club funds.",
   '내 선수 카드를 찾을 수 없어요.': "We couldn't find your player card.",
   '이번 시즌 선수만 내놓을 수 있어요.': "You can only list this season's players.",
-  '기준가가 없는 선수는 내놓을 수 없어요.': "Players without a reference value can't be listed.",
+  '기준가가 없는 선수는 내놓을 수 없어요.': "Players without a base value can't be listed.",
   '이미 내놓은 선수예요.': 'That player is already listed.',
   '판매가가 정할 수 있는 범위를 벗어났어요.': 'The asking price is outside the allowed range.',
   '이미 내놓았거나 방출한 선수예요.': 'That player has already been listed or released.',

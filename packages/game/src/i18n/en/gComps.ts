@@ -33,7 +33,7 @@ export const gComps: Translation<GCompsMsgs> = {
   leaguePlayoff: (p) => `${p.name}: into the knockout play-off (${p.pts} pts)`,
   leagueOut: (p) => `${p.name}: out in the league phase (${p.pts} pts)`,
   galaWin: 'You won the Ballon d’Or!',
-  galaRank: (p) => `Ballon d’Or: ${p.rank}${ord(p.rank)} (30-man shortlist)`,
+  galaRank: (p) => `Ballon d’Or: ${p.rank}${ord(p.rank)} (30-player shortlist)`,
 };
 function ord(n: number): string {
   const v = n % 100;

@@ -759,7 +759,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const en = await call('GET', '/v1/owner-team/opponents?lang=en', { cookie: noTeam.cookie });
     expect(en.status).toBe(409);
     expect(await en.json()).toMatchObject({
-      error: { message: 'Create this season’s team first.', details: { reason: 'TEAM_REQUIRED' } },
+      error: { message: "Create this season's team first.", details: { reason: 'TEAM_REQUIRED' } },
     });
     expect(
       await (await call('GET', '/v1/owner-team/opponents', { cookie: noTeam.cookie })).json(),

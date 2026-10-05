@@ -6,11 +6,11 @@ export const events_positional: Record<string, EventText> = {
   'fw-drought': {
     title: 'Goal drought',
     text: (s) =>
-      `${s.season.goals} goal${s.season.goals === 1 ? '' : 's'} in ${s.season.apps} games. Nothing weighs on a striker like a drought. The press are starting to ask where the finisher is.`,
+      `${s.season.goals} goal${s.season.goals === 1 ? '' : 's'} in ${s.season.apps} ${s.season.apps === 1 ? 'match' : 'matches'}. Nothing weighs on a striker like a drought. The press is starting to ask where the go-to finisher is.`,
     choices: [
       {
         label: 'Fire 300 shots every night',
-        ok: 'Your first shot of the next game hits the back of the net. The floodgates open.',
+        ok: 'Your first shot of the next match hits the back of the net. The floodgates open.',
         fail: 'They go in on the training pitch, but on matchday they hit the post.',
       },
       {
@@ -22,7 +22,7 @@ export const events_positional: Record<string, EventText> = {
   'fw-one-on-one': {
     title: 'One-on-one with the keeper',
     text: () =>
-      'The 40th minute of the second half, 0-0. You run in behind the defence and it is just you and the keeper. The whole crowd is on its feet.',
+      '85th minute, 0-0. You run in behind the defense and it is just you and the keeper. The whole crowd is on its feet.',
     choices: [
       {
         label: 'Chip it over him',
@@ -30,9 +30,9 @@ export const events_positional: Record<string, EventText> = {
         fail: 'The keeper stayed on his feet to the end. The chip drops into his arms.',
       },
       {
-        label: 'Take it round the keeper and roll it into the empty net',
+        label: 'Round the keeper and roll it into the empty net',
         ok: 'You calmly go round him and slide it into the empty net. The winner!',
-        fail: 'You took it too far. The ball runs out for a goal kick.',
+        fail: 'You knock it too far ahead. The ball runs out for a goal kick.',
       },
     ],
   },
@@ -43,13 +43,13 @@ export const events_positional: Record<string, EventText> = {
     choices: [
       {
         label: 'Accept it and add weight work',
-        ok: 'Your upper body has filled out. You are no longer afraid of a physical battle with centre-backs.',
-        fail: 'The extra weight leaves you heavy. Even your pace, your best quality, has dulled.',
+        ok: 'Your upper body has filled out. You are no longer afraid of a physical battle with center-backs.',
+        fail: 'The extra weight has left you sluggish. Even your pace, your best quality, has dulled.',
       },
       {
-        label: 'Argue that running in behind is your weapon',
+        label: 'Argue that runs in behind are your weapon',
         ok: 'The manager backs down. A counter-attacking plan is built around you.',
-        fail: '"Then I will see you on the bench." The conversation ends quickly.',
+        fail: '"Then I\'ll see you on the bench." The conversation ends quickly.',
       },
     ],
   },
@@ -66,14 +66,14 @@ export const events_positional: Record<string, EventText> = {
         fail: 'It hits the wall and comes back out. The senior player pats you on the shoulder.',
       },
       {
-        label: 'Play the short routine',
+        label: 'Play the short set-piece routine',
         ok: 'The set piece you drilled dozens of times in training ends in a goal. An assist!',
         fail: 'The timing is off and you lose the ball.',
       },
     ],
   },
   'mf-role': {
-    title: 'Offer to play as a holding midfielder',
+    title: 'Move to holding midfield?',
     text: () =>
       'The first-choice number 6 is out with a long-term injury. The manager asks you to drop one line deeper.',
     choices: [
@@ -92,7 +92,7 @@ export const events_positional: Record<string, EventText> = {
   'mf-press': {
     title: 'High-intensity pressing',
     text: () =>
-      'The new system is gegenpressing. Midfielders have to cover 13 km a game. Three games in, your legs feel heavy.',
+      'The new system is gegenpressing. Midfielders have to cover 13 km a game. Three matches in, your legs feel heavy.',
     choices: [
       {
         label: 'Keep up the pressing intensity to the end',
@@ -102,7 +102,7 @@ export const events_positional: Record<string, EventText> = {
       {
         label: 'Pick your pressing moments smartly',
         ok: 'You run less, but win the ball back more. The coach looks at the data and is impressed.',
-        fail: '"I cannot use a player who does not press." The manager gives you a furious dressing-down.',
+        fail: '"I can\'t use a player who doesn\'t press." The manager gives you a furious dressing-down.',
       },
     ],
   },
@@ -111,12 +111,12 @@ export const events_positional: Record<string, EventText> = {
   'df-marking': {
     title: 'Marking the top scorer',
     text: () =>
-      'This week the opponents have the league\'s top scorer. The manager says, "Stick to him like a shadow for 90 minutes."',
+      'This week\'s opponents have the league\'s top scorer. The manager says, "Stick to him like a shadow for 90 minutes."',
     choices: [
       {
         label: 'Mark him tightly, man to man',
         ok: 'You keep the top scorer to zero shots. A clean sheet and a win!',
-        fail: 'For one moment you let him get goal-side. They scored from that single chance.',
+        fail: 'For one moment you lost sight of him. They scored from that single chance.',
       },
       {
         label: 'Close down the space with zonal marking',
@@ -138,18 +138,18 @@ export const events_positional: Record<string, EventText> = {
       {
         label: 'Hold your ground and delay him',
         ok: 'You buy time for your teammates to get back. Danger over.',
-        fail: 'He had too much pace for you. You have given away a one-on-one with the keeper.',
+        fail: 'He had too much pace for you, and you gave away a one-on-one with the keeper.',
       },
     ],
   },
   'df-header': {
     title: 'Going up for the corner',
-    text: () => 'A corner late in a 1-1 game. The manager waves all the centre-backs forward.',
+    text: () => 'A corner late in a 1-1 game. The manager waves all the center-backs forward.',
     choices: [
       {
         label: 'Attack the near post',
         ok: 'It hits your head cleanly. A last-minute header from a defender wins it!',
-        fail: 'You miss by a whisker. You sprint back towards your own half.',
+        fail: 'You miss by a whisker. You sprint back toward your own half.',
       },
       {
         label: 'Stay back to cover the counter',
@@ -163,7 +163,7 @@ export const events_positional: Record<string, EventText> = {
     choices: [
       {
         label: 'Go all the way to the byline and cross',
-        ok: "A pin-point cross lands on the striker's head. An assist!",
+        ok: "A pinpoint cross lands on the striker's head. An assist!",
         fail: 'The cross is cut out and you are caught on the counter, with the space behind you left empty.',
       },
       {
@@ -177,32 +177,32 @@ export const events_positional: Record<string, EventText> = {
   'gk-error': {
     title: 'A costly mistake',
     text: () =>
-      'Dealing with a routine back-pass, the ball slips under your foot and rolls into your own net. The clip is spreading even in the foreign press.',
+      'Dealing with a routine back-pass, the ball slips under your foot and rolls into your own net. The clip is spreading even in the foreign media.',
     choices: [
       {
-        label: 'Play in the very next game',
-        ok: 'Seven saves and a clean sheet next game. You have covered the mistake with performance.',
+        label: 'Play the very next match',
+        ok: 'Seven saves and a clean sheet next match. You cover the mistake with your performance.',
         fail: 'Your shaken confidence brought another error. You have been pushed to the bench.',
       },
       {
-        label: 'Ask the manager for a game off',
-        ok: 'You rest for a game and clear your head. Your hold on the number one shirt wobbles a little.',
+        label: 'Ask the manager for a match off',
+        ok: 'You rest for a match and clear your head. Your hold on the number one shirt wobbles a little.',
       },
     ],
   },
   'gk-sweeper': {
     title: 'Sweeper-keeper demands',
     text: () =>
-      'The new manager prizes building out from the back. "The goalkeeper has to be the eleventh outfield player. Work on your feet."',
+      'The new manager wants to build out from the back. "The goalkeeper has to be an eleventh outfield player. Work on your feet."',
     choices: [
       {
         label: 'Do passing drills with the outfield players',
         ok: 'You play your way out with short passes even under pressure. The manager is pleased.',
-        fail: 'Frequent misplaced passes mean you conceded several times in tactical training.',
+        fail: 'Misplaced passes were frequent, and you conceded several times in tactical training.',
       },
       {
         label: "Say that a goalkeeper's first job is to stop shots",
-        ok: 'You focus on shot-stopping. You are a little more distant from the manager, but your saves go up a level.',
+        ok: 'You focus on shot-stopping. You grow a little distant from the manager, but your saves go up a level.',
       },
     ],
   },
@@ -212,25 +212,25 @@ export const events_positional: Record<string, EventText> = {
       'In stoppage time, with your side 1-0 up, a penalty is given. The opposing taker places the ball and stares at you.',
     choices: [
       {
-        label: 'Dive the way you worked out from his habits',
-        ok: 'Saved! A stop that holds on to the win. Your teammates pile on top of you.',
+        label: 'Dive the way his habits suggest',
+        ok: 'Saved! A stop that secures the win. Your teammates pile on top of you.',
         fail: 'You picked the right side but only got a fingertip to it. 1-1 draw.',
       },
       {
         label: 'Play mind games on the line',
         ok: 'Your antics rattle the taker. His shot sails over the bar!',
-        fail: 'He was a cool taker. 1-1 draw.',
+        fail: 'He stayed cool. 1-1 draw.',
       },
     ],
   },
   'gk-no1': {
     title: 'Fight for the number one shirt',
     text: () =>
-      'Goalkeeper is a position where only one man can play. You hear the club want to hand the number one gloves to your rival.',
+      'Only one goalkeeper can play at a time. You hear the club wants to hand the number one gloves to your rival.',
     choices: [
       {
         label: 'Prove it with your save percentage in training',
-        ok: "The goalkeeping coach's report changes the manager's mind. You start the next game.",
+        ok: "The goalkeeping coach's report changes the manager's mind. You start the next match.",
         fail: 'Your rival got the chance first. For now you play in the cup.',
       },
       {
@@ -242,7 +242,7 @@ export const events_positional: Record<string, EventText> = {
   'gk-cross': {
     title: 'Commanding the area',
     text: () =>
-      'The opposition have brought on a tall striker and keep swinging crosses in. It is chaos in front of goal.',
+      'The opposition has brought on a tall striker and keep swinging crosses in. It is chaos in front of goal.',
     choices: [
       {
         label: 'Come out boldly and punch clear',
@@ -250,7 +250,7 @@ export const events_positional: Record<string, EventText> = {
         fail: 'You came out and missed the ball. A header into the empty net.',
       },
       {
-        label: 'Stay on your line and organise the defenders',
+        label: 'Stay on your line and organize the defenders',
         ok: 'Your non-stop calling tidies up the back line. A clean sheet.',
         fail: 'You conceded after a scramble in front of goal.',
       },

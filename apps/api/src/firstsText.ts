@@ -71,14 +71,14 @@ const RECORD: Record<string, { label: string; unit: string }> = {
   assists: { label: 'Most career assists', unit: ' assists' },
   apps: { label: 'Most career appearances', unit: ' matches' },
   cs: { label: 'Most career clean sheets', unit: ' matches' },
-  caps: { label: 'Most international caps', unit: ' matches' },
+  caps: { label: 'Most international caps', unit: ' caps' },
   trophies: { label: 'Most trophies', unit: ' trophies' },
   awards: { label: 'Most individual awards', unit: ' awards' },
   sgoals: { label: 'Most goals in a season', unit: ' goals' },
   sassists: { label: 'Most assists in a season', unit: ' assists' },
   scs: { label: 'Most clean sheets in a season', unit: ' matches' },
   ballon: { label: "Most Ballon d'Or awards", unit: ' awards' },
-  legend: { label: 'Highest legend score', unit: ' pts' },
+  legend: { label: 'Highest Legend Score', unit: ' pts' },
 };
 
 /** 최초 기록 id → 영어 문장. 모르는 id면 null. season은 시즌마다 다른 기록(은퇴 나이)에 쓴다. */

@@ -11,9 +11,9 @@ export const boardLabel: Translation<BoardLabelMsgs> = {
   reportAbuse: 'Abuse or insults',
   reportSexual: 'Sexual or offensive content',
   reportOther: 'Other',
-  views: (p) => `${plural(p.n, 'view')}`,
-  likes: (p) => `${plural(p.n, 'like')}`,
-  commentCount: (p) => `${plural(p.n, 'comment')}`,
+  views: (p) => plural(p.n, 'view'),
+  likes: (p) => plural(p.n, 'like'),
+  commentCount: (p) => plural(p.n, 'comment'),
   edited: 'edited',
   monthDayHour: (p) =>
     `${MONTHS[p.month - 1]} ${p.day}, ${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')} KST`,

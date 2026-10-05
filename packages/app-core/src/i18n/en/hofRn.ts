@@ -1,12 +1,12 @@
 import type { Translation } from '../core';
 import type { HofRnMsgs } from '../ko/hofRn';
-import { plural } from './_util';
+import { ordinal, plural } from './_util';
 
 export const hofRn: Translation<HofRnMsgs> = {
   season: 'Season',
   seasonAria: 'Retired numbers season',
   notOpen: ' (opens soon)',
-  lead: 'Shirt numbers of players who served a club for a long time are no longer used. Each number belongs to one player per club.',
+  lead: "A long-serving player's shirt number is retired and never worn again. Each club retires a number for one player only.",
   opens: (p) => `${p.name} opens ${p.when} (Korea time).`,
   loadFailed: "Couldn't load retired numbers. Please try again in a moment.",
   loading: 'Loading…',
@@ -34,7 +34,7 @@ export const hofRn: Translation<HofRnMsgs> = {
   more: 'Show more',
   moreLabel: 'Show more retired numbers',
   moreFailed: "Couldn't load. Try again",
-  tileSeq: (p) => `No. ${p.seq} · ${p.day}`,
+  tileSeq: (p) => `${ordinal(p.seq)} · ${p.day}`,
   tileLabel: (p) => `${p.name} No. ${p.number} · ${p.sub}`,
   clubLabel: (p) =>
     `${p.name}${p.league ? ` ${p.league}` : ''}, ${plural(p.count, 'retired number')}`,

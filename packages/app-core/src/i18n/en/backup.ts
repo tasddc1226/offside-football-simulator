@@ -4,11 +4,11 @@ import type { BackupMsgs } from '../ko/backup';
 export const backup: Translation<BackupMsgs> = {
   title: 'Back up your current career',
   bodyWeb:
-    'Use this when you switch devices or move out of an in-app browser such as KakaoTalk. Never share your backup code with anyone.',
-  bodyApp: 'Use this when you switch devices. Never share your backup code with anyone.',
+    'Use this when you switch devices or move out of an in-app browser such as KakaoTalk. Never share your backup code.',
+  bodyApp: 'Use this when you switch devices. Never share your backup code.',
   copyCode: 'Copy code',
   saveFile: 'Save as file',
-  shareFile: 'Export via share',
+  shareFile: 'Share backup',
   manualLabel: 'Backup code (copy manually)',
   importLabel: 'Restore a backup',
   pastePlaceholder: 'Paste your backup code here',
@@ -22,7 +22,7 @@ export const backup: Translation<BackupMsgs> = {
   fileSaved: 'Backup file saved',
   shareFail: "Couldn't share. Copy the code instead",
   replaceConfirm: (p) =>
-    `Replace the career of ${p.name} in progress with this backup? This can't be undone.`,
+    `Replace ${p.name}'s current career with this backup? This can't be undone.`,
   replaceOk: 'Replace',
   cancel: 'Cancel',
   noSpace: 'Not enough storage to restore the backup. Your current career is unchanged',

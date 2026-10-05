@@ -39,7 +39,7 @@ export const gNational: Translation<GNationalMsgs> = {
         : ' · Unused sub'
     }`,
   captain: 'You were named national team captain.',
-  whyInjury: 'Left out of the final squad through injury',
+  whyInjury: 'Missed the final squad through injury',
   whyCut: 'Cut from the final squad',
   whyRefused: 'Your club refused to release you',
   whyWildcard: 'Picked as an over-age wildcard',
