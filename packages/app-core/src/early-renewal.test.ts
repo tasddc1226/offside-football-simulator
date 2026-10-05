@@ -43,12 +43,13 @@ function harness(saved?: GameState) {
   const save = vi.fn(() => {
     s.rng = getActiveRng().getState();
   });
+  const scrollTop = vi.fn();
   const host: GameHost = {
     state,
     sheet,
     save,
     toast: vi.fn(),
-    scrollTop: vi.fn(),
+    scrollTop,
     uploadSeason: vi.fn(),
     uploadRetirement: vi.fn(),
     trackPage: vi.fn(),
@@ -60,7 +61,7 @@ function harness(saved?: GameState) {
       retire: vi.fn(),
     },
   };
-  return { s, state, sheet, save, actions: createGameActions(host) };
+  return { s, state, sheet, save, scrollTop, actions: createGameActions(host) };
 }
 
 describe('웹·앱 공용 조기 연장 진행', () => {
@@ -98,7 +99,11 @@ describe('웹·앱 공용 조기 연장 진행', () => {
     r.actions.pickOption(index);
     const cv = r.sheet.state.view;
     if (cv?.kind !== 'contract') throw new Error('contract');
+    expect(r.scrollTop).not.toHaveBeenCalled();
     cv.onSign();
+    // T-11-090 이적시장이 끝나면 훈련을 마친 뒤처럼 시즌 탭 맨 위에서 시작한다.
+    expect(r.scrollTop).toHaveBeenCalledWith(true);
+    expect(r.state.tab).toBe('season');
     expect(r.s.contract!.years).toBe(2);
     expect(r.s.trust).toBe(3);
     expect(r.s.pending).toBeNull();
@@ -141,5 +146,13 @@ describe('웹·앱 공용 조기 연장 진행', () => {
       contract.onSign(); // 선택이 끝난 뒤 오래된 연장 계약서 콜백.
       expect(JSON.stringify(h.s)).toBe(after);
     }
+  });
+  it('T-11-090 이벤트 결과를 확인하면 시즌 탭 맨 위로 돌아간다', () => {
+    const h = harness();
+    h.s.pending = null; // 결과 시트의 '확인'은 남은 일이 없을 때 nextPending으로 시트를 닫는다.
+    h.state.tab = 'player';
+    h.actions.nextPending();
+    expect(h.scrollTop).toHaveBeenCalledWith(true);
+    expect(h.state.tab).toBe('season');
   });
 });
