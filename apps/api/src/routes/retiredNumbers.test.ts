@@ -313,6 +313,8 @@ describe('영구결번 (T-10-076)', () => {
       db.prepare('DELETE FROM retired_numbers'),
       db.prepare("DELETE FROM app_meta WHERE key LIKE 'retired_numbers_%'"),
     ]);
+    // 고정된 시각에서도 새 은퇴가 기존 은퇴보다 뒤임을 명시한다.
+    vi.setSystemTime(new Date(Date.now() + 1000));
     expect(await retire(A, skyBlue(10), '새레전드')).toMatchObject({
       kind: 'taken',
       holder: '옛레전드',
