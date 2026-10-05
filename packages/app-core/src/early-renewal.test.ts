@@ -155,4 +155,21 @@ describe('웹·앱 공용 조기 연장 진행', () => {
     expect(h.scrollTop).toHaveBeenCalledWith(true);
     expect(h.state.tab).toBe('season');
   });
+
+  it('T-11-090 결과 시트를 바깥 탭·끌어내리기로 닫아도 버튼과 같은 곳으로 돌아간다', () => {
+    const h = harness();
+    const back = vi.fn();
+    h.sheet.showSheet({ kind: 'notice', eyebrow: '결과' }, [], back);
+    h.sheet.dismissSheet();
+    expect(back).toHaveBeenCalledOnce();
+    expect(h.sheet.state.open).toBe(false);
+    // 버튼으로 닫거나 다른 시트로 넘어가면 쓰지 않는다.
+    h.sheet.showSheet({ kind: 'notice', eyebrow: '결과' }, [], back);
+    h.sheet.closeSheet();
+    h.sheet.dismissSheet();
+    h.sheet.showSheet({ kind: 'notice', eyebrow: '결과' }, [], back);
+    h.sheet.showSheet({ kind: 'notice', eyebrow: '다음' });
+    h.sheet.dismissSheet();
+    expect(back).toHaveBeenCalledOnce();
+  });
 });

@@ -379,6 +379,7 @@ export function createGameActions(host: GameHost) {
         timing: r.timing,
       },
       [{ label: '확인', cls: 'btn-primary', fn: nextPending }],
+      backToSeason,
     );
   }
 
@@ -628,6 +629,7 @@ export function createGameActions(host: GameHost) {
             fn: backToSeason,
           },
         ],
+        backToSeason,
       );
       return false;
     }

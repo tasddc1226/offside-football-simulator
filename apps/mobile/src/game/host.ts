@@ -66,7 +66,7 @@ export const sheet = createSheetController(sheetState, {
   painted: () => nextFrame().then(nextFrame),
   motionOK: () => prefs.motionOK,
 });
-export const { showSheet, closeSheet } = sheet;
+export const { showSheet, closeSheet, dismissSheet } = sheet;
 
 export const {
   advance,
