@@ -6,6 +6,8 @@ import type { Bindings } from './env.js';
 import { chatSocket } from './chat/socket.js';
 import { liveSocket } from './live/socket.js';
 import { runNewsPush } from './push/dispatch.js';
+import { runPersonalPush } from './push/personal.js';
+import { queueReengagement } from './push/reengagement.js';
 
 export { app };
 export { LiveHub } from './live/hub.js';
@@ -24,6 +26,10 @@ export default {
   // 중간에 끊겼다(실행 기록은 success). 핸들러가 기다리면 cron은 15분까지 돈다.
   async scheduled(controller: ScheduledController, env: Bindings) {
     if (controller.cron === '0 19 * * *') await runDaily(env, controller.scheduledTime);
-    else await runNewsPush(env);
+    else {
+      await runNewsPush(env);
+      await queueReengagement(env, controller.scheduledTime);
+      await runPersonalPush(env, controller.scheduledTime);
+    }
   },
 };

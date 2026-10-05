@@ -113,6 +113,9 @@ describe('릴리즈 노트 게시 트랜잭션', () => {
         { ...entry, availability: 'web-app-pending', appVersion: '1.0.2' },
       ]),
     ).toContain('웹에 먼저 적용했어요. 앱은 1.0.2 업데이트로 제공할 예정이에요');
+    expect(appendReleaseNotes('본문', [{ ...entry, availability: 'app' }])).toContain(
+      '앱에 적용했어요',
+    );
     expect(appendReleaseNotes('본문', [{ ...entry, availability: 'web' }])).toContain(
       '웹에 적용했어요',
     );

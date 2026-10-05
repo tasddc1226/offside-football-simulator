@@ -29,7 +29,7 @@ export function readEntries(directory) {
       e.items.some(
         (s) => typeof s !== 'string' || !s.trim() || s.length > 500 || /[\r\n]/.test(s),
       ) ||
-      !['web', 'web-app', 'web-app-pending'].includes(e.availability) ||
+      !['web', 'app', 'web-app', 'web-app-pending'].includes(e.availability) ||
       (e.appVersion !== undefined && !/^\d+\.\d+\.\d+$/.test(e.appVersion)) ||
       (e.availability === 'web-app-pending' && !e.appVersion) ||
       Object.keys(e).some(

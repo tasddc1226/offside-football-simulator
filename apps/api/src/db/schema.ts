@@ -76,6 +76,68 @@ export const pushNewsDeliveries = sqliteTable(
   ],
 );
 
+/** 프로필별 알림함. OS 전달 상태와 읽음 상태는 별개이며 기기·세션 교체에도 기록을 유지한다. */
+export const notifications = sqliteTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    sourceKey: text('source_key').notNull(),
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    targetJson: text('target_json').notNull(),
+    createdAt: text('created_at').notNull(),
+    readAt: text('read_at'),
+    pushReservedAt: text('push_reserved_at'),
+    expiresAt: text('expires_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('notifications_source_unique').on(t.profileId, t.sourceKey),
+    index('notifications_profile_created_idx').on(t.profileId, t.createdAt, t.id),
+    index('notifications_profile_read_created_idx').on(t.profileId, t.readAt, t.createdAt, t.id),
+    index('notifications_expires_idx').on(t.expiresAt),
+    index('notifications_profile_push_reserved_idx').on(t.profileId, t.pushReservedAt),
+  ],
+);
+
+/** 개인 이벤트 발송 outbox. 공지 발송 큐를 바꾸지 않고 동일한 동의·세션 경계를 적용한다. */
+export const pushDeliveries = sqliteTable(
+  'push_deliveries',
+  {
+    id: text('id').primaryKey(),
+    notificationId: text('notification_id')
+      .notNull()
+      .references(() => notifications.id, { onDelete: 'cascade' }),
+    installationHash: text('installation_hash').notNull(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    state: text('state').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    receiptAttempts: integer('receipt_attempts').notNull().default(0),
+    dueAt: text('due_at').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    leaseId: text('lease_id'),
+    ticketId: text('ticket_id'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_deliveries_device_unique').on(t.notificationId, t.installationHash),
+    index('push_deliveries_due_idx').on(t.state, t.dueAt),
+    index('push_deliveries_installation_idx').on(t.installationHash),
+    index('push_deliveries_profile_idx').on(t.profileId),
+    index('push_deliveries_session_idx').on(t.sessionId),
+    index('push_deliveries_expires_idx').on(t.expiresAt),
+  ],
+);
+
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
 export const profiles = sqliteTable(
   'profiles',
@@ -198,6 +260,7 @@ export const pushDevices = sqliteTable(
     token: text('token').notNull(),
     platform: text('platform', { enum: ['ios', 'android'] }).notNull(),
     appVersion: text('app_version').notNull(),
+    engagementEnabled: integer('engagement_enabled', { mode: 'boolean' }).notNull().default(false),
     updatedAt: text('updated_at').notNull(),
     /** 마지막 본인 테스트 접수 번호. 토큰·세션이 바뀌면 지우고 전달 결과 조회에만 쓴다. */
     lastTestTicketId: text('last_test_ticket_id'),
@@ -208,6 +271,7 @@ export const pushDevices = sqliteTable(
     index('push_devices_session_idx').on(t.sessionId),
     index('push_devices_profile_idx').on(t.profileId),
     index('push_devices_updated_idx').on(t.updatedAt),
+    index('push_devices_engagement_updated_idx').on(t.engagementEnabled, t.updatedAt),
   ],
 );
 

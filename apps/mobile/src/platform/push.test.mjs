@@ -3,6 +3,10 @@ const f = vi.hoisted(() => {
   const fixture = {
     values: new Map(),
     listener: undefined,
+    response: undefined,
+    received: undefined,
+    openInbox: vi.fn(),
+    invalidate: vi.fn(),
     rotateDuringFetch: false,
     nativeReads: 0,
     token: 'native-a',
@@ -39,6 +43,7 @@ const f = vi.hoisted(() => {
   return fixture;
 });
 vi.mock('expo-notifications', () => ({
+  DEFAULT_ACTION_IDENTIFIER: 'default',
   getExpoPushTokenAsync: f.getExpo,
   setAutoServerRegistrationEnabledAsync: f.autoRegistration,
   setNotificationChannelAsync: async () => {},
@@ -48,7 +53,14 @@ vi.mock('expo-notifications', () => ({
   setNotificationHandler: () => {},
   getLastNotificationResponse: () => null,
   clearLastNotificationResponseAsync: async () => {},
-  addNotificationResponseReceivedListener: () => ({ remove() {} }),
+  addNotificationResponseReceivedListener: (cb) => {
+    f.response = cb;
+    return { remove() {} };
+  },
+  addNotificationReceivedListener: (cb) => {
+    f.received = cb;
+    return { remove() {} };
+  },
   addPushTokenListener: (listener) => {
     f.listener = listener;
     return { remove() {} };
@@ -92,6 +104,7 @@ vi.mock('./session', () => ({
   sessionToken: () => 'test-session',
   onSessionChanged() {},
 }));
+vi.mock('./inbox', () => ({ openInbox: f.openInbox, inbox: { invalidate: f.invalidate } }));
 vi.mock('../game/nav', () => ({ openBoard() {} }));
 vi.mock('./setup', () => ({
   kv: {
@@ -242,5 +255,43 @@ describe('own-device test push cooldown', () => {
     await expect(p.testOwnPush()).rejects.toThrow();
     expect(p.pushTestState.nextTestAt).toBeGreaterThan(Date.now());
     expect(p.pushTestState.busy).toBe(false);
+  });
+});
+
+describe('notification inbox routing and personal consent', () => {
+  it('opens only a validated inbox ID from trusted notification types', async () => {
+    await app();
+    f.response({
+      actionIdentifier: 'default',
+      notification: {
+        request: {
+          content: { data: { type: 'offside-notification', notificationId: 'ntf_safe' } },
+        },
+      },
+    });
+    expect(f.openInbox).toHaveBeenCalledWith('ntf_safe');
+    f.response({
+      actionIdentifier: 'default',
+      notification: {
+        request: {
+          content: {
+            data: { type: 'offside-notification', notificationId: 'https://evil.invalid' },
+          },
+        },
+      },
+    });
+    expect(f.openInbox).toHaveBeenCalledTimes(1);
+    f.received({
+      request: { content: { data: { type: 'offside-notification', notificationId: 'ntf_next' } } },
+    });
+    expect(f.invalidate).toHaveBeenCalledTimes(2);
+  });
+  it('defaults optional personal notifications off and updates registration for both toggle directions', async () => {
+    const p = await app();
+    expect(f.requests.at(-1).body.engagementEnabled).toBe(false);
+    await p.setEngagementPush(true);
+    expect(f.requests.at(-1).body.engagementEnabled).toBe(true);
+    await p.setEngagementPush(false);
+    expect(f.requests.at(-1).body.engagementEnabled).toBe(false);
   });
 });
