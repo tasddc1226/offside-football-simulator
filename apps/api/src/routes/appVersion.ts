@@ -9,7 +9,7 @@ import { ok } from './shared.js';
  * 안내하게 된다. DB를 읽지 않는다.
  */
 export const APP_VERSIONS: AppVersionResponse = {
-  ios: { min: '1.0.0', url: 'https://apps.apple.com/kr/app/id6817463687' },
+  ios: { min: '1.1.0', url: 'https://apps.apple.com/kr/app/id6817463687' },
   android: {
     min: '1.0.0',
     url: 'https://play.google.com/store/apps/details?id=com.offsidelab.app',
