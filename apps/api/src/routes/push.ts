@@ -16,6 +16,7 @@ import {
 } from '../db/repos/pushDevices.js';
 import { sendPushTest } from '../push/expo.js';
 import { reservePushTest } from '../push/testLimit.js';
+import { queueNotification } from '../db/repos/notifications.js';
 import { enforceLimit, NO_STORE, nowIso, ok, readBody, notFoundError } from './shared.js';
 
 export function registerPushRoutes(app: Hono<AppEnv>) {
@@ -64,8 +65,24 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
     if (!device)
       throw notFoundError('이 기기의 알림 받기를 먼저 켜 주세요.', 'PUSH_DEVICE_MISSING');
     const nextTestAt = await reservePushTest(c.env.DB, installationId, session.profileId, now);
+    const notification = await queueNotification(c.env.DB, {
+      profileId: session.profileId,
+      sourceKey: `test:${now}`,
+      now,
+      content: {
+        kind: 'test',
+        title: '오프사이드 알림 테스트',
+        body: '이 기기의 알림 연결을 확인하는 테스트예요.',
+        target: { type: 'screen', screen: 'home' },
+      },
+    });
     try {
-      const ticketId = await sendPushTest(device.token, c.env.EXPO_PUSH_ACCESS_TOKEN);
+      const ticketId = await sendPushTest(
+        device.token,
+        c.env.EXPO_PUSH_ACCESS_TOKEN,
+        fetch,
+        notification.id ?? undefined,
+      );
       await rememberPushTestTicket(
         c.env.DB,
         installationId,

@@ -13,11 +13,15 @@ import { kv } from './setup';
 import { openBoard } from '../game/nav';
 import { PUSH_TEST_COOLDOWN_MS } from '@offside/contracts/push-limits';
 import { DAY_MS, kstDay } from '@offside/contracts/kst';
+import { NotificationIdSchema } from '@offside/contracts';
+import { openInbox, inbox } from './inbox';
 
 const DEVICE_KEY = 'offside_push_installation';
 const WANTED = 'offside_push_wanted';
 const REMOVE = 'offside_push_remove';
 const REGISTERED = 'offside_push_registered';
+const ENGAGEMENT = 'offside_push_engagement';
+export const engagementPushState = proxy({ enabled: kv.getBoolean(ENGAGEMENT) ?? false });
 export const pushState = proxy({
   enabled: kv.getBoolean(WANTED) ?? false,
   busy: false,
@@ -83,7 +87,7 @@ async function register() {
   const revision = tokenRevision;
   const fingerprint = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
-    `${deviceToken}|${sessionToken()}|${appVersion}`,
+    `${deviceToken}|${sessionToken()}|${appVersion}|${engagementPushState.enabled}`,
   );
   const saved = kv.getString(REGISTERED);
   if (saved === fingerprint && Date.now() - (kv.getNumber(`${REGISTERED}_at`) ?? 0) < 86400_000)
@@ -95,6 +99,7 @@ async function register() {
       token: deviceToken,
       platform: Platform.OS,
       appVersion,
+      engagementEnabled: engagementPushState.enabled,
     }),
   });
   if (!r.ok) throw new Error('Could not register device');
@@ -137,6 +142,15 @@ function openNotification(response: Notifications.NotificationResponse) {
   if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
   const data = response.notification.request.content.data;
   if (
+    data &&
+    (data.type === 'offside-news' || data.type === 'offside-notification') &&
+    NotificationIdSchema.safeParse(data.notificationId).success
+  ) {
+    inbox.invalidate();
+    openInbox(data.notificationId as string);
+    return;
+  }
+  if (
     !data ||
     data.type !== 'offside-news' ||
     (data.board !== 'notice' && data.board !== 'release')
@@ -170,6 +184,15 @@ export function startPush() {
     openNotification(response);
     void Notifications.clearLastNotificationResponseAsync().catch(() => {});
   });
+  Notifications.addNotificationReceivedListener((notification) => {
+    const data = notification.request.content.data;
+    if (
+      data &&
+      (data.type === 'offside-news' || data.type === 'offside-notification') &&
+      NotificationIdSchema.safeParse(data.notificationId).success
+    )
+      inbox.invalidate();
+  });
   Notifications.addPushTokenListener((token) => {
     if ((token.type !== 'ios' && token.type !== 'android') || typeof token.data !== 'string')
       return;
@@ -190,6 +213,13 @@ export function startPush() {
     if (state === 'active') void pushRegistration.restore();
   });
   void pushRegistration.restore();
+}
+
+export async function setEngagementPush(on: boolean) {
+  if (pushState.busy) return;
+  kv.set(ENGAGEMENT, on);
+  engagementPushState.enabled = on;
+  if (pushState.enabled) await pushRegistration.restore();
 }
 
 const TEST_NEXT = 'offside_push_test_next';
