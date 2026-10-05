@@ -193,6 +193,43 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect((await rowOf()).hidden).toBe(1);
   });
 
+  it('T-11-097: 성장 기록에 세이브를 고친 흔적(시즌 중 급상승·지난 시즌보다 높은 시작 OVR)이 있으면 숨긴다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
+    const body = seasonBody();
+    const growth = (o0: number, ph: number[]) => ({
+      v: 1,
+      o0,
+      ph,
+      a0: [60, 60, 60, 60, 60, 60],
+      a1: [61, 61, 61, 61, 61, 61],
+      s0: [],
+      s1: [],
+      pot: { s: 75, b: 0, bl: 0, r: 2 },
+    });
+    const send = (id: string, year: number, age: number, ovr: number, g: unknown) =>
+      put(`/v1/careers/${id}/seasons/${year}`, {
+        ...body,
+        season: { ...body.season, age, ovr, growth: g },
+      });
+    const hiddenOf = async (id: string) =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, id)))[0]!.hidden;
+
+    // 정상 성장(구간마다 몇씩)은 그대로 둔다.
+    expect((await send(CAREER_ID, 2026, 29, 67, growth(65, [65, 66, 66]))).status).toBe(200);
+    expect(await hiddenOf(CAREER_ID)).toBe(0);
+    // 만 30세(나이별 상한 없음)에 구간 사이 67 → 90: 상한에 안 걸리지만 숨긴다.
+    expect((await send(CAREER_ID, 2027, 30, 91, growth(67, [90, 90, 91]))).status).toBe(200);
+    expect(await hiddenOf(CAREER_ID)).toBe(1);
+
+    // 시즌 시작 OVR이 지난 시즌 저장값(상한으로 잘린 81)보다 높다 — 시즌 사이에 고쳤다.
+    const other = '7a1c9b1a-6f0f-4a4b-9c3a-1e2f3a4b5c6e';
+    expect((await send(other, 2026, 18, 81, growth(60, [60, 61, 62]))).status).toBe(200);
+    expect(await hiddenOf(other)).toBe(0);
+    expect((await send(other, 2027, 19, 87, growth(95, [95, 95, 96]))).status).toBe(200);
+    expect(await hiddenOf(other)).toBe(1);
+  });
+
   it('T-11-030: 처음 스카우트 평가는 한 번만 저장하고, 은퇴 때 실제 잠재력을 저장한다', async () => {
     const { cookie } = await issueCookie(ctx);
     const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
@@ -285,12 +322,14 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     const row = async () =>
       (await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID)))[0]!;
 
+    // T-11-097 세부 능력치(s0·s1)는 저장하지 않는다.
+    const stored = { ...growth, s0: undefined, s1: undefined };
     expect((await send({ growth })).status).toBe(200);
-    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
+    expect(JSON.parse((await row()).growthJson!)).toEqual(stored);
 
     // 옛 시즌 재전송(성장 기록 없음)은 이미 쌓인 기록을 그대로 둔다.
     expect((await send({})).status).toBe(200);
-    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
+    expect(JSON.parse((await row()).growthJson!)).toEqual(stored);
 
     // 새 성장 기록이 오면 덮어쓴다.
     expect((await send({ growth: { ...growth, o0: 53 } })).status).toBe(200);

@@ -1,5 +1,5 @@
 <script lang="ts">
-  // T-11-061 광고 칸. 위치 이름만 받고 노출 규칙은 adPolicy가 정한다. 목록·페이지 맨 끝에만 둔다.
+  // T-11-061 광고 칸. 위치 이름만 받고 노출 규칙은 adPolicy가 정한다. 승인된 위치에 본문과 함께 스크롤되는 칸을 둔다.
   import { untrack } from 'svelte';
   import { shouldShow, type AdPlace } from '@offside/app-core/adPolicy';
   import { sheetOn } from '../ui/skin.svelte.js';
@@ -47,7 +47,7 @@
 </script>
 
 {#if show && !collapsed && !sheetOn()}
-  <aside class="ad-slot" aria-label="광고" data-ad-place={place}>
+  <aside class="ad-slot" class:owner-summary={place === 'owner-summary'} aria-label="광고" data-ad-place={place}>
     <span class="ad-label">광고</span>
     {#if live}
       <ins
@@ -75,6 +75,9 @@
     font-size: 0.6875rem;
     letter-spacing: 0.04em;
     color: var(--muted);
+  }
+  .owner-summary {
+    margin-bottom: 24px;
   }
   .ad-slot :global(.adsbygoogle),
   .ad-preview {
