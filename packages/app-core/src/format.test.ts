@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cardFootNote, cardTier, iGa, withEulReul, withRo } from './format.js';
 import { priceAtPct, priceDiff, releaseLock } from './market.js';
+import { chartModel, marketIndex, ratioPct } from './marketChart.js';
 
 describe('withRo', () => {
   it('받침에 맞춰 로/으로를 붙인다', () => {
@@ -65,5 +66,46 @@ describe('이적시장 표시 (T-11-080d)', () => {
       releaseLock({ ...(p as object), listing: { id: 'x', price: 1 } } as never, new Set()),
     ).toContain('판매 중');
     expect(releaseLock(p, new Set(['a']))).toContain('선발');
+  });
+});
+
+describe('시세 차트 (T-11-080f)', () => {
+  const p = (day: string, avg: number, min = avg, max = avg) => ({
+    day,
+    trades: 2,
+    volume: 1,
+    avg,
+    min,
+    max,
+  });
+
+  it('시장 지수는 마지막 거래일 평균과 그 전 거래일과의 차이', () => {
+    expect(marketIndex([])).toBeNull();
+    expect(ratioPct(986)).toBe('98.6%');
+    expect(marketIndex([p('2026-10-04', 1000), p('2026-10-05', 986)])).toMatchObject({
+      pct: '98.6%',
+      tone: 'down',
+      change: '▼ 1.4%p',
+      trades: 4,
+    });
+    expect(marketIndex([p('2026-10-05', 1000)])?.change).toBe('변동 없음');
+  });
+
+  it('기간 첫날~오늘을 가로축으로, 값과 기준가를 담게 세로축을 잡는다', () => {
+    expect(chartModel([], [], 'week', '2026-10-05')).toBeNull();
+    const m = chartModel(
+      [p('2026-09-29', 1000), p('2026-10-05', 1100, 900, 1200)],
+      [
+        { price: 1, ratio: 700, soldAt: '2026-10-04T16:00:00.000Z' },
+        { price: 1, ratio: 1000, soldAt: '2026-09-01T00:00:00.000Z' },
+      ],
+      'week',
+      '2026-10-05',
+    )!;
+    expect(m.days.map((d) => d.x)).toEqual([0, 100]);
+    // 기간 밖 거래는 빼고, UTC 16시 거래는 KST로 다음 날(10/5)이다.
+    expect(m.dots.map((d) => [d.x, d.t.ratio])).toEqual([[100, 700]]);
+    expect([m.top, m.bottom, m.from, m.to, m.tone]).toEqual(['125%', '65%', '9/29', '10/5', 'up']);
+    expect(m.base).toBeGreaterThan(m.days[1]!.y);
   });
 });

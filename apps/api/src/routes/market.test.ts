@@ -1,5 +1,7 @@
 import {
   ErrorEnvelopeSchema,
+  MarketCardTradesResponseSchema,
+  MarketChartResponseSchema,
   MarketListResponseSchema,
   MarketMeResponseSchema,
   OwnerTeamResponseSchema,
@@ -16,6 +18,8 @@ import { callJson, deleteProfile, issueGoogleCookie } from '../test/http.js';
 const ListRes = successEnvelope(MarketListResponseSchema);
 const MeRes = successEnvelope(MarketMeResponseSchema);
 const TeamRes = successEnvelope(OwnerTeamResponseSchema);
+const ChartRes = successEnvelope(MarketChartResponseSchema);
+const TradesRes = successEnvelope(MarketCardTradesResponseSchema);
 
 let seq = 0;
 
@@ -84,12 +88,18 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
   it('공개 시장 목록은 쿠키가 있어도 세션·프로필을 읽지 않는다(T-10-015)', async () => {
     const owner = await issueGoogleCookie(ctx);
     const { DB, seen } = spyDb(ctx.env.DB);
-    const res = await createApp().request(
+    for (const path of [
       '/v1/market?sort=price&pos=FW',
-      { headers: { Cookie: owner.cookie } },
-      { ...ctx.env, DB },
-    );
-    expect(res.status).toBe(200);
+      '/v1/market/chart?range=month',
+      `/v1/market/cards/${crypto.randomUUID()}/trades`,
+    ]) {
+      const res = await createApp().request(
+        path,
+        { headers: { Cookie: owner.cookie } },
+        { ...ctx.env, DB },
+      );
+      expect(res.status).toBe(200);
+    }
     expect(seen.length).toBeGreaterThan(0);
     expect(seen.filter((q) => /"sessions"|"profiles"/.test(q))).toEqual([]);
   });
@@ -249,6 +259,25 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     // 실패한 영입(이미 팔림)은 집계에 더하지 않는다.
     expect(await reason(await buy(buyer.cookie, 1_200_000))).toBe('LISTING_GONE');
     expect((await ctx.db.select().from(marketDaily))[0]!.trades).toBe(2);
+
+    // 시세 차트(T-11-080f): 묶음과 시장 전체가 같은 하루치를 돌려주고, 선수 거래는 최신순이다.
+    const chart = async (q: string) => {
+      const res = await call('GET', `/v1/market/chart${q}`);
+      expect(res.status).toBe(200);
+      return ChartRes.parse(await res.json()).data;
+    };
+    const day = { day: '2026-09-30', trades: 2, volume: 2_100_000, avg: 1050, min: 900, max: 1200 };
+    expect(await chart('')).toEqual({ season: 0, points: [day] });
+    expect(await chart('?range=season&pos=FW&band=85')).toEqual({ season: 0, points: [day] });
+    expect((await chart('?range=month&pos=FW&band=80')).points).toEqual([]);
+    expect((await call('GET', '/v1/market/chart?pos=FW')).status).toBe(400);
+    const trades = TradesRes.parse(
+      await (await call('GET', `/v1/market/cards/${card}/trades`)).json(),
+    ).data.trades;
+    expect(trades.map((t) => [t.price, t.ratio])).toEqual([
+      [900_000, 900],
+      [1_200_000, 1200],
+    ]);
   });
 
   it('다른 시즌 카드는 내놓을 수 없고, 내 등록은 내릴 수 있다', async () => {

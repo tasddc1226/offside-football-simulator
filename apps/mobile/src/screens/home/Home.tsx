@@ -147,6 +147,15 @@ export default function Home() {
           </View>
         ) : null}
         <HomeLive />
+        {/* T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. */}
+        <Tile
+          wide
+          testID="home-market"
+          eyebrow="Transfer market"
+          title="이적시장"
+          sub="이번 시즌 선수 사고팔기 · 시세 →"
+          onPress={() => go('market')}
+        />
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <HomeFirsts />
           <Tile
