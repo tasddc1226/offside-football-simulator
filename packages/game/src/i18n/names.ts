@@ -5,7 +5,10 @@
 // 대응표에 없는 이름(유저가 지은 구단명 등)은 그대로 보인다.
 import { localeData } from '@offside/contracts/i18n';
 
-export type NamePattern = readonly [RegExp, (m: RegExpExecArray, tn: (ko: string) => string) => string];
+export type NamePattern = readonly [
+  RegExp,
+  (m: RegExpExecArray, tn: (ko: string) => string) => string,
+];
 export interface NameTable {
   exact: Readonly<Record<string, string>>;
   /** 위에서부터 처음 맞는 패턴 하나를 쓴다. 정규식은 ^…$로 전체를 맞춘다. */

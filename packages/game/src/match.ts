@@ -14,6 +14,7 @@ import type { GameState } from './types.js';
 import { leagueOf, roleOf } from './player.js';
 import { addAttr, addStat } from './stats.js';
 import { growthFactor } from './training.js';
+import { gTurnText as L } from './i18n/ko/gTurn.js';
 
 // ───────── 경기 구간 시뮬레이션 ─────────
 export function blockMatches(s: GameState): number {
@@ -24,7 +25,7 @@ export function roundRange(s: GameState, phase: number): string {
   const tot = leagueOf(s.leagueId).matches;
   const a = (phase - 1) * n + 1;
   const b = Math.min(tot, phase * n);
-  return `${a}–${b}R`;
+  return L.roundRange({ a, b });
 }
 
 /** 득점·도움 기대값에 들어가는 '리그(상대) 평균 대비 우위'. DOMINANCE_KNEE를 넘는 몫은 DOMINANCE_SLOPE만 반영한다
@@ -166,11 +167,10 @@ function matchHighlights(
   cs: boolean,
 ): string[] {
   const hl: string[] = [];
-  if (g >= 3) hl.push(`${rd}R 해트트릭! ${g}골 폭발 (평점 ${rating})`);
-  else if (g === 2) hl.push(`${rd}R 멀티골 (평점 ${rating})`);
-  else if (rating >= 8.5) hl.push(`${rd}R 경기 최우수 선수 선정 (평점 ${rating})`);
-  if (cs && s.pos === 'GK' && rating >= 8)
-    hl.push(`${rd}R 슈퍼 세이브 쇼, 무실점 (평점 ${rating})`);
+  if (g >= 3) hl.push(L.hlHat({ rd, g, rating }));
+  else if (g === 2) hl.push(L.hlMulti({ rd, rating }));
+  else if (rating >= 8.5) hl.push(L.hlMom({ rd, rating }));
+  if (cs && s.pos === 'GK' && rating >= 8) hl.push(L.hlSave({ rd, rating }));
   return hl;
 }
 
@@ -184,7 +184,7 @@ function rollInjury(s: GameState, rd: number): string | null {
   if (!chance(ip)) return null;
   const big = chance(BAL.bigInjuryShare);
   s.injury = big ? ri(8, 18) : ri(1, 5);
-  return `${rd}R ${big ? '심각한 부상' : '부상'}으로 교체 아웃… ${s.injury}경기 결장 예상`;
+  return L.hlInjury({ rd, big, n: s.injury });
 }
 
 /** 구간을 마친 뒤: 출전 비율만큼 성장, 활약에 따라 명성·사기·감독 신뢰, 연봉 지급. */

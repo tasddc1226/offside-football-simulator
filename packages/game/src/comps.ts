@@ -15,6 +15,8 @@ import {
 import type { GameState, Season, SeasonComp } from './types.js';
 import type { NatTourResult } from './national.js';
 import { confPoty, federationPoty } from './nation.js';
+import { gCompsText as M } from './i18n/ko/gComps.js';
+import { tn } from './i18n/names.js';
 
 export const CUPS: Record<string, string[]> = {
   hs: ['전국고교축구선수권'],
@@ -237,7 +239,10 @@ export function compsPhase(s: GameState): { t: string; k: string }[] {
       c.alive = false;
       c.stage = won ? '우승' : '준우승';
       if (won) S.trophiesMid!.push(`${c.name} 우승`);
-      lines.push({ t: `${c.name} ${won ? '우승!' : '준우승'}`, k: won ? 'good' : '' });
+      lines.push({
+        t: M.compLine({ name: tn(c.name), stage: won ? '우승' : '준우승' }),
+        k: won ? 'good' : '',
+      });
     } else if (c.type === 'cup' && CUP_PLAN[s.phase]) {
       for (const r of CUP_PLAN[s.phase]!) {
         const won = tie(s, c, L.avg + (CUP_OPP[r] ?? 0) + gauss() * 3, 1);
@@ -253,7 +258,7 @@ export function compsPhase(s: GameState): { t: string; k: string }[] {
         } else c.stage = `${r} 통과`;
       }
       lines.push({
-        t: `${c.name} ${c.stage === '우승' ? '우승!' : c.stage}`,
+        t: M.compLine({ name: tn(c.name), stage: c.stage }),
         k: c.stage === '우승' ? 'good' : c.alive ? '' : 'bad',
       });
     } else if (c.type === 'cont' && s.phase >= 1) contPhase(s, c, lines);
@@ -266,11 +271,11 @@ function contPhase(s: GameState, c: SeasonComp, lines: { t: string; k: string }[
   if (s.phase === 1 && C.ko) {
     if (tie(s, c, C.avg - 2 + gauss() * 2, 2)) {
       c.stage = '16강 진출';
-      lines.push({ t: `${c.name} 1라운드 통과, 16강 진출`, k: 'good' });
+      lines.push({ t: M.contKoPass({ name: tn(c.name) }), k: 'good' });
     } else {
       c.alive = false;
       c.stage = '1라운드 탈락';
-      lines.push({ t: `${c.name} 1라운드 탈락`, k: 'bad' });
+      lines.push({ t: M.compLine({ name: tn(c.name), stage: '1라운드 탈락' }), k: 'bad' });
     }
     return;
   }
@@ -285,14 +290,14 @@ function contPhase(s: GameState, c: SeasonComp, lines: { t: string; k: string }[
     }
     if (c.pts! >= C.top) {
       c.stage = '16강 직행';
-      lines.push({ t: `${c.name} 리그 페이즈 통과, 16강 직행 (승점 ${c.pts})`, k: 'good' });
+      lines.push({ t: M.leagueDirect({ name: tn(c.name), pts: c.pts! }), k: 'good' });
     } else if (C.po && c.pts! >= C.po) {
       c.stage = '녹아웃 PO';
-      lines.push({ t: `${c.name} 녹아웃 플레이오프 진출 (승점 ${c.pts})`, k: '' });
+      lines.push({ t: M.leaguePlayoff({ name: tn(c.name), pts: c.pts! }), k: '' });
     } else {
       c.alive = false;
       c.stage = '리그 페이즈 탈락';
-      lines.push({ t: `${c.name} 리그 페이즈 탈락 (승점 ${c.pts})`, k: 'bad' });
+      lines.push({ t: M.leagueOut({ name: tn(c.name), pts: c.pts! }), k: 'bad' });
     }
     return;
   }
@@ -307,19 +312,22 @@ function contPhase(s: GameState, c: SeasonComp, lines: { t: string; k: string }[
     if (!won) {
       c.alive = false;
       c.stage = r === '결승' ? '준우승' : `${r} 탈락`;
-      lines.push({ t: `${c.name} ${c.stage}`, k: r === '결승' ? '' : 'bad' });
+      lines.push({
+        t: M.compLine({ name: tn(c.name), stage: c.stage }),
+        k: r === '결승' ? '' : 'bad',
+      });
       return;
     }
     if (r === '결승') {
       c.alive = false;
       c.stage = '우승';
       S.trophiesMid!.push(`${c.name} 우승`);
-      lines.push({ t: `${c.name} 우승!`, k: 'good' });
+      lines.push({ t: M.compLine({ name: tn(c.name), stage: '우승' }), k: 'good' });
       return;
     }
     c.stage = r === '16강' ? '8강 진출' : `${r} 통과`;
   }
-  lines.push({ t: `${c.name} ${c.stage}`, k: '' });
+  lines.push({ t: M.compLine({ name: tn(c.name), stage: c.stage }), k: '' });
 }
 export function compGoals(S: Season) {
   return (S.comps ?? []).reduce((t, c) => ({ apps: t.apps + c.apps, g: t.g + c.g, a: t.a + c.a }), {
@@ -416,7 +424,7 @@ export function seasonAwards(
   const ballonRank = clamp(Math.round(1 + (BALLON_BAR - score) / 0.8), 1, 99);
   if (L.tier >= 4 && ballonRank <= 30 && enough) {
     s.ballon = (s.ballon ?? []).concat({ year: s.year, rank: ballonRank });
-    gala.push(ballonRank === 1 ? '발롱도르 수상!' : `발롱도르 ${ballonRank}위 (30인 후보)`);
+    gala.push(ballonRank === 1 ? M.galaWin : M.galaRank({ rank: ballonRank }));
     if (ballonRank === 1) awards.push('발롱도르');
     if (s.age <= 21) awards.push('코파 트로피');
     if (s.pos === 'GK' && ballonRank <= 25 && chance(0.6)) awards.push('야신 트로피');

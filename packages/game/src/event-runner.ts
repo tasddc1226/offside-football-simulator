@@ -17,6 +17,7 @@ import {
   type Chip,
 } from './stats.js';
 import { STORIES, turnNo, storyActive, endStory } from './story.js';
+import { gStatsText as L } from './i18n/ko/gStats.js';
 
 // ───────── 이벤트 문구/조건 공용 헬퍼 (원본 events.js) ─────────
 export const isPro = (s: GameState): boolean => !leagueOf(s.leagueId).amateur;
@@ -66,9 +67,39 @@ export const EVENT_RULES = {
   twistUp: { safe: 0.3, ok: 0.65, fail: 0.4 },
   /** 안전한 선택의 대가(셋 중 하나, 폭 안에서 무작위). */
   safeCost: [
-    { k: 'morale', label: '사기', min: 3, max: 6, why: '도전하지 않은 아쉬움' },
-    { k: 'trust', label: '감독 신뢰', min: 1, max: 1, why: '감독의 미지근한 평가' },
-    { k: 'fame', label: '명성', min: 2, max: 4, why: '"무난했다"는 평가' },
+    {
+      k: 'morale',
+      get label() {
+        return L.costMoraleLabel;
+      },
+      min: 3,
+      max: 6,
+      get why() {
+        return L.costMoraleWhy;
+      },
+    },
+    {
+      k: 'trust',
+      get label() {
+        return L.costTrustLabel;
+      },
+      min: 1,
+      max: 1,
+      get why() {
+        return L.costTrustWhy;
+      },
+    },
+    {
+      k: 'fame',
+      get label() {
+        return L.costFameLabel;
+      },
+      min: 2,
+      max: 4,
+      get why() {
+        return L.costFameWhy;
+      },
+    },
   ],
 } as const;
 const EV_COOLDOWN = EVENT_RULES.cooldown;
@@ -156,7 +187,7 @@ export function resolveChoice(
       ),
     );
     addStat(s, k, d);
-    twist = '안전한 선택의 대가 · ' + why;
+    twist = L.twistSafe({ why });
   } else if (chance(EVENT_RULES.twist)) {
     const k = pick(ATTR_KEYS.filter((x) => wOf(s)[x] > 0.09));
     const up = chance(
@@ -164,7 +195,7 @@ export function resolveChoice(
     );
     const d = up ? ri(1, 2) : -1;
     addAttr(s, k, d);
-    twist = up ? `뜻밖의 수확 · ${labelOf(s, k)} +${d}` : `예상 못 한 여파 · ${labelOf(s, k)} ${d}`;
+    twist = up ? L.twistUp({ label: labelOf(s, k), d }) : L.twistDown({ label: labelOf(s, k), d });
   }
   const key =
     ev.story ||

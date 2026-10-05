@@ -9,6 +9,8 @@ import {
   type Club,
 } from './data.js';
 import { ovr } from './attributes.js';
+import { fmtValue as fmtValueKo } from '@offside/contracts/market-value';
+import { getLocale, intlLocale } from '@offside/contracts/i18n';
 import type { GameState } from './types.js';
 
 export const leagueOf = (id: string): League => LEAGUES.find((l) => l.id === id)!;
@@ -33,15 +35,33 @@ export function roleOf(s: GameState): '주전' | '로테이션' | '벤치' {
   return d >= 1 ? '주전' : d >= -5 ? '로테이션' : '벤치';
 }
 // 연봉·몸값 식은 서버와 같이 쓴다(T-10-100 명예의 전당 가치 순).
-export { fmtValue, salaryFor, valueFor } from '@offside/contracts/market-value';
+export { salaryFor, valueFor } from '@offside/contracts/market-value';
+/** 영어 금액 표기(원화 그대로): ₩500K · ₩12.3M · ₩1.85B. 한국어 단위(만·억)를 쓰지 않는다. man은 만 원. */
+function krwCompact(man: number): string {
+  const won = Math.round(man) * 10_000;
+  const a = Math.abs(won);
+  const sign = won < 0 ? '-' : '';
+  const num = (v: number, digits: number) =>
+    v.toLocaleString(intlLocale(), { maximumFractionDigits: digits });
+  if (a >= 999_500_000) return `${sign}₩${num(a / 1e9, 2)}B`;
+  if (a >= 1_000_000) return `${sign}₩${num(a / 1e6, a >= 100_000_000 ? 0 : 1)}M`;
+  return `${sign}₩${num(a / 1e3, 0)}K`;
+}
 export function fmtMoney(man: number): string {
+  if (getLocale() === 'en') return krwCompact(man);
   const m = Math.round(man);
   if (Math.abs(m) >= 10000) {
     // 천만 단위로 먼저 반올림해야 9,770만 → '1억'으로 올라간다('18억 10,000만' 방지). 음수는 부호만 앞에 붙인다.
     const t = Math.round(Math.abs(m) / 1000) * 1000;
     const e = Math.floor(t / 10000),
       r = t % 10000;
-    return `${m < 0 ? '-' : ''}${e}억${r ? ` ${r.toLocaleString('ko-KR')}만` : ''}`;
+    return `${m < 0 ? '-' : ''}${e}억${r ? ` ${r.toLocaleString(intlLocale())}만` : ''}`;
   }
-  return `${m.toLocaleString('ko-KR')}만`;
+  return `${m.toLocaleString(intlLocale())}만`;
+}
+/** 몸값·이적료 표기. 한국어는 서버와 같은 표기(contracts), 영어는 fmtMoney와 같은 원화 약식. 0 이하는 '-'. */
+export function fmtValue(man: number): string {
+  if (getLocale() !== 'en') return fmtValueKo(man);
+  if (man <= 0) return '-';
+  return Math.round(man / 100) * 100 ? krwCompact(Math.round(man / 100) * 100) : 'Under ₩1M';
 }

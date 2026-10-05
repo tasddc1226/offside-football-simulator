@@ -9,6 +9,7 @@ import { eventById } from './events-data.js';
 // 게임 화면을 거치지 않고 은퇴 리포트만 열어도(구단주 → 내 선수) 여기서 직접 불러온다(성향 카드는 지연 청크라 첫 화면 밖).
 import './event-registry.js';
 import type { CareerRecord } from './types.js';
+import { gPlayStyleText as L } from './i18n/ko/gPlayStyle.js';
 
 /** 고교·대학 리그 이름(스냅샷 시즌 기록엔 프로 여부가 없어 리그 이름으로 가린다). */
 const AMATEUR = new Set(LEAGUE_BASE.filter((l) => l.amateur).map((l) => l.name));
@@ -57,79 +58,123 @@ const TYPES: (StyleType & { hit: (x: Signals) => boolean })[] = [
   {
     key: 'oneclub',
     icon: '🏠',
-    name: '원클럽 순정파',
-    line: '다른 유니폼은 입어 본 적이 없다. 한 팀에서 끝까지 뛰었다.',
+    get name() {
+      return L.oneclub;
+    },
+    get line() {
+      return L.oneclubLine;
+    },
     hit: (x) => x.clubs === 1 && x.proSeasons >= 8,
   },
   {
     key: 'lucky',
     icon: '🍀',
-    name: '타고난 강운',
-    line: '낮은 확률에 건 선택이 자꾸 들어맞았다. 운도 따라줬다.',
+    get name() {
+      return L.lucky;
+    },
+    get line() {
+      return L.luckyLine;
+    },
     hit: (x) => x.luck >= 3,
   },
   {
     key: 'allin',
     icon: '🎲',
-    name: '올인 승부사',
-    line: '확률이 낮을수록 더 걸었다. 안 되면 그만이었다.',
+    get name() {
+      return L.allin;
+    },
+    get line() {
+      return L.allinLine;
+    },
     hit: (x) => x.st.longshots >= 4 && x.st.longshots / x.choices >= 0.25,
   },
   {
     key: 'nomad',
     icon: '🧳',
-    name: '축구계 노마드',
-    line: '짐은 늘 반쯤 싸 두었다. 가는 곳마다 새 등번호.',
+    get name() {
+      return L.nomad;
+    },
+    get line() {
+      return L.nomadLine;
+    },
     hit: (x) => x.clubs >= 7,
   },
   {
     key: 'unlucky',
     icon: '🌧️',
-    name: '비운의 사나이',
-    line: '될 만한 선택도 자꾸 빗나갔다. 운이 따라주지 않았다.',
+    get name() {
+      return L.unlucky;
+    },
+    get line() {
+      return L.unluckyLine;
+    },
     hit: (x) => x.luck <= -3,
   },
   {
     key: 'climber',
     icon: '🚀',
-    name: '사다리 등반가',
-    line: '이적할 때마다 리그 수준이 올라갔다. 늘 한 단계 위만 봤다.',
+    get name() {
+      return L.climber;
+    },
+    get line() {
+      return L.climberLine;
+    },
     hit: (x) => x.st.tierUp >= 4,
   },
   {
     key: 'business',
     icon: '💼',
-    name: '연봉 협상의 달인',
-    line: '축구는 비즈니스. 계약서의 숫자부터 읽었다.',
+    get name() {
+      return L.business;
+    },
+    get line() {
+      return L.businessLine;
+    },
     hit: (x) => x.st.payFirst >= 2,
   },
   {
     key: 'loyal',
     icon: '🤝',
-    name: '의리의 사나이',
-    line: '더 큰 구단이 불러도 고개를 저었다.',
+    get name() {
+      return L.loyal;
+    },
+    get line() {
+      return L.loyalLine;
+    },
     hit: (x) => x.st.snubUp >= 3,
   },
   {
     key: 'safe',
     icon: '🛡️',
-    name: '안전제일주의',
-    line: '돌다리도 두들겨 보고 건넜다. 부상 없이 오래가는 게 실력.',
+    get name() {
+      return L.safe;
+    },
+    get line() {
+      return L.safeLine;
+    },
     hit: (x) => x.st.safe / x.choices >= 0.45,
   },
   {
     key: 'calculated',
     icon: '🧮',
-    name: '계산된 모험가',
-    line: '승부는 걸되, 이길 만한 판에만 걸었다.',
+    get name() {
+      return L.calculated;
+    },
+    get line() {
+      return L.calculatedLine;
+    },
     hit: (x) => x.st.bets / x.choices >= 0.6 && x.st.longshots / x.choices < 0.15,
   },
 ];
 const BALANCED: StyleType = {
   key: 'balanced',
   icon: '⚖️',
-  name: '균형 잡힌 현실주의자',
-  line: '걸 때와 물러설 때를 가렸다. 큰 기복 없는 커리어.',
+  get name() {
+    return L.balanced;
+  },
+  get line() {
+    return L.balancedLine;
+  },
 };
 
 /** 성향 카드. 선택 기록이 없거나 너무 적으면 null. */

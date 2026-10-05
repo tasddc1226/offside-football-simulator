@@ -1,5 +1,7 @@
 // 은퇴 레전드 등급표(T-10-026 칭호의 은퇴 등급). 워커(공유 링크 미리보기)도 읽으므로 게임 코드를 끌어오지 않는
 // 작은 모듈로 둔다. 등급 id가 바뀌면 scripts/seo.mjs의 미리보기 이미지(CAREER_OG_BANDS)도 같이 바꾼다.
+import { gLegendText as L } from './i18n/ko/gLegend.js';
+
 export type Rarity = 1 | 2 | 3 | 4;
 
 /**
@@ -32,3 +34,6 @@ export function legendBand(
   const b = LEGEND_BANDS.find(([, , , min, preMin]) => score >= (dpos ? min : preMin))!;
   return { id: b[0], name: b[1] };
 }
+
+/** 레전드 등급 id의 화면용 이름(지금 언어). LEGEND_BANDS의 name은 한국어 원문이다 — 칭호 정의가 그대로 읽는다. */
+export const legendBandName = (id: string): string => L[id as keyof typeof L] ?? id;

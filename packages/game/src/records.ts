@@ -4,18 +4,20 @@
 // 메인 시뮬레이션 RNG 소비 순서에 영향을 줄 수 없다(결정성 유지 조건).
 import type { Pos } from './data.js';
 import type { CareerRecord, GameState } from './types.js';
+import { gRecordsText as L } from './i18n/ko/gRecords.js';
 
 export type ChKey = 'goals' | 'assists' | 'apps' | 'rating' | 'cs';
 
-const CH_LABEL: Record<ChKey, string> = {
-  goals: '커리어 최다골',
-  assists: '커리어 최다도움',
-  apps: '커리어 최다출전',
-  rating: '커리어 최고평점',
-  cs: '커리어 최다무실점',
+// 문구는 읽을 때 지금 언어로 고른다(import 시점에 굳히지 않는다).
+const CH_LABEL: Record<ChKey, () => string> = {
+  goals: () => L.chGoals,
+  assists: () => L.chAssists,
+  apps: () => L.chApps,
+  rating: () => L.chRating,
+  cs: () => L.chCs,
 };
 export function chLabel(k: string): string {
-  return CH_LABEL[k as ChKey] ?? k;
+  return Object.hasOwn(CH_LABEL, k) ? CH_LABEL[k as ChKey]() : k;
 }
 
 /** 방금 push된 rec(=s.career의 마지막 원소)을 제외한 이전 시즌들 중 각 지표의 최고값을 구해, rec이
@@ -56,32 +58,32 @@ const THRESHOLDS_BY_POS: Record<Pos, Threshold[]> = (() => {
   const common: Threshold[] = [
     {
       key: 'apps',
-      label: (n) => `통산 ${n}경기 출전`,
+      label: (n) => L.msApps({ n }),
       get: (t) => t.p,
       targets: [100, 200, 300, 400, 500, 600, 700],
     },
     {
       key: 'caps',
-      label: (n) => `A매치 ${n}경기 출전`,
+      label: (n) => L.msCaps({ n }),
       get: (t) => t.caps,
       targets: [10, 30, 50, 100],
     },
     {
       key: 'trophy',
-      label: (n) => `우승 트로피 ${n}회`,
+      label: (n) => L.msTrophy({ n }),
       get: (t) => t.trophies,
       targets: [1, 3, 5, 10],
     },
   ];
   const goals: Threshold = {
     key: 'goals',
-    label: (n) => `통산 ${n}골`,
+    label: (n) => L.msGoals({ n }),
     get: (t) => t.g,
     targets: [10, 30, 50, 100, 150, 200, 300],
   };
   const assists: Threshold = {
     key: 'assists',
-    label: (n) => `통산 ${n}도움`,
+    label: (n) => L.msAssists({ n }),
     get: (t) => t.a,
     targets: [10, 30, 50, 100, 150],
   };
