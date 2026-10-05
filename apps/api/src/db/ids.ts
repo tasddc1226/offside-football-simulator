@@ -12,7 +12,8 @@ export type IdPrefix =
   | 'tem'
   | 'mat'
   | 'blk'
-  | 'lst';
+  | 'lst'
+  | 'ntf';
 
 export function newId(prefix: IdPrefix): string {
   return `${prefix}_${crypto.randomUUID()}`;

@@ -428,6 +428,13 @@
       "when": 1791165698551,
       "tag": "0060_market_chart_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "6",
+      "when": 1791182645680,
+      "tag": "0061_sweet_strong_guy",
+      "breakpoints": true
     }
   ]
 }

@@ -13,12 +13,12 @@ export async function registerPushDevice(
   // 같은 기기의 계정 전환은 재바인딩한다. 다른 기기의 토큰을 빼앗지는 못한다.
   const r = await db
     .prepare(
-      `INSERT INTO push_devices (installation_hash, session_id, profile_id, token, platform, app_version, updated_at)
-    SELECT ?, ?, ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM push_devices WHERE token = ? AND installation_hash <> ?)
+      `INSERT INTO push_devices (installation_hash, session_id, profile_id, token, platform, app_version, engagement_enabled, updated_at)
+    SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM push_devices WHERE token = ? AND installation_hash <> ?)
     ON CONFLICT(installation_hash) DO UPDATE SET session_id = excluded.session_id, profile_id = excluded.profile_id,
     last_test_ticket_id = CASE WHEN token = excluded.token AND session_id = excluded.session_id THEN last_test_ticket_id ELSE NULL END,
     last_test_sent_at = CASE WHEN token = excluded.token AND session_id = excluded.session_id THEN last_test_sent_at ELSE NULL END,
-    token = excluded.token, platform = excluded.platform, app_version = excluded.app_version, updated_at = excluded.updated_at`,
+    token = excluded.token, platform = excluded.platform, app_version = excluded.app_version, engagement_enabled = excluded.engagement_enabled, updated_at = excluded.updated_at`,
     )
     .bind(
       hash,
@@ -27,6 +27,7 @@ export async function registerPushDevice(
       input.token,
       input.platform,
       input.appVersion,
+      input.engagementEnabled ? 1 : 0,
       now,
       input.token,
       hash,
@@ -66,7 +67,7 @@ export async function unregisterPushDevice(
     : 'installation_hash = ?';
   const values = expected ? [hash, expected.token, expected.sessionId] : [hash];
   await db.batch(
-    ['push_devices', 'push_news_deliveries'].map((table) =>
+    ['push_devices', 'push_news_deliveries', 'push_deliveries'].map((table) =>
       db.prepare(`DELETE FROM ${table} WHERE ${predicate}`).bind(...values),
     ),
   );

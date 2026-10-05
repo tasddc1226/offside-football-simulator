@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { AppState, Linking, View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import { pushState, pushTestState, pushRegistration, testOwnPush } from '../../platform/push';
+import {
+  pushState,
+  pushTestState,
+  pushRegistration,
+  testOwnPush,
+  engagementPushState,
+  setEngagementPush,
+} from '../../platform/push';
+import { openInbox } from '../../platform/inbox';
 import { Btn, Txt } from '../../ui';
 import { SettingsCard, SettingsLabel } from './parts';
 import { WEB_ORIGIN } from '../../platform/config';
@@ -11,6 +19,7 @@ export function PushSettings() {
   const state = useSnapshot(pushState);
   const [testMessage, setTestMessage] = useState('');
   const test = useSnapshot(pushTestState);
+  const engagement = useSnapshot(engagementPushState);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const refresh = () => setNow(Date.now());
@@ -66,6 +75,18 @@ export function PushSettings() {
         ) : null}
         {state.enabled ? (
           <>
+            <Txt bold>재방문 안내 (선택)</Txt>
+            <Txt tone="muted">
+              7일 이상 방문하지 않았을 때 다시 시작할 안내를 받아요. 오전 9시부터 오후 8시 사이에만
+              보내요.
+            </Txt>
+            <Btn
+              block
+              disabled={state.busy}
+              onPress={() => void setEngagementPush(!engagement.enabled)}
+            >
+              {engagement.enabled ? '재방문 안내 끄기' : '재방문 안내 받기'}
+            </Btn>
             <Txt tone="muted">
               테스트 알림은 이 기기에만 보내요. 기기·계정마다 10분에 한 번, 하루 3회까지 요청할 수
               있어요.
@@ -108,6 +129,9 @@ export function PushSettings() {
             {testMessage}
           </Txt>
         ) : null}
+        <Btn block onPress={() => openInbox()}>
+          알림함 열기
+        </Btn>
         <Btn block onPress={() => void Linking.openURL(`${WEB_ORIGIN}/legal/privacy/#push`)}>
           알림 정보 처리 안내
         </Btn>
