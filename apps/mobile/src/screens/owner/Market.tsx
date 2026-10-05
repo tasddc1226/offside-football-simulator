@@ -57,7 +57,7 @@ import {
 } from '@offside/app-core/market';
 import { agoKo, cardTier, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/season';
-import { POS_LABEL } from '@offside/game/pos-label';
+import { POS } from '@offside/game/data';
 import { appState, prefs } from '../../store';
 import { toast } from '../../game/host';
 import { useColors } from '../../theme/useColors';
@@ -67,6 +67,8 @@ import { ActionBar, BackBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
 import { CARD_TONES, PlayerCard } from '../../components/PlayerCard';
 import { MarketChart, MarketIndex } from './MarketChart';
 import { marketText as L } from '@offside/app-core/i18n/ko/market';
+import { intlLocale } from '@offside/app-core/i18n/core';
+import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 
 type Sent<T> = Promise<
   { ok: true; data: T } | { ok: false; error: { message: string; reason?: string | undefined } }
@@ -583,7 +585,9 @@ export default function Market() {
   const lineup = useMemo(() => (team ? lineupOf(team) : new Set<string>()), [team]);
   const isCurrent = !!team && team.season === team.current;
   const nameOfPlayer = (p: TeamPlayer) => marketName(p, local);
-  const seasonName = team?.seasons.find((o) => o.id === team.season)?.name ?? '';
+  const seasonName = team?.seasons.find((o) => o.id === team.season)
+    ? teamSeasonLabel(team.season)
+    : '';
 
   // 방출 — 고른 선수.
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
@@ -825,7 +829,7 @@ export default function Market() {
                   <FilterChip
                     key={o.id}
                     on={team?.season === o.id}
-                    label={L.seasonChip({ name: o.name })}
+                    label={L.seasonChip({ name: seasonLabel(o.id, o.name) })}
                     testID={`market-season-${o.id}`}
                     onPress={() => {
                       setTeamSeason(o.id);
@@ -886,7 +890,10 @@ export default function Market() {
                         {nameOfPlayer(p)}
                       </Txt>
                       <Txt tone={lock ? 'bad' : 'muted'} style={tiny}>
-                        {lock ?? L.releaseInfo({ score: (p.legendScore ?? 0).toLocaleString() })}
+                        {lock ??
+                          L.releaseInfo({
+                            score: (p.legendScore ?? 0).toLocaleString(intlLocale()),
+                          })}
                       </Txt>
                     </View>
                     {!lock && me ? (
@@ -952,7 +959,7 @@ export default function Market() {
                     <FilterChip
                       key={p ?? 'all'}
                       on={pos === p}
-                      label={p ? POS_LABEL[p] : L.posAll}
+                      label={p ? POS[p].label : L.posAll}
                       testID={`market-pos-${p ?? 'all'}`}
                       onPress={() => setPos(p)}
                     />
@@ -1362,7 +1369,7 @@ export default function Market() {
                               </View>
                               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                                 <Txt numberOfLines={1} style={small}>
-                                  {`${marketName(t.card, local)} ${POS_LABEL[t.card.pos]} ${t.card.peak}`}
+                                  {`${marketName(t.card, local)} ${POS[t.card.pos].label} ${t.card.peak}`}
                                 </Txt>
                                 <Txt tone="muted" style={tiny}>
                                   {`${agoKo(Date.now() - Date.parse(t.at))}${t.kind === 'sold' ? L.feeTaken : ''}`}
@@ -1423,9 +1430,9 @@ export default function Market() {
               </View>
               <View style={{ flexDirection: 'row', gap: 8, alignSelf: 'stretch' }}>
                 {[
-                  [L.detailLegend, buying.card.legendScore.toLocaleString()],
+                  [L.detailLegend, buying.card.legendScore.toLocaleString(intlLocale())],
                   [L.detailTransfers, L.transferTimes({ n: buying.card.transfers })],
-                  [L.position, POS_LABEL[buying.card.pos]],
+                  [L.position, POS[buying.card.pos].label],
                 ].map(([k, v]) => (
                   <View
                     key={k}

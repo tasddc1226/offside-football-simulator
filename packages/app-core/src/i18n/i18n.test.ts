@@ -51,12 +51,14 @@ describe('i18n core', () => {
 
 describe('영어 사전', () => {
   it('파일 이름과 네임스페이스 이름이 같고, en/index.ts가 모두 묶는다', () => {
-    const names = [...koSources().keys()].filter((n) => !n.startsWith('__'));
+    const names = [...koSources().keys()].filter((n) => !n.startsWith('__') && !gameNames.has(n));
     expect(names.sort()).toEqual([...files].sort());
     expect(files.filter((f) => gameNames.has(f))).toEqual([]);
-    expect(Object.keys(en).filter((k) => !k.startsWith('__') && !gameNames.has(k)).sort()).toEqual(
-      [...files].sort(),
-    );
+    expect(
+      Object.keys(en)
+        .filter((k) => !k.startsWith('__') && !gameNames.has(k))
+        .sort(),
+    ).toEqual([...files].sort());
     // 묶음은 생성 스크립트 결과와 같아야 한다(node tooling/scripts/i18n-index.mjs).
     execFileSync('node', [
       new URL('../../../../tooling/scripts/i18n-index.mjs', import.meta.url).pathname,

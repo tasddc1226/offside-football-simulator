@@ -16,6 +16,7 @@
   import HofRow, { type RowStats } from './HofRow.svelte';
   import type { DetailPos, POS } from '@offside/game/data';
   import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
+  import { seasonLabel } from './seasonName.js';
 
   /** T-11-026 구단주 화면이 요약(선수 수·점수 합·결번 수)을 세도록 불러온 목록을 알려 준다. T-11-029 고른 시즌 것만. */
   let { onrows }: { onrows?: (rows: readonly MineRow[]) => void } = $props();
@@ -127,7 +128,7 @@
     {#if seasons.length > 1}
       <div class="seg board-tabs hof-seasons" role="group" aria-label={L.seasonGroup}>
         {#each seasons as s (s.id)}
-          <button class="opt" aria-pressed={season === s.id} data-my-season={s.id} onclick={() => ((picked = s.id), (expanded = false))}>{s.name}</button>
+          <button class="opt" aria-pressed={season === s.id} data-my-season={s.id} onclick={() => ((picked = s.id), (expanded = false))}>{seasonLabel(s.id, s.name)}</button>
         {/each}
       </div>
     {/if}

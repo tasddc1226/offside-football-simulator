@@ -40,7 +40,9 @@ for (const [pkg, out] of Object.entries(targets)) {
   const target = new URL(`${pkg}/src/i18n/en/index.ts`, root);
   if (!check) writeFileSync(target, out);
   else if (readFileSync(target, 'utf8') !== out) {
-    console.error(`packages/${pkg}/src/i18n/en/index.ts is stale — run: node tooling/scripts/i18n-index.mjs`);
+    console.error(
+      `packages/${pkg}/src/i18n/en/index.ts is stale — run: node tooling/scripts/i18n-index.mjs`,
+    );
     stale = true;
   }
 }

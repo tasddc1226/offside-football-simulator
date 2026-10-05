@@ -3,6 +3,7 @@
 import type { OwnerTeamResponse } from './api/team.js';
 import { matchHintOf } from './teamOwner.js';
 import { ownerText as L } from './i18n/ko/owner.js';
+import { teamSeasonLabel } from './seasonName.js';
 
 /** 구단주 요약 — 은퇴 선수 수 · 레전드 점수 합 · 영구결번 수 · 구단 가치(은퇴 가치 합, 만 원). */
 export type OwnerSummary = { players: number; score: number; retired: number; value: number };
@@ -31,7 +32,7 @@ export type OwnerTeamCard = {
 
 export function ownerTeamCard(d: OwnerTeamResponse): OwnerTeamCard {
   return {
-    season: d.seasons.find((o) => o.id === d.season)?.name ?? '',
+    season: d.seasons.find((o) => o.id === d.season) ? teamSeasonLabel(d.season) : '',
     team: d.team,
     players: d.players.length,
     left: d.matchesLeft,

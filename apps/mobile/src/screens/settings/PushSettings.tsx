@@ -15,6 +15,7 @@ import { SettingsCard, SettingsLabel } from './parts';
 import { WEB_ORIGIN } from '../../platform/config';
 import { dismissPushOffer } from '../../platform/pushOffer';
 import { pushText as L } from '@offside/app-core/i18n/ko/push';
+import { intlLocale } from '@offside/app-core/i18n/core';
 
 export function PushSettings() {
   const state = useSnapshot(pushState);
@@ -97,7 +98,7 @@ export function PushSettings() {
             {waiting ? (
               <Txt tone="muted" accessibilityLiveRegion="polite">
                 {L.nextTest}{' '}
-                {new Date(test.nextTestAt).toLocaleString('ko-KR', {
+                {new Date(test.nextTestAt).toLocaleString(intlLocale(), {
                   month: 'numeric',
                   day: 'numeric',
                   hour: '2-digit',

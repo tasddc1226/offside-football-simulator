@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   import { visibleSeasonNotes } from '@offside/app-core/potential-view';
   import type { SheetView } from '@offside/app-core/sheets';
   import NewTitles from '../titles/NewTitles.svelte';
@@ -22,7 +23,7 @@
   <div><b>{v.stats.rating}</b><span>{sheetCoreText.tallyRating}</span></div>
 </div>
 {#if v.honors.length}
-  <div class="stack">{#each v.honors as t, i (i)}<p class="hl"><b>{t}</b></p>{/each}</div>
+  <div class="stack">{#each v.honors as t, i (i)}<p class="hl"><b>{tn(t)}</b></p>{/each}</div>
 {:else}
   <p class="muted">{L.noHonors}</p>
 {/if}
@@ -30,8 +31,8 @@
   <div class="story-end promo-card pop" style="--d:160ms" data-promo>
     <div class="eyebrow">Promotion</div>
     <b>{L.promoTitle}</b>
-    <p class="muted fs-sm">{L.promoBodyWeb({ club: v.promo.club })}</p>
-    <p class="muted fs-xs">{L.promoDownWeb({ club: v.promo.down })}</p>
+    <p class="muted fs-sm">{L.promoBodyWeb({ club: tn(v.promo.club) })}</p>
+    <p class="muted fs-xs">{L.promoDownWeb({ club: tn(v.promo.down) })}</p>
   </div>
 {/if}
 {#if v.comps.length}
@@ -45,7 +46,7 @@
     <div class="eyebrow" style="margin-bottom:6px">{L.tours}</div>
     {#each v.tours as x, i (i)}
       <div class="stack" style="gap:2px">
-        <p><b>{x.name}</b> · {x.stage}{#if x.note}<span class="muted" style="margin-left:.25em">({x.note})</span>{/if}</p>
+        <p><b>{tn(x.name)}</b> · {tn(x.stage)}{#if x.note}<span class="muted" style="margin-left:.25em">({x.note})</span>{/if}</p>
         {#each x.lines as l, j (j)}<div class="muted fs-xs">{l}</div>{/each}
       </div>
     {/each}
@@ -54,13 +55,13 @@
 {#if v.gala.length}
   <div>
     <div class="eyebrow" style="margin-bottom:6px">{L.gala}</div>
-    {#each v.gala as g, i (i)}<p class="hl"><b>{g}</b></p>{/each}
+    {#each v.gala as g, i (i)}<p class="hl"><b>{tn(g)}</b></p>{/each}
   </div>
 {/if}
 {#if v.miles.length}
   <div>
     <div class="eyebrow" style="margin-bottom:6px">{L.miles}</div>
-    {#each v.miles as m, i (i)}<p>· {m}</p>{/each}
+    {#each v.miles as m, i (i)}<p>· {tn(m)}</p>{/each}
   </div>
 {/if}
 <NewTitles titles={v.titles} pop />

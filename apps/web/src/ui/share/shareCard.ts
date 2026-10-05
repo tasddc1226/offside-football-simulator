@@ -8,6 +8,7 @@ import {
   type ShareCardData,
 } from '@offside/app-core/shareCard';
 import { drawJersey } from './jerseyCanvas.js';
+import { tn } from '@offside/game/i18n/names';
 
 export { CARD_H, CARD_W, shareCardData, type ShareCardData } from '@offside/app-core/shareCard';
 
@@ -62,11 +63,11 @@ export async function loadCardFonts(c: ShareCardData) {
     c.sub,
     ...c.pills.map((p) => p.text + (p.tail ?? '')),
     ...c.stats.map((s) => s.label),
-    ...c.stops.flatMap((s) => (s ? [s.club, s.league] : [])),
+    ...c.stops.flatMap((s) => (s ? [tn(s.club), tn(s.league)] : [])),
     c.style?.name,
     c.style?.best ?? c.style?.line,
     c.jersey?.name,
-    ...c.honours.map((h) => h.name),
+    ...c.honours.map((h) => tn(h.name)),
     `${cardBrand()} ${tagline()} offside-lab.com LEGEND SCORE THE JOURNEY HONOURS HOW I PLAYED ×0123456789`,
   ].join('');
   await Promise.all(Object.values(F).map((f) => document.fonts.load(f, sample).catch(() => [])));
@@ -214,8 +215,9 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
       continue;
     }
     text(s.years, YEAR_X, y, F.years, C.muted, { align: 'right' });
-    const lx = CLUB_X + text(s.club, CLUB_X, y, F.club, C.ink, { align: 'left', max: 430 }) + 16;
-    text(s.league, lx, y, F.league, C.muted, { align: 'left', max: CARD_W - PAD - lx });
+    const lx =
+      CLUB_X + text(tn(s.club), CLUB_X, y, F.club, C.ink, { align: 'left', max: 430 }) + 16;
+    text(tn(s.league), lx, y, F.league, C.muted, { align: 'left', max: CARD_W - PAD - lx });
     y += 52;
   }
   if (c.honours.length) {
@@ -224,7 +226,7 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
     y += 56;
     for (const h of c.honours) {
       text(h.count, YEAR_X, y, F.years, C.gold, { align: 'right' });
-      text(h.name, CLUB_X, y, F.club, C.ink, { align: 'left', max: CARD_W - PAD - CLUB_X });
+      text(tn(h.name), CLUB_X, y, F.club, C.ink, { align: 'left', max: CARD_W - PAD - CLUB_X });
       y += 52;
     }
   }

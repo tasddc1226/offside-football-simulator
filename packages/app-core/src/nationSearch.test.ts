@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setLocale } from './i18n/core.js';
 import { NATIONS } from '@offside/contracts/nations';
 import { NATION_GROUPS, nationGroups } from './nationSearch.js';
 
@@ -34,5 +35,27 @@ describe('국적 고르기', () => {
 
   it('없는 나라는 빈 배열', () => {
     expect(nationGroups('없는나라이름')).toEqual([]);
+  });
+});
+
+describe('국적 고르기(영어)', () => {
+  afterEach(() => setLocale('ko'));
+
+  it('영어 이름으로 찾고, 연맹 안은 A-Z순', () => {
+    const table = { exact: { 브라질: 'Brazil', 일본: 'Japan', 독일: 'Germany' }, patterns: [] };
+    setLocale('en', { __names: table });
+    const [g] = nationGroups('braz');
+    expect(g!.data.map((n) => n.ko)).toContain('브라질');
+    expect(nationGroups('브라')[0]!.data.map((n) => n.ko)).toContain('브라질');
+    const named = NATION_GROUPS.flatMap((x) => x.data).filter(
+      (n) => table.exact[n.ko as keyof typeof table.exact],
+    );
+    expect(named.length).toBeGreaterThan(0);
+    // 같은 연맹 안에서 영어 이름이 A-Z로 정렬된다(대응이 없는 이름은 한국어 그대로라 비교에서 뺀다).
+    const asia = nationGroups(null).find((x) => x.key === 'AFC')!;
+    const en = asia.data
+      .map((n) => table.exact[n.ko as keyof typeof table.exact] ?? '')
+      .filter(Boolean);
+    expect(en).toEqual([...en].sort(new Intl.Collator('en').compare));
   });
 });

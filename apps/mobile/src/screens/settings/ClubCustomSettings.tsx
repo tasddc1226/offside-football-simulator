@@ -23,6 +23,7 @@ import { rem } from '../../theme/type';
 import { Btn, ClubBadge, Press, Row, Txt } from '../../ui';
 import { SelectField, SettingsCard, SettingsLabel, SettingsTrigger, TextField } from './parts';
 import { clubText as T } from '@offside/app-core/i18n/ko/club';
+import { tn } from '@offside/game/i18n/names';
 
 const fail = () => toast(T.noSpace);
 
@@ -191,14 +192,14 @@ function ClubRow({
             if (!setClubCustom(club.id, { name: v })) fail();
           }}
           maxLength={CLUB_NAME_MAX}
-          placeholder={club.baseName ?? club.name}
-          accessibilityLabel={T.nameLabel({ name: club.baseName ?? club.name })}
+          placeholder={tn(club.baseName ?? club.name)}
+          accessibilityLabel={T.nameLabel({ name: tn(club.baseName ?? club.name) })}
           style={{ flex: 1, minWidth: 0 }}
         />
         <Btn
           sm
           testID="logo"
-          accessibilityLabel={T.emblemLabel({ name: club.baseName ?? club.name })}
+          accessibilityLabel={T.emblemLabel({ name: tn(club.baseName ?? club.name) })}
           onPress={toggle}
         >
           {T.emblem}
@@ -325,7 +326,7 @@ export function ClubCustomSettings() {
               value={leagueId}
               options={LEAGUES.map((L) => ({
                 value: L.id,
-                label: T.leagueOption({ name: L.name, n: clubsIn(L.id).length }),
+                label: T.leagueOption({ name: tn(L.name), n: clubsIn(L.id).length }),
               }))}
               onChange={(v) => {
                 setLeagueId(v);

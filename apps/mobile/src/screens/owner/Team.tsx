@@ -38,7 +38,7 @@ import { type TeamView } from '@offside/app-core/state';
 import { recordText, num } from '@offside/app-core/teamText';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { autoFillSlots, matchHintOf } from '@offside/app-core/teamOwner';
-import { anonName } from '@offside/game/pos-label';
+import { anonName } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/season';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines } from '../../components/TeamPitch';
@@ -69,6 +69,7 @@ import type { PutOwnerTeamBody } from '@offside/contracts';
 import { readTeamDraft, writeTeamDraft, teamDraftBase, type TeamDraft } from './teamDraft';
 import { RecordsChips as SortChips } from '../hof/RecordsControls';
 import { TeamResult } from './TeamResult';
+import { teamSeasonLabel } from '@offside/app-core/seasonName';
 
 const between = (v: string, min: number, max: number) =>
   v.trim().length >= min && v.trim().length <= max;
@@ -96,7 +97,7 @@ export default function Team() {
   const [seasons, setSeasons] = useState<OwnerTeamResponse['seasons']>([]);
   const [lastManager, setLastManager] = useState<string | null>(null);
   const editable = season === current;
-  const seasonName = seasons.find((o) => o.id === season)?.name ?? '';
+  const seasonName = seasons.find((o) => o.id === season) ? teamSeasonLabel(season) : '';
 
   // 편집 초안 — 저장하기 전까지 이 기기에만 있다.
   const [name, setName] = useState('');

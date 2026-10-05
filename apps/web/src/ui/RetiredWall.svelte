@@ -7,11 +7,12 @@
 </script>
 
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // T-10-076 기록실 '영구결번' 탭. 유니폼은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
   // 결번은 시즌마다 따로 — 프리시즌 선수가 찬 번호도 시즌 1에서는 새로 받을 수 있다.
   // T-11-101 첫 화면은 요약(구단별 결번 수·최근 결번 8개)만 받는다. 결번 타일은 구단을 고르거나 최신순 전체를 열 때 받는다.
   import type { RetiredNumbersResponse, RetiredNumbersSummary } from '@offside/contracts';
-  import { PRESEASON, SERVICE_SEASONS, displaySeasonAt, seasonById, teamSeasonName } from '@offside/contracts/service-seasons';
+  import { PRESEASON, SERVICE_SEASONS, displaySeasonAt, seasonById } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from '@offside/app-core/boardText';
   import { POS_GROUPS } from '@offside/contracts/positions';
   import { getRetiredNumbersOfClub, getRetiredNumbersPage, getRetiredNumbersSummary } from '@offside/app-core/api/client';
@@ -21,9 +22,12 @@
   import { anonName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';
   import { RN_SHIRT, RN_TRIM, rnStyle } from '@offside/app-core/rnStyle';
-  import { rnByLeague, rnClubName as clubName, rnDay as day, rnLeagueName as leagueOf } from '@offside/app-core/retiredWall';
+  import { rnByLeague, rnClubName, rnDay as day, rnLeagueName } from '@offside/app-core/retiredWall';
 
   import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
+  import { seasonLabel, teamSeasonLabel } from './seasonName.js';
+  const clubName = (x: Parameters<typeof rnClubName>[0]) => tn(rnClubName(x));
+  const leagueOf = (clubId: string) => tn(rnLeagueName(clubId));
   type Item = RetiredNumbersResponse['items'][number];
 
   const now = new Date().toISOString();
@@ -111,7 +115,7 @@
     <b class="rn-tile-name">{it.name ?? anonName(it.pos, it.number)}</b>
     {#if withClub || !view.pos}
       <span class="muted fs-xs">
-        {#if withClub}<ClubMark name={it.club} id={it.clubId} size={14} /> {clubName(it)}{:else}{POS[it.pos].label}{/if}
+        {#if withClub}<ClubMark name={it.club} id={it.clubId} size={14} /> {clubName(it)}{:else}{tn(POS[it.pos].label)}{/if}
       </span>
     {/if}
     <span class="muted fs-xs num">{L.tileSeq({ seq: it.seq, day: day(it.grantedAt) })}</span>
@@ -134,7 +138,7 @@
     <label class="hof-season-picker">
       <span class="hof-filter-label">{L.season}</span>
       <select aria-label={L.seasonAria} data-rn-season-select value={String(season)} onchange={(e) => pickSeason(Number(e.currentTarget.value))}>
-        {#each seasons as s (s.id)}<option value={String(s.id)}>{s.name}{s.startsAt > now ? L.notOpen : ''}</option>{/each}
+        {#each seasons as s (s.id)}<option value={String(s.id)}>{seasonLabel(s.id, s.name)}{s.startsAt > now ? L.notOpen : ''}</option>{/each}
       </select>
     </label>
   </div>
@@ -143,7 +147,7 @@
     <p class="muted fs-sm rn-wall-lead">{L.lead}</p>
   {/if}
   {#if upcoming}
-    <div class="empty hof-season-note" data-rn-upcoming><b>{L.opens({ name: upcoming.name, when: kstMonthDayHour(upcoming.startsAt) })}</b></div>
+    <div class="empty hof-season-note" data-rn-upcoming><b>{L.opens({ name: seasonLabel(upcoming.id, upcoming.name), when: kstMonthDayHour(upcoming.startsAt) })}</b></div>
   {:else if failed || (view.screen !== 'home' && listFailed)}
     <p class="empty">{L.loadFailed}</p>
   {:else if view.screen === 'home'}
@@ -175,14 +179,14 @@
         </div>
       {:else}
         {#each leagues as g (g.league)}
-          <p class="rn-league-head" data-rn-league={g.league}><span>{g.league}</span> <span class="num">{g.count}</span></p>
+          <p class="rn-league-head" data-rn-league={g.league}><span>{tn(g.league)}</span> <span class="num">{g.count}</span></p>
           <div class="rn-club-list">
             {#each g.clubs as c (c.clubId)}{@render clubRow(c, false)}{/each}
           </div>
         {/each}
       {/if}
     {:else}
-      <p class="empty">{L.empty({ season: teamSeasonName(season) })}</p>
+      <p class="empty">{L.empty({ season: teamSeasonLabel(season) })}</p>
     {/if}
   {:else}
     <button class="link-btn rn-back" data-rn-back onclick={goHome}>{L.backWeb}</button>
@@ -197,7 +201,7 @@
       </div>
       <div class="hof-sorts" role="group" aria-label={L.positionLabel}>
         <button class="hof-sort" aria-pressed={view.pos === null} data-rn-pos="all" onclick={() => (view.pos = null)}>{L.all}</button>
-        {#each POS_GROUPS as pos (pos)}<button class="hof-sort" aria-pressed={view.pos === pos} data-rn-pos={pos} onclick={() => (view.pos = pos)}>{POS[pos].label}</button>{/each}
+        {#each POS_GROUPS as pos (pos)}<button class="hof-sort" aria-pressed={view.pos === pos} data-rn-pos={pos} onclick={() => (view.pos = pos)}>{tn(POS[pos].label)}</button>{/each}
       </div>
     {:else}
       <h2 class="rn-recent-title">{L.recentAll}</h2>

@@ -10,6 +10,8 @@ import type { TeamPlayer } from '@offside/app-core/api/team';
 import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { cardFootNote, cardTier } from '@offside/app-core/format';
+import { intlLocale } from '@offside/app-core/i18n/core';
+import { tn } from '@offside/game/i18n/names';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({
@@ -343,7 +345,7 @@ export function PlayerCard({
           </Text>
           {!compact && country ? (
             <Text
-              accessibilityLabel={L.nationAria({ name: country.ko })}
+              accessibilityLabel={L.nationAria({ name: tn(country.ko) })}
               maxFontSizeMultiplier={1.1}
               style={{ fontSize: 18, lineHeight: 18, marginTop: 2, includeFontPadding: false }}
             >
@@ -378,7 +380,7 @@ export function PlayerCard({
             >
               LS{' '}
               <Text style={{ fontFamily: DISPLAY[700], fontSize: 11 }}>
-                {cell.legendScore.toLocaleString()}
+                {cell.legendScore.toLocaleString(intlLocale())}
               </Text>
             </Text>
           ) : null}
@@ -386,7 +388,7 @@ export function PlayerCard({
       </View>
       {compact && country ? (
         <Text
-          accessibilityLabel={L.nationAria({ name: country.ko })}
+          accessibilityLabel={L.nationAria({ name: tn(country.ko) })}
           maxFontSizeMultiplier={1.1}
           style={{
             position: 'absolute',

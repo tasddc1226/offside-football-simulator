@@ -7,6 +7,8 @@
   import ClubMark from './ClubMark.svelte';
   import Laurel from './Laurel.svelte';
   import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+  import { tn } from '@offside/game/i18n/names';
+  import { intlLocale } from '@offside/contracts/i18n';
 
   const { players, label, unit, showPosition = true }: {
     players: { entry: PublicHofEntry; rank: number; value: number | string; own: boolean }[];
@@ -24,11 +26,11 @@
     {@const h = player.entry}
     {@const name = h.name ?? anonName(h.pos, h.number)}
     {@const country = NATION_BY_CODE.get(h.nation || DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION)!}
-    {@const value = typeof player.value === 'number' ? player.value.toLocaleString('ko-KR') : player.value}
-    <button class="hof-podium-player medal {medals[player.rank - 1]}" data-hof-id={h.id} data-hof-podium-rank={player.rank} style:grid-column={places.indexOf(player.rank) + 1} aria-label={L.podiumPlayer({ rank: player.rank, name, country: country.ko, label, value, unit })} onclick={() => void openPublicLegend(h)}>
+    {@const value = typeof player.value === 'number' ? player.value.toLocaleString(intlLocale()) : player.value}
+    <button class="hof-podium-player medal {medals[player.rank - 1]}" data-hof-id={h.id} data-hof-podium-rank={player.rank} style:grid-column={places.indexOf(player.rank) + 1} aria-label={L.podiumPlayer({ rank: player.rank, name, country: tn(country.ko), label, value, unit })} onclick={() => void openPublicLegend(h)}>
       <span class="hof-podium-profile">
         <span class="hof-podium-medal" aria-hidden="true"><Laurel /><strong>{player.rank}</strong></span>
-        <span class="hof-podium-club"><ClubMark name={h.lastClub} id={h.lastClubId} size={24} /><span class="hof-flag" role="img" aria-label={country.ko} title={country.ko} data-hof-nation={country.code}>{flagOf(country.code)}</span></span>
+        <span class="hof-podium-club"><ClubMark name={h.lastClub} id={h.lastClubId} size={24} /><span class="hof-flag" role="img" aria-label={tn(country.ko)} title={tn(country.ko)} data-hof-nation={country.code}>{flagOf(country.code)}</span></span>
         <b class="hof-podium-name" title={name}>{name}</b>
         {#if showPosition || player.own}<span class="hof-podium-pos">{showPosition ? posLabel({ pos: h.pos, dpos: h.dpos }) : ''}{player.own ? `${showPosition ? ' · ' : ''}${L.mine}` : ''}</span>{/if}
       </span>

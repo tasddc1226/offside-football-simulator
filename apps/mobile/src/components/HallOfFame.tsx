@@ -9,7 +9,8 @@ import { View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
-import { POS_GROUPS, POS_LABEL } from '@offside/contracts/positions';
+import { POS_GROUPS } from '@offside/contracts/positions';
+import { POS } from '@offside/game/data';
 import {
   PRESEASON,
   SERVICE_SEASONS,
@@ -35,6 +36,7 @@ import { HofRow, type RowStats } from './HofRow';
 import { HofPodium } from './HofPodium';
 import { RecordsSelect, RecordsFilters, RecordsChips } from '../screens/hof/RecordsControls';
 import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+import { seasonLabel } from '@offside/app-core/seasonName';
 
 const TOP = 3;
 const PER_PAGE = 10;
@@ -104,7 +106,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   /** 고른 시즌이 아직 개막 전이면 그 시즌(목록 대신 개막 안내). */
   const upcoming = ss && notOpen(ss) ? ss : undefined;
   /** 문구 앞에 붙는 시즌·포지션 이름('시즌 1 수비수 '). 둘 다 전체면 빈 문자열. */
-  const scope = `${ss ? `${ss.name} ` : ''}${pos ? `${POS_LABEL[pos]} ` : ''}`;
+  const scope = `${ss ? `${seasonLabel(ss.id, ss.name)} ` : ''}${pos ? `${POS[pos].label} ` : ''}`;
   const [filtering, setFiltering] = useState(false);
   const [all, setAll] = useState<PublicHofEntry[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -229,7 +231,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           testID="hof-filters"
           open={filtering}
           onToggle={() => setFiltering(!filtering)}
-          label={`${pos ? POS_LABEL[pos] : L.allPositions} · ${by.label}`}
+          label={`${pos ? POS[pos].label : L.allPositions} · ${by.label}`}
           season={
             <RecordsSelect
               label={L.season}
@@ -240,7 +242,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                 { value: 'all', label: L.allSeasons },
                 ...[PRESEASON, ...SERVICE_SEASONS].map((s) => ({
                   value: s.id,
-                  label: `${s.name}${notOpen(s) ? L.notOpen : ''}`,
+                  label: `${seasonLabel(s.id, s.name)}${notOpen(s) ? L.notOpen : ''}`,
                 })),
               ]}
             />
@@ -255,7 +257,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                 onPick={(key) => pickPos(key === 'all' ? null : (key as CareerPos))}
                 items={[
                   { key: 'all', label: L.all },
-                  ...POS_GROUPS.map((key) => ({ key, label: POS_LABEL[key] })),
+                  ...POS_GROUPS.map((key) => ({ key, label: POS[key].label })),
                 ]}
               />
               <RecordsChips
@@ -287,7 +289,10 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
       {upcoming ? (
         <View testID="hof-upcoming" style={{ paddingVertical: 8, gap: 4 }}>
           <Txt bold style={{ fontSize: rem(0.875) }}>
-            {L.opens({ name: upcoming.name, when: kstMonthDayHour(upcoming.startsAt) })}
+            {L.opens({
+              name: seasonLabel(upcoming.id, upcoming.name),
+              when: kstMonthDayHour(upcoming.startsAt),
+            })}
           </Txt>
           <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
             {L.opensNote}
@@ -312,7 +317,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           ) : null}
           {!full && ss ? (
             <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 6 }}>
-              {L.homeSource({ season: ss.name })}
+              {L.homeSource({ season: seasonLabel(ss.id, ss.name) })}
             </Txt>
           ) : null}
           {podiumEntries.length > 0 ? (

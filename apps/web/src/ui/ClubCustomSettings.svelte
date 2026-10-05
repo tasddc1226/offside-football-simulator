@@ -10,6 +10,7 @@
   import { doneOnEnter } from './inputDone.js';
   import ClubBadge from './ClubBadge.svelte';
   import { clubText as T } from '@offside/app-core/i18n/ko/club';
+  import { tn } from '@offside/game/i18n/names';
 
   let clubsOpen = $state(false);
   let leagueId = $state(LEAGUES[LEAGUES.length - 1]!.id);
@@ -99,7 +100,7 @@
         <label for="club-league">{T.league}</label>
         <select id="club-league" bind:value={leagueId} onchange={() => (open = null)}>
           {#each LEAGUES as L (L.id)}
-            <option value={L.id}>{T.leagueOption({ name: L.name, n: clubsIn(L.id).length })}</option>
+            <option value={L.id}>{T.leagueOption({ name: tn(L.name), n: clubsIn(L.id).length })}</option>
           {/each}
         </select>
       </div>
@@ -111,9 +112,9 @@
               <ClubBadge club={c} size={34} />
               <input
                 type="text"
-                aria-label={T.nameLabel({ name: c.baseName ?? c.name })}
+                aria-label={T.nameLabel({ name: tn(c.baseName ?? c.name) })}
                 maxlength={CLUB_NAME_MAX}
-                placeholder={c.baseName}
+                placeholder={c.baseName ? tn(c.baseName) : c.baseName}
                 enterkeyhint="done"
                 use:doneOnEnter
                 value={clubCustom.map[c.id]?.name ?? ''}

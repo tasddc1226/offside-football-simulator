@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // T-10-076 은퇴 리포트의 영구결번 장면 — 결번 세리머니 · 명예의 벽 헌정 · 이름 공개 안내. 판정 기준(점수·시즌 수)은
   // 서버만 안다 — 웹은 서버가 준 결과만 그린다. LegendReport가 따로 불러온다(첫 화면 번들 밖).
   import type { RetiredNumberResult } from '@offside/contracts';
@@ -56,7 +57,7 @@
         {#if rnClub}
           <p class="rn-stats">{L.stats(rnClub)}</p>
         {/if}
-        <p class="rn-foot"><ClubMark name={rnSlot.club} id={rnSlot.clubId} size={18} /> {L.foot({ club: rnSlot.club, seq: rnSlot.seq })}</p>
+        <p class="rn-foot"><ClubMark name={rnSlot.club} id={rnSlot.clubId} size={18} /> {L.foot({ club: tn(rnSlot.club), seq: rnSlot.seq })}</p>
       </div>
     {:else if rnSlot?.kind === 'taken'}
       <div class="rn-ceremony rn-honour">
@@ -66,7 +67,7 @@
     {:else if rnSlot?.kind === 'anonymous'}
       <div class="rn-ceremony rn-anon">
         <div class="eyebrow film-kicker">Retired Number</div>
-        <p class="rn-line">{L.anonA}<br /><b>{L.anonSlot({ club: rnSlot.club, number: rnSlot.number })}</b> {L.anonTail}</p>
+        <p class="rn-line">{L.anonA}<br /><b>{L.anonSlot({ club: tn(rnSlot.club), number: rnSlot.number })}</b> {L.anonTail}</p>
         <p class="rn-stats">{L.anonNote}</p>
         {#if v.own}
           <button class="btn btn-primary" data-act="rn-public" onclick={() => v.own && setLegendPublic(v.own, true)}>{L.publish}</button>

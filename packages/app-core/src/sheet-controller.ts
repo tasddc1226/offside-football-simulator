@@ -4,6 +4,7 @@
 // 고치기만 한다. 띄운 뷰는 showSheet이 돌려준 것(state.view를 다시 읽은 반응형 프록시)을 고쳐야 화면이 바뀐다.
 import { clamp, ri } from '@offside/game/rng';
 import { clubsIn } from '@offside/game/engine';
+import { tn } from '@offside/game/i18n/names';
 import type { BlockResult, MatchGame } from '@offside/game/match';
 import type { GameState } from '@offside/game/types';
 import type { MgKind } from '@offside/game/minigame';
@@ -82,7 +83,7 @@ export function matchRows(s: GameState, b: BlockResult): TickerRow[] {
     key: i,
     rd: m.rd,
     res: m.res,
-    opp: opps.length ? opps[m.rd % opps.length]!.name : L.opponent,
+    opp: opps.length ? tn(opps[m.rd % opps.length]!.name) : L.opponent,
     score: fakeScore(m),
     mins: m.mins,
     g: m.g,

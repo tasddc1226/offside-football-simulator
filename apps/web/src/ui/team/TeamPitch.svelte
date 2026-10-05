@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   import { DETAIL_LABEL, presetLayout, slotFit, type FormationId, type TeamLayout } from '@offside/contracts/owner-team';
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import PlayerCard from './PlayerCard.svelte';
@@ -29,12 +30,12 @@
       {#if onpick}
         <button class="tm-slot" class:chosen={selected === i} class:dragging={dragging === i} data-slot={i}
           style:left="{point.x}%" style:top="{point.y}%" aria-pressed={selected === i}
-          aria-label="{DETAIL_LABEL[point.slot]} · {c.name}{country ? ` · ${country.ko}` : ''} · {ratingLabel}" onclick={() => onpick?.(i)}
+          aria-label="{tn(DETAIL_LABEL[point.slot])} · {c.name}{country ? ` · ${tn(country.ko)}` : ''} · {ratingLabel}" onclick={() => onpick?.(i)}
           onpointerdown={(e) => onstart?.(e, i)} onkeydown={(e) => onkey?.(e, i)}>
           <PlayerCard player={c.player} nation={c.nation} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
         </button>
       {:else}
-        <div class="tm-slot" data-slot={i} style:left="{point.x}%" style:top="{point.y}%" role="group" aria-label="{DETAIL_LABEL[point.slot]} · {c.name}{country ? ` · ${country.ko}` : ''} · {ratingLabel}">
+        <div class="tm-slot" data-slot={i} style:left="{point.x}%" style:top="{point.y}%" role="group" aria-label="{tn(DETAIL_LABEL[point.slot])} · {c.name}{country ? ` · ${tn(country.ko)}` : ''} · {ratingLabel}">
           <PlayerCard player={c.player} nation={c.nation} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
         </div>
       {/if}

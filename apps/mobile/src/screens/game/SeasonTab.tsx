@@ -50,6 +50,8 @@ import { scrollTo, scrollY, viewH } from '../../ui/scroll';
 import { Txt } from '../../ui/Txt';
 import { LeagueTable, SubTitle, type RankPlay } from './LeagueTable';
 import { PhaseReport } from './PhaseReport';
+import { tn } from '@offside/game/i18n/names';
+import { appFormatText } from '@offside/app-core/i18n/ko/appFormat';
 
 function meterTone(v: number, badAt: number, warnAt: number): 'bad' | 'warn' | 'good' {
   return v < badAt ? 'bad' : v < warnAt ? 'warn' : 'good';
@@ -528,7 +530,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
                 {L.investTitle}
               </Txt>
             </View>
-            <Pill>{L.funds({ v: `${fmtMoney(s.money)}원` })}</Pill>
+            <Pill>{L.funds({ v: appFormatText.won({ v: fmtMoney(s.money) }) })}</Pill>
           </View>
           {wait === 'invest' ? <TourHint>{L.investHint}</TourHint> : null}
           <ChoiceGrid
@@ -604,9 +606,11 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
               <SubTitle>{L.compsTitle}</SubTitle>
               {comps.map((cp) => (
                 <StoryRow key={cp.name}>
-                  <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>{cp.name}</Txt>
+                  <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>
+                    {tn(cp.name)}
+                  </Txt>
                   <RowMuted>
-                    {`${cp.stage || (cp.type === 'super' ? L.compSuper : L.compStart)}${cp.alive && cp.stage ? ` · ${L.compAlive}` : ''}`}
+                    {`${cp.stage ? tn(cp.stage) : cp.type === 'super' ? L.compSuper : L.compStart}${cp.alive && cp.stage ? ` · ${L.compAlive}` : ''}`}
                   </RowMuted>
                   <RowMuted>{L.compLine({ apps: cp.apps, g: cp.g })}</RowMuted>
                 </StoryRow>
@@ -626,7 +630,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
             {activeStories.map(([k, v]) => (
               <StoryRow key={k}>
                 <Txt style={{ flex: 1, fontSize: rem(0.875), fontWeight: '700' }}>
-                  {STORIES[k]!.name}
+                  {tn(STORIES[k]!.name)}
                 </Txt>
                 <View style={{ flexDirection: 'row', gap: 4 }}>
                   {Array.from({ length: STORIES[k]!.total }).map((_, i) => (
@@ -676,7 +680,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
                       letterSpacing: rem(0.75) * 0.03,
                     }}
                   >
-                    {l.t}
+                    {tn(l.t)}
                   </Txt>
                   <Txt
                     style={{

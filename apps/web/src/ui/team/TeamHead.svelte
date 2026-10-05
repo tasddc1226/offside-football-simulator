@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { seasonLabel } from '../seasonName.js';
   // 팀 소개는 작게, 편성 그라운드는 바로 아래에. 보조 동작은 팀 메뉴에 모은다.
   import { tick } from 'svelte';
   import { MANAGER_NAME_MAX, MANAGER_NAME_MIN, TEAM_NAME_MAX, TEAM_NAME_MIN, YOUTH_OVR } from '@offside/contracts/owner-team';
@@ -70,7 +71,7 @@
     {#if seasons.length > 1}
       <select class="tm-season" aria-label={L.seasonSelect} value={season} onchange={(e) => { closeMenu(); onseason(Number(e.currentTarget.value)); }} data-team-season>
         {#each seasons as o (o.id)}
-          <option value={o.id}>{o.name}{o.id === current ? L.seasonNow : ''}</option>
+          <option value={o.id}>{seasonLabel(o.id, o.name)}{o.id === current ? L.seasonNow : ''}</option>
         {/each}
       </select>
     {:else}<span class="tm-season-name">{seasonName}</span>{/if}

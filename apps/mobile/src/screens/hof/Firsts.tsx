@@ -4,17 +4,15 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import type { FirstsResponse, ServerFirst } from '@offside/contracts';
-import {
-  displaySeasonAt,
-  openTeamSeasons,
-  teamSeasonName,
-} from '@offside/contracts/service-seasons';
+import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-seasons';
 import { getFirsts } from '@offside/app-core/api/client';
 import { kstParts } from '@offside/app-core/boardText';
 import { firstsText as L } from '@offside/app-core/i18n/ko/firsts';
 import {
   achievedList,
   byDay,
+  firstLabel,
+  firstUnit,
   firstsTabs,
   holderLabel,
   type FirstsTab,
@@ -31,6 +29,8 @@ import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
 import { Seg, SortChips, TabOpt } from '../board/parts';
+import { intlLocale } from '@offside/app-core/i18n/core';
+import { teamSeasonLabel } from '@offside/app-core/seasonName';
 
 type Holder = NonNullable<ServerFirst['holder']>;
 
@@ -198,7 +198,7 @@ export default function Firsts() {
             {seasons.map((id) => (
               <TabOpt
                 key={id}
-                title={teamSeasonName(id)}
+                title={teamSeasonLabel(id)}
                 selected={season === id}
                 testID={`firsts-season-${id}`}
                 onPress={() => setPicked(id)}
@@ -241,7 +241,7 @@ export default function Firsts() {
                     key={x.id}
                     testID={`first-${x.id}`}
                     first={i === 0}
-                    label={x.label}
+                    label={firstLabel(x.label)}
                     topRight={<TimeText>{kstParts(x.achievedAt).time}</TimeText>}
                     who={who(x.holder)}
                   />
@@ -259,11 +259,11 @@ export default function Firsts() {
                 testID={`record-${r.id}`}
                 first={i === 0}
                 locked={!r.holder}
-                label={r.label}
+                label={firstLabel(r.label)}
                 topRight={
                   r.holder && r.value !== null && r.achievedAt ? (
                     <Txt num style={{ fontSize: rem(0.9375), fontWeight: '800' }}>
-                      {`${r.value.toLocaleString('ko-KR')}${r.unit}`}
+                      {`${r.value.toLocaleString(intlLocale())}${firstUnit(r.unit)}`}
                     </Txt>
                   ) : undefined
                 }
@@ -290,7 +290,7 @@ export default function Firsts() {
                 testID={`first-${x.id}`}
                 first={i === 0}
                 locked={!x.holder}
-                label={x.label}
+                label={firstLabel(x.label)}
                 topRight={
                   x.holder && x.achievedAt ? (
                     <TimeText>{kstParts(x.achievedAt).day}</TimeText>

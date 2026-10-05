@@ -90,7 +90,12 @@ export function kstMonthDayHour(iso: string): string {
   const p = Object.fromEntries(
     KST_PARTS.formatToParts(new Date(iso)).map((x) => [x.type, Number(x.value)]),
   );
-  return `${p.month}월 ${p.day}일 ${p.hour}시${p.minute ? ` ${p.minute}분` : ''}`;
+  return boardLabelText.monthDayHour({
+    month: p.month ?? 0,
+    day: p.day ?? 0,
+    hour: p.hour ?? 0,
+    minute: p.minute ?? 0,
+  });
 }
 
 /** 목록 한 줄의 날짜 · 조회 · 좋아요 · 댓글(0이면 좋아요·댓글은 뺀다). */

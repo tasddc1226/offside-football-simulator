@@ -7,6 +7,7 @@ import { inboxState, inbox, loadInbox, openInbox, openInboxTarget } from '../../
 import { Btn, Card, Press, Screen, Txt } from '../../ui';
 import { useColors } from '../../theme/useColors';
 import { inboxText as L } from '@offside/app-core/i18n/ko/inbox';
+import { intlLocale } from '@offside/app-core/i18n/core';
 
 const labels = (): Record<AppNotification['kind'], string> => ({
   news: L.kindNews,
@@ -17,7 +18,7 @@ const labels = (): Record<AppNotification['kind'], string> => ({
   social: L.kindSocial,
 });
 function stamp(at: string) {
-  return new Date(at).toLocaleString('ko-KR', {
+  return new Date(at).toLocaleString(intlLocale(), {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',

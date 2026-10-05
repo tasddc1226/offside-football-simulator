@@ -1,5 +1,5 @@
 // 서버 최초 업적(웹 firsts/Firsts.svelte · 앱 screens/hof/Firsts.tsx · app-core firsts.ts).
-// 기록 이름(label)·단위는 서버가 보내는 문구라 옮기지 않는다.
+// 기록 이름(label)·단위는 서버가 보내는 문구라 옮기지 않는다(label은 tn(), 단위는 firstsTab.units).
 import { ns } from '../core';
 
 const ko = {

@@ -2,6 +2,8 @@ import type { Translation } from '../core';
 import type { BoardLabelMsgs } from '../ko/boardLabel';
 import { plural } from './_util';
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 export const boardLabel: Translation<BoardLabelMsgs> = {
   noticeLabel: 'Announcements',
   releaseLabel: 'Release notes',
@@ -13,4 +15,6 @@ export const boardLabel: Translation<BoardLabelMsgs> = {
   likes: (p) => `${plural(p.n, 'like')}`,
   commentCount: (p) => `${plural(p.n, 'comment')}`,
   edited: 'edited',
+  monthDayHour: (p) =>
+    `${MONTHS[p.month - 1]} ${p.day}, ${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')} KST`,
 };

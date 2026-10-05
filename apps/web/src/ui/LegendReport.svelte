@@ -22,6 +22,7 @@
   import { rnOf } from './retiredNumber.svelte.js';
   import { EVENT_ICON as ICON, yearsOf } from '@offside/app-core/legendReport';
   import { legendText as L } from '@offside/app-core/i18n/ko/legend';
+  import { tn } from '@offside/game/i18n/names';
 
   // end: 리포트 맨 아래(다음 행동 버튼 등).
   const { v, end }: { v: LegendView; end?: Snippet } = $props();
@@ -93,7 +94,7 @@
 {/snippet}
 {#snippet roll(list: HonourLine[], from: number)}
   {#each list as h, j (h.name)}
-    <div class="roll-line" style="--i:{from + j}"><b>{h.name}{h.years.length > 1 ? ` ×${h.years.length}` : ''}</b><span>{yearsOf(h.years)}</span></div>
+    <div class="roll-line" style="--i:{from + j}"><b>{tn(h.name)}{h.years.length > 1 ? ` ×${h.years.length}` : ''}</b><span>{yearsOf(h.years)}</span></div>
   {/each}
 {/snippet}
 
@@ -101,21 +102,21 @@
   <section class="film-open" class:credit-in={playing} data-credit="player">
     <div class="eyebrow film-kicker">Full Time{v.number != null ? ` · No.${v.number}` : ''}</div>
     <h1>{v.name}</h1>
-    <div class="film-sub">{POS_LABEL[v.pos]}{span ? ` · ${span}` : ''} · {L.retiredAge({ age: v.age })}</div>
+    <div class="film-sub">{tn(POS_LABEL[v.pos])}{span ? ` · ${span}` : ''} · {L.retiredAge({ age: v.age })}</div>
     <div class="film-score">
       <b><CountUp value={v.score} animate={playing} ms={1800} /></b><span>Legend Score</span>
     </div>
     {#if worth > 0}
       <div class="film-worth" class:credit-late={playing} data-legend-value>
         <span>{L.worth}</span><b>{fmtValue(worth)}</b>
-        {#if peakV}<small>{L.peakValue({ value: fmtValue(peakV.value), season: seasonLabelOf(peakV.row), club: peakV.row.club })}</small>{/if}
+        {#if peakV}<small>{L.peakValue({ value: fmtValue(peakV.value), season: seasonLabelOf(peakV.row), club: tn(peakV.row.club) })}</small>{/if}
       </div>
     {/if}
     <div class="film-pills" class:credit-late={playing}>
-      <span class="pill pill-gold">{legendTitle(v.score, v.dpos)}</span>
-      {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{main.name}’</span>{/if}
+      <span class="pill pill-gold">{tn(legendTitle(v.score, v.dpos))}</span>
+      {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{tn(main.name)}’</span>{/if}
       <span class="pill">{L.peakOvr({ peak: v.peak })}</span>
-      {#if rnGranted}<span class="pill pill-rn" data-legend-rn-pill title={L.rnPillTitle({ club: rnGranted.club, number: rnGranted.number })}>{L.rnPill({ club: rnGranted.club, number: rnGranted.number })}</span>{/if}
+      {#if rnGranted}<span class="pill pill-rn" data-legend-rn-pill title={L.rnPillTitle({ club: tn(rnGranted.club), number: rnGranted.number })}>{L.rnPill({ club: tn(rnGranted.club), number: rnGranted.number })}</span>{/if}
     </div>
     <!-- 통산 기록은 레전드 점수 바로 아래(첫 화면에서 한눈에). -->
     <section class="film-stats" data-credit="highlights" aria-label={L.statsLabel} use:reveal>
@@ -144,8 +145,8 @@
       {#each chapters as c, i (i)}
         <li class="chapter" data-credit="journey-{i}" use:reveal>
           <div class="ch-years">{c.from}{c.to !== c.from ? ` — ${c.to}` : ''}</div>
-          <h3 class="ch-club"><ClubMark name={c.club} id={c.clubId} size={24} /> {c.club}</h3>
-          <div class="ch-meta">{L.chapterMeta({ leagues: c.leagues.join(' → '), ageFrom: c.ageFrom, ageTo: c.ageTo, seasons: c.seasons })}</div>
+          <h3 class="ch-club"><ClubMark name={c.club} id={c.clubId} size={24} /> {tn(c.club)}</h3>
+          <div class="ch-meta">{L.chapterMeta({ leagues: c.leagues.map(tn).join(' → '), ageFrom: c.ageFrom, ageTo: c.ageTo, seasons: c.seasons })}</div>
           <div class="ch-stats">
             <span><b>{c.apps}</b>{L.statApps}</span>
             {#if back}<span><b>{c.cs}</b>{L.statCleanSheets}</span>{/if}
@@ -220,7 +221,7 @@
   <section class="film-finale" data-credit="finale" use:reveal>
     <ClubMark name={v.lastClub} id={v.lastClubId} size={56} />
     <div class="eyebrow film-kicker">The Final Whistle</div>
-    <p>{L.finaleLine1({ age: v.age, club: v.lastClub })}<br />{L.finaleLine2}</p>
+    <p>{L.finaleLine1({ age: v.age, club: tn(v.lastClub) })}<br />{L.finaleLine2}</p>
     <h2>{L.thanks({ name: v.name })}</h2>
     <div class="film-end">Full Time</div>
   </section>

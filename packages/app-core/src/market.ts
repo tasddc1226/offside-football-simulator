@@ -6,9 +6,11 @@ import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
 import { POS_GROUPS, detailPosOf } from '@offside/contracts/positions';
 import { marketText as L } from './i18n/ko/market.js';
+import { intlLocale } from './i18n/core.js';
+import { appFormatText } from './i18n/ko/appFormat.js';
 
 /** 구단 자금 표기(0이면 '0원' — fmtValue는 0을 '-'로 쓴다). */
-export const fundsText = (man: number) => (man > 0 ? fmtValue(man) : '0원');
+export const fundsText = (man: number) => (man > 0 ? fmtValue(man) : appFormatText.zeroWon);
 
 /** 탭 셋 + '자금 만들기'(방출) 화면. 방출은 탭이 아니라 자금 옆 버튼으로 연다. */
 export type MarketView = 'market' | 'sell' | 'trades' | 'release';
@@ -167,4 +169,4 @@ export const MARKET_TOAST = {
 
 /** 시장 줄 아래 한 줄(레전드 점수 · 이적 횟수). */
 export const cardMeta = (c: Pick<MarketCard, 'legendScore' | 'transfers'>) =>
-  L.cardMeta({ score: c.legendScore.toLocaleString(), transfers: c.transfers });
+  L.cardMeta({ score: c.legendScore.toLocaleString(intlLocale()), transfers: c.transfers });

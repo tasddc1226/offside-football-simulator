@@ -10,7 +10,9 @@ import type { ApiResult } from './api/client.js';
 import type { SheetButton, SheetView } from './sheets.js';
 import type { AppState } from './state.js';
 import { num } from './teamText.js';
+import { tn } from '@offside/game/i18n/names';
 import { sheetAchieveText as L } from './i18n/ko/sheetAchieve.js';
+import { achGradeName } from './teamOwner.js';
 
 /** 이 기기에 본 기록이 없을 때(기능이 나오기 전부터 쌓은 구단주) 이보다 많이 새로 보이면 알리지 않고 기준만 잡는다. */
 export const FIRST_RUN_MAX = 3;
@@ -83,14 +85,16 @@ export function achieveView(n: AchNudge): Extract<SheetView, { kind: 'achieve' }
   return {
     kind: 'achieve',
     eyebrow: n.from ? 'Grade up' : 'Achievement',
-    title: n.from ? L.gradeUp({ grade: n.grade.name }) : L.achieved({ n: n.fresh.length }),
-    grade: { id: n.grade.id, name: n.grade.name },
-    from: n.from ? { id: n.from.id, name: n.from.name } : null,
-    items: shown.map((f) => ({ label: f.label, gained: f.gained })),
+    title: n.from ? L.gradeUp({ grade: achGradeName(n.grade) }) : L.achieved({ n: n.fresh.length }),
+    grade: { id: n.grade.id, name: achGradeName(n.grade) },
+    from: n.from ? { id: n.from.id, name: achGradeName(n.from) } : null,
+    items: shown.map((f) => ({ label: tn(f.label), gained: f.gained })),
     more: n.fresh.length - shown.length,
     gained: n.fresh.reduce((s, f) => s + f.gained, 0),
     score: n.score,
-    next: n.next ? L.nextGrade({ name: n.next.name, pts: num(n.next.min - n.score) }) : null,
+    next: n.next
+      ? L.nextGrade({ name: achGradeName(n.next), pts: num(n.next.min - n.score) })
+      : null,
   };
 }
 

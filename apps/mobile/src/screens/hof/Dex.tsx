@@ -19,6 +19,7 @@ import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
 import { AutoGrid, TabOpt } from '../board/parts';
+import { tn } from '@offside/game/i18n/names';
 
 /** 이벤트 한 칸 — 눌러서 선택지별 확률을 펼친다(웹 <details>). */
 function DexItem({
@@ -86,7 +87,7 @@ function DexItem({
           }}
         >
           {e.pos ? <Pill>{e.pos}</Pill> : null}
-          {e.story ? <Pill>{`${e.story.name} ${e.story.stage}/${e.story.total}`}</Pill> : null}
+          {e.story ? <Pill>{`${tn(e.story.name)} ${e.story.stage}/${e.story.total}`}</Pill> : null}
         </View>
       </Press>
       {open ? (

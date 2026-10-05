@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { seasonLabel } from '../seasonName.js';
   import TeamLogo from './TeamLogo.svelte';
   // T-11-028 구단주 랭킹 — 기록실 탭. 구단주의 시즌 업적 점수 순(같은 점수면 먼저 닿은 구단주가 앞선다). 구단주는 공개
   // 닉네임과 그 시즌 팀 이름으로만 보이고, 팀이 있으면 줄을 눌러 팀 프로필을 연다. 서버가 5분마다 새로 센다.
@@ -88,7 +89,7 @@
     <label class="hof-season-picker">
       <span class="hof-filter-label">{L.seasonLabel}</span>
       <select aria-label={L.rankSeasonAria} data-ach-season-select value={String(selectedSeason)} onchange={(e) => ((season = Number(e.currentTarget.value)), (page = 1))}>
-        {#each seasons as s (s.id)}<option value={String(s.id)}>{s.name}</option>{/each}
+        {#each seasons as s (s.id)}<option value={String(s.id)}>{seasonLabel(s.id, s.name)}</option>{/each}
       </select>
     </label>
     {#if data && !loading && !failed}<span class="achievement-total muted">{L.ownersBefore}<b class="num">{n(data.total)}</b>{L.ownersAfter}</span>{/if}

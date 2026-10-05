@@ -13,6 +13,7 @@ import { Btn } from '../../ui/Btn';
 import { ClubBadge } from '../../ui/ClubBadge';
 import { Txt } from '../../ui/Txt';
 import { gameLeagueText as L } from '@offside/app-core/i18n/ko/gameLeague';
+import { tn } from '@offside/game/i18n/names';
 
 type Row = ReturnType<typeof leagueTable>[number];
 type Shown = { gap: true; key: string } | { gap: false; key: string; rank: number; r: Row };
@@ -107,7 +108,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
       <View
         style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}
       >
-        <SubTitle>{L.title({ league: leagueOf(seasonLeagueId(s)).name })}</SubTitle>
+        <SubTitle>{L.title({ league: tn(leagueOf(seasonLeagueId(s)).name) })}</SubTitle>
         {s.season.played && (folded || full) ? (
           <Btn
             sm
@@ -166,7 +167,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
                   accessible
                   accessibilityLabel={L.rowLabel({
                     rank: x.rank,
-                    name: x.r.name,
+                    name: tn(x.r.name),
                     played: x.r.p,
                     w: x.r.w,
                     d: x.r.d,
@@ -229,7 +230,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
                         fontWeight: x.r.me ? '700' : '400',
                       }}
                     >
-                      {x.r.name}
+                      {tn(x.r.name)}
                     </Txt>
                   </View>
                   <Cell bold={x.r.me}>{x.r.p}</Cell>

@@ -3,6 +3,8 @@
 // 여기는 리그 → 공항과 경로 위 위치처럼 가벼운 것만 둔다. 지도 틀·육지 점 지도는 육지 데이터(land.ts)가 커서
 // flight-map.ts로 떼어 해외 이적에 사인할 때만 불러온다.
 
+import { appFlightText as L } from './i18n/ko/appFlight.js';
+
 export interface Hub {
   /** 공항 코드(ICN·LHR …). 나라가 같으면 같은 공항이라 비행이 없다. */
   code: string;
@@ -13,15 +15,105 @@ export interface Hub {
 }
 
 const HUBS = {
-  KR: { code: 'ICN', city: '인천', country: '대한민국', lat: 37.46, lon: 126.44 },
-  JP: { code: 'HND', city: '도쿄', country: '일본', lat: 35.55, lon: 139.78 },
-  US: { code: 'JFK', city: '뉴욕', country: '미국', lat: 40.64, lon: -73.78 },
-  NL: { code: 'AMS', city: '암스테르담', country: '네덜란드', lat: 52.31, lon: 4.76 },
-  FR: { code: 'CDG', city: '파리', country: '프랑스', lat: 49.01, lon: 2.55 },
-  DE: { code: 'FRA', city: '프랑크푸르트', country: '독일', lat: 50.04, lon: 8.56 },
-  IT: { code: 'MXP', city: '밀라노', country: '이탈리아', lat: 45.63, lon: 8.72 },
-  ES: { code: 'MAD', city: '마드리드', country: '스페인', lat: 40.47, lon: -3.56 },
-  GB: { code: 'LHR', city: '런던', country: '잉글랜드', lat: 51.47, lon: -0.45 },
+  KR: {
+    code: 'ICN',
+    get city() {
+      return L.cityKR;
+    },
+    get country() {
+      return L.countryKR;
+    },
+    lat: 37.46,
+    lon: 126.44,
+  },
+  JP: {
+    code: 'HND',
+    get city() {
+      return L.cityJP;
+    },
+    get country() {
+      return L.countryJP;
+    },
+    lat: 35.55,
+    lon: 139.78,
+  },
+  US: {
+    code: 'JFK',
+    get city() {
+      return L.cityUS;
+    },
+    get country() {
+      return L.countryUS;
+    },
+    lat: 40.64,
+    lon: -73.78,
+  },
+  NL: {
+    code: 'AMS',
+    get city() {
+      return L.cityNL;
+    },
+    get country() {
+      return L.countryNL;
+    },
+    lat: 52.31,
+    lon: 4.76,
+  },
+  FR: {
+    code: 'CDG',
+    get city() {
+      return L.cityFR;
+    },
+    get country() {
+      return L.countryFR;
+    },
+    lat: 49.01,
+    lon: 2.55,
+  },
+  DE: {
+    code: 'FRA',
+    get city() {
+      return L.cityDE;
+    },
+    get country() {
+      return L.countryDE;
+    },
+    lat: 50.04,
+    lon: 8.56,
+  },
+  IT: {
+    code: 'MXP',
+    get city() {
+      return L.cityIT;
+    },
+    get country() {
+      return L.countryIT;
+    },
+    lat: 45.63,
+    lon: 8.72,
+  },
+  ES: {
+    code: 'MAD',
+    get city() {
+      return L.cityES;
+    },
+    get country() {
+      return L.countryES;
+    },
+    lat: 40.47,
+    lon: -3.56,
+  },
+  GB: {
+    code: 'LHR',
+    get city() {
+      return L.cityGB;
+    },
+    get country() {
+      return L.countryGB;
+    },
+    lat: 51.47,
+    lon: -0.45,
+  },
 } satisfies Record<string, Hub>;
 
 /** 리그 → 나라(contracts LEAGUE_BASE의 id). 고교·대학·K리그는 모두 한국. 모르는 리그도 한국으로 본다. */

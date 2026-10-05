@@ -12,7 +12,7 @@ import {
   type PickCandidate,
   type PickSort,
 } from '@offside/app-core/teamOwner';
-import { POS_LABEL } from '@offside/game/pos-label';
+import { POS } from '@offside/game/data';
 import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -169,7 +169,7 @@ export function TeamPicker({
                         <Txt>{nameOf(cd.p)}</Txt>
                         <Txt tone="muted" v="xs">
                           {`${L.pickLine({
-                            pos: cd.p.dpos ? DETAIL_LABEL[cd.p.dpos] : POS_LABEL[cd.p.pos],
+                            pos: cd.p.dpos ? DETAIL_LABEL[cd.p.dpos] : POS[cd.p.pos].label,
                             peak: cd.p.peak,
                             fit: pct(cd.fit),
                           })}${cd.at >= 0 && slotCodes[cd.at] && current !== cd.p.careerId ? L.pickSwap({ slot: slotCodes[cd.at]! }) : ''}`}

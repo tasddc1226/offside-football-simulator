@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // ui.ts attrCard() 포트 (292~314줄)
   import { ovr } from '@offside/game/attributes';
   import { attrData } from '@offside/app-core/format';
@@ -12,13 +13,13 @@
 
 <section class="card">
   <div class="eyebrow">Attributes</div>
-  <div class="attr-head"><h2>{L.title}</h2><span class="pill">{d.roleName} · OVR {ovr(s)}</span></div>
+  <div class="attr-head"><h2>{L.title}</h2><span class="pill">{tn(d.roleName ?? '')} · OVR {ovr(s)}</span></div>
   <Radar {s} />
   <p class="radar-legend muted"><i class="lg-now"></i>{L.legendNow} <i class="lg-prev"></i>{L.legendPrev}</p>
   <div class="role-line">
     <span class="muted">{L.roleOvr}</span>
     {#each d.roles as r (r.role)}
-      <span class={r.on ? 'on' : ''} title={r.title}>{r.role} <b class="num">{r.ovr}</b></span>
+      <span class={r.on ? 'on' : ''} title={r.title}>{tn(r.role)} <b class="num">{r.ovr}</b></span>
     {/each}
   </div>
   <div class="stat-list">
@@ -33,5 +34,5 @@
       </div>
     {/each}
   </div>
-  <p class="muted stat-note"><b>{L.noteBold}</b>{L.noteRest({ role: d.roleName })}</p>
+  <p class="muted stat-note"><b>{L.noteBold}</b>{L.noteRest({ role: tn(d.roleName ?? '') })}</p>
 </section>

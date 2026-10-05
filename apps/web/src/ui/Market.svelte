@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { intlLocale } from '@offside/contracts/i18n';
+  import { tn } from '@offside/game/i18n/names';
   // T-11-080 이적시장 — 지금 시즌 은퇴 선수 카드를 구단 자금으로 사고판다. 구단주 화면의 '이적시장'으로 연다.
   // T-11-080d 시안(이적시장 모바일 시안)대로: 초록 머리에 구단 자금과 '자금 만들기', 탭 셋(선수 사기 · 팔기 · 내 거래),
   // 카드 모양 목록, 카드 상세 영입 시트, 카드 고르기 + 슬라이더 판매, 방출 화면. 각 화면은 처음 열 때만 불러온다.
@@ -259,7 +261,7 @@
                 {@render mini(p, !!lock)}
                 <span class="mk-info">
                   <strong class="mk-name">{nameOfPlayer(p)}</strong>
-                  <small class:mk-lock={!!lock}>{lock ?? L.releaseInfo({ score: (p.legendScore ?? 0).toLocaleString() })}</small>
+                  <small class:mk-lock={!!lock}>{lock ?? L.releaseInfo({ score: (p.legendScore ?? 0).toLocaleString(intlLocale()) })}</small>
                 </span>
                 {#if !lock && me}<b class="mk-rel-value">{fundsText(releaseValue(p, me.rules.releaseRate))}</b>{/if}
               </label>
@@ -328,7 +330,7 @@
         {/if}
         <div class="mk-chips" role="group" aria-label={L.position}>
           {#each MARKET_POS_FILTERS as p (p ?? 'all')}
-            <button class="mk-chip" aria-pressed={pos === p} data-market-pos={p ?? 'all'} onclick={() => (pos = p)}>{p ? POS_LABEL[p] : L.posAll}</button>
+            <button class="mk-chip" aria-pressed={pos === p} data-market-pos={p ?? 'all'} onclick={() => (pos = p)}>{p ? tn(POS_LABEL[p]) : L.posAll}</button>
           {/each}
         </div>
         <div class="mk-sort">
@@ -437,7 +439,7 @@
               <li data-trade={t.kind}>
                 <span class="mk-badge mk-badge-{t.kind}">{TRADE_LABEL[t.kind]}</span>
                 <span class="mk-info">
-                  <span>{marketName(t.card, local)} {POS_LABEL[t.card.pos]} {t.card.peak}</span>
+                  <span>{marketName(t.card, local)} {tn(POS_LABEL[t.card.pos])} {t.card.peak}</span>
                   <small>{agoKo(Date.now() - Date.parse(t.at))}{t.kind === 'sold' ? L.feeTaken : ''}</small>
                 </span>
                 <b class:mk-plus={t.kind !== 'bought'}>{tradeAmount(t)}</b>
@@ -464,9 +466,9 @@
         <PlayerCard player={asPlayer(buying.card)} name={marketName(buying.card, local)} rating={buying.card.peak} role={detailPosOf(buying.card)} nation={buying.card.nation} />
       </div>
       <dl class="mk-detail-stats">
-        <div><dt>{L.detailLegend}</dt><dd>{buying.card.legendScore.toLocaleString()}</dd></div>
+        <div><dt>{L.detailLegend}</dt><dd>{buying.card.legendScore.toLocaleString(intlLocale())}</dd></div>
         <div><dt>{L.detailTransfers}</dt><dd>{L.transferTimes({ n: buying.card.transfers })}</dd></div>
-        <div><dt>{L.position}</dt><dd>{POS_LABEL[buying.card.pos]}</dd></div>
+        <div><dt>{L.position}</dt><dd>{tn(POS_LABEL[buying.card.pos])}</dd></div>
       </dl>
     </div>
     <div class="mk-confirm">

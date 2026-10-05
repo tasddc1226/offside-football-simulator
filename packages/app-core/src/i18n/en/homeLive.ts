@@ -18,4 +18,12 @@ export const homeLive: Translation<HomeLiveMsgs> = {
   whatCleanSheets: (p) =>
     `${p.club} season: ${plural(p.cs, 'clean sheet')} in ${plural(p.apps, 'match', 'matches')}`,
   whatGoals: (p) => `${p.club} season: ${plural(p.goals, 'goal')}, ${plural(p.assists, 'assist')}`,
+  attrsNone: 'No attribute record',
+  attrsEstimated: 'Estimated attributes',
+  baseValue: (p) => `Base value ${p.value}`,
+  agoNow: 'just now',
+  agoMin: (p) => `${p.n} min ago`,
+  agoHour: (p) => `${p.n} ${p.n === 1 ? 'hour' : 'hours'} ago`,
+  agoYesterday: 'yesterday',
+  agoDay: (p) => `${p.n} days ago`,
 };

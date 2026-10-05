@@ -9,6 +9,7 @@ import { DISPLAY, rem } from '../theme/type';
 import { ClubBadge } from '../ui/ClubBadge';
 import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
+import { tn } from '@offside/game/i18n/names';
 
 export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
   const s = useSnapshot(v);
@@ -31,7 +32,7 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
             key={i}
             testID={`opt-${i}`}
             accessibilityLabel={L.offerA11y({
-              name: o.name,
+              name: tn(o.name),
               lg: o.lg,
               salary: o.salary,
               sub: o.sub,
@@ -55,7 +56,7 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 {o.clubId ? <ClubBadge club={{ id: o.clubId, name: o.name }} size={30} /> : null}
                 <View style={{ flex: 1 }}>
-                  <Txt style={{ fontSize: rem(1), fontWeight: '700' }}>{o.name}</Txt>
+                  <Txt style={{ fontSize: rem(1), fontWeight: '700' }}>{tn(o.name)}</Txt>
                   <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
                     {o.lg}
                   </Txt>

@@ -2,6 +2,7 @@
   // T-10-099 국적 고르기: 한글·초성으로 찾는 콤보박스. 연맹별로 묶어 가나다순, 대한민국은 맨 위.
   import { flagOf, nationOf, type Nation } from '@offside/game/nation';
   import { nationGroups } from '@offside/app-core/nationSearch';
+  import { tn } from '@offside/game/i18n/names';
   import { createText as L } from '@offside/app-core/i18n/ko/create';
   import { motionOK } from './motion.js';
   import { trackViewport } from './viewport.js';
@@ -82,7 +83,7 @@
     aria-activedescendant={open && cur ? optId(cur) : undefined}
     data-value={value}
     placeholder={L.nationSearchPlaceholder}
-    value={query ?? selected.ko}
+    value={query ?? tn(selected.ko)}
     onfocus={show}
     onclick={show}
     oninput={(e) => {
@@ -114,7 +115,7 @@
               onclick={() => pick(n)}
             >
               <span aria-hidden="true">{flagOf(n.code)}</span>
-              {n.ko}
+              {tn(n.ko)}
             </div>
           {/each}
         </div>

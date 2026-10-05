@@ -16,6 +16,7 @@ import { Card } from '../ui/Card';
 import { ClubMark } from '../ui/ClubBadge';
 import { Txt } from '../ui/Txt';
 import { ValueChart } from './ValueChart';
+import { tn } from '@offside/game/i18n/names';
 
 /** 표 칸 너비(웹 table은 nowrap이라 좁은 화면에선 옆으로 밀어 본다). */
 const COL = { season: 100, club: 184, n: 46, rating: 52 };
@@ -82,7 +83,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
               <Txt v="sm" bold>
                 {fmtValue(peakV.value)}
               </Txt>{' '}
-              · {seasonLabelOf(peakV.row)} {peakV.row.club}
+              · {seasonLabelOf(peakV.row)} {tn(peakV.row.club)}
             </Txt>
           </>
         ) : null}
@@ -183,13 +184,13 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
                     <Td w={COL.club}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                         <ClubMark name={r.club} id={r.clubId} />
-                        <Txt style={[cell, { flexShrink: 1 }]}>{r.club}</Txt>
+                        <Txt style={[cell, { flexShrink: 1 }]}>{tn(r.club)}</Txt>
                       </View>
                       <Txt
                         tone="muted"
                         style={{ fontSize: rem(0.6875), lineHeight: rem(0.6875) * 1.5 }}
                       >
-                        {r.league}
+                        {tn(r.league)}
                         {sv ? ' · ' : ''}
                         {sv ? (
                           <Txt style={{ fontSize: rem(0.6875), fontWeight: '600' }}>
@@ -205,7 +206,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
                               color: c.accentText,
                             }}
                           >
-                            {r.honors.join(', ')}
+                            {r.honors.map(tn).join(', ')}
                           </Txt>
                         ) : null}
                       </Txt>

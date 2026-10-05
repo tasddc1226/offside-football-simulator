@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // T-10-117 선수 고르기 시트 — 고른 자리에 넣을 은퇴 선수. 정렬 셋 · 유스 선수(자리 비우기).
   import { DETAIL_LABEL, YOUTH_NAME, YOUTH_OVR, type DetailPos } from '@offside/contracts/owner-team';
   import type { TeamPlayer } from '@offside/app-core/api/team';
@@ -32,11 +33,11 @@
 {#if picking !== null}
   {@const slot = slotCodes[picking]!}
   <button class="tm-scrim" aria-label={L.close} onclick={onclose}></button>
-  <div class="tm-sheet" role="dialog" aria-modal="true" aria-label={L.pickAria({ slot: DETAIL_LABEL[slot] })}>
+  <div class="tm-sheet" role="dialog" aria-modal="true" aria-label={L.pickAria({ slot: tn(DETAIL_LABEL[slot]) })}>
     <div class="tm-sheet-head">
       <div>
         <div class="eyebrow">{slot}</div>
-        <h2>{DETAIL_LABEL[slot]}</h2>
+        <h2>{tn(DETAIL_LABEL[slot])}</h2>
       </div>
       <button class="icon-btn" onclick={onclose}>{L.close}</button>
     </div>
@@ -55,7 +56,7 @@
           <b class="tm-pick-ovr">{c.rating}</b>
           <span class="tm-opp-info">
             <span>{nameOf(c.p)}</span>
-            <small class="muted">{L.pickLine({ pos: c.p.dpos ? DETAIL_LABEL[c.p.dpos] : POS_LABEL[c.p.pos], peak: c.p.peak, fit: pct(c.fit) })}{c.at >= 0 && c.at !== picking ? L.pickSwap({ slot: slotCodes[c.at]! }) : ''}</small>
+            <small class="muted">{L.pickLine({ pos: c.p.dpos ? tn(DETAIL_LABEL[c.p.dpos]) : tn(POS_LABEL[c.p.pos]), peak: c.p.peak, fit: pct(c.fit) })}{c.at >= 0 && c.at !== picking ? L.pickSwap({ slot: slotCodes[c.at]! }) : ''}</small>
             {#if attrLine(c.p)}<small class="muted tm-attrs">{attrLine(c.p)}</small>{/if}
           </span>
         </button>

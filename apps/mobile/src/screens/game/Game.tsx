@@ -7,6 +7,7 @@ import { useSnapshot } from 'valtio';
 import { posLabel } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
 import { leagueOf, roleOf, fmtMoney, focusOf, labelOf } from '@offside/game/engine';
+import { tn } from '@offside/game/i18n/names';
 import { mainTitle } from '@offside/game/titles';
 import { marketValue } from '@offside/game/season';
 import type { GameState } from '@offside/game/types';
@@ -254,7 +255,7 @@ export default function Game() {
                         color: c.onPitch,
                       }}
                     >
-                      {` ${s.club.name}`}
+                      {` ${tn(s.club.name)}`}
                     </Txt>
                   </View>
                   <Txt
@@ -264,7 +265,7 @@ export default function Game() {
                       color: c.onPitch,
                     }}
                   >
-                    {`${L.name}${contract ? ` · ${contract}` : ''}`}
+                    {`${tn(L.name)}${contract ? ` · ${contract}` : ''}`}
                   </Txt>
                 </View>
               </View>
@@ -298,7 +299,9 @@ export default function Game() {
               </View>
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              <HeroPill {...(role === '주전' ? { fill: 'accent' as const } : {})}>{role}</HeroPill>
+              <HeroPill {...(role === '주전' ? { fill: 'accent' as const } : {})}>
+                {tn(role)}
+              </HeroPill>
               {s.injury ? <HeroPill danger>{T.injury({ n: s.injury })}</HeroPill> : null}
               <HeroPill>{focusName}</HeroPill>
             </View>

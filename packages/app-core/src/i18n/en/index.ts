@@ -3,6 +3,9 @@
 import { en as gameEngine } from '@offside/game/i18n/en/index';
 import { account } from './account';
 import { ad } from './ad';
+import { appFlight } from './appFlight';
+import { appFormat } from './appFormat';
+import { appScout } from './appScout';
 import { backup } from './backup';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
@@ -67,11 +70,15 @@ import { teamLive } from './teamLive';
 import { teamMatch } from './teamMatch';
 import { title } from './title';
 import { titleTag } from './titleTag';
+import { webGame } from './webGame';
 
 export const en = {
   ...gameEngine,
   account,
   ad,
+  appFlight,
+  appFormat,
+  appScout,
   backup,
   board,
   boardLabel,
@@ -136,4 +143,5 @@ export const en = {
   teamMatch,
   title,
   titleTag,
+  webGame,
 };

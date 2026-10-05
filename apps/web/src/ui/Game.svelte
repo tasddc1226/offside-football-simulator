@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // ui.ts renderGame() 포트 (207~222줄)
   import { fly } from 'svelte/transition';
   import { Tween } from 'svelte/motion';
@@ -94,13 +95,13 @@
     <div class="chalk"></div>
     <div>
       <div class="shirt">No.{s.number} · {posLabel(s)}</div>
-      {#if title}<button class="card-title r{title.rarity}" data-act="titles" aria-label={T.titleOpen({ name: title.name })} onclick={openTitles}>{title.name}</button>{/if}
+      {#if title}<button class="card-title r{title.rarity}" data-act="titles" aria-label={T.titleOpen({ name: tn(title.name) })} onclick={openTitles}>{tn(title.name)}</button>{/if}
       <h1>{s.name}</h1>
-      <div class="meta">{T.age({ n: s.age })} · <ClubBadge club={s.club} size={16} /> {s.club.name}<br />{L.name}{contract ? ` · ${contract}` : ''}</div>
+      <div class="meta">{T.age({ n: s.age })} · <ClubBadge club={s.club} size={16} /> {tn(s.club.name)}<br />{tn(L.name)}{contract ? ` · ${contract}` : ''}</div>
     </div>
     <div class="ovr"><div class="n num">{Math.round(ovrTween.current)}</div><div class="l">OVR</div></div>
     <div class="foot">
-      <span class="pill role-{role}">{role}</span>
+      <span class="pill role-{role}">{tn(role)}</span>
       {#if s.injury}<span class="pill" style="background:var(--bad);border-color:var(--bad)">{T.injury({ n: s.injury })}</span>{/if}
       <span class="pill">{focusName}</span>
     </div>

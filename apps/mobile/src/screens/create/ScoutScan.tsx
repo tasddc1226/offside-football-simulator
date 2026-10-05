@@ -14,6 +14,7 @@ import { alpha } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Txt, useShadow } from '../../ui';
+import { intlLocale } from '@offside/app-core/i18n/core';
 
 const HOLD = 350;
 // 공격 방향은 오른쪽. 포지션별로 후보가 잡히는 가로 구역(%).
@@ -356,7 +357,7 @@ export function ScoutScan({
             <Txt tone="muted" style={{ fontSize: rem(0.85) }}>
               {L.scannedBefore}{' '}
               <Txt num style={{ fontSize: rem(1.05) }}>
-                {count.toLocaleString('ko-KR')}
+                {count.toLocaleString(intlLocale())}
               </Txt>
               {L.scannedAfter}
             </Txt>

@@ -15,8 +15,14 @@ import {
   SUBS,
 } from '@offside/game/attributes';
 import type { CareerRecord, GameState } from '@offside/game/types';
+import { homeLiveText as L } from './i18n/ko/homeLive.js';
 
-export { anonName } from '@offside/game/pos-label';
+import { anonName as anonNameIn } from '@offside/game/pos-label';
+import { getLocale } from './i18n/core.js';
+
+/** 이름을 공개하지 않은 선수 표기(지금 언어로). */
+export const anonName = (pos: Parameters<typeof anonNameIn>[0], number: number | null): string =>
+  anonNameIn(pos, number, getLocale());
 import { fmtValue } from '@offside/contracts/market-value';
 export { fmtValue };
 
@@ -31,9 +37,9 @@ export function cardFootNote(p: {
   attrsEstimated?: boolean | undefined;
   cardValue?: number | null | undefined;
 }): string | null {
-  if (!p.attrs) return '능력치 기록 없음';
-  if (p.attrsEstimated) return '추정 능력치';
-  return p.cardValue ? `기준가 ${fmtValue(p.cardValue)}` : null;
+  if (!p.attrs) return L.attrsNone;
+  if (p.attrsEstimated) return L.attrsEstimated;
+  return p.cardValue ? L.baseValue({ value: fmtValue(p.cardValue) }) : null;
 }
 
 export function seasonLabelOf(r: CareerRecord): string {
@@ -202,8 +208,8 @@ export const withEulReul = (word: string): string => `${word}${jongOf(word) > 0 
 /** 경과 시간(ms)을 '방금 · N분 전 · N시간 전 · 어제 · N일 전'으로(홈 라이브·전광판). */
 export function agoKo(ms: number): string {
   const s = Math.max(0, ms / 1000);
-  if (s < 60) return '방금';
-  if (s < 3600) return `${Math.floor(s / 60)}분 전`;
-  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
-  return s < 172800 ? '어제' : `${Math.floor(s / 86400)}일 전`;
+  if (s < 60) return L.agoNow;
+  if (s < 3600) return L.agoMin({ n: Math.floor(s / 60) });
+  if (s < 86400) return L.agoHour({ n: Math.floor(s / 3600) });
+  return s < 172800 ? L.agoYesterday : L.agoDay({ n: Math.floor(s / 86400) });
 }
