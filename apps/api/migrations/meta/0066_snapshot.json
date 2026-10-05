@@ -1,6 +1,6 @@
 {
-  "id": "812400e3-15c6-4abc-9ee9-eece4efab628",
-  "prevId": "71d3ebb0-0adc-4546-9756-b5b3ffa7bed8",
+  "id": "e5f91da1-90d6-4d84-8e57-88b776695498",
+  "prevId": "b89a05a2-8299-4a77-9b68-82a4bef78cf7",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -2520,6 +2520,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "team_kept": {
+          "name": "team_kept",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "reached_at": {

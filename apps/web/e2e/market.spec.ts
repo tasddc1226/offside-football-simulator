@@ -55,7 +55,6 @@ const player = (careerId: string, raised: boolean, over: Record<string, unknown>
   legendScore: 300,
   cardValue: 80_000,
   raised,
-  ...(raised ? { retireValue: 250_000 } : {}),
   listing: null,
   ...over,
 });
@@ -311,7 +310,7 @@ test('팔기 — 이번 시즌 선수를 슬라이더로 값을 정해 내놓고
   });
   await page.route(`${API}/v1/cards/release`, (r) => {
     released = r.request().postDataJSON();
-    return r.fulfill(ok({ released: 1, amount: 250_000, balance: 250_000 }));
+    return r.fulfill(ok({ released: 1, amount: 80_000, balance: 80_000 }));
   });
   await page.route(
     (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
@@ -341,12 +340,13 @@ test('팔기 — 이번 시즌 선수를 슬라이더로 값을 정해 내놓고
     '영입한 선수는 방출할 수 없어요',
   );
   await page.locator(`[data-mine="${RAISED}"] input[type="checkbox"]`).check();
-  await expect(page.locator('.mk-dock')).toContainText('+25억');
+  // T-11-104 방출 지급은 은퇴 가치(25억)가 아니라 카드 기준가(8억)다.
+  await expect(page.locator('.mk-dock')).toContainText('+8억');
   await page.locator('[data-act="release"]').click();
   await expect(page.getByRole('dialog', { name: '선수 방출' })).toContainText(
     '다시 데려올 수 없어요',
   );
-  await expect(page.getByRole('dialog', { name: '선수 방출' })).toContainText('25억');
+  await expect(page.getByRole('dialog', { name: '선수 방출' })).toContainText('8억');
   await expectNoA11yViolations(page);
   await page.locator('[data-act="release-confirm"]').click();
   await expect(page.locator('#toast')).toHaveText('1명을 방출했어요.');

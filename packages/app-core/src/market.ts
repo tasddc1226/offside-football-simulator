@@ -127,11 +127,11 @@ export const marketEmptyText = (season: number | null, filtered: boolean) =>
       ? '이 포지션에는 아직 나온 선수가 없어요.'
       : '아직 시장에 나온 선수가 없어요. 이번 시즌에 은퇴한 선수가 나오면 여기에 올라와요.';
 
-/** 한 선수를 방출하면 받을 자금(서버와 같은 releasePayout). */
-export const releaseValue = (p: Pick<TeamPlayer, 'retireValue'>, rate: number) =>
-  releasePayout(p.retireValue ?? 0, rate);
+/** 한 선수를 방출하면 받을 자금(서버와 같은 releasePayout — 카드 기준가 × 지급률). */
+export const releaseValue = (p: Pick<TeamPlayer, 'cardValue'>, rate: number) =>
+  releasePayout(p.cardValue, rate);
 /** 여러 선수를 방출하면 받을 자금. */
-export const releaseAmount = (players: readonly Pick<TeamPlayer, 'retireValue'>[], rate: number) =>
+export const releaseAmount = (players: readonly Pick<TeamPlayer, 'cardValue'>[], rate: number) =>
   players.reduce((s, p) => s + releaseValue(p, rate), 0);
 
 /** 쓰기가 끝나면 띄우는 알림(웹·앱 같은 문구). */

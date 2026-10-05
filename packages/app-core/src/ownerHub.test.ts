@@ -47,7 +47,7 @@ describe('ownerSummary', () => {
       ownerSummary([
         { stats: { score: 100 }, rn: 7, value: 300_000 },
         { stats: { score: 50 }, rn: null, value: 51_000 },
-        { stats: { score: 25 }, value: 0 },
+        { stats: { score: 25 } },
       ]),
     ).toEqual({ players: 3, score: 175, retired: 1, value: 351_000 });
   });

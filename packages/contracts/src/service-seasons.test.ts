@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { HofSeasonQuerySchema, SeasonPickQuerySchema } from './careers.js';
 import {
+  msUntilNextSeasonStart,
   activeSeason,
   displaySeasonAt,
   firstUploadSeasonAt,
@@ -112,5 +113,12 @@ describe('T-11-045 시즌별 은퇴 나이', () => {
     expect(firstUploadSeasonAt('2026-10-20T00:00:00.000Z', true)).toBe(1);
     // 기기 시계를 당겨 개막 전에 올려도 시즌 1에 먼저 들어가지 않는다.
     expect(firstUploadSeasonAt('2026-10-05T14:59:59.999Z', true)).toBe(0);
+  });
+});
+
+describe('T-11-107 msUntilNextSeasonStart', () => {
+  it('다음 개막까지 남은 밀리초, 열린 뒤엔 다음 시즌이 없으면 null', () => {
+    expect(msUntilNextSeasonStart('2026-10-05T14:59:00.000Z')).toBe(60_000);
+    expect(msUntilNextSeasonStart('2026-10-05T15:00:00.000Z')).toBeNull();
   });
 });

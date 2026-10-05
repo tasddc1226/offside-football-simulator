@@ -360,7 +360,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
     }
 
     const id = newId('fmt');
-    const result = simulateMatch(id, lineups.home, lineups.away);
+    const result = simulateMatch(id, lineups.home, lineups.away, season);
     const detail = matchDetailOf(mine, theirs, lineups, result);
     await commitNotifiedEvent(
       db,

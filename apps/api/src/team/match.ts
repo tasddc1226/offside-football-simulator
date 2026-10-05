@@ -49,17 +49,23 @@ export function matchDetailOf(
   result: SimResult,
   delta?: { home: number; away: number },
 ): MatchDetail {
-  const side = (t: OwnerTeamRow, lineup: Lineups['home'], change: number | undefined) => ({
+  const side = (
+    t: OwnerTeamRow,
+    lineup: Lineups['home'],
+    change: number | undefined,
+    synergy: string[] | undefined,
+  ) => ({
     teamId: t.id,
     name: t.name,
     owner: t.manager,
     formation: t.formation as FormationId,
     ovr: lineupOvr(lineup),
     ...(change === undefined ? {} : { ratingChange: change }),
+    ...(synergy === undefined ? {} : { synergy }),
   });
   return {
-    home: side(home, lineups.home, delta?.home),
-    away: side(away, lineups.away, delta?.away),
+    home: side(home, lineups.home, delta?.home, result.synergy?.home),
+    away: side(away, lineups.away, delta?.away, result.synergy?.away),
     events: result.events.map((e) => ({
       minute: e.minute,
       side: e.side,

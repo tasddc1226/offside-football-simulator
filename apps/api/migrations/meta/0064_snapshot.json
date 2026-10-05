@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e163ce40-1391-4ad7-ae42-39f773bbfd27",
+  "id": "49aa7f30-2982-4cbe-a006-7248792b1d68",
   "prevId": "127504d0-2993-4bc8-835b-66100d8c7b26",
   "tables": {
     "app_auth_tickets": {
@@ -2515,6 +2515,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "team_kept": {
+          "name": "team_kept",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "reached_at": {
           "name": "reached_at",
           "type": "text",
@@ -3601,77 +3608,6 @@
         }
       },
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "push_preferences": {
-      "name": "push_preferences",
-      "columns": {
-        "profile_id": {
-          "name": "profile_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "notice": {
-          "name": "notice",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        },
-        "release": {
-          "name": "release",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        },
-        "team": {
-          "name": "team",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        },
-        "market": {
-          "name": "market",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        },
-        "social": {
-          "name": "social",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "push_preferences_profile_id_profiles_id_fk": {
-          "name": "push_preferences_profile_id_profiles_id_fk",
-          "tableFrom": "push_preferences",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

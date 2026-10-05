@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "71d3ebb0-0adc-4546-9756-b5b3ffa7bed8",
-  "prevId": "e163ce40-1391-4ad7-ae42-39f773bbfd27",
+  "id": "b89a05a2-8299-4a77-9b68-82a4bef78cf7",
+  "prevId": "49aa7f30-2982-4cbe-a006-7248792b1d68",
   "tables": {
     "app_auth_tickets": {
       "name": "app_auth_tickets",
@@ -2520,6 +2520,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "team_kept": {
+          "name": "team_kept",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "reached_at": {

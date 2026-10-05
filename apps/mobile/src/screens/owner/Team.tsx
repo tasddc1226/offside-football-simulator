@@ -15,7 +15,6 @@ import {
   TEAM_NAME_MIN,
   YOUTH_NAME,
   YOUTH_OVR,
-  lineStrength,
   slotRating,
   teamOvr,
   type FormationId,
@@ -36,11 +35,18 @@ import {
 } from '@offside/app-core/api/team';
 import { type TeamView } from '@offside/app-core/state';
 import { recordText, num } from '@offside/app-core/teamText';
-import { autoFillSlots, matchHintOf } from '@offside/app-core/teamOwner';
+import {
+  autoFillSlots,
+  draftLines,
+  matchHintOf,
+  slotsSynergy,
+  synergyFocus,
+} from '@offside/app-core/teamOwner';
 import { anonName } from '@offside/game/pos-label';
 import { localCareerNames } from '@offside/game/season';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines } from '../../components/TeamPitch';
+import { TeamSynergy } from '../../components/TeamSynergy';
 import { toast } from '../../game/host';
 import { go } from '../../game/nav';
 import { achNudge } from '../../game/achNudge';
@@ -92,6 +98,7 @@ export default function Team() {
   const [perDay, setPerDay] = useState(0);
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   const [season, setSeason] = useState(0);
+  const [synFocus, setSynFocus] = useState<string | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
   const [seasons, setSeasons] = useState<OwnerTeamResponse['seasons']>([]);
   const [lastManager, setLastManager] = useState<string | null>(null);
@@ -174,8 +181,11 @@ export default function Team() {
     return p ? slotRating(slot, p) : null;
   });
   const ovr = teamOvr(ratings);
+  // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
+  const synergy = slotsSynergy(positions, slots, byId);
+  const syn = synergyFocus(synergy, synFocus);
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
-  const lines = lineStrength(slotCodes, ratings);
+  const lines = draftLines(slotCodes, ratings, synergy, season);
   const filled = slots.filter((s) => s !== null).length;
   const dirty =
     !team ||
@@ -594,6 +604,12 @@ export default function Team() {
                 />
               ) : null}
               <TeamLines lines={lines} />
+              <TeamSynergy
+                synergy={synergy}
+                season={season}
+                focus={synFocus}
+                setFocus={setSynFocus}
+              />
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {editable ? (
                   <Btn
@@ -646,6 +662,8 @@ export default function Team() {
               select={setSelected}
               dragging={setDragging}
               jumpRef={jump}
+              synLinks={syn.links}
+              synFocus={syn.members}
               change={(nextSlots, nextLayout) => {
                 setSlots(nextSlots);
                 setLayout(nextLayout);

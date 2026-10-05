@@ -206,7 +206,7 @@ export const BALANCE_SPEC = {
   marketReleaseRate: {
     group: 'market',
     label: '방출 지급률',
-    desc: '선수를 방출하면 은퇴 가치에 이 값을 곱한 만큼 구단 자금이 생긴다',
+    desc: '선수를 방출하면 카드 기준가에 이 값을 곱한 만큼 구단 자금이 생긴다',
     def: 1,
     min: 0,
     max: 2,

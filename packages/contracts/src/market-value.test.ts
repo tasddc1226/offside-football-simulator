@@ -4,6 +4,7 @@ import {
   cardValue,
   fmtValue,
   peakValue,
+  releasePayout,
   retireValue,
   rowLeague,
   salaryFor,
@@ -81,5 +82,13 @@ describe('fmtValue (T-10-100 몸값)', () => {
     expect(fmtValue(123_456_789)).toBe('1조 2,346억');
     expect(fmtValue(99_999_000)).toBe('1조');
     expect(fmtValue(100_000_000)).toBe('1조');
+  });
+});
+
+describe('releasePayout (T-11-104 방출 지급)', () => {
+  it('카드 기준가 × 지급률을 천만 단위로 반올림하고, 기준가가 없으면 1억으로 본다', () => {
+    expect(releasePayout(1_234_567, 1)).toBe(1_235_000);
+    expect(releasePayout(1_000_000, 0.5)).toBe(500_000);
+    expect(releasePayout(null, 1)).toBe(CARD_VALUE_FLOOR);
   });
 });
