@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, cachedGet, clearApiCache } from './client.js';
+import { setLocale } from '@offside/contracts/i18n';
+import { apiFetch, cachedGet, clearApiCache, withLang } from './client.js';
 
 // T-10-015 공개 조회 메모: 같은 path는 TTL 동안 한 번만, 동시 요청은 하나로, 실패는 담지 않고, 쓰기 성공 시 비운다.
 describe('cachedGet', () => {
@@ -47,5 +48,16 @@ describe('cachedGet', () => {
     await apiFetch('/v1/boards/posts/x/comments', { method: 'POST', body: '{}' });
     await cachedGet('/v1/boards/notice/posts', 60_000);
     expect(calls.filter((c) => c.startsWith('GET'))).toHaveLength(2);
+  });
+});
+
+// T-11-106 영어일 때만 서버에 lang=en을 붙인다 — 한국어 요청 주소(엣지 캐시 키)는 그대로다.
+describe('withLang', () => {
+  afterEach(() => setLocale('ko'));
+  it('한국어는 그대로, 영어는 lang=en을 붙인다', () => {
+    expect(withLang('/v1/firsts?season=1')).toBe('/v1/firsts?season=1');
+    setLocale('en', {});
+    expect(withLang('/v1/firsts?season=1')).toBe('/v1/firsts?season=1&lang=en');
+    expect(withLang('/v1/firsts')).toBe('/v1/firsts?lang=en');
   });
 });
