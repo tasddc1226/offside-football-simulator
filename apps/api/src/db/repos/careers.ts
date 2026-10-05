@@ -6,6 +6,7 @@ import type {
   LegendSnapshot,
   PublicHofEntry,
   RetirementSummary,
+  SeasonGrowth,
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
 import { cardValue, retireValue } from '@offside/contracts/market-value';
@@ -97,7 +98,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
   } = input;
   const signals = signalsJson !== undefined ? { signalsJson } : {};
   // T-11-048 시즌 성장 기록. 없으면 건드리지 않아, 성장 기록 없이 다시 올라온 옛 시즌이 이미 쌓인 기록을 지우지 않는다.
-  const growth = season.growth ? { growthJson: JSON.stringify(season.growth) } : {};
+  // T-11-097 세부 능력치(s0·s1)는 한 줄의 3분의 2를 차지해 저장하지 않는다 — 조작 판정과 성장 분석은 OVR·능력치 6개로 본다.
+  const growth = season.growth ? { growthJson: JSON.stringify(slimGrowth(season.growth)) } : {};
   const name = publicName !== undefined ? { publicName } : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
   const detail = {
@@ -616,6 +618,19 @@ export async function storedSeasonsOf(
     out.set(r.careerId, list);
   }
   return out;
+}
+
+/** T-11-097 저장하는 성장 기록 — 세부 능력치(s0·s1)를 뺀다. */
+const slimGrowth = ({ s0: _s0, s1: _s1, ...kept }: SeasonGrowth) => kept;
+
+/** T-11-097 한 시즌의 저장된 OVR(성장 기록 조작 판정의 '지난 시즌'). 없으면 null. 업로드마다 부르므로 storedSeasonsOf처럼
+ * 커리어 시즌 전부를 읽지 않고 기본 키 한 줄만 읽는다. */
+export async function storedSeasonOvr(db: Db, careerId: string, year: number) {
+  const [row] = await db
+    .select({ ovr: careerSeasons.ovr })
+    .from(careerSeasons)
+    .where(and(eq(careerSeasons.careerId, careerId), eq(careerSeasons.year, year)));
+  return row?.ovr ?? null;
 }
 
 /** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). */
