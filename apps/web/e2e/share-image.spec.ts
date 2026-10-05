@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { API, ok } from './helpers.js';
+import { API, atPreseason, ok } from './helpers.js';
+
+// 시즌 1 개막 뒤에도 프리시즌 기준으로 돈다(시각을 직접 옮기는 테스트는 그 값이 이긴다).
+test.beforeEach(({ page }) => atPreseason(page));
 
 // T-10-079 은퇴한 내 선수의 SNS 공유용 한 장 이미지 — 만들면 미리 보기가 뜨고 PNG로 저장된다(공유 시트가 없는 브라우저).
 const ID = '0d000000-0000-4000-8000-00000000000d';

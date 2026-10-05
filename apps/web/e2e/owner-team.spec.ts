@@ -2,7 +2,10 @@ import { test, expect, type Page } from '@playwright/test';
 import type { TeamLayout } from '@offside/contracts/owner-team';
 import type { TeamLogo } from '@offside/contracts/team-logo';
 import AxeBuilder from '@axe-core/playwright';
-import { API, fail, ok } from './helpers.js';
+import { API, atPreseason, fail, ok } from './helpers.js';
+
+// 시즌 1 개막 뒤에도 프리시즌 기준으로 돈다(시각을 직접 옮기는 테스트는 그 값이 이긴다).
+test.beforeEach(({ page }) => atPreseason(page));
 
 // T-10-092 구단주 팀. 서버는 page.route로 흉내 낸다(경기 결과는 서버가 정한다 — 웹은 받은 결과를 그린다).
 
@@ -496,6 +499,7 @@ test('시즌 업적 — 등급·점수·랭킹 순위, 분류별 단계 묶음�
 test('업적 랭킹 — 내 업적 요약에서 기록실 업적 랭킹으로 가고, 팀이 있는 줄은 팀 프로필을 연다', async ({
   page,
 }) => {
+  await page.clock.setSystemTime(new Date('2026-10-06T02:00:00+09:00')); // 시즌 1 데이터다
   await stubOwner(page, true);
   await page.route(ownerTeamUrl, (route) =>
     route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS })),

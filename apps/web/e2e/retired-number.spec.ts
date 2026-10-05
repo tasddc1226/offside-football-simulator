@@ -1,6 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { API, ok, openMarket, startCareer } from './helpers.js';
+import { API, atPreseason, ok, openMarket, startCareer } from './helpers.js';
+
+// 시즌 1 개막 뒤에도 프리시즌 기준으로 돈다(시각을 직접 옮기는 테스트는 그 값이 이긴다).
+test.beforeEach(({ page }) => atPreseason(page));
 
 // T-10-076 영구결번: 은퇴 업로드 응답의 심사 결과로 은퇴 화면에 결번 세리머니를 띄운다. 판정 기준(점수·시즌 수)은
 // 서버만 알고 화면에 내보내지 않는다.
