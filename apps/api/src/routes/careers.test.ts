@@ -322,14 +322,12 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     const row = async () =>
       (await ctx.db.select().from(careerSeasons).where(eq(careerSeasons.careerId, CAREER_ID)))[0]!;
 
-    // T-11-097 세부 능력치(s0·s1)는 저장하지 않는다.
-    const stored = { ...growth, s0: undefined, s1: undefined };
     expect((await send({ growth })).status).toBe(200);
-    expect(JSON.parse((await row()).growthJson!)).toEqual(stored);
+    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
 
     // 옛 시즌 재전송(성장 기록 없음)은 이미 쌓인 기록을 그대로 둔다.
     expect((await send({})).status).toBe(200);
-    expect(JSON.parse((await row()).growthJson!)).toEqual(stored);
+    expect(JSON.parse((await row()).growthJson!)).toEqual(growth);
 
     // 새 성장 기록이 오면 덮어쓴다.
     expect((await send({ growth: { ...growth, o0: 53 } })).status).toBe(200);
