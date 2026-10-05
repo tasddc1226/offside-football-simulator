@@ -17,13 +17,22 @@ import {
   readNotification,
   readAllNotifications,
 } from '../db/repos/notifications.js';
+import { queryWithoutLang, reqLang } from '../lang.js';
+import { localizeNotification } from '../push/text.js';
 import { NO_STORE, nowIso, notFoundError, ok, readBody } from './shared.js';
 
 export function registerNotificationRoutes(app: Hono<AppEnv>) {
   app.get('/v1/notifications', requireProfile, async (c) => {
-    const query = parseWithAppError(NotificationListQuerySchema, c.req.query());
+    const query = parseWithAppError(NotificationListQuerySchema, queryWithoutLang(c));
     const data = await listNotifications(c.env.DB, getSessionOrThrow(c).profileId, nowIso(), query);
-    return ok(c, NotificationListSchema, data, 200, NO_STORE);
+    const lang = reqLang(c);
+    return ok(
+      c,
+      NotificationListSchema,
+      { ...data, items: data.items.map((n) => localizeNotification(n, lang)) },
+      200,
+      NO_STORE,
+    );
   });
   app.post('/v1/notifications/read-all', requireProfile, async (c) => {
     const { through } = readBody(c, NotificationReadAllBodySchema);
@@ -40,7 +49,7 @@ export function registerNotificationRoutes(app: Hono<AppEnv>) {
     const id = parseWithAppError(NotificationIdSchema, c.req.param('id'));
     const data = await ownNotification(c.env.DB, getSessionOrThrow(c).profileId, id, nowIso());
     if (!data) throw notFoundError('이 알림을 찾을 수 없어요.', 'NOTIFICATION_MISSING');
-    return ok(c, NotificationSchema, data, 200, NO_STORE);
+    return ok(c, NotificationSchema, localizeNotification(data, reqLang(c)), 200, NO_STORE);
   });
   app.post('/v1/notifications/:id/read', requireProfile, async (c) => {
     const id = parseWithAppError(NotificationIdSchema, c.req.param('id'));

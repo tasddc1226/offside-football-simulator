@@ -2,6 +2,8 @@
 import type { TeamLines, TeamRecord, TeamSlot, TeamSeasonOption } from '@offside/contracts';
 import { openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
 import type { OwnerTeamRow } from '../db/repos/ownerTeams.js';
+import type { Lang } from '../lang.js';
+import { anonText } from './anon.js';
 import { lineupLines, type LineupSlot } from './sim.js';
 
 export const recordOf = (t: Pick<OwnerTeamRow, 'wins' | 'draws' | 'losses'>): TeamRecord => ({
@@ -14,11 +16,12 @@ export const recordOf = (t: Pick<OwnerTeamRow, 'wins' | 'draws' | 'losses'>): Te
 export const slotsOf = (
   lineup: readonly LineupSlot[],
   players?: ReadonlyMap<string, { nation?: string | null }>,
+  lang: Lang = 'ko',
 ): TeamSlot[] =>
   lineup.map((s) => ({
     slot: s.slot,
     careerId: s.careerId,
-    name: s.publicName ?? s.ref.anon,
+    name: s.publicName ?? anonText(s.ref.anon, lang),
     pos: s.pos,
     nation: s.careerId ? (players?.get(s.careerId)?.nation ?? null) : null,
     rating: s.rating,
@@ -36,5 +39,5 @@ export function linesOf(lineup: readonly LineupSlot[]): TeamLines {
 }
 
 /** 고를 수 있는 팀 시즌 목록(프리시즌 + 개막한 시즌). */
-export const seasonOptions = (now: string): TeamSeasonOption[] =>
-  openTeamSeasons(now).map((id) => ({ id, name: teamSeasonName(id) }));
+export const seasonOptions = (now: string, lang: Lang = 'ko'): TeamSeasonOption[] =>
+  openTeamSeasons(now).map((id) => ({ id, name: teamSeasonName(id, lang) }));

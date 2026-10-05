@@ -11,6 +11,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { careers, ownerTeams, teamLikes, teamMatches } from '../db/schema.js';
 import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
+import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
 
 const PutRes = successEnvelope(PutOwnerTeamResponseSchema);
@@ -188,6 +189,68 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     expect(final.team.badges[0]).toMatchObject({ id: 'final-1', desc: '프리시즌 최종 1위' });
     expect((await rank('?season=0')).data.total).toBe(2);
     expect((await rank()).data).toMatchObject({ season: 1, total: 0 });
+  });
+
+  it('T-11-106: lang=en이면 시즌 이름·익명 선수·배지 문구가 영어, lang이 없거나 모르는 값이면 한국어', async () => {
+    const a = await team(3, 88, '홍감독');
+    const p = ProfileRes.parse(
+      await (await call('GET', `/v1/teams/${a.team.id}?lang=en`)).json(),
+    ).data;
+    expect(p.team).toMatchObject({ seasonName: 'Preseason' });
+    expect(p.team.slots[9]!.name).toBe('홍감독 에이스'); // 공개 이름은 그대로
+    expect(p.team.slots[8]!.name).toBe('Anonymous forward No.9');
+    expect(p.team.slots[0]!.name).toBe('Youth player');
+    const unknown = ProfileRes.parse(
+      await (await call('GET', `/v1/teams/${a.team.id}?lang=fr`)).json(),
+    ).data;
+    expect(unknown.team).toMatchObject({ seasonName: '프리시즌' });
+    expect(unknown.team.slots[8]!.name).toBe('익명의 공격수 No.9');
+    expect(unknown.team.slots[0]!.name).toBe('유스 선수');
+
+    // 끝난 시즌의 최종 순위 배지 문장
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z'));
+    const final = ProfileRes.parse(
+      await (await call('GET', `/v1/teams/${a.team.id}?lang=en`)).json(),
+    ).data;
+    expect(final.team.badges[0]).toEqual({
+      id: 'final-1',
+      label: 'Season champions',
+      desc: 'Finished 1st in Preseason',
+    });
+  });
+
+  it('T-11-106: 랭킹은 lang=en을 받고(엄격한 쿼리), 엣지 캐시 키는 영어일 때만 lang이 붙어 둘로만 늘어난다', async () => {
+    await team(1, 80);
+    const edge = installFakeEdgeCache();
+    try {
+      const ko = (await rank()).data;
+      const en = (await rank('?lang=en')).data;
+      const odd = (await rank('?lang=zz')).data; // 모르는 값은 한국어 — 같은 키를 쓴다
+      await flushEdge();
+      expect(ko.seasons).toEqual([{ id: 0, name: '프리시즌' }]);
+      expect(en.seasons).toEqual([{ id: 0, name: 'Preseason' }]);
+      expect(odd.seasons).toEqual(ko.seasons);
+      expect([...edge.store.keys()].sort()).toEqual([
+        'http://localhost/v1/teams?season=0&sort=rating&page=1&form=5&logo=1',
+        'http://localhost/v1/teams?season=0&sort=rating&page=1&form=5&logo=1&lang=en',
+      ]);
+      const ach = await call('GET', '/v1/achievements/ranking?lang=en');
+      expect(ach.status).toBe(200);
+      await flushEdge();
+      expect([...edge.store.keys()].filter((k) => k.includes('achievements'))).toEqual([
+        'http://localhost/v1/achievements/ranking?season=0&page=1&logo=1&lang=en',
+      ]);
+      // 팀을 저장하면 한국어·영어 키를 함께 지운다.
+      edge.purged.length = 0;
+      await team(1, 70);
+      await flushEdge();
+      const base = 'http://localhost/v1/teams?season=0&sort=rating&page=1&form=5&logo=1';
+      expect(edge.purged).toEqual(expect.arrayContaining([base, `${base}&lang=en`]));
+      expect(edge.store.has(base)).toBe(false);
+      expect(edge.store.has(`${base}&lang=en`)).toBe(false);
+    } finally {
+      edge.uninstall();
+    }
   });
 
   it('좋아요는 한 사람이 한 번(익명 프로필도), 내 팀은 누를 수 없고, 조회수는 부를 때마다 오른다', async () => {

@@ -17,6 +17,7 @@ import {
 import { sendPushTest } from '../push/expo.js';
 import { reservePushTest } from '../push/testLimit.js';
 import { queueNotification } from '../db/repos/notifications.js';
+import { reqLang } from '../lang.js';
 import { enforceLimit, NO_STORE, nowIso, ok, readBody, notFoundError } from './shared.js';
 
 export function registerPushRoutes(app: Hono<AppEnv>) {
@@ -65,6 +66,7 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
     if (!device)
       throw notFoundError('이 기기의 알림 받기를 먼저 켜 주세요.', 'PUSH_DEVICE_MISSING');
     const nextTestAt = await reservePushTest(c.env.DB, installationId, session.profileId, now);
+    // 알림함에는 한국어 원문을 남기고(읽을 때 요청 언어로 바꾼다), 지금 보내는 푸시만 요청 언어로 보낸다.
     const notification = await queueNotification(c.env.DB, {
       profileId: session.profileId,
       sourceKey: `test:${now}`,
@@ -82,6 +84,7 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
         c.env.EXPO_PUSH_ACCESS_TOKEN,
         fetch,
         notification.id ?? undefined,
+        reqLang(c),
       );
       await rememberPushTestTicket(
         c.env.DB,
