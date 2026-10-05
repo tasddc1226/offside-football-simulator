@@ -8,10 +8,13 @@ describe('광고 노출 판단', () => {
       expect(shouldShow(place, now)).toBe(true);
   });
   it('안 채워진 위치는 다시 요청하지 않는다', () => {
-    expect(shouldShow('records-bottom', now, Infinity)).toBe(false);
+    for (const place of Object.keys(AD_PLACES) as AdPlace[])
+      expect(shouldShow(place, now, Infinity)).toBe(false);
   });
   it('같은 위치는 간격 안에 다시 요청하지 않는다', () => {
-    expect(shouldShow('board-bottom', now, now - AD_REPEAT_MS + 1)).toBe(false);
-    expect(shouldShow('board-bottom', now, now - AD_REPEAT_MS)).toBe(true);
+    for (const place of Object.keys(AD_PLACES) as AdPlace[]) {
+      expect(shouldShow(place, now, now - AD_REPEAT_MS + 1)).toBe(false);
+      expect(shouldShow(place, now, now - AD_REPEAT_MS)).toBe(true);
+    }
   });
 });

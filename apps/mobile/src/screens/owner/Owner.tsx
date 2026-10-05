@@ -34,6 +34,7 @@ import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
 import { Grid2, OvrBadge, Stats } from './TeamParts';
 import { TeamLogo } from '../../components/TeamLogo';
+import { AdSlot } from '../../components/AdSlot';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 
 function openTeam(v: TeamView = 'team') {
@@ -216,8 +217,15 @@ export default function Owner() {
               />
             </View>
           )}
+          {linked ? (
+            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+              {`구단 자금 ${market ? fundsText(market.balance) : '–'}`}
+            </Txt>
+          ) : null}
         </Card>
       ) : null}
+
+      {linked || guest ? <AdSlot place="owner-summary" /> : null}
 
       {/* T-10-092 내 팀: 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. */}
       {linked ? (
