@@ -2,6 +2,7 @@
 // 직접 고치지 않는다: node tooling/scripts/i18n-index.mjs
 import { events } from './_events';
 import { names } from './_names';
+import { roman } from './_roman';
 import { gAttrLabel } from './gAttrLabel';
 import { gBoost } from './gBoost';
 import { gComps } from './gComps';
@@ -28,6 +29,7 @@ import { gTurn } from './gTurn';
 export const en = {
   __events: events,
   __names: names,
+  __roman: roman,
   gAttrLabel,
   gBoost,
   gComps,

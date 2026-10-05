@@ -4,7 +4,7 @@ import type { Pos } from '../../data';
 import { agentFee, fmtMoney, labelOf, weakKey } from '../../engine';
 import { rivalName as rivalKo } from '../../stories';
 import type { GameState, StoryState } from '../../types';
-import { tn } from '../names';
+import { personName, tn } from '../names';
 
 const byPos =
   <T>(m: Partial<Record<Pos | 'def', T>>) =>
@@ -18,47 +18,8 @@ const POS_EN: Record<Pos, string> = {
   GK: 'goalkeeper',
 };
 
-const SURNAME_EN: Record<string, string> = {
-  김: 'Kim',
-  이: 'Lee',
-  박: 'Park',
-  최: 'Choi',
-  정: 'Jung',
-  강: 'Kang',
-  조: 'Cho',
-  윤: 'Yoon',
-  장: 'Jang',
-  임: 'Lim',
-  한: 'Han',
-  오: 'Oh',
-  서: 'Seo',
-  신: 'Shin',
-  권: 'Kwon',
-};
-const GIVEN_EN: Record<string, string> = {
-  민재: 'Min-jae',
-  흥민: 'Heung-min',
-  강인: 'Kang-in',
-  태윤: 'Tae-yun',
-  도현: 'Do-hyun',
-  지호: 'Ji-ho',
-  서준: 'Seo-jun',
-  유찬: 'Yu-chan',
-  하람: 'Ha-ram',
-  시우: 'Si-woo',
-  건우: 'Gun-woo',
-  은호: 'Eun-ho',
-  재혁: 'Jae-hyuk',
-  준서: 'Jun-seo',
-};
-
 /** 라이벌 이름은 stories.ts rivalName이 정해 저장한다(같은 난수). 화면에는 로마자 표기로 보여 준다. */
-function rivalName(s: GameState): string {
-  const ko = rivalKo(s);
-  const sur = SURNAME_EN[ko.slice(0, 1)];
-  const given = GIVEN_EN[ko.slice(1)];
-  return sur && given ? `${sur} ${given}` : tn(ko);
-}
+const rivalName = (s: GameState): string => personName(rivalKo(s));
 const rv = (s: GameState) => s.story.rival as StoryState & { gap: number; tone: string };
 
 export const events_story: Record<string, EventText> = {

@@ -1,6 +1,6 @@
 import './api/setup.js';
 import { initializeAnalytics } from './analytics/index.js';
-import { appState } from './ui/state.svelte.js';
+import { appState, randomName } from './ui/state.svelte.js';
 import { hydrate, mount } from 'svelte';
 import './style.css';
 import App from './ui/App.svelte';
@@ -65,9 +65,13 @@ function render() {
 }
 
 // T-11-102 한국어는 바로 그린다(셸 hydrate·LCP 그대로). 영어는 사전을 받은 뒤 그린다.
+// T-11-106 처음 상태의 무작위 선수 이름은 사전보다 먼저 지어져 한국어다 — 영어면 다시 짓는다.
 const locale = bootLocale();
 if (locale === 'ko') render();
-else void applyLocale(locale).finally(render);
+else
+  void applyLocale(locale)
+    .then(() => (appState.C.name = randomName()))
+    .finally(render);
 
 // T-10-010: 클럽 커스텀을 계정과 맞춘다. 세션이 있었던 기기만 — 첫 방문자는 로컬 모드 그대로다(T-10-037).
 if (hasSessionHint())

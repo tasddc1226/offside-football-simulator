@@ -14,10 +14,10 @@ export const LOCALE_NAMES: Record<Locale, string> = { ko: '한국어', en: 'Engl
 export const LOCALE_KEY = 'ft_lang';
 
 /**
- * 기기 언어를 따라 자동으로 영어를 켤지. 1단계(화면 문구)만으로는 이벤트·기록이 한국어로 남아 섞여 보이므로,
- * 게임 내용 번역(2단계)이 끝나기 전까지는 끈다 — 그동안 영어는 설정에서 고른 사람만 본다.
+ * 기기 언어를 따라 자동으로 영어를 켤지. 1단계(화면 문구)만으로는 이벤트·기록이 한국어로 섞여 보여 껐다가,
+ * 게임 내용 번역(2단계, T-11-106)과 함께 켰다 — 고른 언어가 없으면 기기 첫 언어가 한국어가 아닐 때 영어다.
  */
-export const AUTO_DETECT = false;
+export const AUTO_DETECT = true;
 
 type Msg = string | ((p: never) => string);
 export type Dict = Record<string, Msg>;

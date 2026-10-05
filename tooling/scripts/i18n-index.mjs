@@ -25,8 +25,12 @@ function render(pkg, { imports = [], spread = [], extra = [] }) {
 
 const targets = {
   game: render('game', {
-    imports: [`import { events } from './_events';`, `import { names } from './_names';`],
-    extra: ['__events: events', '__names: names'],
+    imports: [
+      `import { events } from './_events';`,
+      `import { names } from './_names';`,
+      `import { roman } from './_roman';`,
+    ],
+    extra: ['__events: events', '__names: names', '__roman: roman'],
   }),
   'app-core': render('app-core', {
     imports: [`import { en as gameEngine } from '@offside/game/i18n/en/index';`],
