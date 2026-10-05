@@ -61,10 +61,10 @@ const snapshot = (number: number, career: Season[]) => ({
   storyLog: [],
   miles: [],
 });
-const skyBlue = (number: number) =>
+const skyBlue = (number: number, seasons = 8) =>
   snapshot(
     number,
-    years(2030, 8).map((y) => legendSeason(y, '맨체스터 스카이블루', 'pl-0')),
+    years(2030, seasons).map((y) => legendSeason(y, '맨체스터 스카이블루', 'pl-0')),
   );
 /** 스카이블루 8시즌 + 리버풀 더 레즈 8시즌(둘 다 자격). */
 const twoClubs = (number: number) =>
@@ -337,7 +337,7 @@ describe('영구결번 (T-10-076)', () => {
 
     vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
     // 프리시즌 선수가 시즌 중에 자리를 차지했어도 시즌 1 선수가 같은 번호를 받는다.
-    expect(await retire(C, skyBlue(10), '시즌일', cookie, env)).toMatchObject({
+    expect(await retire(C, skyBlue(10, 12), '시즌일', cookie, env)).toMatchObject({
       kind: 'granted',
       clubId: 'pl-0',
       number: 10,
@@ -346,10 +346,13 @@ describe('영구결번 (T-10-076)', () => {
     await vi.waitFor(() => expect(hub.retiredNumbers.map((r) => r.season)).toEqual([0, 0, 1]));
     // 시즌 안에서는 여전히 먼저 잡은 쪽이 영구 보유한다.
     const D = '0c000000-0000-4000-8000-00000000000d';
-    expect(await retire(D, skyBlue(10), '시즌이', cookie, env)).toMatchObject({
+    expect(await retire(D, skyBlue(10, 12), '시즌이', cookie, env)).toMatchObject({
       kind: 'taken',
       holder: '시즌일',
     });
+    // T-11-094 프리시즌엔 결번을 받던 8시즌 공격수도 시즌 1 기준(포지션별)엔 못 미친다.
+    const E = '0c000000-0000-4000-8000-00000000000e';
+    expect(await retire(E, skyBlue(9), '시즌삼', cookie, env)).toBeNull();
     // 기본 목록은 지금 시즌, ?season=으로 프리시즌 목록.
     expect(await list()).toMatchObject([{ careerId: C, seq: 1 }]);
     expect(await list(ctx.env, '?season=1')).toMatchObject([{ careerId: C, seq: 1 }]);

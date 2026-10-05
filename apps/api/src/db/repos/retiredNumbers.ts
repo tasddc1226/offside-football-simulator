@@ -4,7 +4,12 @@ import type {
   RetiredNumbersResponse,
 } from '@offside/contracts';
 import { defaultClubIds } from '@offside/contracts/club-names';
-import { clubContributions, rnCandidates, type RnClub } from '@offside/contracts/retired-numbers';
+import {
+  clubContributions,
+  rnCandidates,
+  rnCut,
+  type RnClub,
+} from '@offside/contracts/retired-numbers';
 import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { runBatch } from './batch.js';
@@ -68,6 +73,7 @@ function candidatesOf(
   const life = lifeSeasons(seasons, row.retireAge);
   const clubs = rnCandidates(
     clubContributions(row.pos, life, (n) => renamed.get(n) ?? DEFAULT_IDS.get(n)),
+    rnCut(row.pos, seasonOf(row)),
   );
   return clubs.length ? { number, clubs } : null;
 }

@@ -28,6 +28,9 @@ export interface BalanceKnob {
   step: number;
 }
 
+/** T-11-093 프리시즌에 만든 선수의 잠재력 추첨(평균·편차). 서버 설정과 상관없이 고정이라 예전과 같은 선수가 나온다. */
+export const PRESEASON_POT = { mean: 74, sd: 8 } as const;
+
 export const BALANCE_SPEC = {
   eventRatePreseason: {
     group: 'event',
@@ -86,8 +89,8 @@ export const BALANCE_SPEC = {
   potMean: {
     group: 'growth',
     label: '잠재력 평균',
-    desc: '새 선수의 실제 잠재력 추첨 평균 — 높을수록 S·A가 늘고 D가 줄어든다. 새 커리어를 만들 때만 쓰인다',
-    def: 74,
+    desc: '새 선수의 실제 잠재력 추첨 평균 — 높을수록 S·A가 늘고 D가 줄어든다. 시즌에 만든 새 커리어에만 쓰인다',
+    def: 75,
     min: 65,
     max: 85,
     step: 1,
@@ -95,8 +98,8 @@ export const BALANCE_SPEC = {
   potSd: {
     group: 'growth',
     label: '잠재력 편차',
-    desc: '새 선수의 실제 잠재력 추첨 표준편차 — 클수록 S와 D가 늘어난다',
-    def: 8,
+    desc: '새 선수의 실제 잠재력 추첨 표준편차 — 클수록 S와 D가 늘어난다. 시즌에 만든 새 커리어에만 쓰인다',
+    def: 6,
     min: 4,
     max: 12,
     step: 0.5,

@@ -14,13 +14,24 @@
 import { isDefaultClubId, LEAGUE_BASE, leagueOfClub, type LeagueBase } from './club-names.js';
 import { LEGEND_W } from './hof-rules.js';
 import { CONFEDS } from './nations.js';
+import type { PosGroup } from './positions.js';
 
-/** 결번 기준 점수(상위 1%). */
+/** 프리시즌 결번 기준 점수(상위 1%, 포지션 공통). */
 export const RN_CUT = 827;
+/** T-11-094 시즌 1부터의 결번 기준 점수 — 프리시즌 운영 기록에서 포지션마다 상위 1%(2026-10-05). */
+export const RN_CUT_SEASON: Readonly<Record<Pos, number>> = {
+  FW: 1500,
+  MF: 1000,
+  DF: 870,
+  GK: 890,
+};
+/** 그 시즌(0 = 프리시즌)·포지션의 결번 기준 점수. */
+export const rnCut = (pos: Pos, season: number): number =>
+  season === 0 ? RN_CUT : RN_CUT_SEASON[pos];
 /** 그 구단에서 뛴 최소 시즌 수. */
 export const RN_MIN_SEASONS = 6;
 
-type Pos = 'FW' | 'MF' | 'DF' | 'GK';
+type Pos = PosGroup;
 
 const LEAGUE_BY_NAME = new Map<string, LeagueBase>(LEAGUE_BASE.map((l) => [l.name, l]));
 /**
@@ -159,10 +170,10 @@ function bondRate(order: readonly string[], key: string): number {
   return Math.min(rate, RN_BOND.cap);
 }
 
-/** 결번 자격: 구단을 알고, 그 구단에서 RN_MIN_SEASONS 시즌 이상, 기여 점수가 기준 이상. */
-export const rnQualifies = (c: RnClub): boolean =>
-  c.clubId != null && c.seasons >= RN_MIN_SEASONS && c.score >= RN_CUT;
+/** 결번 자격: 구단을 알고, 그 구단에서 RN_MIN_SEASONS 시즌 이상, 기여 점수가 기준(cut) 이상. */
+export const rnQualifies = (c: RnClub, cut: number): boolean =>
+  c.clubId != null && c.seasons >= RN_MIN_SEASONS && c.score >= cut;
 
 /** 결번을 노릴 구단 — 가장 큰 기여 구단, 그 자리가 이미 찼으면 두 번째 구단(자격이 있을 때만). */
-export const rnCandidates = (clubs: readonly RnClub[]): RnClub[] =>
-  clubs.filter(rnQualifies).slice(0, 2);
+export const rnCandidates = (clubs: readonly RnClub[], cut: number): RnClub[] =>
+  clubs.filter((c) => rnQualifies(c, cut)).slice(0, 2);

@@ -5,9 +5,12 @@ import {
   honorPoints,
   RN_BOND,
   RN_CUT,
+  RN_CUT_SEASON,
   RN_SEASON_HONOR_CAP,
   rnCandidates,
+  rnCut,
   rnQualifies,
+  type RnClub,
   type RnSeason,
 } from './retired-numbers.js';
 
@@ -66,10 +69,13 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
       );
     const [ok] = clubContributions('FW', legend(6));
     expect(ok!.score).toBeGreaterThanOrEqual(RN_CUT);
-    expect(rnQualifies(ok!)).toBe(true);
-    expect(rnQualifies(clubContributions('FW', legend(5))[0]!)).toBe(false);
+    expect(rnQualifies(ok!, RN_CUT)).toBe(true);
+    expect(rnQualifies(clubContributions('FW', legend(5))[0]!, RN_CUT)).toBe(false);
     expect(
-      rnQualifies(clubContributions('FW', legend(8, { clubId: undefined, club: '우리 시티' }))[0]!),
+      rnQualifies(
+        clubContributions('FW', legend(8, { clubId: undefined, club: '우리 시티' }))[0]!,
+        RN_CUT,
+      ),
     ).toBe(false);
     // 자격 있는 구단만 최대 두 곳.
     const two = clubContributions('FW', [
@@ -82,7 +88,27 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
       })),
       ...legend(3).map((s) => ({ ...s, year: s.year + 20, club: '런던 거너스', clubId: 'pl-2' })),
     ]);
-    expect(rnCandidates(two).map((c) => c.clubId)).toEqual(['pl-0', 'pl-1']);
+    expect(rnCandidates(two, RN_CUT).map((c) => c.clubId)).toEqual(['pl-0', 'pl-1']);
+  });
+
+  it('T-11-094 시즌 1부터 기준은 포지션별, 프리시즌은 공통 827 그대로', () => {
+    expect(rnCut('FW', 0)).toBe(RN_CUT);
+    expect(rnCut('GK', 0)).toBe(RN_CUT);
+    expect(rnCut('FW', 1)).toBe(RN_CUT_SEASON.FW);
+    expect(rnCut('DF', 1)).toBe(RN_CUT_SEASON.DF);
+    // 프리시즌 기준을 넘지만 시즌 1 공격수 기준엔 못 미치는 구단.
+    const mid: RnClub = {
+      clubId: 'pl-0',
+      club: '맨체스터 스카이블루',
+      seasons: 8,
+      play: 900,
+      honors: 100,
+      bond: 0,
+      score: 1000,
+    };
+    expect(rnQualifies(mid, rnCut('FW', 0))).toBe(true);
+    expect(rnCandidates([mid], rnCut('FW', 1))).toEqual([]);
+    expect(rnCandidates([mid], rnCut('MF', 1))).toEqual([mid]);
   });
 
   it('게임에 없는 클럽 id는 인정하지 않고, 리그는 클럽의 리그로 정하며, 한 시즌 영예 점수엔 상한이 있다', () => {
