@@ -27,8 +27,6 @@
 
   import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
   import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
-  const clubName = (x: Parameters<typeof rnClubName>[0]) => rnClubName(x);
-  const leagueOf = (clubId: string) => rnLeagueName(clubId);
   type Item = RetiredNumbersResponse['items'][number];
 
   const clock = seasonNow();
@@ -117,7 +115,7 @@
     <b class="rn-tile-name">{it.name ?? anonName(it.pos, it.number)}</b>
     {#if withClub || !view.pos}
       <span class="muted fs-xs">
-        {#if withClub}<ClubMark name={it.club} id={it.clubId} size={14} /> {clubName(it)}{:else}{POS[it.pos].label}{/if}
+        {#if withClub}<ClubMark name={it.club} id={it.clubId} size={14} /> {rnClubName(it)}{:else}{POS[it.pos].label}{/if}
       </span>
     {/if}
     <span class="muted fs-xs num">{L.tileSeq({ seq: it.seq, day: day(it.grantedAt) })}</span>
@@ -128,8 +126,8 @@
 {#snippet clubRow(c: RetiredNumbersSummary['clubs'][number], withLeague: boolean)}
   <button class="rn-club-row" data-rn-club={c.clubId} onclick={() => openClub(c.clubId)}>
     <ClubMark name={c.club} id={c.clubId} size={22} />
-    <b>{clubName(c)}</b>
-    {#if withLeague}<span class="muted fs-xs">{leagueOf(c.clubId)}</span>{/if}
+    <b>{rnClubName(c)}</b>
+    {#if withLeague}<span class="muted fs-xs">{rnLeagueName(c.clubId)}</span>{/if}
     <span class="num rn-club-count">{c.count}</span>
     <span class="rn-club-go" aria-hidden="true">›</span>
   </button>
@@ -196,8 +194,8 @@
       <div class="rn-club-head rn-club-title">
         {#if pickedClub}
           <ClubMark name={pickedClub.club} id={pickedClub.clubId} size={28} />
-          <b>{clubName(pickedClub)}</b>
-          <span class="muted fs-xs">{leagueOf(pickedClub.clubId)}</span>
+          <b>{rnClubName(pickedClub)}</b>
+          <span class="muted fs-xs">{rnLeagueName(pickedClub.clubId)}</span>
           <span class="num rn-club-count">{pickedClub.count}</span>
         {/if}
       </div>

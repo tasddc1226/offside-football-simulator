@@ -80,6 +80,10 @@ describe('영구결번 (T-10-076)', () => {
   let cookie: string;
 
   beforeEach(async () => {
+    // 결번 컷은 시즌마다 다르다(rnCut). 기록을 프리시즌 기준으로 꾸몄으므로 시계를 시즌 1 개막 전으로 고정한다
+    // — 실제 시계로 돌면 개막(2026-10-06) 뒤 커리어가 시즌 1로 묶여 컷이 바뀐다. 시계는 흐르게 둬 은퇴 순서(소급)가 유지된다.
+    vi.useFakeTimers({ toFake: ['Date'], shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-10-01T03:00:00.000Z'));
     ctx = await createTestD1();
     cookie = (await issueCookie(ctx)).cookie;
   });

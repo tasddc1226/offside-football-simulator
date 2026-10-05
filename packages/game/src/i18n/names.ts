@@ -22,14 +22,15 @@ const HANGUL = /[가-힣]/;
 /** 저장된 한국어 이름을 지금 언어로. 한국어거나 대응이 없으면 그대로 돌려준다. */
 export function tn(ko: string): string {
   const t = localeData<NameTable>('__names');
-  // 한글이 없으면(이미 옮긴 이름·유저가 영어로 지은 이름) 대응표를 볼 것도, 메모에 남길 것도 없다.
-  if (!t || !ko || !HANGUL.test(ko)) return ko;
+  if (!t || !ko) return ko;
   if (memoFor !== t) {
     memoFor = t;
     memo.clear();
   }
   let out = memo.get(ko);
   if (out !== undefined) return out;
+  // 한글이 없으면(이미 옮긴 이름·유저가 영어로 지은 이름) 대응표를 볼 것도, 메모에 남길 것도 없다.
+  if (!HANGUL.test(ko)) return ko;
   out = t.exact[ko];
   if (out === undefined)
     for (const [re, f] of t.patterns) {

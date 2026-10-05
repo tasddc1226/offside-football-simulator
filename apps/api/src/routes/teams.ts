@@ -52,10 +52,12 @@ const RANK_CACHE = 'public, max-age=60';
 
 const teamParam = (c: Context<AppEnv>) => parseWithAppError(TeamIdSchema, c.req.param('teamId'));
 
-/** 엣지에는 한국어 응답 하나만 담고(키·퍼지·D1 읽기를 언어마다 늘리지 않는다), 언어마다 다른 시즌 이름만 꺼낸 뒤 바꾼다. */
-function withSeasonNames<T extends { seasons: unknown }>(data: T, now: string, lang: Lang): T {
-  return lang === 'ko' ? data : { ...data, seasons: seasonOptions(now, lang) };
-}
+/** 시즌 목록은 시계와 언어로만 정해진다 — 엣지에 담지 않고(키·퍼지·D1 읽기를 언어마다 늘리지 않고, 개막 직후 TTL만큼
+ * 낡지도 않게) 캐시에서 꺼낸 뒤 붙인다. */
+const withSeasons = <T extends object>(data: T, now: string, lang: Lang) => ({
+  ...data,
+  seasons: seasonOptions(now, lang),
+});
 
 export function registerTeamRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/teams', async (c) => {
@@ -66,7 +68,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       c,
       EDGE.teamRank(season, q.sort, q.page),
       RANK_TTL,
-      async (): Promise<TeamRankResponse> => {
+      async (): Promise<Omit<TeamRankResponse, 'seasons'>> => {
         const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, q.page);
         const forms = await listTeamRecentForm(
           getDb(c),
@@ -74,7 +76,6 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         );
         return {
           season,
-          seasons: seasonOptions(now),
           sort: q.sort,
           page: q.page,
           total,
@@ -95,7 +96,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         };
       },
     );
-    return ok(c, TeamRankResponseSchema, withSeasonNames(data, now, reqLang(c)), 200, RANK_CACHE);
+    return ok(c, TeamRankResponseSchema, withSeasons(data, now, reqLang(c)), 200, RANK_CACHE);
   });
 
   // T-11-028 업적 랭킹(기록실). 시즌 업적 점수 순 — 구단주는 공개 닉네임과 그 시즌 팀 이름으로만 보인다. 팀 랭킹처럼 5분마다.
@@ -107,11 +108,10 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       c,
       EDGE.achRank(season, q.page),
       RANK_TTL,
-      async (): Promise<AchRankResponse> => {
+      async (): Promise<Omit<AchRankResponse, 'seasons'>> => {
         const { rows, total } = await listAchievementRanking(getDb(c), season, q.page);
         return {
           season,
-          seasons: seasonOptions(now),
           page: q.page,
           total,
           items: rows.map((r, i) => ({
@@ -128,7 +128,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         };
       },
     );
-    return ok(c, AchRankResponseSchema, withSeasonNames(data, now, reqLang(c)), 200, RANK_CACHE);
+    return ok(c, AchRankResponseSchema, withSeasons(data, now, reqLang(c)), 200, RANK_CACHE);
   });
 
   // 팀 프로필. 좋아요 여부가 사람마다 달라 캐시하지 않는다.

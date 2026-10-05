@@ -1,11 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { API, ok, openMarket, startCareer, PRESEASON } from './helpers.js';
+import { API, ok, openMarket, startCareer, usePreseason } from './helpers.js';
 
-// 프리시즌 기록으로 꾸민 화면이라 시계를 시즌 1 개막 전으로 고정한다(테스트가 직접 시각을 정하면 그쪽이 이긴다).
-test.beforeEach(async ({ page }) => {
-  await page.clock.setFixedTime(PRESEASON);
-});
+// 프리시즌 기록으로 꾸민 화면이라 시계를 시즌 1 개막 전으로 고정한다.
+usePreseason();
 
 // T-10-076 영구결번: 은퇴 업로드 응답의 심사 결과로 은퇴 화면에 결번 세리머니를 띄운다. 판정 기준(점수·시즌 수)은
 // 서버만 알고 화면에 내보내지 않는다.

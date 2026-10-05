@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 /** e2e 기본 API 주소 — 실제 서버 없이 page.route로 흉내 낸다. */
 export const API = 'http://localhost:8787';
@@ -70,3 +70,10 @@ export async function clearPendingEvent(page: Page): Promise<void> {
 /** 프리시즌(시즌 1 개막 2026-10-06 00:00 KST 전) 시각. 프리시즌 기록을 꾸며 쓰는 spec은 브라우저 시계를 여기에 고정한다 —
  * 실제 시계로 돌면 개막 뒤 기본 시즌이 1로 바뀌어 요청·목록이 달라진다. */
 export const PRESEASON = new Date('2026-10-01T12:00:00+09:00');
+
+/** 이 spec의 모든 테스트 시계를 프리시즌으로 고정한다(테스트가 직접 시각을 정하면 그쪽이 이긴다). */
+export function usePreseason(): void {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.setFixedTime(PRESEASON);
+  });
+}

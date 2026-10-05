@@ -14,7 +14,3 @@ export function queryWithoutLang(c: Context<AppEnv>): Record<string, string> {
   delete rest.lang;
   return rest;
 }
-
-/** 엣지 캐시 경로의 언어 변형 — 영어만 `lang=en`을 붙인다(키가 둘로만 늘어난다). */
-export const withLang = (path: string, lang: Lang): string =>
-  lang === 'en' ? `${path}${path.includes('?') ? '&' : '?'}lang=en` : path;
