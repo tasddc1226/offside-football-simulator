@@ -526,6 +526,34 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(past.groups.some((g) => g.id === 'team')).toBe(false); // 프리시즌에는 팀을 만들지 않았다
   });
 
+  it('T-11-103 영입한 선수도 팀 업적에 들고, 방출하려고 선발을 비워도 그 시즌 팀 업적은 남는다', async () => {
+    const teamOne = async (cookie: string) =>
+      AchRes.parse(await (await call('GET', '/v1/owner-team/achievements', { cookie })).json())
+        .data.groups.flatMap((g) => g.items)
+        .find((i) => i.id === 'team-one')?.done;
+    // 다른 구단주가 키운 선수를 영입했다(카드 주인만 바뀐다).
+    const seller = await issueGoogleCookie(ctx);
+    const buyer = await issueGoogleCookie(ctx);
+    const bought = await addCareer(seller.profileId, { peak: 75 });
+    await ctx.db.update(cards).set({ ownerId: buyer.profileId }).where(eq(cards.careerId, bought));
+    const slots: (string | null)[] = Array(11).fill(null);
+    slots[9] = bought;
+    expect((await putTeam(buyer.cookie, { slots })).status).toBe(200);
+    expect(await teamOne(buyer.cookie)).toBe(true);
+
+    // 직접 키운 선수로 달성한 뒤 선발에서 빼고 방출했다.
+    const owner = await ownerWithTeam(1);
+    expect(await teamOne(owner.cookie)).toBe(true);
+    expect((await putTeam(owner.cookie, { slots: Array(11).fill(null) })).status).toBe(200);
+    const res = await call('POST', '/v1/cards/release', {
+      cookie: owner.cookie,
+      headers: { 'Idempotency-Key': `ach-release-${seq}-key` },
+      body: { careerIds: owner.ids },
+    });
+    expect(res.status).toBe(200);
+    expect(await teamOne(owner.cookie)).toBe(true);
+  });
+
   it('T-11-028 업적 랭킹: 시즌 점수 순, 닉네임과 그 시즌 팀 이름만 보인다', async () => {
     const a = await issueGoogleCookie(ctx);
     const b = await issueGoogleCookie(ctx);

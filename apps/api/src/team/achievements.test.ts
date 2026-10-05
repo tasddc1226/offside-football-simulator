@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   achievementScore,
   clubAchievements,
+  teamKeptOf,
   type AchievementCareer,
   type AchievementOwner,
   type AchievementTeam,
@@ -355,6 +356,29 @@ describe('구단 시즌 업적', () => {
     expect(item(g, 'team-goals')).toMatchObject({ level: 1 });
     expect(item(g, 'team-rating')).toMatchObject({ level: 2, next: 1300 });
     expect(item(g, 'team-likes')).toMatchObject({ level: 1, next: 5 });
+  });
+
+  it('팀 업적은 그 시즌에 한 번 닿으면 선발이 바뀌어도 남는다(T-11-103)', () => {
+    const input = (team: AchievementTeam, kept?: ReturnType<typeof teamKeptOf>) =>
+      clubAchievements({ careers: [], team, owner: OWNER, detail: true, retireAt: 41, kept });
+    const first = input(
+      teamOf(
+        Array.from({ length: 11 }, () => slot()),
+        { rating: 1210 },
+      ),
+    );
+    const kept = teamKeptOf(first);
+    expect(kept).toMatchObject({ 'team-full': 1, 'team-rn': 1, 'team-rating': 1210 });
+    expect(kept['team-wins']).toBeUndefined();
+
+    // 선수를 방출하려고 선발에서 빼고, 레이팅도 내려갔다.
+    const after = input(teamOf([slot()], { rating: 1050 }), kept);
+    for (const id of ['team-full', 'team-fit', 'team-caps', 'team-club', 'team-rn'])
+      expect(item(after, id)?.done, id).toBe(true);
+    expect(item(after, 'team-rating')).toMatchObject({ level: 2, cur: 1210 });
+    expect(achievementScore(after).score).toBe(achievementScore(first).score);
+    // 기록 없이 같은 선발이면 풀린다(지금 팀으로만 판정).
+    expect(item(input(teamOf([slot()])), 'team-full')?.done).toBe(false);
   });
 
   it('구단주 업적은 은퇴시킨 선수·날, 팀 경기한 날, 응원, 닉네임으로 센다', () => {
