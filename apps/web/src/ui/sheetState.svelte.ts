@@ -32,4 +32,4 @@ export const sheet = createSheetController(sheetState, {
   preloadMinigame: () => import('./sheets/Minigame.svelte'),
   motionOK: () => motionOK,
 });
-export const { showSheet, closeSheet } = sheet;
+export const { showSheet, closeSheet, dismissSheet } = sheet;

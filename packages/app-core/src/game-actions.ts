@@ -266,10 +266,7 @@ export function createGameActions(host: GameHost) {
     const s = appState.G;
     if (!s) return;
     const p = s.pending;
-    if (!p) {
-      sheet.closeSheet();
-      return;
-    }
+    if (!p) return backToSeason();
     if (p.type === 'event') return showEvent(p.id);
     if (p.type === 'seasonEnd') {
       if (sheet.state.busy) return;
@@ -382,6 +379,7 @@ export function createGameActions(host: GameHost) {
         timing: r.timing,
       },
       [{ label: '확인', cls: 'btn-primary', fn: nextPending }],
+      backToSeason,
     );
   }
 
@@ -628,9 +626,10 @@ export function createGameActions(host: GameHost) {
           {
             label: `${G.year} 시즌 시작 →`,
             cls: 'btn-primary',
-            fn: () => sheet.closeSheet(),
+            fn: backToSeason,
           },
         ],
+        backToSeason,
       );
       return false;
     }
@@ -642,9 +641,15 @@ export function createGameActions(host: GameHost) {
   }
 
   function startSeason() {
+    backToSeason();
+    host.toast(`${appState.G!.year} 시즌 시작!`);
+  }
+
+  /** T-11-090 이벤트·이적시장 시트를 닫고 시즌 탭 맨 위로 돌아간다(훈련을 마친 뒤와 같다). */
+  function backToSeason() {
     sheet.closeSheet();
     appState.tab = 'season';
-    host.toast(`${appState.G!.year} 시즌 시작!`);
+    host.scrollTop(true);
   }
 
   function doRetire() {

@@ -6,7 +6,7 @@
   // #modal의 hidden 속성과 배경 클릭-닫기 동작을 이펙트로 관리한다(원본 ui.ts의
   // `$modal.addEventListener` 포트).
   import { fly } from 'svelte/transition';
-  import { closeSheet, registerSheetEl, sheetState } from './sheetState.svelte.js';
+  import { dismissSheet, registerSheetEl, sheetState } from './sheetState.svelte.js';
   import SheetBody from './sheets/SheetBody.svelte';
   import { sheetLabel } from '@offside/app-core/sheets';
   import { appState } from './state.svelte.js';
@@ -63,7 +63,7 @@
     const modal = hostRoot?.parentElement;
     if (!modal) return;
     const onClick = (e: MouseEvent) => {
-      if (e.target === modal && dismissible) closeSheet();
+      if (e.target === modal && dismissible) dismissSheet();
     };
     modal.addEventListener('click', onClick);
     return () => modal.removeEventListener('click', onClick);
@@ -99,7 +99,7 @@
   function onTouchEnd() {
     if (!dragging) return;
     dragging = false;
-    if (dragY > 90) closeSheet();
+    if (dragY > 90) dismissSheet();
     dragY = 0;
   }
 
