@@ -13,6 +13,7 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "lint:deps": "node tooling/scripts/check-deps.mjs",
+    "lint:i18n": "node tooling/scripts/check-i18n.mjs",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write apps packages tooling \"*.{js,mjs,json,yaml,yml}\"",
     "format:check": "prettier --check apps packages tooling \"*.{js,mjs,json,yaml,yml}\"",

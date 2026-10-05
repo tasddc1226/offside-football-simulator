@@ -58,6 +58,7 @@ jobs:
           pnpm format:check
           pnpm lint
           pnpm lint:deps
+          pnpm lint:i18n
           pnpm typecheck
           pnpm test
       - name: Fulltime balance smoke (N=2000, random)
