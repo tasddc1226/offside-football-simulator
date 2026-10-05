@@ -1,6 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ok, API } from './helpers.js';
+import { ok, API, PRESEASON } from './helpers.js';
+
+// 프리시즌 기록으로 꾸민 화면이라 시계를 시즌 1 개막 전으로 고정한다(테스트가 직접 시각을 정하면 그쪽이 이긴다).
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(PRESEASON);
+});
 
 async function expectAccessible(page: Page) {
   // Wait for finite entrance transitions; decorative badge loops intentionally keep running.

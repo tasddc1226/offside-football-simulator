@@ -66,3 +66,7 @@ export async function clearPendingEvent(page: Page): Promise<void> {
   await page.locator('#sheet [data-sheet]:not([data-mg-tap])').first().click();
   await expect(page.locator('#sheet')).toBeHidden();
 }
+
+/** 프리시즌(시즌 1 개막 2026-10-06 00:00 KST 전) 시각. 프리시즌 기록을 꾸며 쓰는 spec은 브라우저 시계를 여기에 고정한다 —
+ * 실제 시계로 돌면 개막 뒤 기본 시즌이 1로 바뀌어 요청·목록이 달라진다. */
+export const PRESEASON = new Date('2026-10-01T12:00:00+09:00');
