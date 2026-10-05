@@ -31,6 +31,8 @@ import {
   cards,
   careers,
   friendMatches,
+  notifications,
+  pushDeliveries,
   friends,
   ownerTeams,
   teamMatches,
@@ -38,6 +40,8 @@ import {
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
+import { addAppPushDevice } from '../test/push.js';
+import { runPersonalPush } from '../push/personal.js';
 
 const GetRes = successEnvelope(OwnerTeamResponseSchema);
 const PutRes = successEnvelope(PutOwnerTeamResponseSchema);
@@ -720,6 +724,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
   it('경기를 치르면 결과·전적이 남고, 상대 쪽 최근 경기에도 보인다', async () => {
     const me = await ownerWithTeam(5, 85);
     const rival = await ownerWithTeam(3, 70, '라이벌 에이스');
+    await addAppPushDevice(ctx, rival.profileId);
     const res = await call('POST', '/v1/owner-team/matches', {
       cookie: me.cookie,
       headers: idem(),
@@ -727,6 +732,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     });
     expect(res.status).toBe(201);
     const { match, record, rating, matchesLeft } = PlayRes.parse(await res.json()).data;
+    expect(await ctx.db.select().from(notifications)).toMatchObject([
+      { profileId: rival.profileId, kind: 'team', sourceKey: `team-match:${match.id}` },
+    ]);
+    expect(await ctx.db.select().from(pushDeliveries)).toMatchObject([
+      { profileId: rival.profileId, state: 'pending' },
+    ]);
     expect(matchesLeft).toBe(TEAM_MATCHES_PER_DAY - 1);
     expect(match.home.teamId).toBe(me.team.id);
     expect(match.away).toMatchObject({ teamId: rival.team.id, name: rival.team.name });
@@ -798,6 +809,9 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(b.status).toBe(201);
     expect(b.headers.get('Idempotent-Replayed')).toBe('true');
     expect(await ctx.db.select().from(teamMatches)).toHaveLength(1);
+    expect(await ctx.db.select().from(notifications)).toMatchObject([
+      { profileId: rival.profileId, kind: 'team' },
+    ]);
   });
 
   it('내 팀·빈 팀·없는 팀은 상대가 될 수 없고, 내 팀에 선수가 없으면 경기할 수 없다', async () => {
@@ -956,6 +970,8 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     it('코드는 한 번 만들면 그대로이고, 신청 → 수락으로 서로 친구가 된다', async () => {
       const a = await issueGoogleCookie(ctx, { nickname: '가나다' });
       const b = await issueGoogleCookie(ctx, { nickname: '라마바' });
+      await addAppPushDevice(ctx, a.profileId);
+      await addAppPushDevice(ctx, b.profileId);
       const first = await friendsOf(a.cookie);
       expect(first.code).toMatch(/^[A-Z2-9]{8}$/);
       expect((await friendsOf(a.cookie)).code).toBe(first.code);
@@ -988,6 +1004,16 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(FriendReqRes.parse(await ok.json()).data.state).toBe('accepted');
       expect((await friendsOf(a.cookie)).friends.map((p) => p.name)).toEqual(['라마바']);
       expect((await friendsOf(b.cookie)).friends.map((p) => p.name)).toEqual(['가나다']);
+      expect(
+        (await call('POST', `/v1/friends/${first.code}/accept`, { cookie: b.cookie })).status,
+      ).toBe(200);
+      const messages = await ctx.db.select().from(notifications);
+      expect(messages).toHaveLength(2);
+      expect(messages.map((n) => [n.profileId, n.title])).toEqual([
+        [b.profileId, '새 친구 신청이 왔어요'],
+        [a.profileId, '친구 신청이 수락됐어요'],
+      ]);
+      expect(await ctx.db.select().from(pushDeliveries)).toHaveLength(2);
     });
 
     it('상대가 먼저 신청했으면 내 신청이 곧 수락이고, 팀 프로필에서도 신청할 수 있다', async () => {
@@ -1014,6 +1040,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       const back = await request(b.cookie, { teamId: a.team.id });
       expect(FriendReqRes.parse(await back.json()).data.state).toBe('accepted');
       expect(await view(a.cookie, b.team.id)).toBe('accepted');
+      expect(await ctx.db.select().from(notifications)).toHaveLength(2);
     });
 
     it('틀린 코드·내 코드·차단한 사이는 신청할 수 없다', async () => {
@@ -1044,6 +1071,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       const a = await ownerWithTeam(5, 85);
       const b = await ownerWithTeam(3, 70);
       const { aCode, bCode } = await befriend(a, b);
+      await addAppPushDevice(ctx, b.profileId);
       const res = await friendly(a.cookie, bCode);
       expect(res.status).toBe(201);
       const { match, h2h, matchesLeft } = FriendlyRes.parse(await res.json()).data;
@@ -1061,6 +1089,27 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       }
       expect(await ctx.db.select().from(teamMatches)).toEqual([]);
       expect(await ctx.db.select().from(friendMatches)).toHaveLength(1);
+      const message = (await ctx.db.select().from(notifications)).find(
+        (n) => n.sourceKey === `friendly:${match.id}`,
+      );
+      expect(message).toMatchObject({
+        profileId: b.profileId,
+        kind: 'social',
+        title: '친선전 결과가 도착했어요',
+      });
+      expect(message?.body).toContain(`${b.team.name} ${ga} : ${gf} ${a.team.name}`);
+      const transport = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(Response.json({ data: [{ status: 'ok', id: 'friendly_ticket' }] }));
+      await runPersonalPush(
+        { ...ctx.env, ENVIRONMENT: 'production', PERSONAL_PUSH_ENABLED: '1' },
+        Date.now(),
+        transport,
+      );
+      expect(transport).toHaveBeenCalledTimes(1);
+      expect(await ctx.db.select().from(pushDeliveries)).toMatchObject([
+        { profileId: b.profileId, state: 'accepted' },
+      ]);
       const owner = GetRes.parse(
         await (await call('GET', '/v1/owner-team', { cookie: a.cookie })).json(),
       ).data;
