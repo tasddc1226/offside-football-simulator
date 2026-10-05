@@ -1,8 +1,8 @@
 // 이벤트 영어 문구 — 정의 모듈의 이벤트 id → 문구(events-data.ts EventText).
 import type { EventText } from '../../events-data';
-import { GIVEN, SURNAMES, type Pos } from '../../data';
+import type { Pos } from '../../data';
 import { agentFee, fmtMoney, labelOf, weakKey } from '../../engine';
-import { pick } from '../../rng';
+import { rivalName as rivalKo } from '../../stories';
 import type { GameState, StoryState } from '../../types';
 import { tn } from '../names';
 
@@ -52,15 +52,9 @@ const GIVEN_EN: Record<string, string> = {
   준서: 'Jun-seo',
 };
 
-/** stories.ts rivalName 과 같은 난수·같은 저장(flags.rivalName) 뒤, 화면에는 로마자 표기로 보여 준다. */
+/** 라이벌 이름은 stories.ts rivalName이 정해 저장한다(같은 난수). 화면에는 로마자 표기로 보여 준다. */
 function rivalName(s: GameState): string {
-  if (!s.flags.rivalName) {
-    let n: string;
-    do n = pick(SURNAMES) + pick(GIVEN);
-    while (n === s.name);
-    s.flags.rivalName = n;
-  }
-  const ko = s.flags.rivalName as string;
+  const ko = rivalKo(s);
   const sur = SURNAME_EN[ko.slice(0, 1)];
   const given = GIVEN_EN[ko.slice(1)];
   return sur && given ? `${sur} ${given}` : tn(ko);
