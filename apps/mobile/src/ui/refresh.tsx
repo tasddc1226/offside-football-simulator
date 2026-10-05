@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from 'react';
 import { RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { clearApiCache } from '@offside/app-core/api/client';
 import { useColors } from '../theme/useColors';
 
@@ -61,8 +62,8 @@ export function useOnPull(fn: () => Promise<unknown> | void) {
 export function RefreshRoot({ children }: { children: ReactNode }) {
   const [tick, setTick] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [on, setOn] = useState(false);
-  const members = useRef(0);
+  // 참여한 컴포넌트 수. 붙고 떨어질 때마다 세지만 같은 커밋의 effect끼리는 묶여 한 번만 다시 그린다.
+  const [members, setMembers] = useState(0);
   const pending = useRef(new Set<Promise<unknown>>());
   const busy = useRef(false);
 
@@ -70,13 +71,11 @@ export function RefreshRoot({ children }: { children: ReactNode }) {
     if (busy.current) pending.current.add(p);
     return p;
   }, []);
-  // 참여 수는 ref로 세고, 0↔1이 바뀔 때만 다시 그린다.
   const join = useCallback(() => {
-    if (members.current++ === 0) setOn(true);
-    return () => {
-      if (--members.current === 0) setOn(false);
-    };
+    setMembers((n) => n + 1);
+    return () => setMembers((n) => n - 1);
   }, []);
+  const on = members > 0;
 
   // 자식 effect가 먼저 돌아 요청을 track에 넣은 뒤에 모아서 기다린다(React는 자식 effect를 부모보다 먼저 부른다).
   useEffect(() => {
@@ -114,6 +113,7 @@ export function RefreshRoot({ children }: { children: ReactNode }) {
 /** Screen이 쓴다 — 이 화면에 참여한 컴포넌트가 있을 때만 당김을 돌려준다. */
 export function useRefreshControl(enabled: boolean) {
   const c = useColors();
+  const insets = useSafeAreaInsets();
   const { on, refreshing, onRefresh } = useContext(ControlScope);
   if (!enabled || !on) return undefined;
   return (
@@ -123,6 +123,8 @@ export function useRefreshControl(enabled: boolean) {
       tintColor={c.muted}
       colors={[c.accent]}
       progressBackgroundColor={c.surface}
+      // Screen은 상태 막대만큼 안쪽을 띄운다 — 도는 표시도 그 아래에 둬야 보인다.
+      progressViewOffset={insets.top}
     />
   );
 }
