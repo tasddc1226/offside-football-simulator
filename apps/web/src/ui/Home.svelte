@@ -66,6 +66,10 @@
   {/if}
   <HomeLive />
   <div class="tiles">
+    <!-- T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. -->
+    <button class="tile tile-link tile-wide" data-act="home-market" onclick={() => go('market')}>
+      <span class="eyebrow">Transfer market</span><b>이적시장</b><span class="muted fs-sm">이번 시즌 선수 사고팔기 · 시세 →</span>
+    </button>
     <HomeFirsts />
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
       <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted fs-sm">선택지별 성공 확률 보기 →</span>

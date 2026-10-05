@@ -24,6 +24,9 @@ export const EDGE = {
   /** T-11-028 업적 랭킹(기록실). TTL로만 새로 읽는다. */
   achRank: (season: number, page: number) =>
     `/v1/achievements/ranking?season=${season}&page=${page}&logo=1`,
+  /** T-11-080f 시세 차트(시즌 · 기간 · 묶음별). */
+  marketChart: (season: number, range: string, group?: { pos: string; band: number }) =>
+    `/v1/market/chart?season=${season}&range=${range}${group ? `&pos=${group.pos}&band=${group.band}` : ''}`,
   /** T-11-080 이적시장 목록은 첫 페이지만 담는다(시즌 · 정렬 · 포지션별). */
   marketList: (season: number, sort: string, pos?: string) =>
     `/v1/market?season=${season}&sort=${sort}${pos ? `&pos=${pos}` : ''}`,

@@ -3,17 +3,19 @@ import {
   MARKET_RECENT,
   type MarketSale,
   resolveBalance,
+  type MarketChartPoint,
   type MarketListing,
   type MarketRules,
   type MarketSort,
   type MarketTrade,
 } from '@offside/contracts';
+import { marketRatio } from '@offside/contracts/market-value';
 import type { PosGroup } from '@offside/contracts/positions';
 import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 import { peakOf } from './ownerTeams.js';
-import { cards, careers, marketListings, ownerFunds } from '../schema.js';
+import { cards, careers, marketDaily, marketListings, ownerFunds } from '../schema.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 설계: docs/tracking/owner-funds-card-market-plan.md 5~7절.
 // 쓰기는 D1 batch(한 트랜잭션)로 묶고, "이번 요청이 이겼는가"는 첫 문장의 조건부 UPDATE가 남긴 표식으로 판정한다.
@@ -464,4 +466,58 @@ export function marketDeleteStatements(db: Db, profileId: string, now: string) {
       .where(and(eq(marketListings.sellerId, profileId), eq(marketListings.status, 'open'))),
     db.delete(ownerFunds).where(eq(ownerFunds.profileId, profileId)),
   ] as const;
+}
+
+/**
+ * T-11-080f 시세 차트: since(KST 일자, 없으면 시즌 전체)부터 하루치 시세. group을 주면 그 묶음(기본키 앞부분),
+ * 없으면 시장 전체를 일자별로 합친다(market_daily_day_idx). 평균은 천분율 합 ÷ 거래 수.
+ */
+export async function marketChart(
+  db: Db,
+  season: number,
+  since: string | null,
+  group: { pos: PosGroup; band: number } | null,
+): Promise<MarketChartPoint[]> {
+  const trades = sql<number>`sum(${marketDaily.trades})`;
+  const ratioSum = sql<number>`sum(${marketDaily.ratioSum})`;
+  const rows = await db
+    .select({
+      day: marketDaily.day,
+      trades,
+      volume: sql<number>`sum(${marketDaily.volume})`,
+      ratioSum,
+      min: sql<number>`min(${marketDaily.ratioMin})`,
+      max: sql<number>`max(${marketDaily.ratioMax})`,
+    })
+    .from(marketDaily)
+    .where(
+      and(
+        eq(marketDaily.season, season),
+        group ? eq(marketDaily.posGroup, group.pos) : undefined,
+        group ? eq(marketDaily.ovrBand, group.band) : undefined,
+        since ? gte(marketDaily.day, since) : undefined,
+      ),
+    )
+    .groupBy(marketDaily.day)
+    .orderBy(asc(marketDaily.day));
+  return rows.map(({ ratioSum: sum, ...r }) => ({ ...r, avg: Math.round(sum / r.trades) }));
+}
+
+/** 이 선수가 팔린 기록(최신순, 최대 20건). market_listings_card_idx가 받친다. */
+export async function cardTrades(db: Db, careerId: string) {
+  const rows = await db
+    .select({
+      price: marketListings.price,
+      cardValue: cards.cardValue,
+      soldAt: sql<string>`${marketListings.closedAt}`,
+    })
+    .from(marketListings)
+    .innerJoin(cards, eq(cards.careerId, marketListings.careerId))
+    .where(and(eq(marketListings.careerId, careerId), eq(marketListings.status, 'sold')))
+    .orderBy(desc(marketListings.closedAt))
+    .limit(20);
+  return rows.map(({ cardValue, ...r }) => ({
+    ...r,
+    ratio: marketRatio(r.price, cardValue ?? r.price),
+  }));
 }
