@@ -122,6 +122,10 @@ type LineupRow = {
   peakProfile: string | null;
   number: number | null;
   publicName: string | null;
+  type?: string | null;
+  foot?: string | null;
+  /** T-11-105 이 팀 구단주가 직접 키운 선수인지(SQL 비교라 0/1일 수 있다). */
+  raised?: boolean | number | null;
 };
 export const toLineupCareer = (
   r: LineupRow,
@@ -136,6 +140,9 @@ export const toLineupCareer = (
   roles: profile?.roles ?? null,
   number: r.number,
   publicName: r.publicName,
+  type: r.type ?? null,
+  foot: r.foot ?? null,
+  raised: !!r.raised,
 });
 
 /** 내 팀들(시즌 순). 시즌마다 한 팀이라 몇 개 되지 않는다. */
@@ -170,6 +177,8 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       cardAttrsJson: careers.cardAttrsJson,
       number: cards.number,
       publicName: careers.publicName,
+      type: careers.type,
+      foot: careers.foot,
       legendScore: cards.legendScore,
       cardValue: cards.cardValue,
       raised: sql<number>`${careers.profileId} = ${profileId}`,
@@ -246,6 +255,9 @@ export async function careersByIds(db: Db, ids: string[]) {
       peakProfile: cards.peakProfile,
       number: cards.number,
       publicName: careers.publicName,
+      type: careers.type,
+      foot: careers.foot,
+      raiserId: careers.profileId,
       serviceSeason: cards.serviceSeason,
       hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
       lastClubId: careers.lastClubId,
@@ -273,7 +285,7 @@ export function eligibleMap(
   for (const r of rows) {
     if (open && r.ownerId !== ownerId) continue;
     if (r.serviceSeason !== season || r.hidden) continue;
-    map.set(r.id, toLineupCareer(r));
+    map.set(r.id, toLineupCareer({ ...r, raised: r.raiserId === ownerId }));
   }
   return map;
 }
@@ -478,6 +490,8 @@ export type TeamSnapshot = {
   ovr: number;
   /** 이 경기로 바뀐 레이팅(T-10-095부터 남긴다). */
   ratingChange?: number;
+  /** 이 경기에 반영된 시너지 id(T-11-105, 반영 시즌 경기만). */
+  synergy?: string[];
 };
 export type StoredEvent = {
   minute: number;
@@ -485,7 +499,7 @@ export type StoredEvent = {
   scorer: PlayerRef;
   assist: PlayerRef | null;
 };
-/** team_matches.detail_json. */
+/** team_matches.detail_json. 시너지 반영 시즌 경기는 TeamSnapshot.synergy에 켜진 시너지 id를 남긴다(T-11-105). */
 export type MatchDetail = { home: TeamSnapshot; away: TeamSnapshot; events: StoredEvent[] };
 
 /** 경기 한 판이 팀 행에 더하는 것(득실·레이팅 변화). */

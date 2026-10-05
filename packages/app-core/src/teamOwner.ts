@@ -8,11 +8,25 @@ import {
   LINEUP_SIZE,
   YOUTH_OVR,
   achGradeOf,
+  DUOS,
+  FOOT_BONUS,
+  FOOT_BONUS_BOTH,
+  HOMEGROWN_EFFECT,
+  TEAM_RULES,
+  lineStrength,
   slotFit,
   slotRating,
+  synergyApplies,
+  teamSynergy,
+  toSynergyPlayer,
   type AchCategory,
   type AchGrade,
+  type ActiveSynergy,
   type DetailPos,
+  type LineStrength,
+  type SynergyLines,
+  type TeamLayout,
+  type TeamSynergy,
 } from '@offside/contracts/owner-team';
 import type {
   ClubAchievement,
@@ -21,7 +35,7 @@ import type {
   TeamMatch,
   TeamPlayer,
 } from './api/team.js';
-import { num } from './teamText.js';
+import { num, signedNum } from './teamText.js';
 
 /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
 export type PickSort = 'fit' | 'score' | 'peak';
@@ -113,6 +127,89 @@ export function autoFillSlots(
   }
   return next;
 }
+
+/**
+ * T-11-105 편성 중인 선발의 시너지 — 서버 경기 계산(api team/sim.ts buildLineup)과 같은 입력으로 센다. 빈 자리는 유스 선수.
+ */
+export function slotsSynergy(
+  positions: TeamLayout,
+  slots: readonly (string | null)[],
+  byId: ReadonlyMap<string, TeamPlayer>,
+): TeamSynergy {
+  return teamSynergy(
+    positions.map(({ slot, x }, i) => {
+      const p = slots[i] ? byId.get(slots[i]!) : undefined;
+      return p ? toSynergyPlayer(slot, x, p) : null;
+    }),
+  );
+}
+
+/** 편성 줄 힘 — 시너지 반영 시즌부터 시너지 보정을 더한다(서버 view.ts linesOf와 같은 규칙). */
+export const draftLines = (
+  slotCodes: readonly DetailPos[],
+  ratings: readonly (number | null)[],
+  synergy: TeamSynergy,
+  season: number,
+): LineStrength => lineStrength(slotCodes, ratings, synergyApplies(season) ? synergy : null);
+
+const SYN_LABEL: Record<keyof SynergyLines, string> = {
+  atk: '공격',
+  mid: '중원',
+  def: '수비',
+  gk: '골문',
+};
+/** 시너지 효과 표기 — '공격 +2 · 중원 +0.5'. 효과가 비면 배지는 '경기 효과 없음', 듀오는 상한에 걸린 것. */
+export const synergyEffectText = (
+  effect: Partial<SynergyLines>,
+  kind?: ActiveSynergy['kind'],
+): string =>
+  (Object.keys(SYN_LABEL) as (keyof SynergyLines)[])
+    .filter((k) => effect[k])
+    .map((k) => `${SYN_LABEL[k]} ${signedNum(effect[k]!)}`)
+    .join(' · ') || (kind === 'duo' ? '상한에 걸려 효과 없음' : '경기 효과 없음');
+/** 시너지가 경기에 들어가는지 알리는 한 줄. */
+export const synergyNote = (season: number): string =>
+  synergyApplies(season) ? '경기에 반영돼요' : '프리시즌 경기에는 반영되지 않았어요';
+
+export type SynergyChip = {
+  id: string;
+  name: string;
+  desc: string;
+  effect: string;
+  badge: boolean;
+};
+/** 편성 화면의 시너지 칩(웹·앱 공용). 주발 맞춤은 인원과 자리 실력 보정 합을 보인다. */
+export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
+  s.active.map((a) => ({
+    id: a.id,
+    name: a.kind === 'foot' ? `${a.name} ${a.members.length}명` : a.name,
+    desc: a.desc,
+    effect:
+      a.kind === 'foot'
+        ? `자리 실력 ${signedNum(s.foot.reduce((t, b) => t + b, 0))}`
+        : synergyEffectText(a.effect, a.kind),
+    badge: a.kind === 'badge',
+  }));
+/** 고른 시너지 칩 → 그라운드 듀오 연결선(고른 것은 굵게)과 테두리를 칠 선수 자리. */
+export function synergyFocus(s: TeamSynergy, id: string | null) {
+  return {
+    links: s.active
+      .filter((a) => a.kind === 'duo')
+      .map((a) => ({ members: a.members, on: a.id === id })),
+    members: s.active.find((a) => a.id === id)?.members ?? null,
+  };
+}
+/** 시너지 표 — [이름, 설명, 효과]. 숨은 규칙 없이 전부 보인다. */
+export const SYNERGY_TABLE: readonly (readonly [string, string, string])[] = [
+  ...DUOS.map((d) => [d.name, d.desc, synergyEffectText(d.effect)] as const),
+  [TEAM_RULES.homegrown.name, TEAM_RULES.homegrown.desc, synergyEffectText(HOMEGROWN_EFFECT)],
+  [TEAM_RULES.national.name, TEAM_RULES.national.desc, '배지만(경기 효과 없음)'],
+  [
+    TEAM_RULES.foot.name,
+    TEAM_RULES.foot.desc,
+    `자리 실력 ${signedNum(FOOT_BONUS)}(양발 ${signedNum(FOOT_BONUS_BOTH)})`,
+  ],
+];
 
 /** 경기하기 버튼 밑에 보이는 못 하는 이유(할 수 있으면 null). */
 export function playHintOf(

@@ -163,7 +163,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           layout: layoutOf(t),
           logo: logoOf(t),
           ovr: lineupOvr(lineup),
-          lines: linesOf(lineup),
+          lines: linesOf(lineup, t.season),
           rating: t.rating,
           record: recordOf(t),
           goals: { for: t.goalsFor, against: t.goalsAgainst },
