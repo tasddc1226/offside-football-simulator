@@ -1,0 +1,1 @@
+ALTER TABLE `owner_achievements` ADD `team_kept` text;

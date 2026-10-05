@@ -370,6 +370,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'score',
     'done',
     'players',
+    'team_kept',
     'reached_at',
     'updated_at',
   ],
