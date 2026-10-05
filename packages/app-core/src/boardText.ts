@@ -27,6 +27,22 @@ export function parseBody(body: string): Block[] {
   return out.filter((b) => b.kind !== 'p' || b.lines.length > 0);
 }
 
+/**
+ * `hide`에 걸리는 줄을 본문에서 뺀다. 소제목이 걸리면 다음 소제목 전까지 통째로 뺀다.
+ * iOS 앱이 다른 플랫폼 언급을 가릴 때 쓴다(T-11-087, App Store 2.3.10). 서버 원문은 그대로 둔다.
+ */
+export function hideLines(body: string, hide: RegExp): string {
+  let skipping = false;
+  return body
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .filter((line) => {
+      if (/^#{1,3}\s+/.test(line)) skipping = hide.test(line);
+      return !skipping && !hide.test(line);
+    })
+    .join('\n');
+}
+
 /** 2026-09-25 형식(보는 사람 시간대). */
 export const dateOf = (iso: string) => {
   const d = new Date(iso);

@@ -2,7 +2,7 @@
 // 댓글은 로그인하고 닉네임을 정한 사람만(T-10-028). 글 본문은 app-core/boardText의 약속("## 소제목", "- 목록", 줄바꿈)만 읽는다.
 // 남의 댓글은 누구나 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 신고한 댓글·차단한 사람의 댓글은 서버가 빼고 준다.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import {
@@ -23,6 +23,7 @@ import {
   BOARD_LABEL,
   REPORT_REASON_LABEL,
   dateOf,
+  hideLines,
   parseBody,
   postMeta,
 } from '@offside/app-core/boardText';
@@ -51,6 +52,14 @@ import { Txt } from '../../ui/Txt';
 import { PostEditor, type Draft } from './PostEditor';
 import { Slide } from './Slide';
 import { Seg, TabOpt, TextBox, confirmAsync } from './parts';
+
+/** iOS 앱에서는 공지·릴리즈 노트의 다른 플랫폼 언급을 가린다(T-11-087, App Store 2.3.10). 웹·안드로이드는 원문. */
+const OTHER_PLATFORM =
+  /android|안드로이드|google\s*play|구글\s*플레이|플레이\s*스토어|play\s*store|갤럭시|galaxy/i;
+const IOS = Platform.OS === 'ios';
+const shownBody = (body: string) => (IOS ? hideLines(body, OTHER_PLATFORM) : body);
+const shownComments = (cs: Comment[]) =>
+  IOS ? cs.filter((c) => !OTHER_PLATFORM.test(c.body)) : cs;
 
 // T-10-058 조회수는 기기마다 글 하나에 한 번만 센다. 최근 VIEWED_MAX개만 기억한다.
 const VIEWED_KEY = 'ft_board_viewed';
@@ -356,6 +365,8 @@ export default function Board() {
   }
 
   const small = { fontSize: rem(0.75) } as const;
+  const comments = detail ? shownComments(detail.comments) : [];
+
   return (
     <Screen>
       <Slide view={view} dir={view === 'list' ? -1 : 1}>
@@ -407,7 +418,7 @@ export default function Board() {
                   </Txt>
                 </View>
                 <View>
-                  {parseBody(detail.post.body).map((b, i) =>
+                  {parseBody(shownBody(detail.post.body)).map((b, i) =>
                     b.kind === 'h' ? (
                       <Txt
                         key={i}
@@ -484,10 +495,10 @@ export default function Board() {
               </View>
               <View accessibilityLabel="댓글" style={{ gap: 10 }}>
                 <Txt v="h3" accessibilityRole="header">
-                  {`댓글 ${detail.comments.length}`}
+                  {`댓글 ${comments.length}`}
                 </Txt>
-                {detail.comments.length ? (
-                  detail.comments.map((cm) => (
+                {comments.length ? (
+                  comments.map((cm) => (
                     <View
                       key={cm.id}
                       testID={`comment-${cm.id}`}
