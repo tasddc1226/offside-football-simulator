@@ -98,9 +98,12 @@ export const profiles = sqliteTable(
     /** T-11-003 Sign in with Apple 사용자 id(앱). 구글과 따로 연결된다. */
     appleSub: text('apple_sub'),
     appleLinkedAt: text('apple_linked_at'),
+    /** T-11-098 친구 코드(초대 링크·코드 입력). 처음 친구 화면을 열 때 만든다. */
+    friendCode: text('friend_code'),
   },
   (table) => [
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
+    uniqueIndex('profiles_friend_code_unique').on(table.friendCode),
     uniqueIndex('profiles_apple_sub_unique').on(table.appleSub),
     uniqueIndex('profiles_nickname_unique').on(sql`lower(${table.nickname})`),
     uniqueIndex('profiles_toss_anon_key_hash_unique').on(table.tossAnonKeyHash),
@@ -171,6 +174,7 @@ export const authAttempts = sqliteTable(
         'CAREER_RETIRE',
         'PUSH_DEVICE',
         'PUSH_TEST',
+        'FRIEND_REQUEST',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -823,6 +827,60 @@ export const teamMatches = sqliteTable(
     index('team_matches_away_created_idx').on(table.awayTeamId, table.createdAt),
     index('team_matches_home_recent_idx').on(table.homeTeamId, table.createdAt, table.id),
     index('team_matches_away_recent_idx').on(table.awayTeamId, table.createdAt, table.id),
+  ],
+);
+
+/**
+ * T-11-098 친구. 한 쌍을 두 줄(내 쪽·상대 쪽)로 적어 내 친구 목록을 profile_id 하나로 읽는다. state는 그 줄 주인 기준 —
+ * 신청하면 보낸 쪽 'sent'·받은 쪽 'received', 수락하면 둘 다 'accepted'. 거절·취소·친구 끊기는 두 줄을 지운다.
+ * wins·draws·losses는 그 줄 주인 쪽에서 본 친선전 상대 전적이다(친구를 끊으면 함께 사라진다).
+ */
+export const friends = sqliteTable(
+  'friends',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    friendId: text('friend_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    state: text('state', { enum: ['sent', 'received', 'accepted'] }).notNull(),
+    wins: integer('wins').notNull().default(0),
+    draws: integer('draws').notNull().default(0),
+    losses: integer('losses').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.profileId, table.friendId] }),
+    index('friends_friend_idx').on(table.friendId),
+  ],
+);
+
+/**
+ * T-11-098 친선전. 랭크 경기(team_matches)와 따로 둔다 — 하루 경기 수·전적·레이팅·업적·랭킹 최근 전적이 이 표를 보지 않는다.
+ * profile_id는 경기를 건 구단주(홈), opponent_id는 받은 구단주(원정). detail_json 모양은 team_matches와 같다(레이팅 변화 없음).
+ */
+export const friendMatches = sqliteTable(
+  'friend_matches',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    opponentId: text('opponent_id').notNull(),
+    homeTeamId: text('home_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    awayTeamId: text('away_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    homeGoals: integer('home_goals').notNull(),
+    awayGoals: integer('away_goals').notNull(),
+    detailJson: text('detail_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('friend_matches_profile_created_idx').on(table.profileId, table.createdAt),
+    index('friend_matches_opponent_created_idx').on(table.opponentId, table.createdAt),
   ],
 );
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  // 경기 결과(중계가 끝난 뒤) — 스코어 · 득점 · 레이팅 변화.
+  // 경기 결과(중계가 끝난 뒤) — 스코어 · 득점 · 레이팅 변화. T-11-098 친선전은 레이팅·전적 없이 '친선전'만 단다.
   import type { OwnerTeam, TeamMatch } from '@offside/app-core/api/team';
   import { kstMonthDayTime } from '@offside/app-core/boardText';
   import { OUTCOME_TITLE, outcomeOf as outcome } from '@offside/app-core/teamOwner';
@@ -31,7 +31,7 @@
 
 <section class="card stack tm-result" style="gap:14px" data-team-result>
   <div>
-    <div class="eyebrow">Full time</div>
+    <div class="eyebrow">Full time{#if m.friendly} · <span data-friendly>친선전</span>{/if}</div>
     <h1>{OUTCOME_TITLE[outcome(m)]}</h1>
   </div>
   <div class="tm-score">
@@ -60,7 +60,7 @@
   {:else}
     <p class="muted">골 없이 비겼어요.</p>
   {/if}
-  <p class="muted fs-sm">{kstMonthDayTime(m.createdAt)}{team && m.mine === 'home' ? ` · 내 팀 ${recordText(team.record)}` : ''}</p>
+  <p class="muted fs-sm">{kstMonthDayTime(m.createdAt)}{team && m.mine === 'home' && !m.friendly ? ` · 내 팀 ${recordText(team.record)}` : ''}</p>
   {#if gain != null}
     <p class="fs-sm" data-rating-change>내 팀 레이팅 <b>{signedNum(gain)}</b></p>
   {/if}

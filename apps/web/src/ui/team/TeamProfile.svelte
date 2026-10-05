@@ -8,6 +8,7 @@
     viewTeam,
     type TeamProfile,
   } from '@offside/app-core/api/team';
+  import { requestFriend, type FriendState } from '@offside/app-core/api/friends';
   import { teamSeasonClosed } from '@offside/contracts/service-seasons';
   import { localCareerNames } from '@offside/game/season';
   import { toast } from '../helpers.js';
@@ -26,6 +27,9 @@
   let liked = $state(false);
   let mine = $state(false);
   let liking = $state(false);
+  /** T-11-098 나와 이 팀 구단주의 친구 상태(로그인한 구단주가 남의 팀을 볼 때만 온다). */
+  let friend = $state<FriendState | null>(null);
+  let befriending = $state(false);
   // T-11-029 끝난 시즌의 팀은 좋아요가 굳는다(서버가 409로 거절한다).
   const closed = $derived(!!team && teamSeasonClosed(team.season, new Date().toISOString()));
 
@@ -40,6 +44,7 @@
       return;
     }
     ({ team, liked, mine } = r.data);
+    friend = r.data.friend ?? null;
     status = 'ready';
     if (!mine) {
       team.views += 1;
@@ -57,6 +62,23 @@
     liked = r.data.liked;
     team.likes = r.data.likes;
   }
+
+  /** 친구 신청 · 받은 신청 수락(같은 요청 — 상대가 먼저 신청했으면 서버가 바로 친구로 맺는다). */
+  async function befriend() {
+    if (!team || befriending) return;
+    befriending = true;
+    const r = await requestFriend({ teamId: team.id });
+    befriending = false;
+    if (!r.ok) return toast(r.error.message);
+    friend = r.data.state;
+    toast(r.data.state === 'accepted' ? `${r.data.friend.name} 님과 친구가 됐어요` : '친구 신청을 보냈어요');
+  }
+  const FRIEND_BUTTON: Record<FriendState, string> = {
+    none: '친구 신청',
+    sent: '신청 보냄',
+    received: '친구 수락',
+    accepted: '친구',
+  };
 
   const cells = $derived(
     team?.slots.map((s) => ({
@@ -98,6 +120,7 @@
           <span aria-hidden="true">{liked ? '♥' : '♡'}</span> {n(team.likes)}
         </button>
         <span class="muted">조회수 <b>{n(team.views)}</b></span>
+        {#if friend}<button class="btn btn-sm" class:btn-primary={friend === 'none' || friend === 'received'} disabled={befriending || friend === 'sent' || friend === 'accepted'} onclick={befriend} data-act="team-friend" data-friend-state={friend}>{FRIEND_BUTTON[friend]}</button>{/if}
         <span class="muted fs-xs tp-formation">{team.formation}</span>
       </div>
     </section>
@@ -189,6 +212,7 @@
   }
   .tp-social {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 14px;
   }

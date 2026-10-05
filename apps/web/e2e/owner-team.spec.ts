@@ -50,6 +50,16 @@ const SEASONS = [
   { id: 1, name: '시즌 1' },
 ];
 
+/** T-11-098 친구·신청 한 사람. */
+const person = (code: string, name: string, over: Record<string, unknown> = {}) => ({
+  code,
+  name,
+  team: null,
+  h2h: REC,
+  createdAt: '2026-09-29T00:00:00.000Z',
+  ...over,
+});
+
 /** GET /v1/owner-team(?season=) 응답. */
 const ownerTeam = (over: Record<string, unknown> = {}) =>
   ok({
@@ -684,8 +694,14 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
         },
         liked: false,
         mine: false,
+        friend: 'none',
       }),
     );
+  });
+  const friendBodies: unknown[] = [];
+  await page.route(`${API}/v1/friends/requests`, (route) => {
+    friendBodies.push(route.request().postDataJSON());
+    return route.fulfill(ok({ state: 'sent', friend: person('RIVA2345', '라이벌 감독') }, 201));
   });
 
   await page.goto('/');
@@ -734,6 +750,14 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await like.click();
   await expect(like).toContainText('3');
   expect(likes).toEqual(['PUT', 'DELETE']);
+  // T-11-098 팀 프로필에서 그 구단주에게 친구 신청을 보낸다.
+  const befriend = page.locator('[data-act="team-friend"]');
+  await expect(befriend).toHaveText('친구 신청');
+  await befriend.click();
+  await expect(page.locator('#toast')).toContainText('친구 신청을 보냈어요');
+  await expect(befriend).toHaveText('신청 보냄');
+  await expect(befriend).toBeDisabled();
+  expect(friendBodies).toEqual([{ teamId: RIVAL }]);
   await page.locator('[data-act="team-profile-back"]').click();
   await expect(list).toBeVisible();
 });
@@ -859,4 +883,198 @@ test('모바일 편성 초안은 화면 왕복·새로고침에도 복원되고 
   await expect(page.locator('[data-act="team-save"]')).toHaveCount(0);
   expect(puts).toBe(2);
   await expectNoA11yViolations(page);
+});
+
+// ───────── T-11-098 친구 · 친선전 ─────────
+
+const FRIEND_TEAM = {
+  id: RIVAL,
+  name: '친구 FC',
+  logo: null,
+  formation: '4-4-2',
+  ovr: 61,
+  rating: 1030,
+  filled: 4,
+};
+/** GET /v1/friends 응답. */
+const friendsBody = (over: Record<string, unknown> = {}) => ({
+  code: 'MYCD2345',
+  friends: [] as unknown[],
+  received: [] as unknown[],
+  sent: [] as unknown[],
+  recent: [] as unknown[],
+  matchesLeft: 10,
+  matchesPerDay: 10,
+  max: 50,
+  canPlay: true,
+  ...over,
+});
+const FRIENDLY = {
+  id: 'fmt_1',
+  home: {
+    teamId: MY_TEAM,
+    name: '우리 FC',
+    owner: '홍감독',
+    formation: '4-3-3',
+    ovr: 56,
+    goals: 1,
+    ratingChange: null,
+  },
+  away: {
+    teamId: RIVAL,
+    name: '친구 FC',
+    owner: '친구 감독',
+    formation: '4-4-2',
+    ovr: 61,
+    goals: 1,
+    ratingChange: null,
+  },
+  events: [
+    {
+      minute: 20,
+      side: 'home',
+      scorer: '공개 골잡이',
+      assist: null,
+      scorerId: null,
+      assistId: null,
+    },
+    { minute: 70, side: 'away', scorer: '유스 선수', assist: null, scorerId: null, assistId: null },
+  ],
+  mine: 'home',
+  friendly: true,
+  createdAt: '2026-09-29T03:00:00.000Z',
+};
+
+test('친구 — 코드로 신청하고 받은 신청을 수락하고 친선전을 치른다', async ({ page }) => {
+  await stubOwner(page, true);
+  const myTeam = teamFrom({
+    name: '우리 FC',
+    formation: '4-3-3',
+    slots: [
+      PLAYERS[1]!.careerId,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      PLAYERS[0]!.careerId,
+    ],
+  });
+  await page.route(ownerTeamUrl, (route) => route.fulfill(ownerTeam({ team: myTeam })));
+  let opponentsGets = 0;
+  await page.route(`${API}/v1/owner-team/opponents`, (route) => {
+    opponentsGets++;
+    return route.fulfill(ok({ items: [] }));
+  });
+  // 서버 상태를 흉내 낸다: 받은 신청 하나로 시작한다.
+  let state = friendsBody({ received: [person('FRND2345', '친구 감독', { team: FRIEND_TEAM })] });
+  let friendsGets = 0;
+  await page.route(`${API}/v1/friends`, (route) => {
+    friendsGets++;
+    return route.fulfill(ok(state));
+  });
+  const requests: unknown[] = [];
+  await page.route(`${API}/v1/friends/requests`, (route) => {
+    requests.push(route.request().postDataJSON());
+    const sent = person('WXYZ2345', '새 친구');
+    state = { ...state, sent: [sent] };
+    return route.fulfill(ok({ state: 'sent', friend: sent }, 201));
+  });
+  await page.route(`${API}/v1/friends/FRND2345/accept`, (route) => {
+    const p = person('FRND2345', '친구 감독', { team: FRIEND_TEAM });
+    state = { ...state, received: [], friends: [p] };
+    return route.fulfill(ok({ state: 'accepted', friend: p }));
+  });
+  let played = 0;
+  await page.route(`${API}/v1/friends/FRND2345/matches`, (route) => {
+    played++;
+    state = {
+      ...state,
+      matchesLeft: 9,
+      friends: [person('FRND2345', '친구 감독', { team: FRIEND_TEAM, h2h: { w: 0, d: 1, l: 0 } })],
+      recent: [FRIENDLY],
+    };
+    return route.fulfill(ok({ match: FRIENDLY, h2h: { w: 0, d: 1, l: 0 }, matchesLeft: 9 }, 201));
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-team-tab="opponents"]').click();
+  await expect.poll(() => opponentsGets).toBe(1);
+  // 친구 쪽은 열 때만 불러온다.
+  expect(friendsGets).toBe(0);
+  await page.locator('[data-match-mode="friends"]').click();
+  const panel = page.locator('[data-friends]');
+  await expect(panel.locator('[data-friend-code]')).toHaveText('MYCD-2345');
+  await expect(panel).toContainText('오늘 남은 친선전 10/10');
+  await expect(panel).toContainText('아직 친구가 없어요');
+  expect(friendsGets).toBe(1);
+  await expectNoA11yViolations(page);
+
+  // 틀린 코드는 보내지 않고, 소문자·하이픈 코드는 정리해서 보낸다.
+  const input = panel.locator('[data-friend-code-input]');
+  await input.fill('abc');
+  await panel.locator('[data-act="friend-request"]').click();
+  await expect(page.locator('#toast')).toContainText('친구 코드 8자리를 확인해 주세요.');
+  await input.fill('wxyz-2345');
+  await panel.locator('[data-act="friend-request"]').click();
+  await expect(page.locator('#toast')).toContainText('친구 신청을 보냈어요');
+  expect(requests).toEqual([{ code: 'WXYZ2345' }]);
+  await expect(panel.locator('[data-friend-sent="WXYZ2345"]')).toContainText('새 친구');
+
+  await panel.locator('[data-friend-received="FRND2345"] [data-act="friend-accept"]').click();
+  await expect(page.locator('#toast')).toContainText('친구 감독 님과 친구가 됐어요');
+  const row = panel.locator('[data-friend="FRND2345"]');
+  await expect(row).toContainText('친구 FC · OVR 61');
+  const gets = friendsGets;
+
+  // 랭크 경기로 갔다가 돌아와도 친구 목록을 다시 부르지 않는다(메모).
+  await page.locator('[data-match-mode="ranked"]').click();
+  await page.locator('[data-match-mode="friends"]').click();
+  await expect(row).toBeVisible();
+  expect(friendsGets).toBe(gets);
+  expect(opponentsGets).toBe(1);
+
+  await row.locator('[data-act="friend-play"]').click();
+  expect(played).toBe(1);
+  const live = page.locator('[data-team-live]');
+  await live.locator('[data-act="live-skip"]').click();
+  const result = page.locator('[data-team-result]');
+  await expect(result.locator('[data-friendly]')).toHaveText('친선전');
+  await expect(result.locator('h1')).toHaveText('무승부');
+  await expect(result.locator('[data-rating-change]')).toHaveCount(0);
+  await expect(result).not.toContainText('내 팀');
+  await result.getByRole('button', { name: '다시 경기하기' }).click();
+  await expect(row).toContainText('상대 전적 0승 1무 0패');
+  await expect(panel).toContainText('오늘 남은 친선전 9/10');
+  await expect(panel.locator('[data-friendly-match="fmt_1"]')).toContainText('친선전 · 친구 감독');
+});
+
+test('친구 초대 링크로 들어오면 친구 화면에서 그 구단주에게 신청한다', async ({ page }) => {
+  await stubOwner(page, true);
+  await page.route(ownerTeamUrl, (route) => route.fulfill(ownerTeam()));
+  await page.route(`${API}/v1/friends`, (route) =>
+    route.fulfill(ok(friendsBody({ canPlay: false }))),
+  );
+  const requests: unknown[] = [];
+  await page.route(`${API}/v1/friends/requests`, (route) => {
+    requests.push(route.request().postDataJSON());
+    return route.fulfill(ok({ state: 'sent', friend: person('ABCD2345', '초대한 감독') }, 201));
+  });
+
+  await page.goto('/?friend=abcd-2345');
+  const card = page.locator('[data-friend-invite]');
+  await expect(card).toContainText('ABCD-2345');
+  // 주소에서 초대 코드를 지운다(새로고침해도 다시 열리지 않게).
+  expect(new URL(page.url()).search).toBe('');
+  // 팀이 없으면 친선전은 못 하지만 친구 신청은 할 수 있다.
+  await expect(page.locator('[data-friends-hint]')).toContainText('이번 시즌 팀을 만들면');
+  await card.locator('[data-act="friend-invite-send"]').click();
+  await expect(page.locator('#toast')).toContainText('친구 신청을 보냈어요');
+  expect(requests).toEqual([{ code: 'ABCD2345' }]);
+  await expect(card).toHaveCount(0);
 });

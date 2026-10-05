@@ -3,6 +3,7 @@
 // 웹의 '← 랭킹'(BackBar)은 화면(Hof)이 아래 고정 막대로 그린다.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
+import { requestFriend, type FriendState } from '@offside/app-core/api/friends';
 import {
   fetchTeamProfile,
   likeTeam,
@@ -19,10 +20,12 @@ import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
 import { toast } from '../../../game/host';
 import { DISPLAY, rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
+import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
 import { Press } from '../../../ui/Press';
 import { Txt } from '../../../ui/Txt';
 import { AutoGrid } from '../../board/parts';
+import { friendRequestMessage } from '../../owner/friendToast';
 
 export default function TeamProfile({ id }: { id: string }) {
   const c = useColors();
@@ -31,6 +34,9 @@ export default function TeamProfile({ id }: { id: string }) {
   const [liked, setLiked] = useState(false);
   const [mine, setMine] = useState(false);
   const [liking, setLiking] = useState(false);
+  // T-11-098 친구 신청. null이면 버튼을 그리지 않는다(로그인 전 · 내 팀 · 구버전 응답).
+  const [friend, setFriend] = useState<FriendState | null>(null);
+  const [requesting, setRequesting] = useState(false);
   // T-11-029 끝난 시즌의 팀은 좋아요가 굳는다(서버가 409로 거절한다).
   const closed = !!team && teamSeasonClosed(team.season, new Date().toISOString());
 
@@ -46,6 +52,7 @@ export default function TeamProfile({ id }: { id: string }) {
     }
     setLiked(r.data.liked);
     setMine(r.data.mine);
+    setFriend(r.data.friend ?? null);
     if (!r.data.mine) {
       setTeam({ ...r.data.team, views: r.data.team.views + 1 });
       void viewTeam(id);
@@ -62,6 +69,16 @@ export default function TeamProfile({ id }: { id: string }) {
     if (!r.ok) return toast(r.error.message);
     setLiked(r.data.liked);
     setTeam((t) => (t ? { ...t, likes: r.data.likes } : t));
+  }
+
+  async function askFriend() {
+    if (!team || requesting) return;
+    setRequesting(true);
+    const r = await requestFriend({ teamId: team.id });
+    setRequesting(false);
+    if (!r.ok) return toast(r.error.message);
+    setFriend(r.data.state === 'sent' ? 'sent' : 'accepted');
+    toast(friendRequestMessage(r.data));
   }
 
   const cells =
@@ -212,6 +229,24 @@ export default function TeamProfile({ id }: { id: string }) {
               </Txt>
             </View>
           </Card>
+
+          {friend && !mine ? (
+            <Btn
+              block
+              kind={friend === 'none' || friend === 'received' ? 'primary' : 'default'}
+              testID="team-friend"
+              disabled={requesting || friend === 'sent' || friend === 'accepted'}
+              onPress={() => void askFriend()}
+            >
+              {friend === 'none'
+                ? '친구 신청'
+                : friend === 'sent'
+                  ? '신청 보냄'
+                  : friend === 'received'
+                    ? '친구 수락'
+                    : '친구'}
+            </Btn>
+          ) : null}
 
           <Card gap={10}>
             <View testID="team-history">

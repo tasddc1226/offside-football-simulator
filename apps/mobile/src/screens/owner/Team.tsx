@@ -53,6 +53,7 @@ import type { TabIconName } from '../../ui/TabIcon';
 import { Field, SelectField, TextField } from '../settings/parts';
 import { LoginButtons } from './LoginButtons';
 import { TeamAchievements } from './TeamAchievements';
+import { TeamFriends, OppSwitch, useFriends, type OppTab } from './TeamFriends';
 import { TeamHistory } from './TeamHistory';
 import { TeamLive } from './TeamLive';
 import { TeamOpponents } from './TeamOpponents';
@@ -119,6 +120,10 @@ export default function Team() {
   const savingRef = useRef(false);
   const draftNow = useRef<PutOwnerTeamBody | null>(null);
 
+  /** T-11-098 '경기' 탭의 두 칸(랭크 경기 · 친구). 친구 칸은 처음 열 때만 불러온다. */
+  const [oppTab, setOppTab] = useState<OppTab>('ranked');
+  const friends = useFriends();
+  const oppLoaded = useRef(false);
   const [opponents, setOpponents] = useState<TeamOpponent[]>([]);
   const [oppStatus, setOppStatus] = useState<LoadStatus>('loading');
   const [playing, setPlaying] = useState(false);
@@ -308,6 +313,7 @@ export default function Team() {
 
   // ───────── 경기 ─────────
   async function loadOpponents() {
+    oppLoaded.current = true;
     setOppStatus('loading');
     const r = await fetchOpponents();
     if (!r.ok) return setOppStatus('error');
@@ -335,6 +341,20 @@ export default function Team() {
     scrollTo(0);
   }
 
+  /** 친구 칸에서 친선전을 치렀거나(중계부터) 최근 친선전을 열 때(결과부터). 친선전은 레이팅·전적을 건드리지 않는다. */
+  function showFriendly(m: TeamMatch, withLive: boolean) {
+    setResultOrigin('opponents');
+    setResult(m);
+    setLive(withLive);
+    show('result');
+    scrollTo(0);
+  }
+  function pickOppTab(t: OppTab) {
+    setOppTab(t);
+    if (t === 'friends') friends.ensure();
+    else if (!oppLoaded.current && !matchHint) void loadOpponents();
+  }
+
   // ───────── 시즌 업적 ─────────
   async function loadAchievements(want = season) {
     setAchStatus('loading');
@@ -357,7 +377,8 @@ export default function Team() {
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 effect가, 이미 그 화면이면 open이 다시 불러온다.
   const LOAD = {
-    opponents: () => (matchHint ? undefined : loadOpponents()),
+    opponents: () =>
+      oppTab === 'friends' ? friends.ensure() : matchHint ? undefined : loadOpponents(),
     achievements: () => loadAchievements(),
     history: loadHistory,
   };
@@ -617,21 +638,32 @@ export default function Team() {
     );
   } else if (view === 'opponents') {
     body = (
-      <TeamOpponents
-        ovr={team?.ovr ?? ovr}
-        matchesLeft={matchesLeft}
-        perDay={perDay}
-        opponents={opponents}
-        status={oppStatus}
-        playing={playing}
-        reload={() => void loadOpponents()}
-        challenge={(o) => void challenge(o)}
-        hint={matchHint}
-        toTeam={editable ? () => switchView('team') : undefined}
-        saveAndFind={editable && dirty && team ? () => void saveAndFind() : undefined}
-        saving={saving}
-        canSave={nameOk}
-      />
+      <>
+        <OppSwitch value={oppTab} onPick={pickOppTab} />
+        {oppTab === 'friends' ? (
+          <TeamFriends
+            friends={friends}
+            onPlayed={(m) => showFriendly(m, true)}
+            onOpen={(m) => showFriendly(m, false)}
+          />
+        ) : (
+          <TeamOpponents
+            ovr={team?.ovr ?? ovr}
+            matchesLeft={matchesLeft}
+            perDay={perDay}
+            opponents={opponents}
+            status={oppStatus}
+            playing={playing}
+            reload={() => void loadOpponents()}
+            challenge={(o) => void challenge(o)}
+            hint={matchHint}
+            toTeam={editable ? () => switchView('team') : undefined}
+            saveAndFind={editable && dirty && team ? () => void saveAndFind() : undefined}
+            saving={saving}
+            canSave={nameOk}
+          />
+        )}
+      </>
     );
   } else if (view === 'result' && result) {
     body = live ? (
@@ -653,7 +685,16 @@ export default function Team() {
         toTeam={() => show(resultOrigin === 'history' ? 'history' : 'team')}
         backLabel={resultOrigin === 'history' ? '기록으로 돌아가기' : '편성으로'}
         replay={() => setLive(true)}
-        again={() => open('opponents')}
+        again={() => {
+          if (result.friendly) {
+            setOppTab('friends');
+            show('opponents');
+            scrollTo(0);
+          } else {
+            setOppTab('ranked');
+            open('opponents');
+          }
+        }}
       />
     );
   } else if (view === 'history') {

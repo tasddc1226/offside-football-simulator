@@ -65,6 +65,23 @@ export const TEAM_MATCHES_PER_DAY = 10;
 /** 한 팀의 선발 인원. */
 export const LINEUP_SIZE = 11;
 
+// T-11-098 친구 · 친선전. 친선전은 레이팅·전적·업적에 들어가지 않고 친구끼리 상대 전적만 남긴다.
+/** 친구(보낸·받은 신청 포함) 상한. */
+export const FRIENDS_MAX = 50;
+/** 구단주 한 명이 한국 시각 하루에 걸 수 있는 친선전 수(랭크 경기와 따로 센다). */
+export const FRIENDLY_MATCHES_PER_DAY = 10;
+/** 친구 코드: 헷갈리는 글자(0·O·1·I·L)를 뺀 대문자·숫자 8자. */
+export const FRIEND_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+export const FRIEND_CODE_LENGTH = 8;
+export const FRIEND_CODE_RE = /^[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{8}$/;
+/** 사람이 입력한 친구 코드를 정리한다(공백·하이픈 제거, 대문자). 형식이 틀리면 null. */
+export function normalizeFriendCode(raw: string): string | null {
+  const code = raw.replace(/[\s-]/g, '').toUpperCase();
+  return FRIEND_CODE_RE.test(code) ? code : null;
+}
+/** 친구 초대 링크의 쿼리 이름(`/?friend=코드`). */
+export const FRIEND_INVITE_PARAM = 'friend';
+
 // 세부 포지션(T-10-091)은 커리어의 dpos와 같은 정의를 쓴다.
 export {
   DETAIL_GROUP,

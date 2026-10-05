@@ -28,7 +28,8 @@ export function TeamResult({
   again: () => void;
   backLabel?: string;
 }) {
-  const gain = m[m.mine].ratingChange;
+  const friendly = !!m.friendly;
+  const gain = friendly ? null : m[m.mine].ratingChange;
   const side = (s: TeamMatch['home'], away: boolean, mine: boolean) => (
     <View style={{ flex: 1, minWidth: 0, gap: 2, alignItems: away ? 'flex-end' : 'flex-start' }}>
       <TeamLogo logo={s.logo} name={s.name} size={40} decorative />
@@ -52,6 +53,11 @@ export function TeamResult({
         <Txt v="h1" accessibilityRole="header">
           {OUTCOME_TITLE[outcomeOf(m)]}
         </Txt>
+        {friendly ? (
+          <Txt v="sm" tone="accent" bold testID="team-friendly-label">
+            친선전
+          </Txt>
+        ) : null}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         {side(m.home, false, m.mine === 'home')}
@@ -100,7 +106,7 @@ export function TeamResult({
         <Txt tone="muted">골 없이 비겼어요.</Txt>
       )}
       <Txt tone="muted" v="sm">
-        {`${kstMonthDayTime(m.createdAt)}${team && m.mine === 'home' ? ` · 내 팀 ${recordText(team.record)}` : ''}`}
+        {`${kstMonthDayTime(m.createdAt)}${team && !friendly && m.mine === 'home' ? ` · 내 팀 ${recordText(team.record)}` : ''}`}
       </Txt>
       {gain != null ? (
         <Txt v="sm" testID="rating-change">
@@ -117,7 +123,13 @@ export function TeamResult({
         <Btn block onPress={replay} testID="team-replay">
           중계 다시 보기
         </Btn>
-        <Btn block kind="primary" onPress={again} disabled={matchesLeft === 0} testID="team-again">
+        <Btn
+          block
+          kind="primary"
+          onPress={again}
+          disabled={!friendly && matchesLeft === 0}
+          testID="team-again"
+        >
           다시 경기하기
         </Btn>
       </Grid2>

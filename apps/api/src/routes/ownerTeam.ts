@@ -99,7 +99,7 @@ export async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
 }
 
 /** 지금 고치고 겨루는 팀 시즌. 시즌 사이 휴식기면 409 SEASON_CLOSED. */
-function currentSeasonOrThrow(now: string): number {
+export function currentSeasonOrThrow(now: string): number {
   const season = teamSeasonAt(now);
   if (season === null) {
     throw conflictError(
@@ -162,9 +162,12 @@ function toOwnerTeam(
   };
 }
 
-type MatchHead = Pick<TeamMatchRow, 'id' | 'homeTeamId' | 'homeGoals' | 'awayGoals' | 'createdAt'>;
+export type MatchHead = Pick<
+  TeamMatchRow,
+  'id' | 'homeTeamId' | 'homeGoals' | 'awayGoals' | 'createdAt'
+>;
 
-function toMatch(
+export function toMatch(
   row: MatchHead,
   d: MatchDetail,
   myTeamId: string,
@@ -200,7 +203,7 @@ function toMatch(
   };
 }
 
-const careerIdsIn = (details: readonly MatchDetail[]) => [
+export const careerIdsIn = (details: readonly MatchDetail[]) => [
   ...new Set(
     details.flatMap((d) =>
       d.events.flatMap((e) =>
