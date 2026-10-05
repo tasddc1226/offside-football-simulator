@@ -86,10 +86,10 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
   const [expanded, setExpanded] = useState(false);
   const now = useMemo(() => new Date().toISOString(), []);
   // T-11-110 목록은 불러온 시각(now)으로, 시즌 탭·기본 시즌은 띄운 채 개막을 넘기면 다시 고른다.
-  const seasonNow = useSeasonNow();
-  const seasons = useMemo(() => mySeasonOptions(seasonNow), [seasonNow]);
+  const clockNow = useSeasonNow();
+  const seasons = useMemo(() => mySeasonOptions(clockNow), [clockNow]);
   const [picked, setPicked] = useState<number | null>(null);
-  const season = picked ?? myDefaultSeason(seasonNow);
+  const season = picked ?? myDefaultSeason(clockNow);
   const inSeason = useMemo(
     () => (seasons.length > 1 ? rows.filter((r) => r.season === season) : rows),
     [seasons, rows, season],

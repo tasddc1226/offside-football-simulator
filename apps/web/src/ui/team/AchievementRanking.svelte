@@ -25,10 +25,12 @@
   const now = $derived(clock.now);
   const seasons = $derived(data?.seasons ?? openTeamSeasons(now).map((id) => ({ id, name: teamSeasonName(id) })));
   const selectedSeason = $derived(season ?? data?.season ?? displaySeasonAt(now));
+  /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
+  const shownSeason = $derived(season ?? displaySeasonAt(now));
 
   $effect(() => {
     const [se, p, example] = [season, page, preview];
-    void now; // 지금 시즌(season 없음)을 보는 중에 개막을 넘기면 다시 받는다.
+    void shownSeason;
     let live = true;
     failed = false;
     loading = true;

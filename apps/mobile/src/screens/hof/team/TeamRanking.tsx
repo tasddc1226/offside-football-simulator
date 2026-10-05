@@ -44,6 +44,8 @@ export default function TeamRanking() {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const now = useSeasonNow();
+  /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
+  const shownSeason = season ?? displaySeasonAt(now);
 
   useEffect(() => {
     setFailed(false);
@@ -58,8 +60,7 @@ export default function TeamRanking() {
     return () => {
       live = false;
     };
-    // now: 지금 시즌(season 없음)을 보는 중에 개막을 넘기면 다시 받는다.
-  }, [season, sort, page, now]);
+  }, [season, sort, page, shownSeason]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1;
   function goPage(p: number) {
@@ -91,7 +92,7 @@ export default function TeamRanking() {
           value={season ?? data?.season ?? displaySeasonAt(now)}
           options={
             data?.seasons.map((s) => ({ value: s.id, label: s.name })) ??
-            openTeamSeasons(new Date().toISOString()).map((id) => ({
+            openTeamSeasons(now).map((id) => ({
               value: id,
               label: teamSeasonName(id),
             }))
