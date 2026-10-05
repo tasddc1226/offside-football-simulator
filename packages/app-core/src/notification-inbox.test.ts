@@ -67,12 +67,10 @@ describe('session-private inbox cache', () => {
     expect(s.unreadCount).toBe(0);
   });
   it('retains unread state on failed read and preserves retry feedback', async () => {
-    request
-      .mockResolvedValueOnce(page())
-      .mockResolvedValueOnce({
-        ok: false,
-        error: { code: 'NETWORK_ERROR', message: '다시 시도해요.', retryable: true },
-      });
+    request.mockResolvedValueOnce(page()).mockResolvedValueOnce({
+      ok: false,
+      error: { code: 'NETWORK_ERROR', message: '다시 시도해요.', retryable: true },
+    });
     const s = initialInboxState(),
       c = createNotificationInbox(s);
     await c.load();
