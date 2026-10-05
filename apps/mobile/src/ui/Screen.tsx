@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../theme/useColors';
 import { noteScrollY, noteViewH, revealFocusedInput } from './scroll';
 import { useFormKeyboardScroll } from './useFormKeyboardScroll';
+import { useRefreshControl } from './refresh';
 
 /** 화면 아래에 탭바가 붙어 있다(탭바가 아래 안전 영역을 채운다). 루트·게임 화면이 넣는다. */
 export const BarBelow = createContext(false);
@@ -40,6 +41,8 @@ export function Screen({
   const insets = useSafeAreaInsets();
   const barBelow = useContext(BarBelow);
   const keyboardScroll = useFormKeyboardScroll();
+  // T-11-111 이 화면에 useRefresh로 불러오는 컴포넌트가 있으면 당겨서 새로고침(화면이 따로 넘긴 것이 먼저).
+  const pull = useRefreshControl(!fixed && !refreshControl);
   const pad = {
     paddingTop: insets.top,
     paddingHorizontal: 16,
@@ -71,7 +74,7 @@ export function Screen({
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         automaticallyAdjustKeyboardInsets
-        refreshControl={refreshControl}
+        refreshControl={refreshControl ?? pull}
         contentContainerStyle={[pad, style]}
       >
         {children}

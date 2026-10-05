@@ -27,6 +27,7 @@ import { RecordsSelect, RecordsChips } from '../RecordsControls';
 import TeamProfile from './TeamProfile';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { useSeasonNow } from '../../../ui/useSeasonNow';
+import { useRefresh } from '../../../ui/refresh';
 
 const SORTS: [TeamRankSort, string][] = [
   ['rating', '레이팅'],
@@ -47,11 +48,12 @@ export default function TeamRanking() {
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = season ?? displaySeasonAt(now);
 
+  const { tick, track, pulled } = useRefresh();
   useEffect(() => {
     setFailed(false);
-    setLoading(true);
+    if (!pulled()) setLoading(true);
     let live = true; // 더 늦게 고른 조건의 응답만 쓴다.
-    void fetchTeamRanking(season, sort, page).then((r) => {
+    void track(fetchTeamRanking(season, sort, page)).then((r) => {
       if (!live) return;
       setLoading(false);
       if (r.ok) setData(r.data);
@@ -60,7 +62,7 @@ export default function TeamRanking() {
     return () => {
       live = false;
     };
-  }, [season, sort, page, shownSeason]);
+  }, [season, sort, page, shownSeason, tick, track]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1;
   function goPage(p: number) {

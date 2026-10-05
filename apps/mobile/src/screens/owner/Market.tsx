@@ -64,6 +64,7 @@ import { useColors } from '../../theme/useColors';
 import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { ActionBar, BackBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
+import { useRefresh } from '../../ui/refresh';
 import { CARD_TONES, PlayerCard } from '../../components/PlayerCard';
 import { MarketChart, MarketIndex } from './MarketChart';
 
@@ -533,12 +534,12 @@ export default function Market() {
   const listReq = useRef(0);
   // 정렬을 빠르게 바꿀 때 늦게 온 이전 응답이 덮어쓰지 않게 요청 번호를 둔다.
   const loadList = useCallback(
-    async (next = 0) => {
+    async (next = 0, silent = false) => {
       const req = ++listReq.current;
-      if (next === 0) setListStatus('loading');
+      if (next === 0 && !silent) setListStatus('loading');
       const r = await fetchMarket(sort, pos, next);
       if (req !== listReq.current) return;
-      if (!r.ok) return setListStatus('error');
+      if (!r.ok) return silent ? undefined : setListStatus('error');
       setItems((prev) => (next === 0 ? r.data.items : [...prev, ...r.data.items]));
       // 배포 직후 옛 엣지 응답에는 recent가 없다.
       if (next === 0) setRecent(r.data.recent ?? []);
@@ -555,11 +556,15 @@ export default function Market() {
   // 시장 지수(최근 7일 · 시장 전체). 선수 사기 탭을 처음 볼 때 한 번(1분 메모).
   const [indexPoints, setIndexPoints] = useState<MarketChartPoint[]>([]);
   const indexAsked = useRef(false);
+  const loadIndex = useCallback(
+    () => fetchMarketChart('week').then((r) => r.ok && setIndexPoints(r.data.points)),
+    [],
+  );
   useEffect(() => {
     if (view !== 'market' || indexAsked.current) return;
     indexAsked.current = true;
-    void fetchMarketChart('week').then((r) => r.ok && setIndexPoints(r.data.points));
-  }, [view]);
+    void loadIndex();
+  }, [view, loadIndex]);
   const myListingIds = useMemo(() => new Set(me?.listings.map((l) => l.id) ?? []), [me]);
 
   // 팔기는 지금 시즌 선수, 방출은 시즌을 골라 본다(기본은 지금 시즌).
@@ -622,6 +627,22 @@ export default function Market() {
       view === 'market' ? loadList(0) : view === 'sell' || view === 'release' ? loadTeam() : null,
     ]);
   };
+  // T-11-111 당겨서 새로고침 — 보이는 탭의 데이터만 조용히 다시 받는다(목록을 비우지 않는다). 사고파는 중에는 건너뛴다.
+  const { tick, track } = useRefresh();
+  useEffect(() => {
+    if (!tick || busy) return;
+    void track(
+      Promise.all([
+        loadMe(),
+        view === 'market'
+          ? Promise.all([loadList(0, true), indexAsked.current ? loadIndex() : null])
+          : view === 'sell' || view === 'release'
+            ? loadTeam()
+            : null,
+      ]),
+    );
+    // tick이 바뀔 때만.
+  }, [tick]);
   async function run<T>(send: () => Sent<T>, done: string) {
     setBusy(true);
     setError(null);

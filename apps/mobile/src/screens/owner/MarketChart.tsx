@@ -27,6 +27,7 @@ import { useColors } from '../../theme/useColors';
 import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Press, Txt } from '../../ui';
+import { useRefresh } from '../../ui/refresh';
 
 const chartTone = (c: Colors, tone: ChartTone) =>
   tone === 'up' ? c.up : tone === 'down' ? c.down : c.muted;
@@ -140,28 +141,37 @@ export function MarketChart({ card }: { card: MarketCard }) {
   const [pick, setPick] = useState<string | null>(null);
   const [w, setW] = useState(0);
 
+  // T-11-111 당겨서 새로고침 — 차트·거래 기록은 그대로 두고 응답이 오면 바꾼다(범위를 바꿀 때만 비운다).
+  const { tick, track, pulled } = useRefresh();
   useEffect(() => {
     let live = true;
-    setFailed(false);
-    setPick(null);
-    void fetchMarketChart(range, { pos: card.pos, band }).then((r) => {
+    const pull = pulled();
+    if (!pull) {
+      setFailed(false);
+      setPick(null);
+    }
+    void track(fetchMarketChart(range, { pos: card.pos, band })).then((r) => {
       if (!live) return;
+      // 당기다 실패하면 보이던 차트를 두고 넘어간다.
+      if (pull && !r.ok) return;
       setFailed(!r.ok);
       setPoints(r.ok ? r.data.points : []);
     });
     return () => {
       live = false;
     };
-  }, [range, card.pos, band]);
+  }, [range, card.pos, band, tick, track]);
   // 한 번도 팔린 적 없는 선수(이적 0회)는 거래 기록을 묻지 않는다.
   useEffect(() => {
     if (card.transfers === 0) return;
     let live = true;
-    void fetchCardTrades(card.careerId).then((r) => live && setTrades(r.ok ? r.data.trades : []));
+    void track(fetchCardTrades(card.careerId)).then(
+      (r) => live && (r.ok || !tick) && setTrades(r.ok ? r.data.trades : []),
+    );
     return () => {
       live = false;
     };
-  }, [card.careerId, card.transfers]);
+  }, [card.careerId, card.transfers, tick, track]);
 
   const model = useMemo(
     () => (points ? chartModel(points, trades, range) : null),

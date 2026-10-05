@@ -44,6 +44,7 @@ import { useColors } from '../../theme/useColors';
 import { Btn } from '../../ui/Btn';
 import { Card } from '../../ui/Card';
 import { Pill } from '../../ui/bits';
+import { useRefresh } from '../../ui/refresh';
 import { Press } from '../../ui/Press';
 import { Screen } from '../../ui/Screen';
 import { scrollTo } from '../../ui/scroll';
@@ -160,13 +161,13 @@ export default function Board() {
   }, []);
 
   const load = useCallback(
-    async (more = false) => {
-      if (!more) setStatus('loading');
+    async (more = false, silent = false) => {
+      if (!more && !silent) setStatus('loading');
       const last = posts.filter((p) => !p.pinned).at(-1);
       const r = await api.fetchPosts(board, more ? last?.createdAt : undefined);
       if (!r.ok) {
         if (more) toast(r.error.message);
-        else setStatus('error');
+        else if (!silent) setStatus('error');
         return;
       }
       setPosts(more ? [...posts, ...r.data.posts] : r.data.posts);
@@ -233,6 +234,22 @@ export default function Board() {
     if (want) void open(want);
     else if (detail || editing) backToList();
   }, [boardOpenId]);
+  // T-11-111 당겨서 새로고침 — 목록은 비우지 않고 첫 페이지로 바꾸고, 글을 펼쳤으면 그 글(조회·좋아요·댓글)만 받는다.
+  // 글을 쓰는 중이거나 글을 여는 중에는 건너뛴다.
+  const { tick, track } = useRefresh();
+  useEffect(() => {
+    if (!tick || editing || entering || busy || liking) return;
+    if (!detail) return void track(load(false, true));
+    const postId = detail.post.id;
+    void track(api.fetchPost(postId)).then((r) => {
+      if (!r.ok) return;
+      const { post, comments, blocks = [], liked } = r.data;
+      setDetail((d) =>
+        d && d.post.id === postId ? { ...d, post, comments, blocks, liked: !!liked } : d,
+      );
+    });
+    // tick이 바뀔 때만.
+  }, [tick]);
   // T-10-113 하단 '소식'을 다시 누르면 목록 맨 위로(쓰던 글이 있으면 먼저 묻는다).
   const seenTop = useRef(appState.boardTop);
   useEffect(() => {

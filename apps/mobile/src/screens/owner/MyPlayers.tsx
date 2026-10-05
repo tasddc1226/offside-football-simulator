@@ -24,6 +24,7 @@ import { HofRow, type RowStats } from '../../components/HofRow';
 import { rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { Seg, TabOpt } from '../board/parts';
+import { useRefresh } from '../../ui/refresh';
 import { useSeasonNow } from '../../ui/useSeasonNow';
 
 type MineRow = {
@@ -100,63 +101,69 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
     if (source !== 'loading') onRows?.(inSeason);
   }, [source, inSeason, onRows]);
 
+  // T-11-111 당겨서 새로고침 — 보이던 목록은 두고 응답이 오면 바꾼다(source도 되돌리지 않는다).
+  const { tick, track } = useRefresh();
   useEffect(() => {
     let alive = true;
-    void (async () => {
-      const r = await getMyCareers();
-      if (!alive) return;
-      // 방금 은퇴해 아직 업로드 대기 중인 선수 — 시즌을 아직 못 받았으면 지금 시즌으로 센다.
-      const pending = pendingRetirementIds();
-      let list: MineRow[];
-      let src: 'account' | 'device' | 'offline';
-      if (!r.ok || !r.data.linked) {
-        src = !r.ok && r.error.code === 'NETWORK_ERROR' ? 'offline' : 'device';
-        list = local.map((h, i) => localRow(h, i, pending, now));
-      } else {
-        const onServer = new Set(r.data.entries.map((e) => e.id));
-        const byId = new Map(
-          local.flatMap((h, i) => (h.id ? [[h.id, localRow(h, i, pending, now)] as const] : [])),
-        );
-        // 방금 은퇴해 아직 업로드 대기 중인 선수도 잠깐 더한다.
-        list = [
-          ...r.data.entries.map((e) => {
-            const row = byId.get(e.id);
-            // 이 기기 기록이 있어도 결번(T-10-076)은 서버 값을 쓴다 — 소급으로 받은 결번은 기기에 없다.
-            return row
-              ? {
-                  ...row,
-                  nation: myPlayerNation(row, e),
-                  rn: row.rn ?? e.retiredNumber?.number,
-                  season: serverSeasonOf(e),
-                }
-              : serverRow(e);
-          }),
-          ...[...byId].filter(([id]) => !onServer.has(id) && pending.has(id)).map(([, row]) => row),
-        ];
-        src = 'account';
-      }
-      list.sort((a, b) => b.stats.score - a.stats.score);
-      setRows(list);
-      setSource(src);
-      // T-10-076 배포 전 은퇴를 소급해 받은 결번은 이 기기에 없다 — 결과를 모르는 기록이 있을 때만 서버 목록에서 채운다
-      // (계정 목록은 서버가 결번을 함께 준다).
-      if (src === 'device' && local.some((h) => h.id && h.detail && h.rn === undefined)) {
-        // T-11-029 결번은 시즌마다 따로 — 결과를 모르는 기록이 속한 시즌의 결번 목록을 받는다.
-        const rn = await getRetiredNumbersIn(
-          local
-            .filter((h) => h.id && h.detail && h.rn === undefined)
-            .map((h) => deviceSeasonOf(h, pending, now)),
-        );
-        if (!alive || !rn.ok) return;
-        fillGranted(rn.data);
-        const byCareer = new Map(rn.data.map((x) => [x.careerId, x.number]));
-        setRows((prev) => prev.map((row) => ({ ...row, rn: row.rn ?? byCareer.get(row.key) })));
-      }
-    })();
+    void track(
+      (async () => {
+        const r = await getMyCareers();
+        if (!alive) return;
+        // 방금 은퇴해 아직 업로드 대기 중인 선수 — 시즌을 아직 못 받았으면 지금 시즌으로 센다.
+        const pending = pendingRetirementIds();
+        let list: MineRow[];
+        let src: 'account' | 'device' | 'offline';
+        if (!r.ok || !r.data.linked) {
+          src = !r.ok && r.error.code === 'NETWORK_ERROR' ? 'offline' : 'device';
+          list = local.map((h, i) => localRow(h, i, pending, now));
+        } else {
+          const onServer = new Set(r.data.entries.map((e) => e.id));
+          const byId = new Map(
+            local.flatMap((h, i) => (h.id ? [[h.id, localRow(h, i, pending, now)] as const] : [])),
+          );
+          // 방금 은퇴해 아직 업로드 대기 중인 선수도 잠깐 더한다.
+          list = [
+            ...r.data.entries.map((e) => {
+              const row = byId.get(e.id);
+              // 이 기기 기록이 있어도 결번(T-10-076)은 서버 값을 쓴다 — 소급으로 받은 결번은 기기에 없다.
+              return row
+                ? {
+                    ...row,
+                    nation: myPlayerNation(row, e),
+                    rn: row.rn ?? e.retiredNumber?.number,
+                    season: serverSeasonOf(e),
+                  }
+                : serverRow(e);
+            }),
+            ...[...byId]
+              .filter(([id]) => !onServer.has(id) && pending.has(id))
+              .map(([, row]) => row),
+          ];
+          src = 'account';
+        }
+        list.sort((a, b) => b.stats.score - a.stats.score);
+        setRows(list);
+        setSource(src);
+        // T-10-076 배포 전 은퇴를 소급해 받은 결번은 이 기기에 없다 — 결과를 모르는 기록이 있을 때만 서버 목록에서 채운다
+        // (계정 목록은 서버가 결번을 함께 준다).
+        if (src === 'device' && local.some((h) => h.id && h.detail && h.rn === undefined)) {
+          // T-11-029 결번은 시즌마다 따로 — 결과를 모르는 기록이 속한 시즌의 결번 목록을 받는다.
+          const rn = await getRetiredNumbersIn(
+            local
+              .filter((h) => h.id && h.detail && h.rn === undefined)
+              .map((h) => deviceSeasonOf(h, pending, now)),
+          );
+          if (!alive || !rn.ok) return;
+          fillGranted(rn.data);
+          const byCareer = new Map(rn.data.map((x) => [x.careerId, x.number]));
+          setRows((prev) => prev.map((row) => ({ ...row, rn: row.rn ?? byCareer.get(row.key) })));
+        }
+      })(),
+    );
     return () => {
       alive = false;
     };
-  }, [local, now]);
+  }, [local, now, tick, track]);
 
   return (
     <Card gap={0}>
