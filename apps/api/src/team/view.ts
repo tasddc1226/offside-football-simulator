@@ -1,8 +1,9 @@
 // T-10-092 팀 응답을 만드는 공통 부분(내 팀 화면 · 공개 팀 프로필).
 import type { TeamLines, TeamRecord, TeamSlot, TeamSeasonOption } from '@offside/contracts';
 import { openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
+import { synergyApplies } from '@offside/contracts/owner-team';
 import type { OwnerTeamRow } from '../db/repos/ownerTeams.js';
-import { lineupLines, type LineupSlot } from './sim.js';
+import { lineupLines, lineupSynergy, type LineupSlot } from './sim.js';
 
 export const recordOf = (t: Pick<OwnerTeamRow, 'wins' | 'draws' | 'losses'>): TeamRecord => ({
   w: t.wins,
@@ -25,8 +26,9 @@ export const slotsOf = (
     fit: s.fit,
   }));
 
-export function linesOf(lineup: readonly LineupSlot[]): TeamLines {
-  const l = lineupLines(lineup);
+/** 줄 힘. 시너지 반영 시즌(T-11-105)이면 경기와 같게 시너지 보정을 더한다. */
+export function linesOf(lineup: readonly LineupSlot[], season: number): TeamLines {
+  const l = lineupLines(lineup, synergyApplies(season) ? lineupSynergy(lineup) : null);
   return {
     atk: Math.round(l.atk),
     mid: Math.round(l.mid),
