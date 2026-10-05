@@ -11,12 +11,12 @@ import {
   staleAchievementOwners,
 } from '../db/repos/ownerAchievements.js';
 import {
+  careersByIds,
   eligibleMap,
   layoutOf,
   myTeamIn,
   seasonCareersOf,
   slotIdsOf,
-  teamSlotCareersOf,
 } from '../db/repos/ownerTeams.js';
 import { getProfile, hasAccount } from '../db/repos/profiles.js';
 import { achievementScore, clubAchievements, teamKeptOf, type TeamKept } from './achievements.js';
@@ -53,15 +53,15 @@ export async function refreshOwnerAchievements(
   const ids = team ? slotIdsOf(team).filter((id): id is string => id !== null) : [];
   const [activity, slotRows] = await Promise.all([
     ownerActivityIn(db, owner.id, season, team?.id ?? null),
-    teamSlotCareersOf(db, ids),
+    careersByIds(db, ids),
   ]);
   // T-11-103 선발은 화면과 같이 카드로 판정한다 — 영입한 선수도 들어가고, 지금 시즌은 지금 가진 선수만(eligibleMap).
   const eligible = eligibleMap(slotRows, owner.id, season, open);
-  const byId = new Map(slotRows.map((r) => [r.id, r]));
+  const byId = new Map(slotRows.filter((r) => eligible.has(r.id)).map((r) => [r.id, r]));
   const slots = team
     ? buildLineup(team.formation as FormationId, slotIdsOf(team), eligible, layoutOf(team)).map(
         (s) => {
-          const r = s.careerId && eligible.has(s.careerId) ? byId.get(s.careerId) : undefined;
+          const r = s.careerId ? byId.get(s.careerId) : undefined;
           return {
             careerId: r ? s.careerId : null,
             fit: s.fit,

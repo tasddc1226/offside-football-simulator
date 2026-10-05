@@ -230,34 +230,11 @@ export const challengedSince = (db: Db, profileId: string, sinceIso: string) =>
     .from(teamMatches)
     .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
 
-/** 여러 팀 선발의 카드를 한 번에 읽는다. 소유자는 부르는 쪽이 팀마다 확인한다(eligibleMap). */
-export async function careersByIds(db: Db, ids: string[]) {
-  if (ids.length === 0) return [];
-  return db
-    .select({
-      id: cards.careerId,
-      ownerId: cards.ownerId,
-      pos: cards.pos,
-      nation: cards.nation,
-      dpos: cards.dpos,
-      peak: cards.peak,
-      peakProfile: cards.peakProfile,
-      number: cards.number,
-      publicName: careers.publicName,
-      serviceSeason: cards.serviceSeason,
-      hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
-    })
-    .from(cards)
-    .leftJoin(careers, eq(careers.id, cards.careerId))
-    .where(inArray(cards.careerId, ids));
-}
-export type CareerLite = Awaited<ReturnType<typeof careersByIds>>[number];
-
 /**
- * T-11-103 업적 판정용 선발 카드: careersByIds에 팀 업적이 보는 기록(마지막 구단·A매치·영구결번)을 붙인다. 화면 선발과
- * 같이 카드로 읽어 영입한 선수도 들어간다(소유 확인은 부르는 쪽이 eligibleMap으로).
+ * 여러 팀 선발의 카드를 한 번에 읽는다. 소유자는 부르는 쪽이 팀마다 확인한다(eligibleMap). 팀 업적이 보는 기록(마지막
+ * 구단·A매치·영구결번)도 함께 읽어 업적 판정이 화면과 같은 선발을 쓴다(T-11-103).
  */
-export async function teamSlotCareersOf(db: Db, ids: string[]) {
+export async function careersByIds(db: Db, ids: string[]) {
   if (ids.length === 0) return [];
   return db
     .select({
@@ -281,6 +258,7 @@ export async function teamSlotCareersOf(db: Db, ids: string[]) {
     .leftJoin(retiredNumbers, eq(retiredNumbers.careerId, cards.careerId))
     .where(inArray(cards.careerId, ids));
 }
+export type CareerLite = Awaited<ReturnType<typeof careersByIds>>[number];
 
 /**
  * 그 구단주의 그 시즌 팀에 넣을 수 있는 카드만 골라 선발 맵으로(그 시즌 선수 · 숨김 아님). T-11-080 소유 규칙: 지금
@@ -623,7 +601,7 @@ export const deleteOwnerTeamsStatements = (db: Db, profileId: string) => {
 
 /**
  * 그 시즌에 처음 올라와(service_season, 0 = 프리시즌) 은퇴한 내 선수(직접 키운 선수) + 영구결번 여부 + 받아 둔 시즌(리그·영예).
- * 팀 선발은 영입한 선수도 들어가므로 여기서 만들지 않고 teamSlotCareersOf로 읽는다(T-11-103).
+ * 팀 선발은 영입한 선수도 들어가므로 여기서 만들지 않고 careersByIds로 읽는다(T-11-103).
  */
 export async function seasonCareersOf(db: Db, profileId: string, season: number) {
   const mine = and(
