@@ -1219,6 +1219,58 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(await reason(over)).toBe('FRIENDLY_DAILY_LIMIT');
     });
 
+    it('T-11-113 개막 뒤 프리시즌 팀을 고쳐 프리시즌 친선전을 하고, 창단 멤버로 보인다 — 지난 랭킹·업적은 그대로', async () => {
+      const a = await ownerWithTeam(1);
+      const b = await issueGoogleCookie(ctx, { nickname: '창단' });
+      const bPre = await addCareer(b.profileId, { peak: 85 });
+      const { bCode } = await befriend(a, b);
+      vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
+      const bS1 = await addCareer(b.profileId, { serviceSeason: 1 });
+      const preFriendly = (cookie: string, code: string) =>
+        call('POST', `/v1/friends/${code}/matches?season=0`, { cookie, headers: idem() });
+
+      const view = await friendsOf(a.cookie);
+      expect(view).toMatchObject({ canPlay: false, canPlayPreseason: true });
+      expect(view.friends[0]).toMatchObject({ name: '창단', founder: true, preseasonTeam: null });
+      const none = await preFriendly(a.cookie, bCode);
+      expect(none.status).toBe(409);
+      expect(await reason(none)).toBe('FRIEND_TEAM_REQUIRED');
+
+      // 프리시즌 팀은 지금 가진 프리시즌 선수로만 고친다. 다른 지난 시즌·시즌 1 선수는 안 된다.
+      expect((await putTeam(b.cookie, { season: 0, slots: slots(bS1) })).status).toBe(400);
+      expect((await putTeam(b.cookie, { season: 2, slots: slots(bPre) })).status).toBe(409);
+      const legacy = await putTeam(b.cookie, { season: 0, name: '레전드 FC', slots: slots(bPre) });
+      expect(legacy.status).toBe(200);
+      expect(PutRes.parse(await legacy.json()).data.team).toMatchObject({
+        season: 0,
+        name: '레전드 FC',
+      });
+      expect((await friendsOf(a.cookie)).friends[0]!.preseasonTeam).toMatchObject({
+        name: '레전드 FC',
+      });
+
+      const played = await preFriendly(a.cookie, bCode);
+      expect(played.status).toBe(201);
+      // 이번 시즌 친선전은 여전히 이번 시즌 팀이 있어야 한다.
+      expect(await reason(await friendly(a.cookie, bCode))).toBe('TEAM_REQUIRED');
+
+      // 개막 뒤 만든 프리시즌 팀은 프리시즌 최종 랭킹·팀 업적에 들지 않는다.
+      const ranking = successEnvelope(TeamRankResponseSchema).parse(
+        await (await call('GET', '/v1/teams?season=0')).json(),
+      ).data.items;
+      expect(ranking.map((t) => t.teamId)).toEqual([a.team.id]);
+      const ach = AchRes.parse(
+        await (
+          await call('GET', '/v1/owner-team/achievements?season=0', { cookie: b.cookie })
+        ).json(),
+      ).data;
+      expect(ach.groups.some((g) => g.id === 'team')).toBe(false);
+      const team = GetRes.parse(
+        await (await call('GET', '/v1/owner-team?season=0', { cookie: b.cookie })).json(),
+      ).data;
+      expect(team).toMatchObject({ season: 0, current: 1, founder: true });
+    });
+
     it('친구를 끊으면 두 줄이 지워지고, 프로필을 지우면 친구 줄과 친선전이 사라진다', async () => {
       const a = await ownerWithTeam(1);
       const b = await ownerWithTeam(1);

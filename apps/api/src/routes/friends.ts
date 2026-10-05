@@ -47,7 +47,13 @@ import {
   unfriendStatements,
   type FriendRow,
 } from '../db/repos/friends.js';
-import { liveTeam, logoOf, myTeamIn, type OwnerTeamRow } from '../db/repos/ownerTeams.js';
+import {
+  foundersOf,
+  liveTeam,
+  logoOf,
+  myTeamIn,
+  type OwnerTeamRow,
+} from '../db/repos/ownerTeams.js';
 import type { Db } from '../db/client.js';
 import { profiles } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -91,24 +97,33 @@ type PersonInput = {
   row: Pick<FriendRow, 'wins' | 'draws' | 'losses'> | undefined;
 };
 
-/** 친구 줄들에 지금 시즌 팀과 표시 이름(닉네임 → 최근 감독 이름 → '구단주')을 붙인다. profileId → 사람. 쿼리 2번. */
+/**
+ * 친구 줄들에 지금 시즌 팀 · 프리시즌 팀(개막 뒤 친선전용, T-11-113) · 창단 멤버 여부와 표시 이름(닉네임 → 최근 감독 이름 →
+ * '구단주')을 붙인다. profileId → 사람. 쿼리 2~4번.
+ */
 async function peopleOf(
   db: Db,
   inputs: readonly PersonInput[],
   season: number | null,
 ): Promise<Map<string, FriendPerson>> {
   const ids = inputs.map((p) => p.profileId);
-  const [teams, managers] = await Promise.all([
+  const legacy = season !== 0;
+  const [teams, legacyTeams, founders, managers] = await Promise.all([
     season === null || ids.length === 0 ? [] : teamsOfOwners(db, ids, season),
+    legacy && ids.length > 0 ? teamsOfOwners(db, ids, 0) : [],
+    ids.length > 0 ? foundersOf(db, ids) : [],
     latestManagersOf(
       db,
       inputs.filter((p) => !p.nickname).map((p) => p.profileId),
     ),
   ]);
   const teamOf = new Map(teams.map((t) => [t.profileId, t]));
+  const legacyOf = new Map(legacyTeams.map((t) => [t.profileId, t]));
+  const founder = new Set(founders.map((f) => f.profileId));
   return new Map(
     inputs.map((p) => {
       const t = teamOf.get(p.profileId);
+      const lt = legacyOf.get(p.profileId);
       return [
         p.profileId,
         {
@@ -116,6 +131,8 @@ async function peopleOf(
           name: p.nickname ?? managers.get(p.profileId) ?? '구단주',
           team: t ? teamSummary(t) : null,
           h2h: h2hOf(p.row),
+          ...(legacy ? { preseasonTeam: lt ? teamSummary(lt) : null } : {}),
+          founder: founder.has(p.profileId),
         },
       ];
     }),
@@ -141,11 +158,12 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = teamSeasonAt(now);
-    const [code, [rows, [played]], recentRows, [myTeam]] = await Promise.all([
+    const [code, [rows, [played]], recentRows, [myTeam], [myLegacy]] = await Promise.all([
       ensureFriendCode(db, me.id, me.friendCode ?? null),
       db.batch([listFriendRows(db, me.id), countFriendliesSince(db, me.id, kstTodayStart(now))]),
       listRecentFriendlies(db, me.id),
       season === null ? [undefined] : myTeamIn(db, me.id, season),
+      season === 0 ? [undefined] : myTeamIn(db, me.id, 0),
     ]);
     const live = rows.filter((r): r is typeof r & { code: string } => !!r.code);
     const [people, recent] = await Promise.all([
@@ -176,6 +194,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         matchesPerDay: FRIENDLY_MATCHES_PER_DAY,
         max: FRIENDS_MAX,
         canPlay: !!myTeam && myTeam.filled > 0,
+        ...(season !== 0 ? { canPlayPreseason: !!myLegacy && myLegacy.filled > 0 } : {}),
       },
       200,
       NO_STORE,
@@ -323,13 +342,16 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
   });
 
   // 친선전 한 판(지금 시즌 두 팀). 랭크 경기와 같은 시뮬레이션을 쓰지만 레이팅·전적·업적은 그대로 두고 상대 전적만 남긴다.
-  // 재시도가 경기를 두 번 치르지 않게 멱등 키를 쓴다.
+  // 재시도가 경기를 두 번 치르지 않게 멱등 키를 쓴다. T-11-113 ?season=0이면 두 사람의 프리시즌 팀끼리(지금 가진 선수만)
+  // 겨룬다 — 휴식기에도 된다. 하루 친선전 수는 함께 센다.
   app.post('/v1/friends/:code/matches', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
     const target = await ownerOfCodeParam(c);
     const now = nowIso();
-    const season = currentSeasonOrThrow(now);
+    const preseason = c.req.query('season') === '0';
+    const season = preseason ? 0 : currentSeasonOrThrow(now);
+    const teamWord = preseason ? '프리시즌 팀' : '이번 시즌 팀';
     const [[link], [mine], [theirs], [played]] = await db.batch([
       friendRowOf(db, me.id, target.id),
       myTeamIn(db, me.id, season),
@@ -346,9 +368,9 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         'FRIENDLY_DAILY_LIMIT',
       );
     }
-    if (!mine) throw conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
+    if (!mine) throw conflictError(`먼저 ${teamWord}을 만들어 주세요.`, 'TEAM_REQUIRED');
     if (!theirs || theirs.filled === 0) {
-      throw conflictError('친구가 아직 이번 시즌 팀을 꾸리지 않았어요.', 'FRIEND_TEAM_REQUIRED');
+      throw conflictError(`친구가 아직 ${teamWord}을 꾸리지 않았어요.`, 'FRIEND_TEAM_REQUIRED');
     }
 
     const lineups = await lineupsOf(db, season, mine, theirs);
@@ -356,7 +378,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       throw conflictError('은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.', 'TEAM_EMPTY');
     }
     if (filledCount(lineups.away) === 0) {
-      throw conflictError('친구가 아직 이번 시즌 팀을 꾸리지 않았어요.', 'FRIEND_TEAM_REQUIRED');
+      throw conflictError(`친구가 아직 ${teamWord}을 꾸리지 않았어요.`, 'FRIEND_TEAM_REQUIRED');
     }
 
     const id = newId('fmt');

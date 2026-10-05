@@ -103,7 +103,9 @@ describe('시즌 업적 요약', () => {
 describe('matchHintOf', () => {
   it('휴식기 · 지난 시즌은 경기할 수 없다', () => {
     expect(matchHintOf(null, false, 10, 1, null)).toMatch(/휴식기/);
-    expect(matchHintOf(null, false, 10, 0, 1)).toMatch(/지난 시즌/);
+    // T-11-113 개막 뒤 프리시즌 팀은 친선전 전용이다. 그 밖의 지난 시즌은 보기만 한다.
+    expect(matchHintOf(null, false, 10, 0, 1)).toMatch(/친선전에만/);
+    expect(matchHintOf(null, false, 10, 1, 2)).toMatch(/지난 시즌/);
     expect(matchHintOf(null, false, 10, 1, 1)).toMatch(/저장/);
   });
 });

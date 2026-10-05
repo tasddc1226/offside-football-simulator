@@ -14,12 +14,17 @@
   } from '@offside/app-core/api/friends';
   import type { TeamMatch } from '@offside/app-core/api/team';
   import {
+    canFriendly,
+    canPreseasonFriendly,
+    FOUNDER_LABEL,
     friendAcceptedText,
     friendCodeLabel,
     friendInviteText,
     friendInviteUrl,
     friendRequestText,
     h2hText,
+    PRESEASON_FRIENDLY_HINT,
+    preseasonTeamLine,
   } from '@offside/app-core/friendText';
   import { toast } from '../helpers.js';
   import { copyText } from '../inapp-open.js';
@@ -31,11 +36,14 @@
   let {
     onplayed,
     onopen,
+    onpreseason,
   }: {
     /** 친선전을 치렀다 — 결과(중계)를 연다. */
     onplayed: (m: TeamMatch, matchesLeft: number) => void;
     /** 최근 친선전 한 경기를 연다. */
     onopen: (m: TeamMatch, matchesLeft: number) => void;
+    /** T-11-113 프리시즌 팀 화면으로 간다(프리시즌 팀이 없을 때). */
+    onpreseason: () => void;
   } = $props();
 
   let status = $state<LoadStatus>('loading');
@@ -103,10 +111,11 @@
     void run(() => removeFriend(p.code));
   };
 
-  async function play(p: FriendPerson) {
+  /** 친선전 한 판. preseason이면 프리시즌 팀끼리(T-11-113). */
+  async function play(p: FriendPerson, preseason = false) {
     if (busy) return;
     busy = true;
-    const r = await playFriendly(p.code);
+    const r = await playFriendly(p.code, preseason);
     busy = false;
     if (!r.ok) {
       if (r.error.reason === 'FRIENDLY_DAILY_LIMIT' && data) data.matchesLeft = 0;
@@ -134,8 +143,6 @@
     toast((await copyText(friendCodeLabel(data.code))) ? '코드를 복사했어요' : '코드를 복사하지 못했어요');
   }
 
-  const canChallenge = (p: FriendPerson) =>
-    !!data && data.canPlay && data.matchesLeft > 0 && !!p.team && p.team.filled > 0;
   const teamLine = (p: FriendPerson) => (p.team ? `${p.team.name} · OVR ${p.team.ovr}` : '이번 시즌 팀이 없어요');
 </script>
 
@@ -146,6 +153,12 @@
     {#if data}
       <p class="muted fs-sm">친선전은 레이팅과 전적에 들어가지 않아요. 오늘 남은 친선전 {data.matchesLeft}/{data.matchesPerDay}</p>
       {#if !data.canPlay}<p class="muted fs-sm" data-friends-hint>이번 시즌 팀을 만들면 친구와 친선전을 할 수 있어요.</p>{/if}
+      {#if data.canPlayPreseason === false}
+        <div class="fr-legacy" data-friends-preseason-hint>
+          <p class="muted fs-sm">{PRESEASON_FRIENDLY_HINT}</p>
+          <button class="btn btn-sm" onclick={onpreseason} data-act="friend-preseason-team">프리시즌 팀 꾸리기</button>
+        </div>
+      {/if}
     {/if}
   </div>
   <LoadState {status} failText="친구 목록을 불러오지 못했어요." retry={() => void load()}>
@@ -196,12 +209,14 @@
         <div class="fr-person" data-friend={p.code}>
           <TeamLogo logo={p.team?.logo ?? null} name={p.team?.name ?? p.name} size={32} decorative />
           <div class="fr-info">
-            <b>{p.name}</b>
+            <b>{p.name}{#if p.founder}<small class="fr-founder" data-friend-founder>{FOUNDER_LABEL}</small>{/if}</b>
             <span class="muted fs-sm">{teamLine(p)}</span>
+            {#if preseasonTeamLine(p)}<span class="muted fs-sm" data-friend-preseason>{preseasonTeamLine(p)}</span>{/if}
             {#if h2h}<span class="fs-sm">상대 전적 {h2h}</span>{/if}
           </div>
           <div class="fr-row-actions">
-            <button class="btn btn-primary btn-sm" disabled={busy || !canChallenge(p)} onclick={() => void play(p)} data-act="friend-play">친선전</button>
+            <button class="btn btn-primary btn-sm" disabled={busy || !canFriendly(data, p)} onclick={() => void play(p)} data-act="friend-play">친선전</button>
+            {#if p.preseasonTeam}<button class="btn btn-sm" disabled={busy || !canPreseasonFriendly(data, p)} onclick={() => void play(p, true)} data-act="friend-play-preseason">프리시즌 친선전</button>{/if}
             <button class="icon-btn fs-sm" disabled={busy} onclick={() => remove(p, `${p.name} 님과 친구를 끊을까요? 상대 전적도 사라져요.`)} data-act="friend-remove">끊기</button>
           </div>
         </div>
@@ -286,6 +301,27 @@
     gap: 10px;
     padding: 10px 0;
     border-top: 1px solid var(--line);
+  }
+  .fr-legacy {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .fr-legacy p {
+    margin: 0;
+    flex: 1 1 200px;
+  }
+  .fr-founder {
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--accent-text);
+    color: var(--accent-text);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    vertical-align: middle;
   }
   .fr-info {
     display: flex;

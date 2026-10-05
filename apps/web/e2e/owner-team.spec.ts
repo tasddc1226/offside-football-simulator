@@ -1082,3 +1082,53 @@ test('친구 초대 링크로 들어오면 친구 화면에서 그 구단주에�
   expect(requests).toEqual([{ code: 'ABCD2345' }]);
   await expect(card).toHaveCount(0);
 });
+
+test('T-11-113 개막 뒤 프리시즌 팀을 꾸려 친구와 프리시즌 친선전을 하고 창단 멤버가 보인다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  const puts: Record<string, unknown>[] = [];
+  await page.route(ownerTeamUrl, (route) => {
+    const req = route.request();
+    if (req.method() === 'PUT') {
+      const body = req.postDataJSON() as Parameters<typeof teamFrom>[0];
+      puts.push(body as unknown as Record<string, unknown>);
+      return route.fulfill(ok({ team: teamFrom(body) }));
+    }
+    const season = new URL(req.url()).searchParams.get('season') === '0' ? 0 : 1;
+    return route.fulfill(ownerTeam({ season, current: 1, seasons: SEASONS, founder: true }));
+  });
+  await page.route(`${API}/v1/owner-team/opponents`, (route) => route.fulfill(ok({ items: [] })));
+  await page.route(`${API}/v1/friends`, (route) =>
+    route.fulfill(
+      ok(
+        friendsBody({
+          canPlay: false,
+          canPlayPreseason: false,
+          friends: [person('FRND2345', '친구 감독', { founder: true, preseasonTeam: FRIEND_TEAM })],
+        }),
+      ),
+    ),
+  );
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-owner-founder]')).toHaveText('창단 멤버');
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-team-tab="opponents"]').click();
+  await page.locator('[data-match-mode="friends"]').click();
+  const row = page.locator('[data-friend="FRND2345"]');
+  await expect(row.locator('[data-friend-founder]')).toHaveText('창단 멤버');
+  await expect(row.locator('[data-friend-preseason]')).toHaveText('프리시즌 친구 FC · OVR 61');
+  // 내 프리시즌 팀이 없으면 프리시즌 친선전은 못 하고, 프리시즌 팀으로 가는 길을 보인다.
+  await expect(row.locator('[data-act="friend-play-preseason"]')).toBeDisabled();
+  await page.locator('[data-act="friend-preseason-team"]').click();
+
+  await expect(page.locator('[data-team-legacy]')).toContainText('친구와 하는 친선전에만');
+  await page.locator('[data-team-name]').fill('레전드 FC');
+  await page.locator('[data-team-manager]').fill('홍감독');
+  await page.locator('[data-act="team-auto"]').click();
+  await page.locator('[data-act="team-save"]').click();
+  await expect(page.locator('#toast')).toContainText('팀을 만들었어요');
+  expect(puts).toMatchObject([{ season: 0, name: '레전드 FC' }]);
+});

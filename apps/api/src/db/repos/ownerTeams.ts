@@ -2,6 +2,7 @@ import { PeakProfileSchema, TeamLayoutSchema, TeamLogoSchema } from '@offside/co
 import type { TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
+import { teamSeasonEndsAt } from '@offside/contracts/service-seasons';
 import {
   DETAIL_POSITIONS,
   FACE_ATTRS,
@@ -299,13 +300,37 @@ export const liveTeam = (db: Db, teamId: string) =>
     .where(and(eq(ownerTeams.id, teamId), accountLinkedSql(), isNull(profiles.deletedAt)));
 
 /** 랭킹·상대에 오르는 팀: 그 시즌 · 선수가 한 명 이상 · 구글 연결이 살아 있는(삭제되지 않은) 구단주. */
+/** T-11-113 닫힌 시즌 랭킹엔 그 시즌 안에 만든 팀만 — 개막 뒤 친선전용으로 새로 만든 프리시즌 팀은 최종 순위에 넣지 않는다. */
+const endsBefore = (season: number) => {
+  const end = teamSeasonEndsAt(season);
+  return end ? lt(ownerTeams.createdAt, end) : undefined;
+};
+
 const rankedIn = (season: number) =>
   and(
     eq(ownerTeams.season, season),
     gt(ownerTeams.filled, 0),
+    endsBefore(season),
     accountLinkedSql(),
     isNull(profiles.deletedAt),
   );
+
+/**
+ * T-11-113 창단 멤버: 프리시즌(service_season 0)에 숨김 아닌 은퇴 선수를 남긴 구단주만 골라 돌려준다(커리어 프로필·상태·시즌
+ * 인덱스). batch에 넣을 수 있게 쿼리로 돌려준다.
+ */
+export const foundersOf = (db: Db, profileIds: readonly string[]) =>
+  db
+    .selectDistinct({ profileId: careers.profileId })
+    .from(careers)
+    .where(
+      and(
+        inArray(careers.profileId, [...profileIds]),
+        eq(careers.status, 'retired'),
+        eq(careers.serviceSeason, 0),
+        eq(careers.hidden, 0),
+      ),
+    );
 
 /**
  * 상대 후보: 같은 시즌 다른 구단주의 팀 중 내 팀 OVR 위·아래로 가까운 팀을 perSide개씩(시즌·OVR 인덱스). 오늘(todayStart

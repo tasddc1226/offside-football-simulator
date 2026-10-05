@@ -38,9 +38,12 @@ import { recordText, num } from '@offside/app-core/teamText';
 import {
   autoFillSlots,
   draftLines,
+  isPreseasonLegacy,
   matchHintOf,
+  PRESEASON_TEAM_NOTE,
   slotsSynergy,
   synergyFocus,
+  teamEditableIn,
 } from '@offside/app-core/teamOwner';
 import { anonName } from '@offside/game/pos-label';
 import { localCareerNames } from '@offside/game/season';
@@ -103,7 +106,9 @@ export default function Team() {
   const [current, setCurrent] = useState<number | null>(null);
   const [seasons, setSeasons] = useState<OwnerTeamResponse['seasons']>([]);
   const [lastManager, setLastManager] = useState<string | null>(null);
-  const editable = season === current;
+  // T-11-113 개막 뒤 프리시즌 팀은 친선전 전용으로 고칠 수 있다(랭크 경기는 지금 시즌 팀만).
+  const legacy = isPreseasonLegacy(season, current);
+  const editable = teamEditableIn(season, current);
   const seasonName = seasons.find((o) => o.id === season)?.name ?? '';
 
   // 편집 초안 — 저장하기 전까지 이 기기에만 있다.
@@ -295,7 +300,7 @@ export default function Team() {
     const key =
       d.team?.id ??
       (profile && typeof profile === 'object' ? `new:${profile.id}:${d.season}` : null);
-    if (d.season === d.current && key) {
+    if (teamEditableIn(d.season, d.current) && key) {
       const draft = readTeamDraft(key);
       setDraftKey(key);
       if (draft) {
@@ -323,7 +328,7 @@ export default function Team() {
     const snapshot = JSON.stringify(draftNow.current);
     const body = { ...draftValue, name: name.trim(), manager: manager.trim() };
     try {
-      const r = await saveOwnerTeam(body);
+      const r = await saveOwnerTeam(legacy ? { ...body, season: 0 } : body);
       if (!r.ok) {
         toast(r.error.message);
         return false;
@@ -540,12 +545,17 @@ export default function Team() {
               v="sm"
               tone="muted"
               testID="team-record"
-            >{`${recordText(team.record)} · 레이팅 ${num(team.rating)} · ${editable ? `오늘 ${matchesLeft}/${perDay}경기` : '지난 시즌'}`}</Txt>
-          ) : (
+            >{`${recordText(team.record)} · 레이팅 ${num(team.rating)} · ${legacy ? '친선전 전용' : editable ? `오늘 ${matchesLeft}/${perDay}경기` : '지난 시즌'}`}</Txt>
+          ) : legacy ? null : (
             <Txt v="sm" tone="muted">
               빈 자리는 유스 선수(OVR {YOUTH_OVR})가 채워요. 한 명만 넣어도 경기할 수 있어요.
             </Txt>
           )}
+          {legacy ? (
+            <Txt v="sm" tone="muted" testID="team-legacy">
+              {PRESEASON_TEAM_NOTE}
+            </Txt>
+          ) : null}
           {editable ? (
             <Btn sm kind="ghost" testID="team-more" onPress={() => setMenu(true)}>
               더보기
@@ -719,6 +729,11 @@ export default function Team() {
             friends={friends}
             onPlayed={(m) => showFriendly(m, true)}
             onOpen={(m) => showFriendly(m, false)}
+            onPreseason={() => {
+              // T-11-113 프리시즌 팀 꾸리기 — 시즌 고르기에서 프리시즌을 고르고 팀 탭으로 가는 것과 같다.
+              pickSeason(0);
+              scrollTo(0);
+            }}
           />
         ) : (
           <TeamOpponents
@@ -732,7 +747,9 @@ export default function Team() {
             challenge={(o) => void challenge(o)}
             hint={matchHint}
             toTeam={editable ? () => switchView('team') : undefined}
-            saveAndFind={editable && dirty && team ? () => void saveAndFind() : undefined}
+            saveAndFind={
+              editable && !legacy && dirty && team ? () => void saveAndFind() : undefined
+            }
             saving={saving}
             canSave={nameOk}
           />
