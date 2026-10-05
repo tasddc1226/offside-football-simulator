@@ -19,6 +19,7 @@ import {
 import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { anonName, fmtValue, iGa } from '@offside/app-core/format';
 import { getHof } from '@offside/app-core/api/client';
+import { watchSeasonClock } from '@offside/app-core/season-opening';
 import { loadHOF } from '@offside/game/season';
 import { openHof } from '../game/nav';
 import { openPublicLegend } from '../game/host';
@@ -82,7 +83,15 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   const sort: HofSort = full ? snap.hof.sort : 'score';
   const by = SORTS[sort];
   // 홈 미리보기는 지금 시즌 고정(개막 전엔 프리시즌 = 전체와 같아 시즌 없이 같은 요청·캐시를 쓴다).
-  const homeSeason = useMemo(() => previewSeasonAt(new Date().toISOString()), []);
+  // T-11-107 홈을 띄운 채 개막을 넘기거나 앱으로 돌아오면 다시 고른다.
+  const [homeSeason, setHomeSeason] = useState(() => previewSeasonAt(new Date().toISOString()));
+  useEffect(
+    () =>
+      full
+        ? undefined
+        : watchSeasonClock(() => setHomeSeason(previewSeasonAt(new Date().toISOString()))),
+    [full],
+  );
   const season = full ? snap.hof.season : homeSeason;
   const q = full ? snap.hof.q : '';
   const pos = full ? snap.hof.pos : null;
@@ -189,7 +198,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
             </Txt>
           </View>
         ) : null}
-        {!full && all?.length ? (
+        {!full && (all?.length || homeSeason !== null) ? (
           <Btn sm testID="hof-all" onPress={openHof}>
             전체 보기
           </Btn>
