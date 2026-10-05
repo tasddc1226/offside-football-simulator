@@ -1,6 +1,6 @@
 // T-10-021 '홈 화면에 추가' 안내. 주소를 입력하지 않고 아이콘으로 바로 열 수 있게, 모바일 브라우저로 홈 화면에
 // 다시 들어올 때마다 보여 준다('다시 보지 않기'를 체크하면 이 브라우저에서는 그만). 홈 화면 앱으로 연 경우와 데스크톱은
-// 띄우지 않고, 설정 > 도움말에서는 언제든 다시 연다. T-11-092 아이폰은 iPhone 앱(App Store)을 먼저 권한다.
+// 띄우지 않고, 설정 > 도움말에서는 언제든 다시 연다. T-11-092 휴대폰은 스토어 앱(T-11-095 App Store · Google Play)을 먼저 권한다.
 import { hasKey, loadKey, saveKey } from '@offside/game/season';
 import { closeSheet, showSheet } from './sheetState.svelte.js';
 import { currentInApp, isStandalone, openExternal } from './inapp-open.js';
@@ -34,24 +34,25 @@ export function showInstallGuide(withOptOut = false) {
     );
     return;
   }
-  // T-11-092 아이폰은 App Store 앱을 먼저 권하고, 원하면 홈 화면 추가 단계로 넘어간다.
-  if (platform === 'ios-safari' || platform === 'ios-chrome') {
+  // T-11-092 휴대폰은 스토어 앱을 먼저 권하고(T-11-095 Android는 Google Play), 원하면 홈 화면 추가 단계로 넘어간다.
+  const os = platform.startsWith('ios') ? 'ios' : platform === 'android' ? 'android' : null;
+  if (os) {
     showSheet(
       {
         kind: 'notice',
-        eyebrow: APP_PROMO.sheet.eyebrow,
-        title: APP_PROMO.sheet.title,
+        eyebrow: APP_PROMO.sheet.eyebrow(os),
+        title: APP_PROMO.sheet.title(os),
         text: APP_PROMO.sheet.text,
         muted: true,
         ...optOutCheck(withOptOut),
       },
       [
         {
-          label: APP_PROMO.sheet.store,
+          label: APP_PROMO.getApp(os),
           cls: 'btn-primary',
           fn: () => {
             closeSheet();
-            openAppStore('sheet');
+            openAppStore(os, 'sheet');
           },
         },
         // 다시 보지 않기는 앞 시트에서 이미 물었다.
