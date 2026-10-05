@@ -60,11 +60,12 @@ describe('T-11-045 은퇴 나이', () => {
     expect(retireAge(make(1))).toBe(41);
   });
 
-  it('은퇴 나이는 RNG를 쓰지 않는다 — 같은 시드면 능력치·잠재력이 같다', () => {
+  it('은퇴 나이는 RNG를 쓰지 않는다 — 같은 시드면 능력치와 이후 추첨이 같다', () => {
     const a = make(3, 45),
       b = make(3);
     expect(a.attrs).toEqual(b.attrs);
-    expect(a.pot).toBe(b.pot);
+    // 잠재력은 시즌 선수만 다른 평균·편차(T-11-093)로 뽑지만 같은 난수를 쓴다.
+    expect(a.season.rivals).toEqual(b.season.rivals);
   });
 
   it('프리시즌 선수는 41세 시장에서 은퇴한다 — 제의가 없어서가 아니라 나이 때문이라고 알린다', () => {
