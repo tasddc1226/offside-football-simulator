@@ -50,6 +50,23 @@ function byReferences(tables: SchemaRow[]): SchemaRow[] {
   return out;
 }
 
+/** 스트림을 정확히 size 바이트씩 잘라 내준다(마지막 조각만 작을 수 있다).
+ * T-11-088 R2는 마지막 말고는 조각 크기가 모두 같아야 한다 — 넘친 만큼 통째로 올리면 complete에서 거부된다. */
+export async function* fixedParts(stream: ReadableStream<Uint8Array>, size: number) {
+  const reader = stream.getReader();
+  let pending = new Blob([]);
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    pending = new Blob([pending, value]);
+    while (pending.size >= size) {
+      yield pending.slice(0, size);
+      pending = pending.slice(size);
+    }
+  }
+  if (pending.size > 0) yield pending;
+}
+
 export const backupKey = (env: string, now: number) =>
   `d1/${env}/${new Date(now).toISOString().slice(0, 10)}.sql.gz`;
 
@@ -77,27 +94,14 @@ export async function backupToR2(
   const encoder = new TextEncoder();
   const write = (s: string) => writer.write(encoder.encode(s));
 
-  // 압축된 바이트를 모아 PART_BYTES마다 조각으로 올린다(쓰기와 동시에 돈다).
+  // 압축된 바이트를 PART_BYTES씩 조각으로 올린다(쓰기와 동시에 돈다).
   const parts: R2UploadedPart[] = [];
   let bytes = 0;
   const uploading = (async () => {
-    const reader = gzip.readable.getReader();
-    let buf: Uint8Array[] = [];
-    let size = 0;
-    const flush = async () => {
-      parts.push(await upload.uploadPart(parts.length + 1, new Blob(buf)));
-      bytes += size;
-      buf = [];
-      size = 0;
-    };
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf.push(value);
-      size += value.byteLength;
-      if (size >= PART_BYTES) await flush();
+    for await (const part of fixedParts(gzip.readable, PART_BYTES)) {
+      parts.push(await upload.uploadPart(parts.length + 1, part));
+      bytes += part.size;
     }
-    if (size > 0) await flush(); // 머리글을 늘 쓰므로 조각은 적어도 하나다
   })();
 
   let rows = 0;
