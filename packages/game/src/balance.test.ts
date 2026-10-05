@@ -20,6 +20,22 @@ const game = (seed = 1) => {
     seed,
   );
 };
+/** 시즌 1에 만든 선수(은퇴 나이 45). */
+const seasonGame = (seed = 1) => {
+  setActiveRng(createRng(seed));
+  return newGame(
+    {
+      name: '홍길동',
+      number: 7,
+      pos: 'FW',
+      foot: '오른발',
+      type: 'poacher',
+      trait: 'late',
+      retireAt: 45,
+    },
+    seed,
+  );
+};
 
 afterEach(() => {
   setLatestBalance(null);
@@ -75,8 +91,8 @@ describe('밸런스 설정 (T-10-016)', () => {
     expect(adoptLatestBalance(s)).toBe(false);
   });
 
-  it('T-11-030 잠재력 추첨은 서버 밸런스를 따르고, 기본값이면 예전과 같다', () => {
-    const draw = () => Array.from({ length: 400 }, (_, i) => game(100 + i).pot);
+  it('T-11-030 시즌 선수의 잠재력 추첨은 서버 밸런스를 따르고, 기본값이면 예전과 같다', () => {
+    const draw = () => Array.from({ length: 400 }, (_, i) => seasonGame(100 + i).pot);
     const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
     const base = draw();
     expect(base.every((p) => p >= 55 && p <= 96)).toBe(true);
@@ -90,6 +106,19 @@ describe('밸런스 설정 (T-10-016)', () => {
     );
     setLatestBalance(null);
     expect(draw()).toEqual(base);
+  });
+
+  it('T-11-093 시즌 선수는 75·6으로 좁게 뽑고, 프리시즌 선수는 서버 설정과 상관없이 74·8 그대로', () => {
+    const sd = (xs: number[]) => {
+      const m = xs.reduce((a, b) => a + b, 0) / xs.length;
+      return Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / xs.length);
+    };
+    const pre = Array.from({ length: 400 }, (_, i) => game(100 + i).pot);
+    const s1 = Array.from({ length: 400 }, (_, i) => seasonGame(100 + i).pot);
+    expect(sd(s1)).toBeLessThan(sd(pre) - 1);
+    // 프리시즌 선수는 서버 설정이 바뀌어도 같은 시드면 같은 잠재력이다.
+    setLatestBalance({ version: 1, values: { potMean: 80, potSd: 4 } });
+    expect(Array.from({ length: 400 }, (_, i) => game(100 + i).pot)).toEqual(pre);
   });
 
   it('선택지 확률 보정과 이벤트 가중치', () => {
