@@ -1,4 +1,4 @@
-import type { AnomalyCareer, AnomalyReason, AnomalyReport } from '@offside/contracts';
+import type { AnomalyCareer, AnomalyReason, AnomalyReport, SeasonGrowth } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { OVR_CAP_BY_AGE, ovrCapAt } from '../../plausibility.js';
 import { createDb } from '../client.js';
@@ -21,6 +21,12 @@ export const ANOMALY = {
   legend: 3600,
   /** 은퇴 레전드 점수가 이 이상이면 숨긴다(정상 최고 3,300대보다 20% 이상 위). */
   legendHide: 4000,
+  /** T-11-097 성장 기록에서 시즌 안 한 구간(시작 → 구간마다 → 시즌 끝)에 이만큼 이상 오르면 숨긴다. 운영 32만 시즌 실측에서
+   * 정상은 구간 사이 14·마지막 구간 13이 최대였고, 세이브를 고친 커리어는 23 이상이었다. */
+  growthStep: 20,
+  /** T-11-097 시즌 시작 OVR이 지난해 시즌의 저장된 OVR보다 이만큼 이상 높으면 숨긴다. 정상은 시즌 사이(노쇠·재평가)에 한 번도
+   * 오르지 않았다(29만 번) — 오르는 건 서버가 상한으로 잘라 저장한 지난 시즌뿐이다. */
+  growthCarry: 5,
 } as const;
 
 export const SWEPT_AT_KEY = 'anomaly_sweep_at';
@@ -115,6 +121,24 @@ export type SweepResult = {
  * 남지 않는다 — 올라오는 순간에 본다. */
 export const exceedsOvrCap = (age: number, ovr: number): boolean =>
   ovr - ovrCapAt(age) > ANOMALY.farMargin;
+
+/**
+ * T-11-097 시즌 성장 기록에 세이브를 고친 흔적이 있으면 true. 저장된 OVR은 나이별 상한으로 잘리고(만 24세부터는 99까지 그대로)
+ * 매일 점검은 시즌 사이 상승만 보므로, 시즌 중간에 능력치를 올린 기록은 올라오는 순간 성장 기록으로만 알 수 있다.
+ * endOvr는 자르기 전 시즌 끝 OVR, prevOvr는 지난해 시즌의 저장된 OVR(없으면 null). 구간 기록이 없으면 시즌 전체 성장과
+ * 구분할 수 없어 구간 검사는 건너뛴다.
+ */
+export function growthTampered(
+  growth: SeasonGrowth | undefined,
+  endOvr: number,
+  prevOvr: number | null,
+): boolean {
+  if (!growth) return false;
+  if (prevOvr !== null && growth.o0 - prevOvr >= ANOMALY.growthCarry) return true;
+  if (!growth.ph.length) return false;
+  const steps = [growth.o0, ...growth.ph, endOvr];
+  return steps.some((v, i) => i > 0 && v - steps[i - 1]! >= ANOMALY.growthStep);
+}
 
 /** cron 한 번의 D1 batch에 담는 커리어 수(커리어마다 문장 4개). */
 const HIDE_CHUNK = 20;

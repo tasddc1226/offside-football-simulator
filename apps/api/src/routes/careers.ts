@@ -16,6 +16,7 @@ import {
   listOwnHof,
   putCareerSeason,
   putRetirement,
+  storedSeasonOvr,
   storedSeasonsOf,
   updateRetired,
 } from '../db/repos/careers.js';
@@ -28,7 +29,7 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { purgeEdge, waitUntil } from '../edgeCache.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { recordFirsts } from './firsts.js';
-import { exceedsOvrCap } from '../db/repos/anomalies.js';
+import { exceedsOvrCap, growthTampered } from '../db/repos/anomalies.js';
 import { judgeRetirement } from './retiredNumbers.js';
 import { STALE } from '../edgeKeys.js';
 import { publishLive } from '../live/publish.js';
@@ -87,7 +88,15 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     await limitUpload(db, 'CAREER_SEASON', session.profileId);
     const now = nowIso();
     // 나이별 OVR 상한을 크게 넘긴 값은 sanitizeSeason이 잘라 저장해 매일 점검에 남지 않으므로 저장과 함께 숨긴다.
-    const overCap = exceedsOvrCap(body.season.age, body.season.ovr);
+    // T-11-097 시즌 중간에 세이브를 고쳐 올린 OVR도 성장 기록으로만 보이므로 같이 숨긴다(지난 시즌 조회는 성장 기록이 올 때만).
+    const { growth } = body.season;
+    const hide =
+      exceedsOvrCap(body.season.age, body.season.ovr) ||
+      growthTampered(
+        growth,
+        body.season.ovr,
+        growth ? await storedSeasonOvr(db, careerId, year - 1) : null,
+      );
 
     await putCareerSeason(db, {
       careerId,
@@ -101,11 +110,11 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       signalsJson:
         body.signals &&
         JSON.stringify({ ...body.signals, headless: isHeadless(c.req.header('User-Agent')) }),
-      hide: overCap,
+      hide,
       now,
     });
 
-    if (overCap) purgeEdge(c, STALE.firstsChanged());
+    if (hide) purgeEdge(c, STALE.firstsChanged());
     else await recordFirsts(c, careerId);
     publishLive(c, 'season', careerId, now);
     const career = await getCareer(db, careerId);
