@@ -1,9 +1,14 @@
 import { useEffect } from 'react';
-import { Linking, View } from 'react-native';
+import { AppState, Linking, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import { pushRegistration, pushState } from '../../platform/push';
-import { checkPushOffer, dismissPushOffer, pushOffer } from '../../platform/pushOffer';
+import {
+  checkPushOffer,
+  dismissPushOffer,
+  snoozePushOffer,
+  pushOffer,
+} from '../../platform/pushOffer';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Txt } from '../../ui';
 import { WEB_ORIGIN } from '../../platform/config';
@@ -14,8 +19,13 @@ export function PushOptInCard() {
   const c = useColors();
   useEffect(() => {
     void checkPushOffer();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void checkPushOffer();
+    });
+    return () => subscription.remove();
   }, []);
-  if (offer.handled || !offer.eligible || state.enabled) return null;
+  if (offer.handled || Date.now() < offer.snoozedUntil || !offer.eligible || state.enabled)
+    return null;
   return (
     <Card testID="push-opt-in" gap={12} style={{ borderWidth: 1, borderColor: c.line }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -34,7 +44,7 @@ export function PushOptInCard() {
         </Txt>
       </View>
       <Txt tone="muted">
-        공지·릴리즈 노트 알림을 준비하고 있어요. 먼저 이 기기를 연결해 두세요. 설정에서 언제든 끌 수
+        공지·릴리즈 노트의 새 글을 알려 드려요. 게시판마다 하루 한 번 보내요. 설정에서 언제든 끌 수
         있어요.
       </Txt>
       <View style={{ gap: 8 }}>
@@ -56,7 +66,7 @@ export function PushOptInCard() {
           block
           disabled={state.busy}
           testID="push-opt-in-dismiss"
-          onPress={dismissPushOffer}
+          onPress={snoozePushOffer}
         >
           나중에
         </Btn>

@@ -30,7 +30,9 @@ export function appendReleaseNotes(body: string, entries: ReleaseNote[]): string
           ? `\n- 웹에 먼저 적용했어요. 앱은 ${entry.appVersion} 업데이트로 제공할 예정이에요`
           : entry.availability === 'web'
             ? '\n- 웹에 적용했어요'
-            : '';
+            : entry.availability === 'app'
+              ? '\n- 앱에 적용했어요'
+              : '';
       return `## ${++number}. ${entry.title}\n${entry.items.map((s) => `- ${s}`).join('\n')}${availability}`;
     })
     .join('\n\n');
