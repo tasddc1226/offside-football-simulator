@@ -4,6 +4,7 @@ import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
 import { issueCookie, callJson } from '../test/http.js';
 import { sha256Hex } from '../db/hash.js';
 import { ownPushDevice, rememberPushTestTicket } from '../db/repos/pushDevices.js';
+import { reservePushTest } from '../push/testLimit.js';
 import { cleanupExpired } from '../cron/cleanup.js';
 import type { SessionContext } from '../env.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
@@ -51,7 +52,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   await ctx.dispose();
 });
-describe('app push registration and admin-only test', () => {
+describe('app push registration and own-device test', () => {
   it('keeps receipt evidence private and clears it on token or account changes', async () => {
     const a = await identity();
     const b = await identity();
@@ -231,43 +232,134 @@ describe('app push registration and admin-only test', () => {
     expect(await ownPushDevice(ctx.env.DB, a.session, INSTALL, now)).toBeNull();
     expect((await cleanupExpired(ctx.env.DB, Date.parse(now))).push_devices).toBe(1);
   });
-  it('defaults test delivery off and requires an admin even when enabled', async () => {
+  it('defaults test delivery off, including for registered non-admin users', async () => {
     const a = await identity();
-    ctx.env.PUSH_TEST_ENABLED = '1';
-    expect((await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL })).status).toBe(
-      403,
-    );
-    await linkGoogle(ctx, a.session.profileId, { email: 'admin@example.com' });
-    ctx.env.ADMIN_EMAILS = 'admin@example.com';
-    delete ctx.env.PUSH_TEST_ENABLED;
+    await call(a.token, 'PUT', '/v1/push/device', INPUT);
     expect((await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL })).status).toBe(
       503,
     );
   });
-  it('only sends to the current admin session’s own device and enforces test rate limits', async () => {
+  it('lets an anonymous app user test only their own device and blocks a repeated request', async () => {
     const a = await identity();
     const b = await identity();
-    await linkGoogle(ctx, a.session.profileId, { email: 'admin@example.com' });
-    ctx.env.ADMIN_EMAILS = 'admin@example.com';
     ctx.env.PUSH_TEST_ENABLED = '1';
     await call(b.token, 'PUT', '/v1/push/device', INPUT);
     const send = vi
       .fn<typeof fetch>()
-      .mockImplementation(async () => Response.json({ data: { status: 'ok', id: 'ticket' } }));
+      .mockResolvedValue(Response.json({ data: { status: 'ok', id: 'ticket' } }));
     vi.stubGlobal('fetch', send);
     expect((await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL })).status).toBe(
       404,
     );
     expect(send).not.toHaveBeenCalled();
     await call(a.token, 'PUT', '/v1/push/device', INPUT);
-    for (let i = 0; i < 4; i++)
-      expect(
-        (await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL })).status,
-      ).toBe(200);
+    const response = await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toContain('no-store');
+    expect(await response.json()).toMatchObject({
+      data: { accepted: true, nextTestAt: expect.any(String) },
+    });
+    const payload = JSON.parse(send.mock.calls[0]![1]!.body as string);
+    expect(payload.to).toBe(INPUT.token);
+    expect(payload.data.test).toBe(true);
     expect((await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL })).status).toBe(
       429,
     );
-    expect(send).toHaveBeenCalledTimes(4);
+    expect(send).toHaveBeenCalledOnce();
+    // Re-registering with a new session/profile keeps the device cooldown.
+    await call(b.token, 'PUT', '/v1/push/device', INPUT);
+    expect((await call(b.token, 'POST', '/v1/push/test', { installationId: INSTALL })).status).toBe(
+      429,
+    );
+    expect(send).toHaveBeenCalledOnce();
+  });
+  it('blocks web sessions and arbitrary targets without sending', async () => {
+    ctx.env.PUSH_TEST_ENABLED = '1';
+    const web = await issueCookie(ctx);
+    expect(
+      (
+        await callJson(ctx.env, 'POST', '/v1/push/test', {
+          cookie: web.cookie,
+          body: { installationId: INSTALL },
+        })
+      ).status,
+    ).toBe(403);
+    const a = await identity();
+    const send = vi.fn<typeof fetch>();
+    vi.stubGlobal('fetch', send);
+    for (const extra of [{ token: INPUT.token }, { profileId: a.session.profileId }])
+      expect(
+        (await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL, ...extra }))
+          .status,
+      ).toBe(400);
+    expect(send).not.toHaveBeenCalled();
+  });
+  it('allows only one of concurrent requests, including across devices of the same profile', async () => {
+    const a = await identity();
+    const result = await Promise.allSettled(
+      Array.from({ length: 8 }, (_, i) =>
+        reservePushTest(
+          ctx.env.DB,
+          i % 2 ? INSTALL : OTHER_INSTALL,
+          a.session.profileId,
+          '2026-10-05T05:00:00.000Z',
+        ),
+      ),
+    );
+    expect(result.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(result.filter((r) => r.status === 'rejected')).toHaveLength(7);
+    const counters = await ctx.env.DB.prepare(
+      "SELECT count FROM auth_attempts WHERE kind = 'PUSH_TEST'",
+    ).all();
+    expect(counters.results).toEqual([{ count: 1 }, { count: 1 }]);
+  });
+  it('limits each KST day to three requests and keeps cooldown across midnight', async () => {
+    const a = await identity();
+    const sendAt = (now: string) => reservePushTest(ctx.env.DB, INSTALL, a.session.profileId, now);
+    await sendAt('2026-10-05T14:30:00.000Z');
+    await sendAt('2026-10-05T14:40:00.000Z');
+    expect(await sendAt('2026-10-05T14:55:00.000Z')).toBe('2026-10-05T15:05:00.000Z');
+    await expect(sendAt('2026-10-05T14:59:00.000Z')).rejects.toMatchObject({
+      details: { reason: 'PUSH_TEST_DAILY_LIMIT' },
+    });
+    await expect(sendAt('2026-10-05T15:01:00.000Z')).rejects.toMatchObject({
+      details: { reason: 'PUSH_TEST_COOLDOWN' },
+    });
+    expect(await sendAt('2026-10-05T15:05:00.000Z')).toBe('2026-10-05T15:15:00.000Z');
+  });
+  it('keeps the daily budget across removal, token rotation and profile changes', async () => {
+    const a = await identity();
+    const b = await identity();
+    for (const minute of ['00', '10', '20'])
+      await reservePushTest(
+        ctx.env.DB,
+        INSTALL,
+        a.session.profileId,
+        `2026-10-05T05:${minute}:00.000Z`,
+      );
+    await call(a.token, 'PUT', '/v1/push/device', INPUT);
+    await call(a.token, 'DELETE', '/v1/push/device', { installationId: INSTALL });
+    await call(b.token, 'PUT', '/v1/push/device', { ...INPUT, token: 'ExpoPushToken[rotated]' });
+    await expect(
+      reservePushTest(ctx.env.DB, INSTALL, b.session.profileId, '2026-10-05T05:30:00.000Z'),
+    ).rejects.toMatchObject({ details: { reason: 'PUSH_TEST_DAILY_LIMIT' } });
+    await expect(
+      reservePushTest(ctx.env.DB, OTHER_INSTALL, a.session.profileId, '2026-10-05T05:30:00.000Z'),
+    ).rejects.toMatchObject({ details: { reason: 'PUSH_TEST_DAILY_LIMIT' } });
+  });
+  it('reserves the cooldown before an uncertain external send and does not resend', async () => {
+    const a = await identity();
+    ctx.env.PUSH_TEST_ENABLED = '1';
+    await call(a.token, 'PUT', '/v1/push/device', INPUT);
+    const send = vi.fn<typeof fetch>().mockRejectedValue(new Error('timeout'));
+    vi.stubGlobal('fetch', send);
+    expect((await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL })).status).toBe(
+      503,
+    );
+    expect((await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL })).status).toBe(
+      429,
+    );
+    expect(send).toHaveBeenCalledOnce();
   });
   it('removes invalid tokens after an Expo rejection', async () => {
     const a = await identity();

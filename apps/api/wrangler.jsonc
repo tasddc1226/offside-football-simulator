@@ -97,6 +97,7 @@
       "vars": {
         "ENVIRONMENT": "production",
         "NEWS_PUSH_ENABLED": "1",
+        "PUSH_TEST_ENABLED": "1",
         "ALLOWED_ORIGINS": "https://offside-lab.com,https://offside-web.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",

@@ -200,3 +200,47 @@ describe('native push token event registration', () => {
     expect(f.nativeReads).toBe(1);
   });
 });
+
+describe('own-device test push cooldown', () => {
+  it('blocks a second request and restores the cooldown after restarting', async () => {
+    const p = await app();
+    const nextTestAt = new Date(Date.now() + 600_000).toISOString();
+    f.api.mockResolvedValueOnce({ ok: true, data: { accepted: true, nextTestAt } });
+    await p.testOwnPush();
+    const requests = f.api.mock.calls.length;
+    await expect(p.testOwnPush()).rejects.toThrow('잠시 뒤');
+    expect(f.api.mock.calls).toHaveLength(requests);
+    vi.resetModules();
+    const restarted = await import('./push.ts');
+    expect(restarted.pushTestState.nextTestAt).toBe(Date.parse(nextTestAt));
+    await expect(restarted.testOwnPush()).rejects.toThrow('잠시 뒤');
+    expect(f.api.mock.calls).toHaveLength(requests);
+  });
+  it('blocks rapid concurrent taps before the request has finished', async () => {
+    const p = await app();
+    let finish;
+    f.api.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const first = p.testOwnPush();
+    await expect(p.testOwnPush()).rejects.toThrow('잠시 뒤');
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
+    finish({ ok: true, data: { accepted: true } });
+    await first;
+    expect(p.pushTestState.busy).toBe(false);
+    expect(f.api.mock.calls.filter(([path]) => path === '/v1/push/test')).toHaveLength(1);
+  });
+  it('persists a pause on an uncertain response or server rate limit', async () => {
+    const p = await app();
+    f.api.mockResolvedValueOnce({
+      ok: false,
+      error: { code: 'NETWORK_ERROR', message: '연결하지 못했어요.' },
+    });
+    await expect(p.testOwnPush()).rejects.toThrow();
+    expect(p.pushTestState.nextTestAt).toBeGreaterThan(Date.now());
+    expect(p.pushTestState.busy).toBe(false);
+  });
+});
