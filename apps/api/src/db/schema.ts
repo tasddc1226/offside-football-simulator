@@ -492,6 +492,10 @@ export const careerSeasons = sqliteTable(
     primaryKey({ columns: [table.careerId, table.year] }),
     // T-10-030 홈 라이브 현황: 최근 올라온 시즌(피드·오늘 시즌 수)을 시각 순으로 찾는다.
     index('career_seasons_created_idx').on(table.createdAt),
+    // T-11-100 매일 성장 기록 보관이 아직 D1에 남은 오래된 성장 기록만 시각 순으로 찾는다(비운 행은 인덱스에서 빠진다).
+    index('career_seasons_growth_created_idx')
+      .on(table.createdAt)
+      .where(sql`${table.growthJson} is not null`),
   ],
 );
 
