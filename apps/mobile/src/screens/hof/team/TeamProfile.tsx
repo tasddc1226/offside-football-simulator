@@ -25,6 +25,7 @@ import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
 import { Press } from '../../../ui/Press';
 import { Txt } from '../../../ui/Txt';
+import { useOnPull } from '../../../ui/refresh';
 import { AutoGrid } from '../../board/parts';
 
 export default function TeamProfile({ id }: { id: string }) {
@@ -43,23 +44,28 @@ export default function TeamProfile({ id }: { id: string }) {
   // 내 팀이면 이 기기에 남은 (비공개) 이름으로 보여 준다.
   const localNames = useMemo(() => localCareerNames(), []);
 
-  const load = useCallback(async () => {
-    setStatus('loading');
-    const r = await fetchTeamProfile(id);
-    if (!r.ok) {
-      setStatus('error');
-      return;
-    }
-    setLiked(r.data.liked);
-    setMine(r.data.mine);
-    setFriend(r.data.friend ?? null);
-    if (!r.data.mine) {
-      setTeam({ ...r.data.team, views: r.data.team.views + 1 });
-      void viewTeam(id);
-    } else setTeam(r.data.team);
-    setStatus('ready');
-  }, [id]);
+  // silent: T-11-111 당겨서 새로고침 — 화면을 비우지 않고 값만 바꾼다. 조회수를 다시 올리지 않고, 실패해도 보던 프로필을 둔다.
+  const load = useCallback(
+    async (silent = false) => {
+      if (!silent) setStatus('loading');
+      const r = await fetchTeamProfile(id);
+      if (!r.ok) {
+        if (!silent) setStatus('error');
+        return;
+      }
+      setLiked(r.data.liked);
+      setMine(r.data.mine);
+      setFriend(r.data.friend ?? null);
+      if (!r.data.mine) {
+        setTeam({ ...r.data.team, views: r.data.team.views + (silent ? 0 : 1) });
+        if (!silent) void viewTeam(id);
+      } else setTeam(r.data.team);
+      setStatus('ready');
+    },
+    [id],
+  );
   useEffect(() => void load(), [load]);
+  useOnPull(() => (liking || requesting ? undefined : load(true)));
 
   async function toggleLike() {
     if (!team || liking) return;

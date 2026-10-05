@@ -139,6 +139,8 @@ export function useFriends() {
     status,
     busy,
     reload: () => void load(),
+    /** T-11-111 당겨서 새로고침 — 이미 불러온 뒤에만, 보이는 목록은 두고 조용히 다시 받는다. */
+    refresh: () => (dataRef.current ? load(true) : Promise.resolve()),
     ensure,
     play,
     request: (body: Parameters<typeof requestFriend>[0]) =>
