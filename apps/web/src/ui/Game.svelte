@@ -15,6 +15,7 @@
   import Topbar from './Topbar.svelte';
   import TabIcon from './TabIcon.svelte';
   import NavIntro from './NavIntro.svelte';
+  import PlayerNudge from './PlayerNudge.svelte';
   import SeasonTab from './tabs/SeasonTab.svelte';
   import PlayerTab from './tabs/PlayerTab.svelte';
   import CareerTab from './tabs/CareerTab.svelte';
@@ -25,6 +26,14 @@
   import { fmtValue } from '@offside/app-core/format';
   import { seasonAction } from '@offside/app-core/seasonAction';
   import { gameText as T } from '@offside/app-core/i18n/ko/game';
+  import { notePlayerVisit, playerNudge } from '@offside/app-core/player-nudge';
+
+  let actionHeight = $state(0);
+  $effect(() => {
+    if (!actionHeight) return;
+    document.documentElement.style.setProperty('--actionbar-h', `${actionHeight}px`);
+    return () => document.documentElement.style.removeProperty('--actionbar-h');
+  });
 
   // T-10-104: 이벤트·결산·이적시장 시트 본문도 게임 청크다 — 첫 시트가 뜨기 전에 미리 받아 둔다.
   void loadGameSheets().catch(() => {});
@@ -79,6 +88,7 @@
 
   // T-11-025 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다.
   function switchTab(k: Tab) {
+    if (k === 'player') notePlayerVisit(playerNudge(s));
     if (appState.tab === k) {
       window.scrollTo({ top: 0, left: 0, behavior: dur(1) ? 'smooth' : 'instant' });
       return;
@@ -127,8 +137,9 @@
 </div>
 
 {#if showAction}
-  <div class="action-bar season-bar" transition:fly={{ y: 20, duration: dur(180) }}>
+  <div class="action-bar season-bar" bind:clientHeight={actionHeight} transition:fly={{ y: 20, duration: dur(180) }}>
     <div class="action-bar-inner">
+      <PlayerNudge openPlayer={() => switchTab('player')} />
       {#if act.kind === 'advance'}
         <button class="season-prep" data-act="prep" aria-label={T.prepOpen({ prep: act.prep })} onclick={openPrep}>{act.prep}</button>
       {/if}

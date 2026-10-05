@@ -77,6 +77,14 @@ export const displaySeasonAt = (now: string): number =>
   SERVICE_SEASONS.filter((s) => s.startsAt <= now).reduce((id, s) => Math.max(id, s.id), 0);
 
 /**
+ * T-11-107 다음 시즌 개막까지 남은 밀리초(없으면 null). 화면을 띄운 채 개막을 넘겨도 시즌 기본값을 다시 고르게 할 때 쓴다.
+ */
+export const msUntilNextSeasonStart = (now: string): number | null => {
+  const next = SERVICE_SEASONS.find((s) => s.startsAt > now);
+  return next ? Date.parse(next.startsAt) - Date.parse(now) : null;
+};
+
+/**
  * T-11-029 홈 명예의 전당 미리보기의 시즌 — 지금 시즌 고정(휴식기면 마지막 시즌). 첫 시즌 개막 전엔 모든 선수가 프리시즌이라
  * 전체와 같으므로 null(시즌 없이 같은 요청·캐시를 쓴다).
  */

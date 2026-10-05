@@ -126,10 +126,10 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     const funds = await call('GET', '/v1/market/funds', { cookie: owner.cookie });
     expect(((await funds.json()) as { data: unknown }).data).toEqual({
       balance: 1_000_000,
-      clubValue: 4_000_000,
+      clubValue: 2_000_000,
     });
-    // 구단 가치 = 자금 + 남은 직접 키운 선수 은퇴 가치(방출한 선수는 두 번 세지 않는다)
-    expect(data.clubValue).toBe(4_000_000);
+    // 구단 가치 = 자금 + 남은 카드 기준가(T-11-109). 방출해도 기준가가 자금으로 옮겨 갈 뿐 구단 가치는 그대로다.
+    expect(data.clubValue).toBe(2_000_000);
     expect(data.trades).toMatchObject([{ kind: 'released', amount: 1_000_000 }]);
     const team = TeamRes.parse(
       await (await call('GET', '/v1/owner-team', { cookie: owner.cookie })).json(),

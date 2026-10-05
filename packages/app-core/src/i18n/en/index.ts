@@ -48,6 +48,7 @@ import { marketValueChart } from './marketValueChart';
 import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
+import { playerNudge } from './playerNudge';
 import { push } from './push';
 import { retired } from './retired';
 import { settings } from './settings';
@@ -68,6 +69,7 @@ import { teamCore } from './teamCore';
 import { teamHome } from './teamHome';
 import { teamLive } from './teamLive';
 import { teamMatch } from './teamMatch';
+import { teamSynergy } from './teamSynergy';
 import { title } from './title';
 import { titleTag } from './titleTag';
 import { webGame } from './webGame';
@@ -121,6 +123,7 @@ export const en = {
   owner,
   ownerConflict,
   ownerPlayers,
+  playerNudge,
   push,
   retired,
   settings,
@@ -141,6 +144,7 @@ export const en = {
   teamHome,
   teamLive,
   teamMatch,
+  teamSynergy,
   title,
   titleTag,
   webGame,

@@ -5,17 +5,24 @@ import { matchHintOf } from './teamOwner.js';
 import { ownerText as L } from './i18n/ko/owner.js';
 import { teamSeasonLabel } from './seasonName.js';
 
-/** 구단주 요약 — 은퇴 선수 수 · 레전드 점수 합 · 영구결번 수 · 구단 가치(은퇴 가치 합, 만 원). */
+/**
+ * 구단주 요약 — 은퇴 선수 수 · 레전드 점수 합 · 영구결번 수 · 구단 가치(만 원). 구단 가치는 이 기기 기록의 카드 기준가
+ * 합이라 비로그인 구단주에만 쓴다(로그인하면 서버가 자금까지 더해 센다, T-11-109).
+ */
 export type OwnerSummary = { players: number; score: number; retired: number; value: number };
 
 export function ownerSummary(
-  rows: readonly { stats: { score: number }; rn?: number | null | undefined; value: number }[],
+  rows: readonly {
+    stats: { score: number };
+    rn?: number | null | undefined;
+    value?: number | undefined;
+  }[],
 ): OwnerSummary {
   return {
     players: rows.length,
     score: rows.reduce((s, r) => s + r.stats.score, 0),
     retired: rows.filter((r) => r.rn != null).length,
-    value: rows.reduce((s, r) => s + r.value, 0),
+    value: rows.reduce((s, r) => s + (r.value ?? 0), 0),
   };
 }
 
