@@ -254,6 +254,35 @@ export async function careersByIds(db: Db, ids: string[]) {
 export type CareerLite = Awaited<ReturnType<typeof careersByIds>>[number];
 
 /**
+ * T-11-103 업적 판정용 선발 카드: careersByIds에 팀 업적이 보는 기록(마지막 구단·A매치·영구결번)을 붙인다. 화면 선발과
+ * 같이 카드로 읽어 영입한 선수도 들어간다(소유 확인은 부르는 쪽이 eligibleMap으로).
+ */
+export async function teamSlotCareersOf(db: Db, ids: string[]) {
+  if (ids.length === 0) return [];
+  return db
+    .select({
+      id: cards.careerId,
+      ownerId: cards.ownerId,
+      pos: cards.pos,
+      nation: cards.nation,
+      dpos: cards.dpos,
+      peak: cards.peak,
+      peakProfile: cards.peakProfile,
+      number: cards.number,
+      publicName: careers.publicName,
+      serviceSeason: cards.serviceSeason,
+      hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
+      lastClubId: careers.lastClubId,
+      caps: careers.caps,
+      rn: retiredNumbers.careerId,
+    })
+    .from(cards)
+    .leftJoin(careers, eq(careers.id, cards.careerId))
+    .leftJoin(retiredNumbers, eq(retiredNumbers.careerId, cards.careerId))
+    .where(inArray(cards.careerId, ids));
+}
+
+/**
  * 그 구단주의 그 시즌 팀에 넣을 수 있는 카드만 골라 선발 맵으로(그 시즌 선수 · 숨김 아님). T-11-080 소유 규칙: 지금
  * 시즌 팀(open)은 지금 주인인지 확인하고, 닫힌 시즌 팀은 그 뒤 방출·이적과 상관없이 id로 읽기만 한다.
  */
@@ -593,8 +622,8 @@ export const deleteOwnerTeamsStatements = (db: Db, profileId: string) => {
 // ───────── 구단 시즌 업적 ─────────
 
 /**
- * 그 시즌에 처음 올라와(service_season, 0 = 프리시즌) 은퇴한 내 선수 + 영구결번 여부 + 받아 둔 시즌(리그·영예). 이 조건이
- * 곧 그 시즌 팀에 넣을 수 있는 선수라 팀 선발(lineup)도 여기서 만든다.
+ * 그 시즌에 처음 올라와(service_season, 0 = 프리시즌) 은퇴한 내 선수(직접 키운 선수) + 영구결번 여부 + 받아 둔 시즌(리그·영예).
+ * 팀 선발은 영입한 선수도 들어가므로 여기서 만들지 않고 teamSlotCareersOf로 읽는다(T-11-103).
  */
 export async function seasonCareersOf(db: Db, profileId: string, season: number) {
   const mine = and(
@@ -611,11 +640,6 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         id: careers.id,
         pos: careers.pos,
         dpos: careers.dpos,
-        peak: careers.peak,
-        peakProfile: careers.peakProfile,
-        number: careers.shirtNumber,
-        publicName: careers.publicName,
-        lastClubId: careers.lastClubId,
         caps: careers.caps,
         ballon: careers.ballon,
         trophies: careers.trophies,
@@ -662,8 +686,6 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
   }
   return rows.map((r) => ({
     id: r.id,
-    lineup: toLineupCareer(r),
-    lastClubId: r.lastClubId,
     pos: r.pos,
     dpos: dposFor(r.pos, r.dpos),
     caps: r.caps ?? 0,

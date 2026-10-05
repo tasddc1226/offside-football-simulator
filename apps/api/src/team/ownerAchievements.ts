@@ -10,11 +10,28 @@ import {
   saveAchievementScore,
   staleAchievementOwners,
 } from '../db/repos/ownerAchievements.js';
-import { layoutOf, myTeamIn, seasonCareersOf, slotIdsOf } from '../db/repos/ownerTeams.js';
+import {
+  eligibleMap,
+  layoutOf,
+  myTeamIn,
+  seasonCareersOf,
+  slotIdsOf,
+  teamSlotCareersOf,
+} from '../db/repos/ownerTeams.js';
 import { getProfile, hasAccount } from '../db/repos/profiles.js';
-import { achievementScore, clubAchievements } from './achievements.js';
+import { achievementScore, clubAchievements, teamKeptOf, type TeamKept } from './achievements.js';
 import { buildLineup } from './sim.js';
 import { kstDay } from '../time.js';
+
+/** 적어 둔 팀 업적 기록(team_kept). 없거나 깨졌으면 빈 기록. */
+function keptOf(json: string | null | undefined): TeamKept {
+  if (!json) return {};
+  try {
+    return JSON.parse(json) as TeamKept;
+  } catch {
+    return {};
+  }
+}
 
 /**
  * 그 시즌 업적을 계산해 점수를 적고 업적·점수 행을 돌려준다. touch면 점수가 그대로여도 갱신 시각을 남긴다
@@ -32,25 +49,28 @@ export async function refreshOwnerAchievements(
     myTeamIn(db, owner.id, season),
     achievementRowOf(db, owner.id, season),
   ]);
-  const activity = await ownerActivityIn(db, owner.id, season, team?.id ?? null);
-  // 그 시즌 팀에 넣을 수 있는 선수 = 이 시즌 은퇴 선수라 선발도 careersIn에서 만든다.
-  const byId = new Map(careersIn.map((r) => [r.id, r]));
+  const open = season === teamSeasonAt(now);
+  const ids = team ? slotIdsOf(team).filter((id): id is string => id !== null) : [];
+  const [activity, slotRows] = await Promise.all([
+    ownerActivityIn(db, owner.id, season, team?.id ?? null),
+    teamSlotCareersOf(db, ids),
+  ]);
+  // T-11-103 선발은 화면과 같이 카드로 판정한다 — 영입한 선수도 들어가고, 지금 시즌은 지금 가진 선수만(eligibleMap).
+  const eligible = eligibleMap(slotRows, owner.id, season, open);
+  const byId = new Map(slotRows.map((r) => [r.id, r]));
   const slots = team
-    ? buildLineup(
-        team.formation as FormationId,
-        slotIdsOf(team),
-        new Map(careersIn.map((r) => [r.id, r.lineup])),
-        layoutOf(team),
-      ).map((s) => {
-        const r = s.careerId ? byId.get(s.careerId) : undefined;
-        return {
-          careerId: r ? s.careerId : null,
-          fit: s.fit,
-          lastClubId: r?.lastClubId ?? null,
-          caps: r?.caps ?? 0,
-          retiredNumber: r?.retiredNumber ?? false,
-        };
-      })
+    ? buildLineup(team.formation as FormationId, slotIdsOf(team), eligible, layoutOf(team)).map(
+        (s) => {
+          const r = s.careerId && eligible.has(s.careerId) ? byId.get(s.careerId) : undefined;
+          return {
+            careerId: r ? s.careerId : null,
+            fit: s.fit,
+            lastClubId: r?.lastClubId ?? null,
+            caps: r?.caps ?? 0,
+            retiredNumber: !!r?.rn,
+          };
+        },
+      )
     : null;
   // 팀이 없는 지금 시즌은 빈 팀으로 판정해 팀 업적을 목표로 보인다. 지난 시즌에 팀이 없었으면 팀 업적을 감춘다.
   const teamInput =
@@ -64,7 +84,7 @@ export async function refreshOwnerAchievements(
           rating: team.rating,
           likes: team.likes,
         }
-      : season === teamSeasonAt(now)
+      : open
         ? { slots: [], wins: 0, bestStreak: 0, bestMargin: 0, goalsFor: 0, rating: 0, likes: 0 }
         : null;
   const groups = clubAchievements({
@@ -79,12 +99,18 @@ export async function refreshOwnerAchievements(
     },
     detail: detailPosInSeason(season),
     retireAt: retireAtOf(season),
+    kept: keptOf(prev?.teamKept),
   });
+  const kept = teamKeptOf(groups);
   const row = await saveAchievementScore(
     db,
     prev,
     { profileId: owner.id, season },
-    { ...achievementScore(groups), players: careersIn.length },
+    {
+      ...achievementScore(groups),
+      players: careersIn.length,
+      teamKept: Object.keys(kept).length ? JSON.stringify(kept) : null,
+    },
     now,
     touch,
   );
@@ -103,7 +129,7 @@ export async function refreshAfterChange(db: Db, profileId: string, season: numb
 }
 
 /**
- * 매일 cron: 놓친 구단주의 점수를 다시 센다(한 번에 limit명 — 남으면 다음 날 이어서). 구단주마다 D1을 6번쯤 부르므로
+ * 매일 cron: 놓친 구단주의 점수를 다시 센다(한 번에 limit명 — 남으면 다음 날 이어서). 구단주마다 D1을 7번쯤 부르므로
  * 한 번 호출의 하위 요청 한도(1,000) 안에 들도록 100명으로 끊는다.
  */
 export async function rebuildStaleAchievements(db: Db, now: string, limit = 100) {
