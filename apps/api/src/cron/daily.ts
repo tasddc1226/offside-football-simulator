@@ -3,6 +3,7 @@
 import type { Bindings } from '../env.js';
 import { sweepAnomalies, type SweepResult } from '../db/repos/anomalies.js';
 import { backupToR2, type BackupResult } from './backup.js';
+import { archiveGrowth, type GrowthArchiveResult } from './growthArchive.js';
 import { cleanupExpired, type CleanupResult } from './cleanup.js';
 import { createDb } from '../db/client.js';
 import { setMeta } from '../db/repos/firsts.js';
@@ -14,6 +15,8 @@ export type DailyResult = {
   anomalies: SweepResult | { error: string };
   /** R2 바인딩(BACKUP)이 없으면(로컬·staging) 건너뛴다. */
   backup: BackupResult | { error: string } | 'skipped';
+  /** T-11-100 오래된 시즌 성장 기록을 R2로 옮기고 D1에서 비운다. R2 바인딩이 없으면 건너뛴다. */
+  growthArchive: GrowthArchiveResult | { error: string } | 'skipped';
   /** T-11-028 놓친 구단주 업적 점수 다시 세기. */
   achievements: Awaited<ReturnType<typeof rebuildStaleAchievements>> | { error: string };
 };
@@ -35,6 +38,10 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
   const backup = env.BACKUP
     ? await backupToR2(env.DB, env.BACKUP, env.ENVIRONMENT, now).catch(errorOf)
     : ('skipped' as const);
+  // 백업 다음에 돈다 — 백업이 성공했으면 그날 백업에도 비우기 전 성장 기록이 남는다. 옮기기는 R2에 올린 뒤에만 비우므로 백업과 상관없이 돈다.
+  const growthArchive = env.BACKUP
+    ? await archiveGrowth(env.DB, env.BACKUP, env.ENVIRONMENT, now).catch(errorOf)
+    : ('skipped' as const);
   // 이상 점검이 숨긴 커리어가 빠지도록 업적 점수는 점검 뒤에 센다.
   const achievements = await rebuildStaleAchievements(
     createDb(env.DB),
@@ -44,6 +51,7 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     'error' in cleanup ||
     'error' in anomalies ||
     (typeof backup === 'object' && 'error' in backup) ||
+    (typeof growthArchive === 'object' && 'error' in growthArchive) ||
     'error' in achievements;
   const log = JSON.stringify({
     level: failed ? 'error' : 'info',
@@ -52,6 +60,7 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     cleanup,
     anomalies,
     backup,
+    growthArchive,
     achievements,
     durationMs: Date.now() - startedAt,
   });
@@ -62,5 +71,5 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
   );
   // 단계마다 오류를 잡아 나머지는 끝까지 돌리지만, 하나라도 실패했으면 실행을 실패로 남긴다(호출 기록에서 보이게).
   if (failed) throw new Error(`daily job failed: ${log.slice(0, 300)}`);
-  return { cleanup, anomalies, backup, achievements };
+  return { cleanup, anomalies, backup, growthArchive, achievements };
 }

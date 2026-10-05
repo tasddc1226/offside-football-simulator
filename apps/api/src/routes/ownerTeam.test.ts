@@ -1,5 +1,9 @@
 import {
   AchRankResponseSchema,
+  FriendRemoveResponseSchema,
+  FriendRequestResponseSchema,
+  FriendsResponseSchema,
+  PlayFriendlyResponseSchema,
   ClubAchievementsResponseSchema,
   ErrorEnvelopeSchema,
   OwnerTeamResponseSchema,
@@ -12,6 +16,7 @@ import {
   successEnvelope,
 } from '@offside/contracts';
 import {
+  FRIENDLY_MATCHES_PER_DAY,
   TEAM_MATCHES_PER_DAY,
   YOUTH_OVR,
   matchScore,
@@ -21,7 +26,15 @@ import {
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cards, careers, ownerTeams, teamMatches } from '../db/schema.js';
+import {
+  boardBlocks,
+  cards,
+  careers,
+  friendMatches,
+  friends,
+  ownerTeams,
+  teamMatches,
+} from '../db/schema.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
@@ -33,6 +46,11 @@ const PlayRes = successEnvelope(PlayTeamMatchResponseSchema);
 const MatchesRes = successEnvelope(TeamMatchesResponseSchema);
 const AchRes = successEnvelope(ClubAchievementsResponseSchema);
 const AchRankRes = successEnvelope(AchRankResponseSchema);
+const FriendsRes = successEnvelope(FriendsResponseSchema);
+const FriendReqRes = successEnvelope(FriendRequestResponseSchema);
+const FriendDelRes = successEnvelope(FriendRemoveResponseSchema);
+const FriendlyRes = successEnvelope(PlayFriendlyResponseSchema);
+const TeamProfileRes = successEnvelope(TeamProfileResponseSchema);
 
 type Pos = 'FW' | 'MF' | 'DF' | 'GK';
 let seq = 0;
@@ -892,5 +910,219 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect((await deleteProfile(ctx.env, me.cookie, 'team-del')).status).toBe(204);
     expect((await ctx.db.select().from(ownerTeams)).map((t) => t.id)).toEqual([rival.team.id]);
     expect(await ctx.db.select().from(teamMatches)).toEqual([]);
+  });
+  // ───────── T-11-098 친구 · 친선전 ─────────
+  describe('친구 · 친선전 (T-11-098)', () => {
+    const friendsOf = async (cookie: string) =>
+      FriendsRes.parse(await (await call('GET', '/v1/friends', { cookie })).json()).data;
+    const request = (cookie: string, body: Record<string, unknown>) =>
+      call('POST', '/v1/friends/requests', { cookie, body });
+    const reason = async (res: Response) =>
+      (ErrorEnvelopeSchema.parse(await res.json()).error.details as { reason?: string } | undefined)
+        ?.reason;
+    /** 두 구단주를 친구로 만든다(a가 코드로 신청 → b가 수락). */
+    async function befriend(a: { cookie: string }, b: { cookie: string }) {
+      const bCode = (await friendsOf(b.cookie)).code;
+      expect((await request(a.cookie, { code: bCode })).status).toBe(201);
+      const aCode = (await friendsOf(a.cookie)).code;
+      expect((await call('POST', `/v1/friends/${aCode}/accept`, { cookie: b.cookie })).status).toBe(
+        200,
+      );
+      return { aCode, bCode };
+    }
+    const friendly = (cookie: string, code: string) =>
+      call('POST', `/v1/friends/${code}/matches`, { cookie, headers: idem() });
+
+    it('세션이 없으면 401, 익명 프로필은 403 GOOGLE_LOGIN_REQUIRED', async () => {
+      expect((await call('GET', '/v1/friends')).status).toBe(401);
+      const anon = await issueCookie(ctx);
+      for (const [method, path] of [
+        ['GET', '/v1/friends'],
+        ['POST', '/v1/friends/requests'],
+        ['POST', '/v1/friends/ABCDEFGH/accept'],
+        ['DELETE', '/v1/friends/ABCDEFGH'],
+        ['POST', '/v1/friends/ABCDEFGH/matches'],
+      ] as const) {
+        const res = await call(method, path, {
+          cookie: anon.cookie,
+          headers: idem(),
+          body: { code: 'ABCDEFGH' },
+        });
+        expect(res.status, `${method} ${path}`).toBe(403);
+        expect(await reason(res)).toBe('GOOGLE_LOGIN_REQUIRED');
+      }
+    });
+
+    it('코드는 한 번 만들면 그대로이고, 신청 → 수락으로 서로 친구가 된다', async () => {
+      const a = await issueGoogleCookie(ctx, { nickname: '가나다' });
+      const b = await issueGoogleCookie(ctx, { nickname: '라마바' });
+      const first = await friendsOf(a.cookie);
+      expect(first.code).toMatch(/^[A-Z2-9]{8}$/);
+      expect((await friendsOf(a.cookie)).code).toBe(first.code);
+      expect(first).toMatchObject({ friends: [], received: [], sent: [], recent: [] });
+      expect(first.matchesLeft).toBe(FRIENDLY_MATCHES_PER_DAY);
+
+      const bCode = (await friendsOf(b.cookie)).code;
+      // 사람이 넣은 코드는 소문자·하이픈이 섞여도 받는다.
+      const label = `${bCode.slice(0, 4)}-${bCode.slice(4)}`.toLowerCase();
+      const sent = await request(a.cookie, { code: label });
+      expect(sent.status).toBe(201);
+      expect(FriendReqRes.parse(await sent.json()).data).toMatchObject({
+        state: 'sent',
+        friend: { code: bCode, name: '라마바', team: null },
+      });
+      // 다시 보내도 그대로(자연 멱등).
+      expect(
+        FriendReqRes.parse(await (await request(a.cookie, { code: bCode })).json()).data.state,
+      ).toBe('sent');
+      expect((await friendsOf(a.cookie)).sent.map((p) => p.name)).toEqual(['라마바']);
+      const bView = await friendsOf(b.cookie);
+      expect(bView.received.map((p) => [p.code, p.name])).toEqual([[first.code, '가나다']]);
+
+      // 보낸 사람은 수락할 수 없다.
+      expect((await call('POST', `/v1/friends/${bCode}/accept`, { cookie: a.cookie })).status).toBe(
+        404,
+      );
+      const ok = await call('POST', `/v1/friends/${first.code}/accept`, { cookie: b.cookie });
+      expect(ok.status).toBe(200);
+      expect(FriendReqRes.parse(await ok.json()).data.state).toBe('accepted');
+      expect((await friendsOf(a.cookie)).friends.map((p) => p.name)).toEqual(['라마바']);
+      expect((await friendsOf(b.cookie)).friends.map((p) => p.name)).toEqual(['가나다']);
+    });
+
+    it('상대가 먼저 신청했으면 내 신청이 곧 수락이고, 팀 프로필에서도 신청할 수 있다', async () => {
+      const a = await ownerWithTeam(1);
+      const b = await ownerWithTeam(1);
+      const view = async (cookie: string | null, teamId: string) =>
+        TeamProfileRes.parse(
+          await (await call('GET', `/v1/teams/${teamId}`, cookie ? { cookie } : {})).json(),
+        ).data.friend;
+      expect(await view(a.cookie, b.team.id)).toBe('none');
+      expect(await view(a.cookie, a.team.id)).toBeNull();
+      expect(await view(null, b.team.id)).toBeNull();
+      expect(await view((await issueCookie(ctx)).cookie, b.team.id)).toBeNull();
+
+      const sent = await request(a.cookie, { teamId: b.team.id });
+      expect(FriendReqRes.parse(await sent.json()).data).toMatchObject({
+        state: 'sent',
+        friend: { team: { id: b.team.id, name: b.team.name, filled: 1 } },
+      });
+      expect(await view(a.cookie, b.team.id)).toBe('sent');
+      expect(await view(b.cookie, a.team.id)).toBe('received');
+      // 친구 화면을 연 적 없는(코드가 없던) 신청자도 받은 쪽 목록에 보인다.
+      expect((await friendsOf(b.cookie)).received.map((p) => p.team?.id)).toEqual([a.team.id]);
+      const back = await request(b.cookie, { teamId: a.team.id });
+      expect(FriendReqRes.parse(await back.json()).data.state).toBe('accepted');
+      expect(await view(a.cookie, b.team.id)).toBe('accepted');
+    });
+
+    it('틀린 코드·내 코드·차단한 사이는 신청할 수 없다', async () => {
+      const a = await issueGoogleCookie(ctx);
+      const b = await issueGoogleCookie(ctx);
+      const aCode = (await friendsOf(a.cookie)).code;
+      const bCode = (await friendsOf(b.cookie)).code;
+      const bad = await request(a.cookie, { code: 'ZZZZ-ZZZZ' });
+      expect(bad.status).toBe(404);
+      expect(await reason(bad)).toBe('FRIEND_NOT_FOUND');
+      const self = await request(a.cookie, { code: aCode });
+      expect(self.status).toBe(400);
+      expect(await reason(self)).toBe('FRIEND_SELF');
+      await ctx.db.insert(boardBlocks).values({
+        id: `blk_${crypto.randomUUID()}`,
+        profileId: b.profileId,
+        blockedProfileId: a.profileId,
+        nickname: '누군가',
+        createdAt: new Date().toISOString(),
+      });
+      const blocked = await request(a.cookie, { code: bCode });
+      expect(blocked.status).toBe(403);
+      expect(await reason(blocked)).toBe('FRIEND_UNAVAILABLE');
+      expect(await ctx.db.select().from(friends)).toEqual([]);
+    });
+
+    it('친선전은 레이팅·전적·랭크 경기 수를 건드리지 않고 두 사람의 상대 전적만 남긴다', async () => {
+      const a = await ownerWithTeam(5, 85);
+      const b = await ownerWithTeam(3, 70);
+      const { aCode, bCode } = await befriend(a, b);
+      const res = await friendly(a.cookie, bCode);
+      expect(res.status).toBe(201);
+      const { match, h2h, matchesLeft } = FriendlyRes.parse(await res.json()).data;
+      expect(match).toMatchObject({ friendly: true, mine: 'home' });
+      expect([match.home.ratingChange, match.away.ratingChange]).toEqual([null, null]);
+      expect(match.home.teamId).toBe(a.team.id);
+      expect(match.away.teamId).toBe(b.team.id);
+      expect(matchesLeft).toBe(FRIENDLY_MATCHES_PER_DAY - 1);
+      const gf = match.home.goals;
+      const ga = match.away.goals;
+      expect(h2h).toEqual({ w: gf > ga ? 1 : 0, d: gf === ga ? 1 : 0, l: gf < ga ? 1 : 0 });
+
+      for (const t of await ctx.db.select().from(ownerTeams)) {
+        expect([t.rating, t.wins, t.draws, t.losses, t.goalsFor]).toEqual([1000, 0, 0, 0, 0]);
+      }
+      expect(await ctx.db.select().from(teamMatches)).toEqual([]);
+      expect(await ctx.db.select().from(friendMatches)).toHaveLength(1);
+      const owner = GetRes.parse(
+        await (await call('GET', '/v1/owner-team', { cookie: a.cookie })).json(),
+      ).data;
+      expect(owner.matchesLeft).toBe(TEAM_MATCHES_PER_DAY);
+
+      const aView = await friendsOf(a.cookie);
+      expect(aView.friends[0]!.h2h).toEqual(h2h);
+      expect(aView.recent.map((m) => [m.id, m.mine, m.friendly])).toEqual([
+        [match.id, 'home', true],
+      ]);
+      expect(aView.matchesLeft).toBe(FRIENDLY_MATCHES_PER_DAY - 1);
+      const bView = await friendsOf(b.cookie);
+      expect(bView.friends[0]!.h2h).toEqual({ w: h2h.l, d: h2h.d, l: h2h.w });
+      expect(bView.recent.map((m) => [m.id, m.mine])).toEqual([[match.id, 'away']]);
+      // 받은 쪽의 친선전 수는 줄지 않는다.
+      expect(bView.matchesLeft).toBe(FRIENDLY_MATCHES_PER_DAY);
+      expect((await friendly(b.cookie, aCode)).status).toBe(201);
+    });
+
+    it('친구가 아니거나 친구 팀이 없으면 친선전을 걸 수 없고, 하루 수를 넘으면 429', async () => {
+      const a = await ownerWithTeam(1);
+      const b = await ownerWithTeam(1);
+      const bCode = (await friendsOf(b.cookie)).code;
+      const notFriend = await friendly(a.cookie, bCode);
+      expect(notFriend.status).toBe(404);
+      expect(await reason(notFriend)).toBe('FRIEND_NOT_FOUND');
+
+      const noTeam = await issueGoogleCookie(ctx);
+      const { bCode: noTeamCode } = await befriend(a, noTeam);
+      const r = await friendly(a.cookie, noTeamCode);
+      expect(r.status).toBe(409);
+      expect(await reason(r)).toBe('FRIEND_TEAM_REQUIRED');
+
+      await befriend(a, b);
+      for (let i = 0; i < FRIENDLY_MATCHES_PER_DAY; i++)
+        expect((await friendly(a.cookie, bCode)).status).toBe(201);
+      const over = await friendly(a.cookie, bCode);
+      expect(over.status).toBe(429);
+      expect(await reason(over)).toBe('FRIENDLY_DAILY_LIMIT');
+    });
+
+    it('친구를 끊으면 두 줄이 지워지고, 프로필을 지우면 친구 줄과 친선전이 사라진다', async () => {
+      const a = await ownerWithTeam(1);
+      const b = await ownerWithTeam(1);
+      const c = await ownerWithTeam(1);
+      const { bCode } = await befriend(a, b);
+      const del = await call('DELETE', `/v1/friends/${bCode}`, { cookie: a.cookie });
+      expect(FriendDelRes.parse(await del.json()).data.removed).toBe(true);
+      expect(
+        FriendDelRes.parse(
+          await (await call('DELETE', `/v1/friends/${bCode}`, { cookie: a.cookie })).json(),
+        ).data.removed,
+      ).toBe(false);
+      expect(await ctx.db.select().from(friends)).toEqual([]);
+
+      const { bCode: cCode } = await befriend(a, c);
+      expect((await friendly(a.cookie, cCode)).status).toBe(201);
+      expect((await deleteProfile(ctx.env, c.cookie, 'friend-del')).status).toBe(204);
+      expect(await ctx.db.select().from(friends)).toEqual([]);
+      expect(await ctx.db.select().from(friendMatches)).toEqual([]);
+      // 지운 사람의 코드로는 더 찾을 수 없다.
+      expect((await request(a.cookie, { code: cCode })).status).toBe(404);
+    });
   });
 });
