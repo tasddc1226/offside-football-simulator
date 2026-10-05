@@ -25,6 +25,8 @@ export interface TabItem {
   testID?: string;
   /** T-11-034 아직 보지 않은 새 업적 수 — 있으면 아이콘 오른쪽 위에 점(웹 .tab-dot). */
   dot?: number;
+  /** 현재 가능한 행동을 알리는 짧은 탭 안내. */
+  hint?: string;
 }
 
 export const TABBAR_H = 60;
@@ -188,7 +190,13 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
             <Press
               accessibilityRole="tab"
               accessibilityState={{ selected: t.active }}
-              accessibilityLabel={t.dot ? `${t.label}, 새 업적 ${t.dot}개` : undefined}
+              accessibilityLabel={
+                t.hint
+                  ? `${t.label}, ${t.hint}`
+                  : t.dot
+                    ? `${t.label}, 새 업적 ${t.dot}개`
+                    : undefined
+              }
               onPress={t.onPress}
               testID={t.testID ?? `tab-${t.key}`}
               style={(pressed) => ({
@@ -199,7 +207,13 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
                 justifyContent: 'center',
                 gap: 3,
                 paddingVertical: 6,
-                backgroundColor: pressed ? 'rgba(128,128,128,0.12)' : 'transparent',
+                backgroundColor: pressed
+                  ? 'rgba(128,128,128,0.12)'
+                  : t.hint
+                    ? alpha(c.accent, 0.15)
+                    : 'transparent',
+                borderWidth: t.hint ? 2 : 0,
+                borderColor: c.accent,
               })}
             >
               <View
