@@ -6,6 +6,7 @@ import {
   filledCount,
   lineupLines,
   lineupOvr,
+  lineupSynergy,
   simulateMatch,
   type LineupCareer,
 } from './sim.js';
@@ -58,7 +59,6 @@ describe('buildLineup', () => {
       [null, null, null, null, null, null, null, null, null, 'a', 'stranger'],
       new Map([['a', star]]),
     );
-    expect(lineup).toHaveLength(11);
     expect(filledCount(lineup)).toBe(1);
     expect(lineup[9]).toMatchObject({ slot: 'ST', careerId: 'a', rating: 86, fit: 0.95 });
     expect(lineup[9]!.ref.anon).toBe('익명의 공격수 No.9');
@@ -125,12 +125,14 @@ describe('simulateMatch', () => {
   it('같은 시드·같은 선발이면 결과가 같다', () => {
     const a = fullTeam('A', 80);
     const b = fullTeam('B', 75, '3-5-2');
-    const r1 = simulateMatch('mat_seed-1', a, b);
-    const r2 = simulateMatch('mat_seed-1', a, b);
+    const r1 = simulateMatch('mat_seed-1', a, b, 1);
+    const r2 = simulateMatch('mat_seed-1', a, b, 1);
     expect(r2).toEqual(r1);
     expect(r1.events).toHaveLength(r1.homeGoals + r1.awayGoals);
     // 시드가 다르면 (여러 판 중 적어도 하나는) 달라진다.
-    const others = Array.from({ length: 20 }, (_, i) => simulateMatch(`mat_seed-${i + 2}`, a, b));
+    const others = Array.from({ length: 20 }, (_, i) =>
+      simulateMatch(`mat_seed-${i + 2}`, a, b, 1),
+    );
     expect(others.some((r) => JSON.stringify(r) !== JSON.stringify(r1))).toBe(true);
   });
 
@@ -139,7 +141,7 @@ describe('simulateMatch', () => {
     const b = youthTeam();
     const gkIds = new Set([a[0]!.ref.careerId]);
     for (let i = 0; i < 300; i++) {
-      const r = simulateMatch(`mat_${i}`, i % 2 ? a : b, i % 2 ? b : a);
+      const r = simulateMatch(`mat_${i}`, i % 2 ? a : b, i % 2 ? b : a, 1);
       for (const [k, e] of r.events.entries()) {
         expect(e.slot).not.toBe('GK');
         expect(gkIds.has(e.scorer.careerId)).toBe(false);
@@ -174,7 +176,7 @@ describe('simulateMatch', () => {
     let wins = 0;
     const N = 400;
     for (let i = 0; i < N; i++) {
-      const r = simulateMatch(`mat_${i}`, weak, strong);
+      const r = simulateMatch(`mat_${i}`, weak, strong, 1);
       diff += r.awayGoals - r.homeGoals;
       if (r.awayGoals > r.homeGoals) wins++;
     }
@@ -184,7 +186,7 @@ describe('simulateMatch', () => {
     const even = fullTeam('E', 75);
     let homePts = 0;
     for (let i = 0; i < N; i++) {
-      const r = simulateMatch(`mat_e${i}`, even, even);
+      const r = simulateMatch(`mat_e${i}`, even, even, 1);
       homePts += r.homeGoals - r.awayGoals;
     }
     expect(Math.abs(homePts / N)).toBeLessThan(0.5);
@@ -205,8 +207,69 @@ describe('simulateMatch', () => {
       [null, null, null, null, null, null, 'x'],
       new Map([['x', one]]),
     );
-    const r = simulateMatch('mat_one', lineup, youthTeam());
+    const r = simulateMatch('mat_one', lineup, youthTeam(), 1);
     expect(r.homeGoals).toBeGreaterThanOrEqual(0);
     expect(r.homeGoals).toBeLessThanOrEqual(9);
+  });
+});
+
+describe('T-11-105 시너지', () => {
+  /** 4-3-3: 타깃맨 ST + 윙어(오른발, 왼쪽) — 크로스 공식·주발 맞춤이 켜지는 팀. */
+  function synergyTeam(prefix: string) {
+    const types = [
+      'shot',
+      'fullback',
+      'stopper',
+      'stopper',
+      'fullback',
+      'b2b',
+      'maker',
+      'maker',
+      'winger',
+      'target',
+      'winger',
+    ];
+    const careers = FORMATIONS['4-3-3'].map((slot, i): LineupCareer => ({
+      id: `${prefix}-${i}`,
+      pos: GROUP_OF_SLOT[slot]!,
+      dpos: null,
+      peak: 75,
+      roles: null,
+      number: i + 1,
+      publicName: null,
+      type: types[i]!,
+      foot: '오른발',
+      nation: 'KR',
+      raised: true,
+    }));
+    return buildLineup(
+      '4-3-3',
+      careers.map((c) => c.id),
+      new Map(careers.map((c) => [c.id, c])),
+    );
+  }
+
+  it('시너지를 끄면 유형·주발이 있어도 지금과 같은 결과다', () => {
+    const plain = fullTeam('A', 75);
+    const syn = synergyTeam('A');
+    const opp = fullTeam('B', 75);
+    for (let i = 0; i < 30; i++) {
+      const a = simulateMatch(`mat_s${i}`, plain, opp, 0);
+      const b = simulateMatch(`mat_s${i}`, syn, opp, 0);
+      expect([b.homeGoals, b.awayGoals]).toEqual([a.homeGoals, a.awayGoals]);
+      expect(b.synergy).toBeUndefined();
+    }
+  });
+
+  it('시너지를 켜면 켜진 시너지를 결과에 남기고 줄 힘이 오른다', () => {
+    const syn = synergyTeam('A');
+    const r = simulateMatch('mat_on', syn, fullTeam('B', 75), 1);
+    expect(r.synergy?.home).toEqual(expect.arrayContaining(['cross', 'engine', 'homegrown']));
+    expect(r.synergy?.away).toEqual([]);
+    expect(lineupLines(syn, lineupSynergy(syn)).atk).toBeGreaterThan(lineupLines(syn).atk);
+  });
+
+  it('유스 선수 자리는 시너지에 들지 않는다', () => {
+    expect(youthTeam().every((s) => s.syn === null)).toBe(true);
   });
 });

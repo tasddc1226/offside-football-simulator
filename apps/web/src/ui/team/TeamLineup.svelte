@@ -3,8 +3,10 @@
   import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, presetLayout, positionRole, slotRating, slotFit, type FormationId, type TeamPosition } from '@offside/contracts/owner-team';
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
-  import { attrLine } from '@offside/app-core/teamOwner';
+  import { attrLine, synergyFocus } from '@offside/app-core/teamOwner';
+  import type { TeamSynergy as Synergy } from '@offside/contracts/owner-team';
   import TeamLines from './TeamLines.svelte';
+  import TeamSynergy from './TeamSynergy.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import PlayerCard from './PlayerCard.svelte';
   import TeamShare from './TeamShare.svelte';
@@ -13,8 +15,8 @@
   import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
   import { dur } from '../motion.js';
 
-  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, onassign, onauto, onsave }:
-    { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines;
+  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, onassign, onauto, onsave }:
+    { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
       cells: { rating: number; name: string; youth: boolean; player?: TeamPlayer | undefined }[]; players: TeamPlayer[]; nameOf: (p: TeamPlayer) => string;
       teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void } = $props();
   let shareData = $state<TeamShareData | null>(null);
@@ -31,6 +33,9 @@
   let drag = $state<Drag | null>(null);
   let scrollFrame = 0;
   const positions = $derived(layout ?? presetLayout(formation));
+  // T-11-105 고른 시너지 칩 — 그라운드에서 그 듀오의 선은 굵게, 선수는 테두리로 보여 준다.
+  let synFocus = $state<string | null>(null);
+  const syn = $derived(synergyFocus(synergy, synFocus));
   const chosen = $derived(players.find((p) => p.careerId === selectedPlayer));
   const selectedCell = $derived(selectedSlot !== null ? cells[selectedSlot] : undefined);
   const selectedFit = $derived(selectedCell?.player && selectedSlot !== null ? Math.round(slotFit(positions[selectedSlot]!.slot, selectedCell.player, selectedCell.rating) * 100) : null);
@@ -148,9 +153,10 @@
     <div class="hof-sorts ground-presets" role="group" aria-label="기본 포메이션">
       {#each FORMATION_IDS as f (f)}<button class="hof-sort" aria-pressed={!layout && formation === f} data-formation={f} disabled={!editable} onclick={() => preset(f)}>{f}</button>{/each}
     </div>
-    <TeamPitch {formation} {cells} {layout} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} bind:element={pitch}
+    <TeamPitch {formation} {cells} {layout} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} bind:element={pitch}
       onpick={editable ? pickSlot : undefined} onstart={editable ? (e, i) => start(e, slots[i] ?? null, i) : undefined} onkey={editable ? keyMove : undefined} onplace={editable ? place : undefined} />
     <div class="ground-strength"><TeamLines {lines} compact /></div>
+    <TeamSynergy {synergy} {season} bind:focus={synFocus} />
     {#if editable}
       <div class="placement-bar" aria-live="polite">
         {#if chosen}
