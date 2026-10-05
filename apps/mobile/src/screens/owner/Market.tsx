@@ -811,8 +811,8 @@ export default function Market() {
               </Press>
             </View>
             <Txt tone="muted" style={small}>
-              직접 키운 선수를 내보내면 은퇴 가치만큼 구단 자금이 생겨요. 명예의 전당 기록은 그대로
-              남아요.
+              직접 키운 선수를 내보내면 카드 기준가만큼 구단 자금이 생겨요. 명예의 전당 기록은
+              그대로 남아요.
             </Txt>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -881,7 +881,7 @@ export default function Market() {
                         {nameOfPlayer(p)}
                       </Txt>
                       <Txt tone={lock ? 'bad' : 'muted'} style={tiny}>
-                        {lock ?? `레전드 ${(p.legendScore ?? 0).toLocaleString()} · 은퇴 가치`}
+                        {lock ?? `레전드 ${(p.legendScore ?? 0).toLocaleString()} · 기준가`}
                       </Txt>
                     </View>
                     {!lock && me ? (

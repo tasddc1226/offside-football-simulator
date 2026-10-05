@@ -9,7 +9,7 @@ import {
   type MarketSort,
   type MarketTrade,
 } from '@offside/contracts';
-import { marketRatio } from '@offside/contracts/market-value';
+import { CARD_VALUE_FLOOR, marketRatio } from '@offside/contracts/market-value';
 import type { PosGroup } from '@offside/contracts/positions';
 import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
@@ -414,7 +414,7 @@ export async function buyListing(
 }
 
 /**
- * 방출: 지금 내가 가진 카드 중 내가 키웠고 숨김 아니고 판매 중이 아닌 것만. 받은 자금(은퇴 가치 × 지급률, 천만 단위)을
+ * 방출: 지금 내가 가진 카드 중 내가 키웠고 숨김 아니고 판매 중이 아닌 것만. 받은 자금(카드 기준가 × 지급률, 천만 단위)을
  * 잔액에 더한다.
  */
 export async function releaseCards(
@@ -425,7 +425,8 @@ export async function releaseCards(
   // 이 batch가 방출한 카드는 released_value = -1로 잠깐 표시한다. D1 batch는 하나의 트랜잭션이고 서로 끼어들지 않으므로
   // -1은 언제나 이 요청의 카드뿐이다(released_at = now 같은 시각 표시는 같은 밀리초의 다른 방출과 겹칠 수 있다).
   // 뒤 문장들도 요청한 카드(기본키)로 좁혀 표 전체를 훑지 않는다. 금액은 contracts releasePayout과 같은 계산.
-  const amountOf = `CAST(round(retire_value * ? / 1000.0) AS INTEGER) * 1000`;
+  // T-11-104 은퇴 가치가 기준가의 수 배라 시장에 파는 것보다 방출이 늘 나았다 — 지급 기준을 기준가로 맞춘다.
+  const amountOf = `CAST(round(coalesce(card_value, ${CARD_VALUE_FLOOR}) * ? / 1000.0) AS INTEGER) * 1000`;
   const ids = JSON.stringify(r.careerIds);
   const mine = `career_id IN (SELECT value FROM json_each(?)) AND released_value = -1`;
   const results = await d1.batch([

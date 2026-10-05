@@ -172,7 +172,6 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       publicName: careers.publicName,
       legendScore: cards.legendScore,
       cardValue: cards.cardValue,
-      retireValue: cards.retireValue,
       raised: sql<number>`${careers.profileId} = ${profileId}`,
       listingId: marketListings.id,
       listPrice: marketListings.price,
@@ -230,7 +229,10 @@ export const challengedSince = (db: Db, profileId: string, sinceIso: string) =>
     .from(teamMatches)
     .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
 
-/** 여러 팀 선발의 카드를 한 번에 읽는다. 소유자는 부르는 쪽이 팀마다 확인한다(eligibleMap). */
+/**
+ * 여러 팀 선발의 카드를 한 번에 읽는다. 소유자는 부르는 쪽이 팀마다 확인한다(eligibleMap). 팀 업적이 보는 기록(마지막
+ * 구단·A매치·영구결번)도 함께 읽어 업적 판정이 화면과 같은 선발을 쓴다(T-11-103).
+ */
 export async function careersByIds(db: Db, ids: string[]) {
   if (ids.length === 0) return [];
   return db
@@ -246,9 +248,13 @@ export async function careersByIds(db: Db, ids: string[]) {
       publicName: careers.publicName,
       serviceSeason: cards.serviceSeason,
       hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
+      lastClubId: careers.lastClubId,
+      caps: careers.caps,
+      rn: retiredNumbers.careerId,
     })
     .from(cards)
     .leftJoin(careers, eq(careers.id, cards.careerId))
+    .leftJoin(retiredNumbers, eq(retiredNumbers.careerId, cards.careerId))
     .where(inArray(cards.careerId, ids));
 }
 export type CareerLite = Awaited<ReturnType<typeof careersByIds>>[number];
@@ -593,8 +599,8 @@ export const deleteOwnerTeamsStatements = (db: Db, profileId: string) => {
 // ───────── 구단 시즌 업적 ─────────
 
 /**
- * 그 시즌에 처음 올라와(service_season, 0 = 프리시즌) 은퇴한 내 선수 + 영구결번 여부 + 받아 둔 시즌(리그·영예). 이 조건이
- * 곧 그 시즌 팀에 넣을 수 있는 선수라 팀 선발(lineup)도 여기서 만든다.
+ * 그 시즌에 처음 올라와(service_season, 0 = 프리시즌) 은퇴한 내 선수(직접 키운 선수) + 영구결번 여부 + 받아 둔 시즌(리그·영예).
+ * 팀 선발은 영입한 선수도 들어가므로 여기서 만들지 않고 careersByIds로 읽는다(T-11-103).
  */
 export async function seasonCareersOf(db: Db, profileId: string, season: number) {
   const mine = and(
@@ -611,11 +617,6 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         id: careers.id,
         pos: careers.pos,
         dpos: careers.dpos,
-        peak: careers.peak,
-        peakProfile: careers.peakProfile,
-        number: careers.shirtNumber,
-        publicName: careers.publicName,
-        lastClubId: careers.lastClubId,
         caps: careers.caps,
         ballon: careers.ballon,
         trophies: careers.trophies,
@@ -662,8 +663,6 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
   }
   return rows.map((r) => ({
     id: r.id,
-    lineup: toLineupCareer(r),
-    lastClubId: r.lastClubId,
     pos: r.pos,
     dpos: dposFor(r.pos, r.dpos),
     caps: r.caps ?? 0,
