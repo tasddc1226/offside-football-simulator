@@ -61,7 +61,6 @@
   "apps/web/src/ui/SheetChrome.svelte": 13,
   "apps/web/src/ui/VoluntarySupport.svelte": 2,
   "apps/web/src/ui/login.ts": 1,
-  "apps/web/src/ui/seasonName.ts": 1,
   "apps/web/src/ui/skin.svelte.ts": 2,
   "apps/web/src/ui/team/AchievementRanking.svelte": 4,
   "apps/web/src/ui/team/TeamMatchRow.svelte": 2,

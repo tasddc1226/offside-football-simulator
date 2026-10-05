@@ -1,6 +1,5 @@
 import { SERVICE_SEASONS } from '@offside/contracts/service-seasons';
 import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
-import { withLang, type Lang } from './lang.js';
 
 // T-10-047. 엣지에 담는 공개 조회의 경로(= 캐시 키)와, 쓰기가 낡게 만드는 키를 한곳에 둔다.
 // 새 조회를 엣지에 담으면 EDGE에 키를 더하고, 그 데이터를 바꾸는 쓰기를 STALE에 적는다. 와일드카드 퍼지는
@@ -26,11 +25,11 @@ export const EDGE = {
   hofList: (limit: number, page: number, sort: string, season?: number, q?: string, pos?: string) =>
     `/v1/hof?limit=${limit}&page=${page}&sort=${sort}${season !== undefined ? `&season=${season}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}${pos ? `&pos=${pos}` : ''}`,
   /** T-10-092 라이브 랭킹(팀 랭킹). TTL로만 새로 읽는다(원작처럼 5분마다 갱신). */
-  teamRank: (season: number, sort: string, page: number, lang: Lang = 'ko') =>
-    withLang(`/v1/teams?season=${season}&sort=${sort}&page=${page}&form=5&logo=1`, lang),
+  teamRank: (season: number, sort: string, page: number) =>
+    `/v1/teams?season=${season}&sort=${sort}&page=${page}&form=5&logo=1`,
   /** T-11-028 업적 랭킹(기록실). TTL로만 새로 읽는다. */
-  achRank: (season: number, page: number, lang: Lang = 'ko') =>
-    withLang(`/v1/achievements/ranking?season=${season}&page=${page}&logo=1`, lang),
+  achRank: (season: number, page: number) =>
+    `/v1/achievements/ranking?season=${season}&page=${page}&logo=1`,
   /** T-11-080f 시세 차트(시즌 · 기간 · 묶음별). */
   marketChart: (season: number, range: string, group?: { pos: string; band: number }) =>
     `/v1/market/chart?season=${season}&range=${range}${group ? `&pos=${group.pos}&band=${group.band}` : ''}`,
@@ -62,13 +61,11 @@ export const STALE = {
   boardChanged: (board: string) => [EDGE.boardFirstPage(board)],
   commentsPurged: allBoardLists,
   /** 팀 등록·편성 저장 — 새 팀이 라이브 랭킹 첫 페이지에 바로 보이게(경기 결과는 TTL로만). */
-  teamSaved: (season: number) =>
-    // T-11-106 시즌 이름이 언어마다 달라 한국어·영어 두 키를 함께 지운다.
-    (['ko', 'en'] as const).flatMap((lang) => [
-      EDGE.teamRank(season, 'rating', 1, lang),
-      EDGE.teamRank(season, 'ovr', 1, lang),
-      EDGE.achRank(season, 1, lang),
-    ]),
+  teamSaved: (season: number) => [
+    EDGE.teamRank(season, 'rating', 1),
+    EDGE.teamRank(season, 'ovr', 1),
+    EDGE.achRank(season, 1),
+  ],
   profileDeleted: (careerIds: string[], hadComments: boolean) => [
     ...careerIds.map(EDGE.hofDetail),
     ...(hadComments ? allBoardLists() : []),

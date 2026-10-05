@@ -82,5 +82,3 @@ const ko = {
 };
 export type GMilitaryMsgs = typeof ko;
 export const gMilitaryText = ns('gMilitary', ko);
-/** 한국어 원문(옛 상수 SPORTS_SERVICE_NOTICE 호환용 — 화면은 gMilitaryText를 읽는다). */
-export const gMilitaryKo = ko;

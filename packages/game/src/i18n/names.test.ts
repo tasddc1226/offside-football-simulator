@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { setLocale } from '@offside/contracts/i18n';
 import { CLUB_NAMES, LEAGUE_BASE } from '@offside/contracts/club-names';
 import { CONFEDS, NATIONS } from '@offside/contracts/nations';
+import { DETAIL_LABEL, POS_LABEL } from '@offside/contracts/positions';
 import { CONT, CUPS, POTY, TOP_SCORER } from '../comps.js';
 import { PHASES } from '../data.js';
 import { SANGMU } from '../military.js';
@@ -54,6 +55,10 @@ describe('저장된 이름 → 영어', () => {
     setLocale('ko');
     for (const n of ['프리미어리그', '프리미어리그 우승', '2026 프리시즌', '내가 지은 구단'])
       expect(tn(n)).toBe(n);
+  });
+
+  it('포지션·세부 포지션 이름이 영어로 옮겨진다', () => {
+    expect(untranslated([...Object.values(POS_LABEL), ...Object.values(DETAIL_LABEL)])).toEqual([]);
   });
 
   it('모든 리그·구단·상무·나라가 영어로 옮겨진다', () => {

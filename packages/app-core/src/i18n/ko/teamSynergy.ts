@@ -3,10 +3,6 @@
 import { ns } from '../core';
 
 const ko = {
-  lineAtk: '공격',
-  lineMid: '중원',
-  lineDef: '수비',
-  lineGk: '골문',
   capped: '상한에 걸려 효과 없음',
   noEffect: '경기 효과 없음',
   applies: '경기에 반영돼요',

@@ -498,7 +498,7 @@ export function createGameActions(host: GameHost) {
             return {
               clubId: o.clubId,
               reason: offerFeedback(G, o),
-              name: o.name,
+              name: tn(o.name),
               lg: strLine(o.leagueId, o.str),
               salary: fmtMoney(o.salary),
               sub: `${L.contractYears({ years: o.years })}${extra}`,

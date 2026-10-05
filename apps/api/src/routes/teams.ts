@@ -41,7 +41,7 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { resolveSession } from '../middleware/session.js';
 import { teamBadges } from '../team/badges.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
-import { queryWithoutLang, reqLang } from '../lang.js';
+import { queryWithoutLang, reqLang, type Lang } from '../lang.js';
 import { buildLineup, lineupOvr } from '../team/sim.js';
 import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 
@@ -52,16 +52,19 @@ const RANK_CACHE = 'public, max-age=60';
 
 const teamParam = (c: Context<AppEnv>) => parseWithAppError(TeamIdSchema, c.req.param('teamId'));
 
+/** 엣지에는 한국어 응답 하나만 담고(키·퍼지·D1 읽기를 언어마다 늘리지 않는다), 언어마다 다른 시즌 이름만 꺼낸 뒤 바꾼다. */
+function withSeasonNames<T extends { seasons: unknown }>(data: T, now: string, lang: Lang): T {
+  return lang === 'ko' ? data : { ...data, seasons: seasonOptions(now, lang) };
+}
+
 export function registerTeamRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/teams', async (c) => {
     const now = nowIso();
     const q = parseWithAppError(TeamRankQuerySchema, queryWithoutLang(c));
     const season = teamSeasonParam(q.season, now);
-    // T-11-106 응답의 시즌 이름이 언어마다 달라 캐시 키에 언어(영어만)를 붙인다.
-    const lang = reqLang(c);
     const data = await edgeCached(
       c,
-      EDGE.teamRank(season, q.sort, q.page, lang),
+      EDGE.teamRank(season, q.sort, q.page),
       RANK_TTL,
       async (): Promise<TeamRankResponse> => {
         const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, q.page);
@@ -71,7 +74,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         );
         return {
           season,
-          seasons: seasonOptions(now, lang),
+          seasons: seasonOptions(now),
           sort: q.sort,
           page: q.page,
           total,
@@ -92,7 +95,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         };
       },
     );
-    return ok(c, TeamRankResponseSchema, data, 200, RANK_CACHE);
+    return ok(c, TeamRankResponseSchema, withSeasonNames(data, now, reqLang(c)), 200, RANK_CACHE);
   });
 
   // T-11-028 업적 랭킹(기록실). 시즌 업적 점수 순 — 구단주는 공개 닉네임과 그 시즌 팀 이름으로만 보인다. 팀 랭킹처럼 5분마다.
@@ -100,16 +103,15 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const q = parseWithAppError(AchRankQuerySchema, queryWithoutLang(c));
     const season = teamSeasonParam(q.season, now);
-    const lang = reqLang(c);
     const data = await edgeCached(
       c,
-      EDGE.achRank(season, q.page, lang),
+      EDGE.achRank(season, q.page),
       RANK_TTL,
       async (): Promise<AchRankResponse> => {
         const { rows, total } = await listAchievementRanking(getDb(c), season, q.page);
         return {
           season,
-          seasons: seasonOptions(now, lang),
+          seasons: seasonOptions(now),
           page: q.page,
           total,
           items: rows.map((r, i) => ({
@@ -126,7 +128,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         };
       },
     );
-    return ok(c, AchRankResponseSchema, data, 200, RANK_CACHE);
+    return ok(c, AchRankResponseSchema, withSeasonNames(data, now, reqLang(c)), 200, RANK_CACHE);
   });
 
   // 팀 프로필. 좋아요 여부가 사람마다 달라 캐시하지 않는다.

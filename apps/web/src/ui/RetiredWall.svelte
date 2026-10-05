@@ -26,9 +26,9 @@
   import { rnByLeague, rnClubName, rnDay as day, rnLeagueName } from '@offside/app-core/retiredWall';
 
   import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
-  import { seasonLabel, teamSeasonLabel } from './seasonName.js';
-  const clubName = (x: Parameters<typeof rnClubName>[0]) => tn(rnClubName(x));
-  const leagueOf = (clubId: string) => tn(rnLeagueName(clubId));
+  import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
+  const clubName = (x: Parameters<typeof rnClubName>[0]) => rnClubName(x);
+  const leagueOf = (clubId: string) => rnLeagueName(clubId);
   type Item = RetiredNumbersResponse['items'][number];
 
   const clock = seasonNow();
@@ -117,7 +117,7 @@
     <b class="rn-tile-name">{it.name ?? anonName(it.pos, it.number)}</b>
     {#if withClub || !view.pos}
       <span class="muted fs-xs">
-        {#if withClub}<ClubMark name={it.club} id={it.clubId} size={14} /> {clubName(it)}{:else}{tn(POS[it.pos].label)}{/if}
+        {#if withClub}<ClubMark name={it.club} id={it.clubId} size={14} /> {clubName(it)}{:else}{POS[it.pos].label}{/if}
       </span>
     {/if}
     <span class="muted fs-xs num">{L.tileSeq({ seq: it.seq, day: day(it.grantedAt) })}</span>
@@ -203,7 +203,7 @@
       </div>
       <div class="hof-sorts" role="group" aria-label={L.positionLabel}>
         <button class="hof-sort" aria-pressed={view.pos === null} data-rn-pos="all" onclick={() => (view.pos = null)}>{L.all}</button>
-        {#each POS_GROUPS as pos (pos)}<button class="hof-sort" aria-pressed={view.pos === pos} data-rn-pos={pos} onclick={() => (view.pos = pos)}>{tn(POS[pos].label)}</button>{/each}
+        {#each POS_GROUPS as pos (pos)}<button class="hof-sort" aria-pressed={view.pos === pos} data-rn-pos={pos} onclick={() => (view.pos = pos)}>{POS[pos].label}</button>{/each}
       </div>
     {:else}
       <h2 class="rn-recent-title">{L.recentAll}</h2>

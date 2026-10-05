@@ -18,10 +18,6 @@ const NAMES: Record<string, readonly [string, string]> = {
 };
 
 export const teamSynergy: Translation<TeamSynergyMsgs> = {
-  lineAtk: 'Attack',
-  lineMid: 'Midfield',
-  lineDef: 'Defense',
-  lineGk: 'Goal',
   capped: 'No effect (cap reached)',
   noEffect: 'No match effect',
   applies: 'Counts in matches',

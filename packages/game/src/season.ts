@@ -341,7 +341,7 @@ export function offerFrom(s: GameState, c: (typeof CLUBS)[number]): OfferOption 
   return {
     kind: 'offer',
     clubId: c.id,
-    name: tn(c.name),
+    name: c.name,
     leagueId,
     str: c.str,
     years: Math.max(

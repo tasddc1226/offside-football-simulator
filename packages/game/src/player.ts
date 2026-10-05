@@ -36,13 +36,21 @@ export function roleOf(s: GameState): '주전' | '로테이션' | '벤치' {
 }
 // 연봉·몸값 식은 서버와 같이 쓴다(T-10-100 명예의 전당 가치 순).
 export { salaryFor, valueFor } from '@offside/contracts/market-value';
+const NUM_FMT = new Map<string, Intl.NumberFormat>();
+/** 소수 자릿수별 숫자 서식 — 목록마다 금액을 여러 번 그리므로 Intl 객체를 다시 만들지 않는다. */
+function numFmt(digits: number): Intl.NumberFormat {
+  const key = `${intlLocale()}:${digits}`;
+  let f = NUM_FMT.get(key);
+  if (!f)
+    NUM_FMT.set(key, (f = new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: digits })));
+  return f;
+}
 /** 영어 금액 표기(원화 그대로): ₩500K · ₩12.3M · ₩1.85B. 한국어 단위(만·억)를 쓰지 않는다. man은 만 원. */
 function krwCompact(man: number): string {
   const won = Math.round(man) * 10_000;
   const a = Math.abs(won);
   const sign = won < 0 ? '-' : '';
-  const num = (v: number, digits: number) =>
-    v.toLocaleString(intlLocale(), { maximumFractionDigits: digits });
+  const num = (v: number, digits: number) => numFmt(digits).format(v);
   if (a >= 999_500_000) return `${sign}₩${num(a / 1e9, 2)}B`;
   if (a >= 1_000_000) return `${sign}₩${num(a / 1e6, a >= 100_000_000 ? 0 : 1)}M`;
   return `${sign}₩${num(a / 1e3, 0)}K`;

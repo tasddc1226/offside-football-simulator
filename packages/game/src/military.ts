@@ -15,7 +15,7 @@ import { ovr as ovrCalc } from './attributes.js';
 import { BAL } from './balance.js';
 import type { EventDef, GameState, MarketOption, MarketResult, MilOption } from './types.js';
 import { isKorean } from './nation.js';
-import { gMilitaryText as M, gMilitaryKo } from './i18n/ko/gMilitary.js';
+import { gMilitaryText as M } from './i18n/ko/gMilitary.js';
 import { tn } from './i18n/names.js';
 
 export const SANGMU = { id: 'sangmu', name: '김천 상무 (국군체육부대)', leagueId: 'k1', str: 63 };
@@ -26,10 +26,6 @@ const SPORTS_MONTHS = 34;
 /** 지금 언어의 병역 특례 안내문. */
 export const sportsServiceNotice = (): string => M.sportsNotice;
 export const sportsServiceLegacyNotice = (): string => M.sportsLegacyNotice;
-/** @deprecated import 시점의 한국어로 굳은 값이다 — sportsServiceNotice()를 쓴다. */
-export const SPORTS_SERVICE_NOTICE = gMilitaryKo.sportsNotice;
-/** @deprecated sportsServiceLegacyNotice()를 쓴다. */
-export const SPORTS_SERVICE_LEGACY_NOTICE = gMilitaryKo.sportsLegacyNotice;
 
 const MIL_KINDS: ReadonlySet<string> = new Set<MilOption['kind']>(['sangmu', 'army', 'serve']);
 /** 이적 시장 선택지 중 병역 선택지(acceptMilitary가 처리한다). */

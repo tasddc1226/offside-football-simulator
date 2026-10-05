@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { seasonLabel } from '../seasonName.js';
+  import { seasonLabel } from '@offside/app-core/seasonName';
   // T-10-092 팀 프로필(라이브 랭킹에서 연다) — 시즌 순위 · 감독 · 레이팅 · 선발 그라운드 · 줄 힘 · 좋아요/조회수 · 팀 히스토리
   // 배지. 누구나 본다. 남의 팀을 열면 조회수를 한 번 올린다(내 팀은 세지 않는다).
   import { onMount } from 'svelte';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { seasonLabel } from '../seasonName.js';
+  import { seasonLabel } from '@offside/app-core/seasonName';
   import TeamLogo from './TeamLogo.svelte';
   // T-11-028 구단주 랭킹 — 기록실 탭. 구단주의 시즌 업적 점수 순(같은 점수면 먼저 닿은 구단주가 앞선다). 구단주는 공개
   // 닉네임과 그 시즌 팀 이름으로만 보이고, 팀이 있으면 줄을 눌러 팀 프로필을 연다. 서버가 5분마다 새로 센다.

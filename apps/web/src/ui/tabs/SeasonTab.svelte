@@ -4,7 +4,7 @@
 </script>
 
 <script lang="ts">
-  import { webGameText as W } from '@offside/app-core/i18n/ko/webGame';
+  import { appFormatText as W } from '@offside/app-core/i18n/ko/appFormat';
   import { tn } from '@offside/game/i18n/names';
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
   // T-11-025 순서: 방금 끝난 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·누적 기록·

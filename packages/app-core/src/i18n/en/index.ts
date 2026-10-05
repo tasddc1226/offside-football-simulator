@@ -72,7 +72,6 @@ import { teamMatch } from './teamMatch';
 import { teamSynergy } from './teamSynergy';
 import { title } from './title';
 import { titleTag } from './titleTag';
-import { webGame } from './webGame';
 
 export const en = {
   ...gameEngine,
@@ -147,5 +146,4 @@ export const en = {
   teamSynergy,
   title,
   titleTag,
-  webGame,
 };

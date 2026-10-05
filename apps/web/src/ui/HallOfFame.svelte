@@ -21,7 +21,7 @@
   import HofPodium from './HofPodium.svelte';
   import { appState } from './state.svelte.js';
   import { hofText as L } from '@offside/app-core/i18n/ko/hof';
-  import { seasonLabel } from './seasonName.js';
+  import { seasonLabel } from '@offside/app-core/seasonName';
 
   let { full = false }: { full?: boolean } = $props();
   const TOP = 3;

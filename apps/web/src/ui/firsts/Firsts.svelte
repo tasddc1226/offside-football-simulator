@@ -17,7 +17,7 @@
   import { firstsText as L } from '@offside/app-core/i18n/ko/firsts';
   import { tn } from '@offside/game/i18n/names';
   import { intlLocale } from '@offside/contracts/i18n';
-  import { teamSeasonLabel } from '../seasonName.js';
+  import { teamSeasonLabel } from '@offside/app-core/seasonName';
 
   let data = $state<FirstsResponse | null>(null);
   let failed = $state(false);

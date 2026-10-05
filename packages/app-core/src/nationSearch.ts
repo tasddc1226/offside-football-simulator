@@ -15,13 +15,17 @@ export interface NationGroup {
 }
 
 const byKo = new Intl.Collator('ko').compare;
-const byEn = new Intl.Collator('en').compare;
+let byEn: Intl.Collator['compare'] | undefined;
+/** 그 언어의 이름순(영어는 A-Z). 영어 정렬기는 영어를 쓸 때 처음 만든다. */
+function cmpFor(en: boolean): (a: Nation, b: Nation) => number {
+  if (!en) return (a, b) => byKo(a.ko, b.ko);
+  const cmp = (byEn ??= new Intl.Collator('en').compare);
+  return (a, b) => cmp(tn(a.ko), tn(b.ko));
+}
 
-/** 연맹별 묶음. 정렬은 그 언어의 이름순(영어는 A-Z). 연맹 이름은 읽을 때 지금 언어로. */
+/** 연맹별 묶음. 연맹 이름은 읽을 때 지금 언어로. */
 function build(en: boolean): NationGroup[] {
-  const cmp = en
-    ? (a: Nation, b: Nation) => byEn(tn(a.ko), tn(b.ko))
-    : (a: Nation, b: Nation) => byKo(a.ko, b.ko);
+  const cmp = cmpFor(en);
   return [
     {
       key: 'KR',
@@ -58,9 +62,7 @@ export function nationGroups(query: string | null): NationGroup[] {
     const e = tn(n.ko).toLowerCase().indexOf(q);
     return ko >= 0 && (e < 0 || ko < e) ? ko : e;
   };
-  const cmp = en
-    ? (a: Nation, b: Nation) => byEn(tn(a.ko), tn(b.ko))
-    : (a: Nation, b: Nation) => byKo(a.ko, b.ko);
+  const cmp = cmpFor(en);
   const hits = NATIONS.map((n) => ({ n, at: at(n) }))
     .filter((h) => h.at >= 0)
     .sort((a, b) => a.at - b.at || cmp(a.n, b.n));

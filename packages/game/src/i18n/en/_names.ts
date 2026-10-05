@@ -532,6 +532,14 @@ const MISC: Record<string, string> = {
   미드필더: 'Midfielder',
   수비수: 'Defender',
   골키퍼: 'Goalkeeper',
+  // 세부 포지션(contracts DETAIL_LABEL — 구단주 팀 자리 이름)
+  센터백: 'Center-back',
+  풀백: 'Fullback',
+  '수비형 미드필더': 'Defensive midfielder',
+  '중앙 미드필더': 'Central midfielder',
+  '공격형 미드필더': 'Attacking midfielder',
+  윙어: 'Winger',
+  스트라이커: 'Striker',
 };
 
 // ───────── 이름이 이어 붙은 것 ─────────

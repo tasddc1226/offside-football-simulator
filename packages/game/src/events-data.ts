@@ -50,7 +50,15 @@ function localize(e: EventDef): EventDef {
 }
 
 /** id로 이벤트 정의를 찾는다(지금 언어의 문구로). */
+let byIdSize = -1;
+const byId = new Map<string, EventDef>();
 export const eventById = (id: string): EventDef | undefined => {
-  const e = EVENTS.find((x) => x.id === id);
+  // EVENTS는 모듈들이 등록하며 늘어난다 — 길이가 바뀌면 색인을 다시 만든다(같은 id는 먼저 등록한 것).
+  if (byIdSize !== EVENTS.length) {
+    byId.clear();
+    for (const e of EVENTS) if (!byId.has(e.id)) byId.set(e.id, e);
+    byIdSize = EVENTS.length;
+  }
+  const e = byId.get(id);
   return e && localize(e);
 };

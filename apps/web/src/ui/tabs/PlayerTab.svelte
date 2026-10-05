@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { webGameText as W } from '@offside/app-core/i18n/ko/webGame';
+  import { appFormatText as W } from '@offside/app-core/i18n/ko/appFormat';
   // ui.ts playerTab()/nationalCard() 포트 (316~356줄)
   import { potentialNotice } from '@offside/app-core/potential-view';
   import { gamePlayerText as L } from '@offside/app-core/i18n/ko/gamePlayer';

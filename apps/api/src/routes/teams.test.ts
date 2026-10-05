@@ -219,35 +219,32 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     });
   });
 
-  it('T-11-106: 랭킹은 lang=en을 받고(엄격한 쿼리), 엣지 캐시 키는 영어일 때만 lang이 붙어 둘로만 늘어난다', async () => {
+  it('T-11-106: 랭킹은 lang=en을 받고(엄격한 쿼리), 엣지에는 한국어 응답 하나만 담아 시즌 이름만 언어별로 바꾼다', async () => {
     await team(1, 80);
     const edge = installFakeEdgeCache();
     try {
       const ko = (await rank()).data;
       const en = (await rank('?lang=en')).data;
-      const odd = (await rank('?lang=zz')).data; // 모르는 값은 한국어 — 같은 키를 쓴다
+      const odd = (await rank('?lang=zz')).data; // 모르는 값은 한국어
       await flushEdge();
       expect(ko.seasons).toEqual([{ id: 0, name: '프리시즌' }]);
       expect(en.seasons).toEqual([{ id: 0, name: 'Preseason' }]);
       expect(odd.seasons).toEqual(ko.seasons);
-      expect([...edge.store.keys()].sort()).toEqual([
-        'http://localhost/v1/teams?season=0&sort=rating&page=1&form=5&logo=1',
-        'http://localhost/v1/teams?season=0&sort=rating&page=1&form=5&logo=1&lang=en',
-      ]);
+      expect(en.items).toEqual(ko.items);
+      const base = 'http://localhost/v1/teams?season=0&sort=rating&page=1&form=5&logo=1';
+      expect([...edge.store.keys()].sort()).toEqual([base]);
       const ach = await call('GET', '/v1/achievements/ranking?lang=en');
       expect(ach.status).toBe(200);
       await flushEdge();
       expect([...edge.store.keys()].filter((k) => k.includes('achievements'))).toEqual([
-        'http://localhost/v1/achievements/ranking?season=0&page=1&logo=1&lang=en',
+        'http://localhost/v1/achievements/ranking?season=0&page=1&logo=1',
       ]);
-      // 팀을 저장하면 한국어·영어 키를 함께 지운다.
+      // 팀을 저장하면 그 키 하나를 지운다.
       edge.purged.length = 0;
       await team(1, 70);
       await flushEdge();
-      const base = 'http://localhost/v1/teams?season=0&sort=rating&page=1&form=5&logo=1';
-      expect(edge.purged).toEqual(expect.arrayContaining([base, `${base}&lang=en`]));
+      expect(edge.purged).toEqual(expect.arrayContaining([base]));
       expect(edge.store.has(base)).toBe(false);
-      expect(edge.store.has(`${base}&lang=en`)).toBe(false);
     } finally {
       edge.uninstall();
     }

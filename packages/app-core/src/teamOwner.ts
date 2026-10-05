@@ -36,6 +36,7 @@ import type {
 } from './api/team.js';
 import { num, signedNum } from './teamText.js';
 import { teamCoreText as L } from './i18n/ko/teamCore.js';
+import { teamHomeText as TH } from './i18n/ko/teamHome.js';
 import { teamSynergyText as SY } from './i18n/ko/teamSynergy.js';
 
 /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
@@ -153,12 +154,7 @@ export const draftLines = (
   season: number,
 ): LineStrength => lineStrength(slotCodes, ratings, synergyApplies(season) ? synergy : null);
 
-const SYN_LABEL: Record<keyof SynergyLines, () => string> = {
-  atk: () => SY.lineAtk,
-  mid: () => SY.lineMid,
-  def: () => SY.lineDef,
-  gk: () => SY.lineGk,
-};
+const SYN_LABEL = { atk: 'lineAtk', mid: 'lineMid', def: 'lineDef', gk: 'lineGk' } as const;
 /** 시너지 효과 표기 — '공격 +2 · 중원 +0.5'. 효과가 비면 배지는 '경기 효과 없음', 듀오는 상한에 걸린 것. */
 export const synergyEffectText = (
   effect: Partial<SynergyLines>,
@@ -166,7 +162,7 @@ export const synergyEffectText = (
 ): string =>
   (Object.keys(SYN_LABEL) as (keyof SynergyLines)[])
     .filter((k) => effect[k])
-    .map((k) => `${SYN_LABEL[k]()} ${signedNum(effect[k]!)}`)
+    .map((k) => `${TH[SYN_LABEL[k]]} ${signedNum(effect[k]!)}`)
     .join(' · ') || (kind === 'duo' ? SY.capped : SY.noEffect);
 /** 시너지가 경기에 들어가는지 알리는 한 줄. */
 export const synergyNote = (season: number): string =>
