@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { LegendMsgs } from '../ko/legend';
+import { plural } from './_util';
 
 export const legend: Translation<LegendMsgs> = {
   reportLabel: (p) => `${p.name}: career review`,
@@ -24,11 +25,10 @@ export const legend: Translation<LegendMsgs> = {
   scrollCue: 'Scroll to look back on the career',
   journeyTitle: 'Club by club',
   chapterMeta: (p) =>
-    `${p.leagues} · ${p.ageFrom === p.ageTo ? `age ${p.ageFrom}` : `ages ${p.ageFrom}–${p.ageTo}`} · ${p.seasons} season${p.seasons === 1 ? '' : 's'}`,
+    `${p.leagues} · ${p.ageFrom === p.ageTo ? `age ${p.ageFrom}` : `ages ${p.ageFrom}–${p.ageTo}`} · ${plural(p.seasons, 'season')}`,
   valueTitle: 'Market value',
   nationalTitle: 'International career',
-  natGa: (p) =>
-    `${p.goals} goal${p.goals === 1 ? '' : 's'} · ${p.assists} assist${p.assists === 1 ? '' : 's'}`,
+  natGa: (p) => `${plural(p.goals, 'goal')} · ${plural(p.assists, 'assist')}`,
   honoursTitle: 'Honours',
   potTitle: 'Potential rating at retirement',
   potLine: (p) => `Potential ${p.value} · recorded at retirement`,

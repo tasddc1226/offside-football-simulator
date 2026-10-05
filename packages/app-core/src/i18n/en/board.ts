@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { BoardMsgs } from '../ko/board';
+import { plural } from './_util';
 
 export const board: Translation<BoardMsgs> = {
   news: 'News',
@@ -20,7 +21,7 @@ export const board: Translation<BoardMsgs> = {
     "Choose why you're reporting this comment. Reported comments are hidden from your screen.",
   blockHint: (p) => `To hide all comments from ${p.nick}`,
   blockAuthor: 'Block author',
-  blockedUsers: (p) => `${p.n} blocked user${p.n === 1 ? '' : 's'}`,
+  blockedUsers: (p) => `${plural(p.n, 'blocked user')}`,
   unblock: 'Unblock',
   loginGate: 'Sign in with Google to comment.',
   loginGateApple: 'Sign in with Google or Apple to comment.',

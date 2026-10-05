@@ -39,7 +39,7 @@ export function ns<D extends Dict>(name: string, ko: D): D {
   for (const key of Object.keys(ko)) {
     Object.defineProperty(out, key, {
       enumerable: true,
-      get: () => (current === 'ko' ? undefined : overrides.get(name)?.[key]) ?? ko[key],
+      get: () => overrides.get(name)?.[key] ?? ko[key],
     });
   }
   return out;

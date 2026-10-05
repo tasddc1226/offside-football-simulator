@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import { koSources, ns, resolveLocale, setLocale, AUTO_DETECT } from './core';
@@ -47,6 +48,11 @@ describe('영어 사전', () => {
     const names = [...koSources().keys()].filter((n) => !n.startsWith('__'));
     expect(names.sort()).toEqual([...files].sort());
     expect(Object.keys(en).sort()).toEqual([...files].sort());
+    // 묶음은 생성 스크립트 결과와 같아야 한다(pnpm --filter @offside/app-core i18n:index).
+    execFileSync('node', [
+      new URL('../../scripts/i18n-index.mjs', import.meta.url).pathname,
+      '--check',
+    ]);
   });
 
   it.each(files)('%s: 키·값 종류가 같고 영어에 한글이 남지 않는다', (name) => {

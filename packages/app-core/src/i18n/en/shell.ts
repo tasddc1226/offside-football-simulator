@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { ShellMsgs } from '../ko/shell';
+import { plural } from './_util';
 
 export const shell: Translation<ShellMsgs> = {
   brandTag: 'Full Time: until the final whistle',
@@ -10,7 +11,7 @@ export const shell: Translation<ShellMsgs> = {
   navHome: 'Home',
   navOwner: 'Owner',
   navSettings: 'Settings',
-  achNew: (p) => `${p.n} new achievement${p.n === 1 ? '' : 's'}`,
+  achNew: (p) => `${plural(p.n, 'new achievement')}`,
   bgm: 'Music',
   bgmOff: 'Turn music off',
   bgmOn: 'Turn music on',

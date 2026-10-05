@@ -68,6 +68,47 @@ if (totalGzipBytes > LIMIT_BYTES) {
   process.exit(1);
 }
 
+// T-11-102 화면 문구 네임스페이스(app-core i18n/ko/*.ts)는 파일째 청크에 실린다. 첫 화면 모듈이 큰 화면 네임스페이스의
+// 키 몇 개만 써도 그 화면 문구 전체가 첫 화면에 실리므로, 첫 화면에 실리는 네임스페이스를 아래로 고정한다
+// (docs/operations/i18n.md 규칙 8). 늘어나면 첫 화면이 쓰는 키만 작은 네임스페이스로 나누거나, 정말 필요하면 여기에 더한다.
+const EAGER_NAMESPACES = new Set([
+  'boardLabel',
+  'chatReject',
+  'clubSync',
+  'firstsTab',
+  'gamePotentialNote',
+  'hof',
+  'home',
+  'homeLive',
+  'legendToast',
+  'ownerConflict',
+  'settingsApi',
+  'sheetCore',
+  'shell',
+  'shellInstall',
+  'shellLogin',
+  'titleTag',
+]);
+const koDir = path.resolve(scriptDir, '../../../packages/app-core/src/i18n/ko');
+const nsNames = new Set(
+  readdirSync(koDir)
+    .filter((f) => f.endsWith('.ts'))
+    .map((f) => f.slice(0, -3)),
+);
+// 압축된 ns('이름', { … }) 호출 — 함수 이름은 바뀌어도 첫 인자 문자열과 객체 리터럴은 남는다.
+const NS_CALL = /\(\s*["'`]([A-Za-z]+)["'`]\s*,\s*\{/g;
+const eagerFound = new Set();
+for (const file of initialFiles)
+  for (const m of readFileSync(path.join(distAssetsDir, file), 'utf8').matchAll(NS_CALL))
+    if (nsNames.has(m[1])) eagerFound.add(m[1]);
+const unexpected = [...eagerFound].filter((n) => !EAGER_NAMESPACES.has(n));
+if (unexpected.length) {
+  console.error(
+    `첫 화면 청크에 예상하지 않은 문구 네임스페이스가 실렸다: ${unexpected.join(', ')}`,
+  );
+  process.exit(1);
+}
+
 const gameEntries = readdirSync(distAssetsDir).filter((f) => GAME_CHUNK.test(f));
 if (!gameEntries.length) {
   console.error(

@@ -1,7 +1,6 @@
 import type { Translation } from '../core';
 import type { GameActionsMsgs } from '../ko/gameActions';
-
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+import { ordinal, plural } from './_util';
 
 export const gameActions: Translation<GameActionsMsgs> = {
   natDetail: (p) =>
@@ -43,7 +42,7 @@ export const gameActions: Translation<GameActionsMsgs> = {
   colCs: 'Clean sheets',
   colAssists: 'Assists',
   seasonTitle: (p) =>
-    `${p.club} · ${p.league} ${p.rank}${typeof p.rank === 'number' ? ord(p.rank) : ''}`,
+    `${p.club} · ${p.league} ${typeof p.rank === 'number' ? ordinal(p.rank) : p.rank}`,
   compLine: (p) =>
     `${p.name} · ${p.stage} · ${plural(p.apps, 'match', 'matches')}, ${plural(p.g, 'goal')}, ${plural(p.a, 'assist')}`,
   toMarket: 'To the transfer window →',
@@ -95,9 +94,3 @@ export const gameActions: Translation<GameActionsMsgs> = {
   retireStay: 'Play on',
   careerStartToast: 'Your final high school season begins',
 };
-
-function ord(n: number): string {
-  const m = n % 100;
-  if (m >= 11 && m <= 13) return 'th';
-  return n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th';
-}

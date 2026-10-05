@@ -1,11 +1,6 @@
 import type { Translation } from '../core';
 import type { HofMsgs } from '../ko/hof';
-
-const ord = (n: number) => {
-  const r = n % 100;
-  if (r >= 11 && r <= 13) return `${n}th`;
-  return `${n}${({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'}`;
-};
+import { ordinal } from './_util';
 
 export const hof: Translation<HofMsgs> = {
   tabsLabel: 'Records',
@@ -61,12 +56,12 @@ export const hof: Translation<HofMsgs> = {
   prev: '← Previous',
   next: 'Next →',
   mine: 'Your player',
-  rankN: (p) => ord(p.rank),
+  rankN: (p) => ordinal(p.rank),
   podiumLabel: (p) => `Top 3 by ${p.label}`,
   podiumPlayer: (p) =>
-    `${ord(p.rank)}, ${p.name}, ${p.country}, ${p.label} ${p.value}${p.unit}, view full record`,
+    `${ordinal(p.rank)}, ${p.name}, ${p.country}, ${p.label} ${p.value}${p.unit}, view full record`,
   podiumPlayerApp: (p) =>
-    `${ord(p.rank)}, ${p.name}, ${p.country}${p.pos ? `, ${p.pos}` : ''}, ${p.value}${p.unit}${p.mine ? ', your player' : ''}`,
+    `${ordinal(p.rank)}, ${p.name}, ${p.country}${p.pos ? `, ${p.pos}` : ''}, ${p.value}${p.unit}${p.mine ? ', your player' : ''}`,
   rnChipTitle: (p) => `Retired No. ${p.number}`,
   rnChip: (p) => `👑 Retired ${p.number}`,
   rowStats: (p) =>

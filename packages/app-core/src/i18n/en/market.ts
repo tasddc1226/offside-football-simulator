@@ -1,7 +1,6 @@
 import type { Translation } from '../core';
 import type { MarketMsgs } from '../ko/market';
-
-const players = (n: number) => `${n} ${n === 1 ? 'player' : 'players'}`;
+import { plural } from './_util';
 
 export const market: Translation<MarketMsgs> = {
   title: 'Transfer market',
@@ -104,17 +103,17 @@ export const market: Translation<MarketMsgs> = {
   releaseInfo: (p) => `Legend ${p.score} · retirement value`,
   noRetired: (p) => `You have no players who retired in ${p.season}.`,
   dockLabel: 'Confirm release',
-  dockSum: (p) => `Releasing ${players(p.n)} · funds received`,
+  dockSum: (p) => `Releasing ${plural(p.n, 'player')} · funds received`,
   dockWarn: "Released players can't be brought back.",
-  releaseBtn: (p) => `Release ${players(p.n)}`,
+  releaseBtn: (p) => `Release ${plural(p.n, 'player')}`,
   sheetRelease: 'Release players',
   releaseConfirm: (p) =>
-    `Release ${players(p.count)} and receive ${p.amount} in club funds. Released players can't be brought back. Their Hall of Fame records stay.`,
+    `Release ${plural(p.count, 'player')} and receive ${p.amount} in club funds. Released players can't be brought back. Their Hall of Fame records stay.`,
   lockBought: "Signed players can't be released",
   lockListed: 'Listed for sale. Take it down to release',
   lockStarter: 'In the starting lineup. Remove from the team to release',
   toastListed: 'Listed on the market.',
   toastUnlisted: 'Listing removed.',
   toastBought: 'Player signed.',
-  toastReleased: (p) => `Released ${players(p.n)}.`,
+  toastReleased: (p) => `Released ${plural(p.n, 'player')}.`,
 };

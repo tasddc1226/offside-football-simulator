@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { GameSeasonMsgs } from '../ko/gameSeason';
+import { plural } from './_util';
 
 export const gameSeason: Translation<GameSeasonMsgs> = {
   preseason: 'Preseason',
@@ -23,10 +24,10 @@ export const gameSeason: Translation<GameSeasonMsgs> = {
   compSuper: 'Single match before the season',
   compStart: 'Starts in phase 1',
   compAlive: 'in progress',
-  compLine: (p) => `${p.apps} apps, ${p.g} goal${p.g === 1 ? '' : 's'}`,
+  compLine: (p) => `${p.apps} apps, ${plural(p.g, 'goal')}`,
   storiesTitle: 'Storylines in progress',
   storySoon: 'Continues soon',
-  storyWait: (p) => `In about ${p.n} phase${p.n === 1 ? '' : 's'}`,
+  storyWait: (p) => `In about ${plural(p.n, 'phase')}`,
   feedTitle: 'Latest news',
   feedLess: 'Show less',
   feedMore: 'Show more',

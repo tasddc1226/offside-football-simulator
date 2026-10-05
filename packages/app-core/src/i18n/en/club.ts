@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { ClubMsgs } from '../ko/club';
+import { plural } from './_util';
 
 export const club: Translation<ClubMsgs> = {
   title: 'Club names and crests',
@@ -34,7 +35,7 @@ export const club: Translation<ClubMsgs> = {
   imgFull: 'No room left for crest images. Remove another club image, then upload again',
   imgReadFail: "Couldn't read the image",
   badFile: "That edit file isn't in the right format",
-  imported: (p) => `Imported settings for ${p.n} club${p.n === 1 ? '' : 's'}`,
+  imported: (p) => `Imported settings for ${plural(p.n, 'club')}`,
   leagueReset: 'Reset this league to defaults',
   resetAllConfirm: 'Reset club names and crests in every league to their defaults?',
   allReset: 'Reset all clubs to defaults',

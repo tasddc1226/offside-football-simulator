@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { HofRnMsgs } from '../ko/hofRn';
+import { plural } from './_util';
 
 export const hofRn: Translation<HofRnMsgs> = {
   season: 'Season',
@@ -36,6 +37,6 @@ export const hofRn: Translation<HofRnMsgs> = {
   tileSeq: (p) => `No. ${p.seq} · ${p.day}`,
   tileLabel: (p) => `${p.name} No. ${p.number} · ${p.sub}`,
   clubLabel: (p) =>
-    `${p.name}${p.league ? ` ${p.league}` : ''}, ${p.count} retired number${p.count === 1 ? '' : 's'}`,
+    `${p.name}${p.league ? ` ${p.league}` : ''}, ${plural(p.count, 'retired number')}`,
   mine: 'Your player',
 };

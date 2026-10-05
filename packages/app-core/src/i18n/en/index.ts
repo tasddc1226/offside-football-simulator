@@ -1,4 +1,5 @@
 // 영어 사전 묶음 — 파일 이름 = ns() 이름 = export 이름 = 여기 키. 영어 사용자에게만 불러온다(웹은 지연 청크).
+// 직접 고치지 않는다: pnpm --filter @offside/app-core i18n:index
 import { account } from './account';
 import { ad } from './ad';
 import { backup } from './backup';

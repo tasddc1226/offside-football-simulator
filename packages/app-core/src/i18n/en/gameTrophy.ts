@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { GameTrophyMsgs } from '../ko/gameTrophy';
+import { ordinal } from './_util';
 
 export const gameTrophy: Translation<GameTrophyMsgs> = {
   empty: 'None yet.',
@@ -7,8 +8,7 @@ export const gameTrophy: Translation<GameTrophyMsgs> = {
   individual: 'Individual awards',
   ballon: "Ballon d'Or ranking",
   ballonWon: 'Winner',
-  ballonRank: (p) =>
-    `${p.n}${p.n % 10 === 1 && p.n !== 11 ? 'st' : p.n % 10 === 2 && p.n !== 12 ? 'nd' : p.n % 10 === 3 && p.n !== 13 ? 'rd' : 'th'}`,
+  ballonRank: (p) => ordinal(p.n),
   nominees: '30-player shortlist',
   stories: 'Completed storylines',
 };

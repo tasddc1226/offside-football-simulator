@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { LegendRnMsgs } from '../ko/legendRn';
+import { plural } from './_util';
 
 export const legendRn: Translation<LegendRnMsgs> = {
   pending: 'The server is reviewing your retired number. Check the Hall of Fame in a moment.',
@@ -7,7 +8,7 @@ export const legendRn: Translation<LegendRnMsgs> = {
   lineNumAfter: ' is now',
   lineNameAfter: '’s.',
   stats: (p) =>
-    `${p.from}–${p.to} · ${p.seasons} season${p.seasons === 1 ? '' : 's'} · ${p.apps} apps ${p.goals} goal${p.goals === 1 ? '' : 's'} ${p.assists} assist${p.assists === 1 ? '' : 's'}`,
+    `${p.from}–${p.to} · ${plural(p.seasons, 'season')} · ${p.apps} apps ${plural(p.goals, 'goal')} ${plural(p.assists, 'assist')}`,
   foot: (p) => `${p.club} retired number · server retirement No. ${p.seq}`,
   takenA: (p) => `No. ${p.number} is already held by`,
   anonLegend: 'an anonymous legend',

@@ -1,7 +1,6 @@
 import type { Translation } from '../core';
 import type { OwnerMsgs } from '../ko/owner';
-
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+import { plural } from './_util';
 
 export const owner: Translation<OwnerMsgs> = {
   title: 'Owner',
@@ -17,7 +16,7 @@ export const owner: Translation<OwnerMsgs> = {
   statRetired: 'Retired players',
   statLegend: 'Legend score',
   statRetiredNumbers: 'Retired numbers',
-  playersCount: (p) => `${p.text} ${plural(p.n, 'player', 'players')}`,
+  playersCount: (p) => `${p.text} ${p.n === 1 ? 'player' : 'players'}`,
   numbersCount: (p) => `${p.n}`,
   fundsLine: (p) => `Club funds ${p.funds}`,
   myTeam: 'My team',
@@ -39,9 +38,9 @@ export const owner: Translation<OwnerMsgs> = {
   accountSection: 'Account',
   adminTools: 'Admin tools',
   teamEmptyWith: (p) =>
-    `You can build a team from your ${p.n} ${plural(p.n, 'player', 'players')} who retired in ${p.season}. Youth players fill any empty spots.`,
+    `You can build a team from your ${plural(p.n, 'player')} who retired in ${p.season}. Youth players fill any empty spots.`,
   teamEmptyNone: (p) =>
     `Once you have a player who played and retired in ${p.season}, you can build a team.`,
   locked: (p) =>
-    `Log in to build a team from ${p.players > 0 ? `your ${p.players} retired ${plural(p.players, 'player', 'players')}` : 'your retired players'} and compete against other owners. Daily matches, live rankings and season achievements unlock.`,
+    `Log in to build a team from ${p.players > 0 ? `your ${p.players} retired ${p.players === 1 ? 'player' : 'players'}` : 'your retired players'} and compete against other owners. Daily matches, live rankings and season achievements unlock.`,
 };

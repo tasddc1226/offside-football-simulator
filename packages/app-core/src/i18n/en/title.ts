@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { TitleMsgs } from '../ko/title';
+import { plural } from './_util';
 
 export const title: Translation<TitleMsgs> = {
   newTitles: 'New titles',
@@ -13,7 +14,7 @@ export const title: Translation<TitleMsgs> = {
     'Tap a title to make it your main title. It shows on your player card and in the Hall of Fame.',
   earlier: 'Earlier record',
   emptyEarned: 'No titles yet. Your pro debut is the first one.',
-  lockedSummary: (p) => `${p.n} title${p.n === 1 ? '' : 's'} not earned yet`,
+  lockedSummary: (p) => `${plural(p.n, 'title')} not earned yet`,
   hiddenDesc: 'Hidden title',
   progressLabel: (p) => `${p.name} progress`,
   pickChanged: (p) => `Main title changed: ${p.name}`,

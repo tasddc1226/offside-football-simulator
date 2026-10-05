@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { HomeMsgs } from '../ko/home';
+import { plural } from './_util';
 
 export const home: Translation<HomeMsgs> = {
   currentSub: 'Career in progress',
@@ -29,7 +30,7 @@ export const home: Translation<HomeMsgs> = {
   firstsCount: (p) => `Server firsts ${p.done} / ${p.total}`,
   firstsEmpty: 'See who was first among all players',
   chatLabel: 'Chat',
-  chatLabelUnread: (p) => `Chat, ${p.n} unread message${p.n === 1 ? '' : 's'}`,
+  chatLabelUnread: (p) => `Chat, ${plural(p.n, 'unread message')}`,
   chatStatusUnread: (p) => `${p.n} unread chat message${p.n === 1 ? '' : 's'}`,
   noticeTitle: 'Notices',
   releaseTitle: 'Release notes',

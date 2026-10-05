@@ -1,7 +1,6 @@
 import type { Translation } from '../core';
 import type { HomeLiveMsgs } from '../ko/homeLive';
-
-const n = (v: number, one: string, many: string) => `${v} ${v === 1 ? one : many}`;
+import { plural } from './_util';
 
 export const homeLive: Translation<HomeLiveMsgs> = {
   title: 'Right now on OFFSIDE',
@@ -17,7 +16,6 @@ export const homeLive: Translation<HomeLiveMsgs> = {
   whatFirst: (p) => `Finished a first season at ${p.club}`,
   whatHonor: (p) => `${p.honor} · ${p.club}`,
   whatCleanSheets: (p) =>
-    `${p.club} season: ${n(p.cs, 'clean sheet', 'clean sheets')} in ${n(p.apps, 'match', 'matches')}`,
-  whatGoals: (p) =>
-    `${p.club} season: ${n(p.goals, 'goal', 'goals')}, ${n(p.assists, 'assist', 'assists')}`,
+    `${p.club} season: ${plural(p.cs, 'clean sheet')} in ${plural(p.apps, 'match', 'matches')}`,
+  whatGoals: (p) => `${p.club} season: ${plural(p.goals, 'goal')}, ${plural(p.assists, 'assist')}`,
 };

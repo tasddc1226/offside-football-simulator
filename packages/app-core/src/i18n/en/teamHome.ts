@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { TeamHomeMsgs } from '../ko/teamHome';
+import { plural } from './_util';
 
 export const teamHome: Translation<TeamHomeMsgs> = {
   navLabel: 'My team menu',
@@ -8,7 +9,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   navAch: 'Achievements',
   navHistory: 'Match history',
   navOwner: 'Owner',
-  navNewAch: (p) => `${p.n} new achievement${p.n === 1 ? '' : 's'}`,
+  navNewAch: (p) => `${plural(p.n, 'new achievement')}`,
   loadFail: "Couldn't load your team.",
   myTeam: 'My team',
   loginOnly: 'Only signed-in owners can build a team from retired players.',

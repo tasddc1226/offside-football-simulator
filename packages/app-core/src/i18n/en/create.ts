@@ -1,6 +1,7 @@
 import type { AttrKey, Pos } from '@offside/game/data';
 import type { Translation } from '../core';
 import type { CreateMsgs } from '../ko/create';
+import { plural } from './_util';
 
 const ARCHETYPE: Record<Pos, Record<AttrKey, string>> = {
   FW: {
@@ -113,6 +114,6 @@ export const create: Translation<CreateMsgs> = {
   nationSearchLabel: 'Search nationality',
   close: 'Close',
   groupBase: 'Default',
-  groupHits: (p) => `${p.n} result${p.n === 1 ? '' : 's'}`,
+  groupHits: (p) => `${plural(p.n, 'result')}`,
   invalidHint: 'Check the value you entered',
 };
