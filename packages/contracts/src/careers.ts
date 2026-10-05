@@ -3,6 +3,7 @@ import { bodyError } from './body.js';
 import { NATION_BY_CODE } from './nations.js';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
+import { isDefaultClubId } from './club-names.js';
 import { seasonById } from './service-seasons.js';
 import { DETAIL_POSITIONS, FACE_ATTRS, type DetailPos, type FaceAttr } from './positions.js';
 
@@ -608,8 +609,11 @@ export const RetiredNumbersResponseSchema = z.strictObject({
 });
 export type RetiredNumbersResponse = z.infer<typeof RetiredNumbersResponseSchema>;
 
-/** T-11-101 `GET /v1/retired-numbers?club=` 한 구단의 결번만. */
-export const RetiredClubQuerySchema = ClubIdSchema.optional();
+/** T-11-101 `GET /v1/retired-numbers?club=` 한 구단의 결번만 — 결번은 게임에 있는 구단에만 있다(캐시 키를 마음대로 늘리지 못하게). */
+export const RetiredClubQuerySchema = ClubIdSchema.refine(
+  isDefaultClubId,
+  '게임에 없는 구단이에요.',
+).optional();
 /** T-11-101 `GET /v1/retired-numbers?before=` 최신순 페이지 — 이 순번보다 앞선 결번부터. 첫 페이지는 0. */
 export const RetiredBeforeQuerySchema = z.coerce.number().int().nonnegative().optional();
 /** T-11-101 최신순 한 페이지의 결번 수. */
@@ -622,14 +626,12 @@ export const RETIRED_PAGE = 24;
 export const RetiredNumbersSummarySchema = z.strictObject({
   season: z.number().int().nonnegative(),
   total: z.number().int().nonnegative(),
-  /** 결번이 있는 구단. firstSeq = 그 구단의 첫 결번 순번(같은 수일 때 먼저 낸 구단 먼저), lastAt = 가장 최근 결번 시각. */
+  /** 결번이 있는 구단 — 많은 구단 먼저, 같으면 먼저 결번을 낸 구단 먼저. */
   clubs: z.array(
     z.strictObject({
       clubId: z.string().min(1),
       club: z.string(),
       count: z.number().int().positive(),
-      firstSeq: z.number().int(),
-      lastAt: z.string(),
     }),
   ),
   recent: z.array(RetiredNumberItemSchema),

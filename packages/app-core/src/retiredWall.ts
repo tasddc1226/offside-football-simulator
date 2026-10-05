@@ -14,24 +14,6 @@ export const rnDay = (iso: string) => {
   return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 };
 
-/** 구단별 — 결번이 많은 구단 먼저, 같으면 먼저 결번을 낸 구단. 구단 안에서는 번호 순. */
-export function rnByClub<T extends Pick<Item, 'clubId' | 'number' | 'seq'>>(
-  items: readonly T[],
-): T[][] {
-  const by: Record<string, T[]> = {};
-  for (const it of items) (by[it.clubId] ??= []).push(it);
-  return Object.values(by)
-    .map((list) => list.sort((a, b) => a.number - b.number))
-    .sort(
-      (a, b) =>
-        b.length - a.length || Math.min(...a.map((x) => x.seq)) - Math.min(...b.map((x) => x.seq)),
-    );
-}
-
-/** 최신순(결번 순번 큰 것 먼저). 원본은 그대로 둔다. */
-export const rnRecent = <T extends Pick<Item, 'seq'>>(items: readonly T[]): T[] =>
-  [...items].sort((a, b) => b.seq - a.seq);
-
 type ClubSum = RetiredNumbersSummary['clubs'][number];
 
 /** T-11-101 벽 첫 화면의 구단 목록 정렬 — 결번 많은 순(서버 순서 그대로) 또는 리그별. */

@@ -4336,9 +4336,6 @@ html:has(.wrap.has-actionbar) {
 .rn-wall-lead {
   margin: 0 0 14px;
 }
-.rn-club-picker {
-  margin-top: 12px;
-}
 .rn-wall-sum {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -4364,10 +4361,6 @@ html:has(.wrap.has-actionbar) {
 .rn-wall-sum small {
   font-size: 0.75rem;
   color: var(--muted);
-}
-.rn-club {
-  padding-block: 14px 4px;
-  border-top: 1px solid var(--line);
 }
 .rn-club-head {
   display: flex;
@@ -4400,7 +4393,7 @@ html:has(.wrap.has-actionbar) {
   gap: 8px;
   margin: 14px 0 10px;
 }
-.rn-sec-head h3 {
+.rn-sec-head h2 {
   margin: 0;
   font-size: 1rem;
 }
@@ -4455,22 +4448,11 @@ html:has(.wrap.has-actionbar) {
 .rn-club-title {
   margin-top: 4px;
 }
-/* 필터 패널의 포지션 칩과 같은 모양 — 5칸 격자에선 '미드필더'가 두 줄로 꺾인다. */
-.rn-club-title + .hof-pos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 10px 0 12px;
-}
-.rn-club-title + .hof-pos .hof-sort {
-  white-space: nowrap;
-}
 .rn-recent-title {
   margin: 4px 0 12px;
   font-size: 1rem;
 }
 .rn-more {
-  width: 100%;
   margin-top: 4px;
 }
 .rn-tiles {

@@ -7,6 +7,7 @@ import {
   RetiredNumbersSummarySchema,
   SeasonPickQuerySchema,
   type RetiredNumberResult,
+  type RetiredNumbersResponse,
 } from '@offside/contracts';
 import { displaySeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
@@ -97,18 +98,16 @@ export function registerRetiredNumberRoutes(app: Hono<AppEnv>): void {
     const season = seasonOf(c);
     const clubId = parseWithAppError(RetiredClubQuerySchema, c.req.query('club'));
     const before = parseWithAppError(RetiredBeforeQuerySchema, c.req.query('before'));
-    const data =
+    const [path, read]: [string, (db: Db) => Promise<RetiredNumbersResponse>] =
       clubId !== undefined
-        ? await cachedRead(c, EDGE.retiredNumbersClub(season, clubId), (db) =>
-            listRetiredNumbers(db, season, clubId),
-          )
+        ? [EDGE.retiredNumbersClub(season, clubId), (db) => listRetiredNumbers(db, season, clubId)]
         : before !== undefined
-          ? await cachedRead(c, EDGE.retiredNumbersPage(season, before), (db) =>
-              pageRetiredNumbers(db, season, before),
-            )
-          : await cachedRead(c, EDGE.retiredNumbers(season), (db) =>
-              listRetiredNumbers(db, season),
-            );
+          ? [
+              EDGE.retiredNumbersPage(season, before),
+              (db) => pageRetiredNumbers(db, season, before),
+            ]
+          : [EDGE.retiredNumbers(season), (db) => listRetiredNumbers(db, season)];
+    const data = await cachedRead(c, path, read);
     return ok(c, RetiredNumbersResponseSchema, data, 200, `public, max-age=${TTL}`);
   });
 }

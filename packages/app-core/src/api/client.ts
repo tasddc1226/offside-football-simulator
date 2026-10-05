@@ -252,7 +252,7 @@ export function getRetiredNumbersSummary(
 ): Promise<ApiResult<RetiredNumbersSummary>> {
   return cachedGet<RetiredNumbersSummary>(`/v1/retired-numbers/summary?season=${season}`, 60_000);
 }
-/** T-11-101 한 구단의 결번(번호 순은 화면이 정한다). */
+/** T-11-101 한 구단의 결번(등번호 순). */
 export function getRetiredNumbersOfClub(
   season: number,
   clubId: string,

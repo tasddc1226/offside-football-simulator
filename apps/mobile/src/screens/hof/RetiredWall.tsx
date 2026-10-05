@@ -36,6 +36,7 @@ import { alpha } from '../../theme/colors';
 import { rem } from '../../theme/type';
 import { type Colors } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
+import { Btn } from '../../ui/Btn';
 import { Card } from '../../ui/Card';
 import { ClubMark } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
@@ -65,32 +66,14 @@ const view = proxy<{
 
 const GAP = 8;
 const MIN_TILE = 90;
-/** T-11-081 타일을 한 번에 다 그리면(수백 장 · 장마다 SVG 둘) 앱이 수 초 멈춘다 — 첫 화면만큼 먼저, 나머지는 프레임마다 더 그린다. */
-const FIRST_TILES = 24;
-const STEP_TILES = 24;
 const SHIRT_W = 52;
 const SHIRT_H = (SHIRT_W * 124) / 120;
-
-/** 목록(key: 시즌·정렬·필터)이 바뀌면 FIRST_TILES부터 다시, total까지 프레임마다 STEP_TILES씩 늘린다. */
-function useTileBudget(key: string, total: number): number {
-  const [budget, setBudget] = useState({ key, n: FIRST_TILES });
-  // 목록이 바뀐 렌더에서 바로 줄인다(effect로 줄이면 한 번은 전부 그린다).
-  const n = budget.key === key ? budget.n : FIRST_TILES;
-  if (budget.key !== key) setBudget({ key, n });
-  useEffect(() => {
-    if (n >= total) return;
-    const id = requestAnimationFrame(() => setBudget({ key, n: n + STEP_TILES }));
-    return () => cancelAnimationFrame(id);
-  }, [key, n, total]);
-  return n;
-}
 
 type TileOpts = {
   c: Colors;
   width: number;
   myIds: ReadonlySet<string>;
   filteredPos: boolean;
-  filteredClub: boolean;
 };
 
 /** 유니폼 타일 한 장 — 구단 색이 은은히 비치는 바탕(웹 radial-gradient). 바탕과 유니폼을 한 Svg에 그리고, 색·필터 상태는
@@ -102,7 +85,6 @@ const Tile = memo(function Tile({
   c,
   width,
   filteredPos,
-  filteredClub,
 }: Omit<TileOpts, 'myIds'> & { it: Item; withClub: boolean; mine: boolean }) {
   const gid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const col = rnColors(it.clubId) ?? RN_DEFAULT;
@@ -154,7 +136,7 @@ const Tile = memo(function Tile({
       >
         {name}
       </Txt>
-      {withClub && !filteredClub ? (
+      {withClub ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '100%' }}>
           <ClubMark name={it.club} id={it.clubId} size={14} />
           <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75), flexShrink: 1 }}>
@@ -219,7 +201,7 @@ function Tiles({ items, withClub, ...o }: TileOpts & { items: Item[]; withClub: 
 }
 
 /** 타일 폭을 벽에서 한 번 정한다(웹 auto-fill 열 수). 폭을 재기 전(0)에는 타일을 그리지 않는다. */
-function useTileOpts(c: Colors, filteredPos: boolean, filteredClub: boolean) {
+function useTileOpts(c: Colors, filteredPos: boolean) {
   const myIds = useMemo(() => new Set(loadHOF().flatMap((h) => (h.id ? [h.id] : []))), []);
   const [w, setW] = useState(0);
   const cols = Math.max(1, Math.floor((w + GAP) / (MIN_TILE + GAP)));
@@ -229,7 +211,7 @@ function useTileOpts(c: Colors, filteredPos: boolean, filteredClub: boolean) {
     ready: w > 0,
     onLayout: (e: { nativeEvent: { layout: { width: number } } }) =>
       setW(e.nativeEvent.layout.width),
-    opts: { c, width: tileW, myIds, filteredPos, filteredClub } satisfies TileOpts,
+    opts: { c, width: tileW, myIds, filteredPos } satisfies TileOpts,
   };
 }
 
@@ -359,13 +341,12 @@ function Home({ season }: { season: number }) {
       live = false;
     };
   }, [season]);
-  const { ready, onLayout, opts } = useTileOpts(c, false, false);
+  const { ready, onLayout, opts } = useTileOpts(c, false);
   const groups = useMemo(() => (summary ? rnByLeague(summary.clubs) : []), [summary]);
 
   if (failed) return <Message text="영구결번을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." />;
   if (!summary) return <Message live text="불러오는 중…" />;
-  if (!summary.total || !summary.recent.length)
-    return <Message text={`아직 ${teamSeasonName(season)} 영구결번이 없어요.`} />;
+  if (!summary.total) return <Message text={`아직 ${teamSeasonName(season)} 영구결번이 없어요.`} />;
   return (
     <View onLayout={onLayout}>
       <Txt tone="muted" style={{ fontSize: 12, marginBottom: 10 }}>
@@ -426,16 +407,14 @@ function Home({ season }: { season: number }) {
   );
 }
 
-/** 구단 화면 — 그 구단의 결번만 받아 번호 순으로, 포지션은 받은 목록에서 거른다. */
+/** 구단 화면 — 그 구단의 결번만 받는다(서버가 번호 순으로). 포지션은 받은 목록에서 거른다. */
 function ClubScreen({ season, clubId }: { season: number; clubId: string }) {
   const c = useColors();
   const { pos } = useSnapshot(view);
   const [items, setItems] = useState<Item[] | null>(null);
-  const [info, setInfo] = useState<ClubSum | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     setItems(null);
-    setInfo(null);
     setFailed(false);
     let live = true;
     void getRetiredNumbersOfClub(season, clubId).then((r) => {
@@ -443,23 +422,18 @@ function ClubScreen({ season, clubId }: { season: number; clubId: string }) {
       if (r.ok) setItems(r.data.items);
       else setFailed(true);
     });
-    // 이름·개수는 요약에서(60초 메모라 다시 불러도 가볍다). 목록이 먼저 와도 그리는 데는 문제없다.
-    void getRetiredNumbersSummary(season).then((r) => {
-      if (live && r.ok) setInfo(r.data.clubs.find((x) => x.clubId === clubId) ?? null);
-    });
     return () => {
       live = false;
     };
   }, [season, clubId]);
 
-  const sorted = useMemo(
-    () => (items ? [...items].sort((a, b) => a.number - b.number) : []),
-    [items],
+  const filtered = useMemo(
+    () => (items ?? []).filter((it) => !pos || pos === it.pos),
+    [items, pos],
   );
-  const filtered = useMemo(() => sorted.filter((it) => !pos || pos === it.pos), [sorted, pos]);
-  const budget = useTileBudget(`${season}|${clubId}|${pos}`, filtered.length);
-  const { ready, onLayout, opts } = useTileOpts(c, !!pos, true);
-  const head = info ?? (items?.[0] ? { club: items[0].club, clubId, count: items.length } : null);
+  const { ready, onLayout, opts } = useTileOpts(c, !!pos);
+  // 이름·개수는 받은 목록에서(서버가 그 구단 결번을 모두 준다).
+  const head = items?.[0] ? { club: items[0].club, count: items.length } : null;
 
   return (
     <View>
@@ -504,7 +478,7 @@ function ClubScreen({ season, clubId }: { season: number; clubId: string }) {
         <Message live text="불러오는 중…" />
       ) : filtered.length ? (
         <View onLayout={onLayout} style={{ marginTop: 6 }}>
-          {ready ? <Tiles items={filtered.slice(0, budget)} withClub={false} {...opts} /> : null}
+          {ready ? <Tiles items={filtered} withClub={false} {...opts} /> : null}
         </View>
       ) : (
         <Message
@@ -557,8 +531,7 @@ function RecentScreen({ season }: { season: number }) {
       } else setMore('failed');
     });
   };
-  const budget = useTileBudget(`${season}|recent`, items?.length ?? 0);
-  const { ready, onLayout, opts } = useTileOpts(c, false, false);
+  const { ready, onLayout, opts } = useTileOpts(c, false);
 
   return (
     <View>
@@ -570,33 +543,21 @@ function RecentScreen({ season }: { season: number }) {
         <Message live text="불러오는 중…" />
       ) : items.length ? (
         <View onLayout={onLayout}>
-          {ready ? <Tiles items={items.slice(0, budget)} withClub {...opts} /> : null}
+          {ready ? <Tiles items={items} withClub {...opts} /> : null}
           {next !== null ? (
-            <Press
+            <Btn
+              block
               testID="rn-more"
-              scale={1}
               disabled={more === 'loading'}
               accessibilityLabel="결번 더 보기"
-              accessibilityState={{ disabled: more === 'loading' }}
               onPress={loadMore}
-              style={{
-                minHeight: RECORDS_TOUCH,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: c.line,
-                borderRadius: 10,
-                backgroundColor: c.surface2,
-              }}
             >
-              <Txt style={{ fontSize: rem(0.875), fontWeight: '600' }}>
-                {more === 'loading'
-                  ? '불러오는 중…'
-                  : more === 'failed'
-                    ? '불러오지 못했어요. 다시 시도'
-                    : '더 보기'}
-              </Txt>
-            </Press>
+              {more === 'loading'
+                ? '불러오는 중…'
+                : more === 'failed'
+                  ? '불러오지 못했어요. 다시 시도'
+                  : '더 보기'}
+            </Btn>
           ) : null}
         </View>
       ) : (

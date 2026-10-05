@@ -31,7 +31,7 @@
   const selectedSeason = $derived(seasonById(season));
   const upcoming = $derived(selectedSeason && selectedSeason.startsAt > now ? selectedSeason : undefined);
 
-  // 요약은 구단 화면 머리(이름·결번 수)에도 쓴다 — 60초 메모라 다시 불러도 요청이 나가지 않는다.
+  // 요약은 60초 메모라 첫 화면으로 돌아와도 요청이 다시 나가지 않는다.
   let summary = $state<RetiredNumbersSummary | null>(null);
   let items = $state<Item[] | null>(null);
   let next = $state<number | null>(null);
@@ -63,7 +63,7 @@
     void req.then((r) => {
       if (key !== `${season}|${view.screen}|${view.clubId}`) return;
       if (!r.ok) return void (listFailed = true);
-      items = view.screen === 'club' ? [...r.data.items].sort((a, b) => a.number - b.number) : r.data.items;
+      items = r.data.items;
       next = r.data.next ?? null;
     });
   });
@@ -79,7 +79,8 @@
   }
 
   const myIds = new Set(loadHOF().map((h) => h.id).filter(Boolean));
-  const pickedClub = $derived(summary?.clubs.find((c) => c.clubId === view.clubId));
+  // 구단 화면 머리(이름·결번 수)는 받은 목록에서 — 서버가 그 구단 결번을 모두 준다.
+  const pickedClub = $derived(items?.[0] && view.screen === 'club' ? { clubId: items[0].clubId, club: items[0].club, count: items.length } : undefined);
   const shown = $derived((items ?? []).filter((it) => !view.pos || it.pos === view.pos));
   const leagues = $derived(rnByLeague(summary?.clubs ?? []));
 
@@ -137,13 +138,14 @@
     </label>
   </div>
 
-  {#if upcoming}
+  {#if upcoming || view.screen === 'home'}
     <p class="muted fs-sm rn-wall-lead">한 구단에서 오래 활약한 선수의 등번호는 다시 쓰지 않아요. 구단마다 한 번호에 한 명뿐이에요.</p>
+  {/if}
+  {#if upcoming}
     <div class="empty hof-season-note" data-rn-upcoming><b>{upcoming.name}은 {kstMonthDayHour(upcoming.startsAt)}(한국 시각)에 개막해요.</b></div>
   {:else if failed || (view.screen !== 'home' && listFailed)}
     <p class="empty">영구결번을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
   {:else if view.screen === 'home'}
-    <p class="muted fs-sm rn-wall-lead">한 구단에서 오래 활약한 선수의 등번호는 다시 쓰지 않아요. 구단마다 한 번호에 한 명뿐이에요.</p>
     {#if summary === null}
       <p class="empty">불러오는 중…</p>
     {:else if summary.total}
@@ -153,14 +155,14 @@
         <div><b class="num">{day(summary.recent[0]!.grantedAt)}</b><small>최근 결번</small></div>
       </div>
       <div class="rn-sec-head">
-        <h3>최근 결번</h3>
+        <h2>최근 결번</h2>
         <button class="link-btn" data-rn-recent-all onclick={() => (view.screen = 'recent')}>전체 보기 ›</button>
       </div>
       <div class="rn-tiles">
         {#each summary.recent as it (it.seq)}{@render tile(it, true)}{/each}
       </div>
       <div class="rn-sec-head">
-        <h3>구단</h3>
+        <h2>구단</h2>
         <div class="hof-sorts" role="group" aria-label="구단 정렬">
           <button class="hof-sort" aria-pressed={view.clubOrder === 'count'} data-rn-club-order="count" onclick={() => (view.clubOrder = 'count')}>결번 많은 순</button>
           <button class="hof-sort" aria-pressed={view.clubOrder === 'league'} data-rn-club-order="league" onclick={() => (view.clubOrder = 'league')}>리그별</button>
@@ -185,17 +187,19 @@
     <button class="link-btn rn-back" data-rn-back onclick={goHome}>‹ 구단 목록</button>
     {#if view.screen === 'club'}
       <div class="rn-club-head rn-club-title">
-        {#if view.clubId}<ClubMark name={pickedClub?.club ?? ''} id={view.clubId} size={28} />{/if}
-        <b>{pickedClub ? clubName(pickedClub) : ''}</b>
-        <span class="muted fs-xs">{view.clubId ? leagueOf(view.clubId) : ''}</span>
-        {#if pickedClub}<span class="num rn-club-count">{pickedClub.count}</span>{/if}
+        {#if pickedClub}
+          <ClubMark name={pickedClub.club} id={pickedClub.clubId} size={28} />
+          <b>{clubName(pickedClub)}</b>
+          <span class="muted fs-xs">{leagueOf(pickedClub.clubId)}</span>
+          <span class="num rn-club-count">{pickedClub.count}</span>
+        {/if}
       </div>
-      <div class="seg hof-pos" role="group" aria-label="포지션">
+      <div class="hof-sorts" role="group" aria-label="포지션">
         <button class="hof-sort" aria-pressed={view.pos === null} data-rn-pos="all" onclick={() => (view.pos = null)}>전체</button>
         {#each POS_GROUPS as pos (pos)}<button class="hof-sort" aria-pressed={view.pos === pos} data-rn-pos={pos} onclick={() => (view.pos = pos)}>{POS[pos].label}</button>{/each}
       </div>
     {:else}
-      <h3 class="rn-recent-title">최신순 전체</h3>
+      <h2 class="rn-recent-title">최신순 전체</h2>
     {/if}
     {#if items === null}
       <p class="empty">불러오는 중…</p>
@@ -204,7 +208,7 @@
         {#each shown as it (it.seq)}{@render tile(it, view.screen === 'recent')}{/each}
       </div>
       {#if view.screen === 'recent' && next !== null}
-        <button class="btn rn-more" data-rn-more disabled={more} onclick={() => void loadMore()}>{more ? '불러오는 중…' : '더 보기'}</button>
+        <button class="btn btn-block rn-more" data-rn-more disabled={more} onclick={() => void loadMore()}>{more ? '불러오는 중…' : '더 보기'}</button>
       {/if}
     {:else}
       <p class="empty">선택한 조건에 맞는 영구결번이 없어요.</p>

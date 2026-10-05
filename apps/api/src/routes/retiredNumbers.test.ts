@@ -198,14 +198,15 @@ describe('영구결번 (T-10-076)', () => {
       season: 0,
       total: 3,
       clubs: [
-        { clubId: 'pl-0', count: 2, firstSeq: 1 },
-        { clubId: 'pl-1', count: 1, firstSeq: 2 },
+        { clubId: 'pl-0', count: 2 },
+        { clubId: 'pl-1', count: 1 },
       ],
       recent: [{ careerId: D }, { careerId: B }, { careerId: A }],
     });
+    // 한 구단은 등번호 순.
     expect(await list(ctx.env, '?season=0&club=pl-0')).toMatchObject([
-      { careerId: A, number: 10 },
       { careerId: D, number: 7 },
+      { careerId: A, number: 10 },
     ]);
     expect(await list(ctx.env, '?season=0&club=pl-9')).toEqual([]);
     const page = async (before: number) => {
@@ -225,6 +226,10 @@ describe('영구결번 (T-10-076)', () => {
       400,
     );
     expect((await createApp().request('/v1/retired-numbers?before=-1', {}, ctx.env)).status).toBe(
+      400,
+    );
+    // 게임에 없는 구단은 캐시 키를 늘리지 않게 400.
+    expect((await createApp().request('/v1/retired-numbers?club=zz-0', {}, ctx.env)).status).toBe(
       400,
     );
   });

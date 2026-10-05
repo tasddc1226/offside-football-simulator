@@ -280,7 +280,7 @@ const itemsOf = (db: Db) =>
     .innerJoin(careers, eq(careers.id, retiredNumbers.careerId));
 
 /**
- * 한 시즌의 영구결번(결번 순). T-11-101 clubId면 그 구단만. 벽 첫 화면은 요약(summarizeRetiredNumbers)만 받고,
+ * 한 시즌의 영구결번(결번 순). T-11-101 clubId면 그 구단만, 등번호 순. 벽 첫 화면은 요약(summarizeRetiredNumbers)만 받고,
  * 전체 목록은 결번 심사 결과를 모르는 옛 기록(내 선수)과 아직 업데이트하지 않은 앱이 쓴다.
  */
 export async function listRetiredNumbers(
@@ -295,7 +295,7 @@ export async function listRetiredNumbers(
         clubId === undefined ? undefined : eq(retiredNumbers.clubId, clubId),
       ),
     )
-    .orderBy(retiredNumbers.seq);
+    .orderBy(clubId === undefined ? retiredNumbers.seq : retiredNumbers.number);
   return { season, items };
 }
 
@@ -325,20 +325,17 @@ export async function summarizeRetiredNumbers(
   recent = 8,
 ): Promise<RetiredNumbersSummary> {
   const count = sql<number>`count(*)`;
-  const firstSeq = sql<number>`min(${retiredNumbers.seq})`;
   const [clubs, items] = await db.batch([
     db
       .select({
         clubId: retiredNumbers.clubId,
         club: sql<string>`min(${retiredNumbers.club})`,
         count,
-        firstSeq,
-        lastAt: sql<string>`max(${retiredNumbers.grantedAt})`,
       })
       .from(retiredNumbers)
       .where(eq(retiredNumbers.season, season))
       .groupBy(retiredNumbers.clubId)
-      .orderBy(desc(count), asc(firstSeq)),
+      .orderBy(desc(count), asc(sql`min(${retiredNumbers.seq})`)),
     itemsOf(db)
       .where(eq(retiredNumbers.season, season))
       .orderBy(desc(retiredNumbers.seq))

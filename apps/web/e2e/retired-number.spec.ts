@@ -304,20 +304,20 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
           season: 0,
           total: 3,
           clubs: [
-            { clubId: 'pl-0', club: '시티', count: 2, firstSeq: 2, lastAt: items[2]!.grantedAt },
-            {
-              clubId: 'k1-0',
-              club: '울산 호랑이',
-              count: 1,
-              firstSeq: 1,
-              lastAt: items[0]!.grantedAt,
-            },
+            { clubId: 'pl-0', club: '시티', count: 2 },
+            { clubId: 'k1-0', club: '울산 호랑이', count: 1 },
           ],
           recent: [...items].reverse(),
         }),
       );
     const club = url.searchParams.get('club');
-    if (club) return r.fulfill(ok({ season: 0, items: items.filter((it) => it.clubId === club) }));
+    if (club)
+      return r.fulfill(
+        ok({
+          season: 0,
+          items: items.filter((it) => it.clubId === club).sort((a, b) => a.number - b.number),
+        }),
+      );
     return r.fulfill(ok({ season: 0, items: [...items].reverse(), next: null }));
   });
   await page.route(`${API}/v1/hof/${OTHER}`, (r) =>
