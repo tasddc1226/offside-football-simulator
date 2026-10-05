@@ -9,12 +9,14 @@ import type {
 export type Block =
   { kind: 'h'; text: string } | { kind: 'ul'; items: string[] } | { kind: 'p'; lines: string[] };
 
+const HEAD = /^#{1,3}\s+(.+)$/;
+
 export function parseBody(body: string): Block[] {
   const out: Block[] = [];
   for (const raw of body.replace(/\r\n?/g, '\n').split('\n')) {
     const line = raw.trimEnd();
     const last = out[out.length - 1];
-    const head = /^#{1,3}\s+(.+)$/.exec(line);
+    const head = HEAD.exec(line);
     const item = /^\s*[-*]\s+(.+)$/.exec(line);
     if (head) out.push({ kind: 'h', text: head[1]! });
     else if (item) {
@@ -25,6 +27,22 @@ export function parseBody(body: string): Block[] {
     else out.push({ kind: 'p', lines: [line] });
   }
   return out.filter((b) => b.kind !== 'p' || b.lines.length > 0);
+}
+
+/**
+ * `hide`에 걸리는 줄을 본문에서 뺀다. 소제목이 걸리면 다음 소제목 전까지 통째로 뺀다.
+ * iOS 앱이 다른 플랫폼 언급을 가릴 때 쓴다(T-11-087, App Store 2.3.10). 서버 원문은 그대로 둔다.
+ */
+export function hideLines(body: string, hide: RegExp): string {
+  let skipping = false;
+  return body
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .filter((line) => {
+      if (HEAD.test(line)) skipping = hide.test(line);
+      return !skipping && !hide.test(line);
+    })
+    .join('\n');
 }
 
 /** 2026-09-25 형식(보는 사람 시간대). */
