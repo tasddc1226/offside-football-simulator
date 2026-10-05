@@ -55,7 +55,6 @@ const player = (careerId: string, raised: boolean, over: Record<string, unknown>
   legendScore: 300,
   cardValue: 80_000,
   raised,
-  ...(raised ? { retireValue: 250_000 } : {}),
   listing: null,
   ...over,
 });
