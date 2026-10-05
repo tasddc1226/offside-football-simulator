@@ -1,6 +1,6 @@
 import { AppError } from '../errors.js';
 
-/** 1차는 관리자 자신의 기기 한 대로만 발송한다. 응답·토큰·인증값을 로그에 남기지 않는다. */
+/** 현재 앱 세션 소유자의 기기 한 대로만 발송한다. 응답·토큰·인증값을 로그에 남기지 않는다. */
 export async function sendPushTest(
   token: string,
   accessToken?: string,

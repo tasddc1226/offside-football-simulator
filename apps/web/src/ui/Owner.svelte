@@ -6,6 +6,7 @@
   // T-11-026 구단 허브 — 맨 위에 구단주 요약(은퇴 선수·레전드 점수·결번), 그 아래 '내 팀' 카드(전적·레이팅·오늘 남은
   // 경기와 바로 경기하기), 내 선수 상위 3명, 계정은 맨 아래. 비로그인이면 '내 팀' 자리에 잠긴 카드와 로그인 버튼을 둔다.
   import Topbar from './Topbar.svelte';
+  import AdSlot from '../ads/AdSlot.svelte';
   import { fetchBoardViewer } from '@offside/app-core/api/boards';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
@@ -103,7 +104,9 @@
         <div><dt>영구결번</dt><dd>{summary ? `${summary.retired}개` : '–'}</dd></div>
       </dl>
       {/if}
+      {#if linked}<p class="muted fs-sm owner-empty">구단 자금 {market ? fundsText(market.balance) : '–'}</p>{/if}
     </section>
+    <AdSlot place="owner-summary" />
   {/if}
 
   <!-- T-10-092 내 팀: 구글로 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. -->

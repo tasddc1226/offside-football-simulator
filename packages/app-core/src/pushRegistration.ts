@@ -58,7 +58,7 @@ export function createPushRegistration(state: PushRegistrationState, io: PushReg
       io.savePendingRemoval(false);
       io.saveWanted(true);
       state.enabled = true;
-      state.message = '이 기기의 알림 연결을 준비했어요.';
+      state.message = '이 기기의 새 소식 알림을 켰어요.';
     } catch {
       state.failed = true;
       state.message =
