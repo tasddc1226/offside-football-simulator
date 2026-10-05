@@ -69,10 +69,13 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
       );
     const [ok] = clubContributions('FW', legend(6));
     expect(ok!.score).toBeGreaterThanOrEqual(RN_CUT);
-    expect(rnQualifies(ok!)).toBe(true);
-    expect(rnQualifies(clubContributions('FW', legend(5))[0]!)).toBe(false);
+    expect(rnQualifies(ok!, RN_CUT)).toBe(true);
+    expect(rnQualifies(clubContributions('FW', legend(5))[0]!, RN_CUT)).toBe(false);
     expect(
-      rnQualifies(clubContributions('FW', legend(8, { clubId: undefined, club: '우리 시티' }))[0]!),
+      rnQualifies(
+        clubContributions('FW', legend(8, { clubId: undefined, club: '우리 시티' }))[0]!,
+        RN_CUT,
+      ),
     ).toBe(false);
     // 자격 있는 구단만 최대 두 곳.
     const two = clubContributions('FW', [
@@ -85,7 +88,7 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
       })),
       ...legend(3).map((s) => ({ ...s, year: s.year + 20, club: '런던 거너스', clubId: 'pl-2' })),
     ]);
-    expect(rnCandidates(two).map((c) => c.clubId)).toEqual(['pl-0', 'pl-1']);
+    expect(rnCandidates(two, RN_CUT).map((c) => c.clubId)).toEqual(['pl-0', 'pl-1']);
   });
 
   it('T-11-094 시즌 1부터 기준은 포지션별, 프리시즌은 공통 827 그대로', () => {
