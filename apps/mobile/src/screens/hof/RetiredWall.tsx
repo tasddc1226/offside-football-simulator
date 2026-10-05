@@ -201,8 +201,7 @@ function Tiles({ items, withClub, ...o }: TileOpts & { items: Item[]; withClub: 
 }
 
 /** 타일 폭을 벽에서 한 번 정한다(웹 auto-fill 열 수). 폭을 재기 전(0)에는 타일을 그리지 않는다. */
-function useTileOpts(c: Colors, filteredPos: boolean) {
-  const myIds = useMemo(() => new Set(loadHOF().flatMap((h) => (h.id ? [h.id] : []))), []);
+function useTileOpts(c: Colors, filteredPos: boolean, myIds: ReadonlySet<string>) {
   const [w, setW] = useState(0);
   const cols = Math.max(1, Math.floor((w + GAP) / (MIN_TILE + GAP)));
   // Android의 소수점 너비 반올림으로 마지막 열이 다음 줄로 밀리지 않게 한다.
@@ -323,7 +322,7 @@ function ClubRow({ c, club, showLeague }: { c: Colors; club: ClubSum; showLeague
 }
 
 /** 첫 화면 — 요약(구단별 결번 수 + 최근 8개)만 받는다. */
-function Home({ season }: { season: number }) {
+function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> }) {
   const c = useColors();
   const { clubOrder } = useSnapshot(view);
   const [summary, setSummary] = useState<RetiredNumbersSummary | null>(null);
@@ -341,7 +340,7 @@ function Home({ season }: { season: number }) {
       live = false;
     };
   }, [season]);
-  const { ready, onLayout, opts } = useTileOpts(c, false);
+  const { ready, onLayout, opts } = useTileOpts(c, false, myIds);
   const groups = useMemo(() => (summary ? rnByLeague(summary.clubs) : []), [summary]);
 
   if (failed) return <Message text="영구결번을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." />;
@@ -408,7 +407,15 @@ function Home({ season }: { season: number }) {
 }
 
 /** 구단 화면 — 그 구단의 결번만 받는다(서버가 번호 순으로). 포지션은 받은 목록에서 거른다. */
-function ClubScreen({ season, clubId }: { season: number; clubId: string }) {
+function ClubScreen({
+  season,
+  clubId,
+  myIds,
+}: {
+  season: number;
+  clubId: string;
+  myIds: ReadonlySet<string>;
+}) {
   const c = useColors();
   const { pos } = useSnapshot(view);
   const [items, setItems] = useState<Item[] | null>(null);
@@ -431,7 +438,7 @@ function ClubScreen({ season, clubId }: { season: number; clubId: string }) {
     () => (items ?? []).filter((it) => !pos || pos === it.pos),
     [items, pos],
   );
-  const { ready, onLayout, opts } = useTileOpts(c, !!pos);
+  const { ready, onLayout, opts } = useTileOpts(c, !!pos, myIds);
   // 이름·개수는 받은 목록에서(서버가 그 구단 결번을 모두 준다).
   const head = items?.[0] ? { club: items[0].club, count: items.length } : null;
 
@@ -494,7 +501,7 @@ function ClubScreen({ season, clubId }: { season: number; clubId: string }) {
 }
 
 /** 최신순 전체 — 24개씩 이어 받는다. */
-function RecentScreen({ season }: { season: number }) {
+function RecentScreen({ season, myIds }: { season: number; myIds: ReadonlySet<string> }) {
   const c = useColors();
   const [items, setItems] = useState<Item[] | null>(null);
   const [next, setNext] = useState<number | null>(null);
@@ -531,7 +538,7 @@ function RecentScreen({ season }: { season: number }) {
       } else setMore('failed');
     });
   };
-  const { ready, onLayout, opts } = useTileOpts(c, false);
+  const { ready, onLayout, opts } = useTileOpts(c, false, myIds);
 
   return (
     <View>
@@ -574,7 +581,8 @@ export default function RetiredWall() {
   const season = picked ?? displaySeasonAt(now);
   const selectedSeason = seasonById(season);
   const upcoming = selectedSeason && selectedSeason.startsAt > now ? selectedSeason : undefined;
-  const where = screen === 'club' && !clubId ? 'home' : screen;
+  // 내 선수 배지 — 화면을 오갈 때마다 기록을 다시 읽지 않게 벽에서 한 번.
+  const myIds = useMemo(() => new Set(loadHOF().flatMap((h) => (h.id ? [h.id] : []))), []);
 
   return (
     <Card gap={0}>
@@ -599,12 +607,12 @@ export default function RetiredWall() {
         <Message
           text={`${upcoming.name}은 ${kstMonthDayHour(upcoming.startsAt)}(한국 시각)에 개막해요.`}
         />
-      ) : where === 'club' && clubId ? (
-        <ClubScreen season={season} clubId={clubId} />
-      ) : where === 'recent' ? (
-        <RecentScreen season={season} />
+      ) : screen === 'club' && clubId ? (
+        <ClubScreen season={season} clubId={clubId} myIds={myIds} />
+      ) : screen === 'recent' ? (
+        <RecentScreen season={season} myIds={myIds} />
       ) : (
-        <Home season={season} />
+        <Home season={season} myIds={myIds} />
       )}
     </Card>
   );

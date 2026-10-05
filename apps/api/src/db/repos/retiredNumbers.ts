@@ -318,11 +318,13 @@ export async function pageRetiredNumbers(
   return { season, items, next: rows.length > RETIRED_PAGE ? items.at(-1)!.seq : null };
 }
 
+/** 벽 첫 화면에 보이는 최근 결번 수. */
+const RECENT_ON_SUMMARY = 8;
+
 /** T-11-101 벽 첫 화면 — 구단별 결번 수(많은 구단 먼저, 같으면 먼저 결번을 낸 구단)와 최근 결번 몇 개. */
 export async function summarizeRetiredNumbers(
   db: Db,
   season: number,
-  recent = 8,
 ): Promise<RetiredNumbersSummary> {
   const count = sql<number>`count(*)`;
   const [clubs, items] = await db.batch([
@@ -339,7 +341,7 @@ export async function summarizeRetiredNumbers(
     itemsOf(db)
       .where(eq(retiredNumbers.season, season))
       .orderBy(desc(retiredNumbers.seq))
-      .limit(recent),
+      .limit(RECENT_ON_SUMMARY),
   ]);
   return {
     season,
