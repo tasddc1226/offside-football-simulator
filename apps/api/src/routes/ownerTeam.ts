@@ -8,7 +8,6 @@ import {
   TeamMatchesResponseSchema,
   TeamOpponentsResponseSchema,
   type OwnerTeam,
-  type TeamMatch,
   type TeamOpponent,
 } from '@offside/contracts';
 import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
@@ -48,16 +47,12 @@ import {
   meetingsSince,
   myTeamIn,
   peakOf,
-  publicNamesOf,
   recordMatchStatements,
   slotIdsOf,
   layoutOf,
   logoOf,
-  teamLogosByIds,
   toLineupCareer,
-  type MatchDetail,
   type OwnerTeamRow,
-  type TeamMatchRow,
 } from '../db/repos/ownerTeams.js';
 import { achievementRankOf } from '../db/repos/ownerAchievements.js';
 import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
@@ -75,8 +70,8 @@ import {
   lineupOvr,
   simulateMatch,
   type LineupSlot,
-  type PlayerRef,
 } from '../team/sim.js';
+import { lineupsOf, matchDetailOf, matchViews, playedMatch } from '../team/match.js';
 import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀). 구글 로그인한 구단주만 쓴다 — 사람마다 다른 응답이라 엣지 캐시하지 않는다.
@@ -99,7 +94,7 @@ export async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
 }
 
 /** 지금 고치고 겨루는 팀 시즌. 시즌 사이 휴식기면 409 SEASON_CLOSED. */
-function currentSeasonOrThrow(now: string): number {
+export function currentSeasonOrThrow(now: string): number {
   const season = teamSeasonAt(now);
   if (season === null) {
     throw conflictError(
@@ -161,54 +156,6 @@ function toOwnerTeam(
     updatedAt: row.updatedAt,
   };
 }
-
-type MatchHead = Pick<TeamMatchRow, 'id' | 'homeTeamId' | 'homeGoals' | 'awayGoals' | 'createdAt'>;
-
-function toMatch(
-  row: MatchHead,
-  d: MatchDetail,
-  myTeamId: string,
-  names: ReadonlyMap<string, string>,
-  logos: ReadonlyMap<string, ReturnType<typeof logoOf>>,
-): TeamMatch {
-  const label = (p: PlayerRef) => (p.careerId ? (names.get(p.careerId) ?? p.anon) : p.anon);
-  const mine = row.homeTeamId === myTeamId ? 'home' : 'away';
-  return {
-    id: row.id,
-    home: {
-      ...d.home,
-      logo: logos.get(d.home.teamId) ?? null,
-      goals: row.homeGoals,
-      ratingChange: d.home.ratingChange ?? null,
-    },
-    away: {
-      ...d.away,
-      logo: logos.get(d.away.teamId) ?? null,
-      goals: row.awayGoals,
-      ratingChange: d.away.ratingChange ?? null,
-    },
-    events: d.events.map((e) => ({
-      minute: e.minute,
-      side: e.side,
-      scorer: label(e.scorer),
-      assist: e.assist ? label(e.assist) : null,
-      scorerId: e.side === mine ? e.scorer.careerId : null,
-      assistId: e.side === mine ? (e.assist?.careerId ?? null) : null,
-    })),
-    mine,
-    createdAt: row.createdAt,
-  };
-}
-
-const careerIdsIn = (details: readonly MatchDetail[]) => [
-  ...new Set(
-    details.flatMap((d) =>
-      d.events.flatMap((e) =>
-        [e.scorer.careerId, e.assist?.careerId].filter((x): x is string => !!x),
-      ),
-    ),
-  ),
-];
 
 export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   // 내 팀(보고 있는 시즌) + 그 시즌에 넣을 수 있는 은퇴 선수 + 오늘 남은 경기 수. 화면을 열 때 한 번 부른다(웹 메모 1분).
@@ -408,73 +355,34 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       );
     }
 
-    const mySlots = slotIdsOf(mine);
-    const oppSlots = slotIdsOf(opp.team);
-    const [rows, [met]] = await Promise.all([
-      careersByIds(db, [
-        ...new Set([...mySlots, ...oppSlots].filter((x): x is string => x !== null)),
-      ]),
+    const [lineups, [met]] = await Promise.all([
+      lineupsOf(db, season, mine, opp.team),
       meetingsSince(db, mine.id, opp.team.id, repeatWindowStart(now)),
     ]);
-    const home = buildLineup(
-      mine.formation as FormationId,
-      mySlots,
-      eligibleMap(rows, me.id, season, true),
-      layoutOf(mine),
-    );
-    const away = buildLineup(
-      opp.team.formation as FormationId,
-      oppSlots,
-      eligibleMap(rows, opp.team.profileId, season, true),
-      layoutOf(opp.team),
-    );
-    if (filledCount(home) === 0) {
+    if (filledCount(lineups.home) === 0) {
       throw conflictError('은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.', 'TEAM_EMPTY');
     }
-    if (filledCount(away) === 0) throw teamNotFound();
+    if (filledCount(lineups.away) === 0) throw teamNotFound();
 
     const id = newId('mat');
-    const result = simulateMatch(id, home, away);
+    const result = simulateMatch(id, lineups.home, lineups.away);
     const score = matchScore(result.homeGoals, result.awayGoals);
     // 기대 승률에 홈 이점을 넣고, 최근 TEAM_REPEAT_WINDOW_DAYS일 안에 이미 만난 횟수만큼 변화를 줄인다.
     const delta = ratingChange(mine.rating, opp.team.rating, score, Number(met?.n ?? 0));
+    const detail = matchDetailOf(mine, opp.team, lineups, result, delta);
     const homeSide = {
       teamId: mine.id,
-      filled: filledCount(home),
-      ovr: lineupOvr(home),
+      filled: filledCount(lineups.home),
+      ovr: detail.home.ovr,
       goals: result.homeGoals,
       rating: delta.home,
     };
     const awaySide = {
       teamId: opp.team.id,
-      filled: filledCount(away),
-      ovr: lineupOvr(away),
+      filled: filledCount(lineups.away),
+      ovr: detail.away.ovr,
       goals: result.awayGoals,
       rating: delta.away,
-    };
-    const detail: MatchDetail = {
-      home: {
-        teamId: mine.id,
-        name: mine.name,
-        owner: mine.manager,
-        formation: mine.formation as FormationId,
-        ovr: homeSide.ovr,
-        ratingChange: delta.home,
-      },
-      away: {
-        teamId: opp.team.id,
-        name: opp.team.name,
-        owner: opp.team.manager,
-        formation: opp.team.formation as FormationId,
-        ovr: awaySide.ovr,
-        ratingChange: delta.away,
-      },
-      events: result.events.map((e) => ({
-        minute: e.minute,
-        side: e.side,
-        scorer: e.scorer,
-        assist: e.assist,
-      })),
     };
     await runBatch(db, [
       ...recordMatchStatements(db, {
@@ -494,10 +402,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         refreshAfterChange(db, opp.team.profileId, season),
       ]),
     );
-    const names = new Map<string, string>();
-    for (const s of [...home, ...away])
-      if (s.careerId && s.publicName) names.set(s.careerId, s.publicName);
-    const head: MatchHead = {
+    const head = {
       id,
       homeTeamId: mine.id,
       homeGoals: result.homeGoals,
@@ -508,16 +413,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       c,
       PlayTeamMatchResponseSchema,
       {
-        match: toMatch(
-          head,
-          detail,
-          mine.id,
-          names,
-          new Map([
-            [mine.id, logoOf(mine)],
-            [opp.team.id, logoOf(opp.team)],
-          ]),
-        ),
+        match: playedMatch(head, detail, lineups, mine, opp.team),
         record: {
           w: mine.wins + (score === 1 ? 1 : 0),
           d: mine.draws + (score === 0.5 ? 1 : 0),
@@ -554,21 +450,9 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const season = seasonQuery(c, nowIso());
     const [team] = await myTeamIn(db, me.id, season);
-    const rows = team ? await listRecentMatches(db, me.id, team.id) : [];
-    const details = rows.map((r) => JSON.parse(r.detailJson) as MatchDetail);
-    const [names, logos] = await Promise.all([
-      publicNamesOf(db, careerIdsIn(details)),
-      teamLogosByIds(
-        db,
-        details.flatMap((d) => [d.home.teamId, d.away.teamId]),
-      ),
-    ]);
-    return ok(
-      c,
-      TeamMatchesResponseSchema,
-      { items: team ? rows.map((r, i) => toMatch(r, details[i]!, team.id, names, logos)) : [] },
-      200,
-      NO_STORE,
-    );
+    const items = team
+      ? await matchViews(db, await listRecentMatches(db, me.id, team.id), () => team.id)
+      : [];
+    return ok(c, TeamMatchesResponseSchema, { items }, 200, NO_STORE);
   });
 }

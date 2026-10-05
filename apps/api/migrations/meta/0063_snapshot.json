@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8247372f-38ad-4ed2-98ff-3241964c5ba7",
-  "prevId": "dd631b3f-b6e2-4d9b-b5eb-221f3e2c54fe",
+  "id": "127504d0-2993-4bc8-835b-66100d8c7b26",
+  "prevId": "fd5e2921-6f1d-4198-bc7a-c244cfe7f8f4",
   "tables": {
     "app_auth_tickets": {
       "name": "app_auth_tickets",
@@ -1010,6 +1010,14 @@
             "created_at"
           ],
           "isUnique": false
+        },
+        "career_seasons_growth_created_idx": {
+          "name": "career_seasons_growth_created_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false,
+          "where": "\"career_seasons\".\"growth_json\" is not null"
         }
       },
       "foreignKeys": {
@@ -2325,6 +2333,150 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "notifications": {
+      "name": "notifications",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "profile_id": {
+          "name": "profile_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source_key": {
+          "name": "source_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "target_json": {
+          "name": "target_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "read_at": {
+          "name": "read_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "push_reserved_at": {
+          "name": "push_reserved_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "notifications_source_unique": {
+          "name": "notifications_source_unique",
+          "columns": [
+            "profile_id",
+            "source_key"
+          ],
+          "isUnique": true
+        },
+        "notifications_profile_created_idx": {
+          "name": "notifications_profile_created_idx",
+          "columns": [
+            "profile_id",
+            "created_at",
+            "id"
+          ],
+          "isUnique": false
+        },
+        "notifications_profile_read_created_idx": {
+          "name": "notifications_profile_read_created_idx",
+          "columns": [
+            "profile_id",
+            "read_at",
+            "created_at",
+            "id"
+          ],
+          "isUnique": false
+        },
+        "notifications_expires_idx": {
+          "name": "notifications_expires_idx",
+          "columns": [
+            "expires_at"
+          ],
+          "isUnique": false
+        },
+        "notifications_profile_push_reserved_idx": {
+          "name": "notifications_profile_push_reserved_idx",
+          "columns": [
+            "profile_id",
+            "push_reserved_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "notifications_profile_id_profiles_id_fk": {
+          "name": "notifications_profile_id_profiles_id_fk",
+          "tableFrom": "notifications",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "profile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "owner_achievements": {
       "name": "owner_achievements",
       "columns": {
@@ -2855,6 +3007,202 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "push_deliveries": {
+      "name": "push_deliveries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "notification_id": {
+          "name": "notification_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "installation_hash": {
+          "name": "installation_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "profile_id": {
+          "name": "profile_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "receipt_attempts": {
+          "name": "receipt_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "due_at": {
+          "name": "due_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lease_id": {
+          "name": "lease_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "ticket_id": {
+          "name": "ticket_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "push_deliveries_device_unique": {
+          "name": "push_deliveries_device_unique",
+          "columns": [
+            "notification_id",
+            "installation_hash"
+          ],
+          "isUnique": true
+        },
+        "push_deliveries_due_idx": {
+          "name": "push_deliveries_due_idx",
+          "columns": [
+            "state",
+            "due_at"
+          ],
+          "isUnique": false
+        },
+        "push_deliveries_installation_idx": {
+          "name": "push_deliveries_installation_idx",
+          "columns": [
+            "installation_hash"
+          ],
+          "isUnique": false
+        },
+        "push_deliveries_profile_idx": {
+          "name": "push_deliveries_profile_idx",
+          "columns": [
+            "profile_id"
+          ],
+          "isUnique": false
+        },
+        "push_deliveries_session_idx": {
+          "name": "push_deliveries_session_idx",
+          "columns": [
+            "session_id"
+          ],
+          "isUnique": false
+        },
+        "push_deliveries_expires_idx": {
+          "name": "push_deliveries_expires_idx",
+          "columns": [
+            "expires_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "push_deliveries_notification_id_notifications_id_fk": {
+          "name": "push_deliveries_notification_id_notifications_id_fk",
+          "tableFrom": "push_deliveries",
+          "tableTo": "notifications",
+          "columnsFrom": [
+            "notification_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "push_deliveries_session_id_sessions_id_fk": {
+          "name": "push_deliveries_session_id_sessions_id_fk",
+          "tableFrom": "push_deliveries",
+          "tableTo": "sessions",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "push_deliveries_profile_id_profiles_id_fk": {
+          "name": "push_deliveries_profile_id_profiles_id_fk",
+          "tableFrom": "push_deliveries",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "profile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "push_devices": {
       "name": "push_devices",
       "columns": {
@@ -2899,6 +3247,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "engagement_enabled": {
+          "name": "engagement_enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "updated_at": {
           "name": "updated_at",
@@ -2947,6 +3303,14 @@
         "push_devices_updated_idx": {
           "name": "push_devices_updated_idx",
           "columns": [
+            "updated_at"
+          ],
+          "isUnique": false
+        },
+        "push_devices_engagement_updated_idx": {
+          "name": "push_devices_engagement_updated_idx",
+          "columns": [
+            "engagement_enabled",
             "updated_at"
           ],
           "isUnique": false

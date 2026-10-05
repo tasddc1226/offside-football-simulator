@@ -22,6 +22,7 @@
     "./service-seasons": "./src/service-seasons.ts",
     "./positions": "./src/positions.ts",
     "./owner-team": "./src/owner-team.ts",
+    "./friend-code": "./src/friend-code.ts",
     "./team-logo": "./src/team-logo.ts",
     "./nations": "./src/nations.ts",
     "./nations-en": "./src/nations-en.ts",

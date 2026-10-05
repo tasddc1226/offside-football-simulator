@@ -156,6 +156,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'nickname',
     'apple_sub',
     'apple_linked_at',
+    'friend_code',
   ],
   sessions: [
     'id',
@@ -250,6 +251,27 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'growth_json',
   ],
   club_customs: ['profile_id', 'clubs_json', 'updated_at'],
+  friend_matches: [
+    'id',
+    'profile_id',
+    'opponent_id',
+    'home_team_id',
+    'away_team_id',
+    'home_goals',
+    'away_goals',
+    'detail_json',
+    'created_at',
+  ],
+  friends: [
+    'profile_id',
+    'friend_id',
+    'state',
+    'wins',
+    'draws',
+    'losses',
+    'created_at',
+    'updated_at',
+  ],
   // T-10-011: 게시판.
   board_posts: [
     'id',

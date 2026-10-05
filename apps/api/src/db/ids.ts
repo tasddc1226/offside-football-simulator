@@ -1,4 +1,4 @@
-/** tem·mat: T-10-092 구단주 팀·팀 경기. */
+/** tem·mat: T-10-092 구단주 팀·팀 경기. fmt: T-11-098 친선전. */
 export type IdPrefix =
   | 'prf'
   | 'ses'
@@ -11,6 +11,7 @@ export type IdPrefix =
   | 'cmt'
   | 'tem'
   | 'mat'
+  | 'fmt'
   | 'blk'
   | 'lst'
   | 'ntf';

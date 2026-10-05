@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8247372f-38ad-4ed2-98ff-3241964c5ba7",
-  "prevId": "dd631b3f-b6e2-4d9b-b5eb-221f3e2c54fe",
+  "id": "fd5e2921-6f1d-4198-bc7a-c244cfe7f8f4",
+  "prevId": "8247372f-38ad-4ed2-98ff-3241964c5ba7",
   "tables": {
     "app_auth_tickets": {
       "name": "app_auth_tickets",
@@ -1010,6 +1010,14 @@
             "created_at"
           ],
           "isUnique": false
+        },
+        "career_seasons_growth_created_idx": {
+          "name": "career_seasons_growth_created_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false,
+          "where": "\"career_seasons\".\"growth_json\" is not null"
         }
       },
       "foreignKeys": {

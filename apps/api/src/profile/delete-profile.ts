@@ -10,6 +10,7 @@ import { deleteNameReportsStatement } from '../db/repos/nameReports.js';
 import { deleteCareersStatements } from '../db/repos/careers.js';
 import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
 import { resetFirstsBackfillStatement } from '../db/repos/firsts.js';
+import { deleteFriendsStatements } from '../db/repos/friends.js';
 import { deleteOwnerTeamsStatements } from '../db/repos/ownerTeams.js';
 import {
   boardComments,
@@ -114,6 +115,7 @@ export async function executeProfileDeletion(
         nickname: null,
         appleSub: null,
         appleLinkedAt: null,
+        friendCode: null,
       })
       .where(eq(profiles.id, input.profileId)),
     // T-9-009: profiles는 소프트 삭제(deletedAt만 세팅)라 FK ON DELETE CASCADE가 트리거되지 않는다.
@@ -125,6 +127,8 @@ export async function executeProfileDeletion(
     deleteClubCustomStatement(db, input.profileId),
     // T-10-092 구단주 팀(팀 경기는 팀 FK CASCADE로 함께 지워진다).
     ...deleteOwnerTeamsStatements(db, input.profileId),
+    // T-11-098 친구 줄(내 줄 + 나를 가리키는 줄). 친선전은 팀 FK CASCADE로 함께 지워진다.
+    ...deleteFriendsStatements(db, input.profileId),
     ...deleteBoardActivityStatements(db, input.profileId),
     ...deleteChatActivityStatements(db, input.profileId),
     db.delete(pushDevices).where(eq(pushDevices.profileId, input.profileId)),

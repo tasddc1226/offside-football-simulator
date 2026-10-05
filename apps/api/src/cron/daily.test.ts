@@ -6,6 +6,7 @@ import type { Bindings } from '../env.js';
 import { backupKey, backupToR2, fixedParts } from './backup.js';
 import { cleanupExpired } from './cleanup.js';
 import { DAILY_META_KEY, runDaily } from './daily.js';
+import { archiveGrowth, KEEP_DAYS } from './growthArchive.js';
 
 const NOW = Date.parse('2026-09-28T19:00:00.000Z');
 const ago = (ms: number) => new Date(NOW - ms).toISOString();
@@ -209,5 +210,66 @@ describe('T-10-070 D1 → R2 백업', () => {
       .bind(DAILY_META_KEY)
       .first<{ value: string }>();
     expect(JSON.parse(row!.value)).toMatchObject({ level: 'error', backup: { error: 'r2 down' } });
+  });
+});
+
+describe('T-11-100 오래된 성장 기록을 R2로 옮기기', () => {
+  it('KEEP_DAYS 지난 시즌의 성장 기록만 NDJSON으로 올리고 D1에서 비운다. 다시 돌면 할 일이 없다', async () => {
+    await run(
+      `INSERT INTO careers (id, profile_id, pos, foot, type, trait, start_year, status, app_version, created_at, updated_at)
+       VALUES ('car_g', 'prf_1', 'FW', '오른발', 't', 't', 2026, 'active', 'test', ?1, ?1)`,
+      ago(60 * DAY),
+    );
+    const season = (year: number, createdAt: string, growth: string | null) =>
+      run(
+        `INSERT INTO career_seasons (career_id, year, age, club, league, apps, goals, assists, rating, rank, ovr, honors_json, mil, events_json, growth_json, created_at)
+         VALUES ('car_g', ?1, ?2, 'c', 'l', 1, 0, 0, 6.5, '1', 60, '[]', 0, '[]', ?3, ?4)`,
+        year,
+        year - 2008,
+        growth,
+        createdAt,
+      );
+    const g = (o0: number) => JSON.stringify({ v: 1, o0, ph: [o0], s0: [1.5, 2], s1: [2, 3] });
+    const old = ago((KEEP_DAYS + 10) * DAY);
+    await season(2026, old, g(55));
+    await season(2027, old, g(56)); // 같은 시각
+    await season(2028, ago((KEEP_DAYS + 1) * DAY), g(57));
+    await season(2029, ago((KEEP_DAYS + 1) * DAY), null); // 성장 기록 없음
+    await season(2030, ago(DAY), g(60)); // 아직 보관 기간 안
+
+    const r = await archiveGrowth(ctx.env.DB, bucket(), 'test', NOW);
+    expect(r).toMatchObject({ rows: 3 });
+    const lines = gunzipText(await (await bucket().get(r.key!))!.arrayBuffer())
+      .trim()
+      .split('\n')
+      .map((l) => JSON.parse(l) as { careerId: string; year: number; growth: { o0: number } });
+    expect(lines.map((l) => [l.careerId, l.year, l.growth.o0])).toEqual([
+      ['car_g', 2026, 55],
+      ['car_g', 2027, 56],
+      ['car_g', 2028, 57],
+    ]);
+    const { results } = await ctx.env.DB.prepare(
+      `SELECT year, growth_json IS NOT NULL AS has FROM career_seasons WHERE career_id = 'car_g' ORDER BY year`,
+    ).all<{ year: number; has: number }>();
+    expect(results.map((x) => [x.year, x.has])).toEqual([
+      [2026, 0],
+      [2027, 0],
+      [2028, 0],
+      [2029, 0],
+      [2030, 1],
+    ]);
+    // 같은 날 다시 돌면 옮길 행이 없다(이미 올린 파일도 덮어쓰지 않는다).
+    expect(await archiveGrowth(ctx.env.DB, bucket(), 'test', NOW)).toMatchObject({
+      key: null,
+      rows: 0,
+    });
+    // 옮긴 뒤 옛 시즌이 성장 기록과 함께 다시 올라오면 다음 실행이 다시 옮긴다.
+    await run(
+      `UPDATE career_seasons SET growth_json = ?1 WHERE career_id = 'car_g' AND year = 2026`,
+      g(58),
+    );
+    const again = await archiveGrowth(ctx.env.DB, bucket(), 'test', NOW + 1);
+    expect(again.rows).toBe(1);
+    expect((await bucket().list({ prefix: 'growth/test/' })).objects).toHaveLength(2);
   });
 });

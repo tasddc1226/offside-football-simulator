@@ -6,6 +6,7 @@ import { LOGIN_OFFLINE_TEXT, googleFailText, loginDoneText } from '@offside/app-
 import { loadHOF } from '@offside/game/season';
 import { toast } from './helpers.js';
 import { currentInApp, showInAppLoginNotice } from './inapp-open.js';
+import { openFriends, pendingInvite } from './friendInvite.svelte.js';
 import { openLocalLegend } from './legend.js';
 import { openBoard } from './nav.js';
 import { appState } from './state.svelte.js';
@@ -60,6 +61,8 @@ export function handleOAuthReturn() {
     const h = loadHOF().find((x) => x.id === back.career);
     if (h) return openLocalLegend(h);
   }
+  // T-11-098 친구 초대 링크로 들어와 로그인했으면 친구 화면으로 돌아가 신청을 마저 보낸다.
+  if (google !== 'error' && pendingInvite()) return openFriends();
   // 계정 패널이 구단주 화면에 있으므로, 로그인을 마치고 돌아오면 구단주 화면을 연다.
   appState.screen = 'owner';
 }
