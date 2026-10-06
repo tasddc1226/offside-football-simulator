@@ -38,6 +38,9 @@ import { recordText, num } from '@offside/app-core/teamText';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import {
   autoFillSlots,
+  tooManyWildcards,
+  wildcardFullText,
+  wildcardLabel,
   draftLines,
   isPreseasonLegacy,
   matchHintOf,
@@ -180,6 +183,7 @@ export default function Team() {
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = useMemo(() => localCareerNames(), []);
   const byId = new Map(players.map((p) => [p.careerId, p]));
+  const wildcards = wildcardLabel(slots, byId, season);
   const nameOf = (p: TeamPlayer) =>
     localNames.get(p.careerId) ?? p.publicName ?? anonName(p.pos, p.number);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
@@ -216,7 +220,13 @@ export default function Team() {
       name: p ? nameOf(p) : YOUTH_NAME,
       youth: !p,
       ...(p
-        ? { peak: p.peak, number: p.number, legendScore: p.legendScore, nation: p.nation }
+        ? {
+            peak: p.peak,
+            number: p.number,
+            legendScore: p.legendScore,
+            nation: p.nation,
+            season: p.season,
+          }
         : {}),
     };
   });
@@ -674,7 +684,7 @@ export default function Team() {
                     testID="team-auto"
                     disabled={!players.length}
                     style={{ flex: 1 }}
-                    onPress={() => setSlots(autoFillSlots(slotCodes, players))}
+                    onPress={() => setSlots(autoFillSlots(slotCodes, players, season))}
                   >
                     {L.autoPlace}
                   </Btn>
@@ -701,6 +711,11 @@ export default function Team() {
                   {L.shareImageApp}
                 </Btn>
               </View>
+              {wildcards ? (
+                <Txt v="xs" tone="muted" testID="team-wildcards">
+                  {wildcards}
+                </Txt>
+              ) : null}
               {editable ? (
                 <Txt v="xs" tone="muted">
                   {L.dragHintApp}
@@ -722,6 +737,8 @@ export default function Team() {
               synLinks={syn.links}
               synFocus={syn.members}
               change={(nextSlots, nextLayout) => {
+                // T-11-114 지난 시즌 선수는 와일드카드 상한까지만.
+                if (tooManyWildcards(nextSlots, byId, season)) return toast(wildcardFullText());
                 setSlots(nextSlots);
                 setLayout(nextLayout);
               }}

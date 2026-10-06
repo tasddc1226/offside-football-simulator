@@ -215,6 +215,7 @@ export function TeamLineup({
         ? {
             name: nameOf(ghostPlayer),
             nation: ghostPlayer.nation,
+            season: ghostPlayer.season,
             rating: ghostPlayer.peak,
             peak: ghostPlayer.peak,
             number: ghostPlayer.number,
@@ -388,6 +389,7 @@ export function TeamLineup({
                         cell={{
                           name: nameOf(p),
                           nation: p.nation,
+                          season: p.season,
                           rating: p.peak,
                           number: p.number,
                           legendScore: p.legendScore,

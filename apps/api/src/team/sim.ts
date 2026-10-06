@@ -39,6 +39,8 @@ export type LineupCareer = {
   foot?: string | null;
   nation?: string | null;
   raised?: boolean;
+  /** T-11-114 카드 시즌(0 = 프리시즌). 팀 시즌보다 앞이면 와일드카드. */
+  season?: number;
 };
 
 /** 경기 기록에 남기는 선수. 공개 이름은 담지 않는다 — 읽을 때 커리어의 지금 공개 이름을 붙인다. */

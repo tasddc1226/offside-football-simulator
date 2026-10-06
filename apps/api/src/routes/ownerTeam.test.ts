@@ -665,7 +665,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(await ctx.db.select().from(ownerTeams)).toHaveLength(1);
   });
 
-  it('시즌마다 새 팀 — 그 시즌에 처음 올라온 선수만 넣고, 지난 시즌 팀은 그대로 남는다', async () => {
+  it('시즌마다 새 팀 — 앞 시즌 선수는 와일드카드로 넣고(T-11-114), 지난 시즌 팀은 그대로 남는다', async () => {
     const me = await issueGoogleCookie(ctx);
     const pre = await addCareer(me.profileId, { peak: 90 });
     const s1 = await addCareer(me.profileId, { peak: 85, serviceSeason: 1 });
@@ -685,7 +685,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     ).data;
     expect(fresh).toMatchObject({ season: 1, current: 1, team: null, lastManager: '김감독' });
     expect(fresh.seasons.map((x) => x.id)).toEqual([0, 1]);
-    expect(fresh.players.map((p) => p.careerId)).toEqual([s1]);
+    expect(fresh.players.map((p) => p.careerId)).toEqual([pre, s1]);
     // 지난 시즌 팀으로는 경기할 수 없다(이번 시즌 팀이 없다).
     const noTeam = await call('POST', '/v1/owner-team/matches', {
       cookie: me.cookie,
@@ -693,9 +693,8 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       body: { opponentTeamId: rival.team.id },
     });
     expect(noTeam.status).toBe(409);
-    expect((await putTeam(me.cookie, { slots: slots(pre) })).status).toBe(400);
     const s1Team = PutRes.parse(
-      await (await putTeam(me.cookie, { name: '시즌 FC', slots: slots(s1) })).json(),
+      await (await putTeam(me.cookie, { name: '시즌 FC', slots: slots(s1, pre) })).json(),
     ).data.team;
     expect(s1Team).toMatchObject({ season: 1, name: '시즌 FC' });
     expect(s1Team.id).not.toBe(preTeam.id);
@@ -1305,6 +1304,32 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
         await (await call('GET', '/v1/owner-team?season=0', { cookie: b.cookie })).json(),
       ).data;
       expect(team).toMatchObject({ season: 0, current: 1, founder: true });
+    });
+
+    it('T-11-114 지난 시즌 선수는 와일드카드로 이번 시즌 선발에 3명까지 넣고, 카드 시즌이 보인다', async () => {
+      const a = await issueGoogleCookie(ctx, { nickname: '와일드' });
+      const pre = [];
+      for (let i = 0; i < 4; i++) pre.push(await addCareer(a.profileId, { peak: 88 }));
+      vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
+      const s1 = await addCareer(a.profileId, { serviceSeason: 1 });
+
+      const view = GetRes.parse(
+        await (await call('GET', '/v1/owner-team', { cookie: a.cookie })).json(),
+      ).data;
+      expect(view.season).toBe(1);
+      expect(view.players.map((p) => [p.careerId, p.season]).sort()).toEqual(
+        [...pre.map((id) => [id, 0]), [s1, 1]].sort(),
+      );
+
+      const over = await putTeam(a.cookie, { slots: slots(s1, ...pre) });
+      expect(over.status).toBe(400);
+      expect(await reason(over)).toBe('WILDCARD_LIMIT');
+      const ok = await putTeam(a.cookie, { slots: slots(s1, ...pre.slice(0, 3)) });
+      expect(ok.status).toBe(200);
+      const team = PutRes.parse(await ok.json()).data.team;
+      expect(team.season).toBe(1);
+      expect(team.slots.slice(0, 4).map((s) => s.season)).toEqual([1, 0, 0, 0]);
+      expect(team.slots[4]!.season).toBeUndefined();
     });
 
     it('친구를 끊으면 두 줄이 지워지고, 프로필을 지우면 친구 줄과 친선전이 사라진다', async () => {

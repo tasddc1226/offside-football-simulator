@@ -94,7 +94,7 @@
   "packages/contracts/src/market-value.ts": 8,
   "packages/contracts/src/market.ts": 2,
   "packages/contracts/src/nations.ts": 239,
-  "packages/contracts/src/owner-team.ts": 12,
+  "packages/contracts/src/owner-team.ts": 14,
   "packages/contracts/src/positions.ts": 13,
   "packages/contracts/src/primitives.ts": 3,
   "packages/contracts/src/profile.ts": 1,

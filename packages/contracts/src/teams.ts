@@ -112,6 +112,8 @@ export const TeamPlayerSchema = z.strictObject({
   /** T-11-105 시너지용 유형 id·주발. 구버전 응답에는 없다. */
   type: z.string().nullable().optional(),
   foot: z.string().nullable().optional(),
+  /** T-11-114 카드 시즌(0 = 프리시즌). 팀 시즌보다 앞이면 와일드카드다. 구버전 응답에는 없다. */
+  season: z.number().int().nonnegative().optional(),
   /** T-11-080 판매 등록 중이면 그 등록. */
   listing: z.strictObject({ id: z.string(), price: z.number().int() }).nullable().optional(),
 });
@@ -125,6 +127,8 @@ export const TeamSlotSchema = z.strictObject({
   name: z.string(),
   pos: CareerPosSchema.nullable(),
   nation: z.string().nullable().optional(),
+  /** T-11-114 카드 시즌(0 = 프리시즌). 구버전 응답·유스 선수 자리에는 없다. */
+  season: z.number().int().nonnegative().optional(),
   /** 그 자리에서의 실력(자리별 실력, 없으면 최고 OVR × 적합도). */
   rating: z.number().int(),
   fit: z.number(),

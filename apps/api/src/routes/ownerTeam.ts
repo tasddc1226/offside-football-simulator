@@ -14,6 +14,9 @@ import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/c
 import {
   TEAM_MATCHES_PER_DAY,
   TEAM_REPEAT_WINDOW_DAYS,
+  TEAM_WILDCARD_MAX,
+  WILDCARD_FULL_TEXT,
+  isWildcardSeason,
   matchScore,
   ratingChange,
   type FormationId,
@@ -230,6 +233,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           raised: !!p.raised,
           ...(p.type ? { type: p.type } : {}),
           ...(p.foot ? { foot: p.foot } : {}),
+          season: career.season,
           listing: p.listingId ? { id: p.listingId, price: p.listPrice! } : null,
         })),
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
@@ -273,9 +277,20 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         code: 'VALIDATION_FAILED',
         message:
           season === current
-            ? '이번 시즌에 뛰고 은퇴한 내 선수만 팀에 넣을 수 있어요.'
+            ? '지금 가진 내 선수만 팀에 넣을 수 있어요.'
             : '지금 가진 프리시즌 선수만 프리시즌 팀에 넣을 수 있어요.',
         details: { reason: 'PLAYER_NOT_ELIGIBLE' },
+      });
+    }
+    // T-11-114 지난 시즌 선수(와일드카드)는 선발에 정해진 수까지만.
+    if (
+      ids.filter((id) => isWildcardSeason(eligible.get(id)?.season, season)).length >
+      TEAM_WILDCARD_MAX
+    ) {
+      throw new AppError({
+        code: 'VALIDATION_FAILED',
+        message: WILDCARD_FULL_TEXT,
+        details: { reason: 'WILDCARD_LIMIT' },
       });
     }
     // 이전 클라이언트가 좌표를 보내지 않으면 기존 자유 편성을 보존한다.

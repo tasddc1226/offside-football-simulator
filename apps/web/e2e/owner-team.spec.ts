@@ -1136,3 +1136,52 @@ test('T-11-113 개막 뒤 프리시즌 팀을 꾸려 친구와 프리시즌 친�
   await expect(page.locator('#toast')).toContainText('팀을 만들었어요');
   expect(puts).toMatchObject([{ season: 0, name: '레전드 FC' }]);
 });
+
+test('T-11-114 지난 시즌 선수는 와일드카드로 선발에 3명까지 넣고 카드에 시즌 뱃지가 보인다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  const old = [1, 2, 3, 4].map((i) => ({
+    ...PLAYERS[0]!,
+    careerId: `00000000-0000-4000-8000-00000000010${i}`,
+    publicName: `프리 ${i}`,
+    peak: 92 - i,
+    season: 0,
+  }));
+  const fresh = {
+    ...PLAYERS[0]!,
+    careerId: '00000000-0000-4000-8000-000000000201',
+    publicName: '새 얼굴',
+    peak: 70,
+    season: 1,
+  };
+  await page.route(ownerTeamUrl, (route) =>
+    route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS, players: [...old, fresh] })),
+  );
+  await page.route(`${API}/v1/owner-team/opponents`, (route) => route.fulfill(ok({ items: [] })));
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await expect(page.locator('[data-team-wildcards]')).toHaveText('와일드카드 0/3');
+  await expect(
+    page.locator(`[data-locker-player="${old[0]!.careerId}"] [data-card-season]`),
+  ).toHaveText('PRE');
+  await expect(
+    page.locator(`[data-locker-player="${fresh.careerId}"] [data-card-season]`),
+  ).toHaveText('S1');
+
+  await page.locator('[data-act="team-auto"]').click();
+  await expect(page.locator('[data-team-wildcards]')).toHaveText('와일드카드 3/3');
+  await expect(page.locator('button[data-slot] [data-card-season="0"]')).toHaveCount(3);
+  await expect(page.locator('button[data-slot] [data-card-season="1"]')).toHaveCount(1);
+  await page
+    .locator('.ground-panel')
+    .screenshot({ path: test.info().outputPath('wildcard-ground.png') });
+
+  // 네 번째 지난 시즌 선수는 빈 자리에 넣을 수 없다.
+  await page.locator(`[data-locker-player="${old[3]!.careerId}"] .locker-select`).click();
+  await page.locator('button[data-slot]:has(.youth)').first().click();
+  await expect(page.locator('#toast')).toContainText('지난 시즌 선수는 선발에 3명까지');
+  await expect(page.locator('[data-team-wildcards]')).toHaveText('와일드카드 3/3');
+});
