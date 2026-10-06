@@ -4,6 +4,7 @@
 // 구단 이름·엠블럼 변경은 환경설정에 있다.
 // T-11-026 구단 허브 — 맨 위에 구단주 요약(은퇴 선수·레전드 점수·결번), 그 아래 '내 팀' 카드(전적·레이팅·오늘 남은
 // 경기와 바로 경기하기), 내 선수 상위 3명, 계정은 맨 아래. 비로그인이면 '내 팀' 자리에 잠긴 카드와 로그인 버튼을 둔다.
+// T-11-128 요약 아래에 시즌 결산 카드(RecapCard) — 끝난 시즌이 있으면 결산 화면(recap)으로 연다.
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -34,6 +35,7 @@ import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
+import { RecapCard } from './RecapCard';
 import { Grid2, OvrBadge, Stats } from './TeamParts';
 import { TeamLogo } from '../../components/TeamLogo';
 import { AdSlot } from '../../components/AdSlot';
@@ -248,6 +250,9 @@ export default function Owner() {
       ) : null}
 
       {linked || guest ? <AdSlot place="owner-summary" /> : null}
+
+      {/* T-11-128 시즌 결산: 끝난 시즌이 있을 때만(카드가 스스로 숨는다). 비로그인도 본다. */}
+      <RecapCard />
 
       {/* T-10-092 내 팀: 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. */}
       {linked ? (

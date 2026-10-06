@@ -27,6 +27,9 @@
   import { googleStartUrl } from '@offside/app-core/api/client';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
   import { accountText as A } from '@offside/app-core/i18n/ko/account';
+  import { fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
+  import { recapCardView } from '@offside/app-core/seasonRecap';
+  import { seasonRecapText as R } from '@offside/app-core/i18n/ko/seasonRecap';
 
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
@@ -75,6 +78,14 @@
     });
   });
   const clubValue = $derived(linked ? (market?.clubValue ?? null) : (summary?.value ?? null));
+  // T-11-128 시즌 결산 카드 — 끝난 시즌이 있으면 가장 최근 결산을 한 줄로 알린다. 불러오지 못하면 카드를 숨긴다.
+  let recap = $state<SeasonRecapResponse | null>(null);
+  $effect(() => {
+    void fetchSeasonRecap().then((r) => {
+      if (r.ok) recap = r.data;
+    });
+  });
+  const recapCard = $derived(recap ? recapCardView(recap) : null);
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
@@ -110,6 +121,23 @@
       {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}</p>{/if}
     </section>
     <AdSlot place="owner-summary" />
+  {/if}
+
+  <!-- T-11-128 시즌 결산: 끝난 시즌이 있을 때만. 비로그인도 본다(프로필 쿠키만 있으면 된다). -->
+  {#if recap && recapCard}
+    <section class="card owner-market" aria-label={R.cardTitle} data-owner-recap data-recap-status={recap.status}>
+      <div class="owner-who">
+        <small class="eyebrow">Season recap</small>
+        <h2>{R.cardTitle}{#if recapCard.isNew}<span class="pill good owner-founder" data-recap-new>{R.newBadge}</span>{/if}</h2>
+        <span class="muted fs-sm">{recapCard.line}</span>
+        {#if recapCard.chips.length > 0}
+          <span class="recap-chips">
+            {#each recapCard.chips as c (c.kind)}<span class="pill recap-chip medal {c.medal}" data-recap-chip={c.kind}>{c.title} {c.detail}</span>{/each}
+          </span>
+        {/if}
+      </div>
+      <button class="btn" data-act="recap" onclick={() => go('recap')}>{R.open}</button>
+    </section>
   {/if}
 
   <!-- T-10-092 내 팀: 구글로 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. -->

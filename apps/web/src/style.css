@@ -858,6 +858,138 @@ button.hof-row {
 .hof-value-text {
   font-size: 1.0625rem;
 }
+
+/* T-11-128 구단주 시즌 결산 — 허브 카드의 휘장 칩, 결산 화면의 휘장 타일·대표 선수 카드. 색은 .medal의 --medal(-text)을 따른다. */
+.recap-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.recap-chip {
+  color: var(--medal-text);
+  border-color: color-mix(in srgb, var(--medal) 55%, transparent);
+  background: color-mix(in srgb, var(--medal) 12%, var(--surface));
+}
+.recap .recap-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.recap-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.recap-picker select {
+  min-height: 44px; /* 터치 44px */
+}
+.recap-fail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.recap-honors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.recap-honor {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--medal) 45%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--medal) 16%, transparent), transparent 80%),
+    var(--surface-2);
+  text-align: center;
+  min-width: 0;
+}
+.recap-honor b {
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+.recap-emblem {
+  position: relative;
+  width: 56px;
+  height: 56px;
+}
+.recap-honor-detail {
+  font-family: var(--display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--medal-text);
+}
+/* 구단주 허브의 숫자 칸(Owner.svelte .owner-stats)과 같은 모양 — 그쪽은 컴포넌트 범위라 여기 따로 둔다. */
+.recap-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.recap-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  min-width: 0;
+}
+.recap-stats dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.recap-stats dd {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.recap-best {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.recap-best b {
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+.recap-best-score {
+  font-family: var(--display);
+  font-weight: 700;
+  color: var(--accent-text);
+}
+.recap-team-name {
+  font-size: 1.0625rem;
+  overflow-wrap: anywhere;
+}
+.recap-next {
+  padding: 4px 2px;
+  text-align: center;
+}
 .hof-value-text {
   text-align: right;
   line-height: 1.15;

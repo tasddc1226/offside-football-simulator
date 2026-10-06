@@ -51,6 +51,7 @@ import { ownerPlayers } from './ownerPlayers';
 import { playerNudge } from './playerNudge';
 import { push } from './push';
 import { retired } from './retired';
+import { seasonRecap } from './seasonRecap';
 import { settings } from './settings';
 import { settingsApi } from './settingsApi';
 import { share } from './share';
@@ -125,6 +126,7 @@ export const en = {
   playerNudge,
   push,
   retired,
+  seasonRecap,
   settings,
   settingsApi,
   share,
