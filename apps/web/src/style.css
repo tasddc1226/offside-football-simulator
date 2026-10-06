@@ -1388,11 +1388,26 @@ textarea {
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   gap: 12px;
 }
 .player > *:not(.chalk) {
   position: relative;
+}
+.player .avatar {
+  align-self: end;
+}
+/* T-11-120 도트 선수(24×32칸, PixelAvatar). 정수배(3배·2배)로만 키워 칸이 고르게 보이게 한다 — game/avatar.ts avatarWidth와 같은 값. */
+.avatar {
+  width: 72px;
+  height: 96px;
+  flex: none;
+}
+@media (max-width: 359px) {
+  .avatar {
+    width: 48px;
+    height: 64px;
+  }
 }
 .player .shirt {
   font-family: var(--display);
@@ -1807,7 +1822,7 @@ body:has(.main-nav) .wrap {
 }
 .meter {
   display: grid;
-  grid-template-columns: 54px 1fr 34px;
+  grid-template-columns: 72px 1fr 34px;
   gap: 10px;
   align-items: center;
   font-size: 0.8125rem;

@@ -93,7 +93,7 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
   return {
     kicker: `FULL TIME${v.number != null ? ` · NO.${v.number}` : ''}`,
     name: v.name,
-    sub: [POS_LABEL[v.pos], span, L.cardRetiredAge({ age: v.age })].filter(Boolean).join(' · '),
+    sub: [tn(POS_LABEL[v.pos]), span, L.cardRetiredAge({ age: v.age })].filter(Boolean).join(' · '),
     score: v.score,
     pills,
     stats,

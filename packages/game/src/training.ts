@@ -8,7 +8,7 @@ import {
   type AttrKey,
   type Pos,
 } from './data.js';
-import { ovr, wOf } from './attributes.js';
+import { ovr, wOf, mainRole, ROLES, faceOf, SUBS } from './attributes.js';
 import { clamp, ri, pick, chance, rnd } from './rng.js';
 import { baseline } from './candidates.js';
 import { BAL } from './balance.js';
@@ -119,8 +119,15 @@ export function trainingHelp(s: GameState, t: TrainingDef): string {
   const name = labelOf(s, k);
   const w = wOf(s)[k];
   const { focus, bf, lopsided } = attrInfo(s, k);
+  const weights = ROLES[mainRole(s)]!;
+  const subs = Object.keys(faceOf(s)[k]!)
+    .filter((key) => (weights[key] ?? 0) > 0)
+    .sort((a, b) => weights[b]! - weights[a]!)
+    .map((key) => SUBS[key])
+    .join(' · ');
   return [
     L.helpAttrMain({ attr: name }),
+    subs ? L.helpOvrSubs({ list: subs }) : L.helpOvrSeparate,
     k === 'phy' ? L.helpPhy({ pac: labelOf(s, 'pac') }) : '',
     focus
       ? L.helpFocus({ pct: pct(FOCUS_GROWTH - 1) })

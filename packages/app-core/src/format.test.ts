@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { cardFootNote, cardTier, iGa, withEulReul, withRo } from './format.js';
+import { cardFootNote, cardTier, fmtValue, iGa, withEulReul, withRo } from './format.js';
+import { setLocale } from './i18n/core.js';
 import { priceAtPct, priceDiff, releaseLock } from './market.js';
 import { chartModel, marketIndex, ratioPct } from './marketChart.js';
 
@@ -107,5 +108,17 @@ describe('시세 차트 (T-11-080f)', () => {
     expect(m.dots.map((d) => [d.x, d.t.ratio])).toEqual([[100, 700]]);
     expect([m.top, m.bottom, m.from, m.to, m.tone]).toEqual(['125%', '65%', '9/29', '10/5', 'up']);
     expect(m.base).toBeGreaterThan(m.days[1]!.y);
+  });
+});
+
+describe('fmtValue 언어 (T-11-119)', () => {
+  it('영어에서는 억·천만 대신 원화 약식으로 쓴다', () => {
+    expect(fmtValue(1_234_000)).toBe('123억 4천만');
+    setLocale('en');
+    try {
+      expect(fmtValue(1_234_000)).toBe('₩12.34B');
+    } finally {
+      setLocale('ko');
+    }
   });
 });
