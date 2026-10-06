@@ -74,8 +74,8 @@
   .card-rating span { font-family:var(--display); font-size:.82rem; font-weight:700; line-height:1; margin-top:4px; }
   .card-nation {position:absolute;top:82px;left:11px;z-index:1;width:36px;text-align:center;font-family:system-ui,sans-serif;font-size:18px;line-height:18px;}
   /* T-11-114 시즌 뱃지(색은 cardSeasonColor). */
-  .card-season {position:absolute;top:30px;right:12px;z-index:1;padding:2px 5px 1px;border-radius:3px;background:var(--season-bg);color:#fff;font:800 9px/1.1 system-ui,sans-serif;letter-spacing:.06em;box-shadow:0 0 0 1px #ffffff55 inset;}
-  .compact .card-season {top:29px;right:4px;padding:1px 3px 0;font-size:7px;}
+  .card-season {position:absolute;top:9px;left:50%;transform:translateX(-50%);z-index:1;padding:2px 5px 1px;border-radius:3px;background:var(--season-bg);color:#fff;font:800 9px/1.1 system-ui,sans-serif;letter-spacing:.06em;box-shadow:0 0 0 1px #ffffff55 inset;}
+  .compact .card-season {top:4px;padding:1px 3px 0;font-size:7px;}
   .card-deployment {display:flex;flex-direction:column;align-items:center;font-size:8px;line-height:10px;}
   .card-deployment b {font-family:var(--display);font-size:12px;line-height:13px;}
   .card-art { position:relative; height:72px; margin-left:26px; }
@@ -112,5 +112,5 @@
   .compact .shirt-number { font-size:1.15rem; }
   .compact .card-name { font-size:11px; margin-top:3px; }
   .compact.deployed .card-art {height:36px;}
-  @media(max-width:440px) { .compact .card-face { height:88px; padding:8px 3px 10px; } .compact .card-rating { left:5px;top:11px; } .compact .card-rating b { font-size:1.3rem; } .compact .card-art { height:34px;margin-top:8px; } .compact .shirt-number {font-size:1rem;} .compact.deployed .card-art {height:24px;} }
+  @media(max-width:440px) { .compact .card-face { height:88px; padding:8px 3px 10px; } .compact .card-rating { left:5px;top:11px; } .compact .card-season {top:2px;} .compact .card-rating b { font-size:1.3rem; } .compact .card-art { height:34px;margin-top:8px; } .compact .shirt-number {font-size:1rem;} .compact.deployed .card-art {height:24px;} }
 </style>

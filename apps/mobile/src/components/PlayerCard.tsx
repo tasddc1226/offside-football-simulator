@@ -215,36 +215,44 @@ export type PlayerCardData = {
   youth: boolean;
 };
 
-/** T-11-114 카드 시즌 뱃지(웹 PlayerCard .card-season). */
+/** T-11-114 카드 시즌 뱃지(웹 PlayerCard .card-season) — 카드 위쪽 가운데. */
 function SeasonBadge({ season, compact }: { season: number; compact: boolean }) {
   return (
     <View
-      accessibilityLabel={teamSeasonLabel(season)}
+      pointerEvents="none"
       style={{
         position: 'absolute',
-        top: 26,
-        right: compact ? 4 : 11,
-        paddingHorizontal: compact ? 3 : 5,
-        paddingVertical: 1,
-        borderRadius: 3,
-        backgroundColor: cardSeasonColor(season),
-        borderWidth: 0.5,
-        borderColor: '#ffffff55',
+        top: compact ? 2 : 8,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
       }}
     >
-      <Text
-        maxFontSizeMultiplier={1.1}
+      <View
+        accessibilityLabel={teamSeasonLabel(season)}
         style={{
-          color: '#fff',
-          fontSize: compact ? 7 : 9,
-          lineHeight: compact ? 9 : 11,
-          fontWeight: '800',
-          letterSpacing: 0.5,
-          includeFontPadding: false,
+          paddingHorizontal: compact ? 3 : 5,
+          paddingVertical: 1,
+          borderRadius: 3,
+          backgroundColor: cardSeasonColor(season),
+          borderWidth: 0.5,
+          borderColor: '#ffffff55',
         }}
       >
-        {cardSeasonBadge(season)}
-      </Text>
+        <Text
+          maxFontSizeMultiplier={1.1}
+          style={{
+            color: '#fff',
+            fontSize: compact ? 7 : 9,
+            lineHeight: compact ? 9 : 11,
+            fontWeight: '800',
+            letterSpacing: 0.5,
+            includeFontPadding: false,
+          }}
+        >
+          {cardSeasonBadge(season)}
+        </Text>
+      </View>
     </View>
   );
 }
