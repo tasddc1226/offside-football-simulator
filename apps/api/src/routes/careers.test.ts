@@ -409,6 +409,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       status: 'retired',
       retiredNumber: null,
       serviceSeason: expect.any(Number),
+      title: null,
     });
 
     const retiredRow = (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0];
