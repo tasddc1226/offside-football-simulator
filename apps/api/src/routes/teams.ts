@@ -69,7 +69,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       EDGE.teamRank(season, q.sort, q.page),
       RANK_TTL,
       async (): Promise<Omit<TeamRankResponse, 'seasons'>> => {
-        const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, q.page);
+        const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, q.page, now);
         const forms = await listTeamRecentForm(
           getDb(c),
           rows.map((t) => t.id),
@@ -90,6 +90,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
             rating: t.rating,
             record: recordOf(t),
             likes: t.likes,
+            value: t.value,
             createdAt: t.createdAt,
             recentForm: forms.get(t.id) ?? [],
           })),

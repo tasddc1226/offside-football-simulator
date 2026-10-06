@@ -1185,3 +1185,60 @@ test('T-11-114 지난 시즌 선수는 와일드카드로 선발에 3명까지 �
   await expect(page.locator('#toast')).toContainText('지난 시즌 선수는 선발에 3명까지');
   await expect(page.locator('[data-team-wildcards]')).toHaveText('와일드카드 3/3');
 });
+
+// T-11-129 홈의 구단 가치 TOP 3 — 라이브 랭킹 첫 페이지(sort=value)를 한 번만 부르고, 전체 보기는 구단 가치 순 팀 랭킹으로 간다.
+test('홈 구단 가치 TOP 3 — 가치가 있는 팀만 보이고, 전체 보기·줄 누르기로 기록실 팀 랭킹을 연다', async ({
+  page,
+}) => {
+  const rankQueries: string[] = [];
+  const row = (rank: number, teamId: string, name: string, value: number) => ({
+    rank,
+    teamId,
+    name,
+    manager: `${name} 감독`,
+    formation: '4-3-3',
+    ovr: 80 - rank,
+    rating: 1000,
+    record: { w: 0, d: 0, l: 0 },
+    likes: 0,
+    value,
+    createdAt: '2026-09-29T00:00:00.000Z',
+  });
+  await page.route(`${API}/v1/teams?*`, (route) => {
+    const sp = new URL(route.request().url()).searchParams;
+    rankQueries.push(sp.toString());
+    return route.fulfill(
+      ok({
+        season: 0,
+        seasons: SEASONS,
+        sort: sp.get('sort') ?? 'rating',
+        page: 1,
+        total: 3,
+        items: [
+          row(1, RIVAL, '라이벌 FC', 2_345_000),
+          row(2, MY_TEAM, '프리 FC', 120_000),
+          row(3, 'tem_00000000-0000-4000-8000-000000000003', '빈손 FC', 0),
+        ],
+      }),
+    );
+  });
+  const profileAsked: string[] = [];
+  await page.route(`${API}/v1/teams/${RIVAL}**`, (route) => {
+    profileAsked.push(route.request().url());
+    return route.fulfill(fail(404, 'NOT_FOUND', '팀을 찾을 수 없어요.'));
+  });
+  await page.goto('/');
+  const box = page.locator('[data-home-club-value]');
+  await expect(box.locator('[data-club-value-team]')).toHaveCount(2);
+  await expect(box.locator(`[data-club-value-team="${RIVAL}"]`)).toContainText('라이벌 FC');
+  await expect(box.locator(`[data-club-value-team="${RIVAL}"]`)).toContainText('억');
+  await expect(box.locator(`[data-club-value-team="${MY_TEAM}"]`)).toContainText('12억');
+
+  await box.locator('[data-act="club-value-all"]').click();
+  await expect(page.locator('[data-rank-sort="value"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-team-ranking]')).toContainText('선발 11명의 카드 기준가');
+  await page.locator('[data-act="home"]').click();
+  await page.locator(`[data-club-value-team="${RIVAL}"]`).click();
+  await expect.poll(() => profileAsked.length).toBeGreaterThan(0);
+  expect(rankQueries.filter((q) => q === 'sort=value&page=1')).toHaveLength(1);
+});

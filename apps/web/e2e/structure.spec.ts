@@ -100,6 +100,8 @@ const HOME_REQUESTS = [
   'GET /v1/firsts',
   'GET /v1/hof?limit=3',
   'GET /v1/live',
+  // T-11-129 홈 구단 가치 TOP 3 — 기록실 팀 랭킹 첫 페이지와 같은 요청(메모·엣지 캐시 공유).
+  'GET /v1/teams?sort=value&page=1',
   'GET /v1/ticker',
   // 미읽음 알림용 연결을 처음 한 번 열고, 화면을 옮길 때는 그대로 재사용한다.
   'POST /v1/chat/ticket',

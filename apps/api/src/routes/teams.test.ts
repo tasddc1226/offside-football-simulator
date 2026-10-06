@@ -9,7 +9,7 @@ import {
 } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { careers, ownerTeams, teamLikes, teamMatches } from '../db/schema.js';
+import { cards, careers, ownerTeams, teamLikes, teamMatches } from '../db/schema.js';
 import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
@@ -107,6 +107,40 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     expect(byOvr.items.map((i) => i.teamId)).toEqual([strong.team.id, weak.team.id]);
     expect((await call('GET', '/v1/teams?season=1')).status).toBe(400);
     expect((await call('GET', '/v1/teams?sort=goals')).status).toBe(400);
+  });
+
+  it('T-11-129: 구단 가치는 선발 11명 카드 기준가 합이고, 지금 주인이 아닌 카드·숨긴 카드는 세지 않는다', async () => {
+    const deep = await team(3, 90, '셋감독');
+    const star = await team(1, 70, '한감독');
+    const slotIds = (t: typeof deep) =>
+      t.team.slots.flatMap((x) => (x.careerId ? [x.careerId] : []));
+    const [a, b, c] = slotIds(deep);
+    const [s1] = slotIds(star);
+    for (const [id, v] of [
+      [a, 500],
+      [b, 400],
+      [c, 300],
+      [s1, 1_000],
+    ] as const)
+      await ctx.db.update(cards).set({ cardValue: v }).where(eq(cards.careerId, id!));
+
+    const data = (await rank('?sort=value')).data;
+    expect(data.sort).toBe('value');
+    expect(data.items.map((i) => [i.teamId, i.value])).toEqual([
+      [deep.team.id, 1_200],
+      [star.team.id, 1_000],
+    ]);
+    // 다른 정렬에도 구단 가치가 실린다.
+    expect((await rank()).data.items.find((i) => i.teamId === star.team.id)?.value).toBe(1_000);
+
+    // 팔려 나간 카드(주인이 바뀐 카드)와 숨긴 선수는 선발에서 빠진다.
+    await ctx.db.update(cards).set({ ownerId: star.profileId }).where(eq(cards.careerId, a!));
+    await ctx.db.update(careers).set({ hidden: 1 }).where(eq(careers.id, b!));
+    const after = (await rank('?sort=value&page=1')).data;
+    expect(after.items.map((i) => [i.teamId, i.value])).toEqual([
+      [star.team.id, 1_000],
+      [deep.team.id, 300],
+    ]);
   });
 
   it('최근 5경기는 홈·원정을 합쳐 최신순으로 읽고 상대 결과는 뒤집는다', async () => {

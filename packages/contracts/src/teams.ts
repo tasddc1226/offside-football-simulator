@@ -325,7 +325,8 @@ export type ClubAchievementsResponse = z.infer<typeof ClubAchievementsResponseSc
 
 // ───────── 라이브 랭킹(팀 랭킹) · 팀 프로필 ─────────
 
-export const TeamRankSortSchema = z.enum(['rating', 'ovr']);
+/** value: 구단 가치(선발 11명 카드 기준가 합, T-11-129). */
+export const TeamRankSortSchema = z.enum(['rating', 'ovr', 'value']);
 export type TeamRankSort = z.infer<typeof TeamRankSortSchema>;
 
 export const TeamRankQuerySchema = z.strictObject({
@@ -346,6 +347,8 @@ export const TeamRankItemSchema = z.strictObject({
   rating: z.number().int(),
   record: TeamRecordSchema,
   likes: count,
+  /** 구단 가치 = 선발 11명 카드 기준가 합(만 원, T-11-129). 이전 API 응답에는 없을 수 있다. */
+  value: count.default(0),
   createdAt: IsoUtcSchema,
   /** 최근 경기부터, 홈·원정을 합친 최대 5경기. 이전 API 응답에는 없을 수 있다. */
   recentForm: z

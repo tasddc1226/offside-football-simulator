@@ -2,6 +2,8 @@ import { PeakProfileSchema, TeamLayoutSchema, TeamLogoSchema } from '@offside/co
 import type { TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
+import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
+import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import {
   DETAIL_POSITIONS,
   FACE_ATTRS,
@@ -385,20 +387,44 @@ export async function listOpponentCandidates(
   return [...up, ...down].map((r) => r.team);
 }
 
-const RANK_ORDER: Record<TeamRankSort, ReturnType<typeof desc>[]> = {
-  rating: [desc(ownerTeams.rating), desc(ownerTeams.ovr), asc(ownerTeams.createdAt)],
-  ovr: [desc(ownerTeams.ovr), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
-};
+/**
+ * T-11-129 구단 가치 = 선발 11명 카드 기준가 합(만 원). 선발로 실제 뛰는 카드만 센다(eligibleMap과 같은 규칙): 그 시즌까지의
+ * 숨기지 않은 카드, 진행 중 시즌이면 지금 그 구단주가 가진 카드. 기준가가 아직 없는 카드는 하한(CARD_VALUE_FLOOR)으로.
+ * cross join으로 슬롯 11칸에서 카드 기본키로 찾게 순서를 고정한다 — 그냥 join이면 플래너가 구단주의 카드 전체
+ * (cards_owner_season_idx)부터 훑어 운영에서 읽는 행이 10배 늘었다(49,186 → 4,722, 2026-10-06 측정).
+ */
+const lineupValueSql = (open: boolean) => sql<number>`(
+  select coalesce(sum(coalesce(${cards.cardValue}, ${CARD_VALUE_FLOOR})), 0)
+  from json_each(${ownerTeams.slotsJson}) as slot
+  cross join ${cards} on ${cards.careerId} = slot.value
+  left join ${careers} on ${careers.id} = ${cards.careerId}
+  where ${cards.serviceSeason} <= ${ownerTeams.season} and coalesce(${careers.hidden}, 0) = 0
+  ${open ? sql`and ${cards.ownerId} = ${ownerTeams.profileId}` : sql``}
+)`;
 
-/** 라이브 랭킹 한 페이지 + 랭킹에 오른 팀 수. */
-export async function listTeamRanking(db: Db, season: number, sort: TeamRankSort, page: number) {
+const rankOrder = (sort: TeamRankSort, value: ReturnType<typeof lineupValueSql>) =>
+  ({
+    rating: [desc(ownerTeams.rating), desc(ownerTeams.ovr), asc(ownerTeams.createdAt)],
+    ovr: [desc(ownerTeams.ovr), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
+    value: [desc(value), desc(ownerTeams.rating), asc(ownerTeams.createdAt)],
+  })[sort];
+
+/** 라이브 랭킹 한 페이지 + 랭킹에 오른 팀 수. 팀마다 구단 가치(value)를 함께 센다. */
+export async function listTeamRanking(
+  db: Db,
+  season: number,
+  sort: TeamRankSort,
+  page: number,
+  now: string,
+) {
+  const value = lineupValueSql(!teamSeasonClosed(season, now));
   const [rows, [total]] = await db.batch([
     db
-      .select({ team: ownerTeams })
+      .select({ team: ownerTeams, value })
       .from(ownerTeams)
       .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
       .where(rankedIn(season))
-      .orderBy(...RANK_ORDER[sort], asc(ownerTeams.id))
+      .orderBy(...rankOrder(sort, value), asc(ownerTeams.id))
       .limit(TEAM_RANK_PER_PAGE)
       .offset((page - 1) * TEAM_RANK_PER_PAGE),
     db
@@ -407,7 +433,10 @@ export async function listTeamRanking(db: Db, season: number, sort: TeamRankSort
       .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
       .where(rankedIn(season)),
   ]);
-  return { rows: rows.map((r) => r.team), total: Number(total?.n ?? 0) };
+  return {
+    rows: rows.map((r) => ({ ...r.team, value: Number(r.value) })),
+    total: Number(total?.n ?? 0),
+  };
 }
 
 /** 한 페이지의 최근 전적을 한 쿼리로 읽는다. 인덱스로 팀마다 홈·원정 각 5개만 읽고 합친다. */

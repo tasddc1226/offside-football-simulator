@@ -249,7 +249,10 @@ export function confirmAsync(title: string, message?: string, ok = L.confirm): P
   });
 }
 
-/** 웹 grid-template-columns: repeat(auto-fill, minmax(min, 1fr)) — 폭을 재서 칸 수를 정하고 남는 폭을 나눠 갖는다. */
+/**
+ * 웹 grid-template-columns: repeat(auto-fill, minmax(min, 1fr)) — 폭을 재서 칸 수를 정하고 남는 폭을 나눠 갖는다.
+ * 칸은 높이가 정해지지 않으니 같은 줄 높이를 채우려면 항목에 height: 100% 대신 flexGrow: 1을 준다.
+ */
 export function AutoGrid({
   min,
   gap = 8,
