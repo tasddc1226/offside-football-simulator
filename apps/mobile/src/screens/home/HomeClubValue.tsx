@@ -6,12 +6,11 @@ import { fetchTeamRanking, type TeamRankResponse } from '@offside/app-core/api/t
 import { fmtValue } from '@offside/app-core/format';
 import { hofStart } from '@offside/app-core/state';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
-import { RankBadge } from '../../components/Laurel';
+import { RowFrame, Value } from '../../components/HofRow';
 import { TeamLogo } from '../../components/TeamLogo';
 import { go } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
-import { useColors } from '../../theme/useColors';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 
@@ -23,7 +22,6 @@ function openRanking(team: string | null = null) {
 }
 
 export function HomeClubValue() {
-  const c = useColors();
   const [rows, setRows] = useState<TeamRankResponse['items'] | null>(null);
   const [failed, setFailed] = useState(false);
   const { tick, track } = useRefresh();
@@ -78,7 +76,6 @@ export function HomeClubValue() {
             ? note(L.homeValueEmpty)
             : rows.map((t, i) => {
                 const value = fmtValue(t.value);
-                const [head, sub] = value.split(' ');
                 return (
                   <Press
                     key={t.teamId}
@@ -91,37 +88,23 @@ export function HomeClubValue() {
                       value,
                     })}
                     onPress={() => openRanking(t.teamId)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                      paddingVertical: 10,
-                      borderTopWidth: i === 0 ? 0 : 1,
-                      borderTopColor: c.line,
-                    }}
                   >
-                    <RankBadge rank={i + 1} />
-                    <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <TeamLogo logo={t.logo} name={t.name} size={20} decorative />
-                        <Txt bold numberOfLines={1} style={{ flexShrink: 1 }}>
-                          {t.name}
-                        </Txt>
+                    <RowFrame rank={i}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 10 }}>
+                        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <TeamLogo logo={t.logo} name={t.name} size={20} decorative />
+                            <Txt bold numberOfLines={1} style={{ flexShrink: 1 }}>
+                              {t.name}
+                            </Txt>
+                          </View>
+                          <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75) }}>
+                            {`${L.profManager}${t.manager} · OVR ${t.ovr}`}
+                          </Txt>
+                        </View>
+                        <Value value={value} unit="" />
                       </View>
-                      <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75) }}>
-                        {`${L.profManager}${t.manager} · OVR ${t.ovr}`}
-                      </Txt>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Txt num numberOfLines={1} style={{ fontSize: rem(1.0625) }}>
-                        {head}
-                      </Txt>
-                      {sub ? (
-                        <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75) }}>
-                          {sub}
-                        </Txt>
-                      ) : null}
-                    </View>
+                    </RowFrame>
                   </Press>
                 );
               })}

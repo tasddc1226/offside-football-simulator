@@ -279,7 +279,6 @@ export default function TeamProfile({ id }: { id: string }) {
                       backgroundColor: c.surface2,
                       borderWidth: b.id.startsWith('final-') ? 2 : 0,
                       borderColor: c.pitchAccent,
-                      // 칸 높이가 정해지지 않아 height: 100%는 네이티브에서 화면 아래까지 늘어난다 — 같은 줄 높이만큼만 채운다.
                       flexGrow: 1,
                     }}
                   >

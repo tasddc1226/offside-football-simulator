@@ -18,6 +18,12 @@
     ['ovr', L.sortOvr],
     ['value', L.sortValue],
   ];
+  /** 정렬마다 값 칸의 이름과 값(구단 가치는 몸값 표기). */
+  const METRIC: Record<TeamRankSort, { label: () => string; of: (t: TeamRankResponse['items'][number]) => string }> = {
+    rating: { label: () => L.sortRating, of: (t) => n(t.rating) },
+    ovr: { label: () => L.sortOvr, of: (t) => String(t.ovr) },
+    value: { label: () => L.sortValue, of: (t) => fmtValue(t.value) },
+  };
   const formLabel = (result: 'W' | 'D' | 'L') => ({ W: L.formWin, D: L.formDraw, L: L.formLoss })[result];
   function formText(form: TeamRankResponse['items'][number]['recentForm']) {
     return form?.length ? form.map((result) => formLabel(result)).join(', ') : L.formNone;
@@ -35,10 +41,8 @@
   const selectedSeason = $derived(season ?? data?.season ?? displaySeasonAt(now));
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = $derived(season ?? displaySeasonAt(now));
-  const metricLabel = $derived(sort === 'rating' ? L.sortRating : sort === 'ovr' ? L.sortOvr : L.sortValue);
-  /** 고른 정렬의 값(구단 가치는 몸값 표기). */
-  const metricOf = (t: TeamRankResponse['items'][number]) =>
-    sort === 'rating' ? n(t.rating) : sort === 'ovr' ? String(t.ovr) : fmtValue(t.value);
+  const metricLabel = $derived(METRIC[sort].label());
+  const metricOf = $derived(METRIC[sort].of);
   const rows = $derived(data?.items ?? []);
 
   $effect(() => {

@@ -137,7 +137,7 @@ function StatsLine({ text, flow }: { text: string; flow: boolean }) {
 }
 
 /** 오른쪽 큰 값. 글자 값('1,115억 3천만')은 큰 단위 아래에 작은 단위를 한 줄 더 — 이름 줄이 덜 밀린다. */
-function Value({ value, unit }: { value: number | string; unit: string }) {
+export function Value({ value, unit }: { value: number | string; unit: string }) {
   const c = useColors();
   const [head, sub] = typeof value === 'string' ? value.split(' ') : [];
   const small = (s: string) => (

@@ -34,6 +34,35 @@ const sorts = (): [TeamRankSort, string][] => [
   ['value', L.sortValue],
 ];
 
+type Item = TeamRankResponse['items'][number];
+/** 정렬마다 값 칸의 이름(머리 칸은 head)·값·너비(구단 가치는 몸값 표기라 칸을 넓힌다, T-11-129). */
+const METRIC: Record<
+  TeamRankSort,
+  { label: () => string; head: () => string; of: (t: Item) => string; w: number; size: number }
+> = {
+  rating: {
+    label: () => L.sortRating,
+    head: () => L.sortRating,
+    of: (t) => n(t.rating),
+    w: 48,
+    size: 17,
+  },
+  ovr: {
+    label: () => L.sortOvr,
+    head: () => L.colOvrApp,
+    of: (t) => String(t.ovr),
+    w: 48,
+    size: 17,
+  },
+  value: {
+    label: () => L.sortValue,
+    head: () => L.sortValue,
+    of: (t) => fmtValue(t.value),
+    w: 84,
+    size: 14,
+  },
+};
+
 export default function TeamRanking() {
   const c = useColors();
   const snap = useSnapshot(appState);
@@ -67,11 +96,9 @@ export default function TeamRanking() {
   }, [season, sort, page, shownSeason, tick, track]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1;
-  const metricLabel = sort === 'rating' ? L.sortRating : sort === 'ovr' ? L.sortOvr : L.sortValue;
-  /** 고른 정렬의 값(구단 가치는 몸값 표기라 칸을 넓힌다, T-11-129). */
-  const metricOf = (t: TeamRankResponse['items'][number]) =>
-    sort === 'rating' ? n(t.rating) : sort === 'ovr' ? String(t.ovr) : fmtValue(t.value);
-  const metricW = sort === 'value' ? 84 : 48;
+  const metric = METRIC[sort];
+  const metricLabel = metric.label();
+  const metricOf = metric.of;
   function goPage(p: number) {
     setPage(p);
     scrollTo(0);
@@ -163,8 +190,8 @@ export default function TeamRanking() {
                 {label}
               </Txt>
             ))}
-            <Txt bold center style={{ width: metricW, fontSize: 12 }}>
-              {sort === 'rating' ? L.sortRating : sort === 'ovr' ? L.colOvrApp : L.sortValue}
+            <Txt bold center style={{ width: metric.w, fontSize: 12 }}>
+              {metric.head()}
             </Txt>
           </View>
           {data.items.map((t) => (
@@ -220,12 +247,7 @@ export default function TeamRanking() {
                     </Txt>
                   ),
                 )}
-                <Txt
-                  num
-                  bold
-                  center
-                  style={{ width: metricW, fontSize: sort === 'value' ? 14 : 17 }}
-                >
+                <Txt num bold center style={{ width: metric.w, fontSize: metric.size }}>
                   {metricOf(t)}
                 </Txt>
               </View>
