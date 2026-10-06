@@ -21,4 +21,5 @@ export const title: Translation<TitleMsgs> = {
   none: 'None',
   pickOpen: (p) => `Choose from ${p.n} earned titles`,
   pickNote: 'Your chosen title shows on your player card, in the Hall of Fame and on share links.',
+  retiredYear: 'Retired',
 };

@@ -4,6 +4,7 @@
   // T-10-062: 정보 나열 대신 한 편의 엔딩 크레딧처럼 — 타이틀 → 통산 기록 → 클럽별 챕터(우승·이정표·이야기) →
   // 대표팀 → 우승·수상 롤 → 마지막 휘슬. 은퇴 직후든 다시 볼 때든 사용자가 스크롤해 내려가는 대로 장면이
   // 화면에 들어올 때 하나씩 올라온다. 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
+  import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
   import { retirementPotentialNote } from '@offside/app-core/potential-view';
   import type { Snippet } from 'svelte';
   import { legendScoreBreakdown, legendTitle } from '@offside/game/season';
@@ -29,7 +30,7 @@
   const d = $derived(v.d);
   const back = $derived(v.pos === 'GK' || v.pos === 'DF');
   const t = $derived(d ? totals(d) : null);
-  const main = $derived(titleById(legendTitleOf(v.own?.id, v.title)));
+  const main = $derived(titleById(legendTitleOf(v.own ? (v.own.id ?? '') : undefined, v.title)));
 
   const chapters = $derived(d ? careerChapters(d) : []);
   const national = $derived(d ? nationalEvents(d) : []);
@@ -114,7 +115,7 @@
     {/if}
     <div class="film-pills" class:credit-late={playing}>
       <span class="pill pill-gold">{tn(legendTitle(v.score, v.dpos))}</span>
-      {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{tn(main.name)}’</span>{/if}
+      {#if main && (main.cat !== 'legend' || main.id === WALL_OF_HONOR_TITLE_ID)}<span class="pill" data-legend-title>‘{tn(main.name)}’</span>{/if}
       <span class="pill">{L.peakOvr({ peak: v.peak })}</span>
       {#if rnGranted}<span class="pill pill-rn" data-legend-rn-pill title={L.rnPillTitle({ club: tn(rnGranted.club), number: rnGranted.number })}>{L.rnPill({ club: tn(rnGranted.club), number: rnGranted.number })}</span>{/if}
     </div>
@@ -213,7 +214,7 @@
       </div>
     </section>
   {/if}
-  {#if d || rnGranted}
+  {#if d || rnGranted || v.wallOfHonor}
     {#await import('./LateCredits.svelte') then { default: Credit }}
       <Credit {v} rn={rnv} {reveal} />
     {/await}

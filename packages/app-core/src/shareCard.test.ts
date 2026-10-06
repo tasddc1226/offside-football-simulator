@@ -90,6 +90,12 @@ describe('T-10-079 공유 이미지 카드 내용', () => {
     expect(c.style).toBeNull();
   });
 
+  it('명예의 벽 대표 칭호는 점수 등급과 함께 표시하며 영구결번 유니폼을 만들지 않는다', () => {
+    const c = shareCardData(view([season(2027, 'A', 'K리그1')]), 'wall_of_honor');
+    expect(c.pills.map((p) => p.text)).toContain('‘명예의 벽’');
+    expect(c.jersey).toBeNull();
+  });
+
   it('영구결번이 있으면 최고 OVR 대신 결번 배지', () => {
     const v = view([season(2027, 'A', 'K리그1')], {
       rn: { kind: 'granted', clubId: 'k1-1', club: 'A', number: 17, seq: 1 },

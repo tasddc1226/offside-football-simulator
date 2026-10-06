@@ -4,6 +4,7 @@
 import type { RetiredNumberResult } from '@offside/contracts';
 import { seasonValue } from '@offside/contracts/market-value';
 import type { ChapterEvent } from '@offside/game/retirement-report';
+import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { titleById, type TitleDef } from '@offside/game/titles';
 import type { CareerRecord, HofEntry } from '@offside/game/types';
 import { totals } from './format.js';
@@ -67,8 +68,10 @@ export function valuePoints(rows: CareerRecord[], peak: number) {
 
 // ───────── 대표 칭호 ─────────
 /** 받은 칭호를 희귀한 것부터, 같으면 최근 것부터. */
-export function earnedTitles(h: HofEntry): { d: TitleDef; year: number }[] {
-  return (h.detail?.titles ?? [])
+export function earnedTitles(h: HofEntry, rn = h.rn): { d: TitleDef; year: number }[] {
+  const titles = (h.detail?.titles ?? []).filter((t) => t.id !== WALL_OF_HONOR_TITLE_ID);
+  if (rn?.kind === 'taken' && rn.wallOfHonor) titles.push({ id: WALL_OF_HONOR_TITLE_ID, year: 0 });
+  return titles
     .map((e) => ({ d: titleById(e.id), year: e.year }))
     .filter((x): x is { d: TitleDef; year: number } => !!x.d)
     .sort((a, b) => b.d.rarity - a.d.rarity || b.year - a.year);

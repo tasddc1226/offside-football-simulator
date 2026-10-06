@@ -1,3 +1,4 @@
+import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 // ───────── 진행 중 커리어 백업 코드 (T-10-116) ─────────
 // 세이브(ft_save)는 이 브라우저의 localStorage에만 있다 — 카톡 인앱 브라우저 → 사파리, 홈 화면 앱 설치(저장소 분리),
 // iOS 7일 미접속 정리에서 사라지거나 갈라진다. 그래서 세이브를 한 덩어리 문자열(백업 코드/파일)로 뽑고 다시 받는다.
@@ -137,6 +138,17 @@ function decodeBackupValue(text: string): DecodeResult {
 /** 이 기기 은퇴 선수 기록에 백업의 기록을 합친다: 같은 커리어 id는 이 기기 것을 지킨다(id 없는 옛 항목은 이름·나이·
  * 최고 능력치가 같으면 같은 선수). 점수 순으로 세워 로컬 최대치까지만 남긴다. */
 export function mergeHof(mine: HofEntry[], incoming: HofEntry[]): HofEntry[] {
+  incoming = incoming.map((h) => {
+    const copy = { ...h };
+    delete copy.rn;
+    if (copy.title === WALL_OF_HONOR_TITLE_ID) delete copy.title;
+    if (copy.detail)
+      copy.detail = {
+        ...copy.detail,
+        titles: copy.detail.titles?.filter((t) => t.id !== WALL_OF_HONOR_TITLE_ID),
+      };
+    return copy;
+  });
   const keyOf = (h: HofEntry) => h.id ?? `${h.name}|${h.age}|${h.peak}`;
   const seen = new Set(mine.map(keyOf));
   const add = incoming.filter((h) => !seen.has(keyOf(h)) && !!seen.add(keyOf(h)));

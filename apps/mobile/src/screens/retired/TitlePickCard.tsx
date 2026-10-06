@@ -1,3 +1,4 @@
+import { retiredTitleOf } from '@offside/app-core/retiredTitle';
 // 은퇴한 내 선수의 대표 칭호 고르기(웹 titles/TitlePickCard.svelte; 은퇴 화면·내 선수 상세 아래). 받은 칭호 목록은 접어
 // 두고, 펼쳐서 고르면 선수 카드·명예의 전당·공유 링크의 대표 칭호가 바뀐다. 이 기기 기록(ft_hof)에 남기고 서버에 다시
 // 올린다 — 서버는 은퇴 때 올라온 상세 기록의 칭호 목록에 있는 것만 받는다.
@@ -5,12 +6,14 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { loadHOF, saveKey } from '@offside/game/season';
+import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { titleById } from '@offside/game/titles';
 import type { HofEntry } from '@offside/game/types';
 import { earnedTitles } from '@offside/app-core/legendReport';
 import { titleText as L } from '@offside/app-core/i18n/ko/title';
 import { TitleTag } from '../../components/TitleTag';
 import { toast, uploadRetirement } from '../../game/host';
+import { rnResults } from '../../store';
 import { pickedTitles } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -22,8 +25,9 @@ import { liveEntry } from './own';
 export function TitlePickCard({ h }: { h: HofEntry }) {
   const c = useColors();
   const pk = useSnapshot(pickedTitles);
-  const earned = earnedTitles(h);
-  const current = titleById((h.id && pk[h.id]) || h.title);
+  const results = useSnapshot(rnResults);
+  const earned = earnedTitles(h, h.id && h.id in results ? results[h.id] : null);
+  const current = titleById(retiredTitleOf(h.id ?? '', h.title, pk));
   const [open, setOpen] = useState(false);
 
   function pick(id: string) {
@@ -39,7 +43,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
     toast(L.pickChanged({ name: titleById(id)?.name ?? id }));
   }
 
-  if (earned.length <= 1) return null;
+  if (earned.length <= 1 && !earned.some((x) => x.d.id === WALL_OF_HONOR_TITLE_ID)) return null;
   return (
     <Card>
       <View testID="legend-titles">
@@ -99,7 +103,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
                   {x.d.desc}
                 </Txt>
                 <Txt tone="muted" style={{ fontFamily: DISPLAY[700], fontSize: rem(0.75) }}>
-                  {x.year ? x.year : L.earlier}
+                  {x.d.id === WALL_OF_HONOR_TITLE_ID ? L.retiredYear : x.year ? x.year : L.earlier}
                 </Txt>
               </Press>
             );

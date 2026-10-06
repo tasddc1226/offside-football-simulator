@@ -3,6 +3,7 @@
 import type { RetiredNumberResult } from '@offside/contracts';
 import { createRetiredNumbers, type RnAlert } from '@offside/app-core/retiredNumber';
 import type { RetiredNumberEvent } from '../sync/outbox.js';
+import { picked } from './titles/legendTitle.svelte.js';
 import { RETIRED_NUMBER_EVENT } from '../sync/syncEvents.js';
 
 /** 커리어 id → 이번 접속에서 받은 심사 결과. */
@@ -13,11 +14,15 @@ export const rnAlert = $state<RnAlert>({ item: null });
 export const { recordRn, fillGranted, rnOf, watchRetiredNumberAlerts } = createRetiredNumbers(
   rnResults,
   rnAlert,
+  (id, title) => {
+    picked[id] = title;
+  },
 );
 
 export function watchRetiredNumbers() {
   window.addEventListener(RETIRED_NUMBER_EVENT, (e) => {
-    const { careerId, result, serviceSeason } = (e as CustomEvent<RetiredNumberEvent>).detail;
-    recordRn(careerId, result, serviceSeason);
+    const { careerId, result, serviceSeason, title } = (e as CustomEvent<RetiredNumberEvent>)
+      .detail;
+    recordRn(careerId, result, serviceSeason, title);
   });
 }

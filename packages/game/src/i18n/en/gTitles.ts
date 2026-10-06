@@ -117,4 +117,7 @@ export const gTitles: Translation<GTitlesMsgs> = {
   catStory: 'Stories',
   catFame: 'Fame',
   catLegend: 'Retirement',
+  wall_of_honor: 'Wall of Honour',
+  wall_of_honor_d:
+    'Given to a player who qualified for a retired number, but every candidate club had already retired that number',
 };

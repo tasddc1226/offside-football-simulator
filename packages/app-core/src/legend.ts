@@ -1,7 +1,7 @@
 // ───────── 은퇴 선수 상세 · 공개 명예의 전당 (웹·앱 공용, T-10-005 · 공용 T-11-005) ─────────
 // 은퇴 상세 화면과 은퇴 직후 화면이 같은 LegendView를 그린다. 내 선수는 로컬 ft_hof 항목(HofEntry)에서,
 // 다른 유저의 선수는 서버 /v1/hof에서 만든다.
-import type { PublicHofEntry, RetiredNumberResult } from '@offside/contracts';
+import type { LegendSnapshot, PublicHofEntry, RetiredNumberResult } from '@offside/contracts';
 import { toPublicName } from '@offside/contracts/content-filter';
 import { isHofEligible } from '@offside/contracts/hof-rules';
 import { legendScore, loadHOF, saveKey } from '@offside/game/season';
@@ -57,6 +57,7 @@ function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
     title: e.title ?? null,
     pot: retirementPotential(e.potReal),
     rn: e.retiredNumber ? { kind: 'granted', ...e.retiredNumber } : null,
+    wallOfHonor: e.wallOfHonor,
   };
 }
 
@@ -116,7 +117,7 @@ export function createLegends(host: LegendHost) {
       own,
       shareId: ownShareId(own),
       reportId: null,
-      title: mainTitle(s)?.id ?? null,
+      title: own?.title ?? mainTitle(s)?.id ?? null,
       pot: s.retired ? retirementPotential(own?.pot ?? Math.round(truePot(s))) : undefined,
       rn: host.rnOf(s.cid, own?.rn),
     };
@@ -124,10 +125,17 @@ export function createLegends(host: LegendHost) {
 
   /** mine: 계정의 내 선수(T-10-069) — 다른 기기에서 은퇴해 이 기기엔 없어도 공유 바는 띄운다(서버 명예의 전당에
    * 있으니 링크가 있다). */
-  function viewFromPublic(e: PublicHofEntry, d: LegendView['d'], mine: boolean): LegendView {
+  function viewFromPublic(e: PublicHofEntry, d: LegendSnapshot | null, mine: boolean): LegendView {
     // 내 기기에 있는 선수면 로컬 항목을 우선한다(이름 공개 토글 가능).
     const own = loadHOF().find((x) => x.id === e.id);
     if (own) {
+      if (d) own.detail = d;
+      own.title = e.title ?? undefined;
+      if (!e.wallOfHonor && own.rn?.kind === 'taken') own.rn = { ...own.rn, wallOfHonor: false };
+      saveKey(
+        'ft_hof',
+        loadHOF().map((h) => (h.id === own.id ? own : h)),
+      );
       const local = viewFromEntry(own);
       return { ...local, pot: local.pot ?? retirementPotential(e.potReal) };
     }

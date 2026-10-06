@@ -118,6 +118,9 @@ const ko = {
   catStory: '이야기',
   catFame: '인기',
   catLegend: '은퇴',
+  wall_of_honor: '명예의 벽',
+  wall_of_honor_d:
+    '영구결번 자격을 채웠지만 후보 구단의 번호가 모두 먼저 결번된 선수에게 주는 칭호',
 };
 export type GTitlesMsgs = typeof ko;
 export const gTitlesText = ns('gTitles', ko);

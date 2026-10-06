@@ -289,6 +289,8 @@ export const RetiredNumberResultSchema = z.discriminatedUnion('kind', [
   }),
   RetiredSlotSchema.extend({
     kind: z.literal('taken'),
+    /** Present only after server verification and persistence. */
+    wallOfHonor: z.boolean().optional(),
     holder: z.string().nullable(),
   }),
   RetiredSlotSchema.extend({ kind: z.literal('anonymous') }),
@@ -299,6 +301,7 @@ export type RetiredNumberResult = z.infer<typeof RetiredNumberResultSchema>;
 export const RetirementResponseSchema = z.strictObject({
   careerId: z.string().min(1),
   status: z.literal('retired'),
+  title: TitleIdSchema.nullable().optional(),
   /** T-10-076 영구결번 심사. 자격이 없으면 null(배포 전 응답엔 없다). */
   retiredNumber: RetiredNumberResultSchema.nullable().optional(),
   /**
@@ -459,6 +462,7 @@ export const PublicHofEntrySchema = z.strictObject({
   hasDetail: z.boolean(),
   /** T-10-026 대표 칭호 id(없으면 null). */
   title: z.string().nullable(),
+  wallOfHonor: z.boolean().optional(),
   /** T-10-076 이 선수가 가진 영구결번(없으면 null, 배포 전 엣지 캐시 응답엔 없다). */
   retiredNumber: RetiredSlotSchema.extend({ seq: z.number().int() }).nullable().optional(),
   /** T-10-100 은퇴 가치(만 원). 아직 소급하지 못한 옛 기록은 null(배포 전 엣지 캐시 응답엔 없다). */
@@ -640,6 +644,7 @@ export type RetiredNumbersSummary = z.infer<typeof RetiredNumbersSummarySchema>;
 
 /** T-10-076 `GET /v1/careers/:careerId/retired-number` 내 선수의 결번 심사 결과(소급으로 받은 결번·이미 찬 자리 포함). */
 export const RetiredNumberCheckResponseSchema = z.strictObject({
+  title: TitleIdSchema.nullable().optional(),
   retiredNumber: RetiredNumberResultSchema.nullable(),
 });
 export type RetiredNumberCheckResponse = z.infer<typeof RetiredNumberCheckResponseSchema>;

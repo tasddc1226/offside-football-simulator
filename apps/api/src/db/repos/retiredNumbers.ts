@@ -47,6 +47,7 @@ const judgeColumns = {
   retireAge: careers.retireAge,
   retiredAt: careers.retiredAt,
   serviceSeason: careers.serviceSeason,
+  wallOfHonorJson: careers.wallOfHonorJson,
 };
 type JudgeRow = Pick<typeof careers.$inferSelect, keyof typeof judgeColumns>;
 
@@ -157,7 +158,7 @@ export async function ensureRetiredNumbersBackfilled(
   ]);
   const statements = rows.flatMap((r) => {
     const c = candidatesOf(r, seasons.get(r.id), customs.get(r.profileId));
-    return c ? claimStatements(db, r.id, seasonOf(r), c, r.retiredAt!) : [];
+    return c && !r.wallOfHonorJson ? claimStatements(db, r.id, seasonOf(r), c, r.retiredAt!) : [];
   });
   const done = rows.length < chunk;
   const last = rows.at(-1);
@@ -205,6 +206,7 @@ type Judged = {
   result: RetiredNumberResult | null;
   season?: number;
   claimed?: LiveRetiredNumber;
+  awarded?: boolean;
 };
 
 /** 은퇴 PUT 뒤에 부른다. 자격이 없으면(또는 공개 명예의 전당 밖의 짧은 커리어면) result가 null. */
@@ -230,12 +232,50 @@ export async function judgeRetiredNumber(db: Db, careerId: string, now: string):
     return { result: { kind: 'granted', ...slotOf(held[0]) }, season: held[0].season };
   }
   if (!row) return { result: null };
+  if (row.wallOfHonorJson) {
+    const saved = JSON.parse(row.wallOfHonorJson) as {
+      clubId: string;
+      club: string;
+      number: number;
+    };
+    const [holder] = await db
+      .select({ name: careers.publicName })
+      .from(retiredNumbers)
+      .innerJoin(careers, eq(careers.id, retiredNumbers.careerId))
+      .where(
+        and(
+          eq(retiredNumbers.season, seasonOf(row)),
+          eq(retiredNumbers.clubId, saved.clubId),
+          eq(retiredNumbers.number, saved.number),
+        ),
+      );
+    return {
+      result: {
+        kind: 'taken',
+        clubId: saved.clubId,
+        club: saved.club,
+        number: saved.number,
+        holder: holder?.name ?? null,
+        wallOfHonor: true,
+      },
+    };
+  }
   const [customs, seasons] = await Promise.all([
     clubsJsonOf(db, [row.profileId]),
     storedSeasonsOf(db, [careerId]),
   ]);
   const c = candidatesOf(row, seasons.get(careerId), customs.get(row.profileId));
   if (!c) return { result: null };
+  // Reuploads cannot use seasons that arrived after retirement or today's renamed clubs as historical proof.
+  const proof = candidatesOf(
+    row,
+    seasons.get(careerId)?.filter((s) => s.createdAt <= row.retiredAt!),
+    undefined,
+  );
+  const awardProven =
+    !!proof &&
+    proof.clubs.length === c.clubs.length &&
+    proof.clubs.every((club, i) => club.clubId === c.clubs[i]?.clubId);
   const best = c.clubs[0]!;
   const season = seasonOf(row);
   const slot = { clubId: best.clubId!, club: best.club, number: c.number };
@@ -243,6 +283,26 @@ export async function judgeRetiredNumber(db: Db, careerId: string, now: string):
   // 자리 잡기와 결과 확인을 한 번에 보낸다(batch는 한 트랜잭션이라 뒤의 select가 앞의 insert를 본다).
   const results = await runBatch(db, [
     ...claimStatements(db, careerId, season, c, now),
+    // Historical recovery requires occupancy before retirement in the same service season.
+    // For new retirements retiredAt = now; no current-season rules are applied retroactively.
+    db
+      .update(careers)
+      .set({ wallOfHonorJson: JSON.stringify({ ...slot, grantedAt: now }) })
+      .where(
+        and(
+          eq(careers.id, careerId),
+          isPublicRetired,
+          isNotNull(careers.publicName),
+          sql`${awardProven ? 1 : 0} = 1`,
+          sql`${careers.wallOfHonorJson} is null`,
+          sql`not exists (select 1 from ${retiredNumbers} where ${retiredNumbers.careerId} = ${careerId})`,
+          ...c.clubs.map(
+            (club) =>
+              sql`exists (select 1 from ${retiredNumbers} where ${retiredNumbers.season} = ${season} and ${retiredNumbers.clubId} = ${club.clubId!} and ${retiredNumbers.number} = ${c.number} and ${retiredNumbers.grantedAt} <= ${row.retiredAt!})`,
+          ),
+        ),
+      )
+      .returning({ id: careers.id }),
     heldBy(),
     db
       .select({ name: careers.publicName })
@@ -263,7 +323,14 @@ export async function judgeRetiredNumber(db: Db, careerId: string, now: string):
     const claimed = { careerId, name: row.publicName, pos: row.pos, ...mine, season, at: now };
     return { result: { kind: 'granted', ...mine }, season, claimed };
   }
-  return { result: { kind: 'taken', ...slot, holder: holder?.name ?? null } };
+  const [award] = await db
+    .select({ json: careers.wallOfHonorJson })
+    .from(careers)
+    .where(eq(careers.id, careerId));
+  return {
+    result: { kind: 'taken', ...slot, holder: holder?.name ?? null, wallOfHonor: !!award?.json },
+    awarded: (results[c.clubs.length] as { id: string }[]).length > 0,
+  };
 }
 
 const itemColumns = {

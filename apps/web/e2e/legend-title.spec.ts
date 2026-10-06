@@ -8,7 +8,12 @@ usePreseason();
 const ID = '0d000000-0000-4000-8000-00000000000c';
 
 /** 은퇴한 내 선수 한 명(이 기기 기록)과 API 목. 은퇴 PUT 본문을 모은다. */
-async function seed(page: Page, style?: Record<string, unknown>) {
+async function seed(
+  page: Page,
+  style?: Record<string, unknown>,
+  retiredNumber: unknown = null,
+  selectedTitle = 'europe',
+) {
   const bodies: Record<string, unknown>[] = [];
   await page.route(`${API}/v1/profile`, (r) =>
     r.fulfill(
@@ -25,14 +30,14 @@ async function seed(page: Page, style?: Record<string, unknown>) {
   await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   await page.route(`${API}/v1/retired-numbers*`, (r) => r.fulfill(ok({ items: [] })));
   await page.route(`${API}/v1/careers/${ID}/retired-number`, (r) =>
-    r.fulfill(ok({ retiredNumber: null })),
+    r.fulfill(ok({ retiredNumber })),
   );
   await page.route(`${API}/v1/careers/${ID}/retirement`, (r) => {
     bodies.push(r.request().postDataJSON() as Record<string, unknown>);
-    return r.fulfill(ok({ careerId: ID, status: 'retired', retiredNumber: null }));
+    return r.fulfill(ok({ careerId: ID, status: 'retired', retiredNumber }));
   });
   await page.addInitScript(
-    ({ id, style }) => {
+    ({ id, style, selectedTitle }) => {
       if (localStorage.getItem('ft_hof')) return;
       const career = Array.from({ length: 8 }, (_, i) => ({
         year: 2030 + i,
@@ -69,7 +74,7 @@ async function seed(page: Page, style?: Record<string, unknown>) {
             score: 500,
             date: '2026-09-01',
             public: true,
-            title: 'europe',
+            title: selectedTitle,
             detail: {
               number: 9,
               pos: 'FW',
@@ -93,7 +98,7 @@ async function seed(page: Page, style?: Record<string, unknown>) {
         ]),
       );
     },
-    { id: ID, style },
+    { id: ID, style, selectedTitle },
   );
   return bodies;
 }
@@ -166,4 +171,126 @@ test('선택 기록이 없는 은퇴에는 플레이 성향 카드가 없다', a
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-credit="finale"]')).toBeAttached();
   await expect(page.locator('[data-legend-style]')).toHaveCount(0);
+});
+
+test('명예의 벽은 받은 칭호 목록에 추가되고 기존 대표 칭호를 유지한다', async ({ page }) => {
+  const result = {
+    kind: 'taken',
+    clubId: 'pl-0',
+    club: '맨체스터 스카이블루',
+    number: 9,
+    holder: '선배',
+    wallOfHonor: true,
+  };
+  const bodies = await seed(page, undefined, result);
+  let checks = 0;
+  await page.route(`${API}/v1/careers/${ID}/retired-number`, (r) => {
+    checks++;
+    return r.fulfill(ok({ retiredNumber: result }));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-wall-of-honor]')).toContainText('영구결번은 아니에요.');
+  await expect(page.locator('[data-legend-title]')).toHaveText('‘유럽파’');
+  await page.locator('[data-act="legend-title-open"]').click();
+  await expect(page.locator('[data-legend-title-pick="wall_of_honor"]')).toContainText('명예의 벽');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('[data-legend-title-pick="wall_of_honor"]').click();
+  await expect.poll(() => bodies.at(-1)?.title).toBe('wall_of_honor');
+  await expect(page.locator('[data-legend-title]')).toHaveText('‘명예의 벽’');
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('ft_outbox') ?? '[]').length))
+    .toBe(0);
+  await page.goBack();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-wall-of-honor]')).toBeAttached();
+  // Successful PUT invalidates the GET memo, so one new verification is expected.
+  await expect.poll(() => checks).toBe(2);
+  await page.goBack();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-wall-of-honor]')).toBeAttached();
+  expect(checks).toBe(2);
+});
+
+test('상세가 없는 공개 선수도 대표 칭호와 별도로 명예의 벽 획득을 표시한다', async ({ page }) => {
+  await page.route(`${API}/v1/hof/${ID}`, (r) =>
+    r.fulfill(
+      ok({
+        entry: {
+          id: ID,
+          name: '공개선수',
+          pos: 'FW',
+          number: 9,
+          retireAge: 34,
+          peak: 86,
+          legendScore: 500,
+          apps: 304,
+          goals: 160,
+          assists: 80,
+          trophies: 0,
+          awards: 0,
+          caps: 0,
+          ballon: 0,
+          lastClub: '맨체스터 스카이블루',
+          retiredAt: '2026-09-30T00:00:00.000Z',
+          hasDetail: false,
+          title: 'europe',
+          retiredNumber: null,
+          wallOfHonor: true,
+        },
+        snapshot: null,
+      }),
+    ),
+  );
+  await page.goto(`/career/${ID}`);
+  await expect(page.locator('[data-wall-of-honor]')).toContainText('영구결번은 아니에요.');
+  await expect(page.locator('[data-legend-title]')).toHaveText('‘유럽파’');
+  await expect(page.locator('[data-legend-rn-pill]')).toHaveCount(0);
+});
+
+test('복원된 내 선수의 대표 칭호는 서버 선택값으로 복구된다', async ({ page }) => {
+  const result = {
+    kind: 'taken',
+    clubId: 'pl-0',
+    club: '맨체스터 스카이블루',
+    number: 9,
+    holder: null,
+    wallOfHonor: true,
+  };
+  await seed(page, undefined, result);
+  await page.route(`${API}/v1/careers/${ID}/retired-number`, (r) =>
+    r.fulfill(ok({ retiredNumber: result, title: 'wall_of_honor' })),
+  );
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-legend-title]')).toHaveText('‘명예의 벽’');
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('ft_hof') ?? '[]')[0]?.title))
+    .toBe('wall_of_honor');
+});
+
+test('서버 칭호가 없는 기기의 명예의 벽 선택값은 대표 칭호로 표시하지 않는다', async ({ page }) => {
+  await seed(
+    page,
+    undefined,
+    {
+      kind: 'taken',
+      clubId: 'pl-0',
+      club: '맨체스터 스카이블루',
+      number: 9,
+      holder: '선배',
+      wallOfHonor: false,
+    },
+    'wall_of_honor',
+  );
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-legend-titles]')).toBeAttached();
+  await expect(page.locator('[data-legend-title]')).toHaveCount(0);
+  await expect(page.locator('[data-wall-of-honor]')).toHaveCount(0);
+  await page.locator('[data-act="legend-title-open"]').click();
+  await expect(page.locator('[data-legend-title-pick="wall_of_honor"]')).toHaveCount(0);
 });

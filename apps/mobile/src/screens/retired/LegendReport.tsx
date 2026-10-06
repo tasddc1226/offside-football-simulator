@@ -1,8 +1,10 @@
+import { retiredTitleOf } from '@offside/app-core/retiredTitle';
 // 은퇴 리포트 본문(웹 LegendReport.svelte). 은퇴 직후 화면(Retired) · 명예의 전당 상세(Legend) · 공유 링크(Shared)가
 // 함께 쓴다 — 진행 중 세이브(G)든 저장된 스냅샷이든 LegendView 하나로 그린다.
 // T-10-062: 정보 나열 대신 한 편의 엔딩 크레딧처럼 — 타이틀 → 통산 기록 → 클럽별 챕터(우승·이정표·이야기) →
 // 대표팀 → 우승·수상 롤 → 마지막 휘슬. 사용자가 스크롤해 내려가는 대로 장면이 화면에 들어올 때 하나씩 올라온다
 // (credit.tsx Reveal). 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
+import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { retirementPotentialNote } from '@offside/app-core/potential-view';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
@@ -57,7 +59,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
   const back = v.pos === 'GK' || v.pos === 'DF';
   const t = d ? totals(d) : null;
   const ownId = v.own?.id;
-  const main = titleById((ownId && pk[ownId]) || v.title);
+  const main = titleById(retiredTitleOf(v.own ? (ownId ?? '') : undefined, v.title, pk));
 
   const chapters = d ? careerChapters(d) : [];
   const national = d ? nationalEvents(d) : [];
@@ -174,7 +176,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
               style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}
             >
               <FilmPill gold>{legendTitle(v.score, v.dpos)}</FilmPill>
-              {main && main.cat !== 'legend' ? (
+              {main && (main.cat !== 'legend' || main.id === WALL_OF_HONOR_TITLE_ID) ? (
                 <FilmPill testID="legend-title">{`‘${main.name}’`}</FilmPill>
               ) : null}
               <FilmPill>{L.peakOvr({ peak: v.peak })}</FilmPill>
@@ -436,7 +438,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
           </Reveal>
         ) : null}
 
-        {d || rnGranted ? <LateCredits v={v} rn={rnv} /> : null}
+        {d || rnGranted || v.wallOfHonor ? <LateCredits v={v} rn={rnv} /> : null}
 
         <Reveal id="finale" testID="credit-finale">
           <Finale v={v} />

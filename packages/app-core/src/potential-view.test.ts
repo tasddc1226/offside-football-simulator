@@ -31,6 +31,16 @@ function setup() {
 }
 afterEach(() => vi.unstubAllGlobals());
 
+describe('은퇴 대표 칭호 복원', () => {
+  it('재시작한 은퇴 화면은 진행 세이브보다 은퇴 기록에 선택한 칭호를 우선한다', () => {
+    const { legends, s } = setup();
+    const h = retire(s);
+    h.title = 'wall_of_honor';
+    saveKey('ft_hof', [h]);
+    expect(legends.viewFromGame(s).title).toBe('wall_of_honor');
+  });
+});
+
 describe('은퇴 잠재력 표시', () => {
   it('기록된 반올림 수치의 등급 경계와 없는 과거 데이터를 구분한다', () => {
     expect([69, 70, 77, 78, 83, 84, 89, 90].map((v) => retirementPotential(v)?.real)).toEqual([

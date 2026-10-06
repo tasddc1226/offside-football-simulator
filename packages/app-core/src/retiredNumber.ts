@@ -7,24 +7,38 @@ import type {
   RetiredNumberResult,
   RetiredNumbersResponse,
 } from '@offside/contracts';
+import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { loadHOF, saveKey } from '@offside/game/season';
 import { onLive } from './api/liveSocket.js';
 
 export type RnResults = Record<string, RetiredNumberResult | null>;
 export type RnAlert = { item: LiveRetiredNumber | null };
 
-export function createRetiredNumbers(rnResults: RnResults, rnAlert: RnAlert) {
+export function createRetiredNumbers(
+  rnResults: RnResults,
+  rnAlert: RnAlert,
+  onTitle?: (careerId: string, title: string | null) => void,
+) {
   /** 심사 결과를 반응형 맵과 이 기기의 은퇴 기록에 남긴다. serviceSeason(T-11-029)이 오면 기록의 시즌도 남긴다. */
   function recordRn(
     careerId: string,
     result: RetiredNumberResult | null,
     serviceSeason?: number | null,
+    title?: string | null,
   ) {
     rnResults[careerId] = result;
+    if (title !== undefined) onTitle?.(careerId, title);
     const hof = loadHOF();
     const h = hof.find((x) => x.id === careerId);
     if (!h) return;
     h.rn = result;
+    if (title !== undefined) h.title = title ?? undefined;
+    const granted = result?.kind === 'taken' && result.wallOfHonor;
+    if (h.detail) {
+      h.detail.titles = (h.detail.titles ?? []).filter((t) => t.id !== WALL_OF_HONOR_TITLE_ID);
+      if (granted) h.detail.titles.push({ id: WALL_OF_HONOR_TITLE_ID, year: 0 });
+    }
+    if (!granted && h.title === WALL_OF_HONOR_TITLE_ID) delete h.title;
     // 휴식기에 올라온 선수(null)는 결번처럼 프리시즌으로 센다.
     if (serviceSeason !== undefined) h.season = serviceSeason ?? 0;
     saveKey('ft_hof', hof);

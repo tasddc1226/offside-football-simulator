@@ -7,7 +7,7 @@ import type {
   PublicHofEntry,
   RetirementSummary,
 } from '@offside/contracts';
-import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
+import { HOF_MIN_RETIRE_AGE, WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { cardValue, retireValue } from '@offside/contracts/market-value';
 import { firstUploadSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
 import { dposFor, type PeakProfile } from '@offside/contracts/positions';
@@ -36,6 +36,22 @@ import {
   goalsPlusAssists,
   retiredNumbers,
 } from '../schema.js';
+
+export const verifiedRetiredTitle = (
+  row: { title: string | null; wallOfHonorJson: string | null } | undefined,
+): string | null =>
+  !row || (row.title === WALL_OF_HONOR_TITLE_ID && !row.wallOfHonorJson) ? null : row.title;
+
+/** Overlay server evidence on every public snapshot; old forged snapshots are sanitized too. */
+export function verifiedSnapshot(snapshot: LegendSnapshot, granted: boolean): LegendSnapshot {
+  const titles = (snapshot.titles ?? []).filter((t) => t.id !== WALL_OF_HONOR_TITLE_ID);
+  if (granted) {
+    // Reserve the schema's final slot for the server title even for a full client list.
+    titles.length = Math.min(titles.length, 199);
+    titles.push({ id: WALL_OF_HONOR_TITLE_ID, year: 0 });
+  }
+  return { ...snapshot, titles };
+}
 
 export type CareerRow = typeof careers.$inferSelect;
 
@@ -262,12 +278,14 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
         ballon: summary.ballon,
         lastClub: summary.lastClub,
         // 옛 클라이언트는 칭호·클럽 id를 보내지 않는다 — 보낸 경우에만 쓴다.
-        ...(summary.title !== undefined ? { title: summary.title } : {}),
+        ...(summary.title !== undefined
+          ? { title: summary.title === WALL_OF_HONOR_TITLE_ID ? null : summary.title }
+          : {}),
         ...(summary.lastClubId !== undefined ? { lastClubId: summary.lastClubId } : {}),
         ...publicNameSet(publicName),
         ...(snapshot
           ? {
-              snapshotJson: JSON.stringify(snapshot),
+              snapshotJson: JSON.stringify(verifiedSnapshot(snapshot, false)),
               shirtNumber: snapshot.number,
               value: retireValue(snapshot.career, summary.legendScore),
             }
@@ -334,6 +352,7 @@ const publicColumns = {
   retiredAt: careers.retiredAt,
   hasDetail: sql<number>`${careers.snapshotJson} is not null`,
   title: careers.title,
+  wallOfHonor: sql<number>`${careers.wallOfHonorJson} is not null`,
   value: careers.value,
   serviceSeason: careers.serviceSeason,
   // T-10-076 영구결번(retired_numbers를 left join한 쿼리에서만 쓴다).
@@ -368,7 +387,11 @@ function toPublicEntry(r: PublicRow): PublicHofEntry {
     lastClubId: (r.lastClubId as string | null) ?? null,
     retiredAt: String(r.retiredAt ?? ''),
     hasDetail: Boolean(r.hasDetail),
-    title: (r.title as string | null) ?? null,
+    title:
+      r.title === WALL_OF_HONOR_TITLE_ID && !r.wallOfHonor
+        ? null
+        : ((r.title as string | null) ?? null),
+    wallOfHonor: Boolean(r.wallOfHonor),
     value: r.value == null ? null : Number(r.value),
     season: r.serviceSeason == null ? null : Number(r.serviceSeason),
     retiredNumber:
@@ -496,7 +519,9 @@ export async function getPublicHof(
   const { snapshotJson, ...rest } = row;
   return {
     entry: toPublicEntry(rest),
-    snapshot: snapshotJson ? (JSON.parse(snapshotJson) as LegendSnapshot) : null,
+    snapshot: snapshotJson
+      ? verifiedSnapshot(JSON.parse(snapshotJson) as LegendSnapshot, Boolean(rest.wallOfHonor))
+      : null,
   };
 }
 
@@ -568,13 +593,13 @@ export async function updateRetired(
       ...publicNameSet(publicName),
       ...(title
         ? {
-            title: sql`case when exists (select 1 from json_each(${careers.snapshotJson}, '$.titles') where json_extract(value, '$.id') = ${title}) then ${title} else ${careers.title} end`,
+            title: sql`case when (${title} = ${WALL_OF_HONOR_TITLE_ID} and ${careers.wallOfHonorJson} is not null) or (${title} <> ${WALL_OF_HONOR_TITLE_ID} and exists (select 1 from json_each(${careers.snapshotJson}, '$.titles') where json_extract(value, '$.id') = ${title})) then ${title} else ${careers.title} end`,
           }
         : {}),
       ...(snapshot
         ? {
-            snapshotJson: sql`coalesce(${careers.snapshotJson}, ${JSON.stringify(snapshot)})`,
-            shirtNumber: sql`coalesce(${careers.shirtNumber}, ${snapshot.number})`,
+            snapshotJson: sql`coalesce(${careers.snapshotJson}, ${JSON.stringify(verifiedSnapshot(snapshot, false))})`,
+            // A late client snapshot cannot establish a historical retirement number.
           }
         : {}),
     })
@@ -583,6 +608,7 @@ export async function updateRetired(
 
 const storedSeasonColumns = {
   careerId: careerSeasons.careerId,
+  createdAt: careerSeasons.createdAt,
   year: careerSeasons.year,
   age: careerSeasons.age,
   club: careerSeasons.club,
@@ -637,6 +663,8 @@ export async function getCareerHead(db: Db, careerId: string) {
   const [row] = await db
     .select({
       profileId: careers.profileId,
+      title: careers.title,
+      wallOfHonorJson: careers.wallOfHonorJson,
       status: careers.status,
       pos: careers.pos,
       dpos: careers.dpos,

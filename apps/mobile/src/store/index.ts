@@ -2,6 +2,7 @@
 // 상태의 모양·처음 값·고치는 로직은 웹과 같은 @offside/app-core에 있다. 앱은 valtio proxy로 감싸고, 화면은
 // useSnapshot으로 읽고(다시 그리기) 원본 proxy를 고친다(웹 Svelte $state 자리). 글 입력 칸이 읽는 곳은
 // useSnapshot(x, { sync: true })로 — 기본(비동기 묶음)이면 한글 조합 중 커서가 튄다.
+import { retiredTitleOf } from '@offside/app-core/retiredTitle';
 import { proxy } from 'valtio';
 import { initialAppState, type AppState } from '@offside/app-core/state';
 import { initialSheetState, type SheetState } from '@offside/app-core/sheet-controller';
@@ -32,9 +33,9 @@ export const accountCache = proxy<{
   fetchedAt: number;
 }>({ value: undefined, fetchedAt: 0 });
 /** 커리어 id → 이번 접속에서 고른 대표 칭호(웹 titles/legendTitle). */
-export const pickedTitles = proxy<Record<string, string>>({});
+export const pickedTitles = proxy<Record<string, string | null>>({});
 export const legendTitleOf = (careerId: string | undefined, saved: string | null | undefined) =>
-  (careerId && pickedTitles[careerId]) || saved;
+  retiredTitleOf(careerId, saved, pickedTitles);
 
 /** 기기 설정. theme: 설정에서 고른 테마(null이면 시스템) · motionOK: 시스템 '동작 줄이기'가 꺼져 있다 ·
  * lang: 화면 문구 언어(T-11-102, 바뀌면 _layout이 루트를 다시 그린다). */

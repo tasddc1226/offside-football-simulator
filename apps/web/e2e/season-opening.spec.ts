@@ -74,6 +74,7 @@ test('개막 때 프로필 입력값과 주력 선택을 유지하며 세부 포
   await page.clock.install({ time: new Date('2026-10-05T14:59:00.000Z') });
   await page.goto('/');
   await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();
+  await expect(page.locator('[data-act="next-candidates"]')).toBeVisible();
   await expect(page.locator('[data-set="dpos"]')).toHaveCount(0);
   const before = await page
     .locator('input')

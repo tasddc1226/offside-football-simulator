@@ -24,6 +24,7 @@ const ko = {
   none: '없음',
   pickOpen: (p: { n: number }) => `받은 칭호 ${p.n}개 중에서 바꾸기`,
   pickNote: '고른 칭호는 선수 카드와 명예의 전당·공유 링크에 표시돼요.',
+  retiredYear: '은퇴',
 };
 
 export type TitleMsgs = typeof ko;
