@@ -25,6 +25,14 @@ export type CardTier = 'legend' | 'gold' | 'silver';
 export const cardTier = (legendScore: number | null | undefined, peak: number): CardTier =>
   (legendScore ?? 0) >= 1000 ? 'legend' : peak >= 80 ? 'gold' : 'silver';
 
+/** T-11-114 선수 카드 시즌 뱃지 — 프리시즌 PRE, 그 뒤는 S1·S2…(이름은 teamSeasonName). */
+export const cardSeasonBadge = (season: number): string => (season === 0 ? 'PRE' : `S${season}`);
+/** 시즌 뱃지 바탕색(웹·앱 같이) — 프리시즌 보라, 시즌 1부터는 네 색을 차례로 돈다. 카드 등급 색과 섞이지 않는 진한 색. */
+const PRESEASON_COLOR = '#6a4a9c';
+const CARD_SEASON_COLORS = ['#1f7a5c', '#b0472f', '#2e5d7a', '#8a5a14'];
+export const cardSeasonColor = (season: number): string =>
+  season === 0 ? PRESEASON_COLOR : CARD_SEASON_COLORS[(season - 1) % CARD_SEASON_COLORS.length]!;
+
 /** 구단주 팀 선수 카드 아랫줄(웹·앱 같이): 능력치 안내가 먼저, 없으면 T-11-080 카드 기준가. 둘 다 없으면 null. */
 export function cardFootNote(p: {
   attrs?: object | null | undefined;
