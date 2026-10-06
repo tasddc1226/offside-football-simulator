@@ -8,10 +8,10 @@ import {
   PODIUM_H,
   PODIUM_TONES,
   PODIUM_W,
-  podiumRects,
+  podiumPaths,
 } from '@offside/game/podium';
-import { useState, type ReactNode } from 'react';
-import Svg, { Rect } from 'react-native-svg';
+import type { ReactNode } from 'react';
+import Svg, { Path } from 'react-native-svg';
 import { anonName } from '@offside/app-core/format';
 import { openPublicLegend } from '../game/host';
 import { ClubMark } from '../ui/ClubBadge';
@@ -57,6 +57,9 @@ export function HofPodium({
           NATION_BY_CODE.get(entry.nation ?? DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION)!;
         const mine = myIds.has(entry.id);
         const name = entry.name ?? anonName(entry.pos, entry.number);
+        const r = rank as 1 | 2 | 3;
+        const ink = PODIUM_TONES[r].ink;
+        const avW = rank === 1 ? avatarWidth(width) : 48;
         return (
           <Press
             key={entry.id}
@@ -128,34 +131,32 @@ export function HofPodium({
                 style={{
                   marginTop: 2,
                   // 단상 윗면(밟는 곳)에 서도록: 프로필 여백 10 + 그림 아래 빈 두 줄 + 윗면 깊이 8.
-                  marginBottom: -(18 + (2 * (rank === 1 ? avatarWidth(width) : 48)) / 24),
+                  marginBottom: -(18 + (2 * avW) / 24),
                 }}
               >
                 <PrimeAvatar
                   id={entry.id}
                   lastClub={entry.lastClub}
                   lastClubId={entry.lastClubId}
-                  width={rank === 1 ? avatarWidth(width) : 48}
+                  width={avW}
                 />
               </View>
             </View>
             {/* 도트 단상(podium.ts). 값·순위는 앞면 위에 겹쳐 쓴다. */}
-            <PodiumStep rank={rank as 1 | 2 | 3}>
+            <PodiumStep rank={r}>
               <Txt
                 num
                 center
                 style={{
                   fontSize: rank === 1 ? 22 : 19,
                   lineHeight: 26,
-                  color: PODIUM_TONES[rank as 1 | 2 | 3].ink,
+                  color: ink,
                 }}
               >
                 {metric(entry)}
-                <Txt style={{ fontSize: 12, color: PODIUM_TONES[rank as 1 | 2 | 3].ink }}>
-                  {unit}
-                </Txt>
+                <Txt style={{ fontSize: 12, color: ink }}>{unit}</Txt>
               </Txt>
-              <Txt center bold style={{ fontSize: 12, color: PODIUM_TONES[rank as 1 | 2 | 3].ink }}>
+              <Txt center bold style={{ fontSize: 12, color: ink }}>
                 {L.rankN({ rank })}
               </Txt>
             </PodiumStep>
@@ -166,35 +167,29 @@ export function HofPodium({
   );
 }
 
-// 단상 그림은 순위마다 하나라 모듈에서 한 번만 만든다.
-const PODIUM_RECTS = { 1: podiumRects(1), 2: podiumRects(2), 3: podiumRects(3) };
-
 /** 도트 단상 하나. 칸 폭에 맞춰 늘리고(비율 유지), 앞면 자리에 children을 겹친다. */
 function PodiumStep({ rank, children }: { rank: 1 | 2 | 3; children: ReactNode }) {
-  const [w, setW] = useState(0);
-  const unitPx = w / PODIUM_W;
+  const h = PODIUM_H[rank];
   return (
-    <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ width: '100%' }}>
-      {w > 0 ? (
-        <Svg
-          width={w}
-          height={unitPx * PODIUM_H[rank]}
-          viewBox={`0 0 ${PODIUM_W} ${PODIUM_H[rank]}`}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        >
-          {PODIUM_RECTS[rank].map((r, i) => (
-            <Rect key={i} x={r.x} y={r.y} width={r.w} height={1} fill={r.fill} />
-          ))}
-        </Svg>
-      ) : null}
+    <View style={{ width: '100%', aspectRatio: PODIUM_W / h }}>
+      <Svg
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${PODIUM_W} ${h}`}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        {podiumPaths(rank).map((p) => (
+          <Path key={p.fill} d={p.d} fill={p.fill} />
+        ))}
+      </Svg>
       <View
         style={{
           position: 'absolute',
           left: '6%',
           right: '6%',
-          top: unitPx * PODIUM_FACE_TOP,
-          bottom: unitPx * PODIUM_FACE_BOTTOM,
+          top: `${(PODIUM_FACE_TOP / h) * 100}%`,
+          bottom: `${(PODIUM_FACE_BOTTOM / h) * 100}%`,
           alignItems: 'center',
           justifyContent: 'center',
         }}

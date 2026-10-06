@@ -313,10 +313,13 @@ export function HofRow({
             }}
           >
             <View
-              style={[
-                { flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 0 },
-                { flexShrink: 1 },
-              ]}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                minWidth: 0,
+                flexShrink: 1,
+              }}
             >
               {/* 은퇴 시점 구단을 따로 적으면(showClub) 엠블럼은 구단 이름 앞에 둔다. */}
               {clubName ? null : <ClubMark name={club} id={clubId} size={18} />}

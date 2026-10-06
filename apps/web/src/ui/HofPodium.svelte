@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { PublicHofEntry } from '@offside/contracts';
   import { posAbbr, posLabel } from '@offside/game/data';
-  import { PODIUM_FACE_BOTTOM, PODIUM_FACE_TOP, PODIUM_H, PODIUM_TONES, PODIUM_W, podiumRects } from '@offside/game/podium';
+  import { PODIUM_FACE_BOTTOM, PODIUM_FACE_TOP, PODIUM_H, PODIUM_TONES, PODIUM_W, podiumPaths } from '@offside/game/podium';
   import { anonName } from '@offside/app-core/format';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
   import { openPublicLegend } from './legend.js';
@@ -12,7 +12,6 @@
   import { intlLocale } from '@offside/contracts/i18n';
 
   // 단상 그림은 순위마다 하나라 모듈에서 한 번만 만든다.
-  const PODIUM_RECTS = { 1: podiumRects(1), 2: podiumRects(2), 3: podiumRects(3) };
 
   const { players, label, unit, showPosition = true }: {
     players: { entry: PublicHofEntry; rank: number; value: number | string; own: boolean }[];
@@ -44,7 +43,7 @@
       </span>
       <!-- 도트 단상(podium.ts). 값·순위는 앞면 위에 겹쳐 쓴다. -->
       <span class="hof-podium-step" style:--podium-ink={PODIUM_TONES[r].ink}>
-        <svg class="hof-podium-block" viewBox="0 0 {PODIUM_W} {PODIUM_H[r]}" shape-rendering="crispEdges" aria-hidden="true">{#each PODIUM_RECTS[r] as b, i (i)}<rect x={b.x} y={b.y} width={b.w} height="1" fill={b.fill} />{/each}</svg>
+        <svg class="hof-podium-block" viewBox="0 0 {PODIUM_W} {PODIUM_H[r]}" shape-rendering="crispEdges" aria-hidden="true">{#each podiumPaths(r) as p (p.fill)}<path d={p.d} fill={p.fill} />{/each}</svg>
         <span class="hof-podium-face" style:top="{(PODIUM_FACE_TOP / PODIUM_H[r]) * 100}%" style:bottom="{(PODIUM_FACE_BOTTOM / PODIUM_H[r]) * 100}%">
           <strong class="hof-podium-value num">{value}{#if unit}<small>{unit}</small>{/if}</strong>
           <span class="hof-podium-place">{L.rankN({ rank: player.rank })}</span>

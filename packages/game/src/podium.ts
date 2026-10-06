@@ -46,7 +46,7 @@ export const PODIUM_TONES: Record<1 | 2 | 3, Tone> = {
 };
 
 /** 단상 색 격자(null은 빈칸). 윗면(밟는 곳) → 메달 띠 → 앞면(돌 무늬) → 받침. */
-export function podiumPixels(rank: 1 | 2 | 3): (string | null)[][] {
+function podiumPixels(rank: 1 | 2 | 3): (string | null)[][] {
   const t = PODIUM_TONES[rank];
   const W = PODIUM_W;
   const H = PODIUM_H[rank];
@@ -111,17 +111,25 @@ export function podiumPixels(rank: 1 | 2 | 3): (string | null)[][] {
   return g;
 }
 
-/** 사각형 목록(viewBox 0 0 PODIUM_W PODIUM_H[rank]). 같은 색이 이어진 가로 칸은 하나로 합친다. */
-export function podiumRects(rank: 1 | 2 | 3): { x: number; y: number; w: number; fill: string }[] {
-  const out: { x: number; y: number; w: number; fill: string }[] = [];
+/**
+ * 색마다 SVG path 하나(viewBox 0 0 PODIUM_W PODIUM_H[rank]). 같은 색이 이어진 가로 칸은 한 조각으로 합쳐
+ * 단상 하나가 사각형 수백 개 대신 path 몇 개로 그려진다. 순위마다 처음 부를 때 한 번만 만든다.
+ */
+export function podiumPaths(rank: 1 | 2 | 3): readonly { fill: string; d: string }[] {
+  return (pathCache[rank] ??= buildPaths(rank));
+}
+const pathCache: Partial<Record<1 | 2 | 3, readonly { fill: string; d: string }[]>> = {};
+
+function buildPaths(rank: 1 | 2 | 3): { fill: string; d: string }[] {
+  const byFill = new Map<string, string>();
   podiumPixels(rank).forEach((row, y) => {
     for (let x = 0; x < row.length;) {
       const c = row[x];
       let w = 1;
       while (x + w < row.length && row[x + w] === c) w++;
-      if (c) out.push({ x, y, w, fill: c });
+      if (c) byFill.set(c, `${byFill.get(c) ?? ''}M${x} ${y}h${w}v1h-${w}z`);
       x += w;
     }
   });
-  return out;
+  return [...byFill].map(([fill, d]) => ({ fill, d }));
 }
