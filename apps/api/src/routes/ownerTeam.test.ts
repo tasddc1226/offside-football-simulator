@@ -1254,11 +1254,24 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       // 이번 시즌 친선전은 여전히 이번 시즌 팀이 있어야 한다.
       expect(await reason(await friendly(a.cookie, bCode))).toBe('TEAM_REQUIRED');
 
+      // 이미 있던 프리시즌 팀을 고쳐도 최종 기록(랭킹·팀 프로필)은 그대로이고, 친선전·내 팀 화면만 새 편성을 쓴다.
+      const aNew = await addCareer(a.profileId, { peak: 95 });
+      const edited = await putTeam(a.cookie, { season: 0, name: '새 이름', slots: slots(aNew) });
+      expect(PutRes.parse(await edited.json()).data.team).toMatchObject({
+        id: a.team.id,
+        name: '새 이름',
+      });
+      const mineNow = GetRes.parse(
+        await (await call('GET', '/v1/owner-team?season=0', { cookie: a.cookie })).json(),
+      ).data.team!;
+      expect(mineNow.slots[0]!.careerId).toBe(aNew);
       // 개막 뒤 만든 프리시즌 팀은 프리시즌 최종 랭킹·팀 업적에 들지 않는다.
       const ranking = successEnvelope(TeamRankResponseSchema).parse(
         await (await call('GET', '/v1/teams?season=0')).json(),
       ).data.items;
-      expect(ranking.map((t) => t.teamId)).toEqual([a.team.id]);
+      expect(ranking.map((t) => [t.teamId, t.name, t.ovr])).toEqual([
+        [a.team.id, a.team.name, a.team.ovr],
+      ]);
       const ach = AchRes.parse(
         await (
           await call('GET', '/v1/owner-team/achievements?season=0', { cookie: b.cookie })

@@ -91,7 +91,7 @@
       <div class="owner-id">
         <span class="owner-avatar" aria-hidden="true">{(nickname ?? '구').slice(0, 1)}</span>
         <div class="owner-who">
-          <b>{guest ? '게스트 구단주' : (nickname ?? '구단주')}{#if card?.founder}<small class="owner-founder" data-owner-founder>{FOUNDER_LABEL}</small>{/if}</b>
+          <b>{guest ? '게스트 구단주' : (nickname ?? '구단주')}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{FOUNDER_LABEL}</span>{/if}</b>
           <span class="muted fs-sm">{guest ? '기록은 이 기기에만 저장돼요' : card?.team ? `${card.team.name} · ${card.season}` : 'Google 계정으로 로그인했어요'}</span>
         </div>
       </div>
@@ -182,7 +182,7 @@
 </div>
 
 <style>
-  .owner-founder {margin-left:6px;padding:1px 6px;border-radius:999px;border:1px solid var(--accent-text);color:var(--accent-text);font-size:0.6875rem;font-weight:600;vertical-align:middle;}
+  .owner-founder {margin-left:6px;vertical-align:middle;}
   .owner-hub {
     display: flex;
     flex-direction: column;

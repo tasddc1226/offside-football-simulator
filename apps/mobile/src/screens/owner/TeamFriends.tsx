@@ -407,7 +407,7 @@ export function TeamFriends({
                     >
                       친선전
                     </Btn>
-                    {data.canPlayPreseason !== undefined && f.preseasonTeam ? (
+                    {f.preseasonTeam ? (
                       <Btn
                         sm
                         testID="friend-play-preseason"

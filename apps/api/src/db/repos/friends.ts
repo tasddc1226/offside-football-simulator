@@ -158,11 +158,13 @@ export const deleteFriendsStatements = (db: Db, profileId: string) =>
   ] as const;
 
 /** 그 시즌 여러 구단주의 팀(친구 목록에 붙인다). */
-export function teamsOfOwners(db: Db, profileIds: readonly string[], season: number) {
+export function teamsOfOwners(db: Db, profileIds: readonly string[], seasons: readonly number[]) {
   return db
     .select()
     .from(ownerTeams)
-    .where(and(inArray(ownerTeams.profileId, [...profileIds]), eq(ownerTeams.season, season)));
+    .where(
+      and(inArray(ownerTeams.profileId, [...profileIds]), inArray(ownerTeams.season, [...seasons])),
+    );
 }
 
 /** 여러 구단주의 가장 최근 감독 이름(닉네임이 없는 친구의 표시 이름). */

@@ -206,12 +206,13 @@
       <h2 class="fr-h">친구 {data.friends.length}/{data.max}</h2>
       {#each data.friends as p (p.code)}
         {@const h2h = h2hText(p.h2h)}
+        {@const preseasonLine = preseasonTeamLine(p)}
         <div class="fr-person" data-friend={p.code}>
           <TeamLogo logo={p.team?.logo ?? null} name={p.team?.name ?? p.name} size={32} decorative />
           <div class="fr-info">
-            <b>{p.name}{#if p.founder}<small class="fr-founder" data-friend-founder>{FOUNDER_LABEL}</small>{/if}</b>
+            <b>{p.name}{#if p.founder}<span class="pill good fr-founder" data-friend-founder>{FOUNDER_LABEL}</span>{/if}</b>
             <span class="muted fs-sm">{teamLine(p)}</span>
-            {#if preseasonTeamLine(p)}<span class="muted fs-sm" data-friend-preseason>{preseasonTeamLine(p)}</span>{/if}
+            {#if preseasonLine}<span class="muted fs-sm" data-friend-preseason>{preseasonLine}</span>{/if}
             {#if h2h}<span class="fs-sm">상대 전적 {h2h}</span>{/if}
           </div>
           <div class="fr-row-actions">
@@ -315,12 +316,6 @@
   }
   .fr-founder {
     margin-left: 6px;
-    padding: 1px 6px;
-    border-radius: 999px;
-    border: 1px solid var(--accent-text);
-    color: var(--accent-text);
-    font-size: 0.6875rem;
-    font-weight: 600;
     vertical-align: middle;
   }
   .fr-info {

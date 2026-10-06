@@ -718,14 +718,15 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await expect(page.locator('[data-team-manager]')).toHaveValue('홍감독');
   await expect(page.locator('.tm-head')).toContainText('시즌 1에 뛰고 은퇴한');
 
-  // 지난 시즌 팀은 보기만 한다.
+  // T-11-113 개막 뒤 프리시즌 팀은 친선전 전용으로 고칠 수 있다(랭크 경기 기록은 그대로 보인다).
   await page.locator('[data-team-season]').selectOption({ label: '프리시즌' });
   await expect(page.locator('h1')).toHaveText('프리 FC');
-  await expect(page.locator('[data-team-readonly]')).toBeVisible();
+  await expect(page.locator('[data-team-legacy]')).toContainText('친선전에만');
+  await expect(page.locator('[data-team-readonly]')).toHaveCount(0);
   await expect(page.locator('[data-act="team-save"]')).toHaveCount(0);
   await expect(page.locator('[data-team-record] dd').nth(1)).toHaveText('1,040');
-  await expect(page.locator('button[data-slot]')).toHaveCount(0);
-  await expect(page.locator('div[data-slot="9"]')).toContainText('공개 골잡이');
+  await expect(page.locator('[data-team-record]')).toContainText('전용');
+  await expect(page.locator('[data-slot="9"]')).toContainText('공개 골잡이');
   await expectNoA11yViolations(page);
 
   // 기록실의 팀 랭킹 → 다른 팀 프로필(조회수 한 번) → 좋아요.

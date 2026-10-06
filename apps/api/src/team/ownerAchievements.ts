@@ -50,11 +50,10 @@ export async function refreshOwnerAchievements(
     achievementRowOf(db, owner.id, season),
   ]);
   const open = season === teamSeasonAt(now);
-  // T-11-113 끝난 시즌의 팀 업적은 적어 둔 기록(team_kept)으로만 센다. 개막 뒤 친선전용으로 고친 프리시즌 선발이 업적을
-  // 바꾸지 않게 선발을 읽지 않고, 시즌이 끝난 뒤 새로 만든 팀은 그 시즌 팀으로 치지 않는다.
+  // T-11-113 시즌이 끝난 뒤 친선전용으로 처음 만든 팀(최종 기록은 빈 팀)은 그 시즌 팀으로 치지 않는다.
   const end = teamSeasonEndsAt(season);
   const team = seasonTeam && !(end && seasonTeam.createdAt >= end) ? seasonTeam : undefined;
-  const ids = team && open ? slotIdsOf(team).filter((id): id is string => id !== null) : [];
+  const ids = team ? slotIdsOf(team).filter((id): id is string => id !== null) : [];
   const [activity, slotRows] = await Promise.all([
     ownerActivityIn(db, owner.id, season, team?.id ?? null),
     careersByIds(db, ids),
@@ -62,22 +61,20 @@ export async function refreshOwnerAchievements(
   // T-11-103 선발은 화면과 같이 카드로 판정한다 — 영입한 선수도 들어가고, 지금 시즌은 지금 가진 선수만(eligibleMap).
   const eligible = eligibleMap(slotRows, owner.id, season, open);
   const byId = new Map(slotRows.filter((r) => eligible.has(r.id)).map((r) => [r.id, r]));
-  const slots = !team
-    ? null
-    : !open
-      ? []
-      : buildLineup(team.formation as FormationId, slotIdsOf(team), eligible, layoutOf(team)).map(
-          (s) => {
-            const r = s.careerId ? byId.get(s.careerId) : undefined;
-            return {
-              careerId: r ? s.careerId : null,
-              fit: s.fit,
-              lastClubId: r?.lastClubId ?? null,
-              caps: r?.caps ?? 0,
-              retiredNumber: !!r?.rn,
-            };
-          },
-        );
+  const slots = team
+    ? buildLineup(team.formation as FormationId, slotIdsOf(team), eligible, layoutOf(team)).map(
+        (s) => {
+          const r = s.careerId ? byId.get(s.careerId) : undefined;
+          return {
+            careerId: r ? s.careerId : null,
+            fit: s.fit,
+            lastClubId: r?.lastClubId ?? null,
+            caps: r?.caps ?? 0,
+            retiredNumber: !!r?.rn,
+          };
+        },
+      )
+    : null;
   // 팀이 없는 지금 시즌은 빈 팀으로 판정해 팀 업적을 목표로 보인다. 지난 시즌에 팀이 없었으면 팀 업적을 감춘다.
   const teamInput =
     team && slots

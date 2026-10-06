@@ -2,7 +2,6 @@ import { PeakProfileSchema, TeamLayoutSchema, TeamLogoSchema } from '@offside/co
 import type { TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
-import { teamSeasonEndsAt } from '@offside/contracts/service-seasons';
 import {
   DETAIL_POSITIONS,
   FACE_ATTRS,
@@ -300,20 +299,32 @@ export const liveTeam = (db: Db, teamId: string) =>
     .where(and(eq(ownerTeams.id, teamId), accountLinkedSql(), isNull(profiles.deletedAt)));
 
 /** 랭킹·상대에 오르는 팀: 그 시즌 · 선수가 한 명 이상 · 구글 연결이 살아 있는(삭제되지 않은) 구단주. */
-/** T-11-113 닫힌 시즌 랭킹엔 그 시즌 안에 만든 팀만 — 개막 뒤 친선전용으로 새로 만든 프리시즌 팀은 최종 순위에 넣지 않는다. */
-const endsBefore = (season: number) => {
-  const end = teamSeasonEndsAt(season);
-  return end ? lt(ownerTeams.createdAt, end) : undefined;
-};
-
 const rankedIn = (season: number) =>
   and(
     eq(ownerTeams.season, season),
     gt(ownerTeams.filled, 0),
-    endsBefore(season),
     accountLinkedSql(),
     isNull(profiles.deletedAt),
   );
+
+/** T-11-113 친선전용 편성(friendly_json)에 담는 칸. */
+export type FriendlyLineup = Pick<
+  OwnerTeamRow,
+  'name' | 'manager' | 'formation' | 'slotsJson' | 'layoutJson' | 'logoJson' | 'filled' | 'ovr'
+>;
+
+/**
+ * T-11-113 친선전·내 팀 화면에서 쓰는 팀: 끝난 시즌 팀을 친선전용으로 고쳤으면 그 편성을 덮어 쓴다. 랭킹·팀 프로필·업적은
+ * 원래 행(최종 기록)을 그대로 읽는다.
+ */
+export function friendlyTeamOf(row: OwnerTeamRow): OwnerTeamRow {
+  if (!row.friendlyJson) return row;
+  try {
+    return { ...row, ...(JSON.parse(row.friendlyJson) as FriendlyLineup) };
+  } catch {
+    return row;
+  }
+}
 
 /**
  * T-11-113 창단 멤버: 프리시즌(service_season 0)에 숨김 아닌 은퇴 선수를 남긴 구단주만 골라 돌려준다(커리어 프로필·상태·시즌
