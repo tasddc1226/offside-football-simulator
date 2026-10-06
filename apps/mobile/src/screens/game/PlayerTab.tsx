@@ -5,14 +5,7 @@ import { useSnapshot } from 'valtio';
 import { potentialNotice } from '@offside/app-core/potential-view';
 import { gamePlayerText as L } from '@offside/app-core/i18n/ko/gamePlayer';
 import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
-import {
-  boostHidden,
-  boostView,
-  doBoost,
-  type BoostAdOffer,
-  type BoostOutcome,
-} from '@offside/app-core/boost-view';
-import { adText } from '@offside/app-core/i18n/ko/ad';
+import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
 import { peekView } from '@offside/app-core/potential-peek';
 import { TRAITS } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
@@ -33,7 +26,7 @@ import { retireAsk, save } from '../../game/host';
 import { BoostFx } from '../../components/BoostFx';
 import { appState } from '../../store';
 import { adFree } from '../../platform/adFree';
-import { earnReward, rewardAvailable } from '../../platform/rewarded';
+import { claimReward, rewardOffer } from '../../platform/rewarded';
 import { openPeek, peekAvailable, potPeek } from '../../platform/rewardedPeek';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -83,8 +76,7 @@ function BoostCard({ s }: { s: GameState }) {
   const [adBusy, setAdBusy] = useState(false);
   const [adMessage, setAdMessage] = useState('');
   const owned = useSnapshot(adFree).owned;
-  const offer: BoostAdOffer = owned ? 'free' : rewardAvailable() ? 'ad' : null;
-  const v = boostView(s, offer);
+  const v = boostView(s, rewardOffer(owned));
   // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다. 결과를 먼저 저장하고 연출을 연다 — 연출 중에 앱을 꺼도 결과는 그대로다.
   const run = (ad: boolean) => {
     const out = doBoost(appState.G!, ad);
@@ -102,9 +94,7 @@ function BoostCard({ s }: { s: GameState }) {
     setAdBusy(true);
     setAdMessage('');
     try {
-      const r = await earnReward();
-      if (r === 'earned') run(true);
-      else setAdMessage(r === 'consent' ? adText.rewardedUnavailable : B.adWatch);
+      setAdMessage(await claimReward(() => run(true), B.adWatch));
     } finally {
       setAdBusy(false);
     }

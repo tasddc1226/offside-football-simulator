@@ -7,6 +7,7 @@ import {
   RewardedAdEventType,
   TestIds,
 } from 'react-native-google-mobile-ads';
+import { adText } from '@offside/app-core/i18n/ko/ad';
 import { askConsent } from './adConsent';
 import { adFree } from './adFree';
 
@@ -20,6 +21,9 @@ const UNIT = __DEV__
 
 /** 광고를 볼 수 있거나(단위 있음) 광고 없이 받을 수 있으면(광고 제거) 버튼을 보인다. */
 export const rewardAvailable = () => adFree.owned || !!UNIT;
+/** 보상 버튼 종류 — 광고 제거 구매자는 'free', 광고를 볼 수 있으면 'ad', 둘 다 아니면 null. owned는 화면이 구독한 값. */
+export const rewardOffer = (owned: boolean): 'free' | 'ad' | null =>
+  owned ? 'free' : UNIT ? 'ad' : null;
 
 /** 광고를 띄우고 보상을 받았는지 돌려준다. 광고를 못 불러오거나 중간에 닫으면 false. */
 function watch(unit: string): Promise<boolean> {
@@ -47,11 +51,15 @@ function watch(unit: string): Promise<boolean> {
   });
 }
 
-export type RewardResult = 'earned' | 'consent' | 'skipped';
-
-/** 광고 제거 구매자는 바로 'earned'. 동의를 못 받으면 'consent', 끝까지 보지 않았으면 'skipped'. */
-export async function earnReward(): Promise<RewardResult> {
-  if (adFree.owned) return 'earned';
-  if (!UNIT || !(await askConsent())) return 'consent';
-  return (await watch(UNIT)) ? 'earned' : 'skipped';
+/**
+ * 보상을 받으면 onEarned를 부르고 ''를, 못 받으면 보여 줄 안내를 돌려준다(동의·불러오기 실패, 끝까지 보지 않음 = skipped).
+ * 광고 제거 구매자는 광고 없이 바로 받는다.
+ */
+export async function claimReward(onEarned: () => void, skipped: string): Promise<string> {
+  if (!adFree.owned) {
+    if (!UNIT || !(await askConsent())) return adText.rewardedUnavailable;
+    if (!(await watch(UNIT))) return skipped;
+  }
+  onEarned();
+  return '';
 }

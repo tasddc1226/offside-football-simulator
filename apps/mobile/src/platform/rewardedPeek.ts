@@ -3,7 +3,7 @@
 import { proxy } from 'valtio';
 import { parsePeek, peekOf, type PotentialPeek } from '@offside/app-core/potential-peek';
 import type { GameState } from '@offside/game/types';
-import { earnReward, rewardAvailable } from './rewarded';
+import { claimReward, rewardAvailable } from './rewarded';
 import { kv } from './setup';
 import { adText as L } from '@offside/app-core/i18n/ko/ad';
 
@@ -30,9 +30,7 @@ export async function openPeek(s: GameState) {
   potPeek.busy = true;
   potPeek.message = '';
   try {
-    const r = await earnReward();
-    if (r === 'earned') open(s);
-    else potPeek.message = r === 'consent' ? L.rewardedUnavailable : L.rewardedWatch;
+    potPeek.message = await claimReward(() => open(s), L.rewardedWatch);
   } finally {
     potPeek.busy = false;
   }

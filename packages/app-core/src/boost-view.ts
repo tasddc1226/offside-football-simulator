@@ -69,15 +69,14 @@ export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView
     max: BOOST_MAX,
     line,
     ...(status === 'ready'
+      ? { button: L.button({ cost, chance }), confirm: L.confirm({ cost, chance }) }
+      : {}),
+    ...(status === 'short' && adOffer
       ? {
-          button: L.button({ cost, chance }),
-          confirm: L.confirm({ cost, chance }),
+          adButton: (adOffer === 'free' ? L.adButtonFree : L.adButton)({ chance }),
+          adNote: adOffer === 'free' ? L.adNoteFree : L.adNote,
         }
-      : status === 'short' && adOffer
-        ? adOffer === 'free'
-          ? { adButton: L.adButtonFree({ chance }), adNote: L.adNoteFree }
-          : { adButton: L.adButton({ chance }), adNote: L.adNote }
-        : {}),
+      : {}),
     note: boostNote(),
     history: b.log
       .slice(-4)
