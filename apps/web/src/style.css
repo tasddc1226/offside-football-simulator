@@ -891,12 +891,13 @@ button.hof-row {
   align-items: flex-start;
   gap: 10px;
 }
+/* 휘장은 칸 없이 뱃지 모양만 — 진열장처럼 세 개씩. 맨 앞(가장 높은 단계)은 대표 휘장으로 가운데에 크게. */
 .recap-honors {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 6px;
   margin: 0;
-  padding: 0;
+  padding: 4px 0 0;
   list-style: none;
 }
 .recap-honor {
@@ -904,30 +905,106 @@ button.hof-row {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 10px 8px 12px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--medal) 45%, transparent);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--medal) 16%, transparent), transparent 80%),
-    var(--surface-2);
+  gap: 4px;
   text-align: center;
   min-width: 0;
 }
+.recap-honor-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
 .recap-honor b {
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
+  line-height: 1.25;
   overflow-wrap: anywhere;
 }
 .recap-emblem {
-  position: relative;
-  width: 56px;
-  height: 56px;
+  display: block;
+  width: 76px;
+  filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--medal) 35%, transparent));
 }
 .recap-honor-detail {
-  font-family: var(--display);
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-size: 0.75rem;
   color: var(--medal-text);
+  font-weight: 600;
+}
+/* 금 휘장은 빛이 한 번씩 스친다(뱃지 모양 안에서만). */
+.recap-honor.gold .emblem .sheen {
+  animation: recap-sheen 4.5s ease-in-out 0.6s infinite;
+}
+@keyframes recap-sheen {
+  0% {
+    transform: translateX(-90px);
+  }
+  35%,
+  100% {
+    transform: translateX(90px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recap-honor.gold .emblem .sheen {
+    animation: none;
+    opacity: 0;
+  }
+}
+/* 휘장 문장(HonorEmblem.svelte). 금속은 --medal에서 밝게 · 어둡게 섞고, 안쪽 판은 어두운 바탕에 메달 빛. */
+.emblem {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.emblem .metal-hi {
+  stop-color: color-mix(in srgb, var(--medal) 55%, #fff);
+}
+.emblem .metal-mid {
+  stop-color: var(--medal);
+}
+.emblem .metal-lo {
+  stop-color: color-mix(in srgb, var(--medal) 60%, #000);
+}
+.emblem .field-hi {
+  stop-color: color-mix(in srgb, var(--medal) 30%, #17201b);
+}
+.emblem .field-lo {
+  stop-color: #0d1310;
+}
+.emblem .edge {
+  stroke: color-mix(in srgb, var(--medal) 55%, #000);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+.emblem .field {
+  stroke: color-mix(in srgb, var(--medal) 70%, #000);
+  stroke-width: 0.8;
+}
+.emblem .shine {
+  fill: #fff;
+  opacity: 0.18;
+}
+.emblem .glyph {
+  fill: color-mix(in srgb, var(--medal) 70%, #fff);
+}
+.emblem .glyph.line {
+  fill: none;
+  stroke: color-mix(in srgb, var(--medal) 70%, #fff);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.emblem .sheen {
+  fill: #fff;
+  opacity: 0.35;
+  transform: translateX(-90px);
+}
+.emblem .ribbon {
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+  fill: #1a1206;
 }
 /* 구단주 허브의 숫자 칸(Owner.svelte .owner-stats)과 같은 모양 — 그쪽은 컴포넌트 범위라 여기 따로 둔다. */
 .recap-stats {
@@ -6887,4 +6964,84 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   margin: -1px 0 0 -1px;
   border: 2px solid var(--accent);
   pointer-events: none;
+}
+/* T-11-128 구단주 티어(TierBadge.svelte) — 작은 날개 문장 + 티어 이름 알약. */
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  vertical-align: middle;
+  padding: 0 8px 0 0;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--tier) 50%, transparent);
+  background: color-mix(in srgb, var(--tier) 14%, transparent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 20px;
+  color: var(--tier-hi);
+  white-space: nowrap;
+}
+.tier-badge .tier-crest {
+  margin: -4px -2px -4px -4px;
+}
+:root[data-theme='light'] .tier-badge {
+  color: color-mix(in srgb, var(--tier) 75%, #000);
+}
+/* T-11-128 결산 화면 시즌 휘장 — 큰 날개 문장 아래 티어 이름과 근거. */
+.recap-tier {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  background:
+    radial-gradient(
+      ellipse at 50% 45%,
+      color-mix(in srgb, var(--tier) 22%, transparent),
+      transparent 70%
+    ),
+    var(--card);
+}
+.recap-tier h2 {
+  align-self: stretch;
+  text-align: left;
+}
+.recap-tier-name {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
+  color: var(--tier-hi);
+}
+:root[data-theme='light'] .recap-tier-name {
+  color: color-mix(in srgb, var(--tier) 75%, #000);
+}
+/* T-11-128 시즌 휘장(TierCrest.svelte) — 날개 문장 가운데 원에 프로필. 원 자리는 tierCrest.ts의 CREST_SLOT(80,60 r20 / 160×120). */
+.tier-crest {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: var(--crest-w);
+  aspect-ratio: 4 / 3;
+  line-height: 1;
+}
+.tier-crest svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 3px 8px rgb(0 0 0 / 0.35));
+}
+.tier-crest-avatar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 25%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: calc(var(--crest-w) * 0.12);
 }

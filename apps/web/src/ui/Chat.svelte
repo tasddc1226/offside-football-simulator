@@ -18,6 +18,11 @@
   import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
   import { chatText as L } from '@offside/app-core/i18n/ko/chat';
   import { goBack } from './history.svelte.js';
+  import { lastClosedSeason } from '@offside/contracts/service-seasons';
+  import TierBadge from './TierBadge.svelte';
+
+  /** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(툴팁)은 지금 기준 지난 시즌으로 보인다. */
+  const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
   import NicknameForm from './NicknameForm.svelte';
   import { toast } from './helpers.js';
   import { startGoogleLogin } from './login.js';
@@ -151,7 +156,7 @@
       {#each view.messages as m (m.id)}
         <li class="chat-msg" class:mine={mine(m)} data-chat-msg={m.id}>
           <div class="chat-meta">
-            {#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{m.nickname}</b>{/if}
+            {#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{m.nickname}</b>{#if m.tier}<TierBadge tag={{ tier: m.tier, season: tierSeason }} />{/if}{/if}
           </div>
           <div class="chat-body-row">
             <p class="chat-bubble">{m.body}</p>

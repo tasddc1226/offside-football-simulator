@@ -29,6 +29,9 @@
   import { accountText as A } from '@offside/app-core/i18n/ko/account';
   import { fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
   import { recapCardView } from '@offside/app-core/seasonRecap';
+  import { recapTier, tierTitle } from '@offside/app-core/ownerTier';
+  import { TIER_PALETTE } from '@offside/app-core/tierCrest';
+  import TierCrest from './TierCrest.svelte';
   import { seasonRecapText as R } from '@offside/app-core/i18n/ko/seasonRecap';
 
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
@@ -86,6 +89,11 @@
     });
   });
   const recapCard = $derived(recap ? recapCardView(recap) : null);
+  // 지난 시즌 결산으로 정한 티어(시즌 휘장) — 프로필 사진 자리를 날개 문장이 감싼다(LoL 지난 시즌 티어 테두리처럼).
+  // 댓글 · 채팅에도 같은 티어가 나간다(서버 ownerTiersOf).
+  const tierTag = $derived(
+    recap?.status === 'ready' && recap.recap ? { tier: recapTier(recap.recap), season: recap.season } : null,
+  );
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
@@ -102,9 +110,14 @@
   {#if linked || guest}
     <section class="card owner-hub" data-owner-summary aria-label={L.summaryLabel}>
       <div class="owner-id">
-        <span class="owner-avatar" aria-hidden="true">{(nickname ?? L.avatarInitial).slice(0, 1)}</span>
+        {#if tierTag}
+          <span class="owner-crest" data-owner-crest={tierTag.tier}><TierCrest tier={tierTag.tier} size={104} initial={(nickname ?? L.avatarInitial).slice(0, 1)} /></span>
+        {:else}
+          <span class="owner-avatar" aria-hidden="true">{(nickname ?? L.avatarInitial).slice(0, 1)}</span>
+        {/if}
         <div class="owner-who">
           <b>{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}</b>
+          {#if tierTag}<span class="owner-tier" style="color: {TIER_PALETTE[tierTag.tier].hi}" data-owner-tier={tierTag.tier}>{tierTitle(tierTag)}</span>{/if}
           <span class="muted fs-sm">{guest ? L.guestSub : card?.team ? `${card.team.name} · ${card.season}` : L.signedInSubWeb}</span>
         </div>
       </div>
@@ -132,7 +145,7 @@
         <span class="muted fs-sm">{recapCard.line}</span>
         {#if recapCard.chips.length > 0}
           <span class="recap-chips">
-            {#each recapCard.chips as c (c.kind)}<span class="pill recap-chip medal {c.medal}" data-recap-chip={c.kind}>{c.title} {c.detail}</span>{/each}
+            {#each recapCard.chips as c (c.kind)}<span class="pill recap-chip medal {c.medal}" data-recap-chip={c.kind}>{c.chip}</span>{/each}
           </span>
         {/if}
       </div>
@@ -235,6 +248,17 @@
     font-family: var(--display);
     font-size: 1.375rem;
     font-weight: 700;
+  }
+  /* T-11-128 시즌 휘장 — 날개가 옆으로 넘쳐도 이름 칸을 밀지 않게 조금 겹친다. */
+  .owner-crest {
+    flex: none;
+    margin: -14px -14px -10px -18px;
+  }
+  .owner-tier {
+    font-family: var(--display);
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
   .owner-who {
     display: flex;

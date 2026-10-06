@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { careers } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueCookie, issueGoogleCookie } from '../test/http.js';
+import { ownerTiersOf } from '../db/repos/ownerTiers.js';
 import { closeStateOf, runSeasonClose } from './seasonClose.js';
 
 const RecapRes = successEnvelope(SeasonRecapResponseSchema);
@@ -161,6 +162,19 @@ describe('T-11-128 시즌 결산', () => {
       ).json(),
     ).data;
     expect(guest.honors.map((h) => h.kind).sort()).toEqual(['hof', 'pioneer']);
+
+    // 지난 시즌 휘장으로 티어가 붙는다(댓글 · 채팅 · 프로필).
+    const tiers = await ownerTiersOf(
+      ctx.db,
+      [a.profileId, b.profileId, anon.profileId, 'prf_none'],
+      new Date().toISOString(),
+    );
+    // A: 업적 1위 → 챌린저 · B: 팀 레이팅 1위 → 챌린저 · 게스트: 순위 없이 명예의 전당 3위 → 그랜드마스터.
+    expect(Object.fromEntries([...tiers].map(([id, t]) => [id, t.tier]))).toEqual({
+      [a.profileId]: 'challenger',
+      [b.profileId]: 'challenger',
+      [anon.profileId]: 'grandmaster',
+    });
 
     // 다시 돌려도 바꾸지 않는다.
     expect(await closeAll()).toEqual([]);

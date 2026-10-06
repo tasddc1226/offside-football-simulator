@@ -21,7 +21,11 @@ export type HonorView = {
   kind: OwnerHonor['kind'];
   season: number;
   title: string;
-  /** 단계·개수(1위 · 상위 10 · 3개). */
+  /** 리본 글자 — 단계 · 개수(1위 · TOP 10 · ×3). */
+  ribbon: string;
+  /** 허브 카드 알약 — '명예의 전당 1위' · '업적 랭킹 TOP 10'. */
+  chip: string;
+  /** 리본 아래 한 줄 — 실제 순위 · 개수(5위로 마감 · 2개). */
   detail: string;
   /** 1위 · 상위 10이면 금 · 은, 그 밖은 동(메달 색). */
   medal: 'gold' | 'silver' | 'bronze';
@@ -38,8 +42,14 @@ const TITLE: Record<OwnerHonor['kind'], (season: number) => string> = {
   first: () => L.honorFirst,
 };
 
+function ribbonOf(h: OwnerHonor): string {
+  if (h.band !== null) return h.band === 1 ? L.bandFirst : L.ribbonTop({ band: h.band });
+  return h.kind === 'pioneer' ? teamSeasonLabel(h.season) : L.ribbonCount({ n: h.value ?? 0 });
+}
+
 function detailOf(h: OwnerHonor): string {
-  if (h.band !== null) return h.band === 1 ? L.bandFirst : L.bandTop({ band: h.band });
+  if (h.band !== null)
+    return h.rank === null ? L.bandTop({ band: h.band }) : L.rankFinal({ rank: num(h.rank) });
   const n = h.value ?? 0;
   if (h.kind === 'pioneer') return L.pioneerDetail({ n });
   return h.kind === 'wall-of-honor' ? L.countPlayers({ n }) : L.countNumbers({ n });
@@ -57,6 +67,11 @@ export function honorViews(honors: readonly OwnerHonor[]): HonorView[] {
       kind: h.kind,
       season: h.season,
       title: TITLE[h.kind](h.season),
+      ribbon: ribbonOf(h),
+      chip:
+        h.kind === 'pioneer'
+          ? TITLE.pioneer(h.season)
+          : `${TITLE[h.kind](h.season)} ${ribbonOf(h)}`,
       detail: detailOf(h),
       medal: medalOf(h),
     }))

@@ -7,13 +7,12 @@ const ko = {
   cardPending: (p: { season: string }) =>
     `${p.season} 결산을 정리하고 있어요. 잠시 뒤에 다시 봐 주세요.`,
   cardNone: (p: { season: string }) => `${p.season}에 남긴 기록이 없어요.`,
-  cardHonors: (p: { n: number }) => `휘장 ${p.n}개를 받았어요`,
+  cardHonors: (p: { n: number }) => `기록 배지 ${p.n}개를 받았어요`,
   open: '결산 보기',
   newBadge: 'NEW',
   title: (p: { season: string }) => `${p.season} 결산`,
   cutoff: (p: { day: string }) => `${p.day}까지의 기록이에요`,
-  secHonors: '받은 휘장',
-  honorsNone: '이번 시즌에 받은 휘장은 없어요. 다음 시즌에 도전해 보세요.',
+  honorsNone: '이번 시즌에 받은 기록 배지는 없어요. 다음 시즌에 도전해 보세요.',
   secActivity: '이번 시즌 활동',
   players: '키운 선수',
   retired: '은퇴한 선수',
@@ -40,7 +39,7 @@ const ko = {
   pickSeason: '시즌',
   loadFail: '결산을 불러오지 못했어요.',
   retry: '다시 시도',
-  // 휘장
+  // 기록 배지
   honorPioneerPreseason: '프리시즌 개척자',
   honorPioneer: (p: { season: string }) => `${p.season} 완주`,
   honorAchievements: '업적 랭킹',
@@ -54,6 +53,28 @@ const ko = {
   countNumbers: (p: { n: number }) => `${p.n}개`,
   countPlayers: (p: { n: number }) => `${p.n}명`,
   pioneerDetail: (p: { n: number }) => `은퇴 선수 ${p.n}명`,
+  ribbonTop: (p: { band: number }) => `TOP ${p.band}`,
+  ribbonCount: (p: { n: number }) => `×${p.n}`,
+  rankFinal: (p: { rank: string }) => `${p.rank}위로 마감`,
+  // 구단주 티어(시즌 휘장 — 지난 시즌 기록 순위로)
+  tierIron: '아이언',
+  tierBronze: '브론즈',
+  tierSilver: '실버',
+  tierGold: '골드',
+  tierPlatinum: '플래티넘',
+  tierEmerald: '에메랄드',
+  tierDiamond: '다이아몬드',
+  tierMaster: '마스터',
+  tierGrandmaster: '그랜드마스터',
+  tierChallenger: '챌린저',
+  secTier: '시즌 휘장',
+  secBadges: '기록 배지',
+  tierWhy: (p: { what: string; rank: string; total: string }) =>
+    `${p.what} ${p.rank}위 / ${p.total}`,
+  tierWhyLegacy: '영구결번 · 명예의 벽 · 최초 기록',
+  tierWhyRetired: (p: { n: number }) => `은퇴 선수 ${p.n}명`,
+  tierWhyNone: '시즌 기록',
+  tierTitle: (p: { season: string; tier: string }) => `${p.season} ${p.tier}`,
 };
 
 export type SeasonRecapMsgs = typeof ko;

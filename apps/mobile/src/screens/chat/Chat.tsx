@@ -11,6 +11,7 @@ import {
   type CommentReportReason,
 } from '@offside/contracts/board-limits';
 import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
+import { lastClosedSeason } from '@offside/contracts/service-seasons';
 import * as api from '@offside/app-core/api/chat';
 import {
   CHAT_REJECT_TEXT,
@@ -24,6 +25,7 @@ import {
 import type { ApiResult } from '@offside/app-core/api/client';
 import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
 import { NicknameForm } from '../../components/NicknameForm';
+import { TierBadge } from '../../components/TierBadge';
 import { toast } from '../../game/host';
 import { goBack, goHome } from '../../game/nav';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
@@ -39,6 +41,8 @@ import { Txt } from '../../ui/Txt';
 import { TextBox, confirmAsync } from '../board/parts';
 
 const small = { fontSize: rem(0.75) } as const;
+/** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(접근성 글자)은 지금 기준 지난 시즌으로 읽힌다. */
+const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
 
 /** 입력칸 — 글자를 칠 때마다 메시지 목록까지 다시 그리지 않도록 입력 상태를 따로 둔다. */
 type InputHandle = { restore(body: string): void };
@@ -337,9 +341,12 @@ export default function Chat() {
                   {m.admin ? (
                     <Pill tone="good">{ADMIN_NICKNAME}</Pill>
                   ) : (
-                    <Txt bold tone={mine(m) ? 'accent' : 'ink'}>
-                      {m.nickname}
-                    </Txt>
+                    <>
+                      <Txt bold tone={mine(m) ? 'accent' : 'ink'}>
+                        {m.nickname}
+                      </Txt>
+                      {m.tier ? <TierBadge tag={{ tier: m.tier, season: tierSeason }} /> : null}
+                    </>
                   )}
                   {!mine(m) && (!m.admin || me?.admin) ? (
                     <Press

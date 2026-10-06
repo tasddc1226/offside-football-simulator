@@ -34,6 +34,7 @@ import {
   unblock,
   updatePost,
 } from '../db/repos/boards.js';
+import { ownerTierOfProfile, ownerTiersOf } from '../db/repos/ownerTiers.js';
 import { getDb, type AppEnv } from '../env.js';
 import { notFoundError, ok, readBody, nowIso, enforceLimit } from './shared.js';
 import { AppError, parseWithAppError } from '../errors.js';
@@ -101,14 +102,19 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       session.then((s) => (s ? isLiked(db, id, s.profileId) : false)),
       session.then((s) => (s ? getHiddenFor(db, s.profileId, id) : undefined)),
     ]);
-    const comments = rows
-      .filter(
-        (r) => !hidden?.blockedAuthors.has(r.profileId) && !hidden?.reportedComments.has(r.id),
-      )
-      .map(({ profileId, ...r }) => ({
-        ...r,
-        deletable: viewer.admin || profileId === viewer.profileId,
-      }));
+    const shown = rows.filter(
+      (r) => !hidden?.blockedAuthors.has(r.profileId) && !hidden?.reportedComments.has(r.id),
+    );
+    const tiers = await ownerTiersOf(
+      db,
+      shown.map((r) => r.profileId),
+      nowIso(),
+    );
+    const comments = shown.map(({ profileId, ...r }) => ({
+      ...r,
+      tier: tiers.get(profileId) ?? null,
+      deletable: viewer.admin || profileId === viewer.profileId,
+    }));
     return ok(c, PostDetailResponseSchema, {
       post,
       comments,
@@ -213,6 +219,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       nickname,
       body,
       admin: viewer.admin,
+      tier: await ownerTierOfProfile(db, profileId, now),
       deletable: true,
       createdAt: now,
     };

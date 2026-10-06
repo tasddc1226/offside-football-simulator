@@ -28,9 +28,7 @@ export function HonorChip({ h }: { h: HonorView }) {
         backgroundColor: alpha(MEDAL_GLOW[h.medal], 0.14),
       }}
     >
-      <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: text }}>
-        {`${h.title} ${h.detail}`}
-      </Txt>
+      <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: text }}>{h.chip}</Txt>
     </View>
   );
 }

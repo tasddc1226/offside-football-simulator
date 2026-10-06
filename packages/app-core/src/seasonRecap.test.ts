@@ -21,9 +21,9 @@ describe('T-11-128 시즌 결산 문구', () => {
       honor({ kind: 'wall-of-honor', value: 2 }),
     ]);
     expect(views.map((v) => [v.season, v.kind, v.detail, v.medal])).toEqual([
-      [1, 'team', '상위 10', 'silver'],
-      [0, 'achievements', '1위', 'gold'],
-      [0, 'hof', '상위 100', 'bronze'],
+      [1, 'team', '4위로 마감', 'silver'],
+      [0, 'achievements', '1위로 마감', 'gold'],
+      [0, 'hof', '42위로 마감', 'bronze'],
       [0, 'wall-of-honor', '2명', 'bronze'],
       [0, 'pioneer', '은퇴 선수 3명', 'bronze'],
     ]);
@@ -43,7 +43,7 @@ describe('T-11-128 시즌 결산 문구', () => {
       honor({ kind: kind as OwnerHonor['kind'], value: 1 }),
     );
     const ready = recapCardView({ season: 0, status: 'ready', recap: null, honors });
-    expect(ready.line).toBe('프리시즌 결산이 나왔어요 · 휘장 4개를 받았어요');
+    expect(ready.line).toBe('프리시즌 결산이 나왔어요 · 기록 배지 4개를 받았어요');
     expect(ready.chips).toHaveLength(3);
     const pending = recapCardView({ season: 0, status: 'pending', recap: null, honors: [] });
     expect(pending.isNew).toBe(false);

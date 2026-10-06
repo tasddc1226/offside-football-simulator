@@ -2,6 +2,7 @@
 // 한 번 굳히고(owner_season_records) 휘장을 영구히 남긴다(owner_honors). 굳힌 뒤에는 계산식이 바뀌어도 다시 세지 않는다.
 import { z } from 'zod';
 import { CareerPosSchema } from './careers.js';
+import { OWNER_TIERS } from './owner-tier.js';
 import { IsoUtcSchema } from './primitives.js';
 import { TeamSeasonSchema } from './teams.js';
 
@@ -106,3 +107,11 @@ export const OwnerHonorsResponseSchema = z.strictObject({
   honors: z.array(OwnerHonorSchema),
 });
 export type OwnerHonorsResponse = z.infer<typeof OwnerHonorsResponseSchema>;
+
+/** 프로필 · 댓글 · 채팅에 붙는 티어(그 시즌과 함께). 티어 규칙은 zod 없는 owner-tier.ts. */
+export const OwnerTierSchema = z.enum(OWNER_TIERS);
+export const OwnerTierTagSchema = z.strictObject({
+  tier: OwnerTierSchema,
+  season: TeamSeasonSchema,
+});
+export type OwnerTierTag = z.infer<typeof OwnerTierTagSchema>;

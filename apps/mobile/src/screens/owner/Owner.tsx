@@ -20,6 +20,9 @@ import {
   type OwnerSummary,
   type OwnerTeamCard,
 } from '@offside/app-core/ownerHub';
+import { fetchSeasonRecap } from '@offside/app-core/api/seasonRecap';
+import { recapTier, tierTitle, type OwnerTierTag } from '@offside/app-core/ownerTier';
+import { TIER_PALETTE } from '@offside/app-core/tierCrest';
 import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
@@ -28,7 +31,7 @@ import { loadHOF } from '@offside/game/hof-store';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
 import { go } from '../../game/nav';
-import { useColors } from '../../theme/useColors';
+import { useColors, useIsDark } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Pill, Row, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
@@ -38,6 +41,7 @@ import { MyPlayers } from './MyPlayers';
 import { RecapCard } from './RecapCard';
 import { Grid2, OvrBadge, Stats } from './TeamParts';
 import { TeamLogo } from '../../components/TeamLogo';
+import { TierCrest } from '../../components/TierCrest';
 import { AdSlot } from '../../components/AdSlot';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
@@ -113,6 +117,7 @@ function LockedPitch() {
 
 export default function Owner() {
   const c = useColors();
+  const dark = useIsDark();
   const cache = useSnapshot(accountCache);
   const acct = cache.value;
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
@@ -166,6 +171,22 @@ export default function Owner() {
       alive = false;
     };
   }, [linked, tick, track]);
+  // T-11-128 지난 시즌 결산으로 정한 티어(시즌 휘장) — 프로필 자리를 날개 문장이 감싼다(결산 카드와 같은 응답, 1분 메모).
+  const [tierTag, setTierTag] = useState<OwnerTierTag | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void track(fetchSeasonRecap()).then((r) => {
+      if (!alive || !r.ok) return;
+      setTierTag(
+        r.data.status === 'ready' && r.data.recap
+          ? { tier: recapTier(r.data.recap), season: r.data.season }
+          : null,
+      );
+    });
+    return () => {
+      alive = false;
+    };
+  }, [tick, track]);
   const clubValue = linked ? (market?.clubValue ?? null) : (summary?.value ?? null);
 
   const team = card?.team;
@@ -184,22 +205,35 @@ export default function Owner() {
       {linked || guest ? (
         <Card gap={14} testID="owner-summary">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                backgroundColor: c.pitch,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.375), color: c.pitchAccent }}>
-                {(nickname ?? L.avatarInitial).slice(0, 1)}
-              </Txt>
-            </View>
+            {tierTag ? (
+              // 날개가 옆으로 넘쳐도 이름 칸을 밀지 않게 조금 겹친다(웹 .owner-crest).
+              <View style={{ marginVertical: -14, marginLeft: -18, marginRight: -14 }}>
+                <TierCrest
+                  tier={tierTag.tier}
+                  size={104}
+                  initial={(nickname ?? L.avatarInitial).slice(0, 1)}
+                />
+              </View>
+            ) : (
+              <View
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: c.pitch,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Txt
+                  style={{ fontFamily: DISPLAY[700], fontSize: rem(1.375), color: c.pitchAccent }}
+                >
+                  {(nickname ?? L.avatarInitial).slice(0, 1)}
+                </Txt>
+              </View>
+            )}
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
               <Row gap={6}>
                 <Txt style={{ fontSize: rem(1.125), fontWeight: '700' }}>
@@ -212,6 +246,19 @@ export default function Owner() {
                   </View>
                 ) : null}
               </Row>
+              {tierTag ? (
+                <Txt
+                  testID={`owner-tier-${tierTag.tier}`}
+                  style={{
+                    fontFamily: DISPLAY[700],
+                    fontSize: rem(0.875),
+                    letterSpacing: 0.3,
+                    color: dark ? TIER_PALETTE[tierTag.tier].hi : TIER_PALETTE[tierTag.tier].lo,
+                  }}
+                >
+                  {tierTitle(tierTag)}
+                </Txt>
+              ) : null}
               <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
                 {sub}
               </Txt>

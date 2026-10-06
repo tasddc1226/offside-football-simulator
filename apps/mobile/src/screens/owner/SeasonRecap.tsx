@@ -1,13 +1,16 @@
-// T-11-128 구단주 시즌 결산(웹 SeasonRecap.svelte) — 끝난 시즌의 기록을 서버가 굳힌 그대로 보여 준다. 받은 휘장 ·
-// 시즌 활동 · 남긴 선수 · 팀 경쟁 · 업적. 끝난 시즌이 둘 이상이면 시즌 칩으로 고른다(기본은 가장 최근).
+// T-11-128 구단주 시즌 결산(웹 SeasonRecap.svelte) — 끝난 시즌의 기록을 서버가 굳힌 그대로 보여 준다. 시즌 휘장(티어) ·
+// 기록 배지 · 시즌 활동 · 남긴 선수 · 팀 경쟁 · 업적. 끝난 시즌이 둘 이상이면 시즌 칩으로 고른다(기본은 가장 최근).
 // 결산을 열면 그 시즌을 '봤다'고 기록해 구단주 허브 카드의 NEW 표시를 끈다. 뒤로 가기는 구단주 허브로 돌아간다.
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { useSnapshot } from 'valtio';
 import type { SeasonRecapResponse } from '@offside/contracts';
 import { fetchOwnerHonors, fetchSeasonRecap } from '@offside/app-core/api/seasonRecap';
 import { anonName } from '@offside/app-core/format';
 import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
+import { ownerText as O } from '@offside/app-core/i18n/ko/owner';
+import { recapTier, tierReason, tierTitle } from '@offside/app-core/ownerTier';
+import { TIER_PALETTE } from '@offside/app-core/tierCrest';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import {
   honorViews,
@@ -19,12 +22,15 @@ import {
 } from '@offside/app-core/seasonRecap';
 import { num, recordText } from '@offside/app-core/teamText';
 import { POS } from '@offside/game/data';
-import { Laurel, MEDAL_GLOW, useMedal } from '../../components/Laurel';
+import { HonorEmblem } from '../../components/HonorEmblem';
+import { useMedal } from '../../components/Laurel';
+import { TierCrest } from '../../components/TierCrest';
+import { accountCache } from '../../store';
 import { go } from '../../game/nav';
 import { openPublicLegendById } from '../../game/host';
 import { alpha } from '../../theme/colors';
-import { rem } from '../../theme/type';
-import { useColors } from '../../theme/useColors';
+import { DISPLAY, rem } from '../../theme/type';
+import { useColors, useIsDark } from '../../theme/useColors';
 import { BackBar, Btn, Card, Press, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Seg, TabOpt } from '../board/parts';
@@ -72,47 +78,32 @@ const Rows = ({ items }: { items: [string, string, string?][] }) => (
   </View>
 );
 
-/** 휘장 타일 — 메달 색 월계관 + 별 · 이름 · 단계. */
-function HonorTile({ h }: { h: HonorView }) {
-  const { text } = useMedal(h.medal);
+/** 기록 배지 진열(웹 .recap-honor) — 칸 없이 문장만 세 개씩(76px). 문장 아래에 이름(굵게)과 단계(메달 글자색). */
+function HonorBadge({ h }: { h: HonorView }) {
+  const { leaf, text } = useMedal(h.medal);
   return (
     <View
       testID={`recap-honor-${h.kind}`}
       accessible
       accessibilityLabel={`${h.title} ${h.detail}`}
-      style={{
-        flexBasis: '47%',
-        flexGrow: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        padding: 10,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: alpha(MEDAL_GLOW[h.medal], 0.5),
-        backgroundColor: alpha(MEDAL_GLOW[h.medal], 0.12),
-      }}
+      style={{ width: '33.3333%', alignItems: 'center', gap: 4, paddingHorizontal: 3 }}
     >
-      <View style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
-        <Laurel medal={h.medal} />
-        <Svg
-          viewBox="0 0 24 24"
-          width={14}
-          height={14}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        >
-          <Path
-            d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"
-            fill={text}
-          />
-        </Svg>
+      {/* 웹 drop-shadow — 메달 색 빛(iOS만 그려지고 안드로이드는 생략). */}
+      <View
+        style={{
+          shadowColor: leaf,
+          shadowOpacity: 0.35,
+          shadowRadius: 5,
+          shadowOffset: { width: 0, height: 4 },
+        }}
+      >
+        <HonorEmblem h={h} size={76} />
       </View>
-      <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
-        <Txt bold style={{ fontSize: rem(0.875) }}>
+      <View style={{ gap: 1, alignItems: 'center', minWidth: 0 }} accessibilityElementsHidden>
+        <Txt bold center style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.25 }}>
           {h.title}
         </Txt>
-        <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+        <Txt num={600} center style={{ fontSize: rem(0.75), color: text, fontWeight: '600' }}>
           {h.detail}
         </Txt>
       </View>
@@ -159,6 +150,13 @@ export default function SeasonRecap() {
   const shown = res ? teamSeasonLabel(res.season) : '';
   const honors = res ? honorViews(res.honors) : [];
   const muted = { fontSize: rem(0.875) } as const;
+  const tier = recap ? recapTier(recap) : null;
+  const dark = useIsDark();
+  const acct = useSnapshot(accountCache).value;
+  const initial = ((acct && acct !== 'error' ? acct.nickname : null) ?? O.avatarInitial).slice(
+    0,
+    1,
+  );
 
   return (
     <Screen footer={<BackBar testID="owner" fallback={() => go('owner')} />}>
@@ -215,12 +213,50 @@ export default function SeasonRecap() {
 
       {res && recap ? (
         <>
+          {tier ? (
+            // 시즌 휘장 — 이번 시즌 기록으로 정한 티어. 프로필 · 댓글 · 채팅에 다음 시즌 내내 붙는다(웹 .recap-tier).
+            <Card gap={4} testID={`recap-tier-${tier}`}>
+              <Sec>{L.secTier}</Sec>
+              <View
+                accessible
+                accessibilityLabel={`${tierTitle({ tier, season: res.season })} ${tierReason(recap)}`}
+                style={{ alignItems: 'center', gap: 4, paddingBottom: 4 }}
+              >
+                <View
+                  style={{
+                    shadowColor: TIER_PALETTE[tier].base,
+                    shadowOpacity: 0.5,
+                    shadowRadius: 18,
+                    shadowOffset: { width: 0, height: 0 },
+                  }}
+                >
+                  <TierCrest tier={tier} size={240} initial={initial} />
+                </View>
+                <Txt
+                  style={{
+                    fontFamily: DISPLAY[700],
+                    fontSize: rem(1.25),
+                    letterSpacing: 0.3,
+                    color: dark ? TIER_PALETTE[tier].hi : TIER_PALETTE[tier].lo,
+                    textShadowColor: alpha(TIER_PALETTE[tier].base, dark ? 0.4 : 0),
+                    textShadowRadius: 8,
+                  }}
+                >
+                  {tierTitle({ tier, season: res.season })}
+                </Txt>
+                <Txt tone="muted" num style={muted}>
+                  {tierReason(recap)}
+                </Txt>
+              </View>
+            </Card>
+          ) : null}
+
           <Card gap={10} testID="recap-honors">
-            <Sec>{L.secHonors}</Sec>
+            <Sec>{L.secBadges}</Sec>
             {honors.length > 0 ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, paddingTop: 4 }}>
                 {honors.map((h) => (
-                  <HonorTile key={`${h.season}-${h.kind}`} h={h} />
+                  <HonorBadge key={`${h.season}-${h.kind}`} h={h} />
                 ))}
               </View>
             ) : (
