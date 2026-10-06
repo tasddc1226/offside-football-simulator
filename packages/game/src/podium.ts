@@ -1,6 +1,7 @@
 // 명예의 전당 시상대 단상 도트 그림(웹 HofPodium.svelte · 앱 HofPodium.tsx). 도트 선수(avatar.ts)가 윗면에 올라선다.
 // 가로 40칸 고정, 높이는 순위별로 다르다. 웹·앱은 width 100%로 늘려 그리고, 값·순위 글자는 앞면 위에 겹쳐 쓴다.
 // 시상대는 홈 첫 화면 청크에 있어 유니폼 표가 든 avatar.ts를 가져오지 않는다.
+import { pixelPaths, type PixelPath } from './color.js';
 
 export const PODIUM_W = 40;
 /** 1·2·3위 단상 높이(칸). */
@@ -115,21 +116,7 @@ function podiumPixels(rank: 1 | 2 | 3): (string | null)[][] {
  * 색마다 SVG path 하나(viewBox 0 0 PODIUM_W PODIUM_H[rank]). 같은 색이 이어진 가로 칸은 한 조각으로 합쳐
  * 단상 하나가 사각형 수백 개 대신 path 몇 개로 그려진다. 순위마다 처음 부를 때 한 번만 만든다.
  */
-export function podiumPaths(rank: 1 | 2 | 3): readonly { fill: string; d: string }[] {
-  return (pathCache[rank] ??= buildPaths(rank));
+export function podiumPaths(rank: 1 | 2 | 3): readonly PixelPath[] {
+  return (pathCache[rank] ??= pixelPaths(podiumPixels(rank)));
 }
-const pathCache: Partial<Record<1 | 2 | 3, readonly { fill: string; d: string }[]>> = {};
-
-function buildPaths(rank: 1 | 2 | 3): { fill: string; d: string }[] {
-  const byFill = new Map<string, string>();
-  podiumPixels(rank).forEach((row, y) => {
-    for (let x = 0; x < row.length;) {
-      const c = row[x];
-      let w = 1;
-      while (x + w < row.length && row[x + w] === c) w++;
-      if (c) byFill.set(c, `${byFill.get(c) ?? ''}M${x} ${y}h${w}v1h-${w}z`);
-      x += w;
-    }
-  });
-  return [...byFill].map(([fill, d]) => ({ fill, d }));
-}
+const pathCache: Partial<Record<1 | 2 | 3, readonly PixelPath[]>> = {};

@@ -10,7 +10,7 @@ import {
   tagline,
   type ShareCardData,
 } from '@offside/app-core/shareCard';
-import { RnColorContext, RnJersey } from '../../components/RnJersey';
+import { RnFrame } from '../../components/RnFrame';
 import { DISPLAY, fitLine } from '../../theme/type';
 
 const C = {
@@ -166,10 +166,8 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
         LEGEND SCORE
       </T>
       {c.jersey ? (
-        <View style={{ position: 'absolute', left: MID + 215 - 98, top: 306, width: 196 }}>
-          <RnColorContext.Provider value={c.jersey.colors}>
-            <RnJersey name={c.jersey.name} number={c.jersey.number} />
-          </RnColorContext.Provider>
+        <View style={{ position: 'absolute', left: MID + 215 - 99, top: 300 }}>
+          <RnFrame clubId={c.jersey.clubId} number={c.jersey.number} width={198} />
         </View>
       ) : null}
 

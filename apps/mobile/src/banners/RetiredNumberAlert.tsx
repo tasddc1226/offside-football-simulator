@@ -6,15 +6,14 @@ import { useEffect, useState } from 'react';
 import { Animated, Easing, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Text as SvgText } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import type { LiveRetiredNumber } from '@offside/contracts';
 import { defaultClubName } from '@offside/contracts/club-names';
-import { RN_DEFAULT, RN_SHIRT, RN_TRIM, rnColors } from '@offside/app-core/rnStyle';
+import { RnFrame } from '../components/RnFrame';
 import { openPublicLegendById } from '../game/host';
 import { prefs, rnAlert } from '../store';
 import { alpha } from '../theme/colors';
-import { DISPLAY, rem } from '../theme/type';
+import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
 import { Btn, Txt } from '../ui';
 import { BannerClose } from './TopBanner';
@@ -60,7 +59,6 @@ function AlertCard({
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { motionOK } = useSnapshot(prefs);
-  const jc = rnColors(item.clubId) ?? RN_DEFAULT;
   // 배너 폭(웹 min(448px, 100% - 32px)) + 금빛 고리 3px씩.
   const W = Math.min(448, width - 32);
 
@@ -159,20 +157,7 @@ function AlertCard({
               ],
             }}
           >
-            <Svg width={40} height={(40 * 124) / 120} viewBox="0 0 120 124">
-              <Path d={RN_SHIRT} fill={jc.base} stroke={jc.accent} strokeWidth={2} />
-              <Path d={RN_TRIM} fill="none" stroke={jc.accent} strokeWidth={4} />
-              <SvgText
-                x={60}
-                y={92}
-                textAnchor="middle"
-                fontFamily={DISPLAY[700]}
-                fontSize={46}
-                fill={jc.ink}
-              >
-                {String(item.number)}
-              </SvgText>
-            </Svg>
+            <RnFrame clubId={item.clubId} number={item.number} width={40} />
           </Animated.View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Txt

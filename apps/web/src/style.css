@@ -3942,10 +3942,13 @@ html:has(.wrap.has-actionbar) {
 .rn-alert small {
   white-space: normal;
 }
-.rn-jersey.rn-alert-shirt {
+.rn-frame {
+  display: block;
+  height: auto;
+}
+.rn-frame.rn-alert-frame {
   flex: none;
   width: 40px;
-  filter: none;
   animation: rn-alert-pop 0.5s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 @keyframes rn-alert-shine {
@@ -3960,7 +3963,7 @@ html:has(.wrap.has-actionbar) {
 }
 @media (prefers-reduced-motion: reduce) {
   .rn-alert::after,
-  .rn-jersey.rn-alert-shirt {
+  .rn-frame.rn-alert-frame {
     animation: none;
   }
 }
@@ -4570,10 +4573,11 @@ html:has(.wrap.has-actionbar) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rn-jersey.rn-tile-shirt {
-  width: 52px;
+/* 칸이 고르게 보이게 도안 폭(66칸)의 정수배. */
+.rn-frame.rn-tile-frame {
+  width: 66px;
   margin-bottom: 4px;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
 }
 .rn-tile-name {
   max-width: 100%;
@@ -5544,7 +5548,7 @@ button.title-item:hover {
 .style-best b {
   color: var(--film-gold);
 }
-/* T-10-076 영구결번 — 유니폼 세리머니. 유니폼 색은 구단 엠블럼 색(--rn-base/--rn-accent). */
+/* T-10-076 영구결번 세리머니. 결번 액자(RnFrame)는 구단 홈 유니폼으로 그린다. */
 .film-rn {
   display: flex;
   flex-direction: column;
@@ -5558,118 +5562,56 @@ button.title-item:hover {
   align-items: center;
   gap: 10px;
 }
-.rn-jersey {
-  width: 168px;
-  height: auto;
-  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45));
-}
-.rn-shirt {
-  fill: var(--rn-base, #1f6f4a);
-  stroke: var(--rn-accent, #f2c14e);
-  stroke-width: 2;
-}
-.rn-trim {
-  fill: none;
-  stroke: var(--rn-accent, #f2c14e);
-  stroke-width: 4;
-}
-.rn-jersey text {
-  fill: var(--rn-ink, #fff);
-  text-anchor: middle;
-  font-family: var(--display);
-}
-.rn-jersey-name {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-}
-.rn-jersey-num {
-  font-size: 46px;
-}
-/* 은퇴 세리머니 유니폼 — 원근 속에서 천천히 몸을 돌리고, 바닥 그림자·뒤 조명이 따라온다. */
-.rn-jersey3d {
+/* 은퇴 세리머니: 도트 커튼이 계단식(steps)으로 걷히며 결번 액자가 드러난다. 크레딧이 화면에 들어오면(credit-wait가 풀리면) 시작. */
+.rn-unveil {
   position: relative;
-  perspective: 640px;
-  padding: 6px 0 18px;
+  width: 198px;
+  overflow: hidden;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.45));
 }
-.rn-jersey3d::before {
-  content: '';
-  position: absolute;
-  inset: -12% -30% 8%;
-  background: radial-gradient(
-    closest-side,
-    color-mix(in srgb, var(--rn-accent, #f2c14e) 30%, transparent),
-    transparent
-  );
-  opacity: 0.55;
-  pointer-events: none;
+.rn-frame.rn-unveil-frame {
+  width: 100%;
 }
-.rn-jersey3d::after {
-  content: '';
+.rn-curtain {
   position: absolute;
-  left: 50%;
+  top: 0;
   bottom: 0;
-  width: 150px;
-  height: 18px;
-  translate: -50% 0;
-  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), transparent);
-  animation: rn-floor 7s ease-in-out infinite alternate;
+  width: calc(50% + 6px);
+  background: repeating-linear-gradient(
+    90deg,
+    #4d0b14 0 4px,
+    #7a1420 4px 8px,
+    #a3202f 8px 12px,
+    #7a1420 12px 16px
+  );
+  box-shadow:
+    inset 0 8px 0 #c9a24a,
+    inset 0 11px 0 #6e4f12;
+  visibility: hidden;
 }
-.rn-jersey.rn-jersey-3d {
-  position: relative;
-  width: 196px;
-  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.5));
-  transform-origin: 50% 40%;
-  animation: rn-sway 7s ease-in-out infinite alternate;
+.rn-curtain-l {
+  left: -6px;
+  --rn-curtain-to: -100%;
 }
-.rn-jersey-3d .rn-shirt {
-  stroke: none;
+.rn-curtain-r {
+  right: -6px;
+  --rn-curtain-to: 100%;
 }
-.rn-jersey-3d .rn-cuff,
-.rn-jersey-3d .rn-collar {
-  fill: var(--rn-trim, #f2c14e);
+.film-rn:not(.credit-wait) .rn-curtain {
+  visibility: visible;
+  animation: rn-curtain 1.6s steps(12) 0.3s both;
 }
-.rn-jersey-3d .rn-jersey-name {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-}
-.rn-jersey-3d .rn-jersey-num {
-  font-size: 50px;
-  stroke: var(--rn-trim, #f2c14e);
-  stroke-width: 1.3px;
-  paint-order: stroke;
-}
-.rn-jersey-3d .rn-sheen {
-  animation: rn-sheen 7s ease-in-out infinite;
-}
-@keyframes rn-sway {
+@keyframes rn-curtain {
   from {
-    transform: rotateY(-18deg) rotateX(3deg) translateY(0);
+    transform: none;
   }
   to {
-    transform: rotateY(18deg) rotateX(3deg) translateY(-6px);
-  }
-}
-@keyframes rn-floor {
-  to {
-    scale: 0.82 1;
-    opacity: 0.7;
-  }
-}
-@keyframes rn-sheen {
-  0%,
-  40% {
-    transform: translateX(0);
-  }
-  75%,
-  100% {
-    transform: translateX(240px);
+    transform: translateX(var(--rn-curtain-to));
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rn-jersey3d::after,
-  .rn-jersey.rn-jersey-3d,
-  .rn-jersey-3d .rn-sheen {
-    animation: none;
+  .film-rn:not(.credit-wait) .rn-curtain {
+    display: none;
   }
 }
 .rn-line {
