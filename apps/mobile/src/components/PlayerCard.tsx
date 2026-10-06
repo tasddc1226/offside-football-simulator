@@ -294,7 +294,9 @@ export function PlayerCard({
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [cardWidth, setCardWidth] = useState(compact ? 62 : 100);
   const shirtWidth = compact ? 25 : Math.min(43, Math.max(24, cardWidth - 56));
-  const height = compact ? 88 : 242 + (cell.peak !== undefined ? 31 : 0);
+  // 자리 OVR은 최고 OVR과 다를 때(제 자리가 아닐 때)만 — 같으면 같은 숫자가 두 번 보인다(웹 PlayerCard).
+  const deployed = cell.peak !== undefined && cell.peak !== cell.rating;
+  const height = compact ? 88 : 242 + (deployed ? 31 : 0);
   const shield = 'M2 14H17L25 5L50 1L75 5L83 14H98L97 149L88 161L50 173L12 161L3 149Z';
   return (
     <View
@@ -454,7 +456,7 @@ export function PlayerCard({
       >
         <CardName name={cell.name} color={tone.ink} animate={animate} compact={compact} />
       </View>
-      {cell.peak !== undefined ? (
+      {deployed ? (
         <View style={{ alignItems: 'center', marginTop: 2 }}>
           <Text
             maxFontSizeMultiplier={1.1}

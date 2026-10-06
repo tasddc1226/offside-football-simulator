@@ -29,9 +29,11 @@
     observer.observe(nameViewport);
     return () => observer.disconnect();
   });
+  // 자리 OVR은 최고 OVR과 다를 때(제 자리가 아닐 때)만 — 같으면 같은 숫자가 두 번 보인다.
+  const deployed = $derived(deploymentRating !== undefined && deploymentRating !== rating);
 </script>
 
-<div class="player-card" class:compact class:youth class:deployed={deploymentRating !== undefined} data-tier={tier}>
+<div class="player-card" class:compact class:youth class:deployed data-tier={tier}>
   <div class="card-face">
     <div class="card-rating" title="{ratingLabel} {rating}"><b>{rating}</b><span>{role}</span></div>
     {#if cardSeason !== undefined}<span class="card-season" data-card-season={cardSeason} style:--season-bg={cardSeasonColor(cardSeason)} title={teamSeasonLabel(cardSeason)}>{cardSeasonBadge(cardSeason)}</span>{/if}
@@ -44,7 +46,7 @@
       bind:this={nameViewport} bind:clientWidth={viewportWidth} style:--name-offset="-{nameOverflow}px" style:--name-duration="{nameDuration}s">
       <span class="name-track" bind:offsetWidth={nameWidth}>{name}</span>
     </strong>
-    {#if deploymentRating !== undefined}<span class="card-deployment" title={L.posOvr({ n: deploymentRating })}><span>{L.posOvrLabel}</span><b>{deploymentRating}</b></span>{/if}
+    {#if deployed && deploymentRating !== undefined}<span class="card-deployment" title={L.posOvr({ n: deploymentRating })}><span>{L.posOvrLabel}</span><b>{deploymentRating}</b></span>{/if}
     {#if !compact}
       <div class="card-divider"></div>
       <div class="card-career"><span title={L.legendScoreTitle}>LS</span><b>{(player?.legendScore ?? 0).toLocaleString(intlLocale())}</b></div>
