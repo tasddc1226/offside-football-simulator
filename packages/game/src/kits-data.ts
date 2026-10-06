@@ -1,6 +1,6 @@
 // T-11-120 구단 홈·원정 유니폼(도트 아바타용). 한 줄 = '상의 무늬 무늬색 소매 깃 하의 양말 양말끝 [세번째색]' (# 뺀 hex).
 // 모티브가 된 구단의 유니폼 색·무늬만 따른다 — 스폰서·제조사 표시·실제 엠블럼은 넣지 않는다.
-// 정의 없는 구단(고교·대학)은 avatar.ts autoKits가 엠블럼 색으로 만든다. 무늬 키는 avatar.ts KIT_PATTERNS.
+// 정의 없는 구단(고교·대학)은 kits.ts autoKit가 엠블럼 색으로 만든다. 무늬 키는 kits.ts KIT_PATTERNS.
 export const KIT_SPECS: Record<string, readonly [home: string, away: string]> = {
   'k1-0': [
     '0046a8 - 0046a8 0046a8 ffd200 0046a8 0046a8 ffd200',

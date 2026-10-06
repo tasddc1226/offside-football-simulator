@@ -1394,7 +1394,7 @@ textarea {
 .player > *:not(.chalk) {
   position: relative;
 }
-/* T-11-120 도트 선수(24×32칸). 정수배(3배·2배)로만 키워 칸이 고르게 보이게 한다. */
+/* T-11-120 도트 선수(24×32칸). 정수배(3배·2배)로만 키워 칸이 고르게 보이게 한다 — game/avatar.ts avatarWidth와 같은 값. */
 .player .avatar {
   align-self: end;
   width: 72px;

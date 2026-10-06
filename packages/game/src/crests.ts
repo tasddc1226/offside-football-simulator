@@ -140,6 +140,8 @@ export interface Crest {
   shape: string;
   /** accent 색으로 칠할 패턴 path. 없으면 바탕만. */
   pattern?: string;
+  /** 패턴 키(CREST_PATTERNS 키, 없으면 '-'). 유니폼(kits.ts)이 같은 무늬를 고른다. */
+  patKey: string;
   base: string;
   accent: string;
   /** tri 패턴의 세 번째 색(TRI_THIRD_PATH에 칠한다). */
@@ -421,6 +423,7 @@ function crest(
   return {
     shape: CREST_SHAPES[shape as keyof typeof CREST_SHAPES],
     ...(pat !== '-' ? { pattern: CREST_PATTERNS[pat] } : {}),
+    patKey: pat,
     base: col(base),
     accent: col(accent === '-' ? base : accent),
     ...(third ? { third: col(third) } : {}),
