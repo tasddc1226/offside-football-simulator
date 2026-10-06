@@ -1,0 +1,176 @@
+# 스토어 등록 정보 (앱 1.1.1, T-11-119)
+
+2026-10-06 1.1.1 심사 준비로 쓴 App Store Connect·Google Play 등록 문구다. 한국어(ko)와 영어(en-US) 두 벌이다.
+콘솔 입력·스크린샷 업로드·심사 제출은 이 문서로 하지 않는다. 사용자나 오케스트레이터가 콘솔에서 따로 하고, 한 일은 PR·보드에 남긴다.
+
+글자 수는 `node`로 센 값이다(`[...s].length`, 괄호 안은 UTF-8 바이트). 문구를 고치면 다시 센다.
+
+## 1. 개요
+
+1.1.1에서 바뀌는 것:
+
+- 안드로이드 알림 아이콘을 v7 로고(흰 OFF + 오프사이드 라인)로 바꿨다. 지금까지는 전용 아이콘이 없어 앱 아이콘으로 대체됐다. iOS 알림은 앱 아이콘(v7)을 그대로 쓴다.
+- 앱 이름이 기기 언어를 따른다. 한국어 기기는 "오프사이드", 그 밖의 언어는 "OFFSIDE".
+- 화면·게임 문구 영어 지원(T-11-102·T-11-106, OTA로 이미 나감). 사진 접근 권한 문구도 한국어·영어 두 벌이 됐다.
+
+콘솔에서 고칠 곳:
+
+| 콘솔                | 항목                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| App Store Connect   | 이름·부제(앱 정보, 현지화 en-US 추가), 프로모션 텍스트·설명·키워드·이 버전의 새로운 기능·스크린샷(1.1.1 버전 페이지, ko·en-US) |
+| Google Play Console | 기본 스토어 등록정보(앱 이름·간단한 설명·자세한 설명·스크린샷·그래픽 이미지)와 en-US 번역, 1.1.1 출시 노트(ko-KR·en-US)        |
+
+## 2. App Store Connect
+
+### 한국어 (ko)
+
+- 이름 (16자/30): `오프사이드: 축구 선수 커리어`
+- 부제 (20자/30): `고3부터 은퇴까지, 한 선수로 살아요`
+- 프로모션 텍스트 (85자/170):
+
+  ```
+  시즌 1이 열렸어요. 고교 3학년 선수로 시작해 프로 입단, 해외 이적, 국가대표를 거쳐 은퇴까지 가요. 이번 업데이트부터 영어로도 플레이할 수 있어요.
+  ```
+
+- 키워드 (57자/100, 145바이트): `축구게임,풋볼,시뮬레이션,선수키우기,육성,K리그,국가대표,이적,은퇴,명예의전당,텍스트게임,스포츠,해외파`
+- 설명: 아래 [한국어 설명](#한국어-설명)
+- 이 버전의 새로운 기능:
+
+  ```
+  - 영어로도 플레이할 수 있어요. 기기 언어가 한국어가 아니면 영어로 시작하고, 설정에서 바꿀 수 있어요.
+  - 한국어가 아닌 기기에서는 앱 이름이 OFFSIDE로 보여요.
+  - 알림과 사진 권한 안내가 기기 언어에 맞게 나와요.
+  ```
+
+### 영어 (en-US)
+
+- Name (28/30): `OFFSIDE: Football Career Sim`
+- Subtitle (30/30): `From high school to retirement`
+- Promotional Text (154/170):
+
+  ```
+  Season 1 is live. Start as a high school player, turn pro, move abroad, play for your country and retire as a legend. OFFSIDE is now available in English.
+  ```
+
+- Keywords (99/100): `soccer,simulator,rpg,story,choices,transfer,national team,legend,retire,hall of fame,sports,manager`
+- Description: [English description](#english-description)
+- What's New in This Version:
+
+  ```
+  - OFFSIDE is now available in English. It starts in English when your device language isn't Korean, and you can switch languages in Settings.
+  - The app name shows as OFFSIDE outside Korean.
+  - Notification and photo permission prompts follow your device language.
+  ```
+
+## 3. Google Play
+
+### 한국어 (ko-KR)
+
+- 앱 이름 (16자/30): `오프사이드: 축구 선수 커리어`
+- 간단한 설명 (45자/80): `고3부터 은퇴까지, 훈련·이적·이벤트 선택으로 한 축구 선수의 커리어를 만들어요.`
+- 자세한 설명: [한국어 설명](#한국어-설명)과 같다.
+- 출시 노트 (1.1.1):
+
+  ```
+  - 영어로도 플레이할 수 있어요. 설정에서 언어를 바꿀 수 있어요.
+  - 알림 아이콘을 새 로고로 바꿨어요.
+  - 한국어가 아닌 기기에서는 앱 이름이 OFFSIDE로 보여요.
+  ```
+
+### 영어 (en-US)
+
+- App name (28/30): `OFFSIDE: Football Career Sim`
+- Short description (79/80): `Build one footballer’s career from high school to retirement, choice by choice.`
+- Full description: [English description](#english-description)과 같다.
+- Release notes (1.1.1):
+
+  ```
+  - OFFSIDE is now available in English. Switch languages in Settings.
+  - Notifications now use the new OFFSIDE logo.
+  - The app name shows as OFFSIDE outside Korean.
+  ```
+
+## 설명 본문
+
+### 한국어 설명
+
+```
+이번 생은 축구다.
+고교 3학년 선수로 시작해 은퇴할 때까지, 한 선수의 커리어를 직접 만드는 축구 선수 커리어 시뮬레이션이에요. 매 시즌 고른 훈련과 이벤트 선택이 쌓여 선수의 이야기가 돼요.
+
+■ 선수 만들기
+이름, 등번호, 국적, 포지션과 세부 포지션, 주발, 주력 능력치, 성장 특성을 정하면 능력치 총합이 같은 후보 3명이 나와요. 그중 한 명으로 고교 3학년 시즌을 시작해요. 잠재력은 은퇴할 때 공개돼요.
+
+■ 시즌 진행과 성장
+한 시즌은 프리시즌, 전반기, 후반기로 나뉘어요. 구간마다 훈련 방향과 자기 투자를 고르면 경기 결과와 출전·골·도움·평점이 기록돼요. 첫 시즌을 마친 뒤부터는 자금으로 잠재력 강화에 도전할 수 있어요.
+
+■ 확률 이벤트와 경기 장면
+구간마다 이벤트가 나오고, 선택지마다 실제 성공 확률이 보여요. 페널티킥·1대1·승부차기는 타이밍 게이지로 판정해요. 여러 시즌에 걸쳐 이어지는 스토리도 있어요.
+
+■ 이적, 해외 진출, 국가대표
+고교 시즌이 끝나면 프로 입단이나 대학 진학을 정하고, 시즌이 끝날 때마다 잔류·재계약·이적 중에서 골라요. 성적이 좋으면 일본, 미국, 유럽 리그에서도 제의가 와요. 대표팀에 뽑히면 월드컵·올림픽·아시안게임 같은 국제 대회에 나가고, 대한민국 선수는 병역도 거쳐요.
+
+■ 은퇴와 명예의 전당
+은퇴하면 통산 기록·트로피·수상으로 레전드 점수와 등급이 매겨지고 잠재력이 공개돼요. 만 30세 이상에 은퇴한 선수는 명예의 전당에 올라요. 한 구단에서 레전드급으로 활약하면 등번호가 영구결번될 수 있어요.
+
+■ 구단주 팀
+로그인하면 구단주가 되어 은퇴한 내 선수와 이적시장에서 영입한 선수로 11명을 편성해요. 다른 구단주 팀과 경기하고, 친구와 친선전도 치를 수 있어요.
+
+■ 한국어·영어
+설정에서 언어를 바꿀 수 있어요.
+
+진행 상황은 이 기기에 저장돼요. 환경설정에서 백업 코드나 파일을 내보내면 다른 기기에서 이어 할 수 있어요.
+문의: contact@offside-lab.com
+```
+
+### English description
+
+```
+Live one football life, from high school to retirement.
+OFFSIDE is a football (soccer) player career simulation. Start as a final-year high school player in Korea and build one player's whole career through training, transfers and the choices you make in each event.
+
+■ Create your player
+Pick a name, shirt number, nationality, position and role, preferred foot, key attributes and growth type. You get three candidates with the same total rating. Choose one and kick off your final high school season. Potential stays hidden until you retire.
+
+■ Seasons and growth
+Each season runs in three parts: preseason, first half and second half. Choose your training focus and self-investment, and the matches play out with appearances, goals, assists, ratings and league tables recorded. After your first season you can spend funds to try boosting your potential.
+
+■ Odds-based events and match moments
+Events pop up as the season goes on, and every option shows its real success chance. Penalties, one-on-ones and shootouts are decided with a timing gauge. Some stories carry on across several seasons.
+
+■ Transfers, moving abroad, national team
+After high school, turn pro or go to university. At the end of each season, stay, re-sign or move. Play well and offers arrive from Japan, the US and Europe's top leagues. Get called up and play in the World Cup, the Olympics and other international tournaments. Korean players also have to handle military service.
+
+■ Retirement and the Hall of Fame
+When you retire, your career totals, trophies and awards earn a legend score and grade, and your potential is revealed. Players who retire at 30 or older enter the public Hall of Fame. Become a club legend and your shirt number may be retired.
+
+■ Owner team
+Sign in to become a club owner. Build an XI from your retired players and players bought on the transfer market, take on other owners' teams and play friendlies with friends.
+
+■ English and Korean
+Switch languages in Settings.
+
+Your progress is saved on this device. Export a backup code or file in Settings to continue on another device.
+Contact: contact@offside-lab.com
+```
+
+## 4. 스크린샷 문구 (6장)
+
+순서대로 쓴다. 제목은 크게, 부제는 한 줄로 작게.
+
+| #   | 장면                      | 한국어 제목                | 한국어 부제                           | English headline              | English sub                           |
+| --- | ------------------------- | -------------------------- | ------------------------------------- | ----------------------------- | ------------------------------------- |
+| 1   | 홈·핵심 약속              | 이번 생은 축구다           | 고3부터 은퇴까지, 한 선수로 살아요    | One player. One whole career. | From high school to retirement        |
+| 2   | 선수 생성·후보 3명        | 후보 3명 중 한 명을 골라요 | 포지션·주발·성장 특성까지 직접 정해요 | Pick from 3 candidates        | Set position, foot and growth type    |
+| 3   | 확률 이벤트·타이밍 게이지 | 선택마다 확률이 보여요     | 페널티킥은 타이밍 게이지로 판정해요   | See the odds on every choice  | Penalties come down to a timing gauge |
+| 4   | 시즌 진행·성장·기록       | 시즌마다 자라는 내 선수    | 훈련과 자기 투자로 능력치를 키워요    | Grow every season             | Train and invest to build attributes  |
+| 5   | 이적·해외·국가대표        | 해외 이적, 국가대표까지    | 일본·미국·유럽 리그에서 제의가 와요   | Transfers abroad, World Cups  | Offers from Japan, the US and Europe  |
+| 6   | 은퇴·명예의 전당·구단주   | 은퇴하면 명예의 전당에     | 레전드 점수와 잠재력이 공개돼요       | Retire into the Hall of Fame  | Legend score and potential revealed   |
+
+## 5. 체크리스트
+
+- 카테고리(게임 > 스포츠·시뮬레이션)와 연령 등급 설문은 1.1.0과 같다. 바꿀 내용 없음.
+- 개인정보처리방침 `https://offside-lab.com/legal/privacy/`, 지원 URL·문의 `contact@offside-lab.com`은 그대로 둔다. en-US 현지화에도 같은 주소를 넣는다.
+- 실제 리그·대회 로고나 구단 엠블럼이 스크린샷에 나오지 않게 한다. 설명에서도 특정 리그 상표를 제목·키워드로 쓰지 않는다.
+- 평점·다운로드 수·순위 같은 수치는 넣지 않는다.
+- 스토어 문구를 바꾸면 웹 공개 가이드·FAQ와 사실이 어긋나지 않는지 본다(`apps/web/scripts/seo.mjs`).

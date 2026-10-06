@@ -101,6 +101,19 @@ async function main() {
   await png(svg(mark(D.mark)), at(images, 'splash-icon-dark.png'));
   await png(brandSvg('light'), at(images, 'favicon.png'), 48);
 
+  // 안드로이드 알림 아이콘(T-11-119): 흰색·투명 96px. 테마 아이콘(단색)과 같이 라인까지 흰색으로 그린다.
+  // 글자 덩어리만 잘라 가운데 두고, 상태 표시줄 24dp 기준 가장자리 2dp(8px)를 비운다.
+  const glyph = await sharp(Buffer.from(svg(mark(WHITE, WHITE))))
+    .trim()
+    .resize(80, 80, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .toBuffer();
+  await sharp({
+    create: { width: 96, height: 96, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  })
+    .composite([{ input: glyph, gravity: 'center' }])
+    .png()
+    .toFile(at(images, 'notification-icon.png'));
+
   // 상단 브랜드 줄 배지(웹 Topbar.svelte·앱 Topbar.tsx). 웹 빌드는 seo.mjs가 다시 만들지만 dev 서버는 public을 쓴다.
   // public/brand의 v6 PNG는 AdSense 동의 메시지 로고가 가리키고 있어 지우지 않는다.
   const web = new URL('../public/brand/', import.meta.url);
