@@ -18,15 +18,17 @@ const ko = {
     '구글이 앱 안 브라우저(카톡·인스타 등)에서의 로그인을 막고 있어요. 외부 브라우저로 열어서 로그인해 주세요.',
   close: '닫기',
   // 웹에서 앱으로 이어 주는 안내(app-core appPromo.ts)
-  promoTileTitle: 'iPhone 앱 ↗',
-  promoTileSub: 'App Store에서 오프사이드 받기',
-  promoSheetTitle: 'iPhone 앱으로 이어서 해요',
+  promoTileTitle: (p: { device: string }) => `${p.device} 앱 ↗`,
+  promoTileSub: (p: { store: string }) => `${p.store}에서 오프사이드 받기`,
+  promoSheetTitle: (p: { device: string }) => `${p.device} 앱으로 이어서 해요`,
   promoSheetText:
     '앱은 오래 안 들어와도 기록이 지워지지 않고, 새 소식을 알림으로 받아요. 진행 중인 커리어는 설정의 백업 코드로 앱에 옮겨요.',
-  promoSheetStore: 'App Store에서 받기',
+  promoSheetStore: (p: { store: string }) => `${p.store}에서 받기`,
   promoSheetHomeScreen: '홈 화면에 추가할게요',
-  promoMoveTitle: 'iPhone 앱으로 옮기기',
-  promoMoveStep1: 'App Store에서 오프사이드를 받아요.',
+  promoMoveTitle: (p: { device: string }) => `${p.device} 앱으로 옮기기`,
+  promoMoveTitleAny: '앱으로 옮기기',
+  promoMoveStep1: (p: { stores: readonly string[] }) =>
+    `${p.stores.join('나 ')}에서 오프사이드를 받아요.`,
   promoMoveStep2:
     '앱의 구단주 화면에서 같은 구글 계정으로 로그인하면 명예의 전당 · 구단 기록이 이어져요.',
   promoMoveStep3: '진행 중인 커리어는 아래 백업 코드를 복사해 앱 설정의 백업에 붙여 넣어요.',

@@ -4,6 +4,7 @@ import {
   type Progress,
 } from '@offside/app-core/player-metrics';
 import type { OperationResult } from '@offside/app-core/measurement';
+import type { AppStoreOs } from '@offside/app-core/appPromo';
 import type { AppStorePlace } from './index.js';
 import {
   campaignQuery,
@@ -303,9 +304,9 @@ export const analytics = {
   },
 };
 /** T-11-092 웹 → App Store 링크를 누름(어느 안내에서 눌렀는지). */
-export const trackAppStoreClick = (place: AppStorePlace) => {
+export const trackAppStoreClick = (place: AppStorePlace, store: AppStoreOs) => {
   try {
-    send('app_store_click', { place });
+    send('app_store_click', { place, store });
   } catch {
     /* optional */
   }

@@ -38,12 +38,12 @@ test.describe('아이폰 Chrome', () => {
     await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
     await expect(sheet).toBeHidden();
 
-    // 홈 타일은 App Store만(안드로이드 테스터 모집은 아이폰에 보이지 않는다).
-    await expect(page.locator('[data-act="app-store"]')).toHaveAttribute(
+    // 홈 타일은 App Store만(Google Play는 아이폰에 보이지 않는다).
+    await expect(page.locator('[data-act="app-store-ios"]')).toHaveAttribute(
       'href',
       /apps\.apple\.com\/kr\/app\/id6817463687/,
     );
-    await expect(page.locator('[data-act="android-tester"]')).toHaveCount(0);
+    await expect(page.locator('[data-act="app-store-android"]')).toHaveCount(0);
 
     await page.locator('[data-act="settings"]').click();
     await expect(page.locator('[data-settings="app-move"]')).toContainText('iPhone 앱으로 옮기기');
@@ -72,14 +72,19 @@ test.describe('아이폰 Chrome', () => {
   });
 });
 
-test('데스크톱 브라우저에서는 첫 방문 안내를 띄우지 않고, 홈에 iPhone 앱 · 안드로이드 테스터 타일을 둘 다 둔다', async ({
+test('데스크톱 브라우저에서는 첫 방문 안내를 띄우지 않고, 홈 · 설정에 App Store · Google Play를 둘 다 둔다', async ({
   page,
 }) => {
   await page.goto('/');
   await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
   await expect(page.locator('#sheet')).toBeHidden();
-  await expect(page.locator('[data-act="app-store"]')).toBeVisible();
-  await expect(page.locator('[data-act="android-tester"]')).toBeVisible();
+  await expect(page.locator('[data-act="app-store-ios"]')).toBeVisible();
+  await expect(page.locator('[data-act="app-store-android"]')).toBeVisible();
+  await page.locator('[data-act="settings"]').click();
+  const card = page.locator('[data-settings="app-move"]');
+  await expect(card).toContainText('앱으로 옮기기');
+  await expect(card).toContainText('App Store나 Google Play에서 오프사이드를 받아요.');
+  await expect(card.getByRole('button')).toHaveText(['App Store에서 받기', 'Google Play에서 받기']);
 });
 
 test.describe('안드로이드 Chrome', () => {
@@ -88,14 +93,36 @@ test.describe('안드로이드 Chrome', () => {
       'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36',
   });
 
-  test('안드로이드는 비공개 테스트라 App Store 타일 · 앱 옮기기 카드 없이 테스터 모집만 둔다', async ({
+  test('T-11-095 안드로이드는 Google Play로: 다시 찾아오면 앱 시트, 홈 타일 · 설정 카드도 Google Play만', async ({
     page,
   }) => {
+    const sheet = page.locator('#sheet');
     await page.goto('/');
-    await expect(page.locator('[data-act="android-tester"]')).toBeVisible();
-    await expect(page.locator('[data-act="app-store"]')).toHaveCount(0);
+    await expect(page.locator('[data-act="app-store-android"]')).toHaveAttribute(
+      'href',
+      'https://play.google.com/store/apps/details?id=com.offsidelab.app',
+    );
+    await expect(page.locator('[data-act="app-store-ios"]')).toHaveCount(0);
+    await startCareer(page);
+    await page.reload();
+    await expect(sheet).toContainText('Android 앱으로 이어서 해요');
+    await sheet.getByRole('button', { name: '홈 화면에 추가할게요' }).click();
+    await expect(sheet).toContainText('홈 화면에 추가하고 앱처럼 열기');
+    await sheet.locator('[data-sheet="0"]').click();
+
     await page.locator('[data-act="settings"]').click();
-    await expect(page.locator('[data-settings="backup"]')).toBeVisible();
-    await expect(page.locator('[data-settings="app-move"]')).toHaveCount(0);
+    const card = page.locator('[data-settings="app-move"]');
+    await expect(card).toContainText('Android 앱으로 옮기기');
+    await page.evaluate(() => {
+      (window as unknown as { opened: string[] }).opened = [];
+      window.open = (url) => {
+        (window as unknown as { opened: string[] }).opened.push(String(url));
+        return null;
+      };
+    });
+    await card.getByRole('button', { name: 'Google Play에서 받기' }).click();
+    expect(await page.evaluate(() => (window as unknown as { opened: string[] }).opened)).toEqual([
+      'https://play.google.com/store/apps/details?id=com.offsidelab.app',
+    ]);
   });
 });

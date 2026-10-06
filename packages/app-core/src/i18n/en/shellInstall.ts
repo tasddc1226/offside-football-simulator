@@ -1,6 +1,9 @@
 import type { Translation } from '../core';
 import type { ShellInstallMsgs } from '../ko/shellInstall';
 
+// "the App Store" takes an article in English; Google Play doesn't.
+const storeName = (store: string) => (store === 'App Store' ? 'the App Store' : store);
+
 export const shellInstall: Translation<ShellInstallMsgs> = {
   inappHint:
     "You're in an in-app browser (KakaoTalk, Instagram or similar). Your records are only saved inside this app. Open it in your regular browser for safer sign-in and saving.",
@@ -17,15 +20,16 @@ export const shellInstall: Translation<ShellInstallMsgs> = {
   loginNoticeBody:
     'Google blocks sign-in inside in-app browsers (KakaoTalk, Instagram or similar). Open this in your regular browser to sign in.',
   close: 'Close',
-  promoTileTitle: 'iPhone app ↗',
-  promoTileSub: 'Get OFFSIDE on the App Store',
-  promoSheetTitle: 'Keep playing in the iPhone app',
+  promoTileTitle: (p) => `${p.device} app ↗`,
+  promoTileSub: (p) => `Get OFFSIDE on ${storeName(p.store)}`,
+  promoSheetTitle: (p) => `Keep playing in the ${p.device} app`,
   promoSheetText:
     "In the app, your records stay safe even if you're away for a while, and you get news as notifications. Move a career in progress to the app with the backup code in Settings.",
-  promoSheetStore: 'Get it on the App Store',
+  promoSheetStore: (p) => `Get it on ${storeName(p.store)}`,
   promoSheetHomeScreen: "I'll add it to my home screen",
-  promoMoveTitle: 'Move to the iPhone app',
-  promoMoveStep1: 'Get OFFSIDE on the App Store.',
+  promoMoveTitle: (p) => `Move to the ${p.device} app`,
+  promoMoveTitleAny: 'Move to the app',
+  promoMoveStep1: (p) => `Get OFFSIDE on ${p.stores.map(storeName).join(' or ')}.`,
   promoMoveStep2:
     'Sign in with the same Google account on the app’s Owner screen to carry over your Hall of Fame and club records.',
   promoMoveStep3:

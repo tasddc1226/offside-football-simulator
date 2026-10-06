@@ -16,14 +16,14 @@
   import HomeLive from './HomeLive.svelte';
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
-  import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL, IOS_APP_STORE_URL } from '@offside/app-core/links';
-  import { APP_PROMO } from '@offside/app-core/appPromo';
+  import { DC_GALLERY_URL } from '@offside/app-core/links';
+  import { APP_PROMO, APP_STORES } from '@offside/app-core/appPromo';
   import { trackAppStoreClick } from '../analytics/index.js';
-  import { appTarget } from './appStore.js';
+  import { appStoresFor } from './appStore.js';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
 
   const live = $derived(!!appState.G && !appState.G.retired);
-  const appFor = appTarget();
+  const appOses = appStoresFor();
 </script>
 
 <div class="wrap">
@@ -79,19 +79,15 @@
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
       <span class="eyebrow">Events</span><b>{L.dexTitle}</b><span class="muted fs-sm">{L.dexSubWeb}</span>
     </button>
-    <!-- T-11-092 기기에 맞는 앱 안내: iPhone은 App Store, 안드로이드는 비공개 테스터 모집(T-11-016), PC는 둘 다. -->
-    {#if appFor !== 'android'}
-      <a class="tile tile-link" data-act="app-store" href={IOS_APP_STORE_URL} target="_blank" rel="noopener noreferrer" onclick={() => trackAppStoreClick('home')}>
-        <span class="eyebrow">{APP_PROMO.tile.eyebrow}</span><b>{APP_PROMO.tile.title}</b><span class="muted fs-sm">{APP_PROMO.tile.sub}</span>
+    <!-- T-11-092 기기에 맞는 앱 안내: T-11-095 iPhone은 App Store, Android는 Google Play, PC는 둘 다. -->
+    {#each appOses as os (os)}
+      {@const tile = APP_PROMO.tile(os)}
+      <a class="tile tile-link" data-act="app-store-{os}" href={APP_STORES[os].url} target="_blank" rel="noopener noreferrer" onclick={() => trackAppStoreClick('home', os)}>
+        <span class="eyebrow">{tile.eyebrow}</span><b>{tile.title}</b><span class="muted fs-sm">{tile.sub}</span>
       </a>
-    {/if}
-    {#if appFor !== 'ios'}
-      <a class="tile tile-link" data-act="android-tester" href={ANDROID_TESTER_FORM_URL} target="_blank" rel="noopener noreferrer">
-        <span class="eyebrow">Android</span><b>{L.testerTitle}</b><span class="muted fs-sm">{L.testerSub}</span>
-      </a>
-    {/if}
-    <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. 앱 타일이 둘이면 한 줄을 다 쓴다. -->
-    <a class="tile tile-link" class:tile-wide={appFor === 'both'} data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
+    {/each}
+    <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. 앱 타일이 하나면 한 줄을 다 쓴다. -->
+    <a class="tile tile-link" class:tile-wide={appOses.length === 1} data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
       <span class="eyebrow">Community</span><b>{L.galleryTitle}</b><span class="muted fs-sm">{L.gallerySub}</span>
     </a>
   </div>
