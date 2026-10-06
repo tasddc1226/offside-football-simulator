@@ -6,6 +6,7 @@ import {
   avatarRects,
   avatarSpec,
   lookOf,
+  primeAvatarSpec,
   retiredAvatarSpec,
 } from './avatar.js';
 import { CLUBS } from './data.js';
@@ -57,6 +58,9 @@ describe('도트 아바타 (T-11-120)', () => {
     expect(avatarSpec({ ...s, retired: true }).acc).toEqual(['suit', 'bouquet']);
     // 은퇴 기록(커리어 ID·은퇴 나이)만으로 그린 모습은 은퇴 직후 세이브로 그린 모습과 같다.
     expect(retiredAvatarSpec(s.cid, 33)).toEqual(avatarSpec({ ...s, age: 33, retired: true }));
+    // 명예의 전당 시상대: 같은 얼굴에 마지막 구단 홈 유니폼(흰머리 없는 전성기).
+    const prime = primeAvatarSpec(s.cid, CLUBS[0]!);
+    expect([prime.look, prime.kit, prime.gray]).toEqual([lookOf(s.cid), kitOf(CLUBS[0]!), 0]);
     const army = avatarSpec({ ...s, mil: { ...s.mil, serving: true, type: 'army' } });
     expect(army.hairStyle).toBe('buzz');
   });

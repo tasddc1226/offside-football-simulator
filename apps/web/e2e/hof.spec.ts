@@ -318,6 +318,7 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
     'true',
   );
   await expect(full.locator('[data-hof-podium-rank]')).toHaveCount(3);
+  await expect(full.locator('[data-hof-podium-rank] svg.avatar')).toHaveCount(3); // T-11-124 전성기 도트 선수
   await expect(full.locator('.hof-row')).toHaveCount(7);
   await expect(full.locator('[data-hof-id]')).toHaveCount(10);
   await expect(full.locator('[data-hof-nation]')).toHaveCount(10);

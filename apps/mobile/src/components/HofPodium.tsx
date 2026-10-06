@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 import type { PublicHofEntry } from '@offside/contracts';
 import { flagOf, DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
 import { posLabel } from '@offside/game/data';
@@ -9,6 +9,8 @@ import { ClubMark } from '../ui/ClubBadge';
 import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
 import { RankBadge } from './Laurel';
+import { PixelAvatar } from '../ui/PixelAvatar';
+import { avatarWidth, primeAvatarSpec } from '@offside/game/avatar';
 import { hofText as L } from '@offside/app-core/i18n/ko/hof';
 import { tn } from '@offside/game/i18n/names';
 
@@ -25,6 +27,7 @@ export function HofPodium({
   metric: (entry: PublicHofEntry) => number | string;
   unit: string;
 }) {
+  const { width } = useWindowDimensions();
   const ranked = players.map((entry, index) => ({ entry, rank: entry.rank ?? index + 1 }));
   const slots = [2, 1, 3]
     .map((rank) => ranked.find((player) => player.rank === rank))
@@ -94,6 +97,16 @@ export function HofPodium({
                     .join(' · ')}
                 </Txt>
               ) : null}
+              {/* T-11-124 시상대 위에 선 전성기 모습(마지막 구단 유니폼). 2·3위 2배, 1위 3배(좁은 화면은 2배). */}
+              <View style={{ marginTop: 2, marginBottom: -10 }}>
+                <PixelAvatar
+                  spec={primeAvatarSpec(entry.id, {
+                    id: entry.lastClubId ?? '',
+                    name: entry.lastClub,
+                  })}
+                  width={rank === 1 ? avatarWidth(width) : 48}
+                />
+              </View>
             </View>
             <View
               style={{
