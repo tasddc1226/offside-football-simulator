@@ -19,6 +19,7 @@ import {
   storedSeasonOvr,
   storedSeasonsOf,
   updateRetired,
+  verifiedRetiredTitle,
 } from '../db/repos/careers.js';
 import { boundProfile, boundRetirement, sanitizeSeason } from '../plausibility.js';
 import { getProfile, isLinked } from '../db/repos/profiles.js';
@@ -189,6 +190,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     return ok(c, RetirementResponseSchema, {
       careerId,
       status: 'retired',
+      title: verifiedRetiredTitle(await getCareerHead(db, careerId)),
       retiredNumber,
       serviceSeason: career.serviceSeason,
     });

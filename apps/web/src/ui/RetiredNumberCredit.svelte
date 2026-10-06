@@ -34,7 +34,7 @@
     if (!id || id === asked || !isHofEligible(v.age) || pendingRetirementIds().has(id)) return;
     asked = id;
     void checkRetiredNumber(id).then((r) => {
-      if (r.ok) recordRn(id, r.data.retiredNumber);
+      if (r.ok) recordRn(id, r.data.retiredNumber, undefined, r.data.title);
     });
   });
   const rn = $derived(rn0?.kind === 'taken' && v.own?.id && !(v.own.id in rnResults) ? { ...rn0, wallOfHonor: false } : rn0 ?? null);

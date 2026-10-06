@@ -20,7 +20,8 @@ describe('server retirement awards', () => {
       detail: { titles: [{ id: 'goals100', year: 2030 }] },
     } as HofEntry;
     saveKey('ft_hof', [h]);
-    const { recordRn } = createRetiredNumbers({}, { item: null });
+    const onTitle = vi.fn();
+    const { recordRn } = createRetiredNumbers({}, { item: null }, onTitle);
     const result = {
       kind: 'taken' as const,
       clubId: 'pl-0',
@@ -40,5 +41,12 @@ describe('server retirement awards', () => {
     saved = loadHOF()[0]!;
     expect(saved.title).toBeUndefined();
     expect(saved.detail?.titles).toEqual([{ id: 'goals100', year: 2030 }]);
+    // A restored backup discarded local award proof; the official selected title restores it.
+    recordRn('career', result, 0, 'wall_of_honor');
+    expect(loadHOF()[0]?.title).toBe('wall_of_honor');
+    expect(onTitle).toHaveBeenLastCalledWith('career', 'wall_of_honor');
+    recordRn('career', result, 0, null);
+    expect(loadHOF()[0]?.title).toBeUndefined();
+    expect(onTitle).toHaveBeenLastCalledWith('career', null);
   });
 });

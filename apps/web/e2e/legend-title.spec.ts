@@ -245,3 +245,25 @@ test('상세가 없는 공개 선수도 대표 칭호와 별도로 명예의 벽
   await expect(page.locator('[data-legend-title]')).toHaveText('‘유럽파’');
   await expect(page.locator('[data-legend-rn-pill]')).toHaveCount(0);
 });
+
+test('복원된 내 선수의 대표 칭호는 서버 선택값으로 복구된다', async ({ page }) => {
+  const result = {
+    kind: 'taken',
+    clubId: 'pl-0',
+    club: '맨체스터 스카이블루',
+    number: 9,
+    holder: null,
+    wallOfHonor: true,
+  };
+  await seed(page, undefined, result);
+  await page.route(`${API}/v1/careers/${ID}/retired-number`, (r) =>
+    r.fulfill(ok({ retiredNumber: result, title: 'wall_of_honor' })),
+  );
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-legend-title]')).toHaveText('‘명예의 벽’');
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('ft_hof') ?? '[]')[0]?.title))
+    .toBe('wall_of_honor');
+});

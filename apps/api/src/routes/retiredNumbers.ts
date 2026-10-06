@@ -12,7 +12,7 @@ import {
 import { displaySeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { careerOwnerMismatch, nowIso, ok } from './shared.js';
-import { getCareerOwner } from '../db/repos/careers.js';
+import { getCareerHead, verifiedRetiredTitle } from '../db/repos/careers.js';
 import type { Db } from '../db/client.js';
 import {
   ensureRetiredNumbersBackfilled,
@@ -60,10 +60,16 @@ export function registerRetiredNumberRoutes(app: Hono<AppEnv>): void {
   // 은퇴 상세를 열 때 한 번 묻는다. 은퇴 PUT과 같은 심사라 이름을 공개했고 자리가 비어 있으면 이때 자리를 잡는다.
   app.get('/v1/careers/:careerId/retired-number', requireProfile, async (c) => {
     const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
-    const owner = await getCareerOwner(getDb(c), careerId);
-    if (owner !== getSessionOrThrow(c).profileId) throw careerOwnerMismatch();
+    const career = await getCareerHead(getDb(c), careerId);
+    if (career?.profileId !== getSessionOrThrow(c).profileId) throw careerOwnerMismatch();
     const retiredNumber = await judgeRetirement(c, careerId, nowIso());
-    return ok(c, RetiredNumberCheckResponseSchema, { retiredNumber }, 200, 'private, no-store');
+    return ok(
+      c,
+      RetiredNumberCheckResponseSchema,
+      { retiredNumber, title: verifiedRetiredTitle(career) },
+      200,
+      'private, no-store',
+    );
   });
 
   // T-11-029 ?season= 없으면 지금 시즌(개막 전이면 프리시즌, 휴식기면 마지막 시즌). 캐시 키는 시즌을 푼 경로다.

@@ -236,7 +236,17 @@ describe('영구결번 (T-10-076)', () => {
     ).toEqual(before);
     d = await detail(B);
     expect(d.entry.title).toBe('goals100');
-    await put({ ...body, title: 'wall_of_honor' });
+    const selected = await put({ ...body, title: 'wall_of_honor' });
+    expect(successEnvelope(RetirementResponseSchema).parse(await selected.json()).data.title).toBe(
+      'wall_of_honor',
+    );
+    const selectedCheck = await callJson(ctx.env, 'GET', `/v1/careers/${B}/retired-number`, {
+      cookie,
+    });
+    expect(
+      successEnvelope(RetiredNumberCheckResponseSchema).parse(await selectedCheck.json()).data
+        .title,
+    ).toBe('wall_of_honor');
     expect((await detail(B)).entry.title).toBe('wall_of_honor');
     await put({ ...body, title: 'goals100', publicName: null });
     expect((await detail(B)).entry.title).toBe('goals100');

@@ -37,6 +37,11 @@ import {
   retiredNumbers,
 } from '../schema.js';
 
+export const verifiedRetiredTitle = (
+  row: { title: string | null; wallOfHonorJson: string | null } | undefined,
+): string | null =>
+  !row || (row.title === WALL_OF_HONOR_TITLE_ID && !row.wallOfHonorJson) ? null : row.title;
+
 /** Overlay server evidence on every public snapshot; old forged snapshots are sanitized too. */
 export function verifiedSnapshot(snapshot: LegendSnapshot, granted: boolean): LegendSnapshot {
   const titles = (snapshot.titles ?? []).filter((t) => t.id !== WALL_OF_HONOR_TITLE_ID);
@@ -658,6 +663,8 @@ export async function getCareerHead(db: Db, careerId: string) {
   const [row] = await db
     .select({
       profileId: careers.profileId,
+      title: careers.title,
+      wallOfHonorJson: careers.wallOfHonorJson,
       status: careers.status,
       pos: careers.pos,
       dpos: careers.dpos,

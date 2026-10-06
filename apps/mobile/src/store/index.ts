@@ -31,9 +31,9 @@ export const accountCache = proxy<{
   fetchedAt: number;
 }>({ value: undefined, fetchedAt: 0 });
 /** 커리어 id → 이번 접속에서 고른 대표 칭호(웹 titles/legendTitle). */
-export const pickedTitles = proxy<Record<string, string>>({});
+export const pickedTitles = proxy<Record<string, string | null>>({});
 export const legendTitleOf = (careerId: string | undefined, saved: string | null | undefined) =>
-  (careerId && pickedTitles[careerId]) || saved;
+  careerId && careerId in pickedTitles ? pickedTitles[careerId] : saved;
 
 /** 기기 설정. theme: 설정에서 고른 테마(null이면 시스템) · motionOK: 시스템 '동작 줄이기'가 꺼져 있다. */
 export const prefs = proxy<{ theme: 'light' | 'dark' | null; motionOK: boolean }>({

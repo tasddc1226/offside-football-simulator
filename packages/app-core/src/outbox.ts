@@ -23,6 +23,7 @@ export type RetiredNumberEvent = {
   careerId: string;
   result: RetiredNumberResult | null;
   serviceSeason?: number | null;
+  title?: string | null;
 };
 
 export type OutboxItem =
@@ -71,7 +72,11 @@ async function ensureProfile(): Promise<boolean> {
 /** T-10-076 은퇴 응답의 영구결번 심사 결과를 UI에 알린다(배포 전 서버 응답엔 필드가 없어 알리지 않는다). */
 async function announceRetiredNumber(careerId: string, res: Response): Promise<void> {
   const body = (await res.json().catch(() => null)) as {
-    data?: { retiredNumber?: RetiredNumberResult | null; serviceSeason?: number | null };
+    data?: {
+      retiredNumber?: RetiredNumberResult | null;
+      serviceSeason?: number | null;
+      title?: string | null;
+    };
   } | null;
   const result = body?.data?.retiredNumber;
   if (result === undefined) return;
@@ -80,6 +85,7 @@ async function announceRetiredNumber(careerId: string, res: Response): Promise<v
     careerId,
     result,
     ...(serviceSeason !== undefined ? { serviceSeason } : {}),
+    ...(body?.data?.title !== undefined ? { title: body.data.title } : {}),
   });
 }
 

@@ -37,7 +37,7 @@ export function RetiredNumberCredit({
       return;
     asked.current = id;
     void checkRetiredNumber(id).then((r) => {
-      if (r.ok) recordRn(id, r.data.retiredNumber);
+      if (r.ok) recordRn(id, r.data.retiredNumber, undefined, r.data.title);
     });
   }, [id, v.age, rn0]);
   const results = useSnapshot(rnResults);

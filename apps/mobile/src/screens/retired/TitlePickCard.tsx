@@ -25,7 +25,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
   const pk = useSnapshot(pickedTitles);
   const results = useSnapshot(rnResults);
   const earned = earnedTitles(h, h.id && h.id in results ? results[h.id] : null);
-  const current = titleById((h.id && pk[h.id]) || h.title);
+  const current = titleById(h.id && h.id in pk ? pk[h.id] : h.title);
   const [open, setOpen] = useState(false);
 
   function pick(id: string) {
