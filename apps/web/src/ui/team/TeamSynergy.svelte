@@ -64,7 +64,9 @@
   .row[aria-pressed='true'] {background:color-mix(in srgb,var(--accent),var(--surface-2) 82%);}
   .row[aria-pressed='true'] .state {border-color:var(--accent);background:var(--accent);color:var(--accent-ink);}
   .row.dashed {border-style:dashed;}
-  .row[data-state='off'] {background:transparent;opacity:.62;}
+  /* 미적용은 바탕 · 이름만 흐리게 — 줄 전체를 투명하게 하면 설명 글자 명도 대비가 모자란다. */
+  .row[data-state='off'] {background:transparent;}
+  .row[data-state='off'] .text b {color:var(--muted);font-weight:600;}
   .row[data-state='off'] .mark {border-style:dashed;}
   @media(max-width:440px) { .row {grid-template-columns:16px minmax(0,1fr);} .side {grid-column:2;justify-items:start;grid-auto-flow:column;justify-content:start;align-items:center;gap:6px;} }
 </style>
