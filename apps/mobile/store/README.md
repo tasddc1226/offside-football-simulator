@@ -6,7 +6,7 @@ App Store(6.9", 1320×2868)·Google Play(1080×2160) 스크린샷과 Play 그래
 1. 실제 앱 화면을 `shots/<ko|en>/01.png`~`07.png`로 둔다. iPhone 17 Pro Max(iOS 26) 시뮬레이터의 Release 빌드를
    스테이징 API로 띄우고 `xcrun simctl io <기기> screenshot`으로 찍는다(상태 표시줄은 `simctl status_bar … override --time 9:41`).
    운영 데이터가 섞이지 않게 운영 API로 띄우지 않는다.
-2. `PW_FROM=$PWD/../../web/package.json node render.mjs` → `out/<ios|android>/<lang>/0N.png`
+2. `PW_FROM=$PWD/../../web/package.json node render.mjs [ko|en] [ios|android] [장 번호]` → `out/<ios|android>/<lang>/0N.png`
 3. `PW_FROM=$PWD/../../web/package.json node feature.mjs` → `out/android/<lang>/feature-graphic.png`
 
 `shots/`·`out/`은 커밋하지 않는다(용량). 렌더러는 Google Fonts·jsDelivr에서 글꼴을 받는다.
