@@ -9,6 +9,7 @@ import {
   autoFillSlots,
   matchHintOf,
   outcomeOf,
+  teamEditableIn,
   pct,
   pickCandidates,
   playHintOf,
@@ -167,6 +168,13 @@ describe('matchHintOf 우선순위', () => {
   });
   it('지금 시즌이면 playHintOf 로 넘긴다', () => {
     expect(matchHintOf(null, false, 10, 2, 2)).toMatch(/팀을 저장/);
+  });
+  it('T-11-113 개막 뒤 프리시즌 팀은 친선전 전용으로 고칠 수 있다', () => {
+    expect(matchHintOf(null, false, 10, 0, 1)).toMatch(/친선전에만/);
+    expect(teamEditableIn(0, 1)).toBe(true);
+    expect(teamEditableIn(0, 0)).toBe(true);
+    expect(teamEditableIn(1, 2)).toBe(false);
+    expect(teamEditableIn(2, 2)).toBe(true);
   });
 });
 

@@ -878,6 +878,11 @@ export const ownerTeams = sqliteTable(
     bestMargin: integer('best_margin').notNull().default(0),
     likes: integer('likes').notNull().default(0),
     views: integer('views').notNull().default(0),
+    /**
+     * T-11-113 끝난 시즌 팀을 친선전용으로 고친 편성(이름·감독·포메이션·선발·배치·로고·filled·ovr JSON). 최종 기록 칸은
+     * 그대로 두고 친선전·내 팀 화면만 이 값을 쓴다(friendlyTeamOf).
+     */
+    friendlyJson: text('friendly_json'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

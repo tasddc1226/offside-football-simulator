@@ -101,10 +101,13 @@ export const openTeamSeasons = (now: string): number[] => [
   ...SERVICE_SEASONS.filter((s) => s.startsAt <= now).map((s) => s.id),
 ];
 
+/** T-11-113 그 팀 시즌이 끝나는 시각(프리시즌은 첫 시즌 개막, 시즌은 마감). 마감이 정해지지 않았으면 null. */
+export const teamSeasonEndsAt = (id: number): string | null =>
+  id === 0 ? SERVICE_SEASONS[0]!.startsAt : (serviceSeason(id)?.endsAt ?? null);
+
 /** 그 팀 시즌이 끝났는가(프리시즌은 첫 시즌 개막에, 시즌은 마감에 끝난다). */
 export const teamSeasonClosed = (id: number, now: string): boolean => {
-  if (id === 0) return SERVICE_SEASONS[0]!.startsAt <= now;
-  const end = serviceSeason(id)?.endsAt;
+  const end = teamSeasonEndsAt(id);
   return !!end && end <= now;
 };
 

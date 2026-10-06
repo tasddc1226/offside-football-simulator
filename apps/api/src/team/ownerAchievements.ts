@@ -2,7 +2,7 @@
 // 같은 길로 센다.
 import type { FormationId } from '@offside/contracts/owner-team';
 import { detailPosInSeason } from '@offside/contracts/positions';
-import { retireAtOf, teamSeasonAt } from '@offside/contracts/service-seasons';
+import { retireAtOf, teamSeasonAt, teamSeasonEndsAt } from '@offside/contracts/service-seasons';
 import type { Db } from '../db/client.js';
 import {
   achievementRowOf,
@@ -44,12 +44,15 @@ export async function refreshOwnerAchievements(
   now: string,
   touch: boolean,
 ) {
-  const [careersIn, [team], prev] = await Promise.all([
+  const [careersIn, [seasonTeam], prev] = await Promise.all([
     seasonCareersOf(db, owner.id, season),
     myTeamIn(db, owner.id, season),
     achievementRowOf(db, owner.id, season),
   ]);
   const open = season === teamSeasonAt(now);
+  // T-11-113 시즌이 끝난 뒤 친선전용으로 처음 만든 팀(최종 기록은 빈 팀)은 그 시즌 팀으로 치지 않는다.
+  const end = teamSeasonEndsAt(season);
+  const team = seasonTeam && !(end && seasonTeam.createdAt >= end) ? seasonTeam : undefined;
   const ids = team ? slotIdsOf(team).filter((id): id is string => id !== null) : [];
   const [activity, slotRows] = await Promise.all([
     ownerActivityIn(db, owner.id, season, team?.id ?? null),

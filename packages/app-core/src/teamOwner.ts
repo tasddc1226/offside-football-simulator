@@ -329,6 +329,18 @@ export const achRankText = (rank: number | null, ranked: number): string =>
 export const achOpenGroup = (groups: readonly ClubAchievementGroup[]): string | null =>
   groups.find((g) => !g.locked && achDone(g.items) < g.items.length)?.id ?? null;
 
+/** T-11-113 개막 뒤의 프리시즌 팀 — 지난 시즌이지만 친구 친선전용으로 고칠 수 있다. */
+export const isPreseasonLegacy = (season: number, current: number | null) =>
+  season === 0 && current !== 0;
+
+/** 그 시즌 팀을 고칠 수 있는가: 지금 시즌 팀과 개막 뒤의 프리시즌 팀(친선전용). */
+export const teamEditableIn = (season: number, current: number | null) =>
+  season === current || isPreseasonLegacy(season, current);
+
+/** 개막 뒤 프리시즌 팀 화면의 안내. */
+export const PRESEASON_TEAM_NOTE =
+  '프리시즌에 키운 선수 중 지금 가진 선수로 꾸려요. 이 팀은 친구와 하는 친선전에만 나가고, 프리시즌 랭킹과 업적은 그대로예요.';
+
 /** 팀 화면 '경기' 탭에서 경기를 막는 이유 — 휴식기 · 지난 시즌 · 그 밖은 playHintOf. */
 const REST_HINT = '시즌 사이 휴식기예요. 다음 시즌이 열리면 경기할 수 있어요.';
 export function matchHintOf(
@@ -339,6 +351,8 @@ export function matchHintOf(
   current: number | null,
 ): string | null {
   if (current === null) return REST_HINT;
+  if (isPreseasonLegacy(season, current))
+    return '프리시즌 팀은 친구와 하는 친선전에만 나가요. 랭크 경기는 지금 시즌 팀으로 해요.';
   if (season !== current)
     return '지난 시즌 팀은 보기만 할 수 있어요. 지금 시즌을 고르면 경기할 수 있어요.';
   return playHintOf(team, dirty, matchesLeft);
