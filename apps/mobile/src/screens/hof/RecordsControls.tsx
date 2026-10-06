@@ -5,6 +5,7 @@ import { useColors } from '../../theme/useColors';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
 import { SelectField, type SelectOption } from '../settings/parts';
+import { hofText as L } from '@offside/app-core/i18n/ko/hof';
 
 export const RECORDS_TOUCH = Platform.OS === 'android' ? 48 : 44;
 
@@ -61,12 +62,12 @@ export function RecordsFilters({
         {children ? (
           <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
             <Txt tone="muted" style={{ fontSize: 12 }}>
-              필터
+              {L.filter}
             </Txt>
             <Press
               testID={testID}
               scale={1}
-              accessibilityLabel={`필터, ${label}`}
+              accessibilityLabel={L.filterA11y({ label })}
               accessibilityState={{ expanded: open }}
               onPress={onToggle}
               style={{

@@ -1,6 +1,8 @@
 // T-10-115 인앱 브라우저(카톡·인스타·스레드·페북·네이버·라인 웹뷰) 감지 — 순수 함수만 둔다(테스트 가능).
 // 구글은 웹뷰의 OAuth를 막고(403 disallowed_useragent), 웹뷰는 localStorage도 실제 브라우저와 따로라서
 // 로그인·홈 화면 추가·기록 이어하기가 모두 외부 브라우저에서 해야 안전하다.
+import { shellInstallText as L } from '@offside/app-core/i18n/ko/shellInstall';
+
 export type InAppName =
   'kakao' | 'instagram' | 'threads' | 'facebook' | 'naver' | 'line' | 'other-webview';
 export type InAppOs = 'ios' | 'android' | 'other';
@@ -57,9 +59,6 @@ export function externalOpenUrl(info: InAppInfo, href: string): string | null {
 
 /** 프로그램으로 못 여는 경우의 안내 문구. 앱마다 메뉴 위치가 달라 위치는 뭉뚱그리고 항목 이름만 짚는다. */
 export function manualOpenGuide(info: InAppInfo, copied: boolean): string {
-  const menu =
-    info.os === 'ios'
-      ? "화면의 ··· (또는 공유) 메뉴에서 'Safari로 열기'를 눌러 주세요."
-      : "화면의 ··· (또는 ⋮) 메뉴에서 '다른 브라우저로 열기'를 눌러 주세요.";
-  return copied ? `${menu} 주소를 복사해 뒀으니 브라우저 주소창에 붙여 넣어도 돼요.` : menu;
+  const menu = info.os === 'ios' ? L.manualIos : L.manualAndroid;
+  return copied ? L.manualCopied({ menu }) : menu;
 }

@@ -2,6 +2,8 @@ import { LAST_PHASE } from './data.js';
 import { eventById } from './events-data.js';
 import type { GameState, StoryState } from './types.js';
 import { log } from './stats.js';
+import { gTurnText as L } from './i18n/ko/gTurn.js';
+import { tn } from './i18n/names.js';
 
 // ───────── 스토리/체인 헬퍼 (원본 stories.js) ─────────
 export interface StoryDef {
@@ -48,5 +50,10 @@ export function endStory(s: GameState, key: string, ending: string) {
     const e = eventById(c.id);
     return !e || e.story !== key;
   });
-  log(s, `[스토리 완결] ${STORIES[key]!.name} · ${ending}`, 'big', Math.max(0, s.phase - 1));
+  log(
+    s,
+    L.storyEnd({ name: tn(STORIES[key]!.name), ending: tn(ending) }),
+    'big',
+    Math.max(0, s.phase - 1),
+  );
 }

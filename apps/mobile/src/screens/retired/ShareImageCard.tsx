@@ -16,6 +16,7 @@ import { Btn } from '../../ui/Btn';
 import { Card } from '../../ui/Card';
 import { Txt } from '../../ui/Txt';
 import { ShareCardView } from './ShareCardView';
+import { shareText as L } from '@offside/app-core/i18n/ko/share';
 
 const frame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
@@ -50,7 +51,7 @@ export function ShareImageCard({ v }: { v: LegendView }) {
       });
       setShot(uri);
     } catch {
-      toast('이미지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
+      toast(L.imageFailed);
     } finally {
       laidOut.current = null;
       setCard(null);
@@ -61,12 +62,11 @@ export function ShareImageCard({ v }: { v: LegendView }) {
   async function send(dialogTitle: string) {
     if (!shot) return;
     try {
-      if (!(await Sharing.isAvailableAsync()))
-        return toast('이 기기에서는 이미지를 공유할 수 없어요.');
+      if (!(await Sharing.isAvailableAsync())) return toast(L.imageCannotShare);
       await Sharing.shareAsync(shot, { mimeType: 'image/png', UTI: 'public.png', dialogTitle });
     } catch {
       // 공유 시트를 닫은 건 실패가 아니다. 시트를 못 열었을 때만 안내한다.
-      toast('공유 창을 열지 못했어요. 잠시 후 다시 시도해 주세요.');
+      toast(L.imageShareFailed);
     }
   }
 
@@ -75,7 +75,7 @@ export function ShareImageCard({ v }: { v: LegendView }) {
       <View testID="share-image">
         <Txt v="eyebrow">Share</Txt>
         <Txt v="h2" accessibilityRole="header">
-          SNS 공유 이미지
+          {L.imageTitle}
         </Txt>
       </View>
       {shot ? (
@@ -83,24 +83,24 @@ export function ShareImageCard({ v }: { v: LegendView }) {
           <Image
             source={{ uri: shot }}
             testID="share-image-preview"
-            accessibilityLabel={`${h.name} 커리어 공유 이미지`}
+            accessibilityLabel={L.imageAlt({ name: h.name })}
             style={{ width: '100%', aspectRatio: CARD_W / CARD_H, borderRadius: 12 }}
           />
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Btn
               style={{ flex: 1 }}
               testID="share-image-save"
-              onPress={() => void send('이미지 저장')}
+              onPress={() => void send(L.imageSave)}
             >
-              이미지 저장
+              {L.imageSave}
             </Btn>
             <Btn
               kind="primary"
               style={{ flex: 1 }}
               testID="share-image-send"
-              onPress={() => void send('커리어 카드 공유')}
+              onPress={() => void send(L.imageShareDialog)}
             >
-              바로 공유하기
+              {L.imageSend}
             </Btn>
           </View>
           {/* 대표 칭호를 바꾼 뒤 다시 그릴 때. */}
@@ -112,13 +112,13 @@ export function ShareImageCard({ v }: { v: LegendView }) {
             disabled={busy}
             onPress={() => void make()}
           >
-            {busy ? '만드는 중…' : '다시 만들기'}
+            {busy ? L.imageMaking : L.imageRemake}
           </Btn>
         </>
       ) : (
         <>
           <Txt v="sm" tone="muted">
-            인스타그램·카카오톡에 공유할 커리어 카드를 만들어요.
+            {L.imageNote}
           </Txt>
           <Btn
             kind="primary"
@@ -127,7 +127,7 @@ export function ShareImageCard({ v }: { v: LegendView }) {
             disabled={busy}
             onPress={() => void make()}
           >
-            {busy ? '만드는 중…' : '공유 이미지 만들기'}
+            {busy ? L.imageMaking : L.imageMake}
           </Btn>
         </>
       )}

@@ -4,6 +4,7 @@ import { fmtMoney } from '@offside/game/player';
 import { loadKey, saveKey } from '@offside/game/season';
 import { potScouted } from '@offside/game/stats';
 import type { GameState } from '@offside/game/types';
+import { playerNudgeText as L } from './i18n/ko/playerNudge.js';
 
 export interface PlayerNudge {
   key: string;
@@ -22,10 +23,10 @@ export function playerNudge(s: GameState, canPeek = false): PlayerNudge | null {
   if (!ready && !canPeek) return null;
   return {
     key: `${s.cid}:${s.year}`,
-    title: ready ? '잠재력 강화를 시도할 수 있어요' : '이번 시즌 스카우트 평가가 나왔어요',
+    title: ready ? L.readyTitle : L.scoutTitle,
     text: ready
-      ? `${fmtMoney(boostCost(s))}원 · 성공 확률 ${boostChance(s)}%. 실패하면 자금은 돌려받지 못해요.`
-      : '선수 탭에서 이번 시즌 평가를 볼 수 있어요. 실제 잠재력은 은퇴할 때 공개돼요.',
+      ? L.readyText({ cost: fmtMoney(boostCost(s)), chance: boostChance(s) })
+      : L.scoutText,
   };
 }
 

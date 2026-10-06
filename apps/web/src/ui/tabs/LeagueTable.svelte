@@ -2,10 +2,12 @@
   // T-10-024: 선수가 뛰는 리그의 순위표. 기본은 상위 3팀 + 내 팀 앞뒤 2팀 + 꼴찌만 접어서 보여 주고,
   // '전체 순위'로 모두 펼친다. T-11-025 시즌 탭의 시즌 현황 카드 안에 들어가는 한 묶음이라 카드 테두리 없이 작은 제목을 단다. 칸은 순위·팀·경기·승점만(승·무·패는 리포트·시즌 누적 줄에 있다).
   import { leagueOf, leagueTable, seasonLeagueId } from '@offside/game/engine';
+  import { tn } from '@offside/game/i18n/names';
   import type { GameState } from '@offside/game/types';
   import ClubBadge from '../ClubBadge.svelte';
   import { RANK_SLIDE_MS, rankSlideSpan } from '@offside/app-core/resultTour';
   import { dur } from '../motion.js';
+  import { gameLeagueText as L } from '@offside/app-core/i18n/ko/gameLeague';
 
   const { s }: { s: GameState } = $props();
   let full = $state(false);
@@ -62,15 +64,15 @@
 
 <div class="league-table" data-league-table>
   <div class="row" style="justify-content:space-between;align-items:baseline">
-    <h3 class="sub-title">{leagueOf(seasonLeagueId(s)).name} 순위</h3>
+    <h3 class="sub-title">{L.title({ league: tn(leagueOf(seasonLeagueId(s)).name) })}</h3>
     {#if s.season.played && (folded || full)}
-      <button class="icon-btn" data-act="table-toggle" aria-expanded={full} onclick={() => (full = !full)}>{full ? '접기' : '전체 순위'}</button>
+      <button class="icon-btn" data-act="table-toggle" aria-expanded={full} onclick={() => (full = !full)}>{full ? L.fold : L.expand}</button>
     {/if}
   </div>
   {#if s.season.played}
     <table>
       <thead>
-        <tr><th scope="col">#</th><th scope="col" class="lt-team">팀</th><th scope="col">경기</th><th scope="col">승점</th></tr>
+        <tr><th scope="col">#</th><th scope="col" class="lt-team">{L.colTeam}</th><th scope="col">{L.colPlayed}</th><th scope="col">{L.colPts}</th></tr>
       </thead>
       <tbody bind:this={tbody}>
         {#each shown as x (x.key)}
@@ -88,6 +90,6 @@
       </tbody>
     </table>
   {:else}
-    <p class="muted fs-sm">개막하면 {rows.length}개 팀 순위표가 채워져요.</p>
+    <p class="muted fs-sm">{L.empty({ n: rows.length })}</p>
   {/if}
 </div>

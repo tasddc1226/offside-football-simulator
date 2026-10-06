@@ -7,12 +7,14 @@ import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Line, Rect } from 'react-native-svg';
 import type { Pos } from '@offside/game/data';
+import { createText as L } from '@offside/app-core/i18n/ko/create';
 import { buzz } from '../../game/host';
 import { prefs } from '../../store';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Txt, useShadow } from '../../ui';
+import { intlLocale } from '@offside/app-core/i18n/core';
 
 const HOLD = 350;
 // 공격 방향은 오른쪽. 포지션별로 후보가 잡히는 가로 구역(%).
@@ -216,7 +218,7 @@ export function ScoutScan({
       <Pressable
         onPress={finish}
         accessibilityRole="button"
-        accessibilityLabel="스카우트 연출 건너뛰기"
+        accessibilityLabel={L.scanSkipLabel}
         accessibilityLiveRegion="polite"
         style={{
           flex: 1,
@@ -245,7 +247,7 @@ export function ScoutScan({
         >
           <Txt v="eyebrow">Scouting</Txt>
           <Txt v="h2" accessibilityRole="header" style={{ fontSize: rem(1.15) }}>
-            스카우트가 후보를 추리는 중
+            {L.scanTitle}
           </Txt>
 
           <View
@@ -353,14 +355,14 @@ export function ScoutScan({
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <Txt tone="muted" style={{ fontSize: rem(0.85) }}>
-              분석한 선수{' '}
+              {L.scannedBefore}{' '}
               <Txt num style={{ fontSize: rem(1.05) }}>
-                {count.toLocaleString('ko-KR')}
+                {count.toLocaleString(intlLocale())}
               </Txt>
-              명
+              {L.scannedAfter}
             </Txt>
             <Txt tone="muted" style={{ fontSize: rem(0.85) }}>
-              후보{' '}
+              {L.scanCand}{' '}
               <Txt num style={{ fontSize: rem(1.05) }}>
                 {locked}
               </Txt>
@@ -412,7 +414,7 @@ export function ScoutScan({
             })}
           </View>
           <Txt tone="muted" center style={{ fontSize: rem(0.8), marginTop: 2 }}>
-            {p >= 1 ? '후보 3명 선정 완료!' : '탭하면 건너뛰기'}
+            {p >= 1 ? L.scanDone : L.scanSkip}
           </Txt>
         </View>
       </Pressable>

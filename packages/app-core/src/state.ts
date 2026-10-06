@@ -2,6 +2,7 @@
 // 화면·탭·진행 중 커리어·생성 초안 등 클라이언트 상태의 모양과 처음 값. 반응성은 클라이언트가 붙인다 —
 // 웹은 Svelte `$state`로 감싸고(ui/state.svelte.ts), 앱은 자기 스토어로 감싼다. 게임 진행 액션
 // (game-actions.ts)은 넘겨받은 객체를 그대로 고친다.
+import { personName } from '@offside/game/i18n/names';
 import { BODY_DEFAULT, type Body } from '@offside/contracts/body';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { HofSort, RetiredNumberResult } from '@offside/contracts';
@@ -114,8 +115,9 @@ export function draftCareerRules(
   };
 }
 
+/** 무작위 이름 — 영어면 같은 뽑기를 로마자로 보여 준다(난수 소비는 언어와 같다). */
 export function randomName(): string {
-  return pick(SURNAMES) + pick(GIVEN);
+  return personName(pick(SURNAMES) + pick(GIVEN));
 }
 
 /** T-10-076 기본 등번호는 무작위(1~99) — 모두 10번으로 시작하면 영구결번이 10번에 몰린다. 칸은 비우고 직접 적을 수 있다. */

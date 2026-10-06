@@ -9,7 +9,8 @@ import { View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
-import { POS_GROUPS, POS_LABEL } from '@offside/contracts/positions';
+import { POS_GROUPS } from '@offside/contracts/positions';
+import { POS } from '@offside/game/data';
 import {
   PRESEASON,
   SERVICE_SEASONS,
@@ -17,7 +18,7 @@ import {
   seasonById,
 } from '@offside/contracts/service-seasons';
 import { kstMonthDayHour } from '@offside/app-core/boardText';
-import { anonName, fmtValue, iGa } from '@offside/app-core/format';
+import { anonName, fmtValue } from '@offside/app-core/format';
 import { getHof } from '@offside/app-core/api/client';
 import { useSeasonNow } from '../ui/useSeasonNow';
 import { useRefresh } from '../ui/refresh';
@@ -36,6 +37,8 @@ import { Txt } from '../ui/Txt';
 import { HofRow, type RowStats } from './HofRow';
 import { HofPodium } from './HofPodium';
 import { RecordsSelect, RecordsFilters, RecordsChips } from '../screens/hof/RecordsControls';
+import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+import { seasonLabel } from '@offside/app-core/seasonName';
 
 const TOP = 3;
 const PER_PAGE = 10;
@@ -47,24 +50,37 @@ const isNew = (k: HofSort) => {
 };
 /** 아직 개막 전인 시즌인지(ISO 문자열 비교). */
 
-const SORTS: Record<
+// 문구는 그릴 때 읽어야 해서(언어 등록 뒤) 함수로 둔다.
+const sorts = (): Record<
   HofSort,
   { label: string; unit: string; get: (s: RowStats) => number | string }
-> = {
-  score: { label: '레전드 점수', unit: '', get: (s) => s.score },
+> => ({
+  score: { label: L.sortScore, unit: '', get: (s) => s.score },
   // T-10-100 은퇴 가치(만 원) — 조·억·천만으로 적는다.
-  value: { label: '은퇴 가치', unit: '', get: (s) => fmtValue(s.value ?? 0) },
-  goals: { label: '득점', unit: '골', get: (s) => s.goals },
-  assists: { label: '도움', unit: '도움', get: (s) => s.assists },
-  ga: { label: '공격포인트', unit: 'P', get: (s) => s.goals + s.assists },
-  apps: { label: '출전', unit: '경기', get: (s) => s.apps },
-  trophies: { label: '트로피', unit: '개', get: (s) => s.trophies },
-  awards: { label: '개인상', unit: '회', get: (s) => s.awards },
-  ballon: { label: '발롱도르', unit: '회', get: (s) => s.ballon },
-  caps: { label: 'A매치', unit: '경기', get: (s) => s.caps },
-  peak: { label: '최고 OVR', unit: '', get: (s) => s.peak },
-};
-const SORT_KEYS = Object.keys(SORTS) as HofSort[];
+  value: { label: L.sortValue, unit: '', get: (s) => fmtValue(s.value ?? 0) },
+  goals: { label: L.sortGoals, unit: L.unitGoals, get: (s) => s.goals },
+  assists: { label: L.sortAssists, unit: L.unitAssists, get: (s) => s.assists },
+  ga: { label: L.sortGa, unit: L.unitPoints, get: (s) => s.goals + s.assists },
+  apps: { label: L.sortApps, unit: L.unitGames, get: (s) => s.apps },
+  trophies: { label: L.sortTrophies, unit: L.unitCount, get: (s) => s.trophies },
+  awards: { label: L.sortAwards, unit: L.unitTimes, get: (s) => s.awards },
+  ballon: { label: L.sortBallon, unit: L.unitTimes, get: (s) => s.ballon },
+  caps: { label: L.sortCaps, unit: L.unitGames, get: (s) => s.caps },
+  peak: { label: L.sortPeak, unit: '', get: (s) => s.peak },
+});
+const SORT_KEYS: HofSort[] = [
+  'score',
+  'value',
+  'goals',
+  'assists',
+  'ga',
+  'apps',
+  'trophies',
+  'awards',
+  'ballon',
+  'caps',
+  'peak',
+];
 
 function SearchIcon({ color }: { color: string }) {
   return (
@@ -81,7 +97,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   // 전체 보기의 페이지·유형은 appState에 둬 선수 상세에서 돌아와도 그대로다.
   const page = full ? snap.hof.page : 1;
   const sort: HofSort = full ? snap.hof.sort : 'score';
-  const by = SORTS[sort];
+  const by = sorts()[sort];
   // 홈 미리보기는 지금 시즌 고정(개막 전엔 프리시즌 = 전체와 같아 시즌 없이 같은 요청·캐시를 쓴다).
   // T-11-107·110 띄운 채 개막을 넘기면 홈 미리보기 시즌·'개막 예정' 표시를 다시 고른다.
   const now = useSeasonNow();
@@ -94,7 +110,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   /** 고른 시즌이 아직 개막 전이면 그 시즌(목록 대신 개막 안내). */
   const upcoming = ss && notOpen(ss) ? ss : undefined;
   /** 문구 앞에 붙는 시즌·포지션 이름('시즌 1 수비수 '). 둘 다 전체면 빈 문자열. */
-  const scope = `${ss ? `${ss.name} ` : ''}${pos ? `${POS_LABEL[pos]} ` : ''}`;
+  const scope = `${ss ? `${seasonLabel(ss.id, ss.name)} ` : ''}${pos ? `${POS[pos].label} ` : ''}`;
   const [filtering, setFiltering] = useState(false);
   const [all, setAll] = useState<PublicHofEntry[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -164,10 +180,10 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
       : [];
   const podiumIds = new Set(podiumEntries.map((entry) => entry.id));
   const emptyText = q
-    ? `'${q}'${iGa(q)} 들어간 이름의 ${scope}선수가 없어요.`
+    ? L.emptyQuery({ q, scope })
     : sort === 'score'
-      ? `아직 ${scope}은퇴 선수가 없어요.`
-      : `아직 ${by.label} 기록이 있는 ${scope}은퇴 선수가 없어요.`;
+      ? L.emptyScore({ scope })
+      : L.emptySort({ scope, sort: by.label });
 
   const empty = (text: string) => (
     <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
@@ -191,21 +207,21 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           <View style={{ flex: 1 }}>
             <Txt v="eyebrow">Legends</Txt>
             <Txt v={full ? 'h1' : 'h2'} accessibilityRole="header" style={{ marginBottom: 8 }}>
-              명예의 전당
+              {L.title}
             </Txt>
           </View>
         ) : null}
         {!full && (all?.length || homeSeason !== null) ? (
           <Btn sm testID="hof-all" onPress={openHof}>
-            전체 보기
+            {L.seeAll}
           </Btn>
         ) : null}
       </View>
       {full && searching && !upcoming ? (
         <TextBox
           testID="hof-search-input"
-          placeholder="선수 이름 검색"
-          accessibilityLabel="선수 이름 검색"
+          placeholder={L.searchLabel}
+          accessibilityLabel={L.searchLabel}
           maxLength={20}
           returnKeyType="search"
           autoFocus
@@ -221,18 +237,18 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           testID="hof-filters"
           open={filtering}
           onToggle={() => setFiltering(!filtering)}
-          label={`${pos ? POS_LABEL[pos] : '전체 포지션'} · ${by.label}`}
+          label={`${pos ? POS[pos].label : L.allPositions} · ${by.label}`}
           season={
             <RecordsSelect
-              label="시즌"
+              label={L.season}
               testID="hof-season-select"
               value={season ?? 'all'}
               onChange={(id) => pickSeason(id === 'all' ? null : Number(id))}
               options={[
-                { value: 'all', label: '전체 시즌' },
+                { value: 'all', label: L.allSeasons },
                 ...[PRESEASON, ...SERVICE_SEASONS].map((s) => ({
                   value: s.id,
-                  label: `${s.name}${notOpen(s) ? ' (개막 예정)' : ''}`,
+                  label: `${seasonLabel(s.id, s.name)}${notOpen(s) ? L.notOpen : ''}`,
                 })),
               ]}
             />
@@ -241,23 +257,23 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           {!upcoming ? (
             <>
               <RecordsChips
-                label="포지션"
+                label={L.positionGroup}
                 testIDPrefix="hof-pos"
                 value={pos ?? 'all'}
                 onPick={(key) => pickPos(key === 'all' ? null : (key as CareerPos))}
                 items={[
-                  { key: 'all', label: '전체' },
-                  ...POS_GROUPS.map((key) => ({ key, label: POS_LABEL[key] })),
+                  { key: 'all', label: L.all },
+                  ...POS_GROUPS.map((key) => ({ key, label: POS[key].label })),
                 ]}
               />
               <RecordsChips
-                label="순위 유형"
+                label={L.sortGroup}
                 testIDPrefix="hof-sort"
                 value={sort}
                 onPick={(key) => pickSort(key as HofSort)}
                 items={SORT_KEYS.map((key) => ({
                   key,
-                  label: SORTS[key].label,
+                  label: sorts()[key].label,
                   isNew: isNew(key),
                 }))}
               />
@@ -269,7 +285,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                 style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8 }}
               >
                 <SearchIcon color={c.ink} />
-                <Txt style={{ fontSize: 13 }}>선수 이름 검색</Txt>
+                <Txt style={{ fontSize: 13 }}>{L.searchLabel}</Txt>
               </Press>
             </>
           ) : null}
@@ -279,11 +295,13 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
       {upcoming ? (
         <View testID="hof-upcoming" style={{ paddingVertical: 8, gap: 4 }}>
           <Txt bold style={{ fontSize: rem(0.875) }}>
-            {`${upcoming.name}은 ${kstMonthDayHour(upcoming.startsAt)}(한국 시각)에 개막해요.`}
+            {L.opens({
+              name: seasonLabel(upcoming.id, upcoming.name),
+              when: kstMonthDayHour(upcoming.startsAt),
+            })}
           </Txt>
           <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-            개막 뒤 새로 만든 선수가 은퇴하면 여기에 올라요. 지금(프리시즌) 만든 선수는 '프리시즌'과
-            '전체' 명예의 전당에 남아요.
+            {L.opensNote}
           </Txt>
         </View>
       ) : all === null && !failed ? (
@@ -292,20 +310,20 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           accessibilityLiveRegion="polite"
           style={{ fontSize: rem(0.875), paddingVertical: 8 }}
         >
-          불러오는 중…
+          {L.loading}
         </Txt>
       ) : failed ? (
-        empty('명예의 전당을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+        empty(L.loadFailed)
       ) : all && all.length ? (
         <>
           {full ? (
             <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 6 }}>
-              {`${scope && `${scope}· `}${q ? `'${q}' 검색 ` : ''}${sort === 'score' ? '은퇴 선수' : `${by.label} 기록이 있는 선수`} ${total}명 · ${by.label} 순`}
+              {L.source({ scope, q, sort: by.label, isScore: sort === 'score', total })}
             </Txt>
           ) : null}
           {!full && ss ? (
             <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 6 }}>
-              {`${ss.name} · 레전드 점수 순`}
+              {L.homeSource({ season: seasonLabel(ss.id, ss.name) })}
             </Txt>
           ) : null}
           {podiumEntries.length > 0 ? (
@@ -336,7 +354,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                   club={h.lastClub}
                   clubId={h.lastClubId}
                   rn={h.retiredNumber?.number}
-                  tag={myIds.has(h.id) ? '내 선수' : null}
+                  tag={myIds.has(h.id) ? L.mine : null}
                   t={t}
                   titleId={h.title}
                   value={by.get(t)}
@@ -353,7 +371,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           })}
           {full && pages > 1 ? (
             <View
-              accessibilityLabel="명예의 전당 페이지"
+              accessibilityLabel={L.pagerLabel}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -365,7 +383,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
               }}
             >
               <Btn sm testID="hof-page-prev" disabled={page <= 1} onPress={() => goPage(page - 1)}>
-                ← 이전
+                {L.prev}
               </Btn>
               <Txt num accessibilityLiveRegion="polite" style={{ fontWeight: '700' }}>
                 {`${page} / ${pages}`}
@@ -376,7 +394,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                 disabled={page >= pages}
                 onPress={() => goPage(page + 1)}
               >
-                다음 →
+                {L.next}
               </Btn>
             </View>
           ) : null}

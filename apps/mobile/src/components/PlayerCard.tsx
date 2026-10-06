@@ -8,8 +8,11 @@ import { RN_SHIRT, RN_TRIM } from '@offside/app-core/rnStyle';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier } from '@offside/app-core/format';
-import { teamSeasonName } from '@offside/contracts/service-seasons';
+import { intlLocale } from '@offside/app-core/i18n/core';
+import { tn } from '@offside/game/i18n/names';
+import { teamSeasonLabel } from '@offside/app-core/seasonName';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({
@@ -189,7 +192,7 @@ export type PlayerCardData = {
 function SeasonBadge({ season, compact }: { season: number; compact: boolean }) {
   return (
     <View
-      accessibilityLabel={teamSeasonName(season)}
+      accessibilityLabel={teamSeasonLabel(season)}
       style={{
         position: 'absolute',
         top: 26,
@@ -379,7 +382,7 @@ export function PlayerCard({
           </Text>
           {!compact && country ? (
             <Text
-              accessibilityLabel={`국적 ${country.ko}`}
+              accessibilityLabel={L.nationAria({ name: tn(country.ko) })}
               maxFontSizeMultiplier={1.1}
               style={{ fontSize: 18, lineHeight: 18, marginTop: 2, includeFontPadding: false }}
             >
@@ -414,7 +417,7 @@ export function PlayerCard({
             >
               LS{' '}
               <Text style={{ fontFamily: DISPLAY[700], fontSize: 11 }}>
-                {cell.legendScore.toLocaleString()}
+                {cell.legendScore.toLocaleString(intlLocale())}
               </Text>
             </Text>
           ) : null}
@@ -422,7 +425,7 @@ export function PlayerCard({
       </View>
       {compact && country ? (
         <Text
-          accessibilityLabel={`국적 ${country.ko}`}
+          accessibilityLabel={L.nationAria({ name: tn(country.ko) })}
           maxFontSizeMultiplier={1.1}
           style={{
             position: 'absolute',
@@ -462,7 +465,7 @@ export function PlayerCard({
               includeFontPadding: false,
             }}
           >
-            포지션 OVR
+            {L.posOvrLabel}
           </Text>
           <Text
             maxFontSizeMultiplier={1.1}

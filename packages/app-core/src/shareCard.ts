@@ -7,9 +7,11 @@ import { careerChapters, honoursRoll } from '@offside/game/retirement-report';
 import { legendTitle } from '@offside/game/season';
 import { POS_LABEL } from '@offside/game/pos-label';
 import { titleById } from '@offside/game/titles';
+import { tn } from '@offside/game/i18n/names';
 import { totals } from './format.js';
 import { RN_DEFAULT, rnColors, type RnColors } from './rnStyle.js';
 import type { LegendView } from './state.js';
+import { shareText as L } from './i18n/ko/share.js';
 
 /** 결번 유니폼 한 벌(이름·번호·구단 색) — 캔버스(웹)·RN 뷰(앱)가 같은 도안(rnStyle JERSEY)으로 그린다. */
 export interface JerseyArt {
@@ -56,24 +58,24 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
   const pills: ShareCardData['pills'] = [{ text: legendTitle(v.score, v.dpos), gold: true }];
   if (main && (main.cat !== 'legend' || main.id === WALL_OF_HONOR_TITLE_ID))
     pills.push({ text: `‘${main.name}’` });
-  if (rn) pills.push({ text: `👑 ${rn.club}`, tail: ` 영구결번 ${rn.number}` });
-  else pills.push({ text: `최고 OVR ${v.peak}` });
+  if (rn) pills.push({ text: `👑 ${tn(rn.club)}`, tail: L.cardRnTail({ number: rn.number }) });
+  else pills.push({ text: L.cardPeak({ peak: v.peak }) });
 
   const stat = (value: number | undefined, label: string) => ({ value: `${value ?? '—'}`, label });
   const stats = [
-    stat(d?.career.length, '시즌'),
-    stat(t?.p ?? v.totals.apps, '경기'),
+    stat(d?.career.length, L.cardSeasons),
+    stat(t?.p ?? v.totals.apps, L.cardApps),
     ...(back
-      ? [stat(t?.cs, '무실점')]
-      : [stat(t?.g ?? v.totals.goals, '골'), stat(t?.a ?? v.totals.assists, '도움')]),
-    stat(v.totals.trophies, '트로피'),
+      ? [stat(t?.cs, L.cardCleanSheets)]
+      : [stat(t?.g ?? v.totals.goals, L.cardGoals), stat(t?.a ?? v.totals.assists, L.cardAssists)]),
+    stat(v.totals.trophies, L.cardTrophies),
   ];
 
   const r = d ? styleReport(d.style, d.career) : null;
   const all = (d ? careerChapters(d) : []).map((c) => ({
     years: yy(c.from, c.to),
-    club: c.club,
-    league: c.leagues.at(-1)!,
+    club: tn(c.club),
+    league: tn(c.leagues.at(-1)!),
   }));
   const awards = d ? honoursRoll(d.awards) : [];
   const ballon = (h: { name: string }) => h.name.includes('발롱도르');
@@ -85,13 +87,13 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
         ...awards.filter((h) => !ballon(h)),
       ]
         .slice(0, HONOURS)
-        .map((h) => ({ count: `×${h.years.length}`, name: h.name }));
+        .map((h) => ({ count: `×${h.years.length}`, name: tn(h.name) }));
   const room = r || honours.length ? STOPS.shared : STOPS.alone;
   const stops = all.length > room ? [all[0]!, null, ...all.slice(-(room - 2))] : all;
   return {
     kicker: `FULL TIME${v.number != null ? ` · NO.${v.number}` : ''}`,
     name: v.name,
-    sub: [POS_LABEL[v.pos], span, `${v.age}세 은퇴`].filter(Boolean).join(' · '),
+    sub: [POS_LABEL[v.pos], span, L.cardRetiredAge({ age: v.age })].filter(Boolean).join(' · '),
     score: v.score,
     pills,
     stats,
@@ -101,7 +103,7 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
           icon: r.type.icon,
           name: r.type.name,
           line: r.type.line,
-          best: r.best ? `성공 확률 ${r.best.pct}%의 ‘${r.best.title}’, 기어이 해냈다` : null,
+          best: r.best ? L.cardBest({ pct: r.best.pct, title: r.best.title }) : null,
         }
       : null,
     honours,
@@ -111,5 +113,6 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
   };
 }
 
-/** 카드 바닥의 한 줄 소개. */
-export const TAGLINE = '고3부터 은퇴까지, 한 선수의 인생';
+/** 카드 바닥의 한 줄 소개·게임 이름. 언어를 바꾸면 달라져야 하므로 읽을 때 고른다. */
+export const tagline = (): string => L.cardTagline;
+export const cardBrand = (): string => L.cardBrand;

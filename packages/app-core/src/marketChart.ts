@@ -3,11 +3,12 @@
 import type { MarketCardTradesResponse, MarketChartPoint } from '@offside/contracts';
 import { DAY_MS, kstDay } from '@offside/contracts/kst';
 import { MARKET_CHART_DAYS, type MarketChartRange } from '@offside/contracts/market-value';
+import { marketChartText as L } from './i18n/ko/marketChart.js';
 
-export const CHART_RANGES: readonly [MarketChartRange, string][] = [
-  ['week', '1주'],
-  ['month', '1달'],
-  ['season', '시즌'],
+export const chartRanges = (): [MarketChartRange, string][] => [
+  ['week', L.rangeWeek],
+  ['month', L.rangeMonth],
+  ['season', L.rangeSeason],
 ];
 
 const dayNum = (d: string) => Date.parse(`${d}T00:00:00Z`) / DAY_MS;
@@ -109,7 +110,7 @@ export function marketIndex(points: readonly MarketChartPoint[]) {
   return {
     pct: ratioPct(last.avg),
     tone: toneOf(d),
-    change: d === 0 ? '변동 없음' : `${d > 0 ? '▲' : '▼'} ${pct1(Math.abs(d))}%p`,
+    change: d === 0 ? L.noChange : `${d > 0 ? '▲' : '▼'} ${pct1(Math.abs(d))}%p`,
     trades: points.reduce((n, p) => n + p.trades, 0),
     spark: { line: spark.line, base: spark.base },
   };
@@ -117,19 +118,32 @@ export function marketIndex(points: readonly MarketChartPoint[]) {
 
 /** 하루 평균 점을 눌렀을 때 위에 보여 주는 한 줄. */
 export const dayText = (p: MarketChartPoint) =>
-  `${dayLabel(p.day)} · 평균 ${ratioPct(p.avg)} · ${p.trades}건`;
+  L.dayText({ day: dayLabel(p.day), avg: ratioPct(p.avg), trades: p.trades });
 /** 이 선수 거래 점을 눌렀을 때. */
 export const tradeText = (t: CardTrade) =>
-  `${dayLabel(kstDay(t.soldAt))} 이 선수 · ${ratioPct(t.ratio)}`;
+  L.tradeText({ day: dayLabel(kstDay(t.soldAt)), ratio: ratioPct(t.ratio) });
 
+/** 문구는 읽을 때 지금 언어로 고른다(getter) — 모듈을 불러올 때 굳히지 않는다. */
 export const CHART_COPY = {
-  title: '같은 포지션 · 등급 시세',
+  get title() {
+    return L.title;
+  },
   /** 묶음 설명: '공격수 OVR 85~89' */
-  group: (posLabel: string, band: number) => `${posLabel} OVR ${band}~${band + 4}`,
-  legendLine: '하루 평균',
-  legendDot: '이 선수 거래',
-  empty: '아직 거래가 없어요.',
-  failed: '시세를 불러오지 못했어요.',
-  index: '시장 시세',
-  indexSub: (trades: number) => `최근 7일 거래 ${trades}건 · 기준가 대비`,
-} as const;
+  group: (posLabel: string, band: number) => L.group({ pos: posLabel, band }),
+  get legendLine() {
+    return L.legendLine;
+  },
+  get legendDot() {
+    return L.legendDot;
+  },
+  get empty() {
+    return L.empty;
+  },
+  get failed() {
+    return L.failed;
+  },
+  get index() {
+    return L.index;
+  },
+  indexSub: (trades: number) => L.indexSub({ trades }),
+};

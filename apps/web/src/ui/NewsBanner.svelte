@@ -7,18 +7,19 @@
   import { appState } from './state.svelte.js';
   import { openBoard } from './nav.js';
   import { dur } from './motion.js';
+  import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 
   const post = $derived(newsState.post);
   const headline = $derived(
     newsState.count > 1
-      ? `새 소식 ${newsState.count}개가 올라왔어요`
+      ? L.newsCount({ n: newsState.count })
       : newsState.edited
         ? post?.board === 'release'
-          ? '릴리즈 노트가 수정됐어요'
-          : '공지가 수정됐어요'
+          ? L.newsReleaseEdited
+          : L.newsNoticeEdited
         : post?.board === 'release'
-          ? '새 릴리즈 노트가 올라왔어요'
-          : '새로운 공지가 올라왔어요',
+          ? L.newsReleaseNew
+          : L.newsNoticeNew,
   );
   function open() {
     if (!post) return;
@@ -29,9 +30,9 @@
 </script>
 
 {#if post && !updateState.ready && appState.screen !== 'board'}
-  <aside class="update-banner news-banner" aria-label="새 소식 알림" data-news-banner={post.board} transition:fly={{ y: -16, duration: dur(200) }}>
+  <aside class="update-banner news-banner" aria-label={L.newsAlert} data-news-banner={post.board} transition:fly={{ y: -16, duration: dur(200) }}>
     <span class="news-text"><b>{headline}</b><small>{post.title}</small></span>
-    <button class="btn btn-accent btn-sm" data-act="news-open" onclick={open}>보기</button>
-    <button class="news-close" aria-label="알림 닫기" data-act="news-close" onclick={dismissNews}>✕</button>
+    <button class="btn btn-accent btn-sm" data-act="news-open" onclick={open}>{L.newsView}</button>
+    <button class="news-close" aria-label={L.bannerClose} data-act="news-close" onclick={dismissNews}>✕</button>
   </aside>
 {/if}

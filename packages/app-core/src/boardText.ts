@@ -5,6 +5,7 @@ import type {
   CommentReportReason,
   NameReportKind,
 } from '@offside/contracts/board-limits';
+import { boardLabelText } from './i18n/ko/boardLabel.js';
 
 export type Block =
   { kind: 'h'; text: string } | { kind: 'ul'; items: string[] } | { kind: 'p'; lines: string[] };
@@ -89,7 +90,12 @@ export function kstMonthDayHour(iso: string): string {
   const p = Object.fromEntries(
     KST_PARTS.formatToParts(new Date(iso)).map((x) => [x.type, Number(x.value)]),
   );
-  return `${p.month}월 ${p.day}일 ${p.hour}시${p.minute ? ` ${p.minute}분` : ''}`;
+  return boardLabelText.monthDayHour({
+    month: p.month ?? 0,
+    day: p.day ?? 0,
+    hour: p.hour ?? 0,
+    minute: p.minute ?? 0,
+  });
 }
 
 /** 목록 한 줄의 날짜 · 조회 · 좋아요 · 댓글(0이면 좋아요·댓글은 뺀다). */
@@ -101,22 +107,42 @@ export const postMeta = (p: {
 }) =>
   [
     dateOf(p.createdAt),
-    `조회 ${p.viewCount}`,
-    p.likeCount ? `좋아요 ${p.likeCount}` : '',
-    p.commentCount ? `댓글 ${p.commentCount}` : '',
+    boardLabelText.views({ n: p.viewCount }),
+    p.likeCount ? boardLabelText.likes({ n: p.likeCount }) : '',
+    p.commentCount ? boardLabelText.commentCount({ n: p.commentCount }) : '',
   ]
     .filter(Boolean)
     .join(' · ');
 
-export const BOARD_LABEL: Record<BoardKey, string> = { notice: '공지사항', release: '릴리즈 노트' };
+/** 글 상세 머리줄의 날짜 · (고쳤으면 수정됨) · 조회. */
+export const postDetailMeta = (p: { createdAt: string; updatedAt: string; viewCount: number }) =>
+  `${dateOf(p.createdAt)}${p.updatedAt !== p.createdAt ? ` · ${boardLabelText.edited}` : ''} · ${boardLabelText.views({ n: p.viewCount })}`;
+
+// 게시판 이름·신고 사유는 읽을 때 지금 언어로 고른다(모듈 최상위에서 굳히지 않는다).
+export const BOARD_LABEL: Record<BoardKey, string> = {
+  get notice() {
+    return boardLabelText.noticeLabel;
+  },
+  get release() {
+    return boardLabelText.releaseLabel;
+  },
+};
 
 /** 댓글 신고 사유 — 웹·앱 신고 패널이 이 순서로 버튼을 놓는다. */
 /** 이름 신고 대상(운영 도구). */
 export const NAME_KIND_LABEL: Record<NameReportKind, string> = { career: '선수', team: '구단' };
 
 export const REPORT_REASON_LABEL: Record<CommentReportReason, string> = {
-  spam: '스팸·광고',
-  abuse: '욕설·비방',
-  sexual: '음란·불쾌한 내용',
-  other: '기타',
+  get spam() {
+    return boardLabelText.reportSpam;
+  },
+  get abuse() {
+    return boardLabelText.reportAbuse;
+  },
+  get sexual() {
+    return boardLabelText.reportSexual;
+  },
+  get other() {
+    return boardLabelText.reportOther;
+  },
 };

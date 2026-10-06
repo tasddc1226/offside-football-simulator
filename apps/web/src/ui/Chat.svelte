@@ -16,6 +16,7 @@
   } from '@offside/app-core/api/chat';
   import type { ApiResult } from '@offside/app-core/api/client';
   import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
+  import { chatText as L } from '@offside/app-core/i18n/ko/chat';
   import { goBack } from './history.svelte.js';
   import NicknameForm from './NicknameForm.svelte';
   import { toast } from './helpers.js';
@@ -97,7 +98,7 @@
   function send() {
     const body = text.trim();
     if (!body) return;
-    if (!chatSession().send(body)) return toast('연결 중이에요. 잠시 뒤 다시 보내 주세요.');
+    if (!chatSession().send(body)) return toast(L.sendWait);
     text = '';
   }
 
@@ -112,37 +113,37 @@
     return r;
   }
   async function report(m: ChatMessage, reason: CommentReportReason) {
-    if (await run(api.reportChat(m.id, { reason }), '신고했어요. 운영자가 확인할게요.')) chatSession().drop(m.id);
+    if (await run(api.reportChat(m.id, { reason }), L.reportedToast)) chatSession().drop(m.id);
   }
   async function block(m: ChatMessage) {
-    if (!confirm(`${m.nickname}님을 차단할까요? 이 사람의 메시지와 댓글이 더는 보이지 않아요.`)) return;
-    const r = await run(api.blockChatAuthor(m.id), `${m.nickname}님을 차단했어요`);
+    if (!confirm(`${L.blockTitle({ nick: m.nickname })} ${L.blockBody}`)) return;
+    const r = await run(api.blockChatAuthor(m.id), L.blockedToast({ nick: m.nickname }));
     if (r) chatSession().block(r.data.author);
   }
-  const hide = (m: ChatMessage) => run(api.adminHideChat(m.id), '메시지를 가렸어요');
+  const hide = (m: ChatMessage) => run(api.adminHideChat(m.id), L.hiddenToast);
   function mute(m: ChatMessage, days: (typeof CHAT_MUTE_DAYS)[number]) {
-    if (!confirm(`${m.nickname}님의 채팅을 ${days}일 정지할까요? 이 메시지도 가려져요.`)) return;
-    void run(api.adminMuteChat(m.id, { days }), `${m.nickname}님을 ${days}일 정지했어요`);
+    if (!confirm(`${L.muteTitle({ nick: m.nickname, days })} ${L.muteBody}`)) return;
+    void run(api.adminMuteChat(m.id, { days }), L.mutedToast({ nick: m.nickname, days }));
   }
 </script>
 
 <div class="wrap chat-wrap" bind:this={wrap}>
   <section class="card chat-card" data-chat>
     <header class="chat-head">
-      <button class="icon-btn chat-back" data-act="home" aria-label="← 이전으로" onclick={() => goBack(goHome)}>
+      <button class="icon-btn chat-back" data-act="home" aria-label={L.back} onclick={() => goBack(goHome)}>
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="m14 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </button>
       <div class="chat-heading">
-        <h1>라운지 채팅</h1>
+        <h1>{L.title}</h1>
         <span class="muted fs-xs" data-chat-status>
-          {#if view.status === 'open'}<span class="chat-dot" aria-hidden="true"></span>{view.online}명 접속{:else if view.status === 'retrying'}다시 연결하는 중…{:else}연결하는 중…{/if}
+          {#if view.status === 'open'}<span class="chat-dot" aria-hidden="true"></span>{L.online({ n: view.online })}{:else if view.status === 'retrying'}{L.reconnecting}{:else}{L.connecting}{/if}
         </span>
       </div>
       <details class="chat-rules">
-        <summary aria-label="채팅 이용 안내">
+        <summary aria-label={L.rulesLabel}>
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M12 11v6M12 7v1" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
         </summary>
-        <p class="muted fs-xs">모두가 보는 공개 채팅이에요. 링크는 보낼 수 없고, 욕설·비방·광고·개인정보는 가리고 이용을 제한해요. <a href="/legal/terms/">이용약관</a></p>
+        <p class="muted fs-xs">{L.rulesBody} <a href="/legal/terms/">{L.terms}</a></p>
       </details>
     </header>
 
@@ -155,7 +156,7 @@
           <div class="chat-body-row">
             <p class="chat-bubble">{m.body}</p>
             {#if !mine(m) && (!m.admin || view.me?.admin)}
-              <button class="icon-btn chat-more" aria-expanded={selected === m.id} aria-label="{m.nickname}님 메시지 신고·차단" data-act="chat-more" onclick={() => (selected = selected === m.id ? null : m.id)}>
+              <button class="icon-btn chat-more" aria-expanded={selected === m.id} aria-label={L.moreLabel({ nick: m.nickname })} data-act="chat-more" onclick={() => (selected = selected === m.id ? null : m.id)}>
                 <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
               </button>
             {/if}
@@ -165,32 +166,32 @@
             <div class="report-panel stack" style="gap:8px" data-report-panel>
               {#if view.me?.admin}
                 <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
-                  <span class="fs-sm">운영</span>
-                  <button class="btn btn-sm" data-act="chat-hide" disabled={busy} onclick={() => hide(m)}>가리기</button>
+                  <span class="fs-sm">{L.adminLabel}</span>
+                  <button class="btn btn-sm" data-act="chat-hide" disabled={busy} onclick={() => hide(m)}>{L.hide}</button>
                   {#if !m.admin}
                     {#each CHAT_MUTE_DAYS as d (d)}
-                      <button class="btn btn-sm" data-act="chat-mute" disabled={busy} onclick={() => mute(m, d)}>{d}일 정지</button>
+                      <button class="btn btn-sm" data-act="chat-mute" disabled={busy} onclick={() => mute(m, d)}>{L.muteDays({ days: d })}</button>
                     {/each}
                   {/if}
                 </div>
               {/if}
               {#if !m.admin}
-                <span class="fs-sm">신고하는 이유를 골라 주세요. 신고한 메시지는 내 화면에서 숨겨요.</span>
+                <span class="fs-sm">{L.reportPrompt}</span>
                 <div class="row" style="gap:6px;flex-wrap:wrap">
                   {#each COMMENT_REPORT_REASONS as reason (reason)}
                     <button class="btn btn-sm" data-report-reason={reason} disabled={busy} onclick={() => report(m, reason)}>{REPORT_REASON_LABEL[reason]}</button>
                   {/each}
                 </div>
                 <div class="row" style="gap:8px;justify-content:space-between;align-items:center">
-                  <span class="muted fs-xs">{m.nickname}님의 메시지를 모두 숨기려면</span>
-                  <button class="btn btn-sm" data-act="chat-block" disabled={busy} onclick={() => block(m)}>작성자 차단</button>
+                  <span class="muted fs-xs">{L.blockHint({ nick: m.nickname })}</span>
+                  <button class="btn btn-sm" data-act="chat-block" disabled={busy} onclick={() => block(m)}>{L.blockAuthor}</button>
                 </div>
               {/if}
             </div>
           {/if}
         </li>
       {:else}
-        <li class="muted fs-sm chat-empty">{view.status === 'open' ? '아직 조용해요.' : '불러오는 중…'}</li>
+        <li class="muted fs-sm chat-empty">{view.status === 'open' ? L.emptyOpen : L.loading}</li>
       {/each}
     </ol>
 
@@ -199,8 +200,8 @@
         <form class="chat-form" onsubmit={(e) => (e.preventDefault(), send())}>
           <textarea
             rows="1"
-            aria-label="채팅 메시지"
-            placeholder="메시지 입력"
+            aria-label={L.messageLabel}
+            placeholder={L.placeholder}
             maxlength={CHAT_BODY_MAX}
             enterkeyhint="enter"
             autocomplete="off"
@@ -215,7 +216,7 @@
               }
             }}
           ></textarea>
-          <button class="btn btn-primary chat-send" aria-label="보내기" data-act="chat-send" disabled={!text.trim()} onpointerdown={(e) => { if (document.activeElement === input) e.preventDefault(); }}>
+          <button class="btn btn-primary chat-send" aria-label={L.send} data-act="chat-send" disabled={!text.trim()} onpointerdown={(e) => { if (document.activeElement === input) e.preventDefault(); }}>
             <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
           </button>
         </form>
@@ -223,12 +224,12 @@
         <!-- 연결하는 중 -->
       {:else if view.me?.reason === 'login' || !view.me}
         <div class="comment-gate" data-chat-gate="login">
-          <p class="muted">구글로 로그인하면 채팅에 참여할 수 있어요.</p>
-          <button class="btn btn-primary" data-act="chat-login" onclick={() => startGoogleLogin({ chat: true })}>구글로 로그인</button>
+          <p class="muted">{L.gateLogin}</p>
+          <button class="btn btn-primary" data-act="chat-login" onclick={() => startGoogleLogin({ chat: true })}>{L.loginGoogle}</button>
         </div>
       {:else if view.me.reason === 'nickname'}
         <div class="comment-gate" data-chat-gate="nickname">
-          <p class="muted">채팅과 댓글에 쓸 닉네임을 정해 주세요.</p>
+          <p class="muted">{L.gateNicknameWeb}</p>
           <NicknameForm onsaved={connect} />
         </div>
       {:else}

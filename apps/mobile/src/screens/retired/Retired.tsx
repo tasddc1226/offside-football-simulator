@@ -11,6 +11,7 @@ import { LegendReport } from './LegendReport';
 import { RetiredAdSlot } from './RetiredAdSlot';
 import { OwnHofCards } from './OwnHofCards';
 import { ShareBar } from './ShareBar';
+import { retiredText as L } from '@offside/app-core/i18n/ko/retired';
 
 export default function Retired() {
   const snap = useSnapshot(appState);
@@ -28,10 +29,10 @@ export default function Retired() {
           <>
             {v.own?.id ? <OwnHofCards v={v} /> : null}
             <Btn kind="primary" block testID="new" onPress={goNew}>
-              새 커리어 킥오프 →
+              {L.newCareer}
             </Btn>
             <Btn block testID="home" onPress={goHome}>
-              명예의 전당 보기
+              {L.seeHof}
             </Btn>
           </>
         }

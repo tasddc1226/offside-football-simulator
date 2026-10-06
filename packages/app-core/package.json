@@ -9,7 +9,8 @@
   "scripts": {
     "test": "vitest run",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "i18n:index": "node ../../tooling/scripts/i18n-index.mjs"
   },
   "dependencies": {
     "@offside/contracts": "workspace:*",

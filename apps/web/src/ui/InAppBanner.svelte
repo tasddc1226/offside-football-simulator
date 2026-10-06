@@ -3,6 +3,7 @@
   // 막히므로 외부 브라우저로 열도록 권한다. 닫으면 다시 띄우지 않는다.
   import { loadKey, saveKey } from '@offside/game/season';
   import { currentInApp, openExternal } from './inapp-open.js';
+  import { shellInstallText as L } from '@offside/app-core/i18n/ko/shellInstall';
 
   const HINT_KEY = 'ft_inapp_hint';
   const info = currentInApp();
@@ -14,10 +15,10 @@
 </script>
 
 {#if !hidden}
-  <section class="card inapp-hint" data-inapp-hint aria-label="외부 브라우저 안내">
-    <p>카톡·인스타 안에서 열린 화면이에요. 기록은 이 앱 안에만 저장돼요. 외부 브라우저로 열면 로그인과 저장이 더 안전해요.</p>
-    <button class="btn btn-accent" data-act="inapp-open" onclick={() => void openExternal(info)}>외부 브라우저로 열기</button>
-    <button class="icon-btn inapp-close" data-act="inapp-close" aria-label="안내 닫기" onclick={dismiss}>✕</button>
+  <section class="card inapp-hint" data-inapp-hint aria-label={L.inappHintAria}>
+    <p>{L.inappHint}</p>
+    <button class="btn btn-accent" data-act="inapp-open" onclick={() => void openExternal(info)}>{L.inappOpen}</button>
+    <button class="icon-btn inapp-close" data-act="inapp-close" aria-label={L.inappClose} onclick={dismiss}>✕</button>
   </section>
 {/if}
 

@@ -1,0 +1,45 @@
+import type { Translation } from '../core';
+import type { ChatMsgs } from '../ko/chat';
+import { plural } from './_util';
+
+export const chat: Translation<ChatMsgs> = {
+  title: 'Lounge chat',
+  back: '← Back',
+  online: (p) => `${p.n} online`,
+  reconnecting: 'Reconnecting…',
+  connecting: 'Connecting…',
+  rulesLabel: 'Chat rules',
+  rulesBody:
+    "This is a public chat everyone can see. Links aren't allowed. Abuse, insults, ads and personal info are hidden and may get you restricted.",
+  terms: 'Terms of service',
+  ok: 'OK',
+  messageLabel: 'Chat message',
+  placeholder: 'Type a message',
+  send: 'Send',
+  sendWait: 'Still connecting. Try sending again in a moment.',
+  reportedToast: "Reported. We'll take a look.",
+  blockTitle: (p) => `Block ${p.nick}?`,
+  blockBody: "You won't see their messages or comments anymore.",
+  blockOk: 'Block',
+  blockedToast: (p) => `Blocked ${p.nick}`,
+  muteTitle: (p) => `Suspend ${p.nick} from chat for ${plural(p.days, 'day')}?`,
+  muteBody: 'This message will be hidden too.',
+  muteOk: 'Suspend',
+  mutedToast: (p) => `Suspended ${p.nick} for ${plural(p.days, 'day')}`,
+  hiddenToast: 'Message hidden',
+  adminLabel: 'Moderation',
+  hide: 'Hide',
+  muteDays: (p) => `Suspend ${p.days}d`,
+  reportPrompt:
+    "Choose why you're reporting this message. Reported messages are hidden from your screen.",
+  blockHint: (p) => `To hide all messages from ${p.nick}`,
+  blockAuthor: 'Block author',
+  moreLabel: (p) => `Report or block ${p.nick}`,
+  emptyOpen: "It's quiet in here.",
+  loading: 'Loading…',
+  gateLogin: 'Log in with Google to join the chat.',
+  gateLoginApple: 'Log in with Google or Apple to join the chat.',
+  loginGoogle: 'Log in with Google',
+  gateNicknameWeb: 'Pick a nickname for chat and comments.',
+  gateNicknameApp: "Pick a chat nickname first. It's the same as your comment nickname.",
+};

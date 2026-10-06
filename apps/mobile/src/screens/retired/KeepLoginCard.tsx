@@ -12,6 +12,7 @@ import { accountCache } from '../../store';
 import { Btn } from '../../ui/Btn';
 import { Card } from '../../ui/Card';
 import { Txt } from '../../ui/Txt';
+import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
 export function KeepLoginCard({ id }: { id: string }) {
   const { value: profile } = useSnapshot(accountCache);
@@ -27,14 +28,14 @@ export function KeepLoginCard({ id }: { id: string }) {
       <View>
         <Txt v="eyebrow">Account</Txt>
         <Txt v="h2" accessibilityRole="header">
-          로그인하고 기록 지키기
+          {shellMoreText.keepLoginTitle}
         </Txt>
       </View>
       <Txt v="sm" tone="muted">
-        로그인하면 은퇴 기록을 다른 기기에서도 볼 수 있어요. 공유 링크는 로그인 없이 만들어요.
+        {shellMoreText.keepLoginBody}
       </Txt>
       <Btn block testID="share-login" onPress={() => void startGoogleLogin({ career: id })}>
-        구글로 로그인
+        {shellMoreText.keepLoginGoogle}
       </Btn>
       {apple ? (
         <AppleLoginButton

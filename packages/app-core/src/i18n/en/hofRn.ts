@@ -1,0 +1,42 @@
+import type { Translation } from '../core';
+import type { HofRnMsgs } from '../ko/hofRn';
+import { ordinal, plural } from './_util';
+
+export const hofRn: Translation<HofRnMsgs> = {
+  season: 'Season',
+  seasonAria: 'Retired numbers season',
+  notOpen: ' (opens soon)',
+  lead: "A long-serving player's shirt number is retired and never worn again. Each club retires a number for one player only.",
+  opens: (p) => `${p.name} opens ${p.when} (Korea time).`,
+  loadFailed: "Couldn't load retired numbers. Please try again in a moment.",
+  loading: 'Loading…',
+  empty: (p) => `No ${p.season} retired numbers yet.`,
+  sumRetired: 'Retired',
+  sumClubs: 'Clubs',
+  sumRecent: 'Latest',
+  summaryLine: (p) => `${p.total} retired · ${p.clubs} clubs · latest ${p.day}`,
+  recentTitle: 'Latest retired numbers',
+  seeAll: 'See all ›',
+  seeAllLabel: 'See all latest retired numbers',
+  clubsTitle: 'Clubs',
+  clubOrderLabel: 'Sort clubs',
+  orderCount: 'Most retired',
+  orderLeague: 'By league',
+  otherLeague: 'Other',
+  backWeb: '‹ Clubs',
+  backApp: '← Clubs',
+  backLabel: 'Back to the club list',
+  positionLabel: 'Position',
+  all: 'All',
+  recentAll: 'All, newest first',
+  noMatchWeb: 'No retired numbers match your filter.',
+  noMatchApp: 'No retired numbers match your filter.',
+  more: 'Show more',
+  moreLabel: 'Show more retired numbers',
+  moreFailed: "Couldn't load. Try again",
+  tileSeq: (p) => `${ordinal(p.seq)} · ${p.day}`,
+  tileLabel: (p) => `${p.name} No. ${p.number} · ${p.sub}`,
+  clubLabel: (p) =>
+    `${p.name}${p.league ? ` ${p.league}` : ''}, ${plural(p.count, 'retired number')}`,
+  mine: 'Your player',
+};

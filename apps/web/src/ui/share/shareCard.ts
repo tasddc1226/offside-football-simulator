@@ -1,6 +1,12 @@
 // T-10-079 SNS 공유용 한 장 이미지(1080×1350, 인스타 4:5)의 캔버스 그리기. 카드 내용(shareCardData — 순수 함수라
 // 테스트한다)은 앱과 함께 쓰는 @offside/app-core/shareCard 에서 만든다. 은퇴 화면의 공유 이미지 카드(지연 로드)만 쓴다.
-import { CARD_H, CARD_W, TAGLINE, type ShareCardData } from '@offside/app-core/shareCard';
+import {
+  CARD_H,
+  CARD_W,
+  cardBrand,
+  tagline,
+  type ShareCardData,
+} from '@offside/app-core/shareCard';
 import { drawJersey } from './jerseyCanvas.js';
 
 export { CARD_H, CARD_W, shareCardData, type ShareCardData } from '@offside/app-core/shareCard';
@@ -61,7 +67,7 @@ export async function loadCardFonts(c: ShareCardData) {
     c.style?.best ?? c.style?.line,
     c.jersey?.name,
     ...c.honours.map((h) => h.name),
-    `오프사이드 ${TAGLINE} offside-lab.com LEGEND SCORE THE JOURNEY HONOURS HOW I PLAYED ×0123456789`,
+    `${cardBrand()} ${tagline()} offside-lab.com LEGEND SCORE THE JOURNEY HONOURS HOW I PLAYED ×0123456789`,
   ].join('');
   await Promise.all(Object.values(F).map((f) => document.fonts.load(f, sample).catch(() => [])));
 }
@@ -233,8 +239,8 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
 
   // 바닥: 게임 이름과 주소
   rule(CARD_H - 100);
-  const bw = text('오프사이드', PAD, CARD_H - 44, F.brand, C.ink, { align: 'left' });
-  text(TAGLINE, PAD + bw + 24, CARD_H - 46, F.tagline, C.muted, { align: 'left' });
+  const bw = text(cardBrand(), PAD, CARD_H - 44, F.brand, C.ink, { align: 'left' });
+  text(tagline(), PAD + bw + 24, CARD_H - 46, F.tagline, C.muted, { align: 'left' });
   text('offside-lab.com', CARD_W - PAD, CARD_H - 44, F.url, C.gold, { align: 'right' });
 }
 

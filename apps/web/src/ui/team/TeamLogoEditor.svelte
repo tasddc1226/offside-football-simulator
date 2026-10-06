@@ -4,6 +4,7 @@
   import { lockScroll } from '../scrollLock.js';
   import { doneOnEnter } from '../inputDone.js';
   import TeamLogo from './TeamLogo.svelte';
+  import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
   let { logo, name, onapply, onclose }: { logo: Logo | null; name: string; onapply: (logo: Logo | null) => void; onclose: () => void } = $props();
   let draft = $state<Logo>(untrack(() => ({ ...(logo ?? defaultTeamLogo(name)) })));
@@ -15,8 +16,8 @@
   let closeButton: HTMLButtonElement;
   let disposed = false;
   const preview = $derived(mode === 'image' ? draft : { ...draft, img: undefined });
-  const SHAPE_LABEL = { s: '방패', p: '뾰족 방패', r: '원형', b: '둥근 사각' };
-  const PATTERNS = [['plain', '단색'], ['v', '줄무늬'], ['sash', '사선'], ['half', '반반']] as const;
+  const shapeLabel = (shape: 's' | 'p' | 'r' | 'b') => ({ s: L.shapeS, p: L.shapeP, r: L.shapeR, b: L.shapeB })[shape];
+  const patterns = () => [['plain', L.patPlain], ['v', L.patV], ['sash', L.patSash], ['half', L.patHalf]] as const;
 
   onMount(() => {
     dialog.showModal();
@@ -42,7 +43,7 @@
       const img = await teamLogoImage(file);
       if (!disposed) { draft = { ...draft, img }; mode = 'image'; }
     } catch (e) {
-      if (!disposed) error = e instanceof Error && /[가-힣]/.test(e.message) ? e.message : '이미지를 읽지 못했어요. 다른 이미지를 골라 주세요.';
+      if (!disposed) error = e instanceof Error && e.name === 'LogoImageError' ? e.message : L.imageReadFail;
     } finally {
       if (!disposed) busy = false;
     }
@@ -55,31 +56,31 @@
 </script>
 
 <dialog bind:this={dialog} aria-labelledby="team-logo-title" onclose={onclose} onkeydown={trapTab} data-team-logo-editor>
-  <header><h2 id="team-logo-title">팀 로고</h2><button class="close" bind:this={closeButton} aria-label="팀 로고 설정 닫기" onclick={() => dialog.close()}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button></header>
+  <header><h2 id="team-logo-title">{L.logoTitle}</h2><button class="close" bind:this={closeButton} aria-label={L.logoCloseAria} onclick={() => dialog.close()}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button></header>
   <div class="body">
-    <div class="preview"><TeamLogo logo={preview} {name} size={96} /><div><b>{name}</b><p>적용 후 변경 저장을 누르면<br />내 팀·랭킹·경기 화면에 보여요.</p></div></div>
-    <div class="hof-sorts modes" role="group" aria-label="로고 설정 방식">
-      <button class="hof-sort" aria-pressed={mode === 'preset'} disabled={busy} onclick={() => { mode = 'preset'; error = ''; }}>기본 엠블럼</button>
-      <button class="hof-sort" aria-pressed={mode === 'image'} disabled={busy} onclick={() => { mode = 'image'; error = ''; }}>내 이미지</button>
+    <div class="preview"><TeamLogo logo={preview} {name} size={96} /><div><b>{name}</b><p>{L.previewNote1}<br />{L.previewNote2}</p></div></div>
+    <div class="hof-sorts modes" role="group" aria-label={L.logoModeAria}>
+      <button class="hof-sort" aria-pressed={mode === 'preset'} disabled={busy} onclick={() => { mode = 'preset'; error = ''; }}>{L.modePreset}</button>
+      <button class="hof-sort" aria-pressed={mode === 'image'} disabled={busy} onclick={() => { mode = 'image'; error = ''; }}>{L.modeImage}</button>
     </div>
     {#if mode === 'preset'}
-      <div class="control"><span class="lbl">모양</span><div class="shapes" role="group" aria-label="엠블럼 모양">
-        {#each TEAM_LOGO_SHAPES as shape (shape)}<button class:chosen={draft.shape === shape} aria-label={SHAPE_LABEL[shape]} aria-pressed={draft.shape === shape} data-logo-shape={shape} onclick={() => (draft.shape = shape)}><TeamLogo logo={{ ...preview, shape }} {name} size={42} /></button>{/each}
+      <div class="control"><span class="lbl">{L.shapeLabel}</span><div class="shapes" role="group" aria-label={L.shapesAria}>
+        {#each TEAM_LOGO_SHAPES as shape (shape)}<button class:chosen={draft.shape === shape} aria-label={shapeLabel(shape)} aria-pressed={draft.shape === shape} data-logo-shape={shape} onclick={() => (draft.shape = shape)}><TeamLogo logo={{ ...preview, shape }} {name} size={42} /></button>{/each}
       </div></div>
-      <div class="control"><span class="lbl">팀 색상</span><div class="colors" role="group" aria-label="팀 색상">
+      <div class="control"><span class="lbl">{L.colorLabel}</span><div class="colors" role="group" aria-label={L.colorLabel}>
         {#each TEAM_LOGO_COLORS as color (color.bg)}<button class:chosen={draft.bg === color.bg && draft.fg === color.fg} aria-label={color.name} aria-pressed={draft.bg === color.bg && draft.fg === color.fg} data-logo-color={color.bg} onclick={() => (draft = { ...draft, bg: color.bg, fg: color.fg })}><span style:background={color.bg} style:color={color.fg}>FC</span></button>{/each}
       </div></div>
-      <div class="control"><span class="lbl">무늬</span><div class="hof-sorts patterns" role="group" aria-label="엠블럼 무늬">{#each PATTERNS as [pattern, label] (pattern)}<button class="hof-sort" aria-pressed={draft.pattern === pattern} onclick={() => (draft.pattern = pattern)}>{label}</button>{/each}</div></div>
-      <div class="custom"><label class="field"><span class="lbl">글자 · 최대 3자</span><input type="text" maxlength="3" bind:value={draft.text} enterkeyhint="done" use:doneOnEnter data-logo-text /></label><label class="color-label">바탕<input type="color" bind:value={draft.bg} aria-label="로고 바탕색" /></label><label class="color-label">글자색<input type="color" bind:value={draft.fg} aria-label="로고 글자색" /></label></div>
+      <div class="control"><span class="lbl">{L.patternLabel}</span><div class="hof-sorts patterns" role="group" aria-label={L.patternsAria}>{#each patterns() as [pattern, label] (pattern)}<button class="hof-sort" aria-pressed={draft.pattern === pattern} onclick={() => (draft.pattern = pattern)}>{label}</button>{/each}</div></div>
+      <div class="custom"><label class="field"><span class="lbl">{L.textLabel}</span><input type="text" maxlength="3" bind:value={draft.text} enterkeyhint="done" use:doneOnEnter data-logo-text /></label><label class="color-label">{L.bgLabel}<input type="color" bind:value={draft.bg} aria-label={L.bgAria} /></label><label class="color-label">{L.fgLabel}<input type="color" bind:value={draft.fg} aria-label={L.fgAria} /></label></div>
     {:else}
       <input hidden type="file" accept="image/png,image/jpeg,image/webp" bind:this={fileInput} onchange={upload} data-logo-upload />
-      <button class="btn upload" disabled={busy} onclick={() => fileInput?.click()}>{busy ? '이미지를 읽는 중…' : draft.img ? '이미지 바꾸기' : '이미지 선택'}</button>
-      <p class="hint">PNG·JPG·WebP, 최대 10MB. 이미지 중앙을 정사각형으로 잘라 사용해요. 원본은 저장하지 않아요.</p>
-      {#if busy}<span class="sr-only" role="status">이미지를 읽는 중이에요.</span>{/if}
+      <button class="btn upload" disabled={busy} onclick={() => fileInput?.click()}>{busy ? L.uploadBusy : draft.img ? L.uploadChange : L.uploadPick}</button>
+      <p class="hint">{L.imageHint}</p>
+      {#if busy}<span class="sr-only" role="status">{L.busyStatus}</span>{/if}
     {/if}
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   </div>
-  <footer><button class="btn" onclick={() => onapply(null)} disabled={busy}>기본값</button><button class="btn btn-primary" data-act="team-logo-apply" disabled={busy || (mode === 'image' && !draft.img)} onclick={apply}>적용</button></footer>
+  <footer><button class="btn" onclick={() => onapply(null)} disabled={busy}>{L.defaults}</button><button class="btn btn-primary" data-act="team-logo-apply" disabled={busy || (mode === 'image' && !draft.img)} onclick={apply}>{L.apply}</button></footer>
 </dialog>
 
 <style>

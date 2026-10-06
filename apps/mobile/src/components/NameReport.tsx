@@ -9,6 +9,7 @@ import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
 import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
+import { hofOwnText as L } from '@offside/app-core/i18n/ko/hofOwn';
 
 export function NameReport({ kind, id, name }: { kind: NameReportKind; id: string; name: string }) {
   const c = useColors();
@@ -16,23 +17,19 @@ export function NameReport({ kind, id, name }: { kind: NameReportKind; id: strin
   const [busy, setBusy] = useState(false);
   async function send() {
     if (busy) return;
-    const ok = await confirmAsync(
-      `'${name}' 이름을 신고할까요?`,
-      '운영자가 확인 후 처리해요.',
-      '신고',
-    );
+    const ok = await confirmAsync(L.reportTitle({ name }), L.reportBody, L.reportConfirm);
     if (!ok) return;
     setBusy(true);
     const r = await reportName({ kind, id });
     setBusy(false);
     if (!r.ok) return toast(r.error.message);
     setSent(true);
-    toast('신고했어요. 운영자가 확인할게요.');
+    toast(L.reportSent);
   }
   return (
     <Press
       testID="name-report"
-      accessibilityLabel={`${name} 이름 신고`}
+      accessibilityLabel={L.reportLabel({ name })}
       disabled={sent || busy}
       onPress={() => void send()}
       style={{
@@ -44,7 +41,7 @@ export function NameReport({ kind, id, name }: { kind: NameReportKind; id: strin
       }}
     >
       <Txt style={{ fontSize: rem(0.8125), color: c.muted }}>
-        {sent ? '신고했어요' : '이름 신고'}
+        {sent ? L.reportDone : L.reportBtn}
       </Txt>
     </Press>
   );

@@ -5,8 +5,10 @@ import {
   firstsCatalog,
   RETIRE_CAP_FIRST,
   type FirstCareer,
+  RECORDS,
   type FirstSeason,
 } from './firsts.js';
+import { firstLabelEn, recordTextEn } from './firstsText.js';
 
 let t = 0;
 const season = (over: Partial<FirstSeason> = {}): FirstSeason => ({
@@ -193,5 +195,38 @@ describe('서버 최초 기록 규칙 (T-10-027)', () => {
     expect(label(1)).toBe('45세 은퇴 최초 달성! 다음 시즌 은퇴 나이 46세 해금');
     expect(label(0)).toBeUndefined();
     expect(label()).toBe('은퇴 나이까지 뛰고 은퇴 최초 달성!');
+  });
+});
+
+describe('서버 최초 기록 영어 문구(T-11-106)', () => {
+  const hangul = /[가-힣]/;
+  it('모든 규칙·단계(이미 달성된 높은 단계 포함)가 영어 문장을 갖고, 한글이 없다', () => {
+    for (const season of [undefined, 0, 1]) {
+      for (const d of firstsCatalog(['goals2000', 'ballon9', 'apps1500', 'oneclub25'], season)) {
+        const en = firstLabelEn(d.id, season);
+        expect(en, d.id).not.toBeNull();
+        expect(en!, d.id).not.toMatch(hangul);
+        expect(en!, d.id).toMatch(/^First /);
+      }
+    }
+    for (const r of RECORDS) {
+      const t = recordTextEn(r.id);
+      expect(t, r.id).not.toBeNull();
+      expect(`${t!.label}${t!.unit}`).not.toMatch(hangul);
+    }
+  });
+
+  it('대표 문장: 단계·한 번 달성·시즌별 은퇴 나이', () => {
+    expect(firstLabelEn('goals100')).toBe('First to 100 career goals!');
+    expect(firstLabelEn('goals1050')).toBe('First to 1,050 career goals!');
+    expect(firstLabelEn('ballon1')).toBe("First Ballon d'Or winner!");
+    expect(firstLabelEn('ballon3')).toBe("First to 3 Ballon d'Or awards!");
+    expect(firstLabelEn('euro')).toBe('First to win the UEFA Euro!');
+    expect(firstLabelEn('treble')).toBe('First treble!');
+    expect(firstLabelEn('retirecap', 1)).toBe(
+      "First to retire at 45! Next season's retirement age rises to 46",
+    );
+    expect(firstLabelEn('nope')).toBeNull();
+    expect(recordTextEn('goals')).toEqual({ label: 'Most career goals', unit: ' goals' });
   });
 });

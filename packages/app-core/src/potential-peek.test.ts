@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameState } from '@offside/game/types';
-import { PEEK_LOCKED, parsePeek, peekOf, peekOpen, peekView } from './potential-peek.js';
+import { peekLocked, parsePeek, peekOf, peekOpen, peekView } from './potential-peek.js';
 
 const st = (o: { seasons?: number; pot?: number; rescout?: number; year?: number } = {}) =>
   ({
@@ -15,7 +15,7 @@ const st = (o: { seasons?: number; pot?: number; rescout?: number; year?: number
 describe('T-11-079 잠재력 엿보기', () => {
   it('첫 시즌을 마치기 전에는 열 수 없다(리세 방지)', () => {
     const s = st({ seasons: 0 });
-    expect(peekView(s, peekOf(s), true)).toEqual({ kind: 'locked', text: PEEK_LOCKED });
+    expect(peekView(s, peekOf(s), true)).toEqual({ kind: 'locked', text: peekLocked() });
   });
 
   it('광고 제거 구매 여부로 버튼 문구만 바뀐다', () => {

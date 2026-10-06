@@ -2,7 +2,9 @@
 // 합쳐 티커 줄·숫자 칸·문구를 정하는 순수 로직만 둔다. 타이머·모션·상태 반응성은 각 앱이 맡는다.
 import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
 import { LIVE_FEED_MAX } from '@offside/contracts/polling';
+import { tn } from '@offside/game/i18n/names';
 import { anonName } from './format.js';
+import { homeLiveText as L } from './i18n/ko/homeLive.js';
 
 /** 티커가 한 줄씩 올라가는 간격. */
 export const LIVE_STEP_MS = 3_500;
@@ -25,11 +27,36 @@ export const emptyHomeLive = (): HomeLiveState => ({
   cursor: 0,
 });
 
+// label은 읽을 때마다 지금 언어로 고른다(getter) — 모듈을 불러올 때 굳히지 않는다.
 export const STATS = [
-  { key: 'playing', label: '지금 뛰는 중', of: (s: LiveStats) => s.playing },
-  { key: 'seasons', label: '오늘 치른 시즌', of: (s: LiveStats) => s.seasonsToday },
-  { key: 'new', label: '오늘 새 선수', of: (s: LiveStats) => s.newToday },
-  { key: 'retired', label: '오늘 은퇴', of: (s: LiveStats) => s.retiredToday },
+  {
+    key: 'playing',
+    get label() {
+      return L.statPlaying;
+    },
+    of: (s: LiveStats) => s.playing,
+  },
+  {
+    key: 'seasons',
+    get label() {
+      return L.statSeasons;
+    },
+    of: (s: LiveStats) => s.seasonsToday,
+  },
+  {
+    key: 'new',
+    get label() {
+      return L.statNew;
+    },
+    of: (s: LiveStats) => s.newToday,
+  },
+  {
+    key: 'retired',
+    get label() {
+      return L.statRetired;
+    },
+    of: (s: LiveStats) => s.retiredToday,
+  },
 ] as const;
 
 export const keyOf = (e: LiveEvent) =>
@@ -39,12 +66,12 @@ export const who = (e: LiveEvent) =>
   e.name ?? anonName(e.pos, e.kind === 'retire' ? e.number : null);
 
 export function what(e: LiveEvent): string {
-  if (e.kind === 'retire') return `은퇴 · 레전드 점수 ${e.score}`;
-  if (e.first) return `${e.club}에서 첫 시즌을 마쳤어요`;
-  if (e.honor) return `${e.honor} · ${e.club}`;
+  if (e.kind === 'retire') return L.whatRetire({ score: e.score });
+  if (e.first) return L.whatFirst({ club: tn(e.club) });
+  if (e.honor) return L.whatHonor({ honor: tn(e.honor), club: tn(e.club) });
   if ((e.pos === 'GK' || e.pos === 'DF') && e.cs)
-    return `${e.club} 시즌 ${e.apps}경기 무실점 ${e.cs}`;
-  return `${e.club} 시즌 ${e.goals}골 ${e.assists}도움`;
+    return L.whatCleanSheets({ club: tn(e.club), apps: e.apps, cs: e.cs });
+  return L.whatGoals({ club: tn(e.club), goals: e.goals, assists: e.assists });
 }
 
 export const tone = (e: LiveEvent) =>

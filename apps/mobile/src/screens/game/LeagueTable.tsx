@@ -12,6 +12,8 @@ import { DISPLAY, rem } from '../../theme/type';
 import { Btn } from '../../ui/Btn';
 import { ClubBadge } from '../../ui/ClubBadge';
 import { Txt } from '../../ui/Txt';
+import { gameLeagueText as L } from '@offside/app-core/i18n/ko/gameLeague';
+import { tn } from '@offside/game/i18n/names';
 
 type Row = ReturnType<typeof leagueTable>[number];
 type Shown = { gap: true; key: string } | { gap: false; key: string; rank: number; r: Row };
@@ -106,15 +108,15 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
       <View
         style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}
       >
-        <SubTitle>{`${leagueOf(seasonLeagueId(s)).name} 순위`}</SubTitle>
+        <SubTitle>{L.title({ league: tn(leagueOf(seasonLeagueId(s)).name) })}</SubTitle>
         {s.season.played && (folded || full) ? (
           <Btn
             sm
             testID="table-toggle"
-            accessibilityLabel={full ? '순위표 접기' : '전체 순위 보기'}
+            accessibilityLabel={full ? L.foldAria : L.expandAria}
             onPress={() => setFull(!full)}
           >
-            {full ? '접기' : '전체 순위'}
+            {full ? L.fold : L.expand}
           </Btn>
         ) : null}
       </View>
@@ -131,8 +133,8 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
             }}
           >
             {head('#')}
-            {head('팀', true)}
-            {['경기', '승점'].map((t) => head(t))}
+            {head(L.colTeam, true)}
+            {[L.colPlayed, L.colPts].map((t) => head(t))}
           </View>
           {shown.map((x) => (
             <Animated.View
@@ -163,7 +165,16 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
               ) : (
                 <View
                   accessible
-                  accessibilityLabel={`${x.rank}위 ${x.r.name} ${x.r.p}경기 ${x.r.w}승 ${x.r.d}무 ${x.r.l}패 승점 ${x.r.pts}${x.r.me ? ', 내 팀' : ''}`}
+                  accessibilityLabel={L.rowLabel({
+                    rank: x.rank,
+                    name: tn(x.r.name),
+                    played: x.r.p,
+                    w: x.r.w,
+                    d: x.r.d,
+                    l: x.r.l,
+                    pts: x.r.pts,
+                    me: !!x.r.me,
+                  })}
                   style={[
                     {
                       flexDirection: 'row',
@@ -219,7 +230,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
                         fontWeight: x.r.me ? '700' : '400',
                       }}
                     >
-                      {x.r.name}
+                      {tn(x.r.name)}
                     </Txt>
                   </View>
                   <Cell bold={x.r.me}>{x.r.p}</Cell>
@@ -231,7 +242,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
         </View>
       ) : (
         <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-          {`개막하면 ${rows.length}개 팀 순위표가 채워져요.`}
+          {L.empty({ n: rows.length })}
         </Txt>
       )}
     </View>

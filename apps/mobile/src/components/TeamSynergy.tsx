@@ -8,7 +8,8 @@ import {
   synergyPower,
   type TeamSynergy as Synergy,
 } from '@offside/contracts/owner-team';
-import { SYNERGY_TABLE, synergyChips, synergyNote } from '@offside/app-core/teamOwner';
+import { synergyTable, synergyChips, synergyNote } from '@offside/app-core/teamOwner';
+import { teamSynergyText as L } from '@offside/app-core/i18n/ko/teamSynergy';
 import { useColors } from '../theme/useColors';
 import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
@@ -40,7 +41,8 @@ export function TeamSynergy({
         }}
       >
         <Txt v="h3">
-          팀 시너지{power > 0 ? <Txt v="h3" tone="accent">{` +${power}`}</Txt> : null}
+          {L.title}
+          {power > 0 ? <Txt v="h3" tone="accent">{` +${power}`}</Txt> : null}
         </Txt>
         <Txt v="xs" tone="muted">
           {synergyNote(season)}
@@ -79,7 +81,7 @@ export function TeamSynergy({
         </View>
       ) : (
         <Txt v="sm" tone="muted">
-          아직 켜진 시너지가 없어요. 유형이 맞는 선수를 함께 세워 보세요.
+          {L.empty}
         </Txt>
       )}
       <Press
@@ -88,12 +90,12 @@ export function TeamSynergy({
         style={{ alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }}
       >
         <Txt v="sm" bold tone="accent">
-          시너지 표 {open ? '접기' : '보기'}
+          {L.tableToggle({ open })}
         </Txt>
       </Press>
       {open ? (
         <View style={{ gap: 8 }}>
-          {SYNERGY_TABLE.map(([name, desc, effect]) => (
+          {synergyTable().map(([name, desc, effect]) => (
             <View key={name}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
                 <Txt v="sm" bold>
@@ -109,8 +111,7 @@ export function TeamSynergy({
             </View>
           ))}
           <Txt v="xs" tone="muted">
-            듀오 효과는 줄마다 +{DUO_LINE_CAP}, 합쳐서 +{DUO_TOTAL_CAP}까지. 유스 선수는 시너지에
-            들지 않아요.
+            {L.capNote({ line: DUO_LINE_CAP, total: DUO_TOTAL_CAP })}
           </Txt>
         </View>
       ) : null}

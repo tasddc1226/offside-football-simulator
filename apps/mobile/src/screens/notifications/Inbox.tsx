@@ -18,6 +18,8 @@ import { inboxState, inbox, loadInbox, openInbox, openInboxTarget } from '../../
 import { Btn, Card, Press, Screen, Txt as BaseTxt } from '../../ui';
 import type { TxtProps } from '../../ui/Txt';
 import { useColors } from '../../theme/useColors';
+import { inboxText as L } from '@offside/app-core/i18n/ko/inbox';
+import { intlLocale } from '@offside/app-core/i18n/core';
 
 // 큰 시스템 글자에서도 고정 줄 높이로 글리프가 잘리지 않게 기본 서체의 줄 높이를 사용한다.
 function InboxText({ style, ...props }: TxtProps) {
@@ -31,14 +33,14 @@ function InboxText({ style, ...props }: TxtProps) {
   );
 }
 
-const labels: Record<AppNotification['kind'], string> = {
-  news: '새 소식',
-  test: '알림 테스트',
-  return: '다시 킥오프',
-  team: '내 팀',
-  market: '이적시장',
-  social: '친구',
-};
+const labels = (): Record<AppNotification['kind'], string> => ({
+  news: L.kindNews,
+  test: L.kindTest,
+  return: L.kindReturn,
+  team: L.kindTeam,
+  market: L.kindMarket,
+  social: L.kindSocial,
+});
 const paths = {
   back: 'm15 18-6-6 6-6',
   next: 'm9 6 6 6-6 6',
@@ -62,7 +64,7 @@ function Icon({ name, size = 20 }: { name: keyof typeof paths; size?: number }) 
   );
 }
 function stamp(at: string) {
-  return new Date(at).toLocaleString('ko-KR', {
+  return new Date(at).toLocaleString(intlLocale(), {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -75,9 +77,9 @@ function dayLabel(at: string) {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return '오늘';
-  if (date.toDateString() === yesterday.toDateString()) return '어제';
-  return date.toLocaleDateString('ko-KR', {
+  if (date.toDateString() === today.toDateString()) return L.today;
+  if (date.toDateString() === yesterday.toDateString()) return L.yesterday;
+  return date.toLocaleDateString(intlLocale(), {
     ...(date.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}),
     month: 'long',
     day: 'numeric',
@@ -85,16 +87,15 @@ function dayLabel(at: string) {
   });
 }
 function targetLabel(target: NotificationTarget, kind?: AppNotification['kind']) {
-  if (target.type === 'board')
-    return target.board === 'release' ? '업데이트 내용 보기' : '공지 보기';
-  if (target.screen === 'team' && kind === 'social') return '친구 목록 보기';
-  if (target.screen === 'team' && kind === 'team') return '최근 경기 보기';
+  if (target.type === 'board') return target.board === 'release' ? L.goRelease : L.goNotice;
+  if (target.screen === 'team' && kind === 'social') return L.goFriends;
+  if (target.screen === 'team' && kind === 'team') return L.goMatches;
   return {
-    home: '홈으로 가기',
-    owner: '구단주 보기',
-    team: '내 팀 보기',
-    market: '이적시장 보기',
-    settings: '알림 설정 보기',
+    home: L.goHome,
+    owner: L.goOwner,
+    team: L.goTeam,
+    market: L.goMarket,
+    settings: L.goSettings,
   }[target.screen];
 }
 
@@ -132,7 +133,7 @@ export default function Inbox() {
   async function readAll() {
     setNotice('');
     await inbox.readAll();
-    if (!inboxState.error) setNotice('알림을 모두 읽음으로 표시했어요.');
+    if (!inboxState.error) setNotice(L.readAllDone);
   }
   const error = state.error ? (
     <Card gap={12}>
@@ -140,7 +141,7 @@ export default function Inbox() {
         {state.error}
       </InboxText>
       <Btn block disabled={state.busy} onPress={() => (id ? void inbox.open(id) : void refresh())}>
-        다시 시도
+        {L.retry}
       </Btn>
     </Card>
   ) : null;
@@ -151,7 +152,7 @@ export default function Inbox() {
         style={{ gap: 8, alignItems: 'center', paddingVertical: 24 }}
       >
         <ActivityIndicator color={c.accentText} />
-        <InboxText tone="muted">알림 확인 중…</InboxText>
+        <InboxText tone="muted">{L.checking}</InboxText>
       </View>
     ) : null;
   const header = (
@@ -159,7 +160,7 @@ export default function Inbox() {
       <Press
         scale={1}
         testID="inbox-back"
-        accessibilityLabel={id ? '알림함으로 돌아가기' : '이전 화면으로 돌아가기'}
+        accessibilityLabel={id ? L.backToInbox : L.backPrev}
         onPress={() =>
           id
             ? router.dismissTo('/notifications')
@@ -172,13 +173,13 @@ export default function Inbox() {
         <Icon name="back" size={24} />
       </Press>
       <InboxText v="h1" accessibilityRole="header" style={{ flex: 1 }}>
-        {id ? '알림' : '알림함'}
+        {id ? L.detailTitle : L.title}
       </InboxText>
       {!id ? (
         <Press
           scale={1}
           testID="inbox-refresh"
-          accessibilityLabel="알림 새로고침"
+          accessibilityLabel={L.refreshAria}
           accessibilityState={{ disabled: state.busy || refreshing, busy: refreshing }}
           disabled={state.busy || refreshing}
           onPress={() => void refresh()}
@@ -208,10 +209,10 @@ export default function Inbox() {
           <Card gap={20} testID="inbox-detail">
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
               <InboxText tone="accent" bold>
-                {labels[detail.kind]}
+                {labels()[detail.kind]}
               </InboxText>
               <InboxText tone="muted" v="sm">
-                {detail.readAt ? '읽음' : '읽지 않음'}
+                {detail.readAt ? L.read : L.unread}
               </InboxText>
             </View>
             <InboxText v="h1" accessibilityRole="header">
@@ -233,16 +234,16 @@ export default function Inbox() {
             </Btn>
             {!detail.readAt && !state.busy ? (
               <Btn block onPress={() => void inbox.read(detail.id)}>
-                읽음으로 표시
+                {L.markRead}
               </Btn>
             ) : null}
           </Card>
         ) : !state.busy && !state.error ? (
           <Card gap={12}>
-            <InboxText bold>이 알림을 찾을 수 없어요.</InboxText>
-            <InboxText tone="muted">보관 기간이 지났거나 삭제된 알림일 수 있어요.</InboxText>
+            <InboxText bold>{L.notFound}</InboxText>
+            <InboxText tone="muted">{L.notFoundBody}</InboxText>
             <Btn block onPress={() => router.dismissTo('/notifications')}>
-              알림함으로 돌아가기
+              {L.backToInbox}
             </Btn>
           </Card>
         ) : null}
@@ -280,7 +281,7 @@ export default function Inbox() {
             scale={1}
             testID={unread ? 'inbox-filter-unread' : 'inbox-filter-all'}
             accessibilityRole="tab"
-            accessibilityLabel={unread ? `읽지 않음, ${state.unreadCount}개` : '전체 알림'}
+            accessibilityLabel={unread ? L.unreadAriaN({ n: state.unreadCount }) : L.allAria}
             accessibilityState={{ selected: state.onlyUnread === unread, disabled: state.busy }}
             disabled={state.busy}
             onPress={() => void loadInbox({ unread })}
@@ -300,7 +301,7 @@ export default function Inbox() {
               center
               style={{ color: state.onlyUnread === unread ? c.onPitch : c.muted }}
             >
-              {unread ? `읽지 않음 ${state.unreadCount}` : '전체'}
+              {unread ? L.unreadN({ n: state.unreadCount }) : L.all}
             </InboxText>
           </Press>
         ))}
@@ -343,7 +344,7 @@ export default function Inbox() {
               }}
             >
               <InboxText tone="muted" v="sm">
-                최근 90일의 알림
+                {L.recent90}
               </InboxText>
               <Press
                 scale={1}
@@ -361,7 +362,7 @@ export default function Inbox() {
                 }}
               >
                 <InboxText tone="accent" bold>
-                  모두 읽음
+                  {L.readAll}
                 </InboxText>
               </Press>
             </View>
@@ -391,8 +392,8 @@ export default function Inbox() {
               <Press
                 scale={1}
                 testID={`inbox-item-${item.id}`}
-                accessibilityLabel={`${item.readAt ? '읽음' : '읽지 않음'}, ${labels[item.kind]}, ${item.title}, ${item.body}, ${stamp(item.createdAt)}`}
-                accessibilityHint="알림 전문을 열고 읽음으로 표시해요."
+                accessibilityLabel={`${item.readAt ? L.read : L.unread}, ${labels()[item.kind]}, ${item.title}, ${item.body}, ${stamp(item.createdAt)}`}
+                accessibilityHint={L.itemHint}
                 onPress={() => openInbox(item.id)}
                 style={{
                   padding: 16,
@@ -408,13 +409,13 @@ export default function Inbox() {
                   style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}
                 >
                   <InboxText tone={item.readAt ? 'muted' : 'accent'} v="sm" bold>
-                    {labels[item.kind]}
+                    {labels()[item.kind]}
                   </InboxText>
                   <InboxText tone={item.readAt ? 'muted' : 'accent'} v="sm" bold={!item.readAt}>
-                    {item.readAt ? '· 읽음' : '· 읽지 않음'}
+                    {`· ${item.readAt ? L.read : L.unread}`}
                   </InboxText>
                   <InboxText tone="muted" v="sm" style={{ marginLeft: 'auto' }}>
-                    {new Date(item.createdAt).toLocaleTimeString('ko-KR', {
+                    {new Date(item.createdAt).toLocaleTimeString(intlLocale(), {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
@@ -444,15 +445,13 @@ export default function Inbox() {
                 <Icon name={state.onlyUnread ? 'check' : 'bell'} size={32} />
               </View>
               <InboxText v="h2" center>
-                {state.onlyUnread ? '모든 알림을 확인했어요' : '아직 받은 알림이 없어요'}
+                {state.onlyUnread ? L.emptyUnread : L.empty}
               </InboxText>
               <InboxText tone="muted" center>
-                {state.onlyUnread
-                  ? '받은 알림은 전체에서 다시 볼 수 있어요.'
-                  : '받은 앱 알림과 테스트 알림이 여기에 쌓여요.'}
+                {state.onlyUnread ? L.emptyUnreadBody : L.emptyBody}
               </InboxText>
               {state.onlyUnread ? (
-                <Btn onPress={() => void loadInbox({ unread: false })}>전체 알림 보기</Btn>
+                <Btn onPress={() => void loadInbox({ unread: false })}>{L.seeAll}</Btn>
               ) : null}
             </View>
           ) : null
@@ -462,7 +461,7 @@ export default function Inbox() {
             {loading}
             {state.nextCursor ? (
               <Btn block disabled={state.busy} onPress={() => void loadInbox({ more: true })}>
-                이전 알림 더 보기
+                {L.more}
               </Btn>
             ) : null}
           </View>

@@ -3,8 +3,9 @@
   import type { AchCategory } from '@offside/contracts/owner-team';
   import type { ClubAchievementsResponse } from '@offside/app-core/api/team';
   import { num } from '@offside/app-core/teamText';
+  import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
   import {
-    achDone, achGradeView, achNear, achOpenGroup, achPoints, achRankText, achSections, achState, achTotal,
+    achCatShort, achDone, achGradeName, achGradeView, achNear, achOpenGroup, achPoints, achRankText, achSections, achState, achTotal,
   } from '@offside/app-core/teamOwner';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import AchGradeBadge from './AchGradeBadge.svelte';
@@ -34,17 +35,17 @@
   <div class="tm-title">
     <div>
       <div class="eyebrow">Season achievements</div>
-      <h1>시즌 업적</h1>
+      <h1>{L.achTitle}</h1>
     </div>
     {#if ach && ach.seasons.length > 1}
-      <select class="tm-season" aria-label="시즌" value={ach.season} onchange={(e) => load(Number(e.currentTarget.value))}>
+      <select class="tm-season" aria-label={L.seasonLabel} value={ach.season} onchange={(e) => load(Number(e.currentTarget.value))}>
         {#each ach.seasons as o (o.id)}
           <option value={o.id}>{o.name}</option>
         {/each}
       </select>
     {/if}
   </div>
-  <LoadState {status} failText="업적을 불러오지 못했어요." retry={() => load(ach?.season)}>
+  <LoadState {status} failText={L.achLoadFail} retry={() => load(ach?.season)}>
     {#if ach}
       {@const tot = achTotal(ach.groups)}
       {@const gv = achGradeView(ach.score)}
@@ -55,45 +56,45 @@
       <div class="tm-ach-sum" data-ach-summary>
         <div class="tm-ach-head">
           <AchGradeBadge grade={gv.grade} large />
-          <div class="tm-ach-total"><b>{num(ach.score)}</b><span class="muted">점</span></div>
+          <div class="tm-ach-total"><b>{num(ach.score)}</b><span class="muted">{L.pts}</span></div>
           <button class="tm-ach-rank" data-act="ach-ranking" onclick={onrank}>
-            <small class="muted">구단주 랭킹</small><span>{achRankText(ach.rank, ach.ranked)}</span>
+            <small class="muted">{L.rankTitle}</small><span>{achRankText(ach.rank, ach.ranked)}</span>
           </button>
         </div>
-        <div class="tm-bar" role="progressbar" aria-label="다음 등급까지" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(gv.ratio * 100)}>
+        <div class="tm-bar" role="progressbar" aria-label={L.nextGradeBar} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(gv.ratio * 100)}>
           <span style:width="{gv.ratio * 100}%"></span>
         </div>
         <p class="muted fs-sm" data-ach-next>
-          {gv.next ? `${gv.next.name}까지 ${num(gv.toNext)}점` : '최고 등급이에요'} · 업적 {tot.done}/{tot.total} 달성
+          {L.achProgress({ head: gv.next ? L.toNextGrade({ grade: achGradeName(gv.next), pts: num(gv.toNext) }) : L.topGrade, done: tot.done, total: tot.total })}
         </p>
-        <p class="muted fs-xs">{ach.seasons.find((o) => o.id === ach?.season)?.name ?? ''}에 처음 뛰어 은퇴한 내 선수 {ach.players}명과 이 시즌 팀·구단 활동으로 채워요. 시즌마다 처음부터 다시 쌓아요.</p>
+        <p class="muted fs-xs">{L.achAbout({ season: ach.seasons.find((o) => o.id === ach?.season)?.name ?? '', n: ach.players })}</p>
       </div>
       {#if near.length}
         <div class="tm-near" data-ach-near>
-          <div class="eyebrow">다음 목표</div>
+          <div class="eyebrow">{L.nextGoal}</div>
           <ul>
             {#each near as n (n.item.id)}
               <li>
                 <span class="tm-near-txt"><b>{n.item.label}</b><small class="muted">{n.group} · {achState(n.item)}</small></span>
-                <span class="tm-pts">+{num(n.item.worth)}점</span>
+                <span class="tm-pts">{L.worthPlus({ n: num(n.item.worth) })}</span>
                 <span class="tm-bar sm" aria-hidden="true"><span style:width="{n.ratio * 100}%"></span></span>
               </li>
             {/each}
           </ul>
         </div>
       {/if}
-      <div class="tm-ach-cats" role="tablist" aria-label="업적 분류" style:grid-template-columns="repeat({sections.length}, minmax(0, 1fr))">
+      <div class="tm-ach-cats" role="tablist" aria-label={L.catsAria} style:grid-template-columns="repeat({sections.length}, minmax(0, 1fr))">
         {#each sections as x (x.id)}
           <button role="tab" aria-selected={sec.id === x.id} data-ach-cat={x.id} onclick={() => (cat = x.id)}>
-            <span>{x.name.replace(' 업적', '')}</span>
+            <span>{achCatShort(x.id)}</span>
             <small class="num">{x.locked ? '🔒︎' : num(x.score)}</small>
           </button>
         {/each}
       </div>
       {#if sec.locked}
         <div class="tm-ach tm-ach-locked tm-ach-soon" data-ach-group="manager">
-          <div class="tm-ach-head"><span class="tm-ach-stage">SOON</span><b>감독 커리어</b></div>
-          <small class="muted">감독 시뮬레이션이 열리면 감독으로 거둔 성적도 업적이 돼요. 선수·팀·구단주 업적처럼 시즌마다 새로 쌓여요.</small>
+          <div class="tm-ach-head"><span class="tm-ach-stage">SOON</span><b>{L.managerSoonTitle}</b></div>
+          <small class="muted">{L.managerSoonNote}</small>
         </div>
       {:else}
         {#each sec.groups as g (`${ach.season}-${g.id}`)}

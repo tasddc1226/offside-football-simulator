@@ -3,6 +3,8 @@
 import { isNationalTeam } from './nation.js';
 import { sameClub } from './data.js';
 import type { LegendSource } from './types.js';
+import { gRecordsText as L } from './i18n/ko/gRecords.js';
+import { tn } from './i18n/names.js';
 
 export interface ChapterEvent {
   year: number;
@@ -74,21 +76,27 @@ export function careerChapters(s: LegendSource): Chapter[] {
     }
   }
   const inYear = (y: number) => out.find((c) => c.from <= y && y <= c.to);
+  // 화면에 그리는 text는 지금 언어로 옮기고(tn), 같은 우승을 묶는 판정은 저장된 이름으로 한다.
+  const trophyKey = new WeakMap<ChapterEvent, string>();
   for (const t of s.trophies) {
     const c = out.find((c) => sameClub(c, t) && c.from <= t.year && t.year <= c.to);
-    const same = c?.events.find((e) => e.kind === 'trophy' && e.text === t.t);
+    const same = c?.events.find((e) => e.kind === 'trophy' && trophyKey.get(e) === t.t);
     if (same) same.years.push(t.year);
-    else c?.events.push({ year: t.year, kind: 'trophy', text: t.t, years: [t.year] });
+    else if (c) {
+      const e: ChapterEvent = { year: t.year, kind: 'trophy', text: tn(t.t), years: [t.year] };
+      trophyKey.set(e, t.t);
+      c.events.push(e);
+    }
   }
   for (const m of s.miles ?? []) {
     if (NATIONAL_MILE.test(m.t) || !isKeyMilestone(m.t)) continue;
-    inYear(m.year)?.events.push({ year: m.year, kind: 'mile', text: m.t, years: [m.year] });
+    inYear(m.year)?.events.push({ year: m.year, kind: 'mile', text: tn(m.t), years: [m.year] });
   }
   for (const st of s.storyLog ?? []) {
     inYear(st.year)?.events.push({
       year: st.year,
       kind: 'story',
-      text: `「${st.name}」 ${st.ending}`,
+      text: L.storyEnding({ name: tn(st.name), ending: tn(st.ending) }),
       years: [st.year],
     });
   }
@@ -102,10 +110,10 @@ export function nationalEvents(s: LegendSource): ChapterEvent[] {
   return [
     ...(s.miles ?? [])
       .filter((m) => NATIONAL_MILE.test(m.t) && !/데뷔골|본선 득점/.test(m.t))
-      .map((m) => ({ year: m.year, kind: 'mile' as const, text: m.t, years: [m.year] })),
+      .map((m) => ({ year: m.year, kind: 'mile' as const, text: tn(m.t), years: [m.year] })),
     ...s.trophies
       .filter((t) => isNationalTeam(t.club))
-      .map((t) => ({ year: t.year, kind: 'trophy' as const, text: t.t, years: [t.year] })),
+      .map((t) => ({ year: t.year, kind: 'trophy' as const, text: tn(t.t), years: [t.year] })),
   ].sort((a, b) => a.year - b.year);
 }
 

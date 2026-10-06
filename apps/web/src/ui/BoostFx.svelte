@@ -6,6 +6,7 @@
   import { fade } from 'svelte/transition';
   import type { BoostOutcome } from '@offside/app-core/boost-view';
   import { buzz, dur, motionOK } from './motion.js';
+  import { gameBoostText as L } from '@offside/app-core/i18n/ko/gameBoost';
 
   let { out, onDone }: { out: BoostOutcome; onDone: () => void } = $props();
 
@@ -41,7 +42,7 @@
 
 <svelte:window {onkeydown} />
 
-<div class="boost-fx" class:ok={done && out.ok} class:fail={done && !out.ok} data-boost-fx={done ? (out.ok ? 'ok' : 'fail') : 'rolling'} role="dialog" aria-modal="true" aria-label="잠재력 강화" transition:fade={{ duration: dur(180) }}>
+<div class="boost-fx" class:ok={done && out.ok} class:fail={done && !out.ok} data-boost-fx={done ? (out.ok ? 'ok' : 'fail') : 'rolling'} role="dialog" aria-modal="true" aria-label={L.title} transition:fade={{ duration: dur(180) }}>
   <div class="bf-card" aria-live="polite">
     <div class="eyebrow">Potential</div>
     <div class="bf-steps" aria-hidden="true">
@@ -50,13 +51,13 @@
       {/each}
     </div>
     {#if !done}
-      <h2>강화 중…</h2>
+      <h2>{L.rolling}</h2>
       <div class="bf-gauge" aria-hidden="true"><span style={`width:${p * 100}%`}></span></div>
-      <p class="muted fs-sm">성공 확률 {out.chance}%</p>
+      <p class="muted fs-sm">{L.chance({ n: out.chance })}</p>
     {:else}
       <h2 class="bf-title">{out.title}</h2>
       <p class="fs-sm">{out.text}</p>
-      <button class="btn btn-primary btn-block" data-act="boost-fx-close" bind:this={closeBtn} onclick={onDone}>확인</button>
+      <button class="btn btn-primary btn-block" data-act="boost-fx-close" bind:this={closeBtn} onclick={onDone}>{L.close}</button>
     {/if}
   </div>
 </div>

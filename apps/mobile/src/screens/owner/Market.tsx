@@ -33,7 +33,7 @@ import {
   MARKET_SORT_LABEL,
   MARKET_TICKER_MS,
   MARKET_TOAST,
-  MARKET_TABS,
+  marketTabs,
   TRADE_LABEL,
   buyBlock,
   cardMeta,
@@ -57,7 +57,7 @@ import {
 } from '@offside/app-core/market';
 import { agoKo, cardTier, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/season';
-import { POS_LABEL } from '@offside/game/pos-label';
+import { POS } from '@offside/game/data';
 import { appState, prefs } from '../../store';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { toast } from '../../game/host';
@@ -68,6 +68,9 @@ import { ActionBar, BackBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
 import { useOnPull } from '../../ui/refresh';
 import { CARD_TONES, PlayerCard } from '../../components/PlayerCard';
 import { MarketChart, MarketIndex } from './MarketChart';
+import { marketText as L } from '@offside/app-core/i18n/ko/market';
+import { intlLocale } from '@offside/app-core/i18n/core';
+import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 
 type Sent<T> = Promise<
   { ok: true; data: T } | { ok: false; error: { message: string; reason?: string | undefined } }
@@ -158,7 +161,7 @@ function MarketSheet({
     >
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable
-          accessibilityLabel="닫기"
+          accessibilityLabel={L.close}
           onPress={onClose}
           style={{
             position: 'absolute',
@@ -271,7 +274,7 @@ function PctSlider({
       testID="market-sell-pct"
       accessible
       accessibilityRole="adjustable"
-      accessibilityLabel="기준가 대비 판매가"
+      accessibilityLabel={L.sliderLabelApp}
       accessibilityValue={{ min, max, now: value, text: `${value}%` }}
       onAccessibilityAction={(e) =>
         onChange(
@@ -418,7 +421,7 @@ function LiveStrip({
       <Press
         scale={0.99}
         accessibilityRole="button"
-        accessibilityLabel={`방금 이적 ${recent.length}건 모두 보기`}
+        accessibilityLabel={L.liveAll({ n: recent.length })}
         accessibilityState={{ expanded: openAll }}
         onPress={() => setOpenAll((v) => !v)}
         style={{
@@ -445,7 +448,7 @@ function LiveStrip({
           />
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.bad }} />
         </View>
-        <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: c.bad }}>방금 이적</Txt>
+        <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: c.bad }}>{L.justSold}</Txt>
         <Animated.View
           style={{
             flex: 1,
@@ -484,7 +487,10 @@ function LiveStrip({
                   {marketName(s.card, local)}
                 </Txt>
                 <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                  {`${agoKo(Date.now() - Date.parse(s.soldAt))} · 기준가 ${fmtValue(s.card.cardValue)}`}
+                  {L.liveBase({
+                    ago: agoKo(Date.now() - Date.parse(s.soldAt)),
+                    value: fmtValue(s.card.cardValue),
+                  })}
                 </Txt>
               </View>
               <Txt bold num style={{ fontSize: rem(0.875) }}>
@@ -595,7 +601,9 @@ export default function Market() {
   const lineup = useMemo(() => (team ? lineupOf(team) : new Set<string>()), [team]);
   const isCurrent = !!team && team.season === team.current;
   const nameOfPlayer = (p: TeamPlayer) => marketName(p, local);
-  const seasonName = team?.seasons.find((o) => o.id === team.season)?.name ?? '';
+  const seasonName = team?.seasons.find((o) => o.id === team.season)
+    ? teamSeasonLabel(team.season)
+    : '';
 
   // 방출 — 고른 선수.
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
@@ -674,7 +682,7 @@ export default function Market() {
   const buyBlocked =
     buying && me
       ? myListingIds.has(buying.id)
-        ? '내가 내놓은 선수예요.'
+        ? L.ownListing
         : buyBlock(buying.price, me.balance, me.buysLeft)
       : null;
   const box = {
@@ -700,7 +708,7 @@ export default function Market() {
                       alignItems: 'baseline',
                     }}
                   >
-                    <Txt style={small}>{`${pickedPlayers.length}명 방출 · 받는 자금`}</Txt>
+                    <Txt style={small}>{L.dockSum({ n: pickedPlayers.length })}</Txt>
                     <Txt
                       style={{
                         fontFamily: DISPLAY[700],
@@ -712,7 +720,7 @@ export default function Market() {
                     </Txt>
                   </View>
                   <Txt tone="bad" style={tiny}>
-                    방출한 선수는 다시 데려올 수 없어요.
+                    {L.dockWarn}
                   </Txt>
                   <Btn
                     block
@@ -723,7 +731,7 @@ export default function Market() {
                       setError(null);
                     }}
                   >
-                    {`${pickedPlayers.length}명 방출하기`}
+                    {L.releaseBtn({ n: pickedPlayers.length })}
                   </Btn>
                 </View>
               </ActionBar>
@@ -744,7 +752,7 @@ export default function Market() {
               Transfer market
             </Txt>
             <Txt v="h1" accessibilityRole="header" style={{ color: c.onPitch, marginTop: 2 }}>
-              이적시장
+              {L.title}
             </Txt>
           </View>
           <View
@@ -762,7 +770,7 @@ export default function Market() {
             }}
           >
             <View accessible style={{ flex: 1, minWidth: 0, gap: 2 }}>
-              <Txt style={{ ...tiny, color: c.onPitch, opacity: 0.8 }}>구단 자금</Txt>
+              <Txt style={{ ...tiny, color: c.onPitch, opacity: 0.8 }}>{L.funds}</Txt>
               <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.875), color: c.pitchAccent }}>
                 {me ? fundsText(me.balance) : '–'}
               </Txt>
@@ -781,16 +789,16 @@ export default function Market() {
               }}
             >
               <Txt style={{ fontSize: rem(0.8125), fontWeight: '700', color: c.accentInk }}>
-                자금 만들기
+                {L.makeFunds}
               </Txt>
             </Press>
           </View>
           {me ? (
             <View style={{ flexDirection: 'row', gap: 6 }}>
               {[
-                ['구단 가치', fmtValue(me.clubValue)],
-                ['오늘 영입', `${me.rules.dailyBuys - me.buysLeft} / ${me.rules.dailyBuys}`],
-                ['내놓은 선수', `${me.listings.length} / ${me.rules.listLimit}`],
+                [L.statClubValue, fmtValue(me.clubValue)],
+                [L.statBuysToday, `${me.rules.dailyBuys - me.buysLeft} / ${me.rules.dailyBuys}`],
+                [L.statListed, `${me.listings.length} / ${me.rules.listLimit}`],
               ].map(([k, v]) => (
                 <View
                   key={k}
@@ -827,15 +835,16 @@ export default function Market() {
               }}
             >
               <Txt bold accessibilityRole="header" style={small}>
-                방출해서 자금 만들기
+                {L.releasePane}
               </Txt>
               <Press onPress={() => open('market')} accessibilityRole="button" hitSlop={8}>
-                <Txt style={{ ...small, fontWeight: '600', color: c.accentText }}>이적시장으로</Txt>
+                <Txt style={{ ...small, fontWeight: '600', color: c.accentText }}>
+                  {L.backToMarket}
+                </Txt>
               </Press>
             </View>
             <Txt tone="muted" style={small}>
-              직접 키운 선수를 내보내면 카드 기준가만큼 구단 자금이 생겨요. 명예의 전당 기록은
-              그대로 남아요.
+              {L.releaseIntro}
             </Txt>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -843,7 +852,7 @@ export default function Market() {
                   <FilterChip
                     key={o.id}
                     on={team?.season === o.id}
-                    label={`${o.name} 선수`}
+                    label={L.seasonChip({ name: seasonLabel(o.id, o.name) })}
                     testID={`market-season-${o.id}`}
                     onPress={() => {
                       setTeamSeason(o.id);
@@ -862,14 +871,14 @@ export default function Market() {
                   }
                 >
                   <Txt style={{ ...small, fontWeight: '600', color: c.accentText }}>
-                    {allPicked ? '선택 해제' : '전체 선택'}
+                    {allPicked ? L.pickNone : L.pickAll}
                   </Txt>
                 </Press>
               ) : null}
             </View>
             {!team ? (
               <Txt tone="muted" style={small}>
-                {teamFailed ? '내 선수를 불러오지 못했어요.' : '불러오는 중…'}
+                {teamFailed ? L.playersFailed : L.loading}
               </Txt>
             ) : team.players.length ? (
               team.players.map((p) => {
@@ -882,7 +891,7 @@ export default function Market() {
                     scale={0.99}
                     disabled={!!lock}
                     accessibilityRole="checkbox"
-                    accessibilityLabel={`${nameOfPlayer(p)} 방출할 선수로 고르기`}
+                    accessibilityLabel={L.releasePickLabel({ name: nameOfPlayer(p) })}
                     accessibilityState={{ checked: on, disabled: !!lock }}
                     onPress={() => togglePick(p.careerId)}
                     style={{
@@ -904,7 +913,10 @@ export default function Market() {
                         {nameOfPlayer(p)}
                       </Txt>
                       <Txt tone={lock ? 'bad' : 'muted'} style={tiny}>
-                        {lock ?? `레전드 ${(p.legendScore ?? 0).toLocaleString()} · 기준가`}
+                        {lock ??
+                          L.releaseInfo({
+                            score: (p.legendScore ?? 0).toLocaleString(intlLocale()),
+                          })}
                       </Txt>
                     </View>
                     {!lock && me ? (
@@ -916,7 +928,9 @@ export default function Market() {
                 );
               })
             ) : (
-              <Txt tone="muted" style={small}>{`${seasonName}에 은퇴한 내 선수가 없어요.`}</Txt>
+              <Txt tone="muted" style={small}>
+                {L.noRetired({ season: seasonName })}
+              </Txt>
             )}
           </View>
         ) : (
@@ -933,7 +947,7 @@ export default function Market() {
                 borderBottomColor: c.line,
               }}
             >
-              {MARKET_TABS.map(([k, label]) => (
+              {marketTabs().map(([k, label]) => (
                 <Press
                   key={k}
                   testID={`market-tab-${k}`}
@@ -968,7 +982,7 @@ export default function Market() {
                     <FilterChip
                       key={p ?? 'all'}
                       on={pos === p}
-                      label={p ? POS_LABEL[p] : '전체'}
+                      label={p ? POS[p].label : L.posAll}
                       testID={`market-pos-${p ?? 'all'}`}
                       onPress={() => setPos(p)}
                     />
@@ -982,7 +996,7 @@ export default function Market() {
                   }}
                 >
                   <Txt tone="muted" style={small}>
-                    {season === null ? '' : `이번 시즌 선수 ${items.length}${hasMore ? '+' : ''}명`}
+                    {season === null ? '' : L.seasonCount({ n: items.length, more: hasMore })}
                   </Txt>
                   <View style={{ flexDirection: 'row', gap: 4 }}>
                     {SORT_KEYS.map((k) => (
@@ -1007,15 +1021,15 @@ export default function Market() {
                 </View>
                 {listStatus === 'loading' ? (
                   <Txt tone="muted" style={small}>
-                    불러오는 중…
+                    {L.loading}
                   </Txt>
                 ) : listStatus === 'error' ? (
                   <View style={{ gap: 8 }}>
                     <Txt tone="muted" style={small}>
-                      시장을 불러오지 못했어요.
+                      {L.listFailed}
                     </Txt>
                     <Btn block onPress={() => void loadList(0)}>
-                      다시 불러오기
+                      {L.reload}
                     </Btn>
                   </View>
                 ) : (
@@ -1028,7 +1042,7 @@ export default function Market() {
                             key={l.id}
                             scale={0.985}
                             testID={`market-listing-${l.id}`}
-                            accessibilityLabel={`${marketName(l.card, local)} 영입 보기`}
+                            accessibilityLabel={L.openListing({ name: marketName(l.card, local) })}
                             onPress={() => {
                               setBuying(l);
                               setError(null);
@@ -1051,7 +1065,7 @@ export default function Market() {
                                     tone="muted"
                                     style={{ fontSize: rem(0.6875), fontWeight: '700' }}
                                   >
-                                    {'  내 등록'}
+                                    {`  ${L.myListing}`}
                                   </Txt>
                                 ) : null}
                               </Txt>
@@ -1083,7 +1097,7 @@ export default function Market() {
                     )}
                     {hasMore ? (
                       <Btn block onPress={() => void loadList(page + 1)}>
-                        더 보기
+                        {L.more}
                       </Btn>
                     ) : null}
                   </>
@@ -1092,17 +1106,18 @@ export default function Market() {
             ) : view === 'sell' ? (
               <View testID="market-sell" style={{ gap: 10 }}>
                 <Txt bold accessibilityRole="header" style={small}>
-                  {'1. 내놓을 선수 '}
-                  <Txt tone="muted" style={small}>{`(${seasonName || '이번 시즌'} 선수만)`}</Txt>
+                  {`${L.sellStep1} `}
+                  <Txt tone="muted" style={small}>
+                    {L.sellSeasonOnly({ season: seasonName || L.thisSeason })}
+                  </Txt>
                 </Txt>
                 {!team ? (
                   <Txt tone="muted" style={small}>
-                    {teamFailed ? '내 선수를 불러오지 못했어요.' : '불러오는 중…'}
+                    {teamFailed ? L.playersFailed : L.loading}
                   </Txt>
                 ) : !isCurrent || team.players.length === 0 ? (
                   <Txt tone="muted" style={small}>
-                    이번 시즌에 은퇴한 내 선수가 없어요. 지난 시즌 선수는 방출해서 자금으로 바꿀 수
-                    있어요.
+                    {L.sellNone}
                   </Txt>
                 ) : (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -1115,7 +1130,7 @@ export default function Market() {
                           testID={`market-sell-pick-${p.careerId}`}
                           disabled={off}
                           accessibilityRole="button"
-                          accessibilityLabel={`${nameOfPlayer(p)} 내놓을 선수로 고르기`}
+                          accessibilityLabel={L.sellPickLabel({ name: nameOfPlayer(p) })}
                           accessibilityState={{ selected: on, disabled: off }}
                           onPress={() => {
                             setSelling(p);
@@ -1149,7 +1164,7 @@ export default function Market() {
                               color: on ? c.accentText : c.muted,
                             }}
                           >
-                            {on ? '선택' : sellNote(p, lineup)}
+                            {on ? L.sellSelected : sellNote(p, lineup)}
                           </Txt>
                         </Press>
                       );
@@ -1159,20 +1174,24 @@ export default function Market() {
                 {selling && quote && me ? (
                   <View style={{ ...box, borderRadius: 16, gap: 12, padding: 14 }}>
                     <Txt bold style={small}>
-                      {`2. 가격 정하기 · ${nameOfPlayer(selling)} ${detailPosOf(selling)} ${selling.peak}`}
+                      {L.sellStep2({
+                        name: nameOfPlayer(selling),
+                        pos: detailPosOf(selling),
+                        peak: selling.peak,
+                      })}
                     </Txt>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                       {(
                         [
                           [
-                            '기준가 그대로',
+                            L.presetBase,
                             fmtValue(selling.cardValue!),
                             pct === 100,
                             () => setPct(100),
                           ],
                           [
-                            '직접 정하기',
-                            pct === 100 ? '슬라이더로' : fmtValue(sellPrice),
+                            L.presetCustom,
+                            pct === 100 ? L.presetSlider : fmtValue(sellPrice),
                             pct !== 100,
                             () => setPct((v) => (v === 100 ? 110 : v)),
                           ],
@@ -1212,7 +1231,7 @@ export default function Market() {
                           alignItems: 'baseline',
                         }}
                       >
-                        <Txt style={{ fontSize: rem(0.8125) }}>판매가</Txt>
+                        <Txt style={{ fontSize: rem(0.8125) }}>{L.price}</Txt>
                         <Txt num style={{ fontFamily: DISPLAY[700], fontSize: rem(1.375) }}>
                           {`${fmtValue(sellPrice)} `}
                           <Txt
@@ -1245,12 +1264,14 @@ export default function Market() {
                     <View
                       style={{ gap: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: c.line }}
                     >
-                      <Line label={`수수료 ${range!.feePct}%`} value={`−${fmtValue(quote.fee)}`} />
-                      <Line strong label="팔리면 받는 자금" value={fmtValue(quote.gets)} />
+                      <Line
+                        label={L.fee({ pct: range!.feePct })}
+                        value={`−${fmtValue(quote.fee)}`}
+                      />
+                      <Line strong label={L.gets} value={fmtValue(quote.gets)} />
                     </View>
                     <Txt tone="muted" style={small}>
-                      팔리기 전까지는 팀에서 계속 뛰어요. 팔리면 선발 자리는 유스 선수가 채워요.
-                      언제든 내릴 수 있어요.
+                      {L.sellHelp}
                     </Txt>
                     {errText}
                     <Btn
@@ -1265,7 +1286,7 @@ export default function Market() {
                         )
                       }
                     >
-                      {`${fmtValue(sellPrice)}에 내놓기`}
+                      {L.listFor({ price: fmtValue(sellPrice) })}
                     </Btn>
                   </View>
                 ) : null}
@@ -1274,12 +1295,12 @@ export default function Market() {
               <View testID="market-trades" style={{ gap: 10 }}>
                 {!me ? (
                   <Txt tone="muted" style={small}>
-                    {meFailed ?? '불러오는 중…'}
+                    {meFailed ?? L.loading}
                   </Txt>
                 ) : (
                   <>
                     <Txt bold accessibilityRole="header" style={small}>
-                      내놓은 선수
+                      {L.tradesListed}
                     </Txt>
                     {me.listings.length ? (
                       me.listings.map((l) => (
@@ -1300,7 +1321,10 @@ export default function Market() {
                               {marketName(l.card, local)}
                             </Txt>
                             <Txt tone="muted" style={tiny}>
-                              {`${fmtValue(l.price)} · ${agoKo(Date.now() - Date.parse(l.createdAt))} 등록`}
+                              {L.listedAgo({
+                                price: fmtValue(l.price),
+                                ago: agoKo(Date.now() - Date.parse(l.createdAt)),
+                              })}
                             </Txt>
                           </View>
                           <Btn
@@ -1311,17 +1335,17 @@ export default function Market() {
                               void run(() => cancelListing(l.id), MARKET_TOAST.unlisted)
                             }
                           >
-                            내리기
+                            {L.unlistBtn}
                           </Btn>
                         </View>
                       ))
                     ) : (
                       <Txt tone="muted" style={small}>
-                        내놓은 선수가 없어요.
+                        {L.noListed}
                       </Txt>
                     )}
                     <Txt bold accessibilityRole="header" style={{ ...small, marginTop: 6 }}>
-                      자금 내역
+                      {L.fundsLog}
                     </Txt>
                     {me.trades.length ? (
                       <View style={{ ...box }}>
@@ -1368,10 +1392,10 @@ export default function Market() {
                               </View>
                               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                                 <Txt numberOfLines={1} style={small}>
-                                  {`${marketName(t.card, local)} ${POS_LABEL[t.card.pos]} ${t.card.peak}`}
+                                  {`${marketName(t.card, local)} ${POS[t.card.pos].label} ${t.card.peak}`}
                                 </Txt>
                                 <Txt tone="muted" style={tiny}>
-                                  {`${agoKo(Date.now() - Date.parse(t.at))}${t.kind === 'sold' ? ' · 수수료 뺌' : ''}`}
+                                  {`${agoKo(Date.now() - Date.parse(t.at))}${t.kind === 'sold' ? L.feeTaken : ''}`}
                                 </Txt>
                               </View>
                               <Txt
@@ -1388,7 +1412,7 @@ export default function Market() {
                       </View>
                     ) : (
                       <Txt tone="muted" style={small}>
-                        아직 거래가 없어요.
+                        {L.noTrades}
                       </Txt>
                     )}
                   </>
@@ -1399,7 +1423,7 @@ export default function Market() {
         )}
       </Screen>
 
-      <MarketSheet open={!!buying && !!me} label="선수 영입" onClose={closeSheets}>
+      <MarketSheet open={!!buying && !!me} label={L.sheetBuy} onClose={closeSheets}>
         {buying && me ? (
           <>
             <View
@@ -1430,9 +1454,9 @@ export default function Market() {
               </View>
               <View style={{ flexDirection: 'row', gap: 8, alignSelf: 'stretch' }}>
                 {[
-                  ['레전드 점수', buying.card.legendScore.toLocaleString()],
-                  ['이적', `${buying.card.transfers}회`],
-                  ['포지션', POS_LABEL[buying.card.pos]],
+                  [L.detailLegend, buying.card.legendScore.toLocaleString(intlLocale())],
+                  [L.detailTransfers, L.transferTimes({ n: buying.card.transfers })],
+                  [L.position, POS[buying.card.pos].label],
                 ].map(([k, v]) => (
                   <View
                     key={k}
@@ -1457,13 +1481,13 @@ export default function Market() {
               }}
             >
               <Txt v="h2" accessibilityRole="header">
-                이 선수를 영입할까요?
+                {L.buyTitle}
               </Txt>
               <View style={{ gap: 8 }}>
-                <Line label="기준가 (최고 OVR 시즌 몸값)" value={fmtValue(buying.card.cardValue)} />
+                <Line label={L.baseLine} value={fmtValue(buying.card.cardValue)} />
                 <Line
                   big
-                  label="판매가"
+                  label={L.price}
                   value={fmtValue(buying.price)}
                   extra={
                     <Txt
@@ -1478,20 +1502,19 @@ export default function Market() {
                   }
                 />
                 <View style={{ height: 1, backgroundColor: c.line }} />
-                <Line label="지금 구단 자금" value={fundsText(me.balance)} />
+                <Line label={L.fundsNow} value={fundsText(me.balance)} />
                 <Line
                   strong
-                  label="영입 뒤 남는 자금"
+                  label={L.fundsAfter}
                   value={
-                    me.balance >= buying.price ? fundsText(me.balance - buying.price) : '모자라요'
+                    me.balance >= buying.price ? fundsText(me.balance - buying.price) : L.notEnough
                   }
                 />
               </View>
               <MarketChart card={buying.card} />
               <View style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}>
                 <Txt tone="muted" style={tiny}>
-                  영입한 선수는 바로 팀에 넣을 수 있어요. 다시 팔 수는 있지만 방출해서 자금으로 바꿀
-                  수는 없어요.
+                  {L.buyNote}
                 </Txt>
               </View>
               {buyBlocked ? (
@@ -1502,7 +1525,7 @@ export default function Market() {
               {errText}
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Btn style={{ flex: 1 }} testID="market-sheet-close" onPress={closeSheets}>
-                  닫기
+                  {L.close}
                 </Btn>
                 {myListingIds.has(buying.id) ? (
                   <Btn
@@ -1510,7 +1533,7 @@ export default function Market() {
                     disabled={busy}
                     onPress={() => void run(() => cancelListing(buying.id), MARKET_TOAST.unlisted)}
                   >
-                    판매 내리기
+                    {L.unlist}
                   </Btn>
                 ) : (
                   <Btn
@@ -1522,7 +1545,7 @@ export default function Market() {
                       void run(() => buyListing(buying.id, buying.price), MARKET_TOAST.bought)
                     }
                   >
-                    {`${fmtValue(buying.price)}에 영입하기`}
+                    {L.buyFor({ price: fmtValue(buying.price) })}
                   </Btn>
                 )}
               </View>
@@ -1531,7 +1554,7 @@ export default function Market() {
         ) : null}
       </MarketSheet>
 
-      <MarketSheet open={confirmRelease && !!me} label="선수 방출" onClose={closeSheets}>
+      <MarketSheet open={confirmRelease && !!me} label={L.sheetRelease} onClose={closeSheets}>
         <View
           style={{
             gap: 12,
@@ -1541,13 +1564,13 @@ export default function Market() {
           }}
         >
           <Txt v="h2" accessibilityRole="header">
-            선수 방출
+            {L.sheetRelease}
           </Txt>
           <Txt>{releaseConfirmText(pickedPlayers.length, pickedAmount)}</Txt>
           {errText}
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Btn style={{ flex: 1 }} testID="market-sheet-close" onPress={closeSheets}>
-              닫기
+              {L.close}
             </Btn>
             <Btn
               style={{ flex: 2 }}
@@ -1561,7 +1584,7 @@ export default function Market() {
                 )
               }
             >
-              {`${pickedPlayers.length}명 방출하기`}
+              {L.releaseBtn({ n: pickedPlayers.length })}
             </Btn>
           </View>
         </View>

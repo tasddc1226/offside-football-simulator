@@ -2,12 +2,13 @@
   // 경기 한 줄(최근 경기 · 최근 친선전). 누르면 그 경기의 결과를 연다.
   import type { TeamMatch } from '@offside/app-core/api/team';
   import { kstMonthDayTime } from '@offside/app-core/boardText';
-  import { outcomeOf as outcome } from '@offside/app-core/teamOwner';
+  import { outcomeLabel, outcomeOf as outcome } from '@offside/app-core/teamOwner';
+  import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import TeamLogo from './TeamLogo.svelte';
 
   let { m, onopen }: { m: TeamMatch; onopen: (m: TeamMatch) => void } = $props();
   const opp = $derived(m[m.mine === 'home' ? 'away' : 'home']);
-  const kind = $derived(m.friendly ? '친선전' : m.mine === 'home' ? '도전' : '도전받음');
+  const kind = $derived(m.friendly ? L.kindFriendly : m.mine === 'home' ? L.kindChallenge : L.kindChallenged);
 </script>
 
 <button
@@ -16,7 +17,7 @@
   data-team-match={m.friendly ? undefined : m.id}
   data-friendly-match={m.friendly ? m.id : undefined}
 >
-  <span class="tm-out" data-out={outcome(m)}>{outcome(m)}</span>
+  <span class="tm-out" data-out={outcome(m)}>{outcomeLabel(outcome(m))}</span>
   <TeamLogo logo={opp.logo} name={opp.name} size={28} decorative />
   <span class="tm-opp-info">
     <b>{m[m.mine].goals} : {opp.goals} {opp.name}</b>

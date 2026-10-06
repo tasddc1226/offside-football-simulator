@@ -8,10 +8,12 @@
   import { TICKER_POLL_SEC } from '@offside/contracts/polling';
   import { getTicker } from '@offside/app-core/api/client';
   import { clubById } from '@offside/game/clubs';
+  import { tn } from '@offside/game/i18n/names';
   import { agoKo } from '@offside/app-core/format';
   import { motionOK } from './motion.js';
   import { tickerItems, type TickerItem } from '@offside/app-core/ticker';
   import ClubMark from './ClubMark.svelte';
+  import { homeText as L } from '@offside/app-core/i18n/ko/home';
 
   /** 흐르는 속도(px/초). 한글 한 줄을 편히 읽을 만큼 천천히. */
   const SPEED = 42;
@@ -24,12 +26,8 @@
   let copyW = $state(0);
   let still = $state(0);
 
-  const TAG: Record<TickerItem['kind'], string> = {
-    transfer: '이적',
-    debut: '프로 입단',
-    first: '서버 최초',
-    record: '서버 신기록',
-  };
+  const tag = (kind: TickerItem['kind']): string =>
+    ({ transfer: L.tagTransfer, debut: L.tagDebut, first: L.tagFirst, record: L.tagRecord })[kind];
   const club = (id: string) => clubById(id)?.name ?? '';
   const ago = (at: string) => agoKo(now + skew - Date.parse(at));
   const duration = $derived(copyW ? copyW / SPEED : 0);
@@ -71,23 +69,23 @@
 
 {#snippet line(x: TickerItem)}
   <span class="tk-item" data-ticker-kind={x.kind}>
-    <b class="tk-tag {x.kind}">{TAG[x.kind]}</b>
+    <b class="tk-tag {x.kind}">{tag(x.kind)}</b>
     {#if 'age' in x}
-      <span class="tk-who">{x.who}<small>({x.age}세)</small></span>
-      <span class="tk-club"><ClubMark name={club(x.from)} id={x.from} size={14} />{club(x.from)}</span>
+      <span class="tk-who">{x.who}<small>{L.tickerAge({ age: x.age })}</small></span>
+      <span class="tk-club"><ClubMark name={club(x.from)} id={x.from} size={14} />{tn(club(x.from))}</span>
       <span class="tk-arrow">→</span>
-      <span class="tk-club"><ClubMark name={club(x.to)} id={x.to} size={14} /><strong>{club(x.to)}</strong></span>
+      <span class="tk-club"><ClubMark name={club(x.to)} id={x.to} size={14} /><strong>{tn(club(x.to))}</strong></span>
     {:else if 'text' in x}
-      <span>{x.text}</span>
+      <span>{tn(x.text)}</span>
       <span class="tk-who">— {x.who}</span>
     {/if}
     <span class="tk-ago">{ago(x.at)}</span>
   </span>
 {/snippet}
 
-<div class="home-ticker" role="marquee" aria-label="이적·서버 기록 소식" data-home-ticker>
+<div class="home-ticker" role="marquee" aria-label={L.tickerAria} data-home-ticker>
   {#if !items.length}
-    <span class="tk-item tk-idle"><b class="tk-tag">Transfer</b>이적 소식과 서버 최초 기록이 여기로 흘러요</span>
+    <span class="tk-item tk-idle"><b class="tk-tag">Transfer</b>{L.tickerIdle}</span>
   {:else if !motionOK}
     {@render line(items[still % items.length]!)}
   {:else}

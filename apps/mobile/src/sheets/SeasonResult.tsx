@@ -4,6 +4,8 @@ import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { visibleSeasonNotes } from '@offside/app-core/potential-view';
 import type { SheetView } from '@offside/app-core/sheets';
+import { sheetPlayText as L } from '@offside/app-core/i18n/ko/sheetPlay';
+import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
 import { NewTitles } from '../screens/game/NewTitles';
 import { alpha } from '../theme/colors';
 import { useColors } from '../theme/useColors';
@@ -52,10 +54,10 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
       <StatGrid
         mt={14}
         items={[
-          { key: 'apps', v: s.stats.apps, l: '출전' },
-          { key: 'goals', v: s.stats.goals, l: '골' },
+          { key: 'apps', v: s.stats.apps, l: sheetCoreText.tallyApps },
+          { key: 'goals', v: s.stats.goals, l: sheetCoreText.tallyGoals },
           { key: 'col', v: s.stats.col, l: s.stats.colLabel },
-          { key: 'rating', v: s.stats.rating, l: '평점' },
+          { key: 'rating', v: s.stats.rating, l: sheetCoreText.tallyRating },
         ]}
       />
       {s.honors.length ? (
@@ -67,7 +69,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           ))}
         </View>
       ) : (
-        <Txt tone="muted">이번 시즌 수상은 없었어요.</Txt>
+        <Txt tone="muted">{L.noHonors}</Txt>
       )}
       {s.promo ? (
         <Pop from={0.4} ms={400} delay={160}>
@@ -83,20 +85,21 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           >
             <Txt v="eyebrow">Promotion</Txt>
             <Txt bold style={{ color: c.accentText }}>
-              K리그1 승격 확정
+              {L.promoTitle}
             </Txt>
-            <Txt
-              v="sm"
-              tone="muted"
-            >{`이번 시즌 1위로 ${s.promo.club}의 승격이 확정됐어요. 다음 시즌은 K리그1에서 뛰어요.`}</Txt>
-            <Txt v="xs" tone="muted">{`${s.promo.down} · K리그2 강등`}</Txt>
+            <Txt v="sm" tone="muted">
+              {L.promoBodyApp({ club: s.promo.club })}
+            </Txt>
+            <Txt v="xs" tone="muted">
+              {L.promoDownApp({ club: s.promo.down })}
+            </Txt>
           </View>
         </Pop>
       ) : null}
       {s.comps.length ? (
         <View>
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
-            대회별 성적
+            {L.comps}
           </Txt>
           {s.comps.map((x, i) => (
             <Txt key={i} tone="muted">
@@ -108,7 +111,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
       {s.tours.length ? (
         <View>
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
-            국가대표 · 국제대회
+            {L.tours}
           </Txt>
           {s.tours.map((x, i) => (
             <View key={i} style={{ gap: 2 }}>
@@ -129,7 +132,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
       {s.gala.length ? (
         <View style={{ gap: 0 }}>
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
-            {"Ballon d'Or 시상식"}
+            {L.gala}
           </Txt>
           {s.gala.map((g, i) => (
             <Hl key={i}>
@@ -141,7 +144,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
       {s.miles.length ? (
         <View>
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
-            커리어 이정표
+            {L.miles}
           </Txt>
           {s.miles.map((m, i) => (
             <Txt key={i}>{`· ${m}`}</Txt>
@@ -153,14 +156,14 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
       {s.scoutHint ? (
         <View>
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
-            스카우트 한마디
+            {L.scoutHint}
           </Txt>
           <Txt>{`“${s.scoutHint}”`}</Txt>
         </View>
       ) : null}
       <View>
         <Txt v="eyebrow" style={{ marginBottom: 6 }}>
-          팬 반응
+          {L.fans}
         </Txt>
         <View style={{ gap: 6 }}>
           {s.fans.map((f, i) => (
@@ -186,7 +189,7 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           ))}
         </View>
       </View>
-      <Txt tone="muted">{`${s.age}세가 됐어요. 다음 시즌을 준비해요.`}</Txt>
+      <Txt tone="muted">{L.ageApp({ age: s.age })}</Txt>
     </>
   );
 }

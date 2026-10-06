@@ -8,6 +8,7 @@
   import { rnOf } from '../retiredNumber.svelte.js';
   import { toast } from '../helpers.js';
   import { cardFile, drawShareCard, loadCardFonts, shareCardData } from './shareCard.js';
+  import { shareText as L } from '@offside/app-core/i18n/ko/share';
 
   const { v }: { v: LegendView } = $props();
   const h = $derived(v.own!);
@@ -31,7 +32,7 @@
       if (shot) URL.revokeObjectURL(shot.url);
       shot = { file, url: URL.createObjectURL(file), canShare: !!navigator.canShare?.({ files: [file] }) };
     } catch {
-      toast('이미지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
+      toast(L.imageFailed);
     } finally {
       busy = false;
     }
@@ -40,7 +41,7 @@
   async function share() {
     if (!shot) return;
     try {
-      await navigator.share({ files: [shot.file], text: `${h.name}의 축구 인생. 오프사이드 offside-lab.com` });
+      await navigator.share({ files: [shot.file], text: L.imageText({ name: h.name }) });
     } catch (e) {
       // 공유 시트를 닫은 건 실패가 아니다.
       if ((e as DOMException)?.name !== 'AbortError') save();
@@ -54,22 +55,22 @@
 </script>
 
 <section class="card stack" data-share-image>
-  <div><div class="eyebrow">Share</div><h2>SNS 공유 이미지</h2></div>
+  <div><div class="eyebrow">Share</div><h2>{L.imageTitle}</h2></div>
   {#if shot}
-    <img class="share-image" src={shot.url} alt="{h.name} 커리어 공유 이미지" width="1080" height="1350" data-share-image-preview />
+    <img class="share-image" src={shot.url} alt={L.imageAlt({ name: h.name })} width="1080" height="1350" data-share-image-preview />
     <div class="share-actions">
-      <button class="btn" data-act="share-image-save" onclick={save}>이미지 저장</button>
+      <button class="btn" data-act="share-image-save" onclick={save}>{L.imageSave}</button>
       {#if shot.canShare}
-        <button class="btn btn-primary" data-act="share-image-send" onclick={share}>바로 공유하기</button>
+        <button class="btn btn-primary" data-act="share-image-send" onclick={share}>{L.imageSend}</button>
       {:else}
         <!-- 대표 칭호를 바꾼 뒤 다시 그릴 때. -->
-        <button class="btn btn-primary" data-act="share-image-remake" onclick={make} disabled={busy}>다시 만들기</button>
+        <button class="btn btn-primary" data-act="share-image-remake" onclick={make} disabled={busy}>{L.imageRemake}</button>
       {/if}
     </div>
   {:else}
-    <p class="muted fs-sm">인스타그램·카카오톡에 공유할 커리어 카드를 만들어요.</p>
+    <p class="muted fs-sm">{L.imageNote}</p>
     <button class="btn btn-primary btn-block" data-act="share-image-make" onclick={make} disabled={busy}>
-      {busy ? '만드는 중…' : '공유 이미지 만들기'}
+      {busy ? L.imageMaking : L.imageMake}
     </button>
   {/if}
 </section>

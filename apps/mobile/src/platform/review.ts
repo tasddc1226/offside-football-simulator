@@ -3,6 +3,7 @@ import { requireOptionalNativeModule } from 'expo';
 import { Linking, Platform } from 'react-native';
 import { loadKey, saveKey } from '@offside/game/season';
 import { createReviewPrompt } from '@offside/app-core/reviewPrompt';
+import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
 const HISTORY = 'offside_review_prompt_v1';
 export const reviewPrompt = createReviewPrompt({
@@ -35,7 +36,7 @@ export function reviewUrl(platform: string): string | null {
 /** 명시적으로 누른 버튼은 OS의 표시 제한과 관계없이 스토어로 간다. */
 export async function openReviewStore() {
   const url = reviewUrl(Platform.OS);
-  if (!url) throw new Error('이 기기에서는 스토어를 열 수 없어요.');
+  if (!url) throw new Error(shellMoreText.storeUnavailable);
   await Linking.openURL(url);
   try {
     reviewPrompt.manualOpened();

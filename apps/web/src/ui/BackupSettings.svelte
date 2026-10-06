@@ -8,20 +8,21 @@
   import { save, toast } from './helpers.js';
   import { goHome } from './nav.js';
   import { appState } from './state.svelte.js';
+  import { backupText as L } from '@offside/app-core/i18n/ko/backup';
 
   // 클립보드를 못 쓰는 브라우저에서 사용자가 직접 복사하도록 코드를 보여 주는 칸.
   let manualCode = $state('');
   let pasted = $state('');
   let fileInput = $state<HTMLInputElement>();
 
-  const FAIL_TEXT: Record<DecodeFail, string> = {
-    empty: '백업 코드를 붙여넣거나 백업 파일을 골라 주세요',
-    format: '백업 코드가 올바르지 않아요. 코드를 끝까지 복사했는지 확인해 주세요',
-    version: '이 백업은 지금 게임과 형식이 맞지 않아 불러올 수 없어요',
-    saveVersion: '이 백업은 지금 게임 버전과 맞지 않아 불러올 수 없어요',
-    save: '백업 안의 커리어 데이터가 올바르지 않아 불러올 수 없어요',
-    tooLarge: '백업 코드가 너무 커서 불러올 수 없어요',
-  };
+  const failText = (): Record<DecodeFail, string> => ({
+    empty: L.failEmptyWeb,
+    format: L.failFormat,
+    version: L.failVersion,
+    saveVersion: L.failSaveVersion,
+    save: L.failSave,
+    tooLarge: L.failTooLarge,
+  });
 
   /** 지금 진행 중인 세이브로 백업 JSON·코드를 만든다(못 만들면 null). */
   function build() {
@@ -38,7 +39,7 @@
     try {
       await navigator.clipboard.writeText(b.code);
       manualCode = '';
-      toast('백업 코드를 복사했어요');
+      toast(L.copied);
     } catch {
       manualCode = b.code; // 자동 복사 실패 — 칸을 열어 직접 복사하게 한다.
       queueMicrotask(() => {
@@ -46,7 +47,7 @@
         el?.focus();
         el?.select();
       });
-      toast('아래 코드를 길게 눌러 직접 복사해 주세요');
+      toast(L.copyManual);
     }
   }
 
@@ -58,7 +59,7 @@
     // 모바일은 공유 시트(파일 앱·카톡 나에게 보내기 등)가 가장 편하다.
     try {
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'OFFSIDE 커리어 백업' });
+        await navigator.share({ files: [file], title: L.shareTitle });
         return;
       }
     } catch (e) {
@@ -71,23 +72,23 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast('백업 파일을 저장했어요');
+    toast(L.fileSaved);
   }
 
   function importText(text: string) {
     const r = decodeBackup(text);
-    if (!r.ok) return toast(FAIL_TEXT[r.reason]);
+    if (!r.ok) return toast(failText()[r.reason]);
     const cur = appState.G;
     if (cur && !cur.retired) {
-      if (!confirm(`지금 진행 중인 ${cur.name} 선수의 커리어를 백업으로 바꿀까요? 되돌릴 수 없어요.`)) return;
+      if (!confirm(L.replaceConfirm({ name: cur.name }))) return;
     }
-    if (!applyBackup(r.backup, loadHOF())) return toast('저장 공간이 부족해 백업을 불러오지 못했어요. 현재 커리어는 그대로예요');
+    if (!applyBackup(r.backup, loadHOF())) return toast(L.noSpace);
     loadGame(); // 부팅과 같은 길로 저장을 읽는다(형식 변환·RNG 복원·밸런스)
     appState.report = null;
     pasted = '';
     manualCode = '';
     goHome();
-    toast('백업을 불러왔어요');
+    toast(L.restored);
   }
 
   async function importFile(e: Event) {
@@ -95,11 +96,11 @@
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    if (file.size > 12_000_000) return toast(FAIL_TEXT.tooLarge);
+    if (file.size > 12_000_000) return toast(failText().tooLarge);
     try {
       importText(await file.text());
     } catch {
-      toast('파일을 읽지 못했어요');
+      toast(L.fileReadFail);
     }
   }
 </script>
@@ -107,29 +108,29 @@
 <section class="card settings-card" data-settings="backup">
   <div class="settings-label">
     <small class="eyebrow">Backup</small>
-    <strong>진행 중 커리어 백업</strong>
-    <span class="muted">기기를 바꾸거나 카톡 등 앱 안 브라우저에서 옮길 때 쓰세요. 백업 코드는 다른 사람에게 보내지 마세요.</span>
+    <strong>{L.title}</strong>
+    <span class="muted">{L.bodyWeb}</span>
   </div>
   {#if appState.G}
     <div class="backup-actions" data-backup="export">
-      <button class="btn btn-sm" data-act="backup-copy" onclick={copyCode}>코드 복사</button>
-      <button class="btn btn-sm" data-act="backup-file" onclick={saveFile}>파일로 저장</button>
+      <button class="btn btn-sm" data-act="backup-copy" onclick={copyCode}>{L.copyCode}</button>
+      <button class="btn btn-sm" data-act="backup-file" onclick={saveFile}>{L.saveFile}</button>
     </div>
     {#if manualCode}
       <div class="field">
-        <label for="backup-code">백업 코드 (직접 복사)</label>
+        <label for="backup-code">{L.manualLabel}</label>
         <textarea id="backup-code" readonly rows="3" data-backup="code" value={manualCode} onfocus={(e) => e.currentTarget.select()}></textarea>
       </div>
     {/if}
   {/if}
   <div class="backup-import" data-backup="import">
     <div class="field">
-      <label for="backup-paste">백업 불러오기</label>
-      <textarea id="backup-paste" rows="3" placeholder="백업 코드를 여기에 붙여넣어요" autocomplete="off" autocapitalize="off" spellcheck="false" bind:value={pasted}></textarea>
+      <label for="backup-paste">{L.importLabel}</label>
+      <textarea id="backup-paste" rows="3" placeholder={L.pastePlaceholder} autocomplete="off" autocapitalize="off" spellcheck="false" bind:value={pasted}></textarea>
     </div>
     <div class="backup-actions">
-      <button class="btn btn-sm" data-act="backup-import" disabled={!pasted.trim()} onclick={() => importText(pasted)}>불러오기</button>
-      <button class="btn btn-sm" data-act="backup-pick" onclick={() => fileInput?.click()}>파일에서 불러오기</button>
+      <button class="btn btn-sm" data-act="backup-import" disabled={!pasted.trim()} onclick={() => importText(pasted)}>{L.importBtn}</button>
+      <button class="btn btn-sm" data-act="backup-pick" onclick={() => fileInput?.click()}>{L.pickFile}</button>
       <input bind:this={fileInput} type="file" accept=".json,application/json,text/plain" hidden data-backup="file" onchange={importFile} />
     </div>
   </div>

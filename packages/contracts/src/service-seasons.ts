@@ -92,8 +92,14 @@ export const previewSeasonAt = (now: string): number | null =>
   now < SERVICE_SEASONS[0]!.startsAt ? null : displaySeasonAt(now);
 
 /** 팀 시즌 이름(0 = 프리시즌). */
-export const teamSeasonName = (id: number): string =>
-  id === 0 ? '프리시즌' : (serviceSeason(id)?.name ?? `시즌 ${id}`);
+export const teamSeasonName = (id: number, lang: 'ko' | 'en' = 'ko'): string =>
+  lang === 'en'
+    ? id === 0
+      ? 'Preseason'
+      : `Season ${id}`
+    : id === 0
+      ? '프리시즌'
+      : (serviceSeason(id)?.name ?? `시즌 ${id}`);
 
 /** 고를 수 있는 팀 시즌(프리시즌 + 개막한 시즌, 오래된 순). */
 export const openTeamSeasons = (now: string): number[] => [

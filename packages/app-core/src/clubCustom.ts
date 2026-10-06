@@ -14,6 +14,7 @@ import {
 import type { GameState } from '@offside/game/types';
 import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
 import { apiFetch } from './api/client.js';
+import { clubSyncText } from './i18n/ko/clubSync.js';
 
 const KEY = 'ft_clubs';
 const PUSH_DELAY_MS = 1500;
@@ -21,13 +22,23 @@ const PUSH_DELAY_MS = 1500;
 /** local: 세션 없음(이 기기에만 저장) · syncing: 맞추는 중 · synced: 계정과 같음 · error: 네트워크/서버 오류 ·
  * full: 이미지 합계가 서버 한도를 넘어 보내지 않음(이 기기에는 남는다). */
 export type ClubSyncStatus = 'local' | 'syncing' | 'synced' | 'error' | 'full';
-/** 설정 화면이 상태마다 보여 주는 안내(웹·앱 공용). */
+/** 설정 화면이 상태마다 보여 주는 안내(웹·앱 공용). 읽을 때 지금 언어로 고른다. */
 export const CLUB_SYNC_TEXT: Record<ClubSyncStatus, string> = {
-  local: '이 기기에만 저장돼요. 구글 계정으로 로그인하면 다른 기기와 동기화돼요.',
-  syncing: '계정과 동기화하는 중…',
-  synced: '계정에 저장됐어요. 같은 계정으로 로그인한 기기에서도 쓰여요.',
-  error: '동기화하지 못했어요. 이 기기에는 저장됐고, 다음에 다시 시도해요.',
-  full: '엠블럼 이미지가 너무 많아 계정과 동기화하지 못해요. 이 기기에는 저장됐어요. 이미지를 몇 개 지우면 다시 동기화돼요.',
+  get local() {
+    return clubSyncText.syncLocal;
+  },
+  get syncing() {
+    return clubSyncText.syncSyncing;
+  },
+  get synced() {
+    return clubSyncText.syncSynced;
+  },
+  get error() {
+    return clubSyncText.syncError;
+  },
+  get full() {
+    return clubSyncText.syncFull;
+  },
 };
 export interface ClubCustomState {
   map: ClubCustomMap;

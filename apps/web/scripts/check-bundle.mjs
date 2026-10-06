@@ -10,7 +10,9 @@ import { fileURLToPath } from 'node:url';
 
 // T-10-051: 첫 화면 JS 전체 ~120KB(index 63 + season 51 + 작은 공유 청크) — 여유 약 13%로 잡는다.
 // T-10-096: 국적 표(211개국, 게임 엔진이 동기로 쓴다)로 +1.2KB — 생성 화면·영어 이름을 지연 청크로 떼고도 넘어 138KB로(사용자 결정).
-const LIMIT_BYTES = 138 * 1024;
+// T-11-106: 게임 엔진 문구를 네임스페이스로 옮기며(키 이름·함수 문구·getter) 첫 화면에 실린 엔진 청크가 +6KB —
+// 영어 사전은 지연 청크라 한국어 사용자가 받는 영어는 없다. 엔진을 첫 화면 밖으로 빼는 건 따로 할 일이라 141KB로.
+const LIMIT_BYTES = 141 * 1024;
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(scriptDir, '../dist');
@@ -65,6 +67,67 @@ console.log(`합계: ${totalKb} KB gzip (예산 ${LIMIT_BYTES / 1024} KB)`);
 
 if (totalGzipBytes > LIMIT_BYTES) {
   console.error(`첫 화면 JS gzip 합이 ${LIMIT_BYTES / 1024}KB 예산을 초과했다.`);
+  process.exit(1);
+}
+
+// T-11-102 화면 문구 네임스페이스(app-core i18n/ko/*.ts)는 파일째 청크에 실린다. 첫 화면 모듈이 큰 화면 네임스페이스의
+// 키 몇 개만 써도 그 화면 문구 전체가 첫 화면에 실리므로, 첫 화면에 실리는 네임스페이스를 아래로 고정한다
+// (docs/operations/i18n.md 규칙 8). 늘어나면 첫 화면이 쓰는 키만 작은 네임스페이스로 나누거나, 정말 필요하면 여기에 더한다.
+const EAGER_NAMESPACES = new Set([
+  // 게임 엔진(packages/game/src/i18n/ko) — 첫 화면에 실리는 엔진 모듈(season·military 청크)의 문구.
+  'gAttrLabel',
+  'gBoost',
+  'gComps',
+  'gData',
+  'gGkLabel',
+  'gLegend',
+  'gMilitary',
+  'gNational',
+  'gRarity',
+  'gRecords',
+  'gRoleName',
+  'gSeason',
+  'gStats',
+  'gSubs',
+  'gTitles',
+  'gTraining',
+  'gTurn',
+  // 화면(packages/app-core/src/i18n/ko)
+  'boardLabel',
+  'chatReject',
+  'clubSync',
+  'firstsTab',
+  'gamePotentialNote',
+  'hof',
+  'home',
+  'homeLive',
+  'legendToast',
+  'ownerConflict',
+  'settingsApi',
+  'sheetCore',
+  'shell',
+  'shellInstall',
+  'shellLogin',
+  'titleTag',
+]);
+const nsNames = new Set(
+  ['app-core', 'game'].flatMap((pkg) =>
+    readdirSync(path.resolve(scriptDir, `../../../packages/${pkg}/src/i18n/ko`))
+      .filter((f) => f.endsWith('.ts'))
+      .map((f) => f.slice(0, -3)),
+  ),
+);
+// 압축된 ns('이름', { … }) 호출 — 함수 이름은 바뀌어도 첫 인자 문자열과 객체 리터럴은 남는다.
+const NS_CALL = /\(\s*["'`]([A-Za-z]+)["'`]\s*,\s*\{/g;
+const eagerFound = new Set();
+for (const file of initialFiles)
+  for (const m of readFileSync(path.join(distAssetsDir, file), 'utf8').matchAll(NS_CALL))
+    if (nsNames.has(m[1])) eagerFound.add(m[1]);
+const unexpected = [...eagerFound].filter((n) => !EAGER_NAMESPACES.has(n));
+if (unexpected.length) {
+  console.error(
+    `첫 화면 청크에 예상하지 않은 문구 네임스페이스가 실렸다: ${unexpected.join(', ')}`,
+  );
   process.exit(1);
 }
 

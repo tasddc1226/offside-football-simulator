@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   import { onDestroy } from 'svelte';
   import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, presetLayout, positionRole, slotRating, slotFit, type FormationId, type TeamPosition } from '@offside/contracts/owner-team';
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
@@ -14,6 +15,7 @@
   import type { TeamLogo } from '@offside/contracts/team-logo';
   import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
   import { dur } from '../motion.js';
+  import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
   let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, wildcards, onassign, onauto, onsave }:
     { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
@@ -47,12 +49,12 @@
         : sort === 'fit' && selectedSlot !== null ? slotRating(positions[selectedSlot]!.slot, b) - slotRating(positions[selectedSlot]!.slot, a) || b.peak - a.peak : b.peak - a.peak || (b.legendScore ?? 0) - (a.legendScore ?? 0));
   });
 
-  function preset(f: FormationId) { formation = f; layout = null; selectedSlot = null; announcement = `${f} 배치로 바꿨어요.`; }
+  function preset(f: FormationId) { formation = f; layout = null; selectedSlot = null; announcement = L.presetAnnounce({ f }); }
   function openShare() {
     cancelDrag();
     selectedPlayer = null;
     selectedSlot = null;
-    shareData = { name: teamName || '내 팀', manager: managerName, seasonName, formation,
+    shareData = { name: teamName || L.myTeam, manager: managerName, seasonName, formation,
       logo: teamLogo ? { ...teamLogo } : null,
       layout: positions.map((p) => ({ ...p })), cells: cells.map((c) => ({ ...c })), lines: { ...lines }, draft: dirty };
   }
@@ -62,7 +64,7 @@
     const py = Math.round(Math.max(i === 0 ? 84 : 8, Math.min(i === 0 ? 94 : 82, y)) * 10) / 10;
     next[i] = { x: px, y: py, slot: positionRole(px, py, i) };
     layout = next; selectedSlot = i;
-    announcement = `${cells[i]?.name ?? '선수'}를 ${DETAIL_LABEL[next[i]!.slot]} 위치로 옮겼어요.`;
+    announcement = L.movedTo({ name: cells[i]?.name ?? L.playerFallback, pos: tn(DETAIL_LABEL[next[i]!.slot]) });
   }
   function pickPlayer(id: string) { if (suppressClick) return; selectedPlayer = selectedPlayer === id ? null : id; }
   function goToPitch() {
@@ -73,7 +75,7 @@
     if (suppressClick) return;
     selectedSlot = i;
     if (selectedPlayer) {
-      onassign(i, selectedPlayer); announcement = `${chosen ? nameOf(chosen) : '선수'}를 ${DETAIL_LABEL[positions[i]!.slot]} 자리에 넣었어요.`; selectedPlayer = null;
+      onassign(i, selectedPlayer); announcement = L.placedIn({ name: chosen ? nameOf(chosen) : L.playerFallback, pos: tn(DETAIL_LABEL[positions[i]!.slot]) }); selectedPlayer = null;
     }
   }
   function pointAt(x: number, y: number) {
@@ -91,7 +93,7 @@
   function place(e: MouseEvent) { if (selectedPlayer && !suppressClick && pitch) placeAt(selectedPlayer, e.clientX, e.clientY); }
   function keyMove(e: KeyboardEvent, i: number) {
     if (e.key === 'Escape') { selectedPlayer = null; selectedSlot = null; return; }
-    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); onassign(i, null); announcement = '선수를 라커룸으로 보냈어요.'; return; }
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); onassign(i, null); announcement = L.sentToLocker; return; }
     const delta: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     const direction = delta[e.key];
     if (!direction) return;
@@ -123,11 +125,11 @@
       suppressClick = true; setTimeout(() => (suppressClick = false), 0);
       const hit = document.elementFromPoint(e.clientX, e.clientY);
       if (hit?.closest('[data-team-locker]') && item.from !== null) {
-        onassign(item.from, null); announcement = '선수를 라커룸으로 보냈어요.';
+        onassign(item.from, null); announcement = L.sentToLocker;
       } else if (hit && pitch?.closest('[data-pitch-frame]')?.contains(hit)) {
         const target = hit.closest<HTMLElement>('[data-slot]');
         const i = target ? Number(target.dataset.slot) : null;
-        if (i !== null && i !== item.from && item.id) { onassign(i, item.id); selectedSlot = i; announcement = '선수 자리를 바꿨어요.'; }
+        if (i !== null && i !== item.from && item.id) { onassign(i, item.id); selectedSlot = i; announcement = L.swapped; }
         else if (item.from !== null) { const pt = pointAt(e.clientX, e.clientY); moveSlot(item.from, pt.x, pt.y); }
         else if (item.id) placeAt(item.id, e.clientX, e.clientY);
       }
@@ -142,15 +144,15 @@
 <svelte:window onpointermove={dragMove} onpointerup={end} onpointercancel={cancelDrag} onkeydown={(e) => { if (e.key === 'Escape') { cancelDrag(); selectedPlayer = null; selectedSlot = null; } }} />
 
 {#if editable || team}
-  <section class="ground-panel" aria-label="편성 그라운드">
+  <section class="ground-panel" aria-label={L.groundLabel}>
     <header class="ground-head">
-      <div><h2>그라운드</h2><p class="muted">선발 {filled} / {LINEUP_SIZE}명{#if wildcards} · <span class="wildcards" data-team-wildcards>{wildcards}</span>{/if}{#if layout} · 자유 배치{/if}</p></div>
+      <div><h2>{L.groundTitle}</h2><p class="muted">{L.startersCount({ n: filled, max: LINEUP_SIZE })}{#if wildcards} · <span class="wildcards" data-team-wildcards>{wildcards}</span>{/if}{#if layout}{L.freeLayout}{/if}</p></div>
       <div class="ground-actions">
-        {#if editable}<button class="text-button ground-auto" onclick={onauto} disabled={!players.length} data-act="team-auto">자동 배치</button>{/if}
-        <button class="ground-share" aria-label="SNS 공유 이미지 만들기" data-act="team-share-make" onclick={openShare}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V2m-4 4 4-4 4 4M5 9H3v8h14V9h-2" /></svg><span>공유</span></button>
+        {#if editable}<button class="text-button ground-auto" onclick={onauto} disabled={!players.length} data-act="team-auto">{L.autoPlace}</button>{/if}
+        <button class="ground-share" aria-label={L.shareMakeAria} data-act="team-share-make" onclick={openShare}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V2m-4 4 4-4 4 4M5 9H3v8h14V9h-2" /></svg><span>{L.share}</span></button>
       </div>
     </header>
-    <div class="hof-sorts ground-presets" role="group" aria-label="기본 포메이션">
+    <div class="hof-sorts ground-presets" role="group" aria-label={L.presetsLabel}>
       {#each FORMATION_IDS as f (f)}<button class="hof-sort" aria-pressed={!layout && formation === f} data-formation={f} disabled={!editable} onclick={() => preset(f)}>{f}</button>{/each}
     </div>
     <TeamPitch {formation} {cells} {layout} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} bind:element={pitch}
@@ -160,78 +162,78 @@
     {#if editable}
       <div class="placement-bar" aria-live="polite">
         {#if chosen}
-          <div class="selected-info"><b>{nameOf(chosen)}</b><span class="muted">그라운드의 자리나 빈 공간을 눌러요.</span></div>
-          <button class="text-button" onclick={() => (selectedPlayer = null)}>취소</button>
+          <div class="selected-info"><b>{nameOf(chosen)}</b><span class="muted">{L.tapSlot}</span></div>
+          <button class="text-button" onclick={() => (selectedPlayer = null)}>{L.cancel}</button>
         {:else if selectedSlot !== null}
           <div class="selected-head">
-            <div class="selected-info"><span><b>{selectedCell?.name}</b> · {DETAIL_LABEL[positions[selectedSlot]!.slot]}</span>
-              <span class="rating-comparison">{#if selectedCell?.player}최고 OVR {selectedCell.player.peak} → {/if}<b>포지션 OVR {selectedCell?.rating}</b>{#if selectedFit !== null} · 적합도 {selectedFit}%{/if}</span>
+            <div class="selected-info"><span><b>{selectedCell?.name}</b> · {tn(DETAIL_LABEL[positions[selectedSlot]!.slot])}</span>
+              <span class="rating-comparison">{#if selectedCell?.player}{L.peakArrow({ n: selectedCell.player.peak })}{/if}<b>{L.posOvr({ n: selectedCell?.rating ?? 0 })}</b>{#if selectedFit !== null}{L.fitPct({ n: selectedFit })}{/if}</span>
             </div>
-            <button class="close-selection" aria-label="선수 선택 해제" onclick={() => (selectedSlot = null)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button>
+            <button class="close-selection" aria-label={L.deselectAria} onclick={() => (selectedSlot = null)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button>
           </div>
-          {#if slots[selectedSlot]}<button class="text-button" onclick={() => selectedSlot !== null && onassign(selectedSlot, null)}>라커룸으로</button>{/if}
-        {:else}<p class="muted">선수 카드를 끌거나, 선수와 자리를 차례로 눌러요.</p>{/if}
+          {#if slots[selectedSlot]}<button class="text-button" onclick={() => selectedSlot !== null && onassign(selectedSlot, null)}>{L.toLocker}</button>{/if}
+        {:else}<p class="muted">{L.dragHint}</p>{/if}
       </div>
     {/if}
     <div class="rating-guide">
-      <details><summary>최고 OVR · 포지션 OVR 안내</summary>
-        <p>카드 숫자는 선수의 <b>최고 OVR</b>이에요. 카드 아래의 <b>포지션 OVR</b>이 팀 전력과 경기에 반영돼요.</p>
-        <p>옮긴 위치에 따라 포지션이 바뀌어요. 선수의 자리별 능력치가 있으면 그 값을, 없으면 최고 OVR에 포지션 적합도를 곱해요.</p>
-        <p>세부 포지션 기록이 없는 선수는 같은 포지션 계열에서도 95%를 적용해요. 예를 들어 최고 OVR이 85면 포지션 OVR은 81이에요.</p>
-        <p>‘추정 능력치’는 같은 포지션·유형의 은퇴 기록과 최고 OVR을 참고해 계산한 값이에요. 카드 표시용이라 경기 실력에는 영향을 주지 않아요.</p>
+      <details><summary>{L.guideTitle}</summary>
+        <p>{L.guide1Before}<b>{L.guide1Bold1}</b>{L.guide1Mid}<b>{L.guide1Bold2}</b>{L.guide1After}</p>
+        <p>{L.guide2}</p>
+        <p>{L.guide3}</p>
+        <p>{L.guide4}</p>
       </details>
     </div>
   </section>
 {/if}
 
 {#if editable}
-  <section class="locker-room card" data-team-locker class:drop-active={drag?.moving && drag.from !== null} aria-label="라커룸">
-    <div class="locker-head"><div><h2>라커룸</h2><p class="muted fs-sm">선수 {players.length}명 · 선발 {filled}명 · 대기 {players.length - filled}명</p></div><span class="locker-count">{roster.length}</span></div>
-    <p class="muted fs-sm">카드에는 최고 OVR이 표시돼요. 배치할 자리에 따라 실제 실력이 달라져요.</p>
+  <section class="locker-room card" data-team-locker class:drop-active={drag?.moving && drag.from !== null} aria-label={L.lockerTitle}>
+    <div class="locker-head"><div><h2>{L.lockerTitle}</h2><p class="muted fs-sm">{L.lockerCount({ n: players.length, starters: filled, bench: players.length - filled })}</p></div><span class="locker-count">{roster.length}</span></div>
+    <p class="muted fs-sm">{L.lockerNoteWeb}</p>
     {#if players.length}
       <div class="locker-tools">
-        <label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 6 6" /></svg><input type="search" bind:value={search} placeholder="선수 이름 검색" aria-label="선수 이름 검색" /></label>
-        <select bind:value={sort} aria-label="라커룸 정렬"><option value="peak">최고 OVR 순</option><option value="score">레전드 점수 순</option><option value="fit" disabled={selectedSlot === null}>선택 자리 실력 순</option></select>
+        <label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 6 6" /></svg><input type="search" bind:value={search} placeholder={L.searchPlaceholder} aria-label={L.searchPlaceholder} /></label>
+        <select bind:value={sort} aria-label={L.sortAria}><option value="peak">{L.sortPeakOpt}</option><option value="score">{L.sortScoreOpt}</option><option value="fit" disabled={selectedSlot === null}>{L.sortFitOpt}</option></select>
       </div>
-      <div class="hof-sorts locker-filters" role="group" aria-label="선수 포지션 필터">
-        {#each [['all', '전체'], ['FW', '공격수'], ['MF', '미드필더'], ['DF', '수비수'], ['GK', '골키퍼']] as [key, label] (key)}
+      <div class="hof-sorts locker-filters" role="group" aria-label={L.posFilterAria}>
+        {#each [['all', L.posAllWeb], ['FW', L.posFwWeb], ['MF', L.posMfWeb], ['DF', L.posDfWeb], ['GK', L.posGkWeb]] as [key, label] (key)}
           <button class="hof-sort" aria-pressed={position === key} onclick={() => (position = key as PosGroup | 'all')}>{label}</button>
         {/each}
       </div>
-      <label class="starter-toggle"><input type="checkbox" bind:checked={includeStarters} /> 선발 선수 포함</label>
+      <label class="starter-toggle"><input type="checkbox" bind:checked={includeStarters} /> {L.includeStarters}</label>
       <div class="locker-grid">
         {#each roster as p (p.careerId)}
           {@const at = slots.indexOf(p.careerId)}
           {@const country = NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)}
           <article class="locker-player" class:chosen={selectedPlayer === p.careerId} data-locker-player={p.careerId}>
-            <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label="{nameOf(p)}{country ? ` · ${country.ko}` : ''} · {POS_LABEL[p.pos]} · 최고 OVR {p.peak} · {attrLine(p) ?? '능력치 기록 없음'} 선택" onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
+            <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label={L.lockerPickAria({ who: `${nameOf(p)}${country ? ` · ${tn(country.ko)}` : ''}`, pos: tn(POS_LABEL[p.pos]), peak: p.peak, attrs: attrLine(p) ?? L.noAttrs })} onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
               <PlayerCard player={p} name={nameOf(p)} rating={p.peak} role={detailPosOf(p)} />
             </button>
-            <span class="roster-state" class:starting={at >= 0}>{at >= 0 ? `선발 · ${positions[at]!.slot}` : '대기'}</span>
-            <button class="drag-handle" aria-label="{nameOf(p)} 끌어 배치" onpointerdown={(e) => start(e, p.careerId, null)} onclick={() => pickPlayer(p.careerId)}><svg viewBox="0 0 18 12" aria-hidden="true"><path d="M3 2h2M3 6h2M3 10h2M8 2h2M8 6h2M8 10h2M13 2h2M13 6h2M13 10h2" /></svg><span>끌어 배치</span></button>
+            <span class="roster-state" class:starting={at >= 0}>{at >= 0 ? L.rosterStarting({ slot: positions[at]!.slot }) : L.rosterBench}</span>
+            <button class="drag-handle" aria-label={L.dragAria({ name: nameOf(p) })} onpointerdown={(e) => start(e, p.careerId, null)} onclick={() => pickPlayer(p.careerId)}><svg viewBox="0 0 18 12" aria-hidden="true"><path d="M3 2h2M3 6h2M3 10h2M8 2h2M8 6h2M8 10h2M13 2h2M13 6h2M13 10h2" /></svg><span>{L.dragLabel}</span></button>
           </article>
-        {:else}<p class="locker-empty muted">조건에 맞는 선수가 없어요.</p><button class="text-button" onclick={() => { search = ''; position = 'all'; includeStarters = true; }}>필터 초기화</button>{/each}
+        {:else}<p class="locker-empty muted">{L.noMatch}</p><button class="text-button" onclick={() => { search = ''; position = 'all'; includeStarters = true; }}>{L.resetFilter}</button>{/each}
       </div>
-    {:else}<p class="muted">{seasonName}에 뛰고 은퇴한 선수가 아직 없어요. 이번 시즌에 커리어를 끝까지 뛰면 라커룸에 들어와요.</p>{/if}
+    {:else}<p class="muted">{L.noRetired({ season: seasonName })}</p>{/if}
   </section>
   {#if chosen || dirty || saving}
     <div class="lineup-action-space" class:two-rows={chosen && (dirty || saving)} aria-hidden="true"></div>
     <div class="lineup-actions">
       {#if chosen}
         <div class="selection-jump" role="status">
-          <span><b>{nameOf(chosen)}</b><small class="muted">선택됨</small></span>
-          <button class="btn btn-sm" onclick={goToPitch} data-act="team-to-pitch">그라운드로</button>
-          <button class="close-selection" aria-label="선수 선택 해제" onclick={() => (selectedPlayer = null)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button>
+          <span><b>{nameOf(chosen)}</b><small class="muted">{L.chosen}</small></span>
+          <button class="btn btn-sm" onclick={goToPitch} data-act="team-to-pitch">{L.toGround}</button>
+          <button class="close-selection" aria-label={L.deselectAria} onclick={() => (selectedPlayer = null)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button>
         </div>
       {/if}
-      {#if dirty || saving}<div class="lineup-save"><span class="fs-sm" role="status">바꾼 내용을 저장해요</span><button class="btn btn-primary" onclick={onsave} disabled={saving || !nameOk} data-act="team-save">{saving ? '저장 중…' : team ? '변경 저장' : '팀 만들기'}</button></div>{/if}
+      {#if dirty || saving}<div class="lineup-save"><span class="fs-sm" role="status">{L.saveNote}</span><button class="btn btn-primary" onclick={onsave} disabled={saving || !nameOk} data-act="team-save">{saving ? L.saving : team ? L.saveChangesWeb : L.createTeam}</button></div>{/if}
     </div>
   {/if}
 {/if}
 <span class="sr-only" aria-live="polite">{announcement}</span>
 {#if drag?.moving}
   <div class="drag-ghost" style:left="{drag.x}px" style:top="{drag.y}px" aria-hidden="true">
-    <PlayerCard player={ghost} name={ghost ? nameOf(ghost) : cells[drag.from ?? 0]?.name ?? '유스 선수'} rating={ghost?.peak ?? 50} role={ghost?.dpos ?? (drag.from !== null ? positions[drag.from]!.slot : 'ST')} compact youth={!ghost} />
+    <PlayerCard player={ghost} name={ghost ? nameOf(ghost) : cells[drag.from ?? 0]?.name ?? L.youthFallback} rating={ghost?.peak ?? 50} role={ghost?.dpos ?? (drag.from !== null ? positions[drag.from]!.slot : 'ST')} compact youth={!ghost} />
   </div>
 {/if}
 {#if shareData}<TeamShare data={shareData} onclose={() => (shareData = null)} />{/if}

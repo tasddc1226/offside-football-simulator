@@ -14,7 +14,7 @@
   import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
   import { fmtValue } from '@offside/app-core/format';
-  import { FOUNDER_LABEL } from '@offside/app-core/friendText';
+  import { founderLabel } from '@offside/app-core/friendText';
   import { appState, type TeamView } from './state.svelte.js';
   import { accountCache } from './account-state.svelte.js';
   import { isMember } from '@offside/app-core/account';
@@ -25,6 +25,8 @@
   import { startGoogleLogin } from './login.js';
   import { go } from './nav.js';
   import { googleStartUrl } from '@offside/app-core/api/client';
+  import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
+  import { accountText as A } from '@offside/app-core/i18n/ko/account';
 
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
@@ -83,98 +85,98 @@
   <Topbar />
   <header class="settings-head">
     <div class="eyebrow">Owner</div>
-    <h1>구단주</h1>
+    <h1>{L.title}</h1>
   </header>
 
   {#if linked || guest}
-    <section class="card owner-hub" data-owner-summary aria-label="구단주 요약">
+    <section class="card owner-hub" data-owner-summary aria-label={L.summaryLabel}>
       <div class="owner-id">
-        <span class="owner-avatar" aria-hidden="true">{(nickname ?? '구').slice(0, 1)}</span>
+        <span class="owner-avatar" aria-hidden="true">{(nickname ?? L.avatarInitial).slice(0, 1)}</span>
         <div class="owner-who">
-          <b>{guest ? '게스트 구단주' : (nickname ?? '구단주')}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{FOUNDER_LABEL}</span>{/if}</b>
-          <span class="muted fs-sm">{guest ? '기록은 이 기기에만 저장돼요' : card?.team ? `${card.team.name} · ${card.season}` : 'Google 계정으로 로그인했어요'}</span>
+          <b>{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}</b>
+          <span class="muted fs-sm">{guest ? L.guestSub : card?.team ? `${card.team.name} · ${card.season}` : L.signedInSubWeb}</span>
         </div>
       </div>
       {#if (guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue)}
-        <p class="muted fs-sm owner-empty">첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.</p>
+        <p class="muted fs-sm owner-empty">{L.emptySummary}</p>
       {:else}
       <dl class="owner-stats">
-        <div class="owner-value" data-owner-value><dt>구단 가치</dt><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
-        <div><dt>은퇴 선수</dt><dd>{summary ? `${num(summary.players)}명` : '–'}</dd></div>
-        <div><dt>레전드 점수</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
-        <div><dt>영구결번</dt><dd>{summary ? `${summary.retired}개` : '–'}</dd></div>
+        <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
+        <div><dt>{L.statRetired}</dt><dd>{summary ? L.playersCount({ n: summary.players, text: num(summary.players) }) : '–'}</dd></div>
+        <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
+        <div><dt>{L.statRetiredNumbers}</dt><dd>{summary ? L.numbersCount({ n: summary.retired }) : '–'}</dd></div>
       </dl>
       {/if}
-      {#if linked}<p class="muted fs-sm owner-empty">구단 자금 {market ? fundsText(market.balance) : '–'}</p>{/if}
+      {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}</p>{/if}
     </section>
     <AdSlot place="owner-summary" />
   {/if}
 
   <!-- T-10-092 내 팀: 구글로 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. -->
   {#if linked}
-    <section class="card owner-team" aria-label="내 팀" data-owner-team>
+    <section class="card owner-team" aria-label={L.myTeam} data-owner-team>
       <div class="owner-team-head">
         {#if card?.team}<TeamLogo logo={card.team.logo} name={card.team.name} size={44} decorative />{/if}
         <div class="owner-who">
           <small class="eyebrow">My team{card?.season ? ` · ${card.season}` : ''}</small>
-          <h2>{card?.team?.name ?? '내 팀'}</h2>
-          {#if card?.team}<span class="muted fs-sm">{card.team.manager} 감독 · {card.team.formation}</span>{/if}
+          <h2>{card?.team?.name ?? L.myTeam}</h2>
+          {#if card?.team}<span class="muted fs-sm">{L.manager({ manager: card.team.manager, formation: card.team.formation })}</span>{/if}
         </div>
         {#if card?.team}
-          <div class="owner-ovr" aria-label="팀 OVR {card.team.ovr}"><small>OVR</small><b>{card.team.ovr}</b></div>
+          <div class="owner-ovr" aria-label={L.teamOvr({ ovr: card.team.ovr })}><small>OVR</small><b>{card.team.ovr}</b></div>
         {/if}
       </div>
       {#if card?.team}
         <dl class="owner-stats owner-team-stats" data-owner-team-record>
-          <div><dt>전적</dt><dd>{recordText(card.team.record)}</dd></div>
-          <div><dt>레이팅</dt><dd>{num(card.team.rating)}</dd></div>
-          <div><dt>오늘 경기</dt><dd>{card.left}/{card.perDay}</dd></div>
+          <div><dt>{L.statRecord}</dt><dd>{recordText(card.team.record)}</dd></div>
+          <div><dt>{L.statRating}</dt><dd>{num(card.team.rating)}</dd></div>
+          <div><dt>{L.statToday}</dt><dd>{card.left}/{card.perDay}</dd></div>
         </dl>
         <div class="owner-actions">
-          <button class="btn" data-act="team" onclick={() => openTeam()}>내 팀</button>
-          <button class="btn btn-accent" data-act="owner-play" disabled={!!card.playHint} onclick={() => openTeam('opponents')}>경기하기</button>
+          <button class="btn" data-act="team" onclick={() => openTeam()}>{L.myTeam}</button>
+          <button class="btn btn-accent" data-act="owner-play" disabled={!!card.playHint} onclick={() => openTeam('opponents')}>{L.play}</button>
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
       {:else}
         <p class="muted fs-sm">
-          {card ? ownerTeamEmptyText(card) : cardFailed ? '시즌마다 은퇴한 선수로 팀을 꾸려 겨루고, 라이브 랭킹과 구단 업적을 채워요.' : '불러오는 중…'}
+          {card ? ownerTeamEmptyText(card) : cardFailed ? L.teamFailed : L.loading}
         </p>
         <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={() => openTeam()}>
-          {card && card.players > 0 ? '팀 만들기' : '내 팀'}
+          {card && card.players > 0 ? L.buildTeam : L.myTeam}
         </button>
       {/if}
     </section>
-    <section class="card owner-market" aria-label="이적시장" data-owner-market>
+    <section class="card owner-market" aria-label={L.marketTitle} data-owner-market>
       <div class="owner-who">
         <small class="eyebrow">Transfer market</small>
-        <h2>이적시장</h2>
-        <span class="muted fs-sm">구단 자금 {market ? fundsText(market.balance) : '–'} · 이번 시즌 선수를 사고팔아요</span>
+        <h2>{L.marketTitle}</h2>
+        <span class="muted fs-sm">{L.marketSub({ funds: market ? fundsText(market.balance) : '–' })}</span>
       </div>
-      <button class="btn" data-act="market" onclick={() => go('market')}>열기</button>
+      <button class="btn" data-act="market" onclick={() => go('market')}>{L.open}</button>
     </section>
   {:else if guest}
-    <section class="card owner-team" aria-label="내 팀" data-owner-team-locked>
+    <section class="card owner-team" aria-label={L.myTeam} data-owner-team-locked>
       <small class="eyebrow">My team</small>
-      <h2>내 팀</h2>
+      <h2>{L.myTeam}</h2>
       <div class="owner-lock" aria-hidden="true">
         {#each [1, 4, 3, 3] as n, r (r)}
           <span class="owner-lock-row">{#each { length: n } as _, i (i)}<i></i>{/each}</span>
         {/each}
-        <span class="owner-lock-badge">🔒︎ 로그인하면 열려요</span>
+        <span class="owner-lock-badge">{L.lockBadge}</span>
       </div>
       <p class="muted fs-sm">{ownerLockedText(localCount)}</p>
       <!-- 로그아웃·탈퇴 직후엔 세션 쿠키가 없으므로 링크로 바로 가지 않고 startGoogleLogin이 새 익명 세션부터 받는다. -->
-      <a class="btn btn-primary btn-block" data-act="google-login" href={googleStartUrl()} onclick={(e) => { e.preventDefault(); void startGoogleLogin(null); }}>구글로 로그인</a>
+      <a class="btn btn-primary btn-block" data-act="google-login" href={googleStartUrl()} onclick={(e) => { e.preventDefault(); void startGoogleLogin(null); }}>{A.loginGoogle}</a>
     </section>
   {/if}
 
   {#if !guest || localCount > 0}<MyPlayers onrows={(rows) => (summary = ownerSummary(rows))} />{/if}
 
-  <section class="card settings-card" id="account-slot" aria-label="계정">
+  <section class="card settings-card" id="account-slot" aria-label={L.accountSection}>
     <Account {admin} />
     {#if admin}
       <button class="settings-row settings-trigger owner-admin" data-act="admin" onclick={() => (appState.screen = 'admin')}>
-        <span class="settings-label"><strong>운영 도구</strong></span>
+        <span class="settings-label"><strong>{L.adminTools}</strong></span>
         <i class="settings-chev" aria-hidden="true">›</i>
       </button>
     {/if}

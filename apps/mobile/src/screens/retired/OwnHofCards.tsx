@@ -10,6 +10,7 @@ import { KeepLoginCard } from './KeepLoginCard';
 import { PublishCard } from './PublishCard';
 import { ShareImageCard } from './ShareImageCard';
 import { TitlePickCard } from './TitlePickCard';
+import { hofOwnText as L } from '@offside/app-core/i18n/ko/hofOwn';
 
 // 은퇴 리포트와 같은 v를 받는다(공유 이미지가 리포트와 같은 값을 그리게). v.own이 있을 때만 그린다.
 export function OwnHofCards({ v }: { v: LegendView }) {
@@ -29,7 +30,7 @@ export function OwnHofCards({ v }: { v: LegendView }) {
           <View>
             <Txt v="eyebrow">Hall of Fame</Txt>
             <Txt v="h2" accessibilityRole="header">
-              내 선수에만 남는 기록
+              {L.shortTitle}
             </Txt>
           </View>
           <Txt v="sm" tone="muted">

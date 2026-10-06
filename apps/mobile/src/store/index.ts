@@ -11,6 +11,7 @@ import { initialNewsState } from '@offside/app-core/news';
 import type { RnAlert, RnResults } from '@offside/app-core/retiredNumber';
 import type { Profile } from '@offside/app-core/api/client';
 import { loadKey } from '@offside/game/season';
+import { getLocale, type Locale } from '@offside/app-core/i18n/core';
 
 export const appState = proxy<AppState>(initialAppState());
 export const sheetState = proxy<SheetState>(initialSheetState());
@@ -36,8 +37,10 @@ export const pickedTitles = proxy<Record<string, string | null>>({});
 export const legendTitleOf = (careerId: string | undefined, saved: string | null | undefined) =>
   retiredTitleOf(careerId, saved, pickedTitles);
 
-/** 기기 설정. theme: 설정에서 고른 테마(null이면 시스템) · motionOK: 시스템 '동작 줄이기'가 꺼져 있다. */
-export const prefs = proxy<{ theme: 'light' | 'dark' | null; motionOK: boolean }>({
+/** 기기 설정. theme: 설정에서 고른 테마(null이면 시스템) · motionOK: 시스템 '동작 줄이기'가 꺼져 있다 ·
+ * lang: 화면 문구 언어(T-11-102, 바뀌면 _layout이 루트를 다시 그린다). */
+export const prefs = proxy<{ theme: 'light' | 'dark' | null; motionOK: boolean; lang: Locale }>({
   theme: loadKey<'light' | 'dark'>('ft_theme'),
   motionOK: true,
+  lang: getLocale(),
 });

@@ -6,6 +6,7 @@ import {
   type AppNotification,
 } from '@offside/contracts';
 import { apiFetch } from './api/client.js';
+import { inboxText as L } from './i18n/ko/inbox.js';
 
 export const INBOX_CACHE_MS = 5 * 60_000;
 export const initialInboxState = () => ({
@@ -50,7 +51,7 @@ export function createNotificationInbox(state: InboxState) {
     state.error = '';
     const work = task(() => version === epoch)
       .catch(() => {
-        if (version === epoch) state.error = '알림을 불러오지 못했어요. 다시 시도해 주세요.';
+        if (version === epoch) state.error = L.loadFailed;
       })
       .finally(() => {
         if (version === epoch) {

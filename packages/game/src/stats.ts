@@ -4,6 +4,7 @@ import { ovr, spreadAttr } from './attributes.js';
 import { clamp, gauss, rnd } from './rng.js';
 import type { GameState } from './types.js';
 import { labelOf } from './player.js';
+import { gStatsText as L } from './i18n/ko/gStats.js';
 
 export const gradeOf = (p: number) =>
   p >= 90 ? 'S' : p >= 84 ? 'A' : p >= 78 ? 'B' : p >= 70 ? 'C' : 'D';
@@ -44,10 +45,10 @@ export function potReveal(s: GameState) {
 }
 /** T-10-075 달성도 한 줄. */
 export function potAchText(ach: number): string {
-  if (ach >= 102) return '타고난 한계를 넘어섰어요.';
-  if (ach >= 97) return '재능을 끝까지 끌어냈어요.';
-  if (ach >= 92) return '조금은 남겨 두고 떠났어요.';
-  return '다 피우지 못한 재능이었어요.';
+  if (ach >= 102) return L.potAch0;
+  if (ach >= 97) return L.potAch1;
+  if (ach >= 92) return L.potAch2;
+  return L.potAch3;
 }
 const BLOOM_DRIFT = 1.2,
   BLOOM_AGE = 25;
@@ -64,18 +65,9 @@ export function bloomTick(s: GameState): string | null {
   s.bloom = Math.round((s.bloom - k) * 10) / 10;
   const after = potLabel(s);
   if (after === before) return null;
-  const note =
-    k > 0
-      ? '늦게 핀 재능이라는 평가입니다.'
-      : k < 0
-        ? '성장 곡선이 예상보다 일찍 꺾였다는 평가입니다.'
-        : '평가 범위가 좁혀졌습니다.';
-  log(
-    s,
-    `스카우트 재평가: 잠재력 ${before} → ${after}등급. ${note}`,
-    k > 0 ? 'good' : k < 0 ? 'bad' : '',
-  );
-  return `스카우트 재평가 · 잠재력 ${before} → ${after}`;
+  const note = k > 0 ? L.rescoutLate : k < 0 ? L.rescoutEarly : L.rescoutNarrow;
+  log(s, L.rescoutLog({ before, after, note }), k > 0 ? 'good' : k < 0 ? 'bad' : '');
+  return L.rescoutNote({ before, after });
 }
 // ───────── 상태 변경 헬퍼 ─────────
 export let JITTER: boolean | 'safe' = false;
@@ -149,13 +141,14 @@ export function snapshot(s: GameState): Snapshot {
     stories: Object.keys(s.story || {}).filter((k) => !s.story[k]!.done),
   } as Snapshot;
 }
-const NAMED_CHIPS = [
-  ['ovr', 'OVR'],
-  ['cond', '컨디션'],
-  ['morale', '사기'],
-  ['fame', '인기'],
-  ['trust', '감독 신뢰'],
-] as const;
+const namedChips = () =>
+  [
+    ['ovr', 'OVR'],
+    ['cond', L.chipCond],
+    ['morale', L.chipMorale],
+    ['fame', L.chipFame],
+    ['trust', L.chipTrust],
+  ] as const;
 export type Chip = { label: string; d: number; money?: boolean; text?: string; bad?: boolean };
 export function diffChips(s: GameState, a: Snapshot, b: Snapshot): Chip[] {
   const out: Chip[] = [];
@@ -163,13 +156,18 @@ export function diffChips(s: GameState, a: Snapshot, b: Snapshot): Chip[] {
     const d = Math.round(b[k]!) - Math.round(a[k]!);
     if (d) out.push({ label: labelOf(s, k), d });
   }
-  for (const [k, label] of NAMED_CHIPS) {
+  for (const [k, label] of namedChips()) {
     const d = Math.round(b[k] - a[k]);
     if (d) out.push({ label, d });
   }
-  if (b.money !== a.money) out.push({ label: '자금', d: b.money! - a.money!, money: true });
+  if (b.money !== a.money) out.push({ label: L.chipMoney, d: b.money! - a.money!, money: true });
   if (b.injury! > a.injury!)
-    out.push({ label: '부상', d: b.injury! - a.injury!, text: `${b.injury}경기 결장`, bad: true });
-  if (b.potB! > a.potB!) out.push({ label: '잠재력', d: 1, text: '상승' });
+    out.push({
+      label: L.chipInjury,
+      d: b.injury! - a.injury!,
+      text: L.chipOut({ n: b.injury }),
+      bad: true,
+    });
+  if (b.potB! > a.potB!) out.push({ label: L.chipPot, d: 1, text: L.chipPotUp });
   return out;
 }

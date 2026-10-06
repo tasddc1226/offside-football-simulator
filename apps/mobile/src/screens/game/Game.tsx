@@ -7,12 +7,15 @@ import { useSnapshot } from 'valtio';
 import { posLabel } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
 import { leagueOf, roleOf, fmtMoney, focusOf, labelOf } from '@offside/game/engine';
+import { tn } from '@offside/game/i18n/names';
 import { mainTitle } from '@offside/game/titles';
 import { marketValue } from '@offside/game/season';
 import type { GameState } from '@offside/game/types';
 import type { Tab } from '@offside/app-core/state';
 import { fmtValue } from '@offside/app-core/format';
 import { seasonAction } from '@offside/app-core/seasonAction';
+import { gameText as T } from '@offside/app-core/i18n/ko/game';
+import { playerNudgeText as PN } from '@offside/app-core/i18n/ko/playerNudge';
 import { CareerTab } from '../../components/CareerTab';
 import { advance, buzz, nextPending } from '../../game/host';
 import { goHome } from '../../game/nav';
@@ -117,15 +120,17 @@ export default function Game() {
   const role = roleOf(s);
   // T-10-100 연봉 옆에 몸값(이적료 기준)을 같이 둔다 — 연봉을 몸값으로 읽지 않게.
   const contract = [
-    s.contract ? `연봉 ${fmtMoney(s.contract.salary)}` : L.amateur ? '아마추어' : '',
-    L.amateur ? '' : `몸값 ${fmtValue(marketValue(s))}`,
+    s.contract ? T.salary({ v: fmtMoney(s.contract.salary) }) : L.amateur ? T.amateur : '',
+    L.amateur ? '' : T.value({ v: fmtValue(marketValue(s)) }),
   ]
     .filter(Boolean)
     .join(' · ');
   const title = mainTitle(s);
-  const focusName = `주력 ${focusOf(s)
-    .map((k) => labelOf(s, k))
-    .join('·')}`;
+  const focusName = T.focus({
+    names: focusOf(s)
+      .map((k) => labelOf(s, k))
+      .join('·'),
+  });
 
   // T-11-036 엄지 영역 고정 진행 바(웹 Game.svelte와 같다): 시즌 탭에서는 구간 진행 버튼과 그 위 한 줄 준비 요약(훈련·자기
   // 투자·컨디션)을, 다른 탭에서도 이벤트·시즌 결산이 대기 중이면 그걸 여는 버튼을 띄운다. 요약을 누르면 '다음 구간 준비' 카드로 간다.
@@ -158,16 +163,16 @@ export default function Game() {
     key,
     label,
     active: tab === key,
-    hint: key === 'player' && playerHint ? '잠재력 안내' : undefined,
+    hint: key === 'player' && playerHint ? PN.tabHint : undefined,
     onPress: () => switchTab(key),
   });
   // 게임 탭 4개 + 가운데 홈. 홈은 화면을 떠나는 버튼이다.
   const items: TabItem[] = [
-    tabItem('season', '시즌'),
-    tabItem('player', '선수'),
-    { key: 'home', label: '홈', active: false, onPress: goHome },
-    tabItem('career', '커리어'),
-    tabItem('trophy', '트로피'),
+    tabItem('season', T.tabSeason),
+    tabItem('player', T.tabPlayer),
+    { key: 'home', label: T.tabHome, active: false, onPress: goHome },
+    tabItem('career', T.tabCareer),
+    tabItem('trophy', T.tabTrophy),
   ];
 
   return (
@@ -186,7 +191,7 @@ export default function Game() {
                 {act.kind === 'advance' ? (
                   <Press
                     testID="prep"
-                    accessibilityLabel={`다음 구간 준비 보기: ${act.prep}`}
+                    accessibilityLabel={T.prepOpen({ prep: act.prep })}
                     onPress={openPrep}
                     hitSlop={{ top: 6, bottom: 2 }}
                     style={{ marginBottom: -2 }}
@@ -224,7 +229,7 @@ export default function Game() {
                 {title ? (
                   <Press
                     testID="titles"
-                    accessibilityLabel={`대표 칭호 ${title.name}, 칭호 도감 열기`}
+                    accessibilityLabel={T.titleOpen({ name: title.name })}
                     onPress={openTitles}
                     hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
                     style={{ alignSelf: 'flex-start', marginTop: 4 }}
@@ -255,7 +260,7 @@ export default function Game() {
                         color: c.onPitch,
                       }}
                     >
-                      {`${s.age}세 · `}
+                      {`${T.age({ n: s.age })} · `}
                     </Txt>
                     <ClubBadge club={s.club} size={16} />
                     <Txt
@@ -265,7 +270,7 @@ export default function Game() {
                         color: c.onPitch,
                       }}
                     >
-                      {` ${s.club.name}`}
+                      {` ${tn(s.club.name)}`}
                     </Txt>
                   </View>
                   <Txt
@@ -275,7 +280,7 @@ export default function Game() {
                       color: c.onPitch,
                     }}
                   >
-                    {`${L.name}${contract ? ` · ${contract}` : ''}`}
+                    {`${tn(L.name)}${contract ? ` · ${contract}` : ''}`}
                   </Txt>
                 </View>
               </View>
@@ -309,8 +314,10 @@ export default function Game() {
               </View>
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              <HeroPill {...(role === '주전' ? { fill: 'accent' as const } : {})}>{role}</HeroPill>
-              {s.injury ? <HeroPill danger>{`부상 ${s.injury}경기`}</HeroPill> : null}
+              <HeroPill {...(role === '주전' ? { fill: 'accent' as const } : {})}>
+                {tn(role)}
+              </HeroPill>
+              {s.injury ? <HeroPill danger>{T.injury({ n: s.injury })}</HeroPill> : null}
               <HeroPill>{focusName}</HeroPill>
             </View>
           </PitchCard>
@@ -333,7 +340,7 @@ export default function Game() {
             )}
           </TabPanel>
         </Screen>
-        <TabBar label="게임 메뉴" items={items} sub="game" />
+        <TabBar label={T.menuLabel} items={items} sub="game" />
       </View>
     </BarBelow.Provider>
   );

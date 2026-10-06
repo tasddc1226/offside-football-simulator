@@ -15,6 +15,7 @@ import { BAL } from './balance.js';
 import type { GameState } from './types.js';
 import { focusOf, labelOf, fmtMoney } from './player.js';
 import { truePot, addAttr, addStat, fameEff, log } from './stats.js';
+import { gTrainingText as L } from './i18n/ko/gTraining.js';
 
 // ───────── 훈련 ─────────
 export function growthFactor(s: GameState): number {
@@ -35,9 +36,24 @@ export interface TrainingDef {
 }
 export const TRAININGS: TrainingDef[] = [
   ...ATTR_KEYS.map((k) => ({ id: k, attr: k })),
-  { id: 'rest', label: '휴식·회복' },
-  { id: 'coach', label: '개인 코치' },
-  { id: 'media', label: '미디어 활동' },
+  {
+    id: 'rest',
+    get label() {
+      return L.rest;
+    },
+  },
+  {
+    id: 'coach',
+    get label() {
+      return L.coach;
+    },
+  },
+  {
+    id: 'media',
+    get label() {
+      return L.media;
+    },
+  },
 ];
 /** applyTraining과 같은 숫자 — 설명과 실제 효과가 어긋나지 않게 한곳에 둔다. */
 const REST = { cond: 30, morale: 4 };
@@ -48,7 +64,7 @@ const mediaPay = (s: GameState) => (s.contract ? Math.round(fameEff(s) * 8) : 0)
 const pct = (x: number) => Math.round(x * 100);
 
 export function trainingLabel(s: GameState, t: TrainingDef): string {
-  return t.attr ? `${labelOf(s, t.attr)} 훈련` : t.label!;
+  return t.attr ? L.attrTraining({ attr: labelOf(s, t.attr) }) : t.label!;
 }
 const signed = (n: number) => (n > 0 ? `+${n}` : `−${-n}`);
 /** 능력치 훈련의 주력 여부·치우침 배율 — 카드와 자세한 설명이 같이 쓴다. */
@@ -59,56 +75,58 @@ function attrInfo(s: GameState, k: AttrKey) {
 /** T-10-074 훈련 카드: 무엇이 오르고 무엇을 치르는지(effect, 항목별)와 눈여겨볼 한 가지(tag — 주력·너무 앞섬·비용·수입). */
 export function trainingCard(s: GameState, t: TrainingDef): { effect: string[]; tag: string } {
   if (t.id === 'rest')
-    return { effect: [`컨디션 ${signed(REST.cond)}`, `사기 ${signed(REST.morale)}`], tag: '' };
+    return {
+      effect: [L.condition({ v: signed(REST.cond) }), L.morale({ v: signed(REST.morale) })],
+      tag: '',
+    };
   if (t.id === 'coach')
     return {
-      effect: ['전 능력 소폭 ▲', `컨디션 ${signed(COACH_COND)}`],
-      tag: `비용 ${fmtMoney(coachCost(s))}`,
+      effect: [L.allAttrsUp, L.condition({ v: signed(COACH_COND) })],
+      tag: L.cost({ money: fmtMoney(coachCost(s)) }),
     };
   if (t.id === 'media') {
     const pay = mediaPay(s);
     return {
       effect: [
-        `인기 +${MEDIA.fame[0]}~${MEDIA.fame[1]}`,
-        `사기 ${signed(MEDIA.morale)}`,
-        `컨디션 ${signed(MEDIA.cond)}`,
+        L.fameRange({ lo: MEDIA.fame[0], hi: MEDIA.fame[1] }),
+        L.morale({ v: signed(MEDIA.morale) }),
+        L.condition({ v: signed(MEDIA.cond) }),
       ],
-      tag: pay ? `수입 +${fmtMoney(pay)}` : '',
+      tag: pay ? L.income({ money: fmtMoney(pay) }) : '',
     };
   }
   const k = t.attr!;
   const { focus, bf, lopsided } = attrInfo(s, k);
-  const up = k === 'phy' ? `${labelOf(s, k)}·${labelOf(s, 'pac')} ▲` : `${labelOf(s, k)} ▲`;
+  const up =
+    k === 'phy'
+      ? L.attrPairUp({ a: labelOf(s, k), b: labelOf(s, 'pac') })
+      : L.attrUp({ attr: labelOf(s, k) });
   const tags = [
-    focus ? `주력 성장 +${pct(FOCUS_GROWTH - 1)}%` : '',
-    lopsided ? `너무 앞서 성장 −${pct(1 - bf)}%` : '',
+    focus ? L.focusGrowth({ pct: pct(FOCUS_GROWTH - 1) }) : '',
+    lopsided ? L.tooFarAhead({ pct: pct(1 - bf) }) : '',
   ];
-  return { effect: [up, `컨디션 ${signed(trainCond(k))}`], tag: tags.filter(Boolean).join(' · ') };
+  return {
+    effect: [up, L.condition({ v: signed(trainCond(k)) })],
+    tag: tags.filter(Boolean).join(' · '),
+  };
 }
 /** T-10-074 고른 훈련의 자세한 설명(카드 아래). 숨은 잠재력 값은 드러내지 않는다. */
 export function trainingHelp(s: GameState, t: TrainingDef): string {
-  if (t.id === 'rest')
-    return `훈련을 쉬고 몸을 추슬러요. 컨디션이 ${COND_LOW_INJURY} 밑으로 떨어지면 부상 위험이 크게 늘고, ${COND_LOW_START} 밑이면 선발로 나서기 어려워요.`;
-  if (t.id === 'coach')
-    return 'OVR에 반영되는 능력치를 고르게 조금씩 키워요. 자금이 모자라면 컨디션을 회복하는 자율 훈련으로 바뀌어요.';
-  if (t.id === 'media')
-    return `인터뷰·광고로 이름을 알려요. 인기가 높을수록 대표팀 발탁·이적 제안·광고 제의에 유리해요.${s.contract ? ' 계약 중이라 출연료도 들어와요.' : ''}`;
+  if (t.id === 'rest') return L.helpRest({ low: COND_LOW_INJURY, start: COND_LOW_START });
+  if (t.id === 'coach') return L.helpCoach;
+  if (t.id === 'media') return L.helpMedia({ contract: !!s.contract });
   const k = t.attr!;
   const name = labelOf(s, k);
   const w = wOf(s)[k];
   const { focus, bf, lopsided } = attrInfo(s, k);
   return [
-    `${name} 능력치가 크게 오르고, 50% 확률로 다른 능력치 하나도 조금 올라요.`,
-    k === 'phy' ? `${labelOf(s, 'pac')}도 함께 오르는 대신 컨디션이 더 떨어져요.` : '',
+    L.helpAttrMain({ attr: name }),
+    k === 'phy' ? L.helpPhy({ pac: labelOf(s, 'pac') }) : '',
     focus
-      ? `주력 능력치라 성장이 ${pct(FOCUS_GROWTH - 1)}% 빨라요.`
-      : `주력 능력치가 아니라 성장이 ${pct(1 - OFF_FOCUS_GROWTH)}% 느려요.`,
-    lopsided
-      ? `다른 핵심 능력치보다 너무 앞서 있어 성장이 ${pct(1 - bf)}% 줄었어요. 다른 능력치를 키우면 제한이 풀려요.`
-      : '',
-    w < 0.05
-      ? `지금 포지션의 OVR에는 거의 반영되지 않아요.`
-      : `지금 포지션 OVR에서 ${name} 비중은 ${pct(w)}%예요.`,
+      ? L.helpFocus({ pct: pct(FOCUS_GROWTH - 1) })
+      : L.helpOffFocus({ pct: pct(1 - OFF_FOCUS_GROWTH) }),
+    lopsided ? L.helpLopsided({ pct: pct(1 - bf) }) : '',
+    w < 0.05 ? L.helpWeightLow : L.helpWeight({ attr: name, pct: pct(w) }),
   ]
     .filter(Boolean)
     .join(' ');
@@ -162,7 +180,7 @@ export function applyTraining(s: GameState) {
   if (t === 'coach') {
     const c = coachCost(s);
     if (s.money < c) {
-      log(s, '자금이 부족해 개인 코치 대신 자율 훈련을 했습니다.');
+      log(s, L.coachBroke);
       s.training = 'rest';
       addStat(s, 'cond', 10);
       return;
@@ -191,11 +209,46 @@ export interface InvestDef {
   min: number;
 }
 export const INVESTS: InvestDef[] = [
-  { id: 'none', label: '투자 안 함', rate: 0, min: 0 },
-  { id: 'weak', label: '약점 보강 특훈', rate: 0.1, min: 300 },
-  { id: 'best', label: '강점 특화 특훈', rate: 0.1, min: 300 },
-  { id: 'medical', label: '메디컬 케어', rate: 0.06, min: 200 },
-  { id: 'mental', label: '멘탈 코칭', rate: 0.04, min: 150 },
+  {
+    id: 'none',
+    get label() {
+      return L.investNone;
+    },
+    rate: 0,
+    min: 0,
+  },
+  {
+    id: 'weak',
+    get label() {
+      return L.investWeak;
+    },
+    rate: 0.1,
+    min: 300,
+  },
+  {
+    id: 'best',
+    get label() {
+      return L.investBest;
+    },
+    rate: 0.1,
+    min: 300,
+  },
+  {
+    id: 'medical',
+    get label() {
+      return L.investMedical;
+    },
+    rate: 0.06,
+    min: 200,
+  },
+  {
+    id: 'mental',
+    get label() {
+      return L.investMental;
+    },
+    rate: 0.04,
+    min: 150,
+  },
 ];
 const SPECIAL_COND = -3;
 const MEDICAL = { cond: 15, injury: 3 };
@@ -215,10 +268,17 @@ export function investTarget(s: GameState, id: 'weak' | 'best'): AttrKey {
   );
 }
 function investEffect(s: GameState, id: InvestId): string[] {
-  if (id === 'none') return ['자금을 아낀다'];
-  if (id === 'medical') return [`컨디션 +${MEDICAL.cond}`, `부상 결장 −${MEDICAL.injury}경기`];
-  if (id === 'mental') return [`사기 +${MENTAL_MORALE}`];
-  return [`${labelOf(s, investTarget(s, id))} ▲`, `컨디션 ${signed(SPECIAL_COND)}`];
+  if (id === 'none') return [L.investSaveMoney];
+  if (id === 'medical')
+    return [
+      L.condition({ v: `+${MEDICAL.cond}` }),
+      L.investMedicalInjury({ games: MEDICAL.injury }),
+    ];
+  if (id === 'mental') return [L.morale({ v: `+${MENTAL_MORALE}` })];
+  return [
+    L.attrUp({ attr: labelOf(s, investTarget(s, id)) }),
+    L.condition({ v: signed(SPECIAL_COND) }),
+  ];
 }
 /** 카드 한 장: 효과(항목별)와 비용 태그. 자금이 모자라면 affordable=false(화면이 버튼을 막는다)·태그 '자금 부족'. */
 export function investCard(
@@ -227,25 +287,21 @@ export function investCard(
 ): { effect: string[]; tag: string; affordable: boolean } {
   const cost = investCost(s, d);
   const affordable = s.money >= cost;
-  const tag = !cost ? '' : affordable ? `비용 ${fmtMoney(cost)}` : '자금 부족';
+  const tag = !cost ? '' : affordable ? L.cost({ money: fmtMoney(cost) }) : L.investShort;
   return { effect: investEffect(s, d.id), tag, affordable };
 }
 export function investHelp(s: GameState, d: InvestDef): string {
-  if (d.id === 'none') return '이번 구간에는 자금을 쓰지 않아요.';
-  if (d.id === 'medical')
-    return `전담 메디컬 팀이 몸을 관리해요. 컨디션이 오르고, 부상 중이면 복귀가 ${MEDICAL.injury}경기 빨라져요.`;
-  if (d.id === 'mental')
-    return '스포츠 심리 전문가와 상담해요. 사기가 높을수록 경기력과 성장이 좋아져요.';
+  if (d.id === 'none') return L.helpInvestNone;
+  if (d.id === 'medical') return L.helpInvestMedical({ games: MEDICAL.injury });
+  if (d.id === 'mental') return L.helpInvestMental;
   const k = investTarget(s, d.id);
   const name = labelOf(s, k);
   const { bf, lopsided } = attrInfo(s, k);
   return [
-    d.id === 'weak'
-      ? `가장 낮은 핵심 능력치(${name})를 따로 끌어올려요.`
-      : `가장 높은 핵심 능력치(${name})를 더 다듬어요.`,
-    `훈련과 별개로, 능력치 훈련 한 번의 ${pct(BAL.investGain)}% 정도 올라요.`,
-    lopsided ? `다른 능력치보다 너무 앞서 있어 성장이 ${pct(1 - bf)}% 줄었어요.` : '',
-    '자금이 모자라면 투자를 건너뛰고 ‘투자 안 함’으로 바뀌어요.',
+    d.id === 'weak' ? L.helpInvestWeak({ attr: name }) : L.helpInvestBest({ attr: name }),
+    L.helpInvestGain({ pct: pct(BAL.investGain) }),
+    lopsided ? L.helpInvestLopsided({ pct: pct(1 - bf) }) : '',
+    L.helpInvestSkip,
   ]
     .filter(Boolean)
     .join(' ');
@@ -257,7 +313,7 @@ export function applyInvest(s: GameState) {
   if (id === 'none') return;
   const cost = investCost(s, d);
   if (s.money < cost) {
-    log(s, `자금이 부족해 ${d.label} 투자를 중단했습니다.`);
+    log(s, L.investBroke({ label: d.label }));
     s.invest = 'none';
     return;
   }

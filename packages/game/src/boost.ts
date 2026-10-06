@@ -8,6 +8,7 @@ import { fmtMoney } from './player.js';
 import { log, potScouted } from './stats.js';
 import { salaryCost } from './training.js';
 import type { BoostState, GameState } from './types.js';
+import { gBoostText as BT } from './i18n/ko/gBoost.js';
 
 export const BOOST = {
   /** 단계(0부터)별 기본 성공 확률. 길이가 최대 단계(+4). */
@@ -89,9 +90,7 @@ export function tryBoost(s: GameState): BoostResult | null {
   // 잠재력 등급은 은퇴 때 공개한다 — 소식에도 단계만 남긴다.
   log(
     s,
-    ok
-      ? `잠재력 강화 성공. ${next.lv}단계가 되었습니다(${fmtMoney(cost)}원).`
-      : `잠재력 강화 실패(${fmtMoney(cost)}원). 다음 시도 확률이 오릅니다.`,
+    ok ? BT.success({ lv: next.lv, cost: fmtMoney(cost) }) : BT.fail({ cost: fmtMoney(cost) }),
     ok ? 'good' : 'bad',
   );
   return { ok, lv: next.lv, cost, chance };

@@ -202,6 +202,17 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
       });
     const poor = await buy(buyer.cookie, 1_200_000);
     expect(await reason(poor)).toBe('FUNDS_SHORT');
+    // T-11-106 ?lang=en이면 안내 문구만 영어이고 reason은 그대로다. 목록 조회도 lang을 받는다.
+    const poorEn = await call('POST', `/v1/market/listings/${listingId}/buy?lang=en`, {
+      cookie: buyer.cookie,
+      headers: idem(),
+      body: { price: 1_200_000 },
+    });
+    expect(poorEn.status).toBe(409);
+    const poorBody = ErrorEnvelopeSchema.parse(await poorEn.json()).error;
+    expect(poorBody.message).toBe("You don't have enough club funds.");
+    expect(poorBody.details).toMatchObject({ reason: 'FUNDS_SHORT' });
+    expect((await call('GET', '/v1/market?lang=en')).status).toBe(200);
     await fund(buyer.profileId, 2_000_000);
     expect(await reason(await buy(buyer.cookie, 1_000_000))).toBe('PRICE_CHANGED');
     expect(await reason(await buy(seller.cookie, 1_200_000))).toBe('OWN_LISTING');

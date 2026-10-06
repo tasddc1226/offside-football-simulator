@@ -13,7 +13,7 @@ import {
 } from '@offside/app-core/api/market';
 import {
   CHART_COPY,
-  CHART_RANGES,
+  chartRanges,
   chartModel,
   dayText,
   marketIndex,
@@ -22,11 +22,12 @@ import {
   type ChartTone,
 } from '@offside/app-core/marketChart';
 import { ovrBand } from '@offside/contracts/market-value';
-import { POS_LABEL } from '@offside/game/pos-label';
+import { POS } from '@offside/game/data';
 import { useColors } from '../../theme/useColors';
 import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Press, Txt } from '../../ui';
+import { marketChartText as L } from '@offside/app-core/i18n/ko/marketChart';
 import { useRefresh } from '../../ui/refresh';
 
 const chartTone = (c: Colors, tone: ChartTone) =>
@@ -81,7 +82,7 @@ export function MarketIndex({ points }: { points: readonly MarketChartPoint[] })
     <View
       testID="market-index"
       accessible
-      accessibilityLabel={`${CHART_COPY.index} 기준가의 ${index.pct}, ${index.change}`}
+      accessibilityLabel={L.indexA11y({ pct: index.pct, change: index.change })}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -197,12 +198,12 @@ export function MarketChart({ card }: { card: MarketCard }) {
             {CHART_COPY.title}
           </Txt>
           <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-            {CHART_COPY.group(POS_LABEL[card.pos], band)}
+            {CHART_COPY.group(POS[card.pos].label, band)}
           </Txt>
         </View>
         <View
           accessibilityRole="radiogroup"
-          accessibilityLabel="기간"
+          accessibilityLabel={L.rangeGroup}
           style={{
             flexDirection: 'row',
             gap: 2,
@@ -212,7 +213,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
             alignSelf: 'flex-start',
           }}
         >
-          {CHART_RANGES.map(([k, label]) => (
+          {chartRanges().map(([k, label]) => (
             <Press
               key={k}
               testID={`chart-range-${k}`}
@@ -238,7 +239,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
         </View>
       </View>
       {points === null ? (
-        empty('불러오는 중…')
+        empty(L.loading)
       ) : failed ? (
         empty(CHART_COPY.failed)
       ) : !model ? (
@@ -284,7 +285,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
                 {(
                   [
                     [8, model.top],
-                    [model.base, '기준가'],
+                    [model.base, L.baseLabel],
                     [92, model.bottom],
                   ] as const
                 ).map(([y, label]) => (

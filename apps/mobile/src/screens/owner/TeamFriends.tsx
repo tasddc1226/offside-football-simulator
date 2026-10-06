@@ -16,8 +16,8 @@ import {
 } from '@offside/app-core/api/friends';
 import type { TeamMatch } from '@offside/app-core/api/team';
 import {
-  FOUNDER_LABEL,
-  PRESEASON_FRIENDLY_HINT,
+  founderLabel,
+  preseasonFriendlyHint,
   canFriendly,
   canPreseasonFriendly,
   friendCodeLabel,
@@ -26,6 +26,8 @@ import {
   h2hText,
   preseasonTeamLine,
 } from '@offside/app-core/friendText';
+import { friendText as L } from '@offside/app-core/i18n/ko/friend';
+import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { toast } from '../../game/host';
@@ -41,14 +43,14 @@ export type OppTab = 'ranked' | 'friends';
 /** '경기' 탭 맨 위 두 칸 고르기. */
 export function OppSwitch({ value, onPick }: { value: OppTab; onPick: (v: OppTab) => void }) {
   return (
-    <Seg label="경기 종류">
+    <Seg label={LH.matchKindLabel}>
       <SegBtn
         center
         selected={value === 'ranked'}
         testID="opp-tab-ranked"
         onPress={() => onPick('ranked')}
       >
-        <Txt bold>랭크 경기</Txt>
+        <Txt bold>{LH.modeRanked}</Txt>
       </SegBtn>
       <SegBtn
         center
@@ -56,7 +58,7 @@ export function OppSwitch({ value, onPick }: { value: OppTab; onPick: (v: OppTab
         testID="opp-tab-friends"
         onPress={() => onPick('friends')}
       >
-        <Txt bold>친구</Txt>
+        <Txt bold>{LH.modeFriends}</Txt>
       </SegBtn>
     </Seg>
   );
@@ -191,17 +193,21 @@ function Who({ f, h2h = false }: { f: FriendPerson; h2h?: boolean }) {
           <Txt bold numberOfLines={1} style={{ flexShrink: 1 }}>
             {f.name}
           </Txt>
-          {f.founder ? <Pill tone="good">{FOUNDER_LABEL}</Pill> : null}
+          {f.founder ? <Pill tone="good">{founderLabel()}</Pill> : null}
         </View>
         <Txt tone="muted" v="sm">
-          {f.team ? `${f.team.name} · OVR ${f.team.ovr}` : '이번 시즌 팀이 없어요'}
+          {f.team ? `${f.team.name} · OVR ${f.team.ovr}` : L.noTeamLine}
         </Txt>
         {preseasonLine ? (
           <Txt tone="muted" v="sm">
             {preseasonLine}
           </Txt>
         ) : null}
-        {record ? <Txt tone="muted" v="sm">{`상대 전적 ${record}`}</Txt> : null}
+        {record ? (
+          <Txt tone="muted" v="sm">
+            {L.h2hLine({ record })}
+          </Txt>
+        ) : null}
       </View>
     </View>
   );
@@ -230,21 +236,21 @@ export function TeamFriends({
   async function copyCode(code: string) {
     try {
       await Clipboard.setStringAsync(friendCodeLabel(code));
-      toast('코드를 복사했어요');
+      toast(L.codeCopied);
     } catch {
-      toast('코드를 복사하지 못했어요');
+      toast(L.codeCopyFail);
     }
   }
   async function shareInvite(code: string) {
     try {
       await Share.share({ message: friendInviteText(code) });
     } catch {
-      toast('공유하지 못했어요');
+      toast(L.shareFail);
     }
   }
   async function submitCode() {
     const code = normalizeFriendCode(input);
-    if (!code) return toast('친구 코드 8자리를 확인해 주세요.');
+    if (!code) return toast(L.codeInvalid);
     if (await friends.request({ code })) setInput('');
   }
   async function challenge(f: FriendPerson, preseason = false) {
@@ -252,33 +258,33 @@ export function TeamFriends({
     if (m) onPlayed(m);
   }
   function askRemove(f: FriendPerson) {
-    Alert.alert('친구 끊기', `${f.name} 님과 친구를 끊을까요? 상대 전적도 사라져요.`, [
-      { text: '취소', style: 'cancel' },
-      { text: '끊기', style: 'destructive', onPress: () => void friends.remove(f) },
+    Alert.alert(L.removeTitleApp, L.removeConfirm({ name: f.name }), [
+      { text: L.cancel, style: 'cancel' },
+      { text: L.remove, style: 'destructive', onPress: () => void friends.remove(f) },
     ]);
   }
 
   return (
-    <LoadState status={status} failText="친구를 불러오지 못했어요." retry={friends.reload}>
+    <LoadState status={status} failText={L.loadFailApp} retry={friends.reload}>
       {data ? (
         <>
           <Card gap={4}>
             <Txt v="eyebrow">Friends</Txt>
             <Txt v="h1" accessibilityRole="header">
-              친구
+              {L.title}
             </Txt>
             <Txt tone="muted" v="sm" testID="friendly-left">
-              {`친선전은 레이팅과 전적에 들어가지 않아요. 오늘 남은 친선전 ${data.matchesLeft}/${data.matchesPerDay}`}
+              {L.info({ left: data.matchesLeft, per: data.matchesPerDay })}
             </Txt>
             {data.canPlay ? null : (
               <Txt tone="muted" v="sm" testID="friendly-cant-play">
-                이번 시즌 팀을 만들면 친구와 친선전을 할 수 있어요.
+                {L.needTeam}
               </Txt>
             )}
             {data.canPlayPreseason === false ? (
               <>
                 <Txt tone="muted" v="sm" testID="friendly-preseason-hint">
-                  {PRESEASON_FRIENDLY_HINT}
+                  {preseasonFriendlyHint()}
                 </Txt>
                 <Btn
                   sm
@@ -286,7 +292,7 @@ export function TeamFriends({
                   style={{ alignSelf: 'flex-start' }}
                   onPress={onPreseason}
                 >
-                  프리시즌 팀 꾸리기
+                  {L.makePreseason}
                 </Btn>
               </>
             ) : null}
@@ -294,7 +300,7 @@ export function TeamFriends({
 
           <Card gap={10}>
             <Txt v="h2" accessibilityRole="header">
-              내 친구 코드
+              {L.myCode}
             </Txt>
             <Txt
               selectable
@@ -315,17 +321,17 @@ export function TeamFriends({
                 testID="friend-share"
                 onPress={() => void shareInvite(data.code)}
               >
-                초대 링크 공유
+                {L.shareLink}
               </Btn>
               <Btn sm testID="friend-copy" onPress={() => void copyCode(data.code)}>
-                코드 복사
+                {L.copyCode}
               </Btn>
             </View>
           </Card>
 
           <Card gap={10}>
             <Txt v="h2" accessibilityRole="header">
-              친구 코드로 신청
+              {L.addByCode}
             </Txt>
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               <TextField
@@ -336,7 +342,7 @@ export function TeamFriends({
                 autoCapitalize="characters"
                 maxLength={12}
                 testID="friend-code-input"
-                accessibilityLabel="친구 코드"
+                accessibilityLabel={L.codeAria}
                 onSubmitEditing={() => void submitCode()}
               />
               <Btn
@@ -345,7 +351,7 @@ export function TeamFriends({
                 disabled={busy}
                 onPress={() => void submitCode()}
               >
-                신청
+                {L.send}
               </Btn>
             </View>
           </Card>
@@ -353,7 +359,7 @@ export function TeamFriends({
           {data.received.length ? (
             <Card gap={0}>
               <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
-                {`받은 신청 ${data.received.length}`}
+                {L.receivedTitle({ n: data.received.length })}
               </Txt>
               {data.received.map((f) => (
                 <Row key={f.code}>
@@ -366,19 +372,19 @@ export function TeamFriends({
                       kind="primary"
                       disabled={busy}
                       testID="friend-accept"
-                      accessibilityLabel={`${f.name} 신청 수락`}
+                      accessibilityLabel={L.acceptAria({ name: f.name })}
                       onPress={() => void friends.accept(f)}
                     >
-                      수락
+                      {L.accept}
                     </Btn>
                     <Btn
                       sm
                       disabled={busy}
                       testID="friend-decline"
-                      accessibilityLabel={`${f.name} 신청 거절`}
+                      accessibilityLabel={L.rejectAria({ name: f.name })}
                       onPress={() => void friends.remove(f)}
                     >
-                      거절
+                      {L.reject}
                     </Btn>
                   </View>
                 </Row>
@@ -388,7 +394,7 @@ export function TeamFriends({
 
           <Card gap={0}>
             <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
-              {`친구 ${data.friends.length}/${data.max}`}
+              {L.friendsTitle({ n: data.friends.length, max: data.max })}
             </Txt>
             {data.friends.length ? (
               data.friends.map((f) => (
@@ -401,21 +407,21 @@ export function TeamFriends({
                       sm
                       kind="primary"
                       testID="friend-play"
-                      accessibilityLabel={`${f.name} 님과 친선전`}
+                      accessibilityLabel={L.playAria({ name: f.name })}
                       disabled={busy || !canFriendly(data, f)}
                       onPress={() => void challenge(f)}
                     >
-                      친선전
+                      {L.play}
                     </Btn>
                     {f.preseasonTeam ? (
                       <Btn
                         sm
                         testID="friend-play-preseason"
-                        accessibilityLabel={`${f.name} 님과 프리시즌 친선전`}
+                        accessibilityLabel={L.playPreseasonAria({ name: f.name })}
                         disabled={busy || !canPreseasonFriendly(data, f)}
                         onPress={() => void challenge(f, true)}
                       >
-                        프리시즌 친선전
+                        {L.playPreseason}
                       </Btn>
                     ) : null}
                     <Btn
@@ -423,23 +429,23 @@ export function TeamFriends({
                       kind="ghost"
                       disabled={busy}
                       testID="friend-remove"
-                      accessibilityLabel={`${f.name} 님과 친구 끊기`}
+                      accessibilityLabel={L.removeAria({ name: f.name })}
                       onPress={() => askRemove(f)}
                     >
-                      끊기
+                      {L.remove}
                     </Btn>
                   </View>
                 </Row>
               ))
             ) : (
-              <Txt tone="muted">아직 친구가 없어요. 신청을 수락하면 여기에 보여요.</Txt>
+              <Txt tone="muted">{L.noFriends}</Txt>
             )}
           </Card>
 
           {data.sent.length ? (
             <Card gap={0}>
               <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
-                보낸 신청
+                {L.sentTitle}
               </Txt>
               {data.sent.map((f) => (
                 <Row key={f.code}>
@@ -449,10 +455,10 @@ export function TeamFriends({
                       sm
                       disabled={busy}
                       testID="friend-cancel"
-                      accessibilityLabel={`${f.name} 신청 취소`}
+                      accessibilityLabel={L.cancelAria({ name: f.name })}
                       onPress={() => void friends.remove(f)}
                     >
-                      취소
+                      {L.cancel}
                     </Btn>
                   </View>
                 </Row>
@@ -463,7 +469,7 @@ export function TeamFriends({
           {data.recent.length ? (
             <Card gap={0}>
               <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
-                최근 친선전
+                {L.recentTitle}
               </Txt>
               {data.recent.map((m) => (
                 <MatchRow key={m.id} m={m} open={onOpen} />

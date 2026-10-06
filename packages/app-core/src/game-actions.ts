@@ -60,11 +60,13 @@ import type {
 } from '@offside/game/types';
 import { markDexSeen } from './dex.js';
 import { pushEvLog, seasonLabel } from './career.js';
-import { scoutHint } from './potential-view.js';
+import { scoutHint } from './scoutHint.js';
 import { recordPhaseOvr, takeSeasonGrowth } from './growth.js';
 import { publicNameOf } from './namePublic.js';
-import { fmtValue, seasonLabelOf, waGwa, withRo } from './format.js';
+import { fmtValue, seasonLabelOf } from './format.js';
 import { crossesBorder, flightHours, hubOf } from './flight.js';
+import { gameActionsText as L } from './i18n/ko/gameActions';
+import { tn } from '@offside/game/i18n/names';
 
 /** 비행 지도는 육지 데이터가 커서 해외 이적일 때만 불러온다(계약서를 여는 순간 미리 받아 둔다). */
 const loadFlightMap = () => import('./flight-map.js');
@@ -103,16 +105,16 @@ export interface GameHost {
 function natViews(nt: PhaseResult['nt']): NatView[] {
   // 명단에서 빠진 차출(called: false)은 대회명·경기가 없다.
   return (nt ?? []).map((x) => ({
-    name: x.name,
-    comp: x.called ? x.comp : '',
+    name: tn(x.name),
+    comp: x.called ? tn(x.comp) : '',
     called: x.called,
     games: x.called
       ? x.games.map((m) => ({
           line: scoreLine(m),
           hl: m.res === 'W',
           detail: m.mins
-            ? `${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''} · 평점 ${m.rating}`
-            : '벤치',
+            ? L.natDetail({ mins: m.mins, g: m.g, a: m.a, rating: m.rating })
+            : L.natBench,
         }))
       : [],
   }));
@@ -123,17 +125,26 @@ function tourView(x: NatTourResult): TourView {
   // 저장된 결산 시트(pending.res)에서 복원한 옛 세이브는 필드가 비어 있을 수 있다.
   const matches = x.matches ?? [];
   return {
-    name: x.name,
-    stage: x.stage,
+    name: tn(x.name),
+    stage: tn(x.stage),
     note: x.inSquad
       ? ''
-      : [x.why || (matches.length ? '명단 외' : ''), MEDAL_STAGES.has(x.stage) ? '메달 없음' : '']
+      : [
+          x.why || (matches.length ? L.natNotInSquad : ''),
+          MEDAL_STAGES.has(x.stage) ? L.natNoMedal : '',
+        ]
           .filter(Boolean)
           .join(' · '),
     lines: x.inSquad
-      ? matches.map(
-          (m) =>
-            `${m.stage || '조별리그'} · ${scoreLine(m)}${m.mins ? ` · ${m.g ? m.g + '골 ' : ''}${m.a ? m.a + '도움 ' : ''}평점 ${m.rating}` : ''}`,
+      ? matches.map((m) =>
+          L.natTourLine({
+            stage: tn(m.stage || '조별리그'),
+            score: scoreLine(m),
+            mins: m.mins,
+            g: m.g,
+            a: m.a,
+            rating: m.rating,
+          }),
         )
       : [],
   };
@@ -187,9 +198,11 @@ export function createGameActions(host: GameHost) {
       }
       host.analytics.complete?.({ cid: s.cid, year: s.year, phase: ph, matches: r.block?.n ?? 0 });
       const { block: b, comp, nt, ev } = r;
+      // 부상 소식은 로그 문장이 아니라 엔진이 알려 주는 신호로 기록한다(언어가 달라도 같다).
+      if (b?.injured) s.flags.injuredYear = s.year;
       const chips = diffChips(s, before, r.after);
       const titles = r.titles.map(titleView);
-      const title = ph === 0 ? '프리시즌 완료' : `${PHASES[ph]} 결과`;
+      const title = ph === 0 ? L.preseasonDone : L.phaseResult({ phase: PHASES[ph]! });
       s.pending = ev
         ? { type: 'event', id: ev, then: s.phase > LAST_PHASE ? 'seasonEnd' : null }
         : s.phase > LAST_PHASE
@@ -198,9 +211,9 @@ export function createGameActions(host: GameHost) {
       host.save();
       host.analytics.play(s, ph === 0 && s.career.length === 0);
       const extras = [
-        ...(comp.length ? ['컵 · 대륙 대회 결과 집계'] : []),
-        ...(nt ? ['A매치 소집 명단 발표'] : []),
-        ...(ev ? ['새로운 소식이 들려옵니다…'] : []),
+        ...(comp.length ? [L.stepComps] : []),
+        ...(nt ? [L.stepNat] : []),
+        ...(ev ? [L.stepEvent] : []),
       ];
       const games = b ? matchRows(s, b) : [];
       const range = b ? roundRange(s, ph) : '';
@@ -209,8 +222,8 @@ export function createGameActions(host: GameHost) {
       if (b) {
         await sheet.playBlock(
           {
-            eyebrow: `${s.year} · ${PHASES[ph]} 진행 중`,
-            title: `${range} · ${b.n}경기`,
+            eyebrow: L.phaseRunning({ year: s.year, phase: PHASES[ph]! }),
+            title: L.blockTitle({ range, n: b.n }),
             back,
             matches: leagueOf(s.leagueId).matches,
           },
@@ -219,11 +232,11 @@ export function createGameActions(host: GameHost) {
           extras,
         );
       } else
-        await sheet.playSteps(`${s.year} · 프리시즌 진행 중`, [
-          isPro(s) ? '전지훈련 캠프 입소' : '동계 훈련 시작',
-          '체력 테스트',
-          '전술 훈련',
-          '연습 경기',
+        await sheet.playSteps(L.preseasonRunning({ year: s.year }), [
+          isPro(s) ? L.stepCampPro : L.stepCampAmateur,
+          L.stepFitness,
+          L.stepTactics,
+          L.stepFriendly,
           ...extras,
         ]);
       sheet.closeSheet();
@@ -232,7 +245,7 @@ export function createGameActions(host: GameHost) {
         year: s.year,
         ph,
         eyebrow: `${s.year} · ${title}`,
-        title: b ? `${range} · ${b.n}경기` : '시즌 준비를 마쳤습니다',
+        title: b ? L.blockTitle({ range, n: b.n }) : L.preseasonReady,
         back,
         block: b
           ? {
@@ -279,12 +292,12 @@ export function createGameActions(host: GameHost) {
       host.analytics.play(s);
       host.analytics.firstSeason(s);
       const steps = [
-        '리그 최종 순위 확정',
-        ...(res.tours.length ? ['국제 대회 결과 반영'] : []),
-        '시즌 시상식',
-        '커리어 기록 정리',
+        L.endTable,
+        ...(res.tours.length ? [L.endTours] : []),
+        L.endAwards,
+        L.endRecords,
       ];
-      void sheet.playSteps(`${res.rec.year} · 시즌 결산 중`, steps, 560).then(nextPending);
+      void sheet.playSteps(L.endRunning({ year: res.rec.year }), steps, 560).then(nextPending);
       return;
     }
     if (p.type === 'market') {
@@ -304,15 +317,15 @@ export function createGameActions(host: GameHost) {
     const label = txt(c.label, s);
     if (!c.p)
       return isSafe(ev, c)
-        ? { label, odds: '안전', hint: '결과는 확정이지만 보상이 줄고, 가끔 대가가 따라요' }
-        : { label, odds: '확정' };
+        ? { label, odds: L.oddsSafe, hint: L.oddsSafeHint }
+        : { label, odds: L.oddsSure };
     const odds = choiceOdds(c.p(s), ev.id, i);
     const mg = activeMg(c);
     if (!mg) return { label, odds: `${Math.round(odds * 100)}%` };
     return {
       label,
-      odds: `원터치 · ${zoneLabel(zoneWidth(odds, mg.kind))}`,
-      hint: '바늘이 초록 구간에 올 때 탭하면 성공해요. 구간 넓이는 능력치로 정해져요',
+      odds: L.oddsMinigame({ zone: zoneLabel(zoneWidth(odds, mg.kind)) }),
+      hint: L.oddsMinigameHint,
     };
   }
 
@@ -325,7 +338,11 @@ export function createGameActions(host: GameHost) {
       title: ev.title,
       text: ev.text(s),
       story: ev.story
-        ? { name: STORIES[ev.story]!.name, stage: ev.stage ?? 0, total: STORIES[ev.story]!.total }
+        ? {
+            name: tn(STORIES[ev.story]!.name),
+            stage: ev.stage ?? 0,
+            total: STORIES[ev.story]!.total,
+          }
         : null,
       choices: ev.choices.map((c, i) => choiceView(s, ev, c, i)),
     });
@@ -369,16 +386,20 @@ export function createGameActions(host: GameHost) {
       {
         kind: 'eventResult',
         label,
-        outcome: r.p < 1 ? (r.ok ? '성공' : '실패') : '결정',
+        outcome: r.p < 1 ? (r.ok ? L.outcomeOk : L.outcomeFail) : L.outcomeDecided,
         ok: r.ok,
         text: r.text,
         chips: r.chips,
         twist: r.twist || null,
-        story: r.story,
+        story: r.story && {
+          ...r.story,
+          name: tn(r.story.name),
+          ending: r.story.ending && tn(r.story.ending),
+        },
         dexNew: r.dexNew,
         timing: r.timing,
       },
-      [{ label: '확인', cls: 'btn-primary', fn: nextPending }],
+      [{ label: L.ok, cls: 'btn-primary', fn: nextPending }],
       backToSeason,
     );
   }
@@ -401,15 +422,14 @@ export function createGameActions(host: GameHost) {
     const firstScout = s.career.length === 1;
     if (firstScout) releaseScoutSeed();
     const [col, colLabel] =
-      s.pos === 'GK' || s.pos === 'DF' ? [rec.cs, '무실점'] : [rec.assists, '도움'];
+      s.pos === 'GK' || s.pos === 'DF' ? [rec.cs, L.colCs] : [rec.assists, L.colAssists];
     // T-10-034: indexOf(rec)는 $state 프록시라 늘 -1이었다(이적 팬 반응이 안 나옴) — 연도로 찾는다.
     const idx = s.career.findIndex((r) => r.year === rec.year);
     const prev = idx > 0 ? s.career[idx - 1] : null;
     const fans = pickFanLines(s, rec, {
       gotTrophy: trophies.length > 0,
-      injuredThisSeason: s.log.some(
-        (l) => l.t.startsWith(String(rec.year)) && l.text.includes('부상'),
-      ),
+      // 구간 경기에서 다친 시즌이거나 지금도 결장 중이면(로그 문장을 읽지 않는다).
+      injuredThisSeason: s.flags.injuredYear === rec.year || s.injury > 0,
       transferredThisSeason: !!prev && prev.club !== rec.club,
       hasMilestone: miles.length > 0,
     });
@@ -417,7 +437,7 @@ export function createGameActions(host: GameHost) {
       {
         kind: 'season',
         eyebrow: `${seasonLabelOf(rec)} Season Review`,
-        title: `${rec.club} · ${rec.league} ${rec.rank}위`,
+        title: L.seasonTitle({ club: tn(rec.club), league: tn(rec.league), rank: rec.rank }),
         ch: (rec.ch || []).map(chLabel),
         stats: {
           apps: rec.apps,
@@ -426,15 +446,15 @@ export function createGameActions(host: GameHost) {
           colLabel,
           rating: rec.rating ? rec.rating.toFixed(2) : '-',
         },
-        honors: [...trophies, ...awards],
-        comps: (rec.comps || []).map(
-          (c) => `${c.name} · ${c.stage} · ${c.apps}경기 ${c.g}골 ${c.a}도움`,
+        honors: [...trophies, ...awards].map(tn),
+        comps: (rec.comps || []).map((c) =>
+          L.compLine({ name: tn(c.name), stage: tn(c.stage), apps: c.apps, g: c.g, a: c.a }),
         ),
         tours: tours.map(tourView),
         gala,
-        miles,
+        miles: miles.map(tn),
         titles,
-        promo,
+        promo: promo && { club: tn(promo.club), down: tn(promo.down) },
         notes,
         scoutHint: scoutHint(s, rec.year),
         fans,
@@ -442,7 +462,7 @@ export function createGameActions(host: GameHost) {
       },
       [
         {
-          label: '이적 시장으로 →',
+          label: L.toMarket,
           cls: 'btn-primary',
           fn: () => {
             const p = appState.G!.pending;
@@ -462,7 +482,7 @@ export function createGameActions(host: GameHost) {
     const strLine = (leagueId: string, str: number) => {
       const cs = clubsIn(leagueId, G);
       const avg = Math.round(cs.reduce((t, c) => t + c.str, 0) / Math.max(1, cs.length));
-      return `${leagueOf(leagueId).name} · 팀 전력 ${str} (리그 평균 ${avg})`;
+      return L.strLine({ league: tn(leagueOf(leagueId).name), str, avg });
     };
     // 지금 구단(잔류·재계약·연장)도 제의처럼 팀 전력을 보여 줘야 비교할 수 있다.
     const own = () => ({ clubId: G.club.id, lg: strLine(G.leagueId, G.club.str) });
@@ -474,14 +494,14 @@ export function createGameActions(host: GameHost) {
         note: m.note,
         options: m.options.map((o) => {
           if (o.kind === 'offer') {
-            const extra = `${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · 이적료 약 ${fmtValue(o.fee)}` : G.contract && !leagueOf(G.leagueId).amateur ? ' · 자유계약(FA)' : ''}`;
+            const extra = `${o.role ? ` · ${tn(o.role)}` : ''}${o.fee ? ` · ${L.feeAbout({ fee: fmtValue(o.fee) })}` : G.contract && !leagueOf(G.leagueId).amateur ? ` · ${L.freeAgent}` : ''}`;
             return {
               clubId: o.clubId,
               reason: offerFeedback(G, o),
-              name: o.name,
+              name: tn(o.name),
               lg: strLine(o.leagueId, o.str),
               salary: fmtMoney(o.salary),
-              sub: `${o.years}년 계약${extra}`,
+              sub: `${L.contractYears({ years: o.years })}${extra}`,
             };
           }
           if (o.kind === 'renew')
@@ -490,15 +510,15 @@ export function createGameActions(host: GameHost) {
               name: o.name,
               salary: fmtMoney(o.salary),
               sub: o.extension
-                ? `1년 남음 · ${o.extension.years}년 연장 · 총 ${o.years}년. ${o.desc}`
-                : `${o.years}년 계약${o.desc ? ` · ${o.desc}` : ''}`,
+                ? L.renewExtension({ ext: o.extension.years, total: o.years, desc: o.desc })
+                : `${L.contractYears({ years: o.years })}${o.desc ? ` · ${o.desc}` : ''}`,
             };
           if (o.kind === 'stay') return { ...own(), name: o.name, salary: null, sub: o.desc };
           return { name: o.name, lg: o.desc ?? '', salary: null, sub: null };
         }),
       },
       // T-10-029: 은퇴는 언제든 고를 수 있다. 은퇴할 때가 아니면(canRetire=false) 한 번 더 묻고, 취소하면 이 창으로 돌아온다.
-      [{ label: '은퇴하기', fn: () => (m.canRetire ? doRetire() : retireAsk(nextPending)) }],
+      [{ label: L.retireBtn, fn: () => (m.canRetire ? doRetire() : retireAsk(nextPending)) }],
     );
   }
 
@@ -525,33 +545,31 @@ export function createGameActions(host: GameHost) {
       kind: 'contract',
       eyebrow: extension ? 'Extension Contract' : rookie ? 'Rookie Contract' : 'Transfer Contract',
       title: extension
-        ? '연장 계약서에 사인할까요?'
+        ? L.contractTitleExt
         : rookie
-          ? '프로 계약서에 사인할까요?'
-          : '이적 계약서에 사인할까요?',
-      text: extension
-        ? '남은 계약에 기간을 더해요. 새 연봉은 이번 시즌부터 적용돼요.'
-        : `${o.name}${waGwa(o.name)} 함께 ${rookie ? '첫 프로 시즌을' : '새 시즌을'} 시작합니다.`,
+          ? L.contractTitleRookie
+          : L.contractTitleTransfer,
+      text: extension ? L.contractTextExt : L.contractTextStart({ club: tn(o.name), rookie }),
       club: {
         id: o.kind === 'offer' ? o.clubId : G.club.id,
         name: o.kind === 'offer' ? o.name : G.club.name,
       },
       terms: [
-        { label: '연봉', value: fmtMoney(o.salary) },
+        { label: L.termSalary, value: fmtMoney(o.salary) },
         ...(extension
           ? [
-              { label: '남은 계약', value: '1년' },
-              { label: '추가 연장', value: `${extension.years}년` },
-              { label: '총 계약 기간', value: `${o.years}년` },
+              { label: L.termLeft, value: L.termLeftValue },
+              { label: L.termExtra, value: L.termYears({ n: extension.years }) },
+              { label: L.termTotal, value: L.termYears({ n: o.years }) },
             ]
-          : [{ label: '계약 기간', value: `${o.years}년` }]),
+          : [{ label: L.termPeriod, value: L.termYears({ n: o.years }) }]),
         ...(o.kind === 'offer' && o.fee
-          ? [{ label: '이적료', value: `약 ${fmtValue(o.fee)}` }]
+          ? [{ label: L.termFee, value: L.termFeeValue({ fee: fmtValue(o.fee) }) }]
           : []),
-        ...(o.kind === 'offer' && o.role ? [{ label: '역할', value: o.role }] : []),
+        ...(o.kind === 'offer' && o.role ? [{ label: L.termRole, value: tn(o.role) }] : []),
       ],
       name: G.name,
-      cta: extension ? '사인하고 계약 연장' : rookie ? '사인하고 프로 입단' : '사인하고 이적',
+      cta: extension ? L.ctaExt : rookie ? L.ctaRookie : L.ctaTransfer,
       // 두 번 눌러도 한 번만 부른다(본문이 도장을 찍으며 버튼을 잠근다).
       onSign: () => void signContract(i, o, options),
       onClose: nextPending,
@@ -574,8 +592,12 @@ export function createGameActions(host: GameHost) {
       if (map)
         await sheet.playFlight({
           eyebrow: 'Transfer Flight',
-          title: `${withRo(to.city)} 날아가는 중`,
-          sub: `${to.country} · ${leagueOf(o.leagueId).name} · 약 ${flightHours(from, to)}시간 비행`,
+          title: L.flyingTo({ city: to.city }),
+          sub: L.flightSub({
+            country: to.country,
+            league: tn(leagueOf(o.leagueId).name),
+            hours: flightHours(from, to),
+          }),
           from: { code: from.code, city: from.city },
           to: { code: to.code, city: to.city },
           map,
@@ -606,8 +628,8 @@ export function createGameActions(host: GameHost) {
         G.pending = { type: 'market', res: null, m: market(G) };
         host.save();
         host.analytics.play(G);
-        sheet.showSheet({ kind: 'notice', eyebrow: '병역', text: r.text }, [
-          { label: '이적 시장으로 →', cls: 'btn-primary', fn: nextPending },
+        sheet.showSheet({ kind: 'notice', eyebrow: L.milEyebrow, text: r.text }, [
+          { label: L.toMarket, cls: 'btn-primary', fn: nextPending },
         ]);
         return false;
       }
@@ -618,13 +640,16 @@ export function createGameActions(host: GameHost) {
       sheet.showSheet(
         {
           kind: 'notice',
-          eyebrow: '병역',
-          big: { text: o.kind === 'serve' ? '복무' : r.ok ? '합격' : '결정', ok: r.ok !== false },
+          eyebrow: L.milEyebrow,
+          big: {
+            text: o.kind === 'serve' ? L.milServe : r.ok ? L.milPass : L.milDecided,
+            ok: r.ok !== false,
+          },
           text: r.text,
         },
         [
           {
-            label: `${G.year} 시즌 시작 →`,
+            label: L.startSeasonBtn({ year: G.year }),
             cls: 'btn-primary',
             fn: backToSeason,
           },
@@ -642,7 +667,7 @@ export function createGameActions(host: GameHost) {
 
   function startSeason() {
     backToSeason();
-    host.toast(`${appState.G!.year} 시즌 시작!`);
+    host.toast(L.startSeasonToast({ year: appState.G!.year }));
   }
 
   /** T-11-090 이벤트·이적시장 시트를 닫고 시즌 탭 맨 위로 돌아간다(훈련을 마친 뒤와 같다). */
@@ -670,13 +695,13 @@ export function createGameActions(host: GameHost) {
       {
         kind: 'notice',
         eyebrow: 'New Life',
-        title: '새로 시작할까요?',
+        title: L.newTitle,
         muted: true,
-        text: `진행 중인 ${appState.G!.name} 선수의 커리어는 사라져요. 명예의 전당에는 은퇴한 선수만 남아요.`,
+        text: L.newText({ name: appState.G!.name }),
       },
       [
         {
-          label: '새 커리어 시작',
+          label: L.newBtn,
           cls: 'btn-primary',
           fn: () => {
             host.analytics.replace();
@@ -688,7 +713,7 @@ export function createGameActions(host: GameHost) {
             appState.C.number = randomNumber();
           },
         },
-        { label: '취소', fn: sheet.closeSheet },
+        { label: L.cancel, fn: sheet.closeSheet },
       ],
     );
   }
@@ -697,13 +722,13 @@ export function createGameActions(host: GameHost) {
   function retireAsk(onCancel: () => void = sheet.closeSheet) {
     // T-10-032: 짧은 커리어는 전체 명예의 전당에 오르지 않는다 — 은퇴 전에 미리 알린다.
     const text = isHofEligible(appState.G!.age)
-      ? '은퇴하면 이 선수의 커리어는 명예의 전당에 기록되고, 더 이상 플레이할 수 없어요.'
-      : `은퇴하면 더 이상 플레이할 수 없어요. ${SHORT_CAREER_NOTE}`;
+      ? L.retireTextHof
+      : L.retireTextShort({ note: SHORT_CAREER_NOTE });
     sheet.showSheet(
-      { kind: 'notice', eyebrow: 'Retirement', title: '정말 은퇴하시겠어요?', muted: true, text },
+      { kind: 'notice', eyebrow: 'Retirement', title: L.retireTitle, muted: true, text },
       [
-        { label: '은퇴한다', cls: 'btn-primary', fn: doRetire },
-        { label: '조금 더 뛴다', fn: onCancel },
+        { label: L.retireYes, cls: 'btn-primary', fn: doRetire },
+        { label: L.retireStay, fn: onCancel },
       ],
     );
   }
@@ -733,7 +758,7 @@ export function createGameActions(host: GameHost) {
     appState.candidates = null;
     appState.report = null;
     host.scrollTop(false);
-    host.toast('고교 마지막 시즌이 시작돼요');
+    host.toast(L.careerStartToast);
   }
 
   function rollCandidates() {

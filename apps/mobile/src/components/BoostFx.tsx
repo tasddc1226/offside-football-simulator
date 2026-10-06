@@ -6,6 +6,7 @@ import { Animated, Easing, Modal, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useSnapshot } from 'valtio';
 import type { BoostOutcome } from '@offside/app-core/boost-view';
+import { gameBoostText as L } from '@offside/app-core/i18n/ko/gameBoost';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { rem } from '../theme/type';
@@ -109,7 +110,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
           {!done ? (
             <>
               <Txt v="h2" accessibilityRole="header">
-                강화 중…
+                {L.rolling}
               </Txt>
               <View
                 style={{
@@ -129,7 +130,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
                 />
               </View>
               <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                성공 확률 {out.chance}%
+                {L.chance({ n: out.chance })}
               </Txt>
             </>
           ) : (
@@ -145,7 +146,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
                 {out.text}
               </Txt>
               <Btn kind="primary" block testID="boost-fx-close" onPress={onDone}>
-                확인
+                {L.close}
               </Btn>
             </>
           )}

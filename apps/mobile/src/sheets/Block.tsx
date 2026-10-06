@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
+import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, fitLine, rem } from '../theme/type';
@@ -56,10 +57,14 @@ export function Block({ v }: { v: Extract<SheetView, { kind: 'block' }> }) {
   const s = useSnapshot(v);
   const c = useColors();
   const tally = [
-    { key: 'apps', k: s.tally.apps, l: '출전' },
-    { key: 'g', k: s.tally.g, l: '골' },
-    { key: 'a', k: s.back ? s.tally.cs : s.tally.a, l: s.back ? '무실점' : '도움' },
-    { key: 'rating', k: s.tally.rating, l: '평점' },
+    { key: 'apps', k: s.tally.apps, l: sheetCoreText.tallyApps },
+    { key: 'g', k: s.tally.g, l: sheetCoreText.tallyGoals },
+    {
+      key: 'a',
+      k: s.back ? s.tally.cs : s.tally.a,
+      l: s.back ? sheetCoreText.tallyCleanSheets : sheetCoreText.tallyAssists,
+    },
+    { key: 'rating', k: s.tally.rating, l: sheetCoreText.tallyRating },
   ];
   return (
     <>
@@ -76,7 +81,9 @@ export function Block({ v }: { v: Extract<SheetView, { kind: 'block' }> }) {
           tone="muted"
           testID="block-wdl"
           style={{ fontSize: rem(0.75), fontVariant: ['tabular-nums'] }}
-        >{`${s.wdl.w}승 ${s.wdl.d}무 ${s.wdl.l}패`}</Txt>
+        >
+          {sheetCoreText.wdl(s.wdl)}
+        </Txt>
       </View>
       <StatGrid items={tally.map((t) => ({ key: t.key, l: t.l, v: <Bump value={t.k} /> }))} />
       {/* 새 경기 줄이 위에 붙고, 지난 줄은 muted로 누른다. */}

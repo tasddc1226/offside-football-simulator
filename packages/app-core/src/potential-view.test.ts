@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setLocale } from './i18n/core.js';
+import { en } from './i18n/en/index';
 import fixture from '../../game/src/__fixtures__/save-fw26.json';
 import { migrateSave } from '@offside/game/save';
 import { getActiveRng } from '@offside/game/rng';
@@ -6,12 +8,8 @@ import { retire, saveKey } from '@offside/game/season';
 import type { GameState } from '@offside/game/types';
 import { createLegends } from './legend.js';
 import { initialAppState } from './state.js';
-import {
-  retirementPotential,
-  scoutHint,
-  visibleCareerLog,
-  visibleSeasonNotes,
-} from './potential-view.js';
+import { retirementPotential, visibleCareerLog, visibleSeasonNotes } from './potential-view.js';
+import { scoutHint } from './scoutHint.js';
 
 function setup() {
   const items = new Map<string, string>();
@@ -193,5 +191,23 @@ describe('시즌 결산 스카우트 한마디', () => {
     expect(scoutHint(s, 2027)).toBe(scoutHint(s, 2027));
     expect(scoutHint(s, 2028)).not.toBe(scoutHint(s, 2027));
     for (let y = 2026; y < 2040; y++) expect(scoutHint(s, y)).not.toMatch(/[SABCD]/);
+  });
+  it('영어에서도 같은 번호의 문장이 나오고 한글이 섞이지 않는다', () => {
+    const s = at(80, 2);
+    const ko = Array.from({ length: 12 }, (_, i) => scoutHint(s, 2026 + i));
+    setLocale('en', en);
+    try {
+      const eng = Array.from({ length: 12 }, (_, i) => scoutHint(s, 2026 + i));
+      eng.forEach((t, i) => {
+        expect(t).toBeTruthy();
+        expect(t).not.toMatch(/[가-힣]/);
+        expect(t).not.toBe(ko[i]);
+      });
+      // 같은 번호끼리 고른다: 한국어가 같은 문장을 되풀이하는 해는 영어도 되풀이한다.
+      for (let i = 0; i < 12; i++)
+        for (let j = i + 1; j < 12; j++) expect(eng[i] === eng[j]).toBe(ko[i] === ko[j]);
+    } finally {
+      setLocale('ko');
+    }
   });
 });

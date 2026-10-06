@@ -419,8 +419,8 @@ export async function buyListing(
         now: b.now,
         content: {
           kind: 'market',
-          title: '등록한 선수가 이적했어요',
-          body: '판매가 완료됐어요. 이적시장에서 판매 내역과 구단 자금을 확인해 주세요.',
+          title: '등록한 선수가 이적했어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          body: '판매가 완료됐어요. 이적시장에서 판매 내역과 구단 자금을 확인해 주세요.', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
           target: { type: 'screen', screen: 'market' },
         },
       },

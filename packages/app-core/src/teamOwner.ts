@@ -4,7 +4,6 @@ import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import { ATTR_KEYS } from '@offside/game/data';
 import {
   ACH_CATEGORIES,
-  ACH_CATEGORY_NAME,
   LINEUP_SIZE,
   TEAM_WILDCARD_MAX,
   YOUTH_OVR,
@@ -38,14 +37,17 @@ import type {
   TeamPlayer,
 } from './api/team.js';
 import { num, signedNum } from './teamText.js';
+import { teamCoreText as L } from './i18n/ko/teamCore.js';
+import { teamHomeText as TH } from './i18n/ko/teamHome.js';
+import { teamSynergyText as SY } from './i18n/ko/teamSynergy.js';
 
 /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
 export type PickSort = 'fit' | 'score' | 'peak';
-export const PICK_SORTS = [
-  ['fit', '자리 실력'],
-  ['score', '레전드 점수'],
-  ['peak', '최고 OVR'],
-] as const satisfies readonly (readonly [PickSort, string])[];
+export const pickSorts = (): readonly (readonly [PickSort, string])[] => [
+  ['fit', L.sortFit],
+  ['score', L.sortScore],
+  ['peak', L.sortPeak],
+];
 
 export type PickCandidate = {
   p: TeamPlayer;
@@ -83,7 +85,7 @@ export function pickCandidates(
 /** 최고 시점 대표 능력치 한 줄(골키퍼는 골키퍼 능력치 이름). */
 export const attrLine = (p: TeamPlayer): string | null =>
   p.attrs
-    ? (p.attrsEstimated ? '추정 능력치 · ' : '') +
+    ? (p.attrsEstimated ? L.attrEstimated : '') +
       ATTR_KEYS.map((k) => `${(p.pos === 'GK' ? GK_ABBR : FACE_ABBR)[k]} ${p.attrs![k]}`).join(
         ' · ',
       )
@@ -102,7 +104,8 @@ export function assignSlot(
   return next;
 }
 
-export { WILDCARD_FULL_TEXT } from '@offside/contracts/owner-team';
+/** 와일드카드가 가득 찼을 때 안내(서버 오류 문구 WILDCARD_FULL_TEXT의 화면 쪽). */
+export const wildcardFullText = () => L.wildcardFull({ max: TEAM_WILDCARD_MAX });
 /** T-11-114 선발에 든 와일드카드(지난 시즌 선수) 수. */
 export const wildcardsIn = (
   slots: readonly (string | null)[],
@@ -121,7 +124,9 @@ export const wildcardLabel = (
   byId: ReadonlyMap<string, TeamPlayer>,
   season: number,
 ): string | null =>
-  season > 0 ? `와일드카드 ${wildcardsIn(slots, byId, season)}/${TEAM_WILDCARD_MAX}` : null;
+  season > 0
+    ? L.wildcardLabel({ n: wildcardsIn(slots, byId, season), max: TEAM_WILDCARD_MAX })
+    : null;
 
 /** 실력이 같으면 먼저 채울 자리(스트라이커·골키퍼·센터백 …). */
 const FILL_ORDER = ['ST', 'GK', 'CB', 'CM', 'AM', 'DM', 'W', 'FB'];
@@ -184,12 +189,7 @@ export const draftLines = (
   season: number,
 ): LineStrength => lineStrength(slotCodes, ratings, synergyApplies(season) ? synergy : null);
 
-const SYN_LABEL: Record<keyof SynergyLines, string> = {
-  atk: '공격',
-  mid: '중원',
-  def: '수비',
-  gk: '골문',
-};
+const SYN_LABEL = { atk: 'lineAtk', mid: 'lineMid', def: 'lineDef', gk: 'lineGk' } as const;
 /** 시너지 효과 표기 — '공격 +2 · 중원 +0.5'. 효과가 비면 배지는 '경기 효과 없음', 듀오는 상한에 걸린 것. */
 export const synergyEffectText = (
   effect: Partial<SynergyLines>,
@@ -197,11 +197,16 @@ export const synergyEffectText = (
 ): string =>
   (Object.keys(SYN_LABEL) as (keyof SynergyLines)[])
     .filter((k) => effect[k])
-    .map((k) => `${SYN_LABEL[k]} ${signedNum(effect[k]!)}`)
-    .join(' · ') || (kind === 'duo' ? '상한에 걸려 효과 없음' : '경기 효과 없음');
+    .map((k) => `${TH[SYN_LABEL[k]]} ${signedNum(effect[k]!)}`)
+    .join(' · ') || (kind === 'duo' ? SY.capped : SY.noEffect);
 /** 시너지가 경기에 들어가는지 알리는 한 줄. */
 export const synergyNote = (season: number): string =>
-  synergyApplies(season) ? '경기에 반영돼요' : '프리시즌 경기에는 반영되지 않았어요';
+  synergyApplies(season) ? SY.applies : SY.notApplied;
+/** 시너지 이름·설명 — 한국어는 contracts 정의 그대로, 다른 언어는 사전에서 id로 찾는다. */
+const synergyText = (id: string, name: string, desc: string): readonly [string, string] => [
+  SY.synName({ id, ko: name }),
+  SY.synDesc({ id, ko: desc }),
+];
 
 export type SynergyChip = {
   id: string;
@@ -212,16 +217,19 @@ export type SynergyChip = {
 };
 /** 편성 화면의 시너지 칩(웹·앱 공용). 주발 맞춤은 인원과 자리 실력 보정 합을 보인다. */
 export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
-  s.active.map((a) => ({
-    id: a.id,
-    name: a.kind === 'foot' ? `${a.name} ${a.members.length}명` : a.name,
-    desc: a.desc,
-    effect:
-      a.kind === 'foot'
-        ? `자리 실력 ${signedNum(s.foot.reduce((t, b) => t + b, 0))}`
-        : synergyEffectText(a.effect, a.kind),
-    badge: a.kind === 'badge',
-  }));
+  s.active.map((a) => {
+    const [name, desc] = synergyText(a.id, a.name, a.desc);
+    return {
+      id: a.id,
+      name: a.kind === 'foot' ? SY.footChip({ name, n: a.members.length }) : name,
+      desc,
+      effect:
+        a.kind === 'foot'
+          ? SY.fitEffect({ v: signedNum(s.foot.reduce((t, b) => t + b, 0)) })
+          : synergyEffectText(a.effect, a.kind),
+      badge: a.kind === 'badge',
+    };
+  });
 /** 고른 시너지 칩 → 그라운드 듀오 연결선(고른 것은 굵게)과 테두리를 칠 선수 자리. */
 export function synergyFocus(s: TeamSynergy, id: string | null) {
   return {
@@ -231,17 +239,20 @@ export function synergyFocus(s: TeamSynergy, id: string | null) {
     members: s.active.find((a) => a.id === id)?.members ?? null,
   };
 }
-/** 시너지 표 — [이름, 설명, 효과]. 숨은 규칙 없이 전부 보인다. */
-export const SYNERGY_TABLE: readonly (readonly [string, string, string])[] = [
-  ...DUOS.map((d) => [d.name, d.desc, synergyEffectText(d.effect)] as const),
-  [TEAM_RULES.homegrown.name, TEAM_RULES.homegrown.desc, synergyEffectText(HOMEGROWN_EFFECT)],
-  [TEAM_RULES.national.name, TEAM_RULES.national.desc, '배지만(경기 효과 없음)'],
-  [
-    TEAM_RULES.foot.name,
-    TEAM_RULES.foot.desc,
-    `자리 실력 ${signedNum(FOOT_BONUS)}(양발 ${signedNum(FOOT_BONUS_BOTH)})`,
-  ],
-];
+/** 시너지 표 — [이름, 설명, 효과]. 숨은 규칙 없이 전부 보인다. 언어를 바꾸면 다시 만들어야 해서 함수다. */
+export const synergyTable = (): readonly (readonly [string, string, string])[] => {
+  const row = (r: { id: string; name: string; desc: string }, effect: string) =>
+    [...synergyText(r.id, r.name, r.desc), effect] as const;
+  return [
+    ...DUOS.map((d) => row(d, synergyEffectText(d.effect))),
+    row(TEAM_RULES.homegrown, synergyEffectText(HOMEGROWN_EFFECT)),
+    row(TEAM_RULES.national, SY.badgeOnly),
+    row(
+      TEAM_RULES.foot,
+      SY.fitEffectBoth({ v: signedNum(FOOT_BONUS), both: signedNum(FOOT_BONUS_BOTH) }),
+    ),
+  ];
+};
 
 /** 경기하기 버튼 밑에 보이는 못 하는 이유(할 수 있으면 null). */
 export function playHintOf(
@@ -250,29 +261,33 @@ export function playHintOf(
   matchesLeft: number,
 ): string | null {
   return !team
-    ? '팀을 저장하면 경기할 수 있어요.'
+    ? L.hintNoTeam
     : dirty
-      ? '바꾼 편성을 저장해야 경기할 수 있어요.'
+      ? L.hintDirty
       : team.slots.every((s) => s.careerId === null)
-        ? '은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.'
+        ? L.hintNoStarters
         : matchesLeft === 0
-          ? '오늘 경기는 모두 치렀어요. 한국 시각 자정에 다시 열려요.'
+          ? L.hintNoMatches
           : null;
 }
 
 // ───────── 시즌 업적 ─────────
 export const achDone = (items: ClubAchievement[]) => items.filter((i) => i.done).length;
 /** 이름만으론 조건이 안 읽히는 업적의 안내. 미달성일 때만 붙는다. 조건은 api team/achievements.ts와 같이 고친다. */
-const ACH_HINT = new Map([['team-fit', '유스 선수 없이 11명 모두 적합도 1.00이어야 해요']]);
+const achHint = (id: string): string | undefined =>
+  id === 'team-fit' ? L.achTeamFitHint : undefined;
 
 /** 업적 한 줄의 오른쪽 표시. */
 export function achState(i: ClubAchievement): string {
   if (i.level !== undefined)
-    return `${i.level}단계 · ${num(i.cur ?? 0)}${i.unit ?? ''}${i.next != null ? ` · NEXT ${num(i.next)}` : ' · 최고 단계'}`;
+    return (
+      L.achLevel({ level: i.level, cur: `${num(i.cur ?? 0)}${i.unit ?? ''}` }) +
+      (i.next != null ? L.achNext({ next: num(i.next) }) : L.achMaxLevel)
+    );
   if (i.max !== undefined) return `${i.cur ?? 0} / ${i.max}`;
-  if (i.done) return '달성 완료';
-  const hint = ACH_HINT.get(i.id);
-  return hint ? `미달성 · ${hint}` : '미달성';
+  if (i.done) return L.achDone;
+  const hint = achHint(i.id);
+  return hint ? L.achUndoneHint({ hint }) : L.achUndone;
 }
 
 /** 열린 단계 전체의 달성 수 · 업적 수(잠긴 단계는 빼고 센다). */
@@ -300,9 +315,29 @@ export function achNear(groups: readonly ClubAchievementGroup[], n = 3): AchNear
 
 /** 업적 한 줄의 점수 표시 — 얻은 점수가 있으면 '+30점', 아직 없으면 얻을 수 있는 점수 '50점'. */
 export const achPoints = (i: ClubAchievement): string =>
-  i.points > 0 ? `+${num(i.points)}점` : `${num(i.worth)}점`;
+  i.points > 0 ? L.achPointsGot({ n: num(i.points) }) : L.achPointsWorth({ n: num(i.worth) });
 
 // T-11-028 업적 분류(선수·팀·구단주·감독)와 시즌 등급.
+/** 업적 분류 이름(contracts의 한국어 이름 대신 지금 언어로). */
+export const achCatName = (id: AchCategory): string =>
+  ({ player: L.achCatPlayer, team: L.achCatTeam, owner: L.achCatOwner, manager: L.achCatManager })[
+    id
+  ];
+
+/** 시즌 등급 이름(contracts의 한국어 이름 대신 지금 언어로). 모르는 등급이면 받은 이름 그대로. */
+export const achGradeName = (g: { id: string; name: string }): string =>
+  (
+    ({
+      rookie: L.gradeRookie,
+      bronze: L.gradeBronze,
+      silver: L.gradeSilver,
+      gold: L.gradeGold,
+      platinum: L.gradePlatinum,
+      diamond: L.gradeDiamond,
+      legend: L.gradeLegend,
+    }) as Record<string, string>
+  )[g.id] ?? g.name;
+
 export type AchSection = {
   id: AchCategory;
   name: string;
@@ -323,7 +358,7 @@ export function achSections(groups: readonly ClubAchievementGroup[]): AchSection
     return [
       {
         id,
-        name: ACH_CATEGORY_NAME[id],
+        name: achCatName(id),
         groups: gs,
         score: items.reduce((t, i) => t + i.points, 0),
         done: achDone(items),
@@ -355,7 +390,7 @@ export function achGradeView(score: number): AchGradeView {
 
 /** 업적 랭킹 순위 표시('12위 · 297명 중' / 점수가 없으면 안내). */
 export const achRankText = (rank: number | null, ranked: number): string =>
-  rank === null ? '업적을 하나 달성하면 랭킹에 올라요' : `${num(rank)}위 · ${num(ranked)}명 중`;
+  rank === null ? L.achRankNone : L.achRank({ rank: num(rank), ranked: num(ranked) });
 
 /** 처음 펼쳐 둘 단계 — 아직 다 채우지 못한 첫 단계. */
 export const achOpenGroup = (groups: readonly ClubAchievementGroup[]): string | null =>
@@ -370,11 +405,9 @@ export const teamEditableIn = (season: number, current: number | null) =>
   season === current || isPreseasonLegacy(season, current);
 
 /** 개막 뒤 프리시즌 팀 화면의 안내. */
-export const PRESEASON_TEAM_NOTE =
-  '프리시즌에 키운 선수 중 지금 가진 선수로 꾸려요. 이 팀은 친구와 하는 친선전에만 나가고, 프리시즌 랭킹과 업적은 그대로예요.';
+export const preseasonTeamNote = () => L.preseasonTeamNote;
 
 /** 팀 화면 '경기' 탭에서 경기를 막는 이유 — 휴식기 · 지난 시즌 · 그 밖은 playHintOf. */
-const REST_HINT = '시즌 사이 휴식기예요. 다음 시즌이 열리면 경기할 수 있어요.';
 export function matchHintOf(
   team: OwnerTeam | null,
   dirty: boolean,
@@ -382,11 +415,9 @@ export function matchHintOf(
   season: number,
   current: number | null,
 ): string | null {
-  if (current === null) return REST_HINT;
-  if (isPreseasonLegacy(season, current))
-    return '프리시즌 팀은 친구와 하는 친선전에만 나가요. 랭크 경기는 지금 시즌 팀으로 해요.';
-  if (season !== current)
-    return '지난 시즌 팀은 보기만 할 수 있어요. 지금 시즌을 고르면 경기할 수 있어요.';
+  if (current === null) return L.hintRest;
+  if (isPreseasonLegacy(season, current)) return L.hintPreseason;
+  if (season !== current) return L.hintPast;
   return playHintOf(team, dirty, matchesLeft);
 }
 
@@ -397,5 +428,28 @@ export const outcomeOf = (m: TeamMatch): Outcome => {
   const theirs = m[m.mine === 'home' ? 'away' : 'home'].goals;
   return mine > theirs ? '승' : mine < theirs ? '패' : '무';
 };
-export const OUTCOME_TITLE = { 승: '승리', 무: '무승부', 패: '패배' } as const;
+/** 결과 이름(승리 · 무승부 · 패배). 읽을 때마다 지금 언어로 고른다. */
+export const OUTCOME_TITLE = {
+  get 승() {
+    return L.titleWin;
+  },
+  get 무() {
+    return L.titleDraw;
+  },
+  get 패() {
+    return L.titleLoss;
+  },
+} as const;
+/** 결과 한 글자(승 · 무 · 패). Outcome 값 자체는 식별자라 한국어 그대로 두고 화면에만 이 표기를 쓴다. */
+export const outcomeLabel = (o: Outcome): string =>
+  o === '승' ? L.outWin : o === '패' ? L.outLoss : L.outDraw;
 export const pct = (f: number) => `${Math.round(f * 100)}%`;
+
+/** 업적 분류의 짧은 이름(탭 글자) — 선수 · 팀 · 구단주 · 감독. */
+export const achCatShort = (id: AchCategory): string =>
+  ({
+    player: L.achCatShortPlayer,
+    team: L.achCatShortTeam,
+    owner: L.achCatShortOwner,
+    manager: L.achCatShortManager,
+  })[id];

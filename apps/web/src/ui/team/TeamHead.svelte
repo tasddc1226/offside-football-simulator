@@ -1,11 +1,13 @@
 <script lang="ts">
+  import { seasonLabel } from '@offside/app-core/seasonName';
   // 팀 소개는 작게, 편성 그라운드는 바로 아래에. 보조 동작은 팀 메뉴에 모은다.
   import { tick } from 'svelte';
   import { MANAGER_NAME_MAX, MANAGER_NAME_MIN, TEAM_NAME_MAX, TEAM_NAME_MIN, YOUTH_OVR } from '@offside/contracts/owner-team';
   import type { OwnerTeam, OwnerTeamResponse } from '@offside/app-core/api/team';
   import { num, recordText } from '@offside/app-core/teamText';
-  import { isPreseasonLegacy, PRESEASON_TEAM_NOTE } from '@offside/app-core/teamOwner';
+  import { isPreseasonLegacy, preseasonTeamNote } from '@offside/app-core/teamOwner';
   import { doneOnEnter } from '../inputDone.js';
+  import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import TeamLogo from './TeamLogo.svelte';
   import type { TeamLogo as Logo } from '@offside/contracts/team-logo';
 
@@ -70,60 +72,60 @@
 <section class="card tm-head">
   <div class="tm-top">
     {#if seasons.length > 1}
-      <select class="tm-season" aria-label="시즌 선택" value={season} onchange={(e) => { closeMenu(); onseason(Number(e.currentTarget.value)); }} data-team-season>
+      <select class="tm-season" aria-label={L.seasonSelect} value={season} onchange={(e) => { closeMenu(); onseason(Number(e.currentTarget.value)); }} data-team-season>
         {#each seasons as o (o.id)}
-          <option value={o.id}>{o.name}{o.id === current ? ' (지금)' : ''}</option>
+          <option value={o.id}>{seasonLabel(o.id, o.name)}{o.id === current ? L.seasonNow : ''}</option>
         {/each}
       </select>
     {:else}<span class="tm-season-name">{seasonName}</span>{/if}
     {#if editable}
     <details class="tm-menu" bind:this={menu} bind:open={menuOpen}>
-      <summary aria-label="팀 메뉴" aria-expanded={menuOpen} data-act="team-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg></summary>
+      <summary aria-label={L.teamMenu} aria-expanded={menuOpen} data-act="team-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg></summary>
       <div class="tm-menu-items">
-        {#if editable}<button onclick={() => { closeMenu(); onlogo(); }} data-act="team-logo">로고 설정</button>{/if}
-        {#if editable && team && !renaming}<button onclick={rename} data-act="team-rename">이름 바꾸기</button>{/if}
+        {#if editable}<button onclick={() => { closeMenu(); onlogo(); }} data-act="team-logo">{L.menuLogo}</button>{/if}
+        {#if editable && team && !renaming}<button onclick={rename} data-act="team-rename">{L.menuRename}</button>{/if}
       </div>
     </details>
     {/if}
   </div>
   <div class="tm-title">
     <div class="tm-identity">
-      {#if editable}<button class="tm-logo-edit" aria-label="팀 로고 설정" data-act="team-logo-open" onclick={onlogo}><TeamLogo {logo} name={name.trim() || '내 팀'} /></button>
-      {:else}<TeamLogo {logo} name={team?.name ?? '내 팀'} />{/if}
+      {#if editable}<button class="tm-logo-edit" aria-label={L.logoOpen} data-act="team-logo-open" onclick={onlogo}><TeamLogo {logo} name={name.trim() || L.myTeam} /></button>
+      {:else}<TeamLogo {logo} name={team?.name ?? L.myTeam} />{/if}
       <div class="tm-identity-text">
-      <h1>{editable ? name.trim() || (team ? '팀 이름 입력' : '팀 만들기') : team?.name ?? '팀 없음'}</h1>
-      {#if team}<span class="muted fs-sm">{editable ? manager.trim() || '감독 이름 입력' : team.manager}{manager.trim() || !editable ? ' 감독' : ''}{#if editable && dirty}<small class="tm-draft">저장 전</small>{/if}</span>{/if}
+      <h1>{editable ? name.trim() || (team ? L.titleEnterName : L.createTeam) : team?.name ?? L.noTeam}</h1>
+      {#if team}<span class="muted fs-sm">{manager.trim() || !editable ? L.managerLine({ name: editable ? manager.trim() : team.manager }) : L.managerEnter}{#if editable && dirty}<small class="tm-draft">{L.unsaved}</small>{/if}</span>{/if}
       </div>
     </div>
-    <div class="tm-ovr-badge" aria-label="팀 OVR {ovr}"><small>OVR</small><b>{ovr}</b></div>
+    <div class="tm-ovr-badge" aria-label={L.teamOvr({ n: ovr })}><small>OVR</small><b>{ovr}</b></div>
   </div>
   {#if team}
     <dl class="tm-stats" data-team-record>
-      <div class="tm-record"><dt class="sr-only">전적</dt><dd>{recordText(team.record)}</dd></div>
-      <div><dt>레이팅</dt><dd>{num(team.rating)}</dd></div>
-      {#if legacy}<div><dt>친선전</dt><dd>전용</dd></div>
-      {:else}<div aria-label={editable ? `오늘 남은 경기 ${matchesLeft}회, 하루 ${perDay}회까지` : undefined}><dt>{editable ? '남은 경기' : '시즌'}</dt><dd>{editable ? `${matchesLeft}회` : '지난 시즌'}</dd></div>{/if}
+      <div class="tm-record"><dt class="sr-only">{L.statRecord}</dt><dd>{recordText(team.record)}</dd></div>
+      <div><dt>{L.statRating}</dt><dd>{num(team.rating)}</dd></div>
+      {#if legacy}<div><dt>{L.statFriendly}</dt><dd>{L.statFriendlyOnly}</dd></div>
+      {:else}<div aria-label={editable ? L.leftAria({ left: matchesLeft, per: perDay }) : undefined}><dt>{editable ? L.statLeft : L.statSeason}</dt><dd>{editable ? L.statTimes({ n: matchesLeft }) : L.statPast}</dd></div>{/if}
     </dl>
   {/if}
   {#if legacy}
-    <p class="muted fs-sm" data-team-legacy>{PRESEASON_TEAM_NOTE}</p>
+    <p class="muted fs-sm" data-team-legacy>{preseasonTeamNote()}</p>
   {:else if !team && editable}
-    <p class="muted">{seasonName}에 뛰고 은퇴한 내 선수로 11명을 꾸려요. 빈 자리는 유스 선수(OVR {YOUTH_OVR})가 채워서, 한 명만 넣어도 경기할 수 있어요. 팀은 시즌마다 새로 꾸려요.</p>
+    <p class="muted">{L.introNew({ season: seasonName, ovr: YOUTH_OVR })}</p>
   {:else if !team}
-    <p class="muted">{seasonName}에는 팀을 꾸리지 않았어요.</p>
+    <p class="muted">{L.introNone({ season: seasonName })}</p>
   {/if}
   {#if !editable && team}
-    <p class="muted fs-sm" data-team-readonly>지난 시즌 팀이라 보기만 할 수 있어요.</p>
+    <p class="muted fs-sm" data-team-readonly>{L.readonlyNote}</p>
   {/if}
   {#if editable && (!team || renaming)}
     <div class="tm-names">
       <label class="field">
-        <span class="lbl">팀 이름</span>
-        <input type="text" bind:this={teamNameInput} bind:value={name} minlength={TEAM_NAME_MIN} maxlength={TEAM_NAME_MAX} placeholder="{TEAM_NAME_MIN}~{TEAM_NAME_MAX}자" data-team-name enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
+        <span class="lbl">{L.teamNameLabel}</span>
+        <input type="text" bind:this={teamNameInput} bind:value={name} minlength={TEAM_NAME_MIN} maxlength={TEAM_NAME_MAX} placeholder={L.charsRange({ min: TEAM_NAME_MIN, max: TEAM_NAME_MAX })} data-team-name enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
       </label>
       <label class="field">
-        <span class="lbl">감독 이름</span>
-        <input type="text" bind:value={manager} minlength={MANAGER_NAME_MIN} maxlength={MANAGER_NAME_MAX} placeholder="{MANAGER_NAME_MIN}~{MANAGER_NAME_MAX}자" data-team-manager enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
+        <span class="lbl">{L.managerNameLabel}</span>
+        <input type="text" bind:value={manager} minlength={MANAGER_NAME_MIN} maxlength={MANAGER_NAME_MAX} placeholder={L.charsRange({ min: MANAGER_NAME_MIN, max: MANAGER_NAME_MAX })} data-team-manager enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
       </label>
     </div>
   {/if}

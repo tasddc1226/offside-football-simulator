@@ -9,6 +9,7 @@ import {
 import { createNotificationInbox, initialInboxState } from '@offside/app-core/notification-inbox';
 import { ensureSession, onSessionChanged } from './session';
 import { go, openBoard } from '../game/nav';
+import { inboxText as L } from '@offside/app-core/i18n/ko/inbox';
 import { appState } from '../store';
 import { notificationDestination } from './notificationDestination';
 import { invalidateApiCache } from '@offside/app-core/api/client';
@@ -22,7 +23,7 @@ onSessionChanged(() => {
 });
 export async function loadInbox(options: Parameters<typeof inbox.load>[0] = {}) {
   if (await ensureSession()) await inbox.load(options);
-  else inboxState.error = '알림함에 연결하지 못했어요. 다시 시도해 주세요.';
+  else inboxState.error = L.connectFailed;
 }
 export function openInbox(id?: string) {
   if (id && NotificationIdSchema.safeParse(id).success) router.push(`/notifications/${id}`);

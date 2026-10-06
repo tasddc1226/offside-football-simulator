@@ -1,7 +1,10 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   import { visibleSeasonNotes } from '@offside/app-core/potential-view';
   import type { SheetView } from '@offside/app-core/sheets';
   import NewTitles from '../titles/NewTitles.svelte';
+  import { sheetPlayText as L } from '@offside/app-core/i18n/ko/sheetPlay';
+  import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
   let { v }: { v: Extract<SheetView, { kind: 'season' }> } = $props();
   const notes = $derived(visibleSeasonNotes(v.notes));
 </script>
@@ -14,33 +17,33 @@
   </div>
 {/if}
 <div class="stats" style="grid-template-columns:repeat(4,1fr)">
-  <div><b>{v.stats.apps}</b><span>출전</span></div>
-  <div><b>{v.stats.goals}</b><span>골</span></div>
+  <div><b>{v.stats.apps}</b><span>{sheetCoreText.tallyApps}</span></div>
+  <div><b>{v.stats.goals}</b><span>{sheetCoreText.tallyGoals}</span></div>
   <div><b>{v.stats.col}</b><span>{v.stats.colLabel}</span></div>
-  <div><b>{v.stats.rating}</b><span>평점</span></div>
+  <div><b>{v.stats.rating}</b><span>{sheetCoreText.tallyRating}</span></div>
 </div>
 {#if v.honors.length}
   <div class="stack">{#each v.honors as t, i (i)}<p class="hl"><b>{t}</b></p>{/each}</div>
 {:else}
-  <p class="muted">이번 시즌 수상은 없었어요.</p>
+  <p class="muted">{L.noHonors}</p>
 {/if}
 {#if v.promo}
   <div class="story-end promo-card pop" style="--d:160ms" data-promo>
     <div class="eyebrow">Promotion</div>
-    <b>K리그1 승격 확정</b>
-    <p class="muted fs-sm">이번 시즌 1위로 {v.promo.club}의 승격이 확정됐어요. 다음 시즌에는 K리그1에서 새로운 도전을 시작해요.</p>
-    <p class="muted fs-xs">자리를 내준 {v.promo.down} · K리그2 강등</p>
+    <b>{L.promoTitle}</b>
+    <p class="muted fs-sm">{L.promoBodyWeb({ club: v.promo.club })}</p>
+    <p class="muted fs-xs">{L.promoDownWeb({ club: v.promo.down })}</p>
   </div>
 {/if}
 {#if v.comps.length}
   <div>
-    <div class="eyebrow" style="margin-bottom:6px">대회별 성적</div>
+    <div class="eyebrow" style="margin-bottom:6px">{L.comps}</div>
     {#each v.comps as c, i (i)}<p class="muted">{c}</p>{/each}
   </div>
 {/if}
 {#if v.tours.length}
   <div>
-    <div class="eyebrow" style="margin-bottom:6px">국가대표 · 국제대회</div>
+    <div class="eyebrow" style="margin-bottom:6px">{L.tours}</div>
     {#each v.tours as x, i (i)}
       <div class="stack" style="gap:2px">
         <p><b>{x.name}</b> · {x.stage}{#if x.note}<span class="muted" style="margin-left:.25em">({x.note})</span>{/if}</p>
@@ -51,13 +54,13 @@
 {/if}
 {#if v.gala.length}
   <div>
-    <div class="eyebrow" style="margin-bottom:6px">Ballon d'Or 시상식</div>
-    {#each v.gala as g, i (i)}<p class="hl"><b>{g}</b></p>{/each}
+    <div class="eyebrow" style="margin-bottom:6px">{L.gala}</div>
+    {#each v.gala as g, i (i)}<p class="hl"><b>{tn(g)}</b></p>{/each}
   </div>
 {/if}
 {#if v.miles.length}
   <div>
-    <div class="eyebrow" style="margin-bottom:6px">커리어 이정표</div>
+    <div class="eyebrow" style="margin-bottom:6px">{L.miles}</div>
     {#each v.miles as m, i (i)}<p>· {m}</p>{/each}
   </div>
 {/if}
@@ -65,14 +68,14 @@
 {#if notes.length}<p class="muted">{notes.join(' · ')}</p>{/if}
 {#if v.scoutHint}
   <div>
-    <div class="eyebrow" style="margin-bottom:6px">스카우트 한마디</div>
+    <div class="eyebrow" style="margin-bottom:6px">{L.scoutHint}</div>
     <p>“{v.scoutHint}”</p>
   </div>
 {/if}
 <div>
-  <div class="eyebrow" style="margin-bottom:6px">팬 반응</div>
+  <div class="eyebrow" style="margin-bottom:6px">{L.fans}</div>
   <div class="fan-feed">
     {#each v.fans as f, i (i)}<div class="fan-line in" style="--d:{200 + i * 110}ms"><span class="fan-heart" aria-hidden="true">💗</span>{f}</div>{/each}
   </div>
 </div>
-<p class="muted">{v.age}세가 됐어요. 이제 다음 시즌을 준비해요.</p>
+<p class="muted">{L.ageWeb({ age: v.age })}</p>

@@ -10,6 +10,7 @@ import {
   type PlayerNudge as Notice,
 } from '@offside/app-core/player-nudge';
 import { peekOpen } from '@offside/app-core/potential-peek';
+import { playerNudgeText as L } from '@offside/app-core/i18n/ko/playerNudge';
 import type { GameState } from '@offside/game/types';
 import { potPeek, peekAvailable } from '../../platform/rewardedPeek';
 import { sheetState } from '../../store';
@@ -87,11 +88,11 @@ export function PlayerNudge({
               openPlayer();
             }}
           >
-            선수 탭 보기
+            {L.open}
           </Btn>
         </View>
-        <Btn accessibilityLabel="선수 탭 안내 닫기" onPress={() => setShown(null)}>
-          닫기
+        <Btn accessibilityLabel={L.closeAria} onPress={() => setShown(null)}>
+          {L.close}
         </Btn>
       </View>
     </View>

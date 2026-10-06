@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { seasonLabel } from '@offside/app-core/seasonName';
   // T-10-092 팀 프로필(라이브 랭킹에서 연다) — 시즌 순위 · 감독 · 레이팅 · 선발 그라운드 · 줄 힘 · 좋아요/조회수 · 팀 히스토리
   // 배지. 누구나 본다. 남의 팀을 열면 조회수를 한 번 올린다(내 팀은 세지 않는다).
   import { onMount } from 'svelte';
@@ -20,6 +21,8 @@
   import TeamLogo from './TeamLogo.svelte';
   import { num as n, recordText } from '@offside/app-core/teamText';
   import { friendRequestText } from '@offside/app-core/friendText';
+  import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
+  import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 
   let { id, onback }: { id: string; onback: () => void } = $props();
 
@@ -74,12 +77,8 @@
     friend = r.data.state;
     toast(friendRequestText(r.data));
   }
-  const FRIEND_BUTTON: Record<FriendState, string> = {
-    none: '친구 신청',
-    sent: '신청 보냄',
-    received: '친구 수락',
-    accepted: '친구',
-  };
+  const friendButton = (s: FriendState): string =>
+    ({ none: LF.reqNone, sent: LF.reqSent, received: LF.reqReceived, accepted: LF.reqAccepted })[s];
 
   const cells = $derived(
     team?.slots.map((s) => ({
@@ -92,7 +91,7 @@
   );
 </script>
 
-<LoadState {status} failText="팀을 불러오지 못했어요." retry={load}>
+<LoadState {status} failText={L.profLoadFail} retry={load}>
   {#if team}
     <section class="card stack tp-head" style="gap:10px" data-team-profile={team.id}>
       <div class="tp-top">
@@ -100,16 +99,16 @@
       </div>
       <div class="tp-title">
         <div class="tp-identity"><TeamLogo logo={team.logo} name={team.name} size={56} /><div class="tp-names">
-          <small class="muted">{team.seasonName}{team.rank ? ` · RANK #${team.rank}` : ''}</small>
+          <small class="muted">{seasonLabel(team.season, team.seasonName)}{team.rank ? ` · RANK #${team.rank}` : ''}</small>
           <h1>{team.name}</h1>
-          <p class="muted fs-sm">감독 <b class="tp-manager">{team.manager}</b>{mine ? ' · 내 팀' : ''}</p>
+          <p class="muted fs-sm">{L.profManager}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</p>
         </div></div>
-        <div class="tp-rating" aria-label="팀 레이팅 {team.rating}"><small>RATING</small><b>{n(team.rating)}</b></div>
+        <div class="tp-rating" aria-label={L.profRatingAria({ n: team.rating })}><small>RATING</small><b>{n(team.rating)}</b></div>
       </div>
       <dl class="tp-stats">
-        <div><dt>팀 OVR</dt><dd>{team.ovr}</dd></div>
-        <div><dt>전적</dt><dd>{recordText(team.record)}</dd></div>
-        <div><dt>득실</dt><dd>{team.goals.for} : {team.goals.against}</dd></div>
+        <div><dt>{L.profStatOvr}</dt><dd>{team.ovr}</dd></div>
+        <div><dt>{L.profStatRecord}</dt><dd>{recordText(team.record)}</dd></div>
+        <div><dt>{L.profStatGoals}</dt><dd>{team.goals.for} : {team.goals.against}</dd></div>
       </dl>
     </section>
 
@@ -118,11 +117,11 @@
     <section class="card stack" style="gap:12px">
       <TeamLines lines={team.lines} />
       <div class="tp-social">
-        <button class="tp-like" aria-pressed={liked} disabled={mine || liking || closed} onclick={toggleLike} data-act="team-like" aria-label="좋아요 {team.likes}">
+        <button class="tp-like" aria-pressed={liked} disabled={mine || liking || closed} onclick={toggleLike} data-act="team-like" aria-label={L.profLikeAria({ n: team.likes })}>
           <span aria-hidden="true">{liked ? '♥' : '♡'}</span> {n(team.likes)}
         </button>
-        <span class="muted">조회수 <b>{n(team.views)}</b></span>
-        {#if friend}<button class="btn btn-sm" class:btn-primary={friend === 'none' || friend === 'received'} disabled={befriending || friend === 'sent' || friend === 'accepted'} onclick={befriend} data-act="team-friend" data-friend-state={friend}>{FRIEND_BUTTON[friend]}</button>{/if}
+        <span class="muted">{L.profViews}<b>{n(team.views)}</b></span>
+        {#if friend}<button class="btn btn-sm" class:btn-primary={friend === 'none' || friend === 'received'} disabled={befriending || friend === 'sent' || friend === 'accepted'} onclick={befriend} data-act="team-friend" data-friend-state={friend}>{friendButton(friend)}</button>{/if}
         <span class="muted fs-xs tp-formation">{team.formation}</span>
       </div>
     </section>
@@ -130,7 +129,7 @@
     <section class="card stack" style="gap:10px" data-team-history>
       <div>
         <div class="eyebrow">Team history</div>
-        <h2>팀 히스토리</h2>
+        <h2>{L.profHistoryTitle}</h2>
       </div>
       {#if team.badges.length}
         <ul class="tp-badges">
@@ -139,7 +138,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="empty">아직 기록이 없어요. 팀 경기와 시즌 순위 배지가 여기에 쌓여요.</p>
+        <p class="empty">{L.profHistoryEmpty}</p>
       {/if}
     </section>
     {#if !mine}<NameReport kind="team" id={team.id} name={team.name} />{/if}

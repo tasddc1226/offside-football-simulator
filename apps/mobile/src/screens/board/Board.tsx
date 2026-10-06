@@ -24,10 +24,13 @@ import {
   REPORT_REASON_LABEL,
   dateOf,
   parseBody,
+  postDetailMeta,
   postMeta,
 } from '@offside/app-core/boardText';
 import type { CommentReportReason } from '@offside/contracts/board-limits';
 import { touchedAt } from '@offside/app-core/news';
+import { boardText as L } from '@offside/app-core/i18n/ko/board';
+import { boardLabelText } from '@offside/app-core/i18n/ko/boardLabel';
 import { loadKey, saveKey } from '@offside/game/season';
 import { AdSlot } from '../../components/AdSlot';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
@@ -104,7 +107,7 @@ function CommentAct({
 function Tags({ p }: { p: PostSummary }) {
   return (
     <>
-      {p.pinned ? <Pill tone="warn">고정</Pill> : null}
+      {p.pinned ? <Pill tone="warn">{L.pinned}</Pill> : null}
       {p.version ? <Pill>{p.version}</Pill> : null}
     </>
   );
@@ -246,7 +249,7 @@ export default function Board() {
     if (boardTop === seenTop.current) return;
     seenTop.current = boardTop;
     void (async () => {
-      if (editing && !(await confirmAsync('작성 중인 글을 두고 목록으로 갈까요?'))) return;
+      if (editing && !(await confirmAsync(L.leaveEditing))) return;
       if (detail || editing) backToList();
       scrollTo(0);
     })();
@@ -281,21 +284,15 @@ export default function Board() {
     if (!r.ok) return toast(r.error.message);
     markNewsSeen(touchedAt(r.data)); // 내가 쓰거나 고친 글은 알리지 않는다.
     setEditing(null);
-    toast(e.id ? '글을 고쳤어요' : '글을 올렸어요');
+    toast(e.id ? L.postEdited : L.postCreated);
     await open(r.data.id);
   }
   async function removePost(post: Post) {
-    if (
-      !(await confirmAsync(
-        `'${post.title}' 글을 지울까요? 댓글도 함께 숨겨져요.`,
-        undefined,
-        '삭제',
-      ))
-    )
+    if (!(await confirmAsync(L.deletePostConfirm({ title: post.title }), undefined, L.remove)))
       return;
     const r = await api.deletePost(post.id);
     if (!r.ok) return toast(r.error.message);
-    toast('글을 지웠어요');
+    toast(L.postDeleted);
     backToList();
   }
 
@@ -315,7 +312,7 @@ export default function Board() {
   const login = () => void startGoogleLogin(back());
   const loginApple = () => void startAppleLogin(back());
   async function removeComment(cm: Comment) {
-    if (!(await confirmAsync('이 댓글을 지울까요?', undefined, '삭제'))) return;
+    if (!(await confirmAsync(L.deleteCommentConfirm, undefined, L.remove))) return;
     const r = await api.deleteComment(cm.id);
     if (!r.ok) return toast(r.error.message);
     setDetail((d) => (d ? { ...d, comments: d.comments.filter((x) => x.id !== cm.id) } : d));
@@ -338,15 +335,11 @@ export default function Board() {
     if (!r.ok) return toast(r.error.message);
     setReporting(null);
     setDetail((d) => (d ? { ...d, comments: d.comments.filter((x) => x.id !== cm.id) } : d));
-    toast('신고했어요. 운영자가 확인할게요.');
+    toast(L.reportedToast);
   }
   async function block(cm: Comment) {
     if (!detail) return;
-    const ok = await confirmAsync(
-      `${cm.nickname}님을 차단할까요?`,
-      '이 사람의 댓글이 더는 보이지 않아요.',
-      '차단',
-    );
+    const ok = await confirmAsync(L.blockTitle({ nick: cm.nickname }), L.blockBody, L.blockOk);
     if (!ok) return;
     const postId = detail.post.id;
     setBusy(true);
@@ -354,7 +347,7 @@ export default function Board() {
     setBusy(false);
     if (!r.ok) return toast(r.error.message);
     setReporting(null);
-    toast(`${r.data.nickname}님을 차단했어요`);
+    toast(L.blockedToast({ nick: r.data.nickname }));
     await reloadPost(postId);
   }
   async function unblock(b: BoardBlock) {
@@ -362,7 +355,7 @@ export default function Board() {
     const postId = detail.post.id;
     const r = await api.unblock(b.id);
     if (!r.ok) return toast(r.error.message);
-    toast(`${b.nickname}님 차단을 풀었어요`);
+    toast(L.unblockedToast({ nick: b.nickname }));
     await reloadPost(postId);
   }
 
@@ -378,11 +371,11 @@ export default function Board() {
           <View testID={`board-${board}`}>
             <Txt v="eyebrow">News</Txt>
             <Txt v="h1" accessibilityRole="header">
-              소식
+              {L.news}
             </Txt>
           </View>
           {!detail && !editing && !entering ? (
-            <Seg cols={2} label="게시판" style={{ marginBottom: 6 }}>
+            <Seg cols={2} label={L.tabsLabel} style={{ marginBottom: 6 }}>
               {BOARD_KEYS.map((k) => (
                 <TabOpt
                   key={k}
@@ -413,7 +406,7 @@ export default function Board() {
                   >
                     <Tags p={detail.post} />
                     <Txt tone="muted" style={small}>
-                      {`${dateOf(detail.post.createdAt)}${detail.post.updatedAt !== detail.post.createdAt ? ' · 수정됨' : ''} · 조회 ${detail.post.viewCount}`}
+                      {postDetailMeta(detail.post)}
                     </Txt>
                   </View>
                   <Txt v="h2" accessibilityRole="header">
@@ -453,7 +446,7 @@ export default function Board() {
                 </View>
                 <Press
                   testID="like"
-                  accessibilityLabel={`좋아요 ${detail.post.likeCount}`}
+                  accessibilityLabel={boardLabelText.likes({ n: detail.post.likeCount })}
                   accessibilityState={{ selected: detail.liked }}
                   onPress={() => void toggleLike()}
                   style={{
@@ -488,17 +481,17 @@ export default function Board() {
                 {admin ? (
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <Btn sm testID="edit-post" onPress={() => startEdit(detail.post)}>
-                      수정
+                      {L.edit}
                     </Btn>
                     <Btn sm testID="delete-post" onPress={() => void removePost(detail.post)}>
-                      삭제
+                      {L.remove}
                     </Btn>
                   </View>
                 ) : null}
               </View>
-              <View accessibilityLabel="댓글" style={{ gap: 10 }}>
+              <View accessibilityLabel={L.commentsLabel} style={{ gap: 10 }}>
                 <Txt v="h3" accessibilityRole="header">
-                  {`댓글 ${comments.length}`}
+                  {boardLabelText.commentCount({ n: comments.length })}
                 </Txt>
                 {comments.length ? (
                   comments.map((cm) => (
@@ -519,16 +512,16 @@ export default function Board() {
                         </Txt>
                         {cm.deletable ? (
                           <CommentAct
-                            label="삭제"
+                            label={L.remove}
                             testID="comment-delete"
-                            accessibilityLabel="댓글 삭제"
+                            accessibilityLabel={L.commentDeleteLabel}
                             onPress={() => void removeComment(cm)}
                           />
                         ) : !cm.admin ? (
                           <CommentAct
-                            label="신고"
+                            label={L.report}
                             testID="comment-report"
-                            accessibilityLabel="댓글 신고·작성자 차단"
+                            accessibilityLabel={L.commentReportLabel}
                             onPress={() => setReporting(reporting === cm.id ? null : cm.id)}
                           />
                         ) : null}
@@ -546,9 +539,7 @@ export default function Board() {
                             backgroundColor: c.surface2,
                           }}
                         >
-                          <Txt style={{ fontSize: rem(0.8125) }}>
-                            이 댓글을 신고하는 이유를 골라 주세요. 신고한 댓글은 내 화면에서 숨겨요.
-                          </Txt>
+                          <Txt style={{ fontSize: rem(0.8125) }}>{L.reportPrompt}</Txt>
                           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                             {COMMENT_REPORT_REASONS.map((reason) => (
                               <Btn
@@ -571,7 +562,7 @@ export default function Board() {
                             }}
                           >
                             <Txt tone="muted" style={[small, { flex: 1 }]}>
-                              {`${cm.nickname}님의 댓글을 모두 숨기려면`}
+                              {L.blockHint({ nick: cm.nickname })}
                             </Txt>
                             <Btn
                               sm
@@ -579,7 +570,7 @@ export default function Board() {
                               disabled={busy}
                               onPress={() => void block(cm)}
                             >
-                              작성자 차단
+                              {L.blockAuthor}
                             </Btn>
                           </View>
                         </View>
@@ -588,13 +579,13 @@ export default function Board() {
                   ))
                 ) : (
                   <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                    아직 댓글이 없어요.
+                    {L.noComments}
                   </Txt>
                 )}
                 {detail.blocks.length ? (
                   <View testID="board-blocks" style={{ gap: 4 }}>
                     <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                      {`차단한 사용자 ${detail.blocks.length}명`}
+                      {L.blockedUsers({ n: detail.blocks.length })}
                     </Txt>
                     {detail.blocks.map((b) => (
                       <View
@@ -603,7 +594,7 @@ export default function Board() {
                       >
                         <Txt style={{ flex: 1 }}>{b.nickname}</Txt>
                         <Btn sm testID="unblock" onPress={() => void unblock(b)}>
-                          차단 해제
+                          {L.unblock}
                         </Btn>
                       </View>
                     ))}
@@ -623,12 +614,10 @@ export default function Board() {
                     }}
                   >
                     <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                      {apple
-                        ? '구글이나 Apple로 로그인하면 댓글을 쓸 수 있어요.'
-                        : '구글로 로그인하면 댓글을 쓸 수 있어요.'}
+                      {apple ? L.loginGateApple : L.loginGate}
                     </Txt>
                     <Btn kind="primary" testID="comment-login" onPress={login}>
-                      구글로 로그인
+                      {L.loginGoogle}
                     </Btn>
                     {apple ? (
                       <AppleLoginButton testID="comment-login-apple" onPress={loginApple} />
@@ -647,7 +636,7 @@ export default function Board() {
                     }}
                   >
                     <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                      댓글에 쓸 닉네임을 먼저 정해 주세요. 설정의 계정에서 바꿀 수 있어요.
+                      {L.nicknameGate}
                     </Txt>
                     <NicknameForm
                       onsaved={(n) => setViewer((v) => (v ? { ...v, nickname: n } : v))}
@@ -656,26 +645,25 @@ export default function Board() {
                 ) : (
                   <View style={{ gap: 8 }}>
                     <Txt tone="muted" style={small}>
+                      {L.commentAsBefore}
                       <Txt bold tone="muted" style={small}>
                         {viewer.nickname}
                       </Txt>
-                      {
-                        ' 이름으로 남겨요. 욕설·비방·광고 같은 부적절한 댓글은 지우고 이용을 제한해요('
-                      }
+                      {L.commentAsAfter}
                       <Txt
                         tone="muted"
                         style={[small, { textDecorationLine: 'underline' }]}
                         accessibilityRole="link"
                         onPress={() => openWeb('/legal/terms/')}
                       >
-                        이용약관
+                        {L.terms}
                       </Txt>
-                      {').'}
+                      {L.commentAsEnd}
                     </Txt>
                     <TextBox
                       testID="comment-input"
-                      accessibilityLabel="댓글 내용"
-                      placeholder="댓글을 남겨 주세요"
+                      accessibilityLabel={L.commentLabel}
+                      placeholder={L.commentPlaceholder}
                       multiline
                       numberOfLines={3}
                       maxLength={COMMENT_BODY_MAX}
@@ -689,7 +677,7 @@ export default function Board() {
                       disabled={busy}
                       onPress={() => void sendComment()}
                     >
-                      댓글 달기
+                      {L.commentSend}
                     </Btn>
                   </View>
                 )}
@@ -699,12 +687,12 @@ export default function Board() {
             <>
               {admin && !entering ? (
                 <Btn kind="accent" testID="new-post" onPress={() => startEdit()}>
-                  새 글 쓰기
+                  {L.newPost}
                 </Btn>
               ) : null}
               <LoadState
                 status={entering ? 'loading' : status}
-                failText="소식을 불러오지 못했어요."
+                failText={L.loadFail}
                 retry={() => void load()}
               >
                 <View>
@@ -742,12 +730,12 @@ export default function Board() {
                       </Press>
                     ))
                   ) : (
-                    <Txt tone="muted">아직 올라온 글이 없어요.</Txt>
+                    <Txt tone="muted">{L.empty}</Txt>
                   )}
                 </View>
                 {hasMore ? (
                   <Btn sm onPress={() => void load(true)}>
-                    더 보기
+                    {L.more}
                   </Btn>
                 ) : null}
                 <AdSlot place="board-bottom" />

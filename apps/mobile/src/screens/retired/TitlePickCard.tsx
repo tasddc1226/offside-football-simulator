@@ -10,6 +10,7 @@ import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { titleById } from '@offside/game/titles';
 import type { HofEntry } from '@offside/game/types';
 import { earnedTitles } from '@offside/app-core/legendReport';
+import { titleText as L } from '@offside/app-core/i18n/ko/title';
 import { TitleTag } from '../../components/TitleTag';
 import { toast, uploadRetirement } from '../../game/host';
 import { rnResults } from '../../store';
@@ -39,7 +40,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
     if (saved) saved.title = id;
     saveKey('ft_hof', hof);
     uploadRetirement(h.id, liveEntry(h));
-    toast(`대표 칭호를 바꿨어요: ${titleById(id)?.name ?? id}`);
+    toast(L.pickChanged({ name: titleById(id)?.name ?? id }));
   }
 
   if (earned.length <= 1 && !earned.some((x) => x.d.id === WALL_OF_HONOR_TITLE_ID)) return null;
@@ -48,7 +49,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
       <View testID="legend-titles">
         <Txt v="eyebrow">Titles</Txt>
         <Txt v="h2" accessibilityRole="header">
-          대표 칭호
+          {L.mainTitle}
         </Txt>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -56,7 +57,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
           <TitleTag name={current.name} rarity={current.rarity} />
         ) : (
           <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-            없음
+            {L.none}
           </Txt>
         )}
       </View>
@@ -68,7 +69,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
         style={{ paddingVertical: 4 }}
       >
         <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '600' }}>
-          {open ? '▾' : '▸'} 받은 칭호 {earned.length}개 중에서 바꾸기
+          {`${open ? '▾' : '▸'} ${L.pickOpen({ n: earned.length })}`}
         </Txt>
       </Press>
       {open ? (
@@ -102,7 +103,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
                   {x.d.desc}
                 </Txt>
                 <Txt tone="muted" style={{ fontFamily: DISPLAY[700], fontSize: rem(0.75) }}>
-                  {x.d.id === WALL_OF_HONOR_TITLE_ID ? '은퇴' : x.year ? x.year : '이전 기록'}
+                  {x.d.id === WALL_OF_HONOR_TITLE_ID ? L.retiredYear : x.year ? x.year : L.earlier}
                 </Txt>
               </Press>
             );
@@ -110,7 +111,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
         </View>
       ) : null}
       <Txt v="xs" tone="muted">
-        고른 칭호는 선수 카드와 명예의 전당·공유 링크에 표시돼요.
+        {L.pickNote}
       </Txt>
     </Card>
   );

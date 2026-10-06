@@ -1,6 +1,9 @@
 // ───────── 정적 데이터: 리그 · 클럽 · 포지션 · 유형 · 특성 ─────────
 import { CLUB_NAMES, clubIdOf, LEAGUE_BASE, type LeagueBase } from '@offside/contracts/club-names';
-import { DETAIL_LABEL, DETAILS_OF, type DetailPos } from '@offside/contracts/positions';
+import { DETAILS_OF, type DetailPos } from '@offside/contracts/positions';
+import { gDataText as L } from './i18n/ko/gData.js';
+import { gAttrLabelText } from './i18n/ko/gAttrLabel.js';
+import { gGkLabelText } from './i18n/ko/gGkLabel.js';
 
 /** 세이브(ft_save) 형식 버전. 다른 값이면 저장본을 버리고 새로 시작한다(ui/boot.ts). 형식 변환은 save.ts migrateSave. */
 export const SAVE_VERSION = 1;
@@ -68,22 +71,9 @@ for (const L of LEAGUES) {
 
 export const ATTR_KEYS = ['pac', 'sho', 'pas', 'dri', 'def', 'phy'] as const;
 export type AttrKey = (typeof ATTR_KEYS)[number];
-export const ATTR_LABEL: Record<AttrKey, string> = {
-  pac: '스피드',
-  sho: '슈팅',
-  pas: '패스',
-  dri: '드리블',
-  def: '수비',
-  phy: '피지컬',
-};
-export const GK_LABEL: Record<AttrKey, string> = {
-  pac: '반사 신경',
-  sho: '스피드',
-  pas: '킥',
-  dri: '위치 선정',
-  def: '다이빙',
-  phy: '핸들링',
-};
+/** 능력치 이름. 키가 AttrKey인 네임스페이스 객체라 읽을 때 지금 언어로 나온다. */
+export const ATTR_LABEL: Record<AttrKey, string> = gAttrLabelText;
+export const GK_LABEL: Record<AttrKey, string> = gGkLabelText;
 
 export type Pos = 'FW' | 'MF' | 'DF' | 'GK';
 /** 골키퍼는 같은 여섯 능력치를 다른 이름으로 부른다. */
@@ -101,8 +91,12 @@ export interface PosDef {
 }
 export const POS: Record<Pos, PosDef> = {
   FW: {
-    label: '공격수',
-    blurb: '골로 말하는 해결사',
+    get label() {
+      return L.posFW;
+    },
+    get blurb() {
+      return L.posFWBlurb;
+    },
     base: { pac: 50, sho: 52, pas: 42, dri: 48, def: 28, phy: 46 },
     w: { sho: 0.34, pac: 0.2, dri: 0.24, phy: 0.1, pas: 0.1, def: 0.02 },
     goal: 0.34,
@@ -110,8 +104,12 @@ export const POS: Record<Pos, PosDef> = {
     atk: { sho: 0.6, dri: 0.25, pac: 0.15 },
   },
   MF: {
-    label: '미드필더',
-    blurb: '패스로 경기를 조율',
+    get label() {
+      return L.posMF;
+    },
+    get blurb() {
+      return L.posMFBlurb;
+    },
     base: { pac: 46, sho: 42, pas: 52, dri: 48, def: 40, phy: 44 },
     w: { pas: 0.32, dri: 0.2, sho: 0.12, def: 0.14, phy: 0.1, pac: 0.12 },
     goal: 0.14,
@@ -119,8 +117,12 @@ export const POS: Record<Pos, PosDef> = {
     atk: { sho: 0.45, dri: 0.3, pas: 0.25 },
   },
   DF: {
-    label: '수비수',
-    blurb: '실점을 막는 벽',
+    get label() {
+      return L.posDF;
+    },
+    get blurb() {
+      return L.posDFBlurb;
+    },
     base: { pac: 44, sho: 30, pas: 42, dri: 38, def: 54, phy: 52 },
     w: { def: 0.42, phy: 0.22, pac: 0.16, pas: 0.14, dri: 0.04, sho: 0.02 },
     goal: 0.05,
@@ -128,8 +130,12 @@ export const POS: Record<Pos, PosDef> = {
     atk: { sho: 0.3, phy: 0.5, pac: 0.2 },
   },
   GK: {
-    label: '골키퍼',
-    blurb: '마지막 방어선',
+    get label() {
+      return L.posGK;
+    },
+    get blurb() {
+      return L.posGKBlurb;
+    },
     base: { pac: 48, sho: 30, pas: 38, dri: 40, def: 54, phy: 48 },
     w: { def: 0.45, pac: 0.25, phy: 0.15, pas: 0.1, dri: 0.05, sho: 0 },
     goal: 0,
@@ -157,8 +163,12 @@ export interface DetailPosDef {
 }
 export const DPOS: Record<DetailPos, DetailPosDef> = {
   ST: {
-    label: DETAIL_LABEL.ST,
-    blurb: '박스 안에서 끝낸다',
+    get label() {
+      return L.dposST;
+    },
+    get blurb() {
+      return L.dposSTBlurb;
+    },
     role: 'ST',
     mod: {},
     focus: ['sho', 'dri'],
@@ -166,8 +176,12 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 0.85,
   },
   W: {
-    label: DETAIL_LABEL.W,
-    blurb: '측면을 돌파해 크로스를 올린다',
+    get label() {
+      return L.dposW;
+    },
+    get blurb() {
+      return L.dposWBlurb;
+    },
     role: 'RW',
     mod: { pac: 4, dri: 3, sho: -3, phy: -4 },
     focus: ['pac', 'dri'],
@@ -175,8 +189,12 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 1.35,
   },
   AM: {
-    label: DETAIL_LABEL.AM,
-    blurb: '마지막 패스와 중거리',
+    get label() {
+      return L.dposAM;
+    },
+    get blurb() {
+      return L.dposAMBlurb;
+    },
     role: 'CAM',
     mod: { sho: 3, dri: 2, def: -4, phy: -1 },
     focus: ['pas', 'dri'],
@@ -184,8 +202,12 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 1.05,
   },
   CM: {
-    label: DETAIL_LABEL.CM,
-    blurb: '공수를 잇는 엔진',
+    get label() {
+      return L.dposCM;
+    },
+    get blurb() {
+      return L.dposCMBlurb;
+    },
     role: 'CM',
     mod: {},
     focus: ['pas', 'phy'],
@@ -193,8 +215,12 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 1,
   },
   DM: {
-    label: DETAIL_LABEL.DM,
-    blurb: '수비 앞의 방패',
+    get label() {
+      return L.dposDM;
+    },
+    get blurb() {
+      return L.dposDMBlurb;
+    },
     role: 'CDM',
     mod: { def: 6, phy: 2, sho: -5, dri: -3 },
     focus: ['def', 'pas'],
@@ -202,8 +228,12 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 1.0,
   },
   CB: {
-    label: DETAIL_LABEL.CB,
-    blurb: '공중볼과 몸싸움',
+    get label() {
+      return L.dposCB;
+    },
+    get blurb() {
+      return L.dposCBBlurb;
+    },
     role: 'CB',
     mod: { phy: 2, def: 1, pac: -2, pas: -2 },
     focus: ['def', 'phy'],
@@ -211,8 +241,12 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 0.6,
   },
   FB: {
-    label: DETAIL_LABEL.FB,
-    blurb: '오버래핑과 크로스',
+    get label() {
+      return L.dposFB;
+    },
+    get blurb() {
+      return L.dposFBBlurb;
+    },
     role: 'RB',
     mod: { pac: 5, pas: 3, def: -2, phy: -4 },
     focus: ['pac', 'def'],
@@ -220,8 +254,12 @@ export const DPOS: Record<DetailPos, DetailPosDef> = {
     assist: 1.4,
   },
   GK: {
-    label: DETAIL_LABEL.GK,
-    blurb: '마지막 방어선',
+    get label() {
+      return L.dposGK;
+    },
+    get blurb() {
+      return L.dposGKBlurb;
+    },
     role: 'GK',
     mod: {},
     focus: ['def', 'pac'],
@@ -252,80 +290,128 @@ export const TYPES: Record<Pos, TypeDef[]> = {
   FW: [
     {
       id: 'poacher',
-      name: '골 사냥꾼',
-      desc: '슈팅 ▲▲ · 수비 ▼',
+      get name() {
+        return L.typePoacher;
+      },
+      get desc() {
+        return L.typePoacherDesc;
+      },
       mod: { sho: 8, dri: 1, def: -5, pas: -2 },
     },
     {
       id: 'speed',
-      name: '스피드스터',
-      desc: '스피드 ▲▲ · 피지컬 ▼',
+      get name() {
+        return L.typeSpeed;
+      },
+      get desc() {
+        return L.typeSpeedDesc;
+      },
       mod: { pac: 8, dri: 2, phy: -5 },
     },
     {
       id: 'target',
-      name: '타깃맨',
-      desc: '피지컬 ▲▲ · 스피드 ▼',
+      get name() {
+        return L.typeTarget;
+      },
+      get desc() {
+        return L.typeTargetDesc;
+      },
       mod: { phy: 8, sho: 3, pac: -6 },
     },
   ],
   MF: [
     {
       id: 'maker',
-      name: '플레이메이커',
-      desc: '패스 ▲▲ · 피지컬 ▼',
+      get name() {
+        return L.typeMaker;
+      },
+      get desc() {
+        return L.typeMakerDesc;
+      },
       mod: { pas: 8, dri: 2, phy: -5 },
     },
     {
       id: 'b2b',
-      name: '박스 투 박스',
-      desc: '피지컬·수비 ▲ · 드리블 ▼',
+      get name() {
+        return L.typeB2b;
+      },
+      get desc() {
+        return L.typeB2bDesc;
+      },
       mod: { phy: 5, def: 5, dri: -3 },
     },
     {
       id: 'winger',
-      name: '윙어',
-      desc: '드리블·스피드 ▲ · 수비 ▼',
+      get name() {
+        return L.typeWinger;
+      },
+      get desc() {
+        return L.typeWingerDesc;
+      },
       mod: { dri: 6, pac: 5, def: -6 },
     },
   ],
   DF: [
     {
       id: 'stopper',
-      name: '스토퍼',
-      desc: '수비·피지컬 ▲ · 패스 ▼',
+      get name() {
+        return L.typeStopper;
+      },
+      get desc() {
+        return L.typeStopperDesc;
+      },
       mod: { def: 6, phy: 5, pas: -5 },
     },
     {
       id: 'fullback',
-      name: '공격형 풀백',
-      desc: '스피드·패스 ▲ · 피지컬 ▼',
+      get name() {
+        return L.typeFullback;
+      },
+      get desc() {
+        return L.typeFullbackDesc;
+      },
       mod: { pac: 7, pas: 3, phy: -4 },
     },
     {
       id: 'libero',
-      name: '빌드업 센터백',
-      desc: '패스 ▲▲ · 스피드 ▼',
+      get name() {
+        return L.typeLibero;
+      },
+      get desc() {
+        return L.typeLiberoDesc;
+      },
       mod: { pas: 7, def: 2, pac: -5 },
     },
   ],
   GK: [
     {
       id: 'shot',
-      name: '슈퍼 세이버',
-      desc: '다이빙·반사 신경 ▲ · 킥 ▼',
+      get name() {
+        return L.typeShot;
+      },
+      get desc() {
+        return L.typeShotDesc;
+      },
       mod: { def: 6, pac: 4, pas: -5 },
     },
     {
       id: 'sweeper',
-      name: '스위퍼 키퍼',
-      desc: '킥 ▲▲ · 핸들링 ▼',
+      get name() {
+        return L.typeSweeper;
+      },
+      get desc() {
+        return L.typeSweeperDesc;
+      },
       mod: { pas: 8, pac: 2, phy: -5 },
     },
     {
       id: 'wall',
-      name: '통곡의 벽',
-      desc: '핸들링 ▲▲ · 반사 신경 ▼',
+      get name() {
+        return L.typeWall;
+      },
+      get desc() {
+        return L.typeWallDesc;
+      },
       mod: { phy: 8, def: 3, pac: -6 },
     },
   ],
@@ -391,35 +477,68 @@ export interface TraitDef {
 export const TRAITS: TraitDef[] = [
   {
     id: 'early',
-    name: '조기 성장',
-    desc: '어릴 때 빠르게 크고 일찍 주목받지만, 전성기도 일찍 끝나요.',
+    get name() {
+      return L.traitEarly;
+    },
+    get desc() {
+      return L.traitEarlyDesc;
+    },
     icon: '⚡',
-    short: '빨리 크고 일찍 꺾여요',
+    get short() {
+      return L.traitEarlyShort;
+    },
   },
   {
     id: 'late',
-    name: '대기만성',
-    desc: '늦게 피지만 전성기가 길어요.',
+    get name() {
+      return L.traitLate;
+    },
+    get desc() {
+      return L.traitLateDesc;
+    },
     icon: '🌱',
-    short: '늦게 피고 오래 가요',
+    get short() {
+      return L.traitLateShort;
+    },
   },
   {
     id: 'iron',
-    name: '강철 체력',
-    desc: '부상 확률이 크게 낮아요.',
+    get name() {
+      return L.traitIron;
+    },
+    get desc() {
+      return L.traitIronDesc;
+    },
     icon: '🛡️',
-    short: '부상이 크게 줄어요',
+    get short() {
+      return L.traitIronShort;
+    },
   },
   {
     id: 'star',
-    name: '스타성',
-    desc: '인기가 빨리 오르고 스폰서 제의도 늘어요.',
+    get name() {
+      return L.traitStar;
+    },
+    get desc() {
+      return L.traitStarDesc;
+    },
     icon: '⭐',
-    short: '인기·스폰서 제의가 늘어요',
+    get short() {
+      return L.traitStarShort;
+    },
   },
 ];
 
-export const PHASES = ['프리시즌', '전반기', '후반기', '시즌 종료'];
+/**
+ * 시즌 구간 이름(0 프리시즌 ~ 3 시즌 종료). 인덱스로 읽을 때마다 지금 언어로 나온다(로그의 시간 표기도 쓴 시점의 언어).
+ * 이름은 비교·저장에 쓰지 않는다 — 구간은 숫자(phase)로만 다룬다.
+ */
+export const PHASES: readonly string[] = new Array<string>(4).fill('');
+for (let i = 0; i < 4; i++)
+  Object.defineProperty(PHASES, i, {
+    enumerable: true,
+    get: () => L[`phase${i}` as 'phase0'],
+  });
 export const LAST_PHASE = 2;
 
 export const SURNAMES = [

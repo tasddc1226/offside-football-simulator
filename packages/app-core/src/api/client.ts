@@ -16,6 +16,8 @@ import type {
 } from '@offside/contracts';
 import { storage } from '@offside/game/storage';
 import { markAchDirty, touchesAchievements } from '../achDirty.js';
+import { getLocale } from '@offside/contracts/i18n';
+import { settingsApiText as L } from '../i18n/ko/settingsApi.js';
 
 // API 클라이언트 (웹·앱 공용, T-11-002). 게임 상태는 전부 기기 저장소에 남고, 서버로는 계정·공개 기록 요청만 나간다.
 // `@offside/contracts` 전체를 값으로 가져오면 zod까지 번들에 들어오므로, 헤더 이름은 zod 없는 `./headers`
@@ -66,6 +68,14 @@ export function clearApiCache(): void {
   memo.clear();
 }
 
+/**
+ * T-11-106 서버가 만드는 문장(업적·최초 기록·오류 안내 등)을 지금 언어로 받는다. 영어일 때만 `lang=en`을 붙인다 —
+ * 한국어 요청은 예전과 같은 주소라 엣지 캐시 키도 그대로다.
+ */
+export function withLang(path: string): string {
+  return getLocale() === 'en' ? `${path}${path.includes('?') ? '&' : '?'}lang=en` : path;
+}
+
 /** 새 서버 이벤트를 실제로 열 때 해당 기능만 갱신한다. 다른 화면의 메모는 유지한다. */
 export function invalidateApiCache(prefix: string): void {
   for (const key of memo.keys())
@@ -73,17 +83,18 @@ export function invalidateApiCache(prefix: string): void {
       memo.delete(key);
 }
 
-/** GET을 ttlMs 동안 메모한다. 같은 path의 진행 중 요청도 함께 쓴다. */
+/** GET을 ttlMs 동안 메모한다. 같은 path의 진행 중 요청도 함께 쓴다(언어가 다르면 다른 요청이다). */
 export function cachedGet<T>(path: string, ttlMs: number): Promise<ApiResult<T>> {
-  const hit = memo.get(path);
+  const key = withLang(path);
+  const hit = memo.get(key);
   if (hit && Date.now() < hit.until) return hit.result as Promise<ApiResult<T>>;
   const result = apiFetch<T>(path, { method: 'GET' });
   // 선수 상세를 많이 열면 키가 늘어난다 — 일정 크기를 넘으면 만료된 것만 걷어 낸다.
   if (memo.size >= MEMO_SWEEP_AT)
     for (const [k, v] of memo) if (Date.now() >= v.until) memo.delete(k);
-  memo.set(path, { until: Date.now() + ttlMs, result });
+  memo.set(key, { until: Date.now() + ttlMs, result });
   void result.then((r) => {
-    if (!r.ok && memo.get(path)?.result === result) memo.delete(path);
+    if (!r.ok && memo.get(key)?.result === result) memo.delete(key);
   });
   return result;
 }
@@ -110,7 +121,7 @@ export async function apiFetch<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${host.baseUrl}${path}`, {
+    response = await fetch(`${host.baseUrl}${withLang(path)}`, {
       ...init,
       method,
       headers,
@@ -118,7 +129,7 @@ export async function apiFetch<T>(
       ...auth,
     });
   } catch {
-    return failure('NETWORK_ERROR', '서버에 연결하지 못했어요.', true);
+    return failure('NETWORK_ERROR', L.network, true);
   }
 
   if (isMutation && response.ok && !keepCache) clearApiCache();
@@ -130,7 +141,7 @@ export async function apiFetch<T>(
   try {
     json = await response.json();
   } catch {
-    return failure('INVALID_RESPONSE', '서버 응답을 읽지 못했어요.', false);
+    return failure('INVALID_RESPONSE', L.badResponse, false);
   }
 
   if (!response.ok) {
@@ -147,21 +158,16 @@ export async function apiFetch<T>(
       ).error;
       const reason = typeof e.details?.reason === 'string' ? e.details.reason : undefined;
       if (e.code === 'PROFILE_REQUIRED') noteSession(false);
-      return failure(
-        e.code ?? 'UNKNOWN',
-        e.message ?? '요청을 처리하지 못했어요.',
-        !!e.retryable,
-        reason,
-      );
+      return failure(e.code ?? 'UNKNOWN', e.message ?? L.failed, !!e.retryable, reason);
     }
     return failure(
       'INVALID_RESPONSE',
-      `요청을 처리하지 못했어요(${response.status}).`,
+      L.failedStatus({ status: response.status }),
       response.status >= 500,
     );
   }
   if (typeof json !== 'object' || json === null || !('data' in json)) {
-    return failure('INVALID_RESPONSE', '서버 응답 형식이 올바르지 않아요.', false);
+    return failure('INVALID_RESPONSE', L.badShape, false);
   }
   return { ok: true, data: (json as { data: unknown }).data as T };
 }

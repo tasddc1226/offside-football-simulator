@@ -17,6 +17,7 @@ import { compsPhase } from './comps.js';
 import './event-registry.js';
 import { natWindow } from './national.js';
 import { checkTitles, type TitleDef } from './titles.js';
+import { gTurnText as L } from './i18n/ko/gTurn.js';
 import type { GameState } from './types.js';
 
 export interface PhaseResult {
@@ -49,7 +50,16 @@ export function playPhase(s: GameState): PhaseResult {
   if (block) {
     log(
       s,
-      `${PHASES[s.phase]} ${block.n}경기 ${block.w}승 ${block.d}무 ${block.l}패 · 출전 ${block.apps} · ${block.goals}골 ${block.assists}도움`,
+      L.blockLine({
+        phase: PHASES[s.phase]!,
+        n: block.n,
+        w: block.w,
+        d: block.d,
+        l: block.l,
+        apps: block.apps,
+        goals: block.goals,
+        assists: block.assists,
+      }),
     );
     block.hl.forEach((h) => log(s, h, 'good'));
   }

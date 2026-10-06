@@ -51,6 +51,8 @@ describe('T-10-092 팀 시즌', () => {
     expect(openTeamSeasons('2026-09-30T00:00:00.000Z')).toEqual([0]);
     expect(openTeamSeasons(S1)).toEqual([0, 1]);
     expect([teamSeasonName(0), teamSeasonName(1)]).toEqual(['프리시즌', '시즌 1']);
+    expect([teamSeasonName(0, 'en'), teamSeasonName(1, 'en')]).toEqual(['Preseason', 'Season 1']);
+    expect(teamSeasonName(1, 'ko')).toBe('시즌 1');
   });
   it('프리시즌은 첫 시즌 개막에 끝나고, 마감이 없는 시즌은 끝나지 않는다', () => {
     expect(teamSeasonClosed(0, '2026-09-30T00:00:00.000Z')).toBe(false);

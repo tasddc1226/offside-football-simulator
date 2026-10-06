@@ -575,7 +575,7 @@ export type ServerFirst = z.infer<typeof ServerFirstSchema>;
 export const ServerRecordSchema = z.strictObject({
   id: z.string().min(1).max(32),
   label: z.string().max(80),
-  unit: z.string().max(8),
+  unit: z.string().max(16),
   value: z.number().int().nullable(),
   achievedAt: z.string().nullable(),
   holder: FirstHolderSchema.nullable(),
