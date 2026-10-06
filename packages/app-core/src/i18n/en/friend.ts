@@ -48,4 +48,11 @@ export const friend: Translation<FriendMsgs> = {
   playAria: (p) => `Play a friendly with ${p.name}`,
   removeAria: (p) => `Unfriend ${p.name}`,
   cancelAria: (p) => `Cancel request to ${p.name}`,
+  founder: 'Founding member',
+  preseasonLine: (p) => `Preseason ${p.name} · OVR ${p.ovr}`,
+  preseasonHint:
+    'Build a preseason team to play friendlies with friends using the players you raised in the preseason.',
+  makePreseason: 'Build preseason team',
+  playPreseason: 'Preseason friendly',
+  playPreseasonAria: (p) => `Preseason friendly with ${p.name}`,
 };

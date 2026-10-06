@@ -45,4 +45,8 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   gradePlatinum: 'Platinum',
   gradeDiamond: 'Diamond',
   gradeLegend: 'Legend',
+  preseasonTeamNote:
+    'Built from the preseason players you still own. This team only plays friendlies with friends, and your preseason ranking and achievements stay as they are.',
+  hintPreseason:
+    'Your preseason team only plays friendlies with friends. Use your current season team for ranked matches.',
 };

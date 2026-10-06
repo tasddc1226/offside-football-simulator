@@ -39,6 +39,9 @@ import {
   countMatchesSince,
   eligibleMap,
   estimatedAttrsOf,
+  foundersOf,
+  friendlyTeamOf,
+  type FriendlyLineup,
   listEligibleCareers,
   listMyTeams,
   listOpponentCandidates,
@@ -167,12 +170,16 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const [teams, players, [played]] = await db.batch([
+    const [teams, players, [played], founder] = await db.batch([
       listMyTeams(db, me.id),
       listEligibleCareers(db, me.id, season),
       countMatchesSince(db, me.id, kstTodayStart(now)),
+      foundersOf(db, [me.id]),
     ]);
-    const team = teams.find((t) => t.season === season) ?? null;
+    // T-11-113 개막 뒤의 프리시즌 팀은 친선전용 편성을 보이고 고친다(지금 가진 선수만).
+    const editableSeason = season === teamSeasonAt(now) || season === 0;
+    const found = teams.find((t) => t.season === season);
+    const team = found ? friendlyTeamOf(found) : null;
     const picks = players.map((p) => {
       const profile = peakOf(p.peakProfile);
       const estimatedAttrs = profile ? null : estimatedAttrsOf(p.cardAttrsJson);
@@ -188,7 +195,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         await careersByIds(db, missing),
         me.id,
         season,
-        season === teamSeasonAt(now),
+        editableSeason,
       ))
         eligible.set(id, career);
     }
@@ -228,6 +235,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - Number(played?.n ?? 0)),
         matchesPerDay: TEAM_MATCHES_PER_DAY,
+        founder: founder.length > 0,
       },
       200,
       NO_STORE,
@@ -235,12 +243,19 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
   });
 
   // 지금 시즌 팀 만들기·고치기(전체 교체라 자연 멱등). 시즌마다 한 팀 — (구단주, 시즌) 유니크로 있으면 고친다.
+  // T-11-113 개막 뒤 season 0은 프리시즌 팀의 친선전용 편성(friendly_json)만 고친다. 지금 가진 프리시즌 선수만 넣고,
+  // 최종 기록 칸(랭킹·팀 프로필·업적이 읽는다)은 그대로 둔다. 팀이 없었으면 빈 최종 기록(filled 0 — 랭킹 밖)으로 만든다.
   app.put('/v1/owner-team', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
     const input = readBody(c, PutOwnerTeamBodySchema);
     const now = nowIso();
-    const season = currentSeasonOrThrow(now);
+    const current = teamSeasonAt(now);
+    const season = input.season ?? currentSeasonOrThrow(now);
+    if (season !== current && season !== 0) {
+      throw conflictError('지난 시즌 팀은 고칠 수 없어요.', 'SEASON_CLOSED');
+    }
+    const friendly = season !== current;
     checkName(input.name, '팀 이름');
     checkName(input.manager, '감독 이름');
     if (input.logo?.text) checkName(input.logo.text, '로고 글자');
@@ -256,13 +271,18 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     if (ids.some((id) => !eligible.has(id))) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
-        message: '이번 시즌에 뛰고 은퇴한 내 선수만 팀에 넣을 수 있어요.',
+        message:
+          season === current
+            ? '이번 시즌에 뛰고 은퇴한 내 선수만 팀에 넣을 수 있어요.'
+            : '지금 가진 프리시즌 선수만 프리시즌 팀에 넣을 수 있어요.',
         details: { reason: 'PLAYER_NOT_ELIGIBLE' },
       });
     }
     // 이전 클라이언트가 좌표를 보내지 않으면 기존 자유 편성을 보존한다.
     // 포메이션을 바꾼 요청만 새 기본 배치로 돌아간다.
-    const previous = input.layout === undefined ? (await myTeamIn(db, me.id, season))[0] : null;
+    const [stored] =
+      friendly || input.layout === undefined ? await myTeamIn(db, me.id, season) : [];
+    const previous = stored ? friendlyTeamOf(stored) : null;
     const layout =
       input.layout === undefined
         ? previous?.formation === input.formation
@@ -282,12 +302,51 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         : {}),
       filled: filledCount(lineup),
       ovr: lineupOvr(lineup),
-      updatedAt: now,
     };
+    if (friendly) {
+      const lineupJson = JSON.stringify({
+        logoJson: previous?.logoJson ?? null,
+        ...values,
+      } satisfies FriendlyLineup);
+      const [row] = await db
+        .insert(ownerTeams)
+        .values({
+          id: newId('tem'),
+          profileId: me.id,
+          season,
+          name: input.name,
+          manager: input.manager,
+          formation: input.formation,
+          slotsJson: JSON.stringify(input.slots.map(() => null)),
+          filled: 0,
+          ovr: 0,
+          friendlyJson: lineupJson,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [ownerTeams.profileId, ownerTeams.season],
+          set: { friendlyJson: lineupJson },
+        })
+        .returning();
+      return ok(c, PutOwnerTeamResponseSchema, {
+        team: toOwnerTeam(friendlyTeamOf(row!), lineup, eligible, reqLang(c)),
+      });
+    }
     const [row] = await db
       .insert(ownerTeams)
-      .values({ id: newId('tem'), profileId: me.id, season, createdAt: now, ...values })
-      .onConflictDoUpdate({ target: [ownerTeams.profileId, ownerTeams.season], set: values })
+      .values({
+        id: newId('tem'),
+        profileId: me.id,
+        season,
+        createdAt: now,
+        updatedAt: now,
+        ...values,
+      })
+      .onConflictDoUpdate({
+        target: [ownerTeams.profileId, ownerTeams.season],
+        set: { ...values, updatedAt: now },
+      })
       .returning();
     purgeEdge(c, STALE.teamSaved(season));
     waitUntil(c, refreshAfterChange(db, me.id, season));

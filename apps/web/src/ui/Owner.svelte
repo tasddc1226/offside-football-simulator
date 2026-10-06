@@ -14,6 +14,7 @@
   import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
   import { fmtValue } from '@offside/app-core/format';
+  import { founderLabel } from '@offside/app-core/friendText';
   import { appState, type TeamView } from './state.svelte.js';
   import { accountCache } from './account-state.svelte.js';
   import { isMember } from '@offside/app-core/account';
@@ -92,7 +93,7 @@
       <div class="owner-id">
         <span class="owner-avatar" aria-hidden="true">{(nickname ?? L.avatarInitial).slice(0, 1)}</span>
         <div class="owner-who">
-          <b>{guest ? L.guestName : (nickname ?? L.title)}</b>
+          <b>{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}</b>
           <span class="muted fs-sm">{guest ? L.guestSub : card?.team ? `${card.team.name} · ${card.season}` : L.signedInSubWeb}</span>
         </div>
       </div>
@@ -183,6 +184,7 @@
 </div>
 
 <style>
+  .owner-founder {margin-left:6px;vertical-align:middle;}
   .owner-hub {
     display: flex;
     flex-direction: column;

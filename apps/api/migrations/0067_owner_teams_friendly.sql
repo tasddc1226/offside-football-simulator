@@ -1,0 +1,1 @@
+ALTER TABLE `owner_teams` ADD `friendly_json` text;

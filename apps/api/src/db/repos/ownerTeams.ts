@@ -307,6 +307,42 @@ const rankedIn = (season: number) =>
     isNull(profiles.deletedAt),
   );
 
+/** T-11-113 친선전용 편성(friendly_json)에 담는 칸. */
+export type FriendlyLineup = Pick<
+  OwnerTeamRow,
+  'name' | 'manager' | 'formation' | 'slotsJson' | 'layoutJson' | 'logoJson' | 'filled' | 'ovr'
+>;
+
+/**
+ * T-11-113 친선전·내 팀 화면에서 쓰는 팀: 끝난 시즌 팀을 친선전용으로 고쳤으면 그 편성을 덮어 쓴다. 랭킹·팀 프로필·업적은
+ * 원래 행(최종 기록)을 그대로 읽는다.
+ */
+export function friendlyTeamOf(row: OwnerTeamRow): OwnerTeamRow {
+  if (!row.friendlyJson) return row;
+  try {
+    return { ...row, ...(JSON.parse(row.friendlyJson) as FriendlyLineup) };
+  } catch {
+    return row;
+  }
+}
+
+/**
+ * T-11-113 창단 멤버: 프리시즌(service_season 0)에 숨김 아닌 은퇴 선수를 남긴 구단주만 골라 돌려준다(커리어 프로필·상태·시즌
+ * 인덱스). batch에 넣을 수 있게 쿼리로 돌려준다.
+ */
+export const foundersOf = (db: Db, profileIds: readonly string[]) =>
+  db
+    .selectDistinct({ profileId: careers.profileId })
+    .from(careers)
+    .where(
+      and(
+        inArray(careers.profileId, [...profileIds]),
+        eq(careers.status, 'retired'),
+        eq(careers.serviceSeason, 0),
+        eq(careers.hidden, 0),
+      ),
+    );
+
 /**
  * 상대 후보: 같은 시즌 다른 구단주의 팀 중 내 팀 OVR 위·아래로 가까운 팀을 perSide개씩(시즌·OVR 인덱스). 오늘(todayStart
  * 이후) 이미 건 팀은 뺀다(T-10-095).

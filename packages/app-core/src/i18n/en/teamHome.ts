@@ -252,4 +252,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   logoAppliedApp: 'Logo applied. Others see it once you save your lineup.',
   logoApplyApp: 'Apply logo',
   logoResetApp: 'Reset to default logo',
+  friendlyOnly: 'Friendlies only',
+  statFriendly: 'Friendlies',
+  statFriendlyOnly: 'Only',
 };

@@ -1,4 +1,5 @@
 // T-11-098 친구 화면 문구 · 초대 링크. 웹·앱이 함께 쓴다.
+import type { FriendPerson, FriendsResponse } from '@offside/contracts';
 import { FRIEND_INVITE_PARAM } from '@offside/contracts/owner-team';
 import { friendText as L } from './i18n/ko/friend.js';
 import { teamCoreText } from './i18n/ko/teamCore.js';
@@ -29,3 +30,26 @@ export function h2hText(r: { w: number; d: number; l: number }): string | null {
   if (r.w + r.d + r.l === 0) return null;
   return teamCoreText.record(r);
 }
+
+/** T-11-113 프리시즌에 은퇴 선수를 남긴 구단주 표시. 읽을 때 지금 언어로 고른다. */
+export const founderLabel = () => L.founder;
+
+type FriendsView = Pick<FriendsResponse, 'canPlay' | 'canPlayPreseason' | 'matchesLeft'>;
+type FriendTeams = Pick<FriendPerson, 'team' | 'preseasonTeam'>;
+
+/** 이번 시즌 팀끼리 친선전을 걸 수 있는가. */
+export const canFriendly = (d: FriendsView, p: FriendTeams) =>
+  d.canPlay && d.matchesLeft > 0 && !!p.team && p.team.filled > 0;
+
+/** T-11-113 프리시즌 팀끼리 친선전을 걸 수 있는가(개막 뒤). */
+export const canPreseasonFriendly = (d: FriendsView, p: FriendTeams) =>
+  !!d.canPlayPreseason && d.matchesLeft > 0 && !!p.preseasonTeam && p.preseasonTeam.filled > 0;
+
+/** 친구의 프리시즌 팀 한 줄. 프리시즌 팀이 없거나 개막 전이면 null. */
+export const preseasonTeamLine = (p: Pick<FriendPerson, 'preseasonTeam'>) =>
+  p.preseasonTeam
+    ? L.preseasonLine({ name: p.preseasonTeam.name, ovr: p.preseasonTeam.ovr })
+    : null;
+
+/** 개막 뒤 친구 화면에서 프리시즌 팀이 없는 창단 멤버에게 보이는 안내. */
+export const preseasonFriendlyHint = () => L.preseasonHint;

@@ -35,6 +35,8 @@ export type OwnerTeamCard = {
   left: number;
   perDay: number;
   playHint: string | null;
+  /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). */
+  founder: boolean;
 };
 
 export function ownerTeamCard(d: OwnerTeamResponse): OwnerTeamCard {
@@ -45,6 +47,7 @@ export function ownerTeamCard(d: OwnerTeamResponse): OwnerTeamCard {
     left: d.matchesLeft,
     perDay: d.matchesPerDay,
     playHint: matchHintOf(d.team, false, d.matchesLeft, d.season, d.current),
+    founder: !!d.founder,
   };
 }
 
