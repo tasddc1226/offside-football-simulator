@@ -5,6 +5,9 @@
  */
 export const HOF_MIN_RETIRE_AGE = 30;
 
+/** Server-awarded retirement title; never derived from a client snapshot. */
+export const WALL_OF_HONOR_TITLE_ID = 'wall_of_honor';
+
 /** 짧은 커리어 안내(은퇴 확인·은퇴 화면 공용). */
 export const SHORT_CAREER_NOTE = `만 ${HOF_MIN_RETIRE_AGE}세 전에 은퇴한 짧은 커리어는 전체 명예의 전당과 공유 링크에 오르지 않고 '내 선수'에만 남아요.`;
 

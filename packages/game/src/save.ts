@@ -9,6 +9,7 @@ import { createRng, freshSeed, setActiveRng } from './rng.js';
 import { ensureTitles } from './titles.js';
 import { SAVE_VERSION } from './data.js';
 import type { GameState, HofEntry } from './types.js';
+import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { NATION_BY_CODE } from '@offside/contracts/nations';
 
 /** 불러온 저장본을 받을지 정하고 지금 형식으로 고친다. 버전이 다르면(또는 없으면) null — 새로 시작한다. */
@@ -61,6 +62,8 @@ export function migrateSave(G: GameState): { newCid: boolean } {
   if (newCid) G.cid = crypto.randomUUID();
   // T-10-026: 칭호 도입 전 저장 — 이미 채운 조건의 칭호를 조용히 채운다(RNG·인기 변화 없음).
   ensureTitles(G);
+  G.titles = (G.titles ?? []).filter((t) => t.id !== WALL_OF_HONOR_TITLE_ID);
+  if (G.titleSel === WALL_OF_HONOR_TITLE_ID) delete G.titleSel;
   // 구단 이름이 바뀌어도 기존 저장의 현재 소속은 최신 이름으로
   const gClubId = G.club.id;
   const c = clubsIn(G.leagueId, G)

@@ -4,8 +4,9 @@
   import type { RetiredNumberResult } from '@offside/contracts';
   import { rnStyle } from '@offside/app-core/rnStyle';
   import { setLegendPublic } from './legend.js';
+  import { pendingRetirementIds } from '@offside/app-core/outbox';
   import { checkRetiredNumber } from '@offside/app-core/api/client';
-  import { recordRn } from './retiredNumber.svelte.js';
+  import { recordRn, rnResults } from './retiredNumber.svelte.js';
   import { isHofEligible } from '@offside/contracts/hof-rules';
   import { rnClubStats, rnSlotOf } from '@offside/app-core/legendReport';
   import type { LegendView } from './state.svelte.js';
@@ -23,29 +24,30 @@
     /** 스크롤 크레딧(LegendReport). */
     reveal: (el: HTMLElement) => { destroy: () => void } | undefined;
   } = $props();
-  // 결과를 모르는 내 선수 기록(배포 전 은퇴의 소급 결번·이미 찬 자리, 심사 중이던 기록)은 열 때 서버에 한 번 묻는다
-  // (결과는 이 기기 기록에 남아 다시 묻지 않는다). 방금 은퇴한 화면은 은퇴 업로드 응답이 곧 온다.
+  // 로컬·백업 기록은 칭호 증거가 아니므로 상세를 열 때 서버에서 확인한다.
+  // 반복 진입은 API 메모를 사용하며 은퇴 업로드 대기 중에는 응답 이벤트를 기다린다.
   /** 한 선수에 한 번만 묻는다(결과를 남기면 rn0가 바뀌어 효과가 다시 돈다). */
   let asked = '';
   $effect(() => {
     const id = v.own?.id ?? v.shareId;
     // 공개 명예의 전당에 오르는 은퇴(만 30세 이상)만 심사 대상이다.
-    if (!id || id === asked || v.pot || !isHofEligible(v.age)) return;
-    if (rn0 !== undefined && rn0?.kind !== 'pending') return;
+    if (!id || id === asked || !isHofEligible(v.age) || pendingRetirementIds().has(id)) return;
     asked = id;
     void checkRetiredNumber(id).then((r) => {
       if (r.ok) recordRn(id, r.data.retiredNumber);
     });
   });
-  const rn = $derived(rn0 ?? null);
+  const rn = $derived(rn0?.kind === 'taken' && v.own?.id && !(v.own.id in rnResults) ? { ...rn0, wallOfHonor: false } : rn0 ?? null);
   const rnSlot = $derived(rnSlotOf(rn, v.own));
   const rnClub = $derived(rnSlot?.kind === 'granted' ? rnClubStats(rnSlot, v.d) : null);
   const rnColors = $derived(rnStyle(rnSlot?.clubId));
 </script>
 
-{#if rn?.kind === 'pending' || rnSlot}
+{#if rn?.kind === 'pending' || rnSlot || v.wallOfHonor}
   <section class="film-rn" data-credit="retired-number" data-legend-rn={rn?.kind} style={rnColors} use:reveal>
-    {#if rn?.kind === 'pending'}
+    {#if !rnSlot && v.wallOfHonor}
+      <div class="rn-ceremony rn-honour"><div class="eyebrow film-kicker">Wall of Honour</div><p class="rn-stats" data-wall-of-honor>‘명예의 벽’ 칭호를 받았어요. 영구결번은 아니에요.</p></div>
+    {:else if rn?.kind === 'pending'}
       <p class="rn-pending" data-rn-pending>서버가 결번을 심사하고 있어요. 잠시 뒤 명예의 전당에서 확인할 수 있어요.</p>
     {:else if rnSlot?.kind === 'granted'}
       <div class="rn-ceremony">
@@ -60,6 +62,7 @@
     {:else if rnSlot?.kind === 'taken'}
       <div class="rn-ceremony rn-honour">
         <div class="eyebrow film-kicker">Wall of Honour</div>
+        {#if rnSlot.wallOfHonor}<p class="rn-stats" role="status" data-wall-of-honor>‘명예의 벽’ 칭호를 받았어요. 영구결번은 아니에요.</p>{/if}
         <p class="rn-line">{rnSlot.number}번은 이미 <b>{rnSlot.holder ?? '익명의 레전드'}</b>의 이름으로 남아 있어,<br />구단은 <b>{v.name}</b>의 이름을 명예의 벽에 새겼습니다.</p>
       </div>
     {:else if rnSlot?.kind === 'anonymous'}

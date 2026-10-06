@@ -291,12 +291,13 @@ export async function getRetiredNumbersIn(
   }
   return { ok: true, data: items };
 }
-/** T-10-076 내 선수의 결번 심사 결과(소급 결번·이미 찬 자리). 메모하지 않는다 — 결과는 ft_hof에 남긴다. */
+/** T-10-076 내 선수의 결번·서버 칭호 심사 결과. 상세를 열 때 확인하고 반복 진입은 1분 메모한다. */
 export function checkRetiredNumber(
   careerId: string,
 ): Promise<ApiResult<RetiredNumberCheckResponse>> {
-  return apiFetch<RetiredNumberCheckResponse>(
+  return cachedGet<RetiredNumberCheckResponse>(
     `/v1/careers/${encodeURIComponent(careerId)}/retired-number`,
+    60_000,
   );
 }
 /** T-10-027 서버 최초 기록(로그인 불필요). T-11-029 시즌마다 따로 — season(0 = 프리시즌)을 안 주면 서버가 지금 시즌을 쓴다. */

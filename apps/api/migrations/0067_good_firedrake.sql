@@ -1,0 +1,1 @@
+ALTER TABLE `careers` ADD `wall_of_honor_json` text;

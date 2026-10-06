@@ -114,6 +114,34 @@ describe('backupFileName', () => {
 });
 
 describe('mergeHof', () => {
+  it('백업의 서버 칭호 증거를 제거하고 기존 기기 기록은 보존한다', () => {
+    const rn = {
+      kind: 'taken' as const,
+      clubId: 'pl-0',
+      club: '구단',
+      number: 10,
+      holder: null,
+      wallOfHonor: true,
+    };
+    const incoming = hofEntry({
+      id: 'incoming',
+      title: 'wall_of_honor',
+      rn,
+      detail: {
+        titles: [
+          { id: 'wall_of_honor', year: 0 },
+          { id: 'goals100', year: 2030 },
+        ],
+      } as NonNullable<HofEntry['detail']>,
+    });
+    const kept = hofEntry({ id: 'kept', title: 'goals100', rn });
+    const merged = mergeHof([kept], [incoming]);
+    const restored = merged.find((x) => x.id === 'incoming')!;
+    expect(restored.rn).toBeUndefined();
+    expect(restored.title).toBeUndefined();
+    expect(restored.detail?.titles).toEqual([{ id: 'goals100', year: 2030 }]);
+    expect(merged.find((x) => x.id === 'kept')).toEqual(kept);
+  });
   it('같은 커리어 id는 이 기기 것을 지키고 나머지를 점수 순으로 합친다', () => {
     const mine = [hofEntry({ id: 'a', score: 100 })];
     const inc = [hofEntry({ id: 'a', score: 999 }), hofEntry({ id: 'b', score: 300 })];

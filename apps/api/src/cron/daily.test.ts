@@ -91,6 +91,17 @@ describe('T-10-070 매일 정리', () => {
 
 describe('T-10-070 D1 → R2 백업', () => {
   it('SQL(gzip)로 올리고, 빈 D1에 그대로 실행하면 같은 데이터가 된다', async () => {
+    const evidence = JSON.stringify({
+      clubId: 'pl-0',
+      club: '구단',
+      number: 10,
+      grantedAt: '2026-09-28T00:00:00.000Z',
+    });
+    await ctx.env.DB.prepare(
+      "INSERT INTO careers (id, profile_id, pos, foot, type, trait, start_year, status, app_version, created_at, updated_at, wall_of_honor_json) VALUES ('honor', 'prf_1', 'FW', '오른발', 'poacher', 'late', 2026, 'retired', '1.0.0', '2026-09-28', '2026-09-28', ?)",
+    )
+      .bind(evidence)
+      .run();
     const r = await backupToR2(ctx.env.DB, bucket(), 'restore', NOW);
     expect(r.key).toBe('d1/restore/2026-09-28.sql.gz');
     expect(r.rows).toBeGreaterThan(0);
@@ -108,6 +119,11 @@ describe('T-10-070 D1 → R2 백업', () => {
       for (const stmt of splitSqlQuery(sql)) {
         if (stmt.trim()) await fresh.env.DB.prepare(stmt).run();
       }
+      expect(
+        await fresh.env.DB.prepare(
+          "SELECT wall_of_honor_json FROM careers WHERE id = 'honor'",
+        ).first(),
+      ).toEqual({ wall_of_honor_json: evidence });
       for (const t of ['profiles', 'sessions', 'idempotency', 'auth_attempts']) {
         const n = await fresh.env.DB.prepare(`SELECT count(*) AS n FROM ${t}`).first<{
           n: number;

@@ -81,9 +81,9 @@ describe('영구결번 (T-10-076)', () => {
 
   beforeEach(async () => {
     // 기본 데이터는 프리시즌 선수다. 실제 시즌 개막과 무관하게 같은 기준으로 검증한다.
+    ctx = await createTestD1();
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z'));
-    ctx = await createTestD1();
     cookie = (await issueCookie(ctx)).cookie;
   });
   afterEach(async () => {
@@ -187,6 +187,156 @@ describe('영구결번 (T-10-076)', () => {
     // 번호가 다르면 같은 구단이라도 받는다.
     const D = '0c000000-0000-4000-8000-00000000000d';
     expect(await retire(D, skyBlue(7), '일곱')).toMatchObject({ kind: 'granted', number: 7 });
+  });
+
+  const check = async (id: string) => {
+    const res = await callJson(ctx.env, 'GET', `/v1/careers/${id}/retired-number`, { cookie });
+    expect(res.status).toBe(200);
+    return successEnvelope(RetiredNumberCheckResponseSchema).parse(await res.json()).data
+      .retiredNumber;
+  };
+  const detail = async (id: string) => {
+    const res = await createApp().request(`/v1/hof/${id}`, {}, ctx.env);
+    expect(res.status).toBe(200);
+    return successEnvelope(HofDetailResponseSchema).parse(await res.json()).data;
+  };
+
+  it('명예의 벽을 서버에 한 번 기록하고 대표 칭호를 보존하며 구버전 재업로드로 잃지 않는다', async () => {
+    await retire(A, skyBlue(10), '선점');
+    const snap = { ...skyBlue(10), titles: [{ id: 'goals100', year: 2031 }] };
+    await putSeasons(B, snap.career);
+    const put = (body: unknown) =>
+      callJson(ctx.env, 'PUT', `/v1/careers/${B}/retirement`, { cookie, body });
+    const body = {
+      ...RETIREMENT,
+      retireAge: 34,
+      publicName: '후배',
+      title: 'goals100',
+      snapshot: snap,
+    };
+    expect((await retire(C, twoClubs(10), '두구단'))?.kind).toBe('granted');
+    const res = await put(body);
+    expect(
+      successEnvelope(RetirementResponseSchema).parse(await res.json()).data.retiredNumber,
+    ).toMatchObject({ kind: 'taken', wallOfHonor: true });
+    let d = await detail(B);
+    expect(d.entry.title).toBe('goals100');
+    expect(d.entry.retiredNumber).toBeNull();
+    expect(d.entry.wallOfHonor).toBe(true);
+    expect(d.snapshot?.titles?.filter((t) => t.id === 'wall_of_honor')).toHaveLength(1);
+    const before = await ctx.env.DB.prepare('SELECT wall_of_honor_json FROM careers WHERE id = ?')
+      .bind(B)
+      .first();
+    await put({ ...RETIREMENT, publicName: '후배' }); // no snapshot/title, old client
+    await check(B);
+    expect(
+      await ctx.env.DB.prepare('SELECT wall_of_honor_json FROM careers WHERE id = ?')
+        .bind(B)
+        .first(),
+    ).toEqual(before);
+    d = await detail(B);
+    expect(d.entry.title).toBe('goals100');
+    await put({ ...body, title: 'wall_of_honor' });
+    expect((await detail(B)).entry.title).toBe('wall_of_honor');
+    await put({ ...body, title: 'goals100', publicName: null });
+    expect((await detail(B)).entry.title).toBe('goals100');
+    expect(await check(B)).toMatchObject({ wallOfHonor: true });
+    await ctx.env.DB.prepare('DELETE FROM retired_numbers WHERE career_id = ?').bind(A).run();
+    expect(await check(B)).toMatchObject({ kind: 'taken', wallOfHonor: true, holder: null });
+    expect((await list()).some((x) => x.careerId === B)).toBe(false);
+  });
+
+  it('스냅샷·대표 칭호 위조는 첫 은퇴와 늦은 스냅샷 업로드·공개 읽기에서 거른다', async () => {
+    const forged = {
+      ...skyBlue(10),
+      titles: [
+        { id: 'wall_of_honor', year: 2037 },
+        { id: 'goals100', year: 2032 },
+      ],
+    };
+    await putSeasons(A, forged.career);
+    const body = {
+      ...RETIREMENT,
+      retireAge: 34,
+      publicName: '선수',
+      snapshot: forged,
+      title: 'wall_of_honor',
+    };
+    await callJson(ctx.env, 'PUT', `/v1/careers/${A}/retirement`, { cookie, body });
+    expect((await detail(A)).entry.title).toBeNull();
+    expect((await detail(A)).snapshot?.titles).toEqual([{ id: 'goals100', year: 2032 }]);
+    await ctx.env.DB.prepare('UPDATE careers SET snapshot_json = NULL WHERE id = ?').bind(A).run();
+    await callJson(ctx.env, 'PUT', `/v1/careers/${A}/retirement`, { cookie, body });
+    expect((await detail(A)).snapshot?.titles?.some((t) => t.id === 'wall_of_honor')).toBe(false);
+    // Pre-feature forged data must also be sanitized in public responses.
+    await ctx.env.DB.prepare('UPDATE careers SET snapshot_json = ?, title = ? WHERE id = ?')
+      .bind(JSON.stringify(forged), 'wall_of_honor', A)
+      .run();
+    expect((await detail(A)).entry.title).toBeNull();
+    expect((await detail(A)).snapshot?.titles?.some((t) => t.id === 'wall_of_honor')).toBe(false);
+  });
+
+  it('구버전 은퇴에 없던 번호는 늦은 스냅샷으로 만들어 칭호를 받지 못한다', async () => {
+    await retire(A, skyBlue(10), '선점');
+    await putSeasons(B, skyBlue(10).career);
+    await callJson(ctx.env, 'PUT', `/v1/careers/${B}/retirement`, {
+      cookie,
+      body: { ...RETIREMENT, retireAge: 34, publicName: '옛선수' },
+    });
+    await callJson(ctx.env, 'PUT', `/v1/careers/${B}/retirement`, {
+      cookie,
+      body: { ...RETIREMENT, retireAge: 34, publicName: '옛선수', snapshot: skyBlue(10) },
+    });
+    expect(await check(B)).toBeNull();
+    const d = await detail(B);
+    expect(d.entry.number).toBeNull();
+    expect(d.entry.wallOfHonor).toBe(false);
+    expect(d.snapshot?.number).toBe(10); // display detail can still be recovered
+  });
+
+  it('기존 커리어는 당시 시즌 기준·은퇴 전 기록과 모든 후보의 선점 시각이 증명될 때만 복원한다', async () => {
+    await retire(A, skyBlue(10), '먼저');
+    await retire(B, skyBlue(10), '나중');
+    await ctx.env.DB.prepare('UPDATE careers SET wall_of_honor_json = NULL WHERE id = ?')
+      .bind(B)
+      .run();
+    // Same preseason career, now in season 1 with a stricter cutoff.
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z'));
+    expect(await check(B)).toMatchObject({ kind: 'taken', wallOfHonor: true });
+    await ctx.env.DB.prepare('UPDATE careers SET wall_of_honor_json = NULL WHERE id = ?')
+      .bind(B)
+      .run();
+    await ctx.env.DB.prepare('UPDATE retired_numbers SET granted_at = ? WHERE career_id = ?')
+      .bind('2026-10-01T00:00:00.000Z', A)
+      .run();
+    expect(await check(B)).toMatchObject({ kind: 'taken', wallOfHonor: false });
+    await ctx.env.DB.prepare('UPDATE retired_numbers SET granted_at = ? WHERE career_id = ?')
+      .bind('2026-09-29T00:00:00.000Z', A)
+      .run();
+    await ctx.env.DB.prepare('UPDATE career_seasons SET created_at = ? WHERE career_id = ?')
+      .bind('2026-10-01T00:00:00.000Z', B)
+      .run();
+    expect(await check(B)).toMatchObject({ kind: 'taken', wallOfHonor: false });
+  });
+
+  it('두 번째 후보가 비어 있거나 익명·숨김·미달·짧은 커리어면 명예의 벽을 주지 않는다', async () => {
+    await retire(A, skyBlue(10), '선점');
+    expect(await retire(B, twoClubs(10), '두번째빈번호')).toMatchObject({ kind: 'granted' });
+    expect((await detail(B)).entry.wallOfHonor).toBe(false);
+    expect(await retire(C, skyBlue(10), null)).toMatchObject({ kind: 'anonymous' });
+    await ctx.env.DB.prepare('UPDATE careers SET hidden = 1, public_name = ? WHERE id = ?')
+      .bind('가림', C)
+      .run();
+    expect(await check(C)).toBeNull();
+    expect(
+      await ctx.env.DB.prepare('SELECT wall_of_honor_json FROM careers WHERE id = ?')
+        .bind(C)
+        .first(),
+    ).toEqual({ wall_of_honor_json: null });
+    await ctx.env.DB.prepare('UPDATE careers SET hidden = 0, retire_age = 29 WHERE id = ?')
+      .bind(C)
+      .run();
+    expect(await check(C)).toBeNull();
   });
 
   it('T-11-101: 벽 첫 화면은 구단별 수·최근 결번만, 구단·최신순 페이지는 따로 받는다', async () => {

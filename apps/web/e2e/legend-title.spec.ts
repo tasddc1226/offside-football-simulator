@@ -10,7 +10,7 @@ import { API, ok } from './helpers.js';
 const ID = '0d000000-0000-4000-8000-00000000000c';
 
 /** 은퇴한 내 선수 한 명(이 기기 기록)과 API 목. 은퇴 PUT 본문을 모은다. */
-async function seed(page: Page, style?: Record<string, unknown>) {
+async function seed(page: Page, style?: Record<string, unknown>, retiredNumber: unknown = null) {
   const bodies: Record<string, unknown>[] = [];
   await page.route(`${API}/v1/profile`, (r) =>
     r.fulfill(
@@ -27,11 +27,11 @@ async function seed(page: Page, style?: Record<string, unknown>) {
   await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   await page.route(`${API}/v1/retired-numbers*`, (r) => r.fulfill(ok({ items: [] })));
   await page.route(`${API}/v1/careers/${ID}/retired-number`, (r) =>
-    r.fulfill(ok({ retiredNumber: null })),
+    r.fulfill(ok({ retiredNumber })),
   );
   await page.route(`${API}/v1/careers/${ID}/retirement`, (r) => {
     bodies.push(r.request().postDataJSON() as Record<string, unknown>);
-    return r.fulfill(ok({ careerId: ID, status: 'retired', retiredNumber: null }));
+    return r.fulfill(ok({ careerId: ID, status: 'retired', retiredNumber }));
   });
   await page.addInitScript(
     ({ id, style }) => {
@@ -168,4 +168,41 @@ test('선택 기록이 없는 은퇴에는 플레이 성향 카드가 없다', a
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-credit="finale"]')).toBeAttached();
   await expect(page.locator('[data-legend-style]')).toHaveCount(0);
+});
+
+test('명예의 벽은 받은 칭호 목록에 추가되고 기존 대표 칭호를 유지한다', async ({ page }) => {
+  const result = {
+    kind: 'taken',
+    clubId: 'pl-0',
+    club: '맨체스터 스카이블루',
+    number: 9,
+    holder: '선배',
+    wallOfHonor: true,
+  };
+  const bodies = await seed(page, undefined, result);
+  let checks = 0;
+  await page.route(`${API}/v1/careers/${ID}/retired-number`, (r) => {
+    checks++;
+    return r.fulfill(ok({ retiredNumber: result }));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-wall-of-honor]')).toContainText('영구결번은 아니에요.');
+  await expect(page.locator('[data-legend-title]')).toHaveText('‘유럽파’');
+  await page.locator('[data-act="legend-title-open"]').click();
+  await expect(page.locator('[data-legend-title-pick="wall_of_honor"]')).toContainText('명예의 벽');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('[data-legend-title-pick="wall_of_honor"]').click();
+  await expect.poll(() => bodies.at(-1)?.title).toBe('wall_of_honor');
+  await expect(page.locator('[data-legend-title]')).toHaveText('‘명예의 벽’');
+  await page.goBack();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-wall-of-honor]')).toBeAttached();
+  // Successful PUT invalidates the GET memo, so one new verification is expected.
+  await expect.poll(() => checks).toBe(2);
+  await page.goBack();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-wall-of-honor]')).toBeAttached();
+  expect(checks).toBe(2);
 });

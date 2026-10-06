@@ -38,11 +38,12 @@ export async function judgeRetirement(
   now: string,
 ): Promise<RetiredNumberResult | null> {
   try {
-    const { result, season, claimed } = await judgeRetiredNumber(getDb(c), careerId, now);
+    const { result, season, claimed, awarded } = await judgeRetiredNumber(getDb(c), careerId, now);
     // 이미 가진 자리여도 이름 공개 토글이 목록의 이름을 바꾼다. 그 시즌의 목록만 낡는다(T-11-029).
     if (result?.kind === 'granted' && season !== undefined) {
       purgeEdge(c, STALE.retiredNumbersChanged(season, result.clubId));
     }
+    if (awarded) purgeEdge(c, [EDGE.hofDetail(careerId)]);
     if (claimed) publishRetiredNumber(c, claimed);
     return result;
   } catch (err) {

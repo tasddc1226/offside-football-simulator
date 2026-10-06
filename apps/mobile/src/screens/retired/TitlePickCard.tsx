@@ -5,11 +5,13 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { loadHOF, saveKey } from '@offside/game/season';
+import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { titleById } from '@offside/game/titles';
 import type { HofEntry } from '@offside/game/types';
 import { earnedTitles } from '@offside/app-core/legendReport';
 import { TitleTag } from '../../components/TitleTag';
 import { toast, uploadRetirement } from '../../game/host';
+import { rnResults } from '../../store';
 import { pickedTitles } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -21,7 +23,8 @@ import { liveEntry } from './own';
 export function TitlePickCard({ h }: { h: HofEntry }) {
   const c = useColors();
   const pk = useSnapshot(pickedTitles);
-  const earned = earnedTitles(h);
+  const results = useSnapshot(rnResults);
+  const earned = earnedTitles(h, h.id && h.id in results ? results[h.id] : null);
   const current = titleById((h.id && pk[h.id]) || h.title);
   const [open, setOpen] = useState(false);
 
@@ -38,7 +41,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
     toast(`대표 칭호를 바꿨어요: ${titleById(id)?.name ?? id}`);
   }
 
-  if (earned.length <= 1) return null;
+  if (earned.length <= 1 && !earned.some((x) => x.d.id === WALL_OF_HONOR_TITLE_ID)) return null;
   return (
     <Card>
       <View testID="legend-titles">
@@ -98,7 +101,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
                   {x.d.desc}
                 </Txt>
                 <Txt tone="muted" style={{ fontFamily: DISPLAY[700], fontSize: rem(0.75) }}>
-                  {x.year ? x.year : '이전 기록'}
+                  {x.d.id === WALL_OF_HONOR_TITLE_ID ? '은퇴' : x.year ? x.year : '이전 기록'}
                 </Txt>
               </Press>
             );

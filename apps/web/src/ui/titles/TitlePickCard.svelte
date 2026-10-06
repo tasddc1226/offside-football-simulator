@@ -3,7 +3,9 @@
   // 카드·명예의 전당·공유 링크의 대표 칭호가 바뀐다. 이 기기 기록(ft_hof)에 남기고 서버에 다시 올린다 — 서버는 은퇴 때
   // 올라온 상세 기록의 칭호 목록에 있는 것만 받는다.
   import { loadHOF, saveKey } from '@offside/game/season';
+  import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
   import { titleById } from '@offside/game/titles';
+  import { rnOf, rnResults } from '../retiredNumber.svelte.js';
   import { earnedTitles } from '@offside/app-core/legendReport';
   import type { HofEntry } from '@offside/game/types';
   import { toast, uploadRetirement } from '../helpers.js';
@@ -11,7 +13,7 @@
   import TitleTag from './TitleTag.svelte';
 
   const { h }: { h: HofEntry } = $props();
-  const earned = $derived(earnedTitles(h));
+  const earned = $derived(earnedTitles(h, h.id && h.id in rnResults ? rnOf(h.id, h.rn) : null));
   const current = $derived(titleById(legendTitleOf(h.id, h.title)));
   let open = $state(false);
 
@@ -29,7 +31,7 @@
   }
 </script>
 
-{#if earned.length > 1}
+{#if earned.length > 1 || earned.some((x) => x.d.id === WALL_OF_HONOR_TITLE_ID)}
   <section class="card stack" data-legend-titles>
     <div><div class="eyebrow">Titles</div><h2>대표 칭호</h2></div>
     <p class="title-main">
@@ -44,7 +46,7 @@
               <button class="title-item" data-legend-title-pick={x.d.id} aria-pressed={current?.id === x.d.id} onclick={() => pick(x.d.id)}>
                 <TitleTag name={x.d.name} rarity={x.d.rarity} />
                 <span class="title-desc">{x.d.desc}</span>
-                <span class="title-year num">{x.year ? x.year : '이전 기록'}</span>
+                <span class="title-year num">{x.d.id === WALL_OF_HONOR_TITLE_ID ? '은퇴' : x.year ? x.year : '이전 기록'}</span>
               </button>
             </li>
           {/each}

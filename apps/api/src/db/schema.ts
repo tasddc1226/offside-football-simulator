@@ -389,6 +389,8 @@ export const careers = sqliteTable(
     publicName: text('public_name'),
     shirtNumber: integer('shirt_number'),
     snapshotJson: text('snapshot_json'),
+    // Server-owned award evidence (slot + grantedAt), independent of client snapshots.
+    wallOfHonorJson: text('wall_of_honor_json'),
     // T-10-026 은퇴 때의 대표 칭호 id(web game/titles.ts). 옛 은퇴 기록은 NULL.
     title: text('title'),
     // T-10-092 최고 시점 능력치(contracts PeakProfile JSON — 대표 능력치 6개 + 세부 포지션 8자리 실력). 구단주 팀이

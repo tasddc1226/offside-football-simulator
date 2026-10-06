@@ -3,6 +3,7 @@
 // 여정(miles)·수상(awards)은 그대로 "그때 일어난 일" 로그로 남고, 칭호는 그 로그와 통산 기록을 읽어
 // 파생되는 "지금 나를 부르는 이름"이다. 판정은 전부 순수 함수 — 시드 RNG를 절대 호출하지 않는다(결정성).
 // 획득한 순간만 s.titles에 {id, year}로 적어 두고(획득 연도·새 칭호 연출용), 획득하면 등급만큼 인기가 오른다.
+import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { LEAGUES } from './data.js';
 import { CONT, CUPS, POTY, TOP_SCORER } from './comps.js';
 import { STORIES } from './engine.js';
@@ -385,6 +386,15 @@ export const TITLES: TitleDef[] = [
   n('fame100', '국민 스타', 'fame', 2, '인기 100', (s) => Math.floor(s.fame), 100),
   n('fame300', '슈퍼스타', 'fame', 3, '인기 300', (s) => Math.floor(s.fame), 300),
   n('fame1000', '월드 아이콘', 'fame', 4, '인기 1000', (s) => Math.floor(s.fame), 1000),
+  // Server-only: checkTitles never grants it, so no popularity or game rewards.
+  t(
+    WALL_OF_HONOR_TITLE_ID,
+    '명예의 벽',
+    'legend',
+    4,
+    '영구결번 자격을 채웠지만 후보 구단의 번호가 모두 먼저 결번된 선수에게 주는 칭호',
+    () => false,
+  ),
   // 은퇴 — 은퇴할 때 레전드 점수 구간 하나만. T-11-018 기준은 시즌 1 선수 것이고, 프리시즌 선수는 옛 기준을 쓴다.
   ...LEGEND_BANDS.map(([id, name, rarity, min, preMin], i) =>
     t(

@@ -150,6 +150,20 @@ describe('valuePoints', () => {
 });
 
 describe('earnedTitles', () => {
+  it('서버의 명예의 벽 판정만 목록에 넣고 스냅샷 칭호는 증거로 쓰지 않는다', () => {
+    const h = { detail: { titles: [{ id: 'wall_of_honor', year: 2030 }] } } as HofEntry;
+    expect(earnedTitles(h, null)).toEqual([]);
+    const rn = {
+      kind: 'taken' as const,
+      clubId: 'pl-0',
+      club: '구단',
+      number: 10,
+      holder: null,
+      wallOfHonor: true,
+    };
+    expect(earnedTitles(h, rn).map((x) => x.d.id)).toEqual(['wall_of_honor']);
+    expect(earnedTitles(h, { ...rn, wallOfHonor: false })).toEqual([]);
+  });
   const entry = (titles: { id: string; year: number }[] | undefined) =>
     ({ detail: titles ? { titles } : undefined }) as unknown as HofEntry;
   it('희귀한 것부터, 같으면 최근 것부터', () => {

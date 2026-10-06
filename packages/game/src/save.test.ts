@@ -23,6 +23,17 @@ function legacy(edit: (g: Record<string, unknown>) => void = () => {}): GameStat
 }
 
 describe('migrateSave (T-10-046)', () => {
+  it('서버 칭호를 진행 세이브에서 위조하거나 백업으로 복원하지 않는다', () => {
+    const G = current();
+    G.titles = [
+      { id: 'wall_of_honor', year: 2030 },
+      { id: 'goals100', year: 2030 },
+    ];
+    G.titleSel = 'wall_of_honor';
+    migrateSave(G);
+    expect(G.titles).toEqual([{ id: 'goals100', year: 2030 }]);
+    expect(G.titleSel).toBeUndefined();
+  });
   it('T-11-054 옛 만료 제안은 총기간 그대로, 조기 제안은 추가기간을 포함해 복원한다', () => {
     for (const early of [false, true]) {
       const G = current();

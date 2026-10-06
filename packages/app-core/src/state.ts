@@ -155,6 +155,8 @@ export interface LegendView {
   pot?: { real: string; value: number } | undefined;
   /** T-10-076 영구결번 심사 결과. null = 자격 없음, undefined = 아직 모름(업로드 전·옛 기록). */
   rn?: RetiredNumberResult | null | undefined;
+  /** Server-verified public retirement honor, even when the selected title differs. */
+  wallOfHonor?: boolean | undefined;
 }
 
 export interface AppState {
