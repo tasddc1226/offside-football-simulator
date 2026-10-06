@@ -33,6 +33,15 @@ const ko = {
   resultOk: '성장 한계가 한 뼘 더 올라갔어요.',
   resultFail: (p: { chance: number; pct: number }) =>
     `성공 확률 ${p.chance}%였어요. 자금은 돌려받지 못하고, 다음 시도 확률이 ${p.pct}%p 올라요.`,
+  // T-11-116 자금이 모자랄 때 보상형 광고(앱)로 시도한다.
+  adButton: (p: { chance: number }) => `광고 보고 강화하기 (${p.chance}%)`,
+  adButtonFree: (p: { chance: number }) => `자금 없이 강화하기 (${p.chance}%)`,
+  adNote: '광고를 끝까지 보면 자금 없이 한 번 시도할 수 있어요.',
+  adNoteFree: '광고 제거를 구매해서 자금 없이 한 번 시도할 수 있어요.',
+  adWatch: '광고를 끝까지 보면 강화를 시도할 수 있어요.',
+  adCost: '광고',
+  resultFailAd: (p: { chance: number; pct: number }) =>
+    `성공 확률 ${p.chance}%였어요. 다음 시도 확률이 ${p.pct}%p 올라요.`,
 };
 
 export type GameBoostMsgs = typeof ko;

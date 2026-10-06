@@ -146,9 +146,11 @@ export interface BoostTry {
   lv: number;
   /** 시도한 확률(%). */
   p: number;
-  /** 쓴 자금(만 원). */
+  /** 쓴 자금(만 원). 광고로 시도했으면 0. */
   c: number;
   ok: boolean;
+  /** T-11-116 자금이 모자라 보상형 광고로 시도했다(앱). 기능 전 기록·자금 시도엔 없다. */
+  ad?: true;
 }
 export interface BoostState {
   /** 지금 단계(성공 횟수). flags.potBonus에 같은 만큼 더해져 있다. */
