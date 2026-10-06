@@ -23,7 +23,8 @@ import { getLocale } from './i18n/core.js';
 /** 이름을 공개하지 않은 선수 표기(지금 언어로). */
 export const anonName = (pos: Parameters<typeof anonNameIn>[0], number: number | null): string =>
   anonNameIn(pos, number, getLocale());
-import { fmtValue } from '@offside/contracts/market-value';
+// 몸값 표기는 지금 언어를 따른다(한국어는 contracts의 서버 표기, 영어는 원화 약식).
+import { fmtValue } from '@offside/game/player';
 export { fmtValue };
 
 /** 선수 카드 등급(카드 색): 레전드 점수 1,000 이상 레전드, 최고 OVR 80 이상 골드, 나머지 실버. */

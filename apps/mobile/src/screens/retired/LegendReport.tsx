@@ -131,7 +131,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
               {v.name}
             </FText>
             <FText tone="muted" size={0.875} center>
-              {POS_LABEL[v.pos]}
+              {tn(POS_LABEL[v.pos])}
               {span ? ` · ${span}` : ''} · {L.retiredAge({ age: v.age })}
             </FText>
             <View style={{ alignItems: 'center', marginTop: 14 }}>
