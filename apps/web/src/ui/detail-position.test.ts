@@ -80,6 +80,7 @@ describe('세부 포지션 (T-10-091)', () => {
     s.career.push(season({ goals: 10, assists: 20, rating: 7 }));
     const plain = { ...s, dpos: undefined };
     expect(legendScore(s)).toBeGreaterThan(legendScore(plain));
+    s.age = 25;
     expect(retire(s).dpos).toBe('W');
   });
 
@@ -99,6 +100,7 @@ describe('세부 포지션 (T-10-091)', () => {
     expect(s.peakProfile!.roles.CB).toBe(s.peak);
     expect(s.peakProfile!.roles.CB).toBeGreaterThan(s.peakProfile!.roles.ST);
     expect(Object.keys(s.peakProfile!.attrs)).toEqual(['pac', 'sho', 'pas', 'dri', 'def', 'phy']);
+    s.age = 25;
     expect(retire(s).profile).toEqual(s.peakProfile);
   });
 
@@ -106,6 +108,7 @@ describe('세부 포지션 (T-10-091)', () => {
     const s = make('FW', 'ST');
     delete s.peakProfile;
     s.peak = ovr(s) + 6;
+    s.age = 25;
     const p = retire(s).profile!;
     expect(p.roles.ST).toBe(s.peak);
   });

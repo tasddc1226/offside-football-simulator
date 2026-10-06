@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { MIN_RETIRE_AGE } from '@offside/game/season';
   import { appFormatText as W } from '@offside/app-core/i18n/ko/appFormat';
   // ui.ts playerTab()/nationalCard() 포트 (316~356줄)
   import { potentialNotice } from '@offside/app-core/potential-view';
@@ -136,7 +137,7 @@
   {/if}
 </section>
 
-{#if s.age >= 32 && !lg.amateur}
+{#if s.age >= MIN_RETIRE_AGE}
   <button class="btn btn-block" data-act="retire-ask" onclick={() => retireAsk()}>{L.retire}</button>
 {/if}
 

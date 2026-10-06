@@ -52,6 +52,7 @@ export const gameActions: Translation<GameActionsMsgs> = {
   contractYears: (p) => `${p.years}-year contract`,
   renewExtension: (p) =>
     `1 year left · ${p.ext}-year extension · ${plural(p.total, 'year')} in total. ${p.desc}`,
+  retireAgeLimit: (p) => `You can retire from age ${p.age}.`,
   retireBtn: 'Retire',
   contractTitleExt: 'Sign the extension?',
   contractTitleRookie: 'Sign the pro contract?',

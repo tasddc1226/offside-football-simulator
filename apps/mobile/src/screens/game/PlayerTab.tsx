@@ -1,3 +1,4 @@
+import { MIN_RETIRE_AGE } from '@offside/game/season';
 // 선수 탭(웹 tabs/PlayerTab.svelte): 능력치 카드 · 선수 정보 · 국가대표 · 은퇴 선언(32세부터).
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -333,7 +334,7 @@ export function PlayerTab({ s }: { s: GameState }) {
         ) : null}
       </Card>
 
-      {s.age >= 32 && !lg.amateur ? (
+      {s.age >= MIN_RETIRE_AGE ? (
         <Btn block testID="retire-ask" onPress={() => retireAsk()}>
           {L.retire}
         </Btn>

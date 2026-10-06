@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setStorage } from '@offside/game/storage';
 import { ovr } from '@offside/game/attributes';
 import { startOvr } from './create-view.js';
 import { setLatestBalance } from '@offside/game/balance';
@@ -40,6 +41,13 @@ function harness() {
 }
 
 beforeEach(() => {
+  const mem = new Map<string, string>();
+  setStorage({
+    getItem: (k) => mem.get(k) ?? null,
+    setItem: (k, v) => {
+      mem.set(k, v);
+    },
+  });
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(BEFORE));
   setLatestBalance(null);
@@ -175,5 +183,62 @@ describe('개막 선택지 알림', () => {
     }
     expect(draftCareerRules({ pos: 'FW', dpos: 'W' }, OPEN).dpos).toBe('W');
     expect(draftCareerRules({ pos: 'DF', dpos: 'W' }, OPEN).dpos).toBe('CB');
+  });
+});
+
+describe('candidate reveal and retirement minimum', () => {
+  it('persists a reveal for the same scout pool and keeps selected potential at kickoff', () => {
+    vi.setSystemTime(new Date(OPEN));
+    const { state, actions } = harness();
+    actions.rollCandidates();
+    const batch = state.candidates!;
+    expect(state.candidatePotentialOpen).toBe(false);
+    expect(actions.revealCandidatePotential(batch)).toBe(true);
+    actions.rollCandidates();
+    expect(state.candidatePotentialOpen).toBe(true);
+    expect(state.candidates![0]!.potential).toEqual(batch[0]!.potential);
+    expect(actions.revealCandidatePotential(batch)).toBe(false);
+    const c = state.candidates![2]!;
+    actions.startCareer('test', 7, c.attrs, c.potential);
+    expect(state.G!.pot + state.G!.bloom).toBe(c.potential.value);
+  });
+  it('does not grant a reveal when saving fails', () => {
+    const { state, actions } = harness();
+    actions.rollCandidates();
+    setStorage({
+      getItem: () => null,
+      setItem: () => {
+        throw new Error('full');
+      },
+    });
+    expect(actions.revealCandidatePotential()).toBe(false);
+    expect(state.candidatePotentialOpen).toBe(false);
+  });
+  it('recovers an old offerless market save below 25', () => {
+    const { state, host, actions } = harness();
+    actions.startCareer('test', 7);
+    state.G!.age = 24;
+    state.G!.pending = {
+      type: 'market',
+      res: null,
+      m: { options: [], note: 'old forced retirement', canRetire: true },
+    };
+    actions.nextPending();
+    expect(state.G!.pending.m!.options.length).toBeGreaterThan(0);
+    expect(state.G!.pending.m!.canRetire).toBe(false);
+    expect(host.save).toHaveBeenCalled();
+  });
+  it('blocks both direct retirement and its confirmation below 25', () => {
+    const { state, host, actions } = harness();
+    actions.startCareer('test', 7);
+    state.G!.age = 24;
+    actions.doRetire();
+    actions.retireAsk();
+    expect(state.G!.retired).toBe(false);
+    expect(host.uploadRetirement).not.toHaveBeenCalled();
+    expect(host.toast).toHaveBeenCalled();
+    state.G!.age = 25;
+    actions.doRetire();
+    expect(state.G!.retired).toBe(true);
   });
 });
