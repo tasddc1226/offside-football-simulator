@@ -1,6 +1,18 @@
-import type { OwnerHonor } from '@offside/contracts';
+import type { OwnerHonor, SeasonRecap } from '@offside/contracts';
 import { describe, expect, it } from 'vitest';
-import { honorViews, rankText, recapCardView, recapCutoffText } from './seasonRecap.js';
+import {
+  honorViews,
+  rankText,
+  recapCardView,
+  recapCutoffText,
+  recapHeadline,
+  recapHighlights,
+  recapNumbers,
+  recapTeamSummary,
+  recapTierBars,
+  signed,
+  topPercent,
+} from './seasonRecap.js';
 
 const honor = (o: Partial<OwnerHonor> & Pick<OwnerHonor, 'kind'>): OwnerHonor => ({
   season: 0,
@@ -48,5 +60,103 @@ describe('T-11-128 시즌 결산 문구', () => {
     const pending = recapCardView({ season: 0, status: 'pending', recap: null, honors: [] });
     expect(pending.isNew).toBe(false);
     expect(pending.line).not.toContain('·');
+  });
+
+  describe('결산 화면 · 공유 카드', () => {
+    const team = {
+      name: '수영 유나이티드',
+      rating: 1088,
+      rank: 5,
+      ranked: 233,
+      wins: 31,
+      draws: 6,
+      losses: 9,
+      goalsFor: 68,
+      goalsAgainst: 34,
+      bestMargin: 5,
+      bestStreak: 7,
+    };
+    const recap = (o: Partial<SeasonRecap> = {}): SeasonRecap => ({
+      season: 0,
+      cutoff: '2026-10-05T15:00:00.000Z',
+      closedAt: '2026-10-06T00:00:00.000Z',
+      players: 10,
+      retired: 7,
+      best: null,
+      hofRank: 1,
+      hofRanked: 43,
+      retiredNumbers: 2,
+      wallOfHonor: 1,
+      firsts: 0,
+      team,
+      achievements: { score: 820, done: 20, rank: 3, ranked: 15 },
+      stats: {
+        apps: 2685,
+        goals: 457,
+        assists: 589,
+        trophies: 32,
+        awards: 19,
+        caps: 202,
+        ballon: 2,
+        peak: 82,
+        tiers: { icon: 1, legend: 1, elite: 0, gold: 5, silver: 0, bronze: 0 },
+        scorer: null,
+      },
+      ...o,
+    });
+
+    it('상위 %는 올림, 1% 아래는 1%, 순위가 없으면 null', () => {
+      expect(topPercent(5, 233)).toBe(3);
+      expect(topPercent(1, 5000)).toBe(1);
+      expect(topPercent(233, 233)).toBe(100);
+      expect(topPercent(null, 233)).toBeNull();
+      expect(topPercent(1, 0)).toBeNull();
+    });
+
+    it('숫자 칸 · 한 줄 요약 · 자랑거리는 기록 묶음에서', () => {
+      expect(recapNumbers(recap()).map((n) => [n.key, n.value])).toEqual([
+        ['players', 10],
+        ['retired', 7],
+        ['goals', 457],
+        ['assists', 589],
+        ['apps', 2685],
+        ['trophies', 32],
+        ['caps', 202],
+        ['ballon', 2],
+      ]);
+      expect(recapHeadline(recap())).toBe('선수 7명이 은퇴하며 457골을 남겼어요');
+      expect(recapHighlights(recap())).toEqual([
+        '명예의 전당 1위',
+        '발롱도르 2회',
+        '아이콘 카드 1장',
+        '팀 레이팅 5위',
+        '영구결번 2개',
+        '7연승',
+      ]);
+    });
+
+    it('기록 묶음이 없는 옛 결산은 선수 수만, 은퇴 선수가 없으면 팀으로 요약', () => {
+      const old = recap({ stats: null, retired: 0, hofRank: null });
+      expect(recapNumbers(old).map((n) => n.key)).toEqual(['players', 'retired']);
+      expect(recapTierBars(old)).toEqual([]);
+      expect(recapHeadline(old)).toBe('수영 유나이티드 팀으로 경쟁한 시즌이에요');
+      expect(recapHighlights(old)).toEqual(['팀 레이팅 5위', '영구결번 2개', '7연승']);
+    });
+
+    it('카드 등급 막대는 높은 등급부터 비율로, 팀 요약은 승률 · 득실차', () => {
+      const bars = recapTierBars(recap());
+      expect(bars.map((b) => [b.tier, b.n])).toEqual([
+        ['icon', 1],
+        ['legend', 1],
+        ['elite', 0],
+        ['gold', 5],
+        ['silver', 0],
+        ['bronze', 0],
+      ]);
+      expect(bars.reduce((s, b) => s + b.pct, 0)).toBeCloseTo(100);
+      expect(recapTeamSummary(team)).toEqual({ played: 46, winRate: 67, goalDiff: 34 });
+      expect(recapTeamSummary({ ...team, goalsAgainst: null }).goalDiff).toBeNull();
+      expect([signed(34), signed(-3), signed(0)]).toEqual(['+34', '-3', '0']);
+    });
   });
 });

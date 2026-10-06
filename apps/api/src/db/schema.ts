@@ -1101,6 +1101,8 @@ export const ownerSeasonRecords = sqliteTable(
     achAt: text('ach_at'),
     achRank: integer('ach_rank'),
     achChecked: integer('ach_checked').notNull().default(0),
+    /** 결산 화면 · 공유 카드용 시즌 기록 묶음(SeasonRecapStats를 JSON으로). 굳히기 전이면 null. */
+    statsJson: text('stats_json'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [primaryKey({ columns: [table.profileId, table.season] })],

@@ -23,6 +23,7 @@
     "./positions": "./src/positions.ts",
     "./owner-team": "./src/owner-team.ts",
     "./owner-tier": "./src/owner-tier.ts",
+    "./card-tier": "./src/card-tier.ts",
     "./friend-code": "./src/friend-code.ts",
     "./team-logo": "./src/team-logo.ts",
     "./nations": "./src/nations.ts",

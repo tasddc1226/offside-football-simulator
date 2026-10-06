@@ -1058,35 +1058,6 @@ button.hof-row {
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-.recap-best {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  width: 100%;
-  min-height: 44px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.recap-best b {
-  font-size: 1.125rem;
-  overflow-wrap: anywhere;
-}
-.recap-best-score {
-  font-family: var(--display);
-  font-weight: 700;
-  color: var(--accent-text);
-}
-.recap-team-name {
-  font-size: 1.0625rem;
-  overflow-wrap: anywhere;
-}
 .recap-next {
   padding: 4px 2px;
   text-align: center;
@@ -7041,29 +7012,4 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
 .tier-badge {
   display: inline-flex;
   vertical-align: middle;
-}
-/* T-11-128 결산 화면 시즌 등급 — 큰 등급 엠블럼 아래 등급 이름과 마감 업적 점수. */
-.recap-tier {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  text-align: center;
-  background:
-    radial-gradient(
-      ellipse at 50% 45%,
-      color-mix(in srgb, var(--tier) 22%, transparent),
-      transparent 70%
-    ),
-    var(--surface);
-}
-.recap-tier h2 {
-  align-self: stretch;
-  text-align: left;
-}
-.recap-tier-name {
-  margin-top: 8px;
-  font-family: var(--display);
-  font-size: 1.25rem;
-  letter-spacing: 0.02em;
 }

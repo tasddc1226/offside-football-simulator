@@ -1,11 +1,18 @@
 // T-11-128 시즌 결산. 시즌이 끝나면(프리시즌은 첫 시즌 개막, 시즌은 마감) 5분 cron이 한 단계씩 굳힌다 — 한 번 실행의
 // D1 하위 요청 한도(1,000) 안에 들게 단계를 나눈다. 굳힌 결산·휘장은 다시 세지 않는다(계산식이 바뀌어도 그대로).
 //
-// records: 구단주마다 선수·결번·명예의 벽·최초 기록·팀 성적을 마감 시각 기준으로 적는다(SQL 한 문장).
+// records: 구단주마다 선수·결번·명예의 벽·최초 기록·팀 성적과 결산 화면용 기록 묶음(stats_json)을 마감 시각 기준으로 적는다.
 // ach:     업적 점수는 마감 뒤에 점수가 바뀐 구단주만 마감 시각 기준으로 다시 센다(한 번에 ACH_CHUNK명).
 // ranks:   팀 레이팅 · 업적 · 명예의 전당 순위를 매긴다.
 // honors:  순위와 보유 기록으로 휘장을 준다.
 import { HONOR_BANDS, type RankedHonorKind } from '@offside/contracts';
+import {
+  CARD_ELITE_PEAK,
+  CARD_GOLD_PEAK,
+  CARD_ICON_SCORE,
+  CARD_LEGEND_SCORE,
+  CARD_SILVER_PEAK,
+} from '@offside/contracts/card-tier';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
 import {
   openTeamSeasons,
@@ -67,6 +74,11 @@ async function closeRecords(db: Db, season: number, cutoff: string, now: string)
   // 구단주마다 상관 하위 질의를 돌면 운영 규모(커리어 5만)에서 D1 CPU 한도를 넘는다 — 묶음 집계 한 번씩으로 채운다.
   const retiredBy = sql`c.status = 'retired' and c.legend_score is not null and c.retired_at <= ${cutoff}`;
   const seasonCareers = sql`coalesce(c.service_season, 0) = ${season} and c.hidden = 0`;
+  // 카드 등급(card-tier.ts의 cardTier와 같은 기준).
+  const ICON = sql`c.legend_score >= ${CARD_ICON_SCORE}`;
+  const LEGEND = sql`c.legend_score >= ${CARD_LEGEND_SCORE} and c.legend_score < ${CARD_ICON_SCORE}`;
+  const NOT_LEGEND = sql`c.legend_score < ${CARD_LEGEND_SCORE}`;
+  const PEAK = sql`coalesce(c.peak, 0)`;
   await runEach(db, [
     sql`
       insert or ignore into owner_season_records (
@@ -108,6 +120,44 @@ async function closeRecords(db: Db, season: number, cutoff: string, now: string)
       from (
         select c.profile_id, count(*) as n from server_firsts f join careers c on c.id = f.career_id
         where f.season = ${season} and f.achieved_at <= ${cutoff} group by c.profile_id
+      ) x
+      where x.profile_id = owner_season_records.profile_id and owner_season_records.season = ${season}`,
+    // 결산 화면 · 공유 카드용 기록 묶음 — 마감 전 은퇴한 선수의 통산 합, 카드 등급별 수, 최다 득점 선수, 팀 실점 · 최다 점수 차.
+    sql`
+      update owner_season_records set stats_json = json_object(
+        'apps', x.apps, 'goals', x.goals, 'assists', x.assists, 'trophies', x.trophies, 'awards', x.awards,
+        'caps', x.caps, 'ballon', x.ballon, 'peak', x.peak,
+        'tiers', json_array(x.t_icon, x.t_legend, x.t_elite, x.t_gold, x.t_silver, x.t_bronze),
+        'scorerId', x.scorer_id, 'scorerGoals', x.scorer_goals,
+        'goalsAgainst', x.goals_against, 'bestMargin', x.best_margin)
+      from (
+        select r.profile_id,
+          coalesce(k.apps, 0) as apps, coalesce(k.goals, 0) as goals, coalesce(k.assists, 0) as assists,
+          coalesce(k.trophies, 0) as trophies, coalesce(k.awards, 0) as awards, coalesce(k.caps, 0) as caps,
+          coalesce(k.ballon, 0) as ballon, k.peak,
+          coalesce(k.t_icon, 0) as t_icon, coalesce(k.t_legend, 0) as t_legend, coalesce(k.t_elite, 0) as t_elite,
+          coalesce(k.t_gold, 0) as t_gold, coalesce(k.t_silver, 0) as t_silver, coalesce(k.t_bronze, 0) as t_bronze,
+          s.id as scorer_id, s.goals as scorer_goals, t.goals_against, t.best_margin
+        from owner_season_records r
+        left join (
+          select c.profile_id, sum(coalesce(c.apps, 0)) as apps, sum(coalesce(c.goals, 0)) as goals,
+            sum(coalesce(c.assists, 0)) as assists, sum(coalesce(c.trophies, 0)) as trophies,
+            sum(coalesce(c.awards, 0)) as awards, sum(coalesce(c.caps, 0)) as caps,
+            sum(coalesce(c.ballon, 0)) as ballon, max(c.peak) as peak,
+            sum(${ICON}) as t_icon, sum(${LEGEND}) as t_legend,
+            sum(${NOT_LEGEND} and ${PEAK} >= ${CARD_ELITE_PEAK}) as t_elite,
+            sum(${NOT_LEGEND} and ${PEAK} >= ${CARD_GOLD_PEAK} and ${PEAK} < ${CARD_ELITE_PEAK}) as t_gold,
+            sum(${NOT_LEGEND} and ${PEAK} >= ${CARD_SILVER_PEAK} and ${PEAK} < ${CARD_GOLD_PEAK}) as t_silver,
+            sum(${NOT_LEGEND} and ${PEAK} < ${CARD_SILVER_PEAK}) as t_bronze
+          from careers c where ${seasonCareers} and ${retiredBy} group by c.profile_id
+        ) k on k.profile_id = r.profile_id
+        left join (
+          select c.profile_id, c.id, c.goals,
+            row_number() over (partition by c.profile_id order by c.goals desc, c.legend_score desc, c.id) as rk
+          from careers c where ${seasonCareers} and ${retiredBy} and c.goals > 0
+        ) s on s.profile_id = r.profile_id and s.rk = 1
+        left join owner_teams t on t.id = r.team_id
+        where r.season = ${season}
       ) x
       where x.profile_id = owner_season_records.profile_id and owner_season_records.season = ${season}`,
   ]);

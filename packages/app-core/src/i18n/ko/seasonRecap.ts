@@ -1,5 +1,15 @@
 // T-11-128 구단주 시즌 결산과 휘장(웹 SeasonRecap.svelte · 앱 screens/owner/SeasonRecap.tsx · seasonRecap.ts).
+import type { CardTier } from '@offside/contracts/card-tier';
 import { ns } from '../core';
+
+const CARD_TIER_NAMES: Record<CardTier, string> = {
+  icon: '아이콘',
+  legend: '레전드',
+  elite: '엘리트',
+  gold: '골드',
+  silver: '실버',
+  bronze: '브론즈',
+};
 
 const ko = {
   cardTitle: '시즌 결산',
@@ -61,6 +71,56 @@ const ko = {
   secBadges: '기록 배지',
   tierWhy: (p: { score: string }) => `업적 점수 ${p.score}점으로 마감`,
   tierTitle: (p: { season: string; tier: string }) => `${p.season} ${p.tier}`,
+  // 결산 화면 · 공유 카드
+  headlineGoals: (p: { n: string; goals: string }) =>
+    `선수 ${p.n}명이 은퇴하며 ${p.goals}골을 남겼어요`,
+  headlineRetired: (p: { n: string }) => `선수 ${p.n}명이 그라운드를 떠났어요`,
+  headlineTeam: (p: { name: string }) => `${p.name} 팀으로 경쟁한 시즌이에요`,
+  headlinePlayers: (p: { n: string }) => `선수 ${p.n}명을 키운 시즌이에요`,
+  hlHof: (p: { rank: string }) => `명예의 전당 ${p.rank}위`,
+  hlBallon: (p: { n: number }) => `발롱도르 ${p.n}회`,
+  hlIcon: (p: { n: number }) => `아이콘 카드 ${p.n}장`,
+  hlTeamRank: (p: { rank: string }) => `팀 레이팅 ${p.rank}위`,
+  hlFirsts: (p: { n: number }) => `서버 최초 기록 ${p.n}개`,
+  hlRetiredNumbers: (p: { n: number }) => `영구결번 ${p.n}개`,
+  hlStreak: (p: { n: number }) => `${p.n}연승`,
+  hlTrophies: (p: { n: string }) => `우승 ${p.n}회`,
+  secNumbers: '숫자로 본 시즌',
+  numbersLead: '은퇴한 선수들이 남긴 통산 기록이에요',
+  numGoals: '골',
+  numAssists: '도움',
+  numApps: '출전',
+  numTrophies: '우승',
+  numCaps: 'A매치',
+  numBallon: '발롱도르',
+  secFace: '이 시즌의 얼굴',
+  scorer: '최다 득점',
+  scorerGoals: (p: { n: string }) => `${p.n}골`,
+  peak: '최고 OVR',
+  secCards: '카드 등급',
+  cardsLead: (p: { n: string }) => `은퇴한 ${p.n}명의 카드 등급이에요`,
+  cardTierName: (p: { tier: CardTier }) => CARD_TIER_NAMES[p.tier],
+  tierCount: (p: { n: number }) => `${p.n}장`,
+  played: (p: { n: string }) => `${p.n}경기`,
+  winRate: '승률',
+  goalDiff: '득실차',
+  goalsAgainst: '실점',
+  bestMargin: '최다 점수 차 승리',
+  marginGoals: (p: { n: number }) => `${p.n}골 차`,
+  topPct: (p: { pct: number }) => `상위 ${p.pct}%`,
+  secRanks: '시즌 순위',
+  shareBtn: '결산 공유하기',
+  shareLead: '인스타그램 · 카카오톡에 올리기 좋은 4:5 이미지예요.',
+  shareMaking: '이미지를 만들고 있어요…',
+  shareFail: '이미지를 만들지 못했어요. 다시 시도해 주세요.',
+  shareOpenFail: '공유 창을 열지 못했어요. 이미지를 저장해서 올려 주세요.',
+  shareSave: '이미지 저장',
+  shareNow: '공유하기',
+  shareRemake: '다시 만들기',
+  shareClose: '닫기',
+  shareText: (p: { season: string }) => `오프사이드 ${p.season} 결산`,
+  shareAlt: (p: { season: string }) => `${p.season} 결산 공유 이미지`,
+  cardTagline: '고3 축구선수의 한 생을 키우는 게임',
 };
 
 export type SeasonRecapMsgs = typeof ko;

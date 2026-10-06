@@ -1,10 +1,11 @@
 // T-11-128 구단주 시즌 결산과 휘장. 시즌이 끝나면(프리시즌은 첫 시즌 개막, 시즌은 마감) 서버가 그 시각까지의 기록을
 // 한 번 굳히고(owner_season_records) 휘장을 영구히 남긴다(owner_honors). 굳힌 뒤에는 계산식이 바뀌어도 다시 세지 않는다.
 import { z } from 'zod';
+import { CARD_TIERS } from './card-tier.js';
 import { CareerPosSchema } from './careers.js';
 import { OWNER_TIERS } from './owner-tier.js';
 import { IsoUtcSchema } from './primitives.js';
-import { TeamSeasonSchema } from './teams.js';
+import { TeamPlayerSchema, TeamSeasonSchema } from './teams.js';
 
 /** 휘장 종류. 순위 휘장은 band(1위 · 상위 10 · …)로, 보유 휘장은 value(개수)로 단계를 나눈다. */
 export const HONOR_KINDS = [
@@ -43,6 +44,31 @@ export type OwnerHonor = z.infer<typeof OwnerHonorSchema>;
 const RankSchema = z.number().int().min(1).nullable();
 const CountSchema = z.number().int().min(0);
 
+/** 결산 화면 · 공유 카드용 시즌 기록 — 마감 전 은퇴한 그 시즌 선수들의 통산 합과 카드 등급별 수. */
+export const SeasonRecapStatsSchema = z.strictObject({
+  apps: CountSchema,
+  goals: CountSchema,
+  assists: CountSchema,
+  trophies: CountSchema,
+  awards: CountSchema,
+  caps: CountSchema,
+  ballon: CountSchema,
+  /** 은퇴한 선수 가운데 가장 높은 최고 OVR. */
+  peak: z.number().int().nullable(),
+  /** 카드 등급별 선수 수(card-tier.ts). */
+  tiers: z.record(z.enum(CARD_TIERS), CountSchema),
+  /** 가장 많이 넣은 선수. */
+  scorer: z
+    .strictObject({
+      careerId: z.string(),
+      name: z.string().nullable(),
+      pos: CareerPosSchema,
+      goals: CountSchema,
+    })
+    .nullable(),
+});
+export type SeasonRecapStats = z.infer<typeof SeasonRecapStatsSchema>;
+
 export const SeasonRecapSchema = z.strictObject({
   season: TeamSeasonSchema,
   /** 이 시각까지의 기록이다(프리시즌은 첫 시즌 개막). */
@@ -59,6 +85,10 @@ export const SeasonRecapSchema = z.strictObject({
       pos: CareerPosSchema,
       lastClub: z.string().nullable(),
       score: CountSchema,
+      /** 최고 OVR(카드 등급 색). */
+      peak: z.number().int().nullable(),
+      /** 선수 카드(팀 화면 카드와 같은 모양). 구버전 응답에는 없다. */
+      card: TeamPlayerSchema.nullable().optional(),
     })
     .nullable(),
   /** 그 시즌 명예의 전당(마감 전 은퇴) 안에서 내 선수의 가장 높은 순위. */
@@ -77,6 +107,9 @@ export const SeasonRecapSchema = z.strictObject({
       draws: CountSchema,
       losses: CountSchema,
       goalsFor: CountSchema,
+      /** 실점 · 가장 크게 이긴 점수 차. 기록 묶음이 없던 결산이면 null. */
+      goalsAgainst: CountSchema.nullable(),
+      bestMargin: CountSchema.nullable(),
       bestStreak: CountSchema,
     })
     .nullable(),
@@ -88,6 +121,8 @@ export const SeasonRecapSchema = z.strictObject({
       ranked: CountSchema,
     })
     .nullable(),
+  /** 기록 묶음. 굳히기 전 결산이면 null. */
+  stats: SeasonRecapStatsSchema.nullable(),
 });
 export type SeasonRecap = z.infer<typeof SeasonRecapSchema>;
 

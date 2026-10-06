@@ -32,7 +32,14 @@ describe('T-11-128 시즌 결산', () => {
 
   async function addCareer(
     profileId: string,
-    o: { retiredAt?: string | null; score?: number; wall?: boolean; name?: string },
+    o: {
+      retiredAt?: string | null;
+      score?: number;
+      wall?: boolean;
+      name?: string;
+      goals?: number;
+      peak?: number;
+    },
   ) {
     const id = crypto.randomUUID();
     const retired = o.retiredAt !== null;
@@ -50,7 +57,10 @@ describe('T-11-128 시즌 결산', () => {
       updatedAt: BEFORE,
       retiredAt: retired ? (o.retiredAt ?? BEFORE) : null,
       retireAge: retired ? 34 : null,
-      peak: retired ? 80 : null,
+      peak: retired ? (o.peak ?? 80) : null,
+      apps: retired ? 300 : null,
+      goals: retired ? (o.goals ?? 10) : null,
+      ballon: retired ? 1 : null,
       legendScore: retired ? (o.score ?? 300) : null,
       lastClub: '서울',
       publicName: o.name ?? null,
@@ -64,8 +74,8 @@ describe('T-11-128 시즌 결산', () => {
 
   const addTeam = (profileId: string, rating: number) =>
     ctx.db.run(sql`
-      insert into owner_teams (id, profile_id, season, name, formation, slots_json, filled, ovr, rating, wins, created_at, updated_at)
-      values (${crypto.randomUUID()}, ${profileId}, 0, ${`팀 ${rating}`}, '4-3-3', '[]', 1, 70, ${rating}, 3, ${BEFORE}, ${BEFORE})`);
+      insert into owner_teams (id, profile_id, season, name, formation, slots_json, filled, ovr, rating, wins, goals_for, goals_against, best_margin, created_at, updated_at)
+      values (${crypto.randomUUID()}, ${profileId}, 0, ${`팀 ${rating}`}, '4-3-3', '[]', 1, 70, ${rating}, 3, 9, 4, 3, ${BEFORE}, ${BEFORE})`);
 
   const addAch = (profileId: string, score: number, reachedAt: string) =>
     ctx.db.run(sql`
@@ -86,7 +96,14 @@ describe('T-11-128 시즌 결산', () => {
     const a = await issueGoogleCookie(ctx);
     const b = await issueGoogleCookie(ctx);
     const anon = await issueCookie(ctx);
-    const best = await addCareer(a.profileId, { score: 500, wall: true, name: '도하람' });
+    const best = await addCareer(a.profileId, {
+      score: 500,
+      wall: true,
+      name: '도하람',
+      goals: 40,
+    });
+    // 레전드 점수는 낮아도 골을 더 넣은 선수가 최다 득점 · 최고 OVR 엘리트 카드.
+    const scorer = await addCareer(a.profileId, { score: 200, goals: 120, peak: 88, name: '한빛' });
     // 개막 뒤 은퇴는 결산에 들지 않는다(기록은 프리시즌으로 남아도).
     await addCareer(a.profileId, { retiredAt: AFTER, score: 900 });
     await addCareer(a.profileId, { retiredAt: null });
@@ -114,7 +131,7 @@ describe('T-11-128 시즌 결산', () => {
     expect(await closeStateOf(ctx.db, 0)).toMatchObject({
       step: 'done',
       cutoff: CUTOFF,
-      ranked: { team: 2, ach: 2, hof: 3 },
+      ranked: { team: 2, ach: 2, hof: 4 },
     });
     // 시즌 1은 아직 끝나지 않았다.
     expect(await closeStateOf(ctx.db, 1)).toBeNull();
@@ -126,17 +143,34 @@ describe('T-11-128 시즌 결산', () => {
     expect(mine.recap).toMatchObject({
       season: 0,
       cutoff: CUTOFF,
-      players: 3,
-      retired: 1,
+      players: 4,
+      retired: 2,
       best: { careerId: best, name: '도하람', score: 500 },
       hofRank: 1,
-      hofRanked: 3,
+      hofRanked: 4,
       retiredNumbers: 1,
       wallOfHonor: 1,
       firsts: 0,
-      team: { rating: 1000, rank: 2, ranked: 2, wins: 3 },
+      team: {
+        rating: 1000,
+        rank: 2,
+        ranked: 2,
+        wins: 3,
+        goalsFor: 9,
+        goalsAgainst: 4,
+        bestMargin: 3,
+      },
       // 다른 구단주의 9999점은 개막 시각 기준으로 다시 세어 내려간다.
       achievements: { score: 1000, rank: 1, ranked: 2 },
+      // 개막 뒤 은퇴 · 현역은 묶음에 들지 않는다.
+      stats: {
+        apps: 600,
+        goals: 160,
+        ballon: 2,
+        peak: 88,
+        tiers: { icon: 0, legend: 0, elite: 1, gold: 1, silver: 0, bronze: 0 },
+        scorer: { careerId: scorer, name: '한빛', pos: 'FW', goals: 120 },
+      },
     });
     const kinds = Object.fromEntries(mine.honors.map((h) => [h.kind, h]));
     expect(Object.keys(kinds).sort()).toEqual(
@@ -151,7 +185,7 @@ describe('T-11-128 시즌 결산', () => {
       ).json(),
     ).data;
     expect(other.recap?.achievements).toMatchObject({ rank: 2 });
-    expect(other.recap?.achievements?.score).toBeLessThan(50);
+    expect(other.recap?.achievements?.score).toBeLessThan(200);
     expect(other.recap?.team?.rank).toBe(1);
     expect(other.honors.find((h) => h.kind === 'first')?.value).toBe(1);
 
@@ -169,7 +203,7 @@ describe('T-11-128 시즌 결산', () => {
       [a.profileId, b.profileId, anon.profileId, 'prf_none'],
       new Date().toISOString(),
     );
-    // A: 1,000점 → 골드 · B: 개막 시각 기준으로 다시 센 점수(50 미만) → 루키 · 게스트: 업적 점수 없음 → 루키.
+    // A: 1,000점 → 골드 · B: 개막 시각 기준으로 다시 센 점수(200 미만) → 루키 · 게스트: 업적 점수 없음 → 루키.
     expect(Object.fromEntries([...tiers].map(([id, t]) => [id, t.tier]))).toEqual({
       [a.profileId]: 'gold',
       [b.profileId]: 'rookie',

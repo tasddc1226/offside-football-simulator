@@ -1,0 +1,1 @@
+ALTER TABLE `owner_season_records` ADD `stats_json` text;
