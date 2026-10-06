@@ -404,6 +404,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'ach_at',
     'ach_rank',
     'ach_checked',
+    'stats_json',
     'created_at',
   ],
   owner_honors: ['profile_id', 'season', 'kind', 'band', 'rank', 'value', 'granted_at'],
