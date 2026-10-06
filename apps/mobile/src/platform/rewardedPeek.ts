@@ -16,7 +16,7 @@ export const potPeek = proxy({
 });
 
 /** 광고를 볼 수 있거나(단위 있음) 광고 없이 열 수 있으면(광고 제거) 버튼을 보인다. */
-export const peekAvailable = rewardAvailable;
+export const peekAvailable = () => rewardAvailable('peek');
 
 function open(s: GameState) {
   const peek = peekOf(s);
@@ -30,7 +30,7 @@ export async function openPeek(s: GameState) {
   potPeek.busy = true;
   potPeek.message = '';
   try {
-    potPeek.message = await claimReward(() => open(s), L.rewardedWatch);
+    potPeek.message = await claimReward('peek', () => open(s), L.rewardedWatch);
   } finally {
     potPeek.busy = false;
   }

@@ -78,7 +78,7 @@ function BoostCard({ s }: { s: GameState }) {
   const [adBusy, setAdBusy] = useState(false);
   const [adMessage, setAdMessage] = useState('');
   const owned = useSnapshot(adFree).owned;
-  const v = boostView(s, rewardOffer(owned));
+  const v = boostView(s, rewardOffer('boost', owned));
   // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다. 결과를 먼저 저장하고 연출을 연다 — 연출 중에 앱을 꺼도 결과는 그대로다.
   const run = (ad: boolean) => {
     const out = doBoost(appState.G!, ad);
@@ -96,7 +96,7 @@ function BoostCard({ s }: { s: GameState }) {
     setAdBusy(true);
     setAdMessage('');
     try {
-      setAdMessage(await claimReward(() => run(true), B.adWatch));
+      setAdMessage(await claimReward('boost', () => run(true), B.adWatch));
     } finally {
       setAdBusy(false);
     }
