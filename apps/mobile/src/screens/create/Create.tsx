@@ -18,7 +18,7 @@ import {
   posLabel,
 } from '@offside/game/data';
 import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
-import { baseline } from '@offside/game/candidates';
+import { baseline, candidatePotentialGrades } from '@offside/game/candidates';
 import { CONFEDS, flagOf } from '@offside/contracts/nations';
 import { BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
 import { isKorean, nationOf } from '@offside/game/nation';
@@ -656,7 +656,7 @@ export default function Create() {
                           testID={`candidate-potential-${i}`}
                         >
                           {s.candidatePotentialOpen
-                            ? L.potentialRange(cand.potential)
+                            ? L.potentialRange(candidatePotentialGrades(cand.potential))
                             : L.potentialLocked}
                         </Txt>
                         <Txt

@@ -9,6 +9,7 @@
 import { BAL } from './balance.js';
 import { PRESEASON_POT } from '@offside/contracts/balance';
 import { gauss } from './rng.js';
+import { gradeOf } from './stats.js';
 import { ATTR_KEYS, DPOS, POS, focusMod, type AttrKey, type DetailPos, type Pos } from './data.js';
 
 // 로컬(비영속) mulberry32 — game/rng.ts의 활성 RNG와 완전히 분리되어 있다.
@@ -28,6 +29,11 @@ export interface CandidatePotential {
   scouted: number;
   min: number;
   max: number;
+}
+
+/** Display only grade bounds; exact values stay internal to the career engine. */
+export function candidatePotentialGrades(p: Pick<CandidatePotential, 'min' | 'max'>) {
+  return { min: gradeOf(p.min), max: gradeOf(p.max) };
 }
 
 export interface Candidate {

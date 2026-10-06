@@ -8,7 +8,7 @@
   import { fly } from 'svelte/transition';
   import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '@offside/game/data';
   import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
-  import { baseline } from '@offside/game/candidates';
+  import { baseline, candidatePotentialGrades } from '@offside/game/candidates';
   import { appState, detailOpenNow, draftBody, draftDpos, randomName } from './state.svelte.js';
   import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
@@ -268,7 +268,7 @@
               <span class="cc-ovr">OVR <b class="num">{startOvr(C.pos, cand.attrs)}</b></span>
               {#if appState.candidatePick === i}<span class="pill good">{L.picked}</span>{/if}
             </span>
-            <span class="muted">{appState.candidatePotentialOpen ? L.potentialRange(cand.potential) : L.potentialLocked}</span>
+            <span class="muted">{appState.candidatePotentialOpen ? L.potentialRange(candidatePotentialGrades(cand.potential)) : L.potentialLocked}</span>
             <span class="cc-scout">“{scoutLine(C.pos, cand.attrs)}”</span>
             <span class="cc-body">
               <MiniRadar pos={C.pos} attrs={cand.attrs} size={84} />

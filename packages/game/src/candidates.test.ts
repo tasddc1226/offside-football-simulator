@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateCandidates } from './candidates.js';
+import { generateCandidates, candidatePotentialGrades } from './candidates.js';
 import { newGame } from './engine.js';
 import { rnd, createRng, getActiveRng, setActiveRng } from './rng.js';
 import { ATTR_KEYS, focusMod, focusOfType, typeForFocus, TYPES } from './data.js';
@@ -179,5 +179,17 @@ describe('candidate potential', () => {
     expect(selected.pot + selected.bloom).toBe(c.potential.value);
     expect(selected.pot).toBe(c.potential.scouted);
     expect(selected.rng).toEqual(normal.rng);
+  });
+});
+
+describe('candidate grade range display', () => {
+  it.each([
+    [55, 59, 'D', 'D'],
+    [60, 69, 'D', 'D'],
+    [70, 79, 'C', 'B'],
+    [80, 89, 'B', 'A'],
+    [90, 96, 'S', 'S'],
+  ] as const)('maps %i–%i to grade bounds %s–%s', (min, max, lo, hi) => {
+    expect(candidatePotentialGrades({ min, max })).toEqual({ min: lo, max: hi });
   });
 });
