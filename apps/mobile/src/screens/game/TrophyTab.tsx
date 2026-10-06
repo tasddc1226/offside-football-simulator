@@ -8,6 +8,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
 import { ClubMark } from '../../ui/ClubBadge';
 import { Txt } from '../../ui/Txt';
+import { gameTrophyText as L } from '@offside/app-core/i18n/ko/gameTrophy';
 
 /** 연도 + 내용 한 줄(웹 .trophy: 44px 연도 칸 + 본문, 위에 구분선). first면 구분선이 없다. */
 export function TrophyRow({
@@ -50,7 +51,7 @@ export function TrophyRow({
 /** 카드 안 빈 목록 문구(웹 .empty). */
 const Empty = () => (
   <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-    아직 없어요.
+    {L.empty}
   </Txt>
 );
 
@@ -64,7 +65,7 @@ export function TrophyTab({ s }: { s: LegendSource }) {
       <Card gap={4}>
         <Txt v="eyebrow">Team Honours</Txt>
         <Txt v="h2" accessibilityRole="header">
-          우승 연혁
+          {L.honours}
         </Txt>
         {trophies.length ? (
           trophies.map((x, i) => (
@@ -86,7 +87,7 @@ export function TrophyTab({ s }: { s: LegendSource }) {
       <Card gap={4}>
         <Txt v="eyebrow">Individual</Txt>
         <Txt v="h2" accessibilityRole="header">
-          개인 수상
+          {L.individual}
         </Txt>
         {awards.length ? (
           awards.map((x, i) => (
@@ -103,14 +104,16 @@ export function TrophyTab({ s }: { s: LegendSource }) {
         <Card gap={4}>
           <Txt v="eyebrow">Ballon d&apos;Or</Txt>
           <Txt v="h2" accessibilityRole="header">
-            발롱도르 순위
+            {L.ballon}
           </Txt>
           {ballon.map((b, i) => (
             <TrophyRow key={i} year={b.year}>
               <Txt>
-                <Txt style={{ fontWeight: '700' }}>{b.rank === 1 ? '수상' : `${b.rank}위`}</Txt>
+                <Txt style={{ fontWeight: '700' }}>
+                  {b.rank === 1 ? L.ballonWon : L.ballonRank({ n: b.rank })}
+                </Txt>
                 <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                  {' 30인 후보'}
+                  {` ${L.nominees}`}
                 </Txt>
               </Txt>
             </TrophyRow>
@@ -121,7 +124,7 @@ export function TrophyTab({ s }: { s: LegendSource }) {
       <Card gap={4}>
         <Txt v="eyebrow">Story Album</Txt>
         <Txt v="h2" accessibilityRole="header">
-          완결된 스토리
+          {L.stories}
         </Txt>
         {stories.length ? (
           stories.map((x, i) => (

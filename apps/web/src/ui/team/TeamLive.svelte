@@ -1,5 +1,6 @@
 <script lang="ts">
   import TeamLogo from './TeamLogo.svelte';
+  import { teamLiveText as L } from '@offside/app-core/i18n/ko/teamLive';
   // T-10-097 팀 경기 문자중계 — 한 화면에서 시계가 0'부터 90'+까지 흐르며 중계 줄이 하나씩 올라온다. 골이 가까우면
   // 시계가 느려지고, 골이 들어가면 전광판이 번쩍인다. 결과는 이미 서버가 정했고 여기서는 보여 주기만 한다.
   // 감속 모션이어도 진행 템포는 그대로 두고(읽는 시간) 움직임 효과만 뺀다. '결과 바로 보기'로 언제든 끝낼 수 있다.
@@ -94,7 +95,7 @@
 </script>
 
 <section class="card tl" data-team-live aria-labelledby="tl-title">
-  <h1 id="tl-title" class="sr-only">{match.home.name} 대 {match.away.name} 문자중계</h1>
+  <h1 id="tl-title" class="sr-only">{L.title({ home: match.home.name, away: match.away.name })}</h1>
   <div class="tl-board" class:flash={!!flash}>
     <div class="tl-top">
       <span class="tl-live" class:done={phase === 'ft'}>{phase === 'ft' ? 'FT' : 'LIVE'}</span>
@@ -120,7 +121,7 @@
       {/each}
     </div>
     <div class="tl-mom" aria-hidden="true">
-      <span>흐름</span>
+      <span>{L.flow}</span>
       <div class="tl-mom-track"><div class="tl-mom-fill" style:width="{momentum * 100}%"></div></div>
     </div>
     {#if flash}
@@ -139,8 +140,8 @@
   </ol>
 
   <div class="tm-actions">
-    <button class="btn" aria-pressed={fast} onclick={() => (fast = !fast)} data-act="live-fast">{fast ? '보통 속도' : '빠르게'}</button>
-    <button class="btn btn-primary" onclick={finish} data-act="live-skip">결과 바로 보기</button>
+    <button class="btn" aria-pressed={fast} onclick={() => (fast = !fast)} data-act="live-fast">{fast ? L.speedNormal : L.speedFast}</button>
+    <button class="btn btn-primary" onclick={finish} data-act="live-skip">{L.skip}</button>
   </div>
 </section>
 

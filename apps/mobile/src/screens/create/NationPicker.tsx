@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { flagOf, nationOf, type Nation } from '@offside/game/nation';
 import { nationGroups, type NationGroup } from '@offside/app-core/nationSearch';
+import { createText as L } from '@offside/app-core/i18n/ko/create';
 import { alpha } from '../../theme/colors';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
@@ -60,8 +61,8 @@ export function NationPicker({
         scale={0.99}
         onPress={show}
         {...(testID ? { testID } : {})}
-        accessibilityLabel={`국적 ${selected.ko}`}
-        accessibilityHint="누르면 나라를 검색해서 고를 수 있어요"
+        accessibilityLabel={L.nationA11y({ name: selected.ko })}
+        accessibilityHint={L.nationHint}
         accessibilityRole="combobox"
         accessibilityState={{ expanded: open }}
         style={{
@@ -99,7 +100,12 @@ export function NationPicker({
           style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: c.scrim }}
         >
           {/* 바깥을 누르면 닫는다 */}
-          <Press onPress={hide} accessibilityLabel="국적 고르기 닫기" style={{ flex: 1 }} scale={1}>
+          <Press
+            onPress={hide}
+            accessibilityLabel={L.nationCloseLabel}
+            style={{ flex: 1 }}
+            scale={1}
+          >
             <View style={{ flex: 1 }} />
           </Press>
           <View
@@ -128,8 +134,8 @@ export function NationPicker({
                 autoCapitalize="none"
                 spellCheck={false}
                 returnKeyType="search"
-                accessibilityLabel="국적 검색"
-                placeholder="나라 이름이나 초성(ㅂㄹㅈ)"
+                accessibilityLabel={L.nationSearchLabel}
+                placeholder={L.nationSearchPlaceholder}
                 placeholderTextColor={c.muted}
                 value={query}
                 onChangeText={setQuery}
@@ -147,7 +153,7 @@ export function NationPicker({
               />
               <Press
                 onPress={hide}
-                accessibilityLabel="닫기"
+                accessibilityLabel={L.close}
                 style={{
                   minWidth: 48,
                   minHeight: 48,
@@ -156,7 +162,7 @@ export function NationPicker({
                 }}
               >
                 <Txt tone="muted" bold>
-                  닫기
+                  {L.close}
                 </Txt>
               </Press>
             </View>
@@ -218,7 +224,7 @@ export function NationPicker({
               }}
               ListEmptyComponent={
                 <Txt tone="muted" center style={{ paddingVertical: 14, paddingHorizontal: 10 }}>
-                  찾는 나라가 없어요
+                  {L.nationEmpty}
                 </Txt>
               }
             />

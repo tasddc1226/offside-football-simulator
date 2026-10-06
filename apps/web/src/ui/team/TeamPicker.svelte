@@ -2,8 +2,9 @@
   // T-10-117 선수 고르기 시트 — 고른 자리에 넣을 은퇴 선수. 정렬 셋 · 유스 선수(자리 비우기).
   import { DETAIL_LABEL, YOUTH_NAME, YOUTH_OVR, type DetailPos } from '@offside/contracts/owner-team';
   import type { TeamPlayer } from '@offside/app-core/api/team';
-  import { PICK_SORTS, attrLine, pct, type PickCandidate, type PickSort } from '@offside/app-core/teamOwner';
+  import { pickSorts, attrLine, pct, type PickCandidate, type PickSort } from '@offside/app-core/teamOwner';
   import { POS_LABEL } from '@offside/game/pos-label';
+  import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
   let {
     picking,
@@ -30,36 +31,36 @@
 
 {#if picking !== null}
   {@const slot = slotCodes[picking]!}
-  <button class="tm-scrim" aria-label="닫기" onclick={onclose}></button>
-  <div class="tm-sheet" role="dialog" aria-modal="true" aria-label="{DETAIL_LABEL[slot]} 자리 선수 고르기">
+  <button class="tm-scrim" aria-label={L.close} onclick={onclose}></button>
+  <div class="tm-sheet" role="dialog" aria-modal="true" aria-label={L.pickAria({ slot: DETAIL_LABEL[slot] })}>
     <div class="tm-sheet-head">
       <div>
         <div class="eyebrow">{slot}</div>
         <h2>{DETAIL_LABEL[slot]}</h2>
       </div>
-      <button class="icon-btn" onclick={onclose}>닫기</button>
+      <button class="icon-btn" onclick={onclose}>{L.close}</button>
     </div>
-    <div class="seg three tm-sort" role="group" aria-label="정렬">
-      {#each PICK_SORTS as [k, label] (k)}
+    <div class="seg three tm-sort" role="group" aria-label={L.pickSortAria}>
+      {#each pickSorts() as [k, label] (k)}
         <button class="opt" aria-pressed={sort === k} onclick={() => (sort = k)} data-pick-sort={k}>{label}</button>
       {/each}
     </div>
     <div class="tm-list">
       <button class="tm-pick" aria-pressed={slots[picking] === null} onclick={() => onassign(null)} data-pick="youth">
         <b class="tm-pick-ovr">{YOUTH_OVR}</b>
-        <span class="tm-opp-info"><span>{YOUTH_NAME}</span><small class="muted">자리를 비워 두면 유스 선수가 뛰어요</small></span>
+        <span class="tm-opp-info"><span>{YOUTH_NAME}</span><small class="muted">{L.youthNote}</small></span>
       </button>
       {#each candidates as c (c.p.careerId)}
         <button class="tm-pick" aria-pressed={slots[picking] === c.p.careerId} onclick={() => onassign(c.p.careerId)} data-pick={c.p.careerId}>
           <b class="tm-pick-ovr">{c.rating}</b>
           <span class="tm-opp-info">
             <span>{nameOf(c.p)}</span>
-            <small class="muted">{c.p.dpos ? DETAIL_LABEL[c.p.dpos] : POS_LABEL[c.p.pos]} · 최고 {c.p.peak} · 적합 {pct(c.fit)}{c.at >= 0 && c.at !== picking ? ` · ${slotCodes[c.at]} 자리에서 바꿈` : ''}</small>
+            <small class="muted">{L.pickLine({ pos: c.p.dpos ? DETAIL_LABEL[c.p.dpos] : POS_LABEL[c.p.pos], peak: c.p.peak, fit: pct(c.fit) })}{c.at >= 0 && c.at !== picking ? L.pickSwap({ slot: slotCodes[c.at]! }) : ''}</small>
             {#if attrLine(c.p)}<small class="muted tm-attrs">{attrLine(c.p)}</small>{/if}
           </span>
         </button>
       {:else}
-        <p class="muted">넣을 수 있는 은퇴 선수가 없어요.</p>
+        <p class="muted">{L.noCandidates}</p>
       {/each}
     </div>
   </div>

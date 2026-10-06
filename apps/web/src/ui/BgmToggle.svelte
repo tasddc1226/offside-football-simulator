@@ -1,14 +1,15 @@
 <script lang="ts">
   // 게임 화면 상단의 배경음악 스위치(설정 화면의 '배경음악'과 같은 값).
   import { bgm, setBgm } from './bgm.svelte.js';
+  import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 </script>
 
 <button
   class="icon-btn bgm-toggle"
   role="switch"
   aria-checked={bgm.on}
-  aria-label="배경음악"
-  title={bgm.on ? '배경음악 끄기' : '배경음악 켜기'}
+  aria-label={L.bgm}
+  title={bgm.on ? L.bgmOff : L.bgmOn}
   data-act="bgm"
   onclick={() => setBgm(!bgm.on)}
 >

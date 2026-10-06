@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Keyboard, Modal, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { Btn, Txt } from '../ui';
@@ -28,7 +29,7 @@ export function TeamDialog({
     >
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable
-          accessibilityLabel="닫기"
+          accessibilityLabel={L.close}
           onPress={close}
           style={{ position: 'absolute', inset: 0, backgroundColor: c.scrim }}
         />
@@ -57,7 +58,7 @@ export function TeamDialog({
                 {title}
               </Txt>
               <Btn sm onPress={close}>
-                닫기
+                {L.close}
               </Btn>
             </View>
             {children}

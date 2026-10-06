@@ -12,6 +12,7 @@ import { retirementPotential } from './potential-view.js';
 import { getHofDetail, getMyCareers } from './api/client.js';
 import { anonName, totals } from './format.js';
 import type { AppState, LegendView } from './state.js';
+import { legendToastText } from './i18n/ko/legendToast.js';
 
 export interface LegendHost {
   state: AppState;
@@ -162,7 +163,7 @@ export function createLegends(host: LegendHost) {
   async function openPublicLegendById(careerId: string) {
     const [r, mine] = await Promise.all([getHofDetail(careerId), isMyCareer(careerId)]);
     if (!r.ok) {
-      host.toast('상세 기록을 불러오지 못했어요.');
+      host.toast(legendToastText.detailFailed);
       return;
     }
     show(viewFromPublic(r.data.entry, r.data.snapshot, mine));
@@ -175,7 +176,7 @@ export function createLegends(host: LegendHost) {
   function setLegendPublic(h: HofEntry, on: boolean): boolean {
     if (!h.id) return false;
     if (on && !toPublicName(h.name)) {
-      host.toast('링크나 욕설이 들어간 이름은 공개할 수 없어요. 익명으로만 올라가요.');
+      host.toast(legendToastText.nameBlocked);
       return false;
     }
     const hof = loadHOF();
@@ -184,7 +185,7 @@ export function createLegends(host: LegendHost) {
     saveKey('ft_hof', hof);
     h.public = on;
     host.uploadRetirement(h.id, h);
-    host.toast(on ? '명예의 전당에 이름을 공개했어요.' : '명예의 전당에서 익명으로 바꿨어요.');
+    host.toast(on ? legendToastText.namePublished : legendToastText.nameAnon);
     return true;
   }
 

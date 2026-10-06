@@ -6,6 +6,8 @@
   import { flightProgress } from '@offside/app-core/flight-time';
   import { motionOK } from '../motion.js';
   import type { SheetView } from '@offside/app-core/sheets';
+  import { sheetContractText as L } from '@offside/app-core/i18n/ko/sheetContract';
+  import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
 
   let { v }: { v: Extract<SheetView, { kind: 'flight' }> } = $props();
 
@@ -29,7 +31,7 @@
 <div class="eyebrow">{v.eyebrow}</div>
 <h2>{v.title}</h2>
 <p class="muted fs-sm flight-sub">{v.sub}</p>
-<div class="flight-map" role="img" aria-label="{v.from.city}에서 {v.to.city}까지 비행 경로">
+<div class="flight-map" role="img" aria-label={L.flightA11y({ from: v.from.city, to: v.to.city })}>
   <!-- 육지 점·점선 밑그림은 장면 동안 안 바뀌어 따로 그린다 — 프레임마다 다시 그리는 건 위 레이어(경로·비행기)뿐. -->
   <svg viewBox="0 0 {v.map.w} {v.map.h}" aria-hidden="true">
     <path class="land" d={v.map.dots} stroke-width={v.map.dotW} />
@@ -57,7 +59,7 @@
   <div class="end"><b>{v.to.code}</b><span>{v.to.city}</span></div>
 </div>
 {#if !v.done}
-  <button class="link-btn skip" id="an-skip" onclick={v.skip}>건너뛰기</button>
+  <button class="link-btn skip" id="an-skip" onclick={v.skip}>{sheetCoreText.skip}</button>
 {/if}
 
 <style>

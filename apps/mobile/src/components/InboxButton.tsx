@@ -4,6 +4,7 @@ import { useSnapshot } from 'valtio';
 import { inboxState, openInbox } from '../platform/inbox';
 import { useColors } from '../theme/useColors';
 import { Press, Txt } from '../ui';
+import { inboxText as L } from '@offside/app-core/i18n/ko/inbox';
 
 /** 홈에서 서버를 조회하지 않는다. 마지막 알림함 조회의 미읽음 수를 표시한다. */
 export function InboxButton() {
@@ -13,7 +14,7 @@ export function InboxButton() {
     <Press
       onPress={() => openInbox()}
       testID="inbox-open"
-      accessibilityLabel={unreadCount ? `알림함, 읽지 않은 알림 ${unreadCount}개` : '알림함'}
+      accessibilityLabel={unreadCount ? L.titleUnread({ n: unreadCount }) : L.title}
       style={{
         minWidth: 48,
         minHeight: 48,

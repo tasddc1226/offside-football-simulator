@@ -3,10 +3,11 @@
   // 있으면 브라우저 뒤로 가기와 똑같이 돌아가고, 없으면 fallback으로 간다.
   import ActionBar from './ActionBar.svelte';
   import { goBack } from './history.svelte.js';
+  import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
   const { act, fallback, atBottom = true }: { act: string; fallback: () => void; atBottom?: boolean } = $props();
 </script>
 
 <ActionBar {atBottom} data-back-bar>
-  <button class="btn btn-block" data-act={act} onclick={() => goBack(fallback)}>← 이전으로</button>
+  <button class="btn btn-block" data-act={act} onclick={() => goBack(fallback)}>{shellMoreText.back}</button>
 </ActionBar>

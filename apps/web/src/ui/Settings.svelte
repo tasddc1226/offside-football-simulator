@@ -15,6 +15,9 @@
   import ClubCustomSettings from './ClubCustomSettings.svelte';
   import BackupSettings from './BackupSettings.svelte';
   import AppMoveCard from './AppMoveCard.svelte';
+  import { settingsText as L } from '@offside/app-core/i18n/ko/settings';
+  import { getLocale, LOCALE_NAMES, LOCALES, type Locale } from '@offside/app-core/i18n/core';
+  import { changeLocale } from './locale.js';
   let sfx = $state(sfxEnabled());
   let dark = $state(isDark());
   let namePublic = $state(namePublicEnabled());
@@ -25,23 +28,34 @@
   <Topbar />
   <header class="settings-head">
     <div class="eyebrow">Settings</div>
-    <h1>환경설정</h1>
+    <h1>{L.title}</h1>
   </header>
 
   <section class="card settings-card">
     <div class="settings-row">
       <div class="settings-label">
         <small class="eyebrow">Display</small>
-        <strong id="dark-label">다크 모드</strong>
-        <span class="muted">어두운 화면으로 바꿔요. 이 기기에 저장돼요.</span>
+        <strong id="dark-label">{L.darkTitle}</strong>
+        <span class="muted">{L.darkBodyWeb}</span>
       </div>
       <button class="switch" role="switch" aria-checked={dark} aria-labelledby="dark-label" data-setting="dark" onclick={() => setDark((dark = !dark))}></button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">
+        <strong id="lang-label">{L.langTitle}</strong>
+        <span class="muted">{L.langBody}</span>
+      </div>
+      <select class="settings-lang" aria-labelledby="lang-label" data-setting="lang" value={getLocale()} onchange={(e) => changeLocale(e.currentTarget.value as Locale)}>
+        {#each LOCALES as l (l)}
+          <option value={l} lang={l}>{LOCALE_NAMES[l]}</option>
+        {/each}
+      </select>
     </div>
     {#if skin.desktop}
     <div class="settings-row">
       <div class="settings-label">
-        <strong id="sheet-label">업무 모드</strong>
-        <span class="muted">게임 화면을 스프레드시트로 바꾸고 소리를 꺼요. <kbd>`</kbd>(숫자 1 왼쪽 키)로 켜고 꺼요. PC 브라우저 전용이며 이 기기에 저장돼요.</span>
+        <strong id="sheet-label">{L.sheetTitle}</strong>
+        <span class="muted">{L.sheetBodyBefore}<kbd>`</kbd>{L.sheetBodyAfter}</span>
       </div>
       <button class="switch" role="switch" aria-checked={skin.pref} aria-labelledby="sheet-label" data-setting="sheet-skin" onclick={() => setSheetSkin(!skin.pref)}></button>
     </div>
@@ -52,21 +66,21 @@
     <div class="settings-row">
       <div class="settings-label">
         <small class="eyebrow">Sound</small>
-        <strong id="sfx-label">효과음</strong>
-        <span class="muted">버튼을 누를 때 클릭 소리를 내요.</span>
+        <strong id="sfx-label">{L.sfxTitle}</strong>
+        <span class="muted">{L.sfxBody}</span>
       </div>
       <button class="switch" role="switch" aria-checked={sfx} aria-labelledby="sfx-label" data-setting="sfx" onclick={() => setSfxEnabled((sfx = !sfx))}></button>
     </div>
     <div class="settings-row">
       <div class="settings-label">
-        <strong id="bgm-label">배경음악</strong>
-        <span class="muted">기록실·선수 상세에서는 다른 곡이 나와요. 화면 위 스피커 버튼으로도 켜고 꺼요.</span>
+        <strong id="bgm-label">{L.bgmTitle}</strong>
+        <span class="muted">{L.bgmBody}</span>
       </div>
       <button class="switch" role="switch" aria-checked={bgm.on} aria-labelledby="bgm-label" data-setting="bgm" onclick={() => setBgm(!bgm.on)}></button>
     </div>
     {#if volumeAdjustable()}
     <div class="settings-volume" class:off={!bgm.on}>
-      <label for="bgm-volume">배경음악 음량</label>
+      <label for="bgm-volume">{L.bgmVolume}</label>
       <input
         id="bgm-volume"
         type="range"
@@ -80,10 +94,10 @@
       <output for="bgm-volume" class="num">{bgm.volume}%</output>
     </div>
     {:else}
-    <p class="muted fs-xs settings-volume-note" data-setting="bgm-volume-note">이 기기에서는 배경음악 음량을 기기 음량 버튼으로 조절해요.</p>
+    <p class="muted fs-xs settings-volume-note" data-setting="bgm-volume-note">{L.bgmVolumeNote}</p>
     {/if}
     <p class="muted fs-xs settings-credit">
-      음악: Happy Wheels — <a href="https://ludoloonstudio.itch.io/happy-wheels-free-music" target="_blank" rel="noopener">LudoLoon Studio</a> · Deep House Lounge — <a href="https://pixabay.com/users/tunetank-50201703/" target="_blank" rel="noopener">Tunetank</a>
+      {L.musicCredit} Happy Wheels — <a href="https://ludoloonstudio.itch.io/happy-wheels-free-music" target="_blank" rel="noopener">LudoLoon Studio</a> · Deep House Lounge — <a href="https://pixabay.com/users/tunetank-50201703/" target="_blank" rel="noopener">Tunetank</a>
     </p>
   </section>
 
@@ -91,8 +105,8 @@
     <div class="settings-row">
       <div class="settings-label">
         <small class="eyebrow">Privacy</small>
-        <strong id="name-public-label">선수 이름 공개</strong>
-        <span class="muted">홈 라이브 현황·명예의 전당·서버 최초 업적에 선수 이름이 보여요. 끄면 '익명의 공격수'처럼 표시되고, 다음 시즌 기록부터 반영돼요. 실명은 쓰지 않는 게 좋아요.</span>
+        <strong id="name-public-label">{L.namePublicTitle}</strong>
+        <span class="muted">{L.namePublicBody}</span>
       </div>
       <button class="switch" role="switch" aria-checked={namePublic} aria-labelledby="name-public-label" data-setting="name-public" onclick={() => setNamePublic((namePublic = !namePublic))}></button>
     </div>
@@ -107,20 +121,20 @@
 
   <section class="settings-group" aria-labelledby="settings-help">
     <div class="eyebrow">Help</div>
-    <h2 id="settings-help">도움말</h2>
-    <nav class="card settings-links" aria-label="도움말">
-      <button data-act="install-guide" onclick={() => showInstallGuide()}>홈 화면에 추가하기 <span aria-hidden="true">›</span></button>
-      <a href="/guide/">게임 가이드 <span aria-hidden="true">›</span></a>
-      <a href="/faq/">자주 묻는 질문 <span aria-hidden="true">›</span></a>
+    <h2 id="settings-help">{L.help}</h2>
+    <nav class="card settings-links" aria-label={L.help}>
+      <button data-act="install-guide" onclick={() => showInstallGuide()}>{L.installGuide} <span aria-hidden="true">›</span></button>
+      <a href="/guide/">{L.guide} <span aria-hidden="true">›</span></a>
+      <a href="/faq/">{L.faq} <span aria-hidden="true">›</span></a>
     </nav>
   </section>
 
   <section class="settings-group" aria-labelledby="settings-legal">
     <div class="eyebrow">Legal</div>
-    <h2 id="settings-legal">서비스 정책</h2>
-    <nav class="card settings-links" aria-label="서비스 정책">
-      <a href="/legal/terms/">이용약관 <span aria-hidden="true">›</span></a>
-      <a href="/legal/privacy/">개인정보 처리방침 <span aria-hidden="true">›</span></a>
+    <h2 id="settings-legal">{L.legal}</h2>
+    <nav class="card settings-links" aria-label={L.legal}>
+      <a href="/legal/terms/">{L.terms} <span aria-hidden="true">›</span></a>
+      <a href="/legal/privacy/">{L.privacy} <span aria-hidden="true">›</span></a>
     </nav>
   </section>
 

@@ -1,6 +1,7 @@
 // ───────── 기록실 '영구결번' 벽 표시 로직 (웹·앱 공용, T-10-076 · 공용 T-11-044) ─────────
 import type { RetiredNumbersResponse, RetiredNumbersSummary } from '@offside/contracts';
 import { defaultClubName, leagueOfClub } from '@offside/contracts/club-names';
+import { hofRnText as L } from './i18n/ko/hofRn.js';
 
 type Item = RetiredNumbersResponse['items'][number];
 
@@ -25,7 +26,7 @@ export function rnByLeague<T extends Pick<ClubSum, 'clubId' | 'count'>>(
 ): { league: string; count: number; clubs: T[] }[] {
   const by = new Map<string, { league: string; count: number; clubs: T[] }>();
   for (const c of clubs) {
-    const league = rnLeagueName(c.clubId) || '기타';
+    const league = rnLeagueName(c.clubId) || L.otherLeague;
     const g = by.get(league) ?? { league, count: 0, clubs: [] };
     g.count += c.count;
     g.clubs.push(c);

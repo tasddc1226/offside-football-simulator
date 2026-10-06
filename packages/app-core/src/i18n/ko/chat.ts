@@ -1,0 +1,46 @@
+// 라운지 채팅 — 웹 Chat.svelte · 앱 screens/chat/Chat.tsx · app-core api/chat.ts. 운영자 가리기·정지 문구도 여기.
+import { ns } from '../core';
+
+const ko = {
+  title: '라운지 채팅',
+  back: '← 이전으로',
+  online: (p: { n: number }) => `${p.n}명 접속`,
+  reconnecting: '다시 연결하는 중…',
+  connecting: '연결하는 중…',
+  rulesLabel: '채팅 이용 안내',
+  rulesBody:
+    '모두가 보는 공개 채팅이에요. 링크는 보낼 수 없고, 욕설·비방·광고·개인정보는 가리고 이용을 제한해요.',
+  terms: '이용약관',
+  ok: '확인',
+  messageLabel: '채팅 메시지',
+  placeholder: '메시지 입력',
+  send: '보내기',
+  sendWait: '연결 중이에요. 잠시 뒤 다시 보내 주세요.',
+  reportedToast: '신고했어요. 운영자가 확인할게요.',
+  blockTitle: (p: { nick: string }) => `${p.nick}님을 차단할까요?`,
+  blockBody: '이 사람의 메시지와 댓글이 더는 보이지 않아요.',
+  blockOk: '차단',
+  blockedToast: (p: { nick: string }) => `${p.nick}님을 차단했어요`,
+  muteTitle: (p: { nick: string; days: number }) => `${p.nick}님의 채팅을 ${p.days}일 정지할까요?`,
+  muteBody: '이 메시지도 가려져요.',
+  muteOk: '정지',
+  mutedToast: (p: { nick: string; days: number }) => `${p.nick}님을 ${p.days}일 정지했어요`,
+  hiddenToast: '메시지를 가렸어요',
+  adminLabel: '운영',
+  hide: '가리기',
+  muteDays: (p: { days: number }) => `${p.days}일 정지`,
+  reportPrompt: '신고하는 이유를 골라 주세요. 신고한 메시지는 내 화면에서 숨겨요.',
+  blockHint: (p: { nick: string }) => `${p.nick}님의 메시지를 모두 숨기려면`,
+  blockAuthor: '작성자 차단',
+  moreLabel: (p: { nick: string }) => `${p.nick}님 메시지 신고·차단`,
+  emptyOpen: '아직 조용해요.',
+  loading: '불러오는 중…',
+  gateLogin: '구글로 로그인하면 채팅에 참여할 수 있어요.',
+  gateLoginApple: '구글이나 Apple로 로그인하면 채팅에 참여할 수 있어요.',
+  loginGoogle: '구글로 로그인',
+  gateNicknameWeb: '채팅과 댓글에 쓸 닉네임을 정해 주세요.',
+  gateNicknameApp: '채팅에 쓸 닉네임을 먼저 정해 주세요. 댓글 닉네임과 같아요.',
+};
+
+export type ChatMsgs = typeof ko;
+export const chatText = ns('chat', ko);

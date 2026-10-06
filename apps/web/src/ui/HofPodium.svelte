@@ -6,6 +6,7 @@
   import { openPublicLegend } from './legend.js';
   import ClubMark from './ClubMark.svelte';
   import Laurel from './Laurel.svelte';
+  import { hofText as L } from '@offside/app-core/i18n/ko/hof';
 
   const { players, label, unit, showPosition = true }: {
     players: { entry: PublicHofEntry; rank: number; value: number | string; own: boolean }[];
@@ -18,22 +19,22 @@
   const ordered = $derived([...players].sort((a, b) => places.indexOf(a.rank) - places.indexOf(b.rank)));
 </script>
 
-<div class="hof-podium" role="group" aria-label="{label} 상위 3명">
+<div class="hof-podium" role="group" aria-label={L.podiumLabel({ label })}>
   {#each ordered as player (player.entry.id)}
     {@const h = player.entry}
     {@const name = h.name ?? anonName(h.pos, h.number)}
     {@const country = NATION_BY_CODE.get(h.nation || DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION)!}
     {@const value = typeof player.value === 'number' ? player.value.toLocaleString('ko-KR') : player.value}
-    <button class="hof-podium-player medal {medals[player.rank - 1]}" data-hof-id={h.id} data-hof-podium-rank={player.rank} style:grid-column={places.indexOf(player.rank) + 1} aria-label="{player.rank}위 {name}, {country.ko}, {label} {value}{unit}, 상세 기록 보기" onclick={() => void openPublicLegend(h)}>
+    <button class="hof-podium-player medal {medals[player.rank - 1]}" data-hof-id={h.id} data-hof-podium-rank={player.rank} style:grid-column={places.indexOf(player.rank) + 1} aria-label={L.podiumPlayer({ rank: player.rank, name, country: country.ko, label, value, unit })} onclick={() => void openPublicLegend(h)}>
       <span class="hof-podium-profile">
         <span class="hof-podium-medal" aria-hidden="true"><Laurel /><strong>{player.rank}</strong></span>
         <span class="hof-podium-club"><ClubMark name={h.lastClub} id={h.lastClubId} size={24} /><span class="hof-flag" role="img" aria-label={country.ko} title={country.ko} data-hof-nation={country.code}>{flagOf(country.code)}</span></span>
         <b class="hof-podium-name" title={name}>{name}</b>
-        {#if showPosition || player.own}<span class="hof-podium-pos">{showPosition ? posLabel({ pos: h.pos, dpos: h.dpos }) : ''}{player.own ? `${showPosition ? ' · ' : ''}내 선수` : ''}</span>{/if}
+        {#if showPosition || player.own}<span class="hof-podium-pos">{showPosition ? posLabel({ pos: h.pos, dpos: h.dpos }) : ''}{player.own ? `${showPosition ? ' · ' : ''}${L.mine}` : ''}</span>{/if}
       </span>
       <span class="hof-podium-step">
         <strong class="hof-podium-value num">{value}{#if unit}<small>{unit}</small>{/if}</strong>
-        <span class="hof-podium-place">{player.rank}위</span>
+        <span class="hof-podium-place">{L.rankN({ rank: player.rank })}</span>
       </span>
     </button>
   {/each}

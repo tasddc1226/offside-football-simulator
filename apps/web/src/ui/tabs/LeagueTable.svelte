@@ -6,6 +6,7 @@
   import ClubBadge from '../ClubBadge.svelte';
   import { RANK_SLIDE_MS, rankSlideSpan } from '@offside/app-core/resultTour';
   import { dur } from '../motion.js';
+  import { gameLeagueText as L } from '@offside/app-core/i18n/ko/gameLeague';
 
   const { s }: { s: GameState } = $props();
   let full = $state(false);
@@ -62,15 +63,15 @@
 
 <div class="league-table" data-league-table>
   <div class="row" style="justify-content:space-between;align-items:baseline">
-    <h3 class="sub-title">{leagueOf(seasonLeagueId(s)).name} 순위</h3>
+    <h3 class="sub-title">{L.title({ league: leagueOf(seasonLeagueId(s)).name })}</h3>
     {#if s.season.played && (folded || full)}
-      <button class="icon-btn" data-act="table-toggle" aria-expanded={full} onclick={() => (full = !full)}>{full ? '접기' : '전체 순위'}</button>
+      <button class="icon-btn" data-act="table-toggle" aria-expanded={full} onclick={() => (full = !full)}>{full ? L.fold : L.expand}</button>
     {/if}
   </div>
   {#if s.season.played}
     <table>
       <thead>
-        <tr><th scope="col">#</th><th scope="col" class="lt-team">팀</th><th scope="col">경기</th><th scope="col">승점</th></tr>
+        <tr><th scope="col">#</th><th scope="col" class="lt-team">{L.colTeam}</th><th scope="col">{L.colPlayed}</th><th scope="col">{L.colPts}</th></tr>
       </thead>
       <tbody bind:this={tbody}>
         {#each shown as x (x.key)}
@@ -88,6 +89,6 @@
       </tbody>
     </table>
   {:else}
-    <p class="muted fs-sm">개막하면 {rows.length}개 팀 순위표가 채워져요.</p>
+    <p class="muted fs-sm">{L.empty({ n: rows.length })}</p>
   {/if}
 </div>

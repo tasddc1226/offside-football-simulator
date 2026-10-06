@@ -10,6 +10,7 @@ import { Btn } from '../ui';
 import { BannerClose, BannerText, TopBanner } from './TopBanner';
 import { useFly } from './useFly';
 import { useTopBanner } from './useTopBanner';
+import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 
 export function NewsBanner() {
   const news = useSnapshot(newsState);
@@ -33,14 +34,14 @@ export function NewsBanner() {
   const { post, count, edited } = cur;
   const headline =
     count > 1
-      ? `새 소식 ${count}개가 올라왔어요`
+      ? L.newsCount({ n: count })
       : edited
         ? post.board === 'release'
-          ? '릴리즈 노트가 수정됐어요'
-          : '공지가 수정됐어요'
+          ? L.newsReleaseEdited
+          : L.newsNoticeEdited
         : post.board === 'release'
-          ? '새 릴리즈 노트가 올라왔어요'
-          : '새로운 공지가 올라왔어요';
+          ? L.newsReleaseNew
+          : L.newsNoticeNew;
   const open = () => {
     const { board, id } = post;
     dismissNews();
@@ -48,10 +49,10 @@ export function NewsBanner() {
   };
 
   return (
-    <TopBanner testID={`news-banner-${post.board}`} label="새 소식 알림" style={style}>
+    <TopBanner testID={`news-banner-${post.board}`} label={L.newsAlert} style={style}>
       <BannerText title={headline} body={post.title} bodyLines={1} />
       <Btn kind="accent" sm testID="news-open" onPress={open}>
-        보기
+        {L.newsView}
       </Btn>
       <BannerClose testID="news-close" onPress={dismissNews} />
     </TopBanner>

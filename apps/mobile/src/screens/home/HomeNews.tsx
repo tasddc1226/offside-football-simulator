@@ -9,6 +9,8 @@ import { hiddenPost } from '../../platform/storeText';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Btn, Card, Pill, Press, Row, Txt } from '../../ui';
+import { homeText as L } from '@offside/app-core/i18n/ko/home';
+import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import { useRefresh } from '../../ui/refresh';
 
 const SHOWN = 3;
@@ -53,16 +55,16 @@ export function HomeNews({
           </View>
           {posts ? (
             <Btn sm testID="news-all" onPress={() => openBoard(board)}>
-              전체 보기
+              {L.newsAll}
             </Btn>
           ) : null}
         </View>
         {failed ? (
-          <Empty>소식을 불러오지 못했어요.</Empty>
+          <Empty>{L.newsFailed}</Empty>
         ) : !posts ? (
-          <Empty>불러오는 중…</Empty>
+          <Empty>{S.loading}</Empty>
         ) : !posts.length ? (
-          <Empty>아직 올라온 글이 없어요.</Empty>
+          <Empty>{L.newsEmpty}</Empty>
         ) : (
           <View>
             {posts.slice(0, SHOWN).map((p) => (
@@ -81,7 +83,7 @@ export function HomeNews({
                 }}
               >
                 <Row gap={6}>
-                  {p.pinned ? <Pill tone="warn">고정</Pill> : null}
+                  {p.pinned ? <Pill tone="warn">{L.pinned}</Pill> : null}
                   {p.version ? <Pill>{p.version}</Pill> : null}
                   <Txt bold>{p.title}</Txt>
                 </Row>

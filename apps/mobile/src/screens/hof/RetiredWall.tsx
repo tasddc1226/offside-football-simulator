@@ -44,6 +44,7 @@ import { Txt } from '../../ui/Txt';
 import { POS_GROUPS, POS_LABEL } from '@offside/contracts/positions';
 import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { RecordsSelect, RecordsChips, RECORDS_TOUCH } from './RecordsControls';
+import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
 import { useSeasonNow } from '../../ui/useSeasonNow';
 import { useRefresh } from '../../ui/refresh';
 
@@ -97,7 +98,11 @@ const Tile = memo(function Tile({
       scale={0.985}
       testID={`rn-tile-${it.seq}`}
       onPress={() => void openPublicLegendById(it.careerId)}
-      accessibilityLabel={`${name} ${it.number}번 · ${withClub ? clubName(it) : POS[it.pos].label}`}
+      accessibilityLabel={L.tileLabel({
+        name,
+        number: it.number,
+        sub: withClub ? clubName(it) : POS[it.pos].label,
+      })}
       style={{
         width,
         alignItems: 'center',
@@ -156,7 +161,7 @@ const Tile = memo(function Tile({
         numberOfLines={1}
         style={{ fontSize: rem(0.75), maxWidth: '100%' }}
       >
-        {`${it.seq}번째 · ${day(it.grantedAt)}`}
+        {L.tileSeq({ seq: it.seq, day: day(it.grantedAt) })}
       </Txt>
       {mine ? (
         <View
@@ -182,7 +187,7 @@ const Tile = memo(function Tile({
               color: c.muted,
             }}
           >
-            내 선수
+            {L.mine}
           </Txt>
         </View>
       ) : null}
@@ -265,7 +270,7 @@ function BackButton() {
     <Press
       testID="rn-back"
       scale={1}
-      accessibilityLabel="구단 목록으로 돌아가기"
+      accessibilityLabel={L.backLabel}
       onPress={() => {
         view.screen = 'home';
         view.clubId = null;
@@ -274,7 +279,7 @@ function BackButton() {
       style={{ minHeight: RECORDS_TOUCH, justifyContent: 'center', alignSelf: 'flex-start' }}
     >
       <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-        ← 구단 목록
+        {L.backApp}
       </Txt>
     </Press>
   );
@@ -287,7 +292,7 @@ function ClubRow({ c, club, showLeague }: { c: Colors; club: ClubSum; showLeague
     <Press
       testID={`rn-club-${club.clubId}`}
       scale={0.985}
-      accessibilityLabel={`${name}${league ? ` ${league}` : ''} 영구결번 ${club.count}개`}
+      accessibilityLabel={L.clubLabel({ name, league, count: club.count })}
       onPress={() => {
         view.clubId = club.clubId;
         view.pos = null;
@@ -346,45 +351,49 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
   const { ready, onLayout, opts } = useTileOpts(c, false, myIds);
   const groups = useMemo(() => (summary ? rnByLeague(summary.clubs) : []), [summary]);
 
-  if (failed) return <Message text="영구결번을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." />;
-  if (!summary) return <Message live text="불러오는 중…" />;
-  if (!summary.total) return <Message text={`아직 ${teamSeasonName(season)} 영구결번이 없어요.`} />;
+  if (failed) return <Message text={L.loadFailed} />;
+  if (!summary) return <Message live text={L.loading} />;
+  if (!summary.total) return <Message text={L.empty({ season: teamSeasonName(season) })} />;
   return (
     <View onLayout={onLayout}>
       <Txt tone="muted" style={{ fontSize: 12, marginBottom: 10 }}>
-        {`${summary.total}개 결번 · ${summary.clubs.length}개 구단 · 최근 ${day(summary.recent[0]!.grantedAt)}`}
+        {L.summaryLine({
+          total: summary.total,
+          clubs: summary.clubs.length,
+          day: day(summary.recent[0]!.grantedAt),
+        })}
       </Txt>
       <SectionTitle
         right={
           <Press
             testID="rn-recent-all"
             scale={1}
-            accessibilityLabel="최근 결번 전체 보기"
+            accessibilityLabel={L.seeAllLabel}
             onPress={() => {
               view.screen = 'recent';
             }}
             style={{ minHeight: RECORDS_TOUCH, justifyContent: 'center' }}
           >
             <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-              전체 보기 ›
+              {L.seeAll}
             </Txt>
           </Press>
         }
       >
-        최근 결번
+        {L.recentTitle}
       </SectionTitle>
       {ready ? <Tiles items={summary.recent} withClub {...opts} /> : null}
-      <SectionTitle>구단</SectionTitle>
+      <SectionTitle>{L.clubsTitle}</SectionTitle>
       <RecordsChips
-        label="구단 정렬"
+        label={L.clubOrderLabel}
         testIDPrefix="rn-club-order"
         value={clubOrder}
         onPick={(key) => {
           view.clubOrder = key as RnClubOrder;
         }}
         items={[
-          { key: 'count', label: '결번 많은 순' },
-          { key: 'league', label: '리그별' },
+          { key: 'count', label: L.orderCount },
+          { key: 'league', label: L.orderLeague },
         ]}
       />
       {clubOrder === 'count' ? (
@@ -472,33 +481,27 @@ function ClubScreen({
         </View>
       ) : null}
       <RecordsChips
-        label="포지션"
+        label={L.positionLabel}
         testIDPrefix="rn-pos"
         value={pos ?? 'all'}
         onPick={(key) => {
           view.pos = key === 'all' ? null : (key as CareerPos);
         }}
         items={[
-          { key: 'all', label: '전체' },
+          { key: 'all', label: L.all },
           ...POS_GROUPS.map((key) => ({ key, label: POS_LABEL[key] })),
         ]}
       />
       {failed ? (
-        <Message text="영구결번을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." />
+        <Message text={L.loadFailed} />
       ) : items === null ? (
-        <Message live text="불러오는 중…" />
+        <Message live text={L.loading} />
       ) : filtered.length ? (
         <View onLayout={onLayout} style={{ marginTop: 6 }}>
           {ready ? <Tiles items={filtered} withClub={false} {...opts} /> : null}
         </View>
       ) : (
-        <Message
-          text={
-            pos
-              ? '선택한 조건의 영구결번이 없어요.'
-              : `아직 ${teamSeasonName(season)} 영구결번이 없어요.`
-          }
-        />
+        <Message text={pos ? L.noMatchApp : L.empty({ season: teamSeasonName(season) })} />
       )}
     </View>
   );
@@ -550,11 +553,11 @@ function RecentScreen({ season, myIds }: { season: number; myIds: ReadonlySet<st
   return (
     <View>
       <BackButton />
-      <SectionTitle>최신순 전체</SectionTitle>
+      <SectionTitle>{L.recentAll}</SectionTitle>
       {failed ? (
-        <Message text="영구결번을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." />
+        <Message text={L.loadFailed} />
       ) : items === null ? (
-        <Message live text="불러오는 중…" />
+        <Message live text={L.loading} />
       ) : items.length ? (
         <View onLayout={onLayout}>
           {ready ? <Tiles items={items} withClub {...opts} /> : null}
@@ -563,19 +566,15 @@ function RecentScreen({ season, myIds }: { season: number; myIds: ReadonlySet<st
               block
               testID="rn-more"
               disabled={more === 'loading'}
-              accessibilityLabel="결번 더 보기"
+              accessibilityLabel={L.moreLabel}
               onPress={loadMore}
             >
-              {more === 'loading'
-                ? '불러오는 중…'
-                : more === 'failed'
-                  ? '불러오지 못했어요. 다시 시도'
-                  : '더 보기'}
+              {more === 'loading' ? L.loading : more === 'failed' ? L.moreFailed : L.more}
             </Btn>
           ) : null}
         </View>
       ) : (
-        <Message text={`아직 ${teamSeasonName(season)} 영구결번이 없어요.`} />
+        <Message text={L.empty({ season: teamSeasonName(season) })} />
       )}
     </View>
   );
@@ -595,12 +594,12 @@ export default function RetiredWall() {
     <Card gap={0}>
       <View testID="rn-wall" style={{ flexDirection: 'row', marginBottom: 12 }}>
         <RecordsSelect
-          label="시즌"
+          label={L.season}
           testID="rn-season-select"
           value={season}
           options={seasons.map((s) => ({
             value: s.id,
-            label: `${s.name}${s.startsAt > now ? ' (개막 예정)' : ''}`,
+            label: `${s.name}${s.startsAt > now ? L.notOpen : ''}`,
           }))}
           onChange={(id) => {
             view.season = id;
@@ -612,7 +611,7 @@ export default function RetiredWall() {
       </View>
       {upcoming ? (
         <Message
-          text={`${upcoming.name}은 ${kstMonthDayHour(upcoming.startsAt)}(한국 시각)에 개막해요.`}
+          text={L.opens({ name: upcoming.name, when: kstMonthDayHour(upcoming.startsAt) })}
         />
       ) : screen === 'club' && clubId ? (
         <ClubScreen season={season} clubId={clubId} myIds={myIds} />

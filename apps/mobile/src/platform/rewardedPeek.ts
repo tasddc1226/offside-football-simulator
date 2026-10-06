@@ -3,8 +3,9 @@
 import { proxy } from 'valtio';
 import { parsePeek, peekOf, type PotentialPeek } from '@offside/app-core/potential-peek';
 import type { GameState } from '@offside/game/types';
-import { REWARD_CONSENT_TEXT, earnReward, rewardAvailable } from './rewarded';
+import { earnReward, rewardAvailable } from './rewarded';
 import { kv } from './setup';
+import { adText as L } from '@offside/app-core/i18n/ko/ad';
 
 const KEY = 'offside_pot_peek';
 
@@ -31,9 +32,7 @@ export async function openPeek(s: GameState) {
   try {
     const r = await earnReward();
     if (r === 'earned') open(s);
-    else
-      potPeek.message =
-        r === 'consent' ? REWARD_CONSENT_TEXT : '광고를 끝까지 보면 평가를 볼 수 있어요.';
+    else potPeek.message = r === 'consent' ? L.rewardedUnavailable : L.rewardedWatch;
   } finally {
     potPeek.busy = false;
   }

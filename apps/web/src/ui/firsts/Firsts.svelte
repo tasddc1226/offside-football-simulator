@@ -13,7 +13,8 @@
   import Topbar from '../Topbar.svelte';
   import { kstParts } from '@offside/app-core/boardText';
   import { seasonNow } from '../seasonNow.svelte.js';
-  import { FIRSTS_TABS, achievedList, byDay, holderLabel, type FirstsTab } from '@offside/app-core/firsts';
+  import { achievedList, byDay, firstsTabs, holderLabel, type FirstsTab } from '@offside/app-core/firsts';
+  import { firstsText as L } from '@offside/app-core/i18n/ko/firsts';
 
   let data = $state<FirstsResponse | null>(null);
   let failed = $state(false);
@@ -50,7 +51,7 @@
 
 {#snippet who(h: NonNullable<ServerFirst['holder']>)}
   {@const w = holderLabel(h, mine)}
-  <span class="first-who">{w.name}{#if w.mine}<span class="pill good">내 선수</span>{/if}</span>
+  <span class="first-who">{w.name}{#if w.mine}<span class="pill good">{L.mine}</span>{/if}</span>
 {/snippet}
 
 <div class="wrap">
@@ -59,32 +60,30 @@
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <div>
         <div class="eyebrow">Server firsts</div>
-        <h1 style="margin-bottom:4px">서버 최초 업적</h1>
+        <h1 style="margin-bottom:4px">{L.title}</h1>
       </div>
       {#if data}<span class="first-count num" data-firsts-count>{done}/{total}</span>{/if}
     </div>
     <p class="muted fs-sm" style="margin:0 0 10px">
-      {tab === 'records'
-        ? '모든 플레이어 중 가장 높은 기록이에요. 더 큰 기록이 나오면 주인이 바뀌어요.'
-        : '모든 플레이어를 통틀어 가장 먼저 세운 기록만 남아요.'} 이름은 명예의 전당에 이름을 공개한 선수만 보여요.
+      {L.introRecords({ records: tab === 'records' })}
     </p>
     {#if seasons.length > 1}
-      <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
+      <div class="seg board-tabs hof-seasons" role="group" aria-label={L.seasonLabel}>
         {#each seasons as id (id)}
           <button class="opt" aria-pressed={season === id} data-firsts-season={id} onclick={() => (picked = id)}>{teamSeasonName(id)}</button>
         {/each}
       </div>
     {/if}
-    <div class="hof-sorts" role="group" aria-label="기록 분류">
-      {#each FIRSTS_TABS as t (t.id)}
+    <div class="hof-sorts" role="group" aria-label={L.tabsLabel}>
+      {#each firstsTabs() as t (t.id)}
         <button class="hof-sort" aria-pressed={tab === t.id} data-firsts-tab={t.id} onclick={() => (tab = t.id)}>{t.label}</button>
       {/each}
     </div>
 
     {#if failed}
-      <p class="empty">서버 최초 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+      <p class="empty">{L.loadFailed}</p>
     {:else if !data}
-      <p class="empty">불러오는 중…</p>
+      <p class="empty">{L.loading}</p>
     {:else if tab === 'recent'}
       {#each days as d (d.day)}
         <h2 class="first-day num">{d.day}</h2>
@@ -98,7 +97,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="empty">아직 세워진 서버 최초 기록이 없어요.</p>
+        <p class="empty">{L.empty}</p>
       {/each}
     {:else if tab === 'records'}
       <ul class="first-list">
@@ -110,7 +109,7 @@
               {@render who(r.holder)}
               <span class="first-time num">{kstParts(r.achievedAt).day}</span>
             {:else}
-              <span class="first-who">아직 기록 없음</span>
+              <span class="first-who">{L.noRecord}</span>
             {/if}
           </li>
         {/each}
@@ -124,7 +123,7 @@
               <span class="first-time num">{kstParts(x.achievedAt).day}</span>
               {@render who(x.holder)}
             {:else}
-              <span class="first-who">미달성</span>
+              <span class="first-who">{L.locked}</span>
             {/if}
           </li>
         {/each}

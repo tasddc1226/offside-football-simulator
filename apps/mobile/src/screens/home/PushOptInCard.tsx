@@ -12,6 +12,7 @@ import {
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Txt } from '../../ui';
 import { WEB_ORIGIN } from '../../platform/config';
+import { homeMoreText } from '@offside/app-core/i18n/ko/homeMore';
 
 export function PushOptInCard() {
   const state = useSnapshot(pushState);
@@ -40,13 +41,10 @@ export function PushOptInCard() {
           />
         </Svg>
         <Txt bold accessibilityRole="header" style={{ flex: 1 }}>
-          새 소식을 알림으로 받아볼까요?
+          {homeMoreText.pushTitle}
         </Txt>
       </View>
-      <Txt tone="muted">
-        공지·릴리즈 노트의 새 글을 알려 드려요. 게시판마다 하루 한 번 보내요. 설정에서 언제든 끌 수
-        있어요.
-      </Txt>
+      <Txt tone="muted">{homeMoreText.pushBody}</Txt>
       <View style={{ gap: 8 }}>
         <Btn
           kind="primary"
@@ -59,7 +57,7 @@ export function PushOptInCard() {
             });
           }}
         >
-          {state.busy ? '알림 연결 중…' : '알림 받기'}
+          {state.busy ? homeMoreText.pushBusy : homeMoreText.pushAccept}
         </Btn>
         <Btn
           kind="ghost"
@@ -68,7 +66,7 @@ export function PushOptInCard() {
           testID="push-opt-in-dismiss"
           onPress={snoozePushOffer}
         >
-          나중에
+          {homeMoreText.pushLater}
         </Btn>
       </View>
       {state.message ? (
@@ -82,7 +80,7 @@ export function PushOptInCard() {
         testID="push-opt-in-privacy"
         onPress={() => void Linking.openURL(`${WEB_ORIGIN}/legal/privacy/#push`)}
       >
-        알림 정보 처리 안내
+        {homeMoreText.pushPrivacy}
       </Btn>
     </Card>
   );

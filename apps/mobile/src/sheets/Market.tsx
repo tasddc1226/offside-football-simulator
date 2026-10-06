@@ -2,6 +2,7 @@
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
+import { sheetPlayText as L } from '@offside/app-core/i18n/ko/sheetPlay';
 import { buzz, pickOption } from '../game/host';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
@@ -16,7 +17,7 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
     <>
       <Txt v="eyebrow">{s.eyebrow}</Txt>
       <Txt v="h2" accessibilityRole="header">
-        다음 시즌, 어디서 뛸까요?
+        {L.marketTitle}
       </Txt>
       <Txt tone="muted">{s.note}</Txt>
       {s.assessment ? (
@@ -29,7 +30,13 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
           <Press
             key={i}
             testID={`opt-${i}`}
-            accessibilityLabel={`${o.name}, ${o.lg}${o.salary !== null ? `, 연봉 ${o.salary}` : ''}${o.sub ? `, ${o.sub}` : ''}${o.reason ? `, ${o.reason}` : ''}`}
+            accessibilityLabel={L.offerA11y({
+              name: o.name,
+              lg: o.lg,
+              salary: o.salary,
+              sub: o.sub,
+              reason: o.reason,
+            })}
             onPress={() => {
               buzz();
               pickOption(i);
@@ -62,7 +69,7 @@ export function Market({ v }: { v: Extract<SheetView, { kind: 'market' }> }) {
                     {o.salary}
                   </Txt>
                   <Txt tone="muted" style={{ fontSize: rem(0.75), textAlign: 'right' }}>
-                    연봉
+                    {L.salary}
                   </Txt>
                 </View>
               ) : null}

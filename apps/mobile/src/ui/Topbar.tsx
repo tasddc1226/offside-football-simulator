@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { useIsDark } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
 import { Txt } from './Txt';
+import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 import badgeDark from '../../assets/brand/offside-icon-v7-dark-180.png';
 import badgeLight from '../../assets/brand/offside-icon-v7-180.png';
 
@@ -30,7 +31,7 @@ export function Topbar({ right }: { right?: ReactNode }) {
           tone="muted"
           style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.2, letterSpacing: 0.2 }}
         >
-          풀타임: 휘슬이 울릴 때까지
+          {L.brandTag}
         </Txt>
         <Txt
           accessibilityRole="header"
@@ -41,7 +42,7 @@ export function Topbar({ right }: { right?: ReactNode }) {
             letterSpacing: 0.4,
           }}
         >
-          오프사이드
+          {L.brandName}
         </Txt>
       </View>
       {right}

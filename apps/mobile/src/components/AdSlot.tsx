@@ -10,6 +10,7 @@ import { askConsent } from '../platform/adConsent';
 import { adFree } from '../platform/adFree';
 import { rem } from '../theme/type';
 import { Txt } from '../ui/Txt';
+import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
 /** AdMob 배너 단위. 위치마다 나누지 않고 플랫폼별 하나를 같이 쓴다. */
 const UNIT = __DEV__
@@ -63,13 +64,13 @@ export function AdSlot({ place }: { place: AdPlace }) {
   );
   return (
     <View
-      accessibilityLabel="광고"
+      accessibilityLabel={shellMoreText.adLabel}
       testID={`ad-${place}`}
       style={{ marginTop: owner ? 8 : 24, marginBottom: owner ? 12 : 0, gap: 6 }}
       onLayout={(e) => setWidth(Math.floor(e.nativeEvent.layout.width))}
     >
       <Txt tone="muted" style={{ fontSize: rem(0.6875), ...(owner ? { lineHeight: 14 } : {}) }}>
-        광고
+        {shellMoreText.adLabel}
       </Txt>
       {/* 적응형 배너의 SDK 최소 높이(50)만 예약한다. height/maxHeight/overflow 제한 없이
           SDK가 알려 준 실제 높이로 커지므로 큰 광고도 자르지 않는다. 기존 하단 칸은 예약하지 않는다. */}

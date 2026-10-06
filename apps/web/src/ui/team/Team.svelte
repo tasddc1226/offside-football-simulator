@@ -58,6 +58,7 @@
   import { achNudge } from '../achNudge.js';
   import { WILDCARD_FULL_TEXT, assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
+  import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { readTeamDraft, teamDraftBase, writeTeamDraft, type TeamDraft } from './teamDraft.js';
 
   let status = $state<LoadStatus>('loading');
@@ -260,7 +261,7 @@
     if (!unchanged) {
       team = r.data.team;
       preserveDraft();
-      toast('저장했어요. 그 뒤에 바꾼 내용은 아직 저장 전이에요.');
+      toast(L.savedPartial);
       return false;
     }
     if (key) writeTeamDraft(key, null);
@@ -269,7 +270,7 @@
     pendingDraft = null;
     restoredDraft = false;
     renaming = false;
-    toast(created ? '팀을 만들었어요' : '변경 사항을 저장했어요');
+    toast(created ? L.toastCreated : L.toastSavedWeb);
     return true;
   }
 
@@ -378,24 +379,24 @@
 <div class="wrap" class:has-tabbar={!needLogin} class:lineup-editor={view === 'team' && !needLogin}>
   <Topbar />
 
-  <LoadState {status} failText="팀을 불러오지 못했어요." retry={load}>
+  <LoadState {status} failText={L.loadFail} retry={load}>
     {#if needLogin}
       <section class="card stack" style="gap:10px">
         <div class="eyebrow">My team</div>
-        <h1>내 팀</h1>
-        <p class="muted">로그인한 구단주만 은퇴한 선수로 팀을 꾸릴 수 있어요.</p>
-        <button class="btn btn-primary self-start" onclick={() => void startGoogleLogin(null)}>구글로 로그인</button>
+        <h1>{L.myTeam}</h1>
+        <p class="muted">{L.loginOnly}</p>
+        <button class="btn btn-primary self-start" onclick={() => void startGoogleLogin(null)}>{L.googleLogin}</button>
       </section>
     {:else if view === 'achievements'}
       <TeamAchievements {ach} status={achStatus} newIds={achNewIds} bind:cat={achCat} load={(s) => void loadAchievements(s)} onrank={openAchRanking} />
     {:else if view === 'team'}
       {#if pendingDraft}
         <section class="card draft-notice" role="status">
-          <p>저장된 팀이 바뀌었어요. 이전에 수정하던 초안도 남아 있어요.</p>
-          <div><button class="btn btn-sm" onclick={() => pendingDraft && restoreDraft(pendingDraft)} data-act="team-draft-restore">초안 불러오기</button><button class="btn btn-sm" onclick={discardDraft}>저장된 팀 유지</button></div>
+          <p>{L.draftChangedWeb}</p>
+          <div><button class="btn btn-sm" onclick={() => pendingDraft && restoreDraft(pendingDraft)} data-act="team-draft-restore">{L.draftLoadWeb}</button><button class="btn btn-sm" onclick={discardDraft}>{L.draftKeep}</button></div>
         </section>
       {:else if restoredDraft && dirty}
-        <section class="card draft-notice" role="status"><p>이 탭에서 수정하던 내용을 불러왔어요. 아직 저장 전이에요.</p><button class="btn btn-sm" onclick={discardDraft} data-act="team-draft-discard">저장된 팀으로</button></section>
+        <section class="card draft-notice" role="status"><p>{L.draftRestoredWeb}</p><button class="btn btn-sm" onclick={discardDraft} data-act="team-draft-discard">{L.draftDiscardWeb}</button></section>
       {/if}
       <TeamHead
         {team}
@@ -415,7 +416,7 @@
         bind:renaming
         onseason={pickSeason}
       />
-      {#if editingLogo && editable}<TeamLogoEditor {logo} name={name.trim() || '내 팀'} onapply={(value) => { logo = value; editingLogo = false; }} onclose={() => (editingLogo = false)} />{/if}
+      {#if editingLogo && editable}<TeamLogoEditor {logo} name={name.trim() || L.myTeam} onapply={(value) => { logo = value; editingLogo = false; }} onclose={() => (editingLogo = false)} />{/if}
       <TeamLineup
         {team}
         teamLogo={logo}
@@ -442,9 +443,9 @@
         onsave={save}
       />
     {:else if view === 'opponents'}
-      <div class="seg two tm-mode" role="group" aria-label="경기 종류">
-        <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>랭크 경기</button>
-        <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>친구</button>
+      <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
+        <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>
+        <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}</button>
       </div>
       {#if friendsUi.mode === 'friends'}
         <TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />

@@ -9,6 +9,7 @@
   import { toast, uploadRetirement } from '../helpers.js';
   import { legendTitleOf, picked } from './legendTitle.svelte.js';
   import TitleTag from './TitleTag.svelte';
+  import { titleText as L } from '@offside/app-core/i18n/ko/title';
 
   const { h }: { h: HofEntry } = $props();
   const earned = $derived(earnedTitles(h));
@@ -25,18 +26,18 @@
     if (saved) saved.title = id;
     saveKey('ft_hof', hof);
     uploadRetirement(h.id, h);
-    toast(`대표 칭호를 바꿨어요: ${titleById(id)?.name ?? id}`);
+    toast(L.pickChanged({ name: titleById(id)?.name ?? id }));
   }
 </script>
 
 {#if earned.length > 1}
   <section class="card stack" data-legend-titles>
-    <div><div class="eyebrow">Titles</div><h2>대표 칭호</h2></div>
+    <div><div class="eyebrow">Titles</div><h2>{L.mainTitle}</h2></div>
     <p class="title-main">
-      {#if current}<TitleTag name={current.name} rarity={current.rarity} />{:else}<span class="muted">없음</span>{/if}
+      {#if current}<TitleTag name={current.name} rarity={current.rarity} />{:else}<span class="muted">{L.none}</span>{/if}
     </p>
     <details class="title-pick" bind:open>
-      <summary data-act="legend-title-open">받은 칭호 {earned.length}개 중에서 바꾸기</summary>
+      <summary data-act="legend-title-open">{L.pickOpen({ n: earned.length })}</summary>
       {#if open}
         <ul class="title-list">
           {#each earned as x (x.d.id)}
@@ -44,13 +45,13 @@
               <button class="title-item" data-legend-title-pick={x.d.id} aria-pressed={current?.id === x.d.id} onclick={() => pick(x.d.id)}>
                 <TitleTag name={x.d.name} rarity={x.d.rarity} />
                 <span class="title-desc">{x.d.desc}</span>
-                <span class="title-year num">{x.year ? x.year : '이전 기록'}</span>
+                <span class="title-year num">{x.year ? x.year : L.earlier}</span>
               </button>
             </li>
           {/each}
         </ul>
       {/if}
     </details>
-    <p class="muted fs-xs">고른 칭호는 선수 카드와 명예의 전당·공유 링크에 표시돼요.</p>
+    <p class="muted fs-xs">{L.pickNote}</p>
   </section>
 {/if}

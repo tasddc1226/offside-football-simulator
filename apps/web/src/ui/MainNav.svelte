@@ -11,14 +11,10 @@
   import { appState } from './state.svelte.js';
   import { go, goHome, openBoard, openHof } from './nav.js';
   import TabIcon from './TabIcon.svelte';
+  import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 
-  const LABEL: Record<(typeof MAIN_SCREENS)[number], string> = {
-    hof: '기록실',
-    board: '소식',
-    home: '홈',
-    owner: '구단주',
-    settings: '설정',
-  };
+  const label = (k: (typeof MAIN_SCREENS)[number]): string =>
+    ({ hof: L.navHof, board: L.navBoard, home: L.navHome, owner: L.navOwner, settings: L.navSettings })[k];
   const OPEN: Record<(typeof MAIN_SCREENS)[number], () => void> = {
     hof: openHof,
     // T-10-113 소식 화면에서 다시 누르면 보고 있던 게시판의 목록으로 돌아간다.
@@ -29,11 +25,11 @@
   };
 </script>
 
-<nav class="tabs main-nav" aria-label="메인 메뉴">
+<nav class="tabs main-nav" aria-label={L.navLabel}>
   {#each MAIN_SCREENS as k, i (k)}
     <button data-act={k} aria-current={appState.screen === k ? 'page' : undefined} style:--i={i} onclick={OPEN[k]}>
-      <TabIcon name={k} />{LABEL[k]}
-      {#if k === 'owner' && appState.achNew}<span class="tab-dot"><span class="sr-only">새 업적 {appState.achNew}개</span></span>{/if}
+      <TabIcon name={k} />{label(k)}
+      {#if k === 'owner' && appState.achNew}<span class="tab-dot"><span class="sr-only">{L.achNew({ n: appState.achNew })}</span></span>{/if}
     </button>
   {/each}
 </nav>

@@ -38,6 +38,7 @@ import { Grid2, OvrBadge, Stats } from './TeamParts';
 import { TeamLogo } from '../../components/TeamLogo';
 import { AdSlot } from '../../components/AdSlot';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
+import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
 
 function openTeam(v: TeamView = 'team') {
   appState.teamView = v;
@@ -101,7 +102,7 @@ function LockedPitch() {
             backgroundColor: c.surface,
           }}
         >
-          <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>🔒︎ 로그인하면 열려요</Txt>
+          <Txt style={{ fontSize: rem(0.8125), fontWeight: '700' }}>{L.lockBadge}</Txt>
         </View>
       </View>
     </View>
@@ -166,11 +167,7 @@ export default function Owner() {
   const clubValue = linked ? (market?.clubValue ?? null) : (summary?.value ?? null);
 
   const team = card?.team;
-  const sub = guest
-    ? '기록은 이 기기에만 저장돼요'
-    : team
-      ? `${team.name} · ${card.season}`
-      : '로그인했어요';
+  const sub = guest ? L.guestSub : team ? `${team.name} · ${card.season}` : L.signedInSubApp;
 
   return (
     <Screen>
@@ -178,7 +175,7 @@ export default function Owner() {
       <View style={{ paddingHorizontal: 2, paddingTop: 4 }}>
         <Txt v="eyebrow">Owner</Txt>
         <Txt v="h1" accessibilityRole="header" style={{ marginTop: 2 }}>
-          구단주
+          {L.title}
         </Txt>
       </View>
 
@@ -198,13 +195,13 @@ export default function Owner() {
               }}
             >
               <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.375), color: c.pitchAccent }}>
-                {(nickname ?? '구').slice(0, 1)}
+                {(nickname ?? L.avatarInitial).slice(0, 1)}
               </Txt>
             </View>
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
               <Row gap={6}>
                 <Txt style={{ fontSize: rem(1.125), fontWeight: '700' }}>
-                  {guest ? '게스트 구단주' : (nickname ?? '구단주')}
+                  {guest ? L.guestName : (nickname ?? L.title)}
                 </Txt>
                 {card?.founder ? (
                   // T-11-113 프리시즌에 은퇴 선수를 남긴 구단주
@@ -220,26 +217,31 @@ export default function Owner() {
           </View>
           {(guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue) ? (
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-              첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.
+              {L.emptySummary}
             </Txt>
           ) : (
             <View style={{ gap: 8 }}>
               <Stats
                 accent
-                items={[['구단 가치', clubValue !== null ? fmtValue(clubValue) : '–']]}
+                items={[[L.statClubValue, clubValue !== null ? fmtValue(clubValue) : '–']]}
               />
               <Stats
                 items={[
-                  ['은퇴 선수', summary ? `${num(summary.players)}명` : '–'],
-                  ['레전드 점수', summary ? num(summary.score) : '–'],
-                  ['영구결번', summary ? `${summary.retired}개` : '–'],
+                  [
+                    L.statRetired,
+                    summary
+                      ? L.playersCount({ n: summary.players, text: num(summary.players) })
+                      : '–',
+                  ],
+                  [L.statLegend, summary ? num(summary.score) : '–'],
+                  [L.statRetiredNumbers, summary ? L.numbersCount({ n: summary.retired }) : '–'],
                 ]}
               />
             </View>
           )}
           {linked ? (
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-              {`구단 자금 ${market ? fundsText(market.balance) : '–'}`}
+              {L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}
             </Txt>
           ) : null}
         </Card>
@@ -263,11 +265,11 @@ export default function Owner() {
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                 <Txt v="eyebrow">{`My team${card?.season ? ` · ${card.season}` : ''}`}</Txt>
                 <Txt v="h2" accessibilityRole="header">
-                  {team?.name ?? '내 팀'}
+                  {team?.name ?? L.myTeam}
                 </Txt>
                 {team ? (
                   <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                    {`${team.manager} 감독 · ${team.formation}`}
+                    {L.manager({ manager: team.manager, formation: team.formation })}
                   </Txt>
                 ) : null}
               </View>
@@ -278,14 +280,14 @@ export default function Owner() {
                 <Stats
                   small
                   items={[
-                    ['전적', recordText(team.record)],
-                    ['레이팅', num(team.rating)],
-                    ['오늘 경기', `${card.left}/${card.perDay}`],
+                    [L.statRecord, recordText(team.record)],
+                    [L.statRating, num(team.rating)],
+                    [L.statToday, `${card.left}/${card.perDay}`],
                   ]}
                 />
                 <Grid2>
                   <Btn block testID="team" onPress={() => openTeam()}>
-                    내 팀
+                    {L.myTeam}
                   </Btn>
                   <Btn
                     kind="accent"
@@ -294,7 +296,7 @@ export default function Owner() {
                     disabled={!!card.playHint}
                     onPress={() => openTeam('opponents')}
                   >
-                    경기하기
+                    {L.play}
                   </Btn>
                 </Grid2>
                 {card.playHint ? (
@@ -306,11 +308,7 @@ export default function Owner() {
             ) : (
               <>
                 <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                  {card
-                    ? ownerTeamEmptyText(card)
-                    : cardFailed
-                      ? '시즌마다 은퇴한 선수로 팀을 꾸려 겨루고, 라이브 랭킹과 구단 업적을 채워요.'
-                      : '불러오는 중…'}
+                  {card ? ownerTeamEmptyText(card) : cardFailed ? L.teamFailed : L.loading}
                 </Txt>
                 <Btn
                   kind={card && card.players > 0 ? 'primary' : 'default'}
@@ -318,7 +316,7 @@ export default function Owner() {
                   testID="team"
                   onPress={() => openTeam()}
                 >
-                  {card && card.players > 0 ? '팀 만들기' : '내 팀 · 시즌 업적'}
+                  {card && card.players > 0 ? L.buildTeam : L.teamBtnApp}
                 </Btn>
               </>
             )}
@@ -328,14 +326,14 @@ export default function Owner() {
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                 <Txt v="eyebrow">Transfer market</Txt>
                 <Txt v="h2" accessibilityRole="header">
-                  이적시장
+                  {L.marketTitle}
                 </Txt>
                 <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                  {`구단 자금 ${market ? fundsText(market.balance) : '–'} · 이번 시즌 선수를 사고팔아요`}
+                  {L.marketSub({ funds: market ? fundsText(market.balance) : '–' })}
                 </Txt>
               </View>
               <Btn testID="market" onPress={() => go('market')}>
-                열기
+                {L.open}
               </Btn>
             </View>
           </Card>
@@ -345,7 +343,7 @@ export default function Owner() {
           <View style={{ gap: 2 }}>
             <Txt v="eyebrow">My team</Txt>
             <Txt v="h2" accessibilityRole="header">
-              내 팀
+              {L.myTeam}
             </Txt>
           </View>
           <LockedPitch />
@@ -370,8 +368,8 @@ export default function Owner() {
               borderTopColor: c.line,
             }}
           >
-            <SettingsTrigger testID="admin" label="운영 도구" onPress={() => go('admin')}>
-              <SettingsLabel title="운영 도구" />
+            <SettingsTrigger testID="admin" label={L.adminTools} onPress={() => go('admin')}>
+              <SettingsLabel title={L.adminTools} />
             </SettingsTrigger>
           </View>
         ) : null}

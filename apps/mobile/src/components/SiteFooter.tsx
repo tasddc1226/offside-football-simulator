@@ -3,6 +3,7 @@ import { Linking, View } from 'react-native';
 import { DC_GALLERY_URL } from '@offside/app-core/links';
 import { rem } from '../theme/type';
 import { Txt } from '../ui/Txt';
+import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 
 function Link({ href, children }: { href: string; children: string }) {
   return (
@@ -21,14 +22,14 @@ export function SiteFooter() {
   return (
     <View style={{ alignItems: 'center', gap: 4, paddingTop: 8, paddingBottom: 20 }}>
       <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-        문의 <Link href="mailto:contact@offside-lab.com">contact@offside-lab.com</Link>
+        {L.footContact} <Link href="mailto:contact@offside-lab.com">contact@offside-lab.com</Link>
       </Txt>
       <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
         Instagram <Link href="https://www.instagram.com/offside.lab.kr/">@offside.lab.kr</Link> ·
         Threads <Link href="https://www.threads.com/@offside.lab.kr">@offside.lab.kr</Link>
       </Txt>
       <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-        커뮤니티 <Link href={DC_GALLERY_URL}>디시 오프사이드 마이너 갤러리</Link>
+        {L.footCommunity} <Link href={DC_GALLERY_URL}>{L.footGallery}</Link>
       </Txt>
     </View>
   );

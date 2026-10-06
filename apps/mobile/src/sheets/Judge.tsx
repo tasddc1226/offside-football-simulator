@@ -3,6 +3,7 @@
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
+import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
 import { alpha } from '../theme/colors';
 import { useColors } from '../theme/useColors';
 import { rem } from '../theme/type';
@@ -14,7 +15,7 @@ export function Judge({ v }: { v: Extract<SheetView, { kind: 'judge' }> }) {
   const pct = Math.round(s.p * 100);
   return (
     <>
-      <Txt v="eyebrow">판정 중</Txt>
+      <Txt v="eyebrow">{sheetCoreText.judging}</Txt>
       <Txt v="h2" accessibilityRole="header">
         {s.label}
       </Txt>
@@ -38,8 +39,12 @@ export function Judge({ v }: { v: Extract<SheetView, { kind: 'judge' }> }) {
         />
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: -8 }}>
-        <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>{`성공 ${pct}%`}</Txt>
-        <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>{`실패 ${100 - pct}%`}</Txt>
+        <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+          {sheetCoreText.judgeOk({ pct })}
+        </Txt>
+        <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+          {sheetCoreText.judgeFail({ pct: 100 - pct })}
+        </Txt>
       </View>
     </>
   );

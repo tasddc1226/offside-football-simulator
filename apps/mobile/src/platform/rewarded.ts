@@ -55,5 +55,3 @@ export async function earnReward(): Promise<RewardResult> {
   if (!UNIT || !(await askConsent())) return 'consent';
   return (await watch(UNIT)) ? 'earned' : 'skipped';
 }
-
-export const REWARD_CONSENT_TEXT = '지금은 광고를 불러올 수 없어요. 잠시 뒤 다시 시도해 주세요.';

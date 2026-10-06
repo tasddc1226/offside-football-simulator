@@ -2,9 +2,10 @@
   // T-11-080f 카드 상세 시세 차트: 같은 포지션군 · OVR대 하루 평균 선, 최저~최고 띠, 기준가 점선, 이 선수 거래 점.
   // 영입 시트를 열 때만 부르고(1분 메모), 기간(1주 · 1달 · 시즌)을 바꾸면 그 기간만 새로 받는다. 점을 누르면 그날 값을 보여 준다.
   import { fetchCardTrades, fetchMarketChart, type MarketCard, type MarketChartPoint, type MarketChartRange } from '@offside/app-core/api/market';
-  import { CHART_COPY, CHART_RANGES, chartModel, dayText, tradeText, type CardTrade } from '@offside/app-core/marketChart';
+  import { CHART_COPY, chartRanges, chartModel, dayText, tradeText, type CardTrade } from '@offside/app-core/marketChart';
   import { ovrBand } from '@offside/contracts/market-value';
   import { POS_LABEL } from '@offside/game/pos-label';
+  import { marketChartText as L } from '@offside/app-core/i18n/ko/marketChart';
 
   let { card }: { card: MarketCard } = $props();
 
@@ -40,14 +41,14 @@
       <h3>{CHART_COPY.title}</h3>
       <small>{CHART_COPY.group(POS_LABEL[card.pos], band)}</small>
     </div>
-    <div class="mc-ranges" role="group" aria-label="기간">
-      {#each CHART_RANGES as [k, label] (k)}
+    <div class="mc-ranges" role="group" aria-label={L.rangeGroup}>
+      {#each chartRanges() as [k, label] (k)}
         <button aria-pressed={range === k} data-chart-range={k} onclick={() => (range = k)}>{label}</button>
       {/each}
     </div>
   </div>
   {#if points === null}
-    <p class="mc-empty">불러오는 중…</p>
+    <p class="mc-empty">{L.loading}</p>
   {:else if failed}
     <p class="mc-empty">{CHART_COPY.failed}</p>
   {:else if !model}
@@ -62,7 +63,7 @@
       </svg>
       <span class="mc-axis mc-top">{model.top}</span>
       <span class="mc-axis mc-bottom">{model.bottom}</span>
-      <span class="mc-base-label" style:top="{model.base}%">기준가</span>
+      <span class="mc-base-label" style:top="{model.base}%">{L.baseLabel}</span>
       {#each model.days as d (d.p.day)}
         <button class="mc-day" style:left="{d.x}%" style:top="{d.y}%" aria-label={dayText(d.p)} onclick={() => (pick = dayText(d.p))}></button>
       {/each}

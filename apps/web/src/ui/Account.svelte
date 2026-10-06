@@ -12,6 +12,7 @@
   import { accountLabel, isMember } from '@offside/app-core/account';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
   import NicknameForm from './NicknameForm.svelte';
+  import { accountText as L } from '@offside/app-core/i18n/ko/account';
 
   /** 관리자 계정(설정 화면이 확인한다)은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다. */
   let { admin = false }: { admin?: boolean } = $props();
@@ -51,15 +52,15 @@
   }
   function askLogout() {
     showSheet(
-      { kind: 'notice', eyebrow: 'Account', title: '로그아웃할까요?', muted: true, text: '이 기기에 저장된 게임 진행은 그대로 남아요. 같은 구글 계정으로 다시 로그인하면 계정에 저장된 기록을 다시 볼 수 있어요.' },
+      { kind: 'notice', eyebrow: 'Account', title: L.logoutTitle, muted: true, text: L.logoutBodyWeb },
       [
-        { label: '로그아웃', cls: 'btn-primary', fn: () => void doLogout() },
-        { label: '취소', fn: closeSheet },
+        { label: L.logout, cls: 'btn-primary', fn: () => void doLogout() },
+        { label: L.cancel, fn: closeSheet },
       ],
     );
   }
   async function doDeleteFlow() {
-    if (!window.confirm('계정과 서버에 저장된 선수 기록·팀·댓글·채팅을 삭제할까요? 되돌릴 수 없어요. 이 기기의 게임 진행은 남아요.')) return;
+    if (!window.confirm(L.deleteBody)) return;
     const start = await startProfileDeletion();
     if (!start.ok) return set('error');
     const confirmResult = await confirmProfileDeletion(start.data.confirmToken);
@@ -69,33 +70,33 @@
 </script>
 
 {#if profile === undefined}
-  <div class="account-card"><div class="who"><b>계정</b><span class="muted">확인 중…</span></div></div>
+  <div class="account-card"><div class="who"><b>{L.title}</b><span class="muted">{L.checking}</span></div></div>
 {:else if profile === 'error'}
   <div class="account-card">
-    <div class="who"><b>연결할 수 없어요</b><span class="muted">서버에 연결하지 못해 로그인 상태를 확인할 수 없어요. 게임은 계속할 수 있고, 진행 상황은 이 기기에 저장돼요.</span></div>
-    <button class="btn btn-sm" onclick={() => load()}>다시 시도</button>
+    <div class="who"><b>{L.errorTitle}</b><span class="muted">{L.errorBody}</span></div>
+    <button class="btn btn-sm" onclick={() => load()}>{L.retry}</button>
   </div>
 {:else if !profile || !isMember(profile)}
   <!-- T-10-102 비로그인은 안내만 — 구글 로그인 버튼은 구단주 화면이 카드 밖에 하나만 둔다(T-11-026 잠긴 '내 팀' 카드 안). -->
   <div class="account-card">
-    <div class="who"><b>로그인하지 않았어요</b><span class="muted">게임 진행은 이 기기에만 저장돼요. 로그인하면 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요.</span></div>
+    <div class="who"><b>{L.guestTitle}</b><span class="muted">{L.guestBody}</span></div>
   </div>
 {:else}
   {@const label = accountLabel(profile)}
   <div class="account-card">
     <div class="who"><b>{label.title}</b><span class="muted">{label.via}</span></div>
-    <button class="btn btn-primary btn-sm" data-act="logout" onclick={askLogout}>로그아웃</button>
+    <button class="btn btn-primary btn-sm" data-act="logout" onclick={askLogout}>{L.logout}</button>
   </div>
   <div class="account-nick">
-    <span class="muted">{profile.nickname ? '댓글 닉네임' : '댓글 닉네임을 정하면 소식 게시판에 댓글을 쓸 수 있어요'}</span>
-    {#if admin}<b>{profile.nickname} · 운영자 계정은 고정이에요</b>
+    <span class="muted">{profile.nickname ? L.nickname : L.nicknamePrompt}</span>
+    {#if admin}<b>{L.nicknameFixed({ nickname: profile.nickname })}</b>
     {:else}{#key profile.nickname}<NicknameForm current={profile.nickname} />{/key}{/if}
   </div>
   <div class="account-more">
     {#if profile.linked.google}
-      <button class="link-btn" onclick={doUnlink}>구글 연동 해제</button>
+      <button class="link-btn" onclick={doUnlink}>{L.unlinkGoogle}</button>
       <span aria-hidden="true">·</span>
     {/if}
-    <button class="link-btn bad" onclick={doDeleteFlow}>계정 삭제</button>
+    <button class="link-btn bad" onclick={doDeleteFlow}>{L.deleteAccount}</button>
   </div>
 {/if}

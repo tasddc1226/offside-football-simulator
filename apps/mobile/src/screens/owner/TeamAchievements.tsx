@@ -7,7 +7,9 @@ import type { AchCategory } from '@offside/contracts/owner-team';
 import type { ClubAchievementsResponse } from '@offside/app-core/api/team';
 import { hofStart } from '@offside/app-core/state';
 import {
+  achCatShort,
   achDone,
+  achGradeName,
   achGradeView,
   achNear,
   achOpenGroup,
@@ -18,6 +20,7 @@ import {
   achTotal,
 } from '@offside/app-core/teamOwner';
 import { num } from '@offside/app-core/teamText';
+import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { go } from '../../game/nav';
 import { appState } from '../../store';
@@ -115,7 +118,12 @@ function Group({
       <Press
         scale={0.99}
         onPress={() => setOpen(!open)}
-        accessibilityLabel={`${g.stage} ${g.title} ${achDone(g.items)}/${g.items.length} 달성`}
+        accessibilityLabel={L.groupAria({
+          stage: g.stage,
+          title: g.title,
+          done: achDone(g.items),
+          total: g.items.length,
+        })}
         accessibilityState={{ expanded: open }}
         style={{
           flexDirection: 'row',
@@ -201,7 +209,7 @@ function ManagerSoon() {
     <View
       testID="ach-group-manager"
       accessible
-      accessibilityLabel="감독 커리어 업적, 곧 열려요. 감독 시뮬레이션이 열리면 감독으로 거둔 성적도 업적이 돼요."
+      accessibilityLabel={L.managerSoonAria}
       style={{
         gap: 6,
         padding: 12,
@@ -215,12 +223,11 @@ function ManagerSoon() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Stage>SOON</Stage>
         <Txt bold style={{ flex: 1 }}>
-          감독 커리어
+          {L.managerSoonTitle}
         </Txt>
       </View>
       <Txt tone="muted" v="sm">
-        감독 시뮬레이션이 열리면 감독으로 거둔 성적도 업적이 돼요. 선수·팀·구단주 업적처럼 시즌마다
-        새로 쌓여요.
+        {L.managerSoonNote}
       </Txt>
     </View>
   );
@@ -263,11 +270,11 @@ export function TeamAchievements({
     <Card gap={12}>
       <TmTitle
         eyebrow="Season achievements"
-        title="시즌 업적"
+        title={L.achTitle}
         right={
           ach && ach.seasons.length > 1 ? (
             <SelectField
-              label="시즌"
+              label={L.seasonLabel}
               testID="ach-season"
               value={ach.season}
               options={ach.seasons.map((o) => ({ value: o.id, label: o.name }))}
@@ -277,11 +284,7 @@ export function TeamAchievements({
           ) : null
         }
       />
-      <LoadState
-        status={status}
-        failText="업적을 불러오지 못했어요."
-        retry={() => load(ach?.season)}
-      >
+      <LoadState status={status} failText={L.achLoadFail} retry={() => load(ach?.season)}>
         {ach && tot && gv && sec ? (
           <>
             <View style={{ gap: 8 }} testID="ach-summary">
@@ -296,7 +299,7 @@ export function TeamAchievements({
                     gap: 4,
                   }}
                   accessible
-                  accessibilityLabel={`시즌 업적 점수 ${num(ach.score)}점`}
+                  accessibilityLabel={L.scoreAria({ n: num(ach.score) })}
                 >
                   <Txt
                     numberOfLines={1}
@@ -305,13 +308,13 @@ export function TeamAchievements({
                   >
                     {num(ach.score)}
                   </Txt>
-                  <Txt tone="muted">점</Txt>
+                  <Txt tone="muted">{L.pts}</Txt>
                 </View>
                 <Press
                   scale={0.97}
                   testID="ach-ranking"
                   onPress={openAchRanking}
-                  accessibilityLabel={`구단주 랭킹 ${achRankText(ach.rank, ach.ranked)}`}
+                  accessibilityLabel={L.rankAria({ text: achRankText(ach.rank, ach.ranked) })}
                   style={{
                     maxWidth: '50%',
                     minHeight: 44,
@@ -327,25 +330,30 @@ export function TeamAchievements({
                   }}
                 >
                   <Txt tone="muted" style={{ fontSize: rem(0.6875), fontWeight: '600' }}>
-                    구단주 랭킹
+                    {L.rankTitle}
                   </Txt>
                   <Txt style={{ fontSize: rem(0.8125), fontWeight: '700', textAlign: 'right' }}>
                     {achRankText(ach.rank, ach.ranked)}
                   </Txt>
                 </Press>
               </View>
-              <Bar ratio={gv.ratio} label="다음 등급까지" />
+              <Bar ratio={gv.ratio} label={L.nextGradeBar} />
               <Txt tone="muted" v="sm">
-                {`${gv.next ? `${gv.next.name}까지 ${num(gv.toNext)}점` : '최고 등급이에요'} · 업적 ${tot.done}/${tot.total} 달성`}
+                {L.achProgress({
+                  head: gv.next
+                    ? L.toNextGrade({ grade: achGradeName(gv.next), pts: num(gv.toNext) })
+                    : L.topGrade,
+                  done: tot.done,
+                  total: tot.total,
+                })}
               </Txt>
-              <Txt
-                tone="muted"
-                v="xs"
-              >{`${seasonName}에 처음 뛰어 은퇴한 내 선수 ${ach.players}명과 이 시즌 팀·구단 활동으로 채워요. 시즌마다 처음부터 다시 쌓아요.`}</Txt>
+              <Txt tone="muted" v="xs">
+                {L.achAbout({ season: seasonName, n: ach.players })}
+              </Txt>
             </View>
             {near.length ? (
               <View style={{ gap: 6 }} testID="ach-near">
-                <Txt v="eyebrow">다음 목표</Txt>
+                <Txt v="eyebrow">{L.nextGoal}</Txt>
                 {near.map((n) => (
                   <View
                     key={n.item.id}
@@ -364,7 +372,7 @@ export function TeamAchievements({
                           {`${n.group} · ${achState(n.item)}`}
                         </Txt>
                       </View>
-                      <Pts got>{`+${num(n.item.worth)}점`}</Pts>
+                      <Pts got>{L.worthPlus({ n: num(n.item.worth) })}</Pts>
                     </View>
                     <Bar ratio={n.ratio} sm />
                   </View>
@@ -373,7 +381,7 @@ export function TeamAchievements({
             ) : null}
             <View
               accessibilityRole="tablist"
-              accessibilityLabel="업적 분류"
+              accessibilityLabel={L.catsAria}
               style={{ flexDirection: 'row', gap: 6 }}
             >
               {sections.map((x) => {
@@ -385,7 +393,10 @@ export function TeamAchievements({
                     testID={`ach-cat-${x.id}`}
                     onPress={() => setCat(x.id)}
                     accessibilityRole="tab"
-                    accessibilityLabel={`${x.name} ${x.locked ? '잠김' : `${num(x.score)}점`}`}
+                    accessibilityLabel={L.catAria({
+                      name: x.name,
+                      state: x.locked ? L.catLocked : L.catScore({ n: num(x.score) }),
+                    })}
                     accessibilityState={{ selected: on }}
                     style={{
                       flex: 1,
@@ -408,7 +419,7 @@ export function TeamAchievements({
                       minimumFontScale={0.85}
                       style={{ fontSize: rem(0.875), fontWeight: '700' }}
                     >
-                      {x.name.replace(' 업적', '')}
+                      {achCatShort(x.id)}
                     </Txt>
                     <Txt num={400} tone={on ? 'accent' : 'muted'} style={{ fontSize: rem(0.75) }}>
                       {x.locked ? '🔒︎' : num(x.score)}

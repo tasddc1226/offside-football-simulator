@@ -6,6 +6,7 @@
   import { motionOK } from '../motion.js';
   import { MIN_INK, REVEAL_MS, SKEW_X, SKEW_Y, STAMP_MS, signFlourish } from '@offside/app-core/signature';
   import type { SheetView } from '@offside/app-core/sheets';
+  import { sheetContractText as L } from '@offside/app-core/i18n/ko/sheetContract';
 
   let { v }: { v: Extract<SheetView, { kind: 'contract' }> } = $props();
 
@@ -158,7 +159,7 @@
 </script>
 
 <div class="contract">
-  <button class="contract-x" aria-label="계약서 닫기" data-sign="close" disabled={sealed} onclick={v.onClose}>×</button>
+  <button class="contract-x" aria-label={L.close} data-sign="close" disabled={sealed} onclick={v.onClose}>×</button>
   <div class="eyebrow">{v.eyebrow}</div>
   <h2>{v.title}</h2>
   <p class="contract-text">{v.text}</p>
@@ -173,22 +174,22 @@
   <div class="sign-pad" class:inked={inked || named}>
     <canvas
       bind:this={canvas}
-      aria-label="선수 사인 입력 영역"
+      aria-label={L.padLabel}
       onpointerdown={down}
       onpointermove={move}
       onpointerup={up}
       onpointercancel={up}
     ></canvas>
-    <span class="sign-hint" aria-hidden="true">이곳에 사인해 주세요</span>
+    <span class="sign-hint" aria-hidden="true">{L.signHint}</span>
     <i aria-hidden="true"></i>
     {#if sealed}
       <div class="stamp" aria-hidden="true"><b>SIGNED</b><span>{v.club.name}</span></div>
     {/if}
   </div>
-  <p class="sign-note">게임 속 선수의 가상 사인이에요</p>
+  <p class="sign-note">{L.signNote}</p>
   <div class="sign-tools">
-    <button class="btn btn-sm" data-sign="clear" disabled={sealed} onclick={clear}>다시 쓰기</button>
-    <button class="btn btn-sm" data-sign="name" disabled={sealed} onclick={nameSign}>이름 사인 사용</button>
+    <button class="btn btn-sm" data-sign="clear" disabled={sealed} onclick={clear}>{L.clear}</button>
+    <button class="btn btn-sm" data-sign="name" disabled={sealed} onclick={nameSign}>{L.nameSign}</button>
   </div>
   <button class="btn btn-primary btn-block" data-sign="ok" disabled={!ready || sealed} onclick={sign}>
     {v.cta} <span aria-hidden="true">→</span>

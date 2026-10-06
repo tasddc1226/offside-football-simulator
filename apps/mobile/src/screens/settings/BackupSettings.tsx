@@ -28,17 +28,18 @@ import { appState } from '../../store';
 import { Btn, Txt } from '../../ui';
 import { Field, SettingsCard, SettingsLabel, TextField } from './parts';
 import { useColors } from '../../theme/useColors';
+import { backupText as L } from '@offside/app-core/i18n/ko/backup';
 
 const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
-const FAIL_TEXT: Record<DecodeFail, string> = {
-  empty: '백업 코드나 내보낸 백업 글을 붙여넣어 주세요',
-  format: '백업 코드가 올바르지 않아요. 코드를 끝까지 복사했는지 확인해 주세요',
-  version: '이 백업은 지금 게임과 형식이 맞지 않아 불러올 수 없어요',
-  saveVersion: '이 백업은 지금 게임 버전과 맞지 않아 불러올 수 없어요',
-  save: '백업 안의 커리어 데이터가 올바르지 않아 불러올 수 없어요',
-  tooLarge: '백업 코드가 너무 커서 불러올 수 없어요',
-};
+const failText = (): Record<DecodeFail, string> => ({
+  empty: L.failEmptyApp,
+  format: L.failFormat,
+  version: L.failVersion,
+  saveVersion: L.failSaveVersion,
+  save: L.failSave,
+  tooLarge: L.failTooLarge,
+});
 
 /** 지금 진행 중인 세이브로 백업 JSON·코드를 만든다(못 만들면 null). */
 function build() {
@@ -70,10 +71,10 @@ export function BackupSettings() {
     try {
       await Clipboard.setStringAsync(b.code);
       setManualCode('');
-      toast('백업 코드를 복사했어요');
+      toast(L.copied);
     } catch {
       setManualCode(b.code); // 자동 복사 실패 — 칸을 열어 직접 복사하게 한다.
-      toast('아래 코드를 길게 눌러 직접 복사해 주세요');
+      toast(L.copyManual);
     }
   }
 
@@ -81,36 +82,31 @@ export function BackupSettings() {
     const b = build();
     if (!b) return;
     try {
-      await Share.share({ title: 'OFFSIDE 커리어 백업', message: b.json });
+      await Share.share({ title: L.shareTitle, message: b.json });
     } catch {
-      toast('공유하지 못했어요. 코드를 복사해 주세요');
+      toast(L.shareFail);
     }
   }
 
   function apply(backup: Backup) {
-    if (!applyBackup(backup, loadHOF()))
-      return toast('저장 공간이 부족해 백업을 불러오지 못했어요. 현재 커리어는 그대로예요');
+    if (!applyBackup(backup, loadHOF())) return toast(L.noSpace);
     reloadGame();
     appState.report = null;
     setPasted('');
     setManualCode('');
     goHome();
-    toast('백업을 불러왔어요');
+    toast(L.restored);
   }
 
   function importText(text: string) {
     const r = decodeBackup(text);
-    if (!r.ok) return toast(FAIL_TEXT[r.reason]);
+    if (!r.ok) return toast(failText()[r.reason]);
     const cur = appState.G;
     if (cur && !cur.retired) {
-      Alert.alert(
-        '백업 불러오기',
-        `지금 진행 중인 ${cur.name} 선수의 커리어를 백업으로 바꿀까요? 되돌릴 수 없어요.`,
-        [
-          { text: '취소', style: 'cancel' },
-          { text: '바꾸기', style: 'destructive', onPress: () => apply(r.backup) },
-        ],
-      );
+      Alert.alert(L.importLabel, L.replaceConfirm({ name: cur.name }), [
+        { text: L.cancel, style: 'cancel' },
+        { text: L.replaceOk, style: 'destructive', onPress: () => apply(r.backup) },
+      ]);
       return;
     }
     apply(r.backup);
@@ -119,35 +115,31 @@ export function BackupSettings() {
   async function pasteFromClipboard() {
     try {
       const t = await Clipboard.getStringAsync();
-      if (!t.trim()) return toast('클립보드가 비어 있어요');
+      if (!t.trim()) return toast(L.clipEmpty);
       setPasted(t);
     } catch {
-      toast('클립보드를 읽지 못했어요');
+      toast(L.clipFail);
     }
   }
 
   return (
     <SettingsCard>
-      <SettingsLabel
-        eyebrow="Backup"
-        title="진행 중 커리어 백업"
-        muted="기기를 바꿀 때 쓰세요. 백업 코드는 다른 사람에게 보내지 마세요."
-      />
+      <SettingsLabel eyebrow="Backup" title={L.title} muted={L.bodyApp} />
       {G ? (
         <View
           testID="backup-export-box"
           style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}
         >
           <Btn sm testID="backup-copy" onPress={() => void copyCode()}>
-            코드 복사
+            {L.copyCode}
           </Btn>
           <Btn sm testID="backup-file" onPress={() => void shareFile()}>
-            공유로 내보내기
+            {L.shareFile}
           </Btn>
         </View>
       ) : null}
       {G && manualCode ? (
-        <Field label="백업 코드 (직접 복사)" style={{ marginTop: 12 }}>
+        <Field label={L.manualLabel} style={{ marginTop: 12 }}>
           <View
             style={{
               borderWidth: 1,
@@ -169,15 +161,15 @@ export function BackupSettings() {
         testID="backup-import-box"
         style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: c.line }}
       >
-        <Field label="백업 불러오기">
+        <Field label={L.importLabel}>
           <TextField
             value={pasted}
             onChangeText={setPasted}
             multiline
             numberOfLines={3}
-            placeholder="백업 코드를 여기에 붙여넣어요"
+            placeholder={L.pastePlaceholder}
             testID="backup-paste"
-            accessibilityLabel="백업 불러오기"
+            accessibilityLabel={L.importLabel}
             spellCheck={false}
             returnKeyType="default"
             style={{ fontFamily: MONO, fontSize: 14, minHeight: 80, maxHeight: 120 }}
@@ -190,14 +182,14 @@ export function BackupSettings() {
             disabled={!pasted.trim()}
             onPress={() => importText(pasted)}
           >
-            불러오기
+            {L.importBtn}
           </Btn>
           <Btn sm testID="backup-pick" onPress={() => void pasteFromClipboard()}>
-            클립보드에서 붙여넣기
+            {L.pasteClipboard}
           </Btn>
         </View>
         <Txt tone="muted" v="xs" style={{ marginTop: 8 }}>
-          백업 코드나 내보낸 백업 글을 붙여넣으면 돼요.
+          {L.pasteHint}
         </Txt>
       </View>
     </SettingsCard>

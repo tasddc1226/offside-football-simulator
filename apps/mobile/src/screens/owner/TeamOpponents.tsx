@@ -5,6 +5,7 @@ import { TeamLogo } from '../../components/TeamLogo';
 import { TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
 import type { TeamOpponent } from '@offside/app-core/api/team';
 import { recordText } from '@offside/app-core/teamText';
+import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -46,18 +47,16 @@ export function TeamOpponents({
       <View style={{ gap: 4 }}>
         <Txt v="eyebrow">Match</Txt>
         <Txt v="h1" accessibilityRole="header">
-          상대 고르기
+          {L.oppTitle}
         </Txt>
         {hint ? null : (
-          <Txt
-            tone="muted"
-            v="sm"
-          >{`내 팀 OVR ${ovr}과 비슷한 팀이에요 · 오늘 남은 경기 ${matchesLeft}/${perDay}`}</Txt>
+          <Txt tone="muted" v="sm">
+            {L.oppNear({ ovr, left: matchesLeft, per: perDay })}
+          </Txt>
         )}
-        <Txt
-          tone="muted"
-          v="xs"
-        >{`같은 팀에는 하루 한 번 도전할 수 있어요. 최근 ${TEAM_REPEAT_WINDOW_DAYS}일 안에 만난 팀과 다시 경기하면 레이팅 변화가 줄어요.`}</Txt>
+        <Txt tone="muted" v="xs">
+          {L.oppRuleApp({ days: TEAM_REPEAT_WINDOW_DAYS })}
+        </Txt>
       </View>
       {hint ? (
         <>
@@ -71,17 +70,17 @@ export function TeamOpponents({
               onPress={saveAndFind}
               testID="team-save-find"
             >
-              {saving ? '저장 중…' : '변경 저장 후 상대 보기'}
+              {saving ? L.saving : L.saveAndFind}
             </Btn>
           ) : null}
           {toTeam ? (
             <Btn sm style={{ alignSelf: 'flex-start' }} onPress={toTeam}>
-              편성으로
+              {L.toLineup}
             </Btn>
           ) : null}
         </>
       ) : (
-        <LoadState status={status} failText="상대를 불러오지 못했어요." retry={reload}>
+        <LoadState status={status} failText={L.oppLoadFail} retry={reload}>
           {opponents.length ? (
             opponents.map((o) => (
               <View
@@ -119,19 +118,19 @@ export function TeamOpponents({
                   kind="primary"
                   sm
                   testID="team-challenge"
-                  accessibilityLabel={`${o.name}에 도전`}
+                  accessibilityLabel={L.challengeAria({ name: o.name })}
                   disabled={playing || matchesLeft === 0}
                   onPress={() => challenge(o)}
                 >
-                  도전
+                  {L.challenge}
                 </Btn>
               </View>
             ))
           ) : (
-            <Txt tone="muted">아직 겨룰 팀이 없어요. 다른 구단주가 팀을 꾸리면 여기에 나와요.</Txt>
+            <Txt tone="muted">{L.noOpponents}</Txt>
           )}
           <Btn sm style={{ alignSelf: 'flex-start' }} onPress={reload} disabled={playing}>
-            다른 상대 보기
+            {L.moreOpponents}
           </Btn>
         </LoadState>
       )}

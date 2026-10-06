@@ -9,6 +9,7 @@ import { configureApi } from '@offside/app-core/api/client';
 import { configureLive } from '@offside/app-core/api/liveSocket';
 import { API_BASE_URL } from './config';
 import { authHeaders, renewSession } from './session';
+import { bootLocale } from './locale';
 
 const g = globalThis as { crypto?: { randomUUID?: () => string } };
 g.crypto ??= {};
@@ -20,6 +21,9 @@ setStorage({
   getItem: (k) => kv.getString(k) ?? null,
   setItem: (k, v) => kv.set(k, v),
 });
+
+// T-11-102 화면 문구 언어 — 저장소를 정한 뒤, 화면을 그리기 전에.
+bootLocale();
 
 configureApi({
   baseUrl: API_BASE_URL,

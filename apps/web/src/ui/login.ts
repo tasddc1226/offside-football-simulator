@@ -2,7 +2,7 @@
 // 시작(startGoogleLogin), 로그인 뒤 돌아올 곳 기억, OAuth 콜백(/settings?google=linked|switched|error) 처리.
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { getProfile, googleStartUrl } from '@offside/app-core/api/client';
-import { LOGIN_OFFLINE_TEXT, googleFailText, loginDoneText } from '@offside/app-core/loginText';
+import { loginOfflineText, googleFailText, loginDoneText } from '@offside/app-core/loginText';
 import { loadHOF } from '@offside/game/season';
 import { toast } from './helpers.js';
 import { currentInApp, showInAppLoginNotice } from './inapp-open.js';
@@ -39,7 +39,7 @@ export async function startGoogleLogin(back: LoginReturn | null) {
   const inApp = currentInApp();
   if (inApp) return showInAppLoginNotice(inApp);
   rememberLoginReturn(back);
-  if (!(await getProfile()).ok) return toast(LOGIN_OFFLINE_TEXT);
+  if (!(await getProfile()).ok) return toast(loginOfflineText());
   window.location.assign(googleStartUrl());
 }
 export function handleOAuthReturn() {

@@ -11,6 +11,7 @@ import {
   type TitleDef,
 } from '@offside/game/titles';
 import type { GameState } from '@offside/game/types';
+import { titleText as L } from '@offside/app-core/i18n/ko/title';
 import { TitleTag } from '../../components/TitleTag';
 import { buzz, save } from '../../game/host';
 import { appState } from '../../store';
@@ -52,7 +53,7 @@ export function TitleDex({ s }: { s: GameState }) {
         <View>
           <Txt v="eyebrow">Titles</Txt>
           <Txt v="h2" accessibilityRole="header">
-            칭호 도감
+            {L.dexTitle}
           </Txt>
         </View>
         <Txt
@@ -63,17 +64,17 @@ export function TitleDex({ s }: { s: GameState }) {
       </View>
       {main ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-          <Txt style={{ fontSize: rem(0.875) }}>대표 칭호</Txt>
+          <Txt style={{ fontSize: rem(0.875) }}>{L.mainTitle}</Txt>
           <TitleTag name={main.name} rarity={main.rarity} />
           <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-            {s.titleSel ? '직접 고름' : '자동'}
+            {s.titleSel ? L.selManual : L.selAuto}
           </Txt>
         </View>
       ) : null}
       {earned.length ? (
         <>
           <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-            칭호를 누르면 대표 칭호로 정해져 선수 카드와 명예의 전당에 표시돼요.
+            {L.pickHint}
           </Txt>
           <View style={{ gap: 6 }}>
             {earned.map((x) => {
@@ -83,7 +84,11 @@ export function TitleDex({ s }: { s: GameState }) {
                   key={x.d.id}
                   scale={0.985}
                   testID={`title-${x.d.id}`}
-                  accessibilityLabel={`${RARITY_LABEL[x.d.rarity]} 칭호 ${x.d.name}, ${x.d.desc}`}
+                  accessibilityLabel={L.itemLabel({
+                    rarity: RARITY_LABEL[x.d.rarity],
+                    name: x.d.name,
+                    desc: x.d.desc,
+                  })}
                   accessibilityState={{ selected: on }}
                   onPress={() => {
                     buzz();
@@ -106,7 +111,7 @@ export function TitleDex({ s }: { s: GameState }) {
                     {x.d.desc}
                   </Txt>
                   <Txt tone="muted" num style={{ fontSize: rem(0.75) }}>
-                    {x.year ? x.year : '이전 기록'}
+                    {x.year ? x.year : L.earlier}
                   </Txt>
                 </Press>
               );
@@ -115,7 +120,7 @@ export function TitleDex({ s }: { s: GameState }) {
         </>
       ) : (
         <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-          아직 얻은 칭호가 없어요. 프로 데뷔가 첫 번째 칭호예요.
+          {L.emptyEarned}
         </Txt>
       )}
       {locked.length ? (
@@ -127,7 +132,7 @@ export function TitleDex({ s }: { s: GameState }) {
             style={{ paddingVertical: 4 }}
           >
             <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '600' }}>
-              {`${openLocked ? '▾' : '▸'} 아직 얻지 못한 칭호 ${pool.length - earned.length}개`}
+              {`${openLocked ? '▾' : '▸'} ${L.lockedSummary({ n: pool.length - earned.length })}`}
             </Txt>
           </Press>
           {openLocked
@@ -163,7 +168,7 @@ export function TitleDex({ s }: { s: GameState }) {
                               numberOfLines={1}
                               style={{ flex: 1, fontSize: rem(0.75) }}
                             >
-                              {`${d.hidden ? '숨겨진 칭호' : d.desc} · ${RARITY_LABEL[d.rarity]}`}
+                              {`${d.hidden ? L.hiddenDesc : d.desc} · ${RARITY_LABEL[d.rarity]}`}
                             </Txt>
                             {p && !d.hidden ? (
                               <Txt
@@ -175,7 +180,7 @@ export function TitleDex({ s }: { s: GameState }) {
                           {p && !d.hidden ? (
                             <View
                               accessibilityRole="progressbar"
-                              accessibilityLabel={`${d.name} 진행도`}
+                              accessibilityLabel={L.progressLabel({ name: d.name })}
                               accessibilityValue={{ min: 0, max: p[1], now: p[0] }}
                               style={{
                                 height: 4,

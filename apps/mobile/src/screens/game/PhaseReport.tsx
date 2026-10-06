@@ -17,6 +17,7 @@ import { Pill } from '../../ui/bits';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
 import { NewTitles } from './NewTitles';
+import { gameReportText as L } from '@offside/app-core/i18n/ko/gameReport';
 
 const DOT_MS = 60;
 
@@ -50,10 +51,10 @@ export function PhaseReport({ r }: { r: Report }) {
     { from: zeros, ease: cubicOut },
   ) as [number, number, number, number, number, number, number];
   const tally = [
-    { key: 'apps', l: '출전', v: apps.toFixed(0) },
-    { key: 'goals', l: '골', v: goals.toFixed(0) },
-    { key: 'col', l: r.back ? '무실점' : '도움', v: col.toFixed(0) },
-    { key: 'rating', l: '평점', v: b?.rating ? rating.toFixed(2) : '-' },
+    { key: 'apps', l: L.tallyApps, v: apps.toFixed(0) },
+    { key: 'goals', l: L.tallyGoals, v: goals.toFixed(0) },
+    { key: 'col', l: r.back ? L.tallyCs : L.tallyAssists, v: col.toFixed(0) },
+    { key: 'rating', l: L.tallyRating, v: b?.rating ? rating.toFixed(2) : '-' },
   ];
   const small = { fontSize: rem(1.25), color: c.muted } as const;
 
@@ -72,7 +73,7 @@ export function PhaseReport({ r }: { r: Report }) {
         </View>
         {r.rank.after ? (
           <Pill tone={rankDelta > 0 ? 'good' : rankDelta < 0 ? 'bad' : undefined}>
-            {`팀 ${r.rank.after}위${rankDelta > 0 ? ` ▲${rankDelta}` : rankDelta < 0 ? ` ▼${-rankDelta}` : ''}`}
+            {`${L.teamRank({ n: r.rank.after })}${rankDelta > 0 ? ` ▲${rankDelta}` : rankDelta < 0 ? ` ▼${-rankDelta}` : ''}`}
           </Pill>
         ) : null}
       </View>
@@ -81,7 +82,7 @@ export function PhaseReport({ r }: { r: Report }) {
         <>
           <View
             accessible
-            accessibilityLabel={`경기 결과 ${b.w}승 ${b.d}무 ${b.l}패`}
+            accessibilityLabel={L.dotsLabel({ w: b.w, d: b.d, l: b.l })}
             style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}
           >
             {r.games.map((m, i) => (
@@ -102,11 +103,11 @@ export function PhaseReport({ r }: { r: Report }) {
             })}
           >
             {`${Math.round(w)}`}
-            <Text style={small}>{'승'}</Text>
+            <Text style={small}>{L.win}</Text>
             {` ${Math.round(d)}`}
-            <Text style={small}>{'무'}</Text>
+            <Text style={small}>{L.draw}</Text>
             {` ${Math.round(l)}`}
-            <Text style={small}>{'패'}</Text>
+            <Text style={small}>{L.loss}</Text>
           </Text>
           <StatGrid items={tally.map((x) => ({ key: x.key, l: x.l, v: x.v }))} />
           {b.hl.length ? (
@@ -121,7 +122,7 @@ export function PhaseReport({ r }: { r: Report }) {
         </>
       ) : (
         <Txt tone="muted">
-          {'예상 역할: '}
+          {`${L.expectedRole} `}
           <Txt style={{ fontWeight: '700' }}>{r.role}</Txt>
         </Txt>
       )}
@@ -129,7 +130,7 @@ export function PhaseReport({ r }: { r: Report }) {
       {r.comps.length ? (
         <Later after={after}>
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
-            컵 · 대륙 대회
+            {L.cups}
           </Txt>
           {r.comps.map((x, i) =>
             x.good ? (
@@ -162,7 +163,7 @@ export function PhaseReport({ r }: { r: Report }) {
               <Txt v="eyebrow" style={{ marginBottom: 6 }}>
                 {x.name}
               </Txt>
-              <Txt tone="muted">이번 A매치 명단에서 빠졌어요.</Txt>
+              <Txt tone="muted">{L.notCalled}</Txt>
             </>
           )}
         </Later>
@@ -176,12 +177,12 @@ export function PhaseReport({ r }: { r: Report }) {
 
       <Later after={after}>
         <Txt v="eyebrow" style={{ marginBottom: 6 }}>
-          변화
+          {L.changes}
         </Txt>
         {r.chips.length ? (
           <Chips chips={r.chips} pop delay={after} />
         ) : (
-          <Txt tone="muted">큰 변화 없음</Txt>
+          <Txt tone="muted">{L.noChange}</Txt>
         )}
       </Later>
 
@@ -194,7 +195,7 @@ export function PhaseReport({ r }: { r: Report }) {
             style={{ paddingVertical: 4 }}
           >
             <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '600' }}>
-              {`${openGames ? '▾' : '▸'} 경기별 기록 ${r.games.length}경기`}
+              {`${openGames ? '▾' : '▸'} ${L.gamesSummary({ n: r.games.length })}`}
             </Txt>
           </Press>
           {openGames ? (

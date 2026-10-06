@@ -16,12 +16,16 @@ import { boot } from '../game/boot';
 import { startPush } from '../platform/push';
 import { syncAdFree } from '../platform/adFree';
 import { useColors, useIsDark } from '../theme/useColors';
+import { useSnapshot } from 'valtio';
+import { prefs } from '../store';
 
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const c = useColors();
   const dark = useIsDark();
+  // T-11-102 언어를 바꾸면 화면 전체를 다시 그린다(문구는 그릴 때 읽는다).
+  const { lang } = useSnapshot(prefs);
   const [fonts] = useFonts({
     BarlowCondensed_400Regular,
     BarlowCondensed_500Medium,
@@ -46,7 +50,10 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style={dark ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }} />
+      <Stack
+        key={lang}
+        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}
+      />
     </GestureHandlerRootView>
   );
 }

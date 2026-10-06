@@ -7,6 +7,7 @@ import { useColors } from '../theme/useColors';
 import { Btn } from './Btn';
 import { BarBelow } from './Screen';
 import { goBack } from '../game/nav';
+import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
 export function ActionBar({ children, row }: { children: ReactNode; row?: boolean }) {
   const c = useColors();
@@ -35,7 +36,7 @@ export function BackBar({ fallback, testID }: { fallback: () => void; testID?: s
   return (
     <ActionBar>
       <Btn block onPress={() => goBack(fallback)} {...(testID ? { testID } : {})}>
-        ← 이전으로
+        {shellMoreText.back}
       </Btn>
     </ActionBar>
   );
