@@ -1,6 +1,7 @@
 // T-11-128 구단주 시즌 결산과 휘장. 결산은 cron이 굳힌 값만 읽는다(team/seasonClose.ts) — 굳히는 중이면 pending.
 import {
   OwnerHonorsResponseSchema,
+  RECAP_SQUAD_MAX,
   SeasonPickQuerySchema,
   SeasonRecapResponseSchema,
   type OwnerHonor,
@@ -10,7 +11,7 @@ import {
 } from '@offside/contracts';
 import { CARD_TIERS } from '@offside/contracts/card-tier';
 import { openTeamSeasons, teamSeasonClosed } from '@offside/contracts/service-seasons';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, lte, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import type { Db } from '../db/client.js';
 import { estimatedAttrsOf, peakOf, toLineupCareer } from '../db/repos/ownerTeams.js';
@@ -101,8 +102,8 @@ async function recapStats(db: Db, stored: StoredStats | null): Promise<SeasonRec
   };
 }
 
-/** 대표 선수의 카드 — 팀 화면 카드와 같은 값(옛 기록은 추정 능력치). */
-function bestCard(
+/** 선수 카드 — 팀 화면 카드와 같은 값(옛 기록은 추정 능력치). */
+function cardOf(
   row: Parameters<typeof toLineupCareer>[0] & {
     cardAttrsJson: string | null;
     legendScore: number | null;
@@ -127,6 +128,38 @@ function bestCard(
   };
 }
 
+/** 그 시즌에 키워 마감 전에 은퇴한 내 선수(결산 기록과 같은 기준 — team/seasonClose.ts), 레전드 점수 순. */
+const squadOf = (db: Db, profileId: string, season: number, cutoff: string) =>
+  db
+    .select({
+      id: careers.id,
+      pos: careers.pos,
+      nation: careers.nation,
+      dpos: careers.dpos,
+      peak: careers.peak,
+      number: careers.shirtNumber,
+      publicName: careers.publicName,
+      peakProfile: careers.peakProfile,
+      cardAttrsJson: careers.cardAttrsJson,
+      serviceSeason: careers.serviceSeason,
+      legendScore: careers.legendScore,
+      lastClub: careers.lastClub,
+      lastClubId: careers.lastClubId,
+    })
+    .from(careers)
+    .where(
+      and(
+        eq(careers.profileId, profileId),
+        sql`coalesce(${careers.serviceSeason}, 0) = ${season}`,
+        eq(careers.hidden, 0),
+        eq(careers.status, 'retired'),
+        isNotNull(careers.legendScore),
+        lte(careers.retiredAt, cutoff),
+      ),
+    )
+    .orderBy(desc(careers.legendScore), asc(careers.id))
+    .limit(RECAP_SQUAD_MAX);
+
 export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
   // 내 시즌 결산. ?season= 없으면 가장 최근에 끝난 시즌.
   app.get('/v1/owner/season-recap', requireProfile, async (c) => {
@@ -144,7 +177,7 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
     ) =>
       ok(c, SeasonRecapResponseSchema, { season, status, recap, honors }, 200, 'private, no-store');
     if (state?.step !== 'done') return reply('pending', null, []);
-    const [[row], honors] = await Promise.all([
+    const [[row], honors, squad] = await Promise.all([
       db
         .select({
           r: ownerSeasonRecords,
@@ -167,6 +200,7 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
           and(eq(ownerSeasonRecords.profileId, profileId), eq(ownerSeasonRecords.season, season)),
         ),
       honorsOf(db, profileId, season),
+      squadOf(db, profileId, season, state.cutoff),
     ]);
     if (!row) return reply('none', null, []);
     const { r } = row;
@@ -188,7 +222,7 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
               lastClub: row.lastClub,
               score: r.bestScore ?? 0,
               peak: row.peak,
-              card: bestCard({ ...row, id: r.bestCareerId, pos: row.pos, publicName: row.name }),
+              card: cardOf({ ...row, id: r.bestCareerId, pos: row.pos, publicName: row.name }),
             }
           : null,
       hofRank: r.hofRank,
@@ -217,6 +251,11 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
           ? { score: r.achScore, done: r.achDone ?? 0, rank: r.achRank, ranked: ranked.ach }
           : null,
       stats,
+      squad: squad.map((p) => ({
+        card: cardOf(p),
+        lastClub: p.lastClub,
+        lastClubId: p.lastClubId,
+      })),
     };
     return reply('ready', recap, honors);
   });

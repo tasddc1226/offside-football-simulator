@@ -221,3 +221,34 @@ export function recapHeadline(r: SeasonRecap): string {
   if (r.team) return L.headlineTeam({ name: r.team.name });
   return L.headlinePlayers({ n: num(r.players) });
 }
+
+/** 단체사진 한 줄 · 사진 전체에 세우는 선수 수. */
+export const PHOTO_ROW_MAX = 8;
+export const PHOTO_MAX = 24;
+
+/** 순위 순 목록을 가운데부터 좌우로 번갈아 세운다(1등이 가운데). */
+function centerOut<T>(ranked: readonly T[]): T[] {
+  const out: T[] = [];
+  ranked.forEach((x, i) => (i % 2 ? out.unshift(x) : out.push(x)));
+  return out;
+}
+
+/**
+ * 국가대표 단체사진처럼 줄을 나눈다 — 레전드 점수 순 목록을 받아 앞줄(0번)부터 돌려준다. 한 줄 PHOTO_ROW_MAX명까지,
+ * 줄마다 거의 같은 수로 나누고 남는 자리는 앞줄부터 채운다. 줄 안에서는 잘한 선수가 가운데.
+ */
+export function photoRows<T>(squad: readonly T[]): T[][] {
+  const list = squad.slice(0, PHOTO_MAX);
+  if (list.length === 0) return [];
+  const rows = Math.ceil(list.length / PHOTO_ROW_MAX);
+  const base = Math.floor(list.length / rows);
+  let extra = list.length % rows;
+  const out: T[][] = [];
+  let at = 0;
+  for (let r = 0; r < rows; r++) {
+    const size = base + (extra-- > 0 ? 1 : 0);
+    out.push(centerOut(list.slice(at, at + size)));
+    at += size;
+  }
+  return out;
+}

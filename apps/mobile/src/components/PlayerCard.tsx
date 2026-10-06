@@ -316,11 +316,14 @@ export function PlayerCard({
   cell,
   code,
   compact = false,
+  mini = false,
   animate = true,
 }: {
   cell: PlayerCardData;
   code: string;
   compact?: boolean;
+  /** 이적시장 목록용 — compact에서 이름 줄을 뺀다(이름은 줄 옆에 따로 나온다). */
+  mini?: boolean;
   animate?: boolean;
 }) {
   const country = !cell.youth ? NATION_BY_CODE.get(cell.nation ?? DEFAULT_NATION) : undefined;
@@ -331,7 +334,7 @@ export function PlayerCard({
   const shirtWidth = compact ? 25 : Math.min(43, Math.max(24, cardWidth - 56));
   // 자리 OVR은 최고 OVR과 다를 때(제 자리가 아닐 때)만 — 같으면 같은 숫자가 두 번 보인다(웹 PlayerCard).
   const deployed = cell.peak !== undefined && cell.peak !== cell.rating;
-  const height = compact ? 88 : 242 + (deployed ? 31 : 0);
+  const height = compact ? (mini ? 68 : 88) : 242 + (deployed ? 31 : 0);
   const shield = 'M2 14H17L25 5L50 1L75 5L83 14H98L97 149L88 161L50 173L12 161L3 149Z';
   return (
     <View
@@ -479,18 +482,20 @@ export function PlayerCard({
       {!cell.youth && cell.season !== undefined ? (
         <SeasonBadge season={cell.season} compact={compact} />
       ) : null}
-      <View
-        style={{
-          width: '100%',
-          marginTop: compact ? 1 : 3,
-          paddingHorizontal: 1,
-          borderTopWidth: 0.5,
-          borderBottomWidth: 0.5,
-          borderColor: tone.line,
-        }}
-      >
-        <CardName name={cell.name} color={tone.ink} animate={animate} compact={compact} />
-      </View>
+      {mini ? null : (
+        <View
+          style={{
+            width: '100%',
+            marginTop: compact ? 1 : 3,
+            paddingHorizontal: 1,
+            borderTopWidth: 0.5,
+            borderBottomWidth: 0.5,
+            borderColor: tone.line,
+          }}
+        >
+          <CardName name={cell.name} color={tone.ink} animate={animate} compact={compact} />
+        </View>
+      )}
       {deployed ? (
         <View style={{ alignItems: 'center', marginTop: 2 }}>
           <Text

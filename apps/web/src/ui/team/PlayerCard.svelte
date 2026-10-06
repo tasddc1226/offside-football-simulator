@@ -10,8 +10,8 @@
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
-  let { player, name, rating, role, nation, season, compact = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
-    { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; season?: number | undefined; compact?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
+  let { player, name, rating, role, nation, season, compact = false, mini = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
+    { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; season?: number | undefined; compact?: boolean; mini?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
   // T-11-114 카드 시즌 뱃지(유스 선수·시즌을 모르는 옛 응답은 없다).
   const cardSeason = $derived(youth ? undefined : (season ?? player?.season));
   const country = $derived(!youth ? NATION_BY_CODE.get(nation ?? player?.nation ?? DEFAULT_NATION) : undefined);
@@ -33,7 +33,7 @@
   const deployed = $derived(deploymentRating !== undefined && deploymentRating !== rating);
 </script>
 
-<div class="player-card" class:compact class:youth class:deployed data-tier={tier}>
+<div class="player-card" class:compact class:mini class:youth class:deployed data-tier={tier}>
   <div class="card-face">
     <div class="card-rating" title="{ratingLabel} {rating}"><b>{rating}</b><span>{role}</span></div>
     {#if cardSeason !== undefined}<span class="card-season" data-card-season={cardSeason} style:--season-bg={cardSeasonColor(cardSeason)} title={teamSeasonLabel(cardSeason)}>{cardSeasonBadge(cardSeason)}</span>{/if}
@@ -113,4 +113,8 @@
   .compact .card-name { font-size:11px; margin-top:3px; }
   .compact.deployed .card-art {height:36px;}
   @media(max-width:440px) { .compact .card-face { height:88px; padding:8px 3px 10px; } .compact .card-rating { left:5px;top:11px; } .compact .card-season {top:2px;} .compact .card-rating b { font-size:1.3rem; } .compact .card-art { height:34px;margin-top:8px; } .compact .shirt-number {font-size:1rem;} .compact.deployed .card-art {height:24px;} }
+  /* 이적시장 목록용 — 이름은 줄 옆에 따로 나오므로 카드에서 뺀다(compact와 같이 쓴다). 높이는 이름 줄만큼 줄인다. */
+  .mini .card-name {display:none;}
+  .mini .card-face {height:84px;}
+  @media(max-width:440px) { .mini .card-face {height:68px;} }
 </style>

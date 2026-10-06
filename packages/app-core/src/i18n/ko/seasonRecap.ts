@@ -121,6 +121,12 @@ const ko = {
   shareText: (p: { season: string }) => `오프사이드 ${p.season} 결산`,
   shareAlt: (p: { season: string }) => `${p.season} 결산 공유 이미지`,
   cardTagline: '고3 축구선수의 한 생을 키우는 게임',
+  secSquad: '이 시즌의 선수단',
+  squadLead: (p: { n: string }) => `키운 선수 ${p.n}명이 한자리에 모였어요`,
+  photoCaption: (p: { season: string }) => `${p.season} 선수단`,
+  photoMore: (p: { n: number }) => `외 ${p.n}명`,
+  photoAria: (p: { season: string; names: string }) => `${p.season} 선수단 단체사진: ${p.names}`,
+  reelAria: '키운 선수 카드. 옆으로 넘겨 볼 수 있어요.',
 };
 
 export type SeasonRecapMsgs = typeof ko;

@@ -2,6 +2,8 @@ import type { OwnerHonor, SeasonRecap } from '@offside/contracts';
 import { describe, expect, it } from 'vitest';
 import {
   honorViews,
+  PHOTO_MAX,
+  photoRows,
   rankText,
   recapCardView,
   recapCutoffText,
@@ -158,5 +160,26 @@ describe('T-11-128 시즌 결산 문구', () => {
       expect(recapTeamSummary({ ...team, goalsAgainst: null }).goalDiff).toBeNull();
       expect([signed(34), signed(-3), signed(0)]).toEqual(['+34', '-3', '0']);
     });
+  });
+});
+
+describe('photoRows', () => {
+  const ids = (n: number) => Array.from({ length: n }, (_, i) => i);
+
+  it('한 줄 8명까지는 한 줄, 1등이 가운데', () => {
+    expect(photoRows(ids(5))).toEqual([[3, 1, 0, 2, 4]]);
+    expect(photoRows([])).toEqual([]);
+  });
+
+  it('줄을 고르게 나누고 남는 자리는 앞줄부터', () => {
+    expect(photoRows(ids(20)).map((r) => r.length)).toEqual([7, 7, 6]);
+    expect(photoRows(ids(9)).map((r) => r.length)).toEqual([5, 4]);
+  });
+
+  it('많아도 PHOTO_MAX명(한 줄 8명 × 3줄)까지만 세운다', () => {
+    const rows = photoRows(ids(30));
+    expect(PHOTO_MAX).toBe(24);
+    expect(rows.map((r) => r.length)).toEqual([8, 8, 8]);
+    expect(rows.flat().sort((a, b) => a - b)).toEqual(ids(24));
   });
 });

@@ -115,4 +115,10 @@ export const seasonRecap: Translation<SeasonRecapMsgs> = {
   shareText: (p) => `My OFFSIDE ${p.season} recap`,
   shareAlt: (p) => `${p.season} recap share image`,
   cardTagline: 'Live a footballer’s whole career',
+  secSquad: 'The squad of the season',
+  squadLead: (p) => `${p.n} players you raised, together in one shot`,
+  photoCaption: (p) => `${p.season} squad`,
+  photoMore: (p) => `+${p.n} more`,
+  photoAria: (p) => `${p.season} squad photo: ${p.names}`,
+  reelAria: 'Cards of the players you raised. Swipe to browse.',
 };

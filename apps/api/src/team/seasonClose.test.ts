@@ -172,6 +172,14 @@ describe('T-11-128 시즌 결산', () => {
         scorer: { careerId: scorer, name: '한빛', pos: 'FW', goals: 120 },
       },
     });
+    // 단체사진 · 카드 흐름: 마감 전 은퇴한 선수만, 레전드 점수 순(카드 · 마지막 구단).
+    expect(
+      mine.recap?.squad?.map((m) => [m.card.careerId, m.card.legendScore, m.lastClub]),
+    ).toEqual([
+      [best, 500, '서울'],
+      [scorer, 200, '서울'],
+    ]);
+    expect(mine.recap?.best?.card).toMatchObject({ careerId: best, peak: 80, season: 0 });
     const kinds = Object.fromEntries(mine.honors.map((h) => [h.kind, h]));
     expect(Object.keys(kinds).sort()).toEqual(
       ['achievements', 'hof', 'pioneer', 'retired-number', 'team', 'wall-of-honor'].sort(),

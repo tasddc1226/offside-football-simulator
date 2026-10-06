@@ -69,6 +69,17 @@ export const SeasonRecapStatsSchema = z.strictObject({
 });
 export type SeasonRecapStats = z.infer<typeof SeasonRecapStatsSchema>;
 
+/** 결산 단체사진 · 카드 흐름에 싣는 선수 수(레전드 점수 순). */
+export const RECAP_SQUAD_MAX = 30;
+
+/** 그 시즌에 키워 마감 전에 은퇴한 선수(카드 + 도트 유니폼용 마지막 구단). */
+export const RecapSquadMemberSchema = z.strictObject({
+  card: TeamPlayerSchema,
+  lastClub: z.string().nullable(),
+  lastClubId: z.string().nullable(),
+});
+export type RecapSquadMember = z.infer<typeof RecapSquadMemberSchema>;
+
 export const SeasonRecapSchema = z.strictObject({
   season: TeamSeasonSchema,
   /** 이 시각까지의 기록이다(프리시즌은 첫 시즌 개막). */
@@ -123,6 +134,8 @@ export const SeasonRecapSchema = z.strictObject({
     .nullable(),
   /** 기록 묶음. 굳히기 전 결산이면 null. */
   stats: SeasonRecapStatsSchema.nullable(),
+  /** 키운 선수들(레전드 점수 순, RECAP_SQUAD_MAX명까지). 구버전 응답에는 없다. */
+  squad: z.array(RecapSquadMemberSchema).max(RECAP_SQUAD_MAX).optional(),
 });
 export type SeasonRecap = z.infer<typeof SeasonRecapSchema>;
 

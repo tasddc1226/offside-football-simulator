@@ -1,13 +1,15 @@
 <script lang="ts">
   // T-11-128 구단주 시즌 결산 — 끝난 시즌의 기록(서버가 굳힌 값)과 받은 휘장을 한 화면에 모아 보여 준다.
   // 구단주 화면의 '시즌 결산' 카드로 연다. 열면 그 시즌 결산을 '봤다'고 표시한다(카드의 NEW).
-  // 맨 위 시즌 카드(등급 · 한 줄 요약 · 자랑거리) → 숫자 → 이 시즌의 얼굴 → 카드 등급 → 팀 → 순위 → 휘장 → 남긴 기록 순.
+  // 맨 위 시즌 카드(등급 · 한 줄 요약 · 자랑거리) → 선수단(단체사진 · 카드 흐름) → 숫자 → 이 시즌의 얼굴 → 카드 등급 → 팀 → 순위 → 휘장 → 남긴 기록 순.
   // '결산 공유하기'는 같은 값을 4:5 한 장으로 그린다(recapShareCard.ts).
   import Topbar from './Topbar.svelte';
   import BackBar from './BackBar.svelte';
   import HonorEmblem from './HonorEmblem.svelte';
   import GradeEmblem from './team/GradeEmblem.svelte';
   import PlayerCard from './team/PlayerCard.svelte';
+  import RecapTeamPhoto from './recap/RecapTeamPhoto.svelte';
+  import RecapCardReel from './recap/RecapCardReel.svelte';
   import ShareSheet from './share/ShareSheet.svelte';
   import { go } from './nav.js';
   import { appState } from './state.svelte.js';
@@ -179,6 +181,16 @@
           </ul>
         {/if}
         {@render shareButton('hero')}
+      </section>
+    {/if}
+
+    {#if recap.squad && recap.squad.length > 0}
+      <!-- 이 시즌의 선수단 — 단체사진과 끝없이 흐르는 카드. -->
+      <section class="card recap-sec" data-recap-section="squad" aria-label={L.secSquad}>
+        <h2>{L.secSquad}</h2>
+        <p class="muted fs-sm sec-lead">{L.squadLead({ n: num(recap.retired) })}</p>
+        <RecapTeamPhoto squad={recap.squad} season={name} />
+        <RecapCardReel squad={recap.squad} />
       </section>
     {/if}
 
