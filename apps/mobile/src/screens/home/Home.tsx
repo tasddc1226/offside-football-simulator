@@ -16,6 +16,7 @@ import { alpha } from '../../theme/colors';
 import { num, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, PitchCard, Press, Row, Screen, Topbar, Txt } from '../../ui';
+import { HomeClubValue } from './HomeClubValue';
 import { HomeFirsts } from './HomeFirsts';
 import { HomeLive } from './HomeLive';
 import { HomeNews } from './HomeNews';
@@ -200,6 +201,7 @@ export default function Home() {
           />
         )}
         <HallOfFame />
+        <HomeClubValue />
         <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
         <HomeNews board="release" eyebrow="Release notes" title={L.releaseTitle} />
         <SiteFooter />

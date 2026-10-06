@@ -5,7 +5,7 @@
 import { personName } from '@offside/game/i18n/names';
 import { BODY_DEFAULT, type Body } from '@offside/contracts/body';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
-import type { HofSort, RetiredNumberResult } from '@offside/contracts';
+import type { HofSort, RetiredNumberResult, TeamRankSort } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason, retireAtNow } from '@offside/contracts/service-seasons';
 import { detailPosOpen, dposFor, DETAILS_OF } from '@offside/contracts/positions';
@@ -33,6 +33,8 @@ export type HofView = {
   q: string;
   /** T-11-018 포지션별 순위(null = 모든 포지션). */
   pos: Pos | null;
+  /** T-11-129 팀 랭킹 탭을 열 때의 정렬(홈 구단 가치 TOP 3의 전체 보기). 없으면 레이팅. */
+  teamSort?: TeamRankSort;
 };
 /** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
 export const hofStart = (): HofView => ({

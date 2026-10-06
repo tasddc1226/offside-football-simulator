@@ -279,7 +279,7 @@ export default function TeamProfile({ id }: { id: string }) {
                       backgroundColor: c.surface2,
                       borderWidth: b.id.startsWith('final-') ? 2 : 0,
                       borderColor: c.pitchAccent,
-                      height: '100%',
+                      flexGrow: 1,
                     }}
                   >
                     <Txt bold>{b.label}</Txt>
