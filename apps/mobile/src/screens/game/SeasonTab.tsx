@@ -77,7 +77,7 @@ function Meter({
       accessibilityLabel={`${label} ${Math.round(value)}`}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
     >
-      <Txt style={{ width: 54, fontSize: rem(0.8125) }}>{label}</Txt>
+      <Txt style={{ width: 72, fontSize: rem(0.8125) }}>{label}</Txt>
       <View
         style={{
           flex: 1,
