@@ -13,7 +13,7 @@ import { rem } from '../../theme/type';
 import { Btn, Card, Pill, Row, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 
-/** 휘장 한 줄 알약 — 메달 색(1위 금 · 상위 10 은 · 그 밖 동). */
+/** 기록 배지 알약 — 메달 색(1위 금 · 상위 10 은 · 그 밖 동). */
 export function HonorChip({ h }: { h: HonorView }) {
   const { text } = useMedal(h.medal);
   return (

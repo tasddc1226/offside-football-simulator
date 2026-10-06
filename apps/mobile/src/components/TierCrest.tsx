@@ -1,6 +1,6 @@
-// T-11-128 시즌 휘장(웹 TierCrest.svelte) — 티어 날개 문장 가운데에 프로필(이니셜)이 들어간다(LoL 지난 시즌 티어 테두리처럼).
-// 좌표 · 색은 app-core tierCrest.ts(웹과 공용). initial이 없으면 가운데를 보석 빛으로 채운다(작은 표시용).
-// 장식이라 스크린 리더에는 숨긴다(티어 이름은 옆 글자가 읽힌다).
+// T-11-128 시즌 휘장(웹 TierCrest.svelte) — 티어 장식이 둘러싼 고리 가운데에 프로필(이니셜)이 들어간다(LoL 시즌 테두리처럼).
+// 조각 · 색은 app-core tierCrest.ts(웹과 공용). initial이 없으면 가운데를 보석 빛으로 채운다(댓글 · 채팅 작은 표시).
+// 장식이라 스크린 리더에는 숨긴다(티어 이름은 감싼 쪽이 읽힌다).
 import { useId } from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, RadialGradient, Stop } from 'react-native-svg';
@@ -11,12 +11,13 @@ import {
   CREST_VIEWBOX,
   TIER_PALETTE,
   crestShape,
+  type CrestPart,
 } from '@offside/app-core/tierCrest';
 import { DISPLAY } from '../theme/type';
 import { Txt } from '../ui/Txt';
 
-/** 문장 viewBox(160×120)의 세로 ÷ 가로. */
-const RATIO = 120 / 160;
+/** 문장 viewBox(160×128)의 세로 ÷ 가로. */
+const RATIO = 128 / 160;
 
 export function TierCrest({
   tier,
@@ -32,13 +33,24 @@ export function TierCrest({
   const c = TIER_PALETTE[tier];
   const metal = `url(#${uid}m)`;
   const gem = `url(#${uid}g)`;
-  const slot = (CREST_RING.inner * 2 * size) / 160;
+  const part = (p: CrestPart, i: number) => (
+    <Path
+      key={i}
+      d={p.d}
+      fill={p.kind === 'back' ? c.lo : p.kind === 'gem' ? gem : metal}
+      stroke={p.kind === 'back' ? 'none' : c.lo}
+      strokeWidth={0.7}
+      strokeLinejoin="round"
+    />
+  );
+  const scale = size / 160;
+  const slot = CREST_RING.inner * 2 * scale;
   return (
     <View
       testID={`tier-crest-${tier}`}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={{ width: size, height: size * RATIO, alignItems: 'center', justifyContent: 'center' }}
+      style={{ width: size, height: size * RATIO }}
     >
       <Svg
         viewBox={CREST_VIEWBOX}
@@ -47,13 +59,14 @@ export function TierCrest({
         style={{ position: 'absolute' }}
       >
         <Defs>
-          <LinearGradient id={`${uid}m`} x1="0" y1="0" x2="0" y2="1">
+          <LinearGradient id={`${uid}m`} x1="0" y1="0" x2="0.3" y2="1">
             <Stop offset="0" stopColor={c.hi} />
-            <Stop offset="0.5" stopColor={c.base} />
+            <Stop offset="0.45" stopColor={c.base} />
             <Stop offset="1" stopColor={c.lo} />
           </LinearGradient>
-          <RadialGradient id={`${uid}g`} cx="0.5" cy="0.4" r="0.6">
-            <Stop offset="0" stopColor={c.gem} />
+          <RadialGradient id={`${uid}g`} cx="0.4" cy="0.3" r="0.8">
+            <Stop offset="0" stopColor="#ffffff" />
+            <Stop offset="0.35" stopColor={c.gem} />
             <Stop offset="1" stopColor={c.base} />
           </RadialGradient>
           <RadialGradient id={`${uid}in`} cx="0.5" cy="0.35" r="0.7">
@@ -61,63 +74,63 @@ export function TierCrest({
             <Stop offset="1" stopColor="#0b100d" />
           </RadialGradient>
         </Defs>
-        <Path d={shape.wingsBack} fill={c.lo} opacity={0.9} />
-        <Path
-          d={shape.wingsFront}
-          fill={metal}
-          stroke={c.lo}
-          strokeWidth={0.7}
-          strokeLinejoin="round"
-        />
-        {shape.crown ? (
-          <Path
-            d={shape.crown}
-            fill={metal}
-            stroke={c.lo}
-            strokeWidth={0.7}
-            strokeLinejoin="round"
-          />
-        ) : null}
+        {shape.under.map(part)}
         <Circle
           cx={CREST_SLOT.cx}
           cy={CREST_SLOT.cy}
           r={CREST_RING.outer}
           fill={metal}
           stroke={c.lo}
-          strokeWidth={0.8}
+          strokeWidth={0.9}
         />
         <Circle
           cx={CREST_SLOT.cx}
           cy={CREST_SLOT.cy}
-          r={CREST_RING.outer - 2.2}
+          r={CREST_RING.outer - 1.6}
           fill="none"
           stroke={c.hi}
-          strokeOpacity={0.55}
-          strokeWidth={0.8}
+          strokeOpacity={0.6}
+          strokeWidth={0.7}
+        />
+        <Circle
+          cx={CREST_SLOT.cx}
+          cy={CREST_SLOT.cy}
+          r={CREST_RING.inner + 0.8}
+          fill="none"
+          stroke={c.lo}
+          strokeWidth={1.2}
         />
         <Circle
           cx={CREST_SLOT.cx}
           cy={CREST_SLOT.cy}
           r={CREST_RING.inner}
           fill={initial === undefined ? gem : `url(#${uid}in)`}
-          stroke={c.lo}
-          strokeWidth={1}
         />
-        <Path d={shape.gem} fill={gem} stroke={c.lo} strokeWidth={0.7} />
+        {shape.over.map(part)}
       </Svg>
       {initial !== undefined ? (
-        <Txt
+        <View
           style={{
+            position: 'absolute',
+            left: CREST_SLOT.cx * scale - slot / 2,
+            top: CREST_SLOT.cy * scale - slot / 2,
             width: slot,
-            textAlign: 'center',
-            fontFamily: DISPLAY[700],
-            fontSize: size * 0.12,
-            lineHeight: size * 0.12 * 1.15,
-            color: c.hi,
+            height: slot,
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          {initial}
-        </Txt>
+          <Txt
+            style={{
+              fontFamily: DISPLAY[700],
+              fontSize: size * 0.17,
+              lineHeight: size * 0.17 * 1.15,
+              color: c.hi,
+            }}
+          >
+            {initial}
+          </Txt>
+        </View>
       ) : null}
     </View>
   );

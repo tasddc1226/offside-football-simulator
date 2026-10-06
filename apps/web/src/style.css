@@ -6965,29 +6965,15 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   border: 2px solid var(--accent);
   pointer-events: none;
 }
-/* T-11-128 구단주 티어(TierBadge.svelte) — 작은 날개 문장 + 티어 이름 알약. */
+/* T-11-128 구단주 티어(TierBadge.svelte) — 댓글 · 채팅 닉네임 옆 작은 휘장(글자 없음). */
 .tier-badge {
   display: inline-flex;
-  align-items: center;
-  gap: 1px;
   vertical-align: middle;
-  padding: 0 8px 0 0;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--tier) 50%, transparent);
-  background: color-mix(in srgb, var(--tier) 14%, transparent);
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 20px;
-  color: var(--tier-hi);
-  white-space: nowrap;
+  /* 휘장이 줄 높이를 밀지 않게 위아래를 겹친다. */
+  margin: -9px -3px;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
 }
-.tier-badge .tier-crest {
-  margin: -4px -2px -4px -4px;
-}
-:root[data-theme='light'] .tier-badge {
-  color: color-mix(in srgb, var(--tier) 75%, #000);
-}
-/* T-11-128 결산 화면 시즌 휘장 — 큰 날개 문장 아래 티어 이름과 근거. */
+/* T-11-128 결산 화면 시즌 휘장 — 큰 휘장 아래 티어 이름과 근거. */
 .recap-tier {
   display: flex;
   flex-direction: column;
@@ -7000,7 +6986,7 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
       color-mix(in srgb, var(--tier) 22%, transparent),
       transparent 70%
     ),
-    var(--card);
+    var(--surface);
 }
 .recap-tier h2 {
   align-self: stretch;
@@ -7021,7 +7007,7 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   display: inline-block;
   flex: none;
   width: var(--crest-w);
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 160 / 128;
   line-height: 1;
 }
 .tier-crest svg {
@@ -7034,8 +7020,9 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
 .tier-crest-avatar {
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 25%;
+  /* CREST_SLOT.cy(62) ÷ 높이(128), 지름 56 ÷ 너비 160. */
+  top: 48.4375%;
+  width: 35%;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   display: grid;
@@ -7043,5 +7030,5 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   border-radius: 50%;
   font-family: var(--display);
   font-weight: 700;
-  font-size: calc(var(--crest-w) * 0.12);
+  font-size: calc(var(--crest-w) * 0.17);
 }

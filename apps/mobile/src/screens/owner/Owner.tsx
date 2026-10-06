@@ -171,7 +171,7 @@ export default function Owner() {
       alive = false;
     };
   }, [linked, tick, track]);
-  // T-11-128 지난 시즌 결산으로 정한 티어(시즌 휘장) — 프로필 자리를 날개 문장이 감싼다(결산 카드와 같은 응답, 1분 메모).
+  // T-11-128 지난 시즌 결산으로 정한 티어(시즌 휘장) — 프로필 자리를 티어 장식이 감싼다(결산 카드와 같은 응답, 1분 메모).
   const [tierTag, setTierTag] = useState<OwnerTierTag | null>(null);
   useEffect(() => {
     let alive = true;
@@ -207,7 +207,7 @@ export default function Owner() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             {tierTag ? (
               // 날개가 옆으로 넘쳐도 이름 칸을 밀지 않게 조금 겹친다(웹 .owner-crest).
-              <View style={{ marginVertical: -14, marginLeft: -18, marginRight: -14 }}>
+              <View style={{ marginTop: -6, marginBottom: -14, marginLeft: -18, marginRight: -14 }}>
                 <TierCrest
                   tier={tierTag.tier}
                   size={104}

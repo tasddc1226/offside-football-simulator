@@ -88,7 +88,7 @@ export function recapStatusText(res: Pick<SeasonRecapResponse, 'season' | 'statu
   return res.status === 'none' ? L.cardNone({ season }) : L.cardReady({ season });
 }
 
-/** 구단주 화면 결산 카드(웹 · 앱 공용): 한 줄 문구 · 휘장 알약 3개 · 아직 안 열어 봤는지. */
+/** 구단주 화면 결산 카드(웹 · 앱 공용): 한 줄 문구 · 기록 배지 알약 3개 · 아직 안 열어 봤는지. */
 export function recapCardView(res: SeasonRecapResponse) {
   const n = res.honors.length;
   return {

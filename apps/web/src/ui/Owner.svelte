@@ -89,7 +89,7 @@
     });
   });
   const recapCard = $derived(recap ? recapCardView(recap) : null);
-  // 지난 시즌 결산으로 정한 티어(시즌 휘장) — 프로필 사진 자리를 날개 문장이 감싼다(LoL 지난 시즌 티어 테두리처럼).
+  // 지난 시즌 결산으로 정한 티어(시즌 휘장) — 프로필 사진 자리를 티어 장식이 감싼다(LoL 지난 시즌 티어 테두리처럼).
   // 댓글 · 채팅에도 같은 티어가 나간다(서버 ownerTiersOf).
   const tierTag = $derived(
     recap?.status === 'ready' && recap.recap ? { tier: recapTier(recap.recap), season: recap.season } : null,
@@ -252,7 +252,7 @@
   /* T-11-128 시즌 휘장 — 날개가 옆으로 넘쳐도 이름 칸을 밀지 않게 조금 겹친다. */
   .owner-crest {
     flex: none;
-    margin: -14px -14px -10px -18px;
+    margin: -6px -14px -14px -18px;
   }
   .owner-tier {
     font-family: var(--display);

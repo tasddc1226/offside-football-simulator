@@ -38,7 +38,7 @@ describe('T-11-128 시즌 결산 문구', () => {
     );
   });
 
-  it('결산 카드: 상태 한 줄과 휘장 수, 알약은 3개까지', () => {
+  it('결산 카드: 상태 한 줄과 기록 배지 수, 알약은 3개까지', () => {
     const honors = ['pioneer', 'hof', 'team', 'first'].map((kind) =>
       honor({ kind: kind as OwnerHonor['kind'], value: 1 }),
     );
