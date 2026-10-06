@@ -213,6 +213,15 @@ jobs:
           pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
             --command "SELECT board, day, COUNT(*) event_count FROM push_news_events GROUP BY board, day ORDER BY day DESC LIMIT 10; SELECT state, COUNT(*) delivery_count FROM push_news_deliveries GROUP BY state;" > .release/news-push.json
 
+      - name: Inspect personal push tracking after deployment
+        if: inputs.mode == 'deploy'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
+            --command "SELECT name FROM d1_migrations WHERE name GLOB '006[56]*' ORDER BY name; SELECT 'notifications' table_name, COUNT(*) row_count FROM notifications; SELECT 'push_preferences' table_name, COUNT(*) row_count FROM push_preferences; SELECT state, COUNT(*) delivery_count FROM push_deliveries GROUP BY state; SELECT state, COUNT(*) result_count FROM push_results GROUP BY state; SELECT COUNT(*) interaction_count FROM push_interactions; SELECT key, value FROM app_meta WHERE key = 'push_tracking_started_at';" > .release/personal-push.json
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -224,6 +233,7 @@ jobs:
             .release/counts-after.json
             .release/schema-after.json
             .release/news-push.json
+            .release/personal-push.json
           if-no-files-found: ignore
           retention-days: 30
 

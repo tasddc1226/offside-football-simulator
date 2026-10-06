@@ -2,23 +2,15 @@ import type { Translation } from '../core';
 import type { PushMsgs } from '../ko/push';
 
 export const push: Translation<PushMsgs> = {
-  title: 'News notifications',
-  body: 'Get notified about new announcements and release notes. We send at most one a day per board.',
-  tokenNote: 'To connect notifications, we store your push token, device type and app version.',
-  offLabel: 'Turn off news notifications on this device',
-  onLabel: 'Turn on news notifications on this device',
+  title: 'Receive app notifications',
+  body: 'Turn all notifications on this device on or off.',
+  tokenNote:
+    'To connect notifications, we store your push token, device type and app version. Delivery results, notification taps and the screens they open are kept on our server for 90 days to run the service.',
   busy: 'Setting up notifications…',
-  turnOff: 'Turn off notifications',
-  turnOn: 'Turn on notifications',
   openSettings: 'Open device notification settings',
   reconnect: 'Reconnect',
   testNote:
     'Test notifications are sent to this device only. You can request one every 10 minutes per device and account, up to 3 a day.',
-  engagementTitle: 'Comeback reminders (optional)',
-  engagementBody:
-    "Get a nudge to pick up where you left off if you haven't visited for 7 days or more. Sent only between 9 AM and 8 PM.",
-  engagementOff: 'Turn off comeback reminders',
-  engagementOn: 'Get comeback reminders',
   openInbox: 'Open inbox',
   testBusy: 'Requesting…',
   testBtn: 'Send a test notification to my device',
@@ -37,4 +29,22 @@ export const push: Translation<PushMsgs> = {
   offLocal:
     "Turned off on this device. We'll retry disconnecting from the server once you're back online.",
   connectFail: "Couldn't connect notifications. Please try again in a moment.",
+  prefsNote:
+    'Category choices are saved to your account and stay as they are even if you turn all notifications off.',
+  prefsLoading: 'Loading notification types…',
+  prefsReload: 'Reload notification types',
+  catNotice: 'Announcements',
+  catNoticeBody: 'Service announcements and events',
+  catRelease: 'Updates',
+  catReleaseBody: 'New versions and features',
+  catTeam: 'My team',
+  catTeamBody: 'Results of matches others play against you',
+  catMarket: 'Transfer market',
+  catMarketBody: 'When a player you listed is sold',
+  catSocial: 'Friends',
+  catSocialBody: 'Friend requests, accepts and friendly results',
+  catAria: (p) => `${p.title} notifications`,
+  prefsConnectFailed: "Couldn't connect to notification settings. Please try again.",
+  prefsLoadFailed: "Couldn't load notification settings.",
+  prefsSaveFailed: "Couldn't save notification settings.",
 };

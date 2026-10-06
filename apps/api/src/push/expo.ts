@@ -42,7 +42,13 @@ export async function sendPushTest(
     });
   }
   if (!response.ok)
-    throw new AppError({ code: 'SERVICE_UNAVAILABLE', message: '알림 요청을 보내지 못했어요.' });
+    throw new AppError({
+      code: 'SERVICE_UNAVAILABLE',
+      message: '알림 요청을 보내지 못했어요.',
+      ...(response.status < 500 && response.status !== 408
+        ? { details: { reason: 'PUSH_SEND_FAILED' } }
+        : {}),
+    });
   let result: { data?: { status?: string; id?: string; details?: { error?: string } } };
   try {
     result = (await response.json()) ?? {};
@@ -56,12 +62,16 @@ export async function sendPushTest(
     throw new AppError({
       code: 'SERVICE_UNAVAILABLE',
       message: '알림 연결을 확인해 주세요.',
-      details: {
-        reason:
-          result.data?.details?.error === 'DeviceNotRegistered'
-            ? 'PUSH_DEVICE_NOT_REGISTERED'
-            : 'PUSH_SEND_FAILED',
-      },
+      ...(result.data?.status === 'error'
+        ? {
+            details: {
+              reason:
+                result.data?.details?.error === 'DeviceNotRegistered'
+                  ? 'PUSH_DEVICE_NOT_REGISTERED'
+                  : 'PUSH_SEND_FAILED',
+            },
+          }
+        : {}),
     });
   if (typeof result.data.id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(result.data.id))
     throw new AppError({

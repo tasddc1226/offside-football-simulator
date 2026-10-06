@@ -1,13 +1,15 @@
 // T-11-061 광고 위치표와 노출 판단(docs/tracking/web-ads-plan.md 4.1). 웹 AdSlot·앱 AdSlot(AdMob)이 같이 쓴다.
 // 화면은 위치 이름만 넘기고 규칙을 직접 검사하지 않는다. 조작 화면·업무 모드에는 칸을 두지 않는다(3.1).
 
-export type AdPlace = 'records-bottom' | 'board-bottom' | 'legend-bottom' | 'owner-summary';
+export type AdPlace =
+  'records-bottom' | 'board-bottom' | 'legend-bottom' | 'retired-bottom' | 'owner-summary';
 
 /** 위치별 켜기 스위치 — 지표가 나빠지면 여기서 끈다(기획 6절). 다음 단계 위치는 여기에 더한다(5절). */
 export const AD_PLACES: Record<AdPlace, boolean> = {
   'records-bottom': true,
   'board-bottom': true,
   'legend-bottom': true,
+  'retired-bottom': true,
   'owner-summary': true,
 };
 

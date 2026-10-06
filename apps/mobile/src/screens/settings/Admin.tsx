@@ -15,9 +15,11 @@ import AdminComments from './admin/AdminComments';
 import AdminChatReports from './admin/AdminChatReports';
 import AdminNameReports from './admin/AdminNameReports';
 import AdminDashboard from './admin/AdminDashboard';
+import AdminPush from './admin/AdminPush';
 
 const TABS = [
   { id: 'dashboard', label: '대시보드' },
+  { id: 'push', label: '앱 푸시' },
   { id: 'comments', label: '신고·댓글' },
   { id: 'balance', label: '밸런스' },
   { id: 'automation', label: '자동 플레이' },
@@ -53,7 +55,7 @@ export default function Admin() {
           <Txt tone="muted">운영자 계정으로 로그인해야 볼 수 있어요.</Txt>
         ) : (
           <>
-            <Seg cols={TABS.length} label="운영 도구">
+            <Seg cols={3} label="운영 도구">
               {TABS.map((t) => (
                 <TabOpt
                   key={t.id}
@@ -67,6 +69,8 @@ export default function Admin() {
             </Seg>
             {tab === 'dashboard' ? (
               <AdminDashboard />
+            ) : tab === 'push' ? (
+              <AdminPush />
             ) : tab === 'comments' ? (
               <>
                 <AdminChatReports />

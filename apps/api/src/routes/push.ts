@@ -3,6 +3,8 @@ import {
   RegisterPushDeviceSchema,
   PushDeviceResultSchema,
   PushTestResultSchema,
+  PushPreferencesSchema,
+  PutPushPreferencesSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { getDb, type AppEnv } from '../env.js';
@@ -16,8 +18,11 @@ import {
 } from '../db/repos/pushDevices.js';
 import { sendPushTest } from '../push/expo.js';
 import { reservePushTest } from '../push/testLimit.js';
+import { sha256Hex } from '../db/hash.js';
+import { latePushResult } from '../push/result.js';
 import { queueNotification } from '../db/repos/notifications.js';
 import { reqLang } from '../lang.js';
+import { getPushPreferences, putPushPreferences } from '../db/repos/pushPreferences.js';
 import { enforceLimit, NO_STORE, nowIso, ok, readBody, notFoundError } from './shared.js';
 
 export function registerPushRoutes(app: Hono<AppEnv>) {
@@ -27,6 +32,35 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
       throw new AppError({ code: 'FORBIDDEN', message: '앱에서 알림을 설정해 주세요.' });
     return session;
   };
+  app.get('/v1/push/preferences', requireProfile, async (c) => {
+    const session = appSession(c);
+    return ok(
+      c,
+      PushPreferencesSchema,
+      await getPushPreferences(getDb(c), session.profileId),
+      200,
+      NO_STORE,
+    );
+  });
+  app.put('/v1/push/preferences', requireProfile, async (c) => {
+    const session = appSession(c);
+    const input = readBody(c, PutPushPreferencesSchema);
+    await enforceLimit(
+      getDb(c),
+      'PUSH_PREFERENCES',
+      session.id,
+      60,
+      nowIso(),
+      '잠시 뒤 알림 설정을 다시 시도해 주세요.',
+    );
+    return ok(
+      c,
+      PushPreferencesSchema,
+      await putPushPreferences(getDb(c), session.profileId, input),
+      200,
+      NO_STORE,
+    );
+  });
   app.put('/v1/push/device', requireProfile, async (c) => {
     const session = appSession(c);
     const input = readBody(c, RegisterPushDeviceSchema);
@@ -78,6 +112,25 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
         target: { type: 'screen', screen: 'home' },
       },
     });
+    const deliveryId = `test:${notification.id}`;
+    // The same receipt worker checks manual test tickets, without re-sending them.
+    await c.env.DB.prepare(
+      `INSERT INTO push_deliveries
+      (id, notification_id, installation_hash, session_id, profile_id, token, state, attempts, due_at, expires_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'sending', 1, ?, ?, ?)`,
+    )
+      .bind(
+        deliveryId,
+        notification.id,
+        await sha256Hex(installationId),
+        session.id,
+        session.profileId,
+        device.token,
+        new Date(Date.parse(now) + 120_000).toISOString(),
+        new Date(Date.parse(now) + 86400_000).toISOString(),
+        now,
+      )
+      .run();
     try {
       const ticketId = await sendPushTest(
         device.token,
@@ -86,6 +139,12 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
         notification.id ?? undefined,
         reqLang(c),
       );
+      await c.env.DB.prepare(
+        "UPDATE push_deliveries SET state = 'accepted', ticket_id = ?, due_at = ?, updated_at = ? WHERE id = ? AND state = 'sending'",
+      )
+        .bind(ticketId, new Date(Date.now() + 900_000).toISOString(), nowIso(), deliveryId)
+        .run();
+      await latePushResult(c.env.DB, 'push_deliveries', deliveryId, 'accepted', nowIso()).run();
       await rememberPushTestTicket(
         c.env.DB,
         installationId,
@@ -94,6 +153,20 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
         now,
       );
     } catch (e) {
+      const failed =
+        e instanceof AppError && (e.details as { reason?: string } | undefined)?.reason;
+      await c.env.DB.prepare(
+        "UPDATE push_deliveries SET state = ?, token = '', updated_at = ? WHERE id = ? AND state = 'sending'",
+      )
+        .bind(failed ? 'failed' : 'unknown', nowIso(), deliveryId)
+        .run();
+      await latePushResult(
+        c.env.DB,
+        'push_deliveries',
+        deliveryId,
+        failed ? 'failed' : 'unknown',
+        nowIso(),
+      ).run();
       if (
         e instanceof AppError &&
         (e.details as { reason?: string } | undefined)?.reason === 'PUSH_DEVICE_NOT_REGISTERED'

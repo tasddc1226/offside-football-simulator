@@ -25,6 +25,7 @@ import { rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { Seg, TabOpt } from '../board/parts';
 import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
+import { useRefresh } from '../../ui/refresh';
 import { useSeasonNow } from '../../ui/useSeasonNow';
 
 type MineRow = {
@@ -101,10 +102,12 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
     if (source !== 'loading') onRows?.(inSeason);
   }, [source, inSeason, onRows]);
 
+  // T-11-111 당겨서 새로고침 — 보이던 목록은 두고 응답이 오면 바꾼다(source도 되돌리지 않는다).
+  const { tick, track } = useRefresh();
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const r = await getMyCareers();
+      const r = await track(getMyCareers());
       if (!alive) return;
       // 방금 은퇴해 아직 업로드 대기 중인 선수 — 시즌을 아직 못 받았으면 지금 시즌으로 센다.
       const pending = pendingRetirementIds();
@@ -157,7 +160,7 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
     return () => {
       alive = false;
     };
-  }, [local, now]);
+  }, [local, now, tick, track]);
 
   return (
     <Card gap={0}>

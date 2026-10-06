@@ -1,4 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
+
+// 기본 은퇴 기록은 프리시즌이다. 실제 개막 날짜와 분리해 검증한다.
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-30T00:00:00.000Z'));
+});
 import type { TeamLayout } from '@offside/contracts/owner-team';
 import type { TeamLogo } from '@offside/contracts/team-logo';
 import AxeBuilder from '@axe-core/playwright';
@@ -594,6 +599,7 @@ test('업적 랭킹 — 내 업적 요약에서 기록실 업적 랭킹으로 �
 test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹에서 팀 프로필을 열어 좋아요를 누른다', async ({
   page,
 }) => {
+  await page.clock.setFixedTime(new Date('2026-10-06T00:01:00.000Z'));
   await stubOwner(page, true);
   const pre = {
     ...teamFrom({
@@ -681,7 +687,8 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
         team: {
           ...teamFrom({ name: '라이벌 FC', formation: '4-4-2', slots: Array(11).fill(null) }),
           id: RIVAL,
-          seasonName: '프리시즌',
+          season: 1,
+          seasonName: '시즌 1',
           rank: 1,
           manager: '라이벌 감독',
           rating: 1100,

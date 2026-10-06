@@ -33,6 +33,7 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm --filter @offside/api exec vitest run --config ../mobile/vitest.push.config.mjs
       - run: pnpm build
       - run: pnpm --filter @offside/web check:bundle
       - run: pnpm --filter @offside/api db:check

@@ -4,6 +4,7 @@ const f = vi.hoisted(() => {
     values: new Map(),
     listener: undefined,
     response: undefined,
+    lastResponse: null,
     received: undefined,
     openInbox: vi.fn(),
     invalidate: vi.fn(),
@@ -51,7 +52,7 @@ vi.mock('expo-notifications', () => ({
   getPermissionsAsync: async () => ({ granted: true, canAskAgain: true }),
   requestPermissionsAsync: async () => ({ granted: true, canAskAgain: true }),
   setNotificationHandler: () => {},
-  getLastNotificationResponse: () => null,
+  getLastNotificationResponse: () => f.lastResponse,
   clearLastNotificationResponseAsync: async () => {},
   addNotificationResponseReceivedListener: (cb) => {
     f.response = cb;
@@ -121,6 +122,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   f.values.clear();
   f.listener = undefined;
+  f.lastResponse = null;
   f.rotateDuringFetch = false;
   f.nativeReads = 0;
   f.token = 'native-a';
@@ -258,7 +260,37 @@ describe('own-device test push cooldown', () => {
   });
 });
 
-describe('notification inbox routing and personal consent', () => {
+describe('notification inbox routing and unified push subscription', () => {
+  it('tracks a push that launches the terminated app', async () => {
+    f.lastResponse = {
+      actionIdentifier: 'default',
+      notification: {
+        request: { content: { data: { type: 'offside-news', notificationId: 'ntf_cold' } } },
+      },
+    };
+    await app();
+    await vi.waitFor(() =>
+      expect(
+        f.api.mock.calls.filter(([path]) => path.includes('ntf_cold/interaction')),
+      ).toHaveLength(1),
+    );
+    expect(f.openInbox).toHaveBeenCalledWith('ntf_cold');
+  });
+  it('tracks OS default response clicks, and never tracks foreground receipt as a click', async () => {
+    await app();
+    const notification = {
+      request: { content: { data: { type: 'offside-notification', notificationId: 'ntf_click' } } },
+    };
+    f.received(notification);
+    f.response({ actionIdentifier: 'dismiss', notification });
+    expect(f.api.mock.calls.some(([path]) => path.includes('/interaction'))).toBe(false);
+    f.response({ actionIdentifier: 'default', notification });
+    await vi.waitFor(() =>
+      expect(f.api.mock.calls.filter(([path]) => path.includes('/interaction'))).toHaveLength(1),
+    );
+    const call = f.api.mock.calls.find(([path]) => path.includes('/interaction'));
+    expect(JSON.parse(call[1].body).event).toBe('click');
+  });
   it('opens only a validated inbox ID from trusted notification types', async () => {
     await app();
     f.response({
@@ -286,12 +318,16 @@ describe('notification inbox routing and personal consent', () => {
     });
     expect(f.invalidate).toHaveBeenCalledTimes(2);
   });
-  it('defaults optional personal notifications off and updates registration for both toggle directions', async () => {
+  it('re-registers a legacy subscriber even when the removed engagement preference was off', async () => {
+    f.values.set('offside_push_engagement', false);
+    f.values.set('offside_push_registered', 'ExpoPushToken[native-a]|test-session|1.0.2|false');
+    f.values.set('offside_push_registered_at', Date.now());
     const p = await app();
-    expect(f.requests.at(-1).body.engagementEnabled).toBe(false);
-    await p.setEngagementPush(true);
-    expect(f.requests.at(-1).body.engagementEnabled).toBe(true);
-    await p.setEngagementPush(false);
-    expect(f.requests.at(-1).body.engagementEnabled).toBe(false);
+    expect(f.requests.at(-1).path).toBe('/v1/push/device');
+    expect(f.requests.at(-1).body).not.toHaveProperty('engagementEnabled');
+    expect(p.pushState.enabled).toBe(true);
+    await p.pushRegistration.setEnabled(false);
+    expect(p.pushState.enabled).toBe(false);
+    expect(f.requests.at(-1).path).toBe('/v1/push/device');
   });
 });

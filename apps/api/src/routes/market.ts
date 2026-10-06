@@ -253,6 +253,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     try {
       result = await buyListing(db, {
         id,
+        sellerId: found.sellerId,
         buyerId: me.id,
         price: input.price,
         fee: marketFee(input.price, rules.feeRate),

@@ -29,6 +29,7 @@ import { go } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Screen, Topbar, Txt } from '../../ui';
+import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
@@ -135,23 +136,33 @@ export default function Owner() {
   // 메모)이라 이적시장에 들어가도 다시 묻지 않는다. 비로그인이면 이 기기 기록의 카드 기준가 합을 쓴다.
   const [market, setMarket] = useState<MarketFundsResponse | null>(null);
 
+  // T-11-111 당겨서 새로고침 — 보이는 값은 그대로 두고 응답이 오면 바꾼다.
+  // 관리자 여부는 거의 안 바뀌므로 당겨도 다시 묻지 않는다.
   useEffect(() => {
     if (!linked) {
       setAdmin(false);
       return;
     }
     let alive = true;
-    void fetchBoardViewer().then((r) => alive && setAdmin(r.ok && r.data.admin));
-    void fetchOwnerTeam().then((r) => {
-      if (!alive) return;
-      if (r.ok) setCard(ownerTeamCard(r.data));
-      else setCardFailed(true);
-    });
-    void fetchMarketFunds().then((r) => alive && r.ok && setMarket(r.data));
+    void fetchBoardViewer().then((r) => alive && r.ok && setAdmin(r.data.admin));
     return () => {
       alive = false;
     };
   }, [linked]);
+  const { tick, track } = useRefresh();
+  useEffect(() => {
+    if (!linked) return;
+    let alive = true;
+    void track(fetchOwnerTeam()).then((r) => {
+      if (!alive) return;
+      if (r.ok) setCard(ownerTeamCard(r.data));
+      else setCardFailed(true);
+    });
+    void track(fetchMarketFunds()).then((r) => alive && r.ok && setMarket(r.data));
+    return () => {
+      alive = false;
+    };
+  }, [linked, tick, track]);
   const clubValue = linked ? (market?.clubValue ?? null) : (summary?.value ?? null);
 
   const team = card?.team;

@@ -14,6 +14,7 @@ import type { PosGroup } from '@offside/contracts/positions';
 import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
+import { eventNotificationStatements } from '../../push/events.js';
 import { peakOf } from './ownerTeams.js';
 import { cards, careers, marketDaily, marketListings, ownerFunds } from '../schema.js';
 
@@ -355,6 +356,7 @@ export async function buyListing(
   b: {
     id: string;
     buyerId: string;
+    sellerId: string;
     price: number;
     fee: number;
     now: string;
@@ -409,6 +411,21 @@ export async function buyListing(
         ...Array(3).fill(b.daily.ratio),
         ...mark,
       ),
+    ...eventNotificationStatements(
+      d1,
+      {
+        profileId: b.sellerId,
+        sourceKey: `market-sold:${b.id}`,
+        now: b.now,
+        content: {
+          kind: 'market',
+          title: '등록한 선수가 이적했어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          body: '판매가 완료됐어요. 이적시장에서 판매 내역과 구단 자금을 확인해 주세요.', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          target: { type: 'screen', screen: 'market' },
+        },
+      },
+      { sql: won, params: [...mark] },
+    ),
     d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(b.buyerId),
   ]);
   const bal = results.at(-1)!.results[0] as { balance: number } | undefined;

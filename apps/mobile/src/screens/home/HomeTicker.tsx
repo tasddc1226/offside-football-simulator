@@ -19,6 +19,7 @@ import { useColors } from '../../theme/useColors';
 import { ClubMark, Txt } from '../../ui';
 import { homeText as L } from '@offside/app-core/i18n/ko/home';
 import { tn } from '@offside/game/i18n/names';
+import { useOnPull } from '../../ui/refresh';
 
 /** 흐르는 속도(px/초). 한글 한 줄을 편히 읽을 만큼 천천히. */
 const SPEED = 42;
@@ -46,6 +47,10 @@ export function HomeTicker() {
   });
   const ago = (at: string) => agoKo(now + skew - Date.parse(at));
 
+  // T-11-111 당겨서 새로고침 — 주기 조회·소켓은 그대로 두고 한 번만 다시 받는다.
+  const reload = useRef<() => Promise<void>>(async () => {});
+  useOnPull(() => reload.current());
+
   // 받아 오기: 처음 한 번 + 주기적으로(앱이 보일 때만).
   useEffect(() => {
     let alive = true;
@@ -62,6 +67,7 @@ export function HomeTicker() {
       });
       setNow(Date.now());
     };
+    reload.current = load;
     void load();
     const loadIfActive = () => {
       if (AppState.currentState === 'active') void load();

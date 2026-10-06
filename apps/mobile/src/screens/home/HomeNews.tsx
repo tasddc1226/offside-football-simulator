@@ -11,6 +11,7 @@ import { rem } from '../../theme/type';
 import { Btn, Card, Pill, Press, Row, Txt } from '../../ui';
 import { homeText as L } from '@offside/app-core/i18n/ko/home';
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
+import { useRefresh } from '../../ui/refresh';
 
 const SHOWN = 3;
 
@@ -27,9 +28,10 @@ export function HomeNews({
   const [posts, setPosts] = useState<PostSummary[] | null>(null);
   const [failed, setFailed] = useState(false);
 
+  const { tick, track } = useRefresh();
   useEffect(() => {
     let alive = true;
-    void fetchPosts(board).then((r) => {
+    void track(fetchPosts(board)).then((r) => {
       if (!alive) return;
       if (r.ok) setPosts(r.data.posts.filter((p) => !hiddenPost(p)));
       else setFailed(true);
@@ -37,7 +39,7 @@ export function HomeNews({
     return () => {
       alive = false;
     };
-  }, [board]);
+  }, [board, tick, track]);
 
   return (
     <View testID={`home-news-${board}`}>

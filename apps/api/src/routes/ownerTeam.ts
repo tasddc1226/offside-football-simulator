@@ -32,7 +32,7 @@ import {
 } from './shared.js';
 import { newId } from '../db/ids.js';
 import { kstDays } from '../time.js';
-import { runBatch } from '../db/repos/batch.js';
+import { commitNotifiedEvent } from '../push/events.js';
 import {
   careersByIds,
   challengedSince,
@@ -391,16 +391,30 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       goals: result.awayGoals,
       rating: delta.away,
     };
-    await runBatch(db, [
-      ...recordMatchStatements(db, {
-        id,
-        profileId: me.id,
-        home: homeSide,
-        away: awaySide,
-        detail,
+    await commitNotifiedEvent(
+      db,
+      [
+        ...recordMatchStatements(db, {
+          id,
+          profileId: me.id,
+          home: homeSide,
+          away: awaySide,
+          detail,
+          now,
+        }),
+      ],
+      {
+        profileId: opp.team.profileId,
+        sourceKey: `team-match:${id}`,
         now,
-      }),
-    ]);
+        content: {
+          kind: 'team',
+          title: '내 팀에 새 경기 결과가 있어요',
+          body: `${opp.team.name} ${result.awayGoals} : ${result.homeGoals} ${mine.name}. 최근 경기에서 결과를 확인해 주세요.`,
+          target: { type: 'screen', screen: 'team' },
+        },
+      },
+    );
     // 상대 팀 기록(승패·레이팅)도 바뀌어 두 구단주 점수를 함께 센다.
     waitUntil(
       c,

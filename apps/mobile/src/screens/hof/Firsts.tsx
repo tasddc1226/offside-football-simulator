@@ -32,6 +32,7 @@ import { Seg, SortChips, TabOpt } from '../board/parts';
 import { intlLocale } from '@offside/app-core/i18n/core';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../ui/useSeasonNow';
+import { useRefresh } from '../../ui/refresh';
 
 type Holder = NonNullable<ServerFirst['holder']>;
 
@@ -117,11 +118,12 @@ export default function Firsts() {
   const seasons = useMemo(() => openTeamSeasons(now), [now]);
   const [picked, setPicked] = useState<number | null>(null);
   const season = picked ?? displaySeasonAt(now);
+  const { tick, track, pulled } = useRefresh();
   useEffect(() => {
-    setData(null);
+    if (!pulled) setData(null);
     setFailed(false);
     let live = true; // 더 늦게 고른 시즌의 응답만 쓴다.
-    void getFirsts(season).then((r) => {
+    void track(getFirsts(season)).then((r) => {
       if (!live) return;
       if (r.ok) setData(r.data);
       else setFailed(true);
@@ -129,7 +131,7 @@ export default function Firsts() {
     return () => {
       live = false;
     };
-  }, [season]);
+  }, [season, tick, track]);
 
   // 내 선수: 진행 중인 커리어 + 이 기기의 은퇴 선수. 서버엔 이름 공개를 끈 선수의 이름이 없으니 여기서 채운다.
   const mine = useMemo<ReadonlyMap<string, string>>(() => {

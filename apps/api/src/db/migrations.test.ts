@@ -96,6 +96,9 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'push_reserved_at',
     'expires_at',
   ],
+  push_preferences: ['profile_id', 'notice', 'release', 'team', 'market', 'social'],
+  push_results: ['id', 'notification_id', 'state', 'accepted_at', 'confirmed_at', 'updated_at'],
+  push_interactions: ['notification_id', 'clicked_at', 'target_opened_at'],
   push_deliveries: [
     'id',
     'notification_id',

@@ -157,6 +157,7 @@ pnpm --filter @offside/fulltime-sim analyze
 
 - 앱(안드로이드·iOS)이 출시돼도 웹(offside-lab.com)을 내리지 않는다. 웹을 줄이는 일은 사용자가 데이터를 보고 정한다.
 - 새 게임 기능은 규칙·문구를 `packages/game`·`packages/app-core`에 두고 웹·앱에 함께 낸다.
+- 게임 규칙·수치가 바뀌면 공개 가이드(`apps/web/scripts/seo.mjs`의 `GUIDE_SECTIONS`, 웹 `/guide/`·앱 설정의 게임 가이드)와 FAQ도 같은 PR에서 고친다(T-11-112).
 - 결제(IAP)·푸시·보상형 광고만 앱 전용이다. 배경과 축소 검토 기준은 [결정 로그](docs/tracking/decision-log.md)(2026-10-04)를 본다.
 
 ## 문서 정본 우선순위

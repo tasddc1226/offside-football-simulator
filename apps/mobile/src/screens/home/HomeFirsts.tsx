@@ -5,14 +5,16 @@ import { getFirsts } from '@offside/app-core/api/client';
 import { achievedList } from '@offside/app-core/firsts';
 import { go } from '../../game/nav';
 import { homeText as L } from '@offside/app-core/i18n/ko/home';
+import { useRefresh } from '../../ui/refresh';
 import { Tile } from './Tile';
 
 export function HomeFirsts() {
   const [latest, setLatest] = useState<ServerFirst | null>(null);
   const [count, setCount] = useState<{ done: number; total: number } | null>(null);
+  const { tick, track } = useRefresh();
   useEffect(() => {
     let alive = true;
-    void getFirsts().then((r) => {
+    void track(getFirsts()).then((r) => {
       if (!alive || !r.ok) return;
       const done = achievedList(r.data.items);
       setLatest(done[0] ?? null);
@@ -21,7 +23,7 @@ export function HomeFirsts() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [tick, track]);
 
   return (
     <Tile

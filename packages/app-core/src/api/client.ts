@@ -76,6 +76,13 @@ export function withLang(path: string): string {
   return getLocale() === 'en' ? `${path}${path.includes('?') ? '&' : '?'}lang=en` : path;
 }
 
+/** 새 서버 이벤트를 실제로 열 때 해당 기능만 갱신한다. 다른 화면의 메모는 유지한다. */
+export function invalidateApiCache(prefix: string): void {
+  for (const key of memo.keys())
+    if (key === prefix || key.startsWith(`${prefix}?`) || key.startsWith(`${prefix}/`))
+      memo.delete(key);
+}
+
 /** GET을 ttlMs 동안 메모한다. 같은 path의 진행 중 요청도 함께 쓴다(언어가 다르면 다른 요청이다). */
 export function cachedGet<T>(path: string, ttlMs: number): Promise<ApiResult<T>> {
   const key = withLang(path);
