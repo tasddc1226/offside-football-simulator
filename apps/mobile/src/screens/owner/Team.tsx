@@ -37,6 +37,10 @@ import { type TeamView } from '@offside/app-core/state';
 import { recordText, num } from '@offside/app-core/teamText';
 import {
   autoFillSlots,
+  tooManyWildcards,
+  WILDCARD_FULL_TEXT,
+  wildcardsIn,
+  wildcardText,
   draftLines,
   isPreseasonLegacy,
   matchHintOf,
@@ -214,7 +218,13 @@ export default function Team() {
       name: p ? nameOf(p) : YOUTH_NAME,
       youth: !p,
       ...(p
-        ? { peak: p.peak, number: p.number, legendScore: p.legendScore, nation: p.nation }
+        ? {
+            peak: p.peak,
+            number: p.number,
+            legendScore: p.legendScore,
+            nation: p.nation,
+            season: p.season,
+          }
         : {}),
     };
   });
@@ -664,7 +674,7 @@ export default function Team() {
                     testID="team-auto"
                     disabled={!players.length}
                     style={{ flex: 1 }}
-                    onPress={() => setSlots(autoFillSlots(slotCodes, players))}
+                    onPress={() => setSlots(autoFillSlots(slotCodes, players, season))}
                   >
                     자동 배치
                   </Btn>
@@ -691,6 +701,11 @@ export default function Team() {
                   이미지 공유
                 </Btn>
               </View>
+              {season > 0 ? (
+                <Txt v="xs" tone="muted" testID="team-wildcards">
+                  {wildcardText(wildcardsIn(slots, byId, season))}
+                </Txt>
+              ) : null}
               {editable ? (
                 <Txt v="xs" tone="muted">
                   선수 카드를 길게 눌러 옮겨요.
@@ -712,6 +727,8 @@ export default function Team() {
               synLinks={syn.links}
               synFocus={syn.members}
               change={(nextSlots, nextLayout) => {
+                // T-11-114 지난 시즌 선수는 와일드카드 상한까지만.
+                if (tooManyWildcards(nextSlots, byId, season)) return toast(WILDCARD_FULL_TEXT);
                 setSlots(nextSlots);
                 setLayout(nextLayout);
               }}

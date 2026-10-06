@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { FORMATIONS } from '@offside/contracts/owner-team';
 import type { ClubAchievement, OwnerTeam, TeamMatch, TeamPlayer } from './api/team.js';
+import { cardSeasonBadge } from './format.js';
 import {
   achDone,
   achState,
   assignSlot,
   attrLine,
   autoFillSlots,
+  overWildcards,
+  wildcardsIn,
+  wildcardText,
   matchHintOf,
   outcomeOf,
   teamEditableIn,
@@ -52,7 +56,7 @@ describe('assignSlot', () => {
 
 describe('autoFillSlots', () => {
   it('선수가 없으면 11자리 모두 비운다', () => {
-    const next = autoFillSlots(slots433, []);
+    const next = autoFillSlots(slots433, [], 0);
     expect(next).toHaveLength(11);
     expect(next.every((s) => s === null)).toBe(true);
   });
@@ -62,7 +66,7 @@ describe('autoFillSlots', () => {
       player('st', { pos: 'FW', dpos: 'ST', peak: 85 }),
       player('cb', { pos: 'DF', dpos: 'CB', peak: 75 }),
     ];
-    const next = autoFillSlots(slots433, players);
+    const next = autoFillSlots(slots433, players, 0);
     expect(next[slots433.indexOf('GK')]).toBe('gk');
     expect(next[slots433.indexOf('ST')]).toBe('st');
     expect(next[slots433.indexOf('CB')]).toBe('cb');
@@ -70,22 +74,42 @@ describe('autoFillSlots', () => {
     expect(new Set(used).size).toBe(used.length);
   });
   it('그 자리 실력이 유스 선수(50) 이하면 채우지 않는다', () => {
-    const next = autoFillSlots(slots433, [player('weak', { pos: 'GK', peak: 50 })]);
+    const next = autoFillSlots(slots433, [player('weak', { pos: 'GK', peak: 50 })], 0);
     expect(next.every((s) => s === null)).toBe(true);
     // 골키퍼가 아닌 필드 자리에서는 0.3 적합도라 80 → 24 로 떨어져 GK 자리만 채운다.
-    const gkOnly = autoFillSlots(slots433, [player('gk', { pos: 'GK', peak: 80 })]);
+    const gkOnly = autoFillSlots(slots433, [player('gk', { pos: 'GK', peak: 80 })], 0);
     expect(gkOnly.filter((s) => s !== null)).toEqual(['gk']);
     expect(gkOnly[slots433.indexOf('GK')]).toBe('gk');
   });
   it('선수가 11명보다 적으면 남는 자리는 null 로 둔다', () => {
-    const next = autoFillSlots(slots433, [player('st', { peak: 80 }), player('st2', { peak: 79 })]);
+    const next = autoFillSlots(
+      slots433,
+      [player('st', { peak: 80 }), player('st2', { peak: 79 })],
+      0,
+    );
     expect(next.filter((s) => s !== null)).toHaveLength(2);
   });
   it('실력이 같으면 FILL_ORDER 가 앞선 자리(ST)를 먼저 채운다', () => {
     // 같은 세부 포지션이 없는 공격수 한 명 — ST(0.95)와 W(0.95)가 같아 ST 자리를 차지한다.
-    const next = autoFillSlots(['W', 'ST'], [player('fw', { peak: 80 })]);
+    const next = autoFillSlots(['W', 'ST'], [player('fw', { peak: 80 })], 0);
     expect(next[1]).toBe('fw');
     expect(next[0]).toBeNull();
+  });
+
+  it('T-11-114 지난 시즌 선수는 와일드카드 상한(3명)까지만 채우고, 상한을 넘는 배치를 알려 준다', () => {
+    const old = [1, 2, 3, 4].map((i) => player(`old${i}`, { peak: 90, season: 0 }));
+    const fresh = player('new', { peak: 75, season: 1 });
+    const next = autoFillSlots(slots433, [...old, fresh], 1);
+    const byId = new Map([...old, fresh].map((p) => [p.careerId, p]));
+    expect(wildcardsIn(next, byId, 1)).toBe(3);
+    expect(next).toContain('new');
+    const free = next.indexOf(null);
+    expect(overWildcards(next, free, 'old4', byId, 1)).toBe(true);
+    // 이미 든 와일드카드끼리 자리를 바꾸는 건 괜찮다.
+    expect(overWildcards(next, next.indexOf('old1'), 'old2', byId, 1)).toBe(false);
+    expect(wildcardText(3)).toBe('와일드카드 3/3');
+    expect(cardSeasonBadge(0)).toBe('PRE');
+    expect(cardSeasonBadge(2)).toBe('S2');
   });
 });
 

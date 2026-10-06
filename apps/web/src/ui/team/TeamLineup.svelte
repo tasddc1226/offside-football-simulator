@@ -3,7 +3,7 @@
   import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, presetLayout, positionRole, slotRating, slotFit, type FormationId, type TeamPosition } from '@offside/contracts/owner-team';
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
-  import { attrLine, synergyFocus } from '@offside/app-core/teamOwner';
+  import { attrLine, synergyFocus, wildcardText, wildcardsIn } from '@offside/app-core/teamOwner';
   import type { TeamSynergy as Synergy } from '@offside/contracts/owner-team';
   import TeamLines from './TeamLines.svelte';
   import TeamSynergy from './TeamSynergy.svelte';
@@ -36,6 +36,8 @@
   // T-11-105 고른 시너지 칩 — 그라운드에서 그 듀오의 선은 굵게, 선수는 테두리로 보여 준다.
   let synFocus = $state<string | null>(null);
   const syn = $derived(synergyFocus(synergy, synFocus));
+  // T-11-114 지난 시즌 선수(와일드카드) 수. 앞 시즌이 없는 프리시즌에는 보이지 않는다.
+  const wildcards = $derived(season > 0 ? wildcardsIn(slots, new Map(players.map((p) => [p.careerId, p])), season) : null);
   const chosen = $derived(players.find((p) => p.careerId === selectedPlayer));
   const selectedCell = $derived(selectedSlot !== null ? cells[selectedSlot] : undefined);
   const selectedFit = $derived(selectedCell?.player && selectedSlot !== null ? Math.round(slotFit(positions[selectedSlot]!.slot, selectedCell.player, selectedCell.rating) * 100) : null);
@@ -144,7 +146,7 @@
 {#if editable || team}
   <section class="ground-panel" aria-label="편성 그라운드">
     <header class="ground-head">
-      <div><h2>그라운드</h2><p class="muted">선발 {filled} / {LINEUP_SIZE}명{#if layout} · 자유 배치{/if}</p></div>
+      <div><h2>그라운드</h2><p class="muted">선발 {filled} / {LINEUP_SIZE}명{#if wildcards !== null} · <span class="wildcards" data-team-wildcards>{wildcardText(wildcards)}</span>{/if}{#if layout} · 자유 배치{/if}</p></div>
       <div class="ground-actions">
         {#if editable}<button class="text-button ground-auto" onclick={onauto} disabled={!players.length} data-act="team-auto">자동 배치</button>{/if}
         <button class="ground-share" aria-label="SNS 공유 이미지 만들기" data-act="team-share-make" onclick={openShare}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V2m-4 4 4-4 4 4M5 9H3v8h14V9h-2" /></svg><span>공유</span></button>
@@ -246,6 +248,7 @@
   .ground-share {display:flex;align-items:center;justify-content:center;gap:5px;min-width:64px;min-height:44px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
   .ground-share svg {width:16px;height:16px;stroke:currentColor;stroke-width:1.5;fill:none;}
   .ground-auto {font-size:12px;white-space:nowrap;}
+  .wildcards {white-space:nowrap;}
   .ground-presets {margin:4px 14px 12px;gap:8px;}
   .ground-presets .hof-sort {min-height:36px;min-width:64px;position:relative;}
   .ground-presets .hof-sort::after {content:'';position:absolute;inset:-4px 0;}

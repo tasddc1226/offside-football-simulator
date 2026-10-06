@@ -14,17 +14,21 @@ export const recordOf = (t: Pick<OwnerTeamRow, 'wins' | 'draws' | 'losses'>): Te
 /** 선발 11자리 표시 — 이름은 공개 이름, 없으면 익명 표기(유스 선수 포함). */
 export const slotsOf = (
   lineup: readonly LineupSlot[],
-  players?: ReadonlyMap<string, { nation?: string | null }>,
+  players?: ReadonlyMap<string, { nation?: string | null; season?: number }>,
 ): TeamSlot[] =>
-  lineup.map((s) => ({
-    slot: s.slot,
-    careerId: s.careerId,
-    name: s.publicName ?? s.ref.anon,
-    pos: s.pos,
-    nation: s.careerId ? (players?.get(s.careerId)?.nation ?? null) : null,
-    rating: s.rating,
-    fit: s.fit,
-  }));
+  lineup.map((s) => {
+    const p = s.careerId ? players?.get(s.careerId) : undefined;
+    return {
+      slot: s.slot,
+      careerId: s.careerId,
+      name: s.publicName ?? s.ref.anon,
+      pos: s.pos,
+      nation: p?.nation ?? null,
+      ...(p?.season !== undefined ? { season: p.season } : {}),
+      rating: s.rating,
+      fit: s.fit,
+    };
+  });
 
 /** 줄 힘. 시너지 반영 시즌(T-11-105)이면 경기와 같게 시너지 보정을 더한다. */
 export function linesOf(lineup: readonly LineupSlot[], season: number): TeamLines {

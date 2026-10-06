@@ -67,6 +67,8 @@ export const YOUTH_NAME = '유스 선수';
 export const TEAM_MATCHES_PER_DAY = 10;
 /** 한 팀의 선발 인원. */
 export const LINEUP_SIZE = 11;
+/** T-11-114 선발에 넣을 수 있는 지난 시즌 선수(와일드카드) 수. 나머지는 그 시즌 선수다. */
+export const TEAM_WILDCARD_MAX = 3;
 
 // T-11-098 친구 · 친선전. 친선전은 레이팅·전적·업적에 들어가지 않고 친구끼리 상대 전적만 남긴다.
 /** 친구(보낸·받은 신청 포함) 상한. */
