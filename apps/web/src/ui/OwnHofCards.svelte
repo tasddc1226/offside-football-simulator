@@ -5,6 +5,7 @@
   import type { LegendView } from './state.svelte.js';
   import PublishCard from './PublishCard.svelte';
   import KeepLoginCard from './KeepLoginCard.svelte';
+  import { hofOwnText as L } from '@offside/app-core/i18n/ko/hofOwn';
 
   // 은퇴 리포트와 같은 v를 받는다(공유 이미지가 리포트와 같은 값을 그리게). v.own이 있을 때만 그린다.
   const { v }: { v: LegendView } = $props();
@@ -18,7 +19,7 @@
   <PublishCard {h} /><KeepLoginCard id={h.id!} />
 {:else}
   <section class="card stack" data-share="short">
-    <div><div class="eyebrow">Hall of Fame</div><h2>내 선수에만 남는 기록</h2></div>
+    <div><div class="eyebrow">Hall of Fame</div><h2>{L.shortTitle}</h2></div>
     <p class="muted fs-sm">
       {SHORT_CAREER_NOTE}
     </p>

@@ -2,6 +2,8 @@
 import { useState, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import type { AchGrade } from '@offside/contracts/owner-team';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+import { achGradeName } from '@offside/app-core/teamOwner';
 import { alpha, mix } from '../../theme/colors';
 import { useColors, useIsDark } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -105,7 +107,7 @@ export function OvrBadge({ ovr }: { ovr: number }) {
   return (
     <View
       accessible
-      accessibilityLabel={`팀 OVR ${ovr}`}
+      accessibilityLabel={L.teamOvr({ n: ovr })}
       style={{
         minWidth: 58,
         paddingVertical: 6,
@@ -245,7 +247,7 @@ export function AchGradeBadge({
     <View
       testID={`ach-grade-${grade.id}`}
       accessible
-      accessibilityLabel={`등급 ${grade.name}`}
+      accessibilityLabel={L.gradeAria({ name: achGradeName(grade) })}
       style={{
         flexShrink: 0,
         alignSelf: emblem ? 'center' : 'flex-end',
@@ -265,7 +267,7 @@ export function AchGradeBadge({
           color: mix(g, c.ink, 0.65),
         }}
       >
-        {grade.name}
+        {achGradeName(grade)}
       </Txt>
     </View>
   );

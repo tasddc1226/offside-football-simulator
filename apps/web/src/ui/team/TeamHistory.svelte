@@ -3,6 +3,7 @@
   import type { TeamMatch } from '@offside/app-core/api/team';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import TeamMatchRow from './TeamMatchRow.svelte';
+  import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 
   let {
     history,
@@ -20,13 +21,13 @@
 <section class="card stack" style="gap:12px">
   <div>
     <div class="eyebrow">Matches</div>
-    <h1>최근 경기</h1>
+    <h1>{L.historyTitle}</h1>
   </div>
-  <LoadState {status} failText="경기 기록을 불러오지 못했어요." retry={onreload}>
+  <LoadState {status} failText={L.historyFail} retry={onreload}>
     {#each history as m (m.id)}
       <TeamMatchRow {m} {onopen} />
     {:else}
-      <p class="muted">아직 치른 경기가 없어요.</p>
+      <p class="muted">{L.historyEmpty}</p>
     {/each}
   </LoadState>
 </section>

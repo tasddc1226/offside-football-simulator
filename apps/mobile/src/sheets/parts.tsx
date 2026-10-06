@@ -8,6 +8,7 @@ import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
 import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
+import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
 
 /** 웹 color-mix(in srgb, A pct%, B) — #rrggbb 두 색을 섞는다. */
 export function mixColor(a: string, b: string, pctA: number): string {
@@ -32,7 +33,7 @@ export function SkipLink({ onPress }: { onPress: () => void }) {
       style={{ alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 2 }}
     >
       <Txt tone="muted" style={{ fontSize: rem(0.75), textDecorationLine: 'underline' }}>
-        건너뛰기
+        {sheetCoreText.skip}
       </Txt>
     </Press>
   );

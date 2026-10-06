@@ -8,6 +8,7 @@ import { toast } from '../game/host';
 import { TextBox } from '../screens/board/parts';
 import { accountCache } from '../store';
 import { Btn } from '../ui/Btn';
+import { hofOwnText as L } from '@offside/app-core/i18n/ko/hofOwn';
 
 export function NicknameForm({
   current = null,
@@ -30,7 +31,7 @@ export function NicknameForm({
     accountCache.fetchedAt = Date.now();
     const next = r.data.nickname ?? value;
     setValue(next);
-    toast('닉네임을 정했어요');
+    toast(L.nickSaved);
     onsaved?.(next);
   }
 
@@ -38,8 +39,8 @@ export function NicknameForm({
     <View style={{ flexDirection: 'row', gap: 8 }}>
       <TextBox
         testID="nickname-input"
-        accessibilityLabel="댓글 닉네임"
-        placeholder={`댓글 닉네임 (2~${COMMENT_NICKNAME_MAX}자)`}
+        accessibilityLabel={L.nickLabel}
+        placeholder={L.nickPlaceholder({ max: COMMENT_NICKNAME_MAX })}
         maxLength={COMMENT_NICKNAME_MAX}
         returnKeyType="done"
         autoCapitalize="none"
@@ -55,7 +56,7 @@ export function NicknameForm({
         disabled={busy || value.trim() === (current ?? '')}
         onPress={() => void save()}
       >
-        {current ? '바꾸기' : '정하기'}
+        {current ? L.nickChange : L.nickSet}
       </Btn>
     </View>
   );

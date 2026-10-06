@@ -8,6 +8,7 @@
   import LegendReport from './LegendReport.svelte';
   import OwnHofCards from './OwnHofCards.svelte';
   import ShareBar from './ShareBar.svelte';
+  import { retiredText as L } from '@offside/app-core/i18n/ko/retired';
 
   const v = $derived(viewFromGame(appState.G!));
 </script>
@@ -18,8 +19,8 @@
   <LegendReport {v}>
     {#snippet end()}
       {#if v.own?.id}<OwnHofCards {v} />{/if}
-      <button class="btn btn-primary btn-block" data-act="new" onclick={goNew}>새 커리어 킥오프 →</button>
-      <button class="btn btn-block" data-act="home" onclick={goHome}>명예의 전당 보기</button>
+      <button class="btn btn-primary btn-block" data-act="new" onclick={goNew}>{L.newCareer}</button>
+      <button class="btn btn-block" data-act="home" onclick={goHome}>{L.seeHof}</button>
     {/snippet}
   </LegendReport>
   <!-- T-11-108: 결산과 다음 행동 버튼을 모두 지난 뒤, 본문과 함께 스크롤되는 광고 한 칸. -->

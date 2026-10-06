@@ -1,6 +1,7 @@
 <script lang="ts">
   import { CREST_SHAPES, CREST_PATTERNS } from '@offside/game/crests';
   import { defaultTeamLogo, type TeamLogo } from '@offside/contracts/team-logo';
+  import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   let { logo, name, size = 48, decorative = false }: { logo?: TeamLogo | null | undefined; name: string; size?: number; decorative?: boolean } = $props();
   const value = $derived(logo ?? defaultTeamLogo(name));
   let failedImage = $state('');
@@ -9,9 +10,9 @@
 
 <span class="team-logo" style:width="{size}px" style:height="{size}px" aria-hidden={decorative}>
   {#if value.img && failedImage !== value.img}
-    <img src={value.img} alt={decorative ? '' : `${name} 로고`} width={size} height={size} onerror={() => (failedImage = value.img ?? '')} />
+    <img src={value.img} alt={decorative ? '' : L.logoAlt({ name })} width={size} height={size} onerror={() => (failedImage = value.img ?? '')} />
   {:else}
-    <svg viewBox="0 0 64 64" width={size} height={size} role="img" aria-label="{name} 로고">
+    <svg viewBox="0 0 64 64" width={size} height={size} role="img" aria-label={L.logoAlt({ name })}>
       <defs><clipPath id={clip}><path d={CREST_SHAPES[value.shape]} /></clipPath></defs>
       <g clip-path="url(#{clip})">
         <rect width="64" height="64" fill={value.bg} />

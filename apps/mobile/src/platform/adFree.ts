@@ -16,6 +16,7 @@ import {
   type Purchase,
 } from 'expo-iap';
 import { kv } from './setup';
+import { adText as L } from '@offside/app-core/i18n/ko/ad';
 
 /** App Store Connect·Play Console에 같은 ID로 만든 비소모성 상품. */
 export const REMOVE_ADS = 'com.offsidelab.app.remove_ads';
@@ -41,7 +42,7 @@ const owns = (purchases: Purchase[]) =>
 async function onPurchase(p: Purchase) {
   if (p.productId !== REMOVE_ADS) return;
   if (p.purchaseState === 'pending') {
-    adFree.message = '결제 승인을 기다리고 있어요. 승인되면 광고가 꺼져요.';
+    adFree.message = L.pending;
     adFree.busy = false;
     return;
   }
@@ -49,7 +50,7 @@ async function onPurchase(p: Purchase) {
   // 마무리를 못 해도 구매는 끝났으니 먼저 광고를 끈다. 마무리는 다음 시작 때 스토어가 다시 알려 준다.
   grant();
   adFree.busy = false;
-  adFree.message = '광고를 껐어요. 고마워요.';
+  adFree.message = L.done;
   await finishTransaction({ purchase: p, isConsumable: false }).catch(() => {});
 }
 
@@ -61,10 +62,7 @@ function connect() {
       purchaseUpdatedListener((p) => void onPurchase(p));
       purchaseErrorListener((e) => {
         adFree.busy = false;
-        adFree.message =
-          e.code === ErrorCode.UserCancelled
-            ? ''
-            : '결제하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+        adFree.message = e.code === ErrorCode.UserCancelled ? '' : L.payFail;
       });
       return true;
     })
@@ -97,7 +95,7 @@ export async function buyAdFree() {
   adFree.message = '';
   if (!(await connect())) {
     adFree.busy = false;
-    adFree.message = '스토어에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+    adFree.message = L.storeFail;
     return;
   }
   await requestPurchase({
@@ -105,7 +103,7 @@ export async function buyAdFree() {
     type: 'in-app',
   }).catch(() => {
     adFree.busy = false;
-    adFree.message = '결제를 시작하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+    adFree.message = L.payStartFail;
   });
 }
 
@@ -128,12 +126,12 @@ export async function restoreAdFree() {
     }
     if (found) {
       grant();
-      adFree.message = '구매를 복원해 광고를 껐어요.';
+      adFree.message = L.restored;
     } else {
-      adFree.message = '이 스토어 계정에는 광고 제거 구매 기록이 없어요.';
+      adFree.message = L.noPurchase;
     }
   } catch {
-    adFree.message = '복원하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+    adFree.message = L.restoreFail;
   } finally {
     adFree.busy = false;
   }

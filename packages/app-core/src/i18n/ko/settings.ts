@@ -1,0 +1,61 @@
+// 환경설정 화면(웹 Settings.svelte · 앱 screens/settings/Settings.tsx). 웹·앱 문구가 다른 줄은 Web/App 접미사로 나눈다.
+import { ns } from '../core';
+
+const ko = {
+  title: '환경설정',
+  darkTitle: '다크 모드',
+  darkBodyWeb: '어두운 화면으로 바꿔요. 이 기기에 저장돼요.',
+  darkBodyApp: '어두운 화면으로 봐요. 이 기기에 저장돼요.',
+  langTitle: '언어',
+  langBody:
+    '화면 문구의 언어를 바꿔요. 이벤트·기록 문장은 아직 한국어로 나와요. 이 기기에 저장돼요.',
+  sheetTitle: '업무 모드',
+  sheetBodyBefore: '게임 화면을 스프레드시트로 바꾸고 소리를 꺼요. ',
+  sheetBodyAfter: '(숫자 1 왼쪽 키)로 켜고 꺼요. PC 브라우저 전용이며 이 기기에 저장돼요.',
+  sfxTitle: '효과음',
+  sfxBody: '버튼을 누를 때 클릭 소리를 내요.',
+  bgmTitle: '배경음악',
+  bgmBody: '기록실·선수 상세에서는 다른 곡이 나와요. 화면 위 스피커 버튼으로도 켜고 꺼요.',
+  bgmVolume: '배경음악 음량',
+  bgmVolumeNote: '이 기기에서는 배경음악 음량을 기기 음량 버튼으로 조절해요.',
+  musicCredit: '음악:',
+  namePublicTitle: '선수 이름 공개',
+  namePublicBody:
+    "홈 라이브 현황·명예의 전당·서버 최초 업적에 선수 이름이 보여요. 끄면 '익명의 공격수'처럼 표시되고, 다음 시즌 기록부터 반영돼요. 실명은 쓰지 않는 게 좋아요.",
+  analyticsTitle: '앱 이용 분석 동의 (선택)',
+  analyticsBody:
+    '동의하면 Google Analytics로 화면 방문과 커리어 시작·진행·은퇴, 기기·앱 버전·세션 정보를 분석해요. 선수 이름·계정 정보·저장 파일은 보내지 않아요. 언제든 끌 수 있고, 동의 전 활동은 전송하지 않아요.',
+  help: '도움말',
+  installGuide: '홈 화면에 추가하기',
+  guide: '게임 가이드',
+  faq: '자주 묻는 질문',
+  legal: '서비스 정책',
+  terms: '이용약관',
+  privacy: '개인정보 처리방침',
+  tapToChange: '눌러서 바꿔요',
+  close: '닫기',
+  consentAria: '선택적 이용 분석',
+  consentTitle: '게임 개선을 위한 이용 분석',
+  consentOptional: '(선택)',
+  consentBody1:
+    '동의하면 Google Analytics가 방문 경로, 화면 이동과 커리어 시작·시즌 완료·은퇴·공유 버튼 이용을 쿠키로 분석해요. 이름과 커리어 ID는 보내지 않아요. 동의하지 않아도 게임은 똑같이 이용할 수 있어요.',
+  consentBody2:
+    '분석 정보는 Google의 해외 서버에서 처리되며, 사용자·이벤트 데이터는 2개월 보관해요. 환경설정에서 언제든 바꿀 수 있어요.',
+  consentMore: '자세히 보기',
+  consentNow: '현재:',
+  consentGranted: '동의',
+  consentDenied: '동의 안 함',
+  consentUnset: '선택 전',
+  consentRevoke: '분석 동의 철회',
+  consentAgree: '분석에 동의',
+  consentRevokeNote:
+    '철회하면 이후 수집이 중단되고 이 브라우저의 분석용 쿠키·기록을 지워요. 이미 전송된 정보가 자동 삭제되지는 않아요.',
+  reviewTitle: '스토어 리뷰',
+  reviewBody: '플레이하면서 느낀 점을 스토어에 남겨 주세요.',
+  reviewOpening: '스토어 여는 중…',
+  reviewBtn: '스토어에 리뷰 남기기',
+  reviewFail: '스토어를 열지 못했어요. 잠시 뒤 다시 시도해 주세요.',
+};
+
+export type SettingsMsgs = typeof ko;
+export const settingsText = ns('settings', ko);

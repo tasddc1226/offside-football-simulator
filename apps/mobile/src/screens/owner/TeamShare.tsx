@@ -7,6 +7,8 @@ import type { FormationId, TeamLayout } from '@offside/contracts/owner-team';
 import type { TeamLogo as Logo } from '@offside/contracts/team-logo';
 import type { TeamLines } from '@offside/app-core/api/team';
 import { TeamDialog } from '../../components/TeamDialog';
+import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
+import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TeamPitch, type PitchCell } from '../../components/TeamPitch';
 import { toast } from '../../game/host';
@@ -60,7 +62,7 @@ export function TeamShare({ data, close }: { data: TeamShareData; close: () => v
       uriRef.current = uri;
       setShot(uri);
     } catch {
-      if (mounted.current) setError('이미지를 만들지 못했어요. 다시 눌러 주세요.');
+      if (mounted.current) setError(L.shareMakeFail);
     } finally {
       if (mounted.current) setBusy(false);
     }
@@ -68,42 +70,41 @@ export function TeamShare({ data, close }: { data: TeamShareData; close: () => v
   async function share(title: string) {
     if (!shot) return;
     try {
-      if (!(await Sharing.isAvailableAsync()))
-        return toast('이 기기에서는 이미지를 공유할 수 없어요.');
+      if (!(await Sharing.isAvailableAsync())) return toast(L.shareUnavailableApp);
       await Sharing.shareAsync(shot, {
         mimeType: 'image/png',
         UTI: 'public.png',
         dialogTitle: title,
       });
     } catch {
-      toast('공유 창을 열지 못했어요. 다시 눌러 주세요.');
+      toast(L.shareOpenFailApp);
     }
   }
   return (
-    <TeamDialog title="SNS 공유 이미지" close={close}>
+    <TeamDialog title={L.shareTitle} close={close}>
       <Txt v="sm" tone="muted">
-        지금 보고 있는 편성을 한 장에 담아요.
-        {data.draft ? ' 저장 전 편성도 이미지에 포함돼요.' : ''}
+        {L.shareLeadApp}
+        {data.draft ? ` ${L.shareDraftNote}` : ''}
       </Txt>
       {shot ? (
         <>
           <Image
             source={{ uri: shot }}
             testID="team-share-preview"
-            accessibilityLabel={`${data.name} 편성 공유 이미지`}
+            accessibilityLabel={L.shareAltApp({ name: data.name })}
             style={{ width: '100%', aspectRatio: 4 / 5, borderRadius: 12 }}
           />
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Btn style={{ flex: 1 }} onPress={() => void share('이미지 저장')}>
-              이미지 저장
+            <Btn style={{ flex: 1 }} onPress={() => void share(L.saveImage)}>
+              {L.saveImage}
             </Btn>
             <Btn
               style={{ flex: 1 }}
               kind="primary"
               testID="team-share-send"
-              onPress={() => void share('팀 편성 공유')}
+              onPress={() => void share(L.shareDialogApp)}
             >
-              바로 공유
+              {L.shareNow}
             </Btn>
           </View>
         </>
@@ -114,7 +115,7 @@ export function TeamShare({ data, close }: { data: TeamShareData; close: () => v
         </Txt>
       ) : null}
       <Btn testID="team-share-make" disabled={busy || !ready} onPress={() => void make()}>
-        {busy ? '만드는 중…' : shot ? '다시 만들기' : '공유 이미지 만들기'}
+        {busy ? L.makingBtn : shot ? L.remake : L.makeImageApp}
       </Btn>
       <View
         pointerEvents="none"
@@ -135,7 +136,7 @@ export function TeamShare({ data, close }: { data: TeamShareData; close: () => v
               <Txt style={{ color: '#14201a', fontSize: 28, fontWeight: '700' }}>{data.name}</Txt>
               <Txt
                 style={{ color: '#5c6b62', fontSize: 13 }}
-              >{`${data.manager} 감독${data.draft ? ' · 저장 전' : ''}`}</Txt>
+              >{`${L.cardManagerApp({ name: data.manager })}${data.draft ? L.cardUnsavedApp : ''}`}</Txt>
             </View>
             <Txt
               style={{ color: '#1c4a35', fontSize: 28, fontWeight: '700' }}
@@ -154,15 +155,13 @@ export function TeamShare({ data, close }: { data: TeamShareData; close: () => v
                 key={key}
                 style={{ flex: 1, textAlign: 'center', color: '#14201a', fontSize: 13 }}
               >
-                {`${['공격', '중원', '수비', '골문'][i]} ${Math.round(data.lines[key])}`}
+                {`${[LH.lineAtk, LH.lineMid, LH.lineDef, LH.lineGk][i]} ${Math.round(data.lines[key])}`}
               </Txt>
             ))}
           </View>
-          <Txt style={{ color: '#5c6b62', fontSize: 12 }}>
-            카드 OVR은 최고 실력 · 배치는 해당 자리 실력
-          </Txt>
+          <Txt style={{ color: '#5c6b62', fontSize: 12 }}>{L.cardFootApp}</Txt>
           <Txt style={{ color: '#1c4a35', fontSize: 14, fontWeight: '700' }}>
-            나만의 축구 커리어 · offside-lab.com
+            {L.cardTaglineApp}
           </Txt>
         </View>
       </View>

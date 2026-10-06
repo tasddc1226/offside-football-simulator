@@ -12,6 +12,7 @@ import {
   type TeamLogo as Logo,
 } from '@offside/contracts/team-logo';
 import { TeamDialog } from '../../components/TeamDialog';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { TeamLogo } from '../../components/TeamLogo';
 import { toast } from '../../game/host';
 import { Btn, Press, Txt } from '../../ui';
@@ -43,8 +44,7 @@ export function TeamLogoEditor({
       });
       if (result.canceled) return;
       const asset = result.assets[0]!;
-      if ((asset.fileSize ?? 0) > 10 * 1024 * 1024)
-        throw new Error('10MB 이하 이미지를 골라 주세요.');
+      if ((asset.fileSize ?? 0) > 10 * 1024 * 1024) throw new Error(L.imgSizeApp);
       const side = Math.min(asset.width, asset.height);
       for (const width of [128, 96, 64]) {
         const context = ImageManipulator.manipulate(asset.uri)
@@ -69,30 +69,26 @@ export function TeamLogoEditor({
           return;
         }
       }
-      throw new Error('이미지가 너무 복잡해요. 다른 이미지를 골라 주세요.');
+      throw new Error(L.imgComplexApp);
     } catch (e) {
-      setError(
-        e instanceof Error && !e.message.includes('Native')
-          ? e.message
-          : '이미지를 불러오지 못했어요. 다시 골라 주세요.',
-      );
+      setError(e instanceof Error && !e.message.includes('Native') ? e.message : L.imgLoadFailApp);
     } finally {
       setBusy(false);
     }
   }
   return (
-    <TeamDialog title="팀 로고 설정" close={close}>
+    <TeamDialog title={L.logoTitleApp} close={close}>
       <View style={{ alignItems: 'center' }}>
         <TeamLogo name={name} logo={value} size={88} />
       </View>
       <Txt tone="muted" v="xs">
-        적용 후 편성을 저장하면 내 팀·랭킹·경기 화면에 보여요.
+        {L.previewNoteApp}
       </Txt>
       <Btn testID="team-logo-upload" onPress={() => void pickImage()} disabled={busy}>
-        {busy ? '이미지 준비 중…' : '사진에서 이미지 선택'}
+        {busy ? L.busyApp : L.pickPhotoApp}
       </Btn>
       <Txt tone="muted" v="xs">
-        가운데를 정사각형으로 잘라 작은 로고로 저장해요. 10MB 이하 이미지를 골라 주세요.
+        {L.cropNoteApp}
       </Txt>
       {value.img ? (
         <Btn
@@ -103,28 +99,28 @@ export function TeamLogoEditor({
             setValue(preset);
           }}
         >
-          기본 도안으로 만들기
+          {L.toPresetApp}
         </Btn>
       ) : (
         <>
           <SortChips
-            label="로고 모양"
+            label={L.shapeLabelApp}
             value={value.shape}
             onPick={(shape) => patch({ shape: shape as Logo['shape'] })}
             testIDPrefix="logo-shape"
             items={TEAM_LOGO_SHAPES.map((key, i) => ({
               key,
-              label: ['방패', '오각형', '원형', '배지'][i]!,
+              label: [L.shapeAppS, L.shapeAppP, L.shapeAppR, L.shapeAppB][i]!,
             }))}
           />
           <SortChips
-            label="로고 무늬"
+            label={L.patternLabelApp}
             value={value.pattern}
             onPick={(pattern) => patch({ pattern: pattern as Logo['pattern'] })}
             testIDPrefix="logo-pattern"
             items={TEAM_LOGO_PATTERNS.map((key, i) => ({
               key,
-              label: ['단색', 'V 무늬', '사선', '반반'][i]!,
+              label: [L.patAppPlain, L.patAppV, L.patAppSash, L.patAppHalf][i]!,
             }))}
           />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -149,31 +145,31 @@ export function TeamLogoEditor({
               </Press>
             ))}
           </View>
-          <Field label="로고 글자 (최대 3자)">
+          <Field label={L.textFieldApp}>
             <TextField
-              accessibilityLabel="로고 글자"
+              accessibilityLabel={L.textAriaApp}
               maxLength={3}
               value={value.text}
               onChangeText={(text) => patch({ text })}
             />
           </Field>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Field label="배경색" style={{ flex: 1 }}>
+            <Field label={L.bgFieldApp} style={{ flex: 1 }}>
               <TextField
                 value={value.bg}
                 onChangeText={(bg) => patch({ bg })}
                 maxLength={7}
                 autoCapitalize="none"
-                accessibilityLabel="로고 배경색 HEX"
+                accessibilityLabel={L.bgAriaApp}
               />
             </Field>
-            <Field label="글자색" style={{ flex: 1 }}>
+            <Field label={L.fgFieldApp} style={{ flex: 1 }}>
               <TextField
                 value={value.fg}
                 onChangeText={(fg) => patch({ fg })}
                 maxLength={7}
                 autoCapitalize="none"
-                accessibilityLabel="로고 글자색 HEX"
+                accessibilityLabel={L.fgAriaApp}
               />
             </Field>
           </View>
@@ -190,14 +186,13 @@ export function TeamLogoEditor({
         disabled={busy}
         onPress={() => {
           const parsed = TeamLogoSchema.safeParse(value);
-          if (!parsed.success)
-            return setError('글자는 3자 이내, 색상은 # 뒤에 6자리로 입력해 주세요.');
+          if (!parsed.success) return setError(L.logoInvalidApp);
           apply(parsed.data);
           close();
-          toast('로고를 적용했어요. 편성 저장을 누르면 다른 사람에게도 보여요.');
+          toast(L.logoAppliedApp);
         }}
       >
-        로고 적용
+        {L.logoApplyApp}
       </Btn>
       <Btn
         kind="ghost"
@@ -207,7 +202,7 @@ export function TeamLogoEditor({
           close();
         }}
       >
-        기본 로고로 되돌리기
+        {L.logoResetApp}
       </Btn>
     </TeamDialog>
   );

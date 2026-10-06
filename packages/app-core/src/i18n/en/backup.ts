@@ -1,0 +1,40 @@
+import type { Translation } from '../core';
+import type { BackupMsgs } from '../ko/backup';
+
+export const backup: Translation<BackupMsgs> = {
+  title: 'Back up your current career',
+  bodyWeb:
+    'Use this when you switch devices or move out of an in-app browser such as KakaoTalk. Never share your backup code with anyone.',
+  bodyApp: 'Use this when you switch devices. Never share your backup code with anyone.',
+  copyCode: 'Copy code',
+  saveFile: 'Save as file',
+  shareFile: 'Export via share',
+  manualLabel: 'Backup code (copy manually)',
+  importLabel: 'Restore a backup',
+  pastePlaceholder: 'Paste your backup code here',
+  importBtn: 'Restore',
+  pickFile: 'Restore from file',
+  pasteClipboard: 'Paste from clipboard',
+  pasteHint: 'Paste a backup code or the backup text you exported.',
+  shareTitle: 'OFFSIDE career backup',
+  copied: 'Backup code copied',
+  copyManual: 'Press and hold the code below to copy it',
+  fileSaved: 'Backup file saved',
+  shareFail: "Couldn't share. Copy the code instead",
+  replaceConfirm: (p) =>
+    `Replace the career of ${p.name} in progress with this backup? This can't be undone.`,
+  replaceOk: 'Replace',
+  cancel: 'Cancel',
+  noSpace: 'Not enough storage to restore the backup. Your current career is unchanged',
+  restored: 'Backup restored',
+  fileReadFail: "Couldn't read the file",
+  clipEmpty: 'The clipboard is empty',
+  clipFail: "Couldn't read the clipboard",
+  failEmptyWeb: 'Paste a backup code or choose a backup file',
+  failEmptyApp: 'Paste a backup code or the backup text you exported',
+  failFormat: "That backup code isn't valid. Check that you copied the whole code",
+  failVersion: "This backup's format doesn't match the current game, so it can't be restored",
+  failSaveVersion: "This backup doesn't match the current game version, so it can't be restored",
+  failSave: "The career data in this backup is invalid, so it can't be restored",
+  failTooLarge: 'This backup code is too large to restore',
+};

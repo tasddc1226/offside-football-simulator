@@ -2,6 +2,7 @@ import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
 import { toast } from '../../game/host';
 import { Btn, Card, Txt } from '../../ui';
+import { homeText as L } from '@offside/app-core/i18n/ko/home';
 
 // 웹과 같은 기존 공개 후원 정보. 게임 혜택·광고 제거 구매와 연결하지 않는다.
 // 아직 홈에 붙이지 않는다(T-11-085): Apple 3.1.1은 개발자 팁을 인앱 결제로만 허용한다. 팁 IAP 상품을 만든 뒤 연다.
@@ -15,13 +16,9 @@ export function VoluntarySupport() {
     setBusy(true);
     try {
       const copied = await Clipboard.setStringAsync(ACCOUNT);
-      toast(
-        copied
-          ? '계좌번호를 복사했어요. 고마워요'
-          : '복사하지 못했어요. 아래 계좌번호를 직접 적어 주세요',
-      );
+      toast(copied ? L.supportCopied : L.supportCopyFailed);
     } catch {
-      toast('복사하지 못했어요. 아래 계좌번호를 직접 적어 주세요');
+      toast(L.supportCopyFailed);
     } finally {
       setBusy(false);
     }
@@ -30,11 +27,10 @@ export function VoluntarySupport() {
   return (
     <Card testID="home-support" gap={10}>
       <Txt v="h2" accessibilityRole="header">
-        개발자 응원하기
+        {L.supportTitle}
       </Txt>
       <Txt v="sm" tone="muted">
-        재밌게 즐기셨다면 개발을 응원해 주세요. 후원은 선택이며, 게임 혜택이나 광고 제거는 제공하지
-        않아요.
+        {L.supportBody}
       </Txt>
       <Btn
         testID="coffee"
@@ -42,7 +38,7 @@ export function VoluntarySupport() {
         onPress={() => void copyAccount()}
         style={{ alignSelf: 'flex-start' }}
       >
-        후원 계좌 복사
+        {L.supportCopy}
       </Btn>
       <Txt v="sm" tone="muted" selectable>
         {ACCOUNT}

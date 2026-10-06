@@ -15,6 +15,7 @@ import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
 import { CreditScreen } from './credit';
 import { LegendReport } from './LegendReport';
+import { shareText as L } from '@offside/app-core/i18n/ko/share';
 
 export default function Shared() {
   const snap = useSnapshot(appState);
@@ -34,7 +35,7 @@ export default function Shared() {
     goHome();
     scrollTo(0);
   }
-  const cta = snap.G ? '내 커리어로 가기 →' : '나도 커리어 시작하기 →';
+  const cta = snap.G ? L.ctaGame : L.ctaNew;
 
   return (
     <CreditScreen>
@@ -42,7 +43,7 @@ export default function Shared() {
       {v === null ? (
         <Card>
           <Txt tone="muted" accessibilityLiveRegion="polite">
-            기록을 불러오는 중…
+            {L.loading}
           </Txt>
         </Card>
       ) : typeof v === 'string' ? (
@@ -50,17 +51,15 @@ export default function Shared() {
           <View testID="shared-unavailable">
             <Txt v="eyebrow">Shared Career</Txt>
             <Txt v="h2" accessibilityRole="header">
-              {v === 'missing' ? '기록을 찾을 수 없어요' : '기록을 불러오지 못했어요'}
+              {v === 'missing' ? L.missingTitle : L.errorTitle}
             </Txt>
           </View>
           <Txt v="sm" tone="muted">
-            {v === 'missing'
-              ? '링크가 잘못되었거나 더 이상 공개되지 않는 기록이에요.'
-              : '서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.'}
+            {v === 'missing' ? L.missingBody : L.errorBody}
           </Txt>
           {v === 'error' ? (
             <Btn block onPress={() => void load()}>
-              다시 시도
+              {L.retry}
             </Btn>
           ) : null}
           <Btn kind="primary" block testID="shared-start" onPress={leave}>
@@ -80,7 +79,7 @@ export default function Shared() {
               letterSpacing: rem(0.75) * 0.02,
             }}
           >
-            공유받은 은퇴 커리어 · 보기 전용
+            {L.viewNote}
           </Txt>
           <LegendReport
             v={v}
@@ -89,11 +88,11 @@ export default function Shared() {
                 <View>
                   <Txt v="eyebrow">Your Turn</Txt>
                   <Txt v="h2" accessibilityRole="header">
-                    이번엔 내 선수를 키울 차례예요
+                    {L.turnTitle}
                   </Txt>
                 </View>
                 <Txt v="sm" tone="muted">
-                  고3 킥오프부터 은퇴 휘슬까지, 내 선수의 커리어를 직접 정해요.
+                  {L.turnBodyApp}
                 </Txt>
                 <Btn kind="primary" block testID="shared-start" onPress={leave}>
                   {cta}

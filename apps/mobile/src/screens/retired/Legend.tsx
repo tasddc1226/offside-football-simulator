@@ -19,6 +19,7 @@ import { LegendReport } from './LegendReport';
 import { OwnHofCards } from './OwnHofCards';
 import { rollCredits } from './roll';
 import { ShareBar } from './ShareBar';
+import { retiredText as L } from '@offside/app-core/i18n/ko/retired';
 
 export default function Legend() {
   const snap = useSnapshot(appState);
@@ -74,7 +75,7 @@ function CareerPlay() {
   return (
     <Press
       testID="career-play"
-      accessibilityLabel={rolling ? '멈춤' : '커리어 재생'}
+      accessibilityLabel={rolling ? L.stop : L.play}
       accessibilityState={{ selected: rolling }}
       onPress={toggle}
       style={{
@@ -102,7 +103,7 @@ function CareerPlay() {
         </Svg>
       </View>
       <Txt style={{ fontSize: rem(0.875), fontWeight: '700', color: fg }}>
-        {rolling ? '멈춤' : '커리어 재생'}
+        {rolling ? L.stop : L.play}
       </Txt>
     </Press>
   );

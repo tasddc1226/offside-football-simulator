@@ -2,7 +2,9 @@
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import { POTENTIAL_NOTICE } from '@offside/app-core/potential-view';
+import { potentialNotice } from '@offside/app-core/potential-view';
+import { gamePlayerText as L } from '@offside/app-core/i18n/ko/gamePlayer';
+import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
 import { peekView } from '@offside/app-core/potential-peek';
 import { TRAITS } from '@offside/game/data';
@@ -91,11 +93,11 @@ function BoostCard({ s }: { s: GameState }) {
         }}
       >
         <Txt v="h2" accessibilityRole="header">
-          잠재력 강화
+          {B.title}
         </Txt>
         <View
           accessible
-          accessibilityLabel={`${v.max}단계 중 ${v.lv}단계`}
+          accessibilityLabel={B.stepsLabel({ max: v.max, lv: v.lv })}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
         >
           {Array.from({ length: v.max }, (_, i) => (
@@ -126,11 +128,11 @@ function BoostCard({ s }: { s: GameState }) {
           ) : null}
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Btn kind="primary" style={{ flex: 1 }} testID="boost-btn" onPress={onBoost}>
-              {arming ? '강화하기' : v.button}
+              {arming ? B.confirmBtn : v.button}
             </Btn>
             {arming ? (
               <Btn testID="boost-cancel" onPress={() => setArming(false)}>
-                취소
+                {B.cancel}
               </Btn>
             ) : null}
           </View>
@@ -150,13 +152,13 @@ function BoostCard({ s }: { s: GameState }) {
 
 export function PlayerTab({ s }: { s: GameState }) {
   const c = useColors();
-  const L = leagueOf(s.leagueId);
+  const lg = leagueOf(s.leagueId);
   const value = marketValue(s);
   const traitName = TRAITS.find((t) => t.id === s.trait)?.name ?? '';
   const milTxt = milStatusText(s);
   const tours = s.nat.tours.filter((x) => x.inSquad);
   const nextWcYear = nextWC(s.year - 1);
-  const nextWcHost = (HOSTS.wc as Record<number, string>)[nextWcYear] || '개최지 미정';
+  const nextWcHost = (HOSTS.wc as Record<number, string>)[nextWcYear] || L.hostTbd;
   const nation = nationOf(s);
   // 체격 입력 이전 선수는 포지션 표준 체격으로 보여 준다(표시만 — 능력치 보정은 없다).
   const body = s.body ?? BODY_DEFAULT[s.pos];
@@ -167,23 +169,23 @@ export function PlayerTab({ s }: { s: GameState }) {
   const showPeek = pot.kind !== 'shown' && peekAvailable();
 
   const info: Row[] = [
-    { k: '국적', testID: 'nation', v: `${flagOf(nation.code)} ${nation.ko}` },
-    { k: '체격', testID: 'body', v: `${body.h}cm · ${body.w}kg` },
-    { k: '주발', v: s.foot },
-    { k: '성장 특성', v: traitName },
-    { k: '잠재력 평가', testID: 'pot', v: pot.kind === 'shown' ? pot.text : POTENTIAL_NOTICE },
-    { k: '최고 OVR', v: String(Math.max(s.peak, ovr(s))) },
-    { k: '감독 신뢰', v: s.trust >= 2 ? '두터움' : s.trust >= 0 ? '보통' : '냉랭함' },
+    { k: L.nation, testID: 'nation', v: `${flagOf(nation.code)} ${nation.ko}` },
+    { k: L.body, testID: 'body', v: `${body.h}cm · ${body.w}kg` },
+    { k: L.foot, v: s.foot },
+    { k: L.trait, v: traitName },
+    { k: L.potential, testID: 'pot', v: pot.kind === 'shown' ? pot.text : potentialNotice() },
+    { k: L.peakOvr, v: String(Math.max(s.peak, ovr(s))) },
+    { k: L.trust, v: s.trust >= 2 ? L.trustHigh : s.trust >= 0 ? L.trustMid : L.trustLow },
     {
-      k: '계약',
+      k: L.contract,
       v: s.contract
-        ? `${s.contract.years}년 남음 · ${fmtMoney(s.contract.salary)}/년`
-        : L.amateur
-          ? '아마추어'
+        ? L.contractLeft({ years: s.contract.years, salary: fmtMoney(s.contract.salary) })
+        : lg.amateur
+          ? L.amateur
           : '-',
     },
-    { k: '보유 자금', v: `${fmtMoney(s.money)}원` },
-    ...(!L.amateur ? [{ k: '추정 몸값', testID: 'value', v: fmtValue(value) }] : []),
+    { k: L.money, v: `${fmtMoney(s.money)}원` },
+    ...(!lg.amateur ? [{ k: L.value, testID: 'value', v: fmtValue(value) }] : []),
   ];
 
   return (
@@ -193,7 +195,7 @@ export function PlayerTab({ s }: { s: GameState }) {
       <Card gap={0}>
         <Txt v="eyebrow">Profile</Txt>
         <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 10 }}>
-          선수 정보
+          {L.profile}
         </Txt>
         <Kv rows={info} />
         {showPeek ? (
@@ -209,7 +211,7 @@ export function PlayerTab({ s }: { s: GameState }) {
                 testID="pot-peek-btn"
                 onPress={() => void openPeek(s)}
               >
-                {peek.busy ? '광고 불러오는 중…' : pot.button}
+                {peek.busy ? B.adLoading : pot.button}
               </Btn>
             ) : null}
           </View>
@@ -222,14 +224,14 @@ export function PlayerTab({ s }: { s: GameState }) {
         {/* 영어 나라 이름은 웹에서 첫 화면 번들 밖에서 불러왔지만 앱은 한 번들이라 바로 쓴다. */}
         <Txt v="eyebrow">{isKorean(s) ? 'Korea Republic' : NATION_EN[nation.code]}</Txt>
         <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 10 }}>
-          국가대표
+          {L.nationalTitle}
         </Txt>
         <View style={{ flexDirection: 'row', gap: 6 }}>
           {[
-            { k: 'caps', v: String(s.nat.caps), l: 'A매치' },
-            { k: 'goals', v: String(s.nat.goals), l: '골' },
-            { k: 'assists', v: String(s.nat.assists), l: '도움' },
-            { k: 'captain', v: s.nat.captain ? 'C' : '-', l: '주장' },
+            { k: 'caps', v: String(s.nat.caps), l: L.caps },
+            { k: 'goals', v: String(s.nat.goals), l: L.goals },
+            { k: 'assists', v: String(s.nat.assists), l: L.assists },
+            { k: 'captain', v: s.nat.captain ? 'C' : '-', l: L.captain },
           ].map((x) => (
             <View
               key={x.k}
@@ -261,9 +263,9 @@ export function PlayerTab({ s }: { s: GameState }) {
         <Kv
           mt={10}
           rows={[
-            { k: 'A매치 데뷔', v: String(s.nat.debutYear || '미발탁') },
-            ...(isKorean(s) ? [{ k: '병역', v: milTxt }] : []),
-            { k: '다음 월드컵', v: `${nextWcYear} · ${nextWcHost}` },
+            { k: L.debut, v: String(s.nat.debutYear || L.notCalled) },
+            ...(isKorean(s) ? [{ k: L.military, v: milTxt }] : []),
+            { k: L.nextWc, v: `${nextWcYear} · ${nextWcHost}` },
           ]}
         />
         {isKorean(s) && (
@@ -286,7 +288,7 @@ export function PlayerTab({ s }: { s: GameState }) {
                   <Txt>
                     <Txt style={{ fontWeight: '700' }}>{x.name.replace(/^\d{4} /, '')}</Txt>
                     <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                      {`  ${x.stage} · ${x.apps}경기 ${x.goals}골`}
+                      {`  ${L.tourLine({ stage: x.stage, apps: x.apps, goals: x.goals })}`}
                     </Txt>
                   </Txt>
                 </TrophyRow>
@@ -295,9 +297,9 @@ export function PlayerTab({ s }: { s: GameState }) {
         ) : null}
       </Card>
 
-      {s.age >= 32 && !L.amateur ? (
+      {s.age >= 32 && !lg.amateur ? (
         <Btn block testID="retire-ask" onPress={() => retireAsk()}>
-          은퇴 선언하기
+          {L.retire}
         </Btn>
       ) : null}
     </>

@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { Btn } from '../ui/Btn';
 import { Stack } from '../ui/bits';
 import { Txt } from '../ui/Txt';
+import { shellText as L } from '@offside/app-core/i18n/ko/shell';
+import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
 export type LoadStatus = 'loading' | 'ready' | 'error';
 
@@ -20,7 +22,7 @@ export function LoadState({
   if (status === 'loading')
     return (
       <Txt tone="muted" accessibilityLiveRegion="polite">
-        불러오는 중…
+        {L.loading}
       </Txt>
     );
   if (status === 'error')
@@ -28,7 +30,7 @@ export function LoadState({
       <Stack gap={8}>
         <Txt tone="muted">{failText}</Txt>
         <Btn sm onPress={retry} style={{ alignSelf: 'flex-start' }}>
-          다시 시도
+          {shellMoreText.retry}
         </Btn>
       </Stack>
     );

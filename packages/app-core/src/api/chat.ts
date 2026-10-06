@@ -21,6 +21,7 @@ import {
 } from '@offside/contracts/chat';
 import { LIVE_PING, LIVE_PING_SEC } from '@offside/contracts/polling';
 import { kstParts } from '../boardText.js';
+import { chatRejectText } from '../i18n/ko/chatReject.js';
 import { apiBaseUrl, apiFetch, withProfile } from './client.js';
 
 export type { AdminChatReport, ChatMessage, ChatRejectCode, ChatTicketResponse };
@@ -79,20 +80,32 @@ export async function resolveChatReportAs(it: AdminChatReport, action: ChatRepor
   return { ok: true, text };
 }
 
-/** 방이 내 줄을 거절한 이유(웹·앱 같은 문구). */
+/** 방이 내 줄을 거절한 이유(웹·앱 같은 문구). 읽을 때 지금 언어로 고른다. */
 export const CHAT_REJECT_TEXT: Record<ChatRejectCode, string> = {
-  readonly: '로그인하고 닉네임을 정하면 쓸 수 있어요.',
-  muted: '운영 정책에 따라 채팅이 정지됐어요.',
-  long: `한 번에 ${CHAT_BODY_MAX}자까지 보낼 수 있어요.`,
-  filter: '링크나 욕설은 보낼 수 없어요.',
-  rate: '조금 천천히 보내 주세요.',
+  get readonly() {
+    return chatRejectText.rejectReadonly;
+  },
+  get muted() {
+    return chatRejectText.rejectMuted;
+  },
+  get long() {
+    return chatRejectText.rejectLong({ max: CHAT_BODY_MAX });
+  },
+  get filter() {
+    return chatRejectText.rejectFilter;
+  },
+  get rate() {
+    return chatRejectText.rejectRate;
+  },
 };
 /** 메시지 옆 시각(KST HH:MM). */
 export const chatTime = (at: number) => kstParts(new Date(at).toISOString()).time;
 /** 정지 안내 문장. */
 export function chatMutedText(until: string | null) {
   const p = until ? kstParts(until) : null;
-  return `운영 정책에 따라 ${p ? `${p.day} ${p.time}까지 ` : ''}채팅이 정지됐어요. 읽기는 계속할 수 있어요.`;
+  return p
+    ? chatRejectText.mutedUntil({ until: `${p.day} ${p.time}` })
+    : chatRejectText.mutedNotice;
 }
 
 export const chatSocketUrl = (ticket: string | null, base = apiBaseUrl()) =>

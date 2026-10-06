@@ -6,18 +6,16 @@ import { Btn } from '../ui';
 import { BannerClose, BannerText, TopBanner } from './TopBanner';
 import { useFly } from './useFly';
 import { useTopBanner } from './useTopBanner';
+import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
 export function StoreUpdateBanner() {
   const { mounted, style } = useFly(useTopBanner() === 'store', 200);
   if (!mounted) return null;
   return (
-    <TopBanner testID="store-update-banner" label="앱 업데이트 알림" style={style}>
-      <BannerText
-        title="새 버전이 스토어에 나왔어요"
-        body="업데이트하지 않으면 이후 수정이 이 앱에 들어가지 않아요."
-      />
+    <TopBanner testID="store-update-banner" label={shellMoreText.storeUpdateAlert} style={style}>
+      <BannerText title={shellMoreText.storeUpdateTitle} body={shellMoreText.storeUpdateBody} />
       <Btn kind="accent" sm testID="store-update-open" onPress={openStore}>
-        업데이트
+        {shellMoreText.storeUpdateBtn}
       </Btn>
       <BannerClose testID="store-update-close" onPress={() => (storeUpdate.closed = true)} />
     </TopBanner>

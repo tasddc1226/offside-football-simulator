@@ -2998,6 +2998,11 @@ th.n {
   gap: 12px;
   width: 100%;
 }
+/* T-11-102 언어 고르기 — 스위치 자리에 들어가는 좁은 <select>. */
+.settings-lang {
+  width: auto;
+  flex-shrink: 0;
+}
 /* 배경음악 음량 — 배경음악이 꺼져 있어도 미리 맞춰 둘 수 있게 흐리게만 한다. */
 .settings-volume {
   display: grid;

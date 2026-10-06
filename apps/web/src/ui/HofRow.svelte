@@ -15,6 +15,7 @@
   import ClubMark from './ClubMark.svelte';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
   import { motionOK } from './motion.js';
+  import { hofText as L } from '@offside/app-core/i18n/ko/hof';
 
   const MEDAL = ['gold', 'silver', 'bronze'];
   const {
@@ -70,9 +71,7 @@
   const tt = $derived(titleById(titleId));
   // 글자 값('1,115억 3천만')은 큰 단위 아래에 작은 단위를 한 줄 더 — 오른쪽 칸이 좁아 이름 줄이 덜 밀린다.
   const [valueHead, valueSub] = $derived(typeof value === 'string' ? value.split(' ') : []);
-  const stats = $derived(
-    `${t.apps}경기 ${t.goals}골 ${t.assists}도움 · 트로피 ${t.trophies} · 최고 OVR ${t.peak}${t.ballon ? ` · 발롱도르 ${t.ballon}회` : ''}${showScore ? ` · 레전드 ${t.score}` : ''}`,
-  );
+  const stats = $derived(L.rowStats({ ...t, score: showScore ? t.score : null }));
   // 흐를 때 두 벌을 이어 붙여 -50%까지 민다(HomeTicker와 같은 방식). 한 벌 = 글 + 뒤 여백(FLOW_GAP).
   const FLOW_SPEED = 28; // px/초
   const FLOW_GAP = 32;
@@ -91,7 +90,7 @@
   <span class="hof-identity"><ClubMark name={club} id={clubId} size={18} />{#if country}<span class="hof-flag" role="img" aria-label={country.ko} title={country.ko} data-hof-nation={country.code}>{flagOf(country.code)}</span>{/if}<b>{name}</b></span>
   {#if showPosition || rn != null || tag || tt}
     <span class="hof-badges">{#if showPosition}<span class="pill">{posLabel({ pos, dpos })}</span>{/if}
-      {#if rn != null}<span class="pill pill-rn" data-rn-chip title="영구결번 {rn}번">👑 영결 {rn}</span>{/if}
+      {#if rn != null}<span class="pill pill-rn" data-rn-chip title={L.rnChipTitle({ number: rn })}>{L.rnChip({ number: rn })}</span>{/if}
       {#if tag}<span class="pill">{tag}</span>{/if}
       {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
     </span>
@@ -106,7 +105,7 @@
   </div>
 {:else if compact}
   <div class="muted hof-stats hof-stats-compact">
-    <span>{t.apps.toLocaleString('ko-KR')}경기</span><span>{t.goals.toLocaleString('ko-KR')}골</span><span>{t.assists.toLocaleString('ko-KR')}도움</span>
+    <span>{L.appsN({ n: t.apps.toLocaleString('ko-KR') })}</span><span>{L.goalsN({ n: t.goals.toLocaleString('ko-KR') })}</span><span>{L.assistsN({ n: t.assists.toLocaleString('ko-KR') })}</span>
   </div>
 {:else}
   <div class="muted fs-xs hof-stats">{stats}</div>

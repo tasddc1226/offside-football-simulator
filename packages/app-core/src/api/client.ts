@@ -16,6 +16,7 @@ import type {
 } from '@offside/contracts';
 import { storage } from '@offside/game/storage';
 import { markAchDirty, touchesAchievements } from '../achDirty.js';
+import { settingsApiText as L } from '../i18n/ko/settingsApi.js';
 
 // API 클라이언트 (웹·앱 공용, T-11-002). 게임 상태는 전부 기기 저장소에 남고, 서버로는 계정·공개 기록 요청만 나간다.
 // `@offside/contracts` 전체를 값으로 가져오면 zod까지 번들에 들어오므로, 헤더 이름은 zod 없는 `./headers`
@@ -118,7 +119,7 @@ export async function apiFetch<T>(
       ...auth,
     });
   } catch {
-    return failure('NETWORK_ERROR', '서버에 연결하지 못했어요.', true);
+    return failure('NETWORK_ERROR', L.network, true);
   }
 
   if (isMutation && response.ok && !keepCache) clearApiCache();
@@ -130,7 +131,7 @@ export async function apiFetch<T>(
   try {
     json = await response.json();
   } catch {
-    return failure('INVALID_RESPONSE', '서버 응답을 읽지 못했어요.', false);
+    return failure('INVALID_RESPONSE', L.badResponse, false);
   }
 
   if (!response.ok) {
@@ -147,21 +148,16 @@ export async function apiFetch<T>(
       ).error;
       const reason = typeof e.details?.reason === 'string' ? e.details.reason : undefined;
       if (e.code === 'PROFILE_REQUIRED') noteSession(false);
-      return failure(
-        e.code ?? 'UNKNOWN',
-        e.message ?? '요청을 처리하지 못했어요.',
-        !!e.retryable,
-        reason,
-      );
+      return failure(e.code ?? 'UNKNOWN', e.message ?? L.failed, !!e.retryable, reason);
     }
     return failure(
       'INVALID_RESPONSE',
-      `요청을 처리하지 못했어요(${response.status}).`,
+      L.failedStatus({ status: response.status }),
       response.status >= 500,
     );
   }
   if (typeof json !== 'object' || json === null || !('data' in json)) {
-    return failure('INVALID_RESPONSE', '서버 응답 형식이 올바르지 않아요.', false);
+    return failure('INVALID_RESPONSE', L.badShape, false);
   }
   return { ok: true, data: (json as { data: unknown }).data as T };
 }

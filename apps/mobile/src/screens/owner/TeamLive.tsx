@@ -19,6 +19,7 @@ import {
   type LiveLine,
   type LivePhase,
 } from '@offside/app-core/teamLive';
+import { teamLiveText as L } from '@offside/app-core/i18n/ko/teamLive';
 import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -235,7 +236,7 @@ export function TeamLive({
         accessibilityRole="header"
         style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
       >
-        {`${match.home.name} 대 ${match.away.name} 문자중계`}
+        {L.title({ home: match.home.name, away: match.away.name })}
       </Txt>
       {/* 전광판 */}
       <View
@@ -338,7 +339,7 @@ export function TeamLive({
             testID="live-score"
             accessibilityLiveRegion="polite"
             accessible
-            accessibilityLabel={`${score[0]} 대 ${score[1]}`}
+            accessibilityLabel={L.scoreAria({ a: score[0], b: score[1] })}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -451,7 +452,7 @@ export function TeamLive({
           importantForAccessibility="no-hide-descendants"
           style={{ flexDirection: 'row', alignItems: 'center', gap: 8, opacity: 0.85 }}
         >
-          <Txt style={{ fontSize: rem(0.75), color: c.onPitch }}>흐름</Txt>
+          <Txt style={{ fontSize: rem(0.75), color: c.onPitch }}>{L.flow}</Txt>
           <View
             style={{
               flex: 1,
@@ -527,16 +528,16 @@ export function TeamLive({
         <Btn
           block
           testID="live-fast"
-          accessibilityLabel={fast ? '보통 속도' : '빠르게'}
+          accessibilityLabel={fast ? L.speedNormal : L.speedFast}
           onPress={() => {
             fastRef.current = !fast;
             setFast(!fast);
           }}
         >
-          {fast ? '보통 속도' : '빠르게'}
+          {fast ? L.speedNormal : L.speedFast}
         </Btn>
         <Btn block kind="primary" testID="live-skip" onPress={finish}>
-          결과 바로 보기
+          {L.skip}
         </Btn>
       </Grid2>
     </Card>

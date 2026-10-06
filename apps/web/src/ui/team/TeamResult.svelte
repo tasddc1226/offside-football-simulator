@@ -3,6 +3,7 @@
   import type { OwnerTeam, TeamMatch } from '@offside/app-core/api/team';
   import { kstMonthDayTime } from '@offside/app-core/boardText';
   import { OUTCOME_TITLE, outcomeOf as outcome } from '@offside/app-core/teamOwner';
+  import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import { recordText, signedNum } from '@offside/app-core/teamText';
   import TeamLogo from './TeamLogo.svelte';
 
@@ -31,7 +32,7 @@
 
 <section class="card stack tm-result" style="gap:14px" data-team-result>
   <div>
-    <div class="eyebrow">Full time{#if m.friendly}&nbsp;· <span data-friendly>친선전</span>{/if}</div>
+    <div class="eyebrow">Full time{#if m.friendly}&nbsp;· <span data-friendly>{L.kindFriendly}</span>{/if}</div>
     <h1>{OUTCOME_TITLE[outcome(m)]}</h1>
   </div>
   <div class="tm-score">
@@ -52,22 +53,22 @@
           <span class="tm-min">{e.minute}'</span>
           <span>
             <b>{eventName(e.scorerId, e.scorer)}</b>
-            {#if e.assist}<small class="muted">도움 {eventName(e.assistId, e.assist)}</small>{/if}
+            {#if e.assist}<small class="muted">{L.assist({ name: eventName(e.assistId, e.assist) })}</small>{/if}
           </span>
         </li>
       {/each}
     </ol>
   {:else}
-    <p class="muted">골 없이 비겼어요.</p>
+    <p class="muted">{L.noGoals}</p>
   {/if}
-  <p class="muted fs-sm">{kstMonthDayTime(m.createdAt)}{team && m.mine === 'home' && !m.friendly ? ` · 내 팀 ${recordText(team.record)}` : ''}</p>
+  <p class="muted fs-sm">{kstMonthDayTime(m.createdAt)}{team && m.mine === 'home' && !m.friendly ? L.resultRecord({ record: recordText(team.record) }) : ''}</p>
   {#if gain != null}
-    <p class="fs-sm" data-rating-change>내 팀 레이팅 <b>{signedNum(gain)}</b></p>
+    <p class="fs-sm" data-rating-change>{L.ratingChange}<b>{signedNum(gain)}</b></p>
   {/if}
   <div class="tm-actions">
-    {#if onhistory}<button class="btn" onclick={onhistory} data-act="team-result-history">기록으로 돌아가기</button>{:else}<button class="btn" onclick={ontoTeam}>편성으로</button>{/if}
-    <button class="btn" onclick={onreplay} data-act="team-replay">중계 다시 보기</button>
-    <button class="btn btn-primary" onclick={onagain} disabled={matchesLeft === 0}>다시 경기하기</button>
+    {#if onhistory}<button class="btn" onclick={onhistory} data-act="team-result-history">{L.backHistory}</button>{:else}<button class="btn" onclick={ontoTeam}>{L.toLineup}</button>{/if}
+    <button class="btn" onclick={onreplay} data-act="team-replay">{L.replay}</button>
+    <button class="btn btn-primary" onclick={onagain} disabled={matchesLeft === 0}>{L.again}</button>
   </div>
 </section>
 

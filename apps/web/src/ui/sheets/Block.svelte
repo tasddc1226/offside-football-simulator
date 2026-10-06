@@ -2,19 +2,20 @@
   // T-10-028 경기 중계 시트 — 구간 경기가 한 경기씩 올라오며 승무패·출전 기록이 쌓인다.
   import TickerLine from './TickerLine.svelte';
   import type { SheetView } from '@offside/app-core/sheets';
+  import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
   let { v }: { v: Extract<SheetView, { kind: 'block' }> } = $props();
   const tally = $derived([
-    { k: v.tally.apps, l: '출전' },
-    { k: v.tally.g, l: '골' },
-    { k: v.back ? v.tally.cs : v.tally.a, l: v.back ? '무실점' : '도움' },
-    { k: v.tally.rating, l: '평점' },
+    { k: v.tally.apps, l: sheetCoreText.tallyApps },
+    { k: v.tally.g, l: sheetCoreText.tallyGoals },
+    { k: v.back ? v.tally.cs : v.tally.a, l: v.back ? sheetCoreText.tallyCleanSheets : sheetCoreText.tallyAssists },
+    { k: v.tally.rating, l: sheetCoreText.tallyRating },
   ]);
 </script>
 
 <div class="eyebrow">{v.eyebrow}</div>
 <h2>{v.title}</h2>
 <div class="prog"><i style:width="{v.progress * 100}%" style:transition-duration="{v.fill}ms"></i></div>
-<div class="prog-meta"><span>{v.round}</span><span data-block-wdl>{v.wdl.w}승 {v.wdl.d}무 {v.wdl.l}패</span></div>
+<div class="prog-meta"><span>{v.round}</span><span data-block-wdl>{sheetCoreText.wdl(v.wdl)}</span></div>
 <div class="tally">
   {#each tally as t (t.l)}
     <!-- 값이 바뀔 때마다 {#key}로 <b>를 새로 그려 bump 애니메이션을 다시 건다. -->
@@ -32,5 +33,5 @@
   {/each}
 </div>
 {#if v.skip}
-  <button class="link-btn skip" id="an-skip" onclick={v.skip}>건너뛰기</button>
+  <button class="link-btn skip" id="an-skip" onclick={v.skip}>{sheetCoreText.skip}</button>
 {/if}

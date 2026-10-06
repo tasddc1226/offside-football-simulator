@@ -7,6 +7,7 @@
   import { goHome } from './nav.js';
   import Topbar from './Topbar.svelte';
   import LegendReport from './LegendReport.svelte';
+  import { shareText as L } from '@offside/app-core/i18n/ko/share';
 
   let v = $state<LegendView | 'missing' | 'error' | null>(null);
 
@@ -22,29 +23,29 @@
     goHome();
     window.scrollTo(0, 0);
   }
-  const cta = $derived(appState.G ? '내 커리어로 가기 →' : '나도 커리어 시작하기 →');
+  const cta = $derived(appState.G ? L.ctaGame : L.ctaNew);
 </script>
 
 <div class="wrap">
   <Topbar />
   {#if v === null}
-    <section class="card"><p class="muted">기록을 불러오는 중…</p></section>
+    <section class="card"><p class="muted">{L.loading}</p></section>
   {:else if typeof v === 'string'}
     <section class="card stack" data-shared="unavailable">
-      <div><div class="eyebrow">Shared Career</div><h2>{v === 'missing' ? '기록을 찾을 수 없어요' : '기록을 불러오지 못했어요'}</h2></div>
+      <div><div class="eyebrow">Shared Career</div><h2>{v === 'missing' ? L.missingTitle : L.errorTitle}</h2></div>
       <p class="muted fs-sm">
-        {v === 'missing' ? '링크가 잘못되었거나 더 이상 공개되지 않는 기록이에요.' : '서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.'}
+        {v === 'missing' ? L.missingBody : L.errorBody}
       </p>
-      {#if v === 'error'}<button class="btn btn-block" onclick={load}>다시 시도</button>{/if}
+      {#if v === 'error'}<button class="btn btn-block" onclick={load}>{L.retry}</button>{/if}
       <button class="btn btn-primary btn-block" data-act="shared-start" onclick={leave}>{cta}</button>
     </section>
   {:else}
-    <p class="shared-note" data-shared="view">공유받은 은퇴 커리어 · 보기 전용</p>
+    <p class="shared-note" data-shared="view">{L.viewNote}</p>
     <LegendReport {v}>
       {#snippet end()}
         <section class="card stack">
-          <div><div class="eyebrow">Your Turn</div><h2>이번엔 내 선수를 키울 차례예요</h2></div>
-          <p class="muted fs-sm">고3부터 은퇴까지, 내 선수를 키워요.</p>
+          <div><div class="eyebrow">Your Turn</div><h2>{L.turnTitle}</h2></div>
+          <p class="muted fs-sm">{L.turnBodyWeb}</p>
           <button class="btn btn-primary btn-block" data-act="shared-start" onclick={leave}>{cta}</button>
         </section>
       {/snippet}

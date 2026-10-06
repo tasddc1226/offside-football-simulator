@@ -2,15 +2,17 @@
 import type { ServerFirst, ServerFirstCat } from '@offside/contracts';
 import { anonName } from '@offside/app-core/format';
 import { kstParts } from '@offside/app-core/boardText';
+import { firstsTabText } from './i18n/ko/firstsTab.js';
 
 // T-10-056 'records'는 깨질 수 있는 서버 기록(최다·최고) 탭.
 export type FirstsTab = 'recent' | 'records' | ServerFirstCat;
-export const FIRSTS_TABS: { id: FirstsTab; label: string }[] = [
-  { id: 'recent', label: '최근 기록' },
-  { id: 'records', label: '서버 기록' },
-  { id: 'total', label: '통산' },
-  { id: 'season', label: '시즌' },
-  { id: 'honor', label: '수상·우승' },
+/** 언어를 바꾸면 달라져야 하므로 읽을 때 만든다(모듈 최상위 상수로 굳히지 않는다). */
+export const firstsTabs = (): { id: FirstsTab; label: string }[] => [
+  { id: 'recent', label: firstsTabText.tabRecent },
+  { id: 'records', label: firstsTabText.tabRecords },
+  { id: 'total', label: firstsTabText.tabTotal },
+  { id: 'season', label: firstsTabText.tabSeason },
+  { id: 'honor', label: firstsTabText.tabHonor },
 ];
 
 type Holder = NonNullable<ServerFirst['holder']>;

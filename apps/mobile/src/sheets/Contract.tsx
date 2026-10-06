@@ -9,6 +9,7 @@ import { Easing, PanResponder, StyleSheet, View, type GestureResponderEvent } fr
 import Svg, { ClipPath, Defs, G, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
+import { sheetContractText as L } from '@offside/app-core/i18n/ko/sheetContract';
 import {
   MIN_INK,
   REVEAL_MS,
@@ -226,7 +227,7 @@ export function Contract({ v }: { v: ContractView }) {
       {/* 제목 줄 오른쪽 위 × — 이적시장으로 돌아간다. */}
       <Press
         testID="sign-close"
-        accessibilityLabel="계약서 닫기"
+        accessibilityLabel={L.close}
         disabled={sealed}
         onPress={() => v.onClose()}
         style={{
@@ -251,7 +252,7 @@ export function Contract({ v }: { v: ContractView }) {
       </Txt>
       <Terms club={s.club} terms={s.terms} />
       <View
-        accessibilityLabel="선수 사인 입력 영역"
+        accessibilityLabel={L.padLabel}
         onLayout={(e) => {
           const { width, height } = e.nativeEvent.layout;
           // 폭이 바뀌면(회전 등) 그린 사인이 어긋나므로 처음부터 다시 받는다(웹 ResizeObserver).
@@ -311,7 +312,7 @@ export function Contract({ v }: { v: ContractView }) {
             style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}
           >
             <Txt tone="muted" style={{ fontSize: rem(0.9375) }}>
-              이곳에 사인해 주세요
+              {L.signHint}
             </Txt>
           </View>
         )}
@@ -357,14 +358,14 @@ export function Contract({ v }: { v: ContractView }) {
         center
         style={{ marginTop: -6, fontSize: rem(0.75), lineHeight: rem(0.75) * 1.5 }}
       >
-        게임 속 선수의 가상 사인이에요
+        {L.signNote}
       </Txt>
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Btn sm testID="sign-clear" disabled={sealed} onPress={clear} style={{ flex: 1 }}>
-          다시 쓰기
+          {L.clear}
         </Btn>
         <Btn sm testID="sign-name" disabled={sealed} onPress={nameSign} style={{ flex: 1 }}>
-          이름 사인 사용
+          {L.nameSign}
         </Btn>
       </View>
       <Btn kind="primary" block testID="sign-ok" disabled={!ready || sealed} onPress={seal}>

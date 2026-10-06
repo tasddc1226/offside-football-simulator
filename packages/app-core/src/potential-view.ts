@@ -3,10 +3,11 @@
 import { hashStr } from '@offside/game/hash';
 import { gradeOf, potFogged, potGrade, potScouted } from '@offside/game/stats';
 import type { GameState, LogEntry } from '@offside/game/types';
+import { gamePotentialNoteText } from './i18n/ko/gamePotentialNote';
 
-export const POTENTIAL_NOTICE = '잠재력 평가는 은퇴할 때 공개돼요.';
-export const RETIREMENT_POTENTIAL_NOTE =
-  '은퇴 시점의 성장 기준값이에요. 최대 OVR을 뜻하지 않아 최고 OVR이 이 값을 넘을 수 있어요.';
+/** 안내 문구 — 언어가 정해진 뒤에 읽도록 함수로 둔다(모듈 최상위 상수는 영어가 안 나온다). */
+export const potentialNotice = (): string => gamePotentialNoteText.notice;
+export const retirementPotentialNote = (): string => gamePotentialNoteText.retirementNote;
 
 /** 이미 저장된 은퇴 수치(반올림한 truePot)만 사용한다. 없는 과거 값은 추정하지 않는다. */
 export function retirementPotential(value: number | null | undefined) {

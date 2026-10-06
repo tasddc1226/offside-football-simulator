@@ -16,6 +16,7 @@
   import HofRow, { type RowStats } from './HofRow.svelte';
   import { seasonNow } from './seasonNow.svelte.js';
   import type { DetailPos, POS } from '@offside/game/data';
+  import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
 
   /** T-11-026 구단주 화면이 요약(선수 수·점수 합·결번 수)을 세도록 불러온 목록을 알려 준다. T-11-029 고른 시즌 것만. */
   let { onrows }: { onrows?: (rows: readonly MineRow[]) => void } = $props();
@@ -37,7 +38,7 @@
     club: h.lastClub,
     clubId: h.lastClubId,
     rn: h.rn?.kind === 'granted' ? h.rn.number : null,
-    tag: h.public ? '공개' : null,
+    tag: h.public ? L.tagPublic : null,
     stats: h,
     title: h.title ?? null,
     season: deviceSeasonOf(h, pendingIds, now),
@@ -53,7 +54,7 @@
     club: e.lastClub,
     clubId: e.lastClubId,
     rn: e.retiredNumber?.number,
-    tag: e.name ? '공개' : null,
+    tag: e.name ? L.tagPublic : null,
     stats: { ...e, score: e.legendScore },
     title: e.title ?? null,
     season: serverSeasonOf(e),
@@ -114,19 +115,19 @@
 
 <section class="card" data-my-players aria-labelledby="my-players-title">
   <div class="eyebrow">My players</div>
-  <h2 id="my-players-title" style="margin-bottom:8px">내 선수</h2>
+  <h2 id="my-players-title" style="margin-bottom:8px">{L.title}</h2>
   {#if source === 'loading'}
-    <p class="empty">불러오는 중…</p>
+    <p class="empty">{L.loading}</p>
   {:else}
     <p class="muted hof-source" data-my-source={source}>
       {source === 'account'
-        ? '계정에 기록된 선수예요. 다른 기기에서도 똑같이 보여요.'
+        ? L.sourceAccount
         : source === 'offline'
-          ? '서버에 연결하지 못해 이 기기에 저장된 선수를 보여 줘요.'
-          : '이 기기에 저장된 선수예요. 구글 계정을 연결하면 계정에 모아 볼 수 있어요.'}
+          ? L.sourceOffline
+          : L.sourceDeviceWeb}
     </p>
     {#if seasons.length > 1}
-      <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
+      <div class="seg board-tabs hof-seasons" role="group" aria-label={L.seasonGroup}>
         {#each seasons as s (s.id)}
           <button class="opt" aria-pressed={season === s.id} data-my-season={s.id} onclick={() => ((picked = s.id), (expanded = false))}>{s.name}</button>
         {/each}
@@ -140,7 +141,7 @@
       <p class="empty">{emptySeasonText(season, seasons.length > 1 ? rows.length : 0)}</p>
     {/each}
     {#if !expanded && inSeason.length > SHOW}
-      <button class="icon-btn self-start" data-act="my-players-all" onclick={() => (expanded = true)}>모두 보기 ({inSeason.length}명)</button>
+      <button class="icon-btn self-start" data-act="my-players-all" onclick={() => (expanded = true)}>{L.showAll({ n: inSeason.length })}</button>
     {/if}
   {/if}
 </section>

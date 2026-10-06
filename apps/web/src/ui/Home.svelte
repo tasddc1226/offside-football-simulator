@@ -15,11 +15,11 @@
   import HomeLive from './HomeLive.svelte';
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
-  import { withRo } from '@offside/app-core/format';
   import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL, IOS_APP_STORE_URL } from '@offside/app-core/links';
   import { APP_PROMO } from '@offside/app-core/appPromo';
   import { trackAppStoreClick } from '../analytics/index.js';
   import { appTarget } from './appStore.js';
+  import { homeText as L } from '@offside/app-core/i18n/ko/home';
 
   const live = $derived(!!appState.G && !appState.G.retired);
   const appFor = appTarget();
@@ -37,15 +37,15 @@
     <section class="hero-home hero-current" data-home-current>
       <div class="chalk"></div>
       <div class="eyebrow">Current career</div>
-      <h1><span>진행 중인 커리어</span><b><strong>{G.name}</strong></b></h1>
-      <p>{G.club.name} · {G.age}세 · {posLabel(G)}</p>
-      <p class="hero-meta num">{G.year} 시즌 {PHASES[Math.min(G.phase, LAST_PHASE + 1)]} · OVR {ovr(G)}</p>
+      <h1><span>{L.currentSub}</span><b><strong>{G.name}</strong></b></h1>
+      <p>{L.currentLine({ club: G.club.name, age: G.age, pos: posLabel(G) })}</p>
+      <p class="hero-meta num">{L.currentMeta({ year: G.year, phase: PHASES[Math.min(G.phase, LAST_PHASE + 1)] ?? '', ovr: ovr(G) })}</p>
       <!-- T-10-124 한 줄에 왼쪽 새 커리어, 오른쪽 이어하기(주 버튼이라 더 넓게). -->
       <div class="hero-actions">
-        <button class="btn hero-new" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>새 커리어 시작</button>
+        <button class="btn hero-new" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>{L.newCareer}</button>
         <button class="btn btn-accent" data-act="continue" onclick={goContinue} onpointerenter={warmGame} onfocus={warmGame}>
           <svg class="hero-play" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m10 7.8 6 4.2-6 4.2Z" /></svg>
-          <span>{withRo(G.name)} 계속 →</span>
+          <span>{L.continueCareer({ name: G.name })}</span>
         </button>
       </div>
     </section>
@@ -53,18 +53,18 @@
     <section class="hero-home">
       <div class="chalk"></div>
       <div class="eyebrow">Kick-off · 0′</div>
-      <h1>이번 생은 축구다<br />고3부터 은퇴까지,<br />한 선수로 살아요</h1>
-      <p>훈련·이적·이벤트에서 고른 선택으로 커리어가 달라져요.</p>
-      <button class="btn btn-accent btn-block" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>새 커리어 킥오프 →</button>
+      <h1>{L.kickoffLine1}<br />{L.kickoffLine2}<br />{L.kickoffLine3}</h1>
+      <p>{L.kickoffSub}</p>
+      <button class="btn btn-accent btn-block" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>{L.kickoffBtn}</button>
     </section>
   {/if}
   {#if live && appState.G && appState.ownerConflict}
     <section class="card owner-conflict" data-owner-conflict>
-      <b>이 커리어는 다른 계정에 기록돼 있어요</b>
-      <p class="muted">로그인한 계정이 바뀌어서 {appState.G.name} 선수의 기록이 서버에 저장되지 않고 있어요. 원래 계정으로 다시 로그인하면 그대로 이어져요.</p>
+      <b>{L.conflictTitle}</b>
+      <p class="muted">{L.conflictBody({ name: appState.G.name })}</p>
       <div class="row" style="gap:8px;flex-wrap:wrap">
-        <button class="btn btn-accent" data-act="adopt-career" onclick={adoptCareer}>지금 계정으로 이어서 기록</button>
-        <button class="icon-btn" data-act="keep-on-device" onclick={keepOnDevice}>이 기기에만 두기</button>
+        <button class="btn btn-accent" data-act="adopt-career" onclick={adoptCareer}>{L.conflictAdopt}</button>
+        <button class="icon-btn" data-act="keep-on-device" onclick={keepOnDevice}>{L.conflictKeep}</button>
       </div>
     </section>
   {/if}
@@ -72,11 +72,11 @@
   <div class="tiles">
     <!-- T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. -->
     <button class="tile tile-link tile-wide" data-act="home-market" onclick={() => go('market')}>
-      <span class="eyebrow">Transfer market</span><b>이적시장</b><span class="muted fs-sm">이번 시즌 선수 사고팔기 · 시세 →</span>
+      <span class="eyebrow">Transfer market</span><b>{L.marketTitle}</b><span class="muted fs-sm">{L.marketSub}</span>
     </button>
     <HomeFirsts />
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
-      <span class="eyebrow">Events</span><b>확률 이벤트</b><span class="muted fs-sm">선택지별 성공 확률 보기 →</span>
+      <span class="eyebrow">Events</span><b>{L.dexTitle}</b><span class="muted fs-sm">{L.dexSubWeb}</span>
     </button>
     <!-- T-11-092 기기에 맞는 앱 안내: iPhone은 App Store, 안드로이드는 비공개 테스터 모집(T-11-016), PC는 둘 다. -->
     {#if appFor !== 'android'}
@@ -86,23 +86,23 @@
     {/if}
     {#if appFor !== 'ios'}
       <a class="tile tile-link" data-act="android-tester" href={ANDROID_TESTER_FORM_URL} target="_blank" rel="noopener noreferrer">
-        <span class="eyebrow">Android</span><b>테스터 모집 ↗</b><span class="muted fs-sm">안드로이드 앱 비공개 테스트 신청하기</span>
+        <span class="eyebrow">Android</span><b>{L.testerTitle}</b><span class="muted fs-sm">{L.testerSub}</span>
       </a>
     {/if}
     <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. 앱 타일이 둘이면 한 줄을 다 쓴다. -->
     <a class="tile tile-link" class:tile-wide={appFor === 'both'} data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
-      <span class="eyebrow">Community</span><b>마이너 갤러리 ↗</b><span class="muted fs-sm">디시인사이드에서 커리어 자랑 · 공략 · 건의</span>
+      <span class="eyebrow">Community</span><b>{L.galleryTitle}</b><span class="muted fs-sm">{L.gallerySub}</span>
     </a>
   </div>
   <HallOfFame />
-  <HomeNews board="notice" eyebrow="Notice" title="공지사항" />
-  <HomeNews board="release" eyebrow="Release notes" title="릴리즈 노트" />
+  <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
+  <HomeNews board="release" eyebrow="Release notes" title={L.releaseTitle} />
   <VoluntarySupport />
   <SiteFooter />
   <!-- T-11-015 라운지 채팅으로 가는 떠 있는 버튼(하단 메뉴 위). -->
-  <button class="chat-fab" data-act="chat" aria-label={chatState.unread ? `채팅, 읽지 않은 메시지 ${chatState.unread}개` : '채팅'} onclick={() => go('chat')}>
+  <button class="chat-fab" data-act="chat" aria-label={chatState.unread ? L.chatLabelUnread({ n: chatState.unread }) : L.chatLabel} onclick={() => go('chat')}>
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z" fill="currentColor"/></svg>
     {#if chatState.unread}<span class="chat-unread num" data-chat-unread aria-hidden="true">{chatState.unread > 99 ? '99+' : chatState.unread}</span>{/if}
-    <span class="visually-hidden" role="status" aria-atomic="true">{chatState.unread ? `읽지 않은 채팅 메시지 ${chatState.unread}개` : ''}</span>
+    <span class="visually-hidden" role="status" aria-atomic="true">{chatState.unread ? L.chatStatusUnread({ n: chatState.unread }) : ''}</span>
   </button>
 </div>

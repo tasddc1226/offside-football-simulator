@@ -2,6 +2,7 @@
   // T-10-099 국적 고르기: 한글·초성으로 찾는 콤보박스. 연맹별로 묶어 가나다순, 대한민국은 맨 위.
   import { flagOf, nationOf, type Nation } from '@offside/game/nation';
   import { nationGroups } from '@offside/app-core/nationSearch';
+  import { createText as L } from '@offside/app-core/i18n/ko/create';
   import { motionOK } from './motion.js';
   import { trackViewport } from './viewport.js';
 
@@ -80,7 +81,7 @@
     aria-controls="{id}-list"
     aria-activedescendant={open && cur ? optId(cur) : undefined}
     data-value={value}
-    placeholder="나라 이름이나 초성(ㅂㄹㅈ)"
+    placeholder={L.nationSearchPlaceholder}
     value={query ?? selected.ko}
     onfocus={show}
     onclick={show}
@@ -94,7 +95,7 @@
   />
   <span class="combo-caret" aria-hidden="true">▾</span>
   {#if open}
-    <div class="combo-list" id="{id}-list" role="listbox" aria-label="국적" bind:this={list}>
+    <div class="combo-list" id="{id}-list" role="listbox" aria-label={L.nationListLabel} bind:this={list}>
       {#each groups as g (g.key)}
         <div role="group" aria-labelledby="{id}-g-{g.key}">
           <div class="combo-group" id="{id}-g-{g.key}">{g.label}</div>
@@ -118,7 +119,7 @@
           {/each}
         </div>
       {:else}
-        <div class="combo-empty">찾는 나라가 없어요</div>
+        <div class="combo-empty">{L.nationEmpty}</div>
       {/each}
     </div>
   {/if}

@@ -2,6 +2,7 @@
   import { DETAIL_LABEL, presetLayout, slotFit, type FormationId, type TeamLayout } from '@offside/contracts/owner-team';
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import PlayerCard from './PlayerCard.svelte';
+  import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
   type Cell = { rating: number; name: string; youth: boolean; nation?: string | null | undefined; season?: number | undefined; player?: TeamPlayer | undefined };
   let { formation, cells, layout, selected = null, dragging = null, links = [], focus = null, element = $bindable(), onpick, onstart, onkey, onplace }:
@@ -14,13 +15,13 @@
   const filled = $derived(cells.filter((c) => !c.youth).length);
 </script>
 
-<section class="pitch-frame" data-pitch-frame aria-label="선발 {filled}명 · 나머지 유스 선수">
+<section class="pitch-frame" data-pitch-frame aria-label={L.pitchAria({ n: filled })}>
   <svg class="pitch-lines" viewBox="0 0 100 120" preserveAspectRatio="none" aria-hidden="true">
     <rect x="3" y="3" width="94" height="114" rx="1" /><path d="M3 60H97" /><circle cx="50" cy="60" r="13" /><circle cx="50" cy="60" r=".7" class="pitch-dot" />
     <path d="M25 3V21H75V3M38 3V11H62V3M25 117V99H75V117M38 117V109H62V117M38 21Q50 35 62 21M38 99Q50 85 62 99" />
   </svg>
-  <span class="attack-direction" aria-hidden="true">공격 방향 ↑</span>
-  {#if onplace}<button class="pitch-space" aria-label="선택한 선수를 그라운드에 배치" onclick={onplace}></button>{/if}
+  <span class="attack-direction" aria-hidden="true">{L.attackDirection}</span>
+  {#if onplace}<button class="pitch-space" aria-label={L.placeAriaWeb} onclick={onplace}></button>{/if}
   <div class="tm-pitch" bind:this={element} data-team-pitch>
   {#if links.length}
     <svg class="syn-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -37,17 +38,17 @@
     {@const c = cells[i]}
     {#if c}
       {@const country = !c.youth ? NATION_BY_CODE.get(c.nation ?? c.player?.nation ?? DEFAULT_NATION) : undefined}
-      {@const ratingLabel = c.player ? `최고 OVR ${c.player.peak} · 포지션 OVR ${c.rating} · 적합도 ${Math.round(slotFit(point.slot, c.player, c.rating) * 100)}%` : `포지션 OVR ${c.rating}`}
+      {@const ratingLabel = c.player ? L.pitchRatingFull({ peak: c.player.peak, rating: c.rating, fit: Math.round(slotFit(point.slot, c.player, c.rating) * 100) }) : L.posOvr({ n: c.rating })}
       {#if onpick}
         <button class="tm-slot" class:chosen={selected === i} class:syn-on={focus?.includes(i)} class:dragging={dragging === i} data-slot={i}
           style:left="{point.x}%" style:top="{point.y}%" aria-pressed={selected === i}
           aria-label="{DETAIL_LABEL[point.slot]} · {c.name}{country ? ` · ${country.ko}` : ''} · {ratingLabel}" onclick={() => onpick?.(i)}
           onpointerdown={(e) => onstart?.(e, i)} onkeydown={(e) => onkey?.(e, i)}>
-          <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? '최고 OVR' : '포지션 OVR'} compact />
+          <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
         </button>
       {:else}
         <div class="tm-slot" class:syn-on={focus?.includes(i)} data-slot={i} style:left="{point.x}%" style:top="{point.y}%" role="group" aria-label="{DETAIL_LABEL[point.slot]} · {c.name}{country ? ` · ${country.ko}` : ''} · {ratingLabel}">
-          <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? '최고 OVR' : '포지션 OVR'} compact />
+          <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
         </div>
       {/if}
     {/if}

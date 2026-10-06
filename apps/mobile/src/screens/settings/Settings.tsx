@@ -17,7 +17,11 @@ import { ClubCustomSettings } from './ClubCustomSettings';
 import { AdFreeSettings } from './AdFreeSettings';
 import { PushSettings } from './PushSettings';
 import { ReviewSettings } from './ReviewSettings';
-import { SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
+import { SelectField, SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
+import { settingsText as L } from '@offside/app-core/i18n/ko/settings';
+import { LOCALE_NAMES, LOCALES, type Locale } from '@offside/app-core/i18n/core';
+import { useSnapshot } from 'valtio';
+import { saveLocale } from '../../platform/locale';
 
 /** 정책·가이드는 웹 페이지를 앱 안 브라우저로 연다. */
 function LinkList({ label, items }: { label: string; items: { text: string; path: string }[] }) {
@@ -79,6 +83,13 @@ export default function Settings() {
   const dark = useIsDark();
   const consent = useSyncExternalStore(nativeAnalytics.onConsent, nativeAnalytics.getConsent);
   const [namePublic, setNamePublicState] = useState(namePublicEnabled());
+  const { lang } = useSnapshot(prefs);
+
+  /** 언어: 이 기기에 저장하고 루트를 다시 그린다(_layout의 key). */
+  const setLang = (l: Locale) => {
+    saveLocale(l);
+    prefs.lang = l;
+  };
 
   /** 다크 모드: 고른 테마를 이 기기에 저장한다(고르지 않았으면 시스템 설정을 따른다). */
   const setDark = (on: boolean) => {
@@ -93,35 +104,37 @@ export default function Settings() {
       <View style={{ paddingHorizontal: 2, paddingTop: 4 }}>
         <Txt v="eyebrow">Settings</Txt>
         <Txt v="h1" accessibilityRole="header" style={{ marginTop: 2 }}>
-          환경설정
+          {L.title}
         </Txt>
       </View>
 
       <SettingsCard>
         <SettingsRow>
-          <SettingsLabel
-            eyebrow="Display"
-            title="다크 모드"
-            muted="어두운 화면으로 봐요. 이 기기에 저장돼요."
+          <SettingsLabel eyebrow="Display" title={L.darkTitle} muted={L.darkBodyApp} />
+          <Switch value={dark} onChange={setDark} label={L.darkTitle} testID="dark" />
+        </SettingsRow>
+        <SettingsRow first={false}>
+          <SettingsLabel title={L.langTitle} muted={L.langBody} />
+          <SelectField
+            value={lang}
+            options={LOCALES.map((l) => ({ value: l, label: LOCALE_NAMES[l] }))}
+            onChange={setLang}
+            label={L.langTitle}
+            testID="lang"
           />
-          <Switch value={dark} onChange={setDark} label="다크 모드" testID="dark" />
         </SettingsRow>
       </SettingsCard>
 
       <SettingsCard>
         <SettingsRow>
-          <SettingsLabel
-            eyebrow="Privacy"
-            title="선수 이름 공개"
-            muted="홈 라이브 현황·명예의 전당·서버 최초 업적에 선수 이름이 보여요. 끄면 '익명의 공격수'처럼 표시되고, 다음 시즌 기록부터 반영돼요. 실명은 쓰지 않는 게 좋아요."
-          />
+          <SettingsLabel eyebrow="Privacy" title={L.namePublicTitle} muted={L.namePublicBody} />
           <Switch
             value={namePublic}
             onChange={(on) => {
               setNamePublic(on);
               setNamePublicState(on);
             }}
-            label="선수 이름 공개"
+            label={L.namePublicTitle}
             testID="name-public"
           />
         </SettingsRow>
@@ -130,15 +143,11 @@ export default function Settings() {
       {nativeAnalytics.enabled() ? (
         <SettingsCard>
           <SettingsRow>
-            <SettingsLabel
-              eyebrow="Privacy"
-              title="앱 이용 분석 동의 (선택)"
-              muted="동의하면 Google Analytics로 화면 방문과 커리어 시작·진행·은퇴, 기기·앱 버전·세션 정보를 분석해요. 선수 이름·계정 정보·저장 파일은 보내지 않아요. 언제든 끌 수 있고, 동의 전 활동은 전송하지 않아요."
-            />
+            <SettingsLabel eyebrow="Privacy" title={L.analyticsTitle} muted={L.analyticsBody} />
             <Switch
               value={consent === 'granted'}
               onChange={(on) => nativeAnalytics.setConsent(on ? 'granted' : 'denied')}
-              label="앱 이용 분석 동의 (선택)"
+              label={L.analyticsTitle}
               testID="analytics-consent"
             />
           </SettingsRow>
@@ -152,22 +161,22 @@ export default function Settings() {
       <ReviewSettings />
       <ClubCustomSettings />
 
-      <Group eyebrow="Help" title="도움말">
+      <Group eyebrow="Help" title={L.help}>
         <LinkList
-          label="도움말"
+          label={L.help}
           items={[
-            { text: '게임 가이드', path: '/guide/' },
-            { text: '자주 묻는 질문', path: '/faq/' },
+            { text: L.guide, path: '/guide/' },
+            { text: L.faq, path: '/faq/' },
           ]}
         />
       </Group>
 
-      <Group eyebrow="Legal" title="서비스 정책">
+      <Group eyebrow="Legal" title={L.legal}>
         <LinkList
-          label="서비스 정책"
+          label={L.legal}
           items={[
-            { text: '이용약관', path: '/legal/terms/' },
-            { text: '개인정보 처리방침', path: '/legal/privacy/' },
+            { text: L.terms, path: '/legal/terms/' },
+            { text: L.privacy, path: '/legal/privacy/' },
           ]}
         />
       </Group>

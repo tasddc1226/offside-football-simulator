@@ -12,6 +12,7 @@ import { useColors, useIsDark } from '../../theme/useColors';
 import { Btn } from '../../ui/Btn';
 import { Txt } from '../../ui/Txt';
 import { Field, TextBox } from './parts';
+import { boardText as L } from '@offside/app-core/i18n/ko/board';
 
 export interface Draft {
   id?: string;
@@ -41,9 +42,9 @@ export function PostEditor({
   return (
     <View style={{ gap: 10 }}>
       <Txt v="h2" accessibilityRole="header">
-        {draft.id ? '글 고치기' : `${BOARD_LABEL[board]} 새 글`}
+        {draft.id ? L.editTitle : L.newTitle({ board: BOARD_LABEL[board] })}
       </Txt>
-      <Field label="제목">
+      <Field label={L.titleLabel}>
         <TextBox
           testID="post-title"
           maxLength={POST_TITLE_MAX}
@@ -53,7 +54,7 @@ export function PostEditor({
         />
       </Field>
       {board === 'release' ? (
-        <Field label="버전">
+        <Field label={L.versionLabel}>
           <TextBox
             testID="post-version"
             maxLength={POST_VERSION_MAX}
@@ -67,7 +68,7 @@ export function PostEditor({
           />
         </Field>
       ) : null}
-      <Field label="본문">
+      <Field label={L.bodyLabel}>
         <TextBox
           testID="post-body"
           multiline
@@ -77,25 +78,25 @@ export function PostEditor({
           style={{ minHeight: 12 * 26 }}
         />
         <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-          {'"## 소제목", "- 목록" 줄을 쓸 수 있어요.'}
+          {L.bodyHint}
         </Txt>
       </Field>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Switch
           testID="post-pinned"
-          accessibilityLabel="맨 위에 고정"
+          accessibilityLabel={L.pin}
           value={draft.pinned}
           onValueChange={(pinned) => onChange({ ...draft, pinned })}
           trackColor={{ true: dark ? c.accent : c.pitch, false: c.line }}
         />
-        <Txt onPress={() => onChange({ ...draft, pinned: !draft.pinned })}>맨 위에 고정</Txt>
+        <Txt onPress={() => onChange({ ...draft, pinned: !draft.pinned })}>{L.pin}</Txt>
       </View>
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Btn kind="accent" testID="save-post" disabled={busy} onPress={onSave}>
-          {draft.id ? '저장' : '올리기'}
+          {draft.id ? L.save : L.publish}
         </Btn>
         <Btn sm onPress={onCancel}>
-          취소
+          {L.cancel}
         </Btn>
       </View>
     </View>

@@ -8,6 +8,7 @@ import {
 } from '@offside/contracts/owner-team';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import { assignSlot, attrLine } from '@offside/app-core/teamOwner';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { DragPlayer, type PlayerDrag } from '../../components/DragPlayer';
 import { PlayerCard } from '../../components/PlayerCard';
 import { TeamPitch, type PitchCell } from '../../components/TeamPitch';
@@ -279,11 +280,11 @@ export function TeamLineup({
           <Txt v="sm" style={{ flex: 1 }}>{`${layout[focus]?.slot} · ${cells[focus]?.name}`}</Txt>
           {slots[focus] ? (
             <Btn sm onPress={() => change(assignSlot(slots, focus, null), layout)}>
-              라커룸으로
+              {L.toLocker}
             </Btn>
           ) : null}
           <Btn sm kind="ghost" onPress={() => setFocus(null)}>
-            닫기
+            {L.close}
           </Btn>
         </View>
       ) : null}
@@ -297,28 +298,33 @@ export function TeamLineup({
                 justifyContent: 'space-between',
               }}
             >
-              <Txt v="h2">라커룸</Txt>
-              <Txt tone="muted" v="sm">{`${visible.length}명`}</Txt>
+              <Txt v="h2">{L.lockerTitle}</Txt>
+              <Txt tone="muted" v="sm">
+                {L.lockerCountApp({ n: visible.length })}
+              </Txt>
             </View>
             <Txt v="sm" tone="muted">
-              선수를 길게 눌러 그라운드로 끌거나, 고른 뒤 자리를 눌러 주세요.
+              {L.lockerNoteApp}
             </Txt>
             <TextField
               value={query}
               onChangeText={setQuery}
-              placeholder="선수 이름 검색"
-              accessibilityLabel="선수 이름 검색"
+              placeholder={L.searchPlaceholder}
+              accessibilityLabel={L.searchPlaceholder}
               testID="locker-search"
             />
             <SortChips
-              label="포지션"
+              label={L.posLabelApp}
               items={['all', 'GK', 'DF', 'MF', 'FW'].map((value) => ({
                 key: value,
                 label: (
-                  { all: '전체', GK: '골키퍼', DF: '수비', MF: '중원', FW: '공격' } as Record<
-                    string,
-                    string
-                  >
+                  {
+                    all: L.posAllApp,
+                    GK: L.posGkApp,
+                    DF: L.posDfApp,
+                    MF: L.posMfApp,
+                    FW: L.posFwApp,
+                  } as Record<string, string>
                 )[value]!,
               }))}
               value={position}
@@ -326,11 +332,11 @@ export function TeamLineup({
               testIDPrefix="locker-position"
             />
             <SortChips
-              label="정렬"
+              label={L.sortLabelApp}
               items={[
                 { key: 'ovr', label: 'OVR' },
                 { key: 'ls', label: 'LS' },
-                { key: 'fit', label: `${code} 적합` },
+                { key: 'fit', label: L.fitApp({ code }) },
               ]}
               value={sort}
               onPick={setSort}
@@ -342,20 +348,20 @@ export function TeamLineup({
               accessibilityState={{ checked: starters }}
               style={{ minHeight: 44, justifyContent: 'center' }}
             >
-              <Txt v="sm">{`${starters ? '☑' : '□'} 선발 선수도 보기`}</Txt>
+              <Txt v="sm">{L.startersToggleApp({ on: starters })}</Txt>
             </Press>
             <Press
               onPress={() => setGuide(!guide)}
               accessibilityState={{ expanded: guide }}
               style={{ minHeight: 44, justifyContent: 'center' }}
             >
-              <Txt v="sm" tone="muted">{`OVR이 달라지는 이유 ${guide ? '−' : '+'}`}</Txt>
+              <Txt v="sm" tone="muted">
+                {L.guideToggleApp({ open: guide })}
+              </Txt>
             </Press>
             {guide ? (
               <Txt v="sm" tone="muted">
-                라커룸 OVR은 커리어 최고 OVR이에요. 포지션 OVR은 자리별 능력치와 적합도로 계산하며,
-                팀 OVR과 경기에 반영돼요. ‘추정 능력치’는 같은 포지션·유형의 은퇴 기록과 최고 OVR로
-                계산한 카드 표시용 값이에요. 경기에는 영향을 주지 않아요.
+                {L.guideBodyApp}
               </Txt>
             ) : null}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -364,7 +370,12 @@ export function TeamLineup({
                   <DragPlayer index={null} id={p.careerId} drag={drag}>
                     <Press
                       testID={`locker-${p.careerId}`}
-                      accessibilityLabel={`${nameOf(p)}${NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION) ? ` · ${NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)!.ko}` : ''} · 최고 OVR ${p.peak} · LS ${p.legendScore ?? 0} · ${attrLine(p) ?? '능력치 기록 없음'}`}
+                      accessibilityLabel={L.lockerPickAriaApp({
+                        who: `${nameOf(p)}${NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION) ? ` · ${NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)!.ko}` : ''}`,
+                        peak: p.peak,
+                        ls: p.legendScore ?? 0,
+                        attrs: attrLine(p) ?? L.noAttrs,
+                      })}
                       accessibilityState={{ selected: selected === p.careerId }}
                       onPress={() => select(selected === p.careerId ? null : p.careerId)}
                       style={{
@@ -393,22 +404,20 @@ export function TeamLineup({
                   </DragPlayer>
                   <Txt v="xs" tone="muted" style={{ textAlign: 'center' }}>
                     {slots.includes(p.careerId)
-                      ? `선발 · ${layout[slots.indexOf(p.careerId)]?.slot}`
-                      : '대기'}
+                      ? L.rosterStarting({ slot: layout[slots.indexOf(p.careerId)]?.slot ?? '' })
+                      : L.rosterBench}
                   </Txt>
                 </View>
               ))}
             </View>
             {visible.length > limit ? (
               <Btn sm onPress={() => setLimit(limit + 24)}>
-                선수 더 보기
+                {L.moreApp}
               </Btn>
             ) : null}
             {!visible.length ? (
               <Txt tone="muted" v="sm">
-                {players.length
-                  ? '조건에 맞는 대기 선수가 없어요. 선발 선수도 보거나 필터를 바꿔 주세요.'
-                  : '이번 시즌에 커리어를 끝까지 뛰고 은퇴한 선수를 배치할 수 있어요.'}
+                {players.length ? L.emptyFilteredApp : L.emptyNoneApp}
               </Txt>
             ) : null}
           </Card>

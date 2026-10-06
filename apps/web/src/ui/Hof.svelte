@@ -8,15 +8,17 @@
   import TeamRanking from './team/TeamRanking.svelte';
   import Topbar from './Topbar.svelte';
   import { appState, type HofTab } from './state.svelte.js';
+  import { hofText as L } from '@offside/app-core/i18n/ko/hof';
 
-  const TABS: Record<HofTab, string> = {
-    legends: '명예의 전당',
-    rn: '영구결번',
-    teams: '팀 랭킹',
-    ach: '구단주 랭킹',
-  };
+  // 문구는 그릴 때 읽어야 해서(언어 등록 뒤) 함수로 둔다.
+  const tabs = (): Record<HofTab, string> => ({
+    legends: L.tabLegends,
+    rn: L.tabRn,
+    teams: L.tabTeams,
+    ach: L.tabAch,
+  });
 
-  const tabKeys = Object.keys(TABS) as HofTab[];
+  const tabKeys: HofTab[] = ['legends', 'rn', 'teams', 'ach'];
   function onTabKey(event: KeyboardEvent, tab: HofTab) {
     const index = tabKeys.indexOf(tab);
     let next: number;
@@ -32,9 +34,9 @@
 
 <div class="wrap">
   <Topbar />
-  <h1 class="sr-only">{TABS[appState.hof.tab]}</h1>
-  <div class="hof-tabs" role="tablist" aria-label="기록실">
-    {#each Object.entries(TABS) as [k, label] (k)}
+  <h1 class="sr-only">{tabs()[appState.hof.tab]}</h1>
+  <div class="hof-tabs" role="tablist" aria-label={L.tabsLabel}>
+    {#each Object.entries(tabs()) as [k, label] (k)}
       <button type="button" role="tab" id="hof-tab-{k}" aria-selected={appState.hof.tab === k} aria-controls="hof-tab-panel" tabindex={appState.hof.tab === k ? 0 : -1} data-hof-tab={k} onclick={() => (appState.hof.tab = k as HofTab)} onkeydown={(event) => onTabKey(event, k as HofTab)}>{label}</button>
     {/each}
   </div>

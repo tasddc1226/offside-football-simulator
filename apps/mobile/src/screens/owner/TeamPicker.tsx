@@ -3,9 +3,10 @@ import { Keyboard, Modal, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { DETAIL_LABEL, YOUTH_NAME, YOUTH_OVR, type DetailPos } from '@offside/contracts/owner-team';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import {
-  PICK_SORTS,
+  pickSorts,
   attrLine,
   pct,
   type PickCandidate,
@@ -72,7 +73,7 @@ export function TeamPicker({
     >
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable
-          accessibilityLabel="닫기"
+          accessibilityLabel={L.close}
           onPress={onClose}
           style={{
             position: 'absolute',
@@ -86,7 +87,7 @@ export function TeamPicker({
         {slot ? (
           <View
             accessibilityViewIsModal
-            accessibilityLabel={`${DETAIL_LABEL[slot]} 자리 선수 고르기`}
+            accessibilityLabel={L.pickAria({ slot: DETAIL_LABEL[slot] })}
             style={{
               maxHeight: '78%',
               paddingTop: 16,
@@ -113,12 +114,12 @@ export function TeamPicker({
                 </Txt>
               </View>
               <Btn sm onPress={onClose} testID="pick-close">
-                닫기
+                {L.close}
               </Btn>
             </View>
             <View style={{ marginBottom: 6 }}>
-              <Seg label="정렬">
-                {PICK_SORTS.map(([k, label]) => (
+              <Seg label={L.pickSortAria}>
+                {pickSorts().map(([k, label]) => (
                   <SegBtn
                     key={k}
                     selected={sort === k}
@@ -144,7 +145,7 @@ export function TeamPicker({
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Txt>{YOUTH_NAME}</Txt>
                   <Txt tone="muted" v="xs">
-                    자리를 비워 두면 유스 선수가 뛰어요
+                    {L.youthNote}
                   </Txt>
                 </View>
               </Press>
@@ -167,7 +168,11 @@ export function TeamPicker({
                       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                         <Txt>{nameOf(cd.p)}</Txt>
                         <Txt tone="muted" v="xs">
-                          {`${cd.p.dpos ? DETAIL_LABEL[cd.p.dpos] : POS_LABEL[cd.p.pos]} · 최고 ${cd.p.peak} · 적합 ${pct(cd.fit)}${cd.at >= 0 && slotCodes[cd.at] && current !== cd.p.careerId ? ` · ${slotCodes[cd.at]} 자리에서 바꿈` : ''}`}
+                          {`${L.pickLine({
+                            pos: cd.p.dpos ? DETAIL_LABEL[cd.p.dpos] : POS_LABEL[cd.p.pos],
+                            peak: cd.p.peak,
+                            fit: pct(cd.fit),
+                          })}${cd.at >= 0 && slotCodes[cd.at] && current !== cd.p.careerId ? L.pickSwap({ slot: slotCodes[cd.at]! }) : ''}`}
                         </Txt>
                         {line ? (
                           <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
@@ -179,7 +184,7 @@ export function TeamPicker({
                   );
                 })
               ) : (
-                <Txt tone="muted">넣을 수 있는 은퇴 선수가 없어요.</Txt>
+                <Txt tone="muted">{L.noCandidates}</Txt>
               )}
             </ScrollView>
           </View>

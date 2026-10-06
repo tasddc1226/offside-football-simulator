@@ -7,6 +7,7 @@ import type { ChapterEvent } from '@offside/game/retirement-report';
 import { titleById, type TitleDef } from '@offside/game/titles';
 import type { CareerRecord, HofEntry } from '@offside/game/types';
 import { totals } from './format.js';
+import { legendStyleText as L } from './i18n/ko/legendStyle.js';
 import type { LegendView } from './state.js';
 
 /** 2036 · 37 · 39 — 첫 해만 네 자리. */
@@ -51,7 +52,7 @@ export function rnClubStats(rnSlot: Granted, d: LegendView['d']) {
 export const pct = (n: number, of: number): number => (of ? Math.round((n / of) * 100) : 0);
 export const luckText = (l: number): string => (l > 0 ? `+${l}` : l < 0 ? `${l}` : '±0');
 export const luckNote = (l: number): string =>
-  l > 0 ? `기대보다 ${l}번 더 성공` : l < 0 ? `기대보다 ${-l}번 덜 성공` : '딱 기대만큼 성공';
+  l > 0 ? L.luckUp({ n: l }) : l < 0 ? L.luckDown({ n: -l }) : L.luckEven;
 
 // ───────── 몸값 그래프 좌표 ─────────
 /** 시즌별 몸값 점: x는 0~1(첫~마지막 시즌), y는 위 0 ~ 아래 100(맨 위 20%는 최고 몸값 꼬리표 자리로 비운다). */
