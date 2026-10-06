@@ -18,12 +18,15 @@
   {#if chips.length}
     <div class="chips">
       {#each chips as s (s.id)}
-        <button class="chip" class:dashed={s.badge} aria-pressed={focus === s.id} data-synergy={s.id} title={s.desc}
+        <button class="chip" class:dashed={s.badge} class:applied={s.applied} aria-pressed={focus === s.id} data-synergy={s.id} title={s.desc}
           onclick={() => (focus = focus === s.id ? null : s.id)}>
-          <span>{s.name}</span><small>{s.effect}</small>
+          <span class="chip-name">{#if s.applied}<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2 5 8.6 9.6 3.6" /></svg>{/if}{s.name}</span>
+          <small>{s.effect}</small>
+          {#if focus === s.id}<em class="chip-state">{L.chipViewing}</em>{:else if s.applied}<em class="chip-state on">{L.chipApplied}</em>{/if}
         </button>
       {/each}
     </div>
+    <p class="muted hint">{L.chipHint}</p>
   {:else}
     <p class="muted empty">{L.empty}</p>
   {/if}
@@ -44,9 +47,17 @@
   .note {font-size:12px;color:var(--muted);}
   .chips {display:flex;flex-wrap:wrap;gap:6px;}
   .chip {flex:0 0 auto;white-space:nowrap;display:grid;gap:1px;text-align:left;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:inherit;font:inherit;cursor:pointer;}
-  .chip span {font-size:13px;font-weight:600;}
-  .chip small {font-size:11px;color:var(--muted);}
-  .chip[aria-pressed='true'] {border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+  .chip {position:relative;grid-template-columns:auto auto;column-gap:10px;align-items:baseline;}
+  .chip-name {font-size:13px;font-weight:600;display:flex;align-items:center;gap:4px;}
+  .chip-name svg {width:12px;height:12px;fill:none;stroke:var(--accent-text);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .chip small {grid-column:1;font-size:11px;color:var(--muted);}
+  .chip-state {grid-column:2;grid-row:1 / span 2;align-self:center;font-style:normal;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted);}
+  .chip-state.on {border-color:color-mix(in srgb,var(--accent),transparent 50%);color:var(--accent-text);}
+  /* 켜진 시너지는 모두 같은 '적용 중' 모습. 누른 칩은 고른 것처럼 보이지 않게 테두리 대신 배경만 바꾸고 '보는 중'을 단다. */
+  .chip.applied {border-color:color-mix(in srgb,var(--accent),transparent 55%);}
+  .chip[aria-pressed='true'] {background:color-mix(in srgb,var(--accent),var(--surface-2) 82%);}
+  .chip[aria-pressed='true'] .chip-state {border-color:var(--accent);background:var(--accent);color:var(--accent-ink);}
+  .hint {margin:0;font-size:11px;}
   .chip.dashed {border-style:dashed;}
   .empty {margin:0;font-size:13px;}
   .more {justify-self:start;border:0;background:none;color:var(--accent-text);font:inherit;font-size:13px;font-weight:600;min-height:44px;padding:0;cursor:pointer;}

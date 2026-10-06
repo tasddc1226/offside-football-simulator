@@ -214,7 +214,16 @@ export type SynergyChip = {
   desc: string;
   effect: string;
   badge: boolean;
+  /** 경기 효과가 실제로 들어가는 시너지(배지 · 상한에 걸린 듀오는 아니다). 켜진 것은 모두 함께 적용된다. */
+  applied: boolean;
 };
+/** 경기 효과가 실제로 들어가는지 — 주발 맞춤은 자리 실력 보정, 나머지는 더한 줄 힘. */
+const synergyApplied = (s: TeamSynergy, a: ActiveSynergy): boolean =>
+  a.kind === 'badge'
+    ? false
+    : a.kind === 'foot'
+      ? s.foot.some((b) => b > 0)
+      : Object.values(a.effect).some((v) => (v ?? 0) > 0);
 /** 편성 화면의 시너지 칩(웹·앱 공용). 주발 맞춤은 인원과 자리 실력 보정 합을 보인다. */
 export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
   s.active.map((a) => {
@@ -228,15 +237,32 @@ export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
           ? SY.fitEffect({ v: signedNum(s.foot.reduce((t, b) => t + b, 0)) })
           : synergyEffectText(a.effect, a.kind),
       badge: a.kind === 'badge',
+      applied: synergyApplied(s, a),
     };
   });
-/** 고른 시너지 칩 → 그라운드 듀오 연결선(고른 것은 굵게)과 테두리를 칠 선수 자리. */
+/**
+ * 그라운드 시너지 표시(웹·앱 공용). 켜진 시너지는 고른 칩과 상관없이 모두 적용되므로, 효과가 들어가는 듀오 · 주발 맞춤의
+ * 선수(applied)는 늘 점으로 표시하고 칩을 고르면(id) 그 시너지의 선 · 선수만 더 굵게 보여 준다. 팀 색깔(우리가 키운 팀)은
+ * 선발 대부분이라 점을 찍지 않고 caption 개수에만 든다. caption은 그라운드 아래 한 줄.
+ */
 export function synergyFocus(s: TeamSynergy, id: string | null) {
+  const on = s.active.filter((a) => synergyApplied(s, a));
+  const picked = s.active.find((a) => a.id === id);
+  const n = on.length;
   return {
     links: s.active
       .filter((a) => a.kind === 'duo')
       .map((a) => ({ members: a.members, on: a.id === id })),
-    members: s.active.find((a) => a.id === id)?.members ?? null,
+    members: picked?.members ?? null,
+    applied: [...new Set(on.filter((a) => a.kind !== 'team').flatMap((a) => a.members))].sort(
+      (a, b) => a - b,
+    ),
+    caption:
+      n === 0
+        ? null
+        : picked
+          ? SY.pitchFocus({ name: synergyText(picked.id, picked.name, picked.desc)[0], n })
+          : SY.pitchAll({ n }),
   };
 }
 /** 시너지 표 — [이름, 설명, 효과]. 숨은 규칙 없이 전부 보인다. 언어를 바꾸면 다시 만들어야 해서 함수다. */

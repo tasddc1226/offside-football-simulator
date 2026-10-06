@@ -31,6 +31,8 @@ export function TeamPitch({
   height: fixedHeight,
   links = [],
   focus = null,
+  applied = [],
+  caption = null,
 }: {
   formation: FormationId;
   cells: readonly PitchCell[];
@@ -47,12 +49,15 @@ export function TeamPitch({
   links?: readonly { members: readonly number[]; on: boolean }[];
   /** 고른 시너지의 선수 자리(테두리). */
   focus?: readonly number[] | null;
+  /** 효과가 들어가는 시너지의 선수 자리(카드 아래 점, 늘 표시)와 그라운드 아래 안내 한 줄(웹 TeamPitch). */
+  applied?: readonly number[];
+  caption?: string | null;
 }) {
   const c = useColors();
   const positions = layout ?? presetLayout(formation);
   const [width, setWidth] = useState(0);
   const height = fixedHeight ?? pitchHeight(width);
-  return (
+  const pitch = (
     <View
       testID="team-pitch"
       onLayout={fixedHeight ? undefined : (e) => setWidth(e.nativeEvent.layout.width)}
@@ -196,9 +201,53 @@ export function TeamPitch({
                   <PlayerCard cell={cell} code={pos.slot} compact animate={animate} />
                 </Press>
               </DragPlayer>
+              {applied.includes(i) ? (
+                <View
+                  pointerEvents="none"
+                  testID={`slot-${i}-synergy`}
+                  style={{
+                    position: 'absolute',
+                    left: 26,
+                    bottom: -6,
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    borderWidth: 2,
+                    borderColor: c.pitch,
+                    backgroundColor: c.accent,
+                  }}
+                />
+              ) : null}
             </View>
           );
         })}
+      </View>
+    </View>
+  );
+  if (!caption) return pitch;
+  // 그라운드 안에 두면 골키퍼 카드와 겹쳐서 바로 아래 줄에 둔다(웹은 그라운드 아래 여백 안).
+  return (
+    <View style={{ gap: 8 }}>
+      {pitch}
+      <View
+        testID="synergy-caption"
+        accessibilityLiveRegion="polite"
+        style={{
+          alignSelf: 'center',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          maxWidth: '100%',
+          paddingVertical: 4,
+          paddingHorizontal: 10,
+          borderRadius: 999,
+          backgroundColor: c.surface2,
+        }}
+      >
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: c.accent }} />
+        <Txt v="xs" bold numberOfLines={1} style={{ flexShrink: 1 }}>
+          {caption}
+        </Txt>
       </View>
     </View>
   );

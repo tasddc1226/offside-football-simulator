@@ -52,33 +52,70 @@ export function TeamSynergy({
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
           {chips.map((s) => {
             const on = focus === s.id;
+            const state = on ? L.chipViewing : s.applied ? L.chipApplied : null;
             return (
               <Press
                 key={s.id}
                 testID={`synergy-${s.id}`}
-                accessibilityLabel={`${s.name} · ${s.effect}`}
+                accessibilityLabel={`${s.name} · ${s.effect}${state ? ` · ${state}` : ''}`}
                 accessibilityState={{ selected: on }}
                 onPress={() => setFocus(on ? null : s.id)}
                 style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
                   paddingVertical: 6,
                   paddingHorizontal: 10,
                   borderRadius: 10,
-                  borderWidth: on ? 2 : 1,
+                  borderWidth: 1,
                   borderStyle: s.badge ? 'dashed' : 'solid',
-                  borderColor: on ? c.accent : c.line,
-                  backgroundColor: c.surface2,
+                  // 켜진 시너지는 모두 같은 '적용 중' 모습 — 누른 칩은 고른 것처럼 보이지 않게 배경만 바꾸고 '보는 중'을 단다.
+                  borderColor: s.applied ? `${c.accent}80` : c.line,
+                  backgroundColor: on ? `${c.accent}2e` : c.surface2,
                 }}
               >
-                <Txt v="sm" bold>
-                  {s.name}
-                </Txt>
-                <Txt v="xs" tone="muted">
-                  {s.effect}
-                </Txt>
+                <View>
+                  <Txt v="sm" bold>
+                    {s.applied ? (
+                      <Txt v="sm" bold tone="accent">
+                        {'✓ '}
+                      </Txt>
+                    ) : null}
+                    {s.name}
+                  </Txt>
+                  <Txt v="xs" tone="muted">
+                    {s.effect}
+                  </Txt>
+                </View>
+                {state ? (
+                  <View
+                    style={{
+                      paddingHorizontal: 6,
+                      paddingVertical: 1,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: on ? c.accent : `${c.accent}80`,
+                      backgroundColor: on ? c.accent : 'transparent',
+                    }}
+                  >
+                    <Txt
+                      v="xs"
+                      bold
+                      style={{ fontSize: 10, color: on ? c.accentInk : c.accentText }}
+                    >
+                      {state}
+                    </Txt>
+                  </View>
+                ) : null}
               </Press>
             );
           })}
         </View>
+      ) : null}
+      {chips.length ? (
+        <Txt v="xs" tone="muted">
+          {L.chipHint}
+        </Txt>
       ) : (
         <Txt v="sm" tone="muted">
           {L.empty}

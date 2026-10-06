@@ -5,7 +5,7 @@
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
   import { attrLine, synergyFocus } from '@offside/app-core/teamOwner';
-  import type { TeamSynergy as Synergy } from '@offside/contracts/owner-team';
+  import { synergyApplies, type TeamSynergy as Synergy } from '@offside/contracts/owner-team';
   import TeamLines from './TeamLines.svelte';
   import TeamSynergy from './TeamSynergy.svelte';
   import TeamPitch from './TeamPitch.svelte';
@@ -155,7 +155,7 @@
     <div class="hof-sorts ground-presets" role="group" aria-label={L.presetsLabel}>
       {#each FORMATION_IDS as f (f)}<button class="hof-sort" aria-pressed={!layout && formation === f} data-formation={f} disabled={!editable} onclick={() => preset(f)}>{f}</button>{/each}
     </div>
-    <TeamPitch {formation} {cells} {layout} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} bind:element={pitch}
+    <TeamPitch {formation} {cells} {layout} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} applied={syn.applied} caption={synergyApplies(season) ? syn.caption : null} bind:element={pitch}
       onpick={editable ? pickSlot : undefined} onstart={editable ? (e, i) => start(e, slots[i] ?? null, i) : undefined} onkey={editable ? keyMove : undefined} onplace={editable ? place : undefined} />
     <div class="ground-strength"><TeamLines {lines} compact /></div>
     <TeamSynergy {synergy} {season} bind:focus={synFocus} />
