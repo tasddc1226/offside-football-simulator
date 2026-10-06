@@ -11,7 +11,6 @@ const ko = {
   tabTeams: '팀 랭킹',
   tabAch: '구단주 랭킹',
   title: '명예의 전당',
-  seeAll: '전체 보기',
   // 순위 유형
   sortScore: '레전드 점수',
   sortValue: '은퇴 가치',
@@ -99,6 +98,10 @@ const ko = {
   appsN: (p: { n: string }) => `${p.n}경기`,
   goalsN: (p: { n: string }) => `${p.n}골`,
   assistsN: (p: { n: string }) => `${p.n}도움`,
+  // 기록실 명예의 전당 줄의 은퇴 나이·최고 OVR·발롱도르(받은 선수만).
+  retireAgeN: (p: { n: number }) => `${p.n}세 은퇴`,
+  peakN: (p: { n: number }) => `최고 OVR ${p.n}`,
+  ballonN: (p: { n: number }) => `발롱도르 ${p.n}회`,
 };
 
 export type HofMsgs = typeof ko;

@@ -79,6 +79,7 @@ const ko = {
   // 팀 랭킹
   sortRating: '레이팅',
   sortOvr: '팀 OVR',
+  sortValue: '구단 가치',
   colOvrApp: 'OVR',
   formWin: '승리',
   formDraw: '무승부',
@@ -117,6 +118,13 @@ const ko = {
   teamsEmpty:
     '아직 랭킹에 오른 팀이 없어요. 구단주 화면에서 은퇴한 선수로 팀을 꾸리면 여기에 올라요.',
   teamsFoot: '레이팅은 팀 경기 결과로 오르내려요. 랭킹은 5분마다 갱신돼요.',
+  valueFoot: '구단 가치는 선발 11명의 카드 기준가를 더한 값이에요. 랭킹은 5분마다 갱신돼요.',
+  // T-11-129 홈의 구단 가치 TOP 3
+  homeValueTitle: '구단 가치 TOP 3',
+  homeValueSub: '선발 11명의 카드 기준가를 더했어요.',
+  homeValueEmpty: '아직 랭킹에 오른 팀이 없어요.',
+  homeValueRowAria: (p: { rank: number; name: string; manager: string; value: string }) =>
+    `${p.rank}위 ${p.name}, 감독 ${p.manager}, 구단 가치 ${p.value}, 팀 상세 보기`,
   // 팀 프로필
   profLoadFail: '팀을 불러오지 못했어요.',
   profManager: '감독 ',

@@ -2,6 +2,7 @@
 // 알아서 받고(ON_LOAD), 앱으로 돌아올 때는 여기서 확인해 받아 둔다. 받아 두면 UpdateBanner가
 // '다시 시작'을 띄운다 — 자동 재시작은 하지 않는다(진행 중인 화면을 갑자기 날리지 않게). 안 눌러도 다음 실행 때 적용된다.
 // 네이티브가 바뀐 번들은 runtimeVersion(fingerprint)이 달라 옛 앱으로 내려오지 않는다. 개발 빌드에서는 꺼져 있다.
+import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
 
 const MIN_GAP_MS = 60_000;
@@ -22,3 +23,12 @@ export const applyUpdate = () => void Updates.reloadAsync();
 
 /** 받아 둔 새 번들이 있다(다시 시작하면 적용). 새 버전 배너가 뜨고, 새 소식 배너는 그동안 물러난다. */
 export const useUpdatePending = () => Updates.useUpdates().isUpdatePending;
+
+/** 설정 맨 아래 표시용 — 설치한 앱 버전·빌드와 지금 돌고 있는 OTA 업데이트 ID(앞 8자리, `eas update:list`의 업데이트 ID와 같다). */
+export function appBuildInfo(): { version: string; build: string; updateId: string | null } {
+  return {
+    version: Application.nativeApplicationVersion ?? '?',
+    build: Application.nativeBuildVersion ?? '?',
+    updateId: Updates.isEmbeddedLaunch || !Updates.updateId ? null : Updates.updateId.slice(0, 8),
+  };
+}

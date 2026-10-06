@@ -36,6 +36,7 @@ const season = (over: Partial<AchievementSeason> = {}): AchievementSeason => ({
   cs: null,
   ...over,
 });
+const pro = (n: number, club: string) => Array.from({ length: n }, () => season({ club }));
 const slot = (over: Partial<AchievementTeamSlot> = {}): AchievementTeamSlot => ({
   careerId: 'c',
   fit: 1,
@@ -235,6 +236,132 @@ describe('구단 시즌 업적', () => {
     });
     expect(item(not, 'one-club')?.done).toBe(false);
     expect(item(not, 'gk-cs-20')?.done).toBe(false);
+  });
+
+  it.each([
+    [9, false],
+    [10, true],
+    [11, true],
+  ])('한 구단 %i시즌 경계', (n, done) => {
+    const g = clubAchievements({
+      careers: [career({ seasons: pro(n, 'A') })],
+      team: null,
+      owner: OWNER,
+      detail: true,
+      retireAt: 41,
+    });
+    expect(item(g, 'one-club')?.done).toBe(done);
+    expect(item(g, 'long-service')?.done).toBe(done);
+  });
+
+  it.each([
+    ['return', [...pro(12, 'A'), ...pro(1, 'B'), ...pro(4, 'A')], true, false],
+    [
+      'sangmu return',
+      [
+        ...pro(4, 'A'),
+        ...pro(2, 'sangmu').map((s) => ({ ...s, clubId: 'sangmu' })),
+        ...pro(4, 'A'),
+      ],
+      false,
+      true,
+    ],
+    [
+      'regular club 10 plus sangmu',
+      [
+        ...pro(5, 'A'),
+        ...pro(2, 'sangmu').map((s) => ({ ...s, clubId: 'sangmu' })),
+        ...pro(5, 'A'),
+      ],
+      true,
+      true,
+    ],
+    [
+      'sangmu then B',
+      [
+        ...pro(10, 'A'),
+        ...pro(2, 'sangmu').map((s) => ({ ...s, clubId: 'sangmu' })),
+        ...pro(1, 'B'),
+      ],
+      true,
+      false,
+    ],
+    ['sangmu only', pro(10, 'sangmu').map((s) => ({ ...s, clubId: 'sangmu' })), false, false],
+    ['name alone is not military evidence', [...pro(9, 'A'), ...pro(1, '김천 상무')], false, false],
+    [
+      'same id renamed and promoted',
+      [
+        ...pro(5, 'old').map((s) => ({ ...s, clubId: 'A', league: 'K리그2' })),
+        ...pro(5, 'new').map((s) => ({ ...s, clubId: 'A', league: 'K리그1' })),
+      ],
+      true,
+      true,
+    ],
+    [
+      'same name different ids',
+      [
+        ...pro(5, 'same').map((s) => ({ ...s, clubId: 'A' })),
+        ...pro(5, 'same').map((s) => ({ ...s, clubId: 'B' })),
+      ],
+      false,
+      false,
+    ],
+    [
+      'mixed old and new evidence',
+      [...pro(5, 'A'), ...pro(5, 'A').map((s) => ({ ...s, clubId: 'A' }))],
+      false,
+      false,
+    ],
+    [
+      'amateurs excluded',
+      [
+        ...pro(9, 'A'),
+        season({ club: 'A', league: '고교 리그' }),
+        season({ club: 'A', league: 'U리그 (대학)' }),
+      ],
+      false,
+      false,
+    ],
+    [
+      'army is not regular club tenure',
+      pro(10, '현역 복무').map((s) => ({ ...s, league: '병역' })),
+      false,
+      true,
+    ],
+  ])('%s', (_label, seasons, long, one) => {
+    const g = clubAchievements({
+      careers: [career({ seasons })],
+      team: null,
+      owner: OWNER,
+      detail: true,
+      retireAt: 41,
+    });
+    expect(item(g, 'long-service')?.done).toBe(long);
+    expect(item(g, 'one-club')?.done).toBe(one);
+    const en = localizeAchievements(g, 'en');
+    expect(item(en, 'long-service')).toMatchObject({
+      label: 'Long service',
+      done: long,
+      points: long ? 50 : 0,
+    });
+    expect(item(en, 'one-club')).toMatchObject({ label: 'One-club player', done: one });
+  });
+
+  it('장기근속은 여러 선수의 시즌을 합치지 않고 한 번만 50점이다', () => {
+    const run = (careers: AchievementCareer[]) =>
+      clubAchievements({ careers, team: null, owner: OWNER, detail: true, retireAt: 41 });
+    expect(
+      item(
+        run([career({ seasons: pro(5, 'A') }), career({ seasons: pro(5, 'A') })]),
+        'long-service',
+      )?.done,
+    ).toBe(false);
+    const g = run([career({ seasons: pro(10, 'A') }), career({ seasons: pro(11, 'A') })]);
+    expect(item(g, 'long-service')).toMatchObject({ done: true, points: 50, worth: 0 });
+    const before = achievementScore(
+      g.map((group) => ({ ...group, items: group.items.filter((i) => i.id !== 'long-service') })),
+    );
+    expect(achievementScore(g)).toEqual({ score: before.score + 50, done: before.done + 1 });
   });
 
   it('은퇴 직전까지 현역은 그 시즌 은퇴 나이의 한 살 아래 — 프리시즌(41세 은퇴) 40세, 시즌 1(45세 은퇴) 44세', () => {

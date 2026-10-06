@@ -7,7 +7,9 @@ test('메인 하단에서 후원 계좌를 복사하고 설정에는 중복 노�
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');
-  await expect(page.locator('[data-home-support]')).toContainText('후원은 선택');
+  await expect(page.locator('[data-home-support]')).toContainText('개발자를 위해서 응원해 주세요');
+  // T-11-130 계좌번호는 카드에 적지 않는다(복사 버튼만).
+  await expect(page.locator('[data-home-support]')).not.toContainText('1000-1599-4723');
   await page.locator('[data-act="coffee"]').click();
   await expect(page.locator('#toast')).toContainText('계좌번호를 복사했어요');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
@@ -17,7 +19,7 @@ test('메인 하단에서 후원 계좌를 복사하고 설정에는 중복 노�
   await expect(page.locator('[data-act="coffee"]')).toHaveCount(0);
 });
 
-test('후원 계좌 복사가 거부되면 직접 적을 수 있는 안내를 남긴다', async ({ page }) => {
+test('후원 계좌 복사가 거부되면 알림에 계좌번호를 보인다', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => {
     Object.defineProperty(navigator, 'clipboard', {
@@ -31,8 +33,9 @@ test('후원 계좌 복사가 거부되면 직접 적을 수 있는 안내를 �
     document.execCommand = () => false;
   });
   await page.locator('[data-act="coffee"]').click();
-  await expect(page.locator('#toast')).toContainText('복사하지 못했어요');
-  await expect(page.locator('[data-home-support]')).toContainText('토스뱅크 1000-1599-4723 양*영');
+  await expect(page.locator('#toast')).toContainText(
+    '복사하지 못했어요. 토스뱅크 1000-1599-4723 양*영',
+  );
   await page.locator('[data-act="settings"]').click();
   await page.locator('[data-act="home"]').click();
   await expect(page.locator('[data-act="coffee"]')).toHaveCount(1);
