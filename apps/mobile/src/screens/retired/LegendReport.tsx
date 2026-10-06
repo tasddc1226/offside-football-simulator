@@ -1,3 +1,4 @@
+import { retiredTitleOf } from '@offside/app-core/retiredTitle';
 // 은퇴 리포트 본문(웹 LegendReport.svelte). 은퇴 직후 화면(Retired) · 명예의 전당 상세(Legend) · 공유 링크(Shared)가
 // 함께 쓴다 — 진행 중 세이브(G)든 저장된 스냅샷이든 LegendView 하나로 그린다.
 // T-10-062: 정보 나열 대신 한 편의 엔딩 크레딧처럼 — 타이틀 → 통산 기록 → 클럽별 챕터(우승·이정표·이야기) →
@@ -56,7 +57,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
   const back = v.pos === 'GK' || v.pos === 'DF';
   const t = d ? totals(d) : null;
   const ownId = v.own?.id;
-  const main = titleById(ownId && ownId in pk ? pk[ownId] : v.title);
+  const main = titleById(retiredTitleOf(v.own ? (ownId ?? '') : undefined, v.title, pk));
 
   const chapters = d ? careerChapters(d) : [];
   const national = d ? nationalEvents(d) : [];

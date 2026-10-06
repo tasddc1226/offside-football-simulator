@@ -32,7 +32,10 @@ export function ShareImageCard({ v }: { v: LegendView }) {
     if (busy) return;
     setBusy(true);
     try {
-      const data = shareCardData({ ...v, rn: rnOf(h.id!, v.rn) }, legendTitleOf(h.id, h.title));
+      const data = shareCardData(
+        { ...v, rn: rnOf(h.id!, v.rn) },
+        legendTitleOf(h.id ?? '', h.title),
+      );
       const ready = new Promise<void>((r) => (laidOut.current = r));
       setCard(data);
       await Promise.race([ready, new Promise<void>((r) => setTimeout(r, 3000))]);

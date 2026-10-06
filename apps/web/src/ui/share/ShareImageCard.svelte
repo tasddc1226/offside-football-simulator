@@ -22,7 +22,7 @@
     if (busy) return;
     busy = true;
     try {
-      const data = shareCardData({ ...v, rn: rnOf(h.id!, v.rn) }, legendTitleOf(h.id, h.title));
+      const data = shareCardData({ ...v, rn: rnOf(h.id!, v.rn) }, legendTitleOf(h.id ?? '', h.title));
       await loadCardFonts(data);
       const canvas = document.createElement('canvas');
       drawShareCard(canvas, data);

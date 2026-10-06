@@ -14,7 +14,7 @@
 
   const { h }: { h: HofEntry } = $props();
   const earned = $derived(earnedTitles(h, h.id && h.id in rnResults ? rnOf(h.id, h.rn) : null));
-  const current = $derived(titleById(legendTitleOf(h.id, h.title)));
+  const current = $derived(titleById(legendTitleOf(h.id ?? '', h.title)));
   let open = $state(false);
 
   function pick(id: string) {

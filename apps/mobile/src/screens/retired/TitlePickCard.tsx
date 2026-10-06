@@ -1,3 +1,4 @@
+import { retiredTitleOf } from '@offside/app-core/retiredTitle';
 // 은퇴한 내 선수의 대표 칭호 고르기(웹 titles/TitlePickCard.svelte; 은퇴 화면·내 선수 상세 아래). 받은 칭호 목록은 접어
 // 두고, 펼쳐서 고르면 선수 카드·명예의 전당·공유 링크의 대표 칭호가 바뀐다. 이 기기 기록(ft_hof)에 남기고 서버에 다시
 // 올린다 — 서버는 은퇴 때 올라온 상세 기록의 칭호 목록에 있는 것만 받는다.
@@ -25,7 +26,7 @@ export function TitlePickCard({ h }: { h: HofEntry }) {
   const pk = useSnapshot(pickedTitles);
   const results = useSnapshot(rnResults);
   const earned = earnedTitles(h, h.id && h.id in results ? results[h.id] : null);
-  const current = titleById(h.id && h.id in pk ? pk[h.id] : h.title);
+  const current = titleById(retiredTitleOf(h.id ?? '', h.title, pk));
   const [open, setOpen] = useState(false);
 
   function pick(id: string) {
