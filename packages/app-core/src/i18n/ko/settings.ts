@@ -55,6 +55,9 @@ const ko = {
   reviewOpening: '스토어 여는 중…',
   reviewBtn: '스토어에 리뷰 남기기',
   reviewFail: '스토어를 열지 못했어요. 잠시 뒤 다시 시도해 주세요.',
+  appVersion: (p: { version: string; build: string }) => `앱 버전 ${p.version} (${p.build})`,
+  updateId: (p: { id: string }) => `업데이트 ${p.id}`,
+  updateEmbedded: '업데이트 없음 (설치한 그대로)',
 };
 
 export type SettingsMsgs = typeof ko;

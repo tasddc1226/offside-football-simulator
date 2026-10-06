@@ -279,6 +279,19 @@ export const scoreRate = (s: {
 /** 포지션 표시 이름(세부 포지션이 있으면 그 이름). */
 export const posLabel = (s: { pos: Pos; dpos?: DetailPos | null | undefined }): string =>
   s.dpos ? DPOS[s.dpos].label : POS[s.pos].label;
+/** 포지션 영어 약어(명예의 전당). 언어와 상관없이 같다. 세부 포지션이 없는 프리시즌 선수는 큰 포지션(FW·MF·DF·GK). */
+const DPOS_ABBR: Record<DetailPos, string> = {
+  GK: 'GK',
+  CB: 'CB',
+  FB: 'FB',
+  DM: 'CDM',
+  CM: 'CM',
+  AM: 'CAM',
+  W: 'WG',
+  ST: 'ST',
+};
+export const posAbbr = (s: { pos: Pos; dpos?: DetailPos | null | undefined }): string =>
+  s.dpos ? DPOS_ABBR[s.dpos] : s.pos;
 
 export interface TypeDef {
   id: string;

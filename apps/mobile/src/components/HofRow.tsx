@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSnapshot } from 'valtio';
 import type { PublicHofEntry } from '@offside/contracts';
 import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
-import { posLabel, type DetailPos, type POS } from '@offside/game/data';
+import { posAbbr, posLabel, type DetailPos, type POS } from '@offside/game/data';
 import { titleById } from '@offside/game/titles';
 import { prefs } from '../store';
 import { alpha } from '../theme/colors';
@@ -61,6 +61,12 @@ export interface HofRowProps {
   plain?: boolean;
   showPosition?: boolean;
   first?: boolean;
+  /** 기록 요약 앞에 은퇴 시점 소속 구단 이름을 적는다(명예의 전당). */
+  showClub?: boolean;
+  /** 포지션을 영어 약어(CDM·ST…)로 적는다(명예의 전당). 읽어 주기는 전체 이름. */
+  shortPos?: boolean;
+  /** 기록실 줄(plain)에 은퇴 나이·최고 OVR·발롱도르(받은 선수만)를 더한다(명예의 전당). */
+  retireAge?: number | null | undefined;
 }
 
 // 흐를 때 두 벌을 이어 붙여 -50%까지 민다(HomeTicker와 같은 방식). 한 벌 = 글 + 뒤 여백(FLOW_GAP).
@@ -265,16 +271,31 @@ export function HofRow({
   first,
   plain = false,
   showPosition = true,
+  showClub = false,
+  shortPos = false,
+  retireAge = null,
 }: HofRowProps) {
   const c = useColors();
   const country = showNation
     ? (NATION_BY_CODE.get(nation ?? DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION))
     : undefined;
   const tt = titleById(titleId);
+  const clubName = showClub && club ? tn(club) : null;
   const stats = useMemo(
     () => L.rowStats({ ...t, score: showScore ? t.score : null }),
     [t, showScore],
   );
+  const clubLabel = clubName ? (
+    <View
+      testID="hof-club"
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1, minWidth: 0 }}
+    >
+      <ClubMark name={club} id={clubId} size={14} />
+      <Txt bold numberOfLines={1} style={{ fontSize: 12, flexShrink: 1 }}>
+        {clubName}
+      </Txt>
+    </View>
+  ) : null;
   return (
     <RowFrame rank={rank} compact={compact} first={first} plain={plain}>
       {/* 두 줄: 윗줄은 이름·포지션·칭호와 오른쪽 값, 아랫줄 기록 요약은 값 밑까지 넓게 쓰고 넘치면 말줄임(T-10-105). */}
@@ -294,10 +315,11 @@ export function HofRow({
             <View
               style={[
                 { flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 0 },
-                plain ? { width: '100%' } : { flexShrink: 1 },
+                { flexShrink: 1 },
               ]}
             >
-              <ClubMark name={club} id={clubId} size={18} />
+              {/* 은퇴 시점 구단을 따로 적으면(showClub) 엠블럼은 구단 이름 앞에 둔다. */}
+              {clubName ? null : <ClubMark name={club} id={clubId} size={18} />}
               {country ? (
                 <Txt
                   accessibilityRole="image"
@@ -313,8 +335,12 @@ export function HofRow({
               </Txt>
             </View>
             {showPosition ? (
-              <Txt tone="muted" style={{ fontSize: 12 }}>
-                {posLabel({ pos, dpos })}
+              <Txt
+                tone="muted"
+                accessibilityLabel={shortPos ? posLabel({ pos, dpos }) : undefined}
+                style={{ fontSize: 12 }}
+              >
+                {shortPos ? posAbbr({ pos, dpos }) : posLabel({ pos, dpos })}
               </Txt>
             ) : null}
             {rn != null ? (
@@ -343,16 +369,37 @@ export function HofRow({
           <Value value={value} unit={unit} />
         </View>
         {plain ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingTop: 3 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, paddingTop: 3 }}>
+            {clubLabel}
+            {retireAge != null ? (
+              <>
+                <Txt tone="muted" style={{ fontSize: 12 }}>
+                  {L.retireAgeN({ n: retireAge })}
+                </Txt>
+                {/* 윗줄 구단·은퇴 나이, 아랫줄 기록. */}
+                <View style={{ width: '100%', height: 0 }} />
+              </>
+            ) : null}
             {[
               L.appsN({ n: t.apps.toLocaleString(intlLocale()) }),
               L.goalsN({ n: t.goals.toLocaleString(intlLocale()) }),
               L.assistsN({ n: t.assists.toLocaleString(intlLocale()) }),
-            ].map((text) => (
-              <Txt key={text} tone="muted" style={{ fontSize: 12 }}>
-                {text}
-              </Txt>
-            ))}
+              retireAge != null ? L.peakN({ n: t.peak }) : null,
+              retireAge != null && t.ballon ? L.ballonN({ n: t.ballon }) : null,
+            ]
+              .filter((text): text is string => text !== null)
+              .map((text) => (
+                <Txt key={text} tone="muted" style={{ fontSize: 12 }}>
+                  {text}
+                </Txt>
+              ))}
+          </View>
+        ) : clubLabel ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ maxWidth: '45%' }}>{clubLabel}</View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <StatsLine text={stats} flow={flow} />
+            </View>
           </View>
         ) : (
           <StatsLine text={stats} flow={flow} />
