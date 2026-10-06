@@ -1,6 +1,6 @@
 // T-11-128 구단주 티어 표시 — 구단주 랭킹과 같은 업적 등급(루키 ~ 레전드)을 지난 시즌 마감 업적 점수로 정한다
 // (contracts owner-tier.ts). 그림은 랭킹과 같은 등급 엠블럼(gradeEmblem.ts).
-import type { SeasonRecap } from '@offside/contracts';
+import type { OwnerTierTag, SeasonRecap, SeasonRecapResponse } from '@offside/contracts';
 import { ACH_GRADES } from '@offside/contracts/owner-team';
 import { ownerTierOf, type OwnerTier } from '@offside/contracts/owner-tier';
 import { seasonRecapText as L } from './i18n/ko/seasonRecap.js';
@@ -25,3 +25,15 @@ export const recapTier = (r: SeasonRecap): OwnerTier => ownerTierOf(r.achievemen
 /** 티어를 정한 까닭 한 줄 — '업적 점수 1,240점으로 마감'. */
 export const tierReason = (r: SeasonRecap): string =>
   L.tierWhy({ score: num(r.achievements?.score ?? 0) });
+
+/**
+ * 구단주 프로필에 늘 붙는 지난 시즌 등급 — 결산이 나왔으면 마감 업적 점수의 등급, 그 시즌 기록이 없으면 루키.
+ * 결산을 아직 굳히는 중이면 없다.
+ */
+export const profileTier = (res: SeasonRecapResponse): OwnerTierTag | null =>
+  res.status === 'pending'
+    ? null
+    : {
+        tier: res.status === 'ready' && res.recap ? recapTier(res.recap) : 'rookie',
+        season: res.season,
+      };

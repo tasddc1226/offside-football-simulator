@@ -21,7 +21,7 @@ import {
   type OwnerTeamCard,
 } from '@offside/app-core/ownerHub';
 import { fetchSeasonRecap } from '@offside/app-core/api/seasonRecap';
-import { recapTier, tierTitle, type OwnerTierTag } from '@offside/app-core/ownerTier';
+import { profileTier, tierTitle, type OwnerTierTag } from '@offside/app-core/ownerTier';
 import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
@@ -170,17 +170,14 @@ export default function Owner() {
       alive = false;
     };
   }, [linked, tick, track]);
-  // T-11-128 지난 시즌 결산 업적 점수의 업적 등급(구단주 랭킹과 같다) — 아바타 아래 등급 엠블럼(결산 카드와 같은 응답, 1분 메모).
+  // T-11-128 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 이름 앞에 늘 붙인다(기록이 없으면 루키).
+  // 결산 카드와 같은 응답(1분 메모).
   const [tierTag, setTierTag] = useState<OwnerTierTag | null>(null);
   useEffect(() => {
     let alive = true;
     void track(fetchSeasonRecap()).then((r) => {
       if (!alive || !r.ok) return;
-      setTierTag(
-        r.data.status === 'ready' && r.data.recap
-          ? { tier: recapTier(r.data.recap), season: r.data.season }
-          : null,
-      );
+      setTierTag(profileTier(r.data));
     });
     return () => {
       alive = false;
@@ -219,15 +216,20 @@ export default function Owner() {
               <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.375), color: c.pitchAccent }}>
                 {(nickname ?? L.avatarInitial).slice(0, 1)}
               </Txt>
-              {tierTag ? (
-                // 지난 시즌 등급 엠블럼 — 아바타 아래 가운데에 걸친다(웹 .owner-avatar-tier).
-                <View style={{ position: 'absolute', bottom: -11, left: 11 }}>
-                  <GradeEmblem id={tierTag.tier} size={26} />
-                </View>
-              ) : null}
             </View>
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
               <Row gap={6}>
+                {tierTag ? (
+                  // 이름 앞 지난 시즌 등급 엠블럼(웹 .owner-last-tier).
+                  <View
+                    testID={`owner-last-tier-${tierTag.tier}`}
+                    accessible
+                    accessibilityLabel={tierTitle(tierTag)}
+                    style={{ marginRight: -2 }}
+                  >
+                    <GradeEmblem id={tierTag.tier} size={24} />
+                  </View>
+                ) : null}
                 <Txt style={{ fontSize: rem(1.125), fontWeight: '700' }}>
                   {guest ? L.guestName : (nickname ?? L.title)}
                 </Txt>

@@ -29,7 +29,7 @@
   import { accountText as A } from '@offside/app-core/i18n/ko/account';
   import { fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
   import { recapCardView } from '@offside/app-core/seasonRecap';
-  import { recapTier, tierTitle } from '@offside/app-core/ownerTier';
+  import { profileTier, tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
   import { seasonRecapText as R } from '@offside/app-core/i18n/ko/seasonRecap';
 
@@ -88,11 +88,9 @@
     });
   });
   const recapCard = $derived(recap ? recapCardView(recap) : null);
-  // 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 프로필 사진 아래에 등급 엠블럼을 붙인다.
+  // 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 프로필 이름 앞에 늘 붙인다(기록이 없으면 루키).
   // 댓글 · 채팅에도 같은 등급이 나간다(서버 ownerTiersOf).
-  const tierTag = $derived(
-    recap?.status === 'ready' && recap.recap ? { tier: recapTier(recap.recap), season: recap.season } : null,
-  );
+  const tierTag = $derived(recap ? profileTier(recap) : null);
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
@@ -109,12 +107,9 @@
   {#if linked || guest}
     <section class="card owner-hub" data-owner-summary aria-label={L.summaryLabel}>
       <div class="owner-id">
-        <span class="owner-avatar" aria-hidden="true">
-          {(nickname ?? L.avatarInitial).slice(0, 1)}
-          {#if tierTag}<span class="owner-avatar-tier" data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={26} /></span>{/if}
-        </span>
+        <span class="owner-avatar" aria-hidden="true">{(nickname ?? L.avatarInitial).slice(0, 1)}</span>
         <div class="owner-who">
-          <b>{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}</b>
+          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}</b>
           {#if tierTag}<span class="ach-grade owner-tier" data-grade={tierTag.tier} data-owner-tier={tierTag.tier}>{tierTitle(tierTag)}</span>{/if}
           <span class="muted fs-sm">{guest ? L.guestSub : card?.team ? `${card.team.name} · ${card.season}` : L.signedInSubWeb}</span>
         </div>
@@ -235,7 +230,6 @@
     gap: 12px;
   }
   .owner-avatar {
-    position: relative;
     flex: none;
     display: grid;
     place-items: center;
@@ -248,12 +242,11 @@
     font-size: 1.375rem;
     font-weight: 700;
   }
-  /* T-11-128 지난 시즌 등급 엠블럼 — 아바타 아래 가운데에 걸친다. */
-  .owner-avatar-tier {
-    position: absolute;
-    left: 50%;
-    bottom: -11px;
-    transform: translateX(-50%);
+  /* 이름 앞 지난 시즌 등급 엠블럼(LoL 이름 앞 지난 시즌 티어처럼). */
+  .owner-last-tier {
+    display: inline-flex;
+    vertical-align: -5px;
+    margin-right: 4px;
   }
   .owner-tier {
     font-family: var(--display);
