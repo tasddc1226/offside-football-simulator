@@ -49,6 +49,8 @@ const EXACT: Record<string, string> = {
   '신고할 이름을 찾지 못했어요.': "We couldn't find the name to report.",
   '내 이름은 신고할 수 없어요.': "You can't report your own name.",
   // 알림
+  '앱에서 알림을 열어 주세요.': 'Open notifications in the app.',
+  '변경할 알림 설정을 선택해 주세요.': 'Choose a notification setting to change.',
   '앱에서 알림을 설정해 주세요.': 'Set up notifications in the app.',
   '잠시 뒤 알림 설정을 다시 시도해 주세요.': 'Please try the notification settings again shortly.',
   '알림 테스트 준비 중이에요.': 'The notification test is being prepared.',
@@ -106,6 +108,12 @@ const EXACT: Record<string, string> = {
   '받은 친구 신청이 없어요.': "There's no friend request from this owner.",
   '친구에게만 친선전을 걸 수 있어요.': 'You can only challenge friends to a friendly.',
   '친구가 아직 이번 시즌 팀을 꾸리지 않았어요.': "Your friend hasn't built a team this season yet.",
+  '지난 시즌 팀은 고칠 수 없어요.': "You can't edit a past season's team.",
+  '지금 가진 내 선수만 팀에 넣을 수 있어요.': 'Only players you currently own can join your team.',
+  '지금 가진 프리시즌 선수만 프리시즌 팀에 넣을 수 있어요.':
+    'Only preseason players you currently own can join your preseason team.',
+  '먼저 프리시즌 팀을 만들어 주세요.': 'Create your preseason team first.',
+  '친구가 아직 프리시즌 팀을 꾸리지 않았어요.': "Your friend hasn't built a preseason team yet.",
   // 이적시장
   '지금은 시즌 사이 휴식기라 이적시장이 닫혀 있어요.':
     'The transfer market is closed during the off-season.',
@@ -137,6 +145,10 @@ const PATTERNS: [RegExp, (m: RegExpExecArray) => string][] = [
   [
     /^오늘 경기는 모두 치렀어요\(하루 (\d+)경기\)\. 한국 시각 자정에 다시 열려요\.$/,
     (m) => `You've played all of today's matches (${m[1]} a day). They reopen at midnight KST.`,
+  ],
+  [
+    /^지난 시즌 선수는 선발에 (\d+)명까지 넣을 수 있어요\.$/,
+    (m) => `You can start up to ${m[1]} players from past seasons.`,
   ],
   [
     /^한 번에 (\d+)명까지 내놓을 수 있어요\.$/,

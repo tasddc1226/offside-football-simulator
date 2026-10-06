@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toErrorEnvelope } from './errors.js';
 import { localizeMessage } from './errorText.js';
+import { pushText } from './push/text.js';
 import { createApp } from './app.js';
 
 describe('toErrorEnvelope unknown errors (T-2-015)', () => {
@@ -46,6 +47,9 @@ describe('오류 문구 영어(T-11-106)', () => {
       "A manager name that looks like staff, such as 'Moderator', isn't allowed.",
     );
     expect(localizeMessage('글 항목을 찾을 수 없어요.', 'en')).toBe("We couldn't find that post.");
+    expect(localizeMessage('지난 시즌 선수는 선발에 3명까지 넣을 수 있어요.', 'en')).toBe(
+      'You can start up to 3 players from past seasons.',
+    );
     expect(localizeMessage('표에 없는 문장', 'en')).toBe('표에 없는 문장');
     expect(localizeMessage('팀을 찾을 수 없어요.', 'ko')).toBe('팀을 찾을 수 없어요.');
   });
@@ -56,5 +60,17 @@ describe('오류 문구 영어(T-11-106)', () => {
       ((await (await app.request(path)).json()) as { error: { message: string } }).error.message;
     expect(await body('/v1/없는-경로')).toBe('요청한 경로를 찾을 수 없어요.');
     expect(await body('/v1/없는-경로?lang=en')).toBe("We couldn't find what you asked for.");
+  });
+});
+
+describe('알림 문구 영어 (T-11-106)', () => {
+  it('친구·팀 경기 결과 본문은 팀 이름을 두고 안내만 옮긴다', () => {
+    expect(pushText('새 친구 신청이 왔어요', 'en')).toBe('You have a new friend request');
+    expect(pushText('FC 하나 2 : 1 FC 둘. 친구 목록에서 경기 결과를 확인해 주세요.', 'en')).toBe(
+      'FC 하나 2 : 1 FC 둘. Check the result in your friend list.',
+    );
+    expect(pushText('FC 하나 2 : 1 FC 둘. 최근 경기에서 결과를 확인해 주세요.', 'ko')).toBe(
+      'FC 하나 2 : 1 FC 둘. 최근 경기에서 결과를 확인해 주세요.',
+    );
   });
 });
