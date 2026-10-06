@@ -214,7 +214,16 @@ export type SynergyChip = {
   desc: string;
   effect: string;
   badge: boolean;
+  /** 경기 효과가 실제로 들어가는 시너지(배지 · 상한에 걸린 듀오는 아니다). 켜진 것은 모두 함께 적용된다. */
+  applied: boolean;
 };
+/** 경기 효과가 실제로 들어가는지 — 주발 맞춤은 자리 실력 보정, 나머지는 더한 줄 힘. */
+const synergyApplied = (s: TeamSynergy, a: ActiveSynergy): boolean =>
+  a.kind === 'badge'
+    ? false
+    : a.kind === 'foot'
+      ? s.foot.some((b) => b > 0)
+      : Object.values(a.effect).some((v) => (v ?? 0) > 0);
 /** 편성 화면의 시너지 칩(웹·앱 공용). 주발 맞춤은 인원과 자리 실력 보정 합을 보인다. */
 export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
   s.active.map((a) => {
@@ -228,31 +237,70 @@ export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
           ? SY.fitEffect({ v: signedNum(s.foot.reduce((t, b) => t + b, 0)) })
           : synergyEffectText(a.effect, a.kind),
       badge: a.kind === 'badge',
+      applied: synergyApplied(s, a),
     };
   });
-/** 고른 시너지 칩 → 그라운드 듀오 연결선(고른 것은 굵게)과 테두리를 칠 선수 자리. */
+/**
+ * 그라운드 시너지 표시(웹·앱 공용). 켜진 시너지는 고른 칩과 상관없이 모두 적용되므로, 효과가 들어가는 듀오 · 주발 맞춤의
+ * 선수(applied)는 늘 점으로 표시하고 칩을 고르면(id) 그 시너지의 선 · 선수만 더 굵게 보여 준다. 팀 색깔(우리가 키운 팀)은
+ * 선발 대부분이라 점을 찍지 않고 caption 개수에만 든다. caption은 그라운드 아래 한 줄.
+ */
 export function synergyFocus(s: TeamSynergy, id: string | null) {
+  const on = s.active.filter((a) => synergyApplied(s, a));
+  const picked = s.active.find((a) => a.id === id);
+  const n = on.length;
   return {
     links: s.active
       .filter((a) => a.kind === 'duo')
       .map((a) => ({ members: a.members, on: a.id === id })),
-    members: s.active.find((a) => a.id === id)?.members ?? null,
+    members: picked?.members ?? null,
+    applied: [...new Set(on.filter((a) => a.kind !== 'team').flatMap((a) => a.members))].sort(
+      (a, b) => a - b,
+    ),
+    caption:
+      n === 0
+        ? null
+        : picked
+          ? SY.pitchFocus({ name: synergyText(picked.id, picked.name, picked.desc)[0], n })
+          : SY.pitchAll({ n }),
   };
 }
-/** 시너지 표 — [이름, 설명, 효과]. 숨은 규칙 없이 전부 보인다. 언어를 바꾸면 다시 만들어야 해서 함수다. */
-export const synergyTable = (): readonly (readonly [string, string, string])[] => {
-  const row = (r: { id: string; name: string; desc: string }, effect: string) =>
-    [...synergyText(r.id, r.name, r.desc), effect] as const;
-  return [
-    ...DUOS.map((d) => row(d, synergyEffectText(d.effect))),
-    row(TEAM_RULES.homegrown, synergyEffectText(HOMEGROWN_EFFECT)),
-    row(TEAM_RULES.national, SY.badgeOnly),
-    row(
+/** 시너지 목록의 한 줄 — 적용 중(효과가 들어감) · 효과 없음(켜졌지만 배지이거나 상한) · 미적용(조건 미달). */
+export type SynergyState = 'applied' | 'noEffect' | 'off';
+export type SynergyRow = SynergyChip & { state: SynergyState };
+const STATE_RANK: Record<SynergyState, number> = { applied: 0, noEffect: 1, off: 2 };
+/**
+ * 편성 화면의 시너지 목록(웹·앱 공용). 규칙 전부를 숨김 없이 보이고 적용 중 → 효과 없음 → 미적용 순으로 둔다(같은 상태는 표 순서).
+ * 켜진 것은 실제 효과, 미적용은 규칙 효과를 보인다. 언어를 바꾸면 다시 만들어야 해서 함수다.
+ */
+export function synergyRows(s: TeamSynergy): SynergyRow[] {
+  const on = new Map(synergyChips(s).map((c) => [c.id, c]));
+  const rules: (readonly [{ id: string; name: string; desc: string }, string])[] = [
+    ...DUOS.map((d) => [d, synergyEffectText(d.effect)] as const),
+    [TEAM_RULES.homegrown, synergyEffectText(HOMEGROWN_EFFECT)],
+    [TEAM_RULES.national, SY.badgeOnly],
+    [
       TEAM_RULES.foot,
       SY.fitEffectBoth({ v: signedNum(FOOT_BONUS), both: signedNum(FOOT_BONUS_BOTH) }),
-    ),
+    ],
   ];
-};
+  return rules
+    .map(([r, effect]): SynergyRow => {
+      const c = on.get(r.id);
+      if (c) return { ...c, state: c.applied ? 'applied' : 'noEffect' };
+      const [name, desc] = synergyText(r.id, r.name, r.desc);
+      return {
+        id: r.id,
+        name,
+        desc,
+        effect,
+        badge: r.id === TEAM_RULES.national.id,
+        applied: false,
+        state: 'off',
+      };
+    })
+    .sort((x, y) => STATE_RANK[x.state] - STATE_RANK[y.state]);
+}
 
 /** 경기하기 버튼 밑에 보이는 못 하는 이유(할 수 있으면 null). */
 export function playHintOf(
@@ -397,10 +445,6 @@ export function achGradeView(score: number): AchGradeView {
 /** 업적 랭킹 순위 표시('12위 · 297명 중' / 점수가 없으면 안내). */
 export const achRankText = (rank: number | null, ranked: number): string =>
   rank === null ? L.achRankNone : L.achRank({ rank: num(rank), ranked: num(ranked) });
-
-/** 처음 펼쳐 둘 단계 — 아직 다 채우지 못한 첫 단계. */
-export const achOpenGroup = (groups: readonly ClubAchievementGroup[]): string | null =>
-  groups.find((g) => !g.locked && achDone(g.items) < g.items.length)?.id ?? null;
 
 /** T-11-113 개막 뒤의 프리시즌 팀 — 지난 시즌이지만 친구 친선전용으로 고칠 수 있다. */
 export const isPreseasonLegacy = (season: number, current: number | null) =>

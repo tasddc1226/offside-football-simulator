@@ -3,13 +3,12 @@ import type { ClubAchievementGroup } from './api/team.js';
 import {
   achGradeView,
   achNear,
-  achOpenGroup,
   achPoints,
   achRankText,
   achSections,
   achState,
   achTotal,
-  synergyTable,
+  synergyRows,
   draftLines,
   matchHintOf,
   slotsSynergy,
@@ -96,10 +95,6 @@ describe('시즌 업적 요약', () => {
     );
     expect(achState(it_({ id: 'long-service', done: true }))).toBe('달성 완료');
   });
-  it('처음 펼칠 단계는 다 채우지 못한 첫 단계', () => {
-    expect(achOpenGroup(groups)).toBe('first');
-    expect(achOpenGroup([groups[2]!])).toBeNull();
-  });
   it('제자리 업적은 못 이뤘을 때만 조건을 안내한다', () => {
     expect(achState(it_({ id: 'team-fit', done: false }))).toBe(
       '미달성 · 유스 선수 없이 11명 모두 적합도 1.00이어야 해요',
@@ -149,12 +144,20 @@ describe('T-11-105 편성 화면 시너지', () => {
     expect(synergyFocus(s, 'cross')).toEqual({
       links: [{ members: [8, 9], on: true }],
       members: [8, 9],
+      applied: [8, 9],
+      caption: '크로스 공식 선수 보기 · 2개 모두 적용 중',
     });
-    expect(synergyFocus(s, 'foot')).toEqual({
+    expect(synergyFocus(s, 'foot')).toMatchObject({
       links: [{ members: [8, 9], on: false }],
       members: [8],
     });
-    expect(synergyFocus(s, null).members).toBeNull();
+    // 칩을 고르지 않아도 켜진 시너지의 선수는 모두 표시한다.
+    expect(synergyFocus(s, null)).toMatchObject({
+      members: null,
+      applied: [8, 9],
+      caption: '시너지 2개 모두 적용 중',
+    });
+    expect(synergyChips(s).map((c) => c.applied)).toEqual([true, true]);
   });
   it('줄 힘은 시즌 1부터 시너지를 더한다(프리시즌 제외)', () => {
     const codes = layout.map((p) => p.slot);
@@ -166,11 +169,17 @@ describe('T-11-105 편성 화면 시너지', () => {
     expect(synergyEffectText({}, 'duo')).toBe('상한에 걸려 효과 없음');
     expect(synergyEffectText({}, 'badge')).toBe('경기 효과 없음');
     expect(synergyNote(0)).toBe('프리시즌 경기에는 반영되지 않았어요');
-    expect(synergyNote(1)).toBe('경기에 반영돼요');
-    expect(synergyTable().at(-1)).toEqual([
-      '주발 맞춤',
-      '풀백은 같은 쪽 발, 윙어는 반대쪽 발',
-      '자리 실력 +1(양발 +0.5)',
+    expect(synergyNote(1)).toBe('켜진 시너지는 모두 경기에 반영돼요');
+    // 규칙 전부를 적용 중 → 미적용 순으로. 켜진 것은 실제 효과, 미적용은 규칙 효과.
+    const rows = synergyRows(s);
+    expect(rows.slice(0, 2).map((r) => [r.id, r.state, r.effect])).toEqual([
+      ['cross', 'applied', '공격 +2'],
+      ['foot', 'applied', '자리 실력 +1'],
     ]);
+    expect(rows.slice(2).every((r) => r.state === 'off')).toBe(true);
+    expect(rows.find((r) => r.id === 'national')).toMatchObject({
+      badge: true,
+      effect: '배지만(경기 효과 없음)',
+    });
   });
 });

@@ -1,10 +1,10 @@
 // T-10-076 기록실 '영구결번' 탭(웹 RetiredWall.svelte) — 결번을 구단별로 보고, 구단을 고르면 그 구단의 결번 타일을 본다.
-// 유니폼은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
+// 타일은 구단 홈 유니폼 도트 액자(RnFrame), 바탕은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
 // T-11-029 결번은 시즌마다 따로 — 개막한 시즌이 둘 이상이면 시즌 탭을 보인다(웹과 같다).
 // T-11-101 열 때는 요약(구단별 수 + 최근 8개)만 받는다. 타일은 구단을 고르거나 최신순 전체를 열 때 그 몫만 받는다.
 import { memo, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
-import Svg, { Defs, G, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { proxy, useSnapshot } from 'valtio';
 import type { CareerPos, RetiredNumbersResponse, RetiredNumbersSummary } from '@offside/contracts';
 import {
@@ -30,7 +30,7 @@ import {
 import { POS } from '@offside/game/data';
 import { loadHOF } from '@offside/game/hof-store';
 import { Laurel, useMedal } from '../../components/Laurel';
-import { RnShirtShape } from '../../components/RnJersey';
+import { RnFrame } from '../../components/RnFrame';
 import { openPublicLegendById } from '../../game/host';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -71,8 +71,7 @@ const view = proxy<{
 
 const GAP = 8;
 const MIN_TILE = 90;
-const SHIRT_W = 52;
-const SHIRT_H = (SHIRT_W * 124) / 120;
+const SHIRT_W = 66;
 
 type TileOpts = {
   c: Colors;
@@ -162,12 +161,10 @@ const Tile = memo(function Tile({
           </RadialGradient>
         </Defs>
         <Rect width="100%" height="100%" fill={`url(#${gid})`} />
-        {/* 유니폼: 아래 자리(paddingTop 10, 가운데)에 맞춰 120×124 도안을 줄여 그린다. */}
-        <G transform={`translate(${(width - SHIRT_W) / 2} 10) scale(${SHIRT_W / 120})`}>
-          <RnShirtShape number={it.number} col={col} />
-        </G>
       </Svg>
-      <View style={{ width: SHIRT_W, height: SHIRT_H, marginBottom: 4 }} />
+      <View style={{ marginBottom: 4 }}>
+        <RnFrame clubId={it.clubId} number={it.number} width={SHIRT_W} />
+      </View>
       <Txt
         bold
         numberOfLines={1}

@@ -40,6 +40,11 @@
   // 옮기지 않아도 끝나는 대로 확인하게 dirty 신호로 다시 돈다. 보지 않은 새 업적 수(하단 점)는 앱을 열 때 되살린다.
   let achTick = $state(0);
   appState.achNew = achUnseenCount();
+  // T-11-128 새 시즌 결산(안 열어 본 결산이 있으면 구단주 탭에 점). 브라우저에서만 — 빌드의 첫 화면 서버 렌더(app-shell)는
+  // 렌더가 끝나면 모듈 서버를 닫아, 밖에 둔 동적 import가 뒤늦게 돌다 빌드를 깨뜨린다.
+  onMount(() => {
+    void import('@offside/app-core/api/seasonRecap').then(async (m) => (appState.recapNew = await m.recapUnseen()));
+  });
   $effect(() => onAchDirty(() => achTick++));
   $effect(() => {
     void achTick;
@@ -83,6 +88,11 @@
   let Market = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
     if (appState.screen === 'market' && !Market) void import('./Market.svelte').then((m) => (Market = m.default));
+  });
+  // T-11-128: 시즌 결산도 처음 열 때 불러온다.
+  let SeasonRecap = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'recap' && !SeasonRecap) void import('./SeasonRecap.svelte').then((m) => (SeasonRecap = m.default));
   });
   // T-10-090: 기록실(전체 명예의 전당·영구결번 벽)도 처음 열 때 불러온다. 홈의 TOP 3는 그대로 첫 화면에 있다.
   let Hof = $state<Component<Record<string, never>> | null>(null);
@@ -159,6 +169,8 @@
       {#if Team}<Team />{/if}
     {:else if appState.screen === 'market'}
       {#if Market}<Market />{/if}
+    {:else if appState.screen === 'recap'}
+      {#if SeasonRecap}<SeasonRecap />{/if}
     {:else if appState.screen === 'dex'}
       {#if Dex}<Dex />{/if}
     {:else if appState.screen === 'board'}

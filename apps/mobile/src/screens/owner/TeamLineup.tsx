@@ -46,6 +46,8 @@ export function TeamLineup({
   jumpRef,
   synLinks,
   synFocus,
+  synApplied,
+  synCaption,
 }: {
   formation: FormationId;
   layout: TeamPosition[];
@@ -62,6 +64,8 @@ export function TeamLineup({
   /** T-11-105 시너지 연결선·고른 시너지의 선수 자리. */
   synLinks: readonly { members: readonly number[]; on: boolean }[];
   synFocus: readonly number[] | null;
+  synApplied: readonly number[];
+  synCaption: string | null;
 }) {
   const c = useColors();
   const { height } = useWindowDimensions();
@@ -263,6 +267,8 @@ export function TeamLineup({
         selected={focus}
         links={synLinks}
         focus={synFocus}
+        applied={synApplied}
+        caption={synCaption}
         ondrag={editable ? drag : undefined}
         onpick={
           editable

@@ -12,7 +12,6 @@ import {
   achGradeName,
   achGradeView,
   achNear,
-  achOpenGroup,
   achPoints,
   achRankText,
   achSections,
@@ -259,10 +258,8 @@ export function TeamAchievements({
   const sections = ach ? achSections(ach.groups) : [];
   const sec = sections.find((x) => x.id === cat) ?? sections[0];
   const near = ach ? achNear(ach.groups) : [];
-  const openId = sec
-    ? (sec.groups.find((g) => g.items.some((i) => newIds.has(i.id)))?.id ??
-      achOpenGroup(sec.groups))
-    : null;
+  // 단계는 모두 접어 두고, 새로 달성한 업적이 든 단계만 펼친다(웹과 같다).
+  const openId = sec?.groups.find((g) => g.items.some((i) => newIds.has(i.id)))?.id ?? null;
   /** 기록실 구단주 랭킹 탭을 연다. */
   function openAchRanking() {
     appState.hof = { ...hofStart(), tab: 'ach' };
@@ -352,6 +349,27 @@ export function TeamAchievements({
               <Txt tone="muted" v="xs">
                 {L.achAbout({ season: seasonName, n: ach.players })}
               </Txt>
+              <View
+                testID="ach-perks"
+                style={{ gap: 6, padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}
+              >
+                <Txt v="sm" bold>
+                  {L.perksTitle}
+                </Txt>
+                {[L.perkGrade, L.perkTier, L.perkHonor].map((t) => (
+                  <View key={t} style={{ flexDirection: 'row', gap: 6 }}>
+                    <Txt v="sm" tone="accent">
+                      •
+                    </Txt>
+                    <Txt v="sm" style={{ flex: 1 }}>
+                      {t}
+                    </Txt>
+                  </View>
+                ))}
+                <Txt tone="muted" v="xs">
+                  {L.perkNote}
+                </Txt>
+              </View>
             </View>
             {near.length ? (
               <View style={{ gap: 6 }} testID="ach-near">

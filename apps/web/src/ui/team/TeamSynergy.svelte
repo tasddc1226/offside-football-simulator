@@ -1,39 +1,41 @@
 <script lang="ts">
-  // T-11-105 팀 시너지 — 켜진 듀오·팀 색깔·주발 맞춤과 시너지 표. 칩을 누르면 그라운드에서 그 선수들을 잇는다.
+  // T-11-105 팀 시너지 — 규칙 전부를 적용 중 → 효과 없음 → 미적용 순으로 보인다. 켜진 시너지는 누르면 그라운드에서 그 선수들을 잇는다.
   import { DUO_LINE_CAP, DUO_TOTAL_CAP, synergyPower, type TeamSynergy } from '@offside/contracts/owner-team';
-  import { synergyTable, synergyChips, synergyNote } from '@offside/app-core/teamOwner';
+  import { synergyRows, synergyNote } from '@offside/app-core/teamOwner';
   import { teamSynergyText as L } from '@offside/app-core/i18n/ko/teamSynergy';
 
   let { synergy, season, focus = $bindable(null) }: { synergy: TeamSynergy; season: number; focus?: string | null } = $props();
   const power = $derived(synergyPower(synergy));
-  const chips = $derived(synergyChips(synergy));
-  let open = $state(false);
+  const rows = $derived(synergyRows(synergy));
+  const anyOn = $derived(rows.some((r) => r.state !== 'off'));
+  const stateText = { applied: L.chipApplied, noEffect: L.chipNoEffect, off: L.chipOff };
 </script>
+
+{#snippet body(r: (typeof rows)[number])}
+  <span class="mark" aria-hidden="true">{#if r.state === 'applied'}<svg viewBox="0 0 12 12"><path d="M2.5 6.2 5 8.6 9.6 3.6" /></svg>{/if}</span>
+  <span class="text"><b>{r.name}</b><span class="desc">{r.desc}</span></span>
+  <span class="side"><small>{r.effect}</small><em class="state">{focus === r.id ? L.chipViewing : stateText[r.state]}</em></span>
+{/snippet}
 
 <section class="syn" data-team-synergy aria-label={L.title}>
   <header>
     <h3>{L.title}{#if power > 0}<b>+{power}</b>{/if}</h3>
     <span class="note">{synergyNote(season)}</span>
   </header>
-  {#if chips.length}
-    <div class="chips">
-      {#each chips as s (s.id)}
-        <button class="chip" class:dashed={s.badge} aria-pressed={focus === s.id} data-synergy={s.id} title={s.desc}
-          onclick={() => (focus = focus === s.id ? null : s.id)}>
-          <span>{s.name}</span><small>{s.effect}</small>
-        </button>
-      {/each}
-    </div>
-  {:else}
-    <p class="muted empty">{L.empty}</p>
-  {/if}
-  <button class="more" aria-expanded={open} onclick={() => (open = !open)}>{L.tableToggle({ open })}</button>
-  {#if open}
-    <ul class="table">
-      {#each synergyTable() as [name, desc, effect] (name)}<li><b>{name}</b><span>{desc}</span><small>{effect}</small></li>{/each}
-    </ul>
-    <p class="muted cap">{L.capNote({ line: DUO_LINE_CAP, total: DUO_TOTAL_CAP })}</p>
-  {/if}
+  <p class="muted hint">{anyOn ? L.chipHint : L.empty}</p>
+  <ul class="rows">
+    {#each rows as r (r.id)}
+      <li>
+        {#if r.state === 'off'}
+          <div class="row" data-synergy={r.id} data-state={r.state}>{@render body(r)}</div>
+        {:else}
+          <button class="row" class:dashed={r.badge} data-synergy={r.id} data-state={r.state} aria-pressed={focus === r.id}
+            onclick={() => (focus = focus === r.id ? null : r.id)}>{@render body(r)}</button>
+        {/if}
+      </li>
+    {/each}
+  </ul>
+  <p class="muted cap">{L.capNote({ line: DUO_LINE_CAP, total: DUO_TOTAL_CAP })}</p>
 </section>
 
 <style>
@@ -42,18 +44,29 @@
   h3 {margin:0;font-size:15px;display:flex;gap:6px;align-items:baseline;}
   h3 b {color:var(--accent-text);font-family:var(--display);}
   .note {font-size:12px;color:var(--muted);}
-  .chips {display:flex;flex-wrap:wrap;gap:6px;}
-  .chip {flex:0 0 auto;white-space:nowrap;display:grid;gap:1px;text-align:left;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:inherit;font:inherit;cursor:pointer;}
-  .chip span {font-size:13px;font-weight:600;}
-  .chip small {font-size:11px;color:var(--muted);}
-  .chip[aria-pressed='true'] {border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
-  .chip.dashed {border-style:dashed;}
-  .empty {margin:0;font-size:13px;}
-  .more {justify-self:start;border:0;background:none;color:var(--accent-text);font:inherit;font-size:13px;font-weight:600;min-height:44px;padding:0;cursor:pointer;}
-  .table {list-style:none;margin:0;padding:0;display:grid;gap:6px;}
-  .table li {display:grid;grid-template-columns:auto 1fr;gap:0 8px;font-size:12px;}
-  .table li b {font-size:13px;}
-  .table li span {grid-column:1/-1;color:var(--muted);}
-  .table li small {grid-row:1;grid-column:2;justify-self:end;color:var(--accent-text);}
-  .cap {margin:0;font-size:11px;}
+  .hint, .cap {margin:0;font-size:11px;}
+  .rows {list-style:none;margin:0;padding:0;display:grid;gap:6px;}
+  .row {width:100%;display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:inherit;font:inherit;}
+  button.row {cursor:pointer;}
+  .mark {width:16px;height:16px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);}
+  .mark svg {width:11px;height:11px;fill:none;stroke:var(--accent-ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+  .text {display:grid;gap:1px;min-width:0;}
+  .text b {font-size:13px;}
+  .desc {font-size:11px;color:var(--muted);}
+  .side {display:grid;justify-items:end;gap:3px;}
+  .side small {font-size:11px;color:var(--muted);white-space:nowrap;}
+  .state {font-style:normal;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;}
+  /* 적용 중은 모두 같은 모습. 누른 줄은 고른 것처럼 보이지 않게 배경만 바꾸고 '보는 중'을 단다. */
+  .row[data-state='applied'] {border-color:color-mix(in srgb,var(--accent),transparent 55%);}
+  .row[data-state='applied'] .mark {background:var(--accent);border-color:var(--accent);}
+  .row[data-state='applied'] .side small {color:var(--accent-text);}
+  .row[data-state='applied'] .state {border-color:color-mix(in srgb,var(--accent),transparent 50%);color:var(--accent-text);}
+  .row[aria-pressed='true'] {background:color-mix(in srgb,var(--accent),var(--surface-2) 82%);}
+  .row[aria-pressed='true'] .state {border-color:var(--accent);background:var(--accent);color:var(--accent-ink);}
+  .row.dashed {border-style:dashed;}
+  /* 미적용은 바탕 · 이름만 흐리게 — 줄 전체를 투명하게 하면 설명 글자 명도 대비가 모자란다. */
+  .row[data-state='off'] {background:transparent;}
+  .row[data-state='off'] .text b {color:var(--muted);font-weight:600;}
+  .row[data-state='off'] .mark {border-style:dashed;}
+  @media(max-width:440px) { .row {grid-template-columns:16px minmax(0,1fr);} .side {grid-column:2;justify-items:start;grid-auto-flow:column;justify-content:start;align-items:center;gap:6px;} }
 </style>

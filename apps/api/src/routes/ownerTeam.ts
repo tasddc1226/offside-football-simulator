@@ -41,7 +41,6 @@ import {
   challengedSince,
   countMatchesSince,
   eligibleMap,
-  estimatedAttrsOf,
   foundersOf,
   friendlyTeamOf,
   type FriendlyLineup,
@@ -57,6 +56,7 @@ import {
   slotIdsOf,
   layoutOf,
   logoOf,
+  teamPlayerCard,
   toLineupCareer,
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
@@ -185,8 +185,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const team = found ? friendlyTeamOf(found) : null;
     const picks = players.map((p) => {
       const profile = peakOf(p.peakProfile);
-      const estimatedAttrs = profile ? null : estimatedAttrsOf(p.cardAttrsJson);
-      return { p, profile, estimatedAttrs, career: toLineupCareer(p, profile) };
+      const career = toLineupCareer(p, profile);
+      return { p, career, card: teamPlayerCard(p, profile, career) };
     });
     const eligible = new Map(picks.map(({ career }) => [career.id, career]));
     // 은퇴 선수가 목록 상한보다 많으면 선발에 든 선수가 목록 밖에 있을 수 있다 — 그 선수만 따로 읽는다.
@@ -217,23 +217,12 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
               reqLang(c),
             )
           : null,
-        players: picks.map(({ p, profile, estimatedAttrs, career }) => ({
-          careerId: p.id,
-          pos: p.pos,
-          nation: career.nation,
-          dpos: career.dpos,
-          peak: career.peak,
-          roles: career.roles,
-          attrs: profile?.attrs ?? estimatedAttrs,
-          attrsEstimated: estimatedAttrs !== null,
-          number: p.number,
-          publicName: p.publicName,
-          legendScore: p.legendScore,
+        players: picks.map(({ p, card }) => ({
+          ...card,
           cardValue: p.cardValue,
           raised: !!p.raised,
           ...(p.type ? { type: p.type } : {}),
           ...(p.foot ? { foot: p.foot } : {}),
-          season: career.season,
           listing: p.listingId ? { id: p.listingId, price: p.listPrice! } : null,
         })),
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
@@ -370,7 +359,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     });
   });
 
-  // 경기 상대 후보: 같은 시즌에서 내 팀 OVR에 가까운 다른 구단주의 팀 몇 개를 섞어서.
+  // 경기 상대 후보: 같은 시즌에서 내 팀 레이팅에 가까운 다른 구단주의 팀 몇 개를 섞어서(레이팅이 같으면 OVR이 가까운 팀부터).
+  // OVR로만 고르면 비슷한 전력끼리만 만나 레이팅이 실력만큼 벌어지지 않았다(시즌 1 첫날 OVR 대별 평균 레이팅이 모두 1000 안팎).
   app.get('/v1/owner-team/opponents', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
@@ -382,7 +372,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       db,
       me.id,
       season,
-      mine.ovr,
+      { rating: mine.rating, ovr: mine.ovr },
       kstTodayStart(now),
     );
     // 가까운 팀 중에서 무작위로(매번 같은 상대만 나오지 않게).
@@ -392,7 +382,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     }
     const items: TeamOpponent[] = candidates
       .slice(0, OPPONENTS_SHOWN)
-      .sort((a, b) => b.ovr - a.ovr)
+      .sort((a, b) => b.rating - a.rating || b.ovr - a.ovr)
       .map((team) => ({
         teamId: team.id,
         name: team.name,

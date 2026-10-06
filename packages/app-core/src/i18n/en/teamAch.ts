@@ -13,6 +13,14 @@ export const teamAch: Translation<TeamAchMsgs> = {
   achProgress: (p) => `${p.head} · ${p.done}/${p.total} achievements completed`,
   achAbout: (p) =>
     `Built from your ${p.n} retired players who first played in ${p.season}, plus this season's team and club activity. It starts from zero every season.`,
+  perksTitle: 'Why earn achievements',
+  perkGrade:
+    'Your score raises your owner grade from Rookie up to Legend and sets your place in the owner ranking.',
+  perkTier:
+    'The grade you hold when the season ends shows as a tier next to your nickname on your profile, comments and chat all next season.',
+  perkHonor:
+    'Finish 1st, top 10 or top 100 in the owner ranking to keep a permanent honor in your season recap.',
+  perkNote: 'Achievement points never affect match results.',
   nextGoal: 'Next goals',
   worthPlus: (p) => `+${p.n} pts`,
   catsAria: 'Achievement categories',

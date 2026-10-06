@@ -48,7 +48,6 @@
   "apps/api/src/team/badges.ts": 29,
   "apps/api/src/team/sim.ts": 1,
   "apps/api/src/test/http.ts": 12,
-  "apps/mobile/src/components/RnJersey.tsx": 1,
   "apps/mobile/src/platform/storeText.ts": 6,
   "apps/mobile/src/screens/create/Create.tsx": 3,
   "apps/mobile/src/screens/game/Game.tsx": 1,

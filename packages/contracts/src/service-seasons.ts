@@ -140,3 +140,9 @@ export const MAX_RETIRE_AT = Math.max(
  */
 export const firstUploadSeasonAt = (now: string, seasonRules: boolean): number | null =>
   seasonRules ? teamSeasonAt(now) : 0;
+
+/** T-11-128 가장 최근에 끝난 시즌(구단주 티어의 기준 시즌). 없으면 null. */
+export const lastClosedSeason = (now: string): number | null =>
+  openTeamSeasons(now)
+    .filter((s) => teamSeasonClosed(s, now))
+    .at(-1) ?? null;

@@ -1,0 +1,41 @@
+CREATE TABLE `owner_honors` (
+	`profile_id` text NOT NULL,
+	`season` integer NOT NULL,
+	`kind` text NOT NULL,
+	`band` integer,
+	`rank` integer,
+	`value` integer,
+	`granted_at` text NOT NULL,
+	PRIMARY KEY(`profile_id`, `season`, `kind`),
+	FOREIGN KEY (`profile_id`) REFERENCES `profiles`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `owner_season_records` (
+	`profile_id` text NOT NULL,
+	`season` integer NOT NULL,
+	`players` integer NOT NULL,
+	`retired` integer NOT NULL,
+	`best_career_id` text,
+	`best_score` integer,
+	`hof_rank` integer,
+	`retired_numbers` integer NOT NULL,
+	`wall_of_honor` integer NOT NULL,
+	`firsts` integer NOT NULL,
+	`team_id` text,
+	`team_name` text,
+	`team_rating` integer,
+	`team_rank` integer,
+	`wins` integer DEFAULT 0 NOT NULL,
+	`draws` integer DEFAULT 0 NOT NULL,
+	`losses` integer DEFAULT 0 NOT NULL,
+	`goals_for` integer DEFAULT 0 NOT NULL,
+	`best_streak` integer DEFAULT 0 NOT NULL,
+	`ach_score` integer,
+	`ach_done` integer,
+	`ach_at` text,
+	`ach_rank` integer,
+	`ach_checked` integer DEFAULT 0 NOT NULL,
+	`created_at` text NOT NULL,
+	PRIMARY KEY(`profile_id`, `season`),
+	FOREIGN KEY (`profile_id`) REFERENCES `profiles`(`id`) ON UPDATE no action ON DELETE cascade
+);

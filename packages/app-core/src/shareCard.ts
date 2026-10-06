@@ -9,15 +9,13 @@ import { POS_LABEL } from '@offside/game/pos-label';
 import { titleById } from '@offside/game/titles';
 import { tn } from '@offside/game/i18n/names';
 import { totals } from './format.js';
-import { RN_DEFAULT, rnColors, type RnColors } from './rnStyle.js';
 import type { LegendView } from './state.js';
 import { shareText as L } from './i18n/ko/share.js';
 
-/** 결번 유니폼 한 벌(이름·번호·구단 색) — 캔버스(웹)·RN 뷰(앱)가 같은 도안(rnStyle JERSEY)으로 그린다. */
+/** 결번 액자 한 점(번호·구단) — 캔버스(웹)·RN 뷰(앱)가 같은 도트 액자(@offside/game/rnFrame)로 그린다. */
 export interface JerseyArt {
-  name: string;
   number: number;
-  colors: RnColors;
+  clubId: string | null;
 }
 
 export const CARD_W = 1080;
@@ -107,9 +105,7 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
         }
       : null,
     honours,
-    jersey: rn
-      ? { name: v.name, number: rn.number, colors: rnColors(rn.clubId) ?? RN_DEFAULT }
-      : null,
+    jersey: rn ? { number: rn.number, clubId: rn.clubId ?? null } : null,
   };
 }
 

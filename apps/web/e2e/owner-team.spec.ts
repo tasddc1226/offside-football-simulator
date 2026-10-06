@@ -476,12 +476,13 @@ test('시즌 업적 — 등급·점수·랭킹 순위, 분류별 단계 묶음�
   await expect(sum).toContainText('12위 · 297명 중');
   await expect(box.locator('[data-ach-near]')).toContainText('전 세부 포지션 선수 배출');
   await expect(box.locator('[data-ach-near]')).toContainText('+40점');
-  // 분류 탭: 처음은 선수, 다 채우지 못한 첫 단계는 펼쳐 둔다.
+  // 분류 탭: 처음은 선수, 단계는 모두 접혀 있다(새 업적이 든 단계만 펼친다).
   await expect(box.locator('[data-ach-cat]')).toHaveCount(3);
   await expect(box.locator('[data-ach-cat="player"]')).toHaveAttribute('aria-selected', 'true');
   const first = box.locator('[data-ach-group="first"]');
   await expect(first).toContainText('1/2');
-  await expect(first).toHaveAttribute('open', '');
+  await expect(first).not.toHaveAttribute('open');
+  await first.locator('summary').click();
   await expect(first).toContainText('달성 완료');
   await expect(first).toContainText('+10점');
   await expect(first).toContainText('2 / 8');

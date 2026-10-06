@@ -217,7 +217,7 @@ export function Stats({
 }
 
 /** T-11-028 등급 색(웹 style.css .ach-grade[data-grade] --g) — 등급 이름 글자에 잉크와 섞어 쓴다. 모르는 등급은 루키 색. */
-const GRADE_COLOR: Record<string, string> = {
+export const GRADE_COLOR: Record<string, string> = {
   rookie: '#7f9a86',
   bronze: '#c27a3e',
   silver: '#9aa6b1',

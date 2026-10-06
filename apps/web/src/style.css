@@ -882,6 +882,186 @@ button.hof-row {
 .hof-value-text {
   font-size: 1.0625rem;
 }
+
+/* T-11-128 구단주 시즌 결산 — 허브 카드의 휘장 칩, 결산 화면의 휘장 타일·대표 선수 카드. 색은 .medal의 --medal(-text)을 따른다. */
+.recap-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.recap-chip {
+  color: var(--medal-text);
+  border-color: color-mix(in srgb, var(--medal) 55%, transparent);
+  background: color-mix(in srgb, var(--medal) 12%, var(--surface));
+}
+.recap .recap-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.recap-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.recap-picker select {
+  min-height: 44px; /* 터치 44px */
+}
+.recap-fail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+/* 휘장은 칸 없이 뱃지 모양만 — 진열장처럼 세 개씩. 맨 앞(가장 높은 단계)은 대표 휘장으로 가운데에 크게. */
+.recap-honors {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 6px;
+  margin: 0;
+  padding: 4px 0 0;
+  list-style: none;
+}
+.recap-honor {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  min-width: 0;
+}
+.recap-honor-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.recap-honor b {
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.recap-emblem {
+  display: block;
+  width: 76px;
+  filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--medal) 35%, transparent));
+}
+.recap-honor-detail {
+  font-size: 0.75rem;
+  color: var(--medal-text);
+  font-weight: 600;
+}
+/* 금 휘장은 빛이 한 번씩 스친다(뱃지 모양 안에서만). */
+.recap-honor.gold .emblem .sheen {
+  animation: recap-sheen 4.5s ease-in-out 0.6s infinite;
+}
+@keyframes recap-sheen {
+  0% {
+    transform: translateX(-90px);
+  }
+  35%,
+  100% {
+    transform: translateX(90px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recap-honor.gold .emblem .sheen {
+    animation: none;
+    opacity: 0;
+  }
+}
+/* 휘장 문장(HonorEmblem.svelte). 금속은 --medal에서 밝게 · 어둡게 섞고, 안쪽 판은 어두운 바탕에 메달 빛. */
+.emblem {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.emblem .metal-hi {
+  stop-color: color-mix(in srgb, var(--medal) 55%, #fff);
+}
+.emblem .metal-mid {
+  stop-color: var(--medal);
+}
+.emblem .metal-lo {
+  stop-color: color-mix(in srgb, var(--medal) 60%, #000);
+}
+.emblem .field-hi {
+  stop-color: color-mix(in srgb, var(--medal) 30%, #17201b);
+}
+.emblem .field-lo {
+  stop-color: #0d1310;
+}
+.emblem .edge {
+  stroke: color-mix(in srgb, var(--medal) 55%, #000);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+.emblem .field {
+  stroke: color-mix(in srgb, var(--medal) 70%, #000);
+  stroke-width: 0.8;
+}
+.emblem .shine {
+  fill: #fff;
+  opacity: 0.18;
+}
+.emblem .glyph {
+  fill: color-mix(in srgb, var(--medal) 70%, #fff);
+}
+.emblem .glyph.line {
+  fill: none;
+  stroke: color-mix(in srgb, var(--medal) 70%, #fff);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.emblem .sheen {
+  fill: #fff;
+  opacity: 0.35;
+  transform: translateX(-90px);
+}
+.emblem .ribbon {
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+  fill: #1a1206;
+}
+/* 구단주 허브의 숫자 칸(Owner.svelte .owner-stats)과 같은 모양 — 그쪽은 컴포넌트 범위라 여기 따로 둔다. */
+.recap-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.recap-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  min-width: 0;
+}
+.recap-stats dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.recap-stats dd {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.recap-next {
+  padding: 4px 2px;
+  text-align: center;
+}
 .hof-value-text {
   text-align: right;
   line-height: 1.15;
@@ -1586,6 +1766,20 @@ body:has(.main-nav) .wrap {
 }
 /* T-11-034 아직 보지 않은 새 업적 — 하단 '구단주'·내 팀 '업적' 아이콘 오른쪽 위의 점. */
 .tabs button {
+  position: relative;
+}
+/* 버튼 오른쪽 위 빨간 점(구단주 '내 팀' — 안 본 새 업적). */
+.btn-dot {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bad, #e5484d);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.btn:has(> .btn-dot) {
   position: relative;
 }
 .tab-dot {
@@ -3942,10 +4136,13 @@ html:has(.wrap.has-actionbar) {
 .rn-alert small {
   white-space: normal;
 }
-.rn-jersey.rn-alert-shirt {
+.rn-frame {
+  display: block;
+  height: auto;
+}
+.rn-frame.rn-alert-frame {
   flex: none;
   width: 40px;
-  filter: none;
   animation: rn-alert-pop 0.5s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 @keyframes rn-alert-shine {
@@ -3960,7 +4157,7 @@ html:has(.wrap.has-actionbar) {
 }
 @media (prefers-reduced-motion: reduce) {
   .rn-alert::after,
-  .rn-jersey.rn-alert-shirt {
+  .rn-frame.rn-alert-frame {
     animation: none;
   }
 }
@@ -4570,10 +4767,11 @@ html:has(.wrap.has-actionbar) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rn-jersey.rn-tile-shirt {
-  width: 52px;
+/* 칸이 고르게 보이게 도안 폭(66칸)의 정수배. */
+.rn-frame.rn-tile-frame {
+  width: 66px;
   margin-bottom: 4px;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
 }
 .rn-tile-name {
   max-width: 100%;
@@ -5544,7 +5742,7 @@ button.title-item:hover {
 .style-best b {
   color: var(--film-gold);
 }
-/* T-10-076 영구결번 — 유니폼 세리머니. 유니폼 색은 구단 엠블럼 색(--rn-base/--rn-accent). */
+/* T-10-076 영구결번 세리머니. 결번 액자(RnFrame)는 구단 홈 유니폼으로 그린다. */
 .film-rn {
   display: flex;
   flex-direction: column;
@@ -5558,118 +5756,56 @@ button.title-item:hover {
   align-items: center;
   gap: 10px;
 }
-.rn-jersey {
-  width: 168px;
-  height: auto;
-  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45));
-}
-.rn-shirt {
-  fill: var(--rn-base, #1f6f4a);
-  stroke: var(--rn-accent, #f2c14e);
-  stroke-width: 2;
-}
-.rn-trim {
-  fill: none;
-  stroke: var(--rn-accent, #f2c14e);
-  stroke-width: 4;
-}
-.rn-jersey text {
-  fill: var(--rn-ink, #fff);
-  text-anchor: middle;
-  font-family: var(--display);
-}
-.rn-jersey-name {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-}
-.rn-jersey-num {
-  font-size: 46px;
-}
-/* 은퇴 세리머니 유니폼 — 원근 속에서 천천히 몸을 돌리고, 바닥 그림자·뒤 조명이 따라온다. */
-.rn-jersey3d {
+/* 은퇴 세리머니: 도트 커튼이 계단식(steps)으로 걷히며 결번 액자가 드러난다. 크레딧이 화면에 들어오면(credit-wait가 풀리면) 시작. */
+.rn-unveil {
   position: relative;
-  perspective: 640px;
-  padding: 6px 0 18px;
+  width: 198px;
+  overflow: hidden;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.45));
 }
-.rn-jersey3d::before {
-  content: '';
-  position: absolute;
-  inset: -12% -30% 8%;
-  background: radial-gradient(
-    closest-side,
-    color-mix(in srgb, var(--rn-accent, #f2c14e) 30%, transparent),
-    transparent
-  );
-  opacity: 0.55;
-  pointer-events: none;
+.rn-frame.rn-unveil-frame {
+  width: 100%;
 }
-.rn-jersey3d::after {
-  content: '';
+.rn-curtain {
   position: absolute;
-  left: 50%;
+  top: 0;
   bottom: 0;
-  width: 150px;
-  height: 18px;
-  translate: -50% 0;
-  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), transparent);
-  animation: rn-floor 7s ease-in-out infinite alternate;
+  width: calc(50% + 6px);
+  background: repeating-linear-gradient(
+    90deg,
+    #4d0b14 0 4px,
+    #7a1420 4px 8px,
+    #a3202f 8px 12px,
+    #7a1420 12px 16px
+  );
+  box-shadow:
+    inset 0 8px 0 #c9a24a,
+    inset 0 11px 0 #6e4f12;
+  visibility: hidden;
 }
-.rn-jersey.rn-jersey-3d {
-  position: relative;
-  width: 196px;
-  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.5));
-  transform-origin: 50% 40%;
-  animation: rn-sway 7s ease-in-out infinite alternate;
+.rn-curtain-l {
+  left: -6px;
+  --rn-curtain-to: -100%;
 }
-.rn-jersey-3d .rn-shirt {
-  stroke: none;
+.rn-curtain-r {
+  right: -6px;
+  --rn-curtain-to: 100%;
 }
-.rn-jersey-3d .rn-cuff,
-.rn-jersey-3d .rn-collar {
-  fill: var(--rn-trim, #f2c14e);
+.film-rn:not(.credit-wait) .rn-curtain {
+  visibility: visible;
+  animation: rn-curtain 1.6s steps(12) 0.3s both;
 }
-.rn-jersey-3d .rn-jersey-name {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-}
-.rn-jersey-3d .rn-jersey-num {
-  font-size: 50px;
-  stroke: var(--rn-trim, #f2c14e);
-  stroke-width: 1.3px;
-  paint-order: stroke;
-}
-.rn-jersey-3d .rn-sheen {
-  animation: rn-sheen 7s ease-in-out infinite;
-}
-@keyframes rn-sway {
+@keyframes rn-curtain {
   from {
-    transform: rotateY(-18deg) rotateX(3deg) translateY(0);
+    transform: none;
   }
   to {
-    transform: rotateY(18deg) rotateX(3deg) translateY(-6px);
-  }
-}
-@keyframes rn-floor {
-  to {
-    scale: 0.82 1;
-    opacity: 0.7;
-  }
-}
-@keyframes rn-sheen {
-  0%,
-  40% {
-    transform: translateX(0);
-  }
-  75%,
-  100% {
-    transform: translateX(240px);
+    transform: translateX(var(--rn-curtain-to));
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .rn-jersey3d::after,
-  .rn-jersey.rn-jersey-3d,
-  .rn-jersey-3d .rn-sheen {
-    animation: none;
+  .film-rn:not(.credit-wait) .rn-curtain {
+    display: none;
   }
 }
 .rn-line {
@@ -6231,6 +6367,7 @@ button.what {
   align-items: center;
   gap: 6px;
   min-height: 24px;
+  margin-bottom: 5px;
   font-size: 0.8125rem;
 }
 .chat-meta b {
@@ -6241,10 +6378,13 @@ button.what {
 }
 .chat-body-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 6px;
   max-width: 100%;
   min-width: 0;
+}
+.chat-msg.mine .chat-body-row {
+  flex-direction: row-reverse;
 }
 .chat-bubble {
   min-width: 0;
@@ -6266,25 +6406,34 @@ button.what {
   border-radius: 16px 4px 16px 16px;
 }
 .chat-time {
-  margin-top: 3px;
+  flex: none;
   padding-inline: 2px;
   font-size: 0.75rem;
+  white-space: nowrap;
 }
+/* 더보기는 티어 배지 바로 옆 작은 점 세 개(테두리 없음). 누르는 자리는 ::after로 넓힌다. */
 .chat-more {
-  width: 44px;
-  height: 44px;
+  position: relative;
+  width: 24px;
+  height: 24px;
   flex: none;
   display: grid;
   place-items: center;
   padding: 0;
   border: 0;
+  border-radius: 6px;
   background: transparent;
   color: var(--muted);
+  cursor: pointer;
+}
+.chat-more::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
 }
 .chat-more:hover,
 .chat-more[aria-expanded='true'] {
   color: var(--ink);
-  background: var(--surface-2);
 }
 .chat-msg .report-panel {
   width: 100%;
@@ -6800,4 +6949,9 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   margin: -1px 0 0 -1px;
   border: 2px solid var(--accent);
   pointer-events: none;
+}
+/* T-11-128 구단주 티어(TierBadge.svelte) — 댓글 · 채팅 닉네임 옆 업적 등급 엠블럼(글자 없음). */
+.tier-badge {
+  display: inline-flex;
+  vertical-align: middle;
 }

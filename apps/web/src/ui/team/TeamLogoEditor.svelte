@@ -114,7 +114,7 @@
   .upload {width:100%;min-height:44px;}
   .hint {margin:0;}
   .error {color:var(--bad);}
-  footer {display:flex;gap:8px;padding:12px 16px calc(12px + var(--safe-b));border-top:1px solid var(--line);flex:none;}
+  footer {display:flex;gap:8px;padding:12px 16px calc(12px + var(--safe-b));flex:none;}
   footer .btn {flex:1;min-height:44px;font-size:14px;}
   @media(min-width:600px) {dialog {margin:auto;border-radius:18px;}}
 </style>

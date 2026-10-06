@@ -5,8 +5,10 @@ import { ns } from '../core';
 const ko = {
   // 상대 고르기
   oppTitle: '상대 고르기',
-  oppNear: (p: { ovr: number; left: number; per: number }) =>
-    `내 팀 OVR ${p.ovr}과 비슷한 팀이에요 · 오늘 남은 경기 ${p.left}/${p.per}`,
+  oppNear: (p: { rating: number; left: number; per: number }) =>
+    `내 팀 레이팅 ${p.rating}점 근처의 팀이에요 · 오늘 남은 경기 ${p.left}/${p.per}`,
+  oppRating: '레이팅',
+  oppOvr: (p: { n: number }) => `OVR ${p.n}`,
   oppRuleWeb: (p: { days: number }) =>
     `같은 팀에는 하루 한 번 도전할 수 있어요. 최근 ${p.days}일 안에 다시 만난 팀이면 레이팅이 덜 움직여요.`,
   oppRuleApp: (p: { days: number }) =>

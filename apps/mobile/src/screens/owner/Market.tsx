@@ -3,7 +3,6 @@
 // 카드 상세 영입 시트, 카드 고르기 + 슬라이더 판매, 방출 화면. 각 화면은 처음 열 때만 불러온다(미리 받기·폴링 없음).
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, Modal, PanResponder, Pressable, ScrollView, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import type { CareerPos } from '@offside/contracts';
@@ -55,7 +54,7 @@ import {
   tradeAmount,
   type MarketView,
 } from '@offside/app-core/market';
-import { agoKo, cardTier, fmtValue } from '@offside/app-core/format';
+import { agoKo, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/hof-store';
 import { POS } from '@offside/game/data';
 import { appState, prefs } from '../../store';
@@ -66,7 +65,7 @@ import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { ActionBar, BackBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
 import { useOnPull } from '../../ui/refresh';
-import { CARD_TONES, PlayerCard } from '../../components/PlayerCard';
+import { PlayerCard } from '../../components/PlayerCard';
 import { MarketChart, MarketIndex } from './MarketChart';
 import { marketText as L } from '@offside/app-core/i18n/ko/market';
 import { intlLocale } from '@offside/app-core/i18n/core';
@@ -77,58 +76,49 @@ type Sent<T> = Promise<
 >;
 
 const SORT_KEYS = Object.keys(MARKET_SORT_LABEL) as MarketSort[];
-const SHIELD = 'M0 9H16L25 2L50 0L75 2L84 9H100L98 84L86 93L50 100L14 93L2 84Z';
 
-/** 작은 방패 카드(OVR · 세부 포지션). */
-function Mini({
+/** 목록·고르기용 카드 — 진짜 PlayerCard의 compact·mini판(OVR·자리·시즌·국기·등번호). 폭은 pitch 슬롯(62)과 거의 같은 64. */
+function MiniCard({
   c: card,
-  size = 52,
+  name,
   dim,
 }: {
-  c: { peak: number; legendScore: number | null; dpos: DetailPos | null; pos: CareerPos };
-  size?: number;
+  c: {
+    nation?: string | null | undefined;
+    season?: number | undefined;
+    peak: number;
+    number: number | null;
+    legendScore: number | null;
+    pos: CareerPos;
+    dpos: DetailPos | null;
+    attrs: TeamPlayer['attrs'];
+  };
+  name: string;
   dim?: boolean;
 }) {
-  const tone = CARD_TONES[cardTier(card.legendScore, card.peak)];
-  const t = { a: tone.base, b: tone.line, ink: tone.ink };
-  const h = Math.round(size * 1.15);
-  const id = `mk${t.a.slice(1)}`;
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={{ width: size, height: h, opacity: dim ? 0.45 : 1 }}
+      style={{ width: 64, opacity: dim ? 0.45 : 1 }}
     >
-      <Svg
-        width={size}
-        height={h}
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        style={{ position: 'absolute' }}
-      >
-        <Defs>
-          <LinearGradient id={id} x1="0" y1="0" x2="0.4" y2="1">
-            <Stop offset="0" stopColor={t.a} />
-            <Stop offset="1" stopColor={t.b} />
-          </LinearGradient>
-        </Defs>
-        <Path d={SHIELD} fill={`url(#${id})`} />
-      </Svg>
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Txt
-          style={{
-            fontFamily: DISPLAY[700],
-            fontSize: size * 0.42,
-            lineHeight: size * 0.46,
-            color: t.ink,
-          }}
-        >
-          {card.peak}
-        </Txt>
-        <Txt style={{ fontFamily: DISPLAY[700], fontSize: size * 0.21, color: t.ink }}>
-          {detailPosOf(card)}
-        </Txt>
-      </View>
+      <PlayerCard
+        compact
+        mini
+        animate={false}
+        code={detailPosOf(card)}
+        cell={{
+          name,
+          nation: card.nation,
+          season: card.season,
+          rating: card.peak,
+          number: card.number,
+          legendScore: card.legendScore,
+          attrs: card.attrs,
+          pos: card.pos,
+          youth: false,
+        }}
+      />
     </View>
   );
 }
@@ -481,7 +471,7 @@ function LiveStrip({
                 borderTopColor: c.line,
               }}
             >
-              <Mini c={s.card} size={34} />
+              <MiniCard c={s.card} name={marketName(s.card, local)} />
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                 <Txt bold numberOfLines={1}>
                   {marketName(s.card, local)}
@@ -907,7 +897,7 @@ export default function Market() {
                     }}
                   >
                     <Check on={on} disabled={!!lock} />
-                    <Mini c={p} size={40} dim={!!lock} />
+                    <MiniCard c={p} name={nameOfPlayer(p)} dim={!!lock} />
                     <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                       <Txt bold numberOfLines={1}>
                         {nameOfPlayer(p)}
@@ -1056,7 +1046,7 @@ export default function Market() {
                               paddingHorizontal: 12,
                             }}
                           >
-                            <Mini c={l.card} />
+                            <MiniCard c={l.card} name={marketName(l.card, local)} />
                             <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
                               <Txt numberOfLines={1}>
                                 <Txt bold>{marketName(l.card, local)}</Txt>
@@ -1153,7 +1143,7 @@ export default function Market() {
                             backgroundColor: on ? c.surface2 : c.surface,
                           }}
                         >
-                          <Mini c={p} dim={off} />
+                          <MiniCard c={p} name={nameOfPlayer(p)} dim={off} />
                           <Txt numberOfLines={1} style={{ fontSize: rem(0.6875) }}>
                             {nameOfPlayer(p)}
                           </Txt>
@@ -1315,7 +1305,7 @@ export default function Market() {
                             paddingHorizontal: 12,
                           }}
                         >
-                          <Mini c={l.card} />
+                          <MiniCard c={l.card} name={marketName(l.card, local)} />
                           <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
                             <Txt bold numberOfLines={1}>
                               {marketName(l.card, local)}
@@ -1435,7 +1425,7 @@ export default function Market() {
                 backgroundColor: c.pitch,
               }}
             >
-              <View style={{ width: 188 }}>
+              <View style={{ width: 170 }}>
                 <PlayerCard
                   animate={false}
                   code={detailPosOf(buying.card)}
@@ -1447,6 +1437,7 @@ export default function Market() {
                     number: buying.card.number,
                     legendScore: buying.card.legendScore,
                     attrs: buying.card.attrs,
+                    cardValue: buying.card.cardValue,
                     pos: buying.card.pos,
                     youth: false,
                   }}

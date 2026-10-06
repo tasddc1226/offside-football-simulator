@@ -1,6 +1,6 @@
 // 버튼 한 벌(웹 .btn + .btn-primary · .btn-accent · .btn-sm · .btn-block). 시트 버튼의 cls 문자열도 그대로 받는다.
 import type { ReactNode } from 'react';
-import { Text, type StyleProp, type ViewStyle } from 'react-native';
+import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useColors } from '../theme/useColors';
 import { rem } from '../theme/type';
 import { Press } from './Press';
@@ -20,6 +20,8 @@ export interface BtnProps {
   accessibilityLabel?: string;
   /** e2e·접근성용 식별자(웹 data-act). */
   testID?: string;
+  /** 오른쪽 위 빨간 점(웹 .btn-dot) — 아직 안 본 새 소식으로 이끈다. 뜻은 accessibilityLabel에 적는다. */
+  dot?: boolean;
 }
 
 export function kindFromCls(cls: string | undefined): BtnKind {
@@ -38,6 +40,7 @@ export function Btn({
   block,
   disabled,
   style,
+  dot,
   ...rest
 }: BtnProps) {
   const c = useColors();
@@ -91,6 +94,22 @@ export function Btn({
       ) : (
         children
       )}
+      {dot ? (
+        <View
+          testID={rest.testID ? `${rest.testID}-dot` : undefined}
+          style={{
+            position: 'absolute',
+            top: 6,
+            right: 8,
+            width: 10,
+            height: 10,
+            borderRadius: 5,
+            backgroundColor: c.bad,
+            borderWidth: 2,
+            borderColor: palette.bg === 'transparent' ? c.surface : palette.bg,
+          }}
+        />
+      ) : null}
     </Press>
   );
 }

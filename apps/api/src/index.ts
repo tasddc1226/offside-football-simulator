@@ -2,12 +2,14 @@ import { CHAT_SOCKET_PATH } from '@offside/contracts/chat';
 import { LIVE_SOCKET_PATH } from '@offside/contracts/polling';
 import { app } from './app.js';
 import { runDaily } from './cron/daily.js';
+import { createDb } from './db/client.js';
 import type { Bindings } from './env.js';
 import { chatSocket } from './chat/socket.js';
 import { liveSocket } from './live/socket.js';
 import { runNewsPush } from './push/dispatch.js';
 import { runPersonalPush } from './push/personal.js';
 import { queueReengagement } from './push/reengagement.js';
+import { runSeasonClose } from './team/seasonClose.js';
 
 export { app };
 export { LiveHub } from './live/hub.js';
@@ -30,6 +32,15 @@ export default {
       await runNewsPush(env);
       await queueReengagement(env, controller.scheduledTime);
       await runPersonalPush(env, controller.scheduledTime);
+      // T-11-128 끝난 시즌 결산을 한 단계씩 굳힌다. 시간이 급한 알림을 먼저 보내고,
+      // 실패하면 다음 5분에 같은 단계를 다시 한다.
+      await runSeasonClose(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'season-close', ...r })))
+        .catch((e: unknown) =>
+          console.error(
+            JSON.stringify({ level: 'error', job: 'season-close', error: String(e).slice(0, 500) }),
+          ),
+        );
     }
   },
 };

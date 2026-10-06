@@ -49,10 +49,10 @@
     tradeAmount,
     type MarketView,
   } from '@offside/app-core/market';
-  import { agoKo, cardTier, fmtValue } from '@offside/app-core/format';
+  import { agoKo, fmtValue } from '@offside/app-core/format';
   import { localCareerNames } from '@offside/game/hof-store';
   import { POS_LABEL } from '@offside/game/pos-label';
-  import { detailPosOf, type DetailPos } from '@offside/contracts/positions';
+  import { detailPosOf } from '@offside/contracts/positions';
   import Topbar from './Topbar.svelte';
   import BackBar from './BackBar.svelte';
   import PlayerCard from './team/PlayerCard.svelte';
@@ -202,9 +202,9 @@
   const asPlayer = (c: MarketCard): TeamPlayer => ({ ...c, roles: null });
 </script>
 
-{#snippet mini(c: { peak: number; legendScore: number | null; dpos: DetailPos | null; pos: CareerPos }, dim = false)}
-  <span class="mk-mini" data-tier={cardTier(c.legendScore, c.peak)} class:dim aria-hidden="true">
-    <b>{c.peak}</b><small>{detailPosOf(c)}</small>
+{#snippet mini(p: TeamPlayer, name: string, dim = false)}
+  <span class="mk-card" class:dim aria-hidden="true">
+    <PlayerCard compact mini player={p} {name} rating={p.peak} role={detailPosOf(p)} />
   </span>
 {/snippet}
 
@@ -258,7 +258,7 @@
             <li>
               <label class="mk-rel" class:on={picked.has(p.careerId)} class:locked={!!lock} data-mine={p.careerId}>
                 <input type="checkbox" checked={picked.has(p.careerId)} disabled={!!lock} aria-label={L.releasePickLabel({ name: nameOfPlayer(p) })} onchange={() => togglePick(p.careerId)} />
-                {@render mini(p, !!lock)}
+                {@render mini(p, nameOfPlayer(p), !!lock)}
                 <span class="mk-info">
                   <strong class="mk-name">{nameOfPlayer(p)}</strong>
                   <small class:mk-lock={!!lock}>{lock ?? L.releaseInfo({ score: (p.legendScore ?? 0).toLocaleString(intlLocale()) })}</small>
@@ -316,7 +316,7 @@
               <ul class="mk-live-list">
                 {#each recent as s (s.id)}
                   <li>
-                    {@render mini(s.card)}
+                    {@render mini(asPlayer(s.card), marketName(s.card, local))}
                     <span class="mk-info">
                       <span class="mk-name">{marketName(s.card, local)}</span>
                       <small>{L.liveBase({ ago: agoKo(Date.now() - Date.parse(s.soldAt)), value: fmtValue(s.card.cardValue) })}</small>
@@ -352,7 +352,7 @@
               {@const diff = priceDiff(l.price, l.card.cardValue)}
               <li>
                 <button class="mk-row" data-listing={l.id} onclick={() => ((buying = l), (error = null))}>
-                  {@render mini(l.card)}
+                  {@render mini(asPlayer(l.card), marketName(l.card, local))}
                   <span class="mk-info">
                     <span class="mk-name">{marketName(l.card, local)}{#if myListingIds.has(l.id)}<em class="mk-tag">{L.myListing}</em>{/if}</span>
                     <small>{cardMeta(l.card)}</small>
@@ -380,7 +380,7 @@
               {@const note = sellNote(p, lineup)}
               {@const off = !sellable(p)}
               <button class="mk-pick" aria-pressed={selling?.careerId === p.careerId} disabled={off} data-sell-pick={p.careerId} onclick={() => pickSell(p)}>
-                {@render mini(p, off)}
+                {@render mini(p, nameOfPlayer(p), off)}
                 <span class="mk-pick-name">{nameOfPlayer(p)}</span>
                 <small>{selling?.careerId === p.careerId ? L.sellSelected : note}</small>
               </button>
@@ -422,7 +422,7 @@
           <ul class="mk-rows">
             {#each me.listings as l (l.id)}
               <li class="mk-row mk-row-static">
-                {@render mini(l.card)}
+                {@render mini(asPlayer(l.card), marketName(l.card, local))}
                 <span class="mk-info">
                   <span class="mk-name">{marketName(l.card, local)}</span>
                   <small>{L.listedAgo({ price: fmtValue(l.price), ago: agoKo(Date.now() - Date.parse(l.createdAt)) })}</small>
@@ -463,7 +463,7 @@
   <div class="mk-sheet" role="dialog" aria-modal="true" aria-label={L.sheetBuy}>
     <div class="mk-detail">
       <div class="mk-detail-card">
-        <PlayerCard player={asPlayer(buying.card)} name={marketName(buying.card, local)} rating={buying.card.peak} role={detailPosOf(buying.card)} nation={buying.card.nation} />
+        <PlayerCard player={asPlayer(buying.card)} name={marketName(buying.card, local)} rating={buying.card.peak} role={detailPosOf(buying.card)} />
       </div>
       <dl class="mk-detail-stats">
         <div><dt>{L.detailLegend}</dt><dd>{buying.card.legendScore.toLocaleString(intlLocale())}</dd></div>
@@ -748,13 +748,6 @@
   .mk-live-list li:last-child {
     border-bottom: 0;
   }
-  .mk-live-list .mk-mini {
-    width: 34px;
-    height: 40px;
-  }
-  .mk-live-list .mk-mini b {
-    font-size: 1rem;
-  }
   .mk-live-list li > b {
     flex: none;
     font-size: 0.875rem;
@@ -812,46 +805,14 @@
     padding: 4px 6px;
   }
 
-  /* 작은 방패 카드(OVR · 세부 포지션) — 카드 색은 PlayerCard와 같은 등급 */
-  .mk-mini {
-    --mk-a: #e8d5a8;
-    --mk-b: #8a6324;
-    --mk-ink: #392b14;
+  /* 목록·고르기 카드 — 진짜 PlayerCard의 compact·mini판(OVR·자리·시즌·국기·등번호). 판 폭은 pitch 슬롯과 같은 64px */
+  .mk-card {
     flex: none;
-    width: 52px;
-    height: 60px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    background: linear-gradient(165deg, var(--mk-a), var(--mk-b));
-    color: var(--mk-ink);
-    clip-path: polygon(0 9%, 16% 9%, 25% 2%, 50% 0, 75% 2%, 84% 9%, 100% 9%, 98% 84%, 86% 93%, 50% 100%, 14% 93%, 2% 84%);
+    display: block;
+    width: 64px;
   }
-  .mk-mini[data-tier='legend'] {
-    --mk-a: #28382e;
-    --mk-b: #101e17;
-    --mk-ink: #fce7b1;
-  }
-  .mk-mini[data-tier='silver'] {
-    --mk-a: #d6dfe0;
-    --mk-b: #83989c;
-    --mk-ink: #243339;
-  }
-  .mk-mini.dim {
+  .mk-card.dim {
     opacity: 0.45;
-  }
-  .mk-mini b {
-    font-family: var(--display);
-    font-size: 1.375rem;
-    line-height: 1;
-    font-weight: 800;
-  }
-  .mk-mini small {
-    font-family: var(--display);
-    font-size: 0.6875rem;
-    font-weight: 700;
   }
 
   /* 목록 줄 */
@@ -1165,13 +1126,6 @@
     margin: 0;
     accent-color: var(--bad);
   }
-  .mk-rel .mk-mini {
-    width: 40px;
-    height: 46px;
-  }
-  .mk-rel .mk-mini b {
-    font-size: 1.125rem;
-  }
   .mk-lock {
     color: var(--bad) !important;
   }
@@ -1300,7 +1254,8 @@
     color: var(--on-pitch);
   }
   .mk-detail-card {
-    width: 188px;
+    /* 라커룸 카드와 같은 폭(.locker-player max-width) */
+    width: 170px;
   }
   .mk-detail-stats {
     display: grid;

@@ -98,6 +98,15 @@ function CardName({
 
 /** Collectible-card materials stay readable against both app themes and the pitch. */
 export const CARD_TONES = {
+  bronze: {
+    light: '#f6dcc6',
+    base: '#dcab84',
+    shade: '#b97e55',
+    line: '#8f5a35',
+    ink: '#3a1f0e',
+    shirt: '#6b3d20',
+    shirtInk: '#f6dcc6',
+  },
   silver: {
     light: '#f5f8fa',
     base: '#d8e2e6',
@@ -116,6 +125,15 @@ export const CARD_TONES = {
     shirt: '#705025',
     shirtInk: '#fff2cd',
   },
+  elite: {
+    light: '#fff4c4',
+    base: '#f2c95c',
+    shade: '#d39a26',
+    line: '#a8700f',
+    ink: '#3b2604',
+    shirt: '#7a5008',
+    shirtInk: '#fff4c4',
+  },
   legend: {
     light: '#3c5448',
     base: '#1d3529',
@@ -124,6 +142,15 @@ export const CARD_TONES = {
     ink: '#ffedbd',
     shirt: '#d7b56b',
     shirtInk: '#10271c',
+  },
+  icon: {
+    light: '#4a5a92',
+    base: '#1d2547',
+    shade: '#0f1633',
+    line: '#e6c369',
+    ink: '#ffe9b0',
+    shirt: '#e6c369',
+    shirtInk: '#0f1633',
   },
   youth: {
     light: '#edf5ed',
@@ -188,36 +215,44 @@ export type PlayerCardData = {
   youth: boolean;
 };
 
-/** T-11-114 카드 시즌 뱃지(웹 PlayerCard .card-season). */
+/** T-11-114 카드 시즌 뱃지(웹 PlayerCard .card-season) — 카드 위쪽 가운데. */
 function SeasonBadge({ season, compact }: { season: number; compact: boolean }) {
   return (
     <View
-      accessibilityLabel={teamSeasonLabel(season)}
+      pointerEvents="none"
       style={{
         position: 'absolute',
-        top: 26,
-        right: compact ? 4 : 11,
-        paddingHorizontal: compact ? 3 : 5,
-        paddingVertical: 1,
-        borderRadius: 3,
-        backgroundColor: cardSeasonColor(season),
-        borderWidth: 0.5,
-        borderColor: '#ffffff55',
+        top: compact ? 2 : 8,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
       }}
     >
-      <Text
-        maxFontSizeMultiplier={1.1}
+      <View
+        accessibilityLabel={teamSeasonLabel(season)}
         style={{
-          color: '#fff',
-          fontSize: compact ? 7 : 9,
-          lineHeight: compact ? 9 : 11,
-          fontWeight: '800',
-          letterSpacing: 0.5,
-          includeFontPadding: false,
+          paddingHorizontal: compact ? 3 : 5,
+          paddingVertical: 1,
+          borderRadius: 3,
+          backgroundColor: cardSeasonColor(season),
+          borderWidth: 0.5,
+          borderColor: '#ffffff55',
         }}
       >
-        {cardSeasonBadge(season)}
-      </Text>
+        <Text
+          maxFontSizeMultiplier={1.1}
+          style={{
+            color: '#fff',
+            fontSize: compact ? 7 : 9,
+            lineHeight: compact ? 9 : 11,
+            fontWeight: '800',
+            letterSpacing: 0.5,
+            includeFontPadding: false,
+          }}
+        >
+          {cardSeasonBadge(season)}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -281,11 +316,14 @@ export function PlayerCard({
   cell,
   code,
   compact = false,
+  mini = false,
   animate = true,
 }: {
   cell: PlayerCardData;
   code: string;
   compact?: boolean;
+  /** 이적시장 목록용 — compact에서 이름 줄을 뺀다(이름은 줄 옆에 따로 나온다). */
+  mini?: boolean;
   animate?: boolean;
 }) {
   const country = !cell.youth ? NATION_BY_CODE.get(cell.nation ?? DEFAULT_NATION) : undefined;
@@ -294,7 +332,9 @@ export function PlayerCard({
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [cardWidth, setCardWidth] = useState(compact ? 62 : 100);
   const shirtWidth = compact ? 25 : Math.min(43, Math.max(24, cardWidth - 56));
-  const height = compact ? 88 : 242 + (cell.peak !== undefined ? 31 : 0);
+  // 자리 OVR은 최고 OVR과 다를 때(제 자리가 아닐 때)만 — 같으면 같은 숫자가 두 번 보인다(웹 PlayerCard).
+  const deployed = cell.peak !== undefined && cell.peak !== cell.rating;
+  const height = compact ? (mini ? 68 : 88) : 242 + (deployed ? 31 : 0);
   const shield = 'M2 14H17L25 5L50 1L75 5L83 14H98L97 149L88 161L50 173L12 161L3 149Z';
   return (
     <View
@@ -442,19 +482,21 @@ export function PlayerCard({
       {!cell.youth && cell.season !== undefined ? (
         <SeasonBadge season={cell.season} compact={compact} />
       ) : null}
-      <View
-        style={{
-          width: '100%',
-          marginTop: compact ? 1 : 3,
-          paddingHorizontal: 1,
-          borderTopWidth: 0.5,
-          borderBottomWidth: 0.5,
-          borderColor: tone.line,
-        }}
-      >
-        <CardName name={cell.name} color={tone.ink} animate={animate} compact={compact} />
-      </View>
-      {cell.peak !== undefined ? (
+      {mini ? null : (
+        <View
+          style={{
+            width: '100%',
+            marginTop: compact ? 1 : 3,
+            paddingHorizontal: 1,
+            borderTopWidth: 0.5,
+            borderBottomWidth: 0.5,
+            borderColor: tone.line,
+          }}
+        >
+          <CardName name={cell.name} color={tone.ink} animate={animate} compact={compact} />
+        </View>
+      )}
+      {deployed ? (
         <View style={{ alignItems: 'center', marginTop: 2 }}>
           <Text
             maxFontSizeMultiplier={1.1}

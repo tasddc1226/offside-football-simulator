@@ -164,6 +164,8 @@ export * from './ticker.js';
 export * from './teams.js';
 export * from './friends.js';
 export * from './market.js';
+export * from './season-recap.js';
+export * from './owner-tier.js';
 
 export * from './app-auth.js';
 export * from './app-version.js';

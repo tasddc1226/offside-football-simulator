@@ -28,3 +28,22 @@ export function dist(a: string, b: string): number {
   const B = hexRgb(b);
   return Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]);
 }
+
+/** 도트 격자 한 칸 = 색 하나(빈 칸 null). 색마다 SVG path 하나로, 같은 색이 이어진 가로 칸은 한 조각으로 합친다. */
+export interface PixelPath {
+  fill: string;
+  d: string;
+}
+export function pixelPaths(grid: readonly (readonly (string | null | undefined)[])[]): PixelPath[] {
+  const byFill = new Map<string, string>();
+  grid.forEach((row, y) => {
+    for (let x = 0; x < row.length;) {
+      const c = row[x];
+      let w = 1;
+      while (x + w < row.length && row[x + w] === c) w++;
+      if (c) byFill.set(c, `${byFill.get(c) ?? ''}M${x} ${y}h${w}v1h-${w}z`);
+      x += w;
+    }
+  });
+  return [...byFill].map(([fill, d]) => ({ fill, d }));
+}

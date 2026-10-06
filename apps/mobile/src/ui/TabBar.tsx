@@ -26,6 +26,8 @@ export interface TabItem {
   testID?: string;
   /** T-11-034 아직 보지 않은 새 업적 수 — 있으면 아이콘 오른쪽 위에 점(웹 .tab-dot). */
   dot?: number;
+  /** 점의 접근성 글자(기본은 새 업적 수). */
+  dotLabel?: string;
   /** 현재 가능한 행동을 알리는 짧은 탭 안내. */
   hint?: string;
 }
@@ -195,7 +197,7 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
                 t.hint
                   ? `${t.label}, ${t.hint}`
                   : t.dot
-                    ? `${t.label}, ${L.achNew({ n: t.dot })}`
+                    ? `${t.label}, ${t.dotLabel ?? L.achNew({ n: t.dot })}`
                     : undefined
               }
               onPress={t.onPress}

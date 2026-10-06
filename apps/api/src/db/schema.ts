@@ -1065,3 +1065,62 @@ export const chatMutes = sqliteTable(
   },
   (table) => [index('chat_mutes_until_idx').on(table.until)],
 );
+
+/**
+ * T-11-128 구단주 시즌 결산. 시즌이 끝나면(프리시즌은 첫 시즌 개막) cron이 그 시각(cutoff)까지의 기록으로 한 번 적고 다시
+ * 세지 않는다 — 계산식이 바뀌어도 유저가 본 결산은 그대로다(team/seasonClose.ts). 선수 기록은 cutoff 전에 은퇴한 선수만 센다.
+ */
+export const ownerSeasonRecords = sqliteTable(
+  'owner_season_records',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    season: integer('season').notNull(),
+    players: integer('players').notNull(),
+    retired: integer('retired').notNull(),
+    bestCareerId: text('best_career_id'),
+    bestScore: integer('best_score'),
+    hofRank: integer('hof_rank'),
+    retiredNumbers: integer('retired_numbers').notNull(),
+    wallOfHonor: integer('wall_of_honor').notNull(),
+    firsts: integer('firsts').notNull(),
+    // 팀 성적도 마감 때 값을 옮겨 둔다(지난 시즌 팀은 친선전용으로 다시 고칠 수 있다).
+    teamId: text('team_id'),
+    teamName: text('team_name'),
+    teamRating: integer('team_rating'),
+    teamRank: integer('team_rank'),
+    wins: integer('wins').notNull().default(0),
+    draws: integer('draws').notNull().default(0),
+    losses: integer('losses').notNull().default(0),
+    goalsFor: integer('goals_for').notNull().default(0),
+    bestStreak: integer('best_streak').notNull().default(0),
+    // 업적 점수는 cutoff 뒤에 바뀐 구단주만 cutoff 기준으로 다시 센다. ach_at은 점수에 닿은 시각(같은 점수면 먼저 닿은 순).
+    achScore: integer('ach_score'),
+    achDone: integer('ach_done'),
+    achAt: text('ach_at'),
+    achRank: integer('ach_rank'),
+    achChecked: integer('ach_checked').notNull().default(0),
+    /** 결산 화면 · 공유 카드용 시즌 기록 묶음(SeasonRecapStats를 JSON으로). 굳히기 전이면 null. */
+    statsJson: text('stats_json'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.profileId, table.season] })],
+);
+
+/** T-11-128 구단주 휘장. 시즌 결산이 한 번 주고 지우지 않는다 — (구단주, 시즌, 종류)에 하나. */
+export const ownerHonors = sqliteTable(
+  'owner_honors',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    season: integer('season').notNull(),
+    kind: text('kind').notNull(),
+    band: integer('band'),
+    rank: integer('rank'),
+    value: integer('value'),
+    grantedAt: text('granted_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.profileId, table.season, table.kind] })],
+);

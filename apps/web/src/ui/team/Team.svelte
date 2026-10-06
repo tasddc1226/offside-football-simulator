@@ -11,6 +11,7 @@
     MANAGER_NAME_MIN,
     TEAM_NAME_MAX,
     TEAM_NAME_MIN,
+    TEAM_RATING_START,
     YOUTH_NAME,
     YOUTH_OVR,
     presetLayout,
@@ -377,7 +378,7 @@
   }
 </script>
 
-<div class="wrap" class:has-tabbar={!needLogin} class:lineup-editor={view === 'team' && !needLogin}>
+<div class="wrap" class:has-tabbar={!needLogin}>
   <Topbar />
 
   <LoadState {status} failText={L.loadFail} retry={load}>
@@ -452,7 +453,7 @@
         <TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />
       {:else}
       <TeamOpponents
-        ovr={team?.ovr ?? ovr}
+        rating={team?.rating ?? TEAM_RATING_START}
         {matchesLeft}
         {perDay}
         {opponents}
@@ -502,7 +503,6 @@
 {/if}
 
 <style>
-  .lineup-editor { max-width: 880px; }
   .tm-mode { margin-bottom: 12px; }
   .draft-notice {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;}
   .draft-notice p {margin:0;font-size:13px;flex:1 1 200px;}
