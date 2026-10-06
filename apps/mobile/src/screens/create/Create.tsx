@@ -22,7 +22,13 @@ import { baseline, candidatePotentialGrades } from '@offside/game/candidates';
 import { CONFEDS, flagOf } from '@offside/contracts/nations';
 import { BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
 import { isKorean, nationOf } from '@offside/game/nation';
-import { bodyNote, hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
+import {
+  bodyNote,
+  hiddenStrength,
+  scoutLine,
+  startOvr,
+  ovrFocusView,
+} from '@offside/app-core/create-view';
 import { adText } from '@offside/app-core/i18n/ko/ad';
 import { createText as L } from '@offside/app-core/i18n/ko/create';
 import { watchDetailOpening } from '@offside/app-core/season-opening';
@@ -190,6 +196,7 @@ export default function Create() {
   const focusLeft = FOCUS_PICK - C.focus.length;
   // 고른 조합이 시작 분포를 어떻게 바꾸는지 버튼마다 미리 보여준다(주력 ▲ / 가장 덜 쓰는 능력치 ▼).
   const preview = focusMod(C.pos, C.focus);
+  const ovrFocus = ovrFocusView(C.pos, C.focus, dpos);
 
   const step: 'form' | 'candidates' = s.candidates ? 'candidates' : 'form';
   const labels = attrLabels(C.pos);
@@ -223,6 +230,27 @@ export default function Create() {
 
   const onPitch = c.onPitch;
   const small = { fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 };
+
+  const ovrGuide = (
+    <View
+      testID="ovr-guide"
+      style={{ borderLeftWidth: 3, borderLeftColor: c.accent, paddingLeft: 12, gap: 4 }}
+    >
+      <Txt v="sm" bold>
+        {ovrFocus.title}
+      </Txt>
+      <Txt v="sm">{ovrFocus.groups}</Txt>
+      <Txt v="sm" tone="muted">
+        {ovrFocus.subs}
+      </Txt>
+      <Txt v="sm" tone="muted">
+        {ovrFocus.note}
+      </Txt>
+      <Txt v="sm" tone="muted">
+        {L.ovrStartNote}
+      </Txt>
+    </View>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -484,6 +512,7 @@ export default function Create() {
               </Field>
             ) : null}
 
+            {ovrGuide}
             <Field label={L.footLabel}>
               <Seg>
                 {feet.map((f) => (
@@ -595,6 +624,10 @@ export default function Create() {
                 </Txt>
               ) : null}
             </View>
+            {ovrGuide}
+            <Txt v="sm" tone="muted">
+              {L.ovrCore}
+            </Txt>
             <View style={{ gap: 10 }}>
               {s.candidates.map((cand, i) => {
                 const isOpen = s.candidatesOpen[i];
@@ -681,6 +714,9 @@ export default function Create() {
                                       fontSize: rem(0.75),
                                       color: hi ? c.ink : c.muted,
                                       ...(hi ? { fontWeight: '600' as const } : {}),
+                                      ...(ovrFocus.keys.includes(k)
+                                        ? { textDecorationLine: 'underline' as const }
+                                        : {}),
                                     }}
                                   >
                                     {labels[k]}
