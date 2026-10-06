@@ -1,4 +1,4 @@
-import { MIN_RETIRE_AGE } from '@offside/game/season';
+import { MIN_RETIRE_AGE, marketValue } from '@offside/game/season';
 // 선수 탭(웹 tabs/PlayerTab.svelte): 능력치 카드 · 선수 정보 · 국가대표 · 은퇴 선언(32세부터).
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -11,7 +11,6 @@ import { peekView } from '@offside/app-core/potential-peek';
 import { TRAITS } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
 import { leagueOf, fmtMoney } from '@offside/game/engine';
-import { marketValue } from '@offside/game/season';
 import {
   milStatusText,
   sportsServiceNotice,

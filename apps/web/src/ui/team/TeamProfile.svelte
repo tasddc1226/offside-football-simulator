@@ -11,7 +11,7 @@
   } from '@offside/app-core/api/team';
   import { requestFriend, type FriendState } from '@offside/app-core/api/friends';
   import { teamSeasonClosed } from '@offside/contracts/service-seasons';
-  import { localCareerNames } from '@offside/game/season';
+  import { localCareerNames } from '@offside/game/hof-store';
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import BackBar from '../BackBar.svelte';

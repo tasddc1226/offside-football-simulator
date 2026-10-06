@@ -56,7 +56,7 @@ import {
   type MarketView,
 } from '@offside/app-core/market';
 import { agoKo, cardTier, fmtValue } from '@offside/app-core/format';
-import { localCareerNames } from '@offside/game/season';
+import { localCareerNames } from '@offside/game/hof-store';
 import { POS } from '@offside/game/data';
 import { appState, prefs } from '../../store';
 import { notificationDestination } from '../../platform/notificationDestination';

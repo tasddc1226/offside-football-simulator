@@ -12,8 +12,8 @@ import { measureOperation } from './measurement.js';
 import { SAVE_VERSION } from '@offside/game/data';
 import { getActiveRng, setActiveRng } from '@offside/game/rng';
 import { loadSave } from '@offside/game/save';
-import { HOF_LOCAL_MAX, saveKey } from '@offside/game/season';
-import { storage } from '@offside/game/storage';
+import { HOF_LOCAL_MAX } from '@offside/game/hof-store';
+import { saveKey, storage } from '@offside/game/storage';
 import type { GameState, HofEntry } from '@offside/game/types';
 
 export const BACKUP_VERSION = 1;

@@ -12,5 +12,8 @@ export * from './positional.js';
 export * from './national.js';
 export * from './comps.js';
 export * from './season.js';
+export * from './storage.js';
+export * from './hof-store.js';
+export * from './legend.js';
 export * from './turn.js';
 export type * from './types.js';

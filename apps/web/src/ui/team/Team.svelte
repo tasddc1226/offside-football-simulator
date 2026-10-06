@@ -34,7 +34,7 @@
     type TeamOpponent,
     type TeamPlayer,
   } from '@offside/app-core/api/team';
-  import { localCareerNames } from '@offside/game/season';
+  import { localCareerNames } from '@offside/game/hof-store';
   import type { TeamLogo } from '@offside/contracts/team-logo';
   import TeamLogoEditor from './TeamLogoEditor.svelte';
   import { go } from '../nav.js';

@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { requireOptionalNativeModule } from 'expo';
 import { Linking, Platform } from 'react-native';
-import { loadKey, saveKey } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/storage';
 import { createReviewPrompt } from '@offside/app-core/reviewPrompt';
 import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
