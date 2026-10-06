@@ -1388,11 +1388,23 @@ textarea {
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   gap: 12px;
 }
 .player > *:not(.chalk) {
   position: relative;
+}
+/* T-11-120 도트 선수(24×32칸). 정수배(3배·2배)로만 키워 칸이 고르게 보이게 한다. */
+.player .avatar {
+  align-self: end;
+  width: 72px;
+  height: 96px;
+}
+@media (max-width: 359px) {
+  .player .avatar {
+    width: 48px;
+    height: 64px;
+  }
 }
 .player .shirt {
   font-family: var(--display);
