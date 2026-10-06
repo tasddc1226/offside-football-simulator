@@ -1,4 +1,5 @@
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
+import { tenureLabels } from '../i18n/en/achievements.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 업적 문구의 영어. 판정(achievements.ts)은 한국어 문구와 id를 그대로 만들고, 응답을 보낼 때 id로 문구만
@@ -45,7 +46,7 @@ const LABEL: Record<string, string> = {
   big5: 'Play in all Big 5 leagues',
   'all-dpos-ballon': "Ballon d'Or in every position",
   // 3단계
-  'one-club': 'One-club player: 10+ pro seasons at a single club',
+  ...tenureLabels,
   'caps-150': '150 international caps',
   'goals-500': '500 career goals',
   'season-50': '50 goals in a season',

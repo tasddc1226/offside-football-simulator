@@ -87,6 +87,15 @@ describe('시즌 업적 요약', () => {
     expect(achRankText(12, 297)).toBe('12위 · 297명 중');
     expect(achRankText(null, 3)).toMatch(/랭킹에 올라요/);
   });
+  it('장기근속과 원클럽맨의 미달성 안내는 서로 다른 조건이다', () => {
+    expect(achState(it_({ id: 'long-service', done: false }))).toMatch(
+      /누적 10시즌.*복귀.*상무 기간은 제외/,
+    );
+    expect(achState(it_({ id: 'one-club', done: false }))).toMatch(
+      /총 프로 10시즌.*일반 구단.*상무는 구단 수에서 제외/,
+    );
+    expect(achState(it_({ id: 'long-service', done: true }))).toBe('달성 완료');
+  });
   it('처음 펼칠 단계는 다 채우지 못한 첫 단계', () => {
     expect(achOpenGroup(groups)).toBe('first');
     expect(achOpenGroup([groups[2]!])).toBeNull();
