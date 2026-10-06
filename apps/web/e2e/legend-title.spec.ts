@@ -196,6 +196,9 @@ test('명예의 벽은 받은 칭호 목록에 추가되고 기존 대표 칭호
   await page.locator('[data-legend-title-pick="wall_of_honor"]').click();
   await expect.poll(() => bodies.at(-1)?.title).toBe('wall_of_honor');
   await expect(page.locator('[data-legend-title]')).toHaveText('‘명예의 벽’');
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('ft_outbox') ?? '[]').length))
+    .toBe(0);
   await page.goBack();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-wall-of-honor]')).toBeAttached();
@@ -205,4 +208,40 @@ test('명예의 벽은 받은 칭호 목록에 추가되고 기존 대표 칭호
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-wall-of-honor]')).toBeAttached();
   expect(checks).toBe(2);
+});
+
+test('상세가 없는 공개 선수도 대표 칭호와 별도로 명예의 벽 획득을 표시한다', async ({ page }) => {
+  await page.route(`${API}/v1/hof/${ID}`, (r) =>
+    r.fulfill(
+      ok({
+        entry: {
+          id: ID,
+          name: '공개선수',
+          pos: 'FW',
+          number: 9,
+          retireAge: 34,
+          peak: 86,
+          legendScore: 500,
+          apps: 304,
+          goals: 160,
+          assists: 80,
+          trophies: 0,
+          awards: 0,
+          caps: 0,
+          ballon: 0,
+          lastClub: '맨체스터 스카이블루',
+          retiredAt: '2026-09-30T00:00:00.000Z',
+          hasDetail: false,
+          title: 'europe',
+          retiredNumber: null,
+          wallOfHonor: true,
+        },
+        snapshot: null,
+      }),
+    ),
+  );
+  await page.goto(`/career/${ID}`);
+  await expect(page.locator('[data-wall-of-honor]')).toContainText('영구결번은 아니에요.');
+  await expect(page.locator('[data-legend-title]')).toHaveText('‘유럽파’');
+  await expect(page.locator('[data-legend-rn-pill]')).toHaveCount(0);
 });
