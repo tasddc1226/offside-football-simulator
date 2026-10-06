@@ -39,7 +39,7 @@
 
   ```
   - 영어로도 플레이할 수 있어요. 기기 언어가 한국어가 아니면 영어로 시작하고, 설정에서 바꿀 수 있어요.
-  - 커리어 화면 위에 내 선수가 도트 아바타로 나와요. 나이와 상황에 따라 모습이 바뀌어요.
+  - 내 선수가 도트 아바타로 나와요. 커리어 화면, 은퇴 리포트, 명예의 전당 시상대에서 볼 수 있어요.
   - 한국어가 아닌 기기에서는 앱 이름이 OFFSIDE로 보여요.
   - 알림과 사진 권한 안내가 기기 언어에 맞게 나와요.
   ```
@@ -60,7 +60,7 @@
 
   ```
   - OFFSIDE is now available in English. It starts in English when your device language isn't Korean, and you can switch languages in Settings.
-  - Your player now appears as a pixel avatar at the top of the career screen. The look changes with age and situation.
+  - Your player now appears as a pixel avatar on the career screen, the retirement report and the Hall of Fame podium.
   - The app name shows as OFFSIDE outside Korean.
   - Notification and photo permission prompts follow your device language.
   ```
@@ -76,7 +76,7 @@
 
   ```
   - 영어로도 플레이할 수 있어요. 설정에서 언어를 바꿀 수 있어요.
-  - 커리어 화면 위에 내 선수가 도트 아바타로 나와요.
+  - 내 선수가 도트 아바타로 나와요. 은퇴 리포트와 명예의 전당에도 나와요.
   - 알림 아이콘을 새 로고로 바꿨어요.
   - 한국어가 아닌 기기에서는 앱 이름이 OFFSIDE로 보여요.
   ```
@@ -90,7 +90,7 @@
 
   ```
   - OFFSIDE is now available in English. Switch languages in Settings.
-  - Your player now appears as a pixel avatar on the career screen.
+  - Your player now appears as a pixel avatar, including in the Hall of Fame.
   - Notifications now use the new OFFSIDE logo.
   - The app name shows as OFFSIDE outside Korean.
   ```
@@ -186,9 +186,11 @@ App Store는 6.9"(1320×2868), Google Play는 휴대전화(1080×2160)와 그래
 
 1.1.1 심사는 보류 중이다(1.1.0 패치 진행). 그 사이 main 변경을 이 브랜치에 합치고 아래에 남긴다.
 
-| main 커밋                  | 1.1.1 영향                                                                                                              |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| #527 후보 잠재력·은퇴 25세 | 선수 생성 화면(2번)에 후보 잠재력 범위 광고 버튼. 문구 변경 없음                                                        |
-| #528 도트 아바타           | 커리어 화면 상단 아바타. 새 기능 문구에 넣음. 게임 화면 머리(3·4번, 5·6번 시트 뒤)가 아바타 전 화면이라 **재촬영 필요** |
-| #530 포지션별 OVR 안내     | 선수 생성·훈련 화면에 포지션별 OVR 설명. 2번 스크린샷(선수 생성) **재촬영 필요**                                        |
-| #532 영어 화면 표시 수정   | 1.1.0 OTA로 먼저 나감. 이 브랜치의 같은 수정과 합쳐짐                                                                   |
+| main 커밋                    | 1.1.1 영향                                                                                                              |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| #527 후보 잠재력·은퇴 25세   | 선수 생성 화면(2번)에 후보 잠재력 범위 광고 버튼. 문구 변경 없음                                                        |
+| #528 도트 아바타             | 커리어 화면 상단 아바타. 새 기능 문구에 넣음. 게임 화면 머리(3·4번, 5·6번 시트 뒤)가 아바타 전 화면이라 **재촬영 필요** |
+| #530 포지션별 OVR 안내       | 선수 생성·훈련 화면에 포지션별 OVR 설명. 2번 스크린샷(선수 생성) **재촬영 필요**                                        |
+| #532 영어 화면 표시 수정     | 1.1.0 OTA로 먼저 나감. 이 브랜치의 같은 수정과 합쳐짐                                                                   |
+| #531 은퇴식 도트 선수        | 은퇴 리포트(7번)에 도트 선수. 새 기능 문구에 반영. 7번 스크린샷 **재촬영 필요**                                         |
+| #533 명예의 전당 시상대 도트 | 명예의 전당 화면(스크린샷 없음). 새 기능 문구에 반영                                                                    |
