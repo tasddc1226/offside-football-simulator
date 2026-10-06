@@ -39,7 +39,7 @@ const unitOf = (p: RewardPlacement) => (__DEV__ ? TestIds.REWARDED : Platform.se
  */
 const DAILY_CAP: Partial<Record<RewardPlacement, number>> = { boost: 20 };
 const today = () => new Date().toDateString();
-/** 오늘 광고로 받은 횟수 — 'Tue Oct 07 2026|3' 꼴로 둔다. 날짜가 바뀌면 0. */
+/** 오늘 띄운 광고 수 — 'Tue Oct 07 2026|3' 꼴로 둔다. 날짜가 바뀌면 0. */
 function watchedToday(p: RewardPlacement): number {
   const [day, n] = (kv.getString(`offside_rewarded_${p}`) ?? '').split('|');
   return day === today() ? Number(n) || 0 : 0;
@@ -66,9 +66,7 @@ function watch(unit: string): Promise<WatchResult> {
     let shown = false;
     const offs = [
       ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-        ad.show()
-          .then(() => (shown = true))
-          .catch(() => done());
+        ad.show().catch(() => done());
       }),
       ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
         earned = true;
@@ -107,8 +105,9 @@ export async function claimReward(
     if (!unit || !(await askConsent())) return adText.rewardedUnavailable;
     const result = await watch(unit);
     if (result === 'failed') return adText.rewardedUnavailable;
-    if (result === 'closed') return skipped;
+    // 띄운 광고는 끝까지 봤든 닫았든 센다(게재 수가 문제라). 불러오지 못한 광고는 세지 않는다.
     countWatch(p);
+    if (result === 'closed') return skipped;
   }
   onEarned();
   return '';
