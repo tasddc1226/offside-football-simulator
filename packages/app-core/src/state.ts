@@ -172,6 +172,7 @@ export interface AppState {
   candidates: Candidate[] | null;
   candidatesOpen: boolean[];
   candidatePick: number | null;
+  candidatePotentialOpen: boolean;
   /** T-10-011. 소식 화면에서 마지막으로 본 게시판. */
   board: BoardKey;
   /** 소식 화면에서 펼친 글(없으면 목록). 홈의 소식 섹션에서 누른 글을 바로 열 때도, 뒤로 가기로 되살릴 때도 쓴다. */
@@ -216,6 +217,7 @@ export const initialAppState = (): AppState => ({
   candidates: null,
   candidatesOpen: [],
   candidatePick: null,
+  candidatePotentialOpen: false,
   board: 'notice',
   boardOpenId: null,
   boardTop: 0,

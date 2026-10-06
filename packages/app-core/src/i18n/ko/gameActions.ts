@@ -66,6 +66,7 @@ const ko = {
   contractYears: (p: { years: number }) => `${p.years}년 계약`,
   renewExtension: (p: { ext: number; total: number; desc: string }) =>
     `1년 남음 · ${p.ext}년 연장 · 총 ${p.total}년. ${p.desc}`,
+  retireAgeLimit: (p: { age: number }) => `은퇴는 ${p.age}세부터 할 수 있어요.`,
   retireBtn: '은퇴하기',
   // 계약서
   contractTitleExt: '연장 계약서에 사인할까요?',

@@ -62,6 +62,7 @@ export function newGame(
   } & ({ type: string; focus?: undefined } | { type?: undefined; focus: AttrKey[] }),
   seed: number,
   presetAttrs?: Record<AttrKey, number>,
+  presetPotential?: { value: number; scouted: number },
 ): GameState {
   const attrs = {} as Record<AttrKey, number>;
   const typeId = o.focus ? typeForFocus(o.pos, o.focus) : o.type;
@@ -80,8 +81,10 @@ export function newGame(
   // T-11-093 시즌에 만든 선수만 서버 설정(기본 75·6)으로 뽑는다. 프리시즌 선수는 예전 값 그대로.
   const retireAt = o.retireAt !== PRESEASON_RETIRE_AT ? o.retireAt : undefined;
   const potDraw = retireAt ? { mean: BAL.potMean, sd: BAL.potSd } : PRESEASON_POT;
-  const pot = clamp(Math.round(potDraw.mean + gauss() * potDraw.sd), 55, 96);
-  const scouted = clamp(Math.round(pot + gauss() * BAL.potScoutSd), 55, 96);
+  const drawnPot = clamp(Math.round(potDraw.mean + gauss() * potDraw.sd), 55, 96);
+  const drawnScout = clamp(Math.round(drawnPot + gauss() * BAL.potScoutSd), 55, 96);
+  const pot = presetPotential ? clamp(Math.round(presetPotential.value), 55, 96) : drawnPot;
+  const scouted = presetPotential ? clamp(Math.round(presetPotential.scouted), 55, 96) : drawnScout;
   // sub/season/seasonStartSub은 initSubs()/newSeason() 호출로만 실제 값이 정해진다(둘 다 RNG를
   // 소모하므로, 그 호출 순서를 바꾸지 않기 위해 이 시점엔 아직 실행하지 않는다). 여기서는 타입을
   // 만족하는 빈 기본값을 채워 두고, 아래에서 원래 순서 그대로 덮어쓴다 — 캐스팅(타입 우회) 없이도

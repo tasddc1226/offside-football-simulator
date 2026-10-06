@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ATTR_KEYS, CLUBS, LAST_PHASE } from './data.js';
 import { newGame, resolveChoice } from './engine.js';
 import { createRng, setActiveRng } from './rng.js';
-import { acceptOption, endSeason, market, retireAge, VETERAN_RENEW } from './season.js';
+import { acceptOption, endSeason, market, retireAge, VETERAN_RENEW, retire } from './season.js';
 import { playPhase } from './turn.js';
 import type { GameState } from './types.js';
 
@@ -127,4 +127,26 @@ describe('T-11-045 은퇴 나이', () => {
     expect(extended).toBeGreaterThan(40);
     expect(extended).toBeLessThanOrEqual(44);
   }, 30_000); // 커리어 40개를 끝까지 돌린다 — CI(x64)에선 5초를 넘긴다
+});
+
+describe('earliest retirement', () => {
+  it('rejects retirement before 25 without changing the career', () => {
+    const s = make(100, 45);
+    s.age = 24;
+    const before = JSON.stringify(s);
+    expect(() => retire(s)).toThrow('RETIREMENT_AGE_LOCKED');
+    expect(JSON.stringify(s)).toBe(before);
+    s.age = 25;
+    expect(retire(s).age).toBe(25);
+  });
+  it('always offers a playable path below 25 even without a club offer', () => {
+    const s = veteran(24, 45, { apps: 0, rating: 5 });
+    for (const k of ATTR_KEYS) s.attrs[k] = 20;
+    for (const k of Object.keys(s.sub)) s.sub[k] = 20;
+    const m = market(s);
+    expect(m.canRetire).toBe(false);
+    expect(m.options.length).toBeGreaterThan(0);
+    s.age = 25;
+    expect(market(s).canRetire).toBe(true);
+  });
 });

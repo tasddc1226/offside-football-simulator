@@ -9,7 +9,7 @@ import type { SeasonGrowth } from '@offside/contracts';
 import { isHofEligible, SHORT_CAREER_NOTE } from '@offside/contracts/hof-rules';
 import { PHASES, LAST_PHASE, type AttrKey } from '@offside/game/data';
 import { clamp, createRng, freshSeed, setActiveRng } from '@offside/game/rng';
-import { generateCandidates } from '@offside/game/candidates';
+import { generateCandidates, type CandidatePotential } from '@offside/game/candidates';
 import {
   leagueOf,
   clubsIn,
@@ -28,7 +28,7 @@ import {
 } from '@offside/game/engine';
 import { playPhase, type PhaseResult } from '@offside/game/turn';
 import { eventById } from '@offside/game/events-data';
-import { choiceOdds } from '@offside/game/balance';
+import { applyLatestBalance, choiceOdds } from '@offside/game/balance';
 import { offsetToRoll, tapOffset, timingNote, zoneLabel, zoneWidth } from '@offside/game/minigame';
 import { isHiddenEvent } from '@offside/game/dexGroups';
 import { scoreLine, type NatTourResult } from '@offside/game/national';
@@ -39,6 +39,7 @@ import {
   acceptOption,
   canAcceptRenewal,
   retire,
+  MIN_RETIRE_AGE,
   loadKey,
   saveKey,
   type SeasonEndResult,
@@ -154,6 +155,7 @@ function tourView(x: NatTourResult): TourView {
 // T-10-112 스카우트 시드: 한 번 정하면 커리어가 고3 첫 시즌을 마칠 때까지 유지한다. 뒤로 가기·새로 고침·
 // 시작 직후 포기로 다시 와도 같은 조건이면 같은 후보가 나온다(다시 뽑아 고르는 리세 방지).
 const SCOUT_SEED = 'ft_scout_seed';
+const SCOUT_REVEAL = 'ft_scout_reveal';
 function scoutSeed(): number {
   const kept = loadKey<number>(SCOUT_SEED);
   if (typeof kept === 'number') return kept;
@@ -302,7 +304,8 @@ export function createGameActions(host: GameHost) {
     }
     if (p.type === 'market') {
       if (p.res) return showSeasonEnd(p.res);
-      if (!p.m) {
+      // Old saves may be paused at a forced retirement before the new minimum.
+      if (!p.m || (s.age < MIN_RETIRE_AGE && !p.m.options.length)) {
         p.m = market(s);
         host.save();
       }
@@ -517,8 +520,10 @@ export function createGameActions(host: GameHost) {
           return { name: o.name, lg: o.desc ?? '', salary: null, sub: null };
         }),
       },
-      // T-10-029: 은퇴는 언제든 고를 수 있다. 은퇴할 때가 아니면(canRetire=false) 한 번 더 묻고, 취소하면 이 창으로 돌아온다.
-      [{ label: L.retireBtn, fn: () => (m.canRetire ? doRetire() : retireAsk(nextPending)) }],
+      // T-11-118: 25세부터 은퇴할 수 있다. 병역 등으로 시장에서 은퇴를 권하지 않으면 한 번 더 묻는다.
+      G.age >= MIN_RETIRE_AGE
+        ? [{ label: L.retireBtn, fn: () => (m.canRetire ? doRetire() : retireAsk(nextPending)) }]
+        : [],
     );
   }
 
@@ -678,7 +683,7 @@ export function createGameActions(host: GameHost) {
   }
 
   function doRetire() {
-    if (!appState.G || appState.G.retired) return;
+    if (!appState.G || appState.G.retired || appState.G.age < MIN_RETIRE_AGE) return;
     appState.lastRetired = retire(appState.G!, publicNameOf(appState.G!.name) !== null);
     host.uploadRetirement(appState.G!.cid, appState.lastRetired);
     appState.G!.pending = null;
@@ -720,6 +725,10 @@ export function createGameActions(host: GameHost) {
 
   /** 은퇴 확인. onCancel: '조금 더 뛴다'를 누르면 할 일(기본은 닫기, 이적 시장에선 시장으로 돌아간다). */
   function retireAsk(onCancel: () => void = sheet.closeSheet) {
+    if (!appState.G || appState.G.age < MIN_RETIRE_AGE) {
+      host.toast(L.retireAgeLimit({ age: MIN_RETIRE_AGE }));
+      return;
+    }
     // T-10-032: 짧은 커리어는 전체 명예의 전당에 오르지 않는다 — 은퇴 전에 미리 알린다.
     const text = isHofEligible(appState.G!.age)
       ? L.retireTextHof
@@ -733,7 +742,12 @@ export function createGameActions(host: GameHost) {
     );
   }
 
-  function startCareer(name: string, number: number, presetAttrs?: Record<AttrKey, number>) {
+  function startCareer(
+    name: string,
+    number: number,
+    presetAttrs?: Record<AttrKey, number>,
+    presetPotential?: CandidatePotential,
+  ) {
     const previous = appState.G;
     const finalName = name.trim() || randomName();
     const finalNumber = clamp(+number || randomNumber(), 1, 99);
@@ -749,6 +763,7 @@ export function createGameActions(host: GameHost) {
       },
       seed,
       presetAttrs,
+      presetPotential,
     );
     host.save();
     appState.screen = 'game';
@@ -762,6 +777,8 @@ export function createGameActions(host: GameHost) {
   }
 
   function rollCandidates() {
+    applyLatestBalance();
+    appState.candidatePotentialOpen = loadKey<number>(SCOUT_REVEAL) === scoutSeed();
     appState.candidates = generateCandidates(
       appState.C.pos,
       appState.C.focus,
@@ -772,7 +789,16 @@ export function createGameActions(host: GameHost) {
     appState.candidatePick = null;
   }
 
+  function revealCandidatePotential(batch = appState.candidates): boolean {
+    if (!batch || batch !== appState.candidates) return false;
+    if (!saveKey(SCOUT_REVEAL, scoutSeed())) return false;
+    appState.candidatePotentialOpen = true;
+    appState.candidatesOpen = batch.map(() => true);
+    return true;
+  }
+
   return {
+    revealCandidatePotential,
     advance,
     nextPending,
     chooseEvent,

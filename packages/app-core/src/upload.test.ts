@@ -86,6 +86,7 @@ describe('T-11-030 잠재력 관찰 업로드', () => {
     const bodies = sent.season.map((b) => PutCareerSeasonBodySchema.parse(b));
     expect(bodies[0]!.career.pot).toBe(first);
     expect(bodies[1]!.career.pot).toBeUndefined();
+    s.age = 25;
     const entry = g.retire(s);
     up.uploadRetirement(s.cid, entry);
     await new Promise((r) => setTimeout(r, 0));

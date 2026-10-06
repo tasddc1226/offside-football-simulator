@@ -10,6 +10,7 @@ export default {
       'src/platform/pushTracking.test.mjs',
       'src/platform/pushPreferences.test.mjs',
       'src/platform/engagement.test.mjs',
+      'src/platform/rewarded.test.mjs',
     ],
   },
 };
