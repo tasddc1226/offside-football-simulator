@@ -1,7 +1,7 @@
 # T-11-125: 시즌 연계 PVP 오프사이드 리그컵 기획
 
 작성일: 2026-10-06 · 상태: 기획 / 정책 결정 전 / 구현 미승인
-소스 확인 기준: 원격 main `8330893f`. 관련: [시즌·구단 기획](season-card-market-plan.md), [자금·시장 기획](owner-funds-card-market-plan.md), [푸시 알림함](../operations/push-inbox.md).
+소스 확인 기준: 원격 main `1d19e8c3`. 관련: [시즌·구단 기획](season-card-market-plan.md), [자금·시장 기획](owner-funds-card-market-plan.md), [푸시 알림함](../operations/push-inbox.md).
 
 이 문서는 문서 작업만 승인받은 draft다. 기능 구현·DB 변경·merge·deploy 승인이 아니다. 아래 **확정 요구**만 사용자 합의이고, **제안**과 **결정 필요**는 구현 전에 승인받는다. 기존 시장 기획의 당시 코드 설명보다 아래 최신 코드 확인을 우선한다.
 
