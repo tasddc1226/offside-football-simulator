@@ -41,6 +41,15 @@ const ARCHETYPE: Record<Pos, Record<AttrKey, string>> = {
 };
 
 const ko = {
+  ovrFocusTitle: (p: { role: string }) => `${p.role} OVR 주요 능력치`,
+  ovrFocusSubs: (p: { list: string }) => `주요 세부 능력치: ${p.list}`,
+  ovrHeadingGroup: '수비(헤딩)',
+  ovrHeadingNote:
+    '헤딩은 수비 항목에 있어요. 이 포지션은 수비 항목 중 헤딩 정확도만 OVR에 반영돼요.',
+  ovrFocusNote: 'OVR은 선택한 포지션의 세부 능력치를 반영해요. OVR 비중과 훈련 성장률은 달라요.',
+  ovrStartNote: '시작 OVR은 카드 능력치로 맞춰요. 육성할 때는 선택한 포지션 기준으로 평가해요.',
+  ovrCore: '밑줄 친 능력치는 이 포지션의 OVR 주요 항목이에요.',
+
   // 제목·라이브 카드
   titleForm: '고교 3학년, 나는 어떤 선수인가',
   titleCandidates: '스카우트 리포트를 비교해 보세요',

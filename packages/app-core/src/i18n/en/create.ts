@@ -41,6 +41,16 @@ const ARCHETYPE: Record<Pos, Record<AttrKey, string>> = {
 const FOOT: Record<string, string> = { 오른발: 'Right foot', 왼발: 'Left foot', 양발: 'Both feet' };
 
 export const create: Translation<CreateMsgs> = {
+  ovrFocusTitle: (p) => `${p.role} OVR key attributes`,
+  ovrFocusSubs: (p) => `Key sub-attributes: ${p.list}`,
+  ovrHeadingGroup: 'Defense (heading)',
+  ovrHeadingNote:
+    'Heading is in Defense. Only heading accuracy from this group contributes to OVR in this role.',
+  ovrFocusNote:
+    'OVR uses sub-attributes for your selected role. OVR weight differs from training growth rate.',
+  ovrStartNote: 'Starting OVR is set from the card attributes. Development uses the selected role.',
+  ovrCore: 'Underlined attributes are key OVR groups for this role.',
+
   titleForm: 'Final year of high school. What kind of player are you?',
   titleCandidates: 'Compare the scouting reports',
   previewLabel: 'Player preview',
