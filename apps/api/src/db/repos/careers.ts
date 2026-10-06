@@ -40,7 +40,11 @@ import {
 /** Overlay server evidence on every public snapshot; old forged snapshots are sanitized too. */
 export function verifiedSnapshot(snapshot: LegendSnapshot, granted: boolean): LegendSnapshot {
   const titles = (snapshot.titles ?? []).filter((t) => t.id !== WALL_OF_HONOR_TITLE_ID);
-  if (granted) titles.push({ id: WALL_OF_HONOR_TITLE_ID, year: 0 });
+  if (granted) {
+    // Reserve the schema's final slot for the server title even for a full client list.
+    titles.length = Math.min(titles.length, 199);
+    titles.push({ id: WALL_OF_HONOR_TITLE_ID, year: 0 });
+  }
   return { ...snapshot, titles };
 }
 

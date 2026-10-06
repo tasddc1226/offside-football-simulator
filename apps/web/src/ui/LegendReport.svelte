@@ -211,7 +211,7 @@
       </div>
     </section>
   {/if}
-  {#if d || rnGranted}
+  {#if d || rnGranted || v.wallOfHonor}
     {#await import('./LateCredits.svelte') then { default: Credit }}
       <Credit {v} rn={rnv} {reveal} />
     {/await}

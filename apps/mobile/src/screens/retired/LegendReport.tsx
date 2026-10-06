@@ -418,7 +418,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
           </Reveal>
         ) : null}
 
-        {d || rnGranted ? <LateCredits v={v} rn={rnv} /> : null}
+        {d || rnGranted || v.wallOfHonor ? <LateCredits v={v} rn={rnv} /> : null}
 
         <Reveal id="finale" testID="credit-finale">
           <Finale v={v} />
