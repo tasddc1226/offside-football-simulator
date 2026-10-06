@@ -6,6 +6,7 @@
   import { hofStart } from '@offside/app-core/state';
   import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
   import Laurel from './Laurel.svelte';
+  import MoreLink from './MoreLink.svelte';
   import TeamLogo from './team/TeamLogo.svelte';
   import { appState } from './state.svelte.js';
   import { go } from './nav.js';
@@ -35,7 +36,7 @@
       <h2 style="margin-bottom:2px">{L.homeValueTitle}</h2>
       <p class="muted fs-sm" style="margin:0 0 8px">{L.homeValueSub}</p>
     </div>
-    <button class="icon-btn" data-act="club-value-all" onclick={() => openRanking()}>{L.homeValueAll}</button>
+    <MoreLink act="club-value-all" what={L.homeValueTitle} onclick={() => openRanking()} />
   </div>
   {#if failed}
     <p class="empty">{L.rankFail}</p>
@@ -69,9 +70,6 @@
   .club-value-title {
     flex: 1;
     min-width: 0;
-  }
-  .club-value-head .icon-btn {
-    flex: none;
   }
   .club-value-row {
     grid-template-areas: 'rank main value';

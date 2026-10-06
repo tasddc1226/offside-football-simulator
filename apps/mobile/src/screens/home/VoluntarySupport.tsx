@@ -16,9 +16,9 @@ export function VoluntarySupport() {
     setBusy(true);
     try {
       const copied = await Clipboard.setStringAsync(ACCOUNT);
-      toast(copied ? L.supportCopied : L.supportCopyFailed);
+      toast(copied ? L.supportCopied : L.supportCopyFailed({ account: ACCOUNT }));
     } catch {
-      toast(L.supportCopyFailed);
+      toast(L.supportCopyFailed({ account: ACCOUNT }));
     } finally {
       setBusy(false);
     }
@@ -32,17 +32,9 @@ export function VoluntarySupport() {
       <Txt v="sm" tone="muted">
         {L.supportBody}
       </Txt>
-      <Btn
-        testID="coffee"
-        disabled={busy}
-        onPress={() => void copyAccount()}
-        style={{ alignSelf: 'flex-start' }}
-      >
+      <Btn testID="coffee" disabled={busy} onPress={() => void copyAccount()}>
         {L.supportCopy}
       </Btn>
-      <Txt v="sm" tone="muted" selectable>
-        {ACCOUNT}
-      </Txt>
     </Card>
   );
 }

@@ -9,7 +9,6 @@ export const hof: Translation<HofMsgs> = {
   tabTeams: 'Team ranking',
   tabAch: 'Owner ranking',
   title: 'Hall of Fame',
-  seeAll: 'See all',
   sortScore: 'Legend Score',
   sortValue: 'Retirement value',
   sortGoals: 'Goals',

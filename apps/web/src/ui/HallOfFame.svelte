@@ -19,6 +19,7 @@
   import { openHof } from './nav.js';
   import HofRow, { type RowStats } from './HofRow.svelte';
   import HofPodium from './HofPodium.svelte';
+  import MoreLink from './MoreLink.svelte';
   import { appState } from './state.svelte.js';
   import { hofText as L } from '@offside/app-core/i18n/ko/hof';
   import { seasonLabel } from '@offside/app-core/seasonName';
@@ -186,7 +187,7 @@
         <h2 style="margin-bottom:8px">{L.title}</h2>
       </div>
       {#if hasAll}
-        <button class="icon-btn" data-act="hof-all" onclick={openHof}>{L.seeAll}</button>
+        <MoreLink act="hof-all" what={L.title} onclick={openHof} />
       {/if}
     </div>
   {/if}

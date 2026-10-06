@@ -123,7 +123,6 @@ const ko = {
   homeValueTitle: '구단 가치 TOP 3',
   homeValueSub: '선발 11명의 카드 기준가를 더했어요.',
   homeValueEmpty: '아직 랭킹에 오른 팀이 없어요.',
-  homeValueAll: '전체 보기',
   homeValueRowAria: (p: { rank: number; name: string; manager: string; value: string }) =>
     `${p.rank}위 ${p.name}, 감독 ${p.manager}, 구단 가치 ${p.value}, 팀 상세 보기`,
   // 팀 프로필

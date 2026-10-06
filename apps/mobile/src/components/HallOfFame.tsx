@@ -30,6 +30,7 @@ import { appState } from '../store';
 import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
 import { Btn } from '../ui/Btn';
+import { MoreLink } from '../ui/MoreLink';
 import { Card } from '../ui/Card';
 import { Press } from '../ui/Press';
 import { scrollTo } from '../ui/scroll';
@@ -212,9 +213,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           </View>
         ) : null}
         {!full && (all?.length || homeSeason !== null) ? (
-          <Btn sm testID="hof-all" onPress={openHof}>
-            {L.seeAll}
-          </Btn>
+          <MoreLink testID="hof-all" what={L.title} onPress={openHof} />
         ) : null}
       </View>
       {full && searching && !upcoming ? (

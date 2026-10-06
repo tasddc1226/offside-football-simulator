@@ -6,7 +6,7 @@
   // 기존 공개 후원 정보. 게임 혜택이나 광고 제거 구매와 연결하지 않는다.
   const ACCOUNT = '토스뱅크 1000-1599-4723 양*영';
   async function copyAccount() {
-    toast((await copyText(ACCOUNT)) ? L.supportCopied : L.supportCopyFailed);
+    toast((await copyText(ACCOUNT)) ? L.supportCopied : L.supportCopyFailed({ account: ACCOUNT }));
   }
 </script>
 
@@ -14,13 +14,11 @@
   <h2 id="home-support">{L.supportTitle}</h2>
   <p class="muted">{L.supportBody}</p>
   <button class="btn" data-act="coffee" onclick={copyAccount}>{L.supportCopy}</button>
-  <p class="muted support-account">{ACCOUNT}</p>
 </section>
 
 <style>
   .voluntary-support { margin-top: 24px; }
   h2 { font-size: 18px; margin: 0 0 8px; }
   p { font-size: 14px; line-height: 1.6; }
-  button { min-height: 44px; margin-top: 12px; max-width: 100%; }
-  .support-account { margin: 8px 0 0; overflow-wrap: anywhere; }
+  button { width: 100%; min-height: 44px; margin-top: 12px; justify-content: center; }
 </style>

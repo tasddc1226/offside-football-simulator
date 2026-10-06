@@ -34,7 +34,8 @@ export const home: Translation<HomeMsgs> = {
   chatStatusUnread: (p) => plural(p.n, 'unread chat message'),
   noticeTitle: 'Announcements',
   releaseTitle: 'Release notes',
-  newsAll: 'See all',
+  more: 'More',
+  moreAria: (p) => `More ${p.what}`,
   newsFailed: "Couldn't load the news.",
   newsEmpty: 'No posts yet.',
   pinned: 'Pinned',
@@ -46,9 +47,8 @@ export const home: Translation<HomeMsgs> = {
   tickerIdle: 'Transfer news and server firsts show up here',
   tickerAge: (p) => `(age ${p.age})`,
   supportTitle: 'Support the developer',
-  supportBody:
-    "If you enjoyed the game, please support its development. Donations are optional and don't unlock game perks or remove ads.",
+  supportBody: 'If you enjoyed the game, please support the developer.',
   supportCopy: 'Copy bank account',
   supportCopied: 'Account number copied. Thank you',
-  supportCopyFailed: "Couldn't copy. Type the account number below by hand",
+  supportCopyFailed: (p) => `Couldn't copy. ${p.account}`,
 };

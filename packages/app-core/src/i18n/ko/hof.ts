@@ -11,7 +11,6 @@ const ko = {
   tabTeams: '팀 랭킹',
   tabAch: '구단주 랭킹',
   title: '명예의 전당',
-  seeAll: '전체 보기',
   // 순위 유형
   sortScore: '레전드 점수',
   sortValue: '은퇴 가치',
