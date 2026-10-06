@@ -3,7 +3,6 @@ import type { PlayStyle } from '@offside/contracts';
 import { STYLE_COUNTERS } from '@offside/contracts/play-style';
 import type { CareerRecord, LegendSource } from '@offside/game/types';
 import type { LegendView } from './state.js';
-import { RN_DEFAULT, rnColors } from './rnStyle.js';
 import { shareCardData } from './shareCard.js';
 
 const season = (
@@ -105,12 +104,11 @@ describe('T-10-079 공유 이미지 카드 내용', () => {
       '월드클래스 레전드',
       '👑 A 영구결번 17',
     ]);
-    // 점수 옆 결번 유니폼 — 구단 엠블럼 색.
-    expect(c.jersey).toMatchObject({ name: v.name, number: 17, colors: rnColors('k1-1') });
-    expect(c.jersey?.colors.base).toMatch(/^#/);
+    // 점수 옆 결번 액자 — 그 구단 유니폼.
+    expect(c.jersey).toEqual({ number: 17, clubId: 'k1-1' });
   });
 
-  it('결번이 없으면 유니폼 없이, 모르는 구단의 결번은 기본 색 유니폼', () => {
+  it('결번이 없으면 액자 없이, 모르는 구단의 결번도 구단 id째 넘긴다(기본 색은 rnFrame이 정한다)', () => {
     const one = shareCardData(view([season(2027, 'A', 'K리그1')]), null);
     expect(one.jersey).toBeNull();
     // 한 시즌이면 기간도 한 해만.
@@ -118,7 +116,7 @@ describe('T-10-079 공유 이미지 카드 내용', () => {
     const v = view([season(2027, 'A', 'K리그1')], {
       rn: { kind: 'granted', clubId: 'zz-9', club: 'A', number: 3, seq: 2 },
     });
-    expect(shareCardData(v, null).jersey?.colors).toEqual(RN_DEFAULT);
+    expect(shareCardData(v, null).jersey).toEqual({ number: 3, clubId: 'zz-9' });
   });
 
   it('구단이 많으면 첫 구단과 마지막 구단만 남기고, 성향이 있으면 성향 칸을 채운다', () => {

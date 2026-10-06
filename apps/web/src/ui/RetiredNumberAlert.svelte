@@ -6,7 +6,7 @@
   import { defaultClubName } from '@offside/contracts/club-names';
   import { rnAlert } from './retiredNumber.svelte.js';
   import { openPublicLegendById } from './legend.js';
-  import { RN_SHIRT, RN_TRIM, rnStyle } from '@offside/app-core/rnStyle';
+  import RnFrame from './RnFrame.svelte';
   import { dur } from './motion.js';
   import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
 
@@ -33,18 +33,13 @@
       class="update-banner rn-alert"
       role="status"
       data-rn-alert={item.seq}
-      style={rnStyle(item.clubId)}
       transition:fly|global={{ y: -16, duration: dur(240) }}
       onmouseenter={() => (holding = true)}
       onmouseleave={() => (holding = false)}
       onfocusin={() => (holding = true)}
       onfocusout={() => (holding = false)}
     >
-      <svg class="rn-jersey rn-alert-shirt" viewBox="0 0 120 124" aria-hidden="true">
-        <path class="rn-shirt" d={RN_SHIRT} />
-        <path class="rn-trim" d={RN_TRIM} />
-        <text class="rn-jersey-num" x="60" y="92">{item.number}</text>
-      </svg>
+      <RnFrame class="rn-alert-frame" clubId={item.clubId} number={item.number} />
       <span class="news-text">
         <b>{L.alertTitle({ name: item.name, number: item.number })}</b>
         <small>{L.alertSub({ club: defaultClubName(item.clubId) ?? item.club, seq: item.seq })}</small>
