@@ -18,13 +18,15 @@
   const tier = $derived(youth ? 'youth' : cardTier(player?.legendScore, player?.peak ?? rating));
   const statKeys = $derived(player?.pos === 'GK' ? ['def', 'phy', 'pas', 'pac', 'sho', 'dri'] as const : ['pac', 'sho', 'dri', 'pas', 'def', 'phy'] as const);
   const statLabels = $derived(player?.pos === 'GK' ? GK_ABBR : FACE_ABBR);
-  let nameViewport: HTMLElement;
+  let nameViewport = $state<HTMLElement>();
   let viewportWidth = $state(0);
   let nameWidth = $state(0);
   let inView = $state(false);
   const nameOverflow = $derived(Math.max(0, nameWidth - viewportWidth));
   const nameDuration = $derived(Math.max(8, nameOverflow / 12 + 4));
   onMount(() => {
+    // 간소화 카드(mini)는 이름 띠가 없다.
+    if (!nameViewport) return;
     const observer = new IntersectionObserver(([entry]) => (inView = !!entry?.isIntersecting));
     observer.observe(nameViewport);
     return () => observer.disconnect();
@@ -42,10 +44,10 @@
       <svg viewBox="0 0 100 96"><path d="M30 10 15 17 3 38 20 48 26 36 24 90 76 90 74 36 80 48 97 38 85 17 70 10 62 5Q50 16 38 5Z" /><path class="shirt-trim" d="M38 5Q50 25 62 5M25 73H75M34 12V87M66 12V87" /></svg>
       <span class="shirt-number">{player?.number ?? (youth ? '+' : name.slice(0, 1))}</span>
     </div>
-    <strong class="card-name" class:scrolling={nameOverflow > 1} class:in-view={inView} title={name}
+    {#if !mini}<strong class="card-name" class:scrolling={nameOverflow > 1} class:in-view={inView} title={name}
       bind:this={nameViewport} bind:clientWidth={viewportWidth} style:--name-offset="-{nameOverflow}px" style:--name-duration="{nameDuration}s">
       <span class="name-track" bind:offsetWidth={nameWidth}>{name}</span>
-    </strong>
+    </strong>{/if}
     {#if deployed && deploymentRating !== undefined}<span class="card-deployment" title={L.posOvr({ n: deploymentRating })}><span>{L.posOvrLabel}</span><b>{deploymentRating}</b></span>{/if}
     {#if !compact}
       <div class="card-divider"></div>
@@ -114,7 +116,6 @@
   .compact.deployed .card-art {height:36px;}
   @media(max-width:440px) { .compact .card-face { height:88px; padding:8px 3px 10px; } .compact .card-rating { left:5px;top:11px; } .compact .card-season {top:2px;} .compact .card-rating b { font-size:1.3rem; } .compact .card-art { height:34px;margin-top:8px; } .compact .shirt-number {font-size:1rem;} .compact.deployed .card-art {height:24px;} }
   /* 이적시장 목록용 — 이름은 줄 옆에 따로 나오므로 카드에서 뺀다(compact와 같이 쓴다). 높이는 이름 줄만큼 줄인다. */
-  .mini .card-name {display:none;}
   .mini .card-face {height:84px;}
   @media(max-width:440px) { .mini .card-face {height:68px;} }
 </style>

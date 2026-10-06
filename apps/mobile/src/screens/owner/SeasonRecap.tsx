@@ -16,26 +16,27 @@ import { ownerText as O } from '@offside/app-core/i18n/ko/owner';
 import { recapTier, tierReason, tierTitle } from '@offside/app-core/ownerTier';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import {
-  CARD_TIER_SWATCH,
   honorViews,
   markRecapSeen,
+  rankLine,
   rankText,
   recapCutoffText,
   recapHeadline,
   recapHighlights,
   recapNumbers,
+  recapRanks,
   recapStatusText,
   recapTeamSummary,
   recapTierBars,
   signed,
-  topPercent,
   type HonorView,
 } from '@offside/app-core/seasonRecap';
 import { num, recordText } from '@offside/app-core/teamText';
 import { POS } from '@offside/game/data';
+import { useCountUp } from '../../components/CountUp';
 import { HonorEmblem } from '../../components/HonorEmblem';
 import { useMedal } from '../../components/Laurel';
-import { PlayerCard } from '../../components/PlayerCard';
+import { CARD_TONES, PlayerCard } from '../../components/PlayerCard';
 import { GradeEmblem } from '../../ui/GradeEmblem';
 import { go } from '../../game/nav';
 import { appState, prefs } from '../../store';
@@ -109,32 +110,9 @@ function Stat({ label, value, testID }: { label: string; value: string; testID?:
   );
 }
 
-/** 숫자가 0에서 차오른다(~1.1초, 끝이 느린 세제곱). 동작 줄이기면 바로 값. */
-function useCountUp(to: number): number {
-  const { motionOK } = useSnapshot(prefs);
-  const [v, setV] = useState(motionOK ? 0 : to);
-  useEffect(() => {
-    if (!motionOK || to === 0) {
-      setV(to);
-      return;
-    }
-    const start = Date.now();
-    let raf = 0;
-    const step = () => {
-      const k = Math.min(1, (Date.now() - start) / 1100);
-      setV(Math.round(to * (1 - (1 - k) ** 3)));
-      if (k < 1) raf = requestAnimationFrame(step);
-    };
-    setV(0);
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [to, motionOK]);
-  return v;
-}
-
 /** 차오르는 숫자 글자. 스크린 리더에는 처음부터 최종 값을 읽어 준다. */
 function CountUp({ value, style, testID }: { value: number; style: object; testID?: string }) {
-  const shown = useCountUp(value);
+  const shown = Math.round(useCountUp(value, { ms: 1100 }));
   return (
     <Txt num testID={testID} accessibilityLabel={num(value)} style={style}>
       {num(shown)}
@@ -417,25 +395,31 @@ export default function SeasonRecap() {
   );
 }
 
-/** 시즌 카드 — 테마와 상관없이 어두운 바탕(공유 이미지와 같은 첫인상). 등급 색 빛이 가운데서 번진다. */
-function Hero({ recap, onShare }: { recap: Recap; onShare: () => void }) {
-  const tier = recapTier(recap);
-  const palette = EMBLEM_PALETTE[tier];
-  const highlights = recapHighlights(recap);
-  const title = tierTitle({ tier, season: recap.season });
+/** 튀어 나오듯 들어오는 값(웹 pop, 0 → 1) — 700ms 뒤로 살짝 튄다. 동작 줄이기면 바로 1. */
+function usePop(delay = 0): Animated.Value {
   const { motionOK } = useSnapshot(prefs);
-  // 엠블럼이 튀어 나오듯 들어온다(웹 pop). 동작 줄이기면 바로.
   const pop = useRef(new Animated.Value(motionOK ? 0 : 1)).current;
   useEffect(() => {
     if (!motionOK) return;
     Animated.timing(pop, {
       toValue: 1,
       duration: 700,
-      delay: 150,
+      delay,
       easing: Easing.out(Easing.back(1.6)),
       useNativeDriver: true,
     }).start();
-  }, [motionOK, pop]);
+  }, [motionOK, pop, delay]);
+  return pop;
+}
+
+/** 시즌 카드 — 테마와 상관없이 어두운 바탕(공유 이미지와 같은 첫인상). 등급 색 빛이 가운데서 번진다. */
+function Hero({ recap, onShare }: { recap: Recap; onShare: () => void }) {
+  const tier = recapTier(recap);
+  const palette = EMBLEM_PALETTE[tier];
+  const highlights = recapHighlights(recap);
+  const title = tierTitle({ tier, season: recap.season });
+  // 엠블럼이 튀어 나오듯 들어온다(웹 pop).
+  const pop = usePop(150);
   return (
     <View
       testID={`recap-tier-${tier}`}
@@ -621,22 +605,12 @@ type Best = NonNullable<Recap['best']>;
 /** 마감 전 은퇴한 선수 가운데 레전드 점수가 가장 높은 선수. 결산 화면 밖으로 나가지 않아 누를 수 없다. */
 function BestFace({ best }: { best: Best }) {
   const tier = cardTier(best.score, best.peak ?? 0);
-  const sw = CARD_TIER_SWATCH[tier];
+  const sw = CARD_TONES[tier];
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const name = best.name ?? anonName(best.pos, null);
   const { card } = best;
-  const { motionOK } = useSnapshot(prefs);
   // 선수 카드가 튀어 나오듯 들어온다(웹 .face-card pop).
-  const pop = useRef(new Animated.Value(motionOK ? 0 : 1)).current;
-  useEffect(() => {
-    if (!motionOK) return;
-    Animated.timing(pop, {
-      toValue: 1,
-      duration: 700,
-      easing: Easing.out(Easing.back(1.6)),
-      useNativeDriver: true,
-    }).start();
-  }, [motionOK, pop]);
+  const pop = usePop();
   const label = `${L.best} ${name} ${L.bestScore({ score: num(best.score) })}`;
   const body = (
     <View
@@ -720,7 +694,7 @@ function BestFace({ best }: { best: Best }) {
       <Defs>
         <LinearGradient id={`${uid}b`} x1="0" y1="0" x2="0.35" y2="1">
           <Stop offset="0" stopColor={sw.base} />
-          <Stop offset="1" stopColor={sw.dark} />
+          <Stop offset="1" stopColor={sw.shade} />
         </LinearGradient>
       </Defs>
       <Rect width="100%" height="100%" fill={`url(#${uid}b)`} />
@@ -797,18 +771,14 @@ function Cards({ recap }: { recap: Recap }) {
                 flexGrow: b.n,
                 flexBasis: 0,
                 minWidth: 6,
-                backgroundColor: mix(
-                  CARD_TIER_SWATCH[b.tier].base,
-                  CARD_TIER_SWATCH[b.tier].dark,
-                  0.6,
-                ),
+                backgroundColor: mix(CARD_TONES[b.tier].base, CARD_TONES[b.tier].shade, 0.6),
               }}
             />
           ))}
       </View>
       <Grid cols={3}>
         {bars.map((b) => {
-          const sw = CARD_TIER_SWATCH[b.tier];
+          const sw = CARD_TONES[b.tier];
           return (
             <View
               key={b.tier}
@@ -951,90 +921,59 @@ function TeamSection({ recap }: { recap: Recap }) {
 /** 시즌 순위 — 팀 · 업적 · 명예의 전당, 상위 몇 %인지 막대로. */
 function Ranks({ recap }: { recap: Recap }) {
   const c = useColors();
-  const rows = [
-    {
-      key: 'team',
-      label: L.honorTeam,
-      rank: recap.team?.rank ?? null,
-      total: recap.team ? recap.team.ranked : 0,
-      show: !!recap.team,
-    },
-    {
-      key: 'ach',
-      label: L.honorAchievements,
-      rank: recap.achievements?.rank ?? null,
-      total: recap.achievements?.ranked ?? 0,
-      show: !!recap.achievements,
-    },
-    {
-      key: 'hof',
-      label: L.hofRank,
-      rank: recap.hofRank,
-      total: recap.hofRanked,
-      show: recap.retired > 0,
-    },
-  ].filter((x) => x.show);
+  const rows = recapRanks(recap);
   if (rows.length === 0) return null;
   return (
     <Card gap={12} testID="recap-section-ranks">
       <Sec>{L.secRanks}</Sec>
-      {rows.map((r) => {
-        const pct = topPercent(r.rank, r.total);
-        const hot = pct !== null && pct <= 10;
-        return (
-          <View
-            key={r.key}
-            testID={`recap-rank-${r.key}`}
-            accessible
-            accessibilityLabel={`${r.label} ${rankText(r.rank, r.total)}${pct === null ? '' : ` ${L.topPct({ pct })}`}`}
-            style={{ gap: 6 }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-              <Txt style={{ fontSize: rem(0.875) }}>{r.label}</Txt>
-              <Txt num style={{ marginLeft: 'auto', fontSize: rem(1.0625) }}>
-                {rankText(r.rank, r.total)}
-              </Txt>
-              {pct !== null ? (
-                <View
-                  style={{
-                    paddingVertical: 2,
-                    paddingHorizontal: 8,
-                    borderRadius: 999,
-                    backgroundColor: hot ? mix(c.accent, c.surface, 0.18) : c.surface2,
-                  }}
-                >
-                  <Txt
-                    style={{
-                      fontSize: rem(0.75),
-                      fontWeight: '700',
-                      color: hot ? c.accentText : c.muted,
-                    }}
-                  >
-                    {L.topPct({ pct })}
-                  </Txt>
-                </View>
-              ) : null}
-            </View>
-            <View
-              style={{
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: c.surface2,
-                overflow: 'hidden',
-              }}
-            >
+      {rows.map((r) => (
+        <View
+          key={r.key}
+          testID={`recap-rank-${r.key}`}
+          accessible
+          accessibilityLabel={`${r.label} ${rankLine(r.rank, r.total)}`}
+          style={{ gap: 6 }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+            <Txt style={{ fontSize: rem(0.875) }}>{r.label}</Txt>
+            <Txt num style={{ marginLeft: 'auto', fontSize: rem(1.0625) }}>
+              {rankText(r.rank, r.total)}
+            </Txt>
+            {r.pct !== null ? (
               <View
                 style={{
-                  height: '100%',
-                  borderRadius: 3,
-                  width: `${pct === null ? 0 : Math.max(4, 101 - pct)}%`,
-                  backgroundColor: c.accent,
+                  paddingVertical: 2,
+                  paddingHorizontal: 8,
+                  borderRadius: 999,
+                  backgroundColor: r.hot ? mix(c.accent, c.surface, 0.18) : c.surface2,
                 }}
-              />
-            </View>
+              >
+                <Txt
+                  style={{
+                    fontSize: rem(0.75),
+                    fontWeight: '700',
+                    color: r.hot ? c.accentText : c.muted,
+                  }}
+                >
+                  {L.topPct({ pct: r.pct })}
+                </Txt>
+              </View>
+            ) : null}
           </View>
-        );
-      })}
+          <View
+            style={{ height: 6, borderRadius: 3, backgroundColor: c.surface2, overflow: 'hidden' }}
+          >
+            <View
+              style={{
+                height: '100%',
+                borderRadius: 3,
+                width: `${r.meter}%`,
+                backgroundColor: c.accent,
+              }}
+            />
+          </View>
+        </View>
+      ))}
       {recap.achievements ? (
         <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
           {`${L.achScore} ${num(recap.achievements.score)} · ${L.achDone({ n: recap.achievements.done })}`}

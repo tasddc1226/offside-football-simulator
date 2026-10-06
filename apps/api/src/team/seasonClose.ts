@@ -125,16 +125,16 @@ async function closeRecords(db: Db, season: number, cutoff: string, now: string)
     // 결산 화면 · 공유 카드용 기록 묶음 — 마감 전 은퇴한 선수의 통산 합, 카드 등급별 수, 최다 득점 선수, 팀 실점 · 최다 점수 차.
     sql`
       update owner_season_records set stats_json = json_object(
-        'apps', x.apps, 'goals', x.goals, 'assists', x.assists, 'trophies', x.trophies, 'awards', x.awards,
-        'caps', x.caps, 'ballon', x.ballon, 'peak', x.peak,
-        'tiers', json_array(x.t_icon, x.t_legend, x.t_elite, x.t_gold, x.t_silver, x.t_bronze),
-        'scorerId', x.scorer_id, 'scorerGoals', x.scorer_goals,
-        'goalsAgainst', x.goals_against, 'bestMargin', x.best_margin)
+        'stats', json_object('apps', x.apps, 'goals', x.goals, 'assists', x.assists, 'trophies', x.trophies,
+          'caps', x.caps, 'ballon', x.ballon,
+          'tiers', json_object('icon', x.t_icon, 'legend', x.t_legend, 'elite', x.t_elite, 'gold', x.t_gold,
+            'silver', x.t_silver, 'bronze', x.t_bronze)),
+        'scorer', json_object('id', x.scorer_id, 'goals', x.scorer_goals),
+        'team', json_object('goalsAgainst', x.goals_against, 'bestMargin', x.best_margin))
       from (
         select r.profile_id,
           coalesce(k.apps, 0) as apps, coalesce(k.goals, 0) as goals, coalesce(k.assists, 0) as assists,
-          coalesce(k.trophies, 0) as trophies, coalesce(k.awards, 0) as awards, coalesce(k.caps, 0) as caps,
-          coalesce(k.ballon, 0) as ballon, k.peak,
+          coalesce(k.trophies, 0) as trophies, coalesce(k.caps, 0) as caps, coalesce(k.ballon, 0) as ballon,
           coalesce(k.t_icon, 0) as t_icon, coalesce(k.t_legend, 0) as t_legend, coalesce(k.t_elite, 0) as t_elite,
           coalesce(k.t_gold, 0) as t_gold, coalesce(k.t_silver, 0) as t_silver, coalesce(k.t_bronze, 0) as t_bronze,
           s.id as scorer_id, s.goals as scorer_goals, t.goals_against, t.best_margin
@@ -142,8 +142,7 @@ async function closeRecords(db: Db, season: number, cutoff: string, now: string)
         left join (
           select c.profile_id, sum(coalesce(c.apps, 0)) as apps, sum(coalesce(c.goals, 0)) as goals,
             sum(coalesce(c.assists, 0)) as assists, sum(coalesce(c.trophies, 0)) as trophies,
-            sum(coalesce(c.awards, 0)) as awards, sum(coalesce(c.caps, 0)) as caps,
-            sum(coalesce(c.ballon, 0)) as ballon, max(c.peak) as peak,
+            sum(coalesce(c.caps, 0)) as caps, sum(coalesce(c.ballon, 0)) as ballon,
             sum(${ICON}) as t_icon, sum(${LEGEND}) as t_legend,
             sum(${NOT_LEGEND} and ${PEAK} >= ${CARD_ELITE_PEAK}) as t_elite,
             sum(${NOT_LEGEND} and ${PEAK} >= ${CARD_GOLD_PEAK} and ${PEAK} < ${CARD_ELITE_PEAK}) as t_gold,

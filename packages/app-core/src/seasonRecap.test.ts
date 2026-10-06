@@ -4,7 +4,10 @@ import {
   honorViews,
   PHOTO_MAX,
   photoRows,
+  rankLine,
   rankText,
+  recapRanks,
+  recapShareCells,
   recapCardView,
   recapCutoffText,
   recapHeadline,
@@ -97,10 +100,8 @@ describe('T-11-128 시즌 결산 문구', () => {
         goals: 457,
         assists: 589,
         trophies: 32,
-        awards: 19,
         caps: 202,
         ballon: 2,
-        peak: 82,
         tiers: { icon: 1, legend: 1, elite: 0, gold: 5, silver: 0, bronze: 0 },
         scorer: null,
       },
@@ -155,7 +156,22 @@ describe('T-11-128 시즌 결산 문구', () => {
         ['silver', 0],
         ['bronze', 0],
       ]);
-      expect(bars.reduce((s, b) => s + b.pct, 0)).toBeCloseTo(100);
+      expect(recapRanks(recap()).map((r) => [r.key, r.pct, r.hot, r.meter])).toEqual([
+        ['team', 3, true, 98],
+        ['ach', 20, false, 81],
+        ['hof', 3, true, 98],
+      ]);
+      expect(recapRanks(recap({ team: null, achievements: null, retired: 0 }))).toEqual([]);
+      expect(rankLine(5, 233)).toBe('5위 / 233 · 상위 3%');
+      expect(rankLine(null, 233)).toBe('순위 밖');
+      expect(recapShareCells(recap()).map((c) => c.key)).toEqual([
+        'players',
+        'goals',
+        'assists',
+        'apps',
+        'trophies',
+        'ballon',
+      ]);
       expect(recapTeamSummary(team)).toEqual({ played: 46, winRate: 67, goalDiff: 34 });
       expect(recapTeamSummary({ ...team, goalsAgainst: null }).goalDiff).toBeNull();
       expect([signed(34), signed(-3), signed(0)]).toEqual(['+34', '-3', '0']);

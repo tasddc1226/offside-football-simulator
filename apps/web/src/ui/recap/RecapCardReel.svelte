@@ -8,6 +8,7 @@
   import { anonName } from '@offside/app-core/format';
   import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
   import PlayerCard from '../team/PlayerCard.svelte';
+  import { motionOK } from '../motion.js';
 
   const { squad }: { squad: readonly RecapSquadMember[] } = $props();
   /** 1초에 움직이는 px. */
@@ -21,27 +22,44 @@
   const nameOf = (m: RecapSquadMember) => m.card.publicName ?? anonName(m.card.pos, m.card.number);
 
   onMount(() => {
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduce = !motionOK;
     let raf = 0;
     let last = 0;
     let pos = 0;
     let holdUntil = 0;
     let visible = false;
-    const half = () => el.scrollWidth / 2;
-    const measure = () => {
-      // 한 벌(이어 붙이기 전) 너비가 화면보다 넓을 때만 흐른다.
-      const one = loop ? half() : el.scrollWidth;
-      loop = !reduce && one > el.clientWidth + 8;
-    };
+    // 한 벌 폭 — 크기가 바뀔 때만 다시 잰다(스크롤 · 프레임마다 레이아웃을 읽지 않는다).
+    let half = 0;
     const tick = (t: number) => {
       raf = requestAnimationFrame(tick);
       const dt = last ? Math.min(64, t - last) : 0;
       last = t;
-      if (!loop || !visible || t < holdUntil) return;
+      if (t < holdUntil) return;
       // 왼쪽에서 오른쪽으로 흐르게 스크롤을 줄인다(0에 닿으면 반 바퀴 뒤로).
       pos -= (SPEED * dt) / 1000;
-      if (pos <= 0) pos += half();
+      if (pos <= 0) pos += half;
       el.scrollLeft = pos;
+    };
+    // 흐를 때(이어 붙였고 화면 안)만 프레임을 돈다.
+    const sync = () => {
+      const run = loop && visible;
+      if (run && !raf) {
+        last = 0;
+        raf = requestAnimationFrame(tick);
+      } else if (!run && raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+    const measure = () => {
+      // 한 벌(이어 붙이기 전) 너비가 화면보다 넓을 때만 흐른다.
+      const one = loop ? el.scrollWidth / 2 : el.scrollWidth;
+      const was = loop;
+      loop = !reduce && one > el.clientWidth + 8;
+      half = one;
+      // 처음 이어 붙이면 반 바퀴 지점에서 시작해 왼쪽 끝에 바로 닿지 않게 한다.
+      if (loop && !was) requestAnimationFrame(() => (pos = el.scrollLeft = half));
+      sync();
     };
     const hold = () => (holdUntil = performance.now() + RESUME);
     const onScroll = () => {
@@ -51,22 +69,19 @@
         pos = el.scrollLeft;
       }
       if (!loop) return;
-      if (el.scrollLeft <= 0) pos = el.scrollLeft = half();
-      else if (el.scrollLeft >= half() * 2 - el.clientWidth - 1) pos = el.scrollLeft = el.scrollLeft - half();
+      if (el.scrollLeft <= 0) pos = el.scrollLeft = half;
+      else if (el.scrollLeft >= half * 2 - el.clientWidth - 1) pos = el.scrollLeft = el.scrollLeft - half;
     };
-    const io = new IntersectionObserver(([e]) => (visible = !!e?.isIntersecting));
+    const io = new IntersectionObserver(([e]) => {
+      visible = !!e?.isIntersecting;
+      sync();
+    });
     const ro = new ResizeObserver(measure);
     io.observe(el);
     ro.observe(el);
-    measure();
-    // 첫 프레임은 반 바퀴 지점에서 시작해 왼쪽 끝에 바로 닿지 않게 한다.
-    requestAnimationFrame(() => {
-      if (loop) pos = el.scrollLeft = half();
-    });
     el.addEventListener('scroll', onScroll, { passive: true });
     el.addEventListener('pointerdown', hold);
     el.addEventListener('wheel', hold, { passive: true });
-    raf = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(raf);
       io.disconnect();

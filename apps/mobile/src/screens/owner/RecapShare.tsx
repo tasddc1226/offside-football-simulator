@@ -13,11 +13,10 @@ import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
 import { recapTier, tierReason, tierTitle } from '@offside/app-core/ownerTier';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import {
-  rankText,
+  rankLine,
   recapHeadline,
   recapHighlights,
-  recapNumbers,
-  topPercent,
+  recapShareCells,
 } from '@offside/app-core/seasonRecap';
 import { num, recordText } from '@offside/app-core/teamText';
 import { TeamDialog } from '../../components/TeamDialog';
@@ -86,14 +85,7 @@ function ShareCard({ recap }: { recap: SeasonRecap }) {
   const tier = recapTier(recap);
   const palette = EMBLEM_PALETTE[tier];
   const season = teamSeasonLabel(recap.season);
-  // 은퇴 선수 수는 한 줄 요약에 들어 있어 칸에서 뺀다(A매치보다 발롱도르가 먼저).
-  const cells = recapNumbers(recap)
-    .filter((c) => c.key !== 'retired' && c.key !== 'caps')
-    .slice(0, 6);
-  const teamPct = recap.team ? topPercent(recap.team.rank, recap.team.ranked) : null;
-  const achPct = recap.achievements
-    ? topPercent(recap.achievements.rank, recap.achievements.ranked)
-    : null;
+  const cells = recapShareCells(recap);
   const pills: string[] = [];
   let used = 0;
   for (const label of recapHighlights(recap)) {
@@ -283,12 +275,12 @@ function ShareCard({ recap }: { recap: SeasonRecap }) {
         {recap.team
           ? panel(234 + 12, L.secTeam, recap.team.name, [
               recordText({ w: recap.team.wins, d: recap.team.draws, l: recap.team.losses }),
-              `${L.teamRank} ${rankText(recap.team.rank, recap.team.ranked)}${teamPct === null ? '' : ` · ${L.topPct({ pct: teamPct })}`}`,
+              `${L.teamRank} ${rankLine(recap.team.rank, recap.team.ranked)}`,
             ])
           : recap.achievements
             ? panel(234 + 12, L.secAch, L.achScore, [
                 num(recap.achievements.score),
-                `${rankText(recap.achievements.rank, recap.achievements.ranked)}${achPct === null ? '' : ` · ${L.topPct({ pct: achPct })}`}`,
+                rankLine(recap.achievements.rank, recap.achievements.ranked),
               ])
             : null}
       </View>

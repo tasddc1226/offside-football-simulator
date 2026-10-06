@@ -12,6 +12,7 @@
   import RecapCardReel from './recap/RecapCardReel.svelte';
   import ShareSheet from './share/ShareSheet.svelte';
   import { go } from './nav.js';
+  import { motionOK } from './motion.js';
   import { appState } from './state.svelte.js';
   import { fetchOwnerHonors, fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
   import {
@@ -19,6 +20,7 @@
     honorViews,
     markRecapSeen,
     rankText,
+    recapRanks,
     recapCutoffText,
     recapHeadline,
     recapHighlights,
@@ -27,7 +29,6 @@
     recapTeamSummary,
     recapTierBars,
     signed,
-    topPercent,
   } from '@offside/app-core/seasonRecap';
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
   import { detailPosOf } from '@offside/contracts/positions';
@@ -80,17 +81,8 @@
   const numbers = $derived(recap ? recapNumbers(recap) : []);
   const bars = $derived(recap ? recapTierBars(recap) : []);
   const highlights = $derived(recap ? recapHighlights(recap) : []);
-  const ranks = $derived(
-    recap
-      ? [
-          { key: 'team', label: L.honorTeam, rank: recap.team?.rank ?? null, total: recap.team ? recap.team.ranked : 0, show: !!recap.team },
-          { key: 'ach', label: L.honorAchievements, rank: recap.achievements?.rank ?? null, total: recap.achievements?.ranked ?? 0, show: !!recap.achievements },
-          { key: 'hof', label: L.hofRank, rank: recap.hofRank, total: recap.hofRanked, show: recap.retired > 0 },
-        ].filter((x) => x.show)
-      : [],
-  );
+  const ranks = $derived(recap ? recapRanks(recap) : []);
 
-  const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   /** 숫자가 0에서 차오른다(화면에 들어올 때 한 번). 움직임 줄이기면 바로 값. */
   function countUp(node: HTMLElement, value: number) {
     let raf = 0;
@@ -98,7 +90,7 @@
     const run = (to: number) => {
       cancelAnimationFrame(raf);
       io?.disconnect();
-      if (reduceMotion || to === 0 || typeof IntersectionObserver !== 'function') {
+      if (!motionOK || to === 0 || typeof IntersectionObserver !== 'function') {
         node.textContent = num(to);
         return;
       }
@@ -216,7 +208,8 @@
             {@const t = cardTier(b.score, b.peak ?? 0)}
             {@const sw = CARD_TIER_SWATCH[t]}
             {@const bestName = b.name ?? anonName(b.pos, null)}
-            {#snippet bestBody()}
+            <!-- 결산은 한 화면 안에서만 본다(다른 화면으로 넘어가지 않는다). 카드는 팀 화면 카드와 같은 모양. -->
+            <div class="face face-best" class:with-card={!!b.card} data-recap-best={b.careerId} data-tier={t} style="--c-base:{sw.base};--c-dark:{sw.dark};--c-ink:{sw.ink};--c-line:{sw.line}">
               {#if b.card}
                 <span class="face-card"><PlayerCard player={b.card} name={bestName} rating={b.card.peak} role={detailPosOf(b.card)} season={b.card.season} /></span>
               {/if}
@@ -227,19 +220,16 @@
                 <span class="face-score num">{L.bestScore({ score: num(b.score) })}</span>
                 {#if b.peak}<span class="face-peak num">{L.peak} {b.peak}</span>{/if}
               </span>
-            {/snippet}
-            <!-- 결산은 한 화면 안에서만 본다(다른 화면으로 넘어가지 않는다). 카드는 팀 화면 카드와 같은 모양. -->
-            <div class="face face-best" class:with-card={!!b.card} data-recap-best={b.careerId} data-tier={t} style="--c-base:{sw.base};--c-dark:{sw.dark};--c-ink:{sw.ink};--c-line:{sw.line}">{@render bestBody()}</div>
+            </div>
           {/if}
           {#if recap.stats?.scorer}
             {@const s = recap.stats.scorer}
-            {#snippet scorerBody()}
+            <div class="face face-scorer" data-recap-scorer={s.careerId}>
               <small class="face-eyebrow">{L.scorer}</small>
               <b class="face-name">{s.name ?? anonName(s.pos, null)}</b>
               <span class="face-sub">{s.pos}</span>
               <span class="face-goals num"><span aria-hidden="true" use:countUp={s.goals}>{num(s.goals)}</span><span class="sr-only">{num(s.goals)}</span><small>{L.numGoals}</small></span>
-            {/snippet}
-            <div class="face face-scorer" data-recap-scorer={s.careerId}>{@render scorerBody()}</div>
+            </div>
           {/if}
         </div>
       </section>
@@ -302,14 +292,13 @@
         <h2>{L.secRanks}</h2>
         <ul class="rank-list">
           {#each ranks as r (r.key)}
-            {@const pct = topPercent(r.rank, r.total)}
             <li data-recap-rank={r.key}>
               <div class="rank-row">
                 <span>{r.label}</span>
                 <b class="num">{rankText(r.rank, r.total)}</b>
-                {#if pct !== null}<em class:hot={pct <= 10}>{L.topPct({ pct })}</em>{/if}
+                {#if r.pct !== null}<em class:hot={r.hot}>{L.topPct({ pct: r.pct })}</em>{/if}
               </div>
-              <div class="rank-meter" aria-hidden="true"><span style="width: {pct === null ? 0 : Math.max(4, 101 - pct)}%"></span></div>
+              <div class="rank-meter" aria-hidden="true"><span style="width: {r.meter}%"></span></div>
             </li>
           {/each}
         </ul>
@@ -518,9 +507,6 @@
     border-radius: 14px;
     border: 1px solid var(--line);
     background: var(--surface-2);
-    color: inherit;
-    font: inherit;
-    text-align: left;
   }
   .face-best {
     border: 2px solid var(--c-line);

@@ -41,7 +41,6 @@ const ko = {
   noTeam: '이 시즌에는 팀을 꾸리지 않았어요.',
   secAch: '업적',
   achScore: '업적 점수',
-  achRank: '업적 순위',
   achDone: (p: { n: number }) => `업적 ${p.n}개 달성`,
   rankOf: (p: { rank: number; total: string }) => `${p.rank}위 / ${p.total}`,
   unranked: '순위 밖',

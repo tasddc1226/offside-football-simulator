@@ -7,14 +7,12 @@ import {
   type OwnerHonor,
   type SeasonRecap,
   type SeasonRecapStats,
-  type TeamPlayer,
 } from '@offside/contracts';
-import { CARD_TIERS } from '@offside/contracts/card-tier';
 import { openTeamSeasons, teamSeasonClosed } from '@offside/contracts/service-seasons';
 import { and, asc, desc, eq, isNotNull, lte, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import type { Db } from '../db/client.js';
-import { estimatedAttrsOf, peakOf, toLineupCareer } from '../db/repos/ownerTeams.js';
+import { teamPlayerCard } from '../db/repos/ownerTeams.js';
 import { careers, ownerHonors, ownerSeasonRecords } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
@@ -43,13 +41,11 @@ const honorsOf = async (db: Db, profileId: string, season?: number): Promise<Own
     grantedAt,
   }));
 
-/** owner_season_records.stats_json(team/seasonClose.ts가 굳힌 모양). */
-type StoredStats = Omit<SeasonRecapStats, 'tiers' | 'scorer'> & {
-  tiers: number[];
-  scorerId: string | null;
-  scorerGoals: number | null;
-  goalsAgainst: number | null;
-  bestMargin: number | null;
+/** owner_season_records.stats_json(team/seasonClose.ts가 굳힌 모양) — 최다 득점 선수는 ID만, 팀 실점 · 최다 점수 차가 더 있다. */
+type StoredStats = {
+  stats: Omit<SeasonRecapStats, 'scorer'>;
+  scorer: { id: string | null; goals: number | null };
+  team: { goalsAgainst: number | null; bestMargin: number | null };
 };
 
 const parseStats = (json: string | null): StoredStats | null => {
@@ -64,19 +60,8 @@ const parseStats = (json: string | null): StoredStats | null => {
 /** 굳힌 묶음에 최다 득점 선수의 이름 · 포지션을 붙인다(이름은 신고로 가리면 null — 지금 값을 읽는다). */
 async function recapStats(db: Db, stored: StoredStats | null): Promise<SeasonRecapStats | null> {
   if (!stored) return null;
-  const {
-    apps,
-    goals,
-    assists,
-    trophies,
-    awards,
-    caps,
-    ballon,
-    peak,
-    tiers,
-    scorerId,
-    scorerGoals,
-  } = stored;
+  const { stats, scorer: top } = stored;
+  const scorerId = top.id;
   const [scorer] = scorerId
     ? await db
         .select({ name: careers.publicName, pos: careers.pos })
@@ -84,47 +69,11 @@ async function recapStats(db: Db, stored: StoredStats | null): Promise<SeasonRec
         .where(eq(careers.id, scorerId))
     : [];
   return {
-    apps,
-    goals,
-    assists,
-    trophies,
-    awards,
-    caps,
-    ballon,
-    peak,
-    tiers: Object.fromEntries(
-      CARD_TIERS.map((t, i) => [t, tiers[i] ?? 0]),
-    ) as SeasonRecapStats['tiers'],
+    ...stats,
     scorer:
       scorerId && scorer
-        ? { careerId: scorerId, name: scorer.name, pos: scorer.pos, goals: scorerGoals ?? 0 }
+        ? { careerId: scorerId, name: scorer.name, pos: scorer.pos, goals: top.goals ?? 0 }
         : null,
-  };
-}
-
-/** 선수 카드 — 팀 화면 카드와 같은 값(옛 기록은 추정 능력치). */
-function cardOf(
-  row: Parameters<typeof toLineupCareer>[0] & {
-    cardAttrsJson: string | null;
-    legendScore: number | null;
-  },
-): TeamPlayer {
-  const profile = peakOf(row.peakProfile);
-  const career = toLineupCareer(row, profile);
-  const estimated = profile ? null : estimatedAttrsOf(row.cardAttrsJson);
-  return {
-    careerId: row.id,
-    pos: career.pos,
-    nation: career.nation,
-    dpos: career.dpos,
-    peak: career.peak,
-    roles: career.roles,
-    attrs: profile?.attrs ?? estimated,
-    attrsEstimated: estimated !== null,
-    number: career.number,
-    publicName: career.publicName,
-    legendScore: row.legendScore,
-    season: career.season,
   };
 }
 
@@ -186,13 +135,6 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
           pos: careers.pos,
           lastClub: careers.lastClub,
           peak: careers.peak,
-          nation: careers.nation,
-          dpos: careers.dpos,
-          number: careers.shirtNumber,
-          peakProfile: careers.peakProfile,
-          cardAttrsJson: careers.cardAttrsJson,
-          serviceSeason: careers.serviceSeason,
-          legendScore: careers.legendScore,
         })
         .from(ownerSeasonRecords)
         .leftJoin(careers, eq(careers.id, ownerSeasonRecords.bestCareerId))
@@ -207,6 +149,11 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
     const stored = parseStats(r.statsJson);
     const stats = await recapStats(db, stored);
     const ranked = state.ranked ?? { team: 0, ach: 0, hof: 0 };
+    const cards = squad.map((p) => ({
+      card: teamPlayerCard(p),
+      lastClub: p.lastClub,
+      lastClubId: p.lastClubId,
+    }));
     const recap: SeasonRecap = {
       season,
       cutoff: state.cutoff,
@@ -222,7 +169,8 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
               lastClub: row.lastClub,
               score: r.bestScore ?? 0,
               peak: row.peak,
-              card: cardOf({ ...row, id: r.bestCareerId, pos: row.pos, publicName: row.name }),
+              // 대표 선수는 선수단 맨 앞(같은 기준 · 레전드 점수 순)이라 그 카드를 쓴다.
+              card: cards.find((m) => m.card.careerId === r.bestCareerId)?.card ?? null,
             }
           : null,
       hofRank: r.hofRank,
@@ -241,8 +189,8 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
               draws: r.draws,
               losses: r.losses,
               goalsFor: r.goalsFor,
-              goalsAgainst: stored?.goalsAgainst ?? null,
-              bestMargin: stored?.bestMargin ?? null,
+              goalsAgainst: stored?.team.goalsAgainst ?? null,
+              bestMargin: stored?.team.bestMargin ?? null,
               bestStreak: r.bestStreak,
             }
           : null,
@@ -251,11 +199,7 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
           ? { score: r.achScore, done: r.achDone ?? 0, rank: r.achRank, ranked: ranked.ach }
           : null,
       stats,
-      squad: squad.map((p) => ({
-        card: cardOf(p),
-        lastClub: p.lastClub,
-        lastClubId: p.lastClubId,
-      })),
+      squad: cards,
     };
     return reply('ready', recap, honors);
   });

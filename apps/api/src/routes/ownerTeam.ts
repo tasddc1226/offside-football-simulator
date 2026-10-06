@@ -41,7 +41,6 @@ import {
   challengedSince,
   countMatchesSince,
   eligibleMap,
-  estimatedAttrsOf,
   foundersOf,
   friendlyTeamOf,
   type FriendlyLineup,
@@ -57,6 +56,7 @@ import {
   slotIdsOf,
   layoutOf,
   logoOf,
+  teamPlayerCard,
   toLineupCareer,
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
@@ -185,8 +185,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const team = found ? friendlyTeamOf(found) : null;
     const picks = players.map((p) => {
       const profile = peakOf(p.peakProfile);
-      const estimatedAttrs = profile ? null : estimatedAttrsOf(p.cardAttrsJson);
-      return { p, profile, estimatedAttrs, career: toLineupCareer(p, profile) };
+      const career = toLineupCareer(p, profile);
+      return { p, career, card: teamPlayerCard(p, profile, career) };
     });
     const eligible = new Map(picks.map(({ career }) => [career.id, career]));
     // 은퇴 선수가 목록 상한보다 많으면 선발에 든 선수가 목록 밖에 있을 수 있다 — 그 선수만 따로 읽는다.
@@ -217,23 +217,12 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
               reqLang(c),
             )
           : null,
-        players: picks.map(({ p, profile, estimatedAttrs, career }) => ({
-          careerId: p.id,
-          pos: p.pos,
-          nation: career.nation,
-          dpos: career.dpos,
-          peak: career.peak,
-          roles: career.roles,
-          attrs: profile?.attrs ?? estimatedAttrs,
-          attrsEstimated: estimatedAttrs !== null,
-          number: p.number,
-          publicName: p.publicName,
-          legendScore: p.legendScore,
+        players: picks.map(({ p, card }) => ({
+          ...card,
           cardValue: p.cardValue,
           raised: !!p.raised,
           ...(p.type ? { type: p.type } : {}),
           ...(p.foot ? { foot: p.foot } : {}),
-          season: career.season,
           listing: p.listingId ? { id: p.listingId, price: p.listPrice! } : null,
         })),
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,

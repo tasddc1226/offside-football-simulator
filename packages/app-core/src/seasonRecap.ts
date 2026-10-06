@@ -156,7 +156,7 @@ export function recapNumbers(r: SeasonRecap): RecapNumber[] {
   ];
 }
 
-/** 카드 등급 색(웹 PlayerCard.svelte · 앱 PlayerCard.tsx와 같은 값) — 결산의 등급 막대 · 대표 선수 카드. */
+/** 카드 등급 색(웹 PlayerCard.svelte와 같은 값) — 결산의 등급 막대 · 대표 선수 카드 둘레. */
 export const CARD_TIER_SWATCH: Record<
   CardTier,
   { base: string; dark: string; ink: string; line: string }
@@ -169,21 +169,65 @@ export const CARD_TIER_SWATCH: Record<
   bronze: { base: '#d7a27a', dark: '#7d4a29', ink: '#3a1f0e', line: '#a86e45' },
 };
 
-export type RecapTierBar = { tier: CardTier; label: string; n: number; pct: number };
+export type RecapTierBar = { tier: CardTier; label: string; n: number };
 
 /** 카드 등급별 선수 수(높은 등급부터, 0명 등급도 자리를 지킨다). 은퇴 선수가 없으면 빈 배열. */
 export function recapTierBars(r: SeasonRecap): RecapTierBar[] {
   const tiers = r.stats?.tiers;
   if (!tiers) return [];
-  const total = CARD_TIERS.reduce((sum, t) => sum + tiers[t], 0);
-  if (total === 0) return [];
-  return CARD_TIERS.map((tier) => ({
-    tier,
-    label: L.cardTierName({ tier }),
-    n: tiers[tier],
-    pct: (tiers[tier] / total) * 100,
-  }));
+  if (CARD_TIERS.every((t) => tiers[t] === 0)) return [];
+  return CARD_TIERS.map((tier) => ({ tier, label: L.cardTierName({ tier }), n: tiers[tier] }));
 }
+
+export type RecapRank = {
+  key: 'team' | 'ach' | 'hof';
+  label: string;
+  rank: number | null;
+  total: number;
+  /** 상위 N%(순위 밖이면 null). */
+  pct: number | null;
+  /** 상위 10% 안이면 강조. */
+  hot: boolean;
+  /** 막대 길이(%) — 상위일수록 길게, 순위 밖이면 0. */
+  meter: number;
+};
+
+/** 시즌 순위 줄 — 팀 · 업적 · 명예의 전당 중 그 시즌에 있는 것만. */
+export function recapRanks(r: SeasonRecap): RecapRank[] {
+  const rows: Omit<RecapRank, 'pct' | 'hot' | 'meter'>[] = [];
+  if (r.team)
+    rows.push({ key: 'team', label: L.honorTeam, rank: r.team.rank, total: r.team.ranked });
+  if (r.achievements)
+    rows.push({
+      key: 'ach',
+      label: L.honorAchievements,
+      rank: r.achievements.rank,
+      total: r.achievements.ranked,
+    });
+  if (r.retired > 0)
+    rows.push({ key: 'hof', label: L.hofRank, rank: r.hofRank, total: r.hofRanked });
+  return rows.map((x) => {
+    const pct = topPercent(x.rank, x.total);
+    return {
+      ...x,
+      pct,
+      hot: pct !== null && pct <= 10,
+      meter: pct === null ? 0 : Math.max(4, 101 - pct),
+    };
+  });
+}
+
+/** '3위 / 1,818 · 상위 1%' — 공유 카드의 순위 한 줄. */
+export function rankLine(rank: number | null, total: number): string {
+  const pct = topPercent(rank, total);
+  return `${rankText(rank, total)}${pct === null ? '' : ` · ${L.topPct({ pct })}`}`;
+}
+
+/** 공유 카드 숫자 칸(세 칸씩 두 줄) — 은퇴 선수 수는 한 줄 요약에 있어 빼고, A매치보다 발롱도르가 먼저. */
+export const recapShareCells = (r: SeasonRecap): RecapNumber[] =>
+  recapNumbers(r)
+    .filter((c) => c.key !== 'retired' && c.key !== 'caps')
+    .slice(0, 6);
 
 /** 팀 시즌 요약 — 경기 수 · 승률(%) · 득실차. */
 export function recapTeamSummary(t: NonNullable<SeasonRecap['team']>) {

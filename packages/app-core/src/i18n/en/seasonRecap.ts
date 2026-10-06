@@ -31,7 +31,6 @@ export const seasonRecap: Translation<SeasonRecapMsgs> = {
   noTeam: "You didn't build a team this season.",
   secAch: 'Achievements',
   achScore: 'Achievement score',
-  achRank: 'Achievement rank',
   achDone: (p) => `${plural(p.n, 'achievement')} done`,
   rankOf: (p) => `#${p.rank} of ${p.total}`,
   unranked: 'Unranked',

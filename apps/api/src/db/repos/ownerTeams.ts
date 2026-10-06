@@ -1,5 +1,5 @@
 import { PeakProfileSchema, TeamLayoutSchema, TeamLogoSchema } from '@offside/contracts';
-import type { TeamRankItem, TeamRankSort } from '@offside/contracts';
+import type { TeamPlayer, TeamRankItem, TeamRankSort } from '@offside/contracts';
 import { TEAM_RANK_PER_PAGE, type FormationId } from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { CARD_VALUE_FLOOR } from '@offside/contracts/market-value';
@@ -149,6 +149,32 @@ export const toLineupCareer = (
   raised: !!r.raised,
   season: r.serviceSeason ?? 0,
 });
+
+/**
+ * 선수 카드 공통 값(팀 화면 · 시즌 결산). 최고 OVR 능력치가 없는 옛 기록은 카드 능력치를 추정한다. 구단주 화면만의 값
+ * (기준가 · 직접 키움 · 매물 등)은 부르는 쪽이 덧붙인다.
+ */
+export function teamPlayerCard(
+  r: LineupRow & { cardAttrsJson: string | null; legendScore: number | null },
+  profile: PeakProfile | null = peakOf(r.peakProfile),
+  career = toLineupCareer(r, profile),
+): Omit<TeamPlayer, 'cardValue' | 'raised' | 'type' | 'foot' | 'listing'> {
+  const estimated = profile ? null : estimatedAttrsOf(r.cardAttrsJson);
+  return {
+    careerId: r.id,
+    pos: career.pos,
+    nation: career.nation,
+    dpos: career.dpos,
+    peak: career.peak,
+    roles: career.roles,
+    attrs: profile?.attrs ?? estimated,
+    attrsEstimated: estimated !== null,
+    number: career.number,
+    publicName: career.publicName,
+    legendScore: r.legendScore,
+    season: career.season,
+  };
+}
 
 /** 내 팀들(시즌 순). 시즌마다 한 팀이라 몇 개 되지 않는다. */
 export function listMyTeams(db: Db, profileId: string) {

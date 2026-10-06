@@ -167,7 +167,6 @@ describe('T-11-128 시즌 결산', () => {
         apps: 600,
         goals: 160,
         ballon: 2,
-        peak: 88,
         tiers: { icon: 0, legend: 0, elite: 1, gold: 1, silver: 0, bronze: 0 },
         scorer: { careerId: scorer, name: '한빛', pos: 'FW', goals: 120 },
       },

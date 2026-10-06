@@ -50,11 +50,8 @@ export const SeasonRecapStatsSchema = z.strictObject({
   goals: CountSchema,
   assists: CountSchema,
   trophies: CountSchema,
-  awards: CountSchema,
   caps: CountSchema,
   ballon: CountSchema,
-  /** 은퇴한 선수 가운데 가장 높은 최고 OVR. */
-  peak: z.number().int().nullable(),
   /** 카드 등급별 선수 수(card-tier.ts). */
   tiers: z.record(z.enum(CARD_TIERS), CountSchema),
   /** 가장 많이 넣은 선수. */

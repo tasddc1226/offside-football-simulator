@@ -4,11 +4,10 @@ import type { SeasonRecap } from '@offside/contracts';
 import { gradeEmblem, EMBLEM_PALETTE } from '@offside/app-core/gradeEmblem';
 import { recapTier, tierReason, tierTitle } from '@offside/app-core/ownerTier';
 import {
-  rankText,
+  rankLine,
   recapHeadline,
   recapHighlights,
-  recapNumbers,
-  topPercent,
+  recapShareCells,
 } from '@offside/app-core/seasonRecap';
 import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
@@ -113,10 +112,7 @@ export function drawRecapShareCard(canvas: HTMLCanvasElement, r: SeasonRecap) {
   text(recapHeadline(r), 540, 614, 32, C.ink, 'center', BODY, W - PAD * 2);
 
   // 숫자 칸 — 세 칸씩 두 줄.
-  // 은퇴 선수 수는 한 줄 요약에 들어 있어 칸에서 뺀다(A매치보다 발롱도르가 먼저).
-  const cells = recapNumbers(r)
-    .filter((c) => c.key !== 'retired' && c.key !== 'caps')
-    .slice(0, 6);
+  const cells = recapShareCells(r);
   const cols = 3;
   const gap = 24;
   const cw = (W - PAD * 2 - gap * (cols - 1)) / cols;
@@ -169,19 +165,16 @@ export function drawRecapShareCard(canvas: HTMLCanvasElement, r: SeasonRecap) {
         : []),
     ]);
   else panel(PAD, L.secActivity, L.players, [num(r.players)]);
-  if (r.team) {
-    const pct = topPercent(r.team.rank, r.team.ranked);
+  if (r.team)
     panel(PAD + half + gap, L.secTeam, r.team.name, [
       recordText({ w: r.team.wins, d: r.team.draws, l: r.team.losses }),
-      `${L.teamRank} ${rankText(r.team.rank, r.team.ranked)}${pct === null ? '' : ` · ${L.topPct({ pct })}`}`,
+      `${L.teamRank} ${rankLine(r.team.rank, r.team.ranked)}`,
     ]);
-  } else if (r.achievements) {
-    const pct = topPercent(r.achievements.rank, r.achievements.ranked);
+  else if (r.achievements)
     panel(PAD + half + gap, L.secAch, L.achScore, [
       num(r.achievements.score),
-      `${rankText(r.achievements.rank, r.achievements.ranked)}${pct === null ? '' : ` · ${L.topPct({ pct })}`}`,
+      rankLine(r.achievements.rank, r.achievements.ranked),
     ]);
-  }
   y += 176 + 30;
 
   // 자랑거리 알약 — 들어가는 만큼만 한 줄로.
