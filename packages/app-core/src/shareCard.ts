@@ -1,6 +1,7 @@
 // ───────── SNS 공유 이미지 카드 내용 (웹·앱 공용, T-10-079 · 공용 T-11-005) ─────────
 // 은퇴 리포트와 같은 LegendView로 1080×1350(인스타 4:5) 카드에 실을 내용을 만든다(shareCardData — 순수 함수).
 // 그리는 쪽은 클라이언트가 한다: 웹은 캔버스(shareCard.ts drawShareCard), 앱은 같은 카드를 RN 뷰로 그려 PNG로 찍는다.
+import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { styleReport } from '@offside/game/playStyleReport';
 import { careerChapters, honoursRoll } from '@offside/game/retirement-report';
 import { legendTitle } from '@offside/game/season';
@@ -53,7 +54,8 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
   const main = titleById(titleId);
   const rn = v.rn?.kind === 'granted' ? v.rn : null;
   const pills: ShareCardData['pills'] = [{ text: legendTitle(v.score, v.dpos), gold: true }];
-  if (main && main.cat !== 'legend') pills.push({ text: `‘${main.name}’` });
+  if (main && (main.cat !== 'legend' || main.id === WALL_OF_HONOR_TITLE_ID))
+    pills.push({ text: `‘${main.name}’` });
   if (rn) pills.push({ text: `👑 ${rn.club}`, tail: ` 영구결번 ${rn.number}` });
   else pills.push({ text: `최고 OVR ${v.peak}` });
 

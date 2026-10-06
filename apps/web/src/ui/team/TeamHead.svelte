@@ -4,6 +4,7 @@
   import { MANAGER_NAME_MAX, MANAGER_NAME_MIN, TEAM_NAME_MAX, TEAM_NAME_MIN, YOUTH_OVR } from '@offside/contracts/owner-team';
   import type { OwnerTeam, OwnerTeamResponse } from '@offside/app-core/api/team';
   import { num, recordText } from '@offside/app-core/teamText';
+  import { isPreseasonLegacy, PRESEASON_TEAM_NOTE } from '@offside/app-core/teamOwner';
   import { doneOnEnter } from '../inputDone.js';
   import TeamLogo from './TeamLogo.svelte';
   import type { TeamLogo as Logo } from '@offside/contracts/team-logo';
@@ -44,6 +45,8 @@
     renaming: boolean;
     onseason: (id: number) => void;
   } = $props();
+  // T-11-113 개막 뒤 프리시즌 팀 — 친선전 전용으로 고칠 수 있다.
+  const legacy = $derived(isPreseasonLegacy(season, current));
   let menuOpen = $state(false);
   let menu = $state<HTMLDetailsElement>();
   let teamNameInput = $state<HTMLInputElement>();
@@ -98,11 +101,15 @@
     <dl class="tm-stats" data-team-record>
       <div class="tm-record"><dt class="sr-only">전적</dt><dd>{recordText(team.record)}</dd></div>
       <div><dt>레이팅</dt><dd>{num(team.rating)}</dd></div>
-      <div aria-label={editable ? `오늘 남은 경기 ${matchesLeft}회, 하루 ${perDay}회까지` : undefined}><dt>{editable ? '남은 경기' : '시즌'}</dt><dd>{editable ? `${matchesLeft}회` : '지난 시즌'}</dd></div>
+      {#if legacy}<div><dt>친선전</dt><dd>전용</dd></div>
+      {:else}<div aria-label={editable ? `오늘 남은 경기 ${matchesLeft}회, 하루 ${perDay}회까지` : undefined}><dt>{editable ? '남은 경기' : '시즌'}</dt><dd>{editable ? `${matchesLeft}회` : '지난 시즌'}</dd></div>{/if}
     </dl>
-  {:else if editable}
+  {/if}
+  {#if legacy}
+    <p class="muted fs-sm" data-team-legacy>{PRESEASON_TEAM_NOTE}</p>
+  {:else if !team && editable}
     <p class="muted">{seasonName}에 뛰고 은퇴한 내 선수로 11명을 꾸려요. 빈 자리는 유스 선수(OVR {YOUTH_OVR})가 채워서, 한 명만 넣어도 경기할 수 있어요. 팀은 시즌마다 새로 꾸려요.</p>
-  {:else}
+  {:else if !team}
     <p class="muted">{seasonName}에는 팀을 꾸리지 않았어요.</p>
   {/if}
   {#if !editable && team}

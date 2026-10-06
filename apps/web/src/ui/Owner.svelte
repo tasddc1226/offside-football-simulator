@@ -14,6 +14,7 @@
   import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
   import { fmtValue } from '@offside/app-core/format';
+  import { FOUNDER_LABEL } from '@offside/app-core/friendText';
   import { appState, type TeamView } from './state.svelte.js';
   import { accountCache } from './account-state.svelte.js';
   import { isMember } from '@offside/app-core/account';
@@ -90,7 +91,7 @@
       <div class="owner-id">
         <span class="owner-avatar" aria-hidden="true">{(nickname ?? '구').slice(0, 1)}</span>
         <div class="owner-who">
-          <b>{guest ? '게스트 구단주' : (nickname ?? '구단주')}</b>
+          <b>{guest ? '게스트 구단주' : (nickname ?? '구단주')}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{FOUNDER_LABEL}</span>{/if}</b>
           <span class="muted fs-sm">{guest ? '기록은 이 기기에만 저장돼요' : card?.team ? `${card.team.name} · ${card.season}` : 'Google 계정으로 로그인했어요'}</span>
         </div>
       </div>
@@ -181,6 +182,7 @@
 </div>
 
 <style>
+  .owner-founder {margin-left:6px;vertical-align:middle;}
   .owner-hub {
     display: flex;
     flex-direction: column;

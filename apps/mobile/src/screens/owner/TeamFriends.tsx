@@ -16,17 +16,22 @@ import {
 } from '@offside/app-core/api/friends';
 import type { TeamMatch } from '@offside/app-core/api/team';
 import {
+  FOUNDER_LABEL,
+  PRESEASON_FRIENDLY_HINT,
+  canFriendly,
+  canPreseasonFriendly,
   friendCodeLabel,
   friendInviteText,
   friendRequestText,
   h2hText,
+  preseasonTeamLine,
 } from '@offside/app-core/friendText';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { toast } from '../../game/host';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
-import { Btn, Card, Txt } from '../../ui';
+import { Btn, Card, Pill, Txt } from '../../ui';
 import { TextField } from '../settings/parts';
 import { MatchRow } from './TeamHistory';
 import { Seg, SegBtn } from './TeamParts';
@@ -108,11 +113,12 @@ export function useFriends() {
     void load(true);
     return true;
   }
-  async function play(f: FriendPerson): Promise<TeamMatch | null> {
+  /** preseason: T-11-113 프리시즌 팀끼리(개막 뒤) 친선전. */
+  async function play(f: FriendPerson, preseason = false): Promise<TeamMatch | null> {
     if (busyRef.current) return null;
     busyRef.current = true;
     setBusy(true);
-    const r = await playFriendly(f.code);
+    const r = await playFriendly(f.code, preseason);
     busyRef.current = false;
     setBusy(false);
     if (!r.ok) {
@@ -176,16 +182,25 @@ function Row({ children }: { children: ReactNode }) {
 
 function Who({ f, h2h = false }: { f: FriendPerson; h2h?: boolean }) {
   const record = h2h ? h2hText(f.h2h) : null;
+  const preseasonLine = h2h ? preseasonTeamLine(f) : null;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
       <TeamLogo logo={f.team?.logo} name={f.team?.name ?? f.name} size={32} decorative />
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <Txt bold numberOfLines={1}>
-          {f.name}
-        </Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Txt bold numberOfLines={1} style={{ flexShrink: 1 }}>
+            {f.name}
+          </Txt>
+          {f.founder ? <Pill tone="good">{FOUNDER_LABEL}</Pill> : null}
+        </View>
         <Txt tone="muted" v="sm">
           {f.team ? `${f.team.name} · OVR ${f.team.ovr}` : '이번 시즌 팀이 없어요'}
         </Txt>
+        {preseasonLine ? (
+          <Txt tone="muted" v="sm">
+            {preseasonLine}
+          </Txt>
+        ) : null}
         {record ? <Txt tone="muted" v="sm">{`상대 전적 ${record}`}</Txt> : null}
       </View>
     </View>
@@ -198,12 +213,15 @@ export function TeamFriends({
   friends,
   onPlayed,
   onOpen,
+  onPreseason,
 }: {
   friends: Friends;
   /** 친선전을 치르면(중계 화면으로). */
   onPlayed: (match: TeamMatch) => void;
   /** 최근 친선전을 누르면(결과 화면으로). */
   onOpen: (match: TeamMatch) => void;
+  /** T-11-113 '프리시즌 팀 꾸리기' — 프리시즌 팀 편성 화면으로. */
+  onPreseason: () => void;
 }) {
   const c = useColors();
   const { data, status, busy } = friends;
@@ -229,8 +247,8 @@ export function TeamFriends({
     if (!code) return toast('친구 코드 8자리를 확인해 주세요.');
     if (await friends.request({ code })) setInput('');
   }
-  async function challenge(f: FriendPerson) {
-    const m = await friends.play(f);
+  async function challenge(f: FriendPerson, preseason = false) {
+    const m = await friends.play(f, preseason);
     if (m) onPlayed(m);
   }
   function askRemove(f: FriendPerson) {
@@ -257,6 +275,21 @@ export function TeamFriends({
                 이번 시즌 팀을 만들면 친구와 친선전을 할 수 있어요.
               </Txt>
             )}
+            {data.canPlayPreseason === false ? (
+              <>
+                <Txt tone="muted" v="sm" testID="friendly-preseason-hint">
+                  {PRESEASON_FRIENDLY_HINT}
+                </Txt>
+                <Btn
+                  sm
+                  testID="friendly-preseason-make"
+                  style={{ alignSelf: 'flex-start' }}
+                  onPress={onPreseason}
+                >
+                  프리시즌 팀 꾸리기
+                </Btn>
+              </>
+            ) : null}
           </Card>
 
           <Card gap={10}>
@@ -369,17 +402,22 @@ export function TeamFriends({
                       kind="primary"
                       testID="friend-play"
                       accessibilityLabel={`${f.name} 님과 친선전`}
-                      disabled={
-                        busy ||
-                        data.matchesLeft === 0 ||
-                        !data.canPlay ||
-                        !f.team ||
-                        f.team.filled === 0
-                      }
+                      disabled={busy || !canFriendly(data, f)}
                       onPress={() => void challenge(f)}
                     >
                       친선전
                     </Btn>
+                    {f.preseasonTeam ? (
+                      <Btn
+                        sm
+                        testID="friend-play-preseason"
+                        accessibilityLabel={`${f.name} 님과 프리시즌 친선전`}
+                        disabled={busy || !canPreseasonFriendly(data, f)}
+                        onPress={() => void challenge(f, true)}
+                      >
+                        프리시즌 친선전
+                      </Btn>
+                    ) : null}
                     <Btn
                       sm
                       kind="ghost"

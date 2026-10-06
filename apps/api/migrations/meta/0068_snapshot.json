@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "739e7e83-ce60-40e1-bcc0-26e567864ddd",
-  "prevId": "e5f91da1-90d6-4d84-8e57-88b776695498",
+  "id": "fd5adf0b-34a2-4f27-b838-d90591a73e2a",
+  "prevId": "739e7e83-ce60-40e1-bcc0-26e567864ddd",
   "tables": {
     "app_auth_tickets": {
       "name": "app_auth_tickets",
@@ -1262,6 +1262,13 @@
         },
         "snapshot_json": {
           "name": "snapshot_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "wall_of_honor_json": {
+          "name": "wall_of_honor_json",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

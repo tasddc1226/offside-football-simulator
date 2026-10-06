@@ -176,11 +176,17 @@ export const OwnerTeamResponseSchema = z.strictObject({
   /** 오늘(한국 시각) 남은 경기 수. */
   matchesLeft: z.number().int().min(0),
   matchesPerDay: z.number().int().min(1),
+  /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
+  founder: z.boolean().optional(),
 });
 export type OwnerTeamResponse = z.infer<typeof OwnerTeamResponseSchema>;
 
-/** 지금 시즌 팀 만들기·고치기(시즌마다 한 팀 — 있으면 고친다). slots는 포메이션 순서의 11자리. */
+/**
+ * 지금 시즌 팀 만들기·고치기(시즌마다 한 팀 — 있으면 고친다). slots는 포메이션 순서의 11자리. season을 0으로 보내면
+ * 프리시즌 팀을 고친다(T-11-113 — 개막 뒤엔 친선전 전용). 없으면 지금 시즌.
+ */
 export const PutOwnerTeamBodySchema = z.strictObject({
+  season: TeamSeasonSchema.optional(),
   name: TeamNameSchema,
   manager: ManagerNameSchema,
   logo: TeamLogoSchema.nullable().optional(),
