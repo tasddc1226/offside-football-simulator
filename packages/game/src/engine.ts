@@ -22,6 +22,8 @@ import { adoptLatestBalance, applyLatestBalance, BAL } from './balance.js';
 import type { GameState, Season, LogEntry } from './types.js';
 import { leagueOf, clubsIn } from './player.js';
 import { log } from './stats.js';
+import { gTurnText as M } from './i18n/ko/gTurn.js';
+import { tn } from './i18n/names.js';
 import { nationOf } from './nation.js';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { Body } from '@offside/contracts/body';
@@ -169,7 +171,13 @@ export function newGame(
   s.season = newSeason(s);
   log(
     s,
-    `${s.nation ? `${nationOf(s).ko}에서 축구 유학을 온 ` : ''}${club.name} 3학년 ${posLabel(s)} ${s.name}, 등번호 ${s.number}번으로 축구 커리어를 시작합니다.`,
+    M.gameStart({
+      nation: s.nation ? tn(nationOf(s).ko) : '',
+      club: tn(club.name),
+      pos: posLabel(s),
+      name: s.name,
+      number: s.number,
+    }),
     'big',
   );
   return s;
@@ -177,8 +185,7 @@ export function newGame(
 
 export function newSeason(s: GameState): Season {
   // T-10-016 서버의 새 밸런스 버전은 시즌이 바뀔 때만 커리어에 들어온다.
-  if (adoptLatestBalance(s) && s.career.length)
-    log(s, `밸런스 패치 v${s.bal!.v}가 이번 시즌부터 적용됩니다.`);
+  if (adoptLatestBalance(s) && s.career.length) log(s, M.balancePatch({ v: s.bal!.v }));
   const L = leagueOf(s.leagueId);
   const rivals: number[] = [];
   for (let i = 0; i < 19; i++) rivals.push(L.avg + gauss() * L.spread);

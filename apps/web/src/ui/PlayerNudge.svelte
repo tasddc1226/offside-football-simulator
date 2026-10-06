@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { playerNudge, takePlayerNudge, notePlayerVisit, PLAYER_NUDGE_DELAY, PLAYER_NUDGE_MS, type PlayerNudge } from '@offside/app-core/player-nudge';
+  import { playerNudgeText as L } from '@offside/app-core/i18n/ko/playerNudge';
   import { appState } from './state.svelte.js';
   import { sheetState } from './sheetState.svelte.js';
   const { openPlayer }: { openPlayer: () => void } = $props();
@@ -29,11 +30,11 @@
 </script>
 
 {#if shown}
-  <aside class="player-nudge" data-player-nudge aria-label="선수 탭 안내">
+  <aside class="player-nudge" data-player-nudge aria-label={L.aria}>
     <div aria-live="polite"><strong>{shown.title}</strong><p>{shown.text}</p></div>
     <div class="nudge-actions">
-      <button class="btn btn-primary" onclick={() => { shown = null; openPlayer(); }}>선수 탭 보기</button>
-      <button class="btn" aria-label="선수 탭 안내 닫기" onclick={() => (shown = null)}>닫기</button>
+      <button class="btn btn-primary" onclick={() => { shown = null; openPlayer(); }}>{L.open}</button>
+      <button class="btn" aria-label={L.closeAria} onclick={() => (shown = null)}>{L.close}</button>
     </div>
   </aside>
 {/if}

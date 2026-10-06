@@ -1,11 +1,13 @@
 <script lang="ts">
+  import { intlLocale } from '@offside/contracts/i18n';
+  import { tn } from '@offside/game/i18n/names';
   import { onMount } from 'svelte';
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
   import type { DetailPos } from '@offside/contracts/positions';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
   import { cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier } from '@offside/app-core/format';
-  import { teamSeasonName } from '@offside/contracts/service-seasons';
+  import { teamSeasonLabel } from '@offside/app-core/seasonName';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
   let { player, name, rating, role, nation, season, compact = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
@@ -32,8 +34,8 @@
 <div class="player-card" class:compact class:youth class:deployed={deploymentRating !== undefined} data-tier={tier}>
   <div class="card-face">
     <div class="card-rating" title="{ratingLabel} {rating}"><b>{rating}</b><span>{role}</span></div>
-    {#if cardSeason !== undefined}<span class="card-season" data-card-season={cardSeason} style:--season-bg={cardSeasonColor(cardSeason)} title={teamSeasonName(cardSeason)}>{cardSeasonBadge(cardSeason)}</span>{/if}
-    {#if country}<span class="card-nation" role="img" aria-label={L.nationAria({ name: country.ko })} title={country.ko}>{flagOf(country.code)}</span>{/if}
+    {#if cardSeason !== undefined}<span class="card-season" data-card-season={cardSeason} style:--season-bg={cardSeasonColor(cardSeason)} title={teamSeasonLabel(cardSeason)}>{cardSeasonBadge(cardSeason)}</span>{/if}
+    {#if country}<span class="card-nation" role="img" aria-label={L.nationAria({ name: tn(country.ko) })} title={tn(country.ko)}>{flagOf(country.code)}</span>{/if}
     <div class="card-art" aria-hidden="true">
       <svg viewBox="0 0 100 96"><path d="M30 10 15 17 3 38 20 48 26 36 24 90 76 90 74 36 80 48 97 38 85 17 70 10 62 5Q50 16 38 5Z" /><path class="shirt-trim" d="M38 5Q50 25 62 5M25 73H75M34 12V87M66 12V87" /></svg>
       <span class="shirt-number">{player?.number ?? (youth ? '+' : name.slice(0, 1))}</span>
@@ -45,7 +47,7 @@
     {#if deploymentRating !== undefined}<span class="card-deployment" title={L.posOvr({ n: deploymentRating })}><span>{L.posOvrLabel}</span><b>{deploymentRating}</b></span>{/if}
     {#if !compact}
       <div class="card-divider"></div>
-      <div class="card-career"><span title={L.legendScoreTitle}>LS</span><b>{(player?.legendScore ?? 0).toLocaleString()}</b></div>
+      <div class="card-career"><span title={L.legendScoreTitle}>LS</span><b>{(player?.legendScore ?? 0).toLocaleString(intlLocale())}</b></div>
       <dl class="card-attributes" aria-label={L.attributesAria}>
         {#each statKeys as key (key)}
           <div><dt>{statLabels[key]}</dt><dd>{player?.attrs ? Math.round(player.attrs[key]) : '—'}</dd></div>

@@ -2,6 +2,7 @@
 import type { ServerFirst, ServerFirstCat } from '@offside/contracts';
 import { anonName } from '@offside/app-core/format';
 import { kstParts } from '@offside/app-core/boardText';
+import { tn } from '@offside/game/i18n/names';
 import { firstsTabText } from './i18n/ko/firstsTab.js';
 
 // T-10-056 'records'는 깨질 수 있는 서버 기록(최다·최고) 탭.
@@ -46,3 +47,9 @@ export function holderLabel(
     ? { name: own, mine: true }
     : { name: h.name ?? anonName(h.pos, h.number), mine: false };
 }
+
+/** 서버 기록의 이름(서버가 한국어로 보낸다)을 지금 언어로. */
+export const firstLabel = (label: string): string => tn(label);
+/** 서버 기록의 값 뒤에 붙는 단위(골·도움·경기·개·회)를 지금 언어로. 영어는 앞에 공백이 들어 있다. */
+export const firstUnit = (unit: string | null | undefined): string =>
+  unit ? firstsTabText.unit({ u: unit }) : '';

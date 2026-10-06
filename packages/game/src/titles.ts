@@ -10,6 +10,9 @@ import type { GameState } from './types.js';
 import { CONFEDS, CONF_ORDER, cupTrophy } from '@offside/contracts/nations';
 import { isKorean, nationOf, type Confed } from './nation.js';
 import { LEGEND_BANDS, legendBand, type Rarity } from './legend-bands.js';
+import { gTitlesText } from './i18n/ko/gTitles.js';
+import { gRarityText } from './i18n/ko/gRarity.js';
+import { tn } from './i18n/names.js';
 export type { Rarity } from './legend-bands.js';
 
 export type TitleCat =
@@ -34,17 +37,57 @@ export interface TitleDef {
   avail?: (s: Pick<GameState, 'nation'>) => boolean;
 }
 
-export const TITLE_CATS: { id: TitleCat; label: string }[] = [
-  { id: 'record', label: '기록' },
-  { id: 'journey', label: '여정' },
-  { id: 'award', label: '개인 수상' },
-  { id: 'trophy', label: '우승' },
-  { id: 'nation', label: '국가대표' },
-  { id: 'story', label: '이야기' },
-  { id: 'fame', label: '인기' },
-  { id: 'legend', label: '은퇴' },
+export const TITLE_CATS: { id: TitleCat; readonly label: string }[] = [
+  {
+    id: 'record',
+    get label() {
+      return gTitlesText.catRecord;
+    },
+  },
+  {
+    id: 'journey',
+    get label() {
+      return gTitlesText.catJourney;
+    },
+  },
+  {
+    id: 'award',
+    get label() {
+      return gTitlesText.catAward;
+    },
+  },
+  {
+    id: 'trophy',
+    get label() {
+      return gTitlesText.catTrophy;
+    },
+  },
+  {
+    id: 'nation',
+    get label() {
+      return gTitlesText.catNation;
+    },
+  },
+  {
+    id: 'story',
+    get label() {
+      return gTitlesText.catStory;
+    },
+  },
+  {
+    id: 'fame',
+    get label() {
+      return gTitlesText.catFame;
+    },
+  },
+  {
+    id: 'legend',
+    get label() {
+      return gTitlesText.catLegend;
+    },
+  },
 ];
-export const RARITY_LABEL: Record<Rarity, string> = { 1: '일반', 2: '희귀', 3: '영웅', 4: '전설' };
+export const RARITY_LABEL: Record<Rarity, string> = gRarityText;
 /** 획득 시 오르는 인기. 마일스톤 보상(1~6)과 같은 크기대로 둔다. */
 const RARITY_FAME: Record<Rarity, number> = { 1: 1, 2: 2, 3: 4, 4: 8 };
 
@@ -109,293 +152,162 @@ const STORY_ENDINGS: [string, string, string][] = [
   ['mentor', '홀로서기', 'st_mentor_alone'],
 ];
 
+/** 칭호 이름·설명은 만들 때 굳히지 않고 읽을 때 지금 언어로 가져온다(getter). */
+const txt = (k: string): string => (gTitlesText as unknown as Record<string, string>)[k]!;
 const t = (
   id: string,
-  name: string,
   cat: TitleCat,
   rarity: Rarity,
-  desc: string,
   earned: TitleDef['earned'],
   progress?: TitleDef['progress'],
   hidden?: boolean,
+  /** 이름·설명이 id로 찾는 문구가 아닐 때(스토리 결말·국가대항전·은퇴 등급). */
+  text?: { name?: () => string; desc?: () => string },
 ): TitleDef => ({
   id,
-  name,
+  get name() {
+    return text?.name ? text.name() : txt(id);
+  },
   cat,
   rarity,
-  desc,
+  get desc() {
+    return text?.desc ? text.desc() : txt(`${id}_d`);
+  },
   earned,
   ...(progress ? { progress } : {}),
   ...(hidden ? { hidden } : {}),
 });
 
-/** 국적 조건이 붙은 칭호 — 얻을 수 없는 선수에겐 판정도 도감도 없다. */
-const only = (avail: NonNullable<TitleDef['avail']>, d: TitleDef): TitleDef => ({
-  ...d,
-  avail,
-  earned: (s, x) => avail(s) && d.earned(s, x),
-});
+/** 국적 조건이 붙은 칭호 — 얻을 수 없는 선수에겐 판정도 도감도 없다. getter를 잃지 않게 d를 그대로 고친다. */
+const only = (avail: NonNullable<TitleDef['avail']>, d: TitleDef): TitleDef => {
+  const earned = d.earned;
+  d.avail = avail;
+  d.earned = (s, x) => avail(s) && earned(s, x);
+  return d;
+};
 const confIs = (c: Confed) => (s: Pick<GameState, 'nation'>) => nationOf(s).conf === c;
 /** 셀 수 있는 조건(값 ≥ 목표) — 판정과 진행도가 같은 값을 쓴다. */
 const n = (
   id: string,
-  name: string,
   cat: TitleCat,
   rarity: Rarity,
-  desc: string,
   get: (s: GameState) => number,
   target: number,
 ): TitleDef =>
   t(
     id,
-    name,
     cat,
     rarity,
-    desc,
     (s) => get(s) >= target,
     (s) => cap(get(s), target),
   );
 
 export const TITLES: TitleDef[] = [
   // 기록
-  n('goals100', '골잡이', 'record', 2, '프로 통산 100골', (s) => sum(s, 'goals'), 100),
-  n('goals300', '골 머신', 'record', 4, '프로 통산 300골', (s) => sum(s, 'goals'), 300),
-  n(
-    'season30',
-    '득점 기계',
-    'record',
-    3,
-    '한 시즌 공식전 30골',
-    (s) => best(s, (r) => (r.pro ? r.goals : 0)),
-    30,
-  ),
-  n('assists100', '마에스트로', 'record', 3, '프로 통산 100도움', (s) => sum(s, 'assists'), 100),
-  n(
-    'season20a',
-    '킬패스 장인',
-    'record',
-    3,
-    '한 시즌 공식전 20도움',
-    (s) => best(s, (r) => (r.pro ? r.assists : 0)),
-    20,
-  ),
-  n('cs100', '통곡의 벽', 'record', 3, '프로 통산 무실점 100경기', (s) => sum(s, 'cs'), 100),
-  n('apps500', '철인', 'record', 3, '프로 통산 500경기 출전', (s) => sum(s, 'apps'), 500),
-  t('rating8', '평점 8의 사나이', 'record', 3, '한 시즌 평균 평점 8.0 이상(15경기 이상)', (s) =>
-    s.career.some((r) => r.pro && r.apps >= 15 && r.rating >= 8),
-  ),
-  n('ovr80', '에이스', 'record', 2, '최고 OVR 80 달성', (s) => s.peak, 80),
-  n('ovr90', '월드클래스', 'record', 4, '최고 OVR 90 달성', (s) => s.peak, 90),
+  n('goals100', 'record', 2, (s) => sum(s, 'goals'), 100),
+  n('goals300', 'record', 4, (s) => sum(s, 'goals'), 300),
+  n('season30', 'record', 3, (s) => best(s, (r) => (r.pro ? r.goals : 0)), 30),
+  n('assists100', 'record', 3, (s) => sum(s, 'assists'), 100),
+  n('season20a', 'record', 3, (s) => best(s, (r) => (r.pro ? r.assists : 0)), 20),
+  n('cs100', 'record', 3, (s) => sum(s, 'cs'), 100),
+  n('apps500', 'record', 3, (s) => sum(s, 'apps'), 500),
+  t('rating8', 'record', 3, (s) => s.career.some((r) => r.pro && r.apps >= 15 && r.rating >= 8)),
+  n('ovr80', 'record', 2, (s) => s.peak, 80),
+  n('ovr90', 'record', 4, (s) => s.peak, 90),
   // 여정
-  t(
-    'debut',
-    '프로 선수',
-    'journey',
-    1,
-    '프로 무대 데뷔',
-    (s) => mile(s, 'debut') || pro(s).some((r) => r.apps > 0),
-  ),
-  t('wonderkid', '원더키드', 'journey', 3, '20세 이하 시즌 OVR 75 이상', (s) =>
-    s.career.some((r) => r.age <= 20 && r.ovr >= 75),
-  ),
-  t('loyal', '한 팀의 심장', 'journey', 2, '한 클럽에서 프로 5시즌', (s) => mile(s, 'loyal5')),
-  n('journeyman', '저니맨', 'journey', 2, '프로 클럽 5곳을 거치기', clubs, 5),
-  t('europe', '유럽파', 'journey', 2, '유럽 무대 진출', (s) => mile(s, 'europe')),
-  t('big5', '빅리거', 'journey', 3, '유럽 5대 리그 입성', (s) => mile(s, 'big5')),
-  t('veteran', '불혹의 현역', 'journey', 3, '38세까지 현역으로 뛰기', (s) =>
-    s.career.some((r) => r.pro && r.age >= 38 && r.apps > 0),
-  ),
-  t('oneclub', '원클럽맨', 'journey', 4, '한 클럽에서만 뛰고 은퇴(8시즌 이상)', (s) =>
-    mile(s, 'oneclub'),
-  ),
+  t('debut', 'journey', 1, (s) => mile(s, 'debut') || pro(s).some((r) => r.apps > 0)),
+  t('wonderkid', 'journey', 3, (s) => s.career.some((r) => r.age <= 20 && r.ovr >= 75)),
+  t('loyal', 'journey', 2, (s) => mile(s, 'loyal5')),
+  n('journeyman', 'journey', 2, clubs, 5),
+  t('europe', 'journey', 2, (s) => mile(s, 'europe')),
+  t('big5', 'journey', 3, (s) => mile(s, 'big5')),
+  t('veteran', 'journey', 3, (s) => s.career.some((r) => r.pro && r.age >= 38 && r.apps > 0)),
+  t('oneclub', 'journey', 4, (s) => mile(s, 'oneclub')),
   only(
     isKorean,
-    t(
-      'mil',
-      '군필',
-      'journey',
-      1,
-      '병역 의무를 마치기',
-      (s) => !!s.mil?.served && !s.mil.serving,
-      undefined,
-      true,
-    ),
+    t('mil', 'journey', 1, (s) => !!s.mil?.served && !s.mil.serving, undefined, true),
   ),
   // 개인 수상
-  t(
-    'topscorer',
-    '득점왕',
-    'award',
-    2,
-    '리그 득점왕',
-    (s) => awardCount(s, (a) => SCORER.has(a)) >= 1,
-  ),
-  n(
-    'topscorer3',
-    '골든부트 콜렉터',
-    'award',
-    3,
-    '리그 득점왕 3회',
-    (s) => awardCount(s, (a) => SCORER.has(a)),
-    3,
-  ),
-  t(
-    'mvp',
-    '리그 MVP',
-    'award',
-    3,
-    '리그 올해의 선수',
-    (s) => awardCount(s, (a) => LEAGUE_MVP.has(a)) >= 1,
-  ),
-  t(
-    'goldenshoe',
-    '골든슈',
-    'award',
-    3,
-    '유러피언 골든슈 수상',
-    (s) => awardCount(s, (a) => a === '유러피언 골든슈') >= 1,
-  ),
-  t(
-    'yashin',
-    '거미손',
-    'award',
-    3,
-    '야신 트로피 수상',
-    (s) => awardCount(s, (a) => a === '야신 트로피') >= 1,
-  ),
-  n('awards10', '수상 제조기', 'award', 3, '개인상 10개', (s) => s.awards.length, 10),
-  t(
-    'ballon',
-    '발롱도르 위너',
-    'award',
-    4,
-    '발롱도르 수상',
-    (s) => awardCount(s, (a) => a === '발롱도르') >= 1,
-  ),
-  n(
-    'ballon3',
-    '황금의 발',
-    'award',
-    4,
-    '발롱도르 3회 수상',
-    (s) => awardCount(s, (a) => a === '발롱도르'),
-    3,
-  ),
+  t('topscorer', 'award', 2, (s) => awardCount(s, (a) => SCORER.has(a)) >= 1),
+  n('topscorer3', 'award', 3, (s) => awardCount(s, (a) => SCORER.has(a)), 3),
+  t('mvp', 'award', 3, (s) => awardCount(s, (a) => LEAGUE_MVP.has(a)) >= 1),
+  t('goldenshoe', 'award', 3, (s) => awardCount(s, (a) => a === '유러피언 골든슈') >= 1),
+  t('yashin', 'award', 3, (s) => awardCount(s, (a) => a === '야신 트로피') >= 1),
+  n('awards10', 'award', 3, (s) => s.awards.length, 10),
+  t('ballon', 'award', 4, (s) => awardCount(s, (a) => a === '발롱도르') >= 1),
+  n('ballon3', 'award', 4, (s) => awardCount(s, (a) => a === '발롱도르'), 3),
   // 우승
-  t(
-    'champion',
-    '챔피언',
-    'trophy',
-    1,
-    '리그 우승',
-    (s) => trophyCount(s, (x) => LEAGUE_WIN.has(x)) >= 1,
-  ),
-  t(
-    'cupwinner',
-    '컵 위너',
-    'trophy',
-    1,
-    '국내 컵 대회 우승',
-    (s) => trophyCount(s, (x) => CUP_WIN.has(x)) >= 1,
-  ),
-  t(
-    'continental',
-    '대륙 챔피언',
-    'trophy',
-    3,
-    '대륙 최상위 클럽 대회 우승',
-    (s) => trophyCount(s, (x) => TOP_CONT_WIN.has(x)) >= 1,
-  ),
-  t(
-    'bigear',
-    '빅이어',
-    'trophy',
-    4,
-    'UEFA 챔피언스리그 우승',
-    (s) => trophyCount(s, (x) => x === 'UEFA 챔피언스리그 우승') >= 1,
-  ),
-  t('treble', '트레블', 'trophy', 4, '한 시즌 리그·국내 컵·대륙 대회 모두 우승', treble),
-  t(
-    'cwc',
-    '세계 최강 클럽',
-    'trophy',
-    3,
-    'FIFA 클럽 월드컵 우승',
-    (s) => trophyCount(s, (x) => x === 'FIFA 클럽 월드컵 우승') >= 1,
-  ),
-  n('trophies10', '우승 청부사', 'trophy', 3, '트로피 10개', (s) => s.trophies.length, 10),
+  t('champion', 'trophy', 1, (s) => trophyCount(s, (x) => LEAGUE_WIN.has(x)) >= 1),
+  t('cupwinner', 'trophy', 1, (s) => trophyCount(s, (x) => CUP_WIN.has(x)) >= 1),
+  t('continental', 'trophy', 3, (s) => trophyCount(s, (x) => TOP_CONT_WIN.has(x)) >= 1),
+  t('bigear', 'trophy', 4, (s) => trophyCount(s, (x) => x === 'UEFA 챔피언스리그 우승') >= 1),
+  t('treble', 'trophy', 4, treble),
+  t('cwc', 'trophy', 3, (s) => trophyCount(s, (x) => x === 'FIFA 클럽 월드컵 우승') >= 1),
+  n('trophies10', 'trophy', 3, (s) => s.trophies.length, 10),
   // 국가대표
   only(
     isKorean,
-    t('ntdebut', '태극전사', 'nation', 1, 'A매치 데뷔', (s) => s.nat.caps > 0),
+    t('ntdebut', 'nation', 1, (s) => s.nat.caps > 0),
   ),
   only(
     (s) => !isKorean(s),
-    t('ntdebutx', '국가대표', 'nation', 1, 'A매치 데뷔', (s) => s.nat.caps > 0),
+    t('ntdebutx', 'nation', 1, (s) => s.nat.caps > 0),
   ),
-  t(
-    'captain',
-    '캡틴',
-    'nation',
-    3,
-    '국가대표팀 주장 선임',
-    (s) => s.nat.captain || mile(s, 'captain'),
-  ),
-  n('century', '센추리 클럽', 'nation', 3, 'A매치 100경기 출전', (s) => s.nat.caps, 100),
-  t('wcgoal', '월드컵의 사나이', 'nation', 3, '월드컵 본선 득점', (s) => mile(s, 'wcGoal')),
+  t('captain', 'nation', 3, (s) => s.nat.captain || mile(s, 'captain')),
+  n('century', 'nation', 3, (s) => s.nat.caps, 100),
+  t('wcgoal', 'nation', 3, (s) => mile(s, 'wcGoal')),
   t(
     'gold',
-    '금메달리스트',
     'nation',
     2,
-    '아시안게임 또는 올림픽 금메달',
     (s) => trophyCount(s, (x) => x === '아시안게임 금메달' || x === '올림픽 금메달') >= 1,
   ),
   ...CONF_ORDER.map((conf) => {
-    const { id, name } = CONFEDS[conf].title;
+    const { id } = CONFEDS[conf].title;
     const trophy = cupTrophy(conf);
     return only(
       confIs(conf),
-      t(id, name, 'nation', 3, trophy, (s) => trophyCount(s, (x) => x === trophy) >= 1),
+      t(id, 'nation', 3, (s) => trophyCount(s, (x) => x === trophy) >= 1, undefined, undefined, {
+        desc: () => tn(trophy),
+      }),
     );
   }),
-  t(
-    'worldchamp',
-    '월드 챔피언',
-    'nation',
-    4,
-    'FIFA 월드컵 우승',
-    (s) => trophyCount(s, (x) => x === 'FIFA 월드컵 우승') >= 1,
-  ),
-  // 이야기 — 스토리 결말은 숨김 칭호(획득 전에는 이름이 가려진다)
+  t('worldchamp', 'nation', 4, (s) => trophyCount(s, (x) => x === 'FIFA 월드컵 우승') >= 1),
+  // 이야기 — 스토리 결말은 숨김 칭호(획득 전에는 이름이 가려진다). 이름은 저장된 결말 문자열이라 tn()으로 옮긴다.
   ...STORY_ENDINGS.map(([key, ending, id]) =>
     t(
       id,
-      ending,
       'story',
       2,
-      `「${STORIES[key]?.name ?? key}」 이야기의 결말`,
       (s) => (s.storyLog || []).some((l) => l.key === key && l.ending === ending),
       undefined,
       true,
+      {
+        name: () => tn(ending),
+        desc: () => gTitlesText.storyDesc({ name: tn(STORIES[key]?.name ?? key) }),
+      },
     ),
   ),
   // 인기
-  n('fame50', '떠오르는 스타', 'fame', 1, '인기 50', (s) => Math.floor(s.fame), 50),
-  n('fame100', '국민 스타', 'fame', 2, '인기 100', (s) => Math.floor(s.fame), 100),
-  n('fame300', '슈퍼스타', 'fame', 3, '인기 300', (s) => Math.floor(s.fame), 300),
-  n('fame1000', '월드 아이콘', 'fame', 4, '인기 1000', (s) => Math.floor(s.fame), 1000),
+  n('fame50', 'fame', 1, (s) => Math.floor(s.fame), 50),
+  n('fame100', 'fame', 2, (s) => Math.floor(s.fame), 100),
+  n('fame300', 'fame', 3, (s) => Math.floor(s.fame), 300),
+  n('fame1000', 'fame', 4, (s) => Math.floor(s.fame), 1000),
   // 은퇴 — 은퇴할 때 레전드 점수 구간 하나만. T-11-018 기준은 시즌 1 선수 것이고, 프리시즌 선수는 옛 기준을 쓴다.
-  ...LEGEND_BANDS.map(([id, name, rarity, min, preMin], i) =>
+  ...LEGEND_BANDS.map(([id, , rarity, min, preMin], i) =>
     t(
       id,
-      name,
       'legend',
       rarity,
-      i === LEGEND_BANDS.length - 1
-        ? `은퇴(레전드 점수 ${LEGEND_BANDS[i - 1]![3]} 미만)`
-        : `은퇴 시 레전드 점수 ${min} 이상${preMin === min ? '' : `(프리시즌 선수 ${preMin})`}`,
       (s, x) => x.score != null && legendBand(x.score, s.dpos).id === id,
+      undefined,
+      undefined,
+      {
+        desc: () =>
+          i === LEGEND_BANDS.length - 1
+            ? gTitlesText.legendLast({ below: LEGEND_BANDS[i - 1]![3] })
+            : gTitlesText.legendTop({ min, pre: preMin === min ? null : preMin }),
+      },
     ),
   ),
 ];

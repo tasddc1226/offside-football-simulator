@@ -1,14 +1,16 @@
 // ───────── 기록실 '영구결번' 벽 표시 로직 (웹·앱 공용, T-10-076 · 공용 T-11-044) ─────────
 import type { RetiredNumbersResponse, RetiredNumbersSummary } from '@offside/contracts';
 import { defaultClubName, leagueOfClub } from '@offside/contracts/club-names';
+import { tn } from '@offside/game/i18n/names';
 import { hofRnText as L } from './i18n/ko/hofRn.js';
 
 type Item = RetiredNumbersResponse['items'][number];
 
-export const rnLeagueName = (clubId: string) => leagueOfClub(clubId)?.name ?? '';
+/** 리그 이름(화면용 — 지금 언어로). 모르는 구단이면 ''. */
+export const rnLeagueName = (clubId: string) => tn(leagueOfClub(clubId)?.name ?? '');
 /** 결번 당시 기록된 이름은 유저가 바꿔 부른 이름일 수 있다 — 모두가 보는 벽에는 게임 기본 이름을 건다. */
 export const rnClubName = (it: Pick<Item, 'clubId' | 'club'>) =>
-  defaultClubName(it.clubId) ?? it.club;
+  tn(defaultClubName(it.clubId) ?? it.club);
 /** 결번 날짜(기기 시간대 기준 "2026.10.2"). */
 export const rnDay = (iso: string) => {
   const d = new Date(iso);

@@ -30,6 +30,8 @@ import { DISPLAY, rem } from '../../theme/type';
 import { Card, Press, Txt } from '../../ui';
 import { SelectField } from '../settings/parts';
 import { AchGradeBadge, TmTitle } from './TeamParts';
+import { tn } from '@offside/game/i18n/names';
+import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 
 function Stage({ children }: { children: string }) {
   const c = useColors();
@@ -119,8 +121,8 @@ function Group({
         scale={0.99}
         onPress={() => setOpen(!open)}
         accessibilityLabel={L.groupAria({
-          stage: g.stage,
-          title: g.title,
+          stage: tn(g.stage),
+          title: tn(g.title),
           done: achDone(g.items),
           total: g.items.length,
         })}
@@ -134,9 +136,9 @@ function Group({
           paddingHorizontal: 12,
         }}
       >
-        <Stage>{g.stage}</Stage>
+        <Stage>{tn(g.stage)}</Stage>
         <Txt bold style={{ flex: 1, minWidth: 0 }}>
-          {g.title}
+          {tn(g.title)}
         </Txt>
         <Txt tone="accent" style={{ fontFamily: DISPLAY[700] }}>
           {`${achDone(g.items)}/${g.items.length}`}
@@ -160,7 +162,7 @@ function Group({
             >
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Txt style={{ flexShrink: 1 }}>{i.label}</Txt>
+                  <Txt style={{ flexShrink: 1 }}>{tn(i.label)}</Txt>
                   {newIds.has(i.id) ? <NewChip /> : null}
                 </View>
                 <Txt
@@ -251,7 +253,7 @@ export function TeamAchievements({
     const first = ach?.groups.find((g) => g.items.some((i) => newIds.has(i.id)));
     if (first) setCat(first.category);
   }, [ach, newIds]);
-  const seasonName = ach?.seasons.find((o) => o.id === ach.season)?.name ?? '';
+  const seasonName = ach ? teamSeasonLabel(ach.season) : '';
   const tot = ach ? achTotal(ach.groups) : null;
   const gv = ach ? achGradeView(ach.score) : null;
   const sections = ach ? achSections(ach.groups) : [];
@@ -277,7 +279,7 @@ export function TeamAchievements({
               label={L.seasonLabel}
               testID="ach-season"
               value={ach.season}
-              options={ach.seasons.map((o) => ({ value: o.id, label: o.name }))}
+              options={ach.seasons.map((o) => ({ value: o.id, label: seasonLabel(o.id, o.name) }))}
               onChange={(v) => load(v)}
               style={{ maxWidth: '45%', minHeight: 40 }}
             />
@@ -367,7 +369,7 @@ export function TeamAchievements({
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
                       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                        <Txt bold>{n.item.label}</Txt>
+                        <Txt bold>{tn(n.item.label)}</Txt>
                         <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
                           {`${n.group} · ${achState(n.item)}`}
                         </Txt>

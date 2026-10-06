@@ -22,7 +22,7 @@ import {
   type ChartTone,
 } from '@offside/app-core/marketChart';
 import { ovrBand } from '@offside/contracts/market-value';
-import { POS_LABEL } from '@offside/game/pos-label';
+import { POS } from '@offside/game/data';
 import { useColors } from '../../theme/useColors';
 import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -198,7 +198,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
             {CHART_COPY.title}
           </Txt>
           <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-            {CHART_COPY.group(POS_LABEL[card.pos], band)}
+            {CHART_COPY.group(POS[card.pos].label, band)}
           </Txt>
         </View>
         <View

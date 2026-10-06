@@ -10,8 +10,8 @@ const C = '0d000000-0000-4000-8000-00000000000c';
 const D = '0d000000-0000-4000-8000-00000000000d';
 const E = '0d000000-0000-4000-8000-00000000000e';
 
-const read = async (ctx: TestD1) => {
-  const res = await createApp().request('/v1/ticker', {}, ctx.env);
+const read = async (ctx: TestD1, query = '') => {
+  const res = await createApp().request(`/v1/ticker${query}`, {}, ctx.env);
   expect(res.status).toBe(200);
   expect(res.headers.get('Cache-Control')).toContain('public');
   return successEnvelope(TickerResponseSchema).parse(await res.json()).data;
@@ -79,6 +79,20 @@ describe('홈 전광판 /v1/ticker (T-10-122)', () => {
     for (const f of firsts) {
       if (f.kind === 'record') expect(f.value).not.toBeNull();
       else expect(f).toMatchObject({ value: null, unit: null });
+    }
+  });
+
+  it('T-11-106: lang=en이면 최초 기록·신기록 문구만 영어(전광판 줄의 id·값은 그대로)', async () => {
+    await putSeasonsFor(ctx.env, cookie, A);
+    const ko = (await read(ctx)).firsts;
+    const en = (await read(ctx, '?lang=en')).firsts;
+    expect(en.map((f) => [f.id, f.kind, f.value, f.at])).toEqual(
+      ko.map((f) => [f.id, f.kind, f.value, f.at]),
+    );
+    expect(ko.some((f) => /[가-힣]/.test(f.label))).toBe(true);
+    for (const f of en) {
+      expect(f.label, f.id).not.toMatch(/[가-힣]/);
+      if (f.unit !== null) expect(f.unit).not.toMatch(/[가-힣]/);
     }
   });
 

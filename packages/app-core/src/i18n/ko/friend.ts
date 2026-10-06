@@ -54,6 +54,12 @@ const ko = {
   playAria: (p: { name: string }) => `${p.name} 님과 친선전`,
   removeAria: (p: { name: string }) => `${p.name} 님과 친구 끊기`,
   cancelAria: (p: { name: string }) => `${p.name} 신청 취소`,
+  founder: '창단 멤버',
+  preseasonLine: (p: { name: string; ovr: number }) => `프리시즌 ${p.name} · OVR ${p.ovr}`,
+  preseasonHint: '프리시즌 팀을 꾸리면 프리시즌에 키운 선수로 친구와 친선전을 할 수 있어요.',
+  makePreseason: '프리시즌 팀 꾸리기',
+  playPreseason: '프리시즌 친선전',
+  playPreseasonAria: (p: { name: string }) => `${p.name} 님과 프리시즌 친선전`,
 };
 
 export type FriendMsgs = typeof ko;

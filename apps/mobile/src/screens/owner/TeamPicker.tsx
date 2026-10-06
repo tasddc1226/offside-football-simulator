@@ -1,4 +1,5 @@
 // 선수 고르기 시트(웹 team/Team.svelte 의 .tm-sheet) — 고른 자리에 넣을 은퇴 선수. 정렬 셋 · 유스 선수(자리 비우기).
+import { tn } from '@offside/game/i18n/names';
 import { Keyboard, Modal, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
@@ -12,7 +13,7 @@ import {
   type PickCandidate,
   type PickSort,
 } from '@offside/app-core/teamOwner';
-import { POS_LABEL } from '@offside/game/pos-label';
+import { POS } from '@offside/game/data';
 import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -87,7 +88,7 @@ export function TeamPicker({
         {slot ? (
           <View
             accessibilityViewIsModal
-            accessibilityLabel={L.pickAria({ slot: DETAIL_LABEL[slot] })}
+            accessibilityLabel={L.pickAria({ slot: tn(DETAIL_LABEL[slot]) })}
             style={{
               maxHeight: '78%',
               paddingTop: 16,
@@ -110,7 +111,7 @@ export function TeamPicker({
               <View>
                 <Txt v="eyebrow">{slot}</Txt>
                 <Txt v="h2" accessibilityRole="header">
-                  {DETAIL_LABEL[slot]}
+                  {tn(DETAIL_LABEL[slot])}
                 </Txt>
               </View>
               <Btn sm onPress={onClose} testID="pick-close">
@@ -169,7 +170,7 @@ export function TeamPicker({
                         <Txt>{nameOf(cd.p)}</Txt>
                         <Txt tone="muted" v="xs">
                           {`${L.pickLine({
-                            pos: cd.p.dpos ? DETAIL_LABEL[cd.p.dpos] : POS_LABEL[cd.p.pos],
+                            pos: cd.p.dpos ? tn(DETAIL_LABEL[cd.p.dpos]) : POS[cd.p.pos].label,
                             peak: cd.p.peak,
                             fit: pct(cd.fit),
                           })}${cd.at >= 0 && slotCodes[cd.at] && current !== cd.p.careerId ? L.pickSwap({ slot: slotCodes[cd.at]! }) : ''}`}

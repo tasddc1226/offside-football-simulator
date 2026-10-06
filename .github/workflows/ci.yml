@@ -58,6 +58,7 @@ jobs:
           pnpm format:check
           pnpm lint
           pnpm lint:deps
+          pnpm lint:i18n
           pnpm typecheck
           pnpm test
           pnpm --filter @offside/api exec vitest run --config ../mobile/vitest.push.config.mjs

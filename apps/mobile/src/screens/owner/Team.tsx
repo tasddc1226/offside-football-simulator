@@ -39,17 +39,17 @@ import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import {
   autoFillSlots,
   tooManyWildcards,
-  WILDCARD_FULL_TEXT,
+  wildcardFullText,
   wildcardLabel,
   draftLines,
   isPreseasonLegacy,
   matchHintOf,
-  PRESEASON_TEAM_NOTE,
+  preseasonTeamNote,
   slotsSynergy,
   synergyFocus,
   teamEditableIn,
 } from '@offside/app-core/teamOwner';
-import { anonName } from '@offside/game/pos-label';
+import { anonName } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/season';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines } from '../../components/TeamPitch';
@@ -83,6 +83,7 @@ import type { PutOwnerTeamBody } from '@offside/contracts';
 import { readTeamDraft, writeTeamDraft, teamDraftBase, type TeamDraft } from './teamDraft';
 import { RecordsChips as SortChips } from '../hof/RecordsControls';
 import { TeamResult } from './TeamResult';
+import { teamSeasonLabel } from '@offside/app-core/seasonName';
 
 const between = (v: string, min: number, max: number) =>
   v.trim().length >= min && v.trim().length <= max;
@@ -113,7 +114,7 @@ export default function Team() {
   // T-11-113 개막 뒤 프리시즌 팀은 친선전 전용으로 고칠 수 있다(랭크 경기는 지금 시즌 팀만).
   const legacy = isPreseasonLegacy(season, current);
   const editable = teamEditableIn(season, current);
-  const seasonName = seasons.find((o) => o.id === season)?.name ?? '';
+  const seasonName = seasons.find((o) => o.id === season) ? teamSeasonLabel(season) : '';
 
   // 편집 초안 — 저장하기 전까지 이 기기에만 있다.
   const [name, setName] = useState('');
@@ -557,7 +558,7 @@ export default function Team() {
                 record: recordText(team.record),
                 rating: num(team.rating),
                 tail: legacy
-                  ? '친선전 전용'
+                  ? L.friendlyOnly
                   : editable
                     ? L.todayApp({ left: matchesLeft, per: perDay })
                     : L.statPast,
@@ -570,7 +571,7 @@ export default function Team() {
           )}
           {legacy ? (
             <Txt v="sm" tone="muted" testID="team-legacy">
-              {PRESEASON_TEAM_NOTE}
+              {preseasonTeamNote()}
             </Txt>
           ) : null}
           {editable ? (
@@ -737,7 +738,7 @@ export default function Team() {
               synFocus={syn.members}
               change={(nextSlots, nextLayout) => {
                 // T-11-114 지난 시즌 선수는 와일드카드 상한까지만.
-                if (tooManyWildcards(nextSlots, byId, season)) return toast(WILDCARD_FULL_TEXT);
+                if (tooManyWildcards(nextSlots, byId, season)) return toast(wildcardFullText());
                 setSlots(nextSlots);
                 setLayout(nextLayout);
               }}

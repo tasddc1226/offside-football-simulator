@@ -12,6 +12,8 @@ const ko = {
   likes: (p: { n: number }) => `좋아요 ${p.n}`,
   commentCount: (p: { n: number }) => `댓글 ${p.n}`,
   edited: '수정됨',
+  monthDayHour: (p: { month: number; day: number; hour: number; minute: number }) =>
+    `${p.month}월 ${p.day}일 ${p.hour}시${p.minute ? ` ${p.minute}분` : ''}`,
 };
 
 export type BoardLabelMsgs = typeof ko;

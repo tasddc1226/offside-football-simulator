@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // T-11-039 계약서 사인 — 이적시장에서 고른 구단과의 계약. 손가락·마우스로 사인하거나 '이름 사인 사용'으로 선수 이름을
   // 흘려 쓴 사인을 넣으면 확정 버튼이 켜진다. 누르면 도장이 찍히고 onSign. 사인은 화면 연출이라 저장하지 않는다.
   import { onMount } from 'svelte';
@@ -167,7 +168,7 @@
     <ClubBadge club={v.club} size={34} />
     <dl>
       {#each v.terms as t (t.label)}
-        <div><dt>{t.label}</dt><dd>{t.value}</dd></div>
+        <div><dt>{t.label}</dt><dd>{tn(t.value)}</dd></div>
       {/each}
     </dl>
   </div>
@@ -183,7 +184,7 @@
     <span class="sign-hint" aria-hidden="true">{L.signHint}</span>
     <i aria-hidden="true"></i>
     {#if sealed}
-      <div class="stamp" aria-hidden="true"><b>SIGNED</b><span>{v.club.name}</span></div>
+      <div class="stamp" aria-hidden="true"><b>SIGNED</b><span>{tn(v.club.name)}</span></div>
     {/if}
   </div>
   <p class="sign-note">{L.signNote}</p>

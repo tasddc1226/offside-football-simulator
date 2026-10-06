@@ -104,6 +104,49 @@ describe('app push registration and own-device test', () => {
     );
     expect(await receipt()).toEqual({ ticket: null, sent: null });
   });
+  it('T-11-106: ?lang=en sends the test push and errors in English; the inbox keeps the Korean original and translates on read', async () => {
+    const a = await identity();
+    await linkGoogle(ctx, a.session.profileId, { email: 'admin@example.com' });
+    ctx.env.ADMIN_EMAILS = 'admin@example.com';
+    await call(a.token, 'PUT', '/v1/push/device', INPUT);
+    const disabled = await call(a.token, 'POST', '/v1/push/test?lang=en', {
+      installationId: INSTALL,
+    });
+    expect(disabled.status).toBe(503);
+    expect(await disabled.json()).toMatchObject({
+      error: { code: 'SERVICE_UNAVAILABLE', message: 'The notification test is being prepared.' },
+    });
+    const korean = await call(a.token, 'POST', '/v1/push/test', { installationId: INSTALL });
+    expect(await korean.json()).toMatchObject({ error: { message: '알림 테스트 준비 중이에요.' } });
+
+    ctx.env.PUSH_TEST_ENABLED = '1';
+    const send = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(Response.json({ data: { status: 'ok', id: 'en-ticket' } }));
+    vi.stubGlobal('fetch', send);
+    const ok = await call(a.token, 'POST', '/v1/push/test?lang=en', { installationId: INSTALL });
+    expect(ok.status).toBe(200);
+    expect(JSON.parse(send.mock.calls[0]![1]!.body as string)).toMatchObject({
+      title: 'OFFSIDE notification test',
+      body: 'Notices and release note alerts are connected.',
+    });
+    const inbox = async (lang: string) =>
+      (await (
+        await createApp().request(
+          `/v1/notifications${lang}`,
+          { headers: { Authorization: `Bearer ${a.token}` } },
+          ctx.env,
+        )
+      ).json()) as { data: { items: { title: string; body: string }[] } };
+    expect((await inbox('')).data.items[0]).toMatchObject({
+      title: '오프사이드 알림 테스트',
+      body: '이 기기의 알림 연결을 확인하는 테스트예요.',
+    });
+    expect((await inbox('?lang=en')).data.items[0]).toMatchObject({
+      title: 'OFFSIDE notification test',
+      body: 'This is a test to check the notification connection on this device.',
+    });
+  });
   it('does not remove a newer registration after an old in-flight token is rejected', async () => {
     const a = await identity();
     const b = await identity();

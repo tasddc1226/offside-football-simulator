@@ -14,6 +14,7 @@ import {
 import { fmtMoney } from '@offside/game/player';
 import type { GameState } from '@offside/game/types';
 import { gameBoostText as L } from './i18n/ko/gameBoost';
+import { appFormatText as L2 } from './i18n/ko/appFormat.js';
 
 export interface BoostView {
   status: BoostStatus;
@@ -49,7 +50,7 @@ export type BoostAdOffer = 'ad' | 'free' | null;
 export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView {
   const status = boostStatus(s);
   const b = boostState(s);
-  const cost = `${fmtMoney(boostCost(s))}원`;
+  const cost = L2.won({ v: fmtMoney(boostCost(s)) });
   const chance = boostChance(s);
   const line =
     status === 'locked'
@@ -82,7 +83,8 @@ export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView
       .slice(-4)
       .reverse()
       .map((x) => {
-        const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost: x.ad ? L.adCost : `${fmtMoney(x.c)}원` };
+        const cost = x.ad ? L.adCost : L2.won({ v: fmtMoney(x.c) });
+        const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost };
         return x.ok ? L.historyOk(p) : L.historyFail(p);
       }),
   };

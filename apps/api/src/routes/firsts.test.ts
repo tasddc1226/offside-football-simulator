@@ -72,6 +72,27 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     expect(data.items.every((x) => x.holder === null && x.achievedAt === null)).toBe(true);
   });
 
+  it('T-11-106: lang=en이면 문장·단위만 영어이고 id·holder는 같다. 모르는 값이면 한국어', async () => {
+    expect(
+      (await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 })))
+        .status,
+    ).toBe(200);
+    const ko = await read(ctx);
+    const en = await read(ctx, '?lang=en');
+    const odd = await read(ctx, '?lang=zz');
+    expect(odd).toEqual(ko);
+    expect(en.items.map((i) => i.id)).toEqual(ko.items.map((i) => i.id));
+    expect(en.items.map((i) => i.holder)).toEqual(ko.items.map((i) => i.holder));
+    expect(ko.items.find((i) => i.id === 'sgoals30')?.label).toBe('한 시즌 30골 최초 달성!');
+    expect(en.items.find((i) => i.id === 'sgoals30')?.label).toBe('First to 30 goals in a season!');
+    expect(en.items.map((i) => i.label).join('')).not.toMatch(/[가-힣]/);
+    expect(en.records.find((r) => r.id === 'sgoals')).toMatchObject({
+      label: 'Most goals in a season',
+      unit: ' goals',
+      value: 32,
+    });
+  });
+
   it('시즌 업로드로 기록이 생기고, 나중에 같은 기록을 채운 커리어는 자리를 뺏지 못한다', async () => {
     expect(
       (await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 32 })))

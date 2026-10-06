@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // ui.ts renderHome() 포트 (156~182줄)
   import { PHASES, LAST_PHASE, posLabel } from '@offside/game/data';
   import { ovr } from '@offside/game/attributes';
@@ -38,8 +39,8 @@
       <div class="chalk"></div>
       <div class="eyebrow">Current career</div>
       <h1><span>{L.currentSub}</span><b><strong>{G.name}</strong></b></h1>
-      <p>{L.currentLine({ club: G.club.name, age: G.age, pos: posLabel(G) })}</p>
-      <p class="hero-meta num">{L.currentMeta({ year: G.year, phase: PHASES[Math.min(G.phase, LAST_PHASE + 1)] ?? '', ovr: ovr(G) })}</p>
+      <p>{L.currentLine({ club: tn(G.club.name), age: G.age, pos: posLabel(G) })}</p>
+      <p class="hero-meta num">{L.currentMeta({ year: G.year, phase: tn(PHASES[Math.min(G.phase, LAST_PHASE + 1)] ?? ''), ovr: ovr(G) })}</p>
       <!-- T-10-124 한 줄에 왼쪽 새 커리어, 오른쪽 이어하기(주 버튼이라 더 넓게). -->
       <div class="hero-actions">
         <button class="btn hero-new" data-act="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>{L.newCareer}</button>

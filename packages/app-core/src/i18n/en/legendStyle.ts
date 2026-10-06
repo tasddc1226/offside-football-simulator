@@ -14,7 +14,7 @@ export const legendStyle: Translation<LegendStyleMsgs> = {
   longshotsSmall: (p) => `${p.n} landed`,
   moves: 'Transfers',
   movesSmall: (p) =>
-    `${p.tierUp ? `${p.tierUp} up to a higher league` : '—'}${p.snubUp ? ` · ${plural(p.snubUp, 'big-club offer')} turned down` : ''}`,
+    `${p.tierUp ? `${plural(p.tierUp, 'move')} up a league` : '—'}${p.snubUp ? ` · ${plural(p.snubUp, 'big-club offer')} turned down` : ''}`,
   bestLabel: 'Best gamble of your career',
   bestBefore: 'A ',
   bestAfter: (p) => ` chance, and you pulled off ‘${p.title}’.`,

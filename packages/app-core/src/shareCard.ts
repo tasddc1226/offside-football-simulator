@@ -6,6 +6,7 @@ import { careerChapters, honoursRoll } from '@offside/game/retirement-report';
 import { legendTitle } from '@offside/game/season';
 import { POS_LABEL } from '@offside/game/pos-label';
 import { titleById } from '@offside/game/titles';
+import { tn } from '@offside/game/i18n/names';
 import { totals } from './format.js';
 import { RN_DEFAULT, rnColors, type RnColors } from './rnStyle.js';
 import type { LegendView } from './state.js';
@@ -55,7 +56,7 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
   const rn = v.rn?.kind === 'granted' ? v.rn : null;
   const pills: ShareCardData['pills'] = [{ text: legendTitle(v.score, v.dpos), gold: true }];
   if (main && main.cat !== 'legend') pills.push({ text: `‘${main.name}’` });
-  if (rn) pills.push({ text: `👑 ${rn.club}`, tail: L.cardRnTail({ number: rn.number }) });
+  if (rn) pills.push({ text: `👑 ${tn(rn.club)}`, tail: L.cardRnTail({ number: rn.number }) });
   else pills.push({ text: L.cardPeak({ peak: v.peak }) });
 
   const stat = (value: number | undefined, label: string) => ({ value: `${value ?? '—'}`, label });
@@ -71,8 +72,8 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
   const r = d ? styleReport(d.style, d.career) : null;
   const all = (d ? careerChapters(d) : []).map((c) => ({
     years: yy(c.from, c.to),
-    club: c.club,
-    league: c.leagues.at(-1)!,
+    club: tn(c.club),
+    league: tn(c.leagues.at(-1)!),
   }));
   const awards = d ? honoursRoll(d.awards) : [];
   const ballon = (h: { name: string }) => h.name.includes('발롱도르');
@@ -84,7 +85,7 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
         ...awards.filter((h) => !ballon(h)),
       ]
         .slice(0, HONOURS)
-        .map((h) => ({ count: `×${h.years.length}`, name: h.name }));
+        .map((h) => ({ count: `×${h.years.length}`, name: tn(h.name) }));
   const room = r || honours.length ? STOPS.shared : STOPS.alone;
   const stops = all.length > room ? [all[0]!, null, ...all.slice(-(room - 2))] : all;
   return {

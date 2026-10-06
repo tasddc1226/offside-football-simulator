@@ -1,13 +1,16 @@
 <script lang="ts">
+  import { appFormatText as W } from '@offside/app-core/i18n/ko/appFormat';
   // ui.ts playerTab()/nationalCard() 포트 (316~356줄)
   import { potentialNotice } from '@offside/app-core/potential-view';
   import { gamePlayerText as L } from '@offside/app-core/i18n/ko/gamePlayer';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
+  import { createText as C } from '@offside/app-core/i18n/ko/create';
+  import { tn } from '@offside/game/i18n/names';
   import { TRAITS } from '@offside/game/data';
   import { ovr } from '@offside/game/attributes';
   import { leagueOf, fmtMoney } from '@offside/game/engine';
   import { marketValue } from '@offside/game/season';
-  import { milStatusText, SPORTS_SERVICE_NOTICE, SPORTS_SERVICE_LEGACY_NOTICE } from '@offside/game/military';
+  import { milStatusText, sportsServiceNotice, sportsServiceLegacyNotice } from '@offside/game/military';
   import { nextWC, HOSTS } from '@offside/game/national';
   import type { GameState } from '@offside/game/types';
   import { flagOf, isKorean, nationOf } from '@offside/game/nation';
@@ -26,7 +29,7 @@
   const milTxt = $derived(milStatusText(s));
   const tours = $derived(s.nat.tours.filter((x) => x.inSquad));
   const nextWcYear = $derived(nextWC(s.year - 1));
-  const nextWcHost = $derived((HOSTS.wc as Record<number, string>)[nextWcYear] || L.hostTbd);
+  const nextWcHost = $derived(tn((HOSTS.wc as Record<number, string>)[nextWcYear] || '') || L.hostTbd);
   const nation = $derived(nationOf(s));
   // 체격 입력 이전 선수는 포지션 표준 체격으로 보여 준다(표시만 — 능력치 보정은 없다).
   const body = $derived(s.body ?? BODY_DEFAULT[s.pos]);
@@ -54,15 +57,15 @@
   <div class="eyebrow">Profile</div>
   <h2 style="margin-bottom:10px">{L.profile}</h2>
   <dl class="kv">
-    <dt>{L.nation}</dt><dd data-nation><span aria-hidden="true">{flagOf(nation.code)}</span> {nation.ko}</dd>
+    <dt>{L.nation}</dt><dd data-nation><span aria-hidden="true">{flagOf(nation.code)}</span> {tn(nation.ko)}</dd>
     <dt>{L.body}</dt><dd data-body>{body.h}cm · {body.w}kg</dd>
-    <dt>{L.foot}</dt><dd>{s.foot}</dd>
+    <dt>{L.foot}</dt><dd>{C.foot({ v: s.foot })}</dd>
     <dt>{L.trait}</dt><dd>{traitName}</dd>
     <dt>{L.potential}</dt><dd data-pot>{potentialNotice()}</dd>
     <dt>{L.peakOvr}</dt><dd>{Math.max(s.peak, ovr(s))}</dd>
     <dt>{L.trust}</dt><dd>{s.trust >= 2 ? L.trustHigh : s.trust >= 0 ? L.trustMid : L.trustLow}</dd>
     <dt>{L.contract}</dt><dd>{s.contract ? L.contractLeft({ years: s.contract.years, salary: fmtMoney(s.contract.salary) }) : lg.amateur ? L.amateur : '-'}</dd>
-    <dt>{L.money}</dt><dd>{fmtMoney(s.money)}원</dd>
+    <dt>{L.money}</dt><dd>{W.won({ v: fmtMoney(s.money) })}</dd>
     {#if !lg.amateur}
       <dt>{L.value}</dt><dd data-value>{fmtValue(value)}</dd>
     {/if}
@@ -116,9 +119,9 @@
     <dt>{L.nextWc}</dt><dd>{nextWcYear} · {nextWcHost}</dd>
   </dl>
   {#if isKorean(s)}
-    <p class="muted fs-sm" style="margin-top:10px" data-military-guide>{SPORTS_SERVICE_NOTICE}</p>
+    <p class="muted fs-sm" style="margin-top:10px" data-military-guide>{sportsServiceNotice()}</p>
     {#if s.mil.exempt && s.mil.sportsService?.monthsLeft == null}
-      <p class="muted fs-sm" data-military-legacy>{SPORTS_SERVICE_LEGACY_NOTICE}</p>
+      <p class="muted fs-sm" data-military-legacy>{sportsServiceLegacyNotice()}</p>
     {/if}
   {/if}
   {#if tours.length}
@@ -126,7 +129,7 @@
       {#each tours.slice().reverse() as x (x.year + x.name)}
         <div class="trophy">
           <span class="y">{x.year}</span>
-          <div><b>{x.name.replace(/^\d{4} /, '')}</b> <span class="muted fs-xs">{L.tourLine({ stage: x.stage, apps: x.apps, goals: x.goals })}</span></div>
+          <div><b>{tn(x.name).replace(/^\d{4} /, '')}</b> <span class="muted fs-xs">{L.tourLine({ stage: tn(x.stage), apps: x.apps, goals: x.goals })}</span></div>
         </div>
       {/each}
     </div>

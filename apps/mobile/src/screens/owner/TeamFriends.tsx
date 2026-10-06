@@ -16,8 +16,8 @@ import {
 } from '@offside/app-core/api/friends';
 import type { TeamMatch } from '@offside/app-core/api/team';
 import {
-  FOUNDER_LABEL,
-  PRESEASON_FRIENDLY_HINT,
+  founderLabel,
+  preseasonFriendlyHint,
   canFriendly,
   canPreseasonFriendly,
   friendCodeLabel,
@@ -193,7 +193,7 @@ function Who({ f, h2h = false }: { f: FriendPerson; h2h?: boolean }) {
           <Txt bold numberOfLines={1} style={{ flexShrink: 1 }}>
             {f.name}
           </Txt>
-          {f.founder ? <Pill tone="good">{FOUNDER_LABEL}</Pill> : null}
+          {f.founder ? <Pill tone="good">{founderLabel()}</Pill> : null}
         </View>
         <Txt tone="muted" v="sm">
           {f.team ? `${f.team.name} · OVR ${f.team.ovr}` : L.noTeamLine}
@@ -284,7 +284,7 @@ export function TeamFriends({
             {data.canPlayPreseason === false ? (
               <>
                 <Txt tone="muted" v="sm" testID="friendly-preseason-hint">
-                  {PRESEASON_FRIENDLY_HINT}
+                  {preseasonFriendlyHint()}
                 </Txt>
                 <Btn
                   sm
@@ -292,7 +292,7 @@ export function TeamFriends({
                   style={{ alignSelf: 'flex-start' }}
                   onPress={onPreseason}
                 >
-                  프리시즌 팀 꾸리기
+                  {L.makePreseason}
                 </Btn>
               </>
             ) : null}
@@ -417,11 +417,11 @@ export function TeamFriends({
                       <Btn
                         sm
                         testID="friend-play-preseason"
-                        accessibilityLabel={`${f.name} 님과 프리시즌 친선전`}
+                        accessibilityLabel={L.playPreseasonAria({ name: f.name })}
                         disabled={busy || !canPreseasonFriendly(data, f)}
                         onPress={() => void challenge(f, true)}
                       >
-                        프리시즌 친선전
+                        {L.playPreseason}
                       </Btn>
                     ) : null}
                     <Btn

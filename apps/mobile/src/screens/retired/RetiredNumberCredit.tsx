@@ -15,6 +15,7 @@ import { Reveal } from './credit';
 import { FText, Kicker } from './film';
 import { ownOf } from './own';
 import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
+import { tn } from '@offside/game/i18n/names';
 
 export function RetiredNumberCredit({
   v,
@@ -73,7 +74,7 @@ export function RetiredNumberCredit({
             ) : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <ClubMark name={rnSlot.club} id={rnSlot.clubId} size={18} />
-              <FText size={0.875}>{L.foot({ club: rnSlot.club, seq: rnSlot.seq })}</FText>
+              <FText size={0.875}>{L.foot({ club: tn(rnSlot.club), seq: rnSlot.seq })}</FText>
             </View>
           </View>
         ) : rnSlot?.kind === 'taken' ? (
@@ -100,7 +101,7 @@ export function RetiredNumberCredit({
               {L.anonA}
               {'\n'}
               <FText tone="gold" bold size={1.1875}>
-                {L.anonSlot({ club: rnSlot.club, number: rnSlot.number })}
+                {L.anonSlot({ club: tn(rnSlot.club), number: rnSlot.number })}
               </FText>{' '}
               {L.anonTail}
             </FText>

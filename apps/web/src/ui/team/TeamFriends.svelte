@@ -16,14 +16,14 @@
   import {
     canFriendly,
     canPreseasonFriendly,
-    FOUNDER_LABEL,
+    founderLabel,
     friendAcceptedText,
     friendCodeLabel,
     friendInviteText,
     friendInviteUrl,
     friendRequestText,
     h2hText,
-    PRESEASON_FRIENDLY_HINT,
+    preseasonFriendlyHint,
     preseasonTeamLine,
   } from '@offside/app-core/friendText';
   import { friendText as L } from '@offside/app-core/i18n/ko/friend';
@@ -156,8 +156,8 @@
       {#if !data.canPlay}<p class="muted fs-sm" data-friends-hint>{L.needTeam}</p>{/if}
       {#if data.canPlayPreseason === false}
         <div class="fr-legacy" data-friends-preseason-hint>
-          <p class="muted fs-sm">{PRESEASON_FRIENDLY_HINT}</p>
-          <button class="btn btn-sm" onclick={onpreseason} data-act="friend-preseason-team">프리시즌 팀 꾸리기</button>
+          <p class="muted fs-sm">{preseasonFriendlyHint()}</p>
+          <button class="btn btn-sm" onclick={onpreseason} data-act="friend-preseason-team">{L.makePreseason}</button>
         </div>
       {/if}
     {/if}
@@ -211,14 +211,14 @@
         <div class="fr-person" data-friend={p.code}>
           <TeamLogo logo={p.team?.logo ?? null} name={p.team?.name ?? p.name} size={32} decorative />
           <div class="fr-info">
-            <b>{p.name}{#if p.founder}<span class="pill good fr-founder" data-friend-founder>{FOUNDER_LABEL}</span>{/if}</b>
+            <b>{p.name}{#if p.founder}<span class="pill good fr-founder" data-friend-founder>{founderLabel()}</span>{/if}</b>
             <span class="muted fs-sm">{teamLine(p)}</span>
             {#if preseasonLine}<span class="muted fs-sm" data-friend-preseason>{preseasonLine}</span>{/if}
             {#if h2h}<span class="fs-sm">{L.h2hLine({ record: h2h })}</span>{/if}
           </div>
           <div class="fr-row-actions">
             <button class="btn btn-primary btn-sm" disabled={busy || !canFriendly(data, p)} onclick={() => void play(p)} data-act="friend-play">{L.play}</button>
-            {#if p.preseasonTeam}<button class="btn btn-sm" disabled={busy || !canPreseasonFriendly(data, p)} onclick={() => void play(p, true)} data-act="friend-play-preseason">프리시즌 친선전</button>{/if}
+            {#if p.preseasonTeam}<button class="btn btn-sm" disabled={busy || !canPreseasonFriendly(data, p)} onclick={() => void play(p, true)} data-act="friend-play-preseason">{L.playPreseason}</button>{/if}
             <button class="icon-btn fs-sm" disabled={busy} onclick={() => remove(p, L.removeConfirm({ name: p.name }))} data-act="friend-remove">{L.remove}</button>
           </div>
         </div>

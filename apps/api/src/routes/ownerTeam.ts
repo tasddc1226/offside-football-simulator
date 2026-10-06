@@ -79,6 +79,8 @@ import {
 } from '../team/sim.js';
 import { lineupsOf, matchDetailOf, matchViews, playedMatch } from '../team/match.js';
 import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
+import { localizeAchievements } from '../team/achievementsText.js';
+import { reqLang, type Lang } from '../lang.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀). 구글 로그인한 구단주만 쓴다 — 사람마다 다른 응답이라 엣지 캐시하지 않는다.
 /** 상대 목록에 보여 줄 팀 수. */
@@ -142,6 +144,7 @@ function toOwnerTeam(
   row: OwnerTeamRow,
   lineup: LineupSlot[],
   players: ReadonlyMap<string, { nation?: string | null }>,
+  lang: Lang,
 ): OwnerTeam {
   return {
     id: row.id,
@@ -149,7 +152,7 @@ function toOwnerTeam(
     name: row.name,
     manager: row.manager,
     formation: row.formation as FormationId,
-    slots: slotsOf(lineup, players),
+    slots: slotsOf(lineup, players, lang),
     layout: layoutOf(row),
     logo: logoOf(row),
     ovr: lineupOvr(lineup),
@@ -205,12 +208,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       {
         season,
         current: teamSeasonAt(now),
-        seasons: seasonOptions(now),
+        seasons: seasonOptions(now, reqLang(c)),
         team: team
           ? toOwnerTeam(
               team,
               buildLineup(team.formation as FormationId, slotIdsOf(team), eligible, layoutOf(team)),
               eligible,
+              reqLang(c),
             )
           : null,
         players: picks.map(({ p, profile, estimatedAttrs, career }) => ({
@@ -341,7 +345,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         })
         .returning();
       return ok(c, PutOwnerTeamResponseSchema, {
-        team: toOwnerTeam(friendlyTeamOf(row!), lineup, eligible),
+        team: toOwnerTeam(friendlyTeamOf(row!), lineup, eligible, reqLang(c)),
       });
     }
     const [row] = await db
@@ -361,7 +365,9 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       .returning();
     purgeEdge(c, STALE.teamSaved(season));
     waitUntil(c, refreshAfterChange(db, me.id, season));
-    return ok(c, PutOwnerTeamResponseSchema, { team: toOwnerTeam(row!, lineup, eligible) });
+    return ok(c, PutOwnerTeamResponseSchema, {
+      team: toOwnerTeam(row!, lineup, eligible, reqLang(c)),
+    });
   });
 
   // 경기 상대 후보: 같은 시즌에서 내 팀 OVR에 가까운 다른 구단주의 팀 몇 개를 섞어서.
@@ -502,7 +508,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       c,
       PlayTeamMatchResponseSchema,
       {
-        match: playedMatch(head, detail, lineups, mine, opp.team),
+        match: playedMatch(head, detail, lineups, mine, opp.team, reqLang(c)),
         record: {
           w: mine.wins + (score === 1 ? 1 : 0),
           d: mine.draws + (score === 0.5 ? 1 : 0),
@@ -524,10 +530,19 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const season = seasonQuery(c, now);
     const { groups, row, players } = await refreshOwnerAchievements(db, me, season, now, false);
     const { rank, ranked } = await achievementRankOf(db, row);
+    const lang = reqLang(c);
     return ok(
       c,
       ClubAchievementsResponseSchema,
-      { season, seasons: seasonOptions(now), players, groups, score: row.score, rank, ranked },
+      {
+        season,
+        seasons: seasonOptions(now, lang),
+        players,
+        groups: localizeAchievements(groups, lang),
+        score: row.score,
+        rank,
+        ranked,
+      },
       200,
       NO_STORE,
     );
@@ -540,7 +555,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const season = seasonQuery(c, nowIso());
     const [team] = await myTeamIn(db, me.id, season);
     const items = team
-      ? await matchViews(db, await listRecentMatches(db, me.id, team.id), () => team.id)
+      ? await matchViews(db, await listRecentMatches(db, me.id, team.id), () => team.id, reqLang(c))
       : [];
     return ok(c, TeamMatchesResponseSchema, { items }, 200, NO_STORE);
   });

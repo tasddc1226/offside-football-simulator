@@ -18,6 +18,7 @@ import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { ClubMark, Txt } from '../../ui';
 import { homeText as L } from '@offside/app-core/i18n/ko/home';
+import { tn } from '@offside/game/i18n/names';
 import { useOnPull } from '../../ui/refresh';
 
 /** 흐르는 속도(px/초). 한글 한 줄을 편히 읽을 만큼 천천히. */
@@ -26,7 +27,7 @@ const STILL_STEP_MS = 5_000;
 
 const tag = (kind: TickerItem['kind']): string =>
   ({ transfer: L.tagTransfer, debut: L.tagDebut, first: L.tagFirst, record: L.tagRecord })[kind];
-const club = (id: string) => clubById(id)?.name ?? '';
+const club = (id: string) => tn(clubById(id)?.name ?? '');
 
 export function HomeTicker() {
   const c = useColors();

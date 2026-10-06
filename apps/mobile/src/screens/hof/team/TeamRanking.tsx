@@ -19,14 +19,11 @@ import { Card } from '../../../ui/Card';
 import { Press } from '../../../ui/Press';
 import { scrollTo } from '../../../ui/scroll';
 import { Txt } from '../../../ui/Txt';
-import {
-  displaySeasonAt,
-  openTeamSeasons,
-  teamSeasonName,
-} from '@offside/contracts/service-seasons';
+import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-seasons';
 import { RecordsSelect, RecordsChips } from '../RecordsControls';
 import TeamProfile from './TeamProfile';
 import { TeamLogo } from '../../../components/TeamLogo';
+import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../../ui/useSeasonNow';
 import { useRefresh } from '../../../ui/refresh';
 
@@ -96,10 +93,10 @@ export default function TeamRanking() {
           testID="rank-season-select"
           value={season ?? data?.season ?? displaySeasonAt(now)}
           options={
-            data?.seasons.map((s) => ({ value: s.id, label: s.name })) ??
+            data?.seasons.map((s) => ({ value: s.id, label: seasonLabel(s.id, s.name) })) ??
             openTeamSeasons(now).map((id) => ({
               value: id,
-              label: teamSeasonName(id),
+              label: teamSeasonLabel(id),
             }))
           }
           onChange={(id) => {

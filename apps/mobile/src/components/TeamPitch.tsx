@@ -11,6 +11,7 @@ import { PlayerCard, type PlayerCardData } from './PlayerCard';
 import { DragPlayer, type PlayerDrag } from './DragPlayer';
 import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+import { tn } from '@offside/game/i18n/names';
 
 export type PitchCell = PlayerCardData;
 export function TeamPitch({
@@ -169,7 +170,7 @@ export function TeamPitch({
                   testID={`slot-${i}`}
                   onPress={onpick ? () => onpick(i) : undefined}
                   accessibilityLabel={L.pitchSlotApp({
-                    head: `${pos.slot} · ${cell.name}${country ? ` · ${country.ko}` : ''}`,
+                    head: `${pos.slot} · ${cell.name}${country ? ` · ${tn(country.ko)}` : ''}`,
                     rating: cell.rating,
                     drag: !!ondrag,
                   })}

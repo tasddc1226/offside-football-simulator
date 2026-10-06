@@ -26,7 +26,8 @@
     "./team-logo": "./src/team-logo.ts",
     "./nations": "./src/nations.ts",
     "./nations-en": "./src/nations-en.ts",
-    "./body": "./src/body.ts"
+    "./body": "./src/body.ts",
+    "./i18n": "./src/i18n.ts"
   },
   "scripts": {
     "test": "vitest run",

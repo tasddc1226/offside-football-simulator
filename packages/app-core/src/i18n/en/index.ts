@@ -1,7 +1,11 @@
 // 영어 사전 묶음 — 파일 이름 = ns() 이름 = export 이름 = 여기 키. 영어 사용자에게만 불러온다(웹은 지연 청크).
-// 직접 고치지 않는다: pnpm --filter @offside/app-core i18n:index
+// 직접 고치지 않는다: node tooling/scripts/i18n-index.mjs
+import { en as gameEngine } from '@offside/game/i18n/en/index';
 import { account } from './account';
 import { ad } from './ad';
+import { appFlight } from './appFlight';
+import { appFormat } from './appFormat';
+import { appScout } from './appScout';
 import { backup } from './backup';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
@@ -44,6 +48,7 @@ import { marketValueChart } from './marketValueChart';
 import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
+import { playerNudge } from './playerNudge';
 import { push } from './push';
 import { retired } from './retired';
 import { settings } from './settings';
@@ -64,12 +69,17 @@ import { teamCore } from './teamCore';
 import { teamHome } from './teamHome';
 import { teamLive } from './teamLive';
 import { teamMatch } from './teamMatch';
+import { teamSynergy } from './teamSynergy';
 import { title } from './title';
 import { titleTag } from './titleTag';
 
 export const en = {
+  ...gameEngine,
   account,
   ad,
+  appFlight,
+  appFormat,
+  appScout,
   backup,
   board,
   boardLabel,
@@ -112,6 +122,7 @@ export const en = {
   owner,
   ownerConflict,
   ownerPlayers,
+  playerNudge,
   push,
   retired,
   settings,
@@ -132,6 +143,7 @@ export const en = {
   teamHome,
   teamLive,
   teamMatch,
+  teamSynergy,
   title,
   titleTag,
 };

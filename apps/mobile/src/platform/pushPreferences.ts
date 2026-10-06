@@ -5,6 +5,7 @@ import {
   PushPreferencesSchema,
   type PushPreferences,
 } from '@offside/contracts';
+import { pushText as L } from '@offside/app-core/i18n/ko/push';
 import { ensureSession, onSessionChanged, sessionToken } from './session';
 
 export const pushPreferencesState = proxy({
@@ -33,7 +34,7 @@ onSessionChanged(() => {
 /** 설정을 열 때만 조회하고 같은 세션에서는 다시 읽지 않는다. */
 export async function loadPushPreferences() {
   if (!(await ensureSession())) {
-    pushPreferencesState.error = '알림 설정에 연결하지 못했어요. 다시 시도해 주세요.';
+    pushPreferencesState.error = L.prefsConnectFailed;
     return;
   }
   if (pushPreferencesState.loaded) return;
@@ -51,8 +52,7 @@ export async function loadPushPreferences() {
       pushPreferencesState.loaded = true;
     } catch (error) {
       if (current === revision)
-        pushPreferencesState.error =
-          error instanceof Error ? error.message : '알림 설정을 불러오지 못했어요.';
+        pushPreferencesState.error = error instanceof Error ? error.message : L.prefsLoadFailed;
     } finally {
       if (current === revision) {
         pushPreferencesState.loading = false;
@@ -83,8 +83,7 @@ export async function setPushPreference(key: keyof PushPreferences, enabled: boo
   } catch (error) {
     if (current === revision) {
       pushPreferencesState.values[key] = before;
-      pushPreferencesState.error =
-        error instanceof Error ? error.message : '알림 설정을 저장하지 못했어요.';
+      pushPreferencesState.error = error instanceof Error ? error.message : L.prefsSaveFailed;
     }
   } finally {
     if (current === revision) pushPreferencesState.saving = null;

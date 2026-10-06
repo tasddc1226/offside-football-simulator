@@ -49,6 +49,11 @@ const ko = {
   gradePlatinum: '플래티넘',
   gradeDiamond: '다이아',
   gradeLegend: '레전드',
+  preseasonTeamNote:
+    '프리시즌에 키운 선수 중 지금 가진 선수로 꾸려요. 이 팀은 친구와 하는 친선전에만 나가고, 프리시즌 랭킹과 업적은 그대로예요.',
+  hintPreseason: '프리시즌 팀은 친구와 하는 친선전에만 나가요. 랭크 경기는 지금 시즌 팀으로 해요.',
+  wildcardLabel: (p: { n: number; max: number }) => `와일드카드 ${p.n}/${p.max}`,
+  wildcardFull: (p: { max: number }) => `지난 시즌 선수는 선발에 ${p.max}명까지 넣을 수 있어요.`,
 };
 
 export type TeamCoreMsgs = typeof ko;

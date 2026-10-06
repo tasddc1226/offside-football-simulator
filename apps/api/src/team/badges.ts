@@ -1,6 +1,7 @@
 // T-10-092 팀 히스토리 배지(원작 클럽하우스의 '팀 히스토리'). 팀 행에 쌓아 둔 전적·연승·골 차와 시즌 최종 순위로 판정하는
 // 순수 함수다 — 배지 테이블 없이 읽을 때마다 센다. 얻은 배지만 돌려준다(얻는 순서대로).
 import type { TeamBadge } from '@offside/contracts';
+import type { Lang } from '../lang.js';
 
 export type BadgeTeam = {
   filled: number;
@@ -47,17 +48,58 @@ const FINAL: { id: string; label: string; top: number }[] = [
   { id: 'final-10', label: '시즌 TOP 10', top: 10 },
 ];
 
+/** T-11-106 영어 문구(id별). 한국어는 위 규칙 그대로다. */
+const EN: Record<string, { label: string; desc: string }> = {
+  debut: { label: 'Debut', desc: 'Played your first match' },
+  'first-win': { label: 'First win', desc: 'Won your first match' },
+  full: { label: 'Full squad', desc: 'Filled all 11 spots without youth players' },
+  'streak-3': { label: '3-match streak', desc: 'Won 3 matches in a row' },
+  rout: { label: 'Big win', desc: 'Won by 4 or more goals' },
+  'wins-10': { label: '10 wins', desc: 'Won 10 matches' },
+  'streak-5': { label: '5-match streak', desc: 'Won 5 matches in a row' },
+  'goals-100': { label: '100 goals', desc: 'Scored 100 goals in team matches' },
+  'likes-10': { label: 'Fan favourite', desc: 'Received 10 likes' },
+  'wins-30': { label: '30 wins', desc: 'Won 30 matches' },
+  'streak-10': { label: '10-match streak', desc: 'Won 10 matches in a row' },
+  'wins-100': { label: '100 wins', desc: 'Won 100 matches' },
+  'final-1': { label: 'Season champions', desc: '' },
+  'final-3': { label: 'Season top 3', desc: '' },
+  'final-10': { label: 'Season top 10', desc: '' },
+};
+const ordinal = (n: number) => {
+  const r = n % 100;
+  const suffix =
+    r >= 11 && r <= 13
+      ? 'th'
+      : (({ 1: 'st', 2: 'nd', 3: 'rd' } as const)[(n % 10) as 1 | 2 | 3] ?? 'th');
+  return `${n}${suffix}`;
+};
+
 /** 얻은 배지. finalRank는 끝난 시즌의 최종 순위(진행 중이거나 랭킹에 없으면 null). */
 export function teamBadges(
   t: BadgeTeam,
   finalRank: number | null,
   seasonName: string,
+  lang: Lang = 'ko',
 ): TeamBadge[] {
   const final = finalRank === null ? undefined : FINAL.find((f) => finalRank <= f.top);
+  const en = lang === 'en';
   return [
     ...(final
-      ? [{ id: final.id, label: final.label, desc: `${seasonName} 최종 ${finalRank}위` }]
+      ? [
+          {
+            id: final.id,
+            label: en ? (EN[final.id]?.label ?? final.label) : final.label,
+            desc: en
+              ? `Finished ${ordinal(finalRank!)} in ${seasonName}`
+              : `${seasonName} 최종 ${finalRank}위`,
+          },
+        ]
       : []),
-    ...RULES.filter((r) => r.ok(t)).map(({ id, label, desc }) => ({ id, label, desc })),
+    ...RULES.filter((r) => r.ok(t)).map(({ id, label, desc }) => ({
+      id,
+      label: en ? (EN[id]?.label ?? label) : label,
+      desc: en ? (EN[id]?.desc ?? desc) : desc,
+    })),
   ];
 }

@@ -1,0 +1,41 @@
+// 세부 능력치 34개 이름. 키가 세부 능력치 키라 attributes.ts SUBS가 이 객체를 그대로 쓴다.
+import { ns } from '@offside/contracts/i18n';
+
+const ko = {
+  acc: '가속력',
+  spr: '질주 속도',
+  pos: '위치 선정',
+  fin: '골 결정력',
+  pow: '슛 파워',
+  lng: '중거리 슛',
+  vol: '발리슛',
+  pen: '페널티킥',
+  vis: '시야',
+  cro: '크로스',
+  fk: '프리킥',
+  spa: '짧은 패스',
+  lpa: '긴 패스',
+  cur: '커브',
+  agi: '민첩성',
+  bal: '밸런스',
+  rea: '반응 속도',
+  bc: '볼 컨트롤',
+  drb: '드리블',
+  com: '침착성',
+  int: '가로채기',
+  hea: '헤딩 정확도',
+  awa: '수비 인식',
+  stt: '스탠딩 태클',
+  sli: '슬라이딩 태클',
+  jmp: '점프력',
+  stm: '체력',
+  str: '힘',
+  agg: '적극성',
+  div: '다이빙',
+  han: '핸들링',
+  kic: '킥',
+  gkp: '포지셔닝',
+  ref: '반사 신경',
+};
+export type GSubsMsgs = typeof ko;
+export const gSubsText = ns('gSubs', ko);

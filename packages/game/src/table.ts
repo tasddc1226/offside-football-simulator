@@ -2,6 +2,8 @@ import type { League } from './data.js';
 import { clamp, chance, gauss, hashStr } from './rng.js';
 import type { GameState } from './types.js';
 import { leagueOf, clubsIn } from './player.js';
+import { gTurnText as M } from './i18n/ko/gTurn.js';
+import { tn } from './i18n/names.js';
 
 // ───────── 순위 ─────────
 // 시즌마다 상대 전력 19개(S.rivals)를 뽑지만, 리그의 실제 팀 수는 12~20개다(T-10-009). T-10-024부터
@@ -45,9 +47,11 @@ export function leagueTable(s: GameState): TableRow[] {
     .sort((a, b) => b.str - a.str);
   const rows: TableRow[] = rankedRivals(s).map((ri, k) => {
     const club = clubs[k];
-    const name = club?.name ?? `${L.name} ${k + 1}`;
+    const koName = club?.name ?? `${L.name} ${k + 1}`;
+    const name = club ? club.name : M.placeholderTeam({ league: tn(L.name), n: k + 1 });
     // 팀·시즌·경기 수로 정해지는 고정 편차(난수 아님) — 같은 전력대 팀들이 똑같은 전적으로 겹치지 않게.
-    const h = hashStr(`${name}|${s.year}`);
+    // 언어와 상관없이 같은 순위표가 되도록 한국어 이름으로 해시한다.
+    const h = hashStr(`${koName}|${s.year}`);
     const jitter = P ? ((h + P * 7) % 5) - 2 : 0;
     const pts = clamp(
       Math.round(clamp(basePpg(L, S.rivals[ri]!), 0.4, 2.6) * P) + jitter,

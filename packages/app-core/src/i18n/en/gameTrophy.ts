@@ -4,7 +4,7 @@ import { ordinal } from './_util';
 
 export const gameTrophy: Translation<GameTrophyMsgs> = {
   empty: 'None yet.',
-  honours: 'Team honours',
+  honours: 'Team honors',
   individual: 'Individual awards',
   ballon: "Ballon d'Or ranking",
   ballonWon: 'Winner',

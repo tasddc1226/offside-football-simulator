@@ -11,9 +11,9 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   close: 'OK',
   adLoading: 'Loading ad…',
   note: (p) =>
-    `You can try once a season, up to age ${p.age}. If it fails, you only lose the money and the next chance goes up by ${p.pct} points.`,
+    `You can try once a season, up to age ${p.age}. If it fails, you only lose the money, and the next chance goes up by ${p.pct} percentage points.`,
   lineLocked: 'You can boost after your first season.',
-  lineAged: (p) => `You're past ${p.age}, so you can't boost any more.`,
+  lineAged: (p) => `You're past ${p.age}, so you can't boost anymore.`,
   lineMax: (p) => `You've reached the top level (+${p.lv}).`,
   lineDone: "You've already tried this season. You can try again next season.",
   lineShort: (p) => `Not enough funds. The next level costs ${p.cost}.`,
@@ -28,7 +28,7 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   resultOkMax: "You've reached the top level. Your growth ceiling rose a little more.",
   resultOk: 'Your growth ceiling rose a little.',
   resultFail: (p) =>
-    `The chance was ${p.chance}%. The money is gone, and the next attempt's chance goes up by ${p.pct} points.`,
+    `The chance was ${p.chance}%. The money is gone, and the next attempt's chance goes up by ${p.pct} percentage points.`,
   adButton: (p) => `Watch an ad to boost (${p.chance}%)`,
   adButtonFree: (p) => `Boost without funds (${p.chance}%)`,
   adNote: 'Watch an ad to the end to try once without funds.',
@@ -36,5 +36,5 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   adWatch: 'Watch the ad to the end to try the boost.',
   adCost: 'ad',
   resultFailAd: (p) =>
-    `The chance was ${p.chance}%. The next attempt's chance goes up by ${p.pct} points.`,
+    `The chance was ${p.chance}%. The next attempt's chance goes up by ${p.pct} percentage points.`,
 };

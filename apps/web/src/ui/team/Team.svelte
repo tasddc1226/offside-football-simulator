@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { seasonLabel } from '@offside/app-core/seasonName';
   // T-10-092 구단주 팀 — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가 채운다) 같은 시즌
   // 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 구단주 화면에서 처음 열 때 불러오는 지연 청크다. 경기 결과는
   // 서버가 정한다(웹은 보여 주기만).
@@ -56,7 +57,7 @@
   import TeamFriends from './TeamFriends.svelte';
   import { friendsUi } from '../friendInvite.svelte.js';
   import { achNudge } from '../achNudge.js';
-  import { WILDCARD_FULL_TEXT, assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardLabel } from '@offside/app-core/teamOwner';
+  import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { readTeamDraft, teamDraftBase, writeTeamDraft, type TeamDraft } from './teamDraft.js';
@@ -74,7 +75,7 @@
   let lastManager = $state<string | null>(null);
   // T-11-113 개막 뒤에도 프리시즌 팀은 친선전용으로 고칠 수 있다.
   const editable = $derived(teamEditableIn(season, current));
-  const seasonName = $derived(seasons.find((o) => o.id === season)?.name ?? '');
+  const seasonName = $derived(((o) => (o ? seasonLabel(o.id, o.name) : ''))(seasons.find((o) => o.id === season)));
 
   // 편집 초안 — 저장하기 전까지 이 기기에만 있다.
   let name = $state('');
@@ -234,7 +235,7 @@
   /** 라커룸에서 넣거나, 이미 선발인 선수의 두 자리를 바꾼다. T-11-114 지난 시즌 선수는 와일드카드 상한까지만. */
   function assign(index: number, id: string | null) {
     const next = assignSlot(slots, index, id);
-    if (tooManyWildcards(next, byId, season)) return toast(WILDCARD_FULL_TEXT);
+    if (tooManyWildcards(next, byId, season)) return toast(wildcardFullText());
     slots = next;
   }
 

@@ -10,6 +10,8 @@ import { BAL } from './balance.js';
 import type { GameState, NatTour } from './types.js';
 import { isKorean, KR, nationOf, RIVAL, type Confed } from './nation.js';
 import { grantSportsService } from './military.js';
+import { gNationalText as L } from './i18n/ko/gNational.js';
+import { tn } from './i18n/names.js';
 
 const NT_THRESHOLD = 80;
 const AFC_NT: [string, number][] = [
@@ -187,7 +189,8 @@ const CONT_CUP: Record<
 };
 /** 대표팀 트로피 이름들(대륙컵·월드컵·올림픽·아시안게임) — 기록의 club을 대표팀으로 적는 데 쓴다. */
 export const NATIONAL_TROPHIES = new Set([...NATIONAL_WINS, '올림픽 은메달', '올림픽 동메달']);
-const WINDOW_NAME: string[][] = [[], ['9월 A매치', '10월 A매치'], ['11월 A매치', '3월 A매치']];
+/** 단계(phase)별 A매치 기간의 달 — 이름은 만들 때 지금 언어로 붙인다. */
+const WINDOW_MONTHS: number[][] = [[], [9, 10], [11, 3]];
 
 export function natInit(s: GameState) {
   s.nat = Object.assign(
@@ -306,19 +309,24 @@ function simIntl(
   const rival = RIVAL[nationOf(s).code];
   if (rival && opp[0].startsWith(rival.opp) && win && mins) {
     addStat(s, 'fame', 3);
-    log(s, `${rival.label} 승리!${g ? ` ${g}골을 터뜨리며` : ''} 국민 영웅이 됐습니다.`, 'good');
+    log(s, L.rivalWin({ label: L.rivalLabel({ ko: rival.label }), g }), 'good');
   }
   return { team: side.name, comp, stage, opp: opp[0], kg, og, res, pso, mins, g, a, rating };
 }
+/** 대표팀·상대 이름을 지금 언어로 — 'X U-23'은 나라 이름만 옮긴다. */
+function teamName(name: string): string {
+  const t = tn(name);
+  return t === name && name.endsWith(' U-23') ? `${tn(name.slice(0, -5))} U-23` : t;
+}
 export function scoreLine(m: IntlResult): string {
-  return `${m.team} ${m.kg}-${m.og} ${m.opp}${m.pso ? ` (승부차기 ${m.pso})` : ''}`;
+  return L.score({ team: teamName(m.team), kg: m.kg, og: m.og, opp: teamName(m.opp), pso: m.pso });
 }
 
 export function natWindow(s: GameState) {
   natInit(s);
   if (leagueOf(s.leagueId).amateur || s.phase < 1 || s.phase > LAST_PHASE) return null;
-  const names = WINDOW_NAME[s.phase] ?? [];
-  const out = names.map((name) => natOne(s, name)).filter((x) => x !== null);
+  const months = WINDOW_MONTHS[s.phase] ?? [];
+  const out = months.map((m) => natOne(s, L.windowName({ m }))).filter((x) => x !== null);
   return out.length ? out : null;
 }
 function natOne(s: GameState, name: string) {
@@ -328,7 +336,9 @@ function natOne(s: GameState, name: string) {
     return s.nat.caps && sc >= thr - 4 ? { name, called: false as const } : null;
   const qual = isQualYear(s.year);
   const side = natSide(s);
-  const comp = qual ? `${nextWC(s.year)} 월드컵 ${CONFEDS[side.conf].region} 예선` : '친선 A매치';
+  const comp = qual
+    ? L.wcQual({ year: nextWC(s.year), region: CONFEDS[side.conf].region, conf: side.conf })
+    : L.friendly;
   const role: 'starter' | 'sub' =
     sc >= 85 || s.nat.captain ? 'starter' : chance(0.45) ? 'starter' : 'sub';
   const pool = qual ? side.pool.slice(0, 14) : chance(0.55) ? side.world : side.pool.slice(0, 8);
@@ -339,15 +349,12 @@ function natOne(s: GameState, name: string) {
   if (!s.nat.debutYear) {
     s.nat.debutYear = s.year;
     addStat(s, 'fame', 5);
-    log(s, `생애 첫 A대표팀 발탁! (${name})`, 'big');
+    log(s, L.debut({ name }), 'big');
   }
   const games = [o1, o2].map((o) => simIntl(s, o, role, comp));
   addStat(s, 'cond', -6);
   games.forEach((m) =>
-    log(
-      s,
-      `[${comp}] ${scoreLine(m)}${m.mins ? ` · ${m.mins}분${m.g ? ` ${m.g}골` : ''}${m.a ? ` ${m.a}도움` : ''}` : ' · 벤치'}`,
-    ),
+    log(s, L.matchLog({ comp, score: scoreLine(m), mins: m.mins, g: m.g, a: m.a })),
   );
   return { name, comp, called: true as const, role, games };
 }
@@ -456,26 +463,26 @@ function squadRole(
 ): { role: 'starter' | 'sub' | 'none'; why: string } {
   const sc = callupScore(s);
   if (leagueOf(s.leagueId).amateur && !T.youth) return { role: 'none', why: '' };
-  if (s.injury > 0) return { role: 'none', why: '부상으로 최종 명단 제외' };
+  if (s.injury > 0) return { role: 'none', why: L.whyInjury };
   if (T.youth) {
     const young = s.age <= 23;
     const need = young ? 68 : 84;
-    if (sc < need + gauss() * 1.5) return { role: 'none', why: young ? '최종 명단 탈락' : '' };
+    if (sc < need + gauss() * 1.5) return { role: 'none', why: young ? L.whyCut : '' };
     // 아시안게임·올림픽 남자축구는 FIFA 의무 차출 대회가 아니라 해외 구단은 거절할 수 있다(T-10-016 올림픽 추가).
     // 올림픽은 7~8월이라 유럽 프리시즌과 겹쳐 시즌 중인 아시안게임(9월)보다 조금 더 잘 보내 준다.
     const release = RELEASE[key];
     if (release) {
       const rel = s.flags[release.flag + s.year] as boolean | undefined;
       const ok = rel !== undefined ? rel : leagueOf(s.leagueId).tier <= 2 || chance(release.p());
-      if (!ok) return { role: 'none', why: '소속팀이 차출을 거부' };
+      if (!ok) return { role: 'none', why: L.whyRefused };
     }
     return {
       role: sc >= need + 6 || !young ? 'starter' : chance(0.5) ? 'starter' : 'sub',
-      why: young ? '' : '와일드카드 발탁',
+      why: young ? '' : L.whyWildcard,
     };
   }
   if (sc < NT_THRESHOLD - 1 + gauss() * 1.2)
-    return { role: 'none', why: s.nat.caps ? '최종 명단 탈락' : '' };
+    return { role: 'none', why: s.nat.caps ? L.whyCut : '' };
   return { role: sc >= 85 || s.nat.captain ? 'starter' : chance(0.5) ? 'starter' : 'sub', why: '' };
 }
 
@@ -630,7 +637,7 @@ export function natSeasonEnd(s: GameState) {
   }
   if (!s.nat.captain && s.nat.caps >= 40 && ovr(s) >= 78 && chance(0.35)) {
     s.nat.captain = true;
-    log(s, '국가대표팀 주장으로 선임됐습니다.', 'big');
+    log(s, L.captain, 'big');
     addStat(s, 'fame', 6);
   }
   return { tours: out, trophies };

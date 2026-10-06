@@ -15,11 +15,14 @@ import {
 } from './data.js';
 import { initSubs, spreadAttr, syncFace } from './attributes.js';
 import { STORIES, isSafe, leagueOf, newGame, txt } from './engine.js';
-import { EVENTS } from './events-data.js';
+import { EVENTS, eventById } from './events-data.js';
 import { BAL, choiceOdds } from './balance.js';
 import { groupOf, posOf, type DexGroup } from './dexGroups.js';
 import { createRng, getActiveRng, setActiveRng } from './rng.js';
 import type { MgKind } from './minigame.js';
+import { getLocale, type Locale } from '@offside/contracts/i18n';
+import { gDexText as L } from './i18n/ko/gDex.js';
+import { tn } from './i18n/names.js';
 import type { Choice, EventDef, GameState } from './types.js';
 
 export { DEX_GROUPS, isHiddenEvent, type DexGroup } from './dexGroups.js';
@@ -124,9 +127,12 @@ const attrBump =
       s.attrs = attrs;
     };
   };
-const FACTORS: { label: string; bump: Bump }[] = [
+// label은 읽을 때 지금 언어로 나온다(getter).
+const FACTORS: { readonly label: string; bump: Bump }[] = [
   {
-    label: '소속팀 전력',
+    get label() {
+      return L.factorClub;
+    },
     bump: (s) => {
       const v = s.club.str;
       s.club.str = v + 5;
@@ -134,7 +140,9 @@ const FACTORS: { label: string; bump: Bump }[] = [
     },
   },
   {
-    label: '리그 수준',
+    get label() {
+      return L.factorLeague;
+    },
     bump: (s) => {
       const cur = s.leagueId;
       const up = LEAGUES.filter((l) => l.avg > leagueOf(cur).avg).sort((a, b) => a.avg - b.avg)[0];
@@ -143,14 +151,46 @@ const FACTORS: { label: string; bump: Bump }[] = [
       return () => (s.leagueId = cur);
     },
   },
-  { label: '감독 신뢰', bump: statBump('trust', 2) },
-  { label: '사기', bump: statBump('morale', 15) },
-  { label: '명성', bump: statBump('fame', 15) },
-  { label: '컨디션', bump: statBump('cond', 15) },
-  { label: '나이', bump: statBump('age', 3) },
-  { label: '부상 정도', bump: statBump('injury', 2) },
   {
-    label: '남은 계약 기간',
+    get label() {
+      return L.factorTrust;
+    },
+    bump: statBump('trust', 2),
+  },
+  {
+    get label() {
+      return L.factorMorale;
+    },
+    bump: statBump('morale', 15),
+  },
+  {
+    get label() {
+      return L.factorFame;
+    },
+    bump: statBump('fame', 15),
+  },
+  {
+    get label() {
+      return L.factorCond;
+    },
+    bump: statBump('cond', 15),
+  },
+  {
+    get label() {
+      return L.factorAge;
+    },
+    bump: statBump('age', 3),
+  },
+  {
+    get label() {
+      return L.factorInjury;
+    },
+    bump: statBump('injury', 2),
+  },
+  {
+    get label() {
+      return L.factorContract;
+    },
     bump: (s) => {
       const c = s.contract;
       if (!c) return null;
@@ -187,7 +227,7 @@ function factorsOf(p: (s: GameState) => number, states: GameState[]): DexFactor[
     (x) => Math.abs(x.e) > EPS,
   );
   if (per.length > 3) {
-    found.push({ label: '종합 능력치(OVR)', e: effect(p, states, attrBump(null, 5)) });
+    found.push({ label: L.factorOvr, e: effect(p, states, attrBump(null, 5)) });
     const mid = per.map((x) => Math.abs(x.e)).sort((a, b) => a - b)[Math.floor(per.length / 2)]!;
     for (const x of per)
       if (Math.abs(x.e) >= mid * 2.5) found.push({ label: ATTR_LABEL[x.k], e: x.e });
@@ -208,7 +248,8 @@ function factorsOf(p: (s: GameState) => number, states: GameState[]): DexFactor[
     return { t, avg: n ? sum / n : 0 };
   }).sort((a, b) => b.avg - a.avg);
   const spread = byTrait[0]!.avg - byTrait[byTrait.length - 1]!.avg;
-  if (spread > 0.02) found.push({ label: `특성 '${byTrait[0]!.t.name}'`, e: spread });
+  if (spread > 0.02)
+    found.push({ label: L.factorTrait({ name: tn(byTrait[0]!.t.name) }), e: spread });
   return found
     .sort((a, b) => Math.abs(b.e) - Math.abs(a.e))
     .slice(0, 4)
@@ -231,12 +272,19 @@ function labelOf(c: Choice, s: GameState): string {
   try {
     return txt(c.label, s);
   } catch {
-    return typeof c.label === 'string' ? c.label : '(상황에 따라 달라지는 선택지)';
+    return typeof c.label === 'string' ? c.label : L.labelVaries;
   }
 }
 
-function analyzeChoice(ev: EventDef, c: Choice, idx: number, states: GameState[]): DexChoice {
-  const label = labelOf(c, states[0]!);
+/** shown: 지금 언어의 문구를 입힌 같은 선택지(확률·효과는 c와 같다). */
+function analyzeChoice(
+  ev: EventDef,
+  c: Choice,
+  shown: Choice,
+  idx: number,
+  states: GameState[],
+): DexChoice {
+  const label = labelOf(shown, states[0]!);
   if (!c.p)
     return { label, kind: isSafe(ev, c) ? 'safe' : 'sure', min: 100, max: 100, factors: [] };
   const raw = c.p;
@@ -287,11 +335,14 @@ function sandboxed<T>(fn: () => T): T {
   }
 }
 
-let cache: DexEntry[] | null = null;
-/** 전체 도감. 처음 한 번 계산해 둔다(수십 ms). */
+// 문구가 언어마다 달라 언어별로 한 번씩 계산해 둔다(같은 제목으로 묶는 기준은 한국어 원문 제목이라 언어와 상관없다).
+const cache = new Map<Locale, DexEntry[]>();
+/** 전체 도감. 언어마다 처음 한 번 계산해 둔다(수십 ms). */
 export function eventDex(): DexEntry[] {
-  if (cache) return cache;
-  cache = sandboxed(() => {
+  const lang = getLocale();
+  const hit = cache.get(lang);
+  if (hit) return hit;
+  const dex = sandboxed(() => {
     const byTitle = new Map<string, EventDef[]>();
     for (const ev of EVENTS) byTitle.set(ev.title, [...(byTitle.get(ev.title) ?? []), ev]);
     // 앞 단계가 없는 이벤트는 포지션별 상태를 함께 쓰고, 스토리 후속 단계는 따로 만든다(앞 단계가 상태를 바꾼다).
@@ -309,18 +360,24 @@ export function eventDex(): DexEntry[] {
         states = shared.get(key)!;
       }
       const story = ev.story
-        ? { name: STORIES[ev.story]!.name, stage: ev.stage ?? 0, total: STORIES[ev.story]!.total }
+        ? {
+            name: tn(STORIES[ev.story]!.name),
+            stage: ev.stage ?? 0,
+            total: STORIES[ev.story]!.total,
+          }
         : null;
+      const shown = eventById(ev.id) ?? ev;
       return {
         ids: evs.map((e) => e.id),
-        title: ev.title,
+        title: shown.title,
         group: groupOf(ev),
         pos,
         story,
         dependsOnPast,
-        choices: ev.choices.map((c, i) => analyzeChoice(ev, c, i, states)),
+        choices: ev.choices.map((c, i) => analyzeChoice(ev, c, shown.choices[i] ?? c, i, states)),
       };
     });
   });
-  return cache;
+  cache.set(lang, dex);
+  return dex;
 }

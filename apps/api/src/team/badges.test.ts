@@ -44,3 +44,24 @@ describe('팀 히스토리 배지', () => {
     expect(ids(team(), 11)).toEqual([]);
   });
 });
+
+describe('팀 배지 영어(T-11-106)', () => {
+  it('lang 없이는 한국어 그대로, en이면 영어 문구와 순위 문장', () => {
+    const t = team({ wins: 1, losses: 0 });
+    expect(teamBadges(t, 2, '시즌 1')[0]).toEqual({
+      id: 'final-3',
+      label: '시즌 TOP 3',
+      desc: '시즌 1 최종 2위',
+    });
+    const en = teamBadges(t, 2, 'Season 1', 'en');
+    expect(en[0]).toEqual({
+      id: 'final-3',
+      label: 'Season top 3',
+      desc: 'Finished 2nd in Season 1',
+    });
+    expect(en.map((b) => b.label).join(' ')).not.toMatch(/[가-힣]/);
+    expect(
+      teamBadges(t, 11, 'Season 1', 'en').find((b) => b.id.startsWith('final')),
+    ).toBeUndefined();
+  });
+});

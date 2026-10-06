@@ -7,15 +7,15 @@ export const gameCareer: Translation<GameCareerMsgs> = {
   goals: 'Goals',
   assists: 'Assists',
   cleanSheets: 'Clean sheets',
-  awards: 'Honours',
+  awards: 'Awards',
   peakValue: 'Peak market value',
-  goalsTitle: 'Next goals',
+  goalsTitle: 'Next targets',
   goalsNote:
-    'Appearances, goals and assists count completed seasons. National team caps and trophies also go on your career.',
+    'Appearances, goals and assists count completed seasons only. National team caps and trophies also go on your career.',
   goalLine: (p) => `${p.have} / ${p.target} · ${p.remaining} to go`,
   clubApps: (p) => `${p.target} appearances for ${p.club}`,
   retiredNumber: (p) =>
-    `If you play for one club for a long time and retire, that club may retire your number ${p.n}.`,
+    `Play for one club for a long time and retire, and that club may retire your No. ${p.n} shirt.`,
   colSeason: 'Season',
   colClub: 'Club',
   colRating: 'Rating',
@@ -32,7 +32,7 @@ export const gameCareer: Translation<GameCareerMsgs> = {
   coachServing:
     "You're on military service. After it ends, you'll prepare for club training and matches again.",
   coachInjured: (p) =>
-    `You're out for ${p.n} more match${p.n === 1 ? '' : 'es'} with injury. Check your recovery first.`,
+    `You're out for ${p.n} more match${p.n === 1 ? '' : 'es'} with an injury. Check your recovery first.`,
   coachLowCond:
     'Low condition raises your injury risk. Rest and recovery help you get ready to play.',
   coachLowMorale:

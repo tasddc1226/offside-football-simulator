@@ -4,13 +4,13 @@ import type { HofOwnMsgs } from '../ko/hofOwn';
 export const hofOwn: Translation<HofOwnMsgs> = {
   publishTitle: 'Show your name in the Hall of Fame',
   publishBefore:
-    'Retirement records go in the Hall of Fame, which every player can see. Right now it lists your player',
+    'Retirement records go into the Hall of Fame, which every player can see. Right now your player is listed',
   publishNamed: (p) => `as "${p.name}"`,
   publishAnon: 'anonymously',
-  publishAfter: 'to everyone.',
+  publishAfter: 'there.',
   publishHint:
-    "If you make your name public, other players can see your player's name. Avoid using real names.",
-  publishRevert: 'Go back to anonymous',
+    "Making your name public lets other players see your player's name. Avoid real names.",
+  publishRevert: 'Make anonymous again',
   publishOn: 'Make name public',
   shortTitle: 'Kept on your player only',
   reportTitle: (p) => `Report the name '${p.name}'?`,
@@ -24,5 +24,5 @@ export const hofOwn: Translation<HofOwnMsgs> = {
   nickLabel: 'Comment nickname',
   nickPlaceholder: (p) => `Comment nickname (2–${p.max} characters)`,
   nickChange: 'Change',
-  nickSet: 'Save',
+  nickSet: 'Set',
 };

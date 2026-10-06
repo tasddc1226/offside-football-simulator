@@ -7,7 +7,10 @@ test.beforeEach(async ({ page }) => {
 import type { TeamLayout } from '@offside/contracts/owner-team';
 import type { TeamLogo } from '@offside/contracts/team-logo';
 import AxeBuilder from '@axe-core/playwright';
-import { API, fail, ok } from './helpers.js';
+import { API, fail, ok, usePreseason } from './helpers.js';
+
+// 프리시즌 기록으로 꾸민 화면이라 시계를 시즌 1 개막 전으로 고정한다.
+usePreseason();
 
 // T-10-092 구단주 팀. 서버는 page.route로 흉내 낸다(경기 결과는 서버가 정한다 — 웹은 받은 결과를 그린다).
 

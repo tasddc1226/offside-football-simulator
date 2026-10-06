@@ -43,6 +43,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Pop, POP, Reveal, useProgress, useRevealed } from './credit';
 import { FilmBackdrop, FilmPill, FText, H2, Kicker, useFilm } from './film';
 import { LateCredits } from './LateCredits';
+import { tn } from '@offside/game/i18n/names';
 
 // end: 리포트 맨 아래(다음 행동 버튼 등).
 export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
@@ -160,7 +161,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                       {L.peakValue({
                         value: fmtValue(peakV.value),
                         season: seasonLabelOf(peakV.row),
-                        club: peakV.row.club,
+                        club: tn(peakV.row.club),
                       })}
                     </FText>
                   ) : null}
@@ -181,9 +182,9 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                 <FilmPill
                   rn
                   testID="legend-rn-pill"
-                  label={L.rnPillTitle({ club: rnGranted.club, number: rnGranted.number })}
+                  label={L.rnPillTitle({ club: tn(rnGranted.club), number: rnGranted.number })}
                 >
-                  {L.rnPill({ club: rnGranted.club, number: rnGranted.number })}
+                  {L.rnPill({ club: tn(rnGranted.club), number: rnGranted.number })}
                 </FilmPill>
               ) : null}
             </Pop>
@@ -294,12 +295,12 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                     >
                       <ClubMark name={ch.club} id={ch.clubId} size={24} />
                       <FText display={700} size={2} lh={1.05} style={{ flexShrink: 1 }}>
-                        {ch.club}
+                        {tn(ch.club)}
                       </FText>
                     </View>
                     <FText tone="muted" size={0.8125}>
                       {L.chapterMeta({
-                        leagues: ch.leagues.join(' → '),
+                        leagues: ch.leagues.map(tn).join(' → '),
                         ageFrom: ch.ageFrom,
                         ageTo: ch.ageTo,
                         seasons: ch.seasons,
@@ -714,7 +715,7 @@ function RollLine({ h, i }: { h: HonourLine; i: number }) {
       }}
     >
       <FText bold size={0.9375} lh={1.35} style={{ flex: 1, textAlign: 'right' }}>
-        {h.name}
+        {tn(h.name)}
         {h.years.length > 1 ? ` ×${h.years.length}` : ''}
       </FText>
       <FText tone="muted" display={400} size={0.9375} ls={0.06} style={{ flex: 1 }}>
@@ -744,7 +745,7 @@ function Finale({ v }: { v: LegendView }) {
       <ClubMark name={v.lastClub} id={v.lastClubId} size={56} />
       <Kicker>The Final Whistle</Kicker>
       <FText tone="muted" size={0.9375} lh={1.6} center style={{ marginTop: 6 }}>
-        {L.finaleLine1({ age: v.age, club: v.lastClub })}
+        {L.finaleLine1({ age: v.age, club: tn(v.lastClub) })}
         {'\n'}
         {L.finaleLine2}
       </FText>

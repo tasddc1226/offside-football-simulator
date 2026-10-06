@@ -12,7 +12,6 @@ import {
   PRESEASON,
   SERVICE_SEASONS,
   seasonById,
-  teamSeasonName,
 } from '@offside/contracts/service-seasons';
 import {
   getRetiredNumbersOfClub,
@@ -41,10 +40,11 @@ import { Card } from '../../ui/Card';
 import { ClubMark } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
-import { POS_GROUPS, POS_LABEL } from '@offside/contracts/positions';
+import { POS_GROUPS } from '@offside/contracts/positions';
 import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { RecordsSelect, RecordsChips, RECORDS_TOUCH } from './RecordsControls';
 import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
+import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../ui/useSeasonNow';
 import { useRefresh } from '../../ui/refresh';
 
@@ -353,7 +353,7 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
 
   if (failed) return <Message text={L.loadFailed} />;
   if (!summary) return <Message live text={L.loading} />;
-  if (!summary.total) return <Message text={L.empty({ season: teamSeasonName(season) })} />;
+  if (!summary.total) return <Message text={L.empty({ season: teamSeasonLabel(season) })} />;
   return (
     <View onLayout={onLayout}>
       <Txt tone="muted" style={{ fontSize: 12, marginBottom: 10 }}>
@@ -489,7 +489,7 @@ function ClubScreen({
         }}
         items={[
           { key: 'all', label: L.all },
-          ...POS_GROUPS.map((key) => ({ key, label: POS_LABEL[key] })),
+          ...POS_GROUPS.map((key) => ({ key, label: POS[key].label })),
         ]}
       />
       {failed ? (
@@ -501,7 +501,7 @@ function ClubScreen({
           {ready ? <Tiles items={filtered} withClub={false} {...opts} /> : null}
         </View>
       ) : (
-        <Message text={pos ? L.noMatchApp : L.empty({ season: teamSeasonName(season) })} />
+        <Message text={pos ? L.noMatchApp : L.empty({ season: teamSeasonLabel(season) })} />
       )}
     </View>
   );
@@ -574,7 +574,7 @@ function RecentScreen({ season, myIds }: { season: number; myIds: ReadonlySet<st
           ) : null}
         </View>
       ) : (
-        <Message text={L.empty({ season: teamSeasonName(season) })} />
+        <Message text={L.empty({ season: teamSeasonLabel(season) })} />
       )}
     </View>
   );
@@ -611,7 +611,10 @@ export default function RetiredWall() {
       </View>
       {upcoming ? (
         <Message
-          text={L.opens({ name: upcoming.name, when: kstMonthDayHour(upcoming.startsAt) })}
+          text={L.opens({
+            name: seasonLabel(upcoming.id, upcoming.name),
+            when: kstMonthDayHour(upcoming.startsAt),
+          })}
         />
       ) : screen === 'club' && clubId ? (
         <ClubScreen season={season} clubId={clubId} myIds={myIds} />

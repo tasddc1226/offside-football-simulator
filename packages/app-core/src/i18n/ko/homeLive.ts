@@ -18,6 +18,15 @@ const ko = {
     `${p.club} 시즌 ${p.apps}경기 무실점 ${p.cs}`,
   whatGoals: (p: { club: string; goals: number; assists: number }) =>
     `${p.club} 시즌 ${p.goals}골 ${p.assists}도움`,
+  // format.ts(첫 화면에서 함께 불러오는 모듈)가 쓰는 짧은 표기: 카드 아랫줄·경과 시간.
+  attrsNone: '능력치 기록 없음',
+  attrsEstimated: '추정 능력치',
+  baseValue: (p: { value: string }) => `기준가 ${p.value}`,
+  agoNow: '방금',
+  agoMin: (p: { n: number }) => `${p.n}분 전`,
+  agoHour: (p: { n: number }) => `${p.n}시간 전`,
+  agoYesterday: '어제',
+  agoDay: (p: { n: number }) => `${p.n}일 전`,
 };
 
 export type HomeLiveMsgs = typeof ko;

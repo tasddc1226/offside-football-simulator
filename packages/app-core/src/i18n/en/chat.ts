@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { ChatMsgs } from '../ko/chat';
+import { plural } from './_util';
 
 export const chat: Translation<ChatMsgs> = {
   title: 'Lounge chat',
@@ -9,7 +10,7 @@ export const chat: Translation<ChatMsgs> = {
   connecting: 'Connecting…',
   rulesLabel: 'Chat rules',
   rulesBody:
-    'This is a public chat everyone can see. Links are not allowed, and abuse, insults, ads and personal info are hidden and may lead to restrictions.',
+    "This is a public chat everyone can see. Links aren't allowed. Abuse, insults, ads and personal info are hidden and may get you restricted.",
   terms: 'Terms of service',
   ok: 'OK',
   messageLabel: 'Chat message',
@@ -21,10 +22,10 @@ export const chat: Translation<ChatMsgs> = {
   blockBody: "You won't see their messages or comments anymore.",
   blockOk: 'Block',
   blockedToast: (p) => `Blocked ${p.nick}`,
-  muteTitle: (p) => `Suspend ${p.nick} from chat for ${p.days} days?`,
+  muteTitle: (p) => `Suspend ${p.nick} from chat for ${plural(p.days, 'day')}?`,
   muteBody: 'This message will be hidden too.',
   muteOk: 'Suspend',
-  mutedToast: (p) => `Suspended ${p.nick} for ${p.days} days`,
+  mutedToast: (p) => `Suspended ${p.nick} for ${plural(p.days, 'day')}`,
   hiddenToast: 'Message hidden',
   adminLabel: 'Moderation',
   hide: 'Hide',
@@ -34,11 +35,11 @@ export const chat: Translation<ChatMsgs> = {
   blockHint: (p) => `To hide all messages from ${p.nick}`,
   blockAuthor: 'Block author',
   moreLabel: (p) => `Report or block ${p.nick}`,
-  emptyOpen: "It's quiet so far.",
+  emptyOpen: "It's quiet in here.",
   loading: 'Loading…',
-  gateLogin: 'Sign in with Google to join the chat.',
-  gateLoginApple: 'Sign in with Google or Apple to join the chat.',
-  loginGoogle: 'Sign in with Google',
+  gateLogin: 'Log in with Google to join the chat.',
+  gateLoginApple: 'Log in with Google or Apple to join the chat.',
+  loginGoogle: 'Log in with Google',
   gateNicknameWeb: 'Pick a nickname for chat and comments.',
-  gateNicknameApp: 'Pick a nickname for chat first. It is the same as your comment nickname.',
+  gateNicknameApp: "Pick a chat nickname first. It's the same as your comment nickname.",
 };

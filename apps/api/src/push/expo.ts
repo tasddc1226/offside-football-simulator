@@ -1,4 +1,6 @@
 import { AppError } from '../errors.js';
+import type { Lang } from '../lang.js';
+import { pushText } from './text.js';
 
 /** 현재 앱 세션 소유자의 기기 한 대로만 발송한다. 응답·토큰·인증값을 로그에 남기지 않는다. */
 export async function sendPushTest(
@@ -6,6 +8,7 @@ export async function sendPushTest(
   accessToken?: string,
   fetchImpl: typeof fetch = fetch,
   notificationId?: string,
+  lang: Lang = 'ko',
 ): Promise<string> {
   let response: Response;
   try {
@@ -20,8 +23,8 @@ export async function sendPushTest(
       },
       body: JSON.stringify({
         to: token,
-        title: '오프사이드 알림 테스트',
-        body: '공지와 릴리즈 노트 알림이 연결됐어요.',
+        title: pushText('오프사이드 알림 테스트', lang),
+        body: pushText('공지와 릴리즈 노트 알림이 연결됐어요.', lang),
         channelId: 'news',
         sound: 'default',
         data: {

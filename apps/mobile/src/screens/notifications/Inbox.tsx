@@ -19,6 +19,7 @@ import { Btn, Card, Press, Screen, Txt as BaseTxt } from '../../ui';
 import type { TxtProps } from '../../ui/Txt';
 import { useColors } from '../../theme/useColors';
 import { inboxText as L } from '@offside/app-core/i18n/ko/inbox';
+import { intlLocale } from '@offside/app-core/i18n/core';
 
 // 큰 시스템 글자에서도 고정 줄 높이로 글리프가 잘리지 않게 기본 서체의 줄 높이를 사용한다.
 function InboxText({ style, ...props }: TxtProps) {
@@ -63,7 +64,7 @@ function Icon({ name, size = 20 }: { name: keyof typeof paths; size?: number }) 
   );
 }
 function stamp(at: string) {
-  return new Date(at).toLocaleString('ko-KR', {
+  return new Date(at).toLocaleString(intlLocale(), {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -78,7 +79,7 @@ function dayLabel(at: string) {
   yesterday.setDate(today.getDate() - 1);
   if (date.toDateString() === today.toDateString()) return L.today;
   if (date.toDateString() === yesterday.toDateString()) return L.yesterday;
-  return date.toLocaleDateString('ko-KR', {
+  return date.toLocaleDateString(intlLocale(), {
     ...(date.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}),
     month: 'long',
     day: 'numeric',
@@ -414,7 +415,7 @@ export default function Inbox() {
                     {`· ${item.readAt ? L.read : L.unread}`}
                   </InboxText>
                   <InboxText tone="muted" v="sm" style={{ marginLeft: 'auto' }}>
-                    {new Date(item.createdAt).toLocaleTimeString('ko-KR', {
+                    {new Date(item.createdAt).toLocaleTimeString(intlLocale(), {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
