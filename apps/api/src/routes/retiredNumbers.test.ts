@@ -80,6 +80,9 @@ describe('영구결번 (T-10-076)', () => {
   let cookie: string;
 
   beforeEach(async () => {
+    // 기본 데이터는 프리시즌 선수다. 실제 시즌 개막과 무관하게 같은 기준으로 검증한다.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z'));
     ctx = await createTestD1();
     cookie = (await issueCookie(ctx)).cookie;
   });
@@ -310,6 +313,8 @@ describe('영구결번 (T-10-076)', () => {
       db.prepare('DELETE FROM retired_numbers'),
       db.prepare("DELETE FROM app_meta WHERE key LIKE 'retired_numbers_%'"),
     ]);
+    // 고정된 시각에서도 새 은퇴가 기존 은퇴보다 뒤임을 명시한다.
+    vi.setSystemTime(new Date(Date.now() + 1000));
     expect(await retire(A, skyBlue(10), '새레전드')).toMatchObject({
       kind: 'taken',
       holder: '옛레전드',

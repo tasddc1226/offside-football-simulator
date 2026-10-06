@@ -1,10 +1,32 @@
 import type { Bindings } from '../env.js';
 import { postExpo } from './transport.js';
 import { kstDay } from '@offside/contracts/kst';
+import { latePushResult } from './result.js';
 
 const BATCH = 100;
 const MINUTE = 60_000;
 const iso = (at: number) => new Date(at).toISOString();
+// 신청 취소·수락·친구 끊기·차단 뒤에는 지난 이벤트를 OS 알림으로 보내지 않는다.
+const SOCIAL_ELIGIBLE = `CASE
+  WHEN n.source_key LIKE 'friend-request:%' THEN EXISTS (
+    SELECT 1 FROM friends f WHERE f.profile_id = q.profile_id AND f.state = 'received'
+      AND f.friend_id = substr(n.source_key, 16, instr(substr(n.source_key, 16), ':') - 1)
+      AND NOT EXISTS (SELECT 1 FROM board_blocks b WHERE
+        (b.profile_id = f.profile_id AND b.blocked_profile_id = f.friend_id) OR
+        (b.profile_id = f.friend_id AND b.blocked_profile_id = f.profile_id)))
+  WHEN n.source_key LIKE 'friend-accepted:%' THEN EXISTS (
+    SELECT 1 FROM friends f WHERE f.profile_id = q.profile_id AND f.state = 'accepted'
+      AND f.friend_id = substr(n.source_key, 17, instr(substr(n.source_key, 17), ':') - 1)
+      AND NOT EXISTS (SELECT 1 FROM board_blocks b WHERE
+        (b.profile_id = f.profile_id AND b.blocked_profile_id = f.friend_id) OR
+        (b.profile_id = f.friend_id AND b.blocked_profile_id = f.profile_id)))
+  WHEN n.source_key LIKE 'friendly:%' THEN EXISTS (
+    SELECT 1 FROM friend_matches m JOIN friends f ON f.profile_id = m.opponent_id AND f.friend_id = m.profile_id
+    WHERE m.id = substr(n.source_key, 10) AND m.opponent_id = q.profile_id AND f.state = 'accepted'
+      AND NOT EXISTS (SELECT 1 FROM board_blocks b WHERE
+        (b.profile_id = f.profile_id AND b.blocked_profile_id = f.friend_id) OR
+        (b.profile_id = f.friend_id AND b.blocked_profile_id = f.profile_id)))
+  ELSE 1 END`;
 type Row = {
   id: string;
   notification_id: string;
@@ -76,14 +98,18 @@ async function claim(db: D1Database, checking: boolean, now: number, lease: stri
     .prepare(
       `SELECT q.*, n.title, n.body,
     CASE WHEN d.token = q.token AND d.session_id = q.session_id AND d.profile_id = q.profile_id
-      AND d.engagement_enabled = 1 AND d.updated_at >= ? AND s.channel = 'app' AND s.profile_id = q.profile_id
+      AND d.updated_at >= ? AND s.channel = 'app' AND s.profile_id = q.profile_id
       AND s.revoked_at IS NULL AND s.expires_at > ? AND p.deleted_at IS NULL AND p.id IS NOT NULL
       AND n.read_at IS NULL AND n.expires_at > ? AND q.expires_at > ?
+      AND CASE n.kind WHEN 'team' THEN COALESCE(pref.team, 1) WHEN 'market' THEN COALESCE(pref.market, 1)
+        WHEN 'social' THEN COALESCE(pref.social, 1) ELSE 1 END = 1
+      AND (n.kind <> 'social' OR ${SOCIAL_ELIGIBLE} = 1)
       AND (n.kind <> 'return' OR NOT EXISTS (SELECT 1 FROM push_devices active WHERE active.profile_id = q.profile_id AND active.updated_at > ?))
       THEN 1 ELSE 0 END AS eligible
     FROM push_deliveries q JOIN notifications n ON n.id = q.notification_id
     LEFT JOIN push_devices d ON d.installation_hash = q.installation_hash
     LEFT JOIN sessions s ON s.id = q.session_id LEFT JOIN profiles p ON p.id = q.profile_id
+    LEFT JOIN push_preferences pref ON pref.profile_id = q.profile_id
     WHERE q.state = ? AND q.lease_id = ?`,
     )
     .bind(
@@ -183,6 +209,7 @@ async function finish(db: D1Database, rows: Row[], results: Outcome[], now: numb
       WHERE id = ? AND lease_id = ? AND state IN ('sending', 'checking')`,
         )
         .bind(o.state, iso(o.due), o.ticket ?? null, o.state, iso(now), r.id, lease),
+      latePushResult(db, 'push_deliveries', r.id, o.state, iso(now)),
     );
     if (o.remove)
       for (const table of ['push_devices', 'push_news_deliveries', 'push_deliveries']) {

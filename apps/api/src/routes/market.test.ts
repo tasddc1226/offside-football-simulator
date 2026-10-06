@@ -10,10 +10,19 @@ import {
 import { readFileSync } from 'node:fs';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cards, careers, marketDaily, marketListings, ownerFunds } from '../db/schema.js';
+import {
+  cards,
+  careers,
+  marketDaily,
+  marketListings,
+  ownerFunds,
+  notifications,
+  pushDeliveries,
+} from '../db/schema.js';
 import { createApp } from '../app.js';
 import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueGoogleCookie } from '../test/http.js';
+import { addAppPushDevice } from '../test/push.js';
 
 const ListRes = successEnvelope(MarketListResponseSchema);
 const MeRes = successEnvelope(MarketMeResponseSchema);
@@ -167,6 +176,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
   it('내놓고 사면 자금이 오가고 카드 주인이 바뀐다(수수료는 판매자 몫에서 뗀다)', async () => {
     const seller = await issueGoogleCookie(ctx);
     const buyer = await issueGoogleCookie(ctx);
+    await addAppPushDevice(ctx, seller.profileId);
     const card = await addCard(seller.profileId);
     // 가격 범위: 기준가 50%~300%
     const low = await list(seller.cookie, card, 400_000);
@@ -195,10 +205,17 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     await fund(buyer.profileId, 2_000_000);
     expect(await reason(await buy(buyer.cookie, 1_000_000))).toBe('PRICE_CHANGED');
     expect(await reason(await buy(seller.cookie, 1_200_000))).toBe('OWN_LISTING');
+    expect(await ctx.db.select().from(notifications)).toEqual([]);
     const ok = await buy(buyer.cookie, 1_200_000);
     expect(ok.status).toBe(200);
     expect(((await ok.json()) as { data: unknown }).data).toEqual({ balance: 800_000 });
     expect(await reason(await buy(buyer.cookie, 1_200_000))).toBe('LISTING_GONE');
+    expect(await ctx.db.select().from(notifications)).toMatchObject([
+      { profileId: seller.profileId, kind: 'market', sourceKey: `market-sold:${listingId}` },
+    ]);
+    expect(await ctx.db.select().from(pushDeliveries)).toMatchObject([
+      { profileId: seller.profileId, state: 'pending' },
+    ]);
     // 팔린 선수는 '방금 이적' 띠(첫 페이지 recent)에 오른다. 엣지 캐시를 피하려고 다른 정렬로 묻는다.
     const after = ListRes.parse(await (await call('GET', '/v1/market?sort=price')).json()).data;
     expect(after.items).toEqual([]);

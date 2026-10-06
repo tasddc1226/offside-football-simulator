@@ -1,4 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
+
+// 기본 은퇴 기록은 프리시즌이다. 실제 개막 날짜와 분리해 검증한다.
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-30T00:00:00.000Z'));
+});
 import AxeBuilder from '@axe-core/playwright';
 import { API, ok, openMarket, startCareer } from './helpers.js';
 

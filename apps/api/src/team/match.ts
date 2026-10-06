@@ -84,16 +84,24 @@ export function toMatch(
 ): TeamMatch {
   const label = (p: PlayerRef) => (p.careerId ? (names.get(p.careerId) ?? p.anon) : p.anon);
   const mine = row.homeTeamId === myTeamId ? 'home' : 'away';
+  // 저장된 시너지 ID는 내부 경기 기록이다. 구버전 앱도 읽는 공개 응답에는 계약 필드만 보낸다.
+  const publicSide = (side: MatchDetail['home']) => ({
+    teamId: side.teamId,
+    name: side.name,
+    owner: side.owner,
+    formation: side.formation,
+    ovr: side.ovr,
+  });
   return {
     id: row.id,
     home: {
-      ...d.home,
+      ...publicSide(d.home),
       logo: logos.get(d.home.teamId) ?? null,
       goals: row.homeGoals,
       ratingChange: d.home.ratingChange ?? null,
     },
     away: {
-      ...d.away,
+      ...publicSide(d.away),
       logo: logos.get(d.away.teamId) ?? null,
       goals: row.awayGoals,
       ratingChange: d.away.ratingChange ?? null,

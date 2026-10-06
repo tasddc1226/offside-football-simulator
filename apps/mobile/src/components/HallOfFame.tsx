@@ -20,6 +20,7 @@ import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { anonName, fmtValue, iGa } from '@offside/app-core/format';
 import { getHof } from '@offside/app-core/api/client';
 import { useSeasonNow } from '../ui/useSeasonNow';
+import { useRefresh } from '../ui/refresh';
 import { loadHOF } from '@offside/game/season';
 import { openHof } from '../game/nav';
 import { openPublicLegend } from '../game/host';
@@ -135,12 +136,14 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
     scrollTo(0);
   }
 
+  const { tick, track, pulled } = useRefresh();
   useEffect(() => {
-    setAll(null);
+    // T-11-111 당겨서 새로고침이면 보이던 목록을 두고 응답으로 바꾼다.
+    if (!pulled) setAll(null);
     setFailed(false);
     if (upcoming) return;
     let live = true; // 더 늦게 고른 페이지·유형·시즌·검색어·포지션의 응답만 쓴다.
-    void getHof(full ? PER_PAGE : TOP, page, sort, season, q, pos).then((r) => {
+    void track(getHof(full ? PER_PAGE : TOP, page, sort, season, q, pos)).then((r) => {
       if (!live) return;
       if (r.ok) {
         setAll(r.data.entries);
@@ -150,7 +153,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
     return () => {
       live = false;
     };
-  }, [full, page, sort, season, q, pos, upcoming]);
+  }, [full, page, sort, season, q, pos, upcoming, tick, track]);
 
   const myIds = useMemo(() => new Set(loadHOF().flatMap((h) => (h.id ? [h.id] : []))), []);
   const offset = (page - 1) * PER_PAGE;

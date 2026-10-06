@@ -36,6 +36,7 @@ import { prefs } from '../../store';
 import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, ClubMark, Press, Txt } from '../../ui';
+import { useOnPull } from '../../ui/refresh';
 
 const POLL_MS = LIVE_POLL_SEC * 1000;
 const STEP_MS = LIVE_STEP_MS;
@@ -68,6 +69,10 @@ export function HomeLive() {
   const pending = !data && !failed;
   const ago = (at: string) => agoKo(now + skew - Date.parse(at));
 
+  // T-11-111 당겨서 새로고침 — 주기 조회·소켓은 그대로 두고 한 번만 다시 받는다.
+  const reload = useRef<() => Promise<void>>(async () => {});
+  useOnPull(() => reload.current());
+
   // 조회 + 소켓. 앱이 보일 때만 분마다 다시 받고, 앞으로 돌아오면 바로 한 번 받는다.
   useEffect(() => {
     let alive = true;
@@ -88,6 +93,7 @@ export function HomeLive() {
       setLive((p) => applyLoad(p, r.data));
       setNow(Date.now());
     };
+    reload.current = load;
     void load();
     const poll = setInterval(() => {
       if (AppState.currentState === 'active') void load();
