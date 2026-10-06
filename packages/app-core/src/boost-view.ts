@@ -24,6 +24,9 @@ export interface BoostView {
   button?: string;
   /** 시도 전에 한 번 더 묻는 문구. */
   confirm?: string;
+  /** T-11-116 자금이 모자랄 때 광고(광고 제거 구매자는 바로)로 시도하는 버튼 — 앱에서 광고를 쓸 수 있을 때만. */
+  adButton?: string;
+  adNote?: string;
   note: string;
   /** 최근 시도(새것부터 4개). */
   history: string[];
@@ -35,7 +38,13 @@ export const BOOST_NOTE = `시즌마다 한 번, ${BOOST.maxAge}세까지 시도
 export const boostHidden = (s: GameState): boolean =>
   boostStatus(s) === 'aged' && !boostState(s).log.length;
 
-export function boostView(s: GameState): BoostView {
+/**
+ * adOffer(T-11-116): 'ad'는 보상형 광고를 볼 수 있는 앱, 'free'는 광고 제거를 산 앱 사용자. 웹·광고 단위가 없는 앱은 null —
+ * 자금이 모자라면 그대로 시도할 수 없다.
+ */
+export type BoostAdOffer = 'ad' | 'free' | null;
+
+export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView {
   const status = boostStatus(s);
   const b = boostState(s);
   const cost = `${fmtMoney(boostCost(s))}원`;
@@ -62,13 +71,25 @@ export function boostView(s: GameState): BoostView {
           button: `${cost} 내고 강화하기 (${chance}%)`,
           confirm: `${cost}을 쓰고 ${chance}% 확률로 시도해요. 실패하면 돌려받지 못해요.`,
         }
-      : {}),
+      : status === 'short' && adOffer
+        ? {
+            adButton:
+              adOffer === 'free'
+                ? `자금 없이 강화하기 (${chance}%)`
+                : `광고 보고 강화하기 (${chance}%)`,
+            adNote:
+              adOffer === 'free'
+                ? '광고 제거를 구매해서 자금 없이 한 번 시도할 수 있어요.'
+                : '광고를 끝까지 보면 자금 없이 한 번 시도할 수 있어요.',
+          }
+        : {}),
     note: BOOST_NOTE,
     history: b.log
       .slice(-4)
       .reverse()
       .map(
-        (x) => `${x.y} · +${x.lv + 1}단계 ${x.p}% · ${fmtMoney(x.c)}원 · ${x.ok ? '성공' : '실패'}`,
+        (x) =>
+          `${x.y} · +${x.lv + 1}단계 ${x.p}% · ${x.ad ? '광고' : `${fmtMoney(x.c)}원`} · ${x.ok ? '성공' : '실패'}`,
       ),
   };
 }
@@ -84,9 +105,9 @@ export interface BoostOutcome {
   text: string;
 }
 
-/** 시도하고 연출에 쓸 결과를 돌려준다. 시도할 수 없으면 null. 저장은 부르는 쪽이 연출 전에 바로 한다. */
-export function doBoost(s: GameState): BoostOutcome | null {
-  const r = tryBoost(s);
+/** 시도하고 연출에 쓸 결과를 돌려준다. 시도할 수 없으면 null. 저장은 부르는 쪽이 연출 전에 바로 한다. ad: 광고 시도. */
+export function doBoost(s: GameState, ad = false): BoostOutcome | null {
+  const r = tryBoost(s, ad);
   if (!r) return null;
   return {
     ok: r.ok,
@@ -98,6 +119,8 @@ export function doBoost(s: GameState): BoostOutcome | null {
       ? r.lv >= BOOST_MAX
         ? '최고 단계에 닿았어요. 성장 한계가 한 뼘 더 올라갔어요.'
         : '성장 한계가 한 뼘 더 올라갔어요.'
-      : `성공 확률 ${r.chance}%였어요. 자금은 돌려받지 못하고, 다음 시도 확률이 ${BOOST_PITY_PCT}%p 올라요.`,
+      : ad
+        ? `성공 확률 ${r.chance}%였어요. 다음 시도 확률이 ${BOOST_PITY_PCT}%p 올라요.`
+        : `성공 확률 ${r.chance}%였어요. 자금은 돌려받지 못하고, 다음 시도 확률이 ${BOOST_PITY_PCT}%p 올라요.`,
   };
 }

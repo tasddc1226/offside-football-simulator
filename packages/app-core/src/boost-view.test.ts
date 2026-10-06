@@ -47,6 +47,24 @@ describe('T-11-083 잠재력 강화 카드', () => {
     expect(doBoost(s)).toBeNull();
   });
 
+  it('T-11-116 자금이 모자라면 앱에서만 광고 강화 버튼을 보이고, 광고 시도는 기록에 광고로 남는다', () => {
+    const s = player({ money: 100 });
+    expect(boostView(s).adButton).toBeUndefined();
+    expect(boostView(s, 'ad')).toMatchObject({
+      status: 'short',
+      adButton: '광고 보고 강화하기 (50%)',
+      adNote: '광고를 끝까지 보면 자금 없이 한 번 시도할 수 있어요.',
+    });
+    expect(boostView(s, 'free').adButton).toBe('자금 없이 강화하기 (50%)');
+    expect(boostView(player(), 'ad').adButton).toBeUndefined();
+    expect(doBoost(s)).toBeNull();
+    const out = doBoost(s, true)!;
+    expect(out).not.toBeNull();
+    expect(s.money).toBe(100);
+    expect(boostView(s, 'ad').history[0]).toMatch(/· 광고 · (성공|실패)$/);
+    expect(out.text).not.toContain('자금은 돌려받지');
+  });
+
   it('29세가 지나고 한 번도 안 한 선수에게는 카드를 숨긴다', () => {
     expect(boostHidden(player({ age: 30 }))).toBe(true);
     const tried = player({ age: 30 });

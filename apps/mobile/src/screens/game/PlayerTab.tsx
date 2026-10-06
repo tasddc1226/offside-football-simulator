@@ -3,7 +3,13 @@ import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { POTENTIAL_NOTICE } from '@offside/app-core/potential-view';
-import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
+import {
+  boostHidden,
+  boostView,
+  doBoost,
+  type BoostAdOffer,
+  type BoostOutcome,
+} from '@offside/app-core/boost-view';
 import { peekView } from '@offside/app-core/potential-peek';
 import { TRAITS } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
@@ -24,6 +30,7 @@ import { retireAsk, save } from '../../game/host';
 import { BoostFx } from '../../components/BoostFx';
 import { appState } from '../../store';
 import { adFree } from '../../platform/adFree';
+import { REWARD_CONSENT_TEXT, earnReward, rewardAvailable } from '../../platform/rewarded';
 import { openPeek, peekAvailable, potPeek } from '../../platform/rewardedPeek';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -62,21 +69,45 @@ function Kv({ rows, mt = 0 }: { rows: Row[]; mt?: number }) {
   );
 }
 
-/** T-11-083 잠재력 강화(웹 PlayerTab.svelte data-boost). 자금을 쓰는 시도라 버튼을 한 번 더 눌러야 한다. */
+/**
+ * T-11-083 잠재력 강화(웹 PlayerTab.svelte data-boost). 자금을 쓰는 시도라 버튼을 한 번 더 눌러야 한다.
+ * T-11-116 자금이 모자라면 보상형 광고를 끝까지 보고(광고 제거 구매자는 바로) 자금 없이 시도한다(앱 전용).
+ */
 function BoostCard({ s }: { s: GameState }) {
   const c = useColors();
   const [arming, setArming] = useState(false);
   const [fx, setFx] = useState<BoostOutcome | null>(null);
-  const v = boostView(s);
+  const [adBusy, setAdBusy] = useState(false);
+  const [adMessage, setAdMessage] = useState('');
+  const owned = useSnapshot(adFree).owned;
+  const offer: BoostAdOffer = owned ? 'free' : rewardAvailable() ? 'ad' : null;
+  const v = boostView(s, offer);
+  // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다. 결과를 먼저 저장하고 연출을 연다 — 연출 중에 앱을 꺼도 결과는 그대로다.
+  const run = (ad: boolean) => {
+    const out = doBoost(appState.G!, ad);
+    if (!out) return;
+    save();
+    setFx(out);
+  };
   const onBoost = () => {
     if (!arming) return setArming(true);
     setArming(false);
-    // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다.
-    const out = doBoost(appState.G!);
-    if (!out) return;
-    // 결과를 먼저 저장하고 연출을 연다 — 연출 중에 앱을 꺼도 결과는 그대로다.
-    save();
-    setFx(out);
+    run(false);
+  };
+  const onAdBoost = async () => {
+    if (adBusy) return;
+    setAdBusy(true);
+    setAdMessage('');
+    try {
+      const r = await earnReward();
+      if (r === 'earned') run(true);
+      else
+        setAdMessage(
+          r === 'consent' ? REWARD_CONSENT_TEXT : '광고를 끝까지 보면 강화를 시도할 수 있어요.',
+        );
+    } finally {
+      setAdBusy(false);
+    }
   };
   return (
     <Card gap={0} testID="boost">
@@ -134,6 +165,21 @@ function BoostCard({ s }: { s: GameState }) {
               </Btn>
             ) : null}
           </View>
+        </View>
+      ) : null}
+      {v.adButton ? (
+        <View style={{ marginVertical: 8, gap: 6 }} testID="boost-ad">
+          <Txt v="sm" tone="muted" testID="boost-ad-note">
+            {adMessage || v.adNote}
+          </Txt>
+          <Btn
+            kind="primary"
+            disabled={adBusy}
+            testID="boost-ad-btn"
+            onPress={() => void onAdBoost()}
+          >
+            {adBusy ? '광고 불러오는 중…' : v.adButton}
+          </Btn>
         </View>
       ) : null}
       <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 4 }}>

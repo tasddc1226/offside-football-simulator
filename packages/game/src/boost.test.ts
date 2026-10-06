@@ -63,6 +63,24 @@ describe('T-11-083 잠재력 강화', () => {
     expect(boostChance(s)).toBe(55);
   });
 
+  it('T-11-116 자금이 모자라면 광고로 자금 없이 한 번 시도하고, 자금이 충분하면 광고 시도는 못 한다', () => {
+    const poor = player({ money: 1500 });
+    const bonus = poor.flags.potBonus ?? 0;
+    nextRoll(0);
+    expect(tryBoost(poor, true)).toMatchObject({ ok: true, lv: 1, cost: 0, chance: 50 });
+    expect(poor.money).toBe(1500);
+    expect(poor.flags.potBonus).toBe(bonus + 1);
+    expect(poor.boost!.log).toEqual([
+      { y: poor.year, age: 21, lv: 0, p: 50, c: 0, ok: true, ad: true },
+    ]);
+    // 시즌마다 한 번은 광고 시도도 같다.
+    expect(boostStatus(poor)).toBe('done');
+    expect(tryBoost(poor, true)).toBeNull();
+    const rich = player({ money: 50000 });
+    expect(tryBoost(rich, true)).toBeNull();
+    expect(rich.boost).toBeUndefined();
+  });
+
   it('최대 단계에 닿으면 더 강화하지 않는다', () => {
     const s = player();
     s.boost = { lv: BOOST_MAX, fails: 0, log: [] };
