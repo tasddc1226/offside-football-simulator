@@ -69,6 +69,15 @@
           {L.achProgress({ head: gv.next ? L.toNextGrade({ grade: achGradeName(gv.next), pts: num(gv.toNext) }) : L.topGrade, done: tot.done, total: tot.total })}
         </p>
         <p class="muted fs-xs">{L.achAbout({ season: ach.seasons.find((o) => o.id === ach?.season)?.name ?? '', n: ach.players })}</p>
+        <div class="tm-ach-perks" data-ach-perks>
+          <b>{L.perksTitle}</b>
+          <ul>
+            <li>{L.perkGrade}</li>
+            <li>{L.perkTier}</li>
+            <li>{L.perkHonor}</li>
+          </ul>
+          <p class="muted fs-xs">{L.perkNote}</p>
+        </div>
       </div>
       {#if near.length}
         <div class="tm-near" data-ach-near>
@@ -137,6 +146,23 @@
   }
   .tm-ach-sum p {
     margin: 0;
+  }
+  .tm-ach-perks {
+    display: grid;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    font-size: 0.8125rem;
+  }
+  .tm-ach-perks ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 4px;
+  }
+  .tm-ach-perks li::marker {
+    color: var(--accent-text);
   }
   .tm-ach-head {
     display: flex;

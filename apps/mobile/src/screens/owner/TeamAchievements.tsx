@@ -349,6 +349,27 @@ export function TeamAchievements({
               <Txt tone="muted" v="xs">
                 {L.achAbout({ season: seasonName, n: ach.players })}
               </Txt>
+              <View
+                testID="ach-perks"
+                style={{ gap: 6, padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}
+              >
+                <Txt v="sm" bold>
+                  {L.perksTitle}
+                </Txt>
+                {[L.perkGrade, L.perkTier, L.perkHonor].map((t) => (
+                  <View key={t} style={{ flexDirection: 'row', gap: 6 }}>
+                    <Txt v="sm" tone="accent">
+                      •
+                    </Txt>
+                    <Txt v="sm" style={{ flex: 1 }}>
+                      {t}
+                    </Txt>
+                  </View>
+                ))}
+                <Txt tone="muted" v="xs">
+                  {L.perkNote}
+                </Txt>
+              </View>
             </View>
             {near.length ? (
               <View style={{ gap: 6 }} testID="ach-near">
