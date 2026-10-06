@@ -13,9 +13,11 @@ import {
   MANAGER_NAME_MIN,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
+  TEAM_RATING_START,
   YOUTH_NAME,
   YOUTH_OVR,
   slotRating,
+  synergyApplies,
   teamOvr,
   type FormationId,
 } from '@offside/contracts/owner-team';
@@ -736,6 +738,8 @@ export default function Team() {
               jumpRef={jump}
               synLinks={syn.links}
               synFocus={syn.members}
+              synApplied={syn.applied}
+              synCaption={synergyApplies(season) ? syn.caption : null}
               change={(nextSlots, nextLayout) => {
                 // T-11-114 지난 시즌 선수는 와일드카드 상한까지만.
                 if (tooManyWildcards(nextSlots, byId, season)) return toast(wildcardFullText());
@@ -764,7 +768,7 @@ export default function Team() {
           />
         ) : (
           <TeamOpponents
-            ovr={team?.ovr ?? ovr}
+            rating={team?.rating ?? TEAM_RATING_START}
             matchesLeft={matchesLeft}
             perDay={perDay}
             opponents={opponents}

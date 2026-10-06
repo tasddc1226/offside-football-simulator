@@ -1,5 +1,7 @@
 // 홈 하단 메뉴(웹 MainNav.svelte) — 기록실 · 소식 · 홈 · 구단주 · 설정.
+import { useEffect } from 'react';
 import { useSnapshot } from 'valtio';
+import { recapUnseen } from '@offside/app-core/api/seasonRecap';
 import type { Screen } from '@offside/app-core/state';
 import { appState } from '../store';
 import { go, goHome, openBoard, openHof } from '../game/nav';
@@ -33,8 +35,17 @@ const OPEN: Record<(typeof MAIN_SCREENS)[number], () => void> = {
   settings: () => go('settings'),
 };
 
+/** 메뉴는 화면마다 다시 그려진다 — 결산 확인은 앱을 연 뒤 한 번만. */
+let recapChecked = false;
+
 export function MainNav() {
-  const { screen, achNew } = useSnapshot(appState);
+  const { screen, achNew, recapNew } = useSnapshot(appState);
+  // T-11-128 새 시즌 결산(안 열어 본 결산이 있으면 구단주 탭에 점). 앱을 열 때 한 번.
+  useEffect(() => {
+    if (recapChecked) return;
+    recapChecked = true;
+    void recapUnseen().then((v) => (appState.recapNew = v));
+  }, []);
   return (
     <TabBar
       label={L.navLabel}
@@ -43,7 +54,9 @@ export function MainNav() {
         label: label(k),
         active: screen === k,
         onPress: OPEN[k],
-        ...(k === 'owner' ? { dot: achNew } : {}),
+        ...(k === 'owner'
+          ? { dot: achNew || (recapNew ? 1 : 0), dotLabel: achNew ? undefined : L.recapNew }
+          : {}),
       }))}
     />
   );

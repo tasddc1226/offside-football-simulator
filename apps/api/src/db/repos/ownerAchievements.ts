@@ -1,6 +1,19 @@
 // T-11-028 구단주 시즌 업적 점수(업적 랭킹). 업적 자체는 그때그때 계산하고(team/achievements.ts) 점수만 적어 둔다.
 import { ACH_RANK_PER_PAGE } from '@offside/contracts/owner-team';
-import { and, asc, count, countDistinct, desc, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  gt,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { ownerAchievements, ownerTeams, profiles, teamLikes, teamMatches } from '../schema.js';
 import { accountLinkedSql } from './profiles.js';
@@ -132,18 +145,25 @@ export async function listAchievementRanking(db: Db, season: number, page: numbe
   return { rows, total: Number(total?.n ?? 0) };
 }
 
-/** 그 시즌 구단주 활동 — 팀 경기를 건 날 수(한국 시각)와 다른 팀에 누른 좋아요 수. */
+/** 그 시즌 구단주 활동 — 팀 경기를 건 날 수(한국 시각)와 다른 팀에 누른 좋아요 수. T-11-128 asOf면 그 시각까지만. */
 export async function ownerActivityIn(
   db: Db,
   profileId: string,
   season: number,
   teamId: string | null,
+  asOf?: string,
 ) {
   const likes = db
     .select({ n: count() })
     .from(teamLikes)
     .innerJoin(ownerTeams, eq(ownerTeams.id, teamLikes.teamId))
-    .where(and(eq(teamLikes.profileId, profileId), eq(ownerTeams.season, season)));
+    .where(
+      and(
+        eq(teamLikes.profileId, profileId),
+        eq(ownerTeams.season, season),
+        asOf ? lte(teamLikes.createdAt, asOf) : undefined,
+      ),
+    );
   // 팀이 없으면 건 경기도 없다 — 구단주의 지난 시즌 경기까지 읽지 않게 건너뛴다.
   if (teamId === null) {
     const [l] = await likes;
@@ -153,7 +173,13 @@ export async function ownerActivityIn(
     db
       .select({ n: countDistinct(sql`date(${teamMatches.createdAt}, '+9 hours')`) })
       .from(teamMatches)
-      .where(and(eq(teamMatches.profileId, profileId), eq(teamMatches.homeTeamId, teamId))),
+      .where(
+        and(
+          eq(teamMatches.profileId, profileId),
+          eq(teamMatches.homeTeamId, teamId),
+          asOf ? lte(teamMatches.createdAt, asOf) : undefined,
+        ),
+      ),
     likes,
   ]);
   return { matchDays: Number(m?.n ?? 0), likesGiven: Number(l?.n ?? 0) };

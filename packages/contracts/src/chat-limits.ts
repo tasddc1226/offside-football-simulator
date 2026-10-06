@@ -2,6 +2,7 @@
  * T-11-015 실시간 채팅 한도·메시지 모양. zod가 없는 서브패스(`@offside/contracts/chat`)라 웹·앱 번들과 서버의
  * Durable Object가 같은 값을 쓴다. 방은 지금 라운지 하나다.
  */
+import type { OwnerTier } from './owner-tier.js';
 export const CHAT_SOCKET_PATH = '/v1/chat/ws';
 export const CHAT_ROOM = 'lounge';
 /** 메시지 한 줄 최대 길이(자). */
@@ -30,6 +31,8 @@ export type ChatMessage = {
   nickname: string;
   body: string;
   admin: boolean;
+  /** T-11-128 보낸 사람의 지난 시즌 구단주 티어(보낸 때 기준). 옛 메시지엔 없다. */
+  tier?: OwnerTier | null;
 };
 
 /** 쓰기를 거절한 이유(보낸 사람에게만 간다). */

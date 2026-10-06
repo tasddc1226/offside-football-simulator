@@ -6,6 +6,7 @@
   // T-11-026 구단 허브 — 맨 위에 구단주 요약(은퇴 선수·레전드 점수·결번), 그 아래 '내 팀' 카드(전적·레이팅·오늘 남은
   // 경기와 바로 경기하기), 내 선수 상위 3명, 계정은 맨 아래. 비로그인이면 '내 팀' 자리에 잠긴 카드와 로그인 버튼을 둔다.
   import Topbar from './Topbar.svelte';
+  import OwnerAvatar from './OwnerAvatar.svelte';
   import AdSlot from '../ads/AdSlot.svelte';
   import { fetchBoardViewer } from '@offside/app-core/api/boards';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
@@ -27,6 +28,12 @@
   import { googleStartUrl } from '@offside/app-core/api/client';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
   import { accountText as A } from '@offside/app-core/i18n/ko/account';
+  import { fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
+  import { recapCardView } from '@offside/app-core/seasonRecap';
+  import { profileTier, tierTitle } from '@offside/app-core/ownerTier';
+  import GradeEmblem from './team/GradeEmblem.svelte';
+  import { seasonRecapText as R } from '@offside/app-core/i18n/ko/seasonRecap';
+  import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
@@ -75,11 +82,28 @@
     });
   });
   const clubValue = $derived(linked ? (market?.clubValue ?? null) : (summary?.value ?? null));
+  // T-11-128 시즌 결산 카드 — 끝난 시즌이 있으면 가장 최근 결산을 한 줄로 알린다. 불러오지 못하면 카드를 숨긴다.
+  let recap = $state<SeasonRecapResponse | null>(null);
+  $effect(() => {
+    void fetchSeasonRecap().then((r) => {
+      if (r.ok) recap = r.data;
+    });
+  });
+  const recapCard = $derived(recap ? recapCardView(recap) : null);
+  // 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 프로필 이름 앞에 붙인다(그 시즌 기록이 없으면 없다).
+  // 댓글 · 채팅에도 같은 등급이 나간다(서버 ownerTiersOf).
+  const tierTag = $derived(recap ? profileTier(recap) : null);
+  /** 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 업적 탭으로. */
+  const openMyTeam = () => openTeam(appState.achNew ? 'achievements' : 'team');
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
   }
 </script>
+
+{#snippet achDot()}
+  {#if appState.achNew}<span class="btn-dot" data-team-dot><span class="sr-only">{S.achNew({ n: appState.achNew })}</span></span>{/if}
+{/snippet}
 
 <div class="wrap">
   <Topbar />
@@ -91,9 +115,10 @@
   {#if linked || guest}
     <section class="card owner-hub" data-owner-summary aria-label={L.summaryLabel}>
       <div class="owner-id">
-        <span class="owner-avatar" aria-hidden="true">{(nickname ?? L.avatarInitial).slice(0, 1)}</span>
+        <OwnerAvatar name={nickname ?? L.avatarInitial} size={48} />
         <div class="owner-who">
-          <b>{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}</b>
+          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}</b>
+          {#if tierTag}<span class="ach-grade owner-tier" data-grade={tierTag.tier} data-owner-tier={tierTag.tier}>{tierTitle(tierTag)}</span>{/if}
           <span class="muted fs-sm">{guest ? L.guestSub : card?.team ? `${card.team.name} · ${card.season}` : L.signedInSubWeb}</span>
         </div>
       </div>
@@ -110,6 +135,23 @@
       {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}</p>{/if}
     </section>
     <AdSlot place="owner-summary" />
+  {/if}
+
+  <!-- T-11-128 시즌 결산: 끝난 시즌이 있을 때만. 비로그인도 본다(프로필 쿠키만 있으면 된다). -->
+  {#if recap && recapCard}
+    <section class="card owner-market" aria-label={R.cardTitle} data-owner-recap data-recap-status={recap.status}>
+      <div class="owner-who">
+        <small class="eyebrow">Season recap</small>
+        <h2>{R.cardTitle}{#if recapCard.isNew}<span class="pill good owner-founder" data-recap-new>{R.newBadge}</span>{/if}</h2>
+        <span class="muted fs-sm">{recapCard.line}</span>
+        {#if recapCard.chips.length > 0}
+          <span class="recap-chips">
+            {#each recapCard.chips as c (c.kind)}<span class="pill recap-chip medal {c.medal}" data-recap-chip={c.kind}>{c.chip}</span>{/each}
+          </span>
+        {/if}
+      </div>
+      <button class="btn" data-act="recap" onclick={() => go('recap')}>{R.open}</button>
+    </section>
   {/if}
 
   <!-- T-10-092 내 팀: 구글로 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. -->
@@ -133,7 +175,7 @@
           <div><dt>{L.statToday}</dt><dd>{card.left}/{card.perDay}</dd></div>
         </dl>
         <div class="owner-actions">
-          <button class="btn" data-act="team" onclick={() => openTeam()}>{L.myTeam}</button>
+          <button class="btn" data-act="team" onclick={openMyTeam}>{L.myTeam}{@render achDot()}</button>
           <button class="btn btn-accent" data-act="owner-play" disabled={!!card.playHint} onclick={() => openTeam('opponents')}>{L.play}</button>
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
@@ -141,8 +183,8 @@
         <p class="muted fs-sm">
           {card ? ownerTeamEmptyText(card) : cardFailed ? L.teamFailed : L.loading}
         </p>
-        <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={() => openTeam()}>
-          {card && card.players > 0 ? L.buildTeam : L.myTeam}
+        <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={openMyTeam}>
+          {card && card.players > 0 ? L.buildTeam : L.myTeam}{@render achDot()}
         </button>
       {/if}
     </section>
@@ -195,18 +237,17 @@
     align-items: center;
     gap: 12px;
   }
-  .owner-avatar {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--pitch);
-    color: var(--pitch-accent);
+  /* 이름 앞 지난 시즌 등급 엠블럼(LoL 이름 앞 지난 시즌 티어처럼). */
+  .owner-last-tier {
+    display: inline-flex;
+    vertical-align: -5px;
+    margin-right: 4px;
+  }
+  .owner-tier {
     font-family: var(--display);
-    font-size: 1.375rem;
+    font-size: 0.875rem;
     font-weight: 700;
+    letter-spacing: 0.02em;
   }
   .owner-who {
     display: flex;

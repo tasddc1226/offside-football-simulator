@@ -1,6 +1,6 @@
 <script lang="ts">
   import TeamLogo from './TeamLogo.svelte';
-  // 상대 고르기 — 내 팀 OVR과 비슷한 다른 구단주의 팀에 도전한다. 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
+  // 상대 고르기 — 내 팀 레이팅에 가까운 다른 구단주의 팀에 도전한다(레이팅이 크게, OVR은 작게). 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
   import { TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
   import type { TeamOpponent } from '@offside/app-core/api/team';
   import { recordText } from '@offside/app-core/teamText';
@@ -8,7 +8,7 @@
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
 
   let {
-    ovr,
+    rating,
     matchesLeft,
     perDay,
     opponents,
@@ -23,7 +23,7 @@
     saving = false,
     saveDisabled = false,
   }: {
-    ovr: number;
+    rating: number;
     matchesLeft: number;
     perDay: number;
     opponents: TeamOpponent[];
@@ -47,7 +47,7 @@
   <div>
     <div class="eyebrow">Match</div>
     <h1>{L.oppTitle}</h1>
-    {#if !hint}<p class="muted fs-sm">{L.oppNear({ ovr, left: matchesLeft, per: perDay })}</p>{/if}
+    {#if !hint}<p class="muted fs-sm">{L.oppNear({ rating, left: matchesLeft, per: perDay })}</p>{/if}
     <p class="muted fs-xs">{L.oppRuleWeb({ days: TEAM_REPEAT_WINDOW_DAYS })}</p>
   </div>
   {#if hint}
@@ -65,7 +65,7 @@
           <b>{o.name}</b>
           <span class="muted fs-sm">{o.owner} · {o.formation} · {recordText(o.record)}</span>
         </div>
-        <span class="tm-opp-ovr">{o.ovr}</span>
+        <span class="tm-opp-score" data-opponent-rating={o.rating}><small class="muted">{L.oppRating}</small><b>{o.rating}</b><small class="muted">{L.oppOvr({ n: o.ovr })}</small></span>
         <button class="btn btn-primary btn-sm" disabled={playing || matchesLeft === 0} onclick={() => onchallenge(o)} data-act="team-challenge">{L.challenge}</button>
       </div>
     {:else}
@@ -93,13 +93,20 @@
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  .tm-opp-ovr {
+  .tm-opp-score {
     flex: none;
-    min-width: 2.2em;
+    min-width: 3.4em;
+    display: grid;
+    justify-items: center;
+    line-height: 1.1;
+  }
+  .tm-opp-score b {
     font-family: var(--display);
     font-size: 1.375rem;
     font-weight: 700;
-    text-align: center;
     color: var(--accent-text);
+  }
+  .tm-opp-score small {
+    font-size: 0.6875rem;
   }
 </style>

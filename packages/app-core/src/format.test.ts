@@ -43,9 +43,14 @@ describe('이적시장 표시 (T-11-080d)', () => {
     dailyBuys: 10,
   };
   it('카드 등급은 레전드 점수 → 최고 OVR 순으로 정한다', () => {
-    expect(cardTier(1000, 60)).toBe('legend');
-    expect(cardTier(999, 80)).toBe('gold');
-    expect(cardTier(null, 79)).toBe('silver');
+    expect(cardTier(1800, 78)).toBe('icon');
+    expect(cardTier(1100, 71)).toBe('legend');
+    expect(cardTier(1099, 85)).toBe('elite');
+    expect(cardTier(999, 84)).toBe('gold');
+    expect(cardTier(null, 75)).toBe('gold');
+    expect(cardTier(null, 74)).toBe('silver');
+    expect(cardTier(0, 65)).toBe('silver');
+    expect(cardTier(0, 64)).toBe('bronze');
   });
   it('판매가 옆 표시는 기준가와의 차이(%)', () => {
     expect(priceDiff(100_000, 100_000)).toEqual({ text: '기준가', tone: 'same' });

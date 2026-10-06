@@ -27,10 +27,8 @@ export const anonName = (pos: Parameters<typeof anonNameIn>[0], number: number |
 import { fmtValue } from '@offside/game/player';
 export { fmtValue };
 
-/** 선수 카드 등급(카드 색): 레전드 점수 1,000 이상 레전드, 최고 OVR 80 이상 골드, 나머지 실버. */
-export type CardTier = 'legend' | 'gold' | 'silver';
-export const cardTier = (legendScore: number | null | undefined, peak: number): CardTier =>
-  (legendScore ?? 0) >= 1000 ? 'legend' : peak >= 80 ? 'gold' : 'silver';
+// 선수 카드 등급 — 서버 시즌 결산(등급별 카드 수)과 같은 기준이라 contracts에 둔다.
+export { cardTier, isLegendTier } from '@offside/contracts/card-tier';
 
 /** T-11-114 선수 카드 시즌 뱃지 — 프리시즌 PRE, 그 뒤는 S1·S2…(이름은 teamSeasonName). */
 export const cardSeasonBadge = (season: number): string => (season === 0 ? 'PRE' : `S${season}`);

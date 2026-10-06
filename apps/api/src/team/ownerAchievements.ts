@@ -34,28 +34,31 @@ function keptOf(json: string | null | undefined): TeamKept {
 }
 
 /**
- * 그 시즌 업적을 계산해 점수를 적고 업적·점수 행을 돌려준다. touch면 점수가 그대로여도 갱신 시각을 남긴다
- * (saveAchievementScore).
+ * 그 시즌 업적을 계산한다(적지는 않는다). T-11-128 asOf가 있으면 그 시각까지 은퇴한 선수·누른 좋아요·건 경기로만
+ * 센다 — 시즌 결산이 마감 시각 기준 점수를 다시 셀 때 쓴다.
  */
-export async function refreshOwnerAchievements(
+export async function computeOwnerAchievements(
   db: Db,
   owner: { id: string; nickname: string | null },
   season: number,
   now: string,
-  touch: boolean,
+  asOf?: string,
 ) {
-  const [careersIn, [seasonTeam], prev] = await Promise.all([
+  const [allCareers, [seasonTeam], prev] = await Promise.all([
     seasonCareersOf(db, owner.id, season),
     myTeamIn(db, owner.id, season),
     achievementRowOf(db, owner.id, season),
   ]);
+  const careersIn = asOf
+    ? allCareers.filter((c) => c.retiredAt !== null && c.retiredAt <= asOf)
+    : allCareers;
   const open = season === teamSeasonAt(now);
   // T-11-113 시즌이 끝난 뒤 친선전용으로 처음 만든 팀(최종 기록은 빈 팀)은 그 시즌 팀으로 치지 않는다.
   const end = teamSeasonEndsAt(season);
   const team = seasonTeam && !(end && seasonTeam.createdAt >= end) ? seasonTeam : undefined;
   const ids = team ? slotIdsOf(team).filter((id): id is string => id !== null) : [];
   const [activity, slotRows] = await Promise.all([
-    ownerActivityIn(db, owner.id, season, team?.id ?? null),
+    ownerActivityIn(db, owner.id, season, team?.id ?? null, asOf),
     careersByIds(db, ids),
   ]);
   // T-11-103 선발은 화면과 같이 카드로 판정한다 — 영입한 선수도 들어가고, 지금 시즌은 지금 가진 선수만(eligibleMap).
@@ -104,6 +107,21 @@ export async function refreshOwnerAchievements(
     retireAt: retireAtOf(season),
     kept: keptOf(prev?.teamKept),
   });
+  return { groups, prev, players: careersIn.length };
+}
+
+/**
+ * 그 시즌 업적을 계산해 점수를 적고 업적·점수 행을 돌려준다. touch면 점수가 그대로여도 갱신 시각을 남긴다
+ * (saveAchievementScore).
+ */
+export async function refreshOwnerAchievements(
+  db: Db,
+  owner: { id: string; nickname: string | null },
+  season: number,
+  now: string,
+  touch: boolean,
+) {
+  const { groups, prev, players } = await computeOwnerAchievements(db, owner, season, now);
   const kept = teamKeptOf(groups);
   const row = await saveAchievementScore(
     db,
@@ -111,13 +129,13 @@ export async function refreshOwnerAchievements(
     { profileId: owner.id, season },
     {
       ...achievementScore(groups),
-      players: careersIn.length,
+      players,
       teamKept: Object.keys(kept).length ? JSON.stringify(kept) : null,
     },
     now,
     touch,
   );
-  return { groups, row, players: careersIn.length };
+  return { groups, row, players };
 }
 
 /**

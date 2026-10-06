@@ -6,32 +6,36 @@
   import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
   import type { DetailPos } from '@offside/contracts/positions';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
-  import { cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier } from '@offside/app-core/format';
+  import { cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier, isLegendTier } from '@offside/app-core/format';
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
-  let { player, name, rating, role, nation, season, compact = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
-    { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; season?: number | undefined; compact?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
+  let { player, name, rating, role, nation, season, compact = false, mini = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
+    { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; season?: number | undefined; compact?: boolean; mini?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
   // T-11-114 카드 시즌 뱃지(유스 선수·시즌을 모르는 옛 응답은 없다).
   const cardSeason = $derived(youth ? undefined : (season ?? player?.season));
   const country = $derived(!youth ? NATION_BY_CODE.get(nation ?? player?.nation ?? DEFAULT_NATION) : undefined);
   const tier = $derived(youth ? 'youth' : cardTier(player?.legendScore, player?.peak ?? rating));
   const statKeys = $derived(player?.pos === 'GK' ? ['def', 'phy', 'pas', 'pac', 'sho', 'dri'] as const : ['pac', 'sho', 'dri', 'pas', 'def', 'phy'] as const);
   const statLabels = $derived(player?.pos === 'GK' ? GK_ABBR : FACE_ABBR);
-  let nameViewport: HTMLElement;
+  let nameViewport = $state<HTMLElement>();
   let viewportWidth = $state(0);
   let nameWidth = $state(0);
   let inView = $state(false);
   const nameOverflow = $derived(Math.max(0, nameWidth - viewportWidth));
   const nameDuration = $derived(Math.max(8, nameOverflow / 12 + 4));
   onMount(() => {
+    // 간소화 카드(mini)는 이름 띠가 없다.
+    if (!nameViewport) return;
     const observer = new IntersectionObserver(([entry]) => (inView = !!entry?.isIntersecting));
     observer.observe(nameViewport);
     return () => observer.disconnect();
   });
+  // 자리 OVR은 최고 OVR과 다를 때(제 자리가 아닐 때)만 — 같으면 같은 숫자가 두 번 보인다.
+  const deployed = $derived(deploymentRating !== undefined && deploymentRating !== rating);
 </script>
 
-<div class="player-card" class:compact class:youth class:deployed={deploymentRating !== undefined} data-tier={tier}>
+<div class="player-card" class:compact class:mini class:youth class:deployed data-tier={tier}>
   <div class="card-face">
     <div class="card-rating" title="{ratingLabel} {rating}"><b>{rating}</b><span>{role}</span></div>
     {#if cardSeason !== undefined}<span class="card-season" data-card-season={cardSeason} style:--season-bg={cardSeasonColor(cardSeason)} title={teamSeasonLabel(cardSeason)}>{cardSeasonBadge(cardSeason)}</span>{/if}
@@ -40,11 +44,11 @@
       <svg viewBox="0 0 100 96"><path d="M30 10 15 17 3 38 20 48 26 36 24 90 76 90 74 36 80 48 97 38 85 17 70 10 62 5Q50 16 38 5Z" /><path class="shirt-trim" d="M38 5Q50 25 62 5M25 73H75M34 12V87M66 12V87" /></svg>
       <span class="shirt-number">{player?.number ?? (youth ? '+' : name.slice(0, 1))}</span>
     </div>
-    <strong class="card-name" class:scrolling={nameOverflow > 1} class:in-view={inView} title={name}
+    {#if !mini}<strong class="card-name" class:scrolling={nameOverflow > 1} class:in-view={inView} title={name}
       bind:this={nameViewport} bind:clientWidth={viewportWidth} style:--name-offset="-{nameOverflow}px" style:--name-duration="{nameDuration}s">
       <span class="name-track" bind:offsetWidth={nameWidth}>{name}</span>
-    </strong>
-    {#if deploymentRating !== undefined}<span class="card-deployment" title={L.posOvr({ n: deploymentRating })}><span>{L.posOvrLabel}</span><b>{deploymentRating}</b></span>{/if}
+    </strong>{/if}
+    {#if deployed && deploymentRating !== undefined}<span class="card-deployment" title={L.posOvr({ n: deploymentRating })}><span>{L.posOvrLabel}</span><b>{deploymentRating}</b></span>{/if}
     {#if !compact}
       <div class="card-divider"></div>
       <div class="card-career"><span title={L.legendScoreTitle}>LS</span><b>{(player?.legendScore ?? 0).toLocaleString(intlLocale())}</b></div>
@@ -53,15 +57,18 @@
           <div><dt>{statLabels[key]}</dt><dd>{player?.attrs ? Math.round(player.attrs[key]) : '—'}</dd></div>
         {/each}
       </dl>
-      <div class="card-foot">{cardFootNote(player ?? {}) ?? (tier === 'legend' ? L.footLegend : L.footMine)}</div>
+      <div class="card-foot">{cardFootNote(player ?? {}) ?? (isLegendTier(tier) ? L.footLegend : L.footMine)}</div>
     {/if}
   </div>
 </div>
 
 <style>
   .player-card { --card-base:#e8d5a8; --card-light:#fff2ce; --card-dark:#8a6324; --card-ink:#392b14; --card-line:#b79654; width:100%; padding:2px; background:var(--card-line); clip-path:polygon(0 9%,16% 9%,25% 2%,50% 0,75% 2%,84% 9%,100% 9%,98% 84%,86% 93%,50% 100%,14% 93%,2% 84%); filter:drop-shadow(0 4px 5px #0003); }
+  .player-card[data-tier='icon'] { --card-base:#1d2547; --card-light:#4a5a92; --card-dark:#0a0f26; --card-ink:#ffe9b0; --card-line:#e6c369; }
   .player-card[data-tier='legend'] { --card-base:#28382e; --card-light:#51614b; --card-dark:#101e17; --card-ink:#fce7b1; --card-line:#d1ac5f; }
+  .player-card[data-tier='elite'] { --card-base:#f1c654; --card-light:#fff4bf; --card-dark:#a36f12; --card-ink:#3b2604; --card-line:#d99a1e; }
   .player-card[data-tier='silver'] { --card-base:#d6dfe0; --card-light:#f8faf6; --card-dark:#83989c; --card-ink:#243339; --card-line:#9fb3b6; }
+  .player-card[data-tier='bronze'] { --card-base:#d7a27a; --card-light:#f6d6bb; --card-dark:#7d4a29; --card-ink:#3a1f0e; --card-line:#a86e45; }
   .player-card[data-tier='youth'] { --card-base:#d5e4d8; --card-light:#eaf3e9; --card-dark:#9bae9b; --card-ink:#365342; --card-line:#8cab97; opacity:.82; }
   .card-face { position:relative; overflow:hidden; min-height:183px; padding:28px 10px 20px; clip-path:inherit; background:linear-gradient(135deg,transparent 34%,#ffffff25 34.5%,transparent 35%,transparent 62%,#ffffff1c 62.5%,transparent 63%),radial-gradient(ellipse at 80% 10%,var(--card-light),transparent 70%),linear-gradient(165deg,var(--card-base),var(--card-dark)); color:var(--card-ink); }
   .card-rating { position:absolute; top:28px; left:11px; display:flex; flex-direction:column; align-items:center; z-index:1; }
@@ -69,8 +76,8 @@
   .card-rating span { font-family:var(--display); font-size:.82rem; font-weight:700; line-height:1; margin-top:4px; }
   .card-nation {position:absolute;top:82px;left:11px;z-index:1;width:36px;text-align:center;font-family:system-ui,sans-serif;font-size:18px;line-height:18px;}
   /* T-11-114 시즌 뱃지(색은 cardSeasonColor). */
-  .card-season {position:absolute;top:30px;right:12px;z-index:1;padding:2px 5px 1px;border-radius:3px;background:var(--season-bg);color:#fff;font:800 9px/1.1 system-ui,sans-serif;letter-spacing:.06em;box-shadow:0 0 0 1px #ffffff55 inset;}
-  .compact .card-season {top:29px;right:4px;padding:1px 3px 0;font-size:7px;}
+  .card-season {position:absolute;top:9px;left:50%;transform:translateX(-50%);z-index:1;padding:2px 5px 1px;border-radius:3px;background:var(--season-bg);color:#fff;font:800 9px/1.1 system-ui,sans-serif;letter-spacing:.06em;box-shadow:0 0 0 1px #ffffff55 inset;}
+  .compact .card-season {top:4px;padding:1px 3px 0;font-size:7px;}
   .card-deployment {display:flex;flex-direction:column;align-items:center;font-size:8px;line-height:10px;}
   .card-deployment b {font-family:var(--display);font-size:12px;line-height:13px;}
   .card-art { position:relative; height:72px; margin-left:26px; }
@@ -107,5 +114,8 @@
   .compact .shirt-number { font-size:1.15rem; }
   .compact .card-name { font-size:11px; margin-top:3px; }
   .compact.deployed .card-art {height:36px;}
-  @media(max-width:440px) { .compact .card-face { height:88px; padding:8px 3px 10px; } .compact .card-rating { left:5px;top:11px; } .compact .card-rating b { font-size:1.3rem; } .compact .card-art { height:34px;margin-top:8px; } .compact .shirt-number {font-size:1rem;} .compact.deployed .card-art {height:24px;} }
+  @media(max-width:440px) { .compact .card-face { height:88px; padding:8px 3px 10px; } .compact .card-rating { left:5px;top:11px; } .compact .card-season {top:2px;} .compact .card-rating b { font-size:1.3rem; } .compact .card-art { height:34px;margin-top:8px; } .compact .shirt-number {font-size:1rem;} .compact.deployed .card-art {height:24px;} }
+  /* 이적시장 목록용 — 이름은 줄 옆에 따로 나오므로 카드에서 뺀다(compact와 같이 쓴다). 높이는 이름 줄만큼 줄인다. */
+  .mini .card-face {height:84px;}
+  @media(max-width:440px) { .mini .card-face {height:68px;} }
 </style>

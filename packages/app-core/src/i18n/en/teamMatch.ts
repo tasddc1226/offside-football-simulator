@@ -3,7 +3,9 @@ import type { TeamMatchMsgs } from '../ko/teamMatch';
 
 export const teamMatch: Translation<TeamMatchMsgs> = {
   oppTitle: 'Pick an opponent',
-  oppNear: (p) => `Teams near your team OVR of ${p.ovr} · Matches left today: ${p.left}/${p.per}`,
+  oppNear: (p) => `Teams near your rating of ${p.rating} · Matches left today: ${p.left}/${p.per}`,
+  oppRating: 'Rating',
+  oppOvr: (p) => `OVR ${p.n}`,
   oppRuleWeb: (p) =>
     `You can challenge the same team once a day. If you've met a team in the last ${p.days} days, your rating moves less.`,
   oppRuleApp: (p) =>

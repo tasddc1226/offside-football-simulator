@@ -4,6 +4,7 @@
 // 구단 이름·엠블럼 변경은 환경설정에 있다.
 // T-11-026 구단 허브 — 맨 위에 구단주 요약(은퇴 선수·레전드 점수·결번), 그 아래 '내 팀' 카드(전적·레이팅·오늘 남은
 // 경기와 바로 경기하기), 내 선수 상위 3명, 계정은 맨 아래. 비로그인이면 '내 팀' 자리에 잠긴 카드와 로그인 버튼을 둔다.
+// T-11-128 요약 아래에 시즌 결산 카드(RecapCard) — 끝난 시즌이 있으면 결산 화면(recap)으로 연다.
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -19,6 +20,8 @@ import {
   type OwnerSummary,
   type OwnerTeamCard,
 } from '@offside/app-core/ownerHub';
+import { fetchSeasonRecap } from '@offside/app-core/api/seasonRecap';
+import { profileTier, tierTitle, type OwnerTierTag } from '@offside/app-core/ownerTier';
 import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
@@ -34,8 +37,13 @@ import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
-import { Grid2, OvrBadge, Stats } from './TeamParts';
+import { shellText as S } from '@offside/app-core/i18n/ko/shell';
+import { OwnerAvatar } from '../../components/OwnerAvatar';
+import { RecapCard } from './RecapCard';
+import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
+import { mix } from '../../theme/colors';
 import { TeamLogo } from '../../components/TeamLogo';
+import { GradeEmblem } from '../../ui/GradeEmblem';
 import { AdSlot } from '../../components/AdSlot';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
@@ -112,6 +120,13 @@ function LockedPitch() {
 export default function Owner() {
   const c = useColors();
   const cache = useSnapshot(accountCache);
+  // 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 업적 탭으로.
+  const { achNew } = useSnapshot(appState);
+  const teamBtn = {
+    dot: achNew > 0,
+    onPress: () => openTeam(achNew > 0 ? 'achievements' : 'team'),
+    ...(achNew > 0 ? { accessibilityLabel: `${L.myTeam}, ${S.achNew({ n: achNew })}` } : {}),
+  };
   const acct = cache.value;
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
@@ -164,6 +179,19 @@ export default function Owner() {
       alive = false;
     };
   }, [linked, tick, track]);
+  // T-11-128 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 이름 앞에 붙인다(그 시즌 기록이 없으면 없다).
+  // 결산 카드와 같은 응답(1분 메모).
+  const [tierTag, setTierTag] = useState<OwnerTierTag | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void track(fetchSeasonRecap()).then((r) => {
+      if (!alive || !r.ok) return;
+      setTierTag(profileTier(r.data));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [tick, track]);
   const clubValue = linked ? (market?.clubValue ?? null) : (summary?.value ?? null);
 
   const team = card?.team;
@@ -182,24 +210,20 @@ export default function Owner() {
       {linked || guest ? (
         <Card gap={14} testID="owner-summary">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                backgroundColor: c.pitch,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.375), color: c.pitchAccent }}>
-                {(nickname ?? L.avatarInitial).slice(0, 1)}
-              </Txt>
-            </View>
+            <OwnerAvatar name={nickname ?? L.avatarInitial} size={48} />
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
               <Row gap={6}>
+                {tierTag ? (
+                  // 이름 앞 지난 시즌 등급 엠블럼(웹 .owner-last-tier).
+                  <View
+                    testID={`owner-last-tier-${tierTag.tier}`}
+                    accessible
+                    accessibilityLabel={tierTitle(tierTag)}
+                    style={{ marginRight: -2 }}
+                  >
+                    <GradeEmblem id={tierTag.tier} size={24} />
+                  </View>
+                ) : null}
                 <Txt style={{ fontSize: rem(1.125), fontWeight: '700' }}>
                   {guest ? L.guestName : (nickname ?? L.title)}
                 </Txt>
@@ -210,6 +234,19 @@ export default function Owner() {
                   </View>
                 ) : null}
               </Row>
+              {tierTag ? (
+                <Txt
+                  testID={`owner-tier-${tierTag.tier}`}
+                  style={{
+                    fontFamily: DISPLAY[700],
+                    fontSize: rem(0.875),
+                    letterSpacing: 0.3,
+                    color: mix(GRADE_COLOR[tierTag.tier] ?? GRADE_COLOR.rookie!, c.ink, 0.65),
+                  }}
+                >
+                  {tierTitle(tierTag)}
+                </Txt>
+              ) : null}
               <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
                 {sub}
               </Txt>
@@ -249,6 +286,9 @@ export default function Owner() {
 
       {linked || guest ? <AdSlot place="owner-summary" /> : null}
 
+      {/* T-11-128 시즌 결산: 끝난 시즌이 있을 때만(카드가 스스로 숨는다). 비로그인도 본다. */}
+      <RecapCard />
+
       {/* T-10-092 내 팀: 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. */}
       {linked ? (
         <>
@@ -286,7 +326,7 @@ export default function Owner() {
                   ]}
                 />
                 <Grid2>
-                  <Btn block testID="team" onPress={() => openTeam()}>
+                  <Btn block testID="team" {...teamBtn}>
                     {L.myTeam}
                   </Btn>
                   <Btn
@@ -314,7 +354,7 @@ export default function Owner() {
                   kind={card && card.players > 0 ? 'primary' : 'default'}
                   block
                   testID="team"
-                  onPress={() => openTeam()}
+                  {...teamBtn}
                 >
                   {card && card.players > 0 ? L.buildTeam : L.teamBtnApp}
                 </Btn>

@@ -11,6 +11,7 @@ import {
   type CommentReportReason,
 } from '@offside/contracts/board-limits';
 import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
+import { lastClosedSeason } from '@offside/contracts/service-seasons';
 import * as api from '@offside/app-core/api/chat';
 import {
   CHAT_REJECT_TEXT,
@@ -24,6 +25,8 @@ import {
 import type { ApiResult } from '@offside/app-core/api/client';
 import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
 import { NicknameForm } from '../../components/NicknameForm';
+import { OwnerAvatar } from '../../components/OwnerAvatar';
+import { TierBadge } from '../../components/TierBadge';
 import { toast } from '../../game/host';
 import { goBack, goHome } from '../../game/nav';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
@@ -39,6 +42,8 @@ import { Txt } from '../../ui/Txt';
 import { TextBox, confirmAsync } from '../board/parts';
 
 const small = { fontSize: rem(0.75) } as const;
+/** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(접근성 글자)은 지금 기준 지난 시즌으로 읽힌다. */
+const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
 
 /** 입력칸 — 글자를 칠 때마다 메시지 목록까지 다시 그리지 않도록 입력 상태를 따로 둔다. */
 type InputHandle = { restore(body: string): void };
@@ -333,54 +338,72 @@ export default function Chat() {
                   maxWidth: '85%',
                 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 }}
+                >
                   {m.admin ? (
                     <Pill tone="good">{ADMIN_NICKNAME}</Pill>
                   ) : (
-                    <Txt bold tone={mine(m) ? 'accent' : 'ink'}>
-                      {m.nickname}
-                    </Txt>
+                    <>
+                      <OwnerAvatar name={m.nickname} />
+                      <Txt bold tone={mine(m) ? 'accent' : 'ink'}>
+                        {m.nickname}
+                      </Txt>
+                      {m.tier ? <TierBadge tag={{ tier: m.tier, season: tierSeason }} /> : null}
+                    </>
                   )}
                   {!mine(m) && (!m.admin || me?.admin) ? (
                     <Press
                       testID="chat-more"
                       accessibilityLabel={L.moreLabel({ nick: m.nickname })}
                       onPress={() => setSelected(selected === m.id ? null : m.id)}
+                      hitSlop={12}
                       style={{
-                        width: 48,
-                        minHeight: 48,
+                        width: 24,
+                        height: 24,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        paddingHorizontal: 10,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: c.line,
-                        backgroundColor: c.surface,
                       }}
                     >
-                      <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>⋯</Txt>
+                      <Txt
+                        tone={selected === m.id ? 'ink' : 'muted'}
+                        style={{ fontSize: rem(0.875), fontWeight: '700' }}
+                      >
+                        ⋯
+                      </Txt>
                     </Press>
                   ) : null}
                 </View>
+                {/* 보낸 시각은 말풍선 옆 아래(남의 말은 오른쪽, 내 말은 왼쪽). */}
                 <View
                   style={{
-                    paddingVertical: 10,
-                    paddingHorizontal: 13,
-                    borderWidth: 1,
-                    borderColor: mine(m) ? c.pitch : c.line,
-                    backgroundColor: mine(m) ? c.pitch : c.surface2,
-                    borderRadius: 16,
-                    borderTopLeftRadius: mine(m) ? 16 : 4,
-                    borderTopRightRadius: mine(m) ? 4 : 16,
+                    flexDirection: mine(m) ? 'row-reverse' : 'row',
+                    alignItems: 'flex-end',
+                    gap: 6,
+                    maxWidth: '100%',
                   }}
                 >
-                  <Txt style={{ color: mine(m) ? c.onPitch : c.ink, fontSize: rem(0.9375) }}>
-                    {m.body}
+                  <View
+                    style={{
+                      flexShrink: 1,
+                      paddingVertical: 10,
+                      paddingHorizontal: 13,
+                      borderWidth: 1,
+                      borderColor: mine(m) ? c.pitch : c.line,
+                      backgroundColor: mine(m) ? c.pitch : c.surface2,
+                      borderRadius: 16,
+                      borderTopLeftRadius: mine(m) ? 16 : 4,
+                      borderTopRightRadius: mine(m) ? 4 : 16,
+                    }}
+                  >
+                    <Txt style={{ color: mine(m) ? c.onPitch : c.ink, fontSize: rem(0.9375) }}>
+                      {m.body}
+                    </Txt>
+                  </View>
+                  <Txt tone="muted" style={small}>
+                    {chatTime(m.at)}
                   </Txt>
                 </View>
-                <Txt tone="muted" style={[small, { marginTop: 3 }]}>
-                  {chatTime(m.at)}
-                </Txt>
                 {selected === m.id ? (
                   <View testID="report-panel" style={panel}>
                     {me?.admin ? (

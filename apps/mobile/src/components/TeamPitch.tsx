@@ -1,4 +1,4 @@
-import type { RefObject } from 'react';
+import { useState, type RefObject } from 'react';
 import { Pressable, View } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
 import { presetLayout, type FormationId, type TeamLayout } from '@offside/contracts/owner-team';
@@ -14,6 +14,10 @@ import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { tn } from '@offside/game/i18n/names';
 
 export type PitchCell = PlayerCardData;
+
+/** 폭의 1.6배(450~640). 폰에서 450으로 고정하면 골키퍼와 수비 줄(16% 차이)이 카드 높이 88보다 가까워 겹친다. */
+const pitchHeight = (width: number): number =>
+  Math.round(Math.min(640, Math.max(450, width * 1.6)));
 export function TeamPitch({
   formation,
   cells,
@@ -24,9 +28,11 @@ export function TeamPitch({
   selected,
   animate = true,
   onplace,
-  height = 450,
+  height: fixedHeight,
   links = [],
   focus = null,
+  applied = [],
+  caption = null,
 }: {
   formation: FormationId;
   cells: readonly PitchCell[];
@@ -37,16 +43,26 @@ export function TeamPitch({
   selected?: number | null;
   animate?: boolean;
   onplace?: ((x: number, y: number) => void) | undefined;
+  /** 고정 높이(공유 이미지). 없으면 폭에 맞춰 세로로 길게 — 카드(62×88)가 줄끼리 덜 겹친다. */
   height?: number;
   /** T-11-105 시너지 듀오 — 첫 선수에서 나머지로 잇는다. on이면 굵게. */
   links?: readonly { members: readonly number[]; on: boolean }[];
   /** 고른 시너지의 선수 자리(테두리). */
   focus?: readonly number[] | null;
+  /** 효과가 들어가는 시너지의 선수 자리(카드 아래 점, 늘 표시)와 그라운드 아래 안내 한 줄(웹 TeamPitch). */
+  applied?: readonly number[];
+  caption?: string | null;
 }) {
   const c = useColors();
   const positions = layout ?? presetLayout(formation);
-  return (
-    <View testID="team-pitch" style={{ height, borderRadius: 16, backgroundColor: c.pitch }}>
+  const [width, setWidth] = useState(0);
+  const height = fixedHeight ?? pitchHeight(width);
+  const pitch = (
+    <View
+      testID="team-pitch"
+      onLayout={fixedHeight ? undefined : (e) => setWidth(e.nativeEvent.layout.width)}
+      style={{ height, borderRadius: 16, backgroundColor: c.pitch }}
+    >
       <View
         pointerEvents="none"
         style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 16 }}
@@ -162,7 +178,8 @@ export function TeamPitch({
                 height: 88,
                 marginLeft: -31,
                 marginTop: -44,
-                zIndex: selected === i ? 2 : 1,
+                // 골키퍼는 수비 줄 위에 얹는다(웹 .tm-slot[data-slot='0']).
+                zIndex: selected === i ? 3 : i === 0 ? 2 : 1,
               }}
             >
               <DragPlayer index={i} id={null} drag={ondrag}>
@@ -184,9 +201,53 @@ export function TeamPitch({
                   <PlayerCard cell={cell} code={pos.slot} compact animate={animate} />
                 </Press>
               </DragPlayer>
+              {applied.includes(i) ? (
+                <View
+                  pointerEvents="none"
+                  testID={`slot-${i}-synergy`}
+                  style={{
+                    position: 'absolute',
+                    left: 26,
+                    bottom: -6,
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    borderWidth: 2,
+                    borderColor: c.pitch,
+                    backgroundColor: c.accent,
+                  }}
+                />
+              ) : null}
             </View>
           );
         })}
+      </View>
+    </View>
+  );
+  if (!caption) return pitch;
+  // 그라운드 안에 두면 골키퍼 카드와 겹쳐서 바로 아래 줄에 둔다(웹은 그라운드 아래 여백 안).
+  return (
+    <View style={{ gap: 8 }}>
+      {pitch}
+      <View
+        testID="synergy-caption"
+        accessibilityLiveRegion="polite"
+        style={{
+          alignSelf: 'center',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          maxWidth: '100%',
+          paddingVertical: 4,
+          paddingHorizontal: 10,
+          borderRadius: 999,
+          backgroundColor: c.surface2,
+        }}
+      >
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: c.accent }} />
+        <Txt v="xs" bold numberOfLines={1} style={{ flexShrink: 1 }}>
+          {caption}
+        </Txt>
       </View>
     </View>
   );

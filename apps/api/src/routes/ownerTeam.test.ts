@@ -1011,6 +1011,21 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(err.details).toEqual({ reason: 'TEAM_MATCH_DAILY_LIMIT' });
   });
 
+  it('상대 후보는 내 레이팅에 가까운 팀부터(OVR이 아니라), 목록은 레이팅 높은 순', async () => {
+    const me = await ownerWithTeam(1);
+    const teams = await Promise.all([1, 1, 1].map(() => ownerWithTeam(1)));
+    const setRating = (id: string, rating: number) =>
+      ctx.db.update(ownerTeams).set({ rating }).where(eq(ownerTeams.id, id));
+    await setRating(me.team.id, 1100);
+    await setRating(teams[0]!.team.id, 1120);
+    await setRating(teams[1]!.team.id, 1080);
+    await setRating(teams[2]!.team.id, 900);
+    const items = OppRes.parse(
+      await (await call('GET', '/v1/owner-team/opponents', { cookie: me.cookie })).json(),
+    ).data.items;
+    expect(items.map((i) => i.rating)).toEqual([1120, 1080, 900]);
+  });
+
   it('T-10-095 같은 상대에게는 하루 한 번만 걸고, 다음 날 다시 만나면 레이팅 변화가 줄어든다', async () => {
     const me = await ownerWithTeam(1);
     const rival = await ownerWithTeam(1);

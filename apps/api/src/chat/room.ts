@@ -1,4 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
+import type { OwnerTier } from '@offside/contracts/owner-tier';
 import {
   CHAT_HISTORY,
   CHAT_KEEP_MS,
@@ -19,7 +20,14 @@ import { checkSend } from './rules.js';
 // 전송 시각(도배 방지)을 attachment에 둔다 — 잠들었다 깨도 남는다.
 
 /** 쓸 수 있는 사람. */
-export type ChatWriter = { profileId: string; author: string; nickname: string; admin: boolean };
+export type ChatWriter = {
+  profileId: string;
+  author: string;
+  nickname: string;
+  admin: boolean;
+  /** T-11-128 입장권을 받을 때의 지난 시즌 티어. */
+  tier?: OwnerTier | null;
+};
 type Attachment = { w: ChatWriter | null; sent: number[] };
 /** 신고·차단할 때 API가 읽는 메시지 한 줄(작성자 프로필 포함). */
 type StoredMessage = ChatMessage & { profileId: string };
@@ -32,6 +40,7 @@ const toMessage = (r: Row): StoredMessage => ({
   nickname: String(r.nickname),
   body: String(r.body),
   admin: r.admin === 1,
+  tier: (r.tier as OwnerTier | null) ?? null,
   profileId: String(r.profile_id),
 });
 const publicOf = ({ profileId: _, ...m }: StoredMessage): ChatMessage => m;
@@ -61,6 +70,10 @@ export class ChatRoom extends DurableObject<Bindings> {
         hidden INTEGER NOT NULL DEFAULT 0)`,
     );
     this.sql.exec('CREATE INDEX IF NOT EXISTS messages_at ON messages (at)');
+    // T-11-128 티어 칸. 이미 있는 방에는 한 번 더한다.
+    const cols = this.sql.exec<Row>('PRAGMA table_info(messages)').toArray();
+    if (!cols.some((c) => c.name === 'tier'))
+      this.sql.exec('ALTER TABLE messages ADD COLUMN tier TEXT');
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, expires INTEGER NOT NULL, writer TEXT NOT NULL)`,
     );
@@ -118,7 +131,7 @@ export class ChatRoom extends DurableObject<Bindings> {
     if (!check) return;
     if (!check.ok) return this.reject(ws, check.code);
     ws.serializeAttachment({ ...att, sent: check.sent } satisfies Attachment);
-    const { profileId, author, nickname, admin } = att.w;
+    const { profileId, author, nickname, admin, tier = null } = att.w;
     const m: ChatMessage = {
       id: crypto.randomUUID(),
       at: now,
@@ -126,9 +139,10 @@ export class ChatRoom extends DurableObject<Bindings> {
       nickname,
       body: check.body,
       admin,
+      tier,
     };
     this.sql.exec(
-      'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin, tier) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       m.id,
       m.at,
       profileId,
@@ -136,6 +150,7 @@ export class ChatRoom extends DurableObject<Bindings> {
       nickname,
       m.body,
       admin ? 1 : 0,
+      tier,
     );
     this.sql.exec('DELETE FROM messages WHERE at < ?', now - CHAT_KEEP_MS);
     this.broadcast({ t: 'msg', m });
