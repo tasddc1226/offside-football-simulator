@@ -9,8 +9,8 @@ import { ClubMark } from '../ui/ClubBadge';
 import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
 import { RankBadge } from './Laurel';
-import { PixelAvatar } from '../ui/PixelAvatar';
-import { avatarWidth, primeAvatarSpec } from '@offside/game/avatar';
+import { PrimeAvatar } from './PrimeAvatar';
+import { avatarWidth } from '@offside/game/avatar';
 import { hofText as L } from '@offside/app-core/i18n/ko/hof';
 import { tn } from '@offside/game/i18n/names';
 
@@ -99,11 +99,10 @@ export function HofPodium({
               ) : null}
               {/* T-11-124 시상대 위에 선 전성기 모습(마지막 구단 유니폼). 2·3위 2배, 1위 3배(좁은 화면은 2배). */}
               <View style={{ marginTop: 2, marginBottom: -10 }}>
-                <PixelAvatar
-                  spec={primeAvatarSpec(entry.id, {
-                    id: entry.lastClubId ?? '',
-                    name: entry.lastClub,
-                  })}
+                <PrimeAvatar
+                  id={entry.id}
+                  lastClub={entry.lastClub}
+                  lastClubId={entry.lastClubId}
                   width={rank === 1 ? avatarWidth(width) : 48}
                 />
               </View>

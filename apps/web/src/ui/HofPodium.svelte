@@ -9,8 +9,6 @@
   import { hofText as L } from '@offside/app-core/i18n/ko/hof';
   import { tn } from '@offside/game/i18n/names';
   import { intlLocale } from '@offside/contracts/i18n';
-  import type { primeAvatarSpec } from '@offside/game/avatar';
-  import type PixelAvatar from './PixelAvatar.svelte';
 
   const { players, label, unit, showPosition = true }: {
     players: { entry: PublicHofEntry; rank: number; value: number | string; own: boolean }[];
@@ -20,14 +18,6 @@
   } = $props();
   const medals = ['gold', 'silver', 'bronze'];
   const places = [2, 1, 3];
-  // T-11-124 도트 선수 그림 모듈(유니폼 표 포함)은 홈 첫 화면 번들에 넣지 않고 시상대가 뜬 뒤에 불러온다.
-  // 자리는 미리 잡아 두어 그림이 들어와도 시상대가 흔들리지 않는다.
-  let avatar = $state<{ C: typeof PixelAvatar; spec: typeof primeAvatarSpec } | null>(null);
-  $effect(() => {
-    void Promise.all([import('./PixelAvatar.svelte'), import('@offside/game/avatar')])
-      .then(([c, a]) => (avatar = { C: c.default, spec: a.primeAvatarSpec }))
-      .catch(() => {});
-  });
   const ordered = $derived([...players].sort((a, b) => places.indexOf(a.rank) - places.indexOf(b.rank)));
 </script>
 
@@ -43,8 +33,8 @@
         <span class="hof-podium-club"><ClubMark name={h.lastClub} id={h.lastClubId} size={24} /><span class="hof-flag" role="img" aria-label={tn(country.ko)} title={tn(country.ko)} data-hof-nation={country.code}>{flagOf(country.code)}</span></span>
         <b class="hof-podium-name" title={name}>{name}</b>
         {#if showPosition || player.own}<span class="hof-podium-pos">{showPosition ? posLabel({ pos: h.pos, dpos: h.dpos }) : ''}{player.own ? `${showPosition ? ' · ' : ''}${L.mine}` : ''}</span>{/if}
-        <!-- T-11-124 시상대 위에 선 전성기 모습(마지막 구단 유니폼). -->
-        <span class="hof-podium-avatar" aria-hidden="true">{#if avatar}<avatar.C spec={avatar.spec(h.id, { id: h.lastClubId ?? '', name: h.lastClub })} />{/if}</span>
+        <!-- T-11-124 시상대 위에 선 전성기 모습(마지막 구단 유니폼). 그림은 따로 불러오고 자리는 미리 잡아 둔다. -->
+        <span class="hof-podium-avatar" aria-hidden="true">{#await import('./PrimeAvatar.svelte') then { default: PrimeAvatar }}<PrimeAvatar entry={h} />{/await}</span>
       </span>
       <span class="hof-podium-step">
         <strong class="hof-podium-value num">{value}{#if unit}<small>{unit}</small>{/if}</strong>
