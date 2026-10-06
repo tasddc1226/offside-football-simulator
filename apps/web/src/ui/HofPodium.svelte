@@ -33,6 +33,8 @@
         <span class="hof-podium-club"><ClubMark name={h.lastClub} id={h.lastClubId} size={24} /><span class="hof-flag" role="img" aria-label={tn(country.ko)} title={tn(country.ko)} data-hof-nation={country.code}>{flagOf(country.code)}</span></span>
         <b class="hof-podium-name" title={name}>{name}</b>
         {#if showPosition || player.own}<span class="hof-podium-pos">{showPosition ? posLabel({ pos: h.pos, dpos: h.dpos }) : ''}{player.own ? `${showPosition ? ' · ' : ''}${L.mine}` : ''}</span>{/if}
+        <!-- T-11-124 시상대 위에 선 전성기 모습(마지막 구단 유니폼). 그림은 따로 불러오고 자리는 미리 잡아 둔다. -->
+        <span class="hof-podium-avatar" aria-hidden="true">{#await import('./PrimeAvatar.svelte') then { default: PrimeAvatar }}<PrimeAvatar entry={h} />{/await}</span>
       </span>
       <span class="hof-podium-step">
         <strong class="hof-podium-value num">{value}{#if unit}<small>{unit}</small>{/if}</strong>
@@ -120,6 +122,27 @@
     color: var(--muted);
     font-size: 12px;
     line-height: 1.4;
+  }
+  /* 도트 선수가 단상 위에 서도록 프로필 아래 여백 없이 붙인다. 2·3위 2배, 1위 3배(좁은 화면은 모두 2배). */
+  .hof-podium-avatar {
+    display: block;
+    width: 48px;
+    height: 64px;
+    margin: 2px 0 -10px;
+  }
+  .gold .hof-podium-avatar {
+    width: 72px;
+    height: 96px;
+  }
+  @media (max-width: 359px) {
+    .gold .hof-podium-avatar {
+      width: 48px;
+      height: 64px;
+    }
+  }
+  .hof-podium-avatar :global(.avatar) {
+    width: 100%;
+    height: 100%;
   }
   .hof-podium-step {
     display: flex;
