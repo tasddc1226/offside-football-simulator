@@ -15,7 +15,7 @@
   import { isKorean, nationOf } from '@offside/game/nation';
   import { startCareer, rollCandidates } from './actions.js';
   import { goHome } from './nav.js';
-  import { bodyNote, hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
+  import { bodyNote, hiddenStrength, scoutLine, startOvr, ovrFocusView } from '@offside/app-core/create-view';
   import { dur } from './motion.js';
   import { createText as L } from '@offside/app-core/i18n/ko/create';
   import Topbar from './Topbar.svelte';
@@ -40,6 +40,7 @@
   const focusLeft = $derived(FOCUS_PICK - C.focus.length);
   // 고른 조합이 시작 분포를 어떻게 바꾸는지 버튼마다 미리 보여준다(주력 ▲ / 가장 덜 쓰는 능력치 ▼).
   const preview = $derived(focusMod(C.pos, C.focus));
+  const ovrFocus = $derived(ovrFocusView(C.pos, C.focus, dpos));
 
   const step = $derived<'form' | 'candidates'>(appState.candidates ? 'candidates' : 'form');
   const labels = $derived(attrLabels(C.pos));
@@ -109,6 +110,16 @@
     return { duration: dur(360), easing: cubicOut, css: (t: number) => `transform: perspective(800px) rotateY(${(1 - t) * 90}deg); opacity: ${Math.min(1, t * 2)}` };
   }
 </script>
+{#snippet ovrGuide()}
+  <div class="ovr-guide" data-testid="ovr-guide">
+    <b>{ovrFocus.title}</b>
+    <p>{ovrFocus.groups}</p>
+    <p class="muted">{ovrFocus.subs}</p>
+    <p class="muted">{ovrFocus.note}</p>
+    <p class="muted">{L.ovrStartNote}</p>
+  </div>
+{/snippet}
+
 
 <div class="wrap has-cta">
   <Topbar />
@@ -209,6 +220,8 @@
         </div>
       {/if}
 
+      {@render ovrGuide()}
+
       <div class="field">
         <span class="lbl">{L.footLabel}</span>
         <div class="seg three">
@@ -259,6 +272,8 @@
       {/if}
     </div>
     <p class="muted">{appState.candidatePotentialOpen ? L.potentialHelp : L.potentialWeb}</p>
+    {@render ovrGuide()}
+    <p class="muted fs-sm">{L.ovrCore}</p>
     <div class="cand-list">
       {#each appState.candidates as cand, i (i)}
         {#if appState.candidatesOpen[i]}
@@ -276,7 +291,7 @@
                 {#each ATTR_KEYS as k (k)}
                   {@const v = Math.round(cand.attrs[k])}
                   <span class="cc-bar" class:hi={cand.hintKeys.includes(k)}>
-                    <span>{labels[k]}</span>
+                    <span class:ovr-core={ovrFocus.keys.includes(k)}>{labels[k]}</span>
                     <i><em style:width="{v}%"></em></i>
                     <b class="num">{v}</b>
                   </span>
@@ -308,3 +323,9 @@
   {/if}
 </div>
 {#if scouting}<ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} />{/if}
+
+<style>
+.ovr-guide { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; font-size: .8125rem; line-height: 1.5; }
+.ovr-guide p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.cc-bar .ovr-core { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+</style>

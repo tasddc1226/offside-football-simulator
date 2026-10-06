@@ -196,7 +196,7 @@ export const POS_ROLES: Record<Pos, string[]> = {
   DF: ['CB', 'RB', 'CDM'],
   GK: ['GK'],
 };
-export const mainRole = (s: GameState): string =>
+export const mainRole = (s: Pick<GameState, 'pos' | 'type' | 'dpos'>): string =>
   s.dpos ? DPOS[s.dpos].role : (TYPE_ROLE[s.type] ?? POS_ROLES[s.pos][0]!);
 
 function groupOfSub(face: Face, k: string): AttrKey | null {
