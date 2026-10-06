@@ -1,7 +1,8 @@
 // 게임 화면(웹 Game.svelte, ui.ts renderGame() 포트): 선수 카드 + 시즌·선수·커리어·트로피 탭 + 아래 고정 진행 바와 탭바.
 // 탭바(시즌·선수·홈·커리어·트로피 — 홈은 가운데)가 아래 안전 영역을 채우고, 진행 바는 그 바로 위에 붙는다.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { View, type LayoutChangeEvent } from 'react-native';
+import { useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
+import Svg, { Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { posLabel } from '@offside/game/data';
@@ -9,6 +10,14 @@ import { ovr } from '@offside/game/attributes';
 import { leagueOf, roleOf, fmtMoney, focusOf, labelOf } from '@offside/game/engine';
 import { tn } from '@offside/game/i18n/names';
 import { mainTitle } from '@offside/game/titles';
+import {
+  AVATAR_H,
+  AVATAR_W,
+  avatarPixels,
+  avatarRects,
+  avatarSpec,
+  avatarWidth,
+} from '@offside/game/avatar';
 import { marketValue } from '@offside/game/season';
 import type { GameState } from '@offside/game/types';
 import type { Tab } from '@offside/app-core/state';
@@ -94,6 +103,7 @@ export default function Game() {
   const snap = useSnapshot(appState);
   const c = useColors();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const tab = snap.tab;
   const [playerHint, setPlayerHint] = useState(false);
   const s = snap.G as GameState | null;
@@ -126,6 +136,9 @@ export default function Game() {
     .filter(Boolean)
     .join(' · ');
   const title = mainTitle(s);
+  // T-11-120 도트 선수(웹 Game.svelte와 같다). 크기는 avatarWidth(좁으면 2배, 아니면 3배).
+  const avatar = avatarRects(avatarPixels(avatarSpec(s)));
+  const avatarW = avatarWidth(width);
   const focusName = T.focus({
     names: focusOf(s)
       .map((k) => labelOf(s, k))
@@ -216,6 +229,27 @@ export default function Game() {
           <Topbar />
           <PitchCard gap={12} style={{ paddingTop: 18, paddingHorizontal: 18, paddingBottom: 16 }}>
             <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ alignSelf: 'flex-end' }}>
+                <Svg
+                  width={avatarW}
+                  height={(avatarW / AVATAR_W) * AVATAR_H}
+                  viewBox={`0 0 ${AVATAR_W} ${AVATAR_H}`}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                >
+                  {avatar.map((r, i) => (
+                    <Rect
+                      key={i}
+                      x={r.x}
+                      y={r.y}
+                      width={r.w}
+                      height={1}
+                      fill={r.fill}
+                      {...(r.opacity ? { fillOpacity: r.opacity } : {})}
+                    />
+                  ))}
+                </Svg>
+              </View>
               <View style={{ flex: 1 }}>
                 <Txt
                   style={{
