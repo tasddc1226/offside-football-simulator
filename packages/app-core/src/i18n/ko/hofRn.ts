@@ -41,6 +41,13 @@ const ko = {
   clubLabel: (p: { name: string; league: string; count: number }) =>
     `${p.name}${p.league ? ` ${p.league}` : ''} 영구결번 ${p.count}개`,
   mine: '내 선수',
+  // T-11-121 명예의 벽
+  wallTitle: '명예의 벽',
+  wallLead:
+    '결번 자격을 채웠지만 후보 구단의 번호가 모두 먼저 결번돼, 칭호로 이름을 남긴 선수예요.',
+  wallClubTitle: '이 구단 명예의 벽',
+  wallLabel: (p: { name: string; club: string; number: number; day: string }) =>
+    `명예의 벽 ${p.name}, ${p.club} ${p.number}번, ${p.day}`,
 };
 
 export type HofRnMsgs = typeof ko;

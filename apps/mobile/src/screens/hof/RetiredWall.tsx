@@ -29,10 +29,11 @@ import {
 } from '@offside/app-core/retiredWall';
 import { POS } from '@offside/game/data';
 import { loadHOF } from '@offside/game/season';
+import { Laurel, useMedal } from '../../components/Laurel';
 import { RnShirtShape } from '../../components/RnJersey';
 import { openPublicLegendById } from '../../game/host';
 import { alpha } from '../../theme/colors';
-import { rem } from '../../theme/type';
+import { DISPLAY, rem } from '../../theme/type';
 import { type Colors } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn } from '../../ui/Btn';
@@ -50,6 +51,7 @@ import { useRefresh } from '../../ui/refresh';
 
 type Item = RetiredNumbersResponse['items'][number];
 type ClubSum = RetiredNumbersSummary['clubs'][number];
+type Wall = NonNullable<RetiredNumbersSummary['wall']>[number];
 
 // 화면(첫 화면·구단·최신순 전체)·구단 정렬·시즌 선택은 선수 상세에 다녀와도 그대로 둔다(화면이 다시 그려져도 모듈 값은 남는다).
 // season이 null이면 지금 시즌(개막 전이면 프리시즌). 포지션 필터는 구단 화면에서만 쓴다.
@@ -265,6 +267,113 @@ const SectionTitle = ({ children, right }: { children: string; right?: ReactNode
   </View>
 );
 
+/** T-11-121 명예의 벽 명판 — 월계관 안에 받을 뻔한 번호, 옆에 이름·구단·받은 날(웹 .rn-plaque). */
+function Plaques({
+  list,
+  withClub,
+  myIds,
+}: {
+  list: Wall[];
+  withClub: boolean;
+  myIds: ReadonlySet<string>;
+}) {
+  const c = useColors();
+  const { leaf, text } = useMedal('brass');
+  return (
+    <View style={{ gap: GAP, paddingBottom: 10 }}>
+      {list.map((w) => {
+        const name = w.name ?? anonName(w.pos, w.number);
+        return (
+          <Press
+            key={w.careerId}
+            scale={0.985}
+            testID={`rn-wall-of-honor-${w.careerId}`}
+            onPress={() => void openPublicLegendById(w.careerId)}
+            accessibilityLabel={L.wallLabel({
+              name,
+              club: clubName(w),
+              number: w.number,
+              day: day(w.grantedAt),
+            })}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              minHeight: 60,
+              paddingVertical: 8,
+              paddingLeft: 8,
+              paddingRight: 12,
+              borderWidth: 1,
+              borderColor: alpha(leaf, 0.45),
+              borderRadius: 12,
+              backgroundColor: c.surface,
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+                backgroundColor: alpha(leaf, 0.12),
+              }}
+            />
+            <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Laurel medal="brass" />
+              <Txt
+                style={{
+                  fontFamily: DISPLAY[700],
+                  fontVariant: ['tabular-nums'],
+                  fontSize: rem(1),
+                  lineHeight: rem(1),
+                  fontWeight: '700',
+                  color: text,
+                }}
+              >
+                {w.number}
+              </Txt>
+            </View>
+            <View style={{ flexShrink: 1, gap: 2 }}>
+              <Txt bold numberOfLines={1} style={{ fontSize: rem(0.875) }}>
+                {name}
+              </Txt>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                {withClub ? <ClubMark name={w.club} id={w.clubId} size={14} /> : null}
+                <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75), flexShrink: 1 }}>
+                  {withClub ? `${clubName(w)} · ${day(w.grantedAt)}` : day(w.grantedAt)}
+                </Txt>
+              </View>
+            </View>
+            {myIds.has(w.careerId) ? (
+              <Txt
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.2}
+                style={{
+                  marginLeft: 'auto',
+                  paddingHorizontal: 6,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: c.line,
+                  backgroundColor: c.surface2,
+                  fontSize: rem(0.625),
+                  lineHeight: rem(0.625) * 1.6,
+                  fontWeight: '600',
+                  color: c.muted,
+                }}
+              >
+                {L.mine}
+              </Txt>
+            ) : null}
+          </Press>
+        );
+      })}
+    </View>
+  );
+}
+
 function BackButton() {
   return (
     <Press
@@ -383,6 +492,17 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
         {L.recentTitle}
       </SectionTitle>
       {ready ? <Tiles items={summary.recent} withClub {...opts} /> : null}
+      {summary.wall?.length ? (
+        <>
+          <SectionTitle right={<CountPill c={c} count={summary.wall.length} />}>
+            {L.wallTitle}
+          </SectionTitle>
+          <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 10 }}>
+            {L.wallLead}
+          </Txt>
+          <Plaques list={summary.wall} withClub myIds={myIds} />
+        </>
+      ) : null}
       <SectionTitle>{L.clubsTitle}</SectionTitle>
       <RecordsChips
         label={L.clubOrderLabel}
@@ -431,6 +551,7 @@ function ClubScreen({
   const c = useColors();
   const { pos } = useSnapshot(view);
   const [items, setItems] = useState<Item[] | null>(null);
+  const [wall, setWall] = useState<Wall[]>([]);
   const [failed, setFailed] = useState(false);
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
@@ -441,6 +562,10 @@ function ClubScreen({
       if (!live) return;
       if (r.ok) setItems(r.data.items);
       else setFailed(true);
+    });
+    // T-11-121 이 구단 명예의 벽 — 요약(60초 메모라 첫 화면에서 받은 것을 그대로 쓴다)에서 그 구단 몫만.
+    void getRetiredNumbersSummary(season).then((r) => {
+      if (live) setWall(r.ok ? (r.data.wall ?? []).filter((w) => w.clubId === clubId) : []);
     });
     return () => {
       live = false;
@@ -503,6 +628,12 @@ function ClubScreen({
       ) : (
         <Message text={pos ? L.noMatchApp : L.empty({ season: teamSeasonLabel(season) })} />
       )}
+      {wall.length ? (
+        <View testID="rn-club-wall" style={{ marginTop: 6 }}>
+          <SectionTitle>{L.wallClubTitle}</SectionTitle>
+          <Plaques list={wall} withClub={false} myIds={myIds} />
+        </View>
+      ) : null}
     </View>
   );
 }

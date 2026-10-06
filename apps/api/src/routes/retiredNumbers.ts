@@ -43,7 +43,13 @@ export async function judgeRetirement(
     if (result?.kind === 'granted' && season !== undefined) {
       purgeEdge(c, STALE.retiredNumbersChanged(season, result.clubId));
     }
-    if (awarded) purgeEdge(c, [EDGE.hofDetail(careerId)]);
+    // T-11-121 명예의 벽은 그 시즌 영구결번 요약에도 실린다.
+    if (awarded) {
+      purgeEdge(c, [
+        EDGE.hofDetail(careerId),
+        ...(season === undefined ? [] : [EDGE.retiredNumbersSummary(season)]),
+      ]);
+    }
     if (claimed) publishRetiredNumber(c, claimed);
     return result;
   } catch (err) {

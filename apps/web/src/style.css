@@ -4516,6 +4516,84 @@ html:has(.wrap.has-actionbar) {
   padding: 0 6px;
   font-size: 0.625rem;
 }
+/* T-11-121 명예의 벽 — 결번 유니폼과 다르게 월계관 명판(놋쇠빛). 번호는 결번이 아니라 받을 뻔한 자리다. */
+.rn-sec-head h2 .rn-club-count {
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+.rn-plaque-lead {
+  margin: -4px 0 10px;
+}
+.rn-plaques {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  padding-bottom: 10px;
+}
+.rn-plaque {
+  --medal: #b8924a;
+  --medal-text: #7a5a1c;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 60px;
+  padding: 8px 12px 8px 8px;
+  border: 1px solid color-mix(in srgb, var(--medal) 45%, var(--line));
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--medal) 14%, transparent),
+      color-mix(in srgb, var(--rn-base, #1f6f4a) 8%, transparent) 70%
+    ),
+    var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+:root[data-theme='dark'] .rn-plaque {
+  --medal: #d4ae63;
+  --medal-text: #e6c47f;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .rn-plaque {
+    --medal: #d4ae63;
+    --medal-text: #e6c47f;
+  }
+}
+.rn-plaque-medal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+.rn-plaque-medal b {
+  position: relative;
+  font-size: 1rem;
+  color: var(--medal-text);
+}
+.rn-plaque-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rn-plaque-body > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rn-plaque-mine {
+  margin-left: auto;
+  flex: none;
+  padding: 0 6px;
+  font-size: 0.625rem;
+}
 @media (prefers-reduced-motion: reduce) {
   .rn-tile {
     transition: none;
