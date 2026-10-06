@@ -33,6 +33,7 @@
   import { profileTier, tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
   import { seasonRecapText as R } from '@offside/app-core/i18n/ko/seasonRecap';
+  import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
@@ -92,11 +93,17 @@
   // 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 프로필 이름 앞에 붙인다(그 시즌 기록이 없으면 없다).
   // 댓글 · 채팅에도 같은 등급이 나간다(서버 ownerTiersOf).
   const tierTag = $derived(recap ? profileTier(recap) : null);
+  /** 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 업적 탭으로. */
+  const openMyTeam = () => openTeam(appState.achNew ? 'achievements' : 'team');
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
   }
 </script>
+
+{#snippet achDot()}
+  {#if appState.achNew}<span class="btn-dot" data-team-dot><span class="sr-only">{S.achNew({ n: appState.achNew })}</span></span>{/if}
+{/snippet}
 
 <div class="wrap">
   <Topbar />
@@ -168,7 +175,7 @@
           <div><dt>{L.statToday}</dt><dd>{card.left}/{card.perDay}</dd></div>
         </dl>
         <div class="owner-actions">
-          <button class="btn" data-act="team" onclick={() => openTeam()}>{L.myTeam}</button>
+          <button class="btn" data-act="team" onclick={openMyTeam}>{L.myTeam}{@render achDot()}</button>
           <button class="btn btn-accent" data-act="owner-play" disabled={!!card.playHint} onclick={() => openTeam('opponents')}>{L.play}</button>
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
@@ -176,8 +183,8 @@
         <p class="muted fs-sm">
           {card ? ownerTeamEmptyText(card) : cardFailed ? L.teamFailed : L.loading}
         </p>
-        <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={() => openTeam()}>
-          {card && card.players > 0 ? L.buildTeam : L.myTeam}
+        <button class="btn {card && card.players > 0 ? 'btn-primary' : ''} btn-block" data-act="team" onclick={openMyTeam}>
+          {card && card.players > 0 ? L.buildTeam : L.myTeam}{@render achDot()}
         </button>
       {/if}
     </section>

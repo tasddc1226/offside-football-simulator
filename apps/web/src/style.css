@@ -1797,6 +1797,20 @@ body:has(.main-nav) .wrap {
 .tabs button {
   position: relative;
 }
+/* 버튼 오른쪽 위 빨간 점(구단주 '내 팀' — 안 본 새 업적). */
+.btn-dot {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bad, #e5484d);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.btn:has(> .btn-dot) {
+  position: relative;
+}
 .tab-dot {
   position: absolute;
   top: 5px;

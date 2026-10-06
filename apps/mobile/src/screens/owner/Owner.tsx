@@ -37,6 +37,7 @@ import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
+import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
@@ -119,6 +120,13 @@ function LockedPitch() {
 export default function Owner() {
   const c = useColors();
   const cache = useSnapshot(accountCache);
+  // 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 업적 탭으로.
+  const { achNew } = useSnapshot(appState);
+  const teamBtn = {
+    dot: achNew > 0,
+    onPress: () => openTeam(achNew > 0 ? 'achievements' : 'team'),
+    ...(achNew > 0 ? { accessibilityLabel: `${L.myTeam}, ${S.achNew({ n: achNew })}` } : {}),
+  };
   const acct = cache.value;
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
@@ -318,7 +326,7 @@ export default function Owner() {
                   ]}
                 />
                 <Grid2>
-                  <Btn block testID="team" onPress={() => openTeam()}>
+                  <Btn block testID="team" {...teamBtn}>
                     {L.myTeam}
                   </Btn>
                   <Btn
@@ -346,7 +354,7 @@ export default function Owner() {
                   kind={card && card.players > 0 ? 'primary' : 'default'}
                   block
                   testID="team"
-                  onPress={() => openTeam()}
+                  {...teamBtn}
                 >
                   {card && card.players > 0 ? L.buildTeam : L.teamBtnApp}
                 </Btn>
