@@ -35,6 +35,7 @@ import { loadKey, saveKey } from '@offside/game/storage';
 import { AdSlot } from '../../components/AdSlot';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { NicknameForm } from '../../components/NicknameForm';
+import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { TierBadge } from '../../components/TierBadge';
 import { markNewsSeen, toast } from '../../game/host';
 import { openBoard } from '../../game/nav';
@@ -507,6 +508,7 @@ export default function Board() {
                           <Pill tone="good">{ADMIN_NICKNAME}</Pill>
                         ) : (
                           <>
+                            <OwnerAvatar name={cm.nickname} />
                             <Txt bold>{cm.nickname}</Txt>
                             {cm.tier ? <TierBadge tag={cm.tier} /> : null}
                           </>

@@ -25,6 +25,7 @@ import {
 import type { ApiResult } from '@offside/app-core/api/client';
 import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
 import { NicknameForm } from '../../components/NicknameForm';
+import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { TierBadge } from '../../components/TierBadge';
 import { toast } from '../../game/host';
 import { goBack, goHome } from '../../game/nav';
@@ -342,6 +343,7 @@ export default function Chat() {
                     <Pill tone="good">{ADMIN_NICKNAME}</Pill>
                   ) : (
                     <>
+                      <OwnerAvatar name={m.nickname} />
                       <Txt bold tone={mine(m) ? 'accent' : 'ink'}>
                         {m.nickname}
                       </Txt>
@@ -353,41 +355,53 @@ export default function Chat() {
                       testID="chat-more"
                       accessibilityLabel={L.moreLabel({ nick: m.nickname })}
                       onPress={() => setSelected(selected === m.id ? null : m.id)}
+                      hitSlop={12}
                       style={{
-                        width: 48,
-                        minHeight: 48,
+                        width: 24,
+                        height: 24,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        paddingHorizontal: 10,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: c.line,
-                        backgroundColor: c.surface,
                       }}
                     >
-                      <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>⋯</Txt>
+                      <Txt
+                        tone={selected === m.id ? 'ink' : 'muted'}
+                        style={{ fontSize: rem(0.875), fontWeight: '700' }}
+                      >
+                        ⋯
+                      </Txt>
                     </Press>
                   ) : null}
                 </View>
+                {/* 보낸 시각은 말풍선 옆 아래(남의 말은 오른쪽, 내 말은 왼쪽). */}
                 <View
                   style={{
-                    paddingVertical: 10,
-                    paddingHorizontal: 13,
-                    borderWidth: 1,
-                    borderColor: mine(m) ? c.pitch : c.line,
-                    backgroundColor: mine(m) ? c.pitch : c.surface2,
-                    borderRadius: 16,
-                    borderTopLeftRadius: mine(m) ? 16 : 4,
-                    borderTopRightRadius: mine(m) ? 4 : 16,
+                    flexDirection: mine(m) ? 'row-reverse' : 'row',
+                    alignItems: 'flex-end',
+                    gap: 6,
+                    maxWidth: '100%',
                   }}
                 >
-                  <Txt style={{ color: mine(m) ? c.onPitch : c.ink, fontSize: rem(0.9375) }}>
-                    {m.body}
+                  <View
+                    style={{
+                      flexShrink: 1,
+                      paddingVertical: 10,
+                      paddingHorizontal: 13,
+                      borderWidth: 1,
+                      borderColor: mine(m) ? c.pitch : c.line,
+                      backgroundColor: mine(m) ? c.pitch : c.surface2,
+                      borderRadius: 16,
+                      borderTopLeftRadius: mine(m) ? 16 : 4,
+                      borderTopRightRadius: mine(m) ? 4 : 16,
+                    }}
+                  >
+                    <Txt style={{ color: mine(m) ? c.onPitch : c.ink, fontSize: rem(0.9375) }}>
+                      {m.body}
+                    </Txt>
+                  </View>
+                  <Txt tone="muted" style={small}>
+                    {chatTime(m.at)}
                   </Txt>
                 </View>
-                <Txt tone="muted" style={[small, { marginTop: 3 }]}>
-                  {chatTime(m.at)}
-                </Txt>
                 {selected === m.id ? (
                   <View testID="report-panel" style={panel}>
                     {me?.admin ? (

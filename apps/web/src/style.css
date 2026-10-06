@@ -6405,10 +6405,13 @@ button.what {
 }
 .chat-body-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 6px;
   max-width: 100%;
   min-width: 0;
+}
+.chat-msg.mine .chat-body-row {
+  flex-direction: row-reverse;
 }
 .chat-bubble {
   min-width: 0;
@@ -6430,25 +6433,34 @@ button.what {
   border-radius: 16px 4px 16px 16px;
 }
 .chat-time {
-  margin-top: 3px;
+  flex: none;
   padding-inline: 2px;
   font-size: 0.75rem;
+  white-space: nowrap;
 }
+/* 더보기는 티어 배지 바로 옆 작은 점 세 개(테두리 없음). 누르는 자리는 ::after로 넓힌다. */
 .chat-more {
-  width: 44px;
-  height: 44px;
+  position: relative;
+  width: 24px;
+  height: 24px;
   flex: none;
   display: grid;
   place-items: center;
   padding: 0;
   border: 0;
+  border-radius: 6px;
   background: transparent;
   color: var(--muted);
+  cursor: pointer;
+}
+.chat-more::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
 }
 .chat-more:hover,
 .chat-more[aria-expanded='true'] {
   color: var(--ink);
-  background: var(--surface-2);
 }
 .chat-msg .report-panel {
   width: 100%;

@@ -37,6 +37,7 @@ import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
+import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
 import { mix } from '../../theme/colors';
@@ -201,22 +202,7 @@ export default function Owner() {
       {linked || guest ? (
         <Card gap={14} testID="owner-summary">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                backgroundColor: c.pitch,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Txt style={{ fontFamily: DISPLAY[700], fontSize: rem(1.375), color: c.pitchAccent }}>
-                {(nickname ?? L.avatarInitial).slice(0, 1)}
-              </Txt>
-            </View>
+            <OwnerAvatar name={nickname ?? L.avatarInitial} size={48} />
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
               <Row gap={6}>
                 {tierTag ? (

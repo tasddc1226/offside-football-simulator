@@ -20,6 +20,7 @@
   import { goBack } from './history.svelte.js';
   import { lastClosedSeason } from '@offside/contracts/service-seasons';
   import TierBadge from './TierBadge.svelte';
+  import OwnerAvatar from './OwnerAvatar.svelte';
 
   /** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(툴팁)은 지금 기준 지난 시즌으로 보인다. */
   const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
@@ -156,17 +157,18 @@
       {#each view.messages as m (m.id)}
         <li class="chat-msg" class:mine={mine(m)} data-chat-msg={m.id}>
           <div class="chat-meta">
-            {#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{m.nickname}</b>{#if m.tier}<TierBadge tag={{ tier: m.tier, season: tierSeason }} />{/if}{/if}
-          </div>
-          <div class="chat-body-row">
-            <p class="chat-bubble">{m.body}</p>
+            {#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<OwnerAvatar name={m.nickname} /><b>{m.nickname}</b>{#if m.tier}<TierBadge tag={{ tier: m.tier, season: tierSeason }} />{/if}{/if}
             {#if !mine(m) && (!m.admin || view.me?.admin)}
-              <button class="icon-btn chat-more" aria-expanded={selected === m.id} aria-label={L.moreLabel({ nick: m.nickname })} data-act="chat-more" onclick={() => (selected = selected === m.id ? null : m.id)}>
-                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
+              <button class="chat-more" aria-expanded={selected === m.id} aria-label={L.moreLabel({ nick: m.nickname })} data-act="chat-more" onclick={() => (selected = selected === m.id ? null : m.id)}>
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
               </button>
             {/if}
           </div>
-          <time class="muted chat-time num" datetime={new Date(m.at).toISOString()}>{chatTime(m.at)}</time>
+          <!-- 보낸 시각은 말풍선 옆 아래(남의 말은 오른쪽, 내 말은 왼쪽). -->
+          <div class="chat-body-row">
+            <p class="chat-bubble">{m.body}</p>
+            <time class="muted chat-time num" datetime={new Date(m.at).toISOString()}>{chatTime(m.at)}</time>
+          </div>
           {#if selected === m.id}
             <div class="report-panel stack" style="gap:8px" data-report-panel>
               {#if view.me?.admin}

@@ -6,6 +6,7 @@
   // T-11-026 구단 허브 — 맨 위에 구단주 요약(은퇴 선수·레전드 점수·결번), 그 아래 '내 팀' 카드(전적·레이팅·오늘 남은
   // 경기와 바로 경기하기), 내 선수 상위 3명, 계정은 맨 아래. 비로그인이면 '내 팀' 자리에 잠긴 카드와 로그인 버튼을 둔다.
   import Topbar from './Topbar.svelte';
+  import OwnerAvatar from './OwnerAvatar.svelte';
   import AdSlot from '../ads/AdSlot.svelte';
   import { fetchBoardViewer } from '@offside/app-core/api/boards';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
@@ -107,7 +108,7 @@
   {#if linked || guest}
     <section class="card owner-hub" data-owner-summary aria-label={L.summaryLabel}>
       <div class="owner-id">
-        <span class="owner-avatar" aria-hidden="true">{(nickname ?? L.avatarInitial).slice(0, 1)}</span>
+        <OwnerAvatar name={nickname ?? L.avatarInitial} size={48} />
         <div class="owner-who">
           <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}</b>
           {#if tierTag}<span class="ach-grade owner-tier" data-grade={tierTag.tier} data-owner-tier={tierTag.tier}>{tierTitle(tierTag)}</span>{/if}
@@ -228,19 +229,6 @@
     display: flex;
     align-items: center;
     gap: 12px;
-  }
-  .owner-avatar {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--pitch);
-    color: var(--pitch-accent);
-    font-family: var(--display);
-    font-size: 1.375rem;
-    font-weight: 700;
   }
   /* 이름 앞 지난 시즌 등급 엠블럼(LoL 이름 앞 지난 시즌 티어처럼). */
   .owner-last-tier {
