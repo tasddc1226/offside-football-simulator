@@ -3,6 +3,7 @@
 // 29세까지. 비용은 연봉 비례(최소 금액이 있다)라 자금이 많은 선수와 적은 선수의 부담이 같고, 확률은 단계마다 낮아진다.
 // 실패하면 비용만 잃고 같은 단계의 다음 시도 확률이 오른다. 밸런스 근거: docs/tracking/potential-boost-plan.md.
 // 판정은 게임 RNG(세이브에 저장된다)를 한 번 쓴다 — 다시 불러와도 같은 결과다. 시도하지 않은 커리어는 RNG를 쓰지 않는다.
+// T-11-116 자금이 모자란 시즌엔 앱에서 보상형 광고를 끝까지 보면 자금 없이 한 번 시도할 수 있다(확률·시즌 한 번 규칙은 같다).
 import { rnd } from './rng.js';
 import { fmtMoney } from './player.js';
 import { log, potScouted } from './stats.js';
@@ -71,11 +72,14 @@ export interface BoostResult {
   chance: number;
 }
 
-/** 강화를 시도한다. 시도할 수 없으면 null(상태를 바꾸지 않는다). */
-export function tryBoost(s: GameState): BoostResult | null {
-  if (boostStatus(s) !== 'ready') return null;
+/**
+ * 강화를 시도한다. 시도할 수 없으면 null(상태를 바꾸지 않는다). ad: 자금이 모자란('short') 시즌에 보상형 광고를 보고
+ * 자금 없이 시도한다 — 자금이 충분하면 광고 시도는 할 수 없다.
+ */
+export function tryBoost(s: GameState, ad = false): BoostResult | null {
+  if (boostStatus(s) !== (ad ? 'short' : 'ready')) return null;
   const b = boostState(s);
-  const cost = boostCost(s);
+  const cost = ad ? 0 : boostCost(s);
   const chance = boostChance(s);
   const ok = rnd() * 100 < chance;
   s.money -= cost;
@@ -83,14 +87,31 @@ export function tryBoost(s: GameState): BoostResult | null {
     lv: ok ? b.lv + 1 : b.lv,
     fails: ok ? 0 : b.fails + 1,
     year: s.year,
-    log: [...b.log, { y: s.year, age: s.age, lv: b.lv, p: chance, c: cost, ok }],
+    log: [
+      ...b.log,
+      {
+        y: s.year,
+        age: s.age,
+        lv: b.lv,
+        p: chance,
+        c: cost,
+        ok,
+        ...(ad ? { ad: true as const } : {}),
+      },
+    ],
   };
   s.boost = next;
   if (ok) s.flags.potBonus = (s.flags.potBonus ?? 0) + 1;
   // 잠재력 등급은 은퇴 때 공개한다 — 소식에도 단계만 남긴다.
   log(
     s,
-    ok ? BT.success({ lv: next.lv, cost: fmtMoney(cost) }) : BT.fail({ cost: fmtMoney(cost) }),
+    ok
+      ? ad
+        ? BT.successAd({ lv: next.lv })
+        : BT.success({ lv: next.lv, cost: fmtMoney(cost) })
+      : ad
+        ? BT.failAd
+        : BT.fail({ cost: fmtMoney(cost) }),
     ok ? 'good' : 'bad',
   );
   return { ok, lv: next.lv, cost, chance };

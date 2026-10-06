@@ -29,4 +29,12 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   resultOk: 'Your growth ceiling rose a little.',
   resultFail: (p) =>
     `The chance was ${p.chance}%. The money is gone, and the next attempt's chance goes up by ${p.pct} percentage points.`,
+  adButton: (p) => `Watch an ad to boost (${p.chance}%)`,
+  adButtonFree: (p) => `Boost without funds (${p.chance}%)`,
+  adNote: 'Watch an ad to the end to try once without funds.',
+  adNoteFree: 'You bought ad removal, so you can try once without funds.',
+  adWatch: 'Watch the ad to the end to try the boost.',
+  adCost: 'ad',
+  resultFailAd: (p) =>
+    `The chance was ${p.chance}%. The next attempt's chance goes up by ${p.pct} percentage points.`,
 };
