@@ -29,12 +29,14 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   title: 'Team synergy',
   chipApplied: 'Active',
   chipViewing: 'Showing',
-  chipHint: 'Tap a chip to show its players on the pitch. It does not change what applies.',
+  chipNoEffect: 'No effect',
+  chipOff: 'Inactive',
+  chipHint:
+    'Tap an active synergy to show its players on the pitch. All active ones apply either way.',
   pitchAll: (p) => `All ${p.n} synergies active`,
   pitchFocus: (p) => `Showing ${p.name} · all ${p.n} active`,
   pitchMemberAria: 'In an active synergy',
   empty: 'No synergies active yet. Line up players whose types work together.',
-  tableToggle: (p) => (p.open ? 'Hide synergy table' : 'Show synergy table'),
   capNote: (p) =>
     `Duo effects are capped at +${p.line} per line and +${p.total} in total. Youth players don't count toward synergies.`,
   synName: (p) => NAMES[p.id]?.[0] ?? p.ko,

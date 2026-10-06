@@ -9,7 +9,7 @@ import {
   achSections,
   achState,
   achTotal,
-  synergyTable,
+  synergyRows,
   draftLines,
   matchHintOf,
   slotsSynergy,
@@ -175,10 +175,16 @@ describe('T-11-105 편성 화면 시너지', () => {
     expect(synergyEffectText({}, 'badge')).toBe('경기 효과 없음');
     expect(synergyNote(0)).toBe('프리시즌 경기에는 반영되지 않았어요');
     expect(synergyNote(1)).toBe('켜진 시너지는 모두 경기에 반영돼요');
-    expect(synergyTable().at(-1)).toEqual([
-      '주발 맞춤',
-      '풀백은 같은 쪽 발, 윙어는 반대쪽 발',
-      '자리 실력 +1(양발 +0.5)',
+    // 규칙 전부를 적용 중 → 미적용 순으로. 켜진 것은 실제 효과, 미적용은 규칙 효과.
+    const rows = synergyRows(s);
+    expect(rows.slice(0, 2).map((r) => [r.id, r.state, r.effect])).toEqual([
+      ['cross', 'applied', '공격 +2'],
+      ['foot', 'applied', '자리 실력 +1'],
     ]);
+    expect(rows.slice(2).every((r) => r.state === 'off')).toBe(true);
+    expect(rows.find((r) => r.id === 'national')).toMatchObject({
+      badge: true,
+      effect: '배지만(경기 효과 없음)',
+    });
   });
 });

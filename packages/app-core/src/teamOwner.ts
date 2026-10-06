@@ -265,20 +265,42 @@ export function synergyFocus(s: TeamSynergy, id: string | null) {
           : SY.pitchAll({ n }),
   };
 }
-/** 시너지 표 — [이름, 설명, 효과]. 숨은 규칙 없이 전부 보인다. 언어를 바꾸면 다시 만들어야 해서 함수다. */
-export const synergyTable = (): readonly (readonly [string, string, string])[] => {
-  const row = (r: { id: string; name: string; desc: string }, effect: string) =>
-    [...synergyText(r.id, r.name, r.desc), effect] as const;
-  return [
-    ...DUOS.map((d) => row(d, synergyEffectText(d.effect))),
-    row(TEAM_RULES.homegrown, synergyEffectText(HOMEGROWN_EFFECT)),
-    row(TEAM_RULES.national, SY.badgeOnly),
-    row(
+/** 시너지 목록의 한 줄 — 적용 중(효과가 들어감) · 효과 없음(켜졌지만 배지이거나 상한) · 미적용(조건 미달). */
+export type SynergyState = 'applied' | 'noEffect' | 'off';
+export type SynergyRow = SynergyChip & { state: SynergyState };
+const STATE_RANK: Record<SynergyState, number> = { applied: 0, noEffect: 1, off: 2 };
+/**
+ * 편성 화면의 시너지 목록(웹·앱 공용). 규칙 전부를 숨김 없이 보이고 적용 중 → 효과 없음 → 미적용 순으로 둔다(같은 상태는 표 순서).
+ * 켜진 것은 실제 효과, 미적용은 규칙 효과를 보인다. 언어를 바꾸면 다시 만들어야 해서 함수다.
+ */
+export function synergyRows(s: TeamSynergy): SynergyRow[] {
+  const on = new Map(synergyChips(s).map((c) => [c.id, c]));
+  const rules: (readonly [{ id: string; name: string; desc: string }, string])[] = [
+    ...DUOS.map((d) => [d, synergyEffectText(d.effect)] as const),
+    [TEAM_RULES.homegrown, synergyEffectText(HOMEGROWN_EFFECT)],
+    [TEAM_RULES.national, SY.badgeOnly],
+    [
       TEAM_RULES.foot,
       SY.fitEffectBoth({ v: signedNum(FOOT_BONUS), both: signedNum(FOOT_BONUS_BOTH) }),
-    ),
+    ],
   ];
-};
+  return rules
+    .map(([r, effect]): SynergyRow => {
+      const c = on.get(r.id);
+      if (c) return { ...c, state: c.applied ? 'applied' : 'noEffect' };
+      const [name, desc] = synergyText(r.id, r.name, r.desc);
+      return {
+        id: r.id,
+        name,
+        desc,
+        effect,
+        badge: r.id === TEAM_RULES.national.id,
+        applied: false,
+        state: 'off',
+      };
+    })
+    .sort((x, y) => STATE_RANK[x.state] - STATE_RANK[y.state]);
+}
 
 /** 경기하기 버튼 밑에 보이는 못 하는 이유(할 수 있으면 null). */
 export function playHintOf(
