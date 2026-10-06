@@ -1,6 +1,13 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { withAndroidManifest } = require('expo/config-plugins');
+const { withAndroidManifest, withAppBuildGradle } = require('expo/config-plugins');
+
+// AdMob 미디에이션 어댑터(T-11-119). 버전은 AdMob 미디에이션 문서의 메타 어댑터 최신값.
+// expo-build-properties에는 안드로이드 의존성 옵션이 없어 app/build.gradle에 직접 넣는다.
+const MEDIATION = {
+  android: ['com.google.ads.mediation:facebook:6.22.0.1'],
+  ios: [{ name: 'GoogleMobileAdsMediationFacebook', version: '6.22.0.0' }],
+};
 
 module.exports = ({ config }) => {
   const iosFile = process.env.OFFSIDE_FIREBASE_IOS_FILE;
@@ -22,9 +29,22 @@ module.exports = ({ config }) => {
   const plugins = [
     ...(config.plugins ?? []),
     ['@react-native-firebase/analytics', { ios: { withoutAdIdSupport: true } }],
-    ['expo-build-properties', { ios: { useFrameworks: 'dynamic' } }],
+    ['expo-build-properties', { ios: { useFrameworks: 'dynamic', extraPods: MEDIATION.ios } }],
   ];
   if (iosFile || androidFile) plugins.push('@react-native-firebase/app');
+  plugins.push((nativeConfig) =>
+    withAppBuildGradle(nativeConfig, (mod) => {
+      const lines = MEDIATION.android
+        .filter((dep) => !mod.modResults.contents.includes(dep))
+        .map((dep) => `    implementation("${dep}")`);
+      if (lines.length)
+        mod.modResults.contents = mod.modResults.contents.replace(
+          /dependencies\s*{/,
+          (head) => `${head}\n${lines.join('\n')}`,
+        );
+      return mod;
+    }),
+  );
   plugins.push((nativeConfig) =>
     withAndroidManifest(nativeConfig, (mod) => {
       const { manifest } = mod.modResults;
