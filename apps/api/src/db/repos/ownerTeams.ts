@@ -358,7 +358,7 @@ export async function listOpponentCandidates(
   db: Db,
   profileId: string,
   season: number,
-  ovr: number,
+  mine: { rating: number; ovr: number },
   todayStart: string,
   perSide = 8,
 ) {
@@ -368,20 +368,22 @@ export async function listOpponentCandidates(
     ne(ownerTeams.profileId, profileId),
     notInArray(ownerTeams.id, challengedSince(db, profileId, todayStart)),
   );
+  // 레이팅이 같으면(시즌 초에는 거의 다 1000) OVR이 가까운 팀부터.
+  const ovrGap = sql`abs(${ownerTeams.ovr} - ${mine.ovr})`;
   const [up, down] = await db.batch([
     db
       .select(cols)
       .from(ownerTeams)
       .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-      .where(and(base, gte(ownerTeams.ovr, ovr)))
-      .orderBy(asc(ownerTeams.ovr))
+      .where(and(base, gte(ownerTeams.rating, mine.rating)))
+      .orderBy(asc(ownerTeams.rating), ovrGap)
       .limit(perSide),
     db
       .select(cols)
       .from(ownerTeams)
       .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
-      .where(and(base, lt(ownerTeams.ovr, ovr)))
-      .orderBy(desc(ownerTeams.ovr))
+      .where(and(base, lt(ownerTeams.rating, mine.rating)))
+      .orderBy(desc(ownerTeams.rating), ovrGap)
       .limit(perSide),
   ]);
   return [...up, ...down].map((r) => r.team);

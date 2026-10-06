@@ -12,7 +12,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Txt } from '../../ui';
 
 export function TeamOpponents({
-  ovr,
+  rating,
   matchesLeft,
   perDay,
   opponents,
@@ -26,7 +26,7 @@ export function TeamOpponents({
   saving = false,
   canSave = true,
 }: {
-  ovr: number;
+  rating: number;
   matchesLeft: number;
   perDay: number;
   opponents: TeamOpponent[];
@@ -51,7 +51,7 @@ export function TeamOpponents({
         </Txt>
         {hint ? null : (
           <Txt tone="muted" v="sm">
-            {L.oppNear({ ovr, left: matchesLeft, per: perDay })}
+            {L.oppNear({ rating, left: matchesLeft, per: perDay })}
           </Txt>
         )}
         <Txt tone="muted" v="xs">
@@ -103,17 +103,28 @@ export function TeamOpponents({
                     v="sm"
                   >{`${o.owner} · ${o.formation} · ${recordText(o.record)}`}</Txt>
                 </View>
-                <Txt
-                  tone="accent"
-                  style={{
-                    minWidth: rem(1.375) * 1.1,
-                    fontFamily: DISPLAY[700],
-                    fontSize: rem(1.375),
-                    textAlign: 'center',
-                  }}
+                <View
+                  accessible
+                  accessibilityLabel={`${L.oppRating} ${o.rating} · ${L.oppOvr({ n: o.ovr })}`}
+                  style={{ alignItems: 'center', minWidth: rem(1.375) * 2.2 }}
                 >
-                  {o.ovr}
-                </Txt>
+                  <Txt tone="muted" style={{ fontSize: 11, lineHeight: 13 }}>
+                    {L.oppRating}
+                  </Txt>
+                  <Txt
+                    tone="accent"
+                    style={{
+                      fontFamily: DISPLAY[700],
+                      fontSize: rem(1.375),
+                      lineHeight: rem(1.375) * 1.15,
+                    }}
+                  >
+                    {o.rating}
+                  </Txt>
+                  <Txt tone="muted" style={{ fontSize: 11, lineHeight: 13 }}>
+                    {L.oppOvr({ n: o.ovr })}
+                  </Txt>
+                </View>
                 <Btn
                   kind="primary"
                   sm

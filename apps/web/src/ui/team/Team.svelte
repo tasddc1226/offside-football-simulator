@@ -11,6 +11,7 @@
     MANAGER_NAME_MIN,
     TEAM_NAME_MAX,
     TEAM_NAME_MIN,
+    TEAM_RATING_START,
     YOUTH_NAME,
     YOUTH_OVR,
     presetLayout,
@@ -452,7 +453,7 @@
         <TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />
       {:else}
       <TeamOpponents
-        ovr={team?.ovr ?? ovr}
+        rating={team?.rating ?? TEAM_RATING_START}
         {matchesLeft}
         {perDay}
         {opponents}

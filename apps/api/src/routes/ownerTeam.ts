@@ -370,7 +370,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     });
   });
 
-  // 경기 상대 후보: 같은 시즌에서 내 팀 OVR에 가까운 다른 구단주의 팀 몇 개를 섞어서.
+  // 경기 상대 후보: 같은 시즌에서 내 팀 레이팅에 가까운 다른 구단주의 팀 몇 개를 섞어서(레이팅이 같으면 OVR이 가까운 팀부터).
+  // OVR로만 고르면 비슷한 전력끼리만 만나 레이팅이 실력만큼 벌어지지 않았다(시즌 1 첫날 OVR 대별 평균 레이팅이 모두 1000 안팎).
   app.get('/v1/owner-team/opponents', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
@@ -382,7 +383,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       db,
       me.id,
       season,
-      mine.ovr,
+      { rating: mine.rating, ovr: mine.ovr },
       kstTodayStart(now),
     );
     // 가까운 팀 중에서 무작위로(매번 같은 상대만 나오지 않게).
@@ -392,7 +393,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     }
     const items: TeamOpponent[] = candidates
       .slice(0, OPPONENTS_SHOWN)
-      .sort((a, b) => b.ovr - a.ovr)
+      .sort((a, b) => b.rating - a.rating || b.ovr - a.ovr)
       .map((team) => ({
         teamId: team.id,
         name: team.name,

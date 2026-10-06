@@ -13,6 +13,7 @@ import {
   MANAGER_NAME_MIN,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
+  TEAM_RATING_START,
   YOUTH_NAME,
   YOUTH_OVR,
   slotRating,
@@ -767,7 +768,7 @@ export default function Team() {
           />
         ) : (
           <TeamOpponents
-            ovr={team?.ovr ?? ovr}
+            rating={team?.rating ?? TEAM_RATING_START}
             matchesLeft={matchesLeft}
             perDay={perDay}
             opponents={opponents}
