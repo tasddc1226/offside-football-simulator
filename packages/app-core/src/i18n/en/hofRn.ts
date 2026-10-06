@@ -39,4 +39,9 @@ export const hofRn: Translation<HofRnMsgs> = {
   clubLabel: (p) =>
     `${p.name}${p.league ? ` ${p.league}` : ''}, ${plural(p.count, 'retired number')}`,
   mine: 'Your player',
+  wallTitle: 'Wall of Honour',
+  wallLead:
+    'Players who earned a retired number, but every candidate club had already retired that number. They live on as a title.',
+  wallClubTitle: 'This club’s Wall of Honour',
+  wallLabel: (p) => `Wall of Honour: ${p.name}, ${p.club} No. ${p.number}, ${p.day}`,
 };

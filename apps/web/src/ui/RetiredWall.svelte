@@ -19,6 +19,7 @@
   import { POS } from '@offside/game/data';
   import { loadHOF } from '@offside/game/season';
   import ClubMark from './ClubMark.svelte';
+  import Laurel from './Laurel.svelte';
   import { seasonNow } from './seasonNow.svelte.js';
   import { anonName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';
@@ -28,6 +29,7 @@
   import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
   import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
   type Item = RetiredNumbersResponse['items'][number];
+  type Wall = NonNullable<RetiredNumbersSummary['wall']>[number];
 
   const clock = seasonNow();
   const now = $derived(clock.now);
@@ -88,6 +90,9 @@
   const pickedClub = $derived(items?.[0] && view.screen === 'club' ? { clubId: items[0].clubId, club: items[0].club, count: items.length } : undefined);
   const shown = $derived((items ?? []).filter((it) => !view.pos || it.pos === view.pos));
   const leagues = $derived(rnByLeague(summary?.clubs ?? []));
+  // T-11-121 명예의 벽은 요약에 다 실려 온다 — 구단 화면은 그중 그 구단 몫만.
+  const wall = $derived(summary?.wall ?? []);
+  const clubWall = $derived(wall.filter((w) => w.clubId === view.clubId));
 
   function pickSeason(id: number) {
     view.season = id;
@@ -121,6 +126,22 @@
     <span class="muted fs-xs num">{L.tileSeq({ seq: it.seq, day: day(it.grantedAt) })}</span>
     {#if myIds.has(it.careerId)}<span class="pill rn-tile-mine">{L.mine}</span>{/if}
   </button>
+{/snippet}
+
+{#snippet plaques(list: Wall[], withClub: boolean)}
+  <div class="rn-plaques">
+    {#each list as w (w.careerId)}
+      {@const name = w.name ?? anonName(w.pos, w.number)}
+      <button class="rn-plaque medal brass" style={rnStyle(w.clubId)} data-rn-wall-of-honor={w.careerId} aria-label={L.wallLabel({ name, club: rnClubName(w), number: w.number, day: day(w.grantedAt) })} onclick={() => void openPublicLegendById(w.careerId)}>
+        <span class="rn-plaque-medal" aria-hidden="true"><Laurel /><b class="num">{w.number}</b></span>
+        <span class="rn-plaque-body">
+          <span class="rn-plaque-top"><b class="rn-tile-name">{name}</b><span class="muted fs-xs num">{day(w.grantedAt)}</span></span>
+          {#if withClub}<span class="muted fs-xs"><ClubMark name={w.club} id={w.clubId} size={14} /> {rnClubName(w)}</span>{/if}
+        </span>
+        {#if myIds.has(w.careerId)}<span class="pill rn-plaque-mine">{L.mine}</span>{/if}
+      </button>
+    {/each}
+  </div>
 {/snippet}
 
 {#snippet clubRow(c: RetiredNumbersSummary['clubs'][number], withLeague: boolean)}
@@ -166,6 +187,13 @@
       <div class="rn-tiles">
         {#each summary.recent as it (it.seq)}{@render tile(it, true)}{/each}
       </div>
+      {#if wall.length}
+        <div class="rn-sec-head" data-rn-wall-section>
+          <h2>{L.wallTitle} <span class="num rn-club-count">{wall.length}</span></h2>
+        </div>
+        <p class="muted fs-xs rn-plaque-lead">{L.wallLead}</p>
+        {@render plaques(wall, true)}
+      {/if}
       <div class="rn-sec-head">
         <h2>{L.clubsTitle}</h2>
         <div class="hof-sorts" role="group" aria-label={L.clubOrderLabel}>
@@ -217,6 +245,10 @@
       {/if}
     {:else}
       <p class="empty">{L.noMatchWeb}</p>
+    {/if}
+    {#if view.screen === 'club' && clubWall.length}
+      <h2 class="rn-recent-title" data-rn-club-wall>{L.wallClubTitle}</h2>
+      {@render plaques(clubWall, false)}
     {/if}
   {/if}
 </section>

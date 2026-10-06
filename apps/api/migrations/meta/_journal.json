@@ -484,6 +484,13 @@
       "when": 1791250824559,
       "tag": "0068_conscious_captain_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "6",
+      "when": 1791277572427,
+      "tag": "0069_quick_ghost_rider",
+      "breakpoints": true
     }
   ]
 }
