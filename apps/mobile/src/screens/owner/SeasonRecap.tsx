@@ -46,6 +46,8 @@ import { BackBar, Btn, Card, Press, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Seg, TabOpt } from '../board/parts';
 import { RECAP_INK, RecapBackdrop, RecapShare } from './RecapShare';
+import { RecapCardReel } from './recap/RecapCardReel';
+import { RecapTeamPhoto } from './recap/RecapTeamPhoto';
 
 /** 카드 제목 줄(영문 eyebrow 없이 소제목만). */
 const Sec = ({ children }: { children: string }) => (
@@ -355,6 +357,7 @@ export default function SeasonRecap() {
       {res && recap ? (
         <>
           <Hero recap={recap} onShare={() => setSharing(true)} />
+          <Squad recap={recap} season={shown} />
           <Numbers recap={recap} />
           <Faces recap={recap} />
           <Cards recap={recap} />
@@ -579,6 +582,20 @@ function Numbers({ recap }: { recap: Recap }) {
           <BigNumber key={n.key} n={n} />
         ))}
       </Grid>
+    </Card>
+  );
+}
+
+/** 이 시즌의 선수단 — 단체사진과 끝없이 흐르는 카드(웹 data-recap-section=squad). 선수단이 없으면 그리지 않는다. */
+function Squad({ recap, season }: { recap: Recap; season: string }) {
+  const { squad } = recap;
+  if (!squad || squad.length === 0) return null;
+  return (
+    <Card gap={10} testID="recap-section-squad">
+      <Sec>{L.secSquad}</Sec>
+      <Lead>{L.squadLead({ n: num(recap.retired) })}</Lead>
+      <RecapTeamPhoto squad={squad} season={season} />
+      <RecapCardReel squad={squad} />
     </Card>
   );
 }
