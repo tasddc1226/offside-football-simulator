@@ -39,8 +39,7 @@ import {
   autoFillSlots,
   tooManyWildcards,
   WILDCARD_FULL_TEXT,
-  wildcardsIn,
-  wildcardText,
+  wildcardLabel,
   draftLines,
   isPreseasonLegacy,
   matchHintOf,
@@ -182,6 +181,7 @@ export default function Team() {
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = useMemo(() => localCareerNames(), []);
   const byId = new Map(players.map((p) => [p.careerId, p]));
+  const wildcards = wildcardLabel(slots, byId, season);
   const nameOf = (p: TeamPlayer) =>
     localNames.get(p.careerId) ?? p.publicName ?? anonName(p.pos, p.number);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
@@ -701,9 +701,9 @@ export default function Team() {
                   이미지 공유
                 </Btn>
               </View>
-              {season > 0 ? (
+              {wildcards ? (
                 <Txt v="xs" tone="muted" testID="team-wildcards">
-                  {wildcardText(wildcardsIn(slots, byId, season))}
+                  {wildcards}
                 </Txt>
               ) : null}
               {editable ? (

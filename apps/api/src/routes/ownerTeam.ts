@@ -15,6 +15,8 @@ import {
   TEAM_MATCHES_PER_DAY,
   TEAM_REPEAT_WINDOW_DAYS,
   TEAM_WILDCARD_MAX,
+  WILDCARD_FULL_TEXT,
+  isWildcardSeason,
   matchScore,
   ratingChange,
   type FormationId,
@@ -277,10 +279,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       });
     }
     // T-11-114 지난 시즌 선수(와일드카드)는 선발에 정해진 수까지만.
-    if (ids.filter((id) => eligible.get(id)!.season! < season).length > TEAM_WILDCARD_MAX) {
+    if (
+      ids.filter((id) => isWildcardSeason(eligible.get(id)?.season, season)).length >
+      TEAM_WILDCARD_MAX
+    ) {
       throw new AppError({
         code: 'VALIDATION_FAILED',
-        message: `지난 시즌 선수는 선발에 ${TEAM_WILDCARD_MAX}명까지 넣을 수 있어요.`,
+        message: WILDCARD_FULL_TEXT,
         details: { reason: 'WILDCARD_LIMIT' },
       });
     }

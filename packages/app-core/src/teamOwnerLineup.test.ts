@@ -8,9 +8,9 @@ import {
   assignSlot,
   attrLine,
   autoFillSlots,
-  overWildcards,
+  tooManyWildcards,
   wildcardsIn,
-  wildcardText,
+  wildcardLabel,
   matchHintOf,
   outcomeOf,
   teamEditableIn,
@@ -104,10 +104,11 @@ describe('autoFillSlots', () => {
     expect(wildcardsIn(next, byId, 1)).toBe(3);
     expect(next).toContain('new');
     const free = next.indexOf(null);
-    expect(overWildcards(next, free, 'old4', byId, 1)).toBe(true);
+    expect(tooManyWildcards(assignSlot(next, free, 'old4'), byId, 1)).toBe(true);
     // 이미 든 와일드카드끼리 자리를 바꾸는 건 괜찮다.
-    expect(overWildcards(next, next.indexOf('old1'), 'old2', byId, 1)).toBe(false);
-    expect(wildcardText(3)).toBe('와일드카드 3/3');
+    expect(tooManyWildcards(assignSlot(next, next.indexOf('old1'), 'old2'), byId, 1)).toBe(false);
+    expect(wildcardLabel(next, byId, 1)).toBe('와일드카드 3/3');
+    expect(wildcardLabel(next, byId, 0)).toBeNull();
     expect(cardSeasonBadge(0)).toBe('PRE');
     expect(cardSeasonBadge(2)).toBe('S2');
   });

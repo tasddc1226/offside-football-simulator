@@ -31,7 +31,7 @@
 <div class="player-card" class:compact class:youth class:deployed={deploymentRating !== undefined} data-tier={tier}>
   <div class="card-face">
     <div class="card-rating" title="{ratingLabel} {rating}"><b>{rating}</b><span>{role}</span></div>
-    {#if cardSeason !== undefined}<span class="card-season" data-card-season={cardSeason} style:--season-bg={cardSeasonColor(cardSeason)} title={teamSeasonName(cardSeason)} aria-label={teamSeasonName(cardSeason)}>{cardSeasonBadge(cardSeason)}</span>{/if}
+    {#if cardSeason !== undefined}<span class="card-season" data-card-season={cardSeason} style:--season-bg={cardSeasonColor(cardSeason)} title={teamSeasonName(cardSeason)}>{cardSeasonBadge(cardSeason)}</span>{/if}
     {#if country}<span class="card-nation" role="img" aria-label="국적 {country.ko}" title={country.ko}>{flagOf(country.code)}</span>{/if}
     <div class="card-art" aria-hidden="true">
       <svg viewBox="0 0 100 96"><path d="M30 10 15 17 3 38 20 48 26 36 24 90 76 90 74 36 80 48 97 38 85 17 70 10 62 5Q50 16 38 5Z" /><path class="shirt-trim" d="M38 5Q50 25 62 5M25 73H75M34 12V87M66 12V87" /></svg>

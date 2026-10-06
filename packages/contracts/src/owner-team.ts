@@ -69,6 +69,10 @@ export const TEAM_MATCHES_PER_DAY = 10;
 export const LINEUP_SIZE = 11;
 /** T-11-114 선발에 넣을 수 있는 지난 시즌 선수(와일드카드) 수. 나머지는 그 시즌 선수다. */
 export const TEAM_WILDCARD_MAX = 3;
+/** 팀 시즌보다 앞 시즌 카드면 와일드카드. 시즌을 모르는 옛 응답은 그 시즌 선수로 본다. */
+export const isWildcardSeason = (cardSeason: number | null | undefined, teamSeason: number) =>
+  (cardSeason ?? teamSeason) < teamSeason;
+export const WILDCARD_FULL_TEXT = `지난 시즌 선수는 선발에 ${TEAM_WILDCARD_MAX}명까지 넣을 수 있어요.`;
 
 // T-11-098 친구 · 친선전. 친선전은 레이팅·전적·업적에 들어가지 않고 친구끼리 상대 전적만 남긴다.
 /** 친구(보낸·받은 신청 포함) 상한. */
