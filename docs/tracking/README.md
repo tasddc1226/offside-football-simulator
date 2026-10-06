@@ -11,7 +11,7 @@
 
 ## 확장 기획
 
-- [T-11-132: 실세계 경기 결과 기반 NPC 전력 갱신](real-club-strength-plan.md) — 데이터 권리·ID 매핑·커리어 고정·수동 발행 MVP 제안, 사용자 정책 미확정.
+- [T-11-132: 일별 현실 순위표 기반 NPC 전력 갱신](real-club-strength-plan.md) — 데이터 권리·별칭 매핑·PPG/득실 완충·일별 발행 MVP 제안, 사용자 정책 미확정.
 
 - [T-10-078: 서비스 시즌·커리어 카드·구단·유저 이적시장](season-card-market-plan.md) — 논의 정리와 미결 정책. 구현 완료나 확정 ADR이 아니다.
 - [T-10-082: 구단주 도전 과제·칭호](owner-quests-and-titles-plan.md) — 장기 과제와 표시 보상, 초기 조건 및 구현 전 검토 항목.
