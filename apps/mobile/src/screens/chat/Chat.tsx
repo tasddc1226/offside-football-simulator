@@ -338,7 +338,9 @@ export default function Chat() {
                   maxWidth: '85%',
                 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 }}
+                >
                   {m.admin ? (
                     <Pill tone="good">{ADMIN_NICKNAME}</Pill>
                   ) : (

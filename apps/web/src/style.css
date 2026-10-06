@@ -6395,6 +6395,7 @@ button.what {
   align-items: center;
   gap: 6px;
   min-height: 24px;
+  margin-bottom: 5px;
   font-size: 0.8125rem;
 }
 .chat-meta b {
