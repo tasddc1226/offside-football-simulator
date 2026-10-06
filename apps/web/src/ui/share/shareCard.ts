@@ -43,9 +43,6 @@ const F = {
   brand: `700 36px ${BODY}`,
   tagline: `400 26px ${BODY}`,
   url: `600 36px ${DISPLAY}`,
-  // 결번 유니폼 글자(유니폼 도안 단위 — 그릴 때 유니폼 크기만큼 커진다).
-  jerseyName: `600 10px ${BODY}`,
-  jerseyNumber: `700 50px ${DISPLAY}`,
 };
 const PAD = 80;
 const PILL = { h: 62, padX: 28, gap: 16, min: 300 };
@@ -65,7 +62,6 @@ export async function loadCardFonts(c: ShareCardData) {
     ...c.stops.flatMap((s) => (s ? [s.club, s.league] : [])),
     c.style?.name,
     c.style?.best ?? c.style?.line,
-    c.jersey?.name,
     ...c.honours.map((h) => h.name),
     `${cardBrand()} ${tagline()} offside-lab.com LEGEND SCORE THE JOURNEY HONOURS HOW I PLAYED ×0123456789`,
   ].join('');
@@ -144,10 +140,7 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
   text(String(c.score), scoreX, 500, F.score, C.gold);
   spaced('LEGEND SCORE', 546, F.label, C.muted, 8, scoreX);
   if (c.jersey) {
-    drawJersey(ctx, { cx: mid + 215, top: 306, width: 220 }, c.jersey, {
-      name: F.jerseyName,
-      number: F.jerseyNumber,
-    });
+    drawJersey(ctx, { cx: mid + 215, top: 300, scale: 3 }, c.jersey);
   }
 
   // 배지: 한 줄에 가운데 정렬. 넘치면 뒷부분(tail)이 있는 마지막 배지는 앞을 줄이고, 그래도 안 되면 뒤 배지부터 뺀다.

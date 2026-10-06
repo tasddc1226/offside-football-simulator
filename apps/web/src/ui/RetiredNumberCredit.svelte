@@ -3,7 +3,6 @@
   // T-10-076 은퇴 리포트의 영구결번 장면 — 결번 세리머니 · 명예의 벽 헌정 · 이름 공개 안내. 판정 기준(점수·시즌 수)은
   // 서버만 안다 — 웹은 서버가 준 결과만 그린다. LegendReport가 따로 불러온다(첫 화면 번들 밖).
   import type { RetiredNumberResult } from '@offside/contracts';
-  import { rnStyle } from '@offside/app-core/rnStyle';
   import { setLegendPublic } from './legend.js';
   import { pendingRetirementIds } from '@offside/app-core/outbox';
   import { checkRetiredNumber } from '@offside/app-core/api/client';
@@ -12,7 +11,7 @@
   import { rnClubStats, rnSlotOf } from '@offside/app-core/legendReport';
   import type { LegendView } from './state.svelte.js';
   import ClubMark from './ClubMark.svelte';
-  import RnJersey from './RnJersey.svelte';
+  import RnFrame from './RnFrame.svelte';
   import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
 
   const {
@@ -42,11 +41,10 @@
   const rn = $derived(rn0?.kind === 'taken' && v.own?.id && !(v.own.id in rnResults) ? { ...rn0, wallOfHonor: false } : rn0 ?? null);
   const rnSlot = $derived(rnSlotOf(rn, v.own));
   const rnClub = $derived(rnSlot?.kind === 'granted' ? rnClubStats(rnSlot, v.d) : null);
-  const rnColors = $derived(rnStyle(rnSlot?.clubId));
 </script>
 
 {#if rn?.kind === 'pending' || rnSlot || v.wallOfHonor}
-  <section class="film-rn" data-credit="retired-number" data-legend-rn={rn?.kind} style={rnColors} use:reveal>
+  <section class="film-rn" data-credit="retired-number" data-legend-rn={rn?.kind} use:reveal>
     {#if !rnSlot && v.wallOfHonor}
       <div class="rn-ceremony rn-honour"><div class="eyebrow film-kicker">Wall of Honour</div><p class="rn-stats" data-wall-of-honor>{L.wallOfHonor}</p></div>
     {:else if rn?.kind === 'pending'}
@@ -54,7 +52,11 @@
     {:else if rnSlot?.kind === 'granted'}
       <div class="rn-ceremony">
         <div class="eyebrow film-kicker">Retired Number</div>
-        <RnJersey name={v.name} number={rnSlot.number} />
+        <div class="rn-unveil">
+          <span class="rn-curtain rn-curtain-l" aria-hidden="true"></span>
+          <span class="rn-curtain rn-curtain-r" aria-hidden="true"></span>
+          <RnFrame class="rn-unveil-frame" clubId={rnSlot.clubId} number={rnSlot.number} />
+        </div>
         <p class="rn-line"><b>{L.lineNum({ number: rnSlot.number })}</b>{L.lineNumAfter}<br /><b>{v.name}</b>{L.lineNameAfter}</p>
         {#if rnClub}
           <p class="rn-stats">{L.stats(rnClub)}</p>

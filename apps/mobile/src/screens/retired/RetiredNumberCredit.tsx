@@ -1,5 +1,5 @@
 // 은퇴 리포트의 영구결번 장면(웹 RetiredNumberCredit.svelte, T-10-076) — 결번 세리머니 · 명예의 벽 헌정 · 이름 공개 안내.
-// 판정 기준(점수·시즌 수)은 서버만 안다 — 앱은 서버가 준 결과만 그린다. 유니폼은 기록실 묶음의 RnJersey.
+// 판정 기준(점수·시즌 수)은 서버만 안다 — 앱은 서버가 준 결과만 그린다. 결번 액자는 RnFrame(웹과 같은 도트 액자).
 import { useEffect, useRef } from 'react';
 import { useSnapshot } from 'valtio';
 import { rnResults } from '../../store';
@@ -10,7 +10,7 @@ import { checkRetiredNumber } from '@offside/app-core/api/client';
 import { rnClubStats, rnSlotOf } from '@offside/app-core/legendReport';
 import type { LegendView } from '@offside/app-core/state';
 import { isHofEligible } from '@offside/contracts/hof-rules';
-import { RnJersey } from '../../components/RnJersey';
+import { RnUnveil } from '../../components/RnFrame';
 import { recordRn, setLegendPublic } from '../../game/host';
 import { Btn } from '../../ui/Btn';
 import { ClubMark } from '../../ui/ClubBadge';
@@ -68,7 +68,7 @@ export function RetiredNumberCredit({
         ) : rnSlot?.kind === 'granted' ? (
           <View style={{ alignItems: 'center', gap: 10 }}>
             <Kicker>Retired Number</Kicker>
-            <RnJersey name={v.name} number={rnSlot.number} clubId={rnSlot.clubId} />
+            <RnUnveil clubId={rnSlot.clubId} number={rnSlot.number} />
             <FText size={1.1875} center>
               <FText tone="gold" bold size={1.1875}>
                 {L.lineNum({ number: rnSlot.number })}

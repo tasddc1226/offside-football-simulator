@@ -8,7 +8,7 @@
 
 <script lang="ts">
   import { tn } from '@offside/game/i18n/names';
-  // T-10-076 기록실 '영구결번' 탭. 유니폼은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
+  // T-10-076 기록실 '영구결번' 탭. 타일은 구단 홈 유니폼 도트 액자(RnFrame), 바탕은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
   // 결번은 시즌마다 따로 — 프리시즌 선수가 찬 번호도 시즌 1에서는 새로 받을 수 있다.
   // T-11-101 첫 화면은 요약(구단별 결번 수·최근 결번 8개)만 받는다. 결번 타일은 구단을 고르거나 최신순 전체를 열 때 받는다.
   import type { RetiredNumbersResponse, RetiredNumbersSummary } from '@offside/contracts';
@@ -23,7 +23,8 @@
   import { seasonNow } from './seasonNow.svelte.js';
   import { anonName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';
-  import { RN_SHIRT, RN_TRIM, rnStyle } from '@offside/app-core/rnStyle';
+  import { rnStyle } from '@offside/app-core/rnStyle';
+  import RnFrame from './RnFrame.svelte';
   import { rnByLeague, rnClubName, rnDay as day, rnLeagueName } from '@offside/app-core/retiredWall';
 
   import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
@@ -112,11 +113,7 @@
 
 {#snippet tile(it: Item, withClub: boolean)}
   <button class="rn-tile" style={rnStyle(it.clubId)} data-rn-tile={it.seq} onclick={() => void openPublicLegendById(it.careerId)}>
-    <svg class="rn-jersey rn-tile-shirt" viewBox="0 0 120 124" aria-hidden="true">
-      <path class="rn-shirt" d={RN_SHIRT} />
-      <path class="rn-trim" d={RN_TRIM} />
-      <text class="rn-jersey-num" x="60" y="92">{it.number}</text>
-    </svg>
+    <RnFrame class="rn-tile-frame" clubId={it.clubId} number={it.number} /><span class="sr-only">{it.number}</span>
     <b class="rn-tile-name">{it.name ?? anonName(it.pos, it.number)}</b>
     {#if withClub || !view.pos}
       <span class="muted fs-xs">
