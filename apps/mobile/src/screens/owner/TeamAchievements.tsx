@@ -12,7 +12,6 @@ import {
   achGradeName,
   achGradeView,
   achNear,
-  achOpenGroup,
   achPoints,
   achRankText,
   achSections,
@@ -259,10 +258,8 @@ export function TeamAchievements({
   const sections = ach ? achSections(ach.groups) : [];
   const sec = sections.find((x) => x.id === cat) ?? sections[0];
   const near = ach ? achNear(ach.groups) : [];
-  const openId = sec
-    ? (sec.groups.find((g) => g.items.some((i) => newIds.has(i.id)))?.id ??
-      achOpenGroup(sec.groups))
-    : null;
+  // 단계는 모두 접어 두고, 새로 달성한 업적이 든 단계만 펼친다(웹과 같다).
+  const openId = sec?.groups.find((g) => g.items.some((i) => newIds.has(i.id)))?.id ?? null;
   /** 기록실 구단주 랭킹 탭을 연다. */
   function openAchRanking() {
     appState.hof = { ...hofStart(), tab: 'ach' };

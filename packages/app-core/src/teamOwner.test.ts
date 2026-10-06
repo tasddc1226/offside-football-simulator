@@ -3,7 +3,6 @@ import type { ClubAchievementGroup } from './api/team.js';
 import {
   achGradeView,
   achNear,
-  achOpenGroup,
   achPoints,
   achRankText,
   achSections,
@@ -95,10 +94,6 @@ describe('시즌 업적 요약', () => {
       /총 프로 10시즌.*일반 구단.*상무는 구단 수에서 제외/,
     );
     expect(achState(it_({ id: 'long-service', done: true }))).toBe('달성 완료');
-  });
-  it('처음 펼칠 단계는 다 채우지 못한 첫 단계', () => {
-    expect(achOpenGroup(groups)).toBe('first');
-    expect(achOpenGroup([groups[2]!])).toBeNull();
   });
   it('제자리 업적은 못 이뤘을 때만 조건을 안내한다', () => {
     expect(achState(it_({ id: 'team-fit', done: false }))).toBe(

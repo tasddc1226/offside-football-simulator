@@ -5,7 +5,7 @@
   import { num } from '@offside/app-core/teamText';
   import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
   import {
-    achCatShort, achDone, achGradeName, achGradeView, achNear, achOpenGroup, achPoints, achRankText, achSections, achState, achTotal,
+    achCatShort, achDone, achGradeName, achGradeView, achNear, achPoints, achRankText, achSections, achState, achTotal,
   } from '@offside/app-core/teamOwner';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import AchGradeBadge from './AchGradeBadge.svelte';
@@ -52,7 +52,8 @@
       {@const sections = achSections(ach.groups)}
       {@const sec = sections.find((x) => x.id === cat) ?? sections[0]!}
       {@const near = achNear(ach.groups)}
-      {@const openId = sec.groups.find((g) => g.items.some((i) => newIds.has(i.id)))?.id ?? achOpenGroup(sec.groups)}
+      <!-- 단계는 모두 접어 두고, 새로 달성한 업적이 든 단계만 펼친다. -->
+      {@const openId = sec.groups.find((g) => g.items.some((i) => newIds.has(i.id)))?.id ?? null}
       <div class="tm-ach-sum" data-ach-summary>
         <div class="tm-ach-head">
           <AchGradeBadge grade={gv.grade} large />
