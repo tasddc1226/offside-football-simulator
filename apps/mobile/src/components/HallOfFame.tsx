@@ -31,6 +31,7 @@ import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
 import { Btn } from '../ui/Btn';
 import { Card } from '../ui/Card';
+import { MoreLink } from '../ui/MoreLink';
 import { Press } from '../ui/Press';
 import { scrollTo } from '../ui/scroll';
 import { Txt } from '../ui/Txt';
@@ -212,9 +213,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
           </View>
         ) : null}
         {!full && (all?.length || homeSeason !== null) ? (
-          <Btn sm testID="hof-all" onPress={openHof}>
-            {L.seeAll}
-          </Btn>
+          <MoreLink testID="hof-all" what={L.title} onPress={openHof} />
         ) : null}
       </View>
       {full && searching && !upcoming ? (
@@ -269,6 +268,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
               <RecordsChips
                 label={L.sortGroup}
                 testIDPrefix="hof-sort"
+                scroll
                 value={sort}
                 onPick={(key) => pickSort(key as HofSort)}
                 items={SORT_KEYS.map((key) => ({
@@ -353,6 +353,9 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
                   nation={h.nation}
                   club={h.lastClub}
                   clubId={h.lastClubId}
+                  showClub
+                  shortPos
+                  retireAge={h.retireAge}
                   rn={h.retiredNumber?.number}
                   tag={myIds.has(h.id) ? L.mine : null}
                   t={t}

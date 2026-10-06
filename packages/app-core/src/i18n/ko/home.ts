@@ -42,7 +42,9 @@ const ko = {
   // 소식 섹션
   noticeTitle: '공지사항',
   releaseTitle: '릴리즈 노트',
-  newsAll: '전체 보기',
+  // T-11-130 섹션 머리의 다른 화면으로 넘어가는 링크(소식·명예의 전당·구단 가치).
+  more: '더보기',
+  moreAria: (p: { what: string }) => `${p.what} 더보기`,
   newsFailed: '소식을 불러오지 못했어요.',
   newsEmpty: '아직 올라온 글이 없어요.',
   pinned: '고정',
@@ -56,11 +58,11 @@ const ko = {
   tickerAge: (p: { age: number }) => `(${p.age}세)`,
   // 개발자 응원
   supportTitle: '개발자 응원하기',
-  supportBody:
-    '재밌게 즐기셨다면 개발을 응원해 주세요. 후원은 선택이며, 게임 혜택이나 광고 제거는 제공하지 않아요.',
+  supportBody: '재밌게 즐기셨다면 개발자를 위해서 응원해 주세요.',
   supportCopy: '후원 계좌 복사',
   supportCopied: '계좌번호를 복사했어요. 고마워요',
-  supportCopyFailed: '복사하지 못했어요. 아래 계좌번호를 직접 적어 주세요',
+  // 계좌번호는 화면에 적지 않으니 복사가 안 되면 알림에 보인다.
+  supportCopyFailed: (p: { account: string }) => `복사하지 못했어요. ${p.account}`,
 };
 
 export type HomeMsgs = typeof ko;

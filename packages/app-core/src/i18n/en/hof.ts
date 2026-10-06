@@ -9,7 +9,6 @@ export const hof: Translation<HofMsgs> = {
   tabTeams: 'Team ranking',
   tabAch: 'Owner ranking',
   title: 'Hall of Fame',
-  seeAll: 'See all',
   sortScore: 'Legend Score',
   sortValue: 'Retirement value',
   sortGoals: 'Goals',
@@ -69,4 +68,7 @@ export const hof: Translation<HofMsgs> = {
   appsN: (p) => `${p.n} ${p.n === '1' ? 'app' : 'apps'}`,
   goalsN: (p) => `${p.n} ${p.n === '1' ? 'goal' : 'goals'}`,
   assistsN: (p) => `${p.n} ${p.n === '1' ? 'assist' : 'assists'}`,
+  retireAgeN: (p) => `Retired at ${p.n}`,
+  peakN: (p) => `Peak OVR ${p.n}`,
+  ballonN: (p) => `Ballon d’Or ×${p.n}`,
 };

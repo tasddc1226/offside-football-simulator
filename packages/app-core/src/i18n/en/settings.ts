@@ -56,4 +56,7 @@ export const settings: Translation<SettingsMsgs> = {
   reviewOpening: 'Opening the store…',
   reviewBtn: 'Leave a store review',
   reviewFail: "Couldn't open the store. Please try again in a moment.",
+  appVersion: (p: { version: string; build: string }) => `App version ${p.version} (${p.build})`,
+  updateId: (p: { id: string }) => `Update ${p.id}`,
+  updateEmbedded: 'No update (as installed)',
 };

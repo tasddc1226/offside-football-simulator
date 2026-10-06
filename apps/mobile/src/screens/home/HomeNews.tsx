@@ -8,7 +8,7 @@ import { openBoard } from '../../game/nav';
 import { hiddenPost } from '../../platform/storeText';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
-import { Btn, Card, Pill, Press, Row, Txt } from '../../ui';
+import { Card, MoreLink, Pill, Press, Row, Txt } from '../../ui';
 import { homeText as L } from '@offside/app-core/i18n/ko/home';
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import { useRefresh } from '../../ui/refresh';
@@ -54,9 +54,7 @@ export function HomeNews({
             </Txt>
           </View>
           {posts ? (
-            <Btn sm testID="news-all" onPress={() => openBoard(board)}>
-              {L.newsAll}
-            </Btn>
+            <MoreLink testID="news-all" what={title} onPress={() => openBoard(board)} />
           ) : null}
         </View>
         {failed ? (
