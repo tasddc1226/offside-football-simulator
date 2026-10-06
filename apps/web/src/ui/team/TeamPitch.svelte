@@ -4,7 +4,7 @@
   import PlayerCard from './PlayerCard.svelte';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
-  type Cell = { rating: number; name: string; youth: boolean; nation?: string | null | undefined; player?: TeamPlayer | undefined };
+  type Cell = { rating: number; name: string; youth: boolean; nation?: string | null | undefined; season?: number | undefined; player?: TeamPlayer | undefined };
   let { formation, cells, layout, selected = null, dragging = null, links = [], focus = null, element = $bindable(), onpick, onstart, onkey, onplace }:
     { formation: FormationId; cells: readonly Cell[]; layout?: TeamLayout | null | undefined; selected?: number | null; dragging?: number | null;
       /** T-11-105 시너지 듀오 — 첫 선수에서 나머지로 잇는다. on이면 굵게. */
@@ -44,11 +44,11 @@
           style:left="{point.x}%" style:top="{point.y}%" aria-pressed={selected === i}
           aria-label="{DETAIL_LABEL[point.slot]} · {c.name}{country ? ` · ${country.ko}` : ''} · {ratingLabel}" onclick={() => onpick?.(i)}
           onpointerdown={(e) => onstart?.(e, i)} onkeydown={(e) => onkey?.(e, i)}>
-          <PlayerCard player={c.player} nation={c.nation} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
+          <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
         </button>
       {:else}
         <div class="tm-slot" class:syn-on={focus?.includes(i)} data-slot={i} style:left="{point.x}%" style:top="{point.y}%" role="group" aria-label="{DETAIL_LABEL[point.slot]} · {c.name}{country ? ` · ${country.ko}` : ''} · {ratingLabel}">
-          <PlayerCard player={c.player} nation={c.nation} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
+          <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
         </div>
       {/if}
     {/if}

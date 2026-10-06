@@ -16,10 +16,10 @@
   import { dur } from '../motion.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
-  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, onassign, onauto, onsave }:
+  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, wildcards, onassign, onauto, onsave }:
     { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
       cells: { rating: number; name: string; youth: boolean; player?: TeamPlayer | undefined }[]; players: TeamPlayer[]; nameOf: (p: TeamPlayer) => string;
-      teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void } = $props();
+      teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean; wildcards: string | null; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void } = $props();
   let shareData = $state<TeamShareData | null>(null);
   let pitch = $state<HTMLElement>();
   let search = $state('');
@@ -145,7 +145,7 @@
 {#if editable || team}
   <section class="ground-panel" aria-label={L.groundLabel}>
     <header class="ground-head">
-      <div><h2>{L.groundTitle}</h2><p class="muted">{L.startersCount({ n: filled, max: LINEUP_SIZE })}{#if layout}{L.freeLayout}{/if}</p></div>
+      <div><h2>{L.groundTitle}</h2><p class="muted">{L.startersCount({ n: filled, max: LINEUP_SIZE })}{#if wildcards} · <span class="wildcards" data-team-wildcards>{wildcards}</span>{/if}{#if layout}{L.freeLayout}{/if}</p></div>
       <div class="ground-actions">
         {#if editable}<button class="text-button ground-auto" onclick={onauto} disabled={!players.length} data-act="team-auto">{L.autoPlace}</button>{/if}
         <button class="ground-share" aria-label={L.shareMakeAria} data-act="team-share-make" onclick={openShare}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V2m-4 4 4-4 4 4M5 9H3v8h14V9h-2" /></svg><span>{L.share}</span></button>
@@ -247,6 +247,7 @@
   .ground-share {display:flex;align-items:center;justify-content:center;gap:5px;min-width:64px;min-height:44px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
   .ground-share svg {width:16px;height:16px;stroke:currentColor;stroke-width:1.5;fill:none;}
   .ground-auto {font-size:12px;white-space:nowrap;}
+  .wildcards {white-space:nowrap;}
   .ground-presets {margin:4px 14px 12px;gap:8px;}
   .ground-presets .hof-sort {min-height:36px;min-width:64px;position:relative;}
   .ground-presets .hof-sort::after {content:'';position:absolute;inset:-4px 0;}

@@ -56,7 +56,7 @@
   import TeamFriends from './TeamFriends.svelte';
   import { friendsUi } from '../friendInvite.svelte.js';
   import { achNudge } from '../achNudge.js';
-  import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn } from '@offside/app-core/teamOwner';
+  import { WILDCARD_FULL_TEXT, assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { readTeamDraft, teamDraftBase, writeTeamDraft, type TeamDraft } from './teamDraft.js';
@@ -231,14 +231,16 @@
   onMount(() => void load());
 
   // ───────── 편성 ─────────
-  /** 라커룸에서 넣거나, 이미 선발인 선수의 두 자리를 바꾼다. */
+  /** 라커룸에서 넣거나, 이미 선발인 선수의 두 자리를 바꾼다. T-11-114 지난 시즌 선수는 와일드카드 상한까지만. */
   function assign(index: number, id: string | null) {
-    slots = assignSlot(slots, index, id);
+    const next = assignSlot(slots, index, id);
+    if (tooManyWildcards(next, byId, season)) return toast(WILDCARD_FULL_TEXT);
+    slots = next;
   }
 
   /** 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만). */
   function autoFill() {
-    slots = autoFillSlots(slotCodes, players);
+    slots = autoFillSlots(slotCodes, players, season);
   }
 
   async function save(): Promise<boolean> {
@@ -421,6 +423,7 @@
         teamName={name.trim()}
         managerName={manager.trim()}
         {editable}
+        wildcards={wildcardLabel(slots, byId, season)}
         bind:formation
         bind:layout
         {slots}

@@ -20,6 +20,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  lte,
   ne,
   notInArray,
   or,
@@ -126,6 +127,7 @@ type LineupRow = {
   foot?: string | null;
   /** T-11-105 이 팀 구단주가 직접 키운 선수인지(SQL 비교라 0/1일 수 있다). */
   raised?: boolean | number | null;
+  serviceSeason?: number | null;
 };
 export const toLineupCareer = (
   r: LineupRow,
@@ -143,6 +145,7 @@ export const toLineupCareer = (
   type: r.type ?? null,
   foot: r.foot ?? null,
   raised: !!r.raised,
+  season: r.serviceSeason ?? 0,
 });
 
 /** 내 팀들(시즌 순). 시즌마다 한 팀이라 몇 개 되지 않는다. */
@@ -162,7 +165,8 @@ export const myTeamIn = (db: Db, profileId: string, season: number) =>
     .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)));
 
 /**
- * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌에 처음 올라온 선수, 최고 OVR 순). T-11-080부터 직접 키운 선수 + 영입한
+ * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌까지 올라온 선수, 최고 OVR 순). T-11-114 지난 시즌 선수는 와일드카드로
+ * 선발에 TEAM_WILDCARD_MAX명까지만 넣는다(PUT이 센다). T-11-080부터 직접 키운 선수 + 영입한
  * 선수 — 소유는 cards.owner_id다. 공개 이름·숨김·옛 추정 능력치·키운 사람은 careers에서 붙인다(기록이 지워졌으면 익명).
  */
 export function listEligibleCareers(db: Db, profileId: string, season: number, limit = 300) {
@@ -179,6 +183,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       publicName: careers.publicName,
       type: careers.type,
       foot: careers.foot,
+      serviceSeason: cards.serviceSeason,
       legendScore: cards.legendScore,
       cardValue: cards.cardValue,
       raised: sql<number>`${careers.profileId} = ${profileId}`,
@@ -194,7 +199,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
     .where(
       and(
         eq(cards.ownerId, profileId),
-        eq(cards.serviceSeason, season),
+        lte(cards.serviceSeason, season),
         sql`coalesce(${careers.hidden}, 0) = 0`,
       ),
     )
@@ -272,7 +277,7 @@ export async function careersByIds(db: Db, ids: string[]) {
 export type CareerLite = Awaited<ReturnType<typeof careersByIds>>[number];
 
 /**
- * 그 구단주의 그 시즌 팀에 넣을 수 있는 카드만 골라 선발 맵으로(그 시즌 선수 · 숨김 아님). T-11-080 소유 규칙: 지금
+ * 그 구단주의 그 시즌 팀에 넣을 수 있는 카드만 골라 선발 맵으로(그 시즌까지의 선수 · 숨김 아님, T-11-114). T-11-080 소유 규칙: 지금
  * 시즌 팀(open)은 지금 주인인지 확인하고, 닫힌 시즌 팀은 그 뒤 방출·이적과 상관없이 id로 읽기만 한다.
  */
 export function eligibleMap(
@@ -284,7 +289,7 @@ export function eligibleMap(
   const map = new Map<string, ReturnType<typeof toLineupCareer>>();
   for (const r of rows) {
     if (open && r.ownerId !== ownerId) continue;
-    if (r.serviceSeason !== season || r.hidden) continue;
+    if (r.serviceSeason > season || r.hidden) continue;
     map.set(r.id, toLineupCareer({ ...r, raised: r.raiserId === ownerId }));
   }
   return map;
