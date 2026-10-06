@@ -27,6 +27,7 @@ test('25세부터 은퇴할 수 있다 — 짧은 커리어는 한 번 더 묻�
 
   // 은퇴 크레딧: 선수 카드가 먼저 보이고, 아래 장면은 스크롤해 화면에 들어올 때 올라온다(T-10-062).
   await expect(page.locator('[data-credit="player"]')).toBeVisible();
+  await expect(page.locator('[data-credit="player"] svg.avatar')).toBeVisible(); // T-11-122
   await expect(page.locator('[data-credit="finale"]')).toBeHidden();
   await expect(page.locator('[data-credit="career"]')).toBeVisible();
   await expect(page.locator('[data-act="new"]')).toHaveText(/새 커리어 킥오프/);

@@ -108,6 +108,7 @@ test('전체 명예의 전당에서 다른 유저의 은퇴 선수 상세를 연
   await expect(row).toContainText('익명의');
   await row.click();
   await expect(page.locator('.film-open h1')).toContainText('익명의');
+  await expect(page.locator('.film-open svg.avatar')).toBeVisible(); // T-11-122 은퇴식 도트 선수
   await expect(page.locator('[data-act="share-career"]')).toHaveCount(0); // 남의 선수엔 공유 바가 없다(T-10-069)
   // 다시 볼 때도 스크롤해 내려가야 장면이 올라온다 (T-10-062).
   await expect(page.locator('[data-credit="finale"]')).toBeHidden();
@@ -164,6 +165,7 @@ test('내 선수 탭: 상세 없는 옛 기록은 요약만 보여 준다', asyn
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('.film-open h1')).toHaveText('옛선수');
+  await expect(page.locator('.film-open svg.avatar')).toHaveCount(0); // 커리어 ID 없는 옛 기록엔 도트 선수가 없다
   await expect(page.getByText('요약만 보여 줘요')).toBeVisible();
 });
 
@@ -316,6 +318,7 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
     'true',
   );
   await expect(full.locator('[data-hof-podium-rank]')).toHaveCount(3);
+  await expect(full.locator('[data-hof-podium-rank] svg.avatar')).toHaveCount(3); // T-11-124 전성기 도트 선수
   await expect(full.locator('.hof-row')).toHaveCount(7);
   await expect(full.locator('[data-hof-id]')).toHaveCount(10);
   await expect(full.locator('[data-hof-nation]')).toHaveCount(10);
