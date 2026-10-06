@@ -22,13 +22,14 @@ import {
 import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
+import { FOUNDER_LABEL } from '@offside/app-core/friendText';
 import { loadHOF } from '@offside/game/season';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
 import { go } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
-import { Btn, Card, Screen, Topbar, Txt } from '../../ui';
+import { Btn, Card, Pill, Row, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
@@ -198,9 +199,17 @@ export default function Owner() {
               </Txt>
             </View>
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-              <Txt style={{ fontSize: rem(1.125), fontWeight: '700' }}>
-                {guest ? L.guestName : (nickname ?? L.title)}
-              </Txt>
+              <Row gap={6}>
+                <Txt style={{ fontSize: rem(1.125), fontWeight: '700' }}>
+                  {guest ? L.guestName : (nickname ?? L.title)}
+                </Txt>
+                {card?.founder ? (
+                  // T-11-113 프리시즌에 은퇴 선수를 남긴 구단주
+                  <View testID="owner-founder">
+                    <Pill tone="good">{FOUNDER_LABEL}</Pill>
+                  </View>
+                ) : null}
+              </Row>
               <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
                 {sub}
               </Txt>

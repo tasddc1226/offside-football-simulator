@@ -36,7 +36,9 @@ export const acceptFriend = (code: string) =>
 export const removeFriend = (code: string) =>
   apiFetch<FriendRemoveResponse>(`/v1/friends/${encodeURIComponent(code)}`, { method: 'DELETE' });
 
-export const playFriendly = (code: string) =>
-  apiFetch<PlayFriendlyResponse>(`/v1/friends/${encodeURIComponent(code)}/matches`, {
-    method: 'POST',
-  });
+/** 친선전 한 판. preseason이면 두 사람의 프리시즌 팀끼리(T-11-113). */
+export const playFriendly = (code: string, preseason = false) =>
+  apiFetch<PlayFriendlyResponse>(
+    `/v1/friends/${encodeURIComponent(code)}/matches${preseason ? '?season=0' : ''}`,
+    { method: 'POST' },
+  );

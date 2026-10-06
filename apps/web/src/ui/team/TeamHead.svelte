@@ -4,6 +4,7 @@
   import { MANAGER_NAME_MAX, MANAGER_NAME_MIN, TEAM_NAME_MAX, TEAM_NAME_MIN, YOUTH_OVR } from '@offside/contracts/owner-team';
   import type { OwnerTeam, OwnerTeamResponse } from '@offside/app-core/api/team';
   import { num, recordText } from '@offside/app-core/teamText';
+  import { isPreseasonLegacy, PRESEASON_TEAM_NOTE } from '@offside/app-core/teamOwner';
   import { doneOnEnter } from '../inputDone.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import TeamLogo from './TeamLogo.svelte';
@@ -45,6 +46,8 @@
     renaming: boolean;
     onseason: (id: number) => void;
   } = $props();
+  // T-11-113 개막 뒤 프리시즌 팀 — 친선전 전용으로 고칠 수 있다.
+  const legacy = $derived(isPreseasonLegacy(season, current));
   let menuOpen = $state(false);
   let menu = $state<HTMLDetailsElement>();
   let teamNameInput = $state<HTMLInputElement>();
@@ -99,11 +102,15 @@
     <dl class="tm-stats" data-team-record>
       <div class="tm-record"><dt class="sr-only">{L.statRecord}</dt><dd>{recordText(team.record)}</dd></div>
       <div><dt>{L.statRating}</dt><dd>{num(team.rating)}</dd></div>
-      <div aria-label={editable ? L.leftAria({ left: matchesLeft, per: perDay }) : undefined}><dt>{editable ? L.statLeft : L.statSeason}</dt><dd>{editable ? L.statTimes({ n: matchesLeft }) : L.statPast}</dd></div>
+      {#if legacy}<div><dt>친선전</dt><dd>전용</dd></div>
+      {:else}<div aria-label={editable ? L.leftAria({ left: matchesLeft, per: perDay }) : undefined}><dt>{editable ? L.statLeft : L.statSeason}</dt><dd>{editable ? L.statTimes({ n: matchesLeft }) : L.statPast}</dd></div>{/if}
     </dl>
-  {:else if editable}
+  {/if}
+  {#if legacy}
+    <p class="muted fs-sm" data-team-legacy>{PRESEASON_TEAM_NOTE}</p>
+  {:else if !team && editable}
     <p class="muted">{L.introNew({ season: seasonName, ovr: YOUTH_OVR })}</p>
-  {:else}
+  {:else if !team}
     <p class="muted">{L.introNone({ season: seasonName })}</p>
   {/if}
   {#if !editable && team}

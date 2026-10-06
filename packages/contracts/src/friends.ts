@@ -25,6 +25,10 @@ export const FriendPersonSchema = z.strictObject({
   team: FriendTeamSchema.nullable(),
   /** 친선전 상대 전적(내 쪽 기준). 신청 중이면 모두 0. */
   h2h: TeamRecordSchema,
+  /** T-11-113 프리시즌 팀(개막 뒤 친선전 전용, 없으면 null). 개막 전이거나 배포 전 응답엔 없다. */
+  preseasonTeam: FriendTeamSchema.nullable().optional(),
+  /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
+  founder: z.boolean().optional(),
 });
 export type FriendPerson = z.infer<typeof FriendPersonSchema>;
 
@@ -42,6 +46,8 @@ export const FriendsResponseSchema = z.strictObject({
   max: z.number().int().min(1),
   /** 지금 시즌 내 팀이 경기할 수 있는가(팀이 있고 선수가 한 명 이상). 시즌 사이 휴식기면 false. */
   canPlay: z.boolean(),
+  /** T-11-113 개막 뒤 내 프리시즌 팀으로 친선전을 할 수 있는가. 개막 전이거나 배포 전 응답엔 없다. */
+  canPlayPreseason: z.boolean().optional(),
 });
 export type FriendsResponse = z.infer<typeof FriendsResponseSchema>;
 

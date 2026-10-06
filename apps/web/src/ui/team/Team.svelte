@@ -56,7 +56,7 @@
   import TeamFriends from './TeamFriends.svelte';
   import { friendsUi } from '../friendInvite.svelte.js';
   import { achNudge } from '../achNudge.js';
-  import { assignSlot, autoFillSlots, draftLines, matchHintOf, slotsSynergy } from '@offside/app-core/teamOwner';
+  import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { readTeamDraft, teamDraftBase, writeTeamDraft, type TeamDraft } from './teamDraft.js';
@@ -72,7 +72,8 @@
   let current = $state<number | null>(null);
   let seasons = $state<OwnerTeamResponse['seasons']>([]);
   let lastManager = $state<string | null>(null);
-  const editable = $derived(season === current);
+  // T-11-113 개막 뒤에도 프리시즌 팀은 친선전용으로 고칠 수 있다.
+  const editable = $derived(teamEditableIn(season, current));
   const seasonName = $derived(seasons.find((o) => o.id === season)?.name ?? '');
 
   // 편집 초안 — 저장하기 전까지 이 기기에만 있다.
@@ -248,6 +249,7 @@
     saving = true;
     const r = await saveOwnerTeam({
       ...submitted, name: submitted.name.trim(), manager: submitted.manager.trim(),
+      ...(isPreseasonLegacy(season, current) ? { season: 0 } : {}),
     });
     saving = false;
     if (!r.ok) { toast(r.error.message); return false; }
@@ -443,7 +445,7 @@
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}</button>
       </div>
       {#if friendsUi.mode === 'friends'}
-        <TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} />
+        <TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />
       {:else}
       <TeamOpponents
         ovr={team?.ovr ?? ovr}
@@ -457,7 +459,7 @@
         onchallenge={(o) => void challenge(o)}
         onmore={() => open('opponents')}
         ontoTeam={editable ? () => switchView('team') : undefined}
-        onsave={editable && dirty && filled > 0 && matchesLeft > 0 ? () => void saveAndFindOpponents() : undefined}
+        onsave={season === current && dirty && filled > 0 && matchesLeft > 0 ? () => void saveAndFindOpponents() : undefined}
         {saving}
         saveDisabled={!nameOk || !!pendingDraft}
       />
