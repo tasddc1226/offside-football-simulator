@@ -29,6 +29,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   boardBlocks,
   cards,
+  careerSeasons,
   careers,
   friendMatches,
   notifications,
@@ -546,6 +547,63 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const past = AchRes.parse((await read('?season=0')).body).data;
     expect(past).toMatchObject({ season: 0, players: 1 });
     expect(past.groups.some((g) => g.id === 'team')).toBe(false); // 프리시즌에는 팀을 만들지 않았다
+  });
+
+  it('장기근속·원클럽은 직접 육성·은퇴·서비스 시즌·숨김 정책을 유지하며 저장된 id를 읽는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const other = await issueGoogleCookie(ctx);
+    const ids = [
+      await addCareer(me.profileId, { status: 'active' }),
+      await addCareer(me.profileId, { serviceSeason: 1 }),
+      await addCareer(me.profileId),
+      await addCareer(other.profileId),
+    ];
+    await ctx.db.update(careers).set({ hidden: 1 }).where(eq(careers.id, ids[2]!));
+    // 이름 비공개는 hidden과 다르다. 구매 카드의 소유자는 육성자가 되지 않는다.
+    await ctx.db.update(cards).set({ ownerId: me.profileId }).where(eq(cards.careerId, ids[3]!));
+    const addSeasons = async (id: string, n: number, military = false) => {
+      for (let i = 0; i < n; i++)
+        await ctx.db.insert(careerSeasons).values({
+          careerId: id,
+          year: 2026 + i,
+          age: 20 + i,
+          club: i < 5 ? '옛 이름' : '새 이름',
+          clubId: military && i >= 8 ? 'sangmu' : 'A',
+          league: i < 5 ? 'K리그2' : 'K리그1',
+          apps: 0,
+          goals: 0,
+          assists: 0,
+          rating: 0,
+          rank: '-',
+          ovr: 70,
+          honorsJson: '[]',
+          mil: 0,
+          eventsJson: '[]',
+          createdAt: '2026-09-28T00:00:00.000Z',
+        });
+    };
+    for (const id of ids) await addSeasons(id, 10);
+    const read = async () =>
+      AchRes.parse(
+        await (await call('GET', '/v1/owner-team/achievements', { cookie: me.cookie })).json(),
+      ).data;
+    const feats = (d: Awaited<ReturnType<typeof read>>) =>
+      d.groups.flatMap((g) => g.items).filter((i) => ['long-service', 'one-club'].includes(i.id));
+    expect(feats(await read()).map((i) => i.done)).toEqual([false, false]);
+    const military = await addCareer(me.profileId, { publicName: null });
+    await addSeasons(military, 10, true);
+    expect(feats(await read()).map((i) => i.done)).toEqual([true, false]);
+    const ordinary = await addCareer(me.profileId, { publicName: null });
+    await addSeasons(ordinary, 10);
+    const after = await read();
+    expect(feats(after).map((i) => i.done)).toEqual([true, true]);
+    expect(feats(after).map((i) => i.points)).toEqual([50, 50]);
+    // 판매해도 원 육성자의 선수 업적은 기존처럼 남는다.
+    await ctx.db
+      .update(cards)
+      .set({ ownerId: other.profileId })
+      .where(eq(cards.careerId, ordinary));
+    expect(feats(await read()).map((i) => i.done)).toEqual([true, true]);
   });
 
   it('T-11-103 영입한 선수도 팀 업적에 들고, 방출하려고 선발을 비워도 그 시즌 팀 업적은 남는다', async () => {

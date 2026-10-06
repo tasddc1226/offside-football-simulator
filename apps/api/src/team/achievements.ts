@@ -10,6 +10,7 @@ import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import { LINEUP_SIZE, type AchCategory } from '@offside/contracts/owner-team';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
 import { DETAIL_POSITIONS, type DetailPos, type PosGroup } from '@offside/contracts/positions';
+import { tenureLabels } from '../i18n/ko/achievements.js';
 import { NATIONAL_WINS } from '@offside/contracts/nations';
 
 export type AchievementCareer = {
@@ -35,8 +36,10 @@ export type AchievementSeason = {
   league: string;
   /** 우승·수상 이름. */
   honors: readonly string[];
-  /** 소속(클럽 id, 옛 기록은 이름). */
+  /** 저장된 소속 이름. */
   club: string;
+  /** 안정적인 구단 식별값. 옛 기록에는 없을 수 있다. */
+  clubId?: string | null;
   goals: number;
   /** 무실점 경기(옛 기록은 null). */
   cs: number | null;
@@ -149,10 +152,27 @@ const treble = (s: AchievementSeason) =>
   CONTINENTAL.some((h) => s.honors.includes(h)) &&
   s.honors.filter((h) => h.endsWith(' 우승') && !NATIONAL.has(h) && !NOT_TREBLE.test(h)).length >=
     3;
-/** 원클럽맨 — 프로로 10시즌 넘게 뛰며 한 구단에만 있었다. */
+/** 이름만 있는 옛 기록과 id가 있는 기록은 추정해서 합치지 않는다. */
+const clubKey = (s: AchievementSeason) => (s.clubId ? `id:${s.clubId}` : `name:${s.club}`);
+const proSeasons = (c: AchievementCareer) => c.seasons.filter((s) => !AMATEUR.has(s.league));
+/** 게임 엔진의 상무 구단 id. 이름이 같다는 이유로 군 복무로 간주하지 않는다. */
+const ordinary = (s: AchievementSeason) => s.clubId !== 'sangmu';
+/** 총 프로 10시즌 이상. 상무는 구단 다양성 판단에서만 제외한다. */
 const oneClub = (c: AchievementCareer) => {
-  const pro = c.seasons.filter((s) => !AMATEUR.has(s.league));
-  return pro.length >= 10 && new Set(pro.map((s) => s.club)).size === 1;
+  const pro = proSeasons(c);
+  return pro.length >= 10 && new Set(pro.filter(ordinary).map(clubKey)).size === 1;
+};
+/** 한 선수의 같은 일반 구단 시즌을 복귀 전후 합산한다. 상무 시즌은 제외한다. */
+const longService = (c: AchievementCareer) => {
+  const counts = new Map<string, number>();
+  // i18n-ignore 저장된 리그 식별값. 현역 복무는 일반 구단 재적이 아니다.
+  for (const s of proSeasons(c).filter((s) => ordinary(s) && s.league !== '병역')) {
+    const key = clubKey(s);
+    const n = (counts.get(key) ?? 0) + 1;
+    if (n >= 10) return true;
+    counts.set(key, n);
+  }
+  return false;
 };
 const POS: PosGroup[] = ['FW', 'MF', 'DF', 'GK'];
 
@@ -376,7 +396,8 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
     ),
     group('player', 'collection', '2단계', '기록 조각 모으기', collection),
     group('player', 'legend', '3단계', '전설의 한 명', [
-      feat('one-club', '프로 10시즌 넘게 한 구단에서 뛴 원클럽맨', anyone(oneClub)),
+      feat('one-club', tenureLabels['one-club'], anyone(oneClub)),
+      feat('long-service', tenureLabels['long-service'], anyone(longService)),
       feat(
         'caps-150',
         'A매치 150경기 선수',
