@@ -38,6 +38,7 @@ import { pickedTitles, prefs, rnResults } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
+import { PixelAvatar } from '../../ui/PixelAvatar';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
 import { ClubMark } from '../../ui/ClubBadge';
@@ -46,6 +47,7 @@ import { Pop, POP, Reveal, useProgress, useRevealed } from './credit';
 import { FilmBackdrop, FilmPill, FText, H2, Kicker, useFilm } from './film';
 import { LateCredits } from './LateCredits';
 import { tn } from '@offside/game/i18n/names';
+import { avatarWidth, retiredAvatarSpec } from '@offside/game/avatar';
 
 // end: 리포트 맨 아래(다음 행동 버튼 등).
 export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
@@ -107,6 +109,10 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
               paddingBottom: playing ? 72 : 0,
             }}
           >
+            {/* T-11-122 은퇴식 정장 차림의 도트 선수. 커리어 ID가 없는 옛 기록은 그리지 않는다. */}
+            {v.avatarId ? (
+              <PixelAvatar spec={retiredAvatarSpec(v.avatarId, v.age)} width={avatarWidth(width)} />
+            ) : null}
             <Kicker>{`Full Time${v.number != null ? ` · No.${v.number}` : ''}`}</Kicker>
             <FText
               accessibilityRole="header"

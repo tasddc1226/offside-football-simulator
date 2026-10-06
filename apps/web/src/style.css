@@ -1397,11 +1397,14 @@ textarea {
 /* T-11-120 도트 선수(24×32칸). 정수배(3배·2배)로만 키워 칸이 고르게 보이게 한다 — game/avatar.ts avatarWidth와 같은 값. */
 .player .avatar {
   align-self: end;
+}
+.avatar {
   width: 72px;
   height: 96px;
+  flex: none;
 }
 @media (max-width: 359px) {
-  .player .avatar {
+  .avatar {
     width: 48px;
     height: 64px;
   }

@@ -2,7 +2,6 @@
 // 탭바(시즌·선수·홈·커리어·트로피 — 홈은 가운데)가 아래 안전 영역을 채우고, 진행 바는 그 바로 위에 붙는다.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
-import Svg, { Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { posLabel } from '@offside/game/data';
@@ -10,14 +9,7 @@ import { ovr } from '@offside/game/attributes';
 import { leagueOf, roleOf, fmtMoney, focusOf, labelOf } from '@offside/game/engine';
 import { tn } from '@offside/game/i18n/names';
 import { mainTitle } from '@offside/game/titles';
-import {
-  AVATAR_H,
-  AVATAR_W,
-  avatarPixels,
-  avatarRects,
-  avatarSpec,
-  avatarWidth,
-} from '@offside/game/avatar';
+import { avatarSpec, avatarWidth } from '@offside/game/avatar';
 import { marketValue } from '@offside/game/season';
 import type { GameState } from '@offside/game/types';
 import type { Tab } from '@offside/app-core/state';
@@ -36,6 +28,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { ActionBar } from '../../ui/ActionBar';
 import { Btn } from '../../ui/Btn';
 import { PitchCard } from '../../ui/Card';
+import { PixelAvatar } from '../../ui/PixelAvatar';
 import { ClubBadge } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
 import { BarBelow, Screen } from '../../ui/Screen';
@@ -137,7 +130,7 @@ export default function Game() {
     .join(' · ');
   const title = mainTitle(s);
   // T-11-120 도트 선수(웹 Game.svelte와 같다). 크기는 avatarWidth(좁으면 2배, 아니면 3배).
-  const avatar = avatarRects(avatarPixels(avatarSpec(s)));
+  const avatar = avatarSpec(s);
   const avatarW = avatarWidth(width);
   const focusName = T.focus({
     names: focusOf(s)
@@ -230,25 +223,7 @@ export default function Game() {
           <PitchCard gap={12} style={{ paddingTop: 18, paddingHorizontal: 18, paddingBottom: 16 }}>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ alignSelf: 'flex-end' }}>
-                <Svg
-                  width={avatarW}
-                  height={(avatarW / AVATAR_W) * AVATAR_H}
-                  viewBox={`0 0 ${AVATAR_W} ${AVATAR_H}`}
-                  accessibilityElementsHidden
-                  importantForAccessibility="no-hide-descendants"
-                >
-                  {avatar.map((r, i) => (
-                    <Rect
-                      key={i}
-                      x={r.x}
-                      y={r.y}
-                      width={r.w}
-                      height={1}
-                      fill={r.fill}
-                      {...(r.opacity ? { fillOpacity: r.opacity } : {})}
-                    />
-                  ))}
-                </Svg>
+                <PixelAvatar spec={avatar} width={avatarW} />
               </View>
               <View style={{ flex: 1 }}>
                 <Txt
