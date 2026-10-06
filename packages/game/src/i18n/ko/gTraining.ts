@@ -32,6 +32,8 @@ const ko = {
   helpOffFocus: (p: { pct: number }) => `주력 능력치가 아니라 성장이 ${p.pct}% 느려요.`,
   helpLopsided: (p: { pct: number }) =>
     `다른 핵심 능력치보다 너무 앞서 있어 성장이 ${p.pct}% 줄었어요. 다른 능력치를 키우면 제한이 풀려요.`,
+  helpOvrSubs: (p: { list: string }) => `이 항목 중 ${p.list} 능력치가 지금 포지션 OVR에 반영돼요.`,
+  helpOvrSeparate: 'OVR 반영 여부와 경기에서의 활용은 달라요.',
   helpWeightLow: '지금 포지션의 OVR에는 거의 반영되지 않아요.',
   helpWeight: (p: { attr: string; pct: number }) =>
     `지금 포지션 OVR에서 ${p.attr} 비중은 ${p.pct}%예요.`,
