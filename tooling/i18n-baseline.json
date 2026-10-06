@@ -43,7 +43,7 @@
   "apps/api/src/routes/reports.ts": 2,
   "apps/api/src/routes/shared.ts": 4,
   "apps/api/src/routes/teams.ts": 2,
-  "apps/api/src/team/achievements.ts": 142,
+  "apps/api/src/team/achievements.ts": 141,
   "apps/api/src/team/anon.ts": 4,
   "apps/api/src/team/badges.ts": 29,
   "apps/api/src/team/sim.ts": 1,

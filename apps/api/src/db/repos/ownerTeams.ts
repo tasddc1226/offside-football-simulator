@@ -710,7 +710,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     list.push({
       league: r.league,
       honors: honorsOf(r.honorsJson),
-      club: r.clubId ?? r.club,
+      club: r.club,
+      clubId: r.clubId,
       goals: r.goals,
       cs: r.cs,
     });

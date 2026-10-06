@@ -275,7 +275,13 @@ export function playHintOf(
 export const achDone = (items: ClubAchievement[]) => items.filter((i) => i.done).length;
 /** 이름만으론 조건이 안 읽히는 업적의 안내. 미달성일 때만 붙는다. 조건은 api team/achievements.ts와 같이 고친다. */
 const achHint = (id: string): string | undefined =>
-  id === 'team-fit' ? L.achTeamFitHint : undefined;
+  id === 'team-fit'
+    ? L.achTeamFitHint
+    : id === 'one-club'
+      ? L.achOneClubHint
+      : id === 'long-service'
+        ? L.achLongServiceHint
+        : undefined;
 
 /** 업적 한 줄의 오른쪽 표시. */
 export function achState(i: ClubAchievement): string {

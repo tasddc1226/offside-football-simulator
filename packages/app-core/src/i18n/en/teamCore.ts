@@ -19,6 +19,10 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   hintNoMatches: "You've played all of today's matches. They reopen at midnight Korea time.",
   hintRest: 'The off-season break. You can play once the next season opens.',
   hintPast: 'Past-season teams are view only. Pick the current season to play.',
+  achOneClubHint:
+    'Checked after a player you raised retires: at least 10 total pro seasons and exactly one regular club. Sangmu is excluded from the club count.',
+  achLongServiceHint:
+    'Checked after a player you raised retires: at least 10 cumulative seasons at one regular club. Return spells count together; Sangmu seasons do not.',
   achTeamFitHint: 'All 11 players need a fit of 1.00, with no youth players',
   achLevel: (p) => `Level ${p.level} · ${p.cur}`,
   achNext: (p) => ` · NEXT ${p.next}`,
