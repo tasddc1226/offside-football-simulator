@@ -44,6 +44,8 @@ import { Txt } from '../../ui/Txt';
 import { POS_GROUPS, POS_LABEL } from '@offside/contracts/positions';
 import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { RecordsSelect, RecordsChips, RECORDS_TOUCH } from './RecordsControls';
+import { useSeasonNow } from '../../ui/useSeasonNow';
+import { useRefresh } from '../../ui/refresh';
 
 type Item = RetiredNumbersResponse['items'][number];
 type ClubSum = RetiredNumbersSummary['clubs'][number];
@@ -327,11 +329,12 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
   const { clubOrder } = useSnapshot(view);
   const [summary, setSummary] = useState<RetiredNumbersSummary | null>(null);
   const [failed, setFailed] = useState(false);
+  const { tick, track, pulled } = useRefresh();
   useEffect(() => {
-    setSummary(null);
+    if (!pulled) setSummary(null);
     setFailed(false);
     let live = true; // 더 늦게 고른 시즌의 응답만 쓴다.
-    void getRetiredNumbersSummary(season).then((r) => {
+    void track(getRetiredNumbersSummary(season)).then((r) => {
       if (!live) return;
       if (r.ok) setSummary(r.data);
       else setFailed(true);
@@ -339,7 +342,7 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
     return () => {
       live = false;
     };
-  }, [season]);
+  }, [season, tick, track]);
   const { ready, onLayout, opts } = useTileOpts(c, false, myIds);
   const groups = useMemo(() => (summary ? rnByLeague(summary.clubs) : []), [summary]);
 
@@ -420,11 +423,12 @@ function ClubScreen({
   const { pos } = useSnapshot(view);
   const [items, setItems] = useState<Item[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const { tick, track, pulled } = useRefresh();
   useEffect(() => {
-    setItems(null);
+    if (!pulled) setItems(null);
     setFailed(false);
     let live = true;
-    void getRetiredNumbersOfClub(season, clubId).then((r) => {
+    void track(getRetiredNumbersOfClub(season, clubId)).then((r) => {
       if (!live) return;
       if (r.ok) setItems(r.data.items);
       else setFailed(true);
@@ -432,7 +436,7 @@ function ClubScreen({
     return () => {
       live = false;
     };
-  }, [season, clubId]);
+  }, [season, clubId, tick, track]);
 
   const filtered = useMemo(
     () => (items ?? []).filter((it) => !pos || pos === it.pos),
@@ -508,13 +512,16 @@ function RecentScreen({ season, myIds }: { season: number; myIds: ReadonlySet<st
   const [failed, setFailed] = useState(false);
   const [more, setMore] = useState<'idle' | 'loading' | 'failed'>('idle');
   const gen = useRef(0); // 시즌이 바뀌거나 화면을 떠난 뒤 늦게 온 응답을 버린다.
+  const { tick, track, pulled } = useRefresh();
   useEffect(() => {
     const mine = ++gen.current;
-    setItems(null);
-    setNext(null);
+    if (!pulled) {
+      setItems(null);
+      setNext(null);
+    }
     setFailed(false);
     setMore('idle');
-    void getRetiredNumbersPage(season, 0).then((r) => {
+    void track(getRetiredNumbersPage(season, 0)).then((r) => {
       if (mine !== gen.current) return;
       if (r.ok) {
         setItems(r.data.items);
@@ -524,7 +531,7 @@ function RecentScreen({ season, myIds }: { season: number; myIds: ReadonlySet<st
     return () => {
       gen.current++;
     };
-  }, [season]);
+  }, [season, tick, track]);
   const loadMore = () => {
     if (next === null || more === 'loading') return;
     const mine = gen.current;
@@ -576,7 +583,7 @@ function RecentScreen({ season, myIds }: { season: number; myIds: ReadonlySet<st
 
 export default function RetiredWall() {
   const { season: picked, screen, clubId } = useSnapshot(view);
-  const now = useMemo(() => new Date().toISOString(), []);
+  const now = useSeasonNow();
   const seasons = [PRESEASON, ...SERVICE_SEASONS];
   const season = picked ?? displaySeasonAt(now);
   const selectedSeason = seasonById(season);

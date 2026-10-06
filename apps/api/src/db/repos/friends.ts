@@ -132,11 +132,13 @@ export const acceptStatements = (db: Db, me: string, them: string, now: string) 
     db
       .update(friends)
       .set({ state: 'accepted', updatedAt: now })
-      .where(and(eq(friends.profileId, me), eq(friends.friendId, them))),
+      .where(
+        and(eq(friends.profileId, me), eq(friends.friendId, them), eq(friends.state, 'received')),
+      ),
     db
       .update(friends)
       .set({ state: 'accepted', updatedAt: now })
-      .where(and(eq(friends.profileId, them), eq(friends.friendId, me))),
+      .where(and(eq(friends.profileId, them), eq(friends.friendId, me), eq(friends.state, 'sent'))),
   ] as const;
 
 /** 거절·취소·친구 끊기: 두 줄을 지운다. 지운 내 줄 수를 returning으로 알 수 있다. */

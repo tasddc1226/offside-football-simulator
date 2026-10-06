@@ -39,6 +39,9 @@ let visibility: LiveVisibility = {
 export function configureLive(v: LiveVisibility) {
   visibility = v;
 }
+/** 화면이 보이는지와 그 변화(웹 visibilitychange · 앱 AppState) — 소켓 밖에서도 같은 기준을 쓴다. */
+export const isVisible = () => visibility.visible();
+export const watchVisibility = (fn: () => void) => visibility.watch(fn);
 
 const RETRY_MIN_MS = 5_000;
 const RETRY_MAX_MS = 5 * 60_000;

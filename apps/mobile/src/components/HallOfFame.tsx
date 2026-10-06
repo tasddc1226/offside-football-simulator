@@ -19,6 +19,8 @@ import {
 import { kstMonthDayHour } from '@offside/app-core/boardText';
 import { anonName, fmtValue, iGa } from '@offside/app-core/format';
 import { getHof } from '@offside/app-core/api/client';
+import { useSeasonNow } from '../ui/useSeasonNow';
+import { useRefresh } from '../ui/refresh';
 import { loadHOF } from '@offside/game/season';
 import { openHof } from '../game/nav';
 import { openPublicLegend } from '../game/host';
@@ -44,7 +46,6 @@ const isNew = (k: HofSort) => {
   return !!until && Date.now() < Date.parse(until);
 };
 /** 아직 개막 전인 시즌인지(ISO 문자열 비교). */
-const notOpen = (s: { startsAt: string }) => new Date().toISOString() < s.startsAt;
 
 const SORTS: Record<
   HofSort,
@@ -82,7 +83,10 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
   const sort: HofSort = full ? snap.hof.sort : 'score';
   const by = SORTS[sort];
   // 홈 미리보기는 지금 시즌 고정(개막 전엔 프리시즌 = 전체와 같아 시즌 없이 같은 요청·캐시를 쓴다).
-  const homeSeason = useMemo(() => previewSeasonAt(new Date().toISOString()), []);
+  // T-11-107·110 띄운 채 개막을 넘기면 홈 미리보기 시즌·'개막 예정' 표시를 다시 고른다.
+  const now = useSeasonNow();
+  const homeSeason = previewSeasonAt(now);
+  const notOpen = (s: { startsAt: string }) => now < s.startsAt;
   const season = full ? snap.hof.season : homeSeason;
   const q = full ? snap.hof.q : '';
   const pos = full ? snap.hof.pos : null;
@@ -132,12 +136,14 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
     scrollTo(0);
   }
 
+  const { tick, track, pulled } = useRefresh();
   useEffect(() => {
-    setAll(null);
+    // T-11-111 당겨서 새로고침이면 보이던 목록을 두고 응답으로 바꾼다.
+    if (!pulled) setAll(null);
     setFailed(false);
     if (upcoming) return;
     let live = true; // 더 늦게 고른 페이지·유형·시즌·검색어·포지션의 응답만 쓴다.
-    void getHof(full ? PER_PAGE : TOP, page, sort, season, q, pos).then((r) => {
+    void track(getHof(full ? PER_PAGE : TOP, page, sort, season, q, pos)).then((r) => {
       if (!live) return;
       if (r.ok) {
         setAll(r.data.entries);
@@ -147,7 +153,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
     return () => {
       live = false;
     };
-  }, [full, page, sort, season, q, pos, upcoming]);
+  }, [full, page, sort, season, q, pos, upcoming, tick, track]);
 
   const myIds = useMemo(() => new Set(loadHOF().flatMap((h) => (h.id ? [h.id] : []))), []);
   const offset = (page - 1) * PER_PAGE;
@@ -189,7 +195,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
             </Txt>
           </View>
         ) : null}
-        {!full && all?.length ? (
+        {!full && (all?.length || homeSeason !== null) ? (
           <Btn sm testID="hof-all" onPress={openHof}>
             전체 보기
           </Btn>
