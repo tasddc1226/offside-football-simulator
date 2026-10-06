@@ -1,0 +1,54 @@
+[
+  {
+    "shot": "01.png",
+    "eyebrow": "KICK-OFF",
+    "lineX": 0.8,
+    "ko": { "h": "이번 생은 *축구*다", "s": "고3부터 은퇴까지, 한 선수로 살아요" },
+    "en": { "h": "One player.\n*One whole career.*", "s": "From high school to retirement" }
+  },
+  {
+    "shot": "02.png",
+    "eyebrow": "CREATE",
+    "lineX": 0.14,
+    "ko": { "h": "나만의 선수를\n*직접* 만들어요", "s": "국적·체격·포지션·성장 특성까지 정해요" },
+    "en": { "h": "Build *your*\nown player", "s": "Nation, build, position and growth type" }
+  },
+  {
+    "shot": "03.png",
+    "eyebrow": "BIG MOMENTS",
+    "lineX": 0.84,
+    "ko": { "h": "결정적인 순간은\n*내 손*으로", "s": "1대1·페널티킥은 타이밍 게이지로 판정해요" },
+    "en": {
+      "h": "Big moments,\n*your timing*",
+      "s": "One-on-ones and penalties use a timing gauge"
+    }
+  },
+  {
+    "shot": "04.png",
+    "eyebrow": "GROWTH",
+    "lineX": 0.12,
+    "ko": { "h": "시즌마다\n*자라는* 내 선수", "s": "훈련과 자기 투자로 능력치를 키워요" },
+    "en": { "h": "*Grow* every\nseason", "s": "Train and invest to build attributes" }
+  },
+  {
+    "shot": "05.png",
+    "eyebrow": "SEASON REVIEW",
+    "lineX": 0.86,
+    "ko": { "h": "모든 시즌이\n*기록*으로 남아요", "s": "골·도움·평점부터 월드컵까지" },
+    "en": { "h": "Every season\n*on the record*", "s": "Goals, ratings, awards and World Cups" }
+  },
+  {
+    "shot": "06.png",
+    "eyebrow": "TRANSFER",
+    "lineX": 0.14,
+    "ko": { "h": "*해외 이적*,\n국가대표까지", "s": "일본·미국·유럽 리그에서 제의가 와요" },
+    "en": { "h": "*Transfers abroad*,\nWorld Cups", "s": "Offers from Japan, the US and Europe" }
+  },
+  {
+    "shot": "07.png",
+    "eyebrow": "FULL TIME",
+    "lineX": 0.82,
+    "ko": { "h": "은퇴하면\n*명예의 전당*에", "s": "레전드 점수와 잠재력이 공개돼요" },
+    "en": { "h": "Retire into the\n*Hall of Fame*", "s": "Legend score and potential revealed" }
+  }
+]

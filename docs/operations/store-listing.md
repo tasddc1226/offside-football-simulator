@@ -33,6 +33,7 @@
   ```
 
 - 키워드 (57자/100, 145바이트): `축구게임,풋볼,시뮬레이션,선수키우기,육성,K리그,국가대표,이적,은퇴,명예의전당,텍스트게임,스포츠,해외파`
+  App Store Connect가 바이트로 세어 넘친다고 하면 뒤(`해외파`, `스포츠`, `텍스트게임` …)부터 뺀다.
 - 설명: 아래 [한국어 설명](#한국어-설명)
 - 이 버전의 새로운 기능:
 
@@ -154,18 +155,20 @@ Your progress is saved on this device. Export a backup code or file in Settings 
 Contact: contact@offside-lab.com
 ```
 
-## 4. 스크린샷 문구 (6장)
+## 4. 스크린샷 문구 (7장)
 
-순서대로 쓴다. 제목은 크게, 부제는 한 줄로 작게.
+순서대로 쓴다. 제목은 크게, 부제는 한 줄로 작게. 이미지는 `apps/mobile/store/`(문구 `frames.json`, 렌더러·촬영 방법은 그 README)로 만든다.
+App Store는 6.9"(1320×2868), Google Play는 휴대전화(1080×2160)와 그래픽 이미지(1024×500, 1번 문구)를 올린다.
 
-| #   | 장면                      | 한국어 제목                | 한국어 부제                           | English headline              | English sub                           |
-| --- | ------------------------- | -------------------------- | ------------------------------------- | ----------------------------- | ------------------------------------- |
-| 1   | 홈·핵심 약속              | 이번 생은 축구다           | 고3부터 은퇴까지, 한 선수로 살아요    | One player. One whole career. | From high school to retirement        |
-| 2   | 선수 생성·후보 3명        | 후보 3명 중 한 명을 골라요 | 포지션·주발·성장 특성까지 직접 정해요 | Pick from 3 candidates        | Set position, foot and growth type    |
-| 3   | 확률 이벤트·타이밍 게이지 | 선택마다 확률이 보여요     | 페널티킥은 타이밍 게이지로 판정해요   | See the odds on every choice  | Penalties come down to a timing gauge |
-| 4   | 시즌 진행·성장·기록       | 시즌마다 자라는 내 선수    | 훈련과 자기 투자로 능력치를 키워요    | Grow every season             | Train and invest to build attributes  |
-| 5   | 이적·해외·국가대표        | 해외 이적, 국가대표까지    | 일본·미국·유럽 리그에서 제의가 와요   | Transfers abroad, World Cups  | Offers from Japan, the US and Europe  |
-| 6   | 은퇴·명예의 전당·구단주   | 은퇴하면 명예의 전당에     | 레전드 점수와 잠재력이 공개돼요       | Retire into the Hall of Fame  | Legend score and potential revealed   |
+| #   | 장면                | 한국어 제목                 | 한국어 부제                              | English headline              | English sub                                  |
+| --- | ------------------- | --------------------------- | ---------------------------------------- | ----------------------------- | -------------------------------------------- |
+| 1   | 홈·진행 중 커리어   | 이번 생은 축구다            | 고3부터 은퇴까지, 한 선수로 살아요       | One player. One whole career. | From high school to retirement               |
+| 2   | 선수 생성           | 나만의 선수를 직접 만들어요 | 국적·체격·포지션·성장 특성까지 정해요    | Build your own player         | Nation, build, position and growth type      |
+| 3   | 1대1 타이밍 게이지  | 결정적인 순간은 내 손으로   | 1대1·페널티킥은 타이밍 게이지로 판정해요 | Big moments, your timing      | One-on-ones and penalties use a timing gauge |
+| 4   | 선수 능력치 레이더  | 시즌마다 자라는 내 선수     | 훈련과 자기 투자로 능력치를 키워요       | Grow every season             | Train and invest to build attributes         |
+| 5   | 시즌 리뷰·월드컵    | 모든 시즌이 기록으로 남아요 | 골·도움·평점부터 월드컵까지              | Every season on the record    | Goals, ratings, awards and World Cups        |
+| 6   | 이적 시장·해외 제의 | 해외 이적, 국가대표까지     | 일본·미국·유럽 리그에서 제의가 와요      | Transfers abroad, World Cups  | Offers from Japan, the US and Europe         |
+| 7   | 은퇴·레전드 리포트  | 은퇴하면 명예의 전당에      | 레전드 점수와 잠재력이 공개돼요          | Retire into the Hall of Fame  | Legend score and potential revealed          |
 
 ## 5. 체크리스트
 
