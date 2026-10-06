@@ -2,7 +2,7 @@
 // 때만 튼다. 같은 곡의 화면끼리 오가는 동안은 끊지 않고 이어서 튼다. 음원은 처음 틀 때 받는다. 브라우저(특히
 // 아이폰)는 사용자 동작 안에서 부른 play()만 허락하므로, 재생기는 지연 로드하지 않고 터치 처리 안에서 바로 부른다.
 // 켜 둔 채 새로 열었으면 첫 터치에 시작한다.
-import { loadKey, saveKey } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/storage';
 import { createBgm, type Bgm, type BgmTrack } from './bgmEngine.js';
 import { appState, type Screen } from './state.svelte.js';
 import { sheetOn } from './skin.svelte.js';

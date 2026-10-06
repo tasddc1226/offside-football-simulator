@@ -11,7 +11,7 @@ import type { BoardKey } from '@offside/contracts/board-limits';
 import { apiFetch, clearApiCache } from '@offside/app-core/api/client';
 import { flushOutbox } from '@offside/app-core/outbox';
 import { googleFailText, loginDoneText, loginOfflineText } from '@offside/app-core/loginText';
-import { loadHOF } from '@offside/game/season';
+import { loadHOF } from '@offside/game/hof-store';
 import { appState } from '../store';
 import { openLocalLegend, refreshAccount, syncClubCustom, toast } from '../game/host';
 import { openBoard } from '../game/nav';

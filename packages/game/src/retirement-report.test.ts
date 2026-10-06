@@ -7,7 +7,8 @@ import {
 } from './retirement-report.js';
 import { newGame } from './engine.js';
 import { createRng, setActiveRng } from './rng.js';
-import { legendScore, legendScoreBreakdown } from './season.js';
+import { legendScore } from './legend.js';
+import { legendScoreBreakdown } from './season.js';
 import type { CareerRecord, LegendSource } from './types.js';
 
 const row = (year: number, age: number, club: string, league: string, apps = 30, goals = 10) =>

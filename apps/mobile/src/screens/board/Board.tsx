@@ -31,7 +31,7 @@ import type { CommentReportReason } from '@offside/contracts/board-limits';
 import { touchedAt } from '@offside/app-core/news';
 import { boardText as L } from '@offside/app-core/i18n/ko/board';
 import { boardLabelText } from '@offside/app-core/i18n/ko/boardLabel';
-import { loadKey, saveKey } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/storage';
 import { AdSlot } from '../../components/AdSlot';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { NicknameForm } from '../../components/NicknameForm';

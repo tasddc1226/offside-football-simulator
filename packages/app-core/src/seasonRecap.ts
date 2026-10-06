@@ -1,6 +1,6 @@
 // T-11-128 시즌 결산 화면이 그리기 전에 만드는 문구(웹·앱 공용). 결산 값은 서버가 굳힌 그대로 쓴다.
 import type { OwnerHonor, SeasonRecap, SeasonRecapResponse } from '@offside/contracts';
-import { loadKey, saveKey } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/storage';
 import { intlLocale } from './i18n/core.js';
 import { seasonRecapText as L } from './i18n/ko/seasonRecap.js';
 import { teamSeasonLabel } from './seasonName.js';

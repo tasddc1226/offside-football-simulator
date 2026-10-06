@@ -1,7 +1,7 @@
 // T-11-102 화면 문구 언어. 고른 언어는 이 기기(saveKey, 앱과 같은 형식)에 두고, 바꾸면 새로고침해 처음부터 그 언어로 그린다.
 // 한국어는 추가로 불러올 것이 없다. 영어 사전은 영어 사용자에게만 지연 청크로 받는다(첫 화면 예산 밖).
 import { LOCALE_KEY, resolveLocale, setLocale, type Locale } from '@offside/app-core/i18n/core';
-import { loadKey, saveKey } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/storage';
 
 /** 이번 방문의 언어(고른 값 → 브라우저 언어). */
 export function bootLocale(): Locale {

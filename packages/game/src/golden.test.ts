@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { legendScore } from './season.js';
+import { legendScore } from './legend.js';
 import type { GameState } from './types.js';
 import { playCareer } from './__fixtures__/play-career.js';
 

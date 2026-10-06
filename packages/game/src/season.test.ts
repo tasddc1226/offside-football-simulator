@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { saveKey, loadKey } from './season.js';
+import { loadHOF } from './hof-store.js';
+import { legendSnapshot } from './legend.js';
+import { saveKey, loadKey } from './storage.js';
 import { newGame } from './engine.js';
 import { createRng, setActiveRng } from './rng.js';
 
@@ -70,7 +72,7 @@ describe('저장/불러오기 라운드트립', () => {
 describe('T-10-005 은퇴 스냅샷', () => {
   it('서버 계약(LegendSnapshotSchema)을 통과하고 CareerRecord 부가 필드는 빠진다', async () => {
     const { LegendSnapshotSchema } = await import('@offside/contracts');
-    const { legendSnapshot } = await import('./season.js');
+
     setActiveRng(createRng(3));
     const g = newGame(
       { name: '스냅샷', number: 11, pos: 'DF', foot: '왼발', type: 'stopper', trait: 'late' },
@@ -143,7 +145,7 @@ describe('대학 4년', () => {
 
 describe('로컬 명예의 전당 30명 한도', () => {
   it('30명이 찬 상태에서 점수가 낮은 선수로 은퇴해도 방금 은퇴한 선수는 남는다', async () => {
-    const { retire, loadHOF } = await import('./season.js');
+    const { retire } = await import('./season.js');
     saveKey(
       'ft_hof',
       Array.from({ length: 30 }, (_, i) => ({ name: `고수${i}`, score: 5000 - i })),
@@ -161,7 +163,7 @@ describe('로컬 명예의 전당 30명 한도', () => {
     expect(hof.some((h) => h.name === '고수29')).toBe(false);
   });
   it('같은 커리어가 다시 은퇴하면 기록을 바꾸고, 예전에 겹친 기록은 하나로 읽는다(T-10-107)', async () => {
-    const { retire, loadHOF } = await import('./season.js');
+    const { retire } = await import('./season.js');
     saveKey('ft_hof', [
       { name: '겹침', id: 'dup', score: 900 },
       { name: '겹침', id: 'dup', score: 900 },
@@ -185,7 +187,7 @@ describe('T-11-072 은퇴 선수 국적 저장', () => {
   it.each(['BR', 'GB-ENG', 'KR'])(
     '%s 국적을 새 은퇴 기록에 명시하고 기존 스냅샷 계약을 유지한다',
     async (nation) => {
-      const { retire, loadHOF } = await import('./season.js');
+      const { retire } = await import('./season.js');
       const { LegendSnapshotSchema } = await import('@offside/contracts');
       setActiveRng(createRng(5));
       const g = newGame(
@@ -210,7 +212,6 @@ describe('T-11-072 은퇴 선수 국적 저장', () => {
   );
 
   it('loadHOF는 같은 커리어 원본으로만 보완하고 저장된 옛 기록을 덮어쓰지 않는다', async () => {
-    const { loadHOF } = await import('./season.js');
     setActiveRng(createRng(5));
     const g = newGame(
       {

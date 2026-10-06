@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { PublicHofEntry } from '@offside/contracts';
 import type { DetailPos, POS } from '@offside/game/data';
-import { loadHOF } from '@offside/game/season';
+import { loadHOF } from '@offside/game/hof-store';
 import type { HofEntry } from '@offside/game/types';
 import { localCardValue, myPlayerNation } from '@offside/app-core/myPlayers';
 import { getMyCareers, getRetiredNumbersIn } from '@offside/app-core/api/client';
