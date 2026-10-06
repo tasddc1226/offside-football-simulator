@@ -29,6 +29,7 @@ import {
 import { currentSeasonOrThrow, kstTodayStart, requireOwner } from './ownerTeam.js';
 import { newId } from '../db/ids.js';
 import { runBatch } from '../db/repos/batch.js';
+import { commitNotifiedEvent } from '../push/events.js';
 import {
   acceptStatements,
   blockBetween,
@@ -221,7 +222,17 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
     ]);
     let state: 'sent' | 'accepted';
     if (mine?.state === 'received') {
-      await runBatch(db, [...acceptStatements(db, me.id, targetId, now)]);
+      await commitNotifiedEvent(db, [...acceptStatements(db, me.id, targetId, now)], {
+        profileId: targetId,
+        sourceKey: `friend-accepted:${me.id}:${crypto.randomUUID()}`,
+        now,
+        content: {
+          kind: 'social',
+          title: '친구 신청이 수락됐어요',
+          body: '친구 목록에서 새 친구와 친선전을 즐겨요.',
+          target: { type: 'screen', screen: 'team' },
+        },
+      });
       state = 'accepted';
     } else if (mine) {
       state = mine.state;
@@ -242,7 +253,17 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       if (Number(theirCount?.n ?? 0) >= FRIENDS_MAX) {
         throw conflictError('상대의 친구 목록이 가득 찼어요.', 'FRIEND_LIMIT_OTHER');
       }
-      await runBatch(db, [...requestStatements(db, me.id, targetId, now)]);
+      await commitNotifiedEvent(db, [...requestStatements(db, me.id, targetId, now)], {
+        profileId: targetId,
+        sourceKey: `friend-request:${me.id}:${crypto.randomUUID()}`,
+        now,
+        content: {
+          kind: 'social',
+          title: '새 친구 신청이 왔어요',
+          body: '친구 목록에서 받은 신청을 확인해 주세요.',
+          target: { type: 'screen', screen: 'team' },
+        },
+      });
       state = 'sent';
     }
     // 친구 목록은 사람을 코드로 가리키므로 코드가 없는 쪽(팀 프로필에서만 신청하고 친구 화면은 안 열어 본 사람)은 지금 만든다.
@@ -270,7 +291,17 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       throw notFoundError('받은 친구 신청이 없어요.', 'FRIEND_REQUEST_NOT_FOUND');
     }
     if (mine.state === 'received')
-      await runBatch(db, [...acceptStatements(db, me.id, target.id, now)]);
+      await commitNotifiedEvent(db, [...acceptStatements(db, me.id, target.id, now)], {
+        profileId: target.id,
+        sourceKey: `friend-accepted:${me.id}:${crypto.randomUUID()}`,
+        now,
+        content: {
+          kind: 'social',
+          title: '친구 신청이 수락됐어요',
+          body: '친구 목록에서 새 친구와 친선전을 즐겨요.',
+          target: { type: 'screen', screen: 'team' },
+        },
+      });
     const friend = await personOf(
       db,
       { profileId: target.id, code: target.code, nickname: target.nickname, row: mine },
@@ -329,21 +360,35 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
     }
 
     const id = newId('fmt');
-    const result = simulateMatch(id, lineups.home, lineups.away);
+    const result = simulateMatch(id, lineups.home, lineups.away, season);
     const detail = matchDetailOf(mine, theirs, lineups, result);
-    await runBatch(db, [
-      ...recordFriendlyStatements(db, {
-        id,
-        profileId: me.id,
-        opponentId: target.id,
-        homeTeamId: mine.id,
-        awayTeamId: theirs.id,
-        homeGoals: result.homeGoals,
-        awayGoals: result.awayGoals,
-        detail,
+    await commitNotifiedEvent(
+      db,
+      [
+        ...recordFriendlyStatements(db, {
+          id,
+          profileId: me.id,
+          opponentId: target.id,
+          homeTeamId: mine.id,
+          awayTeamId: theirs.id,
+          homeGoals: result.homeGoals,
+          awayGoals: result.awayGoals,
+          detail,
+          now,
+        }),
+      ],
+      {
+        profileId: target.id,
+        sourceKey: `friendly:${id}`,
         now,
-      }),
-    ]);
+        content: {
+          kind: 'social',
+          title: '친선전 결과가 도착했어요',
+          body: `${theirs.name} ${result.awayGoals} : ${result.homeGoals} ${mine.name}. 친구 목록에서 경기 결과를 확인해 주세요.`,
+          target: { type: 'screen', screen: 'team' },
+        },
+      },
+    );
     const gf = result.homeGoals;
     const ga = result.awayGoals;
     const before = h2hOf(link);

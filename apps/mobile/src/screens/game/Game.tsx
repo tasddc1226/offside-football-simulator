@@ -1,6 +1,6 @@
 // 게임 화면(웹 Game.svelte, ui.ts renderGame() 포트): 선수 카드 + 시즌·선수·커리어·트로피 탭 + 아래 고정 진행 바와 탭바.
 // 탭바(시즌·선수·홈·커리어·트로피 — 홈은 가운데)가 아래 안전 영역을 채우고, 진행 바는 그 바로 위에 붙는다.
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
@@ -33,6 +33,10 @@ import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
 import { scrollTo } from '../../ui/scroll';
 import { PlayerTab } from './PlayerTab';
+import { PlayerNudge } from './PlayerNudge';
+import { notePlayerVisit, playerNudge } from '@offside/app-core/player-nudge';
+import { peekOpen } from '@offside/app-core/potential-peek';
+import { peekAvailable, potPeek } from '../../platform/rewardedPeek';
 import { SeasonTab } from './SeasonTab';
 import { TitleDex } from './TitleDex';
 import { TrophyTab } from './TrophyTab';
@@ -89,6 +93,7 @@ export default function Game() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const tab = snap.tab;
+  const [playerHint, setPlayerHint] = useState(false);
   const s = snap.G as GameState | null;
   // OVR 숫자 트윈(T-10-003 goal 3): 훈련·이벤트 결과로 능력치가 바뀔 때마다 즉시 점프하는 대신 짧게 카운트업/다운한다.
   const [ovrNow] = useTween([s ? ovr(s) : 0], 420);
@@ -140,6 +145,8 @@ export default function Game() {
   // T-10-117 탭을 바꾸면 이전 탭에서 내려 둔 스크롤을 물려받지 않게 맨 위로 올린다(즉시 이동).
   // T-11-025 지금 보고 있는 탭을 다시 누르면 맨 위로 부드럽게 올린다.
   function switchTab(k: Tab) {
+    if (k === 'player')
+      notePlayerVisit(playerNudge(s!, peekAvailable() && !peekOpen(s!, potPeek.peek)));
     if (appState.tab === k) return scrollTo(0, prefs.motionOK);
     appState.tab = k;
     scrollTo(0);
@@ -154,6 +161,7 @@ export default function Game() {
     key,
     label,
     active: tab === key,
+    hint: key === 'player' && playerHint ? '잠재력 안내' : undefined,
     onPress: () => switchTab(key),
   });
   // 게임 탭 4개 + 가운데 홈. 홈은 화면을 떠나는 버튼이다.
@@ -172,6 +180,12 @@ export default function Game() {
           footer={
             showAction ? (
               <ActionBar>
+                <PlayerNudge
+                  s={s}
+                  tab={tab}
+                  openPlayer={() => switchTab('player')}
+                  onVisibility={setPlayerHint}
+                />
                 {act.kind === 'advance' ? (
                   <Press
                     testID="prep"

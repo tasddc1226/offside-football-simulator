@@ -8,6 +8,7 @@ import { Btn } from '../../ui/Btn';
 import { Topbar } from '../../ui/Topbar';
 import { CreditScreen } from './credit';
 import { LegendReport } from './LegendReport';
+import { RetiredAdSlot } from './RetiredAdSlot';
 import { OwnHofCards } from './OwnHofCards';
 import { ShareBar } from './ShareBar';
 import { retiredText as L } from '@offside/app-core/i18n/ko/retired';
@@ -36,6 +37,7 @@ export default function Retired() {
           </>
         }
       />
+      <RetiredAdSlot />
     </CreditScreen>
   );
 }

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, cachedGet, clearApiCache } from './client.js';
+import { apiFetch, cachedGet, clearApiCache, invalidateApiCache } from './client.js';
 
 // T-10-015 공개 조회 메모: 같은 path는 TTL 동안 한 번만, 동시 요청은 하나로, 실패는 담지 않고, 쓰기 성공 시 비운다.
 describe('cachedGet', () => {
@@ -40,6 +40,19 @@ describe('cachedGet', () => {
     fail = false;
     expect((await cachedGet('/v1/hof', 60_000)).ok).toBe(true);
     expect(calls).toHaveLength(2);
+  });
+  it('새 알림으로 연 기능만 새로 읽고 다른 화면의 캐시는 보존한다', async () => {
+    await cachedGet('/v1/friends', 60_000);
+    await cachedGet('/v1/owner-team/matches?season=0', 60_000);
+    await cachedGet('/v1/hof', 60_000);
+    invalidateApiCache('/v1/friends');
+    invalidateApiCache('/v1/owner-team');
+    await cachedGet('/v1/friends', 60_000);
+    await cachedGet('/v1/owner-team/matches?season=0', 60_000);
+    await cachedGet('/v1/hof', 60_000);
+    expect(calls.filter((c) => c === 'GET /v1/friends')).toHaveLength(2);
+    expect(calls.filter((c) => c === 'GET /v1/owner-team/matches')).toHaveLength(2);
+    expect(calls.filter((c) => c === 'GET /v1/hof')).toHaveLength(1);
   });
 
   it('쓰기가 성공하면 메모를 비운다', async () => {

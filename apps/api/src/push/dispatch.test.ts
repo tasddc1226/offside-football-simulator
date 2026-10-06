@@ -68,9 +68,16 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await ctx.env.DB.batch(
-    ['push_news_events', 'push_devices', 'sessions', 'profiles', 'board_posts', 'app_meta'].map(
-      (t) => ctx.env.DB.prepare(`DELETE FROM ${t}`),
-    ),
+    [
+      'push_preferences',
+      'notifications',
+      'push_news_events',
+      'push_devices',
+      'sessions',
+      'profiles',
+      'board_posts',
+      'app_meta',
+    ].map((t) => ctx.env.DB.prepare(`DELETE FROM ${t}`)),
   );
 });
 
@@ -172,12 +179,16 @@ describe('공지 자동 푸시', () => {
     await runNewsPush(production(), now + 16 * 60_000, receipt);
     expect(receipt).toHaveBeenCalledTimes(1);
   });
-  it.each(['device', 'session', 'post', 'token', 'expiry'] as const)(
+  it.each(['device', 'session', 'post', 'token', 'expiry', 'preference'] as const)(
     '발송 전 %s 변경을 확인하고 취소한다',
     async (change) => {
       await device();
       const id = await post();
       if (change === 'device') await ctx.env.DB.prepare('DELETE FROM push_devices').run();
+      if (change === 'preference')
+        await ctx.env.DB.prepare(
+          "INSERT INTO push_preferences (profile_id, notice) VALUES ('a', 0)",
+        ).run();
       if (change === 'session')
         await ctx.env.DB.prepare('UPDATE sessions SET revoked_at = ?').bind(iso()).run();
       if (change === 'post')

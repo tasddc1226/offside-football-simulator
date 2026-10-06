@@ -18,6 +18,7 @@
   import { POS } from '@offside/game/data';
   import { loadHOF } from '@offside/game/season';
   import ClubMark from './ClubMark.svelte';
+  import { seasonNow } from './seasonNow.svelte.js';
   import { anonName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';
   import { RN_SHIRT, RN_TRIM, rnStyle } from '@offside/app-core/rnStyle';
@@ -26,7 +27,8 @@
   import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
   type Item = RetiredNumbersResponse['items'][number];
 
-  const now = new Date().toISOString();
+  const clock = seasonNow();
+  const now = $derived(clock.now);
   const seasons = [PRESEASON, ...SERVICE_SEASONS];
   const season = $derived(view.season ?? displaySeasonAt(now));
   const selectedSeason = $derived(seasonById(season));

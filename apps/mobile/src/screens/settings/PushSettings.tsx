@@ -1,26 +1,36 @@
 import { useEffect, useState } from 'react';
 import { AppState, Linking, View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import {
-  pushState,
-  pushTestState,
-  pushRegistration,
-  testOwnPush,
-  engagementPushState,
-  setEngagementPush,
-} from '../../platform/push';
+import { pushState, pushTestState, pushRegistration, testOwnPush } from '../../platform/push';
 import { openInbox } from '../../platform/inbox';
 import { Btn, Txt } from '../../ui';
-import { SettingsCard, SettingsLabel } from './parts';
+import { SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
 import { WEB_ORIGIN } from '../../platform/config';
 import { dismissPushOffer } from '../../platform/pushOffer';
+import {
+  loadPushPreferences,
+  pushPreferencesState,
+  setPushPreference,
+} from '../../platform/pushPreferences';
+import type { PushPreferences } from '@offside/contracts';
 import { pushText as L } from '@offside/app-core/i18n/ko/push';
+
+const categories = (): { key: keyof PushPreferences; title: string; description: string }[] => [
+  { key: 'notice', title: L.catNotice, description: L.catNoticeBody },
+  { key: 'release', title: L.catRelease, description: L.catReleaseBody },
+  { key: 'team', title: L.catTeam, description: L.catTeamBody },
+  { key: 'market', title: L.catMarket, description: L.catMarketBody },
+  { key: 'social', title: L.catSocial, description: L.catSocialBody },
+];
 
 export function PushSettings() {
   const state = useSnapshot(pushState);
+  const preferences = useSnapshot(pushPreferencesState);
+  useEffect(() => {
+    void loadPushPreferences();
+  }, [preferences.sessionRevision]);
   const [testMessage, setTestMessage] = useState('');
   const test = useSnapshot(pushTestState);
-  const engagement = useSnapshot(engagementPushState);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const refresh = () => setNow(Date.now());
@@ -37,22 +47,60 @@ export function PushSettings() {
   const waiting = now < test.nextTestAt;
   return (
     <SettingsCard gap={12}>
-      <SettingsLabel eyebrow="Notifications" title={L.title} muted={L.body} />
-      <Txt tone="muted">{L.tokenNote}</Txt>
-      <View style={{ gap: 8 }}>
-        <Btn
-          block
-          disabled={state.busy}
+      <SettingsRow>
+        <SettingsLabel eyebrow="Notifications" title={L.title} muted={L.body} />
+        <Switch
+          value={state.enabled}
+          busy={state.busy}
           testID="push-toggle"
-          accessibilityLabel={state.enabled ? L.offLabel : L.onLabel}
-          onPress={() => {
+          label={L.title}
+          onChange={(on) => {
             setTestMessage('');
             dismissPushOffer();
-            void pushRegistration.setEnabled(!state.enabled);
+            void pushRegistration.setEnabled(on);
           }}
-        >
-          {state.busy ? L.busy : state.enabled ? L.turnOff : L.turnOn}
-        </Btn>
+        />
+      </SettingsRow>
+      <View style={{ gap: 12 }}>
+        <Txt tone="muted">{L.prefsNote}</Txt>
+        {categories().map(({ key, title, description }) => (
+          <SettingsRow key={key}>
+            <SettingsLabel title={title} muted={description} />
+            <Switch
+              value={preferences.values[key]}
+              label={L.catAria({ title })}
+              testID={`push-${key}-toggle`}
+              busy={preferences.saving === key}
+              disabled={!preferences.loaded || preferences.loading || preferences.saving !== null}
+              onChange={(on) => {
+                void setPushPreference(key, on);
+              }}
+            />
+          </SettingsRow>
+        ))}
+        {preferences.loading ? (
+          <Txt tone="muted" accessibilityLiveRegion="polite">
+            {L.prefsLoading}
+          </Txt>
+        ) : null}
+        {preferences.error ? (
+          <Txt tone="muted" accessibilityLiveRegion="polite">
+            {preferences.error}
+          </Txt>
+        ) : null}
+        {!preferences.loaded && !preferences.loading ? (
+          <Btn block onPress={() => void loadPushPreferences()}>
+            {L.prefsReload}
+          </Btn>
+        ) : null}
+      </View>
+      <Txt tone="muted">{L.tokenNote}</Txt>
+      <View style={{ gap: 8 }}>
+        {state.busy ? (
+          <Txt tone="muted" accessibilityLiveRegion="polite">
+            {L.busy}
+          </Txt>
+        ) : null}
         {state.blocked ? (
           <Btn block onPress={() => void Linking.openSettings()}>
             {L.openSettings}
@@ -70,15 +118,6 @@ export function PushSettings() {
         ) : null}
         {state.enabled ? (
           <>
-            <Txt bold>{L.engagementTitle}</Txt>
-            <Txt tone="muted">{L.engagementBody}</Txt>
-            <Btn
-              block
-              disabled={state.busy}
-              onPress={() => void setEngagementPush(!engagement.enabled)}
-            >
-              {engagement.enabled ? L.engagementOff : L.engagementOn}
-            </Btn>
             <Txt tone="muted">{L.testNote}</Txt>
             <Btn
               block

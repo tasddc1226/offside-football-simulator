@@ -26,6 +26,8 @@ import { RecordsSelect, RECORDS_TOUCH } from '../RecordsControls';
 import { AchGradeBadge } from '../../owner/TeamParts';
 import { GradeEmblem } from '../../../ui/GradeEmblem';
 import { TeamLogo } from '../../../components/TeamLogo';
+import { useSeasonNow } from '../../../ui/useSeasonNow';
+import { useRefresh } from '../../../ui/refresh';
 
 export default function AchievementRanking() {
   const c = useColors();
@@ -36,12 +38,16 @@ export default function AchievementRanking() {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [gradesOpen, setGradesOpen] = useState(false);
+  const now = useSeasonNow();
+  /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
+  const shownSeason = season ?? displaySeasonAt(now);
 
+  const { tick, track, pulled } = useRefresh();
   useEffect(() => {
     setFailed(false);
-    setLoading(true);
+    if (!pulled) setLoading(true);
     let live = true; // 더 늦게 고른 조건의 응답만 쓴다.
-    void fetchAchRanking(season, page).then((r) => {
+    void track(fetchAchRanking(season, page)).then((r) => {
       if (!live) return;
       setLoading(false);
       if (r.ok) setData(r.data);
@@ -50,7 +56,7 @@ export default function AchievementRanking() {
     return () => {
       live = false;
     };
-  }, [season, page]);
+  }, [season, page, shownSeason, tick, track]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / ACH_RANK_PER_PAGE)) : 1;
   function goPage(p: number) {
@@ -76,10 +82,10 @@ export default function AchievementRanking() {
         <RecordsSelect
           label={L.seasonLabel}
           testID="ach-rank-season-select"
-          value={season ?? data?.season ?? displaySeasonAt(new Date().toISOString())}
+          value={season ?? data?.season ?? displaySeasonAt(now)}
           options={
             data?.seasons.map((s) => ({ value: s.id, label: s.name })) ??
-            openTeamSeasons(new Date().toISOString()).map((id) => ({
+            openTeamSeasons(now).map((id) => ({
               value: id,
               label: teamSeasonName(id),
             }))

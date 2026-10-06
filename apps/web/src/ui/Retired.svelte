@@ -3,6 +3,7 @@
   import { appState } from './state.svelte.js';
   import { goHome, goNew } from './nav.js';
   import { viewFromGame } from './legend.js';
+  import AdSlot from '../ads/AdSlot.svelte';
   import Topbar from './Topbar.svelte';
   import LegendReport from './LegendReport.svelte';
   import OwnHofCards from './OwnHofCards.svelte';
@@ -22,5 +23,7 @@
       <button class="btn btn-block" data-act="home" onclick={goHome}>{L.seeHof}</button>
     {/snippet}
   </LegendReport>
+  <!-- T-11-108: 결산과 다음 행동 버튼을 모두 지난 뒤, 본문과 함께 스크롤되는 광고 한 칸. -->
+  <AdSlot place="retired-bottom" />
   {#if v.shareId}<ShareBar id={v.shareId} />{/if}
 </div>

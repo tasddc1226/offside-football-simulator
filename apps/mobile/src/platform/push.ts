@@ -16,13 +16,12 @@ import { DAY_MS, kstDay } from '@offside/contracts/kst';
 import { pushText as L } from '@offside/app-core/i18n/ko/push';
 import { NotificationIdSchema } from '@offside/contracts';
 import { openInbox, inbox } from './inbox';
+import { trackPushInteraction, flushPushInteractions } from './pushTracking';
 
 const DEVICE_KEY = 'offside_push_installation';
 const WANTED = 'offside_push_wanted';
 const REMOVE = 'offside_push_remove';
 const REGISTERED = 'offside_push_registered';
-const ENGAGEMENT = 'offside_push_engagement';
-export const engagementPushState = proxy({ enabled: kv.getBoolean(ENGAGEMENT) ?? false });
 export const pushState = proxy({
   enabled: kv.getBoolean(WANTED) ?? false,
   busy: false,
@@ -86,9 +85,10 @@ async function register() {
   }
   const deviceToken = expoToken.token;
   const revision = tokenRevision;
+  // 이전 별도 재방문 설정과 무관하게 통합 수신 정책으로 한 번 재등록한다.
   const fingerprint = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
-    `${deviceToken}|${sessionToken()}|${appVersion}|${engagementPushState.enabled}`,
+    `${deviceToken}|${sessionToken()}|${appVersion}|push-subscription-v2`,
   );
   const saved = kv.getString(REGISTERED);
   if (saved === fingerprint && Date.now() - (kv.getNumber(`${REGISTERED}_at`) ?? 0) < 86400_000)
@@ -100,7 +100,6 @@ async function register() {
       token: deviceToken,
       platform: Platform.OS,
       appVersion,
-      engagementEnabled: engagementPushState.enabled,
     }),
   });
   if (!r.ok) throw new Error('Could not register device');
@@ -148,6 +147,7 @@ function openNotification(response: Notifications.NotificationResponse) {
     NotificationIdSchema.safeParse(data.notificationId).success
   ) {
     inbox.invalidate();
+    void trackPushInteraction(data.notificationId as string, 'click');
     openInbox(data.notificationId as string);
     return;
   }
@@ -211,16 +211,13 @@ export function startPush() {
     void pushRegistration.restore();
   });
   AppState.addEventListener('change', (state) => {
-    if (state === 'active') void pushRegistration.restore();
+    if (state === 'active') {
+      void pushRegistration.restore();
+      void flushPushInteractions();
+    }
   });
+  void flushPushInteractions();
   void pushRegistration.restore();
-}
-
-export async function setEngagementPush(on: boolean) {
-  if (pushState.busy) return;
-  kv.set(ENGAGEMENT, on);
-  engagementPushState.enabled = on;
-  if (pushState.enabled) await pushRegistration.restore();
 }
 
 const TEST_NEXT = 'offside_push_test_next';

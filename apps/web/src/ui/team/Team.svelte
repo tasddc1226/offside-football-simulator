@@ -12,7 +12,7 @@
     TEAM_NAME_MIN,
     YOUTH_NAME,
     YOUTH_OVR,
-    lineStrength,
+    presetLayout,
     slotRating,
     teamOvr,
     type AchCategory,
@@ -56,7 +56,7 @@
   import TeamFriends from './TeamFriends.svelte';
   import { friendsUi } from '../friendInvite.svelte.js';
   import { achNudge } from '../achNudge.js';
-  import { assignSlot, autoFillSlots, matchHintOf } from '@offside/app-core/teamOwner';
+  import { assignSlot, autoFillSlots, draftLines, matchHintOf, slotsSynergy } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { readTeamDraft, teamDraftBase, writeTeamDraft, type TeamDraft } from './teamDraft.js';
@@ -129,8 +129,10 @@
     }),
   );
   const ovr = $derived(teamOvr(ratings));
+  // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
+  const synergy = $derived(slotsSynergy(layout ?? presetLayout(formation), slots, byId));
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
-  const lines = $derived(lineStrength(slotCodes, ratings));
+  const lines = $derived(draftLines(slotCodes, ratings, synergy, season));
   const filled = $derived(slots.filter((s) => s !== null).length);
   const dirty = $derived(
     !team ||
@@ -422,6 +424,8 @@
         {slots}
         {nameOf}
         {lines}
+        {synergy}
+        {season}
         {cells}
         {players}
         {seasonName}

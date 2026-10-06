@@ -6,6 +6,7 @@ import {
   NotificationReadSchema,
   NotificationReadAllBodySchema,
   NotificationReadAllSchema,
+  PushInteractionSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
 import type { AppEnv } from '../env.js';
@@ -18,8 +19,26 @@ import {
   readAllNotifications,
 } from '../db/repos/notifications.js';
 import { NO_STORE, nowIso, notFoundError, ok, readBody } from './shared.js';
+import { AppError } from '../errors.js';
+import { recordPushInteraction } from '../db/repos/pushPerformance.js';
 
 export function registerNotificationRoutes(app: Hono<AppEnv>) {
+  app.post('/v1/notifications/:id/interaction', requireProfile, async (c) => {
+    const session = getSessionOrThrow(c);
+    if (session.channel !== 'app')
+      throw new AppError({ code: 'FORBIDDEN', message: '앱에서 알림을 열어 주세요.' });
+    const id = parseWithAppError(NotificationIdSchema, c.req.param('id'));
+    const { event, occurredAt } = readBody(c, PushInteractionSchema);
+    const now = nowIso();
+    const at = occurredAt ?? now;
+    if (
+      Date.parse(at) >= Date.parse(now) - 86400_000 &&
+      Date.parse(at) <= Date.parse(now) + 300_000
+    )
+      await recordPushInteraction(c.env.DB, session.profileId, id, event, at > now ? now : at);
+    c.header('Cache-Control', NO_STORE);
+    return c.body(null, 204);
+  });
   app.get('/v1/notifications', requireProfile, async (c) => {
     const query = parseWithAppError(NotificationListQuerySchema, c.req.query());
     const data = await listNotifications(c.env.DB, getSessionOrThrow(c).profileId, nowIso(), query);

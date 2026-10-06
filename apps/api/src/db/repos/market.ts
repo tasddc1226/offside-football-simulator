@@ -14,6 +14,7 @@ import type { PosGroup } from '@offside/contracts/positions';
 import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
+import { eventNotificationStatements } from '../../push/events.js';
 import { peakOf } from './ownerTeams.js';
 import { cards, careers, marketDaily, marketListings, ownerFunds } from '../schema.js';
 
@@ -189,14 +190,16 @@ export async function fundsOf(db: Db, profileId: string): Promise<number> {
   return row?.balance ?? 0;
 }
 
-/** 구단 가치에 더하는 선수 몫: 직접 키운 선수는 은퇴 가치, 영입한 선수는 기준가. */
+/**
+ * 구단 가치에 더하는 선수 몫: 가진 카드의 기준가(없으면 방출 지급과 같이 CARD_VALUE_FLOOR). T-11-109 전에는 직접 키운
+ * 선수를 은퇴 가치로 셌는데, 방출 지급이 기준가로 바뀌어(T-11-104) 같은 기준으로 맞춘다.
+ */
 async function ownedCardsValue(db: Db, profileId: string): Promise<number> {
   const [row] = await db
     .select({
-      v: sql<number>`coalesce(sum(case when ${careers.profileId} = ${profileId} then ${cards.retireValue} else coalesce(${cards.cardValue}, 0) end), 0)`,
+      v: sql<number>`coalesce(sum(coalesce(${cards.cardValue}, ${CARD_VALUE_FLOOR})), 0)`,
     })
     .from(cards)
-    .leftJoin(careers, eq(careers.id, cards.careerId))
     .where(eq(cards.ownerId, profileId));
   return row?.v ?? 0;
 }
@@ -353,6 +356,7 @@ export async function buyListing(
   b: {
     id: string;
     buyerId: string;
+    sellerId: string;
     price: number;
     fee: number;
     now: string;
@@ -407,6 +411,21 @@ export async function buyListing(
         ...Array(3).fill(b.daily.ratio),
         ...mark,
       ),
+    ...eventNotificationStatements(
+      d1,
+      {
+        profileId: b.sellerId,
+        sourceKey: `market-sold:${b.id}`,
+        now: b.now,
+        content: {
+          kind: 'market',
+          title: '등록한 선수가 이적했어요',
+          body: '판매가 완료됐어요. 이적시장에서 판매 내역과 구단 자금을 확인해 주세요.',
+          target: { type: 'screen', screen: 'market' },
+        },
+      },
+      { sql: won, params: [...mark] },
+    ),
     d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(b.buyerId),
   ]);
   const bal = results.at(-1)!.results[0] as { balance: number } | undefined;

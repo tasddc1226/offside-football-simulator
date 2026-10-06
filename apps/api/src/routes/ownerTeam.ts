@@ -32,7 +32,7 @@ import {
 } from './shared.js';
 import { newId } from '../db/ids.js';
 import { kstDays } from '../time.js';
-import { runBatch } from '../db/repos/batch.js';
+import { commitNotifiedEvent } from '../push/events.js';
 import {
   careersByIds,
   challengedSince,
@@ -147,7 +147,7 @@ function toOwnerTeam(
     layout: layoutOf(row),
     logo: logoOf(row),
     ovr: lineupOvr(lineup),
-    lines: linesOf(lineup),
+    lines: linesOf(lineup, row.season),
     rating: row.rating,
     record: recordOf(row),
     likes: row.likes,
@@ -217,6 +217,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           legendScore: p.legendScore,
           cardValue: p.cardValue,
           raised: !!p.raised,
+          ...(p.type ? { type: p.type } : {}),
+          ...(p.foot ? { foot: p.foot } : {}),
           listing: p.listingId ? { id: p.listingId, price: p.listPrice! } : null,
         })),
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
@@ -364,7 +366,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     if (filledCount(lineups.away) === 0) throw teamNotFound();
 
     const id = newId('mat');
-    const result = simulateMatch(id, lineups.home, lineups.away);
+    const result = simulateMatch(id, lineups.home, lineups.away, season);
     const score = matchScore(result.homeGoals, result.awayGoals);
     // 기대 승률에 홈 이점을 넣고, 최근 TEAM_REPEAT_WINDOW_DAYS일 안에 이미 만난 횟수만큼 변화를 줄인다.
     const delta = ratingChange(mine.rating, opp.team.rating, score, Number(met?.n ?? 0));
@@ -383,16 +385,30 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       goals: result.awayGoals,
       rating: delta.away,
     };
-    await runBatch(db, [
-      ...recordMatchStatements(db, {
-        id,
-        profileId: me.id,
-        home: homeSide,
-        away: awaySide,
-        detail,
+    await commitNotifiedEvent(
+      db,
+      [
+        ...recordMatchStatements(db, {
+          id,
+          profileId: me.id,
+          home: homeSide,
+          away: awaySide,
+          detail,
+          now,
+        }),
+      ],
+      {
+        profileId: opp.team.profileId,
+        sourceKey: `team-match:${id}`,
         now,
-      }),
-    ]);
+        content: {
+          kind: 'team',
+          title: '내 팀에 새 경기 결과가 있어요',
+          body: `${opp.team.name} ${result.awayGoals} : ${result.homeGoals} ${mine.name}. 최근 경기에서 결과를 확인해 주세요.`,
+          target: { type: 'screen', screen: 'team' },
+        },
+      },
+    );
     // 상대 팀 기록(승패·레이팅)도 바뀌어 두 구단주 점수를 함께 센다.
     waitUntil(
       c,

@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import type { AppEnv, Bindings } from '../env.js';
 import { postExpo } from './transport.js';
+import { latePushResult } from './result.js';
 
 const BATCH = 100;
 const MINUTE = 60_000;
@@ -53,10 +54,13 @@ async function claim(db: D1Database, receipts: boolean, now: number, lease: stri
         AND d.profile_id = q.profile_id AND d.updated_at >= ? AND s.channel = 'app'
         AND s.profile_id = q.profile_id AND s.revoked_at IS NULL AND s.expires_at > ?
         AND p.deleted_at IS NULL AND p.id IS NOT NULL AND b.deleted_at IS NULL AND b.id IS NOT NULL
-        AND e.expires_at > ? THEN 1 ELSE 0 END AS eligible
+        AND e.expires_at > ?
+        AND CASE e.board WHEN 'notice' THEN COALESCE(pref.notice, 1) ELSE COALESCE(pref.release, 1) END = 1
+        THEN 1 ELSE 0 END AS eligible
     FROM push_news_deliveries q JOIN push_news_events e ON e.id = q.event_id
     LEFT JOIN push_devices d ON d.installation_hash = q.installation_hash
     LEFT JOIN sessions s ON s.id = q.session_id LEFT JOIN profiles p ON p.id = q.profile_id
+    LEFT JOIN push_preferences pref ON pref.profile_id = q.profile_id
     LEFT JOIN board_posts b ON b.id = e.post_id
     LEFT JOIN notifications n ON n.profile_id = q.profile_id AND n.source_key = 'news:' || e.id
     WHERE q.state = ? AND q.lease_id = ?`,
@@ -114,6 +118,7 @@ async function finish(
           r.id,
           lease,
         ),
+      latePushResult(db, 'push_news_deliveries', r.id, result.state, iso(now)),
     );
     if (result.remove)
       writes.push(

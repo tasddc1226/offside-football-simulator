@@ -109,6 +109,9 @@ export const TeamPlayerSchema = z.strictObject({
   cardValue: z.number().int().nullable().optional(),
   /** T-11-080 내가 직접 키운 선수(방출할 수 있다). 영입한 선수는 false. 구버전 응답에는 없다. */
   raised: z.boolean().optional(),
+  /** T-11-105 시너지용 유형 id·주발. 구버전 응답에는 없다. */
+  type: z.string().nullable().optional(),
+  foot: z.string().nullable().optional(),
   /** T-11-080 판매 등록 중이면 그 등록. */
   listing: z.strictObject({ id: z.string(), price: z.number().int() }).nullable().optional(),
 });

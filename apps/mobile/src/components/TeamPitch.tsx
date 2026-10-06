@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import { Pressable, View } from 'react-native';
+import Svg, { Line } from 'react-native-svg';
 import { presetLayout, type FormationId, type TeamLayout } from '@offside/contracts/owner-team';
 import type { TeamLines as Lines } from '@offside/app-core/api/team';
 import { rem } from '../theme/type';
@@ -23,6 +24,8 @@ export function TeamPitch({
   animate = true,
   onplace,
   height = 450,
+  links = [],
+  focus = null,
 }: {
   formation: FormationId;
   cells: readonly PitchCell[];
@@ -34,6 +37,10 @@ export function TeamPitch({
   animate?: boolean;
   onplace?: ((x: number, y: number) => void) | undefined;
   height?: number;
+  /** T-11-105 시너지 듀오 — 첫 선수에서 나머지로 잇는다. on이면 굵게. */
+  links?: readonly { members: readonly number[]; on: boolean }[];
+  /** 고른 시너지의 선수 자리(테두리). */
+  focus?: readonly number[] | null;
 }) {
   const c = useColors();
   const positions = layout ?? presetLayout(formation);
@@ -108,6 +115,35 @@ export function TeamPitch({
             style={{ position: 'absolute', inset: 0 }}
           />
         ) : null}
+        {links.length ? (
+          <Svg
+            pointerEvents="none"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+          >
+            {links.flatMap((l, k) =>
+              l.members.slice(1).map((m) => {
+                const a = positions[l.members[0]!];
+                const b = positions[m];
+                return a && b ? (
+                  <Line
+                    key={`${k}-${m}`}
+                    x1={a.x}
+                    y1={a.y}
+                    x2={b.x}
+                    y2={b.y}
+                    stroke={c.accent}
+                    strokeWidth={l.on ? 3 : 2}
+                    strokeDasharray={l.on ? undefined : '6 5'}
+                    strokeOpacity={l.on ? 0.95 : 0.55}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : null;
+              }),
+            )}
+          </Svg>
+        ) : null}
         {positions.map((pos, i) => {
           const cell = cells[i];
           if (!cell) return null;
@@ -140,8 +176,8 @@ export function TeamPitch({
                   accessibilityState={{ selected: selected === i }}
                   style={{
                     borderRadius: 10,
-                    borderWidth: selected === i ? 2 : 0,
-                    borderColor: c.pitchAccent,
+                    borderWidth: selected === i || focus?.includes(i) ? 2 : 0,
+                    borderColor: selected === i ? c.pitchAccent : c.accent,
                   }}
                 >
                   <PlayerCard cell={cell} code={pos.slot} compact animate={animate} />
