@@ -14,14 +14,9 @@ export function VoluntarySupport() {
   async function copyAccount() {
     if (busy) return;
     setBusy(true);
-    try {
-      const copied = await Clipboard.setStringAsync(ACCOUNT);
-      toast(copied ? L.supportCopied : L.supportCopyFailed({ account: ACCOUNT }));
-    } catch {
-      toast(L.supportCopyFailed({ account: ACCOUNT }));
-    } finally {
-      setBusy(false);
-    }
+    const copied = await Clipboard.setStringAsync(ACCOUNT).catch(() => false);
+    toast(copied ? L.supportCopied : L.supportCopyFailed({ account: ACCOUNT }));
+    setBusy(false);
   }
 
   return (
@@ -32,7 +27,7 @@ export function VoluntarySupport() {
       <Txt v="sm" tone="muted">
         {L.supportBody}
       </Txt>
-      <Btn testID="coffee" disabled={busy} onPress={() => void copyAccount()}>
+      <Btn testID="coffee" block disabled={busy} onPress={() => void copyAccount()}>
         {L.supportCopy}
       </Btn>
     </Card>

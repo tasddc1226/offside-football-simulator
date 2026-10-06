@@ -33,7 +33,9 @@ test('후원 계좌 복사가 거부되면 알림에 계좌번호를 보인다',
     document.execCommand = () => false;
   });
   await page.locator('[data-act="coffee"]').click();
-  await expect(page.locator('#toast')).toContainText('복사하지 못했어요. 토스뱅크 1000-1599-4723 양*영');
+  await expect(page.locator('#toast')).toContainText(
+    '복사하지 못했어요. 토스뱅크 1000-1599-4723 양*영',
+  );
   await page.locator('[data-act="settings"]').click();
   await page.locator('[data-act="home"]').click();
   await expect(page.locator('[data-act="coffee"]')).toHaveCount(1);

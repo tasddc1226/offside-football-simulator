@@ -13,12 +13,12 @@
 <section class="card voluntary-support" aria-labelledby="home-support" data-home-support>
   <h2 id="home-support">{L.supportTitle}</h2>
   <p class="muted">{L.supportBody}</p>
-  <button class="btn" data-act="coffee" onclick={copyAccount}>{L.supportCopy}</button>
+  <button class="btn btn-block" data-act="coffee" onclick={copyAccount}>{L.supportCopy}</button>
 </section>
 
 <style>
   .voluntary-support { margin-top: 24px; }
   h2 { font-size: 18px; margin: 0 0 8px; }
   p { font-size: 14px; line-height: 1.6; }
-  button { width: 100%; min-height: 44px; margin-top: 12px; justify-content: center; }
+  button { min-height: 44px; margin-top: 12px; }
 </style>
