@@ -302,6 +302,27 @@ export function retiredAvatarSpec(id: string, age: number): AvatarSpec {
   };
 }
 
+/** 명예의 전당 시상대: 커리어 ID로 얼굴을, 마지막 소속 구단으로 홈 유니폼을 정한 전성기 모습.
+ * 실제 전성기 나이는 목록 응답에 없어 27세(짧은 수염·흰머리 없음)로 그린다. 구단 id가 없는 옛 기록은 이름으로 유니폼을 찾는다. */
+export function primeAvatarSpec(e: {
+  id: string;
+  lastClub: string;
+  lastClubId?: string | null | undefined;
+}): AvatarSpec {
+  const look = lookOf(e.id);
+  const club = { id: e.lastClubId ?? '', name: e.lastClub };
+  return {
+    look,
+    club,
+    hairStyle: look.style,
+    gray: 0,
+    beard: 'stubble',
+    expr: 'happy',
+    acc: [],
+    kit: kitOf(club),
+  };
+}
+
 /** 커리어 상태 → 지금 모습. 나이에 따라 수염·흰머리가 생기고, 부상·입대·은퇴 때 옷과 소품이 바뀐다. */
 export function avatarSpec(s: GameState, side: KitSide = 'home'): AvatarSpec {
   if (s.retired) return retiredAvatarSpec(s.cid, s.age);
