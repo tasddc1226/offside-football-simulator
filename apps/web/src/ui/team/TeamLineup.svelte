@@ -286,7 +286,7 @@
   .roster-state {display:block;text-align:center;font-size:.7rem;color:var(--muted);padding-top:6px;} .roster-state.starting {color:var(--good);font-weight:600;}
   .drag-handle {display:flex;align-items:center;justify-content:center;gap:5px;width:100%;min-height:44px;border:0;background:none;color:var(--muted);font:inherit;font-size:.7rem;cursor:grab;touch-action:none;}
   .drag-handle svg {width:18px;height:12px;stroke:currentColor;stroke-width:1.6;} .locker-empty {grid-column:1/-1;padding:12px 0;}
-  .lineup-actions {position:fixed;bottom:calc(66px + var(--safe-b));left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:848px;z-index:8;display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);}
+  .lineup-actions {position:fixed;bottom:calc(66px + var(--safe-b));left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:528px;z-index:8;display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);}
   .lineup-save,.selection-jump {display:flex;align-items:center;justify-content:space-between;gap:8px;}
   .selection-jump > span {flex:1;min-width:0;}
   .selection-jump b {display:block;font-size:13px;overflow-wrap:anywhere;}

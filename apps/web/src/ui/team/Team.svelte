@@ -377,7 +377,7 @@
   }
 </script>
 
-<div class="wrap" class:has-tabbar={!needLogin} class:lineup-editor={view === 'team' && !needLogin}>
+<div class="wrap" class:has-tabbar={!needLogin}>
   <Topbar />
 
   <LoadState {status} failText={L.loadFail} retry={load}>
@@ -502,7 +502,6 @@
 {/if}
 
 <style>
-  .lineup-editor { max-width: 880px; }
   .tm-mode { margin-bottom: 12px; }
   .draft-notice {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;}
   .draft-notice p {margin:0;font-size:13px;flex:1 1 200px;}
