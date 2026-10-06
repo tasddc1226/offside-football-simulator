@@ -200,6 +200,8 @@ export interface AppState {
   report: PhaseReport | null;
   /** T-11-034 업적 탭에서 아직 보지 않은 새 업적 수 — 하단 '구단주'·내 팀 '업적' 탭의 점(achNudge.ts). */
   achNew: number;
+  /** T-11-128 끝난 시즌 결산이 나왔는데 이 기기에서 아직 안 열어 봤는가 — 하단 '구단주' 탭의 점(recapUnseen). */
+  recapNew: boolean;
 }
 
 /** 앱을 열 때의 상태. */
@@ -235,4 +237,5 @@ export const initialAppState = (): AppState => ({
   sharedCareer: null,
   report: null,
   achNew: 0,
+  recapNew: false,
 });

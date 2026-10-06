@@ -40,6 +40,8 @@
   // 옮기지 않아도 끝나는 대로 확인하게 dirty 신호로 다시 돈다. 보지 않은 새 업적 수(하단 점)는 앱을 열 때 되살린다.
   let achTick = $state(0);
   appState.achNew = achUnseenCount();
+  // T-11-128 새 시즌 결산(안 열어 본 결산이 있으면 구단주 탭에 점).
+  void import('@offside/app-core/api/seasonRecap').then(async (m) => (appState.recapNew = await m.recapUnseen()));
   $effect(() => onAchDirty(() => achTick++));
   $effect(() => {
     void achTick;

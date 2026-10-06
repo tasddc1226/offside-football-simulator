@@ -12,6 +12,7 @@ const ko = {
   navOwner: '구단주',
   navSettings: '설정',
   achNew: (p: { n: number }) => `새 업적 ${p.n}개`,
+  recapNew: '새 시즌 결산',
   bgm: '배경음악',
   bgmOff: '배경음악 끄기',
   bgmOn: '배경음악 켜기',

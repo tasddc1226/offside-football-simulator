@@ -12,6 +12,7 @@ export const shell: Translation<ShellMsgs> = {
   navOwner: 'Owner',
   navSettings: 'Settings',
   achNew: (p) => `${plural(p.n, 'new achievement')}`,
+  recapNew: 'New season recap',
   bgm: 'Music',
   bgmOff: 'Turn music off',
   bgmOn: 'Turn music on',

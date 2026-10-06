@@ -29,7 +29,7 @@
   {#each MAIN_SCREENS as k, i (k)}
     <button data-act={k} aria-current={appState.screen === k ? 'page' : undefined} style:--i={i} onclick={OPEN[k]}>
       <TabIcon name={k} />{label(k)}
-      {#if k === 'owner' && appState.achNew}<span class="tab-dot"><span class="sr-only">{L.achNew({ n: appState.achNew })}</span></span>{/if}
+      {#if k === 'owner' && (appState.achNew || appState.recapNew)}<span class="tab-dot" data-tab-dot><span class="sr-only">{appState.achNew ? L.achNew({ n: appState.achNew }) : L.recapNew}</span></span>{/if}
     </button>
   {/each}
 </nav>

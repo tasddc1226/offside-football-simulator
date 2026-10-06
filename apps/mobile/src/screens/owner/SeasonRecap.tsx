@@ -24,6 +24,7 @@ import { useMedal } from '../../components/Laurel';
 import { GradeEmblem } from '../../ui/GradeEmblem';
 import { GRADE_COLOR } from './TeamParts';
 import { go } from '../../game/nav';
+import { appState } from '../../store';
 import { openPublicLegendById } from '../../game/host';
 import { mix } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -135,7 +136,10 @@ export default function SeasonRecap() {
       if (!alive) return;
       if (!r.ok) return setSt({ kind: 'error' });
       setSt({ kind: 'ok', res: r.data });
-      if (r.data.status === 'ready') markRecapSeen(r.data.season);
+      if (r.data.status === 'ready') {
+        markRecapSeen(r.data.season);
+        appState.recapNew = false;
+      }
     });
     return () => {
       alive = false;

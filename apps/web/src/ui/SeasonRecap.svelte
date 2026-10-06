@@ -6,6 +6,7 @@
   import HonorEmblem from './HonorEmblem.svelte';
   import GradeEmblem from './team/GradeEmblem.svelte';
   import { go } from './nav.js';
+  import { appState } from './state.svelte.js';
   import { openPublicLegendById } from './legend.js';
   import { fetchOwnerHonors, fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
   import { honorViews, markRecapSeen, rankText, recapCutoffText, recapStatusText } from '@offside/app-core/seasonRecap';
@@ -42,7 +43,10 @@
     if (!r.ok) return void (failed = true);
     season = r.data.season;
     res = r.data;
-    if (r.data.status === 'ready') markRecapSeen(r.data.season);
+    if (r.data.status === 'ready') {
+      markRecapSeen(r.data.season);
+      appState.recapNew = false;
+    }
   }
   $effect(() => {
     void load();
