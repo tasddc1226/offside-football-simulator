@@ -6,7 +6,7 @@
 // T-10-108: 이미 본 글이 고쳐져도 알린다 — '본 시각'을 글 작성 시각 대신 마지막으로 바뀐 시각(touchedAt)과 견준다.
 import { fetchPosts, type PostSummary } from './api/boards.js';
 import { BOARD_KEYS } from '@offside/contracts/board-limits';
-import { loadKey, saveKey } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/hof-store';
 
 /** post: 알릴 글(새로 올라오거나 고쳐진 글 중 가장 최근), count: 그런 글 수, edited: post가 본 뒤 고쳐진 글이다. */
 /** post: 알릴 글(새로 올라오거나 고쳐진 글 중 가장 최근), count: 그런 글 수, edited: post가 본 뒤 고쳐진 글이다. */

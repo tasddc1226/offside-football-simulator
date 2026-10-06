@@ -1,7 +1,7 @@
 // T-10-021 '홈 화면에 추가' 안내. 주소를 입력하지 않고 아이콘으로 바로 열 수 있게, 모바일 브라우저로 홈 화면에
 // 다시 들어올 때마다 보여 준다('다시 보지 않기'를 체크하면 이 브라우저에서는 그만). 홈 화면 앱으로 연 경우와 데스크톱은
 // 띄우지 않고, 설정 > 도움말에서는 언제든 다시 연다. T-11-092 아이폰은 iPhone 앱(App Store)을 먼저 권한다.
-import { hasKey, loadKey, saveKey } from '@offside/game/season';
+import { hasKey, loadKey, saveKey } from '@offside/game/hof-store';
 import { closeSheet, showSheet } from './sheetState.svelte.js';
 import { currentInApp, isStandalone, openExternal } from './inapp-open.js';
 import { INSTALL_STEPS, detectPlatform, type Platform } from './install-platform.js';

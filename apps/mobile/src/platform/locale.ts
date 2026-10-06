@@ -5,7 +5,7 @@
 // setup.ts가 저장소(MMKV)를 정하기 전에 store가 평가되면 테마 설정을 못 읽는다.
 import { LOCALE_KEY, resolveLocale, setLocale, type Locale } from '@offside/app-core/i18n/core';
 import type { en as EnDicts } from '@offside/app-core/i18n/en/index';
-import { loadKey, saveKey } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/hof-store';
 
 function deviceLocales(): string[] {
   try {

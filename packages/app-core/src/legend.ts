@@ -4,7 +4,8 @@
 import type { LegendSnapshot, PublicHofEntry, RetiredNumberResult } from '@offside/contracts';
 import { toPublicName } from '@offside/contracts/content-filter';
 import { isHofEligible } from '@offside/contracts/hof-rules';
-import { legendScore, loadHOF, saveKey } from '@offside/game/season';
+import { legendScore } from '@offside/game/legend-score';
+import { loadHOF, saveKey } from '@offside/game/hof-store';
 import type { GameState, HofEntry } from '@offside/game/types';
 import { mainTitle } from '@offside/game/titles';
 import { truePot } from '@offside/game/stats';

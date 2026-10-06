@@ -4,7 +4,7 @@
 // 띄우고, 업적 탭을 열 때까지 하단 '구단주'와 내 팀 '업적' 탭에 점을, 업적 목록엔 NEW를 붙인다.
 import { achGradeOf, type AchGrade } from '@offside/contracts/owner-team';
 import type { ClubAchievementsResponse } from '@offside/contracts';
-import { loadKey, saveKey } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/hof-store';
 import { ACH_SEEN_KEY, OUTBOX_KEY, achUnseenCount, clearAchDirty, isAchDirty } from './achDirty.js';
 import type { ApiResult } from './api/client.js';
 import type { SheetButton, SheetView } from './sheets.js';

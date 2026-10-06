@@ -17,7 +17,7 @@
   import { POS_GROUPS } from '@offside/contracts/positions';
   import { getRetiredNumbersOfClub, getRetiredNumbersPage, getRetiredNumbersSummary } from '@offside/app-core/api/client';
   import { POS } from '@offside/game/data';
-  import { loadHOF } from '@offside/game/season';
+  import { loadHOF } from '@offside/game/hof-store';
   import ClubMark from './ClubMark.svelte';
   import Laurel from './Laurel.svelte';
   import { seasonNow } from './seasonNow.svelte.js';

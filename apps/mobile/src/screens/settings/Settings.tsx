@@ -5,7 +5,7 @@ import { nativeAnalytics } from '../../analytics';
 import { useState, useSyncExternalStore } from 'react';
 import { View } from 'react-native';
 import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
-import { saveKey } from '@offside/game/season';
+import { saveKey } from '@offside/game/hof-store';
 import { SiteFooter } from '../../components/SiteFooter';
 import { openWeb } from '../../platform/openWeb';
 import { prefs } from '../../store';

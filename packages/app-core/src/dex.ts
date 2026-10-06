@@ -1,7 +1,7 @@
 // 확률 도감(T-10-012) 발견 기록. 커리어를 바꿔도 남도록 기기에 따로 저장한다(ft_dex, 이벤트 id 목록).
 // 스토리·특별 이벤트는 여기 기록돼야 도감에서 열린다.
 import { EVENTS } from '@offside/game/events-data';
-import { loadKey, saveKey } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/hof-store';
 import type { GameState } from '@offside/game/types';
 
 const KEY = 'ft_dex';

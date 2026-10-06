@@ -5,7 +5,7 @@
   // T-11-029 시즌 탭(프리시즌 / 시즌 1…)으로 거른다 — 개막한 시즌이 둘 이상일 때만 보이고, 기본은 지금 시즌이다.
   import { onMount } from 'svelte';
   import type { PublicHofEntry } from '@offside/contracts';
-  import { loadHOF } from '@offside/game/season';
+  import { loadHOF } from '@offside/game/hof-store';
   import type { HofEntry } from '@offside/game/types';
   import { localCardValue, myPlayerNation } from '@offside/app-core/myPlayers';
   import { getMyCareers, getRetiredNumbersIn } from '@offside/app-core/api/client';

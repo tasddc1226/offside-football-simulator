@@ -8,7 +8,7 @@ import type {
   RetiredNumbersResponse,
 } from '@offside/contracts';
 import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
-import { loadHOF, saveKey } from '@offside/game/season';
+import { loadHOF, saveKey } from '@offside/game/hof-store';
 import { onLive } from './api/liveSocket.js';
 
 export type RnResults = Record<string, RetiredNumberResult | null>;

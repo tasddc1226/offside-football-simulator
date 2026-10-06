@@ -28,7 +28,7 @@ import {
   rnLeagueName as leagueOf,
 } from '@offside/app-core/retiredWall';
 import { POS } from '@offside/game/data';
-import { loadHOF } from '@offside/game/season';
+import { loadHOF } from '@offside/game/hof-store';
 import { Laurel, useMedal } from '../../components/Laurel';
 import { RnShirtShape } from '../../components/RnJersey';
 import { openPublicLegendById } from '../../game/host';
