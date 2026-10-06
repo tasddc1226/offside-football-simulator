@@ -10,7 +10,7 @@
   // 누르는 버튼(.hof-row)은 부르는 쪽이 감싼다.
   import TitleTag from './titles/TitleTag.svelte';
   import { titleById } from '@offside/game/titles';
-  import { posLabel, type DetailPos, type POS } from '@offside/game/data';
+  import { posAbbr, posLabel, type DetailPos, type POS } from '@offside/game/data';
   import Laurel from './Laurel.svelte';
   import ClubMark from './ClubMark.svelte';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
@@ -39,6 +39,9 @@
     flow = false,
     compact = false,
     showPosition = true,
+    showClub = false,
+    shortPos = false,
+    retireAge = null,
   }: {
     /** 0부터. 0~2는 금·은·동 월계관. */
     rank: number;
@@ -68,11 +71,18 @@
     flow?: boolean;
     compact?: boolean;
     showPosition?: boolean;
+    /** 기록 요약 앞에 은퇴 시점 소속 구단 이름을 적는다(명예의 전당). */
+    showClub?: boolean;
+    /** 포지션을 영어 약어(CDM·ST…)로 적는다(명예의 전당). 전체 이름은 title로 남긴다. */
+    shortPos?: boolean;
+    /** 기록실 줄(compact)에 은퇴 나이·최고 OVR·발롱도르(받은 선수만)를 더한다(명예의 전당). */
+    retireAge?: number | null;
   } = $props();
   const country = $derived(showNation ? (NATION_BY_CODE.get(nation || DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION)!) : undefined);
   const tt = $derived(titleById(titleId));
   // 글자 값('1,115억 3천만')은 큰 단위 아래에 작은 단위를 한 줄 더 — 오른쪽 칸이 좁아 이름 줄이 덜 밀린다.
   const [valueHead, valueSub] = $derived(typeof value === 'string' ? value.split(' ') : []);
+  const clubName = $derived(showClub && club ? tn(club) : null);
   const stats = $derived(L.rowStats({ ...t, score: showScore ? t.score : null }));
   // 흐를 때 두 벌을 이어 붙여 -50%까지 민다(HomeTicker와 같은 방식). 한 벌 = 글 + 뒤 여백(FLOW_GAP).
   const FLOW_SPEED = 28; // px/초
@@ -82,6 +92,10 @@
   const flowing = $derived(flow && motionOK && copyW - FLOW_GAP > boxW + 1);
 </script>
 
+{#snippet clubLabel()}
+  <span class="hof-club-name" data-hof-club><ClubMark name={club} id={clubId} size={14} /><span class="hof-club-text">{clubName}</span></span>
+{/snippet}
+
 {#if rank < MEDAL.length}
   <div class="hof-rank medal {MEDAL[rank]}"><Laurel /><span>{rank + 1}</span></div>
 {:else}
@@ -89,9 +103,10 @@
 {/if}
 <!-- 두 줄: 윗줄은 이름·포지션·칭호와 오른쪽 값, 아랫줄 기록 요약은 값 밑까지 넓게 쓰고 넘치면 말줄임(T-10-105). -->
 <div class="hof-main" class:hof-main-compact={compact}>
-  <span class="hof-identity"><ClubMark name={club} id={clubId} size={18} />{#if country}<span class="hof-flag" role="img" aria-label={tn(country.ko)} title={tn(country.ko)} data-hof-nation={country.code}>{flagOf(country.code)}</span>{/if}<b>{name}</b></span>
+  <!-- 은퇴 시점 구단을 따로 적으면(showClub) 엠블럼은 이름 앞이 아니라 구단 이름 앞에 둔다. -->
+  <span class="hof-identity">{#if !clubName}<ClubMark name={club} id={clubId} size={18} />{/if}{#if country}<span class="hof-flag" role="img" aria-label={tn(country.ko)} title={tn(country.ko)} data-hof-nation={country.code}>{flagOf(country.code)}</span>{/if}<b>{name}</b></span>
   {#if showPosition || rn != null || tag || tt}
-    <span class="hof-badges">{#if showPosition}<span class="pill">{posLabel({ pos, dpos })}</span>{/if}
+    <span class="hof-badges">{#if showPosition}<span class="pill" title={shortPos ? posLabel({ pos, dpos }) : undefined}>{shortPos ? posAbbr({ pos, dpos }) : posLabel({ pos, dpos })}</span>{/if}
       {#if rn != null}<span class="pill pill-rn" data-rn-chip title={L.rnChipTitle({ number: rn })}>{L.rnChip({ number: rn })}</span>{/if}
       {#if tag}<span class="pill">{tag}</span>{/if}
       {#if tt}<TitleTag name={tt.name} rarity={tt.rarity} />{/if}
@@ -102,13 +117,13 @@
 {#if flow}
   <div class="muted fs-xs hof-stats" class:flowing bind:clientWidth={boxW}>
     <div class="hof-flow" style:animation-duration={flowing ? `${copyW / FLOW_SPEED}s` : null}>
-      <span bind:clientWidth={copyW} style:padding-right="{FLOW_GAP}px">{stats}</span>{#if flowing}<span aria-hidden="true" style:padding-right="{FLOW_GAP}px">{stats}</span>{/if}
+      <span bind:clientWidth={copyW} style:padding-right="{FLOW_GAP}px">{#if clubName}{@render clubLabel()} · {/if}{stats}</span>{#if flowing}<span aria-hidden="true" style:padding-right="{FLOW_GAP}px">{#if clubName}{@render clubLabel()} · {/if}{stats}</span>{/if}
     </div>
   </div>
 {:else if compact}
   <div class="muted hof-stats hof-stats-compact">
-    <span>{L.appsN({ n: t.apps.toLocaleString(intlLocale()) })}</span><span>{L.goalsN({ n: t.goals.toLocaleString(intlLocale()) })}</span><span>{L.assistsN({ n: t.assists.toLocaleString(intlLocale()) })}</span>
+    {#if clubName}{@render clubLabel()}{/if}{#if retireAge != null}<span>{L.retireAgeN({ n: retireAge })}</span><i class="hof-stats-break" aria-hidden="true"></i>{/if}<span>{L.appsN({ n: t.apps.toLocaleString(intlLocale()) })}</span><span>{L.goalsN({ n: t.goals.toLocaleString(intlLocale()) })}</span><span>{L.assistsN({ n: t.assists.toLocaleString(intlLocale()) })}</span>{#if retireAge != null}<span>{L.peakN({ n: t.peak })}</span>{#if t.ballon}<span class="hof-ballon">{L.ballonN({ n: t.ballon })}</span>{/if}{/if}
   </div>
 {:else}
-  <div class="muted fs-xs hof-stats">{stats}</div>
+  <div class="muted fs-xs hof-stats">{#if clubName}{@render clubLabel()} · {/if}{stats}</div>
 {/if}

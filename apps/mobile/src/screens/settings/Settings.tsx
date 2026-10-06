@@ -8,6 +8,7 @@ import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
 import { saveKey } from '@offside/game/storage';
 import { SiteFooter } from '../../components/SiteFooter';
 import { openWeb } from '../../platform/openWeb';
+import { appBuildInfo } from '../../platform/updates';
 import { prefs } from '../../store';
 import { useColors, useIsDark } from '../../theme/useColors';
 import { rem } from '../../theme/type';
@@ -76,6 +77,22 @@ function Group({
       </Txt>
       {children}
     </View>
+  );
+}
+
+/** 앱 버전·OTA 업데이트 ID. 새 업데이트가 적용됐는지 확인할 때 본다. */
+function BuildInfo() {
+  const { version, build, updateId } = appBuildInfo();
+  return (
+    <Txt
+      tone="muted"
+      selectable
+      testID="build-info"
+      style={{ fontSize: rem(0.75), textAlign: 'center', paddingTop: 8 }}
+    >
+      {L.appVersion({ version, build })} ·{' '}
+      {updateId ? L.updateId({ id: updateId }) : L.updateEmbedded}
+    </Txt>
   );
 }
 
@@ -181,6 +198,7 @@ export default function Settings() {
         />
       </Group>
 
+      <BuildInfo />
       <SiteFooter />
     </Screen>
   );

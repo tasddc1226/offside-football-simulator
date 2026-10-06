@@ -4,6 +4,7 @@
   import { fetchPosts, type BoardKey, type PostSummary } from '@offside/app-core/api/boards';
   import { postMeta } from '@offside/app-core/boardText';
   import { openBoard } from './nav.js';
+  import MoreLink from './MoreLink.svelte';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
   import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 
@@ -28,7 +29,7 @@
       <h2 style="margin-bottom:4px">{title}</h2>
     </div>
     {#if posts}
-      <button class="icon-btn" data-act="news-all" onclick={() => openBoard(board)}>{L.newsAll}</button>
+      <MoreLink act="news-all" what={title} onclick={() => openBoard(board)} />
     {/if}
   </div>
   {#if failed}

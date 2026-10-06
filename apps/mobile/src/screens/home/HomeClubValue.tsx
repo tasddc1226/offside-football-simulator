@@ -11,7 +11,7 @@ import { TeamLogo } from '../../components/TeamLogo';
 import { go } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
-import { Btn, Card, Press, Txt } from '../../ui';
+import { Card, MoreLink, Press, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 
 const TOP = 3;
@@ -64,9 +64,7 @@ export function HomeClubValue() {
             {L.homeValueSub}
           </Txt>
         </View>
-        <Btn sm testID="club-value-all" onPress={() => openRanking()}>
-          {L.homeValueAll}
-        </Btn>
+        <MoreLink testID="club-value-all" what={L.homeValueTitle} onPress={() => openRanking()} />
       </View>
       {failed
         ? note(L.rankFail)

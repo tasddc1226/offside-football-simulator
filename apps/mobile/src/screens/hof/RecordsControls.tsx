@@ -1,6 +1,6 @@
 // Shared compact records controls. The selection sheet keeps native safe areas and touch targets.
 import type { ReactNode } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { useColors } from '../../theme/useColors';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
@@ -111,12 +111,15 @@ export function RecordsChips({
   value,
   onPick,
   testIDPrefix,
+  scroll = false,
 }: {
   label: string;
   items: readonly { key: string; label: string; isNew?: boolean }[];
   value: string;
   onPick: (value: string) => void;
   testIDPrefix: string;
+  /** 한 줄로 두고 좌우로 넘긴다(순위 유형처럼 항목이 많을 때). */
+  scroll?: boolean;
 }) {
   const c = useColors();
   return (
@@ -124,7 +127,7 @@ export function RecordsChips({
       <Txt tone="muted" style={{ fontSize: 12 }}>
         {label}
       </Txt>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+      <ChipRow scroll={scroll}>
         {items.map((item) => (
           <Press
             key={item.key}
@@ -160,7 +163,21 @@ export function RecordsChips({
             </View>
           </Press>
         ))}
-      </View>
+      </ChipRow>
     </View>
+  );
+}
+
+function ChipRow({ scroll, children }: { scroll: boolean; children: ReactNode }) {
+  if (!scroll)
+    return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{children}</View>;
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ flexDirection: 'row', gap: 6 }}
+    >
+      {children}
+    </ScrollView>
   );
 }
