@@ -99,7 +99,7 @@ describe('T-11-128 시즌 결산', () => {
       insert into server_firsts (season, id, career_id, achieved_at) values (0, 'ballon', ${bCareer}, ${BEFORE})`);
     await addTeam(a.profileId, 1000);
     await addTeam(b.profileId, 1100);
-    await addAch(a.profileId, 50, BEFORE);
+    await addAch(a.profileId, 1000, BEFORE);
     // 개막 뒤에 점수가 바뀐 구단주는 개막 시각 기준으로 다시 센다.
     await addAch(b.profileId, 9999, AFTER);
 
@@ -136,7 +136,7 @@ describe('T-11-128 시즌 결산', () => {
       firsts: 0,
       team: { rating: 1000, rank: 2, ranked: 2, wins: 3 },
       // 다른 구단주의 9999점은 개막 시각 기준으로 다시 세어 내려간다.
-      achievements: { score: 50, rank: 1, ranked: 2 },
+      achievements: { score: 1000, rank: 1, ranked: 2 },
     });
     const kinds = Object.fromEntries(mine.honors.map((h) => [h.kind, h]));
     expect(Object.keys(kinds).sort()).toEqual(
@@ -163,17 +163,17 @@ describe('T-11-128 시즌 결산', () => {
     ).data;
     expect(guest.honors.map((h) => h.kind).sort()).toEqual(['hof', 'pioneer']);
 
-    // 지난 시즌 휘장으로 티어가 붙는다(댓글 · 채팅 · 프로필).
+    // 마감 때 굳힌 업적 점수의 업적 등급이 티어로 붙는다(댓글 · 채팅 · 프로필).
     const tiers = await ownerTiersOf(
       ctx.db,
       [a.profileId, b.profileId, anon.profileId, 'prf_none'],
       new Date().toISOString(),
     );
-    // A: 업적 1위 → 챌린저 · B: 팀 레이팅 1위 → 챌린저 · 게스트: 순위 없이 명예의 전당 3위 → 그랜드마스터.
+    // A: 1,000점 → 골드 · B: 개막 시각 기준으로 다시 센 점수(50 미만) → 루키 · 게스트: 업적 점수 없음 → 루키.
     expect(Object.fromEntries([...tiers].map(([id, t]) => [id, t.tier]))).toEqual({
-      [a.profileId]: 'challenger',
-      [b.profileId]: 'challenger',
-      [anon.profileId]: 'grandmaster',
+      [a.profileId]: 'gold',
+      [b.profileId]: 'rookie',
+      [anon.profileId]: 'rookie',
     });
 
     // 다시 돌려도 바꾸지 않는다.

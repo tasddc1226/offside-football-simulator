@@ -56,24 +56,10 @@ const ko = {
   ribbonTop: (p: { band: number }) => `TOP ${p.band}`,
   ribbonCount: (p: { n: number }) => `×${p.n}`,
   rankFinal: (p: { rank: string }) => `${p.rank}위로 마감`,
-  // 구단주 티어(시즌 휘장 — 지난 시즌 기록 순위로)
-  tierIron: '아이언',
-  tierBronze: '브론즈',
-  tierSilver: '실버',
-  tierGold: '골드',
-  tierPlatinum: '플래티넘',
-  tierEmerald: '에메랄드',
-  tierDiamond: '다이아몬드',
-  tierMaster: '마스터',
-  tierGrandmaster: '그랜드마스터',
-  tierChallenger: '챌린저',
-  secTier: '시즌 휘장',
+  // 구단주 티어(구단주 랭킹과 같은 업적 등급 — 마감 때 업적 점수로)
+  secTier: '시즌 등급',
   secBadges: '기록 배지',
-  tierWhy: (p: { what: string; rank: string; total: string }) =>
-    `${p.what} ${p.rank}위 / ${p.total}`,
-  tierWhyLegacy: '영구결번 · 명예의 벽 · 최초 기록',
-  tierWhyRetired: (p: { n: number }) => `은퇴 선수 ${p.n}명`,
-  tierWhyNone: '시즌 기록',
+  tierWhy: (p: { score: string }) => `업적 점수 ${p.score}점으로 마감`,
   tierTitle: (p: { season: string; tier: string }) => `${p.season} ${p.tier}`,
 };
 

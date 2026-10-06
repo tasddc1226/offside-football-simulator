@@ -6965,15 +6965,12 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   border: 2px solid var(--accent);
   pointer-events: none;
 }
-/* T-11-128 구단주 티어(TierBadge.svelte) — 댓글 · 채팅 닉네임 옆 작은 휘장(글자 없음). */
+/* T-11-128 구단주 티어(TierBadge.svelte) — 댓글 · 채팅 닉네임 옆 업적 등급 엠블럼(글자 없음). */
 .tier-badge {
   display: inline-flex;
   vertical-align: middle;
-  /* 휘장이 줄 높이를 밀지 않게 위아래를 겹친다. */
-  margin: -9px -3px;
-  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
 }
-/* T-11-128 결산 화면 시즌 휘장 — 큰 휘장 아래 티어 이름과 근거. */
+/* T-11-128 결산 화면 시즌 등급 — 큰 등급 엠블럼 아래 등급 이름과 마감 업적 점수. */
 .recap-tier {
   display: flex;
   flex-direction: column;
@@ -6993,42 +6990,8 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   text-align: left;
 }
 .recap-tier-name {
+  margin-top: 8px;
   font-family: var(--display);
   font-size: 1.25rem;
   letter-spacing: 0.02em;
-  color: var(--tier-hi);
-}
-:root[data-theme='light'] .recap-tier-name {
-  color: color-mix(in srgb, var(--tier) 75%, #000);
-}
-/* T-11-128 시즌 휘장(TierCrest.svelte) — 날개 문장 가운데 원에 프로필. 원 자리는 tierCrest.ts의 CREST_SLOT(80,60 r20 / 160×120). */
-.tier-crest {
-  position: relative;
-  display: inline-block;
-  flex: none;
-  width: var(--crest-w);
-  aspect-ratio: 160 / 128;
-  line-height: 1;
-}
-.tier-crest svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  filter: drop-shadow(0 3px 8px rgb(0 0 0 / 0.35));
-}
-.tier-crest-avatar {
-  position: absolute;
-  left: 50%;
-  /* CREST_SLOT.cy(62) ÷ 높이(128), 지름 56 ÷ 너비 160. */
-  top: 48.4375%;
-  width: 35%;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: calc(var(--crest-w) * 0.17);
 }

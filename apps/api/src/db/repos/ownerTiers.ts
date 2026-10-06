@@ -1,4 +1,4 @@
-// T-11-128 구단주 티어(시즌 휘장) — 가장 최근에 끝난 시즌의 결산(owner_season_records) 순위로 정한다(ownerTierOf).
+// T-11-128 구단주 티어 — 가장 최근에 끝난 시즌 마감 때 굳힌 업적 점수(owner_season_records.ach_score)의 업적 등급(ownerTierOf).
 // 프로필 · 댓글 · 채팅이 같이 쓴다. 그 시즌을 아직 굳히는 중이면 티어가 없다(굳히면 바로 붙는다).
 import type { OwnerTierTag } from '@offside/contracts';
 import { ownerTierOf } from '@offside/contracts/owner-tier';
@@ -19,8 +19,7 @@ export async function ownerTiersOf(
   const out = new Map<string, OwnerTierTag>();
   if (season === null || ids.length === 0) return out;
   const state = await closeStateOf(db, season);
-  if (state?.step !== 'done' || !state.ranked) return out;
-  const { ranked } = state;
+  if (state?.step !== 'done') return out;
   // D1 바인딩 한도(100) 안에서 나눠 읽는다(댓글은 한 글에 200개까지).
   const chunks = Array.from({ length: Math.ceil(ids.length / 90) }, (_, i) =>
     ids.slice(i * 90, i * 90 + 90),
@@ -29,33 +28,13 @@ export async function ownerTiersOf(
     await Promise.all(
       chunks.map((chunk) =>
         db
-          .select({
-            profileId: r.profileId,
-            achRank: r.achRank,
-            teamRank: r.teamRank,
-            hofRank: r.hofRank,
-            retired: r.retired,
-            retiredNumbers: r.retiredNumbers,
-            wallOfHonor: r.wallOfHonor,
-            firsts: r.firsts,
-          })
+          .select({ profileId: r.profileId, achScore: r.achScore })
           .from(r)
           .where(and(inArray(r.profileId, chunk), eq(r.season, season))),
       ),
     )
   ).flat();
-  for (const row of rows) {
-    const tier = ownerTierOf({
-      ranks: [
-        { rank: row.achRank, ranked: ranked.ach },
-        { rank: row.teamRank, ranked: ranked.team },
-        { rank: row.hofRank, ranked: ranked.hof },
-      ],
-      retired: row.retired,
-      legacy: row.retiredNumbers + row.wallOfHonor + row.firsts,
-    });
-    out.set(row.profileId, { tier, season });
-  }
+  for (const row of rows) out.set(row.profileId, { tier: ownerTierOf(row.achScore), season });
   return out;
 }
 

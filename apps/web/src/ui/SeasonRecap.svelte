@@ -4,7 +4,7 @@
   import Topbar from './Topbar.svelte';
   import BackBar from './BackBar.svelte';
   import HonorEmblem from './HonorEmblem.svelte';
-  import TierCrest from './TierCrest.svelte';
+  import GradeEmblem from './team/GradeEmblem.svelte';
   import { go } from './nav.js';
   import { openPublicLegendById } from './legend.js';
   import { fetchOwnerHonors, fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
@@ -15,8 +15,7 @@
   import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
   import { ownerText as O } from '@offside/app-core/i18n/ko/owner';
   import { recapTier, tierReason, tierTitle } from '@offside/app-core/ownerTier';
-  import { TIER_PALETTE } from '@offside/app-core/tierCrest';
-  import { accountCache } from './account-state.svelte.js';
+  import { EMBLEM_PALETTE } from '@offside/app-core/gradeEmblem';
 
   let seasons = $state<number[]>([]);
   let season = $state<number | null>(null);
@@ -53,10 +52,6 @@
   const recap = $derived(res?.status === 'ready' ? res.recap : null);
   const honors = $derived(res ? honorViews(res.honors) : []);
   const tier = $derived(recap ? recapTier(recap) : null);
-  const initial = $derived.by(() => {
-    const acct = accountCache.value;
-    return ((acct && acct !== 'error' ? acct.nickname : null) ?? O.avatarInitial).slice(0, 1);
-  });
 </script>
 
 {#snippet stat(label: string, value: string, key?: string)}
@@ -92,11 +87,11 @@
     <section class="card" data-recap-none><p class="muted">{recapStatusText(res)}</p></section>
   {:else}
     {#if tier && res}
-      <!-- 시즌 휘장 — 이번 시즌 기록으로 정한 티어. 프로필 · 댓글 · 채팅에 다음 시즌 내내 붙는다. -->
-      <section class="card recap-sec recap-tier" data-recap-section="tier" data-recap-tier={tier} style="--tier: {TIER_PALETTE[tier].base}; --tier-hi: {TIER_PALETTE[tier].hi}" aria-label={L.secTier}>
+      <!-- 시즌 등급 — 구단주 랭킹과 같은 업적 등급을 마감 업적 점수로. 프로필 · 댓글 · 채팅에 다음 시즌 내내 붙는다. -->
+      <section class="card recap-sec recap-tier" data-recap-section="tier" data-recap-tier={tier} style="--tier: {EMBLEM_PALETTE[tier].base}" aria-label={L.secTier}>
         <h2>{L.secTier}</h2>
-        <TierCrest {tier} size={240} {initial} />
-        <b class="recap-tier-name">{tierTitle({ tier, season: res.season })}</b>
+        <GradeEmblem id={tier} size={112} />
+        <b class="ach-grade large recap-tier-name" data-grade={tier}>{tierTitle({ tier, season: res.season })}</b>
         <span class="muted fs-sm num">{tierReason(recap)}</span>
       </section>
     {/if}
