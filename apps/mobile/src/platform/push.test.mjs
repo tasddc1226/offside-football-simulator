@@ -3,6 +3,11 @@ const f = vi.hoisted(() => {
   const fixture = {
     values: new Map(),
     listener: undefined,
+    response: undefined,
+    lastResponse: null,
+    received: undefined,
+    openInbox: vi.fn(),
+    invalidate: vi.fn(),
     rotateDuringFetch: false,
     nativeReads: 0,
     token: 'native-a',
@@ -39,6 +44,7 @@ const f = vi.hoisted(() => {
   return fixture;
 });
 vi.mock('expo-notifications', () => ({
+  DEFAULT_ACTION_IDENTIFIER: 'default',
   getExpoPushTokenAsync: f.getExpo,
   setAutoServerRegistrationEnabledAsync: f.autoRegistration,
   setNotificationChannelAsync: async () => {},
@@ -46,9 +52,16 @@ vi.mock('expo-notifications', () => ({
   getPermissionsAsync: async () => ({ granted: true, canAskAgain: true }),
   requestPermissionsAsync: async () => ({ granted: true, canAskAgain: true }),
   setNotificationHandler: () => {},
-  getLastNotificationResponse: () => null,
+  getLastNotificationResponse: () => f.lastResponse,
   clearLastNotificationResponseAsync: async () => {},
-  addNotificationResponseReceivedListener: () => ({ remove() {} }),
+  addNotificationResponseReceivedListener: (cb) => {
+    f.response = cb;
+    return { remove() {} };
+  },
+  addNotificationReceivedListener: (cb) => {
+    f.received = cb;
+    return { remove() {} };
+  },
   addPushTokenListener: (listener) => {
     f.listener = listener;
     return { remove() {} };
@@ -92,6 +105,7 @@ vi.mock('./session', () => ({
   sessionToken: () => 'test-session',
   onSessionChanged() {},
 }));
+vi.mock('./inbox', () => ({ openInbox: f.openInbox, inbox: { invalidate: f.invalidate } }));
 vi.mock('../game/nav', () => ({ openBoard() {} }));
 vi.mock('./setup', () => ({
   kv: {
@@ -108,6 +122,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   f.values.clear();
   f.listener = undefined;
+  f.lastResponse = null;
   f.rotateDuringFetch = false;
   f.nativeReads = 0;
   f.token = 'native-a';
@@ -198,5 +213,121 @@ describe('native push token event registration', () => {
     expect(f.requests.at(-1).body.token).toBe('ExpoPushToken[native-b]');
     expect(f.api).toHaveBeenCalledTimes(2);
     expect(f.nativeReads).toBe(1);
+  });
+});
+
+describe('own-device test push cooldown', () => {
+  it('blocks a second request and restores the cooldown after restarting', async () => {
+    const p = await app();
+    const nextTestAt = new Date(Date.now() + 600_000).toISOString();
+    f.api.mockResolvedValueOnce({ ok: true, data: { accepted: true, nextTestAt } });
+    await p.testOwnPush();
+    const requests = f.api.mock.calls.length;
+    await expect(p.testOwnPush()).rejects.toThrow('잠시 뒤');
+    expect(f.api.mock.calls).toHaveLength(requests);
+    vi.resetModules();
+    const restarted = await import('./push.ts');
+    expect(restarted.pushTestState.nextTestAt).toBe(Date.parse(nextTestAt));
+    await expect(restarted.testOwnPush()).rejects.toThrow('잠시 뒤');
+    expect(f.api.mock.calls).toHaveLength(requests);
+  });
+  it('blocks rapid concurrent taps before the request has finished', async () => {
+    const p = await app();
+    let finish;
+    f.api.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const first = p.testOwnPush();
+    await expect(p.testOwnPush()).rejects.toThrow('잠시 뒤');
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
+    finish({ ok: true, data: { accepted: true } });
+    await first;
+    expect(p.pushTestState.busy).toBe(false);
+    expect(f.api.mock.calls.filter(([path]) => path === '/v1/push/test')).toHaveLength(1);
+  });
+  it('persists a pause on an uncertain response or server rate limit', async () => {
+    const p = await app();
+    f.api.mockResolvedValueOnce({
+      ok: false,
+      error: { code: 'NETWORK_ERROR', message: '연결하지 못했어요.' },
+    });
+    await expect(p.testOwnPush()).rejects.toThrow();
+    expect(p.pushTestState.nextTestAt).toBeGreaterThan(Date.now());
+    expect(p.pushTestState.busy).toBe(false);
+  });
+});
+
+describe('notification inbox routing and unified push subscription', () => {
+  it('tracks a push that launches the terminated app', async () => {
+    f.lastResponse = {
+      actionIdentifier: 'default',
+      notification: {
+        request: { content: { data: { type: 'offside-news', notificationId: 'ntf_cold' } } },
+      },
+    };
+    await app();
+    await vi.waitFor(() =>
+      expect(
+        f.api.mock.calls.filter(([path]) => path.includes('ntf_cold/interaction')),
+      ).toHaveLength(1),
+    );
+    expect(f.openInbox).toHaveBeenCalledWith('ntf_cold');
+  });
+  it('tracks OS default response clicks, and never tracks foreground receipt as a click', async () => {
+    await app();
+    const notification = {
+      request: { content: { data: { type: 'offside-notification', notificationId: 'ntf_click' } } },
+    };
+    f.received(notification);
+    f.response({ actionIdentifier: 'dismiss', notification });
+    expect(f.api.mock.calls.some(([path]) => path.includes('/interaction'))).toBe(false);
+    f.response({ actionIdentifier: 'default', notification });
+    await vi.waitFor(() =>
+      expect(f.api.mock.calls.filter(([path]) => path.includes('/interaction'))).toHaveLength(1),
+    );
+    const call = f.api.mock.calls.find(([path]) => path.includes('/interaction'));
+    expect(JSON.parse(call[1].body).event).toBe('click');
+  });
+  it('opens only a validated inbox ID from trusted notification types', async () => {
+    await app();
+    f.response({
+      actionIdentifier: 'default',
+      notification: {
+        request: {
+          content: { data: { type: 'offside-notification', notificationId: 'ntf_safe' } },
+        },
+      },
+    });
+    expect(f.openInbox).toHaveBeenCalledWith('ntf_safe');
+    f.response({
+      actionIdentifier: 'default',
+      notification: {
+        request: {
+          content: {
+            data: { type: 'offside-notification', notificationId: 'https://evil.invalid' },
+          },
+        },
+      },
+    });
+    expect(f.openInbox).toHaveBeenCalledTimes(1);
+    f.received({
+      request: { content: { data: { type: 'offside-notification', notificationId: 'ntf_next' } } },
+    });
+    expect(f.invalidate).toHaveBeenCalledTimes(2);
+  });
+  it('re-registers a legacy subscriber even when the removed engagement preference was off', async () => {
+    f.values.set('offside_push_engagement', false);
+    f.values.set('offside_push_registered', 'ExpoPushToken[native-a]|test-session|1.0.2|false');
+    f.values.set('offside_push_registered_at', Date.now());
+    const p = await app();
+    expect(f.requests.at(-1).path).toBe('/v1/push/device');
+    expect(f.requests.at(-1).body).not.toHaveProperty('engagementEnabled');
+    expect(p.pushState.enabled).toBe(true);
+    await p.pushRegistration.setEnabled(false);
+    expect(p.pushState.enabled).toBe(false);
+    expect(f.requests.at(-1).path).toBe('/v1/push/device');
   });
 });

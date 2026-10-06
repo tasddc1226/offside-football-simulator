@@ -4,6 +4,7 @@ import { TextInput, View, type TextStyle } from 'react-native';
 import { revealFocusedInput } from '../../ui/scroll';
 import { useColors } from '../../theme/useColors';
 import { Txt } from '../../ui';
+import { createText as L } from '@offside/app-core/i18n/ko/create';
 
 /** 두 #rrggbb 색을 섞는다(웹 color-mix(in srgb, A n%, B)) — a가 w 비율. */
 export function mixHex(a: string, b: string, w: number): string {
@@ -96,7 +97,7 @@ export function BodyInput({
       <TextInput
         testID={testID}
         accessibilityLabel={label}
-        accessibilityHint={invalid ? '입력값을 확인해 주세요' : undefined}
+        accessibilityHint={invalid ? L.invalidHint : undefined}
         keyboardType="number-pad"
         returnKeyType="done"
         maxLength={3}

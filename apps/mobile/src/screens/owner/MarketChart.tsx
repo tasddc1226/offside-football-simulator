@@ -13,7 +13,7 @@ import {
 } from '@offside/app-core/api/market';
 import {
   CHART_COPY,
-  CHART_RANGES,
+  chartRanges,
   chartModel,
   dayText,
   marketIndex,
@@ -22,11 +22,13 @@ import {
   type ChartTone,
 } from '@offside/app-core/marketChart';
 import { ovrBand } from '@offside/contracts/market-value';
-import { POS_LABEL } from '@offside/game/pos-label';
+import { POS } from '@offside/game/data';
 import { useColors } from '../../theme/useColors';
 import type { Colors } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Press, Txt } from '../../ui';
+import { marketChartText as L } from '@offside/app-core/i18n/ko/marketChart';
+import { useRefresh } from '../../ui/refresh';
 
 const chartTone = (c: Colors, tone: ChartTone) =>
   tone === 'up' ? c.up : tone === 'down' ? c.down : c.muted;
@@ -80,7 +82,7 @@ export function MarketIndex({ points }: { points: readonly MarketChartPoint[] })
     <View
       testID="market-index"
       accessible
-      accessibilityLabel={`${CHART_COPY.index} 기준가의 ${index.pct}, ${index.change}`}
+      accessibilityLabel={L.indexA11y({ pct: index.pct, change: index.change })}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -140,28 +142,36 @@ export function MarketChart({ card }: { card: MarketCard }) {
   const [pick, setPick] = useState<string | null>(null);
   const [w, setW] = useState(0);
 
+  // T-11-111 당겨서 새로고침 — 차트·거래 기록은 그대로 두고 응답이 오면 바꾼다(범위를 바꿀 때만 비운다).
+  const { tick, track, pulled } = useRefresh();
   useEffect(() => {
     let live = true;
-    setFailed(false);
-    setPick(null);
-    void fetchMarketChart(range, { pos: card.pos, band }).then((r) => {
+    if (!pulled) {
+      setFailed(false);
+      setPick(null);
+    }
+    void track(fetchMarketChart(range, { pos: card.pos, band })).then((r) => {
       if (!live) return;
+      // 당기다 실패하면 보이던 차트를 두고 넘어간다.
+      if (pulled && !r.ok) return;
       setFailed(!r.ok);
       setPoints(r.ok ? r.data.points : []);
     });
     return () => {
       live = false;
     };
-  }, [range, card.pos, band]);
+  }, [range, card.pos, band, tick, track]);
   // 한 번도 팔린 적 없는 선수(이적 0회)는 거래 기록을 묻지 않는다.
   useEffect(() => {
     if (card.transfers === 0) return;
     let live = true;
-    void fetchCardTrades(card.careerId).then((r) => live && setTrades(r.ok ? r.data.trades : []));
+    void track(fetchCardTrades(card.careerId)).then(
+      (r) => live && (r.ok || !pulled) && setTrades(r.ok ? r.data.trades : []),
+    );
     return () => {
       live = false;
     };
-  }, [card.careerId, card.transfers]);
+  }, [card.careerId, card.transfers, tick, track]);
 
   const model = useMemo(
     () => (points ? chartModel(points, trades, range) : null),
@@ -188,12 +198,12 @@ export function MarketChart({ card }: { card: MarketCard }) {
             {CHART_COPY.title}
           </Txt>
           <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-            {CHART_COPY.group(POS_LABEL[card.pos], band)}
+            {CHART_COPY.group(POS[card.pos].label, band)}
           </Txt>
         </View>
         <View
           accessibilityRole="radiogroup"
-          accessibilityLabel="기간"
+          accessibilityLabel={L.rangeGroup}
           style={{
             flexDirection: 'row',
             gap: 2,
@@ -203,7 +213,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
             alignSelf: 'flex-start',
           }}
         >
-          {CHART_RANGES.map(([k, label]) => (
+          {chartRanges().map(([k, label]) => (
             <Press
               key={k}
               testID={`chart-range-${k}`}
@@ -229,7 +239,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
         </View>
       </View>
       {points === null ? (
-        empty('불러오는 중…')
+        empty(L.loading)
       ) : failed ? (
         empty(CHART_COPY.failed)
       ) : !model ? (
@@ -275,7 +285,7 @@ export function MarketChart({ card }: { card: MarketCard }) {
                 {(
                   [
                     [8, model.top],
-                    [model.base, '기준가'],
+                    [model.base, L.baseLabel],
                     [92, model.bottom],
                   ] as const
                 ).map(([y, label]) => (

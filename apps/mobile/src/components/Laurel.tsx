@@ -5,6 +5,7 @@ import Svg, { Ellipse, G, Circle, Path } from 'react-native-svg';
 import { DISPLAY, rem } from '../theme/type';
 import { useColors, useIsDark } from '../theme/useColors';
 import { Txt } from '../ui/Txt';
+import { hofText as L } from '@offside/app-core/i18n/ko/hof';
 
 const CX = 20;
 const CY = 21;
@@ -115,7 +116,7 @@ export function RankBadge({ rank, width = 40 }: { rank: number; width?: number }
           justifyContent: 'center',
         }}
         accessible
-        accessibilityLabel={`${rank}위`}
+        accessibilityLabel={L.rankN({ rank })}
       >
         <Laurel medal={medalName} />
         <Txt
@@ -136,7 +137,7 @@ export function RankBadge({ rank, width = 40 }: { rank: number; width?: number }
   return (
     <View style={{ width, alignItems: 'center', justifyContent: 'center' }}>
       <Txt
-        accessibilityLabel={`${rank}위`}
+        accessibilityLabel={L.rankN({ rank })}
         style={{
           fontFamily: DISPLAY[700],
           fontVariant: ['tabular-nums'],

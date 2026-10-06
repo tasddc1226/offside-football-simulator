@@ -10,12 +10,13 @@ import * as WebBrowser from 'expo-web-browser';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { apiFetch, clearApiCache } from '@offside/app-core/api/client';
 import { flushOutbox } from '@offside/app-core/outbox';
-import { LOGIN_OFFLINE_TEXT, googleFailText, loginDoneText } from '@offside/app-core/loginText';
+import { googleFailText, loginDoneText, loginOfflineText } from '@offside/app-core/loginText';
 import { loadHOF } from '@offside/game/season';
 import { appState } from '../store';
 import { openLocalLegend, refreshAccount, syncClubCustom, toast } from '../game/host';
 import { openBoard } from '../game/nav';
 import { ensureSession, setSessionToken } from './session';
+import { accountText as L } from '@offside/app-core/i18n/ko/account';
 
 /** 로그인을 마치고 돌아가 다시 열 곳. 소식 글(댓글) · 내 은퇴 선수(공유). */
 export type LoginReturn =
@@ -41,7 +42,7 @@ export async function startGoogleLogin(back: LoginReturn | null): Promise<void> 
   if (busy) return;
   busy = true;
   try {
-    if (!(await ensureSession())) return toast(LOGIN_OFFLINE_TEXT);
+    if (!(await ensureSession())) return toast(loginOfflineText());
     const verifier = randomToken();
     const challenge = b64url(
       await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, verifier, {
@@ -52,7 +53,7 @@ export async function startGoogleLogin(back: LoginReturn | null): Promise<void> 
       method: 'POST',
       body: JSON.stringify({ challenge }),
     });
-    if (!start.ok) return toast(LOGIN_OFFLINE_TEXT);
+    if (!start.ok) return toast(loginOfflineText());
     const res = await WebBrowser.openAuthSessionAsync(start.data.url, REDIRECT_URL);
     if (res.type !== 'success') return;
     const q = Linking.parse(res.url).queryParams ?? {};
@@ -66,8 +67,8 @@ export async function startGoogleLogin(back: LoginReturn | null): Promise<void> 
       method: 'POST',
       body: JSON.stringify({ ticket, verifier }),
     });
-    if (!ex.ok) return toast('구글 로그인을 마치지 못했어요. 다시 시도해 주세요.');
-    await finishLogin(ex.data, back, '구글');
+    if (!ex.ok) return toast(L.googleFinishFail);
+    await finishLogin(ex.data, back, L.viaGoogle);
   } finally {
     busy = false;
   }
@@ -87,7 +88,7 @@ export async function startAppleLogin(back: LoginReturn | null): Promise<void> {
   if (busy) return;
   busy = true;
   try {
-    if (!(await ensureSession())) return toast(LOGIN_OFFLINE_TEXT);
+    if (!(await ensureSession())) return toast(loginOfflineText());
     // Apple에는 nonce의 SHA-256(hex)을 넘기고, 서버에는 원문을 보내 토큰의 nonce와 맞춰 보게 한다(재전송 방지).
     const nonce = randomToken();
     const hashed = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, nonce);
@@ -97,15 +98,15 @@ export async function startAppleLogin(back: LoginReturn | null): Promise<void> {
       identityToken = cred.identityToken;
     } catch (e) {
       if ((e as { code?: string }).code === 'ERR_REQUEST_CANCELED') return;
-      return toast('Apple 로그인을 시작하지 못했어요.');
+      return toast(L.appleStartFail);
     }
-    if (!identityToken) return toast('Apple 로그인을 시작하지 못했어요.');
+    if (!identityToken) return toast(L.appleStartFail);
     const r = await apiFetch<AuthResult>('/v1/auth/apple', {
       method: 'POST',
       body: JSON.stringify({ identityToken, nonce }),
     });
-    if (!r.ok) return toast('Apple 로그인을 마치지 못했어요. 다시 시도해 주세요.');
-    await finishLogin(r.data, back, 'Apple');
+    if (!r.ok) return toast(L.appleFinishFail);
+    await finishLogin(r.data, back, L.viaApple);
   } finally {
     busy = false;
   }

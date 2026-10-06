@@ -77,6 +77,14 @@ export const displaySeasonAt = (now: string): number =>
   SERVICE_SEASONS.filter((s) => s.startsAt <= now).reduce((id, s) => Math.max(id, s.id), 0);
 
 /**
+ * T-11-107 다음 시즌 개막까지 남은 밀리초(없으면 null). 화면을 띄운 채 개막을 넘겨도 시즌 기본값을 다시 고르게 할 때 쓴다.
+ */
+export const msUntilNextSeasonStart = (now: string): number | null => {
+  const next = SERVICE_SEASONS.find((s) => s.startsAt > now);
+  return next ? Date.parse(next.startsAt) - Date.parse(now) : null;
+};
+
+/**
  * T-11-029 홈 명예의 전당 미리보기의 시즌 — 지금 시즌 고정(휴식기면 마지막 시즌). 첫 시즌 개막 전엔 모든 선수가 프리시즌이라
  * 전체와 같으므로 null(시즌 없이 같은 요청·캐시를 쓴다).
  */
@@ -84,8 +92,14 @@ export const previewSeasonAt = (now: string): number | null =>
   now < SERVICE_SEASONS[0]!.startsAt ? null : displaySeasonAt(now);
 
 /** 팀 시즌 이름(0 = 프리시즌). */
-export const teamSeasonName = (id: number): string =>
-  id === 0 ? '프리시즌' : (serviceSeason(id)?.name ?? `시즌 ${id}`);
+export const teamSeasonName = (id: number, lang: 'ko' | 'en' = 'ko'): string =>
+  lang === 'en'
+    ? id === 0
+      ? 'Preseason'
+      : `Season ${id}`
+    : id === 0
+      ? '프리시즌'
+      : (serviceSeason(id)?.name ?? `시즌 ${id}`);
 
 /** 고를 수 있는 팀 시즌(프리시즌 + 개막한 시즌, 오래된 순). */
 export const openTeamSeasons = (now: string): number[] => [
@@ -93,10 +107,13 @@ export const openTeamSeasons = (now: string): number[] => [
   ...SERVICE_SEASONS.filter((s) => s.startsAt <= now).map((s) => s.id),
 ];
 
+/** T-11-113 그 팀 시즌이 끝나는 시각(프리시즌은 첫 시즌 개막, 시즌은 마감). 마감이 정해지지 않았으면 null. */
+export const teamSeasonEndsAt = (id: number): string | null =>
+  id === 0 ? SERVICE_SEASONS[0]!.startsAt : (serviceSeason(id)?.endsAt ?? null);
+
 /** 그 팀 시즌이 끝났는가(프리시즌은 첫 시즌 개막에, 시즌은 마감에 끝난다). */
 export const teamSeasonClosed = (id: number, now: string): boolean => {
-  if (id === 0) return SERVICE_SEASONS[0]!.startsAt <= now;
-  const end = serviceSeason(id)?.endsAt;
+  const end = teamSeasonEndsAt(id);
   return !!end && end <= now;
 };
 
@@ -115,3 +132,11 @@ export const MAX_RETIRE_AT = Math.max(
   PRESEASON_RETIRE_AT,
   ...SERVICE_SEASONS.map((s) => s.retireAt),
 );
+
+/**
+ * T-11-095 커리어가 서버에 처음 올라올 때 찍는 시즌. 세부 포지션이 없는 선수는 프리시즌 규칙(41세·세부 포지션 없음)으로
+ * 만든 선수라 개막 뒤에 처음 올라와도(자정을 넘긴 첫 시즌·오프라인 플레이) 프리시즌(0)이다. 세부 포지션이 있으면 올라온
+ * 시각의 시즌 — 기기 시계를 당겨 개막 전에 만든 선수가 시즌 순위에 먼저 들어오지 않게 서버 시각을 따른다.
+ */
+export const firstUploadSeasonAt = (now: string, seasonRules: boolean): number | null =>
+  seasonRules ? teamSeasonAt(now) : 0;

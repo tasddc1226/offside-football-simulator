@@ -9,6 +9,8 @@
   import { toast } from './helpers.js';
   import { doneOnEnter } from './inputDone.js';
   import ClubBadge from './ClubBadge.svelte';
+  import { clubText as T } from '@offside/app-core/i18n/ko/club';
+  import { tn } from '@offside/game/i18n/names';
 
   let clubsOpen = $state(false);
   let leagueId = $state(LEAGUES[LEAGUES.length - 1]!.id);
@@ -16,7 +18,7 @@
   // 이름 편집 결과가 다시 CLUBS에서 읽히도록 clubCustom.map을 의존성에 건다.
   const clubs = $derived((void clubCustom.map, clubsIn(leagueId).map((c) => ({ ...c }))));
 
-  const fail = () => toast('저장 공간이 부족해 저장하지 못했어요');
+  const fail = () => toast(T.noSpace);
 
   function rename(id: string, value: string) {
     if (!setClubCustom(id, { name: value })) fail();
@@ -48,12 +50,12 @@
       // WebP 인코딩을 못 하는 브라우저(PNG로 떨어짐)나 한도를 넘으면 JPEG로 다시 줄인다.
       let img = canvas.toDataURL('image/webp', 0.85);
       if (!img.startsWith('data:image/webp') || img.length > CLUB_CUSTOM_IMG_MAX) img = canvas.toDataURL('image/jpeg', 0.8);
-      if (img.length > CLUB_CUSTOM_IMG_MAX) return toast('이미지가 너무 복잡해 저장할 수 없어요');
+      if (img.length > CLUB_CUSTOM_IMG_MAX) return toast(T.imgComplex);
       const others = clubImgTotal(clubCustom.map) - (clubCustom.map[club.id]?.logo?.img?.length ?? 0);
-      if (others + img.length > CLUB_CUSTOM_IMG_TOTAL_MAX) return toast('엠블럼 이미지를 더 저장할 공간이 없어요. 다른 클럽 이미지를 지운 뒤 올려 주세요');
+      if (others + img.length > CLUB_CUSTOM_IMG_TOTAL_MAX) return toast(T.imgFull);
       editLogo(club, { img });
     } catch {
-      toast('이미지를 읽지 못했어요');
+      toast(T.imgReadFail);
     }
   }
 
@@ -69,16 +71,16 @@
     input.value = '';
     if (!file) return;
     const n = importClubCustom(await file.text());
-    toast(n < 0 ? '에디트 파일 형식이 올바르지 않아요' : `클럽 ${n}개 설정을 불러왔어요`);
+    toast(n < 0 ? T.badFile : T.imported({ n }));
   }
   function resetLeague() {
     resetClubCustom(clubsIn(leagueId).map((c) => c.id));
-    toast('이 리그를 기본값으로 되돌렸어요');
+    toast(T.leagueReset);
   }
   function resetAll() {
-    if (!confirm('모든 리그의 클럽 이름·엠블럼을 기본값으로 되돌릴까요?')) return;
+    if (!confirm(T.resetAllConfirm)) return;
     resetClubCustom();
-    toast('모든 클럽을 기본값으로 되돌렸어요');
+    toast(T.allReset);
   }
 </script>
 
@@ -86,19 +88,19 @@
   <button class="settings-row settings-trigger" aria-expanded={clubsOpen} aria-controls="settings-clubs" data-settings-open="clubs" onclick={() => (clubsOpen = !clubsOpen)}>
     <span class="settings-label">
       <small class="eyebrow">Team settings</small>
-      <strong>구단 이름·엠블럼 변경</strong>
+      <strong>{T.title}</strong>
     </span>
     <i class="settings-chev" aria-hidden="true">▼</i>
   </button>
   {#if clubsOpen}
     <div class="stack settings-body" id="settings-clubs" style="gap:10px">
-      <p class="muted fs-sm" style="margin:0">클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새 이름이 쓰여요.</p>
+      <p class="muted fs-sm" style="margin:0">{T.intro}</p>
       <p class="muted fs-xs" style="margin:0" data-club-sync={clubCustom.status} aria-live="polite">{CLUB_SYNC_TEXT[clubCustom.status]}</p>
       <div class="field">
-        <label for="club-league">리그</label>
+        <label for="club-league">{T.league}</label>
         <select id="club-league" bind:value={leagueId} onchange={() => (open = null)}>
           {#each LEAGUES as L (L.id)}
-            <option value={L.id}>{L.name} ({clubsIn(L.id).length}개 클럽)</option>
+            <option value={L.id}>{T.leagueOption({ name: tn(L.name), n: clubsIn(L.id).length })}</option>
           {/each}
         </select>
       </div>
@@ -110,34 +112,34 @@
               <ClubBadge club={c} size={34} />
               <input
                 type="text"
-                aria-label="{c.baseName} 이름"
+                aria-label={T.nameLabel({ name: tn(c.baseName ?? c.name) })}
                 maxlength={CLUB_NAME_MAX}
-                placeholder={c.baseName}
+                placeholder={c.baseName ? tn(c.baseName) : c.baseName}
                 enterkeyhint="done"
                 use:doneOnEnter
                 value={clubCustom.map[c.id]?.name ?? ''}
                 onchange={(e) => rename(c.id, e.currentTarget.value)}
               />
-              <button class="icon-btn" data-act="logo" aria-expanded={open === c.id} onclick={() => (open = open === c.id ? null : c.id)}>엠블럼</button>
+              <button class="icon-btn" data-act="logo" aria-expanded={open === c.id} onclick={() => (open = open === c.id ? null : c.id)}>{T.emblem}</button>
             </div>
             {#if open === c.id}
               <div class="club-logo-edit">
-                <label>글자 <input type="text" maxlength={LOGO_TEXT_MAX} enterkeyhint="done" use:doneOnEnter value={logo.text} onchange={(e) => editLogo(c, { text: e.currentTarget.value })} /></label>
-                <label>바탕 <input type="color" value={logo.bg} onchange={(e) => editLogo(c, { bg: e.currentTarget.value })} /></label>
-                <label>글자색 <input type="color" value={logo.fg} onchange={(e) => editLogo(c, { fg: e.currentTarget.value })} /></label>
-                <label class="icon-btn">이미지 올리기<input type="file" accept="image/*" hidden onchange={(e) => upload(c, e)} /></label>
-                {#if logo.img}<button class="icon-btn" onclick={() => dropImage(c)}>이미지 빼기</button>{/if}
-                <button class="icon-btn" onclick={() => resetClub(c.id)}>기본값</button>
+                <label>{T.logoText} <input type="text" maxlength={LOGO_TEXT_MAX} enterkeyhint="done" use:doneOnEnter value={logo.text} onchange={(e) => editLogo(c, { text: e.currentTarget.value })} /></label>
+                <label>{T.bg} <input type="color" value={logo.bg} onchange={(e) => editLogo(c, { bg: e.currentTarget.value })} /></label>
+                <label>{T.fg} <input type="color" value={logo.fg} onchange={(e) => editLogo(c, { fg: e.currentTarget.value })} /></label>
+                <label class="icon-btn">{T.uploadImage}<input type="file" accept="image/*" hidden onchange={(e) => upload(c, e)} /></label>
+                {#if logo.img}<button class="icon-btn" onclick={() => dropImage(c)}>{T.dropImage}</button>{/if}
+                <button class="icon-btn" onclick={() => resetClub(c.id)}>{T.reset}</button>
               </div>
             {/if}
           </li>
         {/each}
       </ul>
       <div class="row" style="flex-wrap:wrap;gap:8px">
-        <button class="icon-btn" onclick={resetLeague}>이 리그 초기화</button>
-        <button class="icon-btn" data-act="export-clubs" onclick={exportFile}>에디트 파일 내보내기</button>
-        <label class="icon-btn">에디트 파일 가져오기<input type="file" accept="application/json,.json" hidden onchange={importFile} /></label>
-        <button class="icon-btn" onclick={resetAll}>전체 초기화</button>
+        <button class="icon-btn" onclick={resetLeague}>{T.resetLeague}</button>
+        <button class="icon-btn" data-act="export-clubs" onclick={exportFile}>{T.exportFile}</button>
+        <label class="icon-btn">{T.importFile}<input type="file" accept="application/json,.json" hidden onchange={importFile} /></label>
+        <button class="icon-btn" onclick={resetAll}>{T.resetAll}</button>
       </div>
     </div>
   {/if}

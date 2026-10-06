@@ -6,7 +6,7 @@ import { ownerAchievements, ownerTeams, profiles, teamLikes, teamMatches } from 
 import { accountLinkedSql } from './profiles.js';
 
 export type AchievementRow = typeof ownerAchievements.$inferSelect;
-export type AchievementScore = Pick<AchievementRow, 'score' | 'done' | 'players'>;
+export type AchievementScore = Pick<AchievementRow, 'score' | 'done' | 'players' | 'teamKept'>;
 
 /** 랭킹에 오르는 행: 점수가 있고, 로그인 수단이 연결된 삭제되지 않은 구단주. */
 const rankedIn = (season: number) =>
@@ -38,7 +38,11 @@ export async function saveAchievementScore(
   touch: boolean,
 ): Promise<AchievementRow> {
   const same =
-    !!prev && prev.score === next.score && prev.done === next.done && prev.players === next.players;
+    !!prev &&
+    prev.score === next.score &&
+    prev.done === next.done &&
+    prev.players === next.players &&
+    prev.teamKept === next.teamKept;
   if (same && !touch) return prev;
   const reachedAt = prev && prev.score === next.score ? prev.reachedAt : now;
   const row = { ...key, ...next, reachedAt, updatedAt: now };
@@ -47,7 +51,14 @@ export async function saveAchievementScore(
     .values(row)
     .onConflictDoUpdate({
       target: [ownerAchievements.profileId, ownerAchievements.season],
-      set: { score: next.score, done: next.done, players: next.players, reachedAt, updatedAt: now },
+      set: {
+        score: next.score,
+        done: next.done,
+        players: next.players,
+        teamKept: next.teamKept,
+        reachedAt,
+        updatedAt: now,
+      },
     });
   return row;
 }

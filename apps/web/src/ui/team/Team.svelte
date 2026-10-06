@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { seasonLabel } from '@offside/app-core/seasonName';
   // T-10-092 구단주 팀 — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가 채운다) 같은 시즌
   // 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 구단주 화면에서 처음 열 때 불러오는 지연 청크다. 경기 결과는
   // 서버가 정한다(웹은 보여 주기만).
@@ -12,7 +13,7 @@
     TEAM_NAME_MIN,
     YOUTH_NAME,
     YOUTH_OVR,
-    lineStrength,
+    presetLayout,
     slotRating,
     teamOvr,
     type AchCategory,
@@ -53,9 +54,12 @@
   import TeamNav from './TeamNav.svelte';
   import TeamOpponents from './TeamOpponents.svelte';
   import TeamResult from './TeamResult.svelte';
+  import TeamFriends from './TeamFriends.svelte';
+  import { friendsUi } from '../friendInvite.svelte.js';
   import { achNudge } from '../achNudge.js';
-  import { assignSlot, autoFillSlots, matchHintOf } from '@offside/app-core/teamOwner';
+  import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
+  import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { readTeamDraft, teamDraftBase, writeTeamDraft, type TeamDraft } from './teamDraft.js';
 
   let status = $state<LoadStatus>('loading');
@@ -69,8 +73,9 @@
   let current = $state<number | null>(null);
   let seasons = $state<OwnerTeamResponse['seasons']>([]);
   let lastManager = $state<string | null>(null);
-  const editable = $derived(season === current);
-  const seasonName = $derived(seasons.find((o) => o.id === season)?.name ?? '');
+  // T-11-113 개막 뒤에도 프리시즌 팀은 친선전용으로 고칠 수 있다.
+  const editable = $derived(teamEditableIn(season, current));
+  const seasonName = $derived(((o) => (o ? seasonLabel(o.id, o.name) : ''))(seasons.find((o) => o.id === season)));
 
   // 편집 초안 — 저장하기 전까지 이 기기에만 있다.
   let name = $state('');
@@ -95,6 +100,8 @@
   let resultOrigin = $state<'opponents' | 'history'>('opponents');
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   let live = $state(false);
+  /** T-11-098 오늘 남은 친선전(친선전 결과 화면의 '다시 경기하기'). */
+  let friendlyLeft = $state(0);
   // T-10-130 팀 안의 화면은 appState.teamView — 뒤로 가기로 오간다. 결과는 이 화면에만 있어 다시 들어왔을 때(앞으로 가기)
   // 없으면 팀을 보여 준다.
   const view = $derived(appState.teamView === 'result' && !result ? 'team' : appState.teamView);
@@ -124,8 +131,10 @@
     }),
   );
   const ovr = $derived(teamOvr(ratings));
+  // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
+  const synergy = $derived(slotsSynergy(layout ?? presetLayout(formation), slots, byId));
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
-  const lines = $derived(lineStrength(slotCodes, ratings));
+  const lines = $derived(draftLines(slotCodes, ratings, synergy, season));
   const filled = $derived(slots.filter((s) => s !== null).length);
   const dirty = $derived(
     !team ||
@@ -223,14 +232,16 @@
   onMount(() => void load());
 
   // ───────── 편성 ─────────
-  /** 라커룸에서 넣거나, 이미 선발인 선수의 두 자리를 바꾼다. */
+  /** 라커룸에서 넣거나, 이미 선발인 선수의 두 자리를 바꾼다. T-11-114 지난 시즌 선수는 와일드카드 상한까지만. */
   function assign(index: number, id: string | null) {
-    slots = assignSlot(slots, index, id);
+    const next = assignSlot(slots, index, id);
+    if (tooManyWildcards(next, byId, season)) return toast(wildcardFullText());
+    slots = next;
   }
 
   /** 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만). */
   function autoFill() {
-    slots = autoFillSlots(slotCodes, players);
+    slots = autoFillSlots(slotCodes, players, season);
   }
 
   async function save(): Promise<boolean> {
@@ -241,6 +252,7 @@
     saving = true;
     const r = await saveOwnerTeam({
       ...submitted, name: submitted.name.trim(), manager: submitted.manager.trim(),
+      ...(isPreseasonLegacy(season, current) ? { season: 0 } : {}),
     });
     saving = false;
     if (!r.ok) { toast(r.error.message); return false; }
@@ -250,7 +262,7 @@
     if (!unchanged) {
       team = r.data.team;
       preserveDraft();
-      toast('저장했어요. 그 뒤에 바꾼 내용은 아직 저장 전이에요.');
+      toast(L.savedPartial);
       return false;
     }
     if (key) writeTeamDraft(key, null);
@@ -259,7 +271,7 @@
     pendingDraft = null;
     restoredDraft = false;
     renaming = false;
-    toast(created ? '팀을 만들었어요' : '변경 사항을 저장했어요');
+    toast(created ? L.toastCreated : L.toastSavedWeb);
     return true;
   }
 
@@ -303,6 +315,16 @@
     window.scrollTo(0, 0);
   }
 
+  // T-11-098 친선전 결과(방금 치른 경기는 중계부터, 최근 친선전은 결과부터). 결과에서 돌아가면 '경기' 탭의 친구 쪽이다.
+  function openFriendly(m: TeamMatch, left: number, fresh: boolean) {
+    result = m;
+    resultOrigin = 'opponents';
+    live = fresh;
+    friendlyLeft = left;
+    show('result');
+    window.scrollTo(0, 0);
+  }
+
   // ───────── 시즌 업적 ─────────
   async function loadAchievements(want = season) {
     achStatus = 'loading';
@@ -333,7 +355,7 @@
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 $effect가, 이미 그 화면이면 open이 다시 불러온다.
   const LOAD = {
-    opponents: () => (matchHint ? undefined : loadOpponents()),
+    opponents: () => (matchHint || friendsUi.mode === 'friends' ? undefined : loadOpponents()),
     achievements: () => loadAchievements(),
     history: loadHistory,
   };
@@ -358,24 +380,24 @@
 <div class="wrap" class:has-tabbar={!needLogin} class:lineup-editor={view === 'team' && !needLogin}>
   <Topbar />
 
-  <LoadState {status} failText="팀을 불러오지 못했어요." retry={load}>
+  <LoadState {status} failText={L.loadFail} retry={load}>
     {#if needLogin}
       <section class="card stack" style="gap:10px">
         <div class="eyebrow">My team</div>
-        <h1>내 팀</h1>
-        <p class="muted">로그인한 구단주만 은퇴한 선수로 팀을 꾸릴 수 있어요.</p>
-        <button class="btn btn-primary self-start" onclick={() => void startGoogleLogin(null)}>구글로 로그인</button>
+        <h1>{L.myTeam}</h1>
+        <p class="muted">{L.loginOnly}</p>
+        <button class="btn btn-primary self-start" onclick={() => void startGoogleLogin(null)}>{L.googleLogin}</button>
       </section>
     {:else if view === 'achievements'}
       <TeamAchievements {ach} status={achStatus} newIds={achNewIds} bind:cat={achCat} load={(s) => void loadAchievements(s)} onrank={openAchRanking} />
     {:else if view === 'team'}
       {#if pendingDraft}
         <section class="card draft-notice" role="status">
-          <p>저장된 팀이 바뀌었어요. 이전에 수정하던 초안도 남아 있어요.</p>
-          <div><button class="btn btn-sm" onclick={() => pendingDraft && restoreDraft(pendingDraft)} data-act="team-draft-restore">초안 불러오기</button><button class="btn btn-sm" onclick={discardDraft}>저장된 팀 유지</button></div>
+          <p>{L.draftChangedWeb}</p>
+          <div><button class="btn btn-sm" onclick={() => pendingDraft && restoreDraft(pendingDraft)} data-act="team-draft-restore">{L.draftLoadWeb}</button><button class="btn btn-sm" onclick={discardDraft}>{L.draftKeep}</button></div>
         </section>
       {:else if restoredDraft && dirty}
-        <section class="card draft-notice" role="status"><p>이 탭에서 수정하던 내용을 불러왔어요. 아직 저장 전이에요.</p><button class="btn btn-sm" onclick={discardDraft} data-act="team-draft-discard">저장된 팀으로</button></section>
+        <section class="card draft-notice" role="status"><p>{L.draftRestoredWeb}</p><button class="btn btn-sm" onclick={discardDraft} data-act="team-draft-discard">{L.draftDiscardWeb}</button></section>
       {/if}
       <TeamHead
         {team}
@@ -395,18 +417,21 @@
         bind:renaming
         onseason={pickSeason}
       />
-      {#if editingLogo && editable}<TeamLogoEditor {logo} name={name.trim() || '내 팀'} onapply={(value) => { logo = value; editingLogo = false; }} onclose={() => (editingLogo = false)} />{/if}
+      {#if editingLogo && editable}<TeamLogoEditor {logo} name={name.trim() || L.myTeam} onapply={(value) => { logo = value; editingLogo = false; }} onclose={() => (editingLogo = false)} />{/if}
       <TeamLineup
         {team}
         teamLogo={logo}
         teamName={name.trim()}
         managerName={manager.trim()}
         {editable}
+        wildcards={wildcardLabel(slots, byId, season)}
         bind:formation
         bind:layout
         {slots}
         {nameOf}
         {lines}
+        {synergy}
+        {season}
         {cells}
         {players}
         {seasonName}
@@ -419,6 +444,13 @@
         onsave={save}
       />
     {:else if view === 'opponents'}
+      <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
+        <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>
+        <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}</button>
+      </div>
+      {#if friendsUi.mode === 'friends'}
+        <TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />
+      {:else}
       <TeamOpponents
         ovr={team?.ovr ?? ovr}
         {matchesLeft}
@@ -431,10 +463,11 @@
         onchallenge={(o) => void challenge(o)}
         onmore={() => open('opponents')}
         ontoTeam={editable ? () => switchView('team') : undefined}
-        onsave={editable && dirty && filled > 0 && matchesLeft > 0 ? () => void saveAndFindOpponents() : undefined}
+        onsave={season === current && dirty && filled > 0 && matchesLeft > 0 ? () => void saveAndFindOpponents() : undefined}
         {saving}
         saveDisabled={!nameOk || !!pendingDraft}
       />
+      {/if}
     {:else if view === 'result' && result}
       {#if live}
         {#key result.id}
@@ -445,7 +478,7 @@
           m={result}
           {team}
           {eventName}
-          {matchesLeft}
+          matchesLeft={result.friendly ? friendlyLeft : matchesLeft}
           ontoTeam={() => switchView('team')}
           onreplay={() => (live = true)}
           onagain={() => open('opponents')}
@@ -470,6 +503,7 @@
 
 <style>
   .lineup-editor { max-width: 880px; }
+  .tm-mode { margin-bottom: 12px; }
   .draft-notice {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;}
   .draft-notice p {margin:0;font-size:13px;flex:1 1 200px;}
   .draft-notice > div {display:flex;flex-wrap:wrap;gap:8px;}

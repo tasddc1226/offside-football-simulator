@@ -3,25 +3,26 @@
   import { reportName } from '@offside/app-core/api/reports';
   import type { NameReportKind } from '@offside/contracts/board-limits';
   import { toast } from './helpers.js';
+  import { hofOwnText as L } from '@offside/app-core/i18n/ko/hofOwn';
 
   const { kind, id, name }: { kind: NameReportKind; id: string; name: string } = $props();
   let sent = $state(false);
   let busy = $state(false);
 
   async function send() {
-    if (busy || !confirm(`'${name}' 이름을 신고할까요? 운영자가 확인 후 처리해요.`)) return;
+    if (busy || !confirm(`${L.reportTitle({ name })} ${L.reportBody}`)) return;
     busy = true;
     const r = await reportName({ kind, id });
     busy = false;
     if (!r.ok) return toast(r.error.message);
     sent = true;
-    toast('신고했어요. 운영자가 확인할게요.');
+    toast(L.reportSent);
   }
 </script>
 
 <p class="name-report">
   <button class="icon-btn" data-act="name-report" disabled={sent || busy} onclick={send}>
-    {sent ? '신고했어요' : '이름 신고'}
+    {sent ? L.reportDone : L.reportBtn}
   </button>
 </p>
 

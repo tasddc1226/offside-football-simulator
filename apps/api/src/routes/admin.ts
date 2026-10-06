@@ -10,6 +10,8 @@ import {
   CareerHiddenInputSchema,
   AutomationHoursSchema,
   AutomationReportSchema,
+  PushPerformanceQuerySchema,
+  PushPerformanceSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
@@ -23,11 +25,23 @@ import { getDb, type AppEnv } from '../env.js';
 import { notFoundError, ok, readBody, nowIso } from './shared.js';
 import { parseWithAppError } from '../errors.js';
 import { EDGE, STALE } from '../edgeKeys.js';
+import { getPushPerformance } from '../db/repos/pushPerformance.js';
 
 // T-10-016 운영 도구: 대시보드와 댓글 관리. 댓글 하나 지우기는 게시판의 DELETE /v1/boards/comments/:id를 쓴다.
 const STATS_TTL = 60;
 
 export function registerAdminRoutes(app: Hono<AppEnv>): void {
+  app.get('/v1/admin/push-performance', async (c) => {
+    await requireAdmin(c);
+    const query = parseWithAppError(PushPerformanceQuerySchema, c.req.query());
+    return ok(
+      c,
+      PushPerformanceSchema,
+      await getPushPerformance(c.env.DB, query),
+      200,
+      'private, no-store',
+    );
+  });
   // 관리자 확인을 먼저 하므로 엣지 캐시는 관리자에게만 나간다. 집계라 1분 늦어도 된다. 활성 밸런스는
   // 행 하나라 매번 읽는다 — 집계 캐시에 넣으면 밸런스 활성화가 대시보드 캐시까지 지워야 한다.
   app.get(EDGE.adminStats, async (c) => {

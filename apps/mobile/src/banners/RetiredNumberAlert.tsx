@@ -18,7 +18,9 @@ import { DISPLAY, rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
 import { Btn, Txt } from '../ui';
 import { BannerClose } from './TopBanner';
+import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
 import { useFly } from './useFly';
+import { tn } from '@offside/game/i18n/names';
 
 const SHOW_MS = 9_000;
 
@@ -129,7 +131,7 @@ function AlertCard({
         <View
           testID={`rn-alert-${item.seq}`}
           accessibilityRole="alert"
-          accessibilityLabel={`${item.name}, ${item.number}번 영구결번`}
+          accessibilityLabel={L.alertLabel({ name: item.name, number: item.number })}
           style={{
             overflow: 'hidden',
             flexDirection: 'row',
@@ -177,7 +179,7 @@ function AlertCard({
               bold
               style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.4, color: c.pitchAccent }}
             >
-              👑 {item.name}, {item.number}번 영구결번
+              {L.alertTitle({ name: item.name, number: item.number })}
             </Txt>
             <Txt
               style={{
@@ -186,11 +188,11 @@ function AlertCard({
                 color: alpha(c.onPitch, 0.85),
               }}
             >
-              {defaultClubName(item.clubId) ?? item.club} · 서버 {item.seq}번째 결번
+              {L.alertSub({ club: tn(defaultClubName(item.clubId) ?? item.club), seq: item.seq })}
             </Txt>
           </View>
           <Btn kind="accent" sm testID="rn-alert-open" onPress={open}>
-            보기
+            {L.alertOpen}
           </Btn>
           <BannerClose testID="rn-alert-close" onPress={close} />
           {/* 한 번 지나가는 빛 */}

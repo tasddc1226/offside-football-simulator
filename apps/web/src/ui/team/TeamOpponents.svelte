@@ -4,6 +4,7 @@
   import { TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
   import type { TeamOpponent } from '@offside/app-core/api/team';
   import { recordText } from '@offside/app-core/teamText';
+  import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
 
   let {
@@ -45,18 +46,18 @@
 <section class="card stack" style="gap:12px">
   <div>
     <div class="eyebrow">Match</div>
-    <h1>상대 고르기</h1>
-    {#if !hint}<p class="muted fs-sm">내 팀 OVR {ovr}과 비슷한 팀이에요 · 오늘 남은 경기 {matchesLeft}/{perDay}</p>{/if}
-    <p class="muted fs-xs">같은 팀에는 하루 한 번 도전할 수 있어요. 최근 {TEAM_REPEAT_WINDOW_DAYS}일 안에 다시 만난 팀이면 레이팅이 덜 움직여요.</p>
+    <h1>{L.oppTitle}</h1>
+    {#if !hint}<p class="muted fs-sm">{L.oppNear({ ovr, left: matchesLeft, per: perDay })}</p>{/if}
+    <p class="muted fs-xs">{L.oppRuleWeb({ days: TEAM_REPEAT_WINDOW_DAYS })}</p>
   </div>
   {#if hint}
-    <p class="muted" data-match-hint>{onsave ? '바꾼 내용을 저장하면 상대를 볼 수 있어요.' : hint}</p>
+    <p class="muted" data-match-hint>{onsave ? L.saveToSee : hint}</p>
     <div class="tm-match-actions">
-      {#if onsave}<button class="btn btn-primary" onclick={onsave} disabled={saving || saveDisabled} data-act="team-save-opponents">{saving ? '저장 중…' : '변경 저장 후 상대 보기'}</button>{/if}
-      {#if ontoTeam}<button class="btn" onclick={ontoTeam}>편성으로</button>{/if}
+      {#if onsave}<button class="btn btn-primary" onclick={onsave} disabled={saving || saveDisabled} data-act="team-save-opponents">{saving ? L.saving : L.saveAndFind}</button>{/if}
+      {#if ontoTeam}<button class="btn" onclick={ontoTeam}>{L.toLineup}</button>{/if}
     </div>
   {:else}
-  <LoadState {status} failText="상대를 불러오지 못했어요." retry={onreload}>
+  <LoadState {status} failText={L.oppLoadFail} retry={onreload}>
     {#each opponents as o (o.teamId)}
       <div class="tm-opp" data-opponent={o.teamId}>
         <TeamLogo logo={o.logo} name={o.name} size={32} decorative />
@@ -65,12 +66,12 @@
           <span class="muted fs-sm">{o.owner} · {o.formation} · {recordText(o.record)}</span>
         </div>
         <span class="tm-opp-ovr">{o.ovr}</span>
-        <button class="btn btn-primary btn-sm" disabled={playing || matchesLeft === 0} onclick={() => onchallenge(o)} data-act="team-challenge">도전</button>
+        <button class="btn btn-primary btn-sm" disabled={playing || matchesLeft === 0} onclick={() => onchallenge(o)} data-act="team-challenge">{L.challenge}</button>
       </div>
     {:else}
-      <p class="muted">아직 겨룰 팀이 없어요. 다른 구단주가 팀을 꾸리면 여기에 나와요.</p>
+      <p class="muted">{L.noOpponents}</p>
     {/each}
-    <button class="icon-btn self-start" onclick={onmore} disabled={playing}>다른 상대 보기</button>
+    <button class="icon-btn self-start" onclick={onmore} disabled={playing}>{L.moreOpponents}</button>
   </LoadState>
   {/if}
 </section>

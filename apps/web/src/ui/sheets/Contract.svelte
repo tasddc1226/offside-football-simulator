@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // T-11-039 계약서 사인 — 이적시장에서 고른 구단과의 계약. 손가락·마우스로 사인하거나 '이름 사인 사용'으로 선수 이름을
   // 흘려 쓴 사인을 넣으면 확정 버튼이 켜진다. 누르면 도장이 찍히고 onSign. 사인은 화면 연출이라 저장하지 않는다.
   import { onMount } from 'svelte';
@@ -6,6 +7,7 @@
   import { motionOK } from '../motion.js';
   import { MIN_INK, REVEAL_MS, SKEW_X, SKEW_Y, STAMP_MS, signFlourish } from '@offside/app-core/signature';
   import type { SheetView } from '@offside/app-core/sheets';
+  import { sheetContractText as L } from '@offside/app-core/i18n/ko/sheetContract';
 
   let { v }: { v: Extract<SheetView, { kind: 'contract' }> } = $props();
 
@@ -158,7 +160,7 @@
 </script>
 
 <div class="contract">
-  <button class="contract-x" aria-label="계약서 닫기" data-sign="close" disabled={sealed} onclick={v.onClose}>×</button>
+  <button class="contract-x" aria-label={L.close} data-sign="close" disabled={sealed} onclick={v.onClose}>×</button>
   <div class="eyebrow">{v.eyebrow}</div>
   <h2>{v.title}</h2>
   <p class="contract-text">{v.text}</p>
@@ -166,29 +168,29 @@
     <ClubBadge club={v.club} size={34} />
     <dl>
       {#each v.terms as t (t.label)}
-        <div><dt>{t.label}</dt><dd>{t.value}</dd></div>
+        <div><dt>{t.label}</dt><dd>{tn(t.value)}</dd></div>
       {/each}
     </dl>
   </div>
   <div class="sign-pad" class:inked={inked || named}>
     <canvas
       bind:this={canvas}
-      aria-label="선수 사인 입력 영역"
+      aria-label={L.padLabel}
       onpointerdown={down}
       onpointermove={move}
       onpointerup={up}
       onpointercancel={up}
     ></canvas>
-    <span class="sign-hint" aria-hidden="true">이곳에 사인해 주세요</span>
+    <span class="sign-hint" aria-hidden="true">{L.signHint}</span>
     <i aria-hidden="true"></i>
     {#if sealed}
-      <div class="stamp" aria-hidden="true"><b>SIGNED</b><span>{v.club.name}</span></div>
+      <div class="stamp" aria-hidden="true"><b>SIGNED</b><span>{tn(v.club.name)}</span></div>
     {/if}
   </div>
-  <p class="sign-note">게임 속 선수의 가상 사인이에요</p>
+  <p class="sign-note">{L.signNote}</p>
   <div class="sign-tools">
-    <button class="btn btn-sm" data-sign="clear" disabled={sealed} onclick={clear}>다시 쓰기</button>
-    <button class="btn btn-sm" data-sign="name" disabled={sealed} onclick={nameSign}>이름 사인 사용</button>
+    <button class="btn btn-sm" data-sign="clear" disabled={sealed} onclick={clear}>{L.clear}</button>
+    <button class="btn btn-sm" data-sign="name" disabled={sealed} onclick={nameSign}>{L.nameSign}</button>
   </div>
   <button class="btn btn-primary btn-block" data-sign="ok" disabled={!ready || sealed} onclick={sign}>
     {v.cta} <span aria-hidden="true">→</span>

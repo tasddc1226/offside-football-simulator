@@ -16,6 +16,8 @@ import { alpha } from '../theme/colors';
 import { useColors } from '../theme/useColors';
 import { rem } from '../theme/type';
 import { Txt } from '../ui/Txt';
+import { marketValueChartText as L } from '@offside/app-core/i18n/ko/marketValueChart';
+import { tn } from '@offside/game/i18n/names';
 
 type Pt = ReturnType<typeof valuePoints>[number];
 
@@ -83,19 +85,19 @@ export function ValueChart({
         {picked ? (
           <Txt v="xs" style={{ color: col.dot }}>
             {picked.r.mil ? picked.r.year : seasonLabelOf(picked.r)} ({picked.r.age}) ·{' '}
-            {picked.r.club} ·{' '}
+            {tn(picked.r.club)} ·{' '}
             <Txt v="xs" bold>
               {fmtValue(picked.v)}
             </Txt>
           </Txt>
         ) : (
           <Txt v="xs" style={{ color: col.muted }}>
-            시즌별 몸값 · 점을 누르면 시즌 값을 보여 줘요
+            {L.hint}
           </Txt>
         )}
       </View>
       <View
-        accessibilityLabel="시즌별 몸값"
+        accessibilityLabel={L.label}
         onLayout={(e) => setW(e.nativeEvent.layout.width)}
         style={{
           height: plotH,
@@ -208,7 +210,7 @@ function Dot({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${p.r.year} ${p.r.club} 몸값 ${fmtValue(p.v)}`}
+      accessibilityLabel={L.dotLabel({ year: p.r.year, club: tn(p.r.club), value: fmtValue(p.v) })}
       accessibilityState={{ selected: on }}
       testID={`value-dot-${i}`}
       onPress={onPress}

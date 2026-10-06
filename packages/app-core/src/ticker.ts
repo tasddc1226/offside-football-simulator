@@ -3,6 +3,7 @@
 import type { TickerFirst, TickerResponse, TickerTransfer } from '@offside/contracts';
 import { isAmateurClubId } from '@offside/contracts/club-names';
 import { anonName } from './format.js';
+import { firstLabel, firstUnit } from './firsts.js';
 
 export type TickerItem =
   | {
@@ -33,7 +34,10 @@ const firstItem = (f: TickerFirst): TickerItem => ({
   kind: f.kind,
   at: f.at,
   who: who(f),
-  text: f.kind === 'record' ? `${f.label} ${f.value}${f.unit ?? ''}` : f.label,
+  text:
+    f.kind === 'record'
+      ? `${firstLabel(f.label)} ${f.value}${firstUnit(f.unit)}`
+      : firstLabel(f.label),
 });
 
 const EVERY = 3;

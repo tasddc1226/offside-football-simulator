@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { RARITY_LABEL, type Rarity } from '@offside/game/titles';
+import { titleText as L } from '@offside/app-core/i18n/ko/title';
 import { prefs } from '../store';
 import { alpha } from '../theme/colors';
 import { useColors } from '../theme/useColors';
@@ -38,7 +39,7 @@ export function TitleTag({
   return (
     <Animated.View
       accessible
-      accessibilityLabel={`${RARITY_LABEL[rarity]} 칭호 ${name}`}
+      accessibilityLabel={L.tagLabel({ rarity: RARITY_LABEL[rarity], name })}
       style={{
         alignSelf: 'flex-start',
         borderRadius: 999,

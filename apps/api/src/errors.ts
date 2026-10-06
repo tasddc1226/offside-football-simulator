@@ -7,6 +7,8 @@ import {
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv } from './env.js';
+import { localizeMessage } from './errorText.js';
+import { reqLang, type Lang } from './lang.js';
 
 type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 422 | 429 | 503;
 
@@ -61,6 +63,7 @@ const UNKNOWN_ERROR_MESSAGE = '일시적인 오류가 생겼어요. 잠시 후 �
 export function toErrorEnvelope(
   err: unknown,
   requestId: string,
+  lang: Lang = 'ko',
 ): { status: ErrorStatus; body: ErrorEnvelope } {
   if (err instanceof AppError) {
     return {
@@ -68,7 +71,7 @@ export function toErrorEnvelope(
       body: {
         error: {
           code: err.code,
-          message: err.message,
+          message: localizeMessage(err.message, lang),
           retryable: RETRYABLE_BY_CODE[err.code],
           ...(err.details !== undefined ? { details: err.details } : {}),
         },
@@ -80,14 +83,18 @@ export function toErrorEnvelope(
   return {
     status: 503,
     body: {
-      error: { code: 'SERVICE_UNAVAILABLE', message: UNKNOWN_ERROR_MESSAGE, retryable: true },
+      error: {
+        code: 'SERVICE_UNAVAILABLE',
+        message: localizeMessage(UNKNOWN_ERROR_MESSAGE, lang),
+        retryable: true,
+      },
       meta: { requestId },
     },
   };
 }
 
 export function errorHandler(err: Error, c: Context<AppEnv>): Response {
-  const { status, body } = toErrorEnvelope(err, c.get('requestId'));
+  const { status, body } = toErrorEnvelope(err, c.get('requestId'), reqLang(c));
   return c.json(body, status as ContentfulStatusCode);
 }
 
@@ -95,7 +102,7 @@ export function notFoundHandler(c: Context<AppEnv>): Response {
   const body: ErrorEnvelope = {
     error: {
       code: 'VALIDATION_FAILED',
-      message: '요청한 경로를 찾을 수 없어요.',
+      message: localizeMessage('요청한 경로를 찾을 수 없어요.', reqLang(c)),
       retryable: false,
     },
     meta: { requestId: c.get('requestId') },

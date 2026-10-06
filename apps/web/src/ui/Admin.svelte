@@ -12,9 +12,11 @@
   import AdminChatReports from './admin/AdminChatReports.svelte';
   import AdminDashboard from './admin/AdminDashboard.svelte';
   import AdminAutomation from './admin/AdminAutomation.svelte';
+  import AdminPush from './admin/AdminPush.svelte';
 
   const TABS = [
     { id: 'dashboard', label: '대시보드' },
+    { id: 'push', label: '앱 푸시' },
     { id: 'comments', label: '신고·댓글' },
     { id: 'balance', label: '밸런스' },
     { id: 'automation', label: '자동 플레이' },
@@ -39,12 +41,13 @@
     {:else if !admin}
       <p class="muted">운영자 계정으로 로그인해야 볼 수 있어요.</p>
     {:else}
-      <div class="seg admin-tabs" style="grid-template-columns:repeat({TABS.length},1fr)" role="group" aria-label="운영 도구">
+      <div class="seg admin-tabs" role="group" aria-label="운영 도구">
         {#each TABS as t (t.id)}
           <button class="opt" aria-pressed={tab === t.id} data-admin-tab={t.id} onclick={() => (tab = t.id)}>{t.label}</button>
         {/each}
       </div>
       {#if tab === 'dashboard'}<AdminDashboard />
+      {:else if tab === 'push'}<AdminPush />
       {:else if tab === 'comments'}<AdminChatReports /><AdminNameReports /><AdminComments />
       {:else if tab === 'automation'}<AdminAutomation />
       {:else}<AdminBalance />{/if}
@@ -53,3 +56,8 @@
   <BackBar act="owner" fallback={() => (appState.screen = 'owner')} />
 </div>
 
+<style>
+  .admin-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .admin-tabs button { min-height:44px; }
+  @media (min-width:600px) { .admin-tabs { grid-template-columns:repeat(5,minmax(0,1fr)); } }
+</style>

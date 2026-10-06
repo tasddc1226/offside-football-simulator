@@ -9,7 +9,7 @@ import type {
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
 import { cardValue, retireValue } from '@offside/contracts/market-value';
-import { teamSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
+import { firstUploadSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
 import { dposFor, type PeakProfile } from '@offside/contracts/positions';
 import {
   and,
@@ -97,6 +97,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
   } = input;
   const signals = signalsJson !== undefined ? { signalsJson } : {};
   // T-11-048 시즌 성장 기록. 없으면 건드리지 않아, 성장 기록 없이 다시 올라온 옛 시즌이 이미 쌓인 기록을 지우지 않는다.
+  // 세부 능력치(s0·s1)도 그대로 둔다 — 세부 능력치별 성장 분석을 계속한다(T-11-097b, 잠깐 빼고 저장했던 것을 되돌림).
   const growth = season.growth ? { growthJson: JSON.stringify(season.growth) } : {};
   const name = publicName !== undefined ? { publicName } : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
@@ -110,6 +111,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
     chJson: season.ch ? JSON.stringify(season.ch) : null,
   };
 
+  const dpos = dposFor(meta.pos, meta.dpos);
+
   await runBatch(db, [
     db
       .insert(careers)
@@ -117,7 +120,7 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         id: careerId,
         profileId,
         pos: meta.pos,
-        dpos: dposFor(meta.pos, meta.dpos),
+        dpos,
         nation: meta.nation ?? null,
         height: meta.height ?? null,
         weight: meta.weight ?? null,
@@ -130,7 +133,8 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         pot: meta.pot ?? null,
         ...name,
         // 처음 올라온 시각의 시즌(0 = 프리시즌, 시즌 사이 휴식기면 NULL) — onConflict set에 없어 바뀌지 않는다.
-        serviceSeason: teamSeasonAt(now),
+        // T-11-095 세부 포지션 없이 만든 프리시즌 선수는 개막 뒤에 처음 올라와도 프리시즌이다.
+        serviceSeason: firstUploadSeasonAt(now, dpos !== null),
         createdAt: now,
         updatedAt: now,
       })
@@ -616,6 +620,16 @@ export async function storedSeasonsOf(
     out.set(r.careerId, list);
   }
   return out;
+}
+
+/** T-11-097 한 시즌의 저장된 OVR(성장 기록 조작 판정의 '지난 시즌'). 없으면 null. 업로드마다 부르므로 storedSeasonsOf처럼
+ * 커리어 시즌 전부를 읽지 않고 기본 키 한 줄만 읽는다. */
+export async function storedSeasonOvr(db: Db, careerId: string, year: number) {
+  const [row] = await db
+    .select({ ovr: careerSeasons.ovr })
+    .from(careerSeasons)
+    .where(and(eq(careerSeasons.careerId, careerId), eq(careerSeasons.year, year)));
+  return row?.ovr ?? null;
 }
 
 /** 은퇴 PUT이 보는 커리어의 소유자·상태·포지션(스냅샷 JSON까지 읽지 않는다). */

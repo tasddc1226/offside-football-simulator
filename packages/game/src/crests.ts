@@ -6,6 +6,8 @@
 import type { Club } from './data.js';
 import { escXml } from './xml.js';
 import { hashStr } from './hash.js';
+import { getLocale } from '@offside/contracts/i18n';
+import { tn } from './i18n/names.js';
 
 export const CREST_SHAPES = {
   /** 방패 */
@@ -393,7 +395,8 @@ const DISC_T = 'translate(32 32) scale(.78) translate(-32 -32)';
 // input[type=color]·clubs.ts cleanLogo는 6자리 hex만 받는다 — 로고 편집이 이 색에서 시작하므로 늘여 둔다.
 const col = (h: string) => `#${h.length === 3 ? h.replace(/./g, '$&$&') : h}`;
 /** 이름 첫 글자('FC 서울' → '서'). 글자 엠블럼과 학교 엠블럼이 같이 쓴다. */
-export const clubInitial = (name: string) => [...name.replace(/^FC\s+/, '')][0] ?? '?';
+// 영어일 때는 저장된 이름을 영어로 옮긴 뒤 첫 글자를 쓴다(대응이 없으면 그대로).
+export const clubInitial = (name: string) => [...tn(name).replace(/^FC\s+/, '')][0] ?? '?';
 
 function crest(
   shape: string,
@@ -470,7 +473,7 @@ const autoCache = new Map<string, Crest>();
 export function crestOf(club: Pick<Club, 'id' | 'name'>): Crest {
   const c = CRESTS.get(club.id);
   if (c) return c;
-  const key = `${club.id}|${club.name}`;
+  const key = `${getLocale()}|${club.id}|${club.name}`;
   let a = autoCache.get(key);
   if (!a) autoCache.set(key, (a = autoCrest(club)));
   return a;

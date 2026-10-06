@@ -1,0 +1,1 @@
+CREATE INDEX `career_seasons_growth_created_idx` ON `career_seasons` (`created_at`) WHERE "career_seasons"."growth_json" is not null;

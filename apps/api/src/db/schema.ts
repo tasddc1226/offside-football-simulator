@@ -76,6 +76,104 @@ export const pushNewsDeliveries = sqliteTable(
   ],
 );
 
+/** 프로필별 알림함. OS 전달 상태와 읽음 상태는 별개이며 기기·세션 교체에도 기록을 유지한다. */
+export const pushPreferences = sqliteTable('push_preferences', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  notice: integer('notice', { mode: 'boolean' }).notNull().default(true),
+  release: integer('release', { mode: 'boolean' }).notNull().default(true),
+  team: integer('team', { mode: 'boolean' }).notNull().default(true),
+  market: integer('market', { mode: 'boolean' }).notNull().default(true),
+  social: integer('social', { mode: 'boolean' }).notNull().default(true),
+});
+
+export const notifications = sqliteTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    sourceKey: text('source_key').notNull(),
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    targetJson: text('target_json').notNull(),
+    createdAt: text('created_at').notNull(),
+    readAt: text('read_at'),
+    pushReservedAt: text('push_reserved_at'),
+    expiresAt: text('expires_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('notifications_source_unique').on(t.profileId, t.sourceKey),
+    index('notifications_profile_created_idx').on(t.profileId, t.createdAt, t.id),
+    index('notifications_profile_read_created_idx').on(t.profileId, t.readAt, t.createdAt, t.id),
+    index('notifications_expires_idx').on(t.expiresAt),
+    index('notifications_created_idx').on(t.createdAt),
+    index('notifications_profile_push_reserved_idx').on(t.profileId, t.pushReservedAt),
+  ],
+);
+
+/** 개인 이벤트 발송 outbox. 공지 발송 큐를 바꾸지 않고 동일한 동의·세션 경계를 적용한다. */
+export const pushDeliveries = sqliteTable(
+  'push_deliveries',
+  {
+    id: text('id').primaryKey(),
+    notificationId: text('notification_id')
+      .notNull()
+      .references(() => notifications.id, { onDelete: 'cascade' }),
+    installationHash: text('installation_hash').notNull(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    state: text('state').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    receiptAttempts: integer('receipt_attempts').notNull().default(0),
+    dueAt: text('due_at').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    leaseId: text('lease_id'),
+    ticketId: text('ticket_id'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_deliveries_device_unique').on(t.notificationId, t.installationHash),
+    index('push_deliveries_due_idx').on(t.state, t.dueAt),
+    index('push_deliveries_installation_idx').on(t.installationHash),
+    index('push_deliveries_profile_idx').on(t.profileId),
+    index('push_deliveries_session_idx').on(t.sessionId),
+    index('push_deliveries_expires_idx').on(t.expiresAt),
+  ],
+);
+
+/** 토큰·기기·세션을 복사하지 않는 발송 결과. 알림함과 함께 90일 보관한다. */
+export const pushResults = sqliteTable(
+  'push_results',
+  {
+    id: text('id').primaryKey(),
+    notificationId: text('notification_id')
+      .notNull()
+      .references(() => notifications.id, { onDelete: 'cascade' }),
+    state: text('state').notNull(),
+    acceptedAt: text('accepted_at'),
+    confirmedAt: text('confirmed_at'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('push_results_notification_idx').on(t.notificationId)],
+);
+
+export const pushInteractions = sqliteTable('push_interactions', {
+  notificationId: text('notification_id')
+    .primaryKey()
+    .references(() => notifications.id, { onDelete: 'cascade' }),
+  clickedAt: text('clicked_at').notNull(),
+  targetOpenedAt: text('target_opened_at'),
+});
+
 /** 02 DATA-PRO-001. 시각은 ISO 8601 UTC TEXT다(설계 결정 7). */
 export const profiles = sqliteTable(
   'profiles',
@@ -98,9 +196,12 @@ export const profiles = sqliteTable(
     /** T-11-003 Sign in with Apple 사용자 id(앱). 구글과 따로 연결된다. */
     appleSub: text('apple_sub'),
     appleLinkedAt: text('apple_linked_at'),
+    /** T-11-098 친구 코드(초대 링크·코드 입력). 처음 친구 화면을 열 때 만든다. */
+    friendCode: text('friend_code'),
   },
   (table) => [
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
+    uniqueIndex('profiles_friend_code_unique').on(table.friendCode),
     uniqueIndex('profiles_apple_sub_unique').on(table.appleSub),
     uniqueIndex('profiles_nickname_unique').on(sql`lower(${table.nickname})`),
     uniqueIndex('profiles_toss_anon_key_hash_unique').on(table.tossAnonKeyHash),
@@ -170,7 +271,9 @@ export const authAttempts = sqliteTable(
         'CAREER_SEASON',
         'CAREER_RETIRE',
         'PUSH_DEVICE',
+        'PUSH_PREFERENCES',
         'PUSH_TEST',
+        'FRIEND_REQUEST',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -194,6 +297,7 @@ export const pushDevices = sqliteTable(
     token: text('token').notNull(),
     platform: text('platform', { enum: ['ios', 'android'] }).notNull(),
     appVersion: text('app_version').notNull(),
+    engagementEnabled: integer('engagement_enabled', { mode: 'boolean' }).notNull().default(false),
     updatedAt: text('updated_at').notNull(),
     /** 마지막 본인 테스트 접수 번호. 토큰·세션이 바뀌면 지우고 전달 결과 조회에만 쓴다. */
     lastTestTicketId: text('last_test_ticket_id'),
@@ -204,6 +308,7 @@ export const pushDevices = sqliteTable(
     index('push_devices_session_idx').on(t.sessionId),
     index('push_devices_profile_idx').on(t.profileId),
     index('push_devices_updated_idx').on(t.updatedAt),
+    index('push_devices_engagement_updated_idx').on(t.engagementEnabled, t.updatedAt),
   ],
 );
 
@@ -488,6 +593,10 @@ export const careerSeasons = sqliteTable(
     primaryKey({ columns: [table.careerId, table.year] }),
     // T-10-030 홈 라이브 현황: 최근 올라온 시즌(피드·오늘 시즌 수)을 시각 순으로 찾는다.
     index('career_seasons_created_idx').on(table.createdAt),
+    // T-11-100 매일 성장 기록 보관이 아직 D1에 남은 오래된 성장 기록만 시각 순으로 찾는다(비운 행은 인덱스에서 빠진다).
+    index('career_seasons_growth_created_idx')
+      .on(table.createdAt)
+      .where(sql`${table.growthJson} is not null`),
   ],
 );
 
@@ -769,6 +878,11 @@ export const ownerTeams = sqliteTable(
     bestMargin: integer('best_margin').notNull().default(0),
     likes: integer('likes').notNull().default(0),
     views: integer('views').notNull().default(0),
+    /**
+     * T-11-113 끝난 시즌 팀을 친선전용으로 고친 편성(이름·감독·포메이션·선발·배치·로고·filled·ovr JSON). 최종 기록 칸은
+     * 그대로 두고 친선전·내 팀 화면만 이 값을 쓴다(friendlyTeamOf).
+     */
+    friendlyJson: text('friendly_json'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -827,6 +941,63 @@ export const teamMatches = sqliteTable(
 );
 
 /**
+ * T-11-098 친구. 한 쌍을 두 줄(내 쪽·상대 쪽)로 적어 내 친구 목록을 profile_id 하나로 읽는다. state는 그 줄 주인 기준 —
+ * 신청하면 보낸 쪽 'sent'·받은 쪽 'received', 수락하면 둘 다 'accepted'. 거절·취소·친구 끊기는 두 줄을 지운다.
+ * wins·draws·losses는 그 줄 주인 쪽에서 본 친선전 상대 전적이다(친구를 끊으면 함께 사라진다).
+ */
+export const friends = sqliteTable(
+  'friends',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    friendId: text('friend_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    state: text('state', { enum: ['sent', 'received', 'accepted'] }).notNull(),
+    wins: integer('wins').notNull().default(0),
+    draws: integer('draws').notNull().default(0),
+    losses: integer('losses').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.profileId, table.friendId] }),
+    index('friends_friend_idx').on(table.friendId),
+  ],
+);
+
+/**
+ * T-11-098 친선전. 랭크 경기(team_matches)와 따로 둔다 — 하루 경기 수·전적·레이팅·업적·랭킹 최근 전적이 이 표를 보지 않는다.
+ * profile_id는 경기를 건 구단주(홈), opponent_id는 받은 구단주(원정). detail_json 모양은 team_matches와 같다(레이팅 변화 없음).
+ */
+export const friendMatches = sqliteTable(
+  'friend_matches',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    opponentId: text('opponent_id').notNull(),
+    homeTeamId: text('home_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    awayTeamId: text('away_team_id')
+      .notNull()
+      .references(() => ownerTeams.id, { onDelete: 'cascade' }),
+    homeGoals: integer('home_goals').notNull(),
+    awayGoals: integer('away_goals').notNull(),
+    detailJson: text('detail_json').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('friend_matches_profile_created_idx').on(table.profileId, table.createdAt),
+    index('friend_matches_opponent_created_idx').on(table.opponentId, table.createdAt),
+    // 팀을 지울 때(CASCADE) 친선전을 찾는다.
+    index('friend_matches_home_team_idx').on(table.homeTeamId),
+    index('friend_matches_away_team_idx').on(table.awayTeamId),
+  ],
+);
+
+/**
  * T-11-028 구단주 시즌 업적 점수(업적 랭킹). 업적은 은퇴 기록·팀에서 그때그때 계산하고, 랭킹을 세려고 점수만 여기에
  * 적어 둔다 — 업적 화면을 열 때·은퇴·팀 저장·팀 경기 뒤와 매일 cron이 다시 센다. 점수가 0이면 행을 두지 않는다.
  * reached_at은 점수가 바뀐 시각이라 같은 점수면 먼저 닿은 구단주가 앞선다.
@@ -841,6 +1012,8 @@ export const ownerAchievements = sqliteTable(
     score: integer('score').notNull(),
     done: integer('done').notNull(),
     players: integer('players').notNull(),
+    // T-11-103 그 시즌에 닿은 팀 업적(JSON {id: 값}). 선발이 바뀌어도 팀 업적을 남긴다. NULL이면 아직 없다.
+    teamKept: text('team_kept'),
     reachedAt: text('reached_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

@@ -20,6 +20,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  lte,
   ne,
   notInArray,
   or,
@@ -122,6 +123,11 @@ type LineupRow = {
   peakProfile: string | null;
   number: number | null;
   publicName: string | null;
+  type?: string | null;
+  foot?: string | null;
+  /** T-11-105 이 팀 구단주가 직접 키운 선수인지(SQL 비교라 0/1일 수 있다). */
+  raised?: boolean | number | null;
+  serviceSeason?: number | null;
 };
 export const toLineupCareer = (
   r: LineupRow,
@@ -136,6 +142,10 @@ export const toLineupCareer = (
   roles: profile?.roles ?? null,
   number: r.number,
   publicName: r.publicName,
+  type: r.type ?? null,
+  foot: r.foot ?? null,
+  raised: !!r.raised,
+  season: r.serviceSeason ?? 0,
 });
 
 /** 내 팀들(시즌 순). 시즌마다 한 팀이라 몇 개 되지 않는다. */
@@ -155,7 +165,8 @@ export const myTeamIn = (db: Db, profileId: string, season: number) =>
     .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)));
 
 /**
- * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌에 처음 올라온 선수, 최고 OVR 순). T-11-080부터 직접 키운 선수 + 영입한
+ * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌까지 올라온 선수, 최고 OVR 순). T-11-114 지난 시즌 선수는 와일드카드로
+ * 선발에 TEAM_WILDCARD_MAX명까지만 넣는다(PUT이 센다). T-11-080부터 직접 키운 선수 + 영입한
  * 선수 — 소유는 cards.owner_id다. 공개 이름·숨김·옛 추정 능력치·키운 사람은 careers에서 붙인다(기록이 지워졌으면 익명).
  */
 export function listEligibleCareers(db: Db, profileId: string, season: number, limit = 300) {
@@ -170,9 +181,11 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       cardAttrsJson: careers.cardAttrsJson,
       number: cards.number,
       publicName: careers.publicName,
+      type: careers.type,
+      foot: careers.foot,
+      serviceSeason: cards.serviceSeason,
       legendScore: cards.legendScore,
       cardValue: cards.cardValue,
-      retireValue: cards.retireValue,
       raised: sql<number>`${careers.profileId} = ${profileId}`,
       listingId: marketListings.id,
       listPrice: marketListings.price,
@@ -186,7 +199,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
     .where(
       and(
         eq(cards.ownerId, profileId),
-        eq(cards.serviceSeason, season),
+        lte(cards.serviceSeason, season),
         sql`coalesce(${careers.hidden}, 0) = 0`,
       ),
     )
@@ -230,7 +243,10 @@ export const challengedSince = (db: Db, profileId: string, sinceIso: string) =>
     .from(teamMatches)
     .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
 
-/** 여러 팀 선발의 카드를 한 번에 읽는다. 소유자는 부르는 쪽이 팀마다 확인한다(eligibleMap). */
+/**
+ * 여러 팀 선발의 카드를 한 번에 읽는다. 소유자는 부르는 쪽이 팀마다 확인한다(eligibleMap). 팀 업적이 보는 기록(마지막
+ * 구단·A매치·영구결번)도 함께 읽어 업적 판정이 화면과 같은 선발을 쓴다(T-11-103).
+ */
 export async function careersByIds(db: Db, ids: string[]) {
   if (ids.length === 0) return [];
   return db
@@ -244,17 +260,24 @@ export async function careersByIds(db: Db, ids: string[]) {
       peakProfile: cards.peakProfile,
       number: cards.number,
       publicName: careers.publicName,
+      type: careers.type,
+      foot: careers.foot,
+      raiserId: careers.profileId,
       serviceSeason: cards.serviceSeason,
       hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
+      lastClubId: careers.lastClubId,
+      caps: careers.caps,
+      rn: retiredNumbers.careerId,
     })
     .from(cards)
     .leftJoin(careers, eq(careers.id, cards.careerId))
+    .leftJoin(retiredNumbers, eq(retiredNumbers.careerId, cards.careerId))
     .where(inArray(cards.careerId, ids));
 }
 export type CareerLite = Awaited<ReturnType<typeof careersByIds>>[number];
 
 /**
- * 그 구단주의 그 시즌 팀에 넣을 수 있는 카드만 골라 선발 맵으로(그 시즌 선수 · 숨김 아님). T-11-080 소유 규칙: 지금
+ * 그 구단주의 그 시즌 팀에 넣을 수 있는 카드만 골라 선발 맵으로(그 시즌까지의 선수 · 숨김 아님, T-11-114). T-11-080 소유 규칙: 지금
  * 시즌 팀(open)은 지금 주인인지 확인하고, 닫힌 시즌 팀은 그 뒤 방출·이적과 상관없이 id로 읽기만 한다.
  */
 export function eligibleMap(
@@ -266,8 +289,8 @@ export function eligibleMap(
   const map = new Map<string, ReturnType<typeof toLineupCareer>>();
   for (const r of rows) {
     if (open && r.ownerId !== ownerId) continue;
-    if (r.serviceSeason !== season || r.hidden) continue;
-    map.set(r.id, toLineupCareer(r));
+    if (r.serviceSeason > season || r.hidden) continue;
+    map.set(r.id, toLineupCareer({ ...r, raised: r.raiserId === ownerId }));
   }
   return map;
 }
@@ -288,6 +311,42 @@ const rankedIn = (season: number) =>
     accountLinkedSql(),
     isNull(profiles.deletedAt),
   );
+
+/** T-11-113 친선전용 편성(friendly_json)에 담는 칸. */
+export type FriendlyLineup = Pick<
+  OwnerTeamRow,
+  'name' | 'manager' | 'formation' | 'slotsJson' | 'layoutJson' | 'logoJson' | 'filled' | 'ovr'
+>;
+
+/**
+ * T-11-113 친선전·내 팀 화면에서 쓰는 팀: 끝난 시즌 팀을 친선전용으로 고쳤으면 그 편성을 덮어 쓴다. 랭킹·팀 프로필·업적은
+ * 원래 행(최종 기록)을 그대로 읽는다.
+ */
+export function friendlyTeamOf(row: OwnerTeamRow): OwnerTeamRow {
+  if (!row.friendlyJson) return row;
+  try {
+    return { ...row, ...(JSON.parse(row.friendlyJson) as FriendlyLineup) };
+  } catch {
+    return row;
+  }
+}
+
+/**
+ * T-11-113 창단 멤버: 프리시즌(service_season 0)에 숨김 아닌 은퇴 선수를 남긴 구단주만 골라 돌려준다(커리어 프로필·상태·시즌
+ * 인덱스). batch에 넣을 수 있게 쿼리로 돌려준다.
+ */
+export const foundersOf = (db: Db, profileIds: readonly string[]) =>
+  db
+    .selectDistinct({ profileId: careers.profileId })
+    .from(careers)
+    .where(
+      and(
+        inArray(careers.profileId, [...profileIds]),
+        eq(careers.status, 'retired'),
+        eq(careers.serviceSeason, 0),
+        eq(careers.hidden, 0),
+      ),
+    );
 
 /**
  * 상대 후보: 같은 시즌 다른 구단주의 팀 중 내 팀 OVR 위·아래로 가까운 팀을 perSide개씩(시즌·OVR 인덱스). 오늘(todayStart
@@ -472,6 +531,8 @@ export type TeamSnapshot = {
   ovr: number;
   /** 이 경기로 바뀐 레이팅(T-10-095부터 남긴다). */
   ratingChange?: number;
+  /** 이 경기에 반영된 시너지 id(T-11-105, 반영 시즌 경기만). */
+  synergy?: string[];
 };
 export type StoredEvent = {
   minute: number;
@@ -479,7 +540,7 @@ export type StoredEvent = {
   scorer: PlayerRef;
   assist: PlayerRef | null;
 };
-/** team_matches.detail_json. */
+/** team_matches.detail_json. 시너지 반영 시즌 경기는 TeamSnapshot.synergy에 켜진 시너지 id를 남긴다(T-11-105). */
 export type MatchDetail = { home: TeamSnapshot; away: TeamSnapshot; events: StoredEvent[] };
 
 /** 경기 한 판이 팀 행에 더하는 것(득실·레이팅 변화). */
@@ -593,8 +654,8 @@ export const deleteOwnerTeamsStatements = (db: Db, profileId: string) => {
 // ───────── 구단 시즌 업적 ─────────
 
 /**
- * 그 시즌에 처음 올라와(service_season, 0 = 프리시즌) 은퇴한 내 선수 + 영구결번 여부 + 받아 둔 시즌(리그·영예). 이 조건이
- * 곧 그 시즌 팀에 넣을 수 있는 선수라 팀 선발(lineup)도 여기서 만든다.
+ * 그 시즌에 처음 올라와(service_season, 0 = 프리시즌) 은퇴한 내 선수(직접 키운 선수) + 영구결번 여부 + 받아 둔 시즌(리그·영예).
+ * 팀 선발은 영입한 선수도 들어가므로 여기서 만들지 않고 careersByIds로 읽는다(T-11-103).
  */
 export async function seasonCareersOf(db: Db, profileId: string, season: number) {
   const mine = and(
@@ -611,11 +672,6 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         id: careers.id,
         pos: careers.pos,
         dpos: careers.dpos,
-        peak: careers.peak,
-        peakProfile: careers.peakProfile,
-        number: careers.shirtNumber,
-        publicName: careers.publicName,
-        lastClubId: careers.lastClubId,
         caps: careers.caps,
         ballon: careers.ballon,
         trophies: careers.trophies,
@@ -662,8 +718,6 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
   }
   return rows.map((r) => ({
     id: r.id,
-    lineup: toLineupCareer(r),
-    lastClubId: r.lastClubId,
     pos: r.pos,
     dpos: dposFor(r.pos, r.dpos),
     caps: r.caps ?? 0,

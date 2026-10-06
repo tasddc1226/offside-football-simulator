@@ -9,6 +9,7 @@ import { useSnapshot } from 'valtio';
 import { alongRoute, PLANE_PATH, type FlightMap } from '@offside/app-core/flight';
 import { flightProgress } from '@offside/app-core/flight-time';
 import type { SheetView } from '@offside/app-core/sheets';
+import { sheetContractText as L } from '@offside/app-core/i18n/ko/sheetContract';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { DISPLAY, rem } from '../theme/type';
@@ -110,7 +111,7 @@ export function Flight({ v }: { v: Extract<SheetView, { kind: 'flight' }> }) {
       <View
         accessible
         accessibilityRole="image"
-        accessibilityLabel={`${s.from.city}에서 ${s.to.city}까지 비행 경로`}
+        accessibilityLabel={L.flightA11y({ from: s.from.city, to: s.to.city })}
         style={{
           borderRadius: 16,
           overflow: 'hidden',

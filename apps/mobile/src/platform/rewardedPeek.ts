@@ -14,6 +14,7 @@ import type { GameState } from '@offside/game/types';
 import { askConsent } from './adConsent';
 import { adFree } from './adFree';
 import { kv } from './setup';
+import { adText as L } from '@offside/app-core/i18n/ko/ad';
 
 /** AdMob 보상형 광고 단위(scout-peek-rewarded, 리워드 1 스카우트 평가). 단위가 없는 플랫폼은 광고 제거 구매자만 연다. */
 const UNIT = __DEV__
@@ -75,11 +76,11 @@ export async function openPeek(s: GameState) {
   potPeek.message = '';
   try {
     if (!(await askConsent())) {
-      potPeek.message = '지금은 광고를 불러올 수 없어요. 잠시 뒤 다시 시도해 주세요.';
+      potPeek.message = L.rewardedUnavailable;
       return;
     }
     if (await watch(UNIT)) open(s);
-    else potPeek.message = '광고를 끝까지 보면 평가를 볼 수 있어요.';
+    else potPeek.message = L.rewardedWatch;
   } finally {
     potPeek.busy = false;
   }

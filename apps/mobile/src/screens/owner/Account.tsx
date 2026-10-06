@@ -19,6 +19,7 @@ import { rem } from '../../theme/type';
 import { NicknameForm } from '../../components/NicknameForm';
 import { Btn, Row, Txt } from '../../ui';
 import { LinkBtn } from '../settings/parts';
+import { accountText as L } from '@offside/app-core/i18n/ko/account';
 
 // 화면을 벗어났다 돌아와도(다시 마운트) 캐시가 이 시간 안이면 '확인 중…'을 다시 보이지 않는다.
 const REVALIDATE_MS = 5 * 60_000;
@@ -48,13 +49,13 @@ function askLogout() {
     {
       kind: 'notice',
       eyebrow: 'Account',
-      title: '로그아웃할까요?',
+      title: L.logoutTitle,
       muted: true,
-      text: '이 기기에 저장된 게임 진행은 그대로 남아요. 같은 계정으로 다시 로그인하면 저장된 기록을 볼 수 있어요.',
+      text: L.logoutBodyApp,
     },
     [
-      { label: '로그아웃', cls: 'btn-primary', fn: () => void doLogout() },
-      { label: '취소', fn: closeSheet },
+      { label: L.logout, cls: 'btn-primary', fn: () => void doLogout() },
+      { label: L.cancel, fn: closeSheet },
     ],
   );
 }
@@ -67,14 +68,10 @@ async function doDeleteFlow() {
   set(done.ok ? null : 'error');
 }
 function askDelete() {
-  Alert.alert(
-    '계정 삭제',
-    '계정과 서버에 저장된 선수 기록·팀·댓글·채팅을 삭제할까요? 되돌릴 수 없어요. 이 기기의 게임 진행은 남아요.',
-    [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: () => void doDeleteFlow() },
-    ],
-  );
+  Alert.alert(L.deleteAccount, L.deleteBody, [
+    { text: L.cancel, style: 'cancel' },
+    { text: L.deleteConfirm, style: 'destructive', onPress: () => void doDeleteFlow() },
+  ]);
 }
 
 /** 관리자 계정(구단주 화면이 확인한다)은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다. */
@@ -101,9 +98,9 @@ export function Account({ admin = false }: { admin?: boolean }) {
     return (
       <View style={head} accessibilityLiveRegion="polite">
         <View style={who}>
-          <Txt style={bTitle}>계정</Txt>
+          <Txt style={bTitle}>{L.title}</Txt>
           <Txt tone="muted" style={bMuted}>
-            확인 중…
+            {L.checking}
           </Txt>
         </View>
       </View>
@@ -112,14 +109,13 @@ export function Account({ admin = false }: { admin?: boolean }) {
     return (
       <View style={head}>
         <View style={who}>
-          <Txt style={bTitle}>연결할 수 없어요</Txt>
+          <Txt style={bTitle}>{L.errorTitle}</Txt>
           <Txt tone="muted" style={bMuted}>
-            서버에 연결하지 못해 로그인 상태를 확인할 수 없어요. 게임은 계속할 수 있고, 진행 상황은
-            이 기기에 저장돼요.
+            {L.errorBody}
           </Txt>
         </View>
         <Btn sm onPress={() => void load()} testID="account-retry">
-          다시 시도
+          {L.retry}
         </Btn>
       </View>
     );
@@ -128,10 +124,9 @@ export function Account({ admin = false }: { admin?: boolean }) {
     return (
       <View style={head}>
         <View style={who}>
-          <Txt style={bTitle}>로그인하지 않았어요</Txt>
+          <Txt style={bTitle}>{L.guestTitle}</Txt>
           <Txt tone="muted" style={bMuted}>
-            게임 진행은 이 기기에만 저장돼요. 로그인하면 선수 기록과 구단 이름을 다른 기기에서도 볼
-            수 있어요.
+            {L.guestBody}
           </Txt>
         </View>
       </View>
@@ -147,18 +142,16 @@ export function Account({ admin = false }: { admin?: boolean }) {
           </Txt>
         </View>
         <Btn kind="primary" sm onPress={askLogout} testID="logout">
-          로그아웃
+          {L.logout}
         </Btn>
       </View>
       <View style={{ gap: 6 }}>
         <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-          {profile.nickname
-            ? '댓글 닉네임'
-            : '댓글 닉네임을 정하면 소식 게시판에 댓글을 쓸 수 있어요'}
+          {profile.nickname ? L.nickname : L.nicknamePrompt}
         </Txt>
         {admin ? (
           <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>
-            {`${profile.nickname} · 운영자 계정은 고정이에요`}
+            {L.nicknameFixed({ nickname: profile.nickname })}
           </Txt>
         ) : (
           <NicknameForm key={profile.nickname ?? ''} current={profile.nickname} />
@@ -168,7 +161,7 @@ export function Account({ admin = false }: { admin?: boolean }) {
         {profile.linked.google ? (
           <>
             <LinkBtn onPress={() => void doUnlink()} testID="account-unlink">
-              구글 연동 해제
+              {L.unlinkGoogle}
             </LinkBtn>
             <Txt tone="muted" accessible={false} style={{ fontSize: rem(0.75) }}>
               ·
@@ -176,7 +169,7 @@ export function Account({ admin = false }: { admin?: boolean }) {
           </>
         ) : null}
         <LinkBtn bad onPress={askDelete} testID="account-delete">
-          계정 삭제
+          {L.deleteAccount}
         </LinkBtn>
       </Row>
     </View>

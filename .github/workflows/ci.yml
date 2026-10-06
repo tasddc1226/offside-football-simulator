@@ -58,8 +58,10 @@ jobs:
           pnpm format:check
           pnpm lint
           pnpm lint:deps
+          pnpm lint:i18n
           pnpm typecheck
           pnpm test
+          pnpm --filter @offside/api exec vitest run --config ../mobile/vitest.push.config.mjs
       - name: Fulltime balance smoke (N=2000, random)
         if: steps.scope.outputs.code_changed == 'true'
         run: node tooling/scripts/sim-smoke.mjs 2000 ci-pr-${{ github.run_id }}

@@ -17,18 +17,17 @@ import { alpha } from '../../theme/colors';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { ClubMark, Txt } from '../../ui';
+import { homeText as L } from '@offside/app-core/i18n/ko/home';
+import { tn } from '@offside/game/i18n/names';
+import { useOnPull } from '../../ui/refresh';
 
 /** 흐르는 속도(px/초). 한글 한 줄을 편히 읽을 만큼 천천히. */
 const SPEED = 42;
 const STILL_STEP_MS = 5_000;
 
-const TAG: Record<TickerItem['kind'], string> = {
-  transfer: '이적',
-  debut: '프로 입단',
-  first: '서버 최초',
-  record: '서버 신기록',
-};
-const club = (id: string) => clubById(id)?.name ?? '';
+const tag = (kind: TickerItem['kind']): string =>
+  ({ transfer: L.tagTransfer, debut: L.tagDebut, first: L.tagFirst, record: L.tagRecord })[kind];
+const club = (id: string) => tn(clubById(id)?.name ?? '');
 
 export function HomeTicker() {
   const c = useColors();
@@ -48,6 +47,10 @@ export function HomeTicker() {
   });
   const ago = (at: string) => agoKo(now + skew - Date.parse(at));
 
+  // T-11-111 당겨서 새로고침 — 주기 조회·소켓은 그대로 두고 한 번만 다시 받는다.
+  const reload = useRef<() => Promise<void>>(async () => {});
+  useOnPull(() => reload.current());
+
   // 받아 오기: 처음 한 번 + 주기적으로(앱이 보일 때만).
   useEffect(() => {
     let alive = true;
@@ -64,6 +67,7 @@ export function HomeTicker() {
       });
       setNow(Date.now());
     };
+    reload.current = load;
     void load();
     const loadIfActive = () => {
       if (AppState.currentState === 'active') void load();
@@ -145,7 +149,7 @@ export function HomeTicker() {
         <>
           <Txt style={tk}>
             {k.who}
-            <Txt style={[tk, { color: c.muted, marginLeft: 2 }]}>({k.age}세)</Txt>
+            <Txt style={[tk, { color: c.muted, marginLeft: 2 }]}>{L.tickerAge({ age: k.age })}</Txt>
           </Txt>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <ClubMark name={club(k.from)} id={k.from} size={14} />
@@ -170,7 +174,7 @@ export function HomeTicker() {
   return (
     <View
       testID="home-ticker"
-      accessibilityLabel="이적·서버 기록 소식"
+      accessibilityLabel={L.tickerAria}
       onTouchStart={() => setHolding(true)}
       onTouchEnd={() => setHolding(false)}
       onTouchCancel={() => setHolding(false)}
@@ -188,7 +192,7 @@ export function HomeTicker() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14 }}>
           <TickTag label="Transfer" />
           <Txt numberOfLines={1} style={[tk, { color: c.muted, flexShrink: 1 }]}>
-            이적 소식과 서버 최초 기록이 여기로 흘러요
+            {L.tickerIdle}
           </Txt>
         </View>
       ) : !motionOK ? (
@@ -268,7 +272,7 @@ function TickTag({ kind, label }: { kind?: TickerItem['kind']; label?: string })
           color: gold ? c.accentText : warm ? c.ink : c.muted,
         }}
       >
-        {label ?? (kind ? TAG[kind] : '')}
+        {label ?? (kind ? tag(kind) : '')}
       </Txt>
     </View>
   );

@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import { Pressable, View } from 'react-native';
+import Svg, { Line } from 'react-native-svg';
 import { presetLayout, type FormationId, type TeamLayout } from '@offside/contracts/owner-team';
 import type { TeamLines as Lines } from '@offside/app-core/api/team';
 import { rem } from '../theme/type';
@@ -9,6 +10,8 @@ import { Txt } from '../ui/Txt';
 import { PlayerCard, type PlayerCardData } from './PlayerCard';
 import { DragPlayer, type PlayerDrag } from './DragPlayer';
 import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+import { tn } from '@offside/game/i18n/names';
 
 export type PitchCell = PlayerCardData;
 export function TeamPitch({
@@ -22,6 +25,8 @@ export function TeamPitch({
   animate = true,
   onplace,
   height = 450,
+  links = [],
+  focus = null,
 }: {
   formation: FormationId;
   cells: readonly PitchCell[];
@@ -33,6 +38,10 @@ export function TeamPitch({
   animate?: boolean;
   onplace?: ((x: number, y: number) => void) | undefined;
   height?: number;
+  /** T-11-105 시너지 듀오 — 첫 선수에서 나머지로 잇는다. on이면 굵게. */
+  links?: readonly { members: readonly number[]; on: boolean }[];
+  /** 고른 시너지의 선수 자리(테두리). */
+  focus?: readonly number[] | null;
 }) {
   const c = useColors();
   const positions = layout ?? presetLayout(formation);
@@ -102,10 +111,39 @@ export function TeamPitch({
         {onplace ? (
           <Pressable
             testID="pitch-space"
-            accessibilityLabel="선택한 선수를 그라운드 빈 공간에 배치"
+            accessibilityLabel={L.placeAriaApp}
             onPress={(e) => onplace(e.nativeEvent.locationX, e.nativeEvent.locationY)}
             style={{ position: 'absolute', inset: 0 }}
           />
+        ) : null}
+        {links.length ? (
+          <Svg
+            pointerEvents="none"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+          >
+            {links.flatMap((l, k) =>
+              l.members.slice(1).map((m) => {
+                const a = positions[l.members[0]!];
+                const b = positions[m];
+                return a && b ? (
+                  <Line
+                    key={`${k}-${m}`}
+                    x1={a.x}
+                    y1={a.y}
+                    x2={b.x}
+                    y2={b.y}
+                    stroke={c.accent}
+                    strokeWidth={l.on ? 3 : 2}
+                    strokeDasharray={l.on ? undefined : '6 5'}
+                    strokeOpacity={l.on ? 0.95 : 0.55}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : null;
+              }),
+            )}
+          </Svg>
         ) : null}
         {positions.map((pos, i) => {
           const cell = cells[i];
@@ -131,12 +169,16 @@ export function TeamPitch({
                 <Press
                   testID={`slot-${i}`}
                   onPress={onpick ? () => onpick(i) : undefined}
-                  accessibilityLabel={`${pos.slot} · ${cell.name}${country ? ` · ${country.ko}` : ''} · 포지션 OVR ${cell.rating}${ondrag ? ' · 길게 눌러 이동' : ''}`}
+                  accessibilityLabel={L.pitchSlotApp({
+                    head: `${pos.slot} · ${cell.name}${country ? ` · ${tn(country.ko)}` : ''}`,
+                    rating: cell.rating,
+                    drag: !!ondrag,
+                  })}
                   accessibilityState={{ selected: selected === i }}
                   style={{
                     borderRadius: 10,
-                    borderWidth: selected === i ? 2 : 0,
-                    borderColor: c.pitchAccent,
+                    borderWidth: selected === i || focus?.includes(i) ? 2 : 0,
+                    borderColor: selected === i ? c.pitchAccent : c.accent,
                   }}
                 >
                   <PlayerCard cell={cell} code={pos.slot} compact animate={animate} />
@@ -151,18 +193,19 @@ export function TeamPitch({
 }
 
 /** 팀의 공격·중원·수비·골문 힘(내 팀 편성 · 팀 프로필). */
-const CELLS = [
-  ['atk', '공격'],
-  ['mid', '중원'],
-  ['def', '수비'],
-  ['gk', '골문'],
-] as const;
+const cells = () =>
+  [
+    ['atk', L.lineAtk],
+    ['mid', L.lineMid],
+    ['def', L.lineDef],
+    ['gk', L.lineGk],
+  ] as const;
 
 export function TeamLines({ lines }: { lines: Lines }) {
   const c = useColors();
   return (
     <View testID="team-lines" style={{ flexDirection: 'row', gap: 6 }}>
-      {CELLS.map(([k, label]) => (
+      {cells().map(([k, label]) => (
         <View
           key={k}
           accessible

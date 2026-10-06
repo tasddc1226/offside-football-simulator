@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { intlLocale } from '@offside/contracts/i18n';
+  import { tn } from '@offside/game/i18n/names';
   // T-11-080 이적시장 — 지금 시즌 은퇴 선수 카드를 구단 자금으로 사고판다. 구단주 화면의 '이적시장'으로 연다.
   // T-11-080d 시안(이적시장 모바일 시안)대로: 초록 머리에 구단 자금과 '자금 만들기', 탭 셋(선수 사기 · 팔기 · 내 거래),
   // 카드 모양 목록, 카드 상세 영입 시트, 카드 고르기 + 슬라이더 판매, 방출 화면. 각 화면은 처음 열 때만 불러온다.
@@ -25,7 +27,7 @@
     MARKET_SORT_LABEL,
     MARKET_TICKER_MS,
     MARKET_TOAST,
-    MARKET_TABS,
+    marketTabs,
     TRADE_LABEL,
     buyBlock,
     cardMeta,
@@ -58,6 +60,7 @@
   import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
   import { go } from './nav.js';
   import { toast } from './helpers.js';
+  import { marketText as L } from '@offside/app-core/i18n/ko/market';
 
   const local = localCareerNames();
   let view = $state<MarketView>('market');
@@ -208,23 +211,23 @@
 <div class="wrap market">
   <Topbar />
 
-  <section class="mk-hero" aria-label="구단 자금" data-market-funds>
+  <section class="mk-hero" aria-label={L.funds} data-market-funds>
     <div class="mk-hero-head">
       <div class="eyebrow">Transfer market</div>
-      <h1>이적시장</h1>
+      <h1>{L.title}</h1>
     </div>
     <div class="mk-wallet">
       <div class="mk-wallet-sum">
-        <span>구단 자금</span>
+        <span>{L.funds}</span>
         <b>{me ? fundsText(me.balance) : '–'}</b>
       </div>
-      <button class="mk-make" data-act="open-release" aria-pressed={view === 'release'} onclick={() => open('release')}>자금 만들기</button>
+      <button class="mk-make" data-act="open-release" aria-pressed={view === 'release'} onclick={() => open('release')}>{L.makeFunds}</button>
     </div>
     {#if me}
       <dl class="mk-hero-stats">
-        <div><dt>구단 가치</dt><dd>{fmtValue(me.clubValue)}</dd></div>
-        <div><dt>오늘 영입</dt><dd>{me.rules.dailyBuys - me.buysLeft} / {me.rules.dailyBuys}</dd></div>
-        <div><dt>내놓은 선수</dt><dd>{me.listings.length} / {me.rules.listLimit}</dd></div>
+        <div><dt>{L.statClubValue}</dt><dd>{fmtValue(me.clubValue)}</dd></div>
+        <div><dt>{L.statBuysToday}</dt><dd>{me.rules.dailyBuys - me.buysLeft} / {me.rules.dailyBuys}</dd></div>
+        <div><dt>{L.statListed}</dt><dd>{me.listings.length} / {me.rules.listLimit}</dd></div>
       </dl>
     {:else if meFailed}
       <p class="mk-hero-note">{meFailed}</p>
@@ -232,59 +235,59 @@
   </section>
 
   {#if view === 'release'}
-    <section class="mk-pane" aria-label="방출해서 자금 만들기">
+    <section class="mk-pane" aria-label={L.releasePane}>
       <div class="mk-pane-head">
-        <h2>방출해서 자금 만들기</h2>
-        <button class="mk-link" onclick={() => open('market')}>이적시장으로</button>
+        <h2>{L.releasePane}</h2>
+        <button class="mk-link" onclick={() => open('market')}>{L.backToMarket}</button>
       </div>
-      <p class="muted fs-sm">직접 키운 선수를 내보내면 은퇴 가치만큼 구단 자금이 생겨요. 명예의 전당 기록은 그대로 남아요.</p>
+      <p class="muted fs-sm">{L.releaseIntro}</p>
       <div class="mk-chips-row">
-        <div class="mk-chips" role="group" aria-label="시즌">
+        <div class="mk-chips" role="group" aria-label={L.seasonGroup}>
           {#each team?.seasons ?? [] as o (o.id)}
-            <button class="mk-chip" aria-pressed={team?.season === o.id} onclick={() => ((teamSeason = o.id), (picked = new Set()))}>{o.name} 선수</button>
+            <button class="mk-chip" aria-pressed={team?.season === o.id} onclick={() => ((teamSeason = o.id), (picked = new Set()))}>{L.seasonChip({ name: o.name })}</button>
           {/each}
         </div>
-        {#if releasable.length > 0}<button class="mk-link" data-act="pick-all" onclick={pickAll}>{allPicked ? '선택 해제' : '전체 선택'}</button>{/if}
+        {#if releasable.length > 0}<button class="mk-link" data-act="pick-all" onclick={pickAll}>{allPicked ? L.pickNone : L.pickAll}</button>{/if}
       </div>
       {#if !team}
-        <p class="muted">{teamFailed ? '내 선수를 불러오지 못했어요.' : '불러오는 중…'}</p>
+        <p class="muted">{teamFailed ? L.playersFailed : L.loading}</p>
       {:else}
         <ul class="mk-rel-list">
           {#each team.players as p (p.careerId)}
             {@const lock = releaseLock(p, lineup)}
             <li>
               <label class="mk-rel" class:on={picked.has(p.careerId)} class:locked={!!lock} data-mine={p.careerId}>
-                <input type="checkbox" checked={picked.has(p.careerId)} disabled={!!lock} aria-label="{nameOfPlayer(p)} 방출할 선수로 고르기" onchange={() => togglePick(p.careerId)} />
+                <input type="checkbox" checked={picked.has(p.careerId)} disabled={!!lock} aria-label={L.releasePickLabel({ name: nameOfPlayer(p) })} onchange={() => togglePick(p.careerId)} />
                 {@render mini(p, !!lock)}
                 <span class="mk-info">
                   <strong class="mk-name">{nameOfPlayer(p)}</strong>
-                  <small class:mk-lock={!!lock}>{lock ?? `레전드 ${(p.legendScore ?? 0).toLocaleString()} · 은퇴 가치`}</small>
+                  <small class:mk-lock={!!lock}>{lock ?? L.releaseInfo({ score: (p.legendScore ?? 0).toLocaleString(intlLocale()) })}</small>
                 </span>
                 {#if !lock && me}<b class="mk-rel-value">{fundsText(releaseValue(p, me.rules.releaseRate))}</b>{/if}
               </label>
             </li>
           {:else}
-            <li class="muted">{seasonName}에 은퇴한 내 선수가 없어요.</li>
+            <li class="muted">{L.noRetired({ season: seasonName })}</li>
           {/each}
         </ul>
       {/if}
     </section>
     {#if pickedPlayers.length > 0}
-      <div class="mk-dock" aria-label="방출 확인">
-        <div class="mk-dock-sum"><span>{pickedPlayers.length}명 방출 · 받는 자금</span><b>+{fundsText(pickedAmount)}</b></div>
-        <p class="mk-warn">방출한 선수는 다시 데려올 수 없어요.</p>
-        <button class="btn btn-block mk-danger" data-act="release" onclick={() => ((confirmRelease = true), (error = null))}>{pickedPlayers.length}명 방출하기</button>
+      <div class="mk-dock" aria-label={L.dockLabel}>
+        <div class="mk-dock-sum"><span>{L.dockSum({ n: pickedPlayers.length })}</span><b>+{fundsText(pickedAmount)}</b></div>
+        <p class="mk-warn">{L.dockWarn}</p>
+        <button class="btn btn-block mk-danger" data-act="release" onclick={() => ((confirmRelease = true), (error = null))}>{L.releaseBtn({ n: pickedPlayers.length })}</button>
       </div>
     {/if}
   {:else}
-    <nav class="mk-tabs" aria-label="이적시장 메뉴">
-      {#each MARKET_TABS as [k, label] (k)}
+    <nav class="mk-tabs" aria-label={L.menu}>
+      {#each marketTabs() as [k, label] (k)}
         <button aria-pressed={view === k} data-market-tab={k} onclick={() => open(k)}>{label}</button>
       {/each}
     </nav>
 
     {#if view === 'market'}
-      <section class="mk-pane" aria-label="선수 사기">
+      <section class="mk-pane" aria-label={L.tabBuy}>
         {#if index}
           <div class="mk-index mk-idx-{index.tone}" data-market-index>
             <span class="mk-info">
@@ -301,9 +304,9 @@
         {/if}
         {#if live}
           <div class="mk-live" data-market-live>
-            <button class="mk-live-bar" aria-expanded={liveOpen} aria-label="방금 이적 {recent.length}건 모두 보기" onclick={() => (liveOpen = !liveOpen)}>
+            <button class="mk-live-bar" aria-expanded={liveOpen} aria-label={L.liveAll({ n: recent.length })} onclick={() => (liveOpen = !liveOpen)}>
               <span class="mk-live-dot" aria-hidden="true"></span>
-              <b>방금 이적</b>
+              <b>{L.justSold}</b>
               {#key tick}
                 <span class="mk-live-line">{saleText(live, local)}</span>
               {/key}
@@ -316,7 +319,7 @@
                     {@render mini(s.card)}
                     <span class="mk-info">
                       <span class="mk-name">{marketName(s.card, local)}</span>
-                      <small>{agoKo(Date.now() - Date.parse(s.soldAt))} · 기준가 {fmtValue(s.card.cardValue)}</small>
+                      <small>{L.liveBase({ ago: agoKo(Date.now() - Date.parse(s.soldAt)), value: fmtValue(s.card.cardValue) })}</small>
                     </span>
                     <b>{fmtValue(s.price)}</b>
                   </li>
@@ -325,24 +328,24 @@
             {/if}
           </div>
         {/if}
-        <div class="mk-chips" role="group" aria-label="포지션">
+        <div class="mk-chips" role="group" aria-label={L.position}>
           {#each MARKET_POS_FILTERS as p (p ?? 'all')}
-            <button class="mk-chip" aria-pressed={pos === p} data-market-pos={p ?? 'all'} onclick={() => (pos = p)}>{p ? POS_LABEL[p] : '전체'}</button>
+            <button class="mk-chip" aria-pressed={pos === p} data-market-pos={p ?? 'all'} onclick={() => (pos = p)}>{p ? tn(POS_LABEL[p]) : L.posAll}</button>
           {/each}
         </div>
         <div class="mk-sort">
-          <span class="muted fs-sm">{season === null ? '' : `이번 시즌 선수 ${items.length}${hasMore ? '+' : ''}명`}</span>
-          <label class="fs-sm">정렬
+          <span class="muted fs-sm">{season === null ? '' : L.seasonCount({ n: items.length, more: hasMore })}</span>
+          <label class="fs-sm">{L.sortLabel}
             <select bind:value={sort} data-market-sort>
               {#each Object.entries(MARKET_SORT_LABEL) as [k, label] (k)}<option value={k}>{label}</option>{/each}
             </select>
           </label>
         </div>
         {#if listStatus === 'loading'}
-          <p class="muted">불러오는 중…</p>
+          <p class="muted">{L.loading}</p>
         {:else if listStatus === 'error'}
-          <p class="muted">시장을 불러오지 못했어요.</p>
-          <button class="btn btn-block" onclick={() => loadList(0)}>다시 불러오기</button>
+          <p class="muted">{L.listFailed}</p>
+          <button class="btn btn-block" onclick={() => loadList(0)}>{L.reload}</button>
         {:else}
           <ul class="mk-rows">
             {#each items as l (l.id)}
@@ -351,7 +354,7 @@
                 <button class="mk-row" data-listing={l.id} onclick={() => ((buying = l), (error = null))}>
                   {@render mini(l.card)}
                   <span class="mk-info">
-                    <span class="mk-name">{marketName(l.card, local)}{#if myListingIds.has(l.id)}<em class="mk-tag">내 등록</em>{/if}</span>
+                    <span class="mk-name">{marketName(l.card, local)}{#if myListingIds.has(l.id)}<em class="mk-tag">{L.myListing}</em>{/if}</span>
                     <small>{cardMeta(l.card)}</small>
                   </span>
                   <span class="mk-price"><b>{fmtValue(l.price)}</b><small class="mk-{diff.tone}">{diff.text}</small></span>
@@ -361,16 +364,16 @@
               <li class="muted">{marketEmptyText(season, !!pos)}</li>
             {/each}
           </ul>
-          {#if hasMore}<button class="btn btn-block" onclick={() => loadList(page + 1)}>더 보기</button>{/if}
+          {#if hasMore}<button class="btn btn-block" onclick={() => loadList(page + 1)}>{L.more}</button>{/if}
         {/if}
       </section>
     {:else if view === 'sell'}
-      <section class="mk-pane" aria-label="팔기">
-        <h2 class="mk-step">1. 내놓을 선수 <small>({seasonName || '이번 시즌'} 선수만)</small></h2>
+      <section class="mk-pane" aria-label={L.tabSell}>
+        <h2 class="mk-step">{L.sellStep1} <small>{L.sellSeasonOnly({ season: seasonName || L.thisSeason })}</small></h2>
         {#if !team}
-          <p class="muted">{teamFailed ? '내 선수를 불러오지 못했어요.' : '불러오는 중…'}</p>
+          <p class="muted">{teamFailed ? L.playersFailed : L.loading}</p>
         {:else if !isCurrent || team.players.length === 0}
-          <p class="muted">이번 시즌에 은퇴한 내 선수가 없어요. 지난 시즌 선수는 방출해서 자금으로 바꿀 수 있어요.</p>
+          <p class="muted">{L.sellNone}</p>
         {:else}
           <div class="mk-pick-grid">
             {#each team.players as p (p.careerId)}
@@ -379,7 +382,7 @@
               <button class="mk-pick" aria-pressed={selling?.careerId === p.careerId} disabled={off} data-sell-pick={p.careerId} onclick={() => pickSell(p)}>
                 {@render mini(p, off)}
                 <span class="mk-pick-name">{nameOfPlayer(p)}</span>
-                <small>{selling?.careerId === p.careerId ? '선택' : note}</small>
+                <small>{selling?.careerId === p.careerId ? L.sellSelected : note}</small>
               </button>
             {/each}
           </div>
@@ -388,61 +391,61 @@
           {@const diff = priceDiff(sellPrice, selling.cardValue!)}
           {@const range = sellSlider(me.rules)}
           <div class="mk-price-box">
-            <h2 class="mk-step">2. 가격 정하기 · {nameOfPlayer(selling)} {detailPosOf(selling)} {selling.peak}</h2>
+            <h2 class="mk-step">{L.sellStep2({ name: nameOfPlayer(selling), pos: detailPosOf(selling), peak: selling.peak })}</h2>
             <div class="mk-presets">
-              <button aria-pressed={pct === 100} onclick={() => (pct = 100)}><span>기준가 그대로</span><b>{fmtValue(selling.cardValue!)}</b></button>
-              <button aria-pressed={pct !== 100} onclick={() => (pct = pct === 100 ? 110 : pct)}><span>직접 정하기</span><b>{pct === 100 ? '슬라이더로' : fmtValue(sellPrice)}</b></button>
+              <button aria-pressed={pct === 100} onclick={() => (pct = 100)}><span>{L.presetBase}</span><b>{fmtValue(selling.cardValue!)}</b></button>
+              <button aria-pressed={pct !== 100} onclick={() => (pct = pct === 100 ? 110 : pct)}><span>{L.presetCustom}</span><b>{pct === 100 ? L.presetSlider : fmtValue(sellPrice)}</b></button>
             </div>
             <label class="mk-slider">
-              <span class="mk-slider-top"><span>판매가</span><b>{fmtValue(sellPrice)} <small class="mk-{diff.tone}">{diff.text}</small></b></span>
-              <input type="range" min={range.minPct} max={range.maxPct} step={range.step} bind:value={pct} aria-label="기준가 대비 판매가(%)" data-sell-pct />
+              <span class="mk-slider-top"><span>{L.price}</span><b>{fmtValue(sellPrice)} <small class="mk-{diff.tone}">{diff.text}</small></b></span>
+              <input type="range" min={range.minPct} max={range.maxPct} step={range.step} bind:value={pct} aria-label={L.sliderLabelWeb} data-sell-pct />
               <span class="mk-slider-ends"><span>{fmtValue(quote.band.min)} ({range.minPct}%)</span><span>{fmtValue(quote.band.max)} ({range.maxPct}%)</span></span>
             </label>
             <dl class="mk-lines">
-              <div><dt>수수료 {range.feePct}%</dt><dd>−{fmtValue(quote.fee)}</dd></div>
-              <div class="strong"><dt>팔리면 받는 자금</dt><dd>{fmtValue(quote.gets)}</dd></div>
+              <div><dt>{L.fee({ pct: range.feePct })}</dt><dd>−{fmtValue(quote.fee)}</dd></div>
+              <div class="strong"><dt>{L.gets}</dt><dd>{fmtValue(quote.gets)}</dd></div>
             </dl>
-            <p class="muted fs-sm">팔리기 전까지는 팀에서 계속 뛰어요. 팔리면 선발 자리는 유스 선수가 채워요. 언제든 내릴 수 있어요.</p>
+            <p class="muted fs-sm">{L.sellHelp}</p>
             {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
             <button class="btn btn-primary btn-block" data-act="list" disabled={busy || !!quote.error} onclick={() => run(() => createListing(selling!.careerId, sellPrice), MARKET_TOAST.listed)}>
-              {fmtValue(sellPrice)}에 내놓기
+              {L.listFor({ price: fmtValue(sellPrice) })}
             </button>
           </div>
         {/if}
       </section>
     {:else}
-      <section class="mk-pane" aria-label="내 거래">
+      <section class="mk-pane" aria-label={L.tabTrades}>
         {#if !me}
-          <p class="muted">{meFailed ?? '불러오는 중…'}</p>
+          <p class="muted">{meFailed ?? L.loading}</p>
         {:else}
-          <h2 class="mk-step">내놓은 선수</h2>
+          <h2 class="mk-step">{L.tradesListed}</h2>
           <ul class="mk-rows">
             {#each me.listings as l (l.id)}
               <li class="mk-row mk-row-static">
                 {@render mini(l.card)}
                 <span class="mk-info">
                   <span class="mk-name">{marketName(l.card, local)}</span>
-                  <small>{fmtValue(l.price)} · {agoKo(Date.now() - Date.parse(l.createdAt))} 등록</small>
+                  <small>{L.listedAgo({ price: fmtValue(l.price), ago: agoKo(Date.now() - Date.parse(l.createdAt)) })}</small>
                 </span>
-                <button class="icon-btn" disabled={busy} data-act="cancel-listing" onclick={() => run(() => cancelListing(l.id), MARKET_TOAST.unlisted)}>내리기</button>
+                <button class="icon-btn" disabled={busy} data-act="cancel-listing" onclick={() => run(() => cancelListing(l.id), MARKET_TOAST.unlisted)}>{L.unlistBtn}</button>
               </li>
             {:else}
-              <li class="muted">내놓은 선수가 없어요.</li>
+              <li class="muted">{L.noListed}</li>
             {/each}
           </ul>
-          <h2 class="mk-step">자금 내역</h2>
+          <h2 class="mk-step">{L.fundsLog}</h2>
           <ul class="mk-log">
             {#each me.trades as t (t.id)}
               <li data-trade={t.kind}>
                 <span class="mk-badge mk-badge-{t.kind}">{TRADE_LABEL[t.kind]}</span>
                 <span class="mk-info">
-                  <span>{marketName(t.card, local)} {POS_LABEL[t.card.pos]} {t.card.peak}</span>
-                  <small>{agoKo(Date.now() - Date.parse(t.at))}{t.kind === 'sold' ? ' · 수수료 뺌' : ''}</small>
+                  <span>{marketName(t.card, local)} {tn(POS_LABEL[t.card.pos])} {t.card.peak}</span>
+                  <small>{agoKo(Date.now() - Date.parse(t.at))}{t.kind === 'sold' ? L.feeTaken : ''}</small>
                 </span>
                 <b class:mk-plus={t.kind !== 'bought'}>{tradeAmount(t)}</b>
               </li>
             {:else}
-              <li class="muted">아직 거래가 없어요.</li>
+              <li class="muted">{L.noTrades}</li>
             {/each}
           </ul>
         {/if}
@@ -454,40 +457,40 @@
 </div>
 
 {#if buying && me}
-  {@const block = myListingIds.has(buying.id) ? '내가 내놓은 선수예요.' : buyBlock(buying.price, me.balance, me.buysLeft)}
+  {@const block = myListingIds.has(buying.id) ? L.ownListing : buyBlock(buying.price, me.balance, me.buysLeft)}
   {@const diff = priceDiff(buying.price, buying.card.cardValue)}
-  <button class="mk-scrim" aria-label="닫기" onclick={closeSheets}></button>
-  <div class="mk-sheet" role="dialog" aria-modal="true" aria-label="선수 영입">
+  <button class="mk-scrim" aria-label={L.close} onclick={closeSheets}></button>
+  <div class="mk-sheet" role="dialog" aria-modal="true" aria-label={L.sheetBuy}>
     <div class="mk-detail">
       <div class="mk-detail-card">
         <PlayerCard player={asPlayer(buying.card)} name={marketName(buying.card, local)} rating={buying.card.peak} role={detailPosOf(buying.card)} nation={buying.card.nation} />
       </div>
       <dl class="mk-detail-stats">
-        <div><dt>레전드 점수</dt><dd>{buying.card.legendScore.toLocaleString()}</dd></div>
-        <div><dt>이적</dt><dd>{buying.card.transfers}회</dd></div>
-        <div><dt>포지션</dt><dd>{POS_LABEL[buying.card.pos]}</dd></div>
+        <div><dt>{L.detailLegend}</dt><dd>{buying.card.legendScore.toLocaleString(intlLocale())}</dd></div>
+        <div><dt>{L.detailTransfers}</dt><dd>{L.transferTimes({ n: buying.card.transfers })}</dd></div>
+        <div><dt>{L.position}</dt><dd>{tn(POS_LABEL[buying.card.pos])}</dd></div>
       </dl>
     </div>
     <div class="mk-confirm">
-      <h2>이 선수를 영입할까요?</h2>
+      <h2>{L.buyTitle}</h2>
       <dl class="mk-lines">
-        <div><dt>기준가 (최고 OVR 시즌 몸값)</dt><dd>{fmtValue(buying.card.cardValue)}</dd></div>
-        <div class="big"><dt>판매가</dt><dd>{fmtValue(buying.price)} <small class="mk-{diff.tone}">{diff.text}</small></dd></div>
+        <div><dt>{L.baseLine}</dt><dd>{fmtValue(buying.card.cardValue)}</dd></div>
+        <div class="big"><dt>{L.price}</dt><dd>{fmtValue(buying.price)} <small class="mk-{diff.tone}">{diff.text}</small></dd></div>
         <div class="rule"></div>
-        <div><dt>지금 구단 자금</dt><dd>{fundsText(me.balance)}</dd></div>
-        <div class="strong"><dt>영입 뒤 남는 자금</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : '모자라요'}</dd></div>
+        <div><dt>{L.fundsNow}</dt><dd>{fundsText(me.balance)}</dd></div>
+        <div class="strong"><dt>{L.fundsAfter}</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : L.notEnough}</dd></div>
       </dl>
       <MarketChart card={buying.card} />
-      <p class="mk-note">영입한 선수는 바로 팀에 넣을 수 있어요. 다시 팔 수는 있지만 방출해서 자금으로 바꿀 수는 없어요.</p>
+      <p class="mk-note">{L.buyNote}</p>
       {#if block}<p class="mk-err">{block}</p>{/if}
       {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
       <div class="mk-actions">
-        <button class="btn" onclick={closeSheets}>닫기</button>
+        <button class="btn" onclick={closeSheets}>{L.close}</button>
         {#if myListingIds.has(buying.id)}
-          <button class="btn" disabled={busy} onclick={() => run(() => cancelListing(buying!.id), MARKET_TOAST.unlisted)}>판매 내리기</button>
+          <button class="btn" disabled={busy} onclick={() => run(() => cancelListing(buying!.id), MARKET_TOAST.unlisted)}>{L.unlist}</button>
         {:else}
           <button class="btn btn-accent" data-act="buy" disabled={busy || !!block} onclick={() => run(() => buyListing(buying!.id, buying!.price), MARKET_TOAST.bought)}>
-            {fmtValue(buying.price)}에 영입하기
+            {L.buyFor({ price: fmtValue(buying.price) })}
           </button>
         {/if}
       </div>
@@ -496,15 +499,15 @@
 {/if}
 
 {#if confirmRelease && me}
-  <button class="mk-scrim" aria-label="닫기" onclick={closeSheets}></button>
-  <div class="mk-sheet mk-confirm" role="dialog" aria-modal="true" aria-label="선수 방출">
-    <h2>선수 방출</h2>
+  <button class="mk-scrim" aria-label={L.close} onclick={closeSheets}></button>
+  <div class="mk-sheet mk-confirm" role="dialog" aria-modal="true" aria-label={L.sheetRelease}>
+    <h2>{L.sheetRelease}</h2>
     <p>{releaseConfirmText(pickedPlayers.length, pickedAmount)}</p>
     {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
     <div class="mk-actions">
-      <button class="btn" onclick={closeSheets}>닫기</button>
+      <button class="btn" onclick={closeSheets}>{L.close}</button>
       <button class="btn mk-danger" data-act="release-confirm" disabled={busy} onclick={() => run(() => releaseCards(pickedPlayers.map((p) => p.careerId)), MARKET_TOAST.released(pickedPlayers.length))}>
-        {pickedPlayers.length}명 방출하기
+        {L.releaseBtn({ n: pickedPlayers.length })}
       </button>
     </div>
   </div>

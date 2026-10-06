@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { HofSeasonQuerySchema, SeasonPickQuerySchema } from './careers.js';
 import {
+  msUntilNextSeasonStart,
   activeSeason,
   displaySeasonAt,
+  firstUploadSeasonAt,
   openTeamSeasons,
   PRESEASON,
   MAX_RETIRE_AT,
@@ -49,6 +51,8 @@ describe('T-10-092 팀 시즌', () => {
     expect(openTeamSeasons('2026-09-30T00:00:00.000Z')).toEqual([0]);
     expect(openTeamSeasons(S1)).toEqual([0, 1]);
     expect([teamSeasonName(0), teamSeasonName(1)]).toEqual(['프리시즌', '시즌 1']);
+    expect([teamSeasonName(0, 'en'), teamSeasonName(1, 'en')]).toEqual(['Preseason', 'Season 1']);
+    expect(teamSeasonName(1, 'ko')).toBe('시즌 1');
   });
   it('프리시즌은 첫 시즌 개막에 끝나고, 마감이 없는 시즌은 끝나지 않는다', () => {
     expect(teamSeasonClosed(0, '2026-09-30T00:00:00.000Z')).toBe(false);
@@ -105,5 +109,18 @@ describe('T-11-045 시즌별 은퇴 나이', () => {
       expect([prev, nextRetireAt(prev, true)]).toContain(s.retireAt);
     });
     expect(MAX_RETIRE_AT).toBe(45);
+  });
+  it('T-11-095 세부 포지션 없는(프리시즌 규칙) 선수는 언제 처음 올라와도 프리시즌, 있으면 올라온 시각의 시즌', () => {
+    expect(firstUploadSeasonAt('2026-10-20T00:00:00.000Z', false)).toBe(0);
+    expect(firstUploadSeasonAt('2026-10-20T00:00:00.000Z', true)).toBe(1);
+    // 기기 시계를 당겨 개막 전에 올려도 시즌 1에 먼저 들어가지 않는다.
+    expect(firstUploadSeasonAt('2026-10-05T14:59:59.999Z', true)).toBe(0);
+  });
+});
+
+describe('T-11-107 msUntilNextSeasonStart', () => {
+  it('다음 개막까지 남은 밀리초, 열린 뒤엔 다음 시즌이 없으면 null', () => {
+    expect(msUntilNextSeasonStart('2026-10-05T14:59:00.000Z')).toBe(60_000);
+    expect(msUntilNextSeasonStart('2026-10-05T15:00:00.000Z')).toBeNull();
   });
 });

@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { Platform, Share, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { flushOutbox } from '@offside/app-core/outbox';
-import { checkShareLink, SHARE_TEXT, SHARE_TITLE } from '@offside/app-core/shareLink';
+import { checkShareLink, shareLinkText, shareLinkTitle } from '@offside/app-core/shareLink';
+import { shareText as L } from '@offside/app-core/i18n/ko/share';
 import { shareUrl, toast } from '../../game/host';
 import { goHome } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
@@ -25,9 +26,9 @@ export function ShareBar({ id }: { id: string }) {
   async function copyLink(link: string) {
     try {
       await Clipboard.setStringAsync(link);
-      toast('공유 링크를 복사했어요.');
+      toast(L.linkCopied);
     } catch {
-      toast('위 링크를 복사해 공유해 주세요.');
+      toast(L.linkCopyHint);
     }
   }
 
@@ -49,8 +50,8 @@ export function ShareBar({ id }: { id: string }) {
       // Android는 message만 실어 보내므로 링크를 글에 함께 넣는다.
       try {
         await Share.share({
-          title: SHARE_TITLE,
-          message: Platform.OS === 'ios' ? SHARE_TEXT : `${SHARE_TEXT}\n${link}`,
+          title: shareLinkTitle(),
+          message: Platform.OS === 'ios' ? shareLinkText() : `${shareLinkText()}\n${link}`,
           url: link,
         });
         return;
@@ -71,7 +72,7 @@ export function ShareBar({ id }: { id: string }) {
           editable
           showSoftInputOnFocus={false}
           selectTextOnFocus
-          accessibilityLabel="공유 링크"
+          accessibilityLabel={L.linkLabel}
           testID="share-url"
           // 읽기 전용: 값은 바꾸지 못하고 선택·복사만 된다.
           onChangeText={() => {}}
@@ -89,7 +90,7 @@ export function ShareBar({ id }: { id: string }) {
       ) : null}
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Btn style={{ flex: 1 }} testID="share-home" onPress={goHome}>
-          홈으로
+          {L.home}
         </Btn>
         <Btn
           kind="primary"
@@ -98,7 +99,7 @@ export function ShareBar({ id }: { id: string }) {
           disabled={busy}
           onPress={() => void run()}
         >
-          {busy ? '링크 만드는 중…' : url ? '링크 다시 복사' : '커리어 공유하기'}
+          {busy ? L.making : url ? L.recopy : L.shareCareer}
         </Btn>
       </View>
     </ActionBar>

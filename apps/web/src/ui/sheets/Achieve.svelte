@@ -3,6 +3,7 @@
   import type { SheetView } from '@offside/app-core/sheets';
   import { num as n } from '@offside/app-core/teamText';
   import GradeEmblem from '../team/GradeEmblem.svelte';
+  import { sheetAchieveText as L } from '@offside/app-core/i18n/ko/sheetAchieve';
 
   let { v }: { v: Extract<SheetView, { kind: 'achieve' }> } = $props();
 </script>
@@ -12,7 +13,7 @@
   <span class="ach-up-emblem"><GradeEmblem id={v.grade.id} size={v.from ? 96 : 64} /></span>
   <h2>{v.title}</h2>
   {#if v.from}
-    <p class="ach-up-from" aria-label="{v.from.name}에서 {v.grade.name}로">
+    <p class="ach-up-from" aria-label={L.fromTo({ from: v.from.name, to: v.grade.name })}>
       <GradeEmblem id={v.from.id} size={20} />{v.from.name}<span aria-hidden="true">→</span><GradeEmblem id={v.grade.id} size={20} /><b>{v.grade.name}</b>
     </p>
   {/if}
@@ -21,10 +22,10 @@
   {#each v.items as it, i (i)}
     <li><span>{it.label}</span><b class="num">+{n(it.gained)}</b></li>
   {/each}
-  {#if v.more > 0}<li class="muted"><span>외 {v.more}개</span></li>{/if}
+  {#if v.more > 0}<li class="muted"><span>{L.more({ n: v.more })}</span></li>{/if}
 </ul>
 <p class="muted fs-sm ach-up-sum">
-  <b class="num">+{n(v.gained)}점</b> · 지금 {n(v.score)}점{v.next ? ` · ${v.next}` : ''}
+  <b class="num">{L.gainedPts({ n: n(v.gained) })}</b> · {L.nowPts({ n: n(v.score) })}{v.next ? ` · ${v.next}` : ''}
 </p>
 
 <style>

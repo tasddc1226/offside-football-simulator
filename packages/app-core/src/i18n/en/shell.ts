@@ -1,0 +1,42 @@
+import type { Translation } from '../core';
+import type { ShellMsgs } from '../ko/shell';
+import { plural } from './_util';
+
+export const shell: Translation<ShellMsgs> = {
+  brandTag: 'Full Time: until the final whistle',
+  brandName: 'OFFSIDE',
+  navLabel: 'Main menu',
+  navHof: 'Records',
+  navBoard: 'News',
+  navHome: 'Home',
+  navOwner: 'Owner',
+  navSettings: 'Settings',
+  achNew: (p) => `${plural(p.n, 'new achievement')}`,
+  bgm: 'Music',
+  bgmOff: 'Turn music off',
+  bgmOn: 'Turn music on',
+  loading: 'Loading…',
+  bannerClose: 'Dismiss alert',
+  newsAlert: 'New post alert',
+  newsView: 'View',
+  newsCount: (p) => plural(p.n, 'new post'),
+  newsReleaseEdited: 'Release notes were updated',
+  newsNoticeEdited: 'A notice was updated',
+  newsReleaseNew: 'New release notes are out',
+  newsNoticeNew: 'A new notice is up',
+  updateAlert: 'Update alert',
+  updateBodyWeb: 'A new version is out. Refresh to apply it.',
+  updateBtnWeb: 'Refresh',
+  footContact: 'Contact',
+  footCommunity: 'Community',
+  footGallery: 'DCinside OFFSIDE gallery',
+  resWin: 'W',
+  resDraw: 'D',
+  resLoss: 'L',
+  marketLabel: 'Where will you play next season?',
+  opponent: 'Opponent',
+  confirm: 'OK',
+  kickoff: 'Kickoff',
+  storageFull:
+    "Not enough storage space, so your progress couldn't be saved. Back it up in Settings.",
+};

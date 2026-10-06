@@ -3,6 +3,8 @@ import type { TeamLines, TeamPlayer } from '@offside/app-core/api/team';
 import { cardFile } from '../share/shareCard.js';
 import { defaultTeamLogo, type TeamLogo } from '@offside/contracts/team-logo';
 import { CREST_SHAPES, CREST_PATTERNS } from '@offside/game/crests';
+import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
+import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 
 export type TeamShareData = {
   name: string;
@@ -41,6 +43,16 @@ export async function makeTeamShareFile(data: TeamShareData): Promise<File> {
     data.seasonName,
     ...data.cells.map((c) => c.name),
     '오프사이드 감독 선발 최고 OVR 포지션 배치 공격 중원 수비 골문 자유0123456789',
+    L.cardBrand,
+    L.cardManagerWeb({ name: '' }),
+    L.cardStarters({ n: 0 }),
+    L.cardFootWeb,
+    LH.attackDirection,
+    LH.posOvr({ n: 0 }),
+    LH.lineAtk,
+    LH.lineMid,
+    LH.lineDef,
+    LH.lineGk,
   ].join('');
   await Promise.all([
     document.fonts.load(`700 60px ${BODY}`, sample),
@@ -114,12 +126,12 @@ export function drawTeamShareCard(
     ctx.textAlign = align;
     ctx.fillText(value, x, y, max);
   };
-  text('오프사이드', 60, 66, 30, '#f0b437');
+  text(L.cardBrand, 60, 66, 30, '#f0b437');
   text(data.seasonName, 1020, 66, 24, '#a9b8ae', 'right');
   drawLogo(ctx, data.logo ?? defaultTeamLogo(data.name), logoImage);
   text(data.name, 160, 150, 64, '#eef4ef', 'left', BODY, 660);
   text(
-    `${data.manager ? `${data.manager} 감독 · ` : ''}선발 ${data.cells.filter((c) => !c.youth).length}/11`,
+    `${data.manager ? L.cardManagerWeb({ name: data.manager }) : ''}${L.cardStarters({ n: data.cells.filter((c) => !c.youth).length })}`,
     60,
     197,
     25,
@@ -153,7 +165,7 @@ export function drawTeamShareCard(
     ctx.strokeRect(310, y, 460, 140);
     ctx.strokeRect(430, bottom ? field.y + field.h - 80 : field.y + 22, 220, 58);
   }
-  text('공격 방향 ↑', 540, field.y + 46, 20, '#b6cec0', 'center');
+  text(LH.attackDirection, 540, field.y + 46, 20, '#b6cec0', 'center');
   // 골키퍼는 마지막에 그려 가까운 수비 카드에 OVR이 가려지지 않게 한다.
   const order = [...data.layout.keys()].sort((a, b) => (a === 0 ? 1 : b === 0 ? -1 : a - b));
   for (const i of order) {
@@ -207,23 +219,23 @@ export function drawTeamShareCard(
     name.lines.forEach((line, j) =>
       text(line, 73, top + j * lineHeight, name.size, ink, 'center', BODY, 126),
     );
-    text(`포지션 OVR ${cell.rating}`, 73, 161, 17, ink, 'center');
+    text(LH.posOvr({ n: cell.rating }), 73, 161, 17, ink, 'center');
     ctx.restore();
   }
   ctx.restore();
 
   const stats = [
-    ['공격', data.lines.atk],
-    ['중원', data.lines.mid],
-    ['수비', data.lines.def],
-    ['골문', data.lines.gk],
+    [LH.lineAtk, data.lines.atk],
+    [LH.lineMid, data.lines.mid],
+    [LH.lineDef, data.lines.def],
+    [LH.lineGk, data.lines.gk],
   ] as const;
   stats.forEach(([label, value], i) => {
     const x = 180 + 240 * i;
     text(label, x - 18, 1221, 25, '#a9b8ae', 'right');
     text(String(Math.round(value)), x + 2, 1223, 42, '#eef4ef', 'left', DISPLAY);
   });
-  text('카드: 최고 OVR · 포지션 OVR: 경기 실력', 60, 1284, 22, '#a9b8ae');
+  text(L.cardFootWeb, 60, 1284, 22, '#a9b8ae');
   text('offside-lab.com', 1020, 1285, 32, '#f0b437', 'right', DISPLAY);
 }
 

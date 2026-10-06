@@ -1,3 +1,5 @@
+import { pushText as L } from './i18n/ko/push.js';
+
 /** 네이티브 권한·토큰 API는 앱이 넣는다. 거절·오프라인·계정 전환을 UI와 분리해 검증한다. */
 export type PushRegistrationState = {
   enabled: boolean;
@@ -40,7 +42,7 @@ export function createPushRegistration(state: PushRegistrationState, io: PushReg
         state.enabled = false;
         io.saveWanted(false);
         await remove();
-        state.message = '이 기기의 새 소식 알림을 껐어요.';
+        state.message = L.offDone;
         return;
       }
       const permission = await io.permission(request);
@@ -49,22 +51,17 @@ export function createPushRegistration(state: PushRegistrationState, io: PushReg
         state.enabled = false;
         io.saveWanted(false);
         if (io.pendingRemoval() || !request) await remove();
-        state.message = state.blocked
-          ? '기기 설정에서 알림을 허용해 주세요.'
-          : '알림을 허용하지 않았어요.';
+        state.message = state.blocked ? L.needSettings : L.denied;
         return;
       }
       await io.register();
       io.savePendingRemoval(false);
       io.saveWanted(true);
       state.enabled = true;
-      state.message = '이 기기의 알림 연결을 준비했어요.';
+      state.message = L.onDone;
     } catch {
       state.failed = true;
-      state.message =
-        !on || io.pendingRemoval()
-          ? '이 기기에서는 껐어요. 서버 연결 해제는 연결이 돌아오면 다시 시도해요.'
-          : '알림을 연결하지 못했어요. 잠시 뒤 다시 연결해 주세요.';
+      state.message = !on || io.pendingRemoval() ? L.offLocal : L.connectFail;
     } finally {
       state.busy = false;
       if (restoreQueued) {

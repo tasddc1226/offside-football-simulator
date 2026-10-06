@@ -1,9 +1,10 @@
 <script lang="ts">
-  // T-11-061 광고 칸. 위치 이름만 받고 노출 규칙은 adPolicy가 정한다. 목록·페이지 맨 끝에만 둔다.
+  // T-11-061 광고 칸. 위치 이름만 받고 노출 규칙은 adPolicy가 정한다. 승인된 위치에 본문과 함께 스크롤되는 칸을 둔다.
   import { untrack } from 'svelte';
   import { shouldShow, type AdPlace } from '@offside/app-core/adPolicy';
   import { sheetOn } from '../ui/skin.svelte.js';
   import { client, enabled, lastShownOf, markUnfilled, preview, request, slotOf } from './ads.js';
+  import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
   let props: { place: AdPlace } = $props();
   // 위치와 노출 여부는 마운트할 때 한 번 정한다 — 화면에 있는 동안 칸이 생기거나 사라지지 않게.
@@ -47,8 +48,8 @@
 </script>
 
 {#if show && !collapsed && !sheetOn()}
-  <aside class="ad-slot" aria-label="광고" data-ad-place={place}>
-    <span class="ad-label">광고</span>
+  <aside class="ad-slot" class:owner-summary={place === 'owner-summary'} aria-label={shellMoreText.adLabel} data-ad-place={place}>
+    <span class="ad-label">{shellMoreText.adLabel}</span>
     {#if live}
       <ins
         bind:this={ins}
@@ -60,7 +61,7 @@
         data-full-width-responsive="true"
       ></ins>
     {:else}
-      <div class="ad-preview">광고 자리 · {place}</div>
+      <div class="ad-preview">{shellMoreText.adPreview({ place })}</div>
     {/if}
   </aside>
 {/if}
@@ -75,6 +76,9 @@
     font-size: 0.6875rem;
     letter-spacing: 0.04em;
     color: var(--muted);
+  }
+  .owner-summary {
+    margin-bottom: 24px;
   }
   .ad-slot :global(.adsbygoogle),
   .ad-preview {

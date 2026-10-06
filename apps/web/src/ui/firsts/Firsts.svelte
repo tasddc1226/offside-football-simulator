@@ -4,7 +4,7 @@
   // 누가 넘을 때마다 다음 목표가 열린다. 서버 기록 탭은 더 큰 기록이 나오면 주인이 바뀌는 최다·최고 기록(T-10-056).
   // T-11-029 기록은 시즌마다 따로 겨룬다 — 개막한 시즌이 둘 이상이면 시즌 탭을 보인다(기본은 지금 시즌).
   import type { FirstsResponse, ServerFirst } from '@offside/contracts';
-  import { displaySeasonAt, openTeamSeasons, teamSeasonName } from '@offside/contracts/service-seasons';
+  import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-seasons';
   import { getFirsts } from '@offside/app-core/api/client';
   import { localCareerNames } from '@offside/game/season';
   import { goHome } from '../nav.js';
@@ -12,13 +12,19 @@
   import { appState } from '../state.svelte.js';
   import Topbar from '../Topbar.svelte';
   import { kstParts } from '@offside/app-core/boardText';
-  import { FIRSTS_TABS, achievedList, byDay, holderLabel, type FirstsTab } from '@offside/app-core/firsts';
+  import { seasonNow } from '../seasonNow.svelte.js';
+  import { achievedList, byDay, firstsTabs, holderLabel, type FirstsTab } from '@offside/app-core/firsts';
+  import { firstsText as L } from '@offside/app-core/i18n/ko/firsts';
+  import { tn } from '@offside/game/i18n/names';
+  import { intlLocale } from '@offside/contracts/i18n';
+  import { teamSeasonLabel } from '@offside/app-core/seasonName';
 
   let data = $state<FirstsResponse | null>(null);
   let failed = $state(false);
   let tab = $state<FirstsTab>('recent');
-  const now = new Date().toISOString();
-  const seasons = openTeamSeasons(now);
+  const clock = seasonNow();
+  const now = $derived(clock.now);
+  const seasons = $derived(openTeamSeasons(now));
   let picked = $state<number | null>(null);
   const season = $derived(picked ?? displaySeasonAt(now));
   $effect(() => {
@@ -48,7 +54,7 @@
 
 {#snippet who(h: NonNullable<ServerFirst['holder']>)}
   {@const w = holderLabel(h, mine)}
-  <span class="first-who">{w.name}{#if w.mine}<span class="pill good">내 선수</span>{/if}</span>
+  <span class="first-who">{w.name}{#if w.mine}<span class="pill good">{L.mine}</span>{/if}</span>
 {/snippet}
 
 <div class="wrap">
@@ -57,58 +63,56 @@
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <div>
         <div class="eyebrow">Server firsts</div>
-        <h1 style="margin-bottom:4px">서버 최초 업적</h1>
+        <h1 style="margin-bottom:4px">{L.title}</h1>
       </div>
       {#if data}<span class="first-count num" data-firsts-count>{done}/{total}</span>{/if}
     </div>
     <p class="muted fs-sm" style="margin:0 0 10px">
-      {tab === 'records'
-        ? '모든 플레이어 중 가장 높은 기록이에요. 더 큰 기록이 나오면 주인이 바뀌어요.'
-        : '모든 플레이어를 통틀어 가장 먼저 세운 기록만 남아요.'} 이름은 명예의 전당에 이름을 공개한 선수만 보여요.
+      {L.introRecords({ records: tab === 'records' })}
     </p>
     {#if seasons.length > 1}
-      <div class="seg board-tabs hof-seasons" role="group" aria-label="시즌">
+      <div class="seg board-tabs hof-seasons" role="group" aria-label={L.seasonLabel}>
         {#each seasons as id (id)}
-          <button class="opt" aria-pressed={season === id} data-firsts-season={id} onclick={() => (picked = id)}>{teamSeasonName(id)}</button>
+          <button class="opt" aria-pressed={season === id} data-firsts-season={id} onclick={() => (picked = id)}>{teamSeasonLabel(id)}</button>
         {/each}
       </div>
     {/if}
-    <div class="hof-sorts" role="group" aria-label="기록 분류">
-      {#each FIRSTS_TABS as t (t.id)}
+    <div class="hof-sorts" role="group" aria-label={L.tabsLabel}>
+      {#each firstsTabs() as t (t.id)}
         <button class="hof-sort" aria-pressed={tab === t.id} data-firsts-tab={t.id} onclick={() => (tab = t.id)}>{t.label}</button>
       {/each}
     </div>
 
     {#if failed}
-      <p class="empty">서버 최초 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+      <p class="empty">{L.loadFailed}</p>
     {:else if !data}
-      <p class="empty">불러오는 중…</p>
+      <p class="empty">{L.loading}</p>
     {:else if tab === 'recent'}
       {#each days as d (d.day)}
         <h2 class="first-day num">{d.day}</h2>
         <ul class="first-list">
           {#each d.items as x (x.id)}
             <li class="first-row" data-first={x.id}>
-              <b class="first-label">{x.label}</b>
+              <b class="first-label">{tn(x.label)}</b>
               <span class="first-time num">{kstParts(x.achievedAt).time}</span>
               {@render who(x.holder)}
             </li>
           {/each}
         </ul>
       {:else}
-        <p class="empty">아직 세워진 서버 최초 기록이 없어요.</p>
+        <p class="empty">{L.empty}</p>
       {/each}
     {:else if tab === 'records'}
       <ul class="first-list">
         {#each data.records as r (r.id)}
           <li class="first-row" class:locked={!r.holder} data-record={r.id}>
-            <b class="first-label">{r.label}</b>
+            <b class="first-label">{tn(r.label)}</b>
             {#if r.holder && r.value !== null && r.achievedAt}
-              <span class="first-value num">{r.value.toLocaleString('ko-KR')}{r.unit}</span>
+              <span class="first-value num">{r.value.toLocaleString(intlLocale())}{tn(r.unit)}</span>
               {@render who(r.holder)}
               <span class="first-time num">{kstParts(r.achievedAt).day}</span>
             {:else}
-              <span class="first-who">아직 기록 없음</span>
+              <span class="first-who">{L.noRecord}</span>
             {/if}
           </li>
         {/each}
@@ -117,12 +121,12 @@
       <ul class="first-list">
         {#each list as x (x.id)}
           <li class="first-row" class:locked={!x.holder} data-first={x.id}>
-            <b class="first-label">{x.label}</b>
+            <b class="first-label">{tn(x.label)}</b>
             {#if x.holder && x.achievedAt}
               <span class="first-time num">{kstParts(x.achievedAt).day}</span>
               {@render who(x.holder)}
             {:else}
-              <span class="first-who">미달성</span>
+              <span class="first-who">{L.locked}</span>
             {/if}
           </li>
         {/each}

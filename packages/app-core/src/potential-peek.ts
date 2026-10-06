@@ -3,6 +3,7 @@
 // 엿본 기록은 세이브가 아니라 기기에 따로 둔다(커리어 id + 시즌). 엔진·저장 형식·업로드는 바꾸지 않는다.
 import { potLabel, potScouted } from '@offside/game/stats';
 import type { GameState } from '@offside/game/types';
+import { gamePotentialText as L } from './i18n/ko/gamePotential';
 
 /** 이 커리어의 이 시즌에 평가를 열었다는 기록. */
 export type PotentialPeek = { cid: string; year: number };
@@ -14,7 +15,8 @@ export type PeekView =
   | { kind: 'available'; text: string; button: string }
   | { kind: 'shown'; grade: string; text: string };
 
-export const PEEK_LOCKED = '첫 시즌을 마치면 스카우트 평가를 볼 수 있어요.';
+/** 첫 시즌 전 안내 — 언어가 정해진 뒤에 읽도록 함수로 둔다. */
+export const peekLocked = (): string => L.peekLocked;
 
 /** 기기에 남긴 값을 읽는다. 형식이 틀리면 없는 것으로 본다. */
 export function parsePeek(raw: string | null | undefined): PotentialPeek | null {
@@ -37,14 +39,14 @@ export const peekOpen = (s: GameState, peek: PotentialPeek | null): boolean =>
 
 /** adFree: 광고 제거를 산 사용자는 광고 없이 버튼만 누르면 된다. */
 export function peekView(s: GameState, peek: PotentialPeek | null, adFree: boolean): PeekView {
-  if (!potScouted(s)) return { kind: 'locked', text: PEEK_LOCKED };
+  if (!potScouted(s)) return { kind: 'locked', text: L.peekLocked };
   if (peekOpen(s, peek)) {
     const grade = potLabel(s);
-    return { kind: 'shown', grade, text: `${grade}등급 · ${s.year} 시즌 스카우트 평가` };
+    return { kind: 'shown', grade, text: L.peekShown({ grade, year: s.year }) };
   }
   return {
     kind: 'available',
-    text: '실제 잠재력은 은퇴할 때 공개돼요.',
-    button: adFree ? '이번 시즌 평가 보기' : '광고 보고 이번 시즌 평가 보기',
+    text: L.peekAvailable,
+    button: adFree ? L.peekBtnFree : L.peekBtnAd,
   };
 }

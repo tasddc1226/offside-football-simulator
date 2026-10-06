@@ -7,6 +7,7 @@ import { alpha } from '../theme/colors';
 import { rem } from '../theme/type';
 import { useColors } from '../theme/useColors';
 import { Press, Txt } from '../ui';
+import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 
 export function TopBanner({
   testID,
@@ -97,7 +98,7 @@ export function BannerClose({ testID, onPress }: { testID: string; onPress: () =
   return (
     <Press
       testID={testID}
-      accessibilityLabel="알림 닫기"
+      accessibilityLabel={L.bannerClose}
       onPress={onPress}
       hitSlop={4}
       style={{

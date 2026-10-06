@@ -6,16 +6,25 @@
 // 판정은 여전히 resolveChoice 한 곳에서 한다. 탭 결과를 판정값(roll)으로 바꿔 넘기면(offsetToRoll) roll < p가
 // 곧 "구간 안"이 된다. 시뮬레이터·골든 테스트는 탭 없이 부르므로 지금처럼 난수로 판정한다.
 import { clamp } from './rng.js';
+import { gMinigameText as L } from './i18n/ko/gMinigame.js';
 
 /** 장면 종류(선택지의 mg.kind). shot·chip·dribble은 내가 차고, save는 내가 골키퍼다. */
 export type MgKind = 'shot' | 'chip' | 'dribble' | 'save';
 
-/** 탭 버튼 문구. */
+/** 탭 버튼 문구(읽을 때 지금 언어로). */
 export const MG_TAP: Readonly<Record<MgKind, string>> = {
-  shot: '슛!',
-  chip: '칩슛!',
-  dribble: '제친다!',
-  save: '다이빙!',
+  get shot() {
+    return L.tapShot;
+  },
+  get chip() {
+    return L.tapChip;
+  },
+  get dribble() {
+    return L.tapDribble;
+  },
+  get save() {
+    return L.tapSave;
+  },
 };
 
 /**
@@ -30,7 +39,8 @@ export const SWEEP_MS = 800;
 export const MG_TIME_MS = 3000;
 
 /** 선택 창·도감에 보이는 구간 크기. */
-export const zoneLabel = (w: number) => (w >= 0.26 ? '넓음' : w >= 0.17 ? '보통' : '좁음');
+export const zoneLabel = (w: number) =>
+  w >= 0.26 ? L.zoneWide : w >= 0.17 ? L.zoneMedium : L.zoneNarrow;
 
 /** 시작 후 t(ms) 시점의 바늘 위치(0–1, 왕복). */
 export function markerAt(t: number): number {
@@ -52,9 +62,9 @@ export function offsetToRoll(d: number, p: number): number {
 
 /** 결과 시트에 붙는 한 줄. */
 export function timingNote(d: number): string {
-  if (!Number.isFinite(d)) return `시간 초과. ${MG_TIME_MS / 1000}초 안에 누르지 않았어요`;
-  if (d <= 0.25) return '완벽한 타이밍!';
-  if (d <= 1) return '타이밍 성공';
-  if (d <= 1.6) return '아깝게 빗나간 타이밍';
-  return '타이밍을 놓쳤어요';
+  if (!Number.isFinite(d)) return L.timeout({ sec: MG_TIME_MS / 1000 });
+  if (d <= 0.25) return L.perfect;
+  if (d <= 1) return L.good;
+  if (d <= 1.6) return L.close;
+  return L.miss;
 }

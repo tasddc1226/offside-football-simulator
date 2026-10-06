@@ -77,6 +77,47 @@ export async function* fixedParts(stream: ReadableStream<Uint8Array>, size: numb
   if (len > 0) yield new Blob(buf);
 }
 
+/**
+ * produce가 write로 흘리는 텍스트를 gzip으로 압축해 R2에 멀티파트로 올리고 올린 바이트 수를 돌려준다. 전체를 메모리에 올리지
+ * 않는다. produce가 실패하면 업로드를 버리고 오류를 다시 던진다(반쯤 올린 객체가 남지 않는다).
+ */
+export async function gzipToR2(
+  bucket: R2Bucket,
+  key: string,
+  contentType: string,
+  produce: (write: (s: string) => Promise<void>) => Promise<void>,
+): Promise<number> {
+  const upload = await bucket.createMultipartUpload(key, {
+    httpMetadata: { contentType, contentEncoding: 'gzip' },
+  });
+  const gzip = new CompressionStream('gzip');
+  const writer = gzip.writable.getWriter();
+  const encoder = new TextEncoder();
+
+  // 압축된 바이트를 PART_BYTES씩 조각으로 올린다(쓰기와 동시에 돈다).
+  const parts: R2UploadedPart[] = [];
+  let bytes = 0;
+  const uploading = (async () => {
+    for await (const part of fixedParts(gzip.readable, PART_BYTES)) {
+      parts.push(await upload.uploadPart(parts.length + 1, part));
+      bytes += part.size;
+    }
+  })();
+
+  try {
+    await produce((s) => writer.write(encoder.encode(s)));
+    await writer.close();
+    await uploading;
+    await upload.complete(parts);
+  } catch (e) {
+    await writer.abort(e).catch(() => {});
+    await uploading.catch(() => {});
+    await upload.abort().catch(() => {});
+    throw e;
+  }
+  return bytes;
+}
+
 export const backupKey = (env: string, now: number) =>
   `d1/${env}/${new Date(now).toISOString().slice(0, 10)}.sql.gz`;
 
@@ -96,26 +137,8 @@ export async function backupToR2(
   const tables = byReferences(schema.filter((s) => s.type === 'table'));
 
   const key = backupKey(env, now);
-  const upload = await bucket.createMultipartUpload(key, {
-    httpMetadata: { contentType: 'application/sql', contentEncoding: 'gzip' },
-  });
-  const gzip = new CompressionStream('gzip');
-  const writer = gzip.writable.getWriter();
-  const encoder = new TextEncoder();
-  const write = (s: string) => writer.write(encoder.encode(s));
-
-  // 압축된 바이트를 PART_BYTES씩 조각으로 올린다(쓰기와 동시에 돈다).
-  const parts: R2UploadedPart[] = [];
-  let bytes = 0;
-  const uploading = (async () => {
-    for await (const part of fixedParts(gzip.readable, PART_BYTES)) {
-      parts.push(await upload.uploadPart(parts.length + 1, part));
-      bytes += part.size;
-    }
-  })();
-
   let rows = 0;
-  try {
+  const bytes = await gzipToR2(bucket, key, 'application/sql', async (write) => {
     await write(
       `-- offside D1 backup · ${env} · ${new Date(now).toISOString()}\nPRAGMA defer_foreign_keys = true;\n`,
     );
@@ -142,15 +165,7 @@ export async function backupToR2(
     }
     // 인덱스·트리거는 데이터를 넣은 뒤에 만든다(넣는 동안 인덱스를 고치지 않게).
     for (const s of schema) if (s.type !== 'table') await write(`${s.sql};\n`);
-    await writer.close();
-    await uploading;
-    await upload.complete(parts);
-  } catch (e) {
-    await writer.abort(e).catch(() => {});
-    await uploading.catch(() => {});
-    await upload.abort().catch(() => {});
-    throw e;
-  }
+  });
 
   return { key, tables: tables.length, rows, bytes, pruned: await prune(bucket, env, now) };
 }

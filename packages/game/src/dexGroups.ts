@@ -2,13 +2,39 @@
 // 도감 화면을 열 때만 불러온다.
 import type { Pos } from './data.js';
 import type { EventDef } from './types.js';
+import { gDexGroupsText as L } from './i18n/ko/gDexGroups.js';
 
 export type DexGroup = 'career' | 'position' | 'story' | 'special';
-export const DEX_GROUPS: { id: DexGroup; name: string; hidden: boolean }[] = [
-  { id: 'career', name: '커리어', hidden: false },
-  { id: 'position', name: '포지션', hidden: false },
-  { id: 'story', name: '스토리', hidden: true },
-  { id: 'special', name: '특별', hidden: true },
+// name은 읽을 때 지금 언어로 나온다(getter).
+export const DEX_GROUPS: { id: DexGroup; readonly name: string; hidden: boolean }[] = [
+  {
+    id: 'career',
+    get name() {
+      return L.career;
+    },
+    hidden: false,
+  },
+  {
+    id: 'position',
+    get name() {
+      return L.position;
+    },
+    hidden: false,
+  },
+  {
+    id: 'story',
+    get name() {
+      return L.story;
+    },
+    hidden: true,
+  },
+  {
+    id: 'special',
+    get name() {
+      return L.special;
+    },
+    hidden: true,
+  },
 ];
 
 const POS_PREFIX: Record<string, Pos> = { fw: 'FW', mf: 'MF', df: 'DF', gk: 'GK' };

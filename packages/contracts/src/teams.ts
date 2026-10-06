@@ -109,8 +109,11 @@ export const TeamPlayerSchema = z.strictObject({
   cardValue: z.number().int().nullable().optional(),
   /** T-11-080 내가 직접 키운 선수(방출할 수 있다). 영입한 선수는 false. 구버전 응답에는 없다. */
   raised: z.boolean().optional(),
-  /** T-11-080 직접 키운 선수의 은퇴 가치(만 원) — 방출하면 이것 × 지급률을 받는다. 영입한 선수에는 없다. */
-  retireValue: z.number().int().optional(),
+  /** T-11-105 시너지용 유형 id·주발. 구버전 응답에는 없다. */
+  type: z.string().nullable().optional(),
+  foot: z.string().nullable().optional(),
+  /** T-11-114 카드 시즌(0 = 프리시즌). 팀 시즌보다 앞이면 와일드카드다. 구버전 응답에는 없다. */
+  season: z.number().int().nonnegative().optional(),
   /** T-11-080 판매 등록 중이면 그 등록. */
   listing: z.strictObject({ id: z.string(), price: z.number().int() }).nullable().optional(),
 });
@@ -124,6 +127,8 @@ export const TeamSlotSchema = z.strictObject({
   name: z.string(),
   pos: CareerPosSchema.nullable(),
   nation: z.string().nullable().optional(),
+  /** T-11-114 카드 시즌(0 = 프리시즌). 구버전 응답·유스 선수 자리에는 없다. */
+  season: z.number().int().nonnegative().optional(),
   /** 그 자리에서의 실력(자리별 실력, 없으면 최고 OVR × 적합도). */
   rating: z.number().int(),
   fit: z.number(),
@@ -175,11 +180,17 @@ export const OwnerTeamResponseSchema = z.strictObject({
   /** 오늘(한국 시각) 남은 경기 수. */
   matchesLeft: z.number().int().min(0),
   matchesPerDay: z.number().int().min(1),
+  /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
+  founder: z.boolean().optional(),
 });
 export type OwnerTeamResponse = z.infer<typeof OwnerTeamResponseSchema>;
 
-/** 지금 시즌 팀 만들기·고치기(시즌마다 한 팀 — 있으면 고친다). slots는 포메이션 순서의 11자리. */
+/**
+ * 지금 시즌 팀 만들기·고치기(시즌마다 한 팀 — 있으면 고친다). slots는 포메이션 순서의 11자리. season을 0으로 보내면
+ * 프리시즌 팀을 고친다(T-11-113 — 개막 뒤엔 친선전 전용). 없으면 지금 시즌.
+ */
 export const PutOwnerTeamBodySchema = z.strictObject({
+  season: TeamSeasonSchema.optional(),
   name: TeamNameSchema,
   manager: ManagerNameSchema,
   logo: TeamLogoSchema.nullable().optional(),
@@ -243,6 +254,8 @@ export const TeamMatchSchema = z.strictObject({
   away: TeamMatchSideSchema,
   events: z.array(TeamMatchEventSchema),
   mine: z.enum(['home', 'away']),
+  /** T-11-098 친구와 치른 친선전(레이팅·전적에 들어가지 않는다). 랭크 경기와 구버전 응답에는 없다. */
+  friendly: z.boolean().optional(),
   createdAt: IsoUtcSchema,
 });
 export type TeamMatch = z.infer<typeof TeamMatchSchema>;
@@ -419,11 +432,19 @@ export const TeamProfileSchema = z.strictObject({
 });
 export type TeamProfile = z.infer<typeof TeamProfileSchema>;
 
-/** liked: 조회한 프로필이 좋아요를 눌렀는가. mine: 조회한 프로필의 팀인가(좋아요·조회수를 세지 않는다). */
+/** T-11-098 나와 그 구단주의 친구 상태. sent: 내가 보낸 신청 · received: 받은 신청 · accepted: 친구. */
+export const FriendStateSchema = z.enum(['none', 'sent', 'received', 'accepted']);
+export type FriendState = z.infer<typeof FriendStateSchema>;
+
+/**
+ * liked: 조회한 프로필이 좋아요를 눌렀는가. mine: 조회한 프로필의 팀인가(좋아요·조회수를 세지 않는다).
+ * friend(T-11-098): 로그인한 구단주가 남의 팀을 볼 때만 준다(그 밖에는 null, 구버전 응답에는 없다).
+ */
 export const TeamProfileResponseSchema = z.strictObject({
   team: TeamProfileSchema,
   liked: z.boolean(),
   mine: z.boolean(),
+  friend: FriendStateSchema.nullable().optional(),
 });
 export type TeamProfileResponse = z.infer<typeof TeamProfileResponseSchema>;
 

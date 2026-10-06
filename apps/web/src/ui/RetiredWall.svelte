@@ -1,65 +1,107 @@
 <script lang="ts" module>
   import type { CareerPos } from '@offside/contracts';
-  // 시즌·정렬·조건은 선수 상세에 다녀와도 그대로 둔다.
+  import type { RnClubOrder } from '@offside/app-core/retiredWall';
+  // 시즌·화면·정렬·조건은 선수 상세에 다녀와도 그대로 둔다.
   // season이 null이면 지금 시즌(개막 전이면 프리시즌).
-  const view = $state<{ order: 'club' | 'recent'; season: number | null; pos: CareerPos | null; clubId: string | null }>({ order: 'club', season: null, pos: null, clubId: null });
+  const view = $state<{ season: number | null; screen: 'home' | 'club' | 'recent'; clubId: string | null; clubOrder: RnClubOrder; pos: CareerPos | null }>({ season: null, screen: 'home', clubId: null, clubOrder: 'count', pos: null });
 </script>
 
 <script lang="ts">
-  // T-10-076 기록실 '영구결번' 탭 — 서버의 모든 결번을 구단별(결번 많은 구단 먼저) 또는 최신순으로 본다.
-  // 유니폼은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
+  import { tn } from '@offside/game/i18n/names';
+  // T-10-076 기록실 '영구결번' 탭. 유니폼은 구단 엠블럼 색(rnStyle), 누르면 그 선수의 은퇴 상세.
   // 결번은 시즌마다 따로 — 프리시즌 선수가 찬 번호도 시즌 1에서는 새로 받을 수 있다.
-  import type { RetiredNumbersResponse } from '@offside/contracts';
-  import { PRESEASON, SERVICE_SEASONS, displaySeasonAt, seasonById, teamSeasonName } from '@offside/contracts/service-seasons';
+  // T-11-101 첫 화면은 요약(구단별 결번 수·최근 결번 8개)만 받는다. 결번 타일은 구단을 고르거나 최신순 전체를 열 때 받는다.
+  import type { RetiredNumbersResponse, RetiredNumbersSummary } from '@offside/contracts';
+  import { PRESEASON, SERVICE_SEASONS, displaySeasonAt, seasonById } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from '@offside/app-core/boardText';
   import { POS_GROUPS } from '@offside/contracts/positions';
-  import { getRetiredNumbers } from '@offside/app-core/api/client';
+  import { getRetiredNumbersOfClub, getRetiredNumbersPage, getRetiredNumbersSummary } from '@offside/app-core/api/client';
   import { POS } from '@offside/game/data';
   import { loadHOF } from '@offside/game/season';
   import ClubMark from './ClubMark.svelte';
+  import { seasonNow } from './seasonNow.svelte.js';
   import { anonName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';
   import { RN_SHIRT, RN_TRIM, rnStyle } from '@offside/app-core/rnStyle';
-  import { rnByClub, rnClubName as clubName, rnDay as day, rnLeagueName as leagueOf, rnRecent } from '@offside/app-core/retiredWall';
+  import { rnByLeague, rnClubName, rnDay as day, rnLeagueName } from '@offside/app-core/retiredWall';
 
+  import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
+  import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
   type Item = RetiredNumbersResponse['items'][number];
 
-  const now = new Date().toISOString();
+  const clock = seasonNow();
+  const now = $derived(clock.now);
   const seasons = [PRESEASON, ...SERVICE_SEASONS];
   const season = $derived(view.season ?? displaySeasonAt(now));
   const selectedSeason = $derived(seasonById(season));
   const upcoming = $derived(selectedSeason && selectedSeason.startsAt > now ? selectedSeason : undefined);
-  let filtering = $state(false);
+
+  // 요약은 60초 메모라 첫 화면으로 돌아와도 요청이 다시 나가지 않는다.
+  let summary = $state<RetiredNumbersSummary | null>(null);
   let items = $state<Item[] | null>(null);
+  let next = $state<number | null>(null);
+  let more = $state(false);
   let failed = $state(false);
+  let listFailed = $state(false);
+
   $effect(() => {
     const se = season;
-    items = null;
+    summary = null;
     failed = false;
     if (upcoming) return;
-    void getRetiredNumbers(se).then((r) => {
+    void getRetiredNumbersSummary(se).then((r) => {
       if (se !== season) return; // 더 늦게 고른 시즌의 응답만 쓴다.
-      if (r.ok) items = r.data.items;
+      if (r.ok) summary = r.data;
       else failed = true;
     });
   });
+  // 구단 화면·최신순 화면의 결번 타일.
+  $effect(() => {
+    const key = `${season}|${view.screen}|${view.clubId}`;
+    const se = season;
+    const club = view.clubId;
+    items = null;
+    next = null;
+    listFailed = false;
+    if (upcoming || view.screen === 'home') return;
+    const req = view.screen === 'club' && club ? getRetiredNumbersOfClub(se, club) : getRetiredNumbersPage(se, 0);
+    void req.then((r) => {
+      if (key !== `${season}|${view.screen}|${view.clubId}`) return;
+      if (!r.ok) return void (listFailed = true);
+      items = r.data.items;
+      next = r.data.next ?? null;
+    });
+  });
+  async function loadMore() {
+    if (next === null || more) return;
+    const se = season;
+    more = true;
+    const r = await getRetiredNumbersPage(se, next);
+    more = false;
+    if (se !== season || view.screen !== 'recent' || !r.ok) return;
+    items = [...(items ?? []), ...r.data.items];
+    next = r.data.next ?? null;
+  }
 
   const myIds = new Set(loadHOF().map((h) => h.id).filter(Boolean));
-  const clubOptions = $derived(rnByClub(items ?? []).map((list) => list[0]!).sort((a, b) => clubName(a).localeCompare(clubName(b), 'ko')));
-  const filtered = $derived((items ?? []).filter((it) => (!view.pos || it.pos === view.pos) && (!view.clubId || it.clubId === view.clubId)));
-  const clubs = $derived(rnByClub(filtered));
-  const recent = $derived(rnRecent(filtered));
-  const filterCount = $derived(Number(!!view.pos) + Number(!!view.clubId));
-  const pickedClub = $derived(clubOptions.find((it) => it.clubId === view.clubId));
-  const filterLabel = $derived([pickedClub ? clubName(pickedClub) : '', view.pos ? POS[view.pos].label : '', view.order === 'club' ? '구단별' : '최신순'].filter(Boolean).join(' · '));
+  // 구단 화면 머리(이름·결번 수)는 받은 목록에서 — 서버가 그 구단 결번을 모두 준다.
+  const pickedClub = $derived(items?.[0] && view.screen === 'club' ? { clubId: items[0].clubId, club: items[0].club, count: items.length } : undefined);
+  const shown = $derived((items ?? []).filter((it) => !view.pos || it.pos === view.pos));
+  const leagues = $derived(rnByLeague(summary?.clubs ?? []));
 
   function pickSeason(id: number) {
     view.season = id;
-    view.clubId = null;
+    goHome();
   }
-  function pickOrder(order: 'club' | 'recent') {
-    view.order = order;
-    filtering = false;
+  function goHome() {
+    view.screen = 'home';
+    view.clubId = null;
+    view.pos = null;
+  }
+  function openClub(clubId: string) {
+    view.screen = 'club';
+    view.clubId = clubId;
+    view.pos = null;
   }
 </script>
 
@@ -71,91 +113,110 @@
       <text class="rn-jersey-num" x="60" y="92">{it.number}</text>
     </svg>
     <b class="rn-tile-name">{it.name ?? anonName(it.pos, it.number)}</b>
-    {#if (withClub && !view.clubId) || !view.pos}
+    {#if withClub || !view.pos}
       <span class="muted fs-xs">
-        {#if withClub && !view.clubId}<ClubMark name={it.club} id={it.clubId} size={14} /> {clubName(it)}{:else}{POS[it.pos].label}{/if}
+        {#if withClub}<ClubMark name={it.club} id={it.clubId} size={14} /> {rnClubName(it)}{:else}{POS[it.pos].label}{/if}
       </span>
     {/if}
-    <span class="muted fs-xs num">{it.seq}번째 · {day(it.grantedAt)}</span>
-    {#if myIds.has(it.careerId)}<span class="pill rn-tile-mine">내 선수</span>{/if}
+    <span class="muted fs-xs num">{L.tileSeq({ seq: it.seq, day: day(it.grantedAt) })}</span>
+    {#if myIds.has(it.careerId)}<span class="pill rn-tile-mine">{L.mine}</span>{/if}
   </button>
 {/snippet}
 
-<section class="card" data-rn-wall>
+{#snippet clubRow(c: RetiredNumbersSummary['clubs'][number], withLeague: boolean)}
+  <button class="rn-club-row" data-rn-club={c.clubId} onclick={() => openClub(c.clubId)}>
+    <ClubMark name={c.club} id={c.clubId} size={22} />
+    <b>{rnClubName(c)}</b>
+    {#if withLeague}<span class="muted fs-xs">{rnLeagueName(c.clubId)}</span>{/if}
+    <span class="num rn-club-count">{c.count}</span>
+    <span class="rn-club-go" aria-hidden="true">›</span>
+  </button>
+{/snippet}
+
+<section class="card" data-rn-wall data-rn-screen={view.screen}>
   <div class="hof-toolbar">
     <label class="hof-season-picker">
-      <span class="hof-filter-label">시즌</span>
-      <select aria-label="영구결번 시즌" data-rn-season-select value={String(season)} onchange={(e) => pickSeason(Number(e.currentTarget.value))}>
-        {#each seasons as s (s.id)}<option value={String(s.id)}>{s.name}{s.startsAt > now ? ' (개막 예정)' : ''}</option>{/each}
+      <span class="hof-filter-label">{L.season}</span>
+      <select aria-label={L.seasonAria} data-rn-season-select value={String(season)} onchange={(e) => pickSeason(Number(e.currentTarget.value))}>
+        {#each seasons as s (s.id)}<option value={String(s.id)}>{seasonLabel(s.id, s.name)}{s.startsAt > now ? L.notOpen : ''}</option>{/each}
       </select>
     </label>
-    {#if !upcoming}
-      <div class="hof-filter-picker">
-        <span class="hof-filter-label" aria-hidden="true">필터</span>
-        <button class="hof-filter-trigger" aria-label="영구결번 필터, {filterLabel}" aria-expanded={filtering} aria-controls="rn-filter-panel" data-rn-filters onclick={() => (filtering = !filtering)}>
-          <span class="hof-filter-current">{filterLabel}</span>
-          <svg class="hof-filter-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-        </button>
-      </div>
-    {/if}
   </div>
-  {#if !upcoming}
-    <div class="hof-filter-panel" id="rn-filter-panel" hidden={!filtering}>
-      <p class="hof-filter-label">포지션</p>
-      <div class="seg hof-pos" role="group" aria-label="포지션">
-        <button class="hof-sort" aria-pressed={view.pos === null} data-rn-pos="all" onclick={() => (view.pos = null)}>전체</button>
-        {#each POS_GROUPS as pos (pos)}<button class="hof-sort" aria-pressed={view.pos === pos} data-rn-pos={pos} onclick={() => (view.pos = pos)}>{POS[pos].label}</button>{/each}
-      </div>
-      <label class="hof-season-picker rn-club-picker">
-        <span class="hof-filter-label">구단</span>
-        <select aria-label="영구결번 구단" data-rn-club-select value={view.clubId ?? 'all'} onchange={(e) => (view.clubId = e.currentTarget.value === 'all' ? null : e.currentTarget.value)}>
-          <option value="all">전체 구단</option>
-          {#each clubOptions as club (club.clubId)}<option value={club.clubId}>{clubName(club)}</option>{/each}
-        </select>
-      </label>
-      <p class="hof-filter-label">정렬</p>
-      <div class="hof-sorts" role="group" aria-label="정렬">
-        <button class="hof-sort" aria-pressed={view.order === 'club'} data-rn-order="club" onclick={() => pickOrder('club')}>구단별</button>
-        <button class="hof-sort" aria-pressed={view.order === 'recent'} data-rn-order="recent" onclick={() => pickOrder('recent')}>최신순</button>
-        {#if filterCount}<button class="hof-sort" data-rn-filter-reset onclick={() => { view.pos = null; view.clubId = null; }}>조건 초기화</button>{/if}
-      </div>
-    </div>
-  {/if}
-  <p class="muted fs-sm rn-wall-lead">한 구단에서 오래 활약한 선수의 등번호는 다시 쓰지 않아요. 구단마다 한 번호에 한 명뿐이에요.</p>
 
+  {#if upcoming || view.screen === 'home'}
+    <p class="muted fs-sm rn-wall-lead">{L.lead}</p>
+  {/if}
   {#if upcoming}
-    <div class="empty hof-season-note" data-rn-upcoming><b>{upcoming.name}은 {kstMonthDayHour(upcoming.startsAt)}(한국 시각)에 개막해요.</b></div>
-  {:else if items === null && !failed}
-    <p class="empty">불러오는 중…</p>
-  {:else if failed}
-    <p class="empty">영구결번을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
-  {:else if filtered.length}
-    <div class="rn-wall-sum">
-      <div><b class="num">{filtered.length}</b><small>결번</small></div>
-      <div><b class="num">{clubs.length}</b><small>구단</small></div>
-      <div><b class="num">{day(recent[0]!.grantedAt)}</b><small>최근 결번</small></div>
-    </div>
-    {#if view.order === 'club'}
-      {#each clubs as list (list[0]!.clubId)}
-        {@const c = list[0]!}
-        <div class="rn-club" data-rn-club={c.clubId}>
-          <div class="rn-club-head">
-            <ClubMark name={c.club} id={c.clubId} size={22} />
-            <b>{clubName(c)}</b>
-            <span class="muted fs-xs">{leagueOf(c.clubId)}</span>
-            <span class="num rn-club-count">{list.length}</span>
-          </div>
-          <div class="rn-tiles">
-            {#each list as it (it.seq)}{@render tile(it, false)}{/each}
-          </div>
-        </div>
-      {/each}
-    {:else}
-      <div class="rn-tiles">
-        {#each recent as it (it.seq)}{@render tile(it, true)}{/each}
+    <div class="empty hof-season-note" data-rn-upcoming><b>{L.opens({ name: seasonLabel(upcoming.id, upcoming.name), when: kstMonthDayHour(upcoming.startsAt) })}</b></div>
+  {:else if failed || (view.screen !== 'home' && listFailed)}
+    <p class="empty">{L.loadFailed}</p>
+  {:else if view.screen === 'home'}
+    {#if summary === null}
+      <p class="empty">{L.loading}</p>
+    {:else if summary.total}
+      <div class="rn-wall-sum">
+        <div><b class="num">{summary.total}</b><small>{L.sumRetired}</small></div>
+        <div><b class="num">{summary.clubs.length}</b><small>{L.sumClubs}</small></div>
+        <div><b class="num">{day(summary.recent[0]!.grantedAt)}</b><small>{L.sumRecent}</small></div>
       </div>
+      <div class="rn-sec-head">
+        <h2>{L.recentTitle}</h2>
+        <button class="link-btn" data-rn-recent-all onclick={() => (view.screen = 'recent')}>{L.seeAll}</button>
+      </div>
+      <div class="rn-tiles">
+        {#each summary.recent as it (it.seq)}{@render tile(it, true)}{/each}
+      </div>
+      <div class="rn-sec-head">
+        <h2>{L.clubsTitle}</h2>
+        <div class="hof-sorts" role="group" aria-label={L.clubOrderLabel}>
+          <button class="hof-sort" aria-pressed={view.clubOrder === 'count'} data-rn-club-order="count" onclick={() => (view.clubOrder = 'count')}>{L.orderCount}</button>
+          <button class="hof-sort" aria-pressed={view.clubOrder === 'league'} data-rn-club-order="league" onclick={() => (view.clubOrder = 'league')}>{L.orderLeague}</button>
+        </div>
+      </div>
+      {#if view.clubOrder === 'count'}
+        <div class="rn-club-list">
+          {#each summary.clubs as c (c.clubId)}{@render clubRow(c, true)}{/each}
+        </div>
+      {:else}
+        {#each leagues as g (g.league)}
+          <p class="rn-league-head" data-rn-league={g.league}><span>{tn(g.league)}</span> <span class="num">{g.count}</span></p>
+          <div class="rn-club-list">
+            {#each g.clubs as c (c.clubId)}{@render clubRow(c, false)}{/each}
+          </div>
+        {/each}
+      {/if}
+    {:else}
+      <p class="empty">{L.empty({ season: teamSeasonLabel(season) })}</p>
     {/if}
   {:else}
-    <p class="empty">{filterCount ? '선택한 조건에 맞는 영구결번이 없어요.' : `아직 ${teamSeasonName(season)} 영구결번이 없어요.`}</p>
+    <button class="link-btn rn-back" data-rn-back onclick={goHome}>{L.backWeb}</button>
+    {#if view.screen === 'club'}
+      <div class="rn-club-head rn-club-title">
+        {#if pickedClub}
+          <ClubMark name={pickedClub.club} id={pickedClub.clubId} size={28} />
+          <b>{rnClubName(pickedClub)}</b>
+          <span class="muted fs-xs">{rnLeagueName(pickedClub.clubId)}</span>
+          <span class="num rn-club-count">{pickedClub.count}</span>
+        {/if}
+      </div>
+      <div class="hof-sorts" role="group" aria-label={L.positionLabel}>
+        <button class="hof-sort" aria-pressed={view.pos === null} data-rn-pos="all" onclick={() => (view.pos = null)}>{L.all}</button>
+        {#each POS_GROUPS as pos (pos)}<button class="hof-sort" aria-pressed={view.pos === pos} data-rn-pos={pos} onclick={() => (view.pos = pos)}>{POS[pos].label}</button>{/each}
+      </div>
+    {:else}
+      <h2 class="rn-recent-title">{L.recentAll}</h2>
+    {/if}
+    {#if items === null}
+      <p class="empty">{L.loading}</p>
+    {:else if shown.length}
+      <div class="rn-tiles">
+        {#each shown as it (it.seq)}{@render tile(it, view.screen === 'recent')}{/each}
+      </div>
+      {#if view.screen === 'recent' && next !== null}
+        <button class="btn btn-block rn-more" data-rn-more disabled={more} onclick={() => void loadMore()}>{more ? L.loading : L.more}</button>
+      {/if}
+    {:else}
+      <p class="empty">{L.noMatchWeb}</p>
+    {/if}
   {/if}
 </section>

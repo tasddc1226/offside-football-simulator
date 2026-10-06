@@ -2,6 +2,7 @@
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SheetView } from '@offside/app-core/sheets';
+import { sheetPlayText as L } from '@offside/app-core/i18n/ko/sheetPlay';
 import { buzz, chooseEvent } from '../game/host';
 import { alpha } from '../theme/colors';
 import { useColors } from '../theme/useColors';
@@ -28,7 +29,7 @@ export function EventChoice({ v }: { v: Extract<SheetView, { kind: 'event' }> })
           }}
         >
           <Txt style={{ fontSize: rem(0.75), fontWeight: '600' }}>
-            {`스토리 · ${s.story.name} `}
+            {`${L.storyTag({ name: s.story.name })} `}
             <Txt
               style={{
                 fontFamily: DISPLAY[700],

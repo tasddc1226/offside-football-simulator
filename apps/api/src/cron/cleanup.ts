@@ -12,6 +12,8 @@ const MAX_CHUNKS = 40;
 /** 표마다: 이 열이 (지금 - keepMs)보다 이르면 지운다. 열마다 인덱스가 있어 묶음마다 표 전체를 훑지 않는다
  * (auth_attempts는 (kind, subject)당 한 행이라 작다). */
 const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
+  { table: 'push_deliveries', column: 'expires_at', keepMs: 30 * DAY_MS },
+  { table: 'notifications', column: 'expires_at', keepMs: 0 },
   // 만료 30일 뒤 토큰·접수 번호를 정리한다. day PK가 지워져도 과거 글을 재발송하지 않는다.
   { table: 'push_news_events', column: 'expires_at', keepMs: 30 * DAY_MS },
   { table: 'push_devices', column: 'updated_at', keepMs: 90 * DAY_MS },

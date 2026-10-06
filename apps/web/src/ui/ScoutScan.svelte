@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { intlLocale } from '@offside/contracts/i18n';
   // T-10-111 "후보 3명 보기"를 누르면 약 3초 동안 화면을 가리고 스카우트가 후보를 추리는 연출을 보여 준다.
   // 스캔 빔이 피치를 훑으며 선수 점을 찍고, 마지막 훑기에서 내 포지션 구역의 세 명이 금색으로 확정된다.
   // 연출용 난수는 Math.random이다(게임 RNG를 건드리지 않는다). 탭·Esc로 건너뛸 수 있고, 감속 모션이면
@@ -7,6 +8,7 @@
   import { fade } from 'svelte/transition';
   import type { Pos } from '@offside/game/data';
   import { buzz, dur, motionOK } from './motion.js';
+  import { createText as L } from '@offside/app-core/i18n/ko/create';
 
   let { pos, steps, onDone }: { pos: Pos; steps: string[]; onDone: () => void } = $props();
 
@@ -78,7 +80,7 @@
 <div class="scout-scan" data-scout-scan role="status" aria-live="polite" onclick={finish} transition:fade={{ duration: dur(200) }}>
   <div class="ss-card">
     <div class="eyebrow">Scouting</div>
-    <h2>스카우트가 후보를 추리는 중</h2>
+    <h2>{L.scanTitle}</h2>
 
     <div class="ss-pitch" aria-hidden="true">
       <svg viewBox="0 0 160 100" preserveAspectRatio="none">
@@ -99,8 +101,8 @@
     </div>
 
     <div class="ss-count">
-      <span>분석한 선수 <b class="num">{count.toLocaleString('ko-KR')}</b>명</span>
-      <span>후보 <b class="num">{locked}</b>/3</span>
+      <span>{L.scannedBefore} <b class="num">{count.toLocaleString(intlLocale())}</b>{L.scannedAfter}</span>
+      <span>{L.scanCand} <b class="num">{locked}</b>/3</span>
     </div>
     <div class="ss-bar"><i style:width="{p * 100}%"></i></div>
 
@@ -112,7 +114,7 @@
         </li>
       {/each}
     </ol>
-    <p class="ss-skip">{p >= 1 ? '후보 3명 선정 완료!' : '탭하면 건너뛰기'}</p>
+    <p class="ss-skip">{p >= 1 ? L.scanDone : L.scanSkip}</p>
   </div>
 </div>
 

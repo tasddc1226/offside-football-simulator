@@ -27,15 +27,39 @@ export function newsPushStatements(db: D1Database, postId: string, board: BoardK
         start,
         end,
       ),
-    // 재등록 때 수신자를 추가하지 않는다. 게시 시점의 유효한 동의·세션만 저장한다.
+    // 종류를 끈 사람도 알림함 원본은 남긴다. 게시 시점의 전체 수신 등록이 유효한 프로필만 포함한다.
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO notifications
+      (id, profile_id, source_key, kind, title, body, target_json, created_at, expires_at)
+      SELECT 'ntf_' || lower(hex(randomblob(16))), d.profile_id, 'news:' || e.id, 'news',
+        CASE e.board WHEN 'notice' THEN '오프사이드 공지' ELSE '오프사이드 릴리즈 노트' END,
+        e.title, json_object('type', 'board', 'board', e.board, 'postId', e.post_id), ?, ?
+      FROM push_news_events e CROSS JOIN push_devices d JOIN sessions s ON s.id = d.session_id JOIN profiles p ON p.id = d.profile_id
+      WHERE changes() = 1 AND e.id = ? AND e.post_id = ? AND e.created_at = ?
+        AND s.channel = 'app' AND s.profile_id = d.profile_id AND s.revoked_at IS NULL AND s.expires_at > ?
+        AND p.deleted_at IS NULL AND d.updated_at >= ? GROUP BY d.profile_id`,
+      )
+      .bind(
+        now,
+        new Date(Date.parse(now) + 90 * 86400_000).toISOString(),
+        eventId,
+        postId,
+        now,
+        now,
+        new Date(Date.parse(now) - 90 * 86400_000).toISOString(),
+      ),
+    // 재등록 때 수신자를 추가하지 않는다. 게시 시점의 유효한 동의·세션·종류별 선택만 저장한다.
     db
       .prepare(
         `INSERT OR IGNORE INTO push_news_deliveries
       (id, event_id, installation_hash, session_id, profile_id, token, due_at, updated_at)
       SELECT ? || ':' || d.installation_hash, ?, d.installation_hash, d.session_id, d.profile_id, d.token, ?, ?
       FROM push_devices d JOIN sessions s ON s.id = d.session_id JOIN profiles p ON p.id = d.profile_id
-      WHERE changes() = 1 AND s.channel = 'app' AND s.profile_id = d.profile_id
-      AND s.revoked_at IS NULL AND s.expires_at > ? AND p.deleted_at IS NULL AND d.updated_at >= ?`,
+      LEFT JOIN push_preferences pref ON pref.profile_id = d.profile_id
+      WHERE changes() > 0 AND s.channel = 'app' AND s.profile_id = d.profile_id
+      AND s.revoked_at IS NULL AND s.expires_at > ? AND p.deleted_at IS NULL AND d.updated_at >= ?
+      AND CASE ? WHEN 'notice' THEN COALESCE(pref.notice, 1) ELSE COALESCE(pref.release, 1) END = 1`,
       )
       .bind(
         eventId,
@@ -44,6 +68,7 @@ export function newsPushStatements(db: D1Database, postId: string, board: BoardK
         now,
         now,
         new Date(Date.parse(now) - 90 * 86400_000).toISOString(),
+        board,
       ),
   ];
 }

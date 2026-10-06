@@ -20,6 +20,7 @@ import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Card, Press, Txt } from '../../ui';
 import { revealFocusedInput } from '../../ui/scroll';
+import { settingsText as L } from '@offside/app-core/i18n/ko/settings';
 
 /** 설정 카드(웹 .card.settings-card: 안쪽 여백 16×18). */
 export function SettingsCard({
@@ -149,11 +150,15 @@ export function Switch({
   onChange,
   label,
   testID,
+  disabled = false,
+  busy = false,
 }: {
   value: boolean;
   onChange: (on: boolean) => void;
   label: string;
   testID?: string;
+  disabled?: boolean;
+  busy?: boolean;
 }) {
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
@@ -166,35 +171,45 @@ export function Switch({
     <Press
       accessibilityRole="switch"
       accessibilityLabel={label}
-      accessibilityState={{ checked: value }}
+      accessibilityState={{ checked: value, disabled: disabled || busy, busy }}
+      disabled={disabled || busy}
       testID={testID}
-      scale={0.94}
+      scale={1}
       onPress={() => onChange(!value)}
-      hitSlop={8}
       style={{
         width: 48,
-        height: 28,
-        borderRadius: 999,
-        backgroundColor: value ? c.good : c.line,
+        minHeight: 48,
         justifyContent: 'center',
+        opacity: disabled || busy ? 0.45 : 1,
       }}
     >
-      <Animated.View
+      <View
+        accessible={false}
         style={{
-          position: 'absolute',
-          left: 3,
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          backgroundColor: '#fff',
-          shadowColor: '#000',
-          shadowOpacity: 0.3,
-          shadowRadius: 2,
-          shadowOffset: { width: 0, height: 1 },
-          elevation: 2,
-          transform: [{ translateX: x }],
+          width: 48,
+          height: 28,
+          borderRadius: 999,
+          backgroundColor: value ? c.good : c.line,
         }}
-      />
+      >
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: 3,
+            left: 3,
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            backgroundColor: '#fff',
+            shadowColor: '#000',
+            shadowOpacity: 0.3,
+            shadowRadius: 2,
+            shadowOffset: { width: 0, height: 1 },
+            elevation: 2,
+            transform: [{ translateX: x }],
+          }}
+        />
+      </View>
     </Press>
   );
 }
@@ -322,7 +337,7 @@ export function SelectField<V extends string | number>({
         scale={0.985}
         testID={testID}
         accessibilityLabel={`${label}, ${cur?.label ?? ''}`}
-        accessibilityHint="눌러서 바꿔요"
+        accessibilityHint={L.tapToChange}
         accessibilityState={{ expanded: open }}
         onPress={() => {
           // 리그·시즌을 고르는 동안 이전 입력칸의 키보드가 되살아나지 않게 한다.
@@ -361,7 +376,7 @@ export function SelectField<V extends string | number>({
       >
         <View style={{ flex: 1, justifyContent: 'flex-end' }}>
           <Pressable
-            accessibilityLabel="닫기"
+            accessibilityLabel={L.close}
             onPress={() => setOpen(false)}
             style={{
               position: 'absolute',

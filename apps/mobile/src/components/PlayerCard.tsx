@@ -8,7 +8,11 @@ import { RN_SHIRT, RN_TRIM } from '@offside/app-core/rnStyle';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
-import { cardFootNote, cardTier } from '@offside/app-core/format';
+import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+import { cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier } from '@offside/app-core/format';
+import { intlLocale } from '@offside/app-core/i18n/core';
+import { tn } from '@offside/game/i18n/names';
+import { teamSeasonLabel } from '@offside/app-core/seasonName';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({
@@ -179,8 +183,44 @@ export type PlayerCardData = {
   /** T-11-080 카드 기준가(만 원). */
   cardValue?: number | null | undefined;
   pos?: TeamPlayer['pos'];
+  /** T-11-114 카드 시즌(0 = 프리시즌) — 뱃지. 모르면 없다. */
+  season?: number | undefined;
   youth: boolean;
 };
+
+/** T-11-114 카드 시즌 뱃지(웹 PlayerCard .card-season). */
+function SeasonBadge({ season, compact }: { season: number; compact: boolean }) {
+  return (
+    <View
+      accessibilityLabel={teamSeasonLabel(season)}
+      style={{
+        position: 'absolute',
+        top: 26,
+        right: compact ? 4 : 11,
+        paddingHorizontal: compact ? 3 : 5,
+        paddingVertical: 1,
+        borderRadius: 3,
+        backgroundColor: cardSeasonColor(season),
+        borderWidth: 0.5,
+        borderColor: '#ffffff55',
+      }}
+    >
+      <Text
+        maxFontSizeMultiplier={1.1}
+        style={{
+          color: '#fff',
+          fontSize: compact ? 7 : 9,
+          lineHeight: compact ? 9 : 11,
+          fontWeight: '800',
+          letterSpacing: 0.5,
+          includeFontPadding: false,
+        }}
+      >
+        {cardSeasonBadge(season)}
+      </Text>
+    </View>
+  );
+}
 
 const CARD_STATS = {
   field: ['pac', 'sho', 'dri', 'pas', 'def', 'phy'],
@@ -342,7 +382,7 @@ export function PlayerCard({
           </Text>
           {!compact && country ? (
             <Text
-              accessibilityLabel={`국적 ${country.ko}`}
+              accessibilityLabel={L.nationAria({ name: tn(country.ko) })}
               maxFontSizeMultiplier={1.1}
               style={{ fontSize: 18, lineHeight: 18, marginTop: 2, includeFontPadding: false }}
             >
@@ -377,7 +417,7 @@ export function PlayerCard({
             >
               LS{' '}
               <Text style={{ fontFamily: DISPLAY[700], fontSize: 11 }}>
-                {cell.legendScore.toLocaleString()}
+                {cell.legendScore.toLocaleString(intlLocale())}
               </Text>
             </Text>
           ) : null}
@@ -385,7 +425,7 @@ export function PlayerCard({
       </View>
       {compact && country ? (
         <Text
-          accessibilityLabel={`국적 ${country.ko}`}
+          accessibilityLabel={L.nationAria({ name: tn(country.ko) })}
           maxFontSizeMultiplier={1.1}
           style={{
             position: 'absolute',
@@ -398,6 +438,9 @@ export function PlayerCard({
         >
           {flagOf(country.code)}
         </Text>
+      ) : null}
+      {!cell.youth && cell.season !== undefined ? (
+        <SeasonBadge season={cell.season} compact={compact} />
       ) : null}
       <View
         style={{
@@ -422,7 +465,7 @@ export function PlayerCard({
               includeFontPadding: false,
             }}
           >
-            포지션 OVR
+            {L.posOvrLabel}
           </Text>
           <Text
             maxFontSizeMultiplier={1.1}

@@ -8,6 +8,9 @@
  */
 
 import { DETAIL_GROUP, type DetailPos, type PeakProfile, type PosGroup } from './positions.js';
+import type { TeamSynergy } from './team-synergy.js';
+
+export * from './team-synergy.js';
 
 /** 팀 이름 길이(앞뒤 공백 제외). */
 export const TEAM_NAME_MIN = 2;
@@ -64,6 +67,25 @@ export const YOUTH_NAME = '유스 선수';
 export const TEAM_MATCHES_PER_DAY = 10;
 /** 한 팀의 선발 인원. */
 export const LINEUP_SIZE = 11;
+/** T-11-114 선발에 넣을 수 있는 지난 시즌 선수(와일드카드) 수. 나머지는 그 시즌 선수다. */
+export const TEAM_WILDCARD_MAX = 3;
+/** 팀 시즌보다 앞 시즌 카드면 와일드카드. 시즌을 모르는 옛 응답은 그 시즌 선수로 본다. */
+export const isWildcardSeason = (cardSeason: number | null | undefined, teamSeason: number) =>
+  (cardSeason ?? teamSeason) < teamSeason;
+export const WILDCARD_FULL_TEXT = `지난 시즌 선수는 선발에 ${TEAM_WILDCARD_MAX}명까지 넣을 수 있어요.`;
+
+// T-11-098 친구 · 친선전. 친선전은 레이팅·전적·업적에 들어가지 않고 친구끼리 상대 전적만 남긴다.
+/** 친구(보낸·받은 신청 포함) 상한. */
+export const FRIENDS_MAX = 50;
+/** 구단주 한 명이 한국 시각 하루에 걸 수 있는 친선전 수(랭크 경기와 따로 센다). */
+export const FRIENDLY_MATCHES_PER_DAY = 10;
+export {
+  FRIEND_CODE_CHARS,
+  FRIEND_CODE_LENGTH,
+  FRIEND_CODE_RE,
+  FRIEND_INVITE_PARAM,
+  normalizeFriendCode,
+} from './friend-code.js';
 
 // 세부 포지션(T-10-091)은 커리어의 dpos와 같은 정의를 쓴다.
 export {
@@ -189,16 +211,20 @@ export const SLOT_LINES: Record<Exclude<DetailPos, 'GK'>, Record<Line, number>> 
 export const LINE_BASE: Record<Line, number> = { atk: 3.25, mid: 2.85, def: 3.9 };
 export const LINE_PRESENCE_K = 4;
 
-/** 11자리 실력 → 공격·중원·수비(몫 가중 평균 + 인원 보정)와 골키퍼. 빈 자리는 유스 선수로 센다. */
+/**
+ * 11자리 실력 → 공격·중원·수비(몫 가중 평균 + 인원 보정)와 골키퍼. 빈 자리는 유스 선수로 센다. synergy를 주면(T-11-105)
+ * 자리 실력에 주발 보정을, 줄 힘에 듀오·팀 색깔 보정을 더한다.
+ */
 export function lineStrength(
   formation: readonly DetailPos[],
   ratings: readonly (number | null)[],
+  synergy?: Pick<TeamSynergy, 'foot' | 'lines'> | null,
 ): LineStrength {
   const sum: Record<Line, number> = { atk: 0, mid: 0, def: 0 };
   const w: Record<Line, number> = { atk: 0, mid: 0, def: 0 };
   let gk = YOUTH_OVR;
   formation.forEach((slot, i) => {
-    const r = ratings[i] ?? YOUTH_OVR;
+    const r = (ratings[i] ?? YOUTH_OVR) + (synergy?.foot[i] ?? 0);
     if (slot === 'GK') {
       gk = r;
       return;
@@ -211,7 +237,13 @@ export function lineStrength(
   });
   const line = (l: Line) =>
     (w[l] ? sum[l] / w[l] : YOUTH_OVR) + LINE_PRESENCE_K * (w[l] - LINE_BASE[l]);
-  return { atk: line('atk'), mid: line('mid'), def: line('def'), gk };
+  const b = synergy?.lines;
+  return {
+    atk: line('atk') + (b?.atk ?? 0),
+    mid: line('mid') + (b?.mid ?? 0),
+    def: line('def') + (b?.def ?? 0),
+    gk: gk + (b?.gk ?? 0),
+  };
 }
 
 /** 팀 OVR = 11자리 실력의 평균(반올림). 빈 자리는 유스 선수(YOUTH_OVR)로 센다. */

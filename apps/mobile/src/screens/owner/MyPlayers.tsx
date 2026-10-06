@@ -8,7 +8,7 @@ import type { PublicHofEntry } from '@offside/contracts';
 import type { DetailPos, POS } from '@offside/game/data';
 import { loadHOF } from '@offside/game/season';
 import type { HofEntry } from '@offside/game/types';
-import { localPlayerValue, myPlayerNation } from '@offside/app-core/myPlayers';
+import { localCardValue, myPlayerNation } from '@offside/app-core/myPlayers';
 import { getMyCareers, getRetiredNumbersIn } from '@offside/app-core/api/client';
 import {
   deviceSeasonOf,
@@ -24,6 +24,9 @@ import { HofRow, type RowStats } from '../../components/HofRow';
 import { rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { Seg, TabOpt } from '../board/parts';
+import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
+import { useRefresh } from '../../ui/refresh';
+import { useSeasonNow } from '../../ui/useSeasonNow';
 
 type MineRow = {
   nation?: string | undefined;
@@ -38,7 +41,8 @@ type MineRow = {
   stats: RowStats;
   title: string | null;
   season: number;
-  value: number;
+  /** T-11-109 비로그인 구단 가치용 카드 기준가(이 기기 기록만). */
+  value?: number;
   open: () => void;
 };
 /** 처음엔 이만큼만 보이고 '모두 보기'로 펼친다(T-11-026 구단주 화면 위쪽을 내 팀에 내주려 상위 3명만). */
@@ -53,11 +57,11 @@ const localRow = (h: HofEntry, i: number, pending: ReadonlySet<string>, now: str
   club: h.lastClub,
   clubId: h.lastClubId,
   rn: h.rn?.kind === 'granted' ? h.rn.number : null,
-  tag: h.public ? '공개' : null,
+  tag: h.public ? L.tagPublic : null,
   stats: h,
   title: h.title ?? null,
   season: deviceSeasonOf(h, pending, now),
-  value: localPlayerValue(h),
+  value: localCardValue(h),
   open: () => openLocalLegend(h),
 });
 const serverRow = (e: PublicHofEntry): MineRow => ({
@@ -69,11 +73,10 @@ const serverRow = (e: PublicHofEntry): MineRow => ({
   club: e.lastClub,
   clubId: e.lastClubId,
   rn: e.retiredNumber?.number,
-  tag: e.name ? '공개' : null,
+  tag: e.name ? L.tagPublic : null,
   stats: { ...e, score: e.legendScore },
   title: e.title ?? null,
   season: serverSeasonOf(e),
-  value: e.value ?? 0,
   open: () => void openPublicLegend(e),
 });
 
@@ -84,9 +87,11 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
   const [rows, setRows] = useState<MineRow[]>([]);
   const [expanded, setExpanded] = useState(false);
   const now = useMemo(() => new Date().toISOString(), []);
-  const seasons = useMemo(() => mySeasonOptions(now), [now]);
+  // T-11-110 목록은 불러온 시각(now)으로, 시즌 탭·기본 시즌은 띄운 채 개막을 넘기면 다시 고른다.
+  const clockNow = useSeasonNow();
+  const seasons = useMemo(() => mySeasonOptions(clockNow), [clockNow]);
   const [picked, setPicked] = useState<number | null>(null);
-  const season = picked ?? myDefaultSeason(now);
+  const season = picked ?? myDefaultSeason(clockNow);
   const inSeason = useMemo(
     () => (seasons.length > 1 ? rows.filter((r) => r.season === season) : rows),
     [seasons, rows, season],
@@ -97,10 +102,12 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
     if (source !== 'loading') onRows?.(inSeason);
   }, [source, inSeason, onRows]);
 
+  // T-11-111 당겨서 새로고침 — 보이던 목록은 두고 응답이 오면 바꾼다(source도 되돌리지 않는다).
+  const { tick, track } = useRefresh();
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const r = await getMyCareers();
+      const r = await track(getMyCareers());
       if (!alive) return;
       // 방금 은퇴해 아직 업로드 대기 중인 선수 — 시즌을 아직 못 받았으면 지금 시즌으로 센다.
       const pending = pendingRetirementIds();
@@ -125,7 +132,6 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
                   nation: myPlayerNation(row, e),
                   rn: row.rn ?? e.retiredNumber?.number,
                   season: serverSeasonOf(e),
-                  value: e.value ?? row.value,
                 }
               : serverRow(e);
           }),
@@ -154,17 +160,17 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
     return () => {
       alive = false;
     };
-  }, [local, now]);
+  }, [local, now, tick, track]);
 
   return (
     <Card gap={0}>
       <Txt v="eyebrow">My players</Txt>
       <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 8 }}>
-        내 선수
+        {L.title}
       </Txt>
       {source === 'loading' ? (
         <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-          불러오는 중…
+          {L.loading}
         </Txt>
       ) : (
         <>
@@ -174,13 +180,17 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
             style={{ fontSize: rem(0.75), marginBottom: 6 }}
           >
             {source === 'account'
-              ? '계정에 기록된 선수예요. 다른 기기에서도 똑같이 보여요.'
+              ? L.sourceAccount
               : source === 'offline'
-                ? '서버에 연결하지 못해 이 기기에 저장된 선수를 보여 줘요.'
-                : '이 기기에 저장된 선수예요. 로그인하면 계정에 모아 볼 수 있어요.'}
+                ? L.sourceOffline
+                : L.sourceDeviceApp}
           </Txt>
           {seasons.length > 1 ? (
-            <Seg cols={Math.min(seasons.length, 3)} label="시즌" style={{ marginBottom: 8 }}>
+            <Seg
+              cols={Math.min(seasons.length, 3)}
+              label={L.seasonGroup}
+              style={{ marginBottom: 8 }}
+            >
               {seasons.map((s) => (
                 <TabOpt
                   key={s.id}
@@ -201,7 +211,7 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
                 key={r.key}
                 scale={0.985}
                 testID={`my-player-${i}`}
-                accessibilityLabel={`${r.name} 선수 기록 열기`}
+                accessibilityLabel={L.openRecord({ name: r.name })}
                 onPress={r.open}
               >
                 <HofRow
@@ -232,7 +242,7 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
               style={{ alignSelf: 'flex-start', marginTop: 8 }}
               onPress={() => setExpanded(true)}
             >
-              {`모두 보기 (${inSeason.length}명)`}
+              {L.showAll({ n: inSeason.length })}
             </Btn>
           ) : null}
         </>

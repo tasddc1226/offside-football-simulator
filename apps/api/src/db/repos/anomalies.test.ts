@@ -7,6 +7,7 @@ import {
   ANOMALY,
   anomalyReport,
   exceedsOvrCap,
+  growthTampered,
   seasonReasons,
   setCareerHidden,
   sweepAnomalies,
@@ -31,6 +32,35 @@ describe('seasonReasons', () => {
   it('한 시즌 상승 폭이 정상 최대(22)보다 크면 숨김 이유', () => {
     expect(seasonReasons(25, 80, 22)).toEqual([]);
     expect(seasonReasons(25, 90, ANOMALY.jump)).toEqual(['jump']);
+  });
+});
+
+describe('growthTampered (T-11-097)', () => {
+  const g = (o0: number, ph: number[]) => ({
+    v: 1 as const,
+    o0,
+    ph,
+    a0: [],
+    a1: [],
+    s0: [],
+    s1: [],
+    pot: { s: 75, b: 0, bl: 0, r: 0 },
+  });
+  const step = ANOMALY.growthStep;
+  it('구간 사이(시작·구간·시즌 끝) 한 번에 growthStep 이상 오르면 참이다', () => {
+    expect(growthTampered(g(60, [60, 60 + step - 1, 70]), 70, null)).toBe(false);
+    expect(growthTampered(g(60, [60 + step]), 80, null)).toBe(true);
+    expect(growthTampered(g(60, [61, 62]), 62 + step, null)).toBe(true);
+  });
+  it('구간 기록이 없으면 시즌 전체 성장과 구분할 수 없어 보지 않는다', () => {
+    expect(growthTampered(g(60, []), 60 + step, null)).toBe(false);
+  });
+  it('시작 OVR이 지난 시즌 저장값보다 growthCarry 이상 높으면 참이다', () => {
+    expect(growthTampered(g(80, [80]), 80, 80 - ANOMALY.growthCarry + 1)).toBe(false);
+    expect(growthTampered(g(80, [80]), 80, 80 - ANOMALY.growthCarry)).toBe(true);
+  });
+  it('성장 기록이 없으면 거짓이다', () => {
+    expect(growthTampered(undefined, 99, 50)).toBe(false);
   });
 });
 

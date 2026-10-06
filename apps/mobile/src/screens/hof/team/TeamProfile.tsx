@@ -3,6 +3,7 @@
 // 웹의 '← 랭킹'(BackBar)은 화면(Hof)이 아래 고정 막대로 그린다.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
+import { requestFriend, type FriendState } from '@offside/app-core/api/friends';
 import {
   fetchTeamProfile,
   likeTeam,
@@ -16,12 +17,17 @@ import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { NameReport } from '../../../components/NameReport';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
+import { friendRequestText } from '@offside/app-core/friendText';
+import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
+import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 import { toast } from '../../../game/host';
 import { DISPLAY, rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
+import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
 import { Press } from '../../../ui/Press';
 import { Txt } from '../../../ui/Txt';
+import { useOnPull } from '../../../ui/refresh';
 import { AutoGrid } from '../../board/parts';
 
 export default function TeamProfile({ id }: { id: string }) {
@@ -31,28 +37,37 @@ export default function TeamProfile({ id }: { id: string }) {
   const [liked, setLiked] = useState(false);
   const [mine, setMine] = useState(false);
   const [liking, setLiking] = useState(false);
+  // T-11-098 친구 신청. null이면 버튼을 그리지 않는다(로그인 전 · 내 팀 · 구버전 응답).
+  const [friend, setFriend] = useState<FriendState | null>(null);
+  const [requesting, setRequesting] = useState(false);
   // T-11-029 끝난 시즌의 팀은 좋아요가 굳는다(서버가 409로 거절한다).
   const closed = !!team && teamSeasonClosed(team.season, new Date().toISOString());
 
   // 내 팀이면 이 기기에 남은 (비공개) 이름으로 보여 준다.
   const localNames = useMemo(() => localCareerNames(), []);
 
-  const load = useCallback(async () => {
-    setStatus('loading');
-    const r = await fetchTeamProfile(id);
-    if (!r.ok) {
-      setStatus('error');
-      return;
-    }
-    setLiked(r.data.liked);
-    setMine(r.data.mine);
-    if (!r.data.mine) {
-      setTeam({ ...r.data.team, views: r.data.team.views + 1 });
-      void viewTeam(id);
-    } else setTeam(r.data.team);
-    setStatus('ready');
-  }, [id]);
+  // silent: T-11-111 당겨서 새로고침 — 화면을 비우지 않고 값만 바꾼다. 조회수를 다시 올리지 않고, 실패해도 보던 프로필을 둔다.
+  const load = useCallback(
+    async (silent = false) => {
+      if (!silent) setStatus('loading');
+      const r = await fetchTeamProfile(id);
+      if (!r.ok) {
+        if (!silent) setStatus('error');
+        return;
+      }
+      setLiked(r.data.liked);
+      setMine(r.data.mine);
+      setFriend(r.data.friend ?? null);
+      if (!r.data.mine) {
+        setTeam({ ...r.data.team, views: r.data.team.views + (silent ? 0 : 1) });
+        if (!silent) void viewTeam(id);
+      } else setTeam(r.data.team);
+      setStatus('ready');
+    },
+    [id],
+  );
   useEffect(() => void load(), [load]);
+  useOnPull(() => (liking || requesting ? undefined : load(true)));
 
   async function toggleLike() {
     if (!team || liking) return;
@@ -64,16 +79,27 @@ export default function TeamProfile({ id }: { id: string }) {
     setTeam((t) => (t ? { ...t, likes: r.data.likes } : t));
   }
 
+  async function askFriend() {
+    if (!team || requesting) return;
+    setRequesting(true);
+    const r = await requestFriend({ teamId: team.id });
+    setRequesting(false);
+    if (!r.ok) return toast(r.error.message);
+    setFriend(r.data.state === 'sent' ? 'sent' : 'accepted');
+    toast(friendRequestText(r.data));
+  }
+
   const cells =
     team?.slots.map((s) => ({
       rating: s.rating,
       nation: s.nation,
+      season: s.season,
       name: (mine && s.careerId && localNames.get(s.careerId)) || s.name,
       youth: s.careerId === null,
     })) ?? [];
 
   return (
-    <LoadState status={status} failText="팀을 불러오지 못했어요." retry={() => void load()}>
+    <LoadState status={status} failText={L.profLoadFail} retry={() => void load()}>
       {team ? (
         <>
           <Card gap={10}>
@@ -97,16 +123,16 @@ export default function TeamProfile({ id }: { id: string }) {
                   {team.name}
                 </Txt>
                 <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-                  {'감독 '}
+                  {L.profManager}
                   <Txt bold style={{ fontSize: rem(0.8125) }}>
                     {team.manager}
                   </Txt>
-                  {mine ? ' · 내 팀' : ''}
+                  {mine ? L.profMine : ''}
                 </Txt>
               </View>
               <View
                 accessible
-                accessibilityLabel={`팀 레이팅 ${team.rating}`}
+                accessibilityLabel={L.profRatingAria({ n: team.rating })}
                 style={{
                   minWidth: 76,
                   alignItems: 'center',
@@ -143,9 +169,9 @@ export default function TeamProfile({ id }: { id: string }) {
             <View style={{ flexDirection: 'row', gap: 6 }}>
               {(
                 [
-                  ['팀 OVR', String(team.ovr)],
-                  ['전적', recordText(team.record)],
-                  ['득실', `${team.goals.for} : ${team.goals.against}`],
+                  [L.profStatOvr, String(team.ovr)],
+                  [L.profStatRecord, recordText(team.record)],
+                  [L.profStatGoals, `${team.goals.for} : ${team.goals.against}`],
                 ] as const
               ).map(([dt, dd]) => (
                 <View
@@ -179,7 +205,7 @@ export default function TeamProfile({ id }: { id: string }) {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <Press
                 testID="team-like"
-                accessibilityLabel={`좋아요 ${team.likes}`}
+                accessibilityLabel={L.profLikeAria({ n: team.likes })}
                 accessibilityState={{ selected: liked, disabled: mine || liking || closed }}
                 disabled={mine || liking || closed}
                 onPress={() => void toggleLike()}
@@ -202,7 +228,7 @@ export default function TeamProfile({ id }: { id: string }) {
                 <Txt bold>{n(team.likes)}</Txt>
               </Press>
               <Txt tone="muted">
-                {'조회수 '}
+                {L.profViews}
                 <Txt bold tone="muted">
                   {n(team.views)}
                 </Txt>
@@ -213,11 +239,29 @@ export default function TeamProfile({ id }: { id: string }) {
             </View>
           </Card>
 
+          {friend && !mine ? (
+            <Btn
+              block
+              kind={friend === 'none' || friend === 'received' ? 'primary' : 'default'}
+              testID="team-friend"
+              disabled={requesting || friend === 'sent' || friend === 'accepted'}
+              onPress={() => void askFriend()}
+            >
+              {friend === 'none'
+                ? LF.reqNone
+                : friend === 'sent'
+                  ? LF.reqSent
+                  : friend === 'received'
+                    ? LF.reqReceived
+                    : LF.reqAccepted}
+            </Btn>
+          ) : null}
+
           <Card gap={10}>
             <View testID="team-history">
               <Txt v="eyebrow">Team history</Txt>
               <Txt v="h2" accessibilityRole="header">
-                팀 히스토리
+                {L.profHistoryTitle}
               </Txt>
             </View>
             {team.badges.length ? (
@@ -247,7 +291,7 @@ export default function TeamProfile({ id }: { id: string }) {
               />
             ) : (
               <Txt tone="muted" style={{ fontSize: rem(0.875), paddingVertical: 8 }}>
-                아직 기록이 없어요. 팀 경기와 시즌 순위 배지가 여기에 쌓여요.
+                {L.profHistoryEmpty}
               </Txt>
             )}
           </Card>

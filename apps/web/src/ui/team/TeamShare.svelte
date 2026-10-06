@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { lockScroll } from '../scrollLock.js';
   import type { TeamShareData } from './teamShareCard.js';
+  import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 
   let { data, onclose }: { data: TeamShareData; onclose: () => void } = $props();
   let dialog: HTMLDialogElement;
@@ -35,7 +36,7 @@
       if (shot) URL.revokeObjectURL(shot.url);
       shot = { file, url: URL.createObjectURL(file), canShare: typeof navigator.share === 'function' && !!navigator.canShare?.({ files: [file] }) };
     } catch {
-      if (!disposed) error = '이미지를 만들지 못했어요. 다시 눌러 주세요.';
+      if (!disposed) error = L.shareMakeFail;
     } finally {
       if (!disposed) busy = false;
     }
@@ -54,24 +55,24 @@
   async function share() {
     if (!shot) return;
     try {
-      await navigator.share({ files: [shot.file], title: `${data.name} 편성`, text: `${data.name}의 그라운드. 오프사이드 offside-lab.com` });
+      await navigator.share({ files: [shot.file], title: L.shareTitleWeb({ name: data.name }), text: L.shareTextWeb({ name: data.name }) });
     } catch (e) {
-      if ((e as DOMException)?.name !== 'AbortError') error = '공유를 열지 못했어요. 이미지 저장을 눌러 주세요.';
+      if ((e as DOMException)?.name !== 'AbortError') error = L.shareOpenFailWeb;
     }
   }
 </script>
 
 <dialog bind:this={dialog} aria-labelledby="team-share-title" onclose={onclose} onkeydown={trapTab} data-team-share>
-  <header><div><h2 id="team-share-title">SNS 공유 이미지</h2><p>지금 보고 있는 편성을 한 장에 담았어요.</p></div><button class="close" aria-label="공유 이미지 닫기" onclick={() => dialog.close()}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button></header>
+  <header><div><h2 id="team-share-title">{L.shareTitle}</h2><p>{L.shareLeadWeb}</p></div><button class="close" aria-label={L.shareCloseAria} onclick={() => dialog.close()}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button></header>
   <div class="preview-body">
-    {#if shot}<img src={shot.url} alt="{data.name}의 선수 배치와 팀 전력을 담은 공유 이미지" width="1080" height="1350" data-team-share-preview />
-    {:else if busy}<div class="making" role="status">이미지를 만드는 중이에요…</div>{/if}
-    {#if data.draft}<p class="draft-note">저장 전 편성도 이미지에 포함돼요.</p>{/if}
+    {#if shot}<img src={shot.url} alt={L.shareAltWeb({ name: data.name })} width="1080" height="1350" data-team-share-preview />
+    {:else if busy}<div class="making" role="status">{L.shareMaking}</div>{/if}
+    {#if data.draft}<p class="draft-note">{L.shareDraftNote}</p>{/if}
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   </div>
   <footer>
-    {#if shot}<button class="btn" data-act="team-share-save" onclick={save}>이미지 저장</button>{#if shot.canShare}<button class="btn btn-primary" data-act="team-share-send" onclick={share}>바로 공유</button>{/if}
-    {:else}<button class="btn btn-primary" onclick={make} disabled={busy}>{busy ? '만드는 중…' : '다시 만들기'}</button>{/if}
+    {#if shot}<button class="btn" data-act="team-share-save" onclick={save}>{L.saveImage}</button>{#if shot.canShare}<button class="btn btn-primary" data-act="team-share-send" onclick={share}>{L.shareNow}</button>{/if}
+    {:else}<button class="btn btn-primary" onclick={make} disabled={busy}>{busy ? L.makingBtn : L.remake}</button>{/if}
   </footer>
 </dialog>
 

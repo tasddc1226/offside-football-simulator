@@ -9,6 +9,7 @@ import { buzz, dismissSheet } from '../game/host';
 import { useColors } from '../theme/useColors';
 import { SheetBody } from '../sheets/SheetBody';
 import { Btn } from './Btn';
+import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
 export function Sheet() {
   const s = useSnapshot(sheetState);
@@ -30,7 +31,7 @@ export function Sheet() {
     >
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable
-          accessibilityLabel="닫기"
+          accessibilityLabel={shellMoreText.close}
           onPress={close}
           style={{
             position: 'absolute',

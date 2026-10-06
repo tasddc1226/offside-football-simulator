@@ -9,11 +9,12 @@ import {
   type MarketSort,
   type MarketTrade,
 } from '@offside/contracts';
-import { marketRatio } from '@offside/contracts/market-value';
+import { CARD_VALUE_FLOOR, marketRatio } from '@offside/contracts/market-value';
 import type { PosGroup } from '@offside/contracts/positions';
 import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
+import { eventNotificationStatements } from '../../push/events.js';
 import { peakOf } from './ownerTeams.js';
 import { cards, careers, marketDaily, marketListings, ownerFunds } from '../schema.js';
 
@@ -189,14 +190,16 @@ export async function fundsOf(db: Db, profileId: string): Promise<number> {
   return row?.balance ?? 0;
 }
 
-/** 구단 가치에 더하는 선수 몫: 직접 키운 선수는 은퇴 가치, 영입한 선수는 기준가. */
+/**
+ * 구단 가치에 더하는 선수 몫: 가진 카드의 기준가(없으면 방출 지급과 같이 CARD_VALUE_FLOOR). T-11-109 전에는 직접 키운
+ * 선수를 은퇴 가치로 셌는데, 방출 지급이 기준가로 바뀌어(T-11-104) 같은 기준으로 맞춘다.
+ */
 async function ownedCardsValue(db: Db, profileId: string): Promise<number> {
   const [row] = await db
     .select({
-      v: sql<number>`coalesce(sum(case when ${careers.profileId} = ${profileId} then ${cards.retireValue} else coalesce(${cards.cardValue}, 0) end), 0)`,
+      v: sql<number>`coalesce(sum(coalesce(${cards.cardValue}, ${CARD_VALUE_FLOOR})), 0)`,
     })
     .from(cards)
-    .leftJoin(careers, eq(careers.id, cards.careerId))
     .where(eq(cards.ownerId, profileId));
   return row?.v ?? 0;
 }
@@ -353,6 +356,7 @@ export async function buyListing(
   b: {
     id: string;
     buyerId: string;
+    sellerId: string;
     price: number;
     fee: number;
     now: string;
@@ -407,6 +411,21 @@ export async function buyListing(
         ...Array(3).fill(b.daily.ratio),
         ...mark,
       ),
+    ...eventNotificationStatements(
+      d1,
+      {
+        profileId: b.sellerId,
+        sourceKey: `market-sold:${b.id}`,
+        now: b.now,
+        content: {
+          kind: 'market',
+          title: '등록한 선수가 이적했어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          body: '판매가 완료됐어요. 이적시장에서 판매 내역과 구단 자금을 확인해 주세요.', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          target: { type: 'screen', screen: 'market' },
+        },
+      },
+      { sql: won, params: [...mark] },
+    ),
     d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(b.buyerId),
   ]);
   const bal = results.at(-1)!.results[0] as { balance: number } | undefined;
@@ -414,7 +433,7 @@ export async function buyListing(
 }
 
 /**
- * 방출: 지금 내가 가진 카드 중 내가 키웠고 숨김 아니고 판매 중이 아닌 것만. 받은 자금(은퇴 가치 × 지급률, 천만 단위)을
+ * 방출: 지금 내가 가진 카드 중 내가 키웠고 숨김 아니고 판매 중이 아닌 것만. 받은 자금(카드 기준가 × 지급률, 천만 단위)을
  * 잔액에 더한다.
  */
 export async function releaseCards(
@@ -425,7 +444,8 @@ export async function releaseCards(
   // 이 batch가 방출한 카드는 released_value = -1로 잠깐 표시한다. D1 batch는 하나의 트랜잭션이고 서로 끼어들지 않으므로
   // -1은 언제나 이 요청의 카드뿐이다(released_at = now 같은 시각 표시는 같은 밀리초의 다른 방출과 겹칠 수 있다).
   // 뒤 문장들도 요청한 카드(기본키)로 좁혀 표 전체를 훑지 않는다. 금액은 contracts releasePayout과 같은 계산.
-  const amountOf = `CAST(round(retire_value * ? / 1000.0) AS INTEGER) * 1000`;
+  // T-11-104 은퇴 가치가 기준가의 수 배라 시장에 파는 것보다 방출이 늘 나았다 — 지급 기준을 기준가로 맞춘다.
+  const amountOf = `CAST(round(coalesce(card_value, ${CARD_VALUE_FLOOR}) * ? / 1000.0) AS INTEGER) * 1000`;
   const ids = JSON.stringify(r.careerIds);
   const mine = `career_id IN (SELECT value FROM json_each(?)) AND released_value = -1`;
   const results = await d1.batch([

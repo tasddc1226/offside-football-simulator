@@ -9,6 +9,8 @@ import { ClubMark } from '../ui/ClubBadge';
 import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
 import { RankBadge } from './Laurel';
+import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+import { tn } from '@offside/game/i18n/names';
 
 export function HofPodium({
   players,
@@ -50,7 +52,15 @@ export function HofPodium({
             scale={1}
             testID={`hof-podium-rank-${rank}`}
             onPress={() => void openPublicLegend(entry)}
-            accessibilityLabel={`${rank}위 ${name}, ${nation.ko}${showPosition ? `, ${posLabel(entry)}` : ''}, ${metric(entry)}${unit}${mine ? ', 내 선수' : ''}`}
+            accessibilityLabel={L.podiumPlayerApp({
+              rank,
+              name,
+              country: tn(nation.ko),
+              pos: showPosition ? posLabel(entry) : '',
+              value: String(metric(entry)),
+              unit,
+              mine,
+            })}
             style={{ flex: 1, minWidth: 0 }}
           >
             <View style={{ alignItems: 'center', gap: 4, paddingBottom: 10 }}>
@@ -59,7 +69,7 @@ export function HofPodium({
                 <ClubMark name={entry.lastClub} id={entry.lastClubId} size={20} />
                 <Txt
                   testID={`hof-nation-${nation.code}`}
-                  accessibilityLabel={nation.ko}
+                  accessibilityLabel={tn(nation.ko)}
                   style={{ fontSize: 16 }}
                 >
                   {flagOf(nation.code)}
@@ -79,7 +89,7 @@ export function HofPodium({
               </Txt>
               {showPosition || mine ? (
                 <Txt tone="muted" center style={{ fontSize: 12 }}>
-                  {[showPosition ? posLabel(entry) : '', mine ? '내 선수' : '']
+                  {[showPosition ? posLabel(entry) : '', mine ? L.mine : '']
                     .filter(Boolean)
                     .join(' · ')}
                 </Txt>
@@ -105,7 +115,7 @@ export function HofPodium({
                 <Txt style={{ fontSize: 12 }}>{unit}</Txt>
               </Txt>
               <Txt tone="muted" center style={{ fontSize: 12 }}>
-                {rank}위
+                {L.rankN({ rank })}
               </Txt>
             </View>
           </Press>

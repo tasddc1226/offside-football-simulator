@@ -23,7 +23,7 @@ import { CONFEDS, flagOf } from '@offside/contracts/nations';
 import { BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
 import { isKorean, nationOf } from '@offside/game/nation';
 import { bodyNote, hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
-import { withRo } from '@offside/app-core/format';
+import { createText as L } from '@offside/app-core/i18n/ko/create';
 import { watchDetailOpening } from '@offside/app-core/season-opening';
 import { detailOpenNow, draftBody, draftDpos, randomName } from '@offside/app-core/state';
 import { rollCandidates, startCareer } from '../../game/host';
@@ -39,9 +39,10 @@ import { MiniRadar } from './MiniRadar';
 import { NationPicker } from './NationPicker';
 import { ScoutScan } from './ScoutScan';
 import { BodyInput, Field, Seg, SegCell, mixHex, useInputStyle } from './parts';
+import { tn } from '@offside/game/i18n/names';
 
 const posKeys = Object.keys(POS) as Pos[];
-const feet = ['오른발', '왼발', '양발'] as const;
+const feet = ['오른발', '왼발', '양발'] as const; // 저장값(화면에는 L.foot으로)
 const growthPct = Math.round((FOCUS_GROWTH - 1) * 100);
 
 // ── 입력을 원본 상태(appState.C)에 쓰는 동작들 ──
@@ -178,11 +179,11 @@ export default function Create() {
   // 후보를 바로 보여 주지 않고 스카우트가 추리는 연출(약 3초)이 끝난 뒤에 뽑는다.
   const [scouting, setScouting] = useState(false);
   const scoutSteps = [
-    `${nation.ko} 고교 경기 영상 분석`,
-    `${posLabel({ pos: C.pos, dpos })} 후보군 추리기`,
-    `주력 ${C.focus.map((k) => labels[k]).join('·')} 대조`,
-    `체격 ${body.h}cm · ${body.w}kg 비교`,
-    '능력치 확인 · 후보 3명 확정',
+    L.stepVideo({ nation: tn(nation.ko) }),
+    L.stepPool({ pos: posLabel({ pos: C.pos, dpos }) }),
+    L.stepFocus({ list: C.focus.map((k) => labels[k]).join('·') }),
+    L.stepBody({ h: body.h, w: body.w }),
+    L.stepDone,
   ];
   const scouted = () => {
     rollCandidates();
@@ -218,7 +219,7 @@ export default function Create() {
         <View style={{ marginBottom: -8 }}>
           <Txt v="eyebrow">Player Creation · {step === 'form' ? 1 : 2}/2</Txt>
           <Txt v="h1" accessibilityRole="header">
-            {step === 'form' ? '고교 3학년, 나는 어떤 선수인가' : '스카우트 리포트를 비교해 보세요'}
+            {step === 'form' ? L.titleForm : L.titleCandidates}
           </Txt>
         </View>
 
@@ -226,7 +227,7 @@ export default function Create() {
         <View style={{ paddingTop: 8 }}>
           <View
             testID="live-card"
-            accessibilityLabel="내 선수 미리보기"
+            accessibilityLabel={L.previewLabel}
             style={[
               {
                 flexDirection: 'row',
@@ -273,7 +274,7 @@ export default function Create() {
                 numberOfLines={1}
                 style={{ fontSize: rem(1.25), lineHeight: rem(1.25) * 1.2, color: onPitch }}
               >
-                {C.name.trim() || '이름 없음'}
+                {C.name.trim() || L.noName}
               </Txt>
               <Txt
                 style={{
@@ -285,20 +286,20 @@ export default function Create() {
                 <Txt accessibilityElementsHidden style={{ fontSize: rem(0.8125) }}>
                   {flagOf(nation.code)}
                 </Txt>{' '}
-                {nation.ko} · {posLabel({ pos: C.pos, dpos })} · {C.foot}
+                {tn(nation.ko)} · {posLabel({ pos: C.pos, dpos })} · {L.foot({ v: C.foot })}
                 {bodyErr ? '' : ` · ${body.h}cm ${body.w}kg`}
               </Txt>
               <Row gap={4} style={{ marginTop: 4 }}>
                 {trait ? <LiveTag>{`${trait.icon} ${trait.name}`}</LiveTag> : null}
                 {C.focus.length ? (
-                  <LiveTag>{`주력 ${C.focus.map((k) => labels[k]).join('·')}`}</LiveTag>
+                  <LiveTag>{L.focusTag({ list: C.focus.map((k) => labels[k]).join('·') })}</LiveTag>
                 ) : null}
               </Row>
             </View>
             <View style={{ alignItems: 'center', gap: 2 }}>
               <MiniRadar pos={C.pos} attrs={cardAttrs} size={72} onPitch />
               <Txt style={{ fontSize: rem(0.6875), color: alpha(onPitch, 0.85) }}>
-                {picked ? '시작' : '예상'} OVR{' '}
+                {picked ? L.ovrStart : L.ovrEst} OVR{' '}
                 <Txt num style={{ fontSize: rem(1.0625), color: c.pitchAccent }}>
                   {startOvr(C.pos, cardAttrs)}
                 </Txt>
@@ -311,11 +312,11 @@ export default function Create() {
           <Card gap={18}>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
-                <Field label="이름">
+                <Field label={L.name}>
                   <View>
                     <TextInput
                       testID="f-name"
-                      accessibilityLabel="이름"
+                      accessibilityLabel={L.name}
                       maxLength={10}
                       autoCorrect={false}
                       autoCapitalize="none"
@@ -328,7 +329,7 @@ export default function Create() {
                     />
                     <Press
                       testID="random-name"
-                      accessibilityLabel="이름 랜덤으로 바꾸기"
+                      accessibilityLabel={L.randomName}
                       onPress={() => (appState.C.name = randomName())}
                       style={{
                         position: 'absolute',
@@ -346,10 +347,10 @@ export default function Create() {
                 </Field>
               </View>
               <View style={{ width: 84 }}>
-                <Field label="등번호">
+                <Field label={L.number}>
                   <TextInput
                     testID="f-num"
-                    accessibilityLabel="등번호"
+                    accessibilityLabel={L.number}
                     keyboardType="number-pad"
                     returnKeyType="done"
                     maxLength={2}
@@ -364,25 +365,26 @@ export default function Create() {
               </View>
             </View>
 
-            <Field label="국적">
+            <Field label={L.nation}>
               <NationPicker
                 testID="f-nation"
                 value={C.nation}
                 onChange={(code) => (appState.C.nation = code)}
               />
               <Txt v="sm" tone="muted" testID="nation-note">
-                {foreign
-                  ? `한국 고교로 축구 유학을 온 선수로 시작해요. ${nation.ko} 대표팀에 뽑히고 대륙컵은 ${CONFEDS[nation.conf].cup}예요. 병역은 없어요. `
-                  : '대표팀 대륙컵은 AFC 아시안컵이에요. 병역(상무·현역)이 있고, 아시안게임 금메달·올림픽 금·은·동메달로 체육요원 특례를 받을 수 있어요. '}
-                대표팀 발탁 기준은 어느 나라든 같아요.
+                {`${
+                  foreign
+                    ? L.nationForeign({ nation: tn(nation.ko), cup: tn(CONFEDS[nation.conf].cup) })
+                    : L.nationHome
+                } ${L.nationSame}`}
               </Txt>
             </Field>
 
-            <Field label="체격">
+            <Field label={L.body}>
               <Row gap={8} wrap={false}>
                 <BodyInput
                   testID="f-height"
-                  label="키"
+                  label={L.height}
                   unit="cm"
                   value={C.height}
                   fallback={def.h}
@@ -391,7 +393,7 @@ export default function Create() {
                 />
                 <BodyInput
                   testID="f-weight"
-                  label="몸무게"
+                  label={L.weight}
                   unit="kg"
                   value={C.weight}
                   fallback={def.w}
@@ -406,13 +408,11 @@ export default function Create() {
                 testID="body-note"
                 accessibilityLiveRegion="polite"
               >
-                {bodyErr
-                  ? bodyErr
-                  : `BMI ${bmiOf(body).toFixed(1)}${note ? ` · ${note}` : ' · 포지션 평균 체격'}. 시작 OVR은 같고, 세부 능력치 분포만 조금 달라져요.`}
+                {bodyErr ? bodyErr : L.bodyNote({ bmi: bmiOf(body).toFixed(1), note })}
               </Txt>
             </Field>
 
-            <Field label="포지션">
+            <Field label={L.position}>
               <Seg>
                 {posKeys.map((k) => (
                   <SegCell key={k} cols={2} testID={`pos-${k}`}>
@@ -429,7 +429,7 @@ export default function Create() {
             </Field>
 
             {detailOpen && DETAILS_OF[C.pos].length > 1 ? (
-              <Field label="세부 포지션">
+              <Field label={L.detailPosition}>
                 <Seg>
                   {DETAILS_OF[C.pos].map((d) => (
                     <SegCell
@@ -448,12 +448,12 @@ export default function Create() {
                   ))}
                 </Seg>
                 <Txt v="sm" tone="muted">
-                  세부 포지션은 은퇴까지 바뀌지 않아요. 능력치 성장·골과 도움 비중이 달라져요.
+                  {L.detailNote}
                 </Txt>
               </Field>
             ) : null}
 
-            <Field label="주발">
+            <Field label={L.footLabel}>
               <Seg>
                 {feet.map((f) => (
                   <SegCell key={f} cols={3} testID={`foot-${f}`}>
@@ -462,14 +462,14 @@ export default function Create() {
                       onPress={() => (appState.C.foot = f)}
                       style={{ flex: 1 }}
                     >
-                      <Txt bold>{f}</Txt>
+                      <Txt bold>{L.foot({ v: f })}</Txt>
                     </Opt>
                   </SegCell>
                 ))}
               </Seg>
             </Field>
 
-            <Field label={`주력 능력치 · ${FOCUS_PICK}개 선택`}>
+            <Field label={L.focusTitle({ n: FOCUS_PICK })}>
               <Seg>
                 {ATTR_KEYS.map((k) => {
                   const d = preview[k] ?? 0;
@@ -486,10 +486,10 @@ export default function Create() {
                           ]}
                         >
                           {on
-                            ? `시작 +${d} · 성장 +${growthPct}%`
+                            ? L.focusUp({ d, pct: growthPct })
                             : d < 0
-                              ? `시작 ${d}`
-                              : '변화 없음'}
+                              ? L.focusDown({ d })
+                              : L.focusNone}
                         </Txt>
                       </Opt>
                     </SegCell>
@@ -498,7 +498,7 @@ export default function Create() {
               </Seg>
             </Field>
 
-            <Field label="성장 특성">
+            <Field label={L.trait}>
               <Seg>
                 {TRAITS.map((t) => (
                   <SegCell key={t.id} cols={2} testID={`trait-${t.id}`}>
@@ -519,18 +519,18 @@ export default function Create() {
               </Seg>
             </Field>
             <Txt v="sm" tone="muted">
-              잠재력 평가는 은퇴할 때 공개돼요.
+              {L.potentialNote}
             </Txt>
           </Card>
         ) : s.candidates ? (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
               <Txt v="sm" tone="muted" style={{ flex: 1 }}>
-                세 후보는 능력치 총합이 같고 분포만 달라요. 카드를 눌러 비교해 보세요.
+                {L.candIntro}
               </Txt>
               {s.candidatesOpen.some((o) => !o) ? (
                 <Btn sm testID="open-all" onPress={openAll}>
-                  모두 열기
+                  {L.openAll}
                 </Btn>
               ) : null}
             </View>
@@ -544,7 +544,11 @@ export default function Create() {
                       <Press
                         scale={0.985}
                         testID={`cand-${i}`}
-                        accessibilityLabel={`후보 ${i + 1}, OVR ${startOvr(C.pos, cand.attrs)}, ${scoutLine(C.pos, cand.attrs)}`}
+                        accessibilityLabel={L.candOpenA11y({
+                          n: i + 1,
+                          ovr: startOvr(C.pos, cand.attrs),
+                          line: scoutLine(C.pos, cand.attrs),
+                        })}
                         accessibilityState={{ selected: isPicked }}
                         onPress={() => pick(i)}
                         style={[
@@ -568,7 +572,7 @@ export default function Create() {
                               letterSpacing: rem(1.125) * 0.02,
                             }}
                           >
-                            후보 {i + 1}
+                            {L.candNo({ n: i + 1 })}
                           </Txt>
                           <Txt
                             tone="muted"
@@ -583,7 +587,7 @@ export default function Create() {
                               {startOvr(C.pos, cand.attrs)}
                             </Txt>
                           </Txt>
-                          {isPicked ? <Pill tone="good">✓ 선택</Pill> : null}
+                          {isPicked ? <Pill tone="good">{L.picked}</Pill> : null}
                         </View>
                         <Txt
                           tone="accent"
@@ -657,7 +661,10 @@ export default function Create() {
                     <Press
                       scale={0.985}
                       testID={`cand-${i}`}
-                      accessibilityLabel={`후보 ${i + 1}, 스카우트 메모: 숨은 무기는 ${labels[hiddenStrength(cand.attrs, C.focus)]}. 눌러서 열기`}
+                      accessibilityLabel={L.candClosedA11y({
+                        n: i + 1,
+                        k: labels[hiddenStrength(cand.attrs, C.focus)],
+                      })}
                       onPress={() => pick(i)}
                       style={{
                         flexDirection: 'row',
@@ -695,10 +702,10 @@ export default function Create() {
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Txt bold style={{ fontSize: rem(1), color: onPitch }}>
-                          후보 {i + 1}
+                          {L.candNo({ n: i + 1 })}
                         </Txt>
                         <Txt style={{ fontSize: rem(0.75), color: alpha(onPitch, 0.75) }}>
-                          스카우트 메모: 숨은 무기는 {labels[hiddenStrength(cand.attrs, C.focus)]}
+                          {L.scoutMemo({ k: labels[hiddenStrength(cand.attrs, C.focus)] })}
                         </Txt>
                       </View>
                       <Txt
@@ -709,7 +716,7 @@ export default function Create() {
                           color: alpha(onPitch, 0.7),
                         }}
                       >
-                        탭해서 열기
+                        {L.tapToOpen}
                       </Txt>
                     </Press>
                   </FlyIn>
@@ -723,7 +730,7 @@ export default function Create() {
       {step === 'form' ? (
         <ActionBar row>
           <Btn testID="home" onPress={goHome}>
-            취소
+            {L.cancel}
           </Btn>
           <Btn
             kind="primary"
@@ -733,16 +740,16 @@ export default function Create() {
             style={{ flex: 1, minWidth: 0 }}
           >
             {bodyErr
-              ? '키·몸무게를 확인해 주세요'
+              ? L.checkBody
               : focusLeft > 0
-                ? `주력 능력치를 ${focusLeft}개 더 골라 주세요`
-                : '후보 3명 보기 →'}
+                ? L.focusMore({ n: focusLeft })
+                : L.seeCandidates}
           </Btn>
         </ActionBar>
       ) : s.candidates ? (
         <ActionBar row>
           <Btn testID="home" onPress={backToForm}>
-            ← 다시 입력
+            {L.back}
           </Btn>
           <Btn
             kind="primary"
@@ -751,9 +758,7 @@ export default function Create() {
             onPress={confirmPick}
             style={{ flex: 1, minWidth: 0 }}
           >
-            {s.candidatePick == null
-              ? '후보를 한 명 골라 주세요'
-              : `${withRo(`후보 ${s.candidatePick + 1}`)} 킥오프 →`}
+            {s.candidatePick == null ? L.pickOne : L.kickoff({ n: s.candidatePick + 1 })}
           </Btn>
         </ActionBar>
       ) : null}

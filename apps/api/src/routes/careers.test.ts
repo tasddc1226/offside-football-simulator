@@ -193,6 +193,43 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect((await rowOf()).hidden).toBe(1);
   });
 
+  it('T-11-097: 성장 기록에 세이브를 고친 흔적(시즌 중 급상승·지난 시즌보다 높은 시작 OVR)이 있으면 숨긴다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
+    const body = seasonBody();
+    const growth = (o0: number, ph: number[]) => ({
+      v: 1,
+      o0,
+      ph,
+      a0: [60, 60, 60, 60, 60, 60],
+      a1: [61, 61, 61, 61, 61, 61],
+      s0: [],
+      s1: [],
+      pot: { s: 75, b: 0, bl: 0, r: 2 },
+    });
+    const send = (id: string, year: number, age: number, ovr: number, g: unknown) =>
+      put(`/v1/careers/${id}/seasons/${year}`, {
+        ...body,
+        season: { ...body.season, age, ovr, growth: g },
+      });
+    const hiddenOf = async (id: string) =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, id)))[0]!.hidden;
+
+    // 정상 성장(구간마다 몇씩)은 그대로 둔다.
+    expect((await send(CAREER_ID, 2026, 29, 67, growth(65, [65, 66, 66]))).status).toBe(200);
+    expect(await hiddenOf(CAREER_ID)).toBe(0);
+    // 만 30세(나이별 상한 없음)에 구간 사이 67 → 90: 상한에 안 걸리지만 숨긴다.
+    expect((await send(CAREER_ID, 2027, 30, 91, growth(67, [90, 90, 91]))).status).toBe(200);
+    expect(await hiddenOf(CAREER_ID)).toBe(1);
+
+    // 시즌 시작 OVR이 지난 시즌 저장값(상한으로 잘린 81)보다 높다 — 시즌 사이에 고쳤다.
+    const other = '7a1c9b1a-6f0f-4a4b-9c3a-1e2f3a4b5c6e';
+    expect((await send(other, 2026, 18, 81, growth(60, [60, 61, 62]))).status).toBe(200);
+    expect(await hiddenOf(other)).toBe(0);
+    expect((await send(other, 2027, 19, 87, growth(95, [95, 95, 96]))).status).toBe(200);
+    expect(await hiddenOf(other)).toBe(1);
+  });
+
   it('T-11-030: 처음 스카우트 평가는 한 번만 저장하고, 은퇴 때 실제 잠재력을 저장한다', async () => {
     const { cookie } = await issueCookie(ctx);
     const put = (path: string, body: unknown) => putJson(ctx, cookie, path, body);
@@ -824,6 +861,7 @@ describe('T-11-063 개막 첫 업로드 경계', () => {
     const app = createApp();
     const pre = '77777777-7777-4777-8777-777777777777';
     const s1 = '88888888-8888-4888-8888-888888888888';
+    const late = '99999999-9999-4999-8999-999999999999';
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-05T14:59:59.999Z'));
     const upload = async (id: string, body = seasonBody()) => {
@@ -838,12 +876,15 @@ describe('T-11-063 개막 첫 업로드 경계', () => {
     vi.setSystemTime(new Date('2026-10-05T15:00:00.000Z'));
     await upload(s1, seasonBody({ career: { ...TEST_CAREER, dpos: 'ST' } }));
     await upload(pre);
+    // T-11-095 세부 포지션 없이 만든(프리시즌 규칙) 선수는 개막 뒤에 처음 올라와도 프리시즌이다.
+    await upload(late);
     const rows = await ctx.db
       .select({ id: careers.id, season: careers.serviceSeason, dpos: careers.dpos })
       .from(careers);
     expect(Object.fromEntries(rows.map((r) => [r.id, [r.season, r.dpos]]))).toEqual({
       [pre]: [0, null],
       [s1]: [1, 'ST'],
+      [late]: [0, null],
     });
   });
 });

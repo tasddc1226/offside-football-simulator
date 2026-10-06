@@ -1,6 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
+
+// 기본 은퇴 기록은 프리시즌이다. 실제 개막 날짜와 분리해 검증한다.
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-30T00:00:00.000Z'));
+});
 import AxeBuilder from '@axe-core/playwright';
-import { API, ok, openMarket, startCareer } from './helpers.js';
+import { API, ok, openMarket, startCareer, usePreseason } from './helpers.js';
+
+// 프리시즌 기록으로 꾸민 화면이라 시계를 시즌 1 개막 전으로 고정한다.
+usePreseason();
 
 // T-10-076 영구결번: 은퇴 업로드 응답의 심사 결과로 은퇴 화면에 결번 세리머니를 띄운다. 판정 기준(점수·시즌 수)은
 // 서버만 알고 화면에 내보내지 않는다.
@@ -288,17 +296,38 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
     pos: 'FW',
     ...o,
   });
-  await page.route(`${API}/v1/retired-numbers*`, (r) =>
-    r.fulfill(
-      ok({
-        items: [
-          item(1, { clubId: 'k1-0', club: '울산 호랑이', number: 1, pos: 'GK', name: null }),
-          item(2, { careerId: OLD_ID, name: '옛레전드' }),
-          item(3, { number: 4, pos: 'DF', careerId: OTHER, name: '박결번', club: '시티' }),
-        ],
-      }),
-    ),
-  );
+  const items = [
+    item(1, { clubId: 'k1-0', club: '울산 호랑이', number: 1, pos: 'GK', name: null }),
+    item(2, { careerId: OLD_ID, name: '옛레전드' }),
+    item(3, { number: 4, pos: 'DF', careerId: OTHER, name: '박결번', club: '시티' }),
+  ];
+  // T-11-101 첫 화면은 요약만, 구단·최신순은 고를 때 따로 받는다.
+  const asked: string[] = [];
+  await page.route(`${API}/v1/retired-numbers**`, (r) => {
+    const url = new URL(r.request().url());
+    asked.push(url.pathname + url.search);
+    if (url.pathname.endsWith('/summary'))
+      return r.fulfill(
+        ok({
+          season: 0,
+          total: 3,
+          clubs: [
+            { clubId: 'pl-0', club: '시티', count: 2 },
+            { clubId: 'k1-0', club: '울산 호랑이', count: 1 },
+          ],
+          recent: [...items].reverse(),
+        }),
+      );
+    const club = url.searchParams.get('club');
+    if (club)
+      return r.fulfill(
+        ok({
+          season: 0,
+          items: items.filter((it) => it.clubId === club).sort((a, b) => a.number - b.number),
+        }),
+      );
+    return r.fulfill(ok({ season: 0, items: [...items].reverse(), next: null }));
+  });
   await page.route(`${API}/v1/hof/${OTHER}`, (r) =>
     r.fulfill(
       ok({
@@ -335,28 +364,40 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
 
   const wall = page.locator('[data-rn-wall]');
   await expect(wall.locator('[data-rn-club]')).toHaveCount(2);
-  // 결번 둘인 맨체스터가 먼저, 구단 안에서는 번호 순.
+  // 첫 화면은 요약 하나만 받는다.
+  expect(asked).toEqual(['/v1/retired-numbers/summary?season=0']);
+  // 최근 결번은 최신순, 구단 이름을 함께 단다.
+  await expect(wall.locator('[data-rn-tile]').first()).toHaveAttribute('data-rn-tile', '3');
+  await expect(wall.locator('[data-rn-tile]').first()).toContainText('맨체스터 스카이블루');
+  // 결번 둘인 맨체스터가 먼저. 결번 당시 유저가 바꿔 부른 이름('시티')이 아니라 게임 기본 이름으로 건다.
   await expect(wall.locator('[data-rn-club]').first()).toHaveAttribute('data-rn-club', 'pl-0');
-  // 결번 당시 유저가 바꿔 부른 이름('시티')이 아니라 게임 기본 이름으로 건다.
-  await expect(wall.locator('[data-rn-club="pl-0"] b').first()).toHaveText('맨체스터 스카이블루');
-  await expect(wall.locator('[data-rn-club="pl-0"] [data-rn-tile]')).toHaveText([
-    /4\s*박결번/,
-    /10\s*옛레전드.*내 선수/s,
-  ]);
-  await expect(wall.locator('[data-rn-club="k1-0"] [data-rn-tile]')).toContainText('골키퍼');
+  await expect(wall.locator('[data-rn-club="pl-0"] b')).toHaveText('맨체스터 스카이블루');
   const axe = await new AxeBuilder({ page }).include('[data-rn-wall]').analyze();
   expect(axe.violations.map((v) => v.id)).toEqual([]);
 
-  await wall.locator('[data-rn-filters]').click();
-  await wall.locator('[data-rn-order="recent"]').click();
+  await wall.locator('[data-rn-club-order="league"]').click();
+  await expect(wall.locator('[data-rn-league]')).toHaveText([/프리미어리그\s*2/, /K리그1\s*1/]);
+
+  // 구단을 누르면 그 구단 결번만 받아 번호 순으로.
+  await wall.locator('[data-rn-club="pl-0"]').click();
+  await expect(wall.locator('[data-rn-tile]')).toHaveText([
+    /4\s*박결번/,
+    /10\s*옛레전드.*내 선수/s,
+  ]);
+  expect(asked.at(-1)).toBe('/v1/retired-numbers?season=0&club=pl-0');
+  await wall.locator('[data-rn-pos="DF"]').click();
+  await expect(wall.locator('[data-rn-tile]')).toHaveCount(1);
+  await wall.locator('[data-rn-back]').click();
+
+  await wall.locator('[data-rn-recent-all]').click();
   await expect(wall.locator('[data-rn-tile]')).toHaveCount(3);
-  await expect(wall.locator('[data-rn-tile]').first()).toHaveAttribute('data-rn-tile', '3');
-  await expect(wall.locator('[data-rn-tile]').first()).toContainText('맨체스터 스카이블루');
+  expect(asked.at(-1)).toBe('/v1/retired-numbers?season=0&before=0');
+  await expect(wall.locator('[data-rn-more]')).toHaveCount(0);
 
   await wall.locator('[data-rn-tile="3"]').click();
   await expect(page.locator('.film-open h1')).toHaveText('박결번');
   await page.locator('[data-act="hof-back"]').click();
   await expect(page.locator('[data-hof-tab="rn"]')).toHaveAttribute('aria-selected', 'true');
-  await wall.locator('[data-rn-filters]').click();
-  await expect(wall.locator('[data-rn-order="recent"]')).toHaveAttribute('aria-pressed', 'true');
+  // 선수 상세에 다녀와도 최신순 화면 그대로.
+  await expect(wall).toHaveAttribute('data-rn-screen', 'recent');
 });

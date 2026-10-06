@@ -4,7 +4,7 @@
   // T-10-062: 정보 나열 대신 한 편의 엔딩 크레딧처럼 — 타이틀 → 통산 기록 → 클럽별 챕터(우승·이정표·이야기) →
   // 대표팀 → 우승·수상 롤 → 마지막 휘슬. 은퇴 직후든 다시 볼 때든 사용자가 스크롤해 내려가는 대로 장면이
   // 화면에 들어올 때 하나씩 올라온다. 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
-  import { RETIREMENT_POTENTIAL_NOTE } from '@offside/app-core/potential-view';
+  import { retirementPotentialNote } from '@offside/app-core/potential-view';
   import type { Snippet } from 'svelte';
   import { legendScoreBreakdown, legendTitle } from '@offside/game/season';
   import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '@offside/game/retirement-report';
@@ -21,6 +21,8 @@
   import ClubMark from './ClubMark.svelte';
   import { rnOf } from './retiredNumber.svelte.js';
   import { EVENT_ICON as ICON, yearsOf } from '@offside/app-core/legendReport';
+  import { legendText as L } from '@offside/app-core/i18n/ko/legend';
+  import { tn } from '@offside/game/i18n/names';
 
   // end: 리포트 맨 아래(다음 행동 버튼 등).
   const { v, end }: { v: LegendView; end?: Snippet } = $props();
@@ -92,63 +94,63 @@
 {/snippet}
 {#snippet roll(list: HonourLine[], from: number)}
   {#each list as h, j (h.name)}
-    <div class="roll-line" style="--i:{from + j}"><b>{h.name}{h.years.length > 1 ? ` ×${h.years.length}` : ''}</b><span>{yearsOf(h.years)}</span></div>
+    <div class="roll-line" style="--i:{from + j}"><b>{tn(h.name)}{h.years.length > 1 ? ` ×${h.years.length}` : ''}</b><span>{yearsOf(h.years)}</span></div>
   {/each}
 {/snippet}
 
-<article class="film" class:playing aria-label="{v.name} 커리어 결산">
+<article class="film" class:playing aria-label={L.reportLabel({ name: v.name })}>
   <section class="film-open" class:credit-in={playing} data-credit="player">
     <div class="eyebrow film-kicker">Full Time{v.number != null ? ` · No.${v.number}` : ''}</div>
     <h1>{v.name}</h1>
-    <div class="film-sub">{POS_LABEL[v.pos]}{span ? ` · ${span}` : ''} · {v.age}세 은퇴</div>
+    <div class="film-sub">{tn(POS_LABEL[v.pos])}{span ? ` · ${span}` : ''} · {L.retiredAge({ age: v.age })}</div>
     <div class="film-score">
       <b><CountUp value={v.score} animate={playing} ms={1800} /></b><span>Legend Score</span>
     </div>
     {#if worth > 0}
       <div class="film-worth" class:credit-late={playing} data-legend-value>
-        <span>은퇴 가치</span><b>{fmtValue(worth)}</b>
-        {#if peakV}<small>최고 몸값 {fmtValue(peakV.value)} · {seasonLabelOf(peakV.row)} {peakV.row.club}</small>{/if}
+        <span>{L.worth}</span><b>{fmtValue(worth)}</b>
+        {#if peakV}<small>{L.peakValue({ value: fmtValue(peakV.value), season: seasonLabelOf(peakV.row), club: tn(peakV.row.club) })}</small>{/if}
       </div>
     {/if}
     <div class="film-pills" class:credit-late={playing}>
-      <span class="pill pill-gold">{legendTitle(v.score, v.dpos)}</span>
-      {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{main.name}’</span>{/if}
-      <span class="pill">최고 OVR {v.peak}</span>
-      {#if rnGranted}<span class="pill pill-rn" data-legend-rn-pill title="{rnGranted.club} 영구결번 {rnGranted.number}번">👑 {rnGranted.club} 영결 {rnGranted.number}</span>{/if}
+      <span class="pill pill-gold">{tn(legendTitle(v.score, v.dpos))}</span>
+      {#if main && main.cat !== 'legend'}<span class="pill" data-legend-title>‘{tn(main.name)}’</span>{/if}
+      <span class="pill">{L.peakOvr({ peak: v.peak })}</span>
+      {#if rnGranted}<span class="pill pill-rn" data-legend-rn-pill title={L.rnPillTitle({ club: tn(rnGranted.club), number: rnGranted.number })}>{L.rnPill({ club: tn(rnGranted.club), number: rnGranted.number })}</span>{/if}
     </div>
     <!-- 통산 기록은 레전드 점수 바로 아래(첫 화면에서 한눈에). -->
-    <section class="film-stats" data-credit="highlights" aria-label="통산 기록" use:reveal>
-      <div><b><CountUp value={d ? d.career.length : 0} animate={playing} run={seen.highlights} /></b><span>시즌</span></div>
-      <div><b><CountUp value={t ? t.p : v.totals.apps} animate={playing} run={seen.highlights} /></b><span>경기</span></div>
+    <section class="film-stats" data-credit="highlights" aria-label={L.statsLabel} use:reveal>
+      <div><b><CountUp value={d ? d.career.length : 0} animate={playing} run={seen.highlights} /></b><span>{L.statSeasons}</span></div>
+      <div><b><CountUp value={t ? t.p : v.totals.apps} animate={playing} run={seen.highlights} /></b><span>{L.statApps}</span></div>
       {#if back && t}
-        <div><b><CountUp value={t.cs} animate={playing} run={seen.highlights} /></b><span>무실점</span></div>
-        <div><b><CountUp value={t.g + t.a} animate={playing} run={seen.highlights} /></b><span>공격P</span></div>
+        <div><b><CountUp value={t.cs} animate={playing} run={seen.highlights} /></b><span>{L.statCleanSheets}</span></div>
+        <div><b><CountUp value={t.g + t.a} animate={playing} run={seen.highlights} /></b><span>{L.statGaPoints}</span></div>
       {:else}
-        <div><b><CountUp value={t ? t.g : v.totals.goals} animate={playing} run={seen.highlights} /></b><span>골</span></div>
-        <div><b><CountUp value={t ? t.a : v.totals.assists} animate={playing} run={seen.highlights} /></b><span>도움</span></div>
+        <div><b><CountUp value={t ? t.g : v.totals.goals} animate={playing} run={seen.highlights} /></b><span>{L.statGoals}</span></div>
+        <div><b><CountUp value={t ? t.a : v.totals.assists} animate={playing} run={seen.highlights} /></b><span>{L.statAssists}</span></div>
       {/if}
-      <div><b><CountUp value={caps} animate={playing} run={seen.highlights} /></b><span>A매치</span></div>
-      <div><b><CountUp value={v.totals.trophies} animate={playing} run={seen.highlights} /></b><span>트로피</span></div>
+      <div><b><CountUp value={caps} animate={playing} run={seen.highlights} /></b><span>{L.statCaps}</span></div>
+      <div><b><CountUp value={v.totals.trophies} animate={playing} run={seen.highlights} /></b><span>{L.statTrophies}</span></div>
     </section>
-    {#if !d}<p class="film-note">시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 줘요.</p>{/if}
-    {#if playing && !seen.journey}<div class="film-cue" aria-hidden="true">스크롤해서 커리어 돌아보기<i>↓</i></div>{/if}
+    {#if !d}<p class="film-note">{L.noDetailNote}</p>{/if}
+    {#if playing && !seen.journey}<div class="film-cue" aria-hidden="true">{L.scrollCue}<i>↓</i></div>{/if}
   </section>
 
   {#if chapters.length}
     <header class="film-head" data-credit="journey" use:reveal>
       <div class="eyebrow film-kicker">The Journey</div>
-      <h2>구단별 커리어</h2>
+      <h2>{L.journeyTitle}</h2>
     </header>
     <ol class="film-rail">
       {#each chapters as c, i (i)}
         <li class="chapter" data-credit="journey-{i}" use:reveal>
           <div class="ch-years">{c.from}{c.to !== c.from ? ` — ${c.to}` : ''}</div>
-          <h3 class="ch-club"><ClubMark name={c.club} id={c.clubId} size={24} /> {c.club}</h3>
-          <div class="ch-meta">{c.leagues.join(' → ')} · {c.ageFrom === c.ageTo ? `${c.ageFrom}세` : `${c.ageFrom}–${c.ageTo}세`} · {c.seasons}시즌</div>
+          <h3 class="ch-club"><ClubMark name={c.club} id={c.clubId} size={24} /> {tn(c.club)}</h3>
+          <div class="ch-meta">{L.chapterMeta({ leagues: c.leagues.map(tn).join(' → '), ageFrom: c.ageFrom, ageTo: c.ageTo, seasons: c.seasons })}</div>
           <div class="ch-stats">
-            <span><b>{c.apps}</b>경기</span>
-            {#if back}<span><b>{c.cs}</b>무실점</span>{/if}
-            <span><b>{c.goals}</b>골</span><span><b>{c.assists}</b>도움</span>
+            <span><b>{c.apps}</b>{L.statApps}</span>
+            {#if back}<span><b>{c.cs}</b>{L.statCleanSheets}</span>{/if}
+            <span><b>{c.goals}</b>{L.statGoals}</span><span><b>{c.assists}</b>{L.statAssists}</span>
           </div>
           {#if c.events.length}
             <ul class="ch-events">
@@ -164,7 +166,7 @@
   {#if d && peakV}
     <section class="film-value" data-credit="value" use:reveal>
       <div class="eyebrow film-kicker">Market Value</div>
-      <h2>몸값 흐름</h2>
+      <h2>{L.valueTitle}</h2>
       <ValueChart rows={d.career} />
     </section>
   {/if}
@@ -172,10 +174,10 @@
   {#if caps > 0 || national.length}
     <section class="film-national" data-credit="national" use:reveal>
       <div class="eyebrow film-kicker">For the Country</div>
-      <h2>국가대표</h2>
-      <div class="nat-caps"><b><CountUp value={caps} animate={playing} run={seen.national} /></b> A매치</div>
+      <h2>{L.nationalTitle}</h2>
+      <div class="nat-caps"><b><CountUp value={caps} animate={playing} run={seen.national} /></b> {L.statCaps}</div>
       {#if d?.nat.goals !== undefined}
-        <div class="nat-ga" data-nat-ga>{d.nat.goals}골 · {d.nat.assists ?? 0}도움</div>
+        <div class="nat-ga" data-nat-ga>{L.natGa({ goals: d.nat.goals, assists: d.nat.assists ?? 0 })}</div>
       {/if}
       {#if national.length}
         <ul class="ch-events">
@@ -189,7 +191,7 @@
     <section class="film-roll" data-credit="honours" use:reveal>
       {#if honours.length}
         <div class="eyebrow film-kicker">Honours</div>
-        <h2>우승 연혁</h2>
+        <h2>{L.honoursTitle}</h2>
         {@render roll(honours, 0)}
       {/if}
       {#if awards.length}
@@ -202,12 +204,12 @@
   {#if v.pot}
     <section class="film-pot" data-credit="pot" data-legend-pot use:reveal>
       <div class="eyebrow film-kicker">Scout Report</div>
-      <p>은퇴 시점 잠재력 평가</p>
+      <p>{L.potTitle}</p>
       <b>{v.pot.real}</b>
-      <p>잠재력 {v.pot.value} · 은퇴 시점에 기록한 값</p>
-      <p>{RETIREMENT_POTENTIAL_NOTE}</p>
+      <p>{L.potLine({ value: v.pot.value })}</p>
+      <p>{retirementPotentialNote()}</p>
       <div class="film-pot-ach" data-legend-ach>
-        <span>최고 OVR</span><strong>{v.peak}</strong>
+        <span>{L.peakOvrLabel}</span><strong>{v.peak}</strong>
       </div>
     </section>
   {/if}
@@ -219,8 +221,8 @@
   <section class="film-finale" data-credit="finale" use:reveal>
     <ClubMark name={v.lastClub} id={v.lastClubId} size={56} />
     <div class="eyebrow film-kicker">The Final Whistle</div>
-    <p>{v.age}세, {v.lastClub}에서<br />마지막 휘슬이 울렸습니다.</p>
-    <h2>수고했어요, {v.name}</h2>
+    <p>{L.finaleLine1({ age: v.age, club: tn(v.lastClub) })}<br />{L.finaleLine2}</p>
+    <h2>{L.thanks({ name: v.name })}</h2>
     <div class="film-end">Full Time</div>
   </section>
 </article>
@@ -228,11 +230,11 @@
 {#if d}
   <!-- 펼칠 때만 그린다(시즌별 표가 길다). -->
   <details class="card film-more" data-credit="career" bind:open={more}>
-    <summary>시즌별 기록 · 레전드 점수 구성 자세히 보기</summary>
+    <summary>{L.moreSummary}</summary>
     {#if more && breakdown}
       <div class="stack">
-        <h2>레전드 점수 구성</h2>
-        <p class="muted fs-xs">포지션별 기여(공격수·미드필더는 골·도움, 수비수·골키퍼는 무실점 중심) + 출전 · 우승 · 개인상 · A매치 · 최고 OVR · 발롱도르/월드컵 보너스</p>
+        <h2>{L.breakdownTitle}</h2>
+        <p class="muted fs-xs">{L.breakdownNote}</p>
         <div class="legend-break">
           {#each breakdown.items as it, i (it.key)}
             <div class="legend-break-row"><span>{it.label}</span><b>{Math.round(it.value)}</b></div>

@@ -1,12 +1,18 @@
 import { useEffect } from 'react';
-import { Linking, View } from 'react-native';
+import { AppState, Linking, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import { pushRegistration, pushState } from '../../platform/push';
-import { checkPushOffer, dismissPushOffer, pushOffer } from '../../platform/pushOffer';
+import {
+  checkPushOffer,
+  dismissPushOffer,
+  snoozePushOffer,
+  pushOffer,
+} from '../../platform/pushOffer';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Txt } from '../../ui';
 import { WEB_ORIGIN } from '../../platform/config';
+import { homeMoreText } from '@offside/app-core/i18n/ko/homeMore';
 
 export function PushOptInCard() {
   const state = useSnapshot(pushState);
@@ -14,8 +20,13 @@ export function PushOptInCard() {
   const c = useColors();
   useEffect(() => {
     void checkPushOffer();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void checkPushOffer();
+    });
+    return () => subscription.remove();
   }, []);
-  if (offer.handled || !offer.eligible || state.enabled) return null;
+  if (offer.handled || Date.now() < offer.snoozedUntil || !offer.eligible || state.enabled)
+    return null;
   return (
     <Card testID="push-opt-in" gap={12} style={{ borderWidth: 1, borderColor: c.line }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -30,13 +41,10 @@ export function PushOptInCard() {
           />
         </Svg>
         <Txt bold accessibilityRole="header" style={{ flex: 1 }}>
-          새 소식을 알림으로 받아볼까요?
+          {homeMoreText.pushTitle}
         </Txt>
       </View>
-      <Txt tone="muted">
-        공지·릴리즈 노트 알림을 준비하고 있어요. 먼저 이 기기를 연결해 두세요. 설정에서 언제든 끌 수
-        있어요.
-      </Txt>
+      <Txt tone="muted">{homeMoreText.pushBody}</Txt>
       <View style={{ gap: 8 }}>
         <Btn
           kind="primary"
@@ -49,16 +57,16 @@ export function PushOptInCard() {
             });
           }}
         >
-          {state.busy ? '알림 연결 중…' : '알림 받기'}
+          {state.busy ? homeMoreText.pushBusy : homeMoreText.pushAccept}
         </Btn>
         <Btn
           kind="ghost"
           block
           disabled={state.busy}
           testID="push-opt-in-dismiss"
-          onPress={dismissPushOffer}
+          onPress={snoozePushOffer}
         >
-          나중에
+          {homeMoreText.pushLater}
         </Btn>
       </View>
       {state.message ? (
@@ -72,7 +80,7 @@ export function PushOptInCard() {
         testID="push-opt-in-privacy"
         onPress={() => void Linking.openURL(`${WEB_ORIGIN}/legal/privacy/#push`)}
       >
-        알림 정보 처리 안내
+        {homeMoreText.pushPrivacy}
       </Btn>
     </Card>
   );

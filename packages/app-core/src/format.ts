@@ -15,8 +15,14 @@ import {
   SUBS,
 } from '@offside/game/attributes';
 import type { CareerRecord, GameState } from '@offside/game/types';
+import { homeLiveText as L } from './i18n/ko/homeLive.js';
 
-export { anonName } from '@offside/game/pos-label';
+import { anonName as anonNameIn } from '@offside/game/pos-label';
+import { getLocale } from './i18n/core.js';
+
+/** 이름을 공개하지 않은 선수 표기(지금 언어로). */
+export const anonName = (pos: Parameters<typeof anonNameIn>[0], number: number | null): string =>
+  anonNameIn(pos, number, getLocale());
 import { fmtValue } from '@offside/contracts/market-value';
 export { fmtValue };
 
@@ -25,15 +31,23 @@ export type CardTier = 'legend' | 'gold' | 'silver';
 export const cardTier = (legendScore: number | null | undefined, peak: number): CardTier =>
   (legendScore ?? 0) >= 1000 ? 'legend' : peak >= 80 ? 'gold' : 'silver';
 
+/** T-11-114 선수 카드 시즌 뱃지 — 프리시즌 PRE, 그 뒤는 S1·S2…(이름은 teamSeasonName). */
+export const cardSeasonBadge = (season: number): string => (season === 0 ? 'PRE' : `S${season}`);
+/** 시즌 뱃지 바탕색(웹·앱 같이) — 프리시즌 보라, 시즌 1부터는 네 색을 차례로 돈다. 카드 등급 색과 섞이지 않는 진한 색. */
+const PRESEASON_COLOR = '#6a4a9c';
+const CARD_SEASON_COLORS = ['#1f7a5c', '#b0472f', '#2e5d7a', '#8a5a14'];
+export const cardSeasonColor = (season: number): string =>
+  season === 0 ? PRESEASON_COLOR : CARD_SEASON_COLORS[(season - 1) % CARD_SEASON_COLORS.length]!;
+
 /** 구단주 팀 선수 카드 아랫줄(웹·앱 같이): 능력치 안내가 먼저, 없으면 T-11-080 카드 기준가. 둘 다 없으면 null. */
 export function cardFootNote(p: {
   attrs?: object | null | undefined;
   attrsEstimated?: boolean | undefined;
   cardValue?: number | null | undefined;
 }): string | null {
-  if (!p.attrs) return '능력치 기록 없음';
-  if (p.attrsEstimated) return '추정 능력치';
-  return p.cardValue ? `기준가 ${fmtValue(p.cardValue)}` : null;
+  if (!p.attrs) return L.attrsNone;
+  if (p.attrsEstimated) return L.attrsEstimated;
+  return p.cardValue ? L.baseValue({ value: fmtValue(p.cardValue) }) : null;
 }
 
 export function seasonLabelOf(r: CareerRecord): string {
@@ -202,8 +216,8 @@ export const withEulReul = (word: string): string => `${word}${jongOf(word) > 0 
 /** 경과 시간(ms)을 '방금 · N분 전 · N시간 전 · 어제 · N일 전'으로(홈 라이브·전광판). */
 export function agoKo(ms: number): string {
   const s = Math.max(0, ms / 1000);
-  if (s < 60) return '방금';
-  if (s < 3600) return `${Math.floor(s / 60)}분 전`;
-  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
-  return s < 172800 ? '어제' : `${Math.floor(s / 86400)}일 전`;
+  if (s < 60) return L.agoNow;
+  if (s < 3600) return L.agoMin({ n: Math.floor(s / 60) });
+  if (s < 86400) return L.agoHour({ n: Math.floor(s / 3600) });
+  return s < 172800 ? L.agoYesterday : L.agoDay({ n: Math.floor(s / 86400) });
 }

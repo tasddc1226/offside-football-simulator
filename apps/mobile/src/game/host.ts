@@ -15,6 +15,7 @@ import { createNews } from '@offside/app-core/news';
 import { createOwnerConflicts } from '@offside/app-core/ownerConflict';
 import { createNavStack } from '@offside/app-core/navHistory';
 import { getProfile } from '@offside/app-core/api/client';
+import { gameText as T } from '@offside/app-core/i18n/ko/game';
 import { APP_VERSION, WEB_ORIGIN } from '../platform/config';
 import { ensureSession, renewSession, sessionToken } from '../platform/session';
 import {
@@ -37,7 +38,7 @@ export function save() {
   const ok = saveGame(s);
   if (!s || ok || saveWarned) return;
   saveWarned = true;
-  toast('저장 공간이 부족해 진행 상황을 저장하지 못했어요. 설정에서 백업해 두세요.');
+  toast(T.storageFull);
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;

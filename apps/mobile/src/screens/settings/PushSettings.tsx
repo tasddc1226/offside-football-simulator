@@ -1,54 +1,110 @@
 import { useEffect, useState } from 'react';
-import { Linking, View } from 'react-native';
+import { AppState, Linking, View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import { pushState, pushRegistration, testOwnPush } from '../../platform/push';
+import { pushState, pushTestState, pushRegistration, testOwnPush } from '../../platform/push';
+import { openInbox } from '../../platform/inbox';
 import { Btn, Txt } from '../../ui';
-import { SettingsCard, SettingsLabel } from './parts';
-import { cachedGet } from '@offside/app-core/api/client';
+import { SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
 import { WEB_ORIGIN } from '../../platform/config';
 import { dismissPushOffer } from '../../platform/pushOffer';
+import {
+  loadPushPreferences,
+  pushPreferencesState,
+  setPushPreference,
+} from '../../platform/pushPreferences';
+import type { PushPreferences } from '@offside/contracts';
+import { pushText as L } from '@offside/app-core/i18n/ko/push';
+import { intlLocale } from '@offside/app-core/i18n/core';
+
+const categories = (): { key: keyof PushPreferences; title: string; description: string }[] => [
+  { key: 'notice', title: L.catNotice, description: L.catNoticeBody },
+  { key: 'release', title: L.catRelease, description: L.catReleaseBody },
+  { key: 'team', title: L.catTeam, description: L.catTeamBody },
+  { key: 'market', title: L.catMarket, description: L.catMarketBody },
+  { key: 'social', title: L.catSocial, description: L.catSocialBody },
+];
 
 export function PushSettings() {
   const state = useSnapshot(pushState);
-  const [testMessage, setTestMessage] = useState('');
-  const [testing, setTesting] = useState(false);
-  const [admin, setAdmin] = useState(false);
+  const preferences = useSnapshot(pushPreferencesState);
   useEffect(() => {
-    let alive = true;
-    void cachedGet<{ admin: boolean }>('/v1/boards/viewer', 300_000).then((r) => {
-      if (alive && r.ok) setAdmin(r.data.admin);
+    void loadPushPreferences();
+  }, [preferences.sessionRevision]);
+  const [testMessage, setTestMessage] = useState('');
+  const test = useSnapshot(pushTestState);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const refresh = () => setNow(Date.now());
+    refresh();
+    const timer = setTimeout(refresh, Math.max(0, test.nextTestAt - Date.now()));
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refresh();
     });
     return () => {
-      alive = false;
+      clearTimeout(timer);
+      subscription.remove();
     };
-  }, []);
+  }, [test.nextTestAt]);
+  const waiting = now < test.nextTestAt;
   return (
     <SettingsCard gap={12}>
-      <SettingsLabel
-        eyebrow="Notifications"
-        title="새 소식 알림"
-        muted="공지·릴리즈 노트 알림을 준비하고 있어요. 기기를 미리 등록할 수 있고, 정식 발송은 아직 시작하지 않았어요."
-      />
-      <Txt tone="muted">알림 연결을 위해 푸시 토큰과 기기 종류·앱 버전을 저장해요.</Txt>
-      <View style={{ gap: 8 }}>
-        <Btn
-          block
-          disabled={state.busy}
+      <SettingsRow>
+        <SettingsLabel eyebrow="Notifications" title={L.title} muted={L.body} />
+        <Switch
+          value={state.enabled}
+          busy={state.busy}
           testID="push-toggle"
-          accessibilityLabel={
-            state.enabled ? '이 기기의 새 소식 알림 끄기' : '이 기기의 새 소식 알림 받기'
-          }
-          onPress={() => {
+          label={L.title}
+          onChange={(on) => {
             setTestMessage('');
             dismissPushOffer();
-            void pushRegistration.setEnabled(!state.enabled);
+            void pushRegistration.setEnabled(on);
           }}
-        >
-          {state.busy ? '알림 설정 중…' : state.enabled ? '알림 끄기' : '알림 받기'}
-        </Btn>
+        />
+      </SettingsRow>
+      <View style={{ gap: 12 }}>
+        <Txt tone="muted">{L.prefsNote}</Txt>
+        {categories().map(({ key, title, description }) => (
+          <SettingsRow key={key}>
+            <SettingsLabel title={title} muted={description} />
+            <Switch
+              value={preferences.values[key]}
+              label={L.catAria({ title })}
+              testID={`push-${key}-toggle`}
+              busy={preferences.saving === key}
+              disabled={!preferences.loaded || preferences.loading || preferences.saving !== null}
+              onChange={(on) => {
+                void setPushPreference(key, on);
+              }}
+            />
+          </SettingsRow>
+        ))}
+        {preferences.loading ? (
+          <Txt tone="muted" accessibilityLiveRegion="polite">
+            {L.prefsLoading}
+          </Txt>
+        ) : null}
+        {preferences.error ? (
+          <Txt tone="muted" accessibilityLiveRegion="polite">
+            {preferences.error}
+          </Txt>
+        ) : null}
+        {!preferences.loaded && !preferences.loading ? (
+          <Btn block onPress={() => void loadPushPreferences()}>
+            {L.prefsReload}
+          </Btn>
+        ) : null}
+      </View>
+      <Txt tone="muted">{L.tokenNote}</Txt>
+      <View style={{ gap: 8 }}>
+        {state.busy ? (
+          <Txt tone="muted" accessibilityLiveRegion="polite">
+            {L.busy}
+          </Txt>
+        ) : null}
         {state.blocked ? (
           <Btn block onPress={() => void Linking.openSettings()}>
-            기기 알림 설정 열기
+            {L.openSettings}
           </Btn>
         ) : null}
         {state.message ? (
@@ -58,40 +114,49 @@ export function PushSettings() {
         ) : null}
         {state.failed && state.enabled ? (
           <Btn block disabled={state.busy} onPress={() => void pushRegistration.restore()}>
-            다시 연결
+            {L.reconnect}
           </Btn>
         ) : null}
-        {admin && state.enabled ? (
-          <Btn
-            block
-            disabled={testing || state.busy}
-            testID="push-test"
-            onPress={() => {
-              setTesting(true);
-              void testOwnPush()
-                .then(
-                  () =>
-                    setTestMessage(
-                      '테스트 요청을 보냈어요. 앱을 닫아 둔 상태에서도 수신을 확인해 주세요.',
-                    ),
-                  (e) =>
-                    setTestMessage(
-                      e instanceof Error ? e.message : '테스트 요청을 보내지 못했어요.',
-                    ),
-                )
-                .finally(() => setTesting(false));
-            }}
-          >
-            {testing ? '요청 중…' : '내 기기로 테스트 알림 보내기'}
-          </Btn>
+        {state.enabled ? (
+          <>
+            <Txt tone="muted">{L.testNote}</Txt>
+            <Btn
+              block
+              disabled={test.busy || state.busy || state.failed || waiting}
+              testID="push-test"
+              onPress={() => {
+                setTestMessage('');
+                void testOwnPush().then(
+                  () => setTestMessage(L.testRequested),
+                  (e) => setTestMessage(e instanceof Error ? e.message : L.testFailed),
+                );
+              }}
+            >
+              {test.busy ? L.testBusy : L.testBtn}
+            </Btn>
+            {waiting ? (
+              <Txt tone="muted" accessibilityLiveRegion="polite">
+                {L.nextTest}{' '}
+                {new Date(test.nextTestAt).toLocaleString(intlLocale(), {
+                  month: 'numeric',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Txt>
+            ) : null}
+          </>
         ) : null}
         {testMessage ? (
           <Txt tone="muted" accessibilityLiveRegion="polite">
             {testMessage}
           </Txt>
         ) : null}
+        <Btn block onPress={() => openInbox()}>
+          {L.openInbox}
+        </Btn>
         <Btn block onPress={() => void Linking.openURL(`${WEB_ORIGIN}/legal/privacy/#push`)}>
-          알림 정보 처리 안내
+          {L.privacy}
         </Btn>
       </View>
     </SettingsCard>

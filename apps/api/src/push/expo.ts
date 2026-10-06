@@ -1,10 +1,14 @@
 import { AppError } from '../errors.js';
+import type { Lang } from '../lang.js';
+import { pushText } from './text.js';
 
-/** 1차는 관리자 자신의 기기 한 대로만 발송한다. 응답·토큰·인증값을 로그에 남기지 않는다. */
+/** 현재 앱 세션 소유자의 기기 한 대로만 발송한다. 응답·토큰·인증값을 로그에 남기지 않는다. */
 export async function sendPushTest(
   token: string,
   accessToken?: string,
   fetchImpl: typeof fetch = fetch,
+  notificationId?: string,
+  lang: Lang = 'ko',
 ): Promise<string> {
   let response: Response;
   try {
@@ -19,11 +23,16 @@ export async function sendPushTest(
       },
       body: JSON.stringify({
         to: token,
-        title: '오프사이드 알림 테스트',
-        body: '공지와 릴리즈 노트 알림이 연결됐어요.',
+        title: pushText('오프사이드 알림 테스트', lang),
+        body: pushText('공지와 릴리즈 노트 알림이 연결됐어요.', lang),
         channelId: 'news',
         sound: 'default',
-        data: { type: 'offside-news', board: 'notice', test: true },
+        data: {
+          type: 'offside-news',
+          board: 'notice',
+          test: true,
+          ...(notificationId ? { notificationId } : {}),
+        },
       }),
     });
   } catch {
@@ -33,7 +42,13 @@ export async function sendPushTest(
     });
   }
   if (!response.ok)
-    throw new AppError({ code: 'SERVICE_UNAVAILABLE', message: '알림 요청을 보내지 못했어요.' });
+    throw new AppError({
+      code: 'SERVICE_UNAVAILABLE',
+      message: '알림 요청을 보내지 못했어요.',
+      ...(response.status < 500 && response.status !== 408
+        ? { details: { reason: 'PUSH_SEND_FAILED' } }
+        : {}),
+    });
   let result: { data?: { status?: string; id?: string; details?: { error?: string } } };
   try {
     result = (await response.json()) ?? {};
@@ -47,12 +62,16 @@ export async function sendPushTest(
     throw new AppError({
       code: 'SERVICE_UNAVAILABLE',
       message: '알림 연결을 확인해 주세요.',
-      details: {
-        reason:
-          result.data?.details?.error === 'DeviceNotRegistered'
-            ? 'PUSH_DEVICE_NOT_REGISTERED'
-            : 'PUSH_SEND_FAILED',
-      },
+      ...(result.data?.status === 'error'
+        ? {
+            details: {
+              reason:
+                result.data?.details?.error === 'DeviceNotRegistered'
+                  ? 'PUSH_DEVICE_NOT_REGISTERED'
+                  : 'PUSH_SEND_FAILED',
+            },
+          }
+        : {}),
     });
   if (typeof result.data.id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(result.data.id))
     throw new AppError({

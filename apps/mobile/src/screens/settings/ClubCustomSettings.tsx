@@ -22,8 +22,10 @@ import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Btn, ClubBadge, Press, Row, Txt } from '../../ui';
 import { SelectField, SettingsCard, SettingsLabel, SettingsTrigger, TextField } from './parts';
+import { clubText as T } from '@offside/app-core/i18n/ko/club';
+import { tn } from '@offside/game/i18n/names';
 
-const fail = () => toast('저장 공간이 부족해 저장하지 못했어요');
+const fail = () => toast(T.noSpace);
 
 /** 색 견본(웹 <input type=color> 자리). */
 const SWATCHES = [
@@ -97,7 +99,7 @@ function ColorField({
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <Txt style={{ fontSize: rem(0.8125) }}>{label}</Txt>
         <Press
-          accessibilityLabel={`${label} 색 고르기`}
+          accessibilityLabel={T.pickColor({ label })}
           accessibilityState={{ expanded: open }}
           onPress={() => setOpen(!open)}
           hitSlop={4}
@@ -124,7 +126,7 @@ function ColorField({
           onChangeText={setDraft}
           onEndEditing={() => commit(draft)}
           maxLength={7}
-          accessibilityLabel={`${label} 색 값`}
+          accessibilityLabel={T.colorValue({ label })}
           style={{ width: 104, fontSize: 16 }}
         />
       </View>
@@ -190,42 +192,42 @@ function ClubRow({
             if (!setClubCustom(club.id, { name: v })) fail();
           }}
           maxLength={CLUB_NAME_MAX}
-          placeholder={club.baseName ?? club.name}
-          accessibilityLabel={`${club.baseName ?? club.name} 이름`}
+          placeholder={tn(club.baseName ?? club.name)}
+          accessibilityLabel={T.nameLabel({ name: tn(club.baseName ?? club.name) })}
           style={{ flex: 1, minWidth: 0 }}
         />
         <Btn
           sm
           testID="logo"
-          accessibilityLabel={`${club.baseName ?? club.name} 엠블럼`}
+          accessibilityLabel={T.emblemLabel({ name: tn(club.baseName ?? club.name) })}
           onPress={toggle}
         >
-          엠블럼
+          {T.emblem}
         </Btn>
       </View>
       {open ? (
         <View style={{ gap: 8, marginTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Txt style={{ fontSize: rem(0.8125) }}>글자</Txt>
+            <Txt style={{ fontSize: rem(0.8125) }}>{T.logoText}</Txt>
             <CommitInput
               value={logo.text}
               onCommit={(v) => editLogo({ text: v })}
               maxLength={LOGO_TEXT_MAX}
-              accessibilityLabel="엠블럼 글자"
+              accessibilityLabel={T.logoTextLabel}
               autoCapitalize="characters"
               style={{ width: rem(0.8125) * 4.5 + 24 }}
             />
           </View>
-          <ColorField label="바탕" value={logo.bg} onCommit={(hex) => editLogo({ bg: hex })} />
-          <ColorField label="글자색" value={logo.fg} onCommit={(hex) => editLogo({ fg: hex })} />
+          <ColorField label={T.bg} value={logo.bg} onCommit={(hex) => editLogo({ bg: hex })} />
+          <ColorField label={T.fg} value={logo.fg} onCommit={(hex) => editLogo({ fg: hex })} />
           <Row gap={8}>
             {logo.img ? (
               <Btn sm onPress={dropImage}>
-                이미지 빼기
+                {T.dropImage}
               </Btn>
             ) : null}
             <Btn sm onPress={() => void resetClubCustom([club.id])}>
-              기본값
+              {T.reset}
             </Btn>
           </Row>
         </View>
@@ -249,12 +251,12 @@ export function ClubCustomSettings() {
     try {
       await Share.share({ title: 'offside-clubs.json', message: exportClubCustom() });
     } catch {
-      toast('공유하지 못했어요');
+      toast(T.shareFail);
     }
   }
   function doImport(text: string) {
     const n = importClubCustom(text);
-    toast(n < 0 ? '에디트 파일 형식이 올바르지 않아요' : `클럽 ${n}개 설정을 불러왔어요`);
+    toast(n < 0 ? T.badFile : T.imported({ n }));
     if (n >= 0) {
       setPasted('');
       setImportOpen(false);
@@ -263,25 +265,25 @@ export function ClubCustomSettings() {
   async function pasteFromClipboard() {
     try {
       const t = await Clipboard.getStringAsync();
-      if (!t.trim()) return toast('클립보드가 비어 있어요');
+      if (!t.trim()) return toast(T.clipEmpty);
       setPasted(t);
     } catch {
-      toast('클립보드를 읽지 못했어요');
+      toast(T.clipFail);
     }
   }
   function resetLeague() {
     resetClubCustom(clubsIn(leagueId).map((cl) => cl.id));
-    toast('이 리그를 기본값으로 되돌렸어요');
+    toast(T.leagueReset);
   }
   function resetAll() {
-    Alert.alert('전체 초기화', '모든 리그의 클럽 이름·엠블럼을 기본값으로 되돌릴까요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(T.resetAll, T.resetAllConfirm, [
+      { text: T.cancel, style: 'cancel' },
       {
-        text: '되돌리기',
+        text: T.revert,
         style: 'destructive',
         onPress: () => {
           resetClubCustom();
-          toast('모든 클럽을 기본값으로 되돌렸어요');
+          toast(T.allReset);
         },
       },
     ]);
@@ -293,10 +295,10 @@ export function ClubCustomSettings() {
         chev="▼"
         expanded={clubsOpen}
         testID="settings-open-clubs"
-        label="구단 이름·엠블럼 변경"
+        label={T.title}
         onPress={() => setClubsOpen(!clubsOpen)}
       >
-        <SettingsLabel eyebrow="Team settings" title="구단 이름·엠블럼 변경" />
+        <SettingsLabel eyebrow="Team settings" title={T.title} />
       </SettingsTrigger>
       {clubsOpen ? (
         <View
@@ -309,23 +311,22 @@ export function ClubCustomSettings() {
           }}
         >
           <Txt tone="muted" v="sm">
-            클럽 이름과 엠블럼을 원하는 대로 바꿀 수 있어요. 바꾼 뒤부터 생기는 오퍼·기록에 새
-            이름이 쓰여요.
+            {T.intro}
           </Txt>
           <Txt tone="muted" v="xs" accessibilityLiveRegion="polite" testID={`club-sync-${status}`}>
             {CLUB_SYNC_TEXT[status]}
           </Txt>
           <View style={{ gap: 6 }}>
             <Txt tone="muted" style={{ fontSize: rem(0.8125), fontWeight: '600' }}>
-              리그
+              {T.league}
             </Txt>
             <SelectField
-              label="리그"
+              label={T.league}
               testID="club-league"
               value={leagueId}
               options={LEAGUES.map((L) => ({
                 value: L.id,
-                label: `${L.name} (${clubsIn(L.id).length}개 클럽)`,
+                label: T.leagueOption({ name: tn(L.name), n: clubsIn(L.id).length }),
               }))}
               onChange={(v) => {
                 setLeagueId(v);
@@ -347,16 +348,16 @@ export function ClubCustomSettings() {
           </View>
           <Row gap={8}>
             <Btn sm onPress={resetLeague}>
-              이 리그 초기화
+              {T.resetLeague}
             </Btn>
             <Btn sm testID="export-clubs" onPress={() => void exportFile()}>
-              에디트 파일 내보내기
+              {T.exportFile}
             </Btn>
             <Btn sm testID="import-clubs" onPress={() => setImportOpen(!importOpen)}>
-              에디트 파일 가져오기
+              {T.importFile}
             </Btn>
             <Btn sm onPress={resetAll}>
-              전체 초기화
+              {T.resetAll}
             </Btn>
           </Row>
           {importOpen ? (
@@ -365,18 +366,18 @@ export function ClubCustomSettings() {
                 value={pasted}
                 onChangeText={setPasted}
                 multiline
-                placeholder="내보낸 에디트 파일 내용을 여기에 붙여넣어요"
-                accessibilityLabel="에디트 파일 붙여넣기"
+                placeholder={T.importPlaceholder}
+                accessibilityLabel={T.importPasteLabel}
                 testID="import-clubs-text"
                 returnKeyType="default"
                 style={{ minHeight: 80, maxHeight: 140, fontSize: 14 }}
               />
               <Row gap={8}>
                 <Btn sm disabled={!pasted.trim()} onPress={() => doImport(pasted)}>
-                  가져오기
+                  {T.importBtn}
                 </Btn>
                 <Btn sm onPress={() => void pasteFromClipboard()}>
-                  클립보드에서 붙여넣기
+                  {T.pasteClipboard}
                 </Btn>
               </Row>
             </View>

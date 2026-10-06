@@ -5,6 +5,8 @@ import { ensureFirstsBackfilled, listFirsts, recordCareerFirsts } from '../db/re
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
+import { localizeFirsts } from '../firstsText.js';
+import { reqLang } from '../lang.js';
 import { parseWithAppError } from '../errors.js';
 import { nowIso, ok } from './shared.js';
 
@@ -47,6 +49,13 @@ export function registerFirstsRoutes(app: Hono<AppEnv>): void {
       },
       () => !rescanning,
     );
-    return ok(c, FirstsResponseSchema, data, 200, `public, max-age=${TTL}`);
+    // 캐시에는 한국어 원본을 담고(키가 언어마다 늘지 않는다) 읽은 뒤에 요청 언어로 문구만 바꾼다.
+    return ok(
+      c,
+      FirstsResponseSchema,
+      localizeFirsts(data, reqLang(c)),
+      200,
+      `public, max-age=${TTL}`,
+    );
   });
 }

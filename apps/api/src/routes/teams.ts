@@ -31,6 +31,7 @@ import {
   layoutOf,
   logoOf,
 } from '../db/repos/ownerTeams.js';
+import { friendStateOf } from '../db/repos/friends.js';
 import { listAchievementRanking } from '../db/repos/ownerAchievements.js';
 import { edgeCached, waitUntil } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
@@ -40,6 +41,7 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { resolveSession } from '../middleware/session.js';
 import { teamBadges } from '../team/badges.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
+import { queryWithoutLang, reqLang, type Lang } from '../lang.js';
 import { buildLineup, lineupOvr } from '../team/sim.js';
 import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
 
@@ -50,16 +52,23 @@ const RANK_CACHE = 'public, max-age=60';
 
 const teamParam = (c: Context<AppEnv>) => parseWithAppError(TeamIdSchema, c.req.param('teamId'));
 
+/** 시즌 목록은 시계와 언어로만 정해진다 — 엣지에 담지 않고(키·퍼지·D1 읽기를 언어마다 늘리지 않고, 개막 직후 TTL만큼
+ * 낡지도 않게) 캐시에서 꺼낸 뒤 붙인다. */
+const withSeasons = <T extends object>(data: T, now: string, lang: Lang) => ({
+  ...data,
+  seasons: seasonOptions(now, lang),
+});
+
 export function registerTeamRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/teams', async (c) => {
     const now = nowIso();
-    const q = parseWithAppError(TeamRankQuerySchema, c.req.query());
+    const q = parseWithAppError(TeamRankQuerySchema, queryWithoutLang(c));
     const season = teamSeasonParam(q.season, now);
     const data = await edgeCached(
       c,
       EDGE.teamRank(season, q.sort, q.page),
       RANK_TTL,
-      async (): Promise<TeamRankResponse> => {
+      async (): Promise<Omit<TeamRankResponse, 'seasons'>> => {
         const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, q.page);
         const forms = await listTeamRecentForm(
           getDb(c),
@@ -67,7 +76,6 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         );
         return {
           season,
-          seasons: seasonOptions(now),
           sort: q.sort,
           page: q.page,
           total,
@@ -88,23 +96,22 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         };
       },
     );
-    return ok(c, TeamRankResponseSchema, data, 200, RANK_CACHE);
+    return ok(c, TeamRankResponseSchema, withSeasons(data, now, reqLang(c)), 200, RANK_CACHE);
   });
 
   // T-11-028 업적 랭킹(기록실). 시즌 업적 점수 순 — 구단주는 공개 닉네임과 그 시즌 팀 이름으로만 보인다. 팀 랭킹처럼 5분마다.
   app.get('/v1/achievements/ranking', async (c) => {
     const now = nowIso();
-    const q = parseWithAppError(AchRankQuerySchema, c.req.query());
+    const q = parseWithAppError(AchRankQuerySchema, queryWithoutLang(c));
     const season = teamSeasonParam(q.season, now);
     const data = await edgeCached(
       c,
       EDGE.achRank(season, q.page),
       RANK_TTL,
-      async (): Promise<AchRankResponse> => {
+      async (): Promise<Omit<AchRankResponse, 'seasons'>> => {
         const { rows, total } = await listAchievementRanking(getDb(c), season, q.page);
         return {
           season,
-          seasons: seasonOptions(now),
           page: q.page,
           total,
           items: rows.map((r, i) => ({
@@ -121,7 +128,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         };
       },
     );
-    return ok(c, AchRankResponseSchema, data, 200, RANK_CACHE);
+    return ok(c, AchRankResponseSchema, withSeasons(data, now, reqLang(c)), 200, RANK_CACHE);
   });
 
   // 팀 프로필. 좋아요 여부가 사람마다 달라 캐시하지 않는다.
@@ -132,18 +139,21 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     if (!found) throw teamNotFound();
     const t = found.team;
     const ids = slotIdsOf(t);
-    const [rows, rank, liked] = await Promise.all([
+    const other = session && session.profileId !== t.profileId ? session.profileId : null;
+    const [rows, rank, liked, friend] = await Promise.all([
       careersByIds(
         db,
         ids.filter((x): x is string => !!x),
       ),
       ratingRankOf(db, t),
       session ? isTeamLiked(db, t.id, session.profileId) : false,
+      other ? friendStateOf(db, other, t.profileId) : null,
     ]);
     const now = nowIso();
     const eligible = eligibleMap(rows, t.profileId, t.season, t.season === teamSeasonAt(now));
     const lineup = buildLineup(t.formation as FormationId, ids, eligible, layoutOf(t));
-    const seasonName = teamSeasonName(t.season);
+    const lang = reqLang(c);
+    const seasonName = teamSeasonName(t.season, lang);
     return ok(
       c,
       TeamProfileResponseSchema,
@@ -156,21 +166,22 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           name: t.name,
           manager: t.manager,
           formation: t.formation as FormationId,
-          slots: slotsOf(lineup, eligible),
+          slots: slotsOf(lineup, eligible, lang),
           layout: layoutOf(t),
           logo: logoOf(t),
           ovr: lineupOvr(lineup),
-          lines: linesOf(lineup),
+          lines: linesOf(lineup, t.season),
           rating: t.rating,
           record: recordOf(t),
           goals: { for: t.goalsFor, against: t.goalsAgainst },
           likes: t.likes,
           views: t.views,
-          badges: teamBadges(t, teamSeasonClosed(t.season, now) ? rank : null, seasonName),
+          badges: teamBadges(t, teamSeasonClosed(t.season, now) ? rank : null, seasonName, lang),
           createdAt: t.createdAt,
         },
         liked,
         mine: session?.profileId === t.profileId,
+        friend,
       },
       200,
       NO_STORE,

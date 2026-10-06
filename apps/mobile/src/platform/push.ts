@@ -11,6 +11,12 @@ import { createPushRegistration } from '@offside/app-core/pushRegistration';
 import { ensureSession, onSessionChanged, sessionToken } from './session';
 import { kv } from './setup';
 import { openBoard } from '../game/nav';
+import { PUSH_TEST_COOLDOWN_MS } from '@offside/contracts/push-limits';
+import { DAY_MS, kstDay } from '@offside/contracts/kst';
+import { pushText as L } from '@offside/app-core/i18n/ko/push';
+import { NotificationIdSchema } from '@offside/contracts';
+import { openInbox, inbox } from './inbox';
+import { trackPushInteraction, flushPushInteractions } from './pushTracking';
 
 const DEVICE_KEY = 'offside_push_installation';
 const WANTED = 'offside_push_wanted';
@@ -79,9 +85,10 @@ async function register() {
   }
   const deviceToken = expoToken.token;
   const revision = tokenRevision;
+  // 이전 별도 재방문 설정과 무관하게 통합 수신 정책으로 한 번 재등록한다.
   const fingerprint = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
-    `${deviceToken}|${sessionToken()}|${appVersion}`,
+    `${deviceToken}|${sessionToken()}|${appVersion}|push-subscription-v2`,
   );
   const saved = kv.getString(REGISTERED);
   if (saved === fingerprint && Date.now() - (kv.getNumber(`${REGISTERED}_at`) ?? 0) < 86400_000)
@@ -110,7 +117,7 @@ export const pushRegistration = createPushRegistration(pushState, {
     if (Platform.OS !== 'ios' && Platform.OS !== 'android') return 'blocked';
     if (request && Platform.OS === 'android')
       await Notifications.setNotificationChannelAsync('news', {
-        name: '공지·릴리즈 노트',
+        name: L.channelName,
         importance: Notifications.AndroidImportance.DEFAULT,
       });
     let status = await Notifications.getPermissionsAsync();
@@ -134,6 +141,16 @@ export const pushRegistration = createPushRegistration(pushState, {
 function openNotification(response: Notifications.NotificationResponse) {
   if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
   const data = response.notification.request.content.data;
+  if (
+    data &&
+    (data.type === 'offside-news' || data.type === 'offside-notification') &&
+    NotificationIdSchema.safeParse(data.notificationId).success
+  ) {
+    inbox.invalidate();
+    void trackPushInteraction(data.notificationId as string, 'click');
+    openInbox(data.notificationId as string);
+    return;
+  }
   if (
     !data ||
     data.type !== 'offside-news' ||
@@ -168,6 +185,15 @@ export function startPush() {
     openNotification(response);
     void Notifications.clearLastNotificationResponseAsync().catch(() => {});
   });
+  Notifications.addNotificationReceivedListener((notification) => {
+    const data = notification.request.content.data;
+    if (
+      data &&
+      (data.type === 'offside-news' || data.type === 'offside-notification') &&
+      NotificationIdSchema.safeParse(data.notificationId).success
+    )
+      inbox.invalidate();
+  });
   Notifications.addPushTokenListener((token) => {
     if ((token.type !== 'ios' && token.type !== 'android') || typeof token.data !== 'string')
       return;
@@ -185,16 +211,47 @@ export function startPush() {
     void pushRegistration.restore();
   });
   AppState.addEventListener('change', (state) => {
-    if (state === 'active') void pushRegistration.restore();
+    if (state === 'active') {
+      void pushRegistration.restore();
+      void flushPushInteractions();
+    }
   });
+  void flushPushInteractions();
   void pushRegistration.restore();
 }
 
+const TEST_NEXT = 'offside_push_test_next';
+export const pushTestState = proxy({
+  busy: false,
+  nextTestAt: kv.getNumber(TEST_NEXT) ?? 0,
+});
+function saveTestNext(at: number) {
+  pushTestState.nextTestAt = at;
+  kv.set(TEST_NEXT, at);
+}
 export async function testOwnPush() {
-  if (!pushState.enabled) throw new Error('먼저 알림 받기를 켜 주세요.');
-  const r = await apiFetch('/v1/push/test', {
-    method: 'POST',
-    body: JSON.stringify({ installationId: await installationId() }),
-  });
-  if (!r.ok) throw new Error(r.error.message);
+  if (!pushState.enabled) throw new Error(L.errTurnOnFirst);
+  if (pushTestState.busy || Date.now() < pushTestState.nextTestAt) throw new Error(L.errTestWait);
+  pushTestState.busy = true;
+  try {
+    const r = await apiFetch<{ accepted: true; nextTestAt?: string }>('/v1/push/test', {
+      method: 'POST',
+      body: JSON.stringify({ installationId: await installationId() }),
+    });
+    const cooldown = Date.now() + PUSH_TEST_COOLDOWN_MS;
+    if (!r.ok) {
+      // 불명확한 발송 결과도 즉시 재요청하지 않는다. 서버가 기기·계정 예산을 최종 판정한다.
+      if (['RATE_LIMITED', 'SERVICE_UNAVAILABLE', 'NETWORK_ERROR'].includes(r.error.code)) {
+        const tomorrow = Date.parse(`${kstDay(new Date().toISOString())}T00:00:00+09:00`) + DAY_MS;
+        saveTestNext(
+          r.error.reason === 'PUSH_TEST_DAILY_LIMIT' ? Math.max(cooldown, tomorrow) : cooldown,
+        );
+      }
+      throw new Error(r.error.message);
+    }
+    const next = r.data.nextTestAt ? Date.parse(r.data.nextTestAt) : cooldown;
+    saveTestNext(Number.isFinite(next) ? next : cooldown);
+  } finally {
+    pushTestState.busy = false;
+  }
 }

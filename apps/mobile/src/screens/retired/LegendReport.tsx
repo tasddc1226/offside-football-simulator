@@ -3,7 +3,7 @@
 // T-10-062: 정보 나열 대신 한 편의 엔딩 크레딧처럼 — 타이틀 → 통산 기록 → 클럽별 챕터(우승·이정표·이야기) →
 // 대표팀 → 우승·수상 롤 → 마지막 휘슬. 사용자가 스크롤해 내려가는 대로 장면이 화면에 들어올 때 하나씩 올라온다
 // (credit.tsx Reveal). 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
-import { RETIREMENT_POTENTIAL_NOTE } from '@offside/app-core/potential-view';
+import { retirementPotentialNote } from '@offside/app-core/potential-view';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   Animated,
@@ -25,6 +25,7 @@ import {
 import { POS_LABEL } from '@offside/game/pos-label';
 import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
 import { EVENT_ICON, yearsOf } from '@offside/app-core/legendReport';
+import { legendText as L } from '@offside/app-core/i18n/ko/legend';
 import { peakValue, retireValue } from '@offside/contracts/market-value';
 import { titleById } from '@offside/game/titles';
 import type { LegendView } from '@offside/app-core/state';
@@ -42,6 +43,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Pop, POP, Reveal, useProgress, useRevealed } from './credit';
 import { FilmBackdrop, FilmPill, FText, H2, Kicker, useFilm } from './film';
 import { LateCredits } from './LateCredits';
+import { tn } from '@offside/game/i18n/names';
 
 // end: 리포트 맨 아래(다음 행동 버튼 등).
 export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
@@ -119,7 +121,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
             </FText>
             <FText tone="muted" size={0.875} center>
               {POS_LABEL[v.pos]}
-              {span ? ` · ${span}` : ''} · {v.age}세 은퇴
+              {span ? ` · ${span}` : ''} · {L.retiredAge({ age: v.age })}
             </FText>
             <View style={{ alignItems: 'center', marginTop: 14 }}>
               <FText
@@ -127,7 +129,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                 display={700}
                 size={4}
                 lh={1}
-                accessibilityLabel={`레전드 점수 ${v.score}`}
+                accessibilityLabel={L.scoreLabel({ score: v.score })}
               >
                 <CountUp value={v.score} animate={playing} ms={1800} />
               </FText>
@@ -149,15 +151,18 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
               >
                 <View testID="legend-value" style={{ alignItems: 'center', gap: 2 }}>
                   <FText tone="muted" size={0.75}>
-                    은퇴 가치
+                    {L.worth}
                   </FText>
                   <FText display={700} size={1.75} lh={1.1}>
                     {fmtValue(worth)}
                   </FText>
                   {peakV ? (
                     <FText tone="muted" size={0.75} center>
-                      최고 몸값 {fmtValue(peakV.value)} · {seasonLabelOf(peakV.row)}{' '}
-                      {peakV.row.club}
+                      {L.peakValue({
+                        value: fmtValue(peakV.value),
+                        season: seasonLabelOf(peakV.row),
+                        club: tn(peakV.row.club),
+                      })}
                     </FText>
                   ) : null}
                 </View>
@@ -172,14 +177,14 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
               {main && main.cat !== 'legend' ? (
                 <FilmPill testID="legend-title">{`‘${main.name}’`}</FilmPill>
               ) : null}
-              <FilmPill>최고 OVR {v.peak}</FilmPill>
+              <FilmPill>{L.peakOvr({ peak: v.peak })}</FilmPill>
               {rnGranted ? (
                 <FilmPill
                   rn
                   testID="legend-rn-pill"
-                  label={`${rnGranted.club} 영구결번 ${rnGranted.number}번`}
+                  label={L.rnPillTitle({ club: tn(rnGranted.club), number: rnGranted.number })}
                 >
-                  👑 {rnGranted.club} 영결 {rnGranted.number}
+                  {L.rnPill({ club: tn(rnGranted.club), number: rnGranted.number })}
                 </FilmPill>
               ) : null}
             </Pop>
@@ -190,7 +195,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
               style={{ alignSelf: 'stretch', marginTop: 18 }}
             >
               <View
-                accessibilityLabel="통산 기록"
+                accessibilityLabel={L.statsLabel}
                 style={{
                   flexDirection: 'row',
                   flexWrap: 'wrap',
@@ -202,41 +207,51 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                 }}
               >
                 <Stat
-                  label="시즌"
+                  label={L.statSeasons}
                   value={d ? d.career.length : 0}
                   run={seen.highlights}
                   playing={playing}
                 />
                 <Stat
-                  label="경기"
+                  label={L.statApps}
                   value={t ? t.p : v.totals.apps}
                   run={seen.highlights}
                   playing={playing}
                 />
                 {back && t ? (
                   <>
-                    <Stat label="무실점" value={t.cs} run={seen.highlights} playing={playing} />
-                    <Stat label="공격P" value={t.g + t.a} run={seen.highlights} playing={playing} />
+                    <Stat
+                      label={L.statCleanSheets}
+                      value={t.cs}
+                      run={seen.highlights}
+                      playing={playing}
+                    />
+                    <Stat
+                      label={L.statGaPoints}
+                      value={t.g + t.a}
+                      run={seen.highlights}
+                      playing={playing}
+                    />
                   </>
                 ) : (
                   <>
                     <Stat
-                      label="골"
+                      label={L.statGoals}
                       value={t ? t.g : v.totals.goals}
                       run={seen.highlights}
                       playing={playing}
                     />
                     <Stat
-                      label="도움"
+                      label={L.statAssists}
                       value={t ? t.a : v.totals.assists}
                       run={seen.highlights}
                       playing={playing}
                     />
                   </>
                 )}
-                <Stat label="A매치" value={caps} run={seen.highlights} playing={playing} />
+                <Stat label={L.statCaps} value={caps} run={seen.highlights} playing={playing} />
                 <Stat
-                  label="트로피"
+                  label={L.statTrophies}
                   value={v.totals.trophies}
                   run={seen.highlights}
                   playing={playing}
@@ -245,7 +260,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
             </Reveal>
             {!d ? (
               <FText tone="muted" size={0.8125} center>
-                시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 줘요.
+                {L.noDetailNote}
               </FText>
             ) : null}
             {playing && !seen.journey ? <ScrollCue /> : null}
@@ -257,7 +272,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
             <Reveal onSeen={see('journey')} testID="credit-journey" style={{ marginBottom: -20 }}>
               <View style={{ alignItems: 'center' }}>
                 <Kicker>The Journey</Kicker>
-                <H2>구단별 커리어</H2>
+                <H2>{L.journeyTitle}</H2>
               </View>
             </Reveal>
             <View>
@@ -280,13 +295,16 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                     >
                       <ClubMark name={ch.club} id={ch.clubId} size={24} />
                       <FText display={700} size={2} lh={1.05} style={{ flexShrink: 1 }}>
-                        {ch.club}
+                        {tn(ch.club)}
                       </FText>
                     </View>
                     <FText tone="muted" size={0.8125}>
-                      {ch.leagues.join(' → ')} ·{' '}
-                      {ch.ageFrom === ch.ageTo ? `${ch.ageFrom}세` : `${ch.ageFrom}–${ch.ageTo}세`}{' '}
-                      · {ch.seasons}시즌
+                      {L.chapterMeta({
+                        leagues: ch.leagues.map(tn).join(' → '),
+                        ageFrom: ch.ageFrom,
+                        ageTo: ch.ageTo,
+                        seasons: ch.seasons,
+                      })}
                     </FText>
                     <View
                       style={{
@@ -297,10 +315,10 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                         marginTop: 8,
                       }}
                     >
-                      <ChStat n={ch.apps} label="경기" />
-                      {back ? <ChStat n={ch.cs} label="무실점" /> : null}
-                      <ChStat n={ch.goals} label="골" />
-                      <ChStat n={ch.assists} label="도움" />
+                      <ChStat n={ch.apps} label={L.statApps} />
+                      {back ? <ChStat n={ch.cs} label={L.statCleanSheets} /> : null}
+                      <ChStat n={ch.goals} label={L.statGoals} />
+                      <ChStat n={ch.assists} label={L.statAssists} />
                     </View>
                     {ch.events.length ? (
                       <Events list={ch.events} style={{ marginTop: 14 }} />
@@ -317,7 +335,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
           <Reveal testID="credit-value">
             <View style={{ alignItems: 'center' }}>
               <Kicker>Market Value</Kicker>
-              <H2>몸값 흐름</H2>
+              <H2>{L.valueTitle}</H2>
               <ValueScene rows={d.career} />
             </View>
           </Reveal>
@@ -327,13 +345,13 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
           <Reveal onSeen={see('national')} testID="credit-national">
             <View style={{ alignItems: 'center' }}>
               <Kicker>For the Country</Kicker>
-              <H2>국가대표</H2>
+              <H2>{L.nationalTitle}</H2>
               <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'baseline' }}>
                 <FText display={700} size={2.75} lh={1.55} tone="gold" style={{ marginRight: 4 }}>
                   <CountUp value={caps} animate={playing} run={seen.national} />
                 </FText>
                 <FText tone="muted" size={0.875}>
-                  A매치
+                  {L.statCaps}
                 </FText>
               </View>
               {d?.nat.goals !== undefined ? (
@@ -343,13 +361,13 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                   testID="nat-ga"
                   style={{ marginTop: 2, fontVariant: ['tabular-nums'] }}
                 >
-                  {d.nat.goals}골 · {d.nat.assists ?? 0}도움
+                  {L.natGa({ goals: d.nat.goals, assists: d.nat.assists ?? 0 })}
                 </FText>
               ) : null}
               {national.length ? (
                 <Events
                   list={national}
-                  style={{ marginTop: 14, maxWidth: 320, alignSelf: 'center' }}
+                  style={{ marginTop: 14, width: '100%', maxWidth: 320, alignSelf: 'center' }}
                 />
               ) : null}
             </View>
@@ -363,7 +381,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                 <>
                   <View style={{ alignItems: 'center', gap: 0 }}>
                     <Kicker>Honours</Kicker>
-                    <H2 style={{ marginBottom: 8 }}>우승 연혁</H2>
+                    <H2 style={{ marginBottom: 8 }}>{L.honoursTitle}</H2>
                   </View>
                   <RollLines list={honours} from={0} />
                 </>
@@ -383,16 +401,16 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
             <View testID="legend-pot" style={{ alignItems: 'center', gap: 4 }}>
               <Kicker>Scout Report</Kicker>
               <FText tone="muted" size={0.9375} center>
-                은퇴 시점 잠재력 평가
+                {L.potTitle}
               </FText>
               <FText tone="gold" display={700} size={4} lh={1}>
                 {v.pot.real}
               </FText>
               <FText tone="muted" size={0.9375} center>
-                잠재력 {v.pot.value} · 은퇴 시점에 기록한 값
+                {L.potLine({ value: v.pot.value })}
               </FText>
               <FText tone="muted" size={0.9375} center>
-                {RETIREMENT_POTENTIAL_NOTE}
+                {retirementPotentialNote()}
               </FText>
               <View
                 testID="legend-ach"
@@ -408,7 +426,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                 }}
               >
                 <FText tone="muted" size={0.8125}>
-                  최고 OVR
+                  {L.peakOvrLabel}
                 </FText>
                 <FText display={700} size={2} lh={1.05}>
                   {v.peak}
@@ -435,17 +453,16 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
             style={{ paddingVertical: 4 }}
           >
             <Txt style={{ fontWeight: '600', fontSize: rem(0.875) }}>
-              {more ? '▾' : '▸'} 시즌별 기록 · 레전드 점수 구성 자세히 보기
+              {more ? '▾' : '▸'} {L.moreSummary}
             </Txt>
           </Press>
           {more && breakdown ? (
             <View style={{ gap: 10, marginBottom: 18 }}>
               <Txt v="h2" accessibilityRole="header">
-                레전드 점수 구성
+                {L.breakdownTitle}
               </Txt>
               <Txt v="xs" tone="muted">
-                포지션별 기여(공격수·미드필더는 골·도움, 수비수·골키퍼는 무실점 중심) + 출전 · 우승
-                · 개인상 · A매치 · 최고 OVR · 발롱도르/월드컵 보너스
+                {L.breakdownNote}
               </Txt>
               <View style={{ gap: 6 }}>
                 {breakdown.items.map((it, i) => (
@@ -547,7 +564,7 @@ function ScrollCue() {
       style={{ position: 'absolute', left: 0, right: 0, bottom: 18, alignItems: 'center', gap: 4 }}
     >
       <FText tone="muted" size={0.75}>
-        스크롤해서 커리어 돌아보기
+        {L.scrollCue}
       </FText>
       <Animated.Text
         style={{
@@ -698,7 +715,7 @@ function RollLine({ h, i }: { h: HonourLine; i: number }) {
       }}
     >
       <FText bold size={0.9375} lh={1.35} style={{ flex: 1, textAlign: 'right' }}>
-        {h.name}
+        {tn(h.name)}
         {h.years.length > 1 ? ` ×${h.years.length}` : ''}
       </FText>
       <FText tone="muted" display={400} size={0.9375} ls={0.06} style={{ flex: 1 }}>
@@ -728,9 +745,11 @@ function Finale({ v }: { v: LegendView }) {
       <ClubMark name={v.lastClub} id={v.lastClubId} size={56} />
       <Kicker>The Final Whistle</Kicker>
       <FText tone="muted" size={0.9375} lh={1.6} center style={{ marginTop: 6 }}>
-        {v.age}세, {v.lastClub}에서{'\n'}마지막 휘슬이 울렸습니다.
+        {L.finaleLine1({ age: v.age, club: tn(v.lastClub) })}
+        {'\n'}
+        {L.finaleLine2}
       </FText>
-      <H2 size={1.75}>수고했어요, {v.name}</H2>
+      <H2 size={1.75}>{L.thanks({ name: v.name })}</H2>
       <Animated.View
         style={{
           marginTop: 18,

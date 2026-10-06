@@ -26,6 +26,8 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     viewport: { width: 360, height: 780 },
+    // T-11-106 기기 언어 자동 감지가 켜져 있다 — 한국어 문구로 화면을 찾는 테스트는 한국어 브라우저로 돈다(locale.spec만 영어).
+    locale: 'ko-KR',
     trace: 'retain-on-failure',
   },
   projects: [

@@ -8,6 +8,8 @@ import { INSTALL_STEPS, detectPlatform, type Platform } from './install-platform
 import { appState } from './state.svelte.js';
 import { APP_PROMO } from '@offside/app-core/appPromo';
 import { openAppStore } from './appStore.js';
+import { shellInstallText as L } from '@offside/app-core/i18n/ko/shellInstall';
+import { shellInstallGuideText } from '@offside/app-core/i18n/ko/shellInstallGuide';
 
 const HIDE_KEY = 'ft_install_hide';
 
@@ -19,17 +21,17 @@ export function showInstallGuide(withOptOut = false) {
       {
         kind: 'notice',
         eyebrow: 'Home screen',
-        title: '홈 화면에 추가하고 앱처럼 열기',
-        text: '외부 브라우저(Safari/Chrome)에서 열어야 홈 화면에 추가할 수 있어요.',
+        title: shellInstallGuideText.installTitle,
+        text: shellInstallGuideText.installInapp,
         muted: true,
       },
       [
         {
-          label: '외부 브라우저로 열기',
+          label: L.inappOpen,
           cls: 'btn-primary',
           fn: () => void openExternal(currentInApp()),
         },
-        { label: '닫기', fn: closeSheet },
+        { label: L.close, fn: closeSheet },
       ],
     );
     return;
@@ -57,7 +59,7 @@ export function showInstallGuide(withOptOut = false) {
         },
         // 다시 보지 않기는 앞 시트에서 이미 물었다.
         { label: APP_PROMO.sheet.homeScreen, fn: () => homeScreenSteps(platform, false) },
-        { label: '닫기', fn: closeSheet },
+        { label: L.close, fn: closeSheet },
       ],
     );
     return;
@@ -67,7 +69,12 @@ export function showInstallGuide(withOptOut = false) {
 
 const optOutCheck = (withOptOut: boolean) =>
   withOptOut
-    ? { check: { label: '다시 보지 않기', onChange: (on: boolean) => saveKey(HIDE_KEY, on) } }
+    ? {
+        check: {
+          label: shellInstallGuideText.optOut,
+          onChange: (on: boolean) => saveKey(HIDE_KEY, on),
+        },
+      }
     : {};
 
 function homeScreenSteps(platform: Exclude<Platform, 'inapp'>, withOptOut: boolean) {
@@ -75,13 +82,13 @@ function homeScreenSteps(platform: Exclude<Platform, 'inapp'>, withOptOut: boole
     {
       kind: 'notice',
       eyebrow: 'Home screen',
-      title: '홈 화면에 추가하고 앱처럼 열기',
+      title: shellInstallGuideText.installTitle,
       steps: INSTALL_STEPS[platform],
-      text: '홈 화면의 오프사이드 아이콘으로 바로 열어요. 이 안내는 설정 > 도움말에서 다시 볼 수 있어요.',
+      text: shellInstallGuideText.installBody,
       muted: true,
       ...optOutCheck(withOptOut),
     },
-    [{ label: '확인했어요', cls: 'btn-primary', fn: closeSheet }],
+    [{ label: L.gotIt, cls: 'btn-primary', fn: closeSheet }],
   );
 }
 

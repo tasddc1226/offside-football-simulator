@@ -10,10 +10,19 @@ import {
 import { readFileSync } from 'node:fs';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cards, careers, marketDaily, marketListings, ownerFunds } from '../db/schema.js';
+import {
+  cards,
+  careers,
+  marketDaily,
+  marketListings,
+  ownerFunds,
+  notifications,
+  pushDeliveries,
+} from '../db/schema.js';
 import { createApp } from '../app.js';
 import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
 import { callJson, deleteProfile, issueGoogleCookie } from '../test/http.js';
+import { addAppPushDevice } from '../test/push.js';
 
 const ListRes = successEnvelope(MarketListResponseSchema);
 const MeRes = successEnvelope(MarketMeResponseSchema);
@@ -104,7 +113,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(seen.filter((q) => /"sessions"|"profiles"/.test(q))).toEqual([]);
   });
 
-  it('직접 키운 선수를 방출하면 은퇴 가치 × 지급률만큼 자금이 생기고 라커룸에서 빠진다', async () => {
+  it('직접 키운 선수를 방출하면 카드 기준가 × 지급률만큼 자금이 생기고 라커룸에서 빠진다(T-11-104)', async () => {
     const owner = await issueGoogleCookie(ctx);
     const a = await addCard(owner.profileId);
     const b = await addCard(owner.profileId);
@@ -116,21 +125,21 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(res.status).toBe(200);
     expect(((await res.json()) as { data: unknown }).data).toEqual({
       released: 1,
-      amount: 3_000_000,
-      balance: 3_000_000,
+      amount: 1_000_000,
+      balance: 1_000_000,
     });
     const data = await me(owner.cookie);
-    expect(data.balance).toBe(3_000_000);
+    expect(data.balance).toBe(1_000_000);
     expect(data.rules).toMatchObject({ releaseRate: 1, feeRate: 0.05, priceMin: 0.5, priceMax: 3 });
     // 구단주 화면 요약은 가벼운 /funds로 같은 값을 받는다.
     const funds = await call('GET', '/v1/market/funds', { cookie: owner.cookie });
     expect(((await funds.json()) as { data: unknown }).data).toEqual({
-      balance: 3_000_000,
-      clubValue: 6_000_000,
+      balance: 1_000_000,
+      clubValue: 2_000_000,
     });
-    // 구단 가치 = 자금 + 남은 직접 키운 선수 은퇴 가치(방출한 선수는 두 번 세지 않는다)
-    expect(data.clubValue).toBe(6_000_000);
-    expect(data.trades).toMatchObject([{ kind: 'released', amount: 3_000_000 }]);
+    // 구단 가치 = 자금 + 남은 카드 기준가(T-11-109). 방출해도 기준가가 자금으로 옮겨 갈 뿐 구단 가치는 그대로다.
+    expect(data.clubValue).toBe(2_000_000);
+    expect(data.trades).toMatchObject([{ kind: 'released', amount: 1_000_000 }]);
     const team = TeamRes.parse(
       await (await call('GET', '/v1/owner-team', { cookie: owner.cookie })).json(),
     ).data;
@@ -167,6 +176,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
   it('내놓고 사면 자금이 오가고 카드 주인이 바뀐다(수수료는 판매자 몫에서 뗀다)', async () => {
     const seller = await issueGoogleCookie(ctx);
     const buyer = await issueGoogleCookie(ctx);
+    await addAppPushDevice(ctx, seller.profileId);
     const card = await addCard(seller.profileId);
     // 가격 범위: 기준가 50%~300%
     const low = await list(seller.cookie, card, 400_000);
@@ -192,13 +202,31 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
       });
     const poor = await buy(buyer.cookie, 1_200_000);
     expect(await reason(poor)).toBe('FUNDS_SHORT');
+    // T-11-106 ?lang=en이면 안내 문구만 영어이고 reason은 그대로다. 목록 조회도 lang을 받는다.
+    const poorEn = await call('POST', `/v1/market/listings/${listingId}/buy?lang=en`, {
+      cookie: buyer.cookie,
+      headers: idem(),
+      body: { price: 1_200_000 },
+    });
+    expect(poorEn.status).toBe(409);
+    const poorBody = ErrorEnvelopeSchema.parse(await poorEn.json()).error;
+    expect(poorBody.message).toBe("You don't have enough club funds.");
+    expect(poorBody.details).toMatchObject({ reason: 'FUNDS_SHORT' });
+    expect((await call('GET', '/v1/market?lang=en')).status).toBe(200);
     await fund(buyer.profileId, 2_000_000);
     expect(await reason(await buy(buyer.cookie, 1_000_000))).toBe('PRICE_CHANGED');
     expect(await reason(await buy(seller.cookie, 1_200_000))).toBe('OWN_LISTING');
+    expect(await ctx.db.select().from(notifications)).toEqual([]);
     const ok = await buy(buyer.cookie, 1_200_000);
     expect(ok.status).toBe(200);
     expect(((await ok.json()) as { data: unknown }).data).toEqual({ balance: 800_000 });
     expect(await reason(await buy(buyer.cookie, 1_200_000))).toBe('LISTING_GONE');
+    expect(await ctx.db.select().from(notifications)).toMatchObject([
+      { profileId: seller.profileId, kind: 'market', sourceKey: `market-sold:${listingId}` },
+    ]);
+    expect(await ctx.db.select().from(pushDeliveries)).toMatchObject([
+      { profileId: seller.profileId, state: 'pending' },
+    ]);
     // 팔린 선수는 '방금 이적' 띠(첫 페이지 recent)에 오른다. 엣지 캐시를 피하려고 다른 정렬로 묻는다.
     const after = ListRes.parse(await (await call('GET', '/v1/market?sort=price')).json()).data;
     expect(after.items).toEqual([]);

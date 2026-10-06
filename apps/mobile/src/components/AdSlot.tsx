@@ -1,4 +1,4 @@
-// T-11-068 앱 광고 칸(웹 ads/AdSlot.svelte). 위치 이름만 받고 노출 규칙은 app-core adPolicy가 정한다. 목록·페이지 맨 끝에만 둔다.
+// T-11-068 앱 광고 칸(웹 ads/AdSlot.svelte). 위치 이름만 받고 노출 규칙은 app-core adPolicy가 정한다. 승인된 위치에 본문과 함께 스크롤되는 칸을 둔다.
 // 맞춤 광고 동의를 받지 않아 비개인화 광고만 요청한다(그래서 iOS 추적 동의 창도 띄우지 않는다). 개발 빌드는 구글 테스트 광고를 쓴다.
 // EEA·영국·스위스는 AdMob 'OFFSIDE 유럽 동의' 메시지(UMP)를 첫 광고 칸에서 한 번 띄우고, 광고 요청은 그 뒤에 한다.
 import { useEffect, useState } from 'react';
@@ -10,6 +10,7 @@ import { askConsent } from '../platform/adConsent';
 import { adFree } from '../platform/adFree';
 import { rem } from '../theme/type';
 import { Txt } from '../ui/Txt';
+import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
 /** AdMob 배너 단위. 위치마다 나누지 않고 플랫폼별 하나를 같이 쓴다. */
 const UNIT = __DEV__
@@ -31,6 +32,7 @@ function claim(place: AdPlace) {
 }
 
 export function AdSlot({ place }: { place: AdPlace }) {
+  const owner = place === 'owner-summary';
   // 노출 여부는 마운트할 때 한 번 정한다 — 화면에 있는 동안 칸이 생기거나 사라지지 않게.
   const [phase, setPhase] = useState<'off' | 'consent' | 'ready'>(() =>
     claim(place) ? 'consent' : 'off',
@@ -48,28 +50,31 @@ export function AdSlot({ place }: { place: AdPlace }) {
   // T-11-069 광고 제거를 사면 보고 있던 칸도 바로 접는다.
   const { owned } = useSnapshot(adFree);
   if (phase === 'off' || owned || !UNIT) return null;
+  const banner = phase === 'ready' && width > 0 && (
+    <BannerAd
+      unitId={UNIT}
+      width={width}
+      size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+      requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+      onAdFailedToLoad={() => {
+        lastShown.set(place, Infinity);
+        setPhase('off');
+      }}
+    />
+  );
   return (
     <View
-      accessibilityLabel="광고"
+      accessibilityLabel={shellMoreText.adLabel}
       testID={`ad-${place}`}
-      style={{ marginTop: 24, gap: 6 }}
+      style={{ marginTop: owner ? 8 : 24, marginBottom: owner ? 12 : 0, gap: 6 }}
       onLayout={(e) => setWidth(Math.floor(e.nativeEvent.layout.width))}
     >
-      <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
-        광고
+      <Txt tone="muted" style={{ fontSize: rem(0.6875), ...(owner ? { lineHeight: 14 } : {}) }}>
+        {shellMoreText.adLabel}
       </Txt>
-      {phase === 'ready' && width > 0 && (
-        <BannerAd
-          unitId={UNIT}
-          width={width}
-          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-          requestOptions={{ requestNonPersonalizedAdsOnly: true }}
-          onAdFailedToLoad={() => {
-            lastShown.set(place, Infinity);
-            setPhase('off');
-          }}
-        />
-      )}
+      {/* 적응형 배너의 SDK 최소 높이(50)만 예약한다. height/maxHeight/overflow 제한 없이
+          SDK가 알려 준 실제 높이로 커지므로 큰 광고도 자르지 않는다. 기존 하단 칸은 예약하지 않는다. */}
+      {owner ? <View style={{ minHeight: 50 }}>{banner}</View> : banner}
     </View>
   );
 }

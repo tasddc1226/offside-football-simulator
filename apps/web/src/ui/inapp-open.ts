@@ -2,6 +2,7 @@
 // 판별·URL 조립은 inapp.ts(순수)에 있다.
 import { detectInApp, externalOpenUrl, manualOpenGuide, type InAppInfo } from './inapp.js';
 import { closeSheet, showSheet } from './sheetState.svelte.js';
+import { shellInstallText as L } from '@offside/app-core/i18n/ko/shellInstall';
 
 /** 홈 화면 아이콘(웹 앱)으로 연 상태인지. */
 export function isStandalone(): boolean {
@@ -63,10 +64,10 @@ export async function openExternal(info: InAppInfo | null = currentInApp()) {
     {
       kind: 'notice',
       eyebrow: 'External browser',
-      title: '외부 브라우저에서 열어 주세요',
+      title: L.openTitle,
       text: manualOpenGuide(info, copied),
     },
-    [{ label: '확인했어요', cls: 'btn-primary', fn: closeSheet }],
+    [{ label: L.gotIt, cls: 'btn-primary', fn: closeSheet }],
   );
 }
 
@@ -76,13 +77,13 @@ export function showInAppLoginNotice(info: InAppInfo) {
     {
       kind: 'notice',
       eyebrow: 'Google login',
-      title: '외부 브라우저에서 로그인해 주세요',
-      text: '구글이 앱 안 브라우저(카톡·인스타 등)에서의 로그인을 막고 있어요. 외부 브라우저로 열어서 로그인해 주세요.',
+      title: L.loginNoticeTitle,
+      text: L.loginNoticeBody,
       muted: true,
     },
     [
-      { label: '외부 브라우저로 열기', cls: 'btn-primary', fn: () => void openExternal(info) },
-      { label: '닫기', fn: closeSheet },
+      { label: L.inappOpen, cls: 'btn-primary', fn: () => void openExternal(info) },
+      { label: L.close, fn: closeSheet },
     ],
   );
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
   // 경기 한 줄(라운드·승무패·상대·스코어·내 기록). 경기 중계 시트와 구간 리포트의 경기별 기록이 함께 쓴다.
   import { RES_LABEL, type TickerRow } from '@offside/app-core/sheets';
+  import { sheetCoreText } from '@offside/app-core/i18n/ko/sheetCore';
   let { m }: { m: TickerRow } = $props();
 </script>
 
@@ -9,7 +10,7 @@
   <span
     >{m.opp} {m.score}
     <span class="muted"
-      >· {#if m.mins}{m.mins}분{#if m.g} · <b>{m.g}골</b>{/if}{#if m.a} · {m.a}도움{/if} · {m.rating}{:else if m.inj}부상 결장{:else}출전 없음{/if}</span
+      >· {#if m.mins}{sheetCoreText.tickerMins({ n: m.mins })}{#if m.g} · <b>{sheetCoreText.tickerGoals({ n: m.g })}</b>{/if}{#if m.a} · {sheetCoreText.tickerAssists({ n: m.a })}{/if} · {m.rating}{:else if m.inj}{sheetCoreText.tickerInjured}{:else}{sheetCoreText.tickerNone}{/if}</span
     ></span
   >
 </div>

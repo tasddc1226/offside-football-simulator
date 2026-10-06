@@ -1,4 +1,5 @@
 import { ProfileSchema, successEnvelope } from '@offside/contracts';
+import { detailPosOpen } from '@offside/contracts/positions';
 import { createApp } from '../app.js';
 import { SESSION_COOKIE_NAME } from '../auth/session.js';
 import { linkGoogle, type TestD1 } from './d1.js';
@@ -59,6 +60,12 @@ export const TEST_CAREER = {
   appVersion: '1.0.0',
 };
 
+/** T-11-095 업로드할 때의 커리어 메타. 실제 클라이언트처럼 개막 뒤에 만든 선수만 세부 포지션을 싣는다. */
+export const testCareer = () => ({
+  ...TEST_CAREER,
+  ...(detailPosOpen(new Date().toISOString()) && { dpos: 'ST' }),
+});
+
 /** Set-Cookie에서 쿠키 하나의 값(빈 값일 수 있다). 없으면 던진다. */
 export function extractCookie(setCookie: string, name: string): string {
   const match = new RegExp(`${name}=([^;]*)`).exec(setCookie);
@@ -98,7 +105,7 @@ export const issueAdminCookie = (ctx: TestD1, opts: { nickname?: string } = {}) 
 
 /** 시즌 업로드 본문(테스트 공용). over로 season 칸을 덮어쓴다. */
 export const seasonBody = (over: Record<string, unknown> = {}) => ({
-  career: TEST_CAREER,
+  career: testCareer(),
   season: {
     age: 18,
     club: '테스트 고교',

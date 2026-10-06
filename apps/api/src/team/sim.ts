@@ -6,7 +6,9 @@ import {
   YOUTH_OVR,
   anonName,
   lineStrength,
+  presetLayout,
   slotFit,
+  teamSynergy,
   slotRating,
   teamOvr,
   type DetailPos,
@@ -15,6 +17,10 @@ import {
   type LineStrength,
   type PeakProfile,
   type PosGroup,
+  type SynergyPlayer,
+  type TeamSynergy,
+  synergyApplies,
+  toSynergyPlayer,
 } from '@offside/contracts/owner-team';
 
 /** 팀에 넣을 수 있는 커리어(구단주 본인의 은퇴 선수). */
@@ -28,6 +34,13 @@ export type LineupCareer = {
   roles: PeakProfile['roles'] | null;
   number: number | null;
   publicName: string | null;
+  /** T-11-105 시너지 — 유형 id·주발·국적·이 팀 구단주가 직접 키웠는지. */
+  type?: string | null;
+  foot?: string | null;
+  nation?: string | null;
+  raised?: boolean;
+  /** T-11-114 카드 시즌(0 = 프리시즌). 팀 시즌보다 앞이면 와일드카드. */
+  season?: number;
 };
 
 /** 경기 기록에 남기는 선수. 공개 이름은 담지 않는다 — 읽을 때 커리어의 지금 공개 이름을 붙인다. */
@@ -41,6 +54,8 @@ export type LineupSlot = {
   fit: number;
   ref: PlayerRef;
   publicName: string | null;
+  /** T-11-105 시너지를 따질 선수 정보(유스 선수 자리는 null). */
+  syn: SynergyPlayer | null;
 };
 
 /**
@@ -53,6 +68,7 @@ export function buildLineup(
   eligible: ReadonlyMap<string, LineupCareer>,
   layout?: TeamLayout | null,
 ): LineupSlot[] {
+  const xs = (layout ?? presetLayout(formation)).map((p) => p.x);
   return (layout?.map((p) => p.slot) ?? FORMATIONS[formation]).map((slot, i) => {
     const id = slotIds[i] ?? null;
     const c = id ? eligible.get(id) : undefined;
@@ -65,6 +81,7 @@ export function buildLineup(
         fit: 1,
         ref: { careerId: null, anon: YOUTH_NAME },
         publicName: null,
+        syn: null,
       };
     }
     const rating = slotRating(slot, c);
@@ -76,6 +93,7 @@ export function buildLineup(
       fit: slotFit(slot, c, rating),
       ref: { careerId: c.id, anon: anonName(c.pos, c.number) },
       publicName: c.publicName,
+      syn: toSynergyPlayer(slot, xs[i] ?? 50, c),
     };
   });
 }
@@ -84,11 +102,22 @@ export const filledCount = (lineup: readonly LineupSlot[]) =>
   lineup.filter((s) => s.careerId !== null).length;
 export const lineupOvr = (lineup: readonly LineupSlot[]) => teamOvr(lineup.map((s) => s.rating));
 
-/** 공격·중원·수비·골키퍼 힘 — 자리마다의 몫과 포메이션의 줄 무게(contracts owner-team.ts lineStrength). */
-export const lineupLines = (lineup: readonly LineupSlot[]): LineStrength =>
+/** 선발의 시너지(T-11-105). */
+export const lineupSynergy = (lineup: readonly LineupSlot[]): TeamSynergy =>
+  teamSynergy(lineup.map((s) => s.syn));
+
+/**
+ * 공격·중원·수비·골키퍼 힘 — 자리마다의 몫과 포메이션의 줄 무게(contracts owner-team.ts lineStrength). synergy를 주면
+ * 시너지 보정을 더한다(반영 시즌 경기만).
+ */
+export const lineupLines = (
+  lineup: readonly LineupSlot[],
+  synergy?: TeamSynergy | null,
+): LineStrength =>
   lineStrength(
     lineup.map((s) => s.slot),
     lineup.map((s) => s.rating),
+    synergy,
   );
 
 /** 기대 득점의 기준(두 팀 힘이 같을 때), 공격 − 상대 수비 10점당 배율(지수), 중원 10점당 배율, 홈 이점. */
@@ -195,19 +224,34 @@ export type SimEvent = {
   scorer: PlayerRef;
   assist: PlayerRef | null;
 };
-export type SimResult = { homeGoals: number; awayGoals: number; events: SimEvent[] };
+export type SimResult = {
+  homeGoals: number;
+  awayGoals: number;
+  events: SimEvent[];
+  /** 반영한 시너지 id(T-11-105, 반영 시즌 경기만). 시너지별 사용률·승률 측정용 기록. */
+  synergy?: { home: string[]; away: string[] };
+};
 
-/** 경기 한 판. seed는 경기 id — 같은 id·같은 선발이면 같은 결과다. */
+const synergyIds = (s: TeamSynergy) => s.active.filter((a) => a.kind !== 'badge').map((a) => a.id);
+
+/**
+ * 경기 한 판. seed는 경기 id — 같은 id·같은 선발이면 같은 결과다. season이 시너지 반영 시즌(T-11-105,
+ * SYNERGY_FROM_SEASON)부터면 두 팀 줄 힘에 시너지 보정을 더한다. 그 전 시즌은 지금까지와 같은 결과다.
+ */
 export function simulateMatch(
   seed: string,
   home: readonly LineupSlot[],
   away: readonly LineupSlot[],
+  season: number,
 ): SimResult {
   if (home.length !== LINEUP_SIZE || away.length !== LINEUP_SIZE)
     throw new Error('선발은 11명이어야 합니다.');
   const rng = rngOf(seedOf(seed));
-  const hs = lineupLines(home);
-  const as = lineupLines(away);
+  const on = synergyApplies(season);
+  const hSyn = on ? lineupSynergy(home) : null;
+  const aSyn = on ? lineupSynergy(away) : null;
+  const hs = lineupLines(home, hSyn);
+  const as = lineupLines(away, aSyn);
   const homeGoals = poisson(expectedGoals(hs, as, true), rng);
   const awayGoals = poisson(expectedGoals(as, hs, false), rng);
   const events: SimEvent[] = [];
@@ -229,5 +273,10 @@ export function simulateMatch(
   add('away', away, awayGoals);
   // 같은 분이면 만든 순서(안정 정렬).
   events.sort((a, b) => a.minute - b.minute);
-  return { homeGoals, awayGoals, events };
+  return {
+    homeGoals,
+    awayGoals,
+    events,
+    ...(hSyn && aSyn ? { synergy: { home: synergyIds(hSyn), away: synergyIds(aSyn) } } : {}),
+  };
 }

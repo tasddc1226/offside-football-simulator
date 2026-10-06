@@ -6,6 +6,7 @@ import '@offside/game/index';
 import { DEX_GROUPS, eventDex, type DexEntry, type DexGroup } from '@offside/game/eventDex';
 import { dexRules, oddsText } from '@offside/app-core/dexText';
 import { dexSeen } from '@offside/app-core/dex';
+import { dexText as L } from '@offside/app-core/i18n/ko/dex';
 import { goHome } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
@@ -18,6 +19,7 @@ import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
 import { AutoGrid, TabOpt } from '../board/parts';
+import { tn } from '@offside/game/i18n/names';
 
 /** 이벤트 한 칸 — 눌러서 선택지별 확률을 펼친다(웹 <details>). */
 function DexItem({
@@ -46,7 +48,7 @@ function DexItem({
           🔒
         </Txt>
         <Txt tone="muted" style={{ fontSize: rem(0.875), flex: 1 }}>
-          {`아직 만나지 못한 ${e.group === 'story' ? `스토리 이벤트 · ${e.story?.stage ?? '?'}단계` : '특별 이벤트'}`}
+          {e.group === 'story' ? L.lockedStory({ stage: e.story?.stage ?? '?' }) : L.lockedSpecial}
         </Txt>
       </View>
     );
@@ -69,7 +71,7 @@ function DexItem({
             {open ? '▾ ' : '▸ '}
           </Txt>
           {found ? (
-            <Txt accessibilityLabel="발견" style={{ color: c.good, fontWeight: '700' }}>
+            <Txt accessibilityLabel={L.foundMark} style={{ color: c.good, fontWeight: '700' }}>
               {'✓ '}
             </Txt>
           ) : null}
@@ -85,7 +87,7 @@ function DexItem({
           }}
         >
           {e.pos ? <Pill>{e.pos}</Pill> : null}
-          {e.story ? <Pill>{`${e.story.name} ${e.story.stage}/${e.story.total}`}</Pill> : null}
+          {e.story ? <Pill>{`${tn(e.story.name)} ${e.story.stage}/${e.story.total}`}</Pill> : null}
         </View>
       </Press>
       {open ? (
@@ -129,7 +131,7 @@ function DexItem({
           ))}
           {e.dependsOnPast ? (
             <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: -2 }}>
-              앞 단계에서 한 선택에 따라 확률이 달라져요.
+              {L.dependsOnPast}
             </Txt>
           ) : null}
         </View>
@@ -166,10 +168,10 @@ export default function Dex() {
         <View>
           <Txt v="eyebrow">Odds</Txt>
           <Txt v="h1" accessibilityRole="header">
-            확률 도감
+            {L.title}
           </Txt>
           <Txt tone="muted" style={{ fontSize: rem(0.8125), marginTop: 6 }}>
-            선수 상태에 따라 성공 확률이 달라져요. 가능한 범위와 영향 요인을 보여 줘요.
+            {L.intro}
           </Txt>
         </View>
 
@@ -184,7 +186,7 @@ export default function Dex() {
               <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
                 {rulesOpen ? '▾ ' : '▸ '}
               </Txt>
-              공통 규칙
+              {L.rulesTitle}
             </Txt>
           </Press>
           {rulesOpen ? (
@@ -211,7 +213,7 @@ export default function Dex() {
 
         {!dex ? (
           <Txt tone="muted" accessibilityLiveRegion="polite">
-            확률을 계산하는 중…
+            {L.calculating}
           </Txt>
         ) : (
           <>
@@ -223,10 +225,10 @@ export default function Dex() {
               }}
             >
               <Txt v="h2" accessibilityRole="header">
-                이벤트
+                {L.events}
               </Txt>
               <Txt tone="muted" testID="dex-progress" style={{ fontSize: rem(0.8125) }}>
-                {`발견 ${foundCount}/${dex.length}`}
+                {L.foundCount({ n: foundCount, total: dex.length })}
               </Txt>
             </View>
             <AutoGrid
@@ -236,7 +238,7 @@ export default function Dex() {
                 <TabOpt
                   key="all"
                   tight
-                  title="전체"
+                  title={L.filterAll}
                   selected={filter === 'all'}
                   testID="dex-filter-all"
                   onPress={() => setFilter('all')}
@@ -259,8 +261,7 @@ export default function Dex() {
               ))}
             </View>
             <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-              ▲는 값이 클수록 성공 확률이 오르고, ▼는 내려가요. 범위는 가능한 선수 상태 전체에서
-              나올 수 있는 최저~최고예요.
+              {L.noteApp}
             </Txt>
           </>
         )}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // T-10-012 확률 도감. 공통 규칙과 이벤트별 선택지 확률(범위·영향 요인)을 게임 코드에서 직접 뽑아 보여 준다.
   // 스토리·특별 이벤트는 한 번 겪어야 열린다(스포일러 보호). 분석 코드와 함께 처음 열 때 불러오는 화면이다.
   import { onMount } from 'svelte';
@@ -6,6 +7,7 @@
   import { DEX_GROUPS, eventDex, type DexEntry, type DexGroup } from '@offside/game/eventDex';
   import { dexRules, oddsText } from '@offside/app-core/dexText';
   import { dexSeen } from '@offside/app-core/dex';
+  import { dexText as L } from '@offside/app-core/i18n/ko/dex';
   import { appState } from './state.svelte.js';
   import { goHome } from './nav.js';
   import BackBar from './BackBar.svelte';
@@ -35,14 +37,14 @@
   <section class="card stack" style="gap:14px">
     <div>
       <div class="eyebrow">Odds</div>
-      <h1>확률 도감</h1>
+      <h1>{L.title}</h1>
       <p class="muted fs-sm" style="margin:6px 0 0">
-        선수 상태에 따라 성공 확률이 달라져요. 가능한 범위와 영향 요인을 보여 줘요.
+        {L.intro}
       </p>
     </div>
 
     <details class="dex-rules" open>
-      <summary><b>공통 규칙</b></summary>
+      <summary><b>{L.rulesTitle}</b></summary>
       <dl>
         {#each RULES as [term, desc] (term)}
           <dt>{term}</dt>
@@ -52,14 +54,14 @@
     </details>
 
     {#if !dex}
-      <p class="muted" aria-live="polite">확률을 계산하는 중…</p>
+      <p class="muted" aria-live="polite">{L.calculating}</p>
     {:else}
       <div class="row" style="justify-content:space-between;align-items:baseline">
-        <h2 style="margin:0">이벤트</h2>
-        <span class="muted fs-sm" data-dex-progress>발견 {foundCount}/{dex.length}</span>
+        <h2 style="margin:0">{L.events}</h2>
+        <span class="muted fs-sm" data-dex-progress>{L.foundCount({ n: foundCount, total: dex.length })}</span>
       </div>
-      <div class="seg dex-tabs" role="group" aria-label="분류">
-        <button class="opt" aria-pressed={filter === 'all'} data-dex-filter="all" onclick={() => (filter = 'all')}>전체</button>
+      <div class="seg dex-tabs" role="group" aria-label={L.groupLabel}>
+        <button class="opt" aria-pressed={filter === 'all'} data-dex-filter="all" onclick={() => (filter = 'all')}>{L.filterAll}</button>
         {#each DEX_GROUPS as g (g.id)}
           <button class="opt" aria-pressed={filter === g.id} data-dex-filter={g.id} onclick={() => (filter = g.id)}>{g.name}</button>
         {/each}
@@ -70,15 +72,15 @@
             {#if hidden(e)}
               <div class="dex-locked">
                 <span aria-hidden="true">🔒</span>
-                <span>아직 만나지 못한 {e.group === 'story' ? `스토리 이벤트 · ${e.story?.stage ?? '?'}단계` : '특별 이벤트'}</span>
+                <span>{e.group === 'story' ? L.lockedStory({ stage: e.story?.stage ?? '?' }) : L.lockedSpecial}</span>
               </div>
             {:else}
               <details>
                 <summary>
-                  <span class="dex-title">{#if found(e)}<span class="dex-check" aria-label="발견">✓</span>{/if}{e.title}</span>
+                  <span class="dex-title">{#if found(e)}<span class="dex-check" aria-label={L.foundMark}>✓</span>{/if}{e.title}</span>
                   <span class="row" style="gap:4px">
                     {#if e.pos}<span class="pill">{e.pos}</span>{/if}
-                    {#if e.story}<span class="pill">{e.story.name} {e.story.stage}/{e.story.total}</span>{/if}
+                    {#if e.story}<span class="pill">{tn(e.story.name)} {e.story.stage}/{e.story.total}</span>{/if}
                   </span>
                 </summary>
                 <ul class="dex-choices">
@@ -98,13 +100,13 @@
                     </li>
                   {/each}
                 </ul>
-                {#if e.dependsOnPast}<p class="muted dex-note">앞 단계에서 한 선택에 따라 확률이 달라져요.</p>{/if}
+                {#if e.dependsOnPast}<p class="muted dex-note">{L.dependsOnPast}</p>{/if}
               </details>
             {/if}
           </li>
         {/each}
       </ul>
-      <p class="muted fs-xs" style="margin:0">▲는 값이 클수록 성공 확률이 오르고, ▼는 내려가요. 범위는 선수 상태에 따라 나올 수 있는 최저~최고 확률이에요.</p>
+      <p class="muted fs-xs" style="margin:0">{L.noteWeb}</p>
     {/if}
   </section>
   <BackBar act="home" fallback={goHome} />
