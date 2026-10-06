@@ -336,16 +336,27 @@ function Plaques({
                 {w.number}
               </Txt>
             </View>
-            <View style={{ flexShrink: 1, gap: 2 }}>
-              <Txt bold numberOfLines={1} style={{ fontSize: rem(0.875) }}>
-                {name}
-              </Txt>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                {withClub ? <ClubMark name={w.club} id={w.clubId} size={14} /> : null}
-                <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75), flexShrink: 1 }}>
-                  {withClub ? `${clubName(w)} · ${day(w.grantedAt)}` : day(w.grantedAt)}
+            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                <Txt bold numberOfLines={1} style={{ fontSize: rem(0.875), flexShrink: 1 }}>
+                  {name}
+                </Txt>
+                <Txt tone="muted" num={400} style={{ marginLeft: 'auto', fontSize: rem(0.75) }}>
+                  {day(w.grantedAt)}
                 </Txt>
               </View>
+              {withClub ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <ClubMark name={w.club} id={w.clubId} size={14} />
+                  <Txt
+                    tone="muted"
+                    numberOfLines={1}
+                    style={{ fontSize: rem(0.75), flexShrink: 1 }}
+                  >
+                    {clubName(w)}
+                  </Txt>
+                </View>
+              ) : null}
             </View>
             {myIds.has(w.careerId) ? (
               <Txt

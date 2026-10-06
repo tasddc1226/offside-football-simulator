@@ -135,10 +135,8 @@
       <button class="rn-plaque" style={rnStyle(w.clubId)} data-rn-wall-of-honor={w.careerId} aria-label={L.wallLabel({ name, club: rnClubName(w), number: w.number, day: day(w.grantedAt) })} onclick={() => void openPublicLegendById(w.careerId)}>
         <span class="rn-plaque-medal" aria-hidden="true"><Laurel /><b class="num">{w.number}</b></span>
         <span class="rn-plaque-body">
-          <b class="rn-tile-name">{name}</b>
-          <span class="muted fs-xs">
-            {#if withClub}<ClubMark name={w.club} id={w.clubId} size={14} /> {rnClubName(w)} · {/if}{day(w.grantedAt)}
-          </span>
+          <span class="rn-plaque-top"><b class="rn-tile-name">{name}</b><span class="muted fs-xs num">{day(w.grantedAt)}</span></span>
+          {#if withClub}<span class="muted fs-xs"><ClubMark name={w.club} id={w.clubId} size={14} /> {rnClubName(w)}</span>{/if}
         </span>
         {#if myIds.has(w.careerId)}<span class="pill rn-plaque-mine">{L.mine}</span>{/if}
       </button>
