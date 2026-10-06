@@ -91,6 +91,7 @@ export default function TeamProfile({ id }: { id: string }) {
     team?.slots.map((s) => ({
       rating: s.rating,
       nation: s.nation,
+      season: s.season,
       name: (mine && s.careerId && localNames.get(s.careerId)) || s.name,
       youth: s.careerId === null,
     })) ?? [];

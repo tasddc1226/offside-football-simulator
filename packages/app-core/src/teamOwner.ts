@@ -6,7 +6,9 @@ import {
   ACH_CATEGORIES,
   ACH_CATEGORY_NAME,
   LINEUP_SIZE,
+  TEAM_WILDCARD_MAX,
   YOUTH_OVR,
+  isWildcardSeason,
   achGradeOf,
   DUOS,
   FOOT_BONUS,
@@ -100,30 +102,60 @@ export function assignSlot(
   return next;
 }
 
+export { WILDCARD_FULL_TEXT } from '@offside/contracts/owner-team';
+/** T-11-114 선발에 든 와일드카드(지난 시즌 선수) 수. */
+export const wildcardsIn = (
+  slots: readonly (string | null)[],
+  byId: ReadonlyMap<string, TeamPlayer>,
+  season: number,
+) => slots.filter((id) => id !== null && isWildcardSeason(byId.get(id)?.season, season)).length;
+/** 와일드카드 상한을 넘는 선발인지(자리 바꾸기는 수가 그대로라 괜찮다). */
+export const tooManyWildcards = (
+  slots: readonly (string | null)[],
+  byId: ReadonlyMap<string, TeamPlayer>,
+  season: number,
+) => wildcardsIn(slots, byId, season) > TEAM_WILDCARD_MAX;
+/** 편성 화면 와일드카드 표기 — '와일드카드 2/3'. 앞 시즌이 없는 프리시즌은 null. */
+export const wildcardLabel = (
+  slots: readonly (string | null)[],
+  byId: ReadonlyMap<string, TeamPlayer>,
+  season: number,
+): string | null =>
+  season > 0 ? `와일드카드 ${wildcardsIn(slots, byId, season)}/${TEAM_WILDCARD_MAX}` : null;
+
 /** 실력이 같으면 먼저 채울 자리(스트라이커·골키퍼·센터백 …). */
 const FILL_ORDER = ['ST', 'GK', 'CB', 'CM', 'AM', 'DM', 'W', 'FB'];
 
-/** 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만). */
+/** 자리마다 가장 잘 맞는 선수부터 채운다(유스 선수보다 나을 때만). 지난 시즌 선수는 와일드카드 상한까지만. */
 export function autoFillSlots(
   slotCodes: readonly DetailPos[],
   players: readonly TeamPlayer[],
+  season: number,
 ): (string | null)[] {
   const next: (string | null)[] = Array(LINEUP_SIZE).fill(null);
   const order = slotCodes
     .map((slot, i) => ({ slot, i }))
     .sort((a, b) => FILL_ORDER.indexOf(a.slot) - FILL_ORDER.indexOf(b.slot));
+  const wildIds = new Set(
+    players.filter((p) => isWildcardSeason(p.season, season)).map((p) => p.careerId),
+  );
+  const used = new Set<string>();
+  let wild = 0;
   for (;;) {
     let best: { i: number; id: string; r: number } | null = null;
     for (const { slot, i } of order) {
       if (next[i] !== null) continue;
       for (const p of players) {
-        if (next.includes(p.careerId)) continue;
+        if (used.has(p.careerId)) continue;
+        if (wild >= TEAM_WILDCARD_MAX && wildIds.has(p.careerId)) continue;
         const r = slotRating(slot, p);
         if (r > YOUTH_OVR && (!best || r > best.r)) best = { i, id: p.careerId, r };
       }
     }
     if (!best) break;
     next[best.i] = best.id;
+    used.add(best.id);
+    if (wildIds.has(best.id)) wild++;
   }
   return next;
 }

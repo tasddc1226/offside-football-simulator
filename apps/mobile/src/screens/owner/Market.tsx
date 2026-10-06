@@ -1418,6 +1418,7 @@ export default function Market() {
                   cell={{
                     name: marketName(buying.card, local),
                     nation: buying.card.nation,
+                    season: buying.card.season,
                     rating: buying.card.peak,
                     number: buying.card.number,
                     legendScore: buying.card.legendScore,
