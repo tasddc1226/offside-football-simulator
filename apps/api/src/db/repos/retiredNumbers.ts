@@ -82,6 +82,10 @@ function candidatesOf(
   return clubs.length ? { number, clubs } : null;
 }
 
+/** T-11-121 careers.wall_of_honor_json에 저장한 명예의 벽 — 받을 뻔한 자리와 받은 때. */
+type SavedWall = Pick<WallOfHonorItem, 'clubId' | 'club' | 'number' | 'grantedAt'>;
+const parseWall = (json: string) => JSON.parse(json) as SavedWall;
+
 /** 결번 시즌 — 커리어가 처음 올라온 시즌(NULL = 시즌 사이 휴식기는 프리시즌으로 센다). */
 const seasonOf = (row: Pick<JudgeRow, 'serviceSeason'>) => row.serviceSeason ?? 0;
 
@@ -200,14 +204,13 @@ const slotColumns = {
 };
 
 /**
- * 심사 결과. season은 결번이 속한 시즌(자리를 가졌거나 잡았을 때, 또는 명예의 벽을 따졌을 때 — 지울 캐시의 시즌). claimed는
- * 이번 심사가 막 자리를 잡았을 때만 있다(홈 라이브로 알린다). awarded는 이번 심사가 명예의 벽을 막 줬을 때.
+ * 심사 결과. season은 결번·명예의 벽이 속한 시즌(자리를 가졌거나 따졌을 때 — 지울 캐시의 시즌). claimed는 이번 심사가
+ * 막 자리를 잡았을 때만 있다(홈 라이브로 알린다).
  */
 type Judged = {
   result: RetiredNumberResult | null;
   season?: number;
   claimed?: LiveRetiredNumber;
-  awarded?: boolean;
 };
 
 /** 은퇴 PUT 뒤에 부른다. 자격이 없으면(또는 공개 명예의 전당 밖의 짧은 커리어면) result가 null. */
@@ -234,11 +237,7 @@ export async function judgeRetiredNumber(db: Db, careerId: string, now: string):
   }
   if (!row) return { result: null };
   if (row.wallOfHonorJson) {
-    const saved = JSON.parse(row.wallOfHonorJson) as {
-      clubId: string;
-      club: string;
-      number: number;
-    };
+    const saved = parseWall(row.wallOfHonorJson);
     const [holder] = await db
       .select({ name: careers.publicName })
       .from(retiredNumbers)
@@ -259,6 +258,7 @@ export async function judgeRetiredNumber(db: Db, careerId: string, now: string):
         holder: holder?.name ?? null,
         wallOfHonor: true,
       },
+      season: seasonOf(row),
     };
   }
   const [customs, seasons] = await Promise.all([
@@ -331,7 +331,6 @@ export async function judgeRetiredNumber(db: Db, careerId: string, now: string):
   return {
     result: { kind: 'taken', ...slot, holder: holder?.name ?? null, wallOfHonor: !!award?.json },
     season,
-    awarded: (results[c.clubs.length] as { id: string }[]).length > 0,
   };
 }
 
@@ -428,6 +427,7 @@ export async function summarizeRetiredNumbers(
           sql`coalesce(${careers.serviceSeason}, 0) = ${season}`,
         ),
       )
+      .orderBy(sql`json_extract(${careers.wallOfHonorJson}, '$.grantedAt')`)
       .limit(WALL_ON_SUMMARY),
   ]);
   return {
@@ -435,11 +435,9 @@ export async function summarizeRetiredNumbers(
     total: clubs.reduce((n, c) => n + c.count, 0),
     clubs,
     recent: items,
-    wall: wall
-      .map(({ json, ...r }) => {
-        const { clubId, club, number, grantedAt } = JSON.parse(json!) as WallOfHonorItem;
-        return { ...r, clubId, club, number, grantedAt };
-      })
-      .sort((a, b) => a.grantedAt.localeCompare(b.grantedAt)),
+    wall: wall.map(({ json, ...r }) => {
+      const { clubId, club, number, grantedAt } = parseWall(json!);
+      return { ...r, clubId, club, number, grantedAt };
+    }),
   };
 }

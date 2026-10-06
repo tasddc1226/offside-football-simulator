@@ -3,7 +3,7 @@
 // T-11-029 결번은 시즌마다 따로 — 개막한 시즌이 둘 이상이면 시즌 탭을 보인다(웹과 같다).
 // T-11-101 열 때는 요약(구단별 수 + 최근 8개)만 받는다. 타일은 구단을 고르거나 최신순 전체를 열 때 그 몫만 받는다.
 import { memo, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 import Svg, { Defs, G, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { proxy, useSnapshot } from 'valtio';
 import type { CareerPos, RetiredNumbersResponse, RetiredNumbersSummary } from '@offside/contracts';
@@ -80,6 +80,36 @@ type TileOpts = {
   myIds: ReadonlySet<string>;
   filteredPos: boolean;
 };
+
+/** '내 선수' 배지 — 결번 타일·명예의 벽 명판이 함께 쓴다. */
+const MinePill = ({ c, style }: { c: Colors; style: ViewStyle }) => (
+  <View
+    style={[
+      {
+        paddingHorizontal: 6,
+        borderRadius: 999,
+        backgroundColor: c.surface2,
+        borderWidth: 1,
+        borderColor: c.line,
+      },
+      style,
+    ]}
+  >
+    {/* T-11-038 한 줄 고정, 확대 1.2배까지(큰 글씨에서 꺾여 이름을 덮지 않게). */}
+    <Txt
+      numberOfLines={1}
+      maxFontSizeMultiplier={1.2}
+      style={{
+        fontSize: rem(0.625),
+        lineHeight: rem(0.625) * 1.6,
+        fontWeight: '600',
+        color: c.muted,
+      }}
+    >
+      {L.mine}
+    </Txt>
+  </View>
+);
 
 /** 유니폼 타일 한 장 — 구단 색이 은은히 비치는 바탕(웹 radial-gradient). 바탕과 유니폼을 한 Svg에 그리고, 색·필터 상태는
  * 부모가 넘긴다(수백 장이라 타일마다 Svg를 하나 더 두거나 구독하지 않게). */
@@ -165,34 +195,7 @@ const Tile = memo(function Tile({
       >
         {L.tileSeq({ seq: it.seq, day: day(it.grantedAt) })}
       </Txt>
-      {mine ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: 6,
-            right: 6,
-            paddingHorizontal: 6,
-            borderRadius: 999,
-            backgroundColor: c.surface2,
-            borderWidth: 1,
-            borderColor: c.line,
-          }}
-        >
-          {/* T-11-038 한 줄 고정, 확대 1.2배까지(큰 글씨에서 꺾여 이름을 덮지 않게). */}
-          <Txt
-            numberOfLines={1}
-            maxFontSizeMultiplier={1.2}
-            style={{
-              fontSize: rem(0.625),
-              lineHeight: rem(0.625) * 1.6,
-              fontWeight: '600',
-              color: c.muted,
-            }}
-          >
-            {L.mine}
-          </Txt>
-        </View>
-      ) : null}
+      {mine ? <MinePill c={c} style={{ position: 'absolute', top: 6, right: 6 }} /> : null}
     </Press>
   );
 });
@@ -312,14 +315,7 @@ function Plaques({
           >
             <View
               pointerEvents="none"
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                top: 0,
-                bottom: 0,
-                backgroundColor: alpha(leaf, 0.12),
-              }}
+              style={[StyleSheet.absoluteFill, { backgroundColor: alpha(leaf, 0.12) }]}
             />
             <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Laurel medal="brass" />
@@ -358,26 +354,7 @@ function Plaques({
                 </View>
               ) : null}
             </View>
-            {myIds.has(w.careerId) ? (
-              <Txt
-                numberOfLines={1}
-                maxFontSizeMultiplier={1.2}
-                style={{
-                  marginLeft: 'auto',
-                  paddingHorizontal: 6,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: c.line,
-                  backgroundColor: c.surface2,
-                  fontSize: rem(0.625),
-                  lineHeight: rem(0.625) * 1.6,
-                  fontWeight: '600',
-                  color: c.muted,
-                }}
-              >
-                {L.mine}
-              </Txt>
-            ) : null}
+            {myIds.has(w.careerId) ? <MinePill c={c} style={{ flexShrink: 0 }} /> : null}
           </Press>
         );
       })}
@@ -575,7 +552,7 @@ function ClubScreen({
       else setFailed(true);
     });
     // T-11-121 이 구단 명예의 벽 — 요약(60초 메모라 첫 화면에서 받은 것을 그대로 쓴다)에서 그 구단 몫만.
-    void getRetiredNumbersSummary(season).then((r) => {
+    void track(getRetiredNumbersSummary(season)).then((r) => {
       if (live) setWall(r.ok ? (r.data.wall ?? []).filter((w) => w.clubId === clubId) : []);
     });
     return () => {

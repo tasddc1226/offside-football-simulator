@@ -764,6 +764,11 @@ button.hof-row {
   --medal: #c27a3e;
   --medal-text: #8a4a1a;
 }
+/* T-11-121 명예의 벽 명판 — 순위 메달과 겹치지 않는 놋쇠빛. */
+.medal.brass {
+  --medal: #b8924a;
+  --medal-text: #7a5a1c;
+}
 :root[data-theme='dark'] .medal.gold {
   --medal: #f0b437;
   --medal-text: #f5c45a;
@@ -775,6 +780,10 @@ button.hof-row {
 :root[data-theme='dark'] .medal.bronze {
   --medal: #d98a4e;
   --medal-text: #e8a270;
+}
+:root[data-theme='dark'] .medal.brass {
+  --medal: #d4ae63;
+  --medal-text: #e6c47f;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .medal.gold {
@@ -788,6 +797,10 @@ button.hof-row {
   :root:not([data-theme='light']) .medal.bronze {
     --medal: #d98a4e;
     --medal-text: #e8a270;
+  }
+  :root:not([data-theme='light']) .medal.brass {
+    --medal: #d4ae63;
+    --medal-text: #e6c47f;
   }
 }
 .hof-rank.medal {
@@ -4524,12 +4537,15 @@ html:has(.wrap.has-actionbar) {
   white-space: nowrap;
   font-size: 0.875rem;
 }
+.rn-tile-mine,
+.rn-plaque-mine {
+  padding: 0 6px;
+  font-size: 0.625rem;
+}
 .rn-tile-mine {
   position: absolute;
   top: 6px;
   right: 6px;
-  padding: 0 6px;
-  font-size: 0.625rem;
 }
 /* T-11-121 명예의 벽 — 결번 유니폼과 다르게 월계관 명판(놋쇠빛). 번호는 결번이 아니라 받을 뻔한 자리다. */
 .rn-sec-head h2 .rn-club-count {
@@ -4546,8 +4562,6 @@ html:has(.wrap.has-actionbar) {
   padding-bottom: 10px;
 }
 .rn-plaque {
-  --medal: #b8924a;
-  --medal-text: #7a5a1c;
   position: relative;
   display: flex;
   align-items: center;
@@ -4568,16 +4582,6 @@ html:has(.wrap.has-actionbar) {
   font: inherit;
   text-align: left;
   cursor: pointer;
-}
-:root[data-theme='dark'] .rn-plaque {
-  --medal: #d4ae63;
-  --medal-text: #e6c47f;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .rn-plaque {
-    --medal: #d4ae63;
-    --medal-text: #e6c47f;
-  }
 }
 .rn-plaque-medal {
   position: relative;
@@ -4616,8 +4620,6 @@ html:has(.wrap.has-actionbar) {
 .rn-plaque-mine {
   margin-left: auto;
   flex: none;
-  padding: 0 6px;
-  font-size: 0.625rem;
 }
 @media (prefers-reduced-motion: reduce) {
   .rn-tile {

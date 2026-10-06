@@ -606,12 +606,7 @@ const RetiredNumberItemSchema = RetiredSlotSchema.extend({
   pos: CareerPosSchema,
 });
 /** T-11-121 명예의 벽 한 명 — 칭호를 받을 뻔한 구단·번호(clubId·club·number)와 받은 때. 이름은 공개한 경우에만. */
-const WallOfHonorItemSchema = RetiredSlotSchema.extend({
-  careerId: z.string(),
-  name: z.string().nullable(),
-  pos: CareerPosSchema,
-  grantedAt: z.string(),
-});
+const WallOfHonorItemSchema = RetiredNumberItemSchema.omit({ seq: true });
 export type WallOfHonorItem = z.infer<typeof WallOfHonorItemSchema>;
 export const RetiredNumbersResponseSchema = z.strictObject({
   season: z.number().int().nonnegative(),

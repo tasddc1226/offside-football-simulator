@@ -38,17 +38,14 @@ export async function judgeRetirement(
   now: string,
 ): Promise<RetiredNumberResult | null> {
   try {
-    const { result, season, claimed, awarded } = await judgeRetiredNumber(getDb(c), careerId, now);
+    const { result, season, claimed } = await judgeRetiredNumber(getDb(c), careerId, now);
     // 이미 가진 자리여도 이름 공개 토글이 목록의 이름을 바꾼다. 그 시즌의 목록만 낡는다(T-11-029).
     if (result?.kind === 'granted' && season !== undefined) {
       purgeEdge(c, STALE.retiredNumbersChanged(season, result.clubId));
     }
-    // T-11-121 명예의 벽은 그 시즌 영구결번 요약에도 실린다.
-    if (awarded) {
-      purgeEdge(c, [
-        EDGE.hofDetail(careerId),
-        ...(season === undefined ? [] : [EDGE.retiredNumbersSummary(season)]),
-      ]);
+    // T-11-121 명예의 벽은 그 시즌 요약에도 실린다 — 막 받았거나 이름 공개를 바꿨을 수 있다.
+    if (result?.kind === 'taken' && result.wallOfHonor && season !== undefined) {
+      purgeEdge(c, STALE.wallOfHonorChanged(season, careerId));
     }
     if (claimed) publishRetiredNumber(c, claimed);
     return result;

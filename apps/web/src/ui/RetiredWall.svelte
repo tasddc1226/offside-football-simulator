@@ -132,7 +132,7 @@
   <div class="rn-plaques">
     {#each list as w (w.careerId)}
       {@const name = w.name ?? anonName(w.pos, w.number)}
-      <button class="rn-plaque" style={rnStyle(w.clubId)} data-rn-wall-of-honor={w.careerId} aria-label={L.wallLabel({ name, club: rnClubName(w), number: w.number, day: day(w.grantedAt) })} onclick={() => void openPublicLegendById(w.careerId)}>
+      <button class="rn-plaque medal brass" style={rnStyle(w.clubId)} data-rn-wall-of-honor={w.careerId} aria-label={L.wallLabel({ name, club: rnClubName(w), number: w.number, day: day(w.grantedAt) })} onclick={() => void openPublicLegendById(w.careerId)}>
         <span class="rn-plaque-medal" aria-hidden="true"><Laurel /><b class="num">{w.number}</b></span>
         <span class="rn-plaque-body">
           <span class="rn-plaque-top"><b class="rn-tile-name">{name}</b><span class="muted fs-xs num">{day(w.grantedAt)}</span></span>
