@@ -10,11 +10,13 @@
   import TeamProfile from './TeamProfile.svelte';
   import TeamLogo from './TeamLogo.svelte';
   import { num as n } from '@offside/app-core/teamText';
+  import { fmtValue } from '@offside/app-core/format';
   import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 
   const sorts = (): [TeamRankSort, string][] => [
     ['rating', L.sortRating],
     ['ovr', L.sortOvr],
+    ['value', L.sortValue],
   ];
   const formLabel = (result: 'W' | 'D' | 'L') => ({ W: L.formWin, D: L.formDraw, L: L.formLoss })[result];
   function formText(form: TeamRankResponse['items'][number]['recentForm']) {
@@ -22,7 +24,7 @@
   }
   /** undefined = 지금 시즌(서버가 정한다). */
   let season = $state<number | undefined>(undefined);
-  let sort = $state<TeamRankSort>('rating');
+  let sort = $state<TeamRankSort>(appState.hof.teamSort ?? 'rating');
   let page = $state(1);
   let data = $state<TeamRankResponse | null>(null);
   let failed = $state(false);
@@ -33,7 +35,10 @@
   const selectedSeason = $derived(season ?? data?.season ?? displaySeasonAt(now));
   /** 다시 받을 기준 — 고른 시즌, 아니면 지금 시즌(띄운 채 개막을 넘기면 바뀐다). */
   const shownSeason = $derived(season ?? displaySeasonAt(now));
-  const metricLabel = $derived(sort === 'rating' ? L.sortRating : L.sortOvr);
+  const metricLabel = $derived(sort === 'rating' ? L.sortRating : sort === 'ovr' ? L.sortOvr : L.sortValue);
+  /** 고른 정렬의 값(구단 가치는 몸값 표기). */
+  const metricOf = (t: TeamRankResponse['items'][number]) =>
+    sort === 'rating' ? n(t.rating) : sort === 'ovr' ? String(t.ovr) : fmtValue(t.value);
   const rows = $derived(data?.items ?? []);
 
   $effect(() => {
@@ -88,7 +93,7 @@
       <p class="empty" role="status">{L.loading}</p>
     {:else if data.items.length}
       {#if rows.length}
-        <div class="team-standings">
+        <div class="team-standings" class:by-value={sort === 'value'}>
           <div class="team-standings-columns team-standings-header" aria-hidden="true">
             <span class="team-standings-heading">{L.colTeam}</span><span>{L.colPlayed}</span><span>{L.colWin}</span><span>{L.colDraw}</span><span>{L.colLoss}</span><b>{metricLabel}</b>
           </div>
@@ -96,13 +101,13 @@
             {#each rows as t (t.teamId)}
               {@const played = t.record.w + t.record.d + t.record.l}
               <li value={t.rank}>
-                <button class="team-standings-columns team-standings-row" data-rank-team={t.teamId} aria-label={L.teamRowAria({ rank: t.rank, name: t.name, played: n(played), w: n(t.record.w), d: n(t.record.d), l: n(t.record.l), metric: metricLabel, value: sort === 'rating' ? n(t.rating) : String(t.ovr), form: formText(t.recentForm) })} onclick={() => open(t.teamId)}>
+                <button class="team-standings-columns team-standings-row" data-rank-team={t.teamId} aria-label={L.teamRowAria({ rank: t.rank, name: t.name, played: n(played), w: n(t.record.w), d: n(t.record.d), l: n(t.record.l), metric: metricLabel, value: metricOf(t), form: formText(t.recentForm) })} onclick={() => open(t.teamId)}>
                   <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span><TeamLogo logo={t.logo} name={t.name} size={24} decorative /><b title={t.name}>{t.name}</b></span>
                   <span class="num" title={L.playedTitle({ n: n(played) })}>{n(played)}</span>
                   <span class="num" title={L.winTitle({ n: n(t.record.w) })}>{n(t.record.w)}</span>
                   <span class="num" title={L.drawTitle({ n: n(t.record.d) })}>{n(t.record.d)}</span>
                   <span class="num" title={L.lossTitle({ n: n(t.record.l) })}>{n(t.record.l)}</span>
-                  <strong class="num team-standings-score">{sort === 'rating' ? n(t.rating) : t.ovr}</strong>
+                  <strong class="num team-standings-score">{metricOf(t)}</strong>
                   <span class="team-standings-form" aria-hidden="true">
                     {#each [0, 1, 2, 3, 4] as i (i)}
                       {@const result = t.recentForm?.[i]}
@@ -127,7 +132,7 @@
     {:else}
       <p class="empty">{L.teamsEmpty}</p>
     {/if}
-    <p class="muted fs-xs" style="margin-top:10px">{L.teamsFoot}</p>
+    <p class="muted fs-xs" style="margin-top:10px">{sort === 'value' ? L.valueFoot : L.teamsFoot}</p>
 </section>
 {/if}
 
@@ -157,6 +162,10 @@
   .team-standings {
     --stat-width: 20px;
     --score-width: 48px;
+  }
+  /* T-11-129 구단 가치는 몸값 표기(1조 2,300억)라 값 칸을 넓힌다(클래스 둘이라 아래 넓은 화면 규칙보다 앞선다). */
+  .team-standings.by-value {
+    --score-width: 84px;
   }
   .team-standings-columns {
     display: grid;
