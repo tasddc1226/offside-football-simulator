@@ -88,7 +88,7 @@
     });
   });
   const recapCard = $derived(recap ? recapCardView(recap) : null);
-  // 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 프로필 이름 앞에 늘 붙인다(기록이 없으면 루키).
+  // 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 프로필 이름 앞에 붙인다(그 시즌 기록이 없으면 없다).
   // 댓글 · 채팅에도 같은 등급이 나간다(서버 ownerTiersOf).
   const tierTag = $derived(recap ? profileTier(recap) : null);
   function openTeam(v: TeamView = 'team') {

@@ -26,14 +26,6 @@ export const recapTier = (r: SeasonRecap): OwnerTier => ownerTierOf(r.achievemen
 export const tierReason = (r: SeasonRecap): string =>
   L.tierWhy({ score: num(r.achievements?.score ?? 0) });
 
-/**
- * 구단주 프로필에 늘 붙는 지난 시즌 등급 — 결산이 나왔으면 마감 업적 점수의 등급, 그 시즌 기록이 없으면 루키.
- * 결산을 아직 굳히는 중이면 없다.
- */
+/** 구단주 프로필 지난 시즌 등급 — 결산이 나온 구단주만(그 시즌 기록이 없거나 굳히는 중이면 없다). */
 export const profileTier = (res: SeasonRecapResponse): OwnerTierTag | null =>
-  res.status === 'pending'
-    ? null
-    : {
-        tier: res.status === 'ready' && res.recap ? recapTier(res.recap) : 'rookie',
-        season: res.season,
-      };
+  res.status === 'ready' && res.recap ? { tier: recapTier(res.recap), season: res.season } : null;

@@ -170,7 +170,7 @@ export default function Owner() {
       alive = false;
     };
   }, [linked, tick, track]);
-  // T-11-128 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 이름 앞에 늘 붙인다(기록이 없으면 루키).
+  // T-11-128 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 이름 앞에 붙인다(그 시즌 기록이 없으면 없다).
   // 결산 카드와 같은 응답(1분 메모).
   const [tierTag, setTierTag] = useState<OwnerTierTag | null>(null);
   useEffect(() => {
