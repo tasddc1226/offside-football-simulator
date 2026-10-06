@@ -9,7 +9,7 @@ import type {
   PutRetirementBody,
   RetiredNumberResult,
 } from '@offside/contracts';
-import { loadKey, saveKey } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/storage';
 import { OUTBOX_KEY, markAchDirty } from './achDirty.js';
 import { apiAuth, apiBaseUrl, clearApiCache, noteSession } from './api/client.js';
 

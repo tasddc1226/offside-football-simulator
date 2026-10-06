@@ -21,7 +21,7 @@
   import Account from './Account.svelte';
   import MyPlayers from './MyPlayers.svelte';
   import TeamLogo from './team/TeamLogo.svelte';
-  import { loadHOF } from '@offside/game/season';
+  import { loadHOF } from '@offside/game/hof-store';
   import { startGoogleLogin } from './login.js';
   import { go } from './nav.js';
   import { googleStartUrl } from '@offside/app-core/api/client';

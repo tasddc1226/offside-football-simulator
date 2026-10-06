@@ -8,9 +8,8 @@ import { natInit } from './national.js';
 import { createRng, freshSeed, setActiveRng } from './rng.js';
 import { ensureTitles } from './titles.js';
 import { SAVE_VERSION } from './data.js';
-import type { GameState, HofEntry } from './types.js';
+import type { GameState } from './types.js';
 import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
-import { NATION_BY_CODE } from '@offside/contracts/nations';
 
 /** 불러온 저장본을 받을지 정하고 지금 형식으로 고친다. 버전이 다르면(또는 없으면) null — 새로 시작한다. */
 export function loadSave(raw: GameState | null): { G: GameState; newCid: boolean } | null {
@@ -71,19 +70,4 @@ export function migrateSave(G: GameState): { newCid: boolean } {
     .find((x) => x.id === gClubId);
   if (c) G.club.name = c.name;
   return { newCid };
-}
-
-/** 옛 은퇴 기록은 같은 cid의 은퇴 저장본에 명시된 국적만 보완한다. 원본·칭호·스냅샷은 바꾸지 않는다. */
-export function migrateHofEntry(h: HofEntry, source: GameState | null): HofEntry {
-  if (
-    h.nation !== undefined ||
-    !h.id ||
-    source?.v !== SAVE_VERSION ||
-    !source.retired ||
-    h.id !== source.cid ||
-    !source.nation ||
-    !NATION_BY_CODE.has(source.nation)
-  )
-    return h;
-  return { ...h, nation: source.nation };
 }

@@ -11,7 +11,7 @@
   } from '@offside/app-core/api/team';
   import { requestFriend, type FriendState } from '@offside/app-core/api/friends';
   import { teamSeasonClosed } from '@offside/contracts/service-seasons';
-  import { localCareerNames } from '@offside/game/season';
+  import { localCareerNames } from '@offside/game/hof-store';
   import { toast } from '../helpers.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import BackBar from '../BackBar.svelte';
@@ -93,6 +93,8 @@
 
 <LoadState {status} failText={L.profLoadFail} retry={load}>
   {#if team}
+    <!-- 기록실 탭 패널 안이라 화면(.wrap)의 카드 간격이 닿지 않는다 — 같은 14px로 섹션을 띄운다. -->
+    <div class="tp-sections">
     <section class="card stack tp-head" style="gap:10px" data-team-profile={team.id}>
       <div class="tp-top">
         <span class="eyebrow">Team profile{team.rank ? ` · #${team.rank}` : ''}</span>
@@ -142,12 +144,18 @@
       {/if}
     </section>
     {#if !mine}<NameReport kind="team" id={team.id} name={team.name} />{/if}
+    </div>
   {/if}
 </LoadState>
 <!-- T-10-130 '← 랭킹'은 화면 아래(탭바 위)로. 뒤로 가기로도 랭킹에 돌아간다. -->
 <BackBar act="team-profile-back" fallback={onback} atBottom={false} />
 
 <style>
+  .tp-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
   .tp-top {
     display: flex;
     align-items: center;

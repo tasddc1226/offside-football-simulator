@@ -10,6 +10,7 @@ import {
   type TeamRankSort,
 } from '@offside/app-core/api/team';
 import { num as n } from '@offside/app-core/teamText';
+import { fmtValue } from '@offside/app-core/format';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 import { appState } from '../../../store';
 import { rem } from '../../../theme/type';
@@ -30,14 +31,44 @@ import { useRefresh } from '../../../ui/refresh';
 const sorts = (): [TeamRankSort, string][] => [
   ['rating', L.sortRating],
   ['ovr', L.sortOvr],
+  ['value', L.sortValue],
 ];
+
+type Item = TeamRankResponse['items'][number];
+/** 정렬마다 값 칸의 이름(머리 칸은 head)·값·너비(구단 가치는 몸값 표기라 칸을 넓힌다, T-11-129). */
+const METRIC: Record<
+  TeamRankSort,
+  { label: () => string; head: () => string; of: (t: Item) => string; w: number; size: number }
+> = {
+  rating: {
+    label: () => L.sortRating,
+    head: () => L.sortRating,
+    of: (t) => n(t.rating),
+    w: 48,
+    size: 17,
+  },
+  ovr: {
+    label: () => L.sortOvr,
+    head: () => L.colOvrApp,
+    of: (t) => String(t.ovr),
+    w: 48,
+    size: 17,
+  },
+  value: {
+    label: () => L.sortValue,
+    head: () => L.sortValue,
+    of: (t) => fmtValue(t.value),
+    w: 84,
+    size: 14,
+  },
+};
 
 export default function TeamRanking() {
   const c = useColors();
   const snap = useSnapshot(appState);
   /** undefined = 지금 시즌(서버가 정한다). */
   const [season, setSeason] = useState<number | undefined>(undefined);
-  const [sort, setSort] = useState<TeamRankSort>('rating');
+  const [sort, setSort] = useState<TeamRankSort>(appState.hof.teamSort ?? 'rating');
   const [page, setPage] = useState(1);
   const [data, setData] = useState<TeamRankResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +96,9 @@ export default function TeamRanking() {
   }, [season, sort, page, shownSeason, tick, track]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / TEAM_RANK_PER_PAGE)) : 1;
+  const metric = METRIC[sort];
+  const metricLabel = metric.label();
+  const metricOf = metric.of;
   function goPage(p: number) {
     setPage(p);
     scrollTo(0);
@@ -156,8 +190,8 @@ export default function TeamRanking() {
                 {label}
               </Txt>
             ))}
-            <Txt bold center style={{ width: 48, fontSize: 12 }}>
-              {sort === 'rating' ? L.sortRating : L.colOvrApp}
+            <Txt bold center style={{ width: metric.w, fontSize: 12 }}>
+              {metric.head()}
             </Txt>
           </View>
           {data.items.map((t) => (
@@ -173,8 +207,8 @@ export default function TeamRanking() {
                 w: String(t.record.w),
                 d: String(t.record.d),
                 l: String(t.record.l),
-                metric: sort === 'rating' ? L.sortRating : L.sortOvr,
-                value: String(sort === 'rating' ? t.rating : t.ovr),
+                metric: metricLabel,
+                value: metricOf(t),
                 form: t.recentForm.length
                   ? t.recentForm
                       .map((r) => ({ W: L.formWin, D: L.formDraw, L: L.formLoss })[r])
@@ -213,8 +247,8 @@ export default function TeamRanking() {
                     </Txt>
                   ),
                 )}
-                <Txt num bold center style={{ width: 48, fontSize: 17 }}>
-                  {sort === 'rating' ? n(t.rating) : t.ovr}
+                <Txt num bold center style={{ width: metric.w, fontSize: metric.size }}>
+                  {metricOf(t)}
                 </Txt>
               </View>
               <View
@@ -287,7 +321,7 @@ export default function TeamRanking() {
         empty(L.teamsEmpty)
       )}
       <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 10 }}>
-        {L.teamsFoot}
+        {sort === 'value' ? L.valueFoot : L.teamsFoot}
       </Txt>
     </Card>
   );

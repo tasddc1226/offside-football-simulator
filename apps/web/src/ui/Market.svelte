@@ -50,7 +50,7 @@
     type MarketView,
   } from '@offside/app-core/market';
   import { agoKo, cardTier, fmtValue } from '@offside/app-core/format';
-  import { localCareerNames } from '@offside/game/season';
+  import { localCareerNames } from '@offside/game/hof-store';
   import { POS_LABEL } from '@offside/game/pos-label';
   import { detailPosOf, type DetailPos } from '@offside/contracts/positions';
   import Topbar from './Topbar.svelte';

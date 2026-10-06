@@ -6,7 +6,7 @@
   import type { FirstsResponse, ServerFirst } from '@offside/contracts';
   import { displaySeasonAt, openTeamSeasons } from '@offside/contracts/service-seasons';
   import { getFirsts } from '@offside/app-core/api/client';
-  import { localCareerNames } from '@offside/game/season';
+  import { localCareerNames } from '@offside/game/hof-store';
   import { goHome } from '../nav.js';
   import BackBar from '../BackBar.svelte';
   import { appState } from '../state.svelte.js';

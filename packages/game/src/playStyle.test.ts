@@ -3,7 +3,7 @@ import { LegendSnapshotSchema } from '@offside/contracts';
 import { newGame } from './engine.js';
 import { noteChoice, noteMarket } from './playStyle.js';
 import { createRng, setActiveRng } from './rng.js';
-import { legendSnapshot } from './season.js';
+import { legendSnapshot } from './legend.js';
 import type { GameState, MarketOption, OfferOption } from './types.js';
 
 function game(leagueId = 'k1', salary = 1000): GameState {

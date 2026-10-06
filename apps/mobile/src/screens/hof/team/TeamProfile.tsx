@@ -12,7 +12,7 @@ import {
 } from '@offside/app-core/api/team';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import { num as n, recordText } from '@offside/app-core/teamText';
-import { localCareerNames } from '@offside/game/season';
+import { localCareerNames } from '@offside/game/hof-store';
 import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { NameReport } from '../../../components/NameReport';
 import { TeamLogo } from '../../../components/TeamLogo';
@@ -279,7 +279,7 @@ export default function TeamProfile({ id }: { id: string }) {
                       backgroundColor: c.surface2,
                       borderWidth: b.id.startsWith('final-') ? 2 : 0,
                       borderColor: c.pitchAccent,
-                      height: '100%',
+                      flexGrow: 1,
                     }}
                   >
                     <Txt bold>{b.label}</Txt>

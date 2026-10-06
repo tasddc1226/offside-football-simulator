@@ -23,7 +23,7 @@ import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
 import { founderLabel } from '@offside/app-core/friendText';
-import { loadHOF } from '@offside/game/season';
+import { loadHOF } from '@offside/game/hof-store';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
 import { go } from '../../game/nav';
