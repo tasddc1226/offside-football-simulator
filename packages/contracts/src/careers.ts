@@ -605,6 +605,9 @@ const RetiredNumberItemSchema = RetiredSlotSchema.extend({
   name: z.string().nullable(),
   pos: CareerPosSchema,
 });
+/** T-11-121 명예의 벽 한 명 — 칭호를 받을 뻔한 구단·번호(clubId·club·number)와 받은 때. 이름은 공개한 경우에만. */
+const WallOfHonorItemSchema = RetiredNumberItemSchema.omit({ seq: true });
+export type WallOfHonorItem = z.infer<typeof WallOfHonorItemSchema>;
 export const RetiredNumbersResponseSchema = z.strictObject({
   season: z.number().int().nonnegative(),
   items: z.array(RetiredNumberItemSchema),
@@ -639,6 +642,11 @@ export const RetiredNumbersSummarySchema = z.strictObject({
     }),
   ),
   recent: z.array(RetiredNumberItemSchema),
+  /**
+   * T-11-121 그 시즌 명예의 벽 — 결번 자격을 채웠지만 후보 구단의 번호가 모두 먼저 결번돼 칭호로 남은 선수. 먼저 오른 선수 먼저.
+   * 구단 화면도 이 목록에서 그 구단 몫을 고른다. 이 필드 전의 캐시 응답에는 없다.
+   */
+  wall: z.array(WallOfHonorItemSchema).optional(),
 });
 export type RetiredNumbersSummary = z.infer<typeof RetiredNumbersSummarySchema>;
 

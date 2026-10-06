@@ -3,7 +3,7 @@
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { getProfile, googleStartUrl } from '@offside/app-core/api/client';
 import { loginOfflineText, googleFailText, loginDoneText } from '@offside/app-core/loginText';
-import { loadHOF } from '@offside/game/season';
+import { loadHOF } from '@offside/game/hof-store';
 import { toast } from './helpers.js';
 import { currentInApp, showInAppLoginNotice } from './inapp-open.js';
 import { openFriends, pendingInvite } from './friendInvite.svelte.js';

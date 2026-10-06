@@ -26,6 +26,8 @@ const MEDAL = {
   gold: { light: ['#d9a21b', '#8a5c0a'], dark: ['#f0b437', '#f5c45a'] },
   silver: { light: ['#a7b1ba', '#56616b'], dark: ['#bfc8d0', '#d5dce2'] },
   bronze: { light: ['#c27a3e', '#8a4a1a'], dark: ['#d98a4e', '#e8a270'] },
+  // T-11-121 명예의 벽 명판(웹 .rn-plaque) — 순위 메달과 다른 놋쇠빛.
+  brass: { light: ['#b8924a', '#7a5a1c'], dark: ['#d4ae63', '#e6c47f'] },
 } as const;
 export type MedalName = keyof typeof MEDAL;
 export const MEDAL_NAMES: readonly MedalName[] = ['gold', 'silver', 'bronze'];
@@ -34,6 +36,7 @@ export const MEDAL_GLOW: Record<MedalName, string> = {
   gold: '#d9a21b',
   silver: '#a7b1ba',
   bronze: '#c27a3e',
+  brass: '#b8924a',
 };
 
 export function useMedal(name: MedalName): { leaf: string; text: string } {

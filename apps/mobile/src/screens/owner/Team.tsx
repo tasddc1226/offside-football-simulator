@@ -50,7 +50,7 @@ import {
   teamEditableIn,
 } from '@offside/app-core/teamOwner';
 import { anonName } from '@offside/app-core/format';
-import { localCareerNames } from '@offside/game/season';
+import { localCareerNames } from '@offside/game/hof-store';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines } from '../../components/TeamPitch';
 import { TeamSynergy } from '../../components/TeamSynergy';

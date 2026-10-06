@@ -3,7 +3,7 @@
 // T-11-029 결번은 시즌마다 따로 — 개막한 시즌이 둘 이상이면 시즌 탭을 보인다(웹과 같다).
 // T-11-101 열 때는 요약(구단별 수 + 최근 8개)만 받는다. 타일은 구단을 고르거나 최신순 전체를 열 때 그 몫만 받는다.
 import { memo, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 import Svg, { Defs, G, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { proxy, useSnapshot } from 'valtio';
 import type { CareerPos, RetiredNumbersResponse, RetiredNumbersSummary } from '@offside/contracts';
@@ -28,11 +28,12 @@ import {
   rnLeagueName as leagueOf,
 } from '@offside/app-core/retiredWall';
 import { POS } from '@offside/game/data';
-import { loadHOF } from '@offside/game/season';
+import { loadHOF } from '@offside/game/hof-store';
+import { Laurel, useMedal } from '../../components/Laurel';
 import { RnShirtShape } from '../../components/RnJersey';
 import { openPublicLegendById } from '../../game/host';
 import { alpha } from '../../theme/colors';
-import { rem } from '../../theme/type';
+import { DISPLAY, rem } from '../../theme/type';
 import { type Colors } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn } from '../../ui/Btn';
@@ -50,6 +51,7 @@ import { useRefresh } from '../../ui/refresh';
 
 type Item = RetiredNumbersResponse['items'][number];
 type ClubSum = RetiredNumbersSummary['clubs'][number];
+type Wall = NonNullable<RetiredNumbersSummary['wall']>[number];
 
 // 화면(첫 화면·구단·최신순 전체)·구단 정렬·시즌 선택은 선수 상세에 다녀와도 그대로 둔다(화면이 다시 그려져도 모듈 값은 남는다).
 // season이 null이면 지금 시즌(개막 전이면 프리시즌). 포지션 필터는 구단 화면에서만 쓴다.
@@ -78,6 +80,36 @@ type TileOpts = {
   myIds: ReadonlySet<string>;
   filteredPos: boolean;
 };
+
+/** '내 선수' 배지 — 결번 타일·명예의 벽 명판이 함께 쓴다. */
+const MinePill = ({ c, style }: { c: Colors; style: ViewStyle }) => (
+  <View
+    style={[
+      {
+        paddingHorizontal: 6,
+        borderRadius: 999,
+        backgroundColor: c.surface2,
+        borderWidth: 1,
+        borderColor: c.line,
+      },
+      style,
+    ]}
+  >
+    {/* T-11-038 한 줄 고정, 확대 1.2배까지(큰 글씨에서 꺾여 이름을 덮지 않게). */}
+    <Txt
+      numberOfLines={1}
+      maxFontSizeMultiplier={1.2}
+      style={{
+        fontSize: rem(0.625),
+        lineHeight: rem(0.625) * 1.6,
+        fontWeight: '600',
+        color: c.muted,
+      }}
+    >
+      {L.mine}
+    </Txt>
+  </View>
+);
 
 /** 유니폼 타일 한 장 — 구단 색이 은은히 비치는 바탕(웹 radial-gradient). 바탕과 유니폼을 한 Svg에 그리고, 색·필터 상태는
  * 부모가 넘긴다(수백 장이라 타일마다 Svg를 하나 더 두거나 구독하지 않게). */
@@ -163,34 +195,7 @@ const Tile = memo(function Tile({
       >
         {L.tileSeq({ seq: it.seq, day: day(it.grantedAt) })}
       </Txt>
-      {mine ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: 6,
-            right: 6,
-            paddingHorizontal: 6,
-            borderRadius: 999,
-            backgroundColor: c.surface2,
-            borderWidth: 1,
-            borderColor: c.line,
-          }}
-        >
-          {/* T-11-038 한 줄 고정, 확대 1.2배까지(큰 글씨에서 꺾여 이름을 덮지 않게). */}
-          <Txt
-            numberOfLines={1}
-            maxFontSizeMultiplier={1.2}
-            style={{
-              fontSize: rem(0.625),
-              lineHeight: rem(0.625) * 1.6,
-              fontWeight: '600',
-              color: c.muted,
-            }}
-          >
-            {L.mine}
-          </Txt>
-        </View>
-      ) : null}
+      {mine ? <MinePill c={c} style={{ position: 'absolute', top: 6, right: 6 }} /> : null}
     </Press>
   );
 });
@@ -264,6 +269,98 @@ const SectionTitle = ({ children, right }: { children: string; right?: ReactNode
     {right}
   </View>
 );
+
+/** T-11-121 명예의 벽 명판 — 월계관 안에 받을 뻔한 번호, 옆에 이름·구단·받은 날(웹 .rn-plaque). */
+function Plaques({
+  list,
+  withClub,
+  myIds,
+}: {
+  list: Wall[];
+  withClub: boolean;
+  myIds: ReadonlySet<string>;
+}) {
+  const c = useColors();
+  const { leaf, text } = useMedal('brass');
+  return (
+    <View style={{ gap: GAP, paddingBottom: 10 }}>
+      {list.map((w) => {
+        const name = w.name ?? anonName(w.pos, w.number);
+        return (
+          <Press
+            key={w.careerId}
+            scale={0.985}
+            testID={`rn-wall-of-honor-${w.careerId}`}
+            onPress={() => void openPublicLegendById(w.careerId)}
+            accessibilityLabel={L.wallLabel({
+              name,
+              club: clubName(w),
+              number: w.number,
+              day: day(w.grantedAt),
+            })}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              minHeight: 60,
+              paddingVertical: 8,
+              paddingLeft: 8,
+              paddingRight: 12,
+              borderWidth: 1,
+              borderColor: alpha(leaf, 0.45),
+              borderRadius: 12,
+              backgroundColor: c.surface,
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFill, { backgroundColor: alpha(leaf, 0.12) }]}
+            />
+            <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Laurel medal="brass" />
+              <Txt
+                style={{
+                  fontFamily: DISPLAY[700],
+                  fontVariant: ['tabular-nums'],
+                  fontSize: rem(1),
+                  lineHeight: rem(1),
+                  fontWeight: '700',
+                  color: text,
+                }}
+              >
+                {w.number}
+              </Txt>
+            </View>
+            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                <Txt bold numberOfLines={1} style={{ fontSize: rem(0.875), flexShrink: 1 }}>
+                  {name}
+                </Txt>
+                <Txt tone="muted" num={400} style={{ marginLeft: 'auto', fontSize: rem(0.75) }}>
+                  {day(w.grantedAt)}
+                </Txt>
+              </View>
+              {withClub ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <ClubMark name={w.club} id={w.clubId} size={14} />
+                  <Txt
+                    tone="muted"
+                    numberOfLines={1}
+                    style={{ fontSize: rem(0.75), flexShrink: 1 }}
+                  >
+                    {clubName(w)}
+                  </Txt>
+                </View>
+              ) : null}
+            </View>
+            {myIds.has(w.careerId) ? <MinePill c={c} style={{ flexShrink: 0 }} /> : null}
+          </Press>
+        );
+      })}
+    </View>
+  );
+}
 
 function BackButton() {
   return (
@@ -383,6 +480,17 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
         {L.recentTitle}
       </SectionTitle>
       {ready ? <Tiles items={summary.recent} withClub {...opts} /> : null}
+      {summary.wall?.length ? (
+        <>
+          <SectionTitle right={<CountPill c={c} count={summary.wall.length} />}>
+            {L.wallTitle}
+          </SectionTitle>
+          <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 10 }}>
+            {L.wallLead}
+          </Txt>
+          <Plaques list={summary.wall} withClub myIds={myIds} />
+        </>
+      ) : null}
       <SectionTitle>{L.clubsTitle}</SectionTitle>
       <RecordsChips
         label={L.clubOrderLabel}
@@ -431,6 +539,7 @@ function ClubScreen({
   const c = useColors();
   const { pos } = useSnapshot(view);
   const [items, setItems] = useState<Item[] | null>(null);
+  const [wall, setWall] = useState<Wall[]>([]);
   const [failed, setFailed] = useState(false);
   const { tick, track, pulled } = useRefresh();
   useEffect(() => {
@@ -441,6 +550,10 @@ function ClubScreen({
       if (!live) return;
       if (r.ok) setItems(r.data.items);
       else setFailed(true);
+    });
+    // T-11-121 이 구단 명예의 벽 — 요약(60초 메모라 첫 화면에서 받은 것을 그대로 쓴다)에서 그 구단 몫만.
+    void track(getRetiredNumbersSummary(season)).then((r) => {
+      if (live) setWall(r.ok ? (r.data.wall ?? []).filter((w) => w.clubId === clubId) : []);
     });
     return () => {
       live = false;
@@ -503,6 +616,12 @@ function ClubScreen({
       ) : (
         <Message text={pos ? L.noMatchApp : L.empty({ season: teamSeasonLabel(season) })} />
       )}
+      {wall.length ? (
+        <View testID="rn-club-wall" style={{ marginTop: 6 }}>
+          <SectionTitle>{L.wallClubTitle}</SectionTitle>
+          <Plaques list={wall} withClub={false} myIds={myIds} />
+        </View>
+      ) : null}
     </View>
   );
 }

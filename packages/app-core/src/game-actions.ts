@@ -40,10 +40,9 @@ import {
   canAcceptRenewal,
   retire,
   MIN_RETIRE_AGE,
-  loadKey,
-  saveKey,
   type SeasonEndResult,
 } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/storage';
 import { pickFanLines } from '@offside/game/fanfeed';
 import { chLabel } from '@offside/game/records';
 import { titleView } from '@offside/game/titles';

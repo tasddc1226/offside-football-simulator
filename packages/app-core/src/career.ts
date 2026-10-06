@@ -1,9 +1,10 @@
 // ───────── 커리어 공용 헬퍼 (웹·앱 공용, T-11-002) ─────────
 import { measureOperation } from './measurement.js';
-import { storage } from '@offside/game/storage';
+import { storage, saveKey } from '@offside/game/storage';
 import { leagueOf } from '@offside/game/engine';
 import { createRng, freshSeed, getActiveRng, setActiveRng } from '@offside/game/rng';
-import { legendSnapshot, loadHOF, saveKey } from '@offside/game/season';
+import { legendSnapshot } from '@offside/game/legend';
+import { loadHOF } from '@offside/game/hof-store';
 import { loadSave } from '@offside/game/save';
 import { useCareerBalance } from '@offside/game/balance';
 import type { EventLogEntry, GameState, HofEntry } from '@offside/game/types';

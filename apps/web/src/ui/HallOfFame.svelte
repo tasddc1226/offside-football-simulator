@@ -11,7 +11,7 @@
   import { POS_GROUPS, POS_LABEL } from '@offside/contracts/positions';
   import { PRESEASON, SERVICE_SEASONS, previewSeasonAt, seasonById } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from '@offside/app-core/boardText';
-  import { loadHOF } from '@offside/game/season';
+  import { loadHOF } from '@offside/game/hof-store';
   import { getHof } from '@offside/app-core/api/client';
   import { seasonNow } from './seasonNow.svelte.js';
   import { openPublicLegend } from './legend.js';

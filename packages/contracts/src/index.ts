@@ -88,6 +88,7 @@ export {
   type RetiredNumberResult,
   type RetiredNumbersResponse,
   type RetiredNumbersSummary,
+  type WallOfHonorItem,
   CareerIdParamSchema,
   CareerYearParamSchema,
   PublicNameSchema,

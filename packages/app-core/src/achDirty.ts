@@ -1,6 +1,6 @@
 // T-11-034 업적이 바뀌었을 수 있다는 표시(achNudge.ts가 다음 화면에서 업적을 한 번 받아 비교한다). api/client · outbox가
 // 쓰는 곳이라 업적 계산·등급 모듈을 끌어오지 않게 따로 둔다.
-import { loadKey, saveKey } from '@offside/game/season';
+import { loadKey, saveKey } from '@offside/game/storage';
 
 const DIRTY_KEY = 'ft_ach_dirty';
 /** 이 기기가 마지막으로 본 시즌 업적(achNudge.ts AchSeen). */

@@ -43,9 +43,7 @@ import { nationOf } from './nation.js';
 import { detectCareerHighs } from './records.js';
 import { noteMarket } from './playStyle.js';
 import { movedWithClub, promoteClub, type Promotion } from './promotion.js';
-import type { LegendSnapshot } from '@offside/contracts';
 import { PRESEASON_RETIRE_AT } from '@offside/contracts/service-seasons';
-import { controlPoints, legendAwardCount, legendTerms } from '@offside/contracts/hof-rules';
 import type {
   GameState,
   CareerRecord,
@@ -56,8 +54,9 @@ import type {
   OfferOption,
   RenewOption,
 } from './types.js';
-import { storage } from './storage.js';
-import { migrateHofEntry } from './save.js';
+import { HOF_LOCAL_MAX, loadHOF } from './hof-store.js';
+import { saveKey } from './storage.js';
+import { legendScore, legendSnapshot, legendTermsOf } from './legend.js';
 import { gSeasonText as T } from './i18n/ko/gSeason.js';
 import { tn } from './i18n/names.js';
 
@@ -645,7 +644,7 @@ export function acceptOption(
 }
 
 // ───────── 은퇴 · 명예의 전당 ─────────
-type LegendKey = keyof ReturnType<typeof legendTerms>;
+type LegendKey = keyof ReturnType<typeof legendTermsOf>;
 /** 레전드 점수 항목 이름(지금 언어). */
 const legendLabel = (k: LegendKey): string =>
   ({
@@ -674,38 +673,12 @@ export function legendScoreBreakdown(s: LegendSource): {
   items: LegendBreakdownItem[];
   total: number;
 } {
-  const t = s.career.reduce(
-    (a, r) => ({ g: a.g + r.goals, a: a.a + r.assists, p: a.p + r.apps, cs: a.cs + (r.cs || 0) }),
-    { g: 0, a: 0, p: 0, cs: 0 },
-  );
-  const terms = legendTerms(
-    s.pos,
-    {
-      goals: t.g,
-      assists: t.a,
-      cs: t.cs,
-      apps: t.p,
-      trophies: s.trophies.length,
-      awards: legendAwardCount(s.awards, s.dpos),
-      caps: s.nat.caps,
-      peak: s.peak,
-      ballon: s.awards.filter((x) => x.t === '발롱도르').length,
-      ballonRankPoints: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0),
-      worldCups: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length,
-      control: controlPoints(s.career),
-    },
-    s.dpos,
-  );
+  const terms = legendTermsOf(s);
   const items: LegendBreakdownItem[] = Object.entries(terms)
     .map(([key, value]) => ({ key, label: legendLabel(key as LegendKey), value }))
     .filter((it) => it.value !== 0);
-  const total = Math.round(items.reduce((sum, it) => sum + it.value, 0));
-  return { items, total };
+  return { items, total: legendScore(s) };
 }
-export function legendScore(s: LegendSource): number {
-  return legendScoreBreakdown(s).total;
-}
-export const HOF_LOCAL_MAX = 30;
 /** Earliest retirement, shared by the engine and both clients. */
 export const MIN_RETIRE_AGE = 25;
 /** isPublic: 명예의 전당에 이름을 공개한 채로 시작할지(환경설정 '선수 이름 공개', T-10-065). */
@@ -757,93 +730,6 @@ export function retire(s: GameState, isPublic = false): HofEntry {
   saveKey('ft_hof', kept);
   return entry;
 }
-/** T-10-005. 은퇴 상세를 다시 그리는 데 필요한 필드만 복사한다(서버 계약 LegendSnapshotSchema와 같은
- * 모양 — strictObject라 CareerRecord의 부가 필드(comps·lgApps 등)는 빼고 옮긴다). 선수 이름은 넣지 않는다. */
-export function legendSnapshot(s: GameState): LegendSnapshot {
-  return {
-    number: s.number,
-    pos: s.pos,
-    ...(s.dpos && { dpos: s.dpos }),
-    age: s.age,
-    peak: s.peak,
-    lastClub: s.club.name,
-    lastClubId: s.club.id,
-    career: s.career.map((r) => ({
-      year: r.year,
-      age: r.age,
-      club: r.club,
-      ...(r.clubId ? { clubId: r.clubId } : {}),
-      league: r.league,
-      apps: r.apps,
-      goals: r.goals,
-      assists: r.assists,
-      cs: r.cs || 0,
-      rating: r.rating,
-      rank: r.rank,
-      ovr: r.ovr,
-      honors: r.honors,
-      ...(r.mil ? { mil: true } : {}),
-      ...(r.ch?.length ? { ch: r.ch } : {}),
-    })),
-    trophies: s.trophies.map(({ year, t, club, clubId }) => ({
-      year,
-      t,
-      club,
-      ...(clubId ? { clubId } : {}),
-    })),
-    awards: s.awards.map(({ year, t }) => ({ year, t })),
-    ballon: (s.ballon || []).map(({ year, rank }) => ({ year, rank })),
-    nat: { caps: s.nat.caps, goals: s.nat.goals, assists: s.nat.assists },
-    storyLog: (s.storyLog || []).map(({ year, key, name, ending }) => ({
-      year,
-      key,
-      name,
-      ending,
-    })),
-    miles: (s.miles || []).map(({ year, t }) => ({ year, t })),
-    titles: (s.titles || []).map(({ id, year }) => ({ id, year })),
-    ...(s.style ? { style: { ...s.style } } : {}),
-  };
-}
 export function legendTitle(score: number, dpos: string | null | undefined): string {
   return legendBandName(legendBand(score, dpos).id);
 }
-
-// ───────── 저장 ─────────
-/** 저장 성공 여부를 돌려준다(용량 초과·저장소 차단이면 false). */
-export function saveKey(k: string, v: unknown): boolean {
-  try {
-    storage().setItem(k, JSON.stringify(v));
-    return true;
-  } catch {
-    return false;
-  }
-}
-/** 값을 읽지 않고(큰 세이브를 파싱하지 않고) 키가 있는지만 본다. */
-export function hasKey(k: string): boolean {
-  try {
-    return storage().getItem(k) != null;
-  } catch {
-    return false;
-  }
-}
-export function loadKey<T = unknown>(k: string): T | null {
-  try {
-    const raw = storage().getItem(k);
-    return raw == null ? null : (JSON.parse(raw) as T);
-  } catch {
-    return null;
-  }
-}
-export function loadHOF(): HofEntry[] {
-  const hof = loadKey<HofEntry[]>('ft_hof') || loadKey<HofEntry[]>('sl_hof') || [];
-  // T-10-107 예전에 겹쳐 저장된 같은 커리어는 하나만(점수 순이라 앞의 것).
-  const seen = new Set<string>();
-  const source = loadKey<GameState>('ft_save');
-  return hof
-    .filter((h) => !h.id || (!seen.has(h.id) && !!seen.add(h.id)))
-    .map((h) => migrateHofEntry(h, source));
-}
-/** 이 기기에 남은 은퇴 선수 이름(커리어 id → 이름). 서버엔 이름 공개를 끈 선수의 이름이 없어 화면이 이것으로 채운다. */
-export const localCareerNames = (): Map<string, string> =>
-  new Map(loadHOF().flatMap((h) => (h.id ? [[h.id, h.name] as const] : [])));

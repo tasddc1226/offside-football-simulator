@@ -17,7 +17,7 @@ import {
   holderLabel,
   type FirstsTab,
 } from '@offside/app-core/firsts';
-import { localCareerNames } from '@offside/game/season';
+import { localCareerNames } from '@offside/game/hof-store';
 import { goHome } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';

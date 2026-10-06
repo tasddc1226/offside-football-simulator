@@ -9,7 +9,9 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import { ensureRetiredNumbersBackfilled } from '../db/repos/retiredNumbers.js';
+import { EDGE } from '../edgeKeys.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 import { fakeHub } from '../test/liveHub.js';
 import {
   callJson,
@@ -395,6 +397,35 @@ describe('영구결번 (T-10-076)', () => {
     expect((await createApp().request('/v1/retired-numbers?club=zz-0', {}, ctx.env)).status).toBe(
       400,
     );
+  });
+
+  it('T-11-121: 벽 첫 화면 요약에 그 시즌 명예의 벽이 실리고, 칭호를 막 주면 요약 캐시를 지운다', async () => {
+    const edge = installFakeEdgeCache();
+    try {
+      const summary = async (season: number) => {
+        const res = await createApp().request(
+          `/v1/retired-numbers/summary?season=${season}`,
+          {},
+          ctx.env,
+        );
+        return successEnvelope(RetiredNumbersSummarySchema).parse(await res.json()).data;
+      };
+      await retire(A, skyBlue(10), '선점');
+      await retire(C, twoClubs(10), '두구단');
+      expect((await summary(0)).wall).toEqual([]);
+      await flushEdge();
+      edge.purged.length = 0;
+      expect(await retire(B, skyBlue(10), '후배')).toMatchObject({ wallOfHonor: true });
+      await flushEdge();
+      expect(edge.purged).toContain(`http://localhost${EDGE.retiredNumbersSummary(0)}`);
+      expect((await summary(0)).wall).toMatchObject([
+        { careerId: B, name: '후배', clubId: 'pl-0', number: 10 },
+      ]);
+      // 다른 시즌 요약엔 없다.
+      expect((await summary(1)).wall).toEqual([]);
+    } finally {
+      edge.uninstall();
+    }
   });
 
   it('익명이면 자리를 잡지 않고, 이름을 공개하는 순간 잡는다(나중에 숨겨도 유지)', async () => {

@@ -5,7 +5,8 @@ import { SAVE_VERSION } from './data.js';
 import { leagueOf } from './engine.js';
 import './event-registry.js';
 import { createRng, rnd } from './rng.js';
-import { loadSave, migrateHofEntry, migrateSave } from './save.js';
+import { loadSave, migrateSave } from './save.js';
+import { migrateHofEntry } from './hof-store.js';
 import type { GameState, HofEntry } from './types.js';
 import { acceptOption } from './season.js';
 

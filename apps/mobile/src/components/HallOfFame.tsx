@@ -22,7 +22,7 @@ import { anonName, fmtValue } from '@offside/app-core/format';
 import { getHof } from '@offside/app-core/api/client';
 import { useSeasonNow } from '../ui/useSeasonNow';
 import { useRefresh } from '../ui/refresh';
-import { loadHOF } from '@offside/game/season';
+import { loadHOF } from '@offside/game/hof-store';
 import { openHof } from '../game/nav';
 import { openPublicLegend } from '../game/host';
 import { TextBox } from '../screens/board/parts';

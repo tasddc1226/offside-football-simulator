@@ -438,6 +438,11 @@ export const careers = sqliteTable(
     index('careers_status_updated_idx').on(table.status, table.updatedAt),
     index('careers_created_idx').on(table.createdAt),
     index('careers_status_retired_idx').on(table.status, table.retiredAt),
+    // T-11-121 영구결번 요약의 시즌별 명예의 벽 — 칭호를 받은 몇 행만 든다(나머지 커리어는 인덱스에서 빠진다).
+    // 요약이 쓰는 coalesce 식 그대로 건다. drizzle-kit이 식 인덱스 SQL을 깨뜨려 0069는 손으로 고쳤다(스냅샷은 생성된 그대로).
+    index('careers_wall_of_honor_idx')
+      .on(sql`coalesce(${table.serviceSeason}, 0)`)
+      .where(sql`${table.wallOfHonorJson} is not null`),
   ],
 );
 
