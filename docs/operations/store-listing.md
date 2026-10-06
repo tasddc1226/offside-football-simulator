@@ -39,6 +39,7 @@
 
   ```
   - 영어로도 플레이할 수 있어요. 기기 언어가 한국어가 아니면 영어로 시작하고, 설정에서 바꿀 수 있어요.
+  - 커리어 화면 위에 내 선수가 도트 아바타로 나와요. 나이와 상황에 따라 모습이 바뀌어요.
   - 한국어가 아닌 기기에서는 앱 이름이 OFFSIDE로 보여요.
   - 알림과 사진 권한 안내가 기기 언어에 맞게 나와요.
   ```
@@ -59,6 +60,7 @@
 
   ```
   - OFFSIDE is now available in English. It starts in English when your device language isn't Korean, and you can switch languages in Settings.
+  - Your player now appears as a pixel avatar at the top of the career screen. The look changes with age and situation.
   - The app name shows as OFFSIDE outside Korean.
   - Notification and photo permission prompts follow your device language.
   ```
@@ -74,6 +76,7 @@
 
   ```
   - 영어로도 플레이할 수 있어요. 설정에서 언어를 바꿀 수 있어요.
+  - 커리어 화면 위에 내 선수가 도트 아바타로 나와요.
   - 알림 아이콘을 새 로고로 바꿨어요.
   - 한국어가 아닌 기기에서는 앱 이름이 OFFSIDE로 보여요.
   ```
@@ -87,6 +90,7 @@
 
   ```
   - OFFSIDE is now available in English. Switch languages in Settings.
+  - Your player now appears as a pixel avatar on the career screen.
   - Notifications now use the new OFFSIDE logo.
   - The app name shows as OFFSIDE outside Korean.
   ```
@@ -177,3 +181,12 @@ App Store는 6.9"(1320×2868), Google Play는 휴대전화(1080×2160)와 그래
 - 실제 리그·대회 로고나 구단 엠블럼이 스크린샷에 나오지 않게 한다. 설명에서도 특정 리그 상표를 제목·키워드로 쓰지 않는다.
 - 평점·다운로드 수·순위 같은 수치는 넣지 않는다.
 - 스토어 문구를 바꾸면 웹 공개 가이드·FAQ와 사실이 어긋나지 않는지 본다(`apps/web/scripts/seo.mjs`).
+
+## 6. 심사 재개 전 확인 (main 반영 기록)
+
+1.1.1 심사는 보류 중이다(1.1.0 패치 진행). 그 사이 main 변경을 이 브랜치에 합치고 아래에 남긴다.
+
+| main 커밋                  | 1.1.1 영향                                                                                                              |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| #527 후보 잠재력·은퇴 25세 | 선수 생성 화면(2번)에 후보 잠재력 범위 광고 버튼. 문구 변경 없음                                                        |
+| #528 도트 아바타           | 커리어 화면 상단 아바타. 새 기능 문구에 넣음. 게임 화면 머리(3·4번, 5·6번 시트 뒤)가 아바타 전 화면이라 **재촬영 필요** |
