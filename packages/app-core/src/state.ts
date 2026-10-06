@@ -134,7 +134,8 @@ export interface LegendView {
   lastClub: string;
   /** T-10-066. 옛 기록에는 없다 — 엠블럼은 이름으로 찾는다. */
   lastClubId?: string | null | undefined;
-  /** T-11-122 도트 선수 얼굴을 정하는 커리어 ID. 옛 로컬 기록처럼 ID가 없으면 null(그리지 않는다). */
+  /** T-11-122 도트 선수 얼굴을 정하는 커리어 ID. 옛 로컬 기록처럼 ID가 없으면 null(그리지 않는다).
+   * 모습(retiredAvatarSpec)은 화면에서 만든다 — 여기서 만들면 그림 모듈이 첫 화면 번들에 들어간다. */
   avatarId?: string | null | undefined;
   score: number;
   peak: number;

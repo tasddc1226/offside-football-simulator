@@ -6,7 +6,7 @@ import { retiredTitleOf } from '@offside/app-core/retiredTitle';
 // (credit.tsx Reveal). 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
 import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { retirementPotentialNote } from '@offside/app-core/potential-view';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Animated,
   Easing,
@@ -54,6 +54,11 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
   const c = useColors();
   const f = useFilm();
   const { width, height } = useWindowDimensions();
+  // 같은 선수면 모습을 다시 만들지 않는다(PixelAvatar는 memo라 다시 그리지 않는다).
+  const avatar = useMemo(
+    () => (v.avatarId ? retiredAvatarSpec(v.avatarId, v.age) : null),
+    [v.avatarId, v.age],
+  );
   const { motionOK } = useSnapshot(prefs);
   const rs = useSnapshot(rnResults);
   const pk = useSnapshot(pickedTitles);
@@ -110,9 +115,7 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
             }}
           >
             {/* T-11-122 은퇴식 정장 차림의 도트 선수. 커리어 ID가 없는 옛 기록은 그리지 않는다. */}
-            {v.avatarId ? (
-              <PixelAvatar spec={retiredAvatarSpec(v.avatarId, v.age)} width={avatarWidth(width)} />
-            ) : null}
+            {avatar ? <PixelAvatar spec={avatar} width={avatarWidth(width)} /> : null}
             <Kicker>{`Full Time${v.number != null ? ` · No.${v.number}` : ''}`}</Kicker>
             <FText
               accessibilityRole="header"
