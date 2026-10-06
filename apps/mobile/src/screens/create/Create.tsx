@@ -1,6 +1,6 @@
 // 선수 생성(웹 Create.svelte): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
 // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { Animated, Easing, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
@@ -23,10 +23,13 @@ import { CONFEDS, flagOf } from '@offside/contracts/nations';
 import { BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
 import { isKorean, nationOf } from '@offside/game/nation';
 import { bodyNote, hiddenStrength, scoutLine, startOvr } from '@offside/app-core/create-view';
+import { adText } from '@offside/app-core/i18n/ko/ad';
 import { createText as L } from '@offside/app-core/i18n/ko/create';
 import { watchDetailOpening } from '@offside/app-core/season-opening';
 import { detailOpenNow, draftBody, draftDpos, randomName } from '@offside/app-core/state';
-import { rollCandidates, startCareer } from '../../game/host';
+import { revealCandidatePotential, rollCandidates, startCareer } from '../../game/host';
+import { claimReward, rewardOffer } from '../../platform/rewarded';
+import { adFree } from '../../platform/adFree';
 import { goHome } from '../../game/nav';
 import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
@@ -77,7 +80,7 @@ function confirmPick() {
   const cand =
     appState.candidatePick == null ? null : appState.candidates?.[appState.candidatePick];
   if (!cand) return;
-  startCareer(appState.C.name, appState.C.number, { ...cand.attrs });
+  startCareer(appState.C.name, appState.C.number, { ...cand.attrs }, { ...cand.potential });
 }
 
 /** 카드가 세로축으로 뒤집히며 열린다. 동작 줄이기면 바로 표시. */
@@ -135,6 +138,34 @@ function FlyIn({ index, children }: { index: number; children: ReactNode }) {
 export default function Create() {
   const s = useSnapshot(appState, { sync: true });
   const C = s.C;
+  const owned = useSnapshot(adFree).owned;
+  const offer = rewardOffer('candidates', owned);
+  const rewardLock = useRef(false);
+  const [rewardBusy, setRewardBusy] = useState(false);
+  const [rewardMessage, setRewardMessage] = useState('');
+  const reveal = async () => {
+    if (rewardLock.current || appState.candidatePotentialOpen) return;
+    rewardLock.current = true;
+    const batch = appState.candidates;
+    setRewardBusy(true);
+    setRewardMessage('');
+    try {
+      let saveFailed = false;
+      const message = await claimReward(
+        'candidates',
+        () => {
+          saveFailed = !revealCandidatePotential(batch);
+        },
+        L.potentialWatch,
+      );
+      setRewardMessage(saveFailed ? L.potentialSaveFailed : message);
+    } catch {
+      setRewardMessage(adText.rewardedUnavailable);
+    } finally {
+      rewardLock.current = false;
+      setRewardBusy(false);
+    }
+  };
   const c = useColors();
   const keyboardScroll = useFormKeyboardScroll();
   const insets = useSafeAreaInsets();
@@ -534,6 +565,36 @@ export default function Create() {
                 </Btn>
               ) : null}
             </View>
+            <View style={{ gap: 8 }}>
+              {s.candidatePotentialOpen ? (
+                <Txt v="sm" tone="muted">
+                  {L.potentialHelp}
+                </Txt>
+              ) : offer ? (
+                <>
+                  <Btn
+                    block
+                    testID="candidate-potential-reward"
+                    disabled={rewardBusy}
+                    onPress={() => void reveal()}
+                  >
+                    {rewardBusy
+                      ? L.potentialBusy
+                      : offer === 'free'
+                        ? L.potentialFree
+                        : L.potentialAd}
+                  </Btn>
+                  <Txt v="sm" tone="muted">
+                    {offer === 'free' ? L.potentialHelp : L.potentialWatch}
+                  </Txt>
+                </>
+              ) : null}
+              {rewardMessage ? (
+                <Txt v="sm" tone="muted" accessibilityLiveRegion="polite">
+                  {rewardMessage}
+                </Txt>
+              ) : null}
+            </View>
             <View style={{ gap: 10 }}>
               {s.candidates.map((cand, i) => {
                 const isOpen = s.candidatesOpen[i];
@@ -589,6 +650,15 @@ export default function Create() {
                           </Txt>
                           {isPicked ? <Pill tone="good">{L.picked}</Pill> : null}
                         </View>
+                        <Txt
+                          v="sm"
+                          tone={s.candidatePotentialOpen ? 'accent' : 'muted'}
+                          testID={`candidate-potential-${i}`}
+                        >
+                          {s.candidatePotentialOpen
+                            ? L.potentialRange(cand.potential)
+                            : L.potentialLocked}
+                        </Txt>
                         <Txt
                           tone="accent"
                           style={{ fontSize: rem(0.875), fontWeight: '600' }}
@@ -748,13 +818,13 @@ export default function Create() {
         </ActionBar>
       ) : s.candidates ? (
         <ActionBar row>
-          <Btn testID="home" onPress={backToForm}>
+          <Btn testID="home" disabled={rewardBusy} onPress={backToForm}>
             {L.back}
           </Btn>
           <Btn
             kind="primary"
             testID="start"
-            disabled={s.candidatePick == null}
+            disabled={s.candidatePick == null || rewardBusy}
             onPress={confirmPick}
             style={{ flex: 1, minWidth: 0 }}
           >

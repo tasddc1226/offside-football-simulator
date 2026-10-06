@@ -546,7 +546,14 @@ export function market(s: GameState): MarketResult {
     : shelfNote;
   if (!L.amateur) options.push(...milOptions(s));
   const lastUni = s.leagueId === 'uni' && s.uniYears >= 4;
-  const canRetire = (!L.amateur && (s.age >= 30 || L.tier === 0 || !options.length)) || lastUni;
+  const canRetire =
+    s.age >= MIN_RETIRE_AGE &&
+    ((!L.amateur && (s.age >= 30 || L.tier === 0 || !options.length)) || lastUni);
+  // Before 25, a lower-league trial keeps an offerless career playable.
+  if (!options.length && s.age < MIN_RETIRE_AGE) {
+    const c = clubsIn('k3', s).sort((a, b) => a.str - b.str)[0]!;
+    options.push({ ...offerFrom(s, c), role: T.roleTrial, years: 1 });
+  }
   if (s.age >= retireAge(s)) {
     return {
       options: [],
@@ -699,8 +706,11 @@ export function legendScore(s: LegendSource): number {
   return legendScoreBreakdown(s).total;
 }
 export const HOF_LOCAL_MAX = 30;
+/** Earliest retirement, shared by the engine and both clients. */
+export const MIN_RETIRE_AGE = 25;
 /** isPublic: 명예의 전당에 이름을 공개한 채로 시작할지(환경설정 '선수 이름 공개', T-10-065). */
 export function retire(s: GameState, isPublic = false): HofEntry {
+  if (s.age < MIN_RETIRE_AGE) throw new Error('RETIREMENT_AGE_LOCKED');
   s.retired = true;
   retireMilestones(s);
   const score = legendScore(s);

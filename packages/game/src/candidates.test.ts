@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateCandidates } from './candidates.js';
 import { newGame } from './engine.js';
-import { createRng, getActiveRng, setActiveRng } from './rng.js';
+import { rnd, createRng, getActiveRng, setActiveRng } from './rng.js';
 import { ATTR_KEYS, focusMod, focusOfType, typeForFocus, TYPES } from './data.js';
 import { applyTraining, focusOf } from './engine.js';
 
@@ -140,5 +140,44 @@ describe('generateCandidates 시드 고정', () => {
     const a = attrsOf(generateCandidates('FW', ['sho', 'dri'], null, 1234));
     expect(attrsOf(generateCandidates('FW', ['sho', 'dri'], null, 1235))).not.toEqual(a);
     expect(attrsOf(generateCandidates('FW', ['sho', 'pac'], null, 1234))).not.toEqual(a);
+  });
+});
+
+describe('candidate potential', () => {
+  it('locks three independent draws across form edits and keeps the game RNG unchanged', () => {
+    setActiveRng(createRng(123));
+    const a = generateCandidates('FW', ['sho', 'pac'], 'ST', 999);
+    const b = generateCandidates('MF', ['pas', 'def'], 'CM', 999);
+    expect(a.map((x) => x.potential)).toEqual(b.map((x) => x.potential));
+    expect(a.map((x) => x.potential.value)).not.toEqual([
+      a[0]!.potential.value,
+      a[0]!.potential.value,
+      a[0]!.potential.value,
+    ]);
+    for (const c of a) {
+      expect(c.potential.value).toBeGreaterThanOrEqual(c.potential.min);
+      expect(c.potential.value).toBeLessThanOrEqual(c.potential.max);
+    }
+    const expected = createRng(123).next();
+    expect(rnd()).toBe(expected);
+  });
+  it('uses the selected potential at kickoff and preserves normal newGame RNG consumption', () => {
+    const c = generateCandidates('FW', ['sho', 'pac'], 'ST', 50)[1]!;
+    const o = {
+      name: 'test',
+      number: 7,
+      pos: 'FW' as const,
+      foot: '오른발' as const,
+      type: 'poacher',
+      trait: 'late',
+      retireAt: 45,
+    };
+    setActiveRng(createRng(5));
+    const normal = newGame(o, 5, c.attrs);
+    setActiveRng(createRng(5));
+    const selected = newGame(o, 5, c.attrs, c.potential);
+    expect(selected.pot + selected.bloom).toBe(c.potential.value);
+    expect(selected.pot).toBe(c.potential.scouted);
+    expect(selected.rng).toEqual(normal.rng);
   });
 });

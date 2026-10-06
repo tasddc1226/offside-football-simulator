@@ -6,6 +6,9 @@
 // 다시 뽑든 메인 게임 RNG 스트림은 전혀 움직이지 않고, newGame()에 최종 선택한 분포를
 // presetAttrs로 넘기면(엔진 쪽 ri(-4,4) 루프를 건너뛰므로) fulltime-sim이 쓰는 newGame() 기본
 // 경로(코치/시뮬레이터가 직접 호출하는 경로, presetAttrs 없음)의 RNG 소비 순서도 그대로다.
+import { BAL } from './balance.js';
+import { PRESEASON_POT } from '@offside/contracts/balance';
+import { gauss } from './rng.js';
 import { ATTR_KEYS, DPOS, POS, focusMod, type AttrKey, type DetailPos, type Pos } from './data.js';
 
 // 로컬(비영속) mulberry32 — game/rng.ts의 활성 RNG와 완전히 분리되어 있다.
@@ -20,7 +23,16 @@ function localRng(seed: number): () => number {
   };
 }
 
+export interface CandidatePotential {
+  value: number;
+  scouted: number;
+  min: number;
+  max: number;
+}
+
 export interface Candidate {
+  /** Fixed at scouting; revealing it never changes the draw. */
+  potential: CandidatePotential;
   attrs: Record<AttrKey, number>;
   total: number;
   /** 가장 높은 능력치 2개 — 열린 후보 카드에서 막대를 강조한다. */
@@ -93,7 +105,14 @@ export function generateCandidates(
   for (let i = 0; i < n; i++) {
     const attrs = i === 0 ? { ...base } : redistribute(base, focus, rand, 8 + i * 4, 4);
     const sorted = ATTR_KEYS.slice().sort((a, b) => attrs[b] - attrs[a]);
+    // Potential ignores position/focus edits, preventing a fresh draw by editing the form.
+    const potRng = localRng((seed ^ Math.imul(i + 1, 0x9e3779b1)) >>> 0);
+    const draw = dpos ? { mean: BAL.potMean, sd: BAL.potSd } : PRESEASON_POT;
+    const value = CLAMP(Math.round(draw.mean + gauss(potRng) * draw.sd), 55, 96);
+    const scouted = CLAMP(Math.round(value + gauss(potRng) * BAL.potScoutSd), 55, 96);
+    const min = Math.max(55, Math.floor(value / 10) * 10);
     out.push({
+      potential: { value, scouted, min, max: Math.min(96, Math.floor(value / 10) * 10 + 9) },
       attrs,
       total: ATTR_KEYS.reduce((sum, k) => sum + attrs[k], 0),
       hintKeys: sorted.slice(0, 2),

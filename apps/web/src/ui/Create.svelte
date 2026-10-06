@@ -102,7 +102,7 @@
   }
   function confirmPick() {
     if (!picked) return;
-    startCareer(C.name, C.number, picked.attrs);
+    startCareer(C.name, C.number, picked.attrs, picked.potential);
   }
   // 카드가 세로축으로 뒤집히며 열린다. 감속 모션이면 duration 0(즉시 표시).
   function flipIn(_node: Element) {
@@ -258,6 +258,7 @@
         <button class="icon-btn" data-act="open-all" onclick={openAll}>{L.openAll}</button>
       {/if}
     </div>
+    <p class="muted">{appState.candidatePotentialOpen ? L.potentialHelp : L.potentialWeb}</p>
     <div class="cand-list">
       {#each appState.candidates as cand, i (i)}
         {#if appState.candidatesOpen[i]}
@@ -267,6 +268,7 @@
               <span class="cc-ovr">OVR <b class="num">{startOvr(C.pos, cand.attrs)}</b></span>
               {#if appState.candidatePick === i}<span class="pill good">{L.picked}</span>{/if}
             </span>
+            <span class="muted">{appState.candidatePotentialOpen ? L.potentialRange(cand.potential) : L.potentialLocked}</span>
             <span class="cc-scout">“{scoutLine(C.pos, cand.attrs)}”</span>
             <span class="cc-body">
               <MiniRadar pos={C.pos} attrs={cand.attrs} size={84} />

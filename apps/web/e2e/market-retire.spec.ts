@@ -1,10 +1,15 @@
 import { test, expect } from '@playwright/test';
 import { openMarket, retireFromMarket } from './helpers.js';
 
-// T-10-029: 이적 시장("다음 시즌, 어디서 뛸까요?")에는 언제나 은퇴하기가 있다. 은퇴할 나이가 아니면 한 번 더
-// 묻고, "조금 더 뛴다"를 누르면 이적 시장으로 돌아온다.
-test('이적 시장에서 언제든 은퇴할 수 있다 — 이른 은퇴는 한 번 더 묻는다', async ({ page }) => {
-  await openMarket(page);
+// T-11-118: 25세부터 은퇴할 수 있다. 짧은 커리어는 한 번 더 묻는다.
+test('25세 전에는 이적 시장에서 은퇴할 수 없다', async ({ page }) => {
+  await openMarket(page, 24);
+  await expect(page.locator('#sheet h2')).toHaveText('다음 시즌, 어디서 뛸까요?');
+  await expect(page.locator('#sheet').getByRole('button', { name: '은퇴하기' })).toHaveCount(0);
+});
+
+test('25세부터 은퇴할 수 있다 — 짧은 커리어는 한 번 더 묻는다', async ({ page }) => {
+  await openMarket(page, 25);
 
   const sheet = page.locator('#sheet');
   await expect(sheet.locator('h2')).toHaveText('다음 시즌, 어디서 뛸까요?');

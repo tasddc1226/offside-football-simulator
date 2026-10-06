@@ -18,6 +18,7 @@ export const {
   retireAsk,
   startCareer,
   rollCandidates,
+  revealCandidatePotential,
 } = createGameActions({
   state: appState,
   sheet,

@@ -153,6 +153,7 @@ describe('로컬 명예의 전당 30명 한도', () => {
       { name: '막내', number: 7, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
       5,
     );
+    g.age = 25;
     const entry = retire(g);
     const hof = loadHOF();
     expect(hof).toHaveLength(30);
@@ -173,6 +174,7 @@ describe('로컬 명예의 전당 30명 한도', () => {
       { name: '두 번', number: 7, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
       5,
     );
+    g.age = 25;
     retire(g);
     const again = retire(g);
     expect(loadHOF().filter((h) => h.id === again.id)).toHaveLength(1);
@@ -198,6 +200,7 @@ describe('T-11-072 은퇴 선수 국적 저장', () => {
         },
         5,
       );
+      g.age = 25;
       const h = retire(g);
       expect(h.nation).toBe(nation);
       expect(loadHOF().find((x) => x.id === h.id)?.nation).toBe(nation);
