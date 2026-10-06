@@ -38,17 +38,28 @@ export const rewardAvailable = (p: RewardPlacement) => adFree.owned || !!unitOf(
 export const rewardOffer = (p: RewardPlacement, owned: boolean): 'free' | 'ad' | null =>
   owned ? 'free' : unitOf(p) ? 'ad' : null;
 
-/** 광고를 띄우고 보상을 받았는지 돌려준다. 광고를 못 불러오거나 중간에 닫으면 false. */
-function watch(unit: string): Promise<boolean> {
+/**
+ * 광고를 띄운 결과 — 끝까지 봐서 보상(earned), 보다가 닫음(closed), 불러오기·보여 주기 실패(failed).
+ * 불러오지 못한 광고(게재 제한 · 광고 없음 · 네트워크)를 '끝까지 안 봤다'로 안내하지 않으려고 나눈다.
+ */
+type WatchResult = 'earned' | 'closed' | 'failed';
+
+function watch(unit: string): Promise<WatchResult> {
   return new Promise((resolve) => {
     const ad = RewardedAd.createForAdRequest(unit, { requestNonPersonalizedAdsOnly: true });
     let earned = false;
+    let shown = false;
     const offs = [
       ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-        ad.show().catch(() => done());
+        ad.show()
+          .then(() => (shown = true))
+          .catch(() => done());
       }),
       ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
         earned = true;
+      }),
+      ad.addAdEventListener(AdEventType.OPENED, () => {
+        shown = true;
       }),
       ad.addAdEventListener(AdEventType.CLOSED, () => done()),
       ad.addAdEventListener(AdEventType.ERROR, () => done()),
@@ -58,14 +69,15 @@ function watch(unit: string): Promise<boolean> {
     function done() {
       clearTimeout(timer);
       offs.forEach((off) => off());
-      resolve(earned);
+      resolve(earned ? 'earned' : shown ? 'closed' : 'failed');
     }
     ad.load();
   });
 }
 
 /**
- * 보상을 받으면 onEarned를 부르고 ''를, 못 받으면 보여 줄 안내를 돌려준다(동의·불러오기 실패, 끝까지 보지 않음 = skipped).
+ * 보상을 받으면 onEarned를 부르고 ''를, 못 받으면 보여 줄 안내를 돌려준다(동의·불러오기 실패 = 불러올 수 없음,
+ * 끝까지 보지 않음 = skipped).
  * 광고 제거 구매자는 광고 없이 바로 받는다.
  */
 export async function claimReward(
@@ -76,7 +88,9 @@ export async function claimReward(
   if (!adFree.owned) {
     const unit = unitOf(p);
     if (!unit || !(await askConsent())) return adText.rewardedUnavailable;
-    if (!(await watch(unit))) return skipped;
+    const result = await watch(unit);
+    if (result === 'failed') return adText.rewardedUnavailable;
+    if (result === 'closed') return skipped;
   }
   onEarned();
   return '';
