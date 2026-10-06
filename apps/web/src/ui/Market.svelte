@@ -829,6 +829,21 @@
     color: var(--mk-ink);
     clip-path: polygon(0 9%, 16% 9%, 25% 2%, 50% 0, 75% 2%, 84% 9%, 100% 9%, 98% 84%, 86% 93%, 50% 100%, 14% 93%, 2% 84%);
   }
+  .mk-mini[data-tier='icon'] {
+    --mk-a: #1d2547;
+    --mk-b: #0a0f26;
+    --mk-ink: #ffe9b0;
+  }
+  .mk-mini[data-tier='elite'] {
+    --mk-a: #f1c654;
+    --mk-b: #a36f12;
+    --mk-ink: #3b2604;
+  }
+  .mk-mini[data-tier='bronze'] {
+    --mk-a: #d7a27a;
+    --mk-b: #7d4a29;
+    --mk-ink: #3a1f0e;
+  }
   .mk-mini[data-tier='legend'] {
     --mk-a: #28382e;
     --mk-b: #101e17;

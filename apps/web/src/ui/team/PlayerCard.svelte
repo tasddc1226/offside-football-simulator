@@ -6,7 +6,7 @@
   import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
   import type { DetailPos } from '@offside/contracts/positions';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
-  import { cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier } from '@offside/app-core/format';
+  import { cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier, isLegendTier } from '@offside/app-core/format';
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
@@ -55,15 +55,18 @@
           <div><dt>{statLabels[key]}</dt><dd>{player?.attrs ? Math.round(player.attrs[key]) : '—'}</dd></div>
         {/each}
       </dl>
-      <div class="card-foot">{cardFootNote(player ?? {}) ?? (tier === 'legend' ? L.footLegend : L.footMine)}</div>
+      <div class="card-foot">{cardFootNote(player ?? {}) ?? (isLegendTier(tier) ? L.footLegend : L.footMine)}</div>
     {/if}
   </div>
 </div>
 
 <style>
   .player-card { --card-base:#e8d5a8; --card-light:#fff2ce; --card-dark:#8a6324; --card-ink:#392b14; --card-line:#b79654; width:100%; padding:2px; background:var(--card-line); clip-path:polygon(0 9%,16% 9%,25% 2%,50% 0,75% 2%,84% 9%,100% 9%,98% 84%,86% 93%,50% 100%,14% 93%,2% 84%); filter:drop-shadow(0 4px 5px #0003); }
+  .player-card[data-tier='icon'] { --card-base:#1d2547; --card-light:#4a5a92; --card-dark:#0a0f26; --card-ink:#ffe9b0; --card-line:#e6c369; }
   .player-card[data-tier='legend'] { --card-base:#28382e; --card-light:#51614b; --card-dark:#101e17; --card-ink:#fce7b1; --card-line:#d1ac5f; }
+  .player-card[data-tier='elite'] { --card-base:#f1c654; --card-light:#fff4bf; --card-dark:#a36f12; --card-ink:#3b2604; --card-line:#d99a1e; }
   .player-card[data-tier='silver'] { --card-base:#d6dfe0; --card-light:#f8faf6; --card-dark:#83989c; --card-ink:#243339; --card-line:#9fb3b6; }
+  .player-card[data-tier='bronze'] { --card-base:#d7a27a; --card-light:#f6d6bb; --card-dark:#7d4a29; --card-ink:#3a1f0e; --card-line:#a86e45; }
   .player-card[data-tier='youth'] { --card-base:#d5e4d8; --card-light:#eaf3e9; --card-dark:#9bae9b; --card-ink:#365342; --card-line:#8cab97; opacity:.82; }
   .card-face { position:relative; overflow:hidden; min-height:183px; padding:28px 10px 20px; clip-path:inherit; background:linear-gradient(135deg,transparent 34%,#ffffff25 34.5%,transparent 35%,transparent 62%,#ffffff1c 62.5%,transparent 63%),radial-gradient(ellipse at 80% 10%,var(--card-light),transparent 70%),linear-gradient(165deg,var(--card-base),var(--card-dark)); color:var(--card-ink); }
   .card-rating { position:absolute; top:28px; left:11px; display:flex; flex-direction:column; align-items:center; z-index:1; }

@@ -98,6 +98,15 @@ function CardName({
 
 /** Collectible-card materials stay readable against both app themes and the pitch. */
 export const CARD_TONES = {
+  bronze: {
+    light: '#f6dcc6',
+    base: '#dcab84',
+    shade: '#b97e55',
+    line: '#8f5a35',
+    ink: '#3a1f0e',
+    shirt: '#6b3d20',
+    shirtInk: '#f6dcc6',
+  },
   silver: {
     light: '#f5f8fa',
     base: '#d8e2e6',
@@ -116,6 +125,15 @@ export const CARD_TONES = {
     shirt: '#705025',
     shirtInk: '#fff2cd',
   },
+  elite: {
+    light: '#fff4c4',
+    base: '#f2c95c',
+    shade: '#d39a26',
+    line: '#a8700f',
+    ink: '#3b2604',
+    shirt: '#7a5008',
+    shirtInk: '#fff4c4',
+  },
   legend: {
     light: '#3c5448',
     base: '#1d3529',
@@ -124,6 +142,15 @@ export const CARD_TONES = {
     ink: '#ffedbd',
     shirt: '#d7b56b',
     shirtInk: '#10271c',
+  },
+  icon: {
+    light: '#4a5a92',
+    base: '#1d2547',
+    shade: '#0f1633',
+    line: '#e6c369',
+    ink: '#ffe9b0',
+    shirt: '#e6c369',
+    shirtInk: '#0f1633',
   },
   youth: {
     light: '#edf5ed',
