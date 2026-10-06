@@ -29,6 +29,8 @@ export const gTraining: Translation<GTrainingMsgs> = {
   helpOffFocus: (p) => `This is not a focus attribute, so it grows ${p.pct}% slower.`,
   helpLopsided: (p) =>
     `It is too far ahead of your other key attributes, so growth is down ${p.pct}%. Train the others to lift the cap.`,
+  helpOvrSubs: (p) => `In this group, ${p.list} contribute to OVR for your current role.`,
+  helpOvrSeparate: 'OVR contribution differs from usefulness in matches.',
   helpWeightLow: 'It barely counts toward OVR in your current position.',
   helpWeight: (p) => `${p.attr} makes up ${p.pct}% of OVR in your current position.`,
   coachBroke: 'You could not afford a personal coach and trained on your own instead.',

@@ -1,8 +1,24 @@
 // ───────── 선수 생성 화면 표시 로직 (T-10-022) ─────────
 // Create.svelte의 라이브 카드·후보 카드가 쓰는 순수 함수. .svelte.ts 상태를 import하지 않아
 // vitest에서 바로 검증할 수 있다.
-import { ATTR_KEYS, attrLabels, type AttrKey, type Pos } from '@offside/game/data';
-import { bodyMods, GK_SUBS, legacyOvr, SUBS } from '@offside/game/attributes';
+import {
+  ATTR_KEYS,
+  attrLabels,
+  typeForFocus,
+  type AttrKey,
+  type Pos,
+  type DetailPos,
+} from '@offside/game/data';
+import {
+  bodyMods,
+  GK_SUBS,
+  legacyOvr,
+  SUBS,
+  ROLES,
+  ROLE_NAME,
+  GROUP_W,
+  mainRole,
+} from '@offside/game/attributes';
 import type { Body } from '@offside/contracts/body';
 import { createText as L } from './i18n/ko/create.js';
 
@@ -35,4 +51,31 @@ export function bodyNote(pos: Pos, body: Body): string {
     .slice(0, 4)
     .map(([k, v]) => `${SUBS[k]} ${v > 0 ? '+' : '−'}${Math.abs(v)}`)
     .join(' · ');
+}
+
+/** Display the same role used after creation, including legacy focus-based roles. No RNG or save writes. */
+export function ovrFocusView(pos: Pos, focus: readonly AttrKey[], dpos?: DetailPos | null) {
+  const role = mainRole({ pos, type: typeForFocus(pos, [...focus]), ...(dpos ? { dpos } : {}) });
+  const weights = ROLES[role]!;
+  const labels = attrLabels(pos);
+  const headingOnly =
+    (weights.hea ?? 0) > 0 && ['int', 'awa', 'stt', 'sli'].every((k) => !weights[k]);
+  const keys = ATTR_KEYS.slice()
+    .sort((a, b) => GROUP_W[role]![b] - GROUP_W[role]![a])
+    .filter((k) => GROUP_W[role]![k] > 0)
+    .slice(0, 3);
+  const groups = keys.map((k) => (k === 'def' && headingOnly ? L.ovrHeadingGroup : labels[k]));
+  const subs = Object.entries(weights)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([k]) => SUBS[k])
+    .join(' · ');
+  return {
+    role,
+    keys,
+    title: L.ovrFocusTitle({ role: ROLE_NAME[role]! }),
+    groups: groups.join(' · '),
+    subs: L.ovrFocusSubs({ list: subs }),
+    note: headingOnly ? L.ovrHeadingNote : L.ovrFocusNote,
+  };
 }
