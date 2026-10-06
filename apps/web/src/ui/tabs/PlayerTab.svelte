@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MIN_RETIRE_AGE } from '@offside/game/season';
+  import { MIN_RETIRE_AGE, marketValue } from '@offside/game/season';
   import { appFormatText as W } from '@offside/app-core/i18n/ko/appFormat';
   // ui.ts playerTab()/nationalCard() 포트 (316~356줄)
   import { potentialNotice } from '@offside/app-core/potential-view';
@@ -10,8 +10,7 @@
   import { TRAITS } from '@offside/game/data';
   import { ovr } from '@offside/game/attributes';
   import { leagueOf, fmtMoney } from '@offside/game/engine';
-  import { marketValue } from '@offside/game/season';
-  import { milStatusText, sportsServiceNotice, sportsServiceLegacyNotice } from '@offside/game/military';
+    import { milStatusText, sportsServiceNotice, sportsServiceLegacyNotice } from '@offside/game/military';
   import { nextWC, HOSTS } from '@offside/game/national';
   import type { GameState } from '@offside/game/types';
   import { flagOf, isKorean, nationOf } from '@offside/game/nation';

@@ -42,7 +42,7 @@ import {
   MIN_RETIRE_AGE,
   type SeasonEndResult,
 } from '@offside/game/season';
-import { loadKey, saveKey } from '@offside/game/hof-store';
+import { loadKey, saveKey } from '@offside/game/storage';
 import { pickFanLines } from '@offside/game/fanfeed';
 import { chLabel } from '@offside/game/records';
 import { titleView } from '@offside/game/titles';

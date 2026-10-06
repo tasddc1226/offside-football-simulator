@@ -15,7 +15,8 @@ import {
   type Backup,
   type DecodeFail,
 } from '@offside/app-core/backup';
-import { loadHOF, loadKey } from '@offside/game/hof-store';
+import { loadHOF } from '@offside/game/hof-store';
+import { loadKey } from '@offside/game/storage';
 import {
   loadClubCustom,
   save,

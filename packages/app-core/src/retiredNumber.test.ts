@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadHOF, saveKey } from '@offside/game/hof-store';
+import { loadHOF } from '@offside/game/hof-store';
+import { saveKey } from '@offside/game/storage';
 import type { HofEntry } from '@offside/game/types';
 import { createRetiredNumbers } from './retiredNumber.js';
 

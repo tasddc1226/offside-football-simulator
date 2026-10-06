@@ -5,7 +5,7 @@ import fixture from '../../game/src/__fixtures__/save-fw26.json';
 import { migrateSave } from '@offside/game/save';
 import { getActiveRng } from '@offside/game/rng';
 import { retire } from '@offside/game/season';
-import { saveKey } from '@offside/game/hof-store';
+import { saveKey } from '@offside/game/storage';
 import type { GameState } from '@offside/game/types';
 import { createLegends } from './legend.js';
 import { initialAppState } from './state.js';

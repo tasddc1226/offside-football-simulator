@@ -44,7 +44,6 @@ import { detectCareerHighs } from './records.js';
 import { noteMarket } from './playStyle.js';
 import { movedWithClub, promoteClub, type Promotion } from './promotion.js';
 import { PRESEASON_RETIRE_AT } from '@offside/contracts/service-seasons';
-import type { legendTerms } from '@offside/contracts/hof-rules';
 import type {
   GameState,
   CareerRecord,
@@ -55,8 +54,9 @@ import type {
   OfferOption,
   RenewOption,
 } from './types.js';
-import { loadHOF, saveKey } from './hof-store.js';
-import { legendScore, legendSnapshot, legendTermsOf } from './legend-score.js';
+import { HOF_LOCAL_MAX, loadHOF } from './hof-store.js';
+import { saveKey } from './storage.js';
+import { legendScore, legendSnapshot, legendTermsOf } from './legend.js';
 import { gSeasonText as T } from './i18n/ko/gSeason.js';
 import { tn } from './i18n/names.js';
 
@@ -644,7 +644,7 @@ export function acceptOption(
 }
 
 // ───────── 은퇴 · 명예의 전당 ─────────
-type LegendKey = keyof ReturnType<typeof legendTerms>;
+type LegendKey = keyof ReturnType<typeof legendTermsOf>;
 /** 레전드 점수 항목 이름(지금 언어). */
 const legendLabel = (k: LegendKey): string =>
   ({
@@ -677,10 +677,8 @@ export function legendScoreBreakdown(s: LegendSource): {
   const items: LegendBreakdownItem[] = Object.entries(terms)
     .map(([key, value]) => ({ key, label: legendLabel(key as LegendKey), value }))
     .filter((it) => it.value !== 0);
-  const total = Math.round(items.reduce((sum, it) => sum + it.value, 0));
-  return { items, total };
+  return { items, total: legendScore(s) };
 }
-export const HOF_LOCAL_MAX = 30;
 /** Earliest retirement, shared by the engine and both clients. */
 export const MIN_RETIRE_AGE = 25;
 /** isPublic: 명예의 전당에 이름을 공개한 채로 시작할지(환경설정 '선수 이름 공개', T-10-065). */
@@ -735,7 +733,3 @@ export function retire(s: GameState, isPublic = false): HofEntry {
 export function legendTitle(score: number, dpos: string | null | undefined): string {
   return legendBandName(legendBand(score, dpos).id);
 }
-
-// 저장 헬퍼·레전드 점수는 가벼운 모듈로 옮겼다(T-11-126). 기존 import 경로를 위해 다시 내보낸다.
-export { saveKey, hasKey, loadKey, loadHOF, localCareerNames } from './hof-store.js';
-export { legendScore, legendSnapshot } from './legend-score.js';

@@ -3,7 +3,7 @@
 // 우선으로 맞춘다 — 같은 계정으로 로그인한 기기끼리 같은 설정을 쓴다. 세션이 없거나 오프라인이면
 // 로컬에만 남고(게임은 그대로), 다음 부팅·다음 변경 때 다시 맞춘다. 에디트 파일(JSON)로도 옮길 수 있다.
 // 반응성은 클라이언트가 붙인다 — 넘겨받은 state 객체를 그대로 고친다(웹 $state, 앱 valtio).
-import { loadKey, saveKey } from '@offside/game/hof-store';
+import { loadKey, saveKey } from '@offside/game/storage';
 import { CLUBS } from '@offside/game/data';
 import {
   applyClubNames,

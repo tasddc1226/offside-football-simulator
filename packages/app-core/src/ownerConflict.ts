@@ -2,7 +2,7 @@
 // 로그인 계정이 바뀐 뒤 이 기기의 진행 중 커리어를 이어 하면 서버가 시즌 업로드를 소유권 불일치(409)로 거절한다 —
 // 조용히 버리지 않고 홈에서 고르게 한다: 지금 계정으로 이어서 기록(새 커리어 ID로 지난 시즌까지 다시 올린다) 또는
 // 이 기기에만 두기.
-import { loadKey, saveKey } from '@offside/game/hof-store';
+import { loadKey, saveKey } from '@offside/game/storage';
 import type { GameState } from '@offside/game/types';
 import type { PutCareerSeasonBody } from '@offside/contracts';
 import type { OutboxItem } from './outbox.js';

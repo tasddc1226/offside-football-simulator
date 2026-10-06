@@ -1,7 +1,7 @@
 // 기기별 안내 기록은 커리어 세이브와 분리한다. 요청·RNG·게임 상태 변경은 없다.
 import { boostChance, boostCost, boostStatus } from '@offside/game/boost';
 import { fmtMoney } from '@offside/game/player';
-import { loadKey, saveKey } from '@offside/game/hof-store';
+import { loadKey, saveKey } from '@offside/game/storage';
 import { potScouted } from '@offside/game/stats';
 import type { GameState } from '@offside/game/types';
 import { playerNudgeText as L } from './i18n/ko/playerNudge.js';

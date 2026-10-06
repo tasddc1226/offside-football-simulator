@@ -21,7 +21,7 @@
   import { screenIn } from './motion.js';
   import { uaSwiped } from './history.svelte.js';
   import { markNewsSeen, touchedAt } from './news.svelte.js';
-  import { loadKey, saveKey } from '@offside/game/hof-store';
+  import { loadKey, saveKey } from '@offside/game/storage';
   import { BOARD_LABEL, REPORT_REASON_LABEL, dateOf, parseBody, postDetailMeta, postMeta } from '@offside/app-core/boardText';
   import { boardText as L } from '@offside/app-core/i18n/ko/board';
   import { boardLabelText } from '@offside/app-core/i18n/ko/boardLabel';

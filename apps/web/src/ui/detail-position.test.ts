@@ -4,7 +4,7 @@ import { DETAILS_OF, DPOS, scoreRate, type DetailPos, type Pos } from '@offside/
 import { newGame } from '@offside/game/engine';
 import { mainRole, ovr } from '@offside/game/attributes';
 import { legendScoreBreakdown, retire } from '@offside/game/season';
-import { legendScore, legendSnapshot } from '@offside/game/legend-score';
+import { legendScore, legendSnapshot } from '@offside/game/legend';
 import { createRng, setActiveRng } from '@offside/game/rng';
 import { startOvr } from '@offside/app-core/create-view';
 import type { CareerRecord } from '@offside/game/types';

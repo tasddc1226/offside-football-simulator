@@ -10,7 +10,7 @@ import { initialClubCustomState } from '@offside/app-core/clubCustom';
 import { initialNewsState } from '@offside/app-core/news';
 import type { RnAlert, RnResults } from '@offside/app-core/retiredNumber';
 import type { Profile } from '@offside/app-core/api/client';
-import { loadKey } from '@offside/game/hof-store';
+import { loadKey } from '@offside/game/storage';
 import { getLocale, type Locale } from '@offside/app-core/i18n/core';
 
 export const appState = proxy<AppState>(initialAppState());

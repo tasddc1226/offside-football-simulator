@@ -1,5 +1,5 @@
 // ───────── 레전드 점수 · 은퇴 스냅샷 (T-11-126) ─────────
-// 첫 화면(app-core legend·career)이 쓰는 순수 계산만 둔다. season.ts가 다시 내보낸다.
+// 첫 화면(app-core legend·career)이 쓰는 순수 계산만 둔다. season.ts에 두면 홈이 시즌 엔진을 끌어온다.
 import type { LegendSnapshot } from '@offside/contracts';
 import { controlPoints, legendAwardCount, legendTerms } from '@offside/contracts/hof-rules';
 import type { GameState, LegendSource } from './types.js';

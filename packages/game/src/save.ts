@@ -71,5 +71,3 @@ export function migrateSave(G: GameState): { newCid: boolean } {
   if (c) G.club.name = c.name;
   return { newCid };
 }
-
-export { migrateHofEntry } from './hof-store.js';

@@ -1,35 +1,12 @@
-// ───────── 저장 · 로컬 명예의 전당 (T-11-126) ─────────
-// 첫 화면이 쓰는 저장 헬퍼만 모은 가벼운 모듈. season.ts에 두면 홈이 시즌 엔진 전체를 첫 번들로 끌어온다.
+// ───────── 로컬 명예의 전당 (T-11-126) ─────────
+// 첫 화면이 쓰는 은퇴 기록 읽기만 둔 가벼운 모듈. season.ts에 두면 홈이 시즌 엔진 전체를 첫 번들로 끌어온다.
 import { SAVE_VERSION } from './data.js';
-import { storage } from './storage.js';
+import { loadKey } from './storage.js';
 import type { GameState, HofEntry } from './types.js';
 import { NATION_BY_CODE } from '@offside/contracts/nations';
 
-/** 저장 성공 여부를 돌려준다(용량 초과·저장소 차단이면 false). */
-export function saveKey(k: string, v: unknown): boolean {
-  try {
-    storage().setItem(k, JSON.stringify(v));
-    return true;
-  } catch {
-    return false;
-  }
-}
-/** 값을 읽지 않고(큰 세이브를 파싱하지 않고) 키가 있는지만 본다. */
-export function hasKey(k: string): boolean {
-  try {
-    return storage().getItem(k) != null;
-  } catch {
-    return false;
-  }
-}
-export function loadKey<T = unknown>(k: string): T | null {
-  try {
-    const raw = storage().getItem(k);
-    return raw == null ? null : (JSON.parse(raw) as T);
-  } catch {
-    return null;
-  }
-}
+/** 이 기기에 남기는 은퇴 선수 수(점수 순). */
+export const HOF_LOCAL_MAX = 30;
 
 /** 옛 은퇴 기록은 같은 cid의 은퇴 저장본에 명시된 국적만 보완한다. 원본·칭호·스냅샷은 바꾸지 않는다. */
 export function migrateHofEntry(h: HofEntry, source: GameState | null): HofEntry {
