@@ -285,28 +285,35 @@ export interface AvatarSpec {
   club: Pick<Club, 'id' | 'name'>;
 }
 
+const grayAt = (age: number) => (age >= 29 ? Math.min(0.45, (age - 28) * 0.1) : 0);
+
+/** 은퇴한 선수(은퇴 리포트·명예의 전당): 커리어 ID와 은퇴 나이만으로 은퇴식 정장 모습을 그린다. */
+export function retiredAvatarSpec(id: string, age: number): AvatarSpec {
+  const look = lookOf(id);
+  return {
+    look,
+    club: { id: '', name: '' },
+    hairStyle: look.style,
+    gray: grayAt(age),
+    beard: age >= 24 ? 'stubble' : null,
+    expr: 'happy',
+    acc: ['suit', 'bouquet'],
+    kit: SUIT_KIT,
+  };
+}
+
 /** 커리어 상태 → 지금 모습. 나이에 따라 수염·흰머리가 생기고, 부상·입대·은퇴 때 옷과 소품이 바뀐다. */
 export function avatarSpec(s: GameState, side: KitSide = 'home'): AvatarSpec {
+  if (s.retired) return retiredAvatarSpec(s.cid, s.age);
   const look = lookOf(s.cid);
-  const base = {
+  const serving = s.mil.serving;
+  return {
     look,
     club: s.club,
-    hairStyle: s.mil.serving ? 'buzz' : s.age < 20 ? 'fringe' : look.style,
-    gray: s.age >= 29 ? Math.min(0.45, (s.age - 28) * 0.1) : 0,
-  } as const;
-  const beard = s.mil.serving ? null : s.age >= 28 ? 'full' : s.age >= 24 ? 'stubble' : null;
-  if (s.retired)
-    return {
-      ...base,
-      kit: SUIT_KIT,
-      beard: beard && 'stubble',
-      expr: 'happy',
-      acc: ['suit', 'bouquet'],
-    };
-  return {
-    ...base,
-    kit: s.mil.serving && s.mil.type === 'army' ? ARMY_KIT : kitOf(s.club, side),
-    beard,
+    hairStyle: serving ? 'buzz' : s.age < 20 ? 'fringe' : look.style,
+    gray: grayAt(s.age),
+    beard: serving ? null : s.age >= 28 ? 'full' : s.age >= 24 ? 'stubble' : null,
+    kit: serving && s.mil.type === 'army' ? ARMY_KIT : kitOf(s.club, side),
     expr: s.injury > 0 ? 'pain' : s.age >= 30 ? 'tired' : null,
     acc: s.injury > 0 ? ['bandage', 'crutch'] : s.nat.captain ? ['armband'] : [],
   };

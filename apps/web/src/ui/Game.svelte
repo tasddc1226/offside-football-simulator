@@ -27,7 +27,8 @@
   import { seasonAction } from '@offside/app-core/seasonAction';
   import { gameText as T } from '@offside/app-core/i18n/ko/game';
   import { notePlayerVisit, playerNudge } from '@offside/app-core/player-nudge';
-  import { avatarPixels, avatarRects, avatarSpec } from '@offside/game/avatar';
+  import { avatarSpec } from '@offside/game/avatar';
+  import PixelAvatar from './PixelAvatar.svelte';
 
   let actionHeight = $state(0);
   $effect(() => {
@@ -53,7 +54,7 @@
   );
   const title = $derived(mainTitle(s));
   // T-11-120 도트 선수: 나이·소속·부상·은퇴에 따라 모습이 바뀐다(커리어 ID로 외형을 정하고 RNG는 쓰지 않는다).
-  const avatar = $derived(avatarRects(avatarPixels(avatarSpec(s))));
+  const avatar = $derived(avatarSpec(s));
   // 대표 칭호를 누르면 트로피 탭의 칭호 도감으로 간다.
   function openTitles() {
     appState.tab = 'trophy';
@@ -106,7 +107,7 @@
   <Topbar sticky />
   <section class="player">
     <div class="chalk"></div>
-    <svg class="avatar" viewBox="0 0 24 32" shape-rendering="crispEdges" aria-hidden="true">{#each avatar as r, i (i)}<rect x={r.x} y={r.y} width={r.w} height="1" fill={r.fill} fill-opacity={r.opacity} />{/each}</svg>
+    <PixelAvatar spec={avatar} />
     <div>
       <div class="shirt">No.{s.number} · {posLabel(s)}</div>
       {#if title}<button class="card-title r{title.rarity}" data-act="titles" aria-label={T.titleOpen({ name: tn(title.name) })} onclick={openTitles}>{tn(title.name)}</button>{/if}

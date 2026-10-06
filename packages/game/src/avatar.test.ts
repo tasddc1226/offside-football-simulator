@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { AVATAR_H, AVATAR_W, avatarPixels, avatarRects, avatarSpec, lookOf } from './avatar.js';
+import {
+  AVATAR_H,
+  AVATAR_W,
+  avatarPixels,
+  avatarRects,
+  avatarSpec,
+  lookOf,
+  retiredAvatarSpec,
+} from './avatar.js';
 import { CLUBS } from './data.js';
 import { newGame } from './engine.js';
 import { KIT_PATTERNS, kitOf } from './kits.js';
@@ -47,6 +55,8 @@ describe('도트 아바타 (T-11-120)', () => {
     expect(avatarSpec({ ...s, age: 29 }).beard).toBe('full');
     expect(avatarSpec({ ...s, injury: 3 }).acc).toContain('crutch');
     expect(avatarSpec({ ...s, retired: true }).acc).toEqual(['suit', 'bouquet']);
+    // 은퇴 기록(커리어 ID·은퇴 나이)만으로 그린 모습은 은퇴 직후 세이브로 그린 모습과 같다.
+    expect(retiredAvatarSpec(s.cid, 33)).toEqual(avatarSpec({ ...s, age: 33, retired: true }));
     const army = avatarSpec({ ...s, mil: { ...s.mil, serving: true, type: 'army' } });
     expect(army.hairStyle).toBe('buzz');
   });
