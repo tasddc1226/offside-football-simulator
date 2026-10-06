@@ -20,6 +20,7 @@ import { alpha } from '../../theme/colors';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Press, Txt } from '../../ui';
+import { tn } from '@offside/game/i18n/names';
 
 export function NationPicker({
   value,
@@ -61,7 +62,7 @@ export function NationPicker({
         scale={0.99}
         onPress={show}
         {...(testID ? { testID } : {})}
-        accessibilityLabel={L.nationA11y({ name: selected.ko })}
+        accessibilityLabel={L.nationA11y({ name: tn(selected.ko) })}
         accessibilityHint={L.nationHint}
         accessibilityRole="combobox"
         accessibilityState={{ expanded: open }}
@@ -81,7 +82,7 @@ export function NationPicker({
           {flagOf(selected.code)}
         </Txt>
         <Txt numberOfLines={1} style={{ flex: 1, fontSize: 16 }}>
-          {selected.ko}
+          {tn(selected.ko)}
         </Txt>
         <Txt tone="muted" accessibilityElementsHidden>
           ▾
@@ -202,7 +203,7 @@ export function NationPicker({
                     scale={0.99}
                     onPress={() => pick(n)}
                     testID={`nation-${n.code}`}
-                    accessibilityLabel={n.ko}
+                    accessibilityLabel={tn(n.ko)}
                     accessibilityState={{ selected: on }}
                     style={(pressed) => ({
                       flexDirection: 'row',
@@ -217,7 +218,7 @@ export function NationPicker({
                     <Txt
                       style={{ flex: 1, ...(on ? { fontWeight: '700', color: c.accentText } : {}) }}
                     >
-                      {n.ko}
+                      {tn(n.ko)}
                     </Txt>
                   </Press>
                 );

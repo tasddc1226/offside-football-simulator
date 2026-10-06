@@ -269,6 +269,9 @@ const ko = {
   logoAppliedApp: '로고를 적용했어요. 편성 저장을 누르면 다른 사람에게도 보여요.',
   logoApplyApp: '로고 적용',
   logoResetApp: '기본 로고로 되돌리기',
+  friendlyOnly: '친선전 전용',
+  statFriendly: '친선전',
+  statFriendlyOnly: '전용',
 };
 
 export type TeamHomeMsgs = typeof ko;

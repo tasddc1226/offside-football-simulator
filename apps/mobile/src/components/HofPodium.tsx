@@ -10,6 +10,7 @@ import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
 import { RankBadge } from './Laurel';
 import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+import { tn } from '@offside/game/i18n/names';
 
 export function HofPodium({
   players,
@@ -54,7 +55,7 @@ export function HofPodium({
             accessibilityLabel={L.podiumPlayerApp({
               rank,
               name,
-              country: nation.ko,
+              country: tn(nation.ko),
               pos: showPosition ? posLabel(entry) : '',
               value: String(metric(entry)),
               unit,
@@ -68,7 +69,7 @@ export function HofPodium({
                 <ClubMark name={entry.lastClub} id={entry.lastClubId} size={20} />
                 <Txt
                   testID={`hof-nation-${nation.code}`}
-                  accessibilityLabel={nation.ko}
+                  accessibilityLabel={tn(nation.ko)}
                   style={{ fontSize: 16 }}
                 >
                   {flagOf(nation.code)}

@@ -9,6 +9,7 @@ import { Card } from '../../ui/Card';
 import { ClubMark } from '../../ui/ClubBadge';
 import { Txt } from '../../ui/Txt';
 import { gameTrophyText as L } from '@offside/app-core/i18n/ko/gameTrophy';
+import { tn } from '@offside/game/i18n/names';
 
 /** 연도 + 내용 한 줄(웹 .trophy: 44px 연도 칸 + 본문, 위에 구분선). first면 구분선이 없다. */
 export function TrophyRow({
@@ -70,11 +71,11 @@ export function TrophyTab({ s }: { s: LegendSource }) {
         {trophies.length ? (
           trophies.map((x, i) => (
             <TrophyRow key={i} year={x.year}>
-              <Txt style={{ fontWeight: '700' }}>{x.t}</Txt>
+              <Txt style={{ fontWeight: '700' }}>{tn(x.t)}</Txt>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <ClubMark name={x.club} id={x.clubId} size={14} />
                 <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                  {x.club}
+                  {tn(x.club)}
                 </Txt>
               </View>
             </TrophyRow>
@@ -92,7 +93,7 @@ export function TrophyTab({ s }: { s: LegendSource }) {
         {awards.length ? (
           awards.map((x, i) => (
             <TrophyRow key={i} year={x.year}>
-              <Txt style={{ fontWeight: '700' }}>{x.t}</Txt>
+              <Txt style={{ fontWeight: '700' }}>{tn(x.t)}</Txt>
             </TrophyRow>
           ))
         ) : (
@@ -129,9 +130,9 @@ export function TrophyTab({ s }: { s: LegendSource }) {
         {stories.length ? (
           stories.map((x, i) => (
             <TrophyRow key={i} year={x.year}>
-              <Txt style={{ fontWeight: '700' }}>{x.ending}</Txt>
+              <Txt style={{ fontWeight: '700' }}>{tn(x.ending)}</Txt>
               <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                {x.name}
+                {tn(x.name)}
               </Txt>
             </TrophyRow>
           ))

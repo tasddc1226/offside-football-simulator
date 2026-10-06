@@ -22,7 +22,7 @@ export const share: Translation<ShareMsgs> = {
   ctaGame: 'Go to my career →',
   ctaNew: 'Start my own career →',
   viewNote: 'Shared retired career · view only',
-  turnTitle: 'Now it’s your turn to build a player',
+  turnTitle: 'Your turn to build a player',
   turnBodyWeb: 'Grow your player from high school to retirement.',
   turnBodyApp:
     'From the high school kickoff to the final whistle, you decide your player’s career.',
@@ -48,7 +48,7 @@ export const share: Translation<ShareMsgs> = {
   cardPeak: (p) => `Peak OVR ${p.peak}`,
   cardRnTail: (p) => ` retired No. ${p.number}`,
   cardRetiredAge: (p) => `Retired at ${p.age}`,
-  cardBest: (p) => `Pulled off ‘${p.title}’ at ${p.pct}%`,
+  cardBest: (p) => `Pulled off ‘${p.title}’ at ${p.pct}% odds`,
   cardTagline: 'From high school to retirement, one player’s life',
   cardBrand: 'OFFSIDE',
 };

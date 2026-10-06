@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { seasonLabel } from '@offside/app-core/seasonName';
   // 팀 소개는 작게, 편성 그라운드는 바로 아래에. 보조 동작은 팀 메뉴에 모은다.
   import { tick } from 'svelte';
   import { MANAGER_NAME_MAX, MANAGER_NAME_MIN, TEAM_NAME_MAX, TEAM_NAME_MIN, YOUTH_OVR } from '@offside/contracts/owner-team';
   import type { OwnerTeam, OwnerTeamResponse } from '@offside/app-core/api/team';
   import { num, recordText } from '@offside/app-core/teamText';
-  import { isPreseasonLegacy, PRESEASON_TEAM_NOTE } from '@offside/app-core/teamOwner';
+  import { isPreseasonLegacy, preseasonTeamNote } from '@offside/app-core/teamOwner';
   import { doneOnEnter } from '../inputDone.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import TeamLogo from './TeamLogo.svelte';
@@ -73,7 +74,7 @@
     {#if seasons.length > 1}
       <select class="tm-season" aria-label={L.seasonSelect} value={season} onchange={(e) => { closeMenu(); onseason(Number(e.currentTarget.value)); }} data-team-season>
         {#each seasons as o (o.id)}
-          <option value={o.id}>{o.name}{o.id === current ? L.seasonNow : ''}</option>
+          <option value={o.id}>{seasonLabel(o.id, o.name)}{o.id === current ? L.seasonNow : ''}</option>
         {/each}
       </select>
     {:else}<span class="tm-season-name">{seasonName}</span>{/if}
@@ -102,12 +103,12 @@
     <dl class="tm-stats" data-team-record>
       <div class="tm-record"><dt class="sr-only">{L.statRecord}</dt><dd>{recordText(team.record)}</dd></div>
       <div><dt>{L.statRating}</dt><dd>{num(team.rating)}</dd></div>
-      {#if legacy}<div><dt>친선전</dt><dd>전용</dd></div>
+      {#if legacy}<div><dt>{L.statFriendly}</dt><dd>{L.statFriendlyOnly}</dd></div>
       {:else}<div aria-label={editable ? L.leftAria({ left: matchesLeft, per: perDay }) : undefined}><dt>{editable ? L.statLeft : L.statSeason}</dt><dd>{editable ? L.statTimes({ n: matchesLeft }) : L.statPast}</dd></div>{/if}
     </dl>
   {/if}
   {#if legacy}
-    <p class="muted fs-sm" data-team-legacy>{PRESEASON_TEAM_NOTE}</p>
+    <p class="muted fs-sm" data-team-legacy>{preseasonTeamNote()}</p>
   {:else if !team && editable}
     <p class="muted">{L.introNew({ season: seasonName, ovr: YOUTH_OVR })}</p>
   {:else if !team}

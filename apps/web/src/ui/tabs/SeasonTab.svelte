@@ -4,6 +4,8 @@
 </script>
 
 <script lang="ts">
+  import { appFormatText as W } from '@offside/app-core/i18n/ko/appFormat';
+  import { tn } from '@offside/game/i18n/names';
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
   // T-11-025 순서: 방금 끝난 구간 리포트 → 다음 구간 준비(컨디션·훈련·자기 투자) → 시즌 현황(진행 막대·누적 기록·
   // 순위표·대회) → 스토리 → 최근 소식. 리포트와 겹치는 숫자·소식은 다시 그리지 않는다. T-11-036 진행·이벤트 확인 버튼은
@@ -29,7 +31,7 @@
   const S = $derived(s.season);
   const avg = $derived(S.apps ? (S.ratingSum / S.apps).toFixed(2) : '-');
   const phase = $derived(Math.min(s.phase, LAST_PHASE));
-  const label = $derived(phase === 0 ? L.preseason : `${PHASES[phase]} · ${roundRange(s, phase)}`);
+  const label = $derived(phase === 0 ? L.preseason : `${tn(PHASES[phase] ?? '')} · ${roundRange(s, phase)}`);
   const lastCol = $derived((s.pos === 'GK' || s.pos === 'DF' ? [L.colCs, S.cs] : [L.colAssists, S.assists]) as [string, number]);
   const comps = $derived(s.season.comps || []);
   const activeStories = $derived(Object.entries(s.story || {}).filter(([, v]) => !v.done));
@@ -205,7 +207,7 @@
 <section class="card stack" data-invest-card data-tour="invest">
   <div class="row" style="justify-content:space-between">
     <div><div class="eyebrow">Invest</div><h2>{L.investTitle}</h2></div>
-    <span class="pill" data-invest-money>{L.funds({ v: `${fmtMoney(s.money)}원` })}</span>
+    <span class="pill" data-invest-money>{L.funds({ v: W.won({ v: fmtMoney(s.money) }) })}</span>
   </div>
   {#if tourWait === 'invest'}<p class="tour-hint" aria-live="polite">{L.investHint}</p>{/if}
   <div class="train">
@@ -245,8 +247,8 @@
       <h3 class="sub-title" style="margin-bottom:2px">{L.compsTitle}</h3>
       {#each comps as c (c.name)}
         <div class="story-row">
-          <b>{c.name}</b>
-          <span class="muted">{c.stage || (c.type === 'super' ? L.compSuper : L.compStart)}{c.alive && c.stage ? ` · ${L.compAlive}` : ''}</span>
+          <b>{tn(c.name)}</b>
+          <span class="muted">{tn(c.stage) || (c.type === 'super' ? L.compSuper : L.compStart)}{c.alive && c.stage ? ` · ${L.compAlive}` : ''}</span>
           <span class="muted">{L.compLine({ apps: c.apps, g: c.g })}</span>
         </div>
       {/each}
@@ -260,7 +262,7 @@
     <h2 style="margin-bottom:6px">{L.storiesTitle}</h2>
     {#each activeStories as [k, v] (k)}
       <div class="story-row">
-        <b>{STORIES[k]!.name}</b>
+        <b>{tn(STORIES[k]!.name)}</b>
         <span class="dots">
           {#each Array.from({ length: STORIES[k]!.total }) as _, i (i)}
             <i class={i < v.stage ? 'on' : ''}></i>
@@ -278,7 +280,7 @@
     <h2 style="margin-bottom:6px">{L.feedTitle}</h2>
     <div class="feed">
       {#each feedAll ? feed : feed.slice(0, FEED_SHORT) as l, i (i)}
-        <div><time>{l.t}</time><span class={l.kind}>{l.text}</span></div>
+        <div><time>{tn(l.t)}</time><span class={l.kind}>{l.text}</span></div>
       {/each}
     </div>
     {#if feed.length > FEED_SHORT}

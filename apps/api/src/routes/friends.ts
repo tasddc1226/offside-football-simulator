@@ -63,6 +63,7 @@ import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { lineupsOf, matchDetailOf, matchViews, playedMatch } from '../team/match.js';
 import { filledCount, simulateMatch } from '../team/sim.js';
+import { reqLang, type Lang } from '../lang.js';
 
 // T-11-098 친구 · 친선전. 로그인한 구단주끼리 친구 코드(초대 링크)나 팀 프로필에서 신청하고 수락하면 친구가 된다. 친선전은
 // 랭크 경기와 따로 센다 — 레이팅·전적·업적·랭킹에 들어가지 않고 두 사람의 상대 전적만 남는다. 사람마다 다른 응답이라
@@ -106,6 +107,7 @@ async function peopleOf(
   db: Db,
   inputs: readonly PersonInput[],
   season: number | null,
+  lang: Lang = 'ko',
 ): Promise<Map<string, FriendPerson>> {
   const ids = inputs.map((p) => p.profileId);
   // 개막 뒤(휴식기 포함)엔 프리시즌 팀도 함께 읽는다(친선전용 편성으로).
@@ -131,7 +133,7 @@ async function peopleOf(
         p.profileId,
         {
           code: p.code,
-          name: p.nickname ?? managers.get(p.profileId) ?? '구단주',
+          name: p.nickname ?? managers.get(p.profileId) ?? (lang === 'en' ? 'Owner' : '구단주'),
           team: t ? teamSummary(t) : null,
           h2h: h2hOf(p.row),
           ...(legacy ? { preseasonTeam: lt ? teamSummary(lt) : null } : {}),
@@ -143,8 +145,8 @@ async function peopleOf(
 }
 
 /** 한 사람(신청·수락 응답). */
-const personOf = async (db: Db, input: PersonInput, now: string) =>
-  (await peopleOf(db, [input], teamSeasonAt(now))).get(input.profileId)!;
+const personOf = async (db: Db, input: PersonInput, now: string, lang: Lang) =>
+  (await peopleOf(db, [input], teamSeasonAt(now), lang)).get(input.profileId)!;
 
 const teamSummary = (t: OwnerTeamRow) => ({
   id: t.id,
@@ -183,8 +185,14 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
           row: r.row,
         })),
         season,
+        reqLang(c),
       ),
-      matchViews(db, recentRows, (r) => (r.profileId === me.id ? r.homeTeamId : r.awayTeamId)),
+      matchViews(
+        db,
+        recentRows,
+        (r) => (r.profileId === me.id ? r.homeTeamId : r.awayTeamId),
+        reqLang(c),
+      ),
     ]);
     const byState = (s: FriendRow['state']) =>
       live.filter((r) => r.row.state === s).map((r) => people.get(r.row.friendId)!);
@@ -256,8 +264,8 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         now,
         content: {
           kind: 'social',
-          title: '친구 신청이 수락됐어요',
-          body: '친구 목록에서 새 친구와 친선전을 즐겨요.',
+          title: '친구 신청이 수락됐어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          body: '친구 목록에서 새 친구와 친선전을 즐겨요.', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
           target: { type: 'screen', screen: 'team' },
         },
       });
@@ -287,8 +295,8 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         now,
         content: {
           kind: 'social',
-          title: '새 친구 신청이 왔어요',
-          body: '친구 목록에서 받은 신청을 확인해 주세요.',
+          title: '새 친구 신청이 왔어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          body: '친구 목록에서 받은 신청을 확인해 주세요.', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
           target: { type: 'screen', screen: 'team' },
         },
       });
@@ -304,6 +312,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       db,
       { profileId: targetId, code, nickname: target?.nickname ?? null, row: mine },
       now,
+      reqLang(c),
     );
     return ok(c, FriendRequestResponseSchema, { state, friend }, 201);
   });
@@ -325,8 +334,8 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         now,
         content: {
           kind: 'social',
-          title: '친구 신청이 수락됐어요',
-          body: '친구 목록에서 새 친구와 친선전을 즐겨요.',
+          title: '친구 신청이 수락됐어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          body: '친구 목록에서 새 친구와 친선전을 즐겨요.', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
           target: { type: 'screen', screen: 'team' },
         },
       });
@@ -334,6 +343,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       db,
       { profileId: target.id, code: target.code, nickname: target.nickname, row: mine },
       now,
+      reqLang(c),
     );
     return ok(c, FriendRequestResponseSchema, { state: 'accepted', friend });
   });
@@ -418,8 +428,8 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         now,
         content: {
           kind: 'social',
-          title: '친선전 결과가 도착했어요',
-          body: `${theirs.name} ${result.awayGoals} : ${result.homeGoals} ${mine.name}. 친구 목록에서 경기 결과를 확인해 주세요.`,
+          title: '친선전 결과가 도착했어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+          body: `${theirs.name} ${result.awayGoals} : ${result.homeGoals} ${mine.name}. 친구 목록에서 경기 결과를 확인해 주세요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
           target: { type: 'screen', screen: 'team' },
         },
       },
@@ -432,7 +442,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       c,
       PlayFriendlyResponseSchema,
       {
-        match: { ...playedMatch(head, detail, lineups, mine, theirs), friendly: true },
+        match: { ...playedMatch(head, detail, lineups, mine, theirs, reqLang(c)), friendly: true },
         h2h: {
           w: before.w + (gf > ga ? 1 : 0),
           d: before.d + (gf === ga ? 1 : 0),

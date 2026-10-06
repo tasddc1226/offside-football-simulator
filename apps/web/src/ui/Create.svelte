@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // 선수 생성(T-10-022): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
   // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
   import { onMount } from 'svelte';
@@ -77,7 +78,7 @@
   // T-10-111 후보를 바로 보여 주지 않고 스카우트가 추리는 연출(약 3초)이 끝난 뒤에 뽑는다.
   let scouting = $state(false);
   const scoutSteps = $derived([
-    L.stepVideo({ nation: nation.ko }),
+    L.stepVideo({ nation: tn(nation.ko) }),
     L.stepPool({ pos: posLabel({ pos: C.pos, dpos }) }),
     L.stepFocus({ list: C.focus.map((k) => labels[k]).join('·') }),
     L.stepBody({ h: body.h, w: body.w }),
@@ -124,7 +125,7 @@
     </div>
     <div class="lc-main">
       <b class="lc-name">{C.name.trim() || L.noName}</b>
-      <span class="lc-meta"><span aria-hidden="true">{flagOf(nation.code)}</span> {nation.ko} · {posLabel({ pos: C.pos, dpos })} · {L.foot({ v: C.foot })}{bodyErr ? '' : ` · ${body.h}cm ${body.w}kg`}</span>
+      <span class="lc-meta"><span aria-hidden="true">{flagOf(nation.code)}</span> {tn(nation.ko)} · {posLabel({ pos: C.pos, dpos })} · {L.foot({ v: C.foot })}{bodyErr ? '' : ` · ${body.h}cm ${body.w}kg`}</span>
       <div class="lc-tags">
         {#if trait}<span class="lc-tag">{trait.icon} {trait.name}</span>{/if}
         {#if C.focus.length}<span class="lc-tag">{L.focusTag({ list: C.focus.map((k) => labels[k]).join('·') })}</span>{/if}
@@ -156,7 +157,7 @@
         <label for="f-nation">{L.nation}</label>
         <NationPicker id="f-nation" bind:value={C.nation} />
         <p class="muted fs-sm" data-nation-note>
-          {foreign ? L.nationForeign({ nation: nation.ko, cup: CONFEDS[nation.conf].cup }) : L.nationHome} {L.nationSame}
+          {foreign ? L.nationForeign({ nation: tn(nation.ko), cup: tn(CONFEDS[nation.conf].cup) }) : L.nationHome} {L.nationSame}
         </p>
       </div>
 
@@ -188,7 +189,7 @@
         <div class="seg two">
           {#each posKeys as k (k)}
             <button class="opt pos-opt" data-set="pos" data-val={k} aria-pressed={C.pos === k} onclick={() => setPos(k)}>
-              <span class="pos-code num">{k}</span><b>{POS[k].label}</b><small>{POS[k].blurb}</small>
+              <span class="pos-code num">{k}</span><b>{tn(POS[k].label)}</b><small>{POS[k].blurb}</small>
             </button>
           {/each}
         </div>
@@ -200,7 +201,7 @@
           <div class="seg" class:two={DETAILS_OF[C.pos].length === 2} class:three={DETAILS_OF[C.pos].length === 3}>
             {#each DETAILS_OF[C.pos] as d (d)}
               <button class="opt pos-opt" data-set="dpos" data-val={d} aria-pressed={C.dpos === d} onclick={() => pickDetail(d)}>
-                <span class="pos-code num">{d}</span><b>{DPOS[d].label}</b><small>{DPOS[d].blurb}</small>
+                <span class="pos-code num">{d}</span><b>{tn(DPOS[d].label)}</b><small>{DPOS[d].blurb}</small>
               </button>
             {/each}
           </div>

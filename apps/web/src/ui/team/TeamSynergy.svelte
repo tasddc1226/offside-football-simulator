@@ -1,7 +1,8 @@
 <script lang="ts">
   // T-11-105 팀 시너지 — 켜진 듀오·팀 색깔·주발 맞춤과 시너지 표. 칩을 누르면 그라운드에서 그 선수들을 잇는다.
   import { DUO_LINE_CAP, DUO_TOTAL_CAP, synergyPower, type TeamSynergy } from '@offside/contracts/owner-team';
-  import { SYNERGY_TABLE, synergyChips, synergyNote } from '@offside/app-core/teamOwner';
+  import { synergyTable, synergyChips, synergyNote } from '@offside/app-core/teamOwner';
+  import { teamSynergyText as L } from '@offside/app-core/i18n/ko/teamSynergy';
 
   let { synergy, season, focus = $bindable(null) }: { synergy: TeamSynergy; season: number; focus?: string | null } = $props();
   const power = $derived(synergyPower(synergy));
@@ -9,9 +10,9 @@
   let open = $state(false);
 </script>
 
-<section class="syn" data-team-synergy aria-label="팀 시너지">
+<section class="syn" data-team-synergy aria-label={L.title}>
   <header>
-    <h3>팀 시너지{#if power > 0}<b>+{power}</b>{/if}</h3>
+    <h3>{L.title}{#if power > 0}<b>+{power}</b>{/if}</h3>
     <span class="note">{synergyNote(season)}</span>
   </header>
   {#if chips.length}
@@ -24,14 +25,14 @@
       {/each}
     </div>
   {:else}
-    <p class="muted empty">아직 켜진 시너지가 없어요. 유형이 맞는 선수를 함께 세워 보세요.</p>
+    <p class="muted empty">{L.empty}</p>
   {/if}
-  <button class="more" aria-expanded={open} onclick={() => (open = !open)}>시너지 표 {open ? '접기' : '보기'}</button>
+  <button class="more" aria-expanded={open} onclick={() => (open = !open)}>{L.tableToggle({ open })}</button>
   {#if open}
     <ul class="table">
-      {#each SYNERGY_TABLE as [name, desc, effect] (name)}<li><b>{name}</b><span>{desc}</span><small>{effect}</small></li>{/each}
+      {#each synergyTable() as [name, desc, effect] (name)}<li><b>{name}</b><span>{desc}</span><small>{effect}</small></li>{/each}
     </ul>
-    <p class="muted cap">듀오 효과는 줄마다 +{DUO_LINE_CAP}, 합쳐서 +{DUO_TOTAL_CAP}까지. 유스 선수는 시너지에 들지 않아요.</p>
+    <p class="muted cap">{L.capNote({ line: DUO_LINE_CAP, total: DUO_TOTAL_CAP })}</p>
   {/if}
 </section>
 

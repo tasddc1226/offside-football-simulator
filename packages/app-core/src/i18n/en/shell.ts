@@ -19,7 +19,7 @@ export const shell: Translation<ShellMsgs> = {
   bannerClose: 'Dismiss alert',
   newsAlert: 'New post alert',
   newsView: 'View',
-  newsCount: (p) => `${p.n} new posts`,
+  newsCount: (p) => plural(p.n, 'new post'),
   newsReleaseEdited: 'Release notes were updated',
   newsNoticeEdited: 'A notice was updated',
   newsReleaseNew: 'New release notes are out',
@@ -36,7 +36,7 @@ export const shell: Translation<ShellMsgs> = {
   marketLabel: 'Where will you play next season?',
   opponent: 'Opponent',
   confirm: 'OK',
-  kickoff: 'Kick-off',
+  kickoff: 'Kickoff',
   storageFull:
     "Not enough storage space, so your progress couldn't be saved. Back it up in Settings.",
 };

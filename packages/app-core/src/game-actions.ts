@@ -60,12 +60,13 @@ import type {
 } from '@offside/game/types';
 import { markDexSeen } from './dex.js';
 import { pushEvLog, seasonLabel } from './career.js';
-import { scoutHint } from './potential-view.js';
+import { scoutHint } from './scoutHint.js';
 import { recordPhaseOvr, takeSeasonGrowth } from './growth.js';
 import { publicNameOf } from './namePublic.js';
 import { fmtValue, seasonLabelOf } from './format.js';
 import { crossesBorder, flightHours, hubOf } from './flight.js';
 import { gameActionsText as L } from './i18n/ko/gameActions';
+import { tn } from '@offside/game/i18n/names';
 
 /** 비행 지도는 육지 데이터가 커서 해외 이적일 때만 불러온다(계약서를 여는 순간 미리 받아 둔다). */
 const loadFlightMap = () => import('./flight-map.js');
@@ -104,8 +105,8 @@ export interface GameHost {
 function natViews(nt: PhaseResult['nt']): NatView[] {
   // 명단에서 빠진 차출(called: false)은 대회명·경기가 없다.
   return (nt ?? []).map((x) => ({
-    name: x.name,
-    comp: x.called ? x.comp : '',
+    name: tn(x.name),
+    comp: x.called ? tn(x.comp) : '',
     called: x.called,
     games: x.called
       ? x.games.map((m) => ({
@@ -124,8 +125,8 @@ function tourView(x: NatTourResult): TourView {
   // 저장된 결산 시트(pending.res)에서 복원한 옛 세이브는 필드가 비어 있을 수 있다.
   const matches = x.matches ?? [];
   return {
-    name: x.name,
-    stage: x.stage,
+    name: tn(x.name),
+    stage: tn(x.stage),
     note: x.inSquad
       ? ''
       : [
@@ -137,7 +138,7 @@ function tourView(x: NatTourResult): TourView {
     lines: x.inSquad
       ? matches.map((m) =>
           L.natTourLine({
-            stage: m.stage || '조별리그',
+            stage: tn(m.stage || '조별리그'),
             score: scoreLine(m),
             mins: m.mins,
             g: m.g,
@@ -197,6 +198,8 @@ export function createGameActions(host: GameHost) {
       }
       host.analytics.complete?.({ cid: s.cid, year: s.year, phase: ph, matches: r.block?.n ?? 0 });
       const { block: b, comp, nt, ev } = r;
+      // 부상 소식은 로그 문장이 아니라 엔진이 알려 주는 신호로 기록한다(언어가 달라도 같다).
+      if (b?.injured) s.flags.injuredYear = s.year;
       const chips = diffChips(s, before, r.after);
       const titles = r.titles.map(titleView);
       const title = ph === 0 ? L.preseasonDone : L.phaseResult({ phase: PHASES[ph]! });
@@ -335,7 +338,11 @@ export function createGameActions(host: GameHost) {
       title: ev.title,
       text: ev.text(s),
       story: ev.story
-        ? { name: STORIES[ev.story]!.name, stage: ev.stage ?? 0, total: STORIES[ev.story]!.total }
+        ? {
+            name: tn(STORIES[ev.story]!.name),
+            stage: ev.stage ?? 0,
+            total: STORIES[ev.story]!.total,
+          }
         : null,
       choices: ev.choices.map((c, i) => choiceView(s, ev, c, i)),
     });
@@ -384,7 +391,11 @@ export function createGameActions(host: GameHost) {
         text: r.text,
         chips: r.chips,
         twist: r.twist || null,
-        story: r.story,
+        story: r.story && {
+          ...r.story,
+          name: tn(r.story.name),
+          ending: r.story.ending && tn(r.story.ending),
+        },
         dexNew: r.dexNew,
         timing: r.timing,
       },
@@ -417,9 +428,8 @@ export function createGameActions(host: GameHost) {
     const prev = idx > 0 ? s.career[idx - 1] : null;
     const fans = pickFanLines(s, rec, {
       gotTrophy: trophies.length > 0,
-      injuredThisSeason: s.log.some(
-        (l) => l.t.startsWith(String(rec.year)) && l.text.includes('부상'),
-      ),
+      // 구간 경기에서 다친 시즌이거나 지금도 결장 중이면(로그 문장을 읽지 않는다).
+      injuredThisSeason: s.flags.injuredYear === rec.year || s.injury > 0,
       transferredThisSeason: !!prev && prev.club !== rec.club,
       hasMilestone: miles.length > 0,
     });
@@ -427,7 +437,7 @@ export function createGameActions(host: GameHost) {
       {
         kind: 'season',
         eyebrow: `${seasonLabelOf(rec)} Season Review`,
-        title: L.seasonTitle({ club: rec.club, league: rec.league, rank: rec.rank }),
+        title: L.seasonTitle({ club: tn(rec.club), league: tn(rec.league), rank: rec.rank }),
         ch: (rec.ch || []).map(chLabel),
         stats: {
           apps: rec.apps,
@@ -436,15 +446,15 @@ export function createGameActions(host: GameHost) {
           colLabel,
           rating: rec.rating ? rec.rating.toFixed(2) : '-',
         },
-        honors: [...trophies, ...awards],
+        honors: [...trophies, ...awards].map(tn),
         comps: (rec.comps || []).map((c) =>
-          L.compLine({ name: c.name, stage: c.stage, apps: c.apps, g: c.g, a: c.a }),
+          L.compLine({ name: tn(c.name), stage: tn(c.stage), apps: c.apps, g: c.g, a: c.a }),
         ),
         tours: tours.map(tourView),
         gala,
-        miles,
+        miles: miles.map(tn),
         titles,
-        promo,
+        promo: promo && { club: tn(promo.club), down: tn(promo.down) },
         notes,
         scoutHint: scoutHint(s, rec.year),
         fans,
@@ -472,7 +482,7 @@ export function createGameActions(host: GameHost) {
     const strLine = (leagueId: string, str: number) => {
       const cs = clubsIn(leagueId, G);
       const avg = Math.round(cs.reduce((t, c) => t + c.str, 0) / Math.max(1, cs.length));
-      return L.strLine({ league: leagueOf(leagueId).name, str, avg });
+      return L.strLine({ league: tn(leagueOf(leagueId).name), str, avg });
     };
     // 지금 구단(잔류·재계약·연장)도 제의처럼 팀 전력을 보여 줘야 비교할 수 있다.
     const own = () => ({ clubId: G.club.id, lg: strLine(G.leagueId, G.club.str) });
@@ -484,11 +494,11 @@ export function createGameActions(host: GameHost) {
         note: m.note,
         options: m.options.map((o) => {
           if (o.kind === 'offer') {
-            const extra = `${o.role ? ` · ${o.role}` : ''}${o.fee ? ` · ${L.feeAbout({ fee: fmtValue(o.fee) })}` : G.contract && !leagueOf(G.leagueId).amateur ? ` · ${L.freeAgent}` : ''}`;
+            const extra = `${o.role ? ` · ${tn(o.role)}` : ''}${o.fee ? ` · ${L.feeAbout({ fee: fmtValue(o.fee) })}` : G.contract && !leagueOf(G.leagueId).amateur ? ` · ${L.freeAgent}` : ''}`;
             return {
               clubId: o.clubId,
               reason: offerFeedback(G, o),
-              name: o.name,
+              name: tn(o.name),
               lg: strLine(o.leagueId, o.str),
               salary: fmtMoney(o.salary),
               sub: `${L.contractYears({ years: o.years })}${extra}`,
@@ -539,7 +549,7 @@ export function createGameActions(host: GameHost) {
         : rookie
           ? L.contractTitleRookie
           : L.contractTitleTransfer,
-      text: extension ? L.contractTextExt : L.contractTextStart({ club: o.name, rookie }),
+      text: extension ? L.contractTextExt : L.contractTextStart({ club: tn(o.name), rookie }),
       club: {
         id: o.kind === 'offer' ? o.clubId : G.club.id,
         name: o.kind === 'offer' ? o.name : G.club.name,
@@ -556,7 +566,7 @@ export function createGameActions(host: GameHost) {
         ...(o.kind === 'offer' && o.fee
           ? [{ label: L.termFee, value: L.termFeeValue({ fee: fmtValue(o.fee) }) }]
           : []),
-        ...(o.kind === 'offer' && o.role ? [{ label: L.termRole, value: o.role }] : []),
+        ...(o.kind === 'offer' && o.role ? [{ label: L.termRole, value: tn(o.role) }] : []),
       ],
       name: G.name,
       cta: extension ? L.ctaExt : rookie ? L.ctaRookie : L.ctaTransfer,
@@ -585,7 +595,7 @@ export function createGameActions(host: GameHost) {
           title: L.flyingTo({ city: to.city }),
           sub: L.flightSub({
             country: to.country,
-            league: leagueOf(o.leagueId).name,
+            league: tn(leagueOf(o.leagueId).name),
             hours: flightHours(from, to),
           }),
           from: { code: from.code, city: from.city },

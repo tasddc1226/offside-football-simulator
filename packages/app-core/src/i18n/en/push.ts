@@ -16,7 +16,7 @@ export const push: Translation<PushMsgs> = {
   testBtn: 'Send a test notification to my device',
   nextTest: 'Next test:',
   testRequested:
-    'Test notification requested. Check your device notification centre to confirm it arrived.',
+    'Test notification requested. Check your device notification center to confirm it arrived.',
   testFailed: "Couldn't send the test request.",
   privacy: 'How notification data is handled',
   channelName: 'Announcements and release notes',
@@ -44,4 +44,7 @@ export const push: Translation<PushMsgs> = {
   catSocial: 'Friends',
   catSocialBody: 'Friend requests, accepts and friendly results',
   catAria: (p) => `${p.title} notifications`,
+  prefsConnectFailed: "Couldn't connect to notification settings. Please try again.",
+  prefsLoadFailed: "Couldn't load notification settings.",
+  prefsSaveFailed: "Couldn't save notification settings.",
 };

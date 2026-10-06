@@ -20,6 +20,7 @@ import { Btn, Txt } from '../ui';
 import { BannerClose } from './TopBanner';
 import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
 import { useFly } from './useFly';
+import { tn } from '@offside/game/i18n/names';
 
 const SHOW_MS = 9_000;
 
@@ -187,7 +188,7 @@ function AlertCard({
                 color: alpha(c.onPitch, 0.85),
               }}
             >
-              {L.alertSub({ club: defaultClubName(item.clubId) ?? item.club, seq: item.seq })}
+              {L.alertSub({ club: tn(defaultClubName(item.clubId) ?? item.club), seq: item.seq })}
             </Txt>
           </View>
           <Btn kind="accent" sm testID="rn-alert-open" onPress={open}>

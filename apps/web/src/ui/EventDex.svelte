@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // T-10-012 확률 도감. 공통 규칙과 이벤트별 선택지 확률(범위·영향 요인)을 게임 코드에서 직접 뽑아 보여 준다.
   // 스토리·특별 이벤트는 한 번 겪어야 열린다(스포일러 보호). 분석 코드와 함께 처음 열 때 불러오는 화면이다.
   import { onMount } from 'svelte';
@@ -79,7 +80,7 @@
                   <span class="dex-title">{#if found(e)}<span class="dex-check" aria-label={L.foundMark}>✓</span>{/if}{e.title}</span>
                   <span class="row" style="gap:4px">
                     {#if e.pos}<span class="pill">{e.pos}</span>{/if}
-                    {#if e.story}<span class="pill">{e.story.name} {e.story.stage}/{e.story.total}</span>{/if}
+                    {#if e.story}<span class="pill">{tn(e.story.name)} {e.story.stage}/{e.story.total}</span>{/if}
                   </span>
                 </summary>
                 <ul class="dex-choices">

@@ -31,8 +31,8 @@ export function h2hText(r: { w: number; d: number; l: number }): string | null {
   return teamCoreText.record(r);
 }
 
-/** T-11-113 프리시즌에 은퇴 선수를 남긴 구단주 표시. */
-export const FOUNDER_LABEL = '창단 멤버';
+/** T-11-113 프리시즌에 은퇴 선수를 남긴 구단주 표시. 읽을 때 지금 언어로 고른다. */
+export const founderLabel = () => L.founder;
 
 type FriendsView = Pick<FriendsResponse, 'canPlay' | 'canPlayPreseason' | 'matchesLeft'>;
 type FriendTeams = Pick<FriendPerson, 'team' | 'preseasonTeam'>;
@@ -47,8 +47,9 @@ export const canPreseasonFriendly = (d: FriendsView, p: FriendTeams) =>
 
 /** 친구의 프리시즌 팀 한 줄. 프리시즌 팀이 없거나 개막 전이면 null. */
 export const preseasonTeamLine = (p: Pick<FriendPerson, 'preseasonTeam'>) =>
-  p.preseasonTeam ? `프리시즌 ${p.preseasonTeam.name} · OVR ${p.preseasonTeam.ovr}` : null;
+  p.preseasonTeam
+    ? L.preseasonLine({ name: p.preseasonTeam.name, ovr: p.preseasonTeam.ovr })
+    : null;
 
 /** 개막 뒤 친구 화면에서 프리시즌 팀이 없는 창단 멤버에게 보이는 안내. */
-export const PRESEASON_FRIENDLY_HINT =
-  '프리시즌 팀을 꾸리면 프리시즌에 키운 선수로 친구와 친선전을 할 수 있어요.';
+export const preseasonFriendlyHint = () => L.preseasonHint;

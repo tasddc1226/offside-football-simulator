@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { API, ok } from './helpers.js';
+import { API, ok, usePreseason } from './helpers.js';
+
+// 프리시즌 기록으로 꾸민 화면이라 시계를 시즌 1 개막 전으로 고정한다.
+usePreseason();
 
 // T-10-079 은퇴한 내 선수의 SNS 공유용 한 장 이미지 — 만들면 미리 보기가 뜨고 PNG로 저장된다(공유 시트가 없는 브라우저).
 const ID = '0d000000-0000-4000-8000-00000000000d';

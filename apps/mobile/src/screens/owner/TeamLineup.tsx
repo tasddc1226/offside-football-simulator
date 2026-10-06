@@ -19,6 +19,7 @@ import { scrollTo, scrollY, viewH } from '../../ui/scroll';
 import { TextField } from '../settings/parts';
 import { RecordsChips as SortChips } from '../hof/RecordsControls';
 import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
+import { tn } from '@offside/game/i18n/names';
 
 type Drag = {
   index: number | null;
@@ -371,7 +372,7 @@ export function TeamLineup({
                     <Press
                       testID={`locker-${p.careerId}`}
                       accessibilityLabel={L.lockerPickAriaApp({
-                        who: `${nameOf(p)}${NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION) ? ` · ${NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)!.ko}` : ''}`,
+                        who: `${nameOf(p)}${NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION) ? ` · ${tn(NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)!.ko)}` : ''}`,
                         peak: p.peak,
                         ls: p.legendScore ?? 0,
                         attrs: attrLine(p) ?? L.noAttrs,

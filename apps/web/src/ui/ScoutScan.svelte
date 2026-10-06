@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { intlLocale } from '@offside/contracts/i18n';
   // T-10-111 "후보 3명 보기"를 누르면 약 3초 동안 화면을 가리고 스카우트가 후보를 추리는 연출을 보여 준다.
   // 스캔 빔이 피치를 훑으며 선수 점을 찍고, 마지막 훑기에서 내 포지션 구역의 세 명이 금색으로 확정된다.
   // 연출용 난수는 Math.random이다(게임 RNG를 건드리지 않는다). 탭·Esc로 건너뛸 수 있고, 감속 모션이면
@@ -100,7 +101,7 @@
     </div>
 
     <div class="ss-count">
-      <span>{L.scannedBefore} <b class="num">{count.toLocaleString('ko-KR')}</b>{L.scannedAfter}</span>
+      <span>{L.scannedBefore} <b class="num">{count.toLocaleString(intlLocale())}</b>{L.scannedAfter}</span>
       <span>{L.scanCand} <b class="num">{locked}</b>/3</span>
     </div>
     <div class="ss-bar"><i style:width="{p * 100}%"></i></div>

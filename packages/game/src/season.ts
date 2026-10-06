@@ -28,7 +28,7 @@ import {
   checkMilestones,
   retireMilestones,
 } from './comps.js';
-import { legendBand } from './legend-bands.js';
+import { legendBand, legendBandName } from './legend-bands.js';
 import { checkTitles, mainTitle, titleView, type TitleView } from './titles.js';
 import { natInit, natSeasonEnd, NATIONAL_TROPHIES, type NatTourResult } from './national.js';
 import {
@@ -58,6 +58,8 @@ import type {
 } from './types.js';
 import { storage } from './storage.js';
 import { migrateHofEntry } from './save.js';
+import { gSeasonText as T } from './i18n/ko/gSeason.js';
+import { tn } from './i18n/names.js';
 
 /** 시즌 결산 결과 — 결산 시트가 그린다. tours는 명단에 들었거나 경기가 없던(예선 결과) 대회와 우승 대회만. */
 export interface SeasonEndResult {
@@ -166,14 +168,14 @@ export function endSeason(s: GameState): SeasonEndResult {
   if (rank === 1) trophies.push(`${L.name} 우승`);
   const cwc = clubWorldCup(s, L.tier);
   if (cwc) {
-    notes.push(`FIFA 클럽 월드컵 ${cwc}`);
+    notes.push(T.cwcNote({ stage: tn(cwc) }));
     if (cwc === '우승') trophies.push('FIFA 클럽 월드컵 우승');
   }
   const exemptBefore = s.mil.exempt;
   const nat = natSeasonEnd(s);
   trophies.push(...nat.trophies);
   // T-11-077 이번 대회로 병역 특례(체육요원 편입)를 받았으면 결산에도 알린다(로그에만 있으면 놓치기 쉽다).
-  if (s.mil.exempt && !exemptBefore) notes.push(`병역 특례(입대 면제) · ${s.mil.exempt}`);
+  if (s.mil.exempt && !exemptBefore) notes.push(T.exemptNote({ what: tn(s.mil.exempt) }));
   const tours = nat.tours;
 
   const { awards, gala } = seasonAwards(s, { rank, avg, trophies, tours });
@@ -194,7 +196,14 @@ export function endSeason(s: GameState): SeasonEndResult {
   const titles = checkTitles(s).map(titleView);
   log(
     s,
-    `${s.year} 시즌 종료 · ${L.name} ${rank}위 · 공식전 ${rec.apps}경기 ${rec.goals}골 ${rec.assists}도움`,
+    T.seasonEnd({
+      year: s.year,
+      league: tn(L.name),
+      rank,
+      apps: rec.apps,
+      goals: rec.goals,
+      assists: rec.assists,
+    }),
     'big',
   );
   // T-10-110 기록(K리그2 · 우승)을 남긴 뒤 승격을 확정한다 — 이어지는 이적 시장·재계약부터 K1 기준이다.
@@ -301,8 +310,7 @@ export function makeOffers(s: GameState) {
     s.flags.coachOffer = false;
   }
   const list: OfferOption[] = chosen.map((c) => offerFrom(s, c));
-  if (coach)
-    list.push({ ...offerFrom(s, coach), role: '은사의 부름 · 감독 신뢰 두터움', trust: 3 });
+  if (coach) list.push({ ...offerFrom(s, coach), role: T.roleCoach, trust: 3 });
   return list.sort((a, b) => b.str - a.str);
 }
 /** T-11-045 이 선수의 은퇴 나이(이 나이가 되는 시장에서 은퇴). 옛 저장·프리시즌 선수는 41세. */
@@ -341,7 +349,7 @@ export function offerFrom(s: GameState, c: (typeof CLUBS)[number]): OfferOption 
       Math.min(ri(old ? 1 : 2, old ? 2 : 5), isVeteran(s) ? 1 : 5, retireAge(s) - s.age),
     ),
     salary: Math.round((salaryFor(leagueId, o) * (0.85 + rnd() * 0.35)) / 10) * 10,
-    role: d >= 1 ? '주전 보장' : d >= -5 ? '로테이션' : '벤치 경쟁',
+    role: d >= 1 ? T.roleStarter : d >= -5 ? T.roleRotation : T.roleBench,
     fee:
       s.contract && s.contract.years > 0
         ? Math.round((marketValue(s) * (0.9 + rnd() * 0.5)) / 100) * 100
@@ -359,11 +367,11 @@ function militaryMarket(s: GameState): MarketResult | null {
       options: [
         {
           kind: 'serve',
-          name: '김천 상무 복무 계속',
-          desc: `전역까지 ${s.mil.left}시즌 · 군 복무 중에는 이적할 수 없습니다`,
+          name: T.serveName,
+          desc: T.serveDesc({ left: s.mil.left }),
         },
       ],
-      note: '국군체육부대 소속으로 복무 중입니다.',
+      note: T.serveNote,
       canRetire: false,
     };
   const enlist = milEnlistMarket(s);
@@ -371,7 +379,7 @@ function militaryMarket(s: GameState): MarketResult | null {
   if (milDue(s))
     return {
       options: milOptions(s),
-      note: `만 ${s.age}세. 더 이상 입영을 미룰 수 없습니다. 병역 의무를 이행해야 합니다.`,
+      note: T.dueNote({ age: s.age }),
       canRetire: s.age >= 32,
     };
   return null;
@@ -422,15 +430,13 @@ export function canAcceptRenewal(s: GameState, opt: RenewOption): boolean {
 /** 고3 졸업: 프로 입단 제의 + 대학 진학. */
 function highSchoolShelf(offers: MarketOption[]): Shelf {
   return {
-    note: offers.length
-      ? '졸업을 앞두고 프로 구단의 입단 제의가 도착했습니다.'
-      : '아직 프로 스카우트의 눈에 띄지 못했습니다. 대학에서 기량을 더 키워야 합니다.',
+    note: offers.length ? T.hsNoteOffers : T.hsNoteNone,
     options: [
       ...offers,
       {
         kind: 'uni',
-        name: '대학 진학',
-        desc: '4년 이내에 언제든 프로 도전 · 대학리그에서 출전 기회 확보',
+        name: T.uniName,
+        desc: T.uniDesc,
       },
     ],
   };
@@ -438,17 +444,20 @@ function highSchoolShelf(offers: MarketOption[]): Shelf {
 
 /** 대학: 제의 + 잔류(4학년 전까지). 졸업반에 제의가 없으면 K3 입단 테스트(OVR 46 이상). */
 function universityShelf(s: GameState, offers: MarketOption[], o: number): Shelf {
-  let note = `대학 ${s.uniYears}학년을 마쳤습니다.`;
+  let note = T.uniNote({ years: s.uniYears });
   const options = [...offers];
   if (s.uniYears < 4)
-    options.push({ kind: 'stay', name: '대학 잔류', desc: `${s.uniYears + 1}학년으로 한 시즌 더` });
+    options.push({
+      kind: 'stay',
+      name: T.uniStayName,
+      desc: T.uniStayDesc({ year: s.uniYears + 1 }),
+    });
   if (!offers.length && s.uniYears >= 4) {
     if (o >= 46) {
       const c = clubsIn('k3').sort((a, b) => a.str - b.str)[0]!;
-      options.push({ ...offerFrom(s, c), role: '입단 테스트 합격 · 세미프로', years: 1 });
-      note = '졸업반. 프로 구단의 제의는 없었지만 K3리그 입단 테스트에 합격했습니다.';
-    } else
-      note = '졸업반. 어느 팀에서도 연락이 오지 않았습니다. 선수의 꿈을 접어야 할지도 모릅니다.';
+      options.push({ ...offerFrom(s, c), role: T.roleTrial, years: 1 });
+      note = T.trialNote;
+    } else note = T.gradNote;
   }
   return { options, note };
 }
@@ -469,43 +478,51 @@ function proShelf(
     const contract = s.contract;
     options.push({
       kind: 'stay',
-      name: `${s.club.name} 잔류`,
-      desc: `${promoted ? `이 구단과 ${leagueOf(s.leagueId).name} 도전 · ` : ''}연봉 ${fmtMoney(contract.salary)} · 계약 ${contract.years}년 남음`,
+      name: T.stayName({ club: tn(s.club.name) }),
+      desc: promoted
+        ? T.stayDescPromoted({
+            league: tn(leagueOf(s.leagueId).name),
+            salary: fmtMoney(contract.salary),
+            years: contract.years,
+          })
+        : T.stayDesc({ salary: fmtMoney(contract.salary), years: contract.years }),
     });
     if (earlyRenewalEligible(s, o)) {
       const extra = Math.min(renewalYears(s, true), retireAge(s) - s.age - contract.years);
       if (extra > 0)
         options.push({
           kind: 'renew',
-          name: `${s.club.name} 연장 계약`,
+          name: T.extendName({ club: tn(s.club.name) }),
           years: contract.years + extra,
           salary: renewalSalary(s, o),
-          desc: '새 연봉은 이번 시즌부터 적용돼요.',
+          desc: T.extendDesc,
           extension: { years: extra, clubId: s.club.id, year: s.year },
         });
     }
     options.push(...offers);
-    return { options, note: `${s.club.name}와의 계약이 ${contract.years}년 남았습니다.` };
+    return {
+      options,
+      note: T.contractLeftNote({ club: tn(s.club.name), years: contract.years }),
+    };
   }
   const veteran = isVeteran(s);
   if (o >= s.club.str - 7 && (veteran ? veteranSeasonOk(s) : s.age < 38)) {
     const sal = renewalSalary(s, o);
     options.push({
       kind: 'renew',
-      name: `${s.club.name} 재계약`,
+      name: T.renewName({ club: tn(s.club.name) }),
       years: Math.min(renewalYears(s), Math.max(1, retireAge(s) - s.age)),
       salary: sal,
-      desc: veteran ? '베테랑 재계약' : '',
+      desc: veteran ? T.renewVeteranDesc : '',
     });
   }
   options.push(...offers);
   if (!options.length && s.age < 31) {
     const down = DOWN[leagueId] ?? 'k3';
     const c = clubsIn(down, s).sort((a, b) => Math.abs(a.str - o) - Math.abs(b.str - o))[0];
-    if (c && o >= c.str - 10)
-      options.push({ ...offerFrom(s, c), role: '하부 리그 · 재기 도전', years: 1 });
+    if (c && o >= c.str - 10) options.push({ ...offerFrom(s, c), role: T.roleComeback, years: 1 });
   }
-  return { options, note: '계약이 만료되어 FA 신분이 되었습니다.' };
+  return { options, note: T.faNote };
 }
 
 /** 시즌 뒤 이적 시장: 병역 → 이적 제의 → 단계별(고교·대학·프로) 선택지 → 병역 선택지 → 은퇴 가능 여부(RNG 순서). */
@@ -524,25 +541,23 @@ export function market(s: GameState): MarketResult {
       : s.leagueId === 'uni'
         ? universityShelf(s, offers, o)
         : proShelf(s, offers, o, L.id, promoted);
-  const note = promoted ? `${s.club.name}, ${L.name} 승격! ${shelfNote}` : shelfNote;
+  const note = promoted
+    ? T.promotedNote({ club: tn(s.club.name), league: tn(L.name), note: shelfNote })
+    : shelfNote;
   if (!L.amateur) options.push(...milOptions(s));
   const lastUni = s.leagueId === 'uni' && s.uniYears >= 4;
   const canRetire = (!L.amateur && (s.age >= 30 || L.tier === 0 || !options.length)) || lastUni;
   if (s.age >= retireAge(s)) {
     return {
       options: [],
-      note: `${s.age}세가 되어 더 이상 현역으로 뛸 수 없습니다. 은퇴를 결정할 시간입니다.`,
+      note: T.retireAgeNote({ age: s.age }),
       canRetire: true,
     };
   }
   const forced = !options.length && (!L.amateur || lastUni);
   return {
     options: forced ? [] : options,
-    note: forced
-      ? '더 이상 불러주는 팀이 없습니다. 은퇴를 결정할 시간입니다.'
-      : isVeteran(s)
-        ? `${note} ${retireAge(s)}세가 되면 은퇴합니다.`
-        : note,
+    note: forced ? T.noTeamNote : isVeteran(s) ? T.veteranNote({ note, age: retireAge(s) }) : note,
     canRetire: canRetire || forced,
   };
 }
@@ -563,15 +578,20 @@ export function acceptOption(
     s.club = { ...c };
     s.uniYears = 0;
     s.trust = 0;
-    log(s, `${c.name}에 진학했습니다.`, 'big');
+    log(s, T.enrolled({ club: tn(c.name) }), 'big');
   } else if (opt.kind === 'renew') {
     s.contract = { years: opt.years, salary: opt.salary };
     addStat(s, 'trust', 1);
     log(
       s,
       opt.extension
-        ? `${s.club.name}와 ${opt.extension.years}년 연장, 잔여 계약 포함 총 ${opt.years}년. 이번 시즌부터 연봉 ${fmtMoney(opt.salary)}`
-        : `${s.club.name}와 ${opt.years}년 재계약, 연봉 ${fmtMoney(opt.salary)}`,
+        ? T.renewExtLog({
+            club: tn(s.club.name),
+            ext: opt.extension.years,
+            total: opt.years,
+            salary: fmtMoney(opt.salary),
+          })
+        : T.renewLog({ club: tn(s.club.name), years: opt.years, salary: fmtMoney(opt.salary) }),
       'big',
     );
   } else if (opt.kind === 'offer') {
@@ -587,8 +607,28 @@ export function acceptOption(
     log(
       s,
       wasAm
-        ? `${c.name}(${leagueOf(s.leagueId).name}) 입단! ${opt.years}년 · 연봉 ${fmtMoney(opt.salary)}`
-        : `${from} → ${c.name}(${leagueOf(s.leagueId).name}) 이적! ${opt.fee ? `이적료 ${fmtValue(opt.fee)} · ` : '자유계약 · '}${opt.years}년 · 연봉 ${fmtMoney(opt.salary)}`,
+        ? T.signLog({
+            club: tn(c.name),
+            league: tn(leagueOf(s.leagueId).name),
+            years: opt.years,
+            salary: fmtMoney(opt.salary),
+          })
+        : opt.fee
+          ? T.transferPaidLog({
+              from: tn(from),
+              club: tn(c.name),
+              league: tn(leagueOf(s.leagueId).name),
+              fee: fmtValue(opt.fee),
+              years: opt.years,
+              salary: fmtMoney(opt.salary),
+            })
+          : T.transferFreeLog({
+              from: tn(from),
+              club: tn(c.name),
+              league: tn(leagueOf(s.leagueId).name),
+              years: opt.years,
+              salary: fmtMoney(opt.salary),
+            }),
       'big',
     );
   }
@@ -598,21 +638,24 @@ export function acceptOption(
 }
 
 // ───────── 은퇴 · 명예의 전당 ─────────
-const LEGEND_LABEL: Record<keyof ReturnType<typeof legendTerms>, string> = {
-  goals: '골 기여',
-  assists: '도움 기여',
-  cs: '무실점 기여',
-  apps: '출전',
-  trophies: '우승 트로피',
-  awards: '개인 수상',
-  caps: 'A매치',
-  peak: '최고 OVR',
-  ballonWin: '발롱도르 수상',
-  ballonRank: '발롱도르 순위',
-  wc: '월드컵 우승',
-  century: '센추리 클럽',
-  control: '경기 장악',
-};
+type LegendKey = keyof ReturnType<typeof legendTerms>;
+/** 레전드 점수 항목 이름(지금 언어). */
+const legendLabel = (k: LegendKey): string =>
+  ({
+    goals: T.lgGoals,
+    assists: T.lgAssists,
+    cs: T.lgCs,
+    apps: T.lgApps,
+    trophies: T.lgTrophies,
+    awards: T.lgAwards,
+    caps: T.lgCaps,
+    peak: T.lgPeak,
+    ballonWin: T.lgBallonWin,
+    ballonRank: T.lgBallonRank,
+    wc: T.lgWc,
+    century: T.lgCentury,
+    control: T.lgControl,
+  })[k];
 export interface LegendBreakdownItem {
   key: string;
   label: string;
@@ -647,7 +690,7 @@ export function legendScoreBreakdown(s: LegendSource): {
     s.dpos,
   );
   const items: LegendBreakdownItem[] = Object.entries(terms)
-    .map(([key, value]) => ({ key, label: LEGEND_LABEL[key as keyof typeof terms], value }))
+    .map(([key, value]) => ({ key, label: legendLabel(key as LegendKey), value }))
     .filter((it) => it.value !== 0);
   const total = Math.round(items.reduce((sum, it) => sum + it.value, 0));
   return { items, total };
@@ -662,7 +705,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
   retireMilestones(s);
   const score = legendScore(s);
   checkTitles(s, { score });
-  log(s, `${s.age}세, 정든 그라운드를 떠납니다.`, 'big');
+  log(s, T.retireLog({ age: s.age }), 'big');
   const t = s.career.reduce((a, r) => ({ g: a.g + r.goals, a: a.a + r.assists, p: a.p + r.apps }), {
     g: 0,
     a: 0,
@@ -753,7 +796,7 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
   };
 }
 export function legendTitle(score: number, dpos: string | null | undefined): string {
-  return legendBand(score, dpos).name;
+  return legendBandName(legendBand(score, dpos).id);
 }
 
 // ───────── 저장 ─────────

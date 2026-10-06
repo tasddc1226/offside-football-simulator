@@ -19,6 +19,6 @@ export const title: Translation<TitleMsgs> = {
   progressLabel: (p) => `${p.name} progress`,
   pickChanged: (p) => `Main title changed: ${p.name}`,
   none: 'None',
-  pickOpen: (p) => `Change it from ${p.n} earned titles`,
+  pickOpen: (p) => `Choose from ${p.n} earned titles`,
   pickNote: 'Your chosen title shows on your player card, in the Hall of Fame and on share links.',
 };

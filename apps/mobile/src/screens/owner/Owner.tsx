@@ -22,7 +22,7 @@ import {
 import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
-import { FOUNDER_LABEL } from '@offside/app-core/friendText';
+import { founderLabel } from '@offside/app-core/friendText';
 import { loadHOF } from '@offside/game/season';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
@@ -206,7 +206,7 @@ export default function Owner() {
                 {card?.founder ? (
                   // T-11-113 프리시즌에 은퇴 선수를 남긴 구단주
                   <View testID="owner-founder">
-                    <Pill tone="good">{FOUNDER_LABEL}</Pill>
+                    <Pill tone="good">{founderLabel()}</Pill>
                   </View>
                 ) : null}
               </Row>

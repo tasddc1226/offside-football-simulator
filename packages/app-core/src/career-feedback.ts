@@ -5,6 +5,7 @@ import { labelOf, leagueOf } from '@offside/game/player';
 import { balanceFactor } from '@offside/game/training';
 import { nextMilestones, type NextMilestone } from '@offside/game/records';
 import type { GameState, MarketOption, MarketResult } from '@offside/game/types';
+import { tn } from '@offside/game/i18n/names';
 import { gameCareerText as L } from './i18n/ko/gameCareer';
 
 const signed = (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(1)}`;
@@ -73,7 +74,7 @@ export function marketFeedback(s: GameState, m: MarketResult): string | undefine
 }
 export function offerFeedback(s: GameState, o: MarketOption): string | undefined {
   if (o.kind !== 'offer') return undefined;
-  return L.offerAssess({ ovr: ovr(s), str: o.str, role: o.role ?? '' });
+  return L.offerAssess({ ovr: ovr(s), str: o.str, role: tn(o.role ?? '') });
 }
 
 /**
@@ -93,7 +94,7 @@ export function careerGoals(s: GameState): NextMilestone[] {
   if (target && !leagueOf(s.leagueId).amateur)
     goals.push({
       key: 'club-apps',
-      label: L.clubApps({ club: s.club.name, target }),
+      label: L.clubApps({ club: tn(s.club.name), target }),
       have,
       target,
       remaining: target - have,

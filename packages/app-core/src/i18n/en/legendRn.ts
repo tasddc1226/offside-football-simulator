@@ -5,16 +5,16 @@ import { plural } from './_util';
 export const legendRn: Translation<LegendRnMsgs> = {
   pending: 'The server is reviewing your retired number. Check the Hall of Fame in a moment.',
   lineNum: (p) => `No. ${p.number}`,
-  lineNumAfter: ' is now',
-  lineNameAfter: '’s.',
+  lineNumAfter: ' now belongs to',
+  lineNameAfter: '.',
   stats: (p) =>
-    `${p.from}–${p.to} · ${plural(p.seasons, 'season')} · ${p.apps} apps ${plural(p.goals, 'goal')} ${plural(p.assists, 'assist')}`,
+    `${p.from}–${p.to} · ${plural(p.seasons, 'season')} · ${p.apps} apps, ${plural(p.goals, 'goal')}, ${plural(p.assists, 'assist')}`,
   foot: (p) => `${p.club} retired number · server retirement No. ${p.seq}`,
   takenA: (p) => `No. ${p.number} is already held by`,
   anonLegend: 'an anonymous legend',
   takenB: ',',
   takenC: 'so the club has put',
-  takenD: ' on the Wall of Honour.',
+  takenD: ' on the Wall of Honor.',
   anonA: 'Make your name public and',
   anonSlot: (p) => `${p.club} No. ${p.number}`,
   anonTail: 'will be retired for you.',
@@ -25,5 +25,5 @@ export const legendRn: Translation<LegendRnMsgs> = {
   alertLabel: (p) => `${p.name}, No. ${p.number} retired`,
   alertOpen: 'View',
   alertClose: 'Dismiss notification',
-  jerseyLabel: (p) => `${p.name} retired No. ${p.number} shirt`,
+  jerseyLabel: (p) => `${p.name} retired No. ${p.number} jersey`,
 };

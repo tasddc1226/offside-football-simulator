@@ -20,5 +20,5 @@ export const marketChart: Translation<MarketChartMsgs> = {
   indexA11y: (p) => `Market prices at ${p.pct} of base value, ${p.change}`,
   noChange: 'No change',
   dayText: (p) => `${p.day} · avg ${p.avg} · ${p.trades} ${p.trades === 1 ? 'trade' : 'trades'}`,
-  tradeText: (p) => `${p.day} this player · ${p.ratio}`,
+  tradeText: (p) => `${p.day} · this player · ${p.ratio}`,
 };

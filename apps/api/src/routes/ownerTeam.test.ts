@@ -520,6 +520,18 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(item(pre, 'one-club')?.done).toBe(false);
     expect(item(pre, 'age-40')).toMatchObject({ label: '40세까지 현역', done: false });
     expect((await read('?season=1')).status).toBe(400); // 아직 열리지 않은 시즌
+    // T-11-106 ?lang=en이면 문구만 영어다(id·점수·판정은 같다).
+    const preEn = AchRes.parse((await read('?lang=en')).body).data;
+    expect(preEn).toMatchObject({ season: 0, score: 10, seasons: [{ id: 0, name: 'Preseason' }] });
+    expect(preEn.groups.map((g) => g.id)).toEqual(pre.groups.map((g) => g.id));
+    expect(preEn.groups.map((g) => g.stage).slice(3, 6)).toEqual(['Stage 3', 'Stage 4', 'Stage 5']);
+    expect(item(preEn, 'retire-GK')).toMatchObject({ label: 'Retire a goalkeeper', done: true });
+    expect(item(preEn, 'age-40')).toMatchObject({ label: 'Still playing at 40', done: false });
+    expect(
+      JSON.stringify(
+        preEn.groups.flatMap((g) => [g.title, g.stage, ...g.items.map((i) => i.label)]),
+      ),
+    ).not.toMatch(/[가-힣]/);
 
     vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
     await putTeam(me.cookie, { slots: slots(null, null, s1) });
@@ -752,6 +764,17 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     const noTeam = await issueGoogleCookie(ctx);
     const r = await call('GET', '/v1/owner-team/opponents', { cookie: noTeam.cookie });
     expect(r.status).toBe(409);
+    // T-11-106 오류 안내도 ?lang=en이면 영어, code·reason은 그대로.
+    const en = await call('GET', '/v1/owner-team/opponents?lang=en', { cookie: noTeam.cookie });
+    expect(en.status).toBe(409);
+    expect(await en.json()).toMatchObject({
+      error: { message: "Create this season's team first.", details: { reason: 'TEAM_REQUIRED' } },
+    });
+    expect(
+      await (await call('GET', '/v1/owner-team/opponents', { cookie: noTeam.cookie })).json(),
+    ).toMatchObject({
+      error: { message: '먼저 이번 시즌 팀을 만들어 주세요.' },
+    });
   });
 
   it('시즌 1 개막 뒤 경기 결과와 상대 푸시가 함께 저장되고 재요청은 중복 발송하지 않는다', async () => {

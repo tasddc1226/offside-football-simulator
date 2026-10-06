@@ -7,6 +7,7 @@ import { useSnapshot } from 'valtio';
 import { posLabel } from '@offside/game/data';
 import { ovr } from '@offside/game/attributes';
 import { leagueOf, roleOf, fmtMoney, focusOf, labelOf } from '@offside/game/engine';
+import { tn } from '@offside/game/i18n/names';
 import { mainTitle } from '@offside/game/titles';
 import { marketValue } from '@offside/game/season';
 import type { GameState } from '@offside/game/types';
@@ -14,6 +15,7 @@ import type { Tab } from '@offside/app-core/state';
 import { fmtValue } from '@offside/app-core/format';
 import { seasonAction } from '@offside/app-core/seasonAction';
 import { gameText as T } from '@offside/app-core/i18n/ko/game';
+import { playerNudgeText as PN } from '@offside/app-core/i18n/ko/playerNudge';
 import { CareerTab } from '../../components/CareerTab';
 import { advance, buzz, nextPending } from '../../game/host';
 import { goHome } from '../../game/nav';
@@ -161,7 +163,7 @@ export default function Game() {
     key,
     label,
     active: tab === key,
-    hint: key === 'player' && playerHint ? '잠재력 안내' : undefined,
+    hint: key === 'player' && playerHint ? PN.tabHint : undefined,
     onPress: () => switchTab(key),
   });
   // 게임 탭 4개 + 가운데 홈. 홈은 화면을 떠나는 버튼이다.
@@ -268,7 +270,7 @@ export default function Game() {
                         color: c.onPitch,
                       }}
                     >
-                      {` ${s.club.name}`}
+                      {` ${tn(s.club.name)}`}
                     </Txt>
                   </View>
                   <Txt
@@ -278,7 +280,7 @@ export default function Game() {
                       color: c.onPitch,
                     }}
                   >
-                    {`${L.name}${contract ? ` · ${contract}` : ''}`}
+                    {`${tn(L.name)}${contract ? ` · ${contract}` : ''}`}
                   </Txt>
                 </View>
               </View>
@@ -312,7 +314,9 @@ export default function Game() {
               </View>
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              <HeroPill {...(role === '주전' ? { fill: 'accent' as const } : {})}>{role}</HeroPill>
+              <HeroPill {...(role === '주전' ? { fill: 'accent' as const } : {})}>
+                {tn(role)}
+              </HeroPill>
               {s.injury ? <HeroPill danger>{T.injury({ n: s.injury })}</HeroPill> : null}
               <HeroPill>{focusName}</HeroPill>
             </View>

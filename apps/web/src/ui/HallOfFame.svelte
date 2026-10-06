@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // T-10-005 명예의 전당: 모든 유저의 은퇴 선수(서버). 행을 누르면 상세로. 이 기기에서 은퇴한 선수에는
   // '내 선수' 표시를 단다. 내 선수 목록은 구단주 화면으로 옮겼다(T-10-058, MyPlayers).
   // 홈에서는 레전드 점수 TOP 3만 보여 주고, '전체 보기'(full)에서는 순위 유형(득점·도움·발롱도르…)을 골라
@@ -20,6 +21,7 @@
   import HofPodium from './HofPodium.svelte';
   import { appState } from './state.svelte.js';
   import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+  import { seasonLabel } from '@offside/app-core/seasonName';
 
   let { full = false }: { full?: boolean } = $props();
   const TOP = 3;
@@ -61,7 +63,7 @@
   /** 고른 시즌이 아직 개막 전이면 그 시즌(목록 대신 개막 안내). */
   const upcoming = $derived(ss && notOpen(ss) ? ss : undefined);
   /** 문구 앞에 붙는 시즌·포지션 이름('시즌 1 수비수 '). 둘 다 전체면 빈 문자열. */
-  const scope = $derived(`${ss ? `${ss.name} ` : ''}${pos ? `${POS_LABEL[pos]} ` : ''}`);
+  const scope = $derived(`${ss ? `${seasonLabel(ss.id, ss.name)} ` : ''}${pos ? `${tn(POS_LABEL[pos])} ` : ''}`);
   let all = $state<PublicHofEntry[] | null>(null);
   /** 홈 미리보기의 '전체 보기' — 개막 뒤엔 시즌 은퇴 선수가 아직 없어도 기록실로 가는 길을 남긴다. */
   const hasAll = $derived(!!all?.length || homeSeason !== null);
@@ -195,15 +197,15 @@
         <select aria-label={L.seasonAria} data-hof-season-select value={season === null ? 'all' : String(season)} onchange={(e) => pickSeason(e.currentTarget.value === 'all' ? null : Number(e.currentTarget.value))}>
           <option value="all">{L.allSeasons}</option>
           {#each [PRESEASON, ...SERVICE_SEASONS] as s (s.id)}
-            <option value={String(s.id)}>{s.name}{notOpen(s) ? L.notOpen : ''}</option>
+            <option value={String(s.id)}>{seasonLabel(s.id, s.name)}{notOpen(s) ? L.notOpen : ''}</option>
           {/each}
         </select>
       </label>
       {#if !upcoming}
         <div class="hof-filter-picker">
           <span class="hof-filter-label" aria-hidden="true">{L.filter}</span>
-          <button class="hof-filter-trigger" aria-label={L.filterLabel({ pos: pos ? POS_LABEL[pos] : L.allPositions, sort: by.label })} aria-expanded={filtering} aria-controls="hof-filter-panel" data-hof-filters onclick={() => (filtering = !filtering)}>
-            <span class="hof-filter-current">{pos ? `${POS_LABEL[pos]} · ` : ''}{by.label}</span>
+          <button class="hof-filter-trigger" aria-label={L.filterLabel({ pos: pos ? tn(POS_LABEL[pos]) : L.allPositions, sort: by.label })} aria-expanded={filtering} aria-controls="hof-filter-panel" data-hof-filters onclick={() => (filtering = !filtering)}>
+            <span class="hof-filter-current">{pos ? `${tn(POS_LABEL[pos])} · ` : ''}{by.label}</span>
             <svg class="hof-filter-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
           </button>
         </div>
@@ -221,7 +223,7 @@
         <div class="seg hof-pos" role="group" aria-label={L.positionGroup}>
           <button class="hof-sort" aria-pressed={pos === null} data-hof-pos="all" onclick={() => pickPos(null)}>{L.all}</button>
           {#each POS_GROUPS as k (k)}
-            <button class="hof-sort" aria-pressed={pos === k} data-hof-pos={k} onclick={() => pickPos(k)}>{POS_LABEL[k]}</button>
+            <button class="hof-sort" aria-pressed={pos === k} data-hof-pos={k} onclick={() => pickPos(k)}>{tn(POS_LABEL[k])}</button>
           {/each}
         </div>
         <p class="hof-filter-label">{L.rankBasis}</p>
@@ -245,7 +247,7 @@
     <p class="empty">{L.loadFailed}</p>
   {:else if all && all.length}
     {#if full}<p class="muted hof-source">{L.source({ scope, q, sort: by.label, isScore: sort === 'score', total })}</p>{/if}
-    {#if !full && ss}<p class="muted hof-source">{L.homeSource({ season: ss.name })}</p>{/if}
+    {#if !full && ss}<p class="muted hof-source">{L.homeSource({ season: seasonLabel(ss.id, ss.name) })}</p>{/if}
     {#if podium.length}
       <HofPodium players={podium} label={by.label} unit={by.unit} showPosition={pos === null} />
     {/if}

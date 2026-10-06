@@ -13,8 +13,8 @@ import { leagueOf, fmtMoney } from '@offside/game/engine';
 import { marketValue } from '@offside/game/season';
 import {
   milStatusText,
-  SPORTS_SERVICE_NOTICE,
-  SPORTS_SERVICE_LEGACY_NOTICE,
+  sportsServiceNotice,
+  sportsServiceLegacyNotice,
 } from '@offside/game/military';
 import { nextWC, HOSTS } from '@offside/game/national';
 import type { GameState } from '@offside/game/types';
@@ -34,6 +34,8 @@ import { Card } from '../../ui/Card';
 import { Txt } from '../../ui/Txt';
 import { AttrCard } from './AttrCard';
 import { TrophyRow } from './TrophyTab';
+import { tn } from '@offside/game/i18n/names';
+import { appFormatText } from '@offside/app-core/i18n/ko/appFormat';
 
 type Row = { k: string; v: ReactNode; testID?: string };
 
@@ -169,9 +171,9 @@ export function PlayerTab({ s }: { s: GameState }) {
   const showPeek = pot.kind !== 'shown' && peekAvailable();
 
   const info: Row[] = [
-    { k: L.nation, testID: 'nation', v: `${flagOf(nation.code)} ${nation.ko}` },
+    { k: L.nation, testID: 'nation', v: `${flagOf(nation.code)} ${tn(nation.ko)}` },
     { k: L.body, testID: 'body', v: `${body.h}cm · ${body.w}kg` },
-    { k: L.foot, v: s.foot },
+    { k: L.foot, v: tn(s.foot) },
     { k: L.trait, v: traitName },
     { k: L.potential, testID: 'pot', v: pot.kind === 'shown' ? pot.text : potentialNotice() },
     { k: L.peakOvr, v: String(Math.max(s.peak, ovr(s))) },
@@ -184,7 +186,7 @@ export function PlayerTab({ s }: { s: GameState }) {
           ? L.amateur
           : '-',
     },
-    { k: L.money, v: `${fmtMoney(s.money)}원` },
+    { k: L.money, v: appFormatText.won({ v: fmtMoney(s.money) }) },
     ...(!lg.amateur ? [{ k: L.value, testID: 'value', v: fmtValue(value) }] : []),
   ];
 
@@ -265,17 +267,17 @@ export function PlayerTab({ s }: { s: GameState }) {
           rows={[
             { k: L.debut, v: String(s.nat.debutYear || L.notCalled) },
             ...(isKorean(s) ? [{ k: L.military, v: milTxt }] : []),
-            { k: L.nextWc, v: `${nextWcYear} · ${nextWcHost}` },
+            { k: L.nextWc, v: `${nextWcYear} · ${tn(nextWcHost)}` },
           ]}
         />
         {isKorean(s) && (
           <Txt tone="muted" style={{ marginTop: 10, fontSize: rem(0.875) }} testID="military-guide">
-            {SPORTS_SERVICE_NOTICE}
+            {sportsServiceNotice()}
           </Txt>
         )}
         {isKorean(s) && s.mil.exempt && s.mil.sportsService?.monthsLeft == null && (
           <Txt tone="muted" style={{ marginTop: 8, fontSize: rem(0.875) }} testID="military-legacy">
-            {SPORTS_SERVICE_LEGACY_NOTICE}
+            {sportsServiceLegacyNotice()}
           </Txt>
         )}
         {tours.length ? (
@@ -286,9 +288,9 @@ export function PlayerTab({ s }: { s: GameState }) {
               .map((x, i) => (
                 <TrophyRow key={x.year + x.name} year={x.year} first={i === 0}>
                   <Txt>
-                    <Txt style={{ fontWeight: '700' }}>{x.name.replace(/^\d{4} /, '')}</Txt>
+                    <Txt style={{ fontWeight: '700' }}>{tn(x.name).replace(/^\d{4} /, '')}</Txt>
                     <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                      {`  ${L.tourLine({ stage: x.stage, apps: x.apps, goals: x.goals })}`}
+                      {`  ${L.tourLine({ stage: tn(x.stage), apps: x.apps, goals: x.goals })}`}
                     </Txt>
                   </Txt>
                 </TrophyRow>

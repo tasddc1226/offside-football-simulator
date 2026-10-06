@@ -14,6 +14,7 @@ import {
 } from '../../platform/pushPreferences';
 import type { PushPreferences } from '@offside/contracts';
 import { pushText as L } from '@offside/app-core/i18n/ko/push';
+import { intlLocale } from '@offside/app-core/i18n/core';
 
 const categories = (): { key: keyof PushPreferences; title: string; description: string }[] => [
   { key: 'notice', title: L.catNotice, description: L.catNoticeBody },
@@ -136,7 +137,7 @@ export function PushSettings() {
             {waiting ? (
               <Txt tone="muted" accessibilityLiveRegion="polite">
                 {L.nextTest}{' '}
-                {new Date(test.nextTestAt).toLocaleString('ko-KR', {
+                {new Date(test.nextTestAt).toLocaleString(intlLocale(), {
                   month: 'numeric',
                   day: 'numeric',
                   hour: '2-digit',

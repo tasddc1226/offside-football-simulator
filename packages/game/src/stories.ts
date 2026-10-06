@@ -21,7 +21,8 @@ import {
 } from './engine.js';
 import type { EventDef, GameState, StoryState } from './types.js';
 
-function rivalName(s: GameState): string {
+/** 라이벌 이름(처음 부를 때 정해 flags.rivalName에 남긴다). 영어 문구(i18n/en/events-story.ts)도 이것을 부른다. */
+export function rivalName(s: GameState): string {
   if (!s.flags.rivalName) {
     let n: string;
     do n = pick(SURNAMES) + pick(GIVEN);

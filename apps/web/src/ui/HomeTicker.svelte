@@ -8,6 +8,7 @@
   import { TICKER_POLL_SEC } from '@offside/contracts/polling';
   import { getTicker } from '@offside/app-core/api/client';
   import { clubById } from '@offside/game/clubs';
+  import { tn } from '@offside/game/i18n/names';
   import { agoKo } from '@offside/app-core/format';
   import { motionOK } from './motion.js';
   import { tickerItems, type TickerItem } from '@offside/app-core/ticker';
@@ -71,11 +72,11 @@
     <b class="tk-tag {x.kind}">{tag(x.kind)}</b>
     {#if 'age' in x}
       <span class="tk-who">{x.who}<small>{L.tickerAge({ age: x.age })}</small></span>
-      <span class="tk-club"><ClubMark name={club(x.from)} id={x.from} size={14} />{club(x.from)}</span>
+      <span class="tk-club"><ClubMark name={club(x.from)} id={x.from} size={14} />{tn(club(x.from))}</span>
       <span class="tk-arrow">→</span>
-      <span class="tk-club"><ClubMark name={club(x.to)} id={x.to} size={14} /><strong>{club(x.to)}</strong></span>
+      <span class="tk-club"><ClubMark name={club(x.to)} id={x.to} size={14} /><strong>{tn(club(x.to))}</strong></span>
     {:else if 'text' in x}
-      <span>{x.text}</span>
+      <span>{tn(x.text)}</span>
       <span class="tk-who">— {x.who}</span>
     {/if}
     <span class="tk-ago">{ago(x.at)}</span>

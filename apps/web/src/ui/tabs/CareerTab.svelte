@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // ui.ts careerTab() 포트 (371~387줄)
   import type { GameState, LegendSource } from '@offside/game/types';
   import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
@@ -34,7 +35,7 @@
   </div>
   {#if peakV}
     <ValueChart rows={s.career} />
-    <p class="muted fs-sm" data-peak-value>{L.peakValue} <b>{fmtValue(peakV.value)}</b> · {seasonLabelOf(peakV.row)} {peakV.row.club}</p>
+    <p class="muted fs-sm" data-peak-value>{L.peakValue} <b>{fmtValue(peakV.value)}</b> · {seasonLabelOf(peakV.row)} {tn(peakV.row.club)}</p>
   {/if}
 </section>
 {#if rnHint}
@@ -64,7 +65,7 @@
             {@const sv = seasonValue(r)}
             <tr>
               <td>{r.mil ? r.year : seasonLabelOf(r)} <span class="muted">({r.age})</span>{#if r.ch?.length}<br /><span class="badge-ch">CH×{r.ch.length}</span>{/if}</td>
-              <td><ClubMark name={r.club} id={r.clubId} /> {r.club}<div class="muted season-sub">{r.league}{sv ? ' · ' : ''}{#if sv}<span class="season-value" data-season-value>{L.seasonValue({ value: fmtValue(sv) })}</span>{/if}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.join(', ')}</span>{/if}</div></td>
+              <td><ClubMark name={r.club} id={r.clubId} /> {tn(r.club)}<div class="muted season-sub">{tn(r.league)}{sv ? ' · ' : ''}{#if sv}<span class="season-value" data-season-value>{L.seasonValue({ value: fmtValue(sv) })}</span>{/if}{r.honors.length ? ` · ` : ''}{#if r.honors.length}<span class="honor">{r.honors.map(tn).join(', ')}</span>{/if}</div></td>
               <td class="n">{r.apps}</td>
               <td class="n">{r.goals}</td>
               <td class="n">{r.assists}</td>
@@ -86,7 +87,7 @@
   <h2 style="margin-bottom:4px">{L.journeyTitle}</h2>
   {#if miles.length}
     {#each miles as m, i (i)}
-      <div class="trophy"><span class="y">{m.year}</span><div><b>{m.t}</b></div></div>
+      <div class="trophy"><span class="y">{m.year}</span><div><b>{tn(m.t)}</b></div></div>
     {/each}
   {:else}
     <p class="empty">{L.emptyJourney}</p>

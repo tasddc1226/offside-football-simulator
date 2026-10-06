@@ -14,6 +14,7 @@ import {
 import { fmtMoney } from '@offside/game/player';
 import type { GameState } from '@offside/game/types';
 import { gameBoostText as L } from './i18n/ko/gameBoost';
+import { appFormatText as L2 } from './i18n/ko/appFormat.js';
 
 export interface BoostView {
   status: BoostStatus;
@@ -40,7 +41,7 @@ export const boostHidden = (s: GameState): boolean =>
 export function boostView(s: GameState): BoostView {
   const status = boostStatus(s);
   const b = boostState(s);
-  const cost = `${fmtMoney(boostCost(s))}원`;
+  const cost = L2.won({ v: fmtMoney(boostCost(s)) });
   const chance = boostChance(s);
   const line =
     status === 'locked'
@@ -70,7 +71,7 @@ export function boostView(s: GameState): BoostView {
       .slice(-4)
       .reverse()
       .map((x) => {
-        const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost: `${fmtMoney(x.c)}원` };
+        const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost: L2.won({ v: fmtMoney(x.c) }) };
         return x.ok ? L.historyOk(p) : L.historyFail(p);
       }),
   };

@@ -6,6 +6,8 @@
 import { CLUBS, clubRef, sameClub, type Club } from './data.js';
 import { clubsIn, leagueOf } from './player.js';
 import { log } from './stats.js';
+import { gSeasonText as L } from './i18n/ko/gSeason.js';
+import { tn } from './i18n/names.js';
 import type { GameState } from './types.js';
 
 export interface Promotion {
@@ -36,7 +38,7 @@ export function promoteClub(s: GameState, rank: number): Promotion | undefined {
   s.season.leagueId = s.leagueId;
   s.leagueId = 'k1';
   const k1 = leagueOf('k1').name;
-  log(s, `${s.club.name} ${k1} 승격 확정! 다음 시즌은 ${k1}에서 뜁니다 (${down.name} 강등)`, 'big');
+  log(s, L.promoted({ club: tn(s.club.name), league: tn(k1), down: tn(down.name) }), 'big');
   return { club: s.club.name, down: down.name };
 }
 

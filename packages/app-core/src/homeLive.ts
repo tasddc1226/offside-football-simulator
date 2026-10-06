@@ -2,6 +2,7 @@
 // 합쳐 티커 줄·숫자 칸·문구를 정하는 순수 로직만 둔다. 타이머·모션·상태 반응성은 각 앱이 맡는다.
 import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
 import { LIVE_FEED_MAX } from '@offside/contracts/polling';
+import { tn } from '@offside/game/i18n/names';
 import { anonName } from './format.js';
 import { homeLiveText as L } from './i18n/ko/homeLive.js';
 
@@ -66,11 +67,11 @@ export const who = (e: LiveEvent) =>
 
 export function what(e: LiveEvent): string {
   if (e.kind === 'retire') return L.whatRetire({ score: e.score });
-  if (e.first) return L.whatFirst({ club: e.club });
-  if (e.honor) return L.whatHonor({ honor: e.honor, club: e.club });
+  if (e.first) return L.whatFirst({ club: tn(e.club) });
+  if (e.honor) return L.whatHonor({ honor: tn(e.honor), club: tn(e.club) });
   if ((e.pos === 'GK' || e.pos === 'DF') && e.cs)
-    return L.whatCleanSheets({ club: e.club, apps: e.apps, cs: e.cs });
-  return L.whatGoals({ club: e.club, goals: e.goals, assists: e.assists });
+    return L.whatCleanSheets({ club: tn(e.club), apps: e.apps, cs: e.cs });
+  return L.whatGoals({ club: tn(e.club), goals: e.goals, assists: e.assists });
 }
 
 export const tone = (e: LiveEvent) =>

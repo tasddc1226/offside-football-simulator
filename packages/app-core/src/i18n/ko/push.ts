@@ -41,6 +41,9 @@ const ko = {
   catSocial: '친구',
   catSocialBody: '친구 신청·수락과 친선전 결과',
   catAria: (p: { title: string }) => `${p.title} 알림`,
+  prefsConnectFailed: '알림 설정에 연결하지 못했어요. 다시 시도해 주세요.',
+  prefsLoadFailed: '알림 설정을 불러오지 못했어요.',
+  prefsSaveFailed: '알림 설정을 저장하지 못했어요.',
 };
 
 export type PushMsgs = typeof ko;

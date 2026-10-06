@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // T-10-024: 방금 끝난 구간 결과를 시즌 탭 맨 위에서 순서대로 채워 보여 준다 — 경기 결과 점이 하나씩
   // 켜지고, 숫자가 올라가고, 순위 변화·하이라이트·능력치 변화가 이어서 나타난다. 감속 모션이면 즉시.
   import { onMount } from 'svelte';
@@ -71,7 +72,7 @@
       </div>
     {/if}
   {:else}
-    <p class="muted">{L.expectedRole} <b>{r.role}</b></p>
+    <p class="muted">{L.expectedRole} <b>{tn(r.role)}</b></p>
   {/if}
 
   {#if r.comps.length}
@@ -83,10 +84,10 @@
   {#each r.nat as x, i (i)}
     <div class="rp-later">
       {#if x.called}
-        <div class="eyebrow" style="margin-bottom:6px">{x.name} · {x.comp}</div>
+        <div class="eyebrow" style="margin-bottom:6px">{tn(x.name)} · {tn(x.comp)}</div>
         {#each x.games as m, j (j)}<p class:hl={m.hl}>{m.line} <span class="muted">· {m.detail}</span></p>{/each}
       {:else}
-        <div class="eyebrow" style="margin-bottom:6px">{x.name}</div>
+        <div class="eyebrow" style="margin-bottom:6px">{tn(x.name)}</div>
         <p class="muted">{L.notCalled}</p>
       {/if}
     </div>

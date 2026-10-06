@@ -8,7 +8,13 @@ import {
   legendTerms,
   type LegendTotals,
 } from './hof-rules.js';
-import { DETAIL_GROUP, DETAIL_POSITIONS, DETAILS_OF, detailPosOpen } from './positions.js';
+import {
+  anonName,
+  DETAIL_GROUP,
+  DETAIL_POSITIONS,
+  DETAILS_OF,
+  detailPosOpen,
+} from './positions.js';
 
 const ZERO: LegendTotals = {
   goals: 0,
@@ -64,5 +70,14 @@ describe('세부 포지션 (T-10-091)', () => {
     const awards = [2030, 2030, 2030, 2030, 2030, 2031].map((year) => ({ year }));
     expect(legendAwardCount(awards)).toBe(6);
     expect(legendAwardCount(awards, 'ST')).toBe(AWARDS_PER_SEASON + 1);
+  });
+});
+
+describe('익명 선수 표기(T-11-106)', () => {
+  it('lang이 없으면 한국어 그대로, en이면 영어', () => {
+    expect(anonName('FW', 9)).toBe('익명의 공격수 No.9');
+    expect(anonName('GK', null)).toBe('익명의 골키퍼');
+    expect(anonName('FW', 9, 'en')).toBe('Anonymous forward No.9');
+    expect(anonName('MF', null, 'en')).toBe('Anonymous midfielder');
   });
 });

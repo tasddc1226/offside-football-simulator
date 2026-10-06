@@ -13,6 +13,8 @@ import {
   type OwnerTeamRow,
   type TeamMatchRow,
 } from '../db/repos/ownerTeams.js';
+import type { Lang } from '../lang.js';
+import { anonText } from './anon.js';
 import { buildLineup, lineupOvr, type PlayerRef, type SimResult } from './sim.js';
 
 // 랭크 경기(T-10-092)와 친선전(T-11-098)이 함께 쓰는 경기 한 판 준비 · 저장할 상세 · 화면 모양 변환.
@@ -81,8 +83,10 @@ export function toMatch(
   myTeamId: string,
   names: ReadonlyMap<string, string>,
   logos: ReadonlyMap<string, ReturnType<typeof logoOf>>,
+  lang: Lang = 'ko',
 ): TeamMatch {
-  const label = (p: PlayerRef) => (p.careerId ? (names.get(p.careerId) ?? p.anon) : p.anon);
+  const anon = (p: PlayerRef) => anonText(p.anon, lang);
+  const label = (p: PlayerRef) => (p.careerId ? (names.get(p.careerId) ?? anon(p)) : anon(p));
   const mine = row.homeTeamId === myTeamId ? 'home' : 'away';
   // 저장된 시너지 ID는 내부 경기 기록이다. 구버전 앱도 읽는 공개 응답에는 계약 필드만 보낸다.
   const publicSide = (side: MatchDetail['home']) => ({
@@ -126,6 +130,7 @@ export function playedMatch(
   lineups: Lineups,
   home: OwnerTeamRow,
   away: OwnerTeamRow,
+  lang: Lang = 'ko',
 ): TeamMatch {
   const names = new Map<string, string>();
   for (const s of [...lineups.home, ...lineups.away])
@@ -139,6 +144,7 @@ export function playedMatch(
       [home.id, logoOf(home)],
       [away.id, logoOf(away)],
     ]),
+    lang,
   );
 }
 
@@ -157,6 +163,7 @@ export async function matchViews<R extends MatchHead & { detailJson: string }>(
   db: Db,
   rows: readonly R[],
   myTeamIdOf: (row: R) => string,
+  lang: Lang = 'ko',
 ): Promise<TeamMatch[]> {
   const details = rows.map((r) => JSON.parse(r.detailJson) as MatchDetail);
   const [names, logos] = await Promise.all([
@@ -166,5 +173,5 @@ export async function matchViews<R extends MatchHead & { detailJson: string }>(
       details.flatMap((d) => [d.home.teamId, d.away.teamId]),
     ),
   ]);
-  return rows.map((r, i) => toMatch(r, details[i]!, myTeamIdOf(r), names, logos));
+  return rows.map((r, i) => toMatch(r, details[i]!, myTeamIdOf(r), names, logos, lang));
 }

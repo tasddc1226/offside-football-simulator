@@ -9,7 +9,7 @@ import {
   achSections,
   achState,
   achTotal,
-  SYNERGY_TABLE,
+  synergyTable,
   draftLines,
   matchHintOf,
   slotsSynergy,
@@ -158,7 +158,7 @@ describe('T-11-105 편성 화면 시너지', () => {
     expect(synergyEffectText({}, 'badge')).toBe('경기 효과 없음');
     expect(synergyNote(0)).toBe('프리시즌 경기에는 반영되지 않았어요');
     expect(synergyNote(1)).toBe('경기에 반영돼요');
-    expect(SYNERGY_TABLE.at(-1)).toEqual([
+    expect(synergyTable().at(-1)).toEqual([
       '주발 맞춤',
       '풀백은 같은 쪽 발, 윙어는 반대쪽 발',
       '자리 실력 +1(양발 +0.5)',

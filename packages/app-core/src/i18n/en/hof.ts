@@ -1,6 +1,6 @@
 import type { Translation } from '../core';
 import type { HofMsgs } from '../ko/hof';
-import { ordinal } from './_util';
+import { ordinal, plural } from './_util';
 
 export const hof: Translation<HofMsgs> = {
   tabsLabel: 'Records',
@@ -42,7 +42,7 @@ export const hof: Translation<HofMsgs> = {
   sortGroup: 'Ranking type',
   opens: (p) => `${p.name} opens ${p.when} (Korea time).`,
   opensNote:
-    "Players created after the opening appear here once they retire. Players created now (preseason) stay in the 'Preseason' and 'All' halls of fame.",
+    "Players created after the opening appear here once they retire. Players created now (preseason) stay in the 'Preseason' and 'All' tabs.",
   loading: 'Loading…',
   loadFailed: "Couldn't load the Hall of Fame. Please try again in a moment.",
   source: (p) =>
@@ -65,8 +65,8 @@ export const hof: Translation<HofMsgs> = {
   rnChipTitle: (p) => `Retired No. ${p.number}`,
   rnChip: (p) => `👑 Retired ${p.number}`,
   rowStats: (p) =>
-    `${p.apps} apps ${p.goals} goals ${p.assists} assists · trophies ${p.trophies} · peak OVR ${p.peak}${p.ballon ? ` · Ballon d’Or ×${p.ballon}` : ''}${p.score != null ? ` · Legend ${p.score}` : ''}`,
-  appsN: (p) => `${p.n} apps`,
-  goalsN: (p) => `${p.n} goals`,
-  assistsN: (p) => `${p.n} assists`,
+    `${plural(p.apps, 'app')} ${plural(p.goals, 'goal')} ${plural(p.assists, 'assist')} · trophies ${p.trophies} · peak OVR ${p.peak}${p.ballon ? ` · Ballon d’Or ×${p.ballon}` : ''}${p.score != null ? ` · Legend ${p.score}` : ''}`,
+  appsN: (p) => `${p.n} ${p.n === '1' ? 'app' : 'apps'}`,
+  goalsN: (p) => `${p.n} ${p.n === '1' ? 'goal' : 'goals'}`,
+  assistsN: (p) => `${p.n} ${p.n === '1' ? 'assist' : 'assists'}`,
 };

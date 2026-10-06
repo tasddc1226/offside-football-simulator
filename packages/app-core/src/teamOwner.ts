@@ -38,6 +38,8 @@ import type {
 } from './api/team.js';
 import { num, signedNum } from './teamText.js';
 import { teamCoreText as L } from './i18n/ko/teamCore.js';
+import { teamHomeText as TH } from './i18n/ko/teamHome.js';
+import { teamSynergyText as SY } from './i18n/ko/teamSynergy.js';
 
 /** 선수 고르기 정렬 — 그 자리 실력 · 레전드 점수 · 최고 OVR. */
 export type PickSort = 'fit' | 'score' | 'peak';
@@ -102,7 +104,8 @@ export function assignSlot(
   return next;
 }
 
-export { WILDCARD_FULL_TEXT } from '@offside/contracts/owner-team';
+/** 와일드카드가 가득 찼을 때 안내(서버 오류 문구 WILDCARD_FULL_TEXT의 화면 쪽). */
+export const wildcardFullText = () => L.wildcardFull({ max: TEAM_WILDCARD_MAX });
 /** T-11-114 선발에 든 와일드카드(지난 시즌 선수) 수. */
 export const wildcardsIn = (
   slots: readonly (string | null)[],
@@ -121,7 +124,9 @@ export const wildcardLabel = (
   byId: ReadonlyMap<string, TeamPlayer>,
   season: number,
 ): string | null =>
-  season > 0 ? `와일드카드 ${wildcardsIn(slots, byId, season)}/${TEAM_WILDCARD_MAX}` : null;
+  season > 0
+    ? L.wildcardLabel({ n: wildcardsIn(slots, byId, season), max: TEAM_WILDCARD_MAX })
+    : null;
 
 /** 실력이 같으면 먼저 채울 자리(스트라이커·골키퍼·센터백 …). */
 const FILL_ORDER = ['ST', 'GK', 'CB', 'CM', 'AM', 'DM', 'W', 'FB'];
@@ -184,12 +189,7 @@ export const draftLines = (
   season: number,
 ): LineStrength => lineStrength(slotCodes, ratings, synergyApplies(season) ? synergy : null);
 
-const SYN_LABEL: Record<keyof SynergyLines, string> = {
-  atk: '공격',
-  mid: '중원',
-  def: '수비',
-  gk: '골문',
-};
+const SYN_LABEL = { atk: 'lineAtk', mid: 'lineMid', def: 'lineDef', gk: 'lineGk' } as const;
 /** 시너지 효과 표기 — '공격 +2 · 중원 +0.5'. 효과가 비면 배지는 '경기 효과 없음', 듀오는 상한에 걸린 것. */
 export const synergyEffectText = (
   effect: Partial<SynergyLines>,
@@ -197,11 +197,16 @@ export const synergyEffectText = (
 ): string =>
   (Object.keys(SYN_LABEL) as (keyof SynergyLines)[])
     .filter((k) => effect[k])
-    .map((k) => `${SYN_LABEL[k]} ${signedNum(effect[k]!)}`)
-    .join(' · ') || (kind === 'duo' ? '상한에 걸려 효과 없음' : '경기 효과 없음');
+    .map((k) => `${TH[SYN_LABEL[k]]} ${signedNum(effect[k]!)}`)
+    .join(' · ') || (kind === 'duo' ? SY.capped : SY.noEffect);
 /** 시너지가 경기에 들어가는지 알리는 한 줄. */
 export const synergyNote = (season: number): string =>
-  synergyApplies(season) ? '경기에 반영돼요' : '프리시즌 경기에는 반영되지 않았어요';
+  synergyApplies(season) ? SY.applies : SY.notApplied;
+/** 시너지 이름·설명 — 한국어는 contracts 정의 그대로, 다른 언어는 사전에서 id로 찾는다. */
+const synergyText = (id: string, name: string, desc: string): readonly [string, string] => [
+  SY.synName({ id, ko: name }),
+  SY.synDesc({ id, ko: desc }),
+];
 
 export type SynergyChip = {
   id: string;
@@ -212,16 +217,19 @@ export type SynergyChip = {
 };
 /** 편성 화면의 시너지 칩(웹·앱 공용). 주발 맞춤은 인원과 자리 실력 보정 합을 보인다. */
 export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
-  s.active.map((a) => ({
-    id: a.id,
-    name: a.kind === 'foot' ? `${a.name} ${a.members.length}명` : a.name,
-    desc: a.desc,
-    effect:
-      a.kind === 'foot'
-        ? `자리 실력 ${signedNum(s.foot.reduce((t, b) => t + b, 0))}`
-        : synergyEffectText(a.effect, a.kind),
-    badge: a.kind === 'badge',
-  }));
+  s.active.map((a) => {
+    const [name, desc] = synergyText(a.id, a.name, a.desc);
+    return {
+      id: a.id,
+      name: a.kind === 'foot' ? SY.footChip({ name, n: a.members.length }) : name,
+      desc,
+      effect:
+        a.kind === 'foot'
+          ? SY.fitEffect({ v: signedNum(s.foot.reduce((t, b) => t + b, 0)) })
+          : synergyEffectText(a.effect, a.kind),
+      badge: a.kind === 'badge',
+    };
+  });
 /** 고른 시너지 칩 → 그라운드 듀오 연결선(고른 것은 굵게)과 테두리를 칠 선수 자리. */
 export function synergyFocus(s: TeamSynergy, id: string | null) {
   return {
@@ -231,17 +239,20 @@ export function synergyFocus(s: TeamSynergy, id: string | null) {
     members: s.active.find((a) => a.id === id)?.members ?? null,
   };
 }
-/** 시너지 표 — [이름, 설명, 효과]. 숨은 규칙 없이 전부 보인다. */
-export const SYNERGY_TABLE: readonly (readonly [string, string, string])[] = [
-  ...DUOS.map((d) => [d.name, d.desc, synergyEffectText(d.effect)] as const),
-  [TEAM_RULES.homegrown.name, TEAM_RULES.homegrown.desc, synergyEffectText(HOMEGROWN_EFFECT)],
-  [TEAM_RULES.national.name, TEAM_RULES.national.desc, '배지만(경기 효과 없음)'],
-  [
-    TEAM_RULES.foot.name,
-    TEAM_RULES.foot.desc,
-    `자리 실력 ${signedNum(FOOT_BONUS)}(양발 ${signedNum(FOOT_BONUS_BOTH)})`,
-  ],
-];
+/** 시너지 표 — [이름, 설명, 효과]. 숨은 규칙 없이 전부 보인다. 언어를 바꾸면 다시 만들어야 해서 함수다. */
+export const synergyTable = (): readonly (readonly [string, string, string])[] => {
+  const row = (r: { id: string; name: string; desc: string }, effect: string) =>
+    [...synergyText(r.id, r.name, r.desc), effect] as const;
+  return [
+    ...DUOS.map((d) => row(d, synergyEffectText(d.effect))),
+    row(TEAM_RULES.homegrown, synergyEffectText(HOMEGROWN_EFFECT)),
+    row(TEAM_RULES.national, SY.badgeOnly),
+    row(
+      TEAM_RULES.foot,
+      SY.fitEffectBoth({ v: signedNum(FOOT_BONUS), both: signedNum(FOOT_BONUS_BOTH) }),
+    ),
+  ];
+};
 
 /** 경기하기 버튼 밑에 보이는 못 하는 이유(할 수 있으면 null). */
 export function playHintOf(
@@ -394,8 +405,7 @@ export const teamEditableIn = (season: number, current: number | null) =>
   season === current || isPreseasonLegacy(season, current);
 
 /** 개막 뒤 프리시즌 팀 화면의 안내. */
-export const PRESEASON_TEAM_NOTE =
-  '프리시즌에 키운 선수 중 지금 가진 선수로 꾸려요. 이 팀은 친구와 하는 친선전에만 나가고, 프리시즌 랭킹과 업적은 그대로예요.';
+export const preseasonTeamNote = () => L.preseasonTeamNote;
 
 /** 팀 화면 '경기' 탭에서 경기를 막는 이유 — 휴식기 · 지난 시즌 · 그 밖은 playHintOf. */
 export function matchHintOf(
@@ -406,8 +416,7 @@ export function matchHintOf(
   current: number | null,
 ): string | null {
   if (current === null) return L.hintRest;
-  if (isPreseasonLegacy(season, current))
-    return '프리시즌 팀은 친구와 하는 친선전에만 나가요. 랭크 경기는 지금 시즌 팀으로 해요.';
+  if (isPreseasonLegacy(season, current)) return L.hintPreseason;
   if (season !== current) return L.hintPast;
   return playHintOf(team, dirty, matchesLeft);
 }

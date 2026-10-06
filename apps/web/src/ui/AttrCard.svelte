@@ -12,7 +12,7 @@
 
 <section class="card">
   <div class="eyebrow">Attributes</div>
-  <div class="attr-head"><h2>{L.title}</h2><span class="pill">{d.roleName} · OVR {ovr(s)}</span></div>
+  <div class="attr-head"><h2>{L.title}</h2><span class="pill">{d.roleName ?? ''} · OVR {ovr(s)}</span></div>
   <Radar {s} />
   <p class="radar-legend muted"><i class="lg-now"></i>{L.legendNow} <i class="lg-prev"></i>{L.legendPrev}</p>
   <div class="role-line">
@@ -33,5 +33,5 @@
       </div>
     {/each}
   </div>
-  <p class="muted stat-note"><b>{L.noteBold}</b>{L.noteRest({ role: d.roleName })}</p>
+  <p class="muted stat-note"><b>{L.noteBold}</b>{L.noteRest({ role: d.roleName ?? '' })}</p>
 </section>

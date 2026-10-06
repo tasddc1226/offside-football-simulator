@@ -6,7 +6,7 @@ export const sheetContract: Translation<SheetContractMsgs> = {
   padLabel: 'Player signature area',
   signHint: 'Sign here',
   signNote: "This is your in-game player's fictional signature",
-  clear: 'Redo',
+  clear: 'Clear',
   nameSign: 'Sign with name',
   flightA11y: (p) => `Flight path from ${p.from} to ${p.to}`,
 };

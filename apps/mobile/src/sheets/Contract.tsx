@@ -26,6 +26,7 @@ import { ClubBadge } from '../ui/ClubBadge';
 import { Press } from '../ui/Press';
 import { Txt } from '../ui/Txt';
 import { Enter } from './anim';
+import { tn } from '@offside/game/i18n/names';
 
 /** 웹 stamp 키프레임의 cubic-bezier(0.2, 1.6, 0.4, 1). */
 const STAMP_EASE = Easing.bezier(0.2, 1.6, 0.4, 1);
@@ -423,7 +424,7 @@ function Stamp({ name }: { name: string }) {
             color: c.bad,
           }}
         >
-          {name}
+          {tn(name)}
         </Txt>
       </View>
     </View>

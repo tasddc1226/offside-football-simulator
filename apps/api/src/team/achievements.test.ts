@@ -9,6 +9,7 @@ import {
   type AchievementSeason,
   type AchievementTeamSlot,
 } from './achievements.js';
+import { localizeAchievements } from './achievementsText.js';
 
 const career = (over: Partial<AchievementCareer> = {}): AchievementCareer => ({
   pos: 'FW',
@@ -394,5 +395,40 @@ describe('구단 시즌 업적', () => {
     expect(item(g, 'owner-retire-days')).toMatchObject({ level: 2, next: 14 });
     expect(item(g, 'owner-match-days')).toMatchObject({ level: 1, next: 7 });
     expect(item(g, 'owner-likes')).toMatchObject({ level: 2, next: 20 });
+  });
+});
+
+describe('업적 영어 문구(T-11-106)', () => {
+  const full = () =>
+    clubAchievements({
+      careers: [career({ goals: 120, seasons: [season({ goals: 3 })] })],
+      team: teamOf([slot()]),
+      owner: OWNER,
+      detail: true,
+      retireAt: 41,
+    });
+  const hangul = /[가-힣]/;
+
+  it('한국어는 그대로, 영어는 모든 제목·단계·문구·단위가 영어이고 id·점수는 같다', () => {
+    const ko = full();
+    expect(localizeAchievements(ko, 'ko')).toBe(ko);
+    const en = localizeAchievements(ko, 'en');
+    expect(en.map((g) => g.id)).toEqual(ko.map((g) => g.id));
+    for (const g of en) {
+      expect(`${g.title} ${g.stage}`).not.toMatch(hangul);
+      for (const i of g.items) {
+        expect(`${i.label} ${i.unit ?? ''}`, i.id).not.toMatch(hangul);
+        const k = item(ko, i.id)!;
+        expect(i.points).toBe(k.points);
+        expect(i.done).toBe(k.done);
+      }
+    }
+    expect(item(en, 'goals')).toMatchObject({ label: 'Goals', unit: ' goals', cur: 120, level: 1 });
+    expect(en[0]).toMatchObject({ stage: 'Stage 0', title: 'Where the story starts' });
+  });
+
+  it('시즌마다 나이가 다른 문구도 영어로 나온다', () => {
+    const en = localizeAchievements(full(), 'en');
+    expect(item(en, 'age-40')?.label).toBe('Still playing at 40');
   });
 });

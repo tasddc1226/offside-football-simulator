@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   // ui.ts trophyTab() 포트 (388~395줄)
   import type { LegendSource } from '@offside/game/types';
   import ClubMark from '../ClubMark.svelte';
@@ -16,7 +17,7 @@
   <h2 style="margin-bottom:4px">{L.honours}</h2>
   {#if trophies.length}
     {#each trophies as x, i (i)}
-      <div class="trophy"><span class="y">{x.year}</span><div><b>{x.t}</b><span class="muted fs-xs"><ClubMark name={x.club} id={x.clubId} size={14} /> {x.club}</span></div></div>
+      <div class="trophy"><span class="y">{x.year}</span><div><b>{tn(x.t)}</b><span class="muted fs-xs"><ClubMark name={x.club} id={x.clubId} size={14} /> {tn(x.club)}</span></div></div>
     {/each}
   {:else}
     <p class="empty">{L.empty}</p>
@@ -28,7 +29,7 @@
   <h2 style="margin-bottom:4px">{L.individual}</h2>
   {#if awards.length}
     {#each awards as x, i (i)}
-      <div class="trophy"><span class="y">{x.year}</span><div><b>{x.t}</b></div></div>
+      <div class="trophy"><span class="y">{x.year}</span><div><b>{tn(x.t)}</b></div></div>
     {/each}
   {:else}
     <p class="empty">{L.empty}</p>
@@ -50,7 +51,7 @@
   <h2 style="margin-bottom:4px">{L.stories}</h2>
   {#if stories.length}
     {#each stories as x, i (i)}
-      <div class="trophy"><span class="y">{x.year}</span><div><b>{x.ending}</b><span class="muted fs-xs">{x.name}</span></div></div>
+      <div class="trophy"><span class="y">{x.year}</span><div><b>{tn(x.ending)}</b><span class="muted fs-xs">{tn(x.name)}</span></div></div>
     {/each}
   {:else}
     <p class="empty">{L.empty}</p>

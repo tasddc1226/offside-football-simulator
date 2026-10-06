@@ -3,8 +3,7 @@ import type { TeamMatchMsgs } from '../ko/teamMatch';
 
 export const teamMatch: Translation<TeamMatchMsgs> = {
   oppTitle: 'Pick an opponent',
-  oppNear: (p) =>
-    `Teams close to your team OVR of ${p.ovr} · Matches left today ${p.left}/${p.per}`,
+  oppNear: (p) => `Teams near your team OVR of ${p.ovr} · Matches left today: ${p.left}/${p.per}`,
   oppRuleWeb: (p) =>
     `You can challenge the same team once a day. If you've met a team in the last ${p.days} days, your rating moves less.`,
   oppRuleApp: (p) =>
@@ -25,7 +24,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   kindChallenge: 'Challenge',
   kindChallenged: 'Challenged',
   assist: (p) => `Assist ${p.name}`,
-  noGoals: 'It ended goalless.',
+  noGoals: 'A goalless draw.',
   resultRecord: (p) => ` · My team ${p.record}`,
   ratingChange: 'Team rating ',
   backHistory: 'Back to history',

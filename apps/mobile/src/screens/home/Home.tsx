@@ -23,6 +23,7 @@ import { HomeTicker } from './HomeTicker';
 import { Tile } from './Tile';
 import { PushOptInCard } from './PushOptInCard';
 import { InboxButton } from '../../components/InboxButton';
+import { tn } from '@offside/game/i18n/names';
 
 export default function Home() {
   const s = useSnapshot(appState);
@@ -49,7 +50,7 @@ export default function Home() {
                 </Txt>
               </View>
               <Txt style={{ ...p, color: alpha(c.onPitch, 0.8) }}>
-                {L.currentLine({ club: G.club.name, age: G.age, pos: posLabel(G) })}
+                {L.currentLine({ club: tn(G.club.name), age: G.age, pos: posLabel(G) })}
               </Txt>
               <Txt
                 style={[

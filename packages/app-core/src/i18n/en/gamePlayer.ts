@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { GamePlayerMsgs } from '../ko/gamePlayer';
+import { plural } from './_util';
 
 export const gamePlayer: Translation<GamePlayerMsgs> = {
   profile: 'Player info',
@@ -23,11 +24,11 @@ export const gamePlayer: Translation<GamePlayerMsgs> = {
   goals: 'Goals',
   assists: 'Assists',
   captain: 'Captain',
-  debut: 'Caps debut',
+  debut: 'International debut',
   notCalled: 'Not called up',
   military: 'Military service',
   nextWc: 'Next World Cup',
   hostTbd: 'Host to be decided',
-  tourLine: (p) => `${p.stage} · ${p.apps} apps, ${p.goals} goals`,
+  tourLine: (p) => `${p.stage} · ${plural(p.apps, 'app')}, ${plural(p.goals, 'goal')}`,
   retire: 'Announce retirement',
 };

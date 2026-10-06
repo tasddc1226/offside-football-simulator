@@ -18,6 +18,8 @@ import { Txt } from '../ui/Txt';
 import { MEDAL_GLOW, MEDAL_NAMES, RankBadge } from './Laurel';
 import { TitleTag } from './TitleTag';
 import { hofText as L } from '@offside/app-core/i18n/ko/hof';
+import { intlLocale } from '@offside/app-core/i18n/core';
+import { tn } from '@offside/game/i18n/names';
 
 export type RowStats = Pick<
   PublicHofEntry,
@@ -299,7 +301,7 @@ export function HofRow({
               {country ? (
                 <Txt
                   accessibilityRole="image"
-                  accessibilityLabel={country.ko}
+                  accessibilityLabel={tn(country.ko)}
                   testID={`hof-nation-${country.code}`}
                   style={{ fontSize: rem(1) }}
                 >
@@ -343,9 +345,9 @@ export function HofRow({
         {plain ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingTop: 3 }}>
             {[
-              L.appsN({ n: t.apps.toLocaleString('ko-KR') }),
-              L.goalsN({ n: t.goals.toLocaleString('ko-KR') }),
-              L.assistsN({ n: t.assists.toLocaleString('ko-KR') }),
+              L.appsN({ n: t.apps.toLocaleString(intlLocale()) }),
+              L.goalsN({ n: t.goals.toLocaleString(intlLocale()) }),
+              L.assistsN({ n: t.assists.toLocaleString(intlLocale()) }),
             ].map((text) => (
               <Txt key={text} tone="muted" style={{ fontSize: 12 }}>
                 {text}

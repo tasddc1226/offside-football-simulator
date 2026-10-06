@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   import { onDestroy } from 'svelte';
   import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, presetLayout, positionRole, slotRating, slotFit, type FormationId, type TeamPosition } from '@offside/contracts/owner-team';
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
@@ -63,7 +64,7 @@
     const py = Math.round(Math.max(i === 0 ? 84 : 8, Math.min(i === 0 ? 94 : 82, y)) * 10) / 10;
     next[i] = { x: px, y: py, slot: positionRole(px, py, i) };
     layout = next; selectedSlot = i;
-    announcement = L.movedTo({ name: cells[i]?.name ?? L.playerFallback, pos: DETAIL_LABEL[next[i]!.slot] });
+    announcement = L.movedTo({ name: cells[i]?.name ?? L.playerFallback, pos: tn(DETAIL_LABEL[next[i]!.slot]) });
   }
   function pickPlayer(id: string) { if (suppressClick) return; selectedPlayer = selectedPlayer === id ? null : id; }
   function goToPitch() {
@@ -74,7 +75,7 @@
     if (suppressClick) return;
     selectedSlot = i;
     if (selectedPlayer) {
-      onassign(i, selectedPlayer); announcement = L.placedIn({ name: chosen ? nameOf(chosen) : L.playerFallback, pos: DETAIL_LABEL[positions[i]!.slot] }); selectedPlayer = null;
+      onassign(i, selectedPlayer); announcement = L.placedIn({ name: chosen ? nameOf(chosen) : L.playerFallback, pos: tn(DETAIL_LABEL[positions[i]!.slot]) }); selectedPlayer = null;
     }
   }
   function pointAt(x: number, y: number) {
@@ -165,7 +166,7 @@
           <button class="text-button" onclick={() => (selectedPlayer = null)}>{L.cancel}</button>
         {:else if selectedSlot !== null}
           <div class="selected-head">
-            <div class="selected-info"><span><b>{selectedCell?.name}</b> · {DETAIL_LABEL[positions[selectedSlot]!.slot]}</span>
+            <div class="selected-info"><span><b>{selectedCell?.name}</b> · {tn(DETAIL_LABEL[positions[selectedSlot]!.slot])}</span>
               <span class="rating-comparison">{#if selectedCell?.player}{L.peakArrow({ n: selectedCell.player.peak })}{/if}<b>{L.posOvr({ n: selectedCell?.rating ?? 0 })}</b>{#if selectedFit !== null}{L.fitPct({ n: selectedFit })}{/if}</span>
             </div>
             <button class="close-selection" aria-label={L.deselectAria} onclick={() => (selectedSlot = null)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button>
@@ -205,7 +206,7 @@
           {@const at = slots.indexOf(p.careerId)}
           {@const country = NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)}
           <article class="locker-player" class:chosen={selectedPlayer === p.careerId} data-locker-player={p.careerId}>
-            <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label={L.lockerPickAria({ who: `${nameOf(p)}${country ? ` · ${country.ko}` : ''}`, pos: POS_LABEL[p.pos], peak: p.peak, attrs: attrLine(p) ?? L.noAttrs })} onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
+            <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label={L.lockerPickAria({ who: `${nameOf(p)}${country ? ` · ${tn(country.ko)}` : ''}`, pos: tn(POS_LABEL[p.pos]), peak: p.peak, attrs: attrLine(p) ?? L.noAttrs })} onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
               <PlayerCard player={p} name={nameOf(p)} rating={p.peak} role={detailPosOf(p)} />
             </button>
             <span class="roster-state" class:starting={at >= 0}>{at >= 0 ? L.rosterStarting({ slot: positions[at]!.slot }) : L.rosterBench}</span>

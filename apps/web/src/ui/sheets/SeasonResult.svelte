@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tn } from '@offside/game/i18n/names';
   import { visibleSeasonNotes } from '@offside/app-core/potential-view';
   import type { SheetView } from '@offside/app-core/sheets';
   import NewTitles from '../titles/NewTitles.svelte';
@@ -54,7 +55,7 @@
 {#if v.gala.length}
   <div>
     <div class="eyebrow" style="margin-bottom:6px">{L.gala}</div>
-    {#each v.gala as g, i (i)}<p class="hl"><b>{g}</b></p>{/each}
+    {#each v.gala as g, i (i)}<p class="hl"><b>{tn(g)}</b></p>{/each}
   </div>
 {/if}
 {#if v.miles.length}

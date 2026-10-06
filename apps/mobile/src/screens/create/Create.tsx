@@ -39,6 +39,7 @@ import { MiniRadar } from './MiniRadar';
 import { NationPicker } from './NationPicker';
 import { ScoutScan } from './ScoutScan';
 import { BodyInput, Field, Seg, SegCell, mixHex, useInputStyle } from './parts';
+import { tn } from '@offside/game/i18n/names';
 
 const posKeys = Object.keys(POS) as Pos[];
 const feet = ['오른발', '왼발', '양발'] as const; // 저장값(화면에는 L.foot으로)
@@ -178,7 +179,7 @@ export default function Create() {
   // 후보를 바로 보여 주지 않고 스카우트가 추리는 연출(약 3초)이 끝난 뒤에 뽑는다.
   const [scouting, setScouting] = useState(false);
   const scoutSteps = [
-    L.stepVideo({ nation: nation.ko }),
+    L.stepVideo({ nation: tn(nation.ko) }),
     L.stepPool({ pos: posLabel({ pos: C.pos, dpos }) }),
     L.stepFocus({ list: C.focus.map((k) => labels[k]).join('·') }),
     L.stepBody({ h: body.h, w: body.w }),
@@ -285,7 +286,7 @@ export default function Create() {
                 <Txt accessibilityElementsHidden style={{ fontSize: rem(0.8125) }}>
                   {flagOf(nation.code)}
                 </Txt>{' '}
-                {nation.ko} · {posLabel({ pos: C.pos, dpos })} · {L.foot({ v: C.foot })}
+                {tn(nation.ko)} · {posLabel({ pos: C.pos, dpos })} · {L.foot({ v: C.foot })}
                 {bodyErr ? '' : ` · ${body.h}cm ${body.w}kg`}
               </Txt>
               <Row gap={4} style={{ marginTop: 4 }}>
@@ -373,7 +374,7 @@ export default function Create() {
               <Txt v="sm" tone="muted" testID="nation-note">
                 {`${
                   foreign
-                    ? L.nationForeign({ nation: nation.ko, cup: CONFEDS[nation.conf].cup })
+                    ? L.nationForeign({ nation: tn(nation.ko), cup: tn(CONFEDS[nation.conf].cup) })
                     : L.nationHome
                 } ${L.nationSame}`}
               </Txt>
