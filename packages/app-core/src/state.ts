@@ -208,6 +208,8 @@ export interface AppState {
   achNew: number;
   /** T-11-128 끝난 시즌 결산이 나왔는데 이 기기에서 아직 안 열어 봤는가 — 하단 '구단주' 탭의 점(recapUnseen). */
   recapNew: boolean;
+  /** T-11-142 받은 친구 신청 수 — 하단 '구단주'·내 팀 '경기' 탭·'친구' 버튼의 점(friendPending). */
+  friendReq: number;
 }
 
 /** 기기·브라우저 언어 태그(웹 navigator.languages, 앱은 Intl). 읽을 수 없으면 빈 목록. */
@@ -248,4 +250,5 @@ export const initialAppState = (): AppState => ({
   report: null,
   achNew: 0,
   recapNew: false,
+  friendReq: 0,
 });

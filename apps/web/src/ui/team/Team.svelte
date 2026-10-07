@@ -57,6 +57,7 @@
   import TeamResult from './TeamResult.svelte';
   import TeamFriends from './TeamFriends.svelte';
   import { friendsUi } from '../friendInvite.svelte.js';
+  import { shellText as S } from '@offside/app-core/i18n/ko/shell';
   import { achNudge } from '../achNudge.js';
   import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
@@ -475,7 +476,7 @@
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>
-        <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}</button>
+        <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}{#if appState.friendReq}<span class="btn-dot" data-friend-dot><span class="sr-only">{S.friendReq({ n: appState.friendReq })}</span></span>{/if}</button>
       </div>
       {#if friendsUi.mode === 'friends'}
         <TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />

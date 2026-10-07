@@ -54,4 +54,9 @@ export const friend: Translation<FriendMsgs> = {
   makePreseason: 'プレシーズンチームを組む',
   playPreseason: 'プレシーズン親善試合',
   playPreseasonAria: (p) => `${p.name}さんとプレシーズン親善試合`,
+  pushNudgeTitle: 'フレンド申請を通知で受け取りますか？',
+  pushNudgeBody:
+    'アプリ通知をオンにすると、フレンド申請や親善試合の結果が届いたらすぐにお知らせします。',
+  pushNudgeOn: '通知をオンにする',
+  pushNudgeLater: 'あとで',
 };

@@ -1826,6 +1826,16 @@ body:has(.main-nav) .wrap {
 .btn:has(> .btn-dot) {
   position: relative;
 }
+/* T-11-142 내 팀 '경기' 탭의 '친구' 버튼 — 받은 친구 신청. */
+.hof-sort:has(> .btn-dot) {
+  position: relative;
+}
+.hof-sort > .btn-dot {
+  top: 2px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+}
 .tab-dot {
   position: absolute;
   top: 5px;
