@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4dc05f9d-69e0-49e9-9078-7cd576fa3b9e",
-  "prevId": "c2633652-9d35-4b72-8ab7-a8d945c8eea2",
+  "id": "7e20eb67-6ac1-43fb-9cf3-be441cb21475",
+  "prevId": "95e26af3-0bbd-4518-ae78-a0a09df2304d",
   "tables": {
     "app_auth_tickets": {
       "name": "app_auth_tickets",
@@ -681,6 +681,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": 0
+        },
+        "i18n_json": {
+          "name": "i18n_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -5150,6 +5157,45 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "translations": {
+      "name": "translations",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "translations_created_idx": {
+          "name": "translations_created_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

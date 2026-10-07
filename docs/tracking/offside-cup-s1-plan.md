@@ -104,7 +104,7 @@ T-11-125의 컵 전용 명단, 첫 안의 20:00 스냅샷 대신 **경기 전후
 
 ## 9. 구현
 
-- **DB(0073):** `cup_entries`, `cup_matches`, `cup_state`, `owner_items`.
+- **DB(0074):** `cups`(제1회 s1-1 시드), `cup_entries`, `cup_matches`, `cup_state`, `owner_items`.
 - **엔진:** `simulateMatch(..., { neutral })`, `penaltyShootout`.
 - **규칙:** `apps/api/src/team/cupRules.ts`(순수 함수). **진행:** `apps/api/src/team/cup.ts`의 `runCup`(5분 cron).
 - **API:** `GET /v1/cups/:id`(`current` 가능), `GET /v1/cups/:id/me`, `POST /v1/cups/:id/entries`, `DELETE /v1/cups/:id/entries/me`, `GET /v1/cups/:id/matches/:matchId`, `GET /v1/items`, `POST /v1/items/reroll/use`. 명단 저장·시장 등록에 잠금 검사.

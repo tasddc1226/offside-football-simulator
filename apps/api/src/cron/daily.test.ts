@@ -60,6 +60,9 @@ describe('T-10-070 매일 정리', () => {
     const mute = `INSERT INTO chat_mutes (profile_id, until, created_at) VALUES (?1, ?2, ?2)`;
     await run(mute, 'prf_done', ago(HOUR));
     await run(mute, 'prf_muted', later(DAY));
+    const tr = `INSERT INTO translations (key, text, created_at) VALUES (?1, 't', ?2)`;
+    await run(tr, 'tr_old', ago(31 * DAY));
+    await run(tr, 'tr_new', ago(29 * DAY));
 
     expect(await cleanupExpired(ctx.env.DB, NOW)).toEqual({
       push_news_events: 0,
@@ -72,7 +75,9 @@ describe('T-10-070 매일 정리', () => {
       app_auth_tickets: 1,
       chat_reports: 1,
       chat_mutes: 1,
+      translations: 1,
     });
+    expect(await count('translations')).toBe(1);
     expect(await count('chat_reports')).toBe(1);
     expect(await count('chat_mutes')).toBe(1);
     expect(await count('app_auth_tickets')).toBe(1);

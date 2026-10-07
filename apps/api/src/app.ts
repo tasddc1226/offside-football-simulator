@@ -13,6 +13,7 @@ import { registerAppVersionRoutes } from './routes/appVersion.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerBalanceRoutes } from './routes/balance.js';
 import { registerBoardRoutes } from './routes/boards.js';
+import { registerTranslateRoutes } from './routes/translate.js';
 import { registerReleaseNoteRoutes } from './routes/releaseNotes.js';
 import { registerPushRoutes } from './routes/push.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
@@ -64,6 +65,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerMarketRoutes(app);
   registerCupRoutes(app);
   registerBoardRoutes(app);
+  registerTranslateRoutes(app);
   registerReleaseNoteRoutes(app);
   registerPushRoutes(app);
   registerNotificationRoutes(app);

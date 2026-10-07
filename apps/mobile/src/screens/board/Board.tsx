@@ -55,7 +55,10 @@ import { Screen } from '../../ui/Screen';
 import { scrollTo } from '../../ui/scroll';
 import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
-import { PostEditor, type Draft } from './PostEditor';
+import { useTranslations } from '../../ui/Translate';
+import { PostEditor } from './PostEditor';
+import { draftOf, inputOf, postLangLabel, type PostDraft } from '@offside/app-core/boardEditor';
+import type { PostDetailResponse } from '@offside/contracts';
 import { Slide } from './Slide';
 import { Seg, TabOpt, TextBox, confirmAsync } from './parts';
 
@@ -69,7 +72,13 @@ function firstView(id: string): boolean {
   return true;
 }
 
-type Detail = { post: Post; comments: Comment[]; liked: boolean; blocks: BoardBlock[] };
+type Detail = {
+  post: Post;
+  comments: Comment[];
+  liked: boolean;
+  blocks: BoardBlock[];
+  source?: PostDetailResponse['source'];
+};
 
 /** 댓글 줄 오른쪽 작은 버튼(삭제·신고). */
 function CommentAct({
@@ -149,7 +158,9 @@ export default function Board() {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [liking, setLiking] = useState(false);
   /** 관리자 편집기. id가 없으면 새 글. */
-  const [editing, setEditing] = useState<Draft | null>(null);
+  const [editing, setEditing] = useState<PostDraft | null>(null);
+  /** T-11-146 댓글 번역 보기. */
+  const tr = useTranslations();
   /** 홈 등에서 글을 바로 열며 들어온 동안 — 목록을 그리지 않는다(목록이 비쳤다 글로 한 번 더 넘어가지 않게). */
   const [entering, setEntering] = useState(!!appState.boardOpenId);
   const view = editing ? 'edit' : (detail?.post.id ?? (entering ? boardOpenId : null) ?? 'list');
@@ -258,28 +269,16 @@ export default function Board() {
   }, [boardTop]);
 
   function startEdit(post?: Post) {
-    setEditing(
-      post
-        ? {
-            id: post.id,
-            title: post.title,
-            body: post.body,
-            version: post.version ?? '',
-            pinned: post.pinned,
-          }
-        : { title: '', body: '', version: '', pinned: false },
-    );
+    setEditing(draftOf(post, detail?.source));
     scrollTo(0);
   }
   async function savePost() {
     if (!editing || busy) return;
     const e = editing;
-    const input = {
-      title: e.title,
-      body: e.body,
-      pinned: e.pinned,
-      ...(e.version.trim() ? { version: e.version } : {}),
-    };
+    const draft = inputOf(e);
+    if ('incomplete' in draft)
+      return toast(L.translationIncomplete({ lang: postLangLabel(draft.incomplete) }));
+    const input = draft.input;
     setBusy(true);
     const r = e.id ? await api.updatePost(e.id, input) : await api.createPost(board, input);
     setBusy(false);
@@ -532,7 +531,8 @@ export default function Board() {
                           />
                         ) : null}
                       </View>
-                      <Txt style={{ marginTop: 4 }}>{cm.body}</Txt>
+                      <Txt style={{ marginTop: 4 }}>{tr.text(cm.id, cm.body)}</Txt>
+                      {tr.button(cm.id, cm.body)}
                       {reporting === cm.id ? (
                         <View
                           testID="report-panel"

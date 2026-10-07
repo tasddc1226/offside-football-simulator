@@ -1,0 +1,26 @@
+{
+  "id": "t-11-146-translated-notices",
+  "title": "공지·댓글·채팅 번역",
+  "items": [
+    "영어·일본어로 플레이하면 공지와 릴리즈 노트도 그 언어로 보여요.",
+    "번역이 아직 없는 공지는 한국어 원문으로 보여요.",
+    "다른 언어로 쓴 댓글과 채팅 아래에 번역 보기가 생겼어요."
+  ],
+  "en": {
+    "title": "Translated notices, comments and chat",
+    "items": [
+      "Notices and release notes now show in English or Japanese when you play in that language.",
+      "Notices without a translation yet show the Korean original.",
+      "Comments and chat messages written in another language now have a See translation button."
+    ]
+  },
+  "ja": {
+    "title": "お知らせ・コメント・チャットの翻訳",
+    "items": [
+      "英語・日本語でプレイすると、お知らせとリリースノートもその言語で表示されます。",
+      "まだ翻訳がないお知らせは韓国語の原文で表示されます。",
+      "ほかの言語で書かれたコメントとチャットに「翻訳を見る」が付きました。"
+    ]
+  },
+  "availability": "web-app"
+}

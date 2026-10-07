@@ -3,7 +3,8 @@ import { cupText } from '../cupText.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 서버가 만든 알림 문구. 푸시는 보낼 때 기기의 언어를 알 수 없어(기기 등록에 언어가 없다) 한국어로 보내고,
-// 알림함은 읽을 때 요청 언어로 바꿔 보여 준다. 공지·릴리즈 노트의 본문(글 제목)은 운영자가 쓴 글이라 옮기지 않는다.
+// 알림함은 읽을 때 요청 언어로 바꿔 보여 준다. 공지·릴리즈 노트의 본문(글 제목)은 보낼 때의 한국어 제목이다 — 운영자가 쓴
+// 번역(T-11-146 board_posts.i18n_json)은 게시판에서만 고른다.
 const EN: Record<string, string> = {
   '오프사이드 공지': 'OFFSIDE notice',
   '오프사이드 릴리즈 노트': 'OFFSIDE release notes',

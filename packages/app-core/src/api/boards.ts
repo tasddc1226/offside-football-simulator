@@ -10,11 +10,22 @@ import type {
   PostDetailResponse,
   PostInput,
   PostLikeResponse,
+  PostText,
+  PostTranslateResponse,
+  PostTranslations,
 } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { apiFetch, cachedGet, withProfile } from './client.js';
 
-export type { BoardBlock, BoardKey, BoardViewerResponse, Comment, Post, PostInput };
+export type {
+  BoardBlock,
+  BoardKey,
+  BoardViewerResponse,
+  Comment,
+  Post,
+  PostInput,
+  PostTranslations,
+};
 export type PostSummary = BoardListResponse['posts'][number];
 
 export const fetchBoardViewer = () => cachedGet<BoardViewerResponse>('/v1/boards/viewer', 600_000);
@@ -28,6 +39,13 @@ export const createPost = (board: BoardKey, input: PostInput) =>
   apiFetch<Post>(`/v1/boards/${board}/posts`, { method: 'POST', body: JSON.stringify(input) });
 export const updatePost = (id: string, input: PostInput) =>
   apiFetch<Post>(`/v1/boards/posts/${id}`, { method: 'PUT', body: JSON.stringify(input) });
+/** T-11-146 관리자 번역 초안(저장하지 않는다 — 메모를 비울 이유가 없다). */
+export const translatePost = (input: PostText) =>
+  apiFetch<PostTranslateResponse>('/v1/boards/translate', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    keepCache: true,
+  });
 export const deletePost = (id: string) =>
   apiFetch<undefined>(`/v1/boards/posts/${id}`, { method: 'DELETE' });
 export const addComment = (postId: string, input: CommentInput) =>
