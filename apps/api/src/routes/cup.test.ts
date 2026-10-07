@@ -1,5 +1,5 @@
 import { CupMeResponseSchema, ErrorEnvelopeSchema, successEnvelope } from '@offside/contracts';
-import { CUPS } from '@offside/contracts/cup';
+import { planCup } from '@offside/contracts/cup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cards, careers, cupEntries, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -7,7 +7,7 @@ import { callJson, issueGoogleCookie } from '../test/http.js';
 import { checkCupListing } from './cup.js';
 
 const MeRes = successEnvelope(CupMeResponseSchema);
-const CUP = CUPS[0]!;
+const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09' });
 const OPEN = '2026-10-10T03:00:00.000Z';
 let seq = 0;
 

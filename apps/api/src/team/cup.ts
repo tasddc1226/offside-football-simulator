@@ -88,6 +88,9 @@ export function groupTable(
 
 // ───────── 단계별 쓰기 ─────────
 
+/** KST 'HH:MM'(추첨 알림의 첫 경기 시각). */
+const kstHm = (iso: string) => new Date(Date.parse(iso) + 9 * 3600_000).toISOString().slice(11, 16);
+
 function rewardStatements(
   d1: D1Database,
   cup: CupDef,
@@ -110,9 +113,20 @@ function rewardStatements(
          ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + excluded.qty, updated_at = excluded.updated_at`,
       )
       .bind(e.profileId, CUP_REWARDS[stage].rerolls, now),
+    // 최종 성적·보상은 알림함에만 둔다. 같은 cron에 나가는 경기 결과 푸시와 겹치면 예산(60분 간격)에 밀려 사라진다.
+    ...notify(
+      d1,
+      e.profileId,
+      `cup:${cup.id}:result`,
+      cupKo(stage === 'champion' ? 'championTitle' : 'outTitle', { cup: cupTitle(cup) }),
+      cupKo('rewardBody', { stage: cupKo(stage), n: CUP_REWARDS[stage].rerolls }),
+      now,
+      false,
+    ),
   ];
 }
 
+// 탭하면 구단주 화면(컵 배너)으로 간다. 앱 알림 target에 'cup'이 없어 구버전 앱도 읽는 'owner'를 쓴다.
 const notify = (
   d1: D1Database,
   profileId: string,
@@ -120,6 +134,7 @@ const notify = (
   title: string,
   body: string,
   now: string,
+  push = true,
 ) =>
   eventNotificationStatements(
     d1,
@@ -127,10 +142,11 @@ const notify = (
       profileId,
       sourceKey,
       now,
-      content: { kind: 'team', title, body, target: { type: 'screen', screen: 'team' } },
+      content: { kind: 'team', title, body, target: { type: 'screen', screen: 'owner' } },
     },
     // 원본 중복은 source_key가 막는다(앞 문장의 changes()에 기대지 않는다).
     { sql: '1' },
+    { push },
   );
 
 /** 추첨: 자격을 다시 보고, 조를 나누고, 조별 3라운드 경기를 만든다. 한 batch(트랜잭션). */
@@ -218,7 +234,7 @@ export async function drawCup(db: Db, cup: CupDef, now: string) {
         e.profileId,
         `cup:${cup.id}:draw`,
         cupKo('drawTitle', { cup: cupTitle(cup) }),
-        cupKo('drawBody', { team: t.name, group: grp.get(e.teamId)! }),
+        cupKo('drawBody', { team: t.name, group: grp.get(e.teamId)!, time: kstHm(cup.rounds[0]!) }),
         now,
       ),
     );
@@ -401,9 +417,9 @@ export async function advanceRound(
 }
 
 /** cron 한 번: 대회마다 추첨 → 시각이 된 경기 → 끝난 라운드 정리. */
-export async function runCup(db: Db, now: string, cups: readonly CupDef[] = cupSchedule()) {
+export async function runCup(db: Db, now: string, cups?: readonly CupDef[]) {
   const log: Record<string, unknown>[] = [];
-  for (const cup of cups) {
+  for (const cup of cups ?? (await cupSchedule(db))) {
     if (now < cup.drawAt) continue;
     let [state] = await cupStateOf(db, cup.id);
     if (!state) {
@@ -467,8 +483,10 @@ export async function cupHonorsOf(db: Db, profileId: string) {
     .select()
     .from(cupEntries)
     .where(and(eq(cupEntries.profileId, profileId), isNotNull(cupEntries.rewardedAt)));
+  if (!rows.length) return [];
+  const all = await cupSchedule(db);
   return rows
-    .map((e) => ({ e, cup: cupById(e.cupId, cupSchedule()) }))
+    .map((e) => ({ e, cup: cupById(e.cupId, all) }))
     .filter((x): x is { e: CupEntryRow; cup: CupDef } => !!x.cup && !!x.e.stage)
     .sort((a, b) => b.cup.opensAt.localeCompare(a.cup.opensAt))
     .map(({ e, cup }) => ({

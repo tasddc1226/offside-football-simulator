@@ -73,6 +73,18 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'detail_json',
   ],
   cup_state: ['cup_id', 'seed', 'groups', 'drawn_at', 'done_at'],
+  cups: [
+    'id',
+    'season',
+    'edition',
+    'opens_at',
+    'closes_at',
+    'draw_at',
+    'rounds_json',
+    'capacity',
+    'min_filled',
+    'created_at',
+  ],
   owner_items: ['profile_id', 'item', 'qty', 'updated_at'],
   cards: [
     'career_id',

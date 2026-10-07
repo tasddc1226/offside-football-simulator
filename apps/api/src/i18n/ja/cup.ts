@@ -32,6 +32,12 @@ export const CUP_JA: Record<CupTextKey, string> = {
   cancelledTitle: '{cup}は開催されません',
   cancelledBody: '参加クラブが少なすぎるため、今回の大会は中止になりました。',
   drawTitle: '{cup} 組み合わせ抽選結果',
-  drawBody: '{team}はグループ{group}です。初戦は今夜9時です。',
+  drawBody: '{team}はグループ{group}です。初戦は本日{time}に始まります。',
   matchTitle: 'オフサイドカップ {round}:{result}',
+  champion: '優勝',
+  runnerup: '準優勝',
+  group: 'グループステージ',
+  championTitle: '{cup} 優勝！',
+  outTitle: '{cup}が終わりました',
+  rewardBody: '最終成績 {stage}。選手候補リロール券を{n}枚受け取りました。',
 };

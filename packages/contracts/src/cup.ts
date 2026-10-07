@@ -1,5 +1,5 @@
 // T-11-145 오프사이드 컵. 기간 안에 신청한 구단끼리 조별 예선 → 토너먼트를 하루 한 경기씩 서버가 치른다.
-// 대회 일정은 코드 상수다(운영 도구는 2회차부터). 시각은 모두 UTC ISO. zod 없는 서브패스(`@offside/contracts/cup`) — API 모양은 cup-api.ts.
+// 대회 일정은 D1 cups 테이블(관리자 API로 연다), 모양은 planCup이 만든다. 시각은 모두 UTC ISO. zod 없는 서브패스(`@offside/contracts/cup`) — API 모양은 cup-api.ts.
 
 export const CUP_ROUNDS = ['g1', 'g2', 'g3', 'r32', 'r16', 'qf', 'sf', 'f'] as const;
 export type CupRound = (typeof CUP_ROUNDS)[number];
@@ -28,30 +28,63 @@ export interface CupDef {
 
 export const CUP_LOCK_MIN = 60;
 
-// 시각은 KST 표기로 적고 UTC로 둔다. 접수 10/9 00:00 ~ 10/12 23:59, 추첨 10/13 12:00, 경기는 매일 21:00.
-const kst = (d: string) => new Date(`${d}+09:00`).toISOString();
-export const CUPS: readonly CupDef[] = [
-  {
-    id: 's1-1',
-    season: 1,
-    edition: 1,
-    opensAt: kst('2026-10-09T00:00:00'),
-    closesAt: kst('2026-10-13T00:00:00'),
-    drawAt: kst('2026-10-13T12:00:00'),
-    rounds: [13, 14, 15, 16, 17, 18, 19, 20].map((d) => kst(`2026-10-${d}T21:00:00`)),
-    capacity: 64,
-    minFilled: 8,
-  },
-];
+/** 표준 일정의 기본값: 접수 4일, 추첨은 접수 마감일 12:00, 경기는 그날부터 매일 21:00(KST). */
+export const CUP_PLAN_DEFAULTS = {
+  entryDays: 4,
+  drawHour: 12,
+  matchHour: 21,
+  capacity: 64,
+  minFilled: 8,
+} as const;
 
-export const cupById = (id: string, cups: readonly CupDef[] = CUPS) =>
-  cups.find((c) => c.id === id);
+export interface CupPlanInput {
+  id: string;
+  season: number;
+  edition: number;
+  /** 접수 시작일(KST, YYYY-MM-DD). 그날 00:00에 연다. */
+  opensOn: string;
+  entryDays?: number | undefined;
+  drawHour?: number | undefined;
+  matchHour?: number | undefined;
+  capacity?: number | undefined;
+  minFilled?: number | undefined;
+}
+
+/**
+ * 시작일 하나로 대회 일정을 만든다. 접수 opensOn 00:00 ~ entryDays일 뒤 00:00, 추첨 그날 drawHour시, 라운드 8개는
+ * 그날부터 하루 한 경기 matchHour시. 제1회(s1-1) = 10/9 시작 → 접수 10/9~10/12, 추첨 10/13 12:00, 경기 10/13~10/20 21:00.
+ */
+export function planCup(input: CupPlanInput): CupDef {
+  const v = (k: keyof typeof CUP_PLAN_DEFAULTS) => input[k] ?? CUP_PLAN_DEFAULTS[k];
+  const days = v('entryDays');
+  const at = (n: number, hour: number) =>
+    new Date(
+      Date.parse(`${input.opensOn}T00:00:00+09:00`) + (n * 24 + hour) * 3600_000,
+    ).toISOString();
+  return {
+    id: input.id,
+    season: input.season,
+    edition: input.edition,
+    opensAt: at(0, 0),
+    closesAt: at(days, 0),
+    drawAt: at(days, v('drawHour')),
+    rounds: CUP_ROUNDS.map((_, i) => at(days + i, v('matchHour'))),
+    capacity: v('capacity'),
+    minFilled: v('minFilled'),
+  };
+}
+
+/** 대회가 끝난 뒤에도 '지난 대회'로 보여 주는 기간(결승 뒤 24시간). 다음 대회 접수는 이 뒤에 연다. */
+export const CUP_AFTERGLOW_MS = 86400_000;
+export const cupEndsAt = (cup: CupDef) =>
+  new Date(Date.parse(cup.rounds.at(-1)!) + CUP_AFTERGLOW_MS).toISOString();
+
+export const cupById = (id: string, cups: readonly CupDef[]) => cups.find((c) => c.id === id);
 
 /** 지금 보여 줄 대회: 진행 중이거나 다가오는 것, 없으면 가장 최근에 끝난 것. */
-export function currentCup(now: string, cups: readonly CupDef[] = CUPS): CupDef | undefined {
-  const t = Date.parse(now);
-  const live = cups.filter((c) => Date.parse(c.rounds.at(-1)!) + 86400_000 > t);
-  return live.sort((a, b) => Date.parse(a.opensAt) - Date.parse(b.opensAt))[0] ?? cups.at(-1);
+export function currentCup(now: string, cups: readonly CupDef[]): CupDef | undefined {
+  const byOpen = [...cups].sort((a, b) => a.opensAt.localeCompare(b.opensAt));
+  return byOpen.find((c) => cupEndsAt(c) > now) ?? byOpen.at(-1);
 }
 
 export const roundAt = (cup: CupDef, round: CupRound) => cup.rounds[CUP_ROUNDS.indexOf(round)]!;

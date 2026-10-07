@@ -30,8 +30,14 @@ export const CUP_KO = {
   cancelledTitle: '{cup}가 열리지 않아요',
   cancelledBody: '참가 팀이 너무 적어 이번 대회는 취소됐어요.',
   drawTitle: '{cup} 조 추첨 결과',
-  drawBody: '{team}은(는) {group}조예요. 첫 경기는 오늘 밤 9시예요.',
+  drawBody: '{team}은(는) {group}조예요. 첫 경기는 오늘 {time}에 열려요.',
   matchTitle: '오프사이드 컵 {round} — {result}',
+  champion: '우승',
+  runnerup: '준우승',
+  group: '조별 예선',
+  championTitle: '{cup} 우승!',
+  outTitle: '{cup}를 마쳤어요',
+  rewardBody: '최종 성적 {stage}. 선수 후보 리롤권 {n}장을 받았어요.',
 } as const;
 
 export type CupTextKey = keyof typeof CUP_KO;

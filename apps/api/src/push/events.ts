@@ -8,10 +8,11 @@ export function eventNotificationStatements(
   db: D1Database,
   input: Input,
   guard: { sql: string; params?: unknown[] } = { sql: 'changes() > 0' },
+  opts: { push?: boolean } = {},
 ) {
   const content = NotificationContentSchema.parse(input.content);
   const id = newId('ntf');
-  return [
+  const stmts = [
     db
       .prepare(
         `INSERT OR IGNORE INTO notifications
@@ -53,6 +54,8 @@ export function eventNotificationStatements(
         content.kind,
       ),
   ];
+  // push: false면 알림함에만 남긴다(같은 순간 다른 푸시와 겹쳐 예산에 밀리는 알림).
+  return opts.push === false ? stmts.slice(0, 1) : stmts;
 }
 
 /** Drizzle 업무 쿼리를 D1으로 변환해 알림 원본·발송 큐와 원자적으로 커밋한다. */

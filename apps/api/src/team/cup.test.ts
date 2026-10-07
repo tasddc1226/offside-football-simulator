@@ -1,12 +1,12 @@
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts';
-import { CUP_REWARDS, CUPS, cupGroupCount } from '@offside/contracts/cup';
+import { CUP_REWARDS, cupGroupCount, currentCup, planCup } from '@offside/contracts/cup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cupEntries, ownerItems, ownerTeams, profiles } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
+import { cupEntries, notifications, ownerItems, ownerTeams, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 import { checkCupLineup } from '../routes/cup.js';
 import { cupText } from '../cupText.js';
-import { cupSchedule, loadCupSchedule } from './cupSchedule.js';
 import {
   cupEntriesOf,
   cupHonorsOf,
@@ -18,8 +18,8 @@ import {
 import { drawGroups, firstKoPairs, groupFixtures, groupStandings } from './cupRules.js';
 import { buildLineup, penaltyShootout } from './sim.js';
 
-// 실제 제1회 대회 일정 그대로 돌린다(기록·명단 검사가 CUPS를 본다).
-const CUP = CUPS[0]!;
+// 실제 제1회 대회 일정 그대로 돌린다(마이그레이션 0074가 cups에 넣어 둔 s1-1 — 기록·명단 검사가 그 행을 본다).
+const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09' });
 
 describe('T-11-145 컵 규칙', () => {
   it('팀 수로 조 수를 정한다', () => {
@@ -102,20 +102,36 @@ describe('T-11-145 컵 규칙', () => {
     expect(cupText('시즌 1 제1회 오프사이드 컵 조 추첨 결과', 'en')).toBe(
       'Season 1 OFFSIDE Cup #1 group draw',
     );
-    expect(cupText('우리 FC은(는) 3조예요. 첫 경기는 오늘 밤 9시예요.', 'ja')).toBe(
-      '우리 FCはグループ3です。初戦は今夜9時です。',
+    expect(cupText('우리 FC은(는) 3조예요. 첫 경기는 오늘 21:00에 열려요.', 'ja')).toBe(
+      '우리 FCはグループ3です。初戦は本日21:00に始まります。',
+    );
+    expect(cupText('최종 성적 준우승. 선수 후보 리롤권 7장을 받았어요.', 'en')).toBe(
+      'Final result: Runners-up. You received 7 player reroll ticket(s).',
     );
     expect(cupText('다른 문장', 'en')).toBeUndefined();
   });
 
-  it('일정 덮어쓰기는 운영에서는 듣지 않는다', () => {
-    const fake = JSON.stringify([{ ...CUP, id: 's1-8' }]);
-    loadCupSchedule({ ENVIRONMENT: 'production', CUP_SCHEDULE: fake });
-    expect(cupSchedule()).toBe(CUPS);
-    loadCupSchedule({ ENVIRONMENT: 'staging', CUP_SCHEDULE: fake });
-    expect(cupSchedule()[0]!.id).toBe('s1-8');
-    loadCupSchedule({ ENVIRONMENT: 'staging' });
-    expect(cupSchedule()).toBe(CUPS);
+  it('시작일 하나로 표준 일정을 만든다(제1회 = 10/9 접수 ~ 10/20 결승)', () => {
+    expect(CUP).toMatchObject({
+      opensAt: '2026-10-08T15:00:00.000Z',
+      closesAt: '2026-10-12T15:00:00.000Z',
+      drawAt: '2026-10-13T03:00:00.000Z',
+      capacity: 64,
+      minFilled: 8,
+    });
+    expect(CUP.rounds).toHaveLength(8);
+    expect(CUP.rounds[0]).toBe('2026-10-13T12:00:00.000Z');
+    expect(CUP.rounds.at(-1)).toBe('2026-10-20T12:00:00.000Z');
+  });
+
+  it('지금 보여 줄 대회는 진행 중·다가오는 것, 없으면 마지막 대회다', () => {
+    const next = planCup({ id: 's1-2', season: 1, edition: 2, opensOn: '2026-11-01' });
+    const both = [next, CUP];
+    expect(currentCup('2026-10-01T00:00:00.000Z', both)?.id).toBe('s1-1');
+    expect(currentCup('2026-10-21T11:59:00.000Z', both)?.id).toBe('s1-1');
+    expect(currentCup('2026-10-21T12:00:00.000Z', both)?.id).toBe('s1-2');
+    expect(currentCup('2026-12-01T00:00:00.000Z', both)?.id).toBe('s1-2');
+    expect(currentCup('2026-10-01T00:00:00.000Z', [])).toBeUndefined();
   });
 
   it('승부차기는 늘 승자가 있고 시드가 같으면 같다', () => {
@@ -210,6 +226,23 @@ describe('T-11-145 컵 진행(cron)', () => {
     const champ = entries.find((e) => e.stage === 'champion')!;
     expect((await cupHonorsOf(ctx.db, champ.profileId))[0]).toMatchObject({ stage: 'champion' });
     expect(teams).toHaveLength(n);
+    // 알림: 추첨·경기마다 하나, 최종 성적은 한 번(다시 돌려도 늘지 않는다). 탭하면 구단주 화면(컵 배너)으로 간다.
+    const mine = await ctx.db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.profileId, champ.profileId));
+    const played = matches.filter(
+      (m) => m.homeTeamId === champ.teamId || m.awayTeamId === champ.teamId,
+    ).length;
+    expect(mine.map((x) => x.sourceKey).filter((k) => k.startsWith('cup-match:'))).toHaveLength(
+      played,
+    );
+    expect(mine.find((x) => x.sourceKey === `cup:${CUP.id}:draw`)?.body).toContain('21:00');
+    const result = mine.filter((x) => x.sourceKey === `cup:${CUP.id}:result`);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ title: '시즌 1 제1회 오프사이드 컵 우승!' });
+    expect(result[0]!.body).toBe('최종 성적 우승. 선수 후보 리롤권 10장을 받았어요.');
+    expect(mine.every((x) => JSON.parse(x.targetJson).screen === 'owner')).toBe(true);
   });
 
   it('추첨 때 자격이 모자란 팀은 빠지고, 4팀 미만이면 열지 않는다', async () => {

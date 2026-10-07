@@ -1130,7 +1130,28 @@ export const ownerHonors = sqliteTable(
 );
 
 /**
- * T-11-145 오프사이드 컵 참가. 대회 일정은 contracts cup.ts CUPS 상수다. 팀 이름·감독·OVR은 신청·추첨 때 적어 둔다(팀이
+ * T-11-145 오프사이드 컵 대회 일정. 관리자 API(POST /v1/admin/cups)로 연다 — 코드 배포 없이 다음 회차를 만든다. 모양은
+ * contracts planCup, rounds_json은 CUP_ROUNDS 순서의 경기 시각(UTC ISO) 배열. edition(제 n회)은 시즌을 넘어 이어진다.
+ */
+export const cups = sqliteTable(
+  'cups',
+  {
+    id: text('id').primaryKey(),
+    season: integer('season').notNull(),
+    edition: integer('edition').notNull(),
+    opensAt: text('opens_at').notNull(),
+    closesAt: text('closes_at').notNull(),
+    drawAt: text('draw_at').notNull(),
+    roundsJson: text('rounds_json').notNull(),
+    capacity: integer('capacity').notNull(),
+    minFilled: integer('min_filled').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [uniqueIndex('cups_edition_unique').on(table.edition)],
+);
+
+/**
+ * T-11-145 오프사이드 컵 참가. 대회 일정은 cups 테이블이다. 팀 이름·감독·OVR은 신청·추첨 때 적어 둔다(팀이
  * 지워져도 대진표가 남는다). status: active(참가 중) · out(탈락) · champion · withdrawn(접수 중 취소·추첨 때 자격 미달).
  * stage는 끝난 단계(contracts CUP_STAGES), rewarded_at은 그 단계 보상을 준 시각(한 번만 준다).
  */

@@ -87,7 +87,7 @@ export const toCupMatch = (m: CupMatchRow): CupMatch => ({
   forfeit: m.forfeit === 1,
 });
 
-const cupInfo = (cup: CupDef) => ({
+export const cupInfo = (cup: CupDef) => ({
   id: cup.id,
   season: cup.season,
   edition: cup.edition,
@@ -149,14 +149,10 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
   };
 }
 
-const cupOf = (c: Context<AppEnv>) => {
+const cupOf = async (c: Context<AppEnv>) => {
   const id = c.req.param('cupId');
-  const cup =
-    id === 'current'
-      ? currentCup(nowIso(), cupSchedule())
-      : id
-        ? cupById(id, cupSchedule())
-        : undefined;
+  const all = await cupSchedule(getDb(c));
+  const cup = id === 'current' ? currentCup(nowIso(), all) : id ? cupById(id, all) : undefined;
   if (!cup) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
   return cup;
 };
@@ -199,7 +195,7 @@ async function eligibility(
 export function registerCupRoutes(app: Hono<AppEnv>): void {
   // 대회 한눈에: 일정·참가 수·조 순위·대진·결과. 누구나 본다. cupId 'current'는 지금 보여 줄 대회.
   app.get('/v1/cups/:cupId', async (c) => {
-    const cup = cupOf(c);
+    const cup = await cupOf(c);
     return ok(c, CupResponseSchema, await cupView(getDb(c), cup, nowIso()), 200, PUBLIC_CACHE);
   });
 
@@ -207,7 +203,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/cups/:cupId/me', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const cup = cupOf(c);
+    const cup = await cupOf(c);
     const now = nowIso();
     const [entries, matches, rerolls] = await Promise.all([
       cupEntriesOf(db, cup.id),
@@ -254,7 +250,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/cups/:cupId/entries', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const cup = cupOf(c);
+    const cup = await cupOf(c);
     const now = nowIso();
     const entries = await cupEntriesOf(db, cup.id);
     if (entries.some((e) => e.profileId === me.id && e.status !== 'withdrawn'))
@@ -293,7 +289,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   app.delete('/v1/cups/:cupId/entries/me', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const cup = cupOf(c);
+    const cup = await cupOf(c);
     const now = nowIso();
     if (now >= cup.closesAt) throw conflictError(cupKo('withdrawClosed'), 'CUP_CLOSED');
     await db
@@ -306,7 +302,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   // 컵 경기 상세(득점 기록). 누구나 본다. 선수 이름은 공개 이름·익명.
   app.get('/v1/cups/:cupId/matches/:matchId', async (c) => {
     const db = getDb(c);
-    const cup = cupOf(c);
+    const cup = await cupOf(c);
     const [m] = await db
       .select()
       .from(cupMatches)
@@ -392,9 +388,11 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
 /** 컵에 참가 중인(탈락 전) 이 시즌 대회와 그 경기들. 없으면 빈 배열. */
 async function activeCups(db: Db, profileId: string, season: number) {
   const rows = await activeEntriesOf(db, profileId);
+  if (!rows.length) return [];
+  const all = await cupSchedule(db);
   const out: { cup: CupDef; entry: CupEntryRow; matches: CupMatchRow[] }[] = [];
   for (const entry of rows) {
-    const cup = cupById(entry.cupId, cupSchedule());
+    const cup = cupById(entry.cupId, all);
     if (!cup || cup.season !== season) continue;
     out.push({ cup, entry, matches: await cupMatchesOf(db, cup.id) });
   }

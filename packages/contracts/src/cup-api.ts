@@ -138,3 +138,32 @@ export type CupMatchResponse = z.infer<typeof CupMatchResponseSchema>;
 
 export const OwnerItemsResponseSchema = z.strictObject({ reroll: z.number().int().min(0) });
 export type OwnerItemsResponse = z.infer<typeof OwnerItemsResponseSchema>;
+
+// ───────── 관리자: 대회 열기 ─────────
+
+/** POST /v1/admin/cups. 시작일만 주면 표준 일정(planCup)으로 연다. 시즌·회차·id는 서버가 정한다. */
+export const AdminCupCreateSchema = z
+  .strictObject({
+    opensOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    entryDays: z.number().int().min(1).max(14).optional(),
+    drawHour: z.number().int().min(0).max(23).optional(),
+    matchHour: z.number().int().min(0).max(23).optional(),
+    capacity: z.number().int().min(4).max(64).optional(),
+    minFilled: z.number().int().min(1).max(11).optional(),
+  })
+  .refine((v) => (v.matchHour ?? 21) - (v.drawHour ?? 12) >= 2, {
+    message: '추첨은 첫 경기 2시간 전보다 앞서야 해요.',
+    path: ['drawHour'],
+  });
+export type AdminCupCreate = z.infer<typeof AdminCupCreateSchema>;
+
+export const AdminCupStatusSchema = z.enum(['scheduled', 'entry', 'running', 'done']);
+export const AdminCupSchema = z.strictObject({
+  cup: CupInfoSchema,
+  status: AdminCupStatusSchema,
+  /** 신청(취소 제외) 팀 수. */
+  entries: z.number().int(),
+});
+export type AdminCup = z.infer<typeof AdminCupSchema>;
+export const AdminCupListSchema = z.strictObject({ items: z.array(AdminCupSchema) });
+export type AdminCupList = z.infer<typeof AdminCupListSchema>;

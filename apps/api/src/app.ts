@@ -31,7 +31,7 @@ import { registerSeasonRecapRoutes } from './routes/seasonRecap.js';
 import { registerTeamRoutes } from './routes/teams.js';
 import { registerMarketRoutes } from './routes/market.js';
 import { registerCupRoutes } from './routes/cup.js';
-import { loadCupSchedule } from './team/cupSchedule.js';
+import { registerAdminCupRoutes } from './routes/adminCups.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { ok } from './routes/shared.js';
 
@@ -39,10 +39,6 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   const app = new Hono<AppEnv>();
 
   app.use('*', requestId);
-  app.use('*', async (c, next) => {
-    loadCupSchedule(c.env);
-    await next();
-  });
   app.use('*', logger);
   app.use('*', cors);
   app.use('*', originGuard);
@@ -75,6 +71,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerReportRoutes(app);
   registerBalanceRoutes(app);
   registerAdminRoutes(app);
+  registerAdminCupRoutes(app);
 
   if (options.testRoutes) {
     app.get('/v1/test/throw', () => {

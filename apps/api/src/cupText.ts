@@ -19,7 +19,7 @@ export const cupTitle = (cup: CupDef) =>
   cupKo('title', { season: cup.season, edition: cup.edition });
 
 /** 자리 안에 다시 컵 문구가 들어가는 자리(대회 이름·라운드·결과). 팀 이름은 구단주가 지은 이름이라 옮기지 않는다. */
-const NESTED = new Set(['cup', 'round', 'result']);
+const NESTED = new Set(['cup', 'round', 'result', 'stage']);
 const SENTENCES = (Object.keys(CUP_KO) as CupTextKey[]).map((key) => {
   const names: string[] = [];
   const src = CUP_KO[key]

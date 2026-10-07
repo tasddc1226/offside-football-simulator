@@ -519,6 +519,13 @@
       "when": 1791361174684,
       "tag": "0073_dapper_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "6",
+      "when": 1791366850556,
+      "tag": "0074_offside_cups",
+      "breakpoints": true
     }
   ]
 }
