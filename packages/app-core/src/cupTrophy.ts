@@ -7,7 +7,8 @@ import { EMBLEM_PALETTE, type EmblemPalette } from './gradeEmblem.js';
 
 export type TrophyStage = Extract<CupStage, 'champion' | 'runnerup' | 'sf'>;
 export type TrophyTone = keyof EmblemPalette | 'plinth' | 'plinthLight';
-export type TrophyLayer = { d: string; tone: TrophyTone };
+/** plinth: 받침대 레이어 — 작게 그릴 때(컵만)는 뺀다. */
+export type TrophyLayer = { d: string; tone: TrophyTone; plinth?: true };
 export type TrophyPalette = Record<TrophyTone, string> & { engrave: string };
 
 type Pt = readonly [number, number];
@@ -110,8 +111,10 @@ const BAND: Pt[] = [
 ];
 /** 이름을 새기는 자리(받침대 앞면 안쪽). x·y·w·h·font는 viewBox 단위 — 넘치면 화면이 선수 카드 이름처럼 흘려 보낸다. */
 export const TROPHY_PLATE = { x: 12.6, y: 46.3, w: 38.8, h: 12.3, font: 8 } as const;
-/** 이보다 작게 그리면 글자가 읽히지 않아 새기지 않는다(px). */
+/** 이보다 작게 그리면 글자가 읽히지 않아 받침대 없이 컵만 그린다(px). */
 export const TROPHY_PLATE_MIN = 40;
+/** 컵만 그릴 때의 viewBox — 받침대가 빠진 만큼 위로 올려 가운데에 둔다. */
+export const TROPHY_CUP_VIEWBOX = '0 -8 64 64';
 export const TROPHY_VIEWBOX = '0 0 64 64';
 
 // ───────── 장식 ─────────
@@ -172,10 +175,10 @@ function trophy(stage: TrophyStage): TrophyLayer[] {
     ...facet(STEM, 0.6, 36),
     ...facet(KNOT, 0.6, 36.5),
     ...facet(COLLAR, 0.7, 42),
-    { d: poly(sym(PLINTH)), tone: 'plinthLight' },
-    { d: poly(sym(PLINTH_FACE)), tone: 'plinth' },
-    { d: poly(sym(BAND)), tone: 'rim' },
-    { d: poly(leftHalf(BAND)), tone: 'base' },
+    { d: poly(sym(PLINTH)), tone: 'plinthLight', plinth: true },
+    { d: poly(sym(PLINTH_FACE)), tone: 'plinth', plinth: true },
+    { d: poly(sym(BAND)), tone: 'rim', plinth: true },
+    { d: poly(leftHalf(BAND)), tone: 'base', plinth: true },
   ];
 }
 

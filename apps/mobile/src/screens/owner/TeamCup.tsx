@@ -20,6 +20,7 @@ import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Pill, Txt } from '../../ui';
 import { useOnPull } from '../../ui/refresh';
+import { CupTrophy } from '../../ui/CupTrophy';
 import { dayTimeText, phaseLabel, reasonText, roundLabel, stageLabel, whenText } from './cupText';
 
 export interface CupState {
@@ -244,7 +245,8 @@ export function CupCard({ state, onOpen }: { state: CupState; onOpen?: () => voi
   const lines = onOpen ? linesOf(state).slice(0, 1) : linesOf(state);
   return (
     <Card gap={8} testID="cup-banner">
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: onOpen ? 'center' : 'flex-start', gap: 10 }}>
+        {onOpen ? <CupTrophy stage="champion" size={44} bare /> : null}
         <View style={{ flex: 1, minWidth: 0 }}>
           <Txt v="eyebrow">Offside Cup</Txt>
           <Txt v="h2" accessibilityRole="header">

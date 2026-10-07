@@ -22,6 +22,8 @@ describe('cupTrophy (T-11-145)', () => {
     expect(gold.layers.some((l) => l.tone === 'trim')).toBe(true);
     expect(silver.layers.some((l) => l.tone === 'trim')).toBe(false);
     expect(cupTrophy('champion')).toBe(gold);
+    // 받침대 레이어만 떼어 낼 수 있다(작은 트로피는 컵만).
+    expect(gold.layers.filter((l) => l.plinth)).toHaveLength(4);
   });
 
   it('받침대에는 구단주 닉네임을, 없으면 시즌을 새긴다', () => {

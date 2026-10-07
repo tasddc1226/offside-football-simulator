@@ -30,6 +30,7 @@ import Svg, {
 import { useSnapshot } from 'valtio';
 import {
   cupTrophy,
+  TROPHY_CUP_VIEWBOX,
   TROPHY_PLATE as P,
   TROPHY_PLATE_MIN,
   TROPHY_VIEWBOX,
@@ -125,13 +126,19 @@ export function CupTrophy({
   stage,
   name,
   size = 40,
+  bare = false,
 }: {
   stage: TrophyStage;
-  /** 받침대에 새길 이름(구단주). 없거나 작게 그리면 비워 둔다. */
+  /** 받침대에 새길 이름(구단주). 없으면 비워 둔다. */
   name?: string;
   size?: number;
+  /** 받침대 없이 컵만(홈 배너). 작게 그리면(TROPHY_PLATE_MIN 미만) 늘 컵만. */
+  bare?: boolean;
 }) {
-  const { layers, palette } = cupTrophy(stage);
+  const trophy = cupTrophy(stage);
+  const { palette } = trophy;
+  const cupOnly = bare || size < TROPHY_PLATE_MIN;
+  const layers = cupOnly ? trophy.layers.filter((l) => !l.plinth) : trophy.layers;
   const { motionOK } = useSnapshot(prefs);
   const [active, setActive] = useState(AppState.currentState === 'active');
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
@@ -196,22 +203,22 @@ export function CupTrophy({
           <Circle cx={40} cy={34} r={34} fill={`url(#${uid}halo)`} />
         </Svg>
       </Animated.View>
-      <Svg width={size} height={size} viewBox={TROPHY_VIEWBOX}>
+      <Svg width={size} height={size} viewBox={cupOnly ? TROPHY_CUP_VIEWBOX : TROPHY_VIEWBOX}>
         {layers.map((layer, index) => (
           <Path key={index} d={layer.d} fill={palette[layer.tone]} />
         ))}
       </Svg>
-      {name && size >= TROPHY_PLATE_MIN ? (
+      {name && !cupOnly ? (
         <PlateName name={name} size={size} color={palette.engrave} moving={motionOK && active} />
       ) : null}
       {motionOK ? (
         <View
           style={{
             position: 'absolute',
-            top: size * 0.06,
+            top: size * (cupOnly ? 0.18 : 0.06),
             left: size * 0.18,
             right: size * 0.18,
-            bottom: size * 0.32,
+            bottom: size * (cupOnly ? 0.22 : 0.32),
             overflow: 'hidden',
           }}
         >

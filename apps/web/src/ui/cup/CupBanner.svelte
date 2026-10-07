@@ -4,6 +4,7 @@
   import { fetchCup, type CupResponse } from '@offside/app-core/api/cup';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import { cupOnHome } from '@offside/app-core/cupHome';
+  import CupTrophy from './CupTrophy.svelte';
   import { phaseLabel, phaseLine } from './cupView.js';
 
   let { onopen }: { onopen: () => void } = $props();
@@ -20,6 +21,7 @@
 {#if data && cupOnHome(data)}
   <section class="card cup-banner" aria-label={L.title} data-cup-banner data-cup-phase={data.phase}>
     <div class="cb-head">
+      <CupTrophy stage="champion" size={44} bare />
       <div class="cb-who">
         <small class="eyebrow">Offside Cup · {L.edition({ n: data.cup.edition })}</small>
         <h2>{L.fullTitle({ n: data.cup.edition })}</h2>
@@ -43,11 +45,12 @@
   }
   .cb-head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 12px;
   }
   .cb-who {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 2px;
