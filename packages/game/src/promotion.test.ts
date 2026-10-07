@@ -5,7 +5,7 @@ import { createRng, setActiveRng } from './rng.js';
 import { acceptOption, endSeason, market, offerFrom } from './season.js';
 import { seasonSetup } from './comps.js';
 import { migrateSave } from './save.js';
-import { promoteClub } from './promotion.js';
+import { promoteClub, weakestK1 } from './promotion.js';
 import type { GameState } from './types.js';
 
 function k2Player(seed = 7, idx = 0): GameState {
@@ -49,19 +49,21 @@ describe('K2 우승 승격', () => {
   it('K2 1위로 시즌을 마치면 구단이 K1으로 올라가고, K1 최약 구단이 K2로 내려가 팀 수가 그대로다', () => {
     const s = k2Player();
     const me = s.club.id;
+    // T-11-135 K1 최약 구단은 구단 전력표에 따라 다르다 — 시즌을 끝내기 전 값으로 정한다.
+    const weakest = weakestK1(s);
     finishSeason(s, 200);
     const res = endSeason(s);
 
     expect(res.rec.rank).toBe(1);
     expect(res.rec.league).toBe('K리그2');
     expect(res.rec.honors).toContain('K리그2 우승');
-    expect(res.promo).toEqual({ club: s.club.name, down: '부천 95' });
+    expect(res.promo).toEqual({ club: s.club.name, down: weakest.name });
     // 승격은 트로피·영예로 세지 않는다(LS·서버 영예 검사).
     expect(res.trophies.some((t) => t.includes('승격'))).toBe(false);
     expect(s.leagueId).toBe('k1');
 
-    // K1 기본 전력 최하위(k1-10 부천 95)가 내려간다.
-    const down = 'k1-10';
+    // K1 전력 최하위가 내려간다.
+    const down = weakest.id;
     expect(s.leagueMoves).toEqual({ [me]: 'k1', [down]: 'k2' });
     const k1 = clubsIn('k1', s).map((c) => c.id),
       k2 = clubsIn('k2', s).map((c) => c.id);
@@ -118,7 +120,8 @@ describe('K2 우승 승격', () => {
     expect(rows).toHaveLength(clubsIn('k1').length);
     expect(rows.filter((r) => r.id === s.club.id)).toHaveLength(1);
     expect(new Set(rows.map((r) => r.name)).size).toBe(rows.length);
-    expect(rows.some((r) => r.id === 'k1-10')).toBe(false);
+    const down = Object.keys(s.leagueMoves!).find((id) => id !== s.club.id)!;
+    expect(rows.some((r) => r.id === down)).toBe(false);
   });
 
   it('두 번째 K1 시즌부터는 지난 K1 순위로 대륙 대회 자격을 따진다', () => {

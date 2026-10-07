@@ -28,6 +28,8 @@ const ko = {
     `${p.nation ? `${p.nation}에서 축구 유학을 온 ` : ''}${p.club} 3학년 ${p.pos} ${p.name}, 등번호 ${p.number}번으로 축구 커리어를 시작합니다.`,
   balancePatch: (p: { v: number }) =>
     `밸런스 패치 v${p.v}가 이번 시즌부터 적용됩니다. 모든 선수에게 같은 값이며, 바뀐 내용은 확률 도감에서 볼 수 있습니다.`,
+  clubStrengthPatch: (p: { v: number; asOf: string }) =>
+    `구단 전력표 v${p.v}(현실 순위 ${p.asOf} 기준)가 이번 시즌부터 적용됩니다.`,
   storyEnd: (p: { name: string; ending: string }) => `[스토리 완결] ${p.name} · ${p.ending}`,
   placeholderTeam: (p: { league: string; n: number }) => `${p.league} ${p.n}`,
 };
