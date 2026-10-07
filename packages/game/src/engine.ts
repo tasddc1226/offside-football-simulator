@@ -18,6 +18,7 @@ import {
 } from './data.js';
 import { ovr, initSubs, legacyOvr, peakProfileOf } from './attributes.js';
 import { clamp, ri, pick, gauss } from './rng.js';
+import { rivalClubs, seasonRivals } from './table.js';
 import { adoptLatestBalance, applyLatestBalance, BAL } from './balance.js';
 import type { GameState, Season, LogEntry } from './types.js';
 import { leagueOf, clubsIn } from './player.js';
@@ -190,8 +191,9 @@ export function newSeason(s: GameState): Season {
   // T-10-016 서버의 새 밸런스 버전은 시즌이 바뀔 때만 커리어에 들어온다.
   if (adoptLatestBalance(s) && s.career.length) log(s, M.balancePatch({ v: s.bal!.v }));
   const L = leagueOf(s.leagueId);
-  const rivals: number[] = [];
-  for (let i = 0; i < 19; i++) rivals.push(L.avg + gauss() * L.spread);
+  // T-11-134 상대 전력은 리그의 실제 상대 구단 전력에서 나온다(table.ts seasonRivals).
+  const opps = rivalClubs(s);
+  const rivals = seasonRivals(L, opps);
   return {
     apps: 0,
     starts: 0,
@@ -206,6 +208,7 @@ export function newSeason(s: GameState): Season {
     d: 0,
     l: 0,
     rivals,
+    opp: opps.map((c) => c.id),
     honors: [],
   };
 }
