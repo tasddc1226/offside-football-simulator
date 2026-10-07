@@ -31,6 +31,8 @@ const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
   // T-11-015 채팅 신고 사본은 90일, 끝난 채팅 정지는 바로.
   { table: 'chat_reports', column: 'created_at', keepMs: 90 * DAY_MS },
   { table: 'chat_mutes', column: 'until', keepMs: 0 },
+  // T-11-146 번역 캐시. 다시 누르면 새로 번역한다.
+  { table: 'translations', column: 'created_at', keepMs: 30 * DAY_MS },
 ];
 
 export type CleanupResult = Record<string, number>;
