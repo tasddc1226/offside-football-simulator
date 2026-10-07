@@ -274,6 +274,7 @@ export const authAttempts = sqliteTable(
         'PUSH_PREFERENCES',
         'PUSH_TEST',
         'FRIEND_REQUEST',
+        'TRANSLATE',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -664,6 +665,8 @@ export const boardPosts = sqliteTable(
     viewCount: integer('view_count').notNull().default(0),
     /** T-10-058 좋아요 수. board_post_likes를 바꿀 때 같은 batch에서 다시 센다(목록이 COUNT 없이 읽는다). */
     likeCount: integer('like_count').notNull().default(0),
+    /** T-11-146 운영자가 쓴 영어·일본어 제목·본문 `{"en":{"title","body"},"ja":{...}}`. 없으면 한국어를 보여 준다. */
+    i18nJson: text('i18n_json'),
   },
   (table) => [index('board_posts_board_created_idx').on(table.board, table.createdAt)],
 );
@@ -856,6 +859,20 @@ export const retiredNumbers = sqliteTable(
  * 서버 내부 상태 한 줄씩. T-10-027 서버 최초 기록 재계산 버전, T-10-055 한국 시각 날짜별 은퇴 수
  * (`retired:YYYY-MM-DD`, 하루 한 줄씩 늘고 지우지 않는다 — retiredCountKey).
  */
+/**
+ * T-11-146 사용자가 쓴 글의 번역 캐시. 키는 sha256(목표 언어 + 원문) — 같은 댓글·채팅을 여러 사람이 눌러도 Workers AI는
+ * 한 번만 부른다. 원문은 두지 않는다(번역문만). 30일 지나면 매일 정리(cron/cleanup.ts)에서 지운다.
+ */
+export const translations = sqliteTable(
+  'translations',
+  {
+    key: text('key').primaryKey(),
+    text: text('text').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('translations_created_idx').on(table.createdAt)],
+);
+
 export const appMeta = sqliteTable('app_meta', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),

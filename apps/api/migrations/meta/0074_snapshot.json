@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "95e26af3-0bbd-4518-ae78-a0a09df2304d",
-  "prevId": "8215f2f1-70d8-407e-8a17-77cba02b83ca",
+  "id": "20fa6f11-0208-456c-8c34-bf0260de00e7",
+  "prevId": "95e26af3-0bbd-4518-ae78-a0a09df2304d",
   "tables": {
     "app_auth_tickets": {
       "name": "app_auth_tickets",
@@ -1169,6 +1169,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "detail_archive_key": {
+          "name": "detail_archive_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "retired_at": {
           "name": "retired_at",
           "type": "text",
@@ -1354,6 +1361,13 @@
         }
       },
       "indexes": {
+        "careers_detail_archive_idx": {
+          "name": "careers_detail_archive_idx",
+          "columns": [
+            "detail_archive_key"
+          ],
+          "isUnique": false
+        },
         "careers_profile_id_idx": {
           "name": "careers_profile_id_idx",
           "columns": [
@@ -2225,6 +2239,13 @@
           "isUnique": true,
           "where": "\"market_listings\".\"status\" = 'open'"
         },
+        "market_listings_career_idx": {
+          "name": "market_listings_career_idx",
+          "columns": [
+            "career_id"
+          ],
+          "isUnique": false
+        },
         "market_listings_new_idx": {
           "name": "market_listings_new_idx",
           "columns": [
@@ -2936,7 +2957,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "owner_season_records_best_career_idx": {
+          "name": "owner_season_records_best_career_idx",
+          "columns": [
+            "best_career_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "owner_season_records_profile_id_profiles_id_fk": {
           "name": "owner_season_records_profile_id_profiles_id_fk",
@@ -4286,6 +4315,13 @@
         }
       },
       "indexes": {
+        "server_firsts_career_idx": {
+          "name": "server_firsts_career_idx",
+          "columns": [
+            "career_id"
+          ],
+          "isUnique": false
+        },
         "server_firsts_achieved_idx": {
           "name": "server_firsts_achieved_idx",
           "columns": [
@@ -4368,7 +4404,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "server_records_career_idx": {
+          "name": "server_records_career_idx",
+          "columns": [
+            "career_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "server_records_career_id_careers_id_fk": {
           "name": "server_records_career_id_careers_id_fk",

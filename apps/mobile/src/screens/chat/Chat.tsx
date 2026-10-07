@@ -39,6 +39,7 @@ import { Btn } from '../../ui/Btn';
 import { Pill } from '../../ui/bits';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
+import { useTranslations } from '../../ui/Translate';
 import { TextBox, confirmAsync } from '../board/parts';
 
 const small = { fontSize: rem(0.75) } as const;
@@ -183,6 +184,8 @@ export default function Chat() {
   }, []);
 
   const mine = (m: ChatMessage) => !!view.me && m.author === view.me.author;
+  /** T-11-146 번역 보기. */
+  const tr = useTranslations();
   function send(body: string) {
     if (session.current?.send(body)) return true;
     toast(L.sendWait);
@@ -397,13 +400,14 @@ export default function Chat() {
                     }}
                   >
                     <Txt style={{ color: mine(m) ? c.onPitch : c.ink, fontSize: rem(0.9375) }}>
-                      {m.body}
+                      {tr.text(m.id, m.body)}
                     </Txt>
                   </View>
                   <Txt tone="muted" style={small}>
                     {chatTime(m.at)}
                   </Txt>
                 </View>
+                {!mine(m) ? tr.button(m.id, m.body) : null}
                 {selected === m.id ? (
                   <View testID="report-panel" style={panel}>
                     {me?.admin ? (

@@ -606,6 +606,38 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(feats(await read()).map((i) => i.done)).toEqual([true, true]);
   });
 
+  it('T-11-147 현역 복무 시즌(mil)은 원클럽맨의 구단 수에서 빠지고 장기근속 재적에도 들지 않는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const id = await addCareer(me.profileId);
+    for (let i = 0; i < 10; i++) {
+      const army = i === 4 || i === 5;
+      await ctx.db.insert(careerSeasons).values({
+        careerId: id,
+        year: 2026 + i,
+        age: 20 + i,
+        club: army ? '현역 복무' : 'A',
+        clubId: army ? null : 'A',
+        league: army ? '병역' : 'K리그1',
+        apps: 0,
+        goals: 0,
+        assists: 0,
+        rating: 0,
+        rank: '-',
+        ovr: 70,
+        honorsJson: '[]',
+        mil: army ? 1 : 0,
+        eventsJson: '[]',
+        createdAt: '2026-09-28T00:00:00.000Z',
+      });
+    }
+    const d = AchRes.parse(
+      await (await call('GET', '/v1/owner-team/achievements', { cookie: me.cookie })).json(),
+    ).data;
+    const done = (k: string) => d.groups.flatMap((g) => g.items).find((i) => i.id === k)?.done;
+    expect(done('one-club')).toBe(true);
+    expect(done('long-service')).toBe(false);
+  });
+
   it('T-11-103 영입한 선수도 팀 업적에 들고, 방출하려고 선발을 비워도 그 시즌 팀 업적은 남는다', async () => {
     const teamOne = async (cookie: string) =>
       AchRes.parse(await (await call('GET', '/v1/owner-team/achievements', { cookie })).json())

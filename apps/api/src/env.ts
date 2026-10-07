@@ -35,6 +35,8 @@ export type Bindings = {
   APPLE_BUNDLE_ID?: string;
   /** T-10-011. secret. 쉼표 구분 관리자 구글 이메일(게시판 글쓰기). 비어 있으면 관리자가 없다. */
   ADMIN_EMAILS?: string;
+  /** T-11-146 Workers AI(공지 번역 초안·댓글·채팅 번역 보기). staging·운영에만 있다 — 없으면 번역 경로가 503을 낸다. */
+  AI?: Ai;
   /** T-10-070 D1 매일 백업을 두는 R2 버킷. 운영에만 있다 — 없으면 백업을 건너뛴다. */
   BACKUP?: R2Bucket;
   /** T-10-072 홈 라이브 실시간 허브. 테스트(getPlatformProxy)엔 없다 — 없으면 소켓은 503, 소식은 보내지 않는다. */

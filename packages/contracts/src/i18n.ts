@@ -7,7 +7,10 @@
 // 그래서 모듈 최상위에서 문구를 꺼내 상수로 굳히지 않는다(화면을 그릴 때·함수 안에서 읽는다).
 
 export type Locale = 'ko' | 'en' | 'ja';
-export const LOCALES: readonly Locale[] = ['ko', 'en', 'ja'];
+export const LOCALES = ['ko', 'en', 'ja'] as const satisfies readonly Locale[];
+/** 한국어 원문을 옮기는 언어(운영자 글 번역 칸·릴리즈 노트 en·ja·서버 `lang=`). */
+export const TRANSLATED_LOCALES = ['en', 'ja'] as const satisfies readonly Locale[];
+export type TranslatedLocale = (typeof TRANSLATED_LOCALES)[number];
 /** 설정 화면에 보이는 언어 이름 — 각 언어 자기 표기라 번역하지 않는다. */
 export const LOCALE_NAMES: Record<Locale, string> = { ko: '한국어', en: 'English', ja: '日本語' };
 /** 이 기기에 고른 언어를 저장하는 키(웹 localStorage · 앱 saveKey). 없으면 기기 언어를 따른다. */
