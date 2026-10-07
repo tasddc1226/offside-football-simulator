@@ -326,7 +326,37 @@ describe('구단 시즌 업적', () => {
       'army is not regular club tenure',
       pro(10, '현역 복무').map((s) => ({ ...s, league: '병역' })),
       false,
+      false,
+    ],
+    [
+      'army return',
+      [
+        ...pro(4, 'A'),
+        ...pro(2, '현역 복무').map((s) => ({ ...s, league: '병역' })),
+        ...pro(4, 'A'),
+      ],
+      false,
       true,
+    ],
+    [
+      'regular club 10 plus army',
+      [
+        ...pro(5, 'A'),
+        ...pro(2, '현역 복무').map((s) => ({ ...s, league: '병역' })),
+        ...pro(5, 'A'),
+      ],
+      true,
+      true,
+    ],
+    [
+      'army then B',
+      [
+        ...pro(10, 'A'),
+        ...pro(2, '현역 복무').map((s) => ({ ...s, league: '병역' })),
+        ...pro(1, 'B'),
+      ],
+      true,
+      false,
     ],
   ])('%s', (_label, seasons, long, one) => {
     const g = clubAchievements({
