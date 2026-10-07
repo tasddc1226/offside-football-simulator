@@ -154,7 +154,7 @@ function openNotification(response: Notifications.NotificationResponse) {
     const target = NotificationTargetSchema.safeParse(data.target);
     if (data.kind === 'social' && target.success) {
       void inbox.read(id);
-      openInboxTarget(target.data, 'social', id);
+      openInboxTarget(target.data, data.kind, id);
       return;
     }
     openInbox(id);

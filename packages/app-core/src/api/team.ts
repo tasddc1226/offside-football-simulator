@@ -14,7 +14,7 @@ import type {
   TeamRankSort,
 } from '@offside/contracts';
 import { apiFetch, cachedGet } from './client.js';
-import { noteOwnerResult } from './friendPending.js';
+import { withOwnerHint } from './friendPending.js';
 
 export type {
   AchRankItem,
@@ -41,9 +41,7 @@ const seasonQ = (season?: number) => (season === undefined ? '' : `?season=${sea
 
 /** 그 시즌 내 팀 + 넣을 수 있는 은퇴 선수. 팀을 저장하거나 경기를 치르면(쓰기) 메모가 비워진다. */
 export const fetchOwnerTeam = (season?: number) =>
-  cachedGet<OwnerTeamResponse>(`/v1/owner-team${seasonQ(season)}`, 60_000).then(
-    (r) => (noteOwnerResult(r), r),
-  );
+  withOwnerHint(cachedGet<OwnerTeamResponse>(`/v1/owner-team${seasonQ(season)}`, 60_000));
 export const saveOwnerTeam = (body: PutOwnerTeamBody) =>
   apiFetch<PutOwnerTeamResponse>('/v1/owner-team', { method: 'PUT', body: JSON.stringify(body) });
 /** 상대 후보는 서버가 섞어 준다 — '다른 상대 보기'가 새로 받게 메모하지 않는다. */

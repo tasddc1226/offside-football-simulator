@@ -63,7 +63,7 @@ const ko = {
   pushNudgeTitle: '친구 신청을 알림으로 받을까요?',
   pushNudgeBody: '앱 알림을 켜면 친구 신청과 친선전 결과가 오는 대로 알려 드려요.',
   pushNudgeOn: '알림 켜기',
-  pushNudgeClose: '닫기',
+  pushNudgeLater: '나중에',
 };
 
 export type FriendMsgs = typeof ko;

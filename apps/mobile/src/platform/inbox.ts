@@ -29,6 +29,13 @@ export function openInbox(id?: string) {
   if (id && NotificationIdSchema.safeParse(id).success) router.push(`/notifications/${id}`);
   else router.push('/notifications');
 }
+/** 내 팀 '경기' 탭의 친구 목록을 연다(구단주 '내 팀'의 받은 신청 점, 웹 openFriends). */
+export function openFriends() {
+  notificationDestination.friends = true;
+  invalidateApiCache('/v1/friends');
+  appState.teamView = 'opponents';
+  go('team');
+}
 export function openInboxTarget(
   target: NotificationTarget,
   kind?: AppNotification['kind'],

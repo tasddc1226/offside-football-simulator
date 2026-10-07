@@ -1,7 +1,7 @@
 // T-11-098 친구 · 친선전(웹 team/TeamFriends.svelte) — 내 팀 '경기' 탭의 '친구' 칸. 친구 코드 · 받은/보낸 신청 · 친구 ·
 // 최근 친선전. 친선전은 랭크와 따로 센다(레이팅·전적·업적에 들어가지 않고, 하루 한도와 친구별 상대 전적이 따로 있다).
 // 친구 데이터는 이 칸을 처음 열 때만 불러온다(useFriends). 문구는 웹과 같이 고친다.
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Alert, Share, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { normalizeFriendCode } from '@offside/contracts/owner-team';
@@ -31,7 +31,12 @@ import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import { useSnapshot } from 'valtio';
 import { appState } from '../../store';
-import { kv } from '../../platform/setup';
+import {
+  checkPushOffer,
+  dismissPushOffer,
+  pushOffer,
+  snoozePushOffer,
+} from '../../platform/pushOffer';
 import { pushRegistration, pushState } from '../../platform/push';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
@@ -192,18 +197,17 @@ export function useFriends() {
 }
 export type Friends = ReturnType<typeof useFriends>;
 
-const PUSH_NUDGE_CLOSED = 'offside_friend_push_nudge_closed';
-/** T-11-142 앱 알림이 꺼져 있으면 친구 화면에서 한 번 권한다. 닫으면 다시 띄우지 않는다. */
+/** T-11-142 앱 알림이 꺼져 있으면 친구 화면에서도 권한다. 홈 알림 안내(pushOffer)와 같은 상태라 한쪽에서 받거나 '나중에'를 고르면
+ *  다른 쪽도 따른다. 기기 설정에서 막혔으면 띄우지 않는다. */
 function PushNudge() {
   const push = useSnapshot(pushState);
-  const [closed, setClosed] = useState(() => kv.getBoolean(PUSH_NUDGE_CLOSED) ?? false);
-  if (closed || push.enabled) return null;
-  function close() {
-    kv.set(PUSH_NUDGE_CLOSED, true);
-    setClosed(true);
-  }
+  const offer = useSnapshot(pushOffer);
+  useEffect(() => void checkPushOffer(), []);
+  if (offer.handled || Date.now() < offer.snoozedUntil || !offer.eligible || push.enabled)
+    return null;
   async function turnOn() {
     await pushRegistration.setEnabled(true);
+    if (!pushState.failed) dismissPushOffer();
     if (pushState.message) toast(pushState.message);
   }
   return (
@@ -222,8 +226,8 @@ function PushNudge() {
         >
           {L.pushNudgeOn}
         </Btn>
-        <Btn sm kind="ghost" testID="friend-push-nudge-close" onPress={close}>
-          {L.pushNudgeClose}
+        <Btn sm kind="ghost" testID="friend-push-nudge-later" onPress={snoozePushOffer}>
+          {L.pushNudgeLater}
         </Btn>
       </View>
     </Card>

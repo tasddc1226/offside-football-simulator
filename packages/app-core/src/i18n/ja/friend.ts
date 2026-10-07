@@ -58,5 +58,5 @@ export const friend: Translation<FriendMsgs> = {
   pushNudgeBody:
     'アプリ通知をオンにすると、フレンド申請や親善試合の結果が届いたらすぐにお知らせします。',
   pushNudgeOn: '通知をオンにする',
-  pushNudgeClose: '閉じる',
+  pushNudgeLater: 'あとで',
 };

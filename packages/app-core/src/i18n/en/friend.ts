@@ -59,5 +59,5 @@ export const friend: Translation<FriendMsgs> = {
   pushNudgeBody:
     'Turn on app notifications to hear about friend requests and friendly results as they come in.',
   pushNudgeOn: 'Turn on',
-  pushNudgeClose: 'Close',
+  pushNudgeLater: 'Later',
 };
