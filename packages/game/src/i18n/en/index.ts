@@ -15,6 +15,7 @@ import { gLegend } from './gLegend';
 import { gMilitary } from './gMilitary';
 import { gMinigame } from './gMinigame';
 import { gNational } from './gNational';
+import { gPeek } from './gPeek';
 import { gPlayStyle } from './gPlayStyle';
 import { gRarity } from './gRarity';
 import { gRecords } from './gRecords';
@@ -42,6 +43,7 @@ export const en = {
   gMilitary,
   gMinigame,
   gNational,
+  gPeek,
   gPlayStyle,
   gRarity,
   gRecords,
