@@ -23,6 +23,7 @@ import {
   reportedMessageIds,
   resolveChatReports,
 } from '../db/repos/chat.js';
+import { ownerTitlesOf } from '../db/repos/ownerProfile.js';
 import { ownerTierOfProfile } from '../db/repos/ownerTiers.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
@@ -109,6 +110,7 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
           admin: viewer.admin,
           tier:
             (await ownerTierOfProfile(db, profileId, new Date(now).toISOString()))?.tier ?? null,
+          title: (await ownerTitlesOf(db, [profileId])).get(profileId) ?? null,
         });
     return ok(
       c,

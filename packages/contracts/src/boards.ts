@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TITLE_RE } from './owner-title.js';
 import {
   BOARD_KEYS,
   BOARD_PAGE_LIMIT,
@@ -102,6 +103,8 @@ export const CommentSchema = z.object({
   admin: z.boolean(),
   /** T-11-128 작성자의 지난 시즌 구단주 티어(없으면 null). 옛 서버 응답엔 없다. */
   tier: OwnerTierTagSchema.nullable().default(null),
+  /** T-11-150 작성자의 대표 칭호(owner-title.ts id). 옛 서버 응답엔 없다. */
+  title: z.string().regex(TITLE_RE).nullable().default(null),
   /** 보는 사람이 지울 수 있다(본인 댓글이거나 관리자) — 이런 댓글엔 신고·차단 버튼을 그리지 않는다. */
   deletable: z.boolean(),
   createdAt: IsoUtcSchema,

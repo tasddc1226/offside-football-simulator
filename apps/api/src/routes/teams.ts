@@ -94,6 +94,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
             value: t.value,
             createdAt: t.createdAt,
             recentForm: forms.get(t.id) ?? [],
+            title: t.title,
           })),
         };
       },
@@ -126,6 +127,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
             score: r.score,
             done: r.done,
             players: r.players,
+            title: r.title,
           })),
         };
       },
@@ -181,6 +183,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           views: t.views,
           badges: teamBadges(t, teamSeasonClosed(t.season, now) ? rank : null, seasonName, lang),
           cupHonors,
+          ownerTitle: found.title,
           createdAt: t.createdAt,
         },
         liked,

@@ -167,6 +167,7 @@ export * from './cup-api.js';
 export * from './friends.js';
 export * from './market.js';
 export * from './season-recap.js';
+export * from './owner-profile.js';
 export * from './owner-tier.js';
 
 export * from './app-auth.js';

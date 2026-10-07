@@ -255,6 +255,14 @@ describe('T-11-145 컵 진행(cron)', () => {
     // 우승팀 구단주의 영구 기록.
     const champ = entries.find((e) => e.stage === 'champion')!;
     expect((await cupHonorsOf(ctx.db, champ.profileId))[0]).toMatchObject({ stage: 'champion' });
+    // T-11-150 칭호를 받는 성적(우승·준우승·4강)은 대표 칭호가 자동으로 붙고, 8강 이하는 붙지 않는다.
+    const titleOf = async (profileId: string) =>
+      (await ctx.db.select().from(profiles).where(eq(profiles.id, profileId)))[0]?.title;
+    expect(await titleOf(champ.profileId)).toBe(`cup-${CUP.edition}-champion`);
+    const sf = entries.find((e) => e.stage === 'sf')!;
+    expect(await titleOf(sf.profileId)).toBe(`cup-${CUP.edition}-sf`);
+    const out = entries.find((e) => e.stage === 'group')!;
+    expect(await titleOf(out.profileId)).toBeNull();
     expect(teams).toHaveLength(n);
     // 알림: 추첨·경기마다 하나, 최종 성적은 한 번(다시 돌려도 늘지 않는다). 탭하면 구단주 화면(컵 배너)으로 간다.
     const mine = await ctx.db

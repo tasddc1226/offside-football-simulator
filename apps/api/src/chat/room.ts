@@ -27,6 +27,8 @@ export type ChatWriter = {
   admin: boolean;
   /** T-11-128 입장권을 받을 때의 지난 시즌 티어. */
   tier?: OwnerTier | null;
+  /** T-11-150 입장권을 받을 때의 대표 칭호. */
+  title?: string | null;
 };
 type Attachment = { w: ChatWriter | null; sent: number[] };
 /** 신고·차단할 때 API가 읽는 메시지 한 줄(작성자 프로필 포함). */
@@ -41,6 +43,7 @@ const toMessage = (r: Row): StoredMessage => ({
   body: String(r.body),
   admin: r.admin === 1,
   tier: (r.tier as OwnerTier | null) ?? null,
+  title: (r.title as string | null) ?? null,
   profileId: String(r.profile_id),
 });
 const publicOf = ({ profileId: _, ...m }: StoredMessage): ChatMessage => m;
@@ -74,6 +77,9 @@ export class ChatRoom extends DurableObject<Bindings> {
     const cols = this.sql.exec<Row>('PRAGMA table_info(messages)').toArray();
     if (!cols.some((c) => c.name === 'tier'))
       this.sql.exec('ALTER TABLE messages ADD COLUMN tier TEXT');
+    // T-11-150 대표 칭호 칸.
+    if (!cols.some((c) => c.name === 'title'))
+      this.sql.exec('ALTER TABLE messages ADD COLUMN title TEXT');
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, expires INTEGER NOT NULL, writer TEXT NOT NULL)`,
     );
@@ -131,7 +137,7 @@ export class ChatRoom extends DurableObject<Bindings> {
     if (!check) return;
     if (!check.ok) return this.reject(ws, check.code);
     ws.serializeAttachment({ ...att, sent: check.sent } satisfies Attachment);
-    const { profileId, author, nickname, admin, tier = null } = att.w;
+    const { profileId, author, nickname, admin, tier = null, title = null } = att.w;
     const m: ChatMessage = {
       id: crypto.randomUUID(),
       at: now,
@@ -140,9 +146,10 @@ export class ChatRoom extends DurableObject<Bindings> {
       body: check.body,
       admin,
       tier,
+      title,
     };
     this.sql.exec(
-      'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin, tier) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin, tier, title) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       m.id,
       m.at,
       profileId,
@@ -151,6 +158,7 @@ export class ChatRoom extends DurableObject<Bindings> {
       m.body,
       admin ? 1 : 0,
       tier,
+      title,
     );
     this.sql.exec('DELETE FROM messages WHERE at < ?', now - CHAT_KEEP_MS);
     this.broadcast({ t: 'msg', m });

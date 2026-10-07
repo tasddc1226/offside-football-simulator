@@ -198,6 +198,12 @@ export const profiles = sqliteTable(
     appleLinkedAt: text('apple_linked_at'),
     /** T-11-098 친구 코드(초대 링크·코드 입력). 처음 친구 화면을 열 때 만든다. */
     friendCode: text('friend_code'),
+    /**
+     * T-11-150 대표 칭호(owner-title.ts id). 굳힌 값이라 랭킹·댓글·채팅이 그대로 읽는다. title_pinned가 0이면 컵 보상 때
+     * 더 좋은 칭호로 자동으로 바뀌고, 1이면 구단주가 고른 그대로(null = 달지 않기)다.
+     */
+    title: text('title'),
+    titlePinned: integer('title_pinned').notNull().default(0),
   },
   (table) => [
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),

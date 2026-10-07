@@ -394,6 +394,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         ovr: team.ovr,
         rating: team.rating,
         record: recordOf(team),
+        title: team.title,
       }));
     return ok(c, TeamOpponentsResponseSchema, { items }, 200, NO_STORE);
   });

@@ -326,7 +326,7 @@ export function eligibleMap(
 /** 팀 한 개(없으면 빈 배열). 구글 연결이 끊겼거나 삭제된 구단주의 팀은 없는 것으로 본다. batch에 넣을 수 있게 쿼리로 돌려준다. */
 export const liveTeam = (db: Db, teamId: string) =>
   db
-    .select({ team: ownerTeams })
+    .select({ team: ownerTeams, title: profiles.title })
     .from(ownerTeams)
     .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
     .where(and(eq(ownerTeams.id, teamId), accountLinkedSql(), isNull(profiles.deletedAt)));
@@ -388,7 +388,7 @@ export async function listOpponentCandidates(
   todayStart: string,
   perSide = 8,
 ) {
-  const cols = { team: ownerTeams };
+  const cols = { team: ownerTeams, title: profiles.title };
   const base = and(
     rankedIn(season),
     ne(ownerTeams.profileId, profileId),
@@ -412,7 +412,7 @@ export async function listOpponentCandidates(
       .orderBy(desc(ownerTeams.rating), ovrGap)
       .limit(perSide),
   ]);
-  return [...up, ...down].map((r) => r.team);
+  return [...up, ...down].map((r) => ({ ...r.team, title: r.title }));
 }
 
 /**
@@ -448,7 +448,7 @@ export async function listTeamRanking(
   const value = lineupValueSql(!teamSeasonClosed(season, now));
   const [rows, [total]] = await db.batch([
     db
-      .select({ team: ownerTeams, value })
+      .select({ team: ownerTeams, value, title: profiles.title })
       .from(ownerTeams)
       .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
       .where(rankedIn(season))
@@ -462,7 +462,7 @@ export async function listTeamRanking(
       .where(rankedIn(season)),
   ]);
   return {
-    rows: rows.map((r) => ({ ...r.team, value: Number(r.value) })),
+    rows: rows.map((r) => ({ ...r.team, value: Number(r.value), title: r.title })),
     total: Number(total?.n ?? 0),
   };
 }

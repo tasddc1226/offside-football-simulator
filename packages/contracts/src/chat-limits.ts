@@ -33,6 +33,8 @@ export type ChatMessage = {
   admin: boolean;
   /** T-11-128 보낸 사람의 지난 시즌 구단주 티어(보낸 때 기준). 옛 메시지엔 없다. */
   tier?: OwnerTier | null;
+  /** T-11-150 보낸 사람의 대표 칭호(owner-title.ts id, 보낸 때 기준). 옛 메시지엔 없다. */
+  title?: string | null;
 };
 
 /** 쓰기를 거절한 이유(보낸 사람에게만 간다). */

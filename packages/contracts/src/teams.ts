@@ -7,6 +7,7 @@ import {
 } from './careers.js';
 import { PUBLIC_NAME_CHARS } from './content-filter.js';
 import { CUP_STAGES } from './cup.js';
+import { TITLE_RE } from './owner-title.js';
 import {
   ACH_CATEGORIES,
   FORMATION_IDS,
@@ -81,6 +82,10 @@ export const TeamSeasonQuerySchema = z.coerce.number().int().min(0).max(999).opt
 /** 고를 수 있는 시즌(0 = 프리시즌). */
 export const TeamSeasonOptionSchema = z.strictObject({ id: TeamSeasonSchema, name: z.string() });
 export type TeamSeasonOption = z.infer<typeof TeamSeasonOptionSchema>;
+
+/** T-11-150 구단주 대표 칭호 id('cup-1-champion', owner-title.ts). 칭호가 없으면 null, 배포 전 응답엔 없다. */
+export const OwnerTitleSchema = z.string().regex(TITLE_RE);
+const titleField = OwnerTitleSchema.nullable().optional();
 
 export const TeamIdSchema = z.string().regex(/^tem_[0-9a-f-]{36}$/, '팀 id 형식이 아닙니다.');
 
@@ -215,6 +220,8 @@ export const TeamOpponentSchema = z.strictObject({
   ovr: z.number().int(),
   rating: z.number().int(),
   record: TeamRecordSchema,
+  /** T-11-150 구단주 대표 칭호. */
+  title: titleField,
 });
 export type TeamOpponent = z.infer<typeof TeamOpponentSchema>;
 
@@ -356,6 +363,8 @@ export const TeamRankItemSchema = z.strictObject({
     .array(z.enum(['W', 'D', 'L']))
     .max(5)
     .default([]),
+  /** T-11-150 구단주 대표 칭호. */
+  title: titleField,
 });
 export type TeamRankItem = z.infer<typeof TeamRankItemSchema>;
 
@@ -392,6 +401,8 @@ export const AchRankItemSchema = z.strictObject({
   done: count,
   /** 그 시즌 은퇴 선수 수. */
   players: count,
+  /** T-11-150 구단주 대표 칭호. */
+  title: titleField,
 });
 export type AchRankItem = z.infer<typeof AchRankItemSchema>;
 
@@ -444,6 +455,8 @@ export const TeamProfileSchema = z.strictObject({
   badges: z.array(TeamBadgeSchema),
   /** T-11-145 이 팀 구단주의 컵 성적(모든 시즌). 배포 전 응답엔 없다. */
   cupHonors: z.array(CupHonorSchema).optional(),
+  /** T-11-150 이 팀 구단주의 대표 칭호. */
+  ownerTitle: titleField,
   createdAt: IsoUtcSchema,
 });
 export type TeamProfile = z.infer<typeof TeamProfileSchema>;
