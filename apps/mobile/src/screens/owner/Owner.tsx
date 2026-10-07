@@ -37,6 +37,7 @@ import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
+import { ChampBadge } from '../../components/ChampBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
@@ -239,6 +240,7 @@ export default function Owner() {
                     <Pill tone="good">{founderLabel()}</Pill>
                   </View>
                 ) : null}
+                {card?.champ ? <ChampBadge edition={card.champ} /> : null}
               </Row>
               {tierTag ? (
                 <Txt
@@ -385,20 +387,22 @@ export default function Owner() {
           </Card>
         </>
       ) : guest ? (
-        <Card gap={12} testID="owner-team-locked">
-          <View style={{ gap: 2 }}>
-            <Txt v="eyebrow">My team</Txt>
-            <Txt v="h2" accessibilityRole="header">
-              {L.myTeam}
+        <>
+          <Card gap={12} testID="owner-team-locked">
+            <View style={{ gap: 2 }}>
+              <Txt v="eyebrow">My team</Txt>
+              <Txt v="h2" accessibilityRole="header">
+                {L.myTeam}
+              </Txt>
+            </View>
+            <LockedPitch />
+            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+              {ownerLockedText(localCount)}
             </Txt>
-          </View>
-          <LockedPitch />
-          <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-            {ownerLockedText(localCount)}
-          </Txt>
-          {/* 로그아웃·탈퇴 직후엔 세션이 없으므로 startGoogleLogin이 새 익명 세션부터 받는다. */}
-          <LoginButtons />
-        </Card>
+            {/* 로그아웃·탈퇴 직후엔 세션이 없으므로 startGoogleLogin이 새 익명 세션부터 받는다. */}
+            <LoginButtons />
+          </Card>
+        </>
       ) : null}
 
       {!guest || localCount > 0 ? <MyPlayers onRows={onRows} /> : null}

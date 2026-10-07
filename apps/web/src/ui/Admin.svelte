@@ -13,10 +13,12 @@
   import AdminDashboard from './admin/AdminDashboard.svelte';
   import AdminAutomation from './admin/AdminAutomation.svelte';
   import AdminPush from './admin/AdminPush.svelte';
+  import AdminCups from './admin/AdminCups.svelte';
 
   const TABS = [
     { id: 'dashboard', label: '대시보드' },
     { id: 'push', label: '앱 푸시' },
+    { id: 'cup', label: '컵 열기' },
     { id: 'comments', label: '신고·댓글' },
     { id: 'balance', label: '밸런스' },
     { id: 'automation', label: '자동 플레이' },
@@ -48,6 +50,7 @@
       </div>
       {#if tab === 'dashboard'}<AdminDashboard />
       {:else if tab === 'push'}<AdminPush />
+      {:else if tab === 'cup'}<AdminCups />
       {:else if tab === 'comments'}<AdminChatReports /><AdminNameReports /><AdminComments />
       {:else if tab === 'automation'}<AdminAutomation />
       {:else}<AdminBalance />{/if}
@@ -59,5 +62,5 @@
 <style>
   .admin-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); }
   .admin-tabs button { min-height:44px; }
-  @media (min-width:600px) { .admin-tabs { grid-template-columns:repeat(5,minmax(0,1fr)); } }
+  @media (min-width:600px) { .admin-tabs { grid-template-columns:repeat(6,minmax(0,1fr)); } }
 </style>

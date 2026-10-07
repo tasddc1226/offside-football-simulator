@@ -271,6 +271,24 @@ describe('personal event delivery infrastructure', () => {
     await runPersonalPush(ctx.env, NOW, fetcher);
     expect(fetcher).not.toHaveBeenCalled();
   });
+  it('sends only cup events from 20:00 to 22:00 KST', async () => {
+    const cup = await identity();
+    const other = await identity();
+    await device(cup, 1);
+    await device(other, 2);
+    enable();
+    const at = Date.parse('2026-10-13T12:05:00Z'); // 21:05 KST, 컵 경기 직후
+    await queue(cup, 'cup-match:cpm_1:tem_1', at, true);
+    await queue(other, 'team-match:tmm_1', at, true);
+    const fetcher = send();
+    await runPersonalPush(ctx.env, at, fetcher);
+    const sent = fetcher.mock.calls.filter(([url]) => String(url).endsWith('/send'));
+    expect(sent).toHaveLength(1);
+    expect(JSON.parse(sent[0]![1]!.body as string)[0].to).toBe('ExpoPushToken[test_1]');
+    await queue(cup, 'cup-match:cpm_2:tem_1', at + 61 * 60_000, true);
+    await runPersonalPush(ctx.env, Date.parse('2026-10-13T13:05:00Z'), fetcher); // 22:05 KST
+    expect(fetcher.mock.calls.filter(([url]) => String(url).endsWith('/send'))).toHaveLength(1);
+  });
   it('treats ambiguous transport as unknown and never retries that event', async () => {
     const a = await identity();
     await device(a);

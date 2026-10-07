@@ -80,6 +80,7 @@ export const {
   retireAsk,
   startCareer,
   rollCandidates,
+  rerollCandidates,
   revealCandidatePotential,
 } = createGameActions({
   state: appState,

@@ -1156,3 +1156,115 @@ export const ownerHonors = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.profileId, table.season, table.kind] })],
 );
+
+/**
+ * T-11-145 오프사이드 컵 대회 일정. 관리자 API(POST /v1/admin/cups)로 연다 — 코드 배포 없이 다음 회차를 만든다. 모양은
+ * contracts planCup, rounds_json은 CUP_ROUNDS 순서의 경기 시각(UTC ISO) 배열. edition(제 n회)은 시즌을 넘어 이어진다.
+ */
+export const cups = sqliteTable(
+  'cups',
+  {
+    id: text('id').primaryKey(),
+    season: integer('season').notNull(),
+    edition: integer('edition').notNull(),
+    opensAt: text('opens_at').notNull(),
+    closesAt: text('closes_at').notNull(),
+    drawAt: text('draw_at').notNull(),
+    roundsJson: text('rounds_json').notNull(),
+    capacity: integer('capacity').notNull(),
+    minFilled: integer('min_filled').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [uniqueIndex('cups_edition_unique').on(table.edition)],
+);
+
+/**
+ * T-11-145 오프사이드 컵 참가. 대회 일정은 cups 테이블이다. 팀 이름·감독·OVR은 신청·추첨 때 적어 둔다(팀이
+ * 지워져도 대진표가 남는다). status: active(참가 중) · out(탈락) · champion · withdrawn(접수 중 취소·추첨 때 자격 미달).
+ * stage는 끝난 단계(contracts CUP_STAGES), rewarded_at은 그 단계 보상을 준 시각(한 번만 준다).
+ */
+export const cupEntries = sqliteTable(
+  'cup_entries',
+  {
+    cupId: text('cup_id').notNull(),
+    teamId: text('team_id').notNull(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    manager: text('manager').notNull(),
+    ovr: integer('ovr').notNull(),
+    grp: integer('grp'),
+    status: text('status').notNull().default('active'),
+    stage: text('stage'),
+    rewardedAt: text('rewarded_at'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.cupId, table.teamId] }),
+    uniqueIndex('cup_entries_cup_profile_unique').on(table.cupId, table.profileId),
+    index('cup_entries_profile_idx').on(table.profileId),
+  ],
+);
+
+/**
+ * T-11-145 컵 경기. 조별은 grp(1부터)·slot(그 라운드 조 안 순서), 토너먼트는 grp 0·slot(대진 순서). 추첨 때 조별 경기를,
+ * 앞 라운드가 끝나면 다음 라운드를 만든다(INSERT OR IGNORE — 같은 자리는 한 번만). played_at이 차면 끝난 경기다.
+ * 상대가 없거나(조 2팀) 한 팀이 못 나오면 forfeit. detail_json은 팀 경기와 같은 MatchDetail.
+ */
+export const cupMatches = sqliteTable(
+  'cup_matches',
+  {
+    id: text('id').primaryKey(),
+    cupId: text('cup_id').notNull(),
+    round: text('round').notNull(),
+    grp: integer('grp').notNull().default(0),
+    slot: integer('slot').notNull(),
+    homeTeamId: text('home_team_id'),
+    awayTeamId: text('away_team_id'),
+    at: text('at').notNull(),
+    playedAt: text('played_at'),
+    homeGoals: integer('home_goals'),
+    awayGoals: integer('away_goals'),
+    pensHome: integer('pens_home'),
+    pensAway: integer('pens_away'),
+    winnerTeamId: text('winner_team_id'),
+    forfeit: integer('forfeit').notNull().default(0),
+    detailJson: text('detail_json'),
+  },
+  (table) => [
+    uniqueIndex('cup_matches_cup_round_slot_unique').on(
+      table.cupId,
+      table.round,
+      table.grp,
+      table.slot,
+    ),
+  ],
+);
+
+/** T-11-145 대회 진행 상태(추첨 시드·조 수·취소). 행이 있으면 추첨이 끝났다. */
+export const cupState = sqliteTable('cup_state', {
+  cupId: text('cup_id').primaryKey(),
+  seed: text('seed').notNull(),
+  groups: integer('groups').notNull(),
+  drawnAt: text('drawn_at').notNull(),
+  doneAt: text('done_at'),
+});
+
+/** T-11-145 구단주 소모성 아이템(item: 'reroll' = 선수 후보 리롤권). */
+export const ownerItems = sqliteTable(
+  'owner_items',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    item: text('item').notNull(),
+    qty: integer('qty').notNull().default(0),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.profileId, table.item] }),
+    check('owner_items_qty_check', sql`${table.qty} >= 0`),
+  ],
+);

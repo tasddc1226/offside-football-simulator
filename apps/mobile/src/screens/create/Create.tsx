@@ -1,7 +1,7 @@
 // 선수 생성(웹 Create.svelte): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
 // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
 import { useEffect, useState, useRef, type ReactNode } from 'react';
-import { Animated, Easing, ScrollView, TextInput, View } from 'react-native';
+import { Alert, Animated, Easing, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import {
@@ -31,9 +31,18 @@ import {
 } from '@offside/app-core/create-view';
 import { adText } from '@offside/app-core/i18n/ko/ad';
 import { createText as L } from '@offside/app-core/i18n/ko/create';
+import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
+import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
+import { fetchItems, spendReroll } from '@offside/app-core/api/cup';
 import { watchDetailOpening } from '@offside/app-core/season-opening';
 import { detailOpenNow, draftBody, draftDpos, randomName } from '@offside/app-core/state';
-import { revealCandidatePotential, rollCandidates, startCareer } from '../../game/host';
+import {
+  revealCandidatePotential,
+  rerollCandidates,
+  rollCandidates,
+  startCareer,
+  toast,
+} from '../../game/host';
 import { claimReward, rewardOffer } from '../../platform/rewarded';
 import { adFree } from '../../platform/adFree';
 import { goHome } from '../../game/nav';
@@ -172,6 +181,50 @@ export default function Create() {
       setRewardBusy(false);
     }
   };
+  // T-11-145 오프사이드 컵 보상 리롤권 — 로그인한 구단주가 한 장 이상 갖고 있을 때만 '후보 다시 뽑기'를 보여 준다.
+  const [rerolls, setRerolls] = useState(0);
+  const [rerolling, setRerolling] = useState(false);
+  const rerollLock = useRef(false);
+  // 한 번의 '다시 뽑기' 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 차감되지 않는다.
+  const rerollKey = useRef<string | null>(null);
+  const hasCandidates = !!s.candidates;
+  useEffect(() => {
+    if (!hasCandidates) return;
+    let live = true;
+    void fetchItems().then((r) => {
+      if (live) setRerolls(r.ok ? r.data.reroll : 0);
+    });
+    return () => {
+      live = false;
+    };
+  }, [hasCandidates]);
+  const askReroll = () =>
+    Alert.alert(CA.rerollAskTitle, CL.rerollConfirm({ n: Math.max(0, rerolls - 1) }), [
+      { text: CA.cancel, style: 'cancel' },
+      { text: CA.rerollAction, onPress: () => void reroll() },
+    ]);
+  async function reroll() {
+    if (rerollLock.current || rerolls < 1) return;
+    rerollLock.current = true;
+    setRerolling(true);
+    try {
+      rerollKey.current ??= crypto.randomUUID();
+      const r = await spendReroll(rerollKey.current);
+      if (r.ok || !r.error.retryable) rerollKey.current = null;
+      if (!r.ok) {
+        if (r.error.reason === 'NO_REROLL') setRerolls(0);
+        toast(r.error.message || CL.rerollFail);
+        return;
+      }
+      setRerolls(r.data.reroll);
+      rerollCandidates();
+      setRewardMessage('');
+      toast(CL.rerollDone({ n: r.data.reroll }));
+    } finally {
+      rerollLock.current = false;
+      setRerolling(false);
+    }
+  }
   const c = useColors();
   const keyboardScroll = useFormKeyboardScroll();
   const insets = useSafeAreaInsets();
@@ -594,6 +647,16 @@ export default function Create() {
                 </Btn>
               ) : null}
             </View>
+            {rerolls > 0 ? (
+              <Btn
+                block
+                testID="candidate-reroll"
+                disabled={rerolling || rewardBusy}
+                onPress={askReroll}
+              >
+                {rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}
+              </Btn>
+            ) : null}
             <View style={{ gap: 8 }}>
               {s.candidatePotentialOpen ? (
                 <Txt v="sm" tone="muted">

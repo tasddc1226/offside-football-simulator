@@ -40,6 +40,7 @@ import {
   releaseCards,
 } from '../db/repos/market.js';
 import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
+import { checkCupListing } from './cup.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -194,6 +195,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     if (card.cardValue === null || card.hidden)
       throw conflictError('기준가가 없는 선수는 내놓을 수 없어요.', 'CARD_NOT_TRADABLE');
     if (card.openListing) throw conflictError('이미 내놓은 선수예요.', 'CARD_LISTED');
+    await checkCupListing(db, me.id, season, input.careerId);
     if (open >= rules.listLimit)
       throw conflictError(`한 번에 ${rules.listLimit}명까지 내놓을 수 있어요.`, 'LISTING_LIMIT');
     const band = priceBand(card.cardValue, rules);

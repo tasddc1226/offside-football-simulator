@@ -86,6 +86,7 @@ import type { PutOwnerTeamBody } from '@offside/contracts';
 import { readTeamDraft, writeTeamDraft, teamDraftBase, type TeamDraft } from './teamDraft';
 import { RecordsChips as SortChips } from '../hof/RecordsControls';
 import { TeamResult } from './TeamResult';
+import { CupLockNotice, useCup } from './TeamCup';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 
 const between = (v: string, min: number, max: number) =>
@@ -175,6 +176,8 @@ export default function Team() {
   const [achStatus, setAchStatus] = useState<LoadStatus>('loading');
   /** T-11-034 지난번 업적 탭을 본 뒤 새로 오른 업적(NEW). */
   const [achNewIds, setAchNewIds] = useState<ReadonlySet<string>>(new Set());
+  // T-11-145 오프사이드 컵 — 지금 시즌 팀을 볼 때만 명단 마감 안내를 위해 불러온다.
+  const cupState = useCup(status === 'ready' && !needLogin && editable && !legacy);
 
   // T-10-130 팀 안의 화면은 appState.teamView — 뒤로 가기로 오간다. 결과는 이 화면에만 있어 다시 들어왔을 때(앞으로
   // 가기) 없으면 팀을 보여 준다.
@@ -650,6 +653,7 @@ export default function Team() {
         ) : null}
         {editable || team ? (
           <>
+            {editable && !legacy ? <CupLockNotice state={cupState} /> : null}
             <Card gap={8}>
               <View
                 style={{

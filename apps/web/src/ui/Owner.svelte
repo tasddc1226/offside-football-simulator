@@ -34,6 +34,7 @@
   import { recapCardView } from '@offside/app-core/seasonRecap';
   import { profileTier, tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
+  import ChampBadge from './cup/ChampBadge.svelte';
   import { seasonRecapText as R } from '@offside/app-core/i18n/ko/seasonRecap';
 
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
@@ -123,7 +124,7 @@
       <div class="owner-id">
         <OwnerAvatar name={nickname ?? L.avatarInitial} size={48} />
         <div class="owner-who">
-          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}</b>
+          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}{#if card?.champ}<span class="owner-founder"><ChampBadge edition={card.champ} /></span>{/if}</b>
           {#if tierTag}<span class="ach-grade owner-tier" data-grade={tierTag.tier} data-owner-tier={tierTag.tier}>{tierTitle(tierTag)}</span>{/if}
           <span class="muted fs-sm">{guest ? L.guestSub : card?.team ? `${card.team.name} · ${card.season}` : L.signedInSubWeb}</span>
         </div>
