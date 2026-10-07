@@ -755,6 +755,7 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         clubId: careerSeasons.clubId,
         goals: careerSeasons.goals,
         cs: careerSeasons.cs,
+        mil: careerSeasons.mil,
       })
       .from(careerSeasons)
       .where(
@@ -771,6 +772,7 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
       clubId: r.clubId,
       goals: r.goals,
       cs: r.cs,
+      mil: r.mil === 1,
     });
     byCareer.set(r.careerId, list);
   }

@@ -37,6 +37,9 @@ const season = (over: Partial<AchievementSeason> = {}): AchievementSeason => ({
   ...over,
 });
 const pro = (n: number, club: string) => Array.from({ length: n }, () => season({ club }));
+/** 병역 시즌. 상무는 구단 id로, 현역은 mil 표시로 남는다. */
+const sangmu = (n: number) => pro(n, 'sangmu').map((s) => ({ ...s, clubId: 'sangmu' }));
+const army = (n: number) => pro(n, '현역 복무').map((s) => ({ ...s, league: '병역', mil: true }));
 const slot = (over: Partial<AchievementTeamSlot> = {}): AchievementTeamSlot => ({
   careerId: 'c',
   fit: 1,
@@ -256,37 +259,10 @@ describe('구단 시즌 업적', () => {
 
   it.each([
     ['return', [...pro(12, 'A'), ...pro(1, 'B'), ...pro(4, 'A')], true, false],
-    [
-      'sangmu return',
-      [
-        ...pro(4, 'A'),
-        ...pro(2, 'sangmu').map((s) => ({ ...s, clubId: 'sangmu' })),
-        ...pro(4, 'A'),
-      ],
-      false,
-      true,
-    ],
-    [
-      'regular club 10 plus sangmu',
-      [
-        ...pro(5, 'A'),
-        ...pro(2, 'sangmu').map((s) => ({ ...s, clubId: 'sangmu' })),
-        ...pro(5, 'A'),
-      ],
-      true,
-      true,
-    ],
-    [
-      'sangmu then B',
-      [
-        ...pro(10, 'A'),
-        ...pro(2, 'sangmu').map((s) => ({ ...s, clubId: 'sangmu' })),
-        ...pro(1, 'B'),
-      ],
-      true,
-      false,
-    ],
-    ['sangmu only', pro(10, 'sangmu').map((s) => ({ ...s, clubId: 'sangmu' })), false, false],
+    ['sangmu return', [...pro(4, 'A'), ...sangmu(2), ...pro(4, 'A')], false, true],
+    ['regular club 10 plus sangmu', [...pro(5, 'A'), ...sangmu(2), ...pro(5, 'A')], true, true],
+    ['sangmu then B', [...pro(10, 'A'), ...sangmu(2), ...pro(1, 'B')], true, false],
+    ['sangmu only', sangmu(10), false, false],
     ['name alone is not military evidence', [...pro(9, 'A'), ...pro(1, '김천 상무')], false, false],
     [
       'same id renamed and promoted',
@@ -322,12 +298,10 @@ describe('구단 시즌 업적', () => {
       false,
       false,
     ],
-    [
-      'army is not regular club tenure',
-      pro(10, '현역 복무').map((s) => ({ ...s, league: '병역' })),
-      false,
-      true,
-    ],
+    ['army is not regular club tenure', army(10), false, false],
+    ['army return', [...pro(4, 'A'), ...army(2), ...pro(4, 'A')], false, true],
+    ['regular club 10 plus army', [...pro(5, 'A'), ...army(2), ...pro(5, 'A')], true, true],
+    ['army then B', [...pro(10, 'A'), ...army(2), ...pro(1, 'B')], true, false],
   ])('%s', (_label, seasons, long, one) => {
     const g = clubAchievements({
       careers: [career({ seasons })],
