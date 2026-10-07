@@ -69,11 +69,12 @@ export function clearApiCache(): void {
 }
 
 /**
- * T-11-106 서버가 만드는 문장(업적·최초 기록·오류 안내 등)을 지금 언어로 받는다. 영어일 때만 `lang=en`을 붙인다 —
- * 한국어 요청은 예전과 같은 주소라 엣지 캐시 키도 그대로다.
+ * T-11-106 서버가 만드는 문장(업적·최초 기록·오류 안내 등)을 지금 언어로 받는다. 영어·일본어일 때만 `lang=en|ja`를
+ * 붙인다 — 한국어 요청은 예전과 같은 주소라 엣지 캐시 키도 그대로다.
  */
 export function withLang(path: string): string {
-  return getLocale() === 'en' ? `${path}${path.includes('?') ? '&' : '?'}lang=en` : path;
+  const lang = getLocale();
+  return lang === 'ko' ? path : `${path}${path.includes('?') ? '&' : '?'}lang=${lang}`;
 }
 
 /** 새 서버 이벤트를 실제로 열 때 해당 기능만 갱신한다. 다른 화면의 메모는 유지한다. */

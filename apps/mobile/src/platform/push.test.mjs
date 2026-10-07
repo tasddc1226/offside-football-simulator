@@ -7,6 +7,9 @@ const f = vi.hoisted(() => {
     lastResponse: null,
     received: undefined,
     openInbox: vi.fn(),
+    openInboxTarget: vi.fn(),
+    read: vi.fn(async () => {}),
+    refreshFriends: vi.fn(),
     invalidate: vi.fn(),
     rotateDuringFetch: false,
     nativeReads: 0,
@@ -105,7 +108,12 @@ vi.mock('./session', () => ({
   sessionToken: () => 'test-session',
   onSessionChanged() {},
 }));
-vi.mock('./inbox', () => ({ openInbox: f.openInbox, inbox: { invalidate: f.invalidate } }));
+vi.mock('./inbox', () => ({
+  openInbox: f.openInbox,
+  openInboxTarget: f.openInboxTarget,
+  inbox: { invalidate: f.invalidate, read: f.read },
+}));
+vi.mock('./friendPending', () => ({ refreshFriendPending: f.refreshFriends }));
 vi.mock('../game/nav', () => ({ openBoard() {} }));
 vi.mock('./setup', () => ({
   kv: {
@@ -317,6 +325,33 @@ describe('notification inbox routing and unified push subscription', () => {
       request: { content: { data: { type: 'offside-notification', notificationId: 'ntf_next' } } },
     });
     expect(f.invalidate).toHaveBeenCalledTimes(2);
+  });
+  it('T-11-142 opens a friend notification straight at its validated target and marks it read', async () => {
+    await app();
+    const target = { type: 'screen', screen: 'team' };
+    const data = {
+      type: 'offside-notification',
+      notificationId: 'ntf_friend',
+      kind: 'social',
+      target,
+    };
+    f.received({ request: { content: { data } } });
+    expect(f.refreshFriends).toHaveBeenCalledWith(true);
+    f.response({ actionIdentifier: 'default', notification: { request: { content: { data } } } });
+    expect(f.read).toHaveBeenCalledWith('ntf_friend');
+    expect(f.openInboxTarget).toHaveBeenCalledWith(target, 'social', 'ntf_friend');
+    expect(f.openInbox).not.toHaveBeenCalled();
+    // 대상이 이상하거나 친구 알림이 아니면 지금처럼 알림함을 연다.
+    for (const bad of [
+      { ...data, notificationId: 'ntf_bad', target: { type: 'url', href: 'https://evil.invalid' } },
+      { ...data, notificationId: 'ntf_team', kind: 'team' },
+    ])
+      f.response({
+        actionIdentifier: 'default',
+        notification: { request: { content: { data: bad } } },
+      });
+    expect(f.openInbox.mock.calls).toEqual([['ntf_bad'], ['ntf_team']]);
+    expect(f.openInboxTarget).toHaveBeenCalledTimes(1);
   });
   it('re-registers a legacy subscriber even when the removed engagement preference was off', async () => {
     f.values.set('offside_push_engagement', false);

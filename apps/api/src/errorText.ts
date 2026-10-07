@@ -1,3 +1,4 @@
+import { EXACT_JA, PATTERNS_JA } from './i18n/ja/errorText.js';
 import type { Lang } from './lang.js';
 
 // T-11-106 사용자에게 보이는 오류 안내의 영어. 던지는 자리(라우트·미들웨어)는 한국어 문장 그대로 두고, 응답 봉투를 만들 때
@@ -24,6 +25,13 @@ const EXACT: Record<string, string> = {
   '지금은 구글 로그인을 사용할 수 없어요. 잠시 후 다시 시도해 주세요.':
     "Google sign-in isn't available right now. Please try again in a moment.",
   '잠시 후 다시 시도해 주세요.': 'Please try again in a moment.',
+  // T-11-146 번역 보기
+  // i18n-ignore: 응답 문장을 찾는 한국어 원문 키
+  '지금은 번역할 수 없어요. 잠시 후 다시 시도해 주세요.':
+    "Translation isn't available right now. Please try again in a moment.",
+  // i18n-ignore: 응답 문장을 찾는 한국어 원문 키
+  '번역을 너무 자주 요청했어요. 잠시 후 다시 시도해 주세요.':
+    "You've asked for translations too often. Please try again in a moment.",
   '로그인을 마치지 못했어요.': "We couldn't finish signing you in.",
   '앱에서만 쓸 수 있어요.': 'This is only available in the app.',
   '새 프로필을 너무 자주 만들고 있어요. 잠시 뒤에 다시 시도해 주세요.':
@@ -180,12 +188,18 @@ const WHAT: Record<string, string> = {
 };
 const KIND: Record<string, string> = { 글: 'post', 댓글: 'comment', 차단: 'block' };
 
+const TABLES: Record<
+  Exclude<Lang, 'ko'>,
+  { exact: Record<string, string>; patterns: [RegExp, (m: RegExpExecArray) => string][] }
+> = { en: { exact: EXACT, patterns: PATTERNS }, ja: { exact: EXACT_JA, patterns: PATTERNS_JA } };
+
 /** 한국어 문장을 요청 언어로. 한국어면 그대로, 표에 없으면 한국어 그대로 돌려준다. */
 export function localizeMessage(message: string, lang: Lang): string {
-  if (lang !== 'en') return message;
-  const hit = EXACT[message];
+  if (lang === 'ko') return message;
+  const T = TABLES[lang];
+  const hit = T.exact[message];
   if (hit) return hit;
-  for (const [re, make] of PATTERNS) {
+  for (const [re, make] of T.patterns) {
     const m = re.exec(message);
     if (m) return make(m);
   }

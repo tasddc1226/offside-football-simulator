@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BODY_DEFAULT, bmiOf, bodyError } from './body.js';
 import { CareerMetaSchema } from './careers.js';
 import { honorPoints } from './retired-numbers.js';
-import { DEFAULT_NATION, NATIONS, NATION_BY_CODE, flagOf } from './nations.js';
+import { DEFAULT_NATION, NATIONS, NATION_BY_CODE, flagOf, nationFromLocales } from './nations.js';
 
 describe('T-10-096 국적', () => {
   it('FIFA 회원국 211개, 코드·이름이 겹치지 않고 대한민국이 기본이다', () => {
@@ -74,4 +74,18 @@ describe('T-10-096 대표팀 수상은 구단 영구결번 점수에 들지 않�
     'CONCACAF 올해의 선수',
     'OFC 올해의 선수',
   ])('%s', (h) => expect(honorPoints(h)).toBe(0));
+});
+
+describe('선수 생성 국적 기본값(T-11-140)', () => {
+  it.each([
+    [['ja-JP'], 'JP'],
+    [['ja'], 'JP'],
+    [['en-US', 'ko-KR'], 'US'],
+    [['en-GB'], 'GB-ENG'],
+    [['ko'], 'KR'],
+    [['en'], 'KR'],
+    [['zh-Hant-TW'], 'TW'],
+    [['en-AQ'], 'KR'],
+    [[], 'KR'],
+  ])('%j → %s', (tags, code) => expect(nationFromLocales(tags)).toBe(code));
 });

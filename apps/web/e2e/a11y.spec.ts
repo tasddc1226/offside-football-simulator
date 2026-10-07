@@ -117,7 +117,7 @@ for (const scheme of ['light', 'dark'] as const) {
 
 // 정적 페이지(/guide, /faq, /legal/*)는 크롤러/noscript용 콘텐츠이며 앱 번들 스크립트를
 // 포함하지 않으므로, 실제 브라우저에서 JS가 켜져 있어도 그대로 남는다.
-for (const path of ['/guide/', '/faq/', '/legal/terms/', '/legal/privacy/']) {
+for (const path of ['/guide/', '/faq/', '/fairness/', '/legal/terms/', '/legal/privacy/']) {
   test(`${path}에 심각한 접근성 위반이 없다`, async ({ page }) => {
     await page.goto(path);
     await expect(page.locator('h1')).toBeVisible();

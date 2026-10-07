@@ -12,7 +12,7 @@ import {
 } from '@offside/game/podium';
 import type { ReactNode } from 'react';
 import Svg, { Path } from 'react-native-svg';
-import { anonName } from '@offside/app-core/format';
+import { playerName } from '@offside/app-core/format';
 import { openPublicLegend } from '../game/host';
 import { ClubMark } from '../ui/ClubBadge';
 import { Press } from '../ui/Press';
@@ -56,7 +56,7 @@ export function HofPodium({
         const nation =
           NATION_BY_CODE.get(entry.nation ?? DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION)!;
         const mine = myIds.has(entry.id);
-        const name = entry.name ?? anonName(entry.pos, entry.number);
+        const name = playerName(entry.name, entry.pos, entry.number);
         const r = rank as 1 | 2 | 3;
         const ink = PODIUM_TONES[r].ink;
         const avW = rank === 1 ? avatarWidth(width) : 48;

@@ -26,6 +26,12 @@
   --display: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
   --body: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
 }
+/* T-11-140 일본어는 한자가 한국식 글꼴로 그려지지 않게 일본어 시스템 서체를 먼저 쓴다(웹 서체를 더 받지 않는다). */
+:root:lang(ja) {
+  --body:
+    'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', Meiryo,
+    'Noto Sans JP', system-ui, sans-serif;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
@@ -1204,6 +1210,8 @@ textarea {
   min-width: 0;
 }
 .body-in > span[aria-hidden] {
+  flex: none;
+  white-space: nowrap;
   color: var(--muted);
   font-weight: 600;
 }
@@ -1413,6 +1421,42 @@ a.tile-link {
   font-size: 0.75rem;
   margin: 8px 0 0;
 }
+/* T-11-141 확률과 공정성 */
+.fair-h {
+  font-size: 0.875rem;
+  margin: 16px 0 6px;
+}
+.fair-note {
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+.fair-history {
+  margin-top: 16px;
+}
+.fair-history summary {
+  cursor: pointer;
+}
+.fair-versions {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fair-versions > li {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.fair-diff {
+  margin-left: 0.35em;
+}
+.fair-versions ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
 /* T-10-011 소식(게시판) */
 textarea {
   resize: vertical;
@@ -1486,6 +1530,23 @@ textarea {
   margin: 4px 0 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+/* T-11-146 댓글·채팅 번역 보기 — 본문 아래 작은 글자 버튼. */
+.translate-btn {
+  min-height: 28px;
+  padding: 2px 2px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.translate-btn:disabled {
+  cursor: progress;
+  text-decoration: none;
 }
 .board-comment-del {
   margin-left: auto;
@@ -1781,6 +1842,16 @@ body:has(.main-nav) .wrap {
 }
 .btn:has(> .btn-dot) {
   position: relative;
+}
+/* T-11-142 내 팀 '경기' 탭의 '친구' 버튼 — 받은 친구 신청. */
+.hof-sort:has(> .btn-dot) {
+  position: relative;
+}
+.hof-sort > .btn-dot {
+  top: 2px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
 }
 .tab-dot {
   position: absolute;
@@ -5674,6 +5745,27 @@ button.title-item:hover {
 .film-pot-ach small {
   color: var(--film-muted);
   font-size: 0.8125rem;
+}
+/* T-11-141 잠재력이 바뀐 과정 · 시드(은퇴 뒤에만). */
+.film-pot-flow {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.film-pot-flow span {
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+.film-pot-flow p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+.film-pot-flow small {
+  color: var(--film-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
 }
 /* T-10-077 플레이 성향 — 유형 하나 + 주사위 기록 네 칸 + 최고의 한 수. */
 .film-style {

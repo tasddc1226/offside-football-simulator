@@ -17,8 +17,8 @@ export interface Promotion {
   down: string;
 }
 
-/** K1에서 내려갈 구단 — 기본 전력이 가장 낮은 구단, 동률은 id 순. */
-const weakestK1 = (s: GameState): Club =>
+/** K1에서 내려갈 구단 — 지금 전력(T-11-135 구단 전력표 반영)이 가장 낮은 구단, 동률은 id 순. */
+export const weakestK1 = (s: GameState): Club =>
   clubsIn('k1', s).sort((a, b) => a.str - b.str || a.id.localeCompare(b.id))[0]!;
 
 /** 정적 소속으로 돌아오면 표에서 뺀다(표에는 옮겨 간 구단만). */

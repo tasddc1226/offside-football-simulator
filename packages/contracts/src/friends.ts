@@ -51,6 +51,10 @@ export const FriendsResponseSchema = z.strictObject({
 });
 export type FriendsResponse = z.infer<typeof FriendsResponseSchema>;
 
+/** T-11-142 받은 친구 신청 수(하단 메뉴 점). */
+export const FriendPendingResponseSchema = z.strictObject({ received: z.number().int().min(0) });
+export type FriendPendingResponse = z.infer<typeof FriendPendingResponseSchema>;
+
 /** 친구 신청: 친구 코드 또는 팀 프로필의 팀 id 중 하나. */
 export const FriendRequestBodySchema = z.union([
   z.strictObject({ code: z.string().trim().min(1).max(20) }),

@@ -3,6 +3,8 @@
   import { appFormatText as W } from '@offside/app-core/i18n/ko/appFormat';
   // ui.ts playerTab()/nationalCard() 포트 (316~356줄)
   import { potentialNotice } from '@offside/app-core/potential-view';
+  import { buyPeek, peekView } from '@offside/app-core/potential-peek';
+  import { loadPeek, savePeek } from '../potPeek.js';
   import { gamePlayerText as L } from '@offside/app-core/i18n/ko/gamePlayer';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
   import { createText as C } from '@offside/app-core/i18n/ko/create';
@@ -33,6 +35,16 @@
   const nation = $derived(nationOf(s));
   // 체격 입력 이전 선수는 포지션 표준 체격으로 보여 준다(표시만 — 능력치 보정은 없다).
   const body = $derived(s.body ?? BODY_DEFAULT[s.pos]);
+  // T-11-133 자금을 내고 이번 시즌 스카우트 평가 보기(앱은 보상형 광고).
+  let peek = $state(loadPeek());
+  const pot = $derived(peekView(s, peek, 'pay'));
+  function onPeek() {
+    const p = buyPeek(s);
+    if (!p) return;
+    save();
+    savePeek(p);
+    peek = p;
+  }
   // T-11-083 잠재력 강화. 자금을 쓰는 시도라 버튼을 한 번 더 눌러야 한다.
   const boost = $derived(boostView(s));
   let arming = $state(false);
@@ -61,7 +73,7 @@
     <dt>{L.body}</dt><dd data-body>{body.h}cm · {body.w}kg</dd>
     <dt>{L.foot}</dt><dd>{C.foot({ v: s.foot })}</dd>
     <dt>{L.trait}</dt><dd>{traitName}</dd>
-    <dt>{L.potential}</dt><dd data-pot>{potentialNotice()}</dd>
+    <dt>{L.potential}</dt><dd data-pot>{pot.kind === 'shown' ? pot.text : potentialNotice()}</dd>
     <dt>{L.peakOvr}</dt><dd>{Math.max(s.peak, ovr(s))}</dd>
     <dt>{L.trust}</dt><dd>{s.trust >= 2 ? L.trustHigh : s.trust >= 0 ? L.trustMid : L.trustLow}</dd>
     <dt>{L.contract}</dt><dd>{s.contract ? L.contractLeft({ years: s.contract.years, salary: fmtMoney(s.contract.salary) }) : lg.amateur ? L.amateur : '-'}</dd>
@@ -70,6 +82,14 @@
       <dt>{L.value}</dt><dd data-value>{fmtValue(value)}</dd>
     {/if}
   </dl>
+  {#if pot.kind === 'available' || pot.kind === 'short'}
+    <div class="pot-peek" data-pot-peek={pot.kind}>
+      <p class="muted fs-sm">{pot.text}</p>
+      {#if pot.kind === 'available'}
+        <button class="btn btn-sm btn-block" data-act="pot-peek" onclick={onPeek}>{pot.button}</button>
+      {/if}
+    </div>
+  {/if}
 </section>
 
 {#if fx}<BoostFx out={fx} onDone={() => (fx = null)} />{/if}
@@ -141,6 +161,11 @@
 {/if}
 
 <style>
+  .pot-peek {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+  }
   .boost-head {
     display: flex;
     align-items: center;

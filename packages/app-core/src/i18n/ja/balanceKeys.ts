@@ -1,0 +1,32 @@
+import type { Translation } from '../core';
+import type { BalanceKeysMsgs } from '../ko/balanceKeys';
+
+export const balanceKeys: Translation<BalanceKeysMsgs> = {
+  eventRatePreseason: 'プレシーズンのイベント確率',
+  eventRateSeason: '前半戦・後半戦のイベント確率',
+  eventTwist: '選択後のどんでん返し確率',
+  growthScale: '成長倍率',
+  investGain: '特訓の成長割合',
+  investCost: '自己投資の費用倍率',
+  potMean: 'ポテンシャルの平均',
+  potSd: 'ポテンシャルのばらつき',
+  potScoutSd: 'スカウト評価の誤差',
+  injuryRate: '1試合あたりのケガ確率',
+  bigInjuryShare: '大ケガの割合',
+  mlsYoungPull: '30歳未満へのMLSオファーの重み',
+  koreaStr: '韓国A代表の戦力',
+  koreaU23: '韓国U-23代表の戦力',
+  wcQual: 'ワールドカップ予選の突破確率',
+  olympicQual: 'オリンピック予選の突破確率',
+  agRelease: 'アジア大会での海外クラブの招集許可',
+  olyRelease: 'オリンピックでの海外クラブの招集許可',
+  sangmuBase: '尚武の基本合格率',
+  marketReleaseRate: '放出時の支給率',
+  marketFeeRate: '取引手数料率',
+  marketPriceMin: '最低販売価格(基準価格の倍率)',
+  marketPriceMax: '最高販売価格(基準価格の倍率)',
+  marketListLimit: '同時に出品できる数',
+  marketDailyBuys: '1日の獲得数',
+  eventWeight: (p) => `イベント出現頻度の調整 ${p.n}件`,
+  choiceBonus: (p) => `選択肢の成功確率の調整 ${p.n}件`,
+};

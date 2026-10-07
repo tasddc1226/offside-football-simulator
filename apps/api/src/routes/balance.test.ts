@@ -192,6 +192,31 @@ describe('밸런스 설정 /v1/balance · /v1/admin/balance (T-10-016)', () => {
     }
   });
 
+  it('T-11-141: 공개 이력은 적용된 버전만 최근 적용 순으로 보여 주고(메모·초안 제외), 활성화가 엣지 캐시를 지운다', async () => {
+    const edge = installFakeEdgeCache();
+    try {
+      const admin = await makeAdmin();
+      type History = { versions: { version: number; active: boolean; note?: string }[] };
+      const history = async () => data<History>(await call('GET', '/v1/balance/history'));
+      expect(await history()).toEqual({ versions: [] });
+      await flushEdge();
+      const v1 = await draft(admin.cookie, { potMean: 76 }, '내부 메모');
+      await draft(admin.cookie, { potMean: 77 });
+      await call('POST', `/v1/admin/balance/${v1.version}/activate`, { cookie: admin.cookie });
+      await flushEdge();
+      const h = await history();
+      expect(h.versions).toHaveLength(1);
+      expect(h.versions[0]).toMatchObject({
+        version: v1.version,
+        active: true,
+        values: { potMean: 76 },
+      });
+      expect(h.versions[0]).not.toHaveProperty('note');
+    } finally {
+      edge.uninstall();
+    }
+  });
+
   it('T-10-090: 시즌 중에는 활성화가 잠기고 override=season으로만 연다', async () => {
     const admin = await makeAdmin();
     const v1 = await draft(admin.cookie, { growthScale: 1.1 });

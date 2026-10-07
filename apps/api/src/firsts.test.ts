@@ -8,7 +8,7 @@ import {
   RECORDS,
   type FirstSeason,
 } from './firsts.js';
-import { firstLabelEn, recordTextEn } from './firstsText.js';
+import { firstLabel, recordText } from './firstsText.js';
 
 let t = 0;
 const season = (over: Partial<FirstSeason> = {}): FirstSeason => ({
@@ -203,30 +203,44 @@ describe('서버 최초 기록 영어 문구(T-11-106)', () => {
   it('모든 규칙·단계(이미 달성된 높은 단계 포함)가 영어 문장을 갖고, 한글이 없다', () => {
     for (const season of [undefined, 0, 1]) {
       for (const d of firstsCatalog(['goals2000', 'ballon9', 'apps1500', 'oneclub25'], season)) {
-        const en = firstLabelEn(d.id, season);
+        const en = firstLabel(d.id, season);
         expect(en, d.id).not.toBeNull();
         expect(en!, d.id).not.toMatch(hangul);
         expect(en!, d.id).toMatch(/^First /);
       }
     }
     for (const r of RECORDS) {
-      const t = recordTextEn(r.id);
+      const t = recordText(r.id);
       expect(t, r.id).not.toBeNull();
       expect(`${t!.label}${t!.unit}`).not.toMatch(hangul);
+      const ja = recordText(r.id, 'ja');
+      expect(ja, r.id).not.toBeNull();
+      expect(`${ja!.label}${ja!.unit}`).not.toMatch(hangul);
+    }
+    for (const season of [undefined, 0, 1]) {
+      for (const d of firstsCatalog(['goals2000', 'ballon9', 'apps1500', 'oneclub25'], season)) {
+        const ja = firstLabel(d.id, season, 'ja');
+        expect(ja, d.id).not.toBeNull();
+        expect(ja!, d.id).not.toMatch(hangul);
+      }
     }
   });
 
   it('대표 문장: 단계·한 번 달성·시즌별 은퇴 나이', () => {
-    expect(firstLabelEn('goals100')).toBe('First to 100 career goals!');
-    expect(firstLabelEn('goals1050')).toBe('First to 1,050 career goals!');
-    expect(firstLabelEn('ballon1')).toBe("First Ballon d'Or winner!");
-    expect(firstLabelEn('ballon3')).toBe("First to 3 Ballon d'Or awards!");
-    expect(firstLabelEn('euro')).toBe('First to win the UEFA Euro!');
-    expect(firstLabelEn('treble')).toBe('First treble!');
-    expect(firstLabelEn('retirecap', 1)).toBe(
+    expect(firstLabel('goals100')).toBe('First to 100 career goals!');
+    expect(firstLabel('goals1050')).toBe('First to 1,050 career goals!');
+    expect(firstLabel('ballon1')).toBe("First Ballon d'Or winner!");
+    expect(firstLabel('ballon3')).toBe("First to 3 Ballon d'Or awards!");
+    expect(firstLabel('euro')).toBe('First to win the UEFA Euro!');
+    expect(firstLabel('treble')).toBe('First treble!');
+    expect(firstLabel('retirecap', 1)).toBe(
       "First to retire at 45! Next season's retirement age rises to 46",
     );
-    expect(firstLabelEn('nope')).toBeNull();
-    expect(recordTextEn('goals')).toEqual({ label: 'Most career goals', unit: ' goals' });
+    expect(firstLabel('nope')).toBeNull();
+    expect(recordText('goals')).toEqual({ label: 'Most career goals', unit: ' goals' });
+    expect(firstLabel('goals1050', undefined, 'ja')).toBe('通算1,050ゴール、史上初達成！');
+    expect(firstLabel('retirecap', 1, 'ja')).toBe(
+      '45歳で引退、史上初達成！次のシーズンの引退年齢が46歳に解禁',
+    );
   });
 });

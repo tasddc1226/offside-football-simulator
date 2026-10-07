@@ -28,6 +28,7 @@
     "./team-logo": "./src/team-logo.ts",
     "./nations": "./src/nations.ts",
     "./nations-en": "./src/nations-en.ts",
+    "./nations-ja": "./src/nations-ja.ts",
     "./body": "./src/body.ts",
     "./i18n": "./src/i18n.ts"
   },

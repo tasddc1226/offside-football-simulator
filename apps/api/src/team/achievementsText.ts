@@ -1,5 +1,6 @@
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import { tenureLabels } from '../i18n/en/achievements.js';
+import { GROUP_JA, LABEL_JA, UNIT_JA, ageLabelJa } from '../i18n/ja/achievements.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 업적 문구의 영어. 판정(achievements.ts)은 한국어 문구와 id를 그대로 만들고, 응답을 보낼 때 id로 문구만
@@ -111,24 +112,34 @@ const UNIT: Record<string, string> = {
   'owner-likes': ' likes',
 };
 
-function itemEn(i: ClubAchievement): ClubAchievement {
+type Tables = {
+  group: Record<string, { stage: string; title: string }>;
+  label: Record<string, string>;
+  unit: Record<string, string>;
+  age: (age: string) => string;
+};
+const TABLES: Record<Exclude<Lang, 'ko'>, Tables> = {
+  en: { group: GROUP, label: LABEL, unit: UNIT, age: (age) => `Still playing at ${age}` },
+  ja: { group: GROUP_JA, label: LABEL_JA, unit: UNIT_JA, age: ageLabelJa },
+};
+
+function item(i: ClubAchievement, T: Tables): ClubAchievement {
   // '○○세까지 현역'은 시즌마다 나이가 달라 한국어 문구의 숫자를 그대로 쓴다.
   const label =
-    i.id === 'age-40'
-      ? `Still playing at ${/\d+/.exec(i.label)?.[0] ?? ''}`
-      : (LABEL[i.id] ?? i.label);
-  return { ...i, label, ...(i.unit !== undefined ? { unit: UNIT[i.id] ?? i.unit } : {}) };
+    i.id === 'age-40' ? T.age(/\d+/.exec(i.label)?.[0] ?? '') : (T.label[i.id] ?? i.label);
+  return { ...i, label, ...(i.unit !== undefined ? { unit: T.unit[i.id] ?? i.unit } : {}) };
 }
 
-/** 응답 직전에 업적 문구를 영어로 바꾼다. 한국어면 그대로 돌려준다. */
+/** 응답 직전에 업적 문구를 요청 언어(영어·일본어)로 바꾼다. 한국어면 그대로 돌려준다. */
 export function localizeAchievements(
   groups: ClubAchievementGroup[],
   lang: Lang,
 ): ClubAchievementGroup[] {
-  if (lang !== 'en') return groups;
+  if (lang === 'ko') return groups;
+  const T = TABLES[lang];
   return groups.map((g) => ({
     ...g,
-    ...(GROUP[g.id] ?? {}),
-    items: g.items.map(itemEn),
+    ...(T.group[g.id] ?? {}),
+    items: g.items.map((i) => item(i, T)),
   }));
 }

@@ -38,6 +38,7 @@ import {
 import { type TeamView } from '@offside/app-core/state';
 import { recordText, num } from '@offside/app-core/teamText';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import {
   autoFillSlots,
   tooManyWildcards,
@@ -51,7 +52,7 @@ import {
   synergyFocus,
   teamEditableIn,
 } from '@offside/app-core/teamOwner';
-import { anonName } from '@offside/app-core/format';
+import { marketName } from '@offside/app-core/market';
 import { localCareerNames } from '@offside/game/hof-store';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines } from '../../components/TeamPitch';
@@ -100,7 +101,7 @@ const nav = (): [TeamView, string, TabIconName][] => [
 
 export default function Team() {
   const c = useColors();
-  const { teamView, achNew } = useSnapshot(appState);
+  const { teamView, achNew, friendReq } = useSnapshot(appState);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [needLogin, setNeedLogin] = useState(false);
   const [team, setTeam] = useState<OwnerTeam | null>(null);
@@ -186,8 +187,7 @@ export default function Team() {
   const localNames = useMemo(() => localCareerNames(), []);
   const byId = new Map(players.map((p) => [p.careerId, p]));
   const wildcards = wildcardLabel(slots, byId, season);
-  const nameOf = (p: TeamPlayer) =>
-    localNames.get(p.careerId) ?? p.publicName ?? anonName(p.pos, p.number);
+  const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
 
   const positions = layout ?? presetLayout(formation);
@@ -493,6 +493,9 @@ export default function Team() {
     onPress: () => switchView(k),
     testID: `team-tab-${k}`,
     ...(k === 'achievements' ? { dot: achNew } : {}),
+    ...(k === 'opponents' && friendReq
+      ? { dot: friendReq, dotLabel: S.friendReq({ n: friendReq }) }
+      : {}),
   }));
   navItems.splice(2, 0, {
     key: 'owner',
@@ -754,7 +757,7 @@ export default function Team() {
   } else if (view === 'opponents') {
     body = (
       <>
-        <OppSwitch value={oppTab} onPick={pickOppTab} />
+        <OppSwitch value={oppTab} onPick={pickOppTab} pending={friendReq} />
         {oppTab === 'friends' ? (
           <TeamFriends
             friends={friends}

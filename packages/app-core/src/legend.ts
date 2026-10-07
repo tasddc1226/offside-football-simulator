@@ -4,15 +4,15 @@
 import type { LegendSnapshot, PublicHofEntry, RetiredNumberResult } from '@offside/contracts';
 import { toPublicName } from '@offside/contracts/content-filter';
 import { isHofEligible } from '@offside/contracts/hof-rules';
-import { legendScore } from '@offside/game/legend';
+import { ballonWinsOf, legendScore } from '@offside/game/legend';
 import { loadHOF } from '@offside/game/hof-store';
 import { saveKey } from '@offside/game/storage';
 import type { GameState, HofEntry } from '@offside/game/types';
 import { mainTitle } from '@offside/game/titles';
 import { truePot } from '@offside/game/stats';
-import { retirementPotential } from './potential-view.js';
+import { hofPotentialFlow, potentialFlow, retirementPotential } from './potential-view.js';
 import { getHofDetail, getMyCareers } from './api/client.js';
-import { anonName, totals } from './format.js';
+import { totals, playerName } from './format.js';
 import type { AppState, LegendView } from './state.js';
 import { legendToastText } from './i18n/ko/legendToast.js';
 
@@ -35,7 +35,7 @@ const ownShareId = (h: HofEntry | null | undefined) =>
 /** 다른 유저에게 보이는 그대로(공개하지 않은 이름은 익명). */
 function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
   return {
-    name: e.name ?? anonName(e.pos, e.number),
+    name: playerName(e.name, e.pos, e.number),
     number: e.number,
     pos: e.pos,
     dpos: e.dpos,
@@ -53,6 +53,7 @@ function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
       trophies: e.trophies,
       awards: e.awards,
       caps: e.caps,
+      ballon: e.ballon,
     },
     own: null,
     shareId: null,
@@ -85,12 +86,14 @@ export function createLegends(host: LegendHost) {
         trophies: h.trophies,
         awards: h.awards,
         caps: h.caps,
+        ballon: h.ballon ?? (h.detail ? ballonWinsOf(h.detail) : 0),
       },
       own: h,
       shareId: ownShareId(h),
       reportId: null,
       title: h.title ?? null,
       pot: retirementPotential(h.pot),
+      flow: hofPotentialFlow(h),
       rn: host.rnOf(h.id, h.rn),
     };
   }
@@ -118,12 +121,14 @@ export function createLegends(host: LegendHost) {
         trophies: s.trophies.length,
         awards: s.awards.length,
         caps: s.nat.caps,
+        ballon: ballonWinsOf(s),
       },
       own,
       shareId: ownShareId(own),
       reportId: null,
       title: own?.title ?? mainTitle(s)?.id ?? null,
       pot: s.retired ? retirementPotential(own?.pot ?? Math.round(truePot(s))) : undefined,
+      flow: potentialFlow(s),
       rn: host.rnOf(s.cid, own?.rn),
     };
   }

@@ -1243,3 +1243,55 @@ test('홈 구단 가치 TOP 3 — 가치가 있는 팀만 보이고, 전체 보�
   await expect.poll(() => profileAsked.length).toBeGreaterThan(0);
   expect(rankQueries.filter((q) => q === 'sort=value&page=1')).toHaveLength(1);
 });
+
+// T-11-142 받은 친구 신청 — 구단주 화면을 연 적 있는 브라우저는 시작할 때 한 번 묻고, 하단 '구단주' 탭부터 '친구' 버튼까지 점을
+// 잇는다. '내 팀'을 누르면 친구 목록으로 바로 가고, 신청을 수락하면 점이 사라진다.
+test('받은 친구 신청이 있으면 메뉴 점을 따라 친구 목록으로 바로 간다', async ({ page }) => {
+  await stubOwner(page, true);
+  await page.addInitScript(() => {
+    localStorage.setItem('ft_session', '1');
+    localStorage.setItem('ft_owner', '1');
+  });
+  await page.route(ownerTeamUrl, (route) => route.fulfill(ownerTeam()));
+  let pendingGets = 0;
+  await page.route(`${API}/v1/friends/pending`, (route) => {
+    pendingGets++;
+    return route.fulfill(ok({ received: 1 }));
+  });
+  let state = friendsBody({ received: [person('FRND2345', '친구 감독', { team: FRIEND_TEAM })] });
+  await page.route(`${API}/v1/friends`, (route) => route.fulfill(ok(state)));
+  await page.route(`${API}/v1/friends/FRND2345/accept`, (route) => {
+    const p = person('FRND2345', '친구 감독', { team: FRIEND_TEAM });
+    state = { ...state, received: [], friends: [p] };
+    return route.fulfill(ok({ state: 'accepted', friend: p }));
+  });
+
+  await page.goto('/');
+  const ownerTab = page.locator('.main-nav [data-act="owner"]');
+  await expect(ownerTab.locator('[data-tab-dot]')).toContainText('받은 친구 신청 1개');
+  await ownerTab.click();
+  const teamBtn = page.locator('[data-act="team"]').first();
+  await expect(teamBtn.locator('[data-team-dot]')).toBeAttached();
+  await teamBtn.click();
+  const panel = page.locator('[data-friends]');
+  await expect(panel.locator('[data-friend-received="FRND2345"]')).toBeVisible();
+  await expect(page.locator('[data-team-tab="opponents"] [data-friend-dot]')).toBeAttached();
+  await panel.locator('[data-friend-received="FRND2345"] [data-act="friend-accept"]').click();
+  await expect(panel.locator('[data-friend="FRND2345"]')).toBeVisible();
+  await expect(page.locator('[data-friend-dot]')).toHaveCount(0);
+  // 화면을 오가도 신청 수는 다시 묻지 않는다(시작할 때 한 번 · 메모 5분).
+  expect(pendingGets).toBe(1);
+});
+
+test('구단주 화면을 연 적 없는 브라우저는 받은 친구 신청을 묻지 않는다', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('ft_session', '1'));
+  let pendingGets = 0;
+  await page.route(`${API}/v1/friends/pending`, (route) => {
+    pendingGets++;
+    return route.fulfill(ok({ received: 1 }));
+  });
+  await page.goto('/');
+  await expect(page.locator('.main-nav [data-act="owner"]')).toBeVisible();
+  await expect(page.locator('[data-tab-dot]')).toHaveCount(0);
+  expect(pendingGets).toBe(0);
+});

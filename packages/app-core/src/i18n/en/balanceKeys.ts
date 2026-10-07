@@ -1,0 +1,32 @@
+import type { Translation } from '../core';
+import type { BalanceKeysMsgs } from '../ko/balanceKeys';
+
+export const balanceKeys: Translation<BalanceKeysMsgs> = {
+  eventRatePreseason: 'Preseason event chance',
+  eventRateSeason: 'Half-season event chance',
+  eventTwist: 'Twist chance after a choice',
+  growthScale: 'Growth multiplier',
+  investGain: 'Special training growth share',
+  investCost: 'Self-investment cost multiplier',
+  potMean: 'Potential average',
+  potSd: 'Potential spread',
+  potScoutSd: 'Scouting rating error',
+  injuryRate: 'Injury chance per match',
+  bigInjuryShare: 'Share of serious injuries',
+  mlsYoungPull: 'MLS offer weight under 30',
+  koreaStr: 'Korea senior team strength',
+  koreaU23: 'Korea U-23 team strength',
+  wcQual: 'World Cup qualifying chance',
+  olympicQual: 'Olympic qualifying chance',
+  agRelease: 'Overseas club release for the Asian Games',
+  olyRelease: 'Overseas club release for the Olympics',
+  sangmuBase: 'Sangmu base acceptance rate',
+  marketReleaseRate: 'Release payout rate',
+  marketFeeRate: 'Transfer fee rate',
+  marketPriceMin: 'Minimum sale price (× base)',
+  marketPriceMax: 'Maximum sale price (× base)',
+  marketListLimit: 'Listings at once',
+  marketDailyBuys: 'Signings per day',
+  eventWeight: (p) => `Event frequency changes: ${p.n}`,
+  choiceBonus: (p) => `Choice success chance changes: ${p.n}`,
+};

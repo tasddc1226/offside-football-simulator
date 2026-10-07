@@ -13,6 +13,7 @@ export const shell: Translation<ShellMsgs> = {
   navSettings: 'Settings',
   achNew: (p) => `${plural(p.n, 'new achievement')}`,
   recapNew: 'New season recap',
+  friendReq: (p) => `${plural(p.n, 'friend request')}`,
   bgm: 'Music',
   bgmOff: 'Turn music off',
   bgmOn: 'Turn music on',

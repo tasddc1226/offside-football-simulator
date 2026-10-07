@@ -1,0 +1,45 @@
+import type { Translation } from '../core';
+import type { ChatMsgs } from '../ko/chat';
+
+export const chat: Translation<ChatMsgs> = {
+  title: 'ラウンジチャット',
+  back: '← 戻る',
+  online: (p) => `${p.n}人が接続中`,
+  reconnecting: '再接続中…',
+  connecting: '接続中…',
+  rulesLabel: 'チャットの利用案内',
+  rulesBody:
+    '誰でも見られる公開チャットです。リンクは送れません。暴言・誹謗中傷・宣伝・個人情報は非表示にし、利用を制限します。',
+  terms: '利用規約',
+  ok: 'OK',
+  messageLabel: 'チャットメッセージ',
+  placeholder: 'メッセージを入力',
+  send: '送信',
+  sendWait: '接続中です。少し待ってからもう一度送ってください。',
+  reportedToast: '通報しました。運営が確認します。',
+  blockTitle: (p) => `${p.nick}さんをブロックしますか？`,
+  blockBody: 'この人のメッセージとコメントが表示されなくなります。',
+  blockOk: 'ブロック',
+  blockedToast: (p) => `${p.nick}さんをブロックしました`,
+  muteTitle: (p) => `${p.nick}さんのチャットを${p.days}日間停止しますか？`,
+  muteBody: 'このメッセージも非表示になります。',
+  muteOk: '停止',
+  mutedToast: (p) => `${p.nick}さんを${p.days}日間停止しました`,
+  hiddenToast: 'メッセージを非表示にしました',
+  adminLabel: '運営',
+  hide: '非表示',
+  muteDays: (p) => `${p.days}日停止`,
+  reportPrompt:
+    '通報する理由を選んでください。通報したメッセージはあなたの画面で非表示になります。',
+  blockHint: (p) => `${p.nick}さんのメッセージをすべて非表示にするには`,
+  blockAuthor: '投稿者をブロック',
+  moreLabel: (p) => `${p.nick}さんのメッセージを通報・ブロック`,
+  emptyOpen: 'まだ静かです。',
+  loading: '読み込み中…',
+  gateLogin: 'Googleでログインするとチャットに参加できます。',
+  gateLoginApple: 'GoogleかAppleでログインするとチャットに参加できます。',
+  loginGoogle: 'Googleでログイン',
+  gateNicknameWeb: 'チャットとコメントで使うニックネームを決めてください。',
+  gateNicknameApp:
+    'まずチャットで使うニックネームを決めてください。コメント用ニックネームと同じです。',
+};

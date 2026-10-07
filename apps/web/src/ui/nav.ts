@@ -12,6 +12,18 @@ export function go(screen: Screen) {
   window.scrollTo(0, 0);
 }
 
+// T-11-141 설정 '확률과 공정성' → 확률 도감을 열고 그 칸을 펼쳐 보여 준다(한 번만 읽힌다).
+let fairnessFocus = false;
+export function goFairness() {
+  fairnessFocus = true;
+  go('dex');
+}
+export function takeFairnessFocus(): boolean {
+  const v = fairnessFocus;
+  fairnessFocus = false;
+  return v;
+}
+
 // T-10-104: 게임 화면·액션(게임 엔진 포함)·게임 시트 본문은 홈에서 바로 쓰지 않아 첫 화면 번들에서 뗐다. 누르는 순간
 // 불러오되, 홈이 한가할 때(main.ts)나 버튼에 손이 닿을 때(warmGame) 미리 받아 둬 첫 클릭이 느리지 않게 한다.
 const loadActions = () => Promise.all([import('./actions.js'), loadGameSheets()]).then(([a]) => a);

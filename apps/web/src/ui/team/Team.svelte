@@ -39,7 +39,7 @@
   import type { TeamLogo } from '@offside/contracts/team-logo';
   import TeamLogoEditor from './TeamLogoEditor.svelte';
   import { go } from '../nav.js';
-  import { anonName } from '@offside/game/pos-label';
+  import { marketName } from '@offside/app-core/market';
   import { toast } from '../helpers.js';
   import { dur } from '../motion.js';
   import { startGoogleLogin } from '../login.js';
@@ -57,6 +57,7 @@
   import TeamResult from './TeamResult.svelte';
   import TeamFriends from './TeamFriends.svelte';
   import { friendsUi } from '../friendInvite.svelte.js';
+  import { shellText as S } from '@offside/app-core/i18n/ko/shell';
   import { achNudge } from '../achNudge.js';
   import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
@@ -119,8 +120,7 @@
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = localCareerNames();
   const byId = $derived(new Map(players.map((p) => [p.careerId, p])));
-  const nameOf = (p: TeamPlayer) =>
-    localNames.get(p.careerId) ?? p.publicName ?? anonName(p.pos, p.number);
+  const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
 
   const slotCodes = $derived(layout?.map((p) => p.slot) ?? FORMATIONS[formation]);
@@ -447,7 +447,7 @@
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>
-        <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}</button>
+        <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}{#if appState.friendReq}<span class="btn-dot" data-friend-dot><span class="sr-only">{S.friendReq({ n: appState.friendReq })}</span></span>{/if}</button>
       </div>
       {#if friendsUi.mode === 'friends'}
         <TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />

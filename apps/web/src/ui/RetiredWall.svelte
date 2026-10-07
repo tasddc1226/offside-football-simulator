@@ -21,7 +21,7 @@
   import ClubMark from './ClubMark.svelte';
   import Laurel from './Laurel.svelte';
   import { seasonNow } from './seasonNow.svelte.js';
-  import { anonName } from '@offside/app-core/format';
+  import { playerName } from '@offside/app-core/format';
   import { openPublicLegendById } from './legend.js';
   import { rnStyle } from '@offside/app-core/rnStyle';
   import RnFrame from './RnFrame.svelte';
@@ -114,7 +114,7 @@
 {#snippet tile(it: Item, withClub: boolean)}
   <button class="rn-tile" style={rnStyle(it.clubId)} data-rn-tile={it.seq} onclick={() => void openPublicLegendById(it.careerId)}>
     <RnFrame class="rn-tile-frame" clubId={it.clubId} number={it.number} /><span class="sr-only">{it.number}</span>
-    <b class="rn-tile-name">{it.name ?? anonName(it.pos, it.number)}</b>
+    <b class="rn-tile-name">{playerName(it.name, it.pos, it.number)}</b>
     {#if withClub || !view.pos}
       <span class="muted fs-xs">
         {#if withClub}<ClubMark name={it.club} id={it.clubId} size={14} /> {rnClubName(it)}{:else}{POS[it.pos].label}{/if}
@@ -128,7 +128,7 @@
 {#snippet plaques(list: Wall[], withClub: boolean)}
   <div class="rn-plaques">
     {#each list as w (w.careerId)}
-      {@const name = w.name ?? anonName(w.pos, w.number)}
+      {@const name = playerName(w.name, w.pos, w.number)}
       <button class="rn-plaque medal brass" style={rnStyle(w.clubId)} data-rn-wall-of-honor={w.careerId} aria-label={L.wallLabel({ name, club: rnClubName(w), number: w.number, day: day(w.grantedAt) })} onclick={() => void openPublicLegendById(w.careerId)}>
         <span class="rn-plaque-medal" aria-hidden="true"><Laurel /><b class="num">{w.number}</b></span>
         <span class="rn-plaque-body">

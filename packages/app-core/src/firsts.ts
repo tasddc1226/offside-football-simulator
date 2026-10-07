@@ -1,6 +1,6 @@
 // T-10-027 서버 최초 기록 화면의 순수 계산(정렬·날짜 묶기·표시 이름). 컴포넌트와 테스트가 같이 쓴다.
 import type { ServerFirst, ServerFirstCat } from '@offside/contracts';
-import { anonName } from '@offside/app-core/format';
+import { playerName } from '@offside/app-core/format';
 import { kstParts } from '@offside/app-core/boardText';
 import { tn } from '@offside/game/i18n/names';
 import { firstsTabText } from './i18n/ko/firstsTab.js';
@@ -45,7 +45,7 @@ export function holderLabel(
   const own = mine.get(h.careerId);
   return own
     ? { name: own, mine: true }
-    : { name: h.name ?? anonName(h.pos, h.number), mine: false };
+    : { name: playerName(h.name, h.pos, h.number), mine: false };
 }
 
 /** 서버 기록의 이름(서버가 한국어로 보낸다)을 지금 언어로. */

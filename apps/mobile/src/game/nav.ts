@@ -11,6 +11,18 @@ export function go(screen: Screen) {
   appState.screen = screen;
   scrollTo(0);
 }
+
+// T-11-141 설정 '확률과 공정성' → 확률 도감을 열고 그 칸을 펼쳐 둔다(한 번만 읽힌다, 웹 ui/nav.ts).
+let fairnessFocus = false;
+export function goFairness() {
+  fairnessFocus = true;
+  go('dex');
+}
+export function takeFairnessFocus(): boolean {
+  const v = fairnessFocus;
+  fairnessFocus = false;
+  return v;
+}
 export function goNew() {
   if (appState.G && !appState.G.retired) return confirmNew();
   appState.screen = 'create';

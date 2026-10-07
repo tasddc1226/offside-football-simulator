@@ -3,6 +3,7 @@ import { readdirSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import { koSources, ns, resolveLocale, setLocale, AUTO_DETECT } from './core';
 import { en } from './en/index';
+import { ja } from './ja/index';
 
 // 모든 한국어 네임스페이스와 같은 이름의 영어 사전을 불러온다(ns 이름 중복이면 여기서 터진다).
 // 파일 이름 = ns() 이름 = 영어 파일의 export 이름 = en/index.ts의 키.
@@ -15,10 +16,16 @@ const gameNames = new Set(
     .filter((f) => f.endsWith('.ts'))
     .map((f) => f.slice(0, -3)),
 );
-const enFiles: Record<string, Record<string, unknown>> = {};
+// T-11-140 일본어(ja)도 영어와 같은 검사를 받는다.
+const LANGS = [
+  ['en', en],
+  ['ja', ja],
+] as const;
+const dictFiles: Record<string, Record<string, Record<string, unknown>>> = { en: {}, ja: {} };
 for (const f of files) {
   await import(`./ko/${f}.ts`);
-  enFiles[f] = (await import(`./en/${f}.ts`)) as Record<string, unknown>;
+  for (const [lang] of LANGS)
+    dictFiles[lang]![f] = (await import(`./${lang}/${f}.ts`)) as Record<string, unknown>;
 }
 
 afterEach(() => setLocale('ko'));
@@ -45,39 +52,49 @@ describe('i18n core', () => {
     expect(resolveLocale(null, ['ko-KR', 'en-US'])).toBe('ko');
     expect(resolveLocale('fr', [])).toBe('ko');
     expect(resolveLocale(null, ['en-US'])).toBe(AUTO_DETECT ? 'en' : 'ko');
-    expect(resolveLocale(null, ['ja-JP'])).toBe(AUTO_DETECT ? 'en' : 'ko');
+    expect(resolveLocale(null, ['ja-JP'])).toBe(AUTO_DETECT ? 'ja' : 'ko');
+    expect(resolveLocale('ja', ['ko-KR'])).toBe('ja');
   });
 });
 
-describe('영어 사전', () => {
-  it('파일 이름과 네임스페이스 이름이 같고, en/index.ts가 모두 묶는다', () => {
-    const names = [...koSources().keys()].filter((n) => !n.startsWith('__') && !gameNames.has(n));
-    expect(names.sort()).toEqual([...files].sort());
-    expect(files.filter((f) => gameNames.has(f))).toEqual([]);
-    expect(
-      Object.keys(en)
-        .filter((k) => !k.startsWith('__') && !gameNames.has(k))
-        .sort(),
-    ).toEqual([...files].sort());
-    // 묶음은 생성 스크립트 결과와 같아야 한다(node tooling/scripts/i18n-index.mjs).
+describe('영어·일본어 사전', () => {
+  it.each(LANGS)(
+    '파일 이름과 네임스페이스 이름이 같고, %s/index.ts가 모두 묶는다',
+    (_lang, dict) => {
+      const names = [...koSources().keys()].filter((n) => !n.startsWith('__') && !gameNames.has(n));
+      expect(names.sort()).toEqual([...files].sort());
+      expect(files.filter((f) => gameNames.has(f))).toEqual([]);
+      expect(
+        Object.keys(dict)
+          .filter((k) => !k.startsWith('__') && !gameNames.has(k))
+          .sort(),
+      ).toEqual([...files].sort());
+    },
+  );
+
+  it('묶음(en·ja index)이 생성 스크립트 결과와 같다', () => {
+    // node tooling/scripts/i18n-index.mjs — 모든 언어·패키지를 한 번에 본다.
     execFileSync('node', [
       new URL('../../../../tooling/scripts/i18n-index.mjs', import.meta.url).pathname,
       '--check',
     ]);
   });
 
-  it.each(files)('%s: 키·값 종류가 같고 영어에 한글이 남지 않는다', (name) => {
-    const ko = koSources().get(name)!;
-    const d = enFiles[name]![name] as Record<string, unknown>;
-    expect(d, `en/${name}.ts must export const ${name}`).toBeTypeOf('object');
-    expect(Object.keys(d).sort()).toEqual(Object.keys(ko).sort());
-    for (const [key, v] of Object.entries(ko)) {
-      const e = d[key];
-      expect(typeof e, `${name}.${key}`).toBe(typeof v);
-      if (typeof e === 'string') {
-        if ((v as string).trim()) expect(e.trim(), `${name}.${key}`).not.toBe('');
-        expect(e, `${name}.${key}`).not.toMatch(/[가-힣]/);
+  it.each(LANGS.flatMap(([lang]) => files.map((f) => [lang, f] as const)))(
+    '%s/%s: 키·값 종류가 같고 한글이 남지 않는다',
+    (lang, name) => {
+      const ko = koSources().get(name)!;
+      const d = dictFiles[lang]![name]![name] as Record<string, unknown>;
+      expect(d, `${lang}/${name}.ts must export const ${name}`).toBeTypeOf('object');
+      expect(Object.keys(d).sort()).toEqual(Object.keys(ko).sort());
+      for (const [key, v] of Object.entries(ko)) {
+        const e = d[key];
+        expect(typeof e, `${name}.${key}`).toBe(typeof v);
+        if (typeof e === 'string') {
+          if ((v as string).trim()) expect(e.trim(), `${name}.${key}`).not.toBe('');
+          expect(e, `${name}.${key}`).not.toMatch(/[가-힣]/);
+        }
       }
-    }
-  });
+    },
+  );
 });

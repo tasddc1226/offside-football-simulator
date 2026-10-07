@@ -41,6 +41,8 @@
   "env": {
     "staging": {
       "name": "offside-api-staging",
+      // T-11-146 공지 번역 초안·댓글·채팅 번역 보기(src/translate). 로컬·테스트엔 두지 않는다(원격 호출) — 없으면 번역만 503.
+      "ai": { "binding": "AI" },
       "durable_objects": {
         "bindings": [
           { "name": "LIVE", "class_name": "LiveHub" },
@@ -68,6 +70,7 @@
     "production": {
       "name": "offside-api",
       "workers_dev": true,
+      "ai": { "binding": "AI" },
       "routes": [{ "pattern": "api.offside-lab.com", "custom_domain": true }],
       "observability": {
         "enabled": true,

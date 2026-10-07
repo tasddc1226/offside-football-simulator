@@ -7,8 +7,7 @@ const ko = {
   darkBodyWeb: '어두운 화면으로 바꿔요. 이 기기에 저장돼요.',
   darkBodyApp: '어두운 화면으로 봐요. 이 기기에 저장돼요.',
   langTitle: '언어',
-  langBody:
-    '화면 문구의 언어를 바꿔요. 이벤트·기록 문장은 아직 한국어로 나와요. 이 기기에 저장돼요.',
+  langBody: '게임 화면과 이벤트 문구의 언어를 바꿔요. 이 기기에 저장돼요.',
   sheetTitle: '업무 모드',
   sheetBodyBefore: '게임 화면을 스프레드시트로 바꾸고 소리를 꺼요. ',
   sheetBodyAfter: '(숫자 1 왼쪽 키)로 켜고 꺼요. PC 브라우저 전용이며 이 기기에 저장돼요.',
@@ -29,6 +28,7 @@ const ko = {
   installGuide: '홈 화면에 추가하기',
   guide: '게임 가이드',
   faq: '자주 묻는 질문',
+  fairness: '확률과 공정성',
   legal: '서비스 정책',
   terms: '이용약관',
   privacy: '개인정보 처리방침',

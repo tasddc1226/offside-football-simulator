@@ -19,6 +19,7 @@ import {
   truePot,
   newSeason,
   finalRank,
+  leagueTable,
   fameEff,
 } from './engine.js';
 import {
@@ -56,7 +57,7 @@ import type {
 } from './types.js';
 import { HOF_LOCAL_MAX, loadHOF } from './hof-store.js';
 import { saveKey } from './storage.js';
-import { legendScore, legendSnapshot, legendTermsOf } from './legend.js';
+import { ballonWinsOf, legendScore, legendSnapshot, legendTermsOf } from './legend.js';
 import { gSeasonText as T } from './i18n/ko/gSeason.js';
 import { tn } from './i18n/names.js';
 
@@ -159,6 +160,7 @@ export function endSeason(s: GameState): SeasonEndResult {
   // T-10-092 최고 OVR을 찍은(같아도) 시즌 말 능력치를 남긴다 — 아래 노쇠 감소 전 값.
   if (o >= s.peak) s.peakProfile = peakProfileOf(s);
   if (!S.comps) seasonSetup(s, S);
+  S.finalTable ??= leagueTable(s);
   const avg = S.apps ? S.ratingSum / S.apps : 0;
   const rank = finalRank(s);
   const trophies = [...(S.trophiesMid || [])],
@@ -708,7 +710,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     trophies: s.trophies.length,
     awards: s.awards.length,
     caps: s.nat.caps,
-    ballon: s.awards.filter((x) => x.t === '발롱도르').length,
+    ballon: ballonWinsOf(s),
     lastClub: s.club.name,
     lastClubId: s.club.id,
     score,
@@ -718,6 +720,11 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     detail: legendSnapshot(s),
     profile: s.peakProfile ?? peakProfileOf(s, s.peak - ovr(s)),
     pot: Math.round(truePot(s)),
+    potFlow: {
+      ...(s.origin && { origin: s.origin }),
+      boost: s.flags.potBonus ?? 0,
+      bal: s.bal?.v ?? 0,
+    },
     public: isPublic,
   };
   // T-10-107 같은 커리어가 다시 은퇴하면(탭 두 개로 같은 저장 등) 이전 기록을 바꾼다 — 겹치면 '내 선수' 목록이 깨진다.

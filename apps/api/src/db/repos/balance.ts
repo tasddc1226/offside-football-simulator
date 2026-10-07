@@ -1,5 +1,5 @@
-import { sanitizeBalance, type BalanceVersion } from '@offside/contracts';
-import { and, desc, eq } from 'drizzle-orm';
+import { sanitizeBalance, type BalanceHistory, type BalanceVersion } from '@offside/contracts';
+import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
 import { auditLog, balanceVersions } from '../schema.js';
@@ -30,6 +30,29 @@ export async function getBalanceVersion(
 ): Promise<BalanceVersion | undefined> {
   const [row] = await db.select().from(balanceVersions).where(eq(balanceVersions.version, version));
   return row && toVersion(row);
+}
+
+/** T-11-141 공개 이력: 한 번이라도 적용된 버전(적용 시각이 있는 것), 최근 적용 순. 운영 메모는 읽지 않는다. */
+export async function listAppliedBalanceVersions(db: Db, limit: number): Promise<BalanceHistory> {
+  const rows = await db
+    .select({
+      version: balanceVersions.version,
+      status: balanceVersions.status,
+      valuesJson: balanceVersions.valuesJson,
+      activatedAt: balanceVersions.activatedAt,
+    })
+    .from(balanceVersions)
+    .where(isNotNull(balanceVersions.activatedAt))
+    .orderBy(desc(balanceVersions.activatedAt))
+    .limit(limit);
+  return {
+    versions: rows.map((r) => ({
+      version: r.version,
+      values: sanitizeBalance(JSON.parse(r.valuesJson)),
+      activatedAt: r.activatedAt!,
+      active: r.status === 'active',
+    })),
+  };
 }
 
 /** 최신 버전부터. */

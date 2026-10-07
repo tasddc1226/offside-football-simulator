@@ -6,6 +6,7 @@
  * 시즌 1 개막부터 연다(프리시즌 선수는 세부 포지션이 없다 — 옛 방식대로 주력 능력치에서 역할을 정한다).
  * 레전드 점수·영구결번 가중은 여전히 큰 포지션 단위다.
  */
+import type { Locale } from './i18n.js';
 import { serviceSeason } from './service-seasons.js';
 
 export const DETAIL_POSITIONS = ['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'W', 'ST'] as const;
@@ -77,14 +78,29 @@ export const POS_LABEL_EN: Record<PosGroup, string> = {
   DF: 'defender',
   GK: 'goalkeeper',
 };
+/** 큰 포지션의 일본어 표기(T-11-140). */
+export const POS_LABEL_JA: Record<PosGroup, string> = {
+  FW: 'フォワード',
+  MF: 'ミッドフィルダー',
+  DF: 'ディフェンダー',
+  GK: 'ゴールキーパー',
+};
 /** 큰 포지션 순서(공격수 → 골키퍼). 명예의 전당 포지션 칩(T-11-018)이 쓴다. */
 export const POS_GROUPS = Object.keys(POS_LABEL) as PosGroup[];
 
 /** 이름을 공개하지 않은 선수 표기(명예의 전당·서버 최초 기록·공유 링크 미리보기·구단주 팀). */
-export const anonName = (pos: PosGroup, number: number | null, lang: 'ko' | 'en' = 'ko'): string =>
-  lang === 'en'
-    ? `Anonymous ${POS_LABEL_EN[pos]}${number != null ? ` No.${number}` : ''}`
-    : `익명의 ${POS_LABEL[pos]}${number != null ? ` No.${number}` : ''}`;
+const ANON: Record<Locale, (label: string, no: string) => string> = {
+  ko: (label, no) => `익명의 ${label}${no}`,
+  en: (label, no) => `Anonymous ${label}${no}`,
+  ja: (label, no) => `匿名の${label}${no}`,
+};
+const POS_LABELS: Record<Locale, Record<PosGroup, string>> = {
+  ko: POS_LABEL,
+  en: POS_LABEL_EN,
+  ja: POS_LABEL_JA,
+};
+export const anonName = (pos: PosGroup, number: number | null, lang: Locale = 'ko'): string =>
+  ANON[lang](POS_LABELS[lang][pos], number != null ? ` No.${number}` : '');
 
 /** 대표 능력치 6개(웹 game/data.ts ATTR_KEYS와 같은 순서). 골키퍼는 같은 키에 골키퍼 능력치(DIV·HAN…)가 들어간다. */
 export const FACE_ATTRS = ['pac', 'sho', 'pas', 'dri', 'def', 'phy'] as const;

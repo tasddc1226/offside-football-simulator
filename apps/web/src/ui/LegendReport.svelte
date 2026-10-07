@@ -6,6 +6,8 @@
   // 화면에 들어올 때 하나씩 올라온다. 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
   import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
   import { retirementPotentialNote } from '@offside/app-core/potential-view';
+  import { potentialFlowLines, potentialSeedLines } from '@offside/app-core/potential-flow';
+  import { gamePotentialText as P } from '@offside/app-core/i18n/ko/gamePotential';
   import type { Snippet } from 'svelte';
   import { legendScoreBreakdown, legendTitle } from '@offside/game/season';
   import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '@offside/game/retirement-report';
@@ -136,6 +138,7 @@
       {/if}
       <div><b><CountUp value={caps} animate={playing} run={seen.highlights} /></b><span>{L.statCaps}</span></div>
       <div><b><CountUp value={v.totals.trophies} animate={playing} run={seen.highlights} /></b><span>{L.statTrophies}</span></div>
+      <div data-legend-ballon><b><CountUp value={v.totals.ballon} animate={playing} run={seen.highlights} /></b><span>{L.statBallon}</span></div>
     </section>
     {#if !d}<p class="film-note">{L.noDetailNote}</p>{/if}
     {#if playing && !seen.journey}<div class="film-cue" aria-hidden="true">{L.scrollCue}<i>↓</i></div>{/if}
@@ -216,6 +219,13 @@
       <div class="film-pot-ach" data-legend-ach>
         <span>{L.peakOvrLabel}</span><strong>{v.peak}</strong>
       </div>
+      {#if v.flow}
+        <div class="film-pot-flow" data-legend-flow>
+          <span>{P.flowTitle}</span>
+          {#each potentialFlowLines(v.flow, v.pot) as line (line)}<p>{line}</p>{/each}
+          {#each potentialSeedLines(v.flow) as line (line)}<small>{line}</small>{/each}
+        </div>
+      {/if}
     </section>
   {/if}
   {#if d || rnGranted || v.wallOfHonor}

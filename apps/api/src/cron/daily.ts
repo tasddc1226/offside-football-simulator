@@ -3,6 +3,7 @@
 import type { Bindings } from '../env.js';
 import { sweepAnomalies, type SweepResult } from '../db/repos/anomalies.js';
 import { backupToR2, type BackupResult } from './backup.js';
+import { runCareerRetention, type RetentionResult } from './careerRetention.js';
 import { archiveGrowth, type GrowthArchiveResult } from './growthArchive.js';
 import { cleanupExpired, type CleanupResult } from './cleanup.js';
 import { createDb } from '../db/client.js';
@@ -10,6 +11,7 @@ import { setMeta } from '../db/repos/firsts.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
 
 export type DailyResult = {
+  careerRetention: RetentionResult | { error: string };
   cleanup: CleanupResult | { error: string };
   /** 비정상 기록 점검: 확실한 것은 숨기고 애매한 것은 운영자 검토로 남긴다(repos/anomalies.ts). */
   anomalies: SweepResult | { error: string };
@@ -42,6 +44,7 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
   const growthArchive = env.BACKUP
     ? await archiveGrowth(env.DB, env.BACKUP, env.ENVIRONMENT, now).catch(errorOf)
     : ('skipped' as const);
+  const careerRetention = await runCareerRetention(env, now).catch(errorOf);
   // 이상 점검이 숨긴 커리어가 빠지도록 업적 점수는 점검 뒤에 센다.
   const achievements = await rebuildStaleAchievements(
     createDb(env.DB),
@@ -52,7 +55,8 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     'error' in anomalies ||
     (typeof backup === 'object' && 'error' in backup) ||
     (typeof growthArchive === 'object' && 'error' in growthArchive) ||
-    'error' in achievements;
+    'error' in achievements ||
+    'error' in careerRetention;
   const log = JSON.stringify({
     level: failed ? 'error' : 'info',
     ts: new Date().toISOString(),
@@ -61,6 +65,7 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     anomalies,
     backup,
     growthArchive,
+    careerRetention,
     achievements,
     durationMs: Date.now() - startedAt,
   });
@@ -71,5 +76,5 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
   );
   // 단계마다 오류를 잡아 나머지는 끝까지 돌리지만, 하나라도 실패했으면 실행을 실패로 남긴다(호출 기록에서 보이게).
   if (failed) throw new Error(`daily job failed: ${log.slice(0, 300)}`);
-  return { cleanup, anomalies, backup, growthArchive, achievements };
+  return { cleanup, anomalies, backup, growthArchive, careerRetention, achievements };
 }

@@ -274,6 +274,7 @@ export const authAttempts = sqliteTable(
         'PUSH_PREFERENCES',
         'PUSH_TEST',
         'FRIEND_REQUEST',
+        'TRANSLATE',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -368,6 +369,8 @@ export const careers = sqliteTable(
     appVersion: text('app_version').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    /** R2 details archive; header and season summaries stay in D1. */
+    detailArchiveKey: text('detail_archive_key'),
     retiredAt: text('retired_at'),
     // 은퇴 요약(NULL until retired).
     retireAge: integer('retire_age'),
@@ -413,6 +416,7 @@ export const careers = sqliteTable(
     potReal: integer('pot_real'),
   },
   (table) => [
+    index('careers_detail_archive_idx').on(table.detailArchiveKey),
     index('careers_profile_id_idx').on(table.profileId),
     // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
     index('careers_profile_status_season_idx').on(
@@ -507,6 +511,7 @@ export const marketListings = sqliteTable(
     uniqueIndex('market_listings_open_card_unique')
       .on(table.careerId)
       .where(sql`${table.status} = 'open'`),
+    index('market_listings_career_idx').on(table.careerId),
     index('market_listings_new_idx').on(table.status, table.season, table.createdAt),
     index('market_listings_price_idx').on(table.status, table.season, table.price, table.createdAt),
     index('market_listings_seller_idx').on(table.sellerId, table.status, table.closedAt),
@@ -660,6 +665,8 @@ export const boardPosts = sqliteTable(
     viewCount: integer('view_count').notNull().default(0),
     /** T-10-058 좋아요 수. board_post_likes를 바꿀 때 같은 batch에서 다시 센다(목록이 COUNT 없이 읽는다). */
     likeCount: integer('like_count').notNull().default(0),
+    /** T-11-146 운영자가 쓴 영어·일본어 제목·본문 `{"en":{"title","body"},"ja":{...}}`. 없으면 한국어를 보여 준다. */
+    i18nJson: text('i18n_json'),
   },
   (table) => [index('board_posts_board_created_idx').on(table.board, table.createdAt)],
 );
@@ -773,7 +780,11 @@ export const balanceVersions = sqliteTable(
     updatedAt: text('updated_at').notNull(),
     activatedAt: text('activated_at'),
   },
-  (table) => [index('balance_versions_status_idx').on(table.status)],
+  (table) => [
+    index('balance_versions_status_idx').on(table.status),
+    // T-11-141 공개 이력(적용 순 정렬).
+    index('balance_versions_activated_idx').on(table.activatedAt),
+  ],
 );
 
 /** T-10-027 서버 최초 기록. 기록 id(src/firsts.ts firstsCatalog)마다 가장 먼저 달성한 커리어 한 줄. 커리어가 지워지면
@@ -792,6 +803,7 @@ export const serverFirsts = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.season, table.id] }),
+    index('server_firsts_career_idx').on(table.careerId),
     index('server_firsts_achieved_idx').on(table.achievedAt),
   ],
 );
@@ -810,7 +822,10 @@ export const serverRecords = sqliteTable(
     achievedAt: text('achieved_at').notNull(),
     year: integer('year'),
   },
-  (table) => [primaryKey({ columns: [table.season, table.id] })],
+  (table) => [
+    primaryKey({ columns: [table.season, table.id] }),
+    index('server_records_career_idx').on(table.careerId),
+  ],
 );
 
 /**
@@ -844,6 +859,20 @@ export const retiredNumbers = sqliteTable(
  * 서버 내부 상태 한 줄씩. T-10-027 서버 최초 기록 재계산 버전, T-10-055 한국 시각 날짜별 은퇴 수
  * (`retired:YYYY-MM-DD`, 하루 한 줄씩 늘고 지우지 않는다 — retiredCountKey).
  */
+/**
+ * T-11-146 사용자가 쓴 글의 번역 캐시. 키는 sha256(목표 언어 + 원문) — 같은 댓글·채팅을 여러 사람이 눌러도 Workers AI는
+ * 한 번만 부른다. 원문은 두지 않는다(번역문만). 30일 지나면 매일 정리(cron/cleanup.ts)에서 지운다.
+ */
+export const translations = sqliteTable(
+  'translations',
+  {
+    key: text('key').primaryKey(),
+    text: text('text').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('translations_created_idx').on(table.createdAt)],
+);
+
 export const appMeta = sqliteTable('app_meta', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
@@ -1105,7 +1134,10 @@ export const ownerSeasonRecords = sqliteTable(
     statsJson: text('stats_json'),
     createdAt: text('created_at').notNull(),
   },
-  (table) => [primaryKey({ columns: [table.profileId, table.season] })],
+  (table) => [
+    primaryKey({ columns: [table.profileId, table.season] }),
+    index('owner_season_records_best_career_idx').on(table.bestCareerId),
+  ],
 );
 
 /** T-11-128 구단주 휘장. 시즌 결산이 한 번 주고 지우지 않는다 — (구단주, 시즌, 종류)에 하나. */

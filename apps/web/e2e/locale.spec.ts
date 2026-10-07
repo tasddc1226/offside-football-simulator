@@ -44,3 +44,23 @@ test('언어: 영어로 커리어를 시작하면 게임 기록도 영어다', a
   expect(log).toMatch(/begins a football career/);
   expect(log).not.toMatch(/[가-힣]/);
 });
+
+test.describe('일본어(T-11-140)', () => {
+  test.use({ locale: 'ja-JP' });
+
+  test('언어: 일본어 브라우저는 일본어로 시작하고 게임 기록도 일본어다', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
+    await page.locator('[data-act="new"]').click();
+    await page.locator('[data-act="next-candidates"]').click();
+    await page.locator('[data-cand="0"]').click();
+    await page.locator('[data-act="start"]').click();
+    await expect(page.locator('.player h1')).toBeVisible();
+    const log = await page.evaluate(
+      () =>
+        (JSON.parse(localStorage.getItem('ft_save')!) as { log: { text: string }[] }).log[0]!.text,
+    );
+    expect(log).toMatch(/[ぁ-んァ-ン]/);
+    expect(log).not.toMatch(/[가-힣]/);
+  });
+});

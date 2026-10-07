@@ -31,7 +31,7 @@ export const dex: Translation<DexMsgs> = {
     `An event that has appeared won't come back for at least ${p.n} phases, and the more you see it, the less often it shows (weight 1/(1 + times seen)).`,
   ruleRollTerm: 'Success rolls',
   ruleRoll:
-    'The % shown in the choice window is the real chance. A random number from 0 to 100 below it means success. There are no hidden modifiers.',
+    'The % shown in the choice window is the real chance. A random number from 0 to 100 below it means success. There are no hidden modifiers, and the rules are the same for every player regardless of ads, purchases or account.',
   ruleMiniTerm: 'One-tap minigames',
   ruleMini:
     'Choices with a match scene, like penalties, one-on-ones and shootouts, are decided by timing instead of odds. Stop the needle in the green zone of the gauge to succeed. If you do not tap within 3 seconds, you fail. Your attributes set the zone width, and this guide lists the zone as a share of the gauge. With reduced motion on, the shown chance is used instead.',
