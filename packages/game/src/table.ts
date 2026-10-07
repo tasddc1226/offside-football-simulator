@@ -101,6 +101,9 @@ export interface TableRow {
 /** 현재까지의 리그 순위표. 상대 팀 승점은 전력으로 매긴 기대 승점에 팀별 고정 편차를 더한 값이고(난수 없음), 승점이 같으면
  * 내 팀이 위다. */
 export function leagueTable(s: GameState): TableRow[] {
+  // 결산 뒤 연도·승격·병역·구단명이 바뀌어도 완료한 시즌의 승점과 순위는 그대로다.
+  // 행 복사본을 반환해 화면 정렬·가공이 저장된 최종 표를 바꾸지 않게 한다.
+  if (s.season.finalTable) return s.season.finalTable.map((row) => ({ ...row }));
   const L = leagueOf(seasonLeagueId(s)),
     S = s.season,
     P = S.played;
@@ -149,12 +152,11 @@ export function teamRank(s: GameState): number | null {
 export function finalRank(s: GameState): number {
   const L = leagueOf(s.leagueId),
     S = s.season;
-  const ranked = new Set(rankedRivals(s));
-  let rank = 1;
-  S.rivals.forEach((str, i) => {
+  // 결과는 표의 승점·내 팀 우선 동률 규칙을 따른다. 기존 결산과 같은 난수는 소비하되
+  // 순위를 다시 추첨하지 않는다 — 뒤따르는 시상식 등의 RNG 흐름을 불필요하게 옮기지 않는다.
+  S.rivals.forEach((str) => {
     const pts = Math.round(L.matches * clamp(basePpg(L, str) + gauss() * 0.12, 0.4, 2.6));
-    const above = pts > S.pts || (pts === S.pts && chance(0.5));
-    if (above && ranked.has(i)) rank++;
+    if (pts === S.pts) chance(0.5);
   });
-  return rank;
+  return leagueTable(s).findIndex((row) => row.me) + 1;
 }

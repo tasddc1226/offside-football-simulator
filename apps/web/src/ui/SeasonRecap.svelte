@@ -32,7 +32,7 @@
   } from '@offside/app-core/seasonRecap';
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
   import { detailPosOf } from '@offside/contracts/positions';
-  import { anonName, cardTier } from '@offside/app-core/format';
+  import { cardTier, playerName } from '@offside/app-core/format';
   import { num, recordText } from '@offside/app-core/teamText';
   import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
   import { ownerText as O } from '@offside/app-core/i18n/ko/owner';
@@ -207,7 +207,7 @@
             {@const b = recap.best}
             {@const t = cardTier(b.score, b.peak ?? 0)}
             {@const sw = CARD_TIER_SWATCH[t]}
-            {@const bestName = b.name ?? anonName(b.pos, null)}
+            {@const bestName = playerName(b.name, b.pos, null)}
             <!-- 결산은 한 화면 안에서만 본다(다른 화면으로 넘어가지 않는다). 카드는 팀 화면 카드와 같은 모양. -->
             <div class="face face-best" class:with-card={!!b.card} data-recap-best={b.careerId} data-tier={t} style="--c-base:{sw.base};--c-dark:{sw.dark};--c-ink:{sw.ink};--c-line:{sw.line}">
               {#if b.card}
@@ -226,7 +226,7 @@
             {@const s = recap.stats.scorer}
             <div class="face face-scorer" data-recap-scorer={s.careerId}>
               <small class="face-eyebrow">{L.scorer}</small>
-              <b class="face-name">{s.name ?? anonName(s.pos, null)}</b>
+              <b class="face-name">{playerName(s.name, s.pos, null)}</b>
               <span class="face-sub">{s.pos}</span>
               <span class="face-goals num"><span aria-hidden="true" use:countUp={s.goals}>{num(s.goals)}</span><span class="sr-only">{num(s.goals)}</span><small>{L.numGoals}</small></span>
             </div>

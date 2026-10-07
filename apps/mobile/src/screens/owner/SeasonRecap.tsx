@@ -9,7 +9,7 @@ import { useSnapshot } from 'valtio';
 import type { SeasonRecap as Recap, SeasonRecapResponse } from '@offside/contracts';
 import { detailPosOf } from '@offside/contracts/positions';
 import { fetchOwnerHonors, fetchSeasonRecap } from '@offside/app-core/api/seasonRecap';
-import { anonName, cardTier } from '@offside/app-core/format';
+import { cardTier, playerName } from '@offside/app-core/format';
 import { EMBLEM_PALETTE } from '@offside/app-core/gradeEmblem';
 import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
 import { ownerText as O } from '@offside/app-core/i18n/ko/owner';
@@ -607,7 +607,7 @@ function BestFace({ best }: { best: Best }) {
   const tier = cardTier(best.score, best.peak ?? 0);
   const sw = CARD_TONES[tier];
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
-  const name = best.name ?? anonName(best.pos, null);
+  const name = playerName(best.name, best.pos, null);
   const { card } = best;
   // 선수 카드가 튀어 나오듯 들어온다(웹 .face-card pop).
   const pop = usePop();
@@ -711,7 +711,7 @@ function BestFace({ best }: { best: Best }) {
 /** 가장 많이 넣은 선수 — 큰 골 수(차오른다). */
 function ScorerFace({ scorer }: { scorer: NonNullable<NonNullable<Recap['stats']>['scorer']> }) {
   const c = useColors();
-  const name = scorer.name ?? anonName(scorer.pos, null);
+  const name = playerName(scorer.name, scorer.pos, null);
   const body = (
     <View style={{ gap: 2 }}>
       <Txt style={{ opacity: 0.8, fontSize: rem(0.75), fontWeight: '600' }}>{L.scorer}</Txt>

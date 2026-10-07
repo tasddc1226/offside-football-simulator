@@ -154,6 +154,7 @@ export interface LegendView {
     trophies: number;
     awards: number;
     caps: number;
+    ballon: number;
   };
   own: HofEntry | null;
   /** T-10-069 공유 링크를 걸 커리어 id — 내 선수(이 기기·계정 기록) 중 명예의 전당에 오른 기록만. 아래 공유 바(ShareBar)를 띄운다. */
