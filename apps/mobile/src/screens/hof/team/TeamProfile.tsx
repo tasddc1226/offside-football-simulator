@@ -337,9 +337,8 @@ export default function TeamProfile({ id }: { id: string }) {
                   {CL.honorsTitle}
                 </Txt>
               </View>
-              <AutoGrid
-                min={140}
-                items={team.cupHonors.map((h) => {
+              <View style={{ gap: 8 }}>
+                {team.cupHonors.map((h) => {
                   const trophy = trophyStage(h.stage);
                   return (
                     <View
@@ -355,7 +354,6 @@ export default function TeamProfile({ id }: { id: string }) {
                         backgroundColor: c.surface2,
                         borderWidth: trophy ? 2 : 0,
                         borderColor: trophy ? cupTrophy(trophy).palette.base : c.pitchAccent,
-                        flexGrow: 1,
                       }}
                     >
                       {trophy ? <CupTrophy stage={trophy} edition={h.edition} size={48} /> : null}
@@ -372,7 +370,7 @@ export default function TeamProfile({ id }: { id: string }) {
                     </View>
                   );
                 })}
-              />
+              </View>
             </Card>
           ) : null}
           {mine ? null : <NameReport kind="team" id={team.id} name={team.name} />}
