@@ -20,6 +20,8 @@
   import TeamPitch from './TeamPitch.svelte';
   import TeamLogo from './TeamLogo.svelte';
   import CupHonors from '../cup/CupHonors.svelte';
+  import CupTrophy from '../cup/CupTrophy.svelte';
+  import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
   import { num as n, recordText } from '@offside/app-core/teamText';
   import { friendRequestText } from '@offside/app-core/friendText';
   import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
@@ -29,6 +31,8 @@
 
   let status = $state<LoadStatus>('loading');
   let team = $state<TeamProfile | null>(null);
+  // 가장 최근 우승 — 팀 이름 아래 챔피언 배지.
+  const champ = $derived(team?.cupHonors?.find((h) => h.stage === 'champion'));
   let liked = $state(false);
   let mine = $state(false);
   let liking = $state(false);
@@ -104,6 +108,7 @@
         <div class="tp-identity"><TeamLogo logo={team.logo} name={team.name} size={56} /><div class="tp-names">
           <small class="muted">{seasonLabel(team.season, team.seasonName)}{team.rank ? ` · RANK #${team.rank}` : ''}</small>
           <h1>{team.name}</h1>
+          {#if champ}<span class="tp-champ" data-champ-badge><CupTrophy stage="champion" edition={champ.edition} size={22} />{CL.champBadge({ n: champ.edition })}</span>{/if}
           <p class="muted fs-sm">{L.profManager}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</p>
         </div></div>
         <div class="tp-rating" aria-label={L.profRatingAria({ n: team.rating })}><small>RATING</small><b>{n(team.rating)}</b></div>
@@ -175,6 +180,7 @@
   }
   .tp-identity {display:flex;align-items:center;gap:10px;min-width:0;}
   .tp-names {min-width:0;}
+  .tp-champ {display:inline-flex; align-items:center; gap:4px; margin:2px 0 4px; padding:2px 10px 2px 4px; border-radius:999px; font-size:var(--fs-xs, 12px); font-weight:800; color:var(--ink); background:color-mix(in srgb, #f6cf55 30%, var(--surface-2)); box-shadow:inset 0 0 0 1px color-mix(in srgb, #d29a14 55%, transparent);}
   .tp-manager {
     color: var(--ink);
   }

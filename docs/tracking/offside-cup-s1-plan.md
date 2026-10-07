@@ -78,6 +78,10 @@ T-11-125의 컵 전용 명단, 첫 안의 20:00 스냅샷 대신 **경기 전후
 | 32강      | 대회 기록                                       | 1      |
 | 조별 탈락 | 참가 기록                                       | 1      |
 
+트로피 아트는 `packages/app-core/src/cupTrophy.ts`(업적 등급 엠블럼과 같은 64×64 다각형)를 웹 `ui/cup/CupTrophy.svelte`·앱
+`ui/CupTrophy.tsx`가 함께 그린다. 우승 금(월계수·큰 별) · 준우승 은 · 4강 동, 받침대는 브랜드 잉크에 오프사이드 라인과
+회차 숫자. 팀 프로필 컵 기록에 트로피를, 팀 이름 아래에 가장 최근 우승 배지("제N회 챔피언")를 단다.
+
 - 기록은 `cup_entries.stage`·`rewarded_at`에 남고 팀 프로필(`cupHonors`)에 보인다.
 - 리롤권은 `owner_items(profile_id, item='reroll', qty)`. 지급은 `rewarded_at IS NULL`로 막아 팀당 한 번만 한다. 탈락이 확정되는 순간 그 단계 보상을 준다.
 - 리롤권 쓰기: `POST /v1/items/reroll/use`(멱등 키). 새 선수 만들 때 후보 3명을 다시 뽑는다(`rerollCandidates`).

@@ -9,6 +9,7 @@ export const cup: Translation<CupMsgs> = {
   edition: (p) => `#${p.n}`,
   fullTitle: (p) => `Offside Cup #${p.n}`,
   champTitle: (p) => `Offside Cup #${p.n} Champion`,
+  champBadge: (p) => `Cup #${p.n} Champion`,
   open: 'View cup',
   loadFail: "Couldn't load the cup.",
   loading: 'Loading…',

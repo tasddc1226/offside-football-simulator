@@ -10,7 +10,6 @@ import {
   viewTeam,
   type TeamProfile as TeamProfileData,
 } from '@offside/app-core/api/team';
-import { CUP_REWARDS } from '@offside/contracts/cup';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import { num as n, recordText } from '@offside/app-core/teamText';
 import { localCareerNames } from '@offside/game/hof-store';
@@ -21,6 +20,8 @@ import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
 import { friendRequestText } from '@offside/app-core/friendText';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
+import { cupTrophy, trophyStage } from '@offside/app-core/cupTrophy';
+import { EMBLEM_PALETTE } from '@offside/app-core/gradeEmblem';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { stageLabel } from '../../owner/cupText';
 import { toast } from '../../../game/host';
@@ -28,10 +29,13 @@ import { DISPLAY, rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
 import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
+import { CupTrophy } from '../../../ui/CupTrophy';
 import { Press } from '../../../ui/Press';
 import { Txt } from '../../../ui/Txt';
 import { useOnPull } from '../../../ui/refresh';
 import { AutoGrid } from '../../board/parts';
+
+const GOLD = EMBLEM_PALETTE.gold;
 
 export default function TeamProfile({ id }: { id: string }) {
   const c = useColors();
@@ -92,6 +96,8 @@ export default function TeamProfile({ id }: { id: string }) {
     toast(friendRequestText(r.data));
   }
 
+  // 가장 최근 우승 — 팀 이름 아래 챔피언 배지.
+  const champ = team?.cupHonors?.find((h) => h.stage === 'champion');
   const cells =
     team?.slots.map((s) => ({
       rating: s.rating,
@@ -125,6 +131,31 @@ export default function TeamProfile({ id }: { id: string }) {
                 <Txt v="h1" accessibilityRole="header">
                   {team.name}
                 </Txt>
+                {champ ? (
+                  <View
+                    testID="team-champ-badge"
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      alignSelf: 'flex-start',
+                      gap: 4,
+                      marginTop: 2,
+                      marginBottom: 4,
+                      paddingVertical: 2,
+                      paddingLeft: 4,
+                      paddingRight: 10,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: GOLD.base,
+                      backgroundColor: `${GOLD.light}4d`,
+                    }}
+                  >
+                    <CupTrophy stage="champion" edition={champ.edition} size={22} />
+                    <Txt bold style={{ fontSize: rem(0.75) }}>
+                      {CL.champBadge({ n: champ.edition })}
+                    </Txt>
+                  </View>
+                ) : null}
                 <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
                   {L.profManager}
                   <Txt bold style={{ fontSize: rem(0.8125) }}>
@@ -309,28 +340,35 @@ export default function TeamProfile({ id }: { id: string }) {
               <AutoGrid
                 min={140}
                 items={team.cupHonors.map((h) => {
-                  const trophy = CUP_REWARDS[h.stage].trophy;
+                  const trophy = trophyStage(h.stage);
                   return (
                     <View
                       key={`${h.cupId}`}
                       testID={`cup-honor-${h.cupId}`}
                       style={{
-                        gap: 2,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 10,
                         paddingVertical: trophy ? 8 : 10,
                         paddingHorizontal: trophy ? 10 : 12,
                         borderRadius: 12,
                         backgroundColor: c.surface2,
                         borderWidth: trophy ? 2 : 0,
-                        borderColor: c.pitchAccent,
+                        borderColor: trophy ? cupTrophy(trophy).palette.base : c.pitchAccent,
                         flexGrow: 1,
                       }}
                     >
-                      <Txt bold>
-                        {CL.honorResult({ edition: h.edition, stage: stageLabel(h.stage) })}
-                      </Txt>
-                      <Txt tone="muted" style={{ fontSize: rem(0.8333) }}>
-                        {CL.honorTeam({ team: h.teamName })}
-                      </Txt>
+                      {trophy ? <CupTrophy stage={trophy} edition={h.edition} size={48} /> : null}
+                      <View style={{ gap: 2, flexShrink: 1 }}>
+                        <Txt bold>
+                          {h.stage === 'champion'
+                            ? CL.champTitle({ n: h.edition })
+                            : CL.honorResult({ edition: h.edition, stage: stageLabel(h.stage) })}
+                        </Txt>
+                        <Txt tone="muted" style={{ fontSize: rem(0.8333) }}>
+                          {CL.honorTeam({ team: h.teamName })}
+                        </Txt>
+                      </View>
                     </View>
                   );
                 })}
