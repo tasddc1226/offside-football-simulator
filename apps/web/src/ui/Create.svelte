@@ -14,7 +14,7 @@
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { isKorean, nationOf } from '@offside/game/nation';
   import { startCareer, rollCandidates, rerollCandidates } from './actions.js';
-  import { fetchItems, useReroll } from '@offside/app-core/api/cup';
+  import { fetchItems, spendReroll } from '@offside/app-core/api/cup';
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { toast } from './helpers.js';
   import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
@@ -104,10 +104,10 @@
   async function reroll() {
     if (rerolling || rerolls < 1 || !confirm(CL.rerollConfirm({ n: rerolls - 1 }))) return;
     rerolling = true;
-    const r = await useReroll();
+    const r = await spendReroll();
     rerolling = false;
     if (!r.ok) {
-      if (r.error.code === 'NO_REROLL') rerolls = 0;
+      if (r.error.reason === 'NO_REROLL') rerolls = 0;
       return toast(r.error.message || CL.rerollFail);
     }
     rerolls = r.data.reroll;

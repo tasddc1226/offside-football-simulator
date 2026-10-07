@@ -19,7 +19,7 @@ import {
 import { and, eq, sql } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import type { Db } from '../db/client.js';
-import { cupEntries, ownerItems } from '../db/schema.js';
+import { cupEntries, cupMatches, ownerItems } from '../db/schema.js';
 import {
   myTeamIn,
   publicNamesOf,
@@ -27,6 +27,7 @@ import {
   teamLogosByIds,
   type MatchDetail,
 } from '../db/repos/ownerTeams.js';
+import { countOpenListingsAmong } from '../db/repos/market.js';
 import { getDb, type AppEnv } from '../env.js';
 import { reqLang } from '../lang.js';
 import { idempotency } from '../middleware/idempotency.js';
@@ -181,20 +182,13 @@ async function eligibility(
   const lineups = await lineupsOf(db, cup.season, team, team);
   const filled = filledCount(lineups.home);
   const ids = slotIdsOf(team).filter((x): x is string => !!x);
-  const listed = ids.length
-    ? await db.$client
-        .prepare(
-          `SELECT count(*) AS n FROM market_listings WHERE status = 'open' AND career_id IN (SELECT value FROM json_each(?))`,
-        )
-        .bind(JSON.stringify(ids))
-        .first<{ n: number }>()
-    : { n: 0 };
+  const listed = await countOpenListingsAmong(db, ids);
   const reason =
     now < cup.opensAt || now >= cup.closesAt
       ? ('closed' as const)
       : filled < cup.minFilled
         ? ('not-enough' as const)
-        : (listed?.n ?? 0) > 0
+        : listed > 0
           ? ('listed' as const)
           : activeCount(entries) >= cup.capacity
             ? ('full' as const)
@@ -313,7 +307,10 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/cups/:cupId/matches/:matchId', async (c) => {
     const db = getDb(c);
     const cup = cupOf(c);
-    const m = (await cupMatchesOf(db, cup.id)).find((x) => x.id === c.req.param('matchId'));
+    const [m] = await db
+      .select()
+      .from(cupMatches)
+      .where(and(eq(cupMatches.cupId, cup.id), eq(cupMatches.id, c.req.param('matchId'))));
     if (!m || !m.playedAt || !m.detailJson)
       throw notFoundError(cupKo('matchNotFound'), 'CUP_MATCH_NOT_FOUND');
     const d = JSON.parse(m.detailJson) as MatchDetail;
@@ -421,15 +418,8 @@ export async function checkCupLineup(
       throw conflictError(cupKo('lineupLocked'), 'CUP_LINEUP_LOCKED');
     if (filled < cup.minFilled)
       throw conflictError(cupKo('minFilled', { n: cup.minFilled }), 'CUP_MIN_FILLED');
-    if (ids.length) {
-      const listed = await db.$client
-        .prepare(
-          `SELECT count(*) AS n FROM market_listings WHERE status = 'open' AND career_id IN (SELECT value FROM json_each(?))`,
-        )
-        .bind(JSON.stringify(ids))
-        .first<{ n: number }>();
-      if ((listed?.n ?? 0) > 0) throw conflictError(cupKo('cardListed'), 'CUP_CARD_LISTED');
-    }
+    if ((await countOpenListingsAmong(db, ids)) > 0)
+      throw conflictError(cupKo('cardListed'), 'CUP_CARD_LISTED');
   }
 }
 

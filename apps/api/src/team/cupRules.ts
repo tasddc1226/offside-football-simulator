@@ -1,23 +1,10 @@
 import { CUP_POINTS, type CupRound } from '@offside/contracts/cup';
+import { rngOf, seedOf } from './sim.js';
 
 // T-11-145 오프사이드 컵의 순수 규칙: 조 추첨 · 조별 일정 · 순위 · 토너먼트 대진. DB를 모른다(cup.ts가 읽고 쓴다).
 
-/** 문자열 시드 → [0,1) 난수(FNV-1a + mulberry32). 추첨은 서버 비공개 시드로 한 번만 한다. */
-export function rngFrom(seed: string): () => number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  let a = h >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+/** 문자열 시드 → [0,1) 난수(경기 시뮬과 같은 FNV-1a + mulberry32). 추첨은 서버 비공개 시드로 한 번만 한다. */
+export const rngFrom = (seed: string): (() => number) => rngOf(seedOf(seed));
 
 function shuffle<T>(xs: readonly T[], rng: () => number): T[] {
   const a = [...xs];

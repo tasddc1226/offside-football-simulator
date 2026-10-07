@@ -174,6 +174,21 @@ export async function countOpenListingsOf(db: Db, sellerId: string): Promise<num
   return row?.n ?? 0;
 }
 
+/** T-11-145 이 선수들 중 시장에 내놓은(열린 매물) 수. */
+export async function countOpenListingsAmong(
+  db: Db,
+  careerIds: readonly string[],
+): Promise<number> {
+  if (!careerIds.length) return 0;
+  const row = await db.$client
+    .prepare(
+      `SELECT count(*) AS n FROM market_listings WHERE status = 'open' AND career_id IN (SELECT value FROM json_each(?))`,
+    )
+    .bind(JSON.stringify(careerIds))
+    .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
 export async function countBuysSince(db: Db, buyerId: string, sinceIso: string): Promise<number> {
   const [row] = await db
     .select({ n: sql<number>`count(*)` })

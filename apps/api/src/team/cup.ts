@@ -12,11 +12,10 @@ import {
   type CupRound,
   type CupStage,
 } from '@offside/contracts/cup';
-import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, asc, eq, getTableColumns, inArray, isNotNull } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { cupEntries, cupMatches, cupState, ownerTeams, profiles } from '../db/schema.js';
-import { type OwnerTeamRow } from '../db/repos/ownerTeams.js';
 import { cupKo, cupTitle } from '../cupText.js';
 import { cupSchedule } from './cupSchedule.js';
 import { eventNotificationStatements } from '../push/events.js';
@@ -36,10 +35,11 @@ import {
 // INSERT OR IGNORE, 보상: rewarded_at IS NULL).
 
 export type CupEntryRow = typeof cupEntries.$inferSelect;
-export type CupMatchRow = typeof cupMatches.$inferSelect;
+/** 목록용 경기 행. 득점 기록(detail_json)은 경기 상세에서만 따로 읽는다. */
+export type CupMatchRow = Omit<typeof cupMatches.$inferSelect, 'detailJson'>;
 export type CupStateRow = typeof cupState.$inferSelect;
 
-export const FORFEIT_GOALS = 3;
+const FORFEIT_GOALS = 3;
 
 export const cupEntriesOf = (db: Db, cupId: string) =>
   db
@@ -47,16 +47,13 @@ export const cupEntriesOf = (db: Db, cupId: string) =>
     .from(cupEntries)
     .where(eq(cupEntries.cupId, cupId))
     .orderBy(asc(cupEntries.createdAt));
+const MATCH_COLS = Object.fromEntries(
+  Object.entries(getTableColumns(cupMatches)).filter(([k]) => k !== 'detailJson'),
+) as Omit<ReturnType<typeof getTableColumns<typeof cupMatches>>, 'detailJson'>;
 export const cupMatchesOf = (db: Db, cupId: string) =>
-  db.select().from(cupMatches).where(eq(cupMatches.cupId, cupId));
+  db.select(MATCH_COLS).from(cupMatches).where(eq(cupMatches.cupId, cupId));
 export const cupStateOf = (db: Db, cupId: string) =>
   db.select().from(cupState).where(eq(cupState.cupId, cupId));
-
-const randomSeed = () => {
-  const b = new Uint8Array(16);
-  crypto.getRandomValues(b);
-  return [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
-};
 
 /** 라운드 순서(경기 시각 순). */
 const roundIdx = (r: string) => CUP_ROUNDS.indexOf(r as CupRound);
@@ -159,7 +156,7 @@ export async function drawCup(db: Db, cup: CupDef, now: string) {
   });
   const dropped = entries.filter((e) => !ok.includes(e));
   const groups = cupGroupCount(ok.length);
-  const seed = randomSeed();
+  const seed = crypto.randomUUID();
   const stmts: D1PreparedStatement[] = [
     d1
       .prepare(
@@ -257,7 +254,7 @@ const insertMatch = (
       `INSERT OR IGNORE INTO cup_matches (id, cup_id, round, grp, slot, home_team_id, away_team_id, at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .bind(newId('cmt'), cup.id, round, grp, slot, home, away, roundAt(cup, round));
+    .bind(newId('cpm'), cup.id, round, grp, slot, home, away, roundAt(cup, round));
 
 /** 경기 한 판을 치르고 적는다. 팀이 없거나(지워짐·다른 시즌) 선수가 없으면 0:3 몰수. */
 export async function playCupMatch(
@@ -463,8 +460,6 @@ export const activeEntriesOf = (db: Db, profileId: string) =>
     .select()
     .from(cupEntries)
     .where(and(eq(cupEntries.profileId, profileId), eq(cupEntries.status, 'active')));
-
-export type { OwnerTeamRow };
 
 /** T-11-145 구단주의 컵 성적(보상까지 끝난 것, 최근 대회부터). 팀 프로필 트로피·칭호. */
 export async function cupHonorsOf(db: Db, profileId: string) {

@@ -143,7 +143,7 @@ export function expectedGoals(att: LineStrength, opp: LineStrength, home: boolea
 }
 
 /** 문자열 → 32비트 시드(FNV-1a). */
-function seedOf(s: string): number {
+export function seedOf(s: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i);
@@ -153,7 +153,7 @@ function seedOf(s: string): number {
 }
 
 /** mulberry32 — [0, 1) 난수. */
-function rngOf(seed: number): () => number {
+export function rngOf(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;

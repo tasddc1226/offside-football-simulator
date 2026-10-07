@@ -27,8 +27,6 @@ export interface CupDef {
 }
 
 export const CUP_LOCK_MIN = 60;
-/** 이 수보다 적게 모이면 열지 않는다. */
-export const CUP_MIN_TEAMS = 4;
 
 // 시각은 KST 표기로 적고 UTC로 둔다. 접수 10/9 00:00 ~ 10/12 23:59, 추첨 10/13 12:00, 경기는 매일 21:00.
 const kst = (d: string) => new Date(`${d}+09:00`).toISOString();

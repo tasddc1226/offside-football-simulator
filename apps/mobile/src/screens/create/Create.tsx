@@ -33,7 +33,7 @@ import { adText } from '@offside/app-core/i18n/ko/ad';
 import { createText as L } from '@offside/app-core/i18n/ko/create';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
-import { fetchItems, useReroll as spendReroll } from '@offside/app-core/api/cup';
+import { fetchItems, spendReroll } from '@offside/app-core/api/cup';
 import { watchDetailOpening } from '@offside/app-core/season-opening';
 import { detailOpenNow, draftBody, draftDpos, randomName } from '@offside/app-core/state';
 import {

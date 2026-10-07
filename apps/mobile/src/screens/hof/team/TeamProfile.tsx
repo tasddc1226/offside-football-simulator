@@ -10,6 +10,7 @@ import {
   viewTeam,
   type TeamProfile as TeamProfileData,
 } from '@offside/app-core/api/team';
+import { CUP_REWARDS } from '@offside/contracts/cup';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import { num as n, recordText } from '@offside/app-core/teamText';
 import { localCareerNames } from '@offside/game/hof-store';
@@ -308,8 +309,7 @@ export default function TeamProfile({ id }: { id: string }) {
               <AutoGrid
                 min={140}
                 items={team.cupHonors.map((h) => {
-                  const trophy =
-                    h.stage === 'champion' || h.stage === 'runnerup' || h.stage === 'sf';
+                  const trophy = CUP_REWARDS[h.stage].trophy;
                   return (
                     <View
                       key={`${h.cupId}`}

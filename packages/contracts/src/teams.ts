@@ -6,6 +6,7 @@ import {
   PeakProfileSchema,
 } from './careers.js';
 import { PUBLIC_NAME_CHARS } from './content-filter.js';
+import { CUP_STAGES } from './cup.js';
 import {
   ACH_CATEGORIES,
   FORMATION_IDS,
@@ -416,7 +417,7 @@ export const CupHonorSchema = z.strictObject({
   cupId: z.string(),
   season: z.number().int(),
   edition: z.number().int(),
-  stage: z.enum(['champion', 'runnerup', 'sf', 'qf', 'r16', 'r32', 'group']),
+  stage: z.enum(CUP_STAGES),
   teamName: z.string(),
 });
 export type CupHonor = z.infer<typeof CupHonorSchema>;

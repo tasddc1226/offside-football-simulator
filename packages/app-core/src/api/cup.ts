@@ -5,7 +5,7 @@ import type {
   CupResponse,
   OwnerItemsResponse,
 } from '@offside/contracts';
-import { apiFetch, cachedGet, invalidateApiCache } from './client.js';
+import { apiFetch, cachedGet } from './client.js';
 
 export type {
   CupMatch,
@@ -26,18 +26,13 @@ export const fetchCupMe = (cupId = 'current') => apiFetch<CupMeResponse>(`/v1/cu
 export const fetchCupMatch = (cupId: string, matchId: string) =>
   cachedGet<CupMatchResponse>(`/v1/cups/${cupId}/matches/${matchId}`, 60_000);
 
-export async function enterCup(cupId: string) {
-  const r = await apiFetch<null>(`/v1/cups/${cupId}/entries`, { method: 'POST' });
-  invalidateApiCache('/v1/cups');
-  return r;
-}
-export async function withdrawCup(cupId: string) {
-  const r = await apiFetch<null>(`/v1/cups/${cupId}/entries/me`, { method: 'DELETE' });
-  invalidateApiCache('/v1/cups');
-  return r;
-}
+// 쓰기 성공이면 apiFetch가 조회 캐시를 비운다.
+export const enterCup = (cupId: string) =>
+  apiFetch<undefined>(`/v1/cups/${cupId}/entries`, { method: 'POST' });
+export const withdrawCup = (cupId: string) =>
+  apiFetch<undefined>(`/v1/cups/${cupId}/entries/me`, { method: 'DELETE' });
 
 export const fetchItems = () => apiFetch<OwnerItemsResponse>('/v1/items');
 /** 리롤권 1장 쓰기. 성공하면 남은 장수 — 그다음 gameActions.rerollCandidates()로 후보를 다시 뽑는다. */
-export const useReroll = () =>
+export const spendReroll = () =>
   apiFetch<OwnerItemsResponse>('/v1/items/reroll/use', { method: 'POST' });
