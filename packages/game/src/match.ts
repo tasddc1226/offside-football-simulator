@@ -244,7 +244,8 @@ export function simBlock(s: GameState): BlockResult {
       ({ g, a } = rollScoring(s, power, perf, L.avg, mins));
     }
     // T-11-134 이번 라운드 상대 구단의 시즌 전력. 상대가 정해지지 않은 옛 시즌은 리그 평균 팀을 상대한다.
-    const opp = matchOpp(s, S.played);
+    const opp = matchOpp(s, S.played, L);
+    const oppTag = opp ? { opp: opp.id } : {};
     const oppStr = opp?.str ?? L.avg;
     const res = rollResult(s, oppStr, mins, perf, g);
     const k = res === 'W' ? 'w' : res === 'D' ? 'd' : 'l';
@@ -273,14 +274,14 @@ export function simBlock(s: GameState): BlockResult {
       r.rs += rating;
       r.hl.push(...matchHighlights(s, S.played, g, rating, cs));
       addStat(s, 'cond', -(mins / 90) * 3.2);
-      r.games.push({ rd: S.played, res, mins, g, a, rating, cs, ...(opp ? { opp: opp.id } : {}) });
+      r.games.push({ rd: S.played, res, mins, g, a, rating, cs, ...oppTag });
       const hurt = rollInjury(s, S.played);
       if (hurt) {
         r.injured = true;
         r.hl.push(hurt);
       }
     }
-    if (!mins) r.games.push({ rd: S.played, res, mins: 0, inj, ...(opp ? { opp: opp.id } : {}) });
+    if (!mins) r.games.push({ rd: S.played, res, mins: 0, inj, ...oppTag });
     addStat(s, 'cond', 1.1);
   }
   afterBlock(s, r, L.tier);

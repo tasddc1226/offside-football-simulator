@@ -1,4 +1,5 @@
-import { CLUBS, type Club, type League } from './data.js';
+import type { Club, League } from './data.js';
+import { clubById } from './clubs.js';
 import { clamp, chance, gauss, hashStr } from './rng.js';
 import type { GameState } from './types.js';
 import { leagueOf, clubsIn } from './player.js';
@@ -22,8 +23,8 @@ export const RIVALS = 19;
  * T-11-134 이번 시즌 리그 상대 구단 — 내 구단을 뺀 리그 클럽을 전력 순으로 최대 19개(30팀인 MLS는 강한 19팀).
  * 시즌을 시작할 때 S.opp로 고정한다.
  */
-export function rivalClubs(s: GameState): Club[] {
-  return clubsIn(s.leagueId, s)
+export function rivalClubs(s: GameState, leagueId = s.leagueId): Club[] {
+  return clubsIn(leagueId, s)
     .filter((c) => c.id !== s.club.id)
     .sort((a, b) => b.str - a.str)
     .slice(0, RIVALS);
@@ -43,6 +44,8 @@ const TOP_SD = [
 ];
 /** 상대 구단이 n개일 때 순위용 전력이 리그 평균보다 높게 잡히는 몫 — 경기 상대 전력에서는 다시 뺀다. */
 const rivalLift = (L: League, n: number) => (n ? L.spread * TOP_MEAN[n - 1]! : 0);
+/** 상대 구단이 정해진 시즌인가(T-11-134). 옛 시즌은 S.opp가 없다. */
+const hasOpp = (s: GameState) => !!s.season.opp?.length;
 
 /**
  * 시즌 상대 전력. 앞쪽 n개는 상대 구단 전력(리그 안 상대적 위치)에 시즌 폼 편차를 더하고, 구단이 모자라 남는 자리는 예전처럼
@@ -51,36 +54,32 @@ const rivalLift = (L: League, n: number) => (n ? L.spread * TOP_MEAN[n - 1]! : 0
  */
 export function seasonRivals(L: League, opps: Club[]): number[] {
   const n = opps.length;
-  const mean = n ? opps.reduce((t, c) => t + c.str, 0) / n : L.avg;
-  const v = n ? opps.reduce((t, c) => t + (c.str - mean) ** 2, 0) / n : 0;
+  const mean = opps.reduce((t, c) => t + c.str, 0) / (n || 1);
+  const v = opps.reduce((t, c) => t + (c.str - mean) ** 2, 0) / (n || 1);
   const form = Math.sqrt(Math.max(0, L.spread ** 2 - v));
-  const sd = n ? TOP_SD[n - 1]! : 1;
-  const rivals: number[] = [];
-  for (let i = 0; i < RIVALS; i++)
-    rivals.push(
-      i < n
-        ? L.avg + rivalLift(L, n) + sd * (opps[i]!.str - mean + gauss() * form)
-        : L.avg + gauss() * L.spread,
-    );
-  return rivals;
+  const base = L.avg + rivalLift(L, n);
+  const sd = TOP_SD[n - 1]!;
+  return Array.from({ length: RIVALS }, (_, i) =>
+    i < n ? base + sd * (opps[i]!.str - mean + gauss() * form) : L.avg + gauss() * L.spread,
+  );
 }
 
 /**
  * 리그 rd라운드(1부터) 상대 — S.opp를 차례로 돈다. str은 경기용 전력으로, 순위용 몫(rivalLift)을 빼 리그 평균 팀을 상대하던
  * 예전 경기와 평균 난도가 같다. 옛 시즌(S.opp 없음)은 null.
  */
-export function matchOpp(s: GameState, rd: number): { id: string; str: number } | null {
+export function matchOpp(s: GameState, rd: number, L: League): { id: string; str: number } | null {
   const opp = s.season.opp;
   if (!opp?.length) return null;
   const i = (rd - 1) % opp.length;
-  return { id: opp[i]!, str: s.season.rivals[i]! - rivalLift(leagueOf(s.leagueId), opp.length) };
+  return { id: opp[i]!, str: s.season.rivals[i]! - rivalLift(L, opp.length) };
 }
 
 /** 순위에 들어가는 상대 인덱스(S.rivals 기준, 강한 순). */
 function rankedRivals(s: GameState): number[] {
   const R = s.season.rivals;
   // T-11-134 상대 구단이 정해진 시즌은 그 구단들만 순위에 든다(나머지 자리는 구단이 모자라 채운 숫자).
-  if (s.season.opp) return s.season.opp.map((_, i) => i);
+  if (hasOpp(s)) return s.season.opp!.map((_, i) => i);
   const n = Math.max(1, Math.min(R.length, clubsIn(seasonLeagueId(s), s).length - 1));
   return R.map((_, i) => i)
     .sort((a, b) => R[b]! - R[a]!)
@@ -106,13 +105,10 @@ export function leagueTable(s: GameState): TableRow[] {
     S = s.season,
     P = S.played;
   // T-11-134 S.opp가 있으면 상대 전력과 구단이 짝이다. 옛 시즌은 리그 클럽을 전력 순으로 짝지어 이름만 붙인다.
-  const clubs = S.opp
-    ? S.opp.map((id) => CLUBS.find((c) => c.id === id))
-    : clubsIn(seasonLeagueId(s), s)
-        .filter((c) => c.id !== s.club.id)
-        .sort((a, b) => b.str - a.str);
+  // 상대 구단 시즌은 rankedRivals가 0..n-1이라 k번째 전력과 k번째 구단이 짝이다.
+  const clubs = hasOpp(s) ? S.opp!.map(clubById) : rivalClubs(s, seasonLeagueId(s));
   const rows: TableRow[] = rankedRivals(s).map((ri, k) => {
-    const club = clubs[S.opp ? ri : k];
+    const club = clubs[k];
     const koName = club?.name ?? `${L.name} ${k + 1}`;
     const name = club ? club.name : M.placeholderTeam({ league: tn(L.name), n: k + 1 });
     // 팀·시즌·경기 수로 정해지는 고정 편차(난수 아님) — 같은 전력대 팀들이 똑같은 전적으로 겹치지 않게.

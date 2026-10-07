@@ -4,8 +4,9 @@
 // 고치기만 한다. 띄운 뷰는 showSheet이 돌려준 것(state.view를 다시 읽은 반응형 프록시)을 고쳐야 화면이 바뀐다.
 import { clamp, ri } from '@offside/game/rng';
 import { clubsIn } from '@offside/game/engine';
-import { CLUBS } from '@offside/game/data';
 import { tn } from '@offside/game/i18n/names';
+import { clubById } from '@offside/game/clubs';
+import type { Club } from '@offside/game/data';
 import type { BlockResult, MatchGame } from '@offside/game/match';
 import type { GameState } from '@offside/game/types';
 import type { MgKind } from '@offside/game/minigame';
@@ -79,18 +80,22 @@ const SKIP_FILL_MS = 240;
 
 /** T-11-134 엔진이 정한 상대 구단 이름. 옛 시즌 경기(상대 없음)는 null — 예전처럼 리그 클럽을 차례로 붙인다. */
 function oppName(m: MatchGame): string | null {
-  const club = m.opp ? CLUBS.find((c) => c.id === m.opp) : undefined;
+  const club = m.opp ? clubById(m.opp) : null;
   return club ? tn(club.name) : null;
 }
 
 /** 구간 경기를 리포트의 경기별 기록 줄로 바꾼다(상대 팀 이름·스코어를 붙인다). */
 export function matchRows(s: GameState, b: BlockResult): TickerRow[] {
-  const opps = clubsIn(s.leagueId, s).filter((c) => c.id !== s.club.id);
+  let opps: Club[] | undefined;
+  const legacyOpp = (rd: number) => {
+    opps ??= clubsIn(s.leagueId, s).filter((c) => c.id !== s.club.id);
+    return opps.length ? tn(opps[rd % opps.length]!.name) : L.opponent;
+  };
   return b.games.map((m, i) => ({
     key: i,
     rd: m.rd,
     res: m.res,
-    opp: oppName(m) ?? (opps.length ? tn(opps[m.rd % opps.length]!.name) : L.opponent),
+    opp: oppName(m) ?? legacyOpp(m.rd),
     score: fakeScore(m),
     mins: m.mins,
     g: m.g,
