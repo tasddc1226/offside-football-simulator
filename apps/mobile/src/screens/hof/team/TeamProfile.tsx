@@ -127,7 +127,7 @@ export default function TeamProfile({ id }: { id: string }) {
                   {team.name}
                 </Txt>
                 {team.ownerTitle ? (
-                  <View style={{ marginTop: 2, marginBottom: 4 }}>
+                  <View style={{ marginTop: 2, marginBottom: 4, alignItems: 'flex-start' }}>
                     <TitleBadge title={team.ownerTitle} />
                   </View>
                 ) : null}

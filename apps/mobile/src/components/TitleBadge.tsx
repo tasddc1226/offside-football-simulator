@@ -25,7 +25,6 @@ export function TitleBadge({ title, size = 'md' }: { title: string; size?: 'md' 
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        alignSelf: 'flex-start',
         gap: size === 'md' ? 4 : 2,
         ...(icon
           ? {}
