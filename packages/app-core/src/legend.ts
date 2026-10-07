@@ -12,7 +12,7 @@ import { mainTitle } from '@offside/game/titles';
 import { truePot } from '@offside/game/stats';
 import { hofPotentialFlow, potentialFlow, retirementPotential } from './potential-view.js';
 import { getHofDetail, getMyCareers } from './api/client.js';
-import { anonName, totals } from './format.js';
+import { totals, playerName } from './format.js';
 import type { AppState, LegendView } from './state.js';
 import { legendToastText } from './i18n/ko/legendToast.js';
 
@@ -35,7 +35,7 @@ const ownShareId = (h: HofEntry | null | undefined) =>
 /** 다른 유저에게 보이는 그대로(공개하지 않은 이름은 익명). */
 function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
   return {
-    name: e.name ?? anonName(e.pos, e.number),
+    name: playerName(e.name, e.pos, e.number),
     number: e.number,
     pos: e.pos,
     dpos: e.dpos,

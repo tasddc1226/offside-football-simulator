@@ -2,7 +2,7 @@
   import type { PublicHofEntry } from '@offside/contracts';
   import { posAbbr, posLabel } from '@offside/game/data';
   import { PODIUM_FACE_BOTTOM, PODIUM_FACE_TOP, PODIUM_H, PODIUM_TONES, PODIUM_W, podiumPaths } from '@offside/game/podium';
-  import { anonName } from '@offside/app-core/format';
+  import { playerName } from '@offside/app-core/format';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
   import { openPublicLegend } from './legend.js';
   import ClubMark from './ClubMark.svelte';
@@ -28,7 +28,7 @@
   {#each ordered as player (player.entry.id)}
     {@const h = player.entry}
     {@const r = player.rank as 1 | 2 | 3}
-    {@const name = h.name ?? anonName(h.pos, h.number)}
+    {@const name = playerName(h.name, h.pos, h.number)}
     {@const country = NATION_BY_CODE.get(h.nation || DEFAULT_NATION) ?? NATION_BY_CODE.get(DEFAULT_NATION)!}
     {@const value = typeof player.value === 'number' ? player.value.toLocaleString(intlLocale()) : player.value}
     <button class="hof-podium-player medal {medals[player.rank - 1]}" data-hof-id={h.id} data-hof-podium-rank={player.rank} style:grid-column={places.indexOf(player.rank) + 1} aria-label={L.podiumPlayer({ rank: player.rank, name, country: tn(country.ko), label, value, unit })} onclick={() => void openPublicLegend(h)}>

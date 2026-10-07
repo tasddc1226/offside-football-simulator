@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { cardFootNote, cardTier, fmtValue, iGa, withEulReul, withRo } from './format.js';
+import {
+  cardFootNote,
+  cardTier,
+  fmtValue,
+  iGa,
+  playerName,
+  withEulReul,
+  withRo,
+} from './format.js';
+import { en } from './i18n/en/index.js';
+import { ja } from './i18n/ja/index.js';
 import { setLocale } from './i18n/core.js';
 import { priceAtPct, priceDiff, releaseLock } from './market.js';
 import { chartModel, marketIndex, ratioPct } from './marketChart.js';
@@ -122,6 +132,24 @@ describe('fmtValue 언어 (T-11-119)', () => {
     setLocale('en');
     try {
       expect(fmtValue(1_234_000)).toBe('₩12.34B');
+    } finally {
+      setLocale('ko');
+    }
+  });
+});
+
+describe('playerName 언어 (T-11-144)', () => {
+  it('다른 유저 선수 이름을 게임 안 이름과 같은 표로 옮기고, 비공개면 익명 표기', () => {
+    expect(playerName('김서준', 'FW', 9)).toBe('김서준');
+    expect(playerName(null, 'FW', 9)).toBe('익명의 공격수 No.9');
+    try {
+      setLocale('ja', ja);
+      expect(playerName('김서준', 'FW', 9)).toBe('キム・ソジュン');
+      expect(playerName('Kane', 'FW', 9)).toBe('Kane');
+      expect(playerName(null, 'GK', null)).toBe('匿名のゴールキーパー');
+      setLocale('en', en);
+      expect(playerName('김서준', 'FW', 9)).toBe('Kim Seo-jun');
+      expect(playerName(undefined, 'MF', 7)).toBe('Anonymous midfielder No.7');
     } finally {
       setLocale('ko');
     }

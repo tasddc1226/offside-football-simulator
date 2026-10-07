@@ -18,7 +18,7 @@ import {
   getRetiredNumbersPage,
   getRetiredNumbersSummary,
 } from '@offside/app-core/api/client';
-import { anonName } from '@offside/app-core/format';
+import { playerName } from '@offside/app-core/format';
 import { RN_DEFAULT, rnColors } from '@offside/app-core/rnStyle';
 import {
   type RnClubOrder,
@@ -123,7 +123,7 @@ const Tile = memo(function Tile({
   const gid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const col = rnColors(it.clubId) ?? RN_DEFAULT;
   const base = col.base;
-  const name = it.name ?? anonName(it.pos, it.number);
+  const name = playerName(it.name, it.pos, it.number);
   return (
     <Press
       scale={0.985}
@@ -282,7 +282,7 @@ function Plaques({
   return (
     <View style={{ gap: GAP, paddingBottom: 10 }}>
       {list.map((w) => {
-        const name = w.name ?? anonName(w.pos, w.number);
+        const name = playerName(w.name, w.pos, w.number);
         return (
           <Press
             key={w.careerId}

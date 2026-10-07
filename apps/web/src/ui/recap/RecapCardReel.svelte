@@ -5,7 +5,7 @@
   import { onMount } from 'svelte';
   import type { RecapSquadMember } from '@offside/contracts';
   import { detailPosOf } from '@offside/contracts/positions';
-  import { anonName } from '@offside/app-core/format';
+  import { playerName } from '@offside/app-core/format';
   import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
   import PlayerCard from '../team/PlayerCard.svelte';
   import { motionOK } from '../motion.js';
@@ -19,7 +19,7 @@
   let el: HTMLDivElement;
   // 카드가 화면 너비를 못 채우면 이어 붙일 필요도, 흐를 필요도 없다.
   let loop = $state(false);
-  const nameOf = (m: RecapSquadMember) => m.card.publicName ?? anonName(m.card.pos, m.card.number);
+  const nameOf = (m: RecapSquadMember) => playerName(m.card.publicName, m.card.pos, m.card.number);
 
   onMount(() => {
     const reduce = !motionOK;
