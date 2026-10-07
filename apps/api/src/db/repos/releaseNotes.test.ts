@@ -120,6 +120,43 @@ describe('릴리즈 노트 게시 트랜잭션', () => {
       '웹에 적용했어요',
     );
   });
+  it('영어·일본어 본문을 함께 쌓고 번역이 없는 항목·옛 오늘 글은 한국어로 이어 쓴다', async () => {
+    const en = { title: 'Records', items: ['Shows every nationality'] };
+    await publishReleaseNotes(ctx.env.DB, input([{ ...entry, en }]), now);
+    expect(JSON.parse(String((await post())!.i18n_json))).toEqual({
+      en: {
+        title: '261003 Release notes',
+        body: '261003 Release notes\n\n## 1. Records\n- Shows every nationality',
+      },
+      ja: {
+        title: '261003 リリースノート',
+        body: '261003 リリースノート\n\n## 1. 기록실 개선\n- 선수 국적을 모두 표시해요',
+      },
+    });
+    // 번역 칸을 나중에 더해도 게시한 항목의 이력 해시(한국어 원문)는 그대로다.
+    const ja = { title: '記録室の改善', items: ['すべての国籍を表示します'] };
+    const next = { ...entry, id: 'test-web', availability: 'web' as const, en, ja };
+    expect(
+      (await publishReleaseNotes(ctx.env.DB, input([{ ...entry, en, ja }, next]), now))
+        .publishedIds,
+    ).toEqual(['test-web']);
+    const i18n = JSON.parse(String((await post())!.i18n_json));
+    expect(i18n.en.body).toContain(
+      '## 2. Records\n- Shows every nationality\n- Available on the web',
+    );
+    expect(i18n.ja.body).toContain(
+      '## 2. 記録室の改善\n- すべての国籍を表示します\n- Web版に適用しました',
+    );
+
+    await ctx.env.DB.prepare('DELETE FROM board_posts').run();
+    await ctx.env.DB.prepare('DELETE FROM app_meta').run();
+    await daily();
+    await publishReleaseNotes(ctx.env.DB, input([{ ...entry, en, ja }]), now);
+    expect(JSON.parse(String((await post())!.i18n_json)).en).toEqual({
+      title: '261003 Release notes',
+      body: '직접 쓴 내용\n\n## 7. 응원하기\n- 기존 안내\n\n## 8. Records\n- Shows every nationality\n감사합니다\n',
+    });
+  });
   it('삭제된 글과 본문 한도 초과는 이력을 남기지 않는다', async () => {
     await daily();
     await ctx.env.DB.prepare("UPDATE board_posts SET deleted_at = ? WHERE id = 'manual'")

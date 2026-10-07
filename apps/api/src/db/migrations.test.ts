@@ -217,6 +217,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'last_club_id',
     'peak_profile',
     'card_attrs_json',
+    'detail_archive_key',
     'service_season',
     // T-10-096 국적·체격.
     'nation',
@@ -291,6 +292,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     // T-10-058: 조회수·좋아요 수.
     'view_count',
     'like_count',
+    // T-11-146: 운영자가 쓴 영어·일본어 제목·본문.
+    'i18n_json',
   ],
   board_post_likes: ['post_id', 'profile_id', 'created_at'],
   board_comments: [
@@ -317,6 +320,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'resolved_at',
   ],
   chat_mutes: ['profile_id', 'until', 'created_at'],
+  // T-11-146 사용자 글 번역 캐시.
+  translations: ['key', 'text', 'created_at'],
   balance_versions: [
     'version',
     'status',

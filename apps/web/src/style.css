@@ -1531,6 +1531,23 @@ textarea {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* T-11-146 댓글·채팅 번역 보기 — 본문 아래 작은 글자 버튼. */
+.translate-btn {
+  min-height: 28px;
+  padding: 2px 2px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.translate-btn:disabled {
+  cursor: progress;
+  text-decoration: none;
+}
 .board-comment-del {
   margin-left: auto;
   min-height: 0;
@@ -1825,6 +1842,16 @@ body:has(.main-nav) .wrap {
 }
 .btn:has(> .btn-dot) {
   position: relative;
+}
+/* T-11-142 내 팀 '경기' 탭의 '친구' 버튼 — 받은 친구 신청. */
+.hof-sort:has(> .btn-dot) {
+  position: relative;
+}
+.hof-sort > .btn-dot {
+  top: 2px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
 }
 .tab-dot {
   position: absolute;

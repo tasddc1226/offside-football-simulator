@@ -11,7 +11,8 @@ import {
   startProfileDeletion,
   unlinkGoogle,
 } from '@offside/app-core/api/client';
-import { accountCache } from '../../store';
+import { accountCache, appState } from '../../store';
+import { noteOwner } from '@offside/app-core/api/friendPending';
 import { accountLabel, isMember } from '@offside/app-core/account';
 import { closeSheet, refreshAccount, showSheet } from '../../game/host';
 import { setSessionToken } from '../../platform/session';
@@ -42,6 +43,8 @@ async function doLogout() {
   closeSheet();
   await logout();
   await setSessionToken(null);
+  noteOwner(false);
+  appState.friendReq = 0;
   set(null);
 }
 function askLogout() {

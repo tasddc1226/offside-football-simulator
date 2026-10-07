@@ -14,6 +14,7 @@
   import MainNav, { hasMainNav } from './MainNav.svelte';
   import { rnAlert } from './retiredNumber.svelte.js';
   import { achCheckable, achUnseenCount, isAchDirty, onAchDirty } from '@offside/app-core/achDirty';
+  import { pendingFriendRequests } from '@offside/app-core/api/friendPending';
   import { sheetState } from './sheetState.svelte.js';
   import type { Component } from 'svelte';
 
@@ -44,6 +45,16 @@
   // 렌더가 끝나면 모듈 서버를 닫아, 밖에 둔 동적 import가 뒤늦게 돌다 빌드를 깨뜨린다.
   onMount(() => {
     void import('@offside/app-core/api/seasonRecap').then(async (m) => (appState.recapNew = await m.recapUnseen()));
+  });
+  // T-11-142 받은 친구 신청 수(하단 '구단주' 탭 점). 구단주 화면을 연 적 있는 브라우저만, 열 때와 다시 돌아올 때(메모 5분).
+  onMount(() => {
+    const check = () => void pendingFriendRequests().then((n) => (appState.friendReq = n));
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') check();
+    };
+    check();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   });
   $effect(() => onAchDirty(() => achTick++));
   $effect(() => {

@@ -606,6 +606,38 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(feats(await read()).map((i) => i.done)).toEqual([true, true]);
   });
 
+  it('T-11-147 현역 복무 시즌(mil)은 원클럽맨의 구단 수에서 빠지고 장기근속 재적에도 들지 않는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const id = await addCareer(me.profileId);
+    for (let i = 0; i < 10; i++) {
+      const army = i === 4 || i === 5;
+      await ctx.db.insert(careerSeasons).values({
+        careerId: id,
+        year: 2026 + i,
+        age: 20 + i,
+        club: army ? '현역 복무' : 'A',
+        clubId: army ? null : 'A',
+        league: army ? '병역' : 'K리그1',
+        apps: 0,
+        goals: 0,
+        assists: 0,
+        rating: 0,
+        rank: '-',
+        ovr: 70,
+        honorsJson: '[]',
+        mil: army ? 1 : 0,
+        eventsJson: '[]',
+        createdAt: '2026-09-28T00:00:00.000Z',
+      });
+    }
+    const d = AchRes.parse(
+      await (await call('GET', '/v1/owner-team/achievements', { cookie: me.cookie })).json(),
+    ).data;
+    const done = (k: string) => d.groups.flatMap((g) => g.items).find((i) => i.id === k)?.done;
+    expect(done('one-club')).toBe(true);
+    expect(done('long-service')).toBe(false);
+  });
+
   it('T-11-103 영입한 선수도 팀 업적에 들고, 방출하려고 선발을 비워도 그 시즌 팀 업적은 남는다', async () => {
     const teamOne = async (cookie: string) =>
       AchRes.parse(await (await call('GET', '/v1/owner-team/achievements', { cookie })).json())
@@ -1124,6 +1156,28 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
         expect(res.status, `${method} ${path}`).toBe(403);
         expect(await reason(res)).toBe('GOOGLE_LOGIN_REQUIRED');
       }
+    });
+
+    it('T-11-142 받은 신청 수: 신청하면 받은 쪽만 1, 수락하면 0, 익명은 0', async () => {
+      const pending = async (cookie: string) =>
+        (
+          (await (await call('GET', '/v1/friends/pending', { cookie })).json()) as {
+            data: { received: number };
+          }
+        ).data.received;
+      expect((await call('GET', '/v1/friends/pending')).status).toBe(401);
+      expect(await pending((await issueCookie(ctx)).cookie)).toBe(0);
+      const a = await issueGoogleCookie(ctx, { nickname: '받은수가' });
+      const b = await issueGoogleCookie(ctx, { nickname: '받은수나' });
+      const bCode = (await friendsOf(b.cookie)).code;
+      await friendsOf(a.cookie);
+      expect((await request(a.cookie, { code: bCode })).status).toBe(201);
+      expect([await pending(a.cookie), await pending(b.cookie)]).toEqual([0, 1]);
+      const aCode = (await friendsOf(a.cookie)).code;
+      expect((await call('POST', `/v1/friends/${aCode}/accept`, { cookie: b.cookie })).status).toBe(
+        200,
+      );
+      expect(await pending(b.cookie)).toBe(0);
     });
 
     it('코드는 한 번 만들면 그대로이고, 신청 → 수락으로 서로 친구가 된다', async () => {
