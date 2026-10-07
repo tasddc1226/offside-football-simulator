@@ -97,6 +97,8 @@
   // 후보 단계에 들어올 때 한 번 장수를 묻고(로그인 흔적이 없으면 묻지 않는다), 쓸 때마다 서버가 돌려준 장수로 바꾼다.
   let rerolls = $state(0);
   let rerolling = $state(false);
+  // 한 번의 '다시 뽑기' 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 차감되지 않는다.
+  let rerollKey: string | null = null;
   $effect(() => {
     if (step !== 'candidates' || !hasSessionHint()) return;
     void fetchItems().then((r) => (rerolls = r.ok ? r.data.reroll : 0));
@@ -104,8 +106,10 @@
   async function reroll() {
     if (rerolling || rerolls < 1 || !confirm(CL.rerollConfirm({ n: rerolls - 1 }))) return;
     rerolling = true;
-    const r = await spendReroll();
+    rerollKey ??= crypto.randomUUID();
+    const r = await spendReroll(rerollKey);
     rerolling = false;
+    if (r.ok || !r.error.retryable) rerollKey = null;
     if (!r.ok) {
       if (r.error.reason === 'NO_REROLL') rerolls = 0;
       return toast(r.error.message || CL.rerollFail);

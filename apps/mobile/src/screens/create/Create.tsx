@@ -185,6 +185,8 @@ export default function Create() {
   const [rerolls, setRerolls] = useState(0);
   const [rerolling, setRerolling] = useState(false);
   const rerollLock = useRef(false);
+  // 한 번의 '다시 뽑기' 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 차감되지 않는다.
+  const rerollKey = useRef<string | null>(null);
   const hasCandidates = !!s.candidates;
   useEffect(() => {
     if (!hasCandidates) return;
@@ -206,7 +208,9 @@ export default function Create() {
     rerollLock.current = true;
     setRerolling(true);
     try {
-      const r = await spendReroll();
+      rerollKey.current ??= crypto.randomUUID();
+      const r = await spendReroll(rerollKey.current);
+      if (r.ok || !r.error.retryable) rerollKey.current = null;
       if (!r.ok) {
         if (r.error.reason === 'NO_REROLL') setRerolls(0);
         toast(r.error.message || CL.rerollFail);

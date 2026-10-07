@@ -132,7 +132,7 @@ export const cup: Translation<CupMsgs> = {
   rerollBtn: (p) => `Redraw candidates (${plural(p.n, 'reroll ticket')})`,
   rerollBusy: 'Redrawing…',
   rerollConfirm: (p) =>
-    `Use 1 reroll ticket to redraw the 3 candidates? The current ones disappear, and you'll have ${plural(p.n, 'ticket')} left.`,
+    `Use 1 reroll ticket to redraw the 3 candidates? The current ones and any potential ranges you revealed with an ad disappear, and you'll have ${plural(p.n, 'ticket')} left.`,
   rerollDone: (p) => `Candidates redrawn. ${plural(p.n, 'reroll ticket')} left.`,
   rerollFail: "Couldn't use the reroll ticket.",
 };

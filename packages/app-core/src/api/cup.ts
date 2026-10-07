@@ -5,6 +5,7 @@ import type {
   CupResponse,
   OwnerItemsResponse,
 } from '@offside/contracts';
+import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import { apiFetch, cachedGet } from './client.js';
 
 export type {
@@ -32,7 +33,14 @@ export const enterCup = (cupId: string) =>
 export const withdrawCup = (cupId: string) =>
   apiFetch<undefined>(`/v1/cups/${cupId}/entries/me`, { method: 'DELETE' });
 
-export const fetchItems = () => apiFetch<OwnerItemsResponse>('/v1/items');
-/** 리롤권 1장 쓰기. 성공하면 남은 장수 — 그다음 gameActions.rerollCandidates()로 후보를 다시 뽑는다. */
-export const spendReroll = () =>
-  apiFetch<OwnerItemsResponse>('/v1/items/reroll/use', { method: 'POST' });
+// 후보 화면에 들어올 때마다 묻지 않게 잠깐 메모한다. 리롤권을 쓰면(쓰기 성공) apiFetch가 메모를 비운다.
+export const fetchItems = () => cachedGet<OwnerItemsResponse>('/v1/items', 30_000);
+/**
+ * 리롤권 1장 쓰기. 성공하면 남은 장수 — 그다음 gameActions.rerollCandidates()로 후보를 다시 뽑는다.
+ * key는 한 번의 '다시 뽑기' 시도마다 하나: 응답을 못 받아 다시 누르면 같은 key로 보내 서버가 두 번 차감하지 않는다.
+ */
+export const spendReroll = (key: string) =>
+  apiFetch<OwnerItemsResponse>('/v1/items/reroll/use', {
+    method: 'POST',
+    headers: { [IDEMPOTENCY_KEY_HEADER]: key },
+  });
