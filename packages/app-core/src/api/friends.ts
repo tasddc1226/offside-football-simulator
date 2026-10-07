@@ -7,6 +7,7 @@ import type {
   PlayFriendlyResponse,
 } from '@offside/contracts';
 import { apiFetch, cachedGet } from './client.js';
+import { withOwnerHint } from './friendPending.js';
 
 export type {
   FriendPerson,
@@ -18,7 +19,7 @@ export type {
 } from '@offside/contracts';
 
 /** 친구 화면(내 코드 · 친구 · 신청 · 최근 친선전). 신청·수락·친선전(쓰기)을 하면 메모가 비워진다. */
-export const fetchFriends = () => cachedGet<FriendsResponse>('/v1/friends', 60_000);
+export const fetchFriends = () => withOwnerHint(cachedGet<FriendsResponse>('/v1/friends', 60_000));
 
 /** 친구 신청 — 친구 코드 또는 팀 프로필의 팀 id. */
 export const requestFriend = (body: FriendRequestBody) =>

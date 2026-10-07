@@ -3,7 +3,12 @@ import { mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ENDPOINT, publish, readEntries } from '../../.github/scripts/publish-release-notes.mjs';
+import {
+  ENDPOINT,
+  TRANSLATED_SINCE,
+  publish,
+  readEntries,
+} from '../../.github/scripts/publish-release-notes.mjs';
 import { PublishReleaseNotesSchema } from '../../packages/contracts/src/release-notes.ts';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -45,6 +50,27 @@ describe('배포 후 릴리즈 게시 스크립트', () => {
       expect(() => readEntries(dir)).toThrow();
       writeFileSync(resolve(dir, 'a.json'), JSON.stringify(entry));
       writeFileSync(resolve(dir, 'b.json'), JSON.stringify(entry));
+      expect(() => readEntries(dir)).toThrow();
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+  it('기준일 이후 파일은 영어·일본어 문구가 있어야 한다', () => {
+    const dir = mkdtempSync(resolve(tmpdir(), 'release-notes-test-'));
+    try {
+      writeFileSync(resolve(dir, '2026-10-07-01-old.json'), JSON.stringify(entry));
+      expect(readEntries(dir)).toHaveLength(1);
+      const name = `${TRANSLATED_SINCE}-01-new.json`;
+      const en = { title: 'Chat', items: ['Latest messages show up'] };
+      writeFileSync(resolve(dir, name), JSON.stringify({ ...entry, id: 'new-entry', en }));
+      expect(() => readEntries(dir)).toThrow('Japanese');
+      const ja = { title: 'チャット', items: ['最新のメッセージが表示されます'] };
+      writeFileSync(resolve(dir, name), JSON.stringify({ ...entry, id: 'new-entry', en, ja }));
+      expect(readEntries(dir)).toHaveLength(2);
+      writeFileSync(
+        resolve(dir, name),
+        JSON.stringify({ ...entry, id: 'new-entry', en, ja: { ...ja, extra: 1 } }),
+      );
       expect(() => readEntries(dir)).toThrow();
     } finally {
       rmSync(dir, { recursive: true });

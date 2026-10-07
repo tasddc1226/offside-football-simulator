@@ -178,6 +178,68 @@ describe('게시판 /v1/boards', () => {
     expect((await call('GET', '/v1/boards/bug/posts')).status).toBe(400);
   });
 
+  it('번역: 요청 언어의 제목·본문을 주고 없으면 한국어, 관리자만 원문을 받는다', async () => {
+    const admin = await makeAdmin();
+    const en = { title: 'Maintenance', body: 'Maintenance tonight.' };
+    const id = await writePost(admin.cookie, 'notice', { i18n: { en } });
+    type Detail = { data: { post: { title: string; body: string }; source: unknown } };
+    const detail = async (lang: string, cookie?: string) =>
+      (await (
+        await call('GET', `/v1/boards/posts/${id}${lang}`, cookie ? { cookie } : {})
+      ).json()) as Detail;
+    const titles = async (lang: string) =>
+      (
+        (await (await call('GET', `/v1/boards/notice/posts${lang}`)).json()) as {
+          data: { posts: { title: string }[] };
+        }
+      ).data.posts.map((p) => p.title);
+
+    // 목록 캐시는 언어와 상관없이 키 하나 — 담긴 번역 제목에서 요청 언어를 고른다.
+    const edge = installFakeEdgeCache();
+    try {
+      expect(await titles('')).toEqual(['점검 안내']);
+      await flushEdge();
+      expect(await titles('?lang=en')).toEqual(['Maintenance']);
+      expect(await titles('?lang=ja')).toEqual(['점검 안내']);
+      await flushEdge();
+    } finally {
+      edge.uninstall();
+    }
+    expect([...edge.store.keys()]).toEqual(['http://localhost/v1/boards/notice/posts?limit=20']);
+    expect((await detail('?lang=en')).data).toMatchObject({ post: en, source: null });
+    expect((await detail('?lang=ja')).data.post.body).toBe('오늘 밤 점검합니다.');
+    expect((await detail('?lang=en', admin.cookie)).data.source).toEqual({
+      title: '점검 안내',
+      body: '오늘 밤 점검합니다.',
+      i18n: { en },
+    });
+
+    // 번역을 보내지 않는 옛 운영 도구의 수정은 번역을 지우지 않는다. 빈 번역은 지운다.
+    const put = (body: Record<string, unknown>) =>
+      call('PUT', `/v1/boards/posts/${id}`, {
+        cookie: admin.cookie,
+        body: { title: '점검 안내', body: '바뀐 본문', ...body },
+      });
+    expect((await put({})).status).toBe(200);
+    expect((await detail('?lang=en')).data.post).toEqual(expect.objectContaining(en));
+    expect((await put({ i18n: {} })).status).toBe(200);
+    expect((await detail('?lang=en')).data.post.body).toBe('바뀐 본문');
+    expect((await put({ i18n: { ja: { title: '点検', body: '' } } })).status).toBe(400);
+  });
+
+  it('번역 초안: 관리자만, 키가 없으면 503', async () => {
+    const input = { body: { title: '점검', body: '점검해요' } };
+    expect((await call('POST', '/v1/boards/translate', input)).status).toBe(401);
+    const user = await issueCookie(ctx);
+    expect(
+      (await call('POST', '/v1/boards/translate', { ...input, cookie: user.cookie })).status,
+    ).toBe(403);
+    const admin = await makeAdmin();
+    expect(
+      (await call('POST', '/v1/boards/translate', { ...input, cookie: admin.cookie })).status,
+    ).toBe(503);
+  });
+
   it('수정·삭제: 지운 글은 목록·상세에서 사라진다', async () => {
     const admin = await makeAdmin();
     const id = await writePost(admin.cookie);

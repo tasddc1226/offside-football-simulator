@@ -12,7 +12,6 @@ import { careerOwnerMismatch, ok, readBody, nowIso, rateLimited } from './shared
 import {
   getCareer,
   getCareerHead,
-  getCareerOwner,
   listOwnHof,
   putCareerSeason,
   putRetirement,
@@ -36,6 +35,7 @@ import { STALE } from '../edgeKeys.js';
 import { publishLive } from '../live/publish.js';
 import { isHeadless } from '../db/repos/automation.js';
 import { isAcceptablePublicName, toPublicName } from '@offside/contracts/content-filter';
+import { resumeCareerDetails } from '../cron/careerRetention.js';
 import { retireAtOf } from '@offside/contracts/service-seasons';
 
 /** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다. */
@@ -57,11 +57,12 @@ async function assertOwnable(
   db: ReturnType<typeof getDb>,
   careerId: string,
   profileId: string,
-): Promise<void> {
-  const owner = await getCareerOwner(db, careerId);
-  if (owner !== undefined && owner !== profileId) {
+): Promise<Awaited<ReturnType<typeof getCareerHead>>> {
+  const head = await getCareerHead(db, careerId);
+  if (head !== undefined && head.profileId !== profileId) {
     throw careerOwnerMismatch();
   }
+  return head;
 }
 
 export function registerCareerRoutes(app: Hono<AppEnv>): void {
@@ -85,9 +86,17 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     const year = parseWithAppError(CareerYearParamSchema, c.req.param('year'));
 
     const body = readBody(c, PutCareerSeasonBodySchema);
-    await assertOwnable(db, careerId, session.profileId);
+    const head = await assertOwnable(db, careerId, session.profileId);
     await limitUpload(db, 'CAREER_SEASON', session.profileId);
     const now = nowIso();
+    await resumeCareerDetails(
+      c.env,
+      careerId,
+      session.profileId,
+      head?.detailArchiveKey ?? null,
+      head?.updatedAt,
+      now,
+    );
     // 나이별 OVR 상한을 크게 넘긴 값은 sanitizeSeason이 잘라 저장해 매일 점검에 남지 않으므로 저장과 함께 숨긴다.
     // T-11-097 시즌 중간에 세이브를 고쳐 올린 OVR도 성장 기록으로만 보이므로 같이 숨긴다(지난 시즌 조회는 성장 기록이 올 때만).
     const { growth } = body.season;
@@ -149,6 +158,14 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     }
     await limitUpload(db, 'CAREER_RETIRE', session.profileId);
     const now = nowIso();
+    await resumeCareerDetails(
+      c.env,
+      careerId,
+      session.profileId,
+      career.detailArchiveKey,
+      career.updatedAt,
+      now,
+    );
 
     if (career.status === 'retired') {
       await updateRetired(db, { careerId, publicName, snapshot, title: sent.title, now });

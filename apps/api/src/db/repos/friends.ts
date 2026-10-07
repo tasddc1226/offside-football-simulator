@@ -1,5 +1,5 @@
 import { FRIEND_CODE_CHARS, FRIEND_CODE_LENGTH, FRIENDS_MAX } from '@offside/contracts/owner-team';
-import { and, desc, eq, gte, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { boardBlocks, friendMatches, friends, ownerTeams, profiles } from '../schema.js';
 import type { MatchDetail } from './ownerTeams.js';
@@ -92,6 +92,21 @@ export const friendRowOf = (db: Db, profileId: string, friendId: string) =>
     .select()
     .from(friends)
     .where(and(eq(friends.profileId, profileId), eq(friends.friendId, friendId)));
+
+/** T-11-142 받은 신청 수. 친구 화면 received와 같은 기준(계정이 살아 있고 친구 코드가 있는 사람만). */
+export const receivedCountOf = (db: Db, profileId: string) =>
+  db
+    .select({ n: sql<number>`count(*)` })
+    .from(friends)
+    .innerJoin(profiles, eq(profiles.id, friends.friendId))
+    .where(
+      and(
+        eq(friends.profileId, profileId),
+        eq(friends.state, 'received'),
+        liveOwner(),
+        isNotNull(profiles.friendCode),
+      ),
+    );
 
 /** 내 줄 수(신청 포함). 상한을 센다. */
 export const friendCountOf = (db: Db, profileId: string) =>

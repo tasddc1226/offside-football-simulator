@@ -6,6 +6,7 @@ import {
 } from '@offside/contracts';
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { gzipToR2 } from '../cron/backup.js';
 import { createApp } from '../app.js';
 import { UPLOAD_LIMIT } from './careers.js';
 import { authAttempts, cards, careers, careerSeasons, profiles } from '../db/schema.js';
@@ -79,6 +80,78 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
 
   afterEach(async () => {
     await ctx.dispose();
+  });
+
+  async function compactFixture() {
+    const rows = (
+      await ctx.env.DB.prepare(
+        'SELECT year, events_json, signals_json, growth_json FROM career_seasons WHERE career_id=? ORDER BY year LIMIT 3',
+      )
+        .bind(CAREER_ID)
+        .all()
+    ).results;
+    const key = `career-details/local/${CAREER_ID}/route-test.json.gz`;
+    await gzipToR2(ctx.env.BACKUP!, key, 'application/json', async (write) => {
+      await write(JSON.stringify({ version: 1, careerId: CAREER_ID, rows }));
+    });
+    await ctx.env.DB.batch([
+      ctx.env.DB.prepare('UPDATE careers SET detail_archive_key=? WHERE id=?').bind(key, CAREER_ID),
+      ctx.env.DB.prepare(
+        "UPDATE career_seasons SET events_json='[]', signals_json=NULL, growth_json=NULL WHERE career_id=? AND year IN (SELECT json_extract(value,'$.year') FROM json_each(?))",
+      ).bind(CAREER_ID, JSON.stringify(rows)),
+    ]);
+    return { rows, key };
+  }
+
+  it('archived season upload restores previous logs before storing the next season; another owner cannot restore', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const put = (cookie: string, year: number, body = seasonBody()) =>
+      app.request(
+        `/v1/careers/${CAREER_ID}/seasons/${year}`,
+        jsonInit({ method: 'PUT', body, cookie }),
+        ctx.env,
+      );
+    expect((await put(owner.cookie, 2026)).status).toBe(200);
+    const { rows, key } = await compactFixture();
+    const other = await issueCookie(ctx);
+    expect((await put(other.cookie, 2027)).status).toBe(409);
+    expect(await ctx.env.BACKUP!.head(key)).not.toBeNull();
+    const next = seasonBody();
+    next.season.age = 19;
+    expect((await put(owner.cookie, 2027, next)).status).toBe(200);
+    const restored = await ctx.env.DB.prepare(
+      'SELECT events_json FROM career_seasons WHERE career_id=? AND year=2026',
+    )
+      .bind(CAREER_ID)
+      .first();
+    expect(restored).toEqual({ events_json: rows[0]!.events_json });
+    expect(
+      (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0]!.detailArchiveKey,
+    ).toBeNull();
+    expect(await ctx.env.BACKUP!.head(key)).not.toBeNull();
+  });
+
+  it('archived retirement restores logs and retains normal retirement/card behavior', async () => {
+    const owner = await issueCookie(ctx);
+    await putSeasonsFor(ctx.env, owner.cookie, CAREER_ID, retirementBody());
+    const { rows, key } = await compactFixture();
+    const res = await createApp().request(
+      `/v1/careers/${CAREER_ID}/retirement`,
+      jsonInit({ method: 'PUT', body: retirementBody(), cookie: owner.cookie }),
+      ctx.env,
+    );
+    expect(res.status).toBe(200);
+    const [career] = await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID));
+    expect(career).toMatchObject({ status: 'retired', detailArchiveKey: null, legendScore: 420 });
+    expect((await ctx.db.select().from(cards).where(eq(cards.careerId, CAREER_ID))).length).toBe(1);
+    const restored = await ctx.env.DB.prepare(
+      'SELECT events_json FROM career_seasons WHERE career_id=? AND year=?',
+    )
+      .bind(CAREER_ID, rows[0]!.year)
+      .first();
+    expect(restored).toEqual({ events_json: rows[0]!.events_json });
+    expect(await ctx.env.BACKUP!.head(key)).not.toBeNull();
   });
 
   it('T-10-006: 시즌 상세(무실점·리그 기록·A매치·대회별·커리어 하이)를 저장한다', async () => {

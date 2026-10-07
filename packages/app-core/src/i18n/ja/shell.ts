@@ -12,6 +12,7 @@ export const shell: Translation<ShellMsgs> = {
   navSettings: '設定',
   achNew: (p) => `新しい実績 ${p.n}個`,
   recapNew: '新しいシーズン総括',
+  friendReq: (p) => `届いたフレンド申請 ${p.n}件`,
   bgm: 'BGM',
   bgmOff: 'BGMをオフ',
   bgmOn: 'BGMをオン',

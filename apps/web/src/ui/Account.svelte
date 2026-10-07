@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { appState } from './state.svelte.js';
+  import { noteOwner } from '@offside/app-core/api/friendPending';
   import { onMount } from 'svelte';
   // ───────── 계정 영역: 구글 로그인 · 프로필 · 연동 해제 · 로그아웃 · 탈퇴 (account.ts 포트) ─────────
   // 게임 데이터는 전부 localStorage에 남고, 여기서 다루는 건 로그인 상태뿐이다. 오프라인/서버
@@ -47,6 +49,8 @@
   async function doLogout() {
     closeSheet();
     await logout();
+    noteOwner(false);
+    appState.friendReq = 0;
     refreshChatIdentity();
     set(null);
   }
