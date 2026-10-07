@@ -12,7 +12,10 @@ export const gTurn: Translation<GTurnMsgs> = {
   hlInjury: (p) => `第${p.rd}節 ${p.big ? '重傷' : 'ケガ'}で途中交代…${p.n}試合欠場の見込み`,
   gameStart: (p) =>
     `${p.nation ? `${p.nation}からサッカー留学に来た、` : ''}${p.club}の3年生${p.pos}、${p.name}。背番号${p.number}でサッカーキャリアをスタートします。`,
-  balancePatch: (p) => `バランスパッチv${p.v}が今シーズンから適用されます。`,
+  balancePatch: (p) =>
+    `バランスパッチv${p.v}が今シーズンから適用されます。すべての選手に同じ値で、変更内容は確率図鑑で見られます。`,
+  clubStrengthPatch: (p) =>
+    `クラブ戦力表v${p.v}(現実の順位 ${p.asOf} 時点)が今シーズンから適用されます。`,
   storyEnd: (p) => `[ストーリー完結] ${p.name} · ${p.ending}`,
   placeholderTeam: (p) => `${p.league} ${p.n}`,
 };

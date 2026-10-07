@@ -95,8 +95,10 @@ export const create: Translation<CreateMsgs> = {
   potentialAd: '広告を見て候補3人のポテンシャルを見る',
   potentialFree: '候補3人のポテンシャルを見る',
   potentialBusy: '広告を読み込み中です…',
-  potentialWatch: '広告を最後まで見ると、候補3人のポテンシャルのランク範囲が見られます。',
-  potentialHelp: '初期ポテンシャルのランク範囲です。トレーニングや強化で変わることがあります。',
+  potentialWatch:
+    '広告を最後まで見ると、候補3人のポテンシャルのランク範囲が見られます。広告は範囲を見せるだけで、ポテンシャルは変わりません。',
+  potentialHelp:
+    '初期ポテンシャルのランク範囲です。トレーニングや強化で変わることがあります。ポテンシャルはすべてのユーザーに同じ確率で決まり、Sランクはとても珍しいです。',
   potentialWeb: 'アプリでリワード広告を見ると、候補3人の初期ポテンシャルのランク範囲を見られます。',
   potentialSaveFailed: '公開結果を保存できませんでした。保存容量を確認してください。',
   candIntro:

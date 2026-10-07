@@ -29,6 +29,7 @@ export const settings: Translation<SettingsMsgs> = {
   help: 'ヘルプ',
   installGuide: 'ホーム画面に追加',
   guide: 'ゲームガイド',
+  fairness: '確率と公正さ',
   faq: 'よくある質問',
   legal: 'サービスポリシー',
   terms: '利用規約',
