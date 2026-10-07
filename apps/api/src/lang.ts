@@ -1,4 +1,4 @@
-import type { Locale } from '@offside/contracts/i18n';
+import { TRANSLATED_LOCALES, type Locale, type TranslatedLocale } from '@offside/contracts/i18n';
 import type { Context } from 'hono';
 import type { AppEnv } from './env.js';
 
@@ -9,7 +9,7 @@ export type Lang = Locale;
 
 export const reqLang = (c: Context<AppEnv>): Lang => {
   const q = c.req.query('lang');
-  return q === 'en' || q === 'ja' ? q : 'ko';
+  return TRANSLATED_LOCALES.includes(q as TranslatedLocale) ? (q as TranslatedLocale) : 'ko';
 };
 
 /** 엄격한 쿼리 스키마(strictObject)에 넘길 때 `lang`을 뺀 쿼리. */

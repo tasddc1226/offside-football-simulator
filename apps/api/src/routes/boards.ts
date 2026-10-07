@@ -28,7 +28,8 @@ import {
   getCommentOwner,
   getHiddenFor,
   getPost,
-  getPostSource,
+  localizePost,
+  parseI18n,
   isLiked,
   listComments,
   listPosts,
@@ -74,8 +75,9 @@ const idParam = (c: Context<AppEnv>, name: string) => {
 const LIST_TTL = 60;
 const purgeList = (c: Context<AppEnv>, board: string) => purgeEdge(c, STALE.boardChanged(board));
 
+/** 한국어 원문과 번역을 담은 행. 응답에는 `localizePost(row, reqLang(c))`로 고른 것을 쓴다. */
 async function postOr404(c: Context<AppEnv>, id: string) {
-  const post = await getPost(getDb(c), id, reqLang(c));
+  const post = await getPost(getDb(c), id);
   if (!post) throw notFound('글');
   return post;
 }
@@ -101,14 +103,13 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const id = idParam(c, 'postId');
     const db = getDb(c);
     const session = resolveSession(c);
-    const [post, rows, viewer, liked, hidden] = await Promise.all([
+    const [row, rows, viewer, liked, hidden] = await Promise.all([
       postOr404(c, id),
       listComments(db, id),
       getViewer(c),
       session.then((s) => (s ? isLiked(db, id, s.profileId) : false)),
       session.then((s) => (s ? getHiddenFor(db, s.profileId, id) : undefined)),
     ]);
-    const source = viewer.admin ? ((await getPostSource(db, id)) ?? null) : null;
     const shown = rows.filter(
       (r) => !hidden?.blockedAuthors.has(r.profileId) && !hidden?.reportedComments.has(r.id),
     );
@@ -123,11 +124,14 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       deletable: viewer.admin || profileId === viewer.profileId,
     }));
     return ok(c, PostDetailResponseSchema, {
-      post,
+      post: localizePost(row, reqLang(c)),
       comments,
       liked,
       blocks: hidden?.blocks ?? [],
-      source,
+      // 관리자가 고칠 때 쓰는 한국어 원문과 번역(같은 행에서).
+      source: viewer.admin
+        ? { title: row.title, body: row.body, i18n: parseI18n(row.i18nJson) }
+        : null,
     });
   });
 
@@ -156,7 +160,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const id = await createPost(getDb(c), board, input, viewer.profileId!, nowIso());
     purgeList(c, board);
     kickNewsPush(c);
-    return ok(c, PostSchema, await postOr404(c, id), 201);
+    return ok(c, PostSchema, localizePost(await postOr404(c, id), reqLang(c)), 201);
   });
 
   // T-11-146 번역 초안(저장하지 않는다). 관리자만 — 외부 API를 부르므로 권한을 먼저 확인한다.
@@ -173,7 +177,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     if (!(await updatePost(getDb(c), id, input, nowIso()))) throw notFound('글');
     const post = await postOr404(c, id);
     purgeList(c, post.board);
-    return ok(c, PostSchema, post);
+    return ok(c, PostSchema, localizePost(post, reqLang(c)));
   });
 
   app.delete('/v1/boards/posts/:postId', async (c) => {

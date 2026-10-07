@@ -16,12 +16,13 @@
   import * as api from '@offside/app-core/api/boards';
   import type { BoardBlock, BoardViewerResponse, Comment, Post, PostSummary } from '@offside/app-core/api/boards';
   import type { PostDetailResponse } from '@offside/contracts';
-  import { POST_LANGS, draftOf, inputOf, postLangLabel, type PostDraft } from '@offside/app-core/boardEditor';
+  import { POST_LANGS, draftOf, inputOf, postLangLabel, withDraftTranslations, type PostDraft } from '@offside/app-core/boardEditor';
   import { appState } from './state.svelte.js';
   import { openBoard } from './nav.js';
   import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
   import { createTranslations } from './translations.svelte.js';
+  import { canTranslate } from '@offside/app-core/userTranslate';
   import { getLocale } from '@offside/contracts/i18n';
   import { doneOnEnter } from './inputDone.js';
   import { screenIn } from './motion.js';
@@ -155,13 +156,12 @@
   async function draftTranslations() {
     if (!editing || translating) return;
     const e = editing;
-    if (!e.title.trim() || !e.body.trim()) return toast(L.translateNeedsKorean);
     translating = true;
-    const r = await api.translatePost({ title: e.title.trim(), body: e.body.trim() });
+    const r = await withDraftTranslations(e);
     translating = false;
-    if (!r.ok) return toast(r.error.message);
-    e.en = r.data.en;
-    e.ja = r.data.ja;
+    if ('error' in r) return toast(r.error);
+    e.en = r.draft.en;
+    e.ja = r.draft.ja;
     toast(L.translateDone);
   }
   async function savePost() {
@@ -344,8 +344,8 @@
                 {:else if !c.admin}<button class="icon-btn board-comment-del" aria-expanded={reporting === c.id} data-act="comment-report" onclick={() => (reporting = reporting === c.id ? null : c.id)}>{L.report}</button>{/if}
               </div>
               <p lang={tr.translated(c.id) ? getLocale() : undefined}>{tr.text(c.id, c.body)}</p>
-              {#if tr.can(c.body)}
-                <button class="board-translate muted fs-xs" data-act="translate" disabled={tr.busy(c.id)} onclick={() => void tr.toggle(c.id, c.body)}>{tr.label(c.id)}</button>
+              {#if canTranslate(c.body)}
+                <button class="translate-btn" data-act="translate" disabled={tr.busy(c.id)} onclick={() => void tr.toggle(c.id, c.body)}>{tr.label(c.id)}</button>
               {/if}
               {#if reporting === c.id}
                 <div class="report-panel stack" style="gap:8px" data-report-panel>

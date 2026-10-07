@@ -1532,8 +1532,7 @@ textarea {
   overflow-wrap: anywhere;
 }
 /* T-11-146 댓글·채팅 번역 보기 — 본문 아래 작은 글자 버튼. */
-.board-translate,
-.chat-translate {
+.translate-btn {
   min-height: 28px;
   padding: 2px 2px 0;
   border: 0;
@@ -1545,8 +1544,7 @@ textarea {
   text-underline-offset: 2px;
   cursor: pointer;
 }
-.board-translate:disabled,
-.chat-translate:disabled {
+.translate-btn:disabled {
   cursor: progress;
   text-decoration: none;
 }

@@ -4,6 +4,8 @@ import { conflictError } from '../../routes/shared.js';
 import { sha256Hex } from '../hash.js';
 import { newsPushStatements } from '../../push/enqueue.js';
 import type { Lang } from '../../lang.js';
+import { LOCALES, TRANSLATED_LOCALES } from '@offside/contracts/i18n';
+import { parseI18n } from './boards.js';
 
 const keyOf = (id: string) => `release-note:${id}`;
 type DailyPost = {
@@ -13,8 +15,6 @@ type DailyPost = {
   updated_at: string;
   deleted_at: string | null;
 };
-type Translated = Exclude<Lang, 'ko'>;
-const TRANSLATED: readonly Translated[] = ['en', 'ja'];
 // 끝인사는 언어를 가리지 않는다 — 번역이 없던 글은 한국어 본문에 영어·일본어 항목을 붙인다.
 const THANKS = /(?:^|\n)(?:감사합니다|Thank you|ありがとうございます)[.!。！]?\s*$/;
 
@@ -56,7 +56,10 @@ export function releaseDay(now: string) {
   return {
     day,
     title: TEXT.ko.title(yymmdd),
-    titles: { en: TEXT.en.title(yymmdd), ja: TEXT.ja.title(yymmdd) } as Record<Translated, string>,
+    titles: Object.fromEntries(LOCALES.map((l) => [l, TEXT[l].title(yymmdd)])) as Record<
+      Lang,
+      string
+    >,
     start,
     end: new Date(new Date(start).getTime() + 86400_000).toISOString(),
   };
@@ -146,16 +149,17 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
     );
   const body = appendReleaseNotes(post?.body ?? date.title, pending);
   // 번역이 없던 오늘 글(이 기능 전에 만든 글)은 한국어 본문에 이어 붙인다.
-  const before = (post?.i18n_json ? JSON.parse(post.i18n_json) : {}) as PostTranslations;
-  const i18n: PostTranslations = {};
-  for (const lang of TRANSLATED) {
+  const before = parseI18n(post?.i18n_json ?? null);
+  const translated = TRANSLATED_LOCALES.map((lang) => {
     const prev = before[lang];
-    i18n[lang] = {
-      title: prev?.title ?? date.titles[lang],
-      body: appendReleaseNotes(prev?.body ?? (post ? post.body : date.titles[lang]), pending, lang),
-    };
-  }
-  if ([body, i18n.en!.body, i18n.ja!.body].some((b) => b.length > POST_BODY_MAX))
+    const base = prev?.body ?? (post ? post.body : date.titles[lang]);
+    return [
+      lang,
+      { title: prev?.title ?? date.titles[lang], body: appendReleaseNotes(base, pending, lang) },
+    ] as const;
+  });
+  const i18n: PostTranslations = Object.fromEntries(translated);
+  if ([body, ...translated.map(([, t]) => t.body)].some((b) => b.length > POST_BODY_MAX))
     throw conflictError('오늘 릴리즈 노트의 글자 수 한도를 넘었어요.', 'RELEASE_POST_FULL');
   const i18nJson = JSON.stringify(i18n);
   const postId = post?.id ?? `pst_release_${date.day.replaceAll('-', '')}`;

@@ -8,7 +8,7 @@ export const ENDPOINT = 'https://api.offside-lab.com/v1/internal/release-notes';
 /** T-11-146 이 날짜(파일명 앞자리) 이후의 항목은 영어(`en`)·일본어(`ja`) 문구가 있어야 한다. */
 export const TRANSLATED_SINCE = '2026-10-08';
 
-const validText = (t) =>
+const textOk = (t) =>
   !!t &&
   typeof t === 'object' &&
   typeof t.title === 'string' &&
@@ -19,6 +19,8 @@ const validText = (t) =>
   t.items.length >= 1 &&
   t.items.length <= 12 &&
   t.items.every((s) => typeof s === 'string' && !!s.trim() && s.length <= 500 && !/[\r\n]/.test(s));
+/** 영어·일본어 문구: 제목·항목만(ReleaseNoteTextSchema와 같다). */
+const validText = (t) => textOk(t) && Object.keys(t).every((k) => k === 'title' || k === 'items');
 
 /** 사용자 공지는 PR에서 검토한 JSON만 읽는다. 커밋 제목·AI 출력·PR 본문은 게시하지 않는다. */
 export function readEntries(directory) {
@@ -34,13 +36,11 @@ export function readEntries(directory) {
       typeof e !== 'object' ||
       typeof e.id !== 'string' ||
       !/^[a-z0-9][a-z0-9-]{0,79}$/.test(e.id ?? '') ||
-      !validText(e) ||
+      !textOk(e) ||
       !['web', 'app', 'web-app', 'web-app-pending'].includes(e.availability) ||
       (e.appVersion !== undefined && !/^\d+\.\d+\.\d+$/.test(e.appVersion)) ||
       (e.availability === 'web-app-pending' && !e.appVersion) ||
       ['en', 'ja'].some((l) => e[l] !== undefined && !validText(e[l])) ||
-      Object.keys(e.en ?? {}).some((k) => !['title', 'items'].includes(k)) ||
-      Object.keys(e.ja ?? {}).some((k) => !['title', 'items'].includes(k)) ||
       Object.keys(e).some(
         (k) => !['id', 'title', 'items', 'en', 'ja', 'availability', 'appVersion'].includes(k),
       ) ||

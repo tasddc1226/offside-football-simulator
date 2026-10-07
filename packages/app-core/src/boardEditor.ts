@@ -1,9 +1,11 @@
 // T-11-146 관리자 글 편집기의 상태와 저장 입력(웹·앱 공통). 한국어 원문 + 영어·일본어 번역 칸.
 import type { Post, PostDetailResponse, PostInput, PostText } from '@offside/contracts';
+import { TRANSLATED_LOCALES, type TranslatedLocale } from '@offside/contracts/i18n';
+import { translatePost } from './api/boards.js';
 import { boardText as L } from './i18n/ko/board.js';
 
-export const POST_LANGS = ['en', 'ja'] as const;
-export type PostLang = (typeof POST_LANGS)[number];
+export const POST_LANGS = TRANSLATED_LOCALES;
+export type PostLang = TranslatedLocale;
 export const postLangLabel = (lang: PostLang): string => (lang === 'en' ? L.langEn : L.langJa);
 
 export type PostDraft = {
@@ -50,4 +52,15 @@ export function inputOf(d: PostDraft): { input: PostInput } | { incomplete: Post
       i18n,
     },
   };
+}
+
+/** "번역 초안 만들기": 한국어 제목·본문으로 영어·일본어 칸을 채운 새 초안, 아니면 보여 줄 안내. 저장은 하지 않는다. */
+export async function withDraftTranslations(
+  d: PostDraft,
+): Promise<{ draft: PostDraft } | { error: string }> {
+  const title = d.title.trim();
+  const body = d.body.trim();
+  if (!title || !body) return { error: L.translateNeedsKorean };
+  const r = await translatePost({ title, body });
+  return r.ok ? { draft: { ...d, ...r.data } } : { error: r.error.message };
 }

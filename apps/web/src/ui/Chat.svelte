@@ -27,6 +27,7 @@
   import NicknameForm from './NicknameForm.svelte';
   import { toast } from './helpers.js';
   import { createTranslations } from './translations.svelte.js';
+  import { canTranslate } from '@offside/app-core/userTranslate';
   import { getLocale } from '@offside/contracts/i18n';
   import { startGoogleLogin } from './login.js';
   import { goHome } from './nav.js';
@@ -173,8 +174,8 @@
             <p class="chat-bubble" lang={tr.translated(m.id) ? getLocale() : undefined}>{tr.text(m.id, m.body)}</p>
             <time class="muted chat-time num" datetime={new Date(m.at).toISOString()}>{chatTime(m.at)}</time>
           </div>
-          {#if !mine(m) && tr.can(m.body)}
-            <button class="chat-translate muted fs-xs" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>
+          {#if !mine(m) && canTranslate(m.body)}
+            <button class="translate-btn" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>
           {/if}
           {#if selected === m.id}
             <div class="report-panel stack" style="gap:8px" data-report-panel>

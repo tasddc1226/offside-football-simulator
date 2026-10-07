@@ -2,6 +2,7 @@
 import { getLocale, type Locale } from '@offside/contracts/i18n';
 import { translate } from './api/translate.js';
 import type { ApiResult } from './api/client.js';
+import { translateText as T } from './i18n/ko/translate.js';
 
 // i18n-ignore: 한글 글자 범위
 const HANGUL = /[ㄱ-ㆎ가-힣]/;
@@ -19,6 +20,8 @@ export function canTranslate(text: string, locale: Locale = getLocale()): boolea
 }
 
 const memo = new Map<string, Promise<ApiResult<string>>>();
+/** 긴 채팅에서 끝없이 쌓이지 않게 오래된 것부터 버린다(버린 글은 다시 누르면 서버 캐시에서 온다). */
+const MEMO_MAX = 200;
 
 /** 같은 글은 한 번만 묻는다(동시에 눌러도 하나로). 실패는 기억하지 않는다. */
 export function translateUserText(
@@ -31,9 +34,14 @@ export function translateUserText(
   const result = translate(text, to).then((r) =>
     r.ok ? { ok: true as const, data: r.data.text } : r,
   );
+  if (memo.size >= MEMO_MAX) memo.delete(memo.keys().next().value!);
   memo.set(key, result);
   void result.then((r) => {
     if (!r.ok) memo.delete(key);
   });
   return result;
 }
+
+/** 버튼 글자: 펼쳤으면 원문 보기, 묻는 중이면 번역 중, 아니면 번역 보기. */
+export const translateLabel = (shown: boolean, busy: boolean): string =>
+  shown ? T.original : busy ? T.working : T.show;

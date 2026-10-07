@@ -14,8 +14,12 @@ import { Btn } from '../../ui/Btn';
 import { Txt } from '../../ui/Txt';
 import { Field, TextBox } from './parts';
 import { boardText as L } from '@offside/app-core/i18n/ko/board';
-import * as api from '@offside/app-core/api/boards';
-import { POST_LANGS, postLangLabel, type PostDraft } from '@offside/app-core/boardEditor';
+import {
+  POST_LANGS,
+  postLangLabel,
+  withDraftTranslations,
+  type PostDraft,
+} from '@offside/app-core/boardEditor';
 import { toast } from '../../game/host';
 
 export function PostEditor({
@@ -39,14 +43,14 @@ export function PostEditor({
   const [translating, setTranslating] = useState(false);
   async function draftTranslations() {
     if (translating) return;
-    if (!draft.title.trim() || !draft.body.trim()) return toast(L.translateNeedsKorean);
     setTranslating(true);
-    const r = await api.translatePost({ title: draft.title.trim(), body: draft.body.trim() });
+    const r = await withDraftTranslations(draft);
     setTranslating(false);
-    if (!r.ok) return toast(r.error.message);
-    onChange({ ...draft, en: r.data.en, ja: r.data.ja });
+    if ('error' in r) return toast(r.error);
+    onChange(r.draft);
     toast(L.translateDone);
   }
+
   return (
     <View style={{ gap: 10 }}>
       <Txt v="h2" accessibilityRole="header">

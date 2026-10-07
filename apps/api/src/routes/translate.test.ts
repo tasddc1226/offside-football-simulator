@@ -21,10 +21,14 @@ describe('번역 보기 /v1/translate', () => {
   it('프로필이 있어야 하고, 같은 글·같은 언어는 캐시에서 돌려주며 AI를 다시 부르지 않는다', async () => {
     expect((await translate(undefined, '골 멋져요')).status).toBe(401);
     const { cookie } = await issueCookie(ctx);
+    const count = async () =>
+      (await ctx.env.DB.prepare('SELECT COUNT(*) n FROM translations').first<{ n: number }>())!.n;
     for (let i = 0; i < 3; i++) {
       const res = await translate(cookie, '골 멋져요');
       expect(res.status).toBe(200);
       expect(((await res.json()) as { data: { text: string } }).data.text).toBe('Nice goal!');
+      // 캐시 쓰기는 응답 뒤에 끝난다.
+      await vi.waitFor(async () => expect(await count()).toBe(1));
     }
     expect(run).toHaveBeenCalledTimes(1);
     expect((await translate(cookie, '골 멋져요', 'ja')).status).toBe(200);

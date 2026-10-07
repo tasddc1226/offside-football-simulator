@@ -7,6 +7,7 @@ import type {
   PostSummary,
   PostTranslations,
 } from '@offside/contracts';
+import { PostTranslationsSchema } from '@offside/contracts';
 import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
@@ -36,11 +37,16 @@ const summaryColumns = {
   // 단일 테이블 select에서 drizzle은 컬럼을 테이블명 없이 쓰므로 상관 서브쿼리는 이름을 직접 적는다.
   commentCount: sql<number>`(SELECT COUNT(*) FROM board_comments c WHERE c.post_id = board_posts.id AND c.deleted_at IS NULL)`,
 };
-/** T-11-146 운영자가 쓴 번역이 있으면 그 언어로, 없으면 한국어 원문. */
-const localized = (field: 'title' | 'body', lang: Lang) =>
-  lang === 'ko'
-    ? boardPosts[field]
-    : sql<string>`coalesce(json_extract(${boardPosts.i18nJson}, ${`$.${lang}.${field}`}), ${boardPosts[field]})`;
+/** T-11-146 저장된 번역 칸. 모양이 어긋난 값(손으로 고친 행 등)은 번역이 없는 것으로 본다. */
+export function parseI18n(json: string | null): PostTranslations {
+  if (!json) return {};
+  try {
+    const parsed = PostTranslationsSchema.safeParse(JSON.parse(json));
+    return parsed.success ? parsed.data : {};
+  } catch {
+    return {};
+  }
+}
 /** 목록은 엣지에 한국어 키 하나로 담는다 — 번역 제목을 함께 담고(본문은 읽지 않는다) 꺼낸 뒤 `localizeList`로 고른다. */
 const listColumns = {
   ...summaryColumns,
@@ -69,18 +75,17 @@ const likeOf = (postId: string, profileId: string) =>
 
 /** 첫 페이지(before 없음)는 고정 글 전부 + 최신 글, 다음 페이지부터는 고정 안 된 글만 createdAt 역순. */
 export async function listPosts(db: Db, board: BoardKey, limit: number, before?: string) {
-  const columns = listColumns;
   const inBoard = and(eq(boardPosts.board, board), isNull(boardPosts.deletedAt));
   const [pinned, rest] = await Promise.all([
     before
       ? Promise.resolve([])
       : db
-          .select(columns)
+          .select(listColumns)
           .from(boardPosts)
           .where(and(inBoard, eq(boardPosts.pinned, true)))
           .orderBy(desc(boardPosts.createdAt)),
     db
-      .select(columns)
+      .select(listColumns)
       .from(boardPosts)
       .where(
         and(
@@ -98,27 +103,21 @@ export async function listPosts(db: Db, board: BoardKey, limit: number, before?:
   };
 }
 
-export async function getPost(db: Db, id: string, lang: Lang): Promise<Post | undefined> {
+export type PostRow = Post & { i18nJson: string | null };
+
+/** 한국어 원문과 저장된 번역을 한 번에 읽는다 — 요청 언어로 고르기·관리자 원문은 `localizePost`·`parseI18n`. */
+export async function getPost(db: Db, id: string): Promise<PostRow | undefined> {
   const [row] = await db
-    .select({
-      ...summaryColumns,
-      title: localized('title', lang),
-      body: localized('body', lang),
-    })
+    .select({ ...summaryColumns, body: boardPosts.body, i18nJson: boardPosts.i18nJson })
     .from(boardPosts)
     .where(live(id));
-  return row as Post | undefined;
+  return row as PostRow | undefined;
 }
 
-/** 관리자가 글을 고칠 때 쓰는 한국어 원문과 번역. */
-export async function getPostSource(db: Db, id: string) {
-  const [row] = await db
-    .select({ title: boardPosts.title, body: boardPosts.body, i18nJson: boardPosts.i18nJson })
-    .from(boardPosts)
-    .where(live(id));
-  if (!row) return undefined;
-  const i18n = (row.i18nJson ? JSON.parse(row.i18nJson) : {}) as PostTranslations;
-  return { title: row.title, body: row.body, i18n };
+/** 운영자가 쓴 번역이 있으면 그 언어로, 없으면 한국어 원문. */
+export function localizePost({ i18nJson, ...post }: PostRow, lang: Lang): Post {
+  const text = lang === 'ko' ? undefined : parseI18n(i18nJson)[lang];
+  return text ? { ...post, ...text } : post;
 }
 
 export type PostFields = {

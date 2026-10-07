@@ -1,4 +1,4 @@
-import type { Locale } from '@offside/contracts/i18n';
+import type { Locale, TranslatedLocale } from '@offside/contracts/i18n';
 import type { PostText, PostTranslateResponse } from '@offside/contracts';
 import { POST_BODY_MAX, POST_TITLE_MAX } from '@offside/contracts/board-limits';
 import { AppError } from '../errors.js';
@@ -33,20 +33,16 @@ const systemPrompt = (to: Locale) =>
     'Output only the translation. No quotes, notes or explanations.',
   ].join('\n');
 
-const unavailable = (message: string) => new AppError({ code: 'SERVICE_UNAVAILABLE', message });
+const unavailable = (message = TEXT_UNAVAILABLE) =>
+  new AppError({ code: 'SERVICE_UNAVAILABLE', message });
 const DRAFT_UNAVAILABLE = '지금은 번역 초안을 만들 수 없어요. 잠시 후 다시 시도해 주세요.'; // i18n-ignore: 운영 도구 전용
 const TEXT_UNAVAILABLE = '지금은 번역할 수 없어요. 잠시 후 다시 시도해 주세요.'; // i18n-ignore: 응답 때 errorText가 옮긴다
 
 type ChatOutput = { choices?: { message?: { content?: string | null } }[]; response?: string };
 
-/** 한 덩어리를 to 언어로 옮긴다. 바인딩이 없거나 결과가 비면 503(message). */
-export async function translateText(
-  ai: Ai | undefined,
-  text: string,
-  to: Locale,
-  message = TEXT_UNAVAILABLE,
-): Promise<string> {
-  if (!ai) throw unavailable(message);
+/** 한 덩어리를 to 언어로 옮긴다. 바인딩이 없거나 결과가 비면 503. */
+export async function translateText(ai: Ai | undefined, text: string, to: Locale): Promise<string> {
+  if (!ai) throw unavailable();
   const out = (await ai
     .run(TRANSLATE_MODEL, {
       messages: [
@@ -59,7 +55,7 @@ export async function translateText(
     })
     .catch(() => undefined)) as ChatOutput | undefined;
   const result = (out?.choices?.[0]?.message?.content ?? out?.response ?? '').trim();
-  if (!result) throw unavailable(message);
+  if (!result) throw unavailable();
   return result;
 }
 
@@ -68,7 +64,11 @@ export async function draftTranslations(
   ai: Ai | undefined,
   input: PostText,
 ): Promise<PostTranslateResponse> {
-  const one = (text: string, to: 'en' | 'ja') => translateText(ai, text, to, DRAFT_UNAVAILABLE);
+  // 운영 도구에는 운영 도구용 안내를 보인다.
+  const one = (text: string, to: TranslatedLocale) =>
+    translateText(ai, text, to).catch(() => {
+      throw unavailable(DRAFT_UNAVAILABLE);
+    });
   const [enTitle, enBody, jaTitle, jaBody] = await Promise.all([
     one(input.title, 'en'),
     one(input.body, 'en'),

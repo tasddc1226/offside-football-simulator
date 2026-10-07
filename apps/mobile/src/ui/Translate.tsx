@@ -1,8 +1,7 @@
 // T-11-146 댓글·채팅 "번역 보기"(앱, 웹 translations.svelte.ts). 번역을 펼친 글만 기억하고, 서버 호출·세션 메모는
 // app-core userTranslate가 한다.
 import { useState } from 'react';
-import { canTranslate, translateUserText } from '@offside/app-core/userTranslate';
-import { translateText as T } from '@offside/app-core/i18n/ko/translate';
+import { canTranslate, translateLabel, translateUserText } from '@offside/app-core/userTranslate';
 import { toast } from '../game/host';
 import { rem } from '../theme/type';
 import { Press } from './Press';
@@ -24,7 +23,7 @@ export function useTranslations() {
   return {
     text: (id: string, body: string) => shown[id] ?? body,
     /** 다른 글자로 쓴 글에만 버튼을 그린다. */
-    button: (id: string, body: string, align: 'flex-start' | 'flex-end' = 'flex-start') =>
+    button: (id: string, body: string) =>
       canTranslate(body) ? (
         <Press
           testID="translate"
@@ -32,14 +31,14 @@ export function useTranslations() {
           disabled={busy === id}
           onPress={() => void toggle(id, body)}
           style={{
-            alignSelf: align,
+            alignSelf: 'flex-start',
             minHeight: 32,
             justifyContent: 'center',
             paddingHorizontal: 2,
           }}
         >
           <Txt tone="muted" style={{ fontSize: rem(0.75), textDecorationLine: 'underline' }}>
-            {id in shown ? T.original : busy === id ? T.working : T.show}
+            {translateLabel(id in shown, busy === id)}
           </Txt>
         </Press>
       ) : null,
