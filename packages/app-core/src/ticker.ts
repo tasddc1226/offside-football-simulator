@@ -2,7 +2,7 @@
 // 섞는다 — 기록은 드물고 오래돼 시각순으로만 섞으면 맨 뒤로 밀린다.
 import type { TickerFirst, TickerResponse, TickerTransfer } from '@offside/contracts';
 import { isAmateurClubId } from '@offside/contracts/club-names';
-import { anonName } from './format.js';
+import { playerName } from './format.js';
 import { firstLabel, firstUnit } from './firsts.js';
 
 export type TickerItem =
@@ -18,7 +18,7 @@ export type TickerItem =
   | { key: string; kind: 'first' | 'record'; at: string; who: string; text: string };
 
 const who = (x: { name: string | null; pos: TickerTransfer['pos']; number: number | null }) =>
-  x.name ?? anonName(x.pos, x.number);
+  playerName(x.name, x.pos, x.number);
 
 const transferItem = (t: TickerTransfer): TickerItem => ({
   key: `t:${t.at}:${t.toClubId}`,

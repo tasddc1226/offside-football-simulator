@@ -39,7 +39,7 @@
   import type { TeamLogo } from '@offside/contracts/team-logo';
   import TeamLogoEditor from './TeamLogoEditor.svelte';
   import { go } from '../nav.js';
-  import { anonName } from '@offside/game/pos-label';
+  import { playerName } from '@offside/app-core/format';
   import { toast } from '../helpers.js';
   import { dur } from '../motion.js';
   import { startGoogleLogin } from '../login.js';
@@ -120,7 +120,7 @@
   const localNames = localCareerNames();
   const byId = $derived(new Map(players.map((p) => [p.careerId, p])));
   const nameOf = (p: TeamPlayer) =>
-    localNames.get(p.careerId) ?? p.publicName ?? anonName(p.pos, p.number);
+    playerName(localNames.get(p.careerId) ?? p.publicName, p.pos, p.number);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
 
   const slotCodes = $derived(layout?.map((p) => p.slot) ?? FORMATIONS[formation]);

@@ -51,7 +51,7 @@ import {
   synergyFocus,
   teamEditableIn,
 } from '@offside/app-core/teamOwner';
-import { anonName } from '@offside/app-core/format';
+import { playerName } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/hof-store';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines } from '../../components/TeamPitch';
@@ -187,7 +187,7 @@ export default function Team() {
   const byId = new Map(players.map((p) => [p.careerId, p]));
   const wildcards = wildcardLabel(slots, byId, season);
   const nameOf = (p: TeamPlayer) =>
-    localNames.get(p.careerId) ?? p.publicName ?? anonName(p.pos, p.number);
+    playerName(localNames.get(p.careerId) ?? p.publicName, p.pos, p.number);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
 
   const positions = layout ?? presetLayout(formation);

@@ -18,7 +18,7 @@ import {
   seasonById,
 } from '@offside/contracts/service-seasons';
 import { kstMonthDayHour } from '@offside/app-core/boardText';
-import { anonName, fmtValue } from '@offside/app-core/format';
+import { fmtValue, playerName } from '@offside/app-core/format';
 import { getHof } from '@offside/app-core/api/client';
 import { useSeasonNow } from '../ui/useSeasonNow';
 import { useRefresh } from '../ui/refresh';
@@ -347,7 +347,7 @@ export function HallOfFame({ full = false }: { full?: boolean }) {
               >
                 <HofRow
                   rank={h.rank ? h.rank - 1 : offset + i}
-                  name={h.name ?? anonName(h.pos, h.number)}
+                  name={playerName(h.name, h.pos, h.number)}
                   pos={h.pos}
                   dpos={h.dpos}
                   nation={h.nation}

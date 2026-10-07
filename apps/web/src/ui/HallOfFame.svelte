@@ -15,7 +15,7 @@
   import { getHof } from '@offside/app-core/api/client';
   import { seasonNow } from './seasonNow.svelte.js';
   import { openPublicLegend } from './legend.js';
-  import { anonName, fmtValue } from '@offside/app-core/format';
+  import { fmtValue, playerName } from '@offside/app-core/format';
   import { openHof } from './nav.js';
   import HofRow, { type RowStats } from './HofRow.svelte';
   import HofPodium from './HofPodium.svelte';
@@ -159,7 +159,7 @@
   <button class="hof-row" data-hof-id={h.id} onclick={() => void openPublicLegend(h)}>
     <HofRow
       rank={h.rank ? h.rank - 1 : offset + i}
-      name={h.name ?? anonName(h.pos, h.number)}
+      name={playerName(h.name, h.pos, h.number)}
       pos={h.pos}
       dpos={h.dpos}
       nation={h.nation}

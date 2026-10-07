@@ -7,7 +7,7 @@ import * as Sharing from 'expo-sharing';
 import Svg, { Defs, LinearGradient, Pattern, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { captureRef, releaseCapture } from 'react-native-view-shot';
 import type { SeasonRecap } from '@offside/contracts';
-import { anonName } from '@offside/app-core/format';
+import { playerName } from '@offside/app-core/format';
 import { EMBLEM_PALETTE } from '@offside/app-core/gradeEmblem';
 import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
 import { recapTier, tierReason, tierTitle } from '@offside/app-core/ownerTier';
@@ -265,7 +265,7 @@ function ShareCard({ recap }: { recap: SeasonRecap }) {
         style={{ position: 'absolute', left: 30, top: 328 + 2 * 76 + 3, right: 30, height: 88 }}
       >
         {recap.best
-          ? panel(0, L.best, recap.best.name ?? anonName(recap.best.pos, null), [
+          ? panel(0, L.best, playerName(recap.best.name, recap.best.pos, null), [
               L.bestScore({ score: num(recap.best.score) }),
               ...(recap.stats?.scorer
                 ? [`${L.scorer} ${L.scorerGoals({ n: num(recap.stats.scorer.goals) })}`]

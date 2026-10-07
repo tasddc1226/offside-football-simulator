@@ -1,6 +1,6 @@
 // T-11-080 이적시장 화면(웹 ui/market · 앱 screens/owner/Market.tsx 공용) — 그리기 전에 계산하는 것과 문구만 둔다.
 import type { CareerPos } from '@offside/contracts';
-import { anonName, fmtValue } from './format.js';
+import { fmtValue, playerName } from './format.js';
 import type { MarketCard, MarketRules, MarketSale, MarketTrade } from './api/market.js';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
@@ -34,7 +34,7 @@ export const MARKET_POS_FILTERS: readonly (CareerPos | undefined)[] = [undefined
 export const marketName = (
   c: Pick<MarketCard, 'careerId' | 'publicName' | 'pos' | 'number'>,
   local: ReadonlyMap<string, string>,
-) => local.get(c.careerId) ?? c.publicName ?? anonName(c.pos, c.number);
+) => playerName(local.get(c.careerId) ?? c.publicName, c.pos, c.number);
 
 /** 판매가 대비 기준가(%). 100보다 크면 기준가보다 비싸다. */
 const priceRatio = (price: number, cardValue: number) =>
