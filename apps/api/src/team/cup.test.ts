@@ -5,6 +5,7 @@ import { cupEntries, ownerItems, ownerTeams, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 import { checkCupLineup } from '../routes/cup.js';
+import { cupText } from '../cupText.js';
 import {
   cupEntriesOf,
   cupHonorsOf,
@@ -93,6 +94,17 @@ describe('T-11-145 컵 규칙', () => {
       ['B1', 'A2'],
       ['D1', 'C2'],
     ]);
+  });
+
+  it('알림 문장을 영어·일본어로 옮긴다(팀 이름은 그대로)', () => {
+    expect(cupText('오프사이드 컵 결승 — 이겼어요', 'en')).toBe('OFFSIDE Cup Final: You won');
+    expect(cupText('시즌 1 제1회 오프사이드 컵 조 추첨 결과', 'en')).toBe(
+      'Season 1 OFFSIDE Cup #1 group draw',
+    );
+    expect(cupText('우리 FC은(는) 3조예요. 첫 경기는 오늘 밤 9시예요.', 'ja')).toBe(
+      '우리 FCはグループ3です。初戦は今夜9時です。',
+    );
+    expect(cupText('다른 문장', 'en')).toBeUndefined();
   });
 
   it('승부차기는 늘 승자가 있고 시드가 같으면 같다', () => {

@@ -31,7 +31,8 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
   const me = async (cookie: string) =>
     MeRes.parse(await (await call('GET', `/v1/cups/${CUP.id}/me`, { cookie })).json()).data;
   const reason = async (res: Response) =>
-    ErrorEnvelopeSchema.parse(await res.json()).error.details?.reason;
+    (ErrorEnvelopeSchema.parse(await res.json()).error.details as { reason?: string } | undefined)
+      ?.reason;
 
   /** 시즌 1 카드 n장으로 선발을 채운 구단주. */
   async function owner(n: number) {
@@ -111,6 +112,17 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     expect(await reason(await enter(a.cookie))).toBe('CUP_CLOSED');
     vi.setSystemTime(new Date(CUP.closesAt));
     expect(await reason(await enter(a.cookie))).toBe('CUP_CLOSED');
+  });
+
+  it('영어 요청이면 오류를 영어로 돌려준다', async () => {
+    const a = await owner(7);
+    const res = await call('POST', `/v1/cups/${CUP.id}/entries?lang=en`, {
+      cookie: a.cookie,
+      headers: idem(),
+    });
+    expect(ErrorEnvelopeSchema.parse(await res.json()).error.message).toBe(
+      'You need at least 8 of your retired players in your starting XI.',
+    );
   });
 
   it('정원이 차면 신청할 수 없다', async () => {

@@ -17,6 +17,7 @@ import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { cupEntries, cupMatches, cupState, ownerTeams, profiles } from '../db/schema.js';
 import { type OwnerTeamRow } from '../db/repos/ownerTeams.js';
+import { cupKo, cupTitle } from '../cupText.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { lineupsOf, matchDetailOf } from './match.js';
 import { penaltyShootout, simulateMatch } from './sim.js';
@@ -38,17 +39,6 @@ export type CupMatchRow = typeof cupMatches.$inferSelect;
 export type CupStateRow = typeof cupState.$inferSelect;
 
 export const FORFEIT_GOALS = 3;
-const ROUND_LABEL: Record<CupRound, string> = {
-  g1: '조별 1차전',
-  g2: '조별 2차전',
-  g3: '조별 3차전',
-  r32: '32강',
-  r16: '16강',
-  qf: '8강',
-  sf: '4강',
-  f: '결승',
-};
-export const cupTitle = (cup: CupDef) => `시즌 ${cup.season} 제${cup.edition}회 오프사이드 컵`;
 
 export const cupEntriesOf = (db: Db, cupId: string) =>
   db
@@ -187,8 +177,8 @@ export async function drawCup(db: Db, cup: CupDef, now: string) {
         d1,
         e.profileId,
         `cup:${cup.id}:dropped`,
-        `${cupTitle(cup)} 참가가 취소됐어요`,
-        `추첨 시각에 선발 선수가 ${cup.minFilled}명보다 적어 참가할 수 없었어요.`,
+        cupKo('droppedTitle', { cup: cupTitle(cup) }),
+        cupKo('droppedBody', { n: cup.minFilled }),
         now,
       ),
     );
@@ -204,8 +194,8 @@ export async function drawCup(db: Db, cup: CupDef, now: string) {
           d1,
           e.profileId,
           `cup:${cup.id}:cancelled`,
-          `${cupTitle(cup)}가 열리지 않아요`,
-          '참가 팀이 너무 적어 이번 대회는 취소됐어요.',
+          cupKo('cancelledTitle', { cup: cupTitle(cup) }),
+          cupKo('cancelledBody'),
           now,
         ),
       );
@@ -229,8 +219,8 @@ export async function drawCup(db: Db, cup: CupDef, now: string) {
         d1,
         e.profileId,
         `cup:${cup.id}:draw`,
-        `${cupTitle(cup)} 조 추첨 결과`,
-        `${t.name}은(는) ${grp.get(e.teamId)}조예요. 첫 경기는 오늘 밤 9시예요.`,
+        cupKo('drawTitle', { cup: cupTitle(cup) }),
+        cupKo('drawBody', { team: t.name, group: grp.get(e.teamId)! }),
         now,
       ),
     );
@@ -325,19 +315,20 @@ export async function playCupMatch(
       )
       .bind(now, hg, ag, pens?.home ?? null, pens?.away ?? null, winner, forfeit, detail, m.id),
   ];
-  const label = ROUND_LABEL[m.round as CupRound];
-  const name = (id: string | null) => (id ? (entries.get(id)?.name ?? '상대 팀') : '상대 팀');
-  const score = `${name(m.homeTeamId)} ${hg} : ${ag} ${name(m.awayTeamId)}${pens ? ` (승부차기 ${pens.home}:${pens.away})` : ''}`;
+  const round = cupKo(m.round as CupRound);
+  const name = (id: string | null) => (id ? (entries.get(id)?.name ?? '-') : '-');
+  // 본문은 팀 이름과 숫자뿐이라 언어마다 같다(승부차기는 PK).
+  const score = `${name(m.homeTeamId)} ${hg} : ${ag} ${name(m.awayTeamId)}${pens ? ` (PK ${pens.home}:${pens.away})` : ''}`;
   for (const id of ids) {
     const e = entries.get(id);
     if (!e) continue;
-    const res = winner === null ? '비겼어요' : winner === id ? '이겼어요' : '졌어요';
+    const result = cupKo(winner === null ? 'draw' : winner === id ? 'win' : 'loss');
     stmts.push(
       ...notify(
         d1,
         e.profileId,
         `cup-match:${m.id}:${id}`,
-        `오프사이드 컵 ${label} — ${res}`,
+        cupKo('matchTitle', { round, result }),
         score,
         now,
       ),

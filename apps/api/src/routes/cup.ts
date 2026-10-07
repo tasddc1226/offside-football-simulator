@@ -46,6 +46,7 @@ import { lineupsOf, toMatch } from '../team/match.js';
 import { filledCount } from '../team/sim.js';
 import { requireOwner } from './ownerTeam.js';
 import { conflictError, NO_STORE, notFoundError, nowIso, ok } from './shared.js';
+import { cupKo } from '../cupText.js';
 
 // T-11-145 오프사이드 컵(조회·신청·취소)과 구단주 아이템(선수 후보 리롤권).
 
@@ -148,7 +149,7 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
 const cupOf = (c: Context<AppEnv>) => {
   const id = c.req.param('cupId');
   const cup = id === 'current' ? currentCup(nowIso()) : id ? cupById(id) : undefined;
-  if (!cup) throw notFoundError('대회를 찾을 수 없어요.', 'CUP_NOT_FOUND');
+  if (!cup) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
   return cup;
 };
 
@@ -255,15 +256,15 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       return c.body(null, 204);
     const el = await eligibility(db, cup, me.id, now, entries);
     if (!el.ok || !el.team) {
-      const msg: Record<string, string> = {
-        closed: '지금은 신청할 수 없어요.',
-        'no-team': `시즌 ${cup.season} 구단이 있어야 신청할 수 있어요.`,
-        'not-enough': `선발에 내 은퇴 선수가 ${cup.minFilled}명 이상 있어야 해요.`,
-        listed: '이적시장에 내놓은 선수를 선발에서 빼거나 판매를 취소해 주세요.',
-        full: '정원이 다 찼어요.',
+      const msg = {
+        closed: cupKo('closed'),
+        'no-team': cupKo('noTeam', { season: cup.season }),
+        'not-enough': cupKo('notEnough', { n: cup.minFilled }),
+        listed: cupKo('listed'),
+        full: cupKo('full'),
       };
       throw conflictError(
-        msg[el.reason ?? 'closed']!,
+        msg[el.reason ?? 'closed'],
         `CUP_${(el.reason ?? 'closed').toUpperCase().replace('-', '_')}`,
       );
     }
@@ -279,7 +280,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       )
       .bind(cup.id, t.id, me.id, t.name, t.manager, t.ovr, now, now, cup.id, cup.capacity)
       .run();
-    if (!res.meta.changes) throw conflictError('정원이 다 찼어요.', 'CUP_FULL');
+    if (!res.meta.changes) throw conflictError(cupKo('full'), 'CUP_FULL');
     return c.body(null, 201);
   });
 
@@ -289,7 +290,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const cup = cupOf(c);
     const now = nowIso();
-    if (now >= cup.closesAt) throw conflictError('접수가 끝나 취소할 수 없어요.', 'CUP_CLOSED');
+    if (now >= cup.closesAt) throw conflictError(cupKo('withdrawClosed'), 'CUP_CLOSED');
     await db
       .update(cupEntries)
       .set({ status: 'withdrawn', updatedAt: now })
@@ -303,7 +304,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     const cup = cupOf(c);
     const m = (await cupMatchesOf(db, cup.id)).find((x) => x.id === c.req.param('matchId'));
     if (!m || !m.playedAt || !m.detailJson)
-      throw notFoundError('경기를 찾을 수 없어요.', 'CUP_MATCH_NOT_FOUND');
+      throw notFoundError(cupKo('matchNotFound'), 'CUP_MATCH_NOT_FOUND');
     const d = JSON.parse(m.detailJson) as MatchDetail;
     const ids = d.events
       .flatMap((e) => [e.scorer.careerId, e.assist?.careerId])
@@ -375,7 +376,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
         ),
       )
       .returning({ qty: ownerItems.qty });
-    if (!row.length) throw conflictError('리롤권이 없어요.', 'NO_REROLL');
+    if (!row.length) throw conflictError(cupKo('noReroll'), 'NO_REROLL');
     return ok(c, OwnerItemsResponseSchema, { reroll: row[0]!.qty }, 200, NO_STORE);
   });
 }
@@ -406,15 +407,9 @@ export async function checkCupLineup(
 ) {
   for (const { cup, entry, matches } of await activeCups(db, profileId, season)) {
     if (lineupLocked(matches, entry.teamId, now))
-      throw conflictError(
-        '오프사이드 컵 경기 1시간 전부터 경기가 끝날 때까지 명단을 바꿀 수 없어요.',
-        'CUP_LINEUP_LOCKED',
-      );
+      throw conflictError(cupKo('lineupLocked'), 'CUP_LINEUP_LOCKED');
     if (filled < cup.minFilled)
-      throw conflictError(
-        `오프사이드 컵 참가 중에는 선발에 내 은퇴 선수를 ${cup.minFilled}명 이상 두어야 해요.`,
-        'CUP_MIN_FILLED',
-      );
+      throw conflictError(cupKo('minFilled', { n: cup.minFilled }), 'CUP_MIN_FILLED');
     if (ids.length) {
       const listed = await db.$client
         .prepare(
@@ -422,11 +417,7 @@ export async function checkCupLineup(
         )
         .bind(JSON.stringify(ids))
         .first<{ n: number }>();
-      if ((listed?.n ?? 0) > 0)
-        throw conflictError(
-          '오프사이드 컵 참가 중에는 이적시장에 내놓은 선수를 선발에 넣을 수 없어요.',
-          'CUP_CARD_LISTED',
-        );
+      if ((listed?.n ?? 0) > 0) throw conflictError(cupKo('cardListed'), 'CUP_CARD_LISTED');
     }
   }
 }
@@ -436,8 +427,5 @@ export async function checkCupListing(db: Db, profileId: string, season: number,
   if (!(await activeCups(db, profileId, season)).length) return;
   const [team] = await myTeamIn(db, profileId, season);
   if (team && slotIdsOf(team).includes(careerId))
-    throw conflictError(
-      '오프사이드 컵에 참가 중인 선발 선수는 내놓을 수 없어요.',
-      'CUP_CARD_LOCKED',
-    );
+    throw conflictError(cupKo('cardLocked'), 'CUP_CARD_LOCKED');
 }

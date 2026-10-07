@@ -1,4 +1,5 @@
 import { EXACT_JA, PATTERNS_JA } from './i18n/ja/errorText.js';
+import { cupText } from './cupText.js';
 import type { Lang } from './lang.js';
 
 // T-11-106 사용자에게 보이는 오류 안내의 영어. 던지는 자리(라우트·미들웨어)는 한국어 문장 그대로 두고, 응답 봉투를 만들 때
@@ -196,5 +197,5 @@ export function localizeMessage(message: string, lang: Lang): string {
     const m = re.exec(message);
     if (m) return make(m);
   }
-  return message;
+  return cupText(message, lang) ?? message;
 }
