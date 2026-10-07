@@ -20,15 +20,15 @@
     "lineX": 0.14,
     "ko": {
       "h": "나만의 선수를\n*직접* 만들어요",
-      "s": "국적·체격·포지션·성장 특성까지 정해요"
+      "s": "국적을 고르면 그 나라 대표로 뛰어요"
     },
     "en": {
       "h": "Build *your*\nown player",
-      "s": "Nation, build, position and growth type"
+      "s": "Pick any nation and play for its national team"
     },
     "ja": {
       "h": "自分だけの選手を\n*一から*つくる",
-      "s": "国籍・体格・ポジション・成長タイプを決める"
+      "s": "国籍を選べば、その国の代表でプレー"
     }
   },
   {
