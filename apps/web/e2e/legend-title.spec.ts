@@ -103,6 +103,47 @@ async function seed(
   return bodies;
 }
 
+for (const wins of [0, 1, 2]) {
+  test(`개인상 목록에서 제외돼도 은퇴 리포트에 발롱도르 ${wins}회를 별도로 표시한다`, async ({
+    page,
+  }) => {
+    await seed(page);
+    await page.goto('/');
+    await page.evaluate((wins) => {
+      const hof = JSON.parse(localStorage.getItem('ft_hof')!);
+      const h = hof[0];
+      h.ballon = wins;
+      h.detail.awards = Array.from({ length: 8 }, (_, i) =>
+        Array.from({ length: 4 }, (_, j) => ({ year: 2030 + j, t: `other-${i}` })),
+      )
+        .flat()
+        .concat(Array.from({ length: wins }, (_, i) => ({ year: 2030 + i, t: '발롱도르' })));
+      h.awards = h.detail.awards.length;
+      localStorage.setItem('ft_hof', JSON.stringify(hof));
+    }, wins);
+    await page.locator('[data-act="owner"]').click();
+    await page.locator('[data-my-player="0"]').click();
+    const stat = page.locator('[data-legend-ballon]');
+    await expect(stat).toContainText('발롱도르 수상');
+    await expect(stat.locator('b')).toHaveText(String(wins));
+    await expect(page.locator('.roll-line').filter({ hasText: '발롱도르' })).toHaveCount(0);
+  });
+}
+
+test('시즌 상세가 없는 옛 은퇴 리포트에서도 발롱도르 요약 횟수를 표시한다', async ({ page }) => {
+  await seed(page);
+  await page.goto('/');
+  await page.evaluate(() => {
+    const hof = JSON.parse(localStorage.getItem('ft_hof')!);
+    hof[0].ballon = 2;
+    delete hof[0].detail;
+    localStorage.setItem('ft_hof', JSON.stringify(hof));
+  });
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-my-player="0"]').click();
+  await expect(page.locator('[data-legend-ballon] b')).toHaveText('2');
+});
+
 test('은퇴한 내 선수의 대표 칭호를 받은 칭호 중에서 바꾼다', async ({ page }) => {
   const bodies = await seed(page);
   await page.goto('/');

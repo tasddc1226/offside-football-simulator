@@ -4,6 +4,10 @@ import type { LegendSnapshot } from '@offside/contracts';
 import { controlPoints, legendAwardCount, legendTerms } from '@offside/contracts/hof-rules';
 import type { GameState, LegendSource } from './types.js';
 
+/** 30인 후보 기록과 구분한 실제 발롱도르 수상 횟수. */
+export const ballonWinsOf = (s: Pick<LegendSource, 'awards'>): number =>
+  s.awards.filter((x) => x.t === '발롱도르').length; // i18n-ignore 저장값
+
 /** 레전드 점수의 각 항. 합을 반올림한 값이 legendScore()다. */
 export function legendTermsOf(s: LegendSource): ReturnType<typeof legendTerms> {
   const t = s.career.reduce(
@@ -21,7 +25,7 @@ export function legendTermsOf(s: LegendSource): ReturnType<typeof legendTerms> {
       awards: legendAwardCount(s.awards, s.dpos),
       caps: s.nat.caps,
       peak: s.peak,
-      ballon: s.awards.filter((x) => x.t === '발롱도르').length, // i18n-ignore 저장값
+      ballon: ballonWinsOf(s),
       ballonRankPoints: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0),
       worldCups: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length, // i18n-ignore 저장값
       control: controlPoints(s.career),

@@ -138,6 +138,7 @@
       {/if}
       <div><b><CountUp value={caps} animate={playing} run={seen.highlights} /></b><span>{L.statCaps}</span></div>
       <div><b><CountUp value={v.totals.trophies} animate={playing} run={seen.highlights} /></b><span>{L.statTrophies}</span></div>
+      <div data-legend-ballon><b><CountUp value={v.totals.ballon} animate={playing} run={seen.highlights} /></b><span>{L.statBallon}</span></div>
     </section>
     {#if !d}<p class="film-note">{L.noDetailNote}</p>{/if}
     {#if playing && !seen.journey}<div class="film-cue" aria-hidden="true">{L.scrollCue}<i>↓</i></div>{/if}

@@ -4,7 +4,7 @@
 import type { LegendSnapshot, PublicHofEntry, RetiredNumberResult } from '@offside/contracts';
 import { toPublicName } from '@offside/contracts/content-filter';
 import { isHofEligible } from '@offside/contracts/hof-rules';
-import { legendScore } from '@offside/game/legend';
+import { ballonWinsOf, legendScore } from '@offside/game/legend';
 import { loadHOF } from '@offside/game/hof-store';
 import { saveKey } from '@offside/game/storage';
 import type { GameState, HofEntry } from '@offside/game/types';
@@ -53,6 +53,7 @@ function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
       trophies: e.trophies,
       awards: e.awards,
       caps: e.caps,
+      ballon: e.ballon,
     },
     own: null,
     shareId: null,
@@ -85,6 +86,7 @@ export function createLegends(host: LegendHost) {
         trophies: h.trophies,
         awards: h.awards,
         caps: h.caps,
+        ballon: h.ballon ?? (h.detail ? ballonWinsOf(h.detail) : 0),
       },
       own: h,
       shareId: ownShareId(h),
@@ -119,6 +121,7 @@ export function createLegends(host: LegendHost) {
         trophies: s.trophies.length,
         awards: s.awards.length,
         caps: s.nat.caps,
+        ballon: ballonWinsOf(s),
       },
       own,
       shareId: ownShareId(own),
