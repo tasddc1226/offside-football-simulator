@@ -15,10 +15,12 @@ export interface NationGroup {
 }
 
 const byKo = new Intl.Collator('ko').compare;
+const collators = new Map<Locale, Intl.Collator['compare']>();
 /** 그 언어의 이름순(영어는 A-Z, 일본어는 50음순). 한국어가 아니면 옮긴 이름으로, 정렬기는 그 언어를 쓸 때 만든다. */
 function cmpFor(lang: Locale): (a: Nation, b: Nation) => number {
   if (lang === 'ko') return (a, b) => byKo(a.ko, b.ko);
-  const cmp = new Intl.Collator(lang).compare;
+  let cmp = collators.get(lang);
+  if (!cmp) collators.set(lang, (cmp = new Intl.Collator(lang).compare));
   return (a, b) => cmp(tn(a.ko), tn(b.ko));
 }
 

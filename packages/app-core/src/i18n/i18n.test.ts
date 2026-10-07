@@ -69,13 +69,16 @@ describe('영어·일본어 사전', () => {
           .filter((k) => !k.startsWith('__') && !gameNames.has(k))
           .sort(),
       ).toEqual([...files].sort());
-      // 묶음은 생성 스크립트 결과와 같아야 한다(node tooling/scripts/i18n-index.mjs).
-      execFileSync('node', [
-        new URL('../../../../tooling/scripts/i18n-index.mjs', import.meta.url).pathname,
-        '--check',
-      ]);
     },
   );
+
+  it('묶음(en·ja index)이 생성 스크립트 결과와 같다', () => {
+    // node tooling/scripts/i18n-index.mjs — 모든 언어·패키지를 한 번에 본다.
+    execFileSync('node', [
+      new URL('../../../../tooling/scripts/i18n-index.mjs', import.meta.url).pathname,
+      '--check',
+    ]);
+  });
 
   it.each(LANGS.flatMap(([lang]) => files.map((f) => [lang, f] as const)))(
     '%s/%s: 키·값 종류가 같고 한글이 남지 않는다',

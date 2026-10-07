@@ -6,6 +6,8 @@
  * 한 번 찍어 두고 바꾸지 않는다. 프리시즌에 만든 선수는 개막 전에 첫 시즌을 올리므로 시즌 순위에서 빠진다. 시즌 중에는
  * 밸런스 값을 바꾸지 않는다.
  */
+import type { Locale } from './i18n.js';
+
 export interface ServiceSeason {
   id: number;
   name: string;
@@ -92,18 +94,13 @@ export const previewSeasonAt = (now: string): number | null =>
   now < SERVICE_SEASONS[0]!.startsAt ? null : displaySeasonAt(now);
 
 /** 팀 시즌 이름(0 = 프리시즌). */
-export const teamSeasonName = (id: number, lang: 'ko' | 'en' | 'ja' = 'ko'): string =>
-  lang === 'en'
-    ? id === 0
-      ? 'Preseason'
-      : `Season ${id}`
-    : lang === 'ja'
-      ? id === 0
-        ? 'プレシーズン'
-        : `シーズン${id}`
-      : id === 0
-        ? '프리시즌'
-        : (serviceSeason(id)?.name ?? `시즌 ${id}`);
+const TEAM_SEASON: Record<Locale, { pre: string; name: (id: number) => string }> = {
+  ko: { pre: '프리시즌', name: (id) => serviceSeason(id)?.name ?? `시즌 ${id}` },
+  en: { pre: 'Preseason', name: (id) => `Season ${id}` },
+  ja: { pre: 'プレシーズン', name: (id) => `シーズン${id}` },
+};
+export const teamSeasonName = (id: number, lang: Locale = 'ko'): string =>
+  id === 0 ? TEAM_SEASON[lang].pre : TEAM_SEASON[lang].name(id);
 
 /** 고를 수 있는 팀 시즌(프리시즌 + 개막한 시즌, 오래된 순). */
 export const openTeamSeasons = (now: string): number[] => [

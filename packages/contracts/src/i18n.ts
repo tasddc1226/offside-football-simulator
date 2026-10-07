@@ -72,6 +72,22 @@ export const koSources = (): ReadonlyMap<string, Dict> => sources;
 const isLocale = (v: unknown): v is Locale => (LOCALES as readonly unknown[]).includes(v);
 
 /**
+ * 기기 언어 목록. 웹은 브라우저 언어 목록, 앱(navigator에 언어가 없다)은 네이티브 모듈 없이 Intl로 읽는다 — 옛 앱 빌드에도
+ * OTA로 그대로 보낼 수 있게. 화면 언어(resolveLocale)와 선수 생성 국적 기본값(T-11-140)이 같은 값을 쓴다.
+ */
+export function deviceLocales(): string[] {
+  const nav = (globalThis as { navigator?: { languages?: readonly string[]; language?: string } })
+    .navigator;
+  if (nav?.languages?.length) return [...nav.languages];
+  if (nav?.language) return [nav.language];
+  try {
+    return [Intl.DateTimeFormat().resolvedOptions().locale];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * 이번 실행의 언어. 고른 값이 있으면 그것, 없으면 기기 언어 목록의 첫 항목이 한국어면 한국어, 일본어면 일본어, 아니면 영어
  * (AUTO_DETECT가 꺼져 있으면 한국어).
  */

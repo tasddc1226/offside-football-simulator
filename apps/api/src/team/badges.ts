@@ -84,41 +84,25 @@ export function teamBadges(
   lang: Lang = 'ko',
 ): TeamBadge[] {
   const final = finalRank === null ? undefined : FINAL.find((f) => finalRank <= f.top);
-  if (lang === 'ja') {
+  if (lang === 'ko') {
     return [
       ...(final
-        ? [
-            {
-              id: final.id,
-              label: BADGES_JA[final.id]?.label ?? final.label,
-              desc: finalRankJa(seasonName, finalRank!),
-            },
-          ]
+        ? [{ id: final.id, label: final.label, desc: `${seasonName} 최종 ${finalRank}위` }]
         : []),
-      ...RULES.filter((r) => r.ok(t)).map(({ id, label, desc }) => ({
-        id,
-        label: BADGES_JA[id]?.label ?? label,
-        desc: BADGES_JA[id]?.desc ?? desc,
-      })),
+      ...RULES.filter((r) => r.ok(t)).map(({ id, label, desc }) => ({ id, label, desc })),
     ];
   }
-  const en = lang === 'en';
+  const T = lang === 'ja' ? BADGES_JA : EN;
+  const finalDesc =
+    lang === 'ja'
+      ? finalRankJa(seasonName, finalRank!)
+      : `Finished ${ordinal(finalRank!)} in ${seasonName}`;
   return [
-    ...(final
-      ? [
-          {
-            id: final.id,
-            label: en ? (EN[final.id]?.label ?? final.label) : final.label,
-            desc: en
-              ? `Finished ${ordinal(finalRank!)} in ${seasonName}`
-              : `${seasonName} 최종 ${finalRank}위`,
-          },
-        ]
-      : []),
+    ...(final ? [{ id: final.id, label: T[final.id]?.label ?? final.label, desc: finalDesc }] : []),
     ...RULES.filter((r) => r.ok(t)).map(({ id, label, desc }) => ({
       id,
-      label: en ? (EN[id]?.label ?? label) : label,
-      desc: en ? (EN[id]?.desc ?? desc) : desc,
+      label: T[id]?.label ?? label,
+      desc: T[id]?.desc ?? desc,
     })),
   ];
 }

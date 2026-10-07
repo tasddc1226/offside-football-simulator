@@ -25,27 +25,32 @@ const EN: Record<string, string> = {
   '내 팀에 새 경기 결과가 있어요': 'Your team has a new match result',
 };
 
-/** 팀 이름이 끼는 경기 결과 본문(`원정 0 : 0 홈. …`). 팀 이름은 구단주가 지은 이름이라 그대로 둔다. */
-const PATTERNS: [RegExp, string, string][] = [
-  [
-    /^(.+)\. 친구 목록에서 경기 결과를 확인해 주세요\.$/,
-    'Check the result in your friend list.',
-    PUSH_TAIL_JA[0],
-  ],
-  [
-    /^(.+)\. 최근 경기에서 결과를 확인해 주세요\.$/,
-    'Check the result in Recent matches.',
-    PUSH_TAIL_JA[1],
-  ],
+/** 팀 이름이 끼는 경기 결과 본문(`원정 0 : 0 홈. …`). 팀 이름은 구단주가 지은 이름이라 그대로 둔다. 끝 문장은 TABLES의 tails 순서. */
+const PATTERNS = [
+  /^(.+)\. 친구 목록에서 경기 결과를 확인해 주세요\.$/,
+  /^(.+)\. 최근 경기에서 결과를 확인해 주세요\.$/,
 ];
+
+const TABLES: Record<
+  Exclude<Lang, 'ko'>,
+  { exact: Record<string, string>; tails: readonly string[]; sep: string }
+> = {
+  en: {
+    exact: EN,
+    tails: ['Check the result in your friend list.', 'Check the result in Recent matches.'],
+    sep: '. ',
+  },
+  ja: { exact: PUSH_JA, tails: PUSH_TAIL_JA, sep: '。' },
+};
 
 export function pushText(ko: string, lang: Lang): string {
   if (lang === 'ko') return ko;
-  const hit = (lang === 'ja' ? PUSH_JA : EN)[ko];
+  const T = TABLES[lang];
+  const hit = T.exact[ko];
   if (hit) return hit;
-  for (const [re, en, ja] of PATTERNS) {
+  for (const [i, re] of PATTERNS.entries()) {
     const m = re.exec(ko);
-    if (m) return lang === 'ja' ? `${m[1]}。${ja}` : `${m[1]}. ${en}`;
+    if (m) return `${m[1]}${T.sep}${T.tails[i]}`;
   }
   return ko;
 }

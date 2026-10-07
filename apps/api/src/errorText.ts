@@ -181,12 +181,18 @@ const WHAT: Record<string, string> = {
 };
 const KIND: Record<string, string> = { 글: 'post', 댓글: 'comment', 차단: 'block' };
 
+const TABLES: Record<
+  Exclude<Lang, 'ko'>,
+  { exact: Record<string, string>; patterns: [RegExp, (m: RegExpExecArray) => string][] }
+> = { en: { exact: EXACT, patterns: PATTERNS }, ja: { exact: EXACT_JA, patterns: PATTERNS_JA } };
+
 /** 한국어 문장을 요청 언어로. 한국어면 그대로, 표에 없으면 한국어 그대로 돌려준다. */
 export function localizeMessage(message: string, lang: Lang): string {
   if (lang === 'ko') return message;
-  const hit = (lang === 'ja' ? EXACT_JA : EXACT)[message];
+  const T = TABLES[lang];
+  const hit = T.exact[message];
   if (hit) return hit;
-  for (const [re, make] of lang === 'ja' ? PATTERNS_JA : PATTERNS) {
+  for (const [re, make] of T.patterns) {
     const m = re.exec(message);
     if (m) return make(m);
   }
