@@ -86,11 +86,11 @@ describe('candidate report rewarded placement', () => {
     expect(await result).toBe('skipped');
     expect(grant).not.toHaveBeenCalled();
   });
-  it.each(['closed', 'error'])('grants without an ad on %s before the ad opens', async (event) => {
+  it.each(['closed', 'error'])('reports unavailable on %s before the ad opens', async (event) => {
     const { grant, result } = await begin();
     f.listeners.get(event)();
-    expect(await result).toBe('');
-    expect(grant).toHaveBeenCalledOnce();
+    expect(await result).toBe('unavailable');
+    expect(grant).not.toHaveBeenCalled();
   });
   it('does not request an ad when consent is unavailable', async () => {
     f.consent.mockResolvedValue(false);
@@ -133,14 +133,12 @@ describe('boost daily cap', () => {
     f.kv.set(key, 'Mon Jan 01 2001|20');
     expect((await watchBoost(true)).out).toBe('');
   });
-  it('counts rewards granted without an ad toward the cap', async () => {
-    for (let i = 0; i < 20; i++) {
+  it('does not count ads that failed to load', async () => {
+    for (let i = 0; i < 25; i++) {
       const { result } = await begin('boost');
       f.listeners.get('error')();
-      expect(await result).toBe('');
+      await result;
     }
-    const { grant, result } = await begin('boost');
-    expect(await result).toBe('cap 20');
-    expect(grant).not.toHaveBeenCalled();
+    expect((await watchBoost(true)).out).toBe('');
   });
 });
