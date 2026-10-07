@@ -17,22 +17,20 @@ import {
 import type { CareerRecord, GameState } from '@offside/game/types';
 import { homeLiveText as L } from './i18n/ko/homeLive.js';
 
-import { anonName as anonNameIn } from '@offside/game/pos-label';
+import { anonName } from '@offside/game/pos-label';
+import type { PosGroup } from '@offside/contracts/positions';
 import { getLocale } from './i18n/core.js';
 import { personName } from '@offside/game/i18n/names';
 
-/** 이름을 공개하지 않은 선수 표기(지금 언어로). */
-export const anonName = (pos: Parameters<typeof anonNameIn>[0], number: number | null): string =>
-  anonNameIn(pos, number, getLocale());
 /**
  * 다른 유저 선수의 공개 이름(지금 언어로). 서버에는 한국어로 저장돼 있어, 게임 안 선수 이름과 같은 표(personName)로
- * 영어는 로마자, 일본어는 가타카나로 옮긴다. 표에 없는 이름(직접 지은 이름)은 그대로, 비공개면 익명 표기.
+ * 영어는 로마자, 일본어는 가타카나로 옮긴다. 표에 없는 이름(직접 지은 이름)은 그대로, 비공개면 지금 언어의 익명 표기.
  */
 export const playerName = (
   name: string | null | undefined,
-  pos: Parameters<typeof anonNameIn>[0],
+  pos: PosGroup,
   number: number | null,
-): string => (name != null ? personName(name) : anonName(pos, number));
+): string => (name != null ? personName(name) : anonName(pos, number, getLocale()));
 // 몸값 표기는 지금 언어를 따른다(한국어는 contracts의 서버 표기, 영어는 원화 약식).
 import { fmtValue } from '@offside/game/player';
 export { fmtValue };

@@ -20,6 +20,7 @@ import { BannerClose } from './TopBanner';
 import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
 import { useFly } from './useFly';
 import { tn } from '@offside/game/i18n/names';
+import { personName } from '@offside/game/i18n/names';
 
 const SHOW_MS = 9_000;
 
@@ -129,7 +130,7 @@ function AlertCard({
         <View
           testID={`rn-alert-${item.seq}`}
           accessibilityRole="alert"
-          accessibilityLabel={L.alertLabel({ name: item.name, number: item.number })}
+          accessibilityLabel={L.alertLabel({ name: personName(item.name), number: item.number })}
           style={{
             overflow: 'hidden',
             flexDirection: 'row',
@@ -164,7 +165,7 @@ function AlertCard({
               bold
               style={{ fontSize: rem(0.875), lineHeight: rem(0.875) * 1.4, color: c.pitchAccent }}
             >
-              {L.alertTitle({ name: item.name, number: item.number })}
+              {L.alertTitle({ name: personName(item.name), number: item.number })}
             </Txt>
             <Txt
               style={{
