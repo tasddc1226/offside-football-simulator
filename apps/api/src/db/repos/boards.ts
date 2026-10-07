@@ -7,7 +7,7 @@ import type {
   PostSummary,
   PostTranslations,
 } from '@offside/contracts';
-import { PostTranslationsSchema } from '@offside/contracts';
+import { TRANSLATED_LOCALES } from '@offside/contracts/i18n';
 import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
@@ -37,15 +37,30 @@ const summaryColumns = {
   // 단일 테이블 select에서 drizzle은 컬럼을 테이블명 없이 쓰므로 상관 서브쿼리는 이름을 직접 적는다.
   commentCount: sql<number>`(SELECT COUNT(*) FROM board_comments c WHERE c.post_id = board_posts.id AND c.deleted_at IS NULL)`,
 };
-/** T-11-146 저장된 번역 칸. 모양이 어긋난 값(손으로 고친 행 등)은 번역이 없는 것으로 본다. */
+/**
+ * T-11-146 저장된 번역 칸. 쓸 때는 `PostTranslationsSchema`로 한도까지 검사하고, 읽을 때는 언어별로 모양만 본다
+ * (T-11-148) — 한 언어가 어긋나도(손으로 고친 행, 한도가 바뀌기 전 값) 다른 언어를 버리지 않고, 릴리즈 노트가
+ * 번역 본문 대신 한국어 본문에 이어 쓰지 않게 한다.
+ */
 export function parseI18n(json: string | null): PostTranslations {
-  if (!json) return {};
+  let raw: unknown;
   try {
-    const parsed = PostTranslationsSchema.safeParse(JSON.parse(json));
-    return parsed.success ? parsed.data : {};
+    raw = json ? JSON.parse(json) : null;
   } catch {
     return {};
   }
+  const out: PostTranslations = {};
+  for (const lang of TRANSLATED_LOCALES) {
+    const t = (raw as Record<string, { title?: unknown; body?: unknown }> | null)?.[lang];
+    if (
+      typeof t?.title === 'string' &&
+      typeof t.body === 'string' &&
+      t.title.trim() &&
+      t.body.trim()
+    )
+      out[lang] = { title: t.title, body: t.body };
+  }
+  return out;
 }
 /** 목록은 엣지에 한국어 키 하나로 담는다 — 번역 제목을 함께 담고(본문은 읽지 않는다) 꺼낸 뒤 `localizeList`로 고른다. */
 const listColumns = {

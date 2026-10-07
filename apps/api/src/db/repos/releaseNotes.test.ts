@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { PublishReleaseNotes, ReleaseNote } from '@offside/contracts';
 import { createTestD1, type TestD1 } from '../../test/d1.js';
+import { parseI18n } from './boards.js';
 import { appendReleaseNotes, publishReleaseNotes, releaseDay } from './releaseNotes.js';
 
 const now = '2026-10-03T09:00:00.000Z';
@@ -174,6 +175,34 @@ describe('릴리즈 노트 게시 트랜잭션', () => {
       status: 409,
     });
     expect((await ledger()).results).toEqual([]);
+  });
+  it('영어 본문은 한국어 한도를 넘어도 번역 한도 안이면 게시한다', async () => {
+    // T-11-148 영어는 같은 내용의 한국어보다 두 배 가까이 길다.
+    const en = { title: 'Records', items: ['Shows every nationality'] };
+    await daily('x'.repeat(3000));
+    await ctx.env.DB.prepare("UPDATE board_posts SET i18n_json = ? WHERE id = 'manual'")
+      .bind(JSON.stringify({ en: { title: '261003 Release notes', body: 'y'.repeat(6000) } }))
+      .run();
+    await publishReleaseNotes(ctx.env.DB, input([{ ...entry, en }]), now);
+    expect(JSON.parse(String((await post())!.i18n_json)).en.body.length).toBeGreaterThan(6000);
+    expect((await ledger()).results).toHaveLength(1);
+
+    await ctx.env.DB.prepare("UPDATE board_posts SET i18n_json = ? WHERE id = 'manual'")
+      .bind(JSON.stringify({ en: { title: '261003 Release notes', body: 'y'.repeat(12000) } }))
+      .run();
+    const next = { ...entry, id: 'test-next', en };
+    await expect(publishReleaseNotes(ctx.env.DB, input([next]), now)).rejects.toMatchObject({
+      status: 409,
+    });
+  });
+  it('저장된 번역은 언어별로 읽어 한 언어가 어긋나도 다른 언어를 버리지 않는다', () => {
+    const ja = { title: 'リリースノート', body: '本文' };
+    expect(parseI18n(JSON.stringify({ en: { title: '', body: 'x' }, ja }))).toEqual({ ja });
+    expect(
+      parseI18n(JSON.stringify({ en: { title: 'T', body: 'y'.repeat(20000) } })).en?.body,
+    ).toHaveLength(20000);
+    expect(parseI18n('{oops')).toEqual({});
+    expect(parseI18n(null)).toEqual({});
   });
   it('본문을 읽은 뒤 관리자가 수정해도 덮어쓰거나 게시 이력을 남기지 않는다', async () => {
     await daily();
