@@ -15,6 +15,8 @@ import { chatReject } from './chatReject';
 import { club } from './club';
 import { clubSync } from './clubSync';
 import { create } from './create';
+import { cup } from './cup';
+import { cupApp } from './cupApp';
 import { dex } from './dex';
 import { fairness } from './fairness';
 import { firsts } from './firsts';
@@ -92,6 +94,8 @@ export const ja = {
   club,
   clubSync,
   create,
+  cup,
+  cupApp,
   dex,
   fairness,
   firsts,

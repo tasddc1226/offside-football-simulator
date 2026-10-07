@@ -20,6 +20,8 @@ import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
 import { friendRequestText } from '@offside/app-core/friendText';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
+import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
+import { stageLabel } from '../../owner/cupText';
 import { toast } from '../../../game/host';
 import { DISPLAY, rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
@@ -295,6 +297,46 @@ export default function TeamProfile({ id }: { id: string }) {
               </Txt>
             )}
           </Card>
+          {team.cupHonors?.length ? (
+            <Card gap={10} testID="team-cup-honors">
+              <View>
+                <Txt v="eyebrow">Offside Cup</Txt>
+                <Txt v="h2" accessibilityRole="header">
+                  {CL.honorsTitle}
+                </Txt>
+              </View>
+              <AutoGrid
+                min={140}
+                items={team.cupHonors.map((h) => {
+                  const trophy =
+                    h.stage === 'champion' || h.stage === 'runnerup' || h.stage === 'sf';
+                  return (
+                    <View
+                      key={`${h.cupId}`}
+                      testID={`cup-honor-${h.cupId}`}
+                      style={{
+                        gap: 2,
+                        paddingVertical: trophy ? 8 : 10,
+                        paddingHorizontal: trophy ? 10 : 12,
+                        borderRadius: 12,
+                        backgroundColor: c.surface2,
+                        borderWidth: trophy ? 2 : 0,
+                        borderColor: c.pitchAccent,
+                        flexGrow: 1,
+                      }}
+                    >
+                      <Txt bold>
+                        {CL.honorResult({ edition: h.edition, stage: stageLabel(h.stage) })}
+                      </Txt>
+                      <Txt tone="muted" style={{ fontSize: rem(0.8333) }}>
+                        {CL.honorTeam({ team: h.teamName })}
+                      </Txt>
+                    </View>
+                  );
+                })}
+              />
+            </Card>
+          ) : null}
           {mine ? null : <NameReport kind="team" id={team.id} name={team.name} />}
         </>
       ) : null}

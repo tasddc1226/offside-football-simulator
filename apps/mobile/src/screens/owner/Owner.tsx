@@ -40,6 +40,7 @@ import { MyPlayers } from './MyPlayers';
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
+import { CupBanner } from './TeamCup';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
 import { mix } from '../../theme/colors';
 import { TeamLogo } from '../../components/TeamLogo';
@@ -361,6 +362,8 @@ export default function Owner() {
               </>
             )}
           </Card>
+          {/* T-11-145 오프사이드 컵 배너: 신청·다음 경기·결과. 내 상태는 로그인한 구단주에게만 보인다. */}
+          <CupBanner linked onOpen={() => go('cup')} />
           <Card gap={12} testID="owner-market">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -379,20 +382,23 @@ export default function Owner() {
           </Card>
         </>
       ) : guest ? (
-        <Card gap={12} testID="owner-team-locked">
-          <View style={{ gap: 2 }}>
-            <Txt v="eyebrow">My team</Txt>
-            <Txt v="h2" accessibilityRole="header">
-              {L.myTeam}
+        <>
+          <CupBanner linked={false} onOpen={() => go('cup')} />
+          <Card gap={12} testID="owner-team-locked">
+            <View style={{ gap: 2 }}>
+              <Txt v="eyebrow">My team</Txt>
+              <Txt v="h2" accessibilityRole="header">
+                {L.myTeam}
+              </Txt>
+            </View>
+            <LockedPitch />
+            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+              {ownerLockedText(localCount)}
             </Txt>
-          </View>
-          <LockedPitch />
-          <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-            {ownerLockedText(localCount)}
-          </Txt>
-          {/* 로그아웃·탈퇴 직후엔 세션이 없으므로 startGoogleLogin이 새 익명 세션부터 받는다. */}
-          <LoginButtons />
-        </Card>
+            {/* 로그아웃·탈퇴 직후엔 세션이 없으므로 startGoogleLogin이 새 익명 세션부터 받는다. */}
+            <LoginButtons />
+          </Card>
+        </>
       ) : null}
 
       {!guest || localCount > 0 ? <MyPlayers onRows={onRows} /> : null}

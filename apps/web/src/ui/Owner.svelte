@@ -32,6 +32,7 @@
   import { recapCardView } from '@offside/app-core/seasonRecap';
   import { profileTier, tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
+  import CupBanner from './cup/CupBanner.svelte';
   import { seasonRecapText as R } from '@offside/app-core/i18n/ko/seasonRecap';
   import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 
@@ -188,6 +189,8 @@
         </button>
       {/if}
     </section>
+    <!-- T-11-145 오프사이드 컵 배너: 신청·다음 경기·결과. 구단주 팀과 같은 로그인 구단주에게 내 상태까지 보인다. -->
+    <CupBanner {linked} onopen={() => go('cup')} />
     <section class="card owner-market" aria-label={L.marketTitle} data-owner-market>
       <div class="owner-who">
         <small class="eyebrow">Transfer market</small>
@@ -197,6 +200,7 @@
       <button class="btn" data-act="market" onclick={() => go('market')}>{L.open}</button>
     </section>
   {:else if guest}
+    <CupBanner linked={false} onopen={() => go('cup')} />
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team-locked>
       <small class="eyebrow">My team</small>
       <h2>{L.myTeam}</h2>

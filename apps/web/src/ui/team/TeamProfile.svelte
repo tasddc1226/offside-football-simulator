@@ -19,6 +19,7 @@
   import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import TeamLogo from './TeamLogo.svelte';
+  import CupHonors from '../cup/CupHonors.svelte';
   import { num as n, recordText } from '@offside/app-core/teamText';
   import { friendRequestText } from '@offside/app-core/friendText';
   import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
@@ -143,6 +144,7 @@
         <p class="empty">{L.profHistoryEmpty}</p>
       {/if}
     </section>
+    {#if team.cupHonors?.length}<CupHonors honors={team.cupHonors} />{/if}
     {#if !mine}<NameReport kind="team" id={team.id} name={team.name} />{/if}
     </div>
   {/if}

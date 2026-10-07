@@ -61,6 +61,9 @@
   import { assignSlot, autoFillSlots, draftLines, isPreseasonLegacy, matchHintOf, slotsSynergy, teamEditableIn, tooManyWildcards, wildcardFullText, wildcardLabel } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+  import { fetchCup, fetchCupMe } from '@offside/app-core/api/cup';
+  import CupLineupBand from '../cup/CupLineupBand.svelte';
+  import { involves, lockAtOf, lockWhen } from '../cup/cupView.js';
   import { readTeamDraft, teamDraftBase, writeTeamDraft, type TeamDraft } from './teamDraft.js';
 
   let status = $state<LoadStatus>('loading');
@@ -93,6 +96,8 @@
   let pendingDraft = $state<TeamDraft | null>(null);
   let restoredDraft = $state(false);
   let loadSequence = 0;
+  /** T-11-145 컵에 참가 중이면 편성 화면에 명단 마감 띠(잠겼는지 · 다음 마감 시각). */
+  let cupBand = $state<{ locked: boolean; when: string | null } | null>(null);
 
   let opponents = $state<TeamOpponent[]>([]);
   let oppStatus = $state<LoadStatus>('loading');
@@ -194,6 +199,23 @@
     slots = t ? t.slots.map((s) => s.careerId) : Array(LINEUP_SIZE).fill(null);
   }
 
+  /** 컵이 조별·토너먼트 중일 때만 내 참가 상태를 묻는다(그 밖에는 요청 없음). */
+  async function loadCupBand(forSeason: number) {
+    const c = await fetchCup();
+    if (!c.ok || c.data.cup.season !== forSeason || (c.data.phase !== 'group' && c.data.phase !== 'knockout')) {
+      cupBand = null;
+      return;
+    }
+    const m = await fetchCupMe();
+    if (!m.ok || m.data.entry?.status !== 'active') {
+      cupBand = null;
+      return;
+    }
+    const next = m.data.next;
+    const at = next && involves(next, m.data.entry.teamId) ? lockAtOf(c.data.cup, next.round) : null;
+    cupBand = { locked: m.data.locked, when: at ? lockWhen(at, Date.now()) : null };
+  }
+
   async function load(want?: number) {
     preserveDraft();
     const sequence = ++loadSequence;
@@ -219,6 +241,7 @@
       else pendingDraft = draft;
     }
     status = 'ready';
+    void loadCupBand(season);
   }
   /** 시즌을 바꿔 본다(지난 시즌 팀은 보기만). */
   function pickSeason(id: number) {
@@ -256,7 +279,11 @@
       ...(isPreseasonLegacy(season, current) ? { season: 0 } : {}),
     });
     saving = false;
-    if (!r.ok) { toast(r.error.message); return false; }
+    if (!r.ok) {
+      toast(r.error.message);
+      if (r.error.code === 'CUP_LINEUP_LOCKED') void loadCupBand(season);
+      return false;
+    }
     if (sequence !== loadSequence) { if (key) writeTeamDraft(key, null); return false; }
     const created = !team;
     const unchanged = JSON.stringify(submitted) === JSON.stringify(draftValue());
@@ -400,6 +427,7 @@
       {:else if restoredDraft && dirty}
         <section class="card draft-notice" role="status"><p>{L.draftRestoredWeb}</p><button class="btn btn-sm" onclick={discardDraft} data-act="team-draft-discard">{L.draftDiscardWeb}</button></section>
       {/if}
+      {#if cupBand && editable && (cupBand.locked || cupBand.when)}<CupLineupBand locked={cupBand.locked} when={cupBand.when} />{/if}
       <TeamHead
         {team}
         {logo}
