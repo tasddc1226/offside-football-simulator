@@ -40,6 +40,7 @@ import { MyPlayers } from './MyPlayers';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
 import { CupBanner } from './TeamCup';
+import { OwnerHall } from './OwnerHall';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
 import { mix } from '../../theme/colors';
 import { TeamLogo } from '../../components/TeamLogo';
@@ -370,6 +371,8 @@ export default function Owner() {
           </Card>
           {/* T-11-145 오프사이드 컵 배너: 신청·다음 경기·결과. 내 상태는 로그인한 구단주에게만 보인다. */}
           <CupBanner linked onOpen={() => go('cup')} />
+          {/* T-11-150 명예관: 대표 칭호 고르기와 내 구단주 프로필. */}
+          <OwnerHall />
           <Card gap={12} testID="owner-market">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>

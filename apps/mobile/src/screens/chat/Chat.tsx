@@ -27,6 +27,7 @@ import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
 import { NicknameForm } from '../../components/NicknameForm';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { TierBadge } from '../../components/TierBadge';
+import { TitleBadge } from '../../components/TitleBadge';
 import { toast } from '../../game/host';
 import { goBack, goHome } from '../../game/nav';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
@@ -353,6 +354,7 @@ export default function Chat() {
                         {m.nickname}
                       </Txt>
                       {m.tier ? <TierBadge tag={{ tier: m.tier, season: tierSeason }} /> : null}
+                      {m.title ? <TitleBadge title={m.title} size="sm" /> : null}
                     </>
                   )}
                   {!mine(m) && (!m.admin || me?.admin) ? (

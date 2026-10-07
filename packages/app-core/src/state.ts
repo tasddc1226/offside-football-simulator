@@ -37,6 +37,8 @@ export type HofView = {
   pos: Pos | null;
   /** T-11-129 팀 랭킹 탭을 열 때의 정렬(홈 구단 가치 TOP 3의 전체 보기). 없으면 레이팅. */
   teamSort?: TeamRankSort;
+  /** T-11-150 team 팀의 구단주 프로필을 연다(팀 프로필 대신). */
+  owner?: boolean;
 };
 /** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
 export const hofStart = (): HofView => ({

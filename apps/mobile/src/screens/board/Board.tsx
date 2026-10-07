@@ -37,6 +37,7 @@ import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { NicknameForm } from '../../components/NicknameForm';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { TierBadge } from '../../components/TierBadge';
+import { TitleBadge } from '../../components/TitleBadge';
 import { markNewsSeen, toast } from '../../game/host';
 import { openBoard } from '../../game/nav';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
@@ -510,6 +511,7 @@ export default function Board() {
                             <OwnerAvatar name={cm.nickname} />
                             <Txt bold>{cm.nickname}</Txt>
                             {cm.tier ? <TierBadge tag={cm.tier} /> : null}
+                            {cm.title ? <TitleBadge title={cm.title} size="sm" /> : null}
                           </>
                         )}
                         <Txt tone="muted" style={small}>

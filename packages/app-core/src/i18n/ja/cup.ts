@@ -6,7 +6,6 @@ export const cup: Translation<CupMsgs> = {
   edition: (p) => `第${p.n}回`,
   fullTitle: (p) => `第${p.n}回オフサイドカップ`,
   champTitle: (p) => `第${p.n}回オフサイドカップ 王者`,
-  champBadge: (p) => `第${p.n}回 王者`,
   open: '大会を見る',
   loadFail: '大会情報を読み込めませんでした。',
   loading: '読み込み中…',

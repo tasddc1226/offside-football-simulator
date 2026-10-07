@@ -20,8 +20,9 @@
   import TeamPitch from './TeamPitch.svelte';
   import TeamLogo from './TeamLogo.svelte';
   import CupHonors from '../cup/CupHonors.svelte';
-  import CupTrophy from '../cup/CupTrophy.svelte';
-  import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
+  import TitleBadge from '../cup/TitleBadge.svelte';
+  import { ownerProfileText as LO } from '@offside/app-core/i18n/ko/ownerProfile';
+  import { appState } from '../state.svelte.js';
   import { num as n, recordText } from '@offside/app-core/teamText';
   import { friendRequestText } from '@offside/app-core/friendText';
   import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
@@ -31,8 +32,6 @@
 
   let status = $state<LoadStatus>('loading');
   let team = $state<TeamProfile | null>(null);
-  // 가장 최근 우승 — 팀 이름 아래 챔피언 배지.
-  const champ = $derived(team?.cupHonors?.find((h) => h.stage === 'champion'));
   let liked = $state(false);
   let mine = $state(false);
   let liking = $state(false);
@@ -61,6 +60,12 @@
     }
   }
   onMount(() => void load());
+
+  /** T-11-150 이 팀 구단주의 프로필(뒤로 가면 이 팀 프로필로). */
+  function openOwner() {
+    appState.hof = { ...appState.hof, owner: true };
+    window.scrollTo(0, 0);
+  }
 
   async function toggleLike() {
     if (!team || liking) return;
@@ -108,8 +113,9 @@
         <div class="tp-identity"><TeamLogo logo={team.logo} name={team.name} size={56} /><div class="tp-names">
           <small class="muted">{seasonLabel(team.season, team.seasonName)}{team.rank ? ` · RANK #${team.rank}` : ''}</small>
           <h1>{team.name}</h1>
-          {#if champ}<span class="tp-champ" data-champ-badge><CupTrophy stage="champion" edition={champ.edition} size={22} />{CL.champBadge({ n: champ.edition })}</span>{/if}
+          {#if team.ownerTitle}<span class="tp-title-badge"><TitleBadge title={team.ownerTitle} /></span>{/if}
           <p class="muted fs-sm">{L.profManager}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</p>
+          <button class="btn btn-sm tp-owner" data-act="owner-profile" onclick={openOwner}>{LO.open}</button>
         </div></div>
         <div class="tp-rating" aria-label={L.profRatingAria({ n: team.rating })}><small>RATING</small><b>{n(team.rating)}</b></div>
       </div>
@@ -180,7 +186,8 @@
   }
   .tp-identity {display:flex;align-items:center;gap:10px;min-width:0;}
   .tp-names {min-width:0;}
-  .tp-champ {display:inline-flex; align-items:center; gap:4px; margin:2px 0 4px; padding:2px 10px 2px 4px; border-radius:999px; font-size:var(--fs-xs, 12px); font-weight:800; color:var(--ink); background:color-mix(in srgb, #f6cf55 30%, var(--surface-2)); box-shadow:inset 0 0 0 1px color-mix(in srgb, #d29a14 55%, transparent);}
+  .tp-title-badge {display:block; margin:2px 0 4px;}
+  .tp-owner {margin-top:4px;}
   .tp-manager {
     color: var(--ink);
   }

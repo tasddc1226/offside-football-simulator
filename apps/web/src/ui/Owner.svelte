@@ -35,6 +35,7 @@
   import { profileTier, tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
   import CupBanner from './cup/CupBanner.svelte';
+  import OwnerHall from './owner/OwnerHall.svelte';
   import { seasonRecapText as R } from '@offside/app-core/i18n/ko/seasonRecap';
 
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
@@ -197,6 +198,8 @@
     </section>
     <!-- T-11-145 오프사이드 컵 배너: 신청·다음 경기·결과. 구단주 팀과 같은 로그인 구단주에게 내 상태까지 보인다. -->
     <CupBanner {linked} onopen={() => go('cup')} />
+    <!-- T-11-150 명예관: 대표 칭호 고르기와 내 구단주 프로필. -->
+    <OwnerHall />
     <section class="card owner-market" aria-label={L.marketTitle} data-owner-market>
       <div class="owner-who">
         <small class="eyebrow">Transfer market</small>

@@ -52,6 +52,7 @@ import { marketValueChart } from './marketValueChart';
 import { owner } from './owner';
 import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
+import { ownerProfile } from './ownerProfile';
 import { playerNudge } from './playerNudge';
 import { push } from './push';
 import { retired } from './retired';
@@ -132,6 +133,7 @@ export const en = {
   owner,
   ownerConflict,
   ownerPlayers,
+  ownerProfile,
   playerNudge,
   push,
   retired,
