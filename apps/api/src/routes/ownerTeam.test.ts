@@ -1126,6 +1126,28 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       }
     });
 
+    it('T-11-142 받은 신청 수: 신청하면 받은 쪽만 1, 수락하면 0, 익명은 0', async () => {
+      const pending = async (cookie: string) =>
+        (
+          (await (await call('GET', '/v1/friends/pending', { cookie })).json()) as {
+            data: { received: number };
+          }
+        ).data.received;
+      expect((await call('GET', '/v1/friends/pending')).status).toBe(401);
+      expect(await pending((await issueCookie(ctx)).cookie)).toBe(0);
+      const a = await issueGoogleCookie(ctx, { nickname: '받은수가' });
+      const b = await issueGoogleCookie(ctx, { nickname: '받은수나' });
+      const bCode = (await friendsOf(b.cookie)).code;
+      await friendsOf(a.cookie);
+      expect((await request(a.cookie, { code: bCode })).status).toBe(201);
+      expect([await pending(a.cookie), await pending(b.cookie)]).toEqual([0, 1]);
+      const aCode = (await friendsOf(a.cookie)).code;
+      expect((await call('POST', `/v1/friends/${aCode}/accept`, { cookie: b.cookie })).status).toBe(
+        200,
+      );
+      expect(await pending(b.cookie)).toBe(0);
+    });
+
     it('코드는 한 번 만들면 그대로이고, 신청 → 수락으로 서로 친구가 된다', async () => {
       const a = await issueGoogleCookie(ctx, { nickname: '가나다' });
       const b = await issueGoogleCookie(ctx, { nickname: '라마바' });
