@@ -7,8 +7,7 @@ export const settings: Translation<SettingsMsgs> = {
   darkBodyWeb: 'Switch to a dark screen. Saved on this device.',
   darkBodyApp: 'Use a dark screen. Saved on this device.',
   langTitle: 'Language',
-  langBody:
-    'Changes the language of menus and buttons. Event and record text is still in Korean for now. Saved on this device.',
+  langBody: 'Changes the language of the game screens and events. Saved on this device.',
   sheetTitle: 'Work mode',
   sheetBodyBefore: 'Turns the game into a spreadsheet and mutes sound. Press ',
   sheetBodyAfter: ' (the key left of 1) to toggle. PC browsers only. Saved on this device.',

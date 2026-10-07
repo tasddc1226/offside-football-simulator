@@ -5,7 +5,8 @@
 import type { PotentialFlow } from './potential-view.js';
 import { personName } from '@offside/game/i18n/names';
 import { BODY_DEFAULT, type Body } from '@offside/contracts/body';
-import { DEFAULT_NATION } from '@offside/contracts/nations';
+import { nationFromLocales } from '@offside/contracts/nations';
+import { deviceLocales } from './i18n/core.js';
 import type { HofSort, RetiredNumberResult, TeamRankSort } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason, retireAtNow } from '@offside/contracts/service-seasons';
@@ -207,6 +208,10 @@ export interface AppState {
   recapNew: boolean;
 }
 
+/** 기기·브라우저 언어 태그(웹 navigator.languages, 앱은 Intl). 읽을 수 없으면 빈 목록. */
+/** 선수 생성 국적 기본값 — 접속한 기기의 언어 지역을 따른다(T-11-140, ja-JP → 일본). */
+const deviceNation = () => nationFromLocales(deviceLocales());
+
 /** 앱을 열 때의 상태. */
 export const initialAppState = (): AppState => ({
   G: null,
@@ -222,7 +227,7 @@ export const initialAppState = (): AppState => ({
     foot: '오른발',
     focus: defaultFocus('FW'),
     trait: 'late',
-    nation: DEFAULT_NATION,
+    nation: deviceNation(),
     height: null,
     weight: null,
   },

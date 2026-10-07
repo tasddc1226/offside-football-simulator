@@ -1,6 +1,7 @@
 // T-10-092 팀 히스토리 배지(원작 클럽하우스의 '팀 히스토리'). 팀 행에 쌓아 둔 전적·연승·골 차와 시즌 최종 순위로 판정하는
 // 순수 함수다 — 배지 테이블 없이 읽을 때마다 센다. 얻은 배지만 돌려준다(얻는 순서대로).
 import type { TeamBadge } from '@offside/contracts';
+import { BADGES_JA, finalRankJa } from '../i18n/ja/badges.js';
 import type { Lang } from '../lang.js';
 
 export type BadgeTeam = {
@@ -83,23 +84,25 @@ export function teamBadges(
   lang: Lang = 'ko',
 ): TeamBadge[] {
   const final = finalRank === null ? undefined : FINAL.find((f) => finalRank <= f.top);
-  const en = lang === 'en';
+  if (lang === 'ko') {
+    return [
+      ...(final
+        ? [{ id: final.id, label: final.label, desc: `${seasonName} 최종 ${finalRank}위` }]
+        : []),
+      ...RULES.filter((r) => r.ok(t)).map(({ id, label, desc }) => ({ id, label, desc })),
+    ];
+  }
+  const T = lang === 'ja' ? BADGES_JA : EN;
+  const finalDesc =
+    lang === 'ja'
+      ? finalRankJa(seasonName, finalRank!)
+      : `Finished ${ordinal(finalRank!)} in ${seasonName}`;
   return [
-    ...(final
-      ? [
-          {
-            id: final.id,
-            label: en ? (EN[final.id]?.label ?? final.label) : final.label,
-            desc: en
-              ? `Finished ${ordinal(finalRank!)} in ${seasonName}`
-              : `${seasonName} 최종 ${finalRank}위`,
-          },
-        ]
-      : []),
+    ...(final ? [{ id: final.id, label: T[final.id]?.label ?? final.label, desc: finalDesc }] : []),
     ...RULES.filter((r) => r.ok(t)).map(({ id, label, desc }) => ({
       id,
-      label: en ? (EN[id]?.label ?? label) : label,
-      desc: en ? (EN[id]?.desc ?? desc) : desc,
+      label: T[id]?.label ?? label,
+      desc: T[id]?.desc ?? desc,
     })),
   ];
 }

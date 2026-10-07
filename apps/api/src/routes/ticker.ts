@@ -28,7 +28,7 @@ export function registerTickerRoutes(app: Hono<AppEnv>): void {
     });
     const lang = reqLang(c);
     const data =
-      lang === 'en'
+      lang !== 'ko'
         ? {
             ...cached,
             firsts: localizeTickerFirsts(cached.firsts, displaySeasonAt(cached.now), lang),

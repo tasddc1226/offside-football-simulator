@@ -99,6 +99,8 @@ type PersonInput = {
   row: Pick<FriendRow, 'wins' | 'draws' | 'losses'> | undefined;
 };
 
+const OWNER_NAME: Record<Lang, string> = { ko: '구단주', en: 'Owner', ja: 'オーナー' };
+
 /**
  * 친구 줄들에 지금 시즌 팀 · 프리시즌 팀(개막 뒤 친선전용, T-11-113) · 창단 멤버 여부와 표시 이름(닉네임 → 최근 감독 이름 →
  * '구단주')을 붙인다. profileId → 사람. 쿼리 2~4번.
@@ -133,7 +135,7 @@ async function peopleOf(
         p.profileId,
         {
           code: p.code,
-          name: p.nickname ?? managers.get(p.profileId) ?? (lang === 'en' ? 'Owner' : '구단주'),
+          name: p.nickname ?? managers.get(p.profileId) ?? OWNER_NAME[lang],
           team: t ? teamSummary(t) : null,
           h2h: h2hOf(p.row),
           ...(legacy ? { preseasonTeam: lt ? teamSummary(lt) : null } : {}),

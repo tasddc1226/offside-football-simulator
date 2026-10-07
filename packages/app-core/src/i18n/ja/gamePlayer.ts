@@ -1,0 +1,33 @@
+import type { Translation } from '../core';
+import type { GamePlayerMsgs } from '../ko/gamePlayer';
+
+export const gamePlayer: Translation<GamePlayerMsgs> = {
+  profile: '選手情報',
+  nation: '国籍',
+  body: '体格',
+  foot: '利き足',
+  trait: '成長タイプ',
+  potential: 'ポテンシャル評価',
+  peakOvr: '最高OVR',
+  trust: '監督の信頼',
+  trustHigh: '厚い',
+  trustMid: '普通',
+  trustLow: '冷ややか',
+  contract: '契約',
+  contractLeft: (p) => `残り${p.years}年 · ${p.salary}/年`,
+  amateur: 'アマチュア',
+  money: '所持資金',
+  value: '推定市場価値',
+  nationalTitle: '代表',
+  caps: '国際Aマッチ',
+  goals: 'ゴール',
+  assists: 'アシスト',
+  captain: 'キャプテン',
+  debut: 'Aマッチデビュー',
+  notCalled: '未招集',
+  military: '兵役',
+  nextWc: '次のワールドカップ',
+  hostTbd: '開催地未定',
+  tourLine: (p) => `${p.stage} · ${p.apps}試合 ${p.goals}ゴール`,
+  retire: '引退を宣言する',
+};

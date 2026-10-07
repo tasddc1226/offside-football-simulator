@@ -1,0 +1,68 @@
+import type { Translation } from '@offside/contracts/i18n';
+import type { GSeasonMsgs } from '../ko/gSeason';
+
+export const gSeason: Translation<GSeasonMsgs> = {
+  seasonEnd: (p) =>
+    `${p.year}シーズン終了 · ${p.league} ${p.rank}位 · 公式戦${p.apps}試合 ${p.goals}ゴール ${p.assists}アシスト`,
+  cwcNote: (p) => `FIFAクラブワールドカップ ${p.stage}`,
+  exemptNote: (p) => `兵役特例（入隊免除） · ${p.what}`,
+  promoted: (p) =>
+    `${p.club}、${p.league}昇格が決定！来シーズンは${p.league}でプレーします（${p.down}は降格）`,
+  roleStarter: 'レギュラー保証',
+  roleRotation: 'ローテーション',
+  roleBench: 'ベンチから競争',
+  roleCoach: '恩師からの誘い · 監督の厚い信頼',
+  roleTrial: '入団テスト合格 · セミプロ',
+  roleComeback: '下部リーグ · 再起に挑む',
+  serveName: '金泉尚武で服務を続ける',
+  serveDesc: (p) => `除隊まで${p.left}シーズン · 兵役中は移籍できません`,
+  serveNote: '国軍体育部隊の所属として服務中です。',
+  dueNote: (p) => `満${p.age}歳。これ以上入隊を延ばせません。兵役の義務を果たす必要があります。`,
+  hsNoteOffers: '卒業を前に、プロクラブから入団のオファーが届きました。',
+  hsNoteNone: 'まだプロのスカウトの目に留まっていません。大学で実力を伸ばす必要があります。',
+  uniName: '大学に進学',
+  uniDesc: '4年以内ならいつでもプロに挑戦 · 大学リーグで出場機会を確保',
+  uniNote: (p) => `大学${p.years}年生を終えました。`,
+  uniStayName: '大学に残る',
+  uniStayDesc: (p) => `${p.year}年生としてもう1シーズン`,
+  trialNote:
+    '最終学年。プロクラブからのオファーはありませんでしたが、K3リーグの入団テストに合格しました。',
+  gradNote:
+    '最終学年。どのチームからも連絡が来ませんでした。選手の夢をあきらめるしかないかもしれません。',
+  stayName: (p) => `${p.club}に残留`,
+  stayDesc: (p) => `年俸${p.salary} · 契約残り${p.years}年`,
+  stayDescPromoted: (p) => `このクラブで${p.league}に挑戦 · 年俸${p.salary} · 契約残り${p.years}年`,
+  extendName: (p) => `${p.club}と契約延長`,
+  extendDesc: '新しい年俸は今シーズンから適用されます。',
+  contractLeftNote: (p) => `${p.club}との契約が残り${p.years}年です。`,
+  renewName: (p) => `${p.club}と再契約`,
+  renewVeteranDesc: 'ベテラン再契約',
+  faNote: '契約が満了し、FAになりました。',
+  promotedNote: (p) => `${p.club}、${p.league}に昇格！${p.note}`,
+  retireAgeNote: (p) => `${p.age}歳になり、もう現役ではプレーできません。引退を決める時です。`,
+  noTeamNote: 'もう声をかけてくれるチームがありません。引退を決める時です。',
+  veteranNote: (p) => `${p.note} ${p.age}歳になると引退します。`,
+  enrolled: (p) => `${p.club}に進学しました。`,
+  renewExtLog: (p) =>
+    `${p.club}と${p.ext}年延長、残りの契約を含めて計${p.total}年。今シーズンから年俸${p.salary}`,
+  renewLog: (p) => `${p.club}と${p.years}年の再契約、年俸${p.salary}`,
+  signLog: (p) => `${p.club}（${p.league}）に入団！${p.years}年 · 年俸${p.salary}`,
+  transferPaidLog: (p) =>
+    `${p.from} → ${p.club}（${p.league}）へ移籍！移籍金${p.fee} · ${p.years}年 · 年俸${p.salary}`,
+  transferFreeLog: (p) =>
+    `${p.from} → ${p.club}（${p.league}）へ移籍！フリー移籍 · ${p.years}年 · 年俸${p.salary}`,
+  retireLog: (p) => `${p.age}歳、慣れ親しんだピッチを去ります。`,
+  lgGoals: 'ゴール貢献',
+  lgAssists: 'アシスト貢献',
+  lgCs: '無失点貢献',
+  lgApps: '出場',
+  lgTrophies: '優勝トロフィー',
+  lgAwards: '個人タイトル',
+  lgCaps: 'Aマッチ',
+  lgPeak: '最高OVR',
+  lgBallonWin: 'バロンドール受賞',
+  lgBallonRank: 'バロンドール順位',
+  lgWc: 'ワールドカップ優勝',
+  lgCentury: 'センチュリークラブ',
+  lgControl: '試合の支配',
+};

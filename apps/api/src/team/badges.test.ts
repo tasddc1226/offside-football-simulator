@@ -63,5 +63,8 @@ describe('팀 배지 영어(T-11-106)', () => {
     expect(
       teamBadges(t, 11, 'Season 1', 'en').find((b) => b.id.startsWith('final')),
     ).toBeUndefined();
+    const ja = teamBadges(t, 2, 'シーズン1', 'ja');
+    expect(ja[0]).toEqual({ id: 'final-3', label: 'シーズンTOP 3', desc: 'シーズン1 最終2位' });
+    expect(ja.map((b) => `${b.label}${b.desc}`).join(' ')).not.toMatch(/[가-힣]/);
   });
 });

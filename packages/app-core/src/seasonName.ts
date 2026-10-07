@@ -6,9 +6,10 @@ import { getLocale } from './i18n/core.js';
 
 /** 시즌 id(0 = 프리시즌)와 한국어 이름으로 지금 언어의 시즌 이름. */
 export function seasonLabel(id: number, name: string): string {
-  if (getLocale() === 'ko') return name;
+  const lang = getLocale();
+  if (lang === 'ko') return name;
   const m = /^시즌 (\d+)$/.exec(name);
-  return id === 0 ? teamSeasonName(0, 'en') : m ? teamSeasonName(Number(m[1]), 'en') : tn(name);
+  return id === 0 ? teamSeasonName(0, lang) : m ? teamSeasonName(Number(m[1]), lang) : tn(name);
 }
 
 /** 팀 시즌 id의 이름(contracts teamSeasonName의 화면용). */

@@ -234,6 +234,11 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     expect(p.team.slots[9]!.name).toBe('홍감독 에이스'); // 공개 이름은 그대로
     expect(p.team.slots[8]!.name).toBe('Anonymous forward No.9');
     expect(p.team.slots[0]!.name).toBe('Youth player');
+    const ja = ProfileRes.parse(
+      await (await call('GET', `/v1/teams/${a.team.id}?lang=ja`)).json(),
+    ).data;
+    expect(ja.team.slots[8]!.name).toBe('匿名のフォワード No.9');
+    expect(ja.team.slots[0]!.name).toBe('ユース選手');
     const unknown = ProfileRes.parse(
       await (await call('GET', `/v1/teams/${a.team.id}?lang=fr`)).json(),
     ).data;
