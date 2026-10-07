@@ -254,7 +254,15 @@ describe('T-11-145 컵 진행(cron)', () => {
     );
     // 우승팀 구단주의 영구 기록.
     const champ = entries.find((e) => e.stage === 'champion')!;
-    expect((await cupHonorsOf(ctx.db, champ.profileId))[0]).toMatchObject({ stage: 'champion' });
+    await ctx.db
+      .update(profiles)
+      .set({ nickname: '우승구단주' })
+      .where(eq(profiles.id, champ.profileId));
+    // 받침대에 새길 구단주 닉네임도 함께.
+    expect((await cupHonorsOf(ctx.db, champ.profileId))[0]).toMatchObject({
+      stage: 'champion',
+      owner: '우승구단주',
+    });
     // T-11-150 칭호를 받는 성적(우승·준우승·4강)은 대표 칭호가 자동으로 붙고, 8강 이하는 붙지 않는다.
     const titleOf = async (profileId: string) =>
       (await ctx.db.select().from(profiles).where(eq(profiles.id, profileId)))[0]?.title;
@@ -264,7 +272,7 @@ describe('T-11-145 컵 진행(cron)', () => {
     const out = entries.find((e) => e.stage === 'group')!;
     expect(await titleOf(out.profileId)).toBeNull();
     expect(teams).toHaveLength(n);
-    // 알림: 추첨·경기마다 하나, 최종 성적은 한 번(다시 돌려도 늘지 않는다). 탭하면 구단주 화면(컵 배너)으로 간다.
+    // 알림: 추첨·경기마다 하나, 최종 성적은 한 번(다시 돌려도 늘지 않는다). 탭하면 홈(컵 배너)으로 간다.
     const mine = await ctx.db
       .select()
       .from(notifications)
@@ -280,7 +288,7 @@ describe('T-11-145 컵 진행(cron)', () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ title: '시즌 1 제1회 오프사이드 컵 우승!' });
     expect(result[0]!.body).toBe('최종 성적 우승. 선수 후보 리롤권 10장을 받았어요.');
-    expect(mine.every((x) => JSON.parse(x.targetJson).screen === 'owner')).toBe(true);
+    expect(mine.every((x) => JSON.parse(x.targetJson).screen === 'home')).toBe(true);
   });
 
   it('추첨 때 자격이 모자란 팀은 빠지고, 4팀 미만이면 열지 않는다', async () => {
@@ -314,6 +322,24 @@ describe('T-11-145 컵 진행(cron)', () => {
     });
     await runCup(ctx.db, at, [CUP]);
     expect(lineupLocked(await cupMatchesOf(ctx.db, CUP.id), a!.teamId, during)).toBe(false);
+  });
+
+  it('구단주 탭 응답에 대표 칭호가 실린다', async () => {
+    const who = await issueGoogleCookie(ctx);
+    const view = async () =>
+      (
+        (await (
+          await callJson(ctx.env, 'GET', '/v1/owner-team', { cookie: who.cookie })
+        ).json()) as {
+          data: { ownerTitle: string | null };
+        }
+      ).data;
+    expect((await view()).ownerTitle).toBeNull();
+    await ctx.db
+      .update(profiles)
+      .set({ title: 'cup-1-champion' })
+      .where(eq(profiles.id, who.profileId));
+    expect((await view()).ownerTitle).toBe('cup-1-champion');
   });
 
   it('리롤권은 있는 만큼만 쓴다', async () => {

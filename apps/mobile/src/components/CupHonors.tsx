@@ -2,7 +2,7 @@
 // 구단주 프로필(T-11-150)이 같이 쓴다. 서버가 최근 대회부터 보낸다.
 import { View } from 'react-native';
 import type { CupHonor } from '@offside/app-core/api/cup';
-import { cupTrophy, trophyStage } from '@offside/app-core/cupTrophy';
+import { cupTrophy, plateText, trophyStage } from '@offside/app-core/cupTrophy';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { stageLabel } from '../screens/owner/cupText';
 import { rem } from '../theme/type';
@@ -41,7 +41,9 @@ export function CupHonors({ honors }: { honors: readonly CupHonor[] }) {
                 borderColor: trophy ? cupTrophy(trophy).palette.base : c.pitchAccent,
               }}
             >
-              {trophy ? <CupTrophy stage={trophy} edition={h.edition} size={48} /> : null}
+              {trophy ? (
+                <CupTrophy stage={trophy} name={plateText(h.owner, h.season)} size={56} />
+              ) : null}
               <View style={{ gap: 2, flexShrink: 1 }}>
                 <Txt bold>
                   {h.stage === 'champion'

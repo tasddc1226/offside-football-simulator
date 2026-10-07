@@ -230,6 +230,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - Number(played?.n ?? 0)),
         matchesPerDay: TEAM_MATCHES_PER_DAY,
         founder: founder.length > 0,
+        // 컵 성적은 최근 대회부터 온다 — 첫 우승이 가장 최근 우승.
+        ownerTitle: me.title,
       },
       200,
       NO_STORE,

@@ -188,6 +188,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   matchesPerDay: z.number().int().min(1),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
   founder: z.boolean().optional(),
+  /** T-11-150 내 대표 칭호(구단주 탭 닉네임 옆). 달지 않았으면 null, 배포 전 응답엔 없다. */
+  ownerTitle: titleField,
 });
 export type OwnerTeamResponse = z.infer<typeof OwnerTeamResponseSchema>;
 
@@ -430,6 +432,8 @@ export const CupHonorSchema = z.strictObject({
   edition: z.number().int(),
   stage: z.enum(CUP_STAGES),
   teamName: z.string(),
+  /** 트로피 받침대에 새기는 구단주 닉네임(지금 닉네임, 없으면 null). 배포 전 응답엔 없다. */
+  owner: z.string().nullable().optional(),
 });
 export type CupHonor = z.infer<typeof CupHonorSchema>;
 

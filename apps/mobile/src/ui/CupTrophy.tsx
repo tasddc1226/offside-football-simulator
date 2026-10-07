@@ -1,7 +1,14 @@
 // T-11-145 컵 트로피 — 모양은 app-core/cupTrophy(웹과 같다), 효과는 등급 엠블럼(GradeEmblem)처럼 후광·광택, 우승은 반짝임까지.
-// 움직임 줄이기를 켰거나 앱이 뒤로 가면 멈춘다.
-import { useEffect, useId, useState } from 'react';
-import { AppState, StyleSheet, View } from 'react-native';
+// 받침대에는 name(구단주 이름)을 새기고, 넘치면 선수 카드 이름처럼 흘려 보낸다. 움직임 줄이기를 켰거나 앱이 뒤로 가면 멈춘다.
+import { useEffect, useId, useRef, useState } from 'react';
+import {
+  Animated as RNAnimated,
+  AppState,
+  Easing as RNEasing,
+  StyleSheet,
+  Text as RNText,
+  View,
+} from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -19,12 +26,13 @@ import Svg, {
   RadialGradient,
   Rect,
   Stop,
-  Text,
 } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import {
   cupTrophy,
-  TROPHY_NUMBER as N,
+  TROPHY_CUP_VIEWBOX,
+  TROPHY_PLATE as P,
+  TROPHY_PLATE_MIN,
   TROPHY_VIEWBOX,
   type TrophyStage,
 } from '@offside/app-core/cupTrophy';
@@ -33,46 +41,118 @@ import { prefs } from '../store';
 const CYCLE: Record<TrophyStage, number> = { champion: 8500, runnerup: 8000, sf: 9500 };
 const STAR = 'M8 0L10 6L16 8L10 10L8 16L6 10L0 8L6 6Z';
 
-/** 움직임 없는 트로피 그림 — 닉네임 옆 작은 칭호(TitleBadge)처럼 여러 개가 한꺼번에 그려지는 자리. */
-export function TrophyArt({
-  stage,
-  edition,
-  size,
-}: {
-  stage: TrophyStage;
-  edition: number;
-  size: number;
-}) {
+/** 움직임 없는 컵 그림(받침대 없이) — 닉네임 옆 작은 칭호(TitleBadge)처럼 여러 개가 한꺼번에 그려지는 자리. */
+export function TrophyArt({ stage, size }: { stage: TrophyStage; size: number }) {
   const { layers, palette } = cupTrophy(stage);
   return (
-    <Svg width={size} height={size} viewBox={TROPHY_VIEWBOX}>
-      {layers.map((layer, index) => (
-        <Path key={index} d={layer.d} fill={palette[layer.tone]} />
-      ))}
-      <Text
-        x={N.x}
-        y={N.y}
-        fontSize={N.size}
-        fontWeight="900"
-        textAnchor="middle"
-        fill={palette.number}
-      >
-        {edition}
-      </Text>
+    <Svg width={size} height={size} viewBox={TROPHY_CUP_VIEWBOX}>
+      {layers
+        .filter((layer) => !layer.plinth)
+        .map((layer, index) => (
+          <Path key={index} d={layer.d} fill={palette[layer.tone]} />
+        ))}
     </Svg>
+  );
+}
+
+/** 받침대에 새긴 이름. 자리보다 길면 2초 쉬고 끝까지 흘렀다가 처음으로 돌아온다(PlayerCard CardName과 같은 리듬). */
+function PlateName({
+  name,
+  size,
+  color,
+  moving,
+}: {
+  name: string;
+  size: number;
+  color: string;
+  moving: boolean;
+}) {
+  const [textWidth, setTextWidth] = useState(0);
+  const offset = useRef(new RNAnimated.Value(0)).current;
+  const width = (size * P.w) / 64;
+  const distance = textWidth - width;
+  useEffect(() => {
+    offset.setValue(0);
+    if (distance <= 1 || !moving) return;
+    const loop = RNAnimated.loop(
+      RNAnimated.sequence([
+        RNAnimated.delay(2000),
+        RNAnimated.timing(offset, {
+          toValue: -distance,
+          duration: Math.max(4000, distance * 160),
+          easing: RNEasing.linear,
+          useNativeDriver: true,
+        }),
+        RNAnimated.delay(2000),
+        RNAnimated.timing(offset, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [distance, moving, offset]);
+  const style = {
+    fontSize: (size * P.font) / 64,
+    fontWeight: '800' as const,
+    color,
+    includeFontPadding: false,
+    letterSpacing: 0.2,
+  };
+  const scroll = moving && distance > 1;
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        left: (size * P.x) / 64,
+        top: (size * P.y) / 64,
+        width,
+        height: (size * P.h) / 64,
+        overflow: 'hidden',
+        justifyContent: 'center',
+      }}
+    >
+      <RNText
+        allowFontScaling={false}
+        onTextLayout={(e) => setTextWidth(e.nativeEvent.lines[0]?.width ?? 0)}
+        style={[style, { position: 'absolute', width: 1000, opacity: 0 }]}
+      >
+        {name}
+      </RNText>
+      <RNAnimated.Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        style={[
+          style,
+          {
+            width: scroll ? textWidth : width,
+            textAlign: scroll ? 'left' : 'center',
+            transform: [{ translateX: offset }],
+          },
+        ]}
+      >
+        {name}
+      </RNAnimated.Text>
+    </View>
   );
 }
 
 export function CupTrophy({
   stage,
-  edition,
+  name,
   size = 40,
+  bare = false,
 }: {
   stage: TrophyStage;
-  edition: number;
+  /** 받침대에 새길 이름(구단주). 없으면 비워 둔다. */
+  name?: string;
   size?: number;
+  /** 받침대 없이 컵만(홈 배너). 작게 그리면(TROPHY_PLATE_MIN 미만) 늘 컵만. */
+  bare?: boolean;
 }) {
-  const { palette } = cupTrophy(stage);
+  const trophy = cupTrophy(stage);
+  const { palette } = trophy;
+  const cupOnly = bare || size < TROPHY_PLATE_MIN;
+  const layers = cupOnly ? trophy.layers.filter((l) => !l.plinth) : trophy.layers;
   const { motionOK } = useSnapshot(prefs);
   const [active, setActive] = useState(AppState.currentState === 'active');
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
@@ -137,15 +217,22 @@ export function CupTrophy({
           <Circle cx={40} cy={34} r={34} fill={`url(#${uid}halo)`} />
         </Svg>
       </Animated.View>
-      <TrophyArt stage={stage} edition={edition} size={size} />
+      <Svg width={size} height={size} viewBox={cupOnly ? TROPHY_CUP_VIEWBOX : TROPHY_VIEWBOX}>
+        {layers.map((layer, index) => (
+          <Path key={index} d={layer.d} fill={palette[layer.tone]} />
+        ))}
+      </Svg>
+      {name && !cupOnly ? (
+        <PlateName name={name} size={size} color={palette.engrave} moving={motionOK && active} />
+      ) : null}
       {motionOK ? (
         <View
           style={{
             position: 'absolute',
-            top: size * 0.06,
+            top: size * (cupOnly ? 0.18 : 0.06),
             left: size * 0.18,
             right: size * 0.18,
-            bottom: size * 0.32,
+            bottom: size * (cupOnly ? 0.22 : 0.32),
             overflow: 'hidden',
           }}
         >

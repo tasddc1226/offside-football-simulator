@@ -37,9 +37,9 @@ import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
+import { TitleBadge } from '../../components/TitleBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
-import { CupBanner } from './TeamCup';
 import { OwnerHall } from './OwnerHall';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
 import { mix } from '../../theme/colors';
@@ -241,6 +241,7 @@ export default function Owner() {
                     <Pill tone="good">{founderLabel()}</Pill>
                   </View>
                 ) : null}
+                {card?.title ? <TitleBadge title={card.title} /> : null}
               </Row>
               {tierTag ? (
                 <Txt
@@ -369,8 +370,6 @@ export default function Owner() {
               </>
             )}
           </Card>
-          {/* T-11-145 오프사이드 컵 배너: 신청·다음 경기·결과. 내 상태는 로그인한 구단주에게만 보인다. */}
-          <CupBanner linked onOpen={() => go('cup')} />
           {/* T-11-150 명예관: 대표 칭호 고르기와 내 구단주 프로필. */}
           <OwnerHall />
           <Card gap={12} testID="owner-market">
@@ -392,7 +391,6 @@ export default function Owner() {
         </>
       ) : guest ? (
         <>
-          <CupBanner linked={false} onOpen={() => go('cup')} />
           <Card gap={12} testID="owner-team-locked">
             <View style={{ gap: 2 }}>
               <Txt v="eyebrow">My team</Txt>

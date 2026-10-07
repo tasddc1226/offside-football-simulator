@@ -148,7 +148,7 @@ function rewardStatements(
   ];
 }
 
-// 탭하면 구단주 화면(컵 배너)으로 간다. 앱 알림 target에 'cup'이 없어 구버전 앱도 읽는 'owner'를 쓴다.
+// 탭하면 홈(컵 배너)으로 간다. 앱 알림 target에 'cup'이 없어 구버전 앱도 읽는 'home'을 쓴다.
 const notify = (
   d1: D1Database,
   profileId: string,
@@ -164,7 +164,7 @@ const notify = (
       profileId,
       sourceKey,
       now,
-      content: { kind: 'team', title, body, target: { type: 'screen', screen: 'owner' } },
+      content: { kind: 'team', title, body, target: { type: 'screen', screen: 'home' } },
     },
     // 원본 중복은 source_key가 막는다(앞 문장의 changes()에 기대지 않는다).
     { sql: '1' },
@@ -530,14 +530,18 @@ export const activeEntriesOf = (db: Db, profileId: string) =>
     .from(cupEntries)
     .where(and(eq(cupEntries.profileId, profileId), eq(cupEntries.status, 'active')));
 
-/** T-11-145 구단주의 컵 성적(보상까지 끝난 것, 최근 대회부터). 팀 프로필 트로피·칭호. */
+/** T-11-145 구단주의 컵 성적(보상까지 끝난 것, 최근 대회부터). 팀 프로필 트로피·칭호, 받침대에 새길 닉네임. */
 export async function cupHonorsOf(db: Db, profileId: string) {
   const rows = await db
     .select()
     .from(cupEntries)
     .where(and(eq(cupEntries.profileId, profileId), isNotNull(cupEntries.rewardedAt)));
   if (!rows.length) return [];
-  const all = await cupSchedule(db);
+  const [all, [who]] = await Promise.all([
+    cupSchedule(db),
+    db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.id, profileId)),
+  ]);
+  const owner = who?.nickname ?? null;
   return rows
     .map((e) => ({ e, cup: cupById(e.cupId, all) }))
     .filter((x): x is { e: CupEntryRow; cup: CupDef } => !!x.cup && !!x.e.stage)
@@ -548,5 +552,6 @@ export async function cupHonorsOf(db: Db, profileId: string) {
       edition: cup.edition,
       stage: e.stage as CupStage,
       teamName: e.name,
+      owner,
     }));
 }

@@ -1,13 +1,20 @@
 <script lang="ts">
   // T-11-145 컵 트로피 — 모양은 app-core/cupTrophy가 정하고, 여기서는 등급 엠블럼(GradeEmblem)처럼 은은한 후광·광택을 얹는다.
-  // 우승 트로피만 반짝임이 둘 더 붙는다. 화면 밖에서는 움직임을 멈춘다.
-  import { cupTrophy, type TrophyStage } from '@offside/app-core/cupTrophy';
-  import TrophyArt from './TrophyArt.svelte';
+  // 우승 트로피만 반짝임이 둘 더 붙는다. 받침대에는 name(구단주 이름)을 새기고, 넘치면 선수 카드 이름처럼 흘려 보낸다.
+  // 화면 밖에서는 움직임을 멈춘다. 작게 그리거나(TROPHY_PLATE_MIN 미만) bare면 받침대 없이 컵만 그린다(배지·홈 배너).
+  import { cupTrophy, TROPHY_CUP_VIEWBOX, TROPHY_PLATE as P, TROPHY_PLATE_MIN, TROPHY_VIEWBOX, type TrophyStage } from '@offside/app-core/cupTrophy';
 
-  const { stage, edition, size = 40 }: { stage: TrophyStage; edition: number; size?: number } = $props();
+  const { stage, name, size = 40, bare = false }: { stage: TrophyStage; name?: string | undefined; size?: number; bare?: boolean } = $props();
   const trophy = $derived(cupTrophy(stage));
   const palette = $derived(trophy.palette);
+  const cupOnly = $derived(bare || size < TROPHY_PLATE_MIN);
+  const layers = $derived(cupOnly ? trophy.layers.filter((l) => !l.plinth) : trophy.layers);
+  const engraved = $derived(!!name && !cupOnly);
+  const pct = (n: number) => `${(n / 64) * 100}%`;
   let visible = $state(false);
+  let plateWidth = $state(0);
+  let nameWidth = $state(0);
+  const overflow = $derived(Math.max(0, nameWidth - plateWidth));
 
   function observe(node: HTMLElement) {
     const observer = new IntersectionObserver(([entry]) => {
@@ -18,9 +25,21 @@
   }
 </script>
 
-<span class="cup-trophy" data-trophy={stage} data-visible={visible} style={`--t-size:${size}px;--t-base:${palette.base};--t-light:${palette.light};--t-mark:${palette.mark}`} aria-hidden="true" use:observe>
+<span class="cup-trophy" class:cup-only={cupOnly} data-trophy={stage} data-visible={visible} style={`--t-size:${size}px;--t-base:${palette.base};--t-light:${palette.light};--t-mark:${palette.mark}`} aria-hidden="true" use:observe>
   <span class="t-halo"></span>
-  <TrophyArt {stage} {edition} {size} />
+  <svg viewBox={cupOnly ? TROPHY_CUP_VIEWBOX : TROPHY_VIEWBOX} width={size} height={size} aria-hidden="true" focusable="false">
+    {#each layers as layer, index (index)}
+      <path d={layer.d} fill={palette[layer.tone]} />
+    {/each}
+  </svg>
+  {#if engraved}
+    <span class="t-plate" class:scrolling={overflow > 1} data-trophy-name={name} bind:clientWidth={plateWidth}
+      style:left={pct(P.x)} style:top={pct(P.y)} style:width={pct(P.w)} style:height={pct(P.h)}
+      style:font-size="{(size * P.font) / 64}px" style:color={palette.engrave}
+      style:--name-offset="-{overflow}px" style:--name-duration="{Math.max(6, overflow / 6 + 4)}s">
+      <span class="t-name" bind:offsetWidth={nameWidth}>{name}</span>
+    </span>
+  {/if}
   <span class="t-shine"></span>
   {#if stage === 'champion'}
     <span class="t-spark spark-one"></span>
@@ -44,6 +63,45 @@
     z-index: 2;
     font-family: var(--font-display, inherit);
     filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--t-base) 35%, transparent));
+  }
+  /* 컵만: 잔이 가운데로 내려오니 광택 자리도 따라 내린다. */
+  .cup-only .t-shine {
+    inset: 18% 18% 22%;
+  }
+  .t-plate {
+    position: absolute;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .t-plate.scrolling {
+    justify-content: flex-start;
+  }
+  .t-name {
+    display: inline-block;
+    width: max-content;
+  }
+  .t-plate.scrolling .t-name {
+    animation: t-name-scroll var(--name-duration) linear infinite;
+  }
+  .cup-trophy[data-visible='false'] .t-name {
+    animation-play-state: paused;
+  }
+  @keyframes t-name-scroll {
+    0%,
+    15% {
+      transform: translateX(0);
+    }
+    85%,
+    100% {
+      transform: translateX(var(--name-offset));
+    }
   }
   .t-halo {
     position: absolute;
@@ -164,6 +222,12 @@
     }
     .t-shine {
       display: none;
+    }
+    .t-plate.scrolling .t-name {
+      animation: none;
+    }
+    .t-plate.scrolling {
+      text-overflow: ellipsis;
     }
     .t-spark {
       opacity: 0.4;

@@ -16,7 +16,7 @@
 {#if t && label}
   {@const palette = cupTrophy(t.stage).palette}
   <span class="title-badge" class:small={size === 'sm'} class:icon={size === 'icon'} data-title={title} role="img" aria-label={L.titleAria({ title: label })} title={label} style={`--tb-base:${palette.base};--tb-light:${palette.light}`}>
-    {#if size === 'md'}<CupTrophy stage={t.stage} edition={t.edition} size={22} />{:else}<TrophyArt stage={t.stage} edition={t.edition} size={16} />{/if}
+    {#if size === 'md'}<CupTrophy stage={t.stage} size={22} />{:else}<TrophyArt stage={t.stage} size={16} />{/if}
     {#if size !== 'icon'}<span aria-hidden="true">{label}</span>{/if}
   </span>
 {/if}
