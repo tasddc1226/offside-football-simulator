@@ -368,6 +368,8 @@ export const careers = sqliteTable(
     appVersion: text('app_version').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    /** R2 details archive; header and season summaries stay in D1. */
+    detailArchiveKey: text('detail_archive_key'),
     retiredAt: text('retired_at'),
     // 은퇴 요약(NULL until retired).
     retireAge: integer('retire_age'),
@@ -413,6 +415,7 @@ export const careers = sqliteTable(
     potReal: integer('pot_real'),
   },
   (table) => [
+    index('careers_detail_archive_idx').on(table.detailArchiveKey),
     index('careers_profile_id_idx').on(table.profileId),
     // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
     index('careers_profile_status_season_idx').on(
@@ -507,6 +510,7 @@ export const marketListings = sqliteTable(
     uniqueIndex('market_listings_open_card_unique')
       .on(table.careerId)
       .where(sql`${table.status} = 'open'`),
+    index('market_listings_career_idx').on(table.careerId),
     index('market_listings_new_idx').on(table.status, table.season, table.createdAt),
     index('market_listings_price_idx').on(table.status, table.season, table.price, table.createdAt),
     index('market_listings_seller_idx').on(table.sellerId, table.status, table.closedAt),
@@ -796,6 +800,7 @@ export const serverFirsts = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.season, table.id] }),
+    index('server_firsts_career_idx').on(table.careerId),
     index('server_firsts_achieved_idx').on(table.achievedAt),
   ],
 );
@@ -814,7 +819,10 @@ export const serverRecords = sqliteTable(
     achievedAt: text('achieved_at').notNull(),
     year: integer('year'),
   },
-  (table) => [primaryKey({ columns: [table.season, table.id] })],
+  (table) => [
+    primaryKey({ columns: [table.season, table.id] }),
+    index('server_records_career_idx').on(table.careerId),
+  ],
 );
 
 /**
@@ -1109,7 +1117,10 @@ export const ownerSeasonRecords = sqliteTable(
     statsJson: text('stats_json'),
     createdAt: text('created_at').notNull(),
   },
-  (table) => [primaryKey({ columns: [table.profileId, table.season] })],
+  (table) => [
+    primaryKey({ columns: [table.profileId, table.season] }),
+    index('owner_season_records_best_career_idx').on(table.bestCareerId),
+  ],
 );
 
 /** T-11-128 구단주 휘장. 시즌 결산이 한 번 주고 지우지 않는다 — (구단주, 시즌, 종류)에 하나. */
