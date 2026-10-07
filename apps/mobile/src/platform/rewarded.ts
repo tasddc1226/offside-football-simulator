@@ -38,8 +38,15 @@ const unitOf = (p: RewardPlacement) => (__DEV__ ? TestIds.REWARDED : Platform.se
  * AdMob이 비정상 트래픽으로 볼 수 있다(2026-10-06 계정 평가·게재 제한). 광고 제거 구매자는 세지 않는다.
  */
 const DAILY_CAP: Partial<Record<RewardPlacement, number>> = { boost: 20 };
+
+/**
+ * 광고를 불러오지 못하면(게재 제한 · 광고 없음 · 네트워크) 광고 없이 보상을 준다. 사용자 잘못이 아니라서다.
+ * 2026-10-06 AdMob 계정 평가로 게재가 막혀 임시로 켰다 — 게재가 정상으로 돌아오면 false로 되돌린다.
+ * 광고 없이 받은 것도 하루 상한에 센다.
+ */
+const GRANT_WITHOUT_AD = true;
 const today = () => new Date().toDateString();
-/** 오늘 띄운 광고 수 — 'Tue Oct 07 2026|3' 꼴로 둔다. 날짜가 바뀌면 0. */
+/** 오늘 띄운 광고 수(광고 없이 준 보상 포함) — 'Tue Oct 07 2026|3' 꼴로 둔다. 날짜가 바뀌면 0. */
 function watchedToday(p: RewardPlacement): number {
   const [day, n] = (kv.getString(`offside_rewarded_${p}`) ?? '').split('|');
   return day === today() ? Number(n) || 0 : 0;
@@ -77,8 +84,9 @@ function watch(unit: string): Promise<WatchResult> {
       ad.addAdEventListener(AdEventType.CLOSED, () => done()),
       ad.addAdEventListener(AdEventType.ERROR, () => done()),
     ];
-    // 불러오기가 끝나지 않으면(네트워크) 20초에서 끊는다. 보여 주는 중이면 닫힐 때 끝난다.
-    const timer = setTimeout(() => !ad.loaded && done(), 20_000);
+    // 불러오기가 끝나지 않으면(네트워크) 끊는다 — 광고 없이 보상을 줄 땐 오래 기다리게 하지 않는다.
+    // 보여 주는 중이면 닫힐 때 끝난다.
+    const timer = setTimeout(() => !ad.loaded && done(), GRANT_WITHOUT_AD ? 8_000 : 20_000);
     function done() {
       clearTimeout(timer);
       offs.forEach((off) => off());
@@ -89,7 +97,7 @@ function watch(unit: string): Promise<WatchResult> {
 }
 
 /**
- * 보상을 받으면 onEarned를 부르고 ''를, 못 받으면 보여 줄 안내를 돌려준다(동의·불러오기 실패 = 불러올 수 없음,
+ * 보상을 받으면 onEarned를 부르고 ''를, 못 받으면 보여 줄 안내를 돌려준다(동의 실패 · GRANT_WITHOUT_AD가 꺼졌을 때 불러오기 실패 = 불러올 수 없음,
  * 끝까지 보지 않음 = skipped, 오늘 횟수를 다 씀 = rewardedDailyCap).
  * 광고 제거 구매자는 광고 없이 바로 받는다.
  */
@@ -104,8 +112,8 @@ export async function claimReward(
     const unit = unitOf(p);
     if (!unit || !(await askConsent())) return adText.rewardedUnavailable;
     const result = await watch(unit);
-    if (result === 'failed') return adText.rewardedUnavailable;
-    // 띄운 광고는 끝까지 봤든 닫았든 센다(게재 수가 문제라). 불러오지 못한 광고는 세지 않는다.
+    if (result === 'failed' && !GRANT_WITHOUT_AD) return adText.rewardedUnavailable;
+    // 띄운 광고는 끝까지 봤든 닫았든 센다(게재 수가 문제라).
     countWatch(p);
     if (result === 'closed') return skipped;
   }
