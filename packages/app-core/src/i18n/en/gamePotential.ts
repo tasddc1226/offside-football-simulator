@@ -9,5 +9,4 @@ export const gamePotential: Translation<GamePotentialMsgs> = {
   peekBtnAd: "Watch an ad to see this season's rating",
   peekBtnPay: (p) => `Pay ${p.cost} to see this season's rating`,
   peekShort: (p) => `Not enough funds. You need ${p.cost} to see this season's rating.`,
-  peekPaid: (p) => `Paid the scouts ${p.cost} for this season's potential rating.`,
 };

@@ -11,7 +11,7 @@ export function loadPeek(): PotentialPeek | null {
   }
 }
 
-/** 저장소를 못 써도(사생활 보호 모드) 화면에는 이번 방문 동안 열린 채로 둔다. */
+/** 저장소를 못 쓰면(사생활 보호 모드) 남기지 못한다 — 화면은 이번 방문 동안 열린 채로 둔다. */
 export function savePeek(peek: PotentialPeek) {
   try {
     localStorage.setItem(KEY, JSON.stringify(peek));

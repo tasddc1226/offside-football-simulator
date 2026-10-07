@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameState } from '@offside/game/types';
-import {
-  buyPeek,
-  peekCost,
-  peekLocked,
-  parsePeek,
-  peekOf,
-  peekOpen,
-  peekView,
-} from './potential-peek.js';
+import { peekCost } from '@offside/game/peek';
+import { buyPeek, peekLocked, parsePeek, peekOf, peekOpen, peekView } from './potential-peek.js';
 
 const st = (
   o: {

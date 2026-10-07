@@ -1,13 +1,13 @@
 // T-11-079 커리어 중 잠재력 엿보기(앱 보상형 광고). 은퇴 때 공개하는 실제 잠재력은 그대로 두고, 화면용 스카우트
 // 평가(potLabel — 재평가 전에는 'C~B' 범위)만 그 시즌 동안 보여 준다. 첫 시즌을 마쳐야 열린다(potScouted, 리세 방지).
 // 엿본 기록은 세이브가 아니라 기기에 따로 둔다(커리어 id + 시즌). 엔진·저장 형식·업로드는 바꾸지 않는다.
-// T-11-133 보상형 광고가 없는 웹은 게임 자금을 내고 연다(잠재력 강화 첫 단계 비용의 절반). 자금만 세이브에서 빠진다.
+// T-11-133 보상형 광고가 없는 웹은 게임 자금을 내고 연다(규칙은 game peek.ts).
+import { buyPeek as pay, peekCost, peekShort } from '@offside/game/peek';
 import { fmtMoney } from '@offside/game/player';
-import { log, potLabel, potScouted } from '@offside/game/stats';
-import { salaryCost } from '@offside/game/training';
+import { potLabel, potScouted } from '@offside/game/stats';
 import type { GameState } from '@offside/game/types';
 import { gamePotentialText as L } from './i18n/ko/gamePotential';
-import { appFormatText as L2 } from './i18n/ko/appFormat.js';
+import { appFormatText as W } from './i18n/ko/appFormat';
 
 /** 이 커리어의 이 시즌에 평가를 열었다는 기록. */
 export type PotentialPeek = { cid: string; year: number };
@@ -46,9 +46,6 @@ export const peekOpen = (s: GameState, peek: PotentialPeek | null): boolean =>
 /** 여는 방법 — 'ad' 앱 보상형 광고, 'free' 광고 제거 구매자, 'pay' 웹(자금). */
 export type PeekOffer = 'ad' | 'free' | 'pay';
 
-/** 웹에서 여는 비용(만 원) = max(1,000만, 연봉 × 0.35) — 잠재력 강화 첫 단계(max(2,000만, 연봉 × 0.7))의 절반. */
-export const peekCost = (s: GameState): number => salaryCost(s, 0.35, 1000);
-
 export function peekView(s: GameState, peek: PotentialPeek | null, offer: PeekOffer): PeekView {
   if (!potScouted(s)) return { kind: 'locked', text: L.peekLocked };
   if (peekOpen(s, peek)) {
@@ -61,17 +58,11 @@ export function peekView(s: GameState, peek: PotentialPeek | null, offer: PeekOf
       text: L.peekAvailable,
       button: offer === 'free' ? L.peekBtnFree : L.peekBtnAd,
     };
-  const cost = L2.won({ v: fmtMoney(peekCost(s)) });
-  return s.money < peekCost(s)
+  const cost = W.won({ v: fmtMoney(peekCost(s)) });
+  return peekShort(s)
     ? { kind: 'short', text: L.peekShort({ cost }) }
     : { kind: 'available', text: L.peekAvailable, button: L.peekBtnPay({ cost }) };
 }
 
 /** 웹: 자금을 내고 이번 시즌 평가를 연다. 열 수 없으면(첫 시즌 전 · 자금 부족) null, 상태를 바꾸지 않는다. */
-export function buyPeek(s: GameState): PotentialPeek | null {
-  const cost = peekCost(s);
-  if (!potScouted(s) || s.money < cost) return null;
-  s.money -= cost;
-  log(s, L.peekPaid({ cost: L2.won({ v: fmtMoney(cost) }) }));
-  return peekOf(s);
-}
+export const buyPeek = (s: GameState): PotentialPeek | null => (pay(s) ? peekOf(s) : null);
