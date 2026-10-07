@@ -1,6 +1,6 @@
 # 구단 전력표 월 1회 갱신 (T-11-135)
 
-현실 리그 순위표로 게임 NPC 구단 전력(`packages/game/src/club-strength-data.ts`)을 갱신한다. 기획은 T-11-132 2단계.
+현실 리그 순위표로 게임 NPC 구단 전력(`packages/game/src/club-strength.json`)을 갱신한다. 기획은 T-11-132 2단계.
 지금은 K리그1만 한다.
 
 ## 적용 방식

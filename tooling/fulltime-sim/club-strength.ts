@@ -1,16 +1,16 @@
-// T-11-135 현실 순위표로 구단 전력표(packages/game/src/club-strength-data.ts)를 만든다(T-11-132 2단계, 월 1회 운영자 실행).
+// T-11-135 현실 순위표로 구단 전력표(packages/game/src/club-strength.json)를 만든다(T-11-132 2단계, 월 1회 운영자 실행).
 // 실행: tsx club-strength.ts <대응표 json> <순위표 csv> [--write]
 //   순위표 csv: team,p,w,d,l,pts,gf,ga — 공식 순위표를 보고 옮겨 적는다. 파일 이름의 날짜(YYYY-MM-DD)가 기준 시점이다.
 //   --write 없이 실행하면 바뀔 값만 보여 준다. 검사에 걸리면 아무것도 쓰지 않는다.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CLUBS, LEAGUES } from '@offside/game/data';
+import { CLUBS } from '@offside/game/data';
 import { CLUB_STRENGTH } from '@offside/game/club-strength-data';
 import { checkStandings, computeStrength, type StandingRow } from '@offside/game/clubStrengthCalc';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA = path.resolve(__dirname, '../../packages/game/src/club-strength-data.ts');
+const DATA = path.resolve(__dirname, '../../packages/game/src/club-strength.json');
 
 const [mapFile, csvFile] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const write = process.argv.includes('--write');
@@ -44,21 +44,21 @@ const rows: StandingRow[] = lines.map((l) => {
 });
 
 // 정적 CLUBS(전력표를 덮기 전)가 기본 전력이다 — 이 스크립트는 applyClubStrength를 부르지 않는다.
-const league = LEAGUES.find((L) => L.id === map.league);
 const clubs = CLUBS.filter((c) => c.leagueId === map.league);
 const errs = checkStandings(rows);
 if (!asOf) errs.push('순위표 파일 이름에 날짜(YYYY-MM-DD)가 없어요');
-if (!league) errs.push(`모르는 리그: ${map.league}`);
-for (const r of rows)
-  if (!map.teams[r.team] && !map.exclude[r.team]) errs.push(`${r.team}: 대응표에 없는 팀이에요`);
+const teams = new Set(rows.map((r) => r.team));
+for (const t of teams)
+  if (!map.teams[t] && !map.exclude[t]) errs.push(`${t}: 대응표에 없는 팀이에요`);
+for (const [t, id] of Object.entries(map.teams))
+  if (!teams.has(t)) errs.push(`${t}(${id}): 순위표에 없어요`);
+// 대응표 구단과 이 리그 구단이 정확히 한 번씩 짝인지(모르는 리그면 리그 구단이 없어 모두 걸린다).
 const mapped = Object.values(map.teams);
-for (const c of clubs)
-  if (!mapped.includes(c.id)) errs.push(`${c.id} ${c.name}: 대응하는 현실 팀이 없어요`);
-for (const id of mapped)
-  if (!clubs.some((c) => c.id === id)) errs.push(`${id}: 이 리그 구단이 아니에요`);
+const unmatched = new Set(clubs.map((c) => c.id));
 if (new Set(mapped).size !== mapped.length) errs.push('대응표에 같은 구단이 두 번 있어요');
-for (const [team, id] of Object.entries(map.teams))
-  if (!rows.some((r) => r.team === team)) errs.push(`${team}(${id}): 순위표에 없어요`);
+for (const id of mapped)
+  if (!unmatched.delete(id)) errs.push(`${id}: ${map.league} 구단이 아니에요`);
+for (const id of unmatched) errs.push(`${id}: 대응하는 현실 팀이 없어요`);
 if (errs.length) {
   console.error(`검사 실패 — 아무것도 쓰지 않았어요\n- ${errs.join('\n- ')}`);
   process.exit(1);
@@ -85,17 +85,10 @@ const changed = JSON.stringify(values) !== JSON.stringify(CLUB_STRENGTH.values);
 if (!changed) console.log('\n바뀐 값이 없어요 — 버전을 올리지 않아요.');
 else if (!write) console.log(`\n--write로 실행하면 v${CLUB_STRENGTH.v + 1}로 저장해요.`);
 else {
-  const src = fs.readFileSync(DATA, 'utf8');
   const sorted = Object.fromEntries(
     Object.entries(values).sort(([a], [b]) => a.localeCompare(b, 'en', { numeric: true })),
   );
-  const body = `{\n  v: ${CLUB_STRENGTH.v + 1},\n  asOf: '${asOf}',\n  source: '${map.source} 순위표',\n  values: ${JSON.stringify(
-    sorted,
-    null,
-    2,
-  )
-    .replace(/\n/g, '\n  ')
-    .replace(/"([^"]+)":/g, "'$1':")},\n}`;
-  fs.writeFileSync(DATA, src.replace(/= \{[\s\S]*\};\n$/, `= ${body};\n`));
-  console.log(`\nv${CLUB_STRENGTH.v + 1}로 저장했어요: ${path.relative(process.cwd(), DATA)}`);
+  const next = { v: CLUB_STRENGTH.v + 1, asOf, source: `${map.source} 순위표`, values: sorted };
+  fs.writeFileSync(DATA, `${JSON.stringify(next, null, 2)}\n`);
+  console.log(`\nv${next.v}로 저장했어요: ${path.relative(process.cwd(), DATA)}`);
 }

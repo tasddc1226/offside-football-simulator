@@ -2,6 +2,8 @@
 // tooling/fulltime-sim/club-strength.ts가 쓰는 순수 계산. 게임 화면은 이 파일을 쓰지 않는다(결과 표만 읽는다).
 // 순위 번호 대신 경기당 승점·득실차를 쓰고, 경기 수가 적을수록 기본 전력 쪽에 두며, 한 번 갱신할 때 움직이는 폭을 막는다.
 
+import { clamp } from './rng.js';
+
 export interface StandingRow {
   /** 순위표의 팀 이름(대응표 키). */
   team: string;
@@ -72,7 +74,7 @@ export function computeStrength(
   const P = rows.reduce((t, r) => t + r.p, 0);
   const avgPpg = P ? rows.reduce((t, r) => t + r.pts, 0) / P : 0;
   const avgGdpg = P ? rows.reduce((t, r) => t + r.gf - r.ga, 0) / P : 0;
-  const clip = (x: number, m: number) => Math.max(-m, Math.min(m, x));
+  const clip = (x: number, m: number) => clamp(x, -m, m);
   return rows.flatMap((r) => {
     const id = map[r.team];
     if (!id) return [];
@@ -86,7 +88,7 @@ export function computeStrength(
       CALC.gdpg * clip((r.gf - r.ga) / r.p - avgGdpg, CALC.gdpgClip);
     const w = r.p / (r.p + CALC.damp);
     const raw = Math.round((1 - w) * b + w * target);
-    const next = clip(raw - pv, CALC.stepMax) + pv;
+    const stepped = pv + clip(raw - pv, CALC.stepMax);
     return [
       {
         id,
@@ -94,7 +96,7 @@ export function computeStrength(
         base: b,
         prev: pv,
         target: +target.toFixed(2),
-        next: b + clip(next - b, CALC.baseMax),
+        next: b + clip(stepped - b, CALC.baseMax),
       },
     ];
   });
