@@ -1,0 +1,41 @@
+import type { Translation } from '../core';
+import type { LegendMsgs } from '../ko/legend';
+
+export const legend: Translation<LegendMsgs> = {
+  reportLabel: (p) => `${p.name} キャリア総括`,
+  retiredAge: (p) => `${p.age}歳で引退`,
+  scoreLabel: (p) => `レジェンドスコア ${p.score}`,
+  worth: '引退時の価値',
+  peakValue: (p) => `最高市場価値 ${p.value} · ${p.season} ${p.club}`,
+  peakOvr: (p) => `最高OVR ${p.peak}`,
+  rnPillTitle: (p) => `${p.club} 永久欠番 ${p.number}番`,
+  rnPill: (p) => `👑 ${p.club} 永久欠番 ${p.number}`,
+  statsLabel: '通算記録',
+  statSeasons: 'シーズン',
+  statApps: '試合',
+  statCleanSheets: '無失点',
+  statGaPoints: '攻撃P',
+  statGoals: 'ゴール',
+  statAssists: 'アシスト',
+  statCaps: 'Aマッチ',
+  statTrophies: 'トロフィー',
+  noDetailNote: 'シーズン別の詳しい記録がない以前の記録のため、概要だけを表示します。',
+  scrollCue: 'スクロールしてキャリアを振り返る',
+  journeyTitle: 'クラブ別キャリア',
+  chapterMeta: (p) =>
+    `${p.leagues} · ${p.ageFrom === p.ageTo ? `${p.ageFrom}歳` : `${p.ageFrom}–${p.ageTo}歳`} · ${p.seasons}シーズン`,
+  valueTitle: '市場価値の推移',
+  nationalTitle: '代表',
+  natGa: (p) => `${p.goals}ゴール · ${p.assists}アシスト`,
+  honoursTitle: '優勝歴',
+  potTitle: '引退時のポテンシャル評価',
+  potLine: (p) => `ポテンシャル ${p.value} · 引退時に記録した値`,
+  peakOvrLabel: '最高OVR',
+  finaleLine1: (p) => `${p.age}歳、${p.club}で`,
+  finaleLine2: '最後のホイッスルが鳴りました。',
+  thanks: (p) => `お疲れさまでした、${p.name}`,
+  moreSummary: 'シーズン別記録 · レジェンドスコアの内訳を詳しく見る',
+  breakdownTitle: 'レジェンドスコアの内訳',
+  breakdownNote:
+    'ポジション別の貢献（FW・MFはゴール・アシスト、DF・GKは無失点が中心）+ 出場 · 優勝 · 個人タイトル · Aマッチ · 最高OVR · バロンドール/ワールドカップのボーナス',
+};

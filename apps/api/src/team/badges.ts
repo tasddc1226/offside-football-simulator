@@ -1,6 +1,7 @@
 // T-10-092 팀 히스토리 배지(원작 클럽하우스의 '팀 히스토리'). 팀 행에 쌓아 둔 전적·연승·골 차와 시즌 최종 순위로 판정하는
 // 순수 함수다 — 배지 테이블 없이 읽을 때마다 센다. 얻은 배지만 돌려준다(얻는 순서대로).
 import type { TeamBadge } from '@offside/contracts';
+import { BADGES_JA, finalRankJa } from '../i18n/ja/badges.js';
 import type { Lang } from '../lang.js';
 
 export type BadgeTeam = {
@@ -83,6 +84,24 @@ export function teamBadges(
   lang: Lang = 'ko',
 ): TeamBadge[] {
   const final = finalRank === null ? undefined : FINAL.find((f) => finalRank <= f.top);
+  if (lang === 'ja') {
+    return [
+      ...(final
+        ? [
+            {
+              id: final.id,
+              label: BADGES_JA[final.id]?.label ?? final.label,
+              desc: finalRankJa(seasonName, finalRank!),
+            },
+          ]
+        : []),
+      ...RULES.filter((r) => r.ok(t)).map(({ id, label, desc }) => ({
+        id,
+        label: BADGES_JA[id]?.label ?? label,
+        desc: BADGES_JA[id]?.desc ?? desc,
+      })),
+    ];
+  }
   const en = lang === 'en';
   return [
     ...(final

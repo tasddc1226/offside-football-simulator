@@ -1,6 +1,7 @@
 import type { FirstsResponse, TickerFirst } from '@offside/contracts';
 import { CONFEDS, CONF_ORDER } from '@offside/contracts/nations';
 import { retireAtOf, nextRetireAt } from '@offside/contracts/service-seasons';
+import { FIXED_JA, LADDER_JA, RECORD_JA, retireCapJa } from './i18n/ja/firsts.js';
 import type { Lang } from './lang.js';
 
 // T-11-106 서버 최초 기록·서버 기록 문구의 영어. 판정(firsts.ts)은 한국어 문장과 id를 그대로 만들고, 응답을 보낼 때
@@ -81,32 +82,38 @@ const RECORD: Record<string, { label: string; unit: string }> = {
   legend: { label: 'Highest Legend Score', unit: ' pts' },
 };
 
-/** 최초 기록 id → 영어 문장. 모르는 id면 null. season은 시즌마다 다른 기록(은퇴 나이)에 쓴다. */
-export function firstLabelEn(id: string, season?: number): string | null {
+/** 최초 기록 id → 영어(ja면 일본어) 문장. 모르는 id면 null. season은 시즌마다 다른 기록(은퇴 나이)에 쓴다. */
+export function firstLabelEn(id: string, season?: number, lang: 'en' | 'ja' = 'en'): string | null {
+  const ja = lang === 'ja';
   if (id === 'retirecap') {
-    if (season === undefined) return 'First to retire at the retirement age!';
+    if (season === undefined) return ja ? retireCapJa() : 'First to retire at the retirement age!';
     const cap = retireAtOf(season);
     const next = nextRetireAt(cap, true);
+    if (ja) return retireCapJa(cap, next);
     return next > cap
       ? `First to retire at ${cap}! Next season's retirement age rises to ${next}`
       : `First to retire at ${cap}!`;
   }
-  const fixed = FIXED[id];
+  const fixed = (ja ? FIXED_JA : FIXED)[id];
   if (fixed) return fixed;
   const m = /^([a-z_]+?)(\d+)$/.exec(id);
-  const f = m && LADDER[m[1]!];
+  const f = m && (ja ? LADDER_JA : LADDER)[m[1]!];
   return f ? f(Number(m[2])) : null;
 }
 
-export const recordTextEn = (id: string) => RECORD[id] ?? null;
+export const recordTextEn = (id: string, lang: 'en' | 'ja' = 'en') =>
+  (lang === 'ja' ? RECORD_JA : RECORD)[id] ?? null;
 
 /** 최초 기록 응답의 문구를 요청 언어로. 한국어면 그대로 돌려준다. */
 export function localizeFirsts(data: FirstsResponse, lang: Lang): FirstsResponse {
-  if (lang !== 'en') return data;
+  if (lang === 'ko') return data;
   return {
     ...data,
-    items: data.items.map((i) => ({ ...i, label: firstLabelEn(i.id, data.season) ?? i.label })),
-    records: data.records.map((r) => ({ ...r, ...(recordTextEn(r.id) ?? {}) })),
+    items: data.items.map((i) => ({
+      ...i,
+      label: firstLabelEn(i.id, data.season, lang) ?? i.label,
+    })),
+    records: data.records.map((r) => ({ ...r, ...(recordTextEn(r.id, lang) ?? {}) })),
   };
 }
 
@@ -116,10 +123,10 @@ export function localizeTickerFirsts<T extends TickerFirst>(
   season: number,
   lang: Lang,
 ): T[] {
-  if (lang !== 'en') return [...items];
+  if (lang === 'ko') return [...items];
   return items.map((f) =>
     f.kind === 'first'
-      ? { ...f, label: firstLabelEn(f.id, season) ?? f.label }
-      : { ...f, ...(recordTextEn(f.id) ?? {}) },
+      ? { ...f, label: firstLabelEn(f.id, season, lang) ?? f.label }
+      : { ...f, ...(recordTextEn(f.id, lang) ?? {}) },
   );
 }

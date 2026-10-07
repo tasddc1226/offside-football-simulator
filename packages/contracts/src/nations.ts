@@ -231,6 +231,31 @@ export const NATION_BY_CODE: ReadonlyMap<string, Nation> = new Map(NATIONS.map((
 /** 신규 선수 기본 국적. */
 export const DEFAULT_NATION = 'KR';
 
+/** 지역 없는 언어 태그의 나라(ja → JP). 영어처럼 여러 나라가 쓰는 언어는 넣지 않는다. */
+const LANG_NATION: Record<string, string> = {
+  ko: 'KR',
+  ja: 'JP',
+  zh: 'CN',
+  vi: 'VN',
+  th: 'TH',
+  id: 'ID',
+};
+/** 영국은 FIFA 기준 네 나라로 나뉘어 지역 GB를 잉글랜드로 본다. */
+const REGION_NATION: Record<string, string> = { GB: 'GB-ENG', UK: 'GB-ENG' };
+
+/**
+ * T-11-140 선수 생성 국적 기본값: 기기·브라우저 언어 태그의 지역(ja-JP → JP, en-US → US)에서 고른다.
+ * 첫 태그만 보고, 지역이 없으면 언어로(ja → JP), 고를 수 없으면 대한민국. 위치 권한·서버 요청 없이 정한다.
+ */
+export function nationFromLocales(tags: readonly string[]): string {
+  const tag = tags.find(Boolean);
+  if (!tag) return DEFAULT_NATION;
+  const [lang, ...rest] = tag.replace(/_/g, '-').split('-');
+  const region = rest.find((x) => /^[A-Za-z]{2}$/.test(x))?.toUpperCase();
+  const code = region ? (REGION_NATION[region] ?? region) : LANG_NATION[lang!.toLowerCase()];
+  return code && NATION_BY_CODE.has(code) ? code : DEFAULT_NATION;
+}
+
 /**
  * 대륙연맹별 이름 — 지역, 대륙컵, 올해의 선수상, 대륙컵 칭호(=최초 기록 id). 웹(대회·수상·칭호)과
  * API(최초 기록·팀 업적)·영구결번 점수가 모두 이 표에서 이름을 꺼낸다. 순서가 곧 화면·목록 순서다.

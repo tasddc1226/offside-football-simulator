@@ -1,3 +1,4 @@
+import { PUSH_JA, PUSH_TAIL_JA } from '../i18n/ja/push.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 서버가 만든 알림 문구. 푸시는 보낼 때 기기의 언어를 알 수 없어(기기 등록에 언어가 없다) 한국어로 보내고,
@@ -25,18 +26,26 @@ const EN: Record<string, string> = {
 };
 
 /** 팀 이름이 끼는 경기 결과 본문(`원정 0 : 0 홈. …`). 팀 이름은 구단주가 지은 이름이라 그대로 둔다. */
-const PATTERNS: [RegExp, string][] = [
-  [/^(.+)\. 친구 목록에서 경기 결과를 확인해 주세요\.$/, 'Check the result in your friend list.'],
-  [/^(.+)\. 최근 경기에서 결과를 확인해 주세요\.$/, 'Check the result in Recent matches.'],
+const PATTERNS: [RegExp, string, string][] = [
+  [
+    /^(.+)\. 친구 목록에서 경기 결과를 확인해 주세요\.$/,
+    'Check the result in your friend list.',
+    PUSH_TAIL_JA[0],
+  ],
+  [
+    /^(.+)\. 최근 경기에서 결과를 확인해 주세요\.$/,
+    'Check the result in Recent matches.',
+    PUSH_TAIL_JA[1],
+  ],
 ];
 
 export function pushText(ko: string, lang: Lang): string {
-  if (lang !== 'en') return ko;
-  const hit = EN[ko];
+  if (lang === 'ko') return ko;
+  const hit = (lang === 'ja' ? PUSH_JA : EN)[ko];
   if (hit) return hit;
-  for (const [re, tail] of PATTERNS) {
+  for (const [re, en, ja] of PATTERNS) {
     const m = re.exec(ko);
-    if (m) return `${m[1]}. ${tail}`;
+    if (m) return lang === 'ja' ? `${m[1]}。${ja}` : `${m[1]}. ${en}`;
   }
   return ko;
 }
@@ -46,4 +55,4 @@ export const localizeNotification = <T extends { title: string; body: string }>(
   n: T,
   lang: Lang,
 ): T =>
-  lang === 'en' ? { ...n, title: pushText(n.title, lang), body: pushText(n.body, lang) } : n;
+  lang === 'ko' ? n : { ...n, title: pushText(n.title, lang), body: pushText(n.body, lang) };

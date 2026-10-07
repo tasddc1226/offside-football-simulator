@@ -552,6 +552,13 @@ describe('업적 영어 문구(T-11-106)', () => {
     }
     expect(item(en, 'goals')).toMatchObject({ label: 'Goals', unit: ' goals', cur: 120, level: 1 });
     expect(en[0]).toMatchObject({ stage: 'Stage 0', title: 'Where the story starts' });
+    const ja = localizeAchievements(ko, 'ja');
+    for (const g of ja) {
+      expect(`${g.title} ${g.stage}`).not.toMatch(hangul);
+      for (const i of g.items) expect(`${i.label} ${i.unit ?? ''}`, i.id).not.toMatch(hangul);
+    }
+    expect(item(ja, 'goals')).toMatchObject({ label: 'ゴール', unit: 'ゴール', cur: 120 });
+    expect(item(ja, 'age-40')?.label).toBe('40歳まで現役');
   });
 
   it('시즌마다 나이가 다른 문구도 영어로 나온다', () => {

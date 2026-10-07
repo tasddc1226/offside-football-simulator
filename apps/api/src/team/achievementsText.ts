@@ -1,5 +1,6 @@
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import { tenureLabels } from '../i18n/en/achievements.js';
+import { GROUP_JA, LABEL_JA, UNIT_JA, ageLabelJa } from '../i18n/ja/achievements.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 업적 문구의 영어. 판정(achievements.ts)은 한국어 문구와 id를 그대로 만들고, 응답을 보낼 때 id로 문구만
@@ -120,15 +121,22 @@ function itemEn(i: ClubAchievement): ClubAchievement {
   return { ...i, label, ...(i.unit !== undefined ? { unit: UNIT[i.id] ?? i.unit } : {}) };
 }
 
-/** 응답 직전에 업적 문구를 영어로 바꾼다. 한국어면 그대로 돌려준다. */
+function itemJa(i: ClubAchievement): ClubAchievement {
+  const label =
+    i.id === 'age-40' ? ageLabelJa(/\d+/.exec(i.label)?.[0] ?? '') : (LABEL_JA[i.id] ?? i.label);
+  return { ...i, label, ...(i.unit !== undefined ? { unit: UNIT_JA[i.id] ?? i.unit } : {}) };
+}
+
+/** 응답 직전에 업적 문구를 요청 언어(영어·일본어)로 바꾼다. 한국어면 그대로 돌려준다. */
 export function localizeAchievements(
   groups: ClubAchievementGroup[],
   lang: Lang,
 ): ClubAchievementGroup[] {
-  if (lang !== 'en') return groups;
+  if (lang === 'ko') return groups;
+  const ja = lang === 'ja';
   return groups.map((g) => ({
     ...g,
-    ...(GROUP[g.id] ?? {}),
-    items: g.items.map(itemEn),
+    ...((ja ? GROUP_JA : GROUP)[g.id] ?? {}),
+    items: g.items.map(ja ? itemJa : itemEn),
   }));
 }

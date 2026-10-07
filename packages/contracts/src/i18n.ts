@@ -6,10 +6,10 @@
 // 읽을 때마다 지금 언어로 고른다(getter). 반응성은 없다 — 언어를 바꾸면 웹은 새로고침, 앱은 루트를 다시 그린다.
 // 그래서 모듈 최상위에서 문구를 꺼내 상수로 굳히지 않는다(화면을 그릴 때·함수 안에서 읽는다).
 
-export type Locale = 'ko' | 'en';
-export const LOCALES: readonly Locale[] = ['ko', 'en'];
+export type Locale = 'ko' | 'en' | 'ja';
+export const LOCALES: readonly Locale[] = ['ko', 'en', 'ja'];
 /** 설정 화면에 보이는 언어 이름 — 각 언어 자기 표기라 번역하지 않는다. */
-export const LOCALE_NAMES: Record<Locale, string> = { ko: '한국어', en: 'English' };
+export const LOCALE_NAMES: Record<Locale, string> = { ko: '한국어', en: 'English', ja: '日本語' };
 /** 이 기기에 고른 언어를 저장하는 키(웹 localStorage · 앱 saveKey). 없으면 기기 언어를 따른다. */
 export const LOCALE_KEY = 'ft_lang';
 
@@ -56,7 +56,8 @@ export function setLocale(locale: Locale, dicts?: Record<string, object>): void 
 export const getLocale = (): Locale => current;
 
 /** Intl·toLocaleString에 넘길 언어 태그(숫자·날짜 서식). */
-export const intlLocale = (): string => (current === 'en' ? 'en-US' : 'ko-KR');
+const INTL: Record<Locale, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP' };
+export const intlLocale = (): string => INTL[current];
 
 /**
  * 네임스페이스가 아닌 언어별 자료(T-11-106 — 게임의 저장된 이름 대응표 `__names`, 이벤트 문구 `__events` 등).
@@ -68,15 +69,16 @@ export const localeData = <T>(name: string): T | undefined =>
 /** 지금까지 import된 한국어 네임스페이스(검사용). */
 export const koSources = (): ReadonlyMap<string, Dict> => sources;
 
-const isLocale = (v: unknown): v is Locale => v === 'ko' || v === 'en';
+const isLocale = (v: unknown): v is Locale => (LOCALES as readonly unknown[]).includes(v);
 
 /**
- * 이번 실행의 언어. 고른 값이 있으면 그것, 없으면 기기 언어 목록의 첫 항목이 한국어면 한국어, 아니면 영어
+ * 이번 실행의 언어. 고른 값이 있으면 그것, 없으면 기기 언어 목록의 첫 항목이 한국어면 한국어, 일본어면 일본어, 아니면 영어
  * (AUTO_DETECT가 꺼져 있으면 한국어).
  */
 export function resolveLocale(saved: unknown, device: readonly string[]): Locale {
   if (isLocale(saved)) return saved;
   if (!AUTO_DETECT) return 'ko';
   const first = device.find(Boolean)?.toLowerCase();
-  return !first || first.startsWith('ko') ? 'ko' : 'en';
+  if (!first || first.startsWith('ko')) return 'ko';
+  return first.startsWith('ja') ? 'ja' : 'en';
 }

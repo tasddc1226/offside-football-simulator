@@ -1,3 +1,4 @@
+import { EXACT_JA, PATTERNS_JA } from './i18n/ja/errorText.js';
 import type { Lang } from './lang.js';
 
 // T-11-106 사용자에게 보이는 오류 안내의 영어. 던지는 자리(라우트·미들웨어)는 한국어 문장 그대로 두고, 응답 봉투를 만들 때
@@ -182,10 +183,10 @@ const KIND: Record<string, string> = { 글: 'post', 댓글: 'comment', 차단: '
 
 /** 한국어 문장을 요청 언어로. 한국어면 그대로, 표에 없으면 한국어 그대로 돌려준다. */
 export function localizeMessage(message: string, lang: Lang): string {
-  if (lang !== 'en') return message;
-  const hit = EXACT[message];
+  if (lang === 'ko') return message;
+  const hit = (lang === 'ja' ? EXACT_JA : EXACT)[message];
   if (hit) return hit;
-  for (const [re, make] of PATTERNS) {
+  for (const [re, make] of lang === 'ja' ? PATTERNS_JA : PATTERNS) {
     const m = re.exec(message);
     if (m) return make(m);
   }

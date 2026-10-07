@@ -213,6 +213,16 @@ describe('서버 최초 기록 영어 문구(T-11-106)', () => {
       const t = recordTextEn(r.id);
       expect(t, r.id).not.toBeNull();
       expect(`${t!.label}${t!.unit}`).not.toMatch(hangul);
+      const ja = recordTextEn(r.id, 'ja');
+      expect(ja, r.id).not.toBeNull();
+      expect(`${ja!.label}${ja!.unit}`).not.toMatch(hangul);
+    }
+    for (const season of [undefined, 0, 1]) {
+      for (const d of firstsCatalog(['goals2000', 'ballon9', 'apps1500', 'oneclub25'], season)) {
+        const ja = firstLabelEn(d.id, season, 'ja');
+        expect(ja, d.id).not.toBeNull();
+        expect(ja!, d.id).not.toMatch(hangul);
+      }
     }
   });
 
@@ -228,5 +238,9 @@ describe('서버 최초 기록 영어 문구(T-11-106)', () => {
     );
     expect(firstLabelEn('nope')).toBeNull();
     expect(recordTextEn('goals')).toEqual({ label: 'Most career goals', unit: ' goals' });
+    expect(firstLabelEn('goals1050', undefined, 'ja')).toBe('通算1,050ゴール、史上初達成！');
+    expect(firstLabelEn('retirecap', 1, 'ja')).toBe(
+      '45歳で引退、史上初達成！次のシーズンの引退年齢が46歳に解禁',
+    );
   });
 });

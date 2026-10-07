@@ -48,15 +48,17 @@ export function tn(ko: string): string {
 export interface RomanTable {
   surnames: Readonly<Record<string, string>>;
   given: Readonly<Record<string, string>>;
+  /** 성과 이름 사이(영어 ' ', 일본어 가타카나 '・'). 없으면 공백. */
+  sep?: string;
 }
 
 /**
  * 게임이 지은 한국 이름(성 한 글자 + 이름 두 글자, data.ts SURNAMES·GIVEN)을 지금 언어로 — 영어면 로마자
- * ("Kim Min-jae"). 표에 없는 이름(유저가 지은 이름)은 그대로다.
+ * ("Kim Min-jae"), 일본어면 가타카나("キム・ミンジェ"). 표에 없는 이름(유저가 지은 이름)은 그대로다.
  */
 export function personName(ko: string): string {
   const t = localeData<RomanTable>('__roman');
   const sur = t?.surnames[ko.slice(0, 1)];
   const given = t?.given[ko.slice(1)];
-  return sur && given ? `${sur} ${given}` : ko;
+  return sur && given ? `${sur}${t?.sep ?? ' '}${given}` : ko;
 }

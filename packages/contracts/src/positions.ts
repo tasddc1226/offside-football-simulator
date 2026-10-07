@@ -77,14 +77,26 @@ export const POS_LABEL_EN: Record<PosGroup, string> = {
   DF: 'defender',
   GK: 'goalkeeper',
 };
+/** 큰 포지션의 일본어 표기(T-11-140). */
+export const POS_LABEL_JA: Record<PosGroup, string> = {
+  FW: 'フォワード',
+  MF: 'ミッドフィルダー',
+  DF: 'ディフェンダー',
+  GK: 'ゴールキーパー',
+};
 /** 큰 포지션 순서(공격수 → 골키퍼). 명예의 전당 포지션 칩(T-11-018)이 쓴다. */
 export const POS_GROUPS = Object.keys(POS_LABEL) as PosGroup[];
 
 /** 이름을 공개하지 않은 선수 표기(명예의 전당·서버 최초 기록·공유 링크 미리보기·구단주 팀). */
-export const anonName = (pos: PosGroup, number: number | null, lang: 'ko' | 'en' = 'ko'): string =>
-  lang === 'en'
-    ? `Anonymous ${POS_LABEL_EN[pos]}${number != null ? ` No.${number}` : ''}`
-    : `익명의 ${POS_LABEL[pos]}${number != null ? ` No.${number}` : ''}`;
+export const anonName = (
+  pos: PosGroup,
+  number: number | null,
+  lang: 'ko' | 'en' | 'ja' = 'ko',
+): string => {
+  const no = number != null ? ` No.${number}` : '';
+  if (lang === 'en') return `Anonymous ${POS_LABEL_EN[pos]}${no}`;
+  return lang === 'ja' ? `匿名の${POS_LABEL_JA[pos]}${no}` : `익명의 ${POS_LABEL[pos]}${no}`;
+};
 
 /** 대표 능력치 6개(웹 game/data.ts ATTR_KEYS와 같은 순서). 골키퍼는 같은 키에 골키퍼 능력치(DIV·HAN…)가 들어간다. */
 export const FACE_ATTRS = ['pac', 'sho', 'pas', 'dri', 'def', 'phy'] as const;

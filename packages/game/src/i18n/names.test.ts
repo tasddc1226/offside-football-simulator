@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { setLocale } from '@offside/contracts/i18n';
 import { CLUB_NAMES, LEAGUE_BASE } from '@offside/contracts/club-names';
 import { CONFEDS, NATIONS } from '@offside/contracts/nations';
@@ -11,14 +11,21 @@ import { RIVAL } from '../nation.js';
 import { STORIES } from '../story.js';
 import { tn } from './names.js';
 import { en } from './en/index.js';
+import { ja } from './ja/index.js';
 
 // T-11-106 저장된 이름의 영어 대응표(en/_names.ts). 한국어에서는 그대로, 영어에서는 한글이 남지 않아야 한다.
+// T-11-140 일본어 대응표(ja/_names.ts)도 같은 목록으로 검사한다.
 const HANGUL = /[가-힣]/;
 afterEach(() => setLocale('ko'));
 
-/** 영어로 바꿔 한글이 남은 이름들. */
+const LANGS = [
+  ['en', en],
+  ['ja', ja],
+] as const;
+let cur: (typeof LANGS)[number] = LANGS[0];
+/** 지금 검사하는 언어로 바꿔 한글이 남은 이름들. */
 function untranslated(list: string[]): string[] {
-  setLocale('en', en);
+  setLocale(cur[0], cur[1]);
   return [...new Set(list)].filter((n) => HANGUL.test(tn(n)));
 }
 
@@ -50,7 +57,11 @@ const CONT_STAGES = [
   '16강 통과',
 ];
 
-describe('저장된 이름 → 영어', () => {
+describe.each(LANGS)('저장된 이름 → %s', (lang, dict) => {
+  beforeEach(() => {
+    cur = lang === 'en' ? LANGS[0] : LANGS[1];
+  });
+
   it('한국어에서는 그대로 돌려준다', () => {
     setLocale('ko');
     for (const n of ['프리미어리그', '프리미어리그 우승', '2026 프리시즌', '내가 지은 구단'])
@@ -67,11 +78,15 @@ describe('저장된 이름 → 영어', () => {
     expect(untranslated(clubs)).toEqual([]);
     expect(untranslated([SANGMU.name, '김천 상무'])).toEqual([]);
     expect(untranslated(NATIONS.map((n) => n.ko))).toEqual([]);
-    setLocale('en', en);
-    expect(tn('프리미어리그')).toBe('Premier League');
-    expect(tn('K리그1')).toBe('K League 1');
-    expect(tn('대한민국')).toBe('South Korea');
-    // 두 구단이 같은 영어 이름이 되지 않는다(같은 이름의 구단은 표에서 서로 구별돼야 한다).
+    setLocale(lang, dict);
+    const [pl, k1, kr] =
+      lang === 'en'
+        ? ['Premier League', 'K League 1', 'South Korea']
+        : ['プレミアリーグ', 'Kリーグ1', '韓国'];
+    expect(tn('프리미어리그')).toBe(pl);
+    expect(tn('K리그1')).toBe(k1);
+    expect(tn('대한민국')).toBe(kr);
+    // 두 구단이 같은 이름이 되지 않는다(같은 이름의 구단은 표에서 서로 구별돼야 한다).
     const en2 = clubs.map((c) => tn(c));
     expect(new Set(en2).size).toBe(new Set(clubs).size);
   });
@@ -234,7 +249,7 @@ describe('저장된 이름 → 영어', () => {
     expect(untranslated(miles)).toEqual([]);
   });
 
-  it('조합된 이름은 맞는 영어가 된다', () => {
+  it.runIf(lang === 'en')('조합된 이름은 맞는 영어가 된다', () => {
     setLocale('en', en);
     expect(tn('프리미어리그 우승')).toBe('Premier League champions');
     expect(tn('FA컵 우승')).toBe('FA Cup winners');

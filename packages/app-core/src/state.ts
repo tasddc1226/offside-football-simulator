@@ -4,7 +4,7 @@
 // (game-actions.ts)은 넘겨받은 객체를 그대로 고친다.
 import { personName } from '@offside/game/i18n/names';
 import { BODY_DEFAULT, type Body } from '@offside/contracts/body';
-import { DEFAULT_NATION } from '@offside/contracts/nations';
+import { nationFromLocales } from '@offside/contracts/nations';
 import type { HofSort, RetiredNumberResult, TeamRankSort } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason, retireAtNow } from '@offside/contracts/service-seasons';
@@ -204,6 +204,21 @@ export interface AppState {
   recapNew: boolean;
 }
 
+/** 기기·브라우저 언어 태그(웹 navigator.languages, 앱은 Intl). 읽을 수 없으면 빈 목록. */
+function deviceLocales(): string[] {
+  const nav = globalThis.navigator as
+    { languages?: readonly string[]; language?: string } | undefined;
+  const web = nav?.languages?.length ? [...nav.languages] : nav?.language ? [nav.language] : [];
+  if (web.length) return web;
+  try {
+    return [Intl.DateTimeFormat().resolvedOptions().locale];
+  } catch {
+    return [];
+  }
+}
+/** 선수 생성 국적 기본값 — 접속한 기기의 언어 지역을 따른다(T-11-140, ja-JP → 일본). */
+const deviceNation = () => nationFromLocales(deviceLocales());
+
 /** 앱을 열 때의 상태. */
 export const initialAppState = (): AppState => ({
   G: null,
@@ -219,7 +234,7 @@ export const initialAppState = (): AppState => ({
     foot: '오른발',
     focus: defaultFocus('FW'),
     trait: 'late',
-    nation: DEFAULT_NATION,
+    nation: deviceNation(),
     height: null,
     weight: null,
   },

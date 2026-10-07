@@ -50,8 +50,24 @@ function krwCompact(man: number): string {
   if (a >= 1_000_000) return `${sign}₩${num(a / 1e6, a >= 100_000_000 ? 0 : 1)}M`;
   return `${sign}₩${num(a / 1e3, 0)}K`;
 }
+/** 일본어 금액 표기(T-11-140): 원화 기호 + 일본어 단위 — ₩5,000万 · ₩3億5,000万 · ₩1兆2,346億. v는 만 원(0 이상). */
+function krwJa(v: number): string {
+  const n = (x: number) => x.toLocaleString('ja-JP');
+  const part = (hi: number, hn: string, lo: number, ln: string) =>
+    `₩${n(hi)}${hn}${lo ? `${n(lo)}${ln}` : ''}`;
+  if (v >= 100_000_000) return part(Math.floor(v / 1e8), '兆', Math.round((v % 1e8) / 1e4), '億');
+  if (v >= 10_000) return part(Math.floor(v / 1e4), '億', v % 1e4, '万');
+  return `₩${n(v)}万`;
+}
 export function fmtMoney(man: number): string {
-  if (getLocale() === 'en') return krwCompact(man);
+  const lang = getLocale();
+  if (lang === 'en') return krwCompact(man);
+  if (lang === 'ja') {
+    // 한국어와 같게 천만 단위로 먼저 반올림한다(9,770万 → 1億).
+    const m = Math.round(man),
+      a = Math.abs(m);
+    return `${m < 0 ? '-' : ''}${krwJa(a >= 10_000 ? Math.round(a / 1000) * 1000 : a)}`;
+  }
   const m = Math.round(man);
   if (Math.abs(m) >= 10000) {
     // 천만 단위로 먼저 반올림해야 9,770만 → '1억'으로 올라간다('18억 10,000만' 방지). 음수는 부호만 앞에 붙인다.
@@ -62,9 +78,17 @@ export function fmtMoney(man: number): string {
   }
   return `${m.toLocaleString(intlLocale())}만`;
 }
-/** 몸값·이적료 표기. 한국어는 서버와 같은 표기(contracts), 영어는 fmtMoney와 같은 원화 약식. 0 이하는 '-'. */
+/** 몸값·이적료 표기. 한국어는 서버와 같은 표기(contracts), 영어는 fmtMoney와 같은 원화 약식, 일본어는 큰 두 단위. 0 이하는 '-'. */
 export function fmtValue(man: number): string {
-  if (getLocale() !== 'en') return fmtValueKo(man);
+  const lang = getLocale();
+  if (lang === 'ko') return fmtValueKo(man);
+  if (lang === 'ja') {
+    if (man <= 0) return '-';
+    // 한국어 표기(contracts fmtValue)와 같은 자리에서 반올림한다.
+    const r = (u: number) => Math.round(man / u) * u;
+    const v = r(10_000) >= 100_000_000 ? r(10_000) : r(1000) >= 10_000 ? r(1000) : r(100);
+    return v ? krwJa(v) : '₩100万未満';
+  }
   if (man <= 0) return '-';
   return Math.round(man / 100) * 100 ? krwCompact(Math.round(man / 100) * 100) : 'Under ₩1M';
 }

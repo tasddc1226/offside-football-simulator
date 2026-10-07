@@ -26,6 +26,12 @@
   --display: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
   --body: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
 }
+/* T-11-140 일본어는 한자가 한국식 글꼴로 그려지지 않게 일본어 시스템 서체를 먼저 쓴다(웹 서체를 더 받지 않는다). */
+:root:lang(ja) {
+  --body:
+    'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', Meiryo,
+    'Noto Sans JP', system-ui, sans-serif;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
@@ -1204,6 +1210,8 @@ textarea {
   min-width: 0;
 }
 .body-in > span[aria-hidden] {
+  flex: none;
+  white-space: nowrap;
   color: var(--muted);
   font-weight: 600;
 }

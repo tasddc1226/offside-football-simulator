@@ -1,0 +1,48 @@
+import type { Translation } from '../core';
+import type { PushMsgs } from '../ko/push';
+
+export const push: Translation<PushMsgs> = {
+  title: 'アプリの通知を受け取る',
+  body: 'この端末のすべての通知をオン・オフします。',
+  tokenNote:
+    '通知の接続のため、プッシュトークンと端末の種類・アプリのバージョンを保存します。配信結果・通知のタップ・リンク先への移動は、サービス運営のためサーバーに90日間保管します。',
+  busy: '通知を設定中…',
+  openSettings: '端末の通知設定を開く',
+  reconnect: '再接続',
+  testNote:
+    'テスト通知はこの端末にだけ送ります。端末・アカウントごとに10分に1回、1日3回までリクエストできます。',
+  openInbox: '通知ボックスを開く',
+  testBusy: 'リクエスト中…',
+  testBtn: '自分の端末にテスト通知を送る',
+  nextTest: '次のテスト:',
+  testRequested: 'テスト通知をリクエストしました。端末の通知センターで受信を確認してください。',
+  testFailed: 'テストのリクエストを送れませんでした。',
+  privacy: '通知情報の取り扱いについて',
+  channelName: 'お知らせ・アップデート情報',
+  errTurnOnFirst: '先に通知の受け取りをオンにしてください。',
+  errTestWait: 'テスト通知は少し時間をおいてから送れます。',
+  offDone: 'この端末の新着通知をオフにしました。',
+  needSettings: '端末の設定で通知を許可してください。',
+  denied: '通知が許可されませんでした。',
+  onDone: 'この端末の新着通知をオンにしました。',
+  offLocal: 'この端末ではオフにしました。サーバーとの接続解除は、接続が戻ったら再度試みます。',
+  connectFail: '通知を接続できませんでした。少し時間をおいて再接続してください。',
+  prefsNote:
+    '種類ごとの選択はアカウントに保存されます。すべての通知をオフにしても、下の選択はそのまま残ります。',
+  prefsLoading: '通知の種類を読み込み中…',
+  prefsReload: '通知の種類を再読み込み',
+  catNotice: 'お知らせ',
+  catNoticeBody: '運営からのお知らせとイベント案内',
+  catRelease: 'アップデート',
+  catReleaseBody: '新しいバージョンと機能のアップデート',
+  catTeam: 'マイチーム',
+  catTeamBody: '相手から挑まれた試合の結果',
+  catMarket: '移籍市場',
+  catMarketBody: '出品した選手の売却完了',
+  catSocial: 'フレンド',
+  catSocialBody: 'フレンド申請・承認と親善試合の結果',
+  catAria: (p) => `${p.title}の通知`,
+  prefsConnectFailed: '通知設定に接続できませんでした。もう一度お試しください。',
+  prefsLoadFailed: '通知設定を読み込めませんでした。',
+  prefsSaveFailed: '通知設定を保存できませんでした。',
+};
