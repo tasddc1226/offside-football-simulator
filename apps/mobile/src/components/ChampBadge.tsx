@@ -16,7 +16,6 @@ export function ChampBadge({ edition }: { edition: number }) {
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        alignSelf: 'flex-start',
         gap: 4,
         paddingVertical: 2,
         paddingLeft: 4,

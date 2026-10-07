@@ -130,7 +130,7 @@ export default function TeamProfile({ id }: { id: string }) {
                   {team.name}
                 </Txt>
                 {champ ? (
-                  <View style={{ marginTop: 2, marginBottom: 4 }}>
+                  <View style={{ marginTop: 2, marginBottom: 4, alignItems: 'flex-start' }}>
                     <ChampBadge edition={champ.edition} />
                   </View>
                 ) : null}
