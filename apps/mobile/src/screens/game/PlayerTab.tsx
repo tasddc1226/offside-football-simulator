@@ -201,7 +201,7 @@ export function PlayerTab({ s }: { s: GameState }) {
   // T-11-079 보상형 광고로 이번 시즌 스카우트 평가 보기. 광고 단위도 광고 제거도 없으면 예전 안내만 둔다.
   const owned = useSnapshot(adFree).owned;
   const peek = useSnapshot(potPeek);
-  const pot = peekView(s, peek.peek, owned);
+  const pot = peekView(s, peek.peek, owned ? 'free' : 'ad');
   const showPeek = pot.kind !== 'shown' && peekAvailable();
 
   const info: Row[] = [
