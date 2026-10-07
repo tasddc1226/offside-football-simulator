@@ -183,6 +183,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   matchesPerDay: z.number().int().min(1),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
   founder: z.boolean().optional(),
+  /** T-11-145 가장 최근에 우승한 컵 회차(구단주 탭 닉네임 옆 '제N회 챔피언'). 없으면 null, 배포 전 응답엔 없다. */
+  cupChampion: z.number().int().nullable().optional(),
 });
 export type OwnerTeamResponse = z.infer<typeof OwnerTeamResponseSchema>;
 

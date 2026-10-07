@@ -37,6 +37,7 @@ import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
 import { MyPlayers } from './MyPlayers';
+import { ChampBadge } from '../../components/ChampBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
@@ -239,6 +240,7 @@ export default function Owner() {
                     <Pill tone="good">{founderLabel()}</Pill>
                   </View>
                 ) : null}
+                {card?.champ ? <ChampBadge edition={card.champ} /> : null}
               </Row>
               {tierTag ? (
                 <Txt

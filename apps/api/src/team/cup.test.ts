@@ -264,7 +264,7 @@ describe('T-11-145 컵 진행(cron)', () => {
       owner: '우승구단주',
     });
     expect(teams).toHaveLength(n);
-    // 알림: 추첨·경기마다 하나, 최종 성적은 한 번(다시 돌려도 늘지 않는다). 탭하면 구단주 화면(컵 배너)으로 간다.
+    // 알림: 추첨·경기마다 하나, 최종 성적은 한 번(다시 돌려도 늘지 않는다). 탭하면 홈(컵 배너)으로 간다.
     const mine = await ctx.db
       .select()
       .from(notifications)
@@ -314,6 +314,33 @@ describe('T-11-145 컵 진행(cron)', () => {
     });
     await runCup(ctx.db, at, [CUP]);
     expect(lineupLocked(await cupMatchesOf(ctx.db, CUP.id), a!.teamId, during)).toBe(false);
+  });
+
+  it('구단주 탭 응답에 가장 최근 우승 회차가 실린다', async () => {
+    const who = await issueGoogleCookie(ctx);
+    const view = async () =>
+      (
+        (await (
+          await callJson(ctx.env, 'GET', '/v1/owner-team', { cookie: who.cookie })
+        ).json()) as {
+          data: { cupChampion: number | null };
+        }
+      ).data;
+    expect((await view()).cupChampion).toBeNull();
+    await ctx.db.insert(cupEntries).values({
+      cupId: CUP.id,
+      teamId: 'tem_champ',
+      profileId: who.profileId,
+      name: '우승팀',
+      manager: '감독',
+      ovr: 80,
+      status: 'champion',
+      stage: 'champion',
+      rewardedAt: CUP.opensAt,
+      createdAt: CUP.opensAt,
+      updatedAt: CUP.opensAt,
+    });
+    expect((await view()).cupChampion).toBe(1);
   });
 
   it('리롤권은 있는 만큼만 쓴다', async () => {

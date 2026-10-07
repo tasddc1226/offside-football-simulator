@@ -21,7 +21,6 @@ import { friendRequestText } from '@offside/app-core/friendText';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 import { cupTrophy, plateText, trophyStage } from '@offside/app-core/cupTrophy';
-import { EMBLEM_PALETTE } from '@offside/app-core/gradeEmblem';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { stageLabel } from '../../owner/cupText';
 import { toast } from '../../../game/host';
@@ -29,13 +28,12 @@ import { DISPLAY, rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
 import { Btn } from '../../../ui/Btn';
 import { Card } from '../../../ui/Card';
+import { ChampBadge } from '../../../components/ChampBadge';
 import { CupTrophy } from '../../../ui/CupTrophy';
 import { Press } from '../../../ui/Press';
 import { Txt } from '../../../ui/Txt';
 import { useOnPull } from '../../../ui/refresh';
 import { AutoGrid } from '../../board/parts';
-
-const GOLD = EMBLEM_PALETTE.gold;
 
 export default function TeamProfile({ id }: { id: string }) {
   const c = useColors();
@@ -132,28 +130,8 @@ export default function TeamProfile({ id }: { id: string }) {
                   {team.name}
                 </Txt>
                 {champ ? (
-                  <View
-                    testID="team-champ-badge"
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      alignSelf: 'flex-start',
-                      gap: 4,
-                      marginTop: 2,
-                      marginBottom: 4,
-                      paddingVertical: 2,
-                      paddingLeft: 4,
-                      paddingRight: 10,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: GOLD.base,
-                      backgroundColor: `${GOLD.light}4d`,
-                    }}
-                  >
-                    <CupTrophy stage="champion" size={22} />
-                    <Txt bold style={{ fontSize: rem(0.75) }}>
-                      {CL.champBadge({ n: champ.edition })}
-                    </Txt>
+                  <View style={{ marginTop: 2, marginBottom: 4 }}>
+                    <ChampBadge edition={champ.edition} />
                   </View>
                 ) : null}
                 <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
