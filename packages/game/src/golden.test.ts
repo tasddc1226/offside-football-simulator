@@ -11,10 +11,17 @@ import { playCareer } from './__fixtures__/play-career.js';
 
 const CAREERS = 32;
 
-/** cid(crypto.randomUUID)만 비우고 최종 상태 전체를 해시한다 — 세이브에 남는 모든 필드가 비교 대상이다. */
+/**
+ * cid(crypto.randomUUID)만 비우고 최종 상태 전체를 해시한다 — 세이브에 남는 모든 필드가 비교 대상이다.
+ * 정수가 아닌 수는 10자리로 줄인다: Math.log·exp 등의 끝자리가 로컬(arm64)과 CI(x64)에서 달라 해시가 갈린다(T-11-135).
+ */
 function stateHash(s: GameState): string {
   return createHash('sha256')
-    .update(JSON.stringify({ ...s, cid: '' }))
+    .update(
+      JSON.stringify({ ...s, cid: '' }, (_, v: unknown) =>
+        typeof v === 'number' && !Number.isInteger(v) ? Number(v.toPrecision(10)) : v,
+      ),
+    )
     .digest('hex')
     .slice(0, 16);
 }

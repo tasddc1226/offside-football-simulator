@@ -1,5 +1,7 @@
 import {
+  BALANCE_HISTORY_LIMIT,
   BalanceConfigSchema,
+  BalanceHistorySchema,
   BalanceDraftInputSchema,
   BalanceVersionListSchema,
   BalanceVersionParamSchema,
@@ -14,6 +16,7 @@ import {
   deleteBalanceDraft,
   getActiveBalance,
   getBalanceVersion,
+  listAppliedBalanceVersions,
   listBalanceVersions,
   updateBalanceDraft,
 } from '../db/repos/balance.js';
@@ -26,6 +29,7 @@ import { EDGE, STALE } from '../edgeKeys.js';
 // T-10-016 서버 밸런스 설정. 게임은 GET /v1/balance를 앱을 열 때 한 번 받고, 새 버전은 각 커리어의
 // 다음 시즌 시작부터 적용한다. 관리자는 초안을 만들고 고친 뒤 활성화한다(되돌리기 = 옛 버전 재활성화).
 const PUBLIC_TTL = 60;
+const HISTORY_TTL = 600;
 
 const versionParam = (c: Context<AppEnv>) =>
   parseWithAppError(BalanceVersionParamSchema, c.req.param('version'));
@@ -60,6 +64,14 @@ export function registerBalanceRoutes(app: Hono<AppEnv>): void {
         : { version: 0, values: {}, activatedAt: null };
     });
     return ok(c, BalanceConfigSchema, data);
+  });
+
+  // T-11-141 공개 이력(확률 도감 '확률과 공정성'). 모두에게 같은 응답이라 엣지에 담고, 활성화가 지운다.
+  app.get(EDGE.balanceHistory, async (c) => {
+    const data = await edgeCached(c, EDGE.balanceHistory, HISTORY_TTL, () =>
+      listAppliedBalanceVersions(getDb(c), BALANCE_HISTORY_LIMIT),
+    );
+    return ok(c, BalanceHistorySchema, data);
   });
 
   app.get('/v1/admin/balance', async (c) => {
