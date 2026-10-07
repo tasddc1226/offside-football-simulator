@@ -1,0 +1,11 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "OFFSIDE",
+    "CFBundleName": "OFFSIDE",
+    "NSPhotoLibraryUsageDescription": "チームのエンブレムに使う写真を選べるように、写真へのアクセスを許可してください。",
+    "NSUserTrackingUsageDescription": "あなたに合った広告を表示するために使います。許可しなくても、ゲームはそのまま遊べます。"
+  },
+  "android": {
+    "app_name": "OFFSIDE"
+  }
+}

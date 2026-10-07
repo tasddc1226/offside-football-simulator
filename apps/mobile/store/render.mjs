@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium, here, icon, frames, esc, mark, FONTS, shoot } from './lib.mjs';
 
-const langs = process.argv[2] ? [process.argv[2]] : ['ko', 'en'];
+const langs = process.argv[2] ? [process.argv[2]] : ['ko', 'en', 'ja'];
 const plats = process.argv[3] ? [process.argv[3]] : ['ios', 'android'];
 const only = process.argv[4] ? +process.argv[4] : 0;
 
@@ -25,7 +25,7 @@ ${FONTS}
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:${W}px;height:${H}px;overflow:hidden}
-body{position:relative;font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;color:#f2f6f1;
+body{position:relative;font-family:${lang === 'ja' ? "'Noto Sans JP'" : "Pretendard,'Apple SD Gothic Neo'"},sans-serif;color:#f2f6f1;
  background:radial-gradient(120% 70% at 50% 18%,#25603f 0%,#1c4a35 38%,#12301f 72%,#0b1d14 100%)}
 .stripes{position:absolute;inset:0;background:repeating-linear-gradient(180deg,rgba(255,255,255,.035) 0 ${180 * u}px,transparent ${180 * u}px ${360 * u}px)}
 .chalk{position:absolute;inset:0}
@@ -36,9 +36,9 @@ body{position:relative;font-family:Pretendard,'Apple SD Gothic Neo',sans-serif;c
 .eyebrow{display:flex;align-items:center;gap:${18 * u}px;font-family:'Barlow Condensed';font-weight:700;letter-spacing:.16em;font-size:${40 * u}px;color:#D6F24A;text-transform:uppercase}
 .eyebrow img{width:${64 * u}px;height:${64 * u}px;border-radius:${15 * u}px}
 .eyebrow .no{color:rgba(242,246,241,.55)}
-h1{margin-top:${30 * u}px;font-weight:800;font-size:${(lang === 'ko' ? 138 : 118) * u}px;line-height:1.12;letter-spacing:${lang === 'ko' ? '-0.035em' : '-0.02em'};word-break:keep-all}
+h1{margin-top:${30 * u}px;font-weight:800;font-size:${{ ko: 138, en: 118, ja: 120 }[lang] * u}px;line-height:1.12;letter-spacing:${lang === 'en' ? '-0.02em' : '-0.035em'};word-break:${lang === 'ja' ? 'normal' : 'keep-all'}}
 h1 em{font-style:normal;color:#D6F24A}
-p.sub{margin-top:${26 * u}px;font-size:${46 * u}px;font-weight:500;color:rgba(242,246,241,.78);letter-spacing:-0.01em;word-break:keep-all}
+p.sub{margin-top:${26 * u}px;font-size:${46 * u}px;font-weight:500;color:rgba(242,246,241,.78);letter-spacing:-0.01em;word-break:${lang === 'ja' ? 'normal' : 'keep-all'}}
 .phone{position:absolute;left:${(W - phoneW) / 2}px;top:${top}px;width:${phoneW}px;height:${phoneH}px;border-radius:${150 * u}px;
  background:linear-gradient(145deg,#3a4640,#0a0f0c 40%,#1d2622);padding:${bez}px;
  box-shadow:0 ${60 * u}px ${140 * u}px rgba(0,0,0,.55),0 0 0 ${3 * u}px rgba(255,255,255,.08) inset}

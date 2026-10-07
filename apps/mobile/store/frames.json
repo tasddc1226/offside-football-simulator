@@ -9,6 +9,10 @@
     "en": {
       "h": "One player.\n*One whole career.*",
       "s": "From high school to retirement"
+    },
+    "ja": {
+      "h": "今度の人生は\n*サッカー*だ",
+      "s": "高校3年から引退まで、ひとりの選手として"
     }
   },
   {
@@ -21,6 +25,10 @@
     "en": {
       "h": "Build *your*\nown player",
       "s": "Nation, build, position and growth type"
+    },
+    "ja": {
+      "h": "自分だけの選手を\n*一から*つくる",
+      "s": "国籍・体格・ポジション・成長タイプを決める"
     }
   },
   {
@@ -33,6 +41,10 @@
     "en": {
       "h": "Big moments,\n*your timing*",
       "s": "One-on-ones and penalties use a timing gauge"
+    },
+    "ja": {
+      "h": "決定的な瞬間は\n*自分の手*で",
+      "s": "1対1とPKはタイミングゲージで決まる"
     }
   },
   {
@@ -45,6 +57,10 @@
     "en": {
       "h": "*Grow* every\nseason",
       "s": "Train and invest to build attributes"
+    },
+    "ja": {
+      "h": "シーズンごとに\n*成長する*選手",
+      "s": "トレーニングと自己投資で能力値を伸ばす"
     }
   },
   {
@@ -57,6 +73,10 @@
     "en": {
       "h": "Every season\n*on the record*",
       "s": "Goals, ratings, awards and World Cups"
+    },
+    "ja": {
+      "h": "すべてのシーズンが\n*記録*に残る",
+      "s": "ゴール・アシスト・評価点からW杯まで"
     }
   },
   {
@@ -69,6 +89,10 @@
     "en": {
       "h": "*Transfers abroad*,\nWorld Cups",
       "s": "Offers from Japan, the US and Europe"
+    },
+    "ja": {
+      "h": "*海外移籍*、\n代表入りまで",
+      "s": "日本・アメリカ・欧州からオファーが届く"
     }
   },
   {
@@ -81,6 +105,10 @@
     "en": {
       "h": "Retire into the\n*Hall of Fame*",
       "s": "Legend score and potential revealed"
+    },
+    "ja": {
+      "h": "引退したら\n*殿堂*へ",
+      "s": "レジェンドスコアとポテンシャルが明かされる"
     }
   }
 ]

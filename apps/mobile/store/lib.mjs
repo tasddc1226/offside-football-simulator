@@ -17,7 +17,7 @@ export const mark = (s) =>
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/\n/g, '<br>');
 
-export const FONTS = `<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&display=block" rel="stylesheet">
+export const FONTS = `<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Noto+Sans+JP:wght@500;800&display=block" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">`;
 
 /** html을 그려 here/out/<rel>로 저장한다. */

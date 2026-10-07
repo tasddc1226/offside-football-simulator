@@ -154,7 +154,8 @@
     "owner": "tasddc1569",
     "locales": {
       "ko": "./locales/ko.json",
-      "en": "./locales/en.json"
+      "en": "./locales/en.json",
+      "ja": "./locales/ja.json"
     }
   },
   "react-native-google-mobile-ads": {
