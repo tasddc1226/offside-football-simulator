@@ -1,6 +1,6 @@
 import type { Locale, TranslatedLocale } from '@offside/contracts/i18n';
 import type { PostText, PostTranslateResponse } from '@offside/contracts';
-import { POST_BODY_MAX, POST_TITLE_MAX } from '@offside/contracts/board-limits';
+import { POST_TITLE_MAX, TRANSLATED_BODY_MAX } from '@offside/contracts/board-limits';
 import { AppError } from '../errors.js';
 
 // T-11-146 Workers AI 번역. 운영 도구의 공지 번역 초안과 사용자 글(댓글·채팅) "번역 보기"가 함께 쓴다.
@@ -78,7 +78,7 @@ export async function draftTranslations(
   // 번역이 원문보다 길어져도 저장할 수 있게 한도에서 자른다(관리자가 읽고 고친다).
   const text = (title: string, body: string) => ({
     title: title.slice(0, POST_TITLE_MAX),
-    body: body.slice(0, POST_BODY_MAX),
+    body: body.slice(0, TRANSLATED_BODY_MAX),
   });
   return { en: text(enTitle, enBody), ja: text(jaTitle, jaBody) };
 }
