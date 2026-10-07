@@ -47,6 +47,7 @@ import { GradeEmblem } from '../../ui/GradeEmblem';
 import { AdSlot } from '../../components/AdSlot';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
+import { notificationDestination } from '../../platform/notificationDestination';
 
 function openTeam(v: TeamView = 'team') {
   appState.teamView = v;
@@ -120,12 +121,21 @@ function LockedPitch() {
 export default function Owner() {
   const c = useColors();
   const cache = useSnapshot(accountCache);
-  // 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 업적 탭으로.
-  const { achNew } = useSnapshot(appState);
+  // 받은 친구 신청(T-11-142)이나 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 친구 · 업적 탭으로.
+  const { achNew, friendReq } = useSnapshot(appState);
   const teamBtn = {
-    dot: achNew > 0,
-    onPress: () => openTeam(achNew > 0 ? 'achievements' : 'team'),
-    ...(achNew > 0 ? { accessibilityLabel: `${L.myTeam}, ${S.achNew({ n: achNew })}` } : {}),
+    dot: friendReq > 0 || achNew > 0,
+    onPress: () => {
+      if (friendReq > 0) {
+        notificationDestination.friends = true;
+        openTeam('opponents');
+      } else openTeam(achNew > 0 ? 'achievements' : 'team');
+    },
+    ...(friendReq > 0
+      ? { accessibilityLabel: `${L.myTeam}, ${S.friendReq({ n: friendReq })}` }
+      : achNew > 0
+        ? { accessibilityLabel: `${L.myTeam}, ${S.achNew({ n: achNew })}` }
+        : {}),
   };
   const acct = cache.value;
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만

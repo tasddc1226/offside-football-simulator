@@ -60,6 +60,10 @@ const ko = {
   makePreseason: '프리시즌 팀 꾸리기',
   playPreseason: '프리시즌 친선전',
   playPreseasonAria: (p: { name: string }) => `${p.name} 님과 프리시즌 친선전`,
+  pushNudgeTitle: '친구 신청을 알림으로 받을까요?',
+  pushNudgeBody: '앱 알림을 켜면 친구 신청과 친선전 결과가 오는 대로 알려 드려요.',
+  pushNudgeOn: '알림 켜기',
+  pushNudgeClose: '닫기',
 };
 
 export type FriendMsgs = typeof ko;

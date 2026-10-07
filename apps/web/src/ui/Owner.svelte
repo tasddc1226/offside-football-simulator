@@ -25,6 +25,7 @@
   import { loadHOF } from '@offside/game/hof-store';
   import { startGoogleLogin } from './login.js';
   import { go } from './nav.js';
+  import { openFriends } from './friendInvite.svelte.js';
   import { googleStartUrl } from '@offside/app-core/api/client';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
   import { accountText as A } from '@offside/app-core/i18n/ko/account';
@@ -93,8 +94,9 @@
   // 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 프로필 이름 앞에 붙인다(그 시즌 기록이 없으면 없다).
   // 댓글 · 채팅에도 같은 등급이 나간다(서버 ownerTiersOf).
   const tierTag = $derived(recap ? profileTier(recap) : null);
-  /** 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 업적 탭으로. */
-  const openMyTeam = () => openTeam(appState.achNew ? 'achievements' : 'team');
+  /** 받은 친구 신청(T-11-142)이나 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 친구 · 업적 탭으로. */
+  const openMyTeam = () =>
+    appState.friendReq ? openFriends() : openTeam(appState.achNew ? 'achievements' : 'team');
   function openTeam(v: TeamView = 'team') {
     appState.teamView = v;
     go('team');
@@ -102,7 +104,7 @@
 </script>
 
 {#snippet achDot()}
-  {#if appState.achNew}<span class="btn-dot" data-team-dot><span class="sr-only">{S.achNew({ n: appState.achNew })}</span></span>{/if}
+  {#if appState.friendReq || appState.achNew}<span class="btn-dot" data-team-dot><span class="sr-only">{appState.friendReq ? S.friendReq({ n: appState.friendReq }) : S.achNew({ n: appState.achNew })}</span></span>{/if}
 {/snippet}
 
 <div class="wrap">

@@ -55,4 +55,9 @@ export const friend: Translation<FriendMsgs> = {
   makePreseason: 'Build preseason team',
   playPreseason: 'Preseason friendly',
   playPreseasonAria: (p) => `Preseason friendly with ${p.name}`,
+  pushNudgeTitle: 'Get friend requests as notifications?',
+  pushNudgeBody:
+    'Turn on app notifications to hear about friend requests and friendly results as they come in.',
+  pushNudgeOn: 'Turn on',
+  pushNudgeClose: 'Close',
 };
