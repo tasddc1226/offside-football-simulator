@@ -242,21 +242,18 @@ export default function TeamRanking() {
                   <Txt num tone="muted" center style={{ width: 22, fontSize: 14 }}>
                     {t.rank}
                   </Txt>
-                  <TeamLogo logo={t.logo} name={t.name} size={24} decorative />
-                  <View
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 4,
-                    }}
-                  >
-                    <Txt bold numberOfLines={1} style={{ flexShrink: 1, fontSize: 13 }}>
-                      {t.name}
-                    </Txt>
-                    {t.title ? <TitleBadge title={t.title} size="icon" /> : null}
+                  {/* T-11-150 대표 칭호 트로피는 로고 모서리에 얹는다(좁은 줄에서 팀 이름 자리를 먹지 않게). */}
+                  <View>
+                    <TeamLogo logo={t.logo} name={t.name} size={24} decorative />
+                    {t.title ? (
+                      <View style={{ position: 'absolute', right: -7, bottom: -6 }}>
+                        <TitleBadge title={t.title} size="icon" />
+                      </View>
+                    ) : null}
                   </View>
+                  <Txt bold numberOfLines={1} style={{ flex: 1, fontSize: 13 }}>
+                    {t.name}
+                  </Txt>
                 </View>
                 {[t.record.w + t.record.d + t.record.l, t.record.w, t.record.d, t.record.l].map(
                   (value, i) => (

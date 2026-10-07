@@ -187,7 +187,7 @@
   .tp-identity {display:flex;align-items:center;gap:10px;min-width:0;}
   .tp-names {min-width:0;}
   .tp-title-badge {display:block; margin:2px 0 4px;}
-  .tp-owner {margin-top:4px;}
+  .tp-owner {margin-top:4px; white-space:nowrap;}
   .tp-manager {
     color: var(--ink);
   }

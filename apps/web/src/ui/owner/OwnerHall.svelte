@@ -54,7 +54,7 @@
         {#if hall.owner.title}<TitleBadge title={hall.owner.title} />{:else}<b>{L.currentNone}</b>{/if}
       </div>
       <div class="oh-picks" role="radiogroup" aria-label={L.current}>
-        <button class="oh-pick" role="radio" aria-checked={picked === null} disabled={saving} onclick={() => pick(null)} data-title-pick="auto">
+        <button class="oh-pick" role="radio" aria-label={`${L.pickAuto} · ${L.pickAutoNote}`} aria-checked={picked === null} disabled={saving} onclick={() => pick(null)} data-title-pick="auto">
           <b>{L.pickAuto}</b><small class="muted">{L.pickAutoNote}</small>
         </button>
         {#each hall.titles as t (t)}
@@ -62,7 +62,7 @@
             <TitleBadge title={t} />
           </button>
         {/each}
-        <button class="oh-pick" role="radio" aria-checked={picked === TITLE_NONE} disabled={saving} onclick={() => pick(TITLE_NONE)} data-title-pick="none">
+        <button class="oh-pick" role="radio" aria-label={L.pickNone} aria-checked={picked === TITLE_NONE} disabled={saving} onclick={() => pick(TITLE_NONE)} data-title-pick="none">
           <b>{L.pickNone}</b>
         </button>
       </div>

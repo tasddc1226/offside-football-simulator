@@ -110,7 +110,7 @@
               {@const played = t.record.w + t.record.d + t.record.l}
               <li value={t.rank}>
                 <button class="team-standings-columns team-standings-row" data-rank-team={t.teamId} aria-label={L.teamRowAria({ rank: t.rank, name: t.name, played: n(played), w: n(t.record.w), d: n(t.record.d), l: n(t.record.l), metric: metricLabel, value: metricOf(t), form: formText(t.recentForm) })} onclick={() => open(t.teamId)}>
-                  <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span><TeamLogo logo={t.logo} name={t.name} size={24} decorative /><b title={t.name}>{t.name}</b>{#if t.title}<TitleBadge title={t.title} size="icon" />{/if}</span>
+                  <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span><span class="team-standings-logo"><TeamLogo logo={t.logo} name={t.name} size={24} decorative />{#if t.title}<span class="team-standings-title"><TitleBadge title={t.title} size="icon" /></span>{/if}</span><b title={t.name}>{t.name}</b></span>
                   <span class="num" title={L.playedTitle({ n: n(played) })}>{n(played)}</span>
                   <span class="num" title={L.winTitle({ n: n(t.record.w) })}>{n(t.record.w)}</span>
                   <span class="num" title={L.drawTitle({ n: n(t.record.d) })}>{n(t.record.d)}</span>
@@ -231,6 +231,18 @@
     align-items: center;
     gap: 6px;
     text-align: left;
+  }
+  /* T-11-150 대표 칭호 트로피는 로고 모서리에 얹는다(좁은 줄에서 팀 이름 자리를 먹지 않게). */
+  .team-standings-logo {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+  }
+  .team-standings-title {
+    position: absolute;
+    right: -7px;
+    bottom: -6px;
+    line-height: 0;
   }
   .team-standings-rank {
     flex: 0 0 20px;
