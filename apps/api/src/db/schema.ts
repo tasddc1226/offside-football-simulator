@@ -773,7 +773,11 @@ export const balanceVersions = sqliteTable(
     updatedAt: text('updated_at').notNull(),
     activatedAt: text('activated_at'),
   },
-  (table) => [index('balance_versions_status_idx').on(table.status)],
+  (table) => [
+    index('balance_versions_status_idx').on(table.status),
+    // T-11-141 공개 이력(적용 순 정렬).
+    index('balance_versions_activated_idx').on(table.activatedAt),
+  ],
 );
 
 /** T-10-027 서버 최초 기록. 기록 id(src/firsts.ts firstsCatalog)마다 가장 먼저 달성한 커리어 한 줄. 커리어가 지워지면

@@ -43,6 +43,22 @@ export const BalanceConfigSchema = z.object({
 });
 export type BalanceConfig = z.infer<typeof BalanceConfigSchema>;
 
+/** T-11-141 공개 밸런스 이력: 한 번이라도 적용된 버전(최근 적용 순). 운영 메모는 싣지 않는다. */
+export const BALANCE_HISTORY_LIMIT = 30;
+export const BalanceHistorySchema = z.object({
+  versions: z
+    .array(
+      z.object({
+        version: z.number().int().min(1),
+        values: BalanceOverridesSchema,
+        activatedAt: IsoUtcSchema,
+        active: z.boolean(),
+      }),
+    )
+    .max(BALANCE_HISTORY_LIMIT),
+});
+export type BalanceHistory = z.infer<typeof BalanceHistorySchema>;
+
 const BalanceStatusSchema = z.enum(['draft', 'active', 'archived']);
 
 export const BalanceVersionSchema = z.object({

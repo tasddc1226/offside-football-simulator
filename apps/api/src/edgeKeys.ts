@@ -7,6 +7,8 @@ import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 
 export const EDGE = {
   balance: '/v1/balance',
+  /** T-11-141 공개 밸런스 이력. */
+  balanceHistory: '/v1/balance/history',
   adminStats: '/v1/admin/stats',
   /** T-11-029 서버 최초 기록·서버 기록은 시즌마다 따로다(시즌 id를 푼 경로). */
   firsts: (season: number) => `/v1/firsts?season=${season}`,
@@ -46,7 +48,7 @@ const allBoardLists = () => BOARD_KEYS.map(EDGE.boardFirstPage);
 
 /** 쓰기 → 지울 엣지 키. */
 export const STALE = {
-  balanceActivated: () => [EDGE.balance],
+  balanceActivated: () => [EDGE.balance, EDGE.balanceHistory],
   firstsChanged: allFirsts,
   /** 새 결번·이름 공개 토글 — 그 시즌 전체 목록·요약·그 구단·최신순 첫 페이지(뒤 페이지는 TTL로만). */
   retiredNumbersChanged: (season: number, clubId: string) => [

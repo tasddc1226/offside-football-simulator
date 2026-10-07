@@ -7,6 +7,7 @@ import { appFlight } from './appFlight';
 import { appFormat } from './appFormat';
 import { appScout } from './appScout';
 import { backup } from './backup';
+import { balanceKeys } from './balanceKeys';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
 import { chat } from './chat';
@@ -15,6 +16,7 @@ import { club } from './club';
 import { clubSync } from './clubSync';
 import { create } from './create';
 import { dex } from './dex';
+import { fairness } from './fairness';
 import { firsts } from './firsts';
 import { firstsTab } from './firstsTab';
 import { friend } from './friend';
@@ -82,6 +84,7 @@ export const en = {
   appFormat,
   appScout,
   backup,
+  balanceKeys,
   board,
   boardLabel,
   chat,
@@ -90,6 +93,7 @@ export const en = {
   clubSync,
   create,
   dex,
+  fairness,
   firsts,
   firstsTab,
   friend,

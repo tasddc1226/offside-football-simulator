@@ -12,7 +12,7 @@ test('확률 도감: 홈 타일 → 공통 규칙 · 선택지 확률 · 잠긴 
   await tile.click();
 
   await expect(page.getByRole('heading', { name: '확률 도감' })).toBeVisible();
-  await expect(page.locator('.dex-rules')).toContainText('프리시즌 55%');
+  await expect(page.locator('.dex-rules:not(#fairness)')).toContainText('프리시즌 55%');
   await expect(page.locator('[data-dex-progress]')).toHaveText(/발견 2\/\d+/);
 
   // 일반 이벤트: 선택지와 확률 범위·영향 요인이 보인다.

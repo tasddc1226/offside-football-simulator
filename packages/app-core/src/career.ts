@@ -7,6 +7,7 @@ import { legendSnapshot } from '@offside/game/legend';
 import { loadHOF } from '@offside/game/hof-store';
 import { loadSave } from '@offside/game/save';
 import { useCareerBalance } from '@offside/game/balance';
+import { useCareerClubStrength } from '@offside/game/clubStrength';
 import type { EventLogEntry, GameState, HofEntry } from '@offside/game/types';
 
 const EV_BUF_CAP = 300;
@@ -77,5 +78,6 @@ export function restoreGame(upload: {
     setActiveRng(createRng(freshSeed()));
   }
   useCareerBalance(G);
+  useCareerClubStrength(G);
   return G;
 }

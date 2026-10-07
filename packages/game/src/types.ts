@@ -6,6 +6,7 @@ import type { Body } from '@offside/contracts/body';
 import type { LegendSnapshot, PlayStyle, RetiredNumberResult } from '@offside/contracts';
 import type { PeakProfile } from '@offside/contracts/positions';
 import type { CareerBalance } from './balance.js';
+import type { CareerClubStrength } from './clubStrength.js';
 import type { AttrKey, Pos, Club, SAVE_VERSION, DetailPos } from './data.js';
 import type { SeasonEndResult } from './season.js';
 import type { MgKind } from './minigame.js';
@@ -258,6 +259,10 @@ export type Pending =
 export interface GameState {
   /** T-10-016 이 커리어에 적용 중인 서버 밸런스 버전(없으면 코드 기본값 = 버전 0). */
   bal?: CareerBalance;
+  /** T-11-135 이 커리어에 적용 중인 구단 전력표 버전(없으면 data.ts 기본 전력 = 버전 0). */
+  cs?: CareerClubStrength;
+  /** T-11-141 커리어를 만들 때의 RNG 시드와 실제 잠재력. 은퇴 리포트에서만 보여 준다. 옛 세이브엔 없다. */
+  origin?: { seed: number; pot: number };
   v: typeof SAVE_VERSION;
   /** T-9-009. 커리어 고유 ID(`crypto.randomUUID()`). 서버 업로드의 URL 키다. 시드 RNG를 절대
    * 소모하지 않고 만든다 — RNG 시퀀스가 이 변경으로 바뀌면 안 된다. */
@@ -357,6 +362,8 @@ export interface HofEntry {
   profile?: PeakProfile | undefined;
   /** T-11-030 은퇴 때 기록한 실제 잠재력(반올림). 리포트·기록실·서버 관찰에 쓰며 옛 기록엔 없다. */
   pot?: number | undefined;
+  /** T-11-141 은퇴 리포트 '잠재력이 바뀐 과정'의 재료(시작 시드·잠재력, 강화, 밸런스 버전). 옛 기록엔 없다. */
+  potFlow?: { origin?: { seed: number; pot: number }; boost: number; bal: number } | undefined;
   age: number;
   apps: number;
   goals: number;

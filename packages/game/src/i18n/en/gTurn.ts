@@ -14,7 +14,10 @@ export const gTurn: Translation<GTurnMsgs> = {
     `R${p.rd}: Subbed off with ${p.big ? 'a serious injury' : 'an injury'}… expected to miss ${p.n} ${plural(p.n, 'match', 'matches')}`,
   gameStart: (p) =>
     `${p.name}, a third-year ${p.pos.toLowerCase()} at ${p.club}${p.nation ? ` who came from ${p.nation} to study football` : ''}, begins a football career wearing number ${p.number}.`,
-  balancePatch: (p) => `Balance patch v${p.v} applies from this season.`,
+  balancePatch: (p) =>
+    `Balance patch v${p.v} applies from this season. Every player gets the same values, and you can see what changed in the odds guide.`,
+  clubStrengthPatch: (p) =>
+    `Club ratings v${p.v} (real-world standings as of ${p.asOf}) apply from this season.`,
   storyEnd: (p) => `[Story complete] ${p.name} · ${p.ending}`,
   placeholderTeam: (p) => `${p.league} club ${p.n}`,
 };

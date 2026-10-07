@@ -1421,6 +1421,42 @@ a.tile-link {
   font-size: 0.75rem;
   margin: 8px 0 0;
 }
+/* T-11-141 확률과 공정성 */
+.fair-h {
+  font-size: 0.875rem;
+  margin: 16px 0 6px;
+}
+.fair-note {
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+.fair-history {
+  margin-top: 16px;
+}
+.fair-history summary {
+  cursor: pointer;
+}
+.fair-versions {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fair-versions > li {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.fair-diff {
+  margin-left: 0.35em;
+}
+.fair-versions ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
 /* T-10-011 소식(게시판) */
 textarea {
   resize: vertical;
@@ -5682,6 +5718,27 @@ button.title-item:hover {
 .film-pot-ach small {
   color: var(--film-muted);
   font-size: 0.8125rem;
+}
+/* T-11-141 잠재력이 바뀐 과정 · 시드(은퇴 뒤에만). */
+.film-pot-flow {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.film-pot-flow span {
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+.film-pot-flow p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+.film-pot-flow small {
+  color: var(--film-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
 }
 /* T-10-077 플레이 성향 — 유형 하나 + 주사위 기록 네 칸 + 최고의 한 수. */
 .film-style {
