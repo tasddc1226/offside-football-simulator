@@ -419,6 +419,8 @@ export const CupHonorSchema = z.strictObject({
   edition: z.number().int(),
   stage: z.enum(CUP_STAGES),
   teamName: z.string(),
+  /** 트로피 받침대에 새기는 구단주 닉네임(지금 닉네임, 없으면 null). 배포 전 응답엔 없다. */
+  owner: z.string().nullable().optional(),
 });
 export type CupHonor = z.infer<typeof CupHonorSchema>;
 

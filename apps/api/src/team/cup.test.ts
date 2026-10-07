@@ -254,7 +254,15 @@ describe('T-11-145 컵 진행(cron)', () => {
     );
     // 우승팀 구단주의 영구 기록.
     const champ = entries.find((e) => e.stage === 'champion')!;
-    expect((await cupHonorsOf(ctx.db, champ.profileId))[0]).toMatchObject({ stage: 'champion' });
+    await ctx.db
+      .update(profiles)
+      .set({ nickname: '우승구단주' })
+      .where(eq(profiles.id, champ.profileId));
+    // 받침대에 새길 구단주 닉네임도 함께.
+    expect((await cupHonorsOf(ctx.db, champ.profileId))[0]).toMatchObject({
+      stage: 'champion',
+      owner: '우승구단주',
+    });
     expect(teams).toHaveLength(n);
     // 알림: 추첨·경기마다 하나, 최종 성적은 한 번(다시 돌려도 늘지 않는다). 탭하면 구단주 화면(컵 배너)으로 간다.
     const mine = await ctx.db
@@ -272,7 +280,7 @@ describe('T-11-145 컵 진행(cron)', () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ title: '시즌 1 제1회 오프사이드 컵 우승!' });
     expect(result[0]!.body).toBe('최종 성적 우승. 선수 후보 리롤권 10장을 받았어요.');
-    expect(mine.every((x) => JSON.parse(x.targetJson).screen === 'owner')).toBe(true);
+    expect(mine.every((x) => JSON.parse(x.targetJson).screen === 'home')).toBe(true);
   });
 
   it('추첨 때 자격이 모자란 팀은 빠지고, 4팀 미만이면 열지 않는다', async () => {

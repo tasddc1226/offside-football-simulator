@@ -1,4 +1,4 @@
-// T-11-145 오프사이드 컵 — 구단주 화면의 컵 배너 · 신청/취소 · 편성 화면의 명단 마감 안내. 컵 전체 화면은 CupScreen.
+// T-11-145 오프사이드 컵 — 홈의 컵 배너 · 신청/취소 · 편성 화면의 명단 마감 안내. 컵 전체 화면은 CupScreen.
 // 서버가 대회를 치르므로 앱은 fetchCup(누구나) · fetchCupMe(내 참가·자격·다음 경기·명단 잠금)를 보여 주기만 한다.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
@@ -12,6 +12,7 @@ import {
 } from '@offside/app-core/api/cup';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
+import { cupOnHome } from '@offside/app-core/cupHome';
 import { CUP_REWARDS } from '@offside/contracts/cup';
 import { type LoadStatus } from '../../components/LoadState';
 import { toast } from '../../game/host';
@@ -236,11 +237,11 @@ function CupEntry({ state }: { state: CupState }) {
   );
 }
 
-/** 컵 배너(구단 탭) · 컵 화면 맨 위 카드. onOpen이 있으면 '대회 보기' 버튼을 단다. */
+/** 컵 화면 맨 위 카드 · 홈 배너. onOpen이 있으면(홈) 첫 안내 한 줄과 '대회 보기'만 — 신청은 대회 화면에서 한다. */
 export function CupCard({ state, onOpen }: { state: CupState; onOpen?: () => void }) {
   const { cup: data } = state;
   if (!data) return null;
-  const lines = linesOf(state);
+  const lines = onOpen ? linesOf(state).slice(0, 1) : linesOf(state);
   return (
     <Card gap={8} testID="cup-banner">
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
@@ -257,12 +258,13 @@ export function CupCard({ state, onOpen }: { state: CupState; onOpen?: () => voi
           {l.text}
         </Txt>
       ))}
-      <CupEntry state={state} />
       {onOpen ? (
-        <Btn sm testID="cup-open" onPress={onOpen}>
+        <Btn kind="accent" testID="cup-open" onPress={onOpen}>
           {L.open}
         </Btn>
-      ) : null}
+      ) : (
+        <CupEntry state={state} />
+      )}
     </Card>
   );
 }
@@ -296,8 +298,9 @@ export function CupLockNotice({ state }: { state: CupState }) {
   );
 }
 
-/** 구단주 화면의 컵 배너. 대회를 불러오지 못하면 그리지 않는다. */
-export function CupBanner({ linked, onOpen }: { linked: boolean; onOpen: () => void }) {
-  const state = useCup(true, linked);
+/** 홈의 컵 배너(누구나 보는 대회 소식). 취소됐거나 끝난 지 일주일이 지났거나 불러오지 못하면 그리지 않는다. */
+export function CupBanner({ onOpen }: { onOpen: () => void }) {
+  const state = useCup(true, false);
+  if (!state.cup || !cupOnHome(state.cup)) return null;
   return <CupCard state={state} onOpen={onOpen} />;
 }

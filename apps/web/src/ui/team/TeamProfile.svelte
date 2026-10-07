@@ -108,7 +108,7 @@
         <div class="tp-identity"><TeamLogo logo={team.logo} name={team.name} size={56} /><div class="tp-names">
           <small class="muted">{seasonLabel(team.season, team.seasonName)}{team.rank ? ` · RANK #${team.rank}` : ''}</small>
           <h1>{team.name}</h1>
-          {#if champ}<span class="tp-champ" data-champ-badge><CupTrophy stage="champion" edition={champ.edition} size={22} />{CL.champBadge({ n: champ.edition })}</span>{/if}
+          {#if champ}<span class="tp-champ" data-champ-badge><CupTrophy stage="champion" size={22} />{CL.champBadge({ n: champ.edition })}</span>{/if}
           <p class="muted fs-sm">{L.profManager}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</p>
         </div></div>
         <div class="tp-rating" aria-label={L.profRatingAria({ n: team.rating })}><small>RATING</small><b>{n(team.rating)}</b></div>

@@ -20,7 +20,7 @@ import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
 import { friendRequestText } from '@offside/app-core/friendText';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
-import { cupTrophy, trophyStage } from '@offside/app-core/cupTrophy';
+import { cupTrophy, plateText, trophyStage } from '@offside/app-core/cupTrophy';
 import { EMBLEM_PALETTE } from '@offside/app-core/gradeEmblem';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { stageLabel } from '../../owner/cupText';
@@ -150,7 +150,7 @@ export default function TeamProfile({ id }: { id: string }) {
                       backgroundColor: `${GOLD.light}4d`,
                     }}
                   >
-                    <CupTrophy stage="champion" edition={champ.edition} size={22} />
+                    <CupTrophy stage="champion" size={22} />
                     <Txt bold style={{ fontSize: rem(0.75) }}>
                       {CL.champBadge({ n: champ.edition })}
                     </Txt>
@@ -356,7 +356,9 @@ export default function TeamProfile({ id }: { id: string }) {
                         borderColor: trophy ? cupTrophy(trophy).palette.base : c.pitchAccent,
                       }}
                     >
-                      {trophy ? <CupTrophy stage={trophy} edition={h.edition} size={48} /> : null}
+                      {trophy ? (
+                        <CupTrophy stage={trophy} name={plateText(h.owner, h.season)} size={56} />
+                      ) : null}
                       <View style={{ gap: 2, flexShrink: 1 }}>
                         <Txt bold>
                           {h.stage === 'champion'
