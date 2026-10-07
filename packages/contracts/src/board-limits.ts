@@ -9,6 +9,11 @@ export const BOARD_PAGE_LIMIT = 20;
 
 export const POST_TITLE_MAX = 80;
 export const POST_BODY_MAX = 5000;
+/**
+ * T-11-148 운영자 글의 영어·일본어 본문 한도. 영어는 같은 내용의 한국어보다 두 배 가까이 길어서(릴리즈 노트 실측
+ * 1.9~2.1배) 한국어 한도를 그대로 쓰면 하루 릴리즈 노트가 한국어 2,500자 언저리에서 게시에 실패한다.
+ */
+export const TRANSLATED_BODY_MAX = 12000;
 export const POST_VERSION_MAX = 20;
 export const COMMENT_BODY_MAX = 500;
 export const COMMENT_NICKNAME_MAX = 12;

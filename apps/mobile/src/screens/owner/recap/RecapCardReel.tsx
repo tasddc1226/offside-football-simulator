@@ -6,7 +6,7 @@ import { View, type NativeScrollEvent, type NativeSyntheticEvent, ScrollView } f
 import { useSnapshot } from 'valtio';
 import type { RecapSquadMember } from '@offside/contracts';
 import { detailPosOf } from '@offside/contracts/positions';
-import { anonName } from '@offside/app-core/format';
+import { playerName } from '@offside/app-core/format';
 import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
 import { PlayerCard } from '../../../components/PlayerCard';
 import { prefs } from '../../../store';
@@ -30,7 +30,7 @@ const ReelCard = memo(function ReelCard({ m }: { m: RecapSquadMember }) {
         animate={false}
         code={detailPosOf(card)}
         cell={{
-          name: card.publicName ?? anonName(card.pos, card.number),
+          name: playerName(card.publicName, card.pos, card.number),
           nation: card.nation,
           season: card.season,
           rating: card.peak,

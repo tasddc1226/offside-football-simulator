@@ -12,7 +12,7 @@
   import { deviceSeasonOf, emptySeasonText, myDefaultSeason, mySeasonOptions, serverSeasonOf } from '@offside/app-core/mySeason';
   import { fillGranted } from './retiredNumber.svelte.js';
   import { openLocalLegend, openPublicLegend } from './legend.js';
-  import { anonName } from '@offside/app-core/format';
+  import { playerName } from '@offside/app-core/format';
   import HofRow, { type RowStats } from './HofRow.svelte';
   import { seasonNow } from './seasonNow.svelte.js';
   import type { DetailPos, POS } from '@offside/game/data';
@@ -49,7 +49,7 @@
   const serverRow = (e: PublicHofEntry): MineRow => ({
     nation: myPlayerNation(undefined, e),
     key: e.id,
-    name: e.name ?? anonName(e.pos, e.number),
+    name: playerName(e.name, e.pos, e.number),
     pos: e.pos,
     dpos: e.dpos,
     club: e.lastClub,

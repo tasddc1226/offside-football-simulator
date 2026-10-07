@@ -3,7 +3,7 @@
 import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
 import { LIVE_FEED_MAX } from '@offside/contracts/polling';
 import { tn } from '@offside/game/i18n/names';
-import { anonName } from './format.js';
+import { playerName } from './format.js';
 import { homeLiveText as L } from './i18n/ko/homeLive.js';
 
 /** 티커가 한 줄씩 올라가는 간격. */
@@ -63,7 +63,7 @@ export const keyOf = (e: LiveEvent) =>
   `${e.kind}:${e.at}:${e.kind === 'retire' ? e.careerId : `${e.club}:${e.goals}:${e.apps}`}`;
 
 export const who = (e: LiveEvent) =>
-  e.name ?? anonName(e.pos, e.kind === 'retire' ? e.number : null);
+  playerName(e.name, e.pos, e.kind === 'retire' ? e.number : null);
 
 export function what(e: LiveEvent): string {
   if (e.kind === 'retire') return L.whatRetire({ score: e.score });

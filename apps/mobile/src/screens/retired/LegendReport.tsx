@@ -269,6 +269,12 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                   run={seen.highlights}
                   playing={playing}
                 />
+                <Stat
+                  label={L.statBallon}
+                  value={v.totals.ballon}
+                  run={seen.highlights}
+                  playing={playing}
+                />
               </View>
             </Reveal>
             {!d ? (

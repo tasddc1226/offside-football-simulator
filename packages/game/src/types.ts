@@ -10,6 +10,7 @@ import type { CareerClubStrength } from './clubStrength.js';
 import type { AttrKey, Pos, Club, SAVE_VERSION, DetailPos } from './data.js';
 import type { SeasonEndResult } from './season.js';
 import type { MgKind } from './minigame.js';
+import type { TableRow } from './table.js';
 
 export interface RngSaveState {
   seed: number;
@@ -35,6 +36,8 @@ export interface SeasonComp {
 }
 
 export interface Season {
+  /** 결산 때 고정한 순위표. 이전 저장에는 없으며 이미 끝난 시즌의 승점을 추정해 채우지 않는다. */
+  finalTable?: TableRow[];
   apps: number;
   starts: number;
   goals: number;

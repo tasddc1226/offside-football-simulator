@@ -17,8 +17,6 @@ const ko = {
   noPurchase: '이 스토어 계정에는 광고 제거 구매 기록이 없어요.',
   restoreFail: '복원하지 못했어요. 잠시 뒤 다시 시도해 주세요.',
   rewardedUnavailable: '지금은 광고를 불러올 수 없어요. 잠시 뒤 다시 시도해 주세요.',
-  rewardedDailyCap: (p: { n: number }) =>
-    `오늘은 광고로 ${p.n}번을 모두 썼어요. 내일 다시 할 수 있어요.`,
   rewardedWatch: '광고를 끝까지 보면 평가를 볼 수 있어요.',
 };
 

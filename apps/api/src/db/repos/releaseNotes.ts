@@ -1,5 +1,5 @@
 import type { PostTranslations, PublishReleaseNotes, ReleaseNote } from '@offside/contracts';
-import { POST_BODY_MAX } from '@offside/contracts/board-limits';
+import { POST_BODY_MAX, TRANSLATED_BODY_MAX } from '@offside/contracts/board-limits';
 import { conflictError } from '../../routes/shared.js';
 import { sha256Hex } from '../hash.js';
 import { newsPushStatements } from '../../push/enqueue.js';
@@ -159,7 +159,10 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
     ] as const;
   });
   const i18n: PostTranslations = Object.fromEntries(translated);
-  if ([body, ...translated.map(([, t]) => t.body)].some((b) => b.length > POST_BODY_MAX))
+  if (
+    body.length > POST_BODY_MAX ||
+    translated.some(([, t]) => t.body.length > TRANSLATED_BODY_MAX)
+  )
     throw conflictError('오늘 릴리즈 노트의 글자 수 한도를 넘었어요.', 'RELEASE_POST_FULL');
   const i18nJson = JSON.stringify(i18n);
   const postId = post?.id ?? `pst_release_${date.day.replaceAll('-', '')}`;

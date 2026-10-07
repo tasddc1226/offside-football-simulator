@@ -11,7 +11,7 @@ import {
 } from '@offside/app-core/seasonRecap';
 import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
-import { anonName } from '@offside/app-core/format';
+import { playerName } from '@offside/app-core/format';
 import { num, recordText } from '@offside/app-core/teamText';
 import { cardFile } from './share/shareCard.js';
 
@@ -158,7 +158,7 @@ export function drawRecapShareCard(canvas: HTMLCanvasElement, r: SeasonRecap) {
     );
   };
   if (r.best)
-    panel(PAD, L.best, r.best.name ?? anonName(r.best.pos, null), [
+    panel(PAD, L.best, playerName(r.best.name, r.best.pos, null), [
       L.bestScore({ score: num(r.best.score) }),
       ...(r.stats?.scorer
         ? [`${L.scorer} ${L.scorerGoals({ n: num(r.stats.scorer.goals) })}`]

@@ -6,6 +6,7 @@ import {
   COMMENT_REPORT_REASONS,
   NAME_REPORT_KINDS,
   POST_BODY_MAX,
+  TRANSLATED_BODY_MAX,
   POST_TITLE_MAX,
   POST_VERSION_MAX,
 } from './board-limits.js';
@@ -32,19 +33,23 @@ export const BoardListQuerySchema = z.object({
 
 const trimmed = (max: number) => z.string().trim().min(1).max(max);
 
-/** T-11-146 운영자가 직접 쓴 다른 언어 제목·본문. 없는 언어는 한국어 원문을 보여 준다. */
-export const PostTextSchema = z.strictObject({
-  title: trimmed(POST_TITLE_MAX),
-  body: trimmed(POST_BODY_MAX),
-});
+const postText = (bodyMax: number) =>
+  z.strictObject({ title: trimmed(POST_TITLE_MAX), body: trimmed(bodyMax) });
+/** T-11-146 한국어 제목·본문(번역 초안 요청). */
+export const PostTextSchema = postText(POST_BODY_MAX);
+/** T-11-146 운영자가 직접 쓴 다른 언어 제목·본문. 없는 언어는 한국어 원문을 보여 준다. 본문 한도는 T-11-148. */
+const TranslatedTextSchema = postText(TRANSLATED_BODY_MAX);
 export const PostTranslationsSchema = z.strictObject({
-  en: PostTextSchema.optional(),
-  ja: PostTextSchema.optional(),
+  en: TranslatedTextSchema.optional(),
+  ja: TranslatedTextSchema.optional(),
 });
 export type PostTranslations = z.infer<typeof PostTranslationsSchema>;
 /** T-11-146 관리자 "번역 초안 만들기" — 한국어 제목·본문을 보내면 영어·일본어 초안을 받는다(저장은 하지 않는다). */
 export const PostTranslateInputSchema = PostTextSchema;
-export const PostTranslateResponseSchema = z.object({ en: PostTextSchema, ja: PostTextSchema });
+export const PostTranslateResponseSchema = z.object({
+  en: TranslatedTextSchema,
+  ja: TranslatedTextSchema,
+});
 export type PostText = z.infer<typeof PostTextSchema>;
 export type PostTranslateResponse = z.infer<typeof PostTranslateResponseSchema>;
 

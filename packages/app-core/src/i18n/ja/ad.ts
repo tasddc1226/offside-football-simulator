@@ -17,7 +17,5 @@ export const ad: Translation<AdMsgs> = {
   noPurchase: 'このストアアカウントには広告削除の購入記録がありません。',
   restoreFail: '復元できませんでした。しばらくしてからもう一度お試しください。',
   rewardedUnavailable: '今は広告を読み込めません。しばらくしてからもう一度お試しください。',
-  rewardedDailyCap: (p: { n: number }) =>
-    `今日の広告視聴${p.n}回をすべて使いました。明日また利用できます。`,
   rewardedWatch: '広告を最後まで見ると評価を見られます。',
 };
