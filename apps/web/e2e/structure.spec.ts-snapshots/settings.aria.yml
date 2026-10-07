@@ -23,6 +23,7 @@
                 - /url: /guide/
             - link "자주 묻는 질문":
                 - /url: /faq/
+            - button "확률과 공정성"
     - region "서비스 정책":
         - text: Legal
         - heading "서비스 정책" [level=2]

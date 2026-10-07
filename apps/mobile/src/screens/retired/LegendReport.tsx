@@ -6,6 +6,8 @@ import { retiredTitleOf } from '@offside/app-core/retiredTitle';
 // (credit.tsx Reveal). 점수 구성·시즌별 표는 맨 아래 '자세히 보기'에 접어 둔다.
 import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { retirementPotentialNote } from '@offside/app-core/potential-view';
+import { potentialFlowLines, potentialSeedLines } from '@offside/app-core/potential-flow';
+import { gamePotentialText as P } from '@offside/app-core/i18n/ko/gamePotential';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Animated,
@@ -443,6 +445,23 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                   {v.peak}
                 </FText>
               </View>
+              {v.flow ? (
+                <View testID="legend-flow" style={{ marginTop: 10, alignItems: 'center', gap: 2 }}>
+                  <FText bold size={0.875}>
+                    {P.flowTitle}
+                  </FText>
+                  {potentialFlowLines(v.flow, v.pot).map((line) => (
+                    <FText key={line} size={0.875} center>
+                      {line}
+                    </FText>
+                  ))}
+                  {potentialSeedLines(v.flow).map((line) => (
+                    <FText key={line} tone="muted" size={0.75} center>
+                      {line}
+                    </FText>
+                  ))}
+                </View>
+              ) : null}
             </View>
           </Reveal>
         ) : null}

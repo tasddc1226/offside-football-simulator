@@ -2,6 +2,7 @@
 // 화면·탭·진행 중 커리어·생성 초안 등 클라이언트 상태의 모양과 처음 값. 반응성은 클라이언트가 붙인다 —
 // 웹은 Svelte `$state`로 감싸고(ui/state.svelte.ts), 앱은 자기 스토어로 감싼다. 게임 진행 액션
 // (game-actions.ts)은 넘겨받은 객체를 그대로 고친다.
+import type { PotentialFlow } from './potential-view.js';
 import { personName } from '@offside/game/i18n/names';
 import { BODY_DEFAULT, type Body } from '@offside/contracts/body';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
@@ -162,6 +163,8 @@ export interface LegendView {
   title: string | null;
   /** 은퇴 시점의 기록된 잠재력(반올림한 truePot). 값이 없는 옛 기록에는 표시하지 않는다. */
   pot?: { real: string; value: number } | undefined;
+  /** T-11-141 이 기기에서 은퇴한 커리어만: 잠재력이 바뀐 과정과 시드·밸런스 버전. */
+  flow?: PotentialFlow | undefined;
   /** T-10-076 영구결번 심사 결과. null = 자격 없음, undefined = 아직 모름(업로드 전·옛 기록). */
   rn?: RetiredNumberResult | null | undefined;
   /** Server-verified public retirement honor, even when the selected title differs. */

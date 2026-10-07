@@ -7,6 +7,7 @@ import { View } from 'react-native';
 import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
 import { saveKey } from '@offside/game/storage';
 import { SiteFooter } from '../../components/SiteFooter';
+import { goFairness } from '../../game/nav';
 import { openWeb } from '../../platform/openWeb';
 import { appBuildInfo } from '../../platform/updates';
 import { prefs } from '../../store';
@@ -24,19 +25,20 @@ import { LOCALE_NAMES, LOCALES, type Locale } from '@offside/app-core/i18n/core'
 import { useSnapshot } from 'valtio';
 import { saveLocale } from '../../platform/locale';
 
-/** 정책·가이드는 웹 페이지를 앱 안 브라우저로 연다. */
-function LinkList({ label, items }: { label: string; items: { text: string; path: string }[] }) {
+/** 정책·가이드는 웹 페이지를 앱 안 브라우저로 연다. id·onPress 항목은 앱 안 화면으로 간다. */
+type LinkItem = { text: string; path: string } | { text: string; id: string; onPress: () => void };
+function LinkList({ label, items }: { label: string; items: LinkItem[] }) {
   const c = useColors();
   return (
     <Card gap={0} style={{ padding: 0 }}>
       <View accessibilityLabel={label}>
         {items.map((it, i) => (
           <Press
-            key={it.path}
+            key={'id' in it ? it.id : it.path}
             scale={0.985}
             accessibilityRole="link"
-            testID={`link-${it.path.replaceAll('/', '')}`}
-            onPress={() => openWeb(it.path)}
+            testID={`link-${'id' in it ? it.id : it.path.replaceAll('/', '')}`}
+            onPress={() => ('id' in it ? it.onPress() : openWeb(it.path))}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -184,6 +186,7 @@ export default function Settings() {
           items={[
             { text: L.guide, path: '/guide/' },
             { text: L.faq, path: '/faq/' },
+            { text: L.fairness, id: 'fairness', onPress: goFairness },
           ]}
         />
       </Group>
