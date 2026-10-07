@@ -46,13 +46,14 @@ export const CUPS: readonly CupDef[] = [
   },
 ];
 
-export const cupById = (id: string) => CUPS.find((c) => c.id === id);
+export const cupById = (id: string, cups: readonly CupDef[] = CUPS) =>
+  cups.find((c) => c.id === id);
 
 /** 지금 보여 줄 대회: 진행 중이거나 다가오는 것, 없으면 가장 최근에 끝난 것. */
-export function currentCup(now: string): CupDef | undefined {
+export function currentCup(now: string, cups: readonly CupDef[] = CUPS): CupDef | undefined {
   const t = Date.parse(now);
-  const live = CUPS.filter((c) => Date.parse(c.rounds.at(-1)!) + 86400_000 > t);
-  return live.sort((a, b) => Date.parse(a.opensAt) - Date.parse(b.opensAt))[0] ?? CUPS.at(-1);
+  const live = cups.filter((c) => Date.parse(c.rounds.at(-1)!) + 86400_000 > t);
+  return live.sort((a, b) => Date.parse(a.opensAt) - Date.parse(b.opensAt))[0] ?? cups.at(-1);
 }
 
 export const roundAt = (cup: CupDef, round: CupRound) => cup.rounds[CUP_ROUNDS.indexOf(round)]!;

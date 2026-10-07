@@ -42,6 +42,7 @@ import {
   type CupMatchRow,
   type CupStateRow,
 } from '../team/cup.js';
+import { cupSchedule } from '../team/cupSchedule.js';
 import { lineupsOf, toMatch } from '../team/match.js';
 import { filledCount } from '../team/sim.js';
 import { requireOwner } from './ownerTeam.js';
@@ -148,7 +149,12 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
 
 const cupOf = (c: Context<AppEnv>) => {
   const id = c.req.param('cupId');
-  const cup = id === 'current' ? currentCup(nowIso()) : id ? cupById(id) : undefined;
+  const cup =
+    id === 'current'
+      ? currentCup(nowIso(), cupSchedule())
+      : id
+        ? cupById(id, cupSchedule())
+        : undefined;
   if (!cup) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
   return cup;
 };
@@ -386,7 +392,7 @@ async function activeCups(db: Db, profileId: string, season: number) {
   const rows = await activeEntriesOf(db, profileId);
   const out: { cup: CupDef; entry: CupEntryRow; matches: CupMatchRow[] }[] = [];
   for (const entry of rows) {
-    const cup = cupById(entry.cupId);
+    const cup = cupById(entry.cupId, cupSchedule());
     if (!cup || cup.season !== season) continue;
     out.push({ cup, entry, matches: await cupMatchesOf(db, cup.id) });
   }

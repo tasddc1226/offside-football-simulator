@@ -3,7 +3,7 @@ import {
   CUP_KO_ROUNDS,
   CUP_REWARDS,
   CUP_ROUNDS,
-  CUPS,
+  cupById,
   cupGroupCount,
   firstKoRound,
   lockAt,
@@ -18,6 +18,7 @@ import { newId } from '../db/ids.js';
 import { cupEntries, cupMatches, cupState, ownerTeams, profiles } from '../db/schema.js';
 import { type OwnerTeamRow } from '../db/repos/ownerTeams.js';
 import { cupKo, cupTitle } from '../cupText.js';
+import { cupSchedule } from './cupSchedule.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { lineupsOf, matchDetailOf } from './match.js';
 import { penaltyShootout, simulateMatch } from './sim.js';
@@ -403,7 +404,7 @@ export async function advanceRound(
 }
 
 /** cron 한 번: 대회마다 추첨 → 시각이 된 경기 → 끝난 라운드 정리. */
-export async function runCup(db: Db, now: string, cups: readonly CupDef[] = CUPS) {
+export async function runCup(db: Db, now: string, cups: readonly CupDef[] = cupSchedule()) {
   const log: Record<string, unknown>[] = [];
   for (const cup of cups) {
     if (now < cup.drawAt) continue;
@@ -472,7 +473,7 @@ export async function cupHonorsOf(db: Db, profileId: string) {
     .from(cupEntries)
     .where(and(eq(cupEntries.profileId, profileId), isNotNull(cupEntries.rewardedAt)));
   return rows
-    .map((e) => ({ e, cup: CUPS.find((c) => c.id === e.cupId) }))
+    .map((e) => ({ e, cup: cupById(e.cupId, cupSchedule()) }))
     .filter((x): x is { e: CupEntryRow; cup: CupDef } => !!x.cup && !!x.e.stage)
     .sort((a, b) => b.cup.opensAt.localeCompare(a.cup.opensAt))
     .map(({ e, cup }) => ({

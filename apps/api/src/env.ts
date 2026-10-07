@@ -17,6 +17,8 @@ export type Bindings = {
   DB: D1Database;
   /** local|staging|production. */
   ENVIRONMENT: string;
+  /** T-11-145 운영이 아닌 곳에서만 쓰는 컵 일정 덮어쓰기(CupDef[] JSON). team/cupSchedule.ts. */
+  CUP_SCHEDULE?: string;
   /** 쉼표 구분 origin 목록. */
   ALLOWED_ORIGINS: string;
   /** D-21. U-003 전에는 비어 있을 수 있다 — 그러면 /auth/google/start가 503을 낸다. */

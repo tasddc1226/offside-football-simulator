@@ -6,6 +6,7 @@ import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 import { checkCupLineup } from '../routes/cup.js';
 import { cupText } from '../cupText.js';
+import { cupSchedule, loadCupSchedule } from './cupSchedule.js';
 import {
   cupEntriesOf,
   cupHonorsOf,
@@ -105,6 +106,16 @@ describe('T-11-145 컵 규칙', () => {
       '우리 FCはグループ3です。初戦は今夜9時です。',
     );
     expect(cupText('다른 문장', 'en')).toBeUndefined();
+  });
+
+  it('일정 덮어쓰기는 운영에서는 듣지 않는다', () => {
+    const fake = JSON.stringify([{ ...CUP, id: 's1-8' }]);
+    loadCupSchedule({ ENVIRONMENT: 'production', CUP_SCHEDULE: fake });
+    expect(cupSchedule()).toBe(CUPS);
+    loadCupSchedule({ ENVIRONMENT: 'staging', CUP_SCHEDULE: fake });
+    expect(cupSchedule()[0]!.id).toBe('s1-8');
+    loadCupSchedule({ ENVIRONMENT: 'staging' });
+    expect(cupSchedule()).toBe(CUPS);
   });
 
   it('승부차기는 늘 승자가 있고 시드가 같으면 같다', () => {
