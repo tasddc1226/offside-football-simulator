@@ -51,7 +51,8 @@ import { cupKo } from '../cupText.js';
 
 // T-11-145 오프사이드 컵(조회·신청·취소)과 구단주 아이템(선수 후보 리롤권).
 
-const PUBLIC_CACHE = 'public, max-age=30';
+// 브라우저는 매번 다시 묻고(신청 직후 인원이 바로 보이게) 공유 캐시만 30초 둔다.
+const PUBLIC_CACHE = 'public, max-age=0, s-maxage=30';
 
 function phaseOf(
   cup: CupDef,
@@ -241,7 +242,11 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
               createdAt: mine.createdAt,
             }
           : null,
-        eligibility: { ok: el.ok && !mine, reason: el.reason, filled: el.filled },
+        eligibility: {
+          ok: el.ok && (!mine || mine.status === 'withdrawn'),
+          reason: el.reason,
+          filled: el.filled,
+        },
         next: next ? toCupMatch(next) : null,
         locked: mine?.status === 'active' ? lineupLocked(matches, mine.teamId, now) : false,
         rerolls,
@@ -287,7 +292,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       .bind(cup.id, t.id, me.id, t.name, t.manager, t.ovr, now, now, cup.id, cup.capacity)
       .run();
     if (!res.meta.changes) throw conflictError(cupKo('full'), 'CUP_FULL');
-    return c.body(null, 201);
+    return c.body(null, 204);
   });
 
   // 신청 취소(접수 기간만).

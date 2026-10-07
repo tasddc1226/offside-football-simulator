@@ -87,14 +87,17 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
   it('선발 8명 이상이면 신청·취소·다시 신청할 수 있다', async () => {
     const a = await owner(8);
     expect((await me(a.cookie)).eligibility).toMatchObject({ ok: true, filled: 8 });
-    expect((await enter(a.cookie)).status).toBe(201);
+    expect((await enter(a.cookie)).status).toBe(204);
     // 두 번 눌러도 한 번만 들어간다.
     expect((await enter(a.cookie)).status).toBe(204);
     expect((await me(a.cookie)).entry).toMatchObject({ status: 'active' });
     const del = await call('DELETE', `/v1/cups/${CUP.id}/entries/me`, { cookie: a.cookie });
     expect(del.status).toBe(204);
-    expect((await me(a.cookie)).entry).toMatchObject({ status: 'withdrawn' });
-    expect((await enter(a.cookie)).status).toBe(201);
+    expect(await me(a.cookie)).toMatchObject({
+      entry: { status: 'withdrawn' },
+      eligibility: { ok: true },
+    });
+    expect((await enter(a.cookie)).status).toBe(204);
     expect(await ctx.db.select().from(cupEntries)).toHaveLength(1);
   });
 
@@ -149,7 +152,7 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
 
   it('참가 중에는 선발을 8명 밑으로 줄이거나 선발 선수를 내놓을 수 없다', async () => {
     const a = await owner(8);
-    expect((await enter(a.cookie)).status).toBe(201);
+    expect((await enter(a.cookie)).status).toBe(204);
     const fewer = await a.put([...a.ids.slice(0, 7), ...Array(4).fill(null)]);
     expect(fewer.status).toBe(409);
     expect(await reason(fewer)).toBe('CUP_MIN_FILLED');
