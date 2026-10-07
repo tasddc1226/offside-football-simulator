@@ -9,11 +9,13 @@
   import { dexSeen } from '@offside/app-core/dex';
   import { dexText as L } from '@offside/app-core/i18n/ko/dex';
   import { appState } from './state.svelte.js';
-  import { goHome } from './nav.js';
+  import { goHome, takeFairnessFocus } from './nav.js';
+  import Fairness from './Fairness.svelte';
   import BackBar from './BackBar.svelte';
   import Topbar from './Topbar.svelte';
 
   const RULES = dexRules();
+  const focusFair = takeFairnessFocus();
 
   let dex = $state<DexEntry[] | null>(null);
   let filter = $state<DexGroup | 'all'>('all');
@@ -42,6 +44,8 @@
         {L.intro}
       </p>
     </div>
+
+    <Fairness open={focusFair} />
 
     <details class="dex-rules" open>
       <summary><b>{L.rulesTitle}</b></summary>

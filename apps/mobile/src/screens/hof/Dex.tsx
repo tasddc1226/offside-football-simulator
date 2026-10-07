@@ -7,7 +7,7 @@ import { DEX_GROUPS, eventDex, type DexEntry, type DexGroup } from '@offside/gam
 import { dexRules, oddsText } from '@offside/app-core/dexText';
 import { dexSeen } from '@offside/app-core/dex';
 import { dexText as L } from '@offside/app-core/i18n/ko/dex';
-import { goHome } from '../../game/nav';
+import { goHome, takeFairnessFocus } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
@@ -20,6 +20,8 @@ import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
 import { AutoGrid, TabOpt } from '../board/parts';
 import { tn } from '@offside/game/i18n/names';
+import { Fairness } from './Fairness';
+import { Fold, Terms } from './Fold';
 
 /** 이벤트 한 칸 — 눌러서 선택지별 확률을 펼친다(웹 <details>). */
 function DexItem({
@@ -142,6 +144,7 @@ function DexItem({
 
 export default function Dex() {
   const RULES = useMemo(() => dexRules(), []);
+  const [focusFair] = useState(takeFairnessFocus);
   const [dex, setDex] = useState<DexEntry[] | null>(null);
   const [filter, setFilter] = useState<DexGroup | 'all'>('all');
   const [rulesOpen, setRulesOpen] = useState(true);
@@ -175,41 +178,16 @@ export default function Dex() {
           </Txt>
         </View>
 
-        <View testID="dex-rules">
-          <Press
-            accessibilityState={{ expanded: rulesOpen }}
-            onPress={() => setRulesOpen((v) => !v)}
-            scale={0.99}
-            style={{ minHeight: 32, justifyContent: 'center' }}
-          >
-            <Txt bold>
-              <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                {rulesOpen ? '▾ ' : '▸ '}
-              </Txt>
-              {L.rulesTitle}
-            </Txt>
-          </Press>
-          {rulesOpen ? (
-            <View style={{ marginTop: 8, gap: 4 }}>
-              {RULES.map(([term, desc]) => (
-                <View key={term} style={{ gap: 4 }}>
-                  <Txt
-                    bold
-                    style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5, marginTop: 6 }}
-                  >
-                    {term}
-                  </Txt>
-                  <Txt
-                    tone="muted"
-                    style={{ fontSize: rem(0.8125), lineHeight: rem(0.8125) * 1.5 }}
-                  >
-                    {desc}
-                  </Txt>
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </View>
+        <Fairness initialOpen={focusFair} />
+
+        <Fold
+          title={L.rulesTitle}
+          open={rulesOpen}
+          onToggle={() => setRulesOpen((v) => !v)}
+          testID="dex-rules"
+        >
+          <Terms list={RULES} />
+        </Fold>
 
         {!dex ? (
           <Txt tone="muted" accessibilityLiveRegion="polite">

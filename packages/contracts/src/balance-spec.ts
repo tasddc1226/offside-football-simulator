@@ -26,6 +26,8 @@ export interface BalanceKnob {
   max: number;
   /** 입력 칸 증감 단위. */
   step: number;
+  /** T-11-141 공개 이력의 표시 단위: 확률(%)·배율(×). 없으면 숫자 그대로. */
+  unit?: 'pct' | 'x';
 }
 
 /** T-11-093 프리시즌에 만든 선수의 잠재력 추첨(평균·편차). 서버 설정과 상관없이 고정이라 예전과 같은 선수가 나온다. */
@@ -40,6 +42,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 1,
     step: 0.01,
+    unit: 'pct',
   },
   eventRateSeason: {
     group: 'event',
@@ -49,6 +52,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 1,
     step: 0.01,
+    unit: 'pct',
   },
   eventTwist: {
     group: 'event',
@@ -58,6 +62,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 1,
     step: 0.01,
+    unit: 'pct',
   },
   growthScale: {
     group: 'growth',
@@ -67,6 +72,7 @@ export const BALANCE_SPEC = {
     min: 0.5,
     max: 1.5,
     step: 0.01,
+    unit: 'x',
   },
   investGain: {
     group: 'growth',
@@ -76,6 +82,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 1,
     step: 0.05,
+    unit: 'pct',
   },
   investCost: {
     group: 'growth',
@@ -85,6 +92,7 @@ export const BALANCE_SPEC = {
     min: 0.25,
     max: 4,
     step: 0.05,
+    unit: 'x',
   },
   potMean: {
     group: 'growth',
@@ -121,6 +129,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 0.05,
     step: 0.001,
+    unit: 'pct',
   },
   bigInjuryShare: {
     group: 'growth',
@@ -130,6 +139,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 0.5,
     step: 0.01,
+    unit: 'pct',
   },
   mlsYoungPull: {
     group: 'transfer',
@@ -166,6 +176,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 1,
     step: 0.01,
+    unit: 'pct',
   },
   olympicQual: {
     group: 'national',
@@ -175,6 +186,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 1,
     step: 0.01,
+    unit: 'pct',
   },
   agRelease: {
     group: 'national',
@@ -184,6 +196,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 1,
     step: 0.01,
+    unit: 'pct',
   },
   olyRelease: {
     group: 'national',
@@ -193,6 +206,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 1,
     step: 0.01,
+    unit: 'pct',
   },
   sangmuBase: {
     group: 'military',
@@ -202,6 +216,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 1,
     step: 0.01,
+    unit: 'pct',
   },
   marketReleaseRate: {
     group: 'market',
@@ -211,6 +226,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 2,
     step: 0.05,
+    unit: 'pct',
   },
   marketFeeRate: {
     group: 'market',
@@ -220,6 +236,7 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 0.5,
     step: 0.01,
+    unit: 'pct',
   },
   marketPriceMin: {
     group: 'market',
@@ -229,6 +246,7 @@ export const BALANCE_SPEC = {
     min: 0.1,
     max: 1,
     step: 0.05,
+    unit: 'x',
   },
   marketPriceMax: {
     group: 'market',
@@ -238,6 +256,7 @@ export const BALANCE_SPEC = {
     min: 1,
     max: 10,
     step: 0.1,
+    unit: 'x',
   },
   marketListLimit: {
     group: 'market',

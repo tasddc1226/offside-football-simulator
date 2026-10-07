@@ -718,6 +718,11 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     detail: legendSnapshot(s),
     profile: s.peakProfile ?? peakProfileOf(s, s.peak - ovr(s)),
     pot: Math.round(truePot(s)),
+    potFlow: {
+      ...(s.origin && { origin: s.origin }),
+      boost: s.flags.potBonus ?? 0,
+      bal: s.bal?.v ?? 0,
+    },
     public: isPublic,
   };
   // T-10-107 같은 커리어가 다시 은퇴하면(탭 두 개로 같은 저장 등) 이전 기록을 바꾼다 — 겹치면 '내 선수' 목록이 깨진다.

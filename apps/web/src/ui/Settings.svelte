@@ -11,6 +11,7 @@
   import { setSheetSkin, skin } from './skin.svelte.js';
   import SiteFooter from './SiteFooter.svelte';
   import { showInstallGuide } from './install.js';
+  import { goFairness } from './nav.js';
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
   import BackupSettings from './BackupSettings.svelte';
@@ -126,6 +127,7 @@
       <button data-act="install-guide" onclick={() => showInstallGuide()}>{L.installGuide} <span aria-hidden="true">›</span></button>
       <a href="/guide/">{L.guide} <span aria-hidden="true">›</span></a>
       <a href="/faq/">{L.faq} <span aria-hidden="true">›</span></a>
+      <button data-act="fairness" onclick={goFairness}>{L.fairness} <span aria-hidden="true">›</span></button>
     </nav>
   </section>
 

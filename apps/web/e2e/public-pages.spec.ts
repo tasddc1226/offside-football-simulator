@@ -5,6 +5,7 @@ import { test, expect } from '@playwright/test';
 const pages: Array<{ path: string; heading: RegExp }> = [
   { path: '/guide/', heading: /가이드/ },
   { path: '/faq/', heading: /자주 묻는 질문/ },
+  { path: '/fairness/', heading: /확률과 공정성/ },
   { path: '/legal/terms/', heading: /이용약관/ },
   { path: '/legal/privacy/', heading: /개인정보/ },
 ];

@@ -9,6 +9,7 @@ import { saveKey } from '@offside/game/storage';
 import type { GameState } from '@offside/game/types';
 import { createLegends } from './legend.js';
 import { initialAppState } from './state.js';
+import { potentialFlowLines, potentialSeedLines } from './potential-flow.js';
 import { retirementPotential, visibleCareerLog, visibleSeasonNotes } from './potential-view.js';
 import { scoutHint } from './scoutHint.js';
 
@@ -73,6 +74,30 @@ describe('은퇴 잠재력 표시', () => {
     );
     expect(s).toEqual(before);
     expect(getActiveRng().getState()).toEqual(rng);
+  });
+
+  it('T-11-141 은퇴 뒤에만 잠재력이 바뀐 과정과 시드를 보여 준다(옛 세이브는 시작 값 없이)', () => {
+    const { legends, s } = setup();
+    expect(legends.viewFromGame(s).flow).toBeUndefined();
+    s.pot = 80;
+    s.bloom = 1;
+    s.flags.potBonus = 2;
+    s.origin = { seed: 1234, pot: 77 };
+    retire(s);
+    const v = legends.viewFromGame(s);
+    expect(v.flow).toEqual({
+      start: { grade: 'C', value: 77 },
+      drift: 4,
+      boost: 2,
+      seed: 1234,
+      bal: 0,
+    });
+    expect(potentialFlowLines(v.flow!, v.pot!)).toHaveLength(4);
+    expect(potentialSeedLines(v.flow!)[0]).toContain('1234');
+    delete s.origin;
+    const old = legends.viewFromGame(s).flow!;
+    expect(old).toEqual({ boost: 2, bal: 0 });
+    expect(potentialFlowLines(old, v.pot!)).toHaveLength(2);
   });
 
   it('진행 중 세이브에서는 공개하지 않고, 없는 옛 은퇴 값은 최고 OVR로 추정하지 않는다', () => {
