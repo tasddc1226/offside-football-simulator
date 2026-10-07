@@ -20,6 +20,7 @@ export const legend: Translation<LegendMsgs> = {
   statAssists: 'Assists',
   statCaps: 'Caps',
   statTrophies: 'Trophies',
+  statBallon: "Ballon d'Or wins",
   noDetailNote:
     'This is an older record without season-by-season detail, so only a summary is shown.',
   scrollCue: 'Scroll to look back on your career',

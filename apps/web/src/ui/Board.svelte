@@ -12,13 +12,19 @@
     POST_TITLE_MAX,
     POST_VERSION_MAX,
     BOARD_KEYS,
+    TRANSLATED_BODY_MAX,
   } from '@offside/contracts/board-limits';
   import * as api from '@offside/app-core/api/boards';
   import type { BoardBlock, BoardViewerResponse, Comment, Post, PostSummary } from '@offside/app-core/api/boards';
+  import type { PostDetailResponse } from '@offside/contracts';
+  import { POST_LANGS, draftOf, inputOf, postLangLabel, withDraftTranslations, type PostDraft } from '@offside/app-core/boardEditor';
   import { appState } from './state.svelte.js';
   import { openBoard } from './nav.js';
   import { startGoogleLogin } from './login.js';
   import { toast } from './helpers.js';
+  import { createTranslations } from './translations.svelte.js';
+  import { canTranslate } from '@offside/app-core/userTranslate';
+  import { getLocale } from '@offside/contracts/i18n';
   import { doneOnEnter } from './inputDone.js';
   import { screenIn } from './motion.js';
   import { uaSwiped } from './history.svelte.js';
@@ -41,17 +47,20 @@
   let posts = $state<PostSummary[]>([]);
   let hasMore = $state(false);
   let status = $state<LoadStatus>('loading');
-  let detail = $state<{ post: Post; comments: Comment[]; liked: boolean; blocks: BoardBlock[] } | null>(null);
+  let detail = $state<{ post: Post; comments: Comment[]; liked: boolean; blocks: BoardBlock[]; source?: PostDetailResponse['source'] } | null>(null);
   /** 신고·차단 패널을 펼친 댓글. */
   let reporting = $state<string | null>(null);
   let liking = $state(false);
   /** 관리자 편집기. id가 없으면 새 글. */
-  let editing = $state<{ id?: string; title: string; body: string; version: string; pinned: boolean } | null>(null);
+  let editing = $state<PostDraft | null>(null);
+  let translating = $state(false);
   /** 홈 등에서 글을 바로 열며 들어온 동안 — 목록을 그리지 않는다(목록이 비쳤다 글로 한 번 더 넘어가지 않게). */
   let entering = $state(!!appState.boardOpenId);
   const view = $derived(editing ? 'edit' : (detail?.post.id ?? (entering ? appState.boardOpenId : null) ?? 'list'));
   let commentText = $state('');
   let busy = $state(false);
+  /** T-11-146 댓글 번역 보기. */
+  const tr = createTranslations();
 
   onMount(() => {
     void api.fetchBoardViewer().then((r) => (viewer = r.ok ? r.data : { admin: false, google: false, nickname: null }));
@@ -142,15 +151,26 @@
   });
 
   function startEdit(post?: Post) {
-    editing = post
-      ? { id: post.id, title: post.title, body: post.body, version: post.version ?? '', pinned: post.pinned }
-      : { title: '', body: '', version: '', pinned: false };
+    editing = draftOf(post, detail?.source);
     window.scrollTo(0, 0);
+  }
+  async function draftTranslations() {
+    if (!editing || translating) return;
+    const e = editing;
+    translating = true;
+    const r = await withDraftTranslations(e);
+    translating = false;
+    if ('error' in r) return toast(r.error);
+    e.en = r.draft.en;
+    e.ja = r.draft.ja;
+    toast(L.translateDone);
   }
   async function savePost() {
     if (!editing || busy) return;
     const e = editing;
-    const input = { title: e.title, body: e.body, pinned: e.pinned, ...(e.version.trim() ? { version: e.version } : {}) };
+    const draft = inputOf(e);
+    if ('incomplete' in draft) return toast(L.translationIncomplete({ lang: postLangLabel(draft.incomplete) }));
+    const input = draft.input;
     busy = true;
     const r = e.id ? await api.updatePost(e.id, input) : await api.createPost(board, input);
     busy = false;
@@ -264,6 +284,21 @@
             <textarea id="post-body" rows="12" maxlength={POST_BODY_MAX} required bind:value={editing.body}></textarea>
             <span class="muted fs-xs">{L.bodyHint}</span>
           </div>
+          <details class="stack board-i18n" style="gap:10px" open={!!(editing.en.title || editing.ja.title)}>
+            <summary>{L.translationsTitle}</summary>
+            <span class="muted fs-xs">{L.translationsHint}</span>
+            <button class="icon-btn" type="button" data-act="draft-translations" disabled={translating} onclick={() => void draftTranslations()}>{translating ? L.translating : L.translateDraft}</button>
+            {#each POST_LANGS as lang (lang)}
+              <div class="field">
+                <label for="post-title-{lang}">{postLangLabel(lang)} · {L.titleLabel}</label>
+                <input id="post-title-{lang}" type="text" lang={lang} maxlength={POST_TITLE_MAX} enterkeyhint="done" use:doneOnEnter bind:value={editing[lang].title} />
+              </div>
+              <div class="field">
+                <label for="post-body-{lang}">{postLangLabel(lang)} · {L.bodyLabel}</label>
+                <textarea id="post-body-{lang}" lang={lang} rows="8" maxlength={TRANSLATED_BODY_MAX} bind:value={editing[lang].body}></textarea>
+              </div>
+            {/each}
+          </details>
           <label class="row" style="gap:8px;align-items:center"><input type="checkbox" bind:checked={editing.pinned} /> {L.pin}</label>
           <div class="row" style="gap:8px">
             <button class="btn btn-accent" type="submit" data-act="save-post" disabled={busy}>{editing.id ? L.save : L.publish}</button>
@@ -309,7 +344,10 @@
                 {#if c.deletable}<button class="icon-btn board-comment-del" onclick={() => removeComment(c)}>{L.remove}</button>
                 {:else if !c.admin}<button class="icon-btn board-comment-del" aria-expanded={reporting === c.id} data-act="comment-report" onclick={() => (reporting = reporting === c.id ? null : c.id)}>{L.report}</button>{/if}
               </div>
-              <p>{c.body}</p>
+              <p lang={tr.translated(c.id) ? getLocale() : undefined}>{tr.text(c.id, c.body)}</p>
+              {#if canTranslate(c.body)}
+                <button class="translate-btn" data-act="translate" disabled={tr.busy(c.id)} onclick={() => void tr.toggle(c.id, c.body)}>{tr.label(c.id)}</button>
+              {/if}
               {#if reporting === c.id}
                 <div class="report-panel stack" style="gap:8px" data-report-panel>
                   <span class="fs-sm">{L.reportPrompt}</span>

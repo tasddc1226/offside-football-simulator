@@ -14,8 +14,9 @@ import { openBoard } from '../game/nav';
 import { PUSH_TEST_COOLDOWN_MS } from '@offside/contracts/push-limits';
 import { DAY_MS, kstDay } from '@offside/contracts/kst';
 import { pushText as L } from '@offside/app-core/i18n/ko/push';
-import { NotificationIdSchema } from '@offside/contracts';
-import { openInbox, inbox } from './inbox';
+import { NotificationIdSchema, NotificationTargetSchema } from '@offside/contracts';
+import { openInbox, openInboxTarget, inbox } from './inbox';
+import { refreshFriendPending } from './friendPending';
 import { trackPushInteraction, flushPushInteractions } from './pushTracking';
 
 const DEVICE_KEY = 'offside_push_installation';
@@ -146,9 +147,17 @@ function openNotification(response: Notifications.NotificationResponse) {
     (data.type === 'offside-news' || data.type === 'offside-notification') &&
     NotificationIdSchema.safeParse(data.notificationId).success
   ) {
+    const id = data.notificationId as string;
     inbox.invalidate();
-    void trackPushInteraction(data.notificationId as string, 'click');
-    openInbox(data.notificationId as string);
+    void trackPushInteraction(id, 'click');
+    // T-11-142 친구 알림은 알림함을 거치지 않고 친구 목록으로 바로 연다(읽음 처리도 함께). 옛 서버의 푸시엔 kind가 없다.
+    const target = NotificationTargetSchema.safeParse(data.target);
+    if (data.kind === 'social' && target.success) {
+      void inbox.read(id);
+      openInboxTarget(target.data, data.kind, id);
+      return;
+    }
+    openInbox(id);
     return;
   }
   if (
@@ -191,8 +200,10 @@ export function startPush() {
       data &&
       (data.type === 'offside-news' || data.type === 'offside-notification') &&
       NotificationIdSchema.safeParse(data.notificationId).success
-    )
+    ) {
       inbox.invalidate();
+      if (data.kind === 'social') refreshFriendPending(true);
+    }
   });
   Notifications.addPushTokenListener((token) => {
     if ((token.type !== 'ios' && token.type !== 'android') || typeof token.data !== 'string')

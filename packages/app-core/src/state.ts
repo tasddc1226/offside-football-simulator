@@ -5,7 +5,8 @@
 import type { PotentialFlow } from './potential-view.js';
 import { personName } from '@offside/game/i18n/names';
 import { BODY_DEFAULT, type Body } from '@offside/contracts/body';
-import { DEFAULT_NATION } from '@offside/contracts/nations';
+import { nationFromLocales } from '@offside/contracts/nations';
+import { deviceLocales } from './i18n/core.js';
 import type { HofSort, RetiredNumberResult, TeamRankSort } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
 import { activeSeason, retireAtNow } from '@offside/contracts/service-seasons';
@@ -153,6 +154,7 @@ export interface LegendView {
     trophies: number;
     awards: number;
     caps: number;
+    ballon: number;
   };
   own: HofEntry | null;
   /** T-10-069 공유 링크를 걸 커리어 id — 내 선수(이 기기·계정 기록) 중 명예의 전당에 오른 기록만. 아래 공유 바(ShareBar)를 띄운다. */
@@ -205,7 +207,13 @@ export interface AppState {
   achNew: number;
   /** T-11-128 끝난 시즌 결산이 나왔는데 이 기기에서 아직 안 열어 봤는가 — 하단 '구단주' 탭의 점(recapUnseen). */
   recapNew: boolean;
+  /** T-11-142 받은 친구 신청 수 — 하단 '구단주'·내 팀 '경기' 탭·'친구' 버튼의 점(friendPending). */
+  friendReq: number;
 }
+
+/** 기기·브라우저 언어 태그(웹 navigator.languages, 앱은 Intl). 읽을 수 없으면 빈 목록. */
+/** 선수 생성 국적 기본값 — 접속한 기기의 언어 지역을 따른다(T-11-140, ja-JP → 일본). */
+const deviceNation = () => nationFromLocales(deviceLocales());
 
 /** 앱을 열 때의 상태. */
 export const initialAppState = (): AppState => ({
@@ -222,7 +230,7 @@ export const initialAppState = (): AppState => ({
     foot: '오른발',
     focus: defaultFocus('FW'),
     trait: 'late',
-    nation: DEFAULT_NATION,
+    nation: deviceNation(),
     height: null,
     weight: null,
   },
@@ -241,4 +249,5 @@ export const initialAppState = (): AppState => ({
   report: null,
   achNew: 0,
   recapNew: false,
+  friendReq: 0,
 });

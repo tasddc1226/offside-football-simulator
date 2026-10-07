@@ -23,6 +23,7 @@ const ko = {
   statAssists: '도움',
   statCaps: 'A매치',
   statTrophies: '트로피',
+  statBallon: '발롱도르 수상',
   noDetailNote: '시즌별 상세 기록이 없는 예전 기록이라 요약만 보여 줘요.',
   scrollCue: '스크롤해서 커리어 돌아보기',
   // 구단별 커리어

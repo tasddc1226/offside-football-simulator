@@ -1,0 +1,40 @@
+import type { Translation } from '../core';
+import type { BackupMsgs } from '../ko/backup';
+
+export const backup: Translation<BackupMsgs> = {
+  title: '進行中のキャリアのバックアップ',
+  bodyWeb:
+    '端末を変えるときや、アプリ内ブラウザから移るときに使ってください。バックアップコードはほかの人に送らないでください。',
+  bodyApp: '端末を変えるときに使ってください。バックアップコードはほかの人に送らないでください。',
+  copyCode: 'コードをコピー',
+  saveFile: 'ファイルに保存',
+  shareFile: '共有で書き出す',
+  manualLabel: 'バックアップコード（手動でコピー）',
+  importLabel: 'バックアップを読み込む',
+  pastePlaceholder: 'ここにバックアップコードを貼り付けます',
+  importBtn: '読み込む',
+  pickFile: 'ファイルから読み込む',
+  pasteClipboard: 'クリップボードから貼り付け',
+  pasteHint: 'バックアップコードか、書き出したバックアップの文章を貼り付けてください。',
+  shareTitle: 'OFFSIDE キャリアのバックアップ',
+  copied: 'バックアップコードをコピーしました',
+  copyManual: '下のコードを長押ししてコピーしてください',
+  fileSaved: 'バックアップファイルを保存しました',
+  shareFail: '共有できませんでした。コードをコピーしてください',
+  replaceConfirm: (p) =>
+    `進行中の${p.name}選手のキャリアをバックアップに置き換えますか？元に戻せません。`,
+  replaceOk: '置き換える',
+  cancel: 'キャンセル',
+  noSpace: '保存容量が足りず、バックアップを読み込めませんでした。今のキャリアはそのままです',
+  restored: 'バックアップを読み込みました',
+  fileReadFail: 'ファイルを読み込めませんでした',
+  clipEmpty: 'クリップボードが空です',
+  clipFail: 'クリップボードを読み込めませんでした',
+  failEmptyWeb: 'バックアップコードを貼り付けるか、バックアップファイルを選んでください',
+  failEmptyApp: 'バックアップコードか、書き出したバックアップの文章を貼り付けてください',
+  failFormat: 'バックアップコードが正しくありません。コードを最後までコピーしたか確認してください',
+  failVersion: 'このバックアップは今のゲームと形式が合わないため、読み込めません',
+  failSaveVersion: 'このバックアップは今のゲームのバージョンと合わないため、読み込めません',
+  failSave: 'バックアップ内のキャリアデータが正しくないため、読み込めません',
+  failTooLarge: 'バックアップコードが大きすぎて読み込めません',
+};

@@ -5,6 +5,7 @@
   import TabIcon from '../TabIcon.svelte';
   import NavIntro from '../NavIntro.svelte';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+  import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 
   let { navOn, onswitch }: { navOn: TeamView; onswitch: (v: TeamView) => void } = $props();
 
@@ -23,6 +24,7 @@
       <button role="tab" data-team-tab={k} aria-selected={navOn === k} style:--i={i < 2 ? i : i + 1} onclick={() => onswitch(k)}>
         <TabIcon name={icon} />{l}
         {#if k === 'achievements' && appState.achNew}<span class="tab-dot"><span class="sr-only">{L.navNewAch({ n: appState.achNew })}</span></span>{/if}
+        {#if k === 'opponents' && appState.friendReq}<span class="tab-dot" data-friend-dot><span class="sr-only">{S.friendReq({ n: appState.friendReq })}</span></span>{/if}
       </button>
     {/each}
   </div>

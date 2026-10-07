@@ -5,8 +5,9 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const root = new URL('../../packages/', import.meta.url);
-const HEAD =
-  '// 영어 사전 묶음 — 파일 이름 = ns() 이름 = export 이름 = 여기 키. 영어 사용자에게만 불러온다(웹은 지연 청크).\n' +
+const NAME = { en: '영어', ja: '일본어' };
+const head = (lang) =>
+  `// ${NAME[lang]} 사전 묶음 — 파일 이름 = ns() 이름 = export 이름 = 여기 키. ${NAME[lang]} 사용자에게만 불러온다(웹은 지연 청크).\n` +
   '// 직접 고치지 않는다: node tooling/scripts/i18n-index.mjs\n';
 
 function namesIn(pkg) {
@@ -16,37 +17,44 @@ function namesIn(pkg) {
     .sort();
 }
 
-function render(pkg, { imports = [], spread = [], extra = [] }) {
+function render(lang, pkg, { imports = [], spread = [], extra = [] }) {
   const names = namesIn(pkg);
   const lines = [...imports, ...names.map((n) => `import { ${n} } from './${n}';`)];
   const keys = [...spread.map((x) => `...${x}`), ...extra, ...names];
-  return `${HEAD}${lines.join('\n')}\n\nexport const en = {\n${keys.map((k) => `  ${k},`).join('\n')}\n};\n`;
+  return `${head(lang)}${lines.join('\n')}\n\nexport const ${lang} = {\n${keys.map((k) => `  ${k},`).join('\n')}\n};\n`;
 }
 
-const targets = {
-  game: render('game', {
-    imports: [
-      `import { events } from './_events';`,
-      `import { names } from './_names';`,
-      `import { roman } from './_roman';`,
+// T-11-140 일본어 묶음도 같은 모양으로 만든다(ja/<이름>.ts, export ja).
+const targets = Object.fromEntries(
+  ['en', 'ja'].flatMap((lang) => [
+    [
+      `game/src/i18n/${lang}/index.ts`,
+      render(lang, 'game', {
+        imports: [
+          `import { events } from './_events';`,
+          `import { names } from './_names';`,
+          `import { roman } from './_roman';`,
+        ],
+        extra: ['__events: events', '__names: names', '__roman: roman'],
+      }),
     ],
-    extra: ['__events: events', '__names: names', '__roman: roman'],
-  }),
-  'app-core': render('app-core', {
-    imports: [`import { en as gameEngine } from '@offside/game/i18n/en/index';`],
-    spread: ['gameEngine'],
-  }),
-};
+    [
+      `app-core/src/i18n/${lang}/index.ts`,
+      render(lang, 'app-core', {
+        imports: [`import { ${lang} as gameEngine } from '@offside/game/i18n/${lang}/index';`],
+        spread: ['gameEngine'],
+      }),
+    ],
+  ]),
+);
 
 const check = process.argv.includes('--check');
 let stale = false;
-for (const [pkg, out] of Object.entries(targets)) {
-  const target = new URL(`${pkg}/src/i18n/en/index.ts`, root);
+for (const [file, out] of Object.entries(targets)) {
+  const target = new URL(file, root);
   if (!check) writeFileSync(target, out);
   else if (readFileSync(target, 'utf8') !== out) {
-    console.error(
-      `packages/${pkg}/src/i18n/en/index.ts is stale — run: node tooling/scripts/i18n-index.mjs`,
-    );
+    console.error(`packages/${file} is stale — run: node tooling/scripts/i18n-index.mjs`);
     stale = true;
   }
 }

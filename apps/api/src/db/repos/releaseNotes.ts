@@ -1,42 +1,94 @@
-import type { PublishReleaseNotes, ReleaseNote } from '@offside/contracts';
-import { POST_BODY_MAX } from '@offside/contracts/board-limits';
+import type { PostTranslations, PublishReleaseNotes, ReleaseNote } from '@offside/contracts';
+import { POST_BODY_MAX, TRANSLATED_BODY_MAX } from '@offside/contracts/board-limits';
 import { conflictError } from '../../routes/shared.js';
 import { sha256Hex } from '../hash.js';
 import { newsPushStatements } from '../../push/enqueue.js';
+import type { Lang } from '../../lang.js';
+import { LOCALES, TRANSLATED_LOCALES } from '@offside/contracts/i18n';
+import { parseI18n } from './boards.js';
 
 const keyOf = (id: string) => `release-note:${id}`;
-type DailyPost = { id: string; body: string; updated_at: string; deleted_at: string | null };
+type DailyPost = {
+  id: string;
+  body: string;
+  i18n_json: string | null;
+  updated_at: string;
+  deleted_at: string | null;
+};
+// 끝인사는 언어를 가리지 않는다 — 번역이 없던 글은 한국어 본문에 영어·일본어 항목을 붙인다.
+const THANKS = /(?:^|\n)(?:감사합니다|Thank you|ありがとうございます)[.!。！]?\s*$/;
+
+// T-11-146 날짜 글의 제목·적용 범위 문구·끝인사. 한국어 제목은 오늘 글을 찾는 키라 바꾸지 않는다.
+const TEXT: Record<
+  Lang,
+  {
+    title: (yymmdd: string) => string;
+    web: string;
+    app: string;
+    pending: (v: string) => string;
+  }
+> = {
+  ko: {
+    title: (d) => `${d} 릴리즈노트`,
+    web: '웹에 적용했어요',
+    app: '앱에 적용했어요',
+    pending: (v) => `웹에 먼저 적용했어요. 앱은 ${v} 업데이트로 제공할 예정이에요`,
+  },
+  en: {
+    title: (d) => `${d} Release notes`,
+    web: 'Available on the web',
+    app: 'Available in the app',
+    pending: (v) => `Available on the web first. The app gets it in the ${v} update`,
+  },
+  ja: {
+    title: (d) => `${d} リリースノート`,
+    web: 'Web版に適用しました',
+    app: 'アプリに適用しました',
+    pending: (v) => `Web版に先に適用しました。アプリは${v}のアップデートで提供する予定です`,
+  },
+};
 
 export function releaseDay(now: string) {
   const shifted = new Date(new Date(now).getTime() + 9 * 3600_000);
   const day = shifted.toISOString().slice(0, 10);
   const start = new Date(`${day}T00:00:00+09:00`).toISOString();
+  const yymmdd = day.slice(2).replaceAll('-', '');
   return {
     day,
-    title: `${day.slice(2).replaceAll('-', '')} 릴리즈노트`,
+    title: TEXT.ko.title(yymmdd),
+    titles: Object.fromEntries(LOCALES.map((l) => [l, TEXT[l].title(yymmdd)])) as Record<
+      Lang,
+      string
+    >,
     start,
     end: new Date(new Date(start).getTime() + 86400_000).toISOString(),
   };
 }
 
-/** 직접 쓴 본문은 그대로 두고, 마지막 감사 인사 바로 앞에 새 항목만 붙인다. */
-export function appendReleaseNotes(body: string, entries: ReleaseNote[]): string {
+/** 직접 쓴 본문은 그대로 두고, 마지막 감사 인사 바로 앞에 새 항목만 붙인다. 번역이 없는 항목은 한국어로 붙인다. */
+export function appendReleaseNotes(
+  body: string,
+  entries: ReleaseNote[],
+  lang: Lang = 'ko',
+): string {
+  const t = TEXT[lang];
   const numbers = [...body.matchAll(/^#{1,3}\s+(\d+)\.\s/gm)].map((m) => Number(m[1]));
   let number = Math.max(0, ...numbers);
   const added = entries
     .map((entry) => {
+      const { title, items } = (lang !== 'ko' && entry[lang]) || entry;
       const availability =
         entry.availability === 'web-app-pending'
-          ? `\n- 웹에 먼저 적용했어요. 앱은 ${entry.appVersion} 업데이트로 제공할 예정이에요`
+          ? `\n- ${t.pending(entry.appVersion!)}`
           : entry.availability === 'web'
-            ? '\n- 웹에 적용했어요'
+            ? `\n- ${t.web}`
             : entry.availability === 'app'
-              ? '\n- 앱에 적용했어요'
+              ? `\n- ${t.app}`
               : '';
-      return `## ${++number}. ${entry.title}\n${entry.items.map((s) => `- ${s}`).join('\n')}${availability}`;
+      return `## ${++number}. ${title}\n${items.map((s) => `- ${s}`).join('\n')}${availability}`;
     })
     .join('\n\n');
-  const thanks = /(?:^|\n)감사합니다[.!]?\s*$/.exec(body);
+  const thanks = THANKS.exec(body);
   const split = thanks?.index ?? body.length;
   return `${body.slice(0, split).trimEnd()}\n\n${added}${thanks ? body.slice(split) : ''}`;
 }
@@ -84,7 +136,7 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
   // board,created_at 인덱스를 쓰는 하루 범위 조회. 삭제된 오늘 글은 자동으로 다시 만들지 않는다.
   const post = await db
     .prepare(
-      `SELECT id, body, updated_at, deleted_at FROM board_posts
+      `SELECT id, body, i18n_json, updated_at, deleted_at FROM board_posts
      WHERE board = 'release' AND created_at >= ? AND created_at < ? AND title = ?
      ORDER BY created_at DESC LIMIT 1`,
     )
@@ -96,8 +148,23 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
       'RELEASE_POST_DELETED',
     );
   const body = appendReleaseNotes(post?.body ?? date.title, pending);
-  if (body.length > POST_BODY_MAX)
+  // 번역이 없던 오늘 글(이 기능 전에 만든 글)은 한국어 본문에 이어 붙인다.
+  const before = parseI18n(post?.i18n_json ?? null);
+  const translated = TRANSLATED_LOCALES.map((lang) => {
+    const prev = before[lang];
+    const base = prev?.body ?? (post ? post.body : date.titles[lang]);
+    return [
+      lang,
+      { title: prev?.title ?? date.titles[lang], body: appendReleaseNotes(base, pending, lang) },
+    ] as const;
+  });
+  const i18n: PostTranslations = Object.fromEntries(translated);
+  if (
+    body.length > POST_BODY_MAX ||
+    translated.some(([, t]) => t.body.length > TRANSLATED_BODY_MAX)
+  )
     throw conflictError('오늘 릴리즈 노트의 글자 수 한도를 넘었어요.', 'RELEASE_POST_FULL');
+  const i18nJson = JSON.stringify(i18n);
   const postId = post?.id ?? `pst_release_${date.day.replaceAll('-', '')}`;
   const publishedIds = pending.map((e) => e.id);
   if (input.dryRun) return { postId, publishedIds, updated: false, preview: body };
@@ -112,17 +179,25 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
   const write = post
     ? db
         .prepare(
-          `UPDATE board_posts SET body = ?, updated_at = ?
+          `UPDATE board_posts SET body = ?, i18n_json = ?, updated_at = ?
         WHERE id = ? AND body = ? AND updated_at = ? AND deleted_at IS NULL AND ${unclaimed}`,
         )
-        .bind(body, updated, postId, post.body, post.updated_at, JSON.stringify(pendingKeys))
+        .bind(
+          body,
+          i18nJson,
+          updated,
+          postId,
+          post.body,
+          post.updated_at,
+          JSON.stringify(pendingKeys),
+        )
     : db
         .prepare(
           `INSERT OR IGNORE INTO board_posts
-        (id, board, title, body, author_profile_id, created_at, updated_at)
-        SELECT ?, 'release', ?, ?, 'release-automation', ?, ? WHERE ${unclaimed}`,
+        (id, board, title, body, i18n_json, author_profile_id, created_at, updated_at)
+        SELECT ?, 'release', ?, ?, ?, 'release-automation', ?, ? WHERE ${unclaimed}`,
         )
-        .bind(postId, date.title, body, now, updated, JSON.stringify(pendingKeys));
+        .bind(postId, date.title, body, i18nJson, now, updated, JSON.stringify(pendingKeys));
   // changes()는 같은 batch의 직전 DML 변경 수. CAS가 실패하면 이력도 no-op이다.
   // JSON 한 바인딩으로 모든 이력을 쓰므로 D1의 바인딩 100개 제한과 요청 수를 지킨다.
   // 이력 충돌 등 어떤 문장이라도 실패하면 본문까지 모두 롤백한다.

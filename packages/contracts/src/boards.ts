@@ -6,6 +6,7 @@ import {
   COMMENT_REPORT_REASONS,
   NAME_REPORT_KINDS,
   POST_BODY_MAX,
+  TRANSLATED_BODY_MAX,
   POST_TITLE_MAX,
   POST_VERSION_MAX,
 } from './board-limits.js';
@@ -31,12 +32,34 @@ export const BoardListQuerySchema = z.object({
 
 const trimmed = (max: number) => z.string().trim().min(1).max(max);
 
+const postText = (bodyMax: number) =>
+  z.strictObject({ title: trimmed(POST_TITLE_MAX), body: trimmed(bodyMax) });
+/** T-11-146 한국어 제목·본문(번역 초안 요청). */
+export const PostTextSchema = postText(POST_BODY_MAX);
+/** T-11-146 운영자가 직접 쓴 다른 언어 제목·본문. 없는 언어는 한국어 원문을 보여 준다. 본문 한도는 T-11-148. */
+const TranslatedTextSchema = postText(TRANSLATED_BODY_MAX);
+export const PostTranslationsSchema = z.strictObject({
+  en: TranslatedTextSchema.optional(),
+  ja: TranslatedTextSchema.optional(),
+});
+export type PostTranslations = z.infer<typeof PostTranslationsSchema>;
+/** T-11-146 관리자 "번역 초안 만들기" — 한국어 제목·본문을 보내면 영어·일본어 초안을 받는다(저장은 하지 않는다). */
+export const PostTranslateInputSchema = PostTextSchema;
+export const PostTranslateResponseSchema = z.object({
+  en: TranslatedTextSchema,
+  ja: TranslatedTextSchema,
+});
+export type PostText = z.infer<typeof PostTextSchema>;
+export type PostTranslateResponse = z.infer<typeof PostTranslateResponseSchema>;
+
 export const PostInputSchema = z.strictObject({
   title: trimmed(POST_TITLE_MAX),
   body: trimmed(POST_BODY_MAX),
   /** 릴리즈 노트의 버전 표기(예: v1.4.0). */
   version: z.string().trim().max(POST_VERSION_MAX).optional(),
   pinned: z.boolean().default(false),
+  /** T-11-146 번역. 보내지 않으면(옛 운영 도구) 저장된 번역을 그대로 둔다. `{}`는 번역을 지운다. */
+  i18n: PostTranslationsSchema.optional(),
 });
 export type PostInput = z.input<typeof PostInputSchema>;
 
@@ -111,6 +134,11 @@ export const PostDetailResponseSchema = z.object({
   liked: z.boolean().default(false),
   /** 보는 프로필이 차단한 작성자들(댓글 아래에서 풀 수 있다). */
   blocks: z.array(BoardBlockSchema).default([]),
+  /** T-11-146 관리자에게만: 고칠 때 쓰는 한국어 원문과 번역(post의 제목·본문은 요청 언어로 옮긴 것이다). */
+  source: z
+    .object({ title: z.string(), body: z.string(), i18n: PostTranslationsSchema })
+    .nullable()
+    .default(null),
 });
 export type PostDetailResponse = z.infer<typeof PostDetailResponseSchema>;
 

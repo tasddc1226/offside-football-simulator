@@ -36,11 +36,21 @@ type Row = {
   token: string;
   title: string;
   body: string;
+  kind: string;
+  target_json: string;
   ticket_id: string | null;
   attempts: number;
   expires_at: string;
   eligible: number;
 };
+/** 알림 원본의 이동 대상. 읽을 수 없으면 null(앱은 알림함을 연다). */
+function targetOf(json: string): unknown {
+  try {
+    return JSON.parse(json) as unknown;
+  } catch {
+    return null;
+  }
+}
 type Outcome = {
   state: 'pending' | 'accepted' | 'confirmed' | 'unknown' | 'failed' | 'cancelled';
   due: number;
@@ -96,7 +106,7 @@ async function claim(db: D1Database, checking: boolean, now: number, lease: stri
     .run();
   const rows = await db
     .prepare(
-      `SELECT q.*, n.title, n.body,
+      `SELECT q.*, n.title, n.body, n.kind, n.target_json,
     CASE WHEN d.token = q.token AND d.session_id = q.session_id AND d.profile_id = q.profile_id
       AND d.updated_at >= ? AND s.channel = 'app' AND s.profile_id = q.profile_id
       AND s.revoked_at IS NULL AND s.expires_at > ? AND p.deleted_at IS NULL AND p.id IS NOT NULL
@@ -141,7 +151,13 @@ async function send(
         channelId: 'news',
         sound: 'default',
         ttl: 3600,
-        data: { type: 'offside-notification', notificationId: r.notification_id },
+        // T-11-142 kind·target이 있으면 새 앱은 알림함을 거치지 않고 그 화면으로 바로 연다(옛 앱은 무시하고 알림함을 연다).
+        data: {
+          type: 'offside-notification',
+          notificationId: r.notification_id,
+          kind: r.kind,
+          target: targetOf(r.target_json),
+        },
       })),
       transport,
     );

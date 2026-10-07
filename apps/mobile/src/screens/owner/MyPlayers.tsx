@@ -18,7 +18,7 @@ import {
   serverSeasonOf,
 } from '@offside/app-core/mySeason';
 import { pendingRetirementIds } from '@offside/app-core/outbox';
-import { anonName } from '@offside/app-core/format';
+import { playerName } from '@offside/app-core/format';
 import { fillGranted, openLocalLegend, openPublicLegend } from '../../game/host';
 import { HofRow, type RowStats } from '../../components/HofRow';
 import { rem } from '../../theme/type';
@@ -67,7 +67,7 @@ const localRow = (h: HofEntry, i: number, pending: ReadonlySet<string>, now: str
 const serverRow = (e: PublicHofEntry): MineRow => ({
   nation: myPlayerNation(undefined, e),
   key: e.id,
-  name: e.name ?? anonName(e.pos, e.number),
+  name: playerName(e.name, e.pos, e.number),
   pos: e.pos,
   dpos: e.dpos,
   club: e.lastClub,

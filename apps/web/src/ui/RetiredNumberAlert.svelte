@@ -9,6 +9,7 @@
   import RnFrame from './RnFrame.svelte';
   import { dur } from './motion.js';
   import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
+  import { personName } from '@offside/game/i18n/names';
 
   const SHOW_MS = 9_000;
   const item = $derived(rnAlert.item);
@@ -41,7 +42,7 @@
     >
       <RnFrame class="rn-alert-frame" clubId={item.clubId} number={item.number} />
       <span class="news-text">
-        <b>{L.alertTitle({ name: item.name, number: item.number })}</b>
+        <b>{L.alertTitle({ name: personName(item.name), number: item.number })}</b>
         <small>{L.alertSub({ club: defaultClubName(item.clubId) ?? item.club, seq: item.seq })}</small>
       </span>
       <button class="btn btn-accent btn-sm" data-act="rn-alert-open" onclick={open}>{L.alertOpen}</button>

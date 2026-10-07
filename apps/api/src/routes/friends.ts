@@ -1,4 +1,5 @@
 import {
+  FriendPendingResponseSchema,
   FriendRemoveResponseSchema,
   FriendRequestBodySchema,
   FriendRequestResponseSchema,
@@ -41,6 +42,7 @@ import {
   listFriendRows,
   listRecentFriendlies,
   ownerByCode,
+  receivedCountOf,
   recordFriendlyStatements,
   requestStatements,
   teamsOfOwners,
@@ -60,7 +62,7 @@ import { profiles } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
-import { requireProfile } from '../middleware/requireProfile.js';
+import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { lineupsOf, matchDetailOf, matchViews, playedMatch } from '../team/match.js';
 import { filledCount, simulateMatch } from '../team/sim.js';
 import { reqLang, type Lang } from '../lang.js';
@@ -99,6 +101,8 @@ type PersonInput = {
   row: Pick<FriendRow, 'wins' | 'draws' | 'losses'> | undefined;
 };
 
+const OWNER_NAME: Record<Lang, string> = { ko: '구단주', en: 'Owner', ja: 'オーナー' };
+
 /**
  * 친구 줄들에 지금 시즌 팀 · 프리시즌 팀(개막 뒤 친선전용, T-11-113) · 창단 멤버 여부와 표시 이름(닉네임 → 최근 감독 이름 →
  * '구단주')을 붙인다. profileId → 사람. 쿼리 2~4번.
@@ -133,7 +137,7 @@ async function peopleOf(
         p.profileId,
         {
           code: p.code,
-          name: p.nickname ?? managers.get(p.profileId) ?? (lang === 'en' ? 'Owner' : '구단주'),
+          name: p.nickname ?? managers.get(p.profileId) ?? OWNER_NAME[lang],
           team: t ? teamSummary(t) : null,
           h2h: h2hOf(p.row),
           ...(legacy ? { preseasonTeam: lt ? teamSummary(lt) : null } : {}),
@@ -216,6 +220,13 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       200,
       NO_STORE,
     );
+  });
+
+  // T-11-142 받은 신청 수(하단 메뉴 점). 구단주 화면을 연 적 있는 기기가 시작·복귀할 때(메모 5분) 부른다. 신청 줄은
+  // 구단주에게만 생기니 계정 확인 없이 센다(세션 + 쿼리 한 번).
+  app.get('/v1/friends/pending', requireProfile, async (c) => {
+    const [row] = await receivedCountOf(getDb(c), getSessionOrThrow(c).profileId);
+    return ok(c, FriendPendingResponseSchema, { received: Number(row?.n ?? 0) }, 200, NO_STORE);
   });
 
   // 친구 신청(친구 코드 또는 팀 프로필의 팀). 상대가 이미 나에게 신청했으면 곧바로 친구가 된다. 이미 신청했거나 친구면 그대로

@@ -1,7 +1,9 @@
+import { PUSH_JA, PUSH_TAIL_JA } from '../i18n/ja/push.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 서버가 만든 알림 문구. 푸시는 보낼 때 기기의 언어를 알 수 없어(기기 등록에 언어가 없다) 한국어로 보내고,
-// 알림함은 읽을 때 요청 언어로 바꿔 보여 준다. 공지·릴리즈 노트의 본문(글 제목)은 운영자가 쓴 글이라 옮기지 않는다.
+// 알림함은 읽을 때 요청 언어로 바꿔 보여 준다. 공지·릴리즈 노트의 본문(글 제목)은 보낼 때의 한국어 제목이다 — 운영자가 쓴
+// 번역(T-11-146 board_posts.i18n_json)은 게시판에서만 고른다.
 const EN: Record<string, string> = {
   '오프사이드 공지': 'OFFSIDE notice',
   '오프사이드 릴리즈 노트': 'OFFSIDE release notes',
@@ -24,19 +26,32 @@ const EN: Record<string, string> = {
   '내 팀에 새 경기 결과가 있어요': 'Your team has a new match result',
 };
 
-/** 팀 이름이 끼는 경기 결과 본문(`원정 0 : 0 홈. …`). 팀 이름은 구단주가 지은 이름이라 그대로 둔다. */
-const PATTERNS: [RegExp, string][] = [
-  [/^(.+)\. 친구 목록에서 경기 결과를 확인해 주세요\.$/, 'Check the result in your friend list.'],
-  [/^(.+)\. 최근 경기에서 결과를 확인해 주세요\.$/, 'Check the result in Recent matches.'],
+/** 팀 이름이 끼는 경기 결과 본문(`원정 0 : 0 홈. …`). 팀 이름은 구단주가 지은 이름이라 그대로 둔다. 끝 문장은 TABLES의 tails 순서. */
+const PATTERNS = [
+  /^(.+)\. 친구 목록에서 경기 결과를 확인해 주세요\.$/,
+  /^(.+)\. 최근 경기에서 결과를 확인해 주세요\.$/,
 ];
 
+const TABLES: Record<
+  Exclude<Lang, 'ko'>,
+  { exact: Record<string, string>; tails: readonly string[]; sep: string }
+> = {
+  en: {
+    exact: EN,
+    tails: ['Check the result in your friend list.', 'Check the result in Recent matches.'],
+    sep: '. ',
+  },
+  ja: { exact: PUSH_JA, tails: PUSH_TAIL_JA, sep: '。' },
+};
+
 export function pushText(ko: string, lang: Lang): string {
-  if (lang !== 'en') return ko;
-  const hit = EN[ko];
+  if (lang === 'ko') return ko;
+  const T = TABLES[lang];
+  const hit = T.exact[ko];
   if (hit) return hit;
-  for (const [re, tail] of PATTERNS) {
+  for (const [i, re] of PATTERNS.entries()) {
     const m = re.exec(ko);
-    if (m) return `${m[1]}. ${tail}`;
+    if (m) return `${m[1]}${T.sep}${T.tails[i]}`;
   }
   return ko;
 }
@@ -46,4 +61,4 @@ export const localizeNotification = <T extends { title: string; body: string }>(
   n: T,
   lang: Lang,
 ): T =>
-  lang === 'en' ? { ...n, title: pushText(n.title, lang), body: pushText(n.body, lang) } : n;
+  lang === 'ko' ? n : { ...n, title: pushText(n.title, lang), body: pushText(n.body, lang) };

@@ -1,0 +1,32 @@
+import type { Translation } from '@offside/contracts/i18n';
+import type { GStatsMsgs } from '../ko/gStats';
+
+export const gStats: Translation<GStatsMsgs> = {
+  potAch0: '生まれ持った限界を超えました。',
+  potAch1: '才能を最後まで引き出しました。',
+  potAch2: '少しだけ余力を残して去りました。',
+  potAch3: '咲ききらなかった才能でした。',
+  rescoutLate: '遅咲きの才能という評価です。',
+  rescoutEarly: '成長曲線が予想より早く頭打ちになったという評価です。',
+  rescoutNarrow: '評価の幅が絞られました。',
+  rescoutLog: (p) => `スカウト再評価：ポテンシャル ${p.before} → ${p.after}ランク。${p.note}`,
+  rescoutNote: (p) => `スカウト再評価 · ポテンシャル ${p.before} → ${p.after}`,
+  chipCond: 'コンディション',
+  chipMorale: '士気',
+  chipFame: '人気',
+  chipTrust: '監督の信頼',
+  chipMoney: '資金',
+  chipInjury: 'ケガ',
+  chipOut: (p) => `${p.n}試合欠場`,
+  chipPot: 'ポテンシャル',
+  chipPotUp: '上昇',
+  twistSafe: (p) => `安全策の代償 · ${p.why}`,
+  twistUp: (p) => `思わぬ収穫 · ${p.label} +${p.d}`,
+  twistDown: (p) => `予想外の余波 · ${p.label} ${p.d}`,
+  costMoraleLabel: '士気',
+  costMoraleWhy: '挑戦しなかった心残り',
+  costTrustLabel: '監督の信頼',
+  costTrustWhy: '監督の生ぬるい評価',
+  costFameLabel: '名声',
+  costFameWhy: '「無難だった」という評価',
+};

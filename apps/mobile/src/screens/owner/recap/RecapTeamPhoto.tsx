@@ -7,7 +7,7 @@ import Svg, { Circle, Defs, Pattern, Rect } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import type { RecapSquadMember } from '@offside/contracts';
 import { primeAvatarSpec } from '@offside/game/avatar';
-import { anonName } from '@offside/app-core/format';
+import { playerName } from '@offside/app-core/format';
 import { PHOTO_MAX, photoRows } from '@offside/app-core/seasonRecap';
 import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
 import { PixelAvatar } from '../../../ui/PixelAvatar';
@@ -15,7 +15,7 @@ import { Txt } from '../../../ui';
 import { prefs } from '../../../store';
 import { DISPLAY, rem } from '../../../theme/type';
 
-const nameOf = (m: RecapSquadMember) => m.card.publicName ?? anonName(m.card.pos, m.card.number);
+const nameOf = (m: RecapSquadMember) => playerName(m.card.publicName, m.card.pos, m.card.number);
 
 /** 경기장 바탕 — 위 42%는 관중석(점), 아래는 줄무늬 잔디. 테마와 상관없이 같은 사진. */
 function Stadium() {

@@ -1,0 +1,64 @@
+import type { Translation } from '../core';
+import type { SettingsMsgs } from '../ko/settings';
+
+export const settings: Translation<SettingsMsgs> = {
+  title: '設定',
+  darkTitle: 'ダークモード',
+  darkBodyWeb: '暗い画面に切り替えます。この端末に保存されます。',
+  darkBodyApp: '暗い画面で表示します。この端末に保存されます。',
+  langTitle: '言語',
+  langBody: 'ゲーム画面とイベントの言語を変えます。この端末に保存されます。',
+  sheetTitle: '仕事モード',
+  sheetBodyBefore: 'ゲーム画面をスプレッドシートに変えて音を消します。',
+  sheetBodyAfter:
+    '（数字の1の左のキー）でオン・オフします。PCブラウザ専用で、この端末に保存されます。',
+  sfxTitle: '効果音',
+  sfxBody: 'ボタンを押したときにクリック音を鳴らします。',
+  bgmTitle: 'BGM',
+  bgmBody:
+    '記録室・選手詳細では別の曲が流れます。画面上部のスピーカーボタンでもオン・オフできます。',
+  bgmVolume: 'BGMの音量',
+  bgmVolumeNote: 'この端末では、BGMの音量は端末の音量ボタンで調整します。',
+  musicCredit: '音楽:',
+  namePublicTitle: '選手名を公開',
+  namePublicBody:
+    'ホームのライブ状況・殿堂・サーバー初の実績に選手名が表示されます。オフにすると「匿名のフォワード」のように表示され、次のシーズンの記録から反映されます。実名は使わないことをおすすめします。',
+  analyticsTitle: 'アプリ利用分析への同意（任意）',
+  analyticsBody:
+    '同意すると、Google Analyticsで画面の訪問とキャリアの開始・進行・引退、端末・アプリのバージョン・セッション情報を分析します。選手名・アカウント情報・セーブファイルは送信しません。いつでもオフにでき、同意前の活動は送信しません。',
+  help: 'ヘルプ',
+  installGuide: 'ホーム画面に追加',
+  guide: 'ゲームガイド',
+  fairness: '確率と公正さ',
+  faq: 'よくある質問',
+  legal: 'サービスポリシー',
+  terms: '利用規約',
+  privacy: 'プライバシーポリシー',
+  tapToChange: 'タップして変更',
+  close: '閉じる',
+  consentAria: '任意の利用分析',
+  consentTitle: 'ゲーム改善のための利用分析',
+  consentOptional: '（任意）',
+  consentBody1:
+    '同意すると、Google Analyticsが訪問経路、画面の移動、キャリアの開始・シーズン完了・引退・シェアボタンの利用をCookieで分析します。名前とキャリアIDは送信しません。同意しなくても、ゲームは同じように遊べます。',
+  consentBody2:
+    '分析情報はGoogleの海外サーバーで処理され、ユーザー・イベントデータは2か月間保管されます。設定からいつでも変更できます。',
+  consentMore: '詳しく見る',
+  consentNow: '現在:',
+  consentGranted: '同意',
+  consentDenied: '同意しない',
+  consentUnset: '未選択',
+  consentRevoke: '分析への同意を撤回',
+  consentAgree: '分析に同意',
+  consentRevokeNote:
+    '撤回すると以降の収集は止まり、このブラウザの分析用Cookie・記録を削除します。すでに送信された情報は自動では削除されません。',
+  reviewTitle: 'ストアレビュー',
+  reviewBody: 'プレイして感じたことをストアに書いてください。',
+  reviewOpening: 'ストアを開いています…',
+  reviewBtn: 'ストアにレビューを書く',
+  reviewFail: 'ストアを開けませんでした。少し時間をおいてもう一度お試しください。',
+  appVersion: (p: { version: string; build: string }) =>
+    `アプリバージョン ${p.version} (${p.build})`,
+  updateId: (p: { id: string }) => `アップデート ${p.id}`,
+  updateEmbedded: 'アップデートなし（インストール時のまま）',
+};

@@ -2,6 +2,8 @@
 import { useEffect } from 'react';
 import { useSnapshot } from 'valtio';
 import { recapUnseen } from '@offside/app-core/api/seasonRecap';
+import { watchFriendPending } from '../platform/friendPending';
+import { ownerDotLabel } from '@offside/app-core/ownerDots';
 import type { Screen } from '@offside/app-core/state';
 import { appState } from '../store';
 import { go, goHome, openBoard, openHof } from '../game/nav';
@@ -39,13 +41,15 @@ const OPEN: Record<(typeof MAIN_SCREENS)[number], () => void> = {
 let recapChecked = false;
 
 export function MainNav() {
-  const { screen, achNew, recapNew } = useSnapshot(appState);
+  const { screen, achNew, recapNew, friendReq } = useSnapshot(appState);
+  const ownerDot = ownerDotLabel({ friendReq, achNew, recapNew });
   // T-11-128 새 시즌 결산(안 열어 본 결산이 있으면 구단주 탭에 점). 앱을 열 때 한 번.
   useEffect(() => {
     if (recapChecked) return;
     recapChecked = true;
     void recapUnseen().then((v) => (appState.recapNew = v));
   }, []);
+  useEffect(watchFriendPending, []);
   return (
     <TabBar
       label={L.navLabel}
@@ -55,7 +59,7 @@ export function MainNav() {
         active: screen === k,
         onPress: OPEN[k],
         ...(k === 'owner'
-          ? { dot: achNew || (recapNew ? 1 : 0), dotLabel: achNew ? undefined : L.recapNew }
+          ? { dot: ownerDot ? 1 : 0, ...(ownerDot ? { dotLabel: ownerDot } : {}) }
           : {}),
       }))}
     />

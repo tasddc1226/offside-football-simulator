@@ -31,6 +31,7 @@
   import { copyText } from '../inapp-open.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import { clearInvite, pendingInvite } from '../friendInvite.svelte.js';
+  import { appState } from '../state.svelte.js';
   import TeamLogo from './TeamLogo.svelte';
   import TeamMatchRow from './TeamMatchRow.svelte';
 
@@ -61,6 +62,8 @@
       return;
     }
     data = r.data;
+    // T-11-142 받은 신청 수(하단 메뉴 점)를 목록과 맞춘다 — 수락·거절 뒤 다시 받을 때도.
+    appState.friendReq = r.data.received.length;
     // 내 코드로 들어온 초대 링크는 쓸 일이 없다.
     if (invite && invite === r.data.code) {
       clearInvite();

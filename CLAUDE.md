@@ -134,24 +134,24 @@ pnpm --filter @offside/fulltime-sim analyze
 ## 화면 문구 규칙 (2026-10-02, T-11-043)
 
 문구를 쓰거나 고치거나 리뷰할 때는 [`docs/tracking/copy-style.md`](docs/tracking/copy-style.md)(정본)를 먼저 연다.
-핵심만: UI는 해요체, 문장을 ` — `로 잇지 않기, 미사여구·번역투 금지, 빈 화면에 "~해 보세요" 꼬리 금지,
+핵심만: UI는 해요체, 문장을 `—`로 잇지 않기, 미사여구·번역투 금지, 빈 화면에 "~해 보세요" 꼬리 금지,
 이벤트 결과는 장면으로 끝내기, 웹·앱 문구는 같이 고치기.
 엔딩 라벨(`stories.ts` endStory ↔ `titles.ts` STORY_ENDINGS)은 칭호 키이자 세이브 저장값이라 문구만 바꾸면 안 된다.
 
 ## 다국어 규칙 (2026-10-05, T-11-102·T-11-106)
 
-화면·게임·서버 문구는 한국어·영어 두 벌이다. 정본은 [`docs/operations/i18n.md`](docs/operations/i18n.md). 문구를 새로 쓰거나 고치면:
+화면·게임·서버 문구는 한국어·영어·일본어 세 벌이다(일본어는 T-11-140). 정본은 [`docs/operations/i18n.md`](docs/operations/i18n.md). 문구를 새로 쓰거나 고치면:
 
-- 코드에 한국어를 박지 않고 `i18n/ko/<ns>.ts`에 넣은 뒤 같은 PR에서 `i18n/en/<ns>.ts`도 쓴다(화면은 `packages/app-core/src/i18n`,
-  게임 엔진은 `packages/game/src/i18n`). 한국어 문구를 고치면 영어도 같이 고친다.
+- 코드에 한국어를 박지 않고 `i18n/ko/<ns>.ts`에 넣은 뒤 같은 PR에서 `i18n/en/<ns>.ts`·`i18n/ja/<ns>.ts`도 쓴다(화면은 `packages/app-core/src/i18n`,
+  게임 엔진은 `packages/game/src/i18n`). 한국어 문구를 고치면 영어·일본어도 같이 고친다.
 - **게이트:** `pnpm lint:i18n`이 사전 밖 소스의 한글 덩어리 수를 기준선(`tooling/i18n-baseline.json`)과 비교해 늘면 실패한다.
   줄었으면 `pnpm lint:i18n --update`로 기준선을 낮춰 같이 커밋한다. 저장값·식별자처럼 일부러 한국어로 두는 줄만 `i18n-ignore` 주석을 단다.
   기준선을 올리는 커밋은 리뷰에서 이유를 적는다.
 - 사전 키·종류가 두 언어에서 같은지, 영어에 한글이 없는지는 `i18n.test.ts`(app-core·game)가 본다. 새 네임스페이스 뒤에는
   `node tooling/scripts/i18n-index.mjs`로 영어 묶음을 다시 만든다.
 - 세이브·서버에 남는 이름(트로피·수상·구단·리그·대회·엔딩 등)은 한국어로 저장하고 그릴 때 `tn()`으로 옮긴다. 새 이름을 만들면
-  `packages/game/src/i18n/en/_names.ts`에 영어를 더한다. 언어가 게임 결과를 바꾸면 안 된다(같은 시드 한·영 비교 테스트).
-- 서버가 만드는 문장은 요청의 `lang=en`으로 영어를 돌려준다(`apps/api/src/lang.ts`). 운영 도구는 한국어로 둔다.
+  `packages/game/src/i18n/en/_names.ts`·`ja/_names.ts`에 영어·일본어를 더한다. 언어가 게임 결과를 바꾸면 안 된다(같은 시드 한·영 비교 테스트).
+- 서버가 만드는 문장은 요청의 `lang=en`·`lang=ja`로 영어·일본어를 돌려준다(`apps/api/src/lang.ts`). 운영 도구는 한국어로 둔다.
 
 ## 웹·앱 병행 규칙 (2026-10-04, T-11-084)
 

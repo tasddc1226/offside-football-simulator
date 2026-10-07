@@ -5,7 +5,6 @@ const f = vi.hoisted(() => ({
   consent: vi.fn(),
   create: vi.fn(),
   listeners: new Map(),
-  kv: new Map(),
 }));
 vi.mock('react-native', () => ({ Platform: { select: (units) => units[f.platform] } }));
 vi.mock('react-native-google-mobile-ads', () => ({
@@ -13,9 +12,6 @@ vi.mock('react-native-google-mobile-ads', () => ({
   RewardedAdEventType: { LOADED: 'loaded', EARNED_REWARD: 'earned' },
   TestIds: { REWARDED: 'test-rewarded' },
   RewardedAd: { createForAdRequest: f.create },
-}));
-vi.mock('./setup', () => ({
-  kv: { getString: (k) => f.kv.get(k), set: (k, v) => f.kv.set(k, v) },
 }));
 vi.mock('./adConsent', () => ({ askConsent: f.consent }));
 vi.mock('./adFree', () => ({
@@ -26,7 +22,7 @@ vi.mock('./adFree', () => ({
   },
 }));
 vi.mock('@offside/app-core/i18n/ko/ad', () => ({
-  adText: { rewardedUnavailable: 'unavailable', rewardedDailyCap: ({ n }) => `cap ${n}` },
+  adText: { rewardedUnavailable: 'unavailable' },
 }));
 let show;
 beforeEach(() => {
@@ -34,7 +30,6 @@ beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
   f.listeners.clear();
-  f.kv.clear();
   f.platform = 'ios';
   f.owned = false;
   f.consent.mockResolvedValue(true);
@@ -86,11 +81,11 @@ describe('candidate report rewarded placement', () => {
     expect(await result).toBe('skipped');
     expect(grant).not.toHaveBeenCalled();
   });
-  it.each(['closed', 'error'])('grants without an ad on %s before the ad opens', async (event) => {
+  it.each(['closed', 'error'])('reports unavailable on %s before the ad opens', async (event) => {
     const { grant, result } = await begin();
     f.listeners.get(event)();
-    expect(await result).toBe('');
-    expect(grant).toHaveBeenCalledOnce();
+    expect(await result).toBe('unavailable');
+    expect(grant).not.toHaveBeenCalled();
   });
   it('does not request an ad when consent is unavailable', async () => {
     f.consent.mockResolvedValue(false);
@@ -114,33 +109,16 @@ describe('candidate report rewarded placement', () => {
     await result;
   });
 });
-describe('boost daily cap', () => {
-  async function watchBoost(earn) {
-    const { grant, result } = await begin('boost');
-    f.listeners.get('loaded')();
-    f.listeners.get('opened')();
-    if (earn) f.listeners.get('earned')();
-    f.listeners.get('closed')();
-    return { grant, out: await result };
-  }
-  it('stops after 20 shown ads a day, counting skipped ones, and resets the next day', async () => {
-    for (let i = 0; i < 20; i++) await watchBoost(i % 2 === 0);
-    const { grant, result } = await begin('boost');
-    expect(await result).toBe('cap 20');
-    expect(f.create).toHaveBeenCalledTimes(20);
-    expect(grant).not.toHaveBeenCalled();
-    const [key] = f.kv.keys();
-    f.kv.set(key, 'Mon Jan 01 2001|20');
-    expect((await watchBoost(true)).out).toBe('');
-  });
-  it('counts rewards granted without an ad toward the cap', async () => {
-    for (let i = 0; i < 20; i++) {
-      const { result } = await begin('boost');
-      f.listeners.get('error')();
+describe('boost', () => {
+  it('has no daily limit', async () => {
+    for (let i = 0; i < 25; i++) {
+      const { grant, result } = await begin('boost');
+      f.listeners.get('loaded')();
+      f.listeners.get('opened')();
+      f.listeners.get('earned')();
+      f.listeners.get('closed')();
       expect(await result).toBe('');
+      expect(grant).toHaveBeenCalledOnce();
     }
-    const { grant, result } = await begin('boost');
-    expect(await result).toBe('cap 20');
-    expect(grant).not.toHaveBeenCalled();
   });
 });
