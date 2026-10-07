@@ -39,5 +39,9 @@ export const CUP_JA: Record<CupTextKey, string> = {
   group: 'グループステージ',
   championTitle: '{cup} 優勝！',
   outTitle: '{cup}が終わりました',
+  adminPast: '受付開始は現在より後にしてください。',
+  adminSeason: '大会全体が1つのシーズン内に収まる必要があります。',
+  adminOverlap: '第{edition}回大会の期間と重なっています。',
+  adminStarted: '受付が始まった大会は削除できません。',
   rewardBody: '最終成績 {stage}。選手候補リロール券を{n}枚受け取りました。',
 };

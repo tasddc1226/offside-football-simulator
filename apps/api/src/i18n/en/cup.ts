@@ -41,5 +41,9 @@ export const CUP_EN: Record<CupTextKey, string> = {
   group: 'Group stage',
   championTitle: '{cup}: Champions!',
   outTitle: '{cup}: your run is over',
+  adminPast: 'Entries must open in the future.',
+  adminSeason: 'The whole cup must fall within one season.',
+  adminOverlap: 'Overlaps with cup #{edition}.',
+  adminStarted: 'A cup that has opened for entries cannot be deleted.',
   rewardBody: 'Final result: {stage}. You received {n} player reroll ticket(s).',
 };

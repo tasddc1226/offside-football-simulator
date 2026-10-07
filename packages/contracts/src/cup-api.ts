@@ -151,10 +151,8 @@ export const AdminCupCreateSchema = z
     capacity: z.number().int().min(4).max(64).optional(),
     minFilled: z.number().int().min(1).max(11).optional(),
   })
-  .refine((v) => (v.matchHour ?? 21) - (v.drawHour ?? 12) >= 2, {
-    message: '추첨은 첫 경기 2시간 전보다 앞서야 해요.',
-    path: ['drawHour'],
-  });
+  // 추첨은 첫 경기 2시간 전보다 앞서야 한다.
+  .refine((v) => (v.matchHour ?? 21) - (v.drawHour ?? 12) >= 2, { path: ['drawHour'] });
 export type AdminCupCreate = z.infer<typeof AdminCupCreateSchema>;
 
 export const AdminCupStatusSchema = z.enum(['scheduled', 'entry', 'running', 'done']);

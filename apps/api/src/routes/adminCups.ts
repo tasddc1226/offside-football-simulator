@@ -4,6 +4,7 @@ import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import { and, eq, ne, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
+import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
 import { cupEntries, cupState, cups } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -45,12 +46,13 @@ export function registerAdminCupRoutes(app: Hono<AppEnv>): void {
     const all = await cupSchedule(db);
     const edition = Math.max(0, ...all.map((x) => x.edition)) + 1;
     const draft = planCup({ ...input, id: '', season: 0, edition });
-    if (draft.opensAt <= now) throw conflictError('접수 시작은 지금보다 뒤여야 해요.', 'CUP_PAST');
+    if (draft.opensAt <= now) throw conflictError(cupKo('adminPast'), 'CUP_PAST');
     const season = teamSeasonAt(draft.opensAt);
     if (season === null || teamSeasonAt(draft.rounds.at(-1)!) !== season)
-      throw conflictError('대회 전체가 한 시즌 안에 있어야 해요.', 'CUP_SEASON');
+      throw conflictError(cupKo('adminSeason'), 'CUP_SEASON');
     const clash = all.find((x) => draft.opensAt < cupEndsAt(x) && x.opensAt < cupEndsAt(draft));
-    if (clash) throw conflictError(`제${clash.edition}회 대회 기간과 겹쳐요.`, 'CUP_OVERLAP');
+    if (clash)
+      throw conflictError(cupKo('adminOverlap', { edition: clash.edition }), 'CUP_OVERLAP');
     const cup: CupDef = { ...draft, id: `s${season}-${edition}`, season };
     await db.insert(cups).values({
       id: cup.id,
@@ -75,9 +77,8 @@ export function registerAdminCupRoutes(app: Hono<AppEnv>): void {
       .select()
       .from(cups)
       .where(eq(cups.id, c.req.param('cupId')));
-    if (!row) throw notFoundError('대회를 찾을 수 없어요.', 'CUP_NOT_FOUND');
-    if (row.opensAt <= now)
-      throw conflictError('접수가 시작된 대회는 지울 수 없어요.', 'CUP_STARTED');
+    if (!row) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
+    if (row.opensAt <= now) throw conflictError(cupKo('adminStarted'), 'CUP_STARTED');
     await db.delete(cups).where(and(eq(cups.id, row.id), sql`${cups.opensAt} > ${now}`));
     return c.body(null, 204);
   });
