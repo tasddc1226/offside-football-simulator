@@ -51,7 +51,7 @@ R1을 "실카드 11명"으로 읽으면 지금 활동 중인 87팀이 전부라 
 | 조별 1~3R   | 10/13(월) · 14(화) · 15(수) 21:00                               |
 | 32강 ~ 결승 | 10/16(목) · 17(금) · 18(토) · 19(일) · **10/20(월) 결승** 21:00 |
 
-- 명단 마감(R5)은 매 경기 1시간 전(20:00). 일정은 D1 `cups` 테이블(0074가 제1회 s1-1을 넣는다), 모양은 contracts `planCup`.
+- 명단 마감(R5)은 매 경기 1시간 전(20:00). 일정은 D1 `cups` 테이블(0075가 제1회 s1-1을 넣는다), 모양은 contracts `planCup`.
 - 경기는 5분 cron(`runCup`)이 시각이 지난 뒤 첫 회차에 치른다. 추첨 → 지난 라운드 경기 → 순위·다음 라운드 → 보상 순으로 한 번에 따라잡고, 몇 번 돌아도 결과가 같다(멱등).
 - 조 수가 적으면 앞 토너먼트 라운드는 비고 그 날짜에는 경기가 없다(예: 8개 조면 32강 날 쉬고 16강부터).
 
@@ -104,7 +104,7 @@ T-11-125의 컵 전용 명단, 첫 안의 20:00 스냅샷 대신 **경기 전후
 
 ## 9. 구현
 
-- **DB(0074):** `cups`(제1회 s1-1 시드), `cup_entries`, `cup_matches`, `cup_state`, `owner_items`.
+- **DB(0075):** `cups`(제1회 s1-1 시드), `cup_entries`, `cup_matches`, `cup_state`, `owner_items`.
 - **엔진:** `simulateMatch(..., { neutral })`, `penaltyShootout`.
 - **규칙:** `apps/api/src/team/cupRules.ts`(순수 함수). **진행:** `apps/api/src/team/cup.ts`의 `runCup`(5분 cron).
 - **API:** `GET /v1/cups/:id`(`current` 가능), `GET /v1/cups/:id/me`, `POST /v1/cups/:id/entries`, `DELETE /v1/cups/:id/entries/me`, `GET /v1/cups/:id/matches/:matchId`, `GET /v1/items`, `POST /v1/items/reroll/use`. 명단 저장·시장 등록에 잠금 검사.

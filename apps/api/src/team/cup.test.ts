@@ -24,7 +24,7 @@ import {
 import { drawGroups, firstKoPairs, groupFixtures, groupStandings } from './cupRules.js';
 import { buildLineup, penaltyShootout } from './sim.js';
 
-// 실제 제1회 대회 일정 그대로 돌린다(마이그레이션 0074가 cups에 넣어 둔 s1-1 — 기록·명단 검사가 그 행을 본다).
+// 실제 제1회 대회 일정 그대로 돌린다(마이그레이션 0075가 cups에 넣어 둔 s1-1 — 기록·명단 검사가 그 행을 본다).
 const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09' });
 
 describe('T-11-145 컵 규칙', () => {
