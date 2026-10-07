@@ -26,6 +26,7 @@ import { GradeEmblem } from '../../../ui/GradeEmblem';
 import { Press } from '../../../ui/Press';
 import { Txt } from '../../../ui/Txt';
 import { useOnPull } from '../../../ui/refresh';
+import { Stats } from '../../owner/TeamParts';
 
 const rank = (n: number | null) => (n ? L.rank({ n }) : L.none);
 
@@ -53,6 +54,7 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
   useOnPull(() => load(true));
 
   const name = owner?.nickname ?? L.noNickname;
+  const team = owner?.team;
   return (
     <LoadState status={status} failText={L.loadFail} retry={() => void load()}>
       {owner ? (
@@ -80,14 +82,11 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
                 ) : null}
               </View>
             </View>
-            {owner.team ? (
+            {team ? (
               <Press
                 testID="owner-team"
                 accessibilityRole="button"
-                onPress={() => {
-                  const id = owner.team!.id;
-                  appState.hof = { ...appState.hof, team: id, owner: false };
-                }}
+                onPress={() => (appState.hof = { ...appState.hof, team: team.id, owner: false })}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -97,15 +96,15 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
                   backgroundColor: c.surface2,
                 }}
               >
-                <TeamLogo name={owner.team.name} logo={owner.team.logo} size={32} />
+                <TeamLogo name={team.name} logo={team.logo} size={32} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Txt bold numberOfLines={1}>
-                    {owner.team.name}
+                    {team.name}
                   </Txt>
                   <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(0.75) }}>
                     {L.teamLine({
-                      season: seasonLabel(owner.team.season, owner.team.seasonName),
-                      manager: owner.team.manager,
+                      season: seasonLabel(team.season, team.seasonName),
+                      manager: team.manager,
                     })}
                   </Txt>
                 </View>
@@ -114,36 +113,14 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
                 </Txt>
               </Press>
             ) : null}
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-              {(
-                [
-                  [L.statRn, num(owner.stats.retiredNumbers)],
-                  [L.statRetired, num(owner.stats.retired)],
-                  [L.statBestRank, rank(owner.stats.bestTeamRank)],
-                ] as const
-              ).map(([dt, dd]) => (
-                <View
-                  key={dt}
-                  accessible
-                  accessibilityLabel={`${dt} ${dd}`}
-                  style={{
-                    flex: 1,
-                    gap: 2,
-                    paddingVertical: 8,
-                    paddingHorizontal: 10,
-                    borderRadius: 12,
-                    backgroundColor: c.surface2,
-                  }}
-                >
-                  <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                    {dt}
-                  </Txt>
-                  <Txt bold num style={{ fontSize: rem(1.0625) }}>
-                    {dd}
-                  </Txt>
-                </View>
-              ))}
-            </View>
+            <Stats
+              small
+              items={[
+                [L.statRn, num(owner.stats.retiredNumbers)],
+                [L.statRetired, num(owner.stats.retired)],
+                [L.statBestRank, rank(owner.stats.bestTeamRank)],
+              ]}
+            />
             {mine ? (
               <Btn sm testID="owner-hall" onPress={() => go('owner')}>
                 {L.manage}

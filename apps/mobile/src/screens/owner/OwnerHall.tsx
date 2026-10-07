@@ -3,9 +3,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import {
-  fetchMyOwnerProfile,
+  fetchOwnerTitles,
   putOwnerTitle,
-  type MyOwnerProfileResponse,
+  type OwnerTitlesResponse,
 } from '@offside/app-core/api/ownerProfile';
 import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
 import { TITLE_NONE, titleLabel } from '@offside/app-core/ownerTitle';
@@ -15,19 +15,17 @@ import { toast } from '../../game/host';
 import { go } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
-import { useColors } from '../../theme/useColors';
 import { Btn } from '../../ui/Btn';
 import { Card } from '../../ui/Card';
-import { Press } from '../../ui/Press';
+import { Opt } from '../../ui/bits';
 import { Txt } from '../../ui/Txt';
 
 export function OwnerHall() {
-  const c = useColors();
-  const [hall, setHall] = useState<MyOwnerProfileResponse | null>(null);
+  const [hall, setHall] = useState<OwnerTitlesResponse | null>(null);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     let live = true;
-    void fetchMyOwnerProfile().then((r) => {
+    void fetchOwnerTitles().then((r) => {
       if (live && r.ok) setHall(r.data);
     });
     return () => {
@@ -36,7 +34,7 @@ export function OwnerHall() {
   }, []);
   if (!hall) return null;
   /** 고른 칸 — null = 자동, TITLE_NONE = 달지 않기, 그 밖은 칭호 id. */
-  const picked = hall.pinned ? (hall.owner.title ?? TITLE_NONE) : null;
+  const picked = hall.pinned ? (hall.title ?? TITLE_NONE) : null;
 
   async function pick(title: string | null) {
     if (!hall || saving || title === picked) return;
@@ -44,37 +42,24 @@ export function OwnerHall() {
     const r = await putOwnerTitle(title);
     setSaving(false);
     if (!r.ok) return toast(r.error.message);
-    setHall({ ...hall, owner: { ...hall.owner, title: r.data.title }, pinned: r.data.pinned });
+    setHall({ ...hall, title: r.data.title, pinned: r.data.pinned });
     toast(L.saved);
   }
 
-  const option = (key: string, title: string | null, label: string, body: ReactNode) => {
-    const on = picked === title;
-    return (
-      <Press
-        key={key}
-        testID={`title-pick-${key}`}
-        accessibilityRole="radio"
-        accessibilityState={{ checked: on, disabled: saving }}
-        accessibilityLabel={label}
-        disabled={saving}
-        onPress={() => void pick(title)}
-        style={{
-          gap: 2,
-          paddingVertical: 8,
-          paddingHorizontal: 10,
-          borderRadius: 12,
-          borderWidth: on ? 2 : 1,
-          borderColor: on ? c.pitchAccent : c.line,
-          backgroundColor: c.surface,
-        }}
-      >
-        {body}
-      </Press>
-    );
-  };
+  const option = (key: string, title: string | null, label: string, body: ReactNode) => (
+    <Opt
+      key={key}
+      testID={`title-pick-${key}`}
+      selected={picked === title}
+      disabled={saving}
+      accessibilityLabel={label}
+      onPress={() => void pick(title)}
+    >
+      {body}
+    </Opt>
+  );
 
-  const team = hall.owner.team;
+  const teamId = hall.teamId;
   return (
     <Card gap={12} testID="owner-hall">
       <View style={{ gap: 2 }}>
@@ -92,14 +77,10 @@ export function OwnerHall() {
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
               {L.current}
             </Txt>
-            {hall.owner.title ? (
-              <TitleBadge title={hall.owner.title} />
-            ) : (
-              <Txt bold>{L.currentNone}</Txt>
-            )}
+            {hall.title ? <TitleBadge title={hall.title} /> : <Txt bold>{L.currentNone}</Txt>}
           </View>
           <View
-            accessibilityRole="radiogroup"
+            accessibilityRole="none"
             accessibilityLabel={L.current}
             style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
           >
@@ -119,12 +100,12 @@ export function OwnerHall() {
           </View>
         </>
       ) : null}
-      {team ? (
+      {teamId ? (
         <Btn
           block
           testID="my-owner-profile"
           onPress={() => {
-            appState.hof = { ...hofStart(), tab: 'teams', team: team.id, owner: true };
+            appState.hof = { ...hofStart(), tab: 'teams', team: teamId, owner: true };
             go('hof');
           }}
         >

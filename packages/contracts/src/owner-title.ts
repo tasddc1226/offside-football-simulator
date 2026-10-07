@@ -7,6 +7,10 @@ export type TitleStage = (typeof TITLE_STAGES)[number];
 /** 'cup-1-champion' 같은 칭호 id. */
 export type OwnerTitle = string;
 
+/** 칭호를 받는 성적(우승·준우승·4강)인가. */
+export const isTitleStage = (stage: string): stage is TitleStage =>
+  (TITLE_STAGES as readonly string[]).includes(stage);
+
 export const TITLE_RE = /^cup-([1-9]\d{0,3})-(champion|runnerup|sf)$/;
 /** 칭호를 달지 않기로 고른 상태(대표 칭호 PUT 본문). */
 export const TITLE_NONE = 'none';
@@ -24,7 +28,7 @@ export function parseTitle(
 const STAGE_RANK: Record<TitleStage, number> = { champion: 0, runnerup: 1, sf: 2 };
 
 /** 칭호 순서: 우승 > 준우승 > 4강, 같은 단계면 최근 회차 먼저. 진열장·자동 대표 칭호가 같이 쓴다. */
-export function compareTitles(a: OwnerTitle, b: OwnerTitle): number {
+function compareTitles(a: OwnerTitle, b: OwnerTitle): number {
   const x = parseTitle(a);
   const y = parseTitle(b);
   if (!x || !y) return x ? -1 : y ? 1 : 0;
@@ -34,9 +38,6 @@ export function compareTitles(a: OwnerTitle, b: OwnerTitle): number {
 /** 컵 성적에서 받은 칭호(좋은 순). 8강 이하는 칭호가 아니다. */
 export function titlesOf(honors: readonly { edition: number; stage: CupStage }[]): OwnerTitle[] {
   return honors
-    .filter((h): h is { edition: number; stage: TitleStage } =>
-      (TITLE_STAGES as readonly string[]).includes(h.stage),
-    )
-    .map((h) => titleIdOf(h.edition, h.stage))
+    .flatMap((h) => (isTitleStage(h.stage) ? [titleIdOf(h.edition, h.stage)] : []))
     .sort(compareTitles);
 }

@@ -34,7 +34,6 @@ const ko = {
   hallLead:
     '받은 칭호 가운데 하나를 대표 칭호로 달아요. 랭킹 · 팀 프로필 · 댓글 · 채팅에서 닉네임 옆에 보여요.',
   hallEmpty: '아직 받은 칭호가 없어요. 오프사이드 컵에서 4강에 오르면 칭호를 받아요.',
-  hallLoadFail: '명예관을 불러오지 못했어요.',
   current: '지금 대표 칭호',
   currentNone: '달지 않음',
   pickAuto: '자동',

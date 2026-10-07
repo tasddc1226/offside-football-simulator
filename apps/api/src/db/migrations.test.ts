@@ -206,6 +206,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'apple_sub',
     'apple_linked_at',
     'friend_code',
+    'title',
+    'title_pinned',
   ],
   sessions: [
     'id',

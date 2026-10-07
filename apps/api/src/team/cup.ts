@@ -1,4 +1,4 @@
-import { TITLE_STAGES, titleIdOf, type TitleStage } from '@offside/contracts/owner-title';
+import { isTitleStage, TITLE_STAGES, titleIdOf } from '@offside/contracts/owner-title';
 import {
   CUP_GROUP_ROUNDS,
   CUP_KO_ROUNDS,
@@ -95,11 +95,11 @@ const kstHm = (iso: string) => new Date(Date.parse(iso) + 9 * 3600_000).toISOStr
 
 /**
  * T-11-150 칭호를 받는 성적이면 대표 칭호를 자동으로 바꾼다 — 구단주가 직접 고르지 않았고(title_pinned 0) 새 칭호가 지금
- * 칭호보다 좋거나 같은 단계일 때(owner-title titleBeats: 새 대회가 가장 최근 회차라 같은 단계면 새 칭호가 앞선다).
+ * 칭호보다 좋거나 같은 단계일 때. owner-title titlesOf 순서(단계, 같으면 최근 회차)와 같다 — 새 대회가 가장 최근 회차다.
  */
 function autoTitle(d1: D1Database, cup: CupDef, profileId: string, stage: CupStage) {
-  if (!(TITLE_STAGES as readonly string[]).includes(stage)) return [];
-  const t = stage as TitleStage;
+  if (!isTitleStage(stage)) return [];
+  const t = stage;
   // 지금 칭호가 새 칭호보다 아래거나 같은 단계면 바꾼다(우승은 늘, 준우승은 준우승·4강 위로, 4강은 4강 위로).
   const below = TITLE_STAGES.slice(TITLE_STAGES.indexOf(t));
   return [

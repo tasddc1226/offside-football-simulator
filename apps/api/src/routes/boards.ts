@@ -39,7 +39,6 @@ import {
   unblock,
   updatePost,
 } from '../db/repos/boards.js';
-import { ownerTitlesOf } from '../db/repos/ownerProfile.js';
 import { ownerTierOfProfile, ownerTiersOf } from '../db/repos/ownerTiers.js';
 import { getDb, type AppEnv } from '../env.js';
 import { notFoundError, ok, readBody, nowIso, enforceLimit } from './shared.js';
@@ -115,14 +114,10 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       (r) => !hidden?.blockedAuthors.has(r.profileId) && !hidden?.reportedComments.has(r.id),
     );
     const ids = shown.map((r) => r.profileId);
-    const [tiers, titles] = await Promise.all([
-      ownerTiersOf(db, ids, nowIso()),
-      ownerTitlesOf(db, ids),
-    ]);
+    const tiers = await ownerTiersOf(db, ids, nowIso());
     const comments = shown.map(({ profileId, ...r }) => ({
       ...r,
       tier: tiers.get(profileId) ?? null,
-      title: titles.get(profileId) ?? null,
       deletable: viewer.admin || profileId === viewer.profileId,
     }));
     return ok(c, PostDetailResponseSchema, {
@@ -241,7 +236,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       body,
       admin: viewer.admin,
       tier: await ownerTierOfProfile(db, profileId, now),
-      title: (await ownerTitlesOf(db, [profileId])).get(profileId) ?? null,
+      title: viewer.title,
       deletable: true,
       createdAt: now,
     };

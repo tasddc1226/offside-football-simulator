@@ -2,7 +2,7 @@
 // 시즌은 지금 업적 점수(owner_achievements)와 지금 팀 순위를 쓴다.
 import type { OwnerProfile } from '@offside/contracts';
 import { teamSeasonAt, teamSeasonName } from '@offside/contracts/service-seasons';
-import { and, count, desc, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, count, desc, eq, isNotNull } from 'drizzle-orm';
 import type { Lang } from '../../lang.js';
 import { cupHonorsOf } from '../../team/cup.js';
 import type { Db } from '../client.js';
@@ -11,7 +11,6 @@ import {
   ownerAchievements,
   ownerSeasonRecords,
   ownerTeams,
-  profiles,
   retiredNumbers,
 } from '../schema.js';
 import { ownerTierOfProfile } from './ownerTiers.js';
@@ -32,7 +31,8 @@ export async function ownerProfileOf(
       .select()
       .from(ownerTeams)
       .where(eq(ownerTeams.profileId, id))
-      .orderBy(desc(ownerTeams.season)),
+      .orderBy(desc(ownerTeams.season))
+      .limit(2), // 가장 최근 팀과 지금 시즌 팀이면 된다
     db
       .select()
       .from(ownerSeasonRecords)
@@ -104,23 +104,4 @@ export async function ownerProfileOf(
       bestTeamRank: ranks.length ? Math.min(...ranks) : null,
     },
   };
-}
-
-/** 프로필마다 대표 칭호(없으면 빠진다). 댓글 목록처럼 여러 명을 한 번에 — D1 바인딩 한도 안에서 나눠 읽는다. */
-export async function ownerTitlesOf(db: Db, profileIds: readonly string[]) {
-  const ids = [...new Set(profileIds)];
-  const chunks = Array.from({ length: Math.ceil(ids.length / 90) }, (_, i) =>
-    ids.slice(i * 90, i * 90 + 90),
-  );
-  const rows = (
-    await Promise.all(
-      chunks.map((chunk) =>
-        db
-          .select({ id: profiles.id, title: profiles.title })
-          .from(profiles)
-          .where(and(inArray(profiles.id, chunk), isNotNull(profiles.title))),
-      ),
-    )
-  ).flat();
-  return new Map(rows.map((r) => [r.id, r.title!]));
 }

@@ -1,7 +1,8 @@
 <script lang="ts">
   // T-11-145 컵 트로피 — 모양은 app-core/cupTrophy가 정하고, 여기서는 등급 엠블럼(GradeEmblem)처럼 은은한 후광·광택을 얹는다.
   // 우승 트로피만 반짝임이 둘 더 붙는다. 화면 밖에서는 움직임을 멈춘다.
-  import { cupTrophy, TROPHY_NUMBER as N, TROPHY_VIEWBOX, type TrophyStage } from '@offside/app-core/cupTrophy';
+  import { cupTrophy, type TrophyStage } from '@offside/app-core/cupTrophy';
+  import TrophyArt from './TrophyArt.svelte';
 
   const { stage, edition, size = 40 }: { stage: TrophyStage; edition: number; size?: number } = $props();
   const trophy = $derived(cupTrophy(stage));
@@ -19,12 +20,7 @@
 
 <span class="cup-trophy" data-trophy={stage} data-visible={visible} style={`--t-size:${size}px;--t-base:${palette.base};--t-light:${palette.light};--t-mark:${palette.mark}`} aria-hidden="true" use:observe>
   <span class="t-halo"></span>
-  <svg viewBox={TROPHY_VIEWBOX} width={size} height={size} aria-hidden="true" focusable="false">
-    {#each trophy.layers as layer, index (index)}
-      <path d={layer.d} fill={palette[layer.tone]} />
-    {/each}
-    <text x={N.x} y={N.y} font-size={N.size} font-weight="900" text-anchor="middle" fill={palette.number}>{edition}</text>
-  </svg>
+  <TrophyArt {stage} {edition} {size} />
   <span class="t-shine"></span>
   {#if stage === 'champion'}
     <span class="t-spark spark-one"></span>
@@ -43,7 +39,7 @@
     height: var(--t-size);
     pointer-events: none;
   }
-  svg {
+  .cup-trophy :global(svg) {
     position: relative;
     z-index: 2;
     font-family: var(--font-display, inherit);

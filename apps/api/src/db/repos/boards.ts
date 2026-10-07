@@ -17,6 +17,7 @@ import {
   boardComments,
   boardPostLikes,
   boardPosts,
+  profiles,
 } from '../schema.js';
 import { runBatch } from './batch.js';
 import { newsPushStatements } from '../../push/enqueue.js';
@@ -253,8 +254,11 @@ export async function listComments(db: Db, postId: string) {
       body: boardComments.body,
       admin: boardComments.admin,
       createdAt: boardComments.createdAt,
+      // T-11-150 작성자의 지금 대표 칭호.
+      title: profiles.title,
     })
     .from(boardComments)
+    .leftJoin(profiles, eq(profiles.id, boardComments.profileId))
     .where(and(eq(boardComments.postId, postId), isNull(boardComments.deletedAt)))
     .orderBy(asc(boardComments.createdAt))
     .limit(COMMENTS_MAX);

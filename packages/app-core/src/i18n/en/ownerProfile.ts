@@ -30,7 +30,6 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   hallLead:
     'Wear one of your titles. It shows next to your nickname in rankings, team profiles, comments and chat.',
   hallEmpty: 'No titles yet. Reach the Offside Cup semifinals to earn one.',
-  hallLoadFail: "Couldn't load the Hall of Honors.",
   current: 'Current title',
   currentNone: 'None',
   pickAuto: 'Auto',

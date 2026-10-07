@@ -36,14 +36,20 @@ export function commentIdentity(
   return { google: true, admin, nickname: admin ? ADMIN_NICKNAME : profile.nickname };
 }
 
-export type Viewer = CommentIdentity & { profileId: string | null };
+/** T-11-150 title: 대표 칭호(댓글 · 채팅에 같이 남긴다). */
+export type Viewer = CommentIdentity & { profileId: string | null; title: string | null };
 
 /** 요청한 사람. 세션이 없으면 익명(프로필을 새로 만들지 않는다). T-10-028: 댓글 자격(구글 로그인·닉네임)도 함께 본다. */
 export async function getViewer(c: Context<AppEnv>): Promise<Viewer> {
   const session = await resolveSession(c);
-  if (!session) return { profileId: null, admin: false, google: false, nickname: null };
+  if (!session)
+    return { profileId: null, admin: false, google: false, nickname: null, title: null };
   const profile = await getProfile(getDb(c), session.profileId);
-  return { profileId: session.profileId, ...commentIdentity(profile, c.env.ADMIN_EMAILS) };
+  return {
+    profileId: session.profileId,
+    title: profile?.title ?? null,
+    ...commentIdentity(profile, c.env.ADMIN_EMAILS),
+  };
 }
 
 export async function requireAdmin(c: Context<AppEnv>): Promise<Viewer> {

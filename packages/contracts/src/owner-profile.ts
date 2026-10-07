@@ -60,13 +60,15 @@ export const OwnerProfileResponseSchema = z.strictObject({
 });
 export type OwnerProfileResponse = z.infer<typeof OwnerProfileResponseSchema>;
 
-/** 명예관 — 내 프로필과 고를 수 있는 칭호(좋은 순). pinned: 내가 직접 고른 칭호(아니면 자동으로 가장 좋은 칭호). */
-export const MyOwnerProfileResponseSchema = z.strictObject({
-  owner: OwnerProfileSchema,
+/** 명예관 — 지금 대표 칭호와 고를 수 있는 칭호(좋은 순). pinned: 내가 직접 고른 칭호(아니면 자동으로 가장 좋은 칭호).
+ * teamId: 가장 최근 팀 — '내 구단주 프로필 보기'가 이 팀 id로 연다. */
+export const OwnerTitlesResponseSchema = z.strictObject({
+  title: OwnerTitleSchema.nullable(),
   titles: z.array(OwnerTitleSchema),
   pinned: z.boolean(),
+  teamId: TeamIdSchema.nullable(),
 });
-export type MyOwnerProfileResponse = z.infer<typeof MyOwnerProfileResponseSchema>;
+export type OwnerTitlesResponse = z.infer<typeof OwnerTitlesResponseSchema>;
 
 /** 대표 칭호 고르기. 'none'이면 달지 않는다, null이면 다시 자동(가장 좋은 칭호). */
 export const PutOwnerTitleBodySchema = z.strictObject({

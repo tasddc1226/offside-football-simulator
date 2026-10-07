@@ -1,7 +1,7 @@
 import {
   ErrorEnvelopeSchema,
-  MyOwnerProfileResponseSchema,
   OwnerProfileResponseSchema,
+  OwnerTitlesResponseSchema,
   PutOwnerTeamResponseSchema,
   PutOwnerTitleResponseSchema,
   TeamProfileResponseSchema,
@@ -16,7 +16,7 @@ import { callJson, issueGoogleCookie } from '../test/http.js';
 
 const PutTeam = successEnvelope(PutOwnerTeamResponseSchema);
 const OwnerRes = successEnvelope(OwnerProfileResponseSchema);
-const MyRes = successEnvelope(MyOwnerProfileResponseSchema);
+const MyRes = successEnvelope(OwnerTitlesResponseSchema);
 const TitleRes = successEnvelope(PutOwnerTitleResponseSchema);
 const TeamRes = successEnvelope(TeamProfileResponseSchema);
 const RankRes = successEnvelope(TeamRankResponseSchema);
@@ -129,9 +129,14 @@ describe('/v1/owners · /v1/owner/title (T-11-150 구단주 프로필 · 대표 
     expect(pub.owner.cupHonors.map((h) => h.stage)).toEqual(['qf', 'sf', 'champion']);
 
     const my = MyRes.parse(
-      await (await call('GET', '/v1/owner/profile', { cookie: a.cookie })).json(),
+      await (await call('GET', '/v1/owner/title', { cookie: a.cookie })).json(),
     ).data;
-    expect(my).toMatchObject({ titles: ['cup-1-champion', 'cup-2-sf'], pinned: false });
+    expect(my).toEqual({
+      title: null,
+      titles: ['cup-1-champion', 'cup-2-sf'],
+      pinned: false,
+      teamId: a.team.id,
+    });
 
     // 받은 적 없는 칭호는 거절한다.
     const bad = await putTitle(a.cookie, 'cup-3-sf');
@@ -166,6 +171,6 @@ describe('/v1/owners · /v1/owner/title (T-11-150 구단주 프로필 · 대표 
   it('없는 팀이면 404, 로그인 안 했으면 명예관을 못 연다', async () => {
     const res = await call('GET', `/v1/owners/by-team/tem_${crypto.randomUUID()}`);
     expect(res.status).toBe(404);
-    expect((await call('GET', '/v1/owner/profile')).status).toBe(401);
+    expect((await call('GET', '/v1/owner/title')).status).toBe(401);
   });
 });

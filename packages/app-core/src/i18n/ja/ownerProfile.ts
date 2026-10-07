@@ -30,7 +30,6 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   hallLead:
     '獲得した称号から一つを代表称号に。ランキング・チームプロフィール・コメント・チャットでニックネームの横に表示されます。',
   hallEmpty: 'まだ称号はありません。オフサイドカップでベスト4に入ると称号がもらえます。',
-  hallLoadFail: '名誉の殿堂を読み込めませんでした。',
   current: '現在の代表称号',
   currentNone: 'なし',
   pickAuto: '自動',

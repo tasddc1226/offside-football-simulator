@@ -1,20 +1,19 @@
-// T-11-150 구단주 프로필과 명예관. 남의 프로필은 팀 id로 연다 — 팀 프로필·랭킹이 이미 팀 id를 들고 있고, 프로필 id는
+// T-11-150 구단주 프로필과 명예관(대표 칭호). 남의 프로필은 팀 id로 연다 — 팀 프로필·랭킹이 이미 팀 id를 들고 있고, 프로필 id는
 // 내보내지 않는다. 대표 칭호는 받은 칭호(컵 성적) 가운데서만 고른다.
 import {
-  MyOwnerProfileResponseSchema,
   OwnerProfileResponseSchema,
+  OwnerTitlesResponseSchema,
   PutOwnerTitleBodySchema,
   PutOwnerTitleResponseSchema,
   TeamIdSchema,
 } from '@offside/contracts';
 import { TITLE_NONE, titlesOf } from '@offside/contracts/owner-title';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
 import { ownerProfileOf } from '../db/repos/ownerProfile.js';
-import { getProfile } from '../db/repos/profiles.js';
 import { liveTeam } from '../db/repos/ownerTeams.js';
-import { profiles } from '../db/schema.js';
+import { ownerTeams, profiles } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
 import { requireProfile } from '../middleware/requireProfile.js';
@@ -31,40 +30,44 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const [[found], session] = await Promise.all([liveTeam(db, id), resolveSession(c)]);
     if (!found) throw teamNotFound();
-    const profile = await getProfile(db, found.team.profileId);
-    if (!profile) throw teamNotFound();
+    const profileId = found.team.profileId;
     const owner = await ownerProfileOf(
       db,
-      { id: profile.id, nickname: profile.nickname, title: profile.title ?? null },
+      { id: profileId, nickname: found.nickname, title: found.title },
       nowIso(),
       reqLang(c),
     );
     return ok(
       c,
       OwnerProfileResponseSchema,
-      { owner, mine: session?.profileId === profile.id },
+      { owner, mine: session?.profileId === profileId },
       200,
       NO_STORE,
     );
   });
 
-  // 명예관 — 내 프로필과 고를 수 있는 칭호.
-  app.get('/v1/owner/profile', requireProfile, async (c) => {
+  // 명예관 — 지금 대표 칭호와 고를 수 있는 칭호, '내 구단주 프로필 보기'용 가장 최근 팀.
+  app.get('/v1/owner/title', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const [owner, honors] = await Promise.all([
-      ownerProfileOf(
-        db,
-        { id: me.id, nickname: me.nickname, title: me.title ?? null },
-        nowIso(),
-        reqLang(c),
-      ),
+    const [honors, [latest]] = await Promise.all([
       cupHonorsOf(db, me.id),
+      db
+        .select({ id: ownerTeams.id })
+        .from(ownerTeams)
+        .where(eq(ownerTeams.profileId, me.id))
+        .orderBy(desc(ownerTeams.season))
+        .limit(1),
     ]);
     return ok(
       c,
-      MyOwnerProfileResponseSchema,
-      { owner, titles: titlesOf(honors), pinned: !!me.titlePinned },
+      OwnerTitlesResponseSchema,
+      {
+        title: me.title,
+        titles: titlesOf(honors),
+        pinned: me.titlePinned,
+        teamId: latest?.id ?? null,
+      },
       200,
       NO_STORE,
     );
