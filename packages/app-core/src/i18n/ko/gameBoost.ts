@@ -36,7 +36,8 @@ const ko = {
   // T-11-116 자금이 모자랄 때 보상형 광고(앱)로 시도한다.
   adButton: (p: { chance: number }) => `광고 보고 강화하기 (${p.chance}%)`,
   adButtonFree: (p: { chance: number }) => `자금 없이 강화하기 (${p.chance}%)`,
-  adNote: '광고를 끝까지 보면 자금 없이 한 번 시도할 수 있어요.',
+  adNote:
+    '광고를 끝까지 보면 자금 없이 한 번 시도할 수 있어요. 성공 확률은 자금으로 시도할 때와 같아요.',
   adNoteFree: '광고 제거를 구매해서 자금 없이 한 번 시도할 수 있어요.',
   adWatch: '광고를 끝까지 보면 강화를 시도할 수 있어요.',
   adCost: '광고',

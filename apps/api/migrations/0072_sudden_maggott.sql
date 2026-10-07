@@ -1,0 +1,1 @@
+CREATE INDEX `balance_versions_activated_idx` ON `balance_versions` (`activated_at`);

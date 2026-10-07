@@ -53,7 +53,8 @@ describe('T-11-083 잠재력 강화 카드', () => {
     expect(boostView(s, 'ad')).toMatchObject({
       status: 'short',
       adButton: '광고 보고 강화하기 (50%)',
-      adNote: '광고를 끝까지 보면 자금 없이 한 번 시도할 수 있어요.',
+      adNote:
+        '광고를 끝까지 보면 자금 없이 한 번 시도할 수 있어요. 성공 확률은 자금으로 시도할 때와 같아요.',
     });
     expect(boostView(s, 'free').adButton).toBe('자금 없이 강화하기 (50%)');
     expect(boostView(player(), 'ad').adButton).toBeUndefined();

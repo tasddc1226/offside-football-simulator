@@ -29,6 +29,7 @@ const ko = {
   installGuide: '홈 화면에 추가하기',
   guide: '게임 가이드',
   faq: '자주 묻는 질문',
+  fairness: '확률과 공정성',
   legal: '서비스 정책',
   terms: '이용약관',
   privacy: '개인정보 처리방침',

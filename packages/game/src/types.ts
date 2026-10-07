@@ -258,6 +258,8 @@ export type Pending =
 export interface GameState {
   /** T-10-016 이 커리어에 적용 중인 서버 밸런스 버전(없으면 코드 기본값 = 버전 0). */
   bal?: CareerBalance;
+  /** T-11-141 커리어를 만들 때의 RNG 시드와 실제 잠재력. 은퇴 리포트에서만 보여 준다. 옛 세이브엔 없다. */
+  origin?: { seed: number; pot: number };
   v: typeof SAVE_VERSION;
   /** T-9-009. 커리어 고유 ID(`crypto.randomUUID()`). 서버 업로드의 URL 키다. 시드 RNG를 절대
    * 소모하지 않고 만든다 — RNG 시퀀스가 이 변경으로 바뀌면 안 된다. */

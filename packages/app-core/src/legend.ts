@@ -10,7 +10,7 @@ import { saveKey } from '@offside/game/storage';
 import type { GameState, HofEntry } from '@offside/game/types';
 import { mainTitle } from '@offside/game/titles';
 import { truePot } from '@offside/game/stats';
-import { retirementPotential } from './potential-view.js';
+import { potentialFlow, retirementPotential } from './potential-view.js';
 import { getHofDetail, getMyCareers } from './api/client.js';
 import { anonName, totals } from './format.js';
 import type { AppState, LegendView } from './state.js';
@@ -124,6 +124,7 @@ export function createLegends(host: LegendHost) {
       reportId: null,
       title: own?.title ?? mainTitle(s)?.id ?? null,
       pot: s.retired ? retirementPotential(own?.pot ?? Math.round(truePot(s))) : undefined,
+      flow: potentialFlow(s),
       rn: host.rnOf(s.cid, own?.rn),
     };
   }

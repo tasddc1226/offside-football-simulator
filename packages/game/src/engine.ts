@@ -112,6 +112,8 @@ export function newGame(
     sub: {},
     pot: scouted,
     bloom: pot - scouted,
+    // T-11-141 은퇴 리포트에서만 공개하는 시작 시드와 시작 실제 잠재력(옛 세이브엔 없다).
+    origin: { seed, pot },
     cond: 90,
     morale: 70,
     fame: 3,

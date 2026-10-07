@@ -30,6 +30,7 @@ export const settings: Translation<SettingsMsgs> = {
   installGuide: 'Add to home screen',
   guide: 'Game guide',
   faq: 'FAQ',
+  fairness: 'Odds and fairness',
   legal: 'Policies',
   terms: 'Terms of service',
   privacy: 'Privacy policy',
