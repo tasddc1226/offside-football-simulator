@@ -12,6 +12,7 @@
     POST_TITLE_MAX,
     POST_VERSION_MAX,
     BOARD_KEYS,
+    TRANSLATED_BODY_MAX,
   } from '@offside/contracts/board-limits';
   import * as api from '@offside/app-core/api/boards';
   import type { BoardBlock, BoardViewerResponse, Comment, Post, PostSummary } from '@offside/app-core/api/boards';
@@ -294,7 +295,7 @@
               </div>
               <div class="field">
                 <label for="post-body-{lang}">{postLangLabel(lang)} · {L.bodyLabel}</label>
-                <textarea id="post-body-{lang}" lang={lang} rows="8" maxlength={POST_BODY_MAX} bind:value={editing[lang].body}></textarea>
+                <textarea id="post-body-{lang}" lang={lang} rows="8" maxlength={TRANSLATED_BODY_MAX} bind:value={editing[lang].body}></textarea>
               </div>
             {/each}
           </details>

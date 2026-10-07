@@ -19,6 +19,7 @@ import { FText, Kicker } from './film';
 import { ownOf } from './own';
 import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
 import { tn } from '@offside/game/i18n/names';
+import { personName } from '@offside/game/i18n/names';
 
 export function RetiredNumberCredit({
   v,
@@ -101,7 +102,7 @@ export function RetiredNumberCredit({
             <FText size={1.1875} center>
               {L.takenA({ number: rnSlot.number })}{' '}
               <FText tone="gold" bold size={1.1875}>
-                {rnSlot.holder ?? L.anonLegend}
+                {rnSlot.holder != null ? personName(rnSlot.holder) : L.anonLegend}
               </FText>
               {L.takenB}
               {'\n'}

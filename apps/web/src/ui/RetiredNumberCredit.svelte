@@ -13,6 +13,7 @@
   import ClubMark from './ClubMark.svelte';
   import RnFrame from './RnFrame.svelte';
   import { legendRnText as L } from '@offside/app-core/i18n/ko/legendRn';
+  import { personName } from '@offside/game/i18n/names';
 
   const {
     v,
@@ -67,7 +68,7 @@
       <div class="rn-ceremony rn-honour">
         <div class="eyebrow film-kicker">Wall of Honour</div>
         {#if rnSlot.wallOfHonor}<p class="rn-stats" role="status" data-wall-of-honor>{L.wallOfHonor}</p>{/if}
-        <p class="rn-line">{L.takenA({ number: rnSlot.number })} <b>{rnSlot.holder ?? L.anonLegend}</b>{L.takenB}<br />{L.takenC} <b>{v.name}</b>{L.takenD}</p>
+        <p class="rn-line">{L.takenA({ number: rnSlot.number })} <b>{rnSlot.holder != null ? personName(rnSlot.holder) : L.anonLegend}</b>{L.takenB}<br />{L.takenC} <b>{v.name}</b>{L.takenD}</p>
       </div>
     {:else if rnSlot?.kind === 'anonymous'}
       <div class="rn-ceremony rn-anon">

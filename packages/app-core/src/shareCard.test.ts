@@ -61,7 +61,7 @@ function view(career: CareerRecord[], o: Partial<LegendView> = {}, withStyle = f
     score: 612,
     peak: 88,
     d,
-    totals: { apps: 0, goals: 0, assists: 0, trophies: 4, awards: 2, caps: 30 },
+    totals: { apps: 0, goals: 0, assists: 0, trophies: 4, awards: 2, caps: 30, ballon: 0 },
     own: null,
     shareId: null,
     reportId: null,

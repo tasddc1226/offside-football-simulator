@@ -17,7 +17,5 @@ export const ad: Translation<AdMsgs> = {
   noPurchase: 'This store account has no Remove ads purchase on record.',
   restoreFail: "Couldn't restore. Please try again in a moment.",
   rewardedUnavailable: "Can't load an ad right now. Please try again in a moment.",
-  rewardedDailyCap: (p: { n: number }) =>
-    `You've used all ${p.n} ad tries for today. Try again tomorrow.`,
   rewardedWatch: 'Watch the ad to the end to see the assessment.',
 };

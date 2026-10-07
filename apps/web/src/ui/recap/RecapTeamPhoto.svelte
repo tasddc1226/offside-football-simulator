@@ -4,7 +4,7 @@
   // 화면에 처음 들어올 때 플래시가 한 번 터진다(움직임 줄이기면 없다).
   import type { RecapSquadMember } from '@offside/contracts';
   import { primeAvatarSpec } from '@offside/game/avatar';
-  import { anonName } from '@offside/app-core/format';
+  import { playerName } from '@offside/app-core/format';
   import { PHOTO_MAX, photoRows } from '@offside/app-core/seasonRecap';
   import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
   import PixelAvatar from '../PixelAvatar.svelte';
@@ -14,7 +14,7 @@
   // 앞줄이 0번이라 뒤집어 뒷줄부터 그린다.
   const rows = $derived(photoRows(squad).reverse());
   const more = $derived(Math.max(0, squad.length - PHOTO_MAX));
-  const nameOf = (m: RecapSquadMember) => m.card.publicName ?? anonName(m.card.pos, m.card.number);
+  const nameOf = (m: RecapSquadMember) => playerName(m.card.publicName, m.card.pos, m.card.number);
   const specOf = (m: RecapSquadMember) => {
     const spec = primeAvatarSpec({ id: m.card.careerId, lastClub: m.lastClub ?? '', lastClubId: m.lastClubId });
     return m.card.careerId === captain ? { ...spec, acc: [...spec.acc, 'armband' as const] } : spec;
