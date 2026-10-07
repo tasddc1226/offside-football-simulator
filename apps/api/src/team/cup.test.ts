@@ -1,5 +1,11 @@
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts';
-import { CUP_REWARDS, cupGroupCount, currentCup, planCup } from '@offside/contracts/cup';
+import {
+  CUP_REWARDS,
+  cupGroupCount,
+  currentCup,
+  planCup,
+  pullCupForward,
+} from '@offside/contracts/cup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { cupEntries, notifications, ownerItems, ownerTeams, profiles } from '../db/schema.js';
@@ -122,6 +128,30 @@ describe('T-11-145 컵 규칙', () => {
     expect(CUP.rounds).toHaveLength(8);
     expect(CUP.rounds[0]).toBe('2026-10-13T12:00:00.000Z');
     expect(CUP.rounds.at(-1)).toBe('2026-10-20T12:00:00.000Z');
+  });
+
+  it('정원이 일찍 차면 접수를 닫고 12시간 뒤 첫 추첨 시각으로 일정을 당긴다', () => {
+    // 10/9 03:00 KST에 다 차면 → 추첨 10/10 12:00, 경기 10/10~10/17 21:00(3일 당김).
+    const full = '2026-10-08T18:00:00.000Z';
+    const p = pullCupForward(CUP, full)!;
+    expect(p).toMatchObject({
+      closesAt: full,
+      drawAt: '2026-10-10T03:00:00.000Z',
+      opensAt: CUP.opensAt,
+    });
+    expect(p.rounds[0]).toBe('2026-10-10T12:00:00.000Z');
+    expect(p.rounds.at(-1)).toBe('2026-10-17T12:00:00.000Z');
+    // 10/9 18:00 KST면 12시간 뒤(10/10 06:00) 다음 추첨은 10/10 12:00 그대로.
+    expect(pullCupForward(CUP, '2026-10-09T09:00:00.000Z')!.drawAt).toBe(
+      '2026-10-10T03:00:00.000Z',
+    );
+    // 10/10 01:00 KST면 10/11 12:00.
+    expect(pullCupForward(CUP, '2026-10-09T16:00:00.000Z')!.drawAt).toBe(
+      '2026-10-11T03:00:00.000Z',
+    );
+    // 마감 직전(12시간 안에 원래 추첨)이면 당기지 않는다.
+    expect(pullCupForward(CUP, '2026-10-12T14:00:00.000Z')).toBeNull();
+    expect(pullCupForward(CUP, CUP.closesAt)).toBeNull();
   });
 
   it('지금 보여 줄 대회는 진행 중·다가오는 것, 없으면 마지막 대회다', () => {

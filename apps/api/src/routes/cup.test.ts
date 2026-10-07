@@ -1,12 +1,19 @@
-import { CupMeResponseSchema, ErrorEnvelopeSchema, successEnvelope } from '@offside/contracts';
+import {
+  CupMeResponseSchema,
+  CupResponseSchema,
+  ErrorEnvelopeSchema,
+  successEnvelope,
+} from '@offside/contracts';
 import { planCup } from '@offside/contracts/cup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cards, careers, cupEntries, profiles } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
+import { cards, careers, cupEntries, cups, notifications, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 import { checkCupListing } from './cup.js';
 
 const MeRes = successEnvelope(CupMeResponseSchema);
+const CupRes = successEnvelope(CupResponseSchema);
 const CUP = planCup({ id: 's1-1', season: 1, edition: 1, opensOn: '2026-10-09' });
 const OPEN = '2026-10-10T03:00:00.000Z';
 let seq = 0;
@@ -148,6 +155,46 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     const a = await owner(8);
     expect((await me(a.cookie)).eligibility).toMatchObject({ ok: false, reason: 'full' });
     expect(await reason(await enter(a.cookie))).toBe('CUP_FULL');
+  });
+
+  it('마지막 자리가 차면 접수를 닫고 일정을 당긴 뒤 신청한 구단주에게 알린다', async () => {
+    const first = await owner(8);
+    expect((await enter(first.cookie)).status).toBe(204);
+    for (let i = 1; i < CUP.capacity - 1; i++) {
+      const profileId = `prf_fill_${i}`;
+      await ctx.db
+        .insert(profiles)
+        .values({ id: profileId, settingsJson: '{}', createdAt: OPEN, lastSeenAt: OPEN });
+      await ctx.db.insert(cupEntries).values({
+        cupId: CUP.id,
+        teamId: `tem_fill_${i}`,
+        profileId,
+        name: `팀${i}`,
+        manager: '감독',
+        ovr: 60,
+        createdAt: OPEN,
+        updatedAt: OPEN,
+      });
+    }
+    const last = await owner(8);
+    expect((await enter(last.cookie)).status).toBe(204);
+    // OPEN = 10/10 12:00 KST → 12시간 뒤 첫 추첨 시각은 10/11 12:00(2일 당김).
+    const [row] = await ctx.db.select().from(cups).where(eq(cups.id, CUP.id));
+    expect(row).toMatchObject({ closesAt: OPEN, drawAt: '2026-10-11T03:00:00.000Z' });
+    expect(JSON.parse(row!.roundsJson)[0]).toBe('2026-10-11T12:00:00.000Z');
+    const cur = CupRes.parse(await (await call('GET', '/v1/cups/current')).json()).data;
+    expect(cur.cup.drawAt).toBe('2026-10-11T03:00:00.000Z');
+    const sent = await ctx.db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.sourceKey, `cup:${CUP.id}:early`));
+    expect(sent).toHaveLength(CUP.capacity);
+    expect(sent.find((n) => n.profileId === first.profileId)?.body).toBe(
+      '조 추첨 10/11 12:00, 첫 경기 10/11 21:00(한국 시간)에 열려요.',
+    );
+    // 접수가 닫혀 취소·추가 신청은 안 된다.
+    const del = await call('DELETE', `/v1/cups/${CUP.id}/entries/me`, { cookie: first.cookie });
+    expect(await reason(del)).toBe('CUP_CLOSED');
   });
 
   it('참가 중에는 선발을 8명 밑으로 줄이거나 선발 선수를 내놓을 수 없다', async () => {

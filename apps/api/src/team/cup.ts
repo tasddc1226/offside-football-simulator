@@ -7,6 +7,7 @@ import {
   cupGroupCount,
   firstKoRound,
   lockAt,
+  pullCupForward,
   roundAt,
   type CupDef,
   type CupRound,
@@ -148,6 +149,37 @@ const notify = (
     { sql: '1' },
     { push },
   );
+
+/** KST 'M/D HH:MM'(일정 안내). */
+const kstWhen = (iso: string) => {
+  const d = new Date(Date.parse(iso) + 9 * 3600_000);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${d.toISOString().slice(11, 16)}`;
+};
+
+/**
+ * 접수 중 정원이 다 찼으면 접수를 닫고 추첨·경기를 당긴다(contracts pullCupForward). 한 번만 당긴다 — 조건부 UPDATE와
+ * source_key가 겹친 요청을 막는다. 신청한 구단주 모두에게 새 일정을 알린다. 당겼으면 새 일정을 돌려준다.
+ */
+export async function pullCupIfFull(db: Db, cup: CupDef, now: string) {
+  const active = (await cupEntriesOf(db, cup.id)).filter((e) => e.status === 'active');
+  if (active.length < cup.capacity) return null;
+  const next = pullCupForward(cup, now);
+  if (!next) return null;
+  const d1 = db.$client;
+  const res = await d1
+    .prepare(
+      `UPDATE cups SET closes_at = ?, draw_at = ?, rounds_json = ? WHERE id = ? AND closes_at = ? AND draw_at = ?`,
+    )
+    .bind(next.closesAt, next.drawAt, JSON.stringify(next.rounds), cup.id, cup.closesAt, cup.drawAt)
+    .run();
+  if (!res.meta.changes) return null;
+  const title = cupKo('earlyTitle', { cup: cupTitle(cup) });
+  const body = cupKo('earlyBody', { draw: kstWhen(next.drawAt), first: kstWhen(next.rounds[0]!) });
+  await d1.batch(
+    active.flatMap((e) => notify(d1, e.profileId, `cup:${cup.id}:early`, title, body, now)),
+  );
+  return next;
+}
 
 /** 추첨: 자격을 다시 보고, 조를 나누고, 조별 3라운드 경기를 만든다. 한 batch(트랜잭션). */
 export async function drawCup(db: Db, cup: CupDef, now: string) {

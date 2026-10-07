@@ -79,6 +79,24 @@ export const CUP_AFTERGLOW_MS = 86400_000;
 export const cupEndsAt = (cup: CupDef) =>
   new Date(Date.parse(cup.rounds.at(-1)!) + CUP_AFTERGLOW_MS).toISOString();
 
+/** 정원이 일찍 차서 일정을 당길 때 추첨까지 남기는 최소 시간(신청한 구단주가 알림을 보고 명단을 챙길 시간). */
+export const CUP_EARLY_NOTICE_MS = 12 * 3600_000;
+
+/**
+ * 접수 중 정원이 찬 시각(full)에 맞춰 일정을 당긴다. 접수는 그때 닫고, 추첨은 full + 12시간 뒤 처음 오는 원래 추첨
+ * 시각(KST 같은 시:분)으로, 경기는 추첨이 당겨진 날수만큼 모두 당긴다(매일 같은 시각은 그대로). 당길 날이 없으면 null.
+ */
+export function pullCupForward(cup: CupDef, full: string): CupDef | null {
+  if (full >= cup.closesAt) return null;
+  const DAY = 86400_000;
+  const draw = Date.parse(cup.drawAt);
+  const earliest = Date.parse(full) + CUP_EARLY_NOTICE_MS;
+  const days = Math.floor((draw - earliest) / DAY);
+  if (days <= 0) return null;
+  const shift = (iso: string) => new Date(Date.parse(iso) - days * DAY).toISOString();
+  return { ...cup, closesAt: full, drawAt: shift(cup.drawAt), rounds: cup.rounds.map(shift) };
+}
+
 export const cupById = (id: string, cups: readonly CupDef[]) => cups.find((c) => c.id === id);
 
 /** 지금 보여 줄 대회: 진행 중이거나 다가오는 것, 없으면 가장 최근에 끝난 것. */

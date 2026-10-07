@@ -39,6 +39,7 @@ import {
   groupTable,
   activeEntriesOf,
   lineupLocked,
+  pullCupIfFull,
   type CupEntryRow,
   type CupMatchRow,
   type CupStateRow,
@@ -282,6 +283,8 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       .bind(cup.id, t.id, me.id, t.name, t.manager, t.ovr, now, now, cup.id, cup.capacity)
       .run();
     if (!res.meta.changes) throw conflictError(cupKo('full'), 'CUP_FULL');
+    // 마지막 자리였으면 접수를 닫고 일정을 당긴다.
+    await pullCupIfFull(db, cup, now);
     return c.body(null, 204);
   });
 

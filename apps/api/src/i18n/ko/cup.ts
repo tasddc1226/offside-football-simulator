@@ -41,6 +41,8 @@ export const CUP_KO = {
   adminSeason: '대회 전체가 한 시즌 안에 있어야 해요.',
   adminOverlap: '제{edition}회 대회 기간과 겹쳐요.',
   adminStarted: '접수가 시작된 대회는 지울 수 없어요.',
+  earlyTitle: '{cup} 정원이 다 차서 일정이 당겨졌어요',
+  earlyBody: '조 추첨 {draw}, 첫 경기 {first}(한국 시간)에 열려요.',
   rewardBody: '최종 성적 {stage}. 선수 후보 리롤권 {n}장을 받았어요.',
 } as const;
 

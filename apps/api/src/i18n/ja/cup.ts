@@ -43,5 +43,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   adminSeason: '大会全体が1つのシーズン内に収まる必要があります。',
   adminOverlap: '第{edition}回大会の期間と重なっています。',
   adminStarted: '受付が始まった大会は削除できません。',
+  earlyTitle: '{cup}が定員に達したため日程が早まりました',
+  earlyBody: '組み合わせ抽選 {draw}、初戦 {first}(韓国時間)です。',
   rewardBody: '最終成績 {stage}。選手候補リロール券を{n}枚受け取りました。',
 };

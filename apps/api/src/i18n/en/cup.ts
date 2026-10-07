@@ -45,5 +45,7 @@ export const CUP_EN: Record<CupTextKey, string> = {
   adminSeason: 'The whole cup must fall within one season.',
   adminOverlap: 'Overlaps with cup #{edition}.',
   adminStarted: 'A cup that has opened for entries cannot be deleted.',
+  earlyTitle: '{cup} is full, so the schedule moved up',
+  earlyBody: 'Group draw {draw}, first match {first} (KST).',
   rewardBody: 'Final result: {stage}. You received {n} player reroll ticket(s).',
 };
