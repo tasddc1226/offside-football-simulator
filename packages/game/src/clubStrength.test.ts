@@ -95,7 +95,7 @@ describe('순위표 → 전력 계산', () => {
   it('맞는 순위표는 통과, 승점·득실 합이 틀리면 이유를 낸다', () => {
     expect(checkStandings(rows)).toEqual([]);
     expect(checkStandings([{ ...rows[0]!, pts: 10 }, ...rows.slice(1)])).toHaveLength(1);
-    expect(checkStandings([...rows, rows[0]!]).some((e) => e.includes('두 번'))).toBe(true);
+    expect(checkStandings([...rows, rows[0]!]).some((e) => e.kind === 'dup')).toBe(true);
   });
 
   it('잘한 팀은 오르고 못한 팀은 내려가되 한 번에 ±3, 기본에서 ±6까지만', () => {
@@ -114,7 +114,7 @@ describe('순위표 → 전력 계산', () => {
       a: 61,
     });
     expect(few).toEqual([
-      { id: 'a', team: 'A', base: 60, prev: 61, target: 61, next: 61, note: '1경기' },
+      { id: 'a', team: 'A', base: 60, prev: 61, target: 61, next: 61, held: true },
     ]);
   });
 });

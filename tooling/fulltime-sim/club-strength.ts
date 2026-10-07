@@ -7,7 +7,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CLUBS } from '@offside/game/data';
 import { CLUB_STRENGTH } from '@offside/game/club-strength-data';
-import { checkStandings, computeStrength, type StandingRow } from '@offside/game/clubStrengthCalc';
+import {
+  checkStandings,
+  computeStrength,
+  type StandingIssue,
+  type StandingRow,
+} from '@offside/game/clubStrengthCalc';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA = path.resolve(__dirname, '../../packages/game/src/club-strength.json');
@@ -45,7 +50,21 @@ const rows: StandingRow[] = lines.map((l) => {
 
 // 정적 CLUBS(전력표를 덮기 전)가 기본 전력이다 — 이 스크립트는 applyClubStrength를 부르지 않는다.
 const clubs = CLUBS.filter((c) => c.leagueId === map.league);
-const errs = checkStandings(rows);
+function issueText(e: StandingIssue): string {
+  switch (e.kind) {
+    case 'dup':
+      return `${e.team}: 팀이 두 번 있어요`;
+    case 'nan':
+      return `${e.team}: 숫자가 아닌 칸이 있어요`;
+    case 'games':
+      return `${e.team}: 승+무+패(${e.got}) ≠ 경기 수(${e.want})`;
+    case 'points':
+      return `${e.team}: 3×승+무(${e.got}) ≠ 승점(${e.want})`;
+    case 'gd':
+      return `득실차 합이 0이 아니에요(${e.got})`;
+  }
+}
+const errs = checkStandings(rows).map(issueText);
 if (!asOf) errs.push('순위표 파일 이름에 날짜(YYYY-MM-DD)가 없어요');
 const teams = new Set(rows.map((r) => r.team));
 for (const t of teams)
@@ -73,7 +92,7 @@ console.log(`${map.source} ${asOf} · 구단 기본 전력 평균 ${center.toFix
 console.log('구단\t현실\t기본\t이전\t목표\t새 값');
 for (const r of out)
   console.log(
-    `${name(r.id)}\t${r.team}\t${r.base}\t${r.prev}\t${r.target}\t${r.next}${r.next !== r.prev ? ` (${r.next > r.prev ? '+' : ''}${r.next - r.prev})` : ''}${r.note ? ` · 유지: ${r.note}` : ''}`,
+    `${name(r.id)}\t${r.team}\t${r.base}\t${r.prev}\t${r.target}\t${r.next}${r.next !== r.prev ? ` (${r.next > r.prev ? '+' : ''}${r.next - r.prev})` : ''}${r.held ? ` · 유지: ${rows.find((x) => x.team === r.team)!.p}경기` : ''}`,
   );
 
 const values = { ...CLUB_STRENGTH.values };

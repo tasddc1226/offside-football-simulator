@@ -31,22 +31,29 @@ export const CALC = {
   baseMax: 6,
 } as const;
 
-/** 순위표가 맞는지 본다. 문제가 있으면 이유 목록(비어 있으면 통과). */
-export function checkStandings(rows: StandingRow[]): string[] {
-  const errs: string[] = [];
+/** 순위표 검사에서 걸린 것. 문구는 운영 스크립트가 만든다(엔진 파일엔 화면 문구를 두지 않는다). */
+export type StandingIssue =
+  | { kind: 'dup' | 'nan'; team: string }
+  | { kind: 'games' | 'points'; team: string; got: number; want: number }
+  | { kind: 'gd'; got: number };
+
+/** 순위표가 맞는지 본다. 걸린 것 목록(비어 있으면 통과). */
+export function checkStandings(rows: StandingRow[]): StandingIssue[] {
+  const out: StandingIssue[] = [];
   const names = new Set<string>();
   for (const r of rows) {
-    if (names.has(r.team)) errs.push(`${r.team}: 팀이 두 번 있어요`);
+    if (names.has(r.team)) out.push({ kind: 'dup', team: r.team });
     names.add(r.team);
     if (![r.p, r.w, r.d, r.l, r.pts, r.gf, r.ga].every((x) => Number.isInteger(x) && x >= 0))
-      errs.push(`${r.team}: 숫자가 아닌 칸이 있어요`);
+      out.push({ kind: 'nan', team: r.team });
     if (r.w + r.d + r.l !== r.p)
-      errs.push(`${r.team}: 승+무+패(${r.w + r.d + r.l}) ≠ 경기 수(${r.p})`);
-    if (3 * r.w + r.d !== r.pts) errs.push(`${r.team}: 3×승+무(${3 * r.w + r.d}) ≠ 승점(${r.pts})`);
+      out.push({ kind: 'games', team: r.team, got: r.w + r.d + r.l, want: r.p });
+    if (3 * r.w + r.d !== r.pts)
+      out.push({ kind: 'points', team: r.team, got: 3 * r.w + r.d, want: r.pts });
   }
   const gd = rows.reduce((t, r) => t + r.gf - r.ga, 0);
-  if (gd !== 0) errs.push(`득실차 합이 0이 아니에요(${gd})`);
-  return errs;
+  if (gd !== 0) out.push({ kind: 'gd', got: gd });
+  return out;
 }
 
 export interface StrengthRow {
@@ -56,8 +63,8 @@ export interface StrengthRow {
   prev: number;
   target: number;
   next: number;
-  /** 이전 값을 그대로 둔 이유(경기 수 부족 등). */
-  note?: string;
+  /** 경기 수가 모자라 이전 값을 그대로 뒀다. */
+  held?: boolean;
 }
 
 /**
@@ -81,7 +88,7 @@ export function computeStrength(
     const b = base[id]!;
     const pv = prev[id] ?? b;
     if (r.p < CALC.minGames)
-      return [{ id, team: r.team, base: b, prev: pv, target: pv, next: pv, note: `${r.p}경기` }];
+      return [{ id, team: r.team, base: b, prev: pv, target: pv, next: pv, held: true }];
     const target =
       center +
       CALC.ppg * (r.pts / r.p - avgPpg) +
