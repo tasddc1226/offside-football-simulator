@@ -14,6 +14,7 @@ import type { GameState } from './types.js';
 import { leagueOf, roleOf } from './player.js';
 import { addAttr, addStat } from './stats.js';
 import { growthFactor } from './training.js';
+import { matchOpp } from './table.js';
 import { gTurnText as L } from './i18n/ko/gTurn.js';
 
 // ───────── 경기 구간 시뮬레이션 ─────────
@@ -72,6 +73,8 @@ export interface MatchGame {
   rating?: number;
   cs?: boolean;
   inj?: boolean;
+  /** T-11-134 상대 구단 id(옛 시즌은 없다). */
+  opp?: string;
 }
 export interface BlockResult {
   n: number;
@@ -126,10 +129,10 @@ function rollMinutes(s: GameState, startP: number, subP: number): { mins: number
   return { mins: chance(subP) ? ri(8, 35) : 0, inj };
 }
 
-/** 팀 결과. 구단 전력이 바탕이고, 출전했으면 내 경기력·골이 승률을 조금 올린다. */
-function rollResult(s: GameState, avg: number, mins: number, perf: number, g: number): Res {
+/** 팀 결과. 구단 전력과 상대 전력(oppStr, 옛 시즌은 리그 평균) 차이가 바탕이고, 출전했으면 내 경기력·골이 승률을 조금 올린다. */
+function rollResult(s: GameState, oppStr: number, mins: number, perf: number, g: number): Res {
   const wp = clamp(
-    0.38 + (s.club.str - avg) * 0.024 + (mins ? perf * 0.035 + g * 0.12 : 0),
+    0.38 + (s.club.str - oppStr) * 0.024 + (mins ? perf * 0.035 + g * 0.12 : 0),
     0.07,
     0.88,
   );
@@ -240,7 +243,10 @@ export function simBlock(s: GameState): BlockResult {
       perf = (o - L.avg) / 10 + gauss() * 0.8 + (s.cond - 70) / 60 + (s.morale - 60) / 90;
       ({ g, a } = rollScoring(s, power, perf, L.avg, mins));
     }
-    const res = rollResult(s, L.avg, mins, perf, g);
+    // T-11-134 이번 라운드 상대 구단의 시즌 전력. 상대가 정해지지 않은 옛 시즌은 리그 평균 팀을 상대한다.
+    const opp = matchOpp(s, S.played);
+    const oppStr = opp?.str ?? L.avg;
+    const res = rollResult(s, oppStr, mins, perf, g);
     const k = res === 'W' ? 'w' : res === 'D' ? 'd' : 'l';
     S[k] = (S[k] ?? 0) + 1;
     r[k] = (r[k] ?? 0) + 1;
@@ -249,7 +255,7 @@ export function simBlock(s: GameState): BlockResult {
       if (
         isKeeperLine(s) &&
         res !== 'L' &&
-        chance(0.32 + (s.club.str - L.avg) * 0.015 + (s.attrs.def - L.avg) * 0.006)
+        chance(0.32 + (s.club.str - oppStr) * 0.015 + (s.attrs.def - L.avg) * 0.006)
       ) {
         cs = true;
         r.cs++;
@@ -267,14 +273,14 @@ export function simBlock(s: GameState): BlockResult {
       r.rs += rating;
       r.hl.push(...matchHighlights(s, S.played, g, rating, cs));
       addStat(s, 'cond', -(mins / 90) * 3.2);
-      r.games.push({ rd: S.played, res, mins, g, a, rating, cs });
+      r.games.push({ rd: S.played, res, mins, g, a, rating, cs, ...(opp ? { opp: opp.id } : {}) });
       const hurt = rollInjury(s, S.played);
       if (hurt) {
         r.injured = true;
         r.hl.push(hurt);
       }
     }
-    if (!mins) r.games.push({ rd: S.played, res, mins: 0, inj });
+    if (!mins) r.games.push({ rd: S.played, res, mins: 0, inj, ...(opp ? { opp: opp.id } : {}) });
     addStat(s, 'cond', 1.1);
   }
   afterBlock(s, r, L.tier);

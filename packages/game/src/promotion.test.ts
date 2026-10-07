@@ -83,7 +83,9 @@ describe('K2 우승 승격', () => {
     const rows = leagueTable(s);
     expect(rows).toHaveLength(clubsIn('k2').length);
     expect(rows.find((r) => r.me)!.pts).toBe(200);
-    expect(rows.some((r) => r.id === 'k1-10')).toBe(true);
+    // T-11-134 끝난 시즌 표는 그 시즌에 실제로 상대한 K2 구단 그대로다(새로 강등된 K1 구단이 끼지 않는다).
+    expect(rows.some((r) => r.id === 'k1-10')).toBe(false);
+    expect(rows.filter((r) => !r.me).every((r) => r.id?.startsWith('k2-'))).toBe(true);
     stay(s);
     expect(s.season.leagueId).toBeUndefined();
     expect(seasonLeagueId(s)).toBe('k1');
