@@ -8,6 +8,9 @@ const ko = {
     `${p.grade}등급 · ${p.year} 시즌 스카우트 평가`,
   peekBtnFree: '이번 시즌 평가 보기',
   peekBtnAd: '광고 보고 이번 시즌 평가 보기',
+  peekBtnPay: (p: { cost: string }) => `${p.cost} 내고 이번 시즌 평가 보기`,
+  peekShort: (p: { cost: string }) =>
+    `자금이 모자라요. 이번 시즌 평가를 보려면 ${p.cost}이 필요해요.`,
 };
 
 export type GamePotentialMsgs = typeof ko;

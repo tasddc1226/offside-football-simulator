@@ -47,6 +47,8 @@ export interface Season {
   d: number;
   l: number;
   rivals: number[];
+  /** T-11-134 rivals 앞쪽과 짝인 상대 구단 id(순서 같음). 리그 경기 상대·순위표 이름이 이 구단이다. 옛 시즌에는 없다. */
+  opp?: string[];
   honors: string[];
   comps?: SeasonComp[];
   trophiesMid?: string[];
