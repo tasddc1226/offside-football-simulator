@@ -5,6 +5,21 @@ import { execFileSync } from 'node:child_process';
 
 export const ENDPOINT = 'https://api.offside-lab.com/v1/internal/release-notes';
 
+/** T-11-146 이 날짜(파일명 앞자리) 이후의 항목은 영어(`en`)·일본어(`ja`) 문구가 있어야 한다. */
+export const TRANSLATED_SINCE = '2026-10-08';
+
+const validText = (t) =>
+  !!t &&
+  typeof t === 'object' &&
+  typeof t.title === 'string' &&
+  !!t.title.trim() &&
+  t.title.length <= 100 &&
+  !/[\r\n]/.test(t.title) &&
+  Array.isArray(t.items) &&
+  t.items.length >= 1 &&
+  t.items.length <= 12 &&
+  t.items.every((s) => typeof s === 'string' && !!s.trim() && s.length <= 500 && !/[\r\n]/.test(s));
+
 /** 사용자 공지는 PR에서 검토한 JSON만 읽는다. 커밋 제목·AI 출력·PR 본문은 게시하지 않는다. */
 export function readEntries(directory) {
   const names = readdirSync(directory)
@@ -13,33 +28,29 @@ export function readEntries(directory) {
   if (names.length > 100) throw new Error('Keep at most 100 active release-note entries.');
   const entries = names.map((name) => JSON.parse(readFileSync(resolve(directory, name), 'utf8')));
   const ids = new Set();
-  for (const e of entries) {
+  entries.forEach((e, i) => {
     if (
       !e ||
       typeof e !== 'object' ||
       typeof e.id !== 'string' ||
       !/^[a-z0-9][a-z0-9-]{0,79}$/.test(e.id ?? '') ||
-      typeof e.title !== 'string' ||
-      !e.title.trim() ||
-      e.title.length > 100 ||
-      /[\r\n]/.test(e.title) ||
-      !Array.isArray(e.items) ||
-      e.items.length < 1 ||
-      e.items.length > 12 ||
-      e.items.some(
-        (s) => typeof s !== 'string' || !s.trim() || s.length > 500 || /[\r\n]/.test(s),
-      ) ||
+      !validText(e) ||
       !['web', 'app', 'web-app', 'web-app-pending'].includes(e.availability) ||
       (e.appVersion !== undefined && !/^\d+\.\d+\.\d+$/.test(e.appVersion)) ||
       (e.availability === 'web-app-pending' && !e.appVersion) ||
+      ['en', 'ja'].some((l) => e[l] !== undefined && !validText(e[l])) ||
+      Object.keys(e.en ?? {}).some((k) => !['title', 'items'].includes(k)) ||
+      Object.keys(e.ja ?? {}).some((k) => !['title', 'items'].includes(k)) ||
       Object.keys(e).some(
-        (k) => !['id', 'title', 'items', 'availability', 'appVersion'].includes(k),
+        (k) => !['id', 'title', 'items', 'en', 'ja', 'availability', 'appVersion'].includes(k),
       ) ||
       ids.has(e.id)
     )
       throw new Error('Invalid or duplicate release-note entry.');
+    if (names[i] >= TRANSLATED_SINCE && (!e.en || !e.ja))
+      throw new Error(`${names[i]}: add English (en) and Japanese (ja) text.`);
     ids.add(e.id);
-  }
+  });
   const payloadBytes = Buffer.byteLength(JSON.stringify({ sha: 'a'.repeat(40), entries }));
   if (payloadBytes > 65_536) throw new Error('Release-note payload exceeds 64 KiB.');
   return entries;

@@ -12,6 +12,8 @@ import {
   PostInputSchema,
   PostLikeResponseSchema,
   PostSchema,
+  PostTranslateInputSchema,
+  PostTranslateResponseSchema,
 } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
 import { getViewer, requireAdmin } from '../auth/admin.js';
@@ -26,9 +28,11 @@ import {
   getCommentOwner,
   getHiddenFor,
   getPost,
+  getPostSource,
   isLiked,
   listComments,
   listPosts,
+  localizeList,
   reportComment,
   setLike,
   unblock,
@@ -45,6 +49,8 @@ import { BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { hasProfanity } from '@offside/contracts/content-filter';
 import { kickNewsPush } from '../push/dispatch.js';
+import { reqLang } from '../lang.js';
+import { draftTranslations } from '../translate/ai.js';
 
 // T-10-011 게시판(공지·릴리즈 노트). 읽기는 누구나, 글은 관리자만, 댓글은 프로필이 있는 누구나.
 // T-10-058 조회수는 웹이 기기마다 글 하나에 한 번 보내고, 좋아요는 프로필이 있는 누구나(구글 로그인 없이도).
@@ -69,7 +75,7 @@ const LIST_TTL = 60;
 const purgeList = (c: Context<AppEnv>, board: string) => purgeEdge(c, STALE.boardChanged(board));
 
 async function postOr404(c: Context<AppEnv>, id: string) {
-  const post = await getPost(getDb(c), id);
+  const post = await getPost(getDb(c), id, reqLang(c));
   if (!post) throw notFound('글');
   return post;
 }
@@ -88,7 +94,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       q.limit === BOARD_PAGE_LIMIT && !q.before
         ? await edgeCached(c, EDGE.boardFirstPage(board), LIST_TTL, load)
         : await load();
-    return ok(c, BoardListResponseSchema, data);
+    return ok(c, BoardListResponseSchema, localizeList(data, reqLang(c)));
   });
 
   app.get('/v1/boards/posts/:postId', async (c) => {
@@ -102,6 +108,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       session.then((s) => (s ? isLiked(db, id, s.profileId) : false)),
       session.then((s) => (s ? getHiddenFor(db, s.profileId, id) : undefined)),
     ]);
+    const source = viewer.admin ? ((await getPostSource(db, id)) ?? null) : null;
     const shown = rows.filter(
       (r) => !hidden?.blockedAuthors.has(r.profileId) && !hidden?.reportedComments.has(r.id),
     );
@@ -120,6 +127,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       comments,
       liked,
       blocks: hidden?.blocks ?? [],
+      source,
     });
   });
 
@@ -149,6 +157,13 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     purgeList(c, board);
     kickNewsPush(c);
     return ok(c, PostSchema, await postOr404(c, id), 201);
+  });
+
+  // T-11-146 번역 초안(저장하지 않는다). 관리자만 — 외부 API를 부르므로 권한을 먼저 확인한다.
+  app.post('/v1/boards/translate', async (c) => {
+    await requireAdmin(c);
+    const input = readBody(c, PostTranslateInputSchema);
+    return ok(c, PostTranslateResponseSchema, await draftTranslations(c.env.AI, input));
   });
 
   app.put('/v1/boards/posts/:postId', async (c) => {

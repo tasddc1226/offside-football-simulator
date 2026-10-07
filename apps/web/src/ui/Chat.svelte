@@ -26,6 +26,8 @@
   const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
   import NicknameForm from './NicknameForm.svelte';
   import { toast } from './helpers.js';
+  import { createTranslations } from './translations.svelte.js';
+  import { getLocale } from '@offside/contracts/i18n';
   import { startGoogleLogin } from './login.js';
   import { goHome } from './nav.js';
   import { trackViewport } from './viewport.js';
@@ -36,6 +38,8 @@
   let text = $state('');
   let selected = $state<string | null>(null);
   let busy = $state(false);
+  /** T-11-146 번역 보기. */
+  const tr = createTranslations();
   let list: HTMLOListElement | undefined = $state();
   let wrap: HTMLDivElement | undefined = $state();
   let input: HTMLTextAreaElement | undefined = $state();
@@ -166,9 +170,12 @@
           </div>
           <!-- 보낸 시각은 말풍선 옆 아래(남의 말은 오른쪽, 내 말은 왼쪽). -->
           <div class="chat-body-row">
-            <p class="chat-bubble">{m.body}</p>
+            <p class="chat-bubble" lang={tr.translated(m.id) ? getLocale() : undefined}>{tr.text(m.id, m.body)}</p>
             <time class="muted chat-time num" datetime={new Date(m.at).toISOString()}>{chatTime(m.at)}</time>
           </div>
+          {#if !mine(m) && tr.can(m.body)}
+            <button class="chat-translate muted fs-xs" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>
+          {/if}
           {#if selected === m.id}
             <div class="report-panel stack" style="gap:8px" data-report-panel>
               {#if view.me?.admin}

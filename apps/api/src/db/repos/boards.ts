@@ -1,9 +1,11 @@
 import type {
   BoardBlock,
   BoardKey,
+  BoardListResponse,
   CommentReportReason,
   Post,
   PostSummary,
+  PostTranslations,
 } from '@offside/contracts';
 import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
@@ -17,6 +19,7 @@ import {
 } from '../schema.js';
 import { runBatch } from './batch.js';
 import { newsPushStatements } from '../../push/enqueue.js';
+import type { Lang } from '../../lang.js';
 
 const COMMENTS_MAX = 200;
 
@@ -33,23 +36,51 @@ const summaryColumns = {
   // 단일 테이블 select에서 drizzle은 컬럼을 테이블명 없이 쓰므로 상관 서브쿼리는 이름을 직접 적는다.
   commentCount: sql<number>`(SELECT COUNT(*) FROM board_comments c WHERE c.post_id = board_posts.id AND c.deleted_at IS NULL)`,
 };
+/** T-11-146 운영자가 쓴 번역이 있으면 그 언어로, 없으면 한국어 원문. */
+const localized = (field: 'title' | 'body', lang: Lang) =>
+  lang === 'ko'
+    ? boardPosts[field]
+    : sql<string>`coalesce(json_extract(${boardPosts.i18nJson}, ${`$.${lang}.${field}`}), ${boardPosts[field]})`;
+/** 목록은 엣지에 한국어 키 하나로 담는다 — 번역 제목을 함께 담고(본문은 읽지 않는다) 꺼낸 뒤 `localizeList`로 고른다. */
+const listColumns = {
+  ...summaryColumns,
+  titles: sql<
+    string | null
+  >`json_object('en', json_extract(${boardPosts.i18nJson}, '$.en.title'), 'ja', json_extract(${boardPosts.i18nJson}, '$.ja.title'))`,
+};
+type ListedPost = PostSummary & { titles: string | null };
+
+export function localizeList(
+  data: { posts: ListedPost[]; hasMore: boolean },
+  lang: Lang,
+): BoardListResponse {
+  return {
+    hasMore: data.hasMore,
+    posts: data.posts.map(({ titles, ...p }) => {
+      if (lang === 'ko' || !titles) return p;
+      const title = (JSON.parse(titles) as Partial<Record<Lang, string | null>>)[lang];
+      return title ? { ...p, title } : p;
+    }),
+  };
+}
 const live = (id: string) => and(eq(boardPosts.id, id), isNull(boardPosts.deletedAt));
 const likeOf = (postId: string, profileId: string) =>
   and(eq(boardPostLikes.postId, postId), eq(boardPostLikes.profileId, profileId));
 
 /** 첫 페이지(before 없음)는 고정 글 전부 + 최신 글, 다음 페이지부터는 고정 안 된 글만 createdAt 역순. */
 export async function listPosts(db: Db, board: BoardKey, limit: number, before?: string) {
+  const columns = listColumns;
   const inBoard = and(eq(boardPosts.board, board), isNull(boardPosts.deletedAt));
   const [pinned, rest] = await Promise.all([
     before
       ? Promise.resolve([])
       : db
-          .select(summaryColumns)
+          .select(columns)
           .from(boardPosts)
           .where(and(inBoard, eq(boardPosts.pinned, true)))
           .orderBy(desc(boardPosts.createdAt)),
     db
-      .select(summaryColumns)
+      .select(columns)
       .from(boardPosts)
       .where(
         and(
@@ -62,17 +93,32 @@ export async function listPosts(db: Db, board: BoardKey, limit: number, before?:
       .limit(limit + 1),
   ]);
   return {
-    posts: [...pinned, ...rest.slice(0, limit)] as PostSummary[],
+    posts: [...pinned, ...rest.slice(0, limit)] as ListedPost[],
     hasMore: rest.length > limit,
   };
 }
 
-export async function getPost(db: Db, id: string): Promise<Post | undefined> {
+export async function getPost(db: Db, id: string, lang: Lang): Promise<Post | undefined> {
   const [row] = await db
-    .select({ ...summaryColumns, body: boardPosts.body })
+    .select({
+      ...summaryColumns,
+      title: localized('title', lang),
+      body: localized('body', lang),
+    })
     .from(boardPosts)
     .where(live(id));
   return row as Post | undefined;
+}
+
+/** 관리자가 글을 고칠 때 쓰는 한국어 원문과 번역. */
+export async function getPostSource(db: Db, id: string) {
+  const [row] = await db
+    .select({ title: boardPosts.title, body: boardPosts.body, i18nJson: boardPosts.i18nJson })
+    .from(boardPosts)
+    .where(live(id));
+  if (!row) return undefined;
+  const i18n = (row.i18nJson ? JSON.parse(row.i18nJson) : {}) as PostTranslations;
+  return { title: row.title, body: row.body, i18n };
 }
 
 export type PostFields = {
@@ -80,7 +126,11 @@ export type PostFields = {
   body: string;
   version?: string | undefined;
   pinned: boolean;
+  i18n?: PostTranslations | undefined;
 };
+
+/** 빈 번역은 NULL로 둔다. undefined는 "보내지 않음"이라 저장된 번역을 건드리지 않는다. */
+const i18nColumn = (i18n: PostTranslations) => (i18n.en || i18n.ja ? JSON.stringify(i18n) : null);
 
 export async function createPost(
   db: Db,
@@ -95,14 +145,15 @@ export async function createPost(
     d1
       .prepare(
         `INSERT INTO board_posts
-      (id, board, title, body, version, pinned, author_profile_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, board, title, body, i18n_json, version, pinned, author_profile_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         id,
         board,
         fields.title,
         fields.body,
+        fields.i18n ? i18nColumn(fields.i18n) : null,
         fields.version || null,
         fields.pinned ? 1 : 0,
         authorProfileId,
@@ -123,7 +174,14 @@ export async function updatePost(
 ): Promise<boolean> {
   const res = await db
     .update(boardPosts)
-    .set({ ...fields, version: fields.version || null, updatedAt: now })
+    .set({
+      title: fields.title,
+      body: fields.body,
+      pinned: fields.pinned,
+      version: fields.version || null,
+      ...(fields.i18n ? { i18nJson: i18nColumn(fields.i18n) } : {}),
+      updatedAt: now,
+    })
     .where(live(id));
   return res.meta.changes > 0;
 }
