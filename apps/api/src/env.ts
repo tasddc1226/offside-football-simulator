@@ -14,6 +14,8 @@ export type Bindings = {
   REENGAGEMENT_PUSH_ENABLED?: string;
   /** Expo enhanced push security용 secret. 클라이언트에는 넣지 않는다. */
   EXPO_PUSH_ACCESS_TOKEN?: string;
+  /** Emergency stop for dormant career archival (restores remain enabled). */
+  CAREER_RETENTION_DISABLED?: string;
   DB: D1Database;
   /** local|staging|production. */
   ENVIRONMENT: string;

@@ -663,6 +663,8 @@ export async function getCareerHead(db: Db, careerId: string) {
   const [row] = await db
     .select({
       profileId: careers.profileId,
+      detailArchiveKey: careers.detailArchiveKey,
+      updatedAt: careers.updatedAt,
       title: careers.title,
       wallOfHonorJson: careers.wallOfHonorJson,
       status: careers.status,
