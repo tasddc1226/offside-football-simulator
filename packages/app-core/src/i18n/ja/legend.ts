@@ -19,6 +19,7 @@ export const legend: Translation<LegendMsgs> = {
   statAssists: 'アシスト',
   statCaps: 'Aマッチ',
   statTrophies: 'トロフィー',
+  statBallon: 'バロンドール受賞',
   noDetailNote: 'シーズン別の詳しい記録がない以前の記録のため、概要だけを表示します。',
   scrollCue: 'スクロールしてキャリアを振り返る',
   journeyTitle: 'クラブ別キャリア',

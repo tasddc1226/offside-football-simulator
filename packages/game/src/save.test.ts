@@ -8,7 +8,7 @@ import { createRng, rnd } from './rng.js';
 import { loadSave, migrateSave } from './save.js';
 import { migrateHofEntry } from './hof-store.js';
 import type { GameState, HofEntry } from './types.js';
-import { acceptOption } from './season.js';
+import { acceptOption, endSeason } from './season.js';
 
 // T-10-046: 저장본 마이그레이션. 지금 형식의 저장본은 그대로 두고, 옛 형식은 빠진 필드를 채운다.
 // 저장 형식을 바꾸면 여기에 그 이전 형식의 사례를 더한다.
@@ -24,6 +24,37 @@ function legacy(edit: (g: Record<string, unknown>) => void = () => {}): GameStat
 }
 
 describe('migrateSave (T-10-046)', () => {
+  it('최종 표가 없는 이전 저장은 완료 기록·pending을 추정해서 다시 쓰지 않고 그대로 읽는다', () => {
+    const G = current();
+    delete G.season.finalTable;
+    G.pending = { type: 'market', res: null, m: null };
+    const history = structuredClone({ career: G.career, pending: G.pending });
+    const restored = loadSave(JSON.parse(JSON.stringify(G)))!.G;
+    expect(restored.season.finalTable).toBeUndefined();
+    expect({ career: restored.career, pending: restored.pending }).toEqual(history);
+  });
+
+  it('완료 시즌 표는 저장·복원에서 승점·동률 순서까지 그대로 보존한다', () => {
+    const G = current();
+    G.season.finalTable = [
+      { name: '내 팀', me: true, p: 38, w: 24, d: 5, l: 9, pts: 77 },
+      { name: '상대', me: false, p: 38, w: 24, d: 5, l: 9, pts: 77 },
+    ];
+    const restored = loadSave(JSON.parse(JSON.stringify(G)))!.G;
+    expect(restored.season.finalTable).toEqual(G.season.finalTable);
+  });
+
+  it('최종 표가 없던 옛 결산 결과도 실제 res와 커리어 순위를 보존한다', () => {
+    const G = current();
+    const res = endSeason(G);
+    G.pending = { type: 'market', res, m: null };
+    delete G.season.finalTable;
+    const history = structuredClone({ career: G.career, pending: G.pending });
+    const restored = loadSave(JSON.parse(JSON.stringify(G)))!.G;
+    expect(restored.season.finalTable).toBeUndefined();
+    expect({ career: restored.career, pending: restored.pending }).toEqual(history);
+  });
+
   it('서버 칭호를 진행 세이브에서 위조하거나 백업으로 복원하지 않는다', () => {
     const G = current();
     G.titles = [
