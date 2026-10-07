@@ -5,6 +5,7 @@ import {
   POST_BODY_MAX,
   POST_TITLE_MAX,
   POST_VERSION_MAX,
+  TRANSLATED_BODY_MAX,
   type BoardKey,
 } from '@offside/contracts/board-limits';
 import { BOARD_LABEL } from '@offside/app-core/boardText';
@@ -126,7 +127,7 @@ export function PostEditor({
                 <TextBox
                   testID={`post-body-${lang}`}
                   multiline
-                  maxLength={POST_BODY_MAX}
+                  maxLength={TRANSLATED_BODY_MAX}
                   value={draft[lang].body}
                   onChangeText={(body) => onChange({ ...draft, [lang]: { ...draft[lang], body } })}
                   style={{ minHeight: 8 * 26 }}
