@@ -1,3 +1,4 @@
+import { checkCupLineup } from './cup.js';
 import {
   ClubAchievementsResponseSchema,
   OwnerTeamResponseSchema,
@@ -294,6 +295,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           : null
         : input.layout;
     const lineup = buildLineup(input.formation, input.slots, eligible, layout);
+    if (!friendly) await checkCupLineup(db, me.id, season, ids, filledCount(lineup), now);
     const values = {
       name: input.name,
       manager: input.manager,

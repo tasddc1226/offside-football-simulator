@@ -411,6 +411,16 @@ export const TeamBadgeSchema = z.strictObject({
 });
 export type TeamBadge = z.infer<typeof TeamBadgeSchema>;
 
+/** T-11-145 구단주가 얻은 오프사이드 컵 성적(영구 — 우승·준우승·4강은 트로피·칭호). stage는 cup.ts CUP_STAGES. */
+export const CupHonorSchema = z.strictObject({
+  cupId: z.string(),
+  season: z.number().int(),
+  edition: z.number().int(),
+  stage: z.enum(['champion', 'runnerup', 'sf', 'qf', 'r16', 'r32', 'group']),
+  teamName: z.string(),
+});
+export type CupHonor = z.infer<typeof CupHonorSchema>;
+
 /** 누구나 보는 팀 프로필. 선수 이름은 공개 이름·익명 표기뿐이다. rank는 랭킹에 오르지 않은 팀(선수 0명)이면 null. */
 export const TeamProfileSchema = z.strictObject({
   id: TeamIdSchema,
@@ -431,6 +441,8 @@ export const TeamProfileSchema = z.strictObject({
   likes: count,
   views: count,
   badges: z.array(TeamBadgeSchema),
+  /** T-11-145 이 팀 구단주의 컵 성적(모든 시즌). 배포 전 응답엔 없다. */
+  cupHonors: z.array(CupHonorSchema).optional(),
   createdAt: IsoUtcSchema,
 });
 export type TeamProfile = z.infer<typeof TeamProfileSchema>;

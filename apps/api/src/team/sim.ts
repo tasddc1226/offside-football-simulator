@@ -243,6 +243,7 @@ export function simulateMatch(
   home: readonly LineupSlot[],
   away: readonly LineupSlot[],
   season: number,
+  opts: { neutral?: boolean } = {},
 ): SimResult {
   if (home.length !== LINEUP_SIZE || away.length !== LINEUP_SIZE)
     throw new Error('선발은 11명이어야 합니다.');
@@ -252,7 +253,8 @@ export function simulateMatch(
   const aSyn = on ? lineupSynergy(away) : null;
   const hs = lineupLines(home, hSyn);
   const as = lineupLines(away, aSyn);
-  const homeGoals = poisson(expectedGoals(hs, as, true), rng);
+  // T-11-145 컵은 중립 경기 — 홈 이점을 주지 않는다.
+  const homeGoals = poisson(expectedGoals(hs, as, !opts.neutral), rng);
   const awayGoals = poisson(expectedGoals(as, hs, false), rng);
   const events: SimEvent[] = [];
   const add = (side: 'home' | 'away', lineup: readonly LineupSlot[], n: number) => {
@@ -279,4 +281,56 @@ export function simulateMatch(
     events,
     ...(hSyn && aSyn ? { synergy: { home: synergyIds(hSyn), away: synergyIds(aSyn) } } : {}),
   };
+}
+
+/** 승부차기 키커 순서 가중치(골키퍼는 마지막). */
+const KICK_ORDER: Record<DetailPos, number> = {
+  ST: 0,
+  W: 1,
+  AM: 2,
+  CM: 3,
+  DM: 4,
+  FB: 5,
+  CB: 6,
+  GK: 7,
+};
+
+/**
+ * T-11-145 승부차기(컵 토너먼트 무승부). 키커는 공격적인 자리부터 돌아가며 차고, 성공 확률은 키커 실력 − 상대 골키퍼
+ * 실력으로 75% 근처에서 오르내린다. 5명씩 찬 뒤 같으면 서든데스. seed가 같으면 같은 결과다.
+ */
+export function penaltyShootout(
+  seed: string,
+  home: readonly LineupSlot[],
+  away: readonly LineupSlot[],
+): { home: number; away: number } {
+  const rng = rngOf(seedOf(`${seed}:pens`));
+  const order = (l: readonly LineupSlot[]) =>
+    [...l].sort((a, b) => KICK_ORDER[a.slot] - KICK_ORDER[b.slot] || b.rating - a.rating);
+  const gk = (l: readonly LineupSlot[]) => l.find((s) => s.slot === 'GK')?.rating ?? 50;
+  const kickers = { home: order(home), away: order(away) };
+  const keeper = { home: gk(home), away: gk(away) };
+  const score = { home: 0, away: 0 };
+  const kick = (side: 'home' | 'away', n: number) => {
+    const k = kickers[side][n % kickers[side].length]!;
+    const p = Math.min(
+      0.9,
+      Math.max(0.6, 0.75 + 0.005 * (k.rating - keeper[side === 'home' ? 'away' : 'home'])),
+    );
+    if (rng() < p) score[side]++;
+  };
+  for (let n = 0; n < 5; n++) {
+    kick('home', n);
+    if (score.home > score.away + (5 - n)) break;
+    if (score.away > score.home + (5 - n - 1)) break;
+    kick('away', n);
+    if (score.home > score.away + (5 - n - 1) || score.away > score.home + (5 - n - 1)) break;
+  }
+  for (let n = 5; score.home === score.away && n < 40; n++) {
+    kick('home', n);
+    kick('away', n);
+  }
+  // 40번째까지 같을 일은 거의 없지만 끝은 내야 한다 — 시드로 한 쪽을 고른다.
+  if (score.home === score.away) score[rng() < 0.5 ? 'home' : 'away']++;
+  return score;
 }

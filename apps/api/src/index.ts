@@ -9,6 +9,7 @@ import { liveSocket } from './live/socket.js';
 import { runNewsPush } from './push/dispatch.js';
 import { runPersonalPush } from './push/personal.js';
 import { queueReengagement } from './push/reengagement.js';
+import { runCup } from './team/cup.js';
 import { runSeasonClose } from './team/seasonClose.js';
 
 export { app };
@@ -39,6 +40,14 @@ export default {
         .catch((e: unknown) =>
           console.error(
             JSON.stringify({ level: 'error', job: 'season-close', error: String(e).slice(0, 500) }),
+          ),
+        );
+      // T-11-145 오프사이드 컵: 추첨 → 시각이 된 경기 → 진출·보상. 실패하면 다음 5분에 이어서 한다.
+      await runCup(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'cup', steps: r })))
+        .catch((e: unknown) =>
+          console.error(
+            JSON.stringify({ level: 'error', job: 'cup', error: String(e).slice(0, 500) }),
           ),
         );
     }

@@ -1,0 +1,140 @@
+import { z } from 'zod';
+import { CUP_ROUNDS, CUP_STAGES } from './cup.js';
+import { IsoUtcSchema } from './primitives.js';
+import { TeamIdSchema, TeamLogoSchema, TeamMatchSchema } from './teams.js';
+
+// T-11-145 오프사이드 컵·구단주 아이템 API 모양. 값은 zod 없는 cup.ts.
+
+// ───────── API 모양 ─────────
+
+export const CupIdSchema = z.string().regex(/^s\d+-\d+$/);
+export const CupRoundSchema = z.enum(CUP_ROUNDS);
+export const CupStageSchema = z.enum(CUP_STAGES);
+export const CupPhaseSchema = z.enum([
+  'soon',
+  'open',
+  'closed',
+  'group',
+  'knockout',
+  'done',
+  'cancelled',
+]);
+export type CupPhase = z.infer<typeof CupPhaseSchema>;
+
+export const CupTeamSchema = z.strictObject({
+  teamId: z.string(),
+  name: z.string(),
+  owner: z.string(),
+  logo: TeamLogoSchema.nullable(),
+  ovr: z.number().int(),
+});
+export type CupTeam = z.infer<typeof CupTeamSchema>;
+
+export const CupStandingSchema = z.strictObject({
+  teamId: z.string(),
+  p: z.number().int(),
+  w: z.number().int(),
+  d: z.number().int(),
+  l: z.number().int(),
+  gf: z.number().int(),
+  ga: z.number().int(),
+  pts: z.number().int(),
+  /** 조 안 순위(1부터). 조별이 끝나면 1·2위가 진출. */
+  rank: z.number().int(),
+});
+export type CupStanding = z.infer<typeof CupStandingSchema>;
+
+export const CupGroupSchema = z.strictObject({
+  no: z.number().int().min(1),
+  standings: z.array(CupStandingSchema),
+});
+
+export const CupMatchSchema = z.strictObject({
+  id: z.string(),
+  round: CupRoundSchema,
+  group: z.number().int().nullable(),
+  /** 토너먼트 대진 순서(0부터). 조별 경기는 0. */
+  slot: z.number().int(),
+  homeTeamId: z.string().nullable(),
+  awayTeamId: z.string().nullable(),
+  at: IsoUtcSchema,
+  played: z.boolean(),
+  homeGoals: z.number().int().nullable(),
+  awayGoals: z.number().int().nullable(),
+  /** 토너먼트 무승부의 승부차기 점수. */
+  pens: z.strictObject({ home: z.number().int(), away: z.number().int() }).nullable(),
+  winnerTeamId: z.string().nullable(),
+  /** 한 팀이 나오지 못해 0:3으로 끝난 경기. */
+  forfeit: z.boolean(),
+});
+export type CupMatch = z.infer<typeof CupMatchSchema>;
+
+export const CupInfoSchema = z.strictObject({
+  id: CupIdSchema,
+  season: z.number().int(),
+  edition: z.number().int(),
+  opensAt: IsoUtcSchema,
+  closesAt: IsoUtcSchema,
+  drawAt: IsoUtcSchema,
+  rounds: z.array(
+    z.strictObject({ round: CupRoundSchema, at: IsoUtcSchema, lockAt: IsoUtcSchema }),
+  ),
+  capacity: z.number().int(),
+  minFilled: z.number().int(),
+});
+export type CupInfo = z.infer<typeof CupInfoSchema>;
+
+export const CupResponseSchema = z.strictObject({
+  cup: CupInfoSchema,
+  phase: CupPhaseSchema,
+  entries: z.number().int(),
+  /** 추첨 뒤에만 채워진다. */
+  teams: z.array(CupTeamSchema),
+  groups: z.array(CupGroupSchema),
+  matches: z.array(CupMatchSchema),
+  /** 우승 팀(끝났을 때). */
+  championTeamId: z.string().nullable(),
+});
+export type CupResponse = z.infer<typeof CupResponseSchema>;
+
+/** 신청 자격 검사 결과. ok가 아니면 reason으로 안내한다. */
+export const CupEligibilitySchema = z.strictObject({
+  ok: z.boolean(),
+  reason: z.enum(['no-team', 'not-enough', 'listed', 'closed', 'full']).nullable(),
+  filled: z.number().int(),
+});
+
+export const CupEntryStatusSchema = z.enum(['active', 'out', 'champion', 'withdrawn']);
+
+export const CupMeResponseSchema = z.strictObject({
+  entry: z
+    .strictObject({
+      teamId: TeamIdSchema,
+      status: CupEntryStatusSchema,
+      group: z.number().int().nullable(),
+      stage: CupStageSchema.nullable(),
+      createdAt: IsoUtcSchema,
+    })
+    .nullable(),
+  eligibility: CupEligibilitySchema,
+  /** 다음 내 경기(있으면). */
+  next: CupMatchSchema.nullable(),
+  /** 지금 명단이 잠겨 있는가(경기 1시간 전 ~ 그 경기가 끝날 때까지). */
+  locked: z.boolean(),
+  rerolls: z.number().int().min(0),
+});
+export type CupMeResponse = z.infer<typeof CupMeResponseSchema>;
+
+export const CupMatchResponseSchema = z.strictObject({
+  match: TeamMatchSchema,
+  cup: z.strictObject({
+    round: CupRoundSchema,
+    group: z.number().int().nullable(),
+    pens: z.strictObject({ home: z.number().int(), away: z.number().int() }).nullable(),
+    forfeit: z.boolean(),
+  }),
+});
+export type CupMatchResponse = z.infer<typeof CupMatchResponseSchema>;
+
+export const OwnerItemsResponseSchema = z.strictObject({ reroll: z.number().int().min(0) });
+export type OwnerItemsResponse = z.infer<typeof OwnerItemsResponseSchema>;
