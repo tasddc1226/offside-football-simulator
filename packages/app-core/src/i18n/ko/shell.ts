@@ -13,6 +13,7 @@ const ko = {
   navSettings: '설정',
   achNew: (p: { n: number }) => `새 업적 ${p.n}개`,
   recapNew: '새 시즌 결산',
+  friendReq: (p: { n: number }) => `받은 친구 신청 ${p.n}개`,
   bgm: '배경음악',
   bgmOff: '배경음악 끄기',
   bgmOn: '배경음악 켜기',

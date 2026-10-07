@@ -1,7 +1,7 @@
 // T-11-098 친구 · 친선전(웹 team/TeamFriends.svelte) — 내 팀 '경기' 탭의 '친구' 칸. 친구 코드 · 받은/보낸 신청 · 친구 ·
 // 최근 친선전. 친선전은 랭크와 따로 센다(레이팅·전적·업적에 들어가지 않고, 하루 한도와 친구별 상대 전적이 따로 있다).
 // 친구 데이터는 이 칸을 처음 열 때만 불러온다(useFriends). 문구는 웹과 같이 고친다.
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Alert, Share, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { normalizeFriendCode } from '@offside/contracts/owner-team';
@@ -28,6 +28,16 @@ import {
 } from '@offside/app-core/friendText';
 import { friendText as L } from '@offside/app-core/i18n/ko/friend';
 import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
+import { shellText as S } from '@offside/app-core/i18n/ko/shell';
+import { useSnapshot } from 'valtio';
+import { appState } from '../../store';
+import {
+  checkPushOffer,
+  dismissPushOffer,
+  pushOffer,
+  snoozePushOffer,
+} from '../../platform/pushOffer';
+import { pushRegistration, pushState } from '../../platform/push';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { toast } from '../../game/host';
@@ -41,7 +51,17 @@ import { Seg, SegBtn } from './TeamParts';
 export type OppTab = 'ranked' | 'friends';
 
 /** '경기' 탭 맨 위 두 칸 고르기. */
-export function OppSwitch({ value, onPick }: { value: OppTab; onPick: (v: OppTab) => void }) {
+export function OppSwitch({
+  value,
+  onPick,
+  pending = 0,
+}: {
+  value: OppTab;
+  onPick: (v: OppTab) => void;
+  /** T-11-142 받은 친구 신청 수 — 있으면 '친구' 옆에 빨간 점. */
+  pending?: number;
+}) {
+  const c = useColors();
   return (
     <Seg label={LH.matchKindLabel}>
       <SegBtn
@@ -57,8 +77,17 @@ export function OppSwitch({ value, onPick }: { value: OppTab; onPick: (v: OppTab
         selected={value === 'friends'}
         testID="opp-tab-friends"
         onPress={() => onPick('friends')}
+        {...(pending ? { label: `${LH.modeFriends}, ${S.friendReq({ n: pending })}` } : {})}
       >
-        <Txt bold>{LH.modeFriends}</Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Txt bold>{LH.modeFriends}</Txt>
+          {pending ? (
+            <View
+              testID="opp-tab-friends-dot"
+              style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.bad }}
+            />
+          ) : null}
+        </View>
       </SegBtn>
     </Seg>
   );
@@ -90,6 +119,8 @@ export function useFriends() {
       return;
     }
     put(r.data);
+    // T-11-142 받은 신청 수(하단 메뉴 점)를 목록과 맞춘다 — 수락·거절 뒤 다시 받을 때도.
+    appState.friendReq = r.data.received.length;
     setStatus('ready');
   }
   /** 칸을 열 때. 이미 불러온 데이터가 있으면 다시 부르지 않는다. */
@@ -165,6 +196,43 @@ export function useFriends() {
   };
 }
 export type Friends = ReturnType<typeof useFriends>;
+
+/** T-11-142 앱 알림이 꺼져 있으면 친구 화면에서도 권한다. 홈 알림 안내(pushOffer)와 같은 상태라 한쪽에서 받거나 '나중에'를 고르면
+ *  다른 쪽도 따른다. 기기 설정에서 막혔으면 띄우지 않는다. */
+function PushNudge() {
+  const push = useSnapshot(pushState);
+  const offer = useSnapshot(pushOffer);
+  useEffect(() => void checkPushOffer(), []);
+  if (offer.handled || Date.now() < offer.snoozedUntil || !offer.eligible || push.enabled)
+    return null;
+  async function turnOn() {
+    await pushRegistration.setEnabled(true);
+    if (!pushState.failed) dismissPushOffer();
+    if (pushState.message) toast(pushState.message);
+  }
+  return (
+    <Card gap={6} testID="friend-push-nudge">
+      <Txt bold>{L.pushNudgeTitle}</Txt>
+      <Txt tone="muted" v="sm">
+        {L.pushNudgeBody}
+      </Txt>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Btn
+          sm
+          kind="primary"
+          testID="friend-push-nudge-on"
+          disabled={push.busy}
+          onPress={() => void turnOn()}
+        >
+          {L.pushNudgeOn}
+        </Btn>
+        <Btn sm kind="ghost" testID="friend-push-nudge-later" onPress={snoozePushOffer}>
+          {L.pushNudgeLater}
+        </Btn>
+      </View>
+    </Card>
+  );
+}
 
 function Row({ children }: { children: ReactNode }) {
   const c = useColors();
@@ -297,6 +365,7 @@ export function TeamFriends({
               </>
             ) : null}
           </Card>
+          <PushNudge />
 
           <Card gap={10}>
             <Txt v="h2" accessibilityRole="header">

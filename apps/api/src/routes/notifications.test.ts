@@ -216,7 +216,12 @@ describe('personal event delivery infrastructure', () => {
     expect(fetcher).toHaveBeenCalledOnce();
     const payload = JSON.parse(fetcher.mock.calls[0]![1]!.body as string);
     expect(payload).toHaveLength(3);
-    expect(payload[0].data).toEqual({ type: 'offside-notification', notificationId: n.id });
+    expect(payload[0].data).toEqual({
+      type: 'offside-notification',
+      notificationId: n.id,
+      kind: 'team',
+      target: { type: 'screen', screen: 'team' },
+    });
     expect(await deliveries()).toEqual([
       { state: 'accepted', token: expect.any(String) },
       { state: 'accepted', token: expect.any(String) },
