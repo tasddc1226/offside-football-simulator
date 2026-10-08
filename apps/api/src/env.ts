@@ -16,6 +16,9 @@ export type Bindings = {
   EXPO_PUSH_ACCESS_TOKEN?: string;
   /** Emergency stop for dormant career archival (restores remain enabled). */
   CAREER_RETENTION_DISABLED?: string;
+  /** Emergency stops for telemetry offload and public HOF read sessions. */
+  SEASON_EVENTS_ARCHIVE_DISABLED?: string;
+  D1_READ_SESSIONS_DISABLED?: string;
   DB: D1Database;
   /** local|staging|production. */
   ENVIRONMENT: string;
@@ -55,6 +58,7 @@ export type Variables = {
   requestId: string;
   /** `getDb(c)`로만 채운다. health 같은 DB 없는 라우트가 `env.DB` 없이도 동작하도록 지연 생성한다. */
   db?: Db;
+  publicReadDb?: Db;
   session?: SessionContext;
   /** middleware/session.ts `resolveSession`의 요청당 메모. */
   sessionLookup?: Promise<SessionContext | undefined>;
@@ -84,5 +88,17 @@ export function getDb(c: Context<AppEnv>): Db {
   }
   const db = createDb(c.env.DB);
   c.set('db', db);
+  return db;
+}
+
+/** Only for explicitly public, read-only multi-query loaders. Auth/writes use getDb.
+ * Anchor the first query on primary; subsequent reads can use a caught-up replica.
+ * No cross-request bookmark or account/session state is stored. */
+export function getPublicReadDb(c: Context<AppEnv>): Db {
+  if (c.env.D1_READ_SESSIONS_DISABLED === '1') return getDb(c);
+  const existing = c.get('publicReadDb');
+  if (existing) return existing;
+  const db = createDb(c.env.DB.withSession('first-primary'));
+  c.set('publicReadDb', db);
   return db;
 }

@@ -420,6 +420,8 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect((await createApp().request('/v1/hof?pos=ST', {}, ctx.env)).status).toBe(400);
   });
 
+  // Four complete retirement uploads precede search checks; allow slower fixture
+  // D1 RPC under parallel runs without relaxing any search/rank assertions.
   it('T-10-101: q로 공개 이름을 찾고, 찾은 선수에 검색 전 순위를 붙인다', async () => {
     const rows = [
       {
@@ -476,7 +478,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect((await createApp().request(`/v1/hof?q=${'가'.repeat(21)}`, {}, ctx.env)).status).toBe(
       400,
     );
-  });
+  }, 60_000);
 
   it('공개 목록은 쿠키가 있어도 세션·프로필을 읽지 않는다(T-10-015)', async () => {
     const { DB, seen } = spyDb(ctx.env.DB);
