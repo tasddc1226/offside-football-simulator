@@ -20,6 +20,8 @@
   import { fmtValue } from '@offside/app-core/format';
   import AttrCard from '../AttrCard.svelte';
   import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
+  import { boostDayLeft } from '@offside/app-core/boost-daily';
+  import { boostFreeOpen } from '@offside/game/boost';
   import BoostFx from '../BoostFx.svelte';
   import { retireAsk } from '../actions.js';
   import { save } from '../helpers.js';
@@ -49,7 +51,6 @@
     peek = p;
   }
   // T-11-083 잠재력 강화. 자금을 쓰는 시도라 버튼을 한 번 더 눌러야 한다.
-  const boost = $derived(boostView(s));
   let arming = $state(false);
   let fx = $state<BoostOutcome | null>(null);
   function onBoost() {
@@ -64,16 +65,16 @@
     save();
     fx = out;
   }
-  // T-11-153 웹은 광고가 없어 앱의 광고 자리(선수 자금이 모자란 시즌의 강화 · 이번 시즌 평가 보기)를 로그인한 구단주의
-  // 구단 자금으로 받는다. 두 자리 중 하나라도 보일 때만 값을 묻는다(30초 메모).
+  // T-11-153 웹은 광고가 없어 앱의 광고 자리(선수 자금이 모자란 시즌 · 추가 시도의 강화 · 이번 시즌 평가 보기)를 로그인한
+  // 구단주의 구단 자금으로 받는다. 두 자리 중 하나라도 보일 때만 값을 묻는다(30초 메모).
   let club = $state<RewardShopResponse | null>(null);
   let clubBusy = $state(false);
   let clubMsg = $state('');
   let peekMsg = $state('');
-  const short = $derived(boost.status === 'short');
+  const freeOpen = $derived(boostFreeOpen(s));
   const peekClosed = $derived(pot.kind === 'available' || pot.kind === 'short');
   $effect(() => {
-    if (short || peekClosed) void loadClubShop().then((r) => (club = r));
+    if (freeOpen || peekClosed) void loadClubShop().then((r) => (club = r));
   });
   const clubPeek = $derived(peekClosed ? clubOffer(club, 'peek') : null);
   async function onClubPeek() {
@@ -91,7 +92,9 @@
     if (r.shop) club = r.shop;
     peekMsg = r.message;
   }
-  const clubTry = $derived(short ? clubOffer(club, 'boost') : null);
+  const clubTry = $derived(freeOpen ? clubOffer(club, 'boost') : null);
+  // T-11-157 구단 자금으로는 이번 시즌의 한 번을 쓴 뒤에도 더 시도한다(오늘 횟수는 서버가 센다 — 웹은 광고가 없다).
+  const boost = $derived(boostView(s, null, { club: !!clubTry, dayLeft: boostDayLeft(null, club) }));
   async function onClubBoost() {
     const o = clubTry;
     if (clubBusy || !o) return;
