@@ -2,6 +2,8 @@ import { CHAT_SOCKET_PATH } from '@offside/contracts/chat';
 import { LIVE_SOCKET_PATH } from '@offside/contracts/polling';
 import { app } from './app.js';
 import { runDaily } from './cron/daily.js';
+import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
+import { runInfraHealth } from './cron/infraHealth.js';
 import { createDb } from './db/client.js';
 import type { Bindings } from './env.js';
 import { chatSocket } from './chat/socket.js';
@@ -28,11 +30,14 @@ export default {
   // T-11-082 끝까지 await한다. waitUntil로 넘기면 핸들러가 끝난 뒤 30초만 더 살아서, DB가 커진 09-30부터 백업이 매일
   // 중간에 끊겼다(실행 기록은 success). 핸들러가 기다리면 cron은 15분까지 돈다.
   async scheduled(controller: ScheduledController, env: Bindings) {
-    if (controller.cron === '0 19 * * *') await runDaily(env, controller.scheduledTime);
+    const logged = (job: string) => (e: unknown) =>
+      console.error(JSON.stringify({ level: 'error', job, error: String(e).slice(0, 500) }));
+    if (controller.cron === '0 19 * * *')
+      await runDaily(env, controller.scheduledTime).finally(() =>
+        runInfraHealth(env, controller.scheduledTime).catch(logged('infra-health')),
+      );
     else {
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
-      const logged = (job: string) => (e: unknown) =>
-        console.error(JSON.stringify({ level: 'error', job, error: String(e).slice(0, 500) }));
       await runNewsPush(env).catch(logged('news-push'));
       await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
       await runPersonalPush(env, controller.scheduledTime).catch(logged('personal-push'));
@@ -53,6 +58,13 @@ export default {
             JSON.stringify({ level: 'error', job: 'cup', error: String(e).slice(0, 500) }),
           ),
         );
+      await runSeasonEventsArchive(env, controller.scheduledTime)
+        .then(
+          (r) =>
+            r && console.log(JSON.stringify({ level: 'info', job: 'season-events-archive', ...r })),
+        )
+        .catch(logged('season-events-archive'));
+      await runInfraHealth(env, controller.scheduledTime).catch(logged('infra-health'));
     }
   },
 };
