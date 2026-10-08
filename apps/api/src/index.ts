@@ -68,13 +68,6 @@ export default {
             JSON.stringify({ level: 'error', job: 'cup', error: String(e).slice(0, 500) }),
           ),
         );
-      // T-11-156 서버 최초 기록 전체 재계산은 여기서 몰아서 훑는다(공개 목록 조회가 조각을 기다리지 않게).
-      await runFirstsRescan(createDb(env.DB))
-        .then(
-          (n) =>
-            n && console.log(JSON.stringify({ level: 'info', job: 'firsts-rescan', chunks: n })),
-        )
-        .catch(logged('firsts-rescan'));
       await runSeasonEventsArchive(env, controller.scheduledTime)
         .then(
           (r) =>
@@ -82,6 +75,14 @@ export default {
         )
         .catch(logged('season-events-archive'));
       await runInfraHealth(env, controller.scheduledTime).catch(logged('infra-health'));
+      // T-11-156 서버 최초 기록 전체 재계산을 몰아서 훑는다 — 공개 목록 조회가 조각을 기다리지 않게. 시간 한도까지
+      // 돌 수 있어 앞 단계를 밀지 않게 맨 끝에 둔다.
+      await runFirstsRescan(createDb(env.DB))
+        .then(
+          (n) =>
+            n && console.log(JSON.stringify({ level: 'info', job: 'firsts-rescan', chunks: n })),
+        )
+        .catch(logged('firsts-rescan'));
     }
   },
 };
