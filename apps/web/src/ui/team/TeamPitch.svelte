@@ -3,6 +3,7 @@
   import { DETAIL_LABEL, presetLayout, slotFit, type FormationId, type TeamLayout } from '@offside/contracts/owner-team';
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import PlayerCard from './PlayerCard.svelte';
+  import PlayerPeek from './PlayerPeek.svelte';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { teamSynergyText as SY } from '@offside/app-core/i18n/ko/teamSynergy';
   import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
@@ -13,10 +14,19 @@
       links?: readonly { members: readonly number[]; on: boolean }[]; focus?: readonly number[] | null;
       /** 효과가 들어가는 시너지의 선수 자리(늘 표시)와 그라운드 아래 안내 한 줄. */
       applied?: readonly number[]; caption?: string | null;
-      element?: HTMLElement | undefined; onpick?: ((i: number) => void) | undefined; onstart?: ((e: PointerEvent, i: number) => void) | undefined;
+      element?: HTMLElement | undefined;
+      /** 편성 중 자리 누름. true면 배치·교체로 끝난 누름이라 카드 팝업을 열지 않는다. */
+      onpick?: ((i: number) => boolean | void) | undefined; onstart?: ((e: PointerEvent, i: number) => void) | undefined;
       onkey?: ((e: KeyboardEvent, i: number) => void) | undefined; onplace?: ((e: MouseEvent) => void) | undefined } = $props();
   const positions = $derived(layout ?? presetLayout(formation));
   const filled = $derived(cells.filter((c) => !c.youth).length);
+  // 카드 팝업 — 누른 자리와 그 버튼(팝업이 커져 나오고 닫히면 돌아갈 곳).
+  let peek = $state<{ i: number; el: HTMLElement } | null>(null);
+  const peekCell = $derived(peek ? cells[peek.i] : undefined);
+  function press(e: MouseEvent, i: number) {
+    if (onpick?.(i) === true) return;
+    if (cells[i]?.player && !cells[i]!.youth) peek = { i, el: e.currentTarget as HTMLElement };
+  }
 </script>
 
 <section class="pitch-frame" data-pitch-frame aria-label={L.pitchAria({ n: filled })}>
@@ -46,9 +56,15 @@
       {#if onpick}
         <button class="tm-slot" class:chosen={selected === i} class:syn-on={focus?.includes(i)} class:dragging={dragging === i} data-slot={i}
           style:left="{point.x}%" style:top="{point.y}%" aria-pressed={selected === i}
-          aria-label="{tn(DETAIL_LABEL[point.slot])} · {c.name}{country ? ` · ${tn(country.ko)}` : ''} · {ratingLabel}" onclick={() => onpick?.(i)}
+          aria-label="{tn(DETAIL_LABEL[point.slot])} · {c.name}{country ? ` · ${tn(country.ko)}` : ''} · {ratingLabel}" aria-haspopup={c.player && !c.youth ? 'dialog' : undefined} onclick={(e) => press(e, i)}
           onpointerdown={(e) => onstart?.(e, i)} onkeydown={(e) => onkey?.(e, i)}>
           <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player?.peak ?? c.rating} deploymentRating={c.player ? c.rating : undefined} role={point.slot} youth={c.youth} ratingLabel={c.player ? L.peakOvr : L.posOvrLabel} compact />
+          {#if applied.includes(i)}<span class="syn-pip" title={SY.pitchMemberAria}></span>{/if}
+        </button>
+      {:else if c.player && !c.youth}
+        <button class="tm-slot peekable" class:syn-on={focus?.includes(i)} data-slot={i} style:left="{point.x}%" style:top="{point.y}%" aria-haspopup="dialog"
+          aria-label="{tn(DETAIL_LABEL[point.slot])} · {c.name}{country ? ` · ${tn(country.ko)}` : ''} · {ratingLabel}" onclick={(e) => press(e, i)}>
+          <PlayerCard player={c.player} nation={c.nation} season={c.season} name={c.name} rating={c.player.peak} deploymentRating={c.rating} role={point.slot} ratingLabel={L.peakOvr} compact />
           {#if applied.includes(i)}<span class="syn-pip" title={SY.pitchMemberAria}></span>{/if}
         </button>
       {:else}
@@ -60,6 +76,11 @@
     {/if}
   {/each}
   </div>
+  {#if peek && peekCell?.player}
+    {@const slot = positions[peek.i]!.slot}
+    <PlayerPeek player={peekCell.player} name={peekCell.name} rating={peekCell.rating} {slot} nation={peekCell.nation} season={peekCell.season}
+      fit={Math.round(slotFit(slot, peekCell.player, peekCell.rating) * 100)} origin={peek.el} onclose={() => (peek = null)} />
+  {/if}
   {#if caption}<p class="syn-caption" class:focused={!!focus} data-synergy-caption aria-live="polite"><span class="syn-pip" aria-hidden="true"></span>{caption}</p>{/if}
 </section>
 
@@ -71,7 +92,8 @@
   .attack-direction { position:absolute; top:14px; left:50%; transform:translateX(-50%); color:var(--on-pitch); opacity:.7; font-size:11px; pointer-events:none; }
   .tm-slot { position:absolute; width:clamp(58px,15%,86px); transform:translate(-50%,-50%); padding:0; border:0; background:none; color:inherit; font:inherit; z-index:1; border-radius:12px;pointer-events:auto; }
   .tm-slot[data-slot='0'] {z-index:2;}
-  button.tm-slot { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
+  button.tm-slot.peekable {cursor:zoom-in;touch-action:manipulation;}
+  button.tm-slot:not(.peekable) { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
   button.tm-slot:active {cursor:grabbing;} .tm-slot.chosen {outline:2px solid var(--pitch-accent);outline-offset:3px;z-index:3;}
   .tm-slot:focus-visible { outline:3px solid var(--pitch-accent);outline-offset:4px; }
   .tm-slot.dragging { opacity:.25; }

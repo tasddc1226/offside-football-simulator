@@ -23,7 +23,7 @@ import { fillGranted, openLocalLegend, openPublicLegend } from '../../game/host'
 import { HofRow, type RowStats } from '../../components/HofRow';
 import { rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
-import { Seg, TabOpt } from '../board/parts';
+import { SelectField } from '../settings/parts';
 import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
 import { useRefresh } from '../../ui/refresh';
 import { useSeasonNow } from '../../ui/useSeasonNow';
@@ -186,24 +186,17 @@ export function MyPlayers({ onRows }: { onRows?: (rows: readonly MineRow[]) => v
                 : L.sourceDeviceApp}
           </Txt>
           {seasons.length > 1 ? (
-            <Seg
-              cols={Math.min(seasons.length, 3)}
+            <SelectField
               label={L.seasonGroup}
+              testID="my-season"
+              value={season}
+              options={seasons.map((s) => ({ value: s.id, label: s.name }))}
+              onChange={(v) => {
+                setPicked(v);
+                setExpanded(false);
+              }}
               style={{ marginBottom: 8 }}
-            >
-              {seasons.map((s) => (
-                <TabOpt
-                  key={s.id}
-                  title={s.name}
-                  selected={season === s.id}
-                  testID={`my-season-${s.id}`}
-                  onPress={() => {
-                    setPicked(s.id);
-                    setExpanded(false);
-                  }}
-                />
-              ))}
-            </Seg>
+            />
           ) : null}
           {shown.length ? (
             shown.map((r, i) => (

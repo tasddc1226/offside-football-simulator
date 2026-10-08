@@ -18,7 +18,7 @@ import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { num, rem } from '../../theme/type';
 import { scrollToView } from '../../ui/scroll';
-import { Btn, Card, Txt } from '../../ui';
+import { Btn, Card, Press, Txt } from '../../ui';
 
 export function RerollShop({
   onBought,
@@ -109,20 +109,30 @@ export function RerollShop({
       }}
     >
       <Card gap={12} testID="reroll-shop">
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        {/* 머리 줄 전체가 펼치기 버튼(웹은 카드 위쪽을 덮는다). 누르는 자리는 카드 가장자리까지 넓힌다. */}
+        <Press
+          testID="reroll-shop-toggle"
+          accessibilityLabel={`${L.shopTitle} ${open ? L.shopClose : L.shopOpen}`}
+          accessibilityState={{ expanded: open }}
+          hitSlop={{ top: 18, left: 18, right: 18, bottom: open ? 6 : 18 }}
+          onPress={toggle}
+          scale={1}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
+        >
           <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
             <Txt v="eyebrow">Reroll shop</Txt>
-            <Txt v="h2" accessibilityRole="header">
-              {L.shopTitle}
-            </Txt>
+            <Txt v="h2">{L.shopTitle}</Txt>
             <Txt tone="muted" style={small} testID="reroll-sub">
               {have === null ? L.shopSub : L.shopSubHave({ n: have })}
             </Txt>
           </View>
-          <Btn testID="reroll-shop-toggle" onPress={toggle}>
-            {open ? L.shopClose : L.shopOpen}
-          </Btn>
-        </View>
+          <Txt
+            tone="muted"
+            style={{ fontSize: rem(1.5), transform: [{ rotate: open ? '-90deg' : '90deg' }] }}
+          >
+            ›
+          </Txt>
+        </Press>
         {open ? (
           shop && view ? (
             <View style={{ gap: 10 }}>

@@ -12,6 +12,7 @@
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
   import { fundsText } from '@offside/app-core/market';
+  import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import RerollShop from './cup/RerollShop.svelte';
   import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
@@ -87,6 +88,7 @@
     });
   });
   const clubValue = $derived(linked ? (market?.clubValue ?? null) : (summary?.value ?? null));
+  const funds = $derived(market ? fundsText(market.balance) : '–');
   // T-11-128 시즌 결산 카드 — 끝난 시즌이 있으면 가장 최근 결산을 한 줄로 알린다. 불러오지 못하면 카드를 숨긴다.
   let recap = $state<SeasonRecapResponse | null>(null);
   $effect(() => {
@@ -134,15 +136,16 @@
       </div>
       {#if (guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue)}
         <p class="muted fs-sm owner-empty">{L.emptySummary}</p>
+        {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds })}</p>{/if}
       {:else}
       <dl class="owner-stats">
         <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
+        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
         <div><dt>{L.statRetired}</dt><dd>{summary ? L.playersCount({ n: summary.players, text: num(summary.players) }) : '–'}</dd></div>
         <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
         <div><dt>{L.statRetiredNumbers}</dt><dd>{summary ? L.numbersCount({ n: summary.retired }) : '–'}</dd></div>
       </dl>
       {/if}
-      {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}</p>{/if}
     </section>
     <AdSlot place="owner-summary" />
   {/if}
@@ -198,13 +201,14 @@
         </button>
       {/if}
     </section>
-    <section class="card owner-market" aria-label={L.marketTitle} data-owner-market>
+    <section class="card owner-market owner-tap" aria-label={L.marketTitle} data-owner-market>
       <div class="owner-who">
         <small class="eyebrow">Transfer market</small>
         <h2>{L.marketTitle}</h2>
-        <span class="muted fs-sm">{L.marketSub({ funds: market ? fundsText(market.balance) : '–' })}</span>
+        <span class="muted fs-sm">{L.marketSub({ funds })}</span>
       </div>
-      <button class="btn" data-act="market" onclick={() => go('market')}>{L.open}</button>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="market" aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}></button>
     </section>
     <!-- T-11-152 리롤권 상점: 펼칠 때만 상점을 묻는다. 사면 자금 줄을 다시 받는다(쓰기 성공으로 메모가 비워졌다). -->
     <RerollShop focus={shopFocus} onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
@@ -275,9 +279,10 @@
     margin: 0;
     overflow-wrap: anywhere;
   }
+  /* 6칸 격자 — 아래 숫자 셋은 2칸씩, 구단 가치는 한 줄 전체(자금이 있으면 3칸씩 나란히). */
   .owner-stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 8px;
     margin: 0;
   }
@@ -289,6 +294,7 @@
     border-radius: 12px;
     background: var(--surface-2);
     min-width: 0;
+    grid-column: span 2;
   }
   .owner-stats dt {
     font-size: 0.75rem;
@@ -302,8 +308,19 @@
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
-  .owner-value {
+  .owner-stats .owner-value {
     grid-column: 1 / -1;
+  }
+  .owner-stats .owner-value:has(+ .owner-funds),
+  .owner-stats .owner-funds {
+    grid-column: span 3;
+  }
+  /* 구단 자금 칸 전체가 내역으로 가는 버튼(dl 안이라 칸 위에 .tap-cover 를 덮는다). */
+  .owner-stats .owner-funds {
+    position: relative;
+  }
+  .owner-funds-go {
+    margin-left: 4px;
   }
   .owner-stats .owner-value dd {
     font-size: 1.75rem;
@@ -404,8 +421,8 @@
   .owner-market h2 {
     margin: 0;
   }
-  .owner-market .btn {
-    flex: none;
+  .owner-tap {
+    position: relative;
   }
   .owner-admin {
     margin-top: 12px;

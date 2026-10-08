@@ -119,17 +119,24 @@ describe('T-10-079 공유 이미지 카드 내용', () => {
     expect(shareCardData(v, null).jersey).toEqual({ number: 3, clubId: 'zz-9' });
   });
 
-  it('구단이 많으면 첫 구단과 마지막 구단만 남기고, 성향이 있으면 성향 칸을 채운다', () => {
-    const clubs = ['청운고', 'A', 'B', 'C', 'D', 'E'];
+  it('거쳐 간 구단은 줄이지 않고 처음 뛴 순서대로 한 번씩 싣고, 성향이 있으면 성향 칸을 채운다', () => {
+    const clubs = ['청운고', 'A', 'B', 'C', 'B', 'D', 'E'];
     const career = clubs.map((c, i) => season(2026 + i, c, i ? 'K리그1' : '고교 리그'));
     const plain = shareCardData(view(career), null);
-    expect(plain.stops.map((s) => s?.club ?? '…')).toEqual(['청운고', '…', 'C', 'D', 'E']);
+    expect(plain.clubs.map((c) => c.club)).toEqual(['청운고', 'A', 'B', 'C', 'D', 'E']);
     const styled = shareCardData(view(career, {}, true), null);
-    expect(styled.stops.map((s) => s?.club ?? '…')).toEqual(['청운고', '…', 'E']);
+    expect(styled.clubs).toHaveLength(6);
     expect(styled.style?.name).toBe('타고난 강운');
   });
 
-  it('성향이 없으면 여정 아래에 대표 우승(발롱도르 먼저, 많이 든 순)을 싣고 여정을 3곳으로 줄인다', () => {
+  it('국적을 아는 기록만 이름 앞 국기를 싣는다', () => {
+    const career = [season(2027, 'A', 'K리그1')];
+    expect(shareCardData(view(career, { nation: 'KR' }), null).flag).toBe('🇰🇷');
+    expect(shareCardData(view(career), null).flag).toBeNull();
+    expect(shareCardData(view(career, { nation: 'ZZ' }), null).flag).toBeNull();
+  });
+
+  it('성향이 없으면 대표 우승(발롱도르 먼저, 많이 든 순)을 싣는다', () => {
     const clubs = ['청운고', 'A', 'B', 'C', 'D', 'E'];
     const career = clubs.map((c, i) => season(2026 + i, c, i ? 'K리그1' : '고교 리그'));
     const d = view(career).d!;
@@ -153,7 +160,6 @@ describe('T-10-079 공유 이미지 카드 내용', () => {
       { count: '×2', name: '프리미어리그 우승' },
       { count: '×1', name: 'FA컵 우승' },
     ]);
-    expect(c.stops.map((s) => s?.club ?? '…')).toEqual(['청운고', '…', 'E']);
     // 성향 칸이 있으면 우승 칸은 없다.
     expect(shareCardData(view(career, { d: { ...v.d!, style } }), null).honours).toEqual([]);
   });

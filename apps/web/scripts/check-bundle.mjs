@@ -12,7 +12,9 @@ import { fileURLToPath } from 'node:url';
 // T-10-096: 국적 표(211개국, 게임 엔진이 동기로 쓴다)로 +1.2KB — 생성 화면·영어 이름을 지연 청크로 떼고도 넘어 138KB로(사용자 결정).
 // T-11-106: 게임 엔진 문구를 네임스페이스로 옮기며(키 이름·함수 문구·getter) 첫 화면에 실린 엔진 청크가 +6KB —
 // 영어 사전은 지연 청크라 한국어 사용자가 받는 영어는 없다. 엔진을 첫 화면 밖으로 빼는 건 따로 할 일이라 141KB로.
-const LIMIT_BYTES = 141 * 1024;
+// T-11-155: 시즌 자동 전환(시즌 일정을 입히는 contracts 코드) · 은퇴 리포트 엠블럼 줄 · 플레이스타일 이름이 엔진과 함께
+// 첫 화면에 실려 +0.7KB(시즌 게이지 화면은 지연 청크로 뺐다). 엔진을 첫 화면 밖으로 빼기 전까지 142KB로.
+const LIMIT_BYTES = 142 * 1024;
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(scriptDir, '../dist');

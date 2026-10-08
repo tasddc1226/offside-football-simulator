@@ -13,6 +13,7 @@ export const owner: Translation<OwnerMsgs> = {
   emptySummary:
     'Finish your first career and your retired players and Legend Score will show up here.',
   statClubValue: 'Club value',
+  statFunds: 'Club funds',
   statRetired: 'Retired players',
   statLegend: 'Legend Score',
   statRetiredNumbers: 'Retired numbers',

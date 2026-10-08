@@ -52,6 +52,19 @@ describe('/v1/club-custom (T-10-010)', () => {
     });
   });
 
+  it('T-11-156: ?since=가 저장된 updatedAt과 같으면 clubs를 비워 보내고, 다르면 전부 보낸다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const at = '2026-09-25T00:00:00.000Z';
+    await put(ctx, cookie, { clubs: CLUBS, updatedAt: at });
+    const since = (s: string) =>
+      callJson(ctx.env, 'GET', `/v1/club-custom?since=${encodeURIComponent(s)}`, { cookie });
+    expect(Res.parse(await (await since(at)).json()).data).toEqual({ clubs: {}, updatedAt: at });
+    expect(Res.parse(await (await since('2026-09-24T00:00:00.000Z')).json()).data).toEqual({
+      clubs: CLUBS,
+      updatedAt: at,
+    });
+  });
+
   it('더 오래된 updatedAt의 쓰기는 무시하고 서버 값을 돌려준다(최신 쓰기 우선)', async () => {
     const { cookie } = await issueCookie(ctx);
     await put(ctx, cookie, { clubs: CLUBS, updatedAt: '2026-09-25T10:00:00.000Z' });

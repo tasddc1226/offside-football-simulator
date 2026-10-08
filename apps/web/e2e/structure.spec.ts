@@ -76,7 +76,15 @@ async function setup(page: Page, pending: unknown = null): Promise<string[]> {
     const url = new URL(r.request().url());
     const path = url.pathname;
     requests.push(`${r.request().method()} ${path}${url.search}`);
-    const data = path === '/v1/profile' ? profile : path === '/v1/live' ? live : null;
+    const data =
+      path === '/v1/profile'
+        ? profile
+        : path === '/v1/live'
+          ? live
+          : // 시즌 진행 게이지: 진행 중인 시즌이 없으면 그리지 않는다(정상 응답이라 메모돼 한 번만 묻는다).
+            path === '/v1/season/gauge'
+            ? { gauge: null, seasons: [] }
+            : null;
     return r.fulfill(data ? ok(data) : { status: 503, body: '' });
   });
   await page.addInitScript(
@@ -102,6 +110,8 @@ const HOME_REQUESTS = [
   'GET /v1/firsts',
   'GET /v1/hof?limit=3',
   'GET /v1/live',
+  // 시즌 진행 게이지 · 시즌 일정 — 앱 시작 때 일정을 맞추는 요청과 홈 게이지가 같은 메모를 쓴다.
+  'GET /v1/season/gauge',
   // T-11-129 홈 구단 가치 TOP 3 — 기록실 팀 랭킹 첫 페이지와 같은 요청(메모·엣지 캐시 공유).
   'GET /v1/teams?sort=value&page=1',
   'GET /v1/ticker',
