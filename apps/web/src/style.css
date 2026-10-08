@@ -280,6 +280,35 @@ select:focus-visible {
   padding: 18px;
   box-shadow: var(--shadow);
 }
+/* 카드(또는 칸) 전체를 누르는 버튼: 내용 위에 투명 버튼을 덮는다. 부모에 position: relative. */
+.tap-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tap-cover:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.tap-cover:active {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.tap-cover:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* 누르면 넘어가는 카드 오른쪽 › */
+.tap-go {
+  flex: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--muted);
+}
 .eyebrow {
   font-family: var(--display);
   font-weight: 600;

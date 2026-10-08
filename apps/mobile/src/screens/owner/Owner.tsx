@@ -32,7 +32,7 @@ import { isMember } from '@offside/app-core/account';
 import { go, takeFocus } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
-import { Btn, Card, Pill, Row, Screen, Topbar, Txt } from '../../ui';
+import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
@@ -386,22 +386,27 @@ export default function Owner() {
               </>
             )}
           </Card>
-          <Card gap={12} testID="owner-market">
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                <Txt v="eyebrow">Transfer market</Txt>
-                <Txt v="h2" accessibilityRole="header">
-                  {L.marketTitle}
-                </Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                  {L.marketSub({ funds: market ? fundsText(market.balance) : '–' })}
+          <Press
+            testID="market"
+            accessibilityLabel={`${L.marketTitle} ${L.open}`}
+            onPress={() => go('market')}
+            scale={0.98}
+          >
+            <Card gap={12} testID="owner-market">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <Txt v="eyebrow">Transfer market</Txt>
+                  <Txt v="h2">{L.marketTitle}</Txt>
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {L.marketSub({ funds: market ? fundsText(market.balance) : '–' })}
+                  </Txt>
+                </View>
+                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                  ›
                 </Txt>
               </View>
-              <Btn testID="market" onPress={() => go('market')}>
-                {L.open}
-              </Btn>
-            </View>
-          </Card>
+            </Card>
+          </Press>
           <RerollShop
             focus={shopFocus}
             onBought={(balance, spent) =>

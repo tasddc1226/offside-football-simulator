@@ -139,7 +139,7 @@
       {:else}
       <dl class="owner-stats">
         <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
-        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{market ? fundsText(market.balance) : '–'}</dd><button class="owner-funds-open" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
+        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{market ? fundsText(market.balance) : '–'}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
         <div><dt>{L.statRetired}</dt><dd>{summary ? L.playersCount({ n: summary.players, text: num(summary.players) }) : '–'}</dd></div>
         <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
         <div><dt>{L.statRetiredNumbers}</dt><dd>{summary ? L.numbersCount({ n: summary.retired }) : '–'}</dd></div>
@@ -200,13 +200,14 @@
         </button>
       {/if}
     </section>
-    <section class="card owner-market" aria-label={L.marketTitle} data-owner-market>
+    <section class="card owner-market owner-tap" aria-label={L.marketTitle} data-owner-market>
       <div class="owner-who">
         <small class="eyebrow">Transfer market</small>
         <h2>{L.marketTitle}</h2>
         <span class="muted fs-sm">{L.marketSub({ funds: market ? fundsText(market.balance) : '–' })}</span>
       </div>
-      <button class="btn" data-act="market" onclick={() => go('market')}>{L.open}</button>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="market" aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}></button>
     </section>
     <!-- T-11-152 리롤권 상점: 펼칠 때만 상점을 묻는다. 사면 자금 줄을 다시 받는다(쓰기 성공으로 메모가 비워졌다). -->
     <RerollShop focus={shopFocus} onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
@@ -313,24 +314,9 @@
   .owner-stats .owner-funds {
     grid-column: span 3;
   }
-  /* 구단 자금 칸 전체가 내역으로 가는 버튼(dl 안이라 칸 위에 투명 버튼을 덮는다). */
+  /* 구단 자금 칸 전체가 내역으로 가는 버튼(dl 안이라 칸 위에 .tap-cover 를 덮는다). */
   .owner-stats .owner-funds {
     position: relative;
-  }
-  .owner-funds-open {
-    position: absolute;
-    inset: 0;
-    border: 0;
-    border-radius: inherit;
-    background: transparent;
-    cursor: pointer;
-  }
-  .owner-funds-open:hover {
-    background: color-mix(in srgb, var(--ink) 5%, transparent);
-  }
-  .owner-funds-open:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
   }
   .owner-funds-go {
     margin-left: 4px;
@@ -434,8 +420,8 @@
   .owner-market h2 {
     margin: 0;
   }
-  .owner-market .btn {
-    flex: none;
+  .owner-tap {
+    position: relative;
   }
   .owner-admin {
     margin-top: 12px;
