@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState, View } from 'react-native';
 import { seasonGaugeLines, type SeasonGauge as Gauge } from '@offside/app-core/seasonGauge';
 import { loadSeasonGauge } from '@offside/app-core/seasonSchedule';
-import { num as fmt } from '@offside/app-core/teamText';
 import { alpha } from '../../theme/colors';
 import { num, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
@@ -45,7 +44,7 @@ export function SeasonGauge() {
   }, []);
 
   if (!gauge) return null;
-  const lines = seasonGaugeLines(gauge, now, fmt);
+  const lines = seasonGaugeLines(gauge, now);
   const locked = !!gauge.endsAt;
   return (
     <Card gap={8} testID="season-gauge">
@@ -94,9 +93,6 @@ export function SeasonGauge() {
           }}
         />
       </View>
-      <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-        {lines.stats}
-      </Txt>
     </Card>
   );
 }

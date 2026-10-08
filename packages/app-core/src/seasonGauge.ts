@@ -22,15 +22,9 @@ export interface SeasonGaugeLines {
   pct: number;
   /** 마감이 정해졌으면 카운트다운. */
   countdown: string | null;
-  /** 막대 아래 숫자 줄. */
-  stats: string;
 }
 
-export function seasonGaugeLines(
-  g: SeasonGauge,
-  now: number,
-  fmt: (n: number) => string,
-): SeasonGaugeLines {
+export function seasonGaugeLines(g: SeasonGauge, now: number): SeasonGaugeLines {
   const season = teamSeasonLabel(g.season);
   const pct = Math.floor(g.progress * 100);
   const left = g.endsAt ? Date.parse(g.endsAt) - now : null;
@@ -39,6 +33,5 @@ export function seasonGaugeLines(
     aria: L.aria({ season, pct }),
     pct,
     countdown: left === null ? null : left > 0 ? L.endsIn({ left: timeLeft(left) }) : L.ended,
-    stats: `${L.filled({ count: fmt(g.contributed), target: fmt(g.target) })} · ${L.owners({ n: fmt(g.participants) })}`,
   };
 }

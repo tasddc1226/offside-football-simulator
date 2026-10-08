@@ -4,8 +4,6 @@ import { ns } from '../core';
 const ko = {
   title: (p: { season: string }) => `${p.season} 진행률`,
   aria: (p: { season: string; pct: number }) => `${p.season} 진행률 ${p.pct}%`,
-  filled: (p: { count: string; target: string }) => `완주 커리어 ${p.count} / ${p.target}`,
-  owners: (p: { n: string }) => `참여 구단주 ${p.n}명`,
   endsIn: (p: { left: string }) => `시즌 종료까지 ${p.left}`,
   ended: '시즌이 끝났어요. 결산을 정리하고 있어요.',
   days: (p: { d: number; h: number }) => `${p.d}일 ${p.h}시간`,

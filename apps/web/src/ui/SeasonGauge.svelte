@@ -4,11 +4,10 @@
   import { onMount } from 'svelte';
   import { seasonGaugeLines, type SeasonGauge } from '@offside/app-core/seasonGauge';
   import { loadSeasonGauge } from '@offside/app-core/seasonSchedule';
-  import { num } from '@offside/app-core/teamText';
 
   let gauge = $state.raw<SeasonGauge | null>(null);
   let now = $state(Date.now());
-  const lines = $derived(gauge ? seasonGaugeLines(gauge, now, num) : null);
+  const lines = $derived(gauge ? seasonGaugeLines(gauge, now) : null);
 
   async function load() {
     const r = await loadSeasonGauge();
@@ -38,7 +37,6 @@
     <div class="sg-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={lines.pct} aria-label={lines.aria}>
       <i style:width="{lines.pct}%"></i><span class="sg-lock" aria-hidden="true"></span>
     </div>
-    <p class="sg-stats muted fs-sm num">{lines.stats}</p>
   </section>
 {/if}
 
@@ -52,6 +50,5 @@
   .sg-bar i {position:absolute;inset:0 auto 0 0;border-radius:inherit;background:linear-gradient(90deg,color-mix(in srgb,var(--accent),transparent 35%),var(--accent));transition:width .6s ease-out;}
   /* 90%(마감이 정해지는 자리) 눈금 */
   .sg-lock {position:absolute;top:0;bottom:0;left:90%;width:2px;background:color-mix(in srgb,var(--ink),transparent 60%);}
-  .sg-stats {margin:0;}
   @media(prefers-reduced-motion:reduce) { .sg-bar i {transition:none;} }
 </style>

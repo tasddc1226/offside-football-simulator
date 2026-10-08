@@ -4,8 +4,6 @@ import type { SeasonGaugeMsgs } from '../ko/seasonGauge';
 export const seasonGauge: Translation<SeasonGaugeMsgs> = {
   title: (p) => `${p.season} 進行度`,
   aria: (p) => `${p.season} 進行度 ${p.pct}%`,
-  filled: (p) => `完走キャリア ${p.count} / ${p.target}`,
-  owners: (p) => `参加オーナー ${p.n}人`,
   endsIn: (p) => `シーズン終了まで ${p.left}`,
   ended: 'シーズンが終わりました。結果を集計しています。',
   days: (p) => `${p.d}日${p.h}時間`,
