@@ -6,6 +6,7 @@ import { useState, useSyncExternalStore } from 'react';
 import { View } from 'react-native';
 import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
 import { saveKey } from '@offside/game/storage';
+import { buzz } from '../../game/host';
 import { SiteFooter } from '../../components/SiteFooter';
 import { goFairness } from '../../game/nav';
 import { openWeb } from '../../platform/openWeb';
@@ -102,7 +103,7 @@ export default function Settings() {
   const dark = useIsDark();
   const consent = useSyncExternalStore(nativeAnalytics.onConsent, nativeAnalytics.getConsent);
   const [namePublic, setNamePublicState] = useState(namePublicEnabled());
-  const { lang } = useSnapshot(prefs);
+  const { lang, haptics } = useSnapshot(prefs);
 
   /** 언어: 이 기기에 저장하고 루트를 다시 그린다(_layout의 key). */
   const setLang = (l: Locale) => {
@@ -115,6 +116,13 @@ export default function Settings() {
     const theme = on ? 'dark' : 'light';
     prefs.theme = theme;
     saveKey('ft_theme', theme);
+  };
+
+  /** 진동: 이 기기에 저장한다. 켤 때 한 번 울려 어떤 느낌인지 보여 준다. */
+  const setHaptics = (on: boolean) => {
+    prefs.haptics = on;
+    saveKey('ft_haptics', on);
+    if (on) buzz();
   };
 
   return (
@@ -140,6 +148,15 @@ export default function Settings() {
             onChange={setLang}
             label={L.langTitle}
             testID="lang"
+          />
+        </SettingsRow>
+        <SettingsRow first={false}>
+          <SettingsLabel title={L.hapticsTitleApp} muted={L.hapticsBodyApp} />
+          <Switch
+            value={haptics}
+            onChange={setHaptics}
+            label={L.hapticsTitleApp}
+            testID="haptics"
           />
         </SettingsRow>
       </SettingsCard>

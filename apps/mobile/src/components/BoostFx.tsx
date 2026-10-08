@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { hapticsOn } from '../game/host';
 import { useSnapshot } from 'valtio';
 import type { BoostOutcome } from '@offside/app-core/boost-view';
 import { gameBoostText as L } from '@offside/app-core/i18n/ko/gameBoost';
@@ -32,9 +33,12 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
       if (!finished) return;
       setDone(true);
       if (!motionOK) return;
-      void Haptics.notificationAsync(
-        out.ok ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
-      ).catch(() => {});
+      if (hapticsOn())
+        void Haptics.notificationAsync(
+          out.ok
+            ? Haptics.NotificationFeedbackType.Success
+            : Haptics.NotificationFeedbackType.Error,
+        ).catch(() => {});
       if (out.ok) {
         pop.setValue(0.4);
         Animated.spring(pop, { toValue: 1, friction: 4, useNativeDriver: true }).start();

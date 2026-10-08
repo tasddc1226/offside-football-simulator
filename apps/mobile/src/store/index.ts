@@ -38,9 +38,15 @@ export const legendTitleOf = (careerId: string | undefined, saved: string | null
   retiredTitleOf(careerId, saved, pickedTitles);
 
 /** 기기 설정. theme: 설정에서 고른 테마(null이면 시스템) · motionOK: 시스템 '동작 줄이기'가 꺼져 있다 ·
- * lang: 화면 문구 언어(T-11-102, 바뀌면 _layout이 루트를 다시 그린다). */
-export const prefs = proxy<{ theme: 'light' | 'dark' | null; motionOK: boolean; lang: Locale }>({
+ * haptics: 설정의 진동 스위치(기본 켬) · lang: 화면 문구 언어(T-11-102, 바뀌면 _layout이 루트를 다시 그린다). */
+export const prefs = proxy<{
+  theme: 'light' | 'dark' | null;
+  motionOK: boolean;
+  haptics: boolean;
+  lang: Locale;
+}>({
   theme: loadKey<'light' | 'dark'>('ft_theme'),
   motionOK: true,
+  haptics: loadKey<boolean>('ft_haptics') !== false,
   lang: getLocale(),
 });
