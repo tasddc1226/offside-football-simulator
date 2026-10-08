@@ -41,13 +41,14 @@ import { ChampBadge } from '../../components/ChampBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
 import { RerollShop } from './RerollShop';
-import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
+import { GRADE_COLOR, Grid2, OvrBadge, Stats, type StatPress } from './TeamParts';
 import { mix } from '../../theme/colors';
 import { TeamLogo } from '../../components/TeamLogo';
 import { GradeEmblem } from '../../ui/GradeEmblem';
 import { AdSlot } from '../../components/AdSlot';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
+import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { openFriends } from '../../platform/inbox';
 import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
 
@@ -277,7 +278,17 @@ export default function Owner() {
                 items={[
                   [L.statClubValue, clubValue !== null ? fmtValue(clubValue) : '–'],
                   ...(linked
-                    ? [[L.statFunds, market ? fundsText(market.balance) : '–'] as [string, string]]
+                    ? [
+                        [
+                          L.statFunds,
+                          market ? fundsText(market.balance) : '–',
+                          {
+                            onPress: () => go('funds'),
+                            label: F.openAria,
+                            testID: 'funds-history',
+                          },
+                        ] as [string, string, StatPress],
+                      ]
                     : []),
                 ]}
               />

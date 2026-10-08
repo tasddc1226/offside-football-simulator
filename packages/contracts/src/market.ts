@@ -155,6 +155,43 @@ export const FundsSpendSchema = z.strictObject({
 });
 export type FundsSpend = z.infer<typeof FundsSpendSchema>;
 
+/** 자금 내역 한 줄(GET /v1/market/funds/history). amount는 잔액 변화(받으면 +, 쓰면 −). */
+export const FundsHistoryEntrySchema = z.strictObject({
+  id: z.string(),
+  kind: z.enum(['released', 'sold', 'bought', 'spent']),
+  /** spent일 때 산 것. */
+  item: z.enum(FUNDS_ITEMS as unknown as [FundsItem, ...FundsItem[]]).nullable(),
+  amount: z.number().int(),
+  /** sold일 때 뗀 수수료. */
+  fee: man.nullable(),
+  at: IsoUtcSchema,
+  card: MarketTradeSchema.shape.card.nullable(),
+});
+export type FundsHistoryEntry = z.infer<typeof FundsHistoryEntrySchema>;
+
+export const FundsHistoryQuerySchema = z.strictObject({
+  page: z.coerce.number().int().min(0).max(1000).default(0),
+});
+
+/** GET /v1/market/funds/history — 구단 자금 내역(최근 순, 페이지)과 지금까지 출처별 합. */
+export const FundsHistoryResponseSchema = z.strictObject({
+  balance: man,
+  totals: z.strictObject({
+    /** 방출로 받은 자금. */
+    released: man,
+    /** 판매로 받은 자금(수수료 뺀 값)과 뗀 수수료. */
+    sold: man,
+    fees: man,
+    /** 영입에 쓴 자금. */
+    bought: man,
+    /** 리롤권 · 광고 대신 받은 보상에 쓴 자금. */
+    spent: man,
+  }),
+  items: z.array(FundsHistoryEntrySchema),
+  hasMore: z.boolean(),
+});
+export type FundsHistoryResponse = z.infer<typeof FundsHistoryResponseSchema>;
+
 /** GET /v1/market/funds — 구단주 화면 요약용 구단 자금 · 구단 가치(이적시장 화면은 /v1/market/me). */
 export const MarketFundsResponseSchema = z.strictObject({ balance: man, clubValue: man });
 export type MarketFundsResponse = z.infer<typeof MarketFundsResponseSchema>;

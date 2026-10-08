@@ -1,5 +1,6 @@
 import {
   ErrorEnvelopeSchema,
+  FundsHistoryResponseSchema,
   MarketCardTradesResponseSchema,
   MarketChartResponseSchema,
   MarketListResponseSchema,
@@ -22,6 +23,7 @@ import {
   pushDeliveries,
 } from '../db/schema.js';
 import { createApp } from '../app.js';
+import { FUNDS_HISTORY_PAGE } from '../db/repos/fundsHistory.js';
 import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
 import {
   ADMIN_EMAIL,
@@ -37,6 +39,7 @@ const MeRes = successEnvelope(MarketMeResponseSchema);
 const TeamRes = successEnvelope(OwnerTeamResponseSchema);
 const ChartRes = successEnvelope(MarketChartResponseSchema);
 const TradesRes = successEnvelope(MarketCardTradesResponseSchema);
+const HistoryRes = successEnvelope(FundsHistoryResponseSchema);
 
 let seq = 0;
 
@@ -408,5 +411,93 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
       cookie: admin.cookie,
     });
     expect(none.status).toBe(404);
+  });
+
+  it('자금 내역: 방출·판매·영입·구단 자금 사용을 최근 순으로, 출처별 합과 페이지로 준다', async () => {
+    const seller = await issueGoogleCookie(ctx);
+    const buyer = await issueGoogleCookie(ctx);
+    const history = async (cookie: string, page = 0) =>
+      HistoryRes.parse(
+        await (await call('GET', `/v1/market/funds/history?page=${page}`, { cookie })).json(),
+      ).data;
+    expect((await call('GET', '/v1/market/funds/history')).status).toBe(401);
+    expect(await history(seller.cookie)).toEqual({
+      balance: 0,
+      totals: { released: 0, sold: 0, fees: 0, bought: 0, spent: 0 },
+      items: [],
+      hasMore: false,
+    });
+
+    const keep = await addCard(seller.profileId);
+    const sell = await addCard(seller.profileId);
+    await call('POST', '/v1/cards/release', {
+      cookie: seller.cookie,
+      headers: idem(),
+      body: { careerIds: [keep] },
+    });
+    vi.setSystemTime(new Date('2026-09-30T01:00:00.000Z'));
+    const created = await list(seller.cookie, sell, 1_200_000);
+    const listingId = ((await created.json()) as { data: { listing: { id: string } } }).data.listing
+      .id;
+    await fund(buyer.profileId, 2_000_000);
+    vi.setSystemTime(new Date('2026-09-30T02:00:00.000Z'));
+    await call('POST', `/v1/market/listings/${listingId}/buy`, {
+      cookie: buyer.cookie,
+      headers: idem(),
+      body: { price: 1_200_000 },
+    });
+    vi.setSystemTime(new Date('2026-09-30T03:00:00.000Z'));
+    expect(
+      (
+        await call('POST', '/v1/items/reroll/buy', {
+          cookie: seller.cookie,
+          headers: idem(),
+          body: { price: 1_000_000 },
+        })
+      ).status,
+    ).toBe(200);
+
+    const s = await history(seller.cookie);
+    expect(s.balance).toBe(1_000_000 + 1_140_000 - 1_000_000);
+    expect(s.totals).toEqual({
+      released: 1_000_000,
+      sold: 1_140_000,
+      fees: 60_000,
+      bought: 0,
+      spent: 1_000_000,
+    });
+    expect(s.items.map((i) => [i.kind, i.item, i.amount, i.fee, i.card?.careerId ?? null])).toEqual(
+      [
+        ['spent', 'reroll', -1_000_000, null, null],
+        ['sold', null, 1_140_000, 60_000, sell],
+        ['released', null, 1_000_000, null, keep],
+      ],
+    );
+    expect(s.items[1]!.card).toMatchObject({ pos: 'FW', peak: 85, number: 9 });
+    const b = await history(buyer.cookie);
+    expect(b.totals.bought).toBe(1_200_000);
+    expect(b.items).toMatchObject([
+      { kind: 'bought', amount: -1_200_000, card: { careerId: sell } },
+    ]);
+
+    // 한 번에 여러 장 방출하면 시각이 같아도 페이지가 겹치거나 빠지지 않는다.
+    const many: string[] = [];
+    for (let i = 0; i < FUNDS_HISTORY_PAGE; i++) many.push(await addCard(buyer.profileId));
+    await call('POST', '/v1/cards/release', {
+      cookie: buyer.cookie,
+      headers: idem(),
+      body: { careerIds: many },
+    });
+    const p0 = await history(buyer.cookie);
+    const p1 = await history(buyer.cookie, 1);
+    expect([p0.items.length, p0.hasMore, p1.items.length, p1.hasMore]).toEqual([
+      FUNDS_HISTORY_PAGE,
+      true,
+      1,
+      false,
+    ]);
+    const ids = [...p0.items, ...p1.items].map((i) => i.id);
+    expect(new Set(ids).size).toBe(FUNDS_HISTORY_PAGE + 1);
+    expect(p1.items[0]).toMatchObject({ kind: 'bought' });
   });
 });

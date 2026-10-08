@@ -22,6 +22,7 @@ import { fairness } from './fairness';
 import { firsts } from './firsts';
 import { firstsTab } from './firstsTab';
 import { friend } from './friend';
+import { fundsHistory } from './fundsHistory';
 import { game } from './game';
 import { gameActions } from './gameActions';
 import { gameAttr } from './gameAttr';
@@ -103,6 +104,7 @@ export const en = {
   firsts,
   firstsTab,
   friend,
+  fundsHistory,
   game,
   gameActions,
   gameAttr,

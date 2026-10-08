@@ -12,6 +12,7 @@
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
   import { fundsText } from '@offside/app-core/market';
+  import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import RerollShop from './cup/RerollShop.svelte';
   import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
@@ -138,7 +139,7 @@
       {:else}
       <dl class="owner-stats">
         <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
-        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}</dt><dd>{market ? fundsText(market.balance) : '–'}</dd></div>{/if}
+        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{market ? fundsText(market.balance) : '–'}</dd><button class="owner-funds-open" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
         <div><dt>{L.statRetired}</dt><dd>{summary ? L.playersCount({ n: summary.players, text: num(summary.players) }) : '–'}</dd></div>
         <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
         <div><dt>{L.statRetiredNumbers}</dt><dd>{summary ? L.numbersCount({ n: summary.retired }) : '–'}</dd></div>
@@ -311,6 +312,28 @@
   .owner-stats .owner-value:has(+ .owner-funds),
   .owner-stats .owner-funds {
     grid-column: span 3;
+  }
+  /* 구단 자금 칸 전체가 내역으로 가는 버튼(dl 안이라 칸 위에 투명 버튼을 덮는다). */
+  .owner-stats .owner-funds {
+    position: relative;
+  }
+  .owner-funds-open {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    cursor: pointer;
+  }
+  .owner-funds-open:hover {
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+  }
+  .owner-funds-open:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .owner-funds-go {
+    margin-left: 4px;
   }
   .owner-stats .owner-value dd {
     font-size: 1.75rem;

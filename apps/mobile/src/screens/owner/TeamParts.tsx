@@ -167,13 +167,16 @@ export function Grid2({
 }
 
 /** 숫자 칸 줄(웹 .owner-stats · .tm-stats). first는 첫 칸 너비 비율(전적처럼 긴 값). */
+/** Stats 칸을 누를 수 있게(구단주 요약의 구단 자금 → 자금 내역). 이름 옆에 › 를 붙인다. */
+export type StatPress = { onPress: () => void; label: string; testID: string };
+
 export function Stats({
   items,
   small,
   accent,
   first = 1,
 }: {
-  items: [string, string][];
+  items: [string, string, StatPress?][];
   small?: boolean;
   /** 첫 칸을 크게·강조색으로(구단주 요약의 구단 가치). */
   accent?: boolean;
@@ -182,36 +185,49 @@ export function Stats({
   const c = useColors();
   return (
     <View style={{ flexDirection: 'row', gap: 8 }}>
-      {items.map(([k, v], i) => (
-        <View
-          key={k}
-          accessible
-          accessibilityLabel={`${k} ${v}`}
-          style={{
-            flex: i === 0 ? first : 1,
-            minWidth: 0,
-            gap: 2,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderRadius: 12,
-            backgroundColor: c.surface2,
-          }}
-        >
-          <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-            {k}
-          </Txt>
-          <Txt
-            style={{
-              fontFamily: DISPLAY[700],
-              fontSize: rem(accent && i === 0 ? 1.75 : small ? 1.0625 : 1.25),
-              fontVariant: ['tabular-nums'],
-              ...(accent && i === 0 ? { color: c.accentText } : null),
-            }}
+      {items.map(([k, v, press], i) => {
+        const style: ViewStyle = {
+          flex: i === 0 ? first : 1,
+          minWidth: 0,
+          gap: 2,
+          paddingVertical: 10,
+          paddingHorizontal: 12,
+          borderRadius: 12,
+          backgroundColor: c.surface2,
+        };
+        const body = (
+          <>
+            <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+              {press ? `${k} ›` : k}
+            </Txt>
+            <Txt
+              style={{
+                fontFamily: DISPLAY[700],
+                fontSize: rem(accent && i === 0 ? 1.75 : small ? 1.0625 : 1.25),
+                fontVariant: ['tabular-nums'],
+                ...(accent && i === 0 ? { color: c.accentText } : null),
+              }}
+            >
+              {v}
+            </Txt>
+          </>
+        );
+        return press ? (
+          <Press
+            key={k}
+            testID={press.testID}
+            accessibilityLabel={`${k} ${v}, ${press.label}`}
+            onPress={press.onPress}
+            style={style}
           >
-            {v}
-          </Txt>
-        </View>
-      ))}
+            {body}
+          </Press>
+        ) : (
+          <View key={k} accessible accessibilityLabel={`${k} ${v}`} style={style}>
+            {body}
+          </View>
+        );
+      })}
     </View>
   );
 }
