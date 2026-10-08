@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Animated,
   Easing,
+  Text,
   useWindowDimensions,
   View,
   type StyleProp,
@@ -21,6 +22,7 @@ import { useSnapshot } from 'valtio';
 import { legendScoreBreakdown, legendTitle } from '@offside/game/season';
 import {
   careerChapters,
+  careerClubs,
   nationalEvents,
   honoursRoll,
   type ChapterEvent,
@@ -49,6 +51,7 @@ import { Pop, POP, Reveal, useProgress, useRevealed } from './credit';
 import { FilmBackdrop, FilmPill, FText, H2, Kicker, useFilm } from './film';
 import { LateCredits } from './LateCredits';
 import { tn } from '@offside/game/i18n/names';
+import { NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
 import { avatarWidth, retiredAvatarSpec } from '@offside/game/avatar';
 
 // end: 리포트 맨 아래(다음 행동 버튼 등).
@@ -71,6 +74,9 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
   const main = titleById(retiredTitleOf(v.own ? (ownId ?? '') : undefined, v.title, pk));
 
   const chapters = d ? careerChapters(d) : [];
+  /** 거쳐 간 구단 엠블럼 줄(웹 .film-clubs) — 은퇴 가치와 통산 기록 사이에서 커리어를 한눈에. */
+  const clubs = d ? careerClubs(d) : [];
+  const country = v.nation ? NATION_BY_CODE.get(v.nation) : undefined;
   const national = d ? nationalEvents(d) : [];
   const caps = d ? d.nat.caps : v.totals.caps;
   const honours = d ? honoursRoll(d.trophies) : [];
@@ -130,6 +136,11 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                 marginTop: 4,
               }}
             >
+              {country ? (
+                <Text testID="legend-nation" style={{ fontSize: nameSize * 0.6 }}>
+                  {`${flagOf(country.code)} `}
+                </Text>
+              ) : null}
               {v.name}
             </FText>
             <FText tone="muted" size={0.875} center>
@@ -201,6 +212,38 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
                 </FilmPill>
               ) : null}
             </Pop>
+            {clubs.length ? (
+              <Pop on={playing} delay={1500} style={{ marginTop: 8 }}>
+                <View
+                  testID="legend-clubs"
+                  accessible
+                  accessibilityLabel={`${L.clubsLabel}: ${clubs.map((k) => tn(k.club)).join(', ')}`}
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                    rowGap: 10,
+                    columnGap: 4,
+                  }}
+                >
+                  {clubs.map((k, i) => (
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      {i ? (
+                        <FText tone="muted" size={1} style={{ marginBottom: 16 }}>
+                          ›
+                        </FText>
+                      ) : null}
+                      <View style={{ width: 64, alignItems: 'center', gap: 4 }}>
+                        <ClubMark name={k.club} id={k.clubId} size={34} />
+                        <FText tone="muted" size={0.6875} numberOfLines={1}>
+                          {tn(k.club)}
+                        </FText>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </Pop>
+            ) : null}
             {/* 통산 기록은 레전드 점수 바로 아래(첫 화면에서 한눈에). */}
             <Reveal
               onSeen={see('highlights')}

@@ -7,7 +7,7 @@
   import { legendTitleOf } from '../titles/legendTitle.svelte.js';
   import { rnOf } from '../retiredNumber.svelte.js';
   import { toast } from '../helpers.js';
-  import { cardFile, drawShareCard, loadCardFonts, shareCardData } from './shareCard.js';
+  import { cardFile, drawShareCard, loadCardCrests, loadCardFonts, shareCardData } from './shareCard.js';
   import { shareText as L } from '@offside/app-core/i18n/ko/share';
 
   const { v }: { v: LegendView } = $props();
@@ -24,9 +24,9 @@
     busy = true;
     try {
       const data = shareCardData({ ...v, rn: rnOf(h.id!, v.rn) }, legendTitleOf(h.id ?? '', h.title));
-      await loadCardFonts(data);
+      const [crests] = await Promise.all([loadCardCrests(data), loadCardFonts(data)]);
       const canvas = document.createElement('canvas');
-      drawShareCard(canvas, data);
+      drawShareCard(canvas, data, crests);
       const file = await cardFile(canvas, h.name);
       canvas.width = 0; // 큰 캔버스 메모리를 바로 놓는다(iOS 사파리 캔버스 한도).
       if (shot) URL.revokeObjectURL(shot.url);

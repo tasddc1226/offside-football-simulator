@@ -7,6 +7,7 @@ export const legend: Translation<LegendMsgs> = {
   retiredAge: (p) => `Retired at ${p.age}`,
   scoreLabel: (p) => `Legend Score ${p.score}`,
   worth: 'Retirement value',
+  clubsLabel: 'Clubs',
   peakValue: (p) => `Peak value ${p.value} · ${p.season} ${p.club}`,
   peakOvr: (p) => `Peak OVR ${p.peak}`,
   rnPillTitle: (p) => `${p.club} retired No. ${p.number}`,

@@ -6,11 +6,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   CARD_H,
   CARD_W,
+  CLUB_ROW_TOP,
   cardBrand,
+  clubRowLayout,
+  lowerBlockY,
+  statsTop,
   tagline,
   type ShareCardData,
 } from '@offside/app-core/shareCard';
 import { RnFrame } from '../../components/RnFrame';
+import { ClubMark } from '../../ui/ClubBadge';
 import { DISPLAY, fitLine } from '../../theme/type';
 
 const C = {
@@ -27,7 +32,7 @@ const PAD = 80;
 const INNER = CARD_W - PAD * 2;
 const MID = CARD_W / 2;
 const PILL = { h: 62, padX: 28, gap: 16 };
-/** 여정 한 줄: 연도는 YEAR_X에 오른쪽 맞춤, 구단·리그는 CLUB_X부터. */
+/** 대표 우승 한 줄: 횟수는 YEAR_X에 오른쪽 맞춤, 이름은 CLUB_X부터. */
 const YEAR_X = MID - 190;
 const CLUB_X = MID - 160;
 
@@ -81,35 +86,14 @@ function T({
 }
 
 export function ShareCardView({ c }: { c: ShareCardData }) {
-  // 커리어 여정(+ 성향이 없으면 대표 우승). 성향 칸이 없으면 기록 아래~바닥 줄 사이 가운데에 둔다(짧은 여정이 위에 몰리지 않게).
-  const sy = 680;
-  let y = sy + 206;
-  const HONOURS_GAP = 26;
-  if (!c.style) {
-    const rows = c.stops.reduce((n, s) => n + (s ? 52 : 40), 0);
-    const honoursH = c.honours.length ? HONOURS_GAP + 56 + c.honours.length * 52 : 0;
-    const blockH = 22 + 56 + rows + honoursH - 52 + 10; // 제목 글자 윗선 ~ 마지막 줄 아랫선
-    y = Math.max(y, Math.round(sy + 148 + (CARD_H - 100 - (sy + 148) - blockH) / 2 + 22));
-  }
-  const journeyY = y;
-  y += 56;
-  const stopRows: { y: number; s: ShareCardData['stops'][number] }[] = [];
-  for (const s of c.stops) {
-    stopRows.push({ y, s });
-    y += s ? 52 : 40;
-  }
-  let honoursY = 0;
-  const honourRows: { y: number; h: ShareCardData['honours'][number] }[] = [];
-  if (c.honours.length) {
-    y += HONOURS_GAP;
-    honoursY = y;
-    y += 56;
-    for (const h of c.honours) {
-      honourRows.push({ y, h });
-      y += 52;
-    }
-  }
-  const styleY = c.style ? Math.max(y + 18, 1100) : 0;
+  const sy = statsTop(c);
+  const row = clubRowLayout(c.clubs.length);
+  const rowX = MID - (row.slot * c.clubs.length) / 2;
+  // 플레이 성향(없으면 대표 우승) — 기록 아래~바닥 줄 사이 가운데.
+  const lowY = lowerBlockY(c);
+  const styleY = lowY;
+  const honoursY = lowY;
+  const honourRows = c.honours.map((h, i) => ({ y: lowY + 56 + i * 52, h }));
   const scoreX = c.jersey ? MID - 200 : MID;
 
   return (
@@ -152,7 +136,7 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
         {c.kicker}
       </T>
       <T y={232} size={104} color={C.ink} weight="700" x={PAD} w={INNER}>
-        {c.name}
+        {c.flag ? `${c.flag} ${c.name}` : c.name}
       </T>
       <T y={290} size={34} color={C.muted} x={PAD} w={INNER}>
         {c.sub}
@@ -220,6 +204,37 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
         ))}
       </View>
 
+      {/* 거쳐 간 구단: 엠블럼을 처음 뛴 순서대로 가로 한 줄, 아래에 구단 이름. */}
+      {c.clubs.map((k, i) => (
+        <View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: rowX + row.slot * i,
+            top: CLUB_ROW_TOP,
+            width: row.slot,
+            alignItems: 'center',
+          }}
+        >
+          <ClubMark name={k.club} id={k.clubId} size={row.crest} />
+        </View>
+      ))}
+      {row.names
+        ? c.clubs.map((k, i) => (
+            <T
+              key={i}
+              y={CLUB_ROW_TOP + row.crest + 36}
+              size={24}
+              color={C.muted}
+              weight="600"
+              x={rowX + row.slot * i + 5}
+              w={row.slot - 10}
+            >
+              {k.name}
+            </T>
+          ))
+        : null}
+
       {/* 통산 기록 */}
       <View
         style={{
@@ -255,61 +270,7 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
         );
       })}
 
-      {/* 커리어 여정(+ 성향이 없으면 대표 우승) */}
-      <T y={journeyY} size={28} color={C.gold} display={600} gap={6}>
-        THE JOURNEY
-      </T>
-      {stopRows.map(({ y: ry, s }, i) =>
-        s ? (
-          <View key={i}>
-            <T
-              y={ry}
-              size={34}
-              color={C.muted}
-              display={600}
-              align="right"
-              x={YEAR_X - 300}
-              w={300}
-            >
-              {s.years}
-            </T>
-            <View
-              style={{
-                position: 'absolute',
-                left: CLUB_X,
-                width: CARD_W - PAD - CLUB_X,
-                top: ry - 34 * 0.82,
-                flexDirection: 'row',
-                alignItems: 'baseline',
-                gap: 16,
-              }}
-            >
-              <Text
-                numberOfLines={1}
-                style={fitLine({
-                  maxWidth: 430,
-                  fontSize: 34,
-                  lineHeight: 34,
-                  fontWeight: '600',
-                  color: C.ink,
-                })}
-              >
-                {s.club}
-              </Text>
-              <Text
-                numberOfLines={1}
-                style={{ flexShrink: 1, fontSize: 26, lineHeight: 34, color: C.muted }}
-              >
-                {s.league}
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <T key={i} y={ry - 6} size={30} color={C.muted} x={YEAR_X + 15 - 20} w={40}>
-            ⋮
-          </T>
-        ),
-      )}
+      {/* 대표 우승(성향이 없을 때) */}
       {c.honours.length ? (
         <>
           <T y={honoursY} size={28} color={C.gold} display={600} gap={6}>

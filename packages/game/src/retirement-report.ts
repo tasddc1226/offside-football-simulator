@@ -1,7 +1,7 @@
 // ───────── 은퇴 리포트: 클럽별 챕터 타임라인 · 우승 연혁 (T-10-062) ─────────
 // 순수 함수만 있다 — 이미 기록된 시즌·우승·수상·이정표만 읽고 RNG를 전혀 쓰지 않는다.
 import { isNationalTeam } from './nation.js';
-import { sameClub } from './data.js';
+import { sameClub, type ClubRef } from './data.js';
 import type { LegendSource } from './types.js';
 import { gRecordsText as L } from './i18n/ko/gRecords.js';
 import { tn } from './i18n/names.js';
@@ -40,6 +40,19 @@ export function isKeyMilestone(t: string): boolean {
   if (MINOR_MILE.test(t)) return false;
   const goals = /통산 (\d+)골/.exec(t);
   return !goals || Number(goals[1]) % 100 === 0;
+}
+
+/** 거쳐 간 구단을 처음 뛴 순서대로 한 번씩(같은 구단으로 돌아와도 한 번, 현역 복무 시즌은 빼고).
+ * 은퇴 리포트·공유 이미지의 엠블럼 줄. */
+export function careerClubs(s: LegendSource): ClubRef[] {
+  const out: ClubRef[] = [];
+  for (const r of s.career) {
+    if (r.mil) continue;
+    const seen = out.find((o) => sameClub(o, r));
+    if (seen) seen.clubId ??= r.clubId;
+    else out.push({ club: r.club, clubId: r.clubId });
+  }
+  return out;
 }
 
 export function careerChapters(s: LegendSource): Chapter[] {

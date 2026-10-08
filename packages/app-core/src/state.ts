@@ -138,6 +138,8 @@ export interface LegendView {
   pos: Pos;
   /** T-10-091 세부 포지션 — 있으면 시즌 1 선수라 레전드 등급을 시즌 1 기준으로 가른다(T-11-018). */
   dpos: string | null | undefined;
+  /** 국적 코드. 남긴 국적이 없는 옛 로컬 기록은 undefined — 국기를 그리지 않는다. */
+  nation?: string | undefined;
   age: number;
   lastClub: string;
   /** T-10-066. 옛 기록에는 없다 — 엠블럼은 이름으로 찾는다. */

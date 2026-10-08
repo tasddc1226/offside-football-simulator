@@ -3,7 +3,8 @@
 // 그리는 쪽은 클라이언트가 한다: 웹은 캔버스(shareCard.ts drawShareCard), 앱은 같은 카드를 RN 뷰로 그려 PNG로 찍는다.
 import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { styleReport } from '@offside/game/playStyleReport';
-import { careerChapters, honoursRoll } from '@offside/game/retirement-report';
+import { careerClubs, honoursRoll } from '@offside/game/retirement-report';
+import { flagOf, NATION_BY_CODE } from '@offside/contracts/nations';
 import { legendTitle } from '@offside/game/season';
 import { POS_LABEL } from '@offside/game/pos-label';
 import { titleById } from '@offside/game/titles';
@@ -20,30 +21,44 @@ export interface JerseyArt {
 
 export const CARD_W = 1080;
 export const CARD_H = 1350;
-/** 여정에 싣는 구단 수(넘치면 첫 구단과 마지막 구단들만 남기고 가운데를 줄인다). 성향·우승 칸이 있으면 줄어든다. */
-const STOPS = { shared: 3, alone: 5 };
-/** 성향 칸이 없을 때 여정 아래에 싣는 대표 우승·수상 줄 수. */
+/** 성향 칸이 없을 때 그 자리에 싣는 대표 우승·수상 줄 수. */
 const HONOURS = 3;
+
+// ───────── 도안 자리(px) — 웹 캔버스·앱 RN 뷰가 같은 값으로 그린다 ─────────
+/** 배지 아래 엠블럼 줄의 위 끝. 엠블럼 아래에 구단 이름이 붙는다. */
+export const CLUB_ROW_TOP = 672;
+/** 엠블럼 줄: 한 칸 폭·엠블럼 크기. 칸이 좁으면(구단이 아주 많으면) 이름은 빼고 엠블럼만. */
+export function clubRowLayout(n: number) {
+  const slot = Math.min(170, (CARD_W - 160) / Math.max(1, n));
+  return { slot, crest: Math.min(84, slot - 18), names: slot >= 96 };
+}
+/** 통산 기록 칸의 위 끝(엠블럼 줄이 있으면 그만큼 내린다). */
+export const statsTop = (c: Pick<ShareCardData, 'clubs'>): number => (c.clubs.length ? 836 : 680);
+/** 통산 기록 아래~바닥 줄 사이 가운데에 놓는 성향(또는 대표 우승) 칸의 제목 baseline. */
+export function lowerBlockY(c: Pick<ShareCardData, 'clubs' | 'style' | 'honours'>): number {
+  const top = statsTop(c) + 148;
+  const h = c.style ? 150 : 22 + 56 + (c.honours.length - 1) * 52 + 10;
+  return Math.round(top + (CARD_H - 100 - top - h) / 2 + 22);
+}
 
 export interface ShareCardData {
   kicker: string;
   name: string;
+  /** 국적 국기(이모지). 국적을 모르는 옛 기록은 null. */
+  flag: string | null;
   sub: string;
   score: number;
   /** 등급 · 대표 칭호 · 영구결번 배지. tail은 좁으면 text 끝을 줄여도 남기는 뒷부분. */
   pills: { text: string; gold?: boolean; tail?: string }[];
   stats: { value: string; label: string }[];
-  /** 커리어 여정(연도 · 구단 · 리그). 가운데를 줄였으면 null 한 칸이 들어간다. */
-  stops: ({ years: string; club: string; league: string } | null)[];
+  /** 거쳐 간 구단(처음 뛴 순서, 한 번씩) — 배지와 통산 기록 사이 엠블럼 줄. name은 보여 줄 이름. */
+  clubs: { club: string; clubId: string | null; name: string }[];
   style: { icon: string; name: string; line: string; best: string | null } | null;
-  /** 성향 칸이 없을 때 여정 아래 대표 우승·수상(발롱도르 → 많이 든 우승 → 개인상). */
+  /** 성향 칸이 없을 때 그 자리에 싣는 대표 우승·수상(발롱도르 → 많이 든 우승 → 개인상). */
   honours: { count: string; name: string }[];
   /** 영구결번을 받았으면 점수 옆에 세우는 결번 유니폼. */
   jersey: JerseyArt | null;
 }
-
-const yy = (from: number, to: number) =>
-  from === to ? `${from}` : `${from}–${String(to % 100).padStart(2, '0')}`;
 
 export function shareCardData(v: LegendView, titleId: string | null | undefined): ShareCardData {
   const d = v.d;
@@ -70,11 +85,10 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
   ];
 
   const r = d ? styleReport(d.style, d.career) : null;
-  const all = (d ? careerChapters(d) : []).map((c) => ({
-    years: yy(c.from, c.to),
-    club: tn(c.club),
-    league: tn(c.leagues.at(-1)!),
-  }));
+  // 시즌별 기록이 없는 옛 기록은 마지막 구단만 안다.
+  const clubs = (
+    d ? careerClubs(d) : [{ club: v.lastClub, clubId: v.lastClubId ?? undefined }]
+  ).map((c) => ({ club: c.club, clubId: c.clubId ?? null, name: tn(c.club) }));
   const awards = d ? honoursRoll(d.awards) : [];
   const ballon = (h: { name: string }) => h.name.includes('발롱도르');
   const honours = r
@@ -86,16 +100,15 @@ export function shareCardData(v: LegendView, titleId: string | null | undefined)
       ]
         .slice(0, HONOURS)
         .map((h) => ({ count: `×${h.years.length}`, name: tn(h.name) }));
-  const room = r || honours.length ? STOPS.shared : STOPS.alone;
-  const stops = all.length > room ? [all[0]!, null, ...all.slice(-(room - 2))] : all;
   return {
     kicker: `FULL TIME${v.number != null ? ` · NO.${v.number}` : ''}`,
     name: v.name,
+    flag: v.nation && NATION_BY_CODE.has(v.nation) ? flagOf(v.nation) : null,
     sub: [tn(POS_LABEL[v.pos]), span, L.cardRetiredAge({ age: v.age })].filter(Boolean).join(' · '),
     score: v.score,
     pills,
     stats,
-    stops,
+    clubs,
     style: r
       ? {
           icon: r.type.icon,

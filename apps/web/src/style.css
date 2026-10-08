@@ -5544,6 +5544,45 @@ button.title-item:hover {
   color: #1a1204;
   font-weight: 700;
 }
+/* 거쳐 간 구단 — 엠블럼과 이름을 처음 뛴 순서대로, 사이에 작은 화살표. */
+.film-flag {
+  font-size: 0.6em;
+  vertical-align: 0.12em;
+}
+.film-clubs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.film-clubs li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.film-clubs li + li::before {
+  content: '›';
+  margin-bottom: 16px;
+  color: var(--film-muted);
+}
+.film-clubs .fc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 64px;
+}
+.film-clubs .fc > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  color: var(--film-muted);
+}
 .film-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
