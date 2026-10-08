@@ -26,6 +26,10 @@ export const CUP_EN: Record<CupTextKey, string> = {
   shopClosed: "Reroll tickets aren't on sale right now.",
   shopDaily:
     'You can buy up to {n} reroll ticket(s) a day. You can buy more from 00:00 (KST) tomorrow.',
+  rewardClosed: "You can't use club funds for this right now.",
+  rewardDaily:
+    'You can use club funds for this up to {n} time(s) a day. You can use them again from 00:00 (KST) tomorrow.',
+  rewardPriceChanged: 'The club funds price has changed. Please check it again.',
   shopPriceChanged: 'The reroll ticket price has changed. Please check it again.',
   lineupLocked:
     "You can't change your lineup from 1 hour before an OFFSIDE Cup match until it ends.",

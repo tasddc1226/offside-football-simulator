@@ -5,6 +5,8 @@ import type {
   CupResponse,
   OwnerItemsResponse,
   RerollShopResponse,
+  RewardKind,
+  RewardShopResponse,
 } from '@offside/contracts';
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import { apiFetch, cachedGet } from './client.js';
@@ -57,5 +59,18 @@ export const buyReroll = (price: number, key: string) =>
   apiFetch<RerollShopResponse>('/v1/items/reroll/buy', {
     method: 'POST',
     body: JSON.stringify({ price }),
+    headers: { [IDEMPOTENCY_KEY_HEADER]: key },
+  });
+
+/**
+ * T-11-153 광고 대신 구단 자금으로 받는 보상들의 값(구단 자금 · 보상마다 다음 가격). 로그인한 구단주에게 그 버튼을 보일
+ * 때만 부른다. 받으면(쓰기 성공) 메모가 비워진다.
+ */
+export const fetchRewardShop = () => cachedGet<RewardShopResponse>('/v1/items/rewards', 30_000);
+/** 보상 한 번을 구단 자금으로 받는다. price는 화면에서 본 가격, key는 한 번의 시도마다 하나(재시도해도 두 번 쓰지 않는다). */
+export const buyRewardWithFunds = (kind: RewardKind, price: number, key: string) =>
+  apiFetch<RewardShopResponse>('/v1/items/rewards/buy', {
+    method: 'POST',
+    body: JSON.stringify({ kind, price }),
     headers: { [IDEMPOTENCY_KEY_HEADER]: key },
   });

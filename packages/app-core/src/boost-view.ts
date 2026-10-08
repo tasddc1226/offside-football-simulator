@@ -9,6 +9,7 @@ import {
   boostState,
   boostStatus,
   tryBoost,
+  type BoostPay,
   type BoostStatus,
 } from '@offside/game/boost';
 import { fmtMoney } from '@offside/game/player';
@@ -22,6 +23,8 @@ export interface BoostView {
   max: number;
   /** 상태 한 줄. */
   line: string;
+  /** 다음 시도 성공 확률(%). T-11-153 구단 자금 버튼에 적는다. */
+  chance: number;
   /** 시도할 수 있을 때만 — 비용과 확률을 버튼에 그대로 적는다. */
   button?: string;
   /** 시도 전에 한 번 더 묻는 문구. */
@@ -69,6 +72,7 @@ export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView
     lv: b.lv,
     max: BOOST_MAX,
     line,
+    chance,
     ...(status === 'ready'
       ? { button: L.button({ cost, chance }), confirm: L.confirm({ cost, chance }) }
       : {}),
@@ -83,7 +87,7 @@ export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView
       .slice(-4)
       .reverse()
       .map((x) => {
-        const cost = x.ad ? L.adCost : L2.won({ v: fmtMoney(x.c) });
+        const cost = x.ad ? L.adCost : x.club ? L.clubCost : L2.won({ v: fmtMoney(x.c) });
         const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost };
         return x.ok ? L.historyOk(p) : L.historyFail(p);
       }),
@@ -101,9 +105,9 @@ export interface BoostOutcome {
   text: string;
 }
 
-/** 시도하고 연출에 쓸 결과를 돌려준다. 시도할 수 없으면 null. 저장은 부르는 쪽이 연출 전에 바로 한다. ad: 광고 시도. */
-export function doBoost(s: GameState, ad = false): BoostOutcome | null {
-  const r = tryBoost(s, ad);
+/** 시도하고 연출에 쓸 결과를 돌려준다. 시도할 수 없으면 null. 저장은 부르는 쪽이 연출 전에 바로 한다. pay는 tryBoost. */
+export function doBoost(s: GameState, pay: BoostPay = 'money'): BoostOutcome | null {
+  const r = tryBoost(s, pay);
   if (!r) return null;
   return {
     ok: r.ok,
@@ -115,6 +119,9 @@ export function doBoost(s: GameState, ad = false): BoostOutcome | null {
       ? r.lv >= BOOST_MAX
         ? L.resultOkMax
         : L.resultOk
-      : (ad ? L.resultFailAd : L.resultFail)({ chance: r.chance, pct: BOOST_PITY_PCT }),
+      : (pay === 'money' ? L.resultFail : L.resultFailFree)({
+          chance: r.chance,
+          pct: BOOST_PITY_PCT,
+        }),
   };
 }

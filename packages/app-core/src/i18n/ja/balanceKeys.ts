@@ -30,6 +30,11 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   rerollPrice: 'リロールチケットの価格',
   rerollPriceGrowth: 'リロールチケットの値上がり倍率',
   rerollDailyCap: '1日のリロールチケット購入数',
+  rewardPriceCandidates: '候補ポテンシャル表示の価格',
+  rewardPricePeek: 'シーズン評価表示の価格',
+  rewardPriceBoost: 'ポテンシャル強化の価格',
+  rewardPriceGrowth: '広告の代わりのクラブ資金の価格上昇倍率',
+  rewardDailyCap: '広告の代わりのクラブ資金の1日の回数',
   eventWeight: (p) => `イベント出現頻度の調整 ${p.n}件`,
   choiceBonus: (p) => `選択肢の成功確率の調整 ${p.n}件`,
 };

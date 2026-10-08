@@ -426,6 +426,62 @@ describe('T-11-145 컵 진행(cron)', () => {
     expect((await shop()).price).toBe(1_000_000);
   });
 
+  it('T-11-153 광고 대신 구단 자금으로 보상을 받는다: 보상마다 따로 값이 오르고 하루 횟수가 있다', async () => {
+    const who = await issueGoogleCookie(ctx);
+    type Offer = { price: number | null; bought: number; cap: number };
+    type Shop = { balance: number; offers: Record<'candidates' | 'peek' | 'boost', Offer> };
+    const shop = async () =>
+      (
+        (await (
+          await callJson(ctx.env, 'GET', '/v1/items/rewards', { cookie: who.cookie })
+        ).json()) as { data: Shop }
+      ).data;
+    const buy = (kind: string, price: number, k: string) =>
+      callJson(ctx.env, 'POST', '/v1/items/rewards/buy', {
+        cookie: who.cookie,
+        body: { kind, price },
+        headers: { [IDEMPOTENCY_KEY_HEADER]: `reward-${k}-key` },
+      });
+    const reason = async (r: Response) =>
+      ((await r.json()) as { error: { details: { reason: string } } }).error.details.reason;
+    expect(await shop()).toEqual({
+      balance: 0,
+      offers: {
+        candidates: { price: 300_000, bought: 0, cap: 5 },
+        peek: { price: 200_000, bought: 0, cap: 5 },
+        boost: { price: 500_000, bought: 0, cap: 5 },
+      },
+    });
+    // 자금 행이 없으면 받지 못한다.
+    expect(await reason(await buy('peek', 200_000, 'a'))).toBe('FUNDS_SHORT');
+    await ctx.db
+      .insert(ownerFunds)
+      .values({ profileId: who.profileId, balance: 900_000, updatedAt: CUP.opensAt });
+    const first = await buy('peek', 200_000, 'b');
+    expect(first.status).toBe(200);
+    const after = ((await first.json()) as { data: Shop }).data;
+    expect(after.balance).toBe(700_000);
+    // 같은 보상만 값이 오르고 다른 보상은 그대로다.
+    expect(after.offers.peek).toEqual({ price: 400_000, bought: 1, cap: 5 });
+    expect(after.offers.candidates).toEqual({ price: 300_000, bought: 0, cap: 5 });
+    // 같은 키로 다시 보내면 두 번 받지 않는다. 옛 가격이면 가격이 바뀌었다고 알린다.
+    expect((await buy('peek', 200_000, 'b')).status).toBe(200);
+    expect(await reason(await buy('peek', 200_000, 'c'))).toBe('PRICE_CHANGED');
+    expect((await buy('boost', 500_000, 'd')).status).toBe(200);
+    // 자금이 모자라면 받지 못하고 원장에도 남지 않는다.
+    expect(await reason(await buy('boost', 1_000_000, 'e'))).toBe('FUNDS_SHORT');
+    expect((await shop()).balance).toBe(200_000);
+    const ledger = await ctx.db.select().from(ownerItemPurchases);
+    expect(ledger.map((r) => `${r.item}:${r.price}`).sort()).toEqual([
+      'reward:boost:500000',
+      'reward:peek:200000',
+    ]);
+    // 리롤권은 늘지 않는다(보상은 기기의 게임이 준다).
+    expect((await shop()).offers.boost.bought).toBe(1);
+    const items = await callJson(ctx.env, 'GET', '/v1/items', { cookie: who.cookie });
+    expect(((await items.json()) as { data: { reroll: number } }).data.reroll).toBe(0);
+  });
+
   it('대회 화면은 누구나 본다', async () => {
     const res = await callJson(ctx.env, 'GET', '/v1/cups/current');
     expect(res.status).toBe(200);

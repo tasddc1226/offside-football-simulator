@@ -35,5 +35,17 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   adNoteFree: '広告削除を購入済みなので、資金なしで1回挑戦できます。',
   adWatch: '広告を最後まで見ると強化に挑戦できます。',
   adCost: '広告',
-  resultFailAd: (p) => `成功確率は${p.chance}%でした。次の挑戦の確率が${p.pct}%p上がります。`,
+  clubCost: 'クラブ資金',
+  resultFailFree: (p) => `成功確率は${p.chance}%でした。次の挑戦の確率が${p.pct}%p上がります。`,
+  clubCandidates: (p) => `クラブ資金で候補のポテンシャルを見る（${p.price}）`,
+  clubPeek: (p) => `クラブ資金で評価を見る（${p.price}）`,
+  clubBoost: (p) => `クラブ資金で強化する（${p.price} · ${p.chance}%）`,
+  clubConfirm: (p) =>
+    `クラブ資金を${p.price}使います。使用後のクラブ資金は${p.balance}で、取り消せません。`,
+  clubAskTitle: 'クラブ資金を使う',
+  clubAction: '使う',
+  clubBusy: 'クラブ資金を使っています…',
+  clubNote:
+    '広告を見るか、クラブ資金を使って受け取れます。クラブ資金は同じ日に使うほど高くなります。',
+  clubFail: 'クラブ資金を使えませんでした。',
 };

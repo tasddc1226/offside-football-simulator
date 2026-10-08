@@ -3,6 +3,8 @@ import {
   MarketCardTradesResponseSchema,
   MarketChartResponseSchema,
   MarketListResponseSchema,
+  AdminFundsOwnerSchema,
+  AdminFundsReportSchema,
   MarketMeResponseSchema,
   OwnerTeamResponseSchema,
   successEnvelope,
@@ -21,7 +23,13 @@ import {
 } from '../db/schema.js';
 import { createApp } from '../app.js';
 import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
-import { callJson, deleteProfile, issueGoogleCookie } from '../test/http.js';
+import {
+  ADMIN_EMAIL,
+  callJson,
+  deleteProfile,
+  issueAdminCookie,
+  issueGoogleCookie,
+} from '../test/http.js';
 import { addAppPushDevice } from '../test/push.js';
 
 const ListRes = successEnvelope(MarketListResponseSchema);
@@ -338,5 +346,67 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     const rows = await ctx.db.select().from(marketListings);
     expect(rows.map((r) => r.status)).toEqual(['cancelled']);
     expect(await ctx.db.select().from(ownerFunds)).toEqual([]);
+  });
+  it('T-11-153 자금 내역에 구단 자금 사용이 보이고, 운영 도구가 잔액을 기록과 대조한다', async () => {
+    const owner = await issueGoogleCookie(ctx, { nickname: '대조구단' });
+    const card = await addCard(owner.profileId);
+    await call('POST', '/v1/cards/release', {
+      cookie: owner.cookie,
+      headers: idem(),
+      body: { careerIds: [card] },
+    });
+    vi.setSystemTime(new Date('2026-09-30T01:00:00.000Z'));
+    const bought = await call('POST', '/v1/items/reroll/buy', {
+      cookie: owner.cookie,
+      headers: idem(),
+      body: { price: 1_000_000 },
+    });
+    expect(bought.status).toBe(200);
+    const mine = await me(owner.cookie);
+    expect(mine.balance).toBe(0);
+    expect(mine.trades).toMatchObject([{ kind: 'released', amount: 1_000_000 }]);
+    expect(mine.spends).toMatchObject([{ item: 'reroll', amount: 1_000_000 }]);
+
+    const env = { ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL };
+    const admin = await issueAdminCookie(ctx);
+    expect((await callJson(env, 'GET', '/v1/admin/funds', { cookie: owner.cookie })).status).toBe(
+      403,
+    );
+    const report = async () =>
+      successEnvelope(AdminFundsReportSchema).parse(
+        await (await callJson(env, 'GET', '/v1/admin/funds', { cookie: admin.cookie })).json(),
+      ).data;
+    expect(await report()).toMatchObject({
+      owners: 1,
+      balance: 0,
+      released: 1_000_000,
+      items: { reroll: 1_000_000 },
+      mismatched: 0,
+      mismatches: [],
+    });
+    // 기록 밖에서 잔액이 바뀌면(직접 넣은 자금) 어긋난 구단주로 잡힌다.
+    await ctx.db
+      .update(ownerFunds)
+      .set({ balance: 5 })
+      .where(eq(ownerFunds.profileId, owner.profileId));
+    expect(await report()).toMatchObject({
+      mismatched: 1,
+      mismatches: [{ profileId: owner.profileId, nickname: '대조구단', balance: 5, diff: 5 }],
+    });
+    for (const q of [owner.profileId, '대조구단']) {
+      const res = await callJson(env, 'GET', `/v1/admin/funds/owner?q=${encodeURIComponent(q)}`, {
+        cookie: admin.cookie,
+      });
+      const one = successEnvelope(AdminFundsOwnerSchema).parse(await res.json()).data;
+      expect(one).toMatchObject({ released: 1_000_000, items: 1_000_000, diff: 5 });
+      expect(one.moves.map((m) => [m.kind, m.item, m.amount])).toEqual([
+        ['item', 'reroll', -1_000_000],
+        ['released', null, 1_000_000],
+      ]);
+    }
+    const none = await callJson(env, 'GET', '/v1/admin/funds/owner?q=없는구단', {
+      cookie: admin.cookie,
+    });
+    expect(none.status).toBe(404);
   });
 });

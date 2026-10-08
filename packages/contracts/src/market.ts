@@ -7,6 +7,7 @@ import {
 } from './careers.js';
 import { MARKET_CHART_RANGES } from './market-value.js';
 import { IsoUtcSchema } from './primitives.js';
+import { FUNDS_ITEMS, type FundsItem } from './cup.js';
 
 export { MARKET_CHART_DAYS, MARKET_CHART_RANGES, type MarketChartRange } from './market-value.js';
 
@@ -145,6 +146,15 @@ export const MarketTradeSchema = z.strictObject({
 });
 export type MarketTrade = z.infer<typeof MarketTradeSchema>;
 
+/** 구단 자금으로 산 것 하나(리롤권 · 광고 대신 받은 보상). 거래(trades)와 따로 둬 옛 앱이 모르는 줄을 그리다 깨지지 않게 한다. */
+export const FundsSpendSchema = z.strictObject({
+  id: z.string(),
+  item: z.enum(FUNDS_ITEMS as unknown as [FundsItem, ...FundsItem[]]),
+  amount: man,
+  at: IsoUtcSchema,
+});
+export type FundsSpend = z.infer<typeof FundsSpendSchema>;
+
 /** GET /v1/market/funds — 구단주 화면 요약용 구단 자금 · 구단 가치(이적시장 화면은 /v1/market/me). */
 export const MarketFundsResponseSchema = z.strictObject({ balance: man, clubValue: man });
 export type MarketFundsResponse = z.infer<typeof MarketFundsResponseSchema>;
@@ -157,6 +167,8 @@ export const MarketMeResponseSchema = z.strictObject({
   clubValue: man,
   listings: z.array(MarketListingSchema),
   trades: z.array(MarketTradeSchema),
+  /** T-11-153 구단 자금으로 산 것(최근 순). 자금 내역에 거래와 시각순으로 섞어 그린다. */
+  spends: z.array(FundsSpendSchema),
   /** 오늘(한국 시각) 남은 영입 수. */
   buysLeft: z.number().int().min(0),
   rules: MarketRulesSchema,

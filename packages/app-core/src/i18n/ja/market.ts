@@ -88,6 +88,11 @@ export const market: Translation<MarketMsgs> = {
   tradeSold: '売却',
   tradeBought: '獲得',
   tradeReleased: '放出',
+  tradeSpent: '使用',
+  spendReroll: 'リロール券の購入',
+  spendCandidates: '候補のポテンシャル表示',
+  spendPeek: 'シーズン評価の表示',
+  spendBoost: 'ポテンシャル強化',
   releasePane: '放出して資金を作る',
   backToMarket: '移籍市場へ',
   releaseIntro:

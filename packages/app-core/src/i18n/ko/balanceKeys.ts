@@ -30,6 +30,11 @@ const ko = {
   rerollPrice: '리롤권 가격',
   rerollPriceGrowth: '리롤권 가격 상승 배율',
   rerollDailyCap: '하루 리롤권 구매 수',
+  rewardPriceCandidates: '후보 잠재력 보기 가격',
+  rewardPricePeek: '시즌 평가 보기 가격',
+  rewardPriceBoost: '잠재력 강화 가격',
+  rewardPriceGrowth: '광고 대신 구단 자금 가격 상승 배율',
+  rewardDailyCap: '광고 대신 구단 자금 하루 횟수',
   eventWeight: (p: { n: number }) => `이벤트 등장 빈도 조정 ${p.n}건`,
   choiceBonus: (p: { n: number }) => `선택지 성공 확률 조정 ${p.n}건`,
 };

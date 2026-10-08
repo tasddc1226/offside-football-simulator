@@ -5,7 +5,11 @@ import {
   BuyRerollBodySchema,
   OwnerItemsResponseSchema,
   RerollShopResponseSchema,
+  BuyRewardBodySchema,
+  RewardShopResponseSchema,
+  REWARD_KINDS,
   type CupMatch,
+  type RewardShopResponse,
   type CupPhase,
   type CupResponse,
 } from '@offside/contracts';
@@ -15,8 +19,9 @@ import {
   cupById,
   currentCup,
   lockAt,
-  rerollPriceAt,
+  shopPriceAt,
   type CupDef,
+  type RewardKind,
   type CupRound,
 } from '@offside/contracts/cup';
 import { and, eq, sql } from 'drizzle-orm';
@@ -30,7 +35,14 @@ import {
   teamLogosByIds,
   type MatchDetail,
 } from '../db/repos/ownerTeams.js';
-import { buyReroll, rerollShopRules, shopSnapshot } from '../db/repos/itemShop.js';
+import {
+  buyReroll,
+  buyRewardWithFunds,
+  rerollShopRules,
+  rewardShopRules,
+  rewardSnapshot,
+  shopSnapshot,
+} from '../db/repos/itemShop.js';
 import { countOpenListingsAmong } from '../db/repos/market.js';
 import { newId } from '../db/ids.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -409,7 +421,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       shopSnapshot(db, me.id, kstTodayStart(nowIso())),
       rerollShopRules(db),
     ]);
-    const shop = { reroll, balance, price: rerollPriceAt(rules, bought), bought, cap: rules.cap };
+    const shop = { reroll, balance, price: shopPriceAt(rules, bought), bought, cap: rules.cap };
     return ok(c, RerollShopResponseSchema, shop, 200, NO_STORE);
   });
 
@@ -425,7 +437,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       shopSnapshot(db, me.id, since),
       rerollShopRules(db),
     ]);
-    const price = rerollPriceAt(rules, bought);
+    const price = shopPriceAt(rules, bought);
     if (price === null)
       throw rules.cap === 0
         ? conflictError(cupKo('shopClosed'), 'SHOP_CLOSED')
@@ -447,12 +459,78 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     const shop = {
       reroll: res.reroll,
       balance: res.balance,
-      price: rerollPriceAt(rules, next),
+      price: shopPriceAt(rules, next),
       bought: next,
       cap: rules.cap,
     };
     return ok(c, RerollShopResponseSchema, shop, 200, NO_STORE);
   });
+
+  // T-11-153 광고 대신 구단 자금으로 받는 보상들의 값. 앱 · 웹이 그 보상 버튼을 보일 때만 부른다.
+  app.get('/v1/items/rewards', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const [snap, rules] = await Promise.all([
+      rewardSnapshot(db, me.id, kstTodayStart(nowIso())),
+      rewardShopRules(db),
+    ]);
+    return ok(c, RewardShopResponseSchema, rewardShop(snap, rules), 200, NO_STORE);
+  });
+
+  // T-11-153 보상 한 번을 구단 자금으로 받는다. 화면에서 본 가격을 함께 보낸다(다르면 409). 서버는 자금만 받고, 보상은
+  // 응답을 받은 기기가 준다. 재시도가 두 번 받지 않게 멱등 키를 쓴다.
+  app.post('/v1/items/rewards/buy', requireProfile, idempotency, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const input = readBody(c, BuyRewardBodySchema);
+    const now = nowIso();
+    const since = kstTodayStart(now);
+    const [snap, rules] = await Promise.all([
+      rewardSnapshot(db, me.id, since),
+      rewardShopRules(db),
+    ]);
+    const rule = rules[input.kind];
+    const bought = snap.bought[input.kind];
+    const price = shopPriceAt(rule, bought);
+    if (price === null)
+      throw rule.cap === 0
+        ? conflictError(cupKo('rewardClosed'), 'SHOP_CLOSED')
+        : conflictError(cupKo('rewardDaily', { n: rule.cap }), 'DAILY_LIMIT');
+    if (input.price !== price) throw conflictError(cupKo('rewardPriceChanged'), 'PRICE_CHANGED');
+    if (snap.balance < price) throw fundsShort();
+    let res: Awaited<ReturnType<typeof buyRewardWithFunds>>;
+    try {
+      res = await buyRewardWithFunds(db, {
+        id: newId('ipc'),
+        profileId: me.id,
+        kind: input.kind,
+        price,
+        bought,
+        since,
+        now,
+      });
+    } catch (e) {
+      if (isFundsCheck(e)) throw fundsShort();
+      throw e;
+    }
+    if (!res.won) throw conflictError(cupKo('rewardPriceChanged'), 'PRICE_CHANGED');
+    const next = { balance: res.balance, bought: { ...snap.bought, [input.kind]: bought + 1 } };
+    return ok(c, RewardShopResponseSchema, rewardShop(next, rules), 200, NO_STORE);
+  });
+}
+
+/** 구단 자금 · 오늘 받은 횟수 · 수치로 보상 값 응답을 만든다. */
+function rewardShop(
+  snap: { balance: number; bought: Record<RewardKind, number> },
+  rules: Record<RewardKind, { price: number; growth: number; cap: number }>,
+): RewardShopResponse {
+  const offers = Object.fromEntries(
+    REWARD_KINDS.map((k) => [
+      k,
+      { price: shopPriceAt(rules[k], snap.bought[k]), bought: snap.bought[k], cap: rules[k].cap },
+    ]),
+  ) as RewardShopResponse['offers'];
+  return { balance: snap.balance, offers };
 }
 
 /** 컵에 참가 중인(탈락 전) 이 시즌 대회와 그 경기들. 없으면 빈 배열. */

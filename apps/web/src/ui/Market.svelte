@@ -29,6 +29,9 @@
     MARKET_TOAST,
     marketTabs,
     TRADE_LABEL,
+    SPEND_LABEL,
+    fundsLog,
+    spendAmount,
     buyBlock,
     cardMeta,
     fundsText,
@@ -435,15 +438,27 @@
           </ul>
           <h2 class="mk-step">{L.fundsLog}</h2>
           <ul class="mk-log">
-            {#each me.trades as t (t.id)}
-              <li data-trade={t.kind}>
-                <span class="mk-badge mk-badge-{t.kind}">{TRADE_LABEL[t.kind]}</span>
-                <span class="mk-info">
-                  <span>{marketName(t.card, local)} {tn(POS_LABEL[t.card.pos])} {t.card.peak}</span>
-                  <small>{agoKo(Date.now() - Date.parse(t.at))}{t.kind === 'sold' ? L.feeTaken : ''}</small>
-                </span>
-                <b class:mk-plus={t.kind !== 'bought'}>{tradeAmount(t)}</b>
-              </li>
+            {#each fundsLog(me) as row (row.kind === 'trade' ? row.t.id : row.s.id)}
+              {#if row.kind === 'trade'}
+                {@const t = row.t}
+                <li data-trade={t.kind}>
+                  <span class="mk-badge mk-badge-{t.kind}">{TRADE_LABEL[t.kind]}</span>
+                  <span class="mk-info">
+                    <span>{marketName(t.card, local)} {tn(POS_LABEL[t.card.pos])} {t.card.peak}</span>
+                    <small>{agoKo(Date.now() - Date.parse(t.at))}{t.kind === 'sold' ? L.feeTaken : ''}</small>
+                  </span>
+                  <b class:mk-plus={t.kind !== 'bought'}>{tradeAmount(t)}</b>
+                </li>
+              {:else}
+                <li data-trade="spent">
+                  <span class="mk-badge mk-badge-bought">{L.tradeSpent}</span>
+                  <span class="mk-info">
+                    <span>{SPEND_LABEL[row.s.item]}</span>
+                    <small>{agoKo(Date.now() - Date.parse(row.s.at))}</small>
+                  </span>
+                  <b>{spendAmount(row.s)}</b>
+                </li>
+              {/if}
             {:else}
               <li class="muted">{L.noTrades}</li>
             {/each}
