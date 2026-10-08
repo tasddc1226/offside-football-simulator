@@ -1,3 +1,4 @@
+import { sweepAutomation } from './db/repos/automationEnforcement.js';
 import { CHAT_SOCKET_PATH } from '@offside/contracts/chat';
 import { LIVE_SOCKET_PATH } from '@offside/contracts/polling';
 import { app } from './app.js';
@@ -64,6 +65,8 @@ export default {
             r && console.log(JSON.stringify({ level: 'info', job: 'season-events-archive', ...r })),
         )
         .catch(logged('season-events-archive'));
+      if (env.AUTOMATION_HIDE_DISABLED !== '1')
+        await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
       await runInfraHealth(env, controller.scheduledTime).catch(logged('infra-health'));
     }
   },

@@ -263,6 +263,10 @@ test('운영 도구: 자동 플레이 탭은 열 때 불러오고, 구간을 바
   const asked: string[] = [];
   await page.route(`${API}/v1/admin/automation**`, (route) => {
     const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/enforcement'))
+      return route.fulfill(
+        ok({ enabled: true, ruleVersion: '1', sweep: null, actions: [], next: null }),
+      );
     asked.push(url.searchParams.get('hours')!);
     return route.fulfill(
       ok({
@@ -310,4 +314,75 @@ test('운영 도구: 자동 플레이 탭은 열 때 불러오고, 구간을 바
   await expect(page.locator('[data-automation-summary]')).toContainText('55개 프로필 중 1곳');
   await page.locator('[data-automation-hours="24"]').click();
   await expect.poll(() => asked).toEqual(['6', '24']);
+});
+
+test('자동 숨김 이력: 모바일, 페이지 이동, 복구 및 탭 재진입 캐시', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 780 });
+  await mockApi(page, { linked: true, admin: true });
+  const id = '0f000000-0000-4000-8000-000000000001';
+  const key = `automation_action:${T}:${id}:hide`;
+  let hidden = true;
+  let reads = 0;
+  await page.route(`${API}/v1/admin/automation?**`, (r) =>
+    r.fulfill(ok({ generatedAt: T, hours: 6, profiles: 1, suspects: [] })),
+  );
+  await page.route(`${API}/v1/admin/automation/enforcement**`, (r) => {
+    reads++;
+    const older = new URL(r.request().url()).searchParams.has('before');
+    return r.fulfill(
+      ok({
+        enabled: true,
+        ruleVersion: '1',
+        sweep: {
+          since: '',
+          through: T,
+          cursor: '',
+          checked: 29834,
+          hidden: 186,
+          status: 'complete',
+          updatedAt: T,
+          ruleVersion: '1',
+        },
+        actions: [
+          {
+            careerId: id,
+            at: T,
+            action: 'hide',
+            source: older ? 'upload' : 'sweep',
+            ruleVersion: '1',
+            reasons: ['webdriver', 'noInput'],
+            seasons: 27,
+            key: older ? key.replace(':hide', ':restore') : key,
+            hidden,
+          },
+        ],
+        next: older ? null : key,
+      }),
+    );
+  });
+  await page.route(`${API}/v1/admin/careers/hidden**`, (r) => {
+    expect(r.request().postDataJSON()).toEqual({ careerId: id, hidden: false });
+    hidden = false;
+    return r.fulfill({ status: 204 });
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="admin"]').click();
+  await page.locator('[data-admin-tab="automation"]').click();
+  const panel = page.locator('[data-automation-enforcement]');
+  await expect(panel).toContainText('점검 완료');
+  await expect(panel).toContainText('29,834');
+  await expect(panel).toContainText('자동화 브라우저');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  await page.locator('[data-admin-tab="dashboard"]').click();
+  await page.locator('[data-admin-tab="automation"]').click();
+  await expect(panel).toBeVisible();
+  expect(reads).toBe(1);
+  await panel.getByRole('button', { name: '이전 이력 더 보기' }).click();
+  await expect(panel.locator('[data-automation-action]')).toHaveCount(2);
+  page.once('dialog', (d) => d.accept());
+  await panel.getByRole('button', { name: '숨김 해제' }).first().click();
+  await expect(panel).toContainText('복구됨');
+  await expect(panel.getByRole('button', { name: '숨김 해제' })).toHaveCount(0);
+  expect(reads).toBe(3);
 });

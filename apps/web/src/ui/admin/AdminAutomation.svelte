@@ -1,6 +1,8 @@
 <script lang="ts">
   // 자동 플레이 탐지(관찰 전용). 최근 N시간 동안 시즌을 올린 프로필 중 사람답지 않은 흐름이 보이는 곳을 점수순으로
   // 보여 준다 — 게임에는 아무 영향이 없다. 근거 기준은 api `db/repos/automation.ts`.
+  import AutomationModeration from './AutomationModeration.svelte';
+  import { automationModerationText as L } from '@offside/app-core/i18n/ko/automationModeration';
   import { onMount } from 'svelte';
   import type { AutomationReason } from '@offside/contracts';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
@@ -49,6 +51,7 @@
 </script>
 
 <div class="stack" style="gap:14px" data-admin="automation">
+  <AutomationModeration />
   <div class="row" style="justify-content:space-between">
     <h2 style="margin:0">자동 플레이 의심</h2>
     <button class="icon-btn" data-act="refresh-automation" onclick={load}>새로고침</button>
@@ -59,8 +62,7 @@
     {/each}
   </div>
   <p class="muted fs-xs" style="margin:0">
-    관찰 전용이며 게임에는 영향이 없어요. 사람도 같은 속도로 누르면 간격이 일정하게 나올 수 있으니 근거를 함께 보고 판단해 주세요.
-    조작 요약(브라우저·클릭·커서)은 이번 업데이트 뒤에 올라온 시즌부터 있어요.
+    {L.observations}
   </p>
   <LoadState {status} failText="자동 플레이 현황을 불러오지 못했어요." retry={load}>
     {@const r = report!}

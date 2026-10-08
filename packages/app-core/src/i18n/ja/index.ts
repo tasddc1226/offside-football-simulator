@@ -6,6 +6,7 @@ import { ad } from './ad';
 import { appFlight } from './appFlight';
 import { appFormat } from './appFormat';
 import { appScout } from './appScout';
+import { automationModeration } from './automationModeration';
 import { backup } from './backup';
 import { balanceKeys } from './balanceKeys';
 import { board } from './board';
@@ -86,6 +87,7 @@ export const ja = {
   appFlight,
   appFormat,
   appScout,
+  automationModeration,
   backup,
   balanceKeys,
   board,

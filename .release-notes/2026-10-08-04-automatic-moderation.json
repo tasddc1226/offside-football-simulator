@@ -1,0 +1,20 @@
+{
+  "id": "automatic-career-moderation-20261008",
+  "title": "자동 플레이 기록 관리",
+  "items": [
+    "자동 플레이 기준을 충족한 선수는 공개 기록과 팀에서 제외돼요. 원본 커리어 기록은 보존돼요."
+  ],
+  "en": {
+    "title": "Automated play record management",
+    "items": [
+      "Players meeting automated play criteria are excluded from public records and teams. Original career records are preserved."
+    ]
+  },
+  "ja": {
+    "title": "自動プレイの記録管理",
+    "items": [
+      "自動プレイの基準を満たす選手は公開記録とチームから除外します。元のキャリア記録は保存されます。"
+    ]
+  },
+  "availability": "web-app"
+}
