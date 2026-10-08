@@ -33,10 +33,6 @@ import {
   MARKET_TICKER_MS,
   MARKET_TOAST,
   marketTabs,
-  TRADE_LABEL,
-  SPEND_LABEL,
-  fundsLog,
-  spendAmount,
   buyBlock,
   cardMeta,
   fundsText,
@@ -54,13 +50,14 @@ import {
   sellSlider,
   sellable,
   sellQuote,
-  tradeAmount,
   type MarketView,
 } from '@offside/app-core/market';
 import { agoKo, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/hof-store';
 import { POS } from '@offside/game/data';
 import { appState, prefs } from '../../store';
+import { go } from '../../game/nav';
+import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { toast } from '../../game/host';
 import { useColors } from '../../theme/useColors';
@@ -500,18 +497,24 @@ function LiveStrip({
 const small = { fontSize: rem(0.875) } as const;
 const tiny = { fontSize: rem(0.75) } as const;
 
+// T-11-158 '구단 자금 내역 보기'로 나갔다가 뒤로 돌아오면 '내 거래' 탭을 다시 연다(한 번만 읽는다).
+let backToTrades = false;
+
 export default function Market() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const local = useMemo(() => localCareerNames(), []);
   const destination = useSnapshot(notificationDestination);
-  const [view, setView] = useState<MarketView>(destination.market ? 'trades' : 'market');
+  const [view, setView] = useState<MarketView>(() => {
+    const back = backToTrades;
+    backToTrades = false;
+    return destination.market || back ? 'trades' : 'market';
+  });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   // 자금 · 구단 가치 · 내 등록 · 최근 거래(1분 메모). 쓰기가 성공하면 apiFetch가 메모를 비우니 다시 받는다.
   const [me, setMe] = useState<MarketMeResponse | null>(null);
-  const log = useMemo(() => (me ? fundsLog(me) : []), [me]);
   const [meFailed, setMeFailed] = useState<string | null>(null);
   const loadMe = useCallback(async () => {
     const r = await fetchMarketMe();
@@ -1338,98 +1341,18 @@ export default function Market() {
                         {L.noListed}
                       </Txt>
                     )}
-                    <Txt bold accessibilityRole="header" style={{ ...small, marginTop: 6 }}>
-                      {L.fundsLog}
-                    </Txt>
-                    {log.length ? (
-                      <View style={{ ...box }}>
-                        {log.map((row, i) => {
-                          const t = row.kind === 'trade' ? row.t : null;
-                          const v = t
-                            ? {
-                                id: t.id,
-                                kind: t.kind,
-                                label: TRADE_LABEL[t.kind],
-                                title: `${marketName(t.card, local)} ${POS[t.card.pos].label} ${t.card.peak}`,
-                                at: t.at,
-                                amount: tradeAmount(t),
-                              }
-                            : row.kind === 'spend'
-                              ? {
-                                  id: row.s.id,
-                                  kind: 'spent' as const,
-                                  label: L.tradeSpent,
-                                  title: SPEND_LABEL[row.s.item],
-                                  at: row.s.at,
-                                  amount: spendAmount(row.s),
-                                }
-                              : null;
-                          if (!v) return null;
-                          const badge =
-                            v.kind === 'sold'
-                              ? { bg: c.surface2, fg: c.accentText }
-                              : v.kind === 'released'
-                                ? { bg: c.surface2, fg: c.bad }
-                                : { bg: c.surface2, fg: c.ink };
-                          return (
-                            <View
-                              key={v.id}
-                              testID={`market-trade-${v.kind}`}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 10,
-                                paddingVertical: 10,
-                                paddingHorizontal: 12,
-                                borderTopWidth: i ? 1 : 0,
-                                borderTopColor: c.line,
-                              }}
-                            >
-                              <View
-                                style={{
-                                  minWidth: 36,
-                                  paddingVertical: 3,
-                                  paddingHorizontal: 6,
-                                  borderRadius: 6,
-                                  alignItems: 'center',
-                                  backgroundColor: badge.bg,
-                                }}
-                              >
-                                <Txt
-                                  style={{
-                                    fontSize: rem(0.6875),
-                                    fontWeight: '700',
-                                    color: badge.fg,
-                                  }}
-                                >
-                                  {v.label}
-                                </Txt>
-                              </View>
-                              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                                <Txt numberOfLines={1} style={small}>
-                                  {v.title}
-                                </Txt>
-                                <Txt tone="muted" style={tiny}>
-                                  {`${agoKo(Date.now() - Date.parse(v.at))}${v.kind === 'sold' ? L.feeTaken : ''}`}
-                                </Txt>
-                              </View>
-                              <Txt
-                                tone={v.kind === 'bought' || v.kind === 'spent' ? 'ink' : 'good'}
-                                bold
-                                num
-                                style={small}
-                              >
-                                {v.amount}
-                              </Txt>
-                            </View>
-                          );
-                        })}
-                      </View>
-                    ) : (
-                      <Txt tone="muted" style={small}>
-                        {L.noTrades}
-                      </Txt>
-                    )}
+                    {/* T-11-158 자금 내역은 구단주 화면의 구단 자금 내역 한 곳에서 본다(방출 · 거래 · 구단 자금 사용 전부). */}
+                    <Btn
+                      sm
+                      kind="ghost"
+                      testID="market-funds-history"
+                      onPress={() => {
+                        backToTrades = true;
+                        go('funds');
+                      }}
+                    >
+                      {F.openAria}
+                    </Btn>
                   </>
                 )}
               </View>

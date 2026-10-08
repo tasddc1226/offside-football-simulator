@@ -1,3 +1,13 @@
+<script module lang="ts">
+  // T-11-158 '구단 자금 내역 보기'로 나갔다가 뒤로 돌아오면 '내 거래' 탭을 다시 연다(한 번만 읽는다).
+  let backToTrades = false;
+  function takeBackToTrades() {
+    const back = backToTrades;
+    backToTrades = false;
+    return back;
+  }
+</script>
+
 <script lang="ts">
   import { intlLocale } from '@offside/contracts/i18n';
   import { tn } from '@offside/game/i18n/names';
@@ -28,10 +38,6 @@
     MARKET_TICKER_MS,
     MARKET_TOAST,
     marketTabs,
-    TRADE_LABEL,
-    SPEND_LABEL,
-    fundsLog,
-    spendAmount,
     buyBlock,
     cardMeta,
     fundsText,
@@ -49,7 +55,6 @@
     sellSlider,
     sellable,
     sellQuote,
-    tradeAmount,
     type MarketView,
   } from '@offside/app-core/market';
   import { agoKo, fmtValue } from '@offside/app-core/format';
@@ -62,11 +67,12 @@
   import MarketChart from './MarketChart.svelte';
   import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
   import { go } from './nav.js';
+  import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import { toast } from './helpers.js';
   import { marketText as L } from '@offside/app-core/i18n/ko/market';
 
   const local = localCareerNames();
-  let view = $state<MarketView>('market');
+  let view = $state<MarketView>(takeBackToTrades() ? 'trades' : 'market');
   let error = $state<string | null>(null);
   let busy = $state(false);
 
@@ -436,33 +442,8 @@
               <li class="muted">{L.noListed}</li>
             {/each}
           </ul>
-          <h2 class="mk-step">{L.fundsLog}</h2>
-          <ul class="mk-log">
-            {#each fundsLog(me) as row (row.kind === 'trade' ? row.t.id : row.s.id)}
-              {#if row.kind === 'trade'}
-                {@const t = row.t}
-                <li data-trade={t.kind}>
-                  <span class="funds-badge funds-badge-{t.kind}">{TRADE_LABEL[t.kind]}</span>
-                  <span class="mk-info">
-                    <span>{marketName(t.card, local)} {tn(POS_LABEL[t.card.pos])} {t.card.peak}</span>
-                    <small>{agoKo(Date.now() - Date.parse(t.at))}{t.kind === 'sold' ? L.feeTaken : ''}</small>
-                  </span>
-                  <b class:mk-plus={t.kind !== 'bought'}>{tradeAmount(t)}</b>
-                </li>
-              {:else}
-                <li data-trade="spent">
-                  <span class="funds-badge funds-badge-spent">{L.tradeSpent}</span>
-                  <span class="mk-info">
-                    <span>{SPEND_LABEL[row.s.item]}</span>
-                    <small>{agoKo(Date.now() - Date.parse(row.s.at))}</small>
-                  </span>
-                  <b>{spendAmount(row.s)}</b>
-                </li>
-              {/if}
-            {:else}
-              <li class="muted">{L.noTrades}</li>
-            {/each}
-          </ul>
+          <!-- T-11-158 자금 내역은 구단주 화면의 구단 자금 내역 한 곳에서 본다(방출 · 거래 · 구단 자금 사용 전부). -->
+          <button class="btn btn-sm self-start" data-act="market-funds-history" onclick={() => ((backToTrades = true), go('funds'))}>{F.openAria}</button>
         {/if}
       </section>
     {/if}
@@ -832,8 +813,7 @@
 
   /* 목록 줄 */
   .mk-rows,
-  .mk-rel-list,
-  .mk-log {
+  .mk-rel-list {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -1187,30 +1167,6 @@
   /* 내 거래 */
   .mk-row-static .icon-btn {
     flex: none;
-  }
-  .mk-log {
-    gap: 0;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    background: var(--surface);
-  }
-  .mk-log li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--line);
-  }
-  .mk-log li:last-child {
-    border-bottom: 0;
-  }
-  .mk-log b {
-    flex: none;
-    font-size: 0.875rem;
-    white-space: nowrap;
-  }
-  .mk-plus {
-    color: var(--good);
   }
 
   /* 시트 — 영입(카드 상세 + 확인) · 방출 확인 */

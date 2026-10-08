@@ -1,14 +1,8 @@
 // T-11-080 이적시장 화면(웹 ui/market · 앱 screens/owner/Market.tsx 공용) — 그리기 전에 계산하는 것과 문구만 둔다.
 import type { CareerPos } from '@offside/contracts';
 import { fmtValue, playerName } from './format.js';
-import type {
-  MarketCard,
-  MarketMeResponse,
-  MarketRules,
-  MarketSale,
-  MarketTrade,
-} from './api/market.js';
-import type { FundsItem, FundsSpend } from '@offside/contracts';
+import type { MarketCard, MarketRules, MarketSale, MarketTrade } from './api/market.js';
+import type { FundsItem } from '@offside/contracts';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
 import { POS_GROUPS, detailPosOf } from '@offside/contracts/positions';
@@ -139,10 +133,6 @@ export const TRADE_LABEL: Record<MarketTrade['kind'], string> = {
     return L.tradeReleased;
   },
 };
-/** 거래 금액 표기. 들어온 돈은 +, 나간 돈은 −. */
-export const tradeAmount = (t: MarketTrade) =>
-  `${t.kind === 'bought' ? '−' : '+'}${fmtValue(t.amount)}`;
-
 /** T-11-153 구단 자금으로 산 것의 이름. */
 export const SPEND_LABEL: Record<FundsItem, string> = {
   get reroll() {
@@ -158,21 +148,6 @@ export const SPEND_LABEL: Record<FundsItem, string> = {
     return L.spendBoost;
   },
 };
-export const spendAmount = (s: FundsSpend) => `−${fmtValue(s.amount)}`;
-
-/** 자금 내역 한 줄 — 거래(판매 · 영입 · 방출) 또는 구단 자금 사용. */
-export type FundsLogRow = { kind: 'trade'; t: MarketTrade } | { kind: 'spend'; s: FundsSpend };
-/** 거래와 구단 자금 사용을 최근 순으로 섞어 최대 limit줄. */
-export function fundsLog(
-  me: Pick<MarketMeResponse, 'trades' | 'spends'>,
-  limit = 30,
-): FundsLogRow[] {
-  const rows: (FundsLogRow & { at: string })[] = [
-    ...me.trades.map((t) => ({ kind: 'trade' as const, t, at: t.at })),
-    ...me.spends.map((s) => ({ kind: 'spend' as const, s, at: s.at })),
-  ];
-  return rows.sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
-}
 
 /** 방출 확인 문구. 되돌릴 수 없다는 것을 꼭 보여 준다. */
 export const releaseConfirmText = (count: number, amount: number) =>
