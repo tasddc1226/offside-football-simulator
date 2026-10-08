@@ -19,6 +19,8 @@
   import TeamLines from './TeamLines.svelte';
   import TeamPitch from './TeamPitch.svelte';
   import TeamLogo from './TeamLogo.svelte';
+  import CupHonors from '../cup/CupHonors.svelte';
+  import ChampBadge from '../cup/ChampBadge.svelte';
   import { num as n, recordText } from '@offside/app-core/teamText';
   import { friendRequestText } from '@offside/app-core/friendText';
   import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
@@ -28,6 +30,8 @@
 
   let status = $state<LoadStatus>('loading');
   let team = $state<TeamProfile | null>(null);
+  // 가장 최근 우승 — 팀 이름 아래 챔피언 배지.
+  const champ = $derived(team?.cupHonors?.find((h) => h.stage === 'champion'));
   let liked = $state(false);
   let mine = $state(false);
   let liking = $state(false);
@@ -103,6 +107,7 @@
         <div class="tp-identity"><TeamLogo logo={team.logo} name={team.name} size={56} /><div class="tp-names">
           <small class="muted">{seasonLabel(team.season, team.seasonName)}{team.rank ? ` · RANK #${team.rank}` : ''}</small>
           <h1>{team.name}</h1>
+          {#if champ}<span class="tp-champ"><ChampBadge edition={champ.edition} /></span>{/if}
           <p class="muted fs-sm">{L.profManager}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</p>
         </div></div>
         <div class="tp-rating" aria-label={L.profRatingAria({ n: team.rating })}><small>RATING</small><b>{n(team.rating)}</b></div>
@@ -143,6 +148,7 @@
         <p class="empty">{L.profHistoryEmpty}</p>
       {/if}
     </section>
+    {#if team.cupHonors?.length}<CupHonors honors={team.cupHonors} />{/if}
     {#if !mine}<NameReport kind="team" id={team.id} name={team.name} />{/if}
     </div>
   {/if}
@@ -173,6 +179,7 @@
   }
   .tp-identity {display:flex;align-items:center;gap:10px;min-width:0;}
   .tp-names {min-width:0;}
+  .tp-champ {display:block; margin:2px 0 4px;}
   .tp-manager {
     color: var(--ink);
   }

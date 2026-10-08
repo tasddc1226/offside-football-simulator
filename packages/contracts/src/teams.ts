@@ -6,6 +6,7 @@ import {
   PeakProfileSchema,
 } from './careers.js';
 import { PUBLIC_NAME_CHARS } from './content-filter.js';
+import { CUP_STAGES } from './cup.js';
 import {
   ACH_CATEGORIES,
   FORMATION_IDS,
@@ -182,6 +183,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   matchesPerDay: z.number().int().min(1),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
   founder: z.boolean().optional(),
+  /** T-11-145 가장 최근에 우승한 컵 회차(구단주 탭 닉네임 옆 '제N회 챔피언'). 없으면 null, 배포 전 응답엔 없다. */
+  cupChampion: z.number().int().nullable().optional(),
 });
 export type OwnerTeamResponse = z.infer<typeof OwnerTeamResponseSchema>;
 
@@ -411,6 +414,18 @@ export const TeamBadgeSchema = z.strictObject({
 });
 export type TeamBadge = z.infer<typeof TeamBadgeSchema>;
 
+/** T-11-145 구단주가 얻은 오프사이드 컵 성적(영구 — 우승·준우승·4강은 트로피·칭호). stage는 cup.ts CUP_STAGES. */
+export const CupHonorSchema = z.strictObject({
+  cupId: z.string(),
+  season: z.number().int(),
+  edition: z.number().int(),
+  stage: z.enum(CUP_STAGES),
+  teamName: z.string(),
+  /** 트로피 받침대에 새기는 구단주 닉네임(지금 닉네임, 없으면 null). 배포 전 응답엔 없다. */
+  owner: z.string().nullable().optional(),
+});
+export type CupHonor = z.infer<typeof CupHonorSchema>;
+
 /** 누구나 보는 팀 프로필. 선수 이름은 공개 이름·익명 표기뿐이다. rank는 랭킹에 오르지 않은 팀(선수 0명)이면 null. */
 export const TeamProfileSchema = z.strictObject({
   id: TeamIdSchema,
@@ -431,6 +446,8 @@ export const TeamProfileSchema = z.strictObject({
   likes: count,
   views: count,
   badges: z.array(TeamBadgeSchema),
+  /** T-11-145 이 팀 구단주의 컵 성적(모든 시즌). 배포 전 응답엔 없다. */
+  cupHonors: z.array(CupHonorSchema).optional(),
   createdAt: IsoUtcSchema,
 });
 export type TeamProfile = z.infer<typeof TeamProfileSchema>;

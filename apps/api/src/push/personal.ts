@@ -84,14 +84,25 @@ async function reserveBudget(db: D1Database, rows: Row[], now: number) {
   return new Set(results.flatMap((r) => r.results.map((row) => (row as { id: string }).id)));
 }
 
-async function claim(db: D1Database, checking: boolean, now: number, lease: string) {
+/** T-11-145 컵 알림(source_key cup·cup-match)만 조용한 시간 앞부분에도 보낸다. */
+const CUP_PUSH_UNTIL_HOUR = 22;
+const CUP_ONLY =
+  " AND notification_id IN (SELECT id FROM notifications WHERE source_key LIKE 'cup%')";
+
+async function claim(
+  db: D1Database,
+  checking: boolean,
+  now: number,
+  lease: string,
+  cupOnly = false,
+) {
   const from = checking ? 'accepted' : 'pending';
   const state = checking ? 'checking' : 'sending';
   await db
     .prepare(
       `UPDATE push_deliveries SET state = ?, lease_id = ?, due_at = ?, updated_at = ?,
     attempts = attempts + ?, receipt_attempts = receipt_attempts + ?
-    WHERE id IN (SELECT id FROM push_deliveries WHERE state = ? AND due_at <= ? ORDER BY due_at LIMIT ${BATCH})`,
+    WHERE id IN (SELECT id FROM push_deliveries WHERE state = ? AND due_at <= ?${cupOnly ? CUP_ONLY : ''} ORDER BY due_at LIMIT ${BATCH})`,
     )
     .bind(
       state,
@@ -261,9 +272,11 @@ export async function runPersonalPush(
   const states: Partial<Record<Outcome['state'], number>> = {};
   const hour = new Date(now + 9 * 3600_000).getUTCHours();
   for (const checking of [true, false, false, false]) {
-    // 조용한 시간에는 영수증만 확인한다. 수동 본인 테스트는 별도의 요청 경로다.
-    if (!checking && (hour < 9 || hour >= 20)) break;
-    const rows = await claim(env.DB, checking, now, lease);
+    // 조용한 시간에는 영수증만 확인한다. 수동 본인 테스트는 별도의 요청 경로다. T-11-145 컵 알림만 22시까지 보낸다
+    // (경기가 밤 9시라 결과를 다음 날 아침으로 미루지 않게).
+    const cupOnly = hour >= 20 && hour < CUP_PUSH_UNTIL_HOUR;
+    if (!checking && (hour < 9 || (hour >= 20 && !cupOnly))) break;
+    const rows = await claim(env.DB, checking, now, lease, !checking && cupOnly);
     const eligible = checking ? rows : rows.filter((r) => r.eligible === 1);
     const reserved = checking ? null : await reserveBudget(env.DB, eligible, now);
     const active = checking ? eligible : eligible.filter((r) => reserved!.has(r.notification_id));

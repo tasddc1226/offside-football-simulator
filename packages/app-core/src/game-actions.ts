@@ -788,6 +788,13 @@ export function createGameActions(host: GameHost) {
     appState.candidatePick = null;
   }
 
+  /** T-11-145 리롤권을 쓴 뒤(서버가 1장 차감) 스카우트 시드를 새로 뽑아 후보를 다시 만든다. */
+  function rerollCandidates() {
+    releaseScoutSeed();
+    saveKey(SCOUT_REVEAL, null);
+    rollCandidates();
+  }
+
   function revealCandidatePotential(batch = appState.candidates): boolean {
     if (!batch || batch !== appState.candidates) return false;
     if (!saveKey(SCOUT_REVEAL, scoutSeed())) return false;
@@ -807,5 +814,6 @@ export function createGameActions(host: GameHost) {
     retireAsk,
     startCareer,
     rollCandidates,
+    rerollCandidates,
   };
 }

@@ -526,6 +526,20 @@
       "when": 1791373070673,
       "tag": "0074_clever_screwball",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "6",
+      "when": 1791377519241,
+      "tag": "0075_offside_cup",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "6",
+      "when": 1791415515908,
+      "tag": "0076_reroll_shop",
+      "breakpoints": true
     }
   ]
 }

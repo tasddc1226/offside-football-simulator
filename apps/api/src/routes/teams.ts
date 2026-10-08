@@ -1,3 +1,4 @@
+import { cupHonorsOf } from '../team/cup.js';
 import {
   AchRankQuerySchema,
   AchRankResponseSchema,
@@ -141,7 +142,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const t = found.team;
     const ids = slotIdsOf(t);
     const other = session && session.profileId !== t.profileId ? session.profileId : null;
-    const [rows, rank, liked, friend] = await Promise.all([
+    const [rows, rank, liked, friend, cupHonors] = await Promise.all([
       careersByIds(
         db,
         ids.filter((x): x is string => !!x),
@@ -149,6 +150,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       ratingRankOf(db, t),
       session ? isTeamLiked(db, t.id, session.profileId) : false,
       other ? friendStateOf(db, other, t.profileId) : null,
+      cupHonorsOf(db, t.profileId),
     ]);
     const now = nowIso();
     const eligible = eligibleMap(rows, t.profileId, t.season, t.season === teamSeasonAt(now));
@@ -178,6 +180,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           likes: t.likes,
           views: t.views,
           badges: teamBadges(t, teamSeasonClosed(t.season, now) ? rank : null, seasonName, lang),
+          cupHonors,
           createdAt: t.createdAt,
         },
         liked,

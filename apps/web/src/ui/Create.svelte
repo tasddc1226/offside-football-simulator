@@ -13,8 +13,12 @@
   import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { isKorean, nationOf } from '@offside/game/nation';
-  import { startCareer, rollCandidates } from './actions.js';
-  import { goHome } from './nav.js';
+  import { startCareer, rollCandidates, rerollCandidates } from './actions.js';
+  import { fetchItems, spendReroll } from '@offside/app-core/api/cup';
+  import { hasSessionHint } from '@offside/app-core/api/client';
+  import { toast } from './helpers.js';
+  import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
+  import { goHome, goRerollShop } from './nav.js';
   import { bodyNote, hiddenStrength, scoutLine, startOvr, ovrFocusView } from '@offside/app-core/create-view';
   import { dur } from './motion.js';
   import { createText as L } from '@offside/app-core/i18n/ko/create';
@@ -88,6 +92,36 @@
   function scouted() {
     rollCandidates();
     scouting = false;
+  }
+  // T-11-145 선수 후보 리롤권(오프사이드 컵 보상) — 로그인한 구단주가 1장 이상 가졌을 때만 '후보 다시 뽑기'를 보인다.
+  // 후보 단계에 들어올 때 한 번 장수를 묻고(로그인 흔적이 없으면 묻지 않는다), 쓸 때마다 서버가 돌려준 장수로 바꾼다.
+  let rerolls = $state(0);
+  // T-11-152 장수를 받았으면(로그인한 구단주) 0장일 때 구단 자금으로 사는 리롤권 상점으로 가는 안내를 보인다.
+  let owner = $state(false);
+  let rerolling = $state(false);
+  // 한 번의 '다시 뽑기' 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 차감되지 않는다.
+  let rerollKey: string | null = null;
+  $effect(() => {
+    if (step !== 'candidates' || !hasSessionHint()) return;
+    void fetchItems().then((r) => {
+      owner = r.ok;
+      rerolls = r.ok ? r.data.reroll : 0;
+    });
+  });
+  async function reroll() {
+    if (rerolling || rerolls < 1 || !confirm(CL.rerollConfirm({ n: rerolls - 1 }))) return;
+    rerolling = true;
+    rerollKey ??= crypto.randomUUID();
+    const r = await spendReroll(rerollKey);
+    rerolling = false;
+    if (r.ok || !r.error.retryable) rerollKey = null;
+    if (!r.ok) {
+      if (r.error.reason === 'NO_REROLL') rerolls = 0;
+      return toast(r.error.message || CL.rerollFail);
+    }
+    rerolls = r.data.reroll;
+    rerollCandidates();
+    toast(CL.rerollDone({ n: rerolls }));
   }
   function backToForm() {
     appState.candidates = null;
@@ -271,6 +305,13 @@
         <button class="icon-btn" data-act="open-all" onclick={openAll}>{L.openAll}</button>
       {/if}
     </div>
+    {#if rerolls > 0}
+      <button class="btn btn-sm self-start" data-act="reroll-candidates" disabled={rerolling} onclick={reroll}>{rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}</button>
+    {:else if owner}
+      <p class="muted fs-sm" data-reroll-hint>
+        {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
+      </p>
+    {/if}
     <p class="muted">{appState.candidatePotentialOpen ? L.potentialHelp : L.potentialWeb}</p>
     {@render ovrGuide()}
     <p class="muted fs-sm">{L.ovrCore}</p>

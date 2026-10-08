@@ -1,4 +1,5 @@
 import { PUSH_JA, PUSH_TAIL_JA } from '../i18n/ja/push.js';
+import { cupText } from '../cupText.js';
 import type { Lang } from '../lang.js';
 
 // T-11-106 서버가 만든 알림 문구. 푸시는 보낼 때 기기의 언어를 알 수 없어(기기 등록에 언어가 없다) 한국어로 보내고,
@@ -53,7 +54,7 @@ export function pushText(ko: string, lang: Lang): string {
     const m = re.exec(ko);
     if (m) return `${m[1]}${T.sep}${T.tails[i]}`;
   }
-  return ko;
+  return cupText(ko, lang) ?? ko;
 }
 
 /** 알림 한 건의 제목·본문을 요청 언어로. 모르는 문구(운영자가 쓴 글)는 그대로 둔다. */

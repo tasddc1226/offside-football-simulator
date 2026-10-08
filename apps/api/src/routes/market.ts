@@ -40,6 +40,7 @@ import {
   releaseCards,
 } from '../db/repos/market.js';
 import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
+import { checkCupListing } from './cup.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -48,7 +49,16 @@ import { idempotency } from '../middleware/idempotency.js';
 import { kstDay, kstDays } from '../time.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { kstTodayStart, requireOwner } from './ownerTeam.js';
-import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
+import {
+  conflictError,
+  fundsShort,
+  isFundsCheck,
+  NO_STORE,
+  notFoundError,
+  nowIso,
+  ok,
+  readBody,
+} from './shared.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 거래는 지금 팀 시즌 카드끼리만 한다(프리시즌이면 프리시즌 카드).
 // 방출·시장은 구글 연결된 구단주만(requireOwner) — 익명 프로필에는 자금이 생기지 않는다.
@@ -68,7 +78,6 @@ function seasonOrThrow(now: string): number {
 }
 
 const listingGone = () => conflictError('이미 팔렸거나 내린 선수예요.', 'LISTING_GONE');
-const fundsShort = () => conflictError('구단 자금이 모자라요.', 'FUNDS_SHORT');
 const listingIdOf = (c: Context<AppEnv>) =>
   parseWithAppError(ListingIdSchema, c.req.param('listingId'));
 
@@ -194,6 +203,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     if (card.cardValue === null || card.hidden)
       throw conflictError('기준가가 없는 선수는 내놓을 수 없어요.', 'CARD_NOT_TRADABLE');
     if (card.openListing) throw conflictError('이미 내놓은 선수예요.', 'CARD_LISTED');
+    await checkCupListing(db, me.id, season, input.careerId);
     if (open >= rules.listLimit)
       throw conflictError(`한 번에 ${rules.listLimit}명까지 내놓을 수 있어요.`, 'LISTING_LIMIT');
     const band = priceBand(card.cardValue, rules);
@@ -268,7 +278,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       });
     } catch (e) {
       // 같은 구단주가 동시에 두 선수를 사서 잔액이 모자라게 되면 CHECK 위반으로 batch 전체가 되돌아간다.
-      if (String(e).includes('CHECK constraint failed')) throw fundsShort();
+      if (isFundsCheck(e)) throw fundsShort();
       throw e;
     }
     if (!result.won) throw listingGone();

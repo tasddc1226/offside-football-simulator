@@ -9,6 +9,7 @@ import { liveSocket } from './live/socket.js';
 import { runNewsPush } from './push/dispatch.js';
 import { runPersonalPush } from './push/personal.js';
 import { queueReengagement } from './push/reengagement.js';
+import { runCup } from './team/cup.js';
 import { runSeasonClose } from './team/seasonClose.js';
 
 export { app };
@@ -29,9 +30,12 @@ export default {
   async scheduled(controller: ScheduledController, env: Bindings) {
     if (controller.cron === '0 19 * * *') await runDaily(env, controller.scheduledTime);
     else {
-      await runNewsPush(env);
-      await queueReengagement(env, controller.scheduledTime);
-      await runPersonalPush(env, controller.scheduledTime);
+      // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
+      const logged = (job: string) => (e: unknown) =>
+        console.error(JSON.stringify({ level: 'error', job, error: String(e).slice(0, 500) }));
+      await runNewsPush(env).catch(logged('news-push'));
+      await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
+      await runPersonalPush(env, controller.scheduledTime).catch(logged('personal-push'));
       // T-11-128 끝난 시즌 결산을 한 단계씩 굳힌다. 시간이 급한 알림을 먼저 보내고,
       // 실패하면 다음 5분에 같은 단계를 다시 한다.
       await runSeasonClose(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
@@ -39,6 +43,14 @@ export default {
         .catch((e: unknown) =>
           console.error(
             JSON.stringify({ level: 'error', job: 'season-close', error: String(e).slice(0, 500) }),
+          ),
+        );
+      // T-11-145 오프사이드 컵: 추첨 → 시각이 된 경기 → 진출·보상. 실패하면 다음 5분에 이어서 한다.
+      await runCup(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'cup', steps: r })))
+        .catch((e: unknown) =>
+          console.error(
+            JSON.stringify({ level: 'error', job: 'cup', error: String(e).slice(0, 500) }),
           ),
         );
     }
