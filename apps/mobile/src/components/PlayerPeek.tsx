@@ -6,6 +6,7 @@ import type { DetailPos } from '@offside/contracts/positions';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { tn } from '@offside/game/i18n/names';
+import { typeName } from '@offside/game/data';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { Btn, Txt } from '../ui';
@@ -14,7 +15,8 @@ import { PlayerCard } from './PlayerCard';
 export type PeekOrigin = { x: number; y: number; w: number; h: number };
 // 라커룸 카드(2열 중 한 칸)와 같은 폭·높이로 그려 글자·여백 비율을 같게 두고, 통째로 키운다.
 const CARD_W = 165;
-const CARD_H = 242;
+// PlayerCard 큰 카드 높이(플레이스타일 줄이 있으면 그만큼 더).
+const cardHeight = (p: TeamPlayer) => 242 + (typeName(p.pos, p.type) ? 19 : 0);
 
 /** 그라운드 카드를 누르면 그 자리에서 커져 라커룸 카드를 그대로 확대해 보여 준다. 닫으면 제자리로 돌아간다(웹 PlayerPeek). */
 export function PlayerPeek({
@@ -35,6 +37,7 @@ export function PlayerPeek({
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
   const { width, height } = useWindowDimensions();
+  const CARD_H = cardHeight(player);
   const zoom = Math.max(1, Math.min(1.45, (width - 40) / CARD_W, (height - 220) / CARD_H));
   const t = useRef(new Animated.Value(motionOK ? 0 : 1)).current;
   const holder = useRef<View>(null);
@@ -126,6 +129,7 @@ export function PlayerPeek({
                 attrsEstimated: player.attrsEstimated,
                 cardValue: player.cardValue,
                 pos: player.pos,
+                type: player.type,
                 youth: false,
               }}
               code={player.dpos ?? player.pos}

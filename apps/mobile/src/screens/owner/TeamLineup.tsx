@@ -419,6 +419,7 @@ export function TeamLineup({
                           attrsEstimated: p.attrsEstimated,
                           cardValue: p.cardValue,
                           pos: p.pos,
+                          type: p.type,
                           youth: false,
                         }}
                         code={p.dpos ?? p.pos}
