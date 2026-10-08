@@ -9,6 +9,8 @@
  * - 시간 하한: 시즌 최대 기간(maxDays)만큼 지나면 다 찬다 — 게이지가 느려도 시즌이 끝없이 늘어지지 않는다.
  * - lockAt에 닿으면 마감 시각을 확정한다: noticeHours 뒤와 개막 + minDays 중 늦은 쪽을 다음 00:00 KST로 올림
  *   (개막 + maxDays를 넘지 않는다). 그 뒤 게이지는 마감 시각에 정확히 100%가 되게 시간으로 찬다.
+ * - 그 시즌 컵이 아직 끝나지 않았으면 마감을 컵 마지막 경기 다음 00:00 KST 뒤로 미룬다(최대 기간보다 컵이 먼저다).
+ *   확정 뒤에도 컵 일정이 늦춰지면 마감을 늦추기만 하고 당기지는 않는다.
  */
 
 export const SEASON_GAUGE = {
@@ -75,19 +77,34 @@ export const seasonBounds = (startsAt: string) => ({
 const timeShare = (startsAt: string, now: string) =>
   clamp01((ms(now) - ms(startsAt)) / (SEASON_GAUGE.maxDays * DAY));
 
-/** 마감 시각: 예고 시간 뒤와 최소 기간 중 늦은 쪽을 다음 00:00 KST로, 최대 기간을 넘지 않게. */
-export function seasonDeadline(startsAt: string, lockedAt: string): string {
+/** 컵 마지막 경기 뒤 결과·보상을 굳힐 여유(5분 cron 몇 번). */
+const CUP_SETTLE_MS = HOUR;
+
+/**
+ * 마감 시각: 예고 시간 뒤와 최소 기간 중 늦은 쪽을 다음 00:00 KST로, 최대 기간을 넘지 않게. 끝나지 않은 컵이 있으면
+ * (cupEndsAt = 마지막 경기 시각) 그 다음 00:00 KST보다 앞서지 않게 미룬다.
+ */
+export function seasonDeadline(
+  startsAt: string,
+  lockedAt: string,
+  cupEndsAt: string | null = null,
+): string {
   const { minEndsAt, maxEndsAt } = seasonBounds(startsAt);
   const t = Math.max(ms(lockedAt) + SEASON_GAUGE.noticeHours * HOUR, ms(minEndsAt));
-  return iso(Math.min(ceilKstMidnight(t), ms(maxEndsAt)));
+  const base = Math.min(ceilKstMidnight(t), ms(maxEndsAt));
+  return iso(cupEndsAt ? Math.max(base, ceilKstMidnight(ms(cupEndsAt) + CUP_SETTLE_MS)) : base);
 }
 
-/** cron 한 번: 새로 센 값으로 상태를 앞으로 민다. 마감이 확정된 뒤에는 숫자만 고치고 마감은 바꾸지 않는다. */
+/**
+ * cron 한 번: 새로 센 값으로 상태를 앞으로 민다. 마감이 확정된 뒤에는 숫자만 고치고, 마감은 끝나지 않은 컵(cupEndsAt)
+ * 때문에 늦춰야 할 때만 늦춘다(당기지 않는다).
+ */
 export function stepSeasonGauge(
   prev: SeasonGaugeState | null,
   season: { id: number; startsAt: string },
   counted: { contributed: number; participants: number },
   now: string,
+  cupEndsAt: string | null = null,
 ): SeasonGaugeState {
   const raw = counted.contributed / gaugeTarget(counted.participants);
   const peak = Math.min(1, Math.max(prev?.peak ?? 0, raw, timeShare(season.startsAt, now)));
@@ -95,7 +112,10 @@ export function stepSeasonGauge(
   let endsAt = prev?.endsAt ?? null;
   if (!lockedAt && peak >= SEASON_GAUGE.lockAt) {
     lockedAt = now;
-    endsAt = seasonDeadline(season.startsAt, now);
+    endsAt = seasonDeadline(season.startsAt, now, cupEndsAt);
+  } else if (endsAt && cupEndsAt && now < endsAt) {
+    const later = seasonDeadline(season.startsAt, lockedAt!, cupEndsAt);
+    if (later > endsAt) endsAt = later;
   }
   return { season: season.id, ...counted, peak, lockedAt, endsAt, updatedAt: now };
 }

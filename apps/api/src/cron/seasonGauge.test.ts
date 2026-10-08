@@ -8,7 +8,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { forgetSeasonSchedule, readSeasonSchedule, SCHEDULE_KEY } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { countSeasonGauge, readSeasonGauge, runSeasonGauge } from './seasonGauge.js';
+import { ceilKstMidnight } from '@offside/contracts/season-gauge';
+import { countSeasonGauge, openCupEndsAt, readSeasonGauge, runSeasonGauge } from './seasonGauge.js';
 
 // 시즌 1 개막(2026-10-06 00:00 KST) 이틀 뒤
 const START = '2026-10-05T15:00:00.000Z';
@@ -33,8 +34,15 @@ const retire = (profile: string, age: number, at: string, season = 1) =>
     season,
   );
 
+// 제1회 컵(마이그레이션이 넣어 둔 시즌 1 회차)의 결승과, 그 뒤로 미룬 마감.
+let CUP_FINAL: string;
+let END: string;
+const later = (iso: string, ms: number) => new Date(Date.parse(iso) + ms).toISOString();
+
 beforeAll(async () => {
   ctx = await createTestD1();
+  CUP_FINAL = (await openCupEndsAt(ctx.env.DB, 1))!;
+  END = new Date(ceilKstMidnight(Date.parse(CUP_FINAL) + 3_600_000)).toISOString();
   for (const p of ['a', 'b', 'c'])
     await run(
       'INSERT INTO profiles(id,settings_json,created_at,last_seen_at) VALUES (?,?,?,?)',
@@ -69,13 +77,15 @@ describe('시즌 진행 게이지 cron', () => {
 
   it('센 값을 굳히고(90%를 넘으면 마감 확정) 30분 안에는 다시 세지 않으며, 홈 API가 진행률을 돌려준다', async () => {
     const first = await runSeasonGauge(ctx.env.DB, NOW);
-    // 목표(참여 2명 × 10 = 20)를 넘었으니 마감을 확정한다 — 48시간 뒤보다 최소 7일이 늦어 10/13 00:00 KST.
+    // 목표(참여 2명 × 10 = 20)를 넘었으니 마감을 확정한다 — 48시간 뒤보다 최소 7일(10/13 00:00 KST)이 늦지만,
+    // 시즌 1 컵이 아직 끝나지 않아 결승 다음 00:00 KST로 미룬다.
+    expect(END > '2026-10-12T15:00:00.000Z').toBe(true);
     expect(first).toMatchObject({
       season: 1,
       contributed: 23,
       participants: 2,
       lockedAt: NOW,
-      endsAt: '2026-10-12T15:00:00.000Z',
+      endsAt: END,
     });
     expect(await runSeasonGauge(ctx.env.DB, '2026-10-07T15:10:00.000Z')).toBeNull();
     expect((await readSeasonGauge(ctx.env.DB, 1))?.updatedAt).toBe(NOW);
@@ -86,17 +96,16 @@ describe('시즌 진행 게이지 cron', () => {
       data: { gauge: { target: number; progress: number; endsAt: string } };
     };
     // 진행률은 응답 시각(실제 지금)으로 다시 계산한다 — 확정 뒤에는 90%에서 마감 시각 100%로 시간에 따라 찬다.
-    expect(body.data.gauge).toMatchObject({ target: 20, endsAt: '2026-10-12T15:00:00.000Z' });
+    expect(body.data.gauge).toMatchObject({ target: 20, endsAt: END });
     expect(body.data.gauge.progress).toBeGreaterThanOrEqual(0.9);
   });
 
   it('마감을 확정하면 시즌 일정에 마감과 다음 시즌(마감 시각에 개막)을 적고, API가 일정을 내려 준다', async () => {
-    const END = '2026-10-12T15:00:00.000Z';
     expect(await readSeasonSchedule(ctx.env.DB)).toEqual([
       { id: 1, startsAt: START, endsAt: END, retireAt: 45 },
       { id: 2, startsAt: END, endsAt: null, retireAt: 45 },
     ]);
-    expect(activeSeason('2026-10-12T14:59:59.999Z')?.id).toBe(1);
+    expect(activeSeason(later(END, -1))?.id).toBe(1);
     expect(activeSeason(END)?.id).toBe(2);
 
     // 다른 아이솔레이트: 코드의 일정만 아는 상태에서 요청이 오면 굳힌 일정을 읽어 입힌다.
@@ -127,7 +136,17 @@ describe('시즌 진행 게이지 cron', () => {
   });
 
   it('마감 시각이 지나면 다음 시즌 게이지를 새로 센다', async () => {
-    const r = await runSeasonGauge(ctx.env.DB, '2026-10-12T15:05:00.000Z');
+    const r = await runSeasonGauge(ctx.env.DB, later(END, 5 * 60_000));
     expect(r).toMatchObject({ season: 2, contributed: 0, participants: 0, lockedAt: null });
+  });
+
+  it('끝났거나 취소된 컵(cup_state.done_at)은 마감을 미루지 않는다', async () => {
+    expect(await openCupEndsAt(ctx.env.DB, 1)).toBe(CUP_FINAL);
+    await run(
+      "INSERT INTO cup_state(cup_id, seed, groups, drawn_at, done_at) SELECT id, 's', 0, ?, ? FROM cups WHERE season = 1",
+      NOW,
+      NOW,
+    );
+    expect(await openCupEndsAt(ctx.env.DB, 1)).toBeNull();
   });
 });

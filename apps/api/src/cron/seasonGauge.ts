@@ -56,6 +56,27 @@ export async function countSeasonGauge(
   return { contributed: row?.contributed ?? 0, participants: row?.participants ?? 0 };
 }
 
+/** 그 시즌의 끝나지 않은 컵(추첨 전이거나 진행 중) 가운데 가장 늦은 마지막 경기 시각. 없으면 null. */
+export async function openCupEndsAt(db: D1Database, season: number): Promise<string | null> {
+  const { results } = await db
+    .prepare(
+      `SELECT c.rounds_json AS rounds FROM cups c LEFT JOIN cup_state s ON s.cup_id = c.id
+       WHERE c.season = ? AND s.done_at IS NULL`,
+    )
+    .bind(season)
+    .all<{ rounds: string }>();
+  let last: string | null = null;
+  for (const r of results) {
+    try {
+      const end = (JSON.parse(r.rounds) as string[]).at(-1);
+      if (end && (!last || end > last)) last = end;
+    } catch {
+      // 일정이 깨진 회차는 건너뛴다.
+    }
+  }
+  return last;
+}
+
 /** 그 시즌 선수가 은퇴 나이까지 뛰고 은퇴했는가(서버 최초 기록 retirecap) — 다음 시즌 은퇴 나이 +1. */
 async function reachedRetireCap(db: D1Database, season: number): Promise<boolean> {
   const row = await db
@@ -94,12 +115,11 @@ export async function runSeasonGauge(
   let state = await readSeasonGauge(db, season.id);
   let counted = false;
   if (!state || Date.parse(now) - Date.parse(state.updatedAt) >= COUNT_EVERY_MS - 60_000) {
-    state = stepSeasonGauge(
-      state,
-      season,
-      await countSeasonGauge(db, season.id, season.startsAt),
-      now,
-    );
+    const [tally, cupEndsAt] = await Promise.all([
+      countSeasonGauge(db, season.id, season.startsAt),
+      openCupEndsAt(db, season.id),
+    ]);
+    state = stepSeasonGauge(state, season, tally, now, cupEndsAt);
     await db
       .prepare(
         'INSERT INTO app_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',

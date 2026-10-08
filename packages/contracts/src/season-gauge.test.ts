@@ -41,6 +41,24 @@ describe('시즌 진행 게이지', () => {
     expect(seasonDeadline(season.startsAt, at(20))).toBe(at(21));
   });
 
+  it('끝나지 않은 컵이 있으면 마감을 컵 마지막 경기 다음 00:00 KST로 미룬다(최대 기간보다 컵이 먼저)', () => {
+    // 7.5일째 확정 → 원래 10일째 00:00 KST. 컵 결승이 12.9일째(21:00 KST)면 13일째 00:00 KST.
+    expect(seasonDeadline(season.startsAt, at(7.5), at(12.9))).toBe(at(13));
+    // 컵이 마감 전에 끝나면 그대로.
+    expect(seasonDeadline(season.startsAt, at(7.5), at(8.5))).toBe(at(10));
+    // 최대 기간을 넘어도 컵 결승 뒤로.
+    expect(seasonDeadline(season.startsAt, at(20), at(21.5))).toBe(at(22));
+  });
+
+  it('확정 뒤 컵 일정이 늦춰지면 마감을 늦추기만 하고, 당겨져도 마감은 그대로다', () => {
+    const counted = { contributed: 9_000, participants: 1_000 };
+    const s = stepSeasonGauge(null, season, counted, at(7.5), at(11.9));
+    expect(s.endsAt).toBe(at(12));
+    expect(stepSeasonGauge(s, season, counted, at(8), at(9.5)).endsAt).toBe(at(12));
+    expect(stepSeasonGauge(s, season, counted, at(8), at(13.9)).endsAt).toBe(at(14));
+    expect(stepSeasonGauge(s, season, counted, at(8), null).endsAt).toBe(at(12));
+  });
+
   it('확정 전에는 90% 아래, 확정 뒤에는 마감 시각에 정확히 100%', () => {
     const open = stepSeasonGauge(null, season, { contributed: 8_000, participants: 1_000 }, at(5));
     expect(seasonGaugeProgress(open, season.startsAt, at(5))).toBeCloseTo(0.8);
