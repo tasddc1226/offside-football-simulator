@@ -1,4 +1,4 @@
-import { REWARD_KINDS, resolveBalance, type RewardKind } from '@offside/contracts';
+import { REWARD_KINDS, resolveBalance, type FundsSpend, type RewardKind } from '@offside/contracts';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 
@@ -144,3 +144,19 @@ export const buyRewardWithFunds = (
     now: string;
   },
 ) => buyItem(db, { ...b, item: rewardItem(b.kind), grantReroll: false });
+
+/** 구단 자금으로 산 것(리롤권 · 광고 대신 받은 보상) 최근 limit개. 이적시장 '자금 내역'에 거래와 함께 보인다. */
+export async function myFundsSpends(
+  db: Db,
+  profileId: string,
+  limit: number,
+): Promise<FundsSpend[]> {
+  const { results } = await db.$client
+    .prepare(
+      `SELECT id, item, price AS amount, created_at AS at FROM owner_item_purchases
+        WHERE profile_id = ? ORDER BY created_at DESC LIMIT ?`,
+    )
+    .bind(profileId, limit)
+    .all<FundsSpend>();
+  return results;
+}

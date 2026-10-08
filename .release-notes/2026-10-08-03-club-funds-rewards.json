@@ -2,24 +2,24 @@
   "id": "t-11-153-club-funds-rewards",
   "title": "광고 대신 구단 자금",
   "items": [
-    "구단주는 광고 대신 구단 자금으로 후보 잠재력을 볼 수 있어요.",
-    "시즌 평가 보기와 자금이 모자랄 때의 잠재력 강화도 구단 자금으로 할 수 있어요.",
-    "같은 날 다시 쓸수록 비싸지고, 매일 0시(한국 시간)에 처음으로 돌아가요."
+    "구단주는 광고 대신 구단 자금으로 후보 잠재력 · 시즌 평가 · 잠재력 강화를 받을 수 있어요.",
+    "같은 날 다시 쓸수록 비싸지고, 매일 0시(한국 시간)에 처음으로 돌아가요.",
+    "이적시장 자금 내역에 리롤권 구매와 구단 자금 사용도 보여요."
   ],
   "en": {
     "title": "Club funds instead of ads",
     "items": [
-      "Club owners can now see candidate potential with club funds instead of watching an ad.",
-      "Season ratings and potential boosts when you're short on funds can also use club funds.",
-      "Each use costs more on the same day. Prices reset every day at 00:00 (KST)."
+      "Club owners can use club funds instead of ads for candidate potential, season ratings and potential boosts.",
+      "Each use costs more on the same day. Prices reset every day at 00:00 (KST).",
+      "The market funds history now shows reroll tickets and other club fund spending."
     ]
   },
   "ja": {
     "title": "広告の代わりにクラブ資金",
     "items": [
-      "オーナーは広告の代わりにクラブ資金で候補のポテンシャルを見られるようになりました。",
-      "シーズン評価の表示と、資金が足りないときのポテンシャル強化もクラブ資金でできます。",
-      "同じ日に使うほど高くなり、毎日0時(韓国時間)に元に戻ります。"
+      "オーナーは広告の代わりにクラブ資金で候補のポテンシャル・シーズン評価・ポテンシャル強化を受け取れます。",
+      "同じ日に使うほど高くなり、毎日0時(韓国時間)に元に戻ります。",
+      "移籍市場の資金履歴に、リロール券の購入とクラブ資金の使用も表示されます。"
     ]
   },
   "availability": "web-app"

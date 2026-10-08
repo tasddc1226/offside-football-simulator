@@ -34,6 +34,9 @@ import {
   MARKET_TOAST,
   marketTabs,
   TRADE_LABEL,
+  SPEND_LABEL,
+  fundsLog,
+  spendAmount,
   buyBlock,
   cardMeta,
   fundsText,
@@ -508,6 +511,7 @@ export default function Market() {
 
   // 자금 · 구단 가치 · 내 등록 · 최근 거래(1분 메모). 쓰기가 성공하면 apiFetch가 메모를 비우니 다시 받는다.
   const [me, setMe] = useState<MarketMeResponse | null>(null);
+  const log = useMemo(() => (me ? fundsLog(me) : []), [me]);
   const [meFailed, setMeFailed] = useState<string | null>(null);
   const loadMe = useCallback(async () => {
     const r = await fetchMarketMe();
@@ -1337,19 +1341,40 @@ export default function Market() {
                     <Txt bold accessibilityRole="header" style={{ ...small, marginTop: 6 }}>
                       {L.fundsLog}
                     </Txt>
-                    {me.trades.length ? (
+                    {log.length ? (
                       <View style={{ ...box }}>
-                        {me.trades.map((t, i) => {
+                        {log.map((row, i) => {
+                          const t = row.kind === 'trade' ? row.t : null;
+                          const v = t
+                            ? {
+                                id: t.id,
+                                kind: t.kind,
+                                label: TRADE_LABEL[t.kind],
+                                title: `${marketName(t.card, local)} ${POS[t.card.pos].label} ${t.card.peak}`,
+                                at: t.at,
+                                amount: tradeAmount(t),
+                              }
+                            : row.kind === 'spend'
+                              ? {
+                                  id: row.s.id,
+                                  kind: 'spent' as const,
+                                  label: L.tradeSpent,
+                                  title: SPEND_LABEL[row.s.item],
+                                  at: row.s.at,
+                                  amount: spendAmount(row.s),
+                                }
+                              : null;
+                          if (!v) return null;
                           const badge =
-                            t.kind === 'bought'
-                              ? { bg: c.surface2, fg: c.ink }
-                              : t.kind === 'sold'
-                                ? { bg: c.surface2, fg: c.accentText }
-                                : { bg: c.surface2, fg: c.bad };
+                            v.kind === 'sold'
+                              ? { bg: c.surface2, fg: c.accentText }
+                              : v.kind === 'released'
+                                ? { bg: c.surface2, fg: c.bad }
+                                : { bg: c.surface2, fg: c.ink };
                           return (
                             <View
-                              key={t.id}
-                              testID={`market-trade-${t.kind}`}
+                              key={v.id}
+                              testID={`market-trade-${v.kind}`}
                               style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
@@ -1377,24 +1402,24 @@ export default function Market() {
                                     color: badge.fg,
                                   }}
                                 >
-                                  {TRADE_LABEL[t.kind]}
+                                  {v.label}
                                 </Txt>
                               </View>
                               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                                 <Txt numberOfLines={1} style={small}>
-                                  {`${marketName(t.card, local)} ${POS[t.card.pos].label} ${t.card.peak}`}
+                                  {v.title}
                                 </Txt>
                                 <Txt tone="muted" style={tiny}>
-                                  {`${agoKo(Date.now() - Date.parse(t.at))}${t.kind === 'sold' ? L.feeTaken : ''}`}
+                                  {`${agoKo(Date.now() - Date.parse(v.at))}${v.kind === 'sold' ? L.feeTaken : ''}`}
                                 </Txt>
                               </View>
                               <Txt
-                                tone={t.kind === 'bought' ? 'ink' : 'good'}
+                                tone={v.kind === 'bought' || v.kind === 'spent' ? 'ink' : 'good'}
                                 bold
                                 num
                                 style={small}
                               >
-                                {tradeAmount(t)}
+                                {v.amount}
                               </Txt>
                             </View>
                           );

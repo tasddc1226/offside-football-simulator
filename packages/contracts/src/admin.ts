@@ -201,3 +201,52 @@ export const CareerHiddenInputSchema = z.object({
   hidden: z.boolean(),
 });
 export type CareerHiddenInput = z.infer<typeof CareerHiddenInputSchema>;
+
+// ───────── T-11-153 구단 자금 대조 ─────────
+// 잔액(owner_funds) = 방출 + 판매(가격 − 수수료) − 영입 − 구단 자금으로 산 것(owner_item_purchases). 금액은 만 원 단위.
+
+/** 구단주 한 명의 자금 출처별 합과 대조 결과. diff = 잔액 − 기대값(0이 아니면 기록 밖에서 바뀐 돈). */
+export const AdminFundsOwnerSumsSchema = z.object({
+  profileId: z.string(),
+  nickname: z.string().nullable(),
+  balance: z.number().int(),
+  released: z.number().int(),
+  sold: z.number().int(),
+  bought: z.number().int(),
+  items: z.number().int(),
+  diff: z.number().int(),
+});
+export type AdminFundsOwnerSums = z.infer<typeof AdminFundsOwnerSumsSchema>;
+
+/** `GET /v1/admin/funds` 전체 구단주 대조 요약과 어긋난 구단주(차이 큰 순, 최대 50). */
+export const AdminFundsReportSchema = z.object({
+  generatedAt: IsoUtcSchema,
+  owners: z.number().int(),
+  balance: z.number().int(),
+  released: z.number().int(),
+  sold: z.number().int(),
+  bought: z.number().int(),
+  /** 거래 수수료로 없어진 돈. */
+  fees: z.number().int(),
+  /** 구단 자금으로 산 것(없어진 돈) — item별(reroll · reward:<kind>). */
+  items: z.record(z.string(), z.number().int()),
+  mismatched: z.number().int(),
+  mismatches: z.array(AdminFundsOwnerSumsSchema),
+});
+export type AdminFundsReport = z.infer<typeof AdminFundsReportSchema>;
+
+/** 자금이 움직인 한 번. amount는 들어오면 +, 나가면 −. item은 kind가 item일 때(reroll · reward:<kind>). */
+export const AdminFundsMoveSchema = z.object({
+  kind: z.enum(['released', 'sold', 'bought', 'item']),
+  item: z.string().nullable(),
+  amount: z.number().int(),
+  at: z.string(),
+});
+export type AdminFundsMove = z.infer<typeof AdminFundsMoveSchema>;
+
+/** `GET /v1/admin/funds/owner?q=` 프로필 id(prf_…) 또는 닉네임으로 찾은 구단주 한 명의 대조와 최근 움직임(최대 50). */
+export const AdminFundsOwnerSchema = AdminFundsOwnerSumsSchema.extend({
+  moves: z.array(AdminFundsMoveSchema),
+});
+export type AdminFundsOwner = z.infer<typeof AdminFundsOwnerSchema>;
+export const AdminFundsQuerySchema = z.string().trim().min(1).max(64);

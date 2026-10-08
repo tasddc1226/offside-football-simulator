@@ -146,6 +146,9 @@ export type OwnerItem = (typeof OWNER_ITEMS)[number];
  */
 export const REWARD_KINDS = ['candidates', 'peek', 'boost'] as const;
 export type RewardKind = (typeof REWARD_KINDS)[number];
+/** 구단 자금으로 산 것(owner_item_purchases.item) — 리롤권(T-11-152)과 광고 대신 받은 보상(T-11-153). */
+export const FUNDS_ITEMS = ['reroll', ...REWARD_KINDS.map((k) => `reward:${k}` as const)] as const;
+export type FundsItem = 'reroll' | `reward:${RewardKind}`;
 
 /**
  * T-11-152 구단 자금으로 사는 리롤권 가격(만 원). bought = 오늘(0시 한국 시각부터) 이미 산 장수.

@@ -25,7 +25,7 @@
   "apps/api/src/push/reengagement.ts": 2,
   "apps/api/src/push/testLimit.ts": 2,
   "apps/api/src/push/text.ts": 17,
-  "apps/api/src/routes/admin.ts": 2,
+  "apps/api/src/routes/admin.ts": 3,
   "apps/api/src/routes/appAuth.ts": 4,
   "apps/api/src/routes/auth.ts": 2,
   "apps/api/src/routes/balance.ts": 3,

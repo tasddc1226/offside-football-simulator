@@ -99,6 +99,12 @@ const ko = {
   tradeSold: '판매',
   tradeBought: '영입',
   tradeReleased: '방출',
+  // T-11-153 자금 내역의 구단 자금 사용(리롤권 · 광고 대신 받은 보상).
+  tradeSpent: '사용',
+  spendReroll: '리롤권 구매',
+  spendCandidates: '후보 잠재력 보기',
+  spendPeek: '시즌 평가 보기',
+  spendBoost: '잠재력 강화',
   // 방출
   releasePane: '방출해서 자금 만들기',
   backToMarket: '이적시장으로',
