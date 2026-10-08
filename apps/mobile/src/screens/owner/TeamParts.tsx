@@ -175,7 +175,7 @@ export function Stats({
 }: {
   items: [string, string][];
   small?: boolean;
-  /** 한 칸을 크게·강조색으로(구단주 요약의 구단 가치). */
+  /** 첫 칸을 크게·강조색으로(구단주 요약의 구단 가치). */
   accent?: boolean;
   first?: number;
 }) {
@@ -203,9 +203,9 @@ export function Stats({
           <Txt
             style={{
               fontFamily: DISPLAY[700],
-              fontSize: rem(accent ? 1.75 : small ? 1.0625 : 1.25),
+              fontSize: rem(accent && i === 0 ? 1.75 : small ? 1.0625 : 1.25),
               fontVariant: ['tabular-nums'],
-              ...(accent ? { color: c.accentText } : null),
+              ...(accent && i === 0 ? { color: c.accentText } : null),
             }}
           >
             {v}

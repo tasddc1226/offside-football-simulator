@@ -12,6 +12,7 @@ export const owner: Translation<OwnerMsgs> = {
   emptySummary:
     '最初のキャリアを最後までプレーすると、引退選手とレジェンドスコアがここに貯まります。',
   statClubValue: 'クラブ価値',
+  statFunds: 'クラブ資金',
   statRetired: '引退選手',
   statLegend: 'レジェンドスコア',
   statRetiredNumbers: '永久欠番',

@@ -131,15 +131,16 @@
       </div>
       {#if (guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue)}
         <p class="muted fs-sm owner-empty">{L.emptySummary}</p>
+        {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}</p>{/if}
       {:else}
       <dl class="owner-stats">
         <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
+        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}</dt><dd>{market ? fundsText(market.balance) : '–'}</dd></div>{/if}
         <div><dt>{L.statRetired}</dt><dd>{summary ? L.playersCount({ n: summary.players, text: num(summary.players) }) : '–'}</dd></div>
         <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
         <div><dt>{L.statRetiredNumbers}</dt><dd>{summary ? L.numbersCount({ n: summary.retired }) : '–'}</dd></div>
       </dl>
       {/if}
-      {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}</p>{/if}
     </section>
     <AdSlot place="owner-summary" />
   {/if}
@@ -270,9 +271,10 @@
     margin: 0;
     overflow-wrap: anywhere;
   }
+  /* 6칸 격자 — 아래 숫자 셋은 2칸씩, 구단 가치는 한 줄 전체(자금이 있으면 3칸씩 나란히). */
   .owner-stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 8px;
     margin: 0;
   }
@@ -284,6 +286,7 @@
     border-radius: 12px;
     background: var(--surface-2);
     min-width: 0;
+    grid-column: span 2;
   }
   .owner-stats dt {
     font-size: 0.75rem;
@@ -297,8 +300,12 @@
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
-  .owner-value {
+  .owner-stats .owner-value {
     grid-column: 1 / -1;
+  }
+  .owner-stats .owner-value:has(+ .owner-funds),
+  .owner-stats .owner-funds {
+    grid-column: span 3;
   }
   .owner-stats .owner-value dd {
     font-size: 1.75rem;

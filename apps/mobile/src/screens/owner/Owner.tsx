@@ -263,12 +263,20 @@ export default function Owner() {
           {(guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue) ? (
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
               {L.emptySummary}
+              {linked
+                ? `\n${L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}`
+                : ''}
             </Txt>
           ) : (
             <View style={{ gap: 8 }}>
               <Stats
                 accent
-                items={[[L.statClubValue, clubValue !== null ? fmtValue(clubValue) : '–']]}
+                items={[
+                  [L.statClubValue, clubValue !== null ? fmtValue(clubValue) : '–'],
+                  ...(linked
+                    ? [[L.statFunds, market ? fundsText(market.balance) : '–'] as [string, string]]
+                    : []),
+                ]}
               />
               <Stats
                 items={[
@@ -284,11 +292,6 @@ export default function Owner() {
               />
             </View>
           )}
-          {linked ? (
-            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-              {L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}
-            </Txt>
-          ) : null}
         </Card>
       ) : null}
 
