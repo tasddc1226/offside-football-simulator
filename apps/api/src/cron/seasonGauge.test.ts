@@ -1,5 +1,12 @@
+import {
+  activeSeason,
+  applySeasonSchedule,
+  retireAtOf,
+  SERVICE_SEASONS,
+} from '@offside/contracts/service-seasons';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
+import { forgetSeasonSchedule, readSeasonSchedule, SCHEDULE_KEY } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { countSeasonGauge, readSeasonGauge, runSeasonGauge } from './seasonGauge.js';
 
@@ -46,7 +53,11 @@ beforeAll(async () => {
   // c: 프리시즌 선수만(참여 유저가 아니다)
   await retire('c', 40, '2026-10-06T02:00:00.000Z', 0);
 });
-afterAll(() => ctx.dispose());
+afterAll(() => {
+  applySeasonSchedule([]);
+  forgetSeasonSchedule();
+  return ctx.dispose();
+});
 
 describe('시즌 진행 게이지 cron', () => {
   it('35세 이상 은퇴만, 유저·하루마다 20개까지 세고 참여 유저는 완주한 프로필만', async () => {
@@ -77,5 +88,46 @@ describe('시즌 진행 게이지 cron', () => {
     // 진행률은 응답 시각(실제 지금)으로 다시 계산한다 — 확정 뒤에는 90%에서 마감 시각 100%로 시간에 따라 찬다.
     expect(body.data.gauge).toMatchObject({ target: 20, endsAt: '2026-10-12T15:00:00.000Z' });
     expect(body.data.gauge.progress).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it('마감을 확정하면 시즌 일정에 마감과 다음 시즌(마감 시각에 개막)을 적고, API가 일정을 내려 준다', async () => {
+    const END = '2026-10-12T15:00:00.000Z';
+    expect(await readSeasonSchedule(ctx.env.DB)).toEqual([
+      { id: 1, startsAt: START, endsAt: END, retireAt: 45 },
+      { id: 2, startsAt: END, endsAt: null, retireAt: 45 },
+    ]);
+    expect(activeSeason('2026-10-12T14:59:59.999Z')?.id).toBe(1);
+    expect(activeSeason(END)?.id).toBe(2);
+
+    // 다른 아이솔레이트: 코드의 일정만 아는 상태에서 요청이 오면 굳힌 일정을 읽어 입힌다.
+    applySeasonSchedule([]);
+    forgetSeasonSchedule();
+    expect(SERVICE_SEASONS).toHaveLength(1);
+    const res = await createApp().request('/v1/season/gauge', {}, ctx.env);
+    const body = (await res.json()) as { data: { seasons: { id: number }[] } };
+    expect(body.data.seasons.map((s) => s.id)).toEqual([1, 2]);
+    expect(SERVICE_SEASONS.map((s) => s.endsAt)).toEqual([END, null]);
+  });
+
+  it('마감 전에 누가 은퇴 나이까지 뛰면 다음 시즌 은퇴 나이를 올리고, 바뀐 게 없으면 다시 쓰지 않는다', async () => {
+    await run(
+      "INSERT INTO server_firsts(season, id, career_id, achieved_at) VALUES (1, 'retirecap', 'c1', ?)",
+      '2026-10-08T00:00:00.000Z',
+    );
+    expect(await runSeasonGauge(ctx.env.DB, '2026-10-08T00:00:00.000Z')).toMatchObject({
+      scheduled: true,
+    });
+    expect(retireAtOf(2)).toBe(46);
+    expect((await readSeasonSchedule(ctx.env.DB))[1]).toMatchObject({ id: 2, retireAt: 46 });
+    expect(await runSeasonGauge(ctx.env.DB, '2026-10-08T00:05:00.000Z')).toBeNull();
+    const row = await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key = ?')
+      .bind(SCHEDULE_KEY)
+      .first<{ value: string }>();
+    expect(row?.value).toContain('"retireAt":46');
+  });
+
+  it('마감 시각이 지나면 다음 시즌 게이지를 새로 센다', async () => {
+    const r = await runSeasonGauge(ctx.env.DB, '2026-10-12T15:05:00.000Z');
+    expect(r).toMatchObject({ season: 2, contributed: 0, participants: 0, lockedAt: null });
   });
 });

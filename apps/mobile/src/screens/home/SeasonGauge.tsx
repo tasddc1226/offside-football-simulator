@@ -2,8 +2,8 @@
 // (contracts season-gauge.ts). 90%에 닿아 마감이 정해지면 카운트다운으로 바뀐다. 진행 중인 시즌이 없으면 그리지 않는다.
 import { useEffect, useRef, useState } from 'react';
 import { AppState, View } from 'react-native';
-import { getSeasonGauge } from '@offside/app-core/api/client';
 import { seasonGaugeLines, type SeasonGauge as Gauge } from '@offside/app-core/seasonGauge';
+import { loadSeasonGauge } from '@offside/app-core/seasonSchedule';
 import { num as fmt } from '@offside/app-core/teamText';
 import { alpha } from '../../theme/colors';
 import { num, rem } from '../../theme/type';
@@ -21,7 +21,7 @@ export function SeasonGauge() {
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      const r = await getSeasonGauge();
+      const r = await loadSeasonGauge();
       if (!alive) return;
       if (r.ok) setGauge(r.data.gauge);
       setNow(Date.now());

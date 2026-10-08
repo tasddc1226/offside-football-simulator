@@ -7,6 +7,7 @@ import { createMMKV } from 'react-native-mmkv';
 import { setStorage } from '@offside/game/storage';
 import { configureApi } from '@offside/app-core/api/client';
 import { configureLive } from '@offside/app-core/api/liveSocket';
+import { startSeasonSchedule } from '@offside/app-core/seasonSchedule';
 import { API_BASE_URL } from './config';
 import { authHeaders, renewSession } from './session';
 import { bootLocale } from './locale';
@@ -38,3 +39,6 @@ configureLive({
     return () => sub.remove();
   },
 });
+
+// 시즌 일정(게이지가 확정한 마감·다음 시즌): 저장해 둔 일정을 첫 화면 전에 입히고 서버 일정으로 맞춘다.
+startSeasonSchedule();

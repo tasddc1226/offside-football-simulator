@@ -14,8 +14,20 @@ export const SeasonGaugeSchema = z.strictObject({
   updatedAt: z.string(),
 });
 
-/** `GET /v1/season/gauge` — 로그인 없이 누구나 읽는다(홈). */
+/** 시즌 일정 한 줄(service-seasons.ts SeasonScheduleEntry). */
+export const SeasonScheduleEntrySchema = z.strictObject({
+  id: z.number().int().positive(),
+  startsAt: z.string(),
+  endsAt: z.string().nullable(),
+  retireAt: z.number().int().positive(),
+});
+
+/**
+ * `GET /v1/season/gauge` — 로그인 없이 누구나 읽는다(홈). seasons는 서버가 아는 시즌 일정 전체 — 웹·앱이 받아
+ * applySeasonSchedule로 입혀 게이지가 확정한 마감·다음 시즌을 앱 업데이트 없이 따른다.
+ */
 export const SeasonGaugeResponseSchema = z.strictObject({
   gauge: SeasonGaugeSchema.nullable(),
+  seasons: z.array(SeasonScheduleEntrySchema),
 });
 export type SeasonGaugeResponse = z.infer<typeof SeasonGaugeResponseSchema>;

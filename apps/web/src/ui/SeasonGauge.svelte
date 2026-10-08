@@ -2,8 +2,8 @@
   // 시즌 진행 게이지(홈). 시즌은 정한 날짜가 아니라 유저들이 끝까지 뛴 커리어로 찬다(contracts season-gauge.ts).
   // 90%에 닿아 마감이 정해지면 카운트다운으로 바뀐다. 진행 중인 시즌이 없으면 아무것도 그리지 않는다.
   import { onMount } from 'svelte';
-  import { getSeasonGauge } from '@offside/app-core/api/client';
   import { seasonGaugeLines, type SeasonGauge } from '@offside/app-core/seasonGauge';
+  import { loadSeasonGauge } from '@offside/app-core/seasonSchedule';
   import { num } from '@offside/app-core/teamText';
 
   let gauge = $state.raw<SeasonGauge | null>(null);
@@ -11,7 +11,7 @@
   const lines = $derived(gauge ? seasonGaugeLines(gauge, now, num) : null);
 
   async function load() {
-    const r = await getSeasonGauge();
+    const r = await loadSeasonGauge();
     if (r.ok) gauge = r.data.gauge;
     now = Date.now();
   }
