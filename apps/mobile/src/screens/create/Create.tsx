@@ -48,6 +48,7 @@ import {
 } from '../../game/host';
 import { claimReward, rewardOffer } from '../../platform/rewarded';
 import { adFree } from '../../platform/adFree';
+import { adRerollLeft, claimAdReroll } from '../../platform/adReroll';
 import { goHome, goRerollShop } from '../../game/nav';
 import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
@@ -227,6 +228,22 @@ export default function Create() {
       setRewardBusy(false);
     }
   };
+  // T-11-154 광고 보고 다시 뽑기(리롤권 없이, 하루 2번, 이 기기에서 센다). 로그인하지 않아도 쓴다. 광고 단위 · 버튼 종류는
+  // 후보 잠재력(offer)과 같다. 남은 횟수는 그릴 때마다 기기 저장소에서 읽는다(동기 · 작다).
+  const adLeft = adRerollLeft();
+  async function rerollWithAd() {
+    if (rerollLock.current || rewardLock.current) return;
+    rerollLock.current = true;
+    setRerolling(true);
+    setRewardMessage('');
+    try {
+      const message = await claimAdReroll(rerollCandidates);
+      toast(message || adText.adRerollDone({ n: adRerollLeft() }));
+    } finally {
+      rerollLock.current = false;
+      setRerolling(false);
+    }
+  }
   const askReroll = () =>
     Alert.alert(CA.rerollAskTitle, CL.rerollConfirm({ n: Math.max(0, rerolls - 1) }), [
       { text: CA.cancel, style: 'cancel' },
@@ -694,6 +711,18 @@ export default function Create() {
                   {CL.createShopGo}
                 </Btn>
               </View>
+            ) : null}
+            {offer && adLeft > 0 ? (
+              <Btn
+                block
+                testID="candidate-ad-reroll"
+                disabled={rerolling || rewardBusy}
+                onPress={() => void rerollWithAd()}
+              >
+                {rerolling
+                  ? CL.rerollBusy
+                  : (offer === 'free' ? adText.adRerollFreeBtn : adText.adRerollBtn)({ n: adLeft })}
+              </Btn>
             ) : null}
             <View style={{ gap: 8 }}>
               {s.candidatePotentialOpen ? (

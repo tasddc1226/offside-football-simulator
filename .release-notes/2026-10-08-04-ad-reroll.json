@@ -1,0 +1,23 @@
+{
+  "id": "t-11-154-ad-reroll",
+  "title": "광고 보고 후보 다시 뽑기",
+  "items": [
+    "앱에서 광고를 보고 선수 후보를 다시 뽑을 수 있어요. 하루 2번이에요.",
+    "리롤권이 없어도, 로그인하지 않아도 쓸 수 있어요."
+  ],
+  "en": {
+    "title": "Watch an ad to redraw candidates",
+    "items": [
+      "In the app, you can watch an ad to redraw your player candidates. Twice a day.",
+      "No reroll ticket or login needed."
+    ]
+  },
+  "ja": {
+    "title": "広告を見て候補を引き直す",
+    "items": [
+      "アプリでは広告を見て選手候補を引き直せます。1日2回までです。",
+      "リロールチケットやログインがなくても使えます。"
+    ]
+  },
+  "availability": "app"
+}

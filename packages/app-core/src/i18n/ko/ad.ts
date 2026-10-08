@@ -18,6 +18,11 @@ const ko = {
   restoreFail: '복원하지 못했어요. 잠시 뒤 다시 시도해 주세요.',
   rewardedUnavailable: '지금은 광고를 불러올 수 없어요. 잠시 뒤 다시 시도해 주세요.',
   rewardedWatch: '광고를 끝까지 보면 평가를 볼 수 있어요.',
+  // T-11-154 광고 보고 후보 다시 뽑기(리롤권 없이, 하루 2번).
+  adRerollBtn: (p: { n: number }) => `광고 보고 다시 뽑기 (오늘 ${p.n}번 남음)`,
+  adRerollFreeBtn: (p: { n: number }) => `후보 다시 뽑기 (오늘 ${p.n}번 남음)`,
+  adRerollWatch: '광고를 끝까지 봐야 후보를 다시 뽑을 수 있어요.',
+  adRerollDone: (p: { n: number }) => `후보를 다시 뽑았어요. 오늘 ${p.n}번 더 뽑을 수 있어요.`,
 };
 
 export type AdMsgs = typeof ko;
