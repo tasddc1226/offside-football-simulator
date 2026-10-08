@@ -7,10 +7,8 @@ import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-v
 import { POS_GROUPS, detailPosOf } from '@offside/contracts/positions';
 import { marketText as L } from './i18n/ko/market.js';
 import { intlLocale } from './i18n/core.js';
-import { appFormatText } from './i18n/ko/appFormat.js';
 
-/** 구단 자금 표기(0이면 '0원' — fmtValue는 0을 '-'로 쓴다). */
-export const fundsText = (man: number) => (man > 0 ? fmtValue(man) : appFormatText.zeroWon);
+export { fundsText } from './funds.js';
 
 /** 탭 셋 + '자금 만들기'(방출) 화면. 방출은 탭이 아니라 자금 옆 버튼으로 연다. */
 export type MarketView = 'market' | 'sell' | 'trades' | 'release';

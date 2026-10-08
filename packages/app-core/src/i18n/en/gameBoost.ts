@@ -36,6 +36,18 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   adNoteFree: 'You bought ad removal, so you can try once without funds.',
   adWatch: 'Watch the ad to the end to try the boost.',
   adCost: 'ad',
-  resultFailAd: (p) =>
+  clubCost: 'club funds',
+  resultFailFree: (p) =>
     `The chance was ${p.chance}%. The next attempt's chance goes up by ${p.pct} percentage points.`,
+  clubCandidates: (p) => `See candidate potential with club funds (${p.price})`,
+  clubPeek: (p) => `See the rating with club funds (${p.price})`,
+  clubBoost: (p) => `Boost with club funds (${p.price} · ${p.chance}%)`,
+  clubConfirm: (p) =>
+    `This uses ${p.price} of club funds. You'll have ${p.balance} left, and this can't be undone.`,
+  clubAskTitle: 'Use club funds',
+  clubAction: 'Use',
+  clubBusy: 'Using club funds…',
+  clubNote:
+    'Watch an ad or use club funds to get this. Club funds cost more each time you use them on the same day.',
+  clubFail: "Couldn't use club funds.",
 };

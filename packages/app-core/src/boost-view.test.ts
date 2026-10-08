@@ -3,6 +3,7 @@ import { newGame } from '@offside/game/engine';
 import { createRng, setActiveRng } from '@offside/game/rng';
 import type { CareerRecord } from '@offside/game/types';
 import { boostHidden, boostView, doBoost } from './boost-view.js';
+import { clubOffer } from './club-reward.js';
 
 function player(o: { seasons?: number; money?: number; age?: number } = {}) {
   setActiveRng(createRng(3));
@@ -59,11 +60,34 @@ describe('T-11-083 잠재력 강화 카드', () => {
     expect(boostView(s, 'free').adButton).toBe('자금 없이 강화하기 (50%)');
     expect(boostView(player(), 'ad').adButton).toBeUndefined();
     expect(doBoost(s)).toBeNull();
-    const out = doBoost(s, true)!;
+    const out = doBoost(s, 'ad')!;
     expect(out).not.toBeNull();
     expect(s.money).toBe(100);
     expect(boostView(s, 'ad').history[0]).toMatch(/· 광고 · (성공|실패)$/);
     expect(out.text).not.toContain('자금은 돌려받지');
+  });
+
+  it('T-11-153 구단 자금으로 시도하면 기록에 구단 자금으로 남고, 값이 있고 자금이 되면 구단 자금 버튼을 보인다', () => {
+    const s = player({ money: 100 });
+    expect(doBoost(s, 'club')).not.toBeNull();
+    expect(s.money).toBe(100);
+    expect(boostView(s).history[0]).toMatch(/· 구단 자금 · (성공|실패)$/);
+    const offer = (price: number | null, balance: number) => ({
+      balance,
+      offers: {
+        candidates: { price: null, bought: 0, cap: 5 },
+        peek: { price: null, bought: 0, cap: 5 },
+        boost: { price, bought: 0, cap: 5 },
+      },
+    });
+    expect(clubOffer(null, 'boost')).toBeNull();
+    expect(clubOffer(offer(null, 9_000_000), 'boost')).toBeNull();
+    expect(clubOffer(offer(500_000, 400_000), 'boost')).toBeNull();
+    expect(clubOffer(offer(500_000, 2_000_000), 'boost')).toEqual({
+      kind: 'boost',
+      price: 500_000,
+      confirm: '구단 자금 50억을 써요. 쓴 뒤 구단 자금은 150억 남고, 되돌릴 수 없어요.',
+    });
   });
 
   it('29세가 지나고 한 번도 안 한 선수에게는 카드를 숨긴다', () => {

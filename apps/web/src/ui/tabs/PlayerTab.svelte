@@ -23,6 +23,9 @@
   import BoostFx from '../BoostFx.svelte';
   import { retireAsk } from '../actions.js';
   import { save } from '../helpers.js';
+  import { clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
+  import { fundsText } from '@offside/app-core/funds';
+  import type { RewardShopResponse } from '@offside/contracts';
 
   const { s }: { s: GameState } = $props();
   const lg = $derived(leagueOf(s.leagueId));
@@ -58,6 +61,30 @@
     const out = doBoost(s);
     if (!out) return;
     // 결과를 먼저 저장하고 연출을 연다 — 연출 중에 닫아도 결과는 그대로다.
+    save();
+    fx = out;
+  }
+  // T-11-153 선수 자금이 모자란 시즌엔 로그인한 구단주가 구단 자금으로 한 번 시도한다(앱의 광고 강화 자리).
+  let club = $state<RewardShopResponse | null>(null);
+  let clubBusy = $state(false);
+  let clubMsg = $state('');
+  const short = $derived(boost.status === 'short');
+  $effect(() => {
+    if (short) void loadClubShop().then((r) => (club = r));
+  });
+  const clubTry = $derived(short ? clubOffer(club, 'boost') : null);
+  async function onClubBoost() {
+    const o = clubTry;
+    if (clubBusy || !o) return;
+    clubBusy = true;
+    clubMsg = '';
+    let out: BoostOutcome | null = null;
+    const r = await payWithClub(o, confirm, () => (out = doBoost(s, 'club')));
+    clubBusy = false;
+    if (!r) return;
+    if (r.shop) club = r.shop;
+    clubMsg = r.message;
+    if (!out) return;
     save();
     fx = out;
   }
@@ -112,6 +139,12 @@
         {#if arming}<button class="btn" data-act="boost-cancel" onclick={() => (arming = false)}>{B.cancel}</button>{/if}
       </div>
     {/if}
+    {#if clubTry}
+      <button class="btn btn-block" data-act="boost-club" disabled={clubBusy} onclick={onClubBoost}>
+        {clubBusy ? B.clubBusy : B.clubBoost({ price: fundsText(clubTry.price), chance: boost.chance })}
+      </button>
+    {/if}
+    {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
     <p class="muted fs-xs">{boost.note}</p>
     {#if boost.history.length}
       <ul class="boost-log muted fs-xs" data-boost-log>

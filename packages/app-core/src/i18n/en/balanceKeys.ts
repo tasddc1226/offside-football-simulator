@@ -30,6 +30,11 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   rerollPrice: 'Reroll ticket price',
   rerollPriceGrowth: 'Reroll ticket price growth',
   rerollDailyCap: 'Reroll tickets per day',
+  rewardPriceCandidates: 'Candidate potential price',
+  rewardPricePeek: 'Season rating price',
+  rewardPriceBoost: 'Potential boost price',
+  rewardPriceGrowth: 'Club funds instead of ads: price multiplier',
+  rewardDailyCap: 'Club funds instead of ads: uses per day',
   eventWeight: (p) => `Event frequency changes: ${p.n}`,
   choiceBonus: (p) => `Choice success chance changes: ${p.n}`,
 };

@@ -1,4 +1,4 @@
-import { resolveBalance } from '@offside/contracts';
+import { REWARD_KINDS, resolveBalance, type RewardKind } from '@offside/contracts';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 
@@ -26,13 +26,22 @@ export async function shopSnapshot(db: Db, profileId: string, since: string) {
 }
 
 /**
- * 리롤권 한 장 사기. 1) 오늘 산 장수가 라우트가 본 값(bought) 그대로일 때만 원장에 넣고 2) 그 행이 있으면 자금을 빼고
- * 3) 리롤권을 더한다. 동시에 두 번 사면 뒤 요청은 1이 0행이라 아무것도 바꾸지 않는다(won = false). 잔액이 모자라면 CHECK
- * 위반으로 batch 전체가 되돌아간다.
+ * 구단 자금으로 하나 사기(item = 원장 이름). 1) 오늘 같은 item을 산 수가 라우트가 본 값(bought) 그대로일 때만 원장에 넣고
+ * 2) 그 행이 있으면 자금을 빼고 3) grantReroll이면 리롤권을 더한다. 동시에 두 번 사면 뒤 요청은 1이 0행이라 아무것도 바꾸지
+ * 않는다(won = false). 잔액이 모자라면 CHECK 위반으로 batch 전체가 되돌아간다.
  */
-export async function buyReroll(
+async function buyItem(
   db: Db,
-  b: { id: string; profileId: string; price: number; bought: number; since: string; now: string },
+  b: {
+    id: string;
+    profileId: string;
+    item: string;
+    grantReroll: boolean;
+    price: number;
+    bought: number;
+    since: string;
+    now: string;
+  },
 ): Promise<{ won: boolean; balance: number; reroll: number }> {
   const d1 = db.$client;
   const won = `EXISTS (SELECT 1 FROM owner_item_purchases WHERE id = ?)`;
@@ -40,23 +49,27 @@ export async function buyReroll(
     d1
       .prepare(
         `INSERT INTO owner_item_purchases (id, profile_id, item, qty, price, created_at)
-         SELECT ?, ?, 'reroll', 1, ?, ?
+         SELECT ?, ?, ?, 1, ?, ?
          WHERE (SELECT coalesce(sum(qty), 0) FROM owner_item_purchases
-                WHERE profile_id = ? AND item = 'reroll' AND created_at >= ?) = ?`,
+                WHERE profile_id = ? AND item = ? AND created_at >= ?) = ?`,
       )
-      .bind(b.id, b.profileId, b.price, b.now, b.profileId, b.since, b.bought),
+      .bind(b.id, b.profileId, b.item, b.price, b.now, b.profileId, b.item, b.since, b.bought),
     d1
       .prepare(
         `UPDATE owner_funds SET balance = balance - ?, updated_at = ? WHERE profile_id = ? AND ${won}`,
       )
       .bind(b.price, b.now, b.profileId, b.id),
-    d1
-      .prepare(
-        `INSERT INTO owner_items (profile_id, item, qty, updated_at)
-         SELECT ?, 'reroll', 1, ? WHERE ${won}
-         ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + 1, updated_at = excluded.updated_at`,
-      )
-      .bind(b.profileId, b.now, b.id),
+    ...(b.grantReroll
+      ? [
+          d1
+            .prepare(
+              `INSERT INTO owner_items (profile_id, item, qty, updated_at)
+               SELECT ?, 'reroll', 1, ? WHERE ${won}
+               ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + 1, updated_at = excluded.updated_at`,
+            )
+            .bind(b.profileId, b.now, b.id),
+        ]
+      : []),
     d1
       .prepare(
         `SELECT (SELECT balance FROM owner_funds WHERE profile_id = ?) AS balance,
@@ -71,3 +84,63 @@ export async function buyReroll(
     reroll: row.reroll ?? 0,
   };
 }
+
+/** 리롤권 한 장 사기(buyItem). */
+export const buyReroll = (
+  db: Db,
+  b: { id: string; profileId: string; price: number; bought: number; since: string; now: string },
+) => buyItem(db, { ...b, item: 'reroll', grantReroll: true });
+
+// ───────── T-11-153 광고 대신 구단 자금으로 받는 보상 ─────────
+// 앱의 보상형 광고 자리(후보 잠재력 · 시즌 평가 보기 · 자금이 모자란 시즌의 강화)를 구단 자금으로도 받게 한다. 서버는 자금만
+// 받고 원장(item = reward:<kind>)에 남긴다. 보상 자체는 기기의 게임이 준다(커리어는 기기에 있다).
+
+const rewardItem = (kind: RewardKind) => `reward:${kind}`;
+const byKind = <T>(f: (k: RewardKind) => T) =>
+  Object.fromEntries(REWARD_KINDS.map((k) => [k, f(k)])) as Record<RewardKind, T>;
+// 보상 종류는 코드 상수라 SQL에 바로 넣는다. IN 목록이라 (profile_id, item, created_at) 인덱스를 탄다.
+const REWARD_ITEMS = REWARD_KINDS.map((k) => `'${rewardItem(k)}'`).join(', ');
+const REWARD_SUMS = REWARD_KINDS.map(
+  (k) => `coalesce(sum(CASE WHEN item = '${rewardItem(k)}' THEN qty END), 0) AS ${k}`,
+).join(', ');
+
+/** 보상별 수치(활성 버전, 없으면 기본값). 가격 상승 배율 · 하루 횟수는 셋이 같이 쓴다. */
+export async function rewardShopRules(db: Db) {
+  const b = resolveBalance((await getActiveBalance(db))?.values);
+  const price: Record<RewardKind, number> = {
+    candidates: b.rewardPriceCandidates,
+    peek: b.rewardPricePeek,
+    boost: b.rewardPriceBoost,
+  };
+  return byKind((k) => ({ price: price[k], growth: b.rewardPriceGrowth, cap: b.rewardDailyCap }));
+}
+
+/** 구단 자금과 since(오늘 0시, 한국 시각) 뒤에 보상마다 받은 횟수를 한 번에 읽는다(행이 없으면 0). */
+export async function rewardSnapshot(db: Db, profileId: string, since: string) {
+  const row = await db.$client
+    .prepare(
+      `SELECT (SELECT balance FROM owner_funds WHERE profile_id = ?1) AS balance, ${REWARD_SUMS}
+         FROM owner_item_purchases
+        WHERE profile_id = ?1 AND item IN (${REWARD_ITEMS}) AND created_at >= ?2`,
+    )
+    .bind(profileId, since)
+    .first<{ balance: number | null } & Record<RewardKind, number>>();
+  return {
+    balance: row?.balance ?? 0,
+    bought: byKind((k) => row?.[k] ?? 0),
+  };
+}
+
+/** 보상 한 번을 구단 자금으로 받기(buyItem). */
+export const buyRewardWithFunds = (
+  db: Db,
+  b: {
+    id: string;
+    profileId: string;
+    kind: RewardKind;
+    price: number;
+    bought: number;
+    since: string;
+    now: string;
+  },
+) => buyItem(db, { ...b, item: rewardItem(b.kind), grantReroll: false });
