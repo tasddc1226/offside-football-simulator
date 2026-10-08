@@ -15,7 +15,6 @@
   import HomeFirsts from './firsts/HomeFirsts.svelte';
   import HomeLive from './HomeLive.svelte';
   import HomeTicker from './HomeTicker.svelte';
-  import SeasonGauge from './SeasonGauge.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL, IOS_APP_STORE_URL } from '@offside/app-core/links';
   import { APP_PROMO } from '@offside/app-core/appPromo';
@@ -71,7 +70,8 @@
     </section>
   {/if}
   <!-- 시즌 진행 게이지: 유저들이 끝까지 뛴 커리어로 시즌이 차고, 90%면 마감 카운트다운. -->
-  <SeasonGauge />
+  <!-- 시즌 진행 게이지는 첫 화면 번들 밖(지연 청크). -->
+  {#await import('./SeasonGauge.svelte') then { default: SeasonGauge }}<SeasonGauge />{/await}
   <!-- T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서(신청은 대회 화면). 트로피 그림까지 끌고 와서 첫 화면 번들 밖 지연 청크로. -->
   {#await import('./cup/CupBanner.svelte') then { default: CupBanner }}<CupBanner onopen={() => go('cup')} />{/await}
   <HomeLive />
