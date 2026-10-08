@@ -167,7 +167,7 @@
         {#if arming}<button class="btn" data-act="boost-cancel" onclick={() => (arming = false)}>{B.cancel}</button>{/if}
       </div>
     {/if}
-    {#if clubTry}
+    {#if clubTry && boost.free}
       <button class="btn btn-block" data-act="boost-club" disabled={clubBusy} onclick={onClubBoost}>
         {clubBusy ? B.clubBusy : B.clubBoost({ price: fundsText(clubTry.price), chance: boost.chance })}
       </button>

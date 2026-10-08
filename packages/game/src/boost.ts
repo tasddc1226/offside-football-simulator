@@ -69,20 +69,14 @@ export function boostStatus(s: GameState): BoostStatus {
   return 'ready';
 }
 
-/** T-11-157 이 커리어에서 광고·구단 자금으로 더 시도한 횟수. */
-export const boostExtraUsed = (s: GameState): number => boostState(s).log.filter((x) => x.x).length;
-
-/** T-11-157 이 커리어에 남은 추가 시도 횟수(지금 시도할 수 있는지와 무관). */
-export const boostExtraTotalLeft = (s: GameState): number =>
-  Math.max(0, BAL.boostExtraTotal - boostExtraUsed(s));
-
 /**
  * T-11-157 지금 광고·구단 자금으로 더 시도할 수 있는 횟수 — 이번 시즌의 한 번을 썼고, 다음 단계 비용만큼 선수 자금이 없을 때만
  * 커리어에 남은 횟수, 아니면 0.
  */
 export function boostExtraLeft(s: GameState): number {
   if (boostStatus(s) !== 'done' || s.money >= boostCost(s)) return 0;
-  return boostExtraTotalLeft(s);
+  const used = boostState(s).log.filter((x) => x.x).length;
+  return Math.max(0, BAL.boostExtraTotal - used);
 }
 
 /** 광고·구단 자금으로 지금 시도할 수 있는지 — 자금이 모자란 시즌의 한 번(T-11-116)이거나 추가 시도(T-11-157). */

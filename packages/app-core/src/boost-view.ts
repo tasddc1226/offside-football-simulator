@@ -7,7 +7,6 @@ import {
   boostChance,
   boostCost,
   boostExtraLeft,
-  boostFreeOpen,
   boostState,
   boostStatus,
   tryBoost,
@@ -68,9 +67,9 @@ export function boostView(
 ): BoostView {
   const status = boostStatus(s);
   const dayLeft = opts.dayLeft ?? Infinity;
-  const extraLeft = boostExtraLeft(s);
+  const extraLeft = status === 'done' ? boostExtraLeft(s) : 0;
   const path = !!adOffer || !!opts.club;
-  const free = boostFreeOpen(s) && dayLeft > 0;
+  const free = (status === 'short' || extraLeft > 0) && dayLeft > 0;
   const b = boostState(s);
   const cost = L2.won({ v: fmtMoney(boostCost(s)) });
   const chance = boostChance(s);
