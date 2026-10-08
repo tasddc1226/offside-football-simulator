@@ -13,6 +13,8 @@
  *   확정 뒤에도 컵 일정이 늦춰지면 마감을 늦추기만 하고 당기지는 않는다.
  */
 
+import { DAY_MS as DAY, KST_MS as KST } from './kst.js';
+
 export const SEASON_GAUGE = {
   perUser: 10,
   dailyCap: 20,
@@ -56,8 +58,6 @@ export interface SeasonGaugeView {
 }
 
 const HOUR = 3_600_000;
-const DAY = 24 * HOUR;
-const KST = 9 * HOUR;
 const ms = (iso: string) => Date.parse(iso);
 const iso = (t: number) => new Date(t).toISOString();
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));

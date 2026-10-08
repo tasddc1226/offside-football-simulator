@@ -179,9 +179,8 @@ export const FundsHistoryResponseSchema = z.strictObject({
   totals: z.strictObject({
     /** 방출로 받은 자금. */
     released: man,
-    /** 판매로 받은 자금(수수료 뺀 값)과 뗀 수수료. */
+    /** 판매로 받은 자금(수수료 뺀 값). */
     sold: man,
-    fees: man,
     /** 영입에 쓴 자금. */
     bought: man,
     /** 리롤권 · 광고 대신 받은 보상에 쓴 자금. */

@@ -166,10 +166,10 @@ export function Grid2({
   );
 }
 
-/** 숫자 칸 줄(웹 .owner-stats · .tm-stats). first는 첫 칸 너비 비율(전적처럼 긴 값). */
 /** Stats 칸을 누를 수 있게(구단주 요약의 구단 자금 → 자금 내역). 이름 옆에 › 를 붙인다. */
 export type StatPress = { onPress: () => void; label: string; testID: string };
 
+/** 숫자 칸 줄(웹 .owner-stats · .tm-stats). first는 첫 칸 너비 비율(전적처럼 긴 값). */
 export function Stats({
   items,
   small,

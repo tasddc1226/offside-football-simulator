@@ -2,7 +2,9 @@
 import type { FundsHistoryEntry, FundsHistoryResponse } from '@offside/contracts';
 import { tn } from '@offside/game/i18n/names';
 import { POS_LABEL } from '@offside/game/pos-label';
+import { kstDay } from '@offside/contracts/kst';
 import { apiFetch } from './api/client.js';
+import { kstParts } from './boardText.js';
 import { fmtValue } from './format.js';
 import { fundsText } from './funds.js';
 import { fundsHistoryText as H } from './i18n/ko/fundsHistory.js';
@@ -13,11 +15,7 @@ import { marketName, SPEND_LABEL, TRADE_LABEL } from './market.js';
 export const fetchFundsHistory = (page = 0) =>
   apiFetch<FundsHistoryResponse>(`/v1/market/funds/history?page=${page}`);
 
-const KST = 9 * 3_600_000;
-const kst = (iso: string) => new Date(Date.parse(iso) + KST);
-const pad = (n: number) => String(n).padStart(2, '0');
-
-export interface FundsHistoryRow {
+interface FundsHistoryRow {
   id: string;
   kind: FundsHistoryEntry['kind'];
   badge: string;
@@ -28,12 +26,11 @@ export interface FundsHistoryRow {
   plus: boolean;
 }
 
-export function fundsHistoryRow(
+function fundsHistoryRow(
   e: FundsHistoryEntry,
   local: ReadonlyMap<string, string>,
 ): FundsHistoryRow {
-  const d = kst(e.at);
-  const time = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+  const { time } = kstParts(e.at);
   return {
     id: e.id,
     kind: e.kind,
@@ -56,11 +53,10 @@ export function fundsHistoryDays(
 ): { day: string; label: string; rows: FundsHistoryRow[] }[] {
   const days: { day: string; label: string; rows: FundsHistoryRow[] }[] = [];
   for (const e of items) {
-    const d = kst(e.at);
-    const day = d.toISOString().slice(0, 10);
+    const day = kstDay(e.at);
     let g = days.at(-1);
     if (g?.day !== day) {
-      g = { day, label: H.date({ m: d.getUTCMonth() + 1, d: d.getUTCDate() }), rows: [] };
+      g = { day, label: H.date({ m: Number(day.slice(5, 7)), d: Number(day.slice(8)) }), rows: [] };
       days.push(g);
     }
     g.rows.push(fundsHistoryRow(e, local));

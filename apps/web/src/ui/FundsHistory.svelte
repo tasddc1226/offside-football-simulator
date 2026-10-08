@@ -72,7 +72,7 @@
         <ul class="fh-rows">
           {#each g.rows as r (r.id)}
             <li data-funds-row={r.kind}>
-              <span class="fh-badge fh-badge-{r.kind}">{r.badge}</span>
+              <span class="funds-badge funds-badge-{r.kind}">{r.badge}</span>
               <span class="fh-info">
                 <span class="fh-title">{r.title}</span>
                 <small>{r.sub}</small>
@@ -205,28 +205,5 @@
   }
   .fh-plus {
     color: var(--good);
-  }
-  /* 이적시장 자금 내역(Market.svelte .mk-badge)과 같은 색 */
-  .fh-badge {
-    flex: none;
-    min-width: 36px;
-    padding: 3px 6px;
-    border-radius: 6px;
-    text-align: center;
-    font-size: 0.6875rem;
-    font-weight: 700;
-  }
-  .fh-badge-bought,
-  .fh-badge-spent {
-    background: color-mix(in srgb, #1f4f8f 14%, var(--surface));
-    color: color-mix(in srgb, #1f4f8f 80%, var(--ink));
-  }
-  .fh-badge-sold {
-    background: color-mix(in srgb, var(--accent) 18%, var(--surface));
-    color: var(--accent-text);
-  }
-  .fh-badge-released {
-    background: color-mix(in srgb, var(--bad) 12%, var(--surface));
-    color: var(--bad);
   }
 </style>

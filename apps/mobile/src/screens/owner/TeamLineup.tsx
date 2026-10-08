@@ -95,7 +95,10 @@ export function TeamLineup({
     pitch.current?.measureInWindow((px, py, w, h) => {
       if (!w || !h || active.current) return;
       // 자리 카드는 62×88, 가운데가 자리 좌표(TeamPitch).
-      setPeek({ i, origin: { x: px + (pos.x / 100) * w - 31, y: py + (pos.y / 100) * h - 44, w: 62, h: 88 } });
+      setPeek({
+        i,
+        origin: { x: px + (pos.x / 100) * w - 31, y: py + (pos.y / 100) * h - 44, w: 62, h: 88 },
+      });
     });
   }
   const latest = useRef({ layout, slots, change, dragging });

@@ -10,13 +10,13 @@ import { typeName } from '@offside/game/data';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { Btn, Txt } from '../ui';
-import { PlayerCard } from './PlayerCard';
+import { CARD_HEIGHT, CARD_STYLE_ROW, PlayerCard } from './PlayerCard';
 
 export type PeekOrigin = { x: number; y: number; w: number; h: number };
 // 라커룸 카드(2열 중 한 칸)와 같은 폭·높이로 그려 글자·여백 비율을 같게 두고, 통째로 키운다.
 const CARD_W = 165;
 // PlayerCard 큰 카드 높이(플레이스타일 줄이 있으면 그만큼 더).
-const cardHeight = (p: TeamPlayer) => 242 + (typeName(p.pos, p.type) ? 19 : 0);
+const cardHeight = (p: TeamPlayer) => CARD_HEIGHT + (typeName(p.pos, p.type) ? CARD_STYLE_ROW : 0);
 
 /** 그라운드 카드를 누르면 그 자리에서 커져 라커룸 카드를 그대로 확대해 보여 준다. 닫으면 제자리로 돌아간다(웹 PlayerPeek). */
 export function PlayerPeek({

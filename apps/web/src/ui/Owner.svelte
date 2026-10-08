@@ -88,6 +88,7 @@
     });
   });
   const clubValue = $derived(linked ? (market?.clubValue ?? null) : (summary?.value ?? null));
+  const funds = $derived(market ? fundsText(market.balance) : '–');
   // T-11-128 시즌 결산 카드 — 끝난 시즌이 있으면 가장 최근 결산을 한 줄로 알린다. 불러오지 못하면 카드를 숨긴다.
   let recap = $state<SeasonRecapResponse | null>(null);
   $effect(() => {
@@ -135,11 +136,11 @@
       </div>
       {#if (guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue)}
         <p class="muted fs-sm owner-empty">{L.emptySummary}</p>
-        {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}</p>{/if}
+        {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds })}</p>{/if}
       {:else}
       <dl class="owner-stats">
         <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
-        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{market ? fundsText(market.balance) : '–'}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
+        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
         <div><dt>{L.statRetired}</dt><dd>{summary ? L.playersCount({ n: summary.players, text: num(summary.players) }) : '–'}</dd></div>
         <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
         <div><dt>{L.statRetiredNumbers}</dt><dd>{summary ? L.numbersCount({ n: summary.retired }) : '–'}</dd></div>
@@ -204,7 +205,7 @@
       <div class="owner-who">
         <small class="eyebrow">Transfer market</small>
         <h2>{L.marketTitle}</h2>
-        <span class="muted fs-sm">{L.marketSub({ funds: market ? fundsText(market.balance) : '–' })}</span>
+        <span class="muted fs-sm">{L.marketSub({ funds })}</span>
       </div>
       <span class="tap-go" aria-hidden="true">›</span>
       <button class="tap-cover" data-act="market" aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}></button>

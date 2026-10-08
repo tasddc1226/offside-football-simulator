@@ -8,6 +8,7 @@ import type { AppEnv } from './env.js';
 export const SCHEDULE_KEY = 'season_schedule';
 const RELOAD_MS = 60_000;
 let loadedAt = 0;
+let inflight: Promise<void> | null = null;
 
 export async function readSeasonSchedule(db: D1Database): Promise<SeasonScheduleEntry[]> {
   const row = await db
@@ -23,11 +24,19 @@ export async function readSeasonSchedule(db: D1Database): Promise<SeasonSchedule
   }
 }
 
-/** 굳힌 일정을 입힌다. force가 아니면 아이솔레이트마다 RELOAD_MS에 한 번만 읽는다. */
-export async function loadSeasonSchedule(db: D1Database, force = false): Promise<void> {
-  if (!force && Date.now() - loadedAt < RELOAD_MS) return;
-  applySeasonSchedule(await readSeasonSchedule(db));
-  loadedAt = Date.now();
+/**
+ * 굳힌 일정을 입힌다. force가 아니면 아이솔레이트마다 RELOAD_MS에 한 번만 읽는다. 동시에 들어온 요청은 같은 읽기를
+ * 기다리고, 읽기에 실패해도 RELOAD_MS 동안은 다시 묻지 않고 알던 일정으로 간다.
+ */
+export function loadSeasonSchedule(db: D1Database, force = false): Promise<void> {
+  if (!force && Date.now() - loadedAt < RELOAD_MS) return Promise.resolve();
+  inflight ??= readSeasonSchedule(db)
+    .then((entries) => void applySeasonSchedule(entries))
+    .finally(() => {
+      loadedAt = Date.now();
+      inflight = null;
+    });
+  return inflight;
 }
 
 export async function saveSeasonSchedule(
@@ -53,7 +62,7 @@ export const forgetSeasonSchedule = () => {
  * 요청마다 시즌 일정을 맞춘다. DB가 없거나 읽기에 실패하면 알던 일정으로 그대로 간다. 배포 전용 경로(/v1/internal)는
  * 시즌을 보지 않고, 인증 전에는 DB를 읽지 않아야 하므로 건너뛴다.
  */
-export const seasonSchedule: MiddlewareHandler<AppEnv> = async (c, next) => {
+export const seasonScheduleMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
   const db = (c.env as Partial<AppEnv['Bindings']> | undefined)?.DB;
   if (db && !c.req.path.startsWith('/v1/internal/')) await loadSeasonSchedule(db).catch(() => {});
   await next();

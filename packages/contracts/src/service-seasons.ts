@@ -67,7 +67,11 @@ export function onSeasonSchedule(fn: ScheduleListener): () => void {
 export const seasonSchedule = (): SeasonScheduleEntry[] =>
   seasons.map(({ id, startsAt, endsAt, retireAt }) => ({ id, startsAt, endsAt, retireAt }));
 
-const sameSchedule = (a: readonly SeasonScheduleEntry[], b: readonly SeasonScheduleEntry[]) =>
+/** 두 일정이 같은가(시즌마다 id · 개막 · 마감 · 은퇴 나이). */
+export const sameSchedule = (
+  a: readonly SeasonScheduleEntry[],
+  b: readonly SeasonScheduleEntry[],
+) =>
   a.length === b.length &&
   a.every(
     (s, i) =>

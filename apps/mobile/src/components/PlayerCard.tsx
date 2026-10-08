@@ -315,6 +315,10 @@ function CardAttributes({ cell, color }: { cell: PlayerCardData; color: string }
   );
 }
 
+/** 큰 카드 높이(자리 OVR 줄 · 플레이스타일 줄 없이)와 플레이스타일 줄 높이 — 카드 팝업(PlayerPeek)도 같은 값을 쓴다. */
+export const CARD_HEIGHT = 242;
+export const CARD_STYLE_ROW = 19;
+
 export function PlayerCard({
   cell,
   code,
@@ -339,7 +343,11 @@ export function PlayerCard({
   const deployed = cell.peak !== undefined && cell.peak !== cell.rating;
   // 플레이스타일(웹 PlayerCard .card-type). 자리가 좁은 compact 카드에는 넣지 않는다.
   const style = !compact && cell.pos ? typeName(cell.pos, cell.type) : null;
-  const height = compact ? (mini ? 68 : 88) : 242 + (deployed ? 31 : 0) + (style ? 19 : 0);
+  const height = compact
+    ? mini
+      ? 68
+      : 88
+    : CARD_HEIGHT + (deployed ? 31 : 0) + (style ? CARD_STYLE_ROW : 0);
   const shield = 'M2 14H17L25 5L50 1L75 5L83 14H98L97 149L88 161L50 173L12 161L3 149Z';
   return (
     <View

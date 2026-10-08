@@ -91,8 +91,6 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
   const rowX = MID - (row.slot * c.clubs.length) / 2;
   // 플레이 성향(없으면 대표 우승) — 기록 아래~바닥 줄 사이 가운데.
   const lowY = lowerBlockY(c);
-  const styleY = lowY;
-  const honoursY = lowY;
   const honourRows = c.honours.map((h, i) => ({ y: lowY + 56 + i * 52, h }));
   const scoreX = c.jersey ? MID - 200 : MID;
 
@@ -273,7 +271,7 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
       {/* 대표 우승(성향이 없을 때) */}
       {c.honours.length ? (
         <>
-          <T y={honoursY} size={28} color={C.gold} display={600} gap={6}>
+          <T y={lowY} size={28} color={C.gold} display={600} gap={6}>
             HONOURS
           </T>
           {honourRows.map(({ y: ry, h }) => (
@@ -308,13 +306,13 @@ export function ShareCardView({ c }: { c: ShareCardData }) {
       {/* 플레이 성향 */}
       {c.style ? (
         <>
-          <T y={styleY} size={28} color={C.gold} display={600} gap={6}>
+          <T y={lowY} size={28} color={C.gold} display={600} gap={6}>
             HOW I PLAYED
           </T>
-          <T y={styleY + 70} size={52} color={C.ink} weight="700" x={PAD} w={INNER}>
+          <T y={lowY + 70} size={52} color={C.ink} weight="700" x={PAD} w={INNER}>
             {`${c.style.icon} ${c.style.name}`}
           </T>
-          <T y={styleY + 120} size={30} color={C.muted} x={PAD} w={INNER}>
+          <T y={lowY + 120} size={30} color={C.muted} x={PAD} w={INNER}>
             {c.style.best ?? c.style.line}
           </T>
         </>

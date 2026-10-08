@@ -280,6 +280,29 @@ select:focus-visible {
   padding: 18px;
   box-shadow: var(--shadow);
 }
+/* 자금 내역 배지(이적시장 거래 내역 · 구단 자금 내역) — 영입·사용 파랑, 판매 강조색, 방출 빨강. */
+.funds-badge {
+  flex: none;
+  min-width: 36px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+.funds-badge-bought,
+.funds-badge-spent {
+  background: color-mix(in srgb, #1f4f8f 14%, var(--surface));
+  color: color-mix(in srgb, #1f4f8f 80%, var(--ink));
+}
+.funds-badge-sold {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  color: var(--accent-text);
+}
+.funds-badge-released {
+  background: color-mix(in srgb, var(--bad) 12%, var(--surface));
+  color: var(--bad);
+}
 /* 카드(또는 칸) 전체를 누르는 버튼: 내용 위에 투명 버튼을 덮는다. 부모에 position: relative. */
 .tap-cover {
   position: absolute;
@@ -1405,7 +1428,9 @@ a.tile-link {
   border: 1px solid transparent;
   border-bottom-color: var(--line);
   border-radius: 10px;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
 }
 .dex-list > li[data-locked] {
   padding: 10px;

@@ -204,6 +204,7 @@ export default function Owner() {
     };
   }, [tick, track]);
   const clubValue = linked ? (market?.clubValue ?? null) : (summary?.value ?? null);
+  const funds = market ? fundsText(market.balance) : '–';
 
   const team = card?.team;
   const sub = guest ? L.guestSub : team ? `${team.name} · ${card.season}` : L.signedInSubApp;
@@ -267,9 +268,7 @@ export default function Owner() {
           {(guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue) ? (
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
               {L.emptySummary}
-              {linked
-                ? `\n${L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}`
-                : ''}
+              {linked ? `\n${L.fundsLine({ funds })}` : ''}
             </Txt>
           ) : (
             <View style={{ gap: 8 }}>
@@ -281,7 +280,7 @@ export default function Owner() {
                     ? [
                         [
                           L.statFunds,
-                          market ? fundsText(market.balance) : '–',
+                          funds,
                           {
                             onPress: () => go('funds'),
                             label: F.openAria,
@@ -398,7 +397,7 @@ export default function Owner() {
                   <Txt v="eyebrow">Transfer market</Txt>
                   <Txt v="h2">{L.marketTitle}</Txt>
                   <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                    {L.marketSub({ funds: market ? fundsText(market.balance) : '–' })}
+                    {L.marketSub({ funds })}
                   </Txt>
                 </View>
                 <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
