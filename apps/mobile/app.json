@@ -74,10 +74,10 @@
       ],
       "expo-iap",
       [
-        "react-native-google-mobile-ads",
+        "./plugins/with-applovin-max",
         {
-          "androidAppId": "ca-app-pub-3797087216173591~9704816739",
-          "iosAppId": "ca-app-pub-3797087216173591~4994406373"
+          "iosAppId": "ca-app-pub-3797087216173591~4994406373",
+          "androidAppId": "ca-app-pub-3797087216173591~9704816739"
         }
       ]
     ],
@@ -92,8 +92,5 @@
       }
     },
     "owner": "tasddc1569"
-  },
-  "react-native-google-mobile-ads": {
-    "android_app_id": "ca-app-pub-3797087216173591~9704816739"
   }
 }

@@ -1,36 +1,11 @@
-// 보상형 광고(AdMob) 공용 재생. 후보 잠재력(T-11-118)·잠재력 엿보기·강화가 쓴다.
-// T-11-117 두 곳의 실적을 따로 보려고 광고 단위를 나눴다(재생 흐름은 같다).
-// 비개인화 광고만 요청하고, 동의는 배너와 같은 UMP를 쓴다. 개발 빌드는 구글 테스트 광고를 쓴다.
-import { Platform } from 'react-native';
-import {
-  AdEventType,
-  RewardedAd,
-  RewardedAdEventType,
-  TestIds,
-} from 'react-native-google-mobile-ads';
+// 보상형 광고(AppLovin MAX — T-11-159) 공용 재생. 후보 잠재력(T-11-118)·잠재력 엿보기·강화가 쓴다.
+// T-11-117 세 곳의 실적을 따로 보려고 광고 단위를 나눴다(재생 흐름은 같다). 비개인화 광고만 받는다(./ads).
+import { RewardedAd } from 'react-native-applovin-max';
 import { adText } from '@offside/app-core/i18n/ko/ad';
-import { askConsent } from './adConsent';
+import { startAds, unitOf, type AdPlacement } from './ads';
 import { adFree } from './adFree';
 
-/** AdMob 보상형 광고 단위. 단위가 없는 플랫폼은 광고 제거 구매자만 보상을 받는다. */
-const UNITS = {
-  candidates: {
-    ios: 'ca-app-pub-3797087216173591/3708867561',
-    android: 'ca-app-pub-3797087216173591/3204550669',
-  },
-  /** ios·android-scout-peek-rewarded */
-  peek: {
-    ios: 'ca-app-pub-3797087216173591/6888876318',
-    android: 'ca-app-pub-3797087216173591/3915228615',
-  },
-  /** ios·android-potential-boost-rewarded */
-  boost: {
-    ios: 'ca-app-pub-3797087216173591/9962450572',
-    android: 'ca-app-pub-3797087216173591/7873589266',
-  },
-};
-type RewardPlacement = keyof typeof UNITS;
-const unitOf = (p: RewardPlacement) => (__DEV__ ? TestIds.REWARDED : Platform.select(UNITS[p]));
+type RewardPlacement = Exclude<AdPlacement, 'banner'>;
 
 /** 광고를 볼 수 있거나(단위 있음) 광고 없이 받을 수 있으면(광고 제거) 버튼을 보인다. */
 export const rewardAvailable = (p: RewardPlacement) => adFree.owned || !!unitOf(p);
@@ -44,37 +19,45 @@ export const rewardOffer = (p: RewardPlacement, owned: boolean): 'free' | 'ad' |
  */
 type WatchResult = 'earned' | 'closed' | 'failed';
 
+// MAX 보상형 이벤트 리스너는 종류마다 하나뿐이라 재생 중에만 걸고 끝나면 뗀다. 다른 단위의 이벤트는 거른다.
 function watch(unit: string): Promise<WatchResult> {
   return new Promise((resolve) => {
-    const ad = RewardedAd.createForAdRequest(unit, { requestNonPersonalizedAdsOnly: true });
     let earned = false;
     let shown = false;
-    const offs = [
-      ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-        ad.show().catch(() => done());
+    let loaded = false;
+    const mine =
+      (fn: () => void) =>
+      ({ adUnitId }: { adUnitId: string }) =>
+        adUnitId === unit && fn();
+    RewardedAd.addAdLoadedEventListener(
+      mine(() => {
+        loaded = true;
+        RewardedAd.showAd(unit);
       }),
-      ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
-        earned = true;
-      }),
-      ad.addAdEventListener(AdEventType.OPENED, () => {
-        shown = true;
-      }),
-      ad.addAdEventListener(AdEventType.CLOSED, () => done()),
-      ad.addAdEventListener(AdEventType.ERROR, () => done()),
-    ];
+    );
+    RewardedAd.addAdDisplayedEventListener(mine(() => (shown = true)));
+    RewardedAd.addAdReceivedRewardEventListener(mine(() => (earned = true)));
+    RewardedAd.addAdHiddenEventListener(mine(done));
+    RewardedAd.addAdLoadFailedEventListener(mine(done));
+    RewardedAd.addAdFailedToDisplayEventListener(mine(done));
     // 불러오기가 끝나지 않으면(네트워크) 20초에서 끊는다. 보여 주는 중이면 닫힐 때 끝난다.
-    const timer = setTimeout(() => !ad.loaded && done(), 20_000);
+    const timer = setTimeout(() => !loaded && done(), 20_000);
     function done() {
       clearTimeout(timer);
-      offs.forEach((off) => off());
+      RewardedAd.removeAdLoadedEventListener();
+      RewardedAd.removeAdDisplayedEventListener();
+      RewardedAd.removeAdReceivedRewardEventListener();
+      RewardedAd.removeAdHiddenEventListener();
+      RewardedAd.removeAdLoadFailedEventListener();
+      RewardedAd.removeAdFailedToDisplayEventListener();
       resolve(earned ? 'earned' : shown ? 'closed' : 'failed');
     }
-    ad.load();
+    RewardedAd.loadAd(unit);
   });
 }
 
 /**
- * 보상을 받으면 onEarned를 부르고 ''를, 못 받으면 보여 줄 안내를 돌려준다(동의·불러오기 실패 = 불러올 수 없음,
+ * 보상을 받으면 onEarned를 부르고 ''를, 못 받으면 보여 줄 안내를 돌려준다(SDK 시작·불러오기 실패 = 불러올 수 없음,
  * 끝까지 보지 않음 = skipped).
  * 광고 제거 구매자는 광고 없이 바로 받는다.
  */
@@ -85,7 +68,7 @@ export async function claimReward(
 ): Promise<string> {
   if (!adFree.owned) {
     const unit = unitOf(p);
-    if (!unit || !(await askConsent())) return adText.rewardedUnavailable;
+    if (!unit || !(await startAds())) return adText.rewardedUnavailable;
     const result = await watch(unit);
     if (result === 'failed') return adText.rewardedUnavailable;
     if (result === 'closed') return skipped;
