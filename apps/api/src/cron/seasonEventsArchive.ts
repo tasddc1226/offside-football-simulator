@@ -28,7 +28,7 @@ export type EventArchiveResult = {
   bytes: number;
 };
 
-/** Bounded to 200 read/write queries and 50MiB target per hour; retries use a DB lease.
+/** Bounded to 200 page read/write queries and 50MiB target per hour; retries use a DB lease.
  * Upload must complete before exact-value CAS clears any telemetry. */
 export async function runSeasonEventsArchive(
   env: Bindings,
