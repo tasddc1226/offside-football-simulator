@@ -27,6 +27,9 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketPriceMax: '最高販売価格(基準価格の倍率)',
   marketListLimit: '同時に出品できる数',
   marketDailyBuys: '1日の獲得数',
+  rerollPrice: 'リロールチケットの価格',
+  rerollPriceGrowth: 'リロールチケットの値上がり倍率',
+  rerollDailyCap: '1日のリロールチケット購入数',
   eventWeight: (p) => `イベント出現頻度の調整 ${p.n}件`,
   choiceBonus: (p) => `選択肢の成功確率の調整 ${p.n}件`,
 };

@@ -139,6 +139,23 @@ export type CupMatchResponse = z.infer<typeof CupMatchResponseSchema>;
 export const OwnerItemsResponseSchema = z.strictObject({ reroll: z.number().int().min(0) });
 export type OwnerItemsResponse = z.infer<typeof OwnerItemsResponseSchema>;
 
+/**
+ * T-11-152 GET /v1/items/shop — 리롤권 상점(구단 자금으로 산다). price는 다음 한 장 가격(만 원), 오늘 상한을 다 썼거나
+ * 팔지 않으면(cap 0) null. bought·cap은 오늘(0시 한국 시각부터) 산 장수와 하루 상한.
+ */
+export const RerollShopResponseSchema = z.strictObject({
+  reroll: z.number().int().min(0),
+  balance: z.number().int().min(0),
+  price: z.number().int().min(1).nullable(),
+  bought: z.number().int().min(0),
+  cap: z.number().int().min(0),
+});
+export type RerollShopResponse = z.infer<typeof RerollShopResponseSchema>;
+
+/** POST /v1/items/reroll/buy — 화면에서 본 가격을 함께 보낸다(그 사이 가격이 바뀌었으면 409). */
+export const BuyRerollBodySchema = z.strictObject({ price: z.number().int().min(1) });
+export type BuyRerollBody = z.infer<typeof BuyRerollBodySchema>;
+
 // ───────── 관리자: 대회 열기 ─────────
 
 /** POST /v1/admin/cups. 시작일만 주면 표준 일정(planCup)으로 연다. 시즌·회차·id는 서버가 정한다. */

@@ -27,6 +27,9 @@ const ko = {
   marketPriceMax: '최고 판매가(기준가 배수)',
   marketListLimit: '동시 판매 등록 수',
   marketDailyBuys: '하루 영입 수',
+  rerollPrice: '리롤권 가격',
+  rerollPriceGrowth: '리롤권 가격 상승 배율',
+  rerollDailyCap: '하루 리롤권 구매 수',
   eventWeight: (p: { n: number }) => `이벤트 등장 빈도 조정 ${p.n}건`,
   choiceBonus: (p: { n: number }) => `선택지 성공 확률 조정 ${p.n}건`,
 };

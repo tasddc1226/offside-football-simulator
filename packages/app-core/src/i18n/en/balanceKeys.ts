@@ -27,6 +27,9 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketPriceMax: 'Maximum sale price (× base)',
   marketListLimit: 'Listings at once',
   marketDailyBuys: 'Signings per day',
+  rerollPrice: 'Reroll ticket price',
+  rerollPriceGrowth: 'Reroll ticket price growth',
+  rerollDailyCap: 'Reroll tickets per day',
   eventWeight: (p) => `Event frequency changes: ${p.n}`,
   choiceBonus: (p) => `Choice success chance changes: ${p.n}`,
 };

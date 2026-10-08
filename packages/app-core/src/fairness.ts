@@ -11,6 +11,7 @@ import {
 } from '@offside/contracts/balance';
 import { latestBalance } from '@offside/game/balance';
 import { BOOST, BOOST_PITY_PCT } from '@offside/game/boost';
+import { fmtValue } from './format.js';
 import { gradeOf } from '@offside/game/stats';
 import { cachedGet } from './api/client';
 import { balanceKeysText as K } from './i18n/ko/balanceKeys';
@@ -95,6 +96,7 @@ export function fairnessView(): FairnessView {
 const num = (v: number) => String(Math.round(v * 1000) / 1000);
 function fmt(k: BalanceKey, v: number): string {
   const unit = (BALANCE_SPEC[k] as BalanceKnob).unit;
+  if (unit === 'man') return fmtValue(v);
   return unit === 'pct' ? `${num(v * 100)}%` : unit === 'x' ? `×${num(v)}` : num(v);
 }
 const mapDiff = (a: Record<string, number>, b: Record<string, number>) =>

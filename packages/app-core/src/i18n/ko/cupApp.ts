@@ -10,6 +10,8 @@ const ko = {
   roundToggle: (p: { name: string }) => `${p.name} 펼치기·접기`,
   rerollAskTitle: '후보를 다시 뽑을까요?',
   rerollAction: '다시 뽑기',
+  shopAskTitle: '리롤권을 살까요?',
+  shopAction: '사기',
 };
 
 export type CupAppMsgs = typeof ko;
