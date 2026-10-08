@@ -12,9 +12,11 @@ import { Btn, Txt } from '../ui';
 import { PlayerCard } from './PlayerCard';
 
 export type PeekOrigin = { x: number; y: number; w: number; h: number };
-const CARD_W = 220;
+// 라커룸 카드(2열 중 한 칸)와 같은 폭·높이로 그려 글자·여백 비율을 같게 두고, 통째로 키운다.
+const CARD_W = 165;
+const CARD_H = 242;
 
-/** 그라운드 카드를 누르면 그 자리에서 커져 라커룸 카드처럼 능력치까지 보여 준다. 닫으면 제자리로 돌아간다(웹 PlayerPeek). */
+/** 그라운드 카드를 누르면 그 자리에서 커져 라커룸 카드를 그대로 확대해 보여 준다. 닫으면 제자리로 돌아간다(웹 PlayerPeek). */
 export function PlayerPeek({
   player,
   name,
@@ -33,18 +35,20 @@ export function PlayerPeek({
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
   const { width, height } = useWindowDimensions();
+  const zoom = Math.max(1, Math.min(1.45, (width - 40) / CARD_W, (height - 220) / CARD_H));
   const t = useRef(new Animated.Value(motionOK ? 0 : 1)).current;
+  const holder = useRef<View>(null);
   const [box, setBox] = useState<PeekOrigin | null>(null);
   const closing = useRef(false);
   const fit = Math.round(slotFit(slot, player, rating) * 100);
-  // 카드가 그라운드 카드 자리·크기에서 출발한다(FLIP).
+  // 카드가 그라운드 카드 자리·크기에서 출발한다(FLIP). 가운데를 기준으로 커지므로 가운데끼리 잇는다.
   const from = box
     ? {
         dx: origin.x + origin.w / 2 - (box.x + box.w / 2),
         dy: origin.y + origin.h / 2 - (box.y + box.h / 2),
-        scale: origin.w / box.w,
+        scale: origin.w / CARD_W,
       }
-    : { dx: 0, dy: 0, scale: 1 };
+    : { dx: 0, dy: 0, scale: zoom };
   function close() {
     if (closing.current) return;
     closing.current = true;
@@ -70,45 +74,52 @@ export function PlayerPeek({
       </Animated.View>
       <View
         pointerEvents="box-none"
-        style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16, gap: 14 }}
       >
-        <Animated.View
+        <View
+          ref={holder}
           testID="player-peek"
           accessibilityViewIsModal
           accessibilityLabel={L.peekAria({ name })}
-          onLayout={(e) => {
+          collapsable={false}
+          onLayout={() => {
             if (box) return;
-            const l = e.nativeEvent.layout;
-            // 가운데 정렬이라 화면 기준 자리는 창 크기에서 바로 나온다.
-            setBox({ x: (width - l.width) / 2, y: (height - l.height) / 2, w: l.width, h: l.height });
-            if (motionOK)
-              Animated.spring(t, {
-                toValue: 1,
-                speed: 16,
-                bounciness: 6,
-                useNativeDriver: true,
-              }).start();
+            holder.current?.measureInWindow((x, y, w, h) => {
+              setBox({ x, y, w, h });
+              if (motionOK)
+                Animated.spring(t, {
+                  toValue: 1,
+                  speed: 16,
+                  bounciness: 6,
+                  useNativeDriver: true,
+                }).start();
+            });
           }}
           style={{
-            width: CARD_W,
+            width: CARD_W * zoom,
+            height: CARD_H * zoom,
             alignItems: 'center',
-            gap: 14,
-            opacity: box ? 1 : 0,
-            transform: [
-              { translateX: t.interpolate({ inputRange: [0, 1], outputRange: [from.dx, 0] }) },
-              { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [from.dy, 0] }) },
-              { scale: t.interpolate({ inputRange: [0, 1], outputRange: [from.scale, 1] }) },
-            ],
+            justifyContent: 'center',
           }}
         >
-          <View style={{ width: '100%' }}>
+          <Animated.View
+            style={{
+              width: CARD_W,
+              opacity: box ? 1 : 0,
+              transform: [
+                { translateX: t.interpolate({ inputRange: [0, 1], outputRange: [from.dx, 0] }) },
+                { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [from.dy, 0] }) },
+                { scale: t.interpolate({ inputRange: [0, 1], outputRange: [from.scale, zoom] }) },
+              ],
+            }}
+          >
+            {/* 라커룸 카드와 같은 내용(최고 OVR·본래 포지션). 이 자리에서의 값은 카드 아래 줄에. */}
             <PlayerCard
               cell={{
                 name,
                 nation: player.nation,
                 season: player.season,
-                rating,
-                peak: player.peak,
+                rating: player.peak,
                 number: player.number,
                 legendScore: player.legendScore,
                 attrs: player.attrs,
@@ -117,9 +128,11 @@ export function PlayerPeek({
                 pos: player.pos,
                 youth: false,
               }}
-              code={slot}
+              code={player.dpos ?? player.pos}
             />
-          </View>
+          </Animated.View>
+        </View>
+        <Animated.View style={{ alignItems: 'center', gap: 14, opacity: t }}>
           <View style={{ alignItems: 'center', gap: 2 }}>
             <Txt v="sm" bold style={{ color: '#fff' }}>
               {tn(DETAIL_LABEL[slot])}
