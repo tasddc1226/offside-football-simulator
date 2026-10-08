@@ -10,7 +10,7 @@
   import { gamePotentialText as P } from '@offside/app-core/i18n/ko/gamePotential';
   import type { Snippet } from 'svelte';
   import { legendScoreBreakdown, legendTitle } from '@offside/game/season';
-  import { careerChapters, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '@offside/game/retirement-report';
+  import { careerChapters, careerClubs, nationalEvents, honoursRoll, type ChapterEvent, type HonourLine } from '@offside/game/retirement-report';
   import { POS_LABEL } from '@offside/game/pos-label';
   import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
   import { peakValue, retireValue } from '@offside/contracts/market-value';
@@ -28,6 +28,7 @@
   import { tn } from '@offside/game/i18n/names';
   import { retiredAvatarSpec } from '@offside/game/avatar';
   import PixelAvatar from './PixelAvatar.svelte';
+  import { NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
 
   // end: 리포트 맨 아래(다음 행동 버튼 등).
   const { v, end }: { v: LegendView; end?: Snippet } = $props();
@@ -37,6 +38,9 @@
   const main = $derived(titleById(legendTitleOf(v.own ? (v.own.id ?? '') : undefined, v.title)));
 
   const chapters = $derived(d ? careerChapters(d) : []);
+  /** 거쳐 간 구단 엠블럼 줄 — 은퇴 가치와 통산 기록 사이에서 커리어를 한눈에. */
+  const clubs = $derived(d ? careerClubs(d) : []);
+  const country = $derived(v.nation ? NATION_BY_CODE.get(v.nation) : undefined);
   const national = $derived(d ? nationalEvents(d) : []);
   const caps = $derived(d ? d.nat.caps : v.totals.caps);
   const honours = $derived(d ? honoursRoll(d.trophies) : []);
@@ -108,7 +112,7 @@
     <!-- T-11-122 은퇴식 정장 차림의 도트 선수. 커리어 ID가 없는 옛 기록은 그리지 않는다. -->
     {#if v.avatarId}<PixelAvatar spec={retiredAvatarSpec(v.avatarId, v.age)} />{/if}
     <div class="eyebrow film-kicker">Full Time{v.number != null ? ` · No.${v.number}` : ''}</div>
-    <h1>{v.name}</h1>
+    <h1>{#if country}<span class="film-flag" role="img" aria-label={tn(country.ko)} title={tn(country.ko)} data-legend-nation={country.code}>{flagOf(country.code)}</span> {/if}{v.name}</h1>
     <div class="film-sub">{tn(POS_LABEL[v.pos])}{span ? ` · ${span}` : ''} · {L.retiredAge({ age: v.age })}</div>
     <div class="film-score">
       <b><CountUp value={v.score} animate={playing} ms={1800} /></b><span>Legend Score</span>
@@ -125,6 +129,13 @@
       <span class="pill">{L.peakOvr({ peak: v.peak })}</span>
       {#if rnGranted}<span class="pill pill-rn" data-legend-rn-pill title={L.rnPillTitle({ club: tn(rnGranted.club), number: rnGranted.number })}>{L.rnPill({ club: tn(rnGranted.club), number: rnGranted.number })}</span>{/if}
     </div>
+    {#if clubs.length}
+      <ol class="film-clubs" class:credit-late={playing} aria-label={L.clubsLabel} data-legend-clubs>
+        {#each clubs as c, i (i)}
+          <li title={tn(c.club)}><span class="fc"><ClubMark name={c.club} id={c.clubId} size={34} /><span>{tn(c.club)}</span></span></li>
+        {/each}
+      </ol>
+    {/if}
     <!-- 통산 기록은 레전드 점수 바로 아래(첫 화면에서 한눈에). -->
     <section class="film-stats" data-credit="highlights" aria-label={L.statsLabel} use:reveal>
       <div><b><CountUp value={d ? d.career.length : 0} animate={playing} run={seen.highlights} /></b><span>{L.statSeasons}</span></div>

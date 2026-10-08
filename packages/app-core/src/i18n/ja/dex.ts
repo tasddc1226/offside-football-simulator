@@ -11,6 +11,8 @@ export const dex: Translation<DexMsgs> = {
   groupLabel: '分類',
   filterAll: 'すべて',
   foundMark: '発見',
+  tapHint: 'イベントをタップすると選択肢ごとの成功確率が開きます。',
+  choicesHead: (p) => `選択肢 ${p.n}件 · 成功確率`,
   lockedStory: (p) => `まだ出会っていないストーリーイベント · ${p.stage}段階`,
   lockedSpecial: 'まだ出会っていない特別イベント',
   dependsOnPast: '前の段階での選択によって確率が変わります。',

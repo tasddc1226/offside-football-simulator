@@ -89,9 +89,6 @@ export function createArcticGoogleOidc(
 const FAKE_CODE_PREFIX = 'fake:';
 /** 브라우저가 실제로 `/v1/auth/google/start`를 타고 도는 E2E 경로는 항상 이 sub를 쓴다(D-21). */
 const FAKE_DEFAULT_SUB = 'fake-google-sub-e2e';
-/** 로컬 전용이라 wrangler dev 기본 포트로 고정한다. */
-const FAKE_CALLBACK_ORIGIN = 'http://localhost:8787';
-const FAKE_CALLBACK_PATH = '/v1/auth/google/callback';
 
 function fakeEmailForSub(sub: string): string {
   return `${sub}@example.com`;
@@ -104,10 +101,11 @@ function fakeEmailForSub(sub: string): string {
  * 해석한다. api 테스트는 `/callback`에 임의의 `fake:<sub>` 코드를 직접 보내 여러 sub 시나리오를
  * 검사한다.
  */
-export function createFakeGoogleOidc(): GoogleOidc {
+export function createFakeGoogleOidc(redirectUri: string): GoogleOidc {
   return {
     createAuthorizationUrl(state, _codeVerifier) {
-      const url = new URL(`${FAKE_CALLBACK_ORIGIN}${FAKE_CALLBACK_PATH}`);
+      // 포트를 바꿔 띄운 로컬 API(워크트리별 .dev.vars)도 자기 콜백으로 돌아오게 설정값을 따른다.
+      const url = new URL(redirectUri);
       url.searchParams.set('code', `${FAKE_CODE_PREFIX}${FAKE_DEFAULT_SUB}`);
       url.searchParams.set('state', state);
       return url;
@@ -143,7 +141,7 @@ export function selectGoogleOidc(
     | 'GOOGLE_REDIRECT_URI'
   >,
 ): GoogleOidc | null {
-  if (isLocalFakeMode(env)) return createFakeGoogleOidc();
+  if (isLocalFakeMode(env)) return createFakeGoogleOidc(env.GOOGLE_REDIRECT_URI);
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return null;
   return createArcticGoogleOidc(env);
 }

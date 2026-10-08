@@ -20,6 +20,7 @@ const PUBLIC_GETS = [
   '/v1/live',
   '/v1/ticker',
   '/v1/ticker?lang=en',
+  '/v1/season/gauge',
   '/v1/teams',
   '/v1/teams?lang=en',
   '/v1/achievements/ranking',

@@ -22,6 +22,7 @@ import { fairness } from './fairness';
 import { firsts } from './firsts';
 import { firstsTab } from './firstsTab';
 import { friend } from './friend';
+import { fundsHistory } from './fundsHistory';
 import { game } from './game';
 import { gameActions } from './gameActions';
 import { gameAttr } from './gameAttr';
@@ -55,6 +56,7 @@ import { ownerPlayers } from './ownerPlayers';
 import { playerNudge } from './playerNudge';
 import { push } from './push';
 import { retired } from './retired';
+import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
 import { settings } from './settings';
 import { settingsApi } from './settingsApi';
@@ -102,6 +104,7 @@ export const en = {
   firsts,
   firstsTab,
   friend,
+  fundsHistory,
   game,
   gameActions,
   gameAttr,
@@ -135,6 +138,7 @@ export const en = {
   playerNudge,
   push,
   retired,
+  seasonGauge,
   seasonRecap,
   settings,
   settingsApi,

@@ -50,9 +50,12 @@ export function toast(text: string) {
   toastTimer = setTimeout(() => (toastState.visible = false), 2200);
 }
 
-/** 짧은 진동(웹 motion.buzz). 동작 줄이기면 하지 않는다. */
+/** 진동을 줘도 되는지 — 설정의 진동 스위치가 켜져 있고 동작 줄이기가 아닐 때. */
+export const hapticsOn = (): boolean => prefs.haptics && prefs.motionOK;
+
+/** 짧은 진동(웹 motion.buzz). */
 export function buzz() {
-  if (prefs.motionOK) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  if (hapticsOn()) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 }
 
 // ───────── 업로드 ─────────

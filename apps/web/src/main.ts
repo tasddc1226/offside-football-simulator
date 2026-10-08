@@ -24,7 +24,10 @@ import { warmGame } from './ui/nav.js';
 import { initHistory } from './ui/history.svelte.js';
 import { installSheetKey } from './ui/skin.svelte.js';
 import { applyLocale, bootLocale } from './ui/locale.js';
+import { startSeasonSchedule } from '@offside/app-core/seasonSchedule';
 
+// 시즌 일정(게이지가 확정한 마감·다음 시즌): 저장해 둔 일정을 세이브·화면보다 먼저 입히고 서버 일정으로 맞춘다.
+startSeasonSchedule();
 installClickSound();
 // 자동 플레이 탐지(관찰 전용): 시즌마다 조작 횟수만 센다.
 installPlaySignals();

@@ -180,6 +180,7 @@ const ko = {
   placeAriaApp: '선택한 선수를 그라운드 빈 공간에 배치',
   pitchRatingFull: (p: { peak: number; rating: number; fit: number }) =>
     `최고 OVR ${p.peak} · 포지션 OVR ${p.rating} · 적합도 ${p.fit}%`,
+  peekAria: (p: { name: string }) => `${p.name} 선수 카드`,
   pitchSlotApp: (p: { head: string; rating: number; drag: boolean }) =>
     `${p.head} · 포지션 OVR ${p.rating}${p.drag ? ' · 길게 눌러 이동' : ''}`,
   lineAtk: '공격',

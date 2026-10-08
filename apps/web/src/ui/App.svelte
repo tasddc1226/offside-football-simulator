@@ -100,6 +100,11 @@
   $effect(() => {
     if (appState.screen === 'market' && !Market) void import('./Market.svelte').then((m) => (Market = m.default));
   });
+  // 구단 자금 내역도 처음 열 때 불러온다.
+  let FundsHistory = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'funds' && !FundsHistory) void import('./FundsHistory.svelte').then((m) => (FundsHistory = m.default));
+  });
   // T-11-128: 시즌 결산도 처음 열 때 불러온다.
   let SeasonRecap = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -185,6 +190,8 @@
       {#if Team}<Team />{/if}
     {:else if appState.screen === 'market'}
       {#if Market}<Market />{/if}
+    {:else if appState.screen === 'funds'}
+      {#if FundsHistory}<FundsHistory />{/if}
     {:else if appState.screen === 'recap'}
       {#if SeasonRecap}<SeasonRecap />{/if}
     {:else if appState.screen === 'cup'}

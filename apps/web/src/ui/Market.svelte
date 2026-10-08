@@ -442,7 +442,7 @@
               {#if row.kind === 'trade'}
                 {@const t = row.t}
                 <li data-trade={t.kind}>
-                  <span class="mk-badge mk-badge-{t.kind}">{TRADE_LABEL[t.kind]}</span>
+                  <span class="funds-badge funds-badge-{t.kind}">{TRADE_LABEL[t.kind]}</span>
                   <span class="mk-info">
                     <span>{marketName(t.card, local)} {tn(POS_LABEL[t.card.pos])} {t.card.peak}</span>
                     <small>{agoKo(Date.now() - Date.parse(t.at))}{t.kind === 'sold' ? L.feeTaken : ''}</small>
@@ -451,7 +451,7 @@
                 </li>
               {:else}
                 <li data-trade="spent">
-                  <span class="mk-badge mk-badge-bought">{L.tradeSpent}</span>
+                  <span class="funds-badge funds-badge-spent">{L.tradeSpent}</span>
                   <span class="mk-info">
                     <span>{SPEND_LABEL[row.s.item]}</span>
                     <small>{agoKo(Date.now() - Date.parse(row.s.at))}</small>
@@ -1211,27 +1211,6 @@
   }
   .mk-plus {
     color: var(--good);
-  }
-  .mk-badge {
-    flex: none;
-    min-width: 36px;
-    padding: 3px 6px;
-    border-radius: 6px;
-    text-align: center;
-    font-size: 0.6875rem;
-    font-weight: 700;
-  }
-  .mk-badge-bought {
-    background: color-mix(in srgb, #1f4f8f 14%, var(--surface));
-    color: color-mix(in srgb, #1f4f8f 80%, var(--ink));
-  }
-  .mk-badge-sold {
-    background: color-mix(in srgb, var(--accent) 18%, var(--surface));
-    color: var(--accent-text);
-  }
-  .mk-badge-released {
-    background: color-mix(in srgb, var(--bad) 12%, var(--surface));
-    color: var(--bad);
   }
 
   /* 시트 — 영입(카드 상세 + 확인) · 방출 확인 */
