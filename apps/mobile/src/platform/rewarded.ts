@@ -19,37 +19,47 @@ export const rewardOffer = (p: RewardPlacement, owned: boolean): 'free' | 'ad' |
  */
 type WatchResult = 'earned' | 'closed' | 'failed';
 
-// MAX 보상형 이벤트 리스너는 종류마다 하나뿐이라 재생 중에만 걸고 끝나면 뗀다. 다른 단위의 이벤트는 거른다.
+/** 지금 재생 중인 광고. MAX 보상형 이벤트 리스너는 종류마다 하나뿐이라 처음 한 번 걸고 단위로 지금 재생에 나눠 준다. */
+let playing: { unit: string; on: (e: 'loaded' | 'shown' | 'earned' | 'done') => void } | undefined;
+let listening = false;
+function listen() {
+  if (listening) return;
+  listening = true;
+  const to =
+    (e: 'loaded' | 'shown' | 'earned' | 'done') =>
+    ({ adUnitId }: { adUnitId: string }) =>
+      playing?.unit === adUnitId && playing.on(e);
+  RewardedAd.addAdLoadedEventListener(to('loaded'));
+  RewardedAd.addAdDisplayedEventListener(to('shown'));
+  RewardedAd.addAdReceivedRewardEventListener(to('earned'));
+  RewardedAd.addAdHiddenEventListener(to('done'));
+  RewardedAd.addAdLoadFailedEventListener(to('done'));
+  RewardedAd.addAdFailedToDisplayEventListener(to('done'));
+}
+
 function watch(unit: string): Promise<WatchResult> {
+  listen();
   return new Promise((resolve) => {
     let earned = false;
     let shown = false;
     let loaded = false;
-    const mine =
-      (fn: () => void) =>
-      ({ adUnitId }: { adUnitId: string }) =>
-        adUnitId === unit && fn();
-    RewardedAd.addAdLoadedEventListener(
-      mine(() => {
-        loaded = true;
-        RewardedAd.showAd(unit);
-      }),
-    );
-    RewardedAd.addAdDisplayedEventListener(mine(() => (shown = true)));
-    RewardedAd.addAdReceivedRewardEventListener(mine(() => (earned = true)));
-    RewardedAd.addAdHiddenEventListener(mine(done));
-    RewardedAd.addAdLoadFailedEventListener(mine(done));
-    RewardedAd.addAdFailedToDisplayEventListener(mine(done));
+    const me = {
+      unit,
+      on(e: 'loaded' | 'shown' | 'earned' | 'done') {
+        if (e === 'loaded') {
+          loaded = true;
+          RewardedAd.showAd(unit);
+        } else if (e === 'shown') shown = true;
+        else if (e === 'earned') earned = true;
+        else done();
+      },
+    };
+    playing = me;
     // 불러오기가 끝나지 않으면(네트워크) 20초에서 끊는다. 보여 주는 중이면 닫힐 때 끝난다.
     const timer = setTimeout(() => !loaded && done(), 20_000);
     function done() {
       clearTimeout(timer);
-      RewardedAd.removeAdLoadedEventListener();
-      RewardedAd.removeAdDisplayedEventListener();
-      RewardedAd.removeAdReceivedRewardEventListener();
-      RewardedAd.removeAdHiddenEventListener();
-      RewardedAd.removeAdLoadFailedEventListener();
-      RewardedAd.removeAdFailedToDisplayEventListener();
+      if (playing === me) playing = undefined;
       resolve(earned ? 'earned' : shown ? 'closed' : 'failed');
     }
     RewardedAd.loadAd(unit);

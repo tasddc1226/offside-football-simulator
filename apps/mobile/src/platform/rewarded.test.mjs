@@ -73,7 +73,9 @@ describe('candidate report rewarded placement', () => {
       fire('Hidden');
       expect(await result).toBe('');
       expect(grant).toHaveBeenCalledOnce();
-      expect(f.listeners.size).toBe(0);
+      // 끝난 재생에는 늦게 온 이벤트가 닿지 않는다.
+      fire('Loaded');
+      expect(f.show).toHaveBeenCalledOnce();
     },
   );
   it('ignores events from another ad unit', async () => {
@@ -81,7 +83,6 @@ describe('candidate report rewarded placement', () => {
     fire('Loaded', 'other');
     fire('Hidden', 'other');
     expect(f.show).not.toHaveBeenCalled();
-    expect(f.listeners.size).toBe(6);
     fire('LoadFailed');
     expect(await result).toBe('unavailable');
     expect(grant).not.toHaveBeenCalled();

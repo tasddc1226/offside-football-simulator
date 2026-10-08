@@ -15,7 +15,7 @@ AdMob·메타 Audience Network 입찰을 붙여 가장 높은 광고를 고른�
 - SDK 키·광고 단위: `apps/mobile/src/platform/ads.ts`의 `SDK_KEY`·`UNITS`(JS라 OTA로 바꿀 수 있다). 비어 있으면 광고가 꺼지고 광고 제거 구매자만 보상을 받는다.
 - 개인정보: 맞춤 광고 동의를 받지 않는다. 모든 지역에서 `setHasUserConsent(false)`·`setDoNotSell(true)`로 비개인화 광고만 받고,
   iOS 추적 허용(ATT) 창·MAX 약관 흐름·구글 UMP(유럽 동의) 창은 띄우지 않는다.
-- 운영자 기기 테스트 광고: MAX 대시보드 Test Mode 또는 미디에이션 디버거(`AppLovinMAX.showMediationDebugger()`)로 켠다.
+- 테스트 광고: MAX에는 테스트 광고 단위가 없어 개발 빌드(`__DEV__`)는 광고를 끈다. 운영자 기기는 MAX 대시보드 Test Mode로 테스트 광고를 받는다.
 - 네이티브 코드라 OTA로 보낼 수 없다. 1.1.0 이하 앱은 기존 AdMob 광고 그대로다.
 
 ## 콘솔 쪽 (배포 없이)

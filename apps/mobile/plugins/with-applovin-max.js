@@ -20,41 +20,48 @@ const ANDROID_DEPS = {
   'com.applovin.mediation:google-adapter': '25.5.0.0',
   'com.applovin.mediation:facebook-adapter': '6.22.0.1',
 };
-const MARK = '# T-11-159 AppLovin MAX adapters';
+const MARK = 'T-11-159 AppLovin MAX adapters';
+
+/** 기준 줄 다음에 블록을 넣는다. 기준 줄을 못 찾으면 어댑터 없이 빌드되지 않게 멈춘다. */
+function insertAfter(contents, anchor, block, file) {
+  if (contents.includes(MARK)) return contents;
+  if (!anchor.test(contents))
+    throw new Error(`with-applovin-max: ${file}에서 넣을 자리를 못 찾았다`);
+  return contents.replace(anchor, (line) => `${line}\n${block}`);
+}
 
 /** @param {import('expo/config').ExpoConfig} config @param {{ iosAppId: string, androidAppId: string }} props */
 module.exports = function withAppLovinMax(config, { iosAppId, androidAppId }) {
   config = withInfoPlist(config, (mod) => {
     mod.modResults.GADApplicationIdentifier = iosAppId;
-    const have = new Set(
-      (mod.modResults.SKAdNetworkItems ?? []).map((i) => i.SKAdNetworkIdentifier.toLowerCase()),
-    );
+    const items = mod.modResults.SKAdNetworkItems ?? [];
+    const have = new Set(items.map((i) => i.SKAdNetworkIdentifier.toLowerCase()));
     mod.modResults.SKAdNetworkItems = [
-      ...(mod.modResults.SKAdNetworkItems ?? []),
+      ...items,
       ...SKADNETWORK_IDS.filter((id) => !have.has(id)).map((id) => ({ SKAdNetworkIdentifier: id })),
     ];
     return mod;
   });
   config = withPodfile(config, (mod) => {
-    if (mod.modResults.contents.includes(MARK)) return mod;
-    const pods = Object.entries(IOS_PODS)
-      .map(([name, v]) => `  pod '${name}', '${v}'`)
-      .join('\n');
+    const pods = Object.entries(IOS_PODS).map(([name, v]) => `  pod '${name}', '${v}'`);
     // 앱 타깃 안(use_expo_modules! 다음 줄)에 넣는다.
-    mod.modResults.contents = mod.modResults.contents.replace(
-      /^(\s*use_expo_modules!.*)$/m,
-      `$1\n  ${MARK}\n${pods}`,
+    mod.modResults.contents = insertAfter(
+      mod.modResults.contents,
+      /^\s*use_expo_modules!.*$/m,
+      [`  # ${MARK}`, ...pods].join('\n'),
+      'Podfile',
     );
     return mod;
   });
   config = withAppBuildGradle(config, (mod) => {
-    if (mod.modResults.contents.includes('com.applovin.mediation:')) return mod;
-    const deps = Object.entries(ANDROID_DEPS)
-      .map(([name, v]) => `    implementation("${name}:${v}")`)
-      .join('\n');
-    mod.modResults.contents = mod.modResults.contents.replace(
+    const deps = Object.entries(ANDROID_DEPS).map(
+      ([name, v]) => `    implementation("${name}:${v}")`,
+    );
+    mod.modResults.contents = insertAfter(
+      mod.modResults.contents,
       /^dependencies\s*\{/m,
-      `dependencies {\n    // T-11-159 AppLovin MAX adapters\n${deps}`,
+      [`    // ${MARK}`, ...deps].join('\n'),
+      'app/build.gradle',
     );
     return mod;
   });
