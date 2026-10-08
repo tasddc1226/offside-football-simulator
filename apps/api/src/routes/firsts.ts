@@ -36,19 +36,12 @@ export function registerFirstsRoutes(app: Hono<AppEnv>): void {
     // T-11-029 시즌별 기록 — ?season= 없으면 지금 시즌(개막 전이면 프리시즌, 휴식기면 마지막 시즌). 캐시 키는 시즌을 푼 경로다.
     const season =
       parseWithAppError(SeasonPickQuerySchema, c.req.query('season')) ?? displaySeasonAt(nowIso());
-    // 다시 훑는 중이면 캐시하지 않는다 — 캐시하면 데이터센터마다 1분에 한 조각씩만 나아간다.
-    let rescanning = false;
-    const data = await edgeCached(
-      c,
-      EDGE.firsts(season),
-      TTL,
-      async () => {
-        const db = getDb(c);
-        rescanning = await ensureFirstsBackfilled(db);
-        return listFirsts(db, season);
-      },
-      () => !rescanning,
-    );
+    // 다시 훑는 중이어도 캐시한다 — 나머지는 5분 cron(runFirstsRescan)이 몰아서 훑고, 여기선 캐시가 빌 때 한 조각만 돕는다(T-11-156).
+    const data = await edgeCached(c, EDGE.firsts(season), TTL, async () => {
+      const db = getDb(c);
+      await ensureFirstsBackfilled(db);
+      return listFirsts(db, season);
+    });
     // 캐시에는 한국어 원본을 담고(키가 언어마다 늘지 않는다) 읽은 뒤에 요청 언어로 문구만 바꾼다.
     return ok(
       c,
