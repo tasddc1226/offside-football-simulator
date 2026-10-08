@@ -3,8 +3,9 @@
 //   gunzip -c 2026-09-28.sql.gz > dump.sql && wrangler d1 execute <새 DB> --remote --file dump.sql
 // DB 전체를 메모리에 올리지 않게 표를 rowid 순으로 PAGE씩 읽어 gzip 스트림으로 흘리고, R2에는 멀티파트로 올린다.
 
-/** 한 번에 읽는 행 수 — 시즌 기록(events_json)이 커도 응답이 수 MB를 넘지 않게. */
+/** Candidate row cap. Payloads are additionally bounded in SQL before crossing D1 RPC. */
 const PAGE = 2000;
+export const BACKUP_PAGE_BYTES = 4 * 1024 * 1024;
 /** R2 멀티파트 조각(마지막 조각 말고는 5MiB 이상이어야 한다). */
 const PART_BYTES = 8 * 1024 * 1024;
 /** 매일 백업은 이만큼 두고, 매달 1일 백업은 계속 둔다. */
@@ -57,24 +58,31 @@ export async function* fixedParts(stream: ReadableStream<Uint8Array>, size: numb
   const reader = stream.getReader();
   let buf: Uint8Array[] = [];
   let len = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    let rest = value;
-    while (len + rest.byteLength >= size) {
-      const take = size - len;
-      buf.push(rest.subarray(0, take));
-      yield new Blob(buf);
-      rest = rest.subarray(take);
-      buf = [];
-      len = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      let rest = value;
+      while (len + rest.byteLength >= size) {
+        const take = size - len;
+        buf.push(rest.subarray(0, take));
+        yield new Blob(buf);
+        rest = rest.subarray(take);
+        buf = [];
+        len = 0;
+      }
+      if (rest.byteLength) {
+        buf.push(rest);
+        len += rest.byteLength;
+      }
     }
-    if (rest.byteLength) {
-      buf.push(rest);
-      len += rest.byteLength;
-    }
+    if (len > 0) yield new Blob(buf);
+  } finally {
+    // A failed R2 part must cancel the reader, otherwise the SQL producer can
+    // block forever on gzip backpressure and never reach multipart abort.
+    await reader.cancel(new Error('gzip upload reader closed')).catch(() => {});
+    reader.releaseLock();
   }
-  if (len > 0) yield new Blob(buf);
 }
 
 /**
@@ -97,12 +105,20 @@ export async function gzipToR2(
   // 압축된 바이트를 PART_BYTES씩 조각으로 올린다(쓰기와 동시에 돈다).
   const parts: R2UploadedPart[] = [];
   let bytes = 0;
+  let uploadError: unknown;
   const uploading = (async () => {
     for await (const part of fixedParts(gzip.readable, PART_BYTES)) {
-      parts.push(await upload.uploadPart(parts.length + 1, part));
+      try {
+        parts.push(await upload.uploadPart(parts.length + 1, part));
+      } catch (e) {
+        uploadError = e;
+        throw e;
+      }
       bytes += part.size;
     }
   })();
+  // Observe rejection immediately while produce may still be writing.
+  void uploading.catch(() => {});
 
   try {
     await produce((s) => writer.write(encoder.encode(s)));
@@ -113,7 +129,7 @@ export async function gzipToR2(
     await writer.abort(e).catch(() => {});
     await uploading.catch(() => {});
     await upload.abort().catch(() => {});
-    throw e;
+    throw uploadError ?? e;
   }
   return bytes;
 }
@@ -144,23 +160,40 @@ export async function backupToR2(
     );
     for (const t of tables) await write(`${t.sql};\n`);
     for (const t of tables) {
+      const columns = (await db.prepare(`PRAGMA table_info(${q(t.name)})`).all<{ name: string }>())
+        .results;
+      const size = columns
+        .map((c) => `coalesce(length(CAST(${q(c.name)} AS BLOB)), 0) + 16`)
+        .join(' + ');
       let after = 0;
+      let candidates = 64;
       for (;;) {
         const page = await db
           .prepare(
-            `SELECT rowid AS __rowid, * FROM ${q(t.name)} WHERE rowid > ?1 ORDER BY rowid LIMIT ${PAGE}`,
+            // Only small rowid/size metadata is materialized. Large JSON never forms
+            // a 2,000-row RPC response. Always allow one row, even if it exceeds budget.
+            `WITH candidates AS MATERIALIZED (
+               SELECT rowid AS rid, ${size} AS bytes FROM ${q(t.name)}
+               WHERE rowid > ?1 ORDER BY rowid LIMIT ${candidates}
+             ), sized AS (
+               SELECT rid, sum(bytes) OVER (ORDER BY rid) AS bytes,
+                      row_number() OVER (ORDER BY rid) AS n FROM candidates
+             )
+             SELECT rowid AS __rowid, * FROM ${q(t.name)} WHERE rowid > ?1
+             AND rowid <= (SELECT max(rid) FROM sized WHERE bytes <= ?2 OR n = 1)
+             ORDER BY rowid`,
           )
-          .bind(after)
+          .bind(after, BACKUP_PAGE_BYTES)
           .raw<unknown[]>({ columnNames: true });
         const [cols, ...data] = page as [string[], ...unknown[][]];
         if (!cols || data.length === 0) break;
         const insert = `INSERT INTO ${q(t.name)} (${cols.slice(1).map(q).join(', ')}) VALUES `;
-        await write(
-          data.map((r) => `${insert}(${r.slice(1).map(literal).join(', ')});\n`).join(''),
-        );
+        // Do not retain both an entire SQL page and its encoded copy alongside raw rows.
+        for (const r of data) await write(`${insert}(${r.slice(1).map(literal).join(', ')});\n`);
         rows += data.length;
         after = Number(data[data.length - 1]![0]);
-        if (data.length < PAGE) break;
+        // Avoid repeatedly sizing thousands of wide rows to return just a few.
+        candidates = data.length < candidates ? data.length : Math.min(PAGE, candidates * 2);
       }
     }
     // 인덱스·트리거는 데이터를 넣은 뒤에 만든다(넣는 동안 인덱스를 고치지 않게).

@@ -86,6 +86,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
   ],
   owner_items: ['profile_id', 'item', 'qty', 'updated_at'],
+  owner_item_purchases: ['id', 'profile_id', 'item', 'qty', 'price', 'created_at'],
   cards: [
     'career_id',
     'owner_id',

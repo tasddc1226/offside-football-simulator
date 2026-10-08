@@ -38,6 +38,11 @@ export async function enforceLimit(
   if (!(await tryAttempt(db, kind, subject, max, now))) throw rateLimited(message);
 }
 
+/** 구단 자금이 모자라다(이적시장 영입 · 리롤권 상점). */
+export const fundsShort = () => conflictError('구단 자금이 모자라요.', 'FUNDS_SHORT');
+/** 잔액 CHECK(balance >= 0) 위반 — 동시에 다른 출금이 먼저 들어가 batch 전체가 되돌아갔다. */
+export const isFundsCheck = (e: unknown) => String(e).includes('CHECK constraint failed');
+
 export const teamNotFound = () => notFoundError('팀을 찾을 수 없어요.', 'TEAM_NOT_FOUND');
 
 /** T-10-092 `?season=` 팀 시즌 — 없으면 지금 시즌(휴식기면 마지막으로 열린 시즌). 열리지 않은 시즌이면 400. */

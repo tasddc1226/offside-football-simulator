@@ -8,10 +8,19 @@ import {
 } from '@offside/contracts/cup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { cupEntries, notifications, ownerItems, ownerTeams, profiles } from '../db/schema.js';
+import {
+  cupEntries,
+  notifications,
+  ownerFunds,
+  ownerItemPurchases,
+  ownerItems,
+  ownerTeams,
+  profiles,
+} from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 import { checkCupLineup } from '../routes/cup.js';
+import { kstTodayStart } from '../routes/ownerTeam.js';
 import { cupText } from '../cupText.js';
 import {
   cupEntriesOf,
@@ -360,6 +369,61 @@ describe('T-11-145 컵 진행(cron)', () => {
     // 같은 키로 다시 보내면 한 장을 더 쓰지 않는다.
     expect((await use('b')).status).toBe(200);
     expect((await use('c')).status).toBe(409);
+  });
+
+  it('T-11-152 구단 자금으로 리롤권을 산다: 같은 날 살수록 비싸지고 하루 상한이 있다', async () => {
+    const who = await issueGoogleCookie(ctx);
+    type Shop = {
+      reroll: number;
+      balance: number;
+      price: number | null;
+      bought: number;
+      cap: number;
+    };
+    const shop = async () =>
+      (
+        (await (
+          await callJson(ctx.env, 'GET', '/v1/items/shop', { cookie: who.cookie })
+        ).json()) as { data: Shop }
+      ).data;
+    const buy = (price: number, k: string) =>
+      callJson(ctx.env, 'POST', '/v1/items/reroll/buy', {
+        cookie: who.cookie,
+        body: { price },
+        headers: { [IDEMPOTENCY_KEY_HEADER]: `shop-${k}-key` },
+      });
+    const reason = async (r: Response) =>
+      ((await r.json()) as { error: { details: { reason: string } } }).error.details.reason;
+    expect(await shop()).toEqual({ reroll: 0, balance: 0, price: 1_000_000, bought: 0, cap: 3 });
+    // 자금 행이 없으면 사지 못한다(공짜로 지나가지 않는다).
+    expect(await reason(await buy(1_000_000, 'a'))).toBe('FUNDS_SHORT');
+    await ctx.db
+      .insert(ownerFunds)
+      .values({ profileId: who.profileId, balance: 10_000_000, updatedAt: CUP.opensAt });
+    const first = await buy(1_000_000, 'b');
+    expect(first.status).toBe(200);
+    expect(((await first.json()) as { data: Shop }).data).toEqual({
+      reroll: 1,
+      balance: 9_000_000,
+      price: 2_000_000,
+      bought: 1,
+      cap: 3,
+    });
+    // 같은 키로 다시 보내면 두 번 사지 않는다. 옛 가격으로 새로 사면 가격이 바뀌었다고 알린다.
+    expect((await buy(1_000_000, 'b')).status).toBe(200);
+    expect(await reason(await buy(1_000_000, 'c'))).toBe('PRICE_CHANGED');
+    expect((await buy(2_000_000, 'd')).status).toBe(200);
+    expect((await buy(4_000_000, 'e')).status).toBe(200);
+    expect(await shop()).toEqual({ reroll: 3, balance: 3_000_000, price: null, bought: 3, cap: 3 });
+    expect(await reason(await buy(8_000_000, 'f'))).toBe('DAILY_LIMIT');
+    const ledger = await ctx.db.select().from(ownerItemPurchases);
+    expect(ledger.map((r) => r.price).sort((a, b) => a - b)).toEqual([
+      1_000_000, 2_000_000, 4_000_000,
+    ]);
+    // 어제(한국 시각 0시 직전) 산 것은 오늘 상한에 세지 않는다.
+    const today = Date.parse(kstTodayStart(new Date().toISOString()));
+    await ctx.db.update(ownerItemPurchases).set({ createdAt: new Date(today - 1).toISOString() });
+    expect((await shop()).price).toBe(1_000_000);
   });
 
   it('대회 화면은 누구나 본다', async () => {

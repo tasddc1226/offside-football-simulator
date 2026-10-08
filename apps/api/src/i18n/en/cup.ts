@@ -23,6 +23,10 @@ export const CUP_EN: Record<CupTextKey, string> = {
   full: 'The cup is full.',
   withdrawClosed: "Entries have closed, so you can't withdraw.",
   noReroll: "You don't have any rerolls.",
+  shopClosed: "Reroll tickets aren't on sale right now.",
+  shopDaily:
+    'You can buy up to {n} reroll ticket(s) a day. You can buy more from 00:00 (KST) tomorrow.',
+  shopPriceChanged: 'The reroll ticket price has changed. Please check it again.',
   lineupLocked:
     "You can't change your lineup from 1 hour before an OFFSIDE Cup match until it ends.",
   minFilled:

@@ -17,7 +17,7 @@ import { ensureCardValuesBackfilled } from '../db/repos/cardValues.js';
 import { ensureCareerValuesBackfilled } from '../db/repos/careerValues.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
-import { getDb, type AppEnv } from '../env.js';
+import { getDb, getPublicReadDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
 
 // T-10-005 공개 명예의 전당. 로그인 없이 누구나 읽는다 — 응답에는 유저가 공개를 고른 이름과 커리어
@@ -53,7 +53,7 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
           ensureCardValuesBackfilled(db),
         ]);
         filling = filled.some(Boolean);
-        return listPublicHof(db, limit, page, sort, season, q, pos);
+        return listPublicHof(filling ? db : getPublicReadDb(c), limit, page, sort, season, q, pos);
       },
       () => !filling,
     );

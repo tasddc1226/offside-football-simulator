@@ -1,0 +1,2 @@
+CREATE INDEX `career_seasons_events_created_idx` ON `career_seasons` (`created_at`) WHERE "career_seasons"."events_json" <> '[]';--> statement-breakpoint
+CREATE INDEX `careers_hof_count_idx` ON `careers` (`status`,`hidden`,`service_season`,`pos`,`retire_age`,`legend_score`,`retired_at`,`goals`,`assists`,`apps`,`trophies`,`awards`,`ballon`,`caps`,`peak`,`value`);

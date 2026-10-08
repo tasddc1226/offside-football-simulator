@@ -533,6 +533,20 @@
       "when": 1791377519241,
       "tag": "0075_offside_cup",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "6",
+      "when": 1791415515908,
+      "tag": "0076_reroll_shop",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "6",
+      "when": 1791424018032,
+      "tag": "0077_petite_maggott",
+      "breakpoints": true
     }
   ]
 }

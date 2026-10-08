@@ -457,20 +457,20 @@ export async function listPublicHof(
       )
     : ranked;
   const order = [desc(by), desc(careers.legendScore), careers.retiredAt] as const;
-  const [rows, [count]] = await Promise.all([
-    db
-      .select(publicColumns)
-      .from(careers)
-      .leftJoin(retiredNumbers, withRetiredNumber)
-      .where(where)
-      .orderBy(...order)
-      .limit(limit)
-      .offset((page - 1) * limit),
-    db
-      .select({ n: sql<number>`count(*)` })
-      .from(careers)
-      .where(where),
-  ]);
+  // Primary-anchored read sessions send later reads to a caught-up replica.
+  // Await the page before count so its bookmark is established first.
+  const rows = await db
+    .select(publicColumns)
+    .from(careers)
+    .leftJoin(retiredNumbers, withRetiredNumber)
+    .where(where)
+    .orderBy(...order)
+    .limit(limit)
+    .offset((page - 1) * limit);
+  const [count] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(q ? careers : sql`${careers} INDEXED BY careers_hof_count_idx`)
+    .where(where);
   const entries = rows.map(toPublicEntry);
   if (q && entries.length) {
     // 찾은 선수(최대 limit명)만 전체 순위에서 몇 위인지 — id·순번만 읽는 창 함수 한 번.

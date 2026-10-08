@@ -427,6 +427,25 @@ export const careers = sqliteTable(
     ),
     index('careers_profile_status_legend_idx').on(table.profileId, table.status, table.legendScore),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
+    // Count HOF filters without reading the large snapshot/profile table payloads.
+    index('careers_hof_count_idx').on(
+      table.status,
+      table.hidden,
+      table.serviceSeason,
+      table.pos,
+      table.retireAge,
+      table.legendScore,
+      table.retiredAt,
+      table.goals,
+      table.assists,
+      table.apps,
+      table.trophies,
+      table.awards,
+      table.ballon,
+      table.caps,
+      table.peak,
+      table.value,
+    ),
     // 명예의 전당 순위 유형(GET /v1/hof?sort=): status로 은퇴만 좁히고 기록 내림차순 → 레전드 점수로 동점을 가린다.
     index('careers_hof_goals_idx').on(table.status, table.goals, table.legendScore),
     index('careers_hof_assists_idx').on(table.status, table.assists, table.legendScore),
@@ -609,6 +628,9 @@ export const careerSeasons = sqliteTable(
     index('career_seasons_growth_created_idx')
       .on(table.createdAt)
       .where(sql`${table.growthJson} is not null`),
+    index('career_seasons_events_created_idx')
+      .on(table.createdAt)
+      .where(sql`${table.eventsJson} <> '[]'`),
   ],
 );
 
@@ -1266,5 +1288,26 @@ export const ownerItems = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.profileId, table.item] }),
     check('owner_items_qty_check', sql`${table.qty} >= 0`),
+  ],
+);
+
+/**
+ * T-11-152 구단 자금으로 산 아이템 원장(자금이 없어진 내역). 하루 상한을 세고, 운영에서 자금 대조
+ * (방출 + 판매 − 영입 − 아이템 구매)에 쓴다.
+ */
+export const ownerItemPurchases = sqliteTable(
+  'owner_item_purchases',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    item: text('item').notNull(),
+    qty: integer('qty').notNull(),
+    price: integer('price').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('owner_item_purchases_profile_idx').on(table.profileId, table.item, table.createdAt),
   ],
 );

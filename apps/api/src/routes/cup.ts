@@ -2,7 +2,9 @@ import {
   CupMatchResponseSchema,
   CupMeResponseSchema,
   CupResponseSchema,
+  BuyRerollBodySchema,
   OwnerItemsResponseSchema,
+  RerollShopResponseSchema,
   type CupMatch,
   type CupPhase,
   type CupResponse,
@@ -13,6 +15,7 @@ import {
   cupById,
   currentCup,
   lockAt,
+  rerollPriceAt,
   type CupDef,
   type CupRound,
 } from '@offside/contracts/cup';
@@ -27,7 +30,9 @@ import {
   teamLogosByIds,
   type MatchDetail,
 } from '../db/repos/ownerTeams.js';
+import { buyReroll, rerollShopRules, shopSnapshot } from '../db/repos/itemShop.js';
 import { countOpenListingsAmong } from '../db/repos/market.js';
+import { newId } from '../db/ids.js';
 import { getDb, type AppEnv } from '../env.js';
 import { reqLang } from '../lang.js';
 import { idempotency } from '../middleware/idempotency.js';
@@ -47,11 +52,20 @@ import {
 import { cupSchedule } from '../team/cupSchedule.js';
 import { lineupsOf, toMatch } from '../team/match.js';
 import { filledCount } from '../team/sim.js';
-import { requireOwner } from './ownerTeam.js';
-import { conflictError, NO_STORE, notFoundError, nowIso, ok } from './shared.js';
+import { kstTodayStart, requireOwner } from './ownerTeam.js';
+import {
+  conflictError,
+  fundsShort,
+  isFundsCheck,
+  NO_STORE,
+  notFoundError,
+  nowIso,
+  ok,
+  readBody,
+} from './shared.js';
 import { cupKo } from '../cupText.js';
 
-// T-11-145 오프사이드 컵(조회·신청·취소)과 구단주 아이템(선수 후보 리롤권).
+// T-11-145 오프사이드 컵(조회·신청·취소)과 구단주 아이템(선수 후보 리롤권). T-11-152 구단 자금으로 리롤권 사기.
 
 // 브라우저는 매번 다시 묻고(신청 직후 인원이 바로 보이게) 공유 캐시만 30초 둔다.
 const PUBLIC_CACHE = 'public, max-age=0, s-maxage=30';
@@ -385,6 +399,59 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       .returning({ qty: ownerItems.qty });
     if (!row.length) throw conflictError(cupKo('noReroll'), 'NO_REROLL');
     return ok(c, OwnerItemsResponseSchema, { reroll: row[0]!.qty }, 200, NO_STORE);
+  });
+
+  // T-11-152 리롤권 상점: 가진 장수 · 구단 자금 · 다음 한 장 가격 · 오늘 산 장수와 하루 상한. 상점을 펼칠 때만 부른다.
+  app.get('/v1/items/shop', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const [{ reroll, balance, bought }, rules] = await Promise.all([
+      shopSnapshot(db, me.id, kstTodayStart(nowIso())),
+      rerollShopRules(db),
+    ]);
+    const shop = { reroll, balance, price: rerollPriceAt(rules, bought), bought, cap: rules.cap };
+    return ok(c, RerollShopResponseSchema, shop, 200, NO_STORE);
+  });
+
+  // T-11-152 리롤권 한 장 사기. 화면에서 본 가격을 함께 보낸다 — 그 사이 다른 기기에서 샀거나 운영 수치가 바뀌어
+  // 가격이 다르면 409. 재시도가 두 장을 사지 않게 멱등 키를 쓴다.
+  app.post('/v1/items/reroll/buy', requireProfile, idempotency, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const input = readBody(c, BuyRerollBodySchema);
+    const now = nowIso();
+    const since = kstTodayStart(now);
+    const [{ balance: funds, bought }, rules] = await Promise.all([
+      shopSnapshot(db, me.id, since),
+      rerollShopRules(db),
+    ]);
+    const price = rerollPriceAt(rules, bought);
+    if (price === null)
+      throw rules.cap === 0
+        ? conflictError(cupKo('shopClosed'), 'SHOP_CLOSED')
+        : conflictError(cupKo('shopDaily', { n: rules.cap }), 'DAILY_LIMIT');
+    if (input.price !== price) throw conflictError(cupKo('shopPriceChanged'), 'PRICE_CHANGED');
+    // 잔액 행이 없거나 모자라면 batch 전에 막는다(행이 없으면 출금 UPDATE가 0행으로 지나가 공짜가 된다).
+    if (funds < price) throw fundsShort();
+    let res: Awaited<ReturnType<typeof buyReroll>>;
+    try {
+      res = await buyReroll(db, { id: newId('ipc'), profileId: me.id, price, bought, since, now });
+    } catch (e) {
+      // 같은 구단주가 동시에 영입·구매를 해 잔액이 모자라게 되면 CHECK 위반으로 batch 전체가 되돌아간다.
+      if (isFundsCheck(e)) throw fundsShort();
+      throw e;
+    }
+    // 같은 순간 다른 기기에서 한 장 먼저 샀다 — 다음 가격은 달라졌다.
+    if (!res.won) throw conflictError(cupKo('shopPriceChanged'), 'PRICE_CHANGED');
+    const next = bought + 1;
+    const shop = {
+      reroll: res.reroll,
+      balance: res.balance,
+      price: rerollPriceAt(rules, next),
+      bought: next,
+      cap: rules.cap,
+    };
+    return ok(c, RerollShopResponseSchema, shop, 200, NO_STORE);
   });
 }
 

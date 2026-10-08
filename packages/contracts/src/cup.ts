@@ -139,3 +139,15 @@ export const CUP_POINTS = { win: 3, draw: 1, loss: 0 } as const;
 /** 소모성 아이템. reroll = 선수 후보 리롤권(새 선수를 만들 때 후보 3명을 다시 뽑는다). */
 export const OWNER_ITEMS = ['reroll'] as const;
 export type OwnerItem = (typeof OWNER_ITEMS)[number];
+
+/**
+ * T-11-152 구단 자금으로 사는 리롤권 가격(만 원). bought = 오늘(0시 한국 시각부터) 이미 산 장수.
+ * 한 장 더 살 때마다 growth를 곱하고 천만 원 단위로 반올림한다. 하루 상한을 다 썼으면 null.
+ */
+export function rerollPriceAt(
+  rules: { price: number; growth: number; cap: number },
+  bought: number,
+): number | null {
+  if (bought >= rules.cap) return null;
+  return Math.round((rules.price * rules.growth ** bought) / 1000) * 1000;
+}

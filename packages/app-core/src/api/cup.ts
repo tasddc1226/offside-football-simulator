@@ -4,6 +4,7 @@ import type {
   CupMeResponse,
   CupResponse,
   OwnerItemsResponse,
+  RerollShopResponse,
 } from '@offside/contracts';
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import { apiFetch, cachedGet } from './client.js';
@@ -18,6 +19,7 @@ export type {
   CupTeam,
   CupHonor,
   OwnerItemsResponse,
+  RerollShopResponse,
 } from '@offside/contracts';
 
 /** 대회 한눈에(누구나). cupId 'current' = 지금 보여 줄 대회. 서버 캐시 30초. */
@@ -42,5 +44,18 @@ export const fetchItems = () => cachedGet<OwnerItemsResponse>('/v1/items', 30_00
 export const spendReroll = (key: string) =>
   apiFetch<OwnerItemsResponse>('/v1/items/reroll/use', {
     method: 'POST',
+    headers: { [IDEMPOTENCY_KEY_HEADER]: key },
+  });
+
+/** T-11-152 리롤권 상점(가진 장수 · 자금 · 다음 가격 · 오늘 산 장수). 상점을 펼칠 때만. 사면(쓰기 성공) 메모가 비워진다. */
+export const fetchRerollShop = () => cachedGet<RerollShopResponse>('/v1/items/shop', 30_000);
+/**
+ * 리롤권 1장 사기. price는 화면에서 본 가격(그 사이 바뀌었으면 409 PRICE_CHANGED). key는 한 번의 '사기' 시도마다 하나 —
+ * 응답을 못 받아 다시 누르면 같은 key로 보내 두 장을 사지 않는다.
+ */
+export const buyReroll = (price: number, key: string) =>
+  apiFetch<RerollShopResponse>('/v1/items/reroll/buy', {
+    method: 'POST',
+    body: JSON.stringify({ price }),
     headers: { [IDEMPOTENCY_KEY_HEADER]: key },
   });

@@ -7,7 +7,7 @@ import { DEX_GROUPS, eventDex, type DexEntry, type DexGroup } from '@offside/gam
 import { dexRules, oddsText } from '@offside/app-core/dexText';
 import { dexSeen } from '@offside/app-core/dex';
 import { dexText as L } from '@offside/app-core/i18n/ko/dex';
-import { goHome, takeFairnessFocus } from '../../game/nav';
+import { goHome, takeFocus } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
@@ -179,7 +179,7 @@ function DexItem({
 
 export default function Dex() {
   const RULES = useMemo(() => dexRules(), []);
-  const [focusFair] = useState(takeFairnessFocus);
+  const [focusFair] = useState(() => takeFocus('fairness'));
   const [dex, setDex] = useState<DexEntry[] | null>(null);
   const [filter, setFilter] = useState<DexGroup | 'all'>('all');
   const [rulesOpen, setRulesOpen] = useState(true);
