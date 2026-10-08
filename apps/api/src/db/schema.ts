@@ -1290,3 +1290,24 @@ export const ownerItems = sqliteTable(
     check('owner_items_qty_check', sql`${table.qty} >= 0`),
   ],
 );
+
+/**
+ * T-11-152 구단 자금으로 산 아이템 원장(자금이 없어진 내역). 하루 상한을 세고, 운영에서 자금 대조
+ * (방출 + 판매 − 영입 − 아이템 구매)에 쓴다.
+ */
+export const ownerItemPurchases = sqliteTable(
+  'owner_item_purchases',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    item: text('item').notNull(),
+    qty: integer('qty').notNull(),
+    price: integer('price').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('owner_item_purchases_profile_idx').on(table.profileId, table.item, table.createdAt),
+  ],
+);

@@ -145,6 +145,30 @@ const ko = {
     `리롤권 1장을 써서 후보 3명을 다시 뽑을까요? 지금 후보와 광고로 확인한 잠재력 범위는 사라지고, 리롤권은 ${p.n}장 남아요.`,
   rerollDone: (p: { n: number }) => `후보를 다시 뽑았어요. 리롤권 ${p.n}장 남았어요.`,
   rerollFail: '리롤권을 쓰지 못했어요.',
+  // T-11-152 구단 자금으로 사는 리롤권
+  shopTitle: '리롤권 상점',
+  shopSub: '구단 자금으로 선수 후보 리롤권을 사요',
+  shopSubHave: (p: { n: number }) => `가진 리롤권 ${p.n}장 · 구단 자금으로 더 살 수 있어요`,
+  createShopHint: '리롤권이 없어요. 구단 자금으로 리롤권을 사면 후보를 다시 뽑을 수 있어요.',
+  createShopGo: '리롤권 상점 가기',
+  shopOpen: '열기',
+  shopClose: '접기',
+  shopHave: (p: { n: number }) => `가진 리롤권 ${p.n}장`,
+  shopFunds: (p: { funds: string }) => `구단 자금 ${p.funds}`,
+  shopPrice: (p: { price: string }) => `다음 한 장 ${p.price}`,
+  shopToday: (p: { bought: number; cap: number }) => `오늘 ${p.bought}/${p.cap}장`,
+  shopNote:
+    '같은 날 더 살수록 비싸져요. 매일 0시(한국 시간)에 가격과 횟수가 처음으로 돌아가요. 리롤권은 새 선수를 만들 때 후보 선택 화면에서 써요.',
+  shopBuy: (p: { price: string }) => `${p.price}에 사기`,
+  shopBusy: '사는 중…',
+  shopSoldOut: '오늘 살 수 있는 만큼 다 샀어요. 내일 0시(한국 시간)에 다시 살 수 있어요.',
+  shopClosed: '지금은 리롤권을 팔지 않아요.',
+  shopShort: '구단 자금이 모자라요.',
+  shopConfirm: (p: { price: string; balance: string }) =>
+    `리롤권 1장을 ${p.price}에 살까요? 산 뒤 구단 자금은 ${p.balance} 남고, 되돌릴 수 없어요.`,
+  shopDone: (p: { n: number }) => `리롤권을 샀어요. 이제 ${p.n}장 있어요.`,
+  shopFail: '리롤권을 사지 못했어요.',
+  shopLoadFail: '상점을 불러오지 못했어요.',
 };
 
 export type CupMsgs = typeof ko;

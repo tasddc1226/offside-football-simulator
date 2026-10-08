@@ -135,4 +135,28 @@ export const cup: Translation<CupMsgs> = {
     `Use 1 reroll ticket to redraw the 3 candidates? The current ones and any potential ranges you revealed with an ad disappear, and you'll have ${plural(p.n, 'ticket')} left.`,
   rerollDone: (p) => `Candidates redrawn. ${plural(p.n, 'reroll ticket')} left.`,
   rerollFail: "Couldn't use the reroll ticket.",
+  shopTitle: 'Reroll shop',
+  shopSub: 'Buy player reroll tickets with club funds',
+  shopSubHave: (p) => `You have ${plural(p.n, 'reroll ticket')} · buy more with club funds`,
+  createShopHint:
+    "You don't have any reroll tickets. Buy one with club funds to redraw your candidates.",
+  createShopGo: 'Go to the reroll shop',
+  shopOpen: 'Open',
+  shopClose: 'Close',
+  shopHave: (p) => `You have ${plural(p.n, 'reroll ticket')}`,
+  shopFunds: (p) => `Club funds ${p.funds}`,
+  shopPrice: (p) => `Next ticket ${p.price}`,
+  shopToday: (p) => `Today ${p.bought}/${p.cap}`,
+  shopNote:
+    'Each extra ticket on the same day costs more. Prices and the daily limit reset every day at 00:00 (KST). Use tickets on the candidate screen when you create a new player.',
+  shopBuy: (p) => `Buy for ${p.price}`,
+  shopBusy: 'Buying…',
+  shopSoldOut: "You've bought today's limit. You can buy more from 00:00 (KST) tomorrow.",
+  shopClosed: "Reroll tickets aren't on sale right now.",
+  shopShort: "You don't have enough club funds.",
+  shopConfirm: (p) =>
+    `Buy 1 reroll ticket for ${p.price}? You'll have ${p.balance} in club funds left, and this can't be undone.`,
+  shopDone: (p) => `Ticket bought. You now have ${plural(p.n, 'reroll ticket')}.`,
+  shopFail: "Couldn't buy the reroll ticket.",
+  shopLoadFail: "Couldn't load the shop.",
 };

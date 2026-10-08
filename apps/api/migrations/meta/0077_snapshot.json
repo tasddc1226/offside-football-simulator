@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "094aa8fb-568b-4ee5-a51e-dc8aa71b309a",
-  "prevId": "bf7eba12-9f4b-4381-910b-b32bab8cbc16",
+  "id": "14b9d929-e842-47f1-a24b-66938a53878f",
+  "prevId": "094aa8fb-568b-4ee5-a51e-dc8aa71b309a",
   "tables": {
     "app_auth_tickets": {
       "name": "app_auth_tickets",
@@ -1032,6 +1032,14 @@
           ],
           "isUnique": false,
           "where": "\"career_seasons\".\"growth_json\" is not null"
+        },
+        "career_seasons_events_created_idx": {
+          "name": "career_seasons_events_created_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false,
+          "where": "\"career_seasons\".\"events_json\" <> '[]'"
         }
       },
       "foreignKeys": {
@@ -1399,6 +1407,28 @@
           "columns": [
             "status",
             "legend_score"
+          ],
+          "isUnique": false
+        },
+        "careers_hof_count_idx": {
+          "name": "careers_hof_count_idx",
+          "columns": [
+            "status",
+            "hidden",
+            "service_season",
+            "pos",
+            "retire_age",
+            "legend_score",
+            "retired_at",
+            "goals",
+            "assists",
+            "apps",
+            "trophies",
+            "awards",
+            "ballon",
+            "caps",
+            "peak",
+            "value"
           ],
           "isUnique": false
         },

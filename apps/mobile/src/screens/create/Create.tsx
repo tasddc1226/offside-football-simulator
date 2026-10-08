@@ -45,7 +45,7 @@ import {
 } from '../../game/host';
 import { claimReward, rewardOffer } from '../../platform/rewarded';
 import { adFree } from '../../platform/adFree';
-import { goHome } from '../../game/nav';
+import { goHome, goRerollShop } from '../../game/nav';
 import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, num, rem } from '../../theme/type';
@@ -183,6 +183,8 @@ export default function Create() {
   };
   // T-11-145 오프사이드 컵 보상 리롤권 — 로그인한 구단주가 한 장 이상 갖고 있을 때만 '후보 다시 뽑기'를 보여 준다.
   const [rerolls, setRerolls] = useState(0);
+  // T-11-152 장수를 받았으면(로그인한 구단주) 0장일 때 구단 자금으로 사는 리롤권 상점으로 가는 안내를 보인다.
+  const [owner, setOwner] = useState(false);
   const [rerolling, setRerolling] = useState(false);
   const rerollLock = useRef(false);
   // 한 번의 '다시 뽑기' 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 차감되지 않는다.
@@ -192,7 +194,9 @@ export default function Create() {
     if (!hasCandidates) return;
     let live = true;
     void fetchItems().then((r) => {
-      if (live) setRerolls(r.ok ? r.data.reroll : 0);
+      if (!live) return;
+      setOwner(r.ok);
+      setRerolls(r.ok ? r.data.reroll : 0);
     });
     return () => {
       live = false;
@@ -656,6 +660,15 @@ export default function Create() {
               >
                 {rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}
               </Btn>
+            ) : owner ? (
+              <View style={{ gap: 6 }} testID="reroll-hint">
+                <Txt v="sm" tone="muted">
+                  {CL.createShopHint}
+                </Txt>
+                <Btn sm kind="ghost" testID="reroll-shop-go" onPress={goRerollShop}>
+                  {CL.createShopGo}
+                </Btn>
+              </View>
             ) : null}
             <View style={{ gap: 8 }}>
               {s.candidatePotentialOpen ? (
