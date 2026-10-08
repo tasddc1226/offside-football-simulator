@@ -55,6 +55,7 @@ import { ownerPlayers } from './ownerPlayers';
 import { playerNudge } from './playerNudge';
 import { push } from './push';
 import { retired } from './retired';
+import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
 import { settings } from './settings';
 import { settingsApi } from './settingsApi';
@@ -135,6 +136,7 @@ export const ja = {
   playerNudge,
   push,
   retired,
+  seasonGauge,
   seasonRecap,
   settings,
   settingsApi,

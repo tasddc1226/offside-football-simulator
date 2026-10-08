@@ -22,6 +22,7 @@ import { HomeFirsts } from './HomeFirsts';
 import { HomeLive } from './HomeLive';
 import { HomeNews } from './HomeNews';
 import { HomeTicker } from './HomeTicker';
+import { SeasonGauge } from './SeasonGauge';
 import { Tile } from './Tile';
 import { PushOptInCard } from './PushOptInCard';
 import { InboxButton } from '../../components/InboxButton';
@@ -153,6 +154,7 @@ export default function Home() {
           </View>
         ) : null}
         {/* T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서. 신청은 대회 화면에서 한다. */}
+        <SeasonGauge />
         <CupBanner onOpen={() => go('cup')} />
         <HomeLive />
         {/* T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. */}

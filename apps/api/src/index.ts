@@ -3,6 +3,7 @@ import { LIVE_SOCKET_PATH } from '@offside/contracts/polling';
 import { app } from './app.js';
 import { runDaily } from './cron/daily.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
+import { runSeasonGauge } from './cron/seasonGauge.js';
 import { runInfraHealth } from './cron/infraHealth.js';
 import { createDb } from './db/client.js';
 import type { Bindings } from './env.js';
@@ -58,6 +59,10 @@ export default {
             JSON.stringify({ level: 'error', job: 'cup', error: String(e).slice(0, 500) }),
           ),
         );
+      // 시즌 진행 게이지: 30분마다 세어 굳히고, 90%에 닿으면 마감 시각을 확정한다.
+      await runSeasonGauge(env.DB, new Date(controller.scheduledTime).toISOString())
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'season-gauge', ...r })))
+        .catch(logged('season-gauge'));
       await runSeasonEventsArchive(env, controller.scheduledTime)
         .then(
           (r) =>
