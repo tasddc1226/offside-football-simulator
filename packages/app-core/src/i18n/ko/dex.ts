@@ -11,6 +11,8 @@ const ko = {
   groupLabel: '분류',
   filterAll: '전체',
   foundMark: '발견',
+  tapHint: '이벤트를 누르면 선택지별 성공 확률이 펼쳐져요.',
+  choicesHead: (p: { n: number }) => `선택지 ${p.n}개 · 성공 확률`,
   lockedStory: (p: { stage: number | string }) => `아직 만나지 못한 스토리 이벤트 · ${p.stage}단계`,
   lockedSpecial: '아직 만나지 못한 특별 이벤트',
   dependsOnPast: '앞 단계에서 한 선택에 따라 확률이 달라져요.',

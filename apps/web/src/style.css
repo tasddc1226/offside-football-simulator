@@ -1360,23 +1360,87 @@ a.tile-link {
   margin: 0;
   color: var(--muted);
 }
+.dex-hint {
+  margin: -6px 0 0;
+}
 .dex-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
+/* 누를 수 있는 줄은 화살표·눌림 배경으로, 펼친 이벤트는 테두리 카드로 감싸 어디까지가 그 이벤트인지 보이게 한다. */
 .dex-list > li {
-  border-bottom: 1px solid var(--line);
-  padding: 10px 2px;
+  border: 1px solid transparent;
+  border-bottom-color: var(--line);
+  border-radius: 10px;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.dex-list > li[data-locked] {
+  padding: 10px;
+}
+.dex-list > li:has(> details[open]) {
+  border-color: color-mix(in srgb, var(--accent), transparent 45%);
+  background: color-mix(in srgb, var(--accent), var(--surface) 94%);
+  box-shadow: inset 3px 0 0 var(--accent);
+  margin: 6px 0;
 }
 .dex-list summary {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 10px;
   font-weight: 600;
+  list-style: none;
+}
+.dex-list summary::-webkit-details-marker {
+  display: none;
+}
+@media (hover: hover) {
+  .dex-list summary:hover {
+    background: var(--surface-2);
+  }
+}
+.dex-list summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.dex-list details[open] > summary {
+  color: var(--accent-text);
+}
+.dex-list details[open] > summary:hover {
+  background: transparent;
+}
+.dex-side {
+  flex: none;
+}
+.dex-chevron {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s;
+}
+.dex-list details[open] .dex-chevron {
+  transform: rotate(180deg);
+  stroke: var(--accent-text);
+}
+.dex-body-head {
+  margin: 0 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
 }
 .dex-check {
   color: var(--good);
@@ -1390,8 +1454,8 @@ a.tile-link {
 }
 .dex-choices {
   list-style: none;
-  margin: 10px 0 0;
-  padding: 0;
+  margin: 8px 0 0;
+  padding: 0 10px 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1419,7 +1483,7 @@ a.tile-link {
 }
 .dex-note {
   font-size: 0.75rem;
-  margin: 8px 0 0;
+  margin: -2px 10px 10px;
 }
 /* T-11-141 확률과 공정성 */
 .fair-h {
