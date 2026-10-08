@@ -4,6 +4,7 @@
 // 실패하면 비용만 잃고 같은 단계의 다음 시도 확률이 오른다. 밸런스 근거: docs/tracking/potential-boost-plan.md.
 // 판정은 게임 RNG(세이브에 저장된다)를 한 번 쓴다 — 다시 불러와도 같은 결과다. 시도하지 않은 커리어는 RNG를 쓰지 않는다.
 // T-11-116 자금이 모자란 시즌엔 앱에서 보상형 광고를 끝까지 보면 자금 없이 한 번 시도할 수 있다(확률·시즌 한 번 규칙은 같다).
+// T-11-153 광고 대신 구단주의 구단 자금으로도 같은 한 번을 받는다(선수 자금은 쓰지 않는다, 기록만 다르다).
 import { rnd } from './rng.js';
 import { fmtMoney } from './player.js';
 import { log, potScouted } from './stats.js';
@@ -73,13 +74,17 @@ export interface BoostResult {
 }
 
 /**
- * 강화를 시도한다. 시도할 수 없으면 null(상태를 바꾸지 않는다). ad: 자금이 모자란('short') 시즌에 보상형 광고를 보고
- * 자금 없이 시도한다 — 자금이 충분하면 광고 시도는 할 수 없다.
+ * 강화를 시도한다. 시도할 수 없으면 null(상태를 바꾸지 않는다). pay: 'money'는 선수 자금. 'ad'(보상형 광고)와
+ * 'club'(구단주의 구단 자금, T-11-153)은 자금이 모자란('short') 시즌에 선수 자금 없이 시도한다 — 자금이 충분하면 할 수 없다.
  */
-export function tryBoost(s: GameState, ad = false): BoostResult | null {
-  if (boostStatus(s) !== (ad ? 'short' : 'ready')) return null;
+export type BoostPay = 'money' | 'ad' | 'club';
+export function tryBoost(s: GameState, pay: BoostPay = 'money'): BoostResult | null {
+  const free = pay !== 'money';
+  const ad = pay === 'ad';
+  const club = pay === 'club';
+  if (boostStatus(s) !== (free ? 'short' : 'ready')) return null;
   const b = boostState(s);
-  const cost = ad ? 0 : boostCost(s);
+  const cost = free ? 0 : boostCost(s);
   const chance = boostChance(s);
   const ok = rnd() * 100 < chance;
   s.money -= cost;
@@ -97,6 +102,7 @@ export function tryBoost(s: GameState, ad = false): BoostResult | null {
         c: cost,
         ok,
         ...(ad ? { ad: true as const } : {}),
+        ...(club ? { club: true as const } : {}),
       },
     ],
   };
@@ -108,10 +114,14 @@ export function tryBoost(s: GameState, ad = false): BoostResult | null {
     ok
       ? ad
         ? BT.successAd({ lv: next.lv })
-        : BT.success({ lv: next.lv, cost: fmtMoney(cost) })
+        : club
+          ? BT.successClub({ lv: next.lv })
+          : BT.success({ lv: next.lv, cost: fmtMoney(cost) })
       : ad
         ? BT.failAd
-        : BT.fail({ cost: fmtMoney(cost) }),
+        : club
+          ? BT.failClub
+          : BT.fail({ cost: fmtMoney(cost) }),
     ok ? 'good' : 'bad',
   );
   return { ok, lv: next.lv, cost, chance };

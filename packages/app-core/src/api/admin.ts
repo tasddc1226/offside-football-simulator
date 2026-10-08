@@ -10,6 +10,8 @@ import type {
   AdminNameReport,
   AdminNameReportList,
   AdminNameReportResolve,
+  AdminFundsOwner,
+  AdminFundsReport,
   AdminStats,
   AutomationReport,
   BalanceDraftInput,
@@ -21,6 +23,8 @@ import { apiFetch, cachedGet, invalidateApiCache } from './client.js';
 
 export type {
   AdminComment,
+  AdminFundsOwner,
+  AdminFundsReport,
   AdminCup,
   AdminCupCreate,
   AdminNameReport,
@@ -81,6 +85,12 @@ export const resolveNameReport = (input: AdminNameReportResolve) =>
 /** 자동 플레이 탐지(관찰 전용). 열 때만, 늘 새로 읽는다. */
 export const fetchAutomation = (hours: number) =>
   apiFetch<AutomationReport>(`/v1/admin/automation?hours=${hours}`);
+
+/** T-11-153 구단 자금 대조. 열 때마다 새로 읽는다(운영자가 직접 누를 때만). */
+export const fetchFundsReport = () => apiFetch<AdminFundsReport>('/v1/admin/funds');
+/** q: 프로필 id(prf_…) 또는 닉네임. */
+export const fetchFundsOwner = (q: string) =>
+  apiFetch<AdminFundsOwner>(`/v1/admin/funds/owner?q=${encodeURIComponent(q)}`);
 
 export const fetchPushPerformance = (
   days: number,

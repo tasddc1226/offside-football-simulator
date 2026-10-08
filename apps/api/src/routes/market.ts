@@ -36,9 +36,11 @@ import {
   marketRules,
   myOpenListings,
   myTrades,
+  TRADES,
   recentSales,
   releaseCards,
 } from '../db/repos/market.js';
+import { myFundsSpends } from '../db/repos/itemShop.js';
 import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
 import { checkCupListing } from './cup.js';
 import { edgeCached } from '../edgeCache.js';
@@ -161,11 +163,12 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     const me = await requireOwner(c);
     const db = getDb(c);
     const now = nowIso();
-    const [funds, bought, listings, trades, rules] = await Promise.all([
+    const [funds, bought, listings, trades, spends, rules] = await Promise.all([
       marketFunds(db, me.id),
       countBuysSince(db, me.id, kstTodayStart(now)),
       myOpenListings(db, me.id),
       myTrades(db, me.id),
+      myFundsSpends(db, me.id, TRADES),
       marketRules(db),
     ]);
     return ok(
@@ -176,6 +179,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         ...funds,
         listings,
         trades,
+        spends,
         buysLeft: Math.max(0, rules.dailyBuys - bought),
         rules,
       },

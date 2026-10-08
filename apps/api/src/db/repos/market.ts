@@ -239,7 +239,7 @@ export async function myOpenListings(db: Db, sellerId: string): Promise<MarketLi
   return rows.map(toListing);
 }
 
-const TRADES = 30;
+export const TRADES = 30;
 const tradeCard = {
   careerId: cards.careerId,
   pos: cards.pos,

@@ -41,8 +41,21 @@ const ko = {
   adNoteFree: '광고 제거를 구매해서 자금 없이 한 번 시도할 수 있어요.',
   adWatch: '광고를 끝까지 보면 강화를 시도할 수 있어요.',
   adCost: '광고',
-  resultFailAd: (p: { chance: number; pct: number }) =>
+  clubCost: '구단 자금',
+  resultFailFree: (p: { chance: number; pct: number }) =>
     `성공 확률 ${p.chance}%였어요. 다음 시도 확률이 ${p.pct}%p 올라요.`,
+  // T-11-153 광고 대신 구단 자금으로 받기(후보 잠재력 · 시즌 평가 · 강화). price·balance는 fundsText로 쓴 금액.
+  clubCandidates: (p: { price: string }) => `구단 자금으로 후보 잠재력 보기 (${p.price})`,
+  clubPeek: (p: { price: string }) => `구단 자금으로 평가 보기 (${p.price})`,
+  clubBoost: (p: { price: string; chance: number }) =>
+    `구단 자금으로 강화하기 (${p.price} · ${p.chance}%)`,
+  clubConfirm: (p: { price: string; balance: string }) =>
+    `구단 자금 ${p.price}을 써요. 쓴 뒤 구단 자금은 ${p.balance} 남고, 되돌릴 수 없어요.`,
+  clubAskTitle: '구단 자금 쓰기',
+  clubAction: '쓰기',
+  clubBusy: '구단 자금을 쓰는 중이에요…',
+  clubNote: '광고를 보거나 구단 자금을 써서 받을 수 있어요. 구단 자금은 같은 날 쓸수록 비싸져요.',
+  clubFail: '구단 자금을 쓰지 못했어요.',
 };
 
 export type GameBoostMsgs = typeof ko;

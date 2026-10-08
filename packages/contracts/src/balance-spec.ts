@@ -306,6 +306,57 @@ export const BALANCE_SPEC = {
     max: 20,
     step: 1,
   },
+  // T-11-153 앱의 보상형 광고 자리(후보 잠재력 · 시즌 평가 보기 · 자금이 모자란 시즌의 강화)를 광고 대신 구단 자금으로
+  // 받는다. 웹은 광고가 없어 후보 잠재력 · 강화만 구단 자금으로 받는다.
+  rewardPriceCandidates: {
+    group: 'market',
+    label: '후보 잠재력 보기 가격',
+    desc: '광고 대신 구단 자금으로 후보 3명의 잠재력을 볼 때 그날 첫 가격(만 원). 같은 날 더 쓸 때마다 상승 배율을 곱한다',
+    def: 300_000,
+    min: 10_000,
+    max: 100_000_000,
+    step: 10_000,
+    unit: 'man',
+  },
+  rewardPricePeek: {
+    group: 'market',
+    label: '시즌 평가 보기 가격',
+    desc: '광고 대신 구단 자금으로 이번 시즌 스카우트 평가를 볼 때 그날 첫 가격(만 원)',
+    def: 200_000,
+    min: 10_000,
+    max: 100_000_000,
+    step: 10_000,
+    unit: 'man',
+  },
+  rewardPriceBoost: {
+    group: 'market',
+    label: '잠재력 강화 가격',
+    desc: '선수 자금이 모자란 시즌에 광고 대신 구단 자금으로 강화를 한 번 시도할 때 그날 첫 가격(만 원)',
+    def: 500_000,
+    min: 10_000,
+    max: 100_000_000,
+    step: 10_000,
+    unit: 'man',
+  },
+  rewardPriceGrowth: {
+    group: 'market',
+    label: '광고 대신 구단 자금 가격 상승 배율',
+    desc: '같은 날(0시 한국 시각부터) 같은 보상을 한 번 더 받을 때마다 가격에 곱한다',
+    def: 2,
+    min: 1,
+    max: 5,
+    step: 0.5,
+    unit: 'x',
+  },
+  rewardDailyCap: {
+    group: 'market',
+    label: '광고 대신 구단 자금 하루 횟수',
+    desc: '보상마다 한 구단주가 하루(한국 시각)에 구단 자금으로 받을 수 있는 횟수. 0이면 구단 자금으로 받지 않는다',
+    def: 5,
+    min: 0,
+    max: 50,
+    step: 1,
+  },
 } as const satisfies Record<string, BalanceKnob>;
 
 export type BalanceKey = keyof typeof BALANCE_SPEC;

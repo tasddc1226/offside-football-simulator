@@ -157,6 +157,8 @@ export interface BoostTry {
   ok: boolean;
   /** T-11-116 자금이 모자라 보상형 광고로 시도했다(앱). 기능 전 기록·자금 시도엔 없다. */
   ad?: true;
+  /** T-11-153 자금이 모자라 구단주의 구단 자금으로 시도했다. 기능 전 기록·다른 시도엔 없다. */
+  club?: true;
 }
 export interface BoostState {
   /** 지금 단계(성공 횟수). flags.potBonus에 같은 만큼 더해져 있다. */

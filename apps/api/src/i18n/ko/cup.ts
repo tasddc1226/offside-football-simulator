@@ -23,6 +23,10 @@ export const CUP_KO = {
   noReroll: '리롤권이 없어요.',
   shopClosed: '지금은 리롤권을 팔지 않아요.',
   shopDaily: '리롤권은 하루에 {n}장까지 살 수 있어요. 내일 0시(한국 시간)에 다시 살 수 있어요.',
+  rewardClosed: '지금은 구단 자금으로 받을 수 없어요.',
+  rewardDaily:
+    '구단 자금으로는 하루에 {n}번까지 받을 수 있어요. 내일 0시(한국 시간)에 다시 받을 수 있어요.',
+  rewardPriceChanged: '구단 자금 가격이 바뀌었어요. 다시 확인해 주세요.',
   shopPriceChanged: '리롤권 가격이 바뀌었어요. 다시 확인해 주세요.',
   lineupLocked: '오프사이드 컵 경기 1시간 전부터 경기가 끝날 때까지 명단을 바꿀 수 없어요.',
   minFilled: '오프사이드 컵 참가 중에는 선발에 내 은퇴 선수를 {n}명 이상 두어야 해요.',

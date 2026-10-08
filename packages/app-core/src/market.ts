@@ -1,16 +1,21 @@
 // T-11-080 이적시장 화면(웹 ui/market · 앱 screens/owner/Market.tsx 공용) — 그리기 전에 계산하는 것과 문구만 둔다.
 import type { CareerPos } from '@offside/contracts';
 import { fmtValue, playerName } from './format.js';
-import type { MarketCard, MarketRules, MarketSale, MarketTrade } from './api/market.js';
+import type {
+  MarketCard,
+  MarketMeResponse,
+  MarketRules,
+  MarketSale,
+  MarketTrade,
+} from './api/market.js';
+import type { FundsItem, FundsSpend } from '@offside/contracts';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
 import { POS_GROUPS, detailPosOf } from '@offside/contracts/positions';
 import { marketText as L } from './i18n/ko/market.js';
 import { intlLocale } from './i18n/core.js';
-import { appFormatText } from './i18n/ko/appFormat.js';
 
-/** 구단 자금 표기(0이면 '0원' — fmtValue는 0을 '-'로 쓴다). */
-export const fundsText = (man: number) => (man > 0 ? fmtValue(man) : appFormatText.zeroWon);
+export { fundsText } from './funds.js';
 
 /** 탭 셋 + '자금 만들기'(방출) 화면. 방출은 탭이 아니라 자금 옆 버튼으로 연다. */
 export type MarketView = 'market' | 'sell' | 'trades' | 'release';
@@ -137,6 +142,37 @@ export const TRADE_LABEL: Record<MarketTrade['kind'], string> = {
 /** 거래 금액 표기. 들어온 돈은 +, 나간 돈은 −. */
 export const tradeAmount = (t: MarketTrade) =>
   `${t.kind === 'bought' ? '−' : '+'}${fmtValue(t.amount)}`;
+
+/** T-11-153 구단 자금으로 산 것의 이름. */
+export const SPEND_LABEL: Record<FundsItem, string> = {
+  get reroll() {
+    return L.spendReroll;
+  },
+  get 'reward:candidates'() {
+    return L.spendCandidates;
+  },
+  get 'reward:peek'() {
+    return L.spendPeek;
+  },
+  get 'reward:boost'() {
+    return L.spendBoost;
+  },
+};
+export const spendAmount = (s: FundsSpend) => `−${fmtValue(s.amount)}`;
+
+/** 자금 내역 한 줄 — 거래(판매 · 영입 · 방출) 또는 구단 자금 사용. */
+export type FundsLogRow = { kind: 'trade'; t: MarketTrade } | { kind: 'spend'; s: FundsSpend };
+/** 거래와 구단 자금 사용을 최근 순으로 섞어 최대 limit줄. */
+export function fundsLog(
+  me: Pick<MarketMeResponse, 'trades' | 'spends'>,
+  limit = 30,
+): FundsLogRow[] {
+  const rows: (FundsLogRow & { at: string })[] = [
+    ...me.trades.map((t) => ({ kind: 'trade' as const, t, at: t.at })),
+    ...me.spends.map((s) => ({ kind: 'spend' as const, s, at: s.at })),
+  ];
+  return rows.sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
+}
 
 /** 방출 확인 문구. 되돌릴 수 없다는 것을 꼭 보여 준다. */
 export const releaseConfirmText = (count: number, amount: number) =>

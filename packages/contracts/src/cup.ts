@@ -141,10 +141,21 @@ export const OWNER_ITEMS = ['reroll'] as const;
 export type OwnerItem = (typeof OWNER_ITEMS)[number];
 
 /**
+ * T-11-153 광고 대신 구단 자금으로 받는 보상. candidates = 새 선수 후보 3명 잠재력 보기, peek = 이번 시즌 스카우트 평가
+ * 보기, boost = 선수 자금이 모자란 시즌의 잠재력 강화 한 번. 서버는 자금만 받고, 보상은 기기의 게임이 준다.
+ */
+export const REWARD_KINDS = ['candidates', 'peek', 'boost'] as const;
+export type RewardKind = (typeof REWARD_KINDS)[number];
+/** 구단 자금으로 산 것(owner_item_purchases.item) — 리롤권(T-11-152)과 광고 대신 받은 보상(T-11-153). */
+export const FUNDS_ITEMS = ['reroll', ...REWARD_KINDS.map((k) => `reward:${k}` as const)] as const;
+export type FundsItem = 'reroll' | `reward:${RewardKind}`;
+
+/**
  * T-11-152 구단 자금으로 사는 리롤권 가격(만 원). bought = 오늘(0시 한국 시각부터) 이미 산 장수.
  * 한 장 더 살 때마다 growth를 곱하고 천만 원 단위로 반올림한다. 하루 상한을 다 썼으면 null.
+ * T-11-153 광고 대신 구단 자금으로 받는 보상(REWARD_KINDS)도 같은 규칙으로 값을 매긴다.
  */
-export function rerollPriceAt(
+export function shopPriceAt(
   rules: { price: number; growth: number; cap: number },
   bought: number,
 ): number | null {

@@ -3,7 +3,7 @@
   import { appFormatText as W } from '@offside/app-core/i18n/ko/appFormat';
   // ui.ts playerTab()/nationalCard() 포트 (316~356줄)
   import { potentialNotice } from '@offside/app-core/potential-view';
-  import { buyPeek, peekView } from '@offside/app-core/potential-peek';
+  import { buyPeek, peekOf, peekView } from '@offside/app-core/potential-peek';
   import { loadPeek, savePeek } from '../potPeek.js';
   import { gamePlayerText as L } from '@offside/app-core/i18n/ko/gamePlayer';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
@@ -23,6 +23,9 @@
   import BoostFx from '../BoostFx.svelte';
   import { retireAsk } from '../actions.js';
   import { save } from '../helpers.js';
+  import { clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
+  import { fundsText } from '@offside/app-core/funds';
+  import type { RewardShopResponse } from '@offside/contracts';
 
   const { s }: { s: GameState } = $props();
   const lg = $derived(leagueOf(s.leagueId));
@@ -61,6 +64,49 @@
     save();
     fx = out;
   }
+  // T-11-153 웹은 광고가 없어 앱의 광고 자리(선수 자금이 모자란 시즌의 강화 · 이번 시즌 평가 보기)를 로그인한 구단주의
+  // 구단 자금으로 받는다. 두 자리 중 하나라도 보일 때만 값을 묻는다(30초 메모).
+  let club = $state<RewardShopResponse | null>(null);
+  let clubBusy = $state(false);
+  let clubMsg = $state('');
+  let peekMsg = $state('');
+  const short = $derived(boost.status === 'short');
+  const peekClosed = $derived(pot.kind === 'available' || pot.kind === 'short');
+  $effect(() => {
+    if (short || peekClosed) void loadClubShop().then((r) => (club = r));
+  });
+  const clubPeek = $derived(peekClosed ? clubOffer(club, 'peek') : null);
+  async function onClubPeek() {
+    const o = clubPeek;
+    if (clubBusy || !o) return;
+    clubBusy = true;
+    peekMsg = '';
+    const r = await payWithClub(o, confirm, () => {
+      const p = peekOf(s);
+      savePeek(p);
+      peek = p;
+    });
+    clubBusy = false;
+    if (!r) return;
+    if (r.shop) club = r.shop;
+    peekMsg = r.message;
+  }
+  const clubTry = $derived(short ? clubOffer(club, 'boost') : null);
+  async function onClubBoost() {
+    const o = clubTry;
+    if (clubBusy || !o) return;
+    clubBusy = true;
+    clubMsg = '';
+    let out: BoostOutcome | null = null;
+    const r = await payWithClub(o, confirm, () => (out = doBoost(s, 'club')));
+    clubBusy = false;
+    if (!r) return;
+    if (r.shop) club = r.shop;
+    clubMsg = r.message;
+    if (!out) return;
+    save();
+    fx = out;
+  }
 </script>
 
 <AttrCard {s} />
@@ -88,6 +134,12 @@
       {#if pot.kind === 'available'}
         <button class="btn btn-sm btn-block" data-act="pot-peek" onclick={onPeek}>{pot.button}</button>
       {/if}
+      {#if clubPeek}
+        <button class="btn btn-sm btn-block" data-act="pot-peek-club" disabled={clubBusy} onclick={onClubPeek}>
+          {clubBusy ? B.clubBusy : B.clubPeek({ price: fundsText(clubPeek.price) })}
+        </button>
+      {/if}
+      {#if peekMsg}<p class="muted fs-sm" aria-live="polite">{peekMsg}</p>{/if}
     </div>
   {/if}
 </section>
@@ -112,6 +164,12 @@
         {#if arming}<button class="btn" data-act="boost-cancel" onclick={() => (arming = false)}>{B.cancel}</button>{/if}
       </div>
     {/if}
+    {#if clubTry}
+      <button class="btn btn-block" data-act="boost-club" disabled={clubBusy} onclick={onClubBoost}>
+        {clubBusy ? B.clubBusy : B.clubBoost({ price: fundsText(clubTry.price), chance: boost.chance })}
+      </button>
+    {/if}
+    {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
     <p class="muted fs-xs">{boost.note}</p>
     {#if boost.history.length}
       <ul class="boost-log muted fs-xs" data-boost-log>
