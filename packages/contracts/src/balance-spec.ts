@@ -26,8 +26,8 @@ export interface BalanceKnob {
   max: number;
   /** 입력 칸 증감 단위. */
   step: number;
-  /** T-11-141 공개 이력의 표시 단위: 확률(%)·배율(×). 없으면 숫자 그대로. */
-  unit?: 'pct' | 'x';
+  /** T-11-141 공개 이력의 표시 단위: 확률(%)·배율(×)·금액(만 원, T-11-152). 없으면 숫자 그대로. */
+  unit?: 'pct' | 'x' | 'man';
 }
 
 /** T-11-093 프리시즌에 만든 선수의 잠재력 추첨(평균·편차). 서버 설정과 상관없이 고정이라 예전과 같은 선수가 나온다. */
@@ -274,6 +274,36 @@ export const BALANCE_SPEC = {
     def: 20,
     min: 1,
     max: 100,
+    step: 1,
+  },
+  // T-11-152 구단 자금으로 사는 선수 후보 리롤권. 쌓이기만 하는 구단 자금을 없애려고 비싸게 판다.
+  rerollPrice: {
+    group: 'market',
+    label: '리롤권 가격',
+    desc: '그날 첫 리롤권 가격(만 원). 같은 날 더 살 때마다 가격 상승 배율을 곱한다',
+    def: 1_000_000,
+    min: 10_000,
+    max: 100_000_000,
+    step: 100_000,
+    unit: 'man',
+  },
+  rerollPriceGrowth: {
+    group: 'market',
+    label: '리롤권 가격 상승 배율',
+    desc: '같은 날(0시 한국 시각부터) 한 장 더 살 때마다 가격에 곱한다',
+    def: 2,
+    min: 1,
+    max: 5,
+    step: 0.5,
+    unit: 'x',
+  },
+  rerollDailyCap: {
+    group: 'market',
+    label: '하루 리롤권 구매 수',
+    desc: '한 구단주가 하루(한국 시각)에 구단 자금으로 살 수 있는 리롤권 수. 0이면 팔지 않는다',
+    def: 3,
+    min: 0,
+    max: 20,
     step: 1,
   },
 } as const satisfies Record<string, BalanceKnob>;

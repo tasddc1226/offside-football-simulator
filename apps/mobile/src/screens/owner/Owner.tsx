@@ -29,7 +29,7 @@ import { founderLabel } from '@offside/app-core/friendText';
 import { loadHOF } from '@offside/game/hof-store';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
-import { go } from '../../game/nav';
+import { go, takeFocus } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Pill, Row, Screen, Topbar, Txt } from '../../ui';
@@ -40,6 +40,7 @@ import { MyPlayers } from './MyPlayers';
 import { ChampBadge } from '../../components/ChampBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
+import { RerollShop } from './RerollShop';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
 import { mix } from '../../theme/colors';
 import { TeamLogo } from '../../components/TeamLogo';
@@ -138,6 +139,8 @@ export default function Owner() {
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
   // 바꾸면 다시 판단한다.
+  // T-11-152 후보 화면 '리롤권 상점 가기'로 들어왔으면 리롤권 상점을 펼친 채로 연다(한 번만 읽힌다).
+  const [shopFocus] = useState(() => takeFocus('rerollShop'));
   const [admin, setAdmin] = useState(false);
   const linked = !!acct && acct !== 'error' && isMember(acct);
   // T-10-103 비로그인으로 확인됐고 이 기기에 은퇴한 선수도 없으면 빈 '내 선수'를 숨긴다(확인 중·연결 실패면 그대로 둔다).
@@ -385,6 +388,12 @@ export default function Owner() {
               </Btn>
             </View>
           </Card>
+          <RerollShop
+            focus={shopFocus}
+            onBought={(balance, spent) =>
+              setMarket((m) => m && { balance, clubValue: m.clubValue - spent })
+            }
+          />
         </>
       ) : guest ? (
         <>
