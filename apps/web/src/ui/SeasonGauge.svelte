@@ -39,7 +39,6 @@
       <i style:width="{lines.pct}%"></i><span class="sg-lock" aria-hidden="true"></span>
     </div>
     <p class="sg-stats muted fs-sm num">{lines.stats}</p>
-    <p class="sg-note muted fs-sm">{lines.note}</p>
   </section>
 {/if}
 
@@ -53,6 +52,6 @@
   .sg-bar i {position:absolute;inset:0 auto 0 0;border-radius:inherit;background:linear-gradient(90deg,color-mix(in srgb,var(--accent),transparent 35%),var(--accent));transition:width .6s ease-out;}
   /* 90%(마감이 정해지는 자리) 눈금 */
   .sg-lock {position:absolute;top:0;bottom:0;left:90%;width:2px;background:color-mix(in srgb,var(--ink),transparent 60%);}
-  .sg-stats,.sg-note {margin:0;}
+  .sg-stats {margin:0;}
   @media(prefers-reduced-motion:reduce) { .sg-bar i {transition:none;} }
 </style>

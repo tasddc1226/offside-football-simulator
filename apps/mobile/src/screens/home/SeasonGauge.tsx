@@ -97,9 +97,6 @@ export function SeasonGauge() {
       <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
         {lines.stats}
       </Txt>
-      <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
-        {lines.note}
-      </Txt>
     </Card>
   );
 }
