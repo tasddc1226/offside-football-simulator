@@ -83,6 +83,9 @@ const ko = {
   secRewards: '보상',
   secGroups: '조별 예선',
   secBracket: '토너먼트',
+  secEntrants: '신청한 팀',
+  entrantsNote: '먼저 신청한 순서예요. 신청이 끝나면 조를 추첨해요.',
+  mineTeam: '내 팀',
   rulePlay: (p: { min: number; cap: number }) =>
     `선발에 내 선수가 ${p.min}명 이상 있는 이번 시즌 팀이 신청할 수 있어요. 정원은 ${p.cap}팀이고 먼저 신청한 순서로 받아요.`,
   ruleGroup:

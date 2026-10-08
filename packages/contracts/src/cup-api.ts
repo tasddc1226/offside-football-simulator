@@ -88,7 +88,7 @@ export const CupResponseSchema = z.strictObject({
   cup: CupInfoSchema,
   phase: CupPhaseSchema,
   entries: z.number().int(),
-  /** 추첨 뒤에만 채워진다. */
+  /** 추첨 전에는 신청한 팀(신청 순), 추첨 뒤에는 조에 들어간 팀(T-11-160). */
   teams: z.array(CupTeamSchema),
   groups: z.array(CupGroupSchema),
   matches: z.array(CupMatchSchema),
