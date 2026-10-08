@@ -11,6 +11,7 @@ import { assignSlot, attrLine } from '@offside/app-core/teamOwner';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { DragPlayer, type PlayerDrag } from '../../components/DragPlayer';
 import { PlayerCard } from '../../components/PlayerCard';
+import { PlayerPeek, type PeekOrigin } from '../../components/PlayerPeek';
 import { TeamPitch, type PitchCell } from '../../components/TeamPitch';
 import { useColors } from '../../theme/useColors';
 import { prefs } from '../../store';
@@ -84,6 +85,19 @@ export function TeamLineup({
   const [limit, setLimit] = useState(24);
   useEffect(() => setLimit(24), [query, position, sort, starters]);
   const [focus, setFocus] = useState<number | null>(null);
+  // 카드 팝업 — 짧게 누른 자리만 연다. 드래그(길게 눌러 끌기)가 시작·끝난 직후의 누름은 무시한다.
+  const [peek, setPeek] = useState<{ i: number; origin: PeekOrigin } | null>(null);
+  const dragAt = useRef(0);
+  function openPeek(i: number) {
+    if (active.current || Date.now() - dragAt.current < 300) return;
+    const pos = layout[i];
+    if (!pos || !slots[i] || cells[i]?.youth) return;
+    pitch.current?.measureInWindow((px, py, w, h) => {
+      if (!w || !h || active.current) return;
+      // 자리 카드는 62×88, 가운데가 자리 좌표(TeamPitch).
+      setPeek({ i, origin: { x: px + (pos.x / 100) * w - 31, y: py + (pos.y / 100) * h - 44, w: 62, h: 88 } });
+    });
+  }
   const latest = useRef({ layout, slots, change, dragging });
   latest.current = { layout, slots, change, dragging };
   useEffect(() => {
@@ -131,6 +145,7 @@ export function TeamLineup({
   const drag: PlayerDrag = {
     start(index, id, x, y) {
       Keyboard.dismiss();
+      dragAt.current = Date.now();
       const version = ++gestureVersion.current;
       root.current?.measureInWindow((rx, ry) =>
         pitch.current?.measureInWindow((px, py, w, h) => {
@@ -157,6 +172,7 @@ export function TeamLineup({
     move: update,
     end(x, y, success) {
       gestureVersion.current++;
+      dragAt.current = Date.now();
       const d = active.current;
       if (d && success) {
         const state = latest.current;
@@ -277,9 +293,9 @@ export function TeamLineup({
                 if (selected) {
                   change(assignSlot(slots, i, selected), layout);
                   select(null);
-                }
+                } else openPeek(i);
               }
-            : undefined
+            : openPeek
         }
       />
       {editable && focus !== null ? (
@@ -454,6 +470,21 @@ export function TeamLineup({
           />
         </View>
       ) : null}
+      {peek && slots[peek.i] && cells[peek.i]
+        ? (() => {
+            const p = players.find((x) => x.careerId === slots[peek.i]);
+            return p ? (
+              <PlayerPeek
+                player={p}
+                name={cells[peek.i]!.name}
+                rating={cells[peek.i]!.rating}
+                slot={layout[peek.i]!.slot}
+                origin={peek.origin}
+                onclose={() => setPeek(null)}
+              />
+            ) : null;
+          })()
+        : null}
     </View>
   );
 }

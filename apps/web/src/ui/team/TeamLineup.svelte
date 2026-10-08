@@ -71,12 +71,13 @@
     pitch?.closest('[data-pitch-frame]')?.scrollIntoView({block:'start', behavior:dur(1) ? 'smooth' : 'instant'});
     pitch?.querySelector<HTMLButtonElement>('[data-slot]')?.focus({preventScroll:true});
   }
-  function pickSlot(i: number) {
-    if (suppressClick) return;
+  /** true면 배치로 끝난 누름(드래그 직후 클릭 포함)이라 그라운드가 카드 팝업을 열지 않는다. */
+  function pickSlot(i: number): boolean {
+    if (suppressClick) return true;
     selectedSlot = i;
-    if (selectedPlayer) {
-      onassign(i, selectedPlayer); announcement = L.placedIn({ name: chosen ? nameOf(chosen) : L.playerFallback, pos: tn(DETAIL_LABEL[positions[i]!.slot]) }); selectedPlayer = null;
-    }
+    if (!selectedPlayer) return false;
+    onassign(i, selectedPlayer); announcement = L.placedIn({ name: chosen ? nameOf(chosen) : L.playerFallback, pos: tn(DETAIL_LABEL[positions[i]!.slot]) }); selectedPlayer = null;
+    return true;
   }
   function pointAt(x: number, y: number) {
     const rect = pitch!.getBoundingClientRect();
