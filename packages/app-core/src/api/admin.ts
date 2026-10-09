@@ -14,6 +14,7 @@ import type {
   AdminFundsReport,
   AdminStats,
   AutomationReport,
+  AutomationEnforcement,
   BalanceDraftInput,
   BalanceVersion,
   BalanceVersionList,
@@ -30,6 +31,7 @@ export type {
   AdminNameReport,
   AdminStats,
   AutomationReport,
+  AutomationEnforcement,
   BalanceVersion,
 };
 
@@ -105,3 +107,16 @@ export const fetchPushPerformance = (
     60_000,
   );
 };
+
+export const fetchAutomationEnforcement = (before?: string, fresh = false) => {
+  if (fresh) invalidateApiCache('/v1/admin/automation/enforcement');
+  return cachedGet<AutomationEnforcement>(
+    `/v1/admin/automation/enforcement${before ? `?before=${encodeURIComponent(before)}` : ''}`,
+    60_000,
+  );
+};
+export const setAutomationHidden = (careerId: string, hidden: boolean) =>
+  apiFetch<undefined>('/v1/admin/careers/hidden', {
+    method: 'POST',
+    body: JSON.stringify({ careerId, hidden }),
+  });

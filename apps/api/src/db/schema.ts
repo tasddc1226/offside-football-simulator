@@ -418,6 +418,7 @@ export const careers = sqliteTable(
   (table) => [
     index('careers_detail_archive_idx').on(table.detailArchiveKey),
     index('careers_profile_id_idx').on(table.profileId),
+    index('careers_automation_updated_idx').on(table.updatedAt, table.id),
     // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
     index('careers_profile_status_season_idx').on(
       table.profileId,
@@ -624,6 +625,9 @@ export const careerSeasons = sqliteTable(
     primaryKey({ columns: [table.careerId, table.year] }),
     // T-10-030 홈 라이브 현황: 최근 올라온 시즌(피드·오늘 시즌 수)을 시각 순으로 찾는다.
     index('career_seasons_created_idx').on(table.createdAt),
+    index('career_seasons_signals_career_idx')
+      .on(table.careerId, table.createdAt)
+      .where(sql`${table.signalsJson} is not null`),
     // T-11-100 매일 성장 기록 보관이 아직 D1에 남은 오래된 성장 기록만 시각 순으로 찾는다(비운 행은 인덱스에서 빠진다).
     index('career_seasons_growth_created_idx')
       .on(table.createdAt)

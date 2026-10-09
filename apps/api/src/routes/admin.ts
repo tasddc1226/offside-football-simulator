@@ -1,3 +1,4 @@
+import { automationEnforcement } from '../db/repos/automationEnforcement.js';
 import {
   AdminCommentListSchema,
   AdminCommentPurgeInputSchema,
@@ -13,6 +14,8 @@ import {
   CareerHiddenInputSchema,
   AutomationHoursSchema,
   AutomationReportSchema,
+  AutomationEnforcementSchema,
+  AutomationHistoryCursorSchema,
   PushPerformanceQuerySchema,
   PushPerformanceSchema,
 } from '@offside/contracts';
@@ -68,6 +71,18 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
     const hours = parseWithAppError(AutomationHoursSchema, c.req.query('hours'));
     const data = await automationReport(getDb(c), new Date(), hours);
     return ok(c, AutomationReportSchema, data, 200, 'private, no-store');
+  });
+
+  app.get('/v1/admin/automation/enforcement', async (c) => {
+    await requireAdmin(c);
+    const before = parseWithAppError(AutomationHistoryCursorSchema, c.req.query('before'));
+    return ok(
+      c,
+      AutomationEnforcementSchema,
+      await automationEnforcement(getDb(c), c.env.AUTOMATION_HIDE_DISABLED !== '1', before),
+      200,
+      'private, no-store',
+    );
   });
 
   // T-11-153 구단 자금 대조: 전체 요약과 어긋난 구단주, 한 명의 출처별 합과 최근 움직임. 운영자가 열 때만 읽는다.

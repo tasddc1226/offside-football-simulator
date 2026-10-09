@@ -22,7 +22,13 @@ export async function recordFirsts(
   opts?: { legendOnly?: boolean },
 ): Promise<void> {
   try {
-    if (await recordCareerFirsts(getDb(c), careerId, opts)) purgeEdge(c, STALE.firstsChanged());
+    if (
+      await recordCareerFirsts(getDb(c), careerId, {
+        ...opts,
+        automaticHiding: c.env.AUTOMATION_HIDE_DISABLED !== '1',
+      })
+    )
+      purgeEdge(c, STALE.firstsChanged());
   } catch (err) {
     c.set('storeFailure', {
       code: 'SERVER_FIRSTS_FAILED',
