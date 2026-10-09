@@ -102,6 +102,18 @@ describe('T-11-083 잠재력 강화', () => {
     expect(tryBoost(player({ money: 50000 }), 'club')).toBeNull();
   });
 
+  it('T-11-174 잠재력 강화권도 자금 없이 한 번 시도하고, 기록과 소식에 강화권이라고 남긴다', () => {
+    const poor = player({ money: 1500 });
+    nextRoll(0);
+    expect(tryBoost(poor, 'ticket')).toMatchObject({ ok: true, lv: 1, cost: 0, chance: 50 });
+    expect(poor.money).toBe(1500);
+    expect(poor.boost!.log).toEqual([
+      { y: poor.year, age: 21, lv: 0, p: 50, c: 0, ok: true, tk: true },
+    ]);
+    expect(poor.log[0]!.text).toContain('강화권');
+    expect(tryBoost(player({ money: 50000 }), 'ticket')).toBeNull();
+  });
+
   it('T-11-157 자금이 모자란 시즌엔 그 시즌의 한 번 뒤 광고·구단 자금으로 더 시도하고, 한 커리어에서 모두 합쳐 두 번까지다', () => {
     const s = player({ salary: 10000, money: 50000 });
     // 자금이 충분한 시즌의 첫 시도는 선수 자금으로만 하고, 시도 뒤에도 자금이 되면 추가 시도는 없다.

@@ -2,7 +2,7 @@
 // 계정을 지울 때 앱이 Apple에 다시 확인받아 받은 authorizationCode를 토큰으로 바꾼 뒤 그 토큰을 해지한다.
 // 서버는 Apple 토큰을 저장하지 않는다. client_secret은 Sign in with Apple 키(.p8, ES256)로 서명한 JWT다.
 import type { Bindings } from '../env.js';
-import { base64UrlToBytes, bytesToBase64Url } from './base64url.js';
+import { bytesToBase64Url, json64, pemToPkcs8 } from './base64url.js';
 import { APPLE_ISSUER, DEFAULT_BUNDLE_ID } from './apple-id-token.js';
 
 const SECRET_TTL_S = 5 * 60;
@@ -14,11 +14,6 @@ function appleRevokeKeys(env: Bindings): AppleRevokeKeys | null {
   const { APPLE_TEAM_ID: teamId, APPLE_SIGNIN_KEY_ID: keyId, APPLE_SIGNIN_PRIVATE_KEY: pem } = env;
   return teamId && keyId && pem ? { teamId, keyId, privateKey: pem } : null;
 }
-
-const json64 = (v: unknown) => bytesToBase64Url(new TextEncoder().encode(JSON.stringify(v)));
-
-const pemToPkcs8 = (pem: string) =>
-  base64UrlToBytes(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''));
 
 /** Apple 토큰 엔드포인트용 client_secret(JWT, ES256). WebCrypto의 ECDSA 서명은 JWT가 쓰는 r||s 형식이다. */
 async function appleClientSecret(

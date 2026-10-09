@@ -136,9 +136,23 @@ export const CUP_REWARDS: Record<CupStage, { rerolls: number; trophy: boolean }>
 /** 승점. */
 export const CUP_POINTS = { win: 3, draw: 1, loss: 0 } as const;
 
-/** 소모성 아이템. reroll = 선수 후보 리롤권(새 선수를 만들 때 후보 3명을 다시 뽑는다). */
-export const OWNER_ITEMS = ['reroll'] as const;
+/**
+ * 소모성 아이템. reroll = 선수 후보 리롤권(새 선수를 만들 때 후보 3명을 다시 뽑는다), boost = 잠재력 강화권(T-11-174,
+ * 자금이 모자란 시즌의 강화 한 번을 광고·구단 자금 대신 받는다).
+ */
+export const OWNER_ITEMS = ['reroll', 'boost'] as const;
 export type OwnerItem = (typeof OWNER_ITEMS)[number];
+
+/** T-11-174 소모성 인앱 상품(App Store Connect·Play Console에 같은 ID로 만든다) — 사면 구단주 아이템이 qty만큼 는다. */
+export const IAP_PRODUCTS = {
+  'com.offsidelab.app.reroll_5': { item: 'reroll', qty: 5 },
+  'com.offsidelab.app.reroll_15': { item: 'reroll', qty: 15 },
+  'com.offsidelab.app.reroll_40': { item: 'reroll', qty: 40 },
+  'com.offsidelab.app.boost_3': { item: 'boost', qty: 3 },
+  'com.offsidelab.app.boost_10': { item: 'boost', qty: 10 },
+} as const satisfies Record<string, { item: OwnerItem; qty: number }>;
+export type IapProductId = keyof typeof IAP_PRODUCTS;
+export const IAP_PRODUCT_IDS = Object.keys(IAP_PRODUCTS) as [IapProductId, ...IapProductId[]];
 
 /**
  * T-11-153 광고 대신 구단 자금으로 받는 보상. candidates = 새 선수 후보 3명 잠재력 보기, peek = 이번 시즌 스카우트 평가

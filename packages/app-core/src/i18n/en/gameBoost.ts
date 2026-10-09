@@ -59,4 +59,10 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   clubNote:
     'Watch an ad or use club funds to get this. Club funds cost more each time you use them on the same day.',
   clubFail: "Couldn't use club funds.",
+  ticketCost: 'boost ticket',
+  ticketBoost: (p) => `Use boost ticket (${p.n} left · ${p.chance}%)`,
+  ticketBusy: 'Using a boost ticket…',
+  ticketFail: "Couldn't use a boost ticket.",
+  lineExtraTicket: (p) =>
+    `You've tried this season. You can try more with a boost ticket, and this player has ${p.left} ${p.left === 1 ? 'try' : 'tries'} left.`,
 };

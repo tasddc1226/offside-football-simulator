@@ -65,6 +65,13 @@ const ko = {
   clubBusy: '구단 자금을 쓰는 중이에요…',
   clubNote: '광고를 보거나 구단 자금을 써서 받을 수 있어요. 구단 자금은 같은 날 쓸수록 비싸져요.',
   clubFail: '구단 자금을 쓰지 못했어요.',
+  // T-11-174 앱에서 산 잠재력 강화권을 웹에서 쓴다. n은 남은 장수.
+  ticketCost: '강화권',
+  ticketBoost: (p: { n: number; chance: number }) => `강화권 쓰기 (${p.n}장 · ${p.chance}%)`,
+  ticketBusy: '강화권을 쓰는 중이에요…',
+  ticketFail: '강화권을 쓰지 못했어요.',
+  lineExtraTicket: (p: { left: number }) =>
+    `이번 시즌 시도는 했어요. 강화권으로 더 시도할 수 있고, 이 선수는 ${p.left}번 남았어요.`,
 };
 
 export type GameBoostMsgs = typeof ko;

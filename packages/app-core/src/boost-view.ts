@@ -57,17 +57,17 @@ export const boostHidden = (s: GameState): boolean =>
 export type BoostAdOffer = 'ad' | 'free' | null;
 
 /**
- * opts(T-11-157): club = 구단 자금 버튼을 보일 수 있다(로그인한 구단주). 추가 시도 안내는 광고나 구단 자금 길이 있을 때만
- * 보인다. 광고 강화는 하루 횟수를 세지 않는다(T-11-172). 구단 자금의 하루 상한은 서버가 막는다.
+ * opts(T-11-157): club = 구단 자금 버튼을 보일 수 있다(로그인한 구단주). T-11-174 ticket = 잠재력 강화권을 가졌다. 추가 시도
+ * 안내는 광고 · 구단 자금 · 강화권 길이 있을 때만 보인다. 광고 · 구단 자금 강화는 하루 횟수를 세지 않는다(T-11-172 · 173).
  */
 export function boostView(
   s: GameState,
   adOffer: BoostAdOffer = null,
-  opts: { club?: boolean } = {},
+  opts: { club?: boolean; ticket?: boolean } = {},
 ): BoostView {
   const status = boostStatus(s);
   const extraLeft = status === 'done' ? boostExtraLeft(s) : 0;
-  const path = !!adOffer || !!opts.club;
+  const path = !!adOffer || !!opts.club || !!opts.ticket;
   const free = status === 'short' || extraLeft > 0;
   const b = boostState(s);
   const cost = L2.won({ v: fmtMoney(boostCost(s)) });
@@ -81,7 +81,9 @@ export function boostView(
           ? L.lineMax({ lv: BOOST_MAX })
           : status === 'done'
             ? extraLeft && path
-              ? (adOffer ? L.lineExtra : L.lineExtraClub)({ left: extraLeft })
+              ? (adOffer ? L.lineExtra : opts.club ? L.lineExtraClub : L.lineExtraTicket)({
+                  left: extraLeft,
+                })
               : L.lineDone
             : status === 'short'
               ? L.lineShort({ cost })
@@ -112,7 +114,13 @@ export function boostView(
       .slice(-4)
       .reverse()
       .map((x) => {
-        const cost = x.ad ? L.adCost : x.club ? L.clubCost : L2.won({ v: fmtMoney(x.c) });
+        const cost = x.ad
+          ? L.adCost
+          : x.club
+            ? L.clubCost
+            : x.tk
+              ? L.ticketCost
+              : L2.won({ v: fmtMoney(x.c) });
         // T-11-157 추가 시도는 표시를 붙인다.
         const pay = x.x ? L.extraCost({ cost }) : cost;
         const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost: pay };

@@ -24,9 +24,11 @@
   import BoostFx from '../BoostFx.svelte';
   import { retireAsk } from '../actions.js';
   import { save } from '../helpers.js';
-  import { clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
+  import { clubOffer, loadClubShop, payWithClub, payWithTicket } from '@offside/app-core/club-reward';
   import { fundsText } from '@offside/app-core/funds';
   import type { RewardShopResponse } from '@offside/contracts';
+  import { fetchItems } from '@offside/app-core/api/cup';
+  import { hasSessionHint } from '@offside/app-core/api/client';
 
   const { s }: { s: GameState } = $props();
   const lg = $derived(leagueOf(s.leagueId));
@@ -93,7 +95,28 @@
   }
   const clubTry = $derived(freeOpen ? clubOffer(club, 'boost') : null);
   // T-11-157 구단 자금으로는 이번 시즌의 한 번을 쓴 뒤에도 더 시도한다(오늘 횟수는 서버가 센다 — 웹은 광고가 없다).
-  const boost = $derived(boostView(s, null, { club: !!clubTry }));
+  // T-11-174 앱에서 산 잠재력 강화권. 로그인한 구단주가 강화 자리를 볼 때만 장수를 묻고, 못 받으면 버튼을 보이지 않는다.
+  let tickets = $state(0);
+  let ticketBusy = $state(false);
+  $effect(() => {
+    if (!freeOpen || !hasSessionHint()) return;
+    void fetchItems().then((r) => (tickets = r.ok ? r.data.boost : 0));
+  });
+  const boost = $derived(boostView(s, null, { club: !!clubTry, ticket: freeOpen && tickets > 0 }));
+  async function onTicketBoost() {
+    if (ticketBusy || tickets < 1 || !freeOpen) return;
+    ticketBusy = true;
+    clubMsg = '';
+    const r = await payWithTicket(() => {
+      const out = doBoost(s, 'ticket');
+      if (!out) return;
+      save();
+      fx = out;
+    });
+    ticketBusy = false;
+    if (r.boost !== null) tickets = r.boost;
+    clubMsg = r.message;
+  }
   async function onClubBoost() {
     const o = clubTry;
     if (clubBusy || !o) return;
@@ -169,6 +192,11 @@
     {#if clubTry && boost.free}
       <button class="btn btn-block" data-act="boost-club" disabled={clubBusy} onclick={onClubBoost}>
         {clubBusy ? B.clubBusy : B.clubBoost({ price: fundsText(clubTry.price), chance: boost.chance })}
+      </button>
+    {/if}
+    {#if tickets > 0 && boost.free}
+      <button class="btn btn-block" data-act="boost-ticket" disabled={ticketBusy} onclick={onTicketBoost}>
+        {ticketBusy ? B.ticketBusy : B.ticketBoost({ n: tickets, chance: boost.chance })}
       </button>
     {/if}
     {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}

@@ -4,7 +4,7 @@ import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { profiles, referrals } from '../schema.js';
 import { eventNotificationStatements } from '../../push/events.js';
-import { grantRerollStatement } from './itemShop.js';
+import { grantItemStatement } from './itemShop.js';
 import { accountLinkedSql } from './profiles.js';
 
 // T-11-171 친구 초대. 초대는 친구 코드로 친구 신청을 할 때 기록하고(claimReferral), 초대받은 사람이 처음 커리어를
@@ -66,8 +66,8 @@ export function completeReferralStatements(
            AND (SELECT count(*) FROM referrals WHERE inviter_id = ? AND inviter_rewarded = 1) < ?`,
       )
       .bind(...mine.params, r.inviterId, INVITE_REWARD_MAX),
-    grantRerollStatement(d1, r.inviteeId, INVITE_REROLLS, now, mine),
-    grantRerollStatement(d1, r.inviterId, INVITE_REROLLS, now, inviterPaid),
+    grantItemStatement(d1, r.inviteeId, 'reroll', INVITE_REROLLS, now, mine),
+    grantItemStatement(d1, r.inviterId, 'reroll', INVITE_REROLLS, now, inviterPaid),
     ...notice(
       r.inviteeId,
       mine,

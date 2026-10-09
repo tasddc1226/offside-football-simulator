@@ -568,6 +568,13 @@
       "when": 1791531255668,
       "tag": "0080_invite_referrals",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "6",
+      "when": 1791536009768,
+      "tag": "0081_iap_purchases",
+      "breakpoints": true
     }
   ]
 }

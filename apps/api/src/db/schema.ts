@@ -1319,6 +1319,31 @@ export const ownerItemPurchases = sqliteTable(
 );
 
 /**
+ * T-11-174 인앱 상품(소모성) 구매 원장. 스토어 거래 하나(store, transaction_id)에 행 하나라 같은 거래를 두 번 보내도 아이템은
+ * 한 번만 는다. transaction_id: Apple transactionId, Google purchaseToken. 매출 대조·환불 확인에도 쓴다.
+ */
+export const iapPurchases = sqliteTable(
+  'iap_purchases',
+  {
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull(),
+    item: text('item').notNull(),
+    qty: integer('qty').notNull(),
+    /** Apple Sandbox · Google 테스트 구매면 1(매출에서 뺀다). */
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.store, table.transactionId] }),
+    index('iap_purchases_profile_idx').on(table.profileId, table.createdAt),
+  ],
+);
+
+/**
  * T-11-171 친구 초대. 아직 은퇴 선수가 없는 구단주(invitee)가 친구 코드로 친구 신청을 하면 그 코드 주인(inviter)의 초대로
  * 한 번만 적는다. invitee가 처음 은퇴시킨 커리어가 done_at · career_id로 남고, 그때 두 사람에게 리롤권을 준다.
  * inviter_rewarded: 초대한 쪽이 보상을 받았는가(INVITE_REWARD_MAX명까지).
