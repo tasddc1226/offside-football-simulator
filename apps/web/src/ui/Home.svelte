@@ -16,6 +16,8 @@
   import HomeLive from './HomeLive.svelte';
   import HomeTicker from './HomeTicker.svelte';
   import { openFriends } from './friendInvite.svelte.js';
+  import { INVITE_REROLLS } from '@offside/contracts/owner-team';
+  import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { ANDROID_TESTER_FORM_URL, DC_GALLERY_URL, IOS_APP_STORE_URL } from '@offside/app-core/links';
   import { APP_PROMO } from '@offside/app-core/appPromo';
@@ -83,7 +85,7 @@
     </button>
     <!-- T-11-175 친구 초대 이벤트는 구단주 → 경기 → 친구까지 들어가야 보여서 홈에서 바로 친구 화면(이벤트 카드가 맨 위)으로 간다. -->
     <button class="tile tile-link tile-wide" data-act="home-invite" onclick={openFriends}>
-      <span class="eyebrow">Invite event</span><b>{L.inviteTitle}</b><span class="muted fs-sm">{L.inviteSub}</span>
+      <span class="eyebrow">Invite event</span><b>{LF.eventTitle}</b><span class="muted fs-sm">{L.inviteSub({ n: INVITE_REROLLS })}</span>
     </button>
     <HomeFirsts />
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>

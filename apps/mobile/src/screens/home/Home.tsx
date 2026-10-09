@@ -27,6 +27,8 @@ import { Tile } from './Tile';
 import { PushOptInCard } from './PushOptInCard';
 import { InboxButton } from '../../components/InboxButton';
 import { openFriends } from '../../platform/inbox';
+import { INVITE_REROLLS } from '@offside/contracts/owner-team';
+import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { tn } from '@offside/game/i18n/names';
 
 export default function Home() {
@@ -172,8 +174,8 @@ export default function Home() {
           wide
           testID="home-invite"
           eyebrow="Invite event"
-          title={L.inviteTitle}
-          sub={L.inviteSub}
+          title={LF.eventTitle}
+          sub={L.inviteSub({ n: INVITE_REROLLS })}
           onPress={openFriends}
         />
         <View style={{ flexDirection: 'row', gap: 10 }}>
