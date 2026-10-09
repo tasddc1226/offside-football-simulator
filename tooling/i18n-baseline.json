@@ -80,7 +80,7 @@
   "packages/app-core/src/state.ts": 1,
   "packages/app-core/src/teamOwner.ts": 11,
   "packages/contracts/src/auth.ts": 5,
-  "packages/contracts/src/balance-spec.ts": 86,
+  "packages/contracts/src/balance-text.ts": 86,
   "packages/contracts/src/board-limits.ts": 3,
   "packages/contracts/src/body.ts": 6,
   "packages/contracts/src/careers.ts": 9,
