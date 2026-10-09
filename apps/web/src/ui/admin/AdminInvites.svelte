@@ -6,6 +6,7 @@
   import * as api from '@offside/app-core/api/admin';
   import type { AdminInviteReport } from '@offside/app-core/api/admin';
   import { kstDateTime as kst } from '@offside/app-core/boardText';
+  import { INVITE_NOTE, invitePair, inviteState, inviteSummary, inviterLine, nick } from '@offside/app-core/admin/invites';
 
   let report = $state<AdminInviteReport | null>(null);
   let status = $state<LoadStatus>('loading');
@@ -29,26 +30,20 @@
     <h2 style="margin:0">친구 초대 현황</h2>
     <button class="icon-btn" data-act="refresh-invites" onclick={load}>새로고침</button>
   </div>
-  <p class="muted fs-xs" style="margin:0">
-    친구 코드로 신청한 새 구단주가 초대예요. 첫 커리어를 마치면 초대받은 사람은 늘, 초대한 사람은 10명까지 리롤권을 받아요.
-  </p>
+  <p class="muted fs-xs" style="margin:0">{INVITE_NOTE}</p>
   <LoadState {status} failText="친구 초대 현황을 불러오지 못했어요." retry={load}>
     {@const r = report!}
     <p class="fs-sm" style="margin:0">{kst(r.generatedAt)} 기준</p>
     <dl class="sums" data-invites-summary>
-      <dt>초대</dt><dd data-invites-total>{r.invites.toLocaleString()}건</dd>
-      <dt>초대한 구단주</dt><dd>{r.inviters.toLocaleString()}명</dd>
-      <dt>첫 커리어를 마침</dt><dd data-invites-done>{r.done.toLocaleString()}건</dd>
-      <dt>초대한 쪽 보상</dt><dd>{r.inviterRewarded.toLocaleString()}건</dd>
-      <dt>지급된 리롤권</dt><dd data-invites-rerolls>{r.rerolls.toLocaleString()}장</dd>
+      {#each inviteSummary(r) as [label, v] (label)}<dt>{label}</dt><dd>{v}</dd>{/each}
     </dl>
 
     <h3 class="fs-sm" style="margin:0">초대를 많이 한 구단주</h3>
     <ul class="list">
       {#each r.top as t (t.profileId)}
         <li data-inviter={t.profileId}>
-          <span>{t.nickname ?? '닉네임 없음'} <small class="muted">{t.profileId}</small></span>
-          <b>{t.invited}명 · 마침 {t.done} · 보상 {t.rewarded}</b>
+          <span>{nick(t.nickname)} <small class="muted">{t.profileId}</small></span>
+          <b>{inviterLine(t)}</b>
         </li>
       {:else}
         <li class="muted">아직 초대가 없어요.</li>
@@ -60,10 +55,10 @@
       {#each r.recent as v (v.inviteeId)}
         <li data-invite={v.inviteeId}>
           <span>
-            {v.inviterNickname ?? '닉네임 없음'} → {v.inviteeNickname ?? '닉네임 없음'}
+            {invitePair(v)}
             <small class="muted">{kst(v.claimedAt)}</small>
           </span>
-          <b class:good={v.doneAt}>{v.doneAt ? `마침 ${kst(v.doneAt)}` : '진행 중'}</b>
+          <b class:good={v.doneAt}>{inviteState(v)}</b>
         </li>
       {:else}
         <li class="muted">아직 초대가 없어요.</li>

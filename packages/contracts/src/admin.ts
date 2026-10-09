@@ -272,11 +272,9 @@ export type AdminInviter = z.infer<typeof AdminInviterSchema>;
 export const AdminInviteSchema = z.object({
   inviteeId: z.string(),
   inviteeNickname: z.string().nullable(),
-  inviterId: z.string(),
   inviterNickname: z.string().nullable(),
   claimedAt: z.string(),
   doneAt: z.string().nullable(),
-  inviterRewarded: z.boolean(),
 });
 export type AdminInvite = z.infer<typeof AdminInviteSchema>;
 

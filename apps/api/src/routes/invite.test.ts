@@ -180,9 +180,9 @@ describe('T-11-171 친구 초대', () => {
       top: [{ profileId: inviter.profileId, nickname: '초대왕', invited: 2, done: 1, rewarded: 1 }],
     });
     // 최근 것부터.
-    expect(data.recent.map((r) => [r.inviteeId, r.doneAt !== null, r.inviterRewarded])).toEqual([
-      [b.profileId, false, false],
-      [a.profileId, true, true],
+    expect(data.recent.map((r) => [r.inviteeId, r.inviterNickname, r.doneAt !== null])).toEqual([
+      [b.profileId, '초대왕', false],
+      [a.profileId, '초대왕', true],
     ]);
   });
 });

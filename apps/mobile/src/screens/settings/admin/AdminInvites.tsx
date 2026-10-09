@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import * as api from '@offside/app-core/api/admin';
 import type { AdminInviteReport } from '@offside/app-core/api/admin';
+import {
+  INVITE_NOTE,
+  invitePair,
+  inviteState,
+  inviteSummary,
+  inviterLine,
+  nick,
+} from '@offside/app-core/admin/invites';
 import { kstDateTime as kst } from '@offside/app-core/boardText';
 import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { rem } from '../../../theme/type';
@@ -40,15 +48,6 @@ export default function AdminInvites() {
     borderTopColor: c.line,
   } as const;
   const r = report;
-  const sums: [string, string][] = r
-    ? [
-        ['초대', `${r.invites.toLocaleString()}건`],
-        ['초대한 구단주', `${r.inviters.toLocaleString()}명`],
-        ['첫 커리어를 마침', `${r.done.toLocaleString()}건`],
-        ['초대한 쪽 보상', `${r.inviterRewarded.toLocaleString()}건`],
-        ['지급된 리롤권', `${r.rerolls.toLocaleString()}장`],
-      ]
-    : [];
   const none = (
     <Txt tone="muted" style={small}>
       아직 초대가 없어요.
@@ -65,8 +64,7 @@ export default function AdminInvites() {
         </Btn>
       </View>
       <Txt tone="muted" style={tiny}>
-        친구 코드로 신청한 새 구단주가 초대예요. 첫 커리어를 마치면 초대받은 사람은 늘, 초대한
-        사람은 10명까지 리롤권을 받아요.
+        {INVITE_NOTE}
       </Txt>
       <LoadState
         status={status}
@@ -77,7 +75,7 @@ export default function AdminInvites() {
           <>
             <Txt style={small}>{`${kst(r.generatedAt)} 기준`}</Txt>
             <View testID="invites-summary">
-              {sums.map(([label, v]) => (
+              {inviteSummary(r).map(([label, v]) => (
                 <View key={label} style={row}>
                   <Txt style={small}>{label}</Txt>
                   <Txt num style={small}>
@@ -94,13 +92,13 @@ export default function AdminInvites() {
                 ? r.top.map((t) => (
                     <View key={t.profileId} testID={`inviter-${t.profileId}`} style={row}>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Txt style={small}>{t.nickname ?? '닉네임 없음'}</Txt>
+                        <Txt style={small}>{nick(t.nickname)}</Txt>
                         <Txt tone="muted" numberOfLines={1} style={tiny}>
                           {t.profileId}
                         </Txt>
                       </View>
                       <Txt num bold style={small}>
-                        {`${t.invited}명 · 마침 ${t.done} · 보상 ${t.rewarded}`}
+                        {inviterLine(t)}
                       </Txt>
                     </View>
                   ))
@@ -114,15 +112,13 @@ export default function AdminInvites() {
                 ? r.recent.map((v) => (
                     <View key={v.inviteeId} style={row}>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Txt style={small}>
-                          {`${v.inviterNickname ?? '닉네임 없음'} → ${v.inviteeNickname ?? '닉네임 없음'}`}
-                        </Txt>
+                        <Txt style={small}>{invitePair(v)}</Txt>
                         <Txt tone="muted" style={tiny}>
                           {kst(v.claimedAt)}
                         </Txt>
                       </View>
                       <Txt bold tone={v.doneAt ? 'good' : 'muted'} style={small}>
-                        {v.doneAt ? `마침 ${kst(v.doneAt)}` : '진행 중'}
+                        {inviteState(v)}
                       </Txt>
                     </View>
                   ))

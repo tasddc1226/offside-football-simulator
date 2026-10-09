@@ -138,30 +138,28 @@ const ADMIN_TOP = 20;
 const ADMIN_RECENT = 30;
 
 /**
- * T-11-177 운영 도구 친구 초대 현황. 운영자가 열 때만 읽는다. 합 · 구단주별은 (inviter_id, inviter_rewarded, done_at) 인덱스로,
- * 최근 초대는 넣은 순서(rowid)로 읽어 정렬용 인덱스가 필요 없다.
+ * T-11-177 운영 도구 친구 초대 현황. 운영자가 열 때만 읽는다. 구단주별 합은 (inviter_id, inviter_rewarded, done_at) 인덱스를
+ * 한 번 훑어 전체 합과 순위에 같이 쓰고, 최근 초대는 넣은 순서(rowid)로 읽어 정렬용 인덱스가 필요 없다.
  */
 export async function inviteReport(db: Db, now: Date): Promise<AdminInviteReport> {
   const d1 = db.$client;
-  const [total, top, recent] = await d1.batch([
-    d1.prepare(
-      `SELECT count(*) invites, coalesce(sum(done_at IS NOT NULL), 0) done,
-              coalesce(sum(inviter_rewarded), 0) inviterRewarded, count(DISTINCT inviter_id) inviters
-         FROM referrals`,
-    ),
+  const [rows, recent] = await d1.batch([
     d1
       .prepare(
-        `SELECT r.inviter_id profileId, p.nickname, r.invited, r.done, r.rewarded
-           FROM (SELECT inviter_id, count(*) invited, sum(done_at IS NOT NULL) done, sum(inviter_rewarded) rewarded
-                   FROM referrals GROUP BY inviter_id ORDER BY invited DESC, done DESC LIMIT ?) r
-           LEFT JOIN profiles p ON p.id = r.inviter_id
-          ORDER BY r.invited DESC, r.done DESC`,
+        `WITH g AS (SELECT inviter_id, count(*) invited, sum(done_at IS NOT NULL) done, sum(inviter_rewarded) rewarded
+                      FROM referrals GROUP BY inviter_id)
+         SELECT NULL profileId, NULL nickname, coalesce(sum(invited), 0) invited, coalesce(sum(done), 0) done,
+                coalesce(sum(rewarded), 0) rewarded, count(*) inviters FROM g
+         UNION ALL
+         SELECT * FROM (SELECT g.inviter_id, p.nickname, g.invited, g.done, g.rewarded, NULL FROM g
+                          LEFT JOIN profiles p ON p.id = g.inviter_id
+                         ORDER BY g.invited DESC, g.done DESC LIMIT ?)`,
       )
       .bind(ADMIN_TOP),
     d1
       .prepare(
-        `SELECT r.invitee_id inviteeId, e.nickname inviteeNickname, r.inviter_id inviterId,
-                i.nickname inviterNickname, r.claimed_at claimedAt, r.done_at doneAt, r.inviter_rewarded inviterRewarded
+        `SELECT r.invitee_id inviteeId, e.nickname inviteeNickname, i.nickname inviterNickname,
+                r.claimed_at claimedAt, r.done_at doneAt
            FROM (SELECT rowid, * FROM referrals ORDER BY rowid DESC LIMIT ?) r
            LEFT JOIN profiles e ON e.id = r.invitee_id
            LEFT JOIN profiles i ON i.id = r.inviter_id
@@ -169,27 +167,22 @@ export async function inviteReport(db: Db, now: Date): Promise<AdminInviteReport
       )
       .bind(ADMIN_RECENT),
   ]);
-  const t = total!.results[0] as Record<string, number>;
-  const n = (v: unknown) => Number(v ?? 0);
+  // profileId가 NULL인 줄이 전체 합, 나머지가 순위.
+  const all = rows!.results as (Omit<AdminInviter, 'profileId'> & {
+    profileId: string | null;
+    inviters: number;
+  })[];
+  const total = all.find((r) => r.profileId === null)!;
+  const top = all.filter((r): r is typeof r & { profileId: string } => r.profileId !== null);
   return {
     generatedAt: now.toISOString(),
-    invites: n(t.invites),
-    done: n(t.done),
-    inviterRewarded: n(t.inviterRewarded),
-    inviters: n(t.inviters),
-    rerolls: (n(t.done) + n(t.inviterRewarded)) * INVITE_REROLLS,
-    top: (top!.results as AdminInviter[]).map((r) => ({
-      ...r,
-      invited: n(r.invited),
-      done: n(r.done),
-      rewarded: n(r.rewarded),
-    })),
-    recent: (
-      recent!.results as (Omit<AdminInvite, 'inviterRewarded'> & { inviterRewarded: number })[]
-    ).map((r) => ({
-      ...r,
-      inviterRewarded: Boolean(r.inviterRewarded),
-    })),
+    invites: total.invited,
+    done: total.done,
+    inviterRewarded: total.rewarded,
+    inviters: total.inviters,
+    rerolls: (total.done + total.rewarded) * INVITE_REROLLS,
+    top: top.map(({ inviters: _, ...t }) => t),
+    recent: recent!.results as AdminInvite[],
   };
 }
 
