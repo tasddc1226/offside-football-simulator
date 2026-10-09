@@ -1,0 +1,23 @@
+{
+  "id": "t-11-167-block-and-report",
+  "title": "채팅 차단 해제와 닉네임 신고",
+  "items": [
+    "채팅 화면 오른쪽 위 안내 버튼에서 차단한 사용자를 보고 차단을 풀 수 있어요.",
+    "구단 프로필에 구단주 닉네임이 보이고, 닉네임을 신고할 수 있어요."
+  ],
+  "en": {
+    "title": "Unblock in chat and report nicknames",
+    "items": [
+      "Open the info button at the top right of the chat to see who you blocked and unblock them.",
+      "Team profiles now show the owner's nickname, and you can report it."
+    ]
+  },
+  "ja": {
+    "title": "チャットのブロック解除とニックネーム通報",
+    "items": [
+      "チャット画面右上の案内ボタンから、ブロックしたユーザーを確認して解除できます。",
+      "チームプロフィールにオーナーのニックネームが表示され、通報できるようになりました。"
+    ]
+  },
+  "availability": "web-app-pending"
+}

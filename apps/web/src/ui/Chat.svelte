@@ -6,6 +6,8 @@
   import { ADMIN_NICKNAME, COMMENT_REPORT_REASONS, type CommentReportReason } from '@offside/contracts/board-limits';
   import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
   import * as api from '@offside/app-core/api/chat';
+  import { unblock as unblockApi } from '@offside/app-core/api/boards';
+  import type { ChatBlockResponse } from '@offside/contracts';
   import {
     CHAT_REJECT_TEXT,
     EMPTY_CHAT,
@@ -131,6 +133,20 @@
     const r = await run(api.blockChatAuthor(m.id), L.blockedToast({ nick: m.nickname }));
     if (r) chatSession().block(r.data.author);
   }
+  /** T-11-167 차단한 사용자 — 안내 창을 열 때만 불러온다(로그인한 사람만). null이면 아직, 'error'면 실패. */
+  let blocks = $state<ChatBlockResponse[] | null | 'error'>(null);
+  async function loadBlocks(open: boolean) {
+    if (!open || !view.me?.author) return;
+    const r = await api.fetchChatBlocks();
+    blocks = r.ok ? r.data.blocks : 'error';
+  }
+  async function unblock(b: ChatBlockResponse) {
+    const r = await unblockApi(b.id);
+    if (!r.ok) return toast(r.error.message);
+    chatSession().unblock(b.author);
+    if (Array.isArray(blocks)) blocks = blocks.filter((x) => x.id !== b.id);
+    toast(L.unblockedToast({ nick: b.nickname }));
+  }
   const hide = (m: ChatMessage) => run(api.adminHideChat(m.id), L.hiddenToast);
   function mute(m: ChatMessage, days: (typeof CHAT_MUTE_DAYS)[number]) {
     if (!confirm(`${L.muteTitle({ nick: m.nickname, days })} ${L.muteBody}`)) return;
@@ -150,11 +166,32 @@
           {#if view.status === 'open'}<span class="chat-dot" aria-hidden="true"></span>{L.online({ n: view.online })}{:else if view.status === 'retrying'}{L.reconnecting}{:else}{L.connecting}{/if}
         </span>
       </div>
-      <details class="chat-rules">
+      <details class="chat-rules" ontoggle={(e) => void loadBlocks((e.currentTarget as HTMLDetailsElement).open)}>
         <summary aria-label={L.rulesLabel}>
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M12 11v6M12 7v1" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
         </summary>
-        <p class="muted fs-xs">{L.rulesBody} <a href="/legal/terms/">{L.terms}</a></p>
+        <div class="chat-rules-pop">
+          <p class="muted fs-xs">{L.rulesBody} <a href="/legal/terms/">{L.terms}</a></p>
+          {#if view.me?.author}
+            <div class="board-blocks" data-chat-blocks>
+              <b class="fs-sm">{L.blockedTitle}</b>
+              {#if blocks === 'error'}
+                <p class="muted fs-xs">{L.blockedLoadFail}</p>
+              {:else if blocks && !blocks.length}
+                <p class="muted fs-xs">{L.blockedEmpty}</p>
+              {:else if blocks}
+                <ul>
+                  {#each blocks as b (b.id)}
+                    <li class="row" style="justify-content:space-between;align-items:center">
+                      <span class="fs-sm">{b.nickname}</span>
+                      <button class="icon-btn" data-act="chat-unblock" onclick={() => unblock(b)}>{L.unblock}</button>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            </div>
+          {/if}
+        </div>
       </details>
     </header>
 

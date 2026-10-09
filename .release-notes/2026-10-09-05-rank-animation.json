@@ -1,0 +1,20 @@
+{
+  "id": "t-11-162-rank-animation-scroll",
+  "title": "순위 변동 연출 보완",
+  "items": [
+    "경기 결과 안내를 건너뛰고 직접 내려가도, 순위표가 보이면 순위 변동 연출을 한 번 보여 줘요."
+  ],
+  "en": {
+    "title": "Rank change animation fix",
+    "items": [
+      "Even if you skip the match result tour and scroll down yourself, the rank change animation plays once when the league table comes into view."
+    ]
+  },
+  "ja": {
+    "title": "順位変動の演出を改善",
+    "items": [
+      "試合結果の案内を飛ばして自分でスクロールしても、順位表が見えたら順位変動の演出を一度表示します。"
+    ]
+  },
+  "availability": "web-app"
+}

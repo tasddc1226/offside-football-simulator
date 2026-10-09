@@ -6,6 +6,7 @@ import type { FundsItem } from '@offside/contracts';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
 import { POS_GROUPS, detailPosOf } from '@offside/contracts/positions';
+import { typeName } from '@offside/game/data';
 import { marketText as L } from './i18n/ko/market.js';
 import { intlLocale } from './i18n/core.js';
 
@@ -178,6 +179,17 @@ export const MARKET_TOAST = {
   released: (n: number) => L.toastReleased({ n }),
 };
 
+/** 구단주 로그인이 필요해서 실패했는가(세션 없음 · 구글/애플 연결 전). 이적시장·내 팀이 오류 대신 로그인을 권한다. */
+export const needsOwnerLogin = (e: { code: string; reason?: string }) =>
+  e.code === 'PROFILE_REQUIRED' || e.reason === 'GOOGLE_LOGIN_REQUIRED';
+
 /** 시장 줄 아래 한 줄(레전드 점수 · 이적 횟수). */
-export const cardMeta = (c: Pick<MarketCard, 'legendScore' | 'transfers'>) =>
-  L.cardMeta({ score: c.legendScore.toLocaleString(intlLocale()), transfers: c.transfers });
+export function cardMeta(c: Pick<MarketCard, 'pos' | 'type' | 'legendScore' | 'transfers'>) {
+  const meta = L.cardMeta({
+    score: c.legendScore.toLocaleString(intlLocale()),
+    transfers: c.transfers,
+  });
+  // T-11-164 유형(스피드스터·윙어 등)을 앞에 붙인다 — 카드 상세(PlayerCard)의 유형 띠와 같은 이름.
+  const style = typeName(c.pos, c.type);
+  return style ? `${style} · ${meta}` : meta;
+}

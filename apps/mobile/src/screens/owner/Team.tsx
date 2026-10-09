@@ -52,7 +52,7 @@ import {
   synergyFocus,
   teamEditableIn,
 } from '@offside/app-core/teamOwner';
-import { marketName } from '@offside/app-core/market';
+import { marketName, needsOwnerLogin } from '@offside/app-core/market';
 import { localCareerNames } from '@offside/game/hof-store';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines } from '../../components/TeamPitch';
@@ -290,8 +290,7 @@ export default function Team() {
     if (sequence !== loadSequence.current) return;
     if (silent && !r.ok) return;
     if (!r.ok) {
-      const login =
-        r.error.reason === 'GOOGLE_LOGIN_REQUIRED' || r.error.code === 'PROFILE_REQUIRED';
+      const login = needsOwnerLogin(r.error);
       setNeedLogin(login);
       setStatus(login ? 'ready' : 'error');
       return;

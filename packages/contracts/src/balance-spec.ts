@@ -162,6 +162,14 @@ export const BALANCE_SPEC = {
     step: 0.05,
     unit: 'pct',
   },
+  // T-11-163 키운 선수를 방출하지 않고도 구단 자금을 조금 받는다. 방출(기준가 100%)보다 훨씬 적게 둔다.
+  marketRetireBonusRate: {
+    def: 0.1,
+    min: 0,
+    max: 0.5,
+    step: 0.01,
+    unit: 'pct',
+  },
   marketFeeRate: {
     def: 0.05,
     min: 0,

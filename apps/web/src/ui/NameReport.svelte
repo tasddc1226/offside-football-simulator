@@ -6,11 +6,14 @@
   import { hofOwnText as L } from '@offside/app-core/i18n/ko/hofOwn';
 
   const { kind, id, name }: { kind: NameReportKind; id: string; name: string } = $props();
+  /** T-11-167 owner는 구단주 닉네임 신고다(id는 그 구단). */
+  const nick = $derived(kind === 'owner');
   let sent = $state(false);
   let busy = $state(false);
 
   async function send() {
-    if (busy || !confirm(`${L.reportTitle({ name })} ${L.reportBody}`)) return;
+    const title = nick ? L.reportNickTitle({ name }) : L.reportTitle({ name });
+    if (busy || !confirm(`${title} ${L.reportBody}`)) return;
     busy = true;
     const r = await reportName({ kind, id });
     busy = false;
@@ -21,8 +24,8 @@
 </script>
 
 <p class="name-report">
-  <button class="icon-btn" data-act="name-report" disabled={sent || busy} onclick={send}>
-    {sent ? L.reportDone : L.reportBtn}
+  <button class="icon-btn" data-act={nick ? 'nick-report' : 'name-report'} aria-label={nick ? L.reportNickLabel({ name }) : L.reportLabel({ name })} disabled={sent || busy} onclick={send}>
+    {sent ? L.reportDone : nick ? L.reportNickBtn : L.reportBtn}
   </button>
 </p>
 

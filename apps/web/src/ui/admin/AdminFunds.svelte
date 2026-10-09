@@ -1,5 +1,5 @@
 <script lang="ts">
-  // T-11-153 구단 자금 대조. 잔액 = 방출 + 판매(수수료 뺀) − 영입 − 구단 자금으로 산 것. 기록 밖에서 바뀐 잔액(차이)이 있는
+  // T-11-153 구단 자금 대조. 잔액 = 방출 + 은퇴 장려금 + 판매(수수료 뺀) − 영입 − 구단 자금으로 산 것. 기록 밖에서 바뀐 잔액(차이)이 있는
   // 구단주를 보여 주고, 프로필 id나 닉네임으로 한 명의 출처별 합과 최근 움직임을 본다. 근거는 api `db/repos/fundsAudit.ts`.
   import { onMount } from 'svelte';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
@@ -55,6 +55,7 @@
     <dl class="sums">
       <dt>잔액 합</dt><dd>{fundsText(r.balance)}</dd>
       <dt>방출로 들어옴</dt><dd>{fundsText(r.released)}</dd>
+      <dt>은퇴 장려금</dt><dd data-funds-bonus>{fundsText(r.bonus)}</dd>
       <dt>판매(수수료 뺀)</dt><dd>{fundsText(r.sold)}</dd>
       <dt>영입</dt><dd>{fundsText(r.bought)}</dd>
       <dt>수수료로 없어짐</dt><dd>{fundsText(r.fees)}</dd>
@@ -83,7 +84,7 @@
     <div class="owner" data-funds-owner={owner.profileId}>
       <b>{owner.nickname ?? '닉네임 없음'} <small class="muted">{owner.profileId}</small></b>
       <p class="fs-sm" style="margin:0">
-        잔액 {fundsText(owner.balance)} = 방출 {fundsText(owner.released)} + 판매 {fundsText(owner.sold)} − 영입
+        잔액 {fundsText(owner.balance)} = 방출 {fundsText(owner.released)} + 장려금 {fundsText(owner.bonus)} + 판매 {fundsText(owner.sold)} − 영입
         {fundsText(owner.bought)} − 사용 {fundsText(owner.items)}
         <b class:bad={owner.diff !== 0}>{owner.diff === 0 ? '· 일치' : `· 차이 ${signedFunds(owner.diff)}`}</b>
       </p>

@@ -130,7 +130,12 @@ export const BOARD_LABEL: Record<BoardKey, string> = {
 
 /** 댓글 신고 사유 — 웹·앱 신고 패널이 이 순서로 버튼을 놓는다. */
 /** 이름 신고 대상(운영 도구). */
-export const NAME_KIND_LABEL: Record<NameReportKind, string> = { career: '선수', team: '구단' };
+export const NAME_KIND_LABEL: Record<NameReportKind, string> = {
+  career: '선수',
+  team: '구단',
+  // i18n-ignore: 운영 도구는 한국어로 둔다(CLAUDE.md 다국어 규칙)
+  owner: '닉네임',
+};
 
 export const REPORT_REASON_LABEL: Record<CommentReportReason, string> = {
   get spam() {

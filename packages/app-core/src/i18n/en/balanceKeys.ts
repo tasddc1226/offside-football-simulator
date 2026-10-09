@@ -23,6 +23,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   olyRelease: 'Overseas club release for the Olympics',
   sangmuBase: 'Sangmu base acceptance rate',
   marketReleaseRate: 'Release payout rate',
+  marketRetireBonusRate: 'Retirement bonus rate',
   marketFeeRate: 'Transfer fee rate',
   marketPriceMin: 'Minimum sale price (× base)',
   marketPriceMax: 'Maximum sale price (× base)',

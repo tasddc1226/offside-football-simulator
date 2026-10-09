@@ -106,6 +106,22 @@ describe('T-11-015 채팅 /v1/chat', () => {
     expect((await ticketOf(alice.cookie)).data.blocked).toEqual([author]);
     expect((await ticketOf(bob.cookie)).data.author).toBe(author);
 
+    // T-11-167 채팅에서 차단 목록을 보고 게시판과 같은 경로로 푼다.
+    const list = await call('GET', '/v1/chat/blocks', { cookie: alice.cookie });
+    expect(list.status).toBe(200);
+    const { blocks } = (
+      (await list.json()) as {
+        data: { blocks: { id: string; nickname: string; author: string }[] };
+      }
+    ).data;
+    expect(blocks).toEqual([expect.objectContaining({ nickname: '밥', author })]);
+    expect((await call('GET', '/v1/chat/blocks')).status).toBe(401);
+    expect(
+      (await call('DELETE', `/v1/boards/blocks/${blocks[0]!.id}`, { cookie: alice.cookie })).status,
+    ).toBe(204);
+    expect((await ticketOf(alice.cookie)).data.blocked).toEqual([]);
+    await call('POST', `/v1/chat/messages/${bob.id}/block`, { cookie: alice.cookie });
+
     const admin = await issueAdminCookie(ctx);
     const ws = await chat.join((await ticketOf(admin.cookie)).data.ticket!);
     chat.room.webSocketMessage(

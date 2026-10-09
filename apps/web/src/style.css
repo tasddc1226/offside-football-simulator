@@ -295,7 +295,8 @@ select:focus-visible {
   background: color-mix(in srgb, #1f4f8f 14%, var(--surface));
   color: color-mix(in srgb, #1f4f8f 80%, var(--ink));
 }
-.funds-badge-sold {
+.funds-badge-sold,
+.funds-badge-bonus {
   background: color-mix(in srgb, var(--accent) 18%, var(--surface));
   color: var(--accent-text);
 }
@@ -6532,7 +6533,12 @@ button.what {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.chat-rules p {
+.chat-rules-pop p {
+  margin: 0;
+}
+.chat-rules-pop {
+  display: grid;
+  gap: 10px;
   position: absolute;
   z-index: 2;
   top: 100%;

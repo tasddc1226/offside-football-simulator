@@ -40,6 +40,12 @@ export const ChatBlockResponseSchema = z.strictObject({
 });
 export type ChatBlockResponse = z.infer<typeof ChatBlockResponseSchema>;
 
+/** T-11-167 내가 차단한 사람 목록(채팅 화면에서 차단을 푼다). 푸는 건 게시판과 같은 DELETE /v1/boards/blocks/:id다. */
+export const ChatBlockListResponseSchema = z.strictObject({
+  blocks: z.array(ChatBlockResponseSchema),
+});
+export type ChatBlockListResponse = z.infer<typeof ChatBlockListResponseSchema>;
+
 /** T-11-015 운영자 채팅 신고 목록 — 처리하지 않은 신고를 메시지마다 모은다. 본문은 신고할 때 남긴 사본이다. */
 export const AdminChatReportSchema = z.object({
   messageId: z.string(),

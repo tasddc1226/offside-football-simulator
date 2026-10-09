@@ -20,6 +20,9 @@ const ko = {
   reportDone: '신고했어요',
   reportBtn: '이름 신고',
   reportLabel: (p: { name: string }) => `${p.name} 이름 신고`,
+  reportNickTitle: (p: { name: string }) => `'${p.name}' 닉네임을 신고할까요?`,
+  reportNickBtn: '닉네임 신고',
+  reportNickLabel: (p: { name: string }) => `${p.name} 닉네임 신고`,
   // 댓글 닉네임
   nickSaved: '닉네임을 정했어요',
   nickLabel: '댓글 닉네임',

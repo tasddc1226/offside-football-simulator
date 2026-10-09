@@ -13,6 +13,14 @@ import { Btn, Txt } from '../ui';
 import { CARD_HEIGHT, CARD_STYLE_ROW, PlayerCard } from './PlayerCard';
 
 export type PeekOrigin = { x: number; y: number; w: number; h: number };
+/** 그라운드(measureInWindow 값) 위 자리 카드가 화면에서 놓인 곳 — 자리 카드는 62×88, 가운데가 자리 좌표(TeamPitch). */
+export const pitchPeekOrigin = (
+  px: number,
+  py: number,
+  w: number,
+  h: number,
+  pos: { x: number; y: number },
+): PeekOrigin => ({ x: px + (pos.x / 100) * w - 31, y: py + (pos.y / 100) * h - 44, w: 62, h: 88 });
 // 라커룸 카드(2열 중 한 칸)와 같은 폭·높이로 그려 글자·여백 비율을 같게 두고, 통째로 키운다.
 const CARD_W = 165;
 // PlayerCard 큰 카드 높이(플레이스타일 줄이 있으면 그만큼 더).

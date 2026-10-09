@@ -344,6 +344,18 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     ).data.team;
     expect(profile).toMatchObject({ layout, logo });
     expect(profile.slots[2]).toMatchObject({ slot: 'DM', rating: 74, nation: 'BR' });
+    // T-11-165 선발 선수 카드(확대 카드용). 구단주만의 값(기준가 · 직접 키움 · 매물)은 싣지 않는다.
+    expect(profile.players).toHaveLength(1);
+    expect(profile.players![0]).toMatchObject({
+      careerId: cb,
+      pos: 'DF',
+      peak: 82,
+      nation: 'BR',
+      roles,
+    });
+    expect(profile.players![0]).not.toHaveProperty('cardValue');
+    expect(profile.players![0]).not.toHaveProperty('raised');
+    expect(profile.players![0]).not.toHaveProperty('listing');
     const rival = await ownerWithTeam(1);
     const rivalLogo = { ...logo, text: 'RV', bg: '#a52e37' };
     await ctx.db
