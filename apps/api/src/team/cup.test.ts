@@ -481,17 +481,14 @@ describe('T-11-145 컵 진행(cron)', () => {
     const items = await callJson(ctx.env, 'GET', '/v1/items', { cookie: who.cookie });
     expect(((await items.json()) as { data: { reroll: number } }).data.reroll).toBe(0);
     // T-11-173 잠재력 강화는 하루 횟수가 없다: 오늘 5번 넘게 받아도 값만 오른다.
-    const now = new Date().toISOString();
-    await ctx.db.insert(ownerItemPurchases).values(
-      [1, 2, 3, 4, 5].map((i) => ({
-        id: `ipc_boost_${i}`,
-        profileId: who.profileId,
-        item: 'reward:boost',
-        qty: 1,
-        price: 500_000,
-        createdAt: now,
-      })),
-    );
+    await ctx.db.insert(ownerItemPurchases).values({
+      id: 'ipc_boost_5',
+      profileId: who.profileId,
+      item: 'reward:boost',
+      qty: 5,
+      price: 500_000,
+      createdAt: new Date().toISOString(),
+    });
     expect((await shop()).offers.boost).toEqual({
       price: 500_000 * 2 ** 6,
       bought: 6,
