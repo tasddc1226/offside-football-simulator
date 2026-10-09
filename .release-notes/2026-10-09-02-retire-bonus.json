@@ -1,0 +1,23 @@
+{
+  "id": "t-11-163-retire-bonus",
+  "title": "은퇴 장려금",
+  "items": [
+    "키운 선수가 은퇴해 카드가 되면, 카드 기준가의 10%를 구단 자금으로 받아요.",
+    "방출하지 않고 카드를 그대로 가져도 받아요. 받은 장려금은 이적시장 자금 내역에서 볼 수 있어요."
+  ],
+  "en": {
+    "title": "Retirement bonus",
+    "items": [
+      "When a player you raised retires and becomes a card, you receive 10% of the card's base value as club funds.",
+      "You get it even if you keep the card instead of releasing it. The bonus appears in your market funds history."
+    ]
+  },
+  "ja": {
+    "title": "引退奨励金",
+    "items": [
+      "育てた選手が引退してカードになると、カード基準価格の10%をクラブ資金として受け取れます。",
+      "放出せずにカードを持ち続けても受け取れます。奨励金は移籍市場の資金履歴で確認できます。"
+    ]
+  },
+  "availability": "web-app"
+}
