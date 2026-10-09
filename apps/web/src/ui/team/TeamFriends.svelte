@@ -178,15 +178,7 @@
         </div>
       {/if}
 
-      <div class="fr-code">
-        <span class="muted fs-sm">{L.myCode}</span>
-        <b class="fr-code-value" data-friend-code>{friendCodeLabel(data.code)}</b>
-        <div class="fr-row-actions">
-          <button class="btn btn-sm" onclick={share} data-act="friend-share">{L.shareLink}</button>
-          <button class="btn btn-sm" onclick={copyCode}>{L.copyCode}</button>
-        </div>
-      </div>
-
+      <!-- T-11-175 이벤트 카드를 맨 위에: 홈 타일 · 초대 알림으로 들어오면 바로 보이게. -->
       {#if data.invite}
         {@const ev = inviteEventLines(data.invite)}
         <div class="fr-event" data-invite-event>
@@ -197,6 +189,15 @@
           {#if ev.maxed}<p class="muted fs-sm">{ev.maxed}</p>{/if}
         </div>
       {/if}
+
+      <div class="fr-code">
+        <span class="muted fs-sm">{L.myCode}</span>
+        <b class="fr-code-value" data-friend-code>{friendCodeLabel(data.code)}</b>
+        <div class="fr-row-actions">
+          <button class="btn btn-sm" onclick={share} data-act="friend-share">{L.shareLink}</button>
+          <button class="btn btn-sm" onclick={copyCode}>{L.copyCode}</button>
+        </div>
+      </div>
 
       <form class="fr-add" onsubmit={(e) => { e.preventDefault(); sendCode(codeInput); }}>
         <label class="fr-add-label" for="friend-code-input">{L.addByCode}</label>

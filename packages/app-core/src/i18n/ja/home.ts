@@ -19,6 +19,8 @@ export const home: Translation<HomeMsgs> = {
   conflictKeep: 'この端末だけに残す',
   marketTitle: '移籍市場',
   marketSub: '今シーズンの選手売買 · 相場 →',
+  inviteTitle: '友だち招待イベント',
+  inviteSub: '友だちと一緒にリロール券2枚ずつ →',
   dexTitle: '確率イベント',
   dexSubWeb: '選択肢ごとの成功確率を見る →',
   testerTitle: 'テスター募集 ↗',

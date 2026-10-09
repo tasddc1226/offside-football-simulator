@@ -20,6 +20,8 @@ export const home: Translation<HomeMsgs> = {
   conflictKeep: 'Keep on this device only',
   marketTitle: 'Transfer window',
   marketSub: 'Buy and sell players this season · prices →',
+  inviteTitle: 'Invite friends',
+  inviteSub: 'You and your friend each get 2 reroll tickets →',
   dexTitle: 'Event odds',
   dexSubWeb: 'See the success odds for each choice →',
   testerTitle: 'Join the testers ↗',
