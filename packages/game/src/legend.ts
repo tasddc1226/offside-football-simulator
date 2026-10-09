@@ -33,8 +33,11 @@ export function legendTermsOf(s: LegendSource): ReturnType<typeof legendTerms> {
     s.dpos,
   );
 }
+/** 레전드 점수 항의 합(반올림 전). */
+export const legendRawScore = (s: LegendSource): number =>
+  Object.values(legendTermsOf(s)).reduce((sum, v) => sum + v, 0);
 export function legendScore(s: LegendSource): number {
-  return Math.round(Object.values(legendTermsOf(s)).reduce((sum, v) => sum + v, 0));
+  return Math.round(legendRawScore(s));
 }
 
 /** T-10-005. 은퇴 상세를 다시 그리는 데 필요한 필드만 복사한다(서버 계약 LegendSnapshotSchema와 같은
