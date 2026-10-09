@@ -23,7 +23,6 @@ export interface AppleTransaction {
   revocationDate?: number;
 }
 
-const b64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 const hex = (buf: ArrayBuffer) =>
   [...new Uint8Array(buf)].map((x) => x.toString(16).padStart(2, '0')).join('');
 const SIZE = { 'P-256': 32, 'P-384': 48 } as const;
@@ -60,7 +59,11 @@ export async function verifyAppleTransaction(
       x5c?: string[];
     };
     if (header.alg !== 'ES256' || header.x5c?.length !== 3) return null;
-    const [leaf, mid, root] = header.x5c.map((c) => parseCert(b64(c))) as [Cert, Cert, Cert];
+    const [leaf, mid, root] = header.x5c.map((c) => parseCert(base64UrlToBytes(c))) as [
+      Cert,
+      Cert,
+      Cert,
+    ];
     if (hex(await crypto.subtle.digest('SHA-256', root.der)) !== rootSha256) return null;
     if (!hasOid(leaf.der, LEAF_OID) || !hasOid(mid.der, INTERMEDIATE_OID)) return null;
     if (!(await signedBy(mid, root)) || !(await signedBy(leaf, mid))) return null;

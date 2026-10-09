@@ -2,7 +2,7 @@
 // 시즌의 강화)에서 로그인한 구단주는 광고와 구단 자금 중 고른다. 웹은 광고가 없어 후보 잠재력 · 강화만 구단 자금으로 받는다.
 // 서버는 자금만 받고, 보상은 응답을 받은 뒤 기기의 게임이 준다.
 import type { RewardKind, RewardShopResponse } from '@offside/contracts';
-import { buyRewardWithFunds, fetchRewardShop } from './api/cup.js';
+import { buyRewardWithFunds, fetchRewardShop, spendBoost } from './api/cup.js';
 import { clearApiCache, hasSessionHint } from './api/client.js';
 import { fundsText } from './funds.js';
 import { gameBoostText as L } from './i18n/ko/gameBoost';
@@ -65,4 +65,26 @@ export async function payWithClub(
   }
   grant();
   return { shop: r.data, message: '' };
+}
+
+// T-11-174 잠재력 강화권: 같은 멱등 키 규칙으로 서버에서 한 장을 뺀 뒤 grant로 강화한다.
+let ticketKey: string | null = null;
+
+/**
+ * 강화권 한 장을 쓰고 성공하면 grant. 남은 장수(boost)와 보여 줄 안내(message, 성공이면 '')를 돌려준다. 장수가 없다는
+ * 거절(NO_BOOST)이면 boost 0, 다시 시도할 수 있는 실패면 boost null(그대로 둔다).
+ */
+export async function payWithTicket(
+  grant: () => void,
+): Promise<{ boost: number | null; message: string }> {
+  ticketKey ??= crypto.randomUUID();
+  const r = await spendBoost(ticketKey);
+  if (r.ok || !r.error.retryable) ticketKey = null;
+  if (!r.ok)
+    return {
+      boost: r.error.reason === 'NO_BOOST' ? 0 : null,
+      message: r.error.message || L.ticketFail,
+    };
+  grant();
+  return { boost: r.data.boost, message: '' };
 }

@@ -6,6 +6,8 @@ import type { Bindings } from '../env.js';
 import { APPLE_ROOT_G3_SHA256, verifyAppleTransaction } from './apple.js';
 import { acknowledgeGooglePurchase, getGooglePurchase } from './google.js';
 
+export type IapRejection = 'INVALID' | 'PENDING' | 'OTHER_ACCOUNT';
+
 export type IapVerdict =
   | {
       ok: true;
@@ -17,7 +19,7 @@ export type IapVerdict =
       /** 아이템을 준 뒤 스토어에 알릴 일(Google 승인). 없으면 undefined. */
       after?: () => Promise<void>;
     }
-  | { ok: false; reason: 'INVALID' | 'PENDING' | 'OTHER_ACCOUNT' };
+  | { ok: false; reason: IapRejection };
 
 /** 서버가 구매를 확인할 수 있는 스토어. Google은 서비스 계정 키가 있어야 한다. */
 export const iapStores = (env: Bindings): IapStore[] =>

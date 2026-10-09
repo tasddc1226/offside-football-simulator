@@ -2,7 +2,7 @@
 // Google Play Developer API(purchases.products.get)로 purchaseToken을 확인한다. 서비스 계정(Play Console에서 이 앱의
 // 재무 데이터 보기 · 주문 관리 권한)의 JSON 키를 secret GOOGLE_PLAY_SA_JSON으로 두고, 그 키로 서명한 JWT를 액세스 토큰으로
 // 바꾼다. 확인한 구매는 서버가 바로 승인(acknowledge)해 둔다 — 앱이 소비(consume)하기 전에 꺼져도 3일 뒤 자동 환불되지 않게.
-import { base64UrlToBytes, bytesToBase64Url } from '../auth/base64url.js';
+import { bytesToBase64Url, json64, pemToPkcs8 } from '../auth/base64url.js';
 
 export const ANDROID_PACKAGE = 'com.offsidelab.app';
 const SCOPE = 'https://www.googleapis.com/auth/androidpublisher';
@@ -22,10 +22,6 @@ export interface GoogleProductPurchase {
 }
 
 type ServiceAccount = { client_email: string; private_key: string };
-
-const json64 = (v: unknown) => bytesToBase64Url(new TextEncoder().encode(JSON.stringify(v)));
-const pemToPkcs8 = (pem: string) =>
-  base64UrlToBytes(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''));
 
 // 아이솔레이트가 살아 있는 동안 액세스 토큰을 다시 쓴다(한 시간짜리).
 let cached: { key: string; token: string; until: number } | undefined;
@@ -73,16 +69,33 @@ async function accessToken(saJson: string, doFetch: typeof fetch, nowS: number):
 const tokenPath = (productId: string, token: string) =>
   `${API}/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}`;
 
+type GoogleOpts = { nowS: number; fetcher?: typeof fetch };
+
+/** 서비스 계정 토큰을 붙여 이 구매 경로(suffix: '' · ':acknowledge')를 부른다. */
+async function callPurchase(
+  saJson: string,
+  productId: string,
+  token: string,
+  opts: GoogleOpts,
+  suffix = '',
+  init: RequestInit = {},
+) {
+  const doFetch = opts.fetcher ?? fetch;
+  const auth = `Bearer ${await accessToken(saJson, doFetch, opts.nowS)}`;
+  return doFetch(`${tokenPath(productId, token)}${suffix}`, {
+    ...init,
+    headers: { authorization: auth, ...init.headers },
+  });
+}
+
 /** 구매를 읽는다. Google이 모르는 토큰(400·404·410)이면 null, 그 밖의 실패는 던진다(다시 시도할 수 있다). */
 export async function getGooglePurchase(
   saJson: string,
   productId: string,
   token: string,
-  opts: { nowS: number; fetcher?: typeof fetch },
+  opts: GoogleOpts,
 ): Promise<GoogleProductPurchase | null> {
-  const doFetch = opts.fetcher ?? fetch;
-  const auth = { authorization: `Bearer ${await accessToken(saJson, doFetch, opts.nowS)}` };
-  const res = await doFetch(tokenPath(productId, token), { headers: auth });
+  const res = await callPurchase(saJson, productId, token, opts);
   if (res.status === 400 || res.status === 404 || res.status === 410) return null;
   if (!res.ok) throw new Error(`Google purchase ${res.status}`);
   return (await res.json()) as GoogleProductPurchase;
@@ -93,13 +106,11 @@ export async function acknowledgeGooglePurchase(
   saJson: string,
   productId: string,
   token: string,
-  opts: { nowS: number; fetcher?: typeof fetch },
+  opts: GoogleOpts,
 ): Promise<void> {
-  const doFetch = opts.fetcher ?? fetch;
-  const auth = { authorization: `Bearer ${await accessToken(saJson, doFetch, opts.nowS)}` };
-  const res = await doFetch(`${tokenPath(productId, token)}:acknowledge`, {
+  const res = await callPurchase(saJson, productId, token, opts, ':acknowledge', {
     method: 'POST',
-    headers: { ...auth, 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json' },
     body: '{}',
   });
   if (!res.ok) throw new Error(`Google acknowledge ${res.status}`);

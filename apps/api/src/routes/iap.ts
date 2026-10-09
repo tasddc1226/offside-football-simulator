@@ -1,11 +1,11 @@
 import { IAP_PRODUCTS, IapClaimBodySchema, OwnerItemsResponseSchema } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
-import { grantIapPurchase, ownerItemsOf } from '../db/repos/iap.js';
+import { grantIapPurchase, iapOwnerOf, ownerItemsOf } from '../db/repos/iap.js';
 import { waitUntil } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
-import { iapAccount, iapStores, verifyIapClaim } from '../iap/verify.js';
+import { iapAccount, iapStores, verifyIapClaim, type IapRejection } from '../iap/verify.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { requireOwner } from './ownerTeam.js';
 import { conflictError, NO_STORE, nowIso, ok, readBody } from './shared.js';
@@ -17,11 +17,26 @@ import { conflictError, NO_STORE, nowIso, ok, readBody } from './shared.js';
 const unavailable = () =>
   new AppError({ code: 'SERVICE_UNAVAILABLE', message: cupKo('iapUnavailable') });
 
+const REJECT = {
+  PENDING: ['iapPending', 'IAP_PENDING'],
+  OTHER_ACCOUNT: ['iapOtherAccount', 'IAP_OTHER_ACCOUNT'],
+  INVALID: ['iapInvalid', 'IAP_INVALID'],
+} as const;
+const reject = (r: IapRejection) => conflictError(cupKo(REJECT[r][0]), REJECT[r][1]);
+
 export function registerIapRoutes(app: Hono<AppEnv>) {
   app.post('/v1/items/iap', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const input = readBody(c, IapClaimBodySchema);
     if (!iapStores(c.env).includes(input.store)) throw unavailable();
+    const db = getDb(c);
+    // Google은 거래 id가 purchaseToken이라 확인 전에 원장을 본다 — 이미 받은 거래의 재전송은 Google을 부르지 않는다.
+    if (input.store === 'google') {
+      const owner = await iapOwnerOf(db, 'google', input.token);
+      if (owner === me.id)
+        return ok(c, OwnerItemsResponseSchema, await ownerItemsOf(db, me.id), 200, NO_STORE);
+      if (owner) throw reject('OTHER_ACCOUNT');
+    }
     const verdict = await verifyIapClaim(c.env, input, iapAccount(me.id), {
       nowS: Math.floor(Date.now() / 1000),
     }).catch((e: unknown) => {
@@ -30,15 +45,9 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
       );
       throw unavailable();
     });
-    if (!verdict.ok) {
-      if (verdict.reason === 'PENDING') throw conflictError(cupKo('iapPending'), 'IAP_PENDING');
-      if (verdict.reason === 'OTHER_ACCOUNT')
-        throw conflictError(cupKo('iapOtherAccount'), 'IAP_OTHER_ACCOUNT');
-      throw conflictError(cupKo('iapInvalid'), 'IAP_INVALID');
-    }
+    if (!verdict.ok) throw reject(verdict.reason);
     const product = IAP_PRODUCTS[input.productId];
-    const db = getDb(c);
-    const res = await grantIapPurchase(db, {
+    const items = await grantIapPurchase(db, {
       store: input.store,
       transactionId: verdict.transactionId,
       profileId: me.id,
@@ -48,7 +57,7 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
       test: verdict.test,
       now: nowIso(),
     });
-    if (res === 'other') throw conflictError(cupKo('iapOtherAccount'), 'IAP_OTHER_ACCOUNT');
+    if (!items) throw reject('OTHER_ACCOUNT');
     if (verdict.after)
       waitUntil(
         c,
@@ -58,6 +67,6 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
             console.error(JSON.stringify({ job: 'iap-ack', error: String(e).slice(0, 200) })),
           ),
       );
-    return ok(c, OwnerItemsResponseSchema, await ownerItemsOf(db, me.id), 200, NO_STORE);
+    return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
   });
 }

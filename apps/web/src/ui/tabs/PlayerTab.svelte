@@ -24,10 +24,10 @@
   import BoostFx from '../BoostFx.svelte';
   import { retireAsk } from '../actions.js';
   import { save } from '../helpers.js';
-  import { clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
+  import { clubOffer, loadClubShop, payWithClub, payWithTicket } from '@offside/app-core/club-reward';
   import { fundsText } from '@offside/app-core/funds';
   import type { RewardShopResponse } from '@offside/contracts';
-  import { fetchItems, spendBoost } from '@offside/app-core/api/cup';
+  import { fetchItems } from '@offside/app-core/api/cup';
   import { hasSessionHint } from '@offside/app-core/api/client';
 
   const { s }: { s: GameState } = $props();
@@ -98,8 +98,6 @@
   // T-11-174 앱에서 산 잠재력 강화권. 로그인한 구단주가 강화 자리를 볼 때만 장수를 묻고, 못 받으면 버튼을 보이지 않는다.
   let tickets = $state(0);
   let ticketBusy = $state(false);
-  // 한 번의 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 장을 쓰지 않는다.
-  let ticketKey: string | null = null;
   $effect(() => {
     if (!freeOpen || !hasSessionHint()) return;
     void fetchItems().then((r) => (tickets = r.ok ? r.data.boost : 0));
@@ -109,20 +107,15 @@
     if (ticketBusy || tickets < 1 || !freeOpen) return;
     ticketBusy = true;
     clubMsg = '';
-    ticketKey ??= crypto.randomUUID();
-    const r = await spendBoost(ticketKey);
+    const r = await payWithTicket(() => {
+      const out = doBoost(s, 'ticket');
+      if (!out) return;
+      save();
+      fx = out;
+    });
     ticketBusy = false;
-    if (r.ok || !r.error.retryable) ticketKey = null;
-    if (!r.ok) {
-      if (r.error.reason === 'NO_BOOST') tickets = 0;
-      clubMsg = r.error.message || B.ticketFail;
-      return;
-    }
-    tickets = r.data.boost;
-    const out = doBoost(s, 'ticket');
-    if (!out) return;
-    save();
-    fx = out;
+    if (r.boost !== null) tickets = r.boost;
+    clubMsg = r.message;
   }
   async function onClubBoost() {
     const o = clubTry;

@@ -19,15 +19,16 @@ import {
   cupById,
   currentCup,
   lockAt,
+  OWNER_ITEMS,
   shopPriceAt,
   type CupDef,
   type RewardKind,
   type CupRound,
 } from '@offside/contracts/cup';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import type { Db } from '../db/client.js';
-import { cupEntries, cupMatches, ownerItems } from '../db/schema.js';
+import { cupEntries, cupMatches } from '../db/schema.js';
 import {
   myTeamIn,
   publicNamesOf,
@@ -43,7 +44,7 @@ import {
   rewardSnapshot,
   shopSnapshot,
 } from '../db/repos/itemShop.js';
-import { ownerItemsOf } from '../db/repos/iap.js';
+import { ownerItemsOf, spendItem } from '../db/repos/iap.js';
 import { countOpenListingsAmong } from '../db/repos/market.js';
 import { newId } from '../db/ids.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -187,14 +188,6 @@ const cupOf = async (c: Context<AppEnv>) => {
   return cup;
 };
 
-export const rerollsOf = async (db: Db, profileId: string) => {
-  const [row] = await db
-    .select({ qty: ownerItems.qty })
-    .from(ownerItems)
-    .where(and(eq(ownerItems.profileId, profileId), eq(ownerItems.item, 'reroll')));
-  return row?.qty ?? 0;
-};
-
 /** 신청 자격(지금 팀 기준). 실제 선수 수는 선발을 다시 세어 본다(팔린 카드는 빠진다). */
 async function eligibility(
   db: Db,
@@ -238,7 +231,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     const [entries, matches, rerolls] = await Promise.all([
       cupEntriesOf(db, cup.id),
       cupMatchesOf(db, cup.id),
-      rerollsOf(db, me.id),
+      ownerItemsOf(db, me.id).then((x) => x.reroll),
     ]);
     const mine = entries.find((e) => e.profileId === me.id);
     const el = await eligibility(db, cup, me.id, now, entries);
@@ -395,27 +388,13 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
 
   // 아이템 1장 쓰기 — 선수 후보 리롤권(reroll) · 잠재력 강화권(boost, T-11-174). 남은 장수를 돌려준다. 없으면 409.
   // 재시도가 두 장을 쓰지 않게 멱등 키를 쓴다. 강화권은 서버가 장수만 빼고, 강화는 응답을 받은 기기가 한다.
-  const USE_EMPTY = {
-    reroll: () => conflictError(cupKo('noReroll'), 'NO_REROLL'),
-    boost: () => conflictError(cupKo('noBoost'), 'NO_BOOST'),
-  };
-  for (const item of ['reroll', 'boost'] as const)
+  const EMPTY = { reroll: ['noReroll', 'NO_REROLL'], boost: ['noBoost', 'NO_BOOST'] } as const;
+  for (const item of OWNER_ITEMS)
     app.post(`/v1/items/${item}/use`, requireProfile, idempotency, async (c) => {
       const me = await requireOwner(c);
-      const db = getDb(c);
-      const row = await db
-        .update(ownerItems)
-        .set({ qty: sql`${ownerItems.qty} - 1`, updatedAt: nowIso() })
-        .where(
-          and(
-            eq(ownerItems.profileId, me.id),
-            eq(ownerItems.item, item),
-            sql`${ownerItems.qty} > 0`,
-          ),
-        )
-        .returning({ qty: ownerItems.qty });
-      if (!row.length) throw USE_EMPTY[item]();
-      return ok(c, OwnerItemsResponseSchema, await ownerItemsOf(db, me.id), 200, NO_STORE);
+      const items = await spendItem(getDb(c), me.id, item, nowIso());
+      if (!items) throw conflictError(cupKo(EMPTY[item][0]), EMPTY[item][1]);
+      return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
     });
 
   // T-11-152 리롤권 상점: 가진 장수 · 구단 자금 · 다음 한 장 가격 · 오늘 산 장수와 하루 상한. 상점을 펼칠 때만 부른다.

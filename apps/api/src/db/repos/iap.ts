@@ -1,23 +1,60 @@
-import type { IapStore, OwnerItem } from '@offside/contracts';
+import { OWNER_ITEMS, type IapStore, type OwnerItem } from '@offside/contracts';
 import type { Db } from '../client.js';
 import { grantItemStatement } from './itemShop.js';
 
+// T-11-145 구단주 아이템(리롤권 · T-11-174 잠재력 강화권) 읽기 · 쓰기 · 인앱 구매 지급.
+
+type Items = Record<OwnerItem, number>;
+const ITEMS_SQL = `SELECT item, qty FROM owner_items WHERE profile_id = ?`;
+const OWNER_SQL = `SELECT profile_id AS profileId FROM iap_purchases WHERE store = ? AND transaction_id = ?`;
+
+const foldItems = (rows: readonly { item: string; qty: number }[]): Items => {
+  const out = Object.fromEntries(OWNER_ITEMS.map((k) => [k, 0])) as Items;
+  for (const r of rows) if (r.item in out) out[r.item as OwnerItem] = r.qty;
+  return out;
+};
+
 /** 구단주 아이템 장수(행이 없으면 0). */
-export async function ownerItemsOf(db: Db, profileId: string): Promise<Record<OwnerItem, number>> {
-  const row = await db.$client
-    .prepare(
-      `SELECT coalesce(sum(CASE item WHEN 'reroll' THEN qty END), 0) AS reroll,
-              coalesce(sum(CASE item WHEN 'boost' THEN qty END), 0) AS boost
-       FROM owner_items WHERE profile_id = ?`,
-    )
+export async function ownerItemsOf(db: Db, profileId: string): Promise<Items> {
+  const { results } = await db.$client
+    .prepare(ITEMS_SQL)
     .bind(profileId)
-    .first<Record<OwnerItem, number>>();
-  return { reroll: row?.reroll ?? 0, boost: row?.boost ?? 0 };
+    .all<{ item: string; qty: number }>();
+  return foldItems(results);
+}
+
+/** 아이템 한 장 쓰기. 한 장도 없으면 null, 아니면 쓴 뒤 장수. 한 번의 왕복으로 끝난다. */
+export async function spendItem(
+  db: Db,
+  profileId: string,
+  item: OwnerItem,
+  now: string,
+): Promise<Items | null> {
+  const d1 = db.$client;
+  const [used, items] = await d1.batch<{ item: string; qty: number }>([
+    d1
+      .prepare(
+        `UPDATE owner_items SET qty = qty - 1, updated_at = ?
+         WHERE profile_id = ? AND item = ? AND qty > 0`,
+      )
+      .bind(now, profileId, item),
+    d1.prepare(ITEMS_SQL).bind(profileId),
+  ]);
+  return used?.meta.changes ? foldItems(items?.results ?? []) : null;
+}
+
+/** 이 거래를 받은 구단주(없으면 undefined). */
+export async function iapOwnerOf(db: Db, store: IapStore, transactionId: string) {
+  const row = await db.$client
+    .prepare(OWNER_SQL)
+    .bind(store, transactionId)
+    .first<{ profileId: string }>();
+  return row?.profileId;
 }
 
 /**
  * T-11-174 확인한 스토어 거래로 아이템을 준다. 거래(store, transactionId)마다 원장 행 하나라 같은 거래를 다시 보내면 원장도
- * 아이템도 그대로다. 'granted' 이번에 줬다 · 'again' 이 구단주가 이미 받았다 · 'other' 다른 구단주가 받은 거래다.
+ * 아이템도 그대로다. 다른 구단주가 받은 거래면 null, 아니면 지금 장수.
  */
 export async function grantIapPurchase(
   db: Db,
@@ -31,9 +68,9 @@ export async function grantIapPurchase(
     test: boolean;
     now: string;
   },
-): Promise<'granted' | 'again' | 'other'> {
+): Promise<Items | null> {
   const d1 = db.$client;
-  const [ins] = await d1.batch([
+  const [, , owner, items] = await d1.batch<{ profileId?: string; item: string; qty: number }>([
     d1
       .prepare(
         `INSERT INTO iap_purchases (store, transaction_id, profile_id, product_id, item, qty, test, created_at)
@@ -50,13 +87,9 @@ export async function grantIapPurchase(
         p.now,
       ),
     grantItemStatement(d1, p.profileId, p.item, p.qty, p.now, { sql: 'changes() = 1' }),
+    d1.prepare(OWNER_SQL).bind(p.store, p.transactionId),
+    d1.prepare(ITEMS_SQL).bind(p.profileId),
   ]);
-  if (ins?.meta.changes) return 'granted';
-  const owner = await d1
-    .prepare(
-      `SELECT profile_id AS profileId FROM iap_purchases WHERE store = ? AND transaction_id = ?`,
-    )
-    .bind(p.store, p.transactionId)
-    .first<{ profileId: string }>();
-  return owner?.profileId === p.profileId ? 'again' : 'other';
+  if (owner?.results[0]?.profileId !== p.profileId) return null;
+  return foldItems(items?.results ?? []);
 }

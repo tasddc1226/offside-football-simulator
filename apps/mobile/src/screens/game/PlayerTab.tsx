@@ -1,6 +1,6 @@
 import { MIN_RETIRE_AGE, marketValue } from '@offside/game/season';
 // 선수 탭(웹 tabs/PlayerTab.svelte): 능력치 카드 · 선수 정보 · 국가대표 · 은퇴 선언(32세부터).
-import { useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { potentialNotice } from '@offside/app-core/potential-view';
@@ -31,7 +31,7 @@ import { claimReward, rewardOffer } from '../../platform/rewarded';
 import { openPeek, openPeekWithClub, peekAvailable, potPeek } from '../../platform/rewardedPeek';
 import { useClubReward } from '../../platform/clubShop';
 import { iapItems, useIapItems } from '../../platform/iapItems';
-import { spendBoost } from '@offside/app-core/api/cup';
+import { payWithTicket } from '@offside/app-core/club-reward';
 import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
 import { IapPacks } from '../owner/IapPacks';
 import { fundsText } from '@offside/app-core/funds';
@@ -90,7 +90,6 @@ function BoostCard({ s }: { s: GameState }) {
   const club = useClubReward('boost', boostFreeOpen(s) && !owned);
   // T-11-174 잠재력 강화권(스토어에서 산다)도 같은 자리에서 쓴다.
   const tickets = useIapItems(boostFreeOpen(s)).items?.boost ?? 0;
-  const ticketKey = useRef<string | null>(null);
   const v = boostView(s, rewardOffer('boost', owned), {
     club: !!club.offer,
     ticket: tickets > 0,
@@ -128,18 +127,16 @@ function BoostCard({ s }: { s: GameState }) {
       setAdBusy(false);
     }
   };
-  // 서버가 한 장을 뺀 뒤에만 강화한다. 응답을 못 받아 다시 누르면 같은 키로 보내 두 장을 쓰지 않는다.
+  // 서버가 한 장을 뺀 뒤에만 강화한다.
   const onTicketBoost = async () => {
     if (adBusy) return;
     setAdBusy(true);
     setAdMessage('');
     try {
-      ticketKey.current ??= crypto.randomUUID();
-      const r = await spendBoost(ticketKey.current);
-      if (r.ok || !r.error.retryable) ticketKey.current = null;
-      if (!r.ok) return setAdMessage(r.error.message || B.ticketFail);
-      iapItems.items = { reroll: r.data.reroll, boost: r.data.boost };
-      run('ticket');
+      const r = await payWithTicket(() => run('ticket'));
+      if (r.boost !== null && iapItems.items)
+        iapItems.items = { ...iapItems.items, boost: r.boost };
+      setAdMessage(r.message);
     } finally {
       setAdBusy(false);
     }
