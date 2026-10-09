@@ -8,6 +8,7 @@ import {
   type BalanceKey,
   type BalanceOverrides,
 } from '@offside/contracts/balance';
+import { BALANCE_TEXT } from '@offside/contracts/balance-text';
 import { EVENTS } from '@offside/game/events-data';
 
 /** 이벤트 목록(id 패턴에 맞는 것만, 제목 가나다순). */
@@ -74,7 +75,7 @@ export function diffLines(
   const a = resolveBalance(active);
   const b = resolveBalance(values);
   const out = BALANCE_KEYS.filter((k) => a[k] !== b[k]).map(
-    (k) => `${BALANCE_SPEC[k].label}: ${a[k]} → ${b[k]}`,
+    (k) => `${BALANCE_TEXT[k].label}: ${a[k]} → ${b[k]}`,
   );
   for (const map of ['eventWeight', 'choiceBonus'] as const) {
     const keys = new Set([...Object.keys(a[map]), ...Object.keys(b[map])]);

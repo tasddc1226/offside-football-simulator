@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gradeOf } from '@offside/game/stats';
-import { BALANCE_KEYS, BALANCE_SPEC } from '@offside/contracts/balance';
+import { BALANCE_KEYS } from '@offside/contracts/balance';
+import { BALANCE_TEXT } from '@offside/contracts/balance-text';
 import { atLeastOneOf3, fairnessView, gradeOdds, GRADES, historyRows, oddsPct } from './fairness';
 import { balanceKeysText } from './i18n/ko/balanceKeys';
 
@@ -75,6 +76,6 @@ describe('fairness', () => {
   });
 
   it('밸런스 항목 이름은 운영 도구 이름(스펙 label)과 같다', () => {
-    for (const k of BALANCE_KEYS) expect(balanceKeysText[k], k).toBe(BALANCE_SPEC[k].label);
+    for (const k of BALANCE_KEYS) expect(balanceKeysText[k], k).toBe(BALANCE_TEXT[k].label);
   });
 });
