@@ -75,6 +75,16 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     ctx.env.GOOGLE_PLAY_SA_JSON = '{}';
     res = ItemsRes.parse(await (await call('GET', '/v1/items', { cookie: me.cookie })).json());
     expect(res.data.iap?.stores).toEqual(['apple', 'google']);
+    // 테스터 목록이 있으면 목록 밖 구단주는 살 수 없다(목록도 보이지 않고 구매 확인도 503).
+    const tester = await issueGoogleCookie(ctx);
+    ctx.env.IAP_TESTERS = `prf_x, ${tester.profileId}`;
+    res = ItemsRes.parse(await (await call('GET', '/v1/items', { cookie: me.cookie })).json());
+    expect(res.data.iap?.stores).toEqual([]);
+    expect(
+      (await claim(me.cookie, { store: 'apple', productId: REROLL_5, token: 'jws' })).status,
+    ).toBe(503);
+    res = ItemsRes.parse(await (await call('GET', '/v1/items', { cookie: tester.cookie })).json());
+    expect(res.data.iap?.stores).toEqual(['apple', 'google']);
   });
 
   it('Apple 거래 하나로 아이템을 한 번만 주고, 다른 계정의 거래 · 다른 상품은 받지 않는다', async () => {

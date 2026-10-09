@@ -21,9 +21,12 @@ export type IapVerdict =
     }
   | { ok: false; reason: IapRejection };
 
-/** 서버가 구매를 확인할 수 있는 스토어. Google은 서비스 계정 키가 있어야 한다. */
-export const iapStores = (env: Bindings): IapStore[] =>
-  env.GOOGLE_PLAY_SA_JSON ? ['apple', 'google'] : ['apple'];
+/** 이 구단주가 살 수 있는 스토어. Google은 서비스 계정 키가 있어야 하고, IAP_TESTERS가 있으면 그 구단주만 산다. */
+export function iapStores(env: Bindings, profileId: string): IapStore[] {
+  if (env.IAP_TESTERS && !env.IAP_TESTERS.split(',').some((id) => id.trim() === profileId))
+    return [];
+  return env.GOOGLE_PLAY_SA_JSON ? ['apple', 'google'] : ['apple'];
+}
 
 /** 구단주 표시: 프로필 id(prf_<uuid>)의 uuid. Apple appAccountToken은 uuid여야 한다. */
 export const iapAccount = (profileId: string) => profileId.replace(/^prf_/, '');

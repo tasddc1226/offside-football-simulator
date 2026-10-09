@@ -28,7 +28,7 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
   app.post('/v1/items/iap', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const input = readBody(c, IapClaimBodySchema);
-    if (!iapStores(c.env).includes(input.store)) throw unavailable();
+    if (!iapStores(c.env, me.id).includes(input.store)) throw unavailable();
     const db = getDb(c);
     // Google은 거래 id가 purchaseToken이라 확인 전에 원장을 본다 — 이미 받은 거래의 재전송은 Google을 부르지 않는다.
     if (input.store === 'google') {

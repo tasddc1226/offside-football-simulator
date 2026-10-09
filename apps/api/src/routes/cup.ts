@@ -382,7 +382,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/items', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const items = await ownerItemsOf(getDb(c), me.id);
-    const iap = { account: iapAccount(me.id), stores: iapStores(c.env) };
+    const iap = { account: iapAccount(me.id), stores: iapStores(c.env, me.id) };
     return ok(c, OwnerItemsResponseSchema, { ...items, iap }, 200, NO_STORE);
   });
 
