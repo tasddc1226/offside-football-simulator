@@ -1,4 +1,5 @@
 import { INVITE_REROLLS, INVITE_REWARD_MAX } from '@offside/contracts/owner-team';
+import type { AdminInvite, AdminInviteReport, AdminInviter } from '@offside/contracts';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { profiles, referrals } from '../schema.js';
@@ -130,6 +131,65 @@ export async function inviteCountsOf(db: Db, profileId: string) {
     done: Number(counts?.done ?? 0),
     rewarded: Number(counts?.rewarded ?? 0),
     invitedBy: byRow ?? null,
+  };
+}
+
+const ADMIN_TOP = 20;
+const ADMIN_RECENT = 30;
+
+/**
+ * T-11-177 운영 도구 친구 초대 현황. 운영자가 열 때만 읽는다. 합 · 구단주별은 (inviter_id, inviter_rewarded, done_at) 인덱스로,
+ * 최근 초대는 넣은 순서(rowid)로 읽어 정렬용 인덱스가 필요 없다.
+ */
+export async function inviteReport(db: Db, now: Date): Promise<AdminInviteReport> {
+  const d1 = db.$client;
+  const [total, top, recent] = await d1.batch([
+    d1.prepare(
+      `SELECT count(*) invites, coalesce(sum(done_at IS NOT NULL), 0) done,
+              coalesce(sum(inviter_rewarded), 0) inviterRewarded, count(DISTINCT inviter_id) inviters
+         FROM referrals`,
+    ),
+    d1
+      .prepare(
+        `SELECT r.inviter_id profileId, p.nickname, r.invited, r.done, r.rewarded
+           FROM (SELECT inviter_id, count(*) invited, sum(done_at IS NOT NULL) done, sum(inviter_rewarded) rewarded
+                   FROM referrals GROUP BY inviter_id ORDER BY invited DESC, done DESC LIMIT ?) r
+           LEFT JOIN profiles p ON p.id = r.inviter_id
+          ORDER BY r.invited DESC, r.done DESC`,
+      )
+      .bind(ADMIN_TOP),
+    d1
+      .prepare(
+        `SELECT r.invitee_id inviteeId, e.nickname inviteeNickname, r.inviter_id inviterId,
+                i.nickname inviterNickname, r.claimed_at claimedAt, r.done_at doneAt, r.inviter_rewarded inviterRewarded
+           FROM (SELECT rowid, * FROM referrals ORDER BY rowid DESC LIMIT ?) r
+           LEFT JOIN profiles e ON e.id = r.invitee_id
+           LEFT JOIN profiles i ON i.id = r.inviter_id
+          ORDER BY r.rowid DESC`,
+      )
+      .bind(ADMIN_RECENT),
+  ]);
+  const t = total!.results[0] as Record<string, number>;
+  const n = (v: unknown) => Number(v ?? 0);
+  return {
+    generatedAt: now.toISOString(),
+    invites: n(t.invites),
+    done: n(t.done),
+    inviterRewarded: n(t.inviterRewarded),
+    inviters: n(t.inviters),
+    rerolls: (n(t.done) + n(t.inviterRewarded)) * INVITE_REROLLS,
+    top: (top!.results as AdminInviter[]).map((r) => ({
+      ...r,
+      invited: n(r.invited),
+      done: n(r.done),
+      rewarded: n(r.rewarded),
+    })),
+    recent: (
+      recent!.results as (Omit<AdminInvite, 'inviterRewarded'> & { inviterRewarded: number })[]
+    ).map((r) => ({
+      ...r,
+      inviterRewarded: Boolean(r.inviterRewarded),
+    })),
   };
 }
 

@@ -254,6 +254,45 @@ export const AdminFundsOwnerSchema = AdminFundsOwnerSumsSchema.extend({
 export type AdminFundsOwner = z.infer<typeof AdminFundsOwnerSchema>;
 export const AdminFundsQuerySchema = z.string().trim().min(1).max(64);
 
+// ───────── T-11-177 친구 초대 현황 ─────────
+// 초대(referrals, T-11-171): 친구 코드로 신청한 새 구단주. done = 초대받은 사람이 첫 커리어를 마침(그 사람은 늘 리롤권을 받는다),
+// inviterRewarded = 초대한 쪽도 받음(한 사람당 INVITE_REWARD_MAX명까지).
+
+/** 초대를 한 구단주 한 명의 합. */
+export const AdminInviterSchema = z.object({
+  profileId: z.string(),
+  nickname: z.string().nullable(),
+  invited: z.number().int(),
+  done: z.number().int(),
+  rewarded: z.number().int(),
+});
+export type AdminInviter = z.infer<typeof AdminInviterSchema>;
+
+/** 초대 한 건. */
+export const AdminInviteSchema = z.object({
+  inviteeId: z.string(),
+  inviteeNickname: z.string().nullable(),
+  inviterId: z.string(),
+  inviterNickname: z.string().nullable(),
+  claimedAt: z.string(),
+  doneAt: z.string().nullable(),
+  inviterRewarded: z.boolean(),
+});
+export type AdminInvite = z.infer<typeof AdminInviteSchema>;
+
+/** `GET /v1/admin/invites` 전체 합, 초대를 많이 한 구단주(최대 20), 최근 초대(최대 30). rerolls = 지급된 리롤권 장수. */
+export const AdminInviteReportSchema = z.object({
+  generatedAt: IsoUtcSchema,
+  invites: z.number().int(),
+  done: z.number().int(),
+  inviterRewarded: z.number().int(),
+  inviters: z.number().int(),
+  rerolls: z.number().int(),
+  top: z.array(AdminInviterSchema),
+  recent: z.array(AdminInviteSchema),
+});
+export type AdminInviteReport = z.infer<typeof AdminInviteReportSchema>;
+
 export const AutomationActionSchema = z.object({
   careerId: z.string(),
   at: IsoUtcSchema,

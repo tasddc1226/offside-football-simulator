@@ -7,6 +7,7 @@ import {
   AdminFundsOwnerSchema,
   AdminFundsQuerySchema,
   AdminFundsReportSchema,
+  AdminInviteReportSchema,
   AdminNameReportListSchema,
   AdminNameReportResolveSchema,
   AdminStatsSchema,
@@ -27,6 +28,7 @@ import { getActiveBalance } from '../db/repos/balance.js';
 import { anomalyReport, setCareerHidden } from '../db/repos/anomalies.js';
 import { automationReport } from '../db/repos/automation.js';
 import { fundsOwner, fundsReport } from '../db/repos/fundsAudit.js';
+import { inviteReport } from '../db/repos/referrals.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
 import { notFoundError, ok, readBody, nowIso } from './shared.js';
@@ -97,6 +99,13 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
     const data = await fundsOwner(getDb(c), q);
     if (!data) throw notFoundError('구단 자금 기록이 없는 구단주예요.', 'FUNDS_OWNER_NOT_FOUND');
     return ok(c, AdminFundsOwnerSchema, data, 200, 'private, no-store');
+  });
+
+  // T-11-177 친구 초대 현황(T-11-171). 운영자가 열 때만 읽는다.
+  app.get('/v1/admin/invites', async (c) => {
+    await requireAdmin(c);
+    const data = await inviteReport(getDb(c), new Date());
+    return ok(c, AdminInviteReportSchema, data, 200, 'private, no-store');
   });
 
   // 비정상 기록: 검토 대상과 숨겨진 커리어. 매일 cron(repos/anomalies.ts)이 확실한 것은 이미 숨긴다.
