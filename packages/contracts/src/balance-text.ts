@@ -128,6 +128,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '방출 지급률',
     desc: '선수를 방출하면 카드 기준가에 이 값을 곱한 만큼 구단 자금이 생긴다',
   },
+  marketRetireBonusRate: {
+    group: 'market',
+    label: '은퇴 장려금 비율',
+    desc: '선수가 은퇴해 카드가 생길 때 카드 기준가에 이 값을 곱한 만큼 키운 사람에게 구단 자금을 준다. 0이면 주지 않는다',
+  },
   marketFeeRate: {
     group: 'market',
     label: '거래 수수료율',

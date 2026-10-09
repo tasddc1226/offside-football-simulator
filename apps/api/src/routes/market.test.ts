@@ -413,6 +413,24 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(none.status).toBe(404);
   });
 
+  it('T-11-163 은퇴 장려금은 자금 내역과 운영 도구 대조에 출처로 잡힌다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const card = await addCard(owner.profileId);
+    await ctx.db.update(cards).set({ bonusValue: 100_000 }).where(eq(cards.careerId, card));
+    await fund(owner.profileId, 100_000);
+    const h = HistoryRes.parse(
+      await (await call('GET', '/v1/market/funds/history', { cookie: owner.cookie })).json(),
+    ).data;
+    expect(h.totals).toMatchObject({ bonus: 100_000, released: 0 });
+    expect(h.items).toMatchObject([{ kind: 'bonus', amount: 100_000, card: { careerId: card } }]);
+    const env = { ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL };
+    const admin = await issueAdminCookie(ctx);
+    const r = successEnvelope(AdminFundsReportSchema).parse(
+      await (await callJson(env, 'GET', '/v1/admin/funds', { cookie: admin.cookie })).json(),
+    ).data;
+    expect(r).toMatchObject({ bonus: 100_000, mismatched: 0 });
+  });
+
   it('자금 내역: 방출·판매·영입·구단 자금 사용을 최근 순으로, 출처별 합과 페이지로 준다', async () => {
     const seller = await issueGoogleCookie(ctx);
     const buyer = await issueGoogleCookie(ctx);
@@ -423,7 +441,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect((await call('GET', '/v1/market/funds/history')).status).toBe(401);
     expect(await history(seller.cookie)).toEqual({
       balance: 0,
-      totals: { released: 0, sold: 0, bought: 0, spent: 0 },
+      totals: { released: 0, bonus: 0, sold: 0, bought: 0, spent: 0 },
       items: [],
       hasMore: false,
     });
@@ -461,6 +479,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(s.balance).toBe(1_000_000 + 1_140_000 - 1_000_000);
     expect(s.totals).toEqual({
       released: 1_000_000,
+      bonus: 0,
       sold: 1_140_000,
       bought: 0,
       spent: 1_000_000,

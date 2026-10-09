@@ -448,6 +448,11 @@ export const TeamProfileSchema = z.strictObject({
   badges: z.array(TeamBadgeSchema),
   /** T-11-145 이 팀 구단주의 컵 성적(모든 시즌). 배포 전 응답엔 없다. */
   cupHonors: z.array(CupHonorSchema).optional(),
+  /**
+   * T-11-165 선발 선수 카드(그라운드 카드를 누르면 확대해 보여 준다). 구단주만의 값(기준가 · 직접 키움 · 매물)은 싣지 않는다.
+   * 배포 전 응답엔 없다.
+   */
+  players: z.array(TeamPlayerSchema).optional(),
   createdAt: IsoUtcSchema,
 });
 export type TeamProfile = z.infer<typeof TeamProfileSchema>;

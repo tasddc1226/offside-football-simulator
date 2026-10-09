@@ -500,6 +500,8 @@ export const cards = sqliteTable(
     transfers: integer('transfers').notNull().default(0),
     releasedAt: text('released_at'),
     releasedValue: integer('released_value'),
+    // T-11-163 은퇴 장려금(만 원). 은퇴해 카드가 생길 때 키운 사람에게 기준가 × 장려금 비율을 준 값. 없으면 NULL.
+    bonusValue: integer('bonus_value'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

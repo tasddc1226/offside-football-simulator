@@ -4,6 +4,7 @@ import { fundsText } from '../funds.js';
 
 export const FUNDS_MOVE: Record<Exclude<AdminFundsMove['kind'], 'item'>, string> = {
   released: '방출',
+  bonus: '은퇴 장려금',
   sold: '판매',
   bought: '영입',
 };

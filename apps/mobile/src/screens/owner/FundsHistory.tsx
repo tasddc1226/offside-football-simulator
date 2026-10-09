@@ -92,7 +92,7 @@ export default function FundsHistory() {
   const days = useMemo(() => fundsHistoryDays(items, local), [items, local]);
   const totals = res ? fundsHistoryTotals(res.totals) : null;
   const badge = (kind: FundsHistoryEntry['kind']) =>
-    kind === 'sold' ? c.accentText : kind === 'released' ? c.bad : c.ink;
+    kind === 'sold' || kind === 'bonus' ? c.accentText : kind === 'released' ? c.bad : c.ink;
   const small = { fontSize: rem(0.875) } as const;
 
   return (

@@ -158,7 +158,7 @@ export function teamPlayerCard(
   r: LineupRow & { cardAttrsJson: string | null; legendScore: number | null },
   profile: PeakProfile | null = peakOf(r.peakProfile),
   career = toLineupCareer(r, profile),
-): Omit<TeamPlayer, 'cardValue' | 'raised' | 'type' | 'foot' | 'listing'> {
+): Omit<TeamPlayer, 'cardValue' | 'raised' | 'foot' | 'listing'> {
   const estimated = profile ? null : estimatedAttrsOf(r.cardAttrsJson);
   return {
     careerId: r.id,
@@ -172,6 +172,7 @@ export function teamPlayerCard(
     number: career.number,
     publicName: career.publicName,
     legendScore: r.legendScore,
+    type: career.type,
     season: career.season,
   };
 }
@@ -286,6 +287,8 @@ export async function careersByIds(db: Db, ids: string[]) {
       dpos: cards.dpos,
       peak: cards.peak,
       peakProfile: cards.peakProfile,
+      cardAttrsJson: careers.cardAttrsJson,
+      legendScore: cards.legendScore,
       number: cards.number,
       publicName: careers.publicName,
       type: careers.type,

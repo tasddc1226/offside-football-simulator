@@ -37,6 +37,8 @@ import { isHeadless } from '../db/repos/automation.js';
 import { isAcceptablePublicName, toPublicName } from '@offside/contracts/content-filter';
 import { resumeCareerDetails } from '../cron/careerRetention.js';
 import { retireAtOf } from '@offside/contracts/service-seasons';
+import { resolveBalance } from '@offside/contracts';
+import { getActiveBalance } from '../db/repos/balance.js';
 
 /** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다. */
 export const UPLOAD_LIMIT = { CAREER_SEASON: 120, CAREER_RETIRE: 30 } as const;
@@ -186,8 +188,10 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
           details: { reason: 'NO_SEASONS' },
         });
       }
+      const balance = resolveBalance((await getActiveBalance(db))?.values);
       await putRetirement(db, {
         careerId,
+        bonusRate: balance.marketRetireBonusRate,
         summary,
         publicName,
         snapshot,

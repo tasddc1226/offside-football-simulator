@@ -5,10 +5,10 @@ import {
 } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
-import { cards, careers } from '../db/schema.js';
+import { cards, careers, ownerFunds } from '../db/schema.js';
 import { ensureCardValuesBackfilled } from '../db/repos/cardValues.js';
 import { eq, inArray } from 'drizzle-orm';
-import { cardValue, retireValue, valueFor } from '@offside/contracts/market-value';
+import { cardValue, releasePayout, retireValue, valueFor } from '@offside/contracts/market-value';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
 
@@ -634,9 +634,26 @@ describe('공개 명예의 전당 /v1/hof', () => {
       retireValue: career ? retireValue(career, summary.legendScore) : 0,
     }));
     expect(await cardRows()).toEqual(want);
-    // 다시 보낸 은퇴는 카드를 늘리지 않는다.
-    await putJson(ctx, cookie, `/v1/careers/${rows[0]!.id}/retirement`, { ...summary });
+    // T-11-163 은퇴 장려금: 기준가가 있는 카드만 기준가 × 10%(기본값)를 키운 사람 구단 자금으로 준다.
+    const bonuses = want.map((w) =>
+      w.cardValue === null ? null : releasePayout(w.cardValue, 0.1),
+    );
+    const funds = async () =>
+      (await ctx.db.select({ balance: ownerFunds.balance }).from(ownerFunds))[0]?.balance;
+    expect(
+      (await ctx.db.select({ v: cards.bonusValue }).from(cards).orderBy(cards.careerId)).map(
+        (r) => r.v,
+      ),
+    ).toEqual(bonuses);
+    expect(await funds()).toBe(bonuses[0]! + bonuses[2]!);
+    // 다시 보낸 은퇴는 카드를 늘리지 않고 장려금도 다시 주지 않는다.
+    await putJson(ctx, cookie, `/v1/careers/${rows[0]!.id}/retirement`, {
+      ...summary,
+      publicName: null,
+      snapshot: { ...snapshot, career: rows[0]!.career },
+    });
     expect(await cardRows()).toHaveLength(3);
+    expect(await funds()).toBe(bonuses[0]! + bonuses[2]!);
 
     // 마이그레이션이 만든 기존 카드: 기준가 null·은퇴 가치 0. 스냅샷 있는 카드만 한 장씩 채운다(없는 카드는 null로 남는다).
     await ctx.db.update(cards).set({ cardValue: null, retireValue: 0 });

@@ -34,7 +34,8 @@ function fundsHistoryRow(
   return {
     id: e.id,
     kind: e.kind,
-    badge: e.kind === 'spent' ? M.tradeSpent : TRADE_LABEL[e.kind],
+    badge:
+      e.kind === 'spent' ? M.tradeSpent : e.kind === 'bonus' ? M.tradeBonus : TRADE_LABEL[e.kind],
     title: e.item
       ? SPEND_LABEL[e.item]
       : e.card
@@ -64,17 +65,18 @@ export function fundsHistoryDays(
   return days;
 }
 
-/** 위쪽 합계: 들어온 자금(방출 · 판매)과 나간 자금(영입 · 구단 자금 사용). 합은 부호를 붙이고(0이면 없이), 0인 줄은 뺀다. */
+/** 위쪽 합계: 들어온 자금(방출 · 은퇴 장려금 · 판매)과 나간 자금(영입 · 구단 자금 사용). 합은 부호를 붙이고(0이면 없이), 0인 줄은 뺀다. */
 export function fundsHistoryTotals(t: FundsHistoryResponse['totals']) {
   const line = (label: string, v: number) => ({ label, value: fundsText(v) });
   const signed = (sign: string, v: number) => (v > 0 ? `${sign}${fundsText(v)}` : fundsText(0));
-  const income = t.released + t.sold;
+  const income = t.released + t.bonus + t.sold;
   const spending = t.bought + t.spent;
   return {
     income: {
       total: signed('+', income),
       lines: [
         ...(t.released ? [line(H.released, t.released)] : []),
+        ...(t.bonus ? [line(H.bonus, t.bonus)] : []),
         ...(t.sold ? [line(H.sold, t.sold)] : []),
       ],
     },

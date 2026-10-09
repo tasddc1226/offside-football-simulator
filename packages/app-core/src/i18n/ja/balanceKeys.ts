@@ -23,6 +23,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   olyRelease: 'オリンピックでの海外クラブの招集許可',
   sangmuBase: '尚武の基本合格率',
   marketReleaseRate: '放出時の支給率',
+  marketRetireBonusRate: '引退奨励金の割合',
   marketFeeRate: '取引手数料率',
   marketPriceMin: '最低販売価格(基準価格の倍率)',
   marketPriceMax: '最高販売価格(基準価格の倍率)',
