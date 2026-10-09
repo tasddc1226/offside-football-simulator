@@ -1,7 +1,7 @@
 // T-10-092 팀 프로필(웹 team/TeamProfile.svelte, 라이브 랭킹에서 연다) — 시즌 순위 · 감독 · 레이팅 · 선발 그라운드 · 줄 힘 ·
 // 좋아요/조회수 · 팀 히스토리 배지. 누구나 본다. 남의 팀을 열면 조회수를 한 번 올린다(내 팀은 세지 않는다).
 // 웹의 '← 랭킹'(BackBar)은 화면(Hof)이 아래 고정 막대로 그린다.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { requestFriend, type FriendState } from '@offside/app-core/api/friends';
 import {
@@ -17,6 +17,8 @@ import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { NameReport } from '../../../components/NameReport';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
+import { PlayerPeek, type PeekOrigin } from '../../../components/PlayerPeek';
+import { presetLayout } from '@offside/contracts/owner-team';
 import { friendRequestText } from '@offside/app-core/friendText';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
@@ -96,14 +98,47 @@ export default function TeamProfile({ id }: { id: string }) {
 
   // 가장 최근 우승 — 팀 이름 아래 챔피언 배지.
   const champ = team?.cupHonors?.find((h) => h.stage === 'champion');
+  // T-11-165 선발 선수 카드 — 그라운드 카드를 누르면 내 팀처럼 확대 카드가 열린다(웹 TeamProfile, 배포 전 응답엔 없다).
+  const players = useMemo(() => new Map(team?.players?.map((p) => [p.careerId, p]) ?? []), [team]);
   const cells =
-    team?.slots.map((s) => ({
-      rating: s.rating,
-      nation: s.nation,
-      season: s.season,
-      name: (mine && s.careerId && localNames.get(s.careerId)) || s.name,
-      youth: s.careerId === null,
-    })) ?? [];
+    team?.slots.map((s) => {
+      const p = s.careerId ? players.get(s.careerId) : undefined;
+      return {
+        rating: s.rating,
+        nation: s.nation,
+        season: s.season,
+        name: (mine && s.careerId && localNames.get(s.careerId)) || s.name,
+        youth: s.careerId === null,
+        ...(p
+          ? {
+              peak: p.peak,
+              number: p.number,
+              legendScore: p.legendScore,
+              attrs: p.attrs,
+              attrsEstimated: p.attrsEstimated,
+              pos: p.pos,
+              type: p.type,
+            }
+          : {}),
+      };
+    }) ?? [];
+  const pitch = useRef<View>(null);
+  const [peek, setPeek] = useState<{ i: number; origin: PeekOrigin } | null>(null);
+  const positions = team ? (team.layout ?? presetLayout(team.formation)) : [];
+  function openPeek(i: number) {
+    const pos = positions[i];
+    const id = team?.slots[i]?.careerId;
+    if (!pos || !id || !players.has(id)) return;
+    pitch.current?.measureInWindow((px, py, w, h) => {
+      if (!w || !h) return;
+      // 자리 카드는 62×88, 가운데가 자리 좌표(TeamPitch · 내 팀 TeamLineup과 같은 계산).
+      setPeek({
+        i,
+        origin: { x: px + (pos.x / 100) * w - 31, y: py + (pos.y / 100) * h - 44, w: 62, h: 88 },
+      });
+    });
+  }
+  const peekPlayer = peek ? players.get(team?.slots[peek.i]?.careerId ?? '') : undefined;
 
   return (
     <LoadState status={status} failText={L.profLoadFail} retry={() => void load()}>
@@ -210,7 +245,23 @@ export default function TeamProfile({ id }: { id: string }) {
             </View>
           </Card>
 
-          <TeamPitch layout={team.layout} formation={team.formation} cells={cells} />
+          <TeamPitch
+            layout={team.layout}
+            formation={team.formation}
+            cells={cells}
+            pitchRef={pitch}
+            onpick={players.size ? openPeek : undefined}
+          />
+          {peek && peekPlayer && positions[peek.i] ? (
+            <PlayerPeek
+              player={peekPlayer}
+              name={cells[peek.i]!.name}
+              rating={cells[peek.i]!.rating}
+              slot={positions[peek.i]!.slot}
+              origin={peek.origin}
+              onclose={() => setPeek(null)}
+            />
+          ) : null}
 
           <Card gap={12}>
             <TeamLines lines={team.lines} />

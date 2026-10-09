@@ -84,6 +84,8 @@
   const friendButton = (s: FriendState): string =>
     ({ none: LF.reqNone, sent: LF.reqSent, received: LF.reqReceived, accepted: LF.reqAccepted })[s];
 
+  // T-11-165 선발 선수 카드 — 그라운드 카드를 누르면 내 팀처럼 확대 카드가 열린다(배포 전 응답엔 없다).
+  const players = $derived(new Map(team?.players?.map((p) => [p.careerId, p]) ?? []));
   const cells = $derived(
     team?.slots.map((s) => ({
       rating: s.rating,
@@ -91,6 +93,7 @@
       season: s.season,
       name: (mine && s.careerId && localNames.get(s.careerId)) || s.name,
       youth: s.careerId === null,
+      player: s.careerId ? players.get(s.careerId) : undefined,
     })) ?? [],
   );
 </script>

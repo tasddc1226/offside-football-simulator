@@ -286,6 +286,8 @@ export async function careersByIds(db: Db, ids: string[]) {
       dpos: cards.dpos,
       peak: cards.peak,
       peakProfile: cards.peakProfile,
+      cardAttrsJson: careers.cardAttrsJson,
+      legendScore: cards.legendScore,
       number: cards.number,
       publicName: careers.publicName,
       type: careers.type,
