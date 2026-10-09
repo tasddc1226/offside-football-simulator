@@ -86,6 +86,20 @@ export async function appleLoginAvailable(): Promise<boolean> {
   }
 }
 
+/**
+ * T-11-167 계정 삭제 직전 Apple에 다시 확인받아 authorizationCode를 받는다(서버가 Apple 토큰을 해지한다,
+ * 가이드라인 5.1.1(v)). 사용자가 취소하면 'cancel', 이 기기에서 못 쓰거나 실패하면 null(삭제는 그대로 진행).
+ */
+export async function appleReauthCode(): Promise<string | null | 'cancel'> {
+  if (!(await appleLoginAvailable())) return null;
+  try {
+    const cred = await AppleAuthentication.signInAsync({ requestedScopes: [] });
+    return cred.authorizationCode ?? null;
+  } catch (e) {
+    return (e as { code?: string }).code === 'ERR_REQUEST_CANCELED' ? 'cancel' : null;
+  }
+}
+
 export async function startAppleLogin(back: LoginReturn | null): Promise<void> {
   if (busy) return;
   busy = true;

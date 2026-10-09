@@ -172,6 +172,14 @@ export default function TeamProfile({ id }: { id: string }) {
                   </Txt>
                   {mine ? L.profMine : ''}
                 </Txt>
+                {team.ownerNickname ? (
+                  <Txt tone="muted" style={{ fontSize: rem(0.8125) }} testID="team-owner">
+                    {L.profOwner}
+                    <Txt bold style={{ fontSize: rem(0.8125) }}>
+                      {team.ownerNickname}
+                    </Txt>
+                  </Txt>
+                ) : null}
               </View>
               <View
                 accessible
@@ -401,6 +409,9 @@ export default function TeamProfile({ id }: { id: string }) {
             </Card>
           ) : null}
           {mine ? null : <NameReport kind="team" id={team.id} name={team.name} />}
+          {!mine && team.ownerNickname ? (
+            <NameReport kind="owner" id={team.id} name={team.ownerNickname} />
+          ) : null}
         </>
       ) : null}
     </LoadState>
