@@ -19,21 +19,20 @@ const MOVES_LIMIT = 50;
 const sums = (one: boolean) => {
   const w = (col: string) => (one ? ` AND ${col} = ?1` : '');
   return `
-  r AS (SELECT ca.profile_id pid, sum(c.released_value) v FROM cards c JOIN careers ca ON ca.id = c.career_id
-         WHERE c.released_at IS NOT NULL${w('ca.profile_id')} GROUP BY 1),
-  k AS (SELECT ca.profile_id pid, sum(c.bonus_value) v FROM cards c JOIN careers ca ON ca.id = c.career_id
-         WHERE c.bonus_value IS NOT NULL${w('ca.profile_id')} GROUP BY 1),
+  r AS (SELECT ca.profile_id pid, sum(CASE WHEN c.released_at IS NOT NULL THEN c.released_value END) v,
+                sum(c.bonus_value) bonus FROM cards c JOIN careers ca ON ca.id = c.career_id
+         WHERE (c.released_at IS NOT NULL OR c.bonus_value IS NOT NULL)${w('ca.profile_id')} GROUP BY 1),
   s AS (SELECT seller_id pid, sum(price - fee) v, sum(fee) fee FROM market_listings
          WHERE status = 'sold'${w('seller_id')} GROUP BY 1),
   b AS (SELECT buyer_id pid, sum(price) v FROM market_listings
          WHERE status = 'sold' AND buyer_id IS NOT NULL${w('buyer_id')} GROUP BY 1),
   i AS (SELECT profile_id pid, sum(price) v FROM owner_item_purchases WHERE 1 = 1${w('profile_id')} GROUP BY 1),
   x AS (SELECT f.profile_id profileId, p.nickname, f.balance,
-               coalesce(r.v, 0) released, coalesce(k.v, 0) bonus, coalesce(s.v, 0) sold, coalesce(s.fee, 0) fees,
+               coalesce(r.v, 0) released, coalesce(r.bonus, 0) bonus, coalesce(s.v, 0) sold, coalesce(s.fee, 0) fees,
                coalesce(b.v, 0) bought, coalesce(i.v, 0) items
           FROM owner_funds f
           LEFT JOIN profiles p ON p.id = f.profile_id
-          LEFT JOIN r ON r.pid = f.profile_id LEFT JOIN k ON k.pid = f.profile_id LEFT JOIN s ON s.pid = f.profile_id
+          LEFT JOIN r ON r.pid = f.profile_id LEFT JOIN s ON s.pid = f.profile_id
           LEFT JOIN b ON b.pid = f.profile_id LEFT JOIN i ON i.pid = f.profile_id
          WHERE 1 = 1${w('f.profile_id')}),
   d AS (SELECT *, balance - (released + bonus + sold - bought - items) diff FROM x)`;

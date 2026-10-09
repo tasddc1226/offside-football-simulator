@@ -1,5 +1,6 @@
 <script lang="ts">
   import { seasonLabel } from '@offside/app-core/seasonName';
+  import { needsOwnerLogin } from '@offside/app-core/market';
   // T-10-092 구단주 팀 — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가 채운다) 같은 시즌
   // 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 구단주 화면에서 처음 열 때 불러오는 지연 청크다. 경기 결과는
   // 서버가 정한다(웹은 보여 주기만).
@@ -223,7 +224,7 @@
     const r = await fetchOwnerTeam(want);
     if (sequence !== loadSequence) return;
     if (!r.ok) {
-      needLogin = r.error.reason === 'GOOGLE_LOGIN_REQUIRED' || r.error.code === 'PROFILE_REQUIRED';
+      needLogin = needsOwnerLogin(r.error);
       status = needLogin ? 'ready' : 'error';
       return;
     }

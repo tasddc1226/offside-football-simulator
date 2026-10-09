@@ -27,6 +27,9 @@ export const RANK_SLIDE_MS = 900;
  * 화면에 들어올 때 한 번 튼다.
  */
 export const RANK_SEEN_RATIO = 0.6;
+/** 이 리포트에서 순위가 바뀌었으면 이전 순위, 아니면 null — 순위 변동 연출을 틀지 정한다(웹·앱 공용). */
+export const rankBeforeOf = (rank: { before: number | null; after: number | null } | undefined) =>
+  rank?.before != null && rank.before !== rank.after ? rank.before : null;
 
 /**
  * 순위 변동 연출의 범위 — 보이는 줄 목록(접힌 '⋯' 줄은 rank 없음)에서 내 팀 줄(me)과, 그 줄이 출발할 이전 순위

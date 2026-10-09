@@ -11,7 +11,7 @@ import { assignSlot, attrLine } from '@offside/app-core/teamOwner';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { DragPlayer, type PlayerDrag } from '../../components/DragPlayer';
 import { PlayerCard } from '../../components/PlayerCard';
-import { PlayerPeek, type PeekOrigin } from '../../components/PlayerPeek';
+import { PlayerPeek, pitchPeekOrigin, type PeekOrigin } from '../../components/PlayerPeek';
 import { TeamPitch, type PitchCell } from '../../components/TeamPitch';
 import { useColors } from '../../theme/useColors';
 import { prefs } from '../../store';
@@ -94,11 +94,7 @@ export function TeamLineup({
     if (!pos || !slots[i] || cells[i]?.youth) return;
     pitch.current?.measureInWindow((px, py, w, h) => {
       if (!w || !h || active.current) return;
-      // 자리 카드는 62×88, 가운데가 자리 좌표(TeamPitch).
-      setPeek({
-        i,
-        origin: { x: px + (pos.x / 100) * w - 31, y: py + (pos.y / 100) * h - 44, w: 62, h: 88 },
-      });
+      setPeek({ i, origin: pitchPeekOrigin(px, py, w, h, pos) });
     });
   }
   const latest = useRef({ layout, slots, change, dragging });

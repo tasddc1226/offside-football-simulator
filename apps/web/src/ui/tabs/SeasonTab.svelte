@@ -20,7 +20,7 @@
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
   import { seasonLabel } from '@offside/app-core/career';
-  import { RANK_SEEN_RATIO, RESULT_TOUR, TOUR_PICK_MS, TOUR_RANK_DELAY, TOUR_RANK_MS, type TourGate } from '@offside/app-core/resultTour';
+  import { RANK_SEEN_RATIO, RESULT_TOUR, rankBeforeOf, TOUR_PICK_MS, TOUR_RANK_DELAY, TOUR_RANK_MS, type TourGate } from '@offside/app-core/resultTour';
   import { appState } from '../state.svelte.js';
   import { dur } from '../motion.js';
   import PhaseReport from './PhaseReport.svelte';
@@ -62,9 +62,9 @@
   let table = $state<ReturnType<typeof LeagueTable>>();
   let touring = $state(false);
   /** 이 리포트의 순위 변동 — 이전 순위. 바뀌지 않았으면 null. */
-  const rankBefore = $derived(report?.rank.before && report.rank.before !== report.rank.after ? report.rank.before : null);
+  const rankBefore = $derived(rankBeforeOf(report?.rank));
   const playRank = () => {
-    if (!rankBefore || !report || report.key === rankedKey) return;
+    if (rankBefore === null || !report || report.key === rankedKey) return;
     rankedKey = report.key;
     table?.playRank(rankBefore);
   };
@@ -78,7 +78,7 @@
 
   // T-11-162 안내가 순위 연출까지 가지 못했으면, 사용자가 직접 내려와 순위표가 화면에 들어올 때 한 번 튼다.
   $effect(() => {
-    if (touring || !rankBefore || report?.key === rankedKey || !dur(1)) return;
+    if (touring || rankBefore === null || report?.key === rankedKey || !dur(1)) return;
     const el = document.querySelector('[data-league-table]');
     if (!el) return;
     const io = new IntersectionObserver(
@@ -151,7 +151,7 @@
         return;
       }
       let ms = wait;
-      if (k === 'status' && rankBefore) {
+      if (k === 'status' && rankBefore !== null) {
         later(playRank, TOUR_RANK_DELAY);
         ms += TOUR_RANK_MS;
       }

@@ -55,15 +55,14 @@ export async function fundsHistory(
       .bind(profileId, FUNDS_HISTORY_PAGE + 1, page * FUNDS_HISTORY_PAGE),
     d1
       .prepare(
-        `SELECT
-           (SELECT coalesce(sum(c.released_value), 0) FROM cards c JOIN careers ca ON ca.id = c.career_id
-             WHERE ca.profile_id = ?1 AND c.released_at IS NOT NULL) AS released,
-           (SELECT coalesce(sum(c.bonus_value), 0) FROM cards c JOIN careers ca ON ca.id = c.career_id
-             WHERE ca.profile_id = ?1 AND c.bonus_value IS NOT NULL) AS bonus,
+        `SELECT r.released, r.bonus,
            (SELECT coalesce(sum(price - fee), 0) FROM market_listings WHERE seller_id = ?1 AND status = 'sold') AS sold,
            (SELECT coalesce(sum(price), 0) FROM market_listings WHERE buyer_id = ?1 AND status = 'sold') AS bought,
            (SELECT coalesce(sum(price), 0) FROM owner_item_purchases WHERE profile_id = ?1) AS spent,
-           (SELECT balance FROM owner_funds WHERE profile_id = ?1) AS balance`,
+           (SELECT balance FROM owner_funds WHERE profile_id = ?1) AS balance
+           FROM (SELECT coalesce(sum(CASE WHEN c.released_at IS NOT NULL THEN c.released_value END), 0) AS released,
+                        coalesce(sum(c.bonus_value), 0) AS bonus
+                   FROM cards c JOIN careers ca ON ca.id = c.career_id WHERE ca.profile_id = ?1) r`,
       )
       .bind(profileId),
   ]);

@@ -179,11 +179,11 @@ export const MARKET_TOAST = {
   released: (n: number) => L.toastReleased({ n }),
 };
 
-/** 시장 줄 아래 한 줄(레전드 점수 · 이적 횟수). */
-/** 구단주 로그인이 필요해서 실패했는가(세션 없음 · 구글/애플 연결 전). 이적시장에서 영입 대신 로그인을 권한다. */
+/** 구단주 로그인이 필요해서 실패했는가(세션 없음 · 구글/애플 연결 전). 이적시장·내 팀이 오류 대신 로그인을 권한다. */
 export const needsOwnerLogin = (e: { code: string; reason?: string }) =>
   e.code === 'PROFILE_REQUIRED' || e.reason === 'GOOGLE_LOGIN_REQUIRED';
 
+/** 시장 줄 아래 한 줄(레전드 점수 · 이적 횟수). */
 export function cardMeta(c: Pick<MarketCard, 'pos' | 'type' | 'legendScore' | 'transfers'>) {
   const meta = L.cardMeta({
     score: c.legendScore.toLocaleString(intlLocale()),

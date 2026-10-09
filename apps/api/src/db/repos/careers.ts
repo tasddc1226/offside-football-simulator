@@ -248,7 +248,7 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
   const { careerId, summary, publicName, snapshot, profile, potReal, bonusRate, now } = input;
   const value = snapshot ? cardValue(snapshot.career, summary.peak) : null;
   // T-11-163 은퇴 장려금: 기준가가 있는 카드만(스냅샷 없는 옛 기록은 거래도 하지 않는다).
-  const bonus = value !== null && bonusRate > 0 ? releasePayout(value, bonusRate) : 0;
+  const bonus = value === null ? 0 : releasePayout(value, bonusRate);
   await runBatch(db, [
     // 처음 은퇴할 때만 센다 — 같은 커리어의 첫 은퇴가 동시에 두 번 와도 retired_at이 이미 있으면 아무 행도 넣지
     // 않는다. 같은 트랜잭션에서 아래 update보다 먼저 돌아야 retired_at이 비어 있는 것을 본다.

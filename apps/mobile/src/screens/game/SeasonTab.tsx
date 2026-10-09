@@ -31,6 +31,7 @@ import { seasonLabel } from '@offside/app-core/career';
 import {
   RANK_SEEN_RATIO,
   RESULT_TOUR,
+  rankBeforeOf,
   TOUR_PICK_MS,
   TOUR_RANK_DELAY,
   TOUR_RANK_MS,
@@ -152,11 +153,11 @@ function useResultTour(report: PhaseReportData | null) {
   const [rankPlay, setRankPlay] = useState<RankPlay | null>(null);
   const [touring, setTouring] = useState(false);
   const table = useRef<View | null>(null);
-  const moved = report?.rank.before != null && report.rank.before !== report.rank.after;
+  const rankBefore = rankBeforeOf(report?.rank);
   const playRank = () => {
-    if (!report || !moved || report.key === rankedKey) return;
+    if (!report || rankBefore === null || report.key === rankedKey) return;
     rankedKey = report.key;
-    setRankPlay({ before: report.rank.before!, key: report.key });
+    setRankPlay({ before: rankBefore, key: report.key });
   };
 
   useEffect(() => {
@@ -197,7 +198,7 @@ function useResultTour(report: PhaseReportData | null) {
         return;
       }
       let ms = w;
-      if (k === 'status' && moved) {
+      if (k === 'status' && rankBefore !== null) {
         later(playRank, TOUR_RANK_DELAY);
         ms += TOUR_RANK_MS;
       }
@@ -221,13 +222,18 @@ function useResultTour(report: PhaseReportData | null) {
 
   // T-11-162 안내가 순위 연출까지 가지 못했으면, 사용자가 직접 내려와 순위표가 화면에 들어올 때 한 번 튼다(웹 SeasonTab).
   useEffect(() => {
-    if (touring || !moved || !motionOK || report?.key === rankedKey) return;
+    if (touring || rankBefore === null || !motionOK || report?.key === rankedKey) return;
+    // 한 번 틀면 구독을 끊어 스크롤마다 재지 않는다.
+    let off = () => {};
     const check = () =>
       measureShown(table.current, (share) => {
-        if (share >= RANK_SEEN_RATIO) playRank();
+        if (share < RANK_SEEN_RATIO) return;
+        off();
+        playRank();
       });
+    off = onScrolled(check);
     check();
-    return onScrolled(check);
+    return () => off();
   }, [touring, report?.key, motionOK]);
 
   /** Spotlight에 넘길 등록 함수 — 안내가 스크롤해 갈 카드 자리를 재 둔다. */

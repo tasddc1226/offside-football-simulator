@@ -17,7 +17,7 @@ import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { NameReport } from '../../../components/NameReport';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { TeamLines, TeamPitch } from '../../../components/TeamPitch';
-import { PlayerPeek, type PeekOrigin } from '../../../components/PlayerPeek';
+import { PlayerPeek, pitchPeekOrigin, type PeekOrigin } from '../../../components/PlayerPeek';
 import { presetLayout } from '@offside/contracts/owner-team';
 import { friendRequestText } from '@offside/app-core/friendText';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
@@ -131,11 +131,7 @@ export default function TeamProfile({ id }: { id: string }) {
     if (!pos || !id || !players.has(id)) return;
     pitch.current?.measureInWindow((px, py, w, h) => {
       if (!w || !h) return;
-      // 자리 카드는 62×88, 가운데가 자리 좌표(TeamPitch · 내 팀 TeamLineup과 같은 계산).
-      setPeek({
-        i,
-        origin: { x: px + (pos.x / 100) * w - 31, y: py + (pos.y / 100) * h - 44, w: 62, h: 88 },
-      });
+      setPeek({ i, origin: pitchPeekOrigin(px, py, w, h, pos) });
     });
   }
   const peekPlayer = peek ? players.get(team?.slots[peek.i]?.careerId ?? '') : undefined;
