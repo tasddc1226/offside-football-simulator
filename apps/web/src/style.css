@@ -6533,7 +6533,12 @@ button.what {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.chat-rules p {
+.chat-rules-pop p {
+  margin: 0;
+}
+.chat-rules-pop {
+  display: grid;
+  gap: 10px;
   position: absolute;
   z-index: 2;
   top: 100%;

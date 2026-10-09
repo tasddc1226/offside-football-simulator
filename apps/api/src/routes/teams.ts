@@ -143,6 +143,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const t = found.team;
     const ids = slotIdsOf(t);
     const other = session && session.profileId !== t.profileId ? session.profileId : null;
+    const { ownerNickname } = found;
     const [rows, rank, liked, friend, cupHonors] = await Promise.all([
       careersByIds(
         db,
@@ -182,6 +183,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           views: t.views,
           badges: teamBadges(t, teamSeasonClosed(t.season, now) ? rank : null, seasonName, lang),
           cupHonors,
+          ownerNickname,
           // T-11-165 선발에 실제로 든 선수만(숨김·지난 주인 카드는 eligible에서 이미 빠졌다).
           players: rows.filter((r) => eligible.has(r.id)).map((r) => teamPlayerCard(r)),
           createdAt: t.createdAt,

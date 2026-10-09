@@ -369,6 +369,28 @@ describe('POST /v1/profile/delete', () => {
     expect(deletedLogs.some((row) => row.profileId === owner.profileId)).toBe(true);
   });
 
+  it('T-11-167 Apple 재확인 코드를 함께 보내도 삭제한다(해지 키가 없으면 해지는 건너뛴다)', async () => {
+    const owner = await issueCookie(ctx);
+    const app = createApp();
+    const tokenRes = await app.request(
+      '/v1/profile/delete',
+      jsonInit({ method: 'POST', cookie: owner.cookie, idempotencyKey: 'idem-apple-token' }),
+      ctx.env,
+    );
+    const { confirmToken } = ((await tokenRes.json()) as { data: { confirmToken: string } }).data;
+    const res = await app.request(
+      '/v1/profile/delete',
+      jsonInit({
+        method: 'POST',
+        body: { confirmToken, appleAuthorizationCode: 'apple-code' },
+        cookie: owner.cookie,
+        idempotencyKey: 'idem-apple-confirm',
+      }),
+      ctx.env,
+    );
+    expect(res.status).toBe(204);
+  });
+
   it('만료된 토큰은 400', async () => {
     const owner = await issueCookie(ctx);
     const app = createApp();

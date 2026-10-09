@@ -112,6 +112,7 @@
           <h1>{team.name}</h1>
           {#if champ}<span class="tp-champ"><ChampBadge edition={champ.edition} /></span>{/if}
           <p class="muted fs-sm">{L.profManager}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</p>
+          {#if team.ownerNickname}<p class="muted fs-sm" data-team-owner>{L.profOwner}<b>{team.ownerNickname}</b></p>{/if}
         </div></div>
         <div class="tp-rating" aria-label={L.profRatingAria({ n: team.rating })}><small>RATING</small><b>{n(team.rating)}</b></div>
       </div>
@@ -152,7 +153,10 @@
       {/if}
     </section>
     {#if team.cupHonors?.length}<CupHonors honors={team.cupHonors} />{/if}
-    {#if !mine}<NameReport kind="team" id={team.id} name={team.name} />{/if}
+    {#if !mine}
+      <NameReport kind="team" id={team.id} name={team.name} />
+      {#if team.ownerNickname}<NameReport kind="owner" id={team.id} name={team.ownerNickname} />{/if}
+    {/if}
     </div>
   {/if}
 </LoadState>

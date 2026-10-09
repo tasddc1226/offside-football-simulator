@@ -135,6 +135,7 @@ const ko = {
   profLoadFail: '팀을 불러오지 못했어요.',
   profManager: '감독 ',
   profMine: ' · 내 팀',
+  profOwner: '구단주 ',
   profRatingAria: (p: { n: number }) => `팀 레이팅 ${p.n}`,
   profStatOvr: '팀 OVR',
   profStatRecord: '전적',

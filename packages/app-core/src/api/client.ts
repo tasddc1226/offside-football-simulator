@@ -221,8 +221,18 @@ export function startProfileDeletion(): Promise<
 > {
   return apiFetch('/v1/profile/delete', { method: 'POST' });
 }
-export function confirmProfileDeletion(confirmToken: string): Promise<ApiResult<undefined>> {
-  return apiFetch('/v1/profile/delete', { method: 'POST', body: JSON.stringify({ confirmToken }) });
+/** appleAuthorizationCode: T-11-167 Apple로 로그인한 앱이 삭제 직전에 다시 받은 코드(서버가 Apple 토큰을 해지한다). */
+export function confirmProfileDeletion(
+  confirmToken: string,
+  appleAuthorizationCode?: string,
+): Promise<ApiResult<undefined>> {
+  return apiFetch('/v1/profile/delete', {
+    method: 'POST',
+    body: JSON.stringify({
+      confirmToken,
+      appleAuthorizationCode,
+    }),
+  });
 }
 /** T-10-028 댓글에 쓰는 닉네임. 구글 로그인한 프로필만 정할 수 있다(겹치면 409 NICKNAME_TAKEN). */
 export function putNickname(nickname: string): Promise<ApiResult<Profile>> {

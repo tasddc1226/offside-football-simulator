@@ -111,6 +111,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   profLoadFail: 'チームを読み込めませんでした。',
   profManager: '監督 ',
   profMine: ' · マイチーム',
+  profOwner: 'オーナー ',
   profRatingAria: (p) => `チームレーティング ${p.n}`,
   profStatOvr: 'チームOVR',
   profStatRecord: '戦績',

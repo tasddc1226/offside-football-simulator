@@ -33,7 +33,8 @@ import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
-import { purgeEdge } from '../edgeCache.js';
+import { purgeEdge, waitUntil } from '../edgeCache.js';
+import { revokeAppleAuthorization } from '../auth/apple-revoke.js';
 import { STALE } from '../edgeKeys.js';
 import { issueRecoveryCode } from '../profile/issue-recovery-code.js';
 import { maskEmail } from '../profile/mask-email.js';
@@ -222,12 +223,26 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     // 조회부터 조각씩 다시 훑어 채운다. 나머지는 바뀐 공개 캐시만 비운다(명예의 전당 목록은 TTL 1분).
     if (heldFirsts) purgeEdge(c, STALE.firstsChanged());
     purgeEdge(c, STALE.profileDeleted(careerIds, hadComments));
+    // T-11-167 Apple 토큰 해지는 삭제를 막지 않는다(실패는 기록만). 계정 데이터는 이미 지웠다.
+    const code = body.appleAuthorizationCode;
+    if (code)
+      waitUntil(
+        c,
+        revokeAppleAuthorization(c.env, code, { nowS: Math.floor(Date.now() / 1000) }).then(
+          // 키가 빠진 채 코드가 들어오면 가이드라인 5.1.1(v)을 못 지킨 것이라 경고로 남긴다.
+          (r) =>
+            r === 'skipped' &&
+            console.warn(JSON.stringify({ job: 'apple-revoke', skipped: 'no keys' })),
+          (e) =>
+            console.error(JSON.stringify({ job: 'apple-revoke', error: String(e).slice(0, 200) })),
+        ),
+      );
     return c.body(null, 204);
   });
 }
 
 /** 본문 없음(빈 객체)은 1단계 요청이다. 그 외에는 contracts 스키마로 검증한다. */
-function parseDeleteBody(json: unknown): { confirmToken?: string } {
+function parseDeleteBody(json: unknown): Partial<DeleteProfileConfirmBody> {
   if (
     json !== null &&
     typeof json === 'object' &&
@@ -236,6 +251,5 @@ function parseDeleteBody(json: unknown): { confirmToken?: string } {
   ) {
     return {};
   }
-  const parsed: DeleteProfileConfirmBody = parseWithAppError(DeleteProfileConfirmBodySchema, json);
-  return { confirmToken: parsed.confirmToken };
+  return parseWithAppError(DeleteProfileConfirmBodySchema, json);
 }

@@ -83,6 +83,8 @@ export type DeleteProfileStartResponse = z.infer<typeof DeleteProfileStartRespon
 /** API-PRO-005 2단계 요청 본문. 성공하면 204(응답 스키마 없음). */
 export const DeleteProfileConfirmBodySchema = z.strictObject({
   confirmToken: z.string().min(1),
+  /** T-11-167 Apple로 로그인한 계정이면 앱이 삭제 직전에 Apple에 다시 확인받아 넘긴다. 서버가 토큰을 해지한다. */
+  appleAuthorizationCode: z.string().min(1).max(4096).optional(),
 });
 export type DeleteProfileConfirmBody = z.infer<typeof DeleteProfileConfirmBodySchema>;
 
