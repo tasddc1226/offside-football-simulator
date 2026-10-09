@@ -29,6 +29,7 @@ import { eventById } from '@offside/game/events-data';
 import type { GameState } from '@offside/game/types';
 import { seasonLabel } from '@offside/app-core/career';
 import {
+  RANK_SEEN_RATIO,
   RESULT_TOUR,
   TOUR_PICK_MS,
   TOUR_RANK_DELAY,
@@ -46,7 +47,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
 import { Opt, Pill } from '../../ui/bits';
 import { Btn } from '../../ui/Btn';
-import { scrollTo, scrollY, viewH } from '../../ui/scroll';
+import { measureShown, onScrolled, scrollTo, scrollY, viewH } from '../../ui/scroll';
 import { Txt } from '../../ui/Txt';
 import { LeagueTable, SubTitle, type RankPlay } from './LeagueTable';
 import { PhaseReport } from './PhaseReport';
@@ -132,6 +133,8 @@ const RowMuted = ({ children }: { children: ReactNode }) => (
 // 움직여 보여 준다. 기다리는 카드 밖의 단계에서 화면을 만지면 바로 그만둔다. 동작 줄이기면 돌지 않는다.
 /** 안내를 이미 돈 리포트 — 탭을 오가며 다시 마운트돼도 한 리포트에 한 번만. */
 let touredKey = 0;
+/** 순위 변동 연출을 이미 튼 리포트 — 안내든 직접 스크롤이든 한 리포트에 한 번만(웹 rankedKey). */
+let rankedKey = 0;
 
 interface Tour {
   /** 화면을 만졌다(고르기를 기다리는 중이 아니면 그만둔다). */
@@ -147,6 +150,14 @@ function useResultTour(report: PhaseReportData | null) {
   const [spot, setSpot] = useState<TourSpot | null>(null);
   const [wait, setWait] = useState<TourGate | null>(null);
   const [rankPlay, setRankPlay] = useState<RankPlay | null>(null);
+  const [touring, setTouring] = useState(false);
+  const table = useRef<View | null>(null);
+  const moved = report?.rank.before != null && report.rank.before !== report.rank.after;
+  const playRank = () => {
+    if (!report || !moved || report.key === rankedKey) return;
+    rankedKey = report.key;
+    setRankPlay({ before: report.rank.before!, key: report.key });
+  };
 
   useEffect(() => {
     const k = report?.key;
@@ -159,6 +170,7 @@ function useResultTour(report: PhaseReportData | null) {
     let alive = true;
     const stop = () => {
       alive = false;
+      setTouring(false);
       timers.forEach(clearTimeout);
       waiting = null;
       tour.current = null;
@@ -185,9 +197,8 @@ function useResultTour(report: PhaseReportData | null) {
         return;
       }
       let ms = w;
-      const { before, after } = report.rank;
-      if (k === 'status' && before != null && before !== after) {
-        later(() => setRankPlay({ before, key: report.key }), TOUR_RANK_DELAY);
+      if (k === 'status' && moved) {
+        later(playRank, TOUR_RANK_DELAY);
         ms += TOUR_RANK_MS;
       }
       later(() => go(i + 1), ms);
@@ -202,14 +213,26 @@ function useResultTour(report: PhaseReportData | null) {
         later(() => go(i + 1), TOUR_PICK_MS);
       },
     };
+    setTouring(true);
     go(0);
     return stop;
     // 새 리포트(key)마다 한 번만 돈다.
   }, [report?.key]);
 
+  // T-11-162 안내가 순위 연출까지 가지 못했으면, 사용자가 직접 내려와 순위표가 화면에 들어올 때 한 번 튼다(웹 SeasonTab).
+  useEffect(() => {
+    if (touring || !moved || !motionOK || report?.key === rankedKey) return;
+    const check = () =>
+      measureShown(table.current, (share) => {
+        if (share >= RANK_SEEN_RATIO) playRank();
+      });
+    check();
+    return onScrolled(check);
+  }, [touring, report?.key, motionOK]);
+
   /** Spotlight에 넘길 등록 함수 — 안내가 스크롤해 갈 카드 자리를 재 둔다. */
   const reg = (id: TourSpot) => (v: View | null) => void (views.current[id] = v);
-  return { spot, wait, rankPlay, tour, reg };
+  return { spot, wait, rankPlay, tour, reg, table };
 }
 
 /** 안내가 비추는 카드 감싸개 — 자리를 등록하고, 지금 비추는 카드면 바깥에 강조 테두리를 두른다(웹 [data-tour-spot]). */
@@ -420,7 +443,7 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
     [s],
   );
   const investCards = useMemo(() => new Map(INVESTS.map((d) => [d.id, investCard(s, d)])), [s]);
-  const { spot, wait, rankPlay, tour, reg } = useResultTour(report);
+  const { spot, wait, rankPlay, tour, reg, table } = useResultTour(report);
   const [popped, setPopped] = useState<{ g: TourGate; id: string } | null>(null);
 
   function pick(g: TourGate, id: string) {
@@ -600,7 +623,9 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
               })}
             </Txt>
           ) : null}
-          <LeagueTable s={s} play={rankPlay} />
+          <View ref={table} collapsable={false}>
+            <LeagueTable s={s} play={rankPlay} />
+          </View>
           {comps.length ? (
             <View>
               <SubTitle>{L.compsTitle}</SubTitle>

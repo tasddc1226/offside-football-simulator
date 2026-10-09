@@ -22,6 +22,11 @@ export const TOUR_RANK_DELAY = 500;
 export const TOUR_RANK_MS = 1000;
 /** 순위표에서 내 팀 줄이 미끄러지는 시간. */
 export const RANK_SLIDE_MS = 900;
+/**
+ * T-11-162 안내가 순위 연출까지 가지 못했으면(화면을 만져 멈췄거나, 고르기 전에 직접 내려감) 순위표가 이만큼
+ * 화면에 들어올 때 한 번 튼다.
+ */
+export const RANK_SEEN_RATIO = 0.6;
 
 /**
  * 순위 변동 연출의 범위 — 보이는 줄 목록(접힌 '⋯' 줄은 rank 없음)에서 내 팀 줄(me)과, 그 줄이 출발할 이전 순위

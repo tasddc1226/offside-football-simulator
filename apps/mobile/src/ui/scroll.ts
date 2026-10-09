@@ -10,13 +10,33 @@ export function registerScroll(v: ScrollView | null) {
   view = v;
   if (v) y = 0;
 }
-export const noteScrollY = (next: number) => void (y = next);
+const listeners = new Set<() => void>();
+export function noteScrollY(next: number) {
+  y = next;
+  listeners.forEach((fn) => fn());
+}
+/** 스크롤할 때마다 부른다(T-11-162 순위표가 화면에 들어오는지 보기). 해제 함수를 돌려준다. */
+export function onScrolled(fn: () => void) {
+  listeners.add(fn);
+  return () => void listeners.delete(fn);
+}
 export const scrollY = () => y;
 /** 스크롤 창 높이(탭바·하단 바를 뺀 보이는 높이). */
 export const noteViewH = (next: number) => void (h = next);
 export const viewH = () => h;
 export function scrollTo(next: number, animated = false) {
   view?.scrollTo({ y: next, animated });
+}
+/** 화면 안의 한 칸이 스크롤 창 안에 보이는 비율(0~1)을 잰다(T-11-162). */
+export function measureShown(target: View | null, cb: (share: number) => void) {
+  const viewport = view?.getNativeScrollRef();
+  if (!target || !viewport) return;
+  viewport.measureInWindow((_vx, vy, _vw, vh) =>
+    target.measureInWindow((_x, ty, _w, th) => {
+      const bottom = vy + (h || vh);
+      if (th > 0) cb(Math.max(0, Math.min(ty + th, bottom) - Math.max(ty, vy)) / th);
+    }),
+  );
 }
 /** 화면 안의 한 칸이 위쪽에 보이게 내린다(T-11-152 후보 화면 → 리롤권 상점). */
 export function scrollToView(target: View | null, animated = false) {
