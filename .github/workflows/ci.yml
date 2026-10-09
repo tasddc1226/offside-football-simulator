@@ -15,11 +15,24 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  pr-checks:
-    name: PR quick checks
+  # T-11-176 PR 검사: 판정 job이 한 번 바뀐 패키지를 고르고(ci-affected.mjs, 패키지 밖 변경 · 판정 실패면 전부),
+  # 빠른 검사(형식 · 린트 · 타입 · 패키지 테스트) · API 테스트 3조각 · 빌드와 e2e 3조각이 필요한 것만 나란히 돈다.
+  # 머지 전에 모두 잡아서 머지 뒤에는 main CI를 기다리지 않고 운영에 배포한다(T-10-061).
+  pr-plan:
+    name: PR plan
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+    outputs:
+      code_changed: ${{ steps.scope.outputs.code_changed }}
+      any: ${{ steps.affected.outputs.any }}
+      check_filter: ${{ steps.affected.outputs.check_filter }}
+      test_filter: ${{ steps.affected.outputs.test_filter }}
+      test_any: ${{ steps.affected.outputs.test_any }}
+      api: ${{ steps.affected.outputs.api }}
+      web: ${{ steps.affected.outputs.web }}
+      mobile: ${{ steps.affected.outputs.mobile }}
+      sim: ${{ steps.affected.outputs.sim }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -41,87 +54,135 @@ jobs:
       - name: Documentation-only summary
         if: steps.scope.outputs.code_changed == 'false'
         run: echo 'Documentation-only change; game checks and deployment are not required.' >> "$GITHUB_STEP_SUMMARY"
-      - uses: pnpm/action-setup@v4
+      # 설치 없이 npx turbo로 판정한다.
+      - name: Detect affected packages
+        id: affected
         if: steps.scope.outputs.code_changed == 'true'
-      - uses: actions/cache@v4
-        if: steps.scope.outputs.code_changed == 'true'
-        with:
-          path: ~/.local/share/pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: pnpm-store-${{ runner.os }}-
-      - if: steps.scope.outputs.code_changed == 'true'
-        run: pnpm install --frozen-lockfile
-      - name: Format, lint, typecheck and test
-        if: steps.scope.outputs.code_changed == 'true'
-        run: |
-          node --test .github/scripts/*.test.mjs
-          pnpm format:check
-          pnpm lint
-          pnpm lint:deps
-          pnpm lint:i18n
-          pnpm typecheck
-          pnpm test
-          pnpm --filter @offside/api exec vitest run --config ../mobile/vitest.push.config.mjs
-      - name: Fulltime balance smoke (N=2000, random)
-        if: steps.scope.outputs.code_changed == 'true'
-        run: node tooling/scripts/sim-smoke.mjs 2000 ci-pr-${{ github.run_id }}
+        run: node .github/scripts/ci-affected.mjs
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.sha }}
 
-  # 빌드·번들·마이그레이션 검사와 e2e는 위 검사와 나란히 돈다(T-10-061). 머지 전에 모두 잡아서,
-  # 머지 뒤에는 main CI를 기다리지 않고 바로 운영에 배포한다.
-  pr-e2e:
-    name: PR build and e2e
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+  pr-checks:
+    name: PR quick checks
+    needs: pr-plan
+    if: needs.pr-plan.outputs.code_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           package-manager-cache: false
-      - name: Detect code changes
-        id: scope
-        run: node .github/scripts/ci-scope.mjs
-        env:
-          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          CI_HEAD_SHA: ${{ github.sha }}
       - uses: pnpm/action-setup@v4
-        if: steps.scope.outputs.code_changed == 'true'
       - uses: actions/cache@v4
-        if: steps.scope.outputs.code_changed == 'true'
         with:
           path: ~/.local/share/pnpm/store
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-store-${{ runner.os }}-
-      - if: steps.scope.outputs.code_changed == 'true'
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+      - name: Repository-wide checks
+        run: |
+          node --test .github/scripts/*.test.mjs
+          pnpm format:check
+          pnpm lint:deps
+          pnpm lint:i18n
+      - name: Lint and typecheck affected packages
+        if: needs.pr-plan.outputs.any == 'true'
+        run: pnpm turbo run lint typecheck ${{ needs.pr-plan.outputs.check_filter }}
+      # API 테스트는 'PR API tests'가 나눠 돈다.
+      - name: Test affected packages
+        if: needs.pr-plan.outputs.test_any == 'true'
+        run: pnpm turbo run test ${{ needs.pr-plan.outputs.test_filter }}
+      - name: Push delivery tests
+        if: needs.pr-plan.outputs.api == 'true' || needs.pr-plan.outputs.mobile == 'true'
+        run: pnpm --filter @offside/api exec vitest run --config ../mobile/vitest.push.config.mjs
+      - name: Migration snapshot check
+        if: needs.pr-plan.outputs.api == 'true'
+        run: pnpm --filter @offside/api db:check
+      - name: Fulltime balance smoke (N=2000, random)
+        if: needs.pr-plan.outputs.sim == 'true'
+        run: node tooling/scripts/sim-smoke.mjs 2000 ci-pr-${{ github.run_id }}
+
+  pr-api-tests:
+    name: PR API tests (${{ matrix.shard }})
+    needs: pr-plan
+    if: needs.pr-plan.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      - name: API tests
+        run: pnpm --filter @offside/api exec vitest run --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+  pr-e2e:
+    name: PR build and e2e (${{ matrix.shard }})
+    needs: pr-plan
+    if: needs.pr-plan.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
       - uses: actions/cache@v4
         id: pw-cache
-        if: steps.scope.outputs.code_changed == 'true'
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # API의 build는 tsc --noEmit뿐(위 typecheck와 같다). e2e·번들 검사는 웹 dist만 쓴다.
-      - name: Build, bundle check and e2e
-        if: steps.scope.outputs.code_changed == 'true'
+      # e2e · 번들 검사는 웹 dist만 쓴다. 조각마다 빌드한다(몇 초라 artifact로 넘기는 것보다 빠르다).
+      - name: Build and bundle check
         run: |
-          pnpm --filter @offside/api db:check
           pnpm --filter @offside/web build
           pnpm --filter @offside/web check:bundle
+      - name: e2e
+        run: |
           if [ "${{ steps.pw-cache.outputs.cache-hit }}" = 'true' ]; then
             pnpm --filter @offside/web exec playwright install-deps chromium
           else
             pnpm --filter @offside/web exec playwright install --with-deps chromium
           fi
-          pnpm --filter @offside/web e2e
+          pnpm --filter @offside/web exec playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
         env:
           CI: 'true'
           E2E_PREBUILT: '1'
       - name: Verify consent-gated analytics with a test tag
-        if: steps.scope.outputs.code_changed == 'true'
+        if: matrix.shard == strategy.job-total
         run: pnpm --filter @offside/web exec playwright test analytics.spec.ts --workers=1
         env:
           CI: 'true'
@@ -129,9 +190,9 @@ jobs:
           VITE_GA4_MEASUREMENT_ID: G-TEST123456
           VITE_GA4_HOSTNAME: localhost
       - uses: actions/upload-artifact@v4
-        if: failure() && steps.scope.outputs.code_changed == 'true'
+        if: failure()
         with:
-          name: pr-e2e-failure
+          name: pr-e2e-failure-${{ matrix.shard }}
           path: apps/web/test-results
           if-no-files-found: ignore
           retention-days: 7

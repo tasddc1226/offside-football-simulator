@@ -397,6 +397,8 @@ export function TeamFriends({
               </>
             ) : null}
           </Card>
+          {/* T-11-175 이벤트 카드를 맨 위에: 홈 타일 · 초대 알림으로 들어오면 바로 보이게. */}
+          {data.invite ? <InviteEvent invite={data.invite} /> : null}
           <PushNudge />
 
           <Card gap={10}>
@@ -429,7 +431,6 @@ export function TeamFriends({
               </Btn>
             </View>
           </Card>
-          {data.invite ? <InviteEvent invite={data.invite} /> : null}
 
           <Card gap={10}>
             <Txt v="h2" accessibilityRole="header">

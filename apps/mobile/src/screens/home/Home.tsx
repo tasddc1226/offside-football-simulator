@@ -26,6 +26,9 @@ import { SeasonGauge } from './SeasonGauge';
 import { Tile } from './Tile';
 import { PushOptInCard } from './PushOptInCard';
 import { InboxButton } from '../../components/InboxButton';
+import { openFriends } from '../../platform/inbox';
+import { INVITE_REROLLS } from '@offside/contracts/owner-team';
+import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { tn } from '@offside/game/i18n/names';
 
 export default function Home() {
@@ -165,6 +168,15 @@ export default function Home() {
           title={L.marketTitle}
           sub={L.marketSub}
           onPress={() => go('market')}
+        />
+        {/* T-11-175 친구 초대 이벤트는 구단주 → 경기 → 친구까지 들어가야 보여서 홈에서 바로 친구 화면(이벤트 카드가 맨 위)으로 간다. */}
+        <Tile
+          wide
+          testID="home-invite"
+          eyebrow="Invite event"
+          title={LF.eventTitle}
+          sub={L.inviteSub({ n: INVITE_REROLLS })}
+          onPress={openFriends}
         />
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <HomeFirsts />
