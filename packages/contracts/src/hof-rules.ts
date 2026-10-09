@@ -27,7 +27,7 @@ export const LEGEND_W = {
  * 여기 없는 세부 포지션은 큰 포지션 가중을 그대로 쓴다. c는 경기 장악(T-11-021) 가중이다.
  * T-11-168 경기 장악은 최상위 선수에게 매 시즌 상한까지 차 "출전 × 0.6"이 된다. 운영 은퇴 기록(세부 포지션
  * 2.7만 명)을 다시 매겨 최고 OVR 구간마다 ST·W·DM 평균에 맞췄다 — 골·도움을 공격수만큼 쌓는 AM은 장악 몫을
- * 빼고, CM은 0.7 → 0.2로 줄였다(최고 OVR 90 이상 평균 AM 2,236 → 1,961, ST 1,828).
+ * 빼고(항목 없이 MF 가중), CM은 0.7 → 0.2로 줄였다(최고 OVR 90 이상 평균 AM 2,236 → 1,961, ST 1,828).
  */
 interface LegendWeight {
   g: number;
@@ -39,7 +39,6 @@ export const LEGEND_W_DETAIL: Partial<Record<string, LegendWeight>> = {
   W: { g: 0.42, a: 0.55, cs: 0 },
   DM: { g: 0.8, a: 0.85, cs: 0, c: 0.55 },
   CM: { ...LEGEND_W.MF, c: 0.2 },
-  AM: { ...LEGEND_W.MF },
 };
 
 /**
