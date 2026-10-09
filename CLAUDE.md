@@ -120,7 +120,7 @@ pnpm --filter @offside/fulltime-sim analyze
   시드 5개 평균)을 참고 기준으로 유지한다. 수치는 문서에 옮겨 적지 않는다.
 - **서버 밸런스 설정 (T-10-016)**: 운영 중 조정할 수치는 코드 배포 대신
   운영 도구(설정 → 운영 도구 → 밸런스)에서 버전으로 바꾼다. 스펙(키·기본값·
-  범위)은 `packages/contracts/src/balance-spec.ts` 한 곳이고, 게임 코드는
+  범위)은 `packages/contracts/src/balance-spec.ts`, 운영 도구의 이름·설명은 같은 키로 `balance-text.ts`에 두고, 게임 코드는
   `BAL.<키>`(`packages/game/src/balance.ts`)를 읽는다. 새 버전은 진행 중인
   커리어에 **다음 시즌 시작부터**(`newSeason`), 새 커리어에는 바로 적용되며
   커리어마다 `GameState.bal`에 버전이 저장된다. 수치를 새로 열 때는 스펙에

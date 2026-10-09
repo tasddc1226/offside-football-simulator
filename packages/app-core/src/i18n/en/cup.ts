@@ -78,6 +78,9 @@ export const cup: Translation<CupMsgs> = {
   secRewards: 'Rewards',
   secGroups: 'Group stage',
   secBracket: 'Knockout',
+  secEntrants: 'Entered teams',
+  entrantsNote: 'In order of entry. The group draw follows once entries close.',
+  mineTeam: 'My team',
   rulePlay: (p) =>
     `Teams from this season with at least ${p.min} of your own players in the starting lineup can enter. ${p.cap} teams max, first come first served.`,
   ruleGroup:

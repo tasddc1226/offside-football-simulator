@@ -1,4 +1,4 @@
-// 보상형 광고(AppLovin MAX — T-11-159) 공용 재생. 후보 잠재력(T-11-118)·잠재력 엿보기·강화가 쓴다.
+// 보상형 광고(AppLovin MAX — T-11-159) 공용 재생. 후보 잠재력(T-11-118, 후보 다시 뽑기 T-11-154도 같은 단위)·잠재력 엿보기·강화가 쓴다.
 // T-11-117 세 곳의 실적을 따로 보려고 광고 단위를 나눴다(재생 흐름은 같다). 비개인화 광고만 받는다(./ads).
 import { RewardedAd } from 'react-native-applovin-max';
 import { adText } from '@offside/app-core/i18n/ko/ad';

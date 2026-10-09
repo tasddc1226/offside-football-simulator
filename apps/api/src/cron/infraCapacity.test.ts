@@ -8,7 +8,12 @@ import { listPublicHof } from '../db/repos/careers.js';
 import { squadOf } from '../routes/seasonRecap.js';
 import { backupToR2, BACKUP_PAGE_BYTES, gzipToR2 } from './backup.js';
 import { runSeasonEventsArchive, EVENT_ARCHIVE_META_KEY } from './seasonEventsArchive.js';
-import { assessInfraHealth, D1_LIMIT_BYTES, runInfraHealth } from './infraHealth.js';
+import {
+  assessInfraHealth,
+  D1_LIMIT_BYTES,
+  INFRA_HEALTH_META_KEY,
+  runInfraHealth,
+} from './infraHealth.js';
 import { DAILY_META_KEY } from './daily.js';
 import { DAY_MS } from '../time.js';
 
@@ -41,6 +46,7 @@ beforeAll(async () => {
 afterAll(() => ctx.dispose());
 beforeEach(async () => {
   await run('DELETE FROM career_seasons');
+  await run('DELETE FROM app_meta WHERE key = ?1', INFRA_HEALTH_META_KEY);
   await run("UPDATE careers SET status='active',legend_score=NULL,retired_at=NULL WHERE id='own'");
   await run("DELETE FROM app_meta WHERE key LIKE 'cron:season-events:%'");
 });
@@ -319,13 +325,13 @@ describe('capacity safeguards', () => {
       EVENT_ARCHIVE_META_KEY,
       JSON.stringify({ at: NOW }),
     );
-    expect(await runInfraHealth(env(), NOW + 300_000)).toBeNull();
     await ctx.env.BACKUP!.put('d1/production/2026-10-08.sql.gz', 'completed test backup');
     const health = await runInfraHealth(env(), NOW);
     expect(health!.sizeBytes).toBeGreaterThan(0);
     expect(health!.issues).toEqual([]);
+    expect(await runInfraHealth(env(), NOW + 300_000)).toBeNull();
     await ctx.env.BACKUP!.delete('d1/production/2026-10-08.sql.gz');
-    expect((await runInfraHealth(env(), NOW))!.issues).toContain(
+    expect((await runInfraHealth(env(), NOW + 3_600_000))!.issues).toContain(
       'backup-object-missing-or-unavailable',
     );
     const forecast = assessInfraHealth(
@@ -347,5 +353,116 @@ describe('capacity safeguards', () => {
       assessInfraHealth(NOW, 1000, [{ at: NOW - 300_000, sizeBytes: 1 }], null, null, false)
         .growthBytesPerDay,
     ).toBeNull();
+  });
+});
+
+describe('infrastructure report cadence', () => {
+  const report = async () => {
+    const row = await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key = ?1')
+      .bind(INFRA_HEALTH_META_KEY)
+      .first<{ value: string }>();
+    return row ? JSON.parse(row.value) : null;
+  };
+
+  it.each([23_000, 52_000])(
+    'records off-second cron timestamps (%i ms) once per UTC hour',
+    async (offset) => {
+      const at = NOW + offset;
+      const first = await runInfraHealth(env(), at);
+      expect(first?.at).toBe(at);
+      expect(first?.samples).toHaveLength(1);
+      expect(await runInfraHealth(env(), at)).toBeNull();
+      expect(await runInfraHealth(env(), at + 300_000)).toBeNull();
+      expect(await runInfraHealth(env(), NOW - 300_000)).toBeNull();
+      const next = await runInfraHealth(env(), NOW + 3_600_000 + 52_000);
+      expect(next?.samples).toHaveLength(2);
+      expect((await report()).at).toBe(next?.at);
+    },
+  );
+
+  it('catches up on the next tick after missing several hours without inventing samples', async () => {
+    await runInfraHealth(env(), NOW + 23_000);
+    const next = await runInfraHealth(env(), NOW + 3 * 3_600_000 + 300_000 + 52_000);
+    expect(next?.samples).toHaveLength(2);
+    expect(next?.growthBytesPerDay).toBeNull();
+  });
+
+  it('a failed report write preserves the prior hour and retries within the failed hour', async () => {
+    const prior = await runInfraHealth(env(), NOW + 23_000);
+    const DB = new Proxy(ctx.env.DB, {
+      get(target, key) {
+        if (key === 'prepare')
+          return (sql: string) => {
+            if (sql.startsWith('INSERT INTO app_meta')) throw new Error('report write unavailable');
+            return target.prepare(sql);
+          };
+        const value = Reflect.get(target, key) as unknown;
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    const at = NOW + 3_600_000 + 23_000;
+    await expect(runInfraHealth({ ...env(), DB }, at)).rejects.toThrow('report write unavailable');
+    expect(await report()).toEqual(prior);
+    const retried = await runInfraHealth(env(), at + 300_000);
+    expect(retried?.samples).toHaveLength(2);
+    expect((await report()).at).toBe(at + 300_000);
+  });
+
+  it('concurrent invocations commit exactly one report and cannot overwrite a newer hour', async () => {
+    await run(
+      'INSERT OR REPLACE INTO app_meta(key,value) VALUES (?1,?2)',
+      DAILY_META_KEY,
+      JSON.stringify({
+        ts: new Date(NOW).toISOString(),
+        level: 'info',
+        backup: { key: 'd1/production/cadence.sql.gz' },
+      }),
+    );
+    const race = async (times: number[]) => {
+      let ready!: () => void;
+      let release!: () => void;
+      const arrived = new Promise<void>((resolve) => {
+        ready = resolve;
+      });
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let calls = 0;
+      const BACKUP = new Proxy(ctx.env.BACKUP!, {
+        get(target, key) {
+          if (key === 'head')
+            return async () => {
+              calls++;
+              if (calls === times.length) ready();
+              await gate;
+              return null;
+            };
+          const value = Reflect.get(target, key) as unknown;
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      });
+      const pending = times.map((at) => runInfraHealth({ ...env(), BACKUP }, at));
+      await arrived;
+      return { pending, release };
+    };
+    const sameHour = await race([NOW + 23_000, NOW + 52_000]);
+    sameHour.release();
+    const results = await Promise.all(sameHour.pending);
+    expect(results.filter(Boolean)).toHaveLength(1);
+    expect((await report()).samples).toHaveLength(1);
+
+    // Hold an old-hour invocation in R2 while a new-hour invocation commits.
+    const old = await race([NOW + 3_600_000 + 23_000]);
+    const newest = await runInfraHealth(env(), NOW + 2 * 3_600_000 + 52_000);
+    old.release();
+    expect(await old.pending[0]).toBeNull();
+    expect(await report()).toEqual(newest);
+    expect(newest?.samples).toHaveLength(2);
+  });
+
+  it('does not access D1 outside production', async () => {
+    const { DB, seen } = spyDb(ctx.env.DB);
+    expect(await runInfraHealth({ ...env(), DB, ENVIRONMENT: 'staging' }, NOW + 23_000)).toBeNull();
+    expect(seen).toEqual([]);
   });
 });

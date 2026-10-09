@@ -1,0 +1,43 @@
+import { ns } from '../core';
+const ko = {
+  cancel: '취소',
+  webdriver: '자동화 브라우저',
+  headless: '헤드리스 브라우저',
+  synthetic: '스크립트 클릭',
+  noInput: '입력 없이 진행',
+  failureReason: '점검 오류',
+  title: '자동 숨김 처리',
+  policy:
+    '매일 새벽 4시에 점검해요. 자동화·헤드리스 브라우저, 스크립트 클릭, 입력 없는 시즌 반복만 자동으로 숨겨요. 간격·커서 이동·이름은 검토 근거로만 사용해요.',
+  preserve:
+    '숨긴 선수는 공개 기록과 팀에서 제외돼요. 원본 기록은 보존하고, 복구한 선수는 다시 자동으로 숨기지 않아요.',
+  paused: '자동 숨김이 중지돼 있어요.',
+  enabled: '자동 숨김 적용 중',
+  version: '기준 버전',
+  notRun: '아직 점검 전이에요.',
+  running: '점검 진행 중',
+  complete: '점검 완료',
+  error: '점검 실패, 다음 실행에서 이어서 처리해요.',
+  checked: '점검',
+  hiddenCount: '숨김',
+  history: '처리 이력',
+  empty: '아직 처리 이력이 없어요.',
+  restore: '숨김 해제',
+  restored: '복구됨',
+  hidden: '숨김 상태',
+  hideAction: '숨김',
+  restoreAction: '복구',
+  refresh: '새로고침',
+  more: '이전 이력 더 보기',
+  fail: '숨김 처리 현황을 불러오지 못했어요.',
+  restoreFail: '숨김을 해제하지 못했어요. 다시 시도해 주세요.',
+  sweep: '정기 점검',
+  upload: '시즌 업로드',
+  admin: '운영자 처리',
+  seasons: '측정 시즌',
+  source: '처리 경로',
+  observations: '아래 의심 점수만으로는 자동 숨김 처리하지 않아요.',
+  confirm: '이 선수의 숨김을 해제할까요? 이후 자동 점검에서 제외돼요.',
+};
+export type AutomationModerationMsgs = typeof ko;
+export const automationModerationText = ns('automationModeration', ko);
