@@ -2,7 +2,7 @@
 // 첫 화면이 쓰는 은퇴 기록 읽기만 둔 가벼운 모듈. season.ts에 두면 홈이 시즌 엔진 전체를 첫 번들로 끌어온다.
 import { SAVE_VERSION } from './data.js';
 import { controlPoints } from '@offside/contracts/hof-rules';
-import { legendTermsOf } from './legend.js';
+import { legendRawScore } from './legend.js';
 import { loadKey } from './storage.js';
 import type { GameState, HofEntry } from './types.js';
 import { NATION_BY_CODE } from '@offside/contracts/nations';
@@ -28,14 +28,13 @@ export function migrateHofEntry(h: HofEntry, source: GameState | null): HofEntry
 /**
  * T-11-170 T-11-168에서 AM·CM의 경기 장악 가중이 0.5씩 줄었다(AM 0.5 → 0, CM 0.7 → 0.2). 서버는 배포 전 은퇴 기록을
  * round(옛 점수 − 0.5 × 경기 장악)으로 다시 매겼으니 이 기기 기록도 같은 식으로 맞춘다. 옛 공식 점수(새 공식 항의 합 +
- * 0.5 × 경기 장악)와 같을 때만 고쳐, 새 공식으로 은퇴한 기록과 이미 고친 기록은 그대로다.
+ * 0.5 × 경기 장악)와 같을 때만 고쳐, 새 공식으로 은퇴한 기록과 이미 고친 기록은 그대로다. 이 한 번의 공식 변경만 맞추는
+ * 임시 보정이다 — 2026-10-09 이전 은퇴 기록을 가진 기기가 더는 없다고 볼 때 지운다.
  */
-const RESCORE_DPOS = new Set(['AM', 'CM']);
 export function rescoreHofEntry(h: HofEntry): HofEntry {
-  if (!h.detail || !h.dpos || !RESCORE_DPOS.has(h.dpos)) return h;
+  if (!h.detail || (h.dpos !== 'AM' && h.dpos !== 'CM')) return h;
   const cut = 0.5 * controlPoints(h.detail.career);
-  const raw = Object.values(legendTermsOf(h.detail)).reduce((t, v) => t + v, 0);
-  if (h.score !== Math.round(raw + cut)) return h;
+  if (h.score !== Math.round(legendRawScore(h.detail) + cut)) return h;
   const score = Math.round(h.score - cut);
   return score === h.score ? h : { ...h, score };
 }
