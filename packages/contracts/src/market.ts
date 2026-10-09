@@ -37,6 +37,8 @@ export const MarketCardSchema = z.strictObject({
   legendScore: z.number().int(),
   /** 카드 능력치 6개(옛 기록은 null). */
   attrs: PeakProfileSchema.shape.attrs.nullable(),
+  /** T-11-164 커리어 유형 id(만들 때 고른 주력 — 스피드스터·윙어 등). 옛 응답에는 없다. */
+  type: z.string().nullable().optional(),
   /** 기준가(만 원). */
   cardValue: man,
   /** 지금까지 팔린 횟수. */

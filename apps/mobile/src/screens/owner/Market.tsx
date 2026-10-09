@@ -1387,6 +1387,7 @@ export default function Market() {
                     attrs: buying.card.attrs,
                     cardValue: buying.card.cardValue,
                     pos: buying.card.pos,
+                    type: buying.card.type ?? null,
                     youth: false,
                   }}
                 />
