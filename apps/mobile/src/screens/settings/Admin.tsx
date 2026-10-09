@@ -16,6 +16,7 @@ import AdminChatReports from './admin/AdminChatReports';
 import AdminNameReports from './admin/AdminNameReports';
 import AdminDashboard from './admin/AdminDashboard';
 import AdminFunds from './admin/AdminFunds';
+import AdminInvites from './admin/AdminInvites';
 import AdminPush from './admin/AdminPush';
 
 const TABS = [
@@ -25,6 +26,7 @@ const TABS = [
   { id: 'balance', label: '밸런스' },
   { id: 'automation', label: '자동 플레이' },
   { id: 'funds', label: '구단 자금' },
+  { id: 'invites', label: '친구 초대' },
 ] as const;
 
 export default function Admin() {
@@ -83,6 +85,8 @@ export default function Admin() {
               <AdminAutomation />
             ) : tab === 'funds' ? (
               <AdminFunds />
+            ) : tab === 'invites' ? (
+              <AdminInvites />
             ) : (
               <AdminBalance />
             )}

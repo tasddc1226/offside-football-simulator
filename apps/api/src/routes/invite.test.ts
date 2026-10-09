@@ -1,4 +1,5 @@
 import {
+  AdminInviteReportSchema,
   FriendRequestResponseSchema,
   FriendsResponseSchema,
   successEnvelope,
@@ -9,7 +10,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { notifications, ownerItems, referrals } from '../db/schema.js';
 import { localizeNotification } from '../push/text.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { RETIREMENT, callJson, issueGoogleCookie, putSeasonsFor } from '../test/http.js';
+import {
+  ADMIN_EMAIL,
+  RETIREMENT,
+  callJson,
+  issueAdminCookie,
+  issueGoogleCookie,
+  putSeasonsFor,
+} from '../test/http.js';
 
 const FriendsRes = successEnvelope(FriendsResponseSchema);
 const RequestRes = successEnvelope(FriendRequestResponseSchema);
@@ -146,5 +154,35 @@ describe('T-11-171 친구 초대', () => {
       done: INVITE_REWARD_MAX + 1,
       rewarded: INVITE_REWARD_MAX,
     });
+  });
+
+  it('T-11-177 운영 도구는 초대 합 · 많이 한 구단주 · 최근 초대를 보여 준다(운영자만)', async () => {
+    const env = { ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL };
+    const admin = await issueAdminCookie(ctx);
+    const inviter = await issueGoogleCookie(ctx, { nickname: '초대왕' });
+    const code = (await friendsOf(inviter.cookie)).code;
+    const [a, b] = [await issueGoogleCookie(ctx), await issueGoogleCookie(ctx)];
+    await requestByCode(a.cookie, code);
+    await requestByCode(b.cookie, code);
+    await retire(a.cookie);
+
+    expect(
+      (await callJson(env, 'GET', '/v1/admin/invites', { cookie: inviter.cookie })).status,
+    ).toBe(403);
+    const res = await callJson(env, 'GET', '/v1/admin/invites', { cookie: admin.cookie });
+    const data = successEnvelope(AdminInviteReportSchema).parse(await res.json()).data;
+    expect(data).toMatchObject({
+      invites: 2,
+      done: 1,
+      inviterRewarded: 1,
+      inviters: 1,
+      rerolls: 2 * INVITE_REROLLS,
+      top: [{ profileId: inviter.profileId, nickname: '초대왕', invited: 2, done: 1, rewarded: 1 }],
+    });
+    // 최근 것부터.
+    expect(data.recent.map((r) => [r.inviteeId, r.inviterNickname, r.doneAt !== null])).toEqual([
+      [b.profileId, '초대왕', false],
+      [a.profileId, '초대왕', true],
+    ]);
   });
 });
