@@ -238,59 +238,64 @@ describe('T-11-145 컵 진행(cron)', () => {
     for (const at of CUP.rounds) await runCup(ctx.db, at, [CUP]);
   }
 
-  it.each([64, 40, 20, 5])('%i팀: 끝까지 치르고 모두 한 번씩 보상받는다', async (n) => {
-    const teams = await enter(n);
-    await runAll();
-    const [state] = await cupStateOf(ctx.db, CUP.id);
-    expect(state?.doneAt).not.toBeNull();
-    const entries = await cupEntriesOf(ctx.db, CUP.id);
-    expect(entries.every((e) => e.rewardedAt && e.stage)).toBe(true);
-    expect(entries.filter((e) => e.stage === 'champion')).toHaveLength(1);
-    expect(entries.filter((e) => e.stage === 'runnerup')).toHaveLength(1);
-    // 조 수 × 2팀이 토너먼트, 나머지는 조별 탈락.
-    const g = cupGroupCount(n);
-    expect(entries.filter((e) => e.stage === 'group')).toHaveLength(n - 2 * g);
-    const items = await ctx.db.select().from(ownerItems);
-    const expected = entries.reduce((s, e) => s + CUP_REWARDS[e.stage as 'group'].rerolls, 0);
-    expect(items.reduce((s, x) => s + x.qty, 0)).toBe(expected);
-    // 한 번 더 돌려도 바뀌지 않는다(멱등).
-    await runCup(ctx.db, CUP.rounds.at(-1)!, [CUP]);
-    const again = await ctx.db.select().from(ownerItems);
-    expect(again.reduce((s, x) => s + x.qty, 0)).toBe(expected);
-    const matches = await cupMatchesOf(ctx.db, CUP.id);
-    expect(matches.every((m) => m.playedAt && (m.round.startsWith('g') || m.winnerTeamId))).toBe(
-      true,
-    );
-    // 우승팀 구단주의 영구 기록.
-    const champ = entries.find((e) => e.stage === 'champion')!;
-    await ctx.db
-      .update(profiles)
-      .set({ nickname: '우승구단주' })
-      .where(eq(profiles.id, champ.profileId));
-    // 받침대에 새길 구단주 닉네임도 함께.
-    expect((await cupHonorsOf(ctx.db, champ.profileId))[0]).toMatchObject({
-      stage: 'champion',
-      owner: '우승구단주',
-    });
-    expect(teams).toHaveLength(n);
-    // 알림: 추첨·경기마다 하나, 최종 성적은 한 번(다시 돌려도 늘지 않는다). 탭하면 홈(컵 배너)으로 간다.
-    const mine = await ctx.db
-      .select()
-      .from(notifications)
-      .where(eq(notifications.profileId, champ.profileId));
-    const played = matches.filter(
-      (m) => m.homeTeamId === champ.teamId || m.awayTeamId === champ.teamId,
-    ).length;
-    expect(mine.map((x) => x.sourceKey).filter((k) => k.startsWith('cup-match:'))).toHaveLength(
-      played,
-    );
-    expect(mine.find((x) => x.sourceKey === `cup:${CUP.id}:draw`)?.body).toContain('21:00');
-    const result = mine.filter((x) => x.sourceKey === `cup:${CUP.id}:result`);
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ title: '시즌 1 제1회 오프사이드 컵 우승!' });
-    expect(result[0]!.body).toBe('최종 성적 우승. 선수 후보 리롤권 10장을 받았어요.');
-    expect(mine.every((x) => JSON.parse(x.targetJson).screen === 'home')).toBe(true);
-  });
+  it.each([64, 40, 20, 5])(
+    '%i팀: 끝까지 치르고 모두 한 번씩 보상받는다',
+    async (n) => {
+      const teams = await enter(n);
+      await runAll();
+      const [state] = await cupStateOf(ctx.db, CUP.id);
+      expect(state?.doneAt).not.toBeNull();
+      const entries = await cupEntriesOf(ctx.db, CUP.id);
+      expect(entries.every((e) => e.rewardedAt && e.stage)).toBe(true);
+      expect(entries.filter((e) => e.stage === 'champion')).toHaveLength(1);
+      expect(entries.filter((e) => e.stage === 'runnerup')).toHaveLength(1);
+      // 조 수 × 2팀이 토너먼트, 나머지는 조별 탈락.
+      const g = cupGroupCount(n);
+      expect(entries.filter((e) => e.stage === 'group')).toHaveLength(n - 2 * g);
+      const items = await ctx.db.select().from(ownerItems);
+      const expected = entries.reduce((s, e) => s + CUP_REWARDS[e.stage as 'group'].rerolls, 0);
+      expect(items.reduce((s, x) => s + x.qty, 0)).toBe(expected);
+      // 한 번 더 돌려도 바뀌지 않는다(멱등).
+      await runCup(ctx.db, CUP.rounds.at(-1)!, [CUP]);
+      const again = await ctx.db.select().from(ownerItems);
+      expect(again.reduce((s, x) => s + x.qty, 0)).toBe(expected);
+      const matches = await cupMatchesOf(ctx.db, CUP.id);
+      expect(matches.every((m) => m.playedAt && (m.round.startsWith('g') || m.winnerTeamId))).toBe(
+        true,
+      );
+      // 우승팀 구단주의 영구 기록.
+      const champ = entries.find((e) => e.stage === 'champion')!;
+      await ctx.db
+        .update(profiles)
+        .set({ nickname: '우승구단주' })
+        .where(eq(profiles.id, champ.profileId));
+      // 받침대에 새길 구단주 닉네임도 함께.
+      expect((await cupHonorsOf(ctx.db, champ.profileId))[0]).toMatchObject({
+        stage: 'champion',
+        owner: '우승구단주',
+      });
+      expect(teams).toHaveLength(n);
+      // 알림: 추첨·경기마다 하나, 최종 성적은 한 번(다시 돌려도 늘지 않는다). 탭하면 홈(컵 배너)으로 간다.
+      const mine = await ctx.db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.profileId, champ.profileId));
+      const played = matches.filter(
+        (m) => m.homeTeamId === champ.teamId || m.awayTeamId === champ.teamId,
+      ).length;
+      expect(mine.map((x) => x.sourceKey).filter((k) => k.startsWith('cup-match:'))).toHaveLength(
+        played,
+      );
+      expect(mine.find((x) => x.sourceKey === `cup:${CUP.id}:draw`)?.body).toContain('21:00');
+      const result = mine.filter((x) => x.sourceKey === `cup:${CUP.id}:result`);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ title: '시즌 1 제1회 오프사이드 컵 우승!' });
+      expect(result[0]!.body).toBe('최종 성적 우승. 선수 후보 리롤권 10장을 받았어요.');
+      expect(mine.every((x) => JSON.parse(x.targetJson).screen === 'home')).toBe(true);
+    },
+    // 64팀 대회 전체를 돌려 느린 러너에서 기본 20초를 넘긴다.
+    60_000,
+  );
 
   it('추첨 때 자격이 모자란 팀은 빠지고, 4팀 미만이면 열지 않는다', async () => {
     await enter(2);
