@@ -2,6 +2,11 @@
 import { ns } from '../core';
 
 const ko = {
+  missKicker: '영구결번 심사',
+  missSeasons: (p: { club: string; seasons: number; need: number }) =>
+    `${p.club}에서 ${p.seasons}시즌을 뛰었어요. 영구결번은 한 구단에서 ${p.need}시즌 이상 뛰어야 받아요.`,
+  missScore: (p: { club: string; pct: number }) =>
+    `${p.club}에서 쌓은 기여 점수가 영구결번 기준의 ${p.pct}%였어요. 기준을 넘어야 결번을 받아요.`,
   pending: '서버가 결번을 심사하고 있어요. 잠시 뒤 명예의 전당에서 확인할 수 있어요.',
   // 결번 세리머니: "<b>7번</b>은 이제,<br /><b>이름</b>의 이름으로 남습니다."
   lineNum: (p: { number: number }) => `${p.number}번`,

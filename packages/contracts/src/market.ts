@@ -15,7 +15,7 @@ export { MARKET_CHART_DAYS, MARKET_CHART_RANGES, type MarketChartRange } from '.
 // 거래는 지금 팀 시즌(teamSeasonAt) 카드끼리만 한다. 금액은 모두 만 원 단위 정수.
 
 export const MARKET_PER_PAGE = 20;
-export const MARKET_SORTS = ['new', 'price'] as const;
+export const MARKET_SORTS = ['new', 'price', 'ovr'] as const;
 export type MarketSort = (typeof MARKET_SORTS)[number];
 /** 한 번에 방출할 수 있는 선수 수. */
 export const RELEASE_MAX = 50;
@@ -39,6 +39,9 @@ export const MarketCardSchema = z.strictObject({
   attrs: PeakProfileSchema.shape.attrs.nullable(),
   /** T-11-164 커리어 유형 id(만들 때 고른 주력 — 스피드스터·윙어 등). 옛 응답에는 없다. */
   type: z.string().nullable().optional(),
+  /** T-11-180 키(cm)·몸무게(kg). 체격이 없는 옛 커리어·옛 응답에는 없다. */
+  height: z.number().int().optional(),
+  weight: z.number().int().optional(),
   /** 기준가(만 원). */
   cardValue: man,
   /** 지금까지 팔린 횟수. */

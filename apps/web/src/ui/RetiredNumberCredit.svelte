@@ -6,9 +6,9 @@
   import { setLegendPublic } from './legend.js';
   import { pendingRetirementIds } from '@offside/app-core/outbox';
   import { checkRetiredNumber } from '@offside/app-core/api/client';
-  import { recordRn, rnResults } from './retiredNumber.svelte.js';
+  import { recordRn, rnMisses, rnResults } from './retiredNumber.svelte.js';
   import { isHofEligible } from '@offside/contracts/hof-rules';
-  import { rnClubStats, rnSlotOf } from '@offside/app-core/legendReport';
+  import { rnClubStats, rnMissText, rnSlotOf } from '@offside/app-core/legendReport';
   import type { LegendView } from './state.svelte.js';
   import ClubMark from './ClubMark.svelte';
   import RnFrame from './RnFrame.svelte';
@@ -36,15 +36,17 @@
     if (!id || id === asked || !isHofEligible(v.age) || pendingRetirementIds().has(id)) return;
     asked = id;
     void checkRetiredNumber(id).then((r) => {
-      if (r.ok) recordRn(id, r.data.retiredNumber, undefined, r.data.title);
+      if (r.ok) recordRn(id, r.data.retiredNumber, undefined, r.data.title, r.data.retiredNumberMiss);
     });
   });
   const rn = $derived(rn0?.kind === 'taken' && v.own?.id && !(v.own.id in rnResults) ? { ...rn0, wallOfHonor: false } : rn0 ?? null);
   const rnSlot = $derived(rnSlotOf(rn, v.own));
   const rnClub = $derived(rnSlot?.kind === 'granted' ? rnClubStats(rnSlot, v.d) : null);
+  // T-11-180 자격에 못 미쳤으면 이유(기준의 절반 이상일 때만 서버가 준다).
+  const miss = $derived(!rn && v.own?.id ? rnMisses[v.own.id] : undefined);
 </script>
 
-{#if rn?.kind === 'pending' || rnSlot || v.wallOfHonor}
+{#if rn?.kind === 'pending' || rnSlot || v.wallOfHonor || miss}
   <section class="film-rn" data-credit="retired-number" data-legend-rn={rn?.kind} use:reveal>
     {#if !rnSlot && v.wallOfHonor}
       <div class="rn-ceremony rn-honour"><div class="eyebrow film-kicker">Wall of Honour</div><p class="rn-stats" data-wall-of-honor>{L.wallOfHonor}</p></div>
@@ -78,6 +80,11 @@
         {#if v.own}
           <button class="btn btn-primary" data-act="rn-public" onclick={() => v.own && setLegendPublic(v.own, true)}>{L.publish}</button>
         {/if}
+      </div>
+    {:else if miss}
+      <div class="rn-ceremony rn-miss">
+        <div class="eyebrow film-kicker">{L.missKicker}</div>
+        <p class="rn-pending" data-rn-miss={miss.reason}>{rnMissText(miss)}</p>
       </div>
     {/if}
   </section>

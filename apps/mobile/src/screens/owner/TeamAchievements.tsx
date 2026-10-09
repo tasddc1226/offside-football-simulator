@@ -11,6 +11,7 @@ import {
   achDone,
   achGradeName,
   achGradeView,
+  achMissing,
   achNear,
   achPoints,
   achRankText,
@@ -170,6 +171,11 @@ function Group({
                 >
                   {achState(i)}
                 </Txt>
+                {i.missing?.length ? (
+                  <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
+                    {achMissing(i)}
+                  </Txt>
+                ) : null}
               </View>
               <Pts got={i.points > 0}>{achPoints(i)}</Pts>
             </View>

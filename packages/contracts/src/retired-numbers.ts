@@ -174,6 +174,24 @@ function bondRate(order: readonly string[], key: string): number {
 export const rnQualifies = (c: RnClub, cut: number): boolean =>
   c.clubId != null && c.seasons >= RN_MIN_SEASONS && c.score >= cut;
 
+/**
+ * T-11-180 결번을 못 받은 이유(가장 큰 기여 구단 기준). 기준의 절반도 못 채웠으면 null — 대부분의 은퇴엔 띄우지 않는다.
+ * 기준값을 그대로 내보내지 않게 점수는 기준 대비 10% 단위(최대 90%)로만 준다.
+ */
+export function rnMissOf(clubs: readonly RnClub[], cut: number): RnMiss | null {
+  const best = clubs.find((c) => c.clubId != null);
+  if (!best) return null;
+  if (best.score >= cut)
+    return best.seasons < RN_MIN_SEASONS
+      ? { reason: 'seasons', club: best.club, seasons: best.seasons, need: RN_MIN_SEASONS }
+      : null;
+  const pct = Math.floor((best.score / cut) * 10) * 10;
+  return pct >= 50 ? { reason: 'score', club: best.club, pct } : null;
+}
+export type RnMiss =
+  | { reason: 'seasons'; club: string; seasons: number; need: number }
+  | { reason: 'score'; club: string; pct: number };
+
 /** 결번을 노릴 구단 — 가장 큰 기여 구단, 그 자리가 이미 찼으면 두 번째 구단(자격이 있을 때만). */
 export const rnCandidates = (clubs: readonly RnClub[], cut: number): RnClub[] =>
   clubs.filter((c) => rnQualifies(c, cut)).slice(0, 2);

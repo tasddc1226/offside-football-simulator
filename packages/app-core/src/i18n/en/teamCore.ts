@@ -29,6 +29,7 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   achMaxLevel: ' · Max level',
   achDone: 'Completed',
   achUndone: 'Not yet',
+  achMissing: (p) => `Still to get: ${p.names}`,
   achUndoneHint: (p) => `Not yet · ${p.hint}`,
   achPointsGot: (p) => `+${p.n} pts`,
   achPointsWorth: (p) => `${p.n} pts`,

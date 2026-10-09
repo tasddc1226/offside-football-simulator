@@ -17,6 +17,7 @@ export const market: Translation<MarketMsgs> = {
   tabTrades: '自分の取引',
   sortNew: '新着順',
   sortPrice: '価格の安い順',
+  sortOvr: 'OVRの高い順',
   sortLabel: '並び替え',
   posAll: 'すべて',
   seasonCount: (p) => `今シーズンの選手 ${p.n}${p.more ? '+' : ''}人`,

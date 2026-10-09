@@ -27,6 +27,9 @@ export const MARKET_SORT_LABEL = {
   get price() {
     return L.sortPrice;
   },
+  get ovr() {
+    return L.sortOvr;
+  },
 };
 export const MARKET_POS_FILTERS: readonly (CareerPos | undefined)[] = [undefined, ...POS_GROUPS];
 
