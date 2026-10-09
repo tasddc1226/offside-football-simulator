@@ -4,11 +4,10 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import { IAP_PRODUCT_IDS, IAP_PRODUCTS } from '@offside/contracts/cup';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { iapText as L } from '@offside/app-core/i18n/ko/iap';
 import { adFree } from '../../platform/adFree';
-import { useIapItems } from '../../platform/iapItems';
+import { sellablePacks, useIapItems } from '../../platform/iapItems';
 import { rem } from '../../theme/type';
 import { Card, Press, Txt } from '../../ui';
 import { IapPacks } from './IapPacks';
@@ -18,10 +17,7 @@ export function BoostShop() {
   const iap = useIapItems(true);
   const owned = useSnapshot(adFree).owned;
   const have = iap.items?.boost ?? 0;
-  const sells =
-    !owned &&
-    iap.open &&
-    IAP_PRODUCT_IDS.some((id) => IAP_PRODUCTS[id].item === 'boost' && iap.prices[id]);
+  const sells = !owned && sellablePacks('boost', iap).length > 0;
   if (!sells && !have) return null;
   return (
     <Card gap={12} testID="boost-shop">

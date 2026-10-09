@@ -12,7 +12,12 @@ import {
   requestPurchase,
   type Purchase,
 } from 'expo-iap';
-import { IAP_PRODUCT_IDS, IAP_PRODUCTS, type IapProductId } from '@offside/contracts/cup';
+import {
+  IAP_PRODUCT_IDS,
+  IAP_PRODUCTS,
+  type IapProductId,
+  type OwnerItem,
+} from '@offside/contracts/cup';
 import { claimIap, fetchItems, type OwnerItemsResponse } from '@offside/app-core/api/cup';
 import { iapText as L } from '@offside/app-core/i18n/ko/iap';
 import { toast } from '../game/host';
@@ -32,6 +37,12 @@ export const iapItems = proxy({
   /** 서버가 마지막으로 알려 준 장수. 받은 뒤 화면이 바로 고친다. */
   items: null as Pick<OwnerItemsResponse, 'reroll' | 'boost'> | null,
 });
+
+/** 이 아이템의 묶음 중 지금 살 수 있는(스토어가 가격을 알려 준) 상품. 스토어를 열 수 없으면 빈 목록. */
+export const sellablePacks = (
+  item: OwnerItem,
+  s: { open: boolean; prices: typeof iapItems.prices },
+) => (s.open ? IAP_PRODUCT_IDS.filter((id) => IAP_PRODUCTS[id].item === item && s.prices[id]) : []);
 
 let account: string | null = null;
 
