@@ -1,4 +1,4 @@
-import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts';
+import { IDEMPOTENCY_KEY_HEADER, REWARD_UNCAPPED } from '@offside/contracts';
 import {
   CUP_REWARDS,
   cupGroupCount,
@@ -449,7 +449,7 @@ describe('T-11-145 컵 진행(cron)', () => {
       offers: {
         candidates: { price: 300_000, bought: 0, cap: 5 },
         peek: { price: 200_000, bought: 0, cap: 5 },
-        boost: { price: 500_000, bought: 0, cap: 5 },
+        boost: { price: 500_000, bought: 0, cap: REWARD_UNCAPPED },
       },
     });
     // 자금 행이 없으면 받지 못한다.
@@ -480,6 +480,23 @@ describe('T-11-145 컵 진행(cron)', () => {
     expect((await shop()).offers.boost.bought).toBe(1);
     const items = await callJson(ctx.env, 'GET', '/v1/items', { cookie: who.cookie });
     expect(((await items.json()) as { data: { reroll: number } }).data.reroll).toBe(0);
+    // T-11-173 잠재력 강화는 하루 횟수가 없다: 오늘 5번 넘게 받아도 값만 오른다.
+    const now = new Date().toISOString();
+    await ctx.db.insert(ownerItemPurchases).values(
+      [1, 2, 3, 4, 5].map((i) => ({
+        id: `ipc_boost_${i}`,
+        profileId: who.profileId,
+        item: 'reward:boost',
+        qty: 1,
+        price: 500_000,
+        createdAt: now,
+      })),
+    );
+    expect((await shop()).offers.boost).toEqual({
+      price: 500_000 * 2 ** 6,
+      bought: 6,
+      cap: REWARD_UNCAPPED,
+    });
   });
 
   it('대회 화면은 누구나 본다', async () => {
