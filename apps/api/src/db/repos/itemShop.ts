@@ -1,4 +1,10 @@
-import { REWARD_KINDS, resolveBalance, type FundsSpend, type RewardKind } from '@offside/contracts';
+import {
+  REWARD_KINDS,
+  REWARD_UNCAPPED,
+  resolveBalance,
+  type FundsSpend,
+  type RewardKind,
+} from '@offside/contracts';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 
@@ -115,7 +121,7 @@ const REWARD_SUMS = REWARD_KINDS.map(
   (k) => `coalesce(sum(CASE WHEN item = '${rewardItem(k)}' THEN qty END), 0) AS ${k}`,
 ).join(', ');
 
-/** 보상별 수치(활성 버전, 없으면 기본값). 가격 상승 배율 · 하루 횟수는 셋이 같이 쓴다. */
+/** 보상별 수치(활성 버전, 없으면 기본값). 가격 상승 배율 · 하루 횟수는 셋이 같이 쓴다. T-11-173 강화는 하루 횟수 없음. */
 export async function rewardShopRules(db: Db) {
   const b = resolveBalance((await getActiveBalance(db))?.values);
   const price: Record<RewardKind, number> = {
@@ -123,7 +129,11 @@ export async function rewardShopRules(db: Db) {
     peek: b.rewardPricePeek,
     boost: b.rewardPriceBoost,
   };
-  return byKind((k) => ({ price: price[k], growth: b.rewardPriceGrowth, cap: b.rewardDailyCap }));
+  return byKind((k) => ({
+    price: price[k],
+    growth: b.rewardPriceGrowth,
+    cap: k === 'boost' && b.rewardDailyCap > 0 ? REWARD_UNCAPPED : b.rewardDailyCap,
+  }));
 }
 
 /** 구단 자금과 since(오늘 0시, 한국 시각) 뒤에 보상마다 받은 횟수를 한 번에 읽는다(행이 없으면 0). */
