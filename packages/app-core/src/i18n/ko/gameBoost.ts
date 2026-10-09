@@ -17,6 +17,11 @@ const ko = {
   lineAged: (p: { age: number }) => `${p.age}세가 지나 더는 강화할 수 없어요.`,
   lineMax: (p: { lv: number }) => `최고 단계(+${p.lv})에 닿았어요.`,
   lineDone: '이번 시즌엔 이미 시도했어요. 다음 시즌에 다시 할 수 있어요.',
+  lineExtra: (p: { left: number }) =>
+    `이번 시즌 시도는 했어요. 광고나 구단 자금으로 더 시도할 수 있고, 이 선수는 ${p.left}번 남았어요.`,
+  lineExtraClub: (p: { left: number }) =>
+    `이번 시즌 시도는 했어요. 구단 자금으로 더 시도할 수 있고, 이 선수는 ${p.left}번 남았어요.`,
+  lineDayDone: '오늘 더 받을 수 있는 강화를 다 썼어요. 내일 다시 할 수 있어요.',
   lineShort: (p: { cost: string }) => `자금이 모자라요. 다음 단계에 ${p.cost}이 필요해요.`,
   lineReady: (p: { next: number; chance: number; cost: string }) =>
     `다음 단계 +${p.next} · 성공 확률 ${p.chance}% · ${p.cost}`,
@@ -39,8 +44,13 @@ const ko = {
   adNote:
     '광고를 끝까지 보면 자금 없이 한 번 시도할 수 있어요. 성공 확률은 자금으로 시도할 때와 같아요.',
   adNoteFree: '광고 제거를 구매해서 자금 없이 한 번 시도할 수 있어요.',
+  adNoteExtra: (p: { left: number }) =>
+    `광고를 끝까지 보면 자금 없이 한 번 더 시도해요. 추가 시도는 이 선수에게 ${p.left}번 남았어요.`,
+  adNoteExtraFree: (p: { left: number }) =>
+    `광고 제거를 구매해서 자금 없이 한 번 더 시도할 수 있어요. 추가 시도는 이 선수에게 ${p.left}번 남았어요.`,
   adWatch: '광고를 끝까지 보면 강화를 시도할 수 있어요.',
   adCost: '광고',
+  extraCost: (p: { cost: string }) => `${p.cost}(추가)`,
   clubCost: '구단 자금',
   resultFailFree: (p: { chance: number; pct: number }) =>
     `성공 확률 ${p.chance}%였어요. 다음 시도 확률이 ${p.pct}%p 올라요.`,

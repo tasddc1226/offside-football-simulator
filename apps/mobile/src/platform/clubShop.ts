@@ -24,5 +24,5 @@ export function useClubReward(kind: RewardKind, want: boolean) {
     if (r.shop) setShop(r.shop);
     return r.message;
   }
-  return { offer, pay };
+  return { offer, pay, shop: want ? shop : null };
 }

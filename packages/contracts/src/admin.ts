@@ -250,3 +250,39 @@ export const AdminFundsOwnerSchema = AdminFundsOwnerSumsSchema.extend({
 });
 export type AdminFundsOwner = z.infer<typeof AdminFundsOwnerSchema>;
 export const AdminFundsQuerySchema = z.string().trim().min(1).max(64);
+
+export const AutomationActionSchema = z.object({
+  careerId: z.string(),
+  at: IsoUtcSchema,
+  action: z.enum(['hide', 'restore']),
+  source: z.enum(['upload', 'sweep', 'admin']),
+  ruleVersion: z.string(),
+  reasons: z.array(AutomationReasonSchema),
+  seasons: count,
+});
+export type AutomationAction = z.infer<typeof AutomationActionSchema>;
+export const AutomationSweepSchema = z.object({
+  since: z.string(),
+  through: IsoUtcSchema,
+  cursor: z.string(),
+  checked: count,
+  hidden: count,
+  status: z.enum(['running', 'complete', 'error']),
+  updatedAt: IsoUtcSchema,
+  error: z.string().optional(),
+  ruleVersion: z.string(),
+});
+export type AutomationSweep = z.infer<typeof AutomationSweepSchema>;
+export const AutomationEnforcementSchema = z.object({
+  enabled: z.boolean(),
+  ruleVersion: z.string(),
+  sweep: AutomationSweepSchema.nullable(),
+  actions: z.array(AutomationActionSchema.extend({ key: z.string(), hidden: z.boolean() })),
+  next: z.string().nullable(),
+});
+export type AutomationEnforcement = z.infer<typeof AutomationEnforcementSchema>;
+export const AutomationHistoryCursorSchema = z
+  .string()
+  .max(180)
+  .regex(/^automation_action:[0-9TZ:.-]+:[A-Za-z0-9_-]+:(hide|restore)$/)
+  .optional();

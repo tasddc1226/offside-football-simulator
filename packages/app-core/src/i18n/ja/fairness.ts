@@ -6,7 +6,8 @@ export const fairness: Translation<FairnessMsgs> = {
   intro:
     'すべてのユーザーに同じルールと同じ確率を使います。下の数字はゲームのコードの値からそのまま計算しています。',
   promiseSameTerm: '同じルール',
-  promiseSame: '広告の視聴、広告削除の購入、アカウント連携、言語設定は確率と結果に影響しません。',
+  promiseSame:
+    '広告の視聴、広告削除の購入、アカウント連携、言語設定は確率に影響しません。資金が足りないシーズンは広告やクラブ資金でポテンシャル強化を追加で挑戦できますが、成功確率は同じです。',
   promiseDeviceTerm: '端末で判定',
   promiseDevice:
     'キャリアの判定はすべてこの端末で行われます。サーバーは結果を決めず、記録を受け取るだけです。',
@@ -27,7 +28,7 @@ export const fairness: Translation<FairnessMsgs> = {
   boostTitle: 'ポテンシャル強化の確率',
   boostLv: (p) => `+${p.lv}段階`,
   boostNote: (p) =>
-    `同じ段階で失敗するたびに、次の挑戦の確率が${p.pity}ずつ上がります。広告で挑戦しても確率は同じです。`,
+    `同じ段階で失敗するたびに、次の挑戦の確率が${p.pity}ずつ上がります。広告やクラブ資金で挑戦しても確率は同じです。`,
   hiddenTitle: '隠しているものと理由',
   hiddenPotTerm: '実際のポテンシャル',
   hiddenPot: '引退するときに公開します。スカウト評価は実際の値と少し違うことがあります。',

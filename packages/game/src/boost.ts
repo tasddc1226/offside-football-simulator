@@ -5,6 +5,11 @@
 // 판정은 게임 RNG(세이브에 저장된다)를 한 번 쓴다 — 다시 불러와도 같은 결과다. 시도하지 않은 커리어는 RNG를 쓰지 않는다.
 // T-11-116 자금이 모자란 시즌엔 앱에서 보상형 광고를 끝까지 보면 자금 없이 한 번 시도할 수 있다(확률·시즌 한 번 규칙은 같다).
 // T-11-153 광고 대신 구단주의 구단 자금으로도 같은 한 번을 받는다(선수 자금은 쓰지 않는다, 기록만 다르다).
+// T-11-157 자금이 모자란 시즌엔 그 시즌의 한 번을 쓴 뒤에도 광고·구단 자금으로 더 시도할 수 있다. 한 커리어에서 모두 합쳐
+// BAL.boostExtraTotal번까지(확률 규칙은 같다). 시즌마다 열면 광고를 보는 선수가 모두 최고 단계에 닿아 커리어 전체로 묶었다.
+// 자금이 충분하면 다음 시즌을 기다린다 — 자금이 모자란 시기를 돕는 길이라서다.
+// 하루 횟수(광고 + 구단 자금)는 화면이 센다 — app-core boost-daily.
+import { BAL } from './balance.js';
 import { rnd } from './rng.js';
 import { fmtMoney } from './player.js';
 import { log, potScouted } from './stats.js';
@@ -64,6 +69,20 @@ export function boostStatus(s: GameState): BoostStatus {
   return 'ready';
 }
 
+/**
+ * T-11-157 지금 광고·구단 자금으로 더 시도할 수 있는 횟수 — 이번 시즌의 한 번을 썼고, 다음 단계 비용만큼 선수 자금이 없을 때만
+ * 커리어에 남은 횟수, 아니면 0.
+ */
+export function boostExtraLeft(s: GameState): number {
+  if (boostStatus(s) !== 'done' || s.money >= boostCost(s)) return 0;
+  const used = boostState(s).log.filter((x) => x.x).length;
+  return Math.max(0, BAL.boostExtraTotal - used);
+}
+
+/** 광고·구단 자금으로 지금 시도할 수 있는지 — 자금이 모자란 시즌의 한 번(T-11-116)이거나 추가 시도(T-11-157). */
+export const boostFreeOpen = (s: GameState): boolean =>
+  boostStatus(s) === 'short' || boostExtraLeft(s) > 0;
+
 export interface BoostResult {
   ok: boolean;
   /** 시도 뒤 단계. */
@@ -75,15 +94,18 @@ export interface BoostResult {
 
 /**
  * 강화를 시도한다. 시도할 수 없으면 null(상태를 바꾸지 않는다). pay: 'money'는 선수 자금. 'ad'(보상형 광고)와
- * 'club'(구단주의 구단 자금, T-11-153)은 자금이 모자란('short') 시즌에 선수 자금 없이 시도한다 — 자금이 충분하면 할 수 없다.
+ * 'club'(구단주의 구단 자금, T-11-153)은 자금이 모자란('short') 시즌의 한 번이나, 그 시즌의 한 번을 쓴 뒤의 추가 시도
+ * (T-11-157)에 선수 자금 없이 시도한다 — 자금이 충분한 시즌의 첫 시도는 선수 자금으로만 한다.
  */
 export type BoostPay = 'money' | 'ad' | 'club';
 export function tryBoost(s: GameState, pay: BoostPay = 'money'): BoostResult | null {
   const free = pay !== 'money';
   const ad = pay === 'ad';
   const club = pay === 'club';
-  if (boostStatus(s) !== (free ? 'short' : 'ready')) return null;
+  if (free ? !boostFreeOpen(s) : boostStatus(s) !== 'ready') return null;
   const b = boostState(s);
+  // 이번 시즌의 한 번을 이미 썼으면 추가 시도다.
+  const extra = b.year === s.year;
   const cost = free ? 0 : boostCost(s);
   const chance = boostChance(s);
   const ok = rnd() * 100 < chance;
@@ -103,6 +125,7 @@ export function tryBoost(s: GameState, pay: BoostPay = 'money'): BoostResult | n
         ok,
         ...(ad ? { ad: true as const } : {}),
         ...(club ? { club: true as const } : {}),
+        ...(extra ? { x: true as const } : {}),
       },
     ],
   };

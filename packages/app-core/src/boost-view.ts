@@ -6,6 +6,7 @@ import {
   BOOST_PITY_PCT,
   boostChance,
   boostCost,
+  boostExtraLeft,
   boostState,
   boostStatus,
   tryBoost,
@@ -32,6 +33,11 @@ export interface BoostView {
   /** T-11-116 자금이 모자랄 때 광고(광고 제거 구매자는 바로)로 시도하는 버튼 — 앱에서 광고를 쓸 수 있을 때만. */
   adButton?: string;
   adNote?: string;
+  /**
+   * 광고 · 구단 자금으로 지금 시도할 수 있는지 — 자금이 모자란 시즌의 한 번이나 T-11-157 추가 시도이고, 오늘 횟수가
+   * 남았을 때. 구단 자금 버튼도 이 값을 본다.
+   */
+  free: boolean;
   note: string;
   /** 최근 시도(새것부터 4개). */
   history: string[];
@@ -50,8 +56,20 @@ export const boostHidden = (s: GameState): boolean =>
  */
 export type BoostAdOffer = 'ad' | 'free' | null;
 
-export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView {
+/**
+ * opts(T-11-157): club = 구단 자금 버튼을 보일 수 있다(로그인한 구단주), dayLeft = 오늘 광고 · 구단 자금으로 더 받을 수 있는
+ * 횟수(app-core boost-daily). 추가 시도 안내는 광고나 구단 자금 길이 있을 때만 보인다.
+ */
+export function boostView(
+  s: GameState,
+  adOffer: BoostAdOffer = null,
+  opts: { club?: boolean; dayLeft?: number } = {},
+): BoostView {
   const status = boostStatus(s);
+  const dayLeft = opts.dayLeft ?? Infinity;
+  const extraLeft = status === 'done' ? boostExtraLeft(s) : 0;
+  const path = !!adOffer || !!opts.club;
+  const free = (status === 'short' || extraLeft > 0) && dayLeft > 0;
   const b = boostState(s);
   const cost = L2.won({ v: fmtMoney(boostCost(s)) });
   const chance = boostChance(s);
@@ -63,7 +81,11 @@ export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView
         : status === 'max'
           ? L.lineMax({ lv: BOOST_MAX })
           : status === 'done'
-            ? L.lineDone
+            ? extraLeft && path
+              ? dayLeft > 0
+                ? (adOffer ? L.lineExtra : L.lineExtraClub)({ left: extraLeft })
+                : L.lineDayDone
+              : L.lineDone
             : status === 'short'
               ? L.lineShort({ cost })
               : L.lineReady({ next: b.lv + 1, chance, cost });
@@ -76,10 +98,16 @@ export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView
     ...(status === 'ready'
       ? { button: L.button({ cost, chance }), confirm: L.confirm({ cost, chance }) }
       : {}),
-    ...(status === 'short' && adOffer
+    free,
+    ...(free && adOffer
       ? {
           adButton: (adOffer === 'free' ? L.adButtonFree : L.adButton)({ chance }),
-          adNote: adOffer === 'free' ? L.adNoteFree : L.adNote,
+          adNote:
+            status === 'short'
+              ? adOffer === 'free'
+                ? L.adNoteFree
+                : L.adNote
+              : (adOffer === 'free' ? L.adNoteExtraFree : L.adNoteExtra)({ left: extraLeft }),
         }
       : {}),
     note: boostNote(),
@@ -88,7 +116,9 @@ export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView
       .reverse()
       .map((x) => {
         const cost = x.ad ? L.adCost : x.club ? L.clubCost : L2.won({ v: fmtMoney(x.c) });
-        const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost };
+        // T-11-157 추가 시도는 표시를 붙인다.
+        const pay = x.x ? L.extraCost({ cost }) : cost;
+        const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost: pay };
         return x.ok ? L.historyOk(p) : L.historyFail(p);
       }),
   };

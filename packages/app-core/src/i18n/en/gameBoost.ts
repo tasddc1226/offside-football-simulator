@@ -16,6 +16,11 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   lineAged: (p) => `You're past ${p.age}, so you can't boost anymore.`,
   lineMax: (p) => `You've reached the top level (+${p.lv}).`,
   lineDone: "You've already tried this season. You can try again next season.",
+  lineExtra: (p) =>
+    `You've used this season's try. You can try again with an ad or club funds, ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
+  lineExtraClub: (p) =>
+    `You've used this season's try. You can try again with club funds, ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
+  lineDayDone: "You've used all of today's extra boosts. You can try again tomorrow.",
   lineShort: (p) => `Not enough funds. The next level costs ${p.cost}.`,
   lineReady: (p) => `Next level +${p.next} · ${p.chance}% chance · ${p.cost}`,
   button: (p) => `Pay ${p.cost} to boost (${p.chance}%)`,
@@ -34,8 +39,13 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   adNote:
     'Watch an ad to the end to try once without funds. The success chance is the same as paying with funds.',
   adNoteFree: 'You bought ad removal, so you can try once without funds.',
+  adNoteExtra: (p) =>
+    `Watch the whole ad to try once more without funds. ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
+  adNoteExtraFree: (p) =>
+    `You bought ad removal, so you can try once more without funds. ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
   adWatch: 'Watch the ad to the end to try the boost.',
   adCost: 'ad',
+  extraCost: (p) => `${p.cost} (extra)`,
   clubCost: 'club funds',
   resultFailFree: (p) =>
     `The chance was ${p.chance}%. The next attempt's chance goes up by ${p.pct} percentage points.`,

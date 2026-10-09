@@ -8,6 +8,7 @@ const ko = {
   growthScale: '성장 배율',
   investGain: '특훈 성장 비율',
   investCost: '자기 투자 비용 배율',
+  boostExtraTotal: '커리어당 추가 강화 횟수',
   potMean: '잠재력 평균',
   potSd: '잠재력 편차',
   potScoutSd: '스카우트 평가 오차',
