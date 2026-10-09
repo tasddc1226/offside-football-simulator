@@ -70,6 +70,7 @@
           <button class="opt" aria-pressed={filter === g.id} data-dex-filter={g.id} onclick={() => (filter = g.id)}>{g.name}</button>
         {/each}
       </div>
+      <p class="muted fs-xs dex-hint">{L.tapHint}</p>
       <ul class="dex-list">
         {#each shown as e (e.ids[0])}
           <li data-dex={e.ids[0]} data-locked={hidden(e) || undefined}>
@@ -82,11 +83,13 @@
               <details>
                 <summary>
                   <span class="dex-title">{#if found(e)}<span class="dex-check" aria-label={L.foundMark}>✓</span>{/if}{e.title}</span>
-                  <span class="row" style="gap:4px">
+                  <span class="row dex-side" style="gap:4px">
                     {#if e.pos}<span class="pill">{e.pos}</span>{/if}
                     {#if e.story}<span class="pill">{tn(e.story.name)} {e.story.stage}/{e.story.total}</span>{/if}
+                    <svg class="dex-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" /></svg>
                   </span>
                 </summary>
+                <p class="dex-body-head">{L.choicesHead({ n: e.choices.length })}</p>
                 <ul class="dex-choices">
                   {#each e.choices as c, i (i)}
                     <li>

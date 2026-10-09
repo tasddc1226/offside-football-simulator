@@ -36,6 +36,8 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   pitchAll: (p) => `シナジー${p.n}個すべて適用中`,
   pitchFocus: (p) => `${p.name}の選手を表示 · ${p.n}個すべて適用中`,
   pitchMemberAria: 'シナジー適用選手',
+  moreOff: (p) => `もっと見る · 未適用 ${p.n}件`,
+  lessOff: '未適用を閉じる',
   empty: 'まだオンのシナジーはありません。タイプの合う選手を一緒に並べましょう。',
   capNote: (p) =>
     `デュオ効果はラインごとに+${p.line}、合計+${p.total}まで。ユース選手はシナジーに含まれません。`,

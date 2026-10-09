@@ -139,10 +139,11 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
     cupMatchesOf(db, cup.id),
     cupStateOf(db, cup.id),
   ]);
-  const drawn = entries.filter((e) => e.grp !== null && e.status !== 'withdrawn');
+  // 추첨 전에는 신청한 팀을 신청 순으로 보여 준다(T-11-160). 추첨 뒤에는 조에 들어간 팀만.
+  const shown = entries.filter((e) => e.status !== 'withdrawn' && (!state || e.grp !== null));
   const logos = await teamLogosByIds(
     db,
-    drawn.map((e) => e.teamId),
+    shown.map((e) => e.teamId),
   );
   const groups =
     state && state.groups
@@ -156,7 +157,7 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
     cup: cupInfo(cup),
     phase: phaseOf(cup, state, matches, now),
     entries: activeCount(entries),
-    teams: drawn.map((e) => ({
+    teams: shown.map((e) => ({
       teamId: e.teamId,
       name: e.name,
       owner: e.manager,

@@ -22,6 +22,9 @@ const ko = {
   pitchAll: (p: { n: number }) => `시너지 ${p.n}개 모두 적용 중`,
   pitchFocus: (p: { name: string; n: number }) => `${p.name} 선수 보기 · ${p.n}개 모두 적용 중`,
   pitchMemberAria: '시너지 적용 선수',
+  /** 미적용 시너지는 접어 두고 더보기로 연다. */
+  moreOff: (p: { n: number }) => `더보기 · 미적용 ${p.n}개`,
+  lessOff: '미적용 접기',
   empty: '아직 켜진 시너지가 없어요. 유형이 맞는 선수를 함께 세워 보세요.',
   capNote: (p: { line: number; total: number }) =>
     `듀오 효과는 줄마다 +${p.line}, 합쳐서 +${p.total}까지. 유스 선수는 시너지에 들지 않아요.`,

@@ -280,6 +280,58 @@ select:focus-visible {
   padding: 18px;
   box-shadow: var(--shadow);
 }
+/* 자금 내역 배지(이적시장 거래 내역 · 구단 자금 내역) — 영입·사용 파랑, 판매 강조색, 방출 빨강. */
+.funds-badge {
+  flex: none;
+  min-width: 36px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+.funds-badge-bought,
+.funds-badge-spent {
+  background: color-mix(in srgb, #1f4f8f 14%, var(--surface));
+  color: color-mix(in srgb, #1f4f8f 80%, var(--ink));
+}
+.funds-badge-sold {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  color: var(--accent-text);
+}
+.funds-badge-released {
+  background: color-mix(in srgb, var(--bad) 12%, var(--surface));
+  color: var(--bad);
+}
+/* 카드(또는 칸) 전체를 누르는 버튼: 내용 위에 투명 버튼을 덮는다. 부모에 position: relative. */
+.tap-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tap-cover:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.tap-cover:active {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.tap-cover:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* 누르면 넘어가는 카드 오른쪽 › */
+.tap-go {
+  flex: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--muted);
+}
 .eyebrow {
   font-family: var(--display);
   font-weight: 600;
@@ -1360,23 +1412,89 @@ a.tile-link {
   margin: 0;
   color: var(--muted);
 }
+.dex-hint {
+  margin: -6px 0 0;
+}
 .dex-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
+/* 누를 수 있는 줄은 화살표·눌림 배경으로, 펼친 이벤트는 테두리 카드로 감싸 어디까지가 그 이벤트인지 보이게 한다. */
 .dex-list > li {
-  border-bottom: 1px solid var(--line);
-  padding: 10px 2px;
+  border: 1px solid transparent;
+  border-bottom-color: var(--line);
+  border-radius: 10px;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.dex-list > li[data-locked] {
+  padding: 10px;
+}
+.dex-list > li:has(> details[open]) {
+  border-color: color-mix(in srgb, var(--accent), transparent 45%);
+  background: color-mix(in srgb, var(--accent), var(--surface) 94%);
+  box-shadow: inset 3px 0 0 var(--accent);
+  margin: 6px 0;
 }
 .dex-list summary {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 10px;
   font-weight: 600;
+  list-style: none;
+}
+.dex-list summary::-webkit-details-marker {
+  display: none;
+}
+@media (hover: hover) {
+  .dex-list summary:hover {
+    background: var(--surface-2);
+  }
+}
+.dex-list summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.dex-list details[open] > summary {
+  color: var(--accent-text);
+}
+.dex-list details[open] > summary:hover {
+  background: transparent;
+}
+.dex-side {
+  flex: none;
+}
+.dex-chevron {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s;
+}
+.dex-list details[open] .dex-chevron {
+  transform: rotate(180deg);
+  stroke: var(--accent-text);
+}
+.dex-body-head {
+  margin: 0 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
 }
 .dex-check {
   color: var(--good);
@@ -1390,8 +1508,8 @@ a.tile-link {
 }
 .dex-choices {
   list-style: none;
-  margin: 10px 0 0;
-  padding: 0;
+  margin: 8px 0 0;
+  padding: 0 10px 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1419,7 +1537,7 @@ a.tile-link {
 }
 .dex-note {
   font-size: 0.75rem;
-  margin: 8px 0 0;
+  margin: -2px 10px 10px;
 }
 /* T-11-141 확률과 공정성 */
 .fair-h {
@@ -5479,6 +5597,45 @@ button.title-item:hover {
   border-color: var(--film-gold);
   color: #1a1204;
   font-weight: 700;
+}
+/* 거쳐 간 구단 — 엠블럼과 이름을 처음 뛴 순서대로, 사이에 작은 화살표. */
+.film-flag {
+  font-size: 0.6em;
+  vertical-align: 0.12em;
+}
+.film-clubs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.film-clubs li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.film-clubs li + li::before {
+  content: '›';
+  margin-bottom: 16px;
+  color: var(--film-muted);
+}
+.film-clubs .fc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 64px;
+}
+.film-clubs .fc > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  color: var(--film-muted);
 }
 .film-stats {
   display: grid;

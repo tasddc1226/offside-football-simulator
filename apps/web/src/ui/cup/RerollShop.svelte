@@ -67,7 +67,15 @@
       <h2>{L.shopTitle}</h2>
       <span class="muted fs-sm" data-reroll-sub>{have === null ? L.shopSub : L.shopSubHave({ n: have })}</span>
     </div>
-    <button class="btn" data-act="reroll-shop" aria-expanded={open} onclick={toggle}>{open ? L.shopClose : L.shopOpen}</button>
+    <span class="tap-go rs-go" class:open aria-hidden="true">›</span>
+    <button
+      class="tap-cover"
+      class:open
+      data-act="reroll-shop"
+      aria-expanded={open}
+      aria-label={`${L.shopTitle} ${open ? L.shopClose : L.shopOpen}`}
+      onclick={toggle}
+    ></button>
   </div>
   {#if open}
     {#if shop && view}
@@ -106,8 +114,28 @@
     justify-content: space-between;
     gap: 12px;
   }
-  .rs-head .btn {
-    flex: none;
+  /* 머리 줄 전체가 펼치기 버튼. 접혀 있으면 카드 전체, 펼치면 카드 위쪽(머리 줄)까지만 덮는다. */
+  .rs-head {
+    position: relative;
+  }
+  .rs-head .tap-cover {
+    inset: -18px;
+  }
+  .rs-head .tap-cover.open {
+    inset: -18px -18px -5px;
+    border-radius: 16px 16px 0 0;
+  }
+  .rs-go {
+    transform: rotate(90deg);
+    transition: transform 0.2s ease;
+  }
+  .rs-go.open {
+    transform: rotate(-90deg);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rs-go {
+      transition: none;
+    }
   }
   .rs-who {
     display: flex;

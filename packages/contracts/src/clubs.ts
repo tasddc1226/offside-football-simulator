@@ -45,7 +45,7 @@ export const PutClubCustomBodySchema = z.strictObject({
   updatedAt: IsoUtcSchema,
 });
 
-/** GET/PUT 응답. 저장된 적이 없으면 clubs = {}, updatedAt = null. */
+/** GET/PUT 응답. 저장된 적이 없으면 clubs = {}, updatedAt = null. GET ?since=가 updatedAt과 같으면 clubs = {}(바뀐 것 없음). */
 export const ClubCustomResponseSchema = z.strictObject({
   clubs: ClubCustomMapSchema,
   updatedAt: IsoUtcSchema.nullable(),

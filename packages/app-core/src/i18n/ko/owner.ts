@@ -13,6 +13,7 @@ const ko = {
   signedInSubApp: '로그인했어요',
   emptySummary: '첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.',
   statClubValue: '구단 가치',
+  statFunds: '구단 자금',
   statRetired: '은퇴 선수',
   statLegend: '레전드 점수',
   statRetiredNumbers: '영구결번',

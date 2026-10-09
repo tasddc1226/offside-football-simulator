@@ -278,7 +278,8 @@ test('다른 유저의 영구결번이 확정되면 플레이 중인 화면 위�
 
   await alert.locator('[data-act="rn-alert-open"]').click();
   await expect(alert).toHaveCount(0);
-  await expect(page.locator('.film-open h1')).toHaveText('박결번');
+  // 이름 앞에 국적 국기가 붙는다.
+  await expect(page.locator('.film-open h1')).toHaveText('🇰🇷박결번');
   await expect(page.locator('[data-legend-rn-pill]')).toContainText('영결 8');
 });
 
@@ -395,7 +396,8 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
   await expect(wall.locator('[data-rn-more]')).toHaveCount(0);
 
   await wall.locator('[data-rn-tile="3"]').click();
-  await expect(page.locator('.film-open h1')).toHaveText('박결번');
+  // 이름 앞에 국적 국기가 붙는다.
+  await expect(page.locator('.film-open h1')).toHaveText('🇰🇷박결번');
   await page.locator('[data-act="hof-back"]').click();
   await expect(page.locator('[data-hof-tab="rn"]')).toHaveAttribute('aria-selected', 'true');
   // 선수 상세에 다녀와도 최신순 화면 그대로.

@@ -4,6 +4,7 @@
 import type { LegendSnapshot, PublicHofEntry, RetiredNumberResult } from '@offside/contracts';
 import { toPublicName } from '@offside/contracts/content-filter';
 import { isHofEligible } from '@offside/contracts/hof-rules';
+import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { ballonWinsOf, legendScore } from '@offside/game/legend';
 import { loadHOF } from '@offside/game/hof-store';
 import { saveKey } from '@offside/game/storage';
@@ -39,6 +40,8 @@ function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
     number: e.number,
     pos: e.pos,
     dpos: e.dpos,
+    // 공개 기록은 대한민국을 null로 남긴다.
+    nation: e.nation ?? DEFAULT_NATION,
     age: e.retireAge,
     lastClub: e.lastClub,
     lastClubId: e.lastClubId,
@@ -72,6 +75,7 @@ export function createLegends(host: LegendHost) {
       number: h.number,
       pos: h.pos,
       dpos: h.dpos,
+      nation: h.nation,
       age: h.age,
       lastClub: h.lastClub,
       lastClubId: h.lastClubId,
@@ -107,6 +111,7 @@ export function createLegends(host: LegendHost) {
       number: s.number,
       pos: s.pos,
       dpos: s.dpos,
+      nation: s.nation ?? DEFAULT_NATION,
       age: s.age,
       lastClub: s.club.name,
       lastClubId: s.club.id,

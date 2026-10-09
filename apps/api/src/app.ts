@@ -7,6 +7,7 @@ import { cors } from './middleware/cors.js';
 import { logger } from './middleware/logger.js';
 import { originGuard } from './middleware/originGuard.js';
 import { requestId } from './middleware/requestId.js';
+import { seasonScheduleMiddleware } from './seasonSchedule.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerAppAuthRoutes } from './routes/appAuth.js';
 import { registerAppVersionRoutes } from './routes/appVersion.js';
@@ -26,6 +27,7 @@ import { registerFirstsRoutes } from './routes/firsts.js';
 import { registerRetiredNumberRoutes } from './routes/retiredNumbers.js';
 import { registerLiveRoutes } from './routes/live.js';
 import { registerTickerRoutes } from './routes/ticker.js';
+import { registerSeasonGaugeRoutes } from './routes/seasonGauge.js';
 import { registerFriendRoutes } from './routes/friends.js';
 import { registerOwnerTeamRoutes } from './routes/ownerTeam.js';
 import { registerSeasonRecapRoutes } from './routes/seasonRecap.js';
@@ -44,6 +46,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   app.use('*', cors);
   app.use('*', originGuard);
   app.use('*', bodyGuard);
+  app.use('*', seasonScheduleMiddleware);
 
   app.get('/v1/health', (c) => ok(c, HealthDataSchema, { ok: true }));
 
@@ -57,6 +60,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerRetiredNumberRoutes(app);
   registerLiveRoutes(app);
   registerTickerRoutes(app);
+  registerSeasonGaugeRoutes(app);
   registerClubCustomRoutes(app);
   registerOwnerTeamRoutes(app);
   registerSeasonRecapRoutes(app);

@@ -2,7 +2,7 @@ import type { CareerPos, CareerSeasonPayload, RetirementSummary } from '@offside
 import { isDefaultClubId } from '@offside/contracts/club-names';
 import { controlPoints, legendTerms } from '@offside/contracts/hof-rules';
 import type { PeakProfile } from '@offside/contracts/positions';
-import { MAX_RETIRE_AT } from '@offside/contracts/service-seasons';
+import { maxRetireAt } from '@offside/contracts/service-seasons';
 
 // 클라이언트가 보낸 기록 값의 현실성 검사. 게임은 브라우저에서 돌고 서버는 결과만 받으므로, 모양(zod)만 맞으면
 // 어떤 숫자든 들어올 수 있다. 거부하면 기기의 업로드 큐가 그 기록을 버리므로(400) 게임에서 나올 수 없는 값은
@@ -34,7 +34,6 @@ export const ovrCapAt = (age: number): number =>
  * 커리어별 은퇴 나이(T-11-045)는 boundRetirement가 맞춘다.
  */
 const MIN_AGE = 14;
-const MAX_AGE = MAX_RETIRE_AT;
 /** 시즌 영예에 없이 따로 쌓이는 수상(푸스카스상 등)의 여유 — 실측 0–2개. */
 const EXTRA_HONORS = 3;
 
@@ -53,7 +52,7 @@ export function sanitizeSeason(s: CareerSeasonPayload): CareerSeasonPayload {
   return {
     ...s,
     ...(s.clubId ? { clubId: knownClubId(s.clubId) } : {}),
-    age: Math.min(s.age, MAX_AGE),
+    age: Math.min(s.age, maxRetireAt()),
     apps,
     goals,
     assists,
@@ -99,7 +98,7 @@ export function lifeSeasons<T extends { year: number; age: number }>(
   const last = sorted.at(-1);
   if (!last) return [];
   const birth = last.year - last.age;
-  const maxAge = Math.min(MAX_AGE, (retireAge ?? Infinity) - 1);
+  const maxAge = Math.min(maxRetireAt(), (retireAge ?? Infinity) - 1);
   return sorted.filter((r) => r.year - r.age === birth && r.age >= MIN_AGE && r.age <= maxAge);
 }
 

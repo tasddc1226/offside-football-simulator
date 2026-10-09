@@ -8,6 +8,7 @@ const ko = {
   retiredAge: (p: { age: number }) => `${p.age}세 은퇴`,
   scoreLabel: (p: { score: number }) => `레전드 점수 ${p.score}`,
   worth: '은퇴 가치',
+  clubsLabel: '거쳐 간 구단',
   peakValue: (p: { value: string; season: string; club: string }) =>
     `최고 몸값 ${p.value} · ${p.season} ${p.club}`,
   peakOvr: (p: { peak: number }) => `최고 OVR ${p.peak}`,

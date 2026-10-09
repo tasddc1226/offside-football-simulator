@@ -20,6 +20,7 @@
     "./push-limits": "./src/push-limits.ts",
     "./retired-numbers": "./src/retired-numbers.ts",
     "./service-seasons": "./src/service-seasons.ts",
+    "./season-gauge": "./src/season-gauge.ts",
     "./cup": "./src/cup.ts",
     "./positions": "./src/positions.ts",
     "./owner-team": "./src/owner-team.ts",

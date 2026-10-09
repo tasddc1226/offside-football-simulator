@@ -8,7 +8,9 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 /** T-10-010. 클럽 이름·엠블럼 커스텀 동기화. PUT은 전체 교체 + updatedAt 비교라 자연 멱등이다. */
 export function registerClubCustomRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/club-custom', requireProfile, async (c) => {
-    const saved = await getClubCustom(getDb(c), getSessionOrThrow(c).profileId);
+    // ?since=마지막으로 맞춘 updatedAt — 같으면 clubs는 비워 보낸다(클라이언트는 updatedAt이 같으면 받은 clubs를 쓰지 않는다).
+    const since = c.req.query('since');
+    const saved = await getClubCustom(getDb(c), getSessionOrThrow(c).profileId, since);
     return ok(c, ClubCustomResponseSchema, saved ?? { clubs: {}, updatedAt: null });
   });
 

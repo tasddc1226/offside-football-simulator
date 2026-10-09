@@ -73,6 +73,9 @@ export const cup: Translation<CupMsgs> = {
   secRewards: '報酬',
   secGroups: 'グループステージ',
   secBracket: 'トーナメント',
+  secEntrants: '申し込んだチーム',
+  entrantsNote: '申し込み順です。受付が終わると組分け抽選をします。',
+  mineTeam: '自分のチーム',
   rulePlay: (p) =>
     `先発に自分の選手が${p.min}人以上いる今シーズンのチームが申し込めます。定員は${p.cap}チームで、先着順です。`,
   ruleGroup:

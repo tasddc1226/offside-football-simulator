@@ -471,6 +471,11 @@ export function typeForFocus(pos: Pos, focus: readonly AttrKey[]): string {
   return TYPES[pos].reduce((best, t) => (score(t) > score(best) ? t : best)).id;
 }
 
+/** 유형 id의 이름(플레이메이커 · 박스 투 박스 …). 모르는 id·기록이 지워진 선수는 null. */
+export function typeName(pos: Pos, typeId: string | null | undefined): string | null {
+  return (typeId && TYPES[pos]?.find((t) => t.id === typeId)?.name) || null;
+}
+
 /** 유형에서 주력 능력치를 거꾸로 구한다(옛 저장본·시뮬레이터용) — mod가 큰 순 상위 FOCUS_PICK개. */
 export function focusOfType(pos: Pos, typeId: string): AttrKey[] {
   const mod = (TYPES[pos].find((t) => t.id === typeId) ?? TYPES[pos][0]!).mod;

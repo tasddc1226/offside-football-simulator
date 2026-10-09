@@ -18,4 +18,8 @@ export const ad: Translation<AdMsgs> = {
   restoreFail: '復元できませんでした。しばらくしてからもう一度お試しください。',
   rewardedUnavailable: '今は広告を読み込めません。しばらくしてからもう一度お試しください。',
   rewardedWatch: '広告を最後まで見ると評価を見られます。',
+  adRerollBtn: (p) => `広告を見て引き直す(今日あと${p.n}回)`,
+  adRerollFreeBtn: (p) => `候補を引き直す(今日あと${p.n}回)`,
+  adRerollWatch: '広告を最後まで見ると候補を引き直せます。',
+  adRerollDone: (p) => `候補を引き直しました。今日はあと${p.n}回引き直せます。`,
 };

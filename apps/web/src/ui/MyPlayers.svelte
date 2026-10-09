@@ -128,10 +128,13 @@
           : L.sourceDeviceWeb}
     </p>
     {#if seasons.length > 1}
-      <div class="seg board-tabs hof-seasons" role="group" aria-label={L.seasonGroup}>
-        {#each seasons as s (s.id)}
-          <button class="opt" aria-pressed={season === s.id} data-my-season={s.id} onclick={() => ((picked = s.id), (expanded = false))}>{seasonLabel(s.id, s.name)}</button>
-        {/each}
+      <div class="hof-toolbar">
+        <label class="hof-season-picker">
+          <span class="hof-filter-label">{L.seasonGroup}</span>
+          <select data-my-season-select value={String(season)} onchange={(e) => ((picked = Number(e.currentTarget.value)), (expanded = false))}>
+            {#each seasons as s (s.id)}<option value={String(s.id)}>{seasonLabel(s.id, s.name)}</option>{/each}
+          </select>
+        </label>
       </div>
     {/if}
     {#each shown as r, i (r.key)}
