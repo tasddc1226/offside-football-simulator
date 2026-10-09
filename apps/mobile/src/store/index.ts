@@ -8,7 +8,7 @@ import { initialAppState, type AppState } from '@offside/app-core/state';
 import { initialSheetState, type SheetState } from '@offside/app-core/sheet-controller';
 import { initialClubCustomState } from '@offside/app-core/clubCustom';
 import { initialNewsState } from '@offside/app-core/news';
-import type { RnAlert, RnResults } from '@offside/app-core/retiredNumber';
+import type { RnAlert, RnMisses, RnResults } from '@offside/app-core/retiredNumber';
 import type { Profile } from '@offside/app-core/api/client';
 import { loadKey } from '@offside/game/storage';
 import { getLocale, type Locale } from '@offside/app-core/i18n/core';
@@ -25,6 +25,8 @@ export const storeUpdate = proxy<{ url: string | null; closed: boolean }>({
 });
 /** 커리어 id → 이번 접속에서 받은 영구결번 심사 결과. */
 export const rnResults = proxy<RnResults>({});
+/** T-11-180 커리어 id → 결번을 못 받은 이유. */
+export const rnMisses = proxy<RnMisses>({});
 /** 방금 서버 어딘가에서 확정된 영구결번(화면 위 알림). */
 export const rnAlert = proxy<RnAlert>({ item: null });
 /** 프로필 확인 캐시 — 구단주·설정 화면을 오가도 유지한다(웹 account-state). */

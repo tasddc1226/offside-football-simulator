@@ -206,7 +206,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     // 재전송(이름 공개 토글)에서 다시 불려도 한 번만 주고, 처음 은퇴 뒤 판정이 실패했으면 재전송 때 마저 준다.
     await completeInvite(db, session.profileId, careerId, now);
     // T-10-076 영구결번 심사. 이름 공개 토글 재전송도 여기로 온다 — 이름을 공개하는 순간 자리를 잡는다.
-    const retiredNumber = await judgeRetirement(c, careerId, now);
+    const judged = await judgeRetirement(c, careerId, now);
     purgeEdge(c, STALE.retirementPut(careerId));
     publishLive(c, 'retire', careerId, now);
     // T-11-028 그 시즌 구단주 업적 점수(업적 랭킹)를 응답 뒤에 다시 센다.
@@ -216,7 +216,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       careerId,
       status: 'retired',
       title: verifiedRetiredTitle(await getCareerHead(db, careerId)),
-      retiredNumber,
+      ...judged,
       serviceSeason: career.serviceSeason,
     });
   });

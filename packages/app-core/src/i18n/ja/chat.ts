@@ -41,6 +41,7 @@ export const chat: Translation<ChatMsgs> = {
   moreLabel: (p) => `${p.nick}さんのメッセージを通報・ブロック`,
   emptyOpen: 'まだ静かです。',
   loading: '読み込み中…',
+  loadingOlder: '過去のメッセージを読み込み中…',
   gateLogin: 'Googleでログインするとチャットに参加できます。',
   gateLoginApple: 'GoogleかAppleでログインするとチャットに参加できます。',
   loginGoogle: 'Googleでログイン',

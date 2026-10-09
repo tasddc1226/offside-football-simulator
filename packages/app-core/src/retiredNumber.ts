@@ -4,6 +4,7 @@
 // 반응성은 클라이언트가 붙인다 — 넘겨받은 객체를 그대로 고친다.
 import type {
   LiveRetiredNumber,
+  RetiredNumberMiss,
   RetiredNumberResult,
   RetiredNumbersResponse,
 } from '@offside/contracts';
@@ -14,11 +15,14 @@ import { onLive } from './api/liveSocket.js';
 
 export type RnResults = Record<string, RetiredNumberResult | null>;
 export type RnAlert = { item: LiveRetiredNumber | null };
+/** T-11-180 커리어 id → 결번을 못 받은 이유(이번 접속에서 받은 것만, 기기에 남기지 않는다). */
+export type RnMisses = Record<string, RetiredNumberMiss>;
 
 export function createRetiredNumbers(
   rnResults: RnResults,
   rnAlert: RnAlert,
   onTitle?: (careerId: string, title: string | null) => void,
+  rnMisses?: RnMisses,
 ) {
   /** 심사 결과를 반응형 맵과 이 기기의 은퇴 기록에 남긴다. serviceSeason(T-11-029)이 오면 기록의 시즌도 남긴다. */
   function recordRn(
@@ -26,8 +30,13 @@ export function createRetiredNumbers(
     result: RetiredNumberResult | null,
     serviceSeason?: number | null,
     title?: string | null,
+    miss?: RetiredNumberMiss,
   ) {
     rnResults[careerId] = result;
+    if (rnMisses) {
+      if (miss) rnMisses[careerId] = miss;
+      else delete rnMisses[careerId];
+    }
     if (title !== undefined) onTitle?.(careerId, title);
     const hof = loadHOF();
     const h = hof.find((x) => x.id === careerId);

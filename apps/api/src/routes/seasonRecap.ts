@@ -91,6 +91,8 @@ export const squadOf = (db: Db, profileId: string, season: number, cutoff: strin
       publicName: sql`${careers.publicName}`.mapWith(careers.publicName),
       peakProfile: sql`${careers.peakProfile}`.mapWith(careers.peakProfile),
       cardAttrsJson: sql`${careers.cardAttrsJson}`.mapWith(careers.cardAttrsJson),
+      height: sql`${careers.height}`.mapWith(careers.height),
+      weight: sql`${careers.weight}`.mapWith(careers.weight),
       serviceSeason: sql`${careers.serviceSeason}`.mapWith(careers.serviceSeason),
       legendScore: sql`${careers.legendScore}`.mapWith(careers.legendScore),
       lastClub: sql`${careers.lastClub}`.mapWith(careers.lastClub),

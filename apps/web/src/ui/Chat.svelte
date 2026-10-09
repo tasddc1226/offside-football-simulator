@@ -51,6 +51,12 @@
   /** 맨 아래 가까이 보고 있을 때만 새 줄을 따라 내려간다(위로 올려 읽는 중이면 그대로 둔다). */
   const nearBottom = () => !list || list.scrollHeight - list.scrollTop - list.clientHeight < 80;
 
+  function onListScroll() {
+    if (nearBottom()) markChatRead();
+    // T-11-180 맨 위 가까이 올리면 이전 줄을 부른다.
+    if (list && list.scrollTop < 120) chatSession().older();
+  }
+
   function connect() {
     chatSession();
   }
@@ -64,10 +70,16 @@
         const initial = entering && v.status === 'open';
         const follow = initial || (grew && (nearBottom() || v.messages.at(-1)?.author === v.me?.author));
         if (initial) entering = false;
+        // T-11-180 이전 줄이 위에 붙으면 보던 줄이 그 자리에 머물게 늘어난 높이만큼 내린다.
+        const prepended = !follow && view.loadingOlder && !v.loadingOlder;
+        const before = prepended ? (list?.scrollHeight ?? 0) : 0;
         view = v;
         if (follow) void tick().then(() => {
           list?.scrollTo({ top: list.scrollHeight });
           markVisible();
+        });
+        else if (prepended) void tick().then(() => {
+          if (list) list.scrollTop += list.scrollHeight - before;
         });
       },
       (code, restore) => {
@@ -195,7 +207,8 @@
       </details>
     </header>
 
-    <ol class="chat-list" bind:this={list} onscroll={() => { if (nearBottom()) markChatRead(); }} data-chat-list>
+    <ol class="chat-list" bind:this={list} onscroll={onListScroll} data-chat-list>
+      {#if view.loadingOlder}<li class="muted fs-sm chat-older">{L.loadingOlder}</li>{/if}
       {#each view.messages as m (m.id)}
         <li class="chat-msg" class:mine={mine(m)} data-chat-msg={m.id}>
           <div class="chat-meta">

@@ -130,6 +130,9 @@ type LineupRow = {
   /** T-11-105 이 팀 구단주가 직접 키운 선수인지(SQL 비교라 0/1일 수 있다). */
   raised?: boolean | number | null;
   serviceSeason?: number | null;
+  /** T-11-180 키·몸무게(옛 커리어는 NULL). */
+  height?: number | null;
+  weight?: number | null;
 };
 export const toLineupCareer = (
   r: LineupRow,
@@ -174,8 +177,13 @@ export function teamPlayerCard(
     legendScore: r.legendScore,
     type: career.type,
     season: career.season,
+    ...bodyOf(r),
   };
 }
+
+/** T-11-180 카드에 싣는 키·몸무게 — 둘 다 있을 때만(체격 기능 전 커리어는 없다). */
+export const bodyOf = (r: { height?: number | null; weight?: number | null }) =>
+  r.height && r.weight ? { height: r.height, weight: r.weight } : {};
 
 /** 내 팀들(시즌 순). 시즌마다 한 팀이라 몇 개 되지 않는다. */
 export function listMyTeams(db: Db, profileId: string) {
@@ -208,6 +216,8 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       peak: cards.peak,
       peakProfile: cards.peakProfile,
       cardAttrsJson: careers.cardAttrsJson,
+      height: careers.height,
+      weight: careers.weight,
       number: cards.number,
       publicName: careers.publicName,
       type: careers.type,
@@ -288,6 +298,8 @@ export async function careersByIds(db: Db, ids: string[]) {
       peak: cards.peak,
       peakProfile: cards.peakProfile,
       cardAttrsJson: careers.cardAttrsJson,
+      height: careers.height,
+      weight: careers.weight,
       legendScore: cards.legendScore,
       number: cards.number,
       publicName: careers.publicName,

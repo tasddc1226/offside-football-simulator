@@ -13,6 +13,8 @@
   import { retiredText as L } from '@offside/app-core/i18n/ko/retired';
 
   const v = $derived(appState.legend);
+  /** 이전 화면 기록이 없으면 연 곳(명예의 전당·구단주·홈)으로. */
+  const backTo = () => (appState.screen = appState.legendBack);
   let root: HTMLDivElement;
 
   // T-10-129 커리어 재생: 누르면 크레딧처럼 흘러가고, 다시 누르거나 화면을 만지면 멈춘다. 감속 모션이면 버튼이 없다.
@@ -37,11 +39,11 @@
     {#if v.reportId}<NameReport kind="career" id={v.reportId} name={v.name} />{/if}
     <AdSlot place="legend-bottom" />
   {/if}
-  <!-- T-10-128 위쪽 '이전으로' 대신 아래 바: 공유할 수 있는 내 선수는 홈으로 + 공유하기, 그 밖은 '← 이전으로' 하나. -->
+  <!-- T-10-128 위쪽 '이전으로' 대신 아래 바: 공유할 수 있는 내 선수는 이전으로 + 공유하기, 그 밖은 '← 이전으로' 하나. -->
   {#if v?.shareId}
-    <ShareBar id={v.shareId} />
+    <ShareBar id={v.shareId} back={backTo} />
   {:else}
-    <BackBar act="hof-back" fallback={() => (appState.screen = appState.legendBack)} />
+    <BackBar act="hof-back" fallback={backTo} />
   {/if}
   {#if motionOK && v}
     <button class="career-play" class:on={rolling} data-act="career-play" aria-pressed={rolling} onclick={toggleRoll}>

@@ -18,6 +18,7 @@ export const market: Translation<MarketMsgs> = {
   tabTrades: 'My trades',
   sortNew: 'Newest listed',
   sortPrice: 'Price: low to high',
+  sortOvr: 'OVR: high to low',
   sortLabel: 'Sort',
   posAll: 'All',
   seasonCount: (p) =>

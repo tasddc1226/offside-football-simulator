@@ -7,6 +7,7 @@
 import type {
   PutCareerSeasonBody,
   PutRetirementBody,
+  RetiredNumberMiss,
   RetiredNumberResult,
 } from '@offside/contracts';
 import { loadKey, saveKey } from '@offside/game/storage';
@@ -24,6 +25,8 @@ export type RetiredNumberEvent = {
   result: RetiredNumberResult | null;
   serviceSeason?: number | null;
   title?: string | null;
+  /** T-11-180 결번을 못 받은 이유(기준의 절반 이상일 때만, 옛 응답엔 없다). */
+  miss?: RetiredNumberMiss;
 };
 
 export type OutboxItem =
@@ -74,6 +77,7 @@ async function announceRetiredNumber(careerId: string, res: Response): Promise<v
   const body = (await res.json().catch(() => null)) as {
     data?: {
       retiredNumber?: RetiredNumberResult | null;
+      retiredNumberMiss?: RetiredNumberMiss;
       serviceSeason?: number | null;
       title?: string | null;
     };
@@ -86,6 +90,7 @@ async function announceRetiredNumber(careerId: string, res: Response): Promise<v
     result,
     ...(serviceSeason !== undefined ? { serviceSeason } : {}),
     ...(body?.data?.title !== undefined ? { title: body.data.title } : {}),
+    ...(body?.data?.retiredNumberMiss ? { miss: body.data.retiredNumberMiss } : {}),
   });
 }
 

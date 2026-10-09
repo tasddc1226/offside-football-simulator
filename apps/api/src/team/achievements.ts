@@ -321,6 +321,21 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
   const first = (id: string, label: string, done: boolean) => once(id, label, done, PTS.first);
   const piece = (id: string, label: string, cur: number, max: number) =>
     collect(id, label, cur, max, PTS.collection);
+  /** T-11-180 이름 목록을 모으는 업적: 아직 못 모은 이름도 싣는다. */
+  const pieceOf = (
+    id: string,
+    label: string,
+    names: readonly string[],
+    got: (n: string) => boolean,
+    pts: number = PTS.collection,
+  ): ClubAchievement => {
+    const missing = names.filter((n) => !got(n));
+    return {
+      ...collect(id, label, names.length - missing.length, names.length, pts),
+      ...(missing.length ? { missing } : {}),
+    };
+  };
+  const hasHonor = (n: string) => honors.has(n);
   const feat = (id: string, label: string, done: boolean) => once(id, label, done, PTS.legend);
   const world = (id: string, label: string, done: boolean) => once(id, label, done, PTS.world);
 
@@ -364,16 +379,11 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
   ];
 
   const collection: ClubAchievement[] = [
-    piece('all-league-win', '전 리그 우승', has(LEAGUES.map((l) => `${l} 우승`)), LEAGUES.length),
-    piece('all-top-scorer', '전 리그 득점왕', has(TOP_SCORER), TOP_SCORER.length),
-    piece('all-poty', '전 리그 올해의 선수', has(POTY), POTY.length),
-    piece('young', '영플레이어상 수집', has(YOUNG), YOUNG.length),
-    piece(
-      'big5',
-      '빅5 리그 모두 뛰어 보기',
-      BIG5.filter((l) => leagues.has(l)).length,
-      BIG5.length,
-    ),
+    pieceOf('all-league-win', '전 리그 우승', LEAGUES, (l) => honors.has(`${l} 우승`)),
+    pieceOf('all-top-scorer', '전 리그 득점왕', TOP_SCORER, hasHonor),
+    pieceOf('all-poty', '전 리그 올해의 선수', POTY, hasHonor),
+    pieceOf('young', '영플레이어상 수집', YOUNG, hasHonor),
+    pieceOf('big5', '빅5 리그 모두 뛰어 보기', BIG5, (l) => leagues.has(l)),
     ...(detail
       ? [
           piece(
@@ -443,13 +453,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
       world('ucl', 'UEFA 챔피언스리그 우승', honors.has('UEFA 챔피언스리그 우승')),
       world('club-wc', 'FIFA 클럽 월드컵 우승', honors.has('FIFA 클럽 월드컵 우승')),
       world('golden-shoe', '유러피언 골든슈', honors.has('유러피언 골든슈')),
-      collect(
-        'all-continental',
-        '대륙 클럽 대회 모두 우승',
-        has(CONTINENTAL),
-        CONTINENTAL.length,
-        PTS.world,
-      ),
+      pieceOf('all-continental', '대륙 클럽 대회 모두 우승', CONTINENTAL, hasHonor, PTS.world),
       collect(
         'nations',
         '국적이 다른 선수 5명',

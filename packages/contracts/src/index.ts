@@ -85,6 +85,8 @@ export {
   RETIRED_PAGE,
   RetiredNumberCheckResponseSchema,
   type RetiredNumberCheckResponse,
+  RetiredNumberMissSchema,
+  type RetiredNumberMiss,
   type RetiredNumberResult,
   type RetiredNumbersResponse,
   type RetiredNumbersSummary,

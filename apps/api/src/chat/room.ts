@@ -4,7 +4,6 @@ import {
   CHAT_HISTORY,
   CHAT_KEEP_MS,
   CHAT_TICKET_MS,
-  type ChatClientEvent,
   type ChatMessage,
   type ChatRejectCode,
   type ChatServerEvent,
@@ -104,7 +103,7 @@ export class ChatRoom extends DurableObject<Bindings> {
     server.serializeAttachment({ w, sent: [] } satisfies Attachment);
     const hello: ChatServerEvent = {
       t: 'hello',
-      messages: this.recent(),
+      ...this.page(),
       online: online + 1,
       write: !!w,
     };
@@ -118,7 +117,15 @@ export class ChatRoom extends DurableObject<Bindings> {
     if (typeof data !== 'string') return;
     let body: unknown;
     try {
-      const event = JSON.parse(data) as Partial<Record<keyof ChatClientEvent, unknown>>;
+      const event = JSON.parse(data) as Record<string, unknown>;
+      if (event.t === 'older') {
+        if (typeof event.before === 'string')
+          send(
+            ws,
+            JSON.stringify({ t: 'older', ...this.page(event.before) } satisfies ChatServerEvent),
+          );
+        return;
+      }
       if (event.t !== 'send') return;
       body = event.body;
     } catch {
@@ -205,12 +212,27 @@ export class ChatRoom extends DurableObject<Bindings> {
     return row && row.expires >= Date.now() ? (JSON.parse(row.writer) as ChatWriter) : null;
   }
 
-  private recent(): ChatMessage[] {
-    return this.sql
-      .exec<Row>('SELECT * FROM messages WHERE hidden = 0 ORDER BY at DESC LIMIT ?', CHAT_HISTORY)
-      .toArray()
-      .reverse()
-      .map((r) => publicOf(toMessage(r)));
+  /**
+   * 가려지지 않은 줄 CHAT_HISTORY개(오래된 순)와 그 이전 줄이 더 있는지. before(메시지 id)가 있으면 그 줄보다 이전
+   * 줄(T-11-180 위로 올리기, 같은 시각이면 먼저 들어온 줄)이고, before가 지워졌으면 빈 페이지다.
+   */
+  private page(before?: string): { messages: ChatMessage[]; more: boolean } {
+    const rows = this.sql
+      .exec<Row>(
+        `SELECT * FROM messages WHERE hidden = 0${
+          before ? ' AND (at, rowid) < (SELECT at, rowid FROM messages WHERE id = ?)' : ''
+        } ORDER BY at DESC, rowid DESC LIMIT ?`,
+        ...(before ? [before] : []),
+        CHAT_HISTORY + 1,
+      )
+      .toArray();
+    return {
+      messages: rows
+        .slice(0, CHAT_HISTORY)
+        .reverse()
+        .map((r) => publicOf(toMessage(r))),
+      more: rows.length > CHAT_HISTORY,
+    };
   }
 
   private reject(ws: WebSocket, code: ChatRejectCode) {

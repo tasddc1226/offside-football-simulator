@@ -9,6 +9,7 @@ import {
   RN_SEASON_HONOR_CAP,
   rnCandidates,
   rnCut,
+  rnMissOf,
   rnQualifies,
   type RnClub,
   type RnSeason,
@@ -89,6 +90,30 @@ describe('영구결번 구단 기여 점수 (T-10-076)', () => {
       ...legend(3).map((s) => ({ ...s, year: s.year + 20, club: '런던 거너스', clubId: 'pl-2' })),
     ]);
     expect(rnCandidates(two, RN_CUT).map((c) => c.clubId)).toEqual(['pl-0', 'pl-1']);
+  });
+
+  it('T-11-180 못 받은 이유: 시즌 수가 모자라면 seasons, 점수가 기준의 절반 이상이면 10% 단위 score, 그 밖엔 없다', () => {
+    const club = (over: Partial<RnClub>): RnClub => ({
+      clubId: 'pl-0',
+      club: '맨체스터 스카이블루',
+      seasons: 8,
+      play: 0,
+      honors: 0,
+      bond: 0,
+      score: 0,
+      ...over,
+    });
+    expect(rnMissOf([club({ seasons: 5, score: 900 })], 800)).toEqual({
+      reason: 'seasons',
+      club: '맨체스터 스카이블루',
+      seasons: 5,
+      need: 6,
+    });
+    expect(rnMissOf([club({ score: 799 })], 800)).toMatchObject({ reason: 'score', pct: 90 });
+    expect(rnMissOf([club({ score: 400 })], 800)).toMatchObject({ reason: 'score', pct: 50 });
+    expect(rnMissOf([club({ score: 399 })], 800)).toBeNull();
+    expect(rnMissOf([club({ clubId: null, score: 700 })], 800)).toBeNull();
+    expect(rnMissOf([], 800)).toBeNull();
   });
 
   it('T-11-094 시즌 1부터 기준은 포지션별, 프리시즌은 공통 827 그대로', () => {

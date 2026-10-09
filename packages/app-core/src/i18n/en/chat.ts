@@ -42,6 +42,7 @@ export const chat: Translation<ChatMsgs> = {
   moreLabel: (p) => `Report or block ${p.nick}`,
   emptyOpen: "It's quiet in here.",
   loading: 'Loading…',
+  loadingOlder: 'Loading earlier messages…',
   gateLogin: 'Log in with Google to join the chat.',
   gateLoginApple: 'Log in with Google or Apple to join the chat.',
   loginGoogle: 'Log in with Google',
