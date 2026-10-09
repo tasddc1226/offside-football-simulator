@@ -18,7 +18,7 @@ import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { cupEntries, cupMatches, cupState, ownerTeams, profiles } from '../db/schema.js';
 import { cupKo, cupTitle } from '../cupText.js';
-import { grantRerollStatement } from '../db/repos/itemShop.js';
+import { grantItemStatement } from '../db/repos/itemShop.js';
 import { cupSchedule } from './cupSchedule.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { lineupsOf, matchDetailOf } from './match.js';
@@ -108,7 +108,7 @@ function rewardStatements(
          WHERE cup_id = ? AND team_id = ? AND rewarded_at IS NULL`,
       )
       .bind(stage, status, now, now, cup.id, e.teamId),
-    grantRerollStatement(d1, e.profileId, CUP_REWARDS[stage].rerolls, now, {
+    grantItemStatement(d1, e.profileId, 'reroll', CUP_REWARDS[stage].rerolls, now, {
       sql: 'changes() = 1',
     }),
     // 최종 성적·보상은 알림함에만 둔다. 같은 cron에 나가는 경기 결과 푸시와 겹치면 예산(60분 간격)에 밀려 사라진다.

@@ -1,4 +1,10 @@
-import { REWARD_KINDS, resolveBalance, type FundsSpend, type RewardKind } from '@offside/contracts';
+import {
+  REWARD_KINDS,
+  resolveBalance,
+  type FundsSpend,
+  type OwnerItem,
+  type RewardKind,
+} from '@offside/contracts';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 
@@ -6,12 +12,13 @@ import { getActiveBalance } from './balance.js';
 // 비싸지며 하루 상한이 있다. 수치는 운영 도구 밸런스 설정(이적시장 묶음)의 활성 버전을 요청 때 바로 읽는다.
 
 /**
- * 리롤권을 qty장 더하는 문장(컵 보상 · 상점 · 친구 초대가 함께 쓴다). guard는 같은 batch 안에서 앞 문장이 성공했을 때만
- * 주도록 거는 SQL 조건이다.
+ * 구단주 아이템을 qty장 더하는 문장(컵 보상 · 상점 · 친구 초대 · 인앱 구매가 함께 쓴다). guard는 같은 batch 안에서 앞 문장이
+ * 성공했을 때만 주도록 거는 SQL 조건이다.
  */
-export const grantRerollStatement = (
+export const grantItemStatement = (
   d1: D1Database,
   profileId: string,
+  item: OwnerItem,
   qty: number,
   now: string,
   guard: { sql: string; params?: unknown[] },
@@ -19,10 +26,10 @@ export const grantRerollStatement = (
   d1
     .prepare(
       `INSERT INTO owner_items (profile_id, item, qty, updated_at)
-       SELECT ?, 'reroll', ?, ? WHERE ${guard.sql}
+       SELECT ?, ?, ?, ? WHERE ${guard.sql}
        ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + excluded.qty, updated_at = excluded.updated_at`,
     )
-    .bind(profileId, qty, now, ...(guard.params ?? []));
+    .bind(profileId, item, qty, now, ...(guard.params ?? []));
 
 /** 리롤권 상점 수치(활성 버전, 없으면 기본값). */
 export async function rerollShopRules(db: Db) {
@@ -79,7 +86,7 @@ async function buyItem(
       )
       .bind(b.price, b.now, b.profileId, b.id),
     ...(b.grantReroll
-      ? [grantRerollStatement(d1, b.profileId, 1, b.now, { sql: won, params: [b.id] })]
+      ? [grantItemStatement(d1, b.profileId, 'reroll', 1, b.now, { sql: won, params: [b.id] })]
       : []),
     d1
       .prepare(

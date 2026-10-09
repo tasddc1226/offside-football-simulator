@@ -43,10 +43,12 @@ import {
   rewardSnapshot,
   shopSnapshot,
 } from '../db/repos/itemShop.js';
+import { ownerItemsOf } from '../db/repos/iap.js';
 import { countOpenListingsAmong } from '../db/repos/market.js';
 import { newId } from '../db/ids.js';
 import { getDb, type AppEnv } from '../env.js';
 import { reqLang } from '../lang.js';
+import { iapAccount, iapStores } from '../iap/verify.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import {
@@ -383,36 +385,38 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     );
   });
 
-  // 내 아이템.
+  // 내 아이템 · 인앱 구매에 붙일 구단주 표시와 확인할 수 있는 스토어(T-11-174).
   app.get('/v1/items', requireProfile, async (c) => {
     const me = await requireOwner(c);
-    return ok(
-      c,
-      OwnerItemsResponseSchema,
-      { reroll: await rerollsOf(getDb(c), me.id) },
-      200,
-      NO_STORE,
-    );
+    const items = await ownerItemsOf(getDb(c), me.id);
+    const iap = { account: iapAccount(me.id), stores: iapStores(c.env) };
+    return ok(c, OwnerItemsResponseSchema, { ...items, iap }, 200, NO_STORE);
   });
 
-  // 선수 후보 리롤권 1장 쓰기. 남은 장수를 돌려준다. 없으면 409. 재시도가 두 장을 쓰지 않게 멱등 키를 쓴다.
-  app.post('/v1/items/reroll/use', requireProfile, idempotency, async (c) => {
-    const me = await requireOwner(c);
-    const db = getDb(c);
-    const row = await db
-      .update(ownerItems)
-      .set({ qty: sql`${ownerItems.qty} - 1`, updatedAt: nowIso() })
-      .where(
-        and(
-          eq(ownerItems.profileId, me.id),
-          eq(ownerItems.item, 'reroll'),
-          sql`${ownerItems.qty} > 0`,
-        ),
-      )
-      .returning({ qty: ownerItems.qty });
-    if (!row.length) throw conflictError(cupKo('noReroll'), 'NO_REROLL');
-    return ok(c, OwnerItemsResponseSchema, { reroll: row[0]!.qty }, 200, NO_STORE);
-  });
+  // 아이템 1장 쓰기 — 선수 후보 리롤권(reroll) · 잠재력 강화권(boost, T-11-174). 남은 장수를 돌려준다. 없으면 409.
+  // 재시도가 두 장을 쓰지 않게 멱등 키를 쓴다. 강화권은 서버가 장수만 빼고, 강화는 응답을 받은 기기가 한다.
+  const USE_EMPTY = {
+    reroll: () => conflictError(cupKo('noReroll'), 'NO_REROLL'),
+    boost: () => conflictError(cupKo('noBoost'), 'NO_BOOST'),
+  };
+  for (const item of ['reroll', 'boost'] as const)
+    app.post(`/v1/items/${item}/use`, requireProfile, idempotency, async (c) => {
+      const me = await requireOwner(c);
+      const db = getDb(c);
+      const row = await db
+        .update(ownerItems)
+        .set({ qty: sql`${ownerItems.qty} - 1`, updatedAt: nowIso() })
+        .where(
+          and(
+            eq(ownerItems.profileId, me.id),
+            eq(ownerItems.item, item),
+            sql`${ownerItems.qty} > 0`,
+          ),
+        )
+        .returning({ qty: ownerItems.qty });
+      if (!row.length) throw USE_EMPTY[item]();
+      return ok(c, OwnerItemsResponseSchema, await ownerItemsOf(db, me.id), 200, NO_STORE);
+    });
 
   // T-11-152 리롤권 상점: 가진 장수 · 구단 자금 · 다음 한 장 가격 · 오늘 산 장수와 하루 상한. 상점을 펼칠 때만 부른다.
   app.get('/v1/items/shop', requireProfile, async (c) => {

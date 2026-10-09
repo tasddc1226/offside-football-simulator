@@ -43,6 +43,7 @@ import { hofRn } from './hofRn';
 import { home } from './home';
 import { homeLive } from './homeLive';
 import { homeMore } from './homeMore';
+import { iap } from './iap';
 import { inbox } from './inbox';
 import { legend } from './legend';
 import { legendRn } from './legendRn';
@@ -126,6 +127,7 @@ export const ja = {
   home,
   homeLive,
   homeMore,
+  iap,
   inbox,
   legend,
   legendRn,

@@ -57,4 +57,10 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   clubNote:
     '広告を見るか、クラブ資金を使って受け取れます。クラブ資金は同じ日に使うほど高くなります。',
   clubFail: 'クラブ資金を使えませんでした。',
+  ticketCost: '強化券',
+  ticketBoost: (p) => `強化券を使う（残り${p.n}枚 · ${p.chance}%）`,
+  ticketBusy: '強化券を使っています…',
+  ticketFail: '強化券を使えませんでした。',
+  lineExtraTicket: (p) =>
+    `今シーズンの挑戦は済んでいます。強化券でさらに挑戦でき、この選手はあと${p.left}回です。`,
 };

@@ -3,6 +3,7 @@
 // 가진 장수만 보이고(후보 화면과 같은 30초 메모), focus면(후보 화면 '리롤권 상점 가기') 펼친 채로 열고 카드로 내려간다.
 import { useEffect, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
+import { useSnapshot } from 'valtio';
 import {
   buyReroll,
   fetchItems,
@@ -13,12 +14,15 @@ import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fundsText } from '@offside/app-core/market';
 import { rerollShopState } from '@offside/app-core/rerollShop';
+import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
 import { toast } from '../../game/host';
+import { iapItems } from '../../platform/iapItems';
 import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { num, rem } from '../../theme/type';
 import { scrollToView } from '../../ui/scroll';
 import { Btn, Card, Press, Txt } from '../../ui';
+import { IapPacks } from './IapPacks';
 
 export function RerollShop({
   onBought,
@@ -58,6 +62,13 @@ export function RerollShop({
     };
     // 처음 그릴 때 한 번만 묻는다.
   }, []);
+  // T-11-174 스토어에서 사 받은 장수를 바로 보인다.
+  const bought = useSnapshot(iapItems).items?.reroll;
+  useEffect(() => {
+    if (bought === undefined) return;
+    setHave(bought);
+    setShop((sh) => sh && { ...sh, reroll: bought });
+  }, [bought]);
   function toggle() {
     setOpen((o) => !o);
     if (!open && !shop) void load();
@@ -187,6 +198,7 @@ export function RerollShop({
               <Txt tone="muted" style={small}>
                 {L.shopNote}
               </Txt>
+              <IapPacks item="reroll" note={IL.rerollNote} />
             </View>
           ) : (
             <Txt tone="muted" style={small}>

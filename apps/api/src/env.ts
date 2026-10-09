@@ -43,6 +43,11 @@ export type Bindings = {
   APPLE_SIGNIN_KEY_ID?: string;
   /** Sign in with Apple 키(.p8) PEM 원문. */
   APPLE_SIGNIN_PRIVATE_KEY?: string;
+  /**
+   * T-11-174 secret. Google Play 구매 확인용 서비스 계정 JSON 키 원문(Play Console에서 이 앱의 재무 데이터 보기 · 주문 관리
+   * 권한). 없으면 Android 인앱 상품을 보이지 않는다.
+   */
+  GOOGLE_PLAY_SA_JSON?: string;
   /** T-10-011. secret. 쉼표 구분 관리자 구글 이메일(게시판 글쓰기). 비어 있으면 관리자가 없다. */
   ADMIN_EMAILS?: string;
   /** T-11-146 Workers AI(공지 번역 초안·댓글·채팅 번역 보기). staging·운영에만 있다 — 없으면 번역 경로가 503을 낸다. */

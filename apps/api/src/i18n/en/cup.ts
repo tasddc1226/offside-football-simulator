@@ -23,6 +23,11 @@ export const CUP_EN: Record<CupTextKey, string> = {
   full: 'The cup is full.',
   withdrawClosed: "Entries have closed, so you can't withdraw.",
   noReroll: "You don't have any rerolls.",
+  noBoost: "You don't have any boost tickets.",
+  iapInvalid: "We couldn't verify this purchase.",
+  iapPending: "The payment hasn't finished yet. You'll get it automatically once it does.",
+  iapOtherAccount: 'This purchase was made on a different account. Log in with that account.',
+  iapUnavailable: "We can't verify purchases right now. Reopen the app in a moment to get it.",
   shopClosed: "Reroll tickets aren't on sale right now.",
   shopDaily:
     'You can buy up to {n} reroll ticket(s) a day. You can buy more from 00:00 (KST) tomorrow.',

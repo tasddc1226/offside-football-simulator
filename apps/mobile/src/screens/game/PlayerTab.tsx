@@ -1,6 +1,6 @@
 import { MIN_RETIRE_AGE, marketValue } from '@offside/game/season';
 // 선수 탭(웹 tabs/PlayerTab.svelte): 능력치 카드 · 선수 정보 · 국가대표 · 은퇴 선언(32세부터).
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { potentialNotice } from '@offside/app-core/potential-view';
@@ -30,6 +30,10 @@ import { adFree } from '../../platform/adFree';
 import { claimReward, rewardOffer } from '../../platform/rewarded';
 import { openPeek, openPeekWithClub, peekAvailable, potPeek } from '../../platform/rewardedPeek';
 import { useClubReward } from '../../platform/clubShop';
+import { iapItems, useIapItems } from '../../platform/iapItems';
+import { spendBoost } from '@offside/app-core/api/cup';
+import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
+import { IapPacks } from '../owner/IapPacks';
 import { fundsText } from '@offside/app-core/funds';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -84,7 +88,13 @@ function BoostCard({ s }: { s: GameState }) {
   // T-11-153 광고 대신 구단 자금으로 시도(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 시도한다.
   // T-11-157 자금이 모자란 시즌의 한 번과 추가 시도에 쓴다. 광고는 하루 횟수가 없고, 구단 자금은 서버가 하루 상한을 둔다.
   const club = useClubReward('boost', boostFreeOpen(s) && !owned);
-  const v = boostView(s, rewardOffer('boost', owned), { club: !!club.offer });
+  // T-11-174 잠재력 강화권(스토어에서 산다)도 같은 자리에서 쓴다.
+  const tickets = useIapItems(boostFreeOpen(s)).items?.boost ?? 0;
+  const ticketKey = useRef<string | null>(null);
+  const v = boostView(s, rewardOffer('boost', owned), {
+    club: !!club.offer,
+    ticket: tickets > 0,
+  });
   // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다. 결과를 먼저 저장하고 연출을 연다 — 연출 중에 앱을 꺼도 결과는 그대로다.
   const run = (pay: BoostPay) => {
     const out = doBoost(appState.G!, pay);
@@ -114,6 +124,22 @@ function BoostCard({ s }: { s: GameState }) {
     try {
       const message = await club.pay(() => run('club'));
       if (message !== null) setAdMessage(message);
+    } finally {
+      setAdBusy(false);
+    }
+  };
+  // 서버가 한 장을 뺀 뒤에만 강화한다. 응답을 못 받아 다시 누르면 같은 키로 보내 두 장을 쓰지 않는다.
+  const onTicketBoost = async () => {
+    if (adBusy) return;
+    setAdBusy(true);
+    setAdMessage('');
+    try {
+      ticketKey.current ??= crypto.randomUUID();
+      const r = await spendBoost(ticketKey.current);
+      if (r.ok || !r.error.retryable) ticketKey.current = null;
+      if (!r.ok) return setAdMessage(r.error.message || B.ticketFail);
+      iapItems.items = { reroll: r.data.reroll, boost: r.data.boost };
+      run('ticket');
     } finally {
       setAdBusy(false);
     }
@@ -193,6 +219,14 @@ function BoostCard({ s }: { s: GameState }) {
             <Btn disabled={adBusy} testID="boost-club-btn" onPress={() => void onClubBoost()}>
               {B.clubBoost({ price: fundsText(club.offer.price), chance: v.chance })}
             </Btn>
+          ) : null}
+          {tickets > 0 && v.free ? (
+            <Btn disabled={adBusy} testID="boost-ticket-btn" onPress={() => void onTicketBoost()}>
+              {B.ticketBoost({ n: tickets, chance: v.chance })}
+            </Btn>
+          ) : null}
+          {v.free && !owned ? (
+            <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} />
           ) : null}
         </View>
       ) : null}
