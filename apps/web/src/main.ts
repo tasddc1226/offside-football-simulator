@@ -94,7 +94,15 @@ watchNews();
 // T-10-021: 모바일 브라우저로 홈 화면을 열면 '홈 화면에 추가' 안내를 띄운다('다시 보지 않기' 전까지).
 void import('./ui/install.js').then((m) => m.maybeShowInstallOnboarding()).catch(() => {});
 // T-9-009: 이전 세션에서 못 보낸 업로드를 앱 시작 시 한 번 재시도한다(실패해도 게임은 계속된다).
-void import('./sync/outbox.js').then((m) => m.flushOutbox()).catch(() => {});
+// T-11-182 탭으로 돌아오거나 다시 온라인이 될 때도 보낸다(큐가 비면 요청 없음).
+const flushOutbox = () =>
+  void import('./sync/outbox.js').then((m) => m.flushOutbox()).catch(() => {});
+flushOutbox();
+addEventListener('online', flushOutbox);
+document.addEventListener(
+  'visibilitychange',
+  () => document.visibilityState === 'visible' && flushOutbox(),
+);
 // T-10-104: 게임 화면·액션·게임 시트는 첫 화면 번들 밖(지연 청크)이다. 이어 할 커리어가 있으면 첫 페인트 뒤 브라우저가
 // 한가할 때 미리 받아 둬 '계속하기'를 눌렀을 때 기다리지 않게 한다(기록만 보러 온 방문자는 받지 않는다 — 새 커리어는
 // 선수 생성 화면을 여는 순간 받는다, nav.goNew). index.html modulepreload에는 넣지 않는다 — 첫 화면 예산 밖.

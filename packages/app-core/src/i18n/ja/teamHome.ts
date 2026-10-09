@@ -254,4 +254,5 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   friendlyOnly: '親善試合専用',
   statFriendly: '親善試合',
   statFriendlyOnly: '専用',
+  retireSyncing: '引退した選手の記録を送っています。届いたらすぐロッカールームに入ります。',
 };
