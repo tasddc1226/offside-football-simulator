@@ -19,5 +19,6 @@
       "チームプロフィールにオーナーのニックネームが表示され、通報できるようになりました。"
     ]
   },
-  "availability": "web-app-pending"
+  "availability": "web-app-pending",
+  "appVersion": "1.1.1"
 }
