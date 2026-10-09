@@ -4,7 +4,6 @@ import { createRng, setActiveRng } from '@offside/game/rng';
 import type { CareerRecord } from '@offside/game/types';
 import { boostHidden, boostView, doBoost } from './boost-view.js';
 import { clubOffer } from './club-reward.js';
-import { adBoostsToday, boostDayLeft, spendAdBoost } from './boost-daily.js';
 
 function player(o: { seasons?: number; money?: number; age?: number } = {}) {
   setActiveRng(createRng(3));
@@ -109,47 +108,18 @@ describe('T-11-083 잠재력 강화 카드', () => {
       free: true,
       line: '이번 시즌 시도는 했어요. 구단 자금으로 더 시도할 수 있고, 이 선수는 2번 남았어요.',
     });
-    expect(boostView(s, 'ad', { dayLeft: 3 })).toMatchObject({
+    expect(boostView(s, 'ad')).toMatchObject({
       free: true,
       line: '이번 시즌 시도는 했어요. 광고나 구단 자금으로 더 시도할 수 있고, 이 선수는 2번 남았어요.',
       adButton: '광고 보고 강화하기 (' + boostView(s).chance + '%)',
       adNote:
         '광고를 끝까지 보면 자금 없이 한 번 더 시도해요. 추가 시도는 이 선수에게 2번 남았어요.',
     });
-    const closed = boostView(s, 'ad', { club: true, dayLeft: 0 });
-    expect(closed).toMatchObject({
-      free: false,
-      line: '오늘 더 받을 수 있는 강화를 다 썼어요. 내일 다시 할 수 있어요.',
-    });
-    expect(closed.adButton).toBeUndefined();
     expect(doBoost(s, 'ad')).not.toBeNull();
     expect(boostView(s, 'ad').history[0]).toMatch(/· 광고\(추가\) · (성공|실패)$/);
     expect(boostView(s, 'free').adNote).toBe(
       '광고 제거를 구매해서 자금 없이 한 번 더 시도할 수 있어요. 추가 시도는 이 선수에게 1번 남았어요.',
     );
-  });
-
-  it('T-11-157 하루 횟수는 광고(기기)와 구단 자금(서버)을 합쳐 상한까지 센다', () => {
-    const day1 = new Date('2026-10-08T05:00:00Z');
-    const raw = spendAdBoost(spendAdBoost(null, day1), day1);
-    expect(adBoostsToday(raw, day1)).toBe(2);
-    // 한국 시각 0시(UTC 15시)가 지나면 다시 센다. 깨진 값은 0.
-    expect(adBoostsToday(raw, new Date('2026-10-08T15:00:00Z'))).toBe(0);
-    expect(adBoostsToday('{', day1)).toBe(0);
-    const shop = (bought: number, cap: number) => ({
-      balance: 0,
-      offers: {
-        candidates: { price: null, bought: 0, cap },
-        peek: { price: null, bought: 0, cap },
-        boost: { price: null, bought, cap },
-      },
-    });
-    expect(boostDayLeft(raw, shop(1, 5), day1)).toBe(2);
-    expect(boostDayLeft(raw, shop(4, 5), day1)).toBe(0);
-    // 로그인 안 함: 구단 자금 0번, 상한은 밸런스 기본값(5).
-    expect(boostDayLeft(raw, null, day1)).toBe(3);
-    // 상한 0은 구단 자금을 받지 않는다는 뜻이라 광고는 횟수 없이 받는다.
-    expect(boostDayLeft(raw, shop(0, 0), day1)).toBe(Infinity);
   });
 
   it('29세가 지나고 한 번도 안 한 선수에게는 카드를 숨긴다', () => {

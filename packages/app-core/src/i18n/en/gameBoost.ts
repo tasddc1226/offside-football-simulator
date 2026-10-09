@@ -20,7 +20,6 @@ export const gameBoost: Translation<GameBoostMsgs> = {
     `You've used this season's try. You can try again with an ad or club funds, ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
   lineExtraClub: (p) =>
     `You've used this season's try. You can try again with club funds, ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
-  lineDayDone: "You've used all of today's extra boosts. You can try again tomorrow.",
   lineShort: (p) => `Not enough funds. The next level costs ${p.cost}.`,
   lineReady: (p) => `Next level +${p.next} · ${p.chance}% chance · ${p.cost}`,
   button: (p) => `Pay ${p.cost} to boost (${p.chance}%)`,

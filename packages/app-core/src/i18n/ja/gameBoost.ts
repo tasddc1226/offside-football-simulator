@@ -20,7 +20,6 @@ export const gameBoost: Translation<GameBoostMsgs> = {
     `今シーズンの挑戦は済みました。広告かクラブ資金で追加挑戦でき、この選手はあと${p.left}回です。`,
   lineExtraClub: (p) =>
     `今シーズンの挑戦は済みました。クラブ資金で追加挑戦でき、この選手はあと${p.left}回です。`,
-  lineDayDone: '今日受けられる強化はすべて使いました。明日また挑戦できます。',
   lineShort: (p) => `資金が足りません。次の段階には${p.cost}が必要です。`,
   lineReady: (p) => `次の段階 +${p.next} · 成功確率 ${p.chance}% · ${p.cost}`,
   button: (p) => `${p.cost}を払って強化する（${p.chance}%）`,

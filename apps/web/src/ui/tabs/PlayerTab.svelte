@@ -20,7 +20,6 @@
   import { fmtValue } from '@offside/app-core/format';
   import AttrCard from '../AttrCard.svelte';
   import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
-  import { boostDayLeft } from '@offside/app-core/boost-daily';
   import { boostFreeOpen } from '@offside/game/boost';
   import BoostFx from '../BoostFx.svelte';
   import { retireAsk } from '../actions.js';
@@ -94,7 +93,7 @@
   }
   const clubTry = $derived(freeOpen ? clubOffer(club, 'boost') : null);
   // T-11-157 구단 자금으로는 이번 시즌의 한 번을 쓴 뒤에도 더 시도한다(오늘 횟수는 서버가 센다 — 웹은 광고가 없다).
-  const boost = $derived(boostView(s, null, { club: !!clubTry, dayLeft: boostDayLeft(null, club) }));
+  const boost = $derived(boostView(s, null, { club: !!clubTry }));
   async function onClubBoost() {
     const o = clubTry;
     if (clubBusy || !o) return;

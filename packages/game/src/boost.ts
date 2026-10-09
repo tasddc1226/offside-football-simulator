@@ -8,7 +8,7 @@
 // T-11-157 자금이 모자란 시즌엔 그 시즌의 한 번을 쓴 뒤에도 광고·구단 자금으로 더 시도할 수 있다. 한 커리어에서 모두 합쳐
 // BAL.boostExtraTotal번까지(확률 규칙은 같다). 시즌마다 열면 광고를 보는 선수가 모두 최고 단계에 닿아 커리어 전체로 묶었다.
 // 자금이 충분하면 다음 시즌을 기다린다 — 자금이 모자란 시기를 돕는 길이라서다.
-// 하루 횟수(광고 + 구단 자금)는 화면이 센다 — app-core boost-daily.
+// 광고 강화는 하루 횟수를 세지 않는다(T-11-172). 구단 자금은 다른 보상처럼 서버가 하루 상한(rewardDailyCap)을 둔다.
 import { BAL } from './balance.js';
 import { rnd } from './rng.js';
 import { fmtMoney } from './player.js';
