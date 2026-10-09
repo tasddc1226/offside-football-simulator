@@ -355,7 +355,9 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await page.locator('[data-team-tab="opponents"]').click();
   await expect(page.locator('[data-opponent]')).toContainText('라이벌 FC');
   await page.locator('[data-act="team-challenge"]').click();
-  expect(played).toEqual({ opponentTeamId: 'tem_00000000-0000-4000-8000-000000000002' });
+  await expect
+    .poll(() => played)
+    .toEqual({ opponentTeamId: 'tem_00000000-0000-4000-8000-000000000002' });
   // T-10-097 결과 전에 문자중계가 먼저 흐른다 — 킥오프 줄로 시작하고, 건너뛰면 결과 화면.
   const live = page.locator('[data-team-live]');
   await expect(live.locator('[data-live-line="kickoff"]')).toContainText('킥오프');
@@ -1049,7 +1051,7 @@ test('친구 — 코드로 신청하고 받은 신청을 수락하고 친선전�
   expect(opponentsGets).toBe(1);
 
   await row.locator('[data-act="friend-play"]').click();
-  expect(played).toBe(1);
+  await expect.poll(() => played).toBe(1);
   const live = page.locator('[data-team-live]');
   await live.locator('[data-act="live-skip"]').click();
   const result = page.locator('[data-team-result]');
