@@ -1,0 +1,45 @@
+name: Release notes guard
+
+# 사용자에게 보이는 변경에 게임 내 릴리즈 노트가 빠지지 않게 한다(T-11-169).
+# 본문·라벨만 바꿔도 다시 돌도록 무거운 CI와 따로 둔다. 머지 커밋(github.sha)과 비교해야 PR 변경만 본다.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-notes-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-notes:
+    name: Release notes present
+    # 제목만 고치거나 다른 라벨을 붙인 이벤트는 건너뛴다.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.action != 'edited' || github.event.changes.body) &&
+      (!contains(fromJSON('["labeled","unlabeled"]'), github.event.action) || github.event.label.name == 'no-release-note')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # 머지 커밋과 그 부모(base.sha)만 있으면 된다.
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Check release notes
+        run: node .github/scripts/release-notes-guard.mjs
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+      # 형식 오류가 배포 단계에서야 드러나지 않게 PR에서 미리 검사한다.
+      - name: Validate release notes
+        run: node .github/scripts/publish-release-notes.mjs validate .release-notes
