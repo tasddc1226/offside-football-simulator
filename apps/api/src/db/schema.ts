@@ -1317,3 +1317,28 @@ export const ownerItemPurchases = sqliteTable(
     index('owner_item_purchases_profile_idx').on(table.profileId, table.item, table.createdAt),
   ],
 );
+
+/**
+ * T-11-171 친구 초대. 아직 은퇴 선수가 없는 구단주(invitee)가 친구 코드로 친구 신청을 하면 그 코드 주인(inviter)의 초대로
+ * 한 번만 적는다. invitee가 처음 은퇴시킨 커리어가 done_at · career_id로 남고, 그때 두 사람에게 리롤권을 준다.
+ * inviter_rewarded: 초대한 쪽이 보상을 받았는가(INVITE_REWARD_MAX명까지).
+ */
+export const referrals = sqliteTable(
+  'referrals',
+  {
+    inviteeId: text('invitee_id')
+      .primaryKey()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    inviterId: text('inviter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    claimedAt: text('claimed_at').notNull(),
+    doneAt: text('done_at'),
+    careerId: text('career_id'),
+    inviterRewarded: integer('inviter_rewarded', { mode: 'boolean' }).notNull().default(false),
+  },
+  // 초대한 사람별 집계(진행 · 완료 · 보상 수)와 보상 상한 검사를 인덱스만으로 센다.
+  (table) => [
+    index('referrals_inviter_idx').on(table.inviterId, table.inviterRewarded, table.doneAt),
+  ],
+);

@@ -18,6 +18,18 @@ export const FriendTeamSchema = z.strictObject({
 });
 export type FriendTeam = z.infer<typeof FriendTeamSchema>;
 
+/**
+ * T-11-171 친구 초대 이벤트 현황. pending: 초대했고 아직 커리어를 마치지 않은 친구 수, done: 마친 친구 수, rewarded: 그중
+ * 내가 리롤권을 받은 수(최대 INVITE_REWARD_MAX). invitedBy: 나를 초대한 사람(없으면 null) · done: 내가 커리어를 마쳐 보상을 받았는가.
+ */
+export const InviteStatusSchema = z.strictObject({
+  pending: z.number().int().min(0),
+  done: z.number().int().min(0),
+  rewarded: z.number().int().min(0),
+  invitedBy: z.strictObject({ name: z.string(), done: z.boolean() }).nullable(),
+});
+export type InviteStatus = z.infer<typeof InviteStatusSchema>;
+
 /** 친구·신청 한 사람. name은 닉네임, 없으면 최근 팀 감독 이름, 그것도 없으면 '구단주'. */
 export const FriendPersonSchema = z.strictObject({
   code: FriendCodeSchema,
@@ -48,6 +60,8 @@ export const FriendsResponseSchema = z.strictObject({
   canPlay: z.boolean(),
   /** T-11-113 개막 뒤 내 프리시즌 팀으로 친선전을 할 수 있는가. 개막 전이거나 배포 전 응답엔 없다. */
   canPlayPreseason: z.boolean().optional(),
+  /** T-11-171 친구 초대 이벤트 현황. 배포 전 응답엔 없다. */
+  invite: InviteStatusSchema.optional(),
 });
 export type FriendsResponse = z.infer<typeof FriendsResponseSchema>;
 
@@ -66,6 +80,8 @@ export type FriendRequestBody = z.infer<typeof FriendRequestBodySchema>;
 export const FriendRequestResponseSchema = z.strictObject({
   state: z.enum(['sent', 'accepted']),
   friend: FriendPersonSchema,
+  /** T-11-171 이 신청으로 친구 초대 이벤트에 참여했다(초대가 새로 기록됨). 배포 전 응답엔 없다. */
+  invited: z.boolean().optional(),
 });
 export type FriendRequestResponse = z.infer<typeof FriendRequestResponseSchema>;
 
