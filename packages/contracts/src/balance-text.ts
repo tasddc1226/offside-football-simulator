@@ -1,6 +1,7 @@
 /**
  * T-11-157c 운영 도구(밸런스 화면)에만 쓰는 밸런스 수치의 구분·이름·설명. 게임이 읽는 숫자(`./balance`)와 나눠
- * 첫 화면 번들에 이 문구가 실리지 않게 한다. 키는 BALANCE_SPEC과 같다(타입으로 검사).
+ * 첫 화면 번들에 이 문구가 실리지 않게 한다. 키는 BALANCE_SPEC과 같다(타입으로 검사). 이름은 공개 이력용
+ * app-core `i18n/ko/balanceKeys.ts`와 같아야 한다(fairness.test.ts가 검사).
  */
 import type { BalanceKey } from './balance-spec.js';
 
@@ -15,7 +16,7 @@ export const BALANCE_GROUPS = {
 } as const;
 export type BalanceGroup = keyof typeof BALANCE_GROUPS;
 
-export interface BalanceKnobText {
+interface BalanceKnobText {
   group: BalanceGroup;
   label: string;
   desc: string;
