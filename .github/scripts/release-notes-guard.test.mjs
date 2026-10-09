@@ -27,34 +27,11 @@ test('opt-out accepts a body line or the label', () => {
 
 test('flags user-facing changes without a new release note', () => {
   const changed = ['apps/web/src/ui/Market.svelte', 'docs/tracking/board.md'];
-  assert.deepEqual(missingReleaseNote({ changed, added: [], body: '', labels: [] }), [
-    'apps/web/src/ui/Market.svelte',
-  ]);
-  assert.deepEqual(
-    missingReleaseNote({
-      changed,
-      added: ['.release-notes/2026-10-09-06-x.json'],
-      body: '',
-      labels: [],
-    }),
-    [],
-  );
+  const run = (o) => missingReleaseNote({ changed, added: [], body: '', labels: [], ...o });
+  assert.deepEqual(run({}), ['apps/web/src/ui/Market.svelte']);
+  assert.deepEqual(run({ added: ['.release-notes/2026-10-09-06-x.json'] }), []);
   // 보관 폴더로 옮긴 파일은 새 항목이 아니다.
-  assert.equal(
-    missingReleaseNote({
-      changed,
-      added: ['.release-notes/archive/2026-10-01-01-x.json'],
-      body: '',
-      labels: [],
-    }).length,
-    1,
-  );
-  assert.deepEqual(
-    missingReleaseNote({ changed: ['tooling/x.mjs'], added: [], body: '', labels: [] }),
-    [],
-  );
-  assert.deepEqual(
-    missingReleaseNote({ changed, added: [], body: 'release-notes: none', labels: [] }),
-    [],
-  );
+  assert.equal(run({ added: ['.release-notes/archive/2026-10-01-01-x.json'] }).length, 1);
+  assert.deepEqual(run({ changed: ['tooling/x.mjs'] }), []);
+  assert.deepEqual(run({ body: 'release-notes: none' }), []);
 });
