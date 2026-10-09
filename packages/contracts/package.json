@@ -9,6 +9,7 @@
     "./board-limits": "./src/board-limits.ts",
     "./chat": "./src/chat-limits.ts",
     "./balance": "./src/balance-spec.ts",
+    "./balance-text": "./src/balance-text.ts",
     "./hof-rules": "./src/hof-rules.ts",
     "./content-filter": "./src/content-filter.ts",
     "./club-limits": "./src/club-limits.ts",
