@@ -25,6 +25,9 @@ export const LEGEND_W = {
  * T-10-091 세부 포지션별 가중 보정. 윙어·수비형 미드필더는 같은 포지션 안에서 골 대신 도움(또는 수비)을 맡아
  * 골에 붙는 수상이 적다 — 시뮬레이션(fulltime-sim DPOS=1, 12,000명)에서 같은 큰 포지션 평균에 맞춘 값이다.
  * 여기 없는 세부 포지션은 큰 포지션 가중을 그대로 쓴다. c는 경기 장악(T-11-021) 가중이다.
+ * T-11-168 경기 장악은 최상위 선수에게 매 시즌 상한까지 차 "출전 × 0.6"이 된다. 운영 은퇴 기록(세부 포지션
+ * 2.7만 명)을 다시 매겨 최고 OVR 구간마다 ST·W·DM 평균에 맞췄다 — 골·도움을 공격수만큼 쌓는 AM은 장악 몫을
+ * 빼고, CM은 0.7 → 0.2로 줄였다(최고 OVR 90 이상 평균 AM 2,236 → 1,961, ST 1,828).
  */
 interface LegendWeight {
   g: number;
@@ -35,12 +38,12 @@ interface LegendWeight {
 export const LEGEND_W_DETAIL: Partial<Record<string, LegendWeight>> = {
   W: { g: 0.42, a: 0.55, cs: 0 },
   DM: { g: 0.8, a: 0.85, cs: 0, c: 0.55 },
-  CM: { ...LEGEND_W.MF, c: 0.7 },
-  AM: { ...LEGEND_W.MF, c: 0.5 },
+  CM: { ...LEGEND_W.MF, c: 0.2 },
+  AM: { ...LEGEND_W.MF },
 };
 
 /**
- * T-11-021 경기 장악: 골·도움이 적은 중앙 미드필더(LEGEND_W_DETAIL의 c)가 쌓는 몫. 시즌마다 출전 × (평균 평점 −
+ * T-11-021 경기 장악: 골·도움이 적은 중앙·수비형 미드필더(LEGEND_W_DETAIL의 c)가 쌓는 몫. 시즌마다 출전 × (평균 평점 −
  * CONTROL_BASE)를 더한다 — 평점이 기준 아래면 0, CONTROL_CAP 위는 세지 않는다(평균을 올리는 항이지 꼬리를 만드는
  * 항이 아니다). 세부 포지션별 가중이라 프리시즌 선수(세부 포지션 없음)는 0이다.
  */

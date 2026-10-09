@@ -1,0 +1,26 @@
+{
+  "id": "t-11-168-midfield-legend",
+  "title": "미드필더 레전드 점수 조정",
+  "items": [
+    "공격형 미드필더는 이제 경기 장악 점수를 받지 않아요. 골과 도움으로 공격수만큼 점수를 쌓아서 상위권을 독차지했어요.",
+    "중앙 미드필더의 경기 장악 점수를 줄였어요. 수비형 미드필더는 그대로예요.",
+    "이미 은퇴한 선수의 레전드 점수도 새 기준으로 다시 매겨 명예의 전당 순위에 반영해요."
+  ],
+  "en": {
+    "title": "Midfielder legend score rebalance",
+    "items": [
+      "Attacking midfielders no longer earn game control points. Their goals and assists already add up like a forward's, so they were taking over the top of the rankings.",
+      "Central midfielders now earn fewer game control points. Defensive midfielders stay the same.",
+      "Legend scores of players who already retired are recalculated too, and the Hall of Fame rankings reflect the new scores."
+    ]
+  },
+  "ja": {
+    "title": "MFのレジェンドスコア調整",
+    "items": [
+      "攻撃的MFは試合支配ポイントを受け取らなくなります。ゴールとアシストでFW並みにスコアを積み、上位を独占していました。",
+      "セントラルMFの試合支配ポイントを減らしました。守備的MFは変わりません。",
+      "すでに引退した選手のレジェンドスコアも新しい基準で計算し直し、殿堂の順位に反映します。"
+    ]
+  },
+  "availability": "web-app"
+}
