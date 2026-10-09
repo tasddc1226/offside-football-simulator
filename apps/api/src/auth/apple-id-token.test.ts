@@ -143,11 +143,12 @@ describe('revokeAppleAuthorization', () => {
     expect(calls[1]!.body.get('token_type_hint')).toBe('refresh_token');
     const secret = calls[0]!.body.get('client_secret')!;
     const [h, p, s] = secret.split('.') as [string, string, string];
-    expect(JSON.parse(atob(h.replace(/-/g, '+').replace(/_/g, '/')))).toEqual({
+    const dec = (x: string) => JSON.parse(new TextDecoder().decode(base64UrlToBytes(x)));
+    expect(dec(h)).toEqual({
       alg: 'ES256',
       kid: 'KEY1',
     });
-    const claims = JSON.parse(atob(p.replace(/-/g, '+').replace(/_/g, '/')));
+    const claims = dec(p);
     expect(claims).toMatchObject({ iss: 'TEAM1', sub: AUD, aud: APPLE_ISSUER });
     const valid = await crypto.subtle.verify(
       { name: 'ECDSA', hash: 'SHA-256' },

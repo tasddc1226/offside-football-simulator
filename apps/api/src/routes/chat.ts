@@ -132,7 +132,7 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
   // T-11-167 차단 목록은 사람마다 달라 엣지 캐시하지 않는다. 화면에서 목록을 열 때만 부른다.
   app.get('/v1/chat/blocks', requireProfile, async (c) => {
     const { profileId } = getSessionOrThrow(c);
-    const rows = await listBlocks(getDb(c), profileId);
+    const rows = await listBlocks(getDb(c), profileId).limit(200);
     const blocks = await Promise.all(
       rows.map(async ({ blockedProfileId, ...b }) => ({
         ...b,

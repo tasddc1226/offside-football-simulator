@@ -1,5 +1,5 @@
 import { ProfileSettingsSchema, type ProfileSettings } from '@offside/contracts';
-import { and, eq, isNotNull, isNull, or } from 'drizzle-orm';
+import { eq, isNotNull, or } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { newId } from '../ids.js';
 import { profiles } from '../schema.js';
@@ -78,16 +78,6 @@ export async function createProfile(
     })
     .returning();
   return toRecord(row!);
-}
-
-/** T-11-167 공개 닉네임만(팀 프로필의 구단주 이름). 없거나 지운 프로필이면 null. */
-export async function nicknameOf(db: Db, id: string): Promise<string | null> {
-  const [row] = await db
-    .select({ nickname: profiles.nickname })
-    .from(profiles)
-    .where(and(eq(profiles.id, id), isNull(profiles.deletedAt)))
-    .limit(1);
-  return row?.nickname ?? null;
 }
 
 export async function getProfile(db: Db, id: string): Promise<ProfileRecord | undefined> {
