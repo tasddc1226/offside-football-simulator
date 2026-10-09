@@ -59,4 +59,14 @@ export const friend: Translation<FriendMsgs> = {
     'アプリ通知をオンにすると、フレンド申請や親善試合の結果が届いたらすぐにお知らせします。',
   pushNudgeOn: '通知をオンにする',
   pushNudgeLater: 'あとで',
+  eventTitle: 'フレンド招待イベント',
+  eventBody: (p) =>
+    `フレンドが招待リンクやコードでフレンド申請し、最初の選手キャリアを最後まで終えると、二人とも候補リロール券を${p.n}枚もらえます。`,
+  eventStatus: (p) => `進行中 ${p.pending}人 · 完了 ${p.done}人 · 報酬 ${p.got}/${p.max}回`,
+  eventMaxed: (p) =>
+    `招待報酬は${p.max}回までもらえます。その後に招待したフレンドも自分の報酬はもらえます。`,
+  invitedBy: (p) => `${p.name}さんの招待で参加中です。`,
+  invitedDone: (p) => `${p.name}さんの招待報酬を受け取りました。`,
+  joinedEvent: (p) =>
+    `フレンド招待イベントに参加しました。選手キャリアを最後まで終えるとリロール券を${p.n}枚もらえます。`,
 };

@@ -23,7 +23,9 @@ import {
   friendCodeLabel,
   friendInviteText,
   friendRequestText,
+  friendRequestToast,
   h2hText,
+  inviteEventLines,
   preseasonTeamLine,
 } from '@offside/app-core/friendText';
 import { friendText as L } from '@offside/app-core/i18n/ko/friend';
@@ -41,6 +43,7 @@ import { pushRegistration, pushState } from '../../platform/push';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { toast } from '../../game/host';
+import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Pill, Txt } from '../../ui';
@@ -185,7 +188,7 @@ export function useFriends() {
     request: (body: Parameters<typeof requestFriend>[0]) =>
       write(
         () => requestFriend(body),
-        (res) => toast(friendRequestText(res)),
+        (res) => toast(friendRequestToast(res)),
       ),
     accept: (f: FriendPerson) =>
       write(
@@ -230,6 +233,35 @@ function PushNudge() {
           {L.pushNudgeLater}
         </Btn>
       </View>
+    </Card>
+  );
+}
+
+/** T-11-171 친구 초대 이벤트 안내 · 현황(웹 .fr-event). */
+function InviteEvent({ invite }: { invite: NonNullable<FriendsResponse['invite']> }) {
+  const c = useColors();
+  const ev = inviteEventLines(invite);
+  return (
+    <Card gap={6} testID="invite-event" style={{ backgroundColor: alpha(c.accent, 0.1) }}>
+      <Txt v="h2" accessibilityRole="header">
+        {ev.title}
+      </Txt>
+      <Txt v="sm">{ev.body}</Txt>
+      {ev.mine ? (
+        <Txt v="sm" testID="invite-mine">
+          {ev.mine}
+        </Txt>
+      ) : null}
+      {ev.status ? (
+        <Txt v="sm" tone="muted" testID="invite-status">
+          {ev.status}
+        </Txt>
+      ) : null}
+      {ev.maxed ? (
+        <Txt v="sm" tone="muted">
+          {ev.maxed}
+        </Txt>
+      ) : null}
     </Card>
   );
 }
@@ -397,6 +429,7 @@ export function TeamFriends({
               </Btn>
             </View>
           </Card>
+          {data.invite ? <InviteEvent invite={data.invite} /> : null}
 
           <Card gap={10}>
             <Txt v="h2" accessibilityRole="header">
