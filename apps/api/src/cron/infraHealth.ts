@@ -4,6 +4,7 @@ import { DAILY_META_KEY } from './daily.js';
 import { EVENT_ARCHIVE_META_KEY } from './seasonEventsArchive.js';
 
 export const INFRA_HEALTH_META_KEY = 'cron:infra-health:last';
+const HOUR_MS = 60 * 60_000;
 export const D1_LIMIT_BYTES = 10_000_000_000;
 type Sample = { at: number; sizeBytes: number };
 export type InfraHealth = {
@@ -75,7 +76,7 @@ export function assessInfraHealth(
 
 /** Once an hour on the existing scheduled tick. No user requests or per-request writes. */
 export async function runInfraHealth(env: Bindings, now: number): Promise<InfraHealth | null> {
-  if (env.ENVIRONMENT !== 'production' || now % (60 * 60_000) !== 0) return null;
+  if (env.ENVIRONMENT !== 'production' || !Number.isFinite(now) || now < 0) return null;
   const { results: stored, meta } = await env.DB.prepare(
     'SELECT key,value FROM app_meta WHERE key IN (?1,?2,?3)',
   )
@@ -85,11 +86,15 @@ export async function runInfraHealth(env: Bindings, now: number): Promise<InfraH
     const value = stored.find((r) => r.key === key)?.value;
     return typeof value === 'string' ? (JSON.parse(value) as T) : null;
   };
+  const previousValue = stored.find((r) => r.key === INFRA_HEALTH_META_KEY)?.value ?? null;
+  const previous = read<InfraHealth>(INFRA_HEALTH_META_KEY);
+  // Cron timestamps include seconds. Use the last completed UTC hour, not exact alignment.
+  // Older/delayed invocations must not replace a newer report.
+  if (previous && Math.floor(previous.at / HOUR_MS) >= Math.floor(now / HOUR_MS)) return null;
   // page_count/freelist_count are not allowed by production D1. Read its supported
   // response metadata instead; this includes reusable pages, not just live payloads.
   if (!Number.isFinite(meta.size_after) || meta.size_after <= 0)
     throw new Error('D1 storage metadata unavailable');
-  const previous = read<InfraHealth>(INFRA_HEALTH_META_KEY);
   const daily = read<{ ts?: string; level?: string; backup?: { key?: string } }>(DAILY_META_KEY);
   const result = assessInfraHealth(
     now,
@@ -111,11 +116,14 @@ export async function runInfraHealth(env: Bindings, now: number): Promise<InfraH
       if (!object || object.size <= 0) result.issues.push('backup-object-missing-or-unavailable');
     }
   }
-  await env.DB.prepare(
-    'INSERT INTO app_meta(key,value) VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+  // Compare-and-set the complete report, including samples. Concurrent triggers can
+  // inspect R2, but only one commits; failed writes leave the hour retryable.
+  const saved = await env.DB.prepare(
+    'INSERT INTO app_meta(key,value) VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE app_meta.value = ?3',
   )
-    .bind(INFRA_HEALTH_META_KEY, JSON.stringify(result))
+    .bind(INFRA_HEALTH_META_KEY, JSON.stringify(result), previousValue)
     .run();
+  if (!saved.meta.changes) return null;
   const log = { ...result, samples: undefined };
   console.log(
     JSON.stringify({ level: result.issues.length ? 'error' : 'info', job: 'infra-health', ...log }),
