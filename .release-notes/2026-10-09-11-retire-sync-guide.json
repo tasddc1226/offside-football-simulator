@@ -1,0 +1,26 @@
+{
+  "id": "t-11-182-retire-sync-guide",
+  "title": "은퇴 선수 늦게 들어오던 문제 · 가이드 보강",
+  "items": [
+    "은퇴한 선수가 구단주 화면에 늦게 들어오던 문제를 고쳤어요. 기록이 올라가면 앱을 다시 켜지 않아도 바로 들어와요.",
+    "기록을 아직 올리는 중이면 구단주 화면에 알려 줘요.",
+    "자주 묻는 질문에 선수 키우는 법, 카드 색, 광고 제거, 영구결번 기준을 더했어요."
+  ],
+  "en": {
+    "title": "Retired players arriving late, and a fuller guide",
+    "items": [
+      "Fixed retired players showing up late on the owner screen. Once the record is uploaded, they join right away without restarting the app.",
+      "The owner screen now tells you while a record is still uploading.",
+      "The FAQ now covers how to develop players, card colors, ad removal, and retired number rules."
+    ]
+  },
+  "ja": {
+    "title": "引退選手の反映遅れ・ガイドの追加",
+    "items": [
+      "引退した選手がオーナー画面に遅れて入る問題を直しました。記録が届けば、アプリを開き直さなくてもすぐ入ります。",
+      "記録を送っている途中はオーナー画面でお知らせします。",
+      "よくある質問に、選手の育て方・カードの色・広告削除・永久欠番の基準を追加しました。"
+    ]
+  },
+  "availability": "web-app"
+}

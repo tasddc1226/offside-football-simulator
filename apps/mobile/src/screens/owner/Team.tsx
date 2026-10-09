@@ -53,6 +53,7 @@ import {
   teamEditableIn,
 } from '@offside/app-core/teamOwner';
 import { marketName, needsOwnerLogin } from '@offside/app-core/market';
+import { onRetirementSynced, pendingRetirementIds } from '@offside/app-core/outbox';
 import { localCareerNames } from '@offside/game/hof-store';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines } from '../../components/TeamPitch';
@@ -335,6 +336,16 @@ export default function Team() {
     void load();
     // 처음 한 번만.
   }, []);
+  // T-11-182 은퇴 기록이 아직 서버에 없으면 알리고, 올라가면 팀·라커룸을 조용히 다시 받는다(편집 중인 팀은 그대로).
+  const [retireSyncing, setRetireSyncing] = useState(() => pendingRetirementIds().size > 0);
+  useEffect(
+    () =>
+      onRetirementSynced(() => {
+        setRetireSyncing(pendingRetirementIds().size > 0);
+        if (editable) void load(season, true);
+      }),
+    [season, editable],
+  );
 
   // ───────── 편성 ─────────
   async function save(): Promise<boolean> {
@@ -727,6 +738,11 @@ export default function Team() {
               {editable ? (
                 <Txt v="xs" tone="muted">
                   {L.dragHintApp}
+                </Txt>
+              ) : null}
+              {editable && retireSyncing ? (
+                <Txt v="xs" tone="muted" testID="team-retire-syncing">
+                  {L.retireSyncing}
                 </Txt>
               ) : null}
             </Card>

@@ -41,8 +41,9 @@ import { resolveBalance } from '@offside/contracts';
 import { getActiveBalance } from '../db/repos/balance.js';
 import { completeInvite } from '../db/repos/referrals.js';
 
-/** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다. */
-export const UPLOAD_LIMIT = { CAREER_SEASON: 120, CAREER_RETIRE: 30 } as const;
+/** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다.
+ * T-11-182 시즌 한도 120은 빠르게 여러 커리어를 도는 이용자가 넘겨(한 커리어 최대 약 28시즌) 은퇴 기록이 한 시간까지 밀렸다. */
+export const UPLOAD_LIMIT = { CAREER_SEASON: 300, CAREER_RETIRE: 30 } as const;
 
 /** 검증을 통과한 업로드만 센다 — 잘못된 요청이 쿼터를 쓰지 않게, D1 쓰기 직전에 부른다. */
 async function limitUpload(

@@ -386,3 +386,80 @@ describe('T-10-045 재시도·버림·한도', () => {
     expect(years.at(-1)).toBe(2026);
   });
 });
+
+describe('T-11-182 남은 기록 다시 보내기 · 은퇴 알림', () => {
+  const CID = '77777777-7777-7777-7777-777777777777';
+  const seed = (items: unknown[]) => localStorage.setItem('ft_outbox', JSON.stringify(items));
+  const retirement = { kind: 'retirement', careerId: CID, body: summary };
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('5xx로 남은 은퇴 기록을 앱을 다시 켜지 않아도 30초 뒤 다시 보내고, 올라가면 알린다', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(ok())
+      .mockResolvedValueOnce(new Response('{}', { status: 503 }))
+      .mockResolvedValue(ok());
+    vi.stubGlobal('fetch', fetchMock);
+    seed([retirement]);
+    const { flushOutbox, onRetirementSynced, pendingRetirementIds } = await import('./outbox.js');
+    const seen: boolean[] = [];
+    const off = onRetirementSynced(() => void seen.push(pendingRetirementIds().has(CID)));
+    await flushOutbox();
+    expect(queue()).toHaveLength(1);
+    expect(seen).toEqual([]);
+
+    await vi.advanceTimersByTimeAsync(29_000);
+    expect(puts(fetchMock)).toEqual([`${CID}/retirement`]);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(puts(fetchMock)).toEqual([`${CID}/retirement`, `${CID}/retirement`]);
+    expect(queue()).toEqual([]);
+    // 알릴 때는 이미 큐에서 빠져 있다.
+    expect(seen).toEqual([false]);
+
+    // 큐가 비면 더 보내지 않는다.
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(puts(fetchMock)).toHaveLength(2);
+    off();
+  });
+
+  it('계속 실패하면 간격을 늘려 다시 보낸다(30초 → 1분 → 2분)', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(ok())
+      .mockResolvedValue(new Response('{}', { status: 503 }));
+    vi.stubGlobal('fetch', fetchMock);
+    seed([retirement]);
+    const { flushOutbox } = await import('./outbox.js');
+    await flushOutbox();
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(puts(fetchMock)).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(59_000);
+    expect(puts(fetchMock)).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(puts(fetchMock)).toHaveLength(3);
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(puts(fetchMock)).toHaveLength(4);
+    expect(queue()).toHaveLength(1);
+  });
+
+  it('한도(429)에 걸리면 짧은 간격을 건너뛰고 5분 뒤에 다시 보낸다', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(ok())
+      .mockResolvedValue(new Response('{}', { status: 429 }));
+    vi.stubGlobal('fetch', fetchMock);
+    seed([retirement]);
+    const { flushOutbox } = await import('./outbox.js');
+    await flushOutbox();
+    await vi.advanceTimersByTimeAsync(299_000);
+    expect(puts(fetchMock)).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(puts(fetchMock)).toHaveLength(2);
+  });
+});
