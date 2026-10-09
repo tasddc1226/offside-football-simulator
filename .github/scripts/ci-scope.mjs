@@ -14,7 +14,7 @@ const DOCUMENT_IMAGE_EXTENSIONS = new Set([
   '.pdf',
 ]);
 
-function isAllowedDocument(path) {
+export function isAllowedDocument(path) {
   if (path.startsWith('docs/')) {
     const dot = path.lastIndexOf('.');
     return (
