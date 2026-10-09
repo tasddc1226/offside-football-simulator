@@ -16,9 +16,8 @@ const IOS_PODS = {
   AppLovinMediationGoogleAdapter: '13.11.0.0',
   AppLovinMediationFacebookAdapter: '6.22.0.4',
 };
-// google-adapter 25.5.x는 Kotlin 2.3으로 빌드된 play-services-ads 25.5.0을 끌어와 Kotlin 2.1 빌드가 깨진다(1.1.1 빌드 13).
 const ANDROID_DEPS = {
-  'com.applovin.mediation:google-adapter': '25.4.0.0',
+  'com.applovin.mediation:google-adapter': '25.5.0.0',
   'com.applovin.mediation:facebook-adapter': '6.22.0.1',
 };
 const MARK = 'T-11-159 AppLovin MAX adapters';
@@ -56,7 +55,9 @@ module.exports = function withAppLovinMax(config, { iosAppId, androidAppId }) {
   });
   config = withAppBuildGradle(config, (mod) => {
     const deps = Object.entries(ANDROID_DEPS).map(
-      ([name, v]) => `    implementation("${name}:${v}")`,
+      // 어댑터는 MAX SDK가 실행 중에 찾아 쓴다. implementation이면 Kotlin 2.3으로 빌드된 play-services-ads가
+      // 앱 모듈의 Kotlin 2.1 컴파일 경로에 들어가 compileReleaseKotlin이 깨진다(1.1.1 빌드 13).
+      ([name, v]) => `    runtimeOnly("${name}:${v}")`,
     );
     mod.modResults.contents = insertAfter(
       mod.modResults.contents,
