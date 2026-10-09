@@ -21,7 +21,6 @@ const ko = {
     `이번 시즌 시도는 했어요. 광고나 구단 자금으로 더 시도할 수 있고, 이 선수는 ${p.left}번 남았어요.`,
   lineExtraClub: (p: { left: number }) =>
     `이번 시즌 시도는 했어요. 구단 자금으로 더 시도할 수 있고, 이 선수는 ${p.left}번 남았어요.`,
-  lineDayDone: '오늘 더 받을 수 있는 강화를 다 썼어요. 내일 다시 할 수 있어요.',
   lineShort: (p: { cost: string }) => `자금이 모자라요. 다음 단계에 ${p.cost}이 필요해요.`,
   lineReady: (p: { next: number; chance: number; cost: string }) =>
     `다음 단계 +${p.next} · 성공 확률 ${p.chance}% · ${p.cost}`,
