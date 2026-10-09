@@ -7,7 +7,8 @@ import type {
 import type { Db } from '../client.js';
 
 // T-11-153 구단 자금 대조(운영 도구). 잔액(owner_funds)이 기록 세 곳에서 다시 계산한 값과 같은지 본다.
-//   방출(cards.released_value, 키운 사람 = careers.profile_id) + 판매(market_listings 가격 − 수수료)
+//   방출(cards.released_value, 키운 사람 = careers.profile_id) + 은퇴 장려금(cards.bonus_value, T-11-163)
+//   + 판매(market_listings 가격 − 수수료)
 //   − 영입(market_listings 가격) − 구단 자금으로 산 것(owner_item_purchases)
 // 운영자가 열 때만 읽는다. 전체 대조는 세 기록을 한 번씩 훑는다(2026-10 운영 기준 약 15만 행 · 1초).
 
@@ -20,20 +21,22 @@ const sums = (one: boolean) => {
   return `
   r AS (SELECT ca.profile_id pid, sum(c.released_value) v FROM cards c JOIN careers ca ON ca.id = c.career_id
          WHERE c.released_at IS NOT NULL${w('ca.profile_id')} GROUP BY 1),
+  k AS (SELECT ca.profile_id pid, sum(c.bonus_value) v FROM cards c JOIN careers ca ON ca.id = c.career_id
+         WHERE c.bonus_value IS NOT NULL${w('ca.profile_id')} GROUP BY 1),
   s AS (SELECT seller_id pid, sum(price - fee) v, sum(fee) fee FROM market_listings
          WHERE status = 'sold'${w('seller_id')} GROUP BY 1),
   b AS (SELECT buyer_id pid, sum(price) v FROM market_listings
          WHERE status = 'sold' AND buyer_id IS NOT NULL${w('buyer_id')} GROUP BY 1),
   i AS (SELECT profile_id pid, sum(price) v FROM owner_item_purchases WHERE 1 = 1${w('profile_id')} GROUP BY 1),
   x AS (SELECT f.profile_id profileId, p.nickname, f.balance,
-               coalesce(r.v, 0) released, coalesce(s.v, 0) sold, coalesce(s.fee, 0) fees,
+               coalesce(r.v, 0) released, coalesce(k.v, 0) bonus, coalesce(s.v, 0) sold, coalesce(s.fee, 0) fees,
                coalesce(b.v, 0) bought, coalesce(i.v, 0) items
           FROM owner_funds f
           LEFT JOIN profiles p ON p.id = f.profile_id
-          LEFT JOIN r ON r.pid = f.profile_id LEFT JOIN s ON s.pid = f.profile_id
+          LEFT JOIN r ON r.pid = f.profile_id LEFT JOIN k ON k.pid = f.profile_id LEFT JOIN s ON s.pid = f.profile_id
           LEFT JOIN b ON b.pid = f.profile_id LEFT JOIN i ON i.pid = f.profile_id
          WHERE 1 = 1${w('f.profile_id')}),
-  d AS (SELECT *, balance - (released + sold - bought - items) diff FROM x)`;
+  d AS (SELECT *, balance - (released + bonus + sold - bought - items) diff FROM x)`;
 };
 
 type SumsRow = AdminFundsOwnerSums & { fees: number };
@@ -46,7 +49,7 @@ export async function fundsReport(db: Db, now: Date): Promise<AdminFundsReport> 
     d1.prepare(
       `WITH ${sums(false)}
        SELECT count(*) owners, coalesce(sum(balance), 0) balance, coalesce(sum(released), 0) released,
-              coalesce(sum(sold), 0) sold, coalesce(sum(bought), 0) bought, coalesce(sum(fees), 0) fees,
+              coalesce(sum(bonus), 0) bonus, coalesce(sum(sold), 0) sold, coalesce(sum(bought), 0) bought, coalesce(sum(fees), 0) fees,
               coalesce(sum(diff <> 0), 0) mismatched FROM d`,
     ),
     d1
@@ -86,6 +89,10 @@ export async function fundsOwner(db: Db, q: string): Promise<AdminFundsOwner | n
         `SELECT 'released' kind, NULL item, c.released_value amount, c.released_at at
            FROM cards c JOIN careers ca ON ca.id = c.career_id
           WHERE ca.profile_id = ?1 AND c.released_at IS NOT NULL
+         UNION ALL
+         SELECT 'bonus', NULL, c.bonus_value, c.created_at
+           FROM cards c JOIN careers ca ON ca.id = c.career_id
+          WHERE ca.profile_id = ?1 AND c.bonus_value IS NOT NULL
          UNION ALL
          SELECT 'sold', NULL, price - fee, closed_at FROM market_listings WHERE seller_id = ?1 AND status = 'sold'
          UNION ALL

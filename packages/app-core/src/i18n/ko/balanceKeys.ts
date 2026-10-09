@@ -23,6 +23,7 @@ const ko = {
   olyRelease: '올림픽 해외 구단 차출 허락',
   sangmuBase: '상무 기본 합격률',
   marketReleaseRate: '방출 지급률',
+  marketRetireBonusRate: '은퇴 장려금 비율',
   marketFeeRate: '거래 수수료율',
   marketPriceMin: '최저 판매가(기준가 배수)',
   marketPriceMax: '최고 판매가(기준가 배수)',

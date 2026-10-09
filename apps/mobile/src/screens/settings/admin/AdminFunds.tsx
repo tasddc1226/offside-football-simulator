@@ -59,6 +59,7 @@ export default function AdminFunds() {
     ? [
         ['잔액 합', r.balance],
         ['방출로 들어옴', r.released],
+        ['은퇴 장려금', r.bonus],
         ['판매(수수료 뺀)', r.sold],
         ['영입', r.bought],
         ['수수료로 없어짐', r.fees],
@@ -157,7 +158,7 @@ export default function AdminFunds() {
             {owner.profileId}
           </Txt>
           <Txt style={small}>
-            {`잔액 ${fundsText(owner.balance)} = 방출 ${fundsText(owner.released)} + 판매 ${fundsText(owner.sold)} − 영입 ${fundsText(owner.bought)} − 사용 ${fundsText(owner.items)}`}
+            {`잔액 ${fundsText(owner.balance)} = 방출 ${fundsText(owner.released)} + 장려금 ${fundsText(owner.bonus)} + 판매 ${fundsText(owner.sold)} − 영입 ${fundsText(owner.bought)} − 사용 ${fundsText(owner.items)}`}
           </Txt>
           <Txt bold tone={owner.diff === 0 ? 'good' : 'bad'} style={small}>
             {owner.diff === 0 ? '일치' : `차이 ${signedFunds(owner.diff)}`}

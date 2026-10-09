@@ -203,7 +203,7 @@ export const CareerHiddenInputSchema = z.object({
 export type CareerHiddenInput = z.infer<typeof CareerHiddenInputSchema>;
 
 // ───────── T-11-153 구단 자금 대조 ─────────
-// 잔액(owner_funds) = 방출 + 판매(가격 − 수수료) − 영입 − 구단 자금으로 산 것(owner_item_purchases). 금액은 만 원 단위.
+// 잔액(owner_funds) = 방출 + 은퇴 장려금(T-11-163) + 판매(가격 − 수수료) − 영입 − 구단 자금으로 산 것(owner_item_purchases). 금액은 만 원 단위.
 
 /** 구단주 한 명의 자금 출처별 합과 대조 결과. diff = 잔액 − 기대값(0이 아니면 기록 밖에서 바뀐 돈). */
 export const AdminFundsOwnerSumsSchema = z.object({
@@ -211,6 +211,7 @@ export const AdminFundsOwnerSumsSchema = z.object({
   nickname: z.string().nullable(),
   balance: z.number().int(),
   released: z.number().int(),
+  bonus: z.number().int(),
   sold: z.number().int(),
   bought: z.number().int(),
   items: z.number().int(),
@@ -224,6 +225,8 @@ export const AdminFundsReportSchema = z.object({
   owners: z.number().int(),
   balance: z.number().int(),
   released: z.number().int(),
+  /** T-11-163 은퇴 장려금으로 들어온 돈. */
+  bonus: z.number().int(),
   sold: z.number().int(),
   bought: z.number().int(),
   /** 거래 수수료로 없어진 돈. */
@@ -237,7 +240,7 @@ export type AdminFundsReport = z.infer<typeof AdminFundsReportSchema>;
 
 /** 자금이 움직인 한 번. amount는 들어오면 +, 나가면 −. item은 kind가 item일 때(reroll · reward:<kind>). */
 export const AdminFundsMoveSchema = z.object({
-  kind: z.enum(['released', 'sold', 'bought', 'item']),
+  kind: z.enum(['released', 'bonus', 'sold', 'bought', 'item']),
   item: z.string().nullable(),
   amount: z.number().int(),
   at: z.string(),

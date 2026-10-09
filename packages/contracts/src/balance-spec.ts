@@ -237,6 +237,17 @@ export const BALANCE_SPEC = {
     step: 0.05,
     unit: 'pct',
   },
+  // T-11-163 키운 선수를 방출하지 않고도 구단 자금을 조금 받는다. 방출(기준가 100%)보다 훨씬 적게 둔다.
+  marketRetireBonusRate: {
+    group: 'market',
+    label: '은퇴 장려금 비율',
+    desc: '선수가 은퇴해 카드가 생길 때 카드 기준가에 이 값을 곱한 만큼 키운 사람에게 구단 자금을 준다. 0이면 주지 않는다',
+    def: 0.1,
+    min: 0,
+    max: 0.5,
+    step: 0.01,
+    unit: 'pct',
+  },
   marketFeeRate: {
     group: 'market',
     label: '거래 수수료율',

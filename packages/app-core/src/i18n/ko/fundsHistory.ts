@@ -8,6 +8,7 @@ const ko = {
   income: '들어온 자금',
   spending: '나간 자금',
   released: '방출',
+  bonus: '은퇴 장려금',
   sold: '판매',
   fees: (p: { fee: string }) => `수수료 ${p.fee} 뺌`,
   bought: '영입',

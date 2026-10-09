@@ -158,7 +158,7 @@ export type FundsSpend = z.infer<typeof FundsSpendSchema>;
 /** 자금 내역 한 줄(GET /v1/market/funds/history). amount는 잔액 변화(받으면 +, 쓰면 −). */
 export const FundsHistoryEntrySchema = z.strictObject({
   id: z.string(),
-  kind: z.enum(['released', 'sold', 'bought', 'spent']),
+  kind: z.enum(['released', 'bonus', 'sold', 'bought', 'spent']),
   /** spent일 때 산 것. */
   item: z.enum(FUNDS_ITEMS as unknown as [FundsItem, ...FundsItem[]]).nullable(),
   amount: z.number().int(),
@@ -179,6 +179,8 @@ export const FundsHistoryResponseSchema = z.strictObject({
   totals: z.strictObject({
     /** 방출로 받은 자금. */
     released: man,
+    /** T-11-163 은퇴 장려금으로 받은 자금. */
+    bonus: man,
     /** 판매로 받은 자금(수수료 뺀 값). */
     sold: man,
     /** 영입에 쓴 자금. */

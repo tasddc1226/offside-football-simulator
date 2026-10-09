@@ -88,6 +88,7 @@ export const market: Translation<MarketMsgs> = {
   tradeBought: 'Signed',
   tradeReleased: 'Released',
   tradeSpent: 'Spent',
+  tradeBonus: 'Bonus',
   spendReroll: 'Reroll ticket',
   spendCandidates: 'Candidate potential',
   spendPeek: 'Season rating',
