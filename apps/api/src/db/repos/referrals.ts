@@ -1,9 +1,10 @@
 import { INVITE_REROLLS, INVITE_REWARD_MAX } from '@offside/contracts/owner-team';
-import { eq, or, sql } from 'drizzle-orm';
+import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { profiles, referrals } from '../schema.js';
 import { eventNotificationStatements } from '../../push/events.js';
-import { getProfile, hasAccount } from './profiles.js';
+import { grantRerollStatement } from './itemShop.js';
+import { accountLinkedSql } from './profiles.js';
 
 // T-11-171 친구 초대. 초대는 친구 코드로 친구 신청을 할 때 기록하고(claimReferral), 초대받은 사람이 처음 커리어를
 // 은퇴시킬 때 판정한다(completeReferralStatements). 보상은 owner_items의 리롤권 장수에 더한다.
@@ -24,24 +25,6 @@ export async function claimReferral(db: Db, inviteeId: string, inviterId: string
   return r.meta.changes > 0;
 }
 
-/** 아직 판정 전인 내 초대(없으면 undefined). 은퇴 때마다 PK로 한 번 읽는다. */
-export async function openReferralOf(db: Db, inviteeId: string) {
-  const [row] = await db
-    .select({ inviterId: referrals.inviterId })
-    .from(referrals)
-    .where(sql`${referrals.inviteeId} = ${inviteeId} AND ${referrals.doneAt} IS NULL`);
-  return row;
-}
-
-const grant = (d1: D1Database, profileId: string, guard: string, params: unknown[], now: string) =>
-  d1
-    .prepare(
-      `INSERT INTO owner_items (profile_id, item, qty, updated_at)
-       SELECT ?, 'reroll', ?, ? WHERE ${guard}
-       ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + excluded.qty, updated_at = excluded.updated_at`,
-    )
-    .bind(profileId, INVITE_REROLLS, now, ...params);
-
 /**
  * 초대받은 사람이 커리어를 은퇴까지 마쳤다: 초대를 끝내고 두 사람에게 리롤권을 준다. 초대한 쪽은 지금까지 보상받은 초대가
  * INVITE_REWARD_MAX명 미만일 때만 받는다. 같은 batch 안에서 앞 문장이 바꾼 줄(done_at · career_id)을 조건으로 걸어
@@ -52,10 +35,13 @@ export function completeReferralStatements(
   r: { inviteeId: string; inviterId: string; careerId: string },
   now: string,
 ) {
-  const mine = `EXISTS (SELECT 1 FROM referrals WHERE invitee_id = ? AND career_id = ? AND done_at = ?)`;
-  const mineParams = [r.inviteeId, r.careerId, now];
-  const inviterPaid = `EXISTS (SELECT 1 FROM referrals WHERE invitee_id = ? AND career_id = ? AND done_at = ? AND inviter_rewarded = 1)`;
-  const notice = (profileId: string, guard: string, title: string, body: string) =>
+  const done = (extra = '') => ({
+    sql: `EXISTS (SELECT 1 FROM referrals WHERE invitee_id = ? AND career_id = ? AND done_at = ?${extra})`,
+    params: [r.inviteeId, r.careerId, now],
+  });
+  const mine = done();
+  const inviterPaid = done(' AND inviter_rewarded = 1');
+  const notice = (profileId: string, guard: typeof mine, title: string, body: string) =>
     eventNotificationStatements(
       d1,
       {
@@ -64,7 +50,7 @@ export function completeReferralStatements(
         now,
         content: { kind: 'social', title, body, target: { type: 'screen', screen: 'team' } },
       },
-      { sql: guard, params: mineParams },
+      guard,
     );
   return [
     d1
@@ -78,9 +64,9 @@ export function completeReferralStatements(
          WHERE invitee_id = ? AND career_id = ? AND done_at = ?
            AND (SELECT count(*) FROM referrals WHERE inviter_id = ? AND inviter_rewarded = 1) < ?`,
       )
-      .bind(...mineParams, r.inviterId, INVITE_REWARD_MAX),
-    grant(d1, r.inviteeId, mine, mineParams, now),
-    grant(d1, r.inviterId, inviterPaid, mineParams, now),
+      .bind(...mine.params, r.inviterId, INVITE_REWARD_MAX),
+    grantRerollStatement(d1, r.inviteeId, INVITE_REROLLS, now, mine),
+    grantRerollStatement(d1, r.inviterId, INVITE_REROLLS, now, inviterPaid),
     ...notice(
       r.inviteeId,
       mine,
@@ -100,10 +86,19 @@ export function completeReferralStatements(
  * 은퇴 때 부른다: 아직 판정 전인 초대가 있고 지금 로그인한 구단주면 초대를 끝내고 보상을 준다. 초대가 없으면 PK 조회 한 번.
  */
 export async function completeInvite(db: Db, inviteeId: string, careerId: string, now: string) {
-  const open = await openReferralOf(db, inviteeId);
+  const [open] = await db
+    .select({ inviterId: referrals.inviterId })
+    .from(referrals)
+    .innerJoin(profiles, eq(profiles.id, referrals.inviteeId))
+    .where(
+      and(
+        eq(referrals.inviteeId, inviteeId),
+        isNull(referrals.doneAt),
+        isNull(profiles.deletedAt),
+        accountLinkedSql(),
+      ),
+    );
   if (!open) return;
-  const profile = await getProfile(db, inviteeId);
-  if (!profile || !hasAccount(profile) || profile.deletedAt) return;
   await db.$client.batch(
     completeReferralStatements(db.$client, { inviteeId, inviterId: open.inviterId, careerId }, now),
   );

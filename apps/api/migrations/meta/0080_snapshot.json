@@ -4825,6 +4825,7 @@
           "name": "referrals_inviter_idx",
           "columns": [
             "inviter_id",
+            "inviter_rewarded",
             "done_at"
           ],
           "isUnique": false

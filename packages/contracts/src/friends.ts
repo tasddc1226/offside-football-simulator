@@ -20,14 +20,12 @@ export type FriendTeam = z.infer<typeof FriendTeamSchema>;
 
 /**
  * T-11-171 친구 초대 이벤트 현황. pending: 초대했고 아직 커리어를 마치지 않은 친구 수, done: 마친 친구 수, rewarded: 그중
- * 내가 리롤권을 받은 수(최대 rewardMax). invitedBy: 나를 초대한 사람(없으면 null) · done: 내가 커리어를 마쳐 보상을 받았는가.
+ * 내가 리롤권을 받은 수(최대 INVITE_REWARD_MAX). invitedBy: 나를 초대한 사람(없으면 null) · done: 내가 커리어를 마쳐 보상을 받았는가.
  */
 export const InviteStatusSchema = z.strictObject({
   pending: z.number().int().min(0),
   done: z.number().int().min(0),
   rewarded: z.number().int().min(0),
-  rewardMax: z.number().int().min(1),
-  rerolls: z.number().int().min(1),
   invitedBy: z.strictObject({ name: z.string(), done: z.boolean() }).nullable(),
 });
 export type InviteStatus = z.infer<typeof InviteStatusSchema>;

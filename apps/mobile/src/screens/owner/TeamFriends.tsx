@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Alert, Share, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { INVITE_REROLLS, normalizeFriendCode } from '@offside/contracts/owner-team';
+import { normalizeFriendCode } from '@offside/contracts/owner-team';
 import {
   acceptFriend,
   fetchFriends,
@@ -188,7 +188,7 @@ export function useFriends() {
     request: (body: Parameters<typeof requestFriend>[0]) =>
       write(
         () => requestFriend(body),
-        (res) => toast(friendRequestToast(res, INVITE_REROLLS)),
+        (res) => toast(friendRequestToast(res)),
       ),
     accept: (f: FriendPerson) =>
       write(

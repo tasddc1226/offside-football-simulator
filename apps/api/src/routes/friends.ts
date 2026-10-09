@@ -11,8 +11,6 @@ import {
 import {
   FRIENDLY_MATCHES_PER_DAY,
   FRIENDS_MAX,
-  INVITE_REROLLS,
-  INVITE_REWARD_MAX,
   normalizeFriendCode,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
@@ -105,6 +103,13 @@ type PersonInput = {
 };
 
 const OWNER_NAME: Record<Lang, string> = { ko: '구단주', en: 'Owner', ja: 'オーナー' };
+/** 보이는 이름: 닉네임 → 최근 감독 이름 → '구단주'. */
+const nameOf = (
+  nickname: string | null,
+  managers: ReadonlyMap<string, string> | null,
+  profileId: string,
+  lang: Lang,
+) => nickname ?? managers?.get(profileId) ?? OWNER_NAME[lang];
 
 /**
  * 친구 줄들에 지금 시즌 팀 · 프리시즌 팀(개막 뒤 친선전용, T-11-113) · 창단 멤버 여부와 표시 이름(닉네임 → 최근 감독 이름 →
@@ -140,7 +145,7 @@ async function peopleOf(
         p.profileId,
         {
           code: p.code,
-          name: p.nickname ?? managers.get(p.profileId) ?? OWNER_NAME[lang],
+          name: nameOf(p.nickname, managers, p.profileId, lang),
           team: t ? teamSummary(t) : null,
           h2h: h2hOf(p.row),
           ...(legacy ? { preseasonTeam: lt ? teamSummary(lt) : null } : {}),
@@ -228,11 +233,9 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
           pending: invites.pending,
           done: invites.done,
           rewarded: invites.rewarded,
-          rewardMax: INVITE_REWARD_MAX,
-          rerolls: INVITE_REROLLS,
           invitedBy: by
             ? {
-                name: by.nickname ?? inviterNames?.get(by.inviterId) ?? OWNER_NAME[reqLang(c)],
+                name: nameOf(by.nickname, inviterNames, by.inviterId, reqLang(c)),
                 done: by.doneAt !== null,
               }
             : null,
@@ -289,6 +292,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         .where(eq(profiles.id, targetId)),
     ]);
     let state: 'sent' | 'accepted';
+    let invited = false;
     if (mine?.state === 'received') {
       await commitNotifiedEvent(db, [...acceptStatements(db, me.id, targetId, now)], {
         profileId: targetId,
@@ -333,9 +337,10 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         },
       });
       state = 'sent';
+      // T-11-171 친구 코드(초대 링크)로 새로 신청한 구단주는 그 코드 주인의 초대로 적는다(아직 은퇴 선수가 없을 때 한 번).
+      // 이미 친구거나 상대 신청을 수락하는 경우는 초대로 치지 않는다.
+      invited = 'code' in input && (await claimReferral(db, me.id, targetId, now));
     }
-    // T-11-171 친구 코드(초대 링크)로 신청한 새 구단주는 그 코드 주인의 초대로 적는다(아직 은퇴 선수가 없을 때 한 번).
-    const invited = 'code' in input && (await claimReferral(db, me.id, targetId, now));
     // 친구 목록은 사람을 코드로 가리키므로 코드가 없는 쪽(팀 프로필에서만 신청하고 친구 화면은 안 열어 본 사람)은 지금 만든다.
     // 신청자 코드가 없으면 받은 쪽 목록에 신청이 보이지 않는다.
     const [code] = await Promise.all([

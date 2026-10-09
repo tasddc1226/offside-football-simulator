@@ -201,9 +201,10 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
         now,
       });
       await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
-      // T-11-171 친구 초대로 들어온 구단주가 처음 커리어를 은퇴까지 마쳤으면 두 사람에게 초대 보상을 준다.
-      await completeInvite(db, session.profileId, careerId, now);
     }
+    // T-11-171 친구 초대로 들어온 구단주가 커리어를 은퇴까지 마쳤으면 두 사람에게 초대 보상을 준다. 판정 전 초대만 끝내므로
+    // 재전송(이름 공개 토글)에서 다시 불려도 한 번만 주고, 처음 은퇴 뒤 판정이 실패했으면 재전송 때 마저 준다.
+    await completeInvite(db, session.profileId, careerId, now);
     // T-10-076 영구결번 심사. 이름 공개 토글 재전송도 여기로 온다 — 이름을 공개하는 순간 자리를 잡는다.
     const retiredNumber = await judgeRetirement(c, careerId, now);
     purgeEdge(c, STALE.retirementPut(careerId));

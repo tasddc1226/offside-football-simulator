@@ -1337,5 +1337,8 @@ export const referrals = sqliteTable(
     careerId: text('career_id'),
     inviterRewarded: integer('inviter_rewarded', { mode: 'boolean' }).notNull().default(false),
   },
-  (table) => [index('referrals_inviter_idx').on(table.inviterId, table.doneAt)],
+  // 초대한 사람별 집계(진행 · 완료 · 보상 수)와 보상 상한 검사를 인덱스만으로 센다.
+  (table) => [
+    index('referrals_inviter_idx').on(table.inviterId, table.inviterRewarded, table.doneAt),
+  ],
 );

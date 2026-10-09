@@ -7,6 +7,7 @@ import { INVITE_REROLLS, INVITE_REWARD_MAX } from '@offside/contracts/owner-team
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { notifications, ownerItems, referrals } from '../db/schema.js';
+import { localizeNotification } from '../push/text.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { RETIREMENT, callJson, issueGoogleCookie, putSeasonsFor } from '../test/http.js';
 
@@ -57,8 +58,6 @@ describe('T-11-171 친구 초대', () => {
       pending: 1,
       done: 0,
       rewarded: 0,
-      rewardMax: INVITE_REWARD_MAX,
-      rerolls: INVITE_REROLLS,
       invitedBy: null,
     });
     expect((await friendsOf(invitee.cookie)).invite?.invitedBy).toEqual({
@@ -79,10 +78,20 @@ describe('T-11-171 친구 초대', () => {
     });
     expect((await friendsOf(invitee.cookie)).invite?.invitedBy?.done).toBe(true);
     const kinds = await ctx.db
-      .select({ profileId: notifications.profileId, kind: notifications.kind })
+      .select({
+        profileId: notifications.profileId,
+        kind: notifications.kind,
+        title: notifications.title,
+        body: notifications.body,
+      })
       .from(notifications)
       .where(eq(notifications.sourceKey, `invite:${invitee.profileId}:${inviter.profileId}`));
-    expect(kinds).toEqual([{ profileId: inviter.profileId, kind: 'social' }]);
+    expect(kinds).toMatchObject([{ profileId: inviter.profileId, kind: 'social' }]);
+    // 알림함은 요청 언어로 바꿔 보인다.
+    for (const lang of ['en', 'ja'] as const) {
+      const n = localizeNotification(kinds[0]!, lang);
+      expect([n.title, n.body].join(' ')).not.toMatch(/[가-힣]/);
+    }
 
     // 두 번째 커리어는 다시 주지 않는다.
     await retire(invitee.cookie);
@@ -102,8 +111,14 @@ describe('T-11-171 친구 초대', () => {
 
     expect((await requestByCode(newbie.cookie, aCode)).invited).toBe(true);
     expect((await requestByCode(newbie.cookie, bCode)).invited).toBe(false);
+    // 상대가 먼저 보낸 신청을 코드로 수락하는 것은 초대가 아니다.
+    const [x, y] = [await issueGoogleCookie(ctx), await issueGoogleCookie(ctx)];
+    expect((await requestByCode(x.cookie, (await friendsOf(y.cookie)).code)).invited).toBe(true);
+    const accepted = await requestByCode(y.cookie, (await friendsOf(x.cookie)).code);
+    expect(accepted).toMatchObject({ state: 'accepted', invited: false });
     expect(await ctx.db.select().from(referrals)).toMatchObject([
       { inviteeId: newbie.profileId, inviterId: a.profileId },
+      { inviteeId: x.profileId, inviterId: y.profileId },
     ]);
   });
 

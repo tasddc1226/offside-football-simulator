@@ -66,8 +66,7 @@ export const friend: Translation<FriendMsgs> = {
   eventStatus: (p) => `In progress ${p.pending} · Finished ${p.done} · Rewards ${p.got}/${p.max}`,
   eventMaxed: (p) =>
     `You can get invite rewards up to ${p.max} times. Friends you invite after that still get their own reward.`,
-  invitedBy: (p) =>
-    `You joined through ${p.name}'s invite. Finish a player career and you both get ${p.n} rerolls.`,
+  invitedBy: (p) => `You joined through ${p.name}'s invite.`,
   invitedDone: (p) => `You got the invite reward from ${p.name}.`,
   joinedEvent: (p) => `You joined the invite event. Finish a player career to get ${p.n} rerolls.`,
 };

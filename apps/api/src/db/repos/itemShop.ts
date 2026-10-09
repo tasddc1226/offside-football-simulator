@@ -5,6 +5,25 @@ import { getActiveBalance } from './balance.js';
 // T-11-152 구단 자금으로 사는 선수 후보 리롤권. 쌓이기만 하는 구단 자금을 없애는 곳이라 비싸게 팔고, 같은 날 더 살수록
 // 비싸지며 하루 상한이 있다. 수치는 운영 도구 밸런스 설정(이적시장 묶음)의 활성 버전을 요청 때 바로 읽는다.
 
+/**
+ * 리롤권을 qty장 더하는 문장(컵 보상 · 상점 · 친구 초대가 함께 쓴다). guard는 같은 batch 안에서 앞 문장이 성공했을 때만
+ * 주도록 거는 SQL 조건이다.
+ */
+export const grantRerollStatement = (
+  d1: D1Database,
+  profileId: string,
+  qty: number,
+  now: string,
+  guard: { sql: string; params?: unknown[] },
+) =>
+  d1
+    .prepare(
+      `INSERT INTO owner_items (profile_id, item, qty, updated_at)
+       SELECT ?, 'reroll', ?, ? WHERE ${guard.sql}
+       ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + excluded.qty, updated_at = excluded.updated_at`,
+    )
+    .bind(profileId, qty, now, ...(guard.params ?? []));
+
 /** 리롤권 상점 수치(활성 버전, 없으면 기본값). */
 export async function rerollShopRules(db: Db) {
   const b = resolveBalance((await getActiveBalance(db))?.values);
@@ -60,15 +79,7 @@ async function buyItem(
       )
       .bind(b.price, b.now, b.profileId, b.id),
     ...(b.grantReroll
-      ? [
-          d1
-            .prepare(
-              `INSERT INTO owner_items (profile_id, item, qty, updated_at)
-               SELECT ?, 'reroll', 1, ? WHERE ${won}
-               ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + 1, updated_at = excluded.updated_at`,
-            )
-            .bind(b.profileId, b.now, b.id),
-        ]
+      ? [grantRerollStatement(d1, b.profileId, 1, b.now, { sql: won, params: [b.id] })]
       : []),
     d1
       .prepare(

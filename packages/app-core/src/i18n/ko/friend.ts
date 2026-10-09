@@ -72,8 +72,7 @@ const ko = {
     `진행 중 ${p.pending}명 · 완료 ${p.done}명 · 받은 보상 ${p.got}/${p.max}번`,
   eventMaxed: (p: { max: number }) =>
     `초대 보상은 ${p.max}번까지 받을 수 있어요. 그 뒤에 초대한 친구도 자기 보상은 받아요.`,
-  invitedBy: (p: { name: string; n: number }) =>
-    `${p.name} 님의 초대로 참여 중이에요. 선수 커리어를 끝까지 마치면 두 사람 모두 리롤권 ${p.n}장을 받아요.`,
+  invitedBy: (p: { name: string }) => `${p.name} 님의 초대로 참여 중이에요.`,
   invitedDone: (p: { name: string }) => `${p.name} 님의 초대 보상을 받았어요.`,
   joinedEvent: (p: { n: number }) =>
     `친구 초대 이벤트에 참여했어요. 선수 커리어를 끝까지 마치면 리롤권 ${p.n}장을 받아요.`,

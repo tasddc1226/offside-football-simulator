@@ -9,4 +9,4 @@ CREATE TABLE `referrals` (
 	FOREIGN KEY (`inviter_id`) REFERENCES `profiles`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `referrals_inviter_idx` ON `referrals` (`inviter_id`,`done_at`);
+CREATE INDEX `referrals_inviter_idx` ON `referrals` (`inviter_id`,`inviter_rewarded`,`done_at`);

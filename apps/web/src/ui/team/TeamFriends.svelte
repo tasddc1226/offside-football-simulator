@@ -2,7 +2,7 @@
   // T-11-098 친구 · 친선전 — 내 친구 코드(초대 링크) · 코드로 신청 · 받은/보낸 신청 · 친구 목록과 친선전 · 최근 친선전.
   // 친선전은 레이팅·전적에 들어가지 않는다. 이 쪽을 열 때만 불러온다(웹 메모 1분, 쓰기를 하면 메모가 비워진다).
   import { onMount } from 'svelte';
-  import { INVITE_REROLLS, normalizeFriendCode } from '@offside/contracts/owner-team';
+  import { normalizeFriendCode } from '@offside/contracts/owner-team';
   import {
     acceptFriend,
     fetchFriends,
@@ -94,7 +94,7 @@
     void run(
       () => requestFriend({ code }),
       (d) => {
-        toast(friendRequestToast(d, INVITE_REROLLS));
+        toast(friendRequestToast(d));
         codeInput = '';
         if (fromInvite) {
           clearInvite();
