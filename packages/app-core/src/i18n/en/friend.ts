@@ -60,4 +60,14 @@ export const friend: Translation<FriendMsgs> = {
     'Turn on app notifications to hear about friend requests and friendly results as they come in.',
   pushNudgeOn: 'Turn on',
   pushNudgeLater: 'Later',
+  eventTitle: 'Invite friends',
+  eventBody: (p) =>
+    `When a friend sends you a request with your invite link or code and finishes their first player career, you both get ${p.n} candidate rerolls.`,
+  eventStatus: (p) => `In progress ${p.pending} · Finished ${p.done} · Rewards ${p.got}/${p.max}`,
+  eventMaxed: (p) =>
+    `You can get invite rewards up to ${p.max} times. Friends you invite after that still get their own reward.`,
+  invitedBy: (p) =>
+    `You joined through ${p.name}'s invite. Finish a player career and you both get ${p.n} rerolls.`,
+  invitedDone: (p) => `You got the invite reward from ${p.name}.`,
+  joinedEvent: (p) => `You joined the invite event. Finish a player career to get ${p.n} rerolls.`,
 };

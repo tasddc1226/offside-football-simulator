@@ -11,6 +11,7 @@ import { deleteCareersStatements } from '../db/repos/careers.js';
 import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
 import { resetFirstsBackfillStatement } from '../db/repos/firsts.js';
 import { deleteFriendsStatements } from '../db/repos/friends.js';
+import { deleteReferralsStatements } from '../db/repos/referrals.js';
 import { deleteOwnerTeamsStatements } from '../db/repos/ownerTeams.js';
 import {
   boardComments,
@@ -130,6 +131,8 @@ export async function executeProfileDeletion(
     ...deleteOwnerTeamsStatements(db, input.profileId),
     // T-11-098 친구 줄(내 줄 + 나를 가리키는 줄). 친선전은 팀 FK CASCADE로 함께 지워진다.
     ...deleteFriendsStatements(db, input.profileId),
+    // T-11-171 친구 초대 기록(초대한 줄 · 초대받은 줄).
+    ...deleteReferralsStatements(db, input.profileId),
     ...deleteBoardActivityStatements(db, input.profileId),
     ...deleteChatActivityStatements(db, input.profileId),
     db.delete(pushDevices).where(eq(pushDevices.profileId, input.profileId)),

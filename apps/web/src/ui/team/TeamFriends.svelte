@@ -2,7 +2,7 @@
   // T-11-098 친구 · 친선전 — 내 친구 코드(초대 링크) · 코드로 신청 · 받은/보낸 신청 · 친구 목록과 친선전 · 최근 친선전.
   // 친선전은 레이팅·전적에 들어가지 않는다. 이 쪽을 열 때만 불러온다(웹 메모 1분, 쓰기를 하면 메모가 비워진다).
   import { onMount } from 'svelte';
-  import { normalizeFriendCode } from '@offside/contracts/owner-team';
+  import { INVITE_REROLLS, normalizeFriendCode } from '@offside/contracts/owner-team';
   import {
     acceptFriend,
     fetchFriends,
@@ -21,7 +21,8 @@
     friendCodeLabel,
     friendInviteText,
     friendInviteUrl,
-    friendRequestText,
+    friendRequestToast,
+    inviteEventLines,
     h2hText,
     preseasonFriendlyHint,
     preseasonTeamLine,
@@ -93,7 +94,7 @@
     void run(
       () => requestFriend({ code }),
       (d) => {
-        toast(friendRequestText(d));
+        toast(friendRequestToast(d, INVITE_REROLLS));
         codeInput = '';
         if (fromInvite) {
           clearInvite();
@@ -186,6 +187,17 @@
         </div>
       </div>
 
+      {#if data.invite}
+        {@const ev = inviteEventLines(data.invite)}
+        <div class="fr-event" data-invite-event>
+          <b>{ev.title}</b>
+          <p class="fs-sm">{ev.body}</p>
+          {#if ev.mine}<p class="fs-sm" data-invite-mine>{ev.mine}</p>{/if}
+          {#if ev.status}<p class="muted fs-sm" data-invite-status>{ev.status}</p>{/if}
+          {#if ev.maxed}<p class="muted fs-sm">{ev.maxed}</p>{/if}
+        </div>
+      {/if}
+
       <form class="fr-add" onsubmit={(e) => { e.preventDefault(); sendCode(codeInput); }}>
         <label class="fr-add-label" for="friend-code-input">{L.addByCode}</label>
         <div class="fr-add-row">
@@ -265,6 +277,17 @@
   .fr-invite p {
     margin: 0;
     font-size: 0.875rem;
+  }
+  .fr-event {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .fr-event p {
+    margin: 0;
   }
   .fr-code {
     display: flex;

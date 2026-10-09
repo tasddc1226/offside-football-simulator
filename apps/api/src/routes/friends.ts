@@ -11,6 +11,8 @@ import {
 import {
   FRIENDLY_MATCHES_PER_DAY,
   FRIENDS_MAX,
+  INVITE_REROLLS,
+  INVITE_REWARD_MAX,
   normalizeFriendCode,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
@@ -57,6 +59,7 @@ import {
   myTeamIn,
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
+import { claimReferral, inviteCountsOf } from '../db/repos/referrals.js';
 import type { Db } from '../db/client.js';
 import { profiles } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -167,7 +170,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = teamSeasonAt(now);
-    const [code, [rows, [played], myTeams], recentRows] = await Promise.all([
+    const [code, [rows, [played], myTeams], recentRows, invites] = await Promise.all([
       ensureFriendCode(db, me.id, me.friendCode ?? null),
       db.batch([
         listFriendRows(db, me.id),
@@ -175,11 +178,12 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         teamsOfOwners(db, [me.id], [season ?? 0, 0]),
       ]),
       listRecentFriendlies(db, me.id),
+      inviteCountsOf(db, me.id),
     ]);
     const myTeam = season === null ? undefined : myTeams.find((t) => t.season === season);
     const myLegacy = season === 0 ? undefined : myTeams.find((t) => t.season === 0);
     const live = rows.filter((r): r is typeof r & { code: string } => !!r.code);
-    const [people, recent] = await Promise.all([
+    const [people, recent, inviterNames] = await Promise.all([
       peopleOf(
         db,
         live.map((r) => ({
@@ -197,7 +201,11 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         (r) => (r.profileId === me.id ? r.homeTeamId : r.awayTeamId),
         reqLang(c),
       ),
+      invites.invitedBy && !invites.invitedBy.nickname
+        ? latestManagersOf(db, [invites.invitedBy.inviterId])
+        : null,
     ]);
+    const by = invites.invitedBy;
     const byState = (s: FriendRow['state']) =>
       live.filter((r) => r.row.state === s).map((r) => people.get(r.row.friendId)!);
     return ok(
@@ -216,6 +224,19 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         ...(season !== 0
           ? { canPlayPreseason: !!myLegacy && friendlyTeamOf(myLegacy).filled > 0 }
           : {}),
+        invite: {
+          pending: invites.pending,
+          done: invites.done,
+          rewarded: invites.rewarded,
+          rewardMax: INVITE_REWARD_MAX,
+          rerolls: INVITE_REROLLS,
+          invitedBy: by
+            ? {
+                name: by.nickname ?? inviterNames?.get(by.inviterId) ?? OWNER_NAME[reqLang(c)],
+                done: by.doneAt !== null,
+              }
+            : null,
+        },
       },
       200,
       NO_STORE,
@@ -313,6 +334,8 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       });
       state = 'sent';
     }
+    // T-11-171 친구 코드(초대 링크)로 신청한 새 구단주는 그 코드 주인의 초대로 적는다(아직 은퇴 선수가 없을 때 한 번).
+    const invited = 'code' in input && (await claimReferral(db, me.id, targetId, now));
     // 친구 목록은 사람을 코드로 가리키므로 코드가 없는 쪽(팀 프로필에서만 신청하고 친구 화면은 안 열어 본 사람)은 지금 만든다.
     // 신청자 코드가 없으면 받은 쪽 목록에 신청이 보이지 않는다.
     const [code] = await Promise.all([
@@ -325,7 +348,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       now,
       reqLang(c),
     );
-    return ok(c, FriendRequestResponseSchema, { state, friend }, 201);
+    return ok(c, FriendRequestResponseSchema, { state, friend, invited }, 201);
   });
 
   // 받은 신청 수락.
