@@ -361,19 +361,23 @@ export async function unblock(db: Db, id: string, profileId: string): Promise<bo
   return res.meta.changes > 0;
 }
 
+/** 내가 차단한 사람(게시판·채팅 공통, 오래된 순). */
+export const listBlocks = (db: Db, profileId: string) =>
+  db
+    .select({
+      id: boardBlocks.id,
+      nickname: boardBlocks.nickname,
+      createdAt: boardBlocks.createdAt,
+      blockedProfileId: boardBlocks.blockedProfileId,
+    })
+    .from(boardBlocks)
+    .where(eq(boardBlocks.profileId, profileId))
+    .orderBy(asc(boardBlocks.createdAt));
+
 /** 이 프로필이 글 하나에서 뺄 댓글 — 차단한 작성자와 (이 글에서) 신고한 댓글 — 과 차단 목록. */
 export async function getHiddenFor(db: Db, profileId: string, postId: string) {
   const [blocks, reported] = await Promise.all([
-    db
-      .select({
-        id: boardBlocks.id,
-        nickname: boardBlocks.nickname,
-        createdAt: boardBlocks.createdAt,
-        blockedProfileId: boardBlocks.blockedProfileId,
-      })
-      .from(boardBlocks)
-      .where(eq(boardBlocks.profileId, profileId))
-      .orderBy(asc(boardBlocks.createdAt)),
+    listBlocks(db, profileId),
     db
       .select({ commentId: boardCommentReports.commentId })
       .from(boardCommentReports)

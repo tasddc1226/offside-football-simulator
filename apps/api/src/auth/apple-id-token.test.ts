@@ -1,7 +1,8 @@
 // T-11-003 Sign in with Apple 신원 토큰 검증 — 테스트용 RSA 키로 서명한 토큰으로 서명·클레임 검사를 확인한다.
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { sha256Hex } from '../db/hash.js';
-import { bytesToBase64Url } from './base64url.js';
+import { base64UrlToBytes, bytesToBase64Url } from './base64url.js';
+import { revokeAppleAuthorization } from './apple-revoke.js';
 import { APPLE_ISSUER, verifyAppleIdToken, type AppleJwk } from './apple-id-token.js';
 
 const AUD = 'com.offsidelab.app';
@@ -87,5 +88,89 @@ describe('verifyAppleIdToken', () => {
       verifyAppleIdToken(token, { audience: AUD, now: NOW, nonce: NONCE, jwks: fetchKeys }),
     ).resolves.toMatchObject({ sub: 'apple-sub-1' });
     expect(fetchKeys.mock.calls.map((call) => call[1])).toEqual([undefined, true]);
+  });
+});
+
+// T-11-167 계정 삭제 때 Apple 토큰 해지 — client_secret 서명과 교환·해지 요청 순서를 본다.
+describe('revokeAppleAuthorization', () => {
+  async function ecPem() {
+    const pair = (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
+      'sign',
+      'verify',
+    ])) as CryptoKeyPair;
+    const der = new Uint8Array(
+      (await crypto.subtle.exportKey('pkcs8', pair.privateKey)) as ArrayBuffer,
+    );
+    const b64 = btoa(String.fromCharCode(...der));
+    return { pem: `-----BEGIN PRIVATE KEY-----\n${b64}\n-----END PRIVATE KEY-----`, pair };
+  }
+
+  it('키가 없으면 Apple을 부르지 않고 건너뛴다', async () => {
+    const fetcher = vi.fn();
+    const r = await revokeAppleAuthorization({ APPLE_TEAM_ID: 'T' } as never, 'code', {
+      nowS: NOW / 1000,
+      fetcher,
+    });
+    expect(r).toBe('skipped');
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('코드를 토큰으로 바꾼 뒤 refresh_token을 해지하고, client_secret은 ES256으로 서명한다', async () => {
+    const { pem, pair } = await ecPem();
+    const calls: { url: string; body: URLSearchParams }[] = [];
+    const fetcher = vi.fn(async (url: string, init: RequestInit) => {
+      calls.push({ url, body: new URLSearchParams(String(init.body)) });
+      return url.endsWith('/auth/token')
+        ? Response.json({ refresh_token: 'rt-1', access_token: 'at-1' })
+        : new Response(null, { status: 200 });
+    });
+    const env = {
+      APPLE_TEAM_ID: 'TEAM1',
+      APPLE_SIGNIN_KEY_ID: 'KEY1',
+      APPLE_SIGNIN_PRIVATE_KEY: pem,
+    };
+    const r = await revokeAppleAuthorization(env as never, 'auth-code', {
+      nowS: NOW / 1000,
+      fetcher: fetcher as unknown as typeof fetch,
+    });
+    expect(r).toBe('revoked');
+    expect(calls.map((x) => x.url)).toEqual([
+      `${APPLE_ISSUER}/auth/token`,
+      `${APPLE_ISSUER}/auth/revoke`,
+    ]);
+    expect(calls[0]!.body.get('code')).toBe('auth-code');
+    expect(calls[1]!.body.get('token')).toBe('rt-1');
+    expect(calls[1]!.body.get('token_type_hint')).toBe('refresh_token');
+    const secret = calls[0]!.body.get('client_secret')!;
+    const [h, p, s] = secret.split('.') as [string, string, string];
+    expect(JSON.parse(atob(h.replace(/-/g, '+').replace(/_/g, '/')))).toEqual({
+      alg: 'ES256',
+      kid: 'KEY1',
+    });
+    const claims = JSON.parse(atob(p.replace(/-/g, '+').replace(/_/g, '/')));
+    expect(claims).toMatchObject({ iss: 'TEAM1', sub: AUD, aud: APPLE_ISSUER });
+    const valid = await crypto.subtle.verify(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      pair.publicKey,
+      base64UrlToBytes(s),
+      new TextEncoder().encode(`${h}.${p}`),
+    );
+    expect(valid).toBe(true);
+  });
+
+  it('해지 응답이 실패면 던진다(호출 쪽이 기록만 한다)', async () => {
+    const { pem } = await ecPem();
+    const fetcher = vi.fn(async (url: string) =>
+      url.endsWith('/auth/token')
+        ? Response.json({ access_token: 'at-1' })
+        : new Response(null, { status: 400 }),
+    );
+    const env = { APPLE_TEAM_ID: 'T', APPLE_SIGNIN_KEY_ID: 'K', APPLE_SIGNIN_PRIVATE_KEY: pem };
+    await expect(
+      revokeAppleAuthorization(env as never, 'c', {
+        nowS: NOW / 1000,
+        fetcher: fetcher as unknown as typeof fetch,
+      }),
+    ).rejects.toThrow('revoke 400');
   });
 });

@@ -5,6 +5,7 @@ import type {
   AdminChatReport,
   AdminChatReportList,
   AdminChatReportResolve,
+  ChatBlockListResponse,
   ChatBlockResponse,
   ChatMuteInput,
   ChatTicketResponse,
@@ -22,7 +23,7 @@ import {
 import { LIVE_PING, LIVE_PING_SEC } from '@offside/contracts/polling';
 import { kstParts } from '../boardText.js';
 import { chatRejectText } from '../i18n/ko/chatReject.js';
-import { apiBaseUrl, apiFetch, withProfile } from './client.js';
+import { apiBaseUrl, apiFetch, cachedGet, withProfile } from './client.js';
 
 export type { AdminChatReport, ChatMessage, ChatRejectCode, ChatTicketResponse };
 
@@ -44,6 +45,9 @@ export const blockChatAuthor = (id: string) =>
   withProfile(() =>
     apiFetch<ChatBlockResponse>(`/v1/chat/messages/${id}/block`, { method: 'POST' }),
   );
+/** T-11-167 내가 차단한 사람 — 채팅의 차단 목록을 열 때만 부른다. 푸는 건 게시판과 같은 unblock(boards.ts)이다. */
+export const fetchChatBlocks = () =>
+  withProfile(() => cachedGet<ChatBlockListResponse>('/v1/chat/blocks', 60_000));
 export const adminHideChat = (id: string) =>
   apiFetch<undefined>(`/v1/admin/chat/messages/${id}/hide`, { method: 'POST', keepCache: true });
 export const adminMuteChat = (id: string, input: ChatMuteInput) =>
@@ -174,6 +178,8 @@ export type ChatSession = {
   send(body: string): boolean;
   /** 차단한 작성자의 줄을 지금 화면에서 빼고, 앞으로 오는 줄도 뺀다. */
   block(author: string): void;
+  /** 차단을 푼 작성자의 줄을 앞으로 다시 받는다(이미 뺀 줄은 다시 붙을 때 돌아온다). */
+  unblock(author: string): void;
   /** 내가 신고한 줄을 화면에서 뺀다(다시 붙어도 빠진다). */
   drop(id: string): void;
   close(): void;
@@ -257,6 +263,9 @@ export function openChat(
     block(author) {
       blocked = new Set([...blocked, author]);
       refilter();
+    },
+    unblock(author) {
+      blocked = new Set([...blocked].filter((a) => a !== author));
     },
     drop(id) {
       dropped.add(id);

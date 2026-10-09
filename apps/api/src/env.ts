@@ -38,6 +38,11 @@ export type Bindings = {
   APPLE_FAKE?: string;
   /** T-11-003 Apple 신원 토큰의 aud(앱 번들 id). 없으면 com.offsidelab.app. */
   APPLE_BUNDLE_ID?: string;
+  /** T-11-167 secret. 계정 삭제 때 Sign in with Apple 토큰을 해지한다(가이드라인 5.1.1(v)). 셋 중 하나라도 없으면 해지를 건너뛴다. */
+  APPLE_TEAM_ID?: string;
+  APPLE_SIGNIN_KEY_ID?: string;
+  /** Sign in with Apple 키(.p8) PEM 원문. */
+  APPLE_SIGNIN_PRIVATE_KEY?: string;
   /** T-10-011. secret. 쉼표 구분 관리자 구글 이메일(게시판 글쓰기). 비어 있으면 관리자가 없다. */
   ADMIN_EMAILS?: string;
   /** T-11-146 Workers AI(공지 번역 초안·댓글·채팅 번역 보기). staging·운영에만 있다 — 없으면 번역 경로가 503을 낸다. */
