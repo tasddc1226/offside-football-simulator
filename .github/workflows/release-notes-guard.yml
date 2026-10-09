@@ -1,0 +1,37 @@
+name: Release notes guard
+
+# 사용자에게 보이는 변경에 게임 내 릴리즈 노트가 빠지지 않게 한다(T-11-169).
+# 본문·라벨만 바꿔도 다시 돌도록 무거운 CI와 따로 둔다. 머지 커밋(github.sha)과 비교해야 PR 변경만 본다.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-notes-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-notes:
+    name: Release notes present
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Check release notes
+        run: node .github/scripts/release-notes-guard.mjs
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
