@@ -196,6 +196,6 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
   rewardDailyCap: {
     group: 'market',
     label: '광고 대신 구단 자금 하루 횟수',
-    desc: '보상마다 한 구단주가 하루(한국 시각)에 구단 자금으로 받을 수 있는 횟수. 0이면 구단 자금으로 받지 않는다. 강화는 광고 횟수와 합친다',
+    desc: '보상마다 한 구단주가 하루(한국 시각)에 구단 자금으로 받을 수 있는 횟수. 0이면 구단 자금으로 받지 않는다',
   },
 };

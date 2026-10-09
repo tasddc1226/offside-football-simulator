@@ -57,19 +57,18 @@ export const boostHidden = (s: GameState): boolean =>
 export type BoostAdOffer = 'ad' | 'free' | null;
 
 /**
- * opts(T-11-157): club = 구단 자금 버튼을 보일 수 있다(로그인한 구단주), dayLeft = 오늘 광고 · 구단 자금으로 더 받을 수 있는
- * 횟수(app-core boost-daily). 추가 시도 안내는 광고나 구단 자금 길이 있을 때만 보인다.
+ * opts(T-11-157): club = 구단 자금 버튼을 보일 수 있다(로그인한 구단주). 추가 시도 안내는 광고나 구단 자금 길이 있을 때만
+ * 보인다. 광고 강화는 하루 횟수를 세지 않는다(T-11-172). 구단 자금의 하루 상한은 서버가 막는다.
  */
 export function boostView(
   s: GameState,
   adOffer: BoostAdOffer = null,
-  opts: { club?: boolean; dayLeft?: number } = {},
+  opts: { club?: boolean } = {},
 ): BoostView {
   const status = boostStatus(s);
-  const dayLeft = opts.dayLeft ?? Infinity;
   const extraLeft = status === 'done' ? boostExtraLeft(s) : 0;
   const path = !!adOffer || !!opts.club;
-  const free = (status === 'short' || extraLeft > 0) && dayLeft > 0;
+  const free = status === 'short' || extraLeft > 0;
   const b = boostState(s);
   const cost = L2.won({ v: fmtMoney(boostCost(s)) });
   const chance = boostChance(s);
@@ -82,9 +81,7 @@ export function boostView(
           ? L.lineMax({ lv: BOOST_MAX })
           : status === 'done'
             ? extraLeft && path
-              ? dayLeft > 0
-                ? (adOffer ? L.lineExtra : L.lineExtraClub)({ left: extraLeft })
-                : L.lineDayDone
+              ? (adOffer ? L.lineExtra : L.lineExtraClub)({ left: extraLeft })
               : L.lineDone
             : status === 'short'
               ? L.lineShort({ cost })
