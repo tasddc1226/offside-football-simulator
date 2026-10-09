@@ -51,6 +51,7 @@ import {
   sellable,
   sellQuote,
   type MarketView,
+  needsOwnerLogin,
 } from '@offside/app-core/market';
 import { agoKo, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/hof-store';
@@ -66,6 +67,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { ActionBar, BackBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
 import { useOnPull } from '../../ui/refresh';
 import { PlayerCard } from '../../components/PlayerCard';
+import { LoginButtons } from './LoginButtons';
 import { MarketChart, MarketIndex } from './MarketChart';
 import { marketText as L } from '@offside/app-core/i18n/ko/market';
 import { intlLocale } from '@offside/app-core/i18n/core';
@@ -516,8 +518,11 @@ export default function Market() {
   // 자금 · 구단 가치 · 내 등록 · 최근 거래(1분 메모). 쓰기가 성공하면 apiFetch가 메모를 비우니 다시 받는다.
   const [me, setMe] = useState<MarketMeResponse | null>(null);
   const [meFailed, setMeFailed] = useState<string | null>(null);
+  // 로그인 전(세션 없음 · 구글/애플 연결 전) — 매물을 누르면 영입 대신 로그인을 권한다.
+  const [guest, setGuest] = useState(false);
   const loadMe = useCallback(async () => {
     const r = await fetchMarketMe();
+    setGuest(!r.ok && needsOwnerLogin(r.error));
     if (r.ok) {
       setMe(r.data);
       setMeFailed(null);
@@ -1361,8 +1366,8 @@ export default function Market() {
         )}
       </Screen>
 
-      <MarketSheet open={!!buying && !!me} label={L.sheetBuy} onClose={closeSheets}>
-        {buying && me ? (
+      <MarketSheet open={!!buying && (!!me || guest)} label={L.sheetBuy} onClose={closeSheets}>
+        {buying && (me || guest) ? (
           <>
             <View
               style={{
@@ -1421,7 +1426,7 @@ export default function Market() {
               }}
             >
               <Txt v="h2" accessibilityRole="header">
-                {L.buyTitle}
+                {me ? L.buyTitle : L.loginTitle}
               </Txt>
               <View style={{ gap: 8 }}>
                 <Line label={L.baseLine} value={fmtValue(buying.card.cardValue)} />
@@ -1441,54 +1446,76 @@ export default function Market() {
                     </Txt>
                   }
                 />
-                <View style={{ height: 1, backgroundColor: c.line }} />
-                <Line label={L.fundsNow} value={fundsText(me.balance)} />
-                <Line
-                  strong
-                  label={L.fundsAfter}
-                  value={
-                    me.balance >= buying.price ? fundsText(me.balance - buying.price) : L.notEnough
-                  }
-                />
+                {me ? (
+                  <>
+                    <View style={{ height: 1, backgroundColor: c.line }} />
+                    <Line label={L.fundsNow} value={fundsText(me.balance)} />
+                    <Line
+                      strong
+                      label={L.fundsAfter}
+                      value={
+                        me.balance >= buying.price
+                          ? fundsText(me.balance - buying.price)
+                          : L.notEnough
+                      }
+                    />
+                  </>
+                ) : null}
               </View>
               <MarketChart card={buying.card} />
-              <View style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}>
-                <Txt tone="muted" style={tiny}>
-                  {L.buyNote}
-                </Txt>
-              </View>
-              {buyBlocked ? (
-                <Txt tone="bad" style={{ fontWeight: '600' }}>
-                  {buyBlocked}
-                </Txt>
-              ) : null}
-              {errText}
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Btn style={{ flex: 1 }} testID="market-sheet-close" onPress={closeSheets}>
-                  {L.close}
-                </Btn>
-                {myListingIds.has(buying.id) ? (
-                  <Btn
-                    style={{ flex: 2 }}
-                    disabled={busy}
-                    onPress={() => void run(() => cancelListing(buying.id), MARKET_TOAST.unlisted)}
-                  >
-                    {L.unlist}
+              {!me ? (
+                <View testID="market-login" style={{ gap: 10 }}>
+                  <View style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}>
+                    <Txt style={small}>{L.loginToBuy}</Txt>
+                  </View>
+                  <LoginButtons back={{ market: true }} onDone={() => void loadMe()} />
+                  <Btn testID="market-sheet-close" onPress={closeSheets}>
+                    {L.close}
                   </Btn>
-                ) : (
-                  <Btn
-                    style={{ flex: 2 }}
-                    kind="accent"
-                    testID="market-buy"
-                    disabled={busy || !!buyBlocked}
-                    onPress={() =>
-                      void run(() => buyListing(buying.id, buying.price), MARKET_TOAST.bought)
-                    }
-                  >
-                    {L.buyFor({ price: fmtValue(buying.price) })}
-                  </Btn>
-                )}
-              </View>
+                </View>
+              ) : (
+                <>
+                  <View style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}>
+                    <Txt tone="muted" style={tiny}>
+                      {L.buyNote}
+                    </Txt>
+                  </View>
+                  {buyBlocked ? (
+                    <Txt tone="bad" style={{ fontWeight: '600' }}>
+                      {buyBlocked}
+                    </Txt>
+                  ) : null}
+                  {errText}
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <Btn style={{ flex: 1 }} testID="market-sheet-close" onPress={closeSheets}>
+                      {L.close}
+                    </Btn>
+                    {myListingIds.has(buying.id) ? (
+                      <Btn
+                        style={{ flex: 2 }}
+                        disabled={busy}
+                        onPress={() =>
+                          void run(() => cancelListing(buying.id), MARKET_TOAST.unlisted)
+                        }
+                      >
+                        {L.unlist}
+                      </Btn>
+                    ) : (
+                      <Btn
+                        style={{ flex: 2 }}
+                        kind="accent"
+                        testID="market-buy"
+                        disabled={busy || !!buyBlocked}
+                        onPress={() =>
+                          void run(() => buyListing(buying.id, buying.price), MARKET_TOAST.bought)
+                        }
+                      >
+                        {L.buyFor({ price: fmtValue(buying.price) })}
+                      </Btn>
+                    )}
+                  </View>
+                </>
+              )}
             </View>
           </>
         ) : null}

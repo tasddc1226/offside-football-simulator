@@ -56,6 +56,7 @@
     sellable,
     sellQuote,
     type MarketView,
+    needsOwnerLogin,
   } from '@offside/app-core/market';
   import { agoKo, fmtValue } from '@offside/app-core/format';
   import { localCareerNames } from '@offside/game/hof-store';
@@ -69,6 +70,8 @@
   import { go } from './nav.js';
   import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import { toast } from './helpers.js';
+  import { startGoogleLogin } from './login.js';
+  import { accountText as A } from '@offside/app-core/i18n/ko/account';
   import { marketText as L } from '@offside/app-core/i18n/ko/market';
 
   const local = localCareerNames();
@@ -79,9 +82,12 @@
   // 자금 · 구단 가치 · 내 등록 · 최근 거래(1분 메모). 쓰기가 성공하면 apiFetch가 메모를 비우니 다시 받는다.
   let me = $state<MarketMeResponse | null>(null);
   let meFailed = $state<string | null>(null);
+  // 로그인 전(세션 없음 · 구글 연결 전) — 매물을 누르면 영입 대신 로그인을 권한다.
+  let guest = $state(false);
   async function loadMe() {
     const r = await fetchMarketMe();
     meFailed = r.ok ? null : r.error.message;
+    guest = !r.ok && needsOwnerLogin(r.error);
     if (r.ok) me = r.data;
   }
   void loadMe();
@@ -452,8 +458,8 @@
   <BackBar act="owner" fallback={() => go('owner')} />
 </div>
 
-{#if buying && me}
-  {@const block = myListingIds.has(buying.id) ? L.ownListing : buyBlock(buying.price, me.balance, me.buysLeft)}
+{#if buying && (me || guest)}
+  {@const block = !me ? null : myListingIds.has(buying.id) ? L.ownListing : buyBlock(buying.price, me.balance, me.buysLeft)}
   {@const diff = priceDiff(buying.price, buying.card.cardValue)}
   <button class="mk-scrim" aria-label={L.close} onclick={closeSheets}></button>
   <div class="mk-sheet" role="dialog" aria-modal="true" aria-label={L.sheetBuy}>
@@ -468,21 +474,25 @@
       </dl>
     </div>
     <div class="mk-confirm">
-      <h2>{L.buyTitle}</h2>
+      <h2>{me ? L.buyTitle : L.loginTitle}</h2>
       <dl class="mk-lines">
         <div><dt>{L.baseLine}</dt><dd>{fmtValue(buying.card.cardValue)}</dd></div>
         <div class="big"><dt>{L.price}</dt><dd>{fmtValue(buying.price)} <small class="mk-{diff.tone}">{diff.text}</small></dd></div>
-        <div class="rule"></div>
-        <div><dt>{L.fundsNow}</dt><dd>{fundsText(me.balance)}</dd></div>
-        <div class="strong"><dt>{L.fundsAfter}</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : L.notEnough}</dd></div>
+        {#if me}
+          <div class="rule"></div>
+          <div><dt>{L.fundsNow}</dt><dd>{fundsText(me.balance)}</dd></div>
+          <div class="strong"><dt>{L.fundsAfter}</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : L.notEnough}</dd></div>
+        {/if}
       </dl>
       <MarketChart card={buying.card} />
-      <p class="mk-note">{L.buyNote}</p>
+      <p class="mk-note" data-market-login={!me ? '' : undefined}>{me ? L.buyNote : L.loginToBuy}</p>
       {#if block}<p class="mk-err">{block}</p>{/if}
       {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
       <div class="mk-actions">
         <button class="btn" onclick={closeSheets}>{L.close}</button>
-        {#if myListingIds.has(buying.id)}
+        {#if !me}
+          <button class="btn btn-primary" data-act="market-login" onclick={() => startGoogleLogin({ market: true })}>{A.loginGoogle}</button>
+        {:else if myListingIds.has(buying.id)}
           <button class="btn" disabled={busy} onclick={() => run(() => cancelListing(buying!.id), MARKET_TOAST.unlisted)}>{L.unlist}</button>
         {:else}
           <button class="btn btn-accent" data-act="buy" disabled={busy || !!block} onclick={() => run(() => buyListing(buying!.id, buying!.price), MARKET_TOAST.bought)}>

@@ -42,6 +42,8 @@ export const market: Translation<MarketMsgs> = {
   detailTransfers: '移籍',
   transferTimes: (p) => `${p.n}回`,
   buyTitle: 'この選手を獲得しますか？',
+  loginTitle: 'ログインして獲得',
+  loginToBuy: 'ログインするとオーナーとしてこの選手を獲得できます。',
   baseLine: '基準価格（最高OVRシーズンの市場価値）',
   price: '販売価格',
   fundsNow: '現在のクラブ資金',

@@ -50,6 +50,8 @@ const ko = {
   detailTransfers: '이적',
   transferTimes: (p: { n: number }) => `${p.n}회`,
   buyTitle: '이 선수를 영입할까요?',
+  loginTitle: '로그인하고 영입하기',
+  loginToBuy: '로그인하면 구단주가 되어 이 선수를 영입할 수 있어요.',
   baseLine: '기준가 (최고 OVR 시즌 몸값)',
   price: '판매가',
   fundsNow: '지금 구단 자금',

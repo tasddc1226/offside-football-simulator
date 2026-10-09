@@ -44,6 +44,8 @@ export const market: Translation<MarketMsgs> = {
   detailTransfers: 'Transfers',
   transferTimes: (p) => `${p.n}`,
   buyTitle: 'Sign this player?',
+  loginTitle: 'Sign in to sign players',
+  loginToBuy: 'Sign in to become a club owner and sign this player.',
   baseLine: 'Base value (value in their peak OVR season)',
   price: 'Price',
   fundsNow: 'Current club funds',
