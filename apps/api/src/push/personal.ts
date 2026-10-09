@@ -63,7 +63,12 @@ const retry = (r: Row, now: number): Outcome => ({
   due: now + 5 * MINUTE * 2 ** (r.attempts - 1),
 });
 
-/** 같은 이벤트의 여러 기기·재시도는 예산 하나를 공유한다. 서로 다른 이벤트는 한 시간·하루 2회로 제한한다. */
+const NOT_CUP = " AND q.source_key NOT LIKE 'cup%'";
+
+/**
+ * 같은 이벤트의 여러 기기·재시도는 예산 하나를 공유한다. 서로 다른 이벤트는 한 시간·하루 2회로 제한한다.
+ * T-11-161 컵 알림(추첨·경기 결과)은 제때 가야 해서 이 제한을 받지 않고, 다른 알림의 예산도 쓰지 않는다.
+ */
 async function reserveBudget(db: D1Database, rows: Row[], now: number) {
   const ids = [...new Set(rows.map((r) => r.notification_id))];
   if (!ids.length) return new Set<string>();
@@ -73,9 +78,9 @@ async function reserveBudget(db: D1Database, rows: Row[], now: number) {
       db
         .prepare(
           `UPDATE notifications SET push_reserved_at = COALESCE(push_reserved_at, ?)
-    WHERE id = ? AND read_at IS NULL AND (push_reserved_at IS NOT NULL OR (
-      (SELECT COUNT(*) FROM notifications q WHERE q.profile_id = notifications.profile_id AND q.push_reserved_at >= ?) < 2
-      AND NOT EXISTS (SELECT 1 FROM notifications q WHERE q.profile_id = notifications.profile_id AND q.push_reserved_at > ?)))
+    WHERE id = ? AND read_at IS NULL AND (push_reserved_at IS NOT NULL OR source_key LIKE 'cup%' OR (
+      (SELECT COUNT(*) FROM notifications q WHERE q.profile_id = notifications.profile_id AND q.push_reserved_at >= ?${NOT_CUP}) < 2
+      AND NOT EXISTS (SELECT 1 FROM notifications q WHERE q.profile_id = notifications.profile_id AND q.push_reserved_at > ?${NOT_CUP})))
     RETURNING id`,
         )
         .bind(iso(now), id, start, iso(now - 60 * MINUTE)),
