@@ -199,32 +199,35 @@ function BoostCard({ s }: { s: GameState }) {
           </View>
         </View>
       ) : null}
-      {v.adButton ? (
+      {/* T-11-181 광고를 볼 수 없어도(광고 단위 없음) 구단 자금 · 강화권 · 상점 묶음은 보인다 — 웹과 같다. */}
+      {v.free ? (
         <View style={{ marginVertical: 8, gap: 6 }} testID="boost-ad">
-          <Txt v="sm" tone="muted" testID="boost-ad-note">
-            {adMessage || v.adNote}
-          </Txt>
-          <Btn
-            kind="primary"
-            disabled={adBusy}
-            testID="boost-ad-btn"
-            onPress={() => void onAdBoost()}
-          >
-            {adBusy ? B.adLoading : v.adButton}
-          </Btn>
-          {club.offer && v.free ? (
+          {adMessage || v.adNote ? (
+            <Txt v="sm" tone="muted" testID="boost-ad-note">
+              {adMessage || v.adNote}
+            </Txt>
+          ) : null}
+          {v.adButton ? (
+            <Btn
+              kind="primary"
+              disabled={adBusy}
+              testID="boost-ad-btn"
+              onPress={() => void onAdBoost()}
+            >
+              {adBusy ? B.adLoading : v.adButton}
+            </Btn>
+          ) : null}
+          {club.offer ? (
             <Btn disabled={adBusy} testID="boost-club-btn" onPress={() => void onClubBoost()}>
               {B.clubBoost({ price: fundsText(club.offer.price), chance: v.chance })}
             </Btn>
           ) : null}
-          {tickets > 0 && v.free ? (
+          {tickets > 0 ? (
             <Btn disabled={adBusy} testID="boost-ticket-btn" onPress={() => void onTicketBoost()}>
               {B.ticketBoost({ n: tickets, chance: v.chance })}
             </Btn>
           ) : null}
-          {v.free && !owned ? (
-            <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} />
-          ) : null}
+          {!owned ? <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} /> : null}
         </View>
       ) : null}
       <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 4 }}>
@@ -255,9 +258,11 @@ export function PlayerTab({ s }: { s: GameState }) {
   const owned = useSnapshot(adFree).owned;
   const peek = useSnapshot(potPeek);
   const pot = peekView(s, peek.peek, owned ? 'free' : 'ad');
-  const showPeek = pot.kind !== 'shown' && peekAvailable();
+  const canAd = peekAvailable();
   // T-11-153 광고 대신 구단 자금으로 평가 보기(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 본다.
-  const club = useClubReward('peek', showPeek && pot.kind === 'available' && !owned);
+  // T-11-181 광고 단위가 없어도 구단 자금 길은 보인다.
+  const club = useClubReward('peek', pot.kind === 'available' && !owned);
+  const showPeek = pot.kind !== 'shown' && (canAd || !!club.offer);
 
   const info: Row[] = [
     { k: L.nation, testID: 'nation', v: `${flagOf(nation.code)} ${tn(nation.ko)}` },
@@ -294,7 +299,7 @@ export function PlayerTab({ s }: { s: GameState }) {
             <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
               {peek.message || pot.text}
             </Txt>
-            {pot.kind === 'available' ? (
+            {canAd && pot.kind === 'available' ? (
               <Btn
                 sm
                 block
