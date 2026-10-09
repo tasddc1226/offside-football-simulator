@@ -1,0 +1,23 @@
+{
+  "id": "t-11-175-invite-home-tile",
+  "title": "친구 초대 이벤트를 홈에서 바로",
+  "items": [
+    "홈 화면에 친구 초대 이벤트 타일이 생겼어요. 누르면 바로 친구 화면으로 가요.",
+    "친구 화면 맨 위에 이벤트 카드가 보여서 초대 현황을 먼저 확인할 수 있어요."
+  ],
+  "en": {
+    "title": "Friend invites, right from home",
+    "items": [
+      "A friend invite event tile is now on the home screen. Tap it to go straight to your friends screen.",
+      "The event card now sits at the top of the friends screen, so you see your invite progress first."
+    ]
+  },
+  "ja": {
+    "title": "友だち招待イベントをホームからすぐに",
+    "items": [
+      "ホーム画面に友だち招待イベントのタイルを追加しました。タップするとすぐに友だち画面へ移動します。",
+      "友だち画面のいちばん上にイベントカードを表示し、招待の状況を先に確認できるようにしました。"
+    ]
+  },
+  "availability": "web-app"
+}
