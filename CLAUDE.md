@@ -186,8 +186,10 @@ pnpm --filter @offside/fulltime-sim analyze
   캐시 무효화 누락 없음(위 "백엔드 보호 · 요청 최소화 규칙").
 - CI는 GitHub 호스트 러너(`ubuntu-latest`)를 쓴다.
   문서만 바뀐 커밋은 코드 검사·배포를 건너뛴다(`.github/scripts/ci-scope.mjs`).
-- PR 검사는 두 잡이 나란히 돈다: `PR quick checks`(서식·린트·타입·단위 테스트·밸런스 스모크)와
-  `PR build and e2e`(빌드·번들·마이그레이션 검사·e2e). main push의 CI는 staging용 빌드만 하므로 기다리지
+- PR 검사(T-11-176): `PR plan`이 바뀐 패키지를 고르고(`ci-affected.mjs`, 패키지 밖 변경이면 전부),
+  필요한 잡만 나란히 돈다: `PR quick checks`(서식·린트·타입·단위 테스트·마이그레이션 검사·밸런스 스모크),
+  `PR API tests (1~3)`, `PR build and e2e (1~3)`(빌드·번들·e2e). 웹을 바꿨으면 push 전에 로컬에서
+  `pnpm --filter @offside/web build && pnpm --filter @offside/web check:bundle`로 번들 예산을 먼저 본다. main push의 CI는 staging용 빌드만 하므로 기다리지
   않는다(T-10-061). 대신 머지 전에 PR 브랜치가 최신 main을 포함하는지 확인한다(아니면 main을 합치고
   PR 검사를 다시 받는다) — 그래야 검사한 트리와 머지된 트리가 같다.
 - 운영 배포는 `deploy-production.yml`. 머지 직후 main SHA로 바로 `mode=deploy`를 실행한다 — deploy 모드도
