@@ -160,6 +160,11 @@ export const IAP_PRODUCT_IDS = Object.keys(IAP_PRODUCTS) as [IapProductId, ...Ia
  */
 export const REWARD_KINDS = ['candidates', 'peek', 'boost'] as const;
 export type RewardKind = (typeof REWARD_KINDS)[number];
+/**
+ * T-11-173 잠재력 강화(boost)는 구단 자금으로도 하루 횟수를 두지 않는다(값은 그대로 오른다). 응답의 cap은 옛 앱 빌드(1.1.1 빌드
+ * 14가 cap에서 오늘 산 횟수와 광고 횟수를 빼 버튼을 닫는다)가 막지 않게 넉넉한 값으로 보낸다.
+ */
+export const REWARD_UNCAPPED = 999;
 /** 구단 자금으로 산 것(owner_item_purchases.item) — 리롤권(T-11-152)과 광고 대신 받은 보상(T-11-153). */
 export const FUNDS_ITEMS = ['reroll', ...REWARD_KINDS.map((k) => `reward:${k}` as const)] as const;
 export type FundsItem = 'reroll' | `reward:${RewardKind}`;
