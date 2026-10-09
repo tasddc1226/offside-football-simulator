@@ -228,8 +228,13 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     if (code)
       waitUntil(
         c,
-        revokeAppleAuthorization(c.env, code, { nowS: Math.floor(Date.now() / 1000) }).catch((e) =>
-          console.error(JSON.stringify({ job: 'apple-revoke', error: String(e).slice(0, 200) })),
+        revokeAppleAuthorization(c.env, code, { nowS: Math.floor(Date.now() / 1000) }).then(
+          // 키가 빠진 채 코드가 들어오면 가이드라인 5.1.1(v)을 못 지킨 것이라 경고로 남긴다.
+          (r) =>
+            r === 'skipped' &&
+            console.warn(JSON.stringify({ job: 'apple-revoke', skipped: 'no keys' })),
+          (e) =>
+            console.error(JSON.stringify({ job: 'apple-revoke', error: String(e).slice(0, 200) })),
         ),
       );
     return c.body(null, 204);

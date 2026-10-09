@@ -123,6 +123,33 @@ export async function listOpenNameReports(db: Db): Promise<AdminNameReport[]> {
   }));
 }
 
+/** 대상 id가 구단(owner_teams.id)인 종류 — 구단명과 그 구단주의 닉네임. */
+const TEAM_ID_KINDS = ['team', 'owner'] satisfies NameReportKind[];
+
+/** 가리기 — 선수는 공개 이름, 구단은 구단명·감독명, 구단주는 닉네임을 비운다. */
+function hideStatement(
+  db: Db,
+  kind: NameReportKind,
+  id: string,
+  ownerId: string | null,
+  now: string,
+) {
+  if (kind === 'career')
+    return db
+      .update(careers)
+      .set({ publicName: null, nameHiddenAt: now })
+      .where(eq(careers.id, id));
+  // 닉네임을 비운다. 다시 정하기 전까지 랭킹엔 익명 구단주로, 댓글·채팅은 닉네임을 정해야 쓸 수 있다.
+  if (kind === 'owner')
+    return ownerId
+      ? db.update(profiles).set({ nickname: null }).where(eq(profiles.id, ownerId))
+      : null;
+  return db
+    .update(ownerTeams)
+    .set({ name: HIDDEN_TEAM_NAME, manager: HIDDEN_MANAGER_NAME, updatedAt: now })
+    .where(eq(ownerTeams.id, id));
+}
+
 /** 신고를 닫는다. hide면 이름을 가린다. 열린 신고가 없으면 null, 있으면 대상 구단의 시즌(엣지 캐시 퍼지용 —
  *  선수이거나 구단이 지워졌으면 null). */
 export async function resolveNameReports(
@@ -138,40 +165,18 @@ export async function resolveNameReports(
     isNull(nameReports.resolvedAt),
   );
   const [first] = await db
-    .select({ name: nameReports.name, season: ownerTeams.season })
+    .select({ name: nameReports.name, season: ownerTeams.season, ownerId: ownerTeams.profileId })
     .from(nameReports)
     .leftJoin(
       ownerTeams,
-      and(inArray(nameReports.kind, ['team', 'owner']), eq(ownerTeams.id, nameReports.targetId)),
+      and(inArray(nameReports.kind, TEAM_ID_KINDS), eq(ownerTeams.id, nameReports.targetId)),
     )
     .where(open)
     .limit(1);
   if (!first) return null;
   const statements: BatchItem<'sqlite'>[] = [];
-  if (action === 'hide') {
-    statements.push(
-      kind === 'career'
-        ? db.update(careers).set({ publicName: null, nameHiddenAt: now }).where(eq(careers.id, id))
-        : kind === 'owner'
-          ? // 닉네임을 비운다. 다시 정하기 전까지 랭킹엔 익명 구단주로, 댓글·채팅은 닉네임을 정해야 쓸 수 있다.
-            db
-              .update(profiles)
-              .set({ nickname: null })
-              .where(
-                inArray(
-                  profiles.id,
-                  db
-                    .select({ id: ownerTeams.profileId })
-                    .from(ownerTeams)
-                    .where(eq(ownerTeams.id, id)),
-                ),
-              )
-          : db
-              .update(ownerTeams)
-              .set({ name: HIDDEN_TEAM_NAME, manager: HIDDEN_MANAGER_NAME, updatedAt: now })
-              .where(eq(ownerTeams.id, id)),
-    );
-  }
+  const hide = action === 'hide' && hideStatement(db, kind, id, first.ownerId, now);
+  if (hide) statements.push(hide);
   statements.push(
     db.update(nameReports).set({ resolvedAt: now }).where(open),
     auditLogStatement(db, {
@@ -201,7 +206,7 @@ export const deleteNameReportsStatement = (db: Db, profileId: string) =>
           ),
         ),
         and(
-          inArray(nameReports.kind, ['team', 'owner']),
+          inArray(nameReports.kind, TEAM_ID_KINDS),
           inArray(
             nameReports.targetId,
             db

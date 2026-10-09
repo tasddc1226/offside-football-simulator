@@ -230,7 +230,7 @@ export function confirmProfileDeletion(
     method: 'POST',
     body: JSON.stringify({
       confirmToken,
-      ...(appleAuthorizationCode && { appleAuthorizationCode }),
+      appleAuthorizationCode,
     }),
   });
 }

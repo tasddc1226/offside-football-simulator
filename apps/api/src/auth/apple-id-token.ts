@@ -7,7 +7,7 @@ import { base64UrlToBytes } from './base64url.js';
 
 export const APPLE_ISSUER = 'https://appleid.apple.com';
 const APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
-const DEFAULT_BUNDLE_ID = 'com.offsidelab.app';
+export const DEFAULT_BUNDLE_ID = 'com.offsidelab.app';
 const JWKS_TTL_MS = 60 * 60 * 1000;
 const FAKE_PREFIX = 'fake:';
 

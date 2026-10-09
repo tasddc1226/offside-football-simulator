@@ -2,29 +2,26 @@
 // 계정을 지울 때 앱이 Apple에 다시 확인받아 받은 authorizationCode를 토큰으로 바꾼 뒤 그 토큰을 해지한다.
 // 서버는 Apple 토큰을 저장하지 않는다. client_secret은 Sign in with Apple 키(.p8, ES256)로 서명한 JWT다.
 import type { Bindings } from '../env.js';
-import { bytesToBase64Url } from './base64url.js';
-import { APPLE_ISSUER } from './apple-id-token.js';
+import { base64UrlToBytes, bytesToBase64Url } from './base64url.js';
+import { APPLE_ISSUER, DEFAULT_BUNDLE_ID } from './apple-id-token.js';
 
-const DEFAULT_BUNDLE_ID = 'com.offsidelab.app';
 const SECRET_TTL_S = 5 * 60;
 
-export type AppleRevokeKeys = { teamId: string; keyId: string; privateKey: string };
+type AppleRevokeKeys = { teamId: string; keyId: string; privateKey: string };
 
 /** 세 비밀값이 다 있어야 해지할 수 있다. 하나라도 없으면 null(해지를 건너뛴다). */
-export function appleRevokeKeys(env: Bindings): AppleRevokeKeys | null {
+function appleRevokeKeys(env: Bindings): AppleRevokeKeys | null {
   const { APPLE_TEAM_ID: teamId, APPLE_SIGNIN_KEY_ID: keyId, APPLE_SIGNIN_PRIVATE_KEY: pem } = env;
   return teamId && keyId && pem ? { teamId, keyId, privateKey: pem } : null;
 }
 
 const json64 = (v: unknown) => bytesToBase64Url(new TextEncoder().encode(JSON.stringify(v)));
 
-function pemToPkcs8(pem: string): Uint8Array<ArrayBuffer> {
-  const body = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
-  return Uint8Array.from(atob(body), (ch) => ch.charCodeAt(0));
-}
+const pemToPkcs8 = (pem: string) =>
+  base64UrlToBytes(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''));
 
 /** Apple 토큰 엔드포인트용 client_secret(JWT, ES256). WebCrypto의 ECDSA 서명은 JWT가 쓰는 r||s 형식이다. */
-export async function appleClientSecret(
+async function appleClientSecret(
   keys: AppleRevokeKeys,
   clientId: string,
   nowS: number,
@@ -70,7 +67,7 @@ export async function revokeAppleAuthorization(
   const keys = appleRevokeKeys(env);
   if (!keys) return 'skipped';
   const doFetch = opts.fetcher ?? fetch;
-  const clientId = env.APPLE_BUNDLE_ID || DEFAULT_BUNDLE_ID;
+  const clientId = env.APPLE_BUNDLE_ID ?? DEFAULT_BUNDLE_ID;
   const secret = await appleClientSecret(keys, clientId, opts.nowS);
   const base = { client_id: clientId, client_secret: secret };
   const tokenRes = await doFetch(
