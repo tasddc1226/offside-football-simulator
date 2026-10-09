@@ -12,6 +12,7 @@ import {
   type CupResponse,
 } from '@offside/app-core/api/cup';
 import { kstMonthDayTime } from '@offside/app-core/boardText';
+import { cupBeforeDraw } from '@offside/app-core/cupHome';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { teamMatchText as TM } from '@offside/app-core/i18n/ko/teamMatch';
@@ -405,6 +406,57 @@ function CupMatchDetail({
   );
 }
 
+/** 추첨 전 신청한 팀(신청 순, T-11-160). */
+function Entrants({ teams, mineId }: { teams: CupResponse['teams']; mineId: string | null }) {
+  const c = useColors();
+  return (
+    <Card gap={6} testID="cup-entrants">
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+        <Txt v="h2" accessibilityRole="header">
+          {L.secEntrants}
+        </Txt>
+        <Txt v="sm" tone="muted">
+          {L.teamsCount({ n: teams.length })}
+        </Txt>
+      </View>
+      <Txt v="xs" tone="muted">
+        {L.entrantsNote}
+      </Txt>
+      {teams.map((t, i) => {
+        const mine = t.teamId === mineId;
+        return (
+          <View
+            key={t.teamId}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              paddingTop: 8,
+              borderTopWidth: 1,
+              borderTopColor: c.line,
+            }}
+          >
+            <Txt v="xs" tone="muted" style={{ width: 20, textAlign: 'right' }}>
+              {String(i + 1)}
+            </Txt>
+            <TeamLogo logo={t.logo} name={t.name} size={28} decorative />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Txt v="sm" bold tone={mine ? 'accent' : 'ink'} numberOfLines={1}>
+                {t.name}
+              </Txt>
+              <Txt v="xs" tone="muted" numberOfLines={1}>
+                {t.owner}
+              </Txt>
+            </View>
+            {mine ? <Pill tone="good">{L.mineTeam}</Pill> : null}
+            <Txt v="sm">{`OVR ${t.ovr}`}</Txt>
+          </View>
+        );
+      })}
+    </Card>
+  );
+}
+
 function CupBody({ state }: { state: CupState }) {
   const { cup: data, me } = state;
   const [matchId, setMatchId] = useState<string | null>(null);
@@ -434,11 +486,13 @@ function CupBody({ state }: { state: CupState }) {
     data.matches.filter((m) => m.round === r).sort((a, b) => a.slot - b.slot);
   const koRounds = KO_ROUNDS.filter((r) => koMatches(r).length);
   const open = (m: CupMatch) => setMatchId(m.id);
+  const early = cupBeforeDraw(data.phase);
   const closeInclusive = new Date(Date.parse(data.cup.closesAt) - 60_000).toISOString();
 
   return (
     <>
       <CupCard state={state} />
+      {early && data.teams.length ? <Entrants teams={data.teams} mineId={mineId} /> : null}
 
       <Card gap={8} testID="cup-rules">
         <Txt v="h2" accessibilityRole="header">

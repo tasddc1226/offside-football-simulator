@@ -1,0 +1,23 @@
+{
+  "id": "t-11-160-cup-entrants",
+  "title": "오프사이드 컵 신청한 팀 보기",
+  "items": [
+    "대회 화면에서 지금까지 신청한 팀을 신청한 순서대로 볼 수 있어요.",
+    "팀 로고·구단주·OVR이 나오고, 조 추첨이 끝나면 조별 순위로 바뀌어요."
+  ],
+  "en": {
+    "title": "See the Offside Cup entries",
+    "items": [
+      "The cup screen now lists every team that has entered so far, in order of entry.",
+      "Each team shows its logo, owner and OVR. After the group draw, the list turns into group standings."
+    ]
+  },
+  "ja": {
+    "title": "オフサイドカップの申し込みチームを表示",
+    "items": [
+      "大会画面で、これまでに申し込んだチームを申し込み順に見られます。",
+      "チームロゴ・オーナー・OVRが表示され、組分け抽選のあとはグループ順位に変わります。"
+    ]
+  },
+  "availability": "web-app"
+}

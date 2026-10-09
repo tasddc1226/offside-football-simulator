@@ -18,4 +18,8 @@ export const ad: Translation<AdMsgs> = {
   restoreFail: "Couldn't restore. Please try again in a moment.",
   rewardedUnavailable: "Can't load an ad right now. Please try again in a moment.",
   rewardedWatch: 'Watch the ad to the end to see the assessment.',
+  adRerollBtn: (p) => `Watch an ad to redraw (${p.n} left today)`,
+  adRerollFreeBtn: (p) => `Redraw candidates (${p.n} left today)`,
+  adRerollWatch: 'Watch the whole ad to redraw your candidates.',
+  adRerollDone: (p) => `Candidates redrawn. ${p.n} more today.`,
 };
