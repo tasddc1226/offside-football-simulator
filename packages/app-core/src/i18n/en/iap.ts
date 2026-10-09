@@ -17,13 +17,14 @@ export const iap: Translation<IapMsgs> = {
     "Your payment went through, but something went wrong while adding it. You'll get it the next time you open the app.",
   rerollNote:
     'Reroll tickets redraw the 3 candidates when you create a new player. You pay with your store account, and the tickets go to this owner account.',
-  boostBuyLead: 'With a boost ticket you can try right away, no ad needed.',
+  boostBuyLead:
+    'With boost tickets you can try right away with no ad, and keep trying with no limit on tries.',
   boostNote: (p) =>
-    `One boost ticket equals one attempt you'd get from an ad or club funds. Current success chance: ${p.chance}% (it goes up after a failure). When and how often you can use it is the same too.`,
+    `One boost ticket is one attempt, usable after this season's try or when funds are short. Unlike ad or club-fund extra tries, there's no limit on tries. Current success chance: ${p.chance}% (it goes up after a failure).`,
   shopTitle: 'Boost ticket shop',
   shopSub: "Use them on the Player tab's potential boost",
   shopSubHave: (p) => `You have ${p.n} · use them on the Player tab's potential boost`,
   shopNote:
-    'One boost ticket equals one attempt you would get from an ad or club funds. The success chance and when and how often you can use it are the same. You pay with your store account, and the tickets go to this owner account.',
+    "One boost ticket is one attempt, usable after this season's try or when funds are short. Unlike ad or club-fund extra tries, there is no limit on tries, and the success chance is the same. You pay with your store account, and the tickets go to this owner account.",
   shopWeb: 'Boost tickets can be bought in the app.',
 };

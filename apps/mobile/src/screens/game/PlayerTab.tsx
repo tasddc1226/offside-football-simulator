@@ -9,7 +9,7 @@ import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
 import { peekView } from '@offside/app-core/potential-peek';
 import { TRAITS } from '@offside/game/data';
-import { boostFreeOpen, type BoostPay } from '@offside/game/boost';
+import { boostFreeOpen, boostTicketOpen, type BoostPay } from '@offside/game/boost';
 import { ovr } from '@offside/game/attributes';
 import { leagueOf, fmtMoney } from '@offside/game/engine';
 import {
@@ -88,8 +88,8 @@ function BoostCard({ s }: { s: GameState }) {
   // T-11-153 광고 대신 구단 자금으로 시도(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 시도한다.
   // T-11-157 자금이 모자란 시즌의 한 번과 추가 시도에 쓴다. 광고는 하루 횟수가 없고, 구단 자금은 서버가 하루 상한을 둔다.
   const club = useClubReward('boost', boostFreeOpen(s) && !owned);
-  // T-11-174 잠재력 강화권(스토어에서 산다)도 같은 자리에서 쓴다.
-  const tickets = useIapItems(boostFreeOpen(s)).items?.boost ?? 0;
+  // T-11-174 잠재력 강화권(스토어에서 산다)도 같은 자리에서 쓴다. T-11-184 강화권은 추가 시도 상한 없이 쓴다.
+  const tickets = useIapItems(boostTicketOpen(s)).items?.boost ?? 0;
   const v = boostView(s, rewardOffer('boost', owned), {
     club: !!club.offer,
     ticket: tickets > 0,
@@ -199,8 +199,9 @@ function BoostCard({ s }: { s: GameState }) {
           </View>
         </View>
       ) : null}
-      {/* T-11-181 광고를 볼 수 없어도(광고 단위 없음) 구단 자금 · 강화권 · 상점 묶음은 보인다 — 웹과 같다. */}
-      {v.free ? (
+      {/* T-11-181 광고를 볼 수 없어도(광고 단위 없음) 구단 자금 · 강화권 · 상점 묶음은 보인다 — 웹과 같다. T-11-184 광고 · 구단 자금
+          추가 시도를 다 써도 강화권 자리는 남는다(ticketOpen ⊇ free). */}
+      {v.ticketOpen ? (
         <View style={{ marginVertical: 8, gap: 6 }} testID="boost-ad">
           {adMessage || v.adNote ? (
             <Txt v="sm" tone="muted" testID="boost-ad-note">
@@ -227,7 +228,7 @@ function BoostCard({ s }: { s: GameState }) {
               {B.ticketBoost({ n: tickets, chance: v.chance })}
             </Btn>
           ) : null}
-          {!owned ? <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} /> : null}
+          <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} />
         </View>
       ) : null}
       <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 4 }}>

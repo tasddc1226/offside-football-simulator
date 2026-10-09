@@ -7,6 +7,7 @@ import {
   boostExtraLeft,
   boostFreeOpen,
   boostStatus,
+  boostTicketOpen,
   tryBoost,
 } from './boost.js';
 import { newGame } from './engine.js';
@@ -166,6 +167,44 @@ describe('T-11-083 잠재력 강화', () => {
     } finally {
       applyBalance();
     }
+  });
+
+  it('T-11-184 강화권은 그 시즌의 한 번 뒤 자금이 있어도, 추가 시도 상한을 다 써도 더 시도하고, 그 상한에 세지 않는다', () => {
+    const s = player({ salary: 10000, money: 50000 });
+    // 자금이 충분한 시즌의 첫 시도는 선수 자금으로만 한다.
+    expect(boostTicketOpen(s)).toBe(false);
+    expect(tryBoost(s, 'ticket')).toBeNull();
+    nextRoll(0.999);
+    tryBoost(s);
+    // 자금이 남아 있어도 강화권은 열린다(광고 · 구단 자금은 닫혀 있다).
+    expect(boostFreeOpen(s)).toBe(false);
+    expect(boostTicketOpen(s)).toBe(true);
+    nextRoll(0.999);
+    expect(tryBoost(s, 'ticket')).toMatchObject({ ok: false, lv: 0, cost: 0, chance: 55 });
+    expect(s.money).toBe(43000);
+    // 자금이 모자라면 광고 · 구단 자금 추가 시도 두 번을 다 쓴 뒤에도 강화권은 계속 열린다.
+    s.money = 100;
+    expect(boostExtraLeft(s)).toBe(2);
+    nextRoll(0.999);
+    tryBoost(s, 'ad');
+    nextRoll(0.999);
+    tryBoost(s, 'club');
+    expect(boostExtraLeft(s)).toBe(0);
+    expect(boostFreeOpen(s)).toBe(false);
+    for (let i = 0; i < 3; i++) {
+      nextRoll(0.999);
+      expect(tryBoost(s, 'ticket')).not.toBeNull();
+    }
+    expect(s.boost!.log.filter((x) => x.tk).map((x) => x.x)).toEqual([true, true, true, true]);
+    // 단계 상한 · 나이 제한은 같다.
+    for (let i = 0; i < BOOST_MAX; i++) {
+      nextRoll(0);
+      tryBoost(s, 'ticket');
+    }
+    expect(boostStatus(s)).toBe('max');
+    expect(tryBoost(s, 'ticket')).toBeNull();
+    const old = player({ money: 100, age: 30 });
+    expect(tryBoost(old, 'ticket')).toBeNull();
   });
 
   it('최대 단계에 닿으면 더 강화하지 않는다', () => {

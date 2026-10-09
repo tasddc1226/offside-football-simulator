@@ -61,6 +61,5 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   ticketBoost: (p) => `強化券を使う（残り${p.n}枚 · ${p.chance}%）`,
   ticketBusy: '強化券を使っています…',
   ticketFail: '強化券を使えませんでした。',
-  lineExtraTicket: (p) =>
-    `今シーズンの挑戦は済んでいます。強化券でさらに挑戦でき、この選手はあと${p.left}回です。`,
+  lineExtraTicket: '今シーズンの挑戦は済んでいます。強化券なら回数の上限なしでさらに挑戦できます。',
 };

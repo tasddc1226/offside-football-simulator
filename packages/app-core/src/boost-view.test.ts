@@ -122,6 +122,32 @@ describe('T-11-083 잠재력 강화 카드', () => {
     );
   });
 
+  it('T-11-184 강화권이 있으면 추가 시도 상한을 다 써도, 자금이 남아도 이번 시즌 시도 뒤 강화권 안내를 보인다', () => {
+    const s = player();
+    doBoost(s);
+    expect(boostView(s)).toMatchObject({ free: false, ticketOpen: true });
+    expect(boostView(s, null, { ticket: true })).toMatchObject({
+      free: false,
+      ticketOpen: true,
+      line: '이번 시즌 시도는 했어요. 강화권으로는 횟수 상한 없이 더 시도할 수 있어요.',
+    });
+    s.money = 100;
+    // 광고 · 구단 자금 추가 시도가 남아 있으면 그 안내가 먼저다.
+    expect(boostView(s, null, { club: true, ticket: true }).line).toContain('2번 남았어요');
+    doBoost(s, 'club');
+    doBoost(s, 'club');
+    expect(boostView(s, 'free', { club: true, ticket: true })).toMatchObject({
+      free: false,
+      ticketOpen: true,
+      line: '이번 시즌 시도는 했어요. 강화권으로는 횟수 상한 없이 더 시도할 수 있어요.',
+    });
+    expect(boostView(s, 'free').adButton).toBeUndefined();
+    expect(doBoost(s, 'ticket')).not.toBeNull();
+    expect(boostView(s).history[0]).toMatch(/· 강화권\(추가\) · (성공|실패)$/);
+    // 시도할 수 있는 첫 시즌 전에는 닫혀 있다.
+    expect(boostView(player({ seasons: 0 }))).toMatchObject({ ticketOpen: false });
+  });
+
   it('29세가 지나고 한 번도 안 한 선수에게는 카드를 숨긴다', () => {
     expect(boostHidden(player({ age: 30 }))).toBe(true);
     const tried = player({ age: 30 });

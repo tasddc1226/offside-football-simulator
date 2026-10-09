@@ -20,7 +20,7 @@
   import { fmtValue } from '@offside/app-core/format';
   import AttrCard from '../AttrCard.svelte';
   import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
-  import { boostFreeOpen } from '@offside/game/boost';
+  import { boostFreeOpen, boostTicketOpen } from '@offside/game/boost';
   import BoostFx from '../BoostFx.svelte';
   import { retireAsk } from '../actions.js';
   import { save } from '../helpers.js';
@@ -73,6 +73,8 @@
   let clubMsg = $state('');
   let peekMsg = $state('');
   const freeOpen = $derived(boostFreeOpen(s));
+  // T-11-184 강화권은 추가 시도 상한 없이 쓴다 — 이번 시즌의 한 번을 썼거나 자금이 모자라면.
+  const ticketOpen = $derived(boostTicketOpen(s));
   const peekClosed = $derived(pot.kind === 'available' || pot.kind === 'short');
   $effect(() => {
     if (freeOpen || peekClosed) void loadClubShop().then((r) => (club = r));
@@ -99,12 +101,12 @@
   let tickets = $state(0);
   let ticketBusy = $state(false);
   $effect(() => {
-    if (!freeOpen || !hasSessionHint()) return;
+    if (!ticketOpen || !hasSessionHint()) return;
     void fetchItems().then((r) => (tickets = r.ok ? r.data.boost : 0));
   });
-  const boost = $derived(boostView(s, null, { club: !!clubTry, ticket: freeOpen && tickets > 0 }));
+  const boost = $derived(boostView(s, null, { club: !!clubTry, ticket: ticketOpen && tickets > 0 }));
   async function onTicketBoost() {
-    if (ticketBusy || tickets < 1 || !freeOpen) return;
+    if (ticketBusy || tickets < 1 || !ticketOpen) return;
     ticketBusy = true;
     clubMsg = '';
     const r = await payWithTicket(() => {
@@ -194,7 +196,7 @@
         {clubBusy ? B.clubBusy : B.clubBoost({ price: fundsText(clubTry.price), chance: boost.chance })}
       </button>
     {/if}
-    {#if tickets > 0 && boost.free}
+    {#if tickets > 0 && ticketOpen}
       <button class="btn btn-block" data-act="boost-ticket" disabled={ticketBusy} onclick={onTicketBoost}>
         {ticketBusy ? B.ticketBusy : B.ticketBoost({ n: tickets, chance: boost.chance })}
       </button>

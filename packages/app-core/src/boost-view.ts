@@ -9,6 +9,7 @@ import {
   boostExtraLeft,
   boostState,
   boostStatus,
+  boostTicketOpen,
   tryBoost,
   type BoostPay,
   type BoostStatus,
@@ -38,6 +39,8 @@ export interface BoostView {
    * 남았을 때. 구단 자금 버튼도 이 값을 본다.
    */
   free: boolean;
+  /** T-11-184 강화권으로 지금 시도할 수 있는지 — 이번 시즌의 한 번을 썼거나 자금이 모자랄 때(추가 시도 상한 없음). */
+  ticketOpen: boolean;
   note: string;
   /** 최근 시도(새것부터 4개). */
   history: string[];
@@ -58,7 +61,7 @@ export type BoostAdOffer = 'ad' | 'free' | null;
 
 /**
  * opts(T-11-157): club = 구단 자금 버튼을 보일 수 있다(로그인한 구단주). T-11-174 ticket = 잠재력 강화권을 가졌다. 추가 시도
- * 안내는 광고 · 구단 자금 · 강화권 길이 있을 때만 보인다. 광고 · 구단 자금 강화는 하루 횟수를 세지 않는다(T-11-172 · 173).
+ * 안내는 광고 · 구단 자금 · 강화권 길이 있을 때만 보인다. 강화권은 추가 시도 상한이 없다(T-11-184). 광고 · 구단 자금 강화는 하루 횟수를 세지 않는다(T-11-172 · 173).
  */
 export function boostView(
   s: GameState,
@@ -67,7 +70,8 @@ export function boostView(
 ): BoostView {
   const status = boostStatus(s);
   const extraLeft = status === 'done' ? boostExtraLeft(s) : 0;
-  const path = !!adOffer || !!opts.club || !!opts.ticket;
+  const path = !!adOffer || !!opts.club;
+  const ticketOpen = boostTicketOpen(s);
   const free = status === 'short' || extraLeft > 0;
   const b = boostState(s);
   const cost = L2.won({ v: fmtMoney(boostCost(s)) });
@@ -81,10 +85,10 @@ export function boostView(
           ? L.lineMax({ lv: BOOST_MAX })
           : status === 'done'
             ? extraLeft && path
-              ? (adOffer ? L.lineExtra : opts.club ? L.lineExtraClub : L.lineExtraTicket)({
-                  left: extraLeft,
-                })
-              : L.lineDone
+              ? (adOffer ? L.lineExtra : L.lineExtraClub)({ left: extraLeft })
+              : opts.ticket
+                ? L.lineExtraTicket
+                : L.lineDone
             : status === 'short'
               ? L.lineShort({ cost })
               : L.lineReady({ next: b.lv + 1, chance, cost });
@@ -98,6 +102,7 @@ export function boostView(
       ? { button: L.button({ cost, chance }), confirm: L.confirm({ cost, chance }) }
       : {}),
     free,
+    ticketOpen,
     ...(free && adOffer
       ? {
           adButton: (adOffer === 'free' ? L.adButtonFree : L.adButton)({ chance }),
