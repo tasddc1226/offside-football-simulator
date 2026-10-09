@@ -1,3 +1,5 @@
+import AutomationModeration from './AutomationModeration';
+import { automationModerationText as L } from '@offside/app-core/i18n/ko/automationModeration';
 // 자동 플레이 탐지(웹 admin/AdminAutomation.svelte, 관찰 전용). 최근 N시간 동안 시즌을 올린 프로필 중 사람답지 않은 흐름이
 // 보이는 곳을 점수순으로 보여 준다 — 게임에는 아무 영향이 없다. 근거 기준은 api `db/repos/automation.ts`.
 import { useEffect, useRef, useState } from 'react';
@@ -58,6 +60,7 @@ export default function AdminAutomation() {
   const r = report;
   return (
     <View testID="admin-automation" style={{ gap: 14 }}>
+      <AutomationModeration />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Txt v="h2" accessibilityRole="header">
           자동 플레이 의심
@@ -79,9 +82,7 @@ export default function AdminAutomation() {
         ))}
       </Seg>
       <Txt tone="muted" style={small}>
-        관찰 전용이에요 — 게임에는 영향이 없어요. 사람도 같은 속도로 누르면 간격이 일정하게 나올 수
-        있으니 근거를 함께 보고 판단해 주세요. 조작 요약(브라우저·클릭·커서)은 이번 업데이트 뒤에
-        올라온 시즌부터 있어요.
+        {L.observations}
       </Txt>
       <LoadState
         status={status}

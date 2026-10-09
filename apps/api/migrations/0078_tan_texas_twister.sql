@@ -1,0 +1,2 @@
+CREATE INDEX `career_seasons_signals_career_idx` ON `career_seasons` (`career_id`,`created_at`) WHERE "career_seasons"."signals_json" is not null;--> statement-breakpoint
+CREATE INDEX `careers_automation_updated_idx` ON `careers` (`updated_at`,`id`);

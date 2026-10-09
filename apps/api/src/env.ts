@@ -5,6 +5,8 @@ import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  /** Emergency pause for automatic moderation; manual restore remains available. */
+  AUTOMATION_HIDE_DISABLED?: string;
   /** 공지·릴리즈 노트 하루 첫 게시 자동 푸시. 운영에만 켠다. */
   NEWS_PUSH_ENABLED?: string;
   /** 현재 앱 세션의 등록 기기만 테스트. 기본 off. 자동 발송과 별개다. */
