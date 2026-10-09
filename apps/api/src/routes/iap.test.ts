@@ -33,7 +33,7 @@ async function serviceAccountJson() {
   );
   const pem = `-----BEGIN PRIVATE KEY-----\n${btoa(String.fromCharCode(...der))}\n-----END PRIVATE KEY-----\n`;
   return JSON.stringify({
-    client_email: 'verifier@example.iam.gserviceaccount.com',
+    client_email: 'verifier@example.com',
     private_key: pem,
   });
 }

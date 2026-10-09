@@ -46,8 +46,8 @@ App Store Connect · Play Console에 같은 ID로 소모성(Consumable · 일회
 ## 운영 준비 (사용자)
 
 - [x] Google Cloud(offside-eef89): Google Play Android Developer API 사용 설정, 서비스 계정
-      `play-billing-verifier@offside-eef89.iam.gserviceaccount.com` 생성, Play Console에 이 앱 권한으로 초대(2026-10-09)
-- [ ] 서비스 계정 JSON 키 생성 → `wrangler secret put GOOGLE_PLAY_SA_JSON --env production` → 키 파일 삭제
+      `play-billing-verifier` 생성, Play Console에 이 앱 권한으로 초대(2026-10-09)
+- [x] 서비스 계정 JSON 키 생성 → `wrangler secret put GOOGLE_PLAY_SA_JSON --env production` → 키 파일 삭제
 - [ ] Play Console 결제 프로필 인증(2026-11-06 전)
 - [ ] App Store Connect · Play Console에 상품 5종 등록, Apple 상품 심사 제출
 - [ ] TestFlight · 라이선스 테스터로 Sandbox 구매 한 번씩 확인(`iap_purchases.test = 1`)
