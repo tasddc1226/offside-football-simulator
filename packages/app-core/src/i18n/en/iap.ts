@@ -20,4 +20,10 @@ export const iap: Translation<IapMsgs> = {
   boostBuyLead: 'With a boost ticket you can try right away, no ad needed.',
   boostNote: (p) =>
     `One boost ticket equals one attempt you'd get from an ad or club funds. Current success chance: ${p.chance}% (it goes up after a failure). When and how often you can use it is the same too.`,
+  shopTitle: 'Boost ticket shop',
+  shopSub: "Use them on the Player tab's potential boost",
+  shopSubHave: (p) => `You have ${p.n} · use them on the Player tab's potential boost`,
+  shopNote:
+    'One boost ticket equals one attempt you would get from an ad or club funds. The success chance and when and how often you can use it are the same. You pay with your store account, and the tickets go to this owner account.',
+  shopWeb: 'Boost tickets can be bought in the app.',
 };
