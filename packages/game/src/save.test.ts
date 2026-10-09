@@ -6,7 +6,9 @@ import { leagueOf } from './engine.js';
 import './event-registry.js';
 import { createRng, rnd } from './rng.js';
 import { loadSave, migrateSave } from './save.js';
-import { migrateHofEntry } from './hof-store.js';
+import { migrateHofEntry, rescoreHofEntry } from './hof-store.js';
+import { legendScore, legendSnapshot } from './legend.js';
+import { controlPoints } from '@offside/contracts/hof-rules';
 import type { GameState, HofEntry } from './types.js';
 import { acceptOption, endSeason } from './season.js';
 
@@ -230,5 +232,38 @@ describe('T-11-072 옛 은퇴 기록 국적 호환성', () => {
     const noId = { ...h };
     delete noId.id;
     expect(migrateHofEntry(noId, s)).toBe(noId);
+  });
+});
+
+describe('T-11-170 T-11-168 이전 은퇴 기록의 레전드 점수', () => {
+  const retired = (dpos: 'AM' | 'CM' | 'ST', score: (now: number, cut: number) => number) => {
+    const s = { ...current(), pos: dpos === 'ST' ? 'FW' : 'MF', dpos } as GameState;
+    s.career = s.career.map((r) => ({ ...r, apps: 30, rating: 7.5 }));
+    const detail = legendSnapshot(s);
+    const cut = 0.5 * controlPoints(detail.career);
+    return {
+      h: { id: s.cid, dpos, score: score(legendScore(detail), cut), detail } as unknown as HofEntry,
+      cut,
+    };
+  };
+
+  it('옛 공식 점수인 AM·CM 기록은 서버와 같은 식(옛 점수 − 0.5 × 경기 장악)으로 다시 매기고, 다시 읽어도 그대로다', () => {
+    for (const d of ['AM', 'CM'] as const) {
+      const { h, cut } = retired(d, (now, c) => Math.round(now + c));
+      expect(cut).toBeGreaterThan(0);
+      const fixed = rescoreHofEntry(h);
+      expect(fixed.score).toBe(Math.round(h.score - cut));
+      expect(rescoreHofEntry(fixed)).toBe(fixed);
+    }
+  });
+
+  it('새 공식으로 은퇴한 기록·다른 세부 포지션·스냅샷 없는 옛 기록은 바꾸지 않는다', () => {
+    const fresh = retired('AM', (now) => now).h;
+    expect(rescoreHofEntry(fresh)).toBe(fresh);
+    const st = retired('ST', (now, c) => Math.round(now + c)).h;
+    expect(rescoreHofEntry(st)).toBe(st);
+    const old = retired('CM', (now, c) => Math.round(now + c)).h;
+    delete old.detail;
+    expect(rescoreHofEntry(old)).toBe(old);
   });
 });
