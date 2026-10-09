@@ -1,0 +1,16 @@
+{
+  "id": "t-11-170-my-players-legend",
+  "title": "내 선수 레전드 점수 반영",
+  "items": ["미드필더 레전드 점수 조정이 내 선수 목록과 은퇴 리포트에도 반영돼요."],
+  "en": {
+    "title": "My players show the new legend scores",
+    "items": [
+      "The midfielder legend score update now also shows in My players and retirement reports."
+    ]
+  },
+  "ja": {
+    "title": "マイ選手のレジェンドスコアを反映",
+    "items": ["MFのレジェンドスコア調整が、マイ選手一覧と引退レポートにも反映されます。"]
+  },
+  "availability": "web-app"
+}
