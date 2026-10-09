@@ -9,7 +9,8 @@ import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
 import { peekView } from '@offside/app-core/potential-peek';
 import { TRAITS } from '@offside/game/data';
-import type { BoostPay } from '@offside/game/boost';
+import { boostFreeOpen, type BoostPay } from '@offside/game/boost';
+import { boostDayLeft } from '@offside/app-core/boost-daily';
 import { ovr } from '@offside/game/attributes';
 import { leagueOf, fmtMoney } from '@offside/game/engine';
 import {
@@ -30,6 +31,7 @@ import { adFree } from '../../platform/adFree';
 import { claimReward, rewardOffer } from '../../platform/rewarded';
 import { openPeek, openPeekWithClub, peekAvailable, potPeek } from '../../platform/rewardedPeek';
 import { useClubReward } from '../../platform/clubShop';
+import { adBoostRaw, markAdBoost } from '../../platform/boostDaily';
 import { fundsText } from '@offside/app-core/funds';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -81,9 +83,11 @@ function BoostCard({ s }: { s: GameState }) {
   const [adBusy, setAdBusy] = useState(false);
   const [adMessage, setAdMessage] = useState('');
   const owned = useSnapshot(adFree).owned;
-  const v = boostView(s, rewardOffer('boost', owned));
   // T-11-153 광고 대신 구단 자금으로 시도(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 시도한다.
-  const club = useClubReward('boost', v.status === 'short' && !owned);
+  // T-11-157 자금이 모자란 시즌의 한 번과 추가 시도에 쓰고, 오늘 횟수는 광고와 구단 자금을 합쳐 센다.
+  const club = useClubReward('boost', boostFreeOpen(s) && !owned);
+  const dayLeft = boostDayLeft(adBoostRaw(), club.shop);
+  const v = boostView(s, rewardOffer('boost', owned), { club: !!club.offer, dayLeft });
   // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다. 결과를 먼저 저장하고 연출을 연다 — 연출 중에 앱을 꺼도 결과는 그대로다.
   const run = (pay: BoostPay) => {
     const out = doBoost(appState.G!, pay);
@@ -101,7 +105,16 @@ function BoostCard({ s }: { s: GameState }) {
     setAdBusy(true);
     setAdMessage('');
     try {
-      setAdMessage(await claimReward('boost', () => run('ad'), B.adWatch));
+      setAdMessage(
+        await claimReward(
+          'boost',
+          () => {
+            markAdBoost();
+            run('ad');
+          },
+          B.adWatch,
+        ),
+      );
     } finally {
       setAdBusy(false);
     }
@@ -188,7 +201,7 @@ function BoostCard({ s }: { s: GameState }) {
           >
             {adBusy ? B.adLoading : v.adButton}
           </Btn>
-          {club.offer ? (
+          {club.offer && v.free ? (
             <Btn disabled={adBusy} testID="boost-club-btn" onPress={() => void onClubBoost()}>
               {B.clubBoost({ price: fundsText(club.offer.price), chance: v.chance })}
             </Btn>

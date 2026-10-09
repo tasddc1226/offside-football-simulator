@@ -8,6 +8,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   growthScale: '成長倍率',
   investGain: '特訓の成長割合',
   investCost: '自己投資の費用倍率',
+  boostExtraTotal: 'キャリアごとの追加強化回数',
   potMean: 'ポテンシャルの平均',
   potSd: 'ポテンシャルのばらつき',
   potScoutSd: 'スカウト評価の誤差',

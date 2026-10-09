@@ -94,6 +94,15 @@ export const BALANCE_SPEC = {
     step: 0.05,
     unit: 'x',
   },
+  boostExtraTotal: {
+    group: 'growth',
+    label: '커리어당 추가 강화 횟수',
+    desc: '선수 자금이 모자란 시즌에 잠재력 강화 한 번을 쓴 뒤 광고나 구단 자금으로 더 시도할 수 있는 횟수(한 커리어 전체). 0이면 더 시도하지 않는다',
+    def: 2,
+    min: 0,
+    max: 5,
+    step: 1,
+  },
   potMean: {
     group: 'growth',
     label: '잠재력 평균',
@@ -351,7 +360,7 @@ export const BALANCE_SPEC = {
   rewardDailyCap: {
     group: 'market',
     label: '광고 대신 구단 자금 하루 횟수',
-    desc: '보상마다 한 구단주가 하루(한국 시각)에 구단 자금으로 받을 수 있는 횟수. 0이면 구단 자금으로 받지 않는다',
+    desc: '보상마다 한 구단주가 하루(한국 시각)에 구단 자금으로 받을 수 있는 횟수. 0이면 구단 자금으로 받지 않는다. 잠재력 강화는 앱에서 광고로 받은 횟수와 합쳐 센다',
     def: 5,
     min: 0,
     max: 50,

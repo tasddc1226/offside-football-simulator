@@ -64,6 +64,14 @@ export type BoostConfig = {
   perSeason: number;
   /** 정책: 비용의 이 배수 이상 있을 때만 시도한다. */
   reserve: number;
+  /**
+   * T-11-157 광고 · 구단 자금(무료) 정책: 그 시즌의 한 번(자금이 모자라면 무료로)을 쓴 뒤 이만큼 더 무료로 시도한다.
+   * 매 시즌 전부 쓰는 상한 추정이다. freeShort면 추가 시도는 자금이 비용보다 모자랄 때만 한다(출시 규칙).
+   */
+  free?: number;
+  freeShort?: boolean;
+  /** 커리어 전체 추가 시도 상한(없으면 무제한). */
+  freeTotal?: number;
 };
 
 type Hook = (s: GameState, r: () => number) => void;
@@ -165,6 +173,7 @@ export type Career = {
         income: number;
         fails: number;
         ages: number[];
+        extra?: number;
       }
     | undefined;
 };
@@ -261,9 +270,16 @@ function boostSeason(
   b: NonNullable<Career['boost']>,
 ) {
   if (s.age > c.maxAge || s.career.length === 0) return;
-  for (let t = 0; t < c.perSeason && b.level < c.p.length; t++) {
-    const cost = cfgCost(s, c, b.level);
-    if (s.money < cost * c.reserve) return;
+  for (let t = 0; t < c.perSeason + (c.free ?? 0) && b.level < c.p.length; t++) {
+    let cost = cfgCost(s, c, b.level);
+    if (t >= c.perSeason && c.freeShort && s.money >= cost) return;
+    if (t >= c.perSeason && c.freeTotal != null && (b.extra ?? 0) >= c.freeTotal) return;
+    if (t >= c.perSeason) b.extra = (b.extra ?? 0) + 1;
+    if (t >= c.perSeason || s.money < cost * c.reserve) {
+      // 무료 정책이 없으면 자금이 모자란 시즌은 넘긴다.
+      if (c.free == null) return;
+      cost = 0;
+    }
     s.money -= cost;
     b.spent += cost;
     b.tries++;
@@ -501,6 +517,77 @@ export const CONFIGS: BoostConfig[] = [
     maxAge: BOOST.maxAge,
     perSeason: 1,
     reserve: 1,
+  },
+  {
+    name: 'T-11-157a · 출시 + 광고 · 구단 자금(모자란 시즌 무료, 매 시즌 2번 더)',
+    p: [...BOOST.p],
+    min: [...BOOST.min],
+    rate: [...BOOST.rate],
+    pity: BOOST.pity,
+    maxAge: BOOST.maxAge,
+    perSeason: 1,
+    reserve: 1,
+    free: 2,
+  },
+  {
+    name: 'T-11-116 · 출시 + 광고(모자란 시즌 무료 한 번, 추가 없음)',
+    p: [...BOOST.p],
+    min: [...BOOST.min],
+    rate: [...BOOST.rate],
+    pity: BOOST.pity,
+    maxAge: BOOST.maxAge,
+    perSeason: 1,
+    reserve: 1,
+    free: 0,
+  },
+  {
+    name: 'T-11-157t2 · 출시 + 광고(모자란 시즌 무료, 모자란 시즌 추가 · 커리어 전체 2번까지)',
+    p: [...BOOST.p],
+    min: [...BOOST.min],
+    rate: [...BOOST.rate],
+    pity: BOOST.pity,
+    maxAge: BOOST.maxAge,
+    perSeason: 1,
+    reserve: 1,
+    free: 2,
+    freeShort: true,
+    freeTotal: 2,
+  },
+  {
+    name: 'T-11-157t4 · 출시 + 광고(모자란 시즌 무료, 모자란 시즌 추가 · 커리어 전체 4번까지)',
+    p: [...BOOST.p],
+    min: [...BOOST.min],
+    rate: [...BOOST.rate],
+    pity: BOOST.pity,
+    maxAge: BOOST.maxAge,
+    perSeason: 1,
+    reserve: 1,
+    free: 2,
+    freeShort: true,
+    freeTotal: 4,
+  },
+  {
+    name: 'T-11-157c · 출시 + 광고 · 구단 자금(모자란 시즌 무료, 모자란 시즌만 2번 더)',
+    p: [...BOOST.p],
+    min: [...BOOST.min],
+    rate: [...BOOST.rate],
+    pity: BOOST.pity,
+    maxAge: BOOST.maxAge,
+    perSeason: 1,
+    reserve: 1,
+    free: 2,
+    freeShort: true,
+  },
+  {
+    name: 'T-11-157b · 출시 + 광고 · 구단 자금(모자란 시즌 무료, 매 시즌 1번 더)',
+    p: [...BOOST.p],
+    min: [...BOOST.min],
+    rate: [...BOOST.rate],
+    pity: BOOST.pity,
+    maxAge: BOOST.maxAge,
+    perSeason: 1,
+    reserve: 1,
+    free: 1,
   },
 ];
 
