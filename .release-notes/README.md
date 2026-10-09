@@ -26,6 +26,10 @@ OTA 잡과 릴리즈 태그 잡이 성공한 뒤 게시한다. 커밋 제목이�
 - 최대 100개/64KiB다. 운영 게시 이력을 확인한 과거 파일은 하위 `archive/`로 옮길 수 있다.
   서버 이력이 남으므로 파일을 옮겨도 재게시되지 않는다. 미게시 파일은 보관 폴더로 옮기지 않는다.
 
+PR에서 사용자에게 보이는 소스(`apps/web/src`·`apps/mobile/src`·`apps/api/src`·`packages/*/src`, 테스트 제외)가 바뀌었는데
+새 항목이 없으면 `Release notes guard` 검사가 실패한다. 공지할 게 없는 변경(리팩터링·운영 도구 등)은 PR 본문에
+`release-notes: none` 한 줄을 쓰거나 `no-release-note` 라벨을 붙인다.
+
 `node .github/scripts/publish-release-notes.mjs validate .release-notes`로 형식과 크기를 확인한다.
 초안의 사용자 게시판 미리보기는 인증된 게시 API의 `dryRun: true`를 사용한다. 일반 관리자 세션으로
 이 배포 전용 API를 호출할 수는 없다.
