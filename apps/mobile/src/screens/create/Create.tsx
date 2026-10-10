@@ -788,7 +788,7 @@ export default function Create() {
             <View style={{ gap: 8 }}>
               {s.candidatePotentialOpen ? (
                 <Txt v="sm" tone="muted">
-                  {L.potentialHelp}
+                  {premium ? SL.premiumHelp : L.potentialHelp}
                 </Txt>
               ) : offer || club.offer ? (
                 <>

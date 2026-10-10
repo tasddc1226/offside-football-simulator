@@ -126,7 +126,8 @@ export function generateCandidates(
       96,
     );
     const scouted = CLAMP(Math.round(value + gauss(potRng) * BAL.potScoutSd), 55, 96);
-    const min = Math.max(55, Math.floor(value / 10) * 10);
+    // 보장 후보는 표시 하한을 A(84)로 올린다 — 10단위 범위(80–89)로 'B–A'가 보이면 보장과 어긋난다. 표시 전용이다.
+    const min = Math.max(55, Math.floor(value / 10) * 10, i === sure ? 84 : 0);
     out.push({
       potential: { value, scouted, min, max: Math.min(96, Math.floor(value / 10) * 10 + 9) },
       attrs,

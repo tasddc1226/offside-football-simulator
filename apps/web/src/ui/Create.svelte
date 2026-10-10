@@ -367,7 +367,7 @@
         {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
       </p>
     {/if}
-    <p class="muted">{appState.candidatePotentialOpen ? L.potentialHelp : L.potentialWeb}</p>
+    <p class="muted">{appState.candidatePotentialOpen ? (premium ? SL.premiumHelp : L.potentialHelp) : L.potentialWeb}</p>
     {#if clubCand}
       <button class="btn btn-sm self-start" data-act="candidate-potential-club" disabled={clubBusy} onclick={revealWithClub}>
         {clubBusy ? B.clubBusy : B.clubCandidates({ price: fundsText(clubCand.price) })}
