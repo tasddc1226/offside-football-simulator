@@ -177,7 +177,7 @@ test('계정 카드에서 댓글 닉네임을 정하고 바꾼다 (T-10-028)', a
   await page.locator('[data-act="owner"]').click();
   const account = page.locator('#account-slot');
   const editor = page.locator('[data-owner-profile-editor]');
-  await editor.locator('summary').click();
+  await editor.locator('[data-owner-profile-edit]').click();
   await expect(account.locator('[data-act="save-nickname"]')).toHaveCount(0);
   const input = editor.getByLabel('구단주 이름');
   await input.fill('중복');
@@ -259,14 +259,14 @@ test("운영자 계정은 댓글 닉네임이 '운영자'로 고정돼 바꾸는
       }),
     ),
   );
-  await page.route(`${API}/v1/boards/**`, (route) =>
-    route.fulfill(ok({ admin: true, google: true, nickname: '운영자' })),
+  await page.route(`${API}/v1/owner/summary`, (route) =>
+    route.fulfill(ok({ entries: [], admin: true, tier: null, tiers: [] })),
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   const account = page.locator('#account-slot');
   const editor = page.locator('[data-owner-profile-editor]');
-  await editor.locator('summary').click();
+  await editor.locator('[data-owner-profile-edit]').click();
   await expect(editor).toContainText('운영자 · 운영자 계정은 고정이에요');
   await expect(account.getByLabel('댓글 닉네임')).toHaveCount(0);
 });
