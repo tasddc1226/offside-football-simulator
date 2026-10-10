@@ -63,6 +63,6 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   ticketBoost: (p) => `Use boost ticket (${p.n} left · ${p.chance}%)`,
   ticketBusy: 'Using a boost ticket…',
   ticketFail: "Couldn't use a boost ticket.",
-  lineExtraTicket: (p) =>
-    `You've tried this season. You can try more with a boost ticket, and this player has ${p.left} ${p.left === 1 ? 'try' : 'tries'} left.`,
+  lineExtraTicket:
+    "You've tried this season. With boost tickets you can keep trying, with no limit on tries.",
 };
