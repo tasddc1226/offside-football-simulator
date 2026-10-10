@@ -1,7 +1,5 @@
 <script lang="ts">
   import Topbar from '../Topbar.svelte';
-  import BackBar from '../BackBar.svelte';
-  import { go } from '../nav.js';
   import { appState } from '../state.svelte.js';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import OwnerHall from './OwnerHall.svelte';
@@ -17,7 +15,6 @@
 
 <div class="wrap honors" data-owner-honors-screen>
   <Topbar />
-  <BackBar inline act="honors-back" fallback={() => go('owner')} />
   <header class="hall-heading"><h1>{L.hallTitle}</h1><p class="muted">{L.archiveLead}</p></header>
   <div class="hall-tabs" role="group" aria-label={L.hallTitle}>
     <button aria-pressed={appState.honorsView === 'records'} data-hall-tab="records" onclick={() => tab('records')}>{L.archiveTab}{#if appState.recapNew}<span class="hall-dot" aria-label={L.archiveNew}></span>{/if}</button>

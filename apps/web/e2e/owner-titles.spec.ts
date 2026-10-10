@@ -93,14 +93,14 @@ test('permanent titles: progress, selection, header update, recovery and memoize
     'aria-pressed',
     'true',
   );
-  await page.locator('[data-act="honors-back"]').click();
+  await page.locator('.main-nav [data-act="owner"]').click();
   await expect(
     page.locator('[aria-label="구단주 요약"] [data-title="owner-developer"]'),
   ).toBeVisible();
   await page.locator('[data-act="open-owner-hall"]').click();
   await page.locator('[data-hall-tab="titles"]').click();
   await hall.locator('[data-title-pick="none"]').click();
-  await page.locator('[data-act="honors-back"]').click();
+  await page.locator('.main-nav [data-act="owner"]').click();
   await expect(page.locator('[aria-label="구단주 요약"] [data-title]')).toHaveCount(0);
   await page.locator('[data-act="home"]').click();
   await page.locator('[data-act="owner"]').click();
@@ -109,7 +109,7 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await page.locator('[data-hall-tab="titles"]').click();
   await expect(hall).toBeVisible();
   const afterMutation = gets;
-  await page.locator('[data-act="honors-back"]').click();
+  await page.locator('.main-nav [data-act="owner"]').click();
   await page.locator('[data-act="home"]').click();
   await page.locator('[data-act="owner"]').click();
   await expect(page.locator('[data-permanent-title]')).toHaveCount(0);

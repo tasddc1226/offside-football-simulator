@@ -57,7 +57,7 @@ test('hall unifies seasons: lazy details, cache, retry, selection and mobile nav
   expect(summaries).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(page.locator('.main-nav')).toBeVisible();
-  await page.locator('[data-act="honors-back"]').click();
+  await page.locator('.main-nav [data-act="owner"]').click();
   await expect(page.locator('[data-act="open-owner-hall"]')).toBeVisible();
   await page.locator('[data-act="open-owner-hall"]').click();
   await expect(page.locator('[data-archive-season="0"]')).toHaveAttribute('aria-pressed', 'true');
