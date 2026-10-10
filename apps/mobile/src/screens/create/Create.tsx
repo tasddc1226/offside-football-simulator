@@ -33,7 +33,9 @@ import { adText } from '@offside/app-core/i18n/ko/ad';
 import { createText as L } from '@offside/app-core/i18n/ko/create';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
-import { fetchItems, spendReroll } from '@offside/app-core/api/cup';
+import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
+import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
+import { ScoutOdds } from '../owner/ScoutOdds';
 import { fundsText } from '@offside/app-core/funds';
 import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { useClubReward } from '../../platform/clubShop';
@@ -42,6 +44,7 @@ import { detailOpenNow, draftBody, draftDpos, randomName } from '@offside/app-co
 import {
   revealCandidatePotential,
   rerollCandidates,
+  premiumScoutCandidates,
   rollCandidates,
   startCareer,
   toast,
@@ -194,6 +197,10 @@ export default function Create() {
   // 한 번의 '다시 뽑기' 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 차감되지 않는다.
   const rerollKey = useRef<string | null>(null);
   const hasCandidates = !!s.candidates;
+  // T-11-196 프리미엄 스카우트권 — 가진 장수가 있으면 버튼, 없으면 구단주에게 상점(구단주 화면)으로 가는 안내. 잠금 · 멱등 키는 리롤과 함께 쓴다.
+  const [scouts, setScouts] = useState(0);
+  const scoutKey = useRef<string | null>(null);
+  const premium = !!s.candidates?.some((x) => x.guaranteed);
   useEffect(() => {
     if (!hasCandidates) return;
     let live = true;
@@ -201,6 +208,7 @@ export default function Create() {
       if (!live) return;
       setOwner(r.ok);
       setRerolls(r.ok ? r.data.reroll : 0);
+      setScouts(r.ok ? (r.data.scout ?? 0) : 0);
     });
     return () => {
       live = false;
@@ -266,6 +274,33 @@ export default function Create() {
       rerollCandidates();
       setRewardMessage('');
       toast(CL.rerollDone({ n: r.data.reroll }));
+    } finally {
+      rerollLock.current = false;
+      setRerolling(false);
+    }
+  }
+  const askScout = () =>
+    Alert.alert(SL.askTitle, SL.confirm({ n: Math.max(0, scouts - 1) }), [
+      { text: CA.cancel, style: 'cancel' },
+      { text: SL.action, onPress: () => void premiumScout() },
+    ]);
+  async function premiumScout() {
+    if (rerollLock.current || scouts < 1) return;
+    rerollLock.current = true;
+    setRerolling(true);
+    try {
+      scoutKey.current ??= crypto.randomUUID();
+      const r = await spendScout(scoutKey.current);
+      if (r.ok || !r.error.retryable) scoutKey.current = null;
+      if (!r.ok) {
+        if (r.error.reason === 'NO_SCOUT') setScouts(0);
+        toast(r.error.message || SL.fail);
+        return;
+      }
+      setScouts(r.data.scout);
+      premiumScoutCandidates();
+      setRewardMessage('');
+      toast(SL.done({ n: r.data.scout }));
     } finally {
       rerollLock.current = false;
       setRerolling(false);
@@ -693,6 +728,32 @@ export default function Create() {
                 </Btn>
               ) : null}
             </View>
+            {scouts > 0 ? (
+              <View style={{ gap: 6 }}>
+                <Btn
+                  block
+                  kind="primary"
+                  testID="candidate-premium-scout"
+                  disabled={rerolling || rewardBusy}
+                  onPress={askScout}
+                >
+                  {rerolling ? SL.busy : SL.btn({ n: scouts })}
+                </Btn>
+                <Txt v="sm" tone="muted">
+                  {SL.what}
+                </Txt>
+                <ScoutOdds />
+              </View>
+            ) : owner ? (
+              <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
+                {SL.shopGo}
+              </Btn>
+            ) : null}
+            {premium ? (
+              <Txt v="sm" tone="muted" testID="premium-note">
+                {SL.premiumNote}
+              </Txt>
+            ) : null}
             {rerolls > 0 ? (
               <Btn
                 block
@@ -827,6 +888,7 @@ export default function Create() {
                               {startOvr(C.pos, cand.attrs)}
                             </Txt>
                           </Txt>
+                          {cand.guaranteed ? <Pill>{SL.sure}</Pill> : null}
                           {isPicked ? <Pill tone="good">{L.picked}</Pill> : null}
                         </View>
                         <Txt

@@ -13,23 +13,13 @@ import { latestBalance } from '@offside/game/balance';
 import { BOOST, BOOST_PITY_PCT } from '@offside/game/boost';
 import { fmtValue } from './format.js';
 import { gradeOf } from '@offside/game/stats';
+import { phi } from '@offside/game/candidates';
 import { cachedGet } from './api/client';
 import { balanceKeysText as K } from './i18n/ko/balanceKeys';
 import { fairnessText as L } from './i18n/ko/fairness';
 
 export const GRADES = ['S', 'A', 'B', 'C', 'D'] as const;
 export type Grade = (typeof GRADES)[number];
-
-/** 표준정규 누적분포(Abramowitz–Stegun 7.1.26, 오차 1e-7 수준). */
-function phi(z: number): number {
-  const t = 1 / (1 + 0.3275911 * (Math.abs(z) / Math.SQRT2));
-  const y =
-    1 -
-    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) *
-      t *
-      Math.exp(-(z * z) / 2);
-  return z >= 0 ? (1 + y) / 2 : (1 - y) / 2;
-}
 
 /** 잠재력 = clamp(round(평균 + 정규난수 × 편차), 55, 96)일 때(candidates.ts) 등급별 확률(0~1). 정수 잠재력마다 확률을
  * 구해 게임의 gradeOf로 묶으므로 등급 경계가 바뀌어도 표가 따라간다. */
@@ -80,6 +70,8 @@ export function fairnessView(): FairnessView {
         season: oddsPct(atLeastOneOf3(season.S)),
         pre: oddsPct(atLeastOneOf3(pre.S)),
       }),
+      // T-11-196 프리미엄 스카우트권: 모든 후보의 S 확률 2배 · 1명 A 이상 보장(candidates.ts scoutOdds와 같은 식).
+      L.premium({ season: oddsPct(2 * season.S), pre: oddsPct(2 * pre.S) }),
       `${L.potNote} ${L.version({ v })}`,
     ],
     boost: BOOST.p.map((p, i) => [L.boostLv({ lv: i + 1 }), `${Math.round(p * 100)}%`] as const),

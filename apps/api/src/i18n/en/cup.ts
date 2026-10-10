@@ -26,6 +26,7 @@ export const CUP_EN: Record<CupTextKey, string> = {
   withdrawClosed: "Entries have closed, so you can't withdraw.",
   noReroll: "You don't have any rerolls.",
   noBoost: "You don't have any boost tickets.",
+  noScout: "You don't have any premium scout tickets.",
   iapInvalid: "We couldn't verify this purchase.",
   iapPending: "The payment hasn't finished yet. You'll get it automatically once it does.",
   iapOtherAccount: 'This purchase was made on a different account. Log in with that account.',

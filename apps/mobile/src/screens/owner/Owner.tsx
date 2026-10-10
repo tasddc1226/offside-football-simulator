@@ -41,6 +41,7 @@ import { ChampBadge } from '../../components/ChampBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
 import { BoostShop } from './BoostShop';
+import { ScoutShop } from './ScoutShop';
 import { RerollShop } from './RerollShop';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats, type StatPress } from './TeamParts';
 import { mix } from '../../theme/colors';
@@ -414,6 +415,7 @@ export default function Owner() {
             }
           />
           <BoostShop />
+          <ScoutShop />
         </>
       ) : guest ? (
         <>

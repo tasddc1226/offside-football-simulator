@@ -26,6 +26,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   withdrawClosed: '受付が終了したため取り消せません。',
   noReroll: 'リロール券がありません。',
   noBoost: 'ポテンシャル強化券がありません。',
+  noScout: 'プレミアムスカウト券がありません。',
   iapInvalid: '購入を確認できませんでした。',
   iapPending: 'お支払いがまだ完了していません。完了すると自動で受け取れます。',
   iapOtherAccount: '別のアカウントで購入されています。購入したアカウントでログインしてください。',
