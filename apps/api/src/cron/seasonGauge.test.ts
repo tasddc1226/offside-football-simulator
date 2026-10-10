@@ -14,9 +14,6 @@ import { countSeasonGauge, openCupEndsAt, readSeasonGauge, runSeasonGauge } from
 // 시즌 1 개막(2026-10-06 00:00 KST) 이틀 뒤
 const START = '2026-10-05T15:00:00.000Z';
 const NOW = '2026-10-07T15:00:00.000Z';
-const DAY = 86_400_000;
-// T-11-190 시즌은 5주. 32일째면 진행률이 90%를 넘어 마감을 확정한다.
-const LOCK = new Date(Date.parse(START) + 32 * DAY).toISOString();
 let ctx: TestD1;
 const run = (sql: string, ...params: unknown[]) =>
   ctx.env.DB.prepare(sql)
@@ -45,9 +42,12 @@ const later = (iso: string, ms: number) => new Date(Date.parse(iso) + ms).toISOS
 beforeAll(async () => {
   ctx = await createTestD1();
   CUP_FINAL = (await openCupEndsAt(ctx.env.DB, 1))!;
-  // 개막 + 35일. 그때까지 끝나지 않은 컵이 있으면 결승 다음 00:00 KST.
+  // 최소 기간(14일, 10/20 00:00 KST)과 컵 결승 다음 00:00 KST 중 늦은 쪽.
   END = new Date(
-    Math.max(Date.parse(START) + 35 * DAY, ceilKstMidnight(Date.parse(CUP_FINAL) + 3_600_000)),
+    Math.max(
+      ceilKstMidnight(Date.parse(CUP_FINAL) + 3_600_000),
+      Date.parse(START) + 14 * 86_400_000,
+    ),
   ).toISOString();
   for (const p of ['a', 'b', 'c'])
     await run(
@@ -81,51 +81,29 @@ describe('시즌 진행 게이지 cron', () => {
     });
   });
 
-  it('완주 수는 참고 지표로만 굳히고 진행률은 시간으로 찬다 — 목표를 넘어도 마감을 확정하지 않는다(T-11-190)', async () => {
+  it('센 값을 굳히고(90%를 넘으면 마감 확정) 30분 안에는 다시 세지 않으며, 홈 API가 진행률을 돌려준다', async () => {
     const first = await runSeasonGauge(ctx.env.DB, NOW);
-    // 목표(참여 2명 × 10 = 20)를 넘었지만 진행률은 2일 ÷ 35일이다.
+    // 목표(참여 2명 × 12 = 24)의 90%를 넘었으니 마감을 확정한다 — 48시간 뒤보다 최소 14일(10/20 00:00 KST)이 늦고,
+    // 시즌 1 컵이 그보다 늦게 끝나면 결승 다음 00:00 KST로 미룬다.
+    expect(END >= '2026-10-19T15:00:00.000Z').toBe(true);
     expect(first).toMatchObject({
       season: 1,
       contributed: 23,
       participants: 2,
-      lockedAt: null,
-      endsAt: null,
+      lockedAt: NOW,
+      endsAt: END,
     });
-    expect(first!.peak).toBeCloseTo(2 / 35);
     expect(await runSeasonGauge(ctx.env.DB, '2026-10-07T15:10:00.000Z')).toBeNull();
     expect((await readSeasonGauge(ctx.env.DB, 1))?.updatedAt).toBe(NOW);
 
     const res = await createApp().request('/v1/season/gauge', {}, ctx.env);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: {
-        gauge: {
-          target: number;
-          progress: number;
-          endsAt: null;
-          minEndsAt: string;
-          maxEndsAt: string;
-        };
-      };
+      data: { gauge: { target: number; progress: number; endsAt: string } };
     };
-    // 진행률은 응답 시각(실제 지금)으로 다시 계산한다 — 확정 전에는 90%를 넘지 않는다. 마감은 개막 + 35일로 정해져 있다.
-    const fixedEnd = new Date(Date.parse(START) + 35 * DAY).toISOString();
-    expect(body.data.gauge).toMatchObject({
-      target: 20,
-      endsAt: null,
-      minEndsAt: fixedEnd,
-      maxEndsAt: fixedEnd,
-    });
-    expect(body.data.gauge.progress).toBeLessThanOrEqual(0.9);
-  });
-
-  it('90%(32일째)에 닿으면 마감을 개막 + 35일(끝나지 않은 컵이 있으면 그 뒤)로 확정한다', async () => {
-    expect(await runSeasonGauge(ctx.env.DB, LOCK)).toMatchObject({
-      season: 1,
-      lockedAt: LOCK,
-      endsAt: END,
-      scheduled: true,
-    });
+    // 진행률은 응답 시각(실제 지금)으로 다시 계산한다 — 확정 뒤에는 90%에서 마감 시각 100%로 시간에 따라 찬다.
+    expect(body.data.gauge).toMatchObject({ target: 24, endsAt: END });
+    expect(body.data.gauge.progress).toBeGreaterThanOrEqual(0.9);
   });
 
   it('마감을 확정하면 시즌 일정에 마감과 다음 시즌(마감 시각에 개막)을 적고, API가 일정을 내려 준다', async () => {
@@ -151,13 +129,12 @@ describe('시즌 진행 게이지 cron', () => {
       "INSERT INTO server_firsts(season, id, career_id, achieved_at) VALUES (1, 'retirecap', 'c1', ?)",
       '2026-10-08T00:00:00.000Z',
     );
-    const after = later(LOCK, 60 * 60_000);
-    expect(await runSeasonGauge(ctx.env.DB, after)).toMatchObject({
+    expect(await runSeasonGauge(ctx.env.DB, '2026-10-08T00:00:00.000Z')).toMatchObject({
       scheduled: true,
     });
     expect(retireAtOf(2)).toBe(46);
     expect((await readSeasonSchedule(ctx.env.DB))[1]).toMatchObject({ id: 2, retireAt: 46 });
-    expect(await runSeasonGauge(ctx.env.DB, later(after, 5 * 60_000))).toBeNull();
+    expect(await runSeasonGauge(ctx.env.DB, '2026-10-08T00:05:00.000Z')).toBeNull();
     const row = await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key = ?')
       .bind(SCHEDULE_KEY)
       .first<{ value: string }>();
