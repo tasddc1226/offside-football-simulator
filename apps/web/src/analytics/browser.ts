@@ -5,6 +5,7 @@ import {
 } from '@offside/app-core/player-metrics';
 import type { OperationResult } from '@offside/app-core/measurement';
 import type { AppStorePlace } from './index.js';
+import { loadPixel, setAdConsent, trackMeta } from './meta.js';
 import {
   campaignQuery,
   CONSENT_KEY,
@@ -221,6 +222,8 @@ export function setConsent(value: 'granted' | 'denied') {
   } catch {
     /* choice remains for this tab */
   }
+  // T-11-195 같은 카드에서 고른 값을 광고 측정(메타 픽셀)에도 적용한다. 픽셀이 없는 빌드면 아무것도 하지 않는다.
+  setAdConsent(value);
   if (value === 'granted') {
     if (previous !== 'granted') lastPage = '';
     try {
@@ -239,10 +242,12 @@ export function initializeAnalytics(initialScreen: string, restoredCareerId: str
   campaign = campaignQuery(location.href);
   referrer = safeReferrer(document.referrer);
   consent = readConsent();
+  loadPixel();
   for (const fn of listeners) fn();
   window.addEventListener('storage', (e) => {
     if (e.key !== CONSENT_KEY && e.key !== null) return;
     consent = readConsent();
+    loadPixel();
     if (consent === 'granted') {
       try {
         void loadTag().catch(() => {});
@@ -282,6 +287,7 @@ export const analytics = {
       /* cohort origin stays unknown */
     }
     tracker?.start(s, previous);
+    trackMeta('CareerStart');
     const { cid } = s;
     const year = s.year;
     if (typeof year !== 'number') return;
@@ -294,6 +300,7 @@ export const analytics = {
   play: (s: Career, firstAction = false) => tracker?.play(s, firstAction),
   firstSeason: (s: Career) => {
     tracker?.firstSeason(s);
+    trackMeta('FirstSeason');
     metric(() => playerMetrics.season());
   },
   retire: (s: Career) => {
@@ -306,6 +313,7 @@ export const analytics = {
 export const trackAppStoreClick = (place: AppStorePlace) => {
   try {
     send('app_store_click', { place });
+    trackMeta('AppStoreClick');
   } catch {
     /* optional */
   }
