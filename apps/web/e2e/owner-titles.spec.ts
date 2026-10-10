@@ -71,6 +71,15 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   const hall = page.locator('[data-owner-hall]');
   await expect(hall.locator('[data-permanent-title]')).toHaveCount(13);
   await expect(hall.locator('[data-title-grade]')).toHaveCount(4);
+  await expect(
+    hall.locator('[data-title-grade="legend"] [data-permanent-title="owner-keeper"]'),
+  ).toHaveCount(1);
+  await expect(
+    hall.locator('[data-title-grade="honor"] [data-permanent-title="owner-ballon-maker"]'),
+  ).toHaveCount(1);
+  await expect(
+    hall.locator('[data-title-grade="skilled"] [data-permanent-title="owner-national"]'),
+  ).toHaveCount(1);
   await expect(hall.locator('[data-permanent-title="owner-goals"]')).toContainText(
     '통산 500골 선수',
   );

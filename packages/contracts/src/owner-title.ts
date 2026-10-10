@@ -69,7 +69,7 @@ export const PERMANENT_TITLES = [
     metric: 'midfield',
     target: 5,
     symbol: 'pitch',
-    grade: 'skilled',
+    grade: 'honor',
     related: 'retire',
   },
   {
@@ -77,7 +77,7 @@ export const PERMANENT_TITLES = [
     metric: 'defense',
     target: 5,
     symbol: 'shield',
-    grade: 'skilled',
+    grade: 'honor',
     related: 'retire',
   },
   {
@@ -85,7 +85,7 @@ export const PERMANENT_TITLES = [
     metric: 'keeper',
     target: 5,
     symbol: 'glove',
-    grade: 'skilled',
+    grade: 'legend',
     related: 'retire',
   },
   {
@@ -101,7 +101,7 @@ export const PERMANENT_TITLES = [
     metric: 'scorers',
     target: 5,
     symbol: 'ball',
-    grade: 'honor',
+    grade: 'skilled',
     related: 'goals',
   },
   {
@@ -117,7 +117,7 @@ export const PERMANENT_TITLES = [
     metric: 'internationals',
     target: 5,
     symbol: 'flag',
-    grade: 'honor',
+    grade: 'skilled',
     related: 'caps',
   },
   {
@@ -141,7 +141,7 @@ export const PERMANENT_TITLES = [
     metric: 'ballon',
     target: 5,
     symbol: 'ball',
-    grade: 'legend',
+    grade: 'honor',
     related: 'ballon',
   },
   {
