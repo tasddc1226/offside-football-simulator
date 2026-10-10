@@ -1,4 +1,5 @@
 <script lang="ts">
+  import GoogleLoginButton from './GoogleLoginButton.svelte';
   // 구단주 화면(T-10-058) — 게임 속 사용자 프로필. 환경설정에 있던 계정(구글 로그인·닉네임) 카드와
   // 운영 도구(관리자) 입구, 명예의 전당에 있던 '내 선수'를 이리로 옮겼다.
   // T-10-102 비로그인이면 계정 카드는 안내만, 구글 로그인 버튼은 카드 밖에 하나만 두고 로그인해야 쓰는 '내 팀'은 숨긴다.
@@ -30,9 +31,7 @@
   import { go, takeFocus } from './nav.js';
   import { openFriends } from './friendInvite.svelte.js';
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
-  import { googleStartUrl } from '@offside/app-core/api/client';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
-  import { accountText as A } from '@offside/app-core/i18n/ko/account';
   import { fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
   import { recapCardView } from '@offside/app-core/seasonRecap';
   import { profileTier, tierTitle } from '@offside/app-core/ownerTier';
@@ -153,7 +152,7 @@
 
   <!-- T-11-128 시즌 결산: 끝난 시즌이 있을 때만. 비로그인도 본다(프로필 쿠키만 있으면 된다). -->
   {#if recap && recapCard}
-    <section class="card owner-market" aria-label={R.cardTitle} data-owner-recap data-recap-status={recap.status}>
+    <section class="card owner-market owner-tap" aria-label={R.cardTitle} data-owner-recap data-recap-status={recap.status}>
       <div class="owner-who">
         <small class="eyebrow">Season recap</small>
         <h2>{R.cardTitle}{#if recapCard.isNew}<span class="pill good owner-founder" data-recap-new>{R.newBadge}</span>{/if}</h2>
@@ -164,7 +163,8 @@
           </span>
         {/if}
       </div>
-      <button class="btn" data-act="recap" onclick={() => go('recap')}>{R.open}</button>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="recap" aria-label={`${R.cardTitle} ${R.open}`} onclick={() => go('recap')}></button>
     </section>
   {/if}
 
@@ -226,7 +226,7 @@
       </div>
       <p class="muted fs-sm">{ownerLockedText(localCount)}</p>
       <!-- 로그아웃·탈퇴 직후엔 세션 쿠키가 없으므로 링크로 바로 가지 않고 startGoogleLogin이 새 익명 세션부터 받는다. -->
-      <a class="btn btn-primary btn-block" data-act="google-login" href={googleStartUrl()} onclick={(e) => { e.preventDefault(); void startGoogleLogin(null); }}>{A.loginGoogle}</a>
+      <GoogleLoginButton onclick={() => startGoogleLogin(null)} />
     </section>
   {/if}
 

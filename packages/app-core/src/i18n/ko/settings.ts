@@ -2,6 +2,12 @@
 import { ns } from '../core';
 
 const ko = {
+  textSizeTitle: '글자 크기',
+  textSizeBody: '선택하면 바로 적용돼요. 이 기기에 저장돼요.',
+  textSizeSmall: '작게',
+  textSizeStandard: '보통',
+  textSizeLarge: '크게',
+  textSizeExtraLarge: '아주 크게',
   title: '환경설정',
   darkTitle: '다크 모드',
   darkBodyWeb: '어두운 화면으로 바꿔요. 이 기기에 저장돼요.',

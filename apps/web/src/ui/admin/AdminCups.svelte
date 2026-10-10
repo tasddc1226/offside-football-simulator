@@ -2,6 +2,7 @@
   // T-11-145 오프사이드 컵 열기: 접수 시작일만 고르면 표준 일정(접수 4일 → 추첨 12시 → 8일간 매일 21시 경기)으로
   // 다음 회차를 연다. 시즌·회차·id는 서버가 정하고, 다른 대회와 기간이 겹치면 막는다. 접수 전 대회만 지울 수 있다.
   import { onMount } from 'svelte';
+  import AdminCupPredictions from './AdminCupPredictions.svelte';
   import { CUP_PLAN_DEFAULTS as D, planCup } from '@offside/contracts/cup';
   import * as api from '@offside/app-core/api/admin';
   import type { AdminCup } from '@offside/app-core/api/admin';
@@ -56,6 +57,7 @@
 </script>
 
 <div class="stack" style="gap:12px" data-admin="cups">
+  {#if status === 'ready'}<AdminCupPredictions cups={items} />{/if}
   <h2 style="margin:0">새 대회 열기</h2>
   <div class="cup-form">
     <label>접수 시작일(KST)<input type="date" bind:value={opensOn} data-cup-field="opensOn" /></label>

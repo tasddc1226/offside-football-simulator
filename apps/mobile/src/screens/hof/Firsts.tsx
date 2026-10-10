@@ -161,8 +161,9 @@ export default function Firsts() {
   );
 
   return (
-    <Screen footer={<BackBar testID="home" fallback={goHome} />}>
+    <Screen>
       <Topbar />
+      <BackBar inline testID="home" fallback={goHome} />
       <Card gap={0}>
         <View testID="firsts">
           <View

@@ -59,6 +59,7 @@
 
 <div class="wrap">
   <Topbar />
+  <BackBar inline act="home" fallback={goHome} />
   <section class="card" data-firsts>
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <div>
@@ -133,5 +134,5 @@
       </ul>
     {/if}
   </section>
-  <BackBar act="home" fallback={goHome} />
+
 </div>

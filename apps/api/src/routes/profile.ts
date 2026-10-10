@@ -212,17 +212,23 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
       return ok(c, DeleteProfileStartResponseSchema, result);
     }
 
-    const { careerIds, heldFirsts, hadComments } = await executeProfileDeletion(db, {
-      profileId: session.profileId,
-      sessionId: session.id,
-      sessionTokenHash,
-      confirmToken: body.confirmToken,
-      now,
-    });
+    const { careerIds, heldFirsts, hadComments, predictedCupIds } = await executeProfileDeletion(
+      db,
+      {
+        profileId: session.profileId,
+        sessionId: session.id,
+        sessionTokenHash,
+        confirmToken: body.confirmToken,
+        now,
+      },
+    );
     // 지운 커리어가 가진 최초·서버 기록은 삭제 배치가 재계산 표시를 지웠으니, 목록 캐시만 비우면 다음 공개
     // 조회부터 조각씩 다시 훑어 채운다. 나머지는 바뀐 공개 캐시만 비운다(명예의 전당 목록은 TTL 1분).
     if (heldFirsts) purgeEdge(c, STALE.firstsChanged());
-    purgeEdge(c, STALE.profileDeleted(careerIds, hadComments));
+    purgeEdge(c, [
+      ...STALE.profileDeleted(careerIds, hadComments),
+      ...predictedCupIds.map((id) => `/v1/cups/${id}/predictions`),
+    ]);
     // T-11-167 Apple 토큰 해지는 삭제를 막지 않는다(실패는 기록만). 계정 데이터는 이미 지웠다.
     const code = body.appleAuthorizationCode;
     if (code)
