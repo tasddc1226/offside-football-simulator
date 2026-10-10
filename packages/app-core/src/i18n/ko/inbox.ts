@@ -8,6 +8,8 @@ const ko = {
   kindReturn: '다시 킥오프',
   kindTeam: '내 팀',
   kindMarket: '이적시장',
+  kindCommunity: '운영 알림',
+  goChat: '라운지 보기',
   kindSocial: '친구',
   title: '알림함',
   titleUnread: (p: { n: number }) => `알림함, 읽지 않은 알림 ${p.n}개`,

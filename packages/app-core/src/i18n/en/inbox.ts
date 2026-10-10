@@ -7,6 +7,8 @@ export const inbox: Translation<InboxMsgs> = {
   kindReturn: 'Kick off again',
   kindTeam: 'My team',
   kindMarket: 'Transfer market',
+  kindCommunity: 'Community moderation',
+  goChat: 'Open lounge',
   kindSocial: 'Friends',
   title: 'Inbox',
   titleUnread: (p) => `Inbox, ${p.n} unread`,
