@@ -1,4 +1,5 @@
-import { getMyCareers, getRetiredNumbersIn } from './api/client.js';
+import { fetchOwnerSummary } from './api/ownerSummary.js';
+import { getRetiredNumbersIn } from './api/client.js';
 import { loadHOF } from '@offside/game/hof-store';
 import { pendingRetirementIds } from './outbox.js';
 import { myDefaultSeason, deviceSeasonOf, serverSeasonOf } from './mySeason.js';
@@ -27,13 +28,13 @@ export function localCardValue(h: {
   return cardValue(h.detail?.career ?? [], h.peak);
 }
 
-/** Owner hub keeps its current-season totals without mounting the player-list UI. Reuses the same cached account read. */
+/** Owner hub keeps its current-season totals without mounting the player-list UI. Shares the compact owner read with identity badges. */
 export async function loadMyPlayerSummary(account: boolean) {
   const now = new Date().toISOString();
   const season = myDefaultSeason(now);
   const pending = pendingRetirementIds();
   const local = loadHOF();
-  const result = account ? await getMyCareers() : null;
+  const result = account ? await fetchOwnerSummary() : null;
   const deviceRows = local.map((h) => ({
     id: h.id,
     season: deviceSeasonOf(h, pending, now),
@@ -47,7 +48,7 @@ export async function loadMyPlayerSummary(account: boolean) {
     const rows = result.data.entries.map((e) => ({
       season: serverSeasonOf(e),
       stats: { score: localRows.get(e.id)?.stats.score ?? e.legendScore },
-      rn: localRows.get(e.id)?.rn ?? e.retiredNumber?.number,
+      rn: localRows.get(e.id)?.rn ?? e.retiredNumber,
     }));
     return ownerSummary(
       [...rows, ...deviceRows.filter((r) => r.id && pending.has(r.id) && !ids.has(r.id))].filter(

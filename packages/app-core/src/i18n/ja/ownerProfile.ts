@@ -2,6 +2,22 @@ import type { Translation } from '../core';
 import type { OwnerProfileMsgs } from '../ko/ownerProfile';
 
 export const ownerProfile: Translation<OwnerProfileMsgs> = {
+  roomTitle: 'オーナーロッカールーム',
+  roomHint: '左右に回すと、下の記録が切り替わります。',
+  roomSeasons: 'シーズンロッカー',
+  roomOwner: 'オーナーの名札',
+  roomTrophies: 'トロフィー棚',
+  roomSeasonsNote: 'シーズンごとに積み重ねた選手と記録',
+  roomOwnerNote: '自分の名前に添える称号',
+  roomTrophiesNote: '競争で獲得したバッジとカップ成績',
+  roomPrev: '左を見る',
+  roomNext: '右を見る',
+  roomEmptyAwards:
+    'まだ展示できるバッジはありません。シーズンを終えるか、カップで記録を残しましょう。',
+  roomLoading: 'ロッカールームを準備しています。',
+  roomBadgeCount: '記録バッジ',
+  roomCupCount: 'カップ成績',
+  roomEmptyTitle: '代表称号を選んでみましょう。',
   collectionEarned: '獲得済み',
   collectionLocked: '挑戦中',
   collectionHint: '称号をタップすると、すぐに代表称号に設定されます。',
@@ -70,6 +86,9 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   viewAchievements: '今シーズンの実績を見る',
   titleBridge:
     'シーズン実績は今シーズンの挑戦です。永久称号は複数シーズンにわたる育成の積み重ねや確定した初記録の勲章で獲得します。実績ポイントの合算ではありません。',
+  titleFounder: '創設メンバー',
+  conditionFounder: 'プレシーズンに自分で育てた選手が1人以上引退（非表示の記録を除く）',
+  relatedPreseason: 'プレシーズン参加を記念する称号',
   titleDeveloper: '育成家',
   titleAcademy: '育成の名門',
   titleStarMaker: 'スターメーカー',

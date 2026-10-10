@@ -24,8 +24,8 @@ export const hofOwn: Translation<HofOwnMsgs> = {
   reportNickBtn: 'Report nickname',
   reportNickLabel: (p) => `Report the nickname ${p.name}`,
   nickSaved: 'Nickname saved',
-  nickLabel: 'Comment nickname',
-  nickPlaceholder: (p) => `Comment nickname (2–${p.max} characters)`,
+  nickLabel: 'Owner name',
+  nickPlaceholder: (p) => `Owner name (2–${p.max} characters)`,
   nickChange: 'Change',
   nickSet: 'Set',
 };

@@ -14,7 +14,10 @@ type Metrics = Record<TitleMetric, number>;
 /** Scalar aggregates use careers.profile_id, never the transferable cards.owner_id. */
 export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics> {
   const row = await db.get<Metrics>(sql`
-    select count(*) as retired, coalesce(sum(peak >= ${CAREER_FEATS.peak}), 0) as elite,
+    select
+      (select count(*) from careers c where c.profile_id = ${profileId}
+       and c.status = 'retired' and c.service_season = 0 and c.hidden = 0) as preseason,
+      count(*) as retired, coalesce(sum(peak >= ${CAREER_FEATS.peak}), 0) as elite,
       coalesce(sum(ballon >= 1), 0) as ballon,
       coalesce(sum(pos = 'MF' and peak >= ${CAREER_FEATS.peak}), 0) as midfield,
       coalesce(sum(pos = 'DF' and peak >= ${CAREER_FEATS.peak}), 0) as defense,

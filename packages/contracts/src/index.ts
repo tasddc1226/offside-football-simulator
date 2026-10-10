@@ -39,6 +39,7 @@ export {
   ProfileSchema,
   PatchProfileSettingsBodySchema,
   PutNicknameBodySchema,
+  PutAvatarBodySchema,
   type PutNicknameBody,
   type ProfileSettings,
   type Profile,
@@ -182,3 +183,5 @@ export * from './notifications.js';
 export * from './push-performance.js';
 
 export * from './admin-cup-predictions.js';
+
+export * from './owner-summary.js';

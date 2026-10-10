@@ -28,6 +28,7 @@ export function titleLabel(id: string | null | undefined): string | null {
     ? LABEL[t.stage]({ n: t.edition })
     : permanent
       ? {
+          'owner-founder': L.titleFounder,
           'owner-developer': L.titleDeveloper,
           'owner-academy': L.titleAcademy,
           'owner-star-maker': L.titleStarMaker,
@@ -49,6 +50,7 @@ export function titleCondition(id: string): string | null {
   const t = permanentTitleOf(id);
   return t
     ? {
+        'owner-founder': L.conditionFounder,
         'owner-developer': L.conditionDeveloper,
         'owner-academy': L.conditionAcademy,
         'owner-star-maker': L.conditionStarMaker,
@@ -68,6 +70,20 @@ export function titleCondition(id: string): string | null {
 
 /** Shared 16 × 16 pixel art. Each filled cell is a square, with no font or stroke dependency. */
 const TITLE_PIXELS = {
+  'owner-founder': [
+    '..########..',
+    '..#..####...',
+    '..#..###....',
+    '..#..####...',
+    '..########..',
+    '..#.........',
+    '..#.........',
+    '..#.........',
+    '..#.........',
+    '.###........',
+    '#####.......',
+    '............',
+  ],
   'owner-developer': [
     '.....##.....',
     '....####....',
@@ -275,6 +291,7 @@ export const titleRelated = (id: string): string | null => {
   const t = permanentTitleOf(id);
   return t
     ? {
+        preseason: L.relatedPreseason,
         retire: L.relatedRetire,
         goals: L.relatedGoals,
         assists: L.relatedAssists,

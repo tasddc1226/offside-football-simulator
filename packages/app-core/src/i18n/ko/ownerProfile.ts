@@ -3,6 +3,21 @@
 import { ns } from '../core';
 
 const ko = {
+  roomTitle: '구단주 라커룸',
+  roomHint: '좌우로 돌리면 아래 기록이 바뀌어요.',
+  roomSeasons: '시즌 라커',
+  roomOwner: '구단주 명패',
+  roomTrophies: '트로피장',
+  roomSeasonsNote: '시즌마다 쌓인 선수와 기록',
+  roomOwnerNote: '내 이름 옆에 남길 칭호',
+  roomTrophiesNote: '경쟁에서 남긴 배지와 컵 성적',
+  roomPrev: '왼쪽 공간으로',
+  roomNext: '오른쪽 공간으로',
+  roomEmptyAwards: '아직 전시할 배지가 없어요. 시즌을 마치거나 컵에서 기록을 남겨 보세요.',
+  roomLoading: '라커룸을 준비하고 있어요.',
+  roomBadgeCount: '기록 배지',
+  roomCupCount: '컵 성적',
+  roomEmptyTitle: '대표 칭호를 골라 보세요.',
   collectionEarned: '획득한 칭호',
   collectionLocked: '도전 중',
   collectionHint: '칭호를 누르면 바로 대표 칭호로 적용돼요.',
@@ -71,6 +86,9 @@ const ko = {
   viewAchievements: '이번 시즌 업적 보기',
   titleBridge:
     '시즌 업적은 이번 시즌의 도전이에요. 영구 칭호는 여러 시즌의 반복 육성이나 확정된 최초 기록 휘장으로 받아요. 업적 점수를 그대로 합산하지는 않아요.',
+  titleFounder: '창단 멤버',
+  conditionFounder: '프리시즌에 직접 키운 선수 1명 이상 은퇴 · 숨김 처리된 기록 제외',
+  relatedPreseason: '프리시즌 참여 기념 칭호',
   titleDeveloper: '육성가',
   titleAcademy: '육성의 명가',
   titleStarMaker: '스타 메이커',

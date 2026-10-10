@@ -167,7 +167,7 @@ export function Grid2({
 }
 
 /** Stats 칸을 누를 수 있게(구단주 요약의 구단 자금 → 자금 내역). 이름 옆에 › 를 붙인다. */
-export type StatPress = { onPress: () => void; label: string; testID: string };
+export type StatPress = { onPress: () => void; label: string; testID: string; info?: boolean };
 
 /** 숫자 칸 줄(웹 .owner-stats · .tm-stats). first는 첫 칸 너비 비율(전적처럼 긴 값). */
 export function Stats({
@@ -197,8 +197,11 @@ export function Stats({
         };
         const body = (
           <>
-            <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-              {press ? `${k} ›` : k}
+            <Txt
+              tone="muted"
+              style={{ fontSize: rem(0.75), ...(press?.info ? { paddingRight: 24 } : {}) }}
+            >
+              {press && !press.info ? `${k} ›` : k}
             </Txt>
             <Txt
               style={{
@@ -212,6 +215,43 @@ export function Stats({
             </Txt>
           </>
         );
+        if (press?.info)
+          return (
+            <View key={k} style={style}>
+              {body}
+              <Press
+                testID={press.testID}
+                accessibilityLabel={press.label}
+                onPress={press.onPress}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  width: 44,
+                  height: 44,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Txt
+                  tone="muted"
+                  style={{
+                    width: 16,
+                    height: 16,
+                    lineHeight: 14,
+                    textAlign: 'center',
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: c.muted,
+                    fontSize: 11,
+                    fontWeight: '700',
+                  }}
+                >
+                  i
+                </Txt>
+              </Press>
+            </View>
+          );
         return press ? (
           <Press
             key={k}

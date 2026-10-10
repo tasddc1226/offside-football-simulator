@@ -29,6 +29,7 @@ export type OwnerSeasonLine = z.infer<typeof OwnerSeasonLineSchema>;
 
 export const OwnerProfileSchema = z.strictObject({
   nickname: z.string().nullable(),
+  avatarId: z.uuid().nullable().optional(),
   title: OwnerTitleSchema.nullable(),
   tier: OwnerTierTagSchema.nullable(),
   /** 가장 최근 시즌 팀(감독 이름과 함께). 팀을 만든 적이 없으면 null. */

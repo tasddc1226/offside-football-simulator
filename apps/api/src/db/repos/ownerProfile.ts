@@ -18,7 +18,7 @@ import { logoOf, ratingRankOf } from './ownerTeams.js';
 
 export async function ownerProfileOf(
   db: Db,
-  profile: { id: string; nickname: string | null; title: string | null },
+  profile: { id: string; nickname: string | null; title: string | null; avatarId?: string | null },
   now: string,
   lang: Lang,
 ): Promise<OwnerProfile> {
@@ -85,6 +85,7 @@ export async function ownerProfileOf(
   const ranks = seasons.flatMap((s) => (s.teamRank ? [s.teamRank] : []));
   return {
     nickname: profile.nickname,
+    avatarId: profile.avatarId ?? null,
     title: profile.title,
     tier,
     team: latest

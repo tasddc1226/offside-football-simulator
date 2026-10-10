@@ -33,11 +33,12 @@ describe('이 기기 은퇴 기록의 카드 기준가(T-11-109)', () => {
 });
 
 // Hub totals must remain independent of the season selected on the dedicated page.
-vi.mock('./api/client.js', () => ({ getMyCareers: vi.fn(), getRetiredNumbersIn: vi.fn() }));
+vi.mock('./api/client.js', () => ({ getRetiredNumbersIn: vi.fn() }));
+vi.mock('./api/ownerSummary.js', () => ({ fetchOwnerSummary: vi.fn() }));
 vi.mock('@offside/game/hof-store', () => ({ loadHOF: vi.fn() }));
 vi.mock('./outbox.js', () => ({ pendingRetirementIds: () => new Set(['pending']) }));
 import { vi, afterEach } from 'vitest';
-import { getMyCareers } from './api/client.js';
+import { fetchOwnerSummary } from './api/ownerSummary.js';
 import { loadHOF } from '@offside/game/hof-store';
 import { loadMyPlayerSummary } from './myPlayers.js';
 afterEach(() => {
@@ -53,7 +54,7 @@ describe('dedicated player hub summary', () => {
       { id: 'pending', score: 20, peak: 80 },
       { id: 'unlinked', season: 1, score: 999, peak: 80 },
     ] as never);
-    vi.mocked(getMyCareers).mockResolvedValue({
+    vi.mocked(fetchOwnerSummary).mockResolvedValue({
       ok: true,
       data: {
         linked: true,
@@ -73,6 +74,6 @@ describe('dedicated player hub summary', () => {
       { season: 0, score: 999, peak: 80 },
     ] as never);
     expect(await loadMyPlayerSummary(false)).toMatchObject({ players: 1, score: 30 });
-    expect(getMyCareers).not.toHaveBeenCalled();
+    expect(fetchOwnerSummary).not.toHaveBeenCalled();
   });
 });

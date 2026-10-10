@@ -342,7 +342,12 @@ export function eligibleMap(
 /** 팀 한 개(없으면 빈 배열). 구글 연결이 끊겼거나 삭제된 구단주의 팀은 없는 것으로 본다. batch에 넣을 수 있게 쿼리로 돌려준다. */
 export const liveTeam = (db: Db, teamId: string) =>
   db
-    .select({ team: ownerTeams, ownerNickname: profiles.nickname, title: profiles.title })
+    .select({
+      team: ownerTeams,
+      ownerNickname: profiles.nickname,
+      title: profiles.title,
+      avatarId: profiles.avatarId,
+    })
     .from(ownerTeams)
     .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
     .where(and(eq(ownerTeams.id, teamId), accountLinkedSql(), isNull(profiles.deletedAt)));

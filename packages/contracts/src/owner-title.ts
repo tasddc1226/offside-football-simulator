@@ -49,6 +49,14 @@ export type TitleGrade = (typeof TITLE_GRADES)[number];
 /** Grades describe challenge depth, not measured rarity. Player milestones count distinct careers; firsts count finalized honors. */
 export const PERMANENT_TITLES = [
   {
+    id: 'owner-founder',
+    metric: 'preseason',
+    target: 1,
+    symbol: 'flag',
+    grade: 'entry',
+    related: 'preseason',
+  },
+  {
     id: 'owner-developer',
     metric: 'retired',
     target: 10,
@@ -155,7 +163,7 @@ export const PERMANENT_TITLES = [
 ] as const;
 export type PermanentTitleId = (typeof PERMANENT_TITLES)[number]['id'];
 export type TitleMetric = (typeof PERMANENT_TITLES)[number]['metric'];
-export const TITLE_CRITERIA_VERSION = 2;
+export const TITLE_CRITERIA_VERSION = 3;
 export const permanentTitleOf = (id: string | null | undefined) =>
   PERMANENT_TITLES.find((t) => t.id === id);
 export const isOwnerTitle = (id: string): boolean => !!parseTitle(id) || !!permanentTitleOf(id);

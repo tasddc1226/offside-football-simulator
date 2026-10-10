@@ -25,6 +25,7 @@ export type ProfileRecord = {
   /** T-11-150 대표 칭호와 직접 골랐는지. */
   title: string | null;
   titlePinned: boolean;
+  avatarId?: string | null;
 };
 
 /** 구단주 계정(구글·애플 로그인) — 팀·댓글·닉네임 자격. SQL 조건은 accountLinkedSql. */
@@ -64,6 +65,7 @@ function toRecord(row: typeof profiles.$inferSelect): ProfileRecord {
     friendCode: row.friendCode,
     title: row.title,
     titlePinned: row.titlePinned === 1,
+    avatarId: row.avatarId,
   };
 }
 

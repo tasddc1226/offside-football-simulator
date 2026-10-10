@@ -37,7 +37,11 @@ export function commentIdentity(
 }
 
 /** T-11-150 title: 대표 칭호(댓글 · 채팅에 같이 남긴다). */
-export type Viewer = CommentIdentity & { profileId: string | null; title: string | null };
+export type Viewer = CommentIdentity & {
+  profileId: string | null;
+  title: string | null;
+  avatarId?: string | null;
+};
 
 /** 요청한 사람. 세션이 없으면 익명(프로필을 새로 만들지 않는다). T-10-028: 댓글 자격(구글 로그인·닉네임)도 함께 본다. */
 export async function getViewer(c: Context<AppEnv>): Promise<Viewer> {
@@ -48,6 +52,7 @@ export async function getViewer(c: Context<AppEnv>): Promise<Viewer> {
   return {
     profileId: session.profileId,
     title: profile?.title ?? null,
+    avatarId: profile?.avatarId ?? null,
     ...commentIdentity(profile, c.env.ADMIN_EMAILS),
   };
 }

@@ -23,6 +23,7 @@ import {
   ownerTitleProgress,
   cupPredictions,
   profiles,
+  profileAvatars,
   pushDevices,
   pushNewsDeliveries,
   notifications,
@@ -127,6 +128,7 @@ export async function executeProfileDeletion(
         linkedAt: null,
         nickname: null,
         title: null,
+        avatarId: null,
         titlePinned: 0,
         appleSub: null,
         appleLinkedAt: null,
@@ -147,6 +149,7 @@ export async function executeProfileDeletion(
     // T-11-171 친구 초대 기록(초대한 줄 · 초대받은 줄).
     ...deleteReferralsStatements(db, input.profileId),
     // T-11-174 구단주 아이템과 인앱 구매 원장. 같은 거래를 다른 계정이 받는 일은 구단주 표시 확인이 막는다.
+    db.delete(profileAvatars).where(eq(profileAvatars.profileId, input.profileId)),
     db.delete(ownerTitleAwards).where(eq(ownerTitleAwards.profileId, input.profileId)),
     db.delete(ownerTitleProgress).where(eq(ownerTitleProgress.profileId, input.profileId)),
     db.delete(cupPredictions).where(eq(cupPredictions.profileId, input.profileId)),

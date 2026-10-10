@@ -204,6 +204,7 @@ export const profiles = sqliteTable(
      */
     title: text('title'),
     titlePinned: integer('title_pinned').notNull().default(0),
+    avatarId: text('avatar_id'),
   },
   (table) => [
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
@@ -274,6 +275,7 @@ export const authAttempts = sqliteTable(
         'APP_SESSION',
         'APPLE_SIGNIN',
         'PROFILE_CREATE',
+        'PROFILE_AVATAR',
         'CAREER_SEASON',
         'CAREER_RETIRE',
         'PUSH_DEVICE',
@@ -1398,6 +1400,7 @@ export const ownerTitleProgress = sqliteTable('owner_title_progress', {
     .primaryKey()
     .references(() => profiles.id, { onDelete: 'cascade' }),
   criteriaVersion: integer('criteria_version').notNull().default(0),
+  preseason: integer('preseason').notNull().default(0),
   midfield: integer('midfield').notNull().default(0),
   defense: integer('defense').notNull().default(0),
   keeper: integer('keeper').notNull().default(0),
@@ -1436,3 +1439,12 @@ export const cupPredictions = sqliteTable(
     check('cup_predictions_pick_check', sql`${t.pick} IN ('home', 'draw', 'away')`),
   ],
 );
+
+/** Kept outside profiles so session/account reads never load image bytes. */
+export const profileAvatars = sqliteTable('profile_avatars', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  id: text('id').notNull().unique(),
+  image: text('image').notNull(),
+});

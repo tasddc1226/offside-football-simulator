@@ -6,9 +6,9 @@
 // 경기와 바로 경기하기), 내 선수 진입 카드, 계정은 맨 아래. 비로그인이면 '내 팀' 자리에 잠긴 카드와 로그인 버튼을 둔다.
 // T-11-128 요약 아래에 시즌 결산 카드(RecapCard) — 끝난 시즌이 있으면 결산 화면(recap)으로 연다.
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import { fetchBoardViewer } from '@offside/app-core/api/boards';
+import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
 import { fetchOwnerTeam } from '@offside/app-core/api/team';
 import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
 import { fundsText } from '@offside/app-core/market';
@@ -19,21 +19,20 @@ import {
   type OwnerSummary,
   type OwnerTeamCard,
 } from '@offside/app-core/ownerHub';
-import { fetchSeasonRecap } from '@offside/app-core/api/seasonRecap';
-import { profileTier, tierTitle, type OwnerTierTag } from '@offside/app-core/ownerTier';
+import { tierTitle, type OwnerTierTag } from '@offside/app-core/ownerTier';
 import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
-import { founderLabel } from '@offside/app-core/friendText';
 import { loadHOF } from '@offside/game/hof-store';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
 import { go, takeFocus } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
-import { DISPLAY, rem } from '../../theme/type';
+import { rem } from '../../theme/type';
 import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
+import { OwnerProfileEditor } from './OwnerProfileEditor';
 import { LoginButtons } from './LoginButtons';
 import { loadMyPlayerSummary } from '@offside/app-core/myPlayers';
 import { ownerPlayersText as P } from '@offside/app-core/i18n/ko/ownerPlayers';
@@ -171,19 +170,27 @@ export default function Owner() {
   // 메모)이라 이적시장에 들어가도 다시 묻지 않는다. 비로그인이면 이 기기 기록의 카드 기준가 합을 쓴다.
   const [market, setMarket] = useState<MarketFundsResponse | null>(null);
 
-  // T-11-111 당겨서 새로고침 — 보이는 값은 그대로 두고 응답이 오면 바꾼다.
-  // 관리자 여부는 거의 안 바뀌므로 당겨도 다시 묻지 않는다.
+  const [tierTag, setTierTag] = useState<OwnerTierTag | null>(null);
+  const [tiers, setTiers] = useState<OwnerTierTag[]>([]);
   useEffect(() => {
+    let alive = true;
     if (!linked) {
       setAdmin(false);
+      setTierTag(null);
+      setTiers([]);
       return;
     }
-    let alive = true;
-    void fetchBoardViewer().then((r) => alive && r.ok && setAdmin(r.data.admin));
+    void track(fetchOwnerSummary()).then((r) => {
+      if (alive && r.ok) {
+        setAdmin(r.data.admin);
+        setTierTag(r.data.tier);
+        setTiers(r.data.tiers ?? (r.data.tier ? [r.data.tier] : []));
+      }
+    });
     return () => {
       alive = false;
     };
-  }, [linked]);
+  }, [linked, tick, track]);
   useEffect(() => {
     if (!linked) return;
     let alive = true;
@@ -197,19 +204,6 @@ export default function Owner() {
       alive = false;
     };
   }, [linked, tick, track]);
-  // T-11-128 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 이름 앞에 붙인다(그 시즌 기록이 없으면 없다).
-  // 결산 카드와 같은 응답(1분 메모).
-  const [tierTag, setTierTag] = useState<OwnerTierTag | null>(null);
-  useEffect(() => {
-    let alive = true;
-    void track(fetchSeasonRecap()).then((r) => {
-      if (!alive || !r.ok) return;
-      setTierTag(profileTier(r.data));
-    });
-    return () => {
-      alive = false;
-    };
-  }, [tick, track]);
   const clubValue = linked ? (market?.clubValue ?? null) : (summary?.value ?? null);
   const funds = market ? fundsText(market.balance) : '–';
 
@@ -229,7 +223,11 @@ export default function Owner() {
       {linked || guest ? (
         <Card gap={14} testID="owner-summary">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <OwnerAvatar name={nickname ?? L.avatarInitial} size={48} />
+            <OwnerAvatar
+              avatarId={acct?.avatarId ?? null}
+              name={nickname ?? L.avatarInitial}
+              size={48}
+            />
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
               <Row gap={6}>
                 {tierTag ? (
@@ -246,32 +244,49 @@ export default function Owner() {
                 <Txt style={{ fontSize: rem(1.125), fontWeight: '700' }}>
                   {guest ? L.guestName : (nickname ?? L.title)}
                 </Txt>
-                {card?.founder ? (
-                  // T-11-113 프리시즌에 은퇴 선수를 남긴 구단주
-                  <View testID="owner-founder">
-                    <Pill tone="good">{founderLabel()}</Pill>
-                  </View>
-                ) : null}
                 {card?.title ? <TitleBadge title={card.title} /> : null}
               </Row>
-              {tierTag ? (
-                <Txt
-                  testID={`owner-tier-${tierTag.tier}`}
-                  style={{
-                    fontFamily: DISPLAY[700],
-                    fontSize: rem(0.875),
-                    letterSpacing: 0.3,
-                    color: mix(GRADE_COLOR[tierTag.tier] ?? GRADE_COLOR.rookie!, c.ink, 0.65),
-                  }}
-                >
-                  {tierTitle(tierTag)}
-                </Txt>
-              ) : null}
               <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
                 {sub}
               </Txt>
             </View>
+            {linked && acct ? <OwnerProfileEditor profile={acct} admin={admin} /> : null}
           </View>
+          {tiers.length ? (
+            <View
+              accessibilityLabel={L.seasonTierHistory}
+              testID="owner-tier-history"
+              style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
+            >
+              {tiers.map((tier) => (
+                <View
+                  key={tier.season}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 5,
+                    paddingHorizontal: 8,
+                    paddingVertical: 5,
+                    borderWidth: 1,
+                    borderColor: c.line,
+                    borderRadius: 6,
+                    backgroundColor: c.surface2,
+                  }}
+                >
+                  <GradeEmblem id={tier.tier} size={16} />
+                  <Txt
+                    style={{
+                      fontSize: rem(0.75),
+                      fontWeight: '600',
+                      color: mix(GRADE_COLOR[tier.tier] ?? GRADE_COLOR.rookie!, c.ink, 0.65),
+                    }}
+                  >
+                    {tierTitle(tier)}
+                  </Txt>
+                </View>
+              ))}
+            </View>
+          ) : null}
           {(guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue) ? (
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
               {L.emptySummary}
@@ -282,7 +297,26 @@ export default function Owner() {
               <Stats
                 accent
                 items={[
-                  [L.statClubValue, clubValue !== null ? fmtValue(clubValue) : '–'],
+                  [
+                    L.statClubValue,
+                    clubValue !== null ? fmtValue(clubValue) : '–',
+                    {
+                      info: true,
+                      label: L.valueInfoTitle,
+                      testID: 'club-value-info',
+                      onPress: () =>
+                        Alert.alert(
+                          L.valueInfoTitle,
+                          [
+                            linked ? L.valueInfoFormula : L.valueInfoGuest,
+                            ...(linked ? [L.valueInfoOwned] : []),
+                            L.valueInfoPrice,
+                            L.valueInfoFallback,
+                            L.valueInfoExcluded,
+                          ].join('\n\n'),
+                        ),
+                    },
+                  ],
                   ...(linked
                     ? [
                         [
@@ -500,7 +534,7 @@ export default function Owner() {
       ) : null}
 
       <SettingsCard>
-        <Account admin={admin} />
+        <Account />
         {admin ? (
           <View
             style={{

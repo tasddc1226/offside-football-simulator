@@ -75,7 +75,7 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await page.locator('[data-act="owner"]').click();
   await expect(page.locator('[data-permanent-title]')).toHaveCount(0);
   await page.locator('[data-act="open-owner-hall"]').click();
-  await page.locator('[data-hall-tab="titles"]').click();
+  await page.locator('[data-room-zone="1"]').click();
   const hall = page.locator('[data-owner-hall]');
   await expect(hall.locator('[data-permanent-title]')).toHaveCount(12);
   await expect(hall.locator('[data-title-pick="owner-developer"]')).toHaveCount(1);
@@ -108,7 +108,7 @@ test('permanent titles: progress, selection, header update, recovery and memoize
     page.locator('[aria-label="구단주 요약"] [data-title="owner-developer"]'),
   ).toBeVisible();
   await page.locator('[data-act="open-owner-hall"]').click();
-  await page.locator('[data-hall-tab="titles"]').click();
+  await page.locator('[data-room-zone="1"]').click();
   await hall.locator('[data-title-pick="none"]').click();
   await page.locator('.main-nav [data-act="owner"]').click();
   await expect(page.locator('[aria-label="구단주 요약"] [data-title]')).toHaveCount(0);
@@ -116,7 +116,7 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await page.locator('[data-act="owner"]').click();
   await expect(page.locator('[data-permanent-title]')).toHaveCount(0);
   await page.locator('[data-act="open-owner-hall"]').click();
-  await page.locator('[data-hall-tab="titles"]').click();
+  await page.locator('[data-room-zone="1"]').click();
   await expect(hall).toBeVisible();
   const afterMutation = gets;
   await page.locator('.main-nav [data-act="owner"]').click();
@@ -124,7 +124,7 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await page.locator('[data-act="owner"]').click();
   await expect(page.locator('[data-permanent-title]')).toHaveCount(0);
   await page.locator('[data-act="open-owner-hall"]').click();
-  await page.locator('[data-hall-tab="titles"]').click();
+  await page.locator('[data-room-zone="1"]').click();
   await expect(hall).toBeVisible();
   expect(gets).toBe(afterMutation);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -132,12 +132,12 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await page.locator('[data-act="owner"]').click();
   await expect(page.locator('[data-permanent-title]')).toHaveCount(0);
   await page.locator('[data-act="open-owner-hall"]').click();
-  await page.locator('[data-hall-tab="titles"]').click();
+  await page.locator('[data-room-zone="1"]').click();
   await expect(hall.locator('[data-title-pick="none"]')).toHaveCount(0);
   await expect(hall.locator('[aria-label="지금 대표 칭호"]')).toContainText('달지 않음');
   await hall.locator('summary').click();
-  await hall.locator('[data-act="title-season-achievements"]').click();
-  await expect(page.locator('[data-club-achievements]')).toBeVisible();
+  await expect(hall.locator('[data-act="title-season-achievements"]')).toHaveCount(0);
+  await expect(hall.locator('.guide-body')).toBeVisible();
 });
 
 test('hall read failure can retry and shows all locked goals for a new owner', async ({ page }) => {
@@ -182,7 +182,7 @@ test('hall read failure can retry and shows all locked goals for a new owner', a
   await page.locator('[data-act="owner"]').click();
   await expect(page.locator('[data-permanent-title]')).toHaveCount(0);
   await page.locator('[data-act="open-owner-hall"]').click();
-  await page.locator('[data-hall-tab="titles"]').click();
+  await page.locator('[data-room-zone="1"]').click();
   const error = page.locator('[data-owner-hall-error]');
   await expect(error).toContainText('명예관을 불러오지 못했어요.');
   await error.getByRole('button', { name: '다시 시도' }).click();

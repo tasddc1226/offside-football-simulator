@@ -103,6 +103,7 @@ export type Post = z.infer<typeof PostSchema>;
 export const CommentSchema = z.object({
   id: z.string(),
   nickname: z.string(),
+  avatarId: z.uuid().nullable().optional(),
   body: z.string(),
   /** 관리자가 쓴 댓글(운영자 표시). */
   admin: z.boolean(),

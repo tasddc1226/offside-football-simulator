@@ -25,6 +25,7 @@ export const ProfileSchema = z.strictObject({
   googleEmailMasked: z.string().nullable().default(null),
   /** T-10-028 댓글 닉네임(구글 로그인한 프로필만). 옛 응답엔 없다. */
   nickname: z.string().nullable().default(null),
+  avatarId: z.uuid().nullable().optional(),
 });
 
 export type Profile = z.infer<typeof ProfileSchema>;
@@ -42,3 +43,12 @@ export type PutNicknameBody = z.infer<typeof PutNicknameBodySchema>;
 /** API-PRO-002. */
 export const PatchProfileSettingsBodySchema = ProfileSettingsSchema.partial();
 export type PatchProfileSettingsBody = z.infer<typeof PatchProfileSettingsBodySchema>;
+
+/** Cropped raster thumbnail only; null restores the initial avatar. */
+export const PutAvatarBodySchema = z.strictObject({
+  image: z
+    .string()
+    .max(16_384)
+    .regex(/^data:image\/(png|webp);base64,[A-Za-z0-9+/]+={0,2}$/)
+    .nullable(),
+});

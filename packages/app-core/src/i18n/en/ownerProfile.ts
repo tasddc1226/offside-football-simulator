@@ -2,6 +2,21 @@ import type { Translation } from '../core';
 import type { OwnerProfileMsgs } from '../ko/ownerProfile';
 
 export const ownerProfile: Translation<OwnerProfileMsgs> = {
+  roomTitle: 'Owner locker room',
+  roomHint: 'Turn left or right to change the records below.',
+  roomSeasons: 'Season lockers',
+  roomOwner: 'Owner plaque',
+  roomTrophies: 'Trophy cabinet',
+  roomSeasonsNote: 'Players and records from every season',
+  roomOwnerNote: 'A title to display beside your name',
+  roomTrophiesNote: 'Badges and results earned in competition',
+  roomPrev: 'Look left',
+  roomNext: 'Look right',
+  roomEmptyAwards: 'No awards on display yet. Finish a season or make your mark in a cup.',
+  roomLoading: 'Preparing your locker room…',
+  roomBadgeCount: 'Record badges',
+  roomCupCount: 'Cup results',
+  roomEmptyTitle: 'Choose your representative title.',
   collectionEarned: 'Earned',
   collectionLocked: 'In progress',
   collectionHint: 'Tap a title to display it immediately.',
@@ -70,6 +85,10 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   viewAchievements: 'View this season’s achievements',
   titleBridge:
     'Season achievements are challenges for this season. Permanent titles reward repeated development across seasons or finalized season-first honors. Achievement points are not added toward titles.',
+  titleFounder: 'Founding member',
+  conditionFounder:
+    'Retire at least 1 player you developed in preseason, excluding hidden records.',
+  relatedPreseason: 'A title commemorating preseason participation',
   titleDeveloper: 'Player developer',
   titleAcademy: 'Academy great',
   titleStarMaker: 'Star maker',

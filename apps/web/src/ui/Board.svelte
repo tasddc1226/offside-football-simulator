@@ -341,7 +341,7 @@
             <div class="board-comment" data-comment={c.id}>
               <div class="row" style="gap:6px;align-items:center">
                 <!-- 관리자 댓글은 닉네임 대신 운영자 배지만(예전에 누구나 '운영자'라고 쓴 댓글과 구분된다). -->
-                {#if c.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<OwnerAvatar name={c.nickname} /><b>{c.nickname}</b>{#if c.tier}<TierBadge tag={c.tier} />{/if}{#if c.title}<TitleBadge title={c.title} size="sm" />{/if}{/if}
+                <OwnerAvatar avatarId={c.avatarId} name={c.nickname} />{#if c.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{c.nickname}</b>{#if c.tier}<TierBadge tag={c.tier} />{/if}{#if c.title}<TitleBadge title={c.title} size="sm" />{/if}{/if}
                 <span class="muted fs-xs">{dateOf(c.createdAt)}</span>
                 {#if c.deletable}<button class="icon-btn board-comment-del" onclick={() => removeComment(c)}>{L.remove}</button>
                 {:else if !c.admin}<button class="icon-btn board-comment-del" aria-expanded={reporting === c.id} data-act="comment-report" onclick={() => (reporting = reporting === c.id ? null : c.id)}>{L.report}</button>{/if}

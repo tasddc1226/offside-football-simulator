@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { foundersOf } from './ownerTeams.js';
 import { eq } from 'drizzle-orm';
 import { createTestD1, syncCards, type TestD1 } from '../../test/d1.js';
 import { issueGoogleCookie, issueAdminCookie, ADMIN_EMAIL, callJson } from '../../test/http.js';
@@ -55,6 +56,50 @@ describe('Permanent owner titles', () => {
     return ids;
   }
 
+  it('founder matches the old badge exactly, upgrades v2 progress and stays earned without replacing a selected title', async () => {
+    const who = await issueGoogleCookie(ctx);
+    const [id] = await seed(who.profileId, 1);
+    await ctx.db.update(careers).set({ retireAge: 18, peak: null }).where(eq(careers.id, id!));
+    for (const [patch, expected] of [
+      [{ serviceSeason: 1 }, 0],
+      [{ serviceSeason: null }, 0],
+      [{ serviceSeason: 0, hidden: 1 }, 0],
+      [{ hidden: 0, status: 'active' }, 0],
+      [{ status: 'retired' }, 1],
+    ] as const) {
+      await ctx.db.update(careers).set(patch).where(eq(careers.id, id!));
+      expect((await titleMetricsOf(ctx.db, who.profileId)).preseason).toBe(expected);
+      expect((await foundersOf(ctx.db, [who.profileId])).length).toBe(expected);
+    }
+    const metrics = await titleMetricsOf(ctx.db, who.profileId);
+    expect(metrics.retired).toBe(0);
+    await ctx.db.insert(ownerTitleProgress).values({
+      profileId: who.profileId,
+      ...metrics,
+      preseason: 0,
+      criteriaVersion: 2,
+      updatedAt: NOW,
+    });
+    const hall = await permanentTitlesOf(ctx.db, who.profileId, NOW);
+    expect(hall.find((t) => t.id === 'owner-founder')).toMatchObject({
+      target: 1,
+      value: 1,
+      earnedAt: NOW,
+    });
+    const res = await callJson(ctx.env, 'PUT', '/v1/owner/title', {
+      cookie: who.cookie,
+      body: { title: 'owner-founder' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ data: { title: 'owner-founder', pinned: true } });
+    await ctx.db.update(careers).set({ hidden: 1 }).where(eq(careers.id, id!));
+    await refreshOwnerTitles(ctx.db, who.profileId, NOW);
+    expect(
+      (await permanentTitlesOf(ctx.db, who.profileId, NOW)).find((t) => t.id === 'owner-founder')
+        ?.earnedAt,
+    ).toBe(NOW);
+  });
+
   it('all-season milestones exclude early/hidden careers and award the original developer after a transfer', async () => {
     const a = await issueGoogleCookie(ctx);
     const b = await issueGoogleCookie(ctx);
@@ -77,6 +122,7 @@ describe('Permanent owner titles', () => {
       .insert(ownerHonors)
       .values({ profileId: a.profileId, season: 0, kind: 'first', value: 1, grantedAt: NOW });
     expect(await titleMetricsOf(ctx.db, a.profileId)).toEqual({
+      preseason: 6,
       midfield: 0,
       defense: 0,
       keeper: 0,
@@ -91,20 +137,25 @@ describe('Permanent owner titles', () => {
     });
     expect((await titleMetricsOf(ctx.db, b.profileId)).retired).toBe(0);
     const preview = await refreshOwnerTitles(ctx.db, a.profileId, NOW, true);
-    expect(preview).toEqual(['owner-developer', 'owner-star-maker', 'owner-pioneer']);
+    expect(preview).toEqual([
+      'owner-founder',
+      'owner-developer',
+      'owner-star-maker',
+      'owner-pioneer',
+    ]);
     expect(await ctx.db.select().from(ownerTitleAwards)).toHaveLength(0);
     expect(await ctx.db.select().from(ownerTitleProgress)).toHaveLength(0);
     await Promise.all([
       refreshOwnerTitles(ctx.db, a.profileId, NOW),
       refreshOwnerTitles(ctx.db, a.profileId, NOW),
     ]);
-    expect(await ctx.db.select().from(ownerTitleAwards)).toHaveLength(3);
+    expect(await ctx.db.select().from(ownerTitleAwards)).toHaveLength(4);
     expect(await refreshOwnerTitles(ctx.db, a.profileId, NOW)).toEqual([]);
     await ctx.db.update(careers).set({ hidden: 1 }).where(eq(careers.profileId, a.profileId));
     await refreshOwnerTitles(ctx.db, a.profileId, '2026-11-01T00:00:00.000Z');
     expect(
       (await permanentTitlesOf(ctx.db, a.profileId, NOW)).filter((t) => t.earnedAt),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
     expect((await ctx.db.select().from(ownerTitleAwards))[0]?.earnedAt).toBe(NOW);
   });
 
@@ -157,7 +208,7 @@ describe('Permanent owner titles', () => {
     const later = '2026-10-11T00:00:00.000Z';
     hall = await permanentTitlesOf(ctx.db, who.profileId, later);
     expect(hall.find((t) => t.id === 'owner-goals')).toMatchObject({ value: 5, earnedAt: later });
-    expect((await ctx.db.select().from(ownerTitleProgress))[0]?.criteriaVersion).toBe(2);
+    expect((await ctx.db.select().from(ownerTitleProgress))[0]?.criteriaVersion).toBe(3);
     // Historic awards remain valid when their earlier criteria were easier.
     await ctx.db
       .update(ownerTitleAwards)

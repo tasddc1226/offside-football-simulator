@@ -278,6 +278,7 @@ export async function listComments(db: Db, postId: string) {
       createdAt: boardComments.createdAt,
       // T-11-150 작성자의 지금 대표 칭호.
       title: profiles.title,
+      avatarId: profiles.avatarId,
     })
     .from(boardComments)
     .leftJoin(profiles, eq(profiles.id, boardComments.profileId))

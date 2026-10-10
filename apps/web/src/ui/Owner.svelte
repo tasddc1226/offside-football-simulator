@@ -9,7 +9,7 @@
   import Topbar from './Topbar.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
   import AdSlot from '../ads/AdSlot.svelte';
-  import { fetchBoardViewer } from '@offside/app-core/api/boards';
+  import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
   import { fundsText } from '@offside/app-core/market';
@@ -19,11 +19,12 @@
   import { ownerLockedText, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
   import { fmtValue } from '@offside/app-core/format';
-  import { founderLabel } from '@offside/app-core/friendText';
   import { appState, type TeamView } from './state.svelte.js';
   import { accountCache } from './account-state.svelte.js';
   import { isMember } from '@offside/app-core/account';
   import Account from './Account.svelte';
+  import ClubValueInfo from './owner/ClubValueInfo.svelte';
+  import OwnerProfileEditor from './owner/OwnerProfileEditor.svelte';
   import { loadMyPlayerSummary } from '@offside/app-core/myPlayers';
   import { ownerPlayersText as P } from '@offside/app-core/i18n/ko/ownerPlayers';
   import TeamLogo from './team/TeamLogo.svelte';
@@ -33,8 +34,8 @@
   import { openFriends } from './friendInvite.svelte.js';
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
-  import { fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
-  import { profileTier, tierTitle } from '@offside/app-core/ownerTier';
+  import { type OwnerTierTag } from '@offside/contracts';
+  import { tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
   import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from './cup/TitleBadge.svelte';
@@ -60,9 +61,17 @@
     const acct = accountCache.value;
     return acct && acct !== 'error' ? acct.nickname : null;
   });
+  let tierTag = $state<OwnerTierTag | null>(null);
+  let tiers = $state<OwnerTierTag[]>([]);
   $effect(() => {
-    if (linked) void fetchBoardViewer().then((r) => (admin = linked && r.ok && r.data.admin));
-    else admin = false;
+    let alive = true;
+    admin = false;
+    tierTag = null;
+    tiers = [];
+    if (linked) void fetchOwnerSummary().then((r) => {
+      if (alive && r.ok) { admin = r.data.admin; tierTag = r.data.tier; tiers = r.data.tiers ?? (r.data.tier ? [r.data.tier] : []); }
+    });
+    return () => { alive = false; };
   });
 
   // 전용 목록을 열지 않아도 현재 시즌의 기존 기록 기준으로 요약한다.
@@ -95,16 +104,6 @@
   });
   const clubValue = $derived(linked ? (market?.clubValue ?? null) : (summary?.value ?? null));
   const funds = $derived(market ? fundsText(market.balance) : '–');
-  // T-11-128 시즌 결산 카드 — 끝난 시즌이 있으면 가장 최근 결산을 한 줄로 알린다. 불러오지 못하면 카드를 숨긴다.
-  let recap = $state<SeasonRecapResponse | null>(null);
-  $effect(() => {
-    void fetchSeasonRecap().then((r) => {
-      if (r.ok) recap = r.data;
-    });
-  });
-  // 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 프로필 이름 앞에 붙인다(그 시즌 기록이 없으면 없다).
-  // 댓글 · 채팅에도 같은 등급이 나간다(서버 ownerTiersOf).
-  const tierTag = $derived(recap ? profileTier(recap) : null);
   /** 받은 친구 신청(T-11-142)이나 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 친구 · 업적 탭으로. */
   const teamDot = $derived(ownerDotLabel({ friendReq: appState.friendReq, achNew: appState.achNew }));
   function openMyTeam() {
@@ -132,19 +131,28 @@
   {#if linked || guest}
     <section class="card owner-hub" data-owner-summary aria-label={L.summaryLabel}>
       <div class="owner-id">
-        <OwnerAvatar name={nickname ?? L.avatarInitial} size={48} />
+        <OwnerAvatar avatarId={accountCache.value && accountCache.value !== 'error' ? accountCache.value.avatarId : null} name={nickname ?? L.avatarInitial} size={48} />
         <div class="owner-who">
-          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}{#if card?.title}<span class="owner-founder"><TitleBadge title={card.title} size="sm" /></span>{/if}</b>
-          {#if tierTag}<span class="ach-grade owner-tier" data-grade={tierTag.tier} data-owner-tier={tierTag.tier}>{tierTitle(tierTag)}</span>{/if}
+          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.title}<span class="owner-founder"><TitleBadge title={card.title} size="sm" /></span>{/if}</b>
           <span class="muted fs-sm">{guest ? L.guestSub : card?.team ? `${card.team.name} · ${card.season}` : L.signedInSubWeb}</span>
         </div>
+        {#if linked && accountCache.value && accountCache.value !== 'error'}<OwnerProfileEditor profile={accountCache.value} {admin} />{/if}
       </div>
+      {#if tiers.length}
+        <ul class="owner-tier-history" aria-label={L.seasonTierHistory} data-owner-tier-history>
+          {#each tiers as tier (tier.season)}
+            <li class="ach-grade" data-grade={tier.tier} data-owner-tier={tier.tier} data-tier-season={tier.season}>
+              <GradeEmblem id={tier.tier} size={16} /><span>{tierTitle(tier)}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
       {#if (guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue)}
         <p class="muted fs-sm owner-empty">{L.emptySummary}</p>
         {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds })}</p>{/if}
       {:else}
       <dl class="owner-stats">
-        <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
+        <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><ClubValueInfo {linked} /><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
         {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
         <div><dt>{L.statRetired}</dt><dd>{summary ? L.playersCount({ n: summary.players, text: num(summary.players) }) : '–'}</dd></div>
         <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
@@ -244,7 +252,7 @@
   {/if}
 
   <section class="card settings-card" id="account-slot" aria-label={L.accountSection}>
-    <Account {admin} />
+    <Account />
     {#if admin}
       <button class="settings-row settings-trigger owner-admin" data-act="admin" onclick={() => (appState.screen = 'admin')}>
         <span class="settings-label"><strong>{L.adminTools}</strong></span>
@@ -266,18 +274,15 @@
     align-items: center;
     gap: 12px;
   }
+  .owner-id > .owner-who { flex: 1; }
   /* 이름 앞 지난 시즌 등급 엠블럼(LoL 이름 앞 지난 시즌 티어처럼). */
   .owner-last-tier {
     display: inline-flex;
     vertical-align: -5px;
     margin-right: 4px;
   }
-  .owner-tier {
-    font-family: var(--display);
-    font-size: 0.875rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-  }
+  .owner-tier-history {display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none;}
+  .owner-tier-history li {display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font-size:11px;font-weight:600;line-height:1.4;}
   .owner-who {
     display: flex;
     flex-direction: column;
@@ -321,7 +326,9 @@
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
+  .owner-stats .owner-value dt {padding-right:24px;}
   .owner-stats .owner-value {
+    position:relative;
     grid-column: 1 / -1;
   }
   .owner-stats .owner-value:has(+ .owner-funds),

@@ -106,7 +106,12 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
     const profileId = found.team.profileId;
     const owner = await ownerProfileOf(
       db,
-      { id: profileId, nickname: found.ownerNickname, title: found.title },
+      {
+        id: profileId,
+        nickname: found.ownerNickname,
+        title: found.title,
+        avatarId: found.avatarId,
+      },
       nowIso(),
       reqLang(c),
     );

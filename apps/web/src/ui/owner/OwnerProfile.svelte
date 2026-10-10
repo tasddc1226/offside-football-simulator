@@ -47,7 +47,7 @@
     <div class="op-sections" data-owner-profile>
       <section class="card stack" style="gap:12px">
         <div class="op-id">
-          <OwnerAvatar name={owner.nickname ?? L.noNickname} size={56} />
+          <OwnerAvatar avatarId={owner.avatarId} name={owner.nickname ?? L.noNickname} size={56} />
           <div class="op-who">
             <span class="eyebrow">Owner profile{mine ? ` · ${L.mine}` : ''}</span>
             <h1>

@@ -6,8 +6,6 @@
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from '../cup/TitleBadge.svelte';
   import { toast } from '../helpers.js';
-  import { appState } from '../state.svelte.js';
-  import { go } from '../nav.js';
 
   const { onpick }: { onpick?: (title: string | null) => void } = $props();
   let hall = $state<OwnerTitlesResponse | null>(null);
@@ -82,7 +80,6 @@
     <details class="oh-title-guide">
       <summary>{L.titleGuide}</summary>
       <div class="guide-body"><p>{L.permanentLead}</p><p>{L.titleBridge}</p>
-        <button class="btn" data-act="title-season-achievements" onclick={() => { appState.teamView = 'achievements'; go('team'); }}>{L.viewAchievements}</button>
         {#if collection.cups.length}<button class="btn" aria-pressed={picked === null} disabled={saving} data-title-pick="auto" onclick={() => pick(null)}>{L.titleAutoCup}</button><p>{L.pickAutoNote}</p>{/if}
       </div>
     </details>

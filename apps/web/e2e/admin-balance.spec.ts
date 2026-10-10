@@ -51,6 +51,9 @@ async function mockApi(page: Page, opts: { linked: boolean; admin: boolean }) {
       }),
     ),
   );
+  await page.route(`${API}/v1/owner/summary`, (route) =>
+    route.fulfill(ok({ linked: opts.linked, admin: opts.admin, tier: null, entries: [] })),
+  );
   await page.route(`${API}/v1/boards/**`, (route) => {
     const path = new URL(route.request().url()).pathname;
     sent.push({ method: 'GET', path, body: null });

@@ -424,11 +424,11 @@ export default function Chat() {
                 <View
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 }}
                 >
+                  <OwnerAvatar avatarId={m.avatarId} name={m.nickname} />
                   {m.admin ? (
                     <Pill tone="good">{ADMIN_NICKNAME}</Pill>
                   ) : (
                     <>
-                      <OwnerAvatar name={m.nickname} />
                       <Txt bold tone={mine(m) ? 'accent' : 'ink'}>
                         {m.nickname}
                       </Txt>

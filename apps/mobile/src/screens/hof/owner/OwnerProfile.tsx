@@ -61,7 +61,7 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
         <>
           <Card gap={12} testID="owner-profile">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <OwnerAvatar name={name} size={56} />
+              <OwnerAvatar avatarId={owner.avatarId} name={name} size={56} />
               <View style={{ flex: 1, minWidth: 0, gap: 4, alignItems: 'flex-start' }}>
                 <Txt v="eyebrow">{`Owner profile${mine ? ` · ${L.mine}` : ''}`}</Txt>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

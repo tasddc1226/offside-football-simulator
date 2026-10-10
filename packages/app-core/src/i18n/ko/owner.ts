@@ -3,6 +3,29 @@
 import { ns } from '../core';
 
 const ko = {
+  seasonTierHistory: '시즌별 최종 티어',
+  valueInfoTitle: '구단 가치 계산 기준',
+  valueInfoFormula: '구단 가치 = 구단 자금 + 보유 선수 카드의 기준가 합계',
+  valueInfoOwned: '직접 키운 선수와 영입한 선수를 시즌 구분 없이 모두 포함해요.',
+  valueInfoPrice:
+    '카드 기준가는 최고 OVR을 기록한 마지막 시즌의 몸값이에요. 몸값은 리그 자금력·OVR·나이로 계산해요.',
+  valueInfoFallback:
+    '그 시즌의 몸값이 없으면 가장 비쌌던 프로 시즌을 사용하고, 프로 기록도 없으면 1억 원을 적용해요.',
+  valueInfoExcluded: '판매 등록 가격이나 레전드 점수를 직접 더하지는 않아요.',
+  valueInfoGuest:
+    '로그인하지 않은 상태에서는 이 기기에 저장된 현재 시즌 은퇴 선수의 카드 기준가를 합산해요.',
+  profileEdit: '프로필 편집',
+  profileName: '구단주 이름',
+  profileHint: '이름과 이미지는 구단주 프로필·댓글·채팅에 함께 표시돼요.',
+  profileImagePick: '이미지 고르기',
+  profileImageReset: '기본 이미지로 변경',
+  profileImageSave: '이미지 저장',
+  profileCancel: '취소',
+  profileBusy: '이미지를 준비하고 있어요.',
+  profileSaved: '프로필 이미지를 바꿨어요.',
+  profileImageError: '이미지를 불러오지 못했어요. 다른 파일을 골라 주세요.',
+  profilePreview: '프로필 이미지 미리 보기',
+  profileImageHint: 'PNG·JPG·WebP, 최대 10MB. 가운데를 정사각형으로 잘라 저장해요.',
   title: '구단주',
   summaryLabel: '구단주 요약',
   /** 닉네임이 없을 때 동그란 아바타에 들어가는 한 글자. */

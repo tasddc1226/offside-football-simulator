@@ -35,6 +35,7 @@ export type ChatMessage = {
   tier?: OwnerTier | null;
   /** T-11-150 보낸 사람의 대표 칭호(owner-title.ts id, 보낸 때 기준). 옛 메시지엔 없다. */
   title?: string | null;
+  avatarId?: string | null;
 };
 
 /** 쓰기를 거절한 이유(보낸 사람에게만 간다). */
@@ -45,6 +46,7 @@ export type ChatServerEvent =
   /** more(T-11-180): 이보다 이전 줄이 더 있다. 옛 방엔 없다. */
   | { t: 'hello'; messages: ChatMessage[]; online: number; write: boolean; more?: boolean }
   | { t: 'msg'; m: ChatMessage }
+  | { t: 'avatar'; author: string; avatarId: string | null }
   | { t: 'hide'; id: string }
   /** 접속자 수가 바뀌었다(누가 들어오거나 나갔다). */
   | { t: 'online'; n: number }

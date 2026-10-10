@@ -214,7 +214,7 @@
       {#each view.messages as m (m.id)}
         <li class="chat-msg" class:mine={mine(m)} data-chat-msg={m.id}>
           <div class="chat-meta">
-            {#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<OwnerAvatar name={m.nickname} /><b>{m.nickname}</b>{#if m.tier}<TierBadge tag={{ tier: m.tier, season: tierSeason }} />{/if}{#if m.title}<TitleBadge title={m.title} size="sm" />{/if}{/if}
+            <OwnerAvatar avatarId={m.avatarId} name={m.nickname} />{#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{m.nickname}</b>{#if m.tier}<TierBadge tag={{ tier: m.tier, season: tierSeason }} />{/if}{#if m.title}<TitleBadge title={m.title} size="sm" />{/if}{/if}
             {#if !mine(m) && (!m.admin || view.me?.admin)}
               <button class="chat-more" aria-expanded={selected === m.id} aria-label={L.moreLabel({ nick: m.nickname })} data-act="chat-more" onclick={() => (selected = selected === m.id ? null : m.id)}>
                 <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>

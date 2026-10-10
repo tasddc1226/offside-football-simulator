@@ -238,6 +238,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       admin: viewer.admin,
       tier: await ownerTierOfProfile(db, profileId, now),
       title: viewer.title,
+      avatarId: viewer.avatarId ?? null,
       deletable: true,
       createdAt: now,
     };
