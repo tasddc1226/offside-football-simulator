@@ -46,6 +46,18 @@ describe('T-11-083 잠재력 강화', () => {
     expect(boostCost(player({ salary: 10000 }))).toBe(7000);
   });
 
+  it('운영 도구 배율(boostCost)을 비용에 곱한다 (T-11-185)', () => {
+    const low = player({ salary: 1000 });
+    const high = player({ salary: 10000 });
+    try {
+      applyBalance({ boostCost: 0.5 });
+      expect(boostCost(low)).toBe(1000);
+      expect(boostCost(high)).toBe(3500);
+    } finally {
+      applyBalance();
+    }
+  });
+
   it('성공하면 자금을 쓰고 잠재력 보너스와 단계가 오른다. 같은 시즌엔 다시 못 한다', () => {
     const s = player({ salary: 10000, money: 50000 });
     const bonus = s.flags.potBonus ?? 0;

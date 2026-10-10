@@ -53,6 +53,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '자기 투자 비용 배율',
     desc: '자기 투자 비용(연봉 비례·최소 금액)에 곱하는 값',
   },
+  boostCost: {
+    group: 'growth',
+    label: '잠재력 강화 비용 배율',
+    desc: '잠재력 강화 비용(단계별 연봉 비례·최소 금액)에 곱하는 값',
+  },
   boostExtraTotal: {
     group: 'growth',
     label: '커리어당 추가 강화 횟수',

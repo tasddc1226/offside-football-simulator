@@ -8,6 +8,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   growthScale: 'Growth multiplier',
   investGain: 'Special training growth share',
   investCost: 'Self-investment cost multiplier',
+  boostCost: 'Potential boost cost multiplier',
   boostExtraTotal: 'Extra boost tries per career',
   potMean: 'Potential average',
   potSd: 'Potential spread',
