@@ -16,6 +16,8 @@ export const gTraining: Translation<GTrainingMsgs> = {
   attrPairUp: (p) => `${p.a}, ${p.b} ▲`,
   focusGrowth: (p) => `Focus growth +${p.pct}%`,
   tooFarAhead: (p) => `Too far ahead: growth −${p.pct}%`,
+  maxed: (p) => `${p.attr} maxed out`,
+  nearMax: (p) => `Partly maxed: growth −${p.pct}%`,
   helpRest: (p) =>
     `Skip training and recover. Injury risk jumps when condition falls below ${p.low}, and below ${p.start} you will struggle to start.`,
   helpCoach:
@@ -29,6 +31,10 @@ export const gTraining: Translation<GTrainingMsgs> = {
   helpOffFocus: (p) => `This is not a focus attribute, so it grows ${p.pct}% slower.`,
   helpLopsided: (p) =>
     `It is too far ahead of your other key attributes, so growth is down ${p.pct}%. Train the others to lift the cap.`,
+  helpMaxed: (p) =>
+    `Every ${p.attr} detail attribute is already at the max (99), so this won't raise it any further.`,
+  helpNearMax: (p) =>
+    `Some detail attributes are already at the max (99), so ${p.pct}% of the growth is lost.`,
   helpOvrSubs: (p) => `In this group, ${p.list} contribute to OVR for your current role.`,
   helpOvrSeparate: 'OVR contribution differs from usefulness in matches.',
   helpWeightLow: 'It barely counts toward OVR in your current position.',

@@ -8,7 +8,7 @@ import {
   type AttrKey,
   type Pos,
 } from './data.js';
-import { ovr, wOf, mainRole, ROLES, faceOf, SUBS } from './attributes.js';
+import { ovr, wOf, mainRole, ROLES, faceOf, SUBS, maxedShare } from './attributes.js';
 import { clamp, ri, pick, chance, rnd } from './rng.js';
 import { baseline } from './candidates.js';
 import { BAL } from './balance.js';
@@ -72,6 +72,20 @@ function attrInfo(s: GameState, k: AttrKey) {
   const bf = balanceFactor(s, k);
   return { focus: focusOf(s).includes(k), bf, lopsided: bf < 0.95 };
 }
+/** T-11-183 최고치(세부 능력치 99) 알림 — 다 찼으면 '최고치 도달', 성장의 5% 넘게 버려지면 그 몫. 카드 태그·설명이 같이 쓴다. */
+function maxNote(s: GameState, k: AttrKey): { maxed: boolean; tag: string; help: string } {
+  const lost = maxedShare(s, k);
+  if (lost > 0.999) {
+    const attr = labelOf(s, k);
+    return { maxed: true, tag: L.maxed({ attr }), help: L.helpMaxed({ attr }) };
+  }
+  if (lost < 0.05) return { maxed: false, tag: '', help: '' };
+  return {
+    maxed: false,
+    tag: L.nearMax({ pct: pct(lost) }),
+    help: L.helpNearMax({ pct: pct(lost) }),
+  };
+}
 /** T-10-074 훈련 카드: 무엇이 오르고 무엇을 치르는지(effect, 항목별)와 눈여겨볼 한 가지(tag — 주력·너무 앞섬·비용·수입). */
 export function trainingCard(s: GameState, t: TrainingDef): { effect: string[]; tag: string } {
   if (t.id === 'rest')
@@ -97,14 +111,19 @@ export function trainingCard(s: GameState, t: TrainingDef): { effect: string[]; 
   }
   const k = t.attr!;
   const { focus, bf, lopsided } = attrInfo(s, k);
+  const max = maxNote(s, k);
   const up =
     k === 'phy'
       ? L.attrPairUp({ a: labelOf(s, k), b: labelOf(s, 'pac') })
       : L.attrUp({ attr: labelOf(s, k) });
-  const tags = [
-    focus ? L.focusGrowth({ pct: pct(FOCUS_GROWTH - 1) }) : '',
-    lopsided ? L.tooFarAhead({ pct: pct(1 - bf) }) : '',
-  ];
+  // 다 찬 능력치에 성장 보정 태그를 붙이면 오를 것처럼 보인다 — 최고치 태그만 남긴다.
+  const tags = max.maxed
+    ? [max.tag]
+    : [
+        focus ? L.focusGrowth({ pct: pct(FOCUS_GROWTH - 1) }) : '',
+        lopsided ? L.tooFarAhead({ pct: pct(1 - bf) }) : '',
+        max.tag,
+      ];
   return {
     effect: [up, L.condition({ v: signed(trainCond(k)) })],
     tag: tags.filter(Boolean).join(' · '),
@@ -133,6 +152,7 @@ export function trainingHelp(s: GameState, t: TrainingDef): string {
       ? L.helpFocus({ pct: pct(FOCUS_GROWTH - 1) })
       : L.helpOffFocus({ pct: pct(1 - OFF_FOCUS_GROWTH) }),
     lopsided ? L.helpLopsided({ pct: pct(1 - bf) }) : '',
+    maxNote(s, k).help,
     w < 0.05 ? L.helpWeightLow : L.helpWeight({ attr: name, pct: pct(w) }),
   ]
     .filter(Boolean)
@@ -294,7 +314,9 @@ export function investCard(
 ): { effect: string[]; tag: string; affordable: boolean } {
   const cost = investCost(s, d);
   const affordable = s.money >= cost;
-  const tag = !cost ? '' : affordable ? L.cost({ money: fmtMoney(cost) }) : L.investShort;
+  const money = !cost ? '' : affordable ? L.cost({ money: fmtMoney(cost) }) : L.investShort;
+  const k = d.id === 'weak' || d.id === 'best' ? investTarget(s, d.id) : null;
+  const tag = [money, k ? maxNote(s, k).tag : ''].filter(Boolean).join(' · ');
   return { effect: investEffect(s, d.id), tag, affordable };
 }
 export function investHelp(s: GameState, d: InvestDef): string {
@@ -308,6 +330,7 @@ export function investHelp(s: GameState, d: InvestDef): string {
     d.id === 'weak' ? L.helpInvestWeak({ attr: name }) : L.helpInvestBest({ attr: name }),
     L.helpInvestGain({ pct: pct(BAL.investGain) }),
     lopsided ? L.helpInvestLopsided({ pct: pct(1 - bf) }) : '',
+    maxNote(s, k).help,
     L.helpInvestSkip,
   ]
     .filter(Boolean)

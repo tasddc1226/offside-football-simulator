@@ -1,0 +1,23 @@
+{
+  "id": "t-11-183-growth-chips-max",
+  "title": "작은 성장도 보이게 · 최고치 도달 알림",
+  "items": [
+    "훈련으로 1보다 적게 오른 능력치도 결과에 +0.4처럼 보여 줘요.",
+    "세부 능력치가 모두 99인 능력치는 훈련 카드에 '최고치 도달'로 알려 줘요. 일부만 99면 줄어드는 몫을 보여 줘요."
+  ],
+  "en": {
+    "title": "Small gains now show, plus a max-out notice",
+    "items": [
+      "Attribute gains under 1 now show in results, like +0.4.",
+      "When every detail attribute of a stat is at 99, its training card says it's maxed out. If only some are, the card shows how much growth is lost."
+    ]
+  },
+  "ja": {
+    "title": "小さな成長も表示 · 最大値到達のお知らせ",
+    "items": [
+      "トレーニングで1未満しか上がらなかった能力値も、結果に+0.4のように表示します。",
+      "詳細能力値がすべて99の能力値は、トレーニングカードで「最大値に到達」とお知らせします。一部だけ99なら、減る分を表示します。"
+    ]
+  },
+  "availability": "web-app"
+}
