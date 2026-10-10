@@ -84,6 +84,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   manage: 'Pick a title in the Hall of Honors',
   hallLoadFail: 'Could not load your hall.',
   retry: 'Retry',
+  hallNew: 'NEW',
   hallSummary: 'View earned titles, explore your next goals and choose a representative title.',
   openHall: 'View hall',
   hallCount: (p: { n: number }) => `${p.n} titles earned`,

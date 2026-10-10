@@ -389,7 +389,7 @@ export default function Owner() {
           </Card>
           <Press
             testID="open-owner-hall"
-            accessibilityLabel={H.openHall}
+            accessibilityLabel={`${H.openHall} · ${H.hallNew}`}
             onPress={() => go('honors')}
             scale={0.98}
           >
@@ -397,7 +397,14 @@ export default function Owner() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Txt v="eyebrow">Hall of honors</Txt>
-                  <Txt v="h2">{H.hallTitle}</Txt>
+                  <View
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}
+                  >
+                    <Txt v="h2">{H.hallTitle}</Txt>
+                    <View testID="owner-hall-new">
+                      <Pill tone="good">{H.hallNew}</Pill>
+                    </View>
+                  </View>
                   <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
                     {H.hallSummary}
                   </Txt>

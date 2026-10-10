@@ -87,6 +87,7 @@ const ko = {
   // 명예관
   hallLoadFail: '명예관을 불러오지 못했어요.',
   retry: '다시 시도',
+  hallNew: 'NEW',
   hallSummary: '받은 칭호와 다음 목표를 확인하고 대표 칭호를 골라요.',
   openHall: '명예관 보기',
   hallCount: (p: { n: number }) => `획득한 칭호 ${p.n}개`,
