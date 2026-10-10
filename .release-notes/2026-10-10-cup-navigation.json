@@ -8,7 +8,10 @@
     "조별 순위표에서 팀 로고와 구단주 닉네임을 함께 볼 수 있어요.",
     "승부예측 안내를 규칙과 같은 목록 형식으로 정리하고, 경기마다 반복되던 공통 설명을 줄였어요.",
     "대회 화면에서도 홈과 같은 하단 메뉴로 기록실·소식·홈·구단주·설정으로 이동할 수 있어요.",
-    "조별예선·토너먼트를 한 영역에서 바꿔 볼 수 있어요. 조를 선택해 경기를 확인하고, 팀 상세에서 돌아와도 선택한 화면을 유지해요."
+    "조별예선·토너먼트를 한 영역에서 바꿔 볼 수 있어요. 조를 선택해 경기를 확인하고, 팀 상세에서 돌아와도 선택한 화면을 유지해요.",
+    "웹 컵 대회를 앱과 같은 순서로 보고, 토너먼트 라운드를 접고 펼칠 수 있어요.",
+    "웹과 앱에서 컵에 신청한 내 팀의 이름·로고·OVR을 확인할 수 있어요.",
+    "내 팀이 속한 조를 조별 예선 맨 위에서 볼 수 있어요."
   ],
   "en": {
     "title": "Smoother cup browsing",
@@ -19,7 +22,10 @@
       "Group tables now display team crests and owner nicknames.",
       "Prediction guidance now uses the same list format as cup rules, with less repeated match copy.",
       "Use the same bottom navigation as Home to reach Records, News, Home, Club owner and Settings from the cup page.",
-      "Switch between groups and the knockout bracket in one section. Choose a group, and keep your selection when returning from a team profile."
+      "Switch between groups and the knockout bracket in one section. Choose a group, and keep your selection when returning from a team profile.",
+      "The web cup screen follows the app layout, with expandable knockout rounds.",
+      "See the name, crest and OVR of your entered team on web and in the app.",
+      "Your team’s group appears first in the group stage section."
     ]
   },
   "ja": {
@@ -31,7 +37,10 @@
       "グループ順位表にチームロゴとオーナーのニックネームを表示します。",
       "勝敗予想の案内をルールと同じリスト形式にまとめ、試合ごとに繰り返す説明を減らしました。",
       "大会画面でもホームと同じ下部メニューから記録・ニュース・ホーム・オーナー・設定へ移動できます。",
-      "グループ・トーナメントを一か所で切り替えられます。グループを選んで試合を確認し、チーム詳細から戻っても選択した画面を維持します。"
+      "グループ・トーナメントを一か所で切り替えられます。グループを選んで試合を確認し、チーム詳細から戻っても選択した画面を維持します。",
+      "ウェブの大会画面をアプリと同じ表示順にし、トーナメントの各ラウンドを開閉できるようにしました。",
+      "ウェブとアプリで、申込済みの自分のチーム名・エンブレム・OVRを確認できます。",
+      "自分のチームが所属する組をグループステージの先頭に表示します。"
     ]
   },
   "availability": "web-app"
