@@ -24,6 +24,7 @@ export const CUP_KO = {
   withdrawClosed: '접수가 끝나 취소할 수 없어요.',
   noReroll: '리롤권이 없어요.',
   noBoost: '잠재력 강화권이 없어요.',
+  noScout: '프리미엄 스카우트권이 없어요.',
   // T-11-174 인앱 상품 구매 확인.
   iapInvalid: '구매를 확인하지 못했어요.',
   iapPending: '결제가 아직 끝나지 않았어요. 결제가 끝나면 자동으로 받아요.',

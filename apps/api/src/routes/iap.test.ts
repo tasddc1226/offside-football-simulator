@@ -70,6 +70,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     expect(res.data).toEqual({
       reroll: 0,
       boost: 0,
+      scout: 0,
       iap: { account: accountOf(me.profileId), stores: ['apple'] },
     });
     ctx.env.GOOGLE_PLAY_SA_JSON = '{}';
@@ -93,10 +94,10 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     const body = { store: 'apple', productId: REROLL_5, token: 'jws' };
     let res = await claim(me.cookie, body);
     expect(res.status).toBe(200);
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0, scout: 0 });
     // 같은 거래를 다시 보내도(앱이 응답을 못 받아 재전송) 그대로다.
     res = await claim(me.cookie, body);
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0, scout: 0 });
     const rows = await ctx.db.select().from(iapPurchases);
     expect(rows).toMatchObject([
       { store: 'apple', transactionId: '2000000001', item: 'reroll', qty: 5, test: true },
@@ -126,13 +127,13 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     const me = await issueGoogleCookie(ctx);
     appleTx.current = appleFor(me.profileId, { productId: BOOST_3, environment: 'Production' });
     const res = await claim(me.cookie, { store: 'apple', productId: BOOST_3, token: 'jws' });
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 0, boost: 3 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 0, boost: 3, scout: 0 });
     for (const left of [2, 1, 0]) {
       const used = await call('POST', '/v1/items/boost/use', {
         cookie: me.cookie,
         headers: { 'Idempotency-Key': crypto.randomUUID() },
       });
-      expect(ItemsRes.parse(await used.json()).data).toEqual({ reroll: 0, boost: left });
+      expect(ItemsRes.parse(await used.json()).data).toEqual({ reroll: 0, boost: left, scout: 0 });
     }
     const empty = await call('POST', '/v1/items/boost/use', {
       cookie: me.cookie,
@@ -141,6 +142,27 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     expect(empty.status).toBe(409);
     expect(await empty.json()).toMatchObject({ error: { details: { reason: 'NO_BOOST' } } });
     expect((await ctx.db.select().from(iapPurchases))[0]?.test).toBe(false);
+  });
+
+  it('프리미엄 스카우트권을 사서 쓰고, 없으면 409(T-11-196)', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const SCOUT_1 = 'com.offsidelab.app.scout_1';
+    appleTx.current = appleFor(me.profileId, { productId: SCOUT_1, environment: 'Production' });
+    const res = await claim(me.cookie, { store: 'apple', productId: SCOUT_1, token: 'jws' });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 0, boost: 0, scout: 1 });
+    const use = () =>
+      call('POST', '/v1/items/scout/use', {
+        cookie: me.cookie,
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+      });
+    expect(ItemsRes.parse(await (await use()).json()).data).toEqual({
+      reroll: 0,
+      boost: 0,
+      scout: 0,
+    });
+    const empty = await use();
+    expect(empty.status).toBe(409);
+    expect(await empty.json()).toMatchObject({ error: { details: { reason: 'NO_SCOUT' } } });
   });
 
   it('계정을 지우면 아이템과 구매 원장도 지운다', async () => {
@@ -184,7 +206,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     );
     let res = await claim(me.cookie, body);
     expect(res.status).toBe(200);
-    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0 });
+    expect(ItemsRes.parse(await res.json()).data).toEqual({ reroll: 5, boost: 0, scout: 0 });
     expect(calls).toEqual([
       'POST https://oauth2.googleapis.com/token',
       'GET https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.offsidelab.app/purchases/products/com.offsidelab.app.reroll_5/tokens/tok-1',

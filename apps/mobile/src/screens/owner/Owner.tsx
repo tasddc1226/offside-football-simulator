@@ -34,6 +34,7 @@ import { TitleBadge } from '../../components/TitleBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
 import { BoostShop } from './BoostShop';
+import { ScoutShop } from './ScoutShop';
 import { RerollShop } from './RerollShop';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats, type StatPress } from './TeamParts';
 import { mix } from '../../theme/colors';
@@ -455,6 +456,7 @@ export default function Owner() {
             }
           />
           <BoostShop />
+          <ScoutShop />
         </>
       ) : null}
 

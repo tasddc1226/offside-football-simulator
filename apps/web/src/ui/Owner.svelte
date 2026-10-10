@@ -11,6 +11,7 @@
   import { fundsText } from '@offside/app-core/market';
   import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import BoostShop from './cup/BoostShop.svelte';
+  import ScoutShop from './cup/ScoutShop.svelte';
   import RerollShop from './cup/RerollShop.svelte';
   import { ownerLockedText, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
@@ -225,6 +226,7 @@
     <!-- T-11-152 리롤권 상점: 펼칠 때만 상점을 묻는다. 사면 자금 줄을 다시 받는다(쓰기 성공으로 메모가 비워졌다). -->
     <RerollShop focus={shopFocus} onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
     <BoostShop />
+    <ScoutShop />
   {/if}
 
   {#if linked}

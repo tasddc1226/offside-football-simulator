@@ -140,13 +140,14 @@ export const IapStoreSchema = z.enum(['apple', 'google']);
 export type IapStore = z.infer<typeof IapStoreSchema>;
 
 /**
- * 구단주 아이템 장수. reroll: 선수 후보 리롤권, boost: 잠재력 강화권(T-11-174). iap는 GET /v1/items만 준다 — account는
+ * 구단주 아이템 장수. reroll: 선수 후보 리롤권, boost: 잠재력 강화권(T-11-174), scout: 프리미엄 스카우트권(T-11-196). iap는 GET /v1/items만 준다 — account는
  * 인앱 구매에 붙이는 구단주 표시(Apple appAccountToken · Google obfuscatedAccountId), stores는 서버가 구매를 확인할 수 있는
  * 스토어(여기 없는 스토어에선 상품을 보이지 않는다).
  */
 export const OwnerItemsResponseSchema = z.strictObject({
   reroll: z.number().int().min(0),
   boost: z.number().int().min(0),
+  scout: z.number().int().min(0),
   iap: z.strictObject({ account: z.uuid(), stores: z.array(IapStoreSchema) }).optional(),
 });
 export type OwnerItemsResponse = z.infer<typeof OwnerItemsResponseSchema>;

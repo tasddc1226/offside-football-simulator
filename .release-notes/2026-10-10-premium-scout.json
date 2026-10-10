@@ -1,0 +1,26 @@
+{
+  "id": "t-11-196-premium-scout",
+  "title": "프리미엄 스카우트권",
+  "items": [
+    "프리미엄 스카우트권으로 후보 3명을 새로 뽑으면 1명은 잠재력 A 이상이 보장돼요.",
+    "모든 후보가 S일 확률은 일반 스카우트의 2배이고, 등급별 확률은 확률 보기에서 공개해요.",
+    "스카우트권은 앱에서 살 수 있고, 산 스카우트권은 웹에서도 쓸 수 있어요."
+  ],
+  "en": {
+    "title": "Premium scout tickets",
+    "items": [
+      "Draw 3 new candidates with a premium scout ticket, and one of them is guaranteed potential A or higher.",
+      "Every candidate's chance of S is twice that of a regular scout. Odds by grade are shown under Show odds.",
+      "Tickets are sold in the app and can also be used on the web."
+    ]
+  },
+  "ja": {
+    "title": "プレミアムスカウト券",
+    "items": [
+      "プレミアムスカウト券で候補3人を新しく選ぶと、1人はポテンシャルA以上が保証されます。",
+      "すべての候補がSになる確率は通常スカウトの2倍で、等級別の確率は「確率を見る」で公開しています。",
+      "スカウト券はアプリで購入でき、購入した券はウェブでも使えます。"
+    ]
+  },
+  "availability": "web-app"
+}
