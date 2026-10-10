@@ -96,7 +96,7 @@
   });
   let OwnerHonors = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
-    if (appState.screen === 'honors' && !OwnerHonors) void import('./owner/OwnerHonors.svelte').then((m) => (OwnerHonors = m.default));
+    if ((appState.screen === 'honors' || appState.screen === 'recap') && !OwnerHonors) void import('./owner/OwnerHonors.svelte').then((m) => (OwnerHonors = m.default));
   });
   // T-10-092: 구단주 팀(편성·팀 경기)도 처음 열 때 불러온다.
   let Team = $state<Component<Record<string, never>> | null>(null);
@@ -114,10 +114,7 @@
     if (appState.screen === 'funds' && !FundsHistory) void import('./FundsHistory.svelte').then((m) => (FundsHistory = m.default));
   });
   // T-11-128: 시즌 결산도 처음 열 때 불러온다.
-  let SeasonRecap = $state<Component<Record<string, never>> | null>(null);
-  $effect(() => {
-    if (appState.screen === 'recap' && !SeasonRecap) void import('./SeasonRecap.svelte').then((m) => (SeasonRecap = m.default));
-  });
+
   // T-11-145: 오프사이드 컵도 처음 열 때 불러온다.
   let Cup = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -205,7 +202,7 @@
     {:else if appState.screen === 'funds'}
       {#if FundsHistory}<FundsHistory />{/if}
     {:else if appState.screen === 'recap'}
-      {#if SeasonRecap}<SeasonRecap />{/if}
+      {#if OwnerHonors}<OwnerHonors />{/if}
     {:else if appState.screen === 'cup'}
       {#if Cup}<Cup />{/if}
     {:else if appState.screen === 'dex'}

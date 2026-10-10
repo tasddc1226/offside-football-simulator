@@ -219,6 +219,9 @@ export interface AppState {
   achNew: number;
   /** T-11-128 끝난 시즌 결산이 나왔는데 이 기기에서 아직 안 열어 봤는가 — 하단 '구단주' 탭의 점(recapUnseen). */
   recapNew: boolean;
+  /** Local navigation state for the unified archive (not a career save). */
+  honorsView: 'records' | 'titles';
+  honorsSeason: number | null;
   /** T-11-142 받은 친구 신청 수 — 하단 '구단주'·내 팀 '경기' 탭·'친구' 버튼의 점(friendPending). */
   friendReq: number;
 }
@@ -263,5 +266,7 @@ export const initialAppState = (): AppState => ({
   report: null,
   achNew: 0,
   recapNew: false,
+  honorsView: 'records',
+  honorsSeason: null,
   friendReq: 0,
 });

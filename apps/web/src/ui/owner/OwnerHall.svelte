@@ -48,15 +48,14 @@
 
 {#if failed}
   <section class="card stack" aria-label={L.hallTitle} data-owner-hall-error>
-    <h2>{L.hallTitle}</h2><p role="status">{L.hallLoadFail}</p>
+    <h2>{L.titlesTab}</h2><p role="status">{L.hallLoadFail}</p>
     <button class="btn" onclick={() => void load()}>{L.retry}</button>
   </section>
 {/if}
 {#if hall}
   <section class="card stack" style="gap:12px" aria-label={L.hallTitle} data-owner-hall>
     <div>
-      <small class="eyebrow">Hall of honors</small>
-      <h2>{L.hallTitle}</h2>
+      <h2>{L.titlesTab}</h2>
       <p class="muted fs-sm">{L.hallCount({ n: hall.titles.length })}</p>
       <p class="muted fs-sm">{hall.titles.length ? L.hallLead : L.hallEmpty}</p>
     </div>

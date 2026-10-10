@@ -37,7 +37,6 @@ import OwnerPlayers from '../screens/owner/OwnerPlayers';
 import OwnerHonors from '../screens/owner/OwnerHonors';
 import Team from '../screens/owner/Team';
 import Market from '../screens/owner/Market';
-import SeasonRecap from '../screens/owner/SeasonRecap';
 import FundsHistory from '../screens/owner/FundsHistory';
 import Cup from '../screens/owner/CupScreen';
 import Settings from '../screens/settings/Settings';
@@ -63,7 +62,7 @@ const SCREENS: Record<Screen, ComponentType> = {
   market: Market,
   funds: FundsHistory,
   // T-11-128 구단주 시즌 결산(구단주 화면의 결산 카드로 연다).
-  recap: SeasonRecap,
+  recap: OwnerHonors,
   // T-11-145 오프사이드 컵(구단주 화면의 컵 배너로 연다).
   cup: Cup,
   settings: Settings,

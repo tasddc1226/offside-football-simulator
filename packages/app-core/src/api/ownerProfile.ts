@@ -1,6 +1,7 @@
 // T-11-150 구단주 프로필 · 명예관(대표 칭호) API. 타입은 type-only import라 번들에 zod가 들어가지 않는다.
 import type {
   OwnerProfileResponse,
+  OwnerArchiveResponse,
   OwnerTitlesResponse,
   PutOwnerTitleResponse,
 } from '@offside/contracts';
@@ -8,6 +9,7 @@ import { apiFetch, cachedGet } from './client.js';
 
 export type {
   OwnerProfile,
+  OwnerArchiveResponse,
   OwnerProfileResponse,
   OwnerSeasonLine,
   OwnerTitlesResponse,
@@ -25,3 +27,6 @@ export const putOwnerTitle = (title: string | null) =>
     method: 'PUT',
     body: JSON.stringify({ title }),
   });
+
+/** Private archive summary; the selected season's full record is fetched separately. */
+export const fetchOwnerArchive = () => cachedGet<OwnerArchiveResponse>('/v1/owner/archive', 60_000);

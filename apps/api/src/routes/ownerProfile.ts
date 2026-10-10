@@ -2,6 +2,7 @@
 // 내보내지 않는다. 대표 칭호는 받은 칭호(컵 성적) 가운데서만 고른다.
 import {
   OwnerProfileResponseSchema,
+  OwnerArchiveResponseSchema,
   OwnerTitleBackfillBodySchema,
   OwnerTitleBackfillResponseSchema,
   OwnerTitlesResponseSchema,
@@ -10,11 +11,11 @@ import {
   TeamIdSchema,
 } from '@offside/contracts';
 import { TITLE_NONE, titlesOf } from '@offside/contracts/owner-title';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
 import { permanentTitlesOf, backfillOwnerTitles } from '../db/repos/ownerTitles.js';
-import { ownerTitleAwards } from '../db/schema.js';
+import { appMeta, ownerTitleAwards } from '../db/schema.js';
 import { requireAdmin } from '../auth/admin.js';
 import { and } from 'drizzle-orm';
 import { ownerProfileOf } from '../db/repos/ownerProfile.js';
@@ -28,10 +29,74 @@ import { purgeEdge } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { reqLang } from '../lang.js';
 import { cupHonorsOf } from '../team/cup.js';
+import {
+  openTeamSeasons,
+  teamSeasonClosed,
+  teamSeasonAt,
+  teamSeasonName,
+} from '@offside/contracts/service-seasons';
+import { closeMetaKey } from '../team/seasonClose.js';
+import { honorsOf } from './seasonRecap.js';
 import { requireOwner } from './ownerTeam.js';
 import { NO_STORE, conflictError, nowIso, ok, readBody, teamNotFound } from './shared.js';
 
 export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
+  // No team required: the archive belongs to the authenticated owner, including owners who only raise players.
+  app.get('/v1/owner/archive', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const now = nowIso();
+    const lang = reqLang(c);
+    const closed = openTeamSeasons(now).filter((s) => teamSeasonClosed(s, now));
+    const [owner, honors, states] = await Promise.all([
+      ownerProfileOf(db, me, now, lang),
+      honorsOf(db, me.id),
+      closed.length
+        ? db
+            .select()
+            .from(appMeta)
+            .where(inArray(appMeta.key, closed.map(closeMetaKey)))
+        : [],
+    ]);
+    const done = new Set(
+      states.flatMap((s) => {
+        try {
+          return JSON.parse(s.value).step === 'done' ? [s.key] : [];
+        } catch {
+          return [];
+        }
+      }),
+    );
+    const pendingSeasons = closed.filter((s) => !done.has(closeMetaKey(s)));
+    // Always give a new owner a current-season starting point; never synthesize final results.
+    const current = teamSeasonAt(now) ?? 0;
+    if (!owner.seasons.some((s) => s.season === current))
+      owner.seasons.push({
+        season: current,
+        name: teamSeasonName(current, lang),
+        achScore: null,
+        teamName: null,
+        teamRank: null,
+        closed: false,
+      });
+    for (const s of owner.seasons)
+      if (pendingSeasons.includes(s.season)) {
+        s.achScore = null;
+        s.teamRank = null;
+      }
+    return ok(
+      c,
+      OwnerArchiveResponseSchema,
+      {
+        owner,
+        honors: honors.filter((h) => done.has(closeMetaKey(h.season))),
+        pendingSeasons,
+      },
+      200,
+      NO_STORE,
+    );
+  });
+
   // 남의(또는 내) 구단주 프로필 — 그 구단주의 아무 시즌 팀 id로 연다. mine이 사람마다 달라 캐시하지 않는다.
   app.get('/v1/owners/by-team/:teamId', async (c) => {
     const id = parseWithAppError(TeamIdSchema, c.req.param('teamId'));

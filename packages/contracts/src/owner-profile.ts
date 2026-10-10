@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { IsoUtcSchema } from './primitives.js';
 import { TITLE_NONE, PERMANENT_TITLES } from './owner-title.js';
-import { OwnerTierTagSchema } from './season-recap.js';
+import { OwnerHonorSchema, OwnerTierTagSchema } from './season-recap.js';
 import {
   CupHonorSchema,
   OwnerTitleSchema,
@@ -105,3 +105,12 @@ export const OwnerTitleBackfillResponseSchema = z.strictObject({
   counts: z.record(z.string(), count),
   dryRun: z.boolean(),
 });
+
+/** Private archive: one summary read, season details remain on-demand. */
+export const OwnerArchiveResponseSchema = z.strictObject({
+  owner: OwnerProfileSchema,
+  honors: z.array(OwnerHonorSchema),
+  /** Seasons whose close job has not finished; their scores must not be presented as final. */
+  pendingSeasons: z.array(TeamSeasonSchema),
+});
+export type OwnerArchiveResponse = z.infer<typeof OwnerArchiveResponseSchema>;

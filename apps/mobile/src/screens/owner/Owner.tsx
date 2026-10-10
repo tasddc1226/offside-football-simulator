@@ -39,7 +39,6 @@ import { loadMyPlayerSummary } from '@offside/app-core/myPlayers';
 import { ownerPlayersText as P } from '@offside/app-core/i18n/ko/ownerPlayers';
 import { TitleBadge } from '../../components/TitleBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
-import { RecapCard } from './RecapCard';
 import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
 import { BoostShop } from './BoostShop';
 import { RerollShop } from './RerollShop';
@@ -487,9 +486,6 @@ export default function Owner() {
           </Press>
         </>
       ) : null}
-
-      {/* T-11-128 시즌 결산: 끝난 시즌이 있을 때만(카드가 스스로 숨는다). 비로그인도 본다. */}
-      <RecapCard />
 
       {linked ? (
         <>

@@ -34,12 +34,10 @@
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
   import { fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
-  import { recapCardView } from '@offside/app-core/seasonRecap';
   import { profileTier, tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
   import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from './cup/TitleBadge.svelte';
-  import { seasonRecapText as R } from '@offside/app-core/i18n/ko/seasonRecap';
 
   // T-11-152 후보 화면 '리롤권 상점 가기'로 들어왔으면 리롤권 상점을 펼친 채로 연다(한 번만 읽힌다).
   const shopFocus = takeFocus('rerollShop');
@@ -104,7 +102,6 @@
       if (r.ok) recap = r.data;
     });
   });
-  const recapCard = $derived(recap ? recapCardView(recap) : null);
   // 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 프로필 이름 앞에 붙인다(그 시즌 기록이 없으면 없다).
   // 댓글 · 채팅에도 같은 등급이 나간다(서버 ownerTiersOf).
   const tierTag = $derived(recap ? profileTier(recap) : null);
@@ -237,23 +234,7 @@
     </section>
   {/if}
 
-  <!-- T-11-128 시즌 결산: 끝난 시즌이 있을 때만. 비로그인도 본다(프로필 쿠키만 있으면 된다). -->
-  {#if recap && recapCard}
-    <section class="card owner-market owner-tap" aria-label={R.cardTitle} data-owner-recap data-recap-status={recap.status}>
-      <div class="owner-who">
-        <small class="eyebrow">Season recap</small>
-        <h2>{R.cardTitle}{#if recapCard.isNew}<span class="pill good owner-founder" data-recap-new>{R.newBadge}</span>{/if}</h2>
-        <span class="muted fs-sm">{recapCard.line}</span>
-        {#if recapCard.chips.length > 0}
-          <span class="recap-chips">
-            {#each recapCard.chips as c (c.kind)}<span class="pill recap-chip medal {c.medal}" data-recap-chip={c.kind}>{c.chip}</span>{/each}
-          </span>
-        {/if}
-      </div>
-      <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="recap" aria-label={`${R.cardTitle} ${R.open}`} onclick={() => go('recap')}></button>
-    </section>
-  {/if}
+
 
 
   {#if linked}

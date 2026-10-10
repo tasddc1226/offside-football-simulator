@@ -1,6 +1,7 @@
 import {
   ErrorEnvelopeSchema,
   OwnerProfileResponseSchema,
+  OwnerArchiveResponseSchema,
   OwnerTitlesResponseSchema,
   PutOwnerTeamResponseSchema,
   PutOwnerTitleResponseSchema,
@@ -9,7 +10,14 @@ import {
   successEnvelope,
 } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { careers, cupEntries, cups } from '../db/schema.js';
+import {
+  careers,
+  cupEntries,
+  cups,
+  ownerSeasonRecords,
+  ownerHonors,
+  appMeta,
+} from '../db/schema.js';
 import { createTestD1, syncCards, type TestD1 } from '../test/d1.js';
 import { installFakeEdgeCache } from '../test/edgeCache.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
@@ -172,5 +180,59 @@ describe('/v1/owners · /v1/owner/title (T-11-150 구단주 프로필 · 대표 
     const res = await call('GET', `/v1/owners/by-team/tem_${crypto.randomUUID()}`);
     expect(res.status).toBe(404);
     expect((await call('GET', '/v1/owner/title')).status).toBe(401);
+  });
+});
+
+describe('private owner archive', () => {
+  it('works without a team, requires login, isolates owners and hides unfinished final scores', async () => {
+    const ctx = await createTestD1();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z'));
+    try {
+      const who = await issueGoogleCookie(ctx, { nickname: 'archive-owner' });
+      const other = await issueGoogleCookie(ctx, { nickname: 'other-owner' });
+      const record = {
+        season: 0,
+        players: 3,
+        retired: 2,
+        retiredNumbers: 0,
+        wallOfHonor: 0,
+        firsts: 0,
+        achScore: 1500,
+        createdAt: AT,
+      };
+      await ctx.db.insert(ownerSeasonRecords).values([
+        { ...record, profileId: who.profileId },
+        { ...record, profileId: other.profileId, achScore: 9999 },
+      ]);
+      await ctx.db
+        .insert(ownerHonors)
+        .values({ profileId: who.profileId, season: 0, kind: 'pioneer', value: 2, grantedAt: AT });
+      const read = async () => {
+        const r = await callJson(ctx.env, 'GET', '/v1/owner/archive', { cookie: who.cookie });
+        expect(r.status).toBe(200);
+        expect(r.headers.get('cache-control')).toContain('no-store');
+        return successEnvelope(OwnerArchiveResponseSchema).parse(await r.json()).data;
+      };
+      const pending = await read();
+      expect(pending.owner.team).toBeNull();
+      expect(pending.owner.seasons.find((s) => s.season === 0)?.achScore).toBeNull();
+      expect(pending.pendingSeasons).toContain(0);
+      expect(pending.honors).toEqual([]);
+      expect(pending.owner.seasons.some((s) => s.season === 1 && !s.closed)).toBe(true);
+      await ctx.db.insert(appMeta).values({
+        key: 'season-close:0',
+        value: JSON.stringify({ step: 'done', cutoff: '2026-10-05T15:00:00.000Z' }),
+      });
+      const ready = await read();
+      expect(ready.owner.seasons.find((s) => s.season === 0)?.achScore).toBe(1500);
+      expect(ready.honors).toHaveLength(1);
+      expect(ready.pendingSeasons).toEqual([]);
+      const guest = await callJson(ctx.env, 'GET', '/v1/owner/archive');
+      expect(guest.status).not.toBe(200);
+    } finally {
+      vi.useRealTimers();
+      await ctx.dispose();
+    }
   });
 });

@@ -48,7 +48,7 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
   if (!hall)
     return failed ? (
       <Card gap={12} testID="owner-hall-error">
-        <Txt v="h2">{L.hallTitle}</Txt>
+        <Txt v="h2">{L.titlesTab}</Txt>
         <Txt>{L.hallLoadFail}</Txt>
         <Btn
           onPress={() => {
@@ -99,9 +99,8 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
   return (
     <Card gap={12} testID="owner-hall">
       <View style={{ gap: 2 }}>
-        <Txt v="eyebrow">Hall of honors</Txt>
         <Txt v="h2" accessibilityRole="header">
-          {L.hallTitle}
+          {L.titlesTab}
         </Txt>
         <Txt tone="muted">{L.hallCount({ n: hall.titles.length })}</Txt>
         <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
