@@ -13,65 +13,56 @@ const at = (days: number) =>
   new Date(Date.parse(season.startsAt) + days * 86_400_000).toISOString();
 
 describe('시즌 진행 게이지', () => {
-  it('참여 유저 × 10 대비 완주 수로 차고, 새 유저로 비율이 내려가도 뒤로 가지 않는다', () => {
-    const a = stepSeasonGauge(null, season, { contributed: 4_500, participants: 1_400 }, at(1));
-    expect(a.peak).toBeCloseTo(4_500 / 14_000);
-    const b = stepSeasonGauge(a, season, { contributed: 5_000, participants: 3_000 }, at(1.2));
-    expect(b.peak).toBe(a.peak);
-    expect(b.participants).toBe(3_000);
+  const counted = { contributed: 9_000, participants: 1_000 };
+
+  it('T-11-189 진행률은 지난 시간 ÷ 35일 — 완주 수가 목표를 넘어도 앞서지 않는다', () => {
+    const a = stepSeasonGauge(null, season, counted, at(7));
+    expect(a.peak).toBeCloseTo(0.2);
+    expect(a.lockedAt).toBeNull();
+    expect(a).toMatchObject(counted);
   });
 
-  it('게이지가 느려도 최대 기간(21일)에 맞춰 시간으로 찬다', () => {
-    const s = stepSeasonGauge(null, season, { contributed: 0, participants: 0 }, at(10.5));
-    expect(s.peak).toBeCloseTo(0.5);
-    expect(s.lockedAt).toBeNull();
+  it('완주 수로 앞서 있던 옛 최고치는 다음 cron에서 시간 기준으로 돌아간다', () => {
+    const old = { ...stepSeasonGauge(null, season, counted, at(4.6)), peak: 0.56 };
+    expect(stepSeasonGauge(old, season, counted, at(4.6)).peak).toBeCloseTo(4.6 / 35);
   });
 
-  it('90%에 닿으면 마감을 48시간 뒤 다음 00:00 KST로 확정하고, 그 뒤에는 바꾸지 않는다', () => {
-    const s = stepSeasonGauge(null, season, { contributed: 9_000, participants: 1_000 }, at(9.3));
-    expect(s.lockedAt).toBe(at(9.3));
-    // 9.3일 + 48시간 = 11.3일 → 12일째 00:00 KST(10/18 00:00 KST)
-    expect(s.endsAt).toBe(at(12));
-    const t = stepSeasonGauge(s, season, { contributed: 9_500, participants: 1_000 }, at(10));
-    expect(t.endsAt).toBe(s.endsAt);
+  it('90%(31.5일)에 닿으면 마감을 개막 + 35일로 확정하고, 그 뒤에는 바꾸지 않는다', () => {
+    expect(stepSeasonGauge(null, season, counted, at(31)).lockedAt).toBeNull();
+    const s = stepSeasonGauge(null, season, counted, at(31.5));
+    expect(s.lockedAt).toBe(at(31.5));
+    expect(s.endsAt).toBe(at(35));
+    expect(stepSeasonGauge(s, season, counted, at(32)).endsAt).toBe(s.endsAt);
   });
 
-  it('너무 빨리 차도 최소 7일, 늦게 차도 최대 21일을 지킨다', () => {
-    expect(seasonDeadline(season.startsAt, at(1))).toBe(at(7));
-    expect(seasonDeadline(season.startsAt, at(20))).toBe(at(21));
+  it('언제 확정해도 마감은 개막 + 35일', () => {
+    expect(seasonDeadline(season.startsAt, at(1))).toBe(at(35));
+    expect(seasonDeadline(season.startsAt, at(34.5))).toBe(at(35));
   });
 
-  it('끝나지 않은 컵이 있으면 마감을 컵 마지막 경기 다음 00:00 KST로 미룬다(최대 기간보다 컵이 먼저)', () => {
-    // 7.5일째 확정 → 원래 10일째 00:00 KST. 컵 결승이 12.9일째(21:00 KST)면 13일째 00:00 KST.
-    expect(seasonDeadline(season.startsAt, at(7.5), at(12.9))).toBe(at(13));
-    // 컵이 마감 전에 끝나면 그대로.
-    expect(seasonDeadline(season.startsAt, at(7.5), at(8.5))).toBe(at(10));
-    // 최대 기간을 넘어도 컵 결승 뒤로.
-    expect(seasonDeadline(season.startsAt, at(20), at(21.5))).toBe(at(22));
+  it('끝나지 않은 컵이 있으면 마감을 컵 마지막 경기 다음 00:00 KST로 미룬다(시즌 길이보다 컵이 먼저)', () => {
+    // 제1회 컵처럼 일찍 끝나는 컵은 마감을 바꾸지 않는다.
+    expect(seasonDeadline(season.startsAt, at(31.5), at(10.9))).toBe(at(35));
+    // 35일을 넘는 컵은 결승 뒤로.
+    expect(seasonDeadline(season.startsAt, at(31.5), at(35.9))).toBe(at(36));
   });
 
   it('확정 뒤 컵 일정이 늦춰지면 마감을 늦추기만 하고, 당겨져도 마감은 그대로다', () => {
-    const counted = { contributed: 9_000, participants: 1_000 };
-    const s = stepSeasonGauge(null, season, counted, at(7.5), at(11.9));
-    expect(s.endsAt).toBe(at(12));
-    expect(stepSeasonGauge(s, season, counted, at(8), at(9.5)).endsAt).toBe(at(12));
-    expect(stepSeasonGauge(s, season, counted, at(8), at(13.9)).endsAt).toBe(at(14));
-    expect(stepSeasonGauge(s, season, counted, at(8), null).endsAt).toBe(at(12));
+    const s = stepSeasonGauge(null, season, counted, at(31.5), at(34.9));
+    expect(s.endsAt).toBe(at(35));
+    expect(stepSeasonGauge(s, season, counted, at(32), at(33.5)).endsAt).toBe(at(35));
+    expect(stepSeasonGauge(s, season, counted, at(32), at(36.9)).endsAt).toBe(at(37));
+    expect(stepSeasonGauge(s, season, counted, at(32), null).endsAt).toBe(at(35));
   });
 
   it('확정 전에는 90% 아래, 확정 뒤에는 마감 시각에 정확히 100%', () => {
-    const open = stepSeasonGauge(null, season, { contributed: 8_000, participants: 1_000 }, at(5));
-    expect(seasonGaugeProgress(open, season.startsAt, at(5))).toBeCloseTo(0.8);
-    const locked = stepSeasonGauge(
-      open,
-      season,
-      { contributed: 9_200, participants: 1_000 },
-      at(8),
-    );
-    expect(seasonGaugeProgress(locked, season.startsAt, at(8))).toBeCloseTo(0.9);
+    const open = stepSeasonGauge(null, season, counted, at(14));
+    expect(seasonGaugeProgress(open, season.startsAt, at(14))).toBeCloseTo(0.4);
+    const locked = stepSeasonGauge(open, season, counted, at(31.5));
+    expect(seasonGaugeProgress(locked, season.startsAt, at(31.5))).toBeCloseTo(0.9);
     expect(seasonGaugeProgress(locked, season.startsAt, locked.endsAt!)).toBe(1);
-    const view = seasonGaugeView(locked, season.startsAt, at(8));
-    expect(view).toMatchObject({ target: 10_000, minEndsAt: at(7), maxEndsAt: at(21) });
+    const view = seasonGaugeView(locked, season.startsAt, at(31.5));
+    expect(view).toMatchObject({ target: 10_000, minEndsAt: at(35), maxEndsAt: at(35) });
   });
 
   it('00:00 KST 올림', () => {
