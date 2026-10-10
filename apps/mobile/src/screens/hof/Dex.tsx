@@ -7,7 +7,7 @@ import { DEX_GROUPS, eventDex, type DexEntry, type DexGroup } from '@offside/gam
 import { dexRules, oddsText } from '@offside/app-core/dexText';
 import { dexSeen } from '@offside/app-core/dex';
 import { dexText as L } from '@offside/app-core/i18n/ko/dex';
-import { goHome, takeFairnessFocus } from '../../game/nav';
+import { goHome, takeFocus } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
@@ -43,6 +43,16 @@ function DexItem({
     paddingVertical: 10,
     paddingHorizontal: 2,
   } as const;
+  // 펼친 이벤트는 테두리 카드(왼쪽 강조 띠)로 감싸 어디까지가 그 이벤트인지 보이게 한다(웹 .dex-list).
+  const openWrap = {
+    marginVertical: 6,
+    borderWidth: 1,
+    borderLeftWidth: 4,
+    borderColor: `${c.accent}8c`,
+    borderLeftColor: c.accent,
+    borderRadius: 10,
+    backgroundColor: `${c.accent}0f`,
+  } as const;
   if (locked)
     return (
       <View testID={`dex-${e.ids[0]}`} style={[wrap, { flexDirection: 'row', gap: 8 }]}>
@@ -55,9 +65,14 @@ function DexItem({
       </View>
     );
   return (
-    <View testID={`dex-${e.ids[0]}`} style={wrap}>
+    <View
+      testID={`dex-${e.ids[0]}`}
+      style={open ? openWrap : { borderTopWidth: first ? 0 : 1, borderTopColor: c.line }}
+    >
       <Press
+        accessibilityRole="button"
         accessibilityState={{ expanded: open }}
+        accessibilityHint={L.tapHint}
         onPress={() => setOpen((v) => !v)}
         scale={0.99}
         style={{
@@ -65,13 +80,12 @@ function DexItem({
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: 8,
-          minHeight: 32,
+          minHeight: 48,
+          paddingVertical: 8,
+          paddingHorizontal: open ? 10 : 2,
         }}
       >
-        <Txt bold style={{ flex: 1 }}>
-          <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-            {open ? '▾ ' : '▸ '}
-          </Txt>
+        <Txt bold tone={open ? 'accent' : undefined} style={{ flex: 1 }}>
           {found ? (
             <Txt accessibilityLabel={L.foundMark} style={{ color: c.good, fontWeight: '700' }}>
               {'✓ '}
@@ -90,10 +104,31 @@ function DexItem({
         >
           {e.pos ? <Pill>{e.pos}</Pill> : null}
           {e.story ? <Pill>{`${tn(e.story.name)} ${e.story.stage}/${e.story.total}`}</Pill> : null}
+          <Txt
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            tone={open ? 'accent' : 'muted'}
+            style={{ fontSize: 13, lineHeight: 20 }}
+          >
+            {open ? '▴' : '▾'}
+          </Txt>
         </View>
       </Press>
       {open ? (
-        <View style={{ marginTop: 10, gap: 10 }}>
+        <View style={{ gap: 10, paddingHorizontal: 10, paddingBottom: 10 }}>
+          <Txt
+            tone="muted"
+            bold
+            style={{
+              fontSize: rem(0.75),
+              paddingTop: 8,
+              borderTopWidth: 1,
+              borderStyle: 'dashed',
+              borderTopColor: c.line,
+            }}
+          >
+            {L.choicesHead({ n: e.choices.length })}
+          </Txt>
           {e.choices.map((ch, i) => (
             <View
               key={i}
@@ -144,7 +179,7 @@ function DexItem({
 
 export default function Dex() {
   const RULES = useMemo(() => dexRules(), []);
-  const [focusFair] = useState(takeFairnessFocus);
+  const [focusFair] = useState(() => takeFocus('fairness'));
   const [dex, setDex] = useState<DexEntry[] | null>(null);
   const [filter, setFilter] = useState<DexGroup | 'all'>('all');
   const [rulesOpen, setRulesOpen] = useState(true);
@@ -233,6 +268,9 @@ export default function Dex() {
                 )),
               ]}
             />
+            <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: -6 }}>
+              {L.tapHint}
+            </Txt>
             <View>
               {shown.map((e, i) => (
                 <DexItem key={e.ids[0]} e={e} found={found(e)} locked={hidden(e)} first={i === 0} />

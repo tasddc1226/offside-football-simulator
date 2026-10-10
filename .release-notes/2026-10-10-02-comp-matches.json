@@ -1,0 +1,23 @@
+{
+  "id": "t-11-186-comp-matches",
+  "title": "컵 · 대륙 대회 경기를 한 경기씩 보여 줘요",
+  "items": [
+    "구간 리포트에 컵 · 챔피언스리그 같은 대회 경기를 한 경기씩 보여 줘요. 몇 차전인지, 몇 분 뛰고 몇 골 넣었는지, 통과했는지 볼 수 있어요.",
+    "경기 진행 화면에서도 대회 결과를 대회마다 한 줄씩 알려 줘요."
+  ],
+  "en": {
+    "title": "Cup and continental matches, one by one",
+    "items": [
+      "The phase report now lists cup and Champions League matches one by one: which leg, minutes played, goals, and whether you went through.",
+      "The match screen also shows each competition's result on its own line."
+    ]
+  },
+  "ja": {
+    "title": "カップ戦・大陸大会の試合を1試合ずつ表示",
+    "items": [
+      "区間レポートでカップ戦やチャンピオンズリーグの試合を1試合ずつ表示します。第何戦か、出場時間とゴール、勝ち抜けたかが分かります。",
+      "試合進行画面でも大会の結果を大会ごとに1行でお知らせします。"
+    ]
+  },
+  "availability": "web-app"
+}

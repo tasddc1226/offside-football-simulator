@@ -5,7 +5,7 @@
   import { num } from '@offside/app-core/teamText';
   import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
   import {
-    achCatShort, achDone, achGradeName, achGradeView, achNear, achPoints, achRankText, achSections, achState, achTotal,
+    achCatShort, achDone, achGradeName, achGradeView, achMissing, achNear, achPoints, achRankText, achSections, achState, achTotal,
   } from '@offside/app-core/teamOwner';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import AchGradeBadge from './AchGradeBadge.svelte';
@@ -117,7 +117,7 @@
             <ul>
               {#each g.items as i (i.id)}
                 <li class:done={i.done}>
-                  <span class="tm-ach-txt"><span>{i.label}{#if newIds.has(i.id)}<em class="tm-ach-new">NEW</em>{/if}</span><small>{achState(i)}</small></span>
+                  <span class="tm-ach-txt"><span>{i.label}{#if newIds.has(i.id)}<em class="tm-ach-new">NEW</em>{/if}</span><small>{achState(i)}</small>{#if i.missing?.length}<small class="tm-ach-missing">{achMissing(i)}</small>{/if}</span>
                   <span class="tm-pts" class:got={i.points > 0}>{achPoints(i)}</span>
                 </li>
               {/each}
@@ -250,6 +250,9 @@
   .tm-ach-txt small {
     color: var(--muted);
     font-size: 0.75rem;
+  }
+  .tm-ach-txt .tm-ach-missing {
+    font-size: 0.6875rem;
   }
   .tm-pts {
     flex: none;

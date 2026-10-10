@@ -1,0 +1,1 @@
+CREATE INDEX `careers_owner_title_updated_idx` ON `careers` (`profile_id`,`status`,`updated_at`);

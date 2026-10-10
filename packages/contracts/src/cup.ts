@@ -136,6 +136,48 @@ export const CUP_REWARDS: Record<CupStage, { rerolls: number; trophy: boolean }>
 /** 승점. */
 export const CUP_POINTS = { win: 3, draw: 1, loss: 0 } as const;
 
-/** 소모성 아이템. reroll = 선수 후보 리롤권(새 선수를 만들 때 후보 3명을 다시 뽑는다). */
-export const OWNER_ITEMS = ['reroll'] as const;
+/**
+ * 소모성 아이템. reroll = 선수 후보 리롤권(새 선수를 만들 때 후보 3명을 다시 뽑는다), boost = 잠재력 강화권(T-11-174,
+ * 자금이 모자란 시즌의 강화 한 번을 광고·구단 자금 대신 받는다).
+ */
+export const OWNER_ITEMS = ['reroll', 'boost'] as const;
 export type OwnerItem = (typeof OWNER_ITEMS)[number];
+
+/** T-11-174 소모성 인앱 상품(App Store Connect·Play Console에 같은 ID로 만든다) — 사면 구단주 아이템이 qty만큼 는다. */
+export const IAP_PRODUCTS = {
+  'com.offsidelab.app.reroll_5': { item: 'reroll', qty: 5 },
+  'com.offsidelab.app.reroll_15': { item: 'reroll', qty: 15 },
+  'com.offsidelab.app.reroll_40': { item: 'reroll', qty: 40 },
+  'com.offsidelab.app.boost_3': { item: 'boost', qty: 3 },
+  'com.offsidelab.app.boost_10': { item: 'boost', qty: 10 },
+} as const satisfies Record<string, { item: OwnerItem; qty: number }>;
+export type IapProductId = keyof typeof IAP_PRODUCTS;
+export const IAP_PRODUCT_IDS = Object.keys(IAP_PRODUCTS) as [IapProductId, ...IapProductId[]];
+
+/**
+ * T-11-153 광고 대신 구단 자금으로 받는 보상. candidates = 새 선수 후보 3명 잠재력 보기, peek = 이번 시즌 스카우트 평가
+ * 보기, boost = 선수 자금이 모자란 시즌의 잠재력 강화 한 번. 서버는 자금만 받고, 보상은 기기의 게임이 준다.
+ */
+export const REWARD_KINDS = ['candidates', 'peek', 'boost'] as const;
+export type RewardKind = (typeof REWARD_KINDS)[number];
+/**
+ * T-11-173 잠재력 강화(boost)는 구단 자금으로도 하루 횟수를 두지 않는다(값은 그대로 오른다). 응답의 cap은 옛 앱 빌드(1.1.1 빌드
+ * 14가 cap에서 오늘 산 횟수와 광고 횟수를 빼 버튼을 닫는다)가 막지 않게 넉넉한 값으로 보낸다.
+ */
+export const REWARD_UNCAPPED = 999;
+/** 구단 자금으로 산 것(owner_item_purchases.item) — 리롤권(T-11-152)과 광고 대신 받은 보상(T-11-153). */
+export const FUNDS_ITEMS = ['reroll', ...REWARD_KINDS.map((k) => `reward:${k}` as const)] as const;
+export type FundsItem = 'reroll' | `reward:${RewardKind}`;
+
+/**
+ * T-11-152 구단 자금으로 사는 리롤권 가격(만 원). bought = 오늘(0시 한국 시각부터) 이미 산 장수.
+ * 한 장 더 살 때마다 growth를 곱하고 천만 원 단위로 반올림한다. 하루 상한을 다 썼으면 null.
+ * T-11-153 광고 대신 구단 자금으로 받는 보상(REWARD_KINDS)도 같은 규칙으로 값을 매긴다.
+ */
+export function shopPriceAt(
+  rules: { price: number; growth: number; cap: number },
+  bought: number,
+): number | null {
+  if (bought >= rules.cap) return null;
+  return Math.round((rules.price * rules.growth ** bought) / 1000) * 1000;
+}

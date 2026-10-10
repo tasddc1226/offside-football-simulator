@@ -11,14 +11,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.resolve(__dirname, '../../migrations');
 const WRANGLER_CONFIG_PATH = path.resolve(__dirname, '../../wrangler.jsonc');
 
-/** `D1Database.exec()`는 한 줄에 한 문장만 받는다. `splitSqlQuery`로 나눈 각 문장의 내부 개행을 지운다. */
-function readMigrationStatements(): string[] {
-  return readdirSync(MIGRATIONS_DIR)
+/** `D1Database.exec()`는 한 줄에 한 문장만 받는다. `splitSqlQuery`로 나눈 각 문장의 내부 개행을 지우고 줄로 잇는다.
+ * T-11-176 한 번의 exec로 보낸다(문장마다 exec하면 workerd 왕복이 300번 넘어 D1 하나에 1초, 한 번이면 50ms). 파일마다 한 번만 읽는다. */
+let migrationSql: string | undefined;
+function readMigrationSql(): string {
+  return (migrationSql ??= readdirSync(MIGRATIONS_DIR)
     .filter((name) => name.endsWith('.sql'))
     .sort()
     .flatMap((name) => splitSqlQuery(readFileSync(path.join(MIGRATIONS_DIR, name), 'utf8')))
     .map((statement) => statement.replace(/\s+/g, ' ').trim())
-    .filter((statement) => statement.length > 0);
+    .filter((statement) => statement.length > 0)
+    .join('\n'));
 }
 
 export type TestD1 = {
@@ -36,11 +39,7 @@ export async function createTestD1({ migrate = true } = {}): Promise<TestD1> {
     persist: false,
   });
 
-  if (migrate) {
-    for (const statement of readMigrationStatements()) {
-      await proxy.env.DB.exec(statement);
-    }
-  }
+  if (migrate) await proxy.env.DB.exec(readMigrationSql());
 
   // T-10-072 홈 라이브 허브(Durable Object)는 빼 둔다 — 업로드가 뒤에서 허브를 부르지 않게. 허브를 보는 테스트는
   // 가짜를 넣는다(routes/liveSocket.test.ts).
@@ -73,9 +72,20 @@ export async function linkGoogle(
 /** 지나간 SQL을 `seen`에 모으는 D1 — 어떤 표를 읽는지 확인하는 테스트용. */
 export function spyDb(db: D1Database): { DB: D1Database; seen: string[] } {
   const seen: string[] = [];
+  const observe = (session: D1DatabaseSession): D1DatabaseSession =>
+    new Proxy(session, {
+      get(target, key) {
+        if (key === 'prepare') return (query: string) => (seen.push(query), target.prepare(query));
+        const value = Reflect.get(target, key) as unknown;
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
   const DB = new Proxy(db, {
     get(target, key) {
       if (key === 'prepare') return (query: string) => (seen.push(query), target.prepare(query));
+      if (key === 'withSession')
+        return (...args: Parameters<D1Database['withSession']>) =>
+          observe(target.withSession(...args));
       const v = Reflect.get(target, key) as unknown;
       return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v;
     },

@@ -78,7 +78,10 @@
   {#if r.comps.length}
     <div class="rp-later">
       <div class="eyebrow" style="margin-bottom:6px">{L.cups}</div>
-      {#each r.comps as c, i (i)}<p class={c.good ? 'hl' : 'muted'}>{c.t}</p>{/each}
+      {#each r.comps as c, i (i)}
+        <p class={c.good ? 'hl' : 'muted'}>{c.t}</p>
+        {#each c.games ?? [] as m, j (j)}<p class="fs-sm" style="padding-left:10px" class:hl={m.hl}>{m.line} <span class="muted">· {m.detail}</span></p>{/each}
+      {/each}
     </div>
   {/if}
   {#each r.nat as x, i (i)}

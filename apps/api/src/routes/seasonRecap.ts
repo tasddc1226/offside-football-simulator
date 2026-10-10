@@ -78,24 +78,29 @@ async function recapStats(db: Db, stored: StoredStats | null): Promise<SeasonRec
 }
 
 /** 그 시즌에 키워 마감 전에 은퇴한 내 선수(결산 기록과 같은 기준 — team/seasonClose.ts), 레전드 점수 순. */
-const squadOf = (db: Db, profileId: string, season: number, cutoff: string) =>
+// SQL-wrapped fields retain column decoders with the explicit INDEXED BY source.
+export const squadOf = (db: Db, profileId: string, season: number, cutoff: string) =>
   db
     .select({
-      id: careers.id,
-      pos: careers.pos,
-      nation: careers.nation,
-      dpos: careers.dpos,
-      peak: careers.peak,
-      number: careers.shirtNumber,
-      publicName: careers.publicName,
-      peakProfile: careers.peakProfile,
-      cardAttrsJson: careers.cardAttrsJson,
-      serviceSeason: careers.serviceSeason,
-      legendScore: careers.legendScore,
-      lastClub: careers.lastClub,
-      lastClubId: careers.lastClubId,
+      id: sql`${careers.id}`.mapWith(careers.id),
+      pos: sql`${careers.pos}`.mapWith(careers.pos),
+      nation: sql`${careers.nation}`.mapWith(careers.nation),
+      dpos: sql`${careers.dpos}`.mapWith(careers.dpos),
+      peak: sql`${careers.peak}`.mapWith(careers.peak),
+      number: sql`${careers.shirtNumber}`.mapWith(careers.shirtNumber),
+      publicName: sql`${careers.publicName}`.mapWith(careers.publicName),
+      peakProfile: sql`${careers.peakProfile}`.mapWith(careers.peakProfile),
+      cardAttrsJson: sql`${careers.cardAttrsJson}`.mapWith(careers.cardAttrsJson),
+      height: sql`${careers.height}`.mapWith(careers.height),
+      weight: sql`${careers.weight}`.mapWith(careers.weight),
+      serviceSeason: sql`${careers.serviceSeason}`.mapWith(careers.serviceSeason),
+      legendScore: sql`${careers.legendScore}`.mapWith(careers.legendScore),
+      lastClub: sql`${careers.lastClub}`.mapWith(careers.lastClub),
+      lastClubId: sql`${careers.lastClubId}`.mapWith(careers.lastClubId),
     })
-    .from(careers)
+    // The cutoff index scans every owner's retired careers. Keep this owner-scoped
+    // even when SQLite estimates that the global retirement index is cheaper.
+    .from(sql`${careers} INDEXED BY careers_profile_status_legend_idx`)
     .where(
       and(
         eq(careers.profileId, profileId),

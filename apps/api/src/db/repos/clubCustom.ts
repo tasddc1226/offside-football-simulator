@@ -3,13 +3,29 @@ import { eq, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { clubCustoms } from '../schema.js';
 
+/** since가 저장된 updated_at과 같으면 그 기기가 이미 가진 값이라 clubs를 읽지 않고 {}로 돌려준다(T-11-156 — 엠블럼
+ * 이미지가 든 맵이 수백 KB라 부팅마다 내려받지 않게). */
 export async function getClubCustom(
   db: Db,
   profileId: string,
+  since?: string,
 ): Promise<{ clubs: ClubCustomMap; updatedAt: string } | undefined> {
-  const [row] = await db.select().from(clubCustoms).where(eq(clubCustoms.profileId, profileId));
+  const [row] = await db
+    .select({
+      updatedAt: clubCustoms.updatedAt,
+      clubsJson: since
+        ? sql<
+            string | null
+          >`case when ${clubCustoms.updatedAt} = ${since} then null else ${clubCustoms.clubsJson} end`
+        : clubCustoms.clubsJson,
+    })
+    .from(clubCustoms)
+    .where(eq(clubCustoms.profileId, profileId));
   return row
-    ? { clubs: JSON.parse(row.clubsJson) as ClubCustomMap, updatedAt: row.updatedAt }
+    ? {
+        clubs: row.clubsJson === null ? {} : (JSON.parse(row.clubsJson) as ClubCustomMap),
+        updatedAt: row.updatedAt,
+      }
     : undefined;
 }
 

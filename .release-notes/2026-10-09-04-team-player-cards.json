@@ -1,0 +1,14 @@
+{
+  "id": "t-11-165-team-player-cards",
+  "title": "다른 구단 선수 카드 보기",
+  "items": ["다른 구단의 팀 화면에서 선발 선수를 누르면 선수 카드를 자세히 볼 수 있어요."],
+  "en": {
+    "title": "View other clubs' player cards",
+    "items": ["On another club's team page, tap a starting player to see their full player card."]
+  },
+  "ja": {
+    "title": "他クラブの選手カードを表示",
+    "items": ["他クラブのチーム画面で先発選手をタップすると、選手カードを詳しく見られます。"]
+  },
+  "availability": "web-app"
+}

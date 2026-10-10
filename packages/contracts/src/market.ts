@@ -7,6 +7,7 @@ import {
 } from './careers.js';
 import { MARKET_CHART_RANGES } from './market-value.js';
 import { IsoUtcSchema } from './primitives.js';
+import { FUNDS_ITEMS, type FundsItem } from './cup.js';
 
 export { MARKET_CHART_DAYS, MARKET_CHART_RANGES, type MarketChartRange } from './market-value.js';
 
@@ -14,7 +15,7 @@ export { MARKET_CHART_DAYS, MARKET_CHART_RANGES, type MarketChartRange } from '.
 // 거래는 지금 팀 시즌(teamSeasonAt) 카드끼리만 한다. 금액은 모두 만 원 단위 정수.
 
 export const MARKET_PER_PAGE = 20;
-export const MARKET_SORTS = ['new', 'price'] as const;
+export const MARKET_SORTS = ['new', 'price', 'ovr'] as const;
 export type MarketSort = (typeof MARKET_SORTS)[number];
 /** 한 번에 방출할 수 있는 선수 수. */
 export const RELEASE_MAX = 50;
@@ -36,6 +37,11 @@ export const MarketCardSchema = z.strictObject({
   legendScore: z.number().int(),
   /** 카드 능력치 6개(옛 기록은 null). */
   attrs: PeakProfileSchema.shape.attrs.nullable(),
+  /** T-11-164 커리어 유형 id(만들 때 고른 주력 — 스피드스터·윙어 등). 옛 응답에는 없다. */
+  type: z.string().nullable().optional(),
+  /** T-11-180 키(cm)·몸무게(kg). 체격이 없는 옛 커리어·옛 응답에는 없다. */
+  height: z.number().int().optional(),
+  weight: z.number().int().optional(),
   /** 기준가(만 원). */
   cardValue: man,
   /** 지금까지 팔린 횟수. */
@@ -145,6 +151,53 @@ export const MarketTradeSchema = z.strictObject({
 });
 export type MarketTrade = z.infer<typeof MarketTradeSchema>;
 
+/** 구단 자금으로 산 것 하나(리롤권 · 광고 대신 받은 보상). 거래(trades)와 따로 둬 옛 앱이 모르는 줄을 그리다 깨지지 않게 한다. */
+export const FundsSpendSchema = z.strictObject({
+  id: z.string(),
+  item: z.enum(FUNDS_ITEMS as unknown as [FundsItem, ...FundsItem[]]),
+  amount: man,
+  at: IsoUtcSchema,
+});
+export type FundsSpend = z.infer<typeof FundsSpendSchema>;
+
+/** 자금 내역 한 줄(GET /v1/market/funds/history). amount는 잔액 변화(받으면 +, 쓰면 −). */
+export const FundsHistoryEntrySchema = z.strictObject({
+  id: z.string(),
+  kind: z.enum(['released', 'bonus', 'sold', 'bought', 'spent']),
+  /** spent일 때 산 것. */
+  item: z.enum(FUNDS_ITEMS as unknown as [FundsItem, ...FundsItem[]]).nullable(),
+  amount: z.number().int(),
+  /** sold일 때 뗀 수수료. */
+  fee: man.nullable(),
+  at: IsoUtcSchema,
+  card: MarketTradeSchema.shape.card.nullable(),
+});
+export type FundsHistoryEntry = z.infer<typeof FundsHistoryEntrySchema>;
+
+export const FundsHistoryQuerySchema = z.strictObject({
+  page: z.coerce.number().int().min(0).max(1000).default(0),
+});
+
+/** GET /v1/market/funds/history — 구단 자금 내역(최근 순, 페이지)과 지금까지 출처별 합. */
+export const FundsHistoryResponseSchema = z.strictObject({
+  balance: man,
+  totals: z.strictObject({
+    /** 방출로 받은 자금. */
+    released: man,
+    /** T-11-163 은퇴 장려금으로 받은 자금. */
+    bonus: man,
+    /** 판매로 받은 자금(수수료 뺀 값). */
+    sold: man,
+    /** 영입에 쓴 자금. */
+    bought: man,
+    /** 리롤권 · 광고 대신 받은 보상에 쓴 자금. */
+    spent: man,
+  }),
+  items: z.array(FundsHistoryEntrySchema),
+  hasMore: z.boolean(),
+});
+export type FundsHistoryResponse = z.infer<typeof FundsHistoryResponseSchema>;
+
 /** GET /v1/market/funds — 구단주 화면 요약용 구단 자금 · 구단 가치(이적시장 화면은 /v1/market/me). */
 export const MarketFundsResponseSchema = z.strictObject({ balance: man, clubValue: man });
 export type MarketFundsResponse = z.infer<typeof MarketFundsResponseSchema>;
@@ -157,6 +210,8 @@ export const MarketMeResponseSchema = z.strictObject({
   clubValue: man,
   listings: z.array(MarketListingSchema),
   trades: z.array(MarketTradeSchema),
+  /** T-11-153 구단 자금으로 산 것(최근 순). 자금 내역에 거래와 시각순으로 섞어 그린다. */
+  spends: z.array(FundsSpendSchema),
   /** 오늘(한국 시각) 남은 영입 수. */
   buysLeft: z.number().int().min(0),
   rules: MarketRulesSchema,

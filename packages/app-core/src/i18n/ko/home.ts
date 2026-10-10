@@ -26,6 +26,7 @@ const ko = {
   // 타일
   marketTitle: '이적시장',
   marketSub: '이번 시즌 선수 사고팔기 · 시세 →',
+  inviteSub: (p: { n: number }) => `친구와 함께 리롤권 ${p.n}장씩 받기 →`,
   dexTitle: '확률 이벤트',
   dexSubWeb: '선택지별 성공 확률 보기 →',
   testerTitle: '테스터 모집 ↗',

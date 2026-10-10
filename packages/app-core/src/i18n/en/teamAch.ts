@@ -113,6 +113,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   profLoadFail: "Couldn't load the team.",
   profManager: 'Manager ',
   profMine: ' · My team',
+  profOwner: 'Owner ',
   profRatingAria: (p) => `Team rating ${p.n}`,
   profStatOvr: 'Team OVR',
   profStatRecord: 'Record',

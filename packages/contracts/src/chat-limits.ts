@@ -42,15 +42,21 @@ export type ChatRejectCode = 'readonly' | 'muted' | 'long' | 'filter' | 'rate';
 
 /** 서버 → 클라이언트. */
 export type ChatServerEvent =
-  | { t: 'hello'; messages: ChatMessage[]; online: number; write: boolean }
+  /** more(T-11-180): 이보다 이전 줄이 더 있다. 옛 방엔 없다. */
+  | { t: 'hello'; messages: ChatMessage[]; online: number; write: boolean; more?: boolean }
   | { t: 'msg'; m: ChatMessage }
   | { t: 'hide'; id: string }
   /** 접속자 수가 바뀌었다(누가 들어오거나 나갔다). */
   | { t: 'online'; n: number }
-  | { t: 'err'; code: ChatRejectCode };
+  | { t: 'err'; code: ChatRejectCode }
+  /** T-11-180 'older' 요청의 답(그 소켓에만) — before보다 이전 줄을 오래된 순으로. more가 거짓이면 더 없다. */
+  | { t: 'older'; messages: ChatMessage[]; more: boolean };
 
 /** 클라이언트 → 서버(핑은 LIVE_PING 문자열 그대로). */
-export type ChatClientEvent = { t: 'send'; body: string };
+export type ChatClientEvent =
+  | { t: 'send'; body: string }
+  /** T-11-180 위로 올리면 before(메시지 id)보다 이전 줄을 CHAT_HISTORY개씩 부른다. 옛 방은 무시한다. */
+  | { t: 'older'; before: string };
 
 /** 입장권을 못 받는 이유 — login: 계정 로그인 전, nickname: 닉네임을 아직 안 정함, muted: 채팅 정지 중. */
 export const CHAT_DENY_REASONS = ['login', 'nickname', 'muted'] as const;

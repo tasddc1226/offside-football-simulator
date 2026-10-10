@@ -1,7 +1,8 @@
 // T-11-150 구단주 프로필(누구나 보는 화면)과 명예관(대표 칭호 고르기). 시즌을 넘어 쌓이는 기록 — 컵 트로피, 시즌별 업적
 // 점수, 영구결번 — 을 한곳에 모은다. 남의 프로필은 팀 id로 연다(프로필 id는 내보내지 않는다).
 import { z } from 'zod';
-import { TITLE_NONE } from './owner-title.js';
+import { IsoUtcSchema } from './primitives.js';
+import { TITLE_NONE, PERMANENT_TITLES } from './owner-title.js';
 import { OwnerTierTagSchema } from './season-recap.js';
 import {
   CupHonorSchema,
@@ -66,6 +67,15 @@ export const OwnerTitlesResponseSchema = z.strictObject({
   title: OwnerTitleSchema.nullable(),
   titles: z.array(OwnerTitleSchema),
   pinned: z.boolean(),
+  permanent: z.array(
+    z.strictObject({
+      id: z.enum(PERMANENT_TITLES.map((t) => t.id)),
+      value: count,
+      target: count,
+      earnedAt: IsoUtcSchema.nullable(),
+      isNew: z.boolean(),
+    }),
+  ),
   teamId: TeamIdSchema.nullable(),
 });
 export type OwnerTitlesResponse = z.infer<typeof OwnerTitlesResponseSchema>;
@@ -81,3 +91,17 @@ export const PutOwnerTitleResponseSchema = z.strictObject({
   pinned: z.boolean(),
 });
 export type PutOwnerTitleResponse = z.infer<typeof PutOwnerTitleResponseSchema>;
+
+/** Operator-only bounded backfill. Preview is the default. */
+export const OwnerTitleBackfillBodySchema = z.strictObject({
+  after: z.string().max(100).default(''),
+  limit: z.number().int().min(1).max(50).default(25),
+  dryRun: z.boolean().default(true),
+});
+
+export const OwnerTitleBackfillResponseSchema = z.strictObject({
+  processed: count,
+  next: z.string().nullable(),
+  counts: z.record(z.string(), count),
+  dryRun: z.boolean(),
+});

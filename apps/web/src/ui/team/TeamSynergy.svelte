@@ -1,5 +1,5 @@
 <script lang="ts">
-  // T-11-105 팀 시너지 — 규칙 전부를 적용 중 → 효과 없음 → 미적용 순으로 보인다. 켜진 시너지는 누르면 그라운드에서 그 선수들을 잇는다.
+  // T-11-105 팀 시너지 — 적용 중 → 효과 없음 순으로 보이고, 미적용은 접어 두었다가 더보기로 연다. 켜진 시너지는 누르면 그라운드에서 그 선수들을 잇는다.
   import { DUO_LINE_CAP, DUO_TOTAL_CAP, synergyPower, type TeamSynergy } from '@offside/contracts/owner-team';
   import { synergyRows, synergyNote } from '@offside/app-core/teamOwner';
   import { teamSynergyText as L } from '@offside/app-core/i18n/ko/teamSynergy';
@@ -8,6 +8,9 @@
   const power = $derived(synergyPower(synergy));
   const rows = $derived(synergyRows(synergy));
   const anyOn = $derived(rows.some((r) => r.state !== 'off'));
+  const offCount = $derived(rows.filter((r) => r.state === 'off').length);
+  let showOff = $state(false);
+  const shown = $derived(showOff ? rows : rows.filter((r) => r.state !== 'off'));
   const stateText = { applied: L.chipApplied, noEffect: L.chipNoEffect, off: L.chipOff };
 </script>
 
@@ -23,8 +26,8 @@
     <span class="note">{synergyNote(season)}</span>
   </header>
   <p class="muted hint">{anyOn ? L.chipHint : L.empty}</p>
-  <ul class="rows">
-    {#each rows as r (r.id)}
+  <ul class="rows" id="synergy-rows">
+    {#each shown as r (r.id)}
       <li>
         {#if r.state === 'off'}
           <div class="row" data-synergy={r.id} data-state={r.state}>{@render body(r)}</div>
@@ -35,6 +38,7 @@
       </li>
     {/each}
   </ul>
+  {#if offCount}<button class="more" aria-expanded={showOff} aria-controls="synergy-rows" data-act="synergy-more" onclick={() => (showOff = !showOff)}>{showOff ? L.lessOff : L.moreOff({ n: offCount })}<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" /></svg></button>{/if}
   <p class="muted cap">{L.capNote({ line: DUO_LINE_CAP, total: DUO_TOTAL_CAP })}</p>
 </section>
 
@@ -45,6 +49,9 @@
   h3 b {color:var(--accent-text);font-family:var(--display);}
   .note {font-size:12px;color:var(--muted);}
   .hint, .cap {margin:0;font-size:11px;}
+  .more {justify-self:center;display:flex;align-items:center;gap:5px;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--accent-text);font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
+  .more svg {width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;transition:transform .2s;}
+  .more[aria-expanded='true'] svg {transform:rotate(180deg);}
   .rows {list-style:none;margin:0;padding:0;display:grid;gap:6px;}
   .row {width:100%;display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:inherit;font:inherit;}
   button.row {cursor:pointer;}

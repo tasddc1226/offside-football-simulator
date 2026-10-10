@@ -27,6 +27,7 @@ import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { purgeEdge, waitUntil } from '../edgeCache.js';
+import { refreshOwnerTitles } from '../db/repos/ownerTitles.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { recordFirsts } from './firsts.js';
 import { exceedsOvrCap, growthTampered } from '../db/repos/anomalies.js';
@@ -37,9 +38,14 @@ import { isHeadless } from '../db/repos/automation.js';
 import { isAcceptablePublicName, toPublicName } from '@offside/contracts/content-filter';
 import { resumeCareerDetails } from '../cron/careerRetention.js';
 import { retireAtOf } from '@offside/contracts/service-seasons';
+import { legendScoreOfRecord } from '@offside/contracts/hof-rules';
+import { resolveBalance } from '@offside/contracts';
+import { getActiveBalance } from '../db/repos/balance.js';
+import { completeInvite } from '../db/repos/referrals.js';
 
-/** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다. */
-export const UPLOAD_LIMIT = { CAREER_SEASON: 120, CAREER_RETIRE: 30 } as const;
+/** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다.
+ * T-11-182 시즌 한도 120은 빠르게 여러 커리어를 도는 이용자가 넘겨(한 커리어 최대 약 28시즌) 은퇴 기록이 한 시간까지 밀렸다. */
+export const UPLOAD_LIMIT = { CAREER_SEASON: 300, CAREER_RETIRE: 30 } as const;
 
 /** 검증을 통과한 업로드만 센다 — 잘못된 요청이 쿼터를 쓰지 않게, D1 쓰기 직전에 부른다. */
 async function limitUpload(
@@ -172,9 +178,14 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     } else {
       // 은퇴 요약은 받아 둔 시즌 기록에 맞춘다 — 보낸 숫자를 그대로 믿지 않는다.
       const seasons = (await storedSeasonsOf(db, [careerId])).get(careerId) ?? [];
+      // T-11-187 스냅샷이 있으면 레전드 점수는 서버가 지금 공식으로 다시 매긴다. 레전드 공식을 바꾼 뒤에도 OTA를 못 받은
+      // 옛 앱이 옛 공식 점수를 보내기 때문이다(T-11-168 뒤 iOS 옛 빌드).
+      const legendScore = snapshot
+        ? legendScoreOfRecord({ ...snapshot, pos: career.pos, dpos: career.dpos })
+        : sent.legendScore;
       const summary = boundRetirement(
         career.pos,
-        sent,
+        { ...sent, legendScore },
         seasons,
         career.dpos,
         retireAtOf(career.serviceSeason),
@@ -186,8 +197,10 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
           details: { reason: 'NO_SEASONS' },
         });
       }
+      const balance = resolveBalance((await getActiveBalance(db))?.values);
       await putRetirement(db, {
         careerId,
+        bonusRate: balance.marketRetireBonusRate,
         summary,
         publicName,
         snapshot,
@@ -197,18 +210,27 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       });
       await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
     }
+    // T-11-171 친구 초대로 들어온 구단주가 커리어를 은퇴까지 마쳤으면 두 사람에게 초대 보상을 준다. 판정 전 초대만 끝내므로
+    // 재전송(이름 공개 토글)에서 다시 불려도 한 번만 주고, 처음 은퇴 뒤 판정이 실패했으면 재전송 때 마저 준다.
+    await completeInvite(db, session.profileId, careerId, now);
     // T-10-076 영구결번 심사. 이름 공개 토글 재전송도 여기로 온다 — 이름을 공개하는 순간 자리를 잡는다.
-    const retiredNumber = await judgeRetirement(c, careerId, now);
+    const judged = await judgeRetirement(c, careerId, now);
     purgeEdge(c, STALE.retirementPut(careerId));
     publishLive(c, 'retire', careerId, now);
     // T-11-028 그 시즌 구단주 업적 점수(업적 랭킹)를 응답 뒤에 다시 센다.
-    waitUntil(c, refreshAfterChange(db, session.profileId, career.serviceSeason));
+    waitUntil(
+      c,
+      Promise.all([
+        refreshAfterChange(db, session.profileId, career.serviceSeason),
+        refreshOwnerTitles(db, session.profileId, now),
+      ]),
+    );
 
     return ok(c, RetirementResponseSchema, {
       careerId,
       status: 'retired',
       title: verifiedRetiredTitle(await getCareerHead(db, careerId)),
-      retiredNumber,
+      ...judged,
       serviceSeason: career.serviceSeason,
     });
   });

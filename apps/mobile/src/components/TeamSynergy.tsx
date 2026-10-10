@@ -1,5 +1,6 @@
-// T-11-105 팀 시너지 — 규칙 전부를 적용 중 → 효과 없음 → 미적용 순으로 보인다(웹 team/TeamSynergy.svelte와 같은 내용).
+// T-11-105 팀 시너지 — 적용 중 → 효과 없음 순으로 보이고, 미적용은 접어 두었다가 더보기로 연다(웹 team/TeamSynergy.svelte와 같은 내용).
 // 켜진 시너지는 누르면 그라운드에서 그 선수들을 잇는다. 누르는 것과 상관없이 켜진 것은 모두 적용된다.
+import { useState } from 'react';
 import { View } from 'react-native';
 import {
   DUO_LINE_CAP,
@@ -28,6 +29,9 @@ export function TeamSynergy({
   const power = synergyPower(synergy);
   const rows = synergyRows(synergy);
   const anyOn = rows.some((r) => r.state !== 'off');
+  const offCount = rows.filter((r) => r.state === 'off').length;
+  const [showOff, setShowOff] = useState(false);
+  const shown = showOff ? rows : rows.filter((r) => r.state !== 'off');
   const stateText = { applied: L.chipApplied, noEffect: L.chipNoEffect, off: L.chipOff };
   const row = (r: SynergyRow) => {
     const viewing = focus === r.id;
@@ -143,7 +147,27 @@ export function TeamSynergy({
       <Txt v="xs" tone="muted">
         {anyOn ? L.chipHint : L.empty}
       </Txt>
-      <View style={{ gap: 6 }}>{rows.map(row)}</View>
+      <View style={{ gap: 6 }}>{shown.map(row)}</View>
+      {offCount ? (
+        <Press
+          testID="synergy-more"
+          accessibilityState={{ expanded: showOff }}
+          onPress={() => setShowOff(!showOff)}
+          style={{
+            alignSelf: 'center',
+            minHeight: 40,
+            justifyContent: 'center',
+            paddingHorizontal: 14,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: c.line,
+          }}
+        >
+          <Txt v="xs" bold tone="accent">
+            {`${showOff ? L.lessOff : L.moreOff({ n: offCount })} ${showOff ? '▴' : '▾'}`}
+          </Txt>
+        </Press>
+      ) : null}
       <Txt v="xs" tone="muted">
         {L.capNote({ line: DUO_LINE_CAP, total: DUO_TOTAL_CAP })}
       </Txt>

@@ -3,7 +3,7 @@
   // 보통(md), 댓글 · 채팅 닉네임 옆은 작게(sm), 줄이 좁은 랭킹은 트로피만(icon — 이름은 툴팁 · 스크린 리더로).
   // 목록에 여러 개 그려지는 sm · icon은 움직이지 않는 그림(TrophyArt)만.
   import { cupTrophy } from '@offside/app-core/cupTrophy';
-  import { parseTitle, titleLabel } from '@offside/app-core/ownerTitle';
+  import { parseTitle, titleLabel, titleIconPath } from '@offside/app-core/ownerTitle';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import CupTrophy from './CupTrophy.svelte';
   import TrophyArt from './TrophyArt.svelte';
@@ -13,10 +13,10 @@
   const label = $derived(titleLabel(title));
 </script>
 
-{#if t && label}
-  {@const palette = cupTrophy(t.stage).palette}
+{#if label}
+  {@const palette = t ? cupTrophy(t.stage).palette : { base: 'var(--accent)', light: 'var(--accent)' }}
   <span class="title-badge" class:small={size === 'sm'} class:icon={size === 'icon'} data-title={title} role="img" aria-label={L.titleAria({ title: label })} title={label} style={`--tb-base:${palette.base};--tb-light:${palette.light}`}>
-    {#if size === 'md'}<CupTrophy stage={t.stage} size={22} />{:else}<TrophyArt stage={t.stage} size={16} />{/if}
+    {#if !t}<svg width={size === 'md' ? 22 : 16} height={size === 'md' ? 22 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={titleIconPath(title)} /></svg>{:else if size === 'md'}<CupTrophy stage={t.stage} size={22} />{:else}<TrophyArt stage={t.stage} size={16} />{/if}
     {#if size !== 'icon'}<span aria-hidden="true">{label}</span>{/if}
   </span>
 {/if}
@@ -43,7 +43,7 @@
   .title-badge.small {
     gap: 2px;
     padding: 0 7px 0 2px;
-    font-size: 11px;
+    font-size: 12px;
   }
   .title-badge.icon {
     padding: 0;

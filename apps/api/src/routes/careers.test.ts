@@ -6,6 +6,11 @@ import {
 } from '@offside/contracts';
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  controlPoints,
+  legendScoreOfRecord,
+  legendTermsOfRecord,
+} from '@offside/contracts/hof-rules';
 import { gzipToR2 } from '../cron/backup.js';
 import { createApp } from '../app.js';
 import { UPLOAD_LIMIT } from './careers.js';
@@ -348,7 +353,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
         jsonInit({ method: 'PUT', body: seasonBody(), cookie }),
         ctx.env,
       );
-    // 한도 직전까지 쓴 상태를 바로 만든다 — 120번 PUT은 느리다. 그 한 번은 통과하고 다음부터 429다.
+    // 한도 직전까지 쓴 상태를 바로 만든다 — 한도만큼 PUT하면 느리다. 그 한 번은 통과하고 다음부터 429다.
     expect((await put(heavy.cookie, CAREER_ID)).status).toBe(200);
     await ctx.db
       .update(authAttempts)
@@ -894,6 +899,57 @@ describe('조작된 기록 보정', () => {
     // 120×0.42 + 60×0.35 + 300×0.05 + 9×10 + 30×0.4 + 88×2 + 7시즌×30×0.6 = 490.4
     expect(r.legendScore).toBe(491);
   });
+
+  it.each(['AM', 'CM'] as const)(
+    'T-11-187: 옛 %s 점수를 보낸 은퇴는 서버 공식으로 저장하고 재전송해도 유지한다',
+    async (dpos) => {
+      await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());
+      await ctx.db.update(careers).set({ pos: 'MF', dpos }).where(eq(careers.id, CAREER_ID));
+      const season = (year: number, age: number) => ({
+        year,
+        age,
+        club: '테스트 FC',
+        league: 'K리그1',
+        apps: 30,
+        goals: 12,
+        assists: 6,
+        cs: 0,
+        rating: 7.4,
+        rank: 2,
+        ovr: 88,
+        honors: [],
+      });
+      const snapshot = {
+        number: 10,
+        pos: 'FW',
+        age: 34,
+        peak: 88,
+        lastClub: '테스트 FC',
+        career: [season(2040, 30), season(2041, 31)],
+        trophies: [{ year: 2041, t: 'K리그1 우승', club: '테스트 FC' }],
+        awards: [{ year: 2041, t: '리그 베스트 11' }],
+        ballon: [{ year: 2041, rank: 12 }],
+        nat: { caps: 20 },
+        storyLog: [],
+        miles: [],
+      };
+      // 스냅샷의 포지션보다 서버가 처음 저장한 포지션을 쓴다.
+      const record = { ...snapshot, pos: 'MF', dpos };
+      const expected = legendScoreOfRecord(record);
+      const raw = Object.values(legendTermsOfRecord(record)).reduce((sum, v) => sum + v, 0);
+      const oldScore = Math.round(raw + 0.5 * controlPoints(snapshot.career));
+      const body = { ...retirementBody(), legendScore: oldScore, snapshot };
+      const res = await put(`/v1/careers/${CAREER_ID}/retirement`, body);
+      expect(res.status).toBe(200);
+      const r = await row();
+      expect(oldScore).toBeGreaterThan(expected);
+      expect(r.legendScore).toBe(expected);
+      const [card] = await ctx.db.select().from(cards).where(eq(cards.careerId, CAREER_ID));
+      expect(card?.legendScore).toBe(expected);
+      expect((await put(`/v1/careers/${CAREER_ID}/retirement`, body)).status).toBe(200);
+      expect((await row()).legendScore).toBe(expected);
+    },
+  );
 
   it('은퇴를 다시 보내면 공개 이름만 바뀌고 요약은 첫 은퇴 그대로다', async () => {
     await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());

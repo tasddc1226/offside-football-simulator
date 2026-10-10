@@ -2,6 +2,29 @@ import type { Translation } from '../core';
 import type { OwnerProfileMsgs } from '../ko/ownerProfile';
 
 export const ownerProfile: Translation<OwnerProfileMsgs> = {
+  titleDeveloper: 'Player developer',
+  titleAcademy: 'Academy great',
+  titleStarMaker: 'Star maker',
+  titleBallonMaker: 'Ballon d’Or maker',
+  titleLegendHome: 'Home of legends',
+  titlePioneer: 'Record pioneer',
+
+  conditionDeveloper: 'Retire 10 players you developed at age 30 or older.',
+  conditionAcademy: 'Retire 50 players you developed at age 30 or older.',
+  conditionStarMaker:
+    'Retire 3 players you developed with a peak rating of 90+ at age 30 or older.',
+  conditionBallonMaker: 'Retire a Ballon d’Or winner you developed at age 30 or older.',
+  conditionLegendHome: 'Develop a player who receives a retired shirt number.',
+  conditionPioneer: 'Earn a first-record honor in a finalized season recap.',
+
+  permanentLead: 'Includes records from preseason onward. Earned titles stay across seasons.',
+  permanentTitle: 'Permanent titles',
+  equip: 'Equip',
+  selected: 'Selected',
+  earned: 'Earned',
+  locked: 'Locked',
+  newTitle: 'New title',
+  progress: (p: { value: number; target: number }) => `${p.value}/${p.target}`,
   titleChampion: (p) => `Cup #${p.n} Champion`,
   titleRunnerup: (p) => `Cup #${p.n} Runner-up`,
   titleSf: (p) => `Cup #${p.n} Semifinalist`,
@@ -26,14 +49,16 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   colRank: 'Rank',
   ongoing: 'Ongoing',
   manage: 'Pick a title in the Hall of Honors',
+  hallLoadFail: 'Could not load your hall.',
+  retry: 'Retry',
   hallTitle: 'Hall of Honors',
   hallLead:
     'Wear one of your titles. It shows next to your nickname in rankings, team profiles, comments and chat.',
-  hallEmpty: 'No titles yet. Reach the Offside Cup semifinals to earn one.',
+  hallEmpty: 'No titles earned yet. Meet the conditions below to earn one.',
   current: 'Current title',
   currentNone: 'None',
   pickAuto: 'Auto',
-  pickAutoNote: 'Wears your best title',
+  pickAutoNote: 'Equip your highest cup title',
   pickNone: "Don't wear one",
   saved: 'Title updated.',
   viewProfile: 'View my owner profile',

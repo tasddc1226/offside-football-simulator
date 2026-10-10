@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b2f37196-7f1d-45c7-8019-a99de32bc2e0",
+  "id": "094aa8fb-568b-4ee5-a51e-dc8aa71b309a",
   "prevId": "bf7eba12-9f4b-4381-910b-b32bab8cbc16",
   "tables": {
     "app_auth_tickets": {
@@ -3166,6 +3166,82 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "owner_item_purchases": {
+      "name": "owner_item_purchases",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "profile_id": {
+          "name": "profile_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "item": {
+          "name": "item",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "qty": {
+          "name": "qty",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "price": {
+          "name": "price",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "owner_item_purchases_profile_idx": {
+          "name": "owner_item_purchases_profile_idx",
+          "columns": [
+            "profile_id",
+            "item",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "owner_item_purchases_profile_id_profiles_id_fk": {
+          "name": "owner_item_purchases_profile_id_profiles_id_fk",
+          "tableFrom": "owner_item_purchases",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "profile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "owner_items": {
       "name": "owner_items",
       "columns": {
@@ -3811,21 +3887,6 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "title_pinned": {
-          "name": "title_pinned",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
         }
       },
       "indexes": {

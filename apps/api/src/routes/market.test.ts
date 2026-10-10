@@ -1,8 +1,11 @@
 import {
   ErrorEnvelopeSchema,
+  FundsHistoryResponseSchema,
   MarketCardTradesResponseSchema,
   MarketChartResponseSchema,
   MarketListResponseSchema,
+  AdminFundsOwnerSchema,
+  AdminFundsReportSchema,
   MarketMeResponseSchema,
   OwnerTeamResponseSchema,
   successEnvelope,
@@ -20,8 +23,15 @@ import {
   pushDeliveries,
 } from '../db/schema.js';
 import { createApp } from '../app.js';
+import { FUNDS_HISTORY_PAGE } from '../db/repos/fundsHistory.js';
 import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
-import { callJson, deleteProfile, issueGoogleCookie } from '../test/http.js';
+import {
+  ADMIN_EMAIL,
+  callJson,
+  deleteProfile,
+  issueAdminCookie,
+  issueGoogleCookie,
+} from '../test/http.js';
 import { addAppPushDevice } from '../test/push.js';
 
 const ListRes = successEnvelope(MarketListResponseSchema);
@@ -29,6 +39,7 @@ const MeRes = successEnvelope(MarketMeResponseSchema);
 const TeamRes = successEnvelope(OwnerTeamResponseSchema);
 const ChartRes = successEnvelope(MarketChartResponseSchema);
 const TradesRes = successEnvelope(MarketCardTradesResponseSchema);
+const HistoryRes = successEnvelope(FundsHistoryResponseSchema);
 
 let seq = 0;
 
@@ -171,6 +182,25 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     });
     expect(res.status).toBe(409);
     expect(await reason(res)).toBe('IN_LINEUP');
+  });
+
+  it('T-11-180 OVR 높은 순으로 본다(같으면 싼 것부터)', async () => {
+    const seller = await issueGoogleCookie(ctx);
+    const [lo, hi, mid] = [
+      await addCard(seller.profileId),
+      await addCard(seller.profileId),
+      await addCard(seller.profileId),
+    ];
+    await ctx.db.update(cards).set({ peak: 70 }).where(eq(cards.careerId, lo));
+    await ctx.db.update(cards).set({ peak: 92 }).where(eq(cards.careerId, hi));
+    for (const [id, price] of [
+      [lo, 1_000_000],
+      [hi, 1_500_000],
+      [mid, 1_200_000],
+    ] as const)
+      expect((await list(seller.cookie, id, price)).status).toBe(201);
+    const data = ListRes.parse(await (await call('GET', '/v1/market?sort=ovr')).json()).data;
+    expect(data.items.map((i) => i.card.careerId)).toEqual([hi, mid, lo]);
   });
 
   it('내놓고 사면 자금이 오가고 카드 주인이 바뀐다(수수료는 판매자 몫에서 뗀다)', async () => {
@@ -338,5 +368,173 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     const rows = await ctx.db.select().from(marketListings);
     expect(rows.map((r) => r.status)).toEqual(['cancelled']);
     expect(await ctx.db.select().from(ownerFunds)).toEqual([]);
+  });
+  it('T-11-153 자금 내역에 구단 자금 사용이 보이고, 운영 도구가 잔액을 기록과 대조한다', async () => {
+    const owner = await issueGoogleCookie(ctx, { nickname: '대조구단' });
+    const card = await addCard(owner.profileId);
+    await call('POST', '/v1/cards/release', {
+      cookie: owner.cookie,
+      headers: idem(),
+      body: { careerIds: [card] },
+    });
+    vi.setSystemTime(new Date('2026-09-30T01:00:00.000Z'));
+    const bought = await call('POST', '/v1/items/reroll/buy', {
+      cookie: owner.cookie,
+      headers: idem(),
+      body: { price: 1_000_000 },
+    });
+    expect(bought.status).toBe(200);
+    const mine = await me(owner.cookie);
+    expect(mine.balance).toBe(0);
+    expect(mine.trades).toMatchObject([{ kind: 'released', amount: 1_000_000 }]);
+    expect(mine.spends).toMatchObject([{ item: 'reroll', amount: 1_000_000 }]);
+
+    const env = { ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL };
+    const admin = await issueAdminCookie(ctx);
+    expect((await callJson(env, 'GET', '/v1/admin/funds', { cookie: owner.cookie })).status).toBe(
+      403,
+    );
+    const report = async () =>
+      successEnvelope(AdminFundsReportSchema).parse(
+        await (await callJson(env, 'GET', '/v1/admin/funds', { cookie: admin.cookie })).json(),
+      ).data;
+    expect(await report()).toMatchObject({
+      owners: 1,
+      balance: 0,
+      released: 1_000_000,
+      items: { reroll: 1_000_000 },
+      mismatched: 0,
+      mismatches: [],
+    });
+    // 기록 밖에서 잔액이 바뀌면(직접 넣은 자금) 어긋난 구단주로 잡힌다.
+    await ctx.db
+      .update(ownerFunds)
+      .set({ balance: 5 })
+      .where(eq(ownerFunds.profileId, owner.profileId));
+    expect(await report()).toMatchObject({
+      mismatched: 1,
+      mismatches: [{ profileId: owner.profileId, nickname: '대조구단', balance: 5, diff: 5 }],
+    });
+    for (const q of [owner.profileId, '대조구단']) {
+      const res = await callJson(env, 'GET', `/v1/admin/funds/owner?q=${encodeURIComponent(q)}`, {
+        cookie: admin.cookie,
+      });
+      const one = successEnvelope(AdminFundsOwnerSchema).parse(await res.json()).data;
+      expect(one).toMatchObject({ released: 1_000_000, items: 1_000_000, diff: 5 });
+      expect(one.moves.map((m) => [m.kind, m.item, m.amount])).toEqual([
+        ['item', 'reroll', -1_000_000],
+        ['released', null, 1_000_000],
+      ]);
+    }
+    const none = await callJson(env, 'GET', '/v1/admin/funds/owner?q=없는구단', {
+      cookie: admin.cookie,
+    });
+    expect(none.status).toBe(404);
+  });
+
+  it('T-11-163 은퇴 장려금은 자금 내역과 운영 도구 대조에 출처로 잡힌다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const card = await addCard(owner.profileId);
+    await ctx.db.update(cards).set({ bonusValue: 100_000 }).where(eq(cards.careerId, card));
+    await fund(owner.profileId, 100_000);
+    const h = HistoryRes.parse(
+      await (await call('GET', '/v1/market/funds/history', { cookie: owner.cookie })).json(),
+    ).data;
+    expect(h.totals).toMatchObject({ bonus: 100_000, released: 0 });
+    expect(h.items).toMatchObject([{ kind: 'bonus', amount: 100_000, card: { careerId: card } }]);
+    const env = { ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL };
+    const admin = await issueAdminCookie(ctx);
+    const r = successEnvelope(AdminFundsReportSchema).parse(
+      await (await callJson(env, 'GET', '/v1/admin/funds', { cookie: admin.cookie })).json(),
+    ).data;
+    expect(r).toMatchObject({ bonus: 100_000, mismatched: 0 });
+  });
+
+  it('자금 내역: 방출·판매·영입·구단 자금 사용을 최근 순으로, 출처별 합과 페이지로 준다', async () => {
+    const seller = await issueGoogleCookie(ctx);
+    const buyer = await issueGoogleCookie(ctx);
+    const history = async (cookie: string, page = 0) =>
+      HistoryRes.parse(
+        await (await call('GET', `/v1/market/funds/history?page=${page}`, { cookie })).json(),
+      ).data;
+    expect((await call('GET', '/v1/market/funds/history')).status).toBe(401);
+    expect(await history(seller.cookie)).toEqual({
+      balance: 0,
+      totals: { released: 0, bonus: 0, sold: 0, bought: 0, spent: 0 },
+      items: [],
+      hasMore: false,
+    });
+
+    const keep = await addCard(seller.profileId);
+    const sell = await addCard(seller.profileId);
+    await call('POST', '/v1/cards/release', {
+      cookie: seller.cookie,
+      headers: idem(),
+      body: { careerIds: [keep] },
+    });
+    vi.setSystemTime(new Date('2026-09-30T01:00:00.000Z'));
+    const created = await list(seller.cookie, sell, 1_200_000);
+    const listingId = ((await created.json()) as { data: { listing: { id: string } } }).data.listing
+      .id;
+    await fund(buyer.profileId, 2_000_000);
+    vi.setSystemTime(new Date('2026-09-30T02:00:00.000Z'));
+    await call('POST', `/v1/market/listings/${listingId}/buy`, {
+      cookie: buyer.cookie,
+      headers: idem(),
+      body: { price: 1_200_000 },
+    });
+    vi.setSystemTime(new Date('2026-09-30T03:00:00.000Z'));
+    expect(
+      (
+        await call('POST', '/v1/items/reroll/buy', {
+          cookie: seller.cookie,
+          headers: idem(),
+          body: { price: 1_000_000 },
+        })
+      ).status,
+    ).toBe(200);
+
+    const s = await history(seller.cookie);
+    expect(s.balance).toBe(1_000_000 + 1_140_000 - 1_000_000);
+    expect(s.totals).toEqual({
+      released: 1_000_000,
+      bonus: 0,
+      sold: 1_140_000,
+      bought: 0,
+      spent: 1_000_000,
+    });
+    expect(s.items.map((i) => [i.kind, i.item, i.amount, i.fee, i.card?.careerId ?? null])).toEqual(
+      [
+        ['spent', 'reroll', -1_000_000, null, null],
+        ['sold', null, 1_140_000, 60_000, sell],
+        ['released', null, 1_000_000, null, keep],
+      ],
+    );
+    expect(s.items[1]!.card).toMatchObject({ pos: 'FW', peak: 85, number: 9 });
+    const b = await history(buyer.cookie);
+    expect(b.totals.bought).toBe(1_200_000);
+    expect(b.items).toMatchObject([
+      { kind: 'bought', amount: -1_200_000, card: { careerId: sell } },
+    ]);
+
+    // 한 번에 여러 장 방출하면 시각이 같아도 페이지가 겹치거나 빠지지 않는다.
+    const many: string[] = [];
+    for (let i = 0; i < FUNDS_HISTORY_PAGE; i++) many.push(await addCard(buyer.profileId));
+    await call('POST', '/v1/cards/release', {
+      cookie: buyer.cookie,
+      headers: idem(),
+      body: { careerIds: many },
+    });
+    const p0 = await history(buyer.cookie);
+    const p1 = await history(buyer.cookie, 1);
+    expect([p0.items.length, p0.hasMore, p1.items.length, p1.hasMore]).toEqual([
+      FUNDS_HISTORY_PAGE,
+      true,
+      1,
+      false,
+    ]);
+    const ids = [...p0.items, ...p1.items].map((i) => i.id);
+    expect(new Set(ids).size).toBe(FUNDS_HISTORY_PAGE + 1);
+    expect(p1.items[0]).toMatchObject({ kind: 'bought' });
   });
 });

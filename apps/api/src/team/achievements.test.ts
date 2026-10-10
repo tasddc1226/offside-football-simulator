@@ -124,6 +124,11 @@ describe('구단 시즌 업적', () => {
     expect(item(g, 'all-league-win')).toMatchObject({ cur: 1, max: 11 });
     expect(item(g, 'all-top-scorer')).toMatchObject({ cur: 1 });
     expect(item(g, 'big5')).toMatchObject({ cur: 2, max: 5 });
+    // T-11-180 모음 업적은 아직 못 모은 이름을 싣는다.
+    expect(item(g, 'all-league-win')?.missing).toHaveLength(10);
+    expect(item(g, 'all-league-win')?.missing).not.toContain('프리미어리그');
+    expect(item(g, 'all-top-scorer')?.missing).not.toContain('피치치 트로피');
+    expect(item(g, 'big5')?.missing).toEqual(['리그 1', '분데스리가', '세리에 A']);
     expect(item(g, 'all-dpos-ballon')).toMatchObject({ cur: 1, max: 8 });
   });
 

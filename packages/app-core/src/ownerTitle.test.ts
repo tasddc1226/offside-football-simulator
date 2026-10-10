@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { titlesOf } from '@offside/contracts/owner-title';
 import { setLocale } from './i18n/core.js';
-import { titleLabel } from './ownerTitle.js';
+import { titleLabel, titleCondition } from './ownerTitle.js';
 
 describe('대표 칭호 (T-11-150)', () => {
   afterEach(() => setLocale('ko'));
@@ -26,4 +26,15 @@ describe('대표 칭호 (T-11-150)', () => {
       ]),
     ).toEqual(['cup-6-champion', 'cup-2-champion', 'cup-5-runnerup', 'cup-4-sf', 'cup-1-sf']);
   });
+});
+
+it('permanent labels and criteria are translated and unknown titles stay hidden', () => {
+  for (const locale of ['ko', 'en', 'ja'] as const) {
+    setLocale(locale);
+    expect(titleLabel('owner-developer')).toBeTruthy();
+    expect(titleCondition('owner-developer')).toContain('10');
+    expect(titleCondition('owner-star-maker')).toContain('90');
+  }
+  expect(titleLabel('owner-unknown')).toBeNull();
+  setLocale('ko');
 });

@@ -34,6 +34,9 @@ import { createText as L } from '@offside/app-core/i18n/ko/create';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fetchItems, spendReroll } from '@offside/app-core/api/cup';
+import { fundsText } from '@offside/app-core/funds';
+import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
+import { useClubReward } from '../../platform/clubShop';
 import { watchDetailOpening } from '@offside/app-core/season-opening';
 import { detailOpenNow, draftBody, draftDpos, randomName } from '@offside/app-core/state';
 import {
@@ -45,7 +48,8 @@ import {
 } from '../../game/host';
 import { claimReward, rewardOffer } from '../../platform/rewarded';
 import { adFree } from '../../platform/adFree';
-import { goHome } from '../../game/nav';
+import { adRerollLeft, claimAdReroll } from '../../platform/adReroll';
+import { goHome, goRerollShop } from '../../game/nav';
 import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, num, rem } from '../../theme/type';
@@ -183,6 +187,8 @@ export default function Create() {
   };
   // T-11-145 오프사이드 컵 보상 리롤권 — 로그인한 구단주가 한 장 이상 갖고 있을 때만 '후보 다시 뽑기'를 보여 준다.
   const [rerolls, setRerolls] = useState(0);
+  // T-11-152 장수를 받았으면(로그인한 구단주) 0장일 때 구단 자금으로 사는 리롤권 상점으로 가는 안내를 보인다.
+  const [owner, setOwner] = useState(false);
   const [rerolling, setRerolling] = useState(false);
   const rerollLock = useRef(false);
   // 한 번의 '다시 뽑기' 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 차감되지 않는다.
@@ -192,12 +198,52 @@ export default function Create() {
     if (!hasCandidates) return;
     let live = true;
     void fetchItems().then((r) => {
-      if (live) setRerolls(r.ok ? r.data.reroll : 0);
+      if (!live) return;
+      setOwner(r.ok);
+      setRerolls(r.ok ? r.data.reroll : 0);
     });
     return () => {
       live = false;
     };
   }, [hasCandidates]);
+  // T-11-153 광고 대신 구단 자금으로 후보 잠재력 보기(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 보므로 묻지 않는다.
+  const club = useClubReward(
+    'candidates',
+    hasCandidates && !s.candidatePotentialOpen && offer !== 'free',
+  );
+  const revealWithClub = async () => {
+    if (rewardLock.current || appState.candidatePotentialOpen) return;
+    rewardLock.current = true;
+    const batch = appState.candidates;
+    setRewardBusy(true);
+    setRewardMessage('');
+    try {
+      let saveFailed = false;
+      const message = await club.pay(() => {
+        saveFailed = !revealCandidatePotential(batch);
+      });
+      if (message !== null) setRewardMessage(saveFailed ? L.potentialSaveFailed : message);
+    } finally {
+      rewardLock.current = false;
+      setRewardBusy(false);
+    }
+  };
+  // T-11-154 광고 보고 다시 뽑기(리롤권 없이, 하루 2번, 이 기기에서 센다). 로그인하지 않아도 쓴다. 광고 단위 · 버튼 종류는
+  // 후보 잠재력(offer)과 같다. 남은 횟수는 그릴 때마다 기기 저장소에서 읽는다(동기 · 작다).
+  const adLeft = adRerollLeft();
+  async function rerollWithAd() {
+    if (rerollLock.current || rewardLock.current) return;
+    rerollLock.current = true;
+    setRerolling(true);
+    setRewardMessage('');
+    try {
+      const message = await claimAdReroll(rerollCandidates);
+      toast(message || adText.adRerollDone({ n: adRerollLeft() }));
+    } finally {
+      rerollLock.current = false;
+      setRerolling(false);
+    }
+  }
   const askReroll = () =>
     Alert.alert(CA.rerollAskTitle, CL.rerollConfirm({ n: Math.max(0, rerolls - 1) }), [
       { text: CA.cancel, style: 'cancel' },
@@ -656,28 +702,65 @@ export default function Create() {
               >
                 {rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}
               </Btn>
+            ) : owner ? (
+              <View style={{ gap: 6 }} testID="reroll-hint">
+                <Txt v="sm" tone="muted">
+                  {CL.createShopHint}
+                </Txt>
+                <Btn sm kind="ghost" testID="reroll-shop-go" onPress={goRerollShop}>
+                  {CL.createShopGo}
+                </Btn>
+              </View>
+            ) : null}
+            {offer && adLeft > 0 ? (
+              <Btn
+                block
+                testID="candidate-ad-reroll"
+                disabled={rerolling || rewardBusy}
+                onPress={() => void rerollWithAd()}
+              >
+                {rerolling
+                  ? CL.rerollBusy
+                  : (offer === 'free' ? adText.adRerollFreeBtn : adText.adRerollBtn)({ n: adLeft })}
+              </Btn>
             ) : null}
             <View style={{ gap: 8 }}>
               {s.candidatePotentialOpen ? (
                 <Txt v="sm" tone="muted">
                   {L.potentialHelp}
                 </Txt>
-              ) : offer ? (
+              ) : offer || club.offer ? (
                 <>
-                  <Btn
-                    block
-                    testID="candidate-potential-reward"
-                    disabled={rewardBusy}
-                    onPress={() => void reveal()}
-                  >
-                    {rewardBusy
-                      ? L.potentialBusy
-                      : offer === 'free'
-                        ? L.potentialFree
-                        : L.potentialAd}
-                  </Btn>
+                  {offer ? (
+                    <Btn
+                      block
+                      testID="candidate-potential-reward"
+                      disabled={rewardBusy}
+                      onPress={() => void reveal()}
+                    >
+                      {rewardBusy
+                        ? L.potentialBusy
+                        : offer === 'free'
+                          ? L.potentialFree
+                          : L.potentialAd}
+                    </Btn>
+                  ) : null}
+                  {club.offer ? (
+                    <Btn
+                      block
+                      testID="candidate-potential-club"
+                      disabled={rewardBusy}
+                      onPress={() => void revealWithClub()}
+                    >
+                      {B.clubCandidates({ price: fundsText(club.offer.price) })}
+                    </Btn>
+                  ) : null}
                   <Txt v="sm" tone="muted">
-                    {offer === 'free' ? L.potentialHelp : L.potentialWatch}
+                    {offer === 'free'
+                      ? L.potentialHelp
+                      : club.offer
+                        ? B.clubNote
+                        : L.potentialWatch}
                   </Txt>
                 </>
               ) : null}

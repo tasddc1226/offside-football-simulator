@@ -4,7 +4,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
 import {
-  BALANCE_GROUPS,
   BALANCE_KEYS,
   BALANCE_NOTE_MAX,
   BALANCE_SPEC,
@@ -13,10 +12,10 @@ import {
   EVENT_WEIGHT_RANGE,
   resolveBalance,
   sanitizeBalance,
-  type BalanceGroup,
   type BalanceKey,
   type BalanceOverrides,
 } from '@offside/contracts/balance';
+import { BALANCE_GROUPS, BALANCE_TEXT, type BalanceGroup } from '@offside/contracts/balance-text';
 import * as api from '@offside/app-core/api/admin';
 import type { BalanceVersion } from '@offside/app-core/api/admin';
 import {
@@ -49,7 +48,7 @@ const STATUS = {
   archived: ['보관', undefined],
 } as const;
 const GROUPS = Object.entries(BALANCE_GROUPS) as [BalanceGroup, string][];
-const keysOf = (g: BalanceGroup) => BALANCE_KEYS.filter((k) => BALANCE_SPEC[k].group === g);
+const keysOf = (g: BalanceGroup) => BALANCE_KEYS.filter((k) => BALANCE_TEXT[k].group === g);
 const clampRange = (raw: string, r: { min: number; max: number }) =>
   clampTo(Number(raw) || 0, r.min, r.max);
 const dateOf = (iso: string | null) => (iso ? kstDateTime(iso) : '');
@@ -361,14 +360,15 @@ export default function AdminBalance() {
               <Group key={g} title={name}>
                 {keysOf(g).map((k) => {
                   const spec = BALANCE_SPEC[k];
+                  const text = BALANCE_TEXT[k];
                   const val = work.values[k] ?? spec.def;
                   return knob(
                     `knob-${k}`,
                     val !== activeValues[k],
                     <>
-                      <Txt bold>{spec.label}</Txt>
+                      <Txt bold>{text.label}</Txt>
                       <Txt tone="muted" style={small}>
-                        {spec.desc}
+                        {text.desc}
                       </Txt>
                       <Txt tone="muted" style={small}>
                         {`기본 ${spec.def} · 적용 중 ${activeValues[k]} · 범위 ${spec.min}~${spec.max}`}
@@ -377,7 +377,7 @@ export default function AdminBalance() {
                     <>
                       <NumberBox
                         testID={`knob-input-${k}`}
-                        accessibilityLabel={spec.label}
+                        accessibilityLabel={text.label}
                         editable={!!editable}
                         negative={spec.min < 0}
                         value={val}
@@ -386,7 +386,7 @@ export default function AdminBalance() {
                       {editable && work.values[k] !== undefined ? (
                         <Btn
                           sm
-                          accessibilityLabel={`${spec.label} 기본값으로`}
+                          accessibilityLabel={`${text.label} 기본값으로`}
                           onPress={() => setKnob(k, '')}
                         >
                           기본값

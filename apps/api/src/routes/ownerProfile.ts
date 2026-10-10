@@ -2,6 +2,8 @@
 // 내보내지 않는다. 대표 칭호는 받은 칭호(컵 성적) 가운데서만 고른다.
 import {
   OwnerProfileResponseSchema,
+  OwnerTitleBackfillBodySchema,
+  OwnerTitleBackfillResponseSchema,
   OwnerTitlesResponseSchema,
   PutOwnerTitleBodySchema,
   PutOwnerTitleResponseSchema,
@@ -11,6 +13,10 @@ import { TITLE_NONE, titlesOf } from '@offside/contracts/owner-title';
 import { desc, eq } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
+import { permanentTitlesOf, backfillOwnerTitles } from '../db/repos/ownerTitles.js';
+import { ownerTitleAwards } from '../db/schema.js';
+import { requireAdmin } from '../auth/admin.js';
+import { and } from 'drizzle-orm';
 import { ownerProfileOf } from '../db/repos/ownerProfile.js';
 import { liveTeam } from '../db/repos/ownerTeams.js';
 import { ownerTeams, profiles } from '../db/schema.js';
@@ -18,6 +24,8 @@ import { getDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
+import { purgeEdge } from '../edgeCache.js';
+import { EDGE } from '../edgeKeys.js';
 import { reqLang } from '../lang.js';
 import { cupHonorsOf } from '../team/cup.js';
 import { requireOwner } from './ownerTeam.js';
@@ -33,7 +41,7 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
     const profileId = found.team.profileId;
     const owner = await ownerProfileOf(
       db,
-      { id: profileId, nickname: found.nickname, title: found.title },
+      { id: profileId, nickname: found.ownerNickname, title: found.title },
       nowIso(),
       reqLang(c),
     );
@@ -46,12 +54,21 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
     );
   });
 
+  // Admin preview is read-only; apply requires dryRun:false. Bounded cursor batches are resumable.
+  app.post('/v1/admin/owner-titles/backfill', async (c) => {
+    await requireAdmin(c);
+    const { after, limit, dryRun } = readBody(c, OwnerTitleBackfillBodySchema);
+    const result = await backfillOwnerTitles(getDb(c), nowIso(), after, limit, dryRun);
+    return ok(c, OwnerTitleBackfillResponseSchema, result, 200, NO_STORE);
+  });
+
   // 명예관 — 지금 대표 칭호와 고를 수 있는 칭호, '내 구단주 프로필 보기'용 가장 최근 팀.
   app.get('/v1/owner/title', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const [honors, [latest]] = await Promise.all([
+    const [honors, permanent, [latest]] = await Promise.all([
       cupHonorsOf(db, me.id),
+      permanentTitlesOf(db, me.id, nowIso()),
       db
         .select({ id: ownerTeams.id })
         .from(ownerTeams)
@@ -64,7 +81,8 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
       OwnerTitlesResponseSchema,
       {
         title: me.title,
-        titles: titlesOf(honors),
+        titles: [...titlesOf(honors), ...permanent.filter((t) => t.earnedAt).map((t) => t.id)],
+        permanent,
         pinned: me.titlePinned,
         teamId: latest?.id ?? null,
       },
@@ -78,14 +96,38 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
     const me = await requireOwner(c);
     const db = getDb(c);
     const { title } = readBody(c, PutOwnerTitleBodySchema);
-    const titles = titlesOf(await cupHonorsOf(db, me.id));
+    const [honors, permanent] = await Promise.all([
+      cupHonorsOf(db, me.id),
+      permanentTitlesOf(db, me.id, nowIso()),
+    ]);
+    const cupTitles = titlesOf(honors);
+    const titles = [...cupTitles, ...permanent.filter((t) => t.earnedAt).map((t) => t.id)];
     if (title && title !== TITLE_NONE && !titles.includes(title))
       throw conflictError(cupKo('titleNotOwned'), 'TITLE_NOT_OWNED');
     const next =
       title === null
-        ? { title: titles[0] ?? null, titlePinned: 0 }
+        ? { title: cupTitles[0] ?? null, titlePinned: 0 }
         : { title: title === TITLE_NONE ? null : title, titlePinned: 1 };
     await db.update(profiles).set(next).where(eq(profiles.id, me.id));
+    const seasons = await db
+      .select({ season: ownerTeams.season })
+      .from(ownerTeams)
+      .where(eq(ownerTeams.profileId, me.id));
+    // Known first-page keys are purged; remaining rank pages expire within the existing five-minute TTL.
+    purgeEdge(
+      c,
+      seasons.flatMap(({ season }) => [
+        ...['rating', 'ovr', 'value'].map((sort) => EDGE.teamRank(season, sort, 1)),
+        EDGE.achRank(season, 1),
+      ]),
+    );
+    if (next.title)
+      await db
+        .update(ownerTitleAwards)
+        .set({ seenAt: nowIso() })
+        .where(
+          and(eq(ownerTitleAwards.profileId, me.id), eq(ownerTitleAwards.titleId, next.title)),
+        );
     return ok(
       c,
       PutOwnerTitleResponseSchema,

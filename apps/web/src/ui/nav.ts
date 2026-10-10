@@ -6,22 +6,27 @@ import { loadGameSheets } from './sheets/gameSheets.svelte.js';
 import { closeSheet } from './sheetState.svelte.js';
 import { appState, hofStart, type Screen } from './state.svelte.js';
 
-/** 화면을 바꾸고 맨 위로 올린다. */
+/** 화면을 바꾸고 맨 위로 올린다. 다른 화면으로 가면 아직 읽히지 않은 focus는 버린다. */
 export function go(screen: Screen) {
+  pending = null;
   appState.screen = screen;
   window.scrollTo(0, 0);
 }
 
-// T-11-141 설정 '확률과 공정성' → 확률 도감을 열고 그 칸을 펼쳐 보여 준다(한 번만 읽힌다).
-let fairnessFocus = false;
-export function goFairness() {
-  fairnessFocus = true;
-  go('dex');
+// 다른 화면에서 들어올 때 한 칸을 펼쳐 둔다(한 번만 읽힌다). T-11-141 설정 '확률과 공정성' → 확률 도감의 그 칸,
+// T-11-152 후보 화면 '리롤권 상점 가기' → 구단주 화면의 리롤권 상점.
+type Focus = 'fairness' | 'rerollShop';
+let pending: Focus | null = null;
+function goFocus(screen: Screen, focus: Focus) {
+  go(screen);
+  pending = focus;
 }
-export function takeFairnessFocus(): boolean {
-  const v = fairnessFocus;
-  fairnessFocus = false;
-  return v;
+export const goFairness = () => goFocus('dex', 'fairness');
+export const goRerollShop = () => goFocus('owner', 'rerollShop');
+export function takeFocus(focus: Focus): boolean {
+  const hit = pending === focus;
+  if (hit) pending = null;
+  return hit;
 }
 
 // T-10-104: 게임 화면·액션(게임 엔진 포함)·게임 시트 본문은 홈에서 바로 쓰지 않아 첫 화면 번들에서 뗐다. 누르는 순간

@@ -1,0 +1,23 @@
+{
+  "id": "t-11-150-owner-permanent-titles",
+  "title": "구단주 명예관과 영구 칭호",
+  "items": [
+    "프리시즌부터 쌓인 육성·수상·영구결번 기록으로 구단주 영구 칭호를 받아요.",
+    "명예관에서 대표 칭호를 골라 프로필·랭킹·댓글·채팅에 표시해요. 미획득 칭호의 조건과 진행도도 확인해요."
+  ],
+  "en": {
+    "title": "Owner hall and permanent titles",
+    "items": [
+      "Earn permanent owner titles from development, awards and retired numbers, including preseason records.",
+      "Choose a representative title in your hall for profiles, rankings, comments and chat. View conditions and progress for unearned titles."
+    ]
+  },
+  "ja": {
+    "title": "オーナーの名誉館と永久称号",
+    "items": [
+      "プレシーズンからの育成・受賞・永久欠番の記録で永久称号を獲得できます。",
+      "名誉館で代表称号を選ぶと、プロフィール・ランキング・コメント・チャットに表示されます。未獲得の称号の条件と進捗も確認できます。"
+    ]
+  },
+  "availability": "web-app"
+}

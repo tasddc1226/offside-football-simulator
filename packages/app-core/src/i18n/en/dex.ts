@@ -12,6 +12,8 @@ export const dex: Translation<DexMsgs> = {
   groupLabel: 'Category',
   filterAll: 'All',
   foundMark: 'Found',
+  tapHint: 'Tap an event to see the odds for each choice.',
+  choicesHead: (p) => `${p.n} ${p.n === 1 ? 'choice' : 'choices'} · odds`,
   lockedStory: (p) => `Story event not met yet · stage ${p.stage}`,
   lockedSpecial: 'Special event not met yet',
   dependsOnPast: 'The odds depend on what you chose in earlier stages.',

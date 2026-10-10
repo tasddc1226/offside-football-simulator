@@ -165,6 +165,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   placeAriaWeb: '選んだ選手をピッチに配置',
   placeAriaApp: '選んだ選手をピッチの空いた場所に配置',
   pitchRatingFull: (p) => `最高OVR ${p.peak} · ポジションOVR ${p.rating} · 適性 ${p.fit}%`,
+  peekAria: (p) => `${p.name} 選手カード`,
   pitchSlotApp: (p) => `${p.head} · ポジションOVR ${p.rating}${p.drag ? ' · 長押しで移動' : ''}`,
   lineAtk: '攻撃',
   lineMid: '中盤',
@@ -253,4 +254,5 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   friendlyOnly: '親善試合専用',
   statFriendly: '親善試合',
   statFriendlyOnly: '専用',
+  retireSyncing: '引退した選手の記録を送っています。届いたらすぐロッカールームに入ります。',
 };

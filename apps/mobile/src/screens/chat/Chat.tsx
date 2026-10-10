@@ -309,6 +309,8 @@ export default function Chat() {
           keyboardShouldPersistTaps="handled"
           style={{ flex: 1, minHeight: 0 }}
           keyboardDismissMode="interactive"
+          // T-11-180 이전 줄이 위에 붙어도 보던 줄이 그 자리에 머문다.
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
           onContentSizeChange={() => {
             if (view.status !== 'open') return;
             if (entering.current || atBottom.current)
@@ -328,9 +330,16 @@ export default function Chat() {
           onScroll={(e) => {
             const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
             atBottom.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 80;
+            // T-11-180 맨 위 가까이 올리면 이전 줄을 부른다.
+            if (contentOffset.y < 120) session.current?.older();
           }}
           scrollEventThrottle={64}
         >
+          {view.loadingOlder ? (
+            <Txt tone="muted" style={{ textAlign: 'center', fontSize: rem(0.8125) }}>
+              {L.loadingOlder}
+            </Txt>
+          ) : null}
           {view.messages.length ? (
             view.messages.map((m) => (
               <View

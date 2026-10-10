@@ -1,6 +1,15 @@
 // T-11-098 친구 화면 문구 · 초대 링크. 웹·앱이 함께 쓴다.
-import type { FriendPerson, FriendsResponse } from '@offside/contracts';
-import { FRIEND_INVITE_PARAM } from '@offside/contracts/owner-team';
+import type {
+  FriendPerson,
+  FriendRequestResponse,
+  FriendsResponse,
+  InviteStatus,
+} from '@offside/contracts';
+import {
+  FRIEND_INVITE_PARAM,
+  INVITE_REROLLS,
+  INVITE_REWARD_MAX,
+} from '@offside/contracts/owner-team';
 import { friendText as L } from './i18n/ko/friend.js';
 import { teamCoreText } from './i18n/ko/teamCore.js';
 
@@ -24,6 +33,36 @@ export const friendAcceptedText = (name: string) => L.accepted({ name });
 /** 친구 신청 결과 알림(코드로 신청 · 팀 프로필의 친구 신청). 상대가 먼저 신청했으면 곧바로 친구가 된다. */
 export const friendRequestText = (r: { state: 'sent' | 'accepted'; friend: { name: string } }) =>
   r.state === 'sent' ? L.requestSent : friendAcceptedText(r.friend.name);
+
+/** T-11-171 신청 결과 토스트 — 이 신청으로 친구 초대 이벤트에 참여했으면 그 안내를 먼저 보인다. */
+export const friendRequestToast = (r: FriendRequestResponse) =>
+  r.invited ? L.joinedEvent({ n: INVITE_REROLLS }) : friendRequestText(r);
+
+/**
+ * T-11-171 친구 초대 이벤트 카드 문구. mine: 나를 초대한 사람이 있을 때의 한 줄, status: 내가 초대한 친구가 있을 때의 현황,
+ * maxed: 초대한 쪽 보상 상한에 닿았을 때의 안내.
+ */
+export function inviteEventLines(i: InviteStatus) {
+  return {
+    title: L.eventTitle,
+    body: L.eventBody({ n: INVITE_REROLLS }),
+    mine: i.invitedBy
+      ? i.invitedBy.done
+        ? L.invitedDone({ name: i.invitedBy.name })
+        : L.invitedBy({ name: i.invitedBy.name })
+      : null,
+    status:
+      i.pending + i.done > 0
+        ? L.eventStatus({
+            pending: i.pending,
+            done: i.done,
+            got: i.rewarded,
+            max: INVITE_REWARD_MAX,
+          })
+        : null,
+    maxed: i.rewarded >= INVITE_REWARD_MAX ? L.eventMaxed({ max: INVITE_REWARD_MAX }) : null,
+  };
+}
 
 /** 상대 전적 한 줄(3승 1무 2패). 아직 겨룬 적이 없으면 null. */
 export function h2hText(r: { w: number; d: number; l: number }): string | null {

@@ -8,7 +8,7 @@ import {
   type OwnerTitlesResponse,
 } from '@offside/app-core/api/ownerProfile';
 import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
-import { TITLE_NONE, titleLabel } from '@offside/app-core/ownerTitle';
+import { TITLE_NONE, titleLabel, titleCondition, parseTitle } from '@offside/app-core/ownerTitle';
 import { hofStart } from '@offside/app-core/state';
 import { TitleBadge } from '../../components/TitleBadge';
 import { toast } from '../../game/host';
@@ -20,19 +20,39 @@ import { Card } from '../../ui/Card';
 import { Opt } from '../../ui/bits';
 import { Txt } from '../../ui/Txt';
 
-export function OwnerHall() {
+export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void }) {
   const [hall, setHall] = useState<OwnerTitlesResponse | null>(null);
+  const [failed, setFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     let live = true;
     void fetchOwnerTitles().then((r) => {
-      if (live && r.ok) setHall(r.data);
+      if (!live) return;
+      if (r.ok) setHall(r.data);
+      else setFailed(true);
     });
     return () => {
       live = false;
     };
   }, []);
-  if (!hall) return null;
+  if (!hall)
+    return failed ? (
+      <Card gap={12} testID="owner-hall-error">
+        <Txt v="h2">{L.hallTitle}</Txt>
+        <Txt>{L.hallLoadFail}</Txt>
+        <Btn
+          onPress={() => {
+            setFailed(false);
+            void fetchOwnerTitles().then((r) => {
+              if (r.ok) setHall(r.data);
+              else setFailed(true);
+            });
+          }}
+        >
+          {L.retry}
+        </Btn>
+      </Card>
+    ) : null;
   /** 고른 칸 — null = 자동, TITLE_NONE = 달지 않기, 그 밖은 칭호 id. */
   const picked = hall.pinned ? (hall.title ?? TITLE_NONE) : null;
 
@@ -42,7 +62,13 @@ export function OwnerHall() {
     const r = await putOwnerTitle(title);
     setSaving(false);
     if (!r.ok) return toast(r.error.message);
-    setHall({ ...hall, title: r.data.title, pinned: r.data.pinned });
+    setHall({
+      ...hall,
+      title: r.data.title,
+      pinned: r.data.pinned,
+      permanent: hall.permanent.map((t) => (t.id === title ? { ...t, isNew: false } : t)),
+    });
+    onpick?.(r.data.title);
     toast(L.saved);
   }
 
@@ -95,11 +121,44 @@ export function OwnerHall() {
                 </Txt>
               </>,
             )}
-            {hall.titles.map((t) => option(t, t, titleLabel(t) ?? t, <TitleBadge title={t} />))}
+            {hall.titles
+              .filter((id) => parseTitle(id))
+              .map((t) => option(t, t, titleLabel(t) ?? t, <TitleBadge title={t} />))}
             {option('none', TITLE_NONE, L.pickNone, <Txt bold>{L.pickNone}</Txt>)}
           </View>
         </>
       ) : null}
+      <View style={{ gap: 12 }}>
+        <Txt v="h2" accessibilityRole="header">
+          {L.permanentTitle}
+        </Txt>
+        <Txt tone="muted">{L.permanentLead}</Txt>
+        {hall.permanent.map((t) => (
+          <View
+            key={t.id}
+            testID={`permanent-title-${t.id}`}
+            style={{ gap: 8, paddingVertical: 8 }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <TitleBadge title={t.id} />
+              {t.isNew ? <Txt tone="muted">{L.newTitle}</Txt> : null}
+            </View>
+            <Txt tone="muted">{titleCondition(t.id)}</Txt>
+            {t.earnedAt ? (
+              option(
+                t.id,
+                t.id,
+                titleLabel(t.id) ?? t.id,
+                <Txt bold>{picked === t.id ? L.selected : L.equip}</Txt>,
+              )
+            ) : (
+              <Txt tone="muted" accessibilityLabel={`${L.locked} ${L.progress(t)}`}>
+                {L.progress(t)}
+              </Txt>
+            )}
+          </View>
+        ))}
+      </View>
       {teamId ? (
         <Btn
           block

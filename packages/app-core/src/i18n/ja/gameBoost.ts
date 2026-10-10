@@ -16,6 +16,10 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   lineAged: (p) => `${p.age}歳を過ぎたため、もう強化できません。`,
   lineMax: (p) => `最高段階（+${p.lv}）に到達しました。`,
   lineDone: '今シーズンはすでに挑戦しました。次のシーズンにまた挑戦できます。',
+  lineExtra: (p) =>
+    `今シーズンの挑戦は済みました。広告かクラブ資金で追加挑戦でき、この選手はあと${p.left}回です。`,
+  lineExtraClub: (p) =>
+    `今シーズンの挑戦は済みました。クラブ資金で追加挑戦でき、この選手はあと${p.left}回です。`,
   lineShort: (p) => `資金が足りません。次の段階には${p.cost}が必要です。`,
   lineReady: (p) => `次の段階 +${p.next} · 成功確率 ${p.chance}% · ${p.cost}`,
   button: (p) => `${p.cost}を払って強化する（${p.chance}%）`,
@@ -33,7 +37,29 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   adNote:
     '広告を最後まで見ると、資金なしで1回挑戦できます。成功確率は資金で挑戦するときと同じです。',
   adNoteFree: '広告削除を購入済みなので、資金なしで1回挑戦できます。',
+  adNoteExtra: (p) =>
+    `広告を最後まで見ると、資金なしでもう1回挑戦できます。追加挑戦はこの選手にあと${p.left}回です。`,
+  adNoteExtraFree: (p) =>
+    `広告削除を購入済みなので、資金なしでもう1回挑戦できます。追加挑戦はこの選手にあと${p.left}回です。`,
   adWatch: '広告を最後まで見ると強化に挑戦できます。',
   adCost: '広告',
-  resultFailAd: (p) => `成功確率は${p.chance}%でした。次の挑戦の確率が${p.pct}%p上がります。`,
+  extraCost: (p) => `${p.cost}（追加）`,
+  clubCost: 'クラブ資金',
+  resultFailFree: (p) => `成功確率は${p.chance}%でした。次の挑戦の確率が${p.pct}%p上がります。`,
+  clubCandidates: (p) => `クラブ資金で候補のポテンシャルを見る（${p.price}）`,
+  clubPeek: (p) => `クラブ資金で評価を見る（${p.price}）`,
+  clubBoost: (p) => `クラブ資金で強化する（${p.price} · ${p.chance}%）`,
+  clubConfirm: (p) =>
+    `クラブ資金を${p.price}使います。使用後のクラブ資金は${p.balance}で、取り消せません。`,
+  clubAskTitle: 'クラブ資金を使う',
+  clubAction: '使う',
+  clubBusy: 'クラブ資金を使っています…',
+  clubNote:
+    '広告を見るか、クラブ資金を使って受け取れます。クラブ資金は同じ日に使うほど高くなります。',
+  clubFail: 'クラブ資金を使えませんでした。',
+  ticketCost: '強化券',
+  ticketBoost: (p) => `強化券を使う（残り${p.n}枚 · ${p.chance}%）`,
+  ticketBusy: '強化券を使っています…',
+  ticketFail: '強化券を使えませんでした。',
+  lineExtraTicket: '今シーズンの挑戦は済んでいます。強化券なら回数の上限なしでさらに挑戦できます。',
 };

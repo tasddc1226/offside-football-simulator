@@ -36,6 +36,8 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   pitchAll: (p) => `All ${p.n} synergies active`,
   pitchFocus: (p) => `Showing ${p.name} · all ${p.n} active`,
   pitchMemberAria: 'In an active synergy',
+  moreOff: (p) => `Show more · ${p.n} inactive`,
+  lessOff: 'Hide inactive',
   empty: 'No synergies active yet. Line up players whose types work together.',
   capNote: (p) =>
     `Duo effects are capped at +${p.line} per line and +${p.total} in total. Youth players don't count toward synergies.`,

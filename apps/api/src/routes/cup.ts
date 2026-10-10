@@ -2,8 +2,14 @@ import {
   CupMatchResponseSchema,
   CupMeResponseSchema,
   CupResponseSchema,
+  BuyRerollBodySchema,
   OwnerItemsResponseSchema,
+  RerollShopResponseSchema,
+  BuyRewardBodySchema,
+  RewardShopResponseSchema,
+  REWARD_KINDS,
   type CupMatch,
+  type RewardShopResponse,
   type CupPhase,
   type CupResponse,
 } from '@offside/contracts';
@@ -13,13 +19,16 @@ import {
   cupById,
   currentCup,
   lockAt,
+  OWNER_ITEMS,
+  shopPriceAt,
   type CupDef,
+  type RewardKind,
   type CupRound,
 } from '@offside/contracts/cup';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import type { Db } from '../db/client.js';
-import { cupEntries, cupMatches, ownerItems } from '../db/schema.js';
+import { cupEntries, cupMatches } from '../db/schema.js';
 import {
   myTeamIn,
   publicNamesOf,
@@ -27,9 +36,20 @@ import {
   teamLogosByIds,
   type MatchDetail,
 } from '../db/repos/ownerTeams.js';
+import {
+  buyReroll,
+  buyRewardWithFunds,
+  rerollShopRules,
+  rewardShopRules,
+  rewardSnapshot,
+  shopSnapshot,
+} from '../db/repos/itemShop.js';
+import { ownerItemsOf, spendItem } from '../db/repos/iap.js';
 import { countOpenListingsAmong } from '../db/repos/market.js';
+import { newId } from '../db/ids.js';
 import { getDb, type AppEnv } from '../env.js';
 import { reqLang } from '../lang.js';
+import { iapAccount, iapStores } from '../iap/verify.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import {
@@ -47,11 +67,20 @@ import {
 import { cupSchedule } from '../team/cupSchedule.js';
 import { lineupsOf, toMatch } from '../team/match.js';
 import { filledCount } from '../team/sim.js';
-import { requireOwner } from './ownerTeam.js';
-import { conflictError, NO_STORE, notFoundError, nowIso, ok } from './shared.js';
+import { kstTodayStart, requireOwner } from './ownerTeam.js';
+import {
+  conflictError,
+  fundsShort,
+  isFundsCheck,
+  NO_STORE,
+  notFoundError,
+  nowIso,
+  ok,
+  readBody,
+} from './shared.js';
 import { cupKo } from '../cupText.js';
 
-// T-11-145 오프사이드 컵(조회·신청·취소)과 구단주 아이템(선수 후보 리롤권).
+// T-11-145 오프사이드 컵(조회·신청·취소)과 구단주 아이템(선수 후보 리롤권). T-11-152 구단 자금으로 리롤권 사기.
 
 // 브라우저는 매번 다시 묻고(신청 직후 인원이 바로 보이게) 공유 캐시만 30초 둔다.
 const PUBLIC_CACHE = 'public, max-age=0, s-maxage=30';
@@ -113,10 +142,11 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
     cupMatchesOf(db, cup.id),
     cupStateOf(db, cup.id),
   ]);
-  const drawn = entries.filter((e) => e.grp !== null && e.status !== 'withdrawn');
+  // 추첨 전에는 신청한 팀을 신청 순으로 보여 준다(T-11-160). 추첨 뒤에는 조에 들어간 팀만.
+  const shown = entries.filter((e) => e.status !== 'withdrawn' && (!state || e.grp !== null));
   const logos = await teamLogosByIds(
     db,
-    drawn.map((e) => e.teamId),
+    shown.map((e) => e.teamId),
   );
   const groups =
     state && state.groups
@@ -130,7 +160,7 @@ async function cupView(db: Db, cup: CupDef, now: string): Promise<CupResponse> {
     cup: cupInfo(cup),
     phase: phaseOf(cup, state, matches, now),
     entries: activeCount(entries),
-    teams: drawn.map((e) => ({
+    teams: shown.map((e) => ({
       teamId: e.teamId,
       name: e.name,
       owner: e.manager,
@@ -156,14 +186,6 @@ const cupOf = async (c: Context<AppEnv>) => {
   const cup = id === 'current' ? currentCup(nowIso(), all) : id ? cupById(id, all) : undefined;
   if (!cup) throw notFoundError(cupKo('notFound'), 'CUP_NOT_FOUND');
   return cup;
-};
-
-export const rerollsOf = async (db: Db, profileId: string) => {
-  const [row] = await db
-    .select({ qty: ownerItems.qty })
-    .from(ownerItems)
-    .where(and(eq(ownerItems.profileId, profileId), eq(ownerItems.item, 'reroll')));
-  return row?.qty ?? 0;
 };
 
 /** 신청 자격(지금 팀 기준). 실제 선수 수는 선발을 다시 세어 본다(팔린 카드는 빠진다). */
@@ -209,7 +231,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     const [entries, matches, rerolls] = await Promise.all([
       cupEntriesOf(db, cup.id),
       cupMatchesOf(db, cup.id),
-      rerollsOf(db, me.id),
+      ownerItemsOf(db, me.id).then((x) => x.reroll),
     ]);
     const mine = entries.find((e) => e.profileId === me.id);
     const el = await eligibility(db, cup, me.id, now, entries);
@@ -356,36 +378,143 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     );
   });
 
-  // 내 아이템.
+  // 내 아이템 · 인앱 구매에 붙일 구단주 표시와 확인할 수 있는 스토어(T-11-174).
   app.get('/v1/items', requireProfile, async (c) => {
     const me = await requireOwner(c);
-    return ok(
-      c,
-      OwnerItemsResponseSchema,
-      { reroll: await rerollsOf(getDb(c), me.id) },
-      200,
-      NO_STORE,
-    );
+    const items = await ownerItemsOf(getDb(c), me.id);
+    const iap = { account: iapAccount(me.id), stores: iapStores(c.env, me.id) };
+    return ok(c, OwnerItemsResponseSchema, { ...items, iap }, 200, NO_STORE);
   });
 
-  // 선수 후보 리롤권 1장 쓰기. 남은 장수를 돌려준다. 없으면 409. 재시도가 두 장을 쓰지 않게 멱등 키를 쓴다.
-  app.post('/v1/items/reroll/use', requireProfile, idempotency, async (c) => {
+  // 아이템 1장 쓰기 — 선수 후보 리롤권(reroll) · 잠재력 강화권(boost, T-11-174). 남은 장수를 돌려준다. 없으면 409.
+  // 재시도가 두 장을 쓰지 않게 멱등 키를 쓴다. 강화권은 서버가 장수만 빼고, 강화는 응답을 받은 기기가 한다.
+  const EMPTY = { reroll: ['noReroll', 'NO_REROLL'], boost: ['noBoost', 'NO_BOOST'] } as const;
+  for (const item of OWNER_ITEMS)
+    app.post(`/v1/items/${item}/use`, requireProfile, idempotency, async (c) => {
+      const me = await requireOwner(c);
+      const items = await spendItem(getDb(c), me.id, item, nowIso());
+      if (!items) throw conflictError(cupKo(EMPTY[item][0]), EMPTY[item][1]);
+      return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
+    });
+
+  // T-11-152 리롤권 상점: 가진 장수 · 구단 자금 · 다음 한 장 가격 · 오늘 산 장수와 하루 상한. 상점을 펼칠 때만 부른다.
+  app.get('/v1/items/shop', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const row = await db
-      .update(ownerItems)
-      .set({ qty: sql`${ownerItems.qty} - 1`, updatedAt: nowIso() })
-      .where(
-        and(
-          eq(ownerItems.profileId, me.id),
-          eq(ownerItems.item, 'reroll'),
-          sql`${ownerItems.qty} > 0`,
-        ),
-      )
-      .returning({ qty: ownerItems.qty });
-    if (!row.length) throw conflictError(cupKo('noReroll'), 'NO_REROLL');
-    return ok(c, OwnerItemsResponseSchema, { reroll: row[0]!.qty }, 200, NO_STORE);
+    const [{ reroll, balance, bought }, rules] = await Promise.all([
+      shopSnapshot(db, me.id, kstTodayStart(nowIso())),
+      rerollShopRules(db),
+    ]);
+    const shop = { reroll, balance, price: shopPriceAt(rules, bought), bought, cap: rules.cap };
+    return ok(c, RerollShopResponseSchema, shop, 200, NO_STORE);
   });
+
+  // T-11-152 리롤권 한 장 사기. 화면에서 본 가격을 함께 보낸다 — 그 사이 다른 기기에서 샀거나 운영 수치가 바뀌어
+  // 가격이 다르면 409. 재시도가 두 장을 사지 않게 멱등 키를 쓴다.
+  app.post('/v1/items/reroll/buy', requireProfile, idempotency, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const input = readBody(c, BuyRerollBodySchema);
+    const now = nowIso();
+    const since = kstTodayStart(now);
+    const [{ balance: funds, bought }, rules] = await Promise.all([
+      shopSnapshot(db, me.id, since),
+      rerollShopRules(db),
+    ]);
+    const price = shopPriceAt(rules, bought);
+    if (price === null)
+      throw rules.cap === 0
+        ? conflictError(cupKo('shopClosed'), 'SHOP_CLOSED')
+        : conflictError(cupKo('shopDaily', { n: rules.cap }), 'DAILY_LIMIT');
+    if (input.price !== price) throw conflictError(cupKo('shopPriceChanged'), 'PRICE_CHANGED');
+    // 잔액 행이 없거나 모자라면 batch 전에 막는다(행이 없으면 출금 UPDATE가 0행으로 지나가 공짜가 된다).
+    if (funds < price) throw fundsShort();
+    let res: Awaited<ReturnType<typeof buyReroll>>;
+    try {
+      res = await buyReroll(db, { id: newId('ipc'), profileId: me.id, price, bought, since, now });
+    } catch (e) {
+      // 같은 구단주가 동시에 영입·구매를 해 잔액이 모자라게 되면 CHECK 위반으로 batch 전체가 되돌아간다.
+      if (isFundsCheck(e)) throw fundsShort();
+      throw e;
+    }
+    // 같은 순간 다른 기기에서 한 장 먼저 샀다 — 다음 가격은 달라졌다.
+    if (!res.won) throw conflictError(cupKo('shopPriceChanged'), 'PRICE_CHANGED');
+    const next = bought + 1;
+    const shop = {
+      reroll: res.reroll,
+      balance: res.balance,
+      price: shopPriceAt(rules, next),
+      bought: next,
+      cap: rules.cap,
+    };
+    return ok(c, RerollShopResponseSchema, shop, 200, NO_STORE);
+  });
+
+  // T-11-153 광고 대신 구단 자금으로 받는 보상들의 값. 앱 · 웹이 그 보상 버튼을 보일 때만 부른다.
+  app.get('/v1/items/rewards', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const [snap, rules] = await Promise.all([
+      rewardSnapshot(db, me.id, kstTodayStart(nowIso())),
+      rewardShopRules(db),
+    ]);
+    return ok(c, RewardShopResponseSchema, rewardShop(snap, rules), 200, NO_STORE);
+  });
+
+  // T-11-153 보상 한 번을 구단 자금으로 받는다. 화면에서 본 가격을 함께 보낸다(다르면 409). 서버는 자금만 받고, 보상은
+  // 응답을 받은 기기가 준다. 재시도가 두 번 받지 않게 멱등 키를 쓴다.
+  app.post('/v1/items/rewards/buy', requireProfile, idempotency, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const input = readBody(c, BuyRewardBodySchema);
+    const now = nowIso();
+    const since = kstTodayStart(now);
+    const [snap, rules] = await Promise.all([
+      rewardSnapshot(db, me.id, since),
+      rewardShopRules(db),
+    ]);
+    const rule = rules[input.kind];
+    const bought = snap.bought[input.kind];
+    const price = shopPriceAt(rule, bought);
+    if (price === null)
+      throw rule.cap === 0
+        ? conflictError(cupKo('rewardClosed'), 'SHOP_CLOSED')
+        : conflictError(cupKo('rewardDaily', { n: rule.cap }), 'DAILY_LIMIT');
+    if (input.price !== price) throw conflictError(cupKo('rewardPriceChanged'), 'PRICE_CHANGED');
+    if (snap.balance < price) throw fundsShort();
+    let res: Awaited<ReturnType<typeof buyRewardWithFunds>>;
+    try {
+      res = await buyRewardWithFunds(db, {
+        id: newId('ipc'),
+        profileId: me.id,
+        kind: input.kind,
+        price,
+        bought,
+        since,
+        now,
+      });
+    } catch (e) {
+      if (isFundsCheck(e)) throw fundsShort();
+      throw e;
+    }
+    if (!res.won) throw conflictError(cupKo('rewardPriceChanged'), 'PRICE_CHANGED');
+    const next = { balance: res.balance, bought: { ...snap.bought, [input.kind]: bought + 1 } };
+    return ok(c, RewardShopResponseSchema, rewardShop(next, rules), 200, NO_STORE);
+  });
+}
+
+/** 구단 자금 · 오늘 받은 횟수 · 수치로 보상 값 응답을 만든다. */
+function rewardShop(
+  snap: { balance: number; bought: Record<RewardKind, number> },
+  rules: Record<RewardKind, { price: number; growth: number; cap: number }>,
+): RewardShopResponse {
+  const offers = Object.fromEntries(
+    REWARD_KINDS.map((k) => [
+      k,
+      { price: shopPriceAt(rules[k], snap.bought[k]), bought: snap.bought[k], cap: rules[k].cap },
+    ]),
+  ) as RewardShopResponse['offers'];
+  return { balance: snap.balance, offers };
 }
 
 /** 컵에 참가 중인(탈락 전) 이 시즌 대회와 그 경기들. 없으면 빈 배열. */

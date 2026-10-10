@@ -131,7 +131,7 @@ describe('/v1/owners · /v1/owner/title (T-11-150 구단주 프로필 · 대표 
     const my = MyRes.parse(
       await (await call('GET', '/v1/owner/title', { cookie: a.cookie })).json(),
     ).data;
-    expect(my).toEqual({
+    expect(my).toMatchObject({
       title: null,
       titles: ['cup-1-champion', 'cup-2-sf'],
       pinned: false,

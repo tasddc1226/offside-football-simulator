@@ -29,10 +29,10 @@ import { founderLabel } from '@offside/app-core/friendText';
 import { loadHOF } from '@offside/game/hof-store';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
-import { go } from '../../game/nav';
+import { go, takeFocus } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
-import { Btn, Card, Pill, Row, Screen, Topbar, Txt } from '../../ui';
+import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
@@ -41,13 +41,16 @@ import { TitleBadge } from '../../components/TitleBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
 import { OwnerHall } from './OwnerHall';
-import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
+import { BoostShop } from './BoostShop';
+import { RerollShop } from './RerollShop';
+import { GRADE_COLOR, Grid2, OvrBadge, Stats, type StatPress } from './TeamParts';
 import { mix } from '../../theme/colors';
 import { TeamLogo } from '../../components/TeamLogo';
 import { GradeEmblem } from '../../ui/GradeEmblem';
 import { AdSlot } from '../../components/AdSlot';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
+import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { openFriends } from '../../platform/inbox';
 import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
 
@@ -139,6 +142,8 @@ export default function Owner() {
   // T-10-016: 운영자에게만 운영 도구 입구를 보인다. 관리자는 구글 연결 계정이라, 연결된 계정일 때만
   // 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다). 계정 패널이 로그인 상태를 불러오거나
   // 바꾸면 다시 판단한다.
+  // T-11-152 후보 화면 '리롤권 상점 가기'로 들어왔으면 리롤권 상점을 펼친 채로 연다(한 번만 읽힌다).
+  const [shopFocus] = useState(() => takeFocus('rerollShop'));
   const [admin, setAdmin] = useState(false);
   const linked = !!acct && acct !== 'error' && isMember(acct);
   // T-10-103 비로그인으로 확인됐고 이 기기에 은퇴한 선수도 없으면 빈 '내 선수'를 숨긴다(확인 중·연결 실패면 그대로 둔다).
@@ -201,6 +206,7 @@ export default function Owner() {
     };
   }, [tick, track]);
   const clubValue = linked ? (market?.clubValue ?? null) : (summary?.value ?? null);
+  const funds = market ? fundsText(market.balance) : '–';
 
   const team = card?.team;
   const sub = guest ? L.guestSub : team ? `${team.name} · ${card.season}` : L.signedInSubApp;
@@ -264,12 +270,28 @@ export default function Owner() {
           {(guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue) ? (
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
               {L.emptySummary}
+              {linked ? `\n${L.fundsLine({ funds })}` : ''}
             </Txt>
           ) : (
             <View style={{ gap: 8 }}>
               <Stats
                 accent
-                items={[[L.statClubValue, clubValue !== null ? fmtValue(clubValue) : '–']]}
+                items={[
+                  [L.statClubValue, clubValue !== null ? fmtValue(clubValue) : '–'],
+                  ...(linked
+                    ? [
+                        [
+                          L.statFunds,
+                          funds,
+                          {
+                            onPress: () => go('funds'),
+                            label: F.openAria,
+                            testID: 'funds-history',
+                          },
+                        ] as [string, string, StatPress],
+                      ]
+                    : []),
+                ]}
               />
               <Stats
                 items={[
@@ -285,11 +307,6 @@ export default function Owner() {
               />
             </View>
           )}
-          {linked ? (
-            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-              {L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}
-            </Txt>
-          ) : null}
         </Card>
       ) : null}
 
@@ -370,24 +387,35 @@ export default function Owner() {
               </>
             )}
           </Card>
-          {/* T-11-150 명예관: 대표 칭호 고르기와 내 구단주 프로필. */}
-          <OwnerHall />
-          <Card gap={12} testID="owner-market">
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                <Txt v="eyebrow">Transfer market</Txt>
-                <Txt v="h2" accessibilityRole="header">
-                  {L.marketTitle}
-                </Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                  {L.marketSub({ funds: market ? fundsText(market.balance) : '–' })}
+          <OwnerHall onpick={(title) => setCard((prev) => (prev ? { ...prev, title } : prev))} />
+          <Press
+            testID="market"
+            accessibilityLabel={`${L.marketTitle} ${L.open}`}
+            onPress={() => go('market')}
+            scale={0.98}
+          >
+            <Card gap={12} testID="owner-market">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <Txt v="eyebrow">Transfer market</Txt>
+                  <Txt v="h2">{L.marketTitle}</Txt>
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {L.marketSub({ funds })}
+                  </Txt>
+                </View>
+                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                  ›
                 </Txt>
               </View>
-              <Btn testID="market" onPress={() => go('market')}>
-                {L.open}
-              </Btn>
-            </View>
-          </Card>
+            </Card>
+          </Press>
+          <RerollShop
+            focus={shopFocus}
+            onBought={(balance, spent) =>
+              setMarket((m) => m && { balance, clubValue: m.clubValue - spent })
+            }
+          />
+          <BoostShop />
         </>
       ) : guest ? (
         <>

@@ -10,4 +10,6 @@ export const cupApp: Translation<CupAppMsgs> = {
   roundToggle: (p) => `${p.name}を開く・閉じる`,
   rerollAskTitle: '候補を引き直しますか？',
   rerollAction: '引き直す',
+  shopAskTitle: 'リロールチケットを買いますか？',
+  shopAction: '買う',
 };

@@ -10,3 +10,7 @@ export function cupOnHome(c: Pick<CupResponse, 'phase' | 'cup'>, now = Date.now(
   const last = c.cup.rounds.at(-1)?.at;
   return !!last && now < Date.parse(last) + CUP_HOME_AFTER_MS;
 }
+
+/** 조 추첨 전(접수 전·중·마감 뒤)인지. 대회 화면이 신청한 팀 목록·일정 펼침을 정한다(T-11-160). */
+export const cupBeforeDraw = (phase: CupResponse['phase']) =>
+  phase === 'soon' || phase === 'open' || phase === 'closed';

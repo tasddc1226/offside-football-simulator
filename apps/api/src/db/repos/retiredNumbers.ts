@@ -11,7 +11,9 @@ import {
   clubContributions,
   rnCandidates,
   rnCut,
+  rnMissOf,
   type RnClub,
+  type RnMiss,
 } from '@offside/contracts/retired-numbers';
 import { and, asc, desc, eq, inArray, isNotNull, lt, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
@@ -71,15 +73,29 @@ function candidatesOf(
   seasons: StoredSeasonRow[] | undefined,
   clubsJson: string | undefined,
 ): { number: number; clubs: RnClub[] } | null {
+  return candidatesFrom(contributionsOf(row, seasons, clubsJson));
+}
+
+const candidatesFrom = (k: ReturnType<typeof contributionsOf>) => {
+  const clubs = k ? rnCandidates(k.all, k.cut) : [];
+  return k && clubs.length ? { number: k.number, clubs } : null;
+};
+
+/** 구단별 기여 전부(점수 순)와 기준 점수. 등번호나 시즌 기록이 없으면 null. */
+function contributionsOf(
+  row: JudgeRow,
+  seasons: StoredSeasonRow[] | undefined,
+  clubsJson: string | undefined,
+): { number: number; all: RnClub[]; cut: number } | null {
   const number = row.shirtNumber;
   if (number === null || !(number >= 1) || !seasons) return null;
   const renamed = renamedIds(clubsJson);
   const life = lifeSeasons(seasons, row.retireAge);
-  const clubs = rnCandidates(
-    clubContributions(row.pos, life, (n) => renamed.get(n) ?? DEFAULT_IDS.get(n)),
-    rnCut(row.pos, seasonOf(row)),
-  );
-  return clubs.length ? { number, clubs } : null;
+  return {
+    number,
+    all: clubContributions(row.pos, life, (n) => renamed.get(n) ?? DEFAULT_IDS.get(n)),
+    cut: rnCut(row.pos, seasonOf(row)),
+  };
 }
 
 /** T-11-121 careers.wall_of_honor_json에 저장한 명예의 벽 — 받을 뻔한 자리와 받은 때. */
@@ -209,6 +225,8 @@ const slotColumns = {
  */
 type Judged = {
   result: RetiredNumberResult | null;
+  /** T-11-180 자격에 못 미친 이유(result가 null이고 기준의 절반 이상일 때만). */
+  miss?: RnMiss;
   season?: number;
   claimed?: LiveRetiredNumber;
 };
@@ -265,8 +283,12 @@ export async function judgeRetiredNumber(db: Db, careerId: string, now: string):
     clubsJsonOf(db, [row.profileId]),
     storedSeasonsOf(db, [careerId]),
   ]);
-  const c = candidatesOf(row, seasons.get(careerId), customs.get(row.profileId));
-  if (!c) return { result: null };
+  const k = contributionsOf(row, seasons.get(careerId), customs.get(row.profileId));
+  const c = candidatesFrom(k);
+  if (!c) {
+    const miss = k && rnMissOf(k.all, k.cut);
+    return miss ? { result: null, miss } : { result: null };
+  }
   // Reuploads cannot use seasons that arrived after retirement or today's renamed clubs as historical proof.
   const proof = candidatesOf(
     row,

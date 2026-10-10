@@ -21,7 +21,8 @@
     friendCodeLabel,
     friendInviteText,
     friendInviteUrl,
-    friendRequestText,
+    friendRequestToast,
+    inviteEventLines,
     h2hText,
     preseasonFriendlyHint,
     preseasonTeamLine,
@@ -93,7 +94,7 @@
     void run(
       () => requestFriend({ code }),
       (d) => {
-        toast(friendRequestText(d));
+        toast(friendRequestToast(d));
         codeInput = '';
         if (fromInvite) {
           clearInvite();
@@ -174,6 +175,18 @@
             <button class="btn btn-primary btn-sm" disabled={busy} onclick={() => sendCode(invite!, true)} data-act="friend-invite-send">{L.send}</button>
             <button class="btn btn-sm" onclick={dropInvite}>{L.close}</button>
           </div>
+        </div>
+      {/if}
+
+      <!-- T-11-175 이벤트 카드를 맨 위에: 홈 타일 · 초대 알림으로 들어오면 바로 보이게. -->
+      {#if data.invite}
+        {@const ev = inviteEventLines(data.invite)}
+        <div class="fr-event" data-invite-event>
+          <b>{ev.title}</b>
+          <p class="fs-sm">{ev.body}</p>
+          {#if ev.mine}<p class="fs-sm" data-invite-mine>{ev.mine}</p>{/if}
+          {#if ev.status}<p class="muted fs-sm" data-invite-status>{ev.status}</p>{/if}
+          {#if ev.maxed}<p class="muted fs-sm">{ev.maxed}</p>{/if}
         </div>
       {/if}
 
@@ -265,6 +278,17 @@
   .fr-invite p {
     margin: 0;
     font-size: 0.875rem;
+  }
+  .fr-event {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .fr-event p {
+    margin: 0;
   }
   .fr-code {
     display: flex;

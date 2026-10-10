@@ -64,6 +64,18 @@ const ko = {
   pushNudgeBody: '앱 알림을 켜면 친구 신청과 친선전 결과가 오는 대로 알려 드려요.',
   pushNudgeOn: '알림 켜기',
   pushNudgeLater: '나중에',
+  // T-11-171 친구 초대 이벤트
+  eventTitle: '친구 초대 이벤트',
+  eventBody: (p: { n: number }) =>
+    `친구가 내 초대 링크나 코드로 친구 신청을 하고 첫 선수 커리어를 끝까지 마치면, 두 사람 모두 선수 후보 리롤권 ${p.n}장을 받아요.`,
+  eventStatus: (p: { pending: number; done: number; got: number; max: number }) =>
+    `진행 중 ${p.pending}명 · 완료 ${p.done}명 · 받은 보상 ${p.got}/${p.max}번`,
+  eventMaxed: (p: { max: number }) =>
+    `초대 보상은 ${p.max}번까지 받을 수 있어요. 그 뒤에 초대한 친구도 자기 보상은 받아요.`,
+  invitedBy: (p: { name: string }) => `${p.name} 님의 초대로 참여 중이에요.`,
+  invitedDone: (p: { name: string }) => `${p.name} 님의 초대 보상을 받았어요.`,
+  joinedEvent: (p: { n: number }) =>
+    `친구 초대 이벤트에 참여했어요. 선수 커리어를 끝까지 마치면 리롤권 ${p.n}장을 받아요.`,
 };
 
 export type FriendMsgs = typeof ko;

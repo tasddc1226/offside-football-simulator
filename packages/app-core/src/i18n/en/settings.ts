@@ -6,6 +6,8 @@ export const settings: Translation<SettingsMsgs> = {
   darkTitle: 'Dark mode',
   darkBodyWeb: 'Switch to a dark screen. Saved on this device.',
   darkBodyApp: 'Use a dark screen. Saved on this device.',
+  hapticsTitleApp: 'Vibration',
+  hapticsBodyApp: 'Short vibrations on choices and results. Saved on this device.',
   langTitle: 'Language',
   langBody: 'Changes the language of the game screens and events. Saved on this device.',
   sheetTitle: 'Work mode',

@@ -2,6 +2,11 @@ import type { Translation } from '../core';
 import type { LegendRnMsgs } from '../ko/legendRn';
 
 export const legendRn: Translation<LegendRnMsgs> = {
+  missKicker: '永久欠番の審査',
+  missSeasons: (p: { club: string; seasons: number; need: number }) =>
+    `${p.club}で${p.seasons}シーズンプレーしました。永久欠番には同じクラブで${p.need}シーズン以上が必要です。`,
+  missScore: (p: { club: string; pct: number }) =>
+    `${p.club}での貢献ポイントは永久欠番の基準の${p.pct}%でした。基準を超えると欠番になります。`,
   pending: 'サーバーが永久欠番を審査しています。少ししてから殿堂で確認できます。',
   lineNum: (p) => `${p.number}番`,
   lineNumAfter: 'はこれから、',

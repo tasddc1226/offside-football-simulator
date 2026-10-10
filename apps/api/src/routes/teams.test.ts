@@ -9,7 +9,7 @@ import {
 } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cards, careers, ownerTeams, teamLikes, teamMatches } from '../db/schema.js';
+import { cards, careers, ownerTeams, profiles, teamLikes, teamMatches } from '../db/schema.js';
 import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test/http.js';
@@ -214,6 +214,10 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     expect(p.team.badges.map((x) => x.id)).toContain('debut');
     expect(p.team.badges.some((x) => x.id.startsWith('final-'))).toBe(false); // 아직 진행 중인 시즌
     expect((await profile(a.team.id, a.cookie)).mine).toBe(true);
+    // T-11-167 구단주 닉네임(닉네임 신고 대상). 정하지 않았으면 null.
+    expect(p.team.ownerNickname).toBeNull();
+    await ctx.db.update(profiles).set({ nickname: '홍구단주' }).where(eq(profiles.id, a.profileId));
+    expect((await profile(a.team.id)).team.ownerNickname).toBe('홍구단주');
     expect((await call('GET', `/v1/teams/tem_${crypto.randomUUID()}`)).status).toBe(404);
 
     // 시즌 1이 열리면 프리시즌은 끝난 시즌 — 최종 순위 배지가 붙는다.

@@ -90,6 +90,8 @@
   const friendButton = (s: FriendState): string =>
     ({ none: LF.reqNone, sent: LF.reqSent, received: LF.reqReceived, accepted: LF.reqAccepted })[s];
 
+  // T-11-165 선발 선수 카드 — 그라운드 카드를 누르면 내 팀처럼 확대 카드가 열린다(배포 전 응답엔 없다).
+  const players = $derived(new Map(team?.players?.map((p) => [p.careerId, p]) ?? []));
   const cells = $derived(
     team?.slots.map((s) => ({
       rating: s.rating,
@@ -97,6 +99,7 @@
       season: s.season,
       name: (mine && s.careerId && localNames.get(s.careerId)) || s.name,
       youth: s.careerId === null,
+      player: s.careerId ? players.get(s.careerId) : undefined,
     })) ?? [],
   );
 </script>
@@ -115,6 +118,7 @@
           <h1>{team.name}</h1>
           {#if team.ownerTitle}<span class="tp-title-badge"><TitleBadge title={team.ownerTitle} /></span>{/if}
           <p class="muted fs-sm">{L.profManager}<b class="tp-manager">{team.manager}</b>{mine ? L.profMine : ''}</p>
+          {#if team.ownerNickname}<p class="muted fs-sm" data-team-owner>{L.profOwner}<b>{team.ownerNickname}</b></p>{/if}
           <button class="btn btn-sm tp-owner" data-act="owner-profile" onclick={openOwner}>{LO.open}</button>
         </div></div>
         <div class="tp-rating" aria-label={L.profRatingAria({ n: team.rating })}><small>RATING</small><b>{n(team.rating)}</b></div>
@@ -156,7 +160,10 @@
       {/if}
     </section>
     {#if team.cupHonors?.length}<CupHonors honors={team.cupHonors} />{/if}
-    {#if !mine}<NameReport kind="team" id={team.id} name={team.name} />{/if}
+    {#if !mine}
+      <NameReport kind="team" id={team.id} name={team.name} />
+      {#if team.ownerNickname}<NameReport kind="owner" id={team.id} name={team.ownerNickname} />{/if}
+    {/if}
     </div>
   {/if}
 </LoadState>

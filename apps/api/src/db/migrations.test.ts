@@ -40,6 +40,23 @@ function firstProfilesCreateStatement(): string {
  * 5개뿐이다. 컬럼 목록은 schema.ts와 같다(snake_case).
  */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
+  owner_title_awards: [
+    'profile_id',
+    'title_id',
+    'criteria_version',
+    'evidence',
+    'earned_at',
+    'seen_at',
+  ],
+  owner_title_progress: [
+    'profile_id',
+    'retired',
+    'elite',
+    'ballon',
+    'numbers',
+    'firsts',
+    'updated_at',
+  ],
   cup_entries: [
     'cup_id',
     'team_id',
@@ -86,6 +103,18 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
   ],
   owner_items: ['profile_id', 'item', 'qty', 'updated_at'],
+  owner_item_purchases: ['id', 'profile_id', 'item', 'qty', 'price', 'created_at'],
+  referrals: ['invitee_id', 'inviter_id', 'claimed_at', 'done_at', 'career_id', 'inviter_rewarded'],
+  iap_purchases: [
+    'store',
+    'transaction_id',
+    'profile_id',
+    'product_id',
+    'item',
+    'qty',
+    'test',
+    'created_at',
+  ],
   cards: [
     'career_id',
     'owner_id',
@@ -102,6 +131,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'transfers',
     'released_at',
     'released_value',
+    'bonus_value',
     'created_at',
     'updated_at',
   ],

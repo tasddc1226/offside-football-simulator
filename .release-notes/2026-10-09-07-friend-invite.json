@@ -1,0 +1,23 @@
+{
+  "id": "t-11-171-friend-invite",
+  "title": "친구 초대 이벤트",
+  "items": [
+    "친구가 내 초대 링크나 친구 코드로 친구 신청을 하고 첫 선수 커리어를 끝까지 마치면, 두 사람 모두 선수 후보 리롤권 2장을 받아요.",
+    "친구 화면에서 초대 현황(진행 중 · 완료 · 받은 보상)을 볼 수 있어요. 초대한 사람의 보상은 10번까지예요."
+  ],
+  "en": {
+    "title": "Invite friends event",
+    "items": [
+      "When a friend sends you a request with your invite link or friend code and finishes their first player career, you both get 2 candidate rerolls.",
+      "See your invites (in progress, finished, rewards) on the Friends screen. You can earn the inviter reward up to 10 times."
+    ]
+  },
+  "ja": {
+    "title": "フレンド招待イベント",
+    "items": [
+      "フレンドが招待リンクやフレンドコードでフレンド申請し、最初の選手キャリアを最後まで終えると、二人とも候補リロール券を2枚もらえます。",
+      "フレンド画面で招待状況（進行中 · 完了 · 報酬）を確認できます。招待した側の報酬は10回までです。"
+    ]
+  },
+  "availability": "web-app"
+}

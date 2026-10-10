@@ -72,6 +72,9 @@ export const cup: Translation<CupMsgs> = {
   secRewards: '報酬',
   secGroups: 'グループステージ',
   secBracket: 'トーナメント',
+  secEntrants: '申し込んだチーム',
+  entrantsNote: '申し込み順です。受付が終わると組分け抽選をします。',
+  mineTeam: '自分のチーム',
   rulePlay: (p) =>
     `先発に自分の選手が${p.min}人以上いる今シーズンのチームが申し込めます。定員は${p.cap}チームで、先着順です。`,
   ruleGroup:
@@ -128,4 +131,28 @@ export const cup: Translation<CupMsgs> = {
     `リロールチケット1枚を使って候補3人を引き直しますか？今の候補と広告で確認した潜在能力の範囲は消え、チケットは${p.n}枚残ります。`,
   rerollDone: (p) => `候補を引き直しました。リロールチケットは残り${p.n}枚です。`,
   rerollFail: 'リロールチケットを使えませんでした。',
+  shopTitle: 'リロールチケットショップ',
+  shopSub: 'クラブ資金で選手候補のリロールチケットを買います',
+  shopSubHave: (p) => `所持リロールチケット${p.n}枚 · クラブ資金で追加購入できます`,
+  createShopHint:
+    'リロールチケットがありません。クラブ資金でリロールチケットを買うと候補を引き直せます。',
+  createShopGo: 'リロールチケットショップへ',
+  shopOpen: '開く',
+  shopClose: '閉じる',
+  shopHave: (p) => `所持リロールチケット${p.n}枚`,
+  shopFunds: (p) => `クラブ資金 ${p.funds}`,
+  shopPrice: (p) => `次の1枚 ${p.price}`,
+  shopToday: (p) => `今日 ${p.bought}/${p.cap}枚`,
+  shopNote:
+    '同じ日に買うほど高くなります。毎日0時(韓国時間)に価格と回数が元に戻ります。リロールチケットは新しい選手を作るときの候補選択画面で使います。',
+  shopBuy: (p) => `${p.price}で買う`,
+  shopBusy: '購入中…',
+  shopSoldOut: '今日買える分はすべて買いました。明日0時(韓国時間)から再び買えます。',
+  shopClosed: '現在リロールチケットは販売していません。',
+  shopShort: 'クラブの資金が足りません。',
+  shopConfirm: (p) =>
+    `リロールチケット1枚を${p.price}で買いますか？購入後のクラブ資金は${p.balance}で、取り消せません。`,
+  shopDone: (p) => `リロールチケットを買いました。現在${p.n}枚あります。`,
+  shopFail: 'リロールチケットを買えませんでした。',
+  shopLoadFail: 'ショップを読み込めませんでした。',
 };

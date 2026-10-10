@@ -4,6 +4,8 @@ import {
   CareerIdParamSchema,
   CreateListingBodySchema,
   CreateListingResponseSchema,
+  FundsHistoryQuerySchema,
+  FundsHistoryResponseSchema,
   ListingIdSchema,
   MARKET_CHART_DAYS,
   MarketCardTradesResponseSchema,
@@ -20,6 +22,7 @@ import { marketFee, marketRatio, ovrBand, priceBand } from '@offside/contracts/m
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { newId } from '../db/ids.js';
+import { fundsHistory } from '../db/repos/fundsHistory.js';
 import {
   buyListing,
   cancelListing,
@@ -36,9 +39,11 @@ import {
   marketRules,
   myOpenListings,
   myTrades,
+  TRADES,
   recentSales,
   releaseCards,
 } from '../db/repos/market.js';
+import { myFundsSpends } from '../db/repos/itemShop.js';
 import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
 import { checkCupListing } from './cup.js';
 import { edgeCached } from '../edgeCache.js';
@@ -49,7 +54,16 @@ import { idempotency } from '../middleware/idempotency.js';
 import { kstDay, kstDays } from '../time.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { kstTodayStart, requireOwner } from './ownerTeam.js';
-import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
+import {
+  conflictError,
+  fundsShort,
+  isFundsCheck,
+  NO_STORE,
+  notFoundError,
+  nowIso,
+  ok,
+  readBody,
+} from './shared.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 거래는 지금 팀 시즌 카드끼리만 한다(프리시즌이면 프리시즌 카드).
 // 방출·시장은 구글 연결된 구단주만(requireOwner) — 익명 프로필에는 자금이 생기지 않는다.
@@ -69,7 +83,6 @@ function seasonOrThrow(now: string): number {
 }
 
 const listingGone = () => conflictError('이미 팔렸거나 내린 선수예요.', 'LISTING_GONE');
-const fundsShort = () => conflictError('구단 자금이 모자라요.', 'FUNDS_SHORT');
 const listingIdOf = (c: Context<AppEnv>) =>
   parseWithAppError(ListingIdSchema, c.req.param('listingId'));
 
@@ -148,16 +161,32 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     return ok(c, MarketFundsResponseSchema, await marketFunds(getDb(c), me.id), 200, NO_STORE);
   });
 
+  // 구단 자금 내역(구단주 화면 → 구단 자금): 출처별 합과 최근 순 내역(페이지).
+  app.get('/v1/market/funds/history', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const q = parseWithAppError(FundsHistoryQuerySchema, {
+      page: c.req.query('page') || undefined,
+    });
+    return ok(
+      c,
+      FundsHistoryResponseSchema,
+      await fundsHistory(getDb(c), me.id, q.page),
+      200,
+      NO_STORE,
+    );
+  });
+
   // 내 자금 · 구단 가치 · 열린 등록 · 최근 거래. 이적시장 화면을 열 때 한 번 부른다(웹 메모).
   app.get('/v1/market/me', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
     const now = nowIso();
-    const [funds, bought, listings, trades, rules] = await Promise.all([
+    const [funds, bought, listings, trades, spends, rules] = await Promise.all([
       marketFunds(db, me.id),
       countBuysSince(db, me.id, kstTodayStart(now)),
       myOpenListings(db, me.id),
       myTrades(db, me.id),
+      myFundsSpends(db, me.id, TRADES),
       marketRules(db),
     ]);
     return ok(
@@ -168,6 +197,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         ...funds,
         listings,
         trades,
+        spends,
         buysLeft: Math.max(0, rules.dailyBuys - bought),
         rules,
       },
@@ -270,7 +300,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       });
     } catch (e) {
       // 같은 구단주가 동시에 두 선수를 사서 잔액이 모자라게 되면 CHECK 위반으로 batch 전체가 되돌아간다.
-      if (String(e).includes('CHECK constraint failed')) throw fundsShort();
+      if (isFundsCheck(e)) throw fundsShort();
       throw e;
     }
     if (!result.won) throw listingGone();

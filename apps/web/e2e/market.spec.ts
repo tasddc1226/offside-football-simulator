@@ -39,6 +39,7 @@ const me = (balance: number) =>
     clubValue: balance + 300_000,
     listings: [],
     trades: [],
+    spends: [],
     buysLeft: 10,
     rules: RULES,
   });

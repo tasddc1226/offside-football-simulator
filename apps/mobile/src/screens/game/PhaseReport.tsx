@@ -132,15 +132,20 @@ export function PhaseReport({ r }: { r: Report }) {
           <Txt v="eyebrow" style={{ marginBottom: 6 }}>
             {L.cups}
           </Txt>
-          {r.comps.map((x, i) =>
-            x.good ? (
-              <Hl key={i}>{x.t}</Hl>
-            ) : (
-              <Txt key={i} tone="muted">
-                {x.t}
-              </Txt>
-            ),
-          )}
+          {r.comps.map((x, i) => (
+            <View key={i}>
+              {x.good ? <Hl>{x.t}</Hl> : <Txt tone="muted">{x.t}</Txt>}
+              {(x.games ?? []).map((m, j) => {
+                const line = (
+                  <Txt v="sm" style={{ paddingLeft: 10 }}>
+                    {`${m.line} `}
+                    <Txt v="sm" tone="muted">{`· ${m.detail}`}</Txt>
+                  </Txt>
+                );
+                return m.hl ? <Hl key={j}>{line}</Hl> : <View key={j}>{line}</View>;
+              })}
+            </View>
+          ))}
         </Later>
       ) : null}
       {r.nat.map((x, i) => (

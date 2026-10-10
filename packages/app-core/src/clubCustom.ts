@@ -174,7 +174,9 @@ export function createClubCustom(
   /** 부팅 때(로그인 복귀 포함) 한 번. 세션이 없으면 조용히 로컬 모드로 둔다(프로필을 새로 만들지 않는다). */
   async function syncClubCustom(): Promise<void> {
     clubCustom.status = 'syncing';
-    const r = await apiFetch<Remote>('/v1/club-custom', { method: 'GET' });
+    // 마지막으로 맞춘 시각을 보내면 서버는 바뀐 게 없을 때 clubs를 비워 보낸다 — updatedAt이 같아 adopt가 쓰지 않는다.
+    const since = meta.updatedAt ? `?since=${encodeURIComponent(meta.updatedAt)}` : '';
+    const r = await apiFetch<Remote>(`/v1/club-custom${since}`, { method: 'GET' });
     if (!r.ok) return fail(r.error.code);
     const remote = r.data;
     const localNewer =

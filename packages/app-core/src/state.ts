@@ -65,6 +65,8 @@ export type Screen =
   | 'team'
   /** T-11-080 이적시장(구단주 화면에서 연다). */
   | 'market'
+  /** 구단 자금 내역(구단주 화면의 구단 자금 칸에서 연다). */
+  | 'funds'
   /** T-11-128 구단주 시즌 결산(구단주 화면의 '시즌 결산' 카드로 연다). */
   | 'recap'
   /** T-11-145 오프사이드 컵(구단주 화면의 컵 배너로 연다). */
@@ -140,6 +142,8 @@ export interface LegendView {
   pos: Pos;
   /** T-10-091 세부 포지션 — 있으면 시즌 1 선수라 레전드 등급을 시즌 1 기준으로 가른다(T-11-018). */
   dpos: string | null | undefined;
+  /** 국적 코드. 남긴 국적이 없는 옛 로컬 기록은 undefined — 국기를 그리지 않는다. */
+  nation?: string | undefined;
   age: number;
   lastClub: string;
   /** T-10-066. 옛 기록에는 없다 — 엠블럼은 이름으로 찾는다. */

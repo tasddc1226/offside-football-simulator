@@ -41,3 +41,19 @@ export function titlesOf(honors: readonly { edition: number; stage: CupStage }[]
     .flatMap((h) => (isTitleStage(h.stage) ? [titleIdOf(h.edition, h.stage)] : []))
     .sort(compareTitles);
 }
+
+/** Permanent account titles. Criteria v1 includes preseason and every service season. */
+export const PERMANENT_TITLES = [
+  { id: 'owner-developer', metric: 'retired', target: 10, symbol: 'academy' },
+  { id: 'owner-academy', metric: 'retired', target: 50, symbol: 'academy' },
+  { id: 'owner-star-maker', metric: 'elite', target: 3, symbol: 'star' },
+  { id: 'owner-ballon-maker', metric: 'ballon', target: 1, symbol: 'ball' },
+  { id: 'owner-legend-home', metric: 'numbers', target: 1, symbol: 'shirt' },
+  { id: 'owner-pioneer', metric: 'firsts', target: 1, symbol: 'flag' },
+] as const;
+export type PermanentTitleId = (typeof PERMANENT_TITLES)[number]['id'];
+export type TitleMetric = (typeof PERMANENT_TITLES)[number]['metric'];
+export const TITLE_CRITERIA_VERSION = 1;
+export const permanentTitleOf = (id: string | null | undefined) =>
+  PERMANENT_TITLES.find((t) => t.id === id);
+export const isOwnerTitle = (id: string): boolean => !!parseTitle(id) || !!permanentTitleOf(id);

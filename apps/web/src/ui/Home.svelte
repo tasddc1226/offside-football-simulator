@@ -69,6 +69,9 @@
       </div>
     </section>
   {/if}
+  <!-- 시즌 진행 게이지: 유저들이 끝까지 뛴 커리어로 시즌이 차고, 90%면 마감 카운트다운. -->
+  <!-- 시즌 진행 게이지는 첫 화면 번들 밖(지연 청크). -->
+  {#await import('./SeasonGauge.svelte') then { default: SeasonGauge }}<SeasonGauge />{/await}
   <!-- T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서(신청은 대회 화면). 트로피 그림까지 끌고 와서 첫 화면 번들 밖 지연 청크로. -->
   {#await import('./cup/CupBanner.svelte') then { default: CupBanner }}<CupBanner onopen={() => go('cup')} />{/await}
   <HomeLive />
@@ -77,6 +80,8 @@
     <button class="tile tile-link tile-wide" data-act="home-market" onclick={() => go('market')}>
       <span class="eyebrow">Transfer market</span><b>{L.marketTitle}</b><span class="muted fs-sm">{L.marketSub}</span>
     </button>
+    <!-- T-11-175 친구 초대 이벤트는 구단주 → 경기 → 친구까지 들어가야 보여서 홈에서 바로 친구 화면(이벤트 카드가 맨 위)으로 간다. 첫 화면 번들 밖 지연 청크. -->
+    {#await import('./HomeInvite.svelte') then { default: HomeInvite }}<HomeInvite />{/await}
     <HomeFirsts />
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
       <span class="eyebrow">Events</span><b>{L.dexTitle}</b><span class="muted fs-sm">{L.dexSubWeb}</span>

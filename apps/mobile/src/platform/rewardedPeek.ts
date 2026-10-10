@@ -35,3 +35,19 @@ export async function openPeek(s: GameState) {
     potPeek.busy = false;
   }
 }
+
+/** T-11-153 광고 대신 구단 자금으로 '이번 시즌 평가 보기'. pay는 useClubReward('peek').pay. */
+export async function openPeekWithClub(
+  s: GameState,
+  pay: (grant: () => void) => Promise<string | null>,
+) {
+  if (potPeek.busy) return;
+  potPeek.busy = true;
+  potPeek.message = '';
+  try {
+    const message = await pay(() => open(s));
+    if (message !== null) potPeek.message = message;
+  } finally {
+    potPeek.busy = false;
+  }
+}

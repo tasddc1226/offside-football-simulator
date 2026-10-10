@@ -5,6 +5,7 @@ import type {
   AdminChatReport,
   AdminChatReportList,
   AdminChatReportResolve,
+  ChatBlockListResponse,
   ChatBlockResponse,
   ChatMuteInput,
   ChatTicketResponse,
@@ -12,6 +13,7 @@ import type {
 } from '@offside/contracts';
 import {
   CHAT_BODY_MAX,
+  CHAT_HISTORY,
   type CHAT_MUTE_DAYS,
   CHAT_SOCKET_PATH,
   type ChatClientEvent,
@@ -22,7 +24,7 @@ import {
 import { LIVE_PING, LIVE_PING_SEC } from '@offside/contracts/polling';
 import { kstParts } from '../boardText.js';
 import { chatRejectText } from '../i18n/ko/chatReject.js';
-import { apiBaseUrl, apiFetch, withProfile } from './client.js';
+import { apiBaseUrl, apiFetch, cachedGet, withProfile } from './client.js';
 
 export type { AdminChatReport, ChatMessage, ChatRejectCode, ChatTicketResponse };
 
@@ -44,6 +46,9 @@ export const blockChatAuthor = (id: string) =>
   withProfile(() =>
     apiFetch<ChatBlockResponse>(`/v1/chat/messages/${id}/block`, { method: 'POST' }),
   );
+/** T-11-167 내가 차단한 사람 — 채팅의 차단 목록을 열 때만 부른다. 푸는 건 게시판과 같은 unblock(boards.ts)이다. */
+export const fetchChatBlocks = () =>
+  withProfile(() => cachedGet<ChatBlockListResponse>('/v1/chat/blocks', 60_000));
 export const adminHideChat = (id: string) =>
   apiFetch<undefined>(`/v1/admin/chat/messages/${id}/hide`, { method: 'POST', keepCache: true });
 export const adminMuteChat = (id: string, input: ChatMuteInput) =>
@@ -119,6 +124,10 @@ export type ChatView = {
   write: boolean;
   /** 입장권 응답 — 내 작성자 키·닉네임·운영자 여부·못 쓰는 이유. 받지 못했으면 null. */
   me: ChatTicketResponse | null;
+  /** T-11-180 위로 올리면 더 부를 이전 줄이 있다. */
+  more: boolean;
+  /** T-11-180 이전 줄을 부르는 중. */
+  loadingOlder: boolean;
 };
 export const EMPTY_CHAT: ChatView = {
   status: 'connecting',
@@ -126,9 +135,11 @@ export const EMPTY_CHAT: ChatView = {
   online: 0,
   write: false,
   me: null,
+  more: false,
+  loadingOlder: false,
 };
-/** 화면에 들고 있는 최대 줄 수(오래된 줄부터 버린다). */
-const KEEP = 200;
+/** 화면에 들고 있는 최대 줄 수(오래된 줄부터 버린다). 이전 줄은 이만큼 찼으면 더 부르지 않는다. */
+const KEEP = 300;
 
 /** 서버 이벤트 하나를 반영한 새 상태. skip이 참인 줄(차단한 작성자·내가 신고한 줄)은 넣지 않는다. */
 export function applyChat(
@@ -137,14 +148,28 @@ export function applyChat(
   skip: (m: ChatMessage) => boolean,
 ): ChatView {
   switch (e.t) {
-    case 'hello':
+    case 'hello': {
+      // T-11-180 다시 붙으면 최근 줄은 새로 받고, 위로 올려 불러 둔 그 이전 줄은 남긴다(겹치는 줄은 id로 뺀다).
+      const first = e.messages[0]?.at ?? Infinity;
+      const fresh = new Set(e.messages.map((m) => m.id));
+      const kept = view.messages.filter((m) => m.at <= first && !fresh.has(m.id));
       return {
         ...view,
         status: 'open',
-        messages: e.messages.filter((m) => !skip(m)),
+        messages: [...kept, ...e.messages.filter((m) => !skip(m))].slice(-KEEP),
         online: e.online,
         write: e.write,
+        more: kept.length ? view.more : (e.more ?? e.messages.length >= CHAT_HISTORY),
+        loadingOlder: false,
       };
+    }
+    case 'older': {
+      const have = new Set(view.messages.map((m) => m.id));
+      const add = e.messages.filter((m) => !skip(m) && !have.has(m.id));
+      // 한 페이지가 통째로 빠지면(차단한 작성자뿐) 맨 위 줄이 그대로라 같은 페이지를 다시 부르게 되니 멈춘다.
+      const more = e.more && add.length > 0;
+      return { ...view, messages: [...add, ...view.messages], more, loadingOlder: false };
+    }
     case 'msg':
       return skip(e.m) ? view : { ...view, messages: [...view.messages, e.m].slice(-KEEP) };
     case 'online':
@@ -172,8 +197,12 @@ const RETRY_MAX_MS = 60_000;
 export type ChatSession = {
   /** 한 줄 보낸다. 소켓이 열려 있지 않으면 false. */
   send(body: string): boolean;
+  /** T-11-180 맨 위 줄보다 이전 줄을 부른다. 더 없거나 부르는 중이거나 KEEP만큼 찼으면 부르지 않는다. */
+  older(): void;
   /** 차단한 작성자의 줄을 지금 화면에서 빼고, 앞으로 오는 줄도 뺀다. */
   block(author: string): void;
+  /** 차단을 푼 작성자의 줄을 앞으로 다시 받는다(이미 뺀 줄은 다시 붙을 때 돌아온다). */
+  unblock(author: string): void;
   /** 내가 신고한 줄을 화면에서 뺀다(다시 붙어도 빠진다). */
   drop(id: string): void;
   close(): void;
@@ -254,9 +283,19 @@ export function openChat(
       pending = body;
       return true;
     },
+    older() {
+      const top = view.messages[0];
+      if (!ws || view.status !== 'open' || !view.more || view.loadingOlder || !top) return;
+      if (view.messages.length >= KEEP) return;
+      ws.send(JSON.stringify({ t: 'older', before: top.id } satisfies ChatClientEvent));
+      set({ ...view, loadingOlder: true });
+    },
     block(author) {
       blocked = new Set([...blocked, author]);
       refilter();
+    },
+    unblock(author) {
+      blocked = new Set([...blocked].filter((a) => a !== author));
     },
     drop(id) {
       dropped.add(id);

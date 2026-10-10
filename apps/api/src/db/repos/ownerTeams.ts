@@ -130,6 +130,9 @@ type LineupRow = {
   /** T-11-105 이 팀 구단주가 직접 키운 선수인지(SQL 비교라 0/1일 수 있다). */
   raised?: boolean | number | null;
   serviceSeason?: number | null;
+  /** T-11-180 키·몸무게(옛 커리어는 NULL). */
+  height?: number | null;
+  weight?: number | null;
 };
 export const toLineupCareer = (
   r: LineupRow,
@@ -158,7 +161,7 @@ export function teamPlayerCard(
   r: LineupRow & { cardAttrsJson: string | null; legendScore: number | null },
   profile: PeakProfile | null = peakOf(r.peakProfile),
   career = toLineupCareer(r, profile),
-): Omit<TeamPlayer, 'cardValue' | 'raised' | 'type' | 'foot' | 'listing'> {
+): Omit<TeamPlayer, 'cardValue' | 'raised' | 'foot' | 'listing'> {
   const estimated = profile ? null : estimatedAttrsOf(r.cardAttrsJson);
   return {
     careerId: r.id,
@@ -172,9 +175,15 @@ export function teamPlayerCard(
     number: career.number,
     publicName: career.publicName,
     legendScore: r.legendScore,
+    type: career.type,
     season: career.season,
+    ...bodyOf(r),
   };
 }
+
+/** T-11-180 카드에 싣는 키·몸무게 — 둘 다 있을 때만(체격 기능 전 커리어는 없다). */
+export const bodyOf = (r: { height?: number | null; weight?: number | null }) =>
+  r.height && r.weight ? { height: r.height, weight: r.weight } : {};
 
 /** 내 팀들(시즌 순). 시즌마다 한 팀이라 몇 개 되지 않는다. */
 export function listMyTeams(db: Db, profileId: string) {
@@ -207,6 +216,8 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       peak: cards.peak,
       peakProfile: cards.peakProfile,
       cardAttrsJson: careers.cardAttrsJson,
+      height: careers.height,
+      weight: careers.weight,
       number: cards.number,
       publicName: careers.publicName,
       type: careers.type,
@@ -286,6 +297,10 @@ export async function careersByIds(db: Db, ids: string[]) {
       dpos: cards.dpos,
       peak: cards.peak,
       peakProfile: cards.peakProfile,
+      cardAttrsJson: careers.cardAttrsJson,
+      height: careers.height,
+      weight: careers.weight,
+      legendScore: cards.legendScore,
       number: cards.number,
       publicName: careers.publicName,
       type: careers.type,
@@ -326,7 +341,7 @@ export function eligibleMap(
 /** 팀 한 개(없으면 빈 배열). 구글 연결이 끊겼거나 삭제된 구단주의 팀은 없는 것으로 본다. batch에 넣을 수 있게 쿼리로 돌려준다. */
 export const liveTeam = (db: Db, teamId: string) =>
   db
-    .select({ team: ownerTeams, nickname: profiles.nickname, title: profiles.title })
+    .select({ team: ownerTeams, ownerNickname: profiles.nickname, title: profiles.title })
     .from(ownerTeams)
     .innerJoin(profiles, eq(profiles.id, ownerTeams.profileId))
     .where(and(eq(ownerTeams.id, teamId), accountLinkedSql(), isNull(profiles.deletedAt)));

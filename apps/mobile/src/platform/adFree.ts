@@ -1,27 +1,24 @@
 // T-11-069 광고 제거(한 번 사면 평생인 비소모성 인앱 상품, ₩3,300). 서버 없이 스토어 구매 기록으로만 판단한다.
 // 같은 스토어 계정이면 기기를 바꿔도 '구매 복원'으로 되살아난다. 구매 여부는 이 기기에도 남겨 시작하자마자 광고 칸을 끈다.
 // 환불로 스토어 기록이 사라져도 자동으로 되돌리지 않는다(오프라인·로그아웃 상태를 환불로 잘못 읽지 않게).
-import { Platform } from 'react-native';
 import { proxy } from 'valtio';
 import {
   ErrorCode,
   fetchProducts,
   finishTransaction,
   getAvailablePurchases,
-  initConnection,
-  purchaseErrorListener,
-  purchaseUpdatedListener,
   requestPurchase,
   restorePurchases,
   type Purchase,
 } from 'expo-iap';
 import { kv } from './setup';
+import { connectStore, onStoreError, onStorePurchase, STORE_SUPPORTED } from './store';
 import { adText as L } from '@offside/app-core/i18n/ko/ad';
 
 /** App Store Connect·Play Console에 같은 ID로 만든 비소모성 상품. */
 export const REMOVE_ADS = 'com.offsidelab.app.remove_ads';
 const OWNED = 'offside_ad_free';
-export const SUPPORTED = Platform.OS === 'ios' || Platform.OS === 'android';
+export const SUPPORTED = STORE_SUPPORTED;
 
 export const adFree = proxy({
   owned: kv.getBoolean(OWNED) ?? false,
@@ -54,28 +51,17 @@ async function onPurchase(p: Purchase) {
   await finishTransaction({ purchase: p, isConsumable: false }).catch(() => {});
 }
 
-let connected: Promise<boolean> | undefined;
-/** 스토어 연결은 앱 실행마다 한 번. 실패하면 다음 호출 때 다시 시도한다. */
-function connect() {
-  connected ??= initConnection()
-    .then(() => {
-      purchaseUpdatedListener((p) => void onPurchase(p));
-      purchaseErrorListener((e) => {
-        adFree.busy = false;
-        adFree.message = e.code === ErrorCode.UserCancelled ? '' : L.payFail;
-      });
-      return true;
-    })
-    .catch(() => {
-      connected = undefined;
-      return false;
-    });
-  return connected;
-}
+onStorePurchase((p) => void onPurchase(p));
+// 다른 상품(소모성)을 사다 난 오류는 그쪽이 처리한다 — 광고 제거 구매 중일 때만 본다.
+onStoreError((e) => {
+  if (!adFree.busy) return;
+  adFree.busy = false;
+  adFree.message = e.code === ErrorCode.UserCancelled ? '' : L.payFail;
+});
 
 /** 앱 시작 때: 가격을 받아 두고, 이 스토어 계정에 구매 기록이 있으면 광고를 끈다. 창은 띄우지 않는다. */
 export async function syncAdFree() {
-  if (!SUPPORTED || !(await connect())) return;
+  if (!SUPPORTED || !(await connectStore())) return;
   try {
     const [products, purchases] = await Promise.all([
       fetchProducts({ skus: [REMOVE_ADS], type: 'in-app' }),
@@ -93,7 +79,7 @@ export async function buyAdFree() {
   if (!SUPPORTED || adFree.busy || adFree.owned) return;
   adFree.busy = true;
   adFree.message = '';
-  if (!(await connect())) {
+  if (!(await connectStore())) {
     adFree.busy = false;
     adFree.message = L.storeFail;
     return;
@@ -113,7 +99,7 @@ export async function restoreAdFree() {
   adFree.busy = true;
   adFree.message = '';
   try {
-    if (!(await connect())) throw new Error('connect');
+    if (!(await connectStore())) throw new Error('connect');
     // 기기에 남은 구매 기록부터 본다. 없을 때만 스토어와 다시 맞추는데, 로그인 창을 닫거나
     // 계정이 없으면 끝나지 않을 수 있어 30초에서 끊는다.
     let found = owns(await getAvailablePurchases());

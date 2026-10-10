@@ -2,15 +2,15 @@
 import type { CareerPos } from '@offside/contracts';
 import { fmtValue, playerName } from './format.js';
 import type { MarketCard, MarketRules, MarketSale, MarketTrade } from './api/market.js';
+import type { FundsItem } from '@offside/contracts';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import { marketFee, priceBand, releasePayout } from '@offside/contracts/market-value';
 import { POS_GROUPS, detailPosOf } from '@offside/contracts/positions';
+import { typeName } from '@offside/game/data';
 import { marketText as L } from './i18n/ko/market.js';
 import { intlLocale } from './i18n/core.js';
-import { appFormatText } from './i18n/ko/appFormat.js';
 
-/** 구단 자금 표기(0이면 '0원' — fmtValue는 0을 '-'로 쓴다). */
-export const fundsText = (man: number) => (man > 0 ? fmtValue(man) : appFormatText.zeroWon);
+export { fundsText } from './funds.js';
 
 /** 탭 셋 + '자금 만들기'(방출) 화면. 방출은 탭이 아니라 자금 옆 버튼으로 연다. */
 export type MarketView = 'market' | 'sell' | 'trades' | 'release';
@@ -26,6 +26,9 @@ export const MARKET_SORT_LABEL = {
   },
   get price() {
     return L.sortPrice;
+  },
+  get ovr() {
+    return L.sortOvr;
   },
 };
 export const MARKET_POS_FILTERS: readonly (CareerPos | undefined)[] = [undefined, ...POS_GROUPS];
@@ -134,9 +137,21 @@ export const TRADE_LABEL: Record<MarketTrade['kind'], string> = {
     return L.tradeReleased;
   },
 };
-/** 거래 금액 표기. 들어온 돈은 +, 나간 돈은 −. */
-export const tradeAmount = (t: MarketTrade) =>
-  `${t.kind === 'bought' ? '−' : '+'}${fmtValue(t.amount)}`;
+/** T-11-153 구단 자금으로 산 것의 이름. */
+export const SPEND_LABEL: Record<FundsItem, string> = {
+  get reroll() {
+    return L.spendReroll;
+  },
+  get 'reward:candidates'() {
+    return L.spendCandidates;
+  },
+  get 'reward:peek'() {
+    return L.spendPeek;
+  },
+  get 'reward:boost'() {
+    return L.spendBoost;
+  },
+};
 
 /** 방출 확인 문구. 되돌릴 수 없다는 것을 꼭 보여 준다. */
 export const releaseConfirmText = (count: number, amount: number) =>
@@ -167,6 +182,17 @@ export const MARKET_TOAST = {
   released: (n: number) => L.toastReleased({ n }),
 };
 
+/** 구단주 로그인이 필요해서 실패했는가(세션 없음 · 구글/애플 연결 전). 이적시장·내 팀이 오류 대신 로그인을 권한다. */
+export const needsOwnerLogin = (e: { code: string; reason?: string }) =>
+  e.code === 'PROFILE_REQUIRED' || e.reason === 'GOOGLE_LOGIN_REQUIRED';
+
 /** 시장 줄 아래 한 줄(레전드 점수 · 이적 횟수). */
-export const cardMeta = (c: Pick<MarketCard, 'legendScore' | 'transfers'>) =>
-  L.cardMeta({ score: c.legendScore.toLocaleString(intlLocale()), transfers: c.transfers });
+export function cardMeta(c: Pick<MarketCard, 'pos' | 'type' | 'legendScore' | 'transfers'>) {
+  const meta = L.cardMeta({
+    score: c.legendScore.toLocaleString(intlLocale()),
+    transfers: c.transfers,
+  });
+  // T-11-164 유형(스피드스터·윙어 등)을 앞에 붙인다 — 카드 상세(PlayerCard)의 유형 띠와 같은 이름.
+  const style = typeName(c.pos, c.type);
+  return style ? `${style} · ${meta}` : meta;
+}

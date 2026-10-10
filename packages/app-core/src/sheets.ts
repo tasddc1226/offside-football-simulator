@@ -14,7 +14,7 @@ export type SheetButton = { label: string; cls?: string; fn: () => void };
 
 export type StoryTag = { name: string; stage: number; total: number };
 type StoryNote = NonNullable<ResolveResult['story']>;
-type NatGameView = { line: string; hl: boolean; detail: string };
+export type NatGameView = { line: string; hl: boolean; detail: string };
 export type NatView = { name: string; comp: string; called: boolean; games: NatGameView[] };
 export type TourView = { name: string; stage: string; note: string; lines: string[] };
 export type TickerRow = {
@@ -68,7 +68,8 @@ export type PhaseReport = {
   games: TickerRow[];
   rank: { before: number | null; after: number | null };
   role: string;
-  comps: { t: string; good: boolean }[];
+  /** games: T-11-186 이번 구간 그 대회 경기별 줄(옛 리포트·시즌 기록 복원에는 없다). */
+  comps: { t: string; good: boolean; games?: NatGameView[] }[];
   nat: NatView[];
   chips: Chip[];
   titles: TitleView[];

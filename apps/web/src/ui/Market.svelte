@@ -1,3 +1,13 @@
+<script module lang="ts">
+  // T-11-158 '구단 자금 내역 보기'로 나갔다가 뒤로 돌아오면 '내 거래' 탭을 다시 연다(한 번만 읽는다).
+  let backToTrades = false;
+  function takeBackToTrades() {
+    const back = backToTrades;
+    backToTrades = false;
+    return back;
+  }
+</script>
+
 <script lang="ts">
   import { intlLocale } from '@offside/contracts/i18n';
   import { tn } from '@offside/game/i18n/names';
@@ -28,7 +38,6 @@
     MARKET_TICKER_MS,
     MARKET_TOAST,
     marketTabs,
-    TRADE_LABEL,
     buyBlock,
     cardMeta,
     fundsText,
@@ -46,8 +55,8 @@
     sellSlider,
     sellable,
     sellQuote,
-    tradeAmount,
     type MarketView,
+    needsOwnerLogin,
   } from '@offside/app-core/market';
   import { agoKo, fmtValue } from '@offside/app-core/format';
   import { localCareerNames } from '@offside/game/hof-store';
@@ -59,20 +68,26 @@
   import MarketChart from './MarketChart.svelte';
   import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
   import { go } from './nav.js';
+  import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import { toast } from './helpers.js';
+  import { startGoogleLogin } from './login.js';
+  import { accountText as A } from '@offside/app-core/i18n/ko/account';
   import { marketText as L } from '@offside/app-core/i18n/ko/market';
 
   const local = localCareerNames();
-  let view = $state<MarketView>('market');
+  let view = $state<MarketView>(takeBackToTrades() ? 'trades' : 'market');
   let error = $state<string | null>(null);
   let busy = $state(false);
 
   // 자금 · 구단 가치 · 내 등록 · 최근 거래(1분 메모). 쓰기가 성공하면 apiFetch가 메모를 비우니 다시 받는다.
   let me = $state<MarketMeResponse | null>(null);
   let meFailed = $state<string | null>(null);
+  // 로그인 전(세션 없음 · 구글 연결 전) — 매물을 누르면 영입 대신 로그인을 권한다.
+  let guest = $state(false);
   async function loadMe() {
     const r = await fetchMarketMe();
     meFailed = r.ok ? null : r.error.message;
+    guest = !r.ok && needsOwnerLogin(r.error);
     if (r.ok) me = r.data;
   }
   void loadMe();
@@ -433,21 +448,8 @@
               <li class="muted">{L.noListed}</li>
             {/each}
           </ul>
-          <h2 class="mk-step">{L.fundsLog}</h2>
-          <ul class="mk-log">
-            {#each me.trades as t (t.id)}
-              <li data-trade={t.kind}>
-                <span class="mk-badge mk-badge-{t.kind}">{TRADE_LABEL[t.kind]}</span>
-                <span class="mk-info">
-                  <span>{marketName(t.card, local)} {tn(POS_LABEL[t.card.pos])} {t.card.peak}</span>
-                  <small>{agoKo(Date.now() - Date.parse(t.at))}{t.kind === 'sold' ? L.feeTaken : ''}</small>
-                </span>
-                <b class:mk-plus={t.kind !== 'bought'}>{tradeAmount(t)}</b>
-              </li>
-            {:else}
-              <li class="muted">{L.noTrades}</li>
-            {/each}
-          </ul>
+          <!-- T-11-158 자금 내역은 구단주 화면의 구단 자금 내역 한 곳에서 본다(방출 · 거래 · 구단 자금 사용 전부). -->
+          <button class="btn btn-sm self-start" data-act="market-funds-history" onclick={() => ((backToTrades = true), go('funds'))}>{F.openAria}</button>
         {/if}
       </section>
     {/if}
@@ -456,8 +458,8 @@
   <BackBar act="owner" fallback={() => go('owner')} />
 </div>
 
-{#if buying && me}
-  {@const block = myListingIds.has(buying.id) ? L.ownListing : buyBlock(buying.price, me.balance, me.buysLeft)}
+{#if buying && (me || guest)}
+  {@const block = !me ? null : myListingIds.has(buying.id) ? L.ownListing : buyBlock(buying.price, me.balance, me.buysLeft)}
   {@const diff = priceDiff(buying.price, buying.card.cardValue)}
   <button class="mk-scrim" aria-label={L.close} onclick={closeSheets}></button>
   <div class="mk-sheet" role="dialog" aria-modal="true" aria-label={L.sheetBuy}>
@@ -472,21 +474,25 @@
       </dl>
     </div>
     <div class="mk-confirm">
-      <h2>{L.buyTitle}</h2>
+      <h2>{me ? L.buyTitle : L.loginTitle}</h2>
       <dl class="mk-lines">
         <div><dt>{L.baseLine}</dt><dd>{fmtValue(buying.card.cardValue)}</dd></div>
         <div class="big"><dt>{L.price}</dt><dd>{fmtValue(buying.price)} <small class="mk-{diff.tone}">{diff.text}</small></dd></div>
-        <div class="rule"></div>
-        <div><dt>{L.fundsNow}</dt><dd>{fundsText(me.balance)}</dd></div>
-        <div class="strong"><dt>{L.fundsAfter}</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : L.notEnough}</dd></div>
+        {#if me}
+          <div class="rule"></div>
+          <div><dt>{L.fundsNow}</dt><dd>{fundsText(me.balance)}</dd></div>
+          <div class="strong"><dt>{L.fundsAfter}</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : L.notEnough}</dd></div>
+        {/if}
       </dl>
       <MarketChart card={buying.card} />
-      <p class="mk-note">{L.buyNote}</p>
+      <p class="mk-note" data-market-login={!me ? '' : undefined}>{me ? L.buyNote : L.loginToBuy}</p>
       {#if block}<p class="mk-err">{block}</p>{/if}
       {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
       <div class="mk-actions">
         <button class="btn" onclick={closeSheets}>{L.close}</button>
-        {#if myListingIds.has(buying.id)}
+        {#if !me}
+          <button class="btn btn-primary" data-act="market-login" onclick={() => startGoogleLogin({ market: true })}>{A.loginGoogle}</button>
+        {:else if myListingIds.has(buying.id)}
           <button class="btn" disabled={busy} onclick={() => run(() => cancelListing(buying!.id), MARKET_TOAST.unlisted)}>{L.unlist}</button>
         {:else}
           <button class="btn btn-accent" data-act="buy" disabled={busy || !!block} onclick={() => run(() => buyListing(buying!.id, buying!.price), MARKET_TOAST.bought)}>
@@ -817,8 +823,7 @@
 
   /* 목록 줄 */
   .mk-rows,
-  .mk-rel-list,
-  .mk-log {
+  .mk-rel-list {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -1172,51 +1177,6 @@
   /* 내 거래 */
   .mk-row-static .icon-btn {
     flex: none;
-  }
-  .mk-log {
-    gap: 0;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    background: var(--surface);
-  }
-  .mk-log li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--line);
-  }
-  .mk-log li:last-child {
-    border-bottom: 0;
-  }
-  .mk-log b {
-    flex: none;
-    font-size: 0.875rem;
-    white-space: nowrap;
-  }
-  .mk-plus {
-    color: var(--good);
-  }
-  .mk-badge {
-    flex: none;
-    min-width: 36px;
-    padding: 3px 6px;
-    border-radius: 6px;
-    text-align: center;
-    font-size: 0.6875rem;
-    font-weight: 700;
-  }
-  .mk-badge-bought {
-    background: color-mix(in srgb, #1f4f8f 14%, var(--surface));
-    color: color-mix(in srgb, #1f4f8f 80%, var(--ink));
-  }
-  .mk-badge-sold {
-    background: color-mix(in srgb, var(--accent) 18%, var(--surface));
-    color: var(--accent-text);
-  }
-  .mk-badge-released {
-    background: color-mix(in srgb, var(--bad) 12%, var(--surface));
-    color: var(--bad);
   }
 
   /* 시트 — 영입(카드 상세 + 확인) · 방출 확인 */

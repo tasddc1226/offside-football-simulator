@@ -8,7 +8,7 @@ import type {
   RetirementSummary,
 } from '@offside/contracts';
 import { HOF_MIN_RETIRE_AGE, WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
-import { cardValue, retireValue } from '@offside/contracts/market-value';
+import { cardValue, releasePayout, retireValue } from '@offside/contracts/market-value';
 import { firstUploadSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
 import { dposFor, type PeakProfile } from '@offside/contracts/positions';
 import {
@@ -20,6 +20,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  notExists,
   sql,
   type AnyColumn,
   type SQL,
@@ -34,6 +35,7 @@ import {
   careers,
   careerSeasons,
   goalsPlusAssists,
+  ownerFunds,
   retiredNumbers,
 } from '../schema.js';
 
@@ -228,6 +230,8 @@ export type PutRetirementInput = {
   profile?: PeakProfile | undefined;
   /** T-11-030 은퇴 때 공개된 실제 잠재력(관찰 전용). 옛 클라이언트는 없다. */
   potReal?: number | undefined;
+  /** T-11-163 은퇴 장려금 비율(밸런스 marketRetireBonusRate). */
+  bonusRate: number;
   now: string;
 };
 
@@ -241,7 +245,10 @@ export const retiredCountKey = (at: Date) => `retired:${kstDay(at.toISOString())
 /** `PUT /v1/careers/:careerId/retirement`의 첫 은퇴. 소유권 확인과 요약 보정(plausibility.ts)은 라우트가 미리
  * 끝낸다. 다시 보낸 은퇴(이름 공개 토글·대표 칭호)는 `updateRetired`로 간다. */
 export async function putRetirement(db: Db, input: PutRetirementInput): Promise<void> {
-  const { careerId, summary, publicName, snapshot, profile, potReal, now } = input;
+  const { careerId, summary, publicName, snapshot, profile, potReal, bonusRate, now } = input;
+  const value = snapshot ? cardValue(snapshot.career, summary.peak) : null;
+  // T-11-163 은퇴 장려금: 기준가가 있는 카드만(스냅샷 없는 옛 기록은 거래도 하지 않는다).
+  const bonus = value === null ? 0 : releasePayout(value, bonusRate);
   await runBatch(db, [
     // 처음 은퇴할 때만 센다 — 같은 커리어의 첫 은퇴가 동시에 두 번 와도 retired_at이 이미 있으면 아무 행도 넣지
     // 않는다. 같은 트랜잭션에서 아래 update보다 먼저 돌아야 retired_at이 비어 있는 것을 본다.
@@ -294,6 +301,41 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
         ...(potReal !== undefined ? { potReal } : {}),
       })
       .where(eq(careers.id, careerId)),
+    // T-11-163 은퇴 장려금. 아래 카드 insert보다 먼저 — 카드가 아직 없을 때(이 커리어의 첫 은퇴)만 한 번 준다.
+    ...(bonus > 0
+      ? [
+          db
+            .insert(ownerFunds)
+            .select(
+              db
+                .select({
+                  profileId: careers.profileId,
+                  balance: sql<number>`${bonus}`.as('balance'),
+                  updatedAt: sql<string>`${now}`.as('updated_at'),
+                })
+                .from(careers)
+                .where(
+                  and(
+                    eq(careers.id, careerId),
+                    isNotNull(careers.peak),
+                    notExists(
+                      db
+                        .select({ x: sql`1` })
+                        .from(cards)
+                        .where(eq(cards.careerId, careerId)),
+                    ),
+                  ),
+                ),
+            )
+            .onConflictDoUpdate({
+              target: ownerFunds.profileId,
+              set: {
+                balance: sql`${ownerFunds.balance} + excluded.balance`,
+                updatedAt: sql`excluded.updated_at`,
+              },
+            }),
+        ]
+      : []),
     // T-11-080 카드 한 장. 위 update가 쓴 값을 복사한다(같은 커리어를 다시 보내도 PK라 한 장뿐).
     db
       .insert(cards)
@@ -310,13 +352,12 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
             peak: sql<number>`${careers.peak}`.as('peak'),
             legendScore: sql<number>`coalesce(${careers.legendScore}, 0)`.as('legend_score'),
             peakProfile: careers.peakProfile,
-            cardValue: sql<
-              number | null
-            >`${snapshot ? cardValue(snapshot.career, summary.peak) : null}`.as('card_value'),
+            cardValue: sql<number | null>`${value}`.as('card_value'),
             retireValue: sql<number>`coalesce(${careers.value}, 0)`.as('retire_value'),
             transfers: sql<number>`0`.as('transfers'),
             releasedAt: sql<string | null>`null`.as('released_at'),
             releasedValue: sql<number | null>`null`.as('released_value'),
+            bonusValue: sql<number | null>`${bonus > 0 ? bonus : null}`.as('bonus_value'),
             createdAt: sql<string>`${now}`.as('created_at'),
             updatedAt: sql<string>`${now}`.as('updated_at'),
           })
@@ -457,20 +498,20 @@ export async function listPublicHof(
       )
     : ranked;
   const order = [desc(by), desc(careers.legendScore), careers.retiredAt] as const;
-  const [rows, [count]] = await Promise.all([
-    db
-      .select(publicColumns)
-      .from(careers)
-      .leftJoin(retiredNumbers, withRetiredNumber)
-      .where(where)
-      .orderBy(...order)
-      .limit(limit)
-      .offset((page - 1) * limit),
-    db
-      .select({ n: sql<number>`count(*)` })
-      .from(careers)
-      .where(where),
-  ]);
+  // Primary-anchored read sessions send later reads to a caught-up replica.
+  // Await the page before count so its bookmark is established first.
+  const rows = await db
+    .select(publicColumns)
+    .from(careers)
+    .leftJoin(retiredNumbers, withRetiredNumber)
+    .where(where)
+    .orderBy(...order)
+    .limit(limit)
+    .offset((page - 1) * limit);
+  const [count] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(q ? careers : sql`${careers} INDEXED BY careers_hof_count_idx`)
+    .where(where);
   const entries = rows.map(toPublicEntry);
   if (q && entries.length) {
     // 찾은 선수(최대 limit명)만 전체 순위에서 몇 위인지 — id·순번만 읽는 창 함수 한 번.

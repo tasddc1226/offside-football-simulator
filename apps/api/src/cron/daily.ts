@@ -1,3 +1,4 @@
+import { sweepAutomation } from '../db/repos/automationEnforcement.js';
 // T-10-070 매일 KST 04:00(UTC 19:00) cron. 정리가 실패해도 백업은 돈다. 결과는 요청 로그처럼
 // JSON 한 줄로 남긴다(middleware/logger.ts와 같은 모양 — Workers Logs에서 job으로 찾는다).
 import type { Bindings } from '../env.js';
@@ -11,6 +12,7 @@ import { setMeta } from '../db/repos/firsts.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
 
 export type DailyResult = {
+  automation: Awaited<ReturnType<typeof sweepAutomation>> | { error: string };
   careerRetention: RetentionResult | { error: string };
   cleanup: CleanupResult | { error: string };
   /** 비정상 기록 점검: 확실한 것은 숨기고 애매한 것은 운영자 검토로 남긴다(repos/anomalies.ts). */
@@ -36,6 +38,8 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
   // 정리 먼저 — 백업에 지울 행을 싣지 않는다.
   const cleanup = await cleanupExpired(env.DB, now).catch(errorOf);
   // 숨기는 쪽이 백업 전에 끝나도록 정리 다음에 돈다. 실패해도 백업은 돈다.
+  const automation =
+    env.AUTOMATION_HIDE_DISABLED === '1' ? null : await sweepAutomation(env.DB, now).catch(errorOf);
   const anomalies = await sweepAnomalies(env.DB, now).catch(errorOf);
   const backup = env.BACKUP
     ? await backupToR2(env.DB, env.BACKUP, env.ENVIRONMENT, now).catch(errorOf)
@@ -51,6 +55,7 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     new Date(now).toISOString(),
   ).catch(errorOf);
   const failed =
+    (automation !== null && 'error' in automation) ||
     'error' in cleanup ||
     'error' in anomalies ||
     (typeof backup === 'object' && 'error' in backup) ||
@@ -63,6 +68,7 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
     job: 'daily',
     cleanup,
     anomalies,
+    automation,
     backup,
     growthArchive,
     careerRetention,
@@ -76,5 +82,5 @@ export async function runDaily(env: Bindings, now: number): Promise<DailyResult>
   );
   // 단계마다 오류를 잡아 나머지는 끝까지 돌리지만, 하나라도 실패했으면 실행을 실패로 남긴다(호출 기록에서 보이게).
   if (failed) throw new Error(`daily job failed: ${log.slice(0, 300)}`);
-  return { cleanup, anomalies, backup, growthArchive, careerRetention, achievements };
+  return { cleanup, anomalies, automation, backup, growthArchive, careerRetention, achievements };
 }

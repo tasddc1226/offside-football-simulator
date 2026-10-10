@@ -3,7 +3,6 @@
   // 커리어는 다음 시즌 시작부터, 새 커리어는 바로 적용된다. 되돌리기는 옛 버전을 다시 활성화한다.
   import { onMount } from 'svelte';
   import {
-    BALANCE_GROUPS,
     BALANCE_KEYS,
     BALANCE_NOTE_MAX,
     BALANCE_SPEC,
@@ -12,10 +11,10 @@
     EVENT_WEIGHT_RANGE,
     resolveBalance,
     sanitizeBalance,
-    type BalanceGroup,
     type BalanceKey,
     type BalanceOverrides,
   } from '@offside/contracts/balance';
+  import { BALANCE_GROUPS, BALANCE_TEXT, type BalanceGroup } from '@offside/contracts/balance-text';
   import * as api from '@offside/app-core/api/admin';
   import type { BalanceVersion } from '@offside/app-core/api/admin';
   import {
@@ -35,7 +34,7 @@
 
   const STATUS = { draft: ['초안', 'warn'], active: ['적용 중', 'good'], archived: ['보관', ''] } as const;
   const GROUPS = Object.entries(BALANCE_GROUPS) as [BalanceGroup, string][];
-  const keysOf = (g: BalanceGroup) => BALANCE_KEYS.filter((k) => BALANCE_SPEC[k].group === g);
+  const keysOf = (g: BalanceGroup) => BALANCE_KEYS.filter((k) => BALANCE_TEXT[k].group === g);
 
   const discardOk = () => !dirty || confirm('저장하지 않은 변경을 버릴까요?');
 
@@ -187,17 +186,18 @@
             <legend>{name}</legend>
             {#each keysOf(g) as k (k)}
               {@const spec = BALANCE_SPEC[k]}
+              {@const text = BALANCE_TEXT[k]}
               {@const val = work.values[k] ?? spec.def}
               <div class="admin-knob" class:changed={val !== activeValues[k]} data-knob={k}>
                 <div class="stack" style="gap:2px;min-width:0">
-                  <label for="knob-{k}"><b>{spec.label}</b></label>
-                  <span class="muted fs-xs">{spec.desc}</span>
+                  <label for="knob-{k}"><b>{text.label}</b></label>
+                  <span class="muted fs-xs">{text.desc}</span>
                   <span class="muted fs-xs">기본 {spec.def} · 적용 중 {activeValues[k]} · 범위 {spec.min}~{spec.max}</span>
                 </div>
                 <div class="row" style="gap:6px;flex-wrap:nowrap">
                   <input id="knob-{k}" type="number" min={spec.min} max={spec.max} step={spec.step} value={val} onchange={(e) => setKnob(k, e.currentTarget.value)} />
                   {#if editable && work.values[k] !== undefined}
-                    <button class="icon-btn" aria-label="{spec.label} 기본값으로" onclick={() => setKnob(k, '')}>기본값</button>
+                    <button class="icon-btn" aria-label="{text.label} 기본값으로" onclick={() => setKnob(k, '')}>기본값</button>
                   {/if}
                 </div>
               </div>

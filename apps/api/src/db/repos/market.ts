@@ -15,7 +15,7 @@ import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 import { eventNotificationStatements } from '../../push/events.js';
-import { peakOf } from './ownerTeams.js';
+import { bodyOf, peakOf } from './ownerTeams.js';
 import { cards, careers, marketDaily, marketListings, ownerFunds } from '../schema.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 설계: docs/tracking/owner-funds-card-market-plan.md 5~7절.
@@ -44,6 +44,9 @@ const cardCols = {
   publicName: careers.publicName,
   legendScore: cards.legendScore,
   peakProfile: cards.peakProfile,
+  type: careers.type,
+  height: careers.height,
+  weight: careers.weight,
   cardValue: cards.cardValue,
   transfers: cards.transfers,
   season: cards.serviceSeason,
@@ -74,6 +77,8 @@ const toListing = (r: ListingRow): MarketListing => ({
     publicName: (r.publicName as string | null) ?? null,
     legendScore: r.legendScore as number,
     attrs: peakOf(r.peakProfile as string | null)?.attrs ?? null,
+    type: (r.type as string | null) ?? null,
+    ...bodyOf(r as { height: number | null; weight: number | null }),
     cardValue: (r.cardValue as number | null) ?? 0,
     transfers: r.transfers as number,
     season: r.season as number,
@@ -101,10 +106,14 @@ export async function listOpenListings(
         q.pos ? eq(cards.pos, q.pos) : undefined,
       ),
     )
+    // T-11-180 OVR 순은 카드 쪽 값이라 인덱스로 받치지 못한다. 한 시즌의 열린 등록(2026-10 운영 약 640건)만 정렬하고,
+    // 첫 페이지는 엣지 캐시를 탄다.
     .orderBy(
       ...(q.sort === 'price'
         ? [asc(marketListings.price), desc(marketListings.createdAt)]
-        : [desc(marketListings.createdAt)]),
+        : q.sort === 'ovr'
+          ? [desc(cards.peak), asc(marketListings.price), desc(marketListings.createdAt)]
+          : [desc(marketListings.createdAt)]),
     )
     .limit(MARKET_PER_PAGE + 1)
     .offset(q.page * MARKET_PER_PAGE);
@@ -239,7 +248,7 @@ export async function myOpenListings(db: Db, sellerId: string): Promise<MarketLi
   return rows.map(toListing);
 }
 
-const TRADES = 30;
+export const TRADES = 30;
 const tradeCard = {
   careerId: cards.careerId,
   pos: cards.pos,

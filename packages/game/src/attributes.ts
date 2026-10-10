@@ -247,15 +247,29 @@ export function syncFace(s: GameState) {
   }
 }
 
-export function spreadAttr(s: GameState, k: AttrKey, v: number) {
+/** 능력치 성장을 세부 능력치에 나누는 몫(spreadAttr) — 포지션 가중치가 큰 세부 능력치일수록 많이 받는다. */
+function spreadShares(s: GameState, k: AttrKey, up: boolean) {
   const F = faceOf(s)[k]!;
   const W = ROLES[mainRole(s)]!;
   const sh: Record<string, number> = {};
   let norm = 0;
   for (const [i, f] of Object.entries(F)) {
-    sh[i] = 0.5 + (W[i] ?? 0) * (v > 0 ? 1.5 : 6);
+    sh[i] = 0.5 + (W[i] ?? 0) * (up ? 1.5 : 6);
     norm += f * sh[i]!;
   }
+  return { F, sh, norm };
+}
+
+/** T-11-183 오를 성장 중 최고치(99)에 닿은 세부 능력치 몫으로 버려지는 비율(0~1). 1이면 이 능력치는 더 오르지 않는다. */
+export function maxedShare(s: GameState, k: AttrKey): number {
+  const { F, sh, norm } = spreadShares(s, k, true);
+  let lost = 0;
+  for (const [i, f] of Object.entries(F)) if ((s.sub[i] ?? 0) >= 99) lost += f * sh[i]!;
+  return norm ? lost / norm : 0;
+}
+
+export function spreadAttr(s: GameState, k: AttrKey, v: number) {
+  const { F, sh, norm } = spreadShares(s, k, v > 0);
   for (const i in F)
     s.sub[i] = clamp(Math.round((s.sub[i]! + (v * sh[i]!) / norm) * 10) / 10, 1, 99);
   syncFace(s);

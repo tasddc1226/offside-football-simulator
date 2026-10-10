@@ -1,0 +1,35 @@
+{
+  "id": "t-11-180-user-asks",
+  "title": "업적 남은 리그 · OVR 정렬 · 채팅 이전 대화",
+  "items": [
+    "전 리그 우승처럼 모으는 업적에 아직 못 모은 리그·상이 보여요.",
+    "이적시장을 OVR 높은 순으로 정렬할 수 있어요.",
+    "채팅방을 위로 올리면 이전 대화를 더 불러와요.",
+    "선수 카드에 키와 몸무게가 보여요.",
+    "내 선수 커리어 화면 아래 버튼이 홈으로 대신 이전으로 돌아가요.",
+    "영구결번을 아깝게 못 받았으면 모자란 이유를 알려 줘요."
+  ],
+  "en": {
+    "title": "Missing leagues, OVR sort, and older chat",
+    "items": [
+      "Collection achievements like winning every league now show which leagues or awards are still missing.",
+      "You can sort the transfer market by OVR, highest first.",
+      "Scroll up in the chat room to load earlier messages.",
+      "Player cards now show height and weight.",
+      "The button under your player's career now takes you back instead of home.",
+      "If you narrowly miss a retired number, you now see what fell short."
+    ]
+  },
+  "ja": {
+    "title": "残りのリーグ・OVR順・過去のチャット",
+    "items": [
+      "全リーグ優勝のような収集実績で、まだ取っていないリーグや賞が見えるようになりました。",
+      "移籍市場をOVRの高い順に並べ替えられます。",
+      "チャットルームを上にスクロールすると過去のメッセージを読み込みます。",
+      "選手カードに身長と体重が表示されます。",
+      "自分の選手のキャリア画面の下のボタンで、ホームではなく前の画面に戻れます。",
+      "永久欠番をあと少しで逃したときは、足りなかった理由を表示します。"
+    ]
+  },
+  "availability": "web-app"
+}

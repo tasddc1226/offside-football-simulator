@@ -1,8 +1,14 @@
+import { sweepAutomation } from './db/repos/automationEnforcement.js';
 import { CHAT_SOCKET_PATH } from '@offside/contracts/chat';
 import { LIVE_SOCKET_PATH } from '@offside/contracts/polling';
 import { app } from './app.js';
 import { runDaily } from './cron/daily.js';
+import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
+import { runSeasonGauge } from './cron/seasonGauge.js';
+import { loadSeasonSchedule } from './seasonSchedule.js';
+import { runInfraHealth } from './cron/infraHealth.js';
 import { createDb } from './db/client.js';
+import { runFirstsRescan } from './db/repos/firsts.js';
 import type { Bindings } from './env.js';
 import { chatSocket } from './chat/socket.js';
 import { liveSocket } from './live/socket.js';
@@ -28,14 +34,24 @@ export default {
   // T-11-082 끝까지 await한다. waitUntil로 넘기면 핸들러가 끝난 뒤 30초만 더 살아서, DB가 커진 09-30부터 백업이 매일
   // 중간에 끊겼다(실행 기록은 success). 핸들러가 기다리면 cron은 15분까지 돈다.
   async scheduled(controller: ScheduledController, env: Bindings) {
-    if (controller.cron === '0 19 * * *') await runDaily(env, controller.scheduledTime);
+    const logged = (job: string) => (e: unknown) =>
+      console.error(JSON.stringify({ level: 'error', job, error: String(e).slice(0, 500) }));
+    // 시즌 일정(게이지가 확정한 마감·다음 시즌)을 먼저 입힌다 — 아래 결산·보존·게이지가 같은 일정을 본다.
+    await loadSeasonSchedule(env.DB, true).catch(logged('season-schedule'));
+    if (controller.cron === '0 19 * * *')
+      await runDaily(env, controller.scheduledTime).finally(() =>
+        runInfraHealth(env, controller.scheduledTime).catch(logged('infra-health')),
+      );
     else {
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
-      const logged = (job: string) => (e: unknown) =>
-        console.error(JSON.stringify({ level: 'error', job, error: String(e).slice(0, 500) }));
       await runNewsPush(env).catch(logged('news-push'));
       await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
       await runPersonalPush(env, controller.scheduledTime).catch(logged('personal-push'));
+      // 시즌 진행 게이지: 30분마다 세어 굳히고, 90%에 닿으면 마감 시각을 확정해 시즌 일정에
+      // 다음 시즌과 함께 적는다. 결산보다 먼저 돈다.
+      await runSeasonGauge(env.DB, new Date(controller.scheduledTime).toISOString())
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'season-gauge', ...r })))
+        .catch(logged('season-gauge'));
       // T-11-128 끝난 시즌 결산을 한 단계씩 굳힌다. 시간이 급한 알림을 먼저 보내고,
       // 실패하면 다음 5분에 같은 단계를 다시 한다.
       await runSeasonClose(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
@@ -53,6 +69,23 @@ export default {
             JSON.stringify({ level: 'error', job: 'cup', error: String(e).slice(0, 500) }),
           ),
         );
+      await runSeasonEventsArchive(env, controller.scheduledTime)
+        .then(
+          (r) =>
+            r && console.log(JSON.stringify({ level: 'info', job: 'season-events-archive', ...r })),
+        )
+        .catch(logged('season-events-archive'));
+      if (env.AUTOMATION_HIDE_DISABLED !== '1')
+        await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
+      await runInfraHealth(env, controller.scheduledTime).catch(logged('infra-health'));
+      // T-11-156 서버 최초 기록 전체 재계산을 몰아서 훑는다 — 공개 목록 조회가 조각을 기다리지 않게. 시간 한도까지
+      // 돌 수 있어 앞 단계를 밀지 않게 맨 끝에 둔다.
+      await runFirstsRescan(createDb(env.DB))
+        .then(
+          (n) =>
+            n && console.log(JSON.stringify({ level: 'info', job: 'firsts-rescan', chunks: n })),
+        )
+        .catch(logged('firsts-rescan'));
     }
   },
 };

@@ -7,7 +7,7 @@ import {
 } from './careers.js';
 import { PUBLIC_NAME_CHARS } from './content-filter.js';
 import { CUP_STAGES } from './cup.js';
-import { TITLE_RE } from './owner-title.js';
+import { isOwnerTitle } from './owner-title.js';
 import {
   ACH_CATEGORIES,
   FORMATION_IDS,
@@ -84,7 +84,7 @@ export const TeamSeasonOptionSchema = z.strictObject({ id: TeamSeasonSchema, nam
 export type TeamSeasonOption = z.infer<typeof TeamSeasonOptionSchema>;
 
 /** T-11-150 구단주 대표 칭호 id('cup-1-champion', owner-title.ts). 칭호가 없으면 null, 배포 전 응답엔 없다. */
-export const OwnerTitleSchema = z.string().regex(TITLE_RE);
+export const OwnerTitleSchema = z.string().refine(isOwnerTitle);
 const titleField = OwnerTitleSchema.nullable().optional();
 
 export const TeamIdSchema = z.string().regex(/^tem_[0-9a-f-]{36}$/, '팀 id 형식이 아닙니다.');
@@ -120,6 +120,9 @@ export const TeamPlayerSchema = z.strictObject({
   foot: z.string().nullable().optional(),
   /** T-11-114 카드 시즌(0 = 프리시즌). 팀 시즌보다 앞이면 와일드카드다. 구버전 응답에는 없다. */
   season: z.number().int().nonnegative().optional(),
+  /** T-11-180 키(cm)·몸무게(kg). 체격을 입력하지 않은 옛 커리어·구버전 응답에는 없다. */
+  height: z.number().int().optional(),
+  weight: z.number().int().optional(),
   /** T-11-080 판매 등록 중이면 그 등록. */
   listing: z.strictObject({ id: z.string(), price: z.number().int() }).nullable().optional(),
 });
@@ -293,6 +296,8 @@ export const ClubAchievementSchema = z.strictObject({
   done: z.boolean(),
   cur: z.number().int().min(0).optional(),
   max: z.number().int().min(1).optional(),
+  /** T-11-180 모음 업적에서 아직 못 모은 이름(리그 · 상 · 대회, 저장값 한국어 — 그릴 때 tn()). */
+  missing: z.array(z.string()).optional(),
   level: z.number().int().min(0).optional(),
   next: z.number().int().nullable().optional(),
   /** 단계 업적 숫자 뒤에 붙는 단위('골'·'경기' …). */
@@ -461,6 +466,13 @@ export const TeamProfileSchema = z.strictObject({
   cupHonors: z.array(CupHonorSchema).optional(),
   /** T-11-150 이 팀 구단주의 대표 칭호. */
   ownerTitle: titleField,
+  /** T-11-167 구단주의 공개 닉네임(업적 랭킹에 보이는 이름, 닉네임 신고 대상). 없으면 null, 배포 전 응답엔 없다. */
+  ownerNickname: z.string().nullable().optional(),
+  /**
+   * T-11-165 선발 선수 카드(그라운드 카드를 누르면 확대해 보여 준다). 구단주만의 값(기준가 · 직접 키움 · 매물)은 싣지 않는다.
+   * 배포 전 응답엔 없다.
+   */
+  players: z.array(TeamPlayerSchema).optional(),
   createdAt: IsoUtcSchema,
 });
 export type TeamProfile = z.infer<typeof TeamProfileSchema>;

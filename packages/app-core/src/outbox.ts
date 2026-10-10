@@ -7,6 +7,7 @@
 import type {
   PutCareerSeasonBody,
   PutRetirementBody,
+  RetiredNumberMiss,
   RetiredNumberResult,
 } from '@offside/contracts';
 import { loadKey, saveKey } from '@offside/game/storage';
@@ -14,6 +15,8 @@ import { OUTBOX_KEY, markAchDirty } from './achDirty.js';
 import { apiAuth, apiBaseUrl, clearApiCache, noteSession } from './api/client.js';
 
 const OUTBOX_CAP = 100;
+/** T-11-182 못 보낸 항목이 남으면 앱이 켜져 있는 동안 이 간격으로 다시 보낸다(마지막 값에서 멈춘다). */
+const RETRY_MS = [30_000, 60_000, 120_000, 300_000] as const;
 
 /**
  * T-10-076 영구결번 심사 결과 이벤트. result가 null이면 자격 없음.
@@ -24,6 +27,8 @@ export type RetiredNumberEvent = {
   result: RetiredNumberResult | null;
   serviceSeason?: number | null;
   title?: string | null;
+  /** T-11-180 결번을 못 받은 이유(기준의 절반 이상일 때만, 옛 응답엔 없다). */
+  miss?: RetiredNumberMiss;
 };
 
 export type OutboxItem =
@@ -40,6 +45,14 @@ export interface OutboxHost {
 let host: OutboxHost = {};
 export function configureOutbox(h: OutboxHost): void {
   host = h;
+}
+
+/* T-11-182 은퇴 기록이 서버에 올라간 뒤 알릴 곳(구단주 화면이 넣을 수 있는 선수 목록을 다시 받는다). */
+const retiredListeners = new Set<() => void>();
+/** 한 회차에 은퇴 기록이 하나라도 올라가면 fn을 한 번 부른다(여러 건이어도 다시 받기는 한 번). 해제 함수를 돌려준다. */
+export function onRetirementSynced(fn: () => void): () => void {
+  retiredListeners.add(fn);
+  return () => void retiredListeners.delete(fn);
 }
 
 const loadOutbox = (): OutboxItem[] => loadKey<OutboxItem[]>(OUTBOX_KEY) ?? [];
@@ -74,6 +87,7 @@ async function announceRetiredNumber(careerId: string, res: Response): Promise<v
   const body = (await res.json().catch(() => null)) as {
     data?: {
       retiredNumber?: RetiredNumberResult | null;
+      retiredNumberMiss?: RetiredNumberMiss;
       serviceSeason?: number | null;
       title?: string | null;
     };
@@ -86,6 +100,7 @@ async function announceRetiredNumber(careerId: string, res: Response): Promise<v
     result,
     ...(serviceSeason !== undefined ? { serviceSeason } : {}),
     ...(body?.data?.title !== undefined ? { title: body.data.title } : {}),
+    ...(body?.data?.retiredNumberMiss ? { miss: body.data.retiredNumberMiss } : {}),
   });
 }
 
@@ -117,6 +132,8 @@ async function sendItem(item: OutboxItem): Promise<SendResult> {
       if (body?.error?.code === 'CAREER_OWNER_MISMATCH') return 'conflict';
     }
     // 4xx(검증 실패·409 소유권 충돌 포함)는 재시도해도 같은 결과이므로 버린다. 429(업로드 한도)는 시간이 지나면 풀리므로 큐에 남긴다.
+    // T-11-182 한도는 한 시간 창이라 짧은 간격으로 다시 보내 봐야 또 막힌다 — 다음 재시도를 가장 긴 간격으로 미룬다.
+    if (res.status === 429) retryStep = RETRY_MS.length - 1;
     if (res.status >= 500 || res.status === 429) return 'retry';
     // 세션 만료: 다음 flush에서 프로필을 다시 확인하고 재시도한다(버리지 않는다).
     if (res.status === 401) {
@@ -153,8 +170,26 @@ export function flushOutbox(): Promise<void> {
     } finally {
       running = null;
     }
+    scheduleRetry();
   })();
   return running;
+}
+
+/* T-11-182 다시 보내는 때가 앱 시작·복귀뿐이라, 한도(429)·5xx·끊김으로 남은 은퇴 기록이 다시 켤 때까지
+ * 서버에 없어 구단주 화면에서 선수가 안 보였다. 큐가 남으면 간격을 늘려 가며 다시 보내고, 비면 처음 간격으로 돌린다. */
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retryStep = 0;
+function scheduleRetry(): void {
+  if (!loadOutbox().length) {
+    retryStep = 0;
+    return;
+  }
+  if (retryTimer) return;
+  const ms = RETRY_MS[Math.min(retryStep++, RETRY_MS.length - 1)];
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void flushOutbox();
+  }, ms);
 }
 
 async function flushOnce(): Promise<void> {
@@ -166,6 +201,7 @@ async function flushOnce(): Promise<void> {
 
     const settled = new Set<string>();
     const conflicts: OutboxItem[] = [];
+    let retired = false;
     // T-10-045: 한 커리어의 항목은 순서대로만 보낸다. 첫 시즌 PUT이 재시도 대상인데 은퇴를 이어서 보내면
     // 서버에 커리어가 아직 없어 400(CAREER_NOT_FOUND)으로 버려진다 — 그 커리어의 뒤 항목은 다음 회차로 미룬다.
     const blocked = new Set<string>();
@@ -179,6 +215,7 @@ async function flushOnce(): Promise<void> {
       }
       settled.add(JSON.stringify(item));
       if (result === 'conflict') conflicts.push(item);
+      else if (result === 'ok' && item.kind === 'retirement') retired = true;
       else if (result === 'drop')
         console.warn('[outbox] 4xx 응답으로 항목을 버립니다', item.kind, item.careerId);
     }
@@ -186,6 +223,8 @@ async function flushOnce(): Promise<void> {
     // 이번 회차에 끝낸(보냄·버림·충돌) 항목만 뺀다.
     saveOutbox(loadOutbox().filter((i) => !settled.has(JSON.stringify(i))));
     if (conflicts.length) host.onConflict?.(conflicts);
+    // 큐에서 뺀 뒤에 알린다 — 받는 쪽이 pendingRetirementIds를 다시 읽어도 이미 빠져 있다.
+    if (retired) for (const fn of retiredListeners) fn();
   } catch (err) {
     console.error('[outbox] flush 실패', err);
   }

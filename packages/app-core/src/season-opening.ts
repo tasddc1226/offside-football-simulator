@@ -1,5 +1,6 @@
 import {
   msUntilNextSeasonStart,
+  onSeasonSchedule,
   openTeamSeasons,
   serviceSeason,
 } from '@offside/contracts/service-seasons';
@@ -43,9 +44,12 @@ export function watchSeasonClock(onTick: () => void): () => void {
   };
   schedule();
   const stop = watchVisibility(() => isVisible() && tick());
+  // 서버 시즌 일정이 다음 시즌을 더하거나 바꾸면 그 개막에 맞춰 다시 건다.
+  const off = onSeasonSchedule(tick);
   return () => {
     clearTimeout(timer);
     stop();
+    off();
   };
 }
 
