@@ -1,6 +1,6 @@
 // T-10-016 운영 도구(관리자 전용, 웹 Admin.svelte). 관리자 여부는 서버가 요청마다 다시 확인한다 — 여기서는 화면만 가린다.
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import { fetchBoardViewer } from '@offside/app-core/api/boards';
 import { appState } from '../../store';
 import { BackBar } from '../../ui/ActionBar';
@@ -19,17 +19,22 @@ import AdminFunds from './admin/AdminFunds';
 import AdminInvites from './admin/AdminInvites';
 import AdminPush from './admin/AdminPush';
 
+import AdminClubStrength from './admin/AdminClubStrength';
+import { T as strengthText } from '@offside/app-core/admin/club-strength';
+
 const TABS = [
   { id: 'dashboard', label: '대시보드' },
   { id: 'push', label: '앱 푸시' },
   { id: 'comments', label: '신고·댓글' },
   { id: 'balance', label: '밸런스' },
+  { id: 'club-strength', label: strengthText.title },
   { id: 'automation', label: '자동 플레이' },
   { id: 'funds', label: '구단 자금' },
   { id: 'invites', label: '친구 초대' },
 ] as const;
 
 export default function Admin() {
+  const { width } = useWindowDimensions();
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('dashboard');
   const [admin, setAdmin] = useState<boolean | null>(null);
 
@@ -59,7 +64,7 @@ export default function Admin() {
           <Txt tone="muted">운영자 계정으로 로그인해야 볼 수 있어요.</Txt>
         ) : (
           <>
-            <Seg cols={3} label="운영 도구">
+            <Seg cols={width < 360 ? 2 : 3} label="운영 도구">
               {TABS.map((t) => (
                 <TabOpt
                   key={t.id}
@@ -71,7 +76,9 @@ export default function Admin() {
                 />
               ))}
             </Seg>
-            {tab === 'dashboard' ? (
+            {tab === 'club-strength' ? (
+              <AdminClubStrength />
+            ) : tab === 'dashboard' ? (
               <AdminDashboard />
             ) : tab === 'push' ? (
               <AdminPush />

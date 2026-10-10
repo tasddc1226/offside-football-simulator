@@ -11,4 +11,5 @@
     · Threads <a href="https://www.threads.com/@offside.lab.kr" target="_blank" rel="noopener noreferrer">@offside.lab.kr</a>
   </p>
   <p>{L.footCommunity} <a href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">{L.footGallery}</a></p>
+  <p>{L.footFootballData}</p>
 </footer>

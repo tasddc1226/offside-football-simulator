@@ -1,7 +1,7 @@
 # 구단 전력표 월 1회 갱신 (T-11-135)
 
-현실 리그 순위표로 게임 NPC 구단 전력(`packages/game/src/club-strength.json`)을 갱신한다. 기획은 T-11-132 2단계.
-지금은 K리그1만 한다.
+현실 리그 순위표로 게임 NPC 구단 전력(`packages/contracts/src/club-strength-fallback.json`)을 갱신한다. 기획은 T-11-132 2단계.
+이 도구는 K리그1의 배포용 기본값을 수동으로 갱신하는 호환 도구다. 서버의 일일 갱신과 연결 준비는 [운영 문서](../../../docs/operations/club-strength.md)를 따른다. 서버에서 발행한 더 높은 버전은 이 기본값보다 우선한다.
 
 ## 적용 방식
 
@@ -27,7 +27,7 @@
   - 중심을 기본 전력 평균에 두어 리그 전체 수준은 그대로, 구단 사이 순서·간격만 현실을 따른다.
 - 섞기: 새 값 = 반올림((1 − w) × 기본 + w × 목표), w = 경기 수 / (경기 수 + 10)
 - 한 번에 이전 값에서 ±3, 기본 전력에서 ±6까지만. 3경기 미만이면 이전 값 유지.
-- 계수는 `packages/game/src/clubStrengthCalc.ts`의 `CALC`.
+- 계수는 `packages/contracts/src/club-strength-calc.ts`의 `CALC`.
 
 ## 대응표
 

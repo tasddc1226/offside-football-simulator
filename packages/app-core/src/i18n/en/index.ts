@@ -14,6 +14,7 @@ import { boardLabel } from './boardLabel';
 import { chat } from './chat';
 import { chatReject } from './chatReject';
 import { club } from './club';
+import { clubStrength } from './clubStrength';
 import { clubSync } from './clubSync';
 import { create } from './create';
 import { cup } from './cup';
@@ -98,6 +99,7 @@ export const en = {
   chat,
   chatReject,
   club,
+  clubStrength,
   clubSync,
   create,
   cup,

@@ -118,3 +118,32 @@ describe('순위표 → 전력 계산', () => {
     ]);
   });
 });
+
+// Server updates must never mutate an ongoing season or roll back an offline save.
+describe('server strength staging', () => {
+  it('stages for the next season, preserves fixed leagues and rejects stale versions', async () => {
+    const { setLatestClubStrength, latestClubStrength } = await import('./clubStrength.js');
+    const s = game();
+    const before = str('pl-0');
+    setLatestClubStrength({
+      v: 20000,
+      asOf: '2026-10-10',
+      source: 'test',
+      values: { 'pl-0': before - 3 },
+    });
+    expect(str('pl-0')).toBe(before);
+    s.season = newSeason(s);
+    expect(s.cs?.v).toBe(20000);
+    expect(str('pl-0')).toBe(before - 3);
+    setLatestClubStrength({ v: 20001, asOf: '2026-10-11', source: 'test', values: { 'k2-0': 1 } });
+    expect(latestClubStrength().v).toBe(20000);
+    applyClubStrength({ 'k2-0': 1 });
+    expect(str('k2-0')).toBe(baseStr('k2-0'));
+    // Restart without a server response: use a newer saved version rather than bundled v1.
+    setLatestClubStrength(null);
+    useCareerClubStrength(s);
+    expect(adoptClubStrength(s)).toBe(false);
+    expect(s.cs?.v).toBe(20000);
+    expect(str('pl-0')).toBe(before - 3);
+  });
+});

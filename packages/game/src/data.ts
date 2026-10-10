@@ -1,5 +1,6 @@
 // ───────── 정적 데이터: 리그 · 클럽 · 포지션 · 유형 · 특성 ─────────
 import { CLUB_NAMES, clubIdOf, LEAGUE_BASE, type LeagueBase } from '@offside/contracts/club-names';
+import { CLUB_LEAGUE_AVG } from '@offside/contracts/club-strength-spec';
 import { DETAILS_OF, type DetailPos } from '@offside/contracts/positions';
 import { gDataText as L } from './i18n/ko/gData.js';
 import { gAttrLabelText } from './i18n/ko/gAttrLabel.js';
@@ -14,23 +15,27 @@ export interface League extends LeagueBase {
   matches: number;
 }
 // 리그 id·이름·등급·자금력은 @offside/contracts/club-names(서버가 영구결번 등급·은퇴 가치에 쓴다, T-10-076·100).
-const LEAGUE_STATS: Record<string, Pick<League, 'avg' | 'spread' | 'matches'>> = {
-  hs: { avg: 46, spread: 5, matches: 20 },
-  uni: { avg: 52, spread: 5, matches: 20 },
-  k3: { avg: 51, spread: 5, matches: 28 },
-  k2: { avg: 57, spread: 5, matches: 36 },
-  k1: { avg: 63, spread: 6, matches: 38 },
-  j1: { avg: 65, spread: 6, matches: 38 },
+const LEAGUE_STATS: Record<string, Pick<League, 'spread' | 'matches'>> = {
+  hs: { spread: 5, matches: 20 },
+  uni: { spread: 5, matches: 20 },
+  k3: { spread: 5, matches: 28 },
+  k2: { spread: 5, matches: 36 },
+  k1: { spread: 6, matches: 38 },
+  j1: { spread: 6, matches: 38 },
   // T-10-016 MLS: 전력은 J1보다 조금 위(자금력은 에레디비시 위 — club-names LEAGUE_BASE).
-  mls: { avg: 66, spread: 7, matches: 34 },
-  ere: { avg: 68, spread: 7, matches: 34 },
-  l1: { avg: 71, spread: 7, matches: 34 },
-  bl: { avg: 74, spread: 7, matches: 34 },
-  sa: { avg: 74, spread: 7, matches: 38 },
-  ll: { avg: 76, spread: 8, matches: 38 },
-  pl: { avg: 78, spread: 7, matches: 38 },
+  mls: { spread: 7, matches: 34 },
+  ere: { spread: 7, matches: 34 },
+  l1: { spread: 7, matches: 34 },
+  bl: { spread: 7, matches: 34 },
+  sa: { spread: 7, matches: 38 },
+  ll: { spread: 8, matches: 38 },
+  pl: { spread: 7, matches: 38 },
 };
-export const LEAGUES: League[] = LEAGUE_BASE.map((l) => ({ ...l, ...LEAGUE_STATS[l.id]! }));
+export const LEAGUES: League[] = LEAGUE_BASE.map((l) => ({
+  ...l,
+  ...LEAGUE_STATS[l.id]!,
+  avg: CLUB_LEAGUE_AVG[l.id]!,
+}));
 
 // 리그별 클럽 이름은 @offside/contracts/club-names(서버가 옛 기록의 구단을 이름으로 찾는다, T-10-076).
 /** 리그 안 전력 편차: 1위 +9 ~ 꼴찌 -6을 팀 수에 맞춰 고르게 나눈다(6팀이면 9,6,3,0,-3,-6 — 예전 고정값과 같다). */
