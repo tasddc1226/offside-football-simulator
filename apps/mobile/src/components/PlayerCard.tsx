@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Animated, Easing, Text, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import { prefs } from '../store';
 import { DISPLAY } from '../theme/type';
@@ -224,8 +224,45 @@ export type PlayerCardData = {
   /** T-11-180 키(cm)·몸무게(kg) — 큰 카드의 LS 아래. 옛 커리어는 없다. */
   height?: number | undefined;
   weight?: number | undefined;
+  /** T-11-188 잠긴 선수 — 오른쪽 위 자물쇠. */
+  locked?: boolean | undefined;
   youth: boolean;
 };
+
+/** T-11-188 잠긴 선수 자물쇠(웹 PlayerCard .card-lock). */
+function LockBadge({ compact }: { compact: boolean }) {
+  const size = compact ? 16 : 22;
+  return (
+    <View
+      accessibilityRole="image"
+      accessibilityLabel={L.lockedAria}
+      style={{
+        position: 'absolute',
+        top: compact ? 32 : 30,
+        right: compact ? 5 : 11,
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: '#000000aa',
+        borderWidth: 1,
+        borderColor: '#ffffff66',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Svg width={compact ? 10 : 13} height={compact ? 10 : 13} viewBox="0 0 16 16">
+        <Rect x="3" y="7" width="10" height="7" rx="1.5" fill="#fff" />
+        <Path
+          d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"
+          fill="none"
+          stroke="#fff"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+        />
+      </Svg>
+    </View>
+  );
+}
 
 /** T-11-114 카드 시즌 뱃지(웹 PlayerCard .card-season) — 카드 위쪽 가운데. */
 function SeasonBadge({ season, compact }: { season: number; compact: boolean }) {
@@ -525,6 +562,7 @@ export function PlayerCard({
       {!cell.youth && cell.season !== undefined ? (
         <SeasonBadge season={cell.season} compact={compact} />
       ) : null}
+      {cell.locked && !cell.youth ? <LockBadge compact={compact} /> : null}
       {mini ? null : (
         <View
           style={{

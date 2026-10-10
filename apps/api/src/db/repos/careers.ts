@@ -358,6 +358,7 @@ export async function putRetirement(db: Db, input: PutRetirementInput): Promise<
             releasedAt: sql<string | null>`null`.as('released_at'),
             releasedValue: sql<number | null>`null`.as('released_value'),
             bonusValue: sql<number | null>`${bonus > 0 ? bonus : null}`.as('bonus_value'),
+            locked: sql<boolean>`0`.as('locked'),
             createdAt: sql<string>`${now}`.as('created_at'),
             updatedAt: sql<string>`${now}`.as('updated_at'),
           })
