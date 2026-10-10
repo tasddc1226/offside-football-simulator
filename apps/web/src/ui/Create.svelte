@@ -9,6 +9,8 @@
   import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, FOCUS_GROWTH, attrLabels, defaultFocus, focusMod, posLabel } from '@offside/game/data';
   import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
   import { baseline, candidatePotentialGrades } from '@offside/game/candidates';
+  // T-11-196 프리미엄 후보 식을 등록한다(첫 화면 번들에서 떼어 둠).
+  import '@offside/game/premiumScout';
   import { appState, detailOpenNow, draftBody, draftDpos, randomName } from './state.svelte.js';
   import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';

@@ -1,5 +1,5 @@
 // T-11-196 프리미엄 스카우트 확률 공개표(웹·앱 공용). 게임 엔진이 실제로 뽑는 식(scoutOdds)으로 계산한 값을 그대로 보인다.
-import { SCOUT_GRADES, scoutOdds, type ScoutGrade } from '@offside/game/candidates';
+import { SCOUT_GRADES, scoutOdds, type ScoutGrade } from '@offside/game/premiumScout';
 import { scoutText as L } from './i18n/ko/scout';
 
 export interface ScoutOddsRow {

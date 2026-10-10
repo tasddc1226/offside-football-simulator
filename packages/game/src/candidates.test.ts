@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { generateCandidates, candidatePotentialGrades, scoutOdds } from './candidates.js';
+import { generateCandidates, candidatePotentialGrades } from './candidates.js';
+import { scoutOdds } from './premiumScout.js';
 import { newGame } from './engine.js';
 import { rnd, createRng, getActiveRng, setActiveRng } from './rng.js';
 import { ATTR_KEYS, focusMod, focusOfType, typeForFocus, TYPES } from './data.js';

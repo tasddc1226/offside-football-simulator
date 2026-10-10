@@ -13,7 +13,7 @@ import { latestBalance } from '@offside/game/balance';
 import { BOOST, BOOST_PITY_PCT } from '@offside/game/boost';
 import { fmtValue } from './format.js';
 import { gradeOf } from '@offside/game/stats';
-import { phi } from '@offside/game/candidates';
+import { phi } from '@offside/game/premiumScout';
 import { cachedGet } from './api/client';
 import { balanceKeysText as K } from './i18n/ko/balanceKeys';
 import { fairnessText as L } from './i18n/ko/fairness';
