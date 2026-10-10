@@ -48,6 +48,8 @@ export const settings: Translation<SettingsMsgs> = {
   consentOptional: '(optional)',
   consentBody1:
     'If you agree, Google Analytics uses cookies to analyze where visitors come from, screen navigation, and use of career start, season complete, retirement and share buttons. Names and career IDs are not sent. The game works the same if you decline.',
+  consentMeta:
+    'We also use the Meta (Facebook and Instagram) pixel to measure visits from our ads. It uses cookies and sends only visits, career starts, first completed seasons and App Store button taps to Meta.',
   consentBody2:
     "Analytics data is processed on Google's overseas servers, and user and event data is kept for 2 months. You can change this anytime in Settings.",
   consentMore: 'Learn more',
