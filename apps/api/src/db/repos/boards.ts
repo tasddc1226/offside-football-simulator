@@ -1,3 +1,10 @@
+import {
+  communityOwnerEmail,
+  communityRecipients,
+  communityStatements,
+  type CommunityEvent,
+} from '../../push/community.js';
+import type { Bindings } from '../../env.js';
 import type {
   BoardBlock,
   BoardKey,
@@ -279,9 +286,19 @@ export async function createComment(
   db: Db,
   input: { postId: string; profileId: string; nickname: string; body: string; admin: boolean },
   now: string,
+  notify?: { env: Bindings; board: 'notice' | 'release' },
 ) {
   const id = newId('cmt');
-  await db.insert(boardComments).values({ id, ...input, createdAt: now });
+  const mutation = db.insert(boardComments).values({ id, ...input, createdAt: now });
+  if (notify && !input.admin && communityOwnerEmail(notify.env)) {
+    const recipients = await communityRecipients(notify.env);
+    const { sql, params } = mutation.toSQL();
+    const event: CommunityEvent = { ...input, id, now, type: 'comment', board: notify.board };
+    await db.$client.batch([
+      db.$client.prepare(sql).bind(...params),
+      ...communityStatements(notify.env, recipients, event),
+    ]);
+  } else await mutation;
   return id;
 }
 

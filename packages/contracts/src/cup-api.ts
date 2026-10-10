@@ -230,3 +230,30 @@ export const AdminCupSchema = z.strictObject({
 export type AdminCup = z.infer<typeof AdminCupSchema>;
 export const AdminCupListSchema = z.strictObject({ items: z.array(AdminCupSchema) });
 export type AdminCupList = z.infer<typeof AdminCupListSchema>;
+
+/** Public crowd picks are separate from account-specific predictions. */
+export const CupPredictionPickSchema = z.enum(['home', 'draw', 'away']);
+export type CupPredictionPick = z.infer<typeof CupPredictionPickSchema>;
+export const PutCupPredictionBodySchema = z.strictObject({ pick: CupPredictionPickSchema });
+export const CupPredictionCountsSchema = z.strictObject({
+  matchId: z.string(),
+  home: z.number().int().nonnegative(),
+  draw: z.number().int().nonnegative(),
+  away: z.number().int().nonnegative(),
+});
+export type CupPredictionCounts = z.infer<typeof CupPredictionCountsSchema>;
+export const CupPredictionsResponseSchema = z.strictObject({
+  items: z.array(CupPredictionCountsSchema),
+});
+export type CupPredictionsResponse = z.infer<typeof CupPredictionsResponseSchema>;
+export const CupPredictionMeResponseSchema = z.strictObject({
+  items: z.array(
+    z.strictObject({
+      matchId: z.string(),
+      pick: CupPredictionPickSchema,
+      correct: z.boolean().nullable(),
+      rewarded: z.boolean(),
+    }),
+  ),
+});
+export type CupPredictionMeResponse = z.infer<typeof CupPredictionMeResponseSchema>;

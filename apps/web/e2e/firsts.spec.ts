@@ -96,7 +96,7 @@ test('홈 카드 → 서버 최초 기록 화면(연대기·분류 탭·내 선�
     ).toEqual([]);
   }
 
-  await page.locator('[data-act="home"]').click();
+  await page.locator('[data-back-bar] [data-act="home"]').click();
   await expect(card).toBeVisible();
 });
 

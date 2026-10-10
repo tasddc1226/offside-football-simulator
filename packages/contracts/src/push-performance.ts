@@ -17,6 +17,7 @@ export const PushCategorySchema = z.enum([
   'team',
   'market',
   'social',
+  'community',
   'friend-request',
   'friend-accepted',
   'friendly',

@@ -152,8 +152,9 @@ const namedChips = () =>
 export type Chip = { label: string; d: number; money?: boolean; text?: string; bad?: boolean };
 export function diffChips(s: GameState, a: Snapshot, b: Snapshot): Chip[] {
   const out: Chip[] = [];
+  // T-11-183 능력치는 소수 한 자리로 쌓인다 — 반올림한 뒤 빼면 0.4씩 오른 성장이 칩에서 사라진다.
   for (const k of ATTR_KEYS) {
-    const d = Math.round(b[k]!) - Math.round(a[k]!);
+    const d = Math.round((b[k]! - a[k]!) * 10) / 10;
     if (d) out.push({ label: labelOf(s, k), d });
   }
   for (const [k, label] of namedChips()) {

@@ -29,6 +29,7 @@ export const shell: Translation<ShellMsgs> = {
   updateAlert: 'Update alert',
   updateBodyWeb: 'A new version is out. Refresh to apply it.',
   updateBtnWeb: 'Refresh',
+  footFootballData: 'Football data provided by the Football-Data.org API',
   footContact: 'Contact',
   footCommunity: 'Community',
   footGallery: 'DCinside OFFSIDE gallery',

@@ -1,8 +1,7 @@
 <script lang="ts" module>
-  import type { Screen } from './state.svelte.js';
-  /** 하단 메뉴가 붙는 화면(메뉴 항목과 같다). */
-  export const MAIN_SCREENS = ['hof', 'board', 'home', 'owner', 'settings'] as const satisfies readonly Screen[];
-  export const hasMainNav = (s: Screen) => (MAIN_SCREENS as readonly Screen[]).includes(s);
+  import { MAIN_SCREENS as destinations, hasMainNav as showMainNav } from '@offside/app-core/mainNavigation';
+  export const MAIN_SCREENS = destinations;
+  export const hasMainNav = showMainNav;
   const ownerDot = $derived(ownerDotLabel(appState));
 </script>
 

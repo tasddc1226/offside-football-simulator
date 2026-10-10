@@ -1,8 +1,13 @@
+import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
+import CupBracket from './CupBracket';
+import { scrollToView } from '../../ui/scroll';
+import CupMatchStatus from './CupMatchStatus';
+import { startGoogleLogin } from '../../platform/auth';
 // T-11-145 오프사이드 컵 화면(구단주 화면의 컵 배너로 연다, 웹 Cup.svelte) — 내 상태 · 토너먼트 · 조별 순위 · 일정 · 보상 · 규칙 ·
 // 경기 상세.
 // 경기 상세는 팀 경기 결과(TeamResult)와 같은 모양이지만 공개 시점(홈 기준)이라 레이팅·다시 하기 줄은 없다.
-import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ScrollView, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { isMember } from '@offside/app-core/account';
 import {
@@ -21,13 +26,18 @@ import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { refreshAccount } from '../../game/host';
 import { go } from '../../game/nav';
-import { accountCache } from '../../store';
+import { accountCache, appState } from '../../store';
+import { hofStart } from '@offside/app-core/state';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
-import { BackBar, Btn, Card, Pill, Press, Screen, Topbar, Txt } from '../../ui';
+import { Btn, Card, Pill, Press, Screen, Topbar, Txt } from '../../ui';
 import { dayTimeText, roundLabel, stageLabel, timeText } from './cupText';
-import { CupCard, teamNameIn, useCup, type CupState } from './TeamCup';
+import { CupCard, useCup, type CupState } from './TeamCup';
+
+import { cupFolds, rememberCupFolds, type CupScheduleTab } from '@offside/app-core/cupFolds';
+import { CupPrediction, PredictionIntro, usePredictions } from './CupPrediction';
+import type { CupPredictionContext } from '@offside/app-core/cupPredictions';
 
 const KO_ROUNDS: CupRound[] = ['r32', 'r16', 'qf', 'sf', 'f'];
 
@@ -54,6 +64,39 @@ function Kv({ k, v }: { k: string; v: string }) {
         {v}
       </Txt>
     </View>
+  );
+}
+
+function ScheduleTab({
+  label,
+  active,
+  onPress,
+  chip = false,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  chip?: boolean;
+}) {
+  const c = useColors();
+  return (
+    <Press
+      onPress={onPress}
+      accessibilityState={{ selected: active }}
+      style={{
+        minHeight: 48,
+        justifyContent: 'center',
+        paddingHorizontal: chip ? 10 : 0,
+        borderBottomWidth: chip ? 1 : 3,
+        borderWidth: chip ? 1 : 0,
+        borderColor: active ? c.accent : chip ? c.line : 'transparent',
+        borderRadius: chip ? 10 : 0,
+      }}
+    >
+      <Txt v="sm" bold={active} tone={active ? 'accent' : 'muted'}>
+        {label}
+      </Txt>
+    </Press>
   );
 }
 
@@ -108,10 +151,12 @@ function Standings({
   cup,
   standings,
   mineId,
+  onteam,
 }: {
   cup: CupResponse;
   standings: CupResponse['groups'][number]['standings'];
   mineId: string | null;
+  onteam: (id: string) => void;
 }) {
   const c = useColors();
   const num = (w: number) => ({ width: w, textAlign: 'right' as const });
@@ -121,66 +166,88 @@ function Standings({
     </Txt>
   );
   return (
-    <View style={{ gap: 2 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6 }}>
-        <View style={{ width: 18 }} />
-        <Txt v="xs" tone="muted" style={{ flex: 1 }}>
-          {L.thTeam}
-        </Txt>
-        {head(L.thP, 30)}
-        {head(L.thW, 22)}
-        {head(L.thD, 22)}
-        {head(L.thL, 22)}
-        {head(L.thGd, 34)}
-        {head(L.thPts, 34)}
-      </View>
-      {[...standings]
-        .sort((a, b) => a.rank - b.rank)
-        .map((s) => {
-          const mine = s.teamId === mineId;
-          const up = s.rank <= 2;
-          const cell = (value: string | number, w: number, bold = false) => (
-            <Txt v="sm" bold={bold || mine} num style={num(w)}>
-              {String(value)}
+    <View style={{ gap: 6 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator accessibilityLabel={L.secGroups}>
+        <View style={{ gap: 2, width: 420 }}>
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6 }}
+          >
+            <View style={{ width: 18 }} />
+            <Txt v="xs" tone="muted" style={{ flex: 1 }}>
+              {L.thTeam}
             </Txt>
-          );
-          const gd = s.gf - s.ga;
-          return (
-            <View
-              key={s.teamId}
-              testID={`cup-standing-${s.teamId}`}
-              accessible
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                paddingVertical: 6,
-                paddingHorizontal: 6,
-                borderRadius: 8,
-                backgroundColor: up ? alpha(c.good, 0.14) : 'transparent',
-              }}
-            >
-              <Txt v="sm" bold style={{ width: 18 }}>
-                {String(s.rank)}
-              </Txt>
-              <Txt
-                v="sm"
-                bold={mine}
-                tone={mine ? 'accent' : 'ink'}
-                numberOfLines={1}
-                style={{ flex: 1 }}
-              >
-                {teamNameIn(cup, s.teamId)}
-              </Txt>
-              {cell(s.p, 30)}
-              {cell(s.w, 22)}
-              {cell(s.d, 22)}
-              {cell(s.l, 22)}
-              {cell(gd > 0 ? `+${gd}` : gd, 34)}
-              {cell(s.pts, 34, true)}
-            </View>
-          );
-        })}
+            {head(L.thP, 30)}
+            {head(L.thW, 22)}
+            {head(L.thD, 22)}
+            {head(L.thL, 22)}
+            {head(L.thGd, 34)}
+            {head(L.thPts, 34)}
+          </View>
+          {[...standings]
+            .sort((a, b) => a.rank - b.rank)
+            .map((s) => {
+              const team = cup.teams.find((t) => t.teamId === s.teamId);
+              const mine = s.teamId === mineId;
+              const up = s.rank <= 2;
+              const cell = (value: string | number, w: number, bold = false) => (
+                <Txt v="sm" bold={bold || mine} num style={num(w)}>
+                  {String(value)}
+                </Txt>
+              );
+              const gd = s.gf - s.ga;
+              return (
+                <Press
+                  onPress={() => onteam(s.teamId)}
+                  accessibilityHint={L.lineupOpen}
+                  key={s.teamId}
+                  testID={`cup-standing-${s.teamId}`}
+                  accessible
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    paddingVertical: 6,
+                    paddingHorizontal: 6,
+                    borderRadius: 8,
+                    backgroundColor: up ? alpha(c.good, 0.14) : 'transparent',
+                  }}
+                >
+                  <Txt v="sm" bold style={{ width: 18 }}>
+                    {String(s.rank)}
+                  </Txt>
+                  <View
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      minWidth: 0,
+                    }}
+                  >
+                    <TeamLogo logo={team?.logo} name={team?.name ?? L.tbd} size={24} decorative />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Txt v="sm" bold={mine} tone={mine ? 'accent' : 'ink'}>
+                        {team?.name ?? L.tbd}
+                      </Txt>
+                      <Txt v="xs" tone="muted">
+                        {L.teamOwnerLabel} {team?.owner ?? L.tbd}
+                      </Txt>
+                    </View>
+                  </View>
+                  {cell(s.p, 30)}
+                  {cell(s.w, 22)}
+                  {cell(s.d, 22)}
+                  {cell(s.l, 22)}
+                  {cell(gd > 0 ? `+${gd}` : gd, 34)}
+                  {cell(s.pts, 34, true)}
+                </Press>
+              );
+            })}
+        </View>
+      </ScrollView>
+      <Txt v="xs" tone="muted">
+        {L.standingsScroll}
+      </Txt>
     </View>
   );
 }
@@ -191,7 +258,9 @@ function MatchLine({
   m,
   mineId,
   open,
+  prediction,
 }: {
+  prediction: CupPredictionContext;
   cup: CupResponse;
   m: CupMatch;
   mineId: string | null;
@@ -224,12 +293,15 @@ function MatchLine({
     </View>
   );
   const notes = [
-    dayTimeText(m.at),
+    m.round.startsWith('g') ? dayTimeText(m.at) : null,
     m.pens ? L.pens({ home: m.pens.home, away: m.pens.away }) : null,
     m.forfeit ? L.forfeit : null,
   ].filter(Boolean);
   const body = (
     <>
+      <View style={{ alignItems: 'center', marginBottom: 4 }}>
+        <CupMatchStatus m={m} />
+      </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         {side(home, m.homeTeamId, true)}
         <Txt bold num style={{ minWidth: 44, textAlign: 'center' }}>
@@ -238,7 +310,13 @@ function MatchLine({
         {side(away, m.awayTeamId, false)}
       </View>
       <View
-        style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 6,
+        }}
       >
         <Txt v="xs" tone="muted">
           {notes.join(' · ')}
@@ -253,27 +331,32 @@ function MatchLine({
     borderTopWidth: 1,
     borderTopColor: c.line,
   } as const;
-  if (!m.played)
-    return (
+  const row =
+    !m.played || m.forfeit ? (
       <View style={style} testID={`cup-match-${m.id}`}>
         {body}
       </View>
+    ) : (
+      <Press
+        scale={0.985}
+        testID={`cup-match-${m.id}`}
+        accessibilityLabel={L.matchAria({
+          home: home?.name ?? L.tbd,
+          away: away?.name ?? L.tbd,
+          hg: m.homeGoals ?? 0,
+          ag: m.awayGoals ?? 0,
+        })}
+        onPress={() => open(m)}
+        style={style}
+      >
+        {body}
+      </Press>
     );
   return (
-    <Press
-      scale={0.985}
-      testID={`cup-match-${m.id}`}
-      accessibilityLabel={L.matchAria({
-        home: home?.name ?? L.tbd,
-        away: away?.name ?? L.tbd,
-        hg: m.homeGoals ?? 0,
-        ag: m.awayGoals ?? 0,
-      })}
-      onPress={() => open(m)}
-      style={style}
-    >
-      {body}
-    </Press>
+    <View>
+      {row}
+      <CupPrediction m={m} prediction={prediction} />
+    </View>
   );
 }
 
@@ -407,7 +490,15 @@ function CupMatchDetail({
 }
 
 /** 추첨 전 신청한 팀(신청 순, T-11-160). */
-function Entrants({ teams, mineId }: { teams: CupResponse['teams']; mineId: string | null }) {
+function Entrants({
+  teams,
+  mineId,
+  onteam,
+}: {
+  teams: CupResponse['teams'];
+  mineId: string | null;
+  onteam: (id: string) => void;
+}) {
   const c = useColors();
   return (
     <Card gap={6} testID="cup-entrants">
@@ -425,7 +516,9 @@ function Entrants({ teams, mineId }: { teams: CupResponse['teams']; mineId: stri
       {teams.map((t, i) => {
         const mine = t.teamId === mineId;
         return (
-          <View
+          <Press
+            onPress={() => onteam(t.teamId)}
+            accessibilityHint={L.lineupOpen}
             key={t.teamId}
             style={{
               flexDirection: 'row',
@@ -450,15 +543,51 @@ function Entrants({ teams, mineId }: { teams: CupResponse['teams']; mineId: stri
             </View>
             {mine ? <Pill tone="good">{L.mineTeam}</Pill> : null}
             <Txt v="sm">{`OVR ${t.ovr}`}</Txt>
-          </View>
+          </Press>
         );
       })}
     </Card>
   );
 }
 
-function CupBody({ state }: { state: CupState }) {
+function CupBody({
+  state,
+  linked,
+  accountId,
+}: {
+  state: CupState;
+  linked: boolean;
+  accountId: string | null;
+}) {
+  const c = useColors();
   const { cup: data, me } = state;
+  const {
+    state: predictions,
+    now,
+    controller,
+  } = usePredictions(data?.cup.id, accountId, data?.matches);
+  function openTeam(id: string) {
+    if (data)
+      rememberCupFolds(data.cup.id, accountId, {
+        groups: Object.fromEntries(data.groups.map((g) => [g.no, groupOpen(g.no)])),
+        rounds: Object.fromEntries(KO_ROUNDS.map((r) => [r, roundOpen(r)])),
+        schedule: { tab: scheduleTab, group: selectedGroup, bracketList },
+      });
+    appState.hof = { ...hofStart(), tab: 'teams', team: id, season: data?.cup.season ?? null };
+    go('hof');
+  }
+  const prediction: CupPredictionContext = {
+    state: predictions,
+    now,
+    linked,
+    pick: (id, choice) => void controller.pick(id, choice),
+    team: openTeam,
+  };
+  const fixtures = useRef<View>(null);
+  const [bracketListChoice, setBracketList] = useState<boolean | null>(null);
+  const [scheduleChoice, setScheduleChoice] = useState<CupScheduleTab | null>(null);
+  const [groupChoice, setGroupChoice] = useState<number | null>(null);
+  const [bracketMatch, setBracketMatch] = useState<CupMatch | null>(null);
   const [matchId, setMatchId] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<number, boolean> | null>(null);
   const [openRounds, setOpenRounds] = useState<Record<string, boolean> | null>(null);
@@ -474,25 +603,58 @@ function CupBody({ state }: { state: CupState }) {
     return <CupMatchDetail cupId={data.cup.id} matchId={matchId} back={() => setMatchId(null)} />;
 
   const mineId = me?.entry && me.entry.status !== 'withdrawn' ? me.entry.teamId : null;
-  const mineGroup = me?.entry?.group ?? null;
+  const mineGroup = mineId
+    ? (data.groups.find((g) => g.standings.some((s) => s.teamId === mineId))?.no ?? null)
+    : null;
+  const groups = [...data.groups].sort(
+    (a, b) => Number(b.no === mineGroup) - Number(a.no === mineGroup),
+  );
   const rounds = data.cup.rounds;
   const first = rounds[0];
-  const groupOpen = (no: number) => (openGroups ?? { [mineGroup ?? -1]: true })[no] ?? false;
   const nextRound = data.matches.find((m) => !m.played)?.round;
-  const roundOpen = (r: CupRound) =>
-    (openRounds ?? { [nextRound && KO_ROUNDS.includes(nextRound) ? nextRound : 'f']: true })[r] ??
-    false;
+  const folds = cupFolds(data.cup.id, accountId);
+  const groupDefaults = folds?.groups ?? Object.fromEntries(groups.map((g) => [g.no, true]));
+  const roundDefaults = folds?.rounds ?? {
+    [nextRound && KO_ROUNDS.includes(nextRound) ? nextRound : 'f']: true,
+  };
+  const groupOpen = (no: number) => (openGroups ?? groupDefaults)[no] ?? false;
+  const roundOpen = (r: CupRound) => (openRounds ?? roundDefaults)[r] ?? false;
   const koMatches = (r: CupRound) =>
     data.matches.filter((m) => m.round === r).sort((a, b) => a.slot - b.slot);
   const koRounds = KO_ROUNDS.filter((r) => koMatches(r).length);
+  const scheduleTab =
+    scheduleChoice ?? folds?.schedule?.tab ?? (koRounds.length ? 'knockout' : 'groups');
+  const selectedGroup = groupChoice ?? folds?.schedule?.group ?? mineGroup ?? groups[0]?.no ?? 1;
+  const bracketList = bracketListChoice ?? folds?.schedule?.bracketList ?? false;
   const open = (m: CupMatch) => setMatchId(m.id);
   const early = cupBeforeDraw(data.phase);
   const closeInclusive = new Date(Date.parse(data.cup.closesAt) - 60_000).toISOString();
 
   return (
     <>
-      <CupCard state={state} />
-      {early && data.teams.length ? <Entrants teams={data.teams} mineId={mineId} /> : null}
+      {!linked && accountId === null && accountCache.value && accountCache.value !== 'error' ? (
+        <Card gap={10} testID="cup-login">
+          <Txt v="h2">{L.predictionLoginTitle}</Txt>
+          <GoogleLoginButton
+            testID="cup-login-google"
+            onPress={() => void startGoogleLogin({ cup: true })}
+          />
+        </Card>
+      ) : null}
+      <CupCard
+        state={state}
+        onSchedule={() => {
+          setScheduleChoice(koRounds.length ? 'knockout' : 'groups');
+          requestAnimationFrame(() => scrollToView(fixtures.current, true));
+        }}
+      />
+      <PredictionIntro
+        prediction={prediction}
+        retry={() => void controller.load(data.cup.id, linked)}
+      />
+      {early && data.teams.length ? (
+        <Entrants teams={data.teams} mineId={mineId} onteam={openTeam} />
+      ) : null}
 
       <Card gap={8} testID="cup-rules">
         <Txt v="h2" accessibilityRole="header">
@@ -509,16 +671,13 @@ function CupBody({ state }: { state: CupState }) {
 
       <Card gap={6} testID="cup-schedule">
         <Txt v="h2" accessibilityRole="header">
-          {L.secSchedule}
+          {L.scheduleEntryDraw}
         </Txt>
         <Kv
           k={L.schedEntry}
           v={`${dayTimeText(data.cup.opensAt)} ~ ${dayTimeText(closeInclusive)}`}
         />
         <Kv k={L.schedDraw} v={dayTimeText(data.cup.drawAt)} />
-        {rounds.map((r) => (
-          <Kv key={r.round} k={roundLabel(r.round)} v={dayTimeText(r.at)} />
-        ))}
       </Card>
 
       <Card gap={6} testID="cup-rewards">
@@ -545,94 +704,208 @@ function CupBody({ state }: { state: CupState }) {
         </Txt>
       </Card>
 
-      <Card gap={6} testID="cup-groups">
-        <Txt v="h2" accessibilityRole="header">
-          {L.secGroups}
-        </Txt>
-        {data.groups.length ? (
-          <>
-            <Txt v="xs" tone="muted">
-              {L.advanceNote}
-            </Txt>
-            {data.groups.map((g) => {
-              const name = L.groupName({ no: g.no });
-              const isOpen = groupOpen(g.no);
-              return (
-                <View key={g.no}>
-                  <Fold
-                    title={g.no === mineGroup ? `${name} · ${L.myGroup}` : name}
-                    aside={L.teamsCount({ n: g.standings.length })}
-                    open={isOpen}
-                    label={A.groupToggle({ name })}
-                    testID={`cup-group-${g.no}`}
-                    toggle={() =>
-                      setOpenGroups({
-                        ...(openGroups ?? { [mineGroup ?? -1]: true }),
-                        [g.no]: !isOpen,
-                      })
-                    }
-                  />
-                  {isOpen ? (
-                    <View style={{ gap: 6 }}>
-                      <Standings cup={data} standings={g.standings} mineId={mineId} />
-                      {data.matches
-                        .filter((m) => m.group === g.no && !KO_ROUNDS.includes(m.round))
-                        .sort((a, b) => a.at.localeCompare(b.at))
-                        .map((m) => (
-                          <MatchLine key={m.id} cup={data} m={m} mineId={mineId} open={open} />
-                        ))}
-                    </View>
-                  ) : null}
-                </View>
-              );
-            })}
-          </>
-        ) : (
-          <Txt v="sm" tone="muted">
-            {L.noGroups}
+      <View ref={fixtures} collapsable={false}>
+        <Card gap={10} testID="cup-fixtures">
+          <Txt v="h2" accessibilityRole="header">
+            {L.scheduleMatches}
           </Txt>
-        )}
-      </Card>
-
-      <Card gap={6} testID="cup-bracket">
-        <Txt v="h2" accessibilityRole="header">
-          {L.secBracket}
-        </Txt>
-        {koRounds.length ? (
-          koRounds.map((r) => {
-            const isOpen = roundOpen(r);
-            const list = koMatches(r);
-            return (
-              <View key={r}>
-                <Fold
-                  title={roundLabel(r)}
-                  aside={list[0] ? dayTimeText(list[0].at) : undefined}
-                  open={isOpen}
-                  label={A.roundToggle({ name: roundLabel(r) })}
-                  testID={`cup-round-${r}`}
-                  toggle={() =>
-                    setOpenRounds({
-                      ...(openRounds ?? {
-                        [nextRound && KO_ROUNDS.includes(nextRound) ? nextRound : 'f']: true,
-                      }),
-                      [r]: !isOpen,
-                    })
-                  }
+          <View style={{ flexDirection: 'row', gap: 16 }}>
+            {(
+              [
+                ['groups', L.secGroups],
+                ['knockout', L.secBracket],
+              ] as const
+            ).map(([tab, label]) => (
+              <ScheduleTab
+                key={tab}
+                label={label}
+                active={scheduleTab === tab}
+                onPress={() => setScheduleChoice(tab)}
+              />
+            ))}
+          </View>
+          <View
+            style={scheduleTab !== 'groups' ? { display: 'none' } : undefined}
+            testID="cup-groups"
+          >
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 6, paddingBottom: 8 }}
+            >
+              {groups.map((g) => (
+                <ScheduleTab
+                  key={g.no}
+                  chip
+                  label={`${L.groupName({ no: g.no })}${g.no === mineGroup ? ` · ${L.myGroup}` : ''}`}
+                  active={selectedGroup === g.no}
+                  onPress={() => setGroupChoice(g.no)}
                 />
-                {isOpen
-                  ? list.map((m) => (
-                      <MatchLine key={m.id} cup={data} m={m} mineId={mineId} open={open} />
-                    ))
-                  : null}
+              ))}
+            </ScrollView>
+            {data.groups.length ? (
+              <>
+                <Txt v="xs" tone="muted">
+                  {L.advanceNote}
+                </Txt>
+                {groups.map((g) => {
+                  const name = L.groupName({ no: g.no });
+                  const isOpen = groupOpen(g.no);
+                  return (
+                    <View
+                      key={g.no}
+                      style={selectedGroup !== g.no ? { display: 'none' } : undefined}
+                    >
+                      <Fold
+                        title={g.no === mineGroup ? `${name} · ${L.myGroup}` : name}
+                        aside={L.teamsCount({ n: g.standings.length })}
+                        open={isOpen}
+                        label={A.groupToggle({ name })}
+                        testID={`cup-group-${g.no}`}
+                        toggle={() =>
+                          setOpenGroups({
+                            ...(openGroups ?? groupDefaults),
+                            [g.no]: !isOpen,
+                          })
+                        }
+                      />
+                      {isOpen ? (
+                        <View style={{ gap: 6 }}>
+                          <Standings
+                            cup={data}
+                            standings={g.standings}
+                            mineId={mineId}
+                            onteam={openTeam}
+                          />
+                          {data.matches
+                            .filter((m) => m.group === g.no && !KO_ROUNDS.includes(m.round))
+                            .sort((a, b) => a.at.localeCompare(b.at))
+                            .map((m) => (
+                              <MatchLine
+                                key={m.id}
+                                cup={data}
+                                m={m}
+                                mineId={mineId}
+                                open={open}
+                                prediction={prediction}
+                              />
+                            ))}
+                        </View>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </>
+            ) : (
+              <Txt v="sm" tone="muted">
+                {L.noGroups}
+              </Txt>
+            )}
+          </View>
+          <View
+            style={scheduleTab !== 'knockout' ? { display: 'none' } : undefined}
+            testID="cup-bracket"
+          >
+            {koRounds.length ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  gap: 4,
+                  padding: 4,
+                  borderWidth: 1,
+                  borderColor: c.line,
+                  borderRadius: 14,
+                  backgroundColor: c.bg,
+                  marginBottom: 10,
+                }}
+              >
+                {[false, true].map((list) => (
+                  <Press
+                    key={String(list)}
+                    onPress={() => setBracketList(list)}
+                    accessibilityState={{ selected: bracketList === list }}
+                    style={{
+                      flex: 1,
+                      minHeight: 44,
+                      padding: 8,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: bracketList === list ? c.line : 'transparent',
+                      backgroundColor: bracketList === list ? c.surface : 'transparent',
+                    }}
+                  >
+                    <Txt v="sm" bold tone={bracketList === list ? 'ink' : 'muted'}>
+                      {list ? L.bracketList : L.bracketView}
+                    </Txt>
+                  </Press>
+                ))}
               </View>
-            );
-          })
-        ) : (
-          <Txt v="sm" tone="muted">
-            {L.noBracket}
-          </Txt>
-        )}
-      </Card>
+            ) : null}
+            {koRounds.length ? (
+              <View style={bracketList ? { display: 'none' } : undefined}>
+                <View style={bracketMatch ? { display: 'none' } : undefined}>
+                  <CupBracket cup={data} mineId={mineId} now={now} onselect={setBracketMatch} />
+                </View>
+                {bracketMatch ? (
+                  <Btn onPress={() => setBracketMatch(null)}>{L.bracketView}</Btn>
+                ) : null}
+                {bracketMatch ? (
+                  <MatchLine
+                    cup={data}
+                    m={bracketMatch}
+                    mineId={mineId}
+                    open={open}
+                    prediction={prediction}
+                  />
+                ) : null}
+              </View>
+            ) : null}
+            {koRounds.length ? (
+              bracketList ? (
+                koRounds.map((r) => {
+                  const isOpen = roundOpen(r);
+                  const list = koMatches(r);
+                  return (
+                    <View key={r}>
+                      <Fold
+                        title={roundLabel(r)}
+                        aside={list[0] ? dayTimeText(list[0].at) : undefined}
+                        open={isOpen}
+                        label={A.roundToggle({ name: roundLabel(r) })}
+                        testID={`cup-round-${r}`}
+                        toggle={() =>
+                          setOpenRounds({
+                            ...(openRounds ?? roundDefaults),
+                            [r]: !isOpen,
+                          })
+                        }
+                      />
+                      {isOpen
+                        ? list.map((m) => (
+                            <MatchLine
+                              key={m.id}
+                              cup={data}
+                              m={m}
+                              mineId={mineId}
+                              open={open}
+                              prediction={prediction}
+                            />
+                          ))
+                        : null}
+                    </View>
+                  );
+                })
+              ) : null
+            ) : (
+              <Txt v="sm" tone="muted">
+                {L.noBracket}
+              </Txt>
+            )}
+          </View>
+        </Card>
+      </View>
     </>
   );
 }
@@ -647,7 +920,7 @@ export default function Cup() {
   }, []);
   const state = useCup(true, linked);
   return (
-    <Screen footer={<BackBar testID="cup-back" fallback={() => go('owner')} />}>
+    <Screen>
       <Topbar />
       <View style={{ paddingHorizontal: 2, paddingTop: 4 }}>
         <Txt v="eyebrow">Offside Cup</Txt>
@@ -655,7 +928,12 @@ export default function Cup() {
           {state.cup ? L.fullTitle({ n: state.cup.cup.edition }) : L.title}
         </Txt>
       </View>
-      <CupBody state={state} />
+      <CupBody
+        key={`${state.cup?.cup.id ?? 'loading'}:${linked ? acct.id : 'guest'}`}
+        state={state}
+        linked={linked}
+        accountId={linked ? acct.id : null}
+      />
     </Screen>
   );
 }

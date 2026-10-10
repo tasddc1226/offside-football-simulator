@@ -1,0 +1,35 @@
+{
+  "id": "cup-tournament-controls-20261010",
+  "title": "토너먼트 보기와 라운드 선택 개선",
+  "items": [
+    "대진표·경기 목록 전환과 라운드 선택을 구분해 보기 편하게 정리했어요. 보기 방식을 바꿔도 선택한 대진표 라운드를 유지해요.",
+    "라운드를 고르면 대진표가 부드럽게 이동하고, 선택한 라운드에 맞춰 카드 간격과 연결선이 정리돼요. 내 팀 위치로도 바로 이동할 수 있어요.",
+    "대회 상단의 진행 상태를 누르면 현재 단계의 경기 일정으로 바로 이동해요.",
+    "안드로이드에서 32강 대진표를 열 때 앱이 종료되던 문제를 고쳤어요.",
+    "홈의 오프사이드 컵 카드 전체를 눌러 대회로 이동할 수 있어요.",
+    "토너먼트의 다음 상대와 결승까지 이어지는 대진을 연결선으로 볼 수 있어요. 라운드와 내 팀 위치로 이동하고, 경기를 눌러 승부예측과 기록을 확인해요."
+  ],
+  "en": {
+    "title": "Clearer tournament controls",
+    "items": [
+      "View switching and round selection are now easier to tell apart. Switching views keeps your selected bracket round.",
+      "Selecting a round smoothly moves the bracket and adjusts card spacing and connectors. You can also jump to your team.",
+      "Tap the cup status to jump to fixtures for the current stage.",
+      "Fixed a crash when opening the round-of-32 bracket on Android.",
+      "Tap anywhere on the home Offside Cup card to open the tournament.",
+      "Follow matchups through to the final in a connected bracket. Jump to a round or your team, and select a match for predictions and records."
+    ]
+  },
+  "ja": {
+    "title": "トーナメントの操作を改善",
+    "items": [
+      "表示切り替えとラウンド選択を分かりやすく整理しました。表示を切り替えても選択したラウンドを維持します。",
+      "ラウンドを選ぶと対戦表が滑らかに移動し、カードの間隔と接続線が整います。自分のチームにも直接移動できます。",
+      "大会上部の進行状況を押すと、現在のステージの試合日程に移動します。",
+      "Androidでベスト32の対戦表を開くとアプリが終了する問題を修正しました。",
+      "ホームのオフサイドカップのカード全体を押して大会を開けます。",
+      "決勝までつながる対戦表を確認できます。ラウンドや自分のチームに移動し、試合を押して予想と記録を見られます。"
+    ]
+  },
+  "availability": "web-app"
+}

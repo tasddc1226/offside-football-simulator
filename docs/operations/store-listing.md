@@ -321,7 +321,7 @@ App Store는 6.9"(1320×2868), Google Play는 휴대전화(1080×2160)와 그래
 
 ## 7. 앱 1.1.2 새 기능 (T-11-194)
 
-1.1.2는 광고를 AppLovin MAX에서 AdMob으로 되돌린 빌드다(AppLovin 신규 퍼블리셔 계정 거절, 2026-10-09). 등록 정보 · 스크린샷은 1.1.1 그대로 두고 새 기능 문구만 바꾼다.
+1.1.2는 광고를 AppLovin MAX에서 AdMob으로 되돌린 빌드다(AppLovin 신규 퍼블리셔 계정 거절, 2026-10-09). 등록 정보 · 스크린샷은 1.1.1 그대로 두고 새 기능 문구만 바꾼다. iPhone Duo 스크린샷(안쪽 2007×2853, 언어별 7장)과 헤더 · 검색 결과 크리에이티브(ko · en-US · en-GB · ja)는 1.1.2 버전에 올렸다(2026-10-10).
 
 - 한국어: 오프사이드 컵 승부예측과 대진표가 생겼어요. 맞히면 리롤권을 받아요. / 내 선수를 잠가 실수로 팔거나 방출하지 않게 할 수 있어요. / 앱 안정성을 개선했어요.
 - English (en-US · en-GB): Predict OFFSIDE Cup matches and follow the bracket. Correct picks earn reroll tickets. / Lock your players so you never sell or release them by mistake. / Stability improvements.

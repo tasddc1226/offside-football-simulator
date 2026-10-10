@@ -9,6 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTextStyle } from '../../theme/useTextSize';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, fitLine, rem } from '../../theme/type';
 
@@ -57,6 +58,7 @@ export function FText({
   ls?: number;
 }) {
   const f = useFilm();
+  const textStyle = useTextStyle();
   const px = rem(size);
   const base: TextStyle = {
     color: f[tone],
@@ -71,7 +73,9 @@ export function FText({
   if (italic) base.fontStyle = 'italic';
   if (center) base.textAlign = 'center';
   if (ls != null) base.letterSpacing = px * ls;
-  return <Text lineBreakStrategyIOS="hangul-word" {...rest} style={fitLine([base, style])} />;
+  return (
+    <Text lineBreakStrategyIOS="hangul-word" {...rest} style={fitLine(textStyle([base, style]))} />
+  );
 }
 
 /** 필름 소제목(웹 .film-kicker = eyebrow + 자간 0.32em + 금색). */

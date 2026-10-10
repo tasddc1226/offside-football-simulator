@@ -18,6 +18,9 @@ const ko = {
   attrPairUp: (p: { a: string; b: string }) => `${p.a}·${p.b} ▲`,
   focusGrowth: (p: { pct: number }) => `주력 성장 +${p.pct}%`,
   tooFarAhead: (p: { pct: number }) => `너무 앞서 성장 −${p.pct}%`,
+  // T-11-183 세부 능력치가 99에 닿으면 그 몫의 성장은 버려진다.
+  maxed: (p: { attr: string }) => `${p.attr} 최고치 도달`,
+  nearMax: (p: { pct: number }) => `최고치에 닿아 성장 −${p.pct}%`,
   // 자세한 설명
   helpRest: (p: { low: number; start: number }) =>
     `훈련을 쉬고 몸을 추슬러요. 컨디션이 ${p.low} 밑으로 떨어지면 부상 위험이 크게 늘고, ${p.start} 밑이면 선발로 나서기 어려워요.`,
@@ -32,6 +35,10 @@ const ko = {
   helpOffFocus: (p: { pct: number }) => `주력 능력치가 아니라 성장이 ${p.pct}% 느려요.`,
   helpLopsided: (p: { pct: number }) =>
     `다른 핵심 능력치보다 너무 앞서 있어 성장이 ${p.pct}% 줄었어요. 다른 능력치를 키우면 제한이 풀려요.`,
+  helpMaxed: (p: { attr: string }) =>
+    `${p.attr} 세부 능력치가 모두 최고치(99)라 이 훈련으로는 더 오르지 않아요.`,
+  helpNearMax: (p: { pct: number }) =>
+    `최고치(99)에 닿은 세부 능력치가 있어 성장의 ${p.pct}%가 반영되지 않아요.`,
   helpOvrSubs: (p: { list: string }) => `이 항목 중 ${p.list} 능력치가 지금 포지션 OVR에 반영돼요.`,
   helpOvrSeparate: 'OVR 반영 여부와 경기에서의 활용은 달라요.',
   helpWeightLow: '지금 포지션의 OVR에는 거의 반영되지 않아요.',

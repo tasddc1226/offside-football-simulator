@@ -25,7 +25,8 @@ export type LoginReturn =
   /** T-11-015 채팅 화면에서 로그인했으면 채팅으로 돌아온다. */
   | { chat: true }
   /** 이적시장 매물을 보다 로그인했으면 이적시장으로 돌아온다. */
-  | { market: true };
+  | { market: true }
+  | { cup: true };
 
 /** API가 구글 로그인을 마치고 돌려보내는 주소(contracts APP_AUTH_REDIRECT_URL). */
 const REDIRECT_URL = 'offside://auth';
@@ -140,6 +141,7 @@ async function finishLogin(r: AuthResult, back: LoginReturn | null, via: string)
     if ('board' in back) return openBoard(back.board, back.postId);
     if ('chat' in back) return void (appState.screen = 'chat');
     if ('market' in back) return void (appState.screen = 'market');
+    if ('cup' in back) return void (appState.screen = 'cup');
     const h = loadHOF().find((x) => x.id === back.career);
     if (h) return openLocalLegend(h);
   }

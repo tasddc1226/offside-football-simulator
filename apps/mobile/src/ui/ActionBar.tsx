@@ -9,22 +9,34 @@ import { BarBelow } from './Screen';
 import { goBack } from '../game/nav';
 import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
-export function ActionBar({ children, row }: { children: ReactNode; row?: boolean }) {
+export function ActionBar({
+  children,
+  row,
+  inline = false,
+}: {
+  children: ReactNode;
+  row?: boolean;
+  inline?: boolean;
+}) {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const barBelow = useContext(BarBelow);
   return (
     <View
-      style={{
-        backgroundColor: alpha(c.bg, 0.97),
-        borderTopWidth: 1,
-        borderTopColor: c.line,
-        paddingTop: 10,
-        paddingHorizontal: 16,
-        paddingBottom: 10 + (barBelow ? 0 : insets.bottom),
-        gap: 8,
-        flexDirection: row ? 'row' : 'column',
-      }}
+      style={
+        inline
+          ? { gap: 8 }
+          : {
+              backgroundColor: alpha(c.bg, 0.97),
+              borderTopWidth: 1,
+              borderTopColor: c.line,
+              paddingTop: 10,
+              paddingHorizontal: 16,
+              paddingBottom: 10 + (barBelow ? 0 : insets.bottom),
+              gap: 8,
+              flexDirection: row ? 'row' : 'column',
+            }
+      }
     >
       {children}
     </View>
@@ -32,10 +44,18 @@ export function ActionBar({ children, row }: { children: ReactNode; row?: boolea
 }
 
 /** '← 이전으로'(웹 BackBar.svelte): 이전 기록이 있으면 되살리고, 없으면 fallback. */
-export function BackBar({ fallback, testID }: { fallback: () => void; testID?: string }) {
+export function BackBar({
+  fallback,
+  testID,
+  inline = false,
+}: {
+  fallback: () => void;
+  testID?: string;
+  inline?: boolean;
+}) {
   return (
-    <ActionBar>
-      <Btn block onPress={() => goBack(fallback)} {...(testID ? { testID } : {})}>
+    <ActionBar inline={inline}>
+      <Btn block={!inline} onPress={() => goBack(fallback)} {...(testID ? { testID } : {})}>
         {shellMoreText.back}
       </Btn>
     </ActionBar>

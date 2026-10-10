@@ -5,9 +5,9 @@
   import { goBack } from './history.svelte.js';
   import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 
-  const { act, fallback, atBottom = true }: { act: string; fallback: () => void; atBottom?: boolean } = $props();
+  const { act, fallback, atBottom = true, inline = false }: { act: string; fallback: () => void; atBottom?: boolean; inline?: boolean } = $props();
 </script>
 
-<ActionBar {atBottom} data-back-bar>
-  <button class="btn btn-block" data-act={act} onclick={() => goBack(fallback)}>{shellMoreText.back}</button>
+<ActionBar {atBottom} {inline} data-back-bar>
+  <button class="btn" class:btn-block={!inline} data-act={act} onclick={() => goBack(fallback)}>{shellMoreText.back}</button>
 </ActionBar>

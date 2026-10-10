@@ -52,13 +52,14 @@ import {
   synergyFocus,
   teamEditableIn,
 } from '@offside/app-core/teamOwner';
-import { marketName, needsOwnerLogin } from '@offside/app-core/market';
+import { MARKET_TOAST, marketName, needsOwnerLogin } from '@offside/app-core/market';
 import { onRetirementSynced, pendingRetirementIds } from '@offside/app-core/outbox';
 import { localCareerNames } from '@offside/game/hof-store';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLines } from '../../components/TeamPitch';
 import { TeamSynergy } from '../../components/TeamSynergy';
 import { toast } from '../../game/host';
+import { setCardLock } from '@offside/app-core/api/market';
 import { go } from '../../game/nav';
 import { achNudge } from '../../game/achNudge';
 import { accountCache, appState, prefs } from '../../store';
@@ -380,6 +381,16 @@ export default function Team() {
       setSaving(false);
     }
   }
+  // T-11-188 선수 잠금 — 잠긴 선수는 이적시장에 내놓거나 방출할 수 없다.
+  async function toggleLock(p: TeamPlayer) {
+    const r = await setCardLock(p.careerId, !p.locked);
+    if (!r.ok) return toast(r.error.message);
+    setPlayers((prev) =>
+      prev.map((x) => (x.careerId === p.careerId ? { ...x, locked: r.data.locked } : x)),
+    );
+    toast(r.data.locked ? MARKET_TOAST.locked : MARKET_TOAST.unlocked);
+  }
+
   async function saveAndFind() {
     if (await save()) await loadOpponents();
   }
@@ -762,6 +773,7 @@ export default function Team() {
               synFocus={syn.members}
               synApplied={syn.applied}
               synCaption={synergyApplies(season) ? syn.caption : null}
+              onLock={(p) => void toggleLock(p)}
               change={(nextSlots, nextLayout) => {
                 // T-11-114 지난 시즌 선수는 와일드카드 상한까지만.
                 if (tooManyWildcards(nextSlots, byId, season)) return toast(wildcardFullText());

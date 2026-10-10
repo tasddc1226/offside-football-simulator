@@ -1,0 +1,1 @@
+ALTER TABLE `cards` ADD `locked` integer DEFAULT false NOT NULL;

@@ -11,6 +11,7 @@ import type {
   MarketMeResponse,
   MarketSort,
   ReleaseCardsResponse,
+  CardLockResponse,
 } from '@offside/contracts';
 import { apiFetch, cachedGet, clearApiCache, type ApiResult } from './client.js';
 
@@ -75,4 +76,10 @@ export const releaseCards = (careerIds: string[]) =>
   apiFetch<ReleaseCardsResponse>('/v1/cards/release', {
     method: 'POST',
     body: JSON.stringify({ careerIds }),
+  });
+/** T-11-188 선수 잠금·풀기. 성공하면 메모가 비어 구단주 팀을 새로 받는다. */
+export const setCardLock = (careerId: string, locked: boolean) =>
+  apiFetch<CardLockResponse>('/v1/cards/lock', {
+    method: 'POST',
+    body: JSON.stringify({ careerId, locked }),
   });

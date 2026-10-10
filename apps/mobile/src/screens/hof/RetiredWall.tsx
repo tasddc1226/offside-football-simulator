@@ -61,12 +61,15 @@ const view = proxy<{
   clubId: string | null;
   clubOrder: RnClubOrder;
   pos: CareerPos | null;
+  /** T-11-193 첫 화면의 명예의 벽 펼침. 명판이 수백 개라 기본은 접어 둔다. */
+  wallOpen: boolean;
 }>({
   season: null,
   screen: 'home',
   clubId: null,
   clubOrder: 'count',
   pos: null,
+  wallOpen: false,
 });
 
 const GAP = 8;
@@ -425,7 +428,7 @@ function ClubRow({ c, club, showLeague }: { c: Colors; club: ClubSum; showLeague
 /** 첫 화면 — 요약(구단별 결번 수 + 최근 8개)만 받는다. */
 function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> }) {
   const c = useColors();
-  const { clubOrder } = useSnapshot(view);
+  const { clubOrder, wallOpen } = useSnapshot(view);
   const [summary, setSummary] = useState<RetiredNumbersSummary | null>(null);
   const [failed, setFailed] = useState(false);
   const { tick, track, pulled } = useRefresh();
@@ -479,13 +482,37 @@ function Home({ season, myIds }: { season: number; myIds: ReadonlySet<string> })
       {ready ? <Tiles items={summary.recent} withClub {...opts} /> : null}
       {summary.wall?.length ? (
         <>
-          <SectionTitle right={<CountPill c={c} count={summary.wall.length} />}>
+          <SectionTitle
+            right={
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <CountPill c={c} count={summary.wall.length} />
+                <Press
+                  testID="rn-wall-toggle"
+                  scale={1}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: wallOpen }}
+                  onPress={() => {
+                    view.wallOpen = !view.wallOpen;
+                  }}
+                  style={{ minHeight: RECORDS_TOUCH, justifyContent: 'center' }}
+                >
+                  <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
+                    {wallOpen ? L.wallClose : L.wallOpen}
+                  </Txt>
+                </Press>
+              </View>
+            }
+          >
             {L.wallTitle}
           </SectionTitle>
-          <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 10 }}>
-            {L.wallLead}
-          </Txt>
-          <Plaques list={summary.wall} withClub myIds={myIds} />
+          {wallOpen ? (
+            <>
+              <Txt tone="muted" style={{ fontSize: rem(0.75), marginBottom: 10 }}>
+                {L.wallLead}
+              </Txt>
+              <Plaques list={summary.wall} withClub myIds={myIds} />
+            </>
+          ) : null}
         </>
       ) : null}
       <SectionTitle>{L.clubsTitle}</SectionTitle>

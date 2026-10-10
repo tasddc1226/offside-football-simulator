@@ -19,6 +19,9 @@
   import { settingsText as L } from '@offside/app-core/i18n/ko/settings';
   import { getLocale, LOCALE_NAMES, LOCALES, type Locale } from '@offside/app-core/i18n/core';
   import { changeLocale } from './locale.js';
+  import { getTextSize, setTextSize, TEXT_SIZES, type TextSize } from '@offside/app-core/textSize';
+  let textSize = $state(getTextSize());
+  const textSizeLabel = (size: TextSize) => ({ small: L.textSizeSmall, standard: L.textSizeStandard, large: L.textSizeLarge, extraLarge: L.textSizeExtraLarge })[size];
   let sfx = $state(sfxEnabled());
   let dark = $state(isDark());
   let namePublic = $state(namePublicEnabled());
@@ -50,6 +53,15 @@
         {#each LOCALES as l (l)}
           <option value={l} lang={l}>{LOCALE_NAMES[l]}</option>
         {/each}
+      </select>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">
+        <strong id="text-size-label">{L.textSizeTitle}</strong>
+        <span class="muted">{L.textSizeBody}</span>
+      </div>
+      <select class="settings-lang" aria-labelledby="text-size-label" data-setting="text-size" value={textSize} onchange={(e) => setTextSize((textSize = e.currentTarget.value as TextSize))}>
+        {#each TEXT_SIZES as size (size)}<option value={size}>{textSizeLabel(size)}</option>{/each}
       </select>
     </div>
     {#if skin.desktop}

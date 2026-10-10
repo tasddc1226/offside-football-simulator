@@ -215,37 +215,68 @@ function tally(c: SeasonComp, m: { mins: number; g: number; a: number }) {
     c.a += m.a;
   }
 }
-function tie(s: GameState, c: SeasonComp, oppStr: number, legs: number): boolean {
+/**
+ * T-11-186 대회 경기 한 판의 기록 — 화면이 구간 리포트에 경기별 줄로 그린다. 엔진이 이미 굴린 값만 담는다(상대·스코어는
+ * 계산하지 않으므로 없다). stage는 저장값 한국어('16강'·'리그 페이즈'), 그릴 때 tn으로 옮긴다.
+ */
+export type CompGame = {
+  stage: string;
+  /** 두 경기 승부의 몇 번째 경기. 단판·리그 페이즈면 없다. */
+  leg?: number;
+  mins: number;
+  g: number;
+  a: number;
+  /** 리그 페이즈 경기 결과. */
+  res?: 'W' | 'D' | 'L';
+  /** 승부가 끝난 경기(마지막 차전)에만 — 다음 단계로 갔는지. */
+  won?: boolean;
+};
+export type CompLine = { t: string; k: string; games: CompGame[] };
+
+function tie(
+  s: GameState,
+  c: SeasonComp,
+  oppStr: number,
+  legs: number,
+  stage: string,
+  out: CompGame[],
+): boolean {
   let edge = 0;
   for (let i = 0; i < legs; i++) {
     const m = compMatch(s, oppStr, startChance(s, c.type as 'cup' | 'cont'));
     tally(c, m);
     edge += m.edge;
+    out.push({ stage, ...(legs > 1 ? { leg: i + 1 } : {}), mins: m.mins, g: m.g, a: m.a });
   }
-  return chance(clamp(0.5 + edge / legs, 0.08, 0.92));
+  const won = chance(clamp(0.5 + edge / legs, 0.08, 0.92));
+  out[out.length - 1]!.won = won;
+  return won;
 }
 
 const CUP_PLAN: Record<number, string[]> = { 1: ['32강', '16강'], 2: ['8강', '4강', '결승'] };
 const CUP_OPP: Record<string, number> = { '32강': -6, '16강': -2, '8강': 1, '4강': 3, 결승: 5 };
-export function compsPhase(s: GameState): { t: string; k: string }[] {
+export function compsPhase(s: GameState): CompLine[] {
   const S = s.season,
     L = leagueOf(s.leagueId),
-    lines: { t: string; k: string }[] = [];
+    lines: CompLine[] = [];
   if (!S.comps) seasonSetup(s, S);
   for (const c of S.comps!) {
     if (!c.alive) continue;
+    // 대회마다 이번 구간 결과 줄은 하나다 — 그 줄에 이번 구간 경기들을 붙인다.
+    const games: CompGame[] = [];
     if (c.type === 'super' && s.phase === 0) {
-      const won = tie(s, c, L.avg + 6, 1);
+      const won = tie(s, c, L.avg + 6, 1, '결승', games); // i18n-ignore 저장값
       c.alive = false;
       c.stage = won ? '우승' : '준우승';
       if (won) S.trophiesMid!.push(`${c.name} 우승`);
       lines.push({
         t: M.compLine({ name: tn(c.name), stage: won ? '우승' : '준우승' }),
         k: won ? 'good' : '',
+        games,
       });
     } else if (c.type === 'cup' && CUP_PLAN[s.phase]) {
       for (const r of CUP_PLAN[s.phase]!) {
-        const won = tie(s, c, L.avg + (CUP_OPP[r] ?? 0) + gauss() * 3, 1);
+        const won = tie(s, c, L.avg + (CUP_OPP[r] ?? 0) + gauss() * 3, 1, r, games);
         if (!won) {
           c.alive = false;
           c.stage = r === '결승' ? '준우승' : `${r} 탈락`;
@@ -260,24 +291,27 @@ export function compsPhase(s: GameState): { t: string; k: string }[] {
       lines.push({
         t: M.compLine({ name: tn(c.name), stage: c.stage }),
         k: c.stage === '우승' ? 'good' : c.alive ? '' : 'bad',
+        games,
       });
-    } else if (c.type === 'cont' && s.phase >= 1) contPhase(s, c, lines);
+    } else if (c.type === 'cont' && s.phase >= 1) {
+      const line = contPhase(s, c, games);
+      lines.push({ ...line, games });
+    }
   }
   return lines;
 }
-function contPhase(s: GameState, c: SeasonComp, lines: { t: string; k: string }[]) {
+function contPhase(s: GameState, c: SeasonComp, games: CompGame[]): { t: string; k: string } {
   const C = CONT[c.key!]!,
     S = s.season;
   if (s.phase === 1 && C.ko) {
-    if (tie(s, c, C.avg - 2 + gauss() * 2, 2)) {
+    if (tie(s, c, C.avg - 2 + gauss() * 2, 2, '1라운드', games)) {
+      // i18n-ignore 저장값
       c.stage = '16강 진출';
-      lines.push({ t: M.contKoPass({ name: tn(c.name) }), k: 'good' });
-    } else {
-      c.alive = false;
-      c.stage = '1라운드 탈락';
-      lines.push({ t: M.compLine({ name: tn(c.name), stage: '1라운드 탈락' }), k: 'bad' });
+      return { t: M.contKoPass({ name: tn(c.name) }), k: 'good' };
     }
-    return;
+    c.alive = false;
+    c.stage = '1라운드 탈락';
+    return { t: M.compLine({ name: tn(c.name), stage: '1라운드 탈락' }), k: 'bad' };
   }
   if (s.phase === 1) {
     for (let i = 0; i < C.games; i++) {
@@ -285,21 +319,22 @@ function contPhase(s: GameState, c: SeasonComp, lines: { t: string; k: string }[
       tally(c, m);
       const wp = clamp(0.4 + m.edge, 0.05, 0.9),
         x = rnd();
-      c.pts = (c.pts ?? 0) + (x < wp ? 3 : x < wp + (1 - wp) * 0.35 ? 1 : 0);
+      const res = x < wp ? 'W' : x < wp + (1 - wp) * 0.35 ? 'D' : 'L';
+      c.pts = (c.pts ?? 0) + (res === 'W' ? 3 : res === 'D' ? 1 : 0);
       c.played = (c.played ?? 0) + 1;
+      games.push({ stage: '리그 페이즈', mins: m.mins, g: m.g, a: m.a, res }); // i18n-ignore 저장값
     }
     if (c.pts! >= C.top) {
       c.stage = '16강 직행';
-      lines.push({ t: M.leagueDirect({ name: tn(c.name), pts: c.pts! }), k: 'good' });
-    } else if (C.po && c.pts! >= C.po) {
-      c.stage = '녹아웃 PO';
-      lines.push({ t: M.leaguePlayoff({ name: tn(c.name), pts: c.pts! }), k: '' });
-    } else {
-      c.alive = false;
-      c.stage = '리그 페이즈 탈락';
-      lines.push({ t: M.leagueOut({ name: tn(c.name), pts: c.pts! }), k: 'bad' });
+      return { t: M.leagueDirect({ name: tn(c.name), pts: c.pts! }), k: 'good' };
     }
-    return;
+    if (C.po && c.pts! >= C.po) {
+      c.stage = '녹아웃 PO';
+      return { t: M.leaguePlayoff({ name: tn(c.name), pts: c.pts! }), k: '' };
+    }
+    c.alive = false;
+    c.stage = '리그 페이즈 탈락';
+    return { t: M.leagueOut({ name: tn(c.name), pts: c.pts! }), k: 'bad' };
   }
   const rounds = [...(c.stage === '녹아웃 PO' ? ['녹아웃 PO'] : []), '16강', '8강', '4강', '결승'];
   const asia = c.key!.startsWith('ACL');
@@ -308,26 +343,21 @@ function contPhase(s: GameState, c: SeasonComp, lines: { t: string; k: string }[
       C.avg +
       ({ '녹아웃 PO': 0, '16강': 2, '8강': 5, '4강': 8, 결승: 10 } as Record<string, number>)[r]! +
       gauss() * 2;
-    const won = tie(s, c, opp, r === '결승' || (asia && r !== '16강') ? 1 : 2);
+    const won = tie(s, c, opp, r === '결승' || (asia && r !== '16강') ? 1 : 2, r, games);
     if (!won) {
       c.alive = false;
       c.stage = r === '결승' ? '준우승' : `${r} 탈락`;
-      lines.push({
-        t: M.compLine({ name: tn(c.name), stage: c.stage }),
-        k: r === '결승' ? '' : 'bad',
-      });
-      return;
+      return { t: M.compLine({ name: tn(c.name), stage: c.stage }), k: r === '결승' ? '' : 'bad' };
     }
     if (r === '결승') {
       c.alive = false;
       c.stage = '우승';
       S.trophiesMid!.push(`${c.name} 우승`);
-      lines.push({ t: M.compLine({ name: tn(c.name), stage: '우승' }), k: 'good' });
-      return;
+      return { t: M.compLine({ name: tn(c.name), stage: '우승' }), k: 'good' };
     }
     c.stage = r === '16강' ? '8강 진출' : `${r} 통과`;
   }
-  lines.push({ t: M.compLine({ name: tn(c.name), stage: c.stage }), k: '' });
+  return { t: M.compLine({ name: tn(c.name), stage: c.stage }), k: '' };
 }
 export function compGoals(S: Season) {
   return (S.comps ?? []).reduce((t, c) => ({ apps: t.apps + c.apps, g: t.g + c.g, a: t.a + c.a }), {

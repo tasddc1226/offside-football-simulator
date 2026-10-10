@@ -42,7 +42,13 @@ const later = (iso: string, ms: number) => new Date(Date.parse(iso) + ms).toISOS
 beforeAll(async () => {
   ctx = await createTestD1();
   CUP_FINAL = (await openCupEndsAt(ctx.env.DB, 1))!;
-  END = new Date(ceilKstMidnight(Date.parse(CUP_FINAL) + 3_600_000)).toISOString();
+  // 최소 기간(14일, 10/20 00:00 KST)과 컵 결승 다음 00:00 KST 중 늦은 쪽.
+  END = new Date(
+    Math.max(
+      ceilKstMidnight(Date.parse(CUP_FINAL) + 3_600_000),
+      Date.parse(START) + 14 * 86_400_000,
+    ),
+  ).toISOString();
   for (const p of ['a', 'b', 'c'])
     await run(
       'INSERT INTO profiles(id,settings_json,created_at,last_seen_at) VALUES (?,?,?,?)',
@@ -77,9 +83,9 @@ describe('시즌 진행 게이지 cron', () => {
 
   it('센 값을 굳히고(90%를 넘으면 마감 확정) 30분 안에는 다시 세지 않으며, 홈 API가 진행률을 돌려준다', async () => {
     const first = await runSeasonGauge(ctx.env.DB, NOW);
-    // 목표(참여 2명 × 10 = 20)를 넘었으니 마감을 확정한다 — 48시간 뒤보다 최소 7일(10/13 00:00 KST)이 늦지만,
-    // 시즌 1 컵이 아직 끝나지 않아 결승 다음 00:00 KST로 미룬다.
-    expect(END > '2026-10-12T15:00:00.000Z').toBe(true);
+    // 목표(참여 2명 × 12 = 24)의 90%를 넘었으니 마감을 확정한다 — 48시간 뒤보다 최소 14일(10/20 00:00 KST)이 늦고,
+    // 시즌 1 컵이 그보다 늦게 끝나면 결승 다음 00:00 KST로 미룬다.
+    expect(END >= '2026-10-19T15:00:00.000Z').toBe(true);
     expect(first).toMatchObject({
       season: 1,
       contributed: 23,
@@ -96,7 +102,7 @@ describe('시즌 진행 게이지 cron', () => {
       data: { gauge: { target: number; progress: number; endsAt: string } };
     };
     // 진행률은 응답 시각(실제 지금)으로 다시 계산한다 — 확정 뒤에는 90%에서 마감 시각 100%로 시간에 따라 찬다.
-    expect(body.data.gauge).toMatchObject({ target: 20, endsAt: END });
+    expect(body.data.gauge).toMatchObject({ target: 24, endsAt: END });
     expect(body.data.gauge.progress).toBeGreaterThanOrEqual(0.9);
   });
 

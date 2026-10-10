@@ -32,6 +32,7 @@ import { applyLatestBalance, choiceOdds } from '@offside/game/balance';
 import { offsetToRoll, tapOffset, timingNote, zoneLabel, zoneWidth } from '@offside/game/minigame';
 import { isHiddenEvent } from '@offside/game/dexGroups';
 import { scoreLine, type NatTourResult } from '@offside/game/national';
+import type { CompGame } from '@offside/game/comps';
 import { isMilOption } from '@offside/game/military';
 import {
   endSeason,
@@ -79,7 +80,7 @@ import {
   type AppState,
   type Screen,
 } from './state.js';
-import type { NatView, TourView } from './sheets.js';
+import { RES_LABEL, type NatGameView, type NatView, type TourView } from './sheets.js';
 
 export interface GameHost {
   state: AppState;
@@ -100,6 +101,26 @@ export interface GameHost {
     retire(s: GameState): void;
   };
   trackPage(screen: Screen): void;
+}
+
+/** T-11-186 컵·대륙 대회 경기 줄 — 리그 페이즈는 승무패, 승부는 차전과 마지막 경기의 통과 여부. 상대·스코어는 엔진이 정하지 않는다. */
+function compGameViews(games: CompGame[]): NatGameView[] {
+  let n = 0;
+  return games.map((m) => {
+    const stage = tn(m.stage);
+    let line = m.res
+      ? L.compLeagueGame({ n: ++n, res: RES_LABEL[m.res] })
+      : m.leg
+        ? L.compLeg({ stage, leg: m.leg })
+        : stage;
+    if (m.won !== undefined)
+      line += ` · ${m.stage === '결승' ? tn(m.won ? '우승' : '준우승') : m.won ? L.compThrough : L.compOut}`; // i18n-ignore 저장값(그릴 때 tn)
+    return {
+      line,
+      hl: m.res === 'W' || m.won === true,
+      detail: m.mins ? L.compDetail({ mins: m.mins, g: m.g, a: m.a }) : L.natBench,
+    };
+  });
 }
 
 function natViews(nt: PhaseResult['nt']): NatView[] {
@@ -212,7 +233,8 @@ export function createGameActions(host: GameHost) {
       host.save();
       host.analytics.play(s, ph === 0 && s.career.length === 0);
       const extras = [
-        ...(comp.length ? [L.stepComps] : []),
+        // T-11-186 대회 결과를 묶음 문구 대신 대회마다 한 줄로 띄운다.
+        ...comp.map((c) => c.t),
         ...(nt ? [L.stepNat] : []),
         ...(ev ? [L.stepEvent] : []),
       ];
@@ -264,7 +286,7 @@ export function createGameActions(host: GameHost) {
         games,
         rank: { before: rankBefore, after: teamRank(s) },
         role: roleOf(s),
-        comps: comp.map((c) => ({ t: c.t, good: c.k === 'good' })),
+        comps: comp.map((c) => ({ t: c.t, good: c.k === 'good', games: compGameViews(c.games) })),
         nat: natViews(nt),
         chips,
         titles,

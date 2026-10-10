@@ -5,6 +5,12 @@ import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  CLUB_STRENGTH_ENABLED?: string;
+  /** Reviewed provider league/team-id mappings. No secrets in this JSON. */
+  CLUB_STRENGTH_SOURCES?: string;
+  CLUB_STRENGTH_OWNER_EMAIL?: string;
+  FOOTBALL_DATA_TOKEN?: string;
+  API_FOOTBALL_KEY?: string;
   /** Emergency pause for automatic moderation; manual restore remains available. */
   AUTOMATION_HIDE_DISABLED?: string;
   /** 공지·릴리즈 노트 하루 첫 게시 자동 푸시. 운영에만 켠다. */
@@ -13,6 +19,10 @@ export type Bindings = {
   PUSH_TEST_ENABLED?: string;
   /** 개인 이벤트 푸시와 미접속 안내는 검증 후 별도로 활성화한다. */
   PERSONAL_PUSH_ENABLED?: string;
+  /** Optional single verified admin recipient; defaults only when ADMIN_EMAILS has one entry. */
+  ADMIN_COMMUNITY_PUSH_EMAIL?: string;
+  /** Enable only after the app understands community notifications. */
+  ADMIN_COMMUNITY_PUSH_ENABLED?: string;
   REENGAGEMENT_PUSH_ENABLED?: string;
   /** Expo enhanced push security용 secret. 클라이언트에는 넣지 않는다. */
   EXPO_PUSH_ACCESS_TOKEN?: string;

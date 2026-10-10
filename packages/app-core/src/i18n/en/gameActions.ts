@@ -6,13 +6,18 @@ export const gameActions: Translation<GameActionsMsgs> = {
   natDetail: (p) =>
     `${p.mins} min${p.g ? `, ${plural(p.g, 'goal')}` : ''}${p.a ? `, ${plural(p.a, 'assist')}` : ''} · rating ${p.rating}`,
   natBench: 'Bench',
+  compDetail: (p) =>
+    `${p.mins} min${p.g ? `, ${plural(p.g, 'goal')}` : ''}${p.a ? `, ${plural(p.a, 'assist')}` : ''}`,
+  compLeg: (p) => `${p.stage}, leg ${p.leg}`,
+  compLeagueGame: (p) => `League phase, game ${p.n} · ${p.res}`,
+  compThrough: 'Through',
+  compOut: 'Out',
   natNotInSquad: 'Not in squad',
   natNoMedal: 'No medal',
   natTourLine: (p) =>
     `${p.stage} · ${p.score}${p.mins ? ` · ${p.g ? plural(p.g, 'goal') + ', ' : ''}${p.a ? plural(p.a, 'assist') + ', ' : ''}rating ${p.rating}` : ''}`,
   preseasonDone: 'Preseason complete',
   phaseResult: (p) => `${p.phase} results`,
-  stepComps: 'Tallying cup and continental results',
   stepNat: 'National team squad announced',
   stepEvent: 'News is coming in…',
   phaseRunning: (p) => `${p.year} · ${p.phase} in progress`,

@@ -1,6 +1,8 @@
 import {
   BuyListingBodySchema,
   BuyListingResponseSchema,
+  CardLockBodySchema,
+  CardLockResponseSchema,
   CareerIdParamSchema,
   CreateListingBodySchema,
   CreateListingResponseSchema,
@@ -42,6 +44,7 @@ import {
   TRADES,
   recentSales,
   releaseCards,
+  setCardLocked,
 } from '../db/repos/market.js';
 import { myFundsSpends } from '../db/repos/itemShop.js';
 import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
@@ -74,6 +77,9 @@ const CACHE = `public, max-age=${LIST_TTL}`;
 /** 시세 차트 엣지 캐시(초). 하루치 집계라 1분이면 충분하다. */
 const CHART_TTL = 60;
 const CHART_CACHE = `public, max-age=${CHART_TTL}`;
+
+const cardLocked = () =>
+  conflictError('잠긴 선수예요. 잠금을 풀어야 내놓을 수 있어요.', 'CARD_LOCKED');
 
 function seasonOrThrow(now: string): number {
   const season = teamSeasonAt(now);
@@ -225,6 +231,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     if (card.cardValue === null || card.hidden)
       throw conflictError('기준가가 없는 선수는 내놓을 수 없어요.', 'CARD_NOT_TRADABLE');
     if (card.openListing) throw conflictError('이미 내놓은 선수예요.', 'CARD_LISTED');
+    if (card.locked) throw cardLocked();
     await checkCupListing(db, me.id, season, input.careerId);
     if (open >= rules.listLimit)
       throw conflictError(`한 번에 ${rules.listLimit}명까지 내놓을 수 있어요.`, 'LISTING_LIMIT');
@@ -242,7 +249,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         now,
       }))
     )
-      throw conflictError('이미 내놓았거나 방출한 선수예요.', 'CARD_LISTED');
+      throw conflictError('이미 내놓았거나 방출했거나 잠근 선수예요.', 'CARD_LISTED');
     const listing = (await getListing(db, id))!.listing;
     return ok(c, CreateListingResponseSchema, { listing }, 201, NO_STORE);
   });
@@ -330,5 +337,25 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     if (res.released === 0)
       throw conflictError('방출할 수 있는 선수가 없어요.', 'NOTHING_TO_RELEASE');
     return ok(c, ReleaseCardsResponseSchema, res, 200, NO_STORE);
+  });
+
+  // T-11-188 선수 잠금·풀기. 지금 가진 카드면 시즌과 상관없이(영입한 선수도) 잠근다. 판매 중이면 내린 뒤 잠근다.
+  app.post('/v1/cards/lock', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const input = readBody(c, CardLockBodySchema);
+    if (
+      await setCardLocked(db, {
+        careerId: input.careerId,
+        profileId: me.id,
+        locked: input.locked,
+        now: nowIso(),
+      })
+    )
+      return ok(c, CardLockResponseSchema, { locked: input.locked }, 200, NO_STORE);
+    const card = await cardForListing(db, input.careerId);
+    if (!card || card.ownerId !== me.id)
+      throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
+    throw conflictError('판매 중인 선수예요. 판매를 내린 뒤 잠글 수 있어요.', 'CARD_LISTED');
   });
 }

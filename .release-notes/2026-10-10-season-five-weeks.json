@@ -1,0 +1,23 @@
+{
+  "id": "t-11-190-season-five-weeks",
+  "title": "시즌이 5주로 늘어났어요",
+  "items": [
+    "서비스 시즌 하나가 개막부터 5주 동안 열려요. 시즌 1은 11월 10일 0시(한국 시간)에 끝나고, 그 시각에 시즌 2가 바로 개막해요.",
+    "홈의 시즌 진행률은 지난 시간만큼 차고, 처음부터 시즌 종료까지 남은 시간을 보여 줘요."
+  ],
+  "en": {
+    "title": "Seasons now last five weeks",
+    "items": [
+      "Each service season now runs for five weeks from its start. Season 1 ends at 00:00 KST on November 10, and Season 2 starts right then.",
+      "The season progress bar on the home screen fills with elapsed time and shows the time left until the season ends from day one."
+    ]
+  },
+  "ja": {
+    "title": "シーズンが5週間になりました",
+    "items": [
+      "サービスシーズンは開幕から5週間続きます。シーズン1は11月10日0時(韓国時間)に終わり、同時にシーズン2が開幕します。",
+      "ホームのシーズン進行率は経過時間に合わせて進み、最初からシーズン終了までの残り時間を表示します。"
+    ]
+  },
+  "availability": "web-app"
+}

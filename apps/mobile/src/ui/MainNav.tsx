@@ -4,21 +4,13 @@ import { useSnapshot } from 'valtio';
 import { recapUnseen } from '@offside/app-core/api/seasonRecap';
 import { watchFriendPending } from '../platform/friendPending';
 import { ownerDotLabel } from '@offside/app-core/ownerDots';
-import type { Screen } from '@offside/app-core/state';
+import { MAIN_SCREENS } from '@offside/app-core/mainNavigation';
+export { MAIN_SCREENS, hasMainNav } from '@offside/app-core/mainNavigation';
 import { appState } from '../store';
 import { go, goHome, openBoard, openHof } from '../game/nav';
 import { scrollTo } from './scroll';
 import { TabBar } from './TabBar';
 import { shellText as L } from '@offside/app-core/i18n/ko/shell';
-
-export const MAIN_SCREENS = [
-  'hof',
-  'board',
-  'home',
-  'owner',
-  'settings',
-] as const satisfies readonly Screen[];
-export const hasMainNav = (s: Screen) => (MAIN_SCREENS as readonly Screen[]).includes(s);
 
 const label = (k: (typeof MAIN_SCREENS)[number]): string =>
   ({

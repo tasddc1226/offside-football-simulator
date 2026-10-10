@@ -1,0 +1,23 @@
+{
+  "id": "cup-predictions-20261010",
+  "title": "오프사이드 컵 승부예측",
+  "items": [
+    "컵에 참가하지 않아도 모든 경기의 승부를 예측하고, 맞힌 경기마다 리롤권 1장을 받을 수 있어요.",
+    "경기별 예측 비율과 내 선택을 한눈에 보고, 팀 상세 페이지에서 전력과 스쿼드를 확인할 수 있어요."
+  ],
+  "en": {
+    "title": "Offside Cup match predictions",
+    "items": [
+      "Predict every cup match, even without entering. Each correct prediction earns one reroll ticket.",
+      "See each match’s prediction shares and your pick, and open team details to inspect strength and the squad."
+    ]
+  },
+  "ja": {
+    "title": "オフサイドカップ勝敗予想",
+    "items": [
+      "大会に参加していなくても全試合を予想し、的中した試合ごとにリロール券1枚を獲得できます。",
+      "試合ごとの予想割合と自分の選択を確認し、チーム詳細で戦力とスカッドを見ることができます。"
+    ]
+  },
+  "availability": "web-app"
+}

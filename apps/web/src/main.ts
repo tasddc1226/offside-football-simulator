@@ -3,6 +3,7 @@ import { initializeAnalytics } from './analytics/index.js';
 import { appState, randomName } from './ui/state.svelte.js';
 import { hydrate, mount } from 'svelte';
 import './style.css';
+import { installTextSize } from './ui/textSize.js';
 import App from './ui/App.svelte';
 import Sheet from './ui/Sheet.svelte';
 import Toast from './ui/Toast.svelte';
@@ -27,6 +28,7 @@ import { applyLocale, bootLocale } from './ui/locale.js';
 import { startSeasonSchedule } from '@offside/app-core/seasonSchedule';
 
 // 시즌 일정(게이지가 확정한 마감·다음 시즌): 저장해 둔 일정을 세이브·화면보다 먼저 입히고 서버 일정으로 맞춘다.
+installTextSize();
 startSeasonSchedule();
 installClickSound();
 // 자동 플레이 탐지(관찰 전용): 시즌마다 조작 횟수만 센다.
@@ -99,10 +101,12 @@ const flushOutbox = () =>
   void import('./sync/outbox.js').then((m) => m.flushOutbox()).catch(() => {});
 flushOutbox();
 addEventListener('online', flushOutbox);
-document.addEventListener(
-  'visibilitychange',
-  () => document.visibilityState === 'visible' && flushOutbox(),
-);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    flushOutbox();
+    syncBalance();
+  }
+});
 // T-10-104: 게임 화면·액션·게임 시트는 첫 화면 번들 밖(지연 청크)이다. 이어 할 커리어가 있으면 첫 페인트 뒤 브라우저가
 // 한가할 때 미리 받아 둬 '계속하기'를 눌렀을 때 기다리지 않게 한다(기록만 보러 온 방문자는 받지 않는다 — 새 커리어는
 // 선수 생성 화면을 여는 순간 받는다, nav.goNew). index.html modulepreload에는 넣지 않는다 — 첫 화면 예산 밖.

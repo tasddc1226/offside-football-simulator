@@ -31,7 +31,7 @@ function fakeSql() {
   return {
     exec(query: string, ...bindings: (string | number)[]) {
       const stmt = db.prepare(query);
-      if (/^\s*select|\breturning\b/i.test(query)) {
+      if (/^\s*(select|pragma)|\breturning\b/i.test(query)) {
         const rows = stmt.all(...bindings);
         return { toArray: () => rows, rowsWritten: 0 };
       }
@@ -42,7 +42,7 @@ function fakeSql() {
 }
 
 /** 가짜 전역을 끼운 뒤 방을 만든다. 테스트 끝에 vi.unstubAllGlobals(). */
-export function fakeRoom() {
+export function fakeRoom(env = {} as Bindings) {
   vi.stubGlobal(
     'WebSocketRequestResponsePair',
     class {
@@ -69,18 +69,40 @@ export function fakeRoom() {
     },
   );
   const sockets: FakeSocket[] = [];
+  let alarm: number | null = null;
+  const pending: Promise<unknown>[] = [];
   const ctx = {
-    storage: { sql: fakeSql() },
+    storage: {
+      sql: fakeSql(),
+      transactionSync: <T>(fn: () => T) => fn(),
+      getAlarm: async () => alarm,
+      setAlarm: async (at: number) => {
+        alarm = at;
+      },
+      deleteAlarm: async () => {
+        alarm = null;
+      },
+    },
+    waitUntil: (p: Promise<unknown>) => {
+      pending.push(p);
+    },
     getWebSockets: () => sockets,
     acceptWebSocket: (ws: FakeSocket) => sockets.push(ws),
     setWebSocketAutoResponse: vi.fn(),
   };
-  const room = new ChatRoom(ctx as unknown as DurableObjectState, {} as Bindings);
+  const room = new ChatRoom(ctx as unknown as DurableObjectState, env);
   /** 방에 소켓 하나를 붙이고(입장권이 있으면 `?t=`) 서버 쪽 소켓을 돌려준다. */
   const join = async (ticket?: string) => {
     await room.fetch(new Request(`http://api.test/v1/chat/ws${ticket ? `?t=${ticket}` : ''}`));
     return sockets.at(-1)!;
   };
   const ns = { idFromName: (n: string) => n, get: () => room };
-  return { room, sockets, join, ns: ns as unknown as NonNullable<Bindings['CHAT']> };
+  return {
+    room,
+    sockets,
+    join,
+    drain: () => Promise.all(pending),
+    restart: () => new ChatRoom(ctx as unknown as DurableObjectState, env),
+    ns: ns as unknown as NonNullable<Bindings['CHAT']>,
+  };
 }
