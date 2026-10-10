@@ -17,8 +17,6 @@ import { titleCollection } from '@offside/app-core/ownerTitleCollection';
 import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
 import { TitleBadge } from '../../components/TitleBadge';
 import { toast } from '../../game/host';
-import { go } from '../../game/nav';
-import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Press, Txt } from '../../ui';
@@ -285,15 +283,6 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
             <Txt tone="muted" style={small}>
               {L.titleBridge}
             </Txt>
-            <Btn
-              testID="title-season-achievements"
-              onPress={() => {
-                appState.teamView = 'achievements';
-                go('team');
-              }}
-            >
-              {L.viewAchievements}
-            </Btn>
             {collection.cups.length ? (
               <>
                 <Btn testID="title-pick-auto" disabled={saving} onPress={() => void pick(null)}>
