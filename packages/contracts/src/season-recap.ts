@@ -74,6 +74,8 @@ export const RecapSquadMemberSchema = z.strictObject({
   card: TeamPlayerSchema,
   lastClub: z.string().nullable(),
   lastClubId: z.string().nullable(),
+  /** T-11-191 도트 선수 꾸미기 코드. 꾸미지 않았거나 배포 전 결산이면 없다. */
+  look: z.string().nullable().optional(),
 });
 export type RecapSquadMember = z.infer<typeof RecapSquadMemberSchema>;
 

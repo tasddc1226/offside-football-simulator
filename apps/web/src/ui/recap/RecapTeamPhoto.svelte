@@ -16,7 +16,7 @@
   const more = $derived(Math.max(0, squad.length - PHOTO_MAX));
   const nameOf = (m: RecapSquadMember) => playerName(m.card.publicName, m.card.pos, m.card.number);
   const specOf = (m: RecapSquadMember) => {
-    const spec = primeAvatarSpec({ id: m.card.careerId, lastClub: m.lastClub ?? '', lastClubId: m.lastClubId });
+    const spec = primeAvatarSpec({ id: m.card.careerId, lastClub: m.lastClub ?? '', lastClubId: m.lastClubId, look: m.look });
     return m.card.careerId === captain ? { ...spec, acc: [...spec.acc, 'armband' as const] } : spec;
   };
 

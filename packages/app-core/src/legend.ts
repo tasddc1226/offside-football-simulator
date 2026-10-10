@@ -2,6 +2,7 @@
 // 은퇴 상세 화면과 은퇴 직후 화면이 같은 LegendView를 그린다. 내 선수는 로컬 ft_hof 항목(HofEntry)에서,
 // 다른 유저의 선수는 서버 /v1/hof에서 만든다.
 import type { LegendSnapshot, PublicHofEntry, RetiredNumberResult } from '@offside/contracts';
+import { lookCode } from '@offside/game/look';
 import { toPublicName } from '@offside/contracts/content-filter';
 import { isHofEligible } from '@offside/contracts/hof-rules';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
@@ -46,6 +47,7 @@ function publicView(e: PublicHofEntry, d: LegendView['d']): LegendView {
     lastClub: e.lastClub,
     lastClubId: e.lastClubId,
     avatarId: e.id,
+    avatarLook: e.look ?? null,
     score: e.legendScore,
     peak: e.peak,
     d,
@@ -80,6 +82,7 @@ export function createLegends(host: LegendHost) {
       lastClub: h.lastClub,
       lastClubId: h.lastClubId,
       avatarId: h.id ?? null,
+      avatarLook: h.look ?? null,
       score: h.score,
       peak: h.peak,
       d: h.detail ?? null,
@@ -116,6 +119,7 @@ export function createLegends(host: LegendHost) {
       lastClub: s.club.name,
       lastClubId: s.club.id,
       avatarId: s.cid,
+      avatarLook: lookCode(s.look) ?? null,
       score: legendScore(s),
       peak: s.peak,
       d: s,

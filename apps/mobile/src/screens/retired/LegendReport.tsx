@@ -61,8 +61,8 @@ export function LegendReport({ v, end }: { v: LegendView; end?: ReactNode }) {
   const { width, height } = useWindowDimensions();
   // 같은 선수면 모습을 다시 만들지 않는다(PixelAvatar는 memo라 다시 그리지 않는다).
   const avatar = useMemo(
-    () => (v.avatarId ? retiredAvatarSpec(v.avatarId, v.age) : null),
-    [v.avatarId, v.age],
+    () => (v.avatarId ? retiredAvatarSpec(v.avatarId, v.age, v.avatarLook) : null),
+    [v.avatarId, v.age, v.avatarLook],
   );
   const { motionOK } = useSnapshot(prefs);
   const rs = useSnapshot(rnResults);

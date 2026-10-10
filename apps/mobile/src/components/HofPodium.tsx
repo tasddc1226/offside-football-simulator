@@ -138,6 +138,7 @@ export function HofPodium({
                   id={entry.id}
                   lastClub={entry.lastClub}
                   lastClubId={entry.lastClubId}
+                  look={entry.look}
                   width={avW}
                 />
               </View>

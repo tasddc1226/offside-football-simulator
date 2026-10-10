@@ -253,6 +253,9 @@ export type CareerUpsertResponse = z.infer<typeof CareerUpsertResponseSchema>;
 /** T-10-026 칭호 id(web `game/titles.ts` 레지스트리 키). 서버는 모양만 검사하고 뜻은 웹이 해석한다. */
 export const TitleIdSchema = z.string().regex(/^[a-z0-9_]{1,32}$/);
 
+/** T-11-191 도트 선수 꾸미기 코드(항목 글자 + 선택지 번호, 최대 16항목). */
+export const LookCodeSchema = z.string().regex(/^(?:[a-z]\d{1,2}){1,16}$/);
+
 /** season.ts `retire()`가 만드는 `HofEntry` + `legendScore()`에서 뽑아낸 은퇴 요약. */
 export const RetirementSummarySchema = z.strictObject({
   retireAge: z.number().int().min(0).max(100),
@@ -451,6 +454,8 @@ export const PutRetirementBodySchema = RetirementSummarySchema.extend({
   profile: PeakProfileSchema.optional().catch(undefined),
   /** T-11-030 은퇴 때 공개되는 실제 잠재력(스카우트 평가 + 숨은 성장). 관찰 전용 — 옛 클라이언트는 없고, 모양이 틀려도 은퇴는 받는다. */
   potReal: z.number().int().min(0).max(150).optional().catch(undefined),
+  /** T-11-191 은퇴 때 굳은 도트 선수 꾸미기(game look.ts lookCode, 예: `s2h5y3`). 옛 클라이언트는 없고, 모양이 틀려도 은퇴는 받는다. */
+  look: LookCodeSchema.optional().catch(undefined),
 });
 export type PutRetirementBody = z.infer<typeof PutRetirementBodySchema>;
 
@@ -479,6 +484,8 @@ export const PublicHofEntrySchema = z.strictObject({
   lastClub: z.string(),
   /** T-10-066 마지막 소속 클럽 id. 옛 기록·옛 클라이언트 은퇴는 null(배포 전 엣지 캐시 응답엔 없다). */
   lastClubId: z.string().nullable().optional(),
+  /** T-11-191 도트 선수 꾸미기 코드(없으면 커리어 ID로 정한 기본 모습). 배포 전 엣지 캐시 응답엔 없다. */
+  look: z.string().nullable().optional(),
   retiredAt: z.string(),
   hasDetail: z.boolean(),
   /** T-10-026 대표 칭호 id(없으면 null). */

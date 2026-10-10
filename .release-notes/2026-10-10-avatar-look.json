@@ -1,0 +1,26 @@
+{
+  "id": "t-11-191-avatar-look",
+  "title": "도트 선수 꾸미기",
+  "items": [
+    "커리어 화면의 도트 선수를 누르면 선수 자금으로 모습을 꾸밀 수 있어요. 피부색 · 머리색 · 머리 모양 · 수염 · 표정 · 헤어밴드 · 손목 밴드 · 고글 · 축구화 · 양말을 고를 수 있어요.",
+    "항목마다 한 번 사면 그 커리어 동안 무료로 몇 번이든 바꿀 수 있어요. 능력치와 경기 결과에는 영향이 없어요.",
+    "은퇴하면 그 모습으로 굳어요. 은퇴 리포트, 명예의 전당 시상대, 구단주 시즌 결산 단체사진에도 꾸민 모습이 나와요."
+  ],
+  "en": {
+    "title": "Customize your pixel player",
+    "items": [
+      "Tap the pixel player on the career screen to customize your look with your player's money: skin tone, hair color, hairstyle, beard, expression, headband, wristband, goggles, boots and socks.",
+      "Buy each item once and change it as often as you like for the rest of that career. It never affects attributes or match results.",
+      "Your look is locked in when you retire, and it appears on your retirement report, the Hall of Fame podium and the owner season recap team photo."
+    ]
+  },
+  "ja": {
+    "title": "ドット選手のカスタマイズ",
+    "items": [
+      "キャリア画面のドット選手をタップすると、選手の資金で見た目をカスタマイズできます。肌の色・髪の色・髪型・ひげ・表情・ヘアバンド・リストバンド・ゴーグル・スパイク・ソックスを選べます。",
+      "項目ごとに一度買えば、そのキャリアの間は何度でも無料で変えられます。能力値や試合結果には影響しません。",
+      "引退するとその姿で固定されます。引退レポート、殿堂の表彰台、オーナーのシーズン総括の集合写真にもカスタマイズした姿が出ます。"
+    ]
+  },
+  "availability": "web-app"
+}

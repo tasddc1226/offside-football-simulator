@@ -1800,6 +1800,19 @@ textarea {
 .player .avatar {
   align-self: end;
 }
+/* T-11-191 도트 선수를 누르면 꾸미기. */
+.player .avatar-btn {
+  align-self: end;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 10px;
+}
+.player .avatar-btn:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
 /* T-11-120 도트 선수(24×32칸, PixelAvatar). 정수배(3배·2배)로만 키워 칸이 고르게 보이게 한다 — game/avatar.ts avatarWidth와 같은 값. */
 .avatar {
   width: 72px;

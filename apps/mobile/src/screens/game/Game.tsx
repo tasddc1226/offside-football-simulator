@@ -31,6 +31,8 @@ import { PitchCard } from '../../ui/Card';
 import { PixelAvatar } from '../../ui/PixelAvatar';
 import { ClubBadge } from '../../ui/ClubBadge';
 import { Press } from '../../ui/Press';
+import { AvatarLook } from './AvatarLook';
+import { avatarLookText as LK } from '@offside/app-core/i18n/ko/avatarLook';
 import { BarBelow, Screen } from '../../ui/Screen';
 import { TabBar, type TabItem } from '../../ui/TabBar';
 import { Topbar } from '../../ui/Topbar';
@@ -99,6 +101,8 @@ export default function Game() {
   const { width } = useWindowDimensions();
   const tab = snap.tab;
   const [playerHint, setPlayerHint] = useState(false);
+  // T-11-191 도트 선수를 누르면 꾸미기.
+  const [lookOpen, setLookOpen] = useState(false);
   const s = snap.G as GameState | null;
   // OVR 숫자 트윈(T-10-003 goal 3): 훈련·이벤트 결과로 능력치가 바뀔 때마다 즉시 점프하는 대신 짧게 카운트업/다운한다.
   const [ovrNow] = useTween([s ? ovr(s) : 0], 420);
@@ -220,11 +224,17 @@ export default function Game() {
           }
         >
           <Topbar />
+          {lookOpen ? <AvatarLook close={() => setLookOpen(false)} /> : null}
           <PitchCard gap={12} style={{ paddingTop: 18, paddingHorizontal: 18, paddingBottom: 16 }}>
             <View style={{ flexDirection: 'row', gap: 12 }}>
-              <View style={{ alignSelf: 'flex-end' }}>
+              <Press
+                style={{ alignSelf: 'flex-end' }}
+                testID="avatar-look-open"
+                accessibilityLabel={LK.open}
+                onPress={() => setLookOpen(true)}
+              >
                 <PixelAvatar spec={avatar} width={avatarW} />
-              </View>
+              </Press>
               <View style={{ flex: 1 }}>
                 <Txt
                   style={{

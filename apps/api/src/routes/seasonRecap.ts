@@ -97,6 +97,7 @@ export const squadOf = (db: Db, profileId: string, season: number, cutoff: strin
       legendScore: sql`${careers.legendScore}`.mapWith(careers.legendScore),
       lastClub: sql`${careers.lastClub}`.mapWith(careers.lastClub),
       lastClubId: sql`${careers.lastClubId}`.mapWith(careers.lastClubId),
+      look: sql`${careers.look}`.mapWith(careers.look),
     })
     // The cutoff index scans every owner's retired careers. Keep this owner-scoped
     // even when SQLite estimates that the global retirement index is cheaper.
@@ -158,6 +159,7 @@ export function registerSeasonRecapRoutes(app: Hono<AppEnv>): void {
       card: teamPlayerCard(p),
       lastClub: p.lastClub,
       lastClubId: p.lastClubId,
+      ...(p.look ? { look: p.look } : {}),
     }));
     const recap: SeasonRecap = {
       season,
