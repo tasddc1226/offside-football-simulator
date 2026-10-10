@@ -60,7 +60,13 @@ export function Screen({
       </KeyboardAvoidingView>
     );
   return (
-    <View style={{ flex: 1, backgroundColor: c.bg }}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: c.bg,
+        paddingTop: Platform.OS === 'ios' ? insets.top : 0,
+      }}
+    >
       <ScrollView
         ref={keyboardScroll.ref}
         scrollEnabled={scrollEnabled}
@@ -75,7 +81,7 @@ export function Screen({
         keyboardDismissMode="on-drag"
         automaticallyAdjustKeyboardInsets
         refreshControl={refreshControl ?? pull}
-        contentContainerStyle={[pad, style]}
+        contentContainerStyle={[pad, Platform.OS === 'ios' && { paddingTop: 0 }, style]}
       >
         {children}
       </ScrollView>

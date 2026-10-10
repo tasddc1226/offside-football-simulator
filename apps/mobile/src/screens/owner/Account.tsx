@@ -18,7 +18,6 @@ import { closeSheet, refreshAccount, showSheet } from '../../game/host';
 import { appleReauthCode } from '../../platform/auth';
 import { setSessionToken } from '../../platform/session';
 import { rem } from '../../theme/type';
-import { NicknameForm } from '../../components/NicknameForm';
 import { Btn, Row, Txt } from '../../ui';
 import { LinkBtn } from '../settings/parts';
 import { accountText as L } from '@offside/app-core/i18n/ko/account';
@@ -83,7 +82,7 @@ function askDelete() {
 }
 
 /** 관리자 계정(구단주 화면이 확인한다)은 댓글 닉네임이 '운영자'로 고정돼 바꾸는 칸이 없다. */
-export function Account({ admin = false }: { admin?: boolean }) {
+export function Account() {
   const cache = useSnapshot(accountCache);
   const profile = cache.value;
 
@@ -152,18 +151,6 @@ export function Account({ admin = false }: { admin?: boolean }) {
         <Btn kind="primary" sm onPress={askLogout} testID="logout">
           {L.logout}
         </Btn>
-      </View>
-      <View style={{ gap: 6 }}>
-        <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-          {profile.nickname ? L.nickname : L.nicknamePrompt}
-        </Txt>
-        {admin ? (
-          <Txt style={{ fontSize: rem(0.75), fontWeight: '700' }}>
-            {L.nicknameFixed({ nickname: profile.nickname })}
-          </Txt>
-        ) : (
-          <NicknameForm key={profile.nickname ?? ''} current={profile.nickname} />
-        )}
       </View>
       <Row gap={6} wrap={false} style={{ justifyContent: 'flex-end' }}>
         {profile.linked.google ? (

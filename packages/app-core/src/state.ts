@@ -37,6 +37,8 @@ export type HofView = {
   pos: Pos | null;
   /** T-11-129 팀 랭킹 탭을 열 때의 정렬(홈 구단 가치 TOP 3의 전체 보기). 없으면 레이팅. */
   teamSort?: TeamRankSort;
+  /** T-11-150 team 팀의 구단주 프로필을 연다(팀 프로필 대신). */
+  owner?: boolean;
 };
 /** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
 export const hofStart = (): HofView => ({
@@ -59,6 +61,8 @@ export type Screen =
   | 'legend'
   | 'settings'
   | 'owner'
+  | 'honors'
+  | 'players'
   /** T-10-092 구단주 팀(구단주 화면에서 연다). */
   | 'team'
   /** T-11-080 이적시장(구단주 화면에서 연다). */
@@ -182,6 +186,8 @@ export interface LegendView {
 export interface AppState {
   G: GameState | null;
   screen: Screen;
+  playersSeason: number | null;
+  playersView: 'records' | 'manage';
   tab: Tab;
   lastRetired: HofEntry | null;
   legend: LegendView | null;
@@ -202,7 +208,7 @@ export interface AppState {
   /** 기록실 화면의 탭(명예의 전당·영구결번)·페이지(1부터)·순위 유형. 선수 상세에서 돌아와도 그대로다. */
   hof: HofView;
   /** 선수 상세의 '← 이전으로'가 돌아갈 화면. */
-  legendBack: 'home' | 'hof' | 'owner';
+  legendBack: 'home' | 'hof' | 'owner' | 'players';
   /** T-10-130 구단주 팀 안의 화면 — 뒤로 가기 기록에 남도록 appState에 둔다(history.svelte.ts). */
   teamView: TeamView;
   /** T-10-029. 공유 링크(/career/:id)로 들어온 은퇴 선수 id — 보기 전용 화면(SharedCareer)이 읽는다. */
@@ -213,6 +219,9 @@ export interface AppState {
   achNew: number;
   /** T-11-128 끝난 시즌 결산이 나왔는데 이 기기에서 아직 안 열어 봤는가 — 하단 '구단주' 탭의 점(recapUnseen). */
   recapNew: boolean;
+  /** Local navigation state for the unified archive (not a career save). */
+  honorsView: 'records' | 'titles';
+  honorsSeason: number | null;
   /** T-11-142 받은 친구 신청 수 — 하단 '구단주'·내 팀 '경기' 탭·'친구' 버튼의 점(friendPending). */
   friendReq: number;
 }
@@ -250,10 +259,14 @@ export const initialAppState = (): AppState => ({
   ownerConflict: null,
   hof: hofStart(),
   legendBack: 'home',
+  playersSeason: null,
+  playersView: 'records',
   teamView: 'team',
   sharedCareer: null,
   report: null,
   achNew: 0,
   recapNew: false,
+  honorsView: 'records',
+  honorsSeason: null,
   friendReq: 0,
 });

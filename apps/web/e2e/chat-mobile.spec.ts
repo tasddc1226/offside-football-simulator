@@ -146,3 +146,19 @@ test('입장·재입장은 최신 메시지를 보여 주고 과거 글을 읽�
   expect(latest!.y).toBeGreaterThanOrEqual(viewport!.y);
   expect(latest!.y + latest!.height).toBeLessThanOrEqual(viewport!.y + viewport!.height + 1);
 });
+
+test('profile images appear on existing chat messages and restore to initials', async ({
+  page,
+}) => {
+  const avatarId = '11111111-1111-4111-8111-111111111111';
+  await page.route(`${API}/v1/avatars/*`, (r) =>
+    r.fulfill({ path: 'public/brand/offside-icon-v7-64.png' }),
+  );
+  const { incoming } = await openChat(page);
+  incoming({ t: 'avatar', author: 'me', avatarId });
+  const avatar = page.locator('[data-chat-msg="29"] .owner-avatar img');
+  await expect(avatar).toHaveAttribute('src', `${API}/v1/avatars/${avatarId}`);
+  await expect(avatar).toBeVisible();
+  incoming({ t: 'avatar', author: 'me', avatarId: null });
+  await expect(avatar).toHaveCount(0);
+});

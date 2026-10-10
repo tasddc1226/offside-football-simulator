@@ -53,6 +53,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   group: 'グループステージ',
   championTitle: '{cup} 優勝！',
   outTitle: '{cup}が終わりました',
+  titleNotOwned: 'まだ獲得していない称号です。',
   adminPast: '受付開始は現在より後にしてください。',
   adminSeason: '大会全体が1つのシーズン内に収まる必要があります。',
   adminOverlap: '第{edition}回大会の期間と重なっています。',

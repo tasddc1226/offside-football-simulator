@@ -2,6 +2,7 @@
 // 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
 import { View } from 'react-native';
 import { TeamLogo } from '../../components/TeamLogo';
+import { TitleBadge } from '../../components/TitleBadge';
 import { TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
 import type { TeamOpponent } from '@offside/app-core/api/team';
 import { recordText } from '@offside/app-core/teamText';
@@ -97,7 +98,12 @@ export function TeamOpponents({
               >
                 <TeamLogo logo={o.logo} name={o.name} size={32} decorative />
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                  <Txt bold>{o.name}</Txt>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Txt bold style={{ flexShrink: 1 }}>
+                      {o.name}
+                    </Txt>
+                    {o.title ? <TitleBadge title={o.title} size="icon" /> : null}
+                  </View>
                   <Txt
                     tone="muted"
                     v="sm"

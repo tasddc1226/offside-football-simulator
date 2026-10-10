@@ -8,7 +8,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   navMatches: 'Matches',
   navAch: 'Achievements',
   navHistory: 'Match history',
-  navOwner: 'Owner',
+  navOwner: 'My club',
   navNewAch: (p) => `${plural(p.n, 'new achievement')}`,
   loadFail: "Couldn't load your team.",
   myTeam: 'My team',

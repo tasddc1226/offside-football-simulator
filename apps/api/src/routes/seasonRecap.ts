@@ -20,7 +20,7 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { closeStateOf } from '../team/seasonClose.js';
 import { nowIso, ok } from './shared.js';
 
-const honorsOf = async (db: Db, profileId: string, season?: number): Promise<OwnerHonor[]> =>
+export const honorsOf = async (db: Db, profileId: string, season?: number): Promise<OwnerHonor[]> =>
   (
     await db
       .select()

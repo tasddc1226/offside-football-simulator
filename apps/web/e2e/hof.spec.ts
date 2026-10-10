@@ -163,6 +163,7 @@ test('내 선수 탭: 상세 없는 옛 기록은 요약만 보여 준다', asyn
     '불러오지 못했어요',
   );
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('.film-open h1')).toHaveText('옛선수');
   await expect(page.locator('.film-open svg.avatar')).toHaveCount(0); // 커리어 ID 없는 옛 기록엔 도트 선수가 없다
@@ -209,20 +210,21 @@ test('구단주 내 선수: 계정 기록(서버) + 이 기기 이름 덮어쓰�
   }, ID);
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await expect(page.locator('[data-my-source="account"]')).toBeVisible();
   await expect(page.locator('[data-my-player]')).toHaveCount(2);
   await expect(page.locator('[data-my-player="0"]')).toContainText('이기기선수');
   await expect(page.locator('[data-my-player="1"]')).toContainText('익명의 골키퍼');
   await expect(page.locator('[data-my-players]')).not.toContainText('다른계정선수');
-  // 상세에서 돌아오면 구단주 화면이다. 뒤로 가기로도, T-11-180 공유 바 왼쪽 '이전으로'로도 돌아간다.
+  // 상세에서 돌아오면 내 선수 화면이다. 뒤로 가기로도, T-11-180 공유 바 왼쪽 '이전으로'로도 돌아간다.
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('.film-open h1')).toBeVisible();
   await expect(page.locator('[data-act="share-home"]')).toHaveCount(0);
   await page.goBack();
-  await expect(page.locator('h1')).toHaveText('구단주');
+  await expect(page.locator('[data-owner-players-screen]')).toBeVisible();
   await page.locator('[data-my-player="0"]').click();
   await page.locator('[data-act="hof-back"]').click();
-  await expect(page.locator('h1')).toHaveText('구단주');
+  await expect(page.locator('[data-owner-players-screen]')).toBeVisible();
 });
 
 // T-10-069: 다른 기기에서 은퇴한(이 기기 ft_hof에 없는) 계정의 내 선수도, 어디서 열든 상세 아래에 공유 버튼이 뜬다.
@@ -240,6 +242,7 @@ test('이 기기에 없는 계정의 내 선수도 공유 버튼이 뜬다', asy
   // 공유할 수 있는 선수는 아래 바가 홈으로 · 공유하기(T-10-128) — 뒤로 가기로 돌아간다.
   await page.goBack();
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-act="share-career"]')).toBeInViewport();
 });
@@ -274,8 +277,10 @@ test('구단주 내 선수: 계정에 연결되지 않았으면 이 기기 기�
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await expect(page.locator('[data-my-source="device"]')).toContainText('구글 계정을 연결하면');
   await expect(page.locator('[data-my-player="0"]')).toContainText('기기선수');
+  await page.locator('[data-act="players-back"]').click();
   // 기록실에는 전체/내 선수 전환이 없다(탭은 명예의 전당·영구결번·팀 랭킹).
   await page.locator('[data-act="hof"]').click();
   await expect(page.locator('[data-hof-tab]')).toHaveText([
@@ -343,7 +348,7 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
   await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(3);
 });
 
-test('구단주 내 선수: 3명까지 보이고 모두 보기로 펼친다', async ({ page }) => {
+test('구단주 내 선수: 별도 화면에서 전체 목록을 본다', async ({ page }) => {
   await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [], total: 0 })));
   await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: false, entries: [] })));
   await page.addInitScript(() => {
@@ -375,9 +380,9 @@ test('구단주 내 선수: 3명까지 보이고 모두 보기로 펼친다', as
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-my-player]')).toHaveCount(3);
+  await page.locator('[data-act="open-owner-players"]').click();
+  await expect(page.locator('[data-my-player]')).toHaveCount(12);
   await expect(page.locator('[data-my-player="0"]')).toContainText('기기선수1');
-  await page.locator('[data-act="my-players-all"]').click();
   await expect(page.locator('[data-my-player]')).toHaveCount(12);
   await expect(page.locator('[data-act="my-players-all"]')).toHaveCount(0);
 });
@@ -610,7 +615,7 @@ test('내 선수 국적: 계정 응답으로 옛 로컬 기록을 보완하고 �
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await page.locator('[data-act="my-players-all"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   const rows = page.locator('[data-my-player]');
   await expect(rows).toHaveCount(4);
   await expect(rows.nth(0)).toContainText('로컬 브라질');
@@ -655,6 +660,7 @@ test('이 기기 내 선수: 새 로컬 국적을 전달하고 국적 없는 옛
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await expect(page.locator('[data-my-player="0"] [data-hof-nation]')).toHaveAttribute(
     'data-hof-nation',
     'BR',

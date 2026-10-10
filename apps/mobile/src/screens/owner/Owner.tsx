@@ -1,45 +1,38 @@
-// 구단주 화면(웹 Owner.svelte, T-10-058) — 게임 속 사용자 프로필. 계정(로그인·닉네임) 카드, 내 팀 입구, 내 선수,
-// 운영 도구(관리자) 입구.
-// T-10-102 비로그인이면 계정 카드는 안내만, 로그인 버튼은 카드 밖에 하나만 두고 로그인해야 쓰는 '내 팀'은 숨긴다.
-// 구단 이름·엠블럼 변경은 환경설정에 있다.
-// T-11-026 구단 허브 — 맨 위에 구단주 요약(은퇴 선수·레전드 점수·결번), 그 아래 '내 팀' 카드(전적·레이팅·오늘 남은
-// 경기와 바로 경기하기), 내 선수 상위 3명, 계정은 맨 아래. 비로그인이면 '내 팀' 자리에 잠긴 카드와 로그인 버튼을 둔다.
-// T-11-128 요약 아래에 시즌 결산 카드(RecapCard) — 끝난 시즌이 있으면 결산 화면(recap)으로 연다.
-import { useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+// My club: shared owner identity and operations, with team-specific play in the team card.
+import { useEffect, useState } from 'react';
+import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
-import { fetchBoardViewer } from '@offside/app-core/api/boards';
+import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
 import { fetchOwnerTeam } from '@offside/app-core/api/team';
 import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
 import { fundsText } from '@offside/app-core/market';
 import {
   ownerLockedText,
-  ownerSummary,
   ownerTeamCard,
   ownerTeamEmptyText,
   type OwnerSummary,
   type OwnerTeamCard,
 } from '@offside/app-core/ownerHub';
-import { fetchSeasonRecap } from '@offside/app-core/api/seasonRecap';
-import { profileTier, tierTitle, type OwnerTierTag } from '@offside/app-core/ownerTier';
+import { tierTitle, type OwnerTierTag } from '@offside/app-core/ownerTier';
 import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
-import { founderLabel } from '@offside/app-core/friendText';
 import { loadHOF } from '@offside/game/hof-store';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
 import { go, takeFocus } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
-import { DISPLAY, rem } from '../../theme/type';
+import { rem } from '../../theme/type';
 import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
+import { OwnerProfileEditor } from './OwnerProfileEditor';
 import { LoginButtons } from './LoginButtons';
-import { MyPlayers } from './MyPlayers';
-import { ChampBadge } from '../../components/ChampBadge';
+import { loadMyPlayerSummary } from '@offside/app-core/myPlayers';
+import { ownerPlayersText as P } from '@offside/app-core/i18n/ko/ownerPlayers';
+import { TitleBadge } from '../../components/TitleBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
-import { RecapCard } from './RecapCard';
+import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
 import { BoostShop } from './BoostShop';
 import { ScoutShop } from './ScoutShop';
 import { RerollShop } from './RerollShop';
@@ -50,6 +43,7 @@ import { GradeEmblem } from '../../ui/GradeEmblem';
 import { AdSlot } from '../../components/AdSlot';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
+import { teamHomeText as T } from '@offside/app-core/i18n/ko/teamHome';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { openFriends } from '../../platform/inbox';
 import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
@@ -152,12 +146,19 @@ export default function Owner() {
   const guest = acct === null || (!!acct && acct !== 'error' && !isMember(acct));
   const nickname = acct && acct !== 'error' ? acct.nickname : null;
 
-  // 요약은 '내 선수'가 불러온 목록으로 센다(비로그인이면 이 기기 기록).
+  // 전용 목록을 열지 않아도 현재 시즌의 기존 기록 기준으로 요약한다.
+  const { tick, track } = useRefresh();
   const [summary, setSummary] = useState<OwnerSummary | null>(null);
-  const onRows = useCallback(
-    (rows: Parameters<typeof ownerSummary>[0]) => setSummary(ownerSummary(rows)),
-    [],
-  );
+  useEffect(() => {
+    if (!linked && !guest) return;
+    let alive = true;
+    void track(loadMyPlayerSummary(linked)).then((value) => {
+      if (alive) setSummary(value);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [linked, guest, tick, track]);
   // 내 팀 카드 — 팀 화면과 같은 응답(1분 메모)이라 팀 화면에 들어가도 다시 묻지 않는다.
   const [card, setCard] = useState<OwnerTeamCard | null>(null);
   const [cardFailed, setCardFailed] = useState(false);
@@ -165,20 +166,27 @@ export default function Owner() {
   // 메모)이라 이적시장에 들어가도 다시 묻지 않는다. 비로그인이면 이 기기 기록의 카드 기준가 합을 쓴다.
   const [market, setMarket] = useState<MarketFundsResponse | null>(null);
 
-  // T-11-111 당겨서 새로고침 — 보이는 값은 그대로 두고 응답이 오면 바꾼다.
-  // 관리자 여부는 거의 안 바뀌므로 당겨도 다시 묻지 않는다.
+  const [tierTag, setTierTag] = useState<OwnerTierTag | null>(null);
+  const [tiers, setTiers] = useState<OwnerTierTag[]>([]);
   useEffect(() => {
+    let alive = true;
     if (!linked) {
       setAdmin(false);
+      setTierTag(null);
+      setTiers([]);
       return;
     }
-    let alive = true;
-    void fetchBoardViewer().then((r) => alive && r.ok && setAdmin(r.data.admin));
+    void track(fetchOwnerSummary()).then((r) => {
+      if (alive && r.ok) {
+        setAdmin(r.data.admin);
+        setTierTag(r.data.tier);
+        setTiers(r.data.tiers ?? (r.data.tier ? [r.data.tier] : []));
+      }
+    });
     return () => {
       alive = false;
     };
-  }, [linked]);
-  const { tick, track } = useRefresh();
+  }, [linked, tick, track]);
   useEffect(() => {
     if (!linked) return;
     let alive = true;
@@ -192,39 +200,29 @@ export default function Owner() {
       alive = false;
     };
   }, [linked, tick, track]);
-  // T-11-128 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 이름 앞에 붙인다(그 시즌 기록이 없으면 없다).
-  // 결산 카드와 같은 응답(1분 메모).
-  const [tierTag, setTierTag] = useState<OwnerTierTag | null>(null);
-  useEffect(() => {
-    let alive = true;
-    void track(fetchSeasonRecap()).then((r) => {
-      if (!alive || !r.ok) return;
-      setTierTag(profileTier(r.data));
-    });
-    return () => {
-      alive = false;
-    };
-  }, [tick, track]);
   const clubValue = linked ? (market?.clubValue ?? null) : (summary?.value ?? null);
   const funds = market ? fundsText(market.balance) : '–';
 
   const team = card?.team;
-  const sub = guest ? L.guestSub : team ? `${team.name} · ${card.season}` : L.signedInSubApp;
+  const sub = guest ? L.guestSub : L.title;
 
   return (
     <Screen>
       <Topbar />
       <View style={{ paddingHorizontal: 2, paddingTop: 4 }}>
-        <Txt v="eyebrow">Owner</Txt>
         <Txt v="h1" accessibilityRole="header" style={{ marginTop: 2 }}>
-          {L.title}
+          {L.hubTitle}
         </Txt>
       </View>
 
       {linked || guest ? (
         <Card gap={14} testID="owner-summary">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <OwnerAvatar name={nickname ?? L.avatarInitial} size={48} />
+            <OwnerAvatar
+              avatarId={acct?.avatarId ?? null}
+              name={nickname ?? L.avatarInitial}
+              size={48}
+            />
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
               <Row gap={6}>
                 {tierTag ? (
@@ -241,80 +239,24 @@ export default function Owner() {
                 <Txt style={{ fontSize: rem(1.125), fontWeight: '700' }}>
                   {guest ? L.guestName : (nickname ?? L.title)}
                 </Txt>
-                {card?.founder ? (
-                  // T-11-113 프리시즌에 은퇴 선수를 남긴 구단주
-                  <View testID="owner-founder">
-                    <Pill tone="good">{founderLabel()}</Pill>
-                  </View>
-                ) : null}
-                {card?.champ ? <ChampBadge edition={card.champ} /> : null}
+                {card?.title ? <TitleBadge title={card.title} /> : null}
               </Row>
-              {tierTag ? (
-                <Txt
-                  testID={`owner-tier-${tierTag.tier}`}
-                  style={{
-                    fontFamily: DISPLAY[700],
-                    fontSize: rem(0.875),
-                    letterSpacing: 0.3,
-                    color: mix(GRADE_COLOR[tierTag.tier] ?? GRADE_COLOR.rookie!, c.ink, 0.65),
-                  }}
-                >
-                  {tierTitle(tierTag)}
-                </Txt>
-              ) : null}
               <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
                 {sub}
               </Txt>
             </View>
+            {linked && acct ? <OwnerProfileEditor profile={acct} admin={admin} /> : null}
           </View>
-          {(guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue) ? (
-            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-              {L.emptySummary}
-              {linked ? `\n${L.fundsLine({ funds })}` : ''}
-            </Txt>
-          ) : (
-            <View style={{ gap: 8 }}>
-              <Stats
-                accent
-                items={[
-                  [L.statClubValue, clubValue !== null ? fmtValue(clubValue) : '–'],
-                  ...(linked
-                    ? [
-                        [
-                          L.statFunds,
-                          funds,
-                          {
-                            onPress: () => go('funds'),
-                            label: F.openAria,
-                            testID: 'funds-history',
-                          },
-                        ] as [string, string, StatPress],
-                      ]
-                    : []),
-                ]}
-              />
-              <Stats
-                items={[
-                  [
-                    L.statRetired,
-                    summary
-                      ? L.playersCount({ n: summary.players, text: num(summary.players) })
-                      : '–',
-                  ],
-                  [L.statLegend, summary ? num(summary.score) : '–'],
-                  [L.statRetiredNumbers, summary ? L.numbersCount({ n: summary.retired }) : '–'],
-                ]}
-              />
-            </View>
-          )}
         </Card>
       ) : null}
 
       {linked || guest ? <AdSlot place="owner-summary" /> : null}
 
-      {/* T-11-128 시즌 결산: 끝난 시즌이 있을 때만(카드가 스스로 숨는다). 비로그인도 본다. */}
-      <RecapCard />
-
+      {linked || guest ? (
+        <Txt v="h2" accessibilityRole="header">
+          {L.teamsHeading}
+        </Txt>
+      ) : null}
       {/* T-10-092 내 팀: 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. */}
       {linked ? (
         <>
@@ -329,7 +271,7 @@ export default function Owner() {
             >
               {team ? <TeamLogo logo={team.logo} name={team.name} size={44} decorative /> : null}
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                <Txt v="eyebrow">{`My team${card?.season ? ` · ${card.season}` : ''}`}</Txt>
+                <Txt v="eyebrow">{`${L.myTeam}${card?.season ? ` · ${card.season}` : ''}`}</Txt>
                 <Txt v="h2" accessibilityRole="header">
                   {team?.name ?? L.myTeam}
                 </Txt>
@@ -345,6 +287,7 @@ export default function Owner() {
               <>
                 <Stats
                   small
+                  first={1.35}
                   items={[
                     [L.statRecord, recordText(team.record)],
                     [L.statRating, num(team.rating)],
@@ -353,7 +296,7 @@ export default function Owner() {
                 />
                 <Grid2>
                   <Btn block testID="team" {...teamBtn}>
-                    {L.myTeam}
+                    {L.manageTeam}
                   </Btn>
                   <Btn
                     kind="accent"
@@ -387,41 +330,11 @@ export default function Owner() {
               </>
             )}
           </Card>
-          <Press
-            testID="market"
-            accessibilityLabel={`${L.marketTitle} ${L.open}`}
-            onPress={() => go('market')}
-            scale={0.98}
-          >
-            <Card gap={12} testID="owner-market">
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                  <Txt v="eyebrow">Transfer market</Txt>
-                  <Txt v="h2">{L.marketTitle}</Txt>
-                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                    {L.marketSub({ funds })}
-                  </Txt>
-                </View>
-                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
-                  ›
-                </Txt>
-              </View>
-            </Card>
-          </Press>
-          <RerollShop
-            focus={shopFocus}
-            onBought={(balance, spent) =>
-              setMarket((m) => m && { balance, clubValue: m.clubValue - spent })
-            }
-          />
-          <BoostShop />
-          <ScoutShop />
         </>
       ) : guest ? (
         <>
           <Card gap={12} testID="owner-team-locked">
             <View style={{ gap: 2 }}>
-              <Txt v="eyebrow">My team</Txt>
               <Txt v="h2" accessibilityRole="header">
                 {L.myTeam}
               </Txt>
@@ -436,10 +349,194 @@ export default function Owner() {
         </>
       ) : null}
 
-      {!guest || localCount > 0 ? <MyPlayers onRows={onRows} /> : null}
+      {!guest || localCount > 0 ? (
+        <Press
+          testID="open-owner-players"
+          accessibilityLabel={P.openPlayers}
+          onPress={() => {
+            appState.playersView = linked ? 'manage' : 'records';
+            go('players');
+          }}
+          scale={0.98}
+        >
+          <Card gap={12} testID="owner-players-entry">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Txt v="h2">{P.title}</Txt>
+                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                  {P.entryLead}
+                </Txt>
+              </View>
+              <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                ›
+              </Txt>
+            </View>
+          </Card>
+        </Press>
+      ) : null}
+
+      {linked || guest ? (
+        <Card gap={12} testID="club-operations">
+          <Txt v="h2" accessibilityRole="header">
+            {L.operationsHeading}
+          </Txt>
+          <Stats
+            accent
+            items={[
+              [
+                L.statClubValue,
+                clubValue !== null ? fmtValue(clubValue) : '–',
+                {
+                  info: true,
+                  label: L.valueInfoTitle,
+                  testID: 'club-value-info',
+                  onPress: () =>
+                    Alert.alert(
+                      L.valueInfoTitle,
+                      [
+                        linked ? L.valueInfoFormula : L.valueInfoGuest,
+                        ...(linked ? [L.valueInfoOwned] : []),
+                        L.valueInfoPrice,
+                        L.valueInfoFallback,
+                        L.valueInfoExcluded,
+                      ].join('\n\n'),
+                      [{ text: T.close }],
+                    ),
+                },
+              ],
+              ...(linked
+                ? [
+                    [
+                      L.statFunds,
+                      funds,
+                      {
+                        onPress: () => go('funds'),
+                        label: F.openAria,
+                        testID: 'funds-history',
+                      },
+                    ] as [string, string, StatPress],
+                  ]
+                : []),
+            ]}
+          />
+        </Card>
+      ) : null}
+
+      {linked ? (
+        <>
+          <Press
+            testID="market"
+            accessibilityLabel={`${L.marketTitle} ${L.open}`}
+            onPress={() => go('market')}
+            scale={0.98}
+          >
+            <Card gap={12} testID="owner-market">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <Txt v="h2">{L.marketTitle}</Txt>
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {L.marketSub({ funds })}
+                  </Txt>
+                </View>
+                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                  ›
+                </Txt>
+              </View>
+            </Card>
+          </Press>
+        </>
+      ) : null}
+
+      {linked ? (
+        <>
+          <RerollShop
+            focus={shopFocus}
+            onBought={(balance, spent) =>
+              setMarket((m) => m && { balance, clubValue: m.clubValue - spent })
+            }
+          />
+          <BoostShop />
+          <ScoutShop />
+        </>
+      ) : null}
+
+      {linked ? (
+        <Press
+          testID="open-owner-hall"
+          accessibilityLabel={`${H.openHall} · ${H.hallNew}`}
+          onPress={() => go('honors')}
+          scale={0.98}
+        >
+          <Card gap={12} testID="owner-hall-entry">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}
+                >
+                  <Txt v="h2">{H.hallTitle}</Txt>
+                  <View testID="owner-hall-new">
+                    <Pill tone="good">{H.hallNew}</Pill>
+                  </View>
+                </View>
+                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                  {H.hallSummary}
+                </Txt>
+              </View>
+              <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                ›
+              </Txt>
+            </View>
+            {tiers.length ? (
+              <View
+                accessibilityLabel={L.seasonTierHistory}
+                testID="owner-tier-history"
+                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
+              >
+                {tiers.map((tier) => (
+                  <View
+                    key={tier.season}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      paddingHorizontal: 8,
+                      paddingVertical: 5,
+                      borderWidth: 1,
+                      borderColor: c.line,
+                      borderRadius: 6,
+                      backgroundColor: c.surface2,
+                    }}
+                  >
+                    <GradeEmblem id={tier.tier} size={16} />
+                    <Txt
+                      style={{
+                        fontSize: rem(0.75),
+                        fontWeight: '600',
+                        color: mix(GRADE_COLOR[tier.tier] ?? GRADE_COLOR.rookie!, c.ink, 0.65),
+                      }}
+                    >
+                      {tierTitle(tier)}
+                    </Txt>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+              {card?.season ?? L.currentSeason}
+            </Txt>
+            <Stats
+              items={[
+                [L.statRetired, summary ? num(summary.players) : '–'],
+                [L.statLegend, summary ? num(summary.score) : '–'],
+                [L.statRetiredNumbers, summary ? num(summary.retired) : '–'],
+              ]}
+            />
+          </Card>
+        </Press>
+      ) : null}
 
       <SettingsCard>
-        <Account admin={admin} />
+        <Account />
         {admin ? (
           <View
             style={{

@@ -28,7 +28,7 @@
 
 <nav class="tabs main-nav" aria-label={L.navLabel}>
   {#each MAIN_SCREENS as k, i (k)}
-    <button data-act={k} aria-current={appState.screen === k ? 'page' : undefined} style:--i={i} onclick={OPEN[k]}>
+    <button data-act={k} aria-current={(appState.screen === k || (k === 'owner' && (appState.screen === 'honors' || appState.screen === 'recap'))) ? 'page' : undefined} style:--i={i} onclick={OPEN[k]}>
       <TabIcon name={k} />{label(k)}
       {#if k === 'owner' && ownerDot}<span class="tab-dot" data-tab-dot><span class="sr-only">{ownerDot}</span></span>{/if}
     </button>

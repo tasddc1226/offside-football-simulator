@@ -168,7 +168,8 @@ export function createLegends(host: LegendHost) {
   function show(v: LegendView) {
     const s = host.state;
     s.legend = v;
-    s.legendBack = s.screen === 'hof' || s.screen === 'owner' ? s.screen : 'home';
+    s.legendBack =
+      s.screen === 'hof' || s.screen === 'owner' || s.screen === 'players' ? s.screen : 'home';
     s.screen = 'legend';
     host.scrollTop();
   }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import TeamLogo from './TeamLogo.svelte';
+  import TitleBadge from '../cup/TitleBadge.svelte';
   // 상대 고르기 — 내 팀 레이팅에 가까운 다른 구단주의 팀에 도전한다(레이팅이 크게, OVR은 작게). 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
   import { TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
   import type { TeamOpponent } from '@offside/app-core/api/team';
@@ -62,7 +63,7 @@
       <div class="tm-opp" data-opponent={o.teamId}>
         <TeamLogo logo={o.logo} name={o.name} size={32} decorative />
         <div class="tm-opp-info">
-          <b>{o.name}</b>
+          <b>{o.name}{#if o.title} <TitleBadge title={o.title} size="icon" />{/if}</b>
           <span class="muted fs-sm">{o.owner} · {o.formation} · {recordText(o.record)}</span>
         </div>
         <span class="tm-opp-score" data-opponent-rating={o.rating}><small class="muted">{L.oppRating}</small><b>{o.rating}</b><small class="muted">{L.oppOvr({ n: o.ovr })}</small></span>

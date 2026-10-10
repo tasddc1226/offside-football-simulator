@@ -2,6 +2,35 @@ import type { Translation } from '../core';
 import type { OwnerMsgs } from '../ko/owner';
 
 export const owner: Translation<OwnerMsgs> = {
+  hubTitle: 'マイクラブ',
+  teamsHeading: '運営中のチーム',
+  operationsHeading: 'クラブ運営',
+  manageTeam: 'チーム管理',
+  currentSeason: '今シーズン',
+  seasonTierHistory: 'シーズン別最終ランク',
+  valueInfoTitle: 'クラブ価値の計算方法',
+  valueInfoFormula: 'クラブ価値 = クラブ資金 + 保有選手カードの基準価格の合計',
+  valueInfoOwned: '育成した選手と獲得した選手を、シーズンを問わず含みます。',
+  valueInfoPrice:
+    'カードの基準価格は最高OVRを記録した最後のシーズンの市場価値です。リーグの資金力・OVR・年齢で計算します。',
+  valueInfoFallback:
+    'そのシーズンの市場価値がない場合は最も高かったプロシーズンを使い、プロ記録もなければ1億ウォンを適用します。',
+  valueInfoExcluded: '出品価格やレジェンドスコアを直接加算することはありません。',
+  valueInfoGuest:
+    '未ログイン時は、この端末に保存された現シーズンの引退選手カードの基準価格を合算します。',
+  profileEdit: 'プロフィール編集',
+  profileName: 'オーナー名',
+  profileNameNotice: '不適切なオーナー名は通報の対象となり、確認後に非表示になる場合があります。',
+  profileHint: '名前と画像はオーナープロフィール・コメント・チャットに表示されます。',
+  profileImagePick: '画像を選ぶ',
+  profileImageReset: '初期画像に戻す',
+  profileImageSave: '画像を保存',
+  profileCancel: 'キャンセル',
+  profileBusy: '画像を準備しています。',
+  profileSaved: 'プロフィール画像を変更しました。',
+  profileImageError: '画像を読み込めませんでした。別のファイルを選んでください。',
+  profilePreview: 'プロフィール画像のプレビュー',
+  profileImageHint: 'PNG・JPG・WebP、最大10MB。中央を正方形に切り抜いて保存します。',
   title: 'オーナー',
   summaryLabel: 'オーナーの概要',
   avatarInitial: 'オ',
@@ -23,7 +52,7 @@ export const owner: Translation<OwnerMsgs> = {
   manager: (p) => `${p.manager}監督 · ${p.formation}`,
   teamOvr: (p) => `チームOVR ${p.ovr}`,
   statRecord: '戦績',
-  statRating: 'レーティング',
+  statRating: 'レート',
   statToday: '今日の試合',
   play: '試合をする',
   teamFailed:

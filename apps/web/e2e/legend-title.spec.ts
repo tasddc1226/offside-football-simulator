@@ -122,6 +122,7 @@ for (const wins of [0, 1, 2]) {
       localStorage.setItem('ft_hof', JSON.stringify(hof));
     }, wins);
     await page.locator('[data-act="owner"]').click();
+    await page.locator('[data-act="open-owner-players"]').click();
     await page.locator('[data-my-player="0"]').click();
     const stat = page.locator('[data-legend-ballon]');
     await stat.scrollIntoViewIfNeeded();
@@ -141,6 +142,7 @@ test('시즌 상세가 없는 옛 은퇴 리포트에서도 발롱도르 요약 
     localStorage.setItem('ft_hof', JSON.stringify(hof));
   });
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-ballon] b')).toHaveText('2');
 });
@@ -149,6 +151,7 @@ test('은퇴한 내 선수의 대표 칭호를 받은 칭호 중에서 바꾼다
   const bodies = await seed(page);
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-title]')).toHaveText('‘유럽파’');
 
@@ -193,6 +196,7 @@ test('은퇴 리포트에 플레이 성향 카드가 나온다', async ({ page }
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   const card = page.locator('[data-legend-style]');
   // 한 구단에서만 8시즌 — 대표 유형은 원클럽, 운·승부수 성향은 곁들인다.
@@ -210,6 +214,7 @@ test('선택 기록이 없는 은퇴에는 플레이 성향 카드가 없다', a
   await seed(page);
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-credit="finale"]')).toBeAttached();
   await expect(page.locator('[data-legend-style]')).toHaveCount(0);
@@ -232,6 +237,7 @@ test('명예의 벽은 받은 칭호 목록에 추가되고 기존 대표 칭호
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-wall-of-honor]')).toContainText('영구결번은 아니에요.');
   await expect(page.locator('[data-legend-title]')).toHaveText('‘유럽파’');
@@ -306,6 +312,7 @@ test('복원된 내 선수의 대표 칭호는 서버 선택값으로 복구된�
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-title]')).toHaveText('‘명예의 벽’');
   await expect
@@ -329,6 +336,7 @@ test('서버 칭호가 없는 기기의 명예의 벽 선택값은 대표 칭호
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
   await expect(page.locator('[data-legend-titles]')).toBeAttached();
   await expect(page.locator('[data-legend-title]')).toHaveCount(0);

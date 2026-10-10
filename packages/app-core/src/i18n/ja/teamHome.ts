@@ -7,7 +7,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   navMatches: '試合',
   navAch: '実績',
   navHistory: '試合記録',
-  navOwner: 'オーナー',
+  navOwner: 'マイクラブ',
   navNewAch: (p) => `新しい実績 ${p.n}個`,
   loadFail: 'チームを読み込めませんでした。',
   myTeam: 'マイチーム',
