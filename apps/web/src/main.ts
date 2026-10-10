@@ -26,6 +26,7 @@ import { initHistory } from './ui/history.svelte.js';
 import { installSheetKey } from './ui/skin.svelte.js';
 import { applyLocale, bootLocale } from './ui/locale.js';
 import { startSeasonSchedule } from '@offside/app-core/seasonSchedule';
+import { detectAdLanding } from './ui/adLanding.js';
 
 // 시즌 일정(게이지가 확정한 마감·다음 시즌): 저장해 둔 일정을 세이브·화면보다 먼저 입히고 서버 일정으로 맞춘다.
 installTextSize();
@@ -42,6 +43,8 @@ handleOAuthReturn();
 routeSharedCareer();
 // T-11-098 친구 초대 링크(`/?friend=코드`)로 들어왔으면 친구 화면을 연다.
 routeFriendInvite();
+// T-11-195 메타 광고로 들어왔는지(분석 시작 전에 — 픽셀이 이번 탭의 클릭 ID를 쓴다).
+detectAdLanding();
 initializeAnalytics(appState.screen, appState.G && !appState.G.retired ? appState.G.cid : null);
 syncBalance();
 // T-10-114 모바일 뒤로 가기(iOS 가장자리 밀기·Android 뒤로)가 앱 안의 이전 화면으로 가게 한다.
