@@ -1,5 +1,6 @@
 // ───────── 시즌 종료 · 이적 시장 · 은퇴 · 저장 ─────────
 import { CLUBS, clubRef, sameClub, type Club } from './data.js';
+import { lookCode } from './look.js';
 import { BAL } from './balance.js';
 import { ovr, peakProfileOf } from './attributes.js';
 import { clamp, ri, pick, rnd, weightedIndex, createRng, getActiveRng } from './rng.js';
@@ -713,6 +714,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     ballon: ballonWinsOf(s),
     lastClub: s.club.name,
     lastClubId: s.club.id,
+    ...(s.look ? { look: lookCode(s.look) } : {}),
     score,
     title: mainTitle(s)?.id,
     date: new Date().toISOString().slice(0, 10),

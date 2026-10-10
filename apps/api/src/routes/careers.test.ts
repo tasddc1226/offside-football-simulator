@@ -333,6 +333,37 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect((await potOf()).potReal).toBe(84);
   });
 
+  it('T-11-191 은퇴 때 보낸 도트 선수 꾸미기를 저장하고 명예의 전당 목록에 싣는다(다시 보내도 바뀌지 않는다)', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const put = (body: unknown) =>
+      putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, body);
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());
+    expect((await put({ ...retirementBody(), look: 's3y6g5' })).status).toBe(200);
+    const lookOf = async () =>
+      (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0]!.look;
+    expect(await lookOf()).toBe('s3y6g5');
+    // 재전송(이름 공개 토글)은 꾸미기를 바꾸지 않는다 — 은퇴하면 굳는다.
+    expect((await put({ ...retirementBody(), look: 'h1' })).status).toBe(200);
+    expect(await lookOf()).toBe('s3y6g5');
+    const hof = (await (await createApp().request('/v1/hof', {}, ctx.env)).json()) as {
+      data: { entries: { id: string; look?: string | null }[] };
+    };
+    expect(hof.data.entries.find((e) => e.id === CAREER_ID)?.look).toBe('s3y6g5');
+  });
+
+  it('T-11-191 꾸미기 코드 모양이 틀려도 은퇴는 받고 꾸미기만 버린다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    await putSeasonsFor(ctx.env, cookie, CAREER_ID, retirementBody());
+    const res = await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
+      ...retirementBody(),
+      look: '<script>',
+    });
+    expect(res.status).toBe(200);
+    expect(
+      (await ctx.db.select().from(careers).where(eq(careers.id, CAREER_ID)))[0]!.look,
+    ).toBeNull();
+  });
+
   it('T-10-066: 클럽 id 형식이 틀리면 400', async () => {
     const { cookie } = await issueCookie(ctx);
     const body = seasonBody();

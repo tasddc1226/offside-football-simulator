@@ -143,5 +143,6 @@ function retirementBody(entry: HofEntry): PutRetirementBody {
     ...(entry.detail ? { snapshot: entry.detail } : {}),
     ...(entry.profile ? { profile: entry.profile } : {}),
     ...(entry.pot !== undefined ? { potReal: entry.pot } : {}),
+    ...(entry.look ? { look: entry.look } : {}),
   };
 }

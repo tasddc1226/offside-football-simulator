@@ -265,6 +265,15 @@ export type Pending =
   | { type: 'seasonEnd' }
   | { type: 'market'; res: SeasonEndResult | null; m: MarketResult | null };
 
+/** T-11-191 도트 선수 꾸미기 항목(look.ts LOOK_ITEMS). */
+export type LookItem =
+  'skin' | 'hair' | 'beard' | 'style' | 'expr' | 'band' | 'wrist' | 'glasses' | 'boots' | 'socks';
+/** T-11-191 산 꾸미기 항목과 고른 값(선택지 번호). 은퇴하면 굳는다. */
+export interface LookState {
+  owned: LookItem[];
+  pick: Partial<Record<LookItem, number>>;
+}
+
 export interface GameState {
   /** T-10-016 이 커리어에 적용 중인 서버 밸런스 버전(없으면 코드 기본값 = 버전 0). */
   bal?: CareerBalance;
@@ -272,6 +281,8 @@ export interface GameState {
   cs?: CareerClubStrength;
   /** T-11-141 커리어를 만들 때의 RNG 시드와 실제 잠재력. 은퇴 리포트에서만 보여 준다. 옛 세이브엔 없다. */
   origin?: { seed: number; pot: number };
+  /** T-11-191 선수 자금으로 산 꾸미기(없으면 커리어 ID로 정한 기본 모습). 옛 세이브엔 없다. */
+  look?: LookState;
   v: typeof SAVE_VERSION;
   /** T-9-009. 커리어 고유 ID(`crypto.randomUUID()`). 서버 업로드의 URL 키다. 시드 RNG를 절대
    * 소모하지 않고 만든다 — RNG 시퀀스가 이 변경으로 바뀌면 안 된다. */
@@ -360,6 +371,8 @@ export interface GameState {
 }
 
 export interface HofEntry {
+  /** T-11-191 은퇴 때 굳은 도트 선수 꾸미기 코드(look.ts lookCode). 꾸미지 않았거나 옛 기록엔 없다. */
+  look?: string | undefined;
   /** T-11-072 은퇴 때 남긴 국적. 옛 로컬 기록에는 없어 국적을 추측하지 않는다. */
   nation?: string | undefined;
   name: string;

@@ -286,6 +286,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'wall_of_honor_json',
     'title',
     'last_club_id',
+    'look',
     'peak_profile',
     'card_attrs_json',
     'detail_archive_key',

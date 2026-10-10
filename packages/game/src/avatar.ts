@@ -7,7 +7,8 @@ import { crestOf } from './crests.js';
 import type { Club } from './data.js';
 import { hashStr } from './hash.js';
 import { kitColorAt, kitOf, type KitSide, type KitSpec } from './kits.js';
-import type { GameState } from './types.js';
+import { LOOK_BEARDS, LOOK_EXPRS, LOOK_STYLES, parseLookCode } from './look.js';
+import type { GameState, LookState } from './types.js';
 
 export const AVATAR_W = 24;
 export const AVATAR_H = 32;
@@ -120,6 +121,43 @@ const HAIR = {
       '......OH........HO......',
     ],
   },
+  // T-11-191 꾸미기 전용 머리 모양(기본 모습에는 나오지 않는다).
+  afro: {
+    y: 0,
+    r: [
+      '.......OOOOOOOOOO.......',
+      '.....OOhhhhhhhhhhOO.....',
+      '....OhhhhhhhhhhhhhhO....',
+      '....OhhhhhhhhhhhhhhO....',
+      '....OhhHhhhhhhhhhHhO....',
+      '....OhhO........OhhO....',
+      '....OhO..........OhO....',
+      '.....O............O.....',
+    ],
+  },
+  bun: {
+    y: 0,
+    r: [
+      '..........OOOO..........',
+      '.........OhhhhO.........',
+      '.........OhHHhO.........',
+      '........OOOOOOOO........',
+      '.......OhhhhhhhhO.......',
+      '......OhhhhhhhhhhO......',
+      '......OH........HO......',
+    ],
+  },
+  spiky: {
+    y: 0,
+    r: [
+      '.......O..O..O..O.......',
+      '......OhOOhOOhOOhO......',
+      '......OhhhhhhhhhhO......',
+      '......OhhhhhhhhhhO......',
+      '......OhHhhhhhhHhO......',
+      '......OH........HO......',
+    ],
+  },
 } satisfies Record<string, Layer>;
 // f 수염, F 짧은 수염.
 const BEARD = {
@@ -136,6 +174,11 @@ const EXPR = {
     r: ['.........s....s.........', '........eee..eee........', '', '..........mmmm..........'],
   },
   tired: { y: 9, r: ['.........S....S.........'] },
+  // T-11-191 꾸미기: 오른쪽 눈을 감고 웃는다.
+  wink: {
+    y: 7,
+    r: ['..............s.........', '.............eee........', '', '..........mmmm..........'],
+  },
 } satisfies Record<string, Layer>;
 // y 완장, W 목발, w 흰색(붕대·셔츠), r 넥타이, q/Q/v/x 꽃다발(꽃·잎·포장지).
 const ACC = {
@@ -193,6 +236,9 @@ const AVATAR_SKINS = [
   { s: '#e6b088', S: '#c4875e' },
   { s: '#c58858', S: '#9a623b' },
   { s: '#86553a', S: '#643c26' },
+  // T-11-191 꾸미기 전용.
+  { s: '#fde6d2', S: '#e8c2a4' },
+  { s: '#5e3a28', S: '#432819' },
 ] as const;
 const AVATAR_HAIRS = [
   { h: '#2b2522', H: '#16110f' },
@@ -200,7 +246,73 @@ const AVATAR_HAIRS = [
   { h: '#e0b54e', H: '#b0832b' },
   { h: '#b04a2b', H: '#7c2f19' },
   { h: '#ebe5d6', H: '#bdb5a3' },
+  // T-11-191 꾸미기 전용(기본 모습에는 나오지 않는다 — lookOf는 HAIR_PICK만 고른다).
+  { h: '#3f6fd8', H: '#2a4c9c' },
+  { h: '#e06aa5', H: '#a84478' },
+  { h: '#4aa865', H: '#2f7442' },
+  { h: '#b9c0c8', H: '#868d96' },
+  { h: '#8a55c9', H: '#5f3790' },
+  { h: '#e8823a', H: '#b05a20' },
+  { h: '#7cc6ec', H: '#4f97bf' },
 ] as const;
+/** T-11-191 헤어밴드 색(0은 없음). */
+const BANDS = [
+  null,
+  '#f4f4ef',
+  '#d63a33',
+  '#1c1c1f',
+  '#f0b437',
+  '#3f6fd8',
+  '#4aa865',
+  '#ef7fa6',
+] as const;
+/** T-11-191 손목 밴드 색(0은 없음). */
+const WRISTS = [null, '#f4f4ef', '#d63a33', '#1c1c1f', '#3f6fd8', '#f0b437'] as const;
+/** T-11-191 양말 색(0은 구단 양말). */
+const SOCKS = [null, '#f4f4ef', '#1c1c1f', '#d63a33', '#3f6fd8', '#f0b437', '#ef7fa6'] as const;
+/** T-11-191 축구화 색(0은 기본 주황). */
+const BOOTS = [
+  '#ff7a3d',
+  '#1c1c1f',
+  '#f4f4ef',
+  '#e2b13c',
+  '#3f6fd8',
+  '#ef7fa6',
+  '#4aa865',
+  '#8a55c9',
+  '#d63a33',
+  '#c9ced4',
+] as const;
+/** T-11-191 고글 테 · 알 색(0은 없음). */
+const GOGGLES = [
+  null,
+  { G: '#1c1c1f', g: '#3a4252' },
+  { G: '#2c6fd6', g: '#9fd3ff' },
+  { G: '#b52a24', g: '#ff9b8f' },
+  { G: '#b8860b', g: '#ffe08a' },
+  { G: '#1c1c1f', g: '#1c1c1f' },
+] as const;
+/** T-11-191 꾸미기 선택지 색(웹 · 앱 견본). 색이 아닌 항목(머리 모양 · 수염)은 null, 선택지 '없음'은 null. */
+export const LOOK_SWATCHES: Record<
+  'skin' | 'hair' | 'band' | 'wrist' | 'socks' | 'boots' | 'glasses',
+  readonly (string | null)[]
+> = {
+  skin: AVATAR_SKINS.map((c) => c.s),
+  hair: AVATAR_HAIRS.map((c) => c.h),
+  band: BANDS,
+  wrist: WRISTS,
+  socks: SOCKS,
+  boots: BOOTS,
+  glasses: GOGGLES.map((c) => c?.g ?? null),
+};
+/** T-11-191 헤어밴드 줄(이마)과 고글(눈 두 줄). A 밴드, G 고글 테, g 고글 알. */
+const BAND_LAYER: Layer = { y: 5, r: ['......OAAAAAAAAAAO......'] };
+/** T-11-191 손목 밴드(X). */
+const WRIST_LAYER: Layer = { y: 18, r: ['....XX............XX....'] };
+const GOGGLE_LAYER: Layer = {
+  y: 7,
+  r: ['.......GggGGGggG........', '.......GggG.GggG........'],
+};
 const GRAY = { h: '#c9c6bf', H: '#8f8b84' };
 const FIXED: Record<string, string> = {
   e: OUT,
@@ -260,13 +372,15 @@ interface AvatarLook {
   style: HairStyle;
 }
 const STYLES: HairStyle[] = ['short', 'fringe', 'long', 'mohawk'];
+const BASE_SKINS = 4;
 // 검정·갈색이 흔하게(머리 색 5종에 가중치).
 const HAIR_PICK = [0, 0, 0, 1, 1, 2, 3, 4];
 /** 커리어 ID에서 기본 외형을 뽑는다. 같은 ID는 언제나 같은 얼굴이고 게임 RNG는 쓰지 않는다. */
 export function lookOf(id: string): AvatarLook {
   const h = hashStr(`avatar:${id}`);
   return {
-    skin: h % AVATAR_SKINS.length,
+    // 기본 모습은 처음 4가지 피부색에서만 고른다(T-11-191 꾸미기 색이 늘어도 얼굴이 바뀌지 않게).
+    skin: h % BASE_SKINS,
     hair: HAIR_PICK[(h >>> 4) % HAIR_PICK.length]!,
     style: STYLES[(h >>> 8) % STYLES.length]!,
   };
@@ -283,23 +397,52 @@ export interface AvatarSpec {
   kit: KitSpec;
   /** 가슴 엠블럼 점의 구단(구단 유니폼일 때만 찍는다). */
   club: Pick<Club, 'id' | 'name'>;
+  /** T-11-191 꾸미기: 헤어밴드 · 축구화 · 고글 선택지 번호(없으면 기본). */
+  band?: number;
+  boots?: number;
+  glasses?: number;
+  wrist?: number;
+  socks?: number;
+}
+
+/**
+ * T-11-191 산 꾸미기를 모습에 입힌다. 피부 · 머리색 · 머리 모양 · 수염은 고른 값이 나이로 정한 값을 이긴다(흰머리는 나이 그대로).
+ * 군 복무 중 까까머리는 그대로 둔다.
+ */
+function withLook(sp: AvatarSpec, pick: LookState['pick'], forceStyle = false): AvatarSpec {
+  const out = { ...sp, look: { ...sp.look } };
+  if (pick.skin !== undefined) out.look.skin = pick.skin;
+  if (pick.hair !== undefined) out.look.hair = pick.hair;
+  if (pick.style !== undefined && !forceStyle) out.hairStyle = LOOK_STYLES[pick.style]!;
+  if (pick.beard !== undefined) out.beard = LOOK_BEARDS[pick.beard] ?? null;
+  if (pick.band) out.band = pick.band;
+  if (pick.boots) out.boots = pick.boots;
+  if (pick.glasses) out.glasses = pick.glasses;
+  if (pick.wrist) out.wrist = pick.wrist;
+  if (pick.socks) out.socks = pick.socks;
+  // 표정: 부상 중 아픈 표정은 그대로 둔다.
+  if (pick.expr && sp.expr !== 'pain') out.expr = LOOK_EXPRS[pick.expr] ?? sp.expr;
+  return out;
 }
 
 const grayAt = (age: number) => (age >= 29 ? Math.min(0.45, (age - 28) * 0.1) : 0);
 
 /** 은퇴한 선수(은퇴 리포트·명예의 전당): 커리어 ID와 은퇴 나이만으로 은퇴식 정장 모습을 그린다. */
-export function retiredAvatarSpec(id: string, age: number): AvatarSpec {
+export function retiredAvatarSpec(id: string, age: number, code?: string | null): AvatarSpec {
   const look = lookOf(id);
-  return {
-    look,
-    club: { id: '', name: '' },
-    hairStyle: look.style,
-    gray: grayAt(age),
-    beard: age >= 24 ? 'stubble' : null,
-    expr: 'happy',
-    acc: ['suit', 'bouquet'],
-    kit: SUIT_KIT,
-  };
+  return withLook(
+    {
+      look,
+      club: { id: '', name: '' },
+      hairStyle: look.style,
+      gray: grayAt(age),
+      beard: age >= 24 ? 'stubble' : null,
+      expr: 'happy',
+      acc: ['suit', 'bouquet'],
+      kit: SUIT_KIT,
+    },
+    parseLookCode(code),
+  );
 }
 
 /** 명예의 전당 시상대: 커리어 ID로 얼굴을, 마지막 소속 구단으로 홈 유니폼을 정한 전성기 모습.
@@ -308,36 +451,46 @@ export function primeAvatarSpec(e: {
   id: string;
   lastClub: string;
   lastClubId?: string | null | undefined;
+  /** T-11-191 은퇴 때 올린 꾸미기 코드(look.ts lookCode). */
+  look?: string | null | undefined;
 }): AvatarSpec {
   const look = lookOf(e.id);
   const club = { id: e.lastClubId ?? '', name: e.lastClub };
-  return {
-    look,
-    club,
-    hairStyle: look.style,
-    gray: 0,
-    beard: 'stubble',
-    expr: 'happy',
-    acc: [],
-    kit: kitOf(club),
-  };
+  return withLook(
+    {
+      look,
+      club,
+      hairStyle: look.style,
+      gray: 0,
+      beard: 'stubble',
+      expr: 'happy',
+      acc: [],
+      kit: kitOf(club),
+    },
+    parseLookCode(e.look),
+  );
 }
 
 /** 커리어 상태 → 지금 모습. 나이에 따라 수염·흰머리가 생기고, 부상·입대·은퇴 때 옷과 소품이 바뀐다. */
 export function avatarSpec(s: GameState, side: KitSide = 'home'): AvatarSpec {
-  if (s.retired) return retiredAvatarSpec(s.cid, s.age);
+  const pick = s.look?.pick ?? {};
+  if (s.retired) return withLook(retiredAvatarSpec(s.cid, s.age), pick);
   const look = lookOf(s.cid);
   const serving = s.mil.serving;
-  return {
-    look,
-    club: s.club,
-    hairStyle: serving ? 'buzz' : s.age < 20 ? 'fringe' : look.style,
-    gray: grayAt(s.age),
-    beard: serving ? null : s.age >= 28 ? 'full' : s.age >= 24 ? 'stubble' : null,
-    kit: serving && s.mil.type === 'army' ? ARMY_KIT : kitOf(s.club, side),
-    expr: s.injury > 0 ? 'pain' : s.age >= 30 ? 'tired' : null,
-    acc: s.injury > 0 ? ['bandage', 'crutch'] : s.nat.captain ? ['armband'] : [],
-  };
+  return withLook(
+    {
+      look,
+      club: s.club,
+      hairStyle: serving ? 'buzz' : s.age < 20 ? 'fringe' : look.style,
+      gray: grayAt(s.age),
+      beard: serving ? null : s.age >= 28 ? 'full' : s.age >= 24 ? 'stubble' : null,
+      kit: serving && s.mil.type === 'army' ? ARMY_KIT : kitOf(s.club, side),
+      expr: s.injury > 0 ? 'pain' : s.age >= 30 ? 'tired' : null,
+      acc: s.injury > 0 ? ['bandage', 'crutch'] : s.nat.captain ? ['armband'] : [],
+    },
+    pick,
+    serving,
+  );
 }
 
 /** 모습 → 24×32 색 격자(null은 투명). */
@@ -349,14 +502,21 @@ export function avatarPixels(sp: AvatarSpec): (string | null)[][] {
     });
   if (sp.beard) lay(BEARD[sp.beard]);
   lay(HAIR[sp.hairStyle]);
+  if (sp.band) lay(BAND_LAYER);
   if (sp.expr) lay(EXPR[sp.expr]);
+  if (sp.glasses) lay(GOGGLE_LAYER);
+  if (sp.wrist) lay(WRIST_LAYER);
   for (const a of sp.acc) ACC[a].forEach(lay);
+  const band = BANDS[sp.band ?? 0] ?? null;
+  const goggle = GOGGLES[sp.glasses ?? 0] ?? null;
+  const wrist = WRISTS[sp.wrist ?? 0] ?? null;
 
   const skin = AVATAR_SKINS[sp.look.skin % AVATAR_SKINS.length]!;
   const hc = AVATAR_HAIRS[sp.look.hair % AVATAR_HAIRS.length]!;
   const hair = mix(hc.h, GRAY.h, sp.gray);
   const hairS = mix(hc.H, GRAY.H, sp.gray);
   const k = sp.kit;
+  const socks = k === SUIT_KIT ? null : (SOCKS[sp.socks ?? 0] ?? null);
   // 가슴 왼쪽 2×2 엠블럼 점: 바탕색이 상의와 비슷하면 상징 색으로 칠한다.
   let mark: string[] | null = null;
   if (k !== ARMY_KIT && k !== SUIT_KIT) {
@@ -396,11 +556,19 @@ export function avatarPixels(sp: AvatarSpec): (string | null)[][] {
       case 'P':
         return darken(k.shorts, 0.25);
       case 'c':
-        return k.socks;
+        return socks ?? k.socks;
       case 'C':
-        return k.cuff;
+        return socks ? darken(socks, 0.2) : k.cuff;
+      case 'X':
+        return wrist;
       case 'b':
-        return k === SUIT_KIT ? '#18181b' : FIXED.b!;
+        return k === SUIT_KIT ? '#18181b' : (BOOTS[sp.boots ?? 0] ?? FIXED.b!);
+      case 'A':
+        return band;
+      case 'G':
+        return goggle?.G ?? null;
+      case 'g':
+        return goggle?.g ?? null;
       case 'n':
         return SHADOW;
       default:

@@ -110,7 +110,7 @@
 <article class="film" class:playing aria-label={L.reportLabel({ name: v.name })}>
   <section class="film-open" class:credit-in={playing} data-credit="player">
     <!-- T-11-122 은퇴식 정장 차림의 도트 선수. 커리어 ID가 없는 옛 기록은 그리지 않는다. -->
-    {#if v.avatarId}<PixelAvatar spec={retiredAvatarSpec(v.avatarId, v.age)} />{/if}
+    {#if v.avatarId}<PixelAvatar spec={retiredAvatarSpec(v.avatarId, v.age, v.avatarLook)} />{/if}
     <div class="eyebrow film-kicker">Full Time{v.number != null ? ` · No.${v.number}` : ''}</div>
     <h1>{#if country}<span class="film-flag" role="img" aria-label={tn(country.ko)} title={tn(country.ko)} data-legend-nation={country.code}>{flagOf(country.code)}</span> {/if}{v.name}</h1>
     <div class="film-sub">{tn(POS_LABEL[v.pos])}{span ? ` · ${span}` : ''} · {L.retiredAge({ age: v.age })}</div>
