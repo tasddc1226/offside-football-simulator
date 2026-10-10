@@ -156,7 +156,6 @@ describe('compact owner summary', () => {
           key: `season-close:${season}`,
           value:
             season === 3 ? 'invalid' : JSON.stringify({ step: season === 2 ? 'ranks' : 'done' }),
-          updatedAt: '2027-02-01T00:00:00Z',
         });
       }
       expect(
