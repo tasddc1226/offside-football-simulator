@@ -132,6 +132,7 @@
 
 <div class="wrap recap" data-recap>
   <Topbar />
+  <BackBar inline act="owner" fallback={() => go('owner')} />
   <header class="settings-head">
     <div class="eyebrow">Season recap</div>
     <h1>{L.title({ season: name || (season !== null ? teamSeasonLabel(season) : L.cardTitle) })}</h1>
@@ -352,7 +353,7 @@
     {/if}
   {/if}
 
-  <BackBar act="owner" fallback={() => go('owner')} />
+
 </div>
 
 <style>

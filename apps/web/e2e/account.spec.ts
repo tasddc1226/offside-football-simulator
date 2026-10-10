@@ -24,10 +24,7 @@ test('계정 영역: 홈이 아니라 설정 화면에 있다 — 로그아웃 �
   // T-10-102 비로그인 카드는 안내만, 로그인 버튼은 카드 밖에 하나.
   await expect(account).toContainText('로그인하지 않았어요');
   await expect(account.getByRole('link')).toHaveCount(0);
-  await expect(page.getByRole('link', { name: '구글로 로그인' })).toHaveAttribute(
-    'href',
-    `${API}/v1/auth/google/start`,
-  );
+  await expect(page.getByRole('button', { name: '구글로 로그인' })).toHaveCount(1);
 });
 
 test('/settings?google=linked: 토스트 표시 후 URL 정리', async ({ page }) => {

@@ -9,6 +9,7 @@
 </script>
 
 <script lang="ts">
+  import GoogleLoginButton from './GoogleLoginButton.svelte';
   import { intlLocale } from '@offside/contracts/i18n';
   import { tn } from '@offside/game/i18n/names';
   // T-11-080 이적시장 — 지금 시즌 은퇴 선수 카드를 구단 자금으로 사고판다. 구단주 화면의 '이적시장'으로 연다.
@@ -72,7 +73,6 @@
   import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import { toast } from './helpers.js';
   import { startGoogleLogin } from './login.js';
-  import { accountText as A } from '@offside/app-core/i18n/ko/account';
   import { marketText as L } from '@offside/app-core/i18n/ko/market';
 
   const local = localCareerNames();
@@ -226,6 +226,7 @@
 
 <div class="wrap market">
   <Topbar />
+  <BackBar inline act="owner" fallback={() => go('owner')} />
 
   <section class="mk-hero" aria-label={L.funds} data-market-funds>
     <div class="mk-hero-head">
@@ -460,7 +461,7 @@
     {/if}
   {/if}
 
-  <BackBar act="owner" fallback={() => go('owner')} />
+
 </div>
 
 {#if buying && (me || guest)}
@@ -496,7 +497,7 @@
       <div class="mk-actions">
         <button class="btn" onclick={closeSheets}>{L.close}</button>
         {#if !me}
-          <button class="btn btn-primary" data-act="market-login" onclick={() => startGoogleLogin({ market: true })}>{A.loginGoogle}</button>
+          <GoogleLoginButton act="market-login" onclick={() => startGoogleLogin({ market: true })} />
         {:else if myListingIds.has(buying.id)}
           <button class="btn" disabled={busy} onclick={() => run(() => cancelListing(buying!.id), MARKET_TOAST.unlisted)}>{L.unlist}</button>
         {:else}

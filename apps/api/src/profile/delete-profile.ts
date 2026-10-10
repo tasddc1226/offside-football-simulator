@@ -19,6 +19,7 @@ import {
   iapPurchases,
   idempotency,
   ownerItems,
+  cupPredictions,
   profiles,
   pushDevices,
   pushNewsDeliveries,
@@ -66,6 +67,7 @@ export type ExecuteProfileDeletionResult = {
   careerIds: string[];
   heldFirsts: boolean;
   hadComments: boolean;
+  predictedCupIds: string[];
 };
 
 /**
@@ -90,7 +92,7 @@ export async function executeProfileDeletion(
   }
 
   // 지울 커리어와 그 커리어가 가진 서버 최초·서버 기록(FK cascade로 함께 지워진다), 댓글 유무를 한 번에 읽는다.
-  const [owned, comments] = await db.batch([
+  const [owned, comments, predictions] = await db.batch([
     db
       .select({ id: careers.id, first: serverFirsts.id, record: serverRecords.id })
       .from(careers)
@@ -102,6 +104,11 @@ export async function executeProfileDeletion(
       .from(boardComments)
       .where(eq(boardComments.profileId, input.profileId))
       .limit(1),
+    db
+      .select({ cupId: cupPredictions.cupId })
+      .from(cupPredictions)
+      .where(eq(cupPredictions.profileId, input.profileId))
+      .groupBy(cupPredictions.cupId),
   ]);
   const careerIds = [...new Set(owned.map((r) => r.id))];
   const heldFirsts = owned.some((r) => r.first !== null || r.record !== null);
@@ -136,6 +143,7 @@ export async function executeProfileDeletion(
     // T-11-171 친구 초대 기록(초대한 줄 · 초대받은 줄).
     ...deleteReferralsStatements(db, input.profileId),
     // T-11-174 구단주 아이템과 인앱 구매 원장. 같은 거래를 다른 계정이 받는 일은 구단주 표시 확인이 막는다.
+    db.delete(cupPredictions).where(eq(cupPredictions.profileId, input.profileId)),
     db.delete(ownerItems).where(eq(ownerItems.profileId, input.profileId)),
     db.delete(iapPurchases).where(eq(iapPurchases.profileId, input.profileId)),
     ...deleteBoardActivityStatements(db, input.profileId),
@@ -159,5 +167,10 @@ export async function executeProfileDeletion(
     // 가진 최초·서버 기록이 있었으면 재계산 표시를 지워, 공개 조회가 전체를 다시 훑어 실제 다음 보유자에게 돌려준다.
     ...(heldFirsts ? [resetFirstsBackfillStatement(db)] : []),
   ]);
-  return { careerIds, heldFirsts, hadComments: comments.length > 0 };
+  return {
+    careerIds,
+    heldFirsts,
+    hadComments: comments.length > 0,
+    predictedCupIds: predictions.map((p) => p.cupId),
+  };
 }

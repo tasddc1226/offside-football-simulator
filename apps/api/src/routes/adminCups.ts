@@ -1,3 +1,4 @@
+import { registerAdminCupPredictionRoutes } from './adminCupPredictions.js';
 import { AdminCupCreateSchema, AdminCupListSchema, AdminCupSchema } from '@offside/contracts';
 import { cupEndsAt, planCup, type CupDef } from '@offside/contracts/cup';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
@@ -29,6 +30,7 @@ async function adminView(db: Db, cup: CupDef, now: string) {
 }
 
 export function registerAdminCupRoutes(app: Hono<AppEnv>): void {
+  registerAdminCupPredictionRoutes(app);
   app.get('/v1/admin/cups', async (c) => {
     await requireAdmin(c);
     const db = getDb(c);

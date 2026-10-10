@@ -200,8 +200,9 @@ export default function Dex() {
   }, []);
 
   return (
-    <Screen footer={<BackBar testID="home" fallback={goHome} />}>
+    <Screen>
       <Topbar />
+      <BackBar inline testID="home" fallback={goHome} />
       <Card gap={14}>
         <View>
           <Txt v="eyebrow">Odds</Txt>

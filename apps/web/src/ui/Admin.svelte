@@ -14,6 +14,7 @@
   import AdminAutomation from './admin/AdminAutomation.svelte';
   import AdminPush from './admin/AdminPush.svelte';
   import AdminCups from './admin/AdminCups.svelte';
+  import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import AdminFunds from './admin/AdminFunds.svelte';
   import AdminInvites from './admin/AdminInvites.svelte';
 
@@ -23,7 +24,7 @@
   const TABS = [
     { id: 'dashboard', label: '대시보드' },
     { id: 'push', label: '앱 푸시' },
-    { id: 'cup', label: '컵 열기' },
+    { id: 'cup', get label() { return L.adminCupTitle; } },
     { id: 'comments', label: '신고·댓글' },
     { id: 'balance', label: '밸런스' },
     { id: 'club-strength', label: strengthText.title },
@@ -41,6 +42,7 @@
 
 <div class="wrap">
   <Topbar />
+  <BackBar inline act="owner" fallback={() => (appState.screen = 'owner')} />
   <section class="card stack" style="gap:14px">
     <div>
       <div class="eyebrow">Admin</div>
@@ -67,7 +69,7 @@
       {:else}<AdminBalance />{/if}
     {/if}
   </section>
-  <BackBar act="owner" fallback={() => (appState.screen = 'owner')} />
+
 </div>
 
 <style>

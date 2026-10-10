@@ -1,8 +1,9 @@
 // 버튼 한 벌(웹 .btn + .btn-primary · .btn-accent · .btn-sm · .btn-block). 시트 버튼의 cls 문자열도 그대로 받는다.
 import type { ReactNode } from 'react';
-import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { useColors } from '../theme/useColors';
 import { rem } from '../theme/type';
+import { Txt } from './Txt';
 import { Press } from './Press';
 
 export type BtnKind = 'default' | 'primary' | 'accent' | 'ghost' | 'danger';
@@ -79,7 +80,7 @@ export function Btn({
       ]}
     >
       {typeof children === 'string' ? (
-        <Text
+        <Txt
           lineBreakStrategyIOS="hangul-word"
           style={{
             color: palette.fg,
@@ -90,7 +91,7 @@ export function Btn({
           }}
         >
           {children}
-        </Text>
+        </Txt>
       ) : (
         children
       )}

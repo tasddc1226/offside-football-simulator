@@ -658,6 +658,7 @@ export const auditLog = sqliteTable(
         'BALANCE_ACTIVATED',
         'COMMENTS_PURGED',
         'NAME_REPORT_RESOLVED',
+        'CUP_PREDICTIONS_RECOVERED',
       ],
     }).notNull(),
     profileId: text('profile_id').notNull(),
@@ -1367,5 +1368,31 @@ export const referrals = sqliteTable(
   // 초대한 사람별 집계(진행 · 완료 · 보상 수)와 보상 상한 검사를 인덱스만으로 센다.
   (table) => [
     index('referrals_inviter_idx').on(table.inviterId, table.inviterRewarded, table.doneAt),
+  ],
+);
+
+/** One editable prediction per account and cup match; settlement and grant are atomic. */
+export const cupPredictions = sqliteTable(
+  'cup_predictions',
+  {
+    cupId: text('cup_id').notNull(),
+    matchId: text('match_id')
+      .notNull()
+      .references(() => cupMatches.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    pick: text('pick', { enum: ['home', 'draw', 'away'] }).notNull(),
+    correct: integer('correct', { mode: 'boolean' }),
+    settledAt: text('settled_at'),
+    rewardedAt: text('rewarded_at'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.matchId, t.profileId] }),
+    index('cup_predictions_cup_match_pick_idx').on(t.cupId, t.matchId, t.pick),
+    index('cup_predictions_profile_cup_idx').on(t.profileId, t.cupId),
+    check('cup_predictions_pick_check', sql`${t.pick} IN ('home', 'draw', 'away')`),
   ],
 );

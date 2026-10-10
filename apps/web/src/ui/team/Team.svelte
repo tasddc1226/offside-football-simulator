@@ -1,4 +1,5 @@
 <script lang="ts">
+  import GoogleLoginButton from '../GoogleLoginButton.svelte';
   import { seasonLabel } from '@offside/app-core/seasonName';
   import { needsOwnerLogin } from '@offside/app-core/market';
   // T-10-092 구단주 팀 — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가 채운다) 같은 시즌
@@ -448,7 +449,7 @@
         <div class="eyebrow">My team</div>
         <h1>{L.myTeam}</h1>
         <p class="muted">{L.loginOnly}</p>
-        <button class="btn btn-primary self-start" onclick={() => void startGoogleLogin(null)}>{L.googleLogin}</button>
+        <GoogleLoginButton onclick={() => startGoogleLogin(null)} />
       </section>
     {:else if view === 'achievements'}
       <TeamAchievements {ach} status={achStatus} newIds={achNewIds} bind:cat={achCat} load={(s) => void loadAchievements(s)} onrank={openAchRanking} />

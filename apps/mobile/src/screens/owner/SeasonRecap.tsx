@@ -280,8 +280,9 @@ export default function SeasonRecap() {
   const muted = { fontSize: rem(0.875) } as const;
 
   return (
-    <Screen footer={<BackBar testID="owner" fallback={() => go('owner')} />}>
+    <Screen>
       <Topbar />
+      <BackBar inline testID="owner" fallback={() => go('owner')} />
       <Card gap={8} testID="recap">
         <View style={{ gap: 2 }}>
           <Txt v="eyebrow">Season recap</Txt>

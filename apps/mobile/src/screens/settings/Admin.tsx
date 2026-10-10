@@ -18,6 +18,8 @@ import AdminDashboard from './admin/AdminDashboard';
 import AdminFunds from './admin/AdminFunds';
 import AdminInvites from './admin/AdminInvites';
 import AdminPush from './admin/AdminPush';
+import AdminCupPredictions from './admin/AdminCupPredictions';
+import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 
 import AdminClubStrength from './admin/AdminClubStrength';
 import { T as strengthText } from '@offside/app-core/admin/club-strength';
@@ -25,6 +27,12 @@ import { T as strengthText } from '@offside/app-core/admin/club-strength';
 const TABS = [
   { id: 'dashboard', label: '대시보드' },
   { id: 'push', label: '앱 푸시' },
+  {
+    id: 'cup',
+    get label() {
+      return L.adminCupTitle;
+    },
+  },
   { id: 'comments', label: '신고·댓글' },
   { id: 'balance', label: '밸런스' },
   { id: 'club-strength', label: strengthText.title },
@@ -47,8 +55,9 @@ export default function Admin() {
   }, []);
 
   return (
-    <Screen footer={<BackBar testID="owner" fallback={() => (appState.screen = 'owner')} />}>
+    <Screen>
       <Topbar />
+      <BackBar inline testID="owner" fallback={() => (appState.screen = 'owner')} />
       <Card gap={14}>
         <View>
           <Txt v="eyebrow">Admin</Txt>
@@ -80,6 +89,8 @@ export default function Admin() {
               <AdminClubStrength />
             ) : tab === 'dashboard' ? (
               <AdminDashboard />
+            ) : tab === 'cup' ? (
+              <AdminCupPredictions />
             ) : tab === 'push' ? (
               <AdminPush />
             ) : tab === 'comments' ? (

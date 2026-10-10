@@ -13,7 +13,7 @@
   import { shareUrl } from './legend.js';
   import ActionBar from './ActionBar.svelte';
 
-  const { id, back }: { id: string; back?: () => void } = $props();
+  const { id, back, inline = false }: { id: string; back?: () => void; inline?: boolean } = $props();
   let busy = $state(false);
   let url = $state<string | null>(null);
 
@@ -84,7 +84,7 @@
   }
 </script>
 
-<ActionBar data-share="bar">
+<ActionBar {inline} data-share="bar">
   {#if url}
     <input class="share-url" readonly value={url} aria-label={L.linkLabel} onfocus={(e) => e.currentTarget.select()} />
   {/if}

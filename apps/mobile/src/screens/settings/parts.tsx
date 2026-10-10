@@ -1,3 +1,5 @@
+import { useTextSize } from '../../theme/useTextSize';
+import { TEXT_SIZE_SCALE } from '@offside/app-core/textSize';
 // 설정·구단주 화면이 함께 쓰는 작은 부품(웹 .settings-* · .switch · .field · .link-btn · <select> 자리).
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
@@ -221,6 +223,7 @@ export function TextField({
   onFocus,
   ...rest
 }: TextInputProps & { style?: StyleProp<ViewStyle> }) {
+  const textScale = TEXT_SIZE_SCALE[useTextSize()];
   const c = useColors();
   return (
     <TextInput
@@ -242,7 +245,7 @@ export function TextField({
           borderRadius: 10,
           paddingVertical: 11,
           paddingHorizontal: 12,
-          fontSize: 16,
+          fontSize: 16 * textScale,
           color: c.ink,
           minHeight: 44,
           ...(multiline ? { textAlignVertical: 'top' as const } : {}),

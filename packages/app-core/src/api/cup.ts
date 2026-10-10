@@ -87,3 +87,25 @@ export const buyRewardWithFunds = (kind: RewardKind, price: number, key: string)
     body: JSON.stringify({ kind, price }),
     headers: { [IDEMPOTENCY_KEY_HEADER]: key },
   });
+
+export type {
+  CupPredictionPick,
+  CupPredictionCounts,
+  CupPredictionsResponse,
+  CupPredictionMeResponse,
+} from '@offside/contracts';
+import type {
+  CupPredictionPick,
+  CupPredictionCounts,
+  CupPredictionsResponse,
+  CupPredictionMeResponse,
+} from '@offside/contracts';
+export const fetchCupPredictions = (cupId: string) =>
+  cachedGet<CupPredictionsResponse>(`/v1/cups/${cupId}/predictions`, 30_000);
+export const fetchCupPredictionsMe = (cupId: string) =>
+  cachedGet<CupPredictionMeResponse>(`/v1/cups/${cupId}/predictions/me`, 30_000);
+export const putCupPrediction = (cupId: string, matchId: string, pick: CupPredictionPick) =>
+  apiFetch<CupPredictionCounts>(`/v1/cups/${cupId}/matches/${matchId}/prediction`, {
+    method: 'PUT',
+    body: JSON.stringify({ pick }),
+  });

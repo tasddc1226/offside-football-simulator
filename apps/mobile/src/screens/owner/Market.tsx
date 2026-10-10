@@ -757,11 +757,11 @@ export default function Market() {
                 </View>
               </ActionBar>
             ) : null}
-            <BackBar testID="market-back" fallback={() => (appState.screen = 'owner')} />
           </>
         }
       >
         <Topbar />
+        <BackBar inline testID="market-back" fallback={() => (appState.screen = 'owner')} />
 
         {/* 초록 머리 — 구단 자금 · 자금 만들기 · 요약 셋 */}
         <View
