@@ -2,6 +2,15 @@ import type { Translation } from '../core';
 import type { OwnerPlayersMsgs } from '../ko/ownerPlayers';
 
 export const ownerPlayers: Translation<OwnerPlayersMsgs> = {
+  entryLead: 'Explore player records by season and manage your owned players.',
+  openPlayers: 'View my players',
+  menu: 'Player management menu',
+  records: 'Player records',
+  manage: 'Manage owned players',
+  viewRecord: 'View record',
+  noOwned: 'You own no players from this season. Development history remains in Player records.',
+  retry: 'Retry',
+  pickLimit: 'Select all (up to 50)',
   title: 'My players',
   loading: 'Loading…',
   sourceAccount: 'These players are recorded on your account. They look the same on other devices.',

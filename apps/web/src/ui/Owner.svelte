@@ -15,7 +15,7 @@
   import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import BoostShop from './cup/BoostShop.svelte';
   import RerollShop from './cup/RerollShop.svelte';
-  import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
+  import { ownerLockedText, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
   import { fmtValue } from '@offside/app-core/format';
   import { founderLabel } from '@offside/app-core/friendText';
@@ -23,7 +23,8 @@
   import { accountCache } from './account-state.svelte.js';
   import { isMember } from '@offside/app-core/account';
   import Account from './Account.svelte';
-  import MyPlayers from './MyPlayers.svelte';
+  import { loadMyPlayerSummary } from '@offside/app-core/myPlayers';
+  import { ownerPlayersText as P } from '@offside/app-core/i18n/ko/ownerPlayers';
   import TeamLogo from './team/TeamLogo.svelte';
   import { loadHOF } from '@offside/game/hof-store';
   import { startGoogleLogin } from './login.js';
@@ -67,8 +68,14 @@
     else admin = false;
   });
 
-  // 요약은 '내 선수'가 불러온 목록으로 센다(비로그인이면 이 기기 기록).
+  // 전용 목록을 열지 않아도 현재 시즌의 기존 기록 기준으로 요약한다.
   let summary = $state<OwnerSummary | null>(null);
+  $effect(() => {
+    if (!linked && !guest) return;
+    let alive = true;
+    void loadMyPlayerSummary(linked).then(value => { if (alive) summary = value; });
+    return () => { alive = false; };
+  });
 
   // 내 팀 카드 — 팀 화면과 같은 응답(1분 메모)이라 팀 화면에 들어가도 다시 묻지 않는다.
   let card = $state<OwnerTeamCard | null>(null);
@@ -202,7 +209,13 @@
     </section>
   {/if}
 
-  {#if !guest || localCount > 0}<MyPlayers onrows={(rows) => (summary = ownerSummary(rows))} />{/if}
+  {#if !guest || localCount > 0}
+    <section class="card owner-market owner-tap" data-owner-players-entry aria-label={P.title}>
+      <div class="owner-who"><small class="eyebrow">My players</small><h2>{P.title}</h2><span class="muted fs-sm">{P.entryLead}</span></div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="open-owner-players" aria-label={P.openPlayers} onclick={() => go('players')}></button>
+    </section>
+  {/if}
 
   {#if linked}
     <section class="card owner-market owner-tap" aria-label={L.marketTitle} data-owner-market>

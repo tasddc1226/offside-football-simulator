@@ -190,10 +190,12 @@ test('익명 구단주도 이 기기에 은퇴한 선수가 있으면 내 선수
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-my-players]')).toContainText('기기왕');
-  await expect(page.locator('[data-my-source]')).toHaveAttribute('data-my-source', 'device');
   await expect(page.locator('[data-owner-value] dt')).toHaveText('구단 가치');
   await expect(page.locator('[data-owner-value] dd')).toContainText('억');
+  await expect(page.locator('[data-my-players]')).toHaveCount(0);
+  await page.locator('[data-act="open-owner-players"]').click();
+  await expect(page.locator('[data-my-players]')).toContainText('기기왕');
+  await expect(page.locator('[data-my-source]')).toHaveAttribute('data-my-source', 'device');
 });
 
 test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async ({ page }) => {

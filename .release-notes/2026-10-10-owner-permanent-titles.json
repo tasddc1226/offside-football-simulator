@@ -5,7 +5,8 @@
     "시즌 업적과 연결된 반복 육성 기록으로 입문·숙련·명예·전설 등급의 영구 칭호 13종에 도전해요.",
     "명예관에서 대표 칭호를 골라 프로필·랭킹·댓글·채팅에 표시해요. 미획득 칭호의 조건과 진행도도 확인해요.",
     "구단주 탭에서 별도 명예관을 열어 도트 아이콘 칭호와 다음 목표를 살펴봐요.",
-    "구단주 메뉴를 팀·선수 관리, 명예관·시즌 결산, 상점, 계정 순으로 정리했어요."
+    "구단주 메뉴를 팀·선수 관리, 명예관·시즌 결산, 상점, 계정 순으로 정리했어요.",
+    "내 선수 화면에서 시즌별 기록과 상세를 보고, 보유 선수를 골라 방출할 수 있어요."
   ],
   "en": {
     "title": "Owner hall and permanent titles",
@@ -13,7 +14,8 @@
       "Pursue 13 permanent titles across Entry, Skilled, Honor and Legend grades by repeating development feats related to season achievements.",
       "Choose a representative title in your hall for profiles, rankings, comments and chat. View conditions and progress for unearned titles.",
       "Open a dedicated hall from the Owner tab to explore pixel-art titles and your next goals.",
-      "Owner menus now flow from team and player management to honors and season recaps, shops, and account settings."
+      "Owner menus now flow from team and player management to honors and season recaps, shops, and account settings.",
+      "View season-by-season records and details on My players, and select owned players to release."
     ]
   },
   "ja": {
@@ -22,7 +24,8 @@
       "シーズン実績につながる育成記録を重ね、入門・熟練・名誉・伝説の永久称号13種に挑戦できます。",
       "名誉館で代表称号を選ぶと、プロフィール・ランキング・コメント・チャットに表示されます。未獲得の称号の条件と進捗も確認できます。",
       "オーナータブから専用の名誉館を開き、ドット絵の称号と次の目標を確認できます。",
-      "オーナーメニューをチーム・選手管理、名誉館・シーズン総括、ショップ、アカウントの順に整理しました。"
+      "オーナーメニューをチーム・選手管理、名誉館・シーズン総括、ショップ、アカウントの順に整理しました。",
+      "自分の選手画面でシーズン別の記録と詳細を確認し、保有選手を選んで放出できます。"
     ]
   },
   "availability": "web-app"

@@ -62,6 +62,7 @@ export type Screen =
   | 'settings'
   | 'owner'
   | 'honors'
+  | 'players'
   /** T-10-092 구단주 팀(구단주 화면에서 연다). */
   | 'team'
   /** T-11-080 이적시장(구단주 화면에서 연다). */
@@ -185,6 +186,8 @@ export interface LegendView {
 export interface AppState {
   G: GameState | null;
   screen: Screen;
+  playersSeason: number | null;
+  playersView: 'records' | 'manage';
   tab: Tab;
   lastRetired: HofEntry | null;
   legend: LegendView | null;
@@ -205,7 +208,7 @@ export interface AppState {
   /** 기록실 화면의 탭(명예의 전당·영구결번)·페이지(1부터)·순위 유형. 선수 상세에서 돌아와도 그대로다. */
   hof: HofView;
   /** 선수 상세의 '← 이전으로'가 돌아갈 화면. */
-  legendBack: 'home' | 'hof' | 'owner';
+  legendBack: 'home' | 'hof' | 'owner' | 'players';
   /** T-10-130 구단주 팀 안의 화면 — 뒤로 가기 기록에 남도록 appState에 둔다(history.svelte.ts). */
   teamView: TeamView;
   /** T-10-029. 공유 링크(/career/:id)로 들어온 은퇴 선수 id — 보기 전용 화면(SharedCareer)이 읽는다. */
@@ -253,6 +256,8 @@ export const initialAppState = (): AppState => ({
   ownerConflict: null,
   hof: hofStart(),
   legendBack: 'home',
+  playersSeason: null,
+  playersView: 'records',
   teamView: 'team',
   sharedCareer: null,
   report: null,

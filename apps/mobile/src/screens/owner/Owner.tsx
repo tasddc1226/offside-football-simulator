@@ -3,9 +3,9 @@
 // T-10-102 비로그인이면 계정 카드는 안내만, 로그인 버튼은 카드 밖에 하나만 두고 로그인해야 쓰는 '내 팀'은 숨긴다.
 // 구단 이름·엠블럼 변경은 환경설정에 있다.
 // T-11-026 구단 허브 — 맨 위에 구단주 요약(은퇴 선수·레전드 점수·결번), 그 아래 '내 팀' 카드(전적·레이팅·오늘 남은
-// 경기와 바로 경기하기), 내 선수 상위 3명, 계정은 맨 아래. 비로그인이면 '내 팀' 자리에 잠긴 카드와 로그인 버튼을 둔다.
+// 경기와 바로 경기하기), 내 선수 진입 카드, 계정은 맨 아래. 비로그인이면 '내 팀' 자리에 잠긴 카드와 로그인 버튼을 둔다.
 // T-11-128 요약 아래에 시즌 결산 카드(RecapCard) — 끝난 시즌이 있으면 결산 화면(recap)으로 연다.
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { fetchBoardViewer } from '@offside/app-core/api/boards';
@@ -14,7 +14,6 @@ import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/ap
 import { fundsText } from '@offside/app-core/market';
 import {
   ownerLockedText,
-  ownerSummary,
   ownerTeamCard,
   ownerTeamEmptyText,
   type OwnerSummary,
@@ -36,7 +35,8 @@ import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
-import { MyPlayers } from './MyPlayers';
+import { loadMyPlayerSummary } from '@offside/app-core/myPlayers';
+import { ownerPlayersText as P } from '@offside/app-core/i18n/ko/ownerPlayers';
 import { TitleBadge } from '../../components/TitleBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
@@ -152,12 +152,19 @@ export default function Owner() {
   const guest = acct === null || (!!acct && acct !== 'error' && !isMember(acct));
   const nickname = acct && acct !== 'error' ? acct.nickname : null;
 
-  // 요약은 '내 선수'가 불러온 목록으로 센다(비로그인이면 이 기기 기록).
+  // 전용 목록을 열지 않아도 현재 시즌의 기존 기록 기준으로 요약한다.
+  const { tick, track } = useRefresh();
   const [summary, setSummary] = useState<OwnerSummary | null>(null);
-  const onRows = useCallback(
-    (rows: Parameters<typeof ownerSummary>[0]) => setSummary(ownerSummary(rows)),
-    [],
-  );
+  useEffect(() => {
+    if (!linked && !guest) return;
+    let alive = true;
+    void track(loadMyPlayerSummary(linked)).then((value) => {
+      if (alive) setSummary(value);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [linked, guest, tick, track]);
   // 내 팀 카드 — 팀 화면과 같은 응답(1분 메모)이라 팀 화면에 들어가도 다시 묻지 않는다.
   const [card, setCard] = useState<OwnerTeamCard | null>(null);
   const [cardFailed, setCardFailed] = useState(false);
@@ -178,7 +185,6 @@ export default function Owner() {
       alive = false;
     };
   }, [linked]);
-  const { tick, track } = useRefresh();
   useEffect(() => {
     if (!linked) return;
     let alive = true;
@@ -404,7 +410,29 @@ export default function Owner() {
         </>
       ) : null}
 
-      {!guest || localCount > 0 ? <MyPlayers onRows={onRows} /> : null}
+      {!guest || localCount > 0 ? (
+        <Press
+          testID="open-owner-players"
+          accessibilityLabel={P.openPlayers}
+          onPress={() => go('players')}
+          scale={0.98}
+        >
+          <Card gap={12} testID="owner-players-entry">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Txt v="eyebrow">My players</Txt>
+                <Txt v="h2">{P.title}</Txt>
+                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                  {P.entryLead}
+                </Txt>
+              </View>
+              <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                ›
+              </Txt>
+            </View>
+          </Card>
+        </Press>
+      ) : null}
 
       {linked ? (
         <>
