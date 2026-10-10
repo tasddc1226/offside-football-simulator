@@ -24,4 +24,5 @@ pnpm --filter @offside/mobile start     # 이후엔 번들러만 띄우고 설�
 - `src/platform/setup.ts` — 앱 시작 때 `crypto.randomUUID` 폴리필과 세이브 저장소(MMKV)를 엔진에 넣는다. 세이브 키는 웹과 같다.
 - `src/theme/` — 웹 `style.css`의 색 토큰(라이트/다크).
 - `metro.config.js` — 공용 패키지의 `./x.js` import를 `.ts`로 찾게 한다.
-- `scripts/icons.mjs` — 웹 브랜드 원본으로 아이콘·스플래시를 만든다.
+- 아이콘·스플래시·안드로이드 알림 아이콘 PNG는 `apps/web/brand/build-icons.mjs`가 만든다(`node apps/web/brand/build-icons.mjs`).
+- `locales/` — 기기 언어별 앱 이름·권한 문구(한국어 `오프사이드`, 그 밖의 언어 `OFFSIDE`).

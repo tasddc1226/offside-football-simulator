@@ -6,7 +6,7 @@
 `build-icons.mjs`가 원본이다. 도형을 고치면 `node apps/web/brand/build-icons.mjs`로 앱 PNG를 다시 만들어 커밋한다.
 웹은 빌드 때 seo.mjs가 같은 `brandSvg()`로 파비콘, Apple 터치 아이콘, 매니페스트(maskable 포함) 아이콘, Open Graph 카드를 만든다.
 
-- `apps/mobile/assets/images`: iOS 라이트·다크·틴트 아이콘, 안드로이드 적응형 아이콘(전경·배경·단색), 라이트·다크 스플래시, Expo 웹 파비콘.
+- `apps/mobile/assets/images`: iOS 라이트·다크·틴트 아이콘, 안드로이드 적응형 아이콘(전경·배경·단색), 안드로이드 알림 아이콘(96px 흰색, T-11-119), 라이트·다크 스플래시, Expo 웹 파비콘.
 - 상단 브랜드 줄 배지: `apps/web/public/brand/offside-icon-v7-*64.png`, `apps/mobile/assets/brand/offside-icon-v7-*180.png`.
 
 `public/brand/offside-flag-v6-*.png`는 AdSense 동의 메시지 로고가 가리키고 있어 남겨 둔다.

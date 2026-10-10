@@ -1,0 +1,23 @@
+{
+  "id": "t-11-192-season-gauge-tune",
+  "title": "시즌 진행 방식이 바뀌었어요",
+  "items": [
+    "시즌 진행률이 다시 모두가 끝까지 뛴 커리어로 차요. 대신 목표를 높여서 예전보다 천천히 차요.",
+    "한 시즌은 최소 2주, 최대 4주예요. 진행률이 90%에 닿으면 홈에 시즌 종료까지 남은 시간이 보여요."
+  ],
+  "en": {
+    "title": "Season progress has changed",
+    "items": [
+      "Season progress fills with everyone's full careers again, with a higher goal so it fills more slowly than before.",
+      "A season lasts at least two weeks and at most four. When progress reaches 90%, the home screen shows the time left until the season ends."
+    ]
+  },
+  "ja": {
+    "title": "シーズンの進み方が変わりました",
+    "items": [
+      "シーズン進行率は再びみんなが最後までプレーしたキャリアで進みます。目標を上げたので、以前よりゆっくり進みます。",
+      "1シーズンは最短2週間、最長4週間です。進行率が90%に達すると、ホームにシーズン終了までの残り時間が表示されます。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -3,8 +3,15 @@ import { base, svelteConfig, typedConfig } from '@offside/eslint-config';
 // 워크스페이스(web/api/contracts) 경계는 표준 no-restricted-imports로 직접 적는다(ADR-013).
 export default [
   ...base,
-  // T-11-004 Expo가 만드는 네이티브 폴더·캐시(깃에도 없다).
-  { ignores: ['apps/mobile/ios/**', 'apps/mobile/android/**', 'apps/mobile/.expo/**'] },
+  // T-11-004 Expo가 만드는 네이티브 폴더·캐시(깃에도 없다). T-11-159 Expo 설정 플러그인은 app.config.js처럼 CommonJS다.
+  {
+    ignores: [
+      'apps/mobile/ios/**',
+      'apps/mobile/android/**',
+      'apps/mobile/.expo/**',
+      'apps/mobile/plugins/**',
+    ],
+  },
   // T-10-001: apps/web UI가 Svelte 5(runes)로 옮겨오며 .svelte 파일에도 린트를 켠다.
   ...svelteConfig(['apps/web/src/**/*.svelte']),
   ...typedConfig(

@@ -14,6 +14,8 @@ import {
 import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
 import { lastClosedSeason } from '@offside/contracts/service-seasons';
 import * as api from '@offside/app-core/api/chat';
+import { unblock as unblockApi } from '@offside/app-core/api/boards';
+import type { ChatBlockResponse } from '@offside/contracts';
 import {
   CHAT_REJECT_TEXT,
   EMPTY_CHAT,
@@ -212,6 +214,20 @@ export default function Chat() {
     const r = await run(api.blockChatAuthor(m.id), L.blockedToast({ nick: m.nickname }));
     if (r) session.current?.block(r.data.author);
   }
+  /** T-11-167 차단한 사용자 — 안내에서 고를 때만 불러온다. undefined면 닫힘, null이면 불러오는 중. */
+  const [blocks, setBlocks] = useState<ChatBlockResponse[] | null | 'error' | undefined>();
+  async function openBlocks() {
+    setBlocks(null);
+    const r = await api.fetchChatBlocks();
+    setBlocks(r.ok ? r.data.blocks : 'error');
+  }
+  async function unblock(b: ChatBlockResponse) {
+    const r = await unblockApi(b.id);
+    if (!r.ok) return toast(r.error.message);
+    session.current?.unblock(b.author);
+    setBlocks((list) => (Array.isArray(list) ? list.filter((x) => x.id !== b.id) : list));
+    toast(L.unblockedToast({ nick: b.nickname }));
+  }
   async function mute(m: ChatMessage, days: (typeof CHAT_MUTE_DAYS)[number]) {
     const ok = await confirmAsync(L.muteTitle({ nick: m.nickname, days }), L.muteBody, L.muteOk);
     if (ok) await run(api.adminMuteChat(m.id, { days }), L.mutedToast({ nick: m.nickname, days }));
@@ -293,6 +309,9 @@ export default function Chat() {
             onPress={() =>
               Alert.alert(L.rulesLabel, L.rulesBody, [
                 { text: L.terms, onPress: () => openWeb('/legal/terms/') },
+                ...(view.me?.author
+                  ? [{ text: L.blockedTitle, onPress: () => void openBlocks() }]
+                  : []),
                 { text: L.ok },
               ])
             }
@@ -304,6 +323,56 @@ export default function Chat() {
             </Svg>
           </Press>
         </View>
+        {blocks !== undefined ? (
+          <View
+            testID="chat-blocks"
+            style={{ gap: 8, padding: 12, borderBottomWidth: 1, borderBottomColor: c.line }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Txt bold style={{ fontSize: rem(0.875) }}>
+                {L.blockedTitle}
+              </Txt>
+              <Btn sm testID="chat-blocks-close" onPress={() => setBlocks(undefined)}>
+                {L.ok}
+              </Btn>
+            </View>
+            {blocks === null ? (
+              <Txt tone="muted" style={small}>
+                {L.loading}
+              </Txt>
+            ) : blocks === 'error' ? (
+              <Txt tone="muted" style={small}>
+                {L.blockedLoadFail}
+              </Txt>
+            ) : blocks.length ? (
+              blocks.map((b) => (
+                <View
+                  key={b.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Txt style={{ fontSize: rem(0.875) }}>{b.nickname}</Txt>
+                  <Btn sm testID="chat-unblock" onPress={() => void unblock(b)}>
+                    {L.unblock}
+                  </Btn>
+                </View>
+              ))
+            ) : (
+              <Txt tone="muted" style={small}>
+                {L.blockedEmpty}
+              </Txt>
+            )}
+          </View>
+        ) : null}
         <ScrollView
           ref={list}
           testID="chat-list"
