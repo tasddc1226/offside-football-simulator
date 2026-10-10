@@ -28,6 +28,7 @@ export const shell: Translation<ShellMsgs> = {
   updateAlert: 'アップデートのお知らせ',
   updateBodyWeb: '新しいバージョンが出ました。再読み込みするとすぐに反映されます。',
   updateBtnWeb: '再読み込み',
+  footFootballData: 'Football data provided by the Football-Data.org API',
   footContact: 'お問い合わせ',
   footCommunity: 'コミュニティ',
   footGallery: 'DCinside OFFSIDE マイナーギャラリー',

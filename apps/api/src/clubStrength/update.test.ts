@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { collectStandings } from './provider.js';
+import { collectStandings, throttledProviderRequest } from './provider.js';
 import { SourcesSchema } from '@offside/contracts/club-strength-provider';
+import sourceConfig from '../../../../tooling/fulltime-sim/club-strength/football-data-sources.json';
 import { readStrengthState, readStrengthHistory, RUN_PREFIX, LOCK_KEY } from './store.js';
 import { updateClubStrength, validateLeague } from './update.js';
 
@@ -194,4 +195,49 @@ describe('API-Football normalization', () => {
       collectStandings(config, 'key', async () => response([[row]], 2025)),
     ).rejects.toThrow('wrong-provider-season');
   });
+});
+
+describe('provider quota', () => {
+  it('waits for the response reset before making the next request', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetcher = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(
+          new Response('', {
+            headers: { 'x-requests-available-minute': '0', 'x-requestcounter-reset': '2' },
+          }),
+        )
+        .mockResolvedValue(new Response(''));
+      const request = throttledProviderRequest(fetcher);
+      await request('https://api.football-data.org/v4/competitions/PL/standings');
+      const second = request('https://api.football-data.org/v4/competitions/SA/standings');
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      await second;
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+it('reviewed free-provider configuration covers every game club without cross-league mappings', () => {
+  const sources = SourcesSchema.parse(sourceConfig);
+  expect(sources).toHaveLength(6);
+  for (const source of sources) {
+    const rows = [...Object.keys(source.teams), ...source.exclude].map((team) => ({
+      team,
+      p: 0,
+      w: 0,
+      d: 0,
+      l: 0,
+      pts: 0,
+      gf: 0,
+      ga: 0,
+    }));
+    expect(() => validateLeague(source, rows)).not.toThrow();
+  }
 });

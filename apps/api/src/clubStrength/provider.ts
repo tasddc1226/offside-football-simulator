@@ -63,3 +63,19 @@ export async function collectStandings(
     }
   return { season: String(league.season), rows: [...teams.values()] };
 }
+
+/** Share one requester per run. Respect the provider's remaining-minute/reset headers before the next call. */
+export function throttledProviderRequest(request: typeof fetch = fetch): typeof fetch {
+  let resumeAt = 0;
+  return async (input, init) => {
+    const delay = resumeAt - Date.now();
+    if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+    const response = await request(input, init);
+    if (response.headers.get('x-requests-available-minute') === '0') {
+      const reset = Number(response.headers.get('x-requestcounter-reset') ?? 60);
+      const seconds = Number.isFinite(reset) && reset > 0 && reset <= 60 ? reset : 60;
+      resumeAt = Date.now() + Math.ceil(seconds * 1000);
+    }
+    return response;
+  };
+}

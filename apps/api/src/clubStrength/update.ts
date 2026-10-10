@@ -12,7 +12,12 @@ import {
 } from '@offside/contracts/club-strength-calc';
 import type { Bindings } from '../env.js';
 import { purgeEdgeOrigin } from '../edgeCache.js';
-import { collectStandings, SourcesSchema, type StrengthSource } from './provider.js';
+import {
+  collectStandings,
+  SourcesSchema,
+  throttledProviderRequest,
+  type StrengthSource,
+} from './provider.js';
 import { LOCK_KEY, RUN_PREFIX, STATE_KEY, STRENGTH_PATH, readStrengthState } from './store.js';
 
 const completedDays = new WeakMap<D1Database, string>();
@@ -88,6 +93,7 @@ export async function updateClubStrength(
       config = null;
     }
     const sources = SourcesSchema.safeParse(config);
+    const providerRequest = throttledProviderRequest(request);
     const leagues: StrengthLeagueRun[] = [];
     const nextValues = { ...state.snapshot.values },
       inputs = { ...state.inputs };
@@ -105,7 +111,7 @@ export async function updateClubStrength(
       leagues.push(result);
       if (!source || !key) continue;
       try {
-        const collected = await collectStandings(source, key, request);
+        const collected = await collectStandings(source, key, providerRequest);
         result.season = collected.season;
         const base = validateLeague(source, collected.rows);
         const previousInput = inputs[league];

@@ -7,7 +7,10 @@ if (!token) {
   process.exit(1);
 }
 const output = [];
+let resumeAt = 0;
 for (const [league, competition] of Object.entries(competitions)) {
+  if (resumeAt > Date.now())
+    await new Promise((resolve) => setTimeout(resolve, resumeAt - Date.now()));
   const response = await fetch(
     `https://api.football-data.org/v4/competitions/${competition}/teams`,
     {
@@ -15,6 +18,11 @@ for (const [league, competition] of Object.entries(competitions)) {
       signal: AbortSignal.timeout(15000),
     },
   );
+  if (response.headers.get('x-requests-available-minute') === '0') {
+    const reset = Number(response.headers.get('x-requestcounter-reset') ?? 60);
+    resumeAt =
+      Date.now() + (Number.isFinite(reset) && reset > 0 && reset <= 60 ? reset : 60) * 1000;
+  }
   if (!response.ok) throw new Error(`${competition}: HTTP ${response.status}`);
   const data = await response.json();
   if (!Array.isArray(data.teams) || !data.teams.length) throw new Error(`${competition}: no teams`);

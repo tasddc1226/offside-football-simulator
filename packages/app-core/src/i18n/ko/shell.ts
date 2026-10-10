@@ -29,6 +29,7 @@ const ko = {
   updateAlert: '업데이트 알림',
   updateBodyWeb: '새 버전이 나왔어요. 새로고침하면 바로 적용돼요.',
   updateBtnWeb: '새로고침',
+  footFootballData: 'Football data provided by the Football-Data.org API',
   footContact: '문의',
   footCommunity: '커뮤니티',
   footGallery: '디시 오프사이드 마이너 갤러리',
