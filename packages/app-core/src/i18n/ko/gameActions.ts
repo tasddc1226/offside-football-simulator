@@ -8,6 +8,13 @@ const ko = {
   natDetail: (p: { mins: number; g: number; a: number; rating: number | string | null }) =>
     `${p.mins}분${p.g ? ` ${p.g}골` : ''}${p.a ? ` ${p.a}도움` : ''} · 평점 ${p.rating}`,
   natBench: '벤치',
+  // T-11-186 컵·대륙 대회 경기 줄
+  compDetail: (p: { mins: number; g: number; a: number }) =>
+    `${p.mins}분${p.g ? ` ${p.g}골` : ''}${p.a ? ` ${p.a}도움` : ''}`,
+  compLeg: (p: { stage: string; leg: number }) => `${p.stage} ${p.leg}차전`,
+  compLeagueGame: (p: { n: number; res: string }) => `리그 페이즈 ${p.n}경기 · ${p.res}`,
+  compThrough: '통과',
+  compOut: '탈락',
   natNotInSquad: '명단 외',
   natNoMedal: '메달 없음',
   natTourLine: (p: {
@@ -22,7 +29,6 @@ const ko = {
   // 구간 진행
   preseasonDone: '프리시즌 완료',
   phaseResult: (p: { phase: string }) => `${p.phase} 결과`,
-  stepComps: '컵 · 대륙 대회 결과 집계',
   stepNat: 'A매치 소집 명단 발표',
   stepEvent: '새로운 소식이 들려옵니다…',
   phaseRunning: (p: { year: number; phase: string }) => `${p.year} · ${p.phase} 진행 중`,
