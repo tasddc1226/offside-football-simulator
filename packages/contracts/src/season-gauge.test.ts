@@ -15,7 +15,7 @@ const at = (days: number) =>
 describe('시즌 진행 게이지', () => {
   const counted = { contributed: 9_000, participants: 1_000 };
 
-  it('T-11-189 진행률은 지난 시간 ÷ 35일 — 완주 수가 목표를 넘어도 앞서지 않는다', () => {
+  it('T-11-190 진행률은 지난 시간 ÷ 35일 — 완주 수가 목표를 넘어도 앞서지 않는다', () => {
     const a = stepSeasonGauge(null, season, counted, at(7));
     expect(a.peak).toBeCloseTo(0.2);
     expect(a.lockedAt).toBeNull();

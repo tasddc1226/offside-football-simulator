@@ -27,7 +27,7 @@ export interface SeasonGaugeLines {
 export function seasonGaugeLines(g: SeasonGauge, now: number): SeasonGaugeLines {
   const season = teamSeasonLabel(g.season);
   const pct = Math.floor(g.progress * 100);
-  // T-11-189 시즌 길이가 정해져 있으면(최소 = 최대) 확정 전에도 그 마감으로 센다.
+  // T-11-190 시즌 길이가 정해져 있으면(최소 = 최대) 확정 전에도 그 마감으로 센다.
   const endsAt = g.endsAt ?? (g.minEndsAt === g.maxEndsAt ? g.maxEndsAt : null);
   const left = endsAt ? Date.parse(endsAt) - now : null;
   return {

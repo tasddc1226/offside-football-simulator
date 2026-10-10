@@ -15,7 +15,7 @@ import { countSeasonGauge, openCupEndsAt, readSeasonGauge, runSeasonGauge } from
 const START = '2026-10-05T15:00:00.000Z';
 const NOW = '2026-10-07T15:00:00.000Z';
 const DAY = 86_400_000;
-// T-11-189 시즌은 5주. 32일째면 진행률이 90%를 넘어 마감을 확정한다.
+// T-11-190 시즌은 5주. 32일째면 진행률이 90%를 넘어 마감을 확정한다.
 const LOCK = new Date(Date.parse(START) + 32 * DAY).toISOString();
 let ctx: TestD1;
 const run = (sql: string, ...params: unknown[]) =>
@@ -81,7 +81,7 @@ describe('시즌 진행 게이지 cron', () => {
     });
   });
 
-  it('완주 수는 참고 지표로만 굳히고 진행률은 시간으로 찬다 — 목표를 넘어도 마감을 확정하지 않는다(T-11-189)', async () => {
+  it('완주 수는 참고 지표로만 굳히고 진행률은 시간으로 찬다 — 목표를 넘어도 마감을 확정하지 않는다(T-11-190)', async () => {
     const first = await runSeasonGauge(ctx.env.DB, NOW);
     // 목표(참여 2명 × 10 = 20)를 넘었지만 진행률은 2일 ÷ 35일이다.
     expect(first).toMatchObject({

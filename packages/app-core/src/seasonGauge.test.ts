@@ -17,7 +17,7 @@ const gauge = (over: Partial<SeasonGauge> = {}): SeasonGauge => ({
 const now = Date.parse('2026-11-08T12:00:00.000Z');
 
 describe('시즌 진행 게이지 문구', () => {
-  it('T-11-189 시즌 길이가 정해져 있으면 마감 확정 전에도 남은 시간을 보인다', () => {
+  it('T-11-190 시즌 길이가 정해져 있으면 마감 확정 전에도 남은 시간을 보인다', () => {
     expect(seasonGaugeLines(gauge(), now).countdown).toBe('시즌 종료까지 1일 3시간');
   });
   it('최소·최대 마감이 다르고 아직 확정 전이면 남은 시간이 없다', () => {
