@@ -5,6 +5,7 @@
   import { CUP_REWARDS, CUP_STAGES } from '@offside/contracts/cup';
   import { fetchCup, fetchCupMe, type CupMatch, type CupMeResponse, type CupResponse } from '@offside/app-core/api/cup';
   import { isMember } from '@offside/app-core/account';
+  import { cupBeforeDraw } from '@offside/app-core/cupHome';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import Topbar from './Topbar.svelte';
   import BackBar from './BackBar.svelte';
@@ -57,7 +58,7 @@
 
   const names = $derived(teamMap(data?.teams ?? []));
   const mineId = $derived(me?.entry && me.entry.status !== 'withdrawn' ? me.entry.teamId : null);
-  const early = $derived(data ? data.phase === 'soon' || data.phase === 'open' || data.phase === 'closed' : true);
+  const early = $derived(data ? cupBeforeDraw(data.phase) : true);
   const rounds = $derived(data ? bracketRounds(data.matches) : []);
   // 내 조를 맨 위로.
   const groups = $derived.by(() => {
@@ -106,6 +107,24 @@
           {/if}
           <CupEntry {data} {me} {linked} onchanged={reload} />
         </section>
+
+        {#if early && data.teams.length}
+          <details class="card cup-info" open data-cup-entrants>
+            <summary><h2>{L.secEntrants} <span class="muted fs-sm">{L.teamsCount({ n: data.teams.length })}</span></h2></summary>
+            <p class="muted fs-sm">{L.entrantsNote}</p>
+            <ol class="cup-entrants">
+              {#each data.teams as t, i (t.teamId)}
+                <li class:mine={t.teamId === mineId}>
+                  <span class="cup-entrant-no">{i + 1}</span>
+                  <TeamLogo logo={t.logo} name={t.name} size={28} decorative />
+                  <span class="cup-entrant-who"><b>{t.name}</b><small class="muted">{t.owner}</small></span>
+                  {#if t.teamId === mineId}<span class="pill good">{L.mineTeam}</span>{/if}
+                  <span class="cup-entrant-ovr">OVR {t.ovr}</span>
+                </li>
+              {/each}
+            </ol>
+          </details>
+        {/if}
 
         {#if rounds.length}
           <section class="cup-sec" data-cup-bracket>
@@ -277,6 +296,41 @@
     border-top: 0;
     font-size: 0.75rem;
     color: var(--muted);
+  }
+  .cup-entrants {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+  }
+  .cup-entrants li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+  }
+  .cup-entrants li.mine b {
+    color: var(--accent);
+  }
+  .cup-entrant-no {
+    width: 2ch;
+    flex: none;
+    text-align: right;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .cup-entrant-who {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .cup-entrant-ovr {
+    flex: none;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
   }
   .cup-rules {
     margin: 0;

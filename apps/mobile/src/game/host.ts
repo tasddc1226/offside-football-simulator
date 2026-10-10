@@ -26,6 +26,7 @@ import {
   prefs,
   pickedTitles,
   rnAlert,
+  rnMisses,
   rnResults,
   sheetState,
   toastState,
@@ -50,9 +51,12 @@ export function toast(text: string) {
   toastTimer = setTimeout(() => (toastState.visible = false), 2200);
 }
 
-/** 짧은 진동(웹 motion.buzz). 동작 줄이기면 하지 않는다. */
+/** 진동을 줘도 되는지 — 설정의 진동 스위치가 켜져 있고 동작 줄이기가 아닐 때. */
+export const hapticsOn = (): boolean => prefs.haptics && prefs.motionOK;
+
+/** 짧은 진동(웹 motion.buzz). */
 export function buzz() {
-  if (prefs.motionOK) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  if (hapticsOn()) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 }
 
 // ───────── 업로드 ─────────
@@ -110,6 +114,7 @@ export const { recordRn, fillGranted, rnOf, watchRetiredNumberAlerts } = createR
   (id, title) => {
     pickedTitles[id] = title;
   },
+  rnMisses,
 );
 
 export const {
@@ -136,7 +141,7 @@ export const { onOwnerConflict, adoptCareer, keepOnDevice } = createOwnerConflic
 
 Outbox.configureOutbox({
   onConflict: onOwnerConflict,
-  onRetiredNumber: (e) => recordRn(e.careerId, e.result, e.serviceSeason, e.title),
+  onRetiredNumber: (e) => recordRn(e.careerId, e.result, e.serviceSeason, e.title, e.miss),
 });
 
 /** 프로필을 다시 받아 캐시에 둔다. 실패는 'error'(서버에 연결하지 못함). 토큰이 무효(폐기·만료·탈퇴)면 버리고

@@ -6,9 +6,12 @@ import {
   BOOST_PITY_PCT,
   boostChance,
   boostCost,
+  boostExtraLeft,
   boostState,
   boostStatus,
+  boostTicketOpen,
   tryBoost,
+  type BoostPay,
   type BoostStatus,
 } from '@offside/game/boost';
 import { fmtMoney } from '@offside/game/player';
@@ -22,6 +25,8 @@ export interface BoostView {
   max: number;
   /** 상태 한 줄. */
   line: string;
+  /** 다음 시도 성공 확률(%). T-11-153 구단 자금 버튼에 적는다. */
+  chance: number;
   /** 시도할 수 있을 때만 — 비용과 확률을 버튼에 그대로 적는다. */
   button?: string;
   /** 시도 전에 한 번 더 묻는 문구. */
@@ -29,6 +34,13 @@ export interface BoostView {
   /** T-11-116 자금이 모자랄 때 광고(광고 제거 구매자는 바로)로 시도하는 버튼 — 앱에서 광고를 쓸 수 있을 때만. */
   adButton?: string;
   adNote?: string;
+  /**
+   * 광고 · 구단 자금으로 지금 시도할 수 있는지 — 자금이 모자란 시즌의 한 번이나 T-11-157 추가 시도이고, 오늘 횟수가
+   * 남았을 때. 구단 자금 버튼도 이 값을 본다.
+   */
+  free: boolean;
+  /** T-11-184 강화권으로 지금 시도할 수 있는지 — 이번 시즌의 한 번을 썼거나 자금이 모자랄 때(추가 시도 상한 없음). */
+  ticketOpen: boolean;
   note: string;
   /** 최근 시도(새것부터 4개). */
   history: string[];
@@ -47,8 +59,21 @@ export const boostHidden = (s: GameState): boolean =>
  */
 export type BoostAdOffer = 'ad' | 'free' | null;
 
-export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView {
+/**
+ * opts(T-11-157): club = 구단 자금 버튼을 보일 수 있다(로그인한 구단주). T-11-174 ticket = 잠재력 강화권을 가졌다. 추가 시도
+ * 안내는 광고 · 구단 자금 · 강화권 길이 있을 때만 보인다. 강화권은 추가 시도 상한이 없다(T-11-184). 광고 · 구단 자금 강화는
+ * 하루 횟수를 세지 않는다(T-11-172 · 173).
+ */
+export function boostView(
+  s: GameState,
+  adOffer: BoostAdOffer = null,
+  opts: { club?: boolean; ticket?: boolean } = {},
+): BoostView {
   const status = boostStatus(s);
+  const extraLeft = status === 'done' ? boostExtraLeft(s) : 0;
+  const path = !!adOffer || !!opts.club;
+  const ticketOpen = boostTicketOpen(s);
+  const free = status === 'short' || extraLeft > 0;
   const b = boostState(s);
   const cost = L2.won({ v: fmtMoney(boostCost(s)) });
   const chance = boostChance(s);
@@ -60,7 +85,11 @@ export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView
         : status === 'max'
           ? L.lineMax({ lv: BOOST_MAX })
           : status === 'done'
-            ? L.lineDone
+            ? extraLeft && path
+              ? (adOffer ? L.lineExtra : L.lineExtraClub)({ left: extraLeft })
+              : opts.ticket
+                ? L.lineExtraTicket
+                : L.lineDone
             : status === 'short'
               ? L.lineShort({ cost })
               : L.lineReady({ next: b.lv + 1, chance, cost });
@@ -69,13 +98,21 @@ export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView
     lv: b.lv,
     max: BOOST_MAX,
     line,
+    chance,
     ...(status === 'ready'
       ? { button: L.button({ cost, chance }), confirm: L.confirm({ cost, chance }) }
       : {}),
-    ...(status === 'short' && adOffer
+    free,
+    ticketOpen,
+    ...(free && adOffer
       ? {
           adButton: (adOffer === 'free' ? L.adButtonFree : L.adButton)({ chance }),
-          adNote: adOffer === 'free' ? L.adNoteFree : L.adNote,
+          adNote:
+            status === 'short'
+              ? adOffer === 'free'
+                ? L.adNoteFree
+                : L.adNote
+              : (adOffer === 'free' ? L.adNoteExtraFree : L.adNoteExtra)({ left: extraLeft }),
         }
       : {}),
     note: boostNote(),
@@ -83,8 +120,16 @@ export function boostView(s: GameState, adOffer: BoostAdOffer = null): BoostView
       .slice(-4)
       .reverse()
       .map((x) => {
-        const cost = x.ad ? L.adCost : L2.won({ v: fmtMoney(x.c) });
-        const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost };
+        const cost = x.ad
+          ? L.adCost
+          : x.club
+            ? L.clubCost
+            : x.tk
+              ? L.ticketCost
+              : L2.won({ v: fmtMoney(x.c) });
+        // T-11-157 추가 시도는 표시를 붙인다.
+        const pay = x.x ? L.extraCost({ cost }) : cost;
+        const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost: pay };
         return x.ok ? L.historyOk(p) : L.historyFail(p);
       }),
   };
@@ -101,9 +146,9 @@ export interface BoostOutcome {
   text: string;
 }
 
-/** 시도하고 연출에 쓸 결과를 돌려준다. 시도할 수 없으면 null. 저장은 부르는 쪽이 연출 전에 바로 한다. ad: 광고 시도. */
-export function doBoost(s: GameState, ad = false): BoostOutcome | null {
-  const r = tryBoost(s, ad);
+/** 시도하고 연출에 쓸 결과를 돌려준다. 시도할 수 없으면 null. 저장은 부르는 쪽이 연출 전에 바로 한다. pay는 tryBoost. */
+export function doBoost(s: GameState, pay: BoostPay = 'money'): BoostOutcome | null {
+  const r = tryBoost(s, pay);
   if (!r) return null;
   return {
     ok: r.ok,
@@ -115,6 +160,9 @@ export function doBoost(s: GameState, ad = false): BoostOutcome | null {
       ? r.lv >= BOOST_MAX
         ? L.resultOkMax
         : L.resultOk
-      : (ad ? L.resultFailAd : L.resultFail)({ chance: r.chance, pct: BOOST_PITY_PCT }),
+      : (pay === 'money' ? L.resultFail : L.resultFailFree)({
+          chance: r.chance,
+          pct: BOOST_PITY_PCT,
+        }),
   };
 }

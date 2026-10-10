@@ -22,9 +22,13 @@ import { HomeFirsts } from './HomeFirsts';
 import { HomeLive } from './HomeLive';
 import { HomeNews } from './HomeNews';
 import { HomeTicker } from './HomeTicker';
+import { SeasonGauge } from './SeasonGauge';
 import { Tile } from './Tile';
 import { PushOptInCard } from './PushOptInCard';
 import { InboxButton } from '../../components/InboxButton';
+import { openFriends } from '../../platform/inbox';
+import { INVITE_REROLLS } from '@offside/contracts/owner-team';
+import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { tn } from '@offside/game/i18n/names';
 
 export default function Home() {
@@ -153,6 +157,7 @@ export default function Home() {
           </View>
         ) : null}
         {/* T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서. 신청은 대회 화면에서 한다. */}
+        <SeasonGauge />
         <CupBanner onOpen={() => go('cup')} />
         <HomeLive />
         {/* T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. */}
@@ -163,6 +168,15 @@ export default function Home() {
           title={L.marketTitle}
           sub={L.marketSub}
           onPress={() => go('market')}
+        />
+        {/* T-11-175 친구 초대 이벤트는 구단주 → 경기 → 친구까지 들어가야 보여서 홈에서 바로 친구 화면(이벤트 카드가 맨 위)으로 간다. */}
+        <Tile
+          wide
+          testID="home-invite"
+          eyebrow="Invite event"
+          title={LF.eventTitle}
+          sub={L.inviteSub({ n: INVITE_REROLLS })}
+          onPress={openFriends}
         />
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <HomeFirsts />

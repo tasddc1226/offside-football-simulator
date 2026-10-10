@@ -547,6 +547,34 @@
       "when": 1791424018032,
       "tag": "0077_petite_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "6",
+      "when": 1791438448894,
+      "tag": "0078_tan_texas_twister",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "6",
+      "when": 1791521092358,
+      "tag": "0079_retire_bonus",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "6",
+      "when": 1791531255668,
+      "tag": "0080_invite_referrals",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "6",
+      "when": 1791536009768,
+      "tag": "0081_iap_purchases",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,15 @@
 // 실패하면 비용만 잃고 같은 단계의 다음 시도 확률이 오른다. 밸런스 근거: docs/tracking/potential-boost-plan.md.
 // 판정은 게임 RNG(세이브에 저장된다)를 한 번 쓴다 — 다시 불러와도 같은 결과다. 시도하지 않은 커리어는 RNG를 쓰지 않는다.
 // T-11-116 자금이 모자란 시즌엔 앱에서 보상형 광고를 끝까지 보면 자금 없이 한 번 시도할 수 있다(확률·시즌 한 번 규칙은 같다).
+// T-11-153 광고 대신 구단주의 구단 자금으로도 같은 한 번을 받는다(선수 자금은 쓰지 않는다, 기록만 다르다).
+// T-11-157 자금이 모자란 시즌엔 그 시즌의 한 번을 쓴 뒤에도 광고·구단 자금으로 더 시도할 수 있다. 한 커리어에서 모두 합쳐
+// BAL.boostExtraTotal번까지(확률 규칙은 같다). 시즌마다 열면 광고를 보는 선수가 모두 최고 단계에 닿아 커리어 전체로 묶었다.
+// 자금이 충분하면 다음 시즌을 기다린다 — 자금이 모자란 시기를 돕는 길이라서다.
+// T-11-174 구단주가 인앱 상품으로 산 잠재력 강화권 한 장으로도 선수 자금 없이 한 번 시도한다.
+// 광고 · 구단 자금 모두 하루 횟수를 세지 않는다(T-11-172 · 173). 구단 자금은 같은 날 다시 받을수록 값만 오른다.
+// T-11-184 강화권은 커리어 추가 시도 상한(BAL.boostExtraTotal)과 선수 자금에 묶이지 않는다 — 이번 시즌의 한 번을 썼거나 자금이
+// 모자라면 장수만큼 더 시도한다. 단계 · 확률 · 나이 상한은 같다. 강화권 시도는 광고 · 구단 자금의 추가 상한에 세지 않는다.
+import { BAL } from './balance.js';
 import { rnd } from './rng.js';
 import { fmtMoney } from './player.js';
 import { log, potScouted } from './stats.js';
@@ -27,11 +36,11 @@ export const BOOST_PITY_PCT = Math.round(BOOST.pity * 100);
 
 export const boostState = (s: GameState): BoostState => s.boost ?? { lv: 0, fails: 0, log: [] };
 
-/** 다음 단계 비용(만 원, 10 단위). 최대 단계면 0. */
+/** 다음 단계 비용(만 원, 10 단위). 최대 단계면 0. 운영 도구 배율(BAL.boostCost, T-11-185)을 곱한다. */
 export function boostCost(s: GameState): number {
   const L = boostState(s).lv;
   if (L >= BOOST_MAX) return 0;
-  return salaryCost(s, BOOST.rate[L]!, BOOST.min[L]!);
+  return salaryCost(s, BOOST.rate[L]!, BOOST.min[L]!, BAL.boostCost);
 }
 
 /** 다음 시도 성공 확률(%, 정수). 화면에 그대로 보여 준다. */
@@ -63,6 +72,26 @@ export function boostStatus(s: GameState): BoostStatus {
   return 'ready';
 }
 
+/**
+ * T-11-157 지금 광고·구단 자금으로 더 시도할 수 있는 횟수 — 이번 시즌의 한 번을 썼고, 다음 단계 비용만큼 선수 자금이 없을 때만
+ * 커리어에 남은 횟수, 아니면 0.
+ */
+export function boostExtraLeft(s: GameState): number {
+  if (boostStatus(s) !== 'done' || s.money >= boostCost(s)) return 0;
+  const used = boostState(s).log.filter((x) => x.x && !x.tk).length;
+  return Math.max(0, BAL.boostExtraTotal - used);
+}
+
+/** 광고·구단 자금으로 지금 시도할 수 있는지 — 자금이 모자란 시즌의 한 번(T-11-116)이거나 추가 시도(T-11-157). */
+export const boostFreeOpen = (s: GameState): boolean =>
+  boostStatus(s) === 'short' || boostExtraLeft(s) > 0;
+
+/** T-11-184 강화권으로 지금 시도할 수 있는지 — 자금이 모자란 시즌이거나 이번 시즌의 한 번을 썼으면(상한 없음). */
+export const boostTicketOpen = (s: GameState): boolean => {
+  const st = boostStatus(s);
+  return st === 'short' || st === 'done';
+};
+
 export interface BoostResult {
   ok: boolean;
   /** 시도 뒤 단계. */
@@ -73,13 +102,21 @@ export interface BoostResult {
 }
 
 /**
- * 강화를 시도한다. 시도할 수 없으면 null(상태를 바꾸지 않는다). ad: 자금이 모자란('short') 시즌에 보상형 광고를 보고
- * 자금 없이 시도한다 — 자금이 충분하면 광고 시도는 할 수 없다.
+ * 강화를 시도한다. 시도할 수 없으면 null(상태를 바꾸지 않는다). pay: 'money'는 선수 자금. 'ad'(보상형 광고),
+ * 'club'(구단주의 구단 자금, T-11-153)은 자금이 모자란('short') 시즌의 한 번이나, 그 시즌의 한 번을 쓴 뒤의 추가 시도(T-11-157)에 선수
+ * 자금 없이 시도한다. 'ticket'(잠재력 강화권, T-11-174)은 추가 시도 상한 없이 시도한다(T-11-184 boostTicketOpen). 자금이 충분한 시즌의
+ * 첫 시도는 선수 자금으로만 한다.
  */
-export function tryBoost(s: GameState, ad = false): BoostResult | null {
-  if (boostStatus(s) !== (ad ? 'short' : 'ready')) return null;
+export type BoostPay = 'money' | 'ad' | 'club' | 'ticket';
+export function tryBoost(s: GameState, pay: BoostPay = 'money'): BoostResult | null {
+  const free = pay !== 'money';
+  const open =
+    pay === 'ticket' ? boostTicketOpen(s) : free ? boostFreeOpen(s) : boostStatus(s) === 'ready';
+  if (!open) return null;
   const b = boostState(s);
-  const cost = ad ? 0 : boostCost(s);
+  // 이번 시즌의 한 번을 이미 썼으면 추가 시도다.
+  const extra = b.year === s.year;
+  const cost = free ? 0 : boostCost(s);
   const chance = boostChance(s);
   const ok = rnd() * 100 < chance;
   s.money -= cost;
@@ -96,23 +133,30 @@ export function tryBoost(s: GameState, ad = false): BoostResult | null {
         p: chance,
         c: cost,
         ok,
-        ...(ad ? { ad: true as const } : {}),
+        ...(pay === 'ad' ? { ad: true as const } : {}),
+        ...(pay === 'club' ? { club: true as const } : {}),
+        ...(pay === 'ticket' ? { tk: true as const } : {}),
+        ...(extra ? { x: true as const } : {}),
       },
     ],
   };
   s.boost = next;
   if (ok) s.flags.potBonus = (s.flags.potBonus ?? 0) + 1;
   // 잠재력 등급은 은퇴 때 공개한다 — 소식에도 단계만 남긴다.
-  log(
-    s,
-    ok
-      ? ad
-        ? BT.successAd({ lv: next.lv })
-        : BT.success({ lv: next.lv, cost: fmtMoney(cost) })
-      : ad
-        ? BT.failAd
-        : BT.fail({ cost: fmtMoney(cost) }),
-    ok ? 'good' : 'bad',
-  );
+  log(s, boostLine(pay, ok, next.lv, cost), ok ? 'good' : 'bad');
   return { ok, lv: next.lv, cost, chance };
+}
+
+/** 강화 소식 한 줄. 선수 자금이 아니면 무엇으로 시도했는지 괄호에 적는다. */
+function boostLine(pay: BoostPay, ok: boolean, lv: number, cost: number): string {
+  switch (pay) {
+    case 'ad':
+      return ok ? BT.successAd({ lv }) : BT.failAd;
+    case 'club':
+      return ok ? BT.successClub({ lv }) : BT.failClub;
+    case 'ticket':
+      return ok ? BT.successTicket({ lv }) : BT.failTicket;
+    default:
+      return ok ? BT.success({ lv, cost: fmtMoney(cost) }) : BT.fail({ cost: fmtMoney(cost) });
+  }
 }

@@ -16,6 +16,10 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   lineAged: (p) => `You're past ${p.age}, so you can't boost anymore.`,
   lineMax: (p) => `You've reached the top level (+${p.lv}).`,
   lineDone: "You've already tried this season. You can try again next season.",
+  lineExtra: (p) =>
+    `You've used this season's try. You can try again with an ad or club funds, ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
+  lineExtraClub: (p) =>
+    `You've used this season's try. You can try again with club funds, ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
   lineShort: (p) => `Not enough funds. The next level costs ${p.cost}.`,
   lineReady: (p) => `Next level +${p.next} · ${p.chance}% chance · ${p.cost}`,
   button: (p) => `Pay ${p.cost} to boost (${p.chance}%)`,
@@ -34,8 +38,31 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   adNote:
     'Watch an ad to the end to try once without funds. The success chance is the same as paying with funds.',
   adNoteFree: 'You bought ad removal, so you can try once without funds.',
+  adNoteExtra: (p) =>
+    `Watch the whole ad to try once more without funds. ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
+  adNoteExtraFree: (p) =>
+    `You bought ad removal, so you can try once more without funds. ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
   adWatch: 'Watch the ad to the end to try the boost.',
   adCost: 'ad',
-  resultFailAd: (p) =>
+  extraCost: (p) => `${p.cost} (extra)`,
+  clubCost: 'club funds',
+  resultFailFree: (p) =>
     `The chance was ${p.chance}%. The next attempt's chance goes up by ${p.pct} percentage points.`,
+  clubCandidates: (p) => `See candidate potential with club funds (${p.price})`,
+  clubPeek: (p) => `See the rating with club funds (${p.price})`,
+  clubBoost: (p) => `Boost with club funds (${p.price} · ${p.chance}%)`,
+  clubConfirm: (p) =>
+    `This uses ${p.price} of club funds. You'll have ${p.balance} left, and this can't be undone.`,
+  clubAskTitle: 'Use club funds',
+  clubAction: 'Use',
+  clubBusy: 'Using club funds…',
+  clubNote:
+    'Watch an ad or use club funds to get this. Club funds cost more each time you use them on the same day.',
+  clubFail: "Couldn't use club funds.",
+  ticketCost: 'boost ticket',
+  ticketBoost: (p) => `Use boost ticket (${p.n} left · ${p.chance}%)`,
+  ticketBusy: 'Using a boost ticket…',
+  ticketFail: "Couldn't use a boost ticket.",
+  lineExtraTicket:
+    "You've tried this season. With boost tickets you can keep trying, with no limit on tries.",
 };

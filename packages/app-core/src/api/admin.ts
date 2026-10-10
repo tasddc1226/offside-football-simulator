@@ -10,8 +10,12 @@ import type {
   AdminNameReport,
   AdminNameReportList,
   AdminNameReportResolve,
+  AdminFundsOwner,
+  AdminFundsReport,
+  AdminInviteReport,
   AdminStats,
   AutomationReport,
+  AutomationEnforcement,
   BalanceDraftInput,
   BalanceVersion,
   BalanceVersionList,
@@ -21,11 +25,15 @@ import { apiFetch, cachedGet, invalidateApiCache } from './client.js';
 
 export type {
   AdminComment,
+  AdminFundsOwner,
+  AdminFundsReport,
+  AdminInviteReport,
   AdminCup,
   AdminCupCreate,
   AdminNameReport,
   AdminStats,
   AutomationReport,
+  AutomationEnforcement,
   BalanceVersion,
 };
 
@@ -82,6 +90,15 @@ export const resolveNameReport = (input: AdminNameReportResolve) =>
 export const fetchAutomation = (hours: number) =>
   apiFetch<AutomationReport>(`/v1/admin/automation?hours=${hours}`);
 
+/** T-11-153 구단 자금 대조. 열 때마다 새로 읽는다(운영자가 직접 누를 때만). */
+export const fetchFundsReport = () => apiFetch<AdminFundsReport>('/v1/admin/funds');
+/** q: 프로필 id(prf_…) 또는 닉네임. */
+export const fetchFundsOwner = (q: string) =>
+  apiFetch<AdminFundsOwner>(`/v1/admin/funds/owner?q=${encodeURIComponent(q)}`);
+
+/** T-11-177 친구 초대 현황. 열 때마다 새로 읽는다. */
+export const fetchInviteReport = () => apiFetch<AdminInviteReport>('/v1/admin/invites');
+
 export const fetchPushPerformance = (
   days: number,
   tests = false,
@@ -95,3 +112,16 @@ export const fetchPushPerformance = (
     60_000,
   );
 };
+
+export const fetchAutomationEnforcement = (before?: string, fresh = false) => {
+  if (fresh) invalidateApiCache('/v1/admin/automation/enforcement');
+  return cachedGet<AutomationEnforcement>(
+    `/v1/admin/automation/enforcement${before ? `?before=${encodeURIComponent(before)}` : ''}`,
+    60_000,
+  );
+};
+export const setAutomationHidden = (careerId: string, hidden: boolean) =>
+  apiFetch<undefined>('/v1/admin/careers/hidden', {
+    method: 'POST',
+    body: JSON.stringify({ careerId, hidden }),
+  });

@@ -13,6 +13,7 @@ import type {
   RetiredNumbersResponse,
   RetiredNumbersSummary,
   TickerResponse,
+  SeasonGaugeResponse,
 } from '@offside/contracts';
 import { storage } from '@offside/game/storage';
 import { markAchDirty, touchesAchievements } from '../achDirty.js';
@@ -220,8 +221,18 @@ export function startProfileDeletion(): Promise<
 > {
   return apiFetch('/v1/profile/delete', { method: 'POST' });
 }
-export function confirmProfileDeletion(confirmToken: string): Promise<ApiResult<undefined>> {
-  return apiFetch('/v1/profile/delete', { method: 'POST', body: JSON.stringify({ confirmToken }) });
+/** appleAuthorizationCode: T-11-167 Apple로 로그인한 앱이 삭제 직전에 다시 받은 코드(서버가 Apple 토큰을 해지한다). */
+export function confirmProfileDeletion(
+  confirmToken: string,
+  appleAuthorizationCode?: string,
+): Promise<ApiResult<undefined>> {
+  return apiFetch('/v1/profile/delete', {
+    method: 'POST',
+    body: JSON.stringify({
+      confirmToken,
+      appleAuthorizationCode,
+    }),
+  });
 }
 /** T-10-028 댓글에 쓰는 닉네임. 구글 로그인한 프로필만 정할 수 있다(겹치면 409 NICKNAME_TAKEN). */
 export function putNickname(nickname: string): Promise<ApiResult<Profile>> {
@@ -318,6 +329,10 @@ export function getFirsts(season?: number): Promise<ApiResult<FirstsResponse>> {
 export function getLive(): Promise<ApiResult<LiveResponse>> {
   // 메모는 폴링 간격보다 조금 짧게 — 다음 폴링이 메모가 아니라 서버(엣지)를 읽는다.
   return cachedGet<LiveResponse>('/v1/live', LIVE_POLL_SEC * 1000 - 5_000);
+}
+/** 시즌 진행 게이지(로그인 불필요). 서버가 30분마다 세고 엣지에 5분 담으므로 5분 메모. */
+export function getSeasonGauge(): Promise<ApiResult<SeasonGaugeResponse>> {
+  return cachedGet<SeasonGaugeResponse>('/v1/season/gauge', 300_000);
 }
 /** T-10-122 홈 전광판(로그인 불필요). 서버 엣지 캐시와 같은 간격으로 묻는다. */
 export function getTicker(): Promise<ApiResult<TickerResponse>> {

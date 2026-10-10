@@ -1,0 +1,23 @@
+{
+  "id": "t-11-164-market-type-login",
+  "title": "이적시장 매물 정보 보강",
+  "items": [
+    "매물마다 선수 유형(스피드스터·윙어 등)이 함께 보여요.",
+    "로그인하지 않은 상태에서 매물을 누르면 카드와 시세를 보여 주고 로그인을 안내해요. 로그인하면 이적시장으로 돌아와요."
+  ],
+  "en": {
+    "title": "More detail on market listings",
+    "items": [
+      "Each listing now shows the player's type, such as Speedster or Winger.",
+      "If you tap a listing while signed out, you'll see the card and its price chart with a prompt to sign in. After signing in, you return to the market."
+    ]
+  },
+  "ja": {
+    "title": "移籍市場の出品情報を強化",
+    "items": [
+      "出品ごとに選手タイプ(スピードスター・ウインガーなど)が表示されます。",
+      "ログインしていない状態で出品をタップすると、カードと相場を表示してログインを案内します。ログインすると移籍市場に戻ります。"
+    ]
+  },
+  "availability": "web-app"
+}

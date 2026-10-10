@@ -98,8 +98,15 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     // 두 번 눌러도 한 번만 들어간다.
     expect((await enter(a.cookie)).status).toBe(204);
     expect((await me(a.cookie)).entry).toMatchObject({ status: 'active' });
+    // T-11-160 추첨 전에도 신청한 팀을 누구나 본다(취소한 팀은 빠진다).
+    const view = async () =>
+      CupRes.parse(await (await call('GET', `/v1/cups/${CUP.id}`)).json()).data;
+    const entered = await view();
+    expect(entered.teams).toHaveLength(1);
+    expect(entered.teams[0]!.teamId).toBe((await me(a.cookie)).entry!.teamId);
     const del = await call('DELETE', `/v1/cups/${CUP.id}/entries/me`, { cookie: a.cookie });
     expect(del.status).toBe(204);
+    expect((await view()).teams).toHaveLength(0);
     expect(await me(a.cookie)).toMatchObject({
       entry: { status: 'withdrawn' },
       eligibility: { ok: true },

@@ -180,6 +180,7 @@ const ko = {
   placeAriaApp: '선택한 선수를 그라운드 빈 공간에 배치',
   pitchRatingFull: (p: { peak: number; rating: number; fit: number }) =>
     `최고 OVR ${p.peak} · 포지션 OVR ${p.rating} · 적합도 ${p.fit}%`,
+  peekAria: (p: { name: string }) => `${p.name} 선수 카드`,
   pitchSlotApp: (p: { head: string; rating: number; drag: boolean }) =>
     `${p.head} · 포지션 OVR ${p.rating}${p.drag ? ' · 길게 눌러 이동' : ''}`,
   lineAtk: '공격',
@@ -272,6 +273,8 @@ const ko = {
   friendlyOnly: '친선전 전용',
   statFriendly: '친선전',
   statFriendlyOnly: '전용',
+  // T-11-182 은퇴 기록이 아직 서버에 없을 때
+  retireSyncing: '은퇴한 선수 기록을 올리고 있어요. 올라가면 라커룸에 바로 들어와요.',
 };
 
 export type TeamHomeMsgs = typeof ko;

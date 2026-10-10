@@ -13,7 +13,11 @@
   import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { isKorean, nationOf } from '@offside/game/nation';
-  import { startCareer, rollCandidates, rerollCandidates } from './actions.js';
+  import { startCareer, rollCandidates, rerollCandidates, revealCandidatePotential } from './actions.js';
+  import { clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
+  import { fundsText } from '@offside/app-core/funds';
+  import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
+  import type { RewardShopResponse } from '@offside/contracts';
   import { fetchItems, spendReroll } from '@offside/app-core/api/cup';
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { toast } from './helpers.js';
@@ -122,6 +126,28 @@
     rerolls = r.data.reroll;
     rerollCandidates();
     toast(CL.rerollDone({ n: rerolls }));
+  }
+  // T-11-153 웹은 보상형 광고가 없어 로그인한 구단주가 구단 자금으로 후보 잠재력을 본다. 구단주(장수를 받음)이고 아직 안 봤을 때만 묻는다.
+  let club = $state<RewardShopResponse | null>(null);
+  let clubBusy = $state(false);
+  let clubMsg = $state('');
+  $effect(() => {
+    if (step !== 'candidates' || !owner || appState.candidatePotentialOpen) return;
+    void loadClubShop().then((r) => (club = r));
+  });
+  const clubCand = $derived(appState.candidatePotentialOpen ? null : clubOffer(club, 'candidates'));
+  async function revealWithClub() {
+    const o = clubCand;
+    if (clubBusy || !o) return;
+    clubBusy = true;
+    clubMsg = '';
+    const batch = appState.candidates;
+    let saveFailed = false;
+    const r = await payWithClub(o, confirm, () => (saveFailed = !revealCandidatePotential(batch)));
+    clubBusy = false;
+    if (!r) return;
+    if (r.shop) club = r.shop;
+    clubMsg = saveFailed ? L.potentialSaveFailed : r.message;
   }
   function backToForm() {
     appState.candidates = null;
@@ -313,6 +339,12 @@
       </p>
     {/if}
     <p class="muted">{appState.candidatePotentialOpen ? L.potentialHelp : L.potentialWeb}</p>
+    {#if clubCand}
+      <button class="btn btn-sm self-start" data-act="candidate-potential-club" disabled={clubBusy} onclick={revealWithClub}>
+        {clubBusy ? B.clubBusy : B.clubCandidates({ price: fundsText(clubCand.price) })}
+      </button>
+    {/if}
+    {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
     {@render ovrGuide()}
     <p class="muted fs-sm">{L.ovrCore}</p>
     <div class="cand-list">

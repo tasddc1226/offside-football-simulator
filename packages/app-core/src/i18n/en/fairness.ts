@@ -7,7 +7,7 @@ export const fairness: Translation<FairnessMsgs> = {
     'Every player gets the same rules and the same odds. The numbers below are calculated straight from the game code.',
   promiseSameTerm: 'Same rules',
   promiseSame:
-    'Watching ads, buying ad removal, linking an account and your language never affect odds or results.',
+    'Watching ads, buying ad removal, linking an account and your language never affect odds. Ads or club funds can give extra potential boost tries in a season when you are short of funds, but the success chance stays the same.',
   promiseDeviceTerm: 'Decided on your device',
   promiseDevice:
     'Every roll in your career happens on this device. The server only receives records and never decides results.',
@@ -28,7 +28,7 @@ export const fairness: Translation<FairnessMsgs> = {
   boostTitle: 'Potential boost odds',
   boostLv: (p) => `Step +${p.lv}`,
   boostNote: (p) =>
-    `Each failure at the same step raises the next chance by ${p.pity}. Trying with an ad uses the same odds.`,
+    `Each failure at the same step raises the next chance by ${p.pity}. Trying with an ad or club funds uses the same odds.`,
   hiddenTitle: 'What stays hidden and why',
   hiddenPotTerm: 'Real potential',
   hiddenPot: 'Revealed when you retire. Scouting ratings can differ a little from the real value.',

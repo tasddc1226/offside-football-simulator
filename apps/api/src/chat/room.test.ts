@@ -35,7 +35,13 @@ describe('T-11-015 ChatRoom', () => {
   it('입장권이 있으면 쓰고, 없으면 읽기만 한다. 한 줄은 모두에게 간다(프로필 id 없이)', async () => {
     const { room, join } = fakeRoom();
     const reader = await join();
-    expect(reader.sent[0]).toEqual({ t: 'hello', messages: [], online: 1, write: false });
+    expect(reader.sent[0]).toEqual({
+      t: 'hello',
+      messages: [],
+      online: 1,
+      write: false,
+      more: false,
+    });
     const alice = await join(room.issueTicket(ALICE));
     expect(alice.sent[0]).toMatchObject({ t: 'hello', online: 2, write: true });
 
@@ -101,6 +107,32 @@ describe('T-11-015 ChatRoom', () => {
     say(admin, room, '새 줄');
     const after = (await join()).sent[0] as Extract<ChatServerEvent, { t: 'hello' }>;
     expect(after.messages.map((m) => m.body)).toEqual(['새 줄']);
+  });
+
+  it('T-11-180 위로 올리면 그 소켓에만 이전 줄을 CHAT_HISTORY개씩 준다(가린 줄 없이)', async () => {
+    vi.useFakeTimers({ now: 1_000_000 });
+    const { room, join } = fakeRoom();
+    const admin = await join(room.issueTicket({ ...ALICE, admin: true }));
+    for (let i = 0; i < CHAT_HISTORY * 2 + 5; i++) say(admin, room, `m${i}`);
+    const hidden = (admin.sent.at(-(CHAT_HISTORY + 3)) as { m: { id: string } }).m.id;
+    room.hide(hidden);
+    const reader = await join();
+    const older = (before: string) => {
+      room.webSocketMessage(reader as unknown as WebSocket, JSON.stringify({ t: 'older', before }));
+      return last(reader) as Extract<ChatServerEvent, { t: 'older' }>;
+    };
+    const hello = reader.sent[0] as Extract<ChatServerEvent, { t: 'hello' }>;
+    expect(hello.more).toBe(true);
+    const page1 = older(hello.messages[0]!.id);
+    expect(page1.more).toBe(true);
+    expect(page1.messages).toHaveLength(CHAT_HISTORY);
+    expect(page1.messages.at(-1)!.body).toBe(`m${CHAT_HISTORY + 4}`);
+    expect(page1.messages.some((m) => m.id === hidden)).toBe(false);
+    const page2 = older(page1.messages[0]!.id);
+    expect(page2.more).toBe(false);
+    expect(page2.messages.map((m) => m.body)).toEqual(['m0', 'm1', 'm2', 'm3']);
+    expect(older('없는 줄')).toEqual({ t: 'older', messages: [], more: false });
+    expect(admin.sent.some((e) => (e as ChatServerEvent).t === 'older')).toBe(false);
   });
 
   it('신고·차단 대상은 작성자 프로필과 함께 읽는다(가린 메시지는 없다)', async () => {

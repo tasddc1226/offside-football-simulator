@@ -1,8 +1,13 @@
+import { automationEnforcement } from '../db/repos/automationEnforcement.js';
 import {
   AdminCommentListSchema,
   AdminCommentPurgeInputSchema,
   AdminCommentPurgeResultSchema,
   AdminCommentQuerySchema,
+  AdminFundsOwnerSchema,
+  AdminFundsQuerySchema,
+  AdminFundsReportSchema,
+  AdminInviteReportSchema,
   AdminNameReportListSchema,
   AdminNameReportResolveSchema,
   AdminStatsSchema,
@@ -10,6 +15,8 @@ import {
   CareerHiddenInputSchema,
   AutomationHoursSchema,
   AutomationReportSchema,
+  AutomationEnforcementSchema,
+  AutomationHistoryCursorSchema,
   PushPerformanceQuerySchema,
   PushPerformanceSchema,
 } from '@offside/contracts';
@@ -20,6 +27,8 @@ import { listOpenNameReports, resolveNameReports } from '../db/repos/nameReports
 import { getActiveBalance } from '../db/repos/balance.js';
 import { anomalyReport, setCareerHidden } from '../db/repos/anomalies.js';
 import { automationReport } from '../db/repos/automation.js';
+import { fundsOwner, fundsReport } from '../db/repos/fundsAudit.js';
+import { inviteReport } from '../db/repos/referrals.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
 import { notFoundError, ok, readBody, nowIso } from './shared.js';
@@ -64,6 +73,39 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
     const hours = parseWithAppError(AutomationHoursSchema, c.req.query('hours'));
     const data = await automationReport(getDb(c), new Date(), hours);
     return ok(c, AutomationReportSchema, data, 200, 'private, no-store');
+  });
+
+  app.get('/v1/admin/automation/enforcement', async (c) => {
+    await requireAdmin(c);
+    const before = parseWithAppError(AutomationHistoryCursorSchema, c.req.query('before'));
+    return ok(
+      c,
+      AutomationEnforcementSchema,
+      await automationEnforcement(getDb(c), c.env.AUTOMATION_HIDE_DISABLED !== '1', before),
+      200,
+      'private, no-store',
+    );
+  });
+
+  // T-11-153 구단 자금 대조: 전체 요약과 어긋난 구단주, 한 명의 출처별 합과 최근 움직임. 운영자가 열 때만 읽는다.
+  app.get('/v1/admin/funds', async (c) => {
+    await requireAdmin(c);
+    const data = await fundsReport(getDb(c), new Date());
+    return ok(c, AdminFundsReportSchema, data, 200, 'private, no-store');
+  });
+  app.get('/v1/admin/funds/owner', async (c) => {
+    await requireAdmin(c);
+    const q = parseWithAppError(AdminFundsQuerySchema, c.req.query('q'));
+    const data = await fundsOwner(getDb(c), q);
+    if (!data) throw notFoundError('구단 자금 기록이 없는 구단주예요.', 'FUNDS_OWNER_NOT_FOUND');
+    return ok(c, AdminFundsOwnerSchema, data, 200, 'private, no-store');
+  });
+
+  // T-11-177 친구 초대 현황(T-11-171). 운영자가 열 때만 읽는다.
+  app.get('/v1/admin/invites', async (c) => {
+    await requireAdmin(c);
+    const data = await inviteReport(getDb(c), new Date());
+    return ok(c, AdminInviteReportSchema, data, 200, 'private, no-store');
   });
 
   // 비정상 기록: 검토 대상과 숨겨진 커리어. 매일 cron(repos/anomalies.ts)이 확실한 것은 이미 숨긴다.

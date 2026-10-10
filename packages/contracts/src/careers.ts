@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { bodyError } from './body.js';
+import type { RnMiss } from './retired-numbers.js';
 import { NATION_BY_CODE } from './nations.js';
 import { PUBLIC_NAME_CHARS, PUBLIC_NAME_MAX } from './content-filter.js';
 import { STYLE_COUNTERS, STYLE_COUNT_MAX, type StyleCounter } from './play-style.js';
@@ -298,12 +299,32 @@ export const RetiredNumberResultSchema = z.discriminatedUnion('kind', [
 ]);
 export type RetiredNumberResult = z.infer<typeof RetiredNumberResultSchema>;
 
+/**
+ * T-11-180 결번 자격에 못 미친 이유(retiredNumber가 null일 때, 기준의 절반 이상 채웠을 때만). seasons: 그 구단 시즌이
+ * 모자람(need 시즌 필요). score: 구단 기여 점수가 기준의 pct%(10% 단위). 옛 응답엔 없다. 모양은 RnMiss 하나.
+ */
+export const RetiredNumberMissSchema = z.discriminatedUnion('reason', [
+  z.strictObject({
+    reason: z.literal('seasons'),
+    club: z.string(),
+    seasons: z.number().int(),
+    need: z.number().int(),
+  }),
+  z.strictObject({
+    reason: z.literal('score'),
+    club: z.string(),
+    pct: z.number().int(),
+  }),
+]) satisfies z.ZodType<RnMiss>;
+export type RetiredNumberMiss = RnMiss;
+
 export const RetirementResponseSchema = z.strictObject({
   careerId: z.string().min(1),
   status: z.literal('retired'),
   title: TitleIdSchema.nullable().optional(),
   /** T-10-076 영구결번 심사. 자격이 없으면 null(배포 전 응답엔 없다). */
   retiredNumber: RetiredNumberResultSchema.nullable().optional(),
+  retiredNumberMiss: RetiredNumberMissSchema.optional(),
   /**
    * T-11-029 이 커리어가 속한 서비스 시즌(0 = 프리시즌, 휴식기에 올라왔으면 null). 기기가 은퇴 기록(ft_hof)에 남겨
    * '내 선수'를 시즌별로 거른다(배포 전 응답엔 없다).
@@ -654,5 +675,6 @@ export type RetiredNumbersSummary = z.infer<typeof RetiredNumbersSummarySchema>;
 export const RetiredNumberCheckResponseSchema = z.strictObject({
   title: TitleIdSchema.nullable().optional(),
   retiredNumber: RetiredNumberResultSchema.nullable(),
+  retiredNumberMiss: RetiredNumberMissSchema.optional(),
 });
 export type RetiredNumberCheckResponse = z.infer<typeof RetiredNumberCheckResponseSchema>;

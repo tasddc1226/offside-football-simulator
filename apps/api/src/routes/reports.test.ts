@@ -1,7 +1,7 @@
 import { HIDDEN_MANAGER_NAME, HIDDEN_TEAM_NAME } from '@offside/contracts/board-limits';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { auditLog, careers, nameReports, ownerTeams } from '../db/schema.js';
+import { auditLog, careers, nameReports, ownerTeams, profiles } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {
   ADMIN_EMAIL,
@@ -139,6 +139,24 @@ describe('이름 신고 /v1/reports/names', () => {
 
     // 가린 뒤 다시 신고하면(이름 없음) 404.
     expect((await report(a.cookie, 'career', career)).status).toBe(404);
+  });
+
+  it('T-11-167 업적 랭킹 닉네임(owner): 구단 id로 신고하고, 가리면 구단주 닉네임을 비운다', async () => {
+    const owner = await issueGoogleCookie(ctx, { nickname: '나쁜닉' });
+    const a = await issueCookie(ctx);
+    const admin = await issueAdminCookie(ctx);
+    const team = await addTeam(owner.profileId);
+    expect((await report(owner.cookie, 'owner', team)).status).toBe(403);
+    expect((await report(a.cookie, 'owner', team)).status).toBe(204);
+    expect(await openReports(admin.cookie)).toEqual([
+      expect.objectContaining({ kind: 'owner', targetId: team, name: '나쁜닉', reports: 1 }),
+    ]);
+    expect((await resolve(admin.cookie, 'owner', team, 'hide')).status).toBe(204);
+    const [p] = await ctx.db.select().from(profiles).where(eq(profiles.id, owner.profileId));
+    expect(p?.nickname).toBeNull();
+    const [t] = await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, team));
+    expect(t?.name).toBe('나쁜 구단'); // 구단 이름은 그대로
+    expect((await report(a.cookie, 'owner', team)).status).toBe(404); // 닉네임 없음
   });
 
   it('기각: 이름은 그대로 두고 닫는다. 같은 사람이 다시 신고하면 다시 열린다', async () => {

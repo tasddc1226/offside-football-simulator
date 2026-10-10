@@ -2,12 +2,12 @@
 // 판정 기준(점수·시즌 수)은 서버만 안다 — 앱은 서버가 준 결과만 그린다. 결번 액자는 RnFrame(웹과 같은 도트 액자).
 import { useEffect, useRef } from 'react';
 import { useSnapshot } from 'valtio';
-import { rnResults } from '../../store';
+import { rnMisses, rnResults } from '../../store';
 import { View } from 'react-native';
 import type { RetiredNumberResult } from '@offside/contracts';
 import { pendingRetirementIds } from '@offside/app-core/outbox';
 import { checkRetiredNumber } from '@offside/app-core/api/client';
-import { rnClubStats, rnSlotOf } from '@offside/app-core/legendReport';
+import { rnClubStats, rnMissText, rnSlotOf } from '@offside/app-core/legendReport';
 import type { LegendView } from '@offside/app-core/state';
 import { isHofEligible } from '@offside/contracts/hof-rules';
 import { RnUnveil } from '../../components/RnFrame';
@@ -40,7 +40,8 @@ export function RetiredNumberCredit({
       return;
     asked.current = id;
     void checkRetiredNumber(id).then((r) => {
-      if (r.ok) recordRn(id, r.data.retiredNumber, undefined, r.data.title);
+      if (r.ok)
+        recordRn(id, r.data.retiredNumber, undefined, r.data.title, r.data.retiredNumberMiss);
     });
   }, [id, v.age, rn0]);
   const results = useSnapshot(rnResults);
@@ -50,8 +51,11 @@ export function RetiredNumberCredit({
       : (rn0 ?? null);
   const rnSlot = rnSlotOf(rn, v.own);
   const rnClub = rnSlot?.kind === 'granted' ? rnClubStats(rnSlot, v.d) : null;
+  // T-11-180 자격에 못 미쳤으면 이유(기준의 절반 이상일 때만 서버가 준다).
+  const misses = useSnapshot(rnMisses);
+  const miss = !rn && v.own?.id ? misses[v.own.id] : undefined;
 
-  if (!(rn?.kind === 'pending' || rnSlot || v.wallOfHonor)) return null;
+  if (!(rn?.kind === 'pending' || rnSlot || v.wallOfHonor || miss)) return null;
   return (
     <Reveal testID="credit-retired-number">
       <View testID={`legend-rn-${rn?.kind}`} style={{ alignItems: 'center', gap: 20 }}>
@@ -139,6 +143,13 @@ export function RetiredNumberCredit({
                 {L.publish}
               </Btn>
             ) : null}
+          </View>
+        ) : miss ? (
+          <View style={{ alignItems: 'center', gap: 10 }}>
+            <Kicker>{L.missKicker}</Kicker>
+            <FText tone="muted" size={0.875} lh={1.5} center testID={`rn-miss-${miss.reason}`}>
+              {rnMissText(miss)}
+            </FText>
           </View>
         ) : null}
       </View>

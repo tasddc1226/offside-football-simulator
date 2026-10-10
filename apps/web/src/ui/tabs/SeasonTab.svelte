@@ -1,6 +1,8 @@
 <script lang="ts" module>
   /** 마지막으로 안내 스크롤을 돈 리포트 — 탭을 오가며 다시 마운트돼도 같은 리포트로 또 돌지 않는다. */
   let touredKey = 0;
+  /** 순위 변동 연출을 이미 튼 리포트 — 안내든 직접 스크롤이든 한 리포트에 한 번만. */
+  let rankedKey = 0;
 </script>
 
 <script lang="ts">
@@ -18,7 +20,7 @@
   import type { GameState } from '@offside/game/types';
   import { save } from '../helpers.js';
   import { seasonLabel } from '@offside/app-core/career';
-  import { RESULT_TOUR, TOUR_PICK_MS, TOUR_RANK_DELAY, TOUR_RANK_MS, type TourGate } from '@offside/app-core/resultTour';
+  import { RANK_SEEN_RATIO, RESULT_TOUR, rankBeforeOf, TOUR_PICK_MS, TOUR_RANK_DELAY, TOUR_RANK_MS, type TourGate } from '@offside/app-core/resultTour';
   import { appState } from '../state.svelte.js';
   import { dur } from '../motion.js';
   import PhaseReport from './PhaseReport.svelte';
@@ -58,12 +60,37 @@
   let tourWait = $state<TourGate | null>(null);
   let resume: ((btn: HTMLElement) => void) | null = null;
   let table = $state<ReturnType<typeof LeagueTable>>();
+  let touring = $state(false);
+  /** 이 리포트의 순위 변동 — 이전 순위. 바뀌지 않았으면 null. */
+  const rankBefore = $derived(rankBeforeOf(report?.rank));
+  const playRank = () => {
+    if (rankBefore === null || !report || report.key === rankedKey) return;
+    rankedKey = report.key;
+    table?.playRank(rankBefore);
+  };
   $effect(() => {
     const k = report?.key;
     if (!k || k === touredKey) return;
     touredKey = k;
     if (!dur(1)) return;
     return tour();
+  });
+
+  // T-11-162 안내가 순위 연출까지 가지 못했으면, 사용자가 직접 내려와 순위표가 화면에 들어올 때 한 번 튼다.
+  $effect(() => {
+    if (touring || rankBefore === null || report?.key === rankedKey || !dur(1)) return;
+    const el = document.querySelector('[data-league-table]');
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e?.isIntersecting) return;
+        io.disconnect();
+        playRank();
+      },
+      { threshold: RANK_SEEN_RATIO },
+    );
+    io.observe(el);
+    return () => io.disconnect();
   });
 
   function tour(): () => void {
@@ -79,12 +106,14 @@
     // 고르기를 기다리는 동안에는 스크롤·탭으로 카드를 살펴볼 수 있어야 하니 멈추지 않는다.
     const onUser = () => void (tourWait || stop());
     const stop = () => {
+      touring = false;
       timers.forEach(clearTimeout);
       light(null);
       tourWait = null;
       resume = null;
       for (const e of evs) removeEventListener(e, onUser, true);
     };
+    touring = true;
     for (const e of evs) addEventListener(e, onUser, { capture: true, passive: true });
     const steps = RESULT_TOUR.flatMap(([k, wait]) => {
       const el = document.querySelector<HTMLElement>(`[data-tour="${k}"]`);
@@ -122,9 +151,8 @@
         return;
       }
       let ms = wait;
-      const rank = report?.rank;
-      if (k === 'status' && rank?.before && rank.before !== rank.after) {
-        later(() => table?.playRank(rank.before), TOUR_RANK_DELAY);
+      if (k === 'status' && rankBefore !== null) {
+        later(playRank, TOUR_RANK_DELAY);
         ms += TOUR_RANK_MS;
       }
       later(() => go(i + 1), ms);

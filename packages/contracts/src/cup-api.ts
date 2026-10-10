@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CUP_ROUNDS, CUP_STAGES } from './cup.js';
+import { CUP_ROUNDS, CUP_STAGES, IAP_PRODUCT_IDS, REWARD_KINDS } from './cup.js';
 import { IsoUtcSchema } from './primitives.js';
 import { TeamIdSchema, TeamLogoSchema, TeamMatchSchema } from './teams.js';
 
@@ -88,7 +88,7 @@ export const CupResponseSchema = z.strictObject({
   cup: CupInfoSchema,
   phase: CupPhaseSchema,
   entries: z.number().int(),
-  /** 추첨 뒤에만 채워진다. */
+  /** 추첨 전에는 신청한 팀(신청 순), 추첨 뒤에는 조에 들어간 팀(T-11-160). */
   teams: z.array(CupTeamSchema),
   groups: z.array(CupGroupSchema),
   matches: z.array(CupMatchSchema),
@@ -136,8 +136,31 @@ export const CupMatchResponseSchema = z.strictObject({
 });
 export type CupMatchResponse = z.infer<typeof CupMatchResponseSchema>;
 
-export const OwnerItemsResponseSchema = z.strictObject({ reroll: z.number().int().min(0) });
+export const IapStoreSchema = z.enum(['apple', 'google']);
+export type IapStore = z.infer<typeof IapStoreSchema>;
+
+/**
+ * 구단주 아이템 장수. reroll: 선수 후보 리롤권, boost: 잠재력 강화권(T-11-174). iap는 GET /v1/items만 준다 — account는
+ * 인앱 구매에 붙이는 구단주 표시(Apple appAccountToken · Google obfuscatedAccountId), stores는 서버가 구매를 확인할 수 있는
+ * 스토어(여기 없는 스토어에선 상품을 보이지 않는다).
+ */
+export const OwnerItemsResponseSchema = z.strictObject({
+  reroll: z.number().int().min(0),
+  boost: z.number().int().min(0),
+  iap: z.strictObject({ account: z.uuid(), stores: z.array(IapStoreSchema) }).optional(),
+});
 export type OwnerItemsResponse = z.infer<typeof OwnerItemsResponseSchema>;
+
+/**
+ * T-11-174 POST /v1/items/iap — 스토어에서 산 소모성 상품을 서버에 알린다. token: Apple은 서명된 거래(JWS), Google은
+ * purchaseToken. 서버가 스토어 기준으로 확인하고 거래마다 한 번만 아이템을 준다(같은 거래를 다시 보내도 한 번).
+ */
+export const IapClaimBodySchema = z.strictObject({
+  store: IapStoreSchema,
+  productId: z.enum(IAP_PRODUCT_IDS),
+  token: z.string().min(1).max(16384),
+});
+export type IapClaimBody = z.infer<typeof IapClaimBodySchema>;
 
 /**
  * T-11-152 GET /v1/items/shop — 리롤권 상점(구단 자금으로 산다). price는 다음 한 장 가격(만 원), 오늘 상한을 다 썼거나
@@ -155,6 +178,31 @@ export type RerollShopResponse = z.infer<typeof RerollShopResponseSchema>;
 /** POST /v1/items/reroll/buy — 화면에서 본 가격을 함께 보낸다(그 사이 가격이 바뀌었으면 409). */
 export const BuyRerollBodySchema = z.strictObject({ price: z.number().int().min(1) });
 export type BuyRerollBody = z.infer<typeof BuyRerollBodySchema>;
+
+/** T-11-153 보상 하나의 구단 자금 값 — 다음 한 번 가격(오늘 상한을 다 썼거나 팔지 않으면 null) · 오늘 쓴 횟수 · 상한. */
+const RewardOfferSchema = z.strictObject({
+  price: z.number().int().min(1).nullable(),
+  bought: z.number().int().min(0),
+  cap: z.number().int().min(0),
+});
+/** GET /v1/items/rewards — 광고 대신 구단 자금으로 받는 보상들의 값과 지금 구단 자금. */
+export const RewardShopResponseSchema = z.strictObject({
+  balance: z.number().int().min(0),
+  offers: z.strictObject({
+    candidates: RewardOfferSchema,
+    peek: RewardOfferSchema,
+    boost: RewardOfferSchema,
+  }),
+});
+export type RewardShopResponse = z.infer<typeof RewardShopResponseSchema>;
+export type RewardOffer = z.infer<typeof RewardOfferSchema>;
+
+/** POST /v1/items/rewards/buy — 받을 보상과 화면에서 본 가격(그 사이 바뀌었으면 409). 응답은 바뀐 RewardShopResponse. */
+export const BuyRewardBodySchema = z.strictObject({
+  kind: z.enum(REWARD_KINDS),
+  price: z.number().int().min(1),
+});
+export type BuyRewardBody = z.infer<typeof BuyRewardBodySchema>;
 
 // ───────── 관리자: 대회 열기 ─────────
 

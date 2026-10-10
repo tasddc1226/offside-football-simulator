@@ -32,7 +32,7 @@ import { isMember } from '@offside/app-core/account';
 import { go, takeFocus } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
-import { Btn, Card, Pill, Row, Screen, Topbar, Txt } from '../../ui';
+import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { Account } from './Account';
 import { LoginButtons } from './LoginButtons';
@@ -40,14 +40,16 @@ import { MyPlayers } from './MyPlayers';
 import { ChampBadge } from '../../components/ChampBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
+import { BoostShop } from './BoostShop';
 import { RerollShop } from './RerollShop';
-import { GRADE_COLOR, Grid2, OvrBadge, Stats } from './TeamParts';
+import { GRADE_COLOR, Grid2, OvrBadge, Stats, type StatPress } from './TeamParts';
 import { mix } from '../../theme/colors';
 import { TeamLogo } from '../../components/TeamLogo';
 import { GradeEmblem } from '../../ui/GradeEmblem';
 import { AdSlot } from '../../components/AdSlot';
 import { SettingsCard, SettingsLabel, SettingsTrigger } from '../settings/parts';
 import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
+import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { openFriends } from '../../platform/inbox';
 import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
 
@@ -203,6 +205,7 @@ export default function Owner() {
     };
   }, [tick, track]);
   const clubValue = linked ? (market?.clubValue ?? null) : (summary?.value ?? null);
+  const funds = market ? fundsText(market.balance) : '–';
 
   const team = card?.team;
   const sub = guest ? L.guestSub : team ? `${team.name} · ${card.season}` : L.signedInSubApp;
@@ -266,12 +269,28 @@ export default function Owner() {
           {(guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue) ? (
             <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
               {L.emptySummary}
+              {linked ? `\n${L.fundsLine({ funds })}` : ''}
             </Txt>
           ) : (
             <View style={{ gap: 8 }}>
               <Stats
                 accent
-                items={[[L.statClubValue, clubValue !== null ? fmtValue(clubValue) : '–']]}
+                items={[
+                  [L.statClubValue, clubValue !== null ? fmtValue(clubValue) : '–'],
+                  ...(linked
+                    ? [
+                        [
+                          L.statFunds,
+                          funds,
+                          {
+                            onPress: () => go('funds'),
+                            label: F.openAria,
+                            testID: 'funds-history',
+                          },
+                        ] as [string, string, StatPress],
+                      ]
+                    : []),
+                ]}
               />
               <Stats
                 items={[
@@ -287,11 +306,6 @@ export default function Owner() {
               />
             </View>
           )}
-          {linked ? (
-            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-              {L.fundsLine({ funds: market ? fundsText(market.balance) : '–' })}
-            </Txt>
-          ) : null}
         </Card>
       ) : null}
 
@@ -372,28 +386,34 @@ export default function Owner() {
               </>
             )}
           </Card>
-          <Card gap={12} testID="owner-market">
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                <Txt v="eyebrow">Transfer market</Txt>
-                <Txt v="h2" accessibilityRole="header">
-                  {L.marketTitle}
-                </Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                  {L.marketSub({ funds: market ? fundsText(market.balance) : '–' })}
+          <Press
+            testID="market"
+            accessibilityLabel={`${L.marketTitle} ${L.open}`}
+            onPress={() => go('market')}
+            scale={0.98}
+          >
+            <Card gap={12} testID="owner-market">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <Txt v="eyebrow">Transfer market</Txt>
+                  <Txt v="h2">{L.marketTitle}</Txt>
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {L.marketSub({ funds })}
+                  </Txt>
+                </View>
+                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                  ›
                 </Txt>
               </View>
-              <Btn testID="market" onPress={() => go('market')}>
-                {L.open}
-              </Btn>
-            </View>
-          </Card>
+            </Card>
+          </Press>
           <RerollShop
             focus={shopFocus}
             onBought={(balance, spent) =>
               setMarket((m) => m && { balance, clubValue: m.clubValue - spent })
             }
           />
+          <BoostShop />
         </>
       ) : guest ? (
         <>

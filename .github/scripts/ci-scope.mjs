@@ -14,7 +14,7 @@ const DOCUMENT_IMAGE_EXTENSIONS = new Set([
   '.pdf',
 ]);
 
-function isAllowedDocument(path) {
+export function isAllowedDocument(path) {
   if (path.startsWith('docs/')) {
     const dot = path.lastIndexOf('.');
     return (
@@ -42,14 +42,18 @@ function gitObjectExists(sha, exec) {
   exec('git', ['cat-file', '-e', `${sha}^{commit}`], { stdio: 'ignore' });
 }
 
-export function readChangedPaths(baseSha, headSha, exec = execFileSync) {
+export function readChangedPaths(baseSha, headSha, exec = execFileSync, extraArgs = []) {
   assertCommitSha(baseSha, 'CI_BASE_SHA');
   assertCommitSha(headSha, 'CI_HEAD_SHA');
   gitObjectExists(baseSha, exec);
   gitObjectExists(headSha, exec);
-  const output = exec('git', ['diff', '--no-renames', '--name-only', '-z', baseSha, headSha], {
-    encoding: 'utf8',
-  });
+  const output = exec(
+    'git',
+    ['diff', '--no-renames', '--name-only', '-z', ...extraArgs, baseSha, headSha],
+    {
+      encoding: 'utf8',
+    },
+  );
   return output.split('\0').filter(Boolean);
 }
 

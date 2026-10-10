@@ -3,10 +3,16 @@
 import {
   CARD_H,
   CARD_W,
+  CLUB_ROW_TOP,
   cardBrand,
+  clubRowLayout,
+  lowerBlockY,
+  statsTop,
   tagline,
   type ShareCardData,
 } from '@offside/app-core/shareCard';
+import { clubById, clubByName } from '@offside/game/clubs';
+import { crestOf, crestSvg } from '@offside/game/crests';
 import { drawJersey } from './jerseyCanvas.js';
 
 export { CARD_H, CARD_W, shareCardData, type ShareCardData } from '@offside/app-core/shareCard';
@@ -37,7 +43,7 @@ const F = {
   statLabel: `400 28px ${BODY}`,
   years: `600 34px ${DISPLAY}`,
   club: `600 34px ${BODY}`,
-  league: `400 26px ${BODY}`,
+  crestName: `600 24px ${BODY}`,
   styleName: `700 52px ${BODY}`,
   note: `400 30px ${BODY}`,
   brand: `700 36px ${BODY}`,
@@ -46,7 +52,7 @@ const F = {
 };
 const PAD = 80;
 const PILL = { h: 62, padX: 28, gap: 16, min: 300 };
-/** 여정 한 줄: 연도는 YEAR_X에 오른쪽 맞춤, 구단·리그는 CLUB_X부터. */
+/** 대표 우승 한 줄: 횟수는 YEAR_X에 오른쪽 맞춤, 이름은 CLUB_X부터. */
 const YEAR_X = CARD_W / 2 - 190;
 const CLUB_X = CARD_W / 2 - 160;
 
@@ -55,20 +61,42 @@ export async function loadCardFonts(c: ShareCardData) {
   if (!document.fonts) return;
   const sample = [
     c.kicker,
+    c.flag,
     c.name,
     c.sub,
     ...c.pills.map((p) => p.text + (p.tail ?? '')),
     ...c.stats.map((s) => s.label),
-    ...c.stops.flatMap((s) => (s ? [s.club, s.league] : [])),
+    ...c.clubs.map((k) => k.name),
     c.style?.name,
     c.style?.best ?? c.style?.line,
     ...c.honours.map((h) => h.name),
-    `${cardBrand()} ${tagline()} offside-lab.com LEGEND SCORE THE JOURNEY HONOURS HOW I PLAYED ×0123456789`,
+    `${cardBrand()} ${tagline()} offside-lab.com LEGEND SCORE HONOURS HOW I PLAYED ×0123456789`,
   ].join('');
   await Promise.all(Object.values(F).map((f) => document.fonts.load(f, sample).catch(() => [])));
 }
 
-export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
+/** 엠블럼 줄 그림(구단마다 한 장, 모르는 구단은 null) — 캔버스는 SVG를 이미지로 불러 그린다. */
+export async function loadCardCrests(c: ShareCardData): Promise<(HTMLImageElement | null)[]> {
+  return Promise.all(
+    c.clubs.map(async (k, i) => {
+      const club = k.clubId ? clubById(k.clubId) : clubByName(k.club);
+      if (!club) return null;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="168" height="168">${crestSvg(crestOf(club), `c${i}`, C.bg1)}</svg>`;
+      const img = new Image();
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      return img.decode().then(
+        () => img,
+        () => null,
+      );
+    }),
+  );
+}
+
+export function drawShareCard(
+  canvas: HTMLCanvasElement,
+  c: ShareCardData,
+  crests: readonly (HTMLImageElement | null)[] = [],
+) {
   canvas.width = CARD_W;
   canvas.height = CARD_H;
   const ctx = canvas.getContext('2d')!;
@@ -132,7 +160,7 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
 
   // 머리: FULL TIME · 이름 · 포지션/기간
   spaced(c.kicker, 118, F.kicker, C.gold, 7);
-  text(c.name, mid, 232, F.name, C.ink, { max: inner });
+  text(c.flag ? `${c.flag} ${c.name}` : c.name, mid, 232, F.name, C.ink, { max: inner });
   text(c.sub, mid, 290, F.sub, C.muted, { max: inner });
 
   // 레전드 점수(영구결번이면 왼쪽으로 비키고 오른쪽에 결번 유니폼)
@@ -178,8 +206,19 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
     px += p.w + PILL.gap;
   }
 
+  // 거쳐 간 구단: 엠블럼을 처음 뛴 순서대로 가로 한 줄, 아래에 구단 이름.
+  const row = clubRowLayout(c.clubs.length);
+  const rowX = mid - (row.slot * c.clubs.length) / 2;
+  c.clubs.forEach((k, i) => {
+    const cx = rowX + row.slot * (i + 0.5);
+    const img = crests[i];
+    if (img) ctx.drawImage(img, cx - row.crest / 2, CLUB_ROW_TOP, row.crest, row.crest);
+    if (row.names)
+      text(k.name, cx, CLUB_ROW_TOP + row.crest + 36, F.crestName, C.muted, { max: row.slot - 10 });
+  });
+
   // 통산 기록
-  const sy = 680;
+  const sy = statsTop(c);
   rule(sy);
   rule(sy + 148);
   const cw = inner / c.stats.length;
@@ -189,30 +228,9 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
     text(s.label, x, sy + 128, F.statLabel, C.muted);
   });
 
-  // 커리어 여정(+ 성향이 없으면 대표 우승). 성향 칸이 없으면 기록 아래~바닥 줄 사이 가운데에 둔다(짧은 여정이 위에 몰리지 않게).
-  let y = sy + 206;
-  const HONOURS_GAP = 26;
-  if (!c.style) {
-    const rows = c.stops.reduce((n, s) => n + (s ? 52 : 40), 0);
-    const honoursH = c.honours.length ? HONOURS_GAP + 56 + c.honours.length * 52 : 0;
-    const blockH = 22 + 56 + rows + honoursH - 52 + 10; // 제목 글자 윗선 ~ 마지막 줄 아랫선
-    y = Math.max(y, Math.round(sy + 148 + (CARD_H - 100 - (sy + 148) - blockH) / 2 + 22));
-  }
-  spaced('THE JOURNEY', y, F.heading, C.gold, 6);
-  y += 56;
-  for (const s of c.stops) {
-    if (!s) {
-      text('⋮', YEAR_X + 15, y - 6, F.note, C.muted);
-      y += 40;
-      continue;
-    }
-    text(s.years, YEAR_X, y, F.years, C.muted, { align: 'right' });
-    const lx = CLUB_X + text(s.club, CLUB_X, y, F.club, C.ink, { align: 'left', max: 430 }) + 16;
-    text(s.league, lx, y, F.league, C.muted, { align: 'left', max: CARD_W - PAD - lx });
-    y += 52;
-  }
+  // 플레이 성향(없으면 대표 우승) — 기록 아래~바닥 줄 사이 가운데.
+  let y = lowerBlockY(c);
   if (c.honours.length) {
-    y += HONOURS_GAP;
     spaced('HONOURS', y, F.heading, C.gold, 6);
     y += 56;
     for (const h of c.honours) {
@@ -224,7 +242,6 @@ export function drawShareCard(canvas: HTMLCanvasElement, c: ShareCardData) {
 
   // 플레이 성향
   if (c.style) {
-    y = Math.max(y + 18, 1100);
     spaced('HOW I PLAYED', y, F.heading, C.gold, 6);
     text(`${c.style.icon} ${c.style.name}`, mid, y + 70, F.styleName, C.ink, { max: inner });
     text(c.style.best ?? c.style.line, mid, y + 120, F.note, C.muted, { max: inner });

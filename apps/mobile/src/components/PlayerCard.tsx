@@ -6,10 +6,17 @@ import { prefs } from '../store';
 import { DISPLAY } from '../theme/type';
 import { RN_SHIRT, RN_TRIM } from '@offside/app-core/rnStyle';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
+import { typeName } from '@offside/game/data';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
-import { cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier } from '@offside/app-core/format';
+import {
+  cardBody,
+  cardFootNote,
+  cardSeasonBadge,
+  cardSeasonColor,
+  cardTier,
+} from '@offside/app-core/format';
 import { intlLocale } from '@offside/app-core/i18n/core';
 import { tn } from '@offside/game/i18n/names';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
@@ -210,8 +217,13 @@ export type PlayerCardData = {
   /** T-11-080 카드 기준가(만 원). */
   cardValue?: number | null | undefined;
   pos?: TeamPlayer['pos'];
+  /** 플레이스타일(커리어 유형 id — 시너지 듀오의 기준). 큰 카드에만 보인다. */
+  type?: string | null | undefined;
   /** T-11-114 카드 시즌(0 = 프리시즌) — 뱃지. 모르면 없다. */
   season?: number | undefined;
+  /** T-11-180 키(cm)·몸무게(kg) — 큰 카드의 LS 아래. 옛 커리어는 없다. */
+  height?: number | undefined;
+  weight?: number | undefined;
   youth: boolean;
 };
 
@@ -312,6 +324,10 @@ function CardAttributes({ cell, color }: { cell: PlayerCardData; color: string }
   );
 }
 
+/** 큰 카드 높이(자리 OVR 줄 · 플레이스타일 줄 없이)와 플레이스타일 줄 높이 — 카드 팝업(PlayerPeek)도 같은 값을 쓴다. */
+export const CARD_HEIGHT = 242;
+export const CARD_STYLE_ROW = 19;
+
 export function PlayerCard({
   cell,
   code,
@@ -334,7 +350,14 @@ export function PlayerCard({
   const shirtWidth = compact ? 25 : Math.min(43, Math.max(24, cardWidth - 56));
   // 자리 OVR은 최고 OVR과 다를 때(제 자리가 아닐 때)만 — 같으면 같은 숫자가 두 번 보인다(웹 PlayerCard).
   const deployed = cell.peak !== undefined && cell.peak !== cell.rating;
-  const height = compact ? (mini ? 68 : 88) : 242 + (deployed ? 31 : 0);
+  // 플레이스타일(웹 PlayerCard .card-type). 자리가 좁은 compact 카드에는 넣지 않는다.
+  const style = !compact && cell.pos ? typeName(cell.pos, cell.type) : null;
+  const body = compact ? null : cardBody(cell);
+  const height = compact
+    ? mini
+      ? 68
+      : 88
+    : CARD_HEIGHT + (deployed ? 31 : 0) + (style ? CARD_STYLE_ROW : 0);
   const shield = 'M2 14H17L25 5L50 1L75 5L83 14H98L97 149L88 161L50 173L12 161L3 149Z';
   return (
     <View
@@ -461,6 +484,26 @@ export function PlayerCard({
               </Text>
             </Text>
           ) : null}
+          {body ? (
+            <Text
+              testID="card-body"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              maxFontSizeMultiplier={1.15}
+              style={{
+                width: '100%',
+                textAlign: 'center',
+                color: tone.ink,
+                fontSize: 8,
+                lineHeight: 11,
+                fontWeight: '700',
+                includeFontPadding: false,
+              }}
+            >
+              {body}
+            </Text>
+          ) : null}
         </View>
       </View>
       {compact && country ? (
@@ -496,6 +539,29 @@ export function PlayerCard({
           <CardName name={cell.name} color={tone.ink} animate={animate} compact={compact} />
         </View>
       )}
+      {style ? (
+        <Text
+          testID="card-type"
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.1}
+          style={{
+            marginTop: 3,
+            maxWidth: '100%',
+            paddingHorizontal: 7,
+            borderWidth: 0.5,
+            borderColor: tone.line,
+            borderRadius: 999,
+            overflow: 'hidden',
+            color: tone.ink,
+            fontSize: 10,
+            lineHeight: 15,
+            fontWeight: '700',
+            includeFontPadding: false,
+          }}
+        >
+          {style}
+        </Text>
+      ) : null}
       {deployed ? (
         <View style={{ alignItems: 'center', marginTop: 2 }}>
           <Text

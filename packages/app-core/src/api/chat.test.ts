@@ -1,4 +1,4 @@
-import type { ChatMessage } from '@offside/contracts/chat';
+import { CHAT_HISTORY, type ChatMessage } from '@offside/contracts/chat';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyChat, chatSocketUrl, EMPTY_CHAT, openChat, type ChatView } from './chat.js';
 
@@ -25,6 +25,28 @@ describe('T-11-015 채팅 상태', () => {
     expect(applyChat(v, { t: 'msg', m: msg('4', 'x') }, skip)).toBe(v);
     v = applyChat(v, { t: 'hide', id: '1' }, skip);
     expect(v.messages.map((m) => m.id)).toEqual(['3']);
+  });
+
+  it('T-11-180 이전 줄은 앞에 붙이고(겹치거나 차단한 줄 빼고), 다시 붙어도 남긴다', () => {
+    const skip = (m: ChatMessage) => m.author === 'x';
+    const at = (id: string, t: number, author = 'a') => ({ ...msg(id, author), at: t });
+    const full = Array.from({ length: CHAT_HISTORY }, (_, i) => at(`n${i}`, 100 + i));
+    let v = applyChat(EMPTY_CHAT, { t: 'hello', messages: full, online: 1, write: false }, skip);
+    expect(v.more).toBe(true);
+    v = applyChat(
+      { ...v, loadingOlder: true },
+      { t: 'older', messages: [at('o1', 1), at('o2', 2, 'x'), at('n0', 100)], more: false },
+      skip,
+    );
+    expect(v.messages.slice(0, 2).map((m) => m.id)).toEqual(['o1', 'n0']);
+    expect(v).toMatchObject({ more: false, loadingOlder: false });
+    v = applyChat(v, { t: 'hello', messages: [at('n9', 109)], online: 1, write: false }, skip);
+    expect(v.messages.map((m) => m.id)).toEqual(['o1', ...full.slice(0, 9).map((m) => m.id), 'n9']);
+    expect(v.more).toBe(false);
+    expect(
+      applyChat(EMPTY_CHAT, { t: 'hello', messages: [at('a', 1)], online: 1, write: false }, skip)
+        .more,
+    ).toBe(false);
   });
 
   it('정지되면 쓰기를 끄고, 다른 거절은 상태를 바꾸지 않는다', () => {

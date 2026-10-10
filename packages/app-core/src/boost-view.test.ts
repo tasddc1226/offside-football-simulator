@@ -3,6 +3,7 @@ import { newGame } from '@offside/game/engine';
 import { createRng, setActiveRng } from '@offside/game/rng';
 import type { CareerRecord } from '@offside/game/types';
 import { boostHidden, boostView, doBoost } from './boost-view.js';
+import { clubOffer } from './club-reward.js';
 
 function player(o: { seasons?: number; money?: number; age?: number } = {}) {
   setActiveRng(createRng(3));
@@ -59,11 +60,92 @@ describe('T-11-083 잠재력 강화 카드', () => {
     expect(boostView(s, 'free').adButton).toBe('자금 없이 강화하기 (50%)');
     expect(boostView(player(), 'ad').adButton).toBeUndefined();
     expect(doBoost(s)).toBeNull();
-    const out = doBoost(s, true)!;
+    const out = doBoost(s, 'ad')!;
     expect(out).not.toBeNull();
     expect(s.money).toBe(100);
     expect(boostView(s, 'ad').history[0]).toMatch(/· 광고 · (성공|실패)$/);
     expect(out.text).not.toContain('자금은 돌려받지');
+  });
+
+  it('T-11-153 구단 자금으로 시도하면 기록에 구단 자금으로 남고, 값이 있고 자금이 되면 구단 자금 버튼을 보인다', () => {
+    const s = player({ money: 100 });
+    expect(doBoost(s, 'club')).not.toBeNull();
+    expect(s.money).toBe(100);
+    expect(boostView(s).history[0]).toMatch(/· 구단 자금 · (성공|실패)$/);
+    const offer = (price: number | null, balance: number) => ({
+      balance,
+      offers: {
+        candidates: { price: null, bought: 0, cap: 5 },
+        peek: { price: null, bought: 0, cap: 5 },
+        boost: { price, bought: 0, cap: 5 },
+      },
+    });
+    expect(clubOffer(null, 'boost')).toBeNull();
+    expect(clubOffer(offer(null, 9_000_000), 'boost')).toBeNull();
+    expect(clubOffer(offer(500_000, 400_000), 'boost')).toBeNull();
+    expect(clubOffer(offer(500_000, 2_000_000), 'boost')).toEqual({
+      kind: 'boost',
+      price: 500_000,
+      confirm: '구단 자금 50억을 써요. 쓴 뒤 구단 자금은 150억 남고, 되돌릴 수 없어요.',
+    });
+  });
+
+  it('T-11-157 자금이 모자란 시즌의 한 번 뒤에는(커리어 전체 두 번까지) 광고·구단 자금 길이 있을 때만 추가 시도를 보이고, 오늘 횟수를 다 쓰면 닫는다', () => {
+    const s = player();
+    doBoost(s);
+    // 시도 뒤에도 자금이 되면 다음 시즌을 기다린다.
+    expect(boostView(s, 'ad', { club: true })).toMatchObject({
+      free: false,
+      line: '이번 시즌엔 이미 시도했어요. 다음 시즌에 다시 할 수 있어요.',
+    });
+    s.money = 100;
+    // 길이 없으면(웹 · 로그인 안 함) 지금처럼 다음 시즌 안내.
+    expect(boostView(s)).toMatchObject({
+      status: 'done',
+      line: '이번 시즌엔 이미 시도했어요. 다음 시즌에 다시 할 수 있어요.',
+    });
+    expect(boostView(s, null, { club: true })).toMatchObject({
+      free: true,
+      line: '이번 시즌 시도는 했어요. 구단 자금으로 더 시도할 수 있고, 이 선수는 2번 남았어요.',
+    });
+    expect(boostView(s, 'ad')).toMatchObject({
+      free: true,
+      line: '이번 시즌 시도는 했어요. 광고나 구단 자금으로 더 시도할 수 있고, 이 선수는 2번 남았어요.',
+      adButton: '광고 보고 강화하기 (' + boostView(s).chance + '%)',
+      adNote:
+        '광고를 끝까지 보면 자금 없이 한 번 더 시도해요. 추가 시도는 이 선수에게 2번 남았어요.',
+    });
+    expect(doBoost(s, 'ad')).not.toBeNull();
+    expect(boostView(s, 'ad').history[0]).toMatch(/· 광고\(추가\) · (성공|실패)$/);
+    expect(boostView(s, 'free').adNote).toBe(
+      '광고 제거를 구매해서 자금 없이 한 번 더 시도할 수 있어요. 추가 시도는 이 선수에게 1번 남았어요.',
+    );
+  });
+
+  it('T-11-184 강화권이 있으면 추가 시도 상한을 다 써도, 자금이 남아도 이번 시즌 시도 뒤 강화권 안내를 보인다', () => {
+    const s = player();
+    doBoost(s);
+    expect(boostView(s)).toMatchObject({ free: false, ticketOpen: true });
+    expect(boostView(s, null, { ticket: true })).toMatchObject({
+      free: false,
+      ticketOpen: true,
+      line: '이번 시즌 시도는 했어요. 강화권으로는 횟수 상한 없이 더 시도할 수 있어요.',
+    });
+    s.money = 100;
+    // 광고 · 구단 자금 추가 시도가 남아 있으면 그 안내가 먼저다.
+    expect(boostView(s, null, { club: true, ticket: true }).line).toContain('2번 남았어요');
+    doBoost(s, 'club');
+    doBoost(s, 'club');
+    expect(boostView(s, 'free', { club: true, ticket: true })).toMatchObject({
+      free: false,
+      ticketOpen: true,
+      line: '이번 시즌 시도는 했어요. 강화권으로는 횟수 상한 없이 더 시도할 수 있어요.',
+    });
+    expect(boostView(s, 'free').adButton).toBeUndefined();
+    expect(doBoost(s, 'ticket')).not.toBeNull();
+    expect(boostView(s).history[0]).toMatch(/· 강화권\(추가\) · (성공|실패)$/);
+    // 시도할 수 있는 첫 시즌 전에는 닫혀 있다.
+    expect(boostView(player({ seasons: 0 }))).toMatchObject({ ticketOpen: false });
   });
 
   it('29세가 지나고 한 번도 안 한 선수에게는 카드를 숨긴다', () => {

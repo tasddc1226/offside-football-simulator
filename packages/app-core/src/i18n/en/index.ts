@@ -6,6 +6,7 @@ import { ad } from './ad';
 import { appFlight } from './appFlight';
 import { appFormat } from './appFormat';
 import { appScout } from './appScout';
+import { automationModeration } from './automationModeration';
 import { backup } from './backup';
 import { balanceKeys } from './balanceKeys';
 import { board } from './board';
@@ -22,6 +23,7 @@ import { fairness } from './fairness';
 import { firsts } from './firsts';
 import { firstsTab } from './firstsTab';
 import { friend } from './friend';
+import { fundsHistory } from './fundsHistory';
 import { game } from './game';
 import { gameActions } from './gameActions';
 import { gameAttr } from './gameAttr';
@@ -41,6 +43,7 @@ import { hofRn } from './hofRn';
 import { home } from './home';
 import { homeLive } from './homeLive';
 import { homeMore } from './homeMore';
+import { iap } from './iap';
 import { inbox } from './inbox';
 import { legend } from './legend';
 import { legendRn } from './legendRn';
@@ -55,6 +58,7 @@ import { ownerPlayers } from './ownerPlayers';
 import { playerNudge } from './playerNudge';
 import { push } from './push';
 import { retired } from './retired';
+import { seasonGauge } from './seasonGauge';
 import { seasonRecap } from './seasonRecap';
 import { settings } from './settings';
 import { settingsApi } from './settingsApi';
@@ -86,6 +90,7 @@ export const en = {
   appFlight,
   appFormat,
   appScout,
+  automationModeration,
   backup,
   balanceKeys,
   board,
@@ -102,6 +107,7 @@ export const en = {
   firsts,
   firstsTab,
   friend,
+  fundsHistory,
   game,
   gameActions,
   gameAttr,
@@ -121,6 +127,7 @@ export const en = {
   home,
   homeLive,
   homeMore,
+  iap,
   inbox,
   legend,
   legendRn,
@@ -135,6 +142,7 @@ export const en = {
   playerNudge,
   push,
   retired,
+  seasonGauge,
   seasonRecap,
   settings,
   settingsApi,

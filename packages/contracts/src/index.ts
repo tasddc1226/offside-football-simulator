@@ -85,6 +85,8 @@ export {
   RETIRED_PAGE,
   RetiredNumberCheckResponseSchema,
   type RetiredNumberCheckResponse,
+  RetiredNumberMissSchema,
+  type RetiredNumberMiss,
   type RetiredNumberResult,
   type RetiredNumbersResponse,
   type RetiredNumbersSummary,
@@ -161,6 +163,7 @@ export * from './balance.js';
 export * from './admin.js';
 export * from './live.js';
 export * from './ticker.js';
+export * from './season-gauge-api.js';
 export * from './teams.js';
 export * from './cup.js';
 export * from './cup-api.js';

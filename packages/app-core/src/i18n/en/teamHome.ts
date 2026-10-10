@@ -165,6 +165,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   placeAriaWeb: 'Place the selected player on the pitch',
   placeAriaApp: 'Place the selected player in an empty spot on the pitch',
   pitchRatingFull: (p) => `Peak OVR ${p.peak} · Position OVR ${p.rating} · Fit ${p.fit}%`,
+  peekAria: (p) => `${p.name} player card`,
   pitchSlotApp: (p) =>
     `${p.head} · Position OVR ${p.rating}${p.drag ? ' · Press and hold to move' : ''}`,
   lineAtk: 'Attack',
@@ -255,4 +256,6 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   friendlyOnly: 'Friendlies only',
   statFriendly: 'Friendlies',
   statFriendlyOnly: 'Only',
+  retireSyncing:
+    "Uploading your retired player's record. They'll join the locker room as soon as it's in.",
 };

@@ -4,6 +4,8 @@ import {
   CareerIdParamSchema,
   CreateListingBodySchema,
   CreateListingResponseSchema,
+  FundsHistoryQuerySchema,
+  FundsHistoryResponseSchema,
   ListingIdSchema,
   MARKET_CHART_DAYS,
   MarketCardTradesResponseSchema,
@@ -20,6 +22,7 @@ import { marketFee, marketRatio, ovrBand, priceBand } from '@offside/contracts/m
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { newId } from '../db/ids.js';
+import { fundsHistory } from '../db/repos/fundsHistory.js';
 import {
   buyListing,
   cancelListing,
@@ -36,9 +39,11 @@ import {
   marketRules,
   myOpenListings,
   myTrades,
+  TRADES,
   recentSales,
   releaseCards,
 } from '../db/repos/market.js';
+import { myFundsSpends } from '../db/repos/itemShop.js';
 import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
 import { checkCupListing } from './cup.js';
 import { edgeCached } from '../edgeCache.js';
@@ -156,16 +161,32 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     return ok(c, MarketFundsResponseSchema, await marketFunds(getDb(c), me.id), 200, NO_STORE);
   });
 
+  // 구단 자금 내역(구단주 화면 → 구단 자금): 출처별 합과 최근 순 내역(페이지).
+  app.get('/v1/market/funds/history', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const q = parseWithAppError(FundsHistoryQuerySchema, {
+      page: c.req.query('page') || undefined,
+    });
+    return ok(
+      c,
+      FundsHistoryResponseSchema,
+      await fundsHistory(getDb(c), me.id, q.page),
+      200,
+      NO_STORE,
+    );
+  });
+
   // 내 자금 · 구단 가치 · 열린 등록 · 최근 거래. 이적시장 화면을 열 때 한 번 부른다(웹 메모).
   app.get('/v1/market/me', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
     const now = nowIso();
-    const [funds, bought, listings, trades, rules] = await Promise.all([
+    const [funds, bought, listings, trades, spends, rules] = await Promise.all([
       marketFunds(db, me.id),
       countBuysSince(db, me.id, kstTodayStart(now)),
       myOpenListings(db, me.id),
       myTrades(db, me.id),
+      myFundsSpends(db, me.id, TRADES),
       marketRules(db),
     ]);
     return ok(
@@ -176,6 +197,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         ...funds,
         listings,
         trades,
+        spends,
         buysLeft: Math.max(0, rules.dailyBuys - bought),
         rules,
       },

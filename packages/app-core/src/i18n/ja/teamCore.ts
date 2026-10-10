@@ -29,6 +29,7 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   achMaxLevel: ' · 最高段階',
   achDone: '達成済み',
   achUndone: '未達成',
+  achMissing: (p) => `残り: ${p.names}`,
   achUndoneHint: (p) => `未達成 · ${p.hint}`,
   achPointsGot: (p) => `+${p.n}pt`,
   achPointsWorth: (p) => `${p.n}pt`,

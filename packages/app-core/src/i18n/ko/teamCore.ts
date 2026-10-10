@@ -33,6 +33,7 @@ const ko = {
   achMaxLevel: ' · 최고 단계',
   achDone: '달성 완료',
   achUndone: '미달성',
+  achMissing: (p: { names: string }) => `남은 것: ${p.names}`,
   achUndoneHint: (p: { hint: string }) => `미달성 · ${p.hint}`,
   achPointsGot: (p: { n: string }) => `+${p.n}점`,
   achPointsWorth: (p: { n: string }) => `${p.n}점`,

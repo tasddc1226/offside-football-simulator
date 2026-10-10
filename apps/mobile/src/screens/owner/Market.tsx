@@ -33,7 +33,6 @@ import {
   MARKET_TICKER_MS,
   MARKET_TOAST,
   marketTabs,
-  TRADE_LABEL,
   buyBlock,
   cardMeta,
   fundsText,
@@ -51,13 +50,15 @@ import {
   sellSlider,
   sellable,
   sellQuote,
-  tradeAmount,
   type MarketView,
+  needsOwnerLogin,
 } from '@offside/app-core/market';
 import { agoKo, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/hof-store';
 import { POS } from '@offside/game/data';
 import { appState, prefs } from '../../store';
+import { go } from '../../game/nav';
+import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { toast } from '../../game/host';
 import { useColors } from '../../theme/useColors';
@@ -66,6 +67,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { ActionBar, BackBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
 import { useOnPull } from '../../ui/refresh';
 import { PlayerCard } from '../../components/PlayerCard';
+import { LoginButtons } from './LoginButtons';
 import { MarketChart, MarketIndex } from './MarketChart';
 import { marketText as L } from '@offside/app-core/i18n/ko/market';
 import { intlLocale } from '@offside/app-core/i18n/core';
@@ -497,20 +499,30 @@ function LiveStrip({
 const small = { fontSize: rem(0.875) } as const;
 const tiny = { fontSize: rem(0.75) } as const;
 
+// T-11-158 '구단 자금 내역 보기'로 나갔다가 뒤로 돌아오면 '내 거래' 탭을 다시 연다(한 번만 읽는다).
+let backToTrades = false;
+
 export default function Market() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const local = useMemo(() => localCareerNames(), []);
   const destination = useSnapshot(notificationDestination);
-  const [view, setView] = useState<MarketView>(destination.market ? 'trades' : 'market');
+  const [view, setView] = useState<MarketView>(() => {
+    const back = backToTrades;
+    backToTrades = false;
+    return destination.market || back ? 'trades' : 'market';
+  });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   // 자금 · 구단 가치 · 내 등록 · 최근 거래(1분 메모). 쓰기가 성공하면 apiFetch가 메모를 비우니 다시 받는다.
   const [me, setMe] = useState<MarketMeResponse | null>(null);
   const [meFailed, setMeFailed] = useState<string | null>(null);
+  // 로그인 전(세션 없음 · 구글/애플 연결 전) — 매물을 누르면 영입 대신 로그인을 권한다.
+  const [guest, setGuest] = useState(false);
   const loadMe = useCallback(async () => {
     const r = await fetchMarketMe();
+    setGuest(!r.ok && needsOwnerLogin(r.error));
     if (r.ok) {
       setMe(r.data);
       setMeFailed(null);
@@ -981,8 +993,10 @@ export default function Market() {
                 <View
                   style={{
                     flexDirection: 'row',
+                    flexWrap: 'wrap',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    rowGap: 2,
                   }}
                 >
                   <Txt tone="muted" style={small}>
@@ -1334,77 +1348,18 @@ export default function Market() {
                         {L.noListed}
                       </Txt>
                     )}
-                    <Txt bold accessibilityRole="header" style={{ ...small, marginTop: 6 }}>
-                      {L.fundsLog}
-                    </Txt>
-                    {me.trades.length ? (
-                      <View style={{ ...box }}>
-                        {me.trades.map((t, i) => {
-                          const badge =
-                            t.kind === 'bought'
-                              ? { bg: c.surface2, fg: c.ink }
-                              : t.kind === 'sold'
-                                ? { bg: c.surface2, fg: c.accentText }
-                                : { bg: c.surface2, fg: c.bad };
-                          return (
-                            <View
-                              key={t.id}
-                              testID={`market-trade-${t.kind}`}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 10,
-                                paddingVertical: 10,
-                                paddingHorizontal: 12,
-                                borderTopWidth: i ? 1 : 0,
-                                borderTopColor: c.line,
-                              }}
-                            >
-                              <View
-                                style={{
-                                  minWidth: 36,
-                                  paddingVertical: 3,
-                                  paddingHorizontal: 6,
-                                  borderRadius: 6,
-                                  alignItems: 'center',
-                                  backgroundColor: badge.bg,
-                                }}
-                              >
-                                <Txt
-                                  style={{
-                                    fontSize: rem(0.6875),
-                                    fontWeight: '700',
-                                    color: badge.fg,
-                                  }}
-                                >
-                                  {TRADE_LABEL[t.kind]}
-                                </Txt>
-                              </View>
-                              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                                <Txt numberOfLines={1} style={small}>
-                                  {`${marketName(t.card, local)} ${POS[t.card.pos].label} ${t.card.peak}`}
-                                </Txt>
-                                <Txt tone="muted" style={tiny}>
-                                  {`${agoKo(Date.now() - Date.parse(t.at))}${t.kind === 'sold' ? L.feeTaken : ''}`}
-                                </Txt>
-                              </View>
-                              <Txt
-                                tone={t.kind === 'bought' ? 'ink' : 'good'}
-                                bold
-                                num
-                                style={small}
-                              >
-                                {tradeAmount(t)}
-                              </Txt>
-                            </View>
-                          );
-                        })}
-                      </View>
-                    ) : (
-                      <Txt tone="muted" style={small}>
-                        {L.noTrades}
-                      </Txt>
-                    )}
+                    {/* T-11-158 자금 내역은 구단주 화면의 구단 자금 내역 한 곳에서 본다(방출 · 거래 · 구단 자금 사용 전부). */}
+                    <Btn
+                      sm
+                      kind="ghost"
+                      testID="market-funds-history"
+                      onPress={() => {
+                        backToTrades = true;
+                        go('funds');
+                      }}
+                    >
+                      {F.openAria}
+                    </Btn>
                   </>
                 )}
               </View>
@@ -1413,8 +1368,8 @@ export default function Market() {
         )}
       </Screen>
 
-      <MarketSheet open={!!buying && !!me} label={L.sheetBuy} onClose={closeSheets}>
-        {buying && me ? (
+      <MarketSheet open={!!buying && (!!me || guest)} label={L.sheetBuy} onClose={closeSheets}>
+        {buying && (me || guest) ? (
           <>
             <View
               style={{
@@ -1437,8 +1392,11 @@ export default function Market() {
                     number: buying.card.number,
                     legendScore: buying.card.legendScore,
                     attrs: buying.card.attrs,
+                    height: buying.card.height,
+                    weight: buying.card.weight,
                     cardValue: buying.card.cardValue,
                     pos: buying.card.pos,
+                    type: buying.card.type ?? null,
                     youth: false,
                   }}
                 />
@@ -1472,7 +1430,7 @@ export default function Market() {
               }}
             >
               <Txt v="h2" accessibilityRole="header">
-                {L.buyTitle}
+                {me ? L.buyTitle : L.loginTitle}
               </Txt>
               <View style={{ gap: 8 }}>
                 <Line label={L.baseLine} value={fmtValue(buying.card.cardValue)} />
@@ -1492,54 +1450,76 @@ export default function Market() {
                     </Txt>
                   }
                 />
-                <View style={{ height: 1, backgroundColor: c.line }} />
-                <Line label={L.fundsNow} value={fundsText(me.balance)} />
-                <Line
-                  strong
-                  label={L.fundsAfter}
-                  value={
-                    me.balance >= buying.price ? fundsText(me.balance - buying.price) : L.notEnough
-                  }
-                />
+                {me ? (
+                  <>
+                    <View style={{ height: 1, backgroundColor: c.line }} />
+                    <Line label={L.fundsNow} value={fundsText(me.balance)} />
+                    <Line
+                      strong
+                      label={L.fundsAfter}
+                      value={
+                        me.balance >= buying.price
+                          ? fundsText(me.balance - buying.price)
+                          : L.notEnough
+                      }
+                    />
+                  </>
+                ) : null}
               </View>
               <MarketChart card={buying.card} />
-              <View style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}>
-                <Txt tone="muted" style={tiny}>
-                  {L.buyNote}
-                </Txt>
-              </View>
-              {buyBlocked ? (
-                <Txt tone="bad" style={{ fontWeight: '600' }}>
-                  {buyBlocked}
-                </Txt>
-              ) : null}
-              {errText}
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Btn style={{ flex: 1 }} testID="market-sheet-close" onPress={closeSheets}>
-                  {L.close}
-                </Btn>
-                {myListingIds.has(buying.id) ? (
-                  <Btn
-                    style={{ flex: 2 }}
-                    disabled={busy}
-                    onPress={() => void run(() => cancelListing(buying.id), MARKET_TOAST.unlisted)}
-                  >
-                    {L.unlist}
+              {!me ? (
+                <View testID="market-login" style={{ gap: 10 }}>
+                  <View style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}>
+                    <Txt style={small}>{L.loginToBuy}</Txt>
+                  </View>
+                  <LoginButtons back={{ market: true }} onDone={() => void loadMe()} />
+                  <Btn testID="market-sheet-close" onPress={closeSheets}>
+                    {L.close}
                   </Btn>
-                ) : (
-                  <Btn
-                    style={{ flex: 2 }}
-                    kind="accent"
-                    testID="market-buy"
-                    disabled={busy || !!buyBlocked}
-                    onPress={() =>
-                      void run(() => buyListing(buying.id, buying.price), MARKET_TOAST.bought)
-                    }
-                  >
-                    {L.buyFor({ price: fmtValue(buying.price) })}
-                  </Btn>
-                )}
-              </View>
+                </View>
+              ) : (
+                <>
+                  <View style={{ padding: 12, borderRadius: 10, backgroundColor: c.surface2 }}>
+                    <Txt tone="muted" style={tiny}>
+                      {L.buyNote}
+                    </Txt>
+                  </View>
+                  {buyBlocked ? (
+                    <Txt tone="bad" style={{ fontWeight: '600' }}>
+                      {buyBlocked}
+                    </Txt>
+                  ) : null}
+                  {errText}
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <Btn style={{ flex: 1 }} testID="market-sheet-close" onPress={closeSheets}>
+                      {L.close}
+                    </Btn>
+                    {myListingIds.has(buying.id) ? (
+                      <Btn
+                        style={{ flex: 2 }}
+                        disabled={busy}
+                        onPress={() =>
+                          void run(() => cancelListing(buying.id), MARKET_TOAST.unlisted)
+                        }
+                      >
+                        {L.unlist}
+                      </Btn>
+                    ) : (
+                      <Btn
+                        style={{ flex: 2 }}
+                        kind="accent"
+                        testID="market-buy"
+                        disabled={busy || !!buyBlocked}
+                        onPress={() =>
+                          void run(() => buyListing(buying.id, buying.price), MARKET_TOAST.bought)
+                        }
+                      >
+                        {L.buyFor({ price: fmtValue(buying.price) })}
+                      </Btn>
+                    )}
+                  </View>
+                </>
+              )}
             </View>
           </>
         ) : null}

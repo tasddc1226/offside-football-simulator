@@ -6,6 +6,8 @@ const ko = {
   darkTitle: '다크 모드',
   darkBodyWeb: '어두운 화면으로 바꿔요. 이 기기에 저장돼요.',
   darkBodyApp: '어두운 화면으로 봐요. 이 기기에 저장돼요.',
+  hapticsTitleApp: '진동',
+  hapticsBodyApp: '선택·결과 순간에 짧게 진동해요. 이 기기에 저장돼요.',
   langTitle: '언어',
   langBody: '게임 화면과 이벤트 문구의 언어를 바꿔요. 이 기기에 저장돼요.',
   sheetTitle: '업무 모드',

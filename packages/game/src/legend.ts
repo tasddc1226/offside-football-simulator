@@ -1,7 +1,7 @@
 // ───────── 레전드 점수 · 은퇴 스냅샷 (T-11-126) ─────────
 // 첫 화면(app-core legend·career)이 쓰는 순수 계산만 둔다. season.ts에 두면 홈이 시즌 엔진을 끌어온다.
 import type { LegendSnapshot } from '@offside/contracts';
-import { controlPoints, legendAwardCount, legendTerms } from '@offside/contracts/hof-rules';
+import { legendTermsOfRecord } from '@offside/contracts/hof-rules';
 import type { GameState, LegendSource } from './types.js';
 
 /** 30인 후보 기록과 구분한 실제 발롱도르 수상 횟수. */
@@ -9,32 +9,13 @@ export const ballonWinsOf = (s: Pick<LegendSource, 'awards'>): number =>
   s.awards.filter((x) => x.t === '발롱도르').length; // i18n-ignore 저장값
 
 /** 레전드 점수의 각 항. 합을 반올림한 값이 legendScore()다. */
-export function legendTermsOf(s: LegendSource): ReturnType<typeof legendTerms> {
-  const t = s.career.reduce(
-    (a, r) => ({ g: a.g + r.goals, a: a.a + r.assists, p: a.p + r.apps, cs: a.cs + (r.cs || 0) }),
-    { g: 0, a: 0, p: 0, cs: 0 },
-  );
-  return legendTerms(
-    s.pos,
-    {
-      goals: t.g,
-      assists: t.a,
-      cs: t.cs,
-      apps: t.p,
-      trophies: s.trophies.length,
-      awards: legendAwardCount(s.awards, s.dpos),
-      caps: s.nat.caps,
-      peak: s.peak,
-      ballon: ballonWinsOf(s),
-      ballonRankPoints: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0),
-      worldCups: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length, // i18n-ignore 저장값
-      control: controlPoints(s.career),
-    },
-    s.dpos,
-  );
-}
+export const legendTermsOf = (s: LegendSource): ReturnType<typeof legendTermsOfRecord> =>
+  legendTermsOfRecord(s);
+/** 레전드 점수 항의 합(반올림 전). */
+export const legendRawScore = (s: LegendSource): number =>
+  Object.values(legendTermsOf(s)).reduce((sum, v) => sum + v, 0);
 export function legendScore(s: LegendSource): number {
-  return Math.round(Object.values(legendTermsOf(s)).reduce((sum, v) => sum + v, 0));
+  return Math.round(legendRawScore(s));
 }
 
 /** T-10-005. 은퇴 상세를 다시 그리는 데 필요한 필드만 복사한다(서버 계약 LegendSnapshotSchema와 같은

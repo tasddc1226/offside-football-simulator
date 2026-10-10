@@ -3,6 +3,7 @@ import {
   AdminChatReportResolveSchema,
   CHAT_KEEP_MS,
   CHAT_REPORT_HIDE,
+  ChatBlockListResponseSchema,
   ChatBlockResponseSchema,
   ChatMessageIdSchema,
   ChatMuteInputSchema,
@@ -13,7 +14,7 @@ import type { Context, Hono } from 'hono';
 import { getViewer, requireAdmin } from '../auth/admin.js';
 import { chatAuthor } from '../chat/rules.js';
 import { chatRoom } from '../chat/socket.js';
-import { blockAuthor } from '../db/repos/boards.js';
+import { blockAuthor, listBlocks } from '../db/repos/boards.js';
 import {
   blockedProfileIds,
   getMutedUntil,
@@ -126,6 +127,19 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
       200,
       NO_STORE,
     );
+  });
+
+  // T-11-167 차단 목록은 사람마다 달라 엣지 캐시하지 않는다. 화면에서 목록을 열 때만 부른다.
+  app.get('/v1/chat/blocks', requireProfile, async (c) => {
+    const { profileId } = getSessionOrThrow(c);
+    const rows = await listBlocks(getDb(c), profileId).limit(200);
+    const blocks = await Promise.all(
+      rows.map(async ({ blockedProfileId, ...b }) => ({
+        ...b,
+        author: await chatAuthor(blockedProfileId),
+      })),
+    );
+    return ok(c, ChatBlockListResponseSchema, { blocks }, 200, NO_STORE);
   });
 
   app.post('/v1/chat/messages/:messageId/report', requireProfile, async (c) => {

@@ -14,6 +14,8 @@
   import AdminAutomation from './admin/AdminAutomation.svelte';
   import AdminPush from './admin/AdminPush.svelte';
   import AdminCups from './admin/AdminCups.svelte';
+  import AdminFunds from './admin/AdminFunds.svelte';
+  import AdminInvites from './admin/AdminInvites.svelte';
 
   const TABS = [
     { id: 'dashboard', label: '대시보드' },
@@ -22,6 +24,8 @@
     { id: 'comments', label: '신고·댓글' },
     { id: 'balance', label: '밸런스' },
     { id: 'automation', label: '자동 플레이' },
+    { id: 'funds', label: '구단 자금' },
+    { id: 'invites', label: '친구 초대' },
   ] as const;
   let tab = $state<(typeof TABS)[number]['id']>('dashboard');
   let admin = $state<boolean | null>(null);
@@ -53,6 +57,8 @@
       {:else if tab === 'cup'}<AdminCups />
       {:else if tab === 'comments'}<AdminChatReports /><AdminNameReports /><AdminComments />
       {:else if tab === 'automation'}<AdminAutomation />
+      {:else if tab === 'funds'}<AdminFunds />
+      {:else if tab === 'invites'}<AdminInvites />
       {:else}<AdminBalance />{/if}
     {/if}
   </section>
@@ -62,5 +68,5 @@
 <style>
   .admin-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); }
   .admin-tabs button { min-height:44px; }
-  @media (min-width:600px) { .admin-tabs { grid-template-columns:repeat(6,minmax(0,1fr)); } }
+  @media (min-width:600px) { .admin-tabs { grid-template-columns:repeat(4,minmax(0,1fr)); } }
 </style>

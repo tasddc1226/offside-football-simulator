@@ -36,6 +36,7 @@ import type {
   TeamMatch,
   TeamPlayer,
 } from './api/team.js';
+import { tn } from '@offside/game/i18n/names';
 import { num, signedNum } from './teamText.js';
 import { teamCoreText as L } from './i18n/ko/teamCore.js';
 import { teamHomeText as TH } from './i18n/ko/teamHome.js';
@@ -343,6 +344,10 @@ export function achState(i: ClubAchievement): string {
   const hint = achHint(i.id);
   return hint ? L.achUndoneHint({ hint }) : L.achUndone;
 }
+
+/** T-11-180 모음 업적에서 아직 못 모은 이름 한 줄(없으면 null). */
+export const achMissing = (i: ClubAchievement): string | null =>
+  i.missing?.length ? L.achMissing({ names: i.missing.map(tn).join(' · ') }) : null;
 
 /** 열린 단계 전체의 달성 수 · 업적 수(잠긴 단계는 빼고 센다). */
 export function achTotal(groups: readonly ClubAchievementGroup[]): { done: number; total: number } {

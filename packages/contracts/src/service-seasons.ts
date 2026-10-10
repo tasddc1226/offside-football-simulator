@@ -35,10 +35,100 @@ export const RETIRE_AT_LIMIT = 59;
 export const nextRetireAt = (retireAt: number, reached: boolean): number =>
   Math.min(RETIRE_AT_LIMIT, retireAt + (reached ? 1 : 0));
 
-export const SERVICE_SEASONS: readonly ServiceSeason[] = [
+/** 코드에 적어 둔 시즌(개막 일정의 출발점). 그 뒤 마감·다음 시즌은 서버 시즌 일정(applySeasonSchedule)이 더한다. */
+const BASE_SEASONS: readonly ServiceSeason[] = [
   // 2026-10-06 00:00 KST
   { id: 1, name: '시즌 1', startsAt: '2026-10-05T15:00:00.000Z', endsAt: null, retireAt: 45 },
 ];
+
+/** 서버가 굳혀 내려 주는 시즌 일정 한 줄(app_meta `season_schedule`, GET /v1/season/gauge의 seasons). */
+export type SeasonScheduleEntry = Pick<ServiceSeason, 'id' | 'startsAt' | 'endsAt' | 'retireAt'>;
+
+const seasonName = (id: number) => `시즌 ${id}`;
+const seasons: ServiceSeason[] = BASE_SEASONS.map((s) => ({ ...s }));
+
+/**
+ * 지금 아는 시즌 목록(오래된 순). 시즌 진행 게이지가 마감을 확정하면 서버가 그 시즌의 마감과 다음 시즌(마감 시각에 바로
+ * 개막)을 일정에 적고, 서버(요청·cron)와 웹·앱이 applySeasonSchedule로 이 배열을 그 자리에서 고친다 — 배열을 새로
+ * 만들지 않으므로 가져다 둔 참조도 새 일정을 본다.
+ */
+export const SERVICE_SEASONS: readonly ServiceSeason[] = seasons;
+
+type ScheduleListener = () => void;
+const listeners = new Set<ScheduleListener>();
+
+/** 시즌 일정이 바뀌면 부른다(개막 타이머를 다시 맞출 때). 해제 함수를 돌려준다. */
+export function onSeasonSchedule(fn: ScheduleListener): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+/** 지금 시즌 일정(서버가 굳히고 앱이 저장해 두는 모양). */
+export const seasonSchedule = (): SeasonScheduleEntry[] =>
+  seasons.map(({ id, startsAt, endsAt, retireAt }) => ({ id, startsAt, endsAt, retireAt }));
+
+/** 두 일정이 같은가(시즌마다 id · 개막 · 마감 · 은퇴 나이). */
+export const sameSchedule = (
+  a: readonly SeasonScheduleEntry[],
+  b: readonly SeasonScheduleEntry[],
+) =>
+  a.length === b.length &&
+  a.every(
+    (s, i) =>
+      s.id === b[i]!.id &&
+      s.startsAt === b[i]!.startsAt &&
+      s.endsAt === b[i]!.endsAt &&
+      s.retireAt === b[i]!.retireAt,
+  );
+
+/**
+ * 서버 시즌 일정을 입힌다: 코드의 시즌에 일정의 마감·은퇴 나이를 덮고, 코드에 없는 시즌을 뒤에 잇는다. 이어지지 않는
+ * 줄(앞 시즌 마감 전에 개막·id 건너뜀·잘못된 시각)은 버린다. 빈 일정이면 코드의 시즌으로 돌아간다. 바뀌었으면 true.
+ */
+export function applySeasonSchedule(entries: readonly SeasonScheduleEntry[]): boolean {
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  const next: ServiceSeason[] = BASE_SEASONS.map((b) => {
+    const e = byId.get(b.id);
+    return e ? { ...b, endsAt: e.endsAt, retireAt: e.retireAt } : { ...b };
+  });
+  for (const e of [...entries].sort((a, b) => a.id - b.id)) {
+    const prev = next.at(-1)!;
+    if (e.id <= prev.id) continue;
+    if (e.id !== prev.id + 1 || !prev.endsAt || e.startsAt !== prev.endsAt) break;
+    if (Number.isNaN(Date.parse(e.startsAt))) break;
+    if (e.endsAt !== null && !(e.endsAt > e.startsAt)) break;
+    next.push({ ...e, name: seasonName(e.id) });
+  }
+  if (sameSchedule(seasonSchedule(), next)) return false;
+  seasons.splice(0, seasons.length, ...next);
+  listeners.forEach((fn) => fn());
+  return true;
+}
+
+/**
+ * 시즌 마감을 확정할 때 이어 붙일 일정: 그 시즌의 마감과, 마감 시각에 바로 여는 다음 시즌(은퇴 나이는 nextRetireAt —
+ * 이 시즌 선수가 은퇴 나이까지 뛰고 은퇴했으면 +1). 이미 다음 시즌이 있으면 은퇴 나이만 올린다(내리지 않는다).
+ */
+export function closeSeasonSchedule(
+  season: number,
+  endsAt: string,
+  reached: boolean,
+): SeasonScheduleEntry[] {
+  const cur = seasonSchedule();
+  const i = cur.findIndex((s) => s.id === season);
+  if (i < 0) return cur;
+  const s = cur[i]!;
+  const retireAt = nextRetireAt(s.retireAt, reached);
+  const following = cur[i + 1];
+  return [
+    ...cur.slice(0, i),
+    { ...s, endsAt },
+    following
+      ? { ...following, startsAt: endsAt, retireAt: Math.max(following.retireAt, retireAt) }
+      : { id: season + 1, startsAt: endsAt, endsAt: null, retireAt },
+    ...cur.slice(i + 2),
+  ];
+}
 
 export const serviceSeason = (id: number): ServiceSeason | undefined =>
   SERVICE_SEASONS.find((s) => s.id === id);
@@ -95,7 +185,7 @@ export const previewSeasonAt = (now: string): number | null =>
 
 /** 팀 시즌 이름(0 = 프리시즌). */
 const TEAM_SEASON: Record<Locale, { pre: string; name: (id: number) => string }> = {
-  ko: { pre: '프리시즌', name: (id) => serviceSeason(id)?.name ?? `시즌 ${id}` },
+  ko: { pre: '프리시즌', name: (id) => serviceSeason(id)?.name ?? seasonName(id) },
   en: { pre: 'Preseason', name: (id) => `Season ${id}` },
   ja: { pre: 'プレシーズン', name: (id) => `シーズン${id}` },
 };
@@ -129,10 +219,8 @@ export const retireAtOf = (seasonId: number | null | undefined): number =>
 export const retireAtNow = (now: string): number => retireAtOf(teamSeasonAt(now));
 
 /** T-11-045 정의된 시즌 가운데 가장 높은 은퇴 나이 — 서버가 받는 시즌 나이의 상한(이 나이 − 1)을 정한다. */
-export const MAX_RETIRE_AT = Math.max(
-  PRESEASON_RETIRE_AT,
-  ...SERVICE_SEASONS.map((s) => s.retireAt),
-);
+export const maxRetireAt = (): number =>
+  Math.max(PRESEASON_RETIRE_AT, ...SERVICE_SEASONS.map((s) => s.retireAt));
 
 /**
  * T-11-095 커리어가 서버에 처음 올라올 때 찍는 시즌. 세부 포지션이 없는 선수는 프리시즌 규칙(41세·세부 포지션 없음)으로

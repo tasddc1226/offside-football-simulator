@@ -1,3 +1,4 @@
+import { actionEntry } from './automationEnforcement.js';
 import type { AnomalyCareer, AnomalyReason, AnomalyReport, SeasonGrowth } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { OVR_CAP_BY_AGE, ovrCapAt } from '../../plausibility.js';
@@ -224,9 +225,10 @@ export async function setCareerHidden(
     .where(eq(careers.id, careerId));
   if (!row) return false;
   if (!!row.hidden === hidden) return true;
-  await runBatch(
-    db,
-    hidden
+  const entry = actionEntry(careerId, hidden ? 'hide' : 'restore', 'admin', [], 0, now);
+  await runBatch(db, [
+    db.insert(appMeta).values(entry).onConflictDoNothing(),
+    ...(hidden
       ? [
           ...hideCareerStatements(db, careerId),
           db.delete(appMeta).where(eq(appMeta.key, clearedKey(careerId))),
@@ -235,7 +237,7 @@ export async function setCareerHidden(
           db.update(careers).set({ hidden: 0 }).where(eq(careers.id, careerId)),
           setMeta(db, clearedKey(careerId), new Date(now).toISOString()),
           resetFirstsBackfillStatement(db),
-        ],
-  );
+        ]),
+  ]);
   return true;
 }

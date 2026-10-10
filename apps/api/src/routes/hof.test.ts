@@ -4,11 +4,12 @@ import {
   successEnvelope,
 } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { legendScoreOfRecord } from '@offside/contracts/hof-rules';
 import { createApp } from '../app.js';
-import { cards, careers } from '../db/schema.js';
+import { cards, careers, ownerFunds } from '../db/schema.js';
 import { ensureCardValuesBackfilled } from '../db/repos/cardValues.js';
 import { eq, inArray } from 'drizzle-orm';
-import { cardValue, retireValue, valueFor } from '@offside/contracts/market-value';
+import { cardValue, releasePayout, retireValue, valueFor } from '@offside/contracts/market-value';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { issueCookie, putJson, putSeasonsFor, seasonBody } from '../test/http.js';
 
@@ -138,7 +139,8 @@ describe('공개 명예의 전당 /v1/hof', () => {
       id: CAREER_ID,
       name: null,
       number: 7,
-      legendScore: 420,
+      // T-11-187 레전드 점수는 보낸 값이 아니라 스냅샷으로 서버가 매긴다.
+      legendScore: legendScoreOfRecord(snapshot),
       hasDetail: true,
       lastClubId: 'pl-15',
     });
@@ -595,9 +597,10 @@ describe('공개 명예의 전당 /v1/hof', () => {
       ).data;
     const list = await read('sort=value');
     expect(list.entries.map((e) => e.id)).toEqual([rows[1]!.id, rows[0]!.id]);
-    expect(list.entries[1]!.value).toBe(retireValue(rows[0]!.career!, 300));
+    const score0 = legendScoreOfRecord({ ...snapshot, career: rows[0]!.career! });
+    expect(list.entries[1]!.value).toBe(retireValue(rows[0]!.career!, score0));
     expect(list.entries[1]!.value).toBe(
-      Math.round(((valueFor('ll', 80, 26) / 3) * (1 + 300 / 250)) / 1000) * 1000,
+      Math.round(((valueFor('ll', 80, 26) / 3) * (1 + score0 / 250)) / 1000) * 1000,
     );
     // 스냅샷 없는 기록은 소급해도 0 — 가치 순에서 빠지고, 레전드 점수 순에는 남는다.
     expect((await read('sort=score')).entries.find((e) => e.id === rows[2]!.id)?.value).toBe(0);
@@ -631,12 +634,29 @@ describe('공개 명예의 전당 /v1/hof', () => {
     const want = rows.map(({ id, career }) => ({
       id,
       cardValue: career ? cardValue(career, summary.peak) : null,
-      retireValue: career ? retireValue(career, summary.legendScore) : 0,
+      retireValue: career ? retireValue(career, legendScoreOfRecord({ ...snapshot, career })) : 0,
     }));
     expect(await cardRows()).toEqual(want);
-    // 다시 보낸 은퇴는 카드를 늘리지 않는다.
-    await putJson(ctx, cookie, `/v1/careers/${rows[0]!.id}/retirement`, { ...summary });
+    // T-11-163 은퇴 장려금: 기준가가 있는 카드만 기준가 × 10%(기본값)를 키운 사람 구단 자금으로 준다.
+    const bonuses = want.map((w) =>
+      w.cardValue === null ? null : releasePayout(w.cardValue, 0.1),
+    );
+    const funds = async () =>
+      (await ctx.db.select({ balance: ownerFunds.balance }).from(ownerFunds))[0]?.balance;
+    expect(
+      (await ctx.db.select({ v: cards.bonusValue }).from(cards).orderBy(cards.careerId)).map(
+        (r) => r.v,
+      ),
+    ).toEqual(bonuses);
+    expect(await funds()).toBe(bonuses[0]! + bonuses[2]!);
+    // 다시 보낸 은퇴는 카드를 늘리지 않고 장려금도 다시 주지 않는다.
+    await putJson(ctx, cookie, `/v1/careers/${rows[0]!.id}/retirement`, {
+      ...summary,
+      publicName: null,
+      snapshot: { ...snapshot, career: rows[0]!.career },
+    });
     expect(await cardRows()).toHaveLength(3);
+    expect(await funds()).toBe(bonuses[0]! + bonuses[2]!);
 
     // 마이그레이션이 만든 기존 카드: 기준가 null·은퇴 가치 0. 스냅샷 있는 카드만 한 장씩 채운다(없는 카드는 null로 남는다).
     await ctx.db.update(cards).set({ cardValue: null, retireValue: 0 });
@@ -647,20 +667,22 @@ describe('공개 명예의 전당 /v1/hof', () => {
   });
 
   it('T-10-100: 이 기능 전 은퇴 기록(value 없음)은 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {
+    const snap = {
+      ...snapshot,
+      career: [{ ...snapshot.career[0]!, league: 'K리그1', clubId: undefined, ovr: 75, age: 23 }],
+    };
     await putJson(ctx, cookie, `/v1/careers/${CAREER_ID}/retirement`, {
       ...summary,
       publicName: null,
-      snapshot: {
-        ...snapshot,
-        career: [{ ...snapshot.career[0]!, league: 'K리그1', clubId: undefined, ovr: 75, age: 23 }],
-      },
+      snapshot: snap,
     });
     await ctx.env.DB.prepare('update careers set value = null').run();
     const list = successEnvelope(HofListResponseSchema).parse(
       await (await createApp().request('/v1/hof?sort=value', {}, ctx.env)).json(),
     ).data;
     expect(list.entries[0]?.value).toBe(
-      Math.round(((valueFor('k1', 75, 23) / 3) * (1 + 420 / 250)) / 1000) * 1000,
+      Math.round(((valueFor('k1', 75, 23) / 3) * (1 + legendScoreOfRecord(snap) / 250)) / 1000) *
+        1000,
     );
     const meta = await ctx.env.DB.prepare(
       "select value from app_meta where key = 'career_values_backfill'",

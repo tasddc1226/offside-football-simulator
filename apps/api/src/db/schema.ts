@@ -418,6 +418,7 @@ export const careers = sqliteTable(
   (table) => [
     index('careers_detail_archive_idx').on(table.detailArchiveKey),
     index('careers_profile_id_idx').on(table.profileId),
+    index('careers_automation_updated_idx').on(table.updatedAt, table.id),
     // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
     index('careers_profile_status_season_idx').on(
       table.profileId,
@@ -499,6 +500,8 @@ export const cards = sqliteTable(
     transfers: integer('transfers').notNull().default(0),
     releasedAt: text('released_at'),
     releasedValue: integer('released_value'),
+    // T-11-163 은퇴 장려금(만 원). 은퇴해 카드가 생길 때 키운 사람에게 기준가 × 장려금 비율을 준 값. 없으면 NULL.
+    bonusValue: integer('bonus_value'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -624,6 +627,9 @@ export const careerSeasons = sqliteTable(
     primaryKey({ columns: [table.careerId, table.year] }),
     // T-10-030 홈 라이브 현황: 최근 올라온 시즌(피드·오늘 시즌 수)을 시각 순으로 찾는다.
     index('career_seasons_created_idx').on(table.createdAt),
+    index('career_seasons_signals_career_idx')
+      .on(table.careerId, table.createdAt)
+      .where(sql`${table.signalsJson} is not null`),
     // T-11-100 매일 성장 기록 보관이 아직 D1에 남은 오래된 성장 기록만 시각 순으로 찾는다(비운 행은 인덱스에서 빠진다).
     index('career_seasons_growth_created_idx')
       .on(table.createdAt)
@@ -1309,5 +1315,55 @@ export const ownerItemPurchases = sqliteTable(
   },
   (table) => [
     index('owner_item_purchases_profile_idx').on(table.profileId, table.item, table.createdAt),
+  ],
+);
+
+/**
+ * T-11-174 인앱 상품(소모성) 구매 원장. 스토어 거래 하나(store, transaction_id)에 행 하나라 같은 거래를 두 번 보내도 아이템은
+ * 한 번만 는다. transaction_id: Apple transactionId, Google purchaseToken. 매출 대조·환불 확인에도 쓴다.
+ */
+export const iapPurchases = sqliteTable(
+  'iap_purchases',
+  {
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull(),
+    item: text('item').notNull(),
+    qty: integer('qty').notNull(),
+    /** Apple Sandbox · Google 테스트 구매면 1(매출에서 뺀다). */
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.store, table.transactionId] }),
+    index('iap_purchases_profile_idx').on(table.profileId, table.createdAt),
+  ],
+);
+
+/**
+ * T-11-171 친구 초대. 아직 은퇴 선수가 없는 구단주(invitee)가 친구 코드로 친구 신청을 하면 그 코드 주인(inviter)의 초대로
+ * 한 번만 적는다. invitee가 처음 은퇴시킨 커리어가 done_at · career_id로 남고, 그때 두 사람에게 리롤권을 준다.
+ * inviter_rewarded: 초대한 쪽이 보상을 받았는가(INVITE_REWARD_MAX명까지).
+ */
+export const referrals = sqliteTable(
+  'referrals',
+  {
+    inviteeId: text('invitee_id')
+      .primaryKey()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    inviterId: text('inviter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    claimedAt: text('claimed_at').notNull(),
+    doneAt: text('done_at'),
+    careerId: text('career_id'),
+    inviterRewarded: integer('inviter_rewarded', { mode: 'boolean' }).notNull().default(false),
+  },
+  // 초대한 사람별 집계(진행 · 완료 · 보상 수)와 보상 상한 검사를 인덱스만으로 센다.
+  (table) => [
+    index('referrals_inviter_idx').on(table.inviterId, table.inviterRewarded, table.doneAt),
   ],
 );

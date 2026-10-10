@@ -5,6 +5,8 @@ import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  /** Emergency pause for automatic moderation; manual restore remains available. */
+  AUTOMATION_HIDE_DISABLED?: string;
   /** 공지·릴리즈 노트 하루 첫 게시 자동 푸시. 운영에만 켠다. */
   NEWS_PUSH_ENABLED?: string;
   /** 현재 앱 세션의 등록 기기만 테스트. 기본 off. 자동 발송과 별개다. */
@@ -36,6 +38,18 @@ export type Bindings = {
   APPLE_FAKE?: string;
   /** T-11-003 Apple 신원 토큰의 aud(앱 번들 id). 없으면 com.offsidelab.app. */
   APPLE_BUNDLE_ID?: string;
+  /** T-11-167 secret. 계정 삭제 때 Sign in with Apple 토큰을 해지한다(가이드라인 5.1.1(v)). 셋 중 하나라도 없으면 해지를 건너뛴다. */
+  APPLE_TEAM_ID?: string;
+  APPLE_SIGNIN_KEY_ID?: string;
+  /** Sign in with Apple 키(.p8) PEM 원문. */
+  APPLE_SIGNIN_PRIVATE_KEY?: string;
+  /**
+   * T-11-174 secret. Google Play 구매 확인용 서비스 계정 JSON 키 원문(Play Console에서 이 앱의 재무 데이터 보기 · 주문 관리
+   * 권한). 없으면 Android 인앱 상품을 보이지 않는다.
+   */
+  GOOGLE_PLAY_SA_JSON?: string;
+  /** T-11-174 secret. 쉼표 구분 프로필 id. 있으면 이 구단주에게만 인앱 상품을 보인다(출시 전 실기기 구매 확인용). 지우면 모두에게 열린다. */
+  IAP_TESTERS?: string;
   /** T-10-011. secret. 쉼표 구분 관리자 구글 이메일(게시판 글쓰기). 비어 있으면 관리자가 없다. */
   ADMIN_EMAILS?: string;
   /** T-11-146 Workers AI(공지 번역 초안·댓글·채팅 번역 보기). staging·운영에만 있다 — 없으면 번역 경로가 503을 낸다. */

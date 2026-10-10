@@ -3,6 +3,7 @@
 // 가진 장수만 보이고(후보 화면과 같은 30초 메모), focus면(후보 화면 '리롤권 상점 가기') 펼친 채로 열고 카드로 내려간다.
 import { useEffect, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
+import { useSnapshot } from 'valtio';
 import {
   buyReroll,
   fetchItems,
@@ -13,12 +14,15 @@ import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fundsText } from '@offside/app-core/market';
 import { rerollShopState } from '@offside/app-core/rerollShop';
+import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
 import { toast } from '../../game/host';
+import { iapItems } from '../../platform/iapItems';
 import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { num, rem } from '../../theme/type';
 import { scrollToView } from '../../ui/scroll';
-import { Btn, Card, Txt } from '../../ui';
+import { Btn, Card, Press, Txt } from '../../ui';
+import { IapPacks } from './IapPacks';
 
 export function RerollShop({
   onBought,
@@ -58,6 +62,13 @@ export function RerollShop({
     };
     // 처음 그릴 때 한 번만 묻는다.
   }, []);
+  // T-11-174 스토어에서 사 받은 장수를 바로 보인다.
+  const bought = useSnapshot(iapItems).items?.reroll;
+  useEffect(() => {
+    if (bought === undefined) return;
+    setHave(bought);
+    setShop((sh) => sh && { ...sh, reroll: bought });
+  }, [bought]);
   function toggle() {
     setOpen((o) => !o);
     if (!open && !shop) void load();
@@ -109,20 +120,30 @@ export function RerollShop({
       }}
     >
       <Card gap={12} testID="reroll-shop">
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        {/* 머리 줄 전체가 펼치기 버튼(웹은 카드 위쪽을 덮는다). 누르는 자리는 카드 가장자리까지 넓힌다. */}
+        <Press
+          testID="reroll-shop-toggle"
+          accessibilityLabel={`${L.shopTitle} ${open ? L.shopClose : L.shopOpen}`}
+          accessibilityState={{ expanded: open }}
+          hitSlop={{ top: 18, left: 18, right: 18, bottom: open ? 6 : 18 }}
+          onPress={toggle}
+          scale={1}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
+        >
           <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
             <Txt v="eyebrow">Reroll shop</Txt>
-            <Txt v="h2" accessibilityRole="header">
-              {L.shopTitle}
-            </Txt>
+            <Txt v="h2">{L.shopTitle}</Txt>
             <Txt tone="muted" style={small} testID="reroll-sub">
               {have === null ? L.shopSub : L.shopSubHave({ n: have })}
             </Txt>
           </View>
-          <Btn testID="reroll-shop-toggle" onPress={toggle}>
-            {open ? L.shopClose : L.shopOpen}
-          </Btn>
-        </View>
+          <Txt
+            tone="muted"
+            style={{ fontSize: rem(1.5), transform: [{ rotate: open ? '-90deg' : '90deg' }] }}
+          >
+            ›
+          </Txt>
+        </Press>
         {open ? (
           shop && view ? (
             <View style={{ gap: 10 }}>
@@ -177,6 +198,7 @@ export function RerollShop({
               <Txt tone="muted" style={small}>
                 {L.shopNote}
               </Txt>
+              <IapPacks item="reroll" note={IL.rerollNote} />
             </View>
           ) : (
             <Txt tone="muted" style={small}>

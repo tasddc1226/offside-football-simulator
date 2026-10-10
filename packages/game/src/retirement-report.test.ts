@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   careerChapters,
+  careerClubs,
   honoursRoll,
   isKeyMilestone,
   nationalEvents,
@@ -88,6 +89,21 @@ describe('은퇴 리포트 타임라인 (T-10-062)', () => {
       ['서울', 'k1-1', 2029, 2029],
     ]);
     expect(ch[0]!.events.filter((e) => e.kind === 'trophy').map((e) => e.years)).toEqual([[2028]]);
+  });
+
+  it('거쳐 간 구단은 처음 뛴 순서대로 한 번씩, 돌아온 구단·현역 복무는 다시 넣지 않는다', () => {
+    const mil = { ...row(2030, 22, '현역 복무', '병역'), mil: true };
+    expect(
+      careerClubs({
+        ...src,
+        career: [
+          ...src.career,
+          mil,
+          row(2032, 24, '강원', 'K리그1'),
+          row(2033, 25, '셀틱', '스코티시 프리미어십'),
+        ],
+      }).map((c) => c.club),
+    ).toEqual(['해오름고', '강원', '리버풀', '셀틱']);
   });
 
   it('대표팀 이정표와 클럽 밖 우승은 대표팀 장면으로 모은다', () => {

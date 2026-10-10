@@ -91,12 +91,16 @@ function signalReasons(measured: Signals[]): Set<AutomationReason> {
 }
 
 /** 공개 순위에서 뺄 만큼 확실한 이유 — 자동화 브라우저, 스크립트 클릭, 입력 없는 시즌 진행. 간격·이름·커서 이동은 약해서 뺀다. */
-const BLOCKING: readonly AutomationReason[] = ['webdriver', 'headless', 'synthetic', 'noInput'];
+export const BLOCKING: readonly AutomationReason[] = [
+  'webdriver',
+  'headless',
+  'synthetic',
+  'noInput',
+];
 
 /** 한 커리어의 시즌 신호(signals_json)들이 자동 플레이로 확실한가. 신호 없는 옛 시즌은 판단에서 빠진다. */
 export function isAutomatedCareer(signalsJsons: readonly (string | null)[]): boolean {
-  const reasons = signalReasons(signalsJsons.map(parseSignals).filter((s): s is Signals => !!s));
-  return BLOCKING.some((r) => reasons.has(r));
+  return blockingReasons(signalsJsons).length > 0;
 }
 
 function judgeCareer(rows: SeasonRow[]) {
@@ -204,4 +208,11 @@ export async function automationReport(
     profiles: new Set(rows.map((r) => r.profileId)).size,
     suspects: judgeAutomation(rows, hours),
   };
+}
+
+/** Shared, versioned enforcement reasons. Weak observation scores never hide a career. */
+export const AUTOMATION_RULE_VERSION = '1';
+export function blockingReasons(signalsJsons: readonly (string | null)[]): AutomationReason[] {
+  const reasons = signalReasons(signalsJsons.map(parseSignals).filter((s): s is Signals => !!s));
+  return BLOCKING.filter((r) => reasons.has(r));
 }

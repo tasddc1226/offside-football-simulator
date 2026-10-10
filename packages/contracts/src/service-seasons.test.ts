@@ -1,13 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { HofSeasonQuerySchema, SeasonPickQuerySchema } from './careers.js';
 import {
   msUntilNextSeasonStart,
   activeSeason,
+  applySeasonSchedule,
+  closeSeasonSchedule,
+  lastClosedSeason,
+  onSeasonSchedule,
+  seasonSchedule,
   displaySeasonAt,
   firstUploadSeasonAt,
   openTeamSeasons,
   PRESEASON,
-  MAX_RETIRE_AT,
+  maxRetireAt,
   nextRetireAt,
   PRESEASON_RETIRE_AT,
   previewSeasonAt,
@@ -108,7 +113,7 @@ describe('T-11-045 시즌별 은퇴 나이', () => {
       const prev = SERVICE_SEASONS[i]!.retireAt;
       expect([prev, nextRetireAt(prev, true)]).toContain(s.retireAt);
     });
-    expect(MAX_RETIRE_AT).toBe(45);
+    expect(maxRetireAt()).toBe(45);
   });
   it('T-11-095 세부 포지션 없는(프리시즌 규칙) 선수는 언제 처음 올라와도 프리시즌, 있으면 올라온 시각의 시즌', () => {
     expect(firstUploadSeasonAt('2026-10-20T00:00:00.000Z', false)).toBe(0);
@@ -122,5 +127,59 @@ describe('T-11-107 msUntilNextSeasonStart', () => {
   it('다음 개막까지 남은 밀리초, 열린 뒤엔 다음 시즌이 없으면 null', () => {
     expect(msUntilNextSeasonStart('2026-10-05T14:59:00.000Z')).toBe(60_000);
     expect(msUntilNextSeasonStart('2026-10-05T15:00:00.000Z')).toBeNull();
+  });
+});
+
+describe('시즌 일정(applySeasonSchedule · closeSeasonSchedule)', () => {
+  const S1 = '2026-10-05T15:00:00.000Z';
+  const E1 = '2026-10-15T15:00:00.000Z';
+  afterEach(() => applySeasonSchedule([]));
+
+  it('마감을 확정하면 마감 시각에 다음 시즌이 바로 열리고, 같은 배열 참조가 새 일정을 본다', () => {
+    const ref = SERVICE_SEASONS;
+    expect(applySeasonSchedule(closeSeasonSchedule(1, E1, false))).toBe(true);
+    expect(ref.map((s) => [s.id, s.endsAt, s.retireAt])).toEqual([
+      [1, E1, 45],
+      [2, null, 45],
+    ]);
+    expect(activeSeason('2026-10-15T14:59:59.999Z')?.id).toBe(1);
+    expect(activeSeason(E1)?.id).toBe(2);
+    expect(teamSeasonClosed(1, E1)).toBe(true);
+    expect(lastClosedSeason(E1)).toBe(1);
+    expect(openTeamSeasons(E1)).toEqual([0, 1, 2]);
+    expect(msUntilNextSeasonStart('2026-10-15T14:59:00.000Z')).toBe(60_000);
+    expect(teamSeasonName(2)).toBe('시즌 2');
+    // 같은 일정을 다시 입히면 바뀐 게 없다.
+    expect(applySeasonSchedule(seasonSchedule())).toBe(false);
+  });
+
+  it('누가 은퇴 나이까지 뛰었으면 다음 시즌 은퇴 나이 +1, 한 번 오른 값은 내려가지 않는다', () => {
+    applySeasonSchedule(closeSeasonSchedule(1, E1, true));
+    expect(retireAtOf(2)).toBe(46);
+    expect(maxRetireAt()).toBe(46);
+    applySeasonSchedule(closeSeasonSchedule(1, E1, false));
+    expect(retireAtOf(2)).toBe(46);
+  });
+
+  it('이어지지 않는 줄은 버린다', () => {
+    applySeasonSchedule([
+      { id: 1, startsAt: S1, endsAt: E1, retireAt: 45 },
+      { id: 3, startsAt: E1, endsAt: null, retireAt: 45 },
+    ]);
+    expect(SERVICE_SEASONS.map((s) => s.id)).toEqual([1]);
+    applySeasonSchedule([
+      { id: 1, startsAt: S1, endsAt: E1, retireAt: 45 },
+      { id: 2, startsAt: '2026-10-14T15:00:00.000Z', endsAt: null, retireAt: 45 },
+    ]);
+    expect(SERVICE_SEASONS.map((s) => s.id)).toEqual([1]);
+  });
+
+  it('일정이 바뀌면 알린다', () => {
+    let n = 0;
+    const off = onSeasonSchedule(() => n++);
+    applySeasonSchedule(closeSeasonSchedule(1, E1, false));
+    applySeasonSchedule(seasonSchedule());
+    off();
+    expect(n).toBe(1);
   });
 });

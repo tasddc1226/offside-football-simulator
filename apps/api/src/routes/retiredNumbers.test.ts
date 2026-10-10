@@ -120,8 +120,12 @@ describe('영구결번 (T-10-076)', () => {
       snapshot: snap,
     });
     expect(res.status).toBe(200);
-    return successEnvelope(RetirementResponseSchema).parse(await res.json()).data.retiredNumber;
+    const data = successEnvelope(RetirementResponseSchema).parse(await res.json()).data;
+    lastMiss = data.retiredNumberMiss;
+    return data.retiredNumber;
   };
+  /** T-11-180 마지막 은퇴 응답의 못 받은 이유. */
+  let lastMiss: unknown;
   const list = async (env = ctx.env, query = '') => {
     const res = await createApp().request(`/v1/retired-numbers${query}`, {}, env);
     expect(res.status).toBe(200);
@@ -446,11 +450,24 @@ describe('영구결번 (T-10-076)', () => {
       years(2030, 10).map((y) => quietSeason(y, '맨체스터 스카이블루', 'pl-0')),
     );
     expect(await retire(A, quiet, '평범')).toBeNull();
+    expect(lastMiss).toBeUndefined(); // 기준의 절반도 못 채우면 이유를 띄우지 않는다
     const short = snapshot(
       9,
       years(2030, 5).map((y) => legendSeason(y, '맨체스터 스카이블루', 'pl-0')),
     );
     expect(await retire(B, short, '짧음')).toBeNull();
+    // T-11-180 점수는 넘었지만 한 구단 시즌이 모자란 이유를 알려 준다(공개 명예의 전당에 오르는 30세 이상 은퇴).
+    const late = snapshot(
+      9,
+      years(2040, 5).map((y) => legendSeason(y, '맨체스터 스카이블루', 'pl-0')),
+    );
+    expect(await retire(C, late, '늦게')).toBeNull();
+    expect(lastMiss).toEqual({
+      reason: 'seasons',
+      club: '맨체스터 스카이블루',
+      seasons: 5,
+      need: 6,
+    });
   });
 
   it('보유자 프로필이 지워지면 자리가 빈다', async () => {

@@ -289,6 +289,25 @@ describe('personal event delivery infrastructure', () => {
     await runPersonalPush(ctx.env, Date.parse('2026-10-13T13:05:00Z'), fetcher); // 22:05 KST
     expect(fetcher.mock.calls.filter(([url]) => String(url).endsWith('/send'))).toHaveLength(1);
   });
+  it('sends cup events past the hourly and daily budget without spending it', async () => {
+    const a = await identity();
+    await device(a);
+    enable();
+    const fetcher = send();
+    const sends = () => fetcher.mock.calls.filter(([url]) => String(url).endsWith('/send')).length;
+    await queue(a, 'team-match:tmm_1', NOW, true);
+    await runPersonalPush(ctx.env, NOW, fetcher);
+    await queue(a, 'cup:s1-1:moved', NOW + 60_000, true);
+    await queue(a, 'cup:s1-1:draw', NOW + 60_000, true);
+    await queue(a, 'cup-match:cpm_1:tem_1', NOW + 60_000, true);
+    await runPersonalPush(ctx.env, NOW + 60_000, fetcher);
+    expect(sends()).toBe(2);
+    expect(JSON.parse(fetcher.mock.calls.at(-1)![1]!.body as string)).toHaveLength(3);
+    // 컵 알림은 예산을 쓰지 않아서 한 시간 뒤 다른 알림이 오늘 두 번째 자리를 받는다.
+    await queue(a, 'team-match:tmm_2', NOW + 61 * 60_000, true);
+    await runPersonalPush(ctx.env, NOW + 61 * 60_000, fetcher);
+    expect(sends()).toBe(3);
+  });
   it('treats ambiguous transport as unknown and never retries that event', async () => {
     const a = await identity();
     await device(a);
