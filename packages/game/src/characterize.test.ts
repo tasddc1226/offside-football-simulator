@@ -4,6 +4,7 @@ import { ATTR_KEYS, LAST_PHASE, TRAITS, TYPES } from './data.js';
 import { newGame, resolveChoice, rollEvent, simBlock } from './engine.js';
 import { EVENTS } from './events-data.js';
 import { natWindow } from './national.js';
+import { compsPhase } from './comps.js';
 import { createRng, pick, ri, setActiveRng } from './rng.js';
 import { acceptOption, endSeason, market } from './season.js';
 import { playPhase } from './turn.js';
@@ -117,6 +118,34 @@ describe('게임 특성화 (T-11-044)', { timeout: 20_000 }, () => {
   it('상태 모음이 고르게 모였다', () => {
     expect(corpus.phase.length).toBeGreaterThan(300);
     expect(corpus.seasonEnd.length).toBeGreaterThan(100);
+  });
+
+  it('T-11-186 대회 경기 줄은 출전·골·도움 집계와 같고, 승부마다 마지막 경기에 결과가 붙는다', () => {
+    let lines = 0;
+    for (const base of corpus.phase) {
+      const s = clone(base);
+      setActiveRng(createRng(s.year * 10 + s.phase));
+      const before = (s.season.comps ?? []).map((c) => ({ apps: c.apps, g: c.g, a: c.a }));
+      const out = compsPhase(s);
+      const all = out.flatMap((l) => l.games);
+      const comps = s.season.comps ?? [];
+      const sum = (f: (c: { apps: number; g: number; a: number }, i: number) => number) =>
+        comps.reduce((t, c, i) => t + f(c, i), 0);
+      const was = (i: number) => before[i] ?? { apps: 0, g: 0, a: 0 };
+      expect(all.filter((m) => m.mins).length).toBe(sum((c, i) => c.apps - was(i).apps));
+      expect(all.reduce((t, m) => t + (m.mins ? m.g : 0), 0)).toBe(sum((c, i) => c.g - was(i).g));
+      expect(all.reduce((t, m) => t + (m.mins ? m.a : 0), 0)).toBe(sum((c, i) => c.a - was(i).a));
+      for (const l of out) {
+        const ties = l.games.filter((m) => !m.res);
+        for (const stage of new Set(ties.map((m) => m.stage))) {
+          const matches = ties.filter((m) => m.stage === stage);
+          expect(matches.at(-1)!.won).toBeTypeOf('boolean');
+          expect(matches.slice(0, -1).every((m) => m.won === undefined)).toBe(true);
+        }
+        lines += l.games.length;
+      }
+    }
+    expect(lines).toBeGreaterThan(50);
   });
 
   it('simBlock — 리그 구간 경기 결과', () => {

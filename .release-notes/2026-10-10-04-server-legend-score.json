@@ -1,0 +1,20 @@
+{
+  "id": "t-11-187-server-legend-score",
+  "title": "은퇴 레전드 점수 반영 수정",
+  "items": [
+    "이전 버전 앱에서 은퇴해도 명예의 전당과 선수 카드에 조정된 레전드 점수가 반영돼요."
+  ],
+  "en": {
+    "title": "Retirement legend score fix",
+    "items": [
+      "Retiring in an older app version now applies the adjusted legend score to the Hall of Fame and player cards."
+    ]
+  },
+  "ja": {
+    "title": "引退時のレジェンドスコア反映を修正",
+    "items": [
+      "古いバージョンのアプリで引退しても、殿堂と選手カードに調整後のレジェンドスコアが反映されます。"
+    ]
+  },
+  "availability": "web-app"
+}
