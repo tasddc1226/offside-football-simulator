@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "오프사이드",
+    "name": "OFFSIDE",
     "slug": "offside",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "offside",
@@ -27,7 +27,8 @@
       },
       "usesAppleSignIn": true,
       "infoPlist": {
-        "CFBundleName": "오프사이드"
+        "CFBundleName": "OFFSIDE",
+        "CFBundleAllowMixedLocalizations": true
       }
     },
     "android": {
@@ -46,7 +47,13 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#E8412C"
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",
@@ -67,17 +74,17 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "팀 로고에 사용할 사진을 선택할 수 있도록 사진 접근을 허용해 주세요.",
+          "photosPermission": "Allow photo access so you can choose a picture for your team logo.",
           "cameraPermission": false,
           "microphonePermission": false
         }
       ],
       "expo-iap",
       [
-        "react-native-google-mobile-ads",
+        "./plugins/with-applovin-max",
         {
-          "androidAppId": "ca-app-pub-3797087216173591~9704816739",
-          "iosAppId": "ca-app-pub-3797087216173591~4994406373"
+          "iosAppId": "ca-app-pub-3797087216173591~4994406373",
+          "androidAppId": "ca-app-pub-3797087216173591~9704816739"
         }
       ]
     ],
@@ -91,9 +98,11 @@
         "projectId": "bacad4c8-df2f-4fc5-8938-b02d060fbc45"
       }
     },
-    "owner": "tasddc1569"
-  },
-  "react-native-google-mobile-ads": {
-    "android_app_id": "ca-app-pub-3797087216173591~9704816739"
+    "owner": "tasddc1569",
+    "locales": {
+      "ko": "./locales/ko.json",
+      "en": "./locales/en.json",
+      "ja": "./locales/ja.json"
+    }
   }
 }

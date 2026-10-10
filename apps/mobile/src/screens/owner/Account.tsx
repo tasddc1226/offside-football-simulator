@@ -15,6 +15,7 @@ import { accountCache, appState } from '../../store';
 import { noteOwner } from '@offside/app-core/api/friendPending';
 import { accountLabel, isMember } from '@offside/app-core/account';
 import { closeSheet, refreshAccount, showSheet } from '../../game/host';
+import { appleReauthCode } from '../../platform/auth';
 import { setSessionToken } from '../../platform/session';
 import { rem } from '../../theme/type';
 import { NicknameForm } from '../../components/NicknameForm';
@@ -62,11 +63,15 @@ function askLogout() {
     ],
   );
 }
-/** 계정 삭제(스토어 심사 필수): 확인 → 삭제 시작(확인 토큰) → 삭제 확정. 끝나면 세션 토큰도 지운다. */
+/** 계정 삭제(스토어 심사 필수): 확인 → (Apple 연결이면 Apple 재확인) → 삭제 시작(확인 토큰) → 삭제 확정.
+ *  끝나면 세션 토큰도 지운다. Apple 재확인을 취소하면 지우지 않는다. */
 async function doDeleteFlow() {
+  const linked = accountCache.value;
+  const code = linked && linked !== 'error' && linked.linked.apple ? await appleReauthCode() : null;
+  if (code === 'cancel') return;
   const start = await startProfileDeletion();
   if (!start.ok) return set('error');
-  const done = await confirmProfileDeletion(start.data.confirmToken);
+  const done = await confirmProfileDeletion(start.data.confirmToken, code ?? undefined);
   if (done.ok) await setSessionToken(null);
   set(done.ok ? null : 'error');
 }
