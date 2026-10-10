@@ -31,6 +31,9 @@ export function SiteFooter() {
       <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
         {L.footCommunity} <Link href={DC_GALLERY_URL}>{L.footGallery}</Link>
       </Txt>
+      <Txt tone="muted" style={{ fontSize: rem(0.75), textAlign: 'center', flexShrink: 1 }}>
+        {L.footFootballData}
+      </Txt>
     </View>
   );
 }

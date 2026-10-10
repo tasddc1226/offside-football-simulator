@@ -34,7 +34,12 @@
     "./nations-en": "./src/nations-en.ts",
     "./nations-ja": "./src/nations-ja.ts",
     "./body": "./src/body.ts",
-    "./i18n": "./src/i18n.ts"
+    "./i18n": "./src/i18n.ts",
+    "./club-strength": "./src/club-strength.ts",
+    "./club-strength-calc": "./src/club-strength-calc.ts",
+    "./club-strength-spec": "./src/club-strength-spec.ts",
+    "./club-strength-fallback": "./src/club-strength-fallback.json",
+    "./club-strength-provider": "./src/club-strength-provider.ts"
   },
   "scripts": {
     "test": "vitest run",
