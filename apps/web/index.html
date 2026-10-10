@@ -12,6 +12,11 @@
     <script>
       // T-10-021: 설정의 다크 모드 선택(ft_theme, src/ui/theme.ts)을 첫 페인트 전에 적용한다. 고른 적이 없으면 시스템 설정을 따른다.
       try {
+        var size = JSON.parse(localStorage.getItem('ft_text_size') || 'null');
+        var scale = size === 'extraLarge' ? 1.2 : size === 'large' ? 1.1 : size === 'small' ? 0.9 : 1;
+        document.documentElement.style.setProperty('--text-scale', String(scale));
+      } catch (e) {}
+      try {
         var t = localStorage.getItem('ft_theme');
         if (t === 'dark' || t === 'light') {
           document.documentElement.dataset.theme = t;

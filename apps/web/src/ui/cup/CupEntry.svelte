@@ -6,11 +6,14 @@
   import { toast } from '../helpers.js';
   import { lockAtOf, lockWhen, roundLabel, stageLabel, teamMap, teamName, whenText } from './cupView.js';
 
+  import TeamLogo from '../team/TeamLogo.svelte';
+
   let { data, me, linked, onchanged }: { data: CupResponse; me: CupMeResponse | null; linked: boolean; onchanged: () => void } = $props();
 
   let busy = $state(false);
   const entry = $derived(me?.entry && me.entry.status !== 'withdrawn' ? me.entry : null);
   const names = $derived(teamMap(data.teams));
+  const registeredTeam = $derived(entry ? names.get(entry.teamId) : undefined);
   const reason = $derived.by(() => {
     const e = me?.eligibility;
     if (!e || e.ok) return null;
@@ -58,6 +61,18 @@
   }
 </script>
 
+{#if registeredTeam}
+  <div class="ce-team" data-cup-registered-team={registeredTeam.teamId}>
+    <TeamLogo logo={registeredTeam.logo} name={registeredTeam.name} size={40} decorative />
+    <div class="ce-team-who">
+      <small class="muted">{L.registeredTeam}</small>
+      <b>{registeredTeam.name}</b>
+      <small class="muted">{registeredTeam.owner}</small>
+    </div>
+    <span class="fs-sm ce-team-ovr">OVR {registeredTeam.ovr}</span>
+  </div>
+{/if}
+
 {#if data.phase === 'open'}
   {#if !linked}
     <p class="muted fs-sm" data-cup-login>{L.loginToEnter}</p>
@@ -97,6 +112,17 @@
 {/if}
 
 <style>
+  .ce-team {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .ce-team-who { display: flex; flex-direction: column; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .ce-team-ovr { flex: none; font-variant-numeric: tabular-nums; }
+
   .ce-row {
     display: flex;
     align-items: center;

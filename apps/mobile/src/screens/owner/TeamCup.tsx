@@ -18,8 +18,9 @@ import { type LoadStatus } from '../../components/LoadState';
 import { toast } from '../../game/host';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
-import { Btn, Card, Pill, Txt } from '../../ui';
+import { Btn, Card, Pill, Press, Txt } from '../../ui';
 import { useOnPull } from '../../ui/refresh';
+import { TeamLogo } from '../../components/TeamLogo';
 import { CupTrophy } from '../../ui/CupTrophy';
 import { dayTimeText, phaseLabel, reasonText, roundLabel, stageLabel, whenText } from './cupText';
 
@@ -208,12 +209,7 @@ function CupEntry({ state }: { state: CupState }) {
         </Btn>
       </View>
     );
-  if (!me)
-    return (
-      <Txt v="sm" tone="muted">
-        {L.loginToEnter}
-      </Txt>
-    );
+  if (!me) return null;
   const reason = me.eligibility.ok ? null : reasonText(me.eligibility, data.cup.minFilled);
   if (reason)
     return (
@@ -239,35 +235,104 @@ function CupEntry({ state }: { state: CupState }) {
 }
 
 /** 컵 화면 맨 위 카드 · 홈 배너. onOpen이 있으면(홈) 첫 안내 한 줄과 '대회 보기'만 — 신청은 대회 화면에서 한다. */
-export function CupCard({ state, onOpen }: { state: CupState; onOpen?: () => void }) {
+export function CupCard({
+  state,
+  onOpen,
+  onSchedule,
+}: {
+  state: CupState;
+  onOpen?: () => void;
+  onSchedule?: () => void;
+}) {
   const { cup: data } = state;
   if (!data) return null;
+  const entry = state.me?.entry;
+  const registeredTeam =
+    !onOpen && entry && entry.status !== 'withdrawn'
+      ? data.teams.find((t) => t.teamId === entry.teamId)
+      : undefined;
   const lines = onOpen ? linesOf(state).slice(0, 1) : linesOf(state);
-  return (
+  const card = (
     <Card gap={8} testID="cup-banner">
-      <View style={{ flexDirection: 'row', alignItems: onOpen ? 'center' : 'flex-start', gap: 10 }}>
-        {onOpen ? <CupTrophy stage="champion" size={44} bare /> : null}
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Txt v="eyebrow">Offside Cup</Txt>
-          <Txt v="h2" accessibilityRole="header">
-            {L.fullTitle({ n: data.cup.edition })}
-          </Txt>
-        </View>
-        <Pill tone={data.phase === 'open' ? 'good' : undefined}>{phaseLabel(data.phase)}</Pill>
-      </View>
-      {lines.map((l, i) => (
-        <Txt key={i} v="sm" bold={!!l.bold} tone={l.tone ?? 'ink'}>
-          {l.text}
-        </Txt>
-      ))}
-      {onOpen ? (
-        <Btn kind="accent" testID="cup-open" onPress={onOpen}>
-          {L.open}
-        </Btn>
+      {onSchedule ? (
+        <Press
+          onPress={onSchedule}
+          accessibilityLabel={`${lines.map((l) => l.text).join(' ')} · ${L.scheduleMatches}`}
+          style={{ minHeight: 44, justifyContent: 'center', gap: 8 }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10,
+            }}
+          >
+            <Pill>{phaseLabel(data.phase)}</Pill>
+            <Txt tone="muted" accessible={false}>
+              ↓
+            </Txt>
+          </View>
+          {lines.map((l, i) => (
+            <Txt key={i} v="sm" bold={!!l.bold} tone={l.tone ?? 'ink'}>
+              {l.text}
+            </Txt>
+          ))}
+        </Press>
       ) : (
-        <CupEntry state={state} />
+        <View
+          style={{ flexDirection: 'row', alignItems: onOpen ? 'center' : 'flex-start', gap: 10 }}
+        >
+          {onOpen ? <CupTrophy stage="champion" size={44} bare /> : null}
+          {onOpen ? (
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Txt v="eyebrow">Offside Cup</Txt>
+              <Txt v="h2" accessibilityRole="header">
+                {L.fullTitle({ n: data.cup.edition })}
+              </Txt>
+            </View>
+          ) : null}
+          <Pill tone={data.phase === 'open' ? 'good' : undefined}>{phaseLabel(data.phase)}</Pill>
+        </View>
       )}
+      {registeredTeam ? (
+        <View
+          testID="cup-registered-team"
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 }}
+        >
+          <TeamLogo logo={registeredTeam.logo} name={registeredTeam.name} size={40} decorative />
+          <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+            <Txt v="xs" tone="muted">
+              {L.registeredTeam}
+            </Txt>
+            <Txt bold>{registeredTeam.name}</Txt>
+            <Txt v="xs" tone="muted">
+              {registeredTeam.owner}
+            </Txt>
+          </View>
+          <Txt v="sm" num>{`OVR ${registeredTeam.ovr}`}</Txt>
+        </View>
+      ) : null}
+      {!onSchedule &&
+        lines.map((l, i) => (
+          <Txt key={i} v="sm" bold={!!l.bold} tone={l.tone ?? 'ink'}>
+            {l.text}
+          </Txt>
+        ))}
+      {!onOpen && <CupEntry state={state} />}
     </Card>
+  );
+  return onOpen ? (
+    <Press
+      onPress={onOpen}
+      testID="cup-open"
+      scale={0.985}
+      accessibilityLabel={`${L.fullTitle({ n: data.cup.edition })} · ${L.open}`}
+    >
+      {card}
+    </Press>
+  ) : (
+    card
   );
 }
 

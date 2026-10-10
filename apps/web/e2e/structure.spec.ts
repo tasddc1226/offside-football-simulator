@@ -105,6 +105,8 @@ const HOME_REQUESTS = [
   'GET /v1/balance',
   'GET /v1/boards/notice/posts',
   'GET /v1/boards/release/posts',
+  // Daily strength snapshot: one cached public read on open, none on game tab changes.
+  'GET /v1/club-strength',
   // T-11-145 홈 컵 배너 — 대회가 없거나 끝났으면 그리지 않는다.
   'GET /v1/cups/current',
   'GET /v1/firsts',

@@ -1,0 +1,23 @@
+{
+  "id": "daily-club-strength-1010",
+  "title": "구단 전력표를 새 시즌부터 받아요",
+  "items": [
+    "새 전력표가 발행되면 다음 게임 내 시즌부터 적용돼요. 진행 중인 시즌과 기존 영구결번 기록은 유지돼요.",
+    "고교·대학·K2·K3는 기본 팀 전력을 유지해요. 자동 갱신은 데이터 연결을 마친 리그부터 시작해요."
+  ],
+  "en": {
+    "title": "Club strength updates apply next season",
+    "items": [
+      "New strength tables apply from the next in-game season. Your current season and existing retired numbers are preserved.",
+      "High school, university, K2 and K3 retain their base strength. Automatic updates start only for leagues with a configured data connection."
+    ]
+  },
+  "availability": "web-app",
+  "ja": {
+    "title": "クラブ戦力の更新は次のシーズンから",
+    "items": [
+      "新しい戦力表は次のゲーム内シーズンから適用されます。進行中のシーズンと既存の永久欠番記録は維持されます。",
+      "高校・大学・K2・K3は基本戦力を維持します。自動更新はデータ接続を完了したリーグから始まります。"
+    ]
+  }
+}

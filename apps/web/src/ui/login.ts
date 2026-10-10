@@ -16,7 +16,8 @@ type LoginReturn =
   | { board: BoardKey; postId: string | null }
   | { career: string }
   | { chat: true }
-  | { market: true };
+  | { market: true }
+  | { cup: true };
 const LOGIN_RETURN_KEY = 'ft_board_return';
 /** null이면 기록을 지운다(설정에서 로그인할 때). */
 function rememberLoginReturn(to: LoginReturn | null) {
@@ -62,6 +63,7 @@ export function handleOAuthReturn() {
     if ('board' in back) return openBoard(back.board, back.postId);
     if ('chat' in back) return void (appState.screen = 'chat');
     if ('market' in back) return void (appState.screen = 'market');
+    if ('cup' in back) return void (appState.screen = 'cup');
     // 은퇴 화면에서 로그인했으면 그 선수의 상세로 돌아온다.
     const h = loadHOF().find((x) => x.id === back.career);
     if (h) return openLocalLegend(h);

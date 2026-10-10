@@ -96,8 +96,9 @@ export default function FundsHistory() {
   const small = { fontSize: rem(0.875) } as const;
 
   return (
-    <Screen footer={<BackBar testID="funds-back" fallback={() => go('owner')} />}>
+    <Screen>
       <Topbar />
+      <BackBar inline testID="funds-back" fallback={() => go('owner')} />
       <View style={{ gap: 2, paddingHorizontal: 4 }}>
         <Txt v="eyebrow">{H.eyebrow}</Txt>
         <Txt v="h1" accessibilityRole="header">

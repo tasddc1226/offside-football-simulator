@@ -1,0 +1,26 @@
+{
+  "id": "display-settings-login-20261010",
+  "title": "글자 크기 설정과 로그인 버튼 개선",
+  "items": [
+    "환경설정에서 글자 크기를 작게·보통·크게·아주 크게로 고를 수 있어요. 선택한 크기는 이 기기에 저장돼요.",
+    "여러 화면의 구글 로그인 버튼을 같은 모양과 문구로 통일했어요. 로그인 후에는 이용하던 화면으로 돌아가요.",
+    "구단주 화면에서 시즌 결산 카드 전체를 누르면 결산을 볼 수 있어요."
+  ],
+  "en": {
+    "title": "Text size settings and consistent login buttons",
+    "items": [
+      "Choose Small, Standard, Large, or Extra large text in Settings. Your choice is saved on this device.",
+      "Google login buttons now use the same appearance and label across screens. Login still returns you to the screen you were using.",
+      "Tap anywhere on the season recap card in Club owner to open your recap."
+    ]
+  },
+  "ja": {
+    "title": "文字サイズ設定とログインボタンの改善",
+    "items": [
+      "設定で文字サイズを小さい・標準・大きい・とても大きいから選べます。選択はこの端末に保存されます。",
+      "各画面のGoogleログインボタンの見た目と文言を統一しました。ログイン後は利用していた画面に戻ります。",
+      "オーナー画面のシーズン振り返りカード全体をタップして振り返りを開けます。"
+    ]
+  },
+  "availability": "web-app"
+}

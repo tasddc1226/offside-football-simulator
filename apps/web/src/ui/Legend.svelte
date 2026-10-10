@@ -33,17 +33,16 @@
 
 <div class="wrap" bind:this={root}>
   <Topbar />
+  {#if v?.shareId}
+    <ShareBar inline id={v.shareId} back={backTo} />
+  {:else}
+    <BackBar inline act="hof-back" fallback={backTo} />
+  {/if}
   {#if v}
     <LegendReport {v} />
     {#if v.own?.id}<OwnHofCards {v} />{/if}
     {#if v.reportId}<NameReport kind="career" id={v.reportId} name={v.name} />{/if}
     <AdSlot place="legend-bottom" />
-  {/if}
-  <!-- T-10-128 위쪽 '이전으로' 대신 아래 바: 공유할 수 있는 내 선수는 이전으로 + 공유하기, 그 밖은 '← 이전으로' 하나. -->
-  {#if v?.shareId}
-    <ShareBar id={v.shareId} back={backTo} />
-  {:else}
-    <BackBar act="hof-back" fallback={backTo} />
   {/if}
   {#if motionOK && v}
     <button class="career-play" class:on={rolling} data-act="career-play" aria-pressed={rolling} onclick={toggleRoll}>
@@ -58,7 +57,7 @@
 <style>
   .career-play {
     position: fixed;
-    bottom: calc(var(--bottom-bar-h, 0px) + 12px);
+    bottom: calc(var(--tabbar-h) + var(--safe-b) + 12px);
     right: max(var(--pad-r, 16px), calc(50% - 240px + 16px));
     z-index: 6;
     display: inline-flex;

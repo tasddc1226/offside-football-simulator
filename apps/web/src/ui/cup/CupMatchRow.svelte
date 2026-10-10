@@ -4,8 +4,11 @@
   import { kstMonthDayTime } from '@offside/app-core/boardText';
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import { involves, teamName, winnerSide } from './cupView.js';
+  import CupPrediction from './CupPrediction.svelte';
+  import type { CupPredictionContext } from '@offside/app-core/cupPredictions';
+  import TeamLogo from '../team/TeamLogo.svelte';
 
-  let { m, teams, mineId, onopen }: { m: CupMatch; teams: ReadonlyMap<string, CupTeam>; mineId: string | null; onopen: (m: CupMatch) => void } = $props();
+  let { m, teams, mineId, onopen, prediction }: { m: CupMatch; teams: ReadonlyMap<string, CupTeam>; mineId: string | null; onopen: (m: CupMatch) => void; prediction: CupPredictionContext } = $props();
 
   const home = $derived(teamName(teams, m.homeTeamId));
   const away = $derived(teamName(teams, m.awayTeamId));
@@ -16,18 +19,24 @@
 </script>
 
 {#snippet body()}
-  <span class="cm-team" class:win={win === 'home'}>{home}</span>
-  <span class="cm-score">
-    {#if m.played}<b>{m.homeGoals ?? 0}</b><i aria-hidden="true">:</i><b>{m.awayGoals ?? 0}</b>{:else}<small>{kstMonthDayTime(m.at)}</small>{/if}
+  <span class="cm-status"><span class="pill" class:good={m.played} class:cup-upcoming={!m.played && m.at > new Date().toISOString()} class:warn={!m.played && m.at <= new Date().toISOString()} data-cup-status>{m.played ? L.matchFinished : m.at <= new Date().toISOString() ? L.matchProcessing : L.matchScheduled}</span></span>
+  <span class="cm-side home">
+    {#if m.homeTeamId}<TeamLogo logo={teams.get(m.homeTeamId)?.logo} name={home} size={24} decorative />{/if}
+    <span class="cm-team" class:win={win === 'home'} class:own={m.homeTeamId === mineId}>{home}</span>
   </span>
-  <span class="cm-team away" class:win={win === 'away'}>{away}</span>
-  {#if m.pens || m.forfeit || mine}
-    <span class="cm-tags">
+  <span class="cm-score">
+    {#if m.played}<b>{m.homeGoals ?? 0}</b><i aria-hidden="true">:</i><b>{m.awayGoals ?? 0}</b>{:else}<span>vs</span>{/if}
+  </span>
+  <span class="cm-side away">
+    {#if m.awayTeamId}<TeamLogo logo={teams.get(m.awayTeamId)?.logo} name={away} size={24} decorative />{/if}
+    <span class="cm-team" class:win={win === 'away'} class:own={m.awayTeamId === mineId}>{away}</span>
+  </span>
+    <span class="cm-tags muted fs-xs">
+      {#if m.round.startsWith('g')}<span>{kstMonthDayTime(m.at)}</span>{/if}
       {#if mine}<span class="pill good">{L.mineTag}</span>{/if}
       {#if m.pens}<span class="pill" data-cup-pens>{L.pens(m.pens)}</span>{/if}
       {#if m.forfeit}<span class="pill warn" data-cup-forfeit>{L.forfeit}</span>{/if}
     </span>
-  {/if}
 {/snippet}
 
 {#if clickable}
@@ -36,6 +45,8 @@
   <div class="cm" class:mine data-cup-match={m.id}>{@render body()}</div>
 {/if}
 
+<CupPrediction {m} {prediction} />
+
 <style>
   .cm {
     display: grid;
@@ -43,10 +54,10 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--surface);
+    padding: 8px 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+    background: transparent;
     color: var(--ink);
     font: inherit;
     text-align: left;
@@ -56,20 +67,21 @@
     cursor: pointer;
   }
   .cm.mine {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+    border-top-color: var(--accent);
   }
+  .cm-side { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .cm-side.home { flex-direction: row-reverse; text-align: right; }
   .cm-team {
+    flex: 1;
     min-width: 0;
     overflow-wrap: anywhere;
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
   }
-  .cm-team.away {
-    text-align: right;
-  }
+  .cm-team.own { color: var(--accent); }
   .cm-team.win {
     font-weight: 700;
   }
+  .cm-status { grid-column: 1 / -1; justify-self: center; white-space: nowrap; }
   .cm-score {
     display: flex;
     align-items: center;
@@ -79,12 +91,6 @@
     font-family: var(--display);
     font-size: 1.25rem;
     font-variant-numeric: tabular-nums;
-  }
-  .cm-score small {
-    font-family: var(--body);
-    font-size: 0.75rem;
-    color: var(--muted);
-    white-space: nowrap;
   }
   .cm-tags {
     grid-column: 1 / -1;

@@ -1,4 +1,5 @@
 // ───────── 앱 시작 (웹 main.ts · ui/boot.ts와 같은 순서) ─────────
+import { syncClubStrength } from '@offside/app-core/club-strength-sync';
 import { nativeAnalytics } from '../analytics';
 import { AccessibilityInfo, AppState } from 'react-native';
 import { setLatestBalance } from '@offside/game/balance';
@@ -35,6 +36,7 @@ export async function boot(): Promise<void> {
   void AccessibilityInfo.isReduceMotionEnabled().then((on) => (prefs.motionOK = !on));
   AccessibilityInfo.addEventListener('reduceMotionChanged', (on) => (prefs.motionOK = !on));
 
+  syncClubStrength();
   // 최신 밸런스 — 각 커리어는 다음 시즌부터 쓴다. 실패하면 저장된 값으로.
   void cachedGet<BalanceConfig>('/v1/balance', 3_600_000).then((r) => {
     if (r.ok) setLatestBalance(r.data);
@@ -49,6 +51,7 @@ export async function boot(): Promise<void> {
   void checkStoreUpdate();
   AppState.addEventListener('change', (st) => {
     if (st !== 'active') return;
+    syncClubStrength();
     void checkNews();
     void flushOutbox();
     void checkForUpdate();

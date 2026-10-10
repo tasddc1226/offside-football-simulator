@@ -97,20 +97,25 @@ export const lineupOf = (d: OwnerTeamResponse): ReadonlySet<string> =>
       : [],
   );
 
-/** 팔기 탭에서 고를 수 있는 선수: 판매 중이 아니고 기준가가 있다. */
-export const sellable = (p: TeamPlayer) => !p.listing && p.cardValue != null;
+/** 팔기 탭에서 고를 수 있는 선수: 판매 중이 아니고 기준가가 있고 잠기지 않았다. */
+export const sellable = (p: TeamPlayer) => !p.listing && p.cardValue != null && !p.locked;
 
 /** 팔기 탭 카드 아래 한 줄: 판매 중이면 막고, 선발이면 알려 준다(팔리면 유스 선수가 채운다). */
 export function sellNote(p: TeamPlayer, lineup: ReadonlySet<string>): string {
   if (p.listing) return L.noteListed;
   if (p.cardValue == null) return L.noteNoValue;
+  if (p.locked) return L.noteLocked;
   return lineup.has(p.careerId) ? L.noteStarter : '';
 }
+
+/** T-11-188 잠금 버튼을 누를 수 있나: 판매 중인 선수는 내린 뒤에 잠근다(잠긴 선수는 판매 중일 수 없어 늘 풀 수 있다). */
+export const lockToggleable = (p: TeamPlayer) => !!p.locked || !p.listing;
 
 /** 방출 화면에서 고를 수 없는 이유(고를 수 있으면 null). */
 export function releaseLock(p: TeamPlayer, lineup: ReadonlySet<string>): string | null {
   if (!p.raised) return L.lockBought;
   if (p.listing) return L.lockListed;
+  if (p.locked) return L.lockPlayerLocked;
   if (lineup.has(p.careerId)) return L.lockStarter;
   return null;
 }
@@ -180,6 +185,12 @@ export const MARKET_TOAST = {
     return L.toastBought;
   },
   released: (n: number) => L.toastReleased({ n }),
+  get locked() {
+    return L.toastLocked;
+  },
+  get unlocked() {
+    return L.toastUnlocked;
+  },
 };
 
 /** 구단주 로그인이 필요해서 실패했는가(세션 없음 · 구글/애플 연결 전). 이적시장·내 팀이 오류 대신 로그인을 권한다. */

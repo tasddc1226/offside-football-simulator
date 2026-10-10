@@ -21,7 +21,7 @@ import { clamp, ri, pick, gauss } from './rng.js';
 import { rivalClubs, seasonRivals } from './table.js';
 import { adoptLatestBalance, applyLatestBalance, BAL } from './balance.js';
 import { adoptClubStrength } from './clubStrength.js';
-import { CLUB_STRENGTH } from './club-strength-data.js';
+import { latestClubStrength } from './clubStrength.js';
 import type { GameState, Season, LogEntry } from './types.js';
 import { leagueOf, clubsIn } from './player.js';
 import { log } from './stats.js';
@@ -196,7 +196,7 @@ export function newSeason(s: GameState): Season {
   if (adoptLatestBalance(s) && s.career.length) log(s, M.balancePatch({ v: s.bal!.v }));
   // T-11-135 현실 순위표로 갱신한 구단 전력표도 시즌이 바뀔 때만 들어온다(clubStrength.ts).
   if (adoptClubStrength(s) && s.career.length)
-    log(s, M.clubStrengthPatch({ v: CLUB_STRENGTH.v, asOf: CLUB_STRENGTH.asOf }));
+    log(s, M.clubStrengthPatch({ v: latestClubStrength().v, asOf: latestClubStrength().asOf }));
   const L = leagueOf(s.leagueId);
   // T-11-134 상대 전력은 리그의 실제 상대 구단 전력에서 나온다(table.ts seasonRivals).
   const opps = rivalClubs(s);

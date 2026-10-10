@@ -29,18 +29,13 @@ export default function Legend() {
   /** 이전 화면 기록이 없으면 연 곳(명예의 전당·구단주·홈)으로. */
   const backTo = () => (appState.screen = appState.legendBack);
   return (
-    // T-10-128 위쪽 '이전으로' 대신 아래 바: 공유할 수 있는 내 선수는 이전으로 + 공유하기, 그 밖은 '← 이전으로' 하나.
-    <CreditScreen
-      footer={
-        v?.shareId ? (
-          <ShareBar id={v.shareId} back={backTo} />
-        ) : (
-          <BackBar testID="hof-back" fallback={backTo} />
-        )
-      }
-      overlay={motionOK && v ? <CareerPlay /> : null}
-    >
+    <CreditScreen overlay={motionOK && v ? <CareerPlay /> : null}>
       <Topbar />
+      {v?.shareId ? (
+        <ShareBar inline id={v.shareId} back={backTo} />
+      ) : (
+        <BackBar inline testID="hof-back" fallback={backTo} />
+      )}
       {v ? (
         <>
           <LegendReport v={v} />

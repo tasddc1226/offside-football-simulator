@@ -16,12 +16,14 @@
 import { DAY_MS as DAY, KST_MS as KST } from './kst.js';
 
 export const SEASON_GAUGE = {
-  perUser: 10,
+  /** T-11-192 10 → 12: 시즌 1이 4.6일 만에 56%까지 차 2주 남짓이면 끝날 상황이라 목표를 올렸다. */
+  perUser: 12,
   dailyCap: 20,
   /** 이 나이 이상에 은퇴한 커리어만 센다(끝까지 뛴 커리어). */
   fullAge: 35,
-  minDays: 7,
-  maxDays: 21,
+  /** T-11-192 7 → 14, 21 → 28: 빨리 차도 2주는 하고, 느려도 4주면 끝난다. */
+  minDays: 14,
+  maxDays: 28,
   lockAt: 0.9,
   noticeHours: 48,
 } as const;

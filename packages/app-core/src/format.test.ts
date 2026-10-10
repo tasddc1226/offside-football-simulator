@@ -11,7 +11,14 @@ import {
 import { en } from './i18n/en/index.js';
 import { ja } from './i18n/ja/index.js';
 import { setLocale } from './i18n/core.js';
-import { priceAtPct, priceDiff, releaseLock } from './market.js';
+import {
+  lockToggleable,
+  priceAtPct,
+  priceDiff,
+  releaseLock,
+  sellable,
+  sellNote,
+} from './market.js';
 import { chartModel, marketIndex, ratioPct } from './marketChart.js';
 
 describe('withRo', () => {
@@ -82,6 +89,18 @@ describe('이적시장 표시 (T-11-080d)', () => {
       releaseLock({ ...(p as object), listing: { id: 'x', price: 1 } } as never, new Set()),
     ).toContain('판매 중');
     expect(releaseLock(p, new Set(['a']))).toContain('선발');
+  });
+  it('T-11-188 잠긴 선수는 내놓거나 방출할 수 없고, 판매 중인 선수는 잠글 수 없다', () => {
+    const p = { careerId: 'a', raised: true, listing: null, cardValue: 80_000 } as never;
+    const locked = { ...(p as object), locked: true } as never;
+    const listed = { ...(p as object), listing: { id: 'x', price: 1 } } as never;
+    expect(sellable(p)).toBe(true);
+    expect(sellable(locked)).toBe(false);
+    expect(sellNote(locked, new Set())).toBe('잠김');
+    expect(releaseLock(locked, new Set())).toBe('잠긴 선수예요');
+    expect(lockToggleable(p)).toBe(true);
+    expect(lockToggleable(locked)).toBe(true);
+    expect(lockToggleable(listed)).toBe(false);
   });
 });
 

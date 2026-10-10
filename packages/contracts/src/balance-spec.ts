@@ -64,6 +64,13 @@ export const BALANCE_SPEC = {
     step: 0.05,
     unit: 'x',
   },
+  boostCost: {
+    def: 1,
+    min: 0.25,
+    max: 4,
+    step: 0.05,
+    unit: 'x',
+  },
   boostExtraTotal: {
     def: 2,
     min: 0,

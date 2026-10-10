@@ -16,7 +16,15 @@ import { rem } from '../../theme/type';
 import { ActionBar } from '../../ui/ActionBar';
 import { Btn } from '../../ui/Btn';
 
-export function ShareBar({ id, back }: { id: string; back?: () => void }) {
+export function ShareBar({
+  id,
+  back,
+  inline = false,
+}: {
+  id: string;
+  back?: () => void;
+  inline?: boolean;
+}) {
   const c = useColors();
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
@@ -67,7 +75,7 @@ export function ShareBar({ id, back }: { id: string; back?: () => void }) {
   }
 
   return (
-    <ActionBar>
+    <ActionBar inline={inline}>
       {url ? (
         <TextInput
           value={url}

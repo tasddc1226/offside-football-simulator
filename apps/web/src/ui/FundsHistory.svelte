@@ -34,6 +34,7 @@
 
 <div class="wrap funds-history" data-funds-history>
   <Topbar />
+  <BackBar inline act="owner" fallback={() => go('owner')} />
   <header class="settings-head">
     <div class="eyebrow">{H.eyebrow}</div>
     <h1>{H.title}</h1>
@@ -91,7 +92,7 @@
     </section>
   {/if}
 
-  <BackBar act="owner" fallback={() => go('owner')} />
+
 </div>
 
 <style>

@@ -108,7 +108,7 @@ body {
 }
 /* 글자 기준 크기(T-10-059). 글자 크기는 모두 rem이라 여기 한 곳으로 전체를 조절한다. 브라우저 글자 크기 설정도 따른다. */
 html {
-  font-size: 93.75%;
+  font-size: calc(93.75% * var(--text-scale, 1));
   overscroll-behavior-y: none;
 }
 body {
@@ -577,6 +577,12 @@ button.what:active {
 .pill.good {
   color: var(--good);
   border-color: color-mix(in srgb, var(--good) 40%, transparent);
+}
+.pill.cup-upcoming {
+  background: #1d4ed8;
+  color: #fff;
+  border-color: #60a5fa;
+  font-weight: 700;
 }
 .pill.bad {
   color: var(--bad);
@@ -3611,7 +3617,8 @@ th.n {
   text-align: center;
   font-size: 0.75rem;
   color: var(--muted);
-  padding: 8px 0 20px;
+  /* Leave room above the fixed chat button when scrolled to the end. */
+  padding: 8px 0 64px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -6793,7 +6800,7 @@ html:root[data-skin='sheet'] {
   --body: Arial, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   --display: var(--body);
   --tabbar-h: var(--sx-foot);
-  font-size: 81.25%;
+  font-size: calc(81.25% * var(--text-scale, 1));
   background: #fff;
 }
 :root[data-skin='sheet'] body {

@@ -10,7 +10,7 @@ import { MEDAL_GLOW, useMedal } from '../../components/Laurel';
 import { go } from '../../game/nav';
 import { alpha } from '../../theme/colors';
 import { rem } from '../../theme/type';
-import { Btn, Card, Pill, Row, Txt } from '../../ui';
+import { Card, Pill, Press, Row, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 
 /** 기록 배지 알약 — 메달 색(1위 금 · 상위 10 은 · 그 밖 동). */
@@ -47,35 +47,42 @@ export function RecapCard() {
 
   const { line, chips, isNew } = recapCardView(recap);
   return (
-    <Card gap={12} testID="owner-recap">
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Txt v="eyebrow">Season recap</Txt>
-          <Row gap={6}>
-            <Txt v="h2" accessibilityRole="header">
-              {L.cardTitle}
+    <Press
+      testID="recap"
+      accessibilityLabel={`${L.cardTitle} ${L.open}`}
+      onPress={() => go('recap')}
+      scale={0.98}
+    >
+      <Card gap={12} testID="owner-recap">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+            <Txt v="eyebrow">Season recap</Txt>
+            <Row gap={6}>
+              <Txt v="h2" accessibilityRole="header">
+                {L.cardTitle}
+              </Txt>
+              {isNew ? (
+                <View testID="recap-new">
+                  <Pill tone="good">{L.newBadge}</Pill>
+                </View>
+              ) : null}
+            </Row>
+            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+              {line}
             </Txt>
-            {isNew ? (
-              <View testID="recap-new">
-                <Pill tone="good">{L.newBadge}</Pill>
-              </View>
-            ) : null}
-          </Row>
-          <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-            {line}
+          </View>
+          <Txt tone="muted" style={{ fontSize: rem(1.5) }} accessible={false}>
+            ›
           </Txt>
         </View>
-        <Btn testID="recap" onPress={() => go('recap')}>
-          {L.open}
-        </Btn>
-      </View>
-      {chips.length > 0 ? (
-        <Row gap={6}>
-          {chips.map((h) => (
-            <HonorChip key={`${h.season}-${h.kind}`} h={h} />
-          ))}
-        </Row>
-      ) : null}
-    </Card>
+        {chips.length > 0 ? (
+          <Row gap={6}>
+            {chips.map((h) => (
+              <HonorChip key={`${h.season}-${h.kind}`} h={h} />
+            ))}
+          </Row>
+        ) : null}
+      </Card>
+    </Press>
   );
 }

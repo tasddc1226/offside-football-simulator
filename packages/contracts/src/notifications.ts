@@ -12,13 +12,13 @@ export const NotificationTargetSchema = z.discriminatedUnion('type', [
   z
     .object({
       type: z.literal('screen'),
-      screen: z.enum(['home', 'owner', 'team', 'market', 'settings']),
+      screen: z.enum(['home', 'owner', 'team', 'market', 'settings', 'chat']),
     })
     .strict(),
 ]);
 export const NotificationContentSchema = z
   .object({
-    kind: z.enum(['news', 'test', 'return', 'team', 'market', 'social']),
+    kind: z.enum(['news', 'test', 'return', 'team', 'market', 'social', 'community']),
     title: z.string().trim().min(1).max(100),
     body: z.string().trim().min(1).max(500),
     target: NotificationTargetSchema,

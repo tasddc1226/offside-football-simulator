@@ -3,7 +3,7 @@
   import type { RnClubOrder } from '@offside/app-core/retiredWall';
   // 시즌·화면·정렬·조건은 선수 상세에 다녀와도 그대로 둔다.
   // season이 null이면 지금 시즌(개막 전이면 프리시즌).
-  const view = $state<{ season: number | null; screen: 'home' | 'club' | 'recent'; clubId: string | null; clubOrder: RnClubOrder; pos: CareerPos | null }>({ season: null, screen: 'home', clubId: null, clubOrder: 'count', pos: null });
+  const view = $state<{ season: number | null; screen: 'home' | 'club' | 'recent'; clubId: string | null; clubOrder: RnClubOrder; pos: CareerPos | null; wallOpen: boolean }>({ season: null, screen: 'home', clubId: null, clubOrder: 'count', pos: null, wallOpen: false });
 </script>
 
 <script lang="ts">
@@ -185,11 +185,15 @@
         {#each summary.recent as it (it.seq)}{@render tile(it, true)}{/each}
       </div>
       {#if wall.length}
+        <!-- T-11-193 명판이 수백 개라 구단 목록이 한참 아래로 밀려 접어 둔다. -->
         <div class="rn-sec-head" data-rn-wall-section>
           <h2>{L.wallTitle} <span class="num rn-club-count">{wall.length}</span></h2>
+          <button class="link-btn" data-rn-wall-toggle aria-expanded={view.wallOpen} onclick={() => (view.wallOpen = !view.wallOpen)}>{view.wallOpen ? L.wallClose : L.wallOpen}</button>
         </div>
-        <p class="muted fs-xs rn-plaque-lead">{L.wallLead}</p>
-        {@render plaques(wall, true)}
+        {#if view.wallOpen}
+          <p class="muted fs-xs rn-plaque-lead">{L.wallLead}</p>
+          {@render plaques(wall, true)}
+        {/if}
       {/if}
       <div class="rn-sec-head">
         <h2>{L.clubsTitle}</h2>

@@ -15,6 +15,7 @@ import {
   fetchMarketChart,
   fetchMarketMe,
   releaseCards,
+  setCardLock,
   type MarketChartPoint,
   type MarketListing,
   type MarketSale,
@@ -94,6 +95,7 @@ function MiniCard({
     pos: CareerPos;
     dpos: DetailPos | null;
     attrs: TeamPlayer['attrs'];
+    locked?: boolean | undefined;
   };
   name: string;
   dim?: boolean;
@@ -118,6 +120,7 @@ function MiniCard({
           legendScore: card.legendScore,
           attrs: card.attrs,
           pos: card.pos,
+          locked: card.locked,
           youth: false,
         }}
       />
@@ -673,6 +676,22 @@ export default function Market() {
     await refresh();
   }
 
+  // T-11-188 잠금 풀기(팔기 · 방출 화면). 잠그기는 팀 라커룸에서 한다.
+  const unlockBtn = (p: TeamPlayer) => (
+    <Press
+      testID={`market-unlock-${p.careerId}`}
+      accessibilityRole="button"
+      disabled={busy}
+      hitSlop={8}
+      onPress={() => void run(() => setCardLock(p.careerId, false), MARKET_TOAST.unlocked)}
+      style={{ minHeight: 32, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <Txt style={{ fontSize: rem(0.75), fontWeight: '600', color: c.accentText }}>
+        {L.playerUnlock}
+      </Txt>
+    </Press>
+  );
+
   const errText = error ? (
     <Txt tone="bad" accessibilityRole="alert" style={{ fontWeight: '600' }}>
       {error}
@@ -738,11 +757,11 @@ export default function Market() {
                 </View>
               </ActionBar>
             ) : null}
-            <BackBar testID="market-back" fallback={() => (appState.screen = 'owner')} />
           </>
         }
       >
         <Topbar />
+        <BackBar inline testID="market-back" fallback={() => (appState.screen = 'owner')} />
 
         {/* 초록 머리 — 구단 자금 · 자금 만들기 · 요약 셋 */}
         <View
@@ -926,6 +945,7 @@ export default function Market() {
                         {fundsText(releaseValue(p, me.rules.releaseRate))}
                       </Txt>
                     ) : null}
+                    {p.locked && p.raised ? unlockBtn(p) : null}
                   </Press>
                 );
               })
@@ -1129,48 +1149,50 @@ export default function Market() {
                       const on = selling?.careerId === p.careerId;
                       const off = !sellable(p);
                       return (
-                        <Press
+                        <View
                           key={p.careerId}
-                          testID={`market-sell-pick-${p.careerId}`}
-                          disabled={off}
-                          accessibilityRole="button"
-                          accessibilityLabel={L.sellPickLabel({ name: nameOfPlayer(p) })}
-                          accessibilityState={{ selected: on, disabled: off }}
-                          onPress={() => {
-                            setSelling(p);
-                            setPct(100);
-                            setError(null);
-                          }}
-                          style={{
-                            width: '23%',
-                            flexGrow: 1,
-                            maxWidth: '25%',
-                            minHeight: 104,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 3,
-                            paddingVertical: 6,
-                            paddingHorizontal: 4,
-                            borderRadius: 12,
-                            borderWidth: on ? 2 : 1,
-                            borderColor: on ? c.accent : c.line,
-                            backgroundColor: on ? c.surface2 : c.surface,
-                          }}
+                          style={{ width: '23%', flexGrow: 1, maxWidth: '25%', gap: 2 }}
                         >
-                          <MiniCard c={p} name={nameOfPlayer(p)} dim={off} />
-                          <Txt numberOfLines={1} style={{ fontSize: rem(0.6875) }}>
-                            {nameOfPlayer(p)}
-                          </Txt>
-                          <Txt
+                          <Press
+                            testID={`market-sell-pick-${p.careerId}`}
+                            disabled={off}
+                            accessibilityRole="button"
+                            accessibilityLabel={L.sellPickLabel({ name: nameOfPlayer(p) })}
+                            accessibilityState={{ selected: on, disabled: off }}
+                            onPress={() => {
+                              setSelling(p);
+                              setPct(100);
+                              setError(null);
+                            }}
                             style={{
-                              fontSize: rem(0.625),
-                              fontWeight: '600',
-                              color: on ? c.accentText : c.muted,
+                              minHeight: 104,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 3,
+                              paddingVertical: 6,
+                              paddingHorizontal: 4,
+                              borderRadius: 12,
+                              borderWidth: on ? 2 : 1,
+                              borderColor: on ? c.accent : c.line,
+                              backgroundColor: on ? c.surface2 : c.surface,
                             }}
                           >
-                            {on ? L.sellSelected : sellNote(p, lineup)}
-                          </Txt>
-                        </Press>
+                            <MiniCard c={p} name={nameOfPlayer(p)} dim={off} />
+                            <Txt numberOfLines={1} style={{ fontSize: rem(0.6875) }}>
+                              {nameOfPlayer(p)}
+                            </Txt>
+                            <Txt
+                              style={{
+                                fontSize: rem(0.625),
+                                fontWeight: '600',
+                                color: on ? c.accentText : c.muted,
+                              }}
+                            >
+                              {on ? L.sellSelected : sellNote(p, lineup)}
+                            </Txt>
+                          </Press>
+                          {p.locked ? unlockBtn(p) : null}
+                        </View>
                       );
                     })}
                   </View>

@@ -125,3 +125,24 @@ export const setAutomationHidden = (careerId: string, hidden: boolean) =>
     method: 'POST',
     body: JSON.stringify({ careerId, hidden }),
   });
+
+export type {
+  AdminCupPredictions,
+  AdminCupPredictionMatch,
+  AdminCupPredictionRows,
+} from '@offside/contracts';
+export const fetchAdminCupPredictions = (cupId: string, fresh = false) => {
+  const path = `/v1/admin/cups/${encodeURIComponent(cupId)}/predictions`;
+  if (fresh) invalidateApiCache(`/v1/admin/cups/${encodeURIComponent(cupId)}`);
+  return cachedGet<import('@offside/contracts').AdminCupPredictions>(path, 60_000);
+};
+export const fetchAdminCupPredictionRows = (cupId: string, matchId: string, after = '') =>
+  cachedGet<import('@offside/contracts').AdminCupPredictionRows>(
+    `/v1/admin/cups/${encodeURIComponent(cupId)}/matches/${encodeURIComponent(matchId)}/predictions?after=${encodeURIComponent(after)}`,
+    60_000,
+  );
+export const recoverCupPredictions = (cupId: string, matchId: string, reason: string) =>
+  apiFetch<{ settled: number; rewarded: number }>(
+    `/v1/admin/cups/${encodeURIComponent(cupId)}/matches/${encodeURIComponent(matchId)}/predictions/settle`,
+    { method: 'POST', body: JSON.stringify({ reason }) },
+  );

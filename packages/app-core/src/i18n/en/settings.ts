@@ -2,6 +2,12 @@ import type { Translation } from '../core';
 import type { SettingsMsgs } from '../ko/settings';
 
 export const settings: Translation<SettingsMsgs> = {
+  textSizeTitle: 'Text size',
+  textSizeBody: 'Applies immediately. Saved on this device.',
+  textSizeSmall: 'Small',
+  textSizeStandard: 'Standard',
+  textSizeLarge: 'Large',
+  textSizeExtraLarge: 'Extra large',
   title: 'Settings',
   darkTitle: 'Dark mode',
   darkBodyWeb: 'Switch to a dark screen. Saved on this device.',

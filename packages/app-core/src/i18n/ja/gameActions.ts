@@ -5,13 +5,17 @@ export const gameActions: Translation<GameActionsMsgs> = {
   natDetail: (p) =>
     `${p.mins}分${p.g ? ` ${p.g}ゴール` : ''}${p.a ? ` ${p.a}アシスト` : ''} · 評価点 ${p.rating}`,
   natBench: 'ベンチ',
+  compDetail: (p) => `${p.mins}分${p.g ? ` ${p.g}ゴール` : ''}${p.a ? ` ${p.a}アシスト` : ''}`,
+  compLeg: (p) => `${p.stage} 第${p.leg}戦`,
+  compLeagueGame: (p) => `リーグフェーズ 第${p.n}戦 · ${p.res}`,
+  compThrough: '突破',
+  compOut: '敗退',
   natNotInSquad: 'メンバー外',
   natNoMedal: 'メダルなし',
   natTourLine: (p) =>
     `${p.stage} · ${p.score}${p.mins ? ` · ${p.g ? p.g + 'ゴール ' : ''}${p.a ? p.a + 'アシスト ' : ''}評価点 ${p.rating}` : ''}`,
   preseasonDone: 'プレシーズン終了',
   phaseResult: (p) => `${p.phase}の結果`,
-  stepComps: 'カップ戦・大陸大会の結果を集計',
   stepNat: '代表メンバー発表',
   stepEvent: '新しい知らせが届いています…',
   phaseRunning: (p) => `${p.year} · ${p.phase} 進行中`,
