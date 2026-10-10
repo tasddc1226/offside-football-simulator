@@ -1,4 +1,5 @@
 // ───────── 저장 로드 (세이브 복원은 웹·앱 공용 @offside/app-core/career restoreGame) ─────────
+import { syncClubStrength } from '@offside/app-core/club-strength-sync';
 import { setLatestBalance } from '@offside/game/balance';
 import { restoreGame } from '@offside/app-core/career';
 import { cachedGet } from '@offside/app-core/api/client';
@@ -30,6 +31,7 @@ export function loadGame() {
 /** T-10-016. 앱을 열 때 한 번 최신 밸런스 버전을 받는다. 각 커리어는 다음 시즌 시작부터 이 값을 쓴다.
  * 실패하면(오프라인 등) 저장된 값으로 계속한다. */
 export function syncBalance(): void {
+  syncClubStrength();
   void cachedGet<BalanceConfig>('/v1/balance', 3_600_000).then((r) => {
     if (r.ok) setLatestBalance(r.data);
   });

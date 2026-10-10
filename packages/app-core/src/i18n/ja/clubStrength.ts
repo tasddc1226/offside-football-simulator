@@ -1,0 +1,25 @@
+import type { Translation } from '../core';
+import type { ClubStrengthMsgs } from '../ko/clubStrength';
+export const clubStrength: Translation<ClubStrengthMsgs> = {
+  title: 'クラブ戦力',
+  note: '毎日13時（韓国時間）以降に現実の成績を確認します。新しい戦力は次のゲーム内シーズンから適用します。高校・大学・K2・K3は固定です。',
+  refresh: '更新',
+  more: '以前の記録',
+  empty: '自動更新の記録はまだありません。',
+  fail: '戦力の更新履歴を読み込めませんでした。',
+  version: '適用中の戦力表',
+  changed: '戦力変更',
+  unchanged: '変更なし',
+  failed: '取得失敗',
+  unconfigured: '接続が必要',
+  reason: '処理理由',
+  season: '現実のシーズン',
+  rows: 'クラブ別の変更',
+  same: '順位表が同じため維持しました。',
+  held: '試合数が少ないクラブの戦力を維持しました。',
+  valid: '検証した成績を処理しました。',
+  missing: 'データ取得元とAPI接続の設定が必要です。',
+  invalid: 'データ取得元の設定を確認してください。',
+  error: '取得データとクラブの対応を確認してください。',
+  asOf: '戦力表の基準日',
+};

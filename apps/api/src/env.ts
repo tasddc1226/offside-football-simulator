@@ -5,6 +5,12 @@ import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  CLUB_STRENGTH_ENABLED?: string;
+  /** Reviewed provider league/team-id mappings. No secrets in this JSON. */
+  CLUB_STRENGTH_SOURCES?: string;
+  CLUB_STRENGTH_OWNER_EMAIL?: string;
+  FOOTBALL_DATA_TOKEN?: string;
+  API_FOOTBALL_KEY?: string;
   /** Emergency pause for automatic moderation; manual restore remains available. */
   AUTOMATION_HIDE_DISABLED?: string;
   /** 공지·릴리즈 노트 하루 첫 게시 자동 푸시. 운영에만 켠다. */

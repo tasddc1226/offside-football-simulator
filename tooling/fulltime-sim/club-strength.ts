@@ -1,4 +1,4 @@
-// T-11-135 현실 순위표로 구단 전력표(packages/game/src/club-strength.json)를 만든다(T-11-132 2단계, 월 1회 운영자 실행).
+// T-11-135 현실 순위표로 구단 전력표(packages/contracts/src/club-strength-fallback.json)를 만든다(T-11-132 2단계, 월 1회 운영자 실행).
 // 실행: tsx club-strength.ts <대응표 json> <순위표 csv> [--write]
 //   순위표 csv: team,p,w,d,l,pts,gf,ga — 공식 순위표를 보고 옮겨 적는다. 파일 이름의 날짜(YYYY-MM-DD)가 기준 시점이다.
 //   --write 없이 실행하면 바뀔 값만 보여 준다. 검사에 걸리면 아무것도 쓰지 않는다.
@@ -15,7 +15,7 @@ import {
 } from '@offside/game/clubStrengthCalc';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA = path.resolve(__dirname, '../../packages/game/src/club-strength.json');
+const DATA = path.resolve(__dirname, '../../packages/contracts/src/club-strength-fallback.json');
 
 const [mapFile, csvFile] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const write = process.argv.includes('--write');

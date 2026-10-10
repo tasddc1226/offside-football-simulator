@@ -45,6 +45,12 @@ export async function edgeCached<T>(
   return data;
 }
 
+/** Cron writers have no request Context. Same canonical origin/path keys as public reads. */
+export async function purgeEdgeOrigin(origin: string, paths: string[]): Promise<void> {
+  const cache = edge();
+  if (cache) await Promise.all(paths.map((path) => cache.delete(`${origin}${path}`)));
+}
+
 /** 글을 쓰거나 지웠을 때 목록 캐시를 지운다. 이 데이터센터의 사본만 지워지고, 다른 곳은 TTL 안에 새로 읽는다. */
 export function purgeEdge(c: Context<AppEnv>, paths: string[]): void {
   const cache = edge();
