@@ -37,6 +37,7 @@ import { isHeadless } from '../db/repos/automation.js';
 import { isAcceptablePublicName, toPublicName } from '@offside/contracts/content-filter';
 import { resumeCareerDetails } from '../cron/careerRetention.js';
 import { retireAtOf } from '@offside/contracts/service-seasons';
+import { legendScoreOfRecord } from '@offside/contracts/hof-rules';
 import { resolveBalance } from '@offside/contracts';
 import { getActiveBalance } from '../db/repos/balance.js';
 import { completeInvite } from '../db/repos/referrals.js';
@@ -176,9 +177,14 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     } else {
       // 은퇴 요약은 받아 둔 시즌 기록에 맞춘다 — 보낸 숫자를 그대로 믿지 않는다.
       const seasons = (await storedSeasonsOf(db, [careerId])).get(careerId) ?? [];
+      // T-11-187 스냅샷이 있으면 레전드 점수는 서버가 지금 공식으로 다시 매긴다. 레전드 공식을 바꾼 뒤에도 OTA를 못 받은
+      // 옛 앱이 옛 공식 점수를 보내기 때문이다(T-11-168 뒤 iOS 옛 빌드).
+      const legendScore = snapshot
+        ? legendScoreOfRecord({ ...snapshot, pos: career.pos, dpos: career.dpos })
+        : sent.legendScore;
       const summary = boundRetirement(
         career.pos,
-        sent,
+        { ...sent, legendScore },
         seasons,
         career.dpos,
         retireAtOf(career.serviceSeason),

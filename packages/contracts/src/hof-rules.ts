@@ -110,3 +110,51 @@ export function legendTerms(pos: string, t: LegendTotals, dpos?: string | null) 
     control: t.control * (w.c ?? 0),
   };
 }
+
+/** 레전드 점수를 매기는 데 쓰는 은퇴 기록(게임 상태 · 서버에 올라온 은퇴 스냅샷이 같은 모양). */
+export interface LegendRecord {
+  pos: string;
+  dpos?: string | null | undefined;
+  peak: number;
+  career: readonly {
+    goals: number;
+    assists: number;
+    apps: number;
+    cs?: number | undefined;
+    rating: number;
+  }[];
+  trophies: readonly { t: string }[];
+  awards: readonly { year: number; t: string }[];
+  ballon?: readonly { rank: number }[] | undefined;
+  nat: { caps: number };
+}
+
+/** 은퇴 기록에서 레전드 점수의 각 항을 낸다. 게임(packages/game legend.ts)과 서버 은퇴 PUT이 같은 식을 쓴다. */
+export function legendTermsOfRecord(s: LegendRecord): ReturnType<typeof legendTerms> {
+  const t = s.career.reduce(
+    (a, r) => ({ g: a.g + r.goals, a: a.a + r.assists, p: a.p + r.apps, cs: a.cs + (r.cs || 0) }),
+    { g: 0, a: 0, p: 0, cs: 0 },
+  );
+  return legendTerms(
+    s.pos,
+    {
+      goals: t.g,
+      assists: t.a,
+      cs: t.cs,
+      apps: t.p,
+      trophies: s.trophies.length,
+      awards: legendAwardCount(s.awards, s.dpos),
+      caps: s.nat.caps,
+      peak: s.peak,
+      ballon: s.awards.filter((x) => x.t === '발롱도르').length, // i18n-ignore 저장값
+      ballonRankPoints: (s.ballon || []).reduce((tt, b) => tt + Math.max(0, 31 - b.rank), 0),
+      worldCups: s.trophies.filter((x) => x.t === 'FIFA 월드컵 우승').length, // i18n-ignore 저장값
+      control: controlPoints(s.career),
+    },
+    s.dpos,
+  );
+}
+
+/** 레전드 점수: 각 항의 합을 한 번 반올림한다. */
+export const legendScoreOfRecord = (s: LegendRecord): number =>
+  Math.round(Object.values(legendTermsOfRecord(s)).reduce((sum, v) => sum + v, 0));
