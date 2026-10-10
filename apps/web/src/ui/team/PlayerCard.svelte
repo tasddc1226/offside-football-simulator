@@ -44,6 +44,7 @@
     <div class="card-rating" title="{ratingLabel} {rating}"><b>{rating}</b><span>{role}</span></div>
     {#if cardSeason !== undefined}<span class="card-season" data-card-season={cardSeason} style:--season-bg={cardSeasonColor(cardSeason)} title={teamSeasonLabel(cardSeason)}>{cardSeasonBadge(cardSeason)}</span>{/if}
     {#if country}<span class="card-nation" role="img" aria-label={L.nationAria({ name: tn(country.ko) })} title={tn(country.ko)}>{flagOf(country.code)}</span>{/if}
+    {#if player?.locked && !youth}<span class="card-lock" data-card-locked role="img" aria-label={L.lockedAria} title={L.lockedAria}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg></span>{/if}
     <div class="card-art" aria-hidden="true">
       <svg viewBox="0 0 100 96"><path d="M30 10 15 17 3 38 20 48 26 36 24 90 76 90 74 36 80 48 97 38 85 17 70 10 62 5Q50 16 38 5Z" /><path class="shirt-trim" d="M38 5Q50 25 62 5M25 73H75M34 12V87M66 12V87" /></svg>
       <span class="shirt-number">{player?.number ?? (youth ? '+' : name.slice(0, 1))}</span>
@@ -82,6 +83,8 @@
   .card-rating span { font-family:var(--display); font-size:.82rem; font-weight:700; line-height:1; margin-top:4px; }
   .card-nation {position:absolute;top:82px;left:11px;z-index:1;width:36px;text-align:center;font-family:system-ui,sans-serif;font-size:18px;line-height:18px;}
   /* T-11-114 시즌 뱃지(색은 cardSeasonColor). */
+  .card-lock {position:absolute;top:30px;right:11px;z-index:1;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#000a;box-shadow:0 0 0 1px #ffffff66 inset;} .card-lock svg {width:13px;height:13px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;} .card-lock rect {fill:#fff;stroke:none;}
+  .compact .card-lock {top:32px;right:5px;width:16px;height:16px;} .compact .card-lock svg {width:10px;height:10px;}
   .card-season {position:absolute;top:9px;left:50%;transform:translateX(-50%);z-index:1;padding:2px 5px 1px;border-radius:3px;background:var(--season-bg);color:#fff;font:800 9px/1.1 system-ui,sans-serif;letter-spacing:.06em;box-shadow:0 0 0 1px #ffffff55 inset;}
   .compact .card-season {top:4px;padding:1px 3px 0;font-size:7px;}
   .card-deployment {display:flex;flex-direction:column;align-items:center;font-size:8px;line-height:10px;}

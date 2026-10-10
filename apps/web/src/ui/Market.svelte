@@ -23,6 +23,7 @@
     fetchMarketChart,
     fetchMarketMe,
     releaseCards,
+    setCardLock,
     type MarketCard,
     type MarketChartPoint,
     type MarketListing,
@@ -271,7 +272,7 @@
           {#each team.players as p (p.careerId)}
             {@const lock = releaseLock(p, lineup)}
             <li>
-              <label class="mk-rel" class:on={picked.has(p.careerId)} class:locked={!!lock} data-mine={p.careerId}>
+              <label class="mk-rel" class:on={picked.has(p.careerId)} class:locked={!!lock} class:unlockable={p.locked && p.raised && isCurrent} data-mine={p.careerId}>
                 <input type="checkbox" checked={picked.has(p.careerId)} disabled={!!lock} aria-label={L.releasePickLabel({ name: nameOfPlayer(p) })} onchange={() => togglePick(p.careerId)} />
                 {@render mini(p, nameOfPlayer(p), !!lock)}
                 <span class="mk-info">
@@ -280,6 +281,7 @@
                 </span>
                 {#if !lock && me}<b class="mk-rel-value">{fundsText(releaseValue(p, me.rules.releaseRate))}</b>{/if}
               </label>
+              {#if p.locked && p.raised && isCurrent}<button class="mk-link mk-unlock" data-act="unlock" disabled={busy} onclick={() => run(() => setCardLock(p.careerId, false), MARKET_TOAST.unlocked)}>{L.playerUnlock}</button>{/if}
             </li>
           {:else}
             <li class="muted">{L.noRetired({ season: seasonName })}</li>
@@ -1106,6 +1108,18 @@
   }
 
   /* 방출 */
+  .mk-rel-list li:has(.mk-unlock) {
+    position: relative;
+  }
+  .mk-rel.unlockable {
+    padding-right: 92px;
+  }
+  .mk-unlock {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
   .mk-rel {
     display: flex;
     align-items: center;
