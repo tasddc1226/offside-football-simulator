@@ -12,6 +12,12 @@ import { LIVE_PING, LIVE_PONG } from '@offside/contracts/polling';
 import type { Bindings } from '../env.js';
 import { MAX_SOCKETS } from '../live/hub.js';
 import { checkSend } from './rules.js';
+import {
+  communityOwnerEmail,
+  communityRecipients,
+  communityStatements,
+  type CommunityEvent,
+} from '../push/community.js';
 
 // T-11-015 채팅방. 방 하나(이름 CHAT_ROOM)가 소켓을 모두 붙들고, 받은 줄을 SQLite에 적은 뒤 모두에게 보낸다.
 // LiveHub처럼 Hibernation API로 받는다 — 조용하면 잠들어 비용이 없고, 핑에는 깨지 않고 런타임이 pong을 돌려준다.
@@ -79,6 +85,12 @@ export class ChatRoom extends DurableObject<Bindings> {
     // T-11-150 대표 칭호 칸.
     if (!cols.some((c) => c.name === 'title'))
       this.sql.exec('ALTER TABLE messages ADD COLUMN title TEXT');
+    this.sql.exec(
+      `CREATE TABLE IF NOT EXISTS community_push_outbox (id TEXT PRIMARY KEY REFERENCES messages(id), at INTEGER NOT NULL)`,
+    );
+    this.sql.exec(
+      'CREATE INDEX IF NOT EXISTS community_push_outbox_at ON community_push_outbox(at)',
+    );
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, expires INTEGER NOT NULL, writer TEXT NOT NULL)`,
     );
@@ -155,20 +167,68 @@ export class ChatRoom extends DurableObject<Bindings> {
       tier,
       title,
     };
-    this.sql.exec(
-      'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin, tier, title) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      m.id,
-      m.at,
-      profileId,
-      author,
-      nickname,
-      m.body,
-      admin ? 1 : 0,
-      tier,
-      title,
-    );
-    this.sql.exec('DELETE FROM messages WHERE at < ?', now - CHAT_KEEP_MS);
+    const notify = !admin && !!communityOwnerEmail(this.env);
+    this.ctx.storage.transactionSync(() => {
+      this.sql.exec(
+        'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin, tier, title) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        m.id,
+        m.at,
+        profileId,
+        author,
+        nickname,
+        m.body,
+        admin ? 1 : 0,
+        tier,
+        title,
+      );
+      if (notify)
+        this.sql.exec('INSERT INTO community_push_outbox (id, at) VALUES (?, ?)', m.id, now);
+      this.sql.exec('DELETE FROM community_push_outbox WHERE at < ?', now - 86400_000);
+      this.sql.exec('DELETE FROM messages WHERE at < ?', now - CHAT_KEEP_MS);
+    });
+    // No await between SQL and setAlarm: storage write coalescing persists both atomically.
+    if (notify) this.ctx.waitUntil(this.ctx.storage.setAlarm(now));
     this.broadcast({ t: 'msg', m });
+  }
+
+  private async ensureCommunityAlarm() {
+    const alarm = await this.ctx.storage.getAlarm();
+    if (alarm === null) await this.ctx.storage.setAlarm(Date.now() + 1000);
+  }
+
+  /** DO and D1 cannot share a transaction. Persist locally first, retry idempotently by message ID. */
+  override async alarm() {
+    // Reserve the next attempt before crossing the D1 boundary, including abrupt failures.
+    await this.ctx.storage.setAlarm(Date.now() + 60_000);
+    this.sql.exec('DELETE FROM community_push_outbox WHERE at < ?', Date.now() - 86400_000);
+    const rows = this.sql
+      .exec<Row>(
+        `SELECT m.* FROM community_push_outbox q
+      JOIN messages m ON m.id = q.id ORDER BY q.at LIMIT 50`,
+      )
+      .toArray();
+    if (rows.length) {
+      const recipients = await communityRecipients(this.env);
+      const stmts = rows
+        .filter((r) => r.hidden === 0)
+        .flatMap((r) => {
+          const m = toMessage(r);
+          const event: CommunityEvent = { ...m, type: 'chat', now: new Date(m.at).toISOString() };
+          return communityStatements(this.env, recipients, event);
+        });
+      if (stmts.length) await this.env.DB.batch(stmts);
+      this.ctx.storage.transactionSync(() => {
+        for (const r of rows)
+          this.sql.exec('DELETE FROM community_push_outbox WHERE id = ?', String(r.id));
+      });
+    }
+    const [pending] = this.sql.exec<Row>('SELECT id FROM community_push_outbox LIMIT 1').toArray();
+    if (!pending) {
+      await this.ctx.storage.deleteAlarm();
+      // A websocket write may have interleaved while deleting the old alarm.
+      if (this.sql.exec<Row>('SELECT id FROM community_push_outbox LIMIT 1').toArray().length)
+        await this.ensureCommunityAlarm();
+    }
   }
 
   override webSocketClose(ws: WebSocket, code: number): void {

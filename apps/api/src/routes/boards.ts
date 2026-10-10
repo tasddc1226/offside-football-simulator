@@ -228,6 +228,7 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
       db,
       { postId, profileId, nickname, body, admin: viewer.admin },
       now,
+      { env: c.env, board: post.board },
     );
     purgeList(c, post.board); // 댓글 수가 바뀐다.
     const comment = {

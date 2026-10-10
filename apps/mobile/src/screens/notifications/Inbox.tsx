@@ -40,6 +40,7 @@ const labels = (): Record<AppNotification['kind'], string> => ({
   team: L.kindTeam,
   market: L.kindMarket,
   social: L.kindSocial,
+  community: L.kindCommunity,
 });
 const paths = {
   back: 'm15 18-6-6 6-6',
@@ -96,6 +97,7 @@ function targetLabel(target: NotificationTarget, kind?: AppNotification['kind'])
     team: L.goTeam,
     market: L.goMarket,
     settings: L.goSettings,
+    chat: L.goChat,
   }[target.screen];
 }
 

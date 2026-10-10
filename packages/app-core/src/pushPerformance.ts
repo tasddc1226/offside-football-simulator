@@ -1,4 +1,5 @@
 import type { PushCategory, PushMetrics } from '@offside/contracts';
+import { inboxText } from './i18n/ko/inbox';
 
 export const PUSH_CATEGORY_LABELS: Record<PushCategory, string> = {
   notice: '공지',
@@ -6,6 +7,7 @@ export const PUSH_CATEGORY_LABELS: Record<PushCategory, string> = {
   team: '내 팀 경기',
   market: '선수 판매',
   social: '친구',
+  community: inboxText.kindCommunity,
   'friend-request': '친구 신청',
   'friend-accepted': '친구 수락',
   friendly: '친선 경기',
