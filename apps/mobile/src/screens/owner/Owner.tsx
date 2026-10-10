@@ -312,9 +312,6 @@ export default function Owner() {
 
       {linked || guest ? <AdSlot place="owner-summary" /> : null}
 
-      {/* T-11-128 시즌 결산: 끝난 시즌이 있을 때만(카드가 스스로 숨는다). 비로그인도 본다. */}
-      <RecapCard />
-
       {/* T-10-092 내 팀: 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. */}
       {linked ? (
         <>
@@ -387,6 +384,51 @@ export default function Owner() {
               </>
             )}
           </Card>
+        </>
+      ) : guest ? (
+        <>
+          <Card gap={12} testID="owner-team-locked">
+            <View style={{ gap: 2 }}>
+              <Txt v="eyebrow">My team</Txt>
+              <Txt v="h2" accessibilityRole="header">
+                {L.myTeam}
+              </Txt>
+            </View>
+            <LockedPitch />
+            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+              {ownerLockedText(localCount)}
+            </Txt>
+            {/* 로그아웃·탈퇴 직후엔 세션이 없으므로 startGoogleLogin이 새 익명 세션부터 받는다. */}
+            <LoginButtons />
+          </Card>
+        </>
+      ) : null}
+
+      {!guest || localCount > 0 ? <MyPlayers onRows={onRows} /> : null}
+
+      {linked ? (
+        <>
+          <Press
+            testID="market"
+            accessibilityLabel={`${L.marketTitle} ${L.open}`}
+            onPress={() => go('market')}
+            scale={0.98}
+          >
+            <Card gap={12} testID="owner-market">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <Txt v="eyebrow">Transfer market</Txt>
+                  <Txt v="h2">{L.marketTitle}</Txt>
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {L.marketSub({ funds })}
+                  </Txt>
+                </View>
+                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                  ›
+                </Txt>
+              </View>
+            </Card>
+          </Press>
           <Press
             testID="open-owner-hall"
             accessibilityLabel={`${H.openHall} · ${H.hallNew}`}
@@ -415,27 +457,14 @@ export default function Owner() {
               </View>
             </Card>
           </Press>
-          <Press
-            testID="market"
-            accessibilityLabel={`${L.marketTitle} ${L.open}`}
-            onPress={() => go('market')}
-            scale={0.98}
-          >
-            <Card gap={12} testID="owner-market">
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                  <Txt v="eyebrow">Transfer market</Txt>
-                  <Txt v="h2">{L.marketTitle}</Txt>
-                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                    {L.marketSub({ funds })}
-                  </Txt>
-                </View>
-                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
-                  ›
-                </Txt>
-              </View>
-            </Card>
-          </Press>
+        </>
+      ) : null}
+
+      {/* T-11-128 시즌 결산: 끝난 시즌이 있을 때만(카드가 스스로 숨는다). 비로그인도 본다. */}
+      <RecapCard />
+
+      {linked ? (
+        <>
           <RerollShop
             focus={shopFocus}
             onBought={(balance, spent) =>
@@ -444,26 +473,7 @@ export default function Owner() {
           />
           <BoostShop />
         </>
-      ) : guest ? (
-        <>
-          <Card gap={12} testID="owner-team-locked">
-            <View style={{ gap: 2 }}>
-              <Txt v="eyebrow">My team</Txt>
-              <Txt v="h2" accessibilityRole="header">
-                {L.myTeam}
-              </Txt>
-            </View>
-            <LockedPitch />
-            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-              {ownerLockedText(localCount)}
-            </Txt>
-            {/* 로그아웃·탈퇴 직후엔 세션이 없으므로 startGoogleLogin이 새 익명 세션부터 받는다. */}
-            <LoginButtons />
-          </Card>
-        </>
       ) : null}
-
-      {!guest || localCount > 0 ? <MyPlayers onRows={onRows} /> : null}
 
       <SettingsCard>
         <Account admin={admin} />

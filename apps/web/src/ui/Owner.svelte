@@ -152,23 +152,6 @@
     <AdSlot place="owner-summary" />
   {/if}
 
-  <!-- T-11-128 시즌 결산: 끝난 시즌이 있을 때만. 비로그인도 본다(프로필 쿠키만 있으면 된다). -->
-  {#if recap && recapCard}
-    <section class="card owner-market" aria-label={R.cardTitle} data-owner-recap data-recap-status={recap.status}>
-      <div class="owner-who">
-        <small class="eyebrow">Season recap</small>
-        <h2>{R.cardTitle}{#if recapCard.isNew}<span class="pill good owner-founder" data-recap-new>{R.newBadge}</span>{/if}</h2>
-        <span class="muted fs-sm">{recapCard.line}</span>
-        {#if recapCard.chips.length > 0}
-          <span class="recap-chips">
-            {#each recapCard.chips as c (c.kind)}<span class="pill recap-chip medal {c.medal}" data-recap-chip={c.kind}>{c.chip}</span>{/each}
-          </span>
-        {/if}
-      </div>
-      <button class="btn" data-act="recap" onclick={() => go('recap')}>{R.open}</button>
-    </section>
-  {/if}
-
   <!-- T-10-092 내 팀: 구글로 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. -->
   {#if linked}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team>
@@ -203,27 +186,6 @@
         </button>
       {/if}
     </section>
-    <section class="card owner-market owner-tap" data-owner-hall-entry aria-label={H.hallTitle}>
-      <div class="owner-who">
-        <small class="eyebrow">Hall of honors</small>
-        <h2>{H.hallTitle}<span class="pill good owner-founder" data-owner-hall-new>{H.hallNew}</span></h2>
-        <span class="muted fs-sm">{H.hallSummary}</span>
-      </div>
-      <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="open-owner-hall" aria-label={`${H.openHall} · ${H.hallNew}`} onclick={() => go('honors')}></button>
-    </section>
-    <section class="card owner-market owner-tap" aria-label={L.marketTitle} data-owner-market>
-      <div class="owner-who">
-        <small class="eyebrow">Transfer market</small>
-        <h2>{L.marketTitle}</h2>
-        <span class="muted fs-sm">{L.marketSub({ funds })}</span>
-      </div>
-      <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="market" aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}></button>
-    </section>
-    <!-- T-11-152 리롤권 상점: 펼칠 때만 상점을 묻는다. 사면 자금 줄을 다시 받는다(쓰기 성공으로 메모가 비워졌다). -->
-    <RerollShop focus={shopFocus} onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
-    <BoostShop />
   {:else if guest}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team-locked>
       <small class="eyebrow">My team</small>
@@ -241,6 +203,50 @@
   {/if}
 
   {#if !guest || localCount > 0}<MyPlayers onrows={(rows) => (summary = ownerSummary(rows))} />{/if}
+
+  {#if linked}
+    <section class="card owner-market owner-tap" aria-label={L.marketTitle} data-owner-market>
+      <div class="owner-who">
+        <small class="eyebrow">Transfer market</small>
+        <h2>{L.marketTitle}</h2>
+        <span class="muted fs-sm">{L.marketSub({ funds })}</span>
+      </div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="market" aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}></button>
+    </section>
+    <section class="card owner-market owner-tap" data-owner-hall-entry aria-label={H.hallTitle}>
+      <div class="owner-who">
+        <small class="eyebrow">Hall of honors</small>
+        <h2>{H.hallTitle}<span class="pill good owner-founder" data-owner-hall-new>{H.hallNew}</span></h2>
+        <span class="muted fs-sm">{H.hallSummary}</span>
+      </div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="open-owner-hall" aria-label={`${H.openHall} · ${H.hallNew}`} onclick={() => go('honors')}></button>
+    </section>
+  {/if}
+
+  <!-- T-11-128 시즌 결산: 끝난 시즌이 있을 때만. 비로그인도 본다(프로필 쿠키만 있으면 된다). -->
+  {#if recap && recapCard}
+    <section class="card owner-market" aria-label={R.cardTitle} data-owner-recap data-recap-status={recap.status}>
+      <div class="owner-who">
+        <small class="eyebrow">Season recap</small>
+        <h2>{R.cardTitle}{#if recapCard.isNew}<span class="pill good owner-founder" data-recap-new>{R.newBadge}</span>{/if}</h2>
+        <span class="muted fs-sm">{recapCard.line}</span>
+        {#if recapCard.chips.length > 0}
+          <span class="recap-chips">
+            {#each recapCard.chips as c (c.kind)}<span class="pill recap-chip medal {c.medal}" data-recap-chip={c.kind}>{c.chip}</span>{/each}
+          </span>
+        {/if}
+      </div>
+      <button class="btn" data-act="recap" onclick={() => go('recap')}>{R.open}</button>
+    </section>
+  {/if}
+
+  {#if linked}
+    <!-- T-11-152 리롤권 상점: 펼칠 때만 상점을 묻는다. 사면 자금 줄을 다시 받는다(쓰기 성공으로 메모가 비워졌다). -->
+    <RerollShop focus={shopFocus} onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
+    <BoostShop />
+  {/if}
 
   <section class="card settings-card" id="account-slot" aria-label={L.accountSection}>
     <Account {admin} />
