@@ -36,11 +36,11 @@ export const BOOST_PITY_PCT = Math.round(BOOST.pity * 100);
 
 export const boostState = (s: GameState): BoostState => s.boost ?? { lv: 0, fails: 0, log: [] };
 
-/** 다음 단계 비용(만 원, 10 단위). 최대 단계면 0. */
+/** 다음 단계 비용(만 원, 10 단위). 최대 단계면 0. 운영 도구 배율(BAL.boostCost, T-11-185)을 곱한다. */
 export function boostCost(s: GameState): number {
   const L = boostState(s).lv;
   if (L >= BOOST_MAX) return 0;
-  return salaryCost(s, BOOST.rate[L]!, BOOST.min[L]!);
+  return salaryCost(s, BOOST.rate[L]!, BOOST.min[L]!, BAL.boostCost);
 }
 
 /** 다음 시도 성공 확률(%, 정수). 화면에 그대로 보여 준다. */
