@@ -122,7 +122,7 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
               ]}
             />
             {mine ? (
-              <Btn sm testID="owner-hall" onPress={() => go('owner')}>
+              <Btn sm testID="owner-hall" onPress={() => go('honors')}>
                 {L.manage}
               </Btn>
             ) : null}

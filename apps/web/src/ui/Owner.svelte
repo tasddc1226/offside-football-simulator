@@ -37,7 +37,7 @@
   import { recapCardView } from '@offside/app-core/seasonRecap';
   import { profileTier, tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
-  import OwnerHall from './owner/OwnerHall.svelte';
+  import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from './cup/TitleBadge.svelte';
   import { seasonRecapText as R } from '@offside/app-core/i18n/ko/seasonRecap';
 
@@ -203,7 +203,11 @@
         </button>
       {/if}
     </section>
-    <OwnerHall onpick={(title) => { if (card) card = { ...card, title }; }} />
+    <section class="card stack" data-owner-hall-entry aria-label={H.hallTitle}>
+      <h2>{H.hallTitle}</h2>
+      <p class="muted fs-sm">{H.hallSummary}</p>
+      <button class="btn btn-block" data-act="open-owner-hall" onclick={() => go('honors')}>{H.openHall}</button>
+    </section>
     <section class="card owner-market owner-tap" aria-label={L.marketTitle} data-owner-market>
       <div class="owner-who">
         <small class="eyebrow">Transfer market</small>

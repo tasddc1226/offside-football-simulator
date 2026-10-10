@@ -90,6 +90,10 @@
   $effect(() => {
     if (appState.screen === 'owner' && !Owner) void import('./Owner.svelte').then((m) => (Owner = m.default));
   });
+  let OwnerHonors = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'honors' && !OwnerHonors) void import('./owner/OwnerHonors.svelte').then((m) => (OwnerHonors = m.default));
+  });
   // T-10-092: 구단주 팀(편성·팀 경기)도 처음 열 때 불러온다.
   let Team = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -186,6 +190,8 @@
       {#if Settings}<Settings />{/if}
     {:else if appState.screen === 'owner'}
       {#if Owner}<Owner />{/if}
+    {:else if appState.screen === 'honors'}
+      {#if OwnerHonors}<OwnerHonors />{/if}
     {:else if appState.screen === 'team'}
       {#if Team}<Team />{/if}
     {:else if appState.screen === 'market'}

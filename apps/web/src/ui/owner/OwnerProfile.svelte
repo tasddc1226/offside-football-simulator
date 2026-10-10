@@ -74,7 +74,7 @@
           <div><dt>{L.statRetired}</dt><dd>{num(owner.stats.retired)}</dd></div>
           <div><dt>{L.statBestRank}</dt><dd>{rank(owner.stats.bestTeamRank)}</dd></div>
         </dl>
-        {#if mine}<button class="btn btn-sm" data-act="owner-hall" onclick={() => go('owner')}>{L.manage}</button>{/if}
+        {#if mine}<button class="btn btn-sm" data-act="owner-hall" onclick={() => go('honors')}>{L.manage}</button>{/if}
       </section>
 
       {#if owner.cupHonors.length}

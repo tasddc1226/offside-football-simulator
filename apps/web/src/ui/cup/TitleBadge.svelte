@@ -17,7 +17,7 @@
 {#if label}
   {@const palette = t ? cupTrophy(t.stage).palette : { base: titleGradeColor(title), light: titleGradeColor(title) }}
   <span class="title-badge" class:small={size === 'sm'} class:icon={size === 'icon'} data-title={title} role="img" aria-label={L.titleAria({ title: grade ? `${titleGradeLabel(grade)} · ${label}` : label })} title={label} style={`--tb-base:${palette.base};--tb-light:${palette.light}`}>
-    {#if !t}<svg width={size === 'md' ? 22 : 16} height={size === 'md' ? 22 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={titleIconPath(title)} /></svg>{:else if size === 'md'}<CupTrophy stage={t.stage} size={22} />{:else}<TrophyArt stage={t.stage} size={16} />{/if}
+    {#if !t}<svg width={size === 'md' ? 22 : 16} height={size === 'md' ? 22 : 16} viewBox="0 0 16 16" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true"><path d={titleIconPath(title)} /></svg>{:else if size === 'md'}<CupTrophy stage={t.stage} size={22} />{:else}<TrophyArt stage={t.stage} size={16} />{/if}
     {#if size !== 'icon'}<span aria-hidden="true">{label}</span>{/if}
   </span>
 {/if}

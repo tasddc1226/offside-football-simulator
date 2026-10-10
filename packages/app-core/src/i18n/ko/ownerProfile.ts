@@ -87,6 +87,9 @@ const ko = {
   // 명예관
   hallLoadFail: '명예관을 불러오지 못했어요.',
   retry: '다시 시도',
+  hallSummary: '받은 칭호와 다음 목표를 확인하고 대표 칭호를 골라요.',
+  openHall: '명예관 보기',
+  hallCount: (p: { n: number }) => `획득한 칭호 ${p.n}개`,
   hallTitle: '명예관',
   hallLead:
     '받은 칭호 가운데 하나를 대표 칭호로 달아요. 랭킹 · 팀 프로필 · 댓글 · 채팅에서 닉네임 옆에 보여요.',

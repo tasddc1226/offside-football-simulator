@@ -40,7 +40,7 @@ import { MyPlayers } from './MyPlayers';
 import { TitleBadge } from '../../components/TitleBadge';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { RecapCard } from './RecapCard';
-import { OwnerHall } from './OwnerHall';
+import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
 import { BoostShop } from './BoostShop';
 import { RerollShop } from './RerollShop';
 import { GRADE_COLOR, Grid2, OvrBadge, Stats, type StatPress } from './TeamParts';
@@ -387,7 +387,15 @@ export default function Owner() {
               </>
             )}
           </Card>
-          <OwnerHall onpick={(title) => setCard((prev) => (prev ? { ...prev, title } : prev))} />
+          <Card gap={8} testID="owner-hall-entry">
+            <Txt v="h2" accessibilityRole="header">
+              {H.hallTitle}
+            </Txt>
+            <Txt tone="muted">{H.hallSummary}</Txt>
+            <Btn block testID="open-owner-hall" onPress={() => go('honors')}>
+              {H.openHall}
+            </Btn>
+          </Card>
           <Press
             testID="market"
             accessibilityLabel={`${L.marketTitle} ${L.open}`}

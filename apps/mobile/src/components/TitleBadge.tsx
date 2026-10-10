@@ -55,15 +55,8 @@ export function TitleBadge({ title, size = 'md' }: { title: string; size?: 'md' 
       }}
     >
       {!t ? (
-        <Svg width={size === 'md' ? 22 : 16} height={size === 'md' ? 22 : 16} viewBox="0 0 24 24">
-          <Path
-            d={titleIconPath(title)}
-            fill="none"
-            stroke={c.ink}
-            strokeWidth={1.6}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+        <Svg width={size === 'md' ? 22 : 16} height={size === 'md' ? 22 : 16} viewBox="0 0 16 16">
+          <Path d={titleIconPath(title)} fill={c.ink} />
         </Svg>
       ) : size === 'md' ? (
         <CupTrophy stage={t.stage} size={22} />

@@ -18,6 +18,7 @@ export const PAGES: Record<string, string> = {
   game: 'game',
   retired: 'retired',
   owner: 'owner',
+  honors: 'owner_honors',
   hof: 'hof',
   shared: 'shared_career',
   settings: 'settings',

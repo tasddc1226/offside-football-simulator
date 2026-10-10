@@ -103,6 +103,7 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
         <Txt v="h2" accessibilityRole="header">
           {L.hallTitle}
         </Txt>
+        <Txt tone="muted">{L.hallCount({ n: hall.titles.length })}</Txt>
         <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
           {hall.titles.length ? L.hallLead : L.hallEmpty}
         </Txt>

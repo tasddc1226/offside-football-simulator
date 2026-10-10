@@ -68,6 +68,8 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-permanent-title]')).toHaveCount(0);
+  await page.locator('[data-act="open-owner-hall"]').click();
   const hall = page.locator('[data-owner-hall]');
   await expect(hall.locator('[data-permanent-title]')).toHaveCount(13);
   await expect(hall.locator('[data-title-grade]')).toHaveCount(4);
@@ -90,22 +92,32 @@ test('permanent titles: progress, selection, header update, recovery and memoize
     'aria-pressed',
     'true',
   );
+  await page.locator('[data-act="honors-back"]').click();
   await expect(
     page.locator('[aria-label="구단주 요약"] [data-title="owner-developer"]'),
   ).toBeVisible();
+  await page.locator('[data-act="open-owner-hall"]').click();
   await hall.locator('[data-title-pick="none"]').click();
+  await page.locator('[data-act="honors-back"]').click();
   await expect(page.locator('[aria-label="구단주 요약"] [data-title]')).toHaveCount(0);
   await page.locator('[data-act="home"]').click();
   await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-permanent-title]')).toHaveCount(0);
+  await page.locator('[data-act="open-owner-hall"]').click();
   await expect(hall).toBeVisible();
   const afterMutation = gets;
+  await page.locator('[data-act="honors-back"]').click();
   await page.locator('[data-act="home"]').click();
   await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-permanent-title]')).toHaveCount(0);
+  await page.locator('[data-act="open-owner-hall"]').click();
   await expect(hall).toBeVisible();
   expect(gets).toBe(afterMutation);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.reload();
   await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-permanent-title]')).toHaveCount(0);
+  await page.locator('[data-act="open-owner-hall"]').click();
   await expect(hall.locator('[data-title-pick="none"]')).toHaveAttribute('aria-pressed', 'true');
   await hall.locator('[data-act="title-season-achievements"]').click();
   await expect(page.locator('[data-club-achievements]')).toBeVisible();
@@ -151,6 +163,8 @@ test('hall read failure can retry and shows all locked goals for a new owner', a
   });
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await expect(page.locator('[data-permanent-title]')).toHaveCount(0);
+  await page.locator('[data-act="open-owner-hall"]').click();
   const error = page.locator('[data-owner-hall-error]');
   await expect(error).toContainText('명예관을 불러오지 못했어요.');
   await error.getByRole('button', { name: '다시 시도' }).click();

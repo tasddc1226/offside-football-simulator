@@ -57,6 +57,7 @@
     <div>
       <small class="eyebrow">Hall of honors</small>
       <h2>{L.hallTitle}</h2>
+      <p class="muted fs-sm">{L.hallCount({ n: hall.titles.length })}</p>
       <p class="muted fs-sm">{hall.titles.length ? L.hallLead : L.hallEmpty}</p>
     </div>
     {#if hall.titles.length}

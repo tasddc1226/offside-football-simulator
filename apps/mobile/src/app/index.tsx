@@ -33,6 +33,7 @@ import Dex from '../screens/hof/Dex';
 import Board from '../screens/board/Board';
 import Chat from '../screens/chat/Chat';
 import Owner from '../screens/owner/Owner';
+import OwnerHonors from '../screens/owner/OwnerHonors';
 import Team from '../screens/owner/Team';
 import Market from '../screens/owner/Market';
 import SeasonRecap from '../screens/owner/SeasonRecap';
@@ -55,6 +56,7 @@ const SCREENS: Record<Screen, ComponentType> = {
   board: Board,
   chat: Chat,
   owner: Owner,
+  honors: OwnerHonors,
   team: Team,
   market: Market,
   funds: FundsHistory,

@@ -3,20 +3,23 @@
   "title": "구단주 명예관과 영구 칭호",
   "items": [
     "시즌 업적과 연결된 반복 육성 기록으로 입문·숙련·명예·전설 등급의 영구 칭호 13종에 도전해요.",
-    "명예관에서 대표 칭호를 골라 프로필·랭킹·댓글·채팅에 표시해요. 미획득 칭호의 조건과 진행도도 확인해요."
+    "명예관에서 대표 칭호를 골라 프로필·랭킹·댓글·채팅에 표시해요. 미획득 칭호의 조건과 진행도도 확인해요.",
+    "구단주 탭에서 별도 명예관을 열어 도트 아이콘 칭호와 다음 목표를 살펴봐요."
   ],
   "en": {
     "title": "Owner hall and permanent titles",
     "items": [
       "Pursue 13 permanent titles across Entry, Skilled, Honor and Legend grades by repeating development feats related to season achievements.",
-      "Choose a representative title in your hall for profiles, rankings, comments and chat. View conditions and progress for unearned titles."
+      "Choose a representative title in your hall for profiles, rankings, comments and chat. View conditions and progress for unearned titles.",
+      "Open a dedicated hall from the Owner tab to explore pixel-art titles and your next goals."
     ]
   },
   "ja": {
     "title": "オーナーの名誉館と永久称号",
     "items": [
       "シーズン実績につながる育成記録を重ね、入門・熟練・名誉・伝説の永久称号13種に挑戦できます。",
-      "名誉館で代表称号を選ぶと、プロフィール・ランキング・コメント・チャットに表示されます。未獲得の称号の条件と進捗も確認できます。"
+      "名誉館で代表称号を選ぶと、プロフィール・ランキング・コメント・チャットに表示されます。未獲得の称号の条件と進捗も確認できます。",
+      "オーナータブから専用の名誉館を開き、ドット絵の称号と次の目標を確認できます。"
     ]
   },
   "availability": "web-app"

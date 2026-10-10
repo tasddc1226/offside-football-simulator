@@ -83,6 +83,9 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   manage: '名誉の殿堂で称号を選ぶ',
   hallLoadFail: '名誉館を読み込めませんでした。',
   retry: '再試行',
+  hallSummary: '獲得した称号と次の目標を確認し、代表称号を選べます。',
+  openHall: '名誉館を見る',
+  hallCount: (p: { n: number }) => `獲得した称号 ${p.n}個`,
   hallTitle: '名誉の殿堂',
   hallLead:
     '獲得した称号から一つを代表称号に。ランキング・チームプロフィール・コメント・チャットでニックネームの横に表示されます。',
