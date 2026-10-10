@@ -2,7 +2,7 @@
 // 시즌은 지금 업적 점수(owner_achievements)와 지금 팀 순위를 쓴다.
 import type { OwnerProfile } from '@offside/contracts';
 import { teamSeasonAt, teamSeasonName } from '@offside/contracts/service-seasons';
-import { and, count, desc, eq, isNotNull } from 'drizzle-orm';
+import { and, count, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import type { Lang } from '../../lang.js';
 import { cupHonorsOf } from '../../team/cup.js';
 import type { Db } from '../client.js';
@@ -51,7 +51,8 @@ export async function ownerProfileOf(
       .where(and(eq(careers.profileId, id), eq(careers.hidden, 0))),
     db
       .select({ n: count() })
-      .from(careers)
+      // Avoid the global HOF peak index: this count must scan only this owner's retired players.
+      .from(sql`${careers} INDEXED BY careers_profile_status_legend_idx`)
       .where(
         and(
           eq(careers.profileId, id),
