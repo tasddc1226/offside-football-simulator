@@ -23,6 +23,7 @@
     fetchMarketChart,
     fetchMarketMe,
     releaseCards,
+    setCardLock,
     type MarketCard,
     type MarketChartPoint,
     type MarketListing,
@@ -271,7 +272,7 @@
           {#each team.players as p (p.careerId)}
             {@const lock = releaseLock(p, lineup)}
             <li>
-              <label class="mk-rel" class:on={picked.has(p.careerId)} class:locked={!!lock} data-mine={p.careerId}>
+              <label class="mk-rel" class:on={picked.has(p.careerId)} class:locked={!!lock} class:unlockable={p.locked && p.raised} data-mine={p.careerId}>
                 <input type="checkbox" checked={picked.has(p.careerId)} disabled={!!lock} aria-label={L.releasePickLabel({ name: nameOfPlayer(p) })} onchange={() => togglePick(p.careerId)} />
                 {@render mini(p, nameOfPlayer(p), !!lock)}
                 <span class="mk-info">
@@ -280,6 +281,7 @@
                 </span>
                 {#if !lock && me}<b class="mk-rel-value">{fundsText(releaseValue(p, me.rules.releaseRate))}</b>{/if}
               </label>
+              {#if p.locked && p.raised}<button class="mk-link mk-unlock" data-act="unlock" data-unlock={p.careerId} disabled={busy} onclick={() => run(() => setCardLock(p.careerId, false), MARKET_TOAST.unlocked)}>{L.playerUnlock}</button>{/if}
             </li>
           {:else}
             <li class="muted">{L.noRetired({ season: seasonName })}</li>
@@ -394,11 +396,14 @@
             {#each team.players as p (p.careerId)}
               {@const note = sellNote(p, lineup)}
               {@const off = !sellable(p)}
-              <button class="mk-pick" aria-pressed={selling?.careerId === p.careerId} disabled={off} data-sell-pick={p.careerId} onclick={() => pickSell(p)}>
-                {@render mini(p, nameOfPlayer(p), off)}
-                <span class="mk-pick-name">{nameOfPlayer(p)}</span>
-                <small>{selling?.careerId === p.careerId ? L.sellSelected : note}</small>
-              </button>
+              <div class="mk-pick-cell">
+                <button class="mk-pick" aria-pressed={selling?.careerId === p.careerId} disabled={off} data-sell-pick={p.careerId} onclick={() => pickSell(p)}>
+                  {@render mini(p, nameOfPlayer(p), off)}
+                  <span class="mk-pick-name">{nameOfPlayer(p)}</span>
+                  <small>{selling?.careerId === p.careerId ? L.sellSelected : note}</small>
+                </button>
+                {#if p.locked}<button class="mk-link" data-act="unlock" data-unlock={p.careerId} disabled={busy} onclick={() => run(() => setCardLock(p.careerId, false), MARKET_TOAST.unlocked)}>{L.playerUnlock}</button>{/if}
+              </div>
             {/each}
           </div>
         {/if}
@@ -960,6 +965,17 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
   }
+  .mk-pick-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    min-width: 0;
+  }
+  .mk-pick-cell .mk-link {
+    min-height: 32px;
+    font-size: 0.75rem;
+  }
   .mk-pick {
     min-height: 104px;
     display: flex;
@@ -1106,6 +1122,18 @@
   }
 
   /* 방출 */
+  .mk-rel-list li:has(.mk-unlock) {
+    position: relative;
+  }
+  .mk-rel.unlockable {
+    padding-right: 92px;
+  }
+  .mk-unlock {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
   .mk-rel {
     display: flex;
     align-items: center;

@@ -123,6 +123,8 @@ export const TeamPlayerSchema = z.strictObject({
   /** T-11-180 키(cm)·몸무게(kg). 체격을 입력하지 않은 옛 커리어·구버전 응답에는 없다. */
   height: z.number().int().optional(),
   weight: z.number().int().optional(),
+  /** T-11-188 구단주가 잠근 선수(이적시장에 내놓거나 방출할 수 없다). 구버전 응답에는 없다. */
+  locked: z.boolean().optional(),
   /** T-11-080 판매 등록 중이면 그 등록. */
   listing: z.strictObject({ id: z.string(), price: z.number().int() }).nullable().optional(),
 });

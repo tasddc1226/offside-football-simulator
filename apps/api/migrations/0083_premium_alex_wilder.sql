@@ -11,6 +11,13 @@ CREATE TABLE `owner_title_awards` (
 --> statement-breakpoint
 CREATE TABLE `owner_title_progress` (
 	`profile_id` text PRIMARY KEY NOT NULL,
+	`criteria_version` integer DEFAULT 0 NOT NULL,
+	`midfield` integer DEFAULT 0 NOT NULL,
+	`defense` integer DEFAULT 0 NOT NULL,
+	`keeper` integer DEFAULT 0 NOT NULL,
+	`scorers` integer DEFAULT 0 NOT NULL,
+	`creators` integer DEFAULT 0 NOT NULL,
+	`internationals` integer DEFAULT 0 NOT NULL,
 	`retired` integer NOT NULL,
 	`elite` integer NOT NULL,
 	`ballon` integer NOT NULL,
@@ -21,4 +28,5 @@ CREATE TABLE `owner_title_progress` (
 );
 --> statement-breakpoint
 ALTER TABLE `profiles` ADD `title` text;--> statement-breakpoint
-ALTER TABLE `profiles` ADD `title_pinned` integer DEFAULT 0 NOT NULL;
+ALTER TABLE `profiles` ADD `title_pinned` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+CREATE INDEX `careers_owner_title_updated_idx` ON `careers` (`profile_id`,`status`,`updated_at`);

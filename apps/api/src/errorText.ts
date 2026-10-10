@@ -133,7 +133,12 @@ const EXACT: Record<string, string> = {
   '기준가가 없는 선수는 내놓을 수 없어요.': "Players without a base value can't be listed.",
   '이미 내놓은 선수예요.': 'That player is already listed.',
   '판매가가 정할 수 있는 범위를 벗어났어요.': 'The asking price is outside the allowed range.',
-  '이미 내놓았거나 방출한 선수예요.': 'That player has already been listed or released.',
+  '이미 내놓았거나 방출했거나 잠근 선수예요.':
+    'That player has already been listed, released or locked.',
+  '잠긴 선수예요. 잠금을 풀어야 내놓을 수 있어요.':
+    'This player is locked. Unlock them to list them.',
+  '판매 중인 선수예요. 판매를 내린 뒤 잠글 수 있어요.':
+    'This player is listed. Take the listing down to lock them.',
   '내가 내놓은 선수예요.': "That's your own listing.",
   '판매가가 바뀌었어요. 다시 확인해 주세요.': 'The price has changed. Please check it again.',
   '선발에 든 선수는 팀에서 뺀 뒤 방출해 주세요.':

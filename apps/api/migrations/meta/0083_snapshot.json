@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "02d394c7-983b-416b-bc35-6bf6952b86eb",
-  "prevId": "4fab29e7-962e-412f-a0bc-0ff243162feb",
+  "id": "28f7f282-e639-4647-8abd-6621024b8495",
+  "prevId": "db9c010e-f6cd-468f-8e2f-3016ca8dc9ec",
   "tables": {
     "app_auth_tickets": {
       "name": "app_auth_tickets",
@@ -820,6 +820,14 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "locked": {
+          "name": "locked",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -4017,6 +4025,62 @@
           "primaryKey": true,
           "notNull": true,
           "autoincrement": false
+        },
+        "criteria_version": {
+          "name": "criteria_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "midfield": {
+          "name": "midfield",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "defense": {
+          "name": "defense",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "keeper": {
+          "name": "keeper",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "scorers": {
+          "name": "scorers",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "creators": {
+          "name": "creators",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "internationals": {
+          "name": "internationals",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
         },
         "retired": {
           "name": "retired",

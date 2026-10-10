@@ -509,6 +509,8 @@ export const cards = sqliteTable(
     releasedValue: integer('released_value'),
     // T-11-163 은퇴 장려금(만 원). 은퇴해 카드가 생길 때 키운 사람에게 기준가 × 장려금 비율을 준 값. 없으면 NULL.
     bonusValue: integer('bonus_value'),
+    // T-11-188 구단주가 잠근 선수(1). 잠기면 내놓거나 방출할 수 없고, 판매 중인 선수는 잠글 수 없다(판매 중 카드는 늘 0).
+    locked: integer('locked', { mode: 'boolean' }).notNull().default(false),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

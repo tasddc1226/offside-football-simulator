@@ -162,6 +162,7 @@ export async function cardForListing(db: Db, careerId: string) {
       ownerId: cards.ownerId,
       season: cards.serviceSeason,
       cardValue: cards.cardValue,
+      locked: cards.locked,
       hidden: sql<number>`coalesce(${careers.hidden}, 0)`,
       openListing: marketListings.id,
     })
@@ -342,7 +343,7 @@ export async function myTrades(db: Db, profileId: string): Promise<MarketTrade[]
     .slice(0, TRADES);
 }
 
-/** 판매 등록. 지금도 내 카드이고 열린 등록이 없을 때만 넣는다(그 사이 방출되면 0행). 넣었으면 true. */
+/** 판매 등록. 지금도 내 카드이고 잠기지 않았고 열린 등록이 없을 때만 넣는다(그 사이 방출·잠금되면 0행). 넣었으면 true. */
 export async function insertListing(
   db: Db,
   l: { id: string; careerId: string; sellerId: string; season: number; price: number; now: string },
@@ -351,7 +352,7 @@ export async function insertListing(
     .prepare(
       `INSERT OR IGNORE INTO market_listings (id, career_id, seller_id, season, price, status, created_at)
        SELECT ?, career_id, owner_id, service_season, ?, 'open', ? FROM cards
-       WHERE career_id = ? AND owner_id = ? AND service_season = ?`,
+       WHERE career_id = ? AND owner_id = ? AND service_season = ? AND locked = 0`,
     )
     .bind(l.id, l.price, l.now, l.careerId, l.sellerId, l.season)
     .run();
@@ -457,7 +458,7 @@ export async function buyListing(
 }
 
 /**
- * 방출: 지금 내가 가진 카드 중 내가 키웠고 숨김 아니고 판매 중이 아닌 것만. 받은 자금(카드 기준가 × 지급률, 천만 단위)을
+ * 방출: 지금 내가 가진 카드 중 내가 키웠고 숨김 아니고 잠기지 않았고 판매 중이 아닌 것만. 받은 자금(카드 기준가 × 지급률, 천만 단위)을
  * 잔액에 더한다.
  */
 export async function releaseCards(
@@ -476,7 +477,7 @@ export async function releaseCards(
     d1
       .prepare(
         `UPDATE cards SET owner_id = NULL, released_at = ?, updated_at = ?, released_value = -1
-         WHERE career_id IN (SELECT value FROM json_each(?)) AND owner_id = ?
+         WHERE career_id IN (SELECT value FROM json_each(?)) AND owner_id = ? AND locked = 0
            AND EXISTS (SELECT 1 FROM careers c WHERE c.id = cards.career_id AND c.profile_id = ? AND c.hidden = 0)
            AND NOT EXISTS (SELECT 1 FROM market_listings l WHERE l.career_id = cards.career_id AND l.status = 'open')`,
       )
@@ -499,6 +500,25 @@ export async function releaseCards(
   const sum = results[2]!.results[0] as { n: number; amount: number };
   const bal = results[4]!.results[0] as { balance: number } | undefined;
   return { released: sum.n, amount: sum.amount, balance: bal?.balance ?? 0 };
+}
+
+/**
+ * T-11-188 선수 잠금·풀기. 지금 내 카드만 바꾼다. 잠글 때는 판매 중이 아니어야 한다(등록 INSERT는 locked = 0을 보므로
+ * 어느 쪽이 먼저 와도 판매 중이면서 잠긴 카드는 생기지 않는다). 바꿨으면(이미 그 상태여도) true.
+ */
+export async function setCardLocked(
+  db: Db,
+  r: { careerId: string; profileId: string; locked: boolean; now: string },
+): Promise<boolean> {
+  const res = await db.$client
+    .prepare(
+      `UPDATE cards SET locked = ?, updated_at = ?
+       WHERE career_id = ? AND owner_id = ?
+         AND (? = 0 OR NOT EXISTS (SELECT 1 FROM market_listings l WHERE l.career_id = cards.career_id AND l.status = 'open'))`,
+    )
+    .bind(r.locked ? 1 : 0, r.now, r.careerId, r.profileId, r.locked ? 1 : 0)
+    .run();
+  return res.meta.changes === 1;
 }
 
 /** 계정 삭제: 내 열린 등록을 내리고 자금 행을 지운다(소프트 삭제라 FK CASCADE가 돌지 않는다). */

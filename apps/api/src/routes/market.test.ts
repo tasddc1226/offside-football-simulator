@@ -184,6 +184,59 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(await reason(res)).toBe('IN_LINEUP');
   });
 
+  it('T-11-188 잠긴 선수는 내놓거나 방출할 수 없고, 판매 중인 선수는 내린 뒤 잠근다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const other = await issueGoogleCookie(ctx);
+    const a = await addCard(owner.profileId);
+    const b = await addCard(owner.profileId);
+    const lock = (cookie: string, careerId: string, locked: boolean, lang = '') =>
+      call('POST', `/v1/cards/lock${lang}`, { cookie, body: { careerId, locked } });
+    const team = async () =>
+      TeamRes.parse(await (await call('GET', '/v1/owner-team', { cookie: owner.cookie })).json())
+        .data.players;
+
+    expect((await lock(owner.cookie, a, true)).status).toBe(200);
+    expect(await team()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ careerId: a, locked: true }),
+        expect.objectContaining({ careerId: b, locked: false }),
+      ]),
+    );
+    const listed = await list(owner.cookie, a, 1_000_000);
+    expect(listed.status).toBe(409);
+    expect(await reason(listed)).toBe('CARD_LOCKED');
+    const rel = await call('POST', '/v1/cards/release', {
+      cookie: owner.cookie,
+      headers: idem(),
+      body: { careerIds: [a] },
+    });
+    expect(await reason(rel)).toBe('NOTHING_TO_RELEASE');
+    expect((await ctx.db.select().from(cards).where(eq(cards.careerId, a)))[0]?.ownerId).toBe(
+      owner.profileId,
+    );
+
+    // 남의 카드는 잠그지 못한다. 판매 중이면 잠글 수 없고 내린 뒤에는 잠근다.
+    expect(await reason(await lock(other.cookie, b, true))).toBe('CARD_NOT_FOUND');
+    const created = await list(owner.cookie, b, 1_000_000);
+    expect(created.status).toBe(201);
+    const listedLock = await lock(owner.cookie, b, true);
+    expect(listedLock.status).toBe(409);
+    expect(await reason(listedLock)).toBe('CARD_LISTED');
+    const en = await lock(owner.cookie, b, true, '?lang=en');
+    expect(ErrorEnvelopeSchema.parse(await en.json()).error.message).toBe(
+      'This player is listed. Take the listing down to lock them.',
+    );
+    const id = ((await created.json()) as { data: { listing: { id: string } } }).data.listing.id;
+    expect(
+      (await call('DELETE', `/v1/market/listings/${id}`, { cookie: owner.cookie })).status,
+    ).toBe(204);
+    expect((await lock(owner.cookie, b, true)).status).toBe(200);
+
+    // 풀면 다시 내놓을 수 있다.
+    expect((await lock(owner.cookie, a, false)).status).toBe(200);
+    expect((await list(owner.cookie, a, 1_000_000)).status).toBe(201);
+  });
+
   it('T-11-180 OVR 높은 순으로 본다(같으면 싼 것부터)', async () => {
     const seller = await issueGoogleCookie(ctx);
     const [lo, hi, mid] = [

@@ -40,8 +40,9 @@
   import type { TeamLogo } from '@offside/contracts/team-logo';
   import TeamLogoEditor from './TeamLogoEditor.svelte';
   import { go } from '../nav.js';
-  import { marketName } from '@offside/app-core/market';
+  import { MARKET_TOAST, marketName } from '@offside/app-core/market';
   import { toast } from '../helpers.js';
+  import { setCardLock } from '@offside/app-core/api/market';
   import { dur } from '../motion.js';
   import { startGoogleLogin } from '../login.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
@@ -334,6 +335,14 @@
   }
 
   // ───────── 경기 ─────────
+  // T-11-188 선수 잠금 — 잠긴 선수는 이적시장에 내놓거나 방출할 수 없다.
+  async function toggleLock(p: TeamPlayer) {
+    const r = await setCardLock(p.careerId, !p.locked);
+    if (!r.ok) return toast(r.error.message);
+    players = players.map((x) => (x.careerId === p.careerId ? { ...x, locked: r.data.locked } : x));
+    toast(r.data.locked ? MARKET_TOAST.locked : MARKET_TOAST.unlocked);
+  }
+
   async function loadOpponents() {
     oppStatus = 'loading';
     const r = await fetchOpponents();
@@ -497,6 +506,7 @@
         onassign={assign}
         onauto={autoFill}
         onsave={save}
+        onlock={toggleLock}
       />
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>

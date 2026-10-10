@@ -3611,7 +3611,8 @@ th.n {
   text-align: center;
   font-size: 0.75rem;
   color: var(--muted);
-  padding: 8px 0 20px;
+  /* Leave room above the fixed chat button when scrolled to the end. */
+  padding: 8px 0 64px;
   display: flex;
   flex-direction: column;
   gap: 4px;

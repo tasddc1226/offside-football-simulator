@@ -140,6 +140,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'released_at',
     'released_value',
     'bonus_value',
+    'locked',
     'created_at',
     'updated_at',
   ],
