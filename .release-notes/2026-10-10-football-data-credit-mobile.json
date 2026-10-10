@@ -1,0 +1,14 @@
+{
+  "id": "football-data-credit-mobile-1010",
+  "title": "하단 안내를 읽기 편하게 다듬었어요",
+  "items": ["채팅 버튼이 하단 안내를 가리지 않도록 여백을 늘렸어요."],
+  "en": {
+    "title": "Footer information is easier to read",
+    "items": ["Extra space keeps the chat button from covering footer information."]
+  },
+  "ja": {
+    "title": "ページ下部の案内を読みやすくしました",
+    "items": ["チャットボタンが案内を隠さないよう、余白を増やしました。"]
+  },
+  "availability": "web"
+}
