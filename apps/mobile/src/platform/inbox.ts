@@ -44,8 +44,10 @@ export function openInboxTarget(
   const parsed = NotificationTargetSchema.safeParse(target);
   if (!parsed.success) return;
   router.dismissTo('/');
-  if (parsed.data.type === 'board') openBoard(parsed.data.board, parsed.data.postId);
-  else {
+  if (parsed.data.type === 'board') {
+    invalidateApiCache(`/v1/boards/posts/${parsed.data.postId}`);
+    openBoard(parsed.data.board, parsed.data.postId);
+  } else {
     if (parsed.data.screen === 'team') {
       notificationDestination.friends = kind === 'social';
       notificationDestination.history = kind === 'team';

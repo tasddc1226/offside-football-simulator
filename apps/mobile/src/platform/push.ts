@@ -152,7 +152,7 @@ function openNotification(response: Notifications.NotificationResponse) {
     void trackPushInteraction(id, 'click');
     // T-11-142 친구 알림은 알림함을 거치지 않고 친구 목록으로 바로 연다(읽음 처리도 함께). 옛 서버의 푸시엔 kind가 없다.
     const target = NotificationTargetSchema.safeParse(data.target);
-    if (data.kind === 'social' && target.success) {
+    if ((data.kind === 'social' || data.kind === 'community') && target.success) {
       void inbox.read(id);
       openInboxTarget(target.data, data.kind, id);
       return;
@@ -176,11 +176,15 @@ let started = false;
 export function startPush() {
   if (started) return;
   started = true;
-  // 켜진 앱에는 기존 게임 내 배너가 있어 OS 배너·소리를 중복해서 내지 않는다.
+  // 일반 알림은 게임 내 배너를 쓴다. 운영 알림은 앱이 켜져 있어도 OS 배너에 표시한다.
   Notifications.setNotificationHandler({
     handleNotification: async (notification) => ({
-      shouldShowBanner: notification.request.content.data?.test === true,
-      shouldShowList: notification.request.content.data?.test === true,
+      shouldShowBanner:
+        notification.request.content.data?.test === true ||
+        notification.request.content.data?.kind === 'community',
+      shouldShowList:
+        notification.request.content.data?.test === true ||
+        notification.request.content.data?.kind === 'community',
       shouldPlaySound: false,
       shouldSetBadge: false,
     }),

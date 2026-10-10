@@ -2,6 +2,7 @@ import type { Bindings } from '../env.js';
 import { postExpo } from './transport.js';
 import { kstDay } from '@offside/contracts/kst';
 import { latePushResult } from './result.js';
+import { communityOwnerEmail } from './community.js';
 
 const BATCH = 100;
 const MINUTE = 60_000;
@@ -65,10 +66,12 @@ const retry = (r: Row, now: number): Outcome => ({
 
 /** T-11-145 컵 알림(source_key cup·cup-match). */
 const IS_CUP = "source_key LIKE 'cup%'";
+const IS_COMMUNITY = "kind = 'community' AND source_key LIKE 'admin-community-%'";
+const IS_UNCAPPED = `(${IS_CUP} OR (${IS_COMMUNITY}))`;
 
 /**
  * 같은 이벤트의 여러 기기·재시도는 예산 하나를 공유한다. 서로 다른 이벤트는 한 시간·하루 2회로 제한한다.
- * T-11-161 컵 알림(추첨·경기 결과)은 제때 가야 해서 이 제한을 받지 않는다. 예약 시각도 남기지 않아 다른 알림의 예산을 쓰지 않는다.
+ * 컵 경기 결과와 지정 관리자 운영 알림은 이 제한을 받지 않는다. 예약 시각도 남기지 않아 일반 알림의 예산을 쓰지 않는다.
  */
 async function reserveBudget(db: D1Database, rows: Row[], now: number) {
   const ids = [...new Set(rows.map((r) => r.notification_id))];
@@ -78,8 +81,8 @@ async function reserveBudget(db: D1Database, rows: Row[], now: number) {
     ids.map((id) =>
       db
         .prepare(
-          `UPDATE notifications SET push_reserved_at = CASE WHEN ${IS_CUP} THEN NULL ELSE COALESCE(push_reserved_at, ?) END
-    WHERE id = ? AND read_at IS NULL AND (${IS_CUP} OR push_reserved_at IS NOT NULL OR (
+          `UPDATE notifications SET push_reserved_at = CASE WHEN ${IS_UNCAPPED} THEN NULL ELSE COALESCE(push_reserved_at, ?) END
+    WHERE id = ? AND read_at IS NULL AND (${IS_UNCAPPED} OR push_reserved_at IS NOT NULL OR (
       (SELECT COUNT(*) FROM notifications q WHERE q.profile_id = notifications.profile_id AND q.push_reserved_at >= ?) < 2
       AND NOT EXISTS (SELECT 1 FROM notifications q WHERE q.profile_id = notifications.profile_id AND q.push_reserved_at > ?)))
     RETURNING id`,
@@ -92,22 +95,25 @@ async function reserveBudget(db: D1Database, rows: Row[], now: number) {
 
 /** T-11-145 컵 알림만 조용한 시간 앞부분에도 보낸다. */
 const CUP_PUSH_UNTIL_HOUR = 22;
-const CUP_ONLY = ` AND notification_id IN (SELECT id FROM notifications WHERE ${IS_CUP})`;
+const afterHoursOnly = (cup: boolean) => ` AND EXISTS
+  (SELECT 1 FROM notifications WHERE id = push_deliveries.notification_id
+    AND ((${IS_COMMUNITY})${cup ? ` OR ${IS_CUP}` : ''}))`;
 
 async function claim(
-  db: D1Database,
+  env: Bindings,
   checking: boolean,
   now: number,
   lease: string,
-  cupOnly = false,
+  only: string = '',
 ) {
+  const db = env.DB;
   const from = checking ? 'accepted' : 'pending';
   const state = checking ? 'checking' : 'sending';
   await db
     .prepare(
       `UPDATE push_deliveries SET state = ?, lease_id = ?, due_at = ?, updated_at = ?,
     attempts = attempts + ?, receipt_attempts = receipt_attempts + ?
-    WHERE id IN (SELECT id FROM push_deliveries WHERE state = ? AND due_at <= ?${cupOnly ? CUP_ONLY : ''} ORDER BY due_at LIMIT ${BATCH})`,
+    WHERE id IN (SELECT id FROM push_deliveries WHERE state = ? AND due_at <= ?${only} ORDER BY due_at LIMIT ${BATCH})`,
     )
     .bind(
       state,
@@ -130,6 +136,11 @@ async function claim(
       AND CASE n.kind WHEN 'team' THEN COALESCE(pref.team, 1) WHEN 'market' THEN COALESCE(pref.market, 1)
         WHEN 'social' THEN COALESCE(pref.social, 1) ELSE 1 END = 1
       AND (n.kind <> 'social' OR ${SOCIAL_ELIGIBLE} = 1)
+      AND (n.kind <> 'community' OR (n.source_key LIKE 'admin-community-%'
+        AND p.google_sub IS NOT NULL AND lower(trim(p.email)) = ?
+        AND (n.source_key NOT LIKE 'admin-community-comment:%' OR EXISTS (
+          SELECT 1 FROM board_comments cm JOIN board_posts bp ON bp.id = cm.post_id
+          WHERE cm.id = substr(n.source_key, 25) AND cm.deleted_at IS NULL AND bp.deleted_at IS NULL))))
       AND (n.kind <> 'return' OR NOT EXISTS (SELECT 1 FROM push_devices active WHERE active.profile_id = q.profile_id AND active.updated_at > ?))
       THEN 1 ELSE 0 END AS eligible
     FROM push_deliveries q JOIN notifications n ON n.id = q.notification_id
@@ -143,6 +154,7 @@ async function claim(
       iso(now),
       iso(now),
       iso(now),
+      communityOwnerEmail(env),
       iso(now - 7 * 86400_000),
       state,
       lease,
@@ -277,11 +289,11 @@ export async function runPersonalPush(
   const states: Partial<Record<Outcome['state'], number>> = {};
   const hour = new Date(now + 9 * 3600_000).getUTCHours();
   for (const checking of [true, false, false, false]) {
-    // 조용한 시간에는 영수증만 확인한다. 수동 본인 테스트는 별도의 요청 경로다. T-11-145 컵 알림만 22시까지 보낸다
-    // (경기가 밤 9시라 결과를 다음 날 아침으로 미루지 않게).
+    // 운영 알림은 야간에도 보낸다. 일반 알림은 09~20시, 컵 결과는 22시까지다.
+    // 영수증 조회는 시간 제한 없이 유지하고, 수동 본인 테스트는 별도의 요청 경로를 쓴다.
     const cupOnly = hour >= 20 && hour < CUP_PUSH_UNTIL_HOUR;
-    if (!checking && (hour < 9 || (hour >= 20 && !cupOnly))) break;
-    const rows = await claim(env.DB, checking, now, lease, !checking && cupOnly);
+    const only = !checking && (hour < 9 || hour >= 20) ? afterHoursOnly(cupOnly) : '';
+    const rows = await claim(env, checking, now, lease, only);
     const eligible = checking ? rows : rows.filter((r) => r.eligible === 1);
     const reserved = checking ? null : await reserveBudget(env.DB, eligible, now);
     const active = checking ? eligible : eligible.filter((r) => reserved!.has(r.notification_id));
