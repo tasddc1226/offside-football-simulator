@@ -68,7 +68,7 @@
     {#if draft}<div class="draft-actions"><button class="btn" disabled={busy} onclick={() => draft = undefined}>{L.profileCancel}</button><button class="btn btn-primary" disabled={busy} data-avatar-save onclick={() => void save(draft!)}>{L.profileImageSave}</button></div>{/if}
     <p class="muted hint">{L.profileImageHint}</p>
     {#if error}<p class="error" role="alert">{error}</p>{/if}
-    <div class="name-edit"><span class="name-label">{L.profileName}</span>{#if admin}<b>{A.nicknameFixed({ nickname: profile.nickname })}</b>{:else}{#key profile.nickname}<NicknameForm current={profile.nickname} />{/key}{/if}</div>
+    <div class="name-edit"><span class="name-label">{L.profileName}</span>{#if admin}<b>{A.nicknameFixed({ nickname: profile.nickname })}</b>{:else}{#key profile.nickname}<NicknameForm current={profile.nickname} />{/key}{/if}<p class="muted hint" data-profile-name-notice>{L.profileNameNotice}</p></div>
   </div>
     {/if}
   </dialog>

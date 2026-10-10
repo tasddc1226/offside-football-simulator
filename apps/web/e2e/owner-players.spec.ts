@@ -122,6 +122,8 @@ test('내 선수: 320px 별도 화면, 시즌 기록과 방출 관리 및 캐시
   await page.locator('[data-act="owner"]').click();
   await expect(page.locator('[data-my-player]')).toHaveCount(0);
   await page.locator('[data-act="open-owner-players"]').click();
+  await expect(page.locator('[data-act="players-manage"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-act="players-records"]').click();
   await expect(page.locator('[data-my-player]')).toHaveCount(4);
   await page.selectOption('[data-my-season-select]', '0');
   await expect(page.locator('[data-my-player]')).toHaveCount(1);
@@ -170,8 +172,19 @@ test('내 선수: 320px 별도 화면, 시즌 기록과 방출 관리 및 캐시
   await expect(page.locator('[data-act="open-owner-players"]')).toBeVisible();
   const counts = { mineGets, teamGets };
   await page.locator('[data-act="open-owner-players"]').click();
+  await expect(page.locator('[data-act="players-manage"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-act="players-records"]').click();
   await expect(page.locator('[data-my-player]')).toHaveCount(4);
   await page.locator('[data-act="players-manage"]').click();
   await expect(page.locator('[data-managed-player]')).toHaveCount(5);
-  expect({ mineGets, teamGets }).toEqual(counts);
+  // A successful release invalidates the career cache once; later read-only entries reuse it.
+  expect({ mineGets, teamGets }).toEqual({
+    mineGets: counts.mineGets + 1,
+    teamGets: counts.teamGets,
+  });
+  const refreshed = { mineGets, teamGets };
+  await page.locator('[data-act="players-back"]').click();
+  await page.locator('[data-act="open-owner-players"]').click();
+  await expect(page.locator('[data-managed-player]')).toHaveCount(5);
+  expect({ mineGets, teamGets }).toEqual(refreshed);
 });

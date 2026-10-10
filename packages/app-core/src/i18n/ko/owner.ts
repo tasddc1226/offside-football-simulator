@@ -3,6 +3,11 @@
 import { ns } from '../core';
 
 const ko = {
+  hubTitle: '내 구단',
+  teamsHeading: '운영 중인 팀',
+  operationsHeading: '구단 운영',
+  manageTeam: '팀 관리',
+  currentSeason: '이번 시즌',
   seasonTierHistory: '시즌별 최종 티어',
   valueInfoTitle: '구단 가치 계산 기준',
   valueInfoFormula: '구단 가치 = 구단 자금 + 보유 선수 카드의 기준가 합계',
@@ -16,6 +21,8 @@ const ko = {
     '로그인하지 않은 상태에서는 이 기기에 저장된 현재 시즌 은퇴 선수의 카드 기준가를 합산해요.',
   profileEdit: '프로필 편집',
   profileName: '구단주 이름',
+  profileNameNotice:
+    '부적절한 구단주 이름은 신고 대상이 될 수 있으며, 확인 후 숨김 처리될 수 있어요.',
   profileHint: '이름과 이미지는 구단주 프로필·댓글·채팅에 함께 표시돼요.',
   profileImagePick: '이미지 고르기',
   profileImageReset: '기본 이미지로 변경',

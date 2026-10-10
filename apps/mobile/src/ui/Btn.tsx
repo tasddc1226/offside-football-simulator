@@ -88,6 +88,8 @@ export function Btn({
             fontWeight: '600',
             lineHeight: rem(small ? 0.875 : 0.9375) * 1.25,
             textAlign: 'center',
+            flexShrink: 1,
+            minWidth: 0,
           }}
         >
           {children}

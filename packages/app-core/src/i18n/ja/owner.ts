@@ -2,6 +2,11 @@ import type { Translation } from '../core';
 import type { OwnerMsgs } from '../ko/owner';
 
 export const owner: Translation<OwnerMsgs> = {
+  hubTitle: 'マイクラブ',
+  teamsHeading: '運営中のチーム',
+  operationsHeading: 'クラブ運営',
+  manageTeam: 'チーム管理',
+  currentSeason: '今シーズン',
   seasonTierHistory: 'シーズン別最終ランク',
   valueInfoTitle: 'クラブ価値の計算方法',
   valueInfoFormula: 'クラブ価値 = クラブ資金 + 保有選手カードの基準価格の合計',
@@ -15,6 +20,7 @@ export const owner: Translation<OwnerMsgs> = {
     '未ログイン時は、この端末に保存された現シーズンの引退選手カードの基準価格を合算します。',
   profileEdit: 'プロフィール編集',
   profileName: 'オーナー名',
+  profileNameNotice: '不適切なオーナー名は通報の対象となり、確認後に非表示になる場合があります。',
   profileHint: '名前と画像はオーナープロフィール・コメント・チャットに表示されます。',
   profileImagePick: '画像を選ぶ',
   profileImageReset: '初期画像に戻す',
@@ -46,7 +52,7 @@ export const owner: Translation<OwnerMsgs> = {
   manager: (p) => `${p.manager}監督 · ${p.formation}`,
   teamOvr: (p) => `チームOVR ${p.ovr}`,
   statRecord: '戦績',
-  statRating: 'レーティング',
+  statRating: 'レート',
   statToday: '今日の試合',
   play: '試合をする',
   teamFailed:

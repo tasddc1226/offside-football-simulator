@@ -49,7 +49,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   archiveNoBadges: 'No badges were awarded for this season.',
   archiveScore: 'Achievement score',
   archiveTeamRank: 'Team rank',
-  archivePlayers: 'View season players',
+  archivePlayers: 'View players',
   archiveChoose: 'Choose a season',
   archiveNew: 'New season record',
   archiveCupEmpty: 'No finalized cup results for this season.',
@@ -82,7 +82,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   relatedNumbers: 'Related achievements · First retired number · 11 retired numbers',
   relatedBallon: 'Related achievements · First Ballon d’Or · 30 Ballon d’Or wins',
   relatedFirsts: 'A title from a finalized season-first honor',
-  viewAchievements: 'View this season’s achievements',
+  viewAchievements: 'Season achievements',
   titleBridge:
     'Season achievements are challenges for this season. Permanent titles reward repeated development across seasons or finalized season-first honors. Achievement points are not added toward titles.',
   titleFounder: 'Founding member',

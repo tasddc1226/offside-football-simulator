@@ -107,8 +107,11 @@ test('owner entry shares one compact read and reentry uses cache', async ({ page
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-owner-summary]')).toContainText('9,710');
-  await expect(page.locator('[data-owner-summary]')).toContainText('프리시즌 골드');
+  await expect(page.locator('[data-owner-hall-entry]')).toContainText('9,710');
+  await expect(page.getByRole('heading', { name: '내 구단', exact: true })).toBeVisible();
+  await expect(page.locator('[data-owner-summary] [data-owner-value]')).toHaveCount(0);
+  await expect(page.locator('[data-club-operations] [data-owner-value]')).toHaveCount(1);
+  await expect(page.locator('[data-owner-hall-entry]')).toContainText('프리시즌 골드');
   await expect(page.locator('[data-owner-tier-history] li')).toHaveCount(4);
   expect(
     await page
@@ -117,7 +120,7 @@ test('owner entry shares one compact read and reentry uses cache', async ({ page
   ).toEqual(['3', '2', '1', '0']);
   await page.locator('[data-act="home"]').click();
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-owner-summary]')).toContainText('9,710');
+  await expect(page.locator('[data-owner-hall-entry]')).toContainText('9,710');
   expect(requested.filter((p) => p === '/v1/owner/summary')).toHaveLength(1);
   expect(
     requested.filter((p) =>

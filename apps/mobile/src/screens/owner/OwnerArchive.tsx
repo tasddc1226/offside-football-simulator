@@ -222,7 +222,7 @@ export function OwnerArchive() {
                     <View
                       key={h.kind}
                       style={{
-                        width: '33.333%',
+                        width: '50%',
                         alignItems: 'center',
                         paddingHorizontal: 3,
                         gap: 5,

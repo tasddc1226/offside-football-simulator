@@ -257,7 +257,9 @@ export default function SeasonRecap({ record }: { record?: SeasonRecapResponse }
   const [st, setSt] = useState<State>({ kind: 'loading' });
   const [retryN, setRetryN] = useState(0);
   const [sharing, setSharing] = useState(false);
-  const { tick, track, pulled } = useRefresh();
+  // Embedded records are already loaded by the archive. Registering a refresh
+  // control here reparents the Android ScrollView and resets the open archive.
+  const { tick, track, pulled } = useRefresh(!embedded);
   const season = picked ?? seasons?.at(-1) ?? null;
 
   useEffect(() => {
@@ -921,7 +923,7 @@ function TeamSection({ recap }: { recap: Recap }) {
                 ))}
             </View>
           ) : null}
-          <Grid cols={3}>
+          <Grid cols={2}>
             <Stat
               label={O.statRecord}
               value={recordText({ w: t.wins, d: t.draws, l: t.losses })}
@@ -975,9 +977,9 @@ function Ranks({ recap }: { recap: Recap }) {
           accessibilityLabel={`${r.label} ${rankLine(r.rank, r.total)}`}
           style={{ gap: 6 }}
         >
+          <Txt style={{ fontSize: rem(0.875) }}>{r.label}</Txt>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-            <Txt style={{ fontSize: rem(0.875) }}>{r.label}</Txt>
-            <Txt num style={{ marginLeft: 'auto', fontSize: rem(1.0625) }}>
+            <Txt num style={{ flex: 1, minWidth: 0, fontSize: rem(1.0625) }}>
               {rankText(r.rank, r.total)}
             </Txt>
             {r.pct !== null ? (

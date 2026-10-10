@@ -141,7 +141,7 @@ describe('/v1/owners · /v1/owner/title (T-11-150 구단주 프로필 · 대표 
     ).data;
     expect(my).toMatchObject({
       title: null,
-      titles: ['cup-1-champion', 'cup-2-sf'],
+      titles: ['cup-1-champion', 'cup-2-sf', 'owner-founder'],
       pinned: false,
       teamId: a.team.id,
     });

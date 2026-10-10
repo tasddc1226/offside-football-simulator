@@ -50,7 +50,7 @@ const ko = {
   archiveNoBadges: '마감 때 받은 배지가 없어요.',
   archiveScore: '업적 점수',
   archiveTeamRank: '팀 순위',
-  archivePlayers: '시즌 선수 보기',
+  archivePlayers: '선수 보기',
   archiveChoose: '시즌 선택',
   archiveNew: '새 시즌 기록',
   archiveCupEmpty: '이 시즌에 확정된 컵 성적이 없어요.',
@@ -83,7 +83,7 @@ const ko = {
   relatedNumbers: '연결 업적 · 첫 영구결번 · 영구결번 11명',
   relatedBallon: '연결 업적 · 첫 발롱도르 · 발롱도르 합계 30회',
   relatedFirsts: '시즌 최초 기록 휘장에서 이어지는 칭호',
-  viewAchievements: '이번 시즌 업적 보기',
+  viewAchievements: '시즌 업적',
   titleBridge:
     '시즌 업적은 이번 시즌의 도전이에요. 영구 칭호는 여러 시즌의 반복 육성이나 확정된 최초 기록 휘장으로 받아요. 업적 점수를 그대로 합산하지는 않아요.',
   titleFounder: '창단 멤버',

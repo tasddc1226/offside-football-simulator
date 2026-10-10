@@ -9,7 +9,7 @@ export const shell: Translation<ShellMsgs> = {
   navHof: 'Records',
   navBoard: 'News',
   navHome: 'Home',
-  navOwner: 'Owner',
+  navOwner: 'My club',
   navSettings: 'Settings',
   achNew: (p) => `${plural(p.n, 'new achievement')}`,
   recapNew: 'New season recap',

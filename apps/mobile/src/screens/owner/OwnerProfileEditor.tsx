@@ -114,6 +114,7 @@ export function OwnerProfileEditor({ profile, admin }: { profile: Profile; admin
       </Pressable>
       {open ? (
         <TeamDialog
+          avoidKeyboard
           title={L.profileEdit}
           close={() => {
             if (busy) return;
@@ -171,6 +172,9 @@ export function OwnerProfileEditor({ profile, admin }: { profile: Profile; admin
             ) : (
               <NicknameForm key={profile.nickname ?? ''} current={profile.nickname} />
             )}
+            <Txt tone="muted" v="xs" testID="profile-name-notice">
+              {L.profileNameNotice}
+            </Txt>
           </View>
         </TeamDialog>
       ) : null}

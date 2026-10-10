@@ -3,6 +3,11 @@ import type { OwnerMsgs } from '../ko/owner';
 import { plural } from './_util';
 
 export const owner: Translation<OwnerMsgs> = {
+  hubTitle: 'My club',
+  teamsHeading: 'Your teams',
+  operationsHeading: 'Club operations',
+  manageTeam: 'Manage team',
+  currentSeason: 'This season',
   seasonTierHistory: 'Final season tiers',
   valueInfoTitle: 'How club value is calculated',
   valueInfoFormula: 'Club value = club funds + the total base value of owned player cards',
@@ -16,6 +21,7 @@ export const owner: Translation<OwnerMsgs> = {
     'When signed out, this is the total base value of retired players from the current season stored on this device.',
   profileEdit: 'Edit profile',
   profileName: 'Owner name',
+  profileNameNotice: 'Inappropriate owner names may be reported and hidden after review.',
   profileHint: 'Your name and image appear on your owner profile, comments and chat.',
   profileImagePick: 'Choose image',
   profileImageReset: 'Use default image',

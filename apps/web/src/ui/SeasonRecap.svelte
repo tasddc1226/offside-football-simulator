@@ -620,9 +620,11 @@
 
   /* 시즌 순위 — 상위 몇 %인지 막대로. */
   .rank-list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
-  .rank-row { display: flex; align-items: baseline; gap: 8px; font-size: 0.875rem; }
-  .rank-row b { margin-left: auto; font-family: var(--display); font-size: 1.0625rem; }
+  .rank-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px 8px; font-size: 0.875rem; }
+  .rank-row > span { grid-column: 1 / -1; }
+  .rank-row b { min-width: 0; font-family: var(--display); font-size: 1.0625rem; }
   .rank-row em {
+    white-space: nowrap;
     font-style: normal;
     font-size: 0.75rem;
     font-weight: 700;

@@ -40,6 +40,7 @@ function firstProfilesCreateStatement(): string {
  * 5개뿐이다. 컬럼 목록은 schema.ts와 같다(snake_case).
  */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
+  profile_avatars: ['profile_id', 'id', 'image'],
   owner_title_awards: [
     'profile_id',
     'title_id',
@@ -57,7 +58,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'scorers',
     'creators',
     'internationals',
-
+    'preseason',
     'retired',
     'elite',
     'ballon',
@@ -240,6 +241,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'last_test_sent_at',
   ],
   profiles: [
+    'avatar_id',
     'id',
     'recovery_code_hash',
     'recovery_code_issued_at',

@@ -9,7 +9,7 @@ const ko = {
   navHof: '기록실',
   navBoard: '소식',
   navHome: '홈',
-  navOwner: '구단주',
+  navOwner: '내 구단',
   navSettings: '설정',
   achNew: (p: { n: number }) => `새 업적 ${p.n}개`,
   recapNew: '새 시즌 결산',

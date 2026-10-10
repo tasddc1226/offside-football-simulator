@@ -191,7 +191,7 @@ export function Stats({
           minWidth: 0,
           gap: 2,
           paddingVertical: 10,
-          paddingHorizontal: 12,
+          paddingHorizontal: small || items.length > 2 ? 6 : 12,
           borderRadius: 12,
           backgroundColor: c.surface2,
         };

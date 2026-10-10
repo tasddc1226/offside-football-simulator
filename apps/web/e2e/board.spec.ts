@@ -327,8 +327,8 @@ test('홈 하단 메뉴: 소식 → 릴리즈 노트로 바꾸기 → 기록실 
 
   await nav.getByRole('button', { name: '기록실' }).click();
   await expect(page.locator('h1')).toHaveText('명예의 전당');
-  await nav.getByRole('button', { name: '구단주' }).click();
-  await expect(page.locator('h1')).toHaveText('구단주');
+  await nav.getByRole('button', { name: '내 구단' }).click();
+  await expect(page.locator('h1')).toHaveText('내 구단');
   await nav.getByRole('button', { name: '설정' }).click();
   await expect(page.locator('h1')).toHaveText('환경설정');
   await nav.getByRole('button', { name: '홈' }).click();

@@ -1,11 +1,7 @@
 <script lang="ts">
   import GoogleLoginButton from './GoogleLoginButton.svelte';
-  // 구단주 화면(T-10-058) — 게임 속 사용자 프로필. 환경설정에 있던 계정(구글 로그인·닉네임) 카드와
-  // 운영 도구(관리자) 입구, 명예의 전당에 있던 '내 선수'를 이리로 옮겼다.
-  // T-10-102 비로그인이면 계정 카드는 안내만, 구글 로그인 버튼은 카드 밖에 하나만 두고 로그인해야 쓰는 '내 팀'은 숨긴다.
-  // 구단 이름·엠블럼 변경은 환경설정으로 옮겼다.
-  // T-11-026 구단 허브 — 맨 위에 구단주 요약(은퇴 선수·레전드 점수·결번), 그 아래 '내 팀' 카드(전적·레이팅·오늘 남은
-  // 경기와 바로 경기하기), 내 선수 상위 3명, 계정은 맨 아래. 비로그인이면 '내 팀' 자리에 잠긴 카드와 로그인 버튼을 둔다.
+  // My club keeps owner identity and shared operations outside the season team card.
+  // Team slots can expand later without duplicating the owner profile, finances or honors.
   import Topbar from './Topbar.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
   import AdSlot from '../ads/AdSlot.svelte';
@@ -124,8 +120,7 @@
 <div class="wrap">
   <Topbar />
   <header class="settings-head">
-    <div class="eyebrow">Owner</div>
-    <h1>{L.title}</h1>
+    <h1>{L.hubTitle}</h1>
   </header>
 
   {#if linked || guest}
@@ -134,42 +129,22 @@
         <OwnerAvatar avatarId={accountCache.value && accountCache.value !== 'error' ? accountCache.value.avatarId : null} name={nickname ?? L.avatarInitial} size={48} />
         <div class="owner-who">
           <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.title}<span class="owner-founder"><TitleBadge title={card.title} size="sm" /></span>{/if}</b>
-          <span class="muted fs-sm">{guest ? L.guestSub : card?.team ? `${card.team.name} · ${card.season}` : L.signedInSubWeb}</span>
+          <span class="muted fs-sm">{guest ? L.guestSub : L.title}</span>
         </div>
         {#if linked && accountCache.value && accountCache.value !== 'error'}<OwnerProfileEditor profile={accountCache.value} {admin} />{/if}
       </div>
-      {#if tiers.length}
-        <ul class="owner-tier-history" aria-label={L.seasonTierHistory} data-owner-tier-history>
-          {#each tiers as tier (tier.season)}
-            <li class="ach-grade" data-grade={tier.tier} data-owner-tier={tier.tier} data-tier-season={tier.season}>
-              <GradeEmblem id={tier.tier} size={16} /><span>{tierTitle(tier)}</span>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-      {#if (guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue)}
-        <p class="muted fs-sm owner-empty">{L.emptySummary}</p>
-        {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds })}</p>{/if}
-      {:else}
-      <dl class="owner-stats">
-        <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><ClubValueInfo {linked} /><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
-        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
-        <div><dt>{L.statRetired}</dt><dd>{summary ? L.playersCount({ n: summary.players, text: num(summary.players) }) : '–'}</dd></div>
-        <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
-        <div><dt>{L.statRetiredNumbers}</dt><dd>{summary ? L.numbersCount({ n: summary.retired }) : '–'}</dd></div>
-      </dl>
-      {/if}
     </section>
     <AdSlot place="owner-summary" />
   {/if}
 
+  {#if linked || guest}<h2 class="hub-section-title">{L.teamsHeading}</h2>{/if}
   <!-- T-10-092 내 팀: 구글로 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. -->
   {#if linked}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team>
       <div class="owner-team-head">
         {#if card?.team}<TeamLogo logo={card.team.logo} name={card.team.name} size={44} decorative />{/if}
         <div class="owner-who">
-          <small class="eyebrow">My team{card?.season ? ` · ${card.season}` : ''}</small>
+          <small class="eyebrow">{L.myTeam}{card?.season ? ` · ${card.season}` : ''}</small>
           <h2>{card?.team?.name ?? L.myTeam}</h2>
           {#if card?.team}<span class="muted fs-sm">{L.manager({ manager: card.team.manager, formation: card.team.formation })}</span>{/if}
         </div>
@@ -184,7 +159,7 @@
           <div><dt>{L.statToday}</dt><dd>{card.left}/{card.perDay}</dd></div>
         </dl>
         <div class="owner-actions">
-          <button class="btn" data-act="team" onclick={openMyTeam}>{L.myTeam}{@render achDot()}</button>
+          <button class="btn" data-act="team" onclick={openMyTeam}>{L.manageTeam}{@render achDot()}</button>
           <button class="btn btn-accent" data-act="owner-play" disabled={!!card.playHint} onclick={() => openTeam('opponents')}>{L.play}</button>
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
@@ -199,7 +174,7 @@
     </section>
   {:else if guest}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team-locked>
-      <small class="eyebrow">My team</small>
+
       <h2>{L.myTeam}</h2>
       <div class="owner-lock" aria-hidden="true">
         {#each [1, 4, 3, 3] as n, r (r)}
@@ -215,31 +190,32 @@
 
   {#if !guest || localCount > 0}
     <section class="card owner-market owner-tap" data-owner-players-entry aria-label={P.title}>
-      <div class="owner-who"><small class="eyebrow">My players</small><h2>{P.title}</h2><span class="muted fs-sm">{P.entryLead}</span></div>
+      <div class="owner-who"><h2>{P.title}</h2><span class="muted fs-sm">{P.entryLead}</span></div>
       <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="open-owner-players" aria-label={P.openPlayers} onclick={() => go('players')}></button>
+      <button class="tap-cover" data-act="open-owner-players" aria-label={P.openPlayers} onclick={() => { appState.playersView = linked ? 'manage' : 'records'; go('players'); }}></button>
+    </section>
+  {/if}
+
+  {#if linked || guest}
+    <section class="card owner-hub" data-club-operations aria-label={L.operationsHeading}>
+      <h2 class="hub-card-title">{L.operationsHeading}</h2>
+      <dl class="owner-stats">
+        <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><ClubValueInfo {linked} /><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
+        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
+      </dl>
     </section>
   {/if}
 
   {#if linked}
     <section class="card owner-market owner-tap" aria-label={L.marketTitle} data-owner-market>
       <div class="owner-who">
-        <small class="eyebrow">Transfer market</small>
         <h2>{L.marketTitle}</h2>
         <span class="muted fs-sm">{L.marketSub({ funds })}</span>
       </div>
       <span class="tap-go" aria-hidden="true">›</span>
       <button class="tap-cover" data-act="market" aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}></button>
     </section>
-    <section class="card owner-market owner-tap" data-owner-hall-entry aria-label={H.hallTitle}>
-      <div class="owner-who">
-        <small class="eyebrow">Hall of honors</small>
-        <h2>{H.hallTitle}<span class="pill good owner-founder" data-owner-hall-new>{H.hallNew}</span></h2>
-        <span class="muted fs-sm">{H.hallSummary}</span>
-      </div>
-      <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="open-owner-hall" aria-label={`${H.openHall} · ${H.hallNew}`} onclick={() => go('honors')}></button>
-    </section>
+
   {/if}
 
 
@@ -249,6 +225,32 @@
     <!-- T-11-152 리롤권 상점: 펼칠 때만 상점을 묻는다. 사면 자금 줄을 다시 받는다(쓰기 성공으로 메모가 비워졌다). -->
     <RerollShop focus={shopFocus} onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
     <BoostShop />
+  {/if}
+
+  {#if linked}
+    <section class="card owner-hall-entry owner-tap" data-owner-hall-entry aria-label={H.hallTitle}>
+      <div class="owner-who">
+        <h2>{H.hallTitle}<span class="pill good owner-founder" data-owner-hall-new>{H.hallNew}</span></h2>
+        <span class="muted fs-sm">{H.hallSummary}</span>
+      </div>
+      {#if tiers.length}
+        <ul class="owner-tier-history" aria-label={L.seasonTierHistory} data-owner-tier-history>
+          {#each tiers as tier (tier.season)}
+            <li class="ach-grade" data-grade={tier.tier} data-owner-tier={tier.tier} data-tier-season={tier.season}>
+              <GradeEmblem id={tier.tier} size={16} /><span>{tierTitle(tier)}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <p class="muted fs-sm owner-empty">{card?.season ?? L.currentSeason}</p>
+      <dl class="owner-stats" data-owner-record-preview>
+        <div><dt>{L.statRetired}</dt><dd>{summary ? num(summary.players) : '–'}</dd></div>
+        <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
+        <div><dt>{L.statRetiredNumbers}</dt><dd>{summary ? num(summary.retired) : '–'}</dd></div>
+      </dl>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="open-owner-hall" aria-label={`${H.openHall} · ${H.hallNew}`} onclick={() => go('honors')}></button>
+    </section>
   {/if}
 
   <section class="card settings-card" id="account-slot" aria-label={L.accountSection}>
@@ -263,6 +265,11 @@
 </div>
 
 <style>
+  .hub-section-title {margin:8px 2px 0;font-size:1rem;}
+  .hub-card-title {margin:0;font-size:1rem;}
+  .owner-hall-entry {display:flex;flex-direction:column;gap:12px;}
+  .owner-hall-entry > .owner-who {padding-right:24px;}
+  .owner-hall-entry > .tap-go {position:absolute;right:18px;top:20px;}
   .owner-founder {margin-left:6px;vertical-align:middle;}
   .owner-hub {
     display: flex;
@@ -348,6 +355,9 @@
   }
   .owner-empty {
     margin: 0;
+  }
+  .owner-team-stats div {
+    padding-inline: 6px;
   }
   .owner-team-stats dd {
     font-size: 1.0625rem;

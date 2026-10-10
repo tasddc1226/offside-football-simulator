@@ -50,7 +50,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   archiveNoBadges: 'このシーズンで獲得したバッジはありません。',
   archiveScore: '実績スコア',
   archiveTeamRank: 'チーム順位',
-  archivePlayers: 'シーズンの選手を見る',
+  archivePlayers: '選手を見る',
   archiveChoose: 'シーズンを選択',
   archiveNew: '新しいシーズン記録',
   archiveCupEmpty: 'このシーズンの確定したカップ成績はありません。',
@@ -83,7 +83,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   relatedNumbers: '関連実績 · 初の永久欠番 · 永久欠番11人',
   relatedBallon: '関連実績 · 初のバロンドール · バロンドール合計30回',
   relatedFirsts: '確定したシーズン初記録の勲章から得る称号',
-  viewAchievements: '今シーズンの実績を見る',
+  viewAchievements: 'シーズン実績',
   titleBridge:
     'シーズン実績は今シーズンの挑戦です。永久称号は複数シーズンにわたる育成の積み重ねや確定した初記録の勲章で獲得します。実績ポイントの合算ではありません。',
   titleFounder: '創設メンバー',

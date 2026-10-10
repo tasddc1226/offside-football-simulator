@@ -44,7 +44,7 @@ test('/settings?google=linked: 토스트 표시 후 URL 정리', async ({ page }
 
   await expect(page.locator('#toast')).toContainText('구글 계정을 연결했어요');
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('h1')).toHaveText('구단주');
+  await expect(page.locator('h1')).toHaveText('내 구단');
 
   const account = page.locator('#account-slot');
   await expect(account).toContainText('연동 해제');
