@@ -3,10 +3,10 @@
 import type { OwnerTierTag } from '@offside/contracts';
 import { ownerTierOf } from '@offside/contracts/owner-tier';
 import { lastClosedSeason } from '@offside/contracts/service-seasons';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, desc, lte, sql } from 'drizzle-orm';
 import { closeStateOf } from '../../team/seasonClose.js';
 import type { Db } from '../client.js';
-import { ownerSeasonRecords as r } from '../schema.js';
+import { appMeta, ownerSeasonRecords as r } from '../schema.js';
 
 /** 프로필마다 지난 시즌 티어. 결산 기록이 없는 프로필은 빠진다. */
 export async function ownerTiersOf(
@@ -40,3 +40,29 @@ export async function ownerTiersOf(
 
 export const ownerTierOfProfile = async (db: Db, profileId: string, now: string) =>
   (await ownerTiersOf(db, [profileId], now)).get(profileId) ?? null;
+
+/** Indexed owner+season read with close-state join; no per-season request or query loop. */
+export async function ownerTierHistoryOfProfile(
+  db: Db,
+  profileId: string,
+  now: string,
+): Promise<OwnerTierTag[]> {
+  const last = lastClosedSeason(now);
+  if (last === null) return [];
+  const rows = await db
+    .select({ season: r.season, achScore: r.achScore, state: appMeta.value })
+    .from(r)
+    .innerJoin(appMeta, eq(appMeta.key, sql`'season-close:' || ${r.season}`))
+    .where(and(eq(r.profileId, profileId), lte(r.season, last)))
+    .orderBy(desc(r.season));
+  return rows.flatMap((row) => {
+    try {
+      const state: unknown = JSON.parse(row.state);
+      if (!state || typeof state !== 'object' || !('step' in state) || state.step !== 'done')
+        return [];
+      return [{ season: row.season, tier: ownerTierOf(row.achScore) }];
+    } catch {
+      return [];
+    }
+  });
+}

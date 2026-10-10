@@ -1,3 +1,4 @@
+import { RELEASE_MAX } from './market-value.js';
 import { z } from 'zod';
 import {
   CareerIdParamSchema,
@@ -17,8 +18,7 @@ export { MARKET_CHART_DAYS, MARKET_CHART_RANGES, type MarketChartRange } from '.
 export const MARKET_PER_PAGE = 20;
 export const MARKET_SORTS = ['new', 'price', 'ovr'] as const;
 export type MarketSort = (typeof MARKET_SORTS)[number];
-/** 한 번에 방출할 수 있는 선수 수. */
-export const RELEASE_MAX = 50;
+export { RELEASE_MAX } from './market-value.js';
 
 const man = z.number().int().min(0);
 

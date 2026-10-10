@@ -6,6 +6,7 @@
 // 랭킹이 된다 — 시즌마다 처음부터 다시 쌓는다. 팀은 편성(나만의 최강 팀)과 경기 성적(시즌 레이스)으로, 구단주는 시즌 동안
 // 꾸준히 찾아온 활동(은퇴시킨 선수·날, 팀 경기한 날, 응원)으로 센다. 팀·구단주 목표치는 프리시즌 팀 53개 분포(2026-10-01)로 잡았다.
 // T-11-046 '은퇴 직전까지 현역'은 그 시즌 은퇴 나이(T-11-045)의 한 살 아래다 — 프리시즌 40세, 시즌 1 44세.
+import { CAREER_FEATS } from '@offside/contracts/owner-title';
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import { LINEUP_SIZE, type AchCategory } from '@offside/contracts/owner-team';
 import { LEAGUE_BASE } from '@offside/contracts/club-names';
@@ -412,12 +413,12 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
       feat(
         'caps-150',
         'A매치 150경기 선수',
-        anyone((c) => c.caps >= 150),
+        anyone((c) => c.caps >= CAREER_FEATS.caps),
       ),
       feat(
         'goals-500',
         '통산 500골 선수',
-        anyone((c) => c.goals >= 500),
+        anyone((c) => c.goals >= CAREER_FEATS.goals),
       ),
       feat(
         'season-50',

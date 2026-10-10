@@ -95,6 +95,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
             value: t.value,
             createdAt: t.createdAt,
             recentForm: forms.get(t.id) ?? [],
+            title: t.title,
           })),
         };
       },
@@ -127,6 +128,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
             score: r.score,
             done: r.done,
             players: r.players,
+            title: r.title,
           })),
         };
       },
@@ -183,6 +185,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           views: t.views,
           badges: teamBadges(t, teamSeasonClosed(t.season, now) ? rank : null, seasonName, lang),
           cupHonors,
+          ownerTitle: found.title,
           ownerNickname,
           // T-11-165 선발에 실제로 든 선수만(숨김·지난 주인 카드는 eligible에서 이미 빠졌다).
           players: rows.filter((r) => eligible.has(r.id)).map((r) => teamPlayerCard(r)),

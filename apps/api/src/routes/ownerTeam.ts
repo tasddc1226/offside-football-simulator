@@ -1,5 +1,4 @@
 import { checkCupLineup } from './cup.js';
-import { cupHonorsOf } from '../team/cup.js';
 import {
   ClubAchievementsResponseSchema,
   OwnerTeamResponseSchema,
@@ -175,14 +174,11 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const [[teams, players, [played], founder], honors] = await Promise.all([
-      db.batch([
-        listMyTeams(db, me.id),
-        listEligibleCareers(db, me.id, season),
-        countMatchesSince(db, me.id, kstTodayStart(now)),
-        foundersOf(db, [me.id]),
-      ]),
-      cupHonorsOf(db, me.id),
+    const [teams, players, [played], founder] = await db.batch([
+      listMyTeams(db, me.id),
+      listEligibleCareers(db, me.id, season),
+      countMatchesSince(db, me.id, kstTodayStart(now)),
+      foundersOf(db, [me.id]),
     ]);
     // T-11-113 개막 뒤의 프리시즌 팀은 친선전용 편성을 보이고 고친다(지금 가진 선수만).
     const editableSeason = season === teamSeasonAt(now) || season === 0;
@@ -235,7 +231,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         matchesPerDay: TEAM_MATCHES_PER_DAY,
         founder: founder.length > 0,
         // 컵 성적은 최근 대회부터 온다 — 첫 우승이 가장 최근 우승.
-        cupChampion: honors.find((h) => h.stage === 'champion')?.edition ?? null,
+        ownerTitle: me.title,
       },
       200,
       NO_STORE,
@@ -400,6 +396,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         ovr: team.ovr,
         rating: team.rating,
         record: recordOf(team),
+        title: team.title,
       }));
     return ok(c, TeamOpponentsResponseSchema, { items }, 200, NO_STORE);
   });

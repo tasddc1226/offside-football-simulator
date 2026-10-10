@@ -1,20 +1,22 @@
 - main:
   - text: "풀타임: 휘슬이 울릴 때까지 오프사이드"
   - switch "배경음악"
-  - text: Owner
-  - heading "구단주" [level=1]
-  - region "구단주 요약":
-    - text: 게스트 구단주 기록은 이 기기에만 저장돼요
-    - paragraph: 첫 커리어를 끝까지 뛰면 은퇴 선수와 레전드 점수가 여기에 쌓여요.
+  - heading "내 구단" [level=1]
+  - region "구단주 요약": 게스트 구단주 기록은 이 기기에만 저장돼요
+  - heading "운영 중인 팀" [level=2]
   - region "내 팀":
-    - text: My team
     - heading "내 팀" [level=2]
     - paragraph: 로그인하면 은퇴한 선수로 팀을 꾸려 다른 구단주와 겨뤄요. 하루 경기·라이브 랭킹·시즌 업적이 열려요.
     - button "구글로 로그인"
+  - region "구단 운영":
+    - heading "구단 운영" [level=2]
+    - term: 구단 가치
+    - button "구단 가치 계산 기준"
+    - definition: "-"
   - region "계정": 로그인하지 않았어요 게임 진행은 이 기기에만 저장돼요. 로그인하면 선수 기록과 구단 이름을 다른 기기에서도 볼 수 있어요.
 - navigation "메인 메뉴":
   - button "기록실"
   - button "소식"
   - button "홈"
-  - button "구단주"
+  - button "내 구단"
   - button "설정"

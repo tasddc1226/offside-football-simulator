@@ -36,7 +36,11 @@ export default function Hof() {
         profile ? (
           <BackBar
             testID="team-profile-back"
-            fallback={() => (appState.hof = { ...appState.hof, team: null })}
+            fallback={() =>
+              (appState.hof = hof.owner
+                ? { ...appState.hof, owner: false }
+                : { ...appState.hof, team: null })
+            }
           />
         ) : undefined
       }

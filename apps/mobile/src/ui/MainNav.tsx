@@ -48,7 +48,7 @@ export function MainNav() {
       items={MAIN_SCREENS.map((k) => ({
         key: k,
         label: label(k),
-        active: screen === k,
+        active: screen === k || (k === 'owner' && (screen === 'honors' || screen === 'recap')),
         onPress: OPEN[k],
         ...(k === 'owner'
           ? { dot: ownerDot ? 1 : 0, ...(ownerDot ? { dotLabel: ownerDot } : {}) }

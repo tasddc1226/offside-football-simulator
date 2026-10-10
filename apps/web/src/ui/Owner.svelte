@@ -1,30 +1,28 @@
 <script lang="ts">
   import GoogleLoginButton from './GoogleLoginButton.svelte';
-  // 구단주 화면(T-10-058) — 게임 속 사용자 프로필. 환경설정에 있던 계정(구글 로그인·닉네임) 카드와
-  // 운영 도구(관리자) 입구, 명예의 전당에 있던 '내 선수'를 이리로 옮겼다.
-  // T-10-102 비로그인이면 계정 카드는 안내만, 구글 로그인 버튼은 카드 밖에 하나만 두고 로그인해야 쓰는 '내 팀'은 숨긴다.
-  // 구단 이름·엠블럼 변경은 환경설정으로 옮겼다.
-  // T-11-026 구단 허브 — 맨 위에 구단주 요약(은퇴 선수·레전드 점수·결번), 그 아래 '내 팀' 카드(전적·레이팅·오늘 남은
-  // 경기와 바로 경기하기), 내 선수 상위 3명, 계정은 맨 아래. 비로그인이면 '내 팀' 자리에 잠긴 카드와 로그인 버튼을 둔다.
+  // My club keeps owner identity and shared operations outside the season team card.
+  // Team slots can expand later without duplicating the owner profile, finances or honors.
   import Topbar from './Topbar.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
   import AdSlot from '../ads/AdSlot.svelte';
-  import { fetchBoardViewer } from '@offside/app-core/api/boards';
+  import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
   import { fundsText } from '@offside/app-core/market';
   import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import BoostShop from './cup/BoostShop.svelte';
   import RerollShop from './cup/RerollShop.svelte';
-  import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
+  import { ownerLockedText, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
   import { fmtValue } from '@offside/app-core/format';
-  import { founderLabel } from '@offside/app-core/friendText';
   import { appState, type TeamView } from './state.svelte.js';
   import { accountCache } from './account-state.svelte.js';
   import { isMember } from '@offside/app-core/account';
   import Account from './Account.svelte';
-  import MyPlayers from './MyPlayers.svelte';
+  import ClubValueInfo from './owner/ClubValueInfo.svelte';
+  import OwnerProfileEditor from './owner/OwnerProfileEditor.svelte';
+  import { loadMyPlayerSummary } from '@offside/app-core/myPlayers';
+  import { ownerPlayersText as P } from '@offside/app-core/i18n/ko/ownerPlayers';
   import TeamLogo from './team/TeamLogo.svelte';
   import { loadHOF } from '@offside/game/hof-store';
   import { startGoogleLogin } from './login.js';
@@ -32,12 +30,11 @@
   import { openFriends } from './friendInvite.svelte.js';
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
-  import { fetchSeasonRecap, type SeasonRecapResponse } from '@offside/app-core/api/seasonRecap';
-  import { recapCardView } from '@offside/app-core/seasonRecap';
-  import { profileTier, tierTitle } from '@offside/app-core/ownerTier';
+  import { type OwnerTierTag } from '@offside/contracts';
+  import { tierTitle } from '@offside/app-core/ownerTier';
   import GradeEmblem from './team/GradeEmblem.svelte';
-  import ChampBadge from './cup/ChampBadge.svelte';
-  import { seasonRecapText as R } from '@offside/app-core/i18n/ko/seasonRecap';
+  import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
+  import TitleBadge from './cup/TitleBadge.svelte';
 
   // T-11-152 후보 화면 '리롤권 상점 가기'로 들어왔으면 리롤권 상점을 펼친 채로 연다(한 번만 읽힌다).
   const shopFocus = takeFocus('rerollShop');
@@ -60,13 +57,27 @@
     const acct = accountCache.value;
     return acct && acct !== 'error' ? acct.nickname : null;
   });
+  let tierTag = $state<OwnerTierTag | null>(null);
+  let tiers = $state<OwnerTierTag[]>([]);
   $effect(() => {
-    if (linked) void fetchBoardViewer().then((r) => (admin = linked && r.ok && r.data.admin));
-    else admin = false;
+    let alive = true;
+    admin = false;
+    tierTag = null;
+    tiers = [];
+    if (linked) void fetchOwnerSummary().then((r) => {
+      if (alive && r.ok) { admin = r.data.admin; tierTag = r.data.tier; tiers = r.data.tiers ?? (r.data.tier ? [r.data.tier] : []); }
+    });
+    return () => { alive = false; };
   });
 
-  // 요약은 '내 선수'가 불러온 목록으로 센다(비로그인이면 이 기기 기록).
+  // 전용 목록을 열지 않아도 현재 시즌의 기존 기록 기준으로 요약한다.
   let summary = $state<OwnerSummary | null>(null);
+  $effect(() => {
+    if (!linked && !guest) return;
+    let alive = true;
+    void loadMyPlayerSummary(linked).then(value => { if (alive) summary = value; });
+    return () => { alive = false; };
+  });
 
   // 내 팀 카드 — 팀 화면과 같은 응답(1분 메모)이라 팀 화면에 들어가도 다시 묻지 않는다.
   let card = $state<OwnerTeamCard | null>(null);
@@ -89,17 +100,6 @@
   });
   const clubValue = $derived(linked ? (market?.clubValue ?? null) : (summary?.value ?? null));
   const funds = $derived(market ? fundsText(market.balance) : '–');
-  // T-11-128 시즌 결산 카드 — 끝난 시즌이 있으면 가장 최근 결산을 한 줄로 알린다. 불러오지 못하면 카드를 숨긴다.
-  let recap = $state<SeasonRecapResponse | null>(null);
-  $effect(() => {
-    void fetchSeasonRecap().then((r) => {
-      if (r.ok) recap = r.data;
-    });
-  });
-  const recapCard = $derived(recap ? recapCardView(recap) : null);
-  // 지난 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로) — 프로필 이름 앞에 붙인다(그 시즌 기록이 없으면 없다).
-  // 댓글 · 채팅에도 같은 등급이 나간다(서버 ownerTiersOf).
-  const tierTag = $derived(recap ? profileTier(recap) : null);
   /** 받은 친구 신청(T-11-142)이나 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 친구 · 업적 탭으로. */
   const teamDot = $derived(ownerDotLabel({ friendReq: appState.friendReq, achNew: appState.achNew }));
   function openMyTeam() {
@@ -120,61 +120,31 @@
 <div class="wrap">
   <Topbar />
   <header class="settings-head">
-    <div class="eyebrow">Owner</div>
-    <h1>{L.title}</h1>
+    <h1>{L.hubTitle}</h1>
   </header>
 
   {#if linked || guest}
     <section class="card owner-hub" data-owner-summary aria-label={L.summaryLabel}>
       <div class="owner-id">
-        <OwnerAvatar name={nickname ?? L.avatarInitial} size={48} />
+        <OwnerAvatar avatarId={accountCache.value && accountCache.value !== 'error' ? accountCache.value.avatarId : null} name={nickname ?? L.avatarInitial} size={48} />
         <div class="owner-who">
-          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.founder}<span class="pill good owner-founder" data-owner-founder>{founderLabel()}</span>{/if}{#if card?.champ}<span class="owner-founder"><ChampBadge edition={card.champ} /></span>{/if}</b>
-          {#if tierTag}<span class="ach-grade owner-tier" data-grade={tierTag.tier} data-owner-tier={tierTag.tier}>{tierTitle(tierTag)}</span>{/if}
-          <span class="muted fs-sm">{guest ? L.guestSub : card?.team ? `${card.team.name} · ${card.season}` : L.signedInSubWeb}</span>
+          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.title}<span class="owner-founder"><TitleBadge title={card.title} size="sm" /></span>{/if}</b>
+          <span class="muted fs-sm">{guest ? L.guestSub : L.title}</span>
         </div>
+        {#if linked && accountCache.value && accountCache.value !== 'error'}<OwnerProfileEditor profile={accountCache.value} {admin} />{/if}
       </div>
-      {#if (guest && localCount === 0) || (summary?.players === 0 && !market?.clubValue)}
-        <p class="muted fs-sm owner-empty">{L.emptySummary}</p>
-        {#if linked}<p class="muted fs-sm owner-empty">{L.fundsLine({ funds })}</p>{/if}
-      {:else}
-      <dl class="owner-stats">
-        <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
-        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
-        <div><dt>{L.statRetired}</dt><dd>{summary ? L.playersCount({ n: summary.players, text: num(summary.players) }) : '–'}</dd></div>
-        <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
-        <div><dt>{L.statRetiredNumbers}</dt><dd>{summary ? L.numbersCount({ n: summary.retired }) : '–'}</dd></div>
-      </dl>
-      {/if}
     </section>
     <AdSlot place="owner-summary" />
   {/if}
 
-  <!-- T-11-128 시즌 결산: 끝난 시즌이 있을 때만. 비로그인도 본다(프로필 쿠키만 있으면 된다). -->
-  {#if recap && recapCard}
-    <section class="card owner-market owner-tap" aria-label={R.cardTitle} data-owner-recap data-recap-status={recap.status}>
-      <div class="owner-who">
-        <small class="eyebrow">Season recap</small>
-        <h2>{R.cardTitle}{#if recapCard.isNew}<span class="pill good owner-founder" data-recap-new>{R.newBadge}</span>{/if}</h2>
-        <span class="muted fs-sm">{recapCard.line}</span>
-        {#if recapCard.chips.length > 0}
-          <span class="recap-chips">
-            {#each recapCard.chips as c (c.kind)}<span class="pill recap-chip medal {c.medal}" data-recap-chip={c.kind}>{c.chip}</span>{/each}
-          </span>
-        {/if}
-      </div>
-      <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="recap" aria-label={`${R.cardTitle} ${R.open}`} onclick={() => go('recap')}></button>
-    </section>
-  {/if}
-
+  {#if linked || guest}<h2 class="hub-section-title">{L.teamsHeading}</h2>{/if}
   <!-- T-10-092 내 팀: 구글로 로그인한 구단주만 — 확인 중·연결 실패면 그리지 않는다. 비로그인이면 잠긴 카드. -->
   {#if linked}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team>
       <div class="owner-team-head">
         {#if card?.team}<TeamLogo logo={card.team.logo} name={card.team.name} size={44} decorative />{/if}
         <div class="owner-who">
-          <small class="eyebrow">My team{card?.season ? ` · ${card.season}` : ''}</small>
+          <small class="eyebrow">{L.myTeam}{card?.season ? ` · ${card.season}` : ''}</small>
           <h2>{card?.team?.name ?? L.myTeam}</h2>
           {#if card?.team}<span class="muted fs-sm">{L.manager({ manager: card.team.manager, formation: card.team.formation })}</span>{/if}
         </div>
@@ -189,7 +159,7 @@
           <div><dt>{L.statToday}</dt><dd>{card.left}/{card.perDay}</dd></div>
         </dl>
         <div class="owner-actions">
-          <button class="btn" data-act="team" onclick={openMyTeam}>{L.myTeam}{@render achDot()}</button>
+          <button class="btn" data-act="team" onclick={openMyTeam}>{L.manageTeam}{@render achDot()}</button>
           <button class="btn btn-accent" data-act="owner-play" disabled={!!card.playHint} onclick={() => openTeam('opponents')}>{L.play}</button>
         </div>
         {#if card.playHint}<p class="muted fs-sm">{card.playHint}</p>{/if}
@@ -202,21 +172,9 @@
         </button>
       {/if}
     </section>
-    <section class="card owner-market owner-tap" aria-label={L.marketTitle} data-owner-market>
-      <div class="owner-who">
-        <small class="eyebrow">Transfer market</small>
-        <h2>{L.marketTitle}</h2>
-        <span class="muted fs-sm">{L.marketSub({ funds })}</span>
-      </div>
-      <span class="tap-go" aria-hidden="true">›</span>
-      <button class="tap-cover" data-act="market" aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}></button>
-    </section>
-    <!-- T-11-152 리롤권 상점: 펼칠 때만 상점을 묻는다. 사면 자금 줄을 다시 받는다(쓰기 성공으로 메모가 비워졌다). -->
-    <RerollShop focus={shopFocus} onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
-    <BoostShop />
   {:else if guest}
     <section class="card owner-team" aria-label={L.myTeam} data-owner-team-locked>
-      <small class="eyebrow">My team</small>
+
       <h2>{L.myTeam}</h2>
       <div class="owner-lock" aria-hidden="true">
         {#each [1, 4, 3, 3] as n, r (r)}
@@ -230,10 +188,73 @@
     </section>
   {/if}
 
-  {#if !guest || localCount > 0}<MyPlayers onrows={(rows) => (summary = ownerSummary(rows))} />{/if}
+  {#if !guest || localCount > 0}
+    <section class="card owner-market owner-tap" data-owner-players-entry aria-label={P.title}>
+      <div class="owner-who"><h2>{P.title}</h2><span class="muted fs-sm">{P.entryLead}</span></div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="open-owner-players" aria-label={P.openPlayers} onclick={() => { appState.playersView = linked ? 'manage' : 'records'; go('players'); }}></button>
+    </section>
+  {/if}
+
+  {#if linked || guest}
+    <section class="card owner-hub" data-club-operations aria-label={L.operationsHeading}>
+      <h2 class="hub-card-title">{L.operationsHeading}</h2>
+      <dl class="owner-stats">
+        <div class="owner-value" data-owner-value><dt>{L.statClubValue}</dt><ClubValueInfo {linked} /><dd>{clubValue !== null ? fmtValue(clubValue) : '–'}</dd></div>
+        {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
+      </dl>
+    </section>
+  {/if}
+
+  {#if linked}
+    <section class="card owner-market owner-tap" aria-label={L.marketTitle} data-owner-market>
+      <div class="owner-who">
+        <h2>{L.marketTitle}</h2>
+        <span class="muted fs-sm">{L.marketSub({ funds })}</span>
+      </div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="market" aria-label={`${L.marketTitle} ${L.open}`} onclick={() => go('market')}></button>
+    </section>
+
+  {/if}
+
+
+
+
+  {#if linked}
+    <!-- T-11-152 리롤권 상점: 펼칠 때만 상점을 묻는다. 사면 자금 줄을 다시 받는다(쓰기 성공으로 메모가 비워졌다). -->
+    <RerollShop focus={shopFocus} onbought={(balance, spent) => market && (market = { balance, clubValue: market.clubValue - spent })} />
+    <BoostShop />
+  {/if}
+
+  {#if linked}
+    <section class="card owner-hall-entry owner-tap" data-owner-hall-entry aria-label={H.hallTitle}>
+      <div class="owner-who">
+        <h2>{H.hallTitle}<span class="pill good owner-founder" data-owner-hall-new>{H.hallNew}</span></h2>
+        <span class="muted fs-sm">{H.hallSummary}</span>
+      </div>
+      {#if tiers.length}
+        <ul class="owner-tier-history" aria-label={L.seasonTierHistory} data-owner-tier-history>
+          {#each tiers as tier (tier.season)}
+            <li class="ach-grade" data-grade={tier.tier} data-owner-tier={tier.tier} data-tier-season={tier.season}>
+              <GradeEmblem id={tier.tier} size={16} /><span>{tierTitle(tier)}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <p class="muted fs-sm owner-empty">{card?.season ?? L.currentSeason}</p>
+      <dl class="owner-stats" data-owner-record-preview>
+        <div><dt>{L.statRetired}</dt><dd>{summary ? num(summary.players) : '–'}</dd></div>
+        <div><dt>{L.statLegend}</dt><dd>{summary ? num(summary.score) : '–'}</dd></div>
+        <div><dt>{L.statRetiredNumbers}</dt><dd>{summary ? num(summary.retired) : '–'}</dd></div>
+      </dl>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="open-owner-hall" aria-label={`${H.openHall} · ${H.hallNew}`} onclick={() => go('honors')}></button>
+    </section>
+  {/if}
 
   <section class="card settings-card" id="account-slot" aria-label={L.accountSection}>
-    <Account {admin} />
+    <Account />
     {#if admin}
       <button class="settings-row settings-trigger owner-admin" data-act="admin" onclick={() => (appState.screen = 'admin')}>
         <span class="settings-label"><strong>{L.adminTools}</strong></span>
@@ -244,6 +265,11 @@
 </div>
 
 <style>
+  .hub-section-title {margin:8px 2px 0;font-size:1rem;}
+  .hub-card-title {margin:0;font-size:1rem;}
+  .owner-hall-entry {display:flex;flex-direction:column;gap:12px;}
+  .owner-hall-entry > .owner-who {padding-right:24px;}
+  .owner-hall-entry > .tap-go {position:absolute;right:18px;top:20px;}
   .owner-founder {margin-left:6px;vertical-align:middle;}
   .owner-hub {
     display: flex;
@@ -255,18 +281,15 @@
     align-items: center;
     gap: 12px;
   }
+  .owner-id > .owner-who { flex: 1; }
   /* 이름 앞 지난 시즌 등급 엠블럼(LoL 이름 앞 지난 시즌 티어처럼). */
   .owner-last-tier {
     display: inline-flex;
     vertical-align: -5px;
     margin-right: 4px;
   }
-  .owner-tier {
-    font-family: var(--display);
-    font-size: 0.875rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-  }
+  .owner-tier-history {display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none;}
+  .owner-tier-history li {display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font-size:11px;font-weight:600;line-height:1.4;}
   .owner-who {
     display: flex;
     flex-direction: column;
@@ -310,7 +333,9 @@
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
+  .owner-stats .owner-value dt {padding-right:24px;}
   .owner-stats .owner-value {
+    position:relative;
     grid-column: 1 / -1;
   }
   .owner-stats .owner-value:has(+ .owner-funds),
@@ -330,6 +355,9 @@
   }
   .owner-empty {
     margin: 0;
+  }
+  .owner-team-stats div {
+    padding-inline: 6px;
   }
   .owner-team-stats dd {
     font-size: 1.0625rem;

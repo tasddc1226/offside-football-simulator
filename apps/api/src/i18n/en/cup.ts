@@ -56,6 +56,7 @@ export const CUP_EN: Record<CupTextKey, string> = {
   group: 'Group stage',
   championTitle: '{cup}: Champions!',
   outTitle: '{cup}: your run is over',
+  titleNotOwned: "You haven't earned that title.",
   adminPast: 'Entries must open in the future.',
   adminSeason: 'The whole cup must fall within one season.',
   adminOverlap: 'Overlaps with cup #{edition}.',

@@ -3,6 +3,35 @@ import type { OwnerMsgs } from '../ko/owner';
 import { plural } from './_util';
 
 export const owner: Translation<OwnerMsgs> = {
+  hubTitle: 'My club',
+  teamsHeading: 'Your teams',
+  operationsHeading: 'Club operations',
+  manageTeam: 'Manage team',
+  currentSeason: 'This season',
+  seasonTierHistory: 'Final season tiers',
+  valueInfoTitle: 'How club value is calculated',
+  valueInfoFormula: 'Club value = club funds + the total base value of owned player cards',
+  valueInfoOwned: 'Includes players you developed and signed, across all seasons.',
+  valueInfoPrice:
+    'A card uses the market value of the last season in which the player reached their peak OVR. Market value depends on league wealth, OVR and age.',
+  valueInfoFallback:
+    'If that season has no market value, the most valuable professional season is used. Without professional records, the base value is ₩100 million.',
+  valueInfoExcluded: 'Listing prices and legend scores are not added directly.',
+  valueInfoGuest:
+    'When signed out, this is the total base value of retired players from the current season stored on this device.',
+  profileEdit: 'Edit profile',
+  profileName: 'Owner name',
+  profileNameNotice: 'Inappropriate owner names may be reported and hidden after review.',
+  profileHint: 'Your name and image appear on your owner profile, comments and chat.',
+  profileImagePick: 'Choose image',
+  profileImageReset: 'Use default image',
+  profileImageSave: 'Save image',
+  profileCancel: 'Cancel',
+  profileBusy: 'Preparing image…',
+  profileSaved: 'Profile image updated.',
+  profileImageError: 'Could not load the image. Choose another file.',
+  profilePreview: 'Profile image preview',
+  profileImageHint: 'PNG, JPG or WebP, up to 10MB. The center is cropped to a square.',
   title: 'Owner',
   summaryLabel: 'Owner summary',
   avatarInitial: 'O',

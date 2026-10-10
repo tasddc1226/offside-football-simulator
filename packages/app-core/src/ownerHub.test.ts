@@ -67,8 +67,8 @@ describe('ownerTeamCard', () => {
     );
   });
   it('최근 우승 회차를 닉네임 옆 배지로 넘긴다(구버전 응답엔 없다)', () => {
-    expect(ownerTeamCard({ ...base, cupChampion: 2 }).champ).toBe(2);
-    expect(ownerTeamCard(base).champ).toBeNull();
+    expect(ownerTeamCard({ ...base, ownerTitle: 'cup-2-champion' }).title).toBe('cup-2-champion');
+    expect(ownerTeamCard(base).title).toBeNull();
   });
   it('휴식기(current null)엔 경기할 수 없다', () => {
     expect(ownerTeamCard({ ...base, current: null, team: team(true) }).playHint).toMatch(/휴식기/);

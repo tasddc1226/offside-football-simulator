@@ -42,7 +42,13 @@ export const apiAuth = (): ReturnType<ApiHost['auth']> => host.auth();
 
 export type Profile = Pick<
   ContractProfile,
-  'id' | 'linked' | 'googleEmailMasked' | 'recoveryCodeIssuedAt' | 'createdAt' | 'nickname'
+  | 'id'
+  | 'linked'
+  | 'googleEmailMasked'
+  | 'recoveryCodeIssuedAt'
+  | 'createdAt'
+  | 'nickname'
+  | 'avatarId'
 >;
 
 export type ApiErrorCode = string;
@@ -238,6 +244,11 @@ export function confirmProfileDeletion(
 export function putNickname(nickname: string): Promise<ApiResult<Profile>> {
   return apiFetch('/v1/profile/nickname', { method: 'PUT', body: JSON.stringify({ nickname }) });
 }
+export function putAvatar(image: string | null): Promise<ApiResult<Profile>> {
+  return apiFetch('/v1/profile/avatar', { method: 'PUT', body: JSON.stringify({ image }) });
+}
+export const ownerAvatarUrl = (id: string): string =>
+  `${apiBaseUrl()}/v1/avatars/${encodeURIComponent(id)}`;
 export function googleStartUrl(): string {
   return `${host.baseUrl}/v1/auth/google/start`;
 }

@@ -27,6 +27,7 @@ import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { purgeEdge, waitUntil } from '../edgeCache.js';
+import { refreshOwnerTitles } from '../db/repos/ownerTitles.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { recordFirsts } from './firsts.js';
 import { exceedsOvrCap, growthTampered } from '../db/repos/anomalies.js';
@@ -217,7 +218,13 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
     purgeEdge(c, STALE.retirementPut(careerId));
     publishLive(c, 'retire', careerId, now);
     // T-11-028 그 시즌 구단주 업적 점수(업적 랭킹)를 응답 뒤에 다시 센다.
-    waitUntil(c, refreshAfterChange(db, session.profileId, career.serviceSeason));
+    waitUntil(
+      c,
+      Promise.all([
+        refreshAfterChange(db, session.profileId, career.serviceSeason),
+        refreshOwnerTitles(db, session.profileId, now),
+      ]),
+    );
 
     return ok(c, RetirementResponseSchema, {
       careerId,

@@ -43,6 +43,10 @@ describe('navKey', () => {
     expect(key('legends', 't1')).toBe('hof:');
     expect(key('teams', 't1')).toBe('hof:t1');
     expect(key('teams', null)).toBe('hof:');
+    // T-11-150 팀 프로필에서 연 구단주 프로필은 따로 한 기록.
+    expect(
+      navKey(state({ screen: 'hof', hof: { ...hof, tab: 'teams', team: 't1', owner: true } })),
+    ).toBe('hof:t1:owner');
   });
   it('나머지 화면은 화면 이름 그대로', () => {
     expect(navKey(state({ screen: 'settings' }))).toBe('settings');

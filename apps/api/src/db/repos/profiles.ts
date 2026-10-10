@@ -22,6 +22,10 @@ export type ProfileRecord = {
   appleLinkedAt: string | null;
   /** T-11-098 친구 코드(처음 친구 화면을 열 때 만든다). */
   friendCode?: string | null;
+  /** T-11-150 대표 칭호와 직접 골랐는지. */
+  title: string | null;
+  titlePinned: boolean;
+  avatarId?: string | null;
 };
 
 /** 구단주 계정(구글·애플 로그인) — 팀·댓글·닉네임 자격. SQL 조건은 accountLinkedSql. */
@@ -59,6 +63,9 @@ function toRecord(row: typeof profiles.$inferSelect): ProfileRecord {
     appleSub: row.appleSub,
     appleLinkedAt: row.appleLinkedAt,
     friendCode: row.friendCode,
+    title: row.title,
+    titlePinned: row.titlePinned === 1,
+    avatarId: row.avatarId,
   };
 }
 

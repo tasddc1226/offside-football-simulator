@@ -39,6 +39,7 @@
   import { recapTier, tierReason, tierTitle } from '@offside/app-core/ownerTier';
   import { EMBLEM_PALETTE } from '@offside/app-core/gradeEmblem';
 
+  let { embedded = false, record }: { embedded?: boolean; record?: SeasonRecapResponse } = $props();
   let seasons = $state<number[]>([]);
   let season = $state<number | null>(null);
   let res = $state<SeasonRecapResponse | null>(null);
@@ -71,7 +72,8 @@
     }
   }
   $effect(() => {
-    void load();
+    if (record) { res = record; season = record.season; }
+    else if (!embedded) void load();
   });
 
   const name = $derived(res ? teamSeasonLabel(res.season) : '');
@@ -90,7 +92,7 @@
     const run = (to: number) => {
       cancelAnimationFrame(raf);
       io?.disconnect();
-      if (!motionOK || to === 0 || typeof IntersectionObserver !== 'function') {
+      if (embedded || !motionOK || to === 0 || typeof IntersectionObserver !== 'function') {
         node.textContent = num(to);
         return;
       }
@@ -130,7 +132,8 @@
   </button>
 {/snippet}
 
-<div class="wrap recap" data-recap>
+<div class:wrap={!embedded} class="recap" class:embedded data-recap>
+  {#if !embedded}
   <Topbar />
   <BackBar inline act="owner" fallback={() => go('owner')} />
   <header class="settings-head">
@@ -146,6 +149,7 @@
       </label>
     {/if}
   </header>
+  {/if}
 
   {#if failed}
     <section class="card recap-fail" data-recap-error>
@@ -159,7 +163,7 @@
   {:else if res.status === 'none' || !recap}
     <section class="card" data-recap-none><p class="muted">{recapStatusText(res)}</p></section>
   {:else}
-    {#if tier}
+    {#if tier && !embedded}
       <!-- 시즌 카드 — 시즌 등급(구단주 랭킹과 같은 업적 등급, 마감 업적 점수로)과 한 줄 요약, 자랑거리. 공유 이미지의 첫 화면과 같다. -->
       <section class="recap-hero" data-recap-section="tier" data-recap-tier={tier} style="--tier: {EMBLEM_PALETTE[tier].base}; --tier-light: {EMBLEM_PALETTE[tier].light}; --tier-mark: {EMBLEM_PALETTE[tier].mark}" aria-label={L.secTier}>
         <div class="hero-top"><span class="hero-brand">OFFSIDE</span><span class="hero-eyebrow">SEASON RECAP</span></div>
@@ -183,7 +187,7 @@
         <h2>{L.secSquad}</h2>
         <p class="muted fs-sm sec-lead">{L.squadLead({ n: num(recap.retired) })}</p>
         <RecapTeamPhoto squad={recap.squad} season={name} />
-        <RecapCardReel squad={recap.squad} />
+        {#if !embedded}<RecapCardReel squad={recap.squad} />{/if}
       </section>
     {/if}
 
@@ -307,7 +311,7 @@
       </section>
     {/if}
 
-    <section class="card recap-sec" data-recap-section="honors" aria-label={L.secBadges}>
+    {#if !embedded}<section class="card recap-sec" data-recap-section="honors" aria-label={L.secBadges}>
       <h2>{L.secBadges}</h2>
       {#if honors.length === 0}
         <p class="muted fs-sm">{L.honorsNone}</p>
@@ -326,6 +330,7 @@
       {/if}
     </section>
 
+    {/if}
     <section class="card recap-sec" data-recap-section="activity" aria-label={L.secLegacy}>
       <h2>{L.secLegacy}</h2>
       <dl class="recap-stats">
@@ -338,7 +343,7 @@
 
     <div class="recap-end">
       {@render shareButton('end')}
-      <p class="muted fs-sm recap-next" data-recap-next>{L.next({ season: teamSeasonLabel(res.season + 1) })}</p>
+      {#if !embedded}<p class="muted fs-sm recap-next" data-recap-next>{L.next({ season: teamSeasonLabel(res.season + 1) })}</p>{/if}
     </div>
 
     {#if sharing}
@@ -357,6 +362,8 @@
 </div>
 
 <style>
+  .embedded {display:flex;flex-direction:column;gap:14px;}
+  .embedded :global(*) {animation:none !important;}
   /* 시즌 카드 — 테마와 상관없이 어두운 바탕(공유 이미지와 같은 첫인상). 등급 색 빛이 가운데서 번진다. */
   .recap-hero {
     position: relative;
@@ -613,9 +620,11 @@
 
   /* 시즌 순위 — 상위 몇 %인지 막대로. */
   .rank-list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
-  .rank-row { display: flex; align-items: baseline; gap: 8px; font-size: 0.875rem; }
-  .rank-row b { margin-left: auto; font-family: var(--display); font-size: 1.0625rem; }
+  .rank-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px 8px; font-size: 0.875rem; }
+  .rank-row > span { grid-column: 1 / -1; }
+  .rank-row b { min-width: 0; font-family: var(--display); font-size: 1.0625rem; }
   .rank-row em {
+    white-space: nowrap;
     font-style: normal;
     font-size: 0.75rem;
     font-weight: 700;

@@ -52,6 +52,7 @@ export const CUP_KO = {
   group: '조별 예선',
   championTitle: '{cup} 우승!',
   outTitle: '{cup}를 마쳤어요',
+  titleNotOwned: '받은 적 없는 칭호예요.',
   adminPast: '접수 시작은 지금보다 뒤여야 해요.',
   adminSeason: '대회 전체가 한 시즌 안에 있어야 해요.',
   adminOverlap: '제{edition}회 대회 기간과 겹쳐요.',

@@ -22,6 +22,7 @@ import {
   pageRetiredNumbers,
   summarizeRetiredNumbers,
 } from '../db/repos/retiredNumbers.js';
+import { refreshOwnerTitles } from '../db/repos/ownerTitles.js';
 import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -48,7 +49,11 @@ export async function judgeRetirement(
     if (result?.kind === 'taken' && result.wallOfHonor && season !== undefined) {
       purgeEdge(c, STALE.wallOfHonorChanged(season, careerId));
     }
-    if (claimed) publishRetiredNumber(c, claimed);
+    if (claimed) {
+      publishRetiredNumber(c, claimed);
+      const career = await getCareerHead(getDb(c), careerId);
+      if (career) await refreshOwnerTitles(getDb(c), career.profileId, now);
+    }
     return miss ? { retiredNumber: result, retiredNumberMiss: miss } : { retiredNumber: result };
   } catch (err) {
     c.set('storeFailure', {

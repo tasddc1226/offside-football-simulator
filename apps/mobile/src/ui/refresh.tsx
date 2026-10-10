@@ -30,9 +30,9 @@ const ControlScope = createContext<Control>({ on: false, refreshing: false, onRe
  * 서버에서 불러오는 effect의 deps에 tick을 넣고, 요청을 track으로 감싼다.
  * 예: useEffect(() => { if (!pulled) setX(null); void track(getX()).then(...) }, [id, tick, track])
  */
-export function useRefresh() {
+export function useRefresh(enabled = true) {
   const { tick, track, join } = useContext(DataScope);
-  useEffect(join, [join]);
+  useEffect(() => (enabled ? join() : undefined), [join, enabled]);
   const seen = useRef(tick);
   /** 이번 렌더가 당기기로 tick이 오른 것인지 — 그러면 보이던 목록을 비우지 않는다. */
   const pulled = seen.current !== tick;

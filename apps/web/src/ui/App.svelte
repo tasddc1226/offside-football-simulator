@@ -90,6 +90,14 @@
   $effect(() => {
     if (appState.screen === 'owner' && !Owner) void import('./Owner.svelte').then((m) => (Owner = m.default));
   });
+  let OwnerPlayers = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'players' && !OwnerPlayers) void import('./owner/OwnerPlayers.svelte').then((m) => (OwnerPlayers = m.default));
+  });
+  let OwnerHonors = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if ((appState.screen === 'honors' || appState.screen === 'recap') && !OwnerHonors) void import('./owner/OwnerHonors.svelte').then((m) => (OwnerHonors = m.default));
+  });
   // T-10-092: 구단주 팀(편성·팀 경기)도 처음 열 때 불러온다.
   let Team = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -106,10 +114,7 @@
     if (appState.screen === 'funds' && !FundsHistory) void import('./FundsHistory.svelte').then((m) => (FundsHistory = m.default));
   });
   // T-11-128: 시즌 결산도 처음 열 때 불러온다.
-  let SeasonRecap = $state<Component<Record<string, never>> | null>(null);
-  $effect(() => {
-    if (appState.screen === 'recap' && !SeasonRecap) void import('./SeasonRecap.svelte').then((m) => (SeasonRecap = m.default));
-  });
+
   // T-11-145: 오프사이드 컵도 처음 열 때 불러온다.
   let Cup = $state<Component<Record<string, never>> | null>(null);
   $effect(() => {
@@ -186,6 +191,10 @@
       {#if Settings}<Settings />{/if}
     {:else if appState.screen === 'owner'}
       {#if Owner}<Owner />{/if}
+    {:else if appState.screen === 'players'}
+      {#if OwnerPlayers}<OwnerPlayers />{/if}
+    {:else if appState.screen === 'honors'}
+      {#if OwnerHonors}<OwnerHonors />{/if}
     {:else if appState.screen === 'team'}
       {#if Team}<Team />{/if}
     {:else if appState.screen === 'market'}
@@ -193,7 +202,7 @@
     {:else if appState.screen === 'funds'}
       {#if FundsHistory}<FundsHistory />{/if}
     {:else if appState.screen === 'recap'}
-      {#if SeasonRecap}<SeasonRecap />{/if}
+      {#if OwnerHonors}<OwnerHonors />{/if}
     {:else if appState.screen === 'cup'}
       {#if Cup}<Cup />{/if}
     {:else if appState.screen === 'dex'}
