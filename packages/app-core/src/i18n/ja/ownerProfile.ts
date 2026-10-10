@@ -2,6 +2,18 @@ import type { Translation } from '../core';
 import type { OwnerProfileMsgs } from '../ko/ownerProfile';
 
 export const ownerProfile: Translation<OwnerProfileMsgs> = {
+  collectionEarned: '獲得済み',
+  collectionLocked: '挑戦中',
+  collectionHint: '称号をタップすると、すぐに代表称号に設定されます。',
+  challengeHint: '達成に近い称号から表示します。',
+  titleUsing: '使用中',
+  titleGuide: '称号について',
+  titleCup: 'カップ',
+  titleAllEarned: 'すべての永久称号を獲得しました。',
+  titleLoading: '称号を読み込んでいます。',
+  titleDisplayHint: 'プロフィール・ランキング・コメント・チャットに表示されます。',
+  titleRemove: '外す',
+  titleAutoCup: 'カップ称号を自動選択',
   archiveLead: 'シーズンごとの記録と獲得した称号をまとめて見られます。',
   archiveTab: 'シーズン記録',
   titlesTab: '称号',

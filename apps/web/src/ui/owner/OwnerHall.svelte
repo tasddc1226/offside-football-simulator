@@ -1,26 +1,22 @@
 <script lang="ts">
-  // T-11-150 명예관 — 구단주 화면에서 받은 칭호 가운데 대표 칭호를 고른다(자동 · 칭호 하나 · 달지 않기). 고른 칭호는 랭킹 ·
-  // 팀 프로필 · 댓글 · 채팅 닉네임 옆에 붙는다. 불러오지 못하면 재시도를 제공한다.
   import { onMount } from 'svelte';
-  import {
-    fetchOwnerTitles,
-    putOwnerTitle,
-    type OwnerTitlesResponse,
-  } from '@offside/app-core/api/ownerProfile';
-  import { TITLE_NONE, titleLabel, titleCondition, parseTitle, TITLE_GRADES, permanentTitleOf, titleGradeLabel, titleGradeNote, titleRelated } from '@offside/app-core/ownerTitle';
+  import { fetchOwnerTitles, putOwnerTitle, type OwnerTitlesResponse } from '@offside/app-core/api/ownerProfile';
+  import { TITLE_NONE, titleLabel, titleCondition, permanentTitleOf, titleGradeLabel, titleRelated } from '@offside/app-core/ownerTitle';
+  import { titleCollection } from '@offside/app-core/ownerTitleCollection';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from '../cup/TitleBadge.svelte';
   import { toast } from '../helpers.js';
-  import { appState, hofStart } from '../state.svelte.js';
+  import { appState } from '../state.svelte.js';
   import { go } from '../nav.js';
 
   const { onpick }: { onpick?: (title: string | null) => void } = $props();
   let hall = $state<OwnerTitlesResponse | null>(null);
   let saving = $state(false);
   let failed = $state(false);
-  /** 고른 칸 — null = 자동, TITLE_NONE = 달지 않기, 그 밖은 칭호 id. */
+  let filter = $state<'earned' | 'locked' | null>(null);
   const picked = $derived(hall ? (hall.pinned ? (hall.title ?? TITLE_NONE) : null) : null);
-
+  const collection = $derived(hall ? titleCollection(hall) : { earned: [], locked: [], cups: [] });
+  const shown = $derived(filter ?? (collection.earned.length ? 'earned' : 'locked'));
   async function load() {
     failed = false;
     const r = await fetchOwnerTitles();
@@ -28,7 +24,6 @@
     else failed = true;
   }
   onMount(() => void load());
-
   async function pick(title: string | null) {
     if (!hall || saving || title === picked) return;
     saving = true;
@@ -39,84 +34,73 @@
     onpick?.(r.data.title);
     toast(L.saved);
   }
-
-  function openProfile(teamId: string) {
-    appState.hof = { ...hofStart(), tab: 'teams', team: teamId, owner: true };
-    go('hof');
-  }
 </script>
 
+{#snippet identity(id: string, isNew = false)}
+  <span class="oh-title-identity">
+    <span class="oh-title-art" aria-hidden="true"><TitleBadge title={id} size="icon" /></span>
+    <span class="oh-title-name"><strong>{titleLabel(id)}</strong><span class="oh-title-meta">{permanentTitleOf(id) ? titleGradeLabel(permanentTitleOf(id)!.grade) : L.titleCup}{#if isNew}<span class="oh-title-new">{L.newTitle}</span>{/if}</span></span>
+  </span>
+{/snippet}
+
 {#if failed}
-  <section class="card stack" aria-label={L.hallTitle} data-owner-hall-error>
-    <h2>{L.titlesTab}</h2><p role="status">{L.hallLoadFail}</p>
-    <button class="btn" onclick={() => void load()}>{L.retry}</button>
-  </section>
-{/if}
-{#if hall}
-  <section class="card stack" style="gap:12px" aria-label={L.hallTitle} data-owner-hall>
-    <div>
-      <h2>{L.titlesTab}</h2>
-      <p class="muted fs-sm">{L.hallCount({ n: hall.titles.length })}</p>
-      <p class="muted fs-sm">{hall.titles.length ? L.hallLead : L.hallEmpty}</p>
+  <section class="card stack" data-owner-hall-error><p role="status">{L.hallLoadFail}</p><button class="btn" onclick={() => void load()}>{L.retry}</button></section>
+{:else if !hall}
+  <p class="muted" role="status">{L.titleLoading}</p>
+{:else}
+  <div class="oh-title-hall" data-owner-hall>
+    <section class="card oh-title-current" aria-label={L.current}>
+      <div class="current-heading"><span class="muted fs-sm">{L.current}</span>{#if hall.title}<button class="oh-title-remove" data-title-pick="none" aria-label={L.pickNone} aria-pressed={picked === TITLE_NONE} disabled={saving || !hall.title} onclick={() => pick(TITLE_NONE)}>{L.titleRemove}</button>{/if}</div>
+      {#if hall.title}{@render identity(hall.title)}{:else}<strong>{L.currentNone}</strong>{/if}
+      <p class="muted fs-sm">{L.titleDisplayHint}</p>
+    </section>
+    <div class="oh-title-filters" role="group" aria-label={L.titlesTab}>
+      <button aria-pressed={shown === 'earned'} data-title-filter="earned" onclick={() => filter = 'earned'}>{L.collectionEarned}<span>{collection.earned.length}</span></button>
+      <button aria-pressed={shown === 'locked'} data-title-filter="locked" onclick={() => filter = 'locked'}>{L.collectionLocked}<span>{collection.locked.length}</span></button>
     </div>
-    {#if hall.titles.length}
-      <div class="oh-current">
-        <span class="muted fs-sm">{L.current}</span>
-        {#if hall.title}<TitleBadge title={hall.title} />{:else}<b>{L.currentNone}</b>{/if}
-      </div>
-      <div class="oh-picks" role="group" aria-label={L.current}>
-        <button class="opt" aria-label={`${L.pickAuto} · ${L.pickAutoNote}`} aria-pressed={picked === null} disabled={saving} onclick={() => pick(null)} data-title-pick="auto">
-          <b>{L.pickAuto}</b><small class="muted">{L.pickAutoNote}</small>
-        </button>
-        {#each hall.titles.filter((id) => parseTitle(id)) as t (t)}
-          <button class="opt" aria-pressed={picked === t} aria-label={titleLabel(t)} disabled={saving} onclick={() => pick(t)} data-title-pick={t}>
-            <TitleBadge title={t} />
+    <p class="muted fs-sm list-hint">{shown === 'earned' ? L.collectionHint : L.challengeHint}</p>
+    <div class="oh-title-list" aria-busy={saving}>
+      {#if shown === 'earned'}
+        {#each collection.earned as id (id)}
+          {@const t = hall.permanent.find((p) => p.id === id)}
+          <button class="oh-title-item" class:equipped={hall.title === id} data-title-pick={id} data-permanent-title={t ? id : undefined} data-title-grade={permanentTitleOf(id)?.grade} aria-pressed={hall.title === id} aria-label={`${titleLabel(id)} · ${L.equip}`} disabled={saving} onclick={() => pick(id)}>
+            <span class="item-heading">{@render identity(id, t?.isNew)}{#if hall.title === id}<span class="using">✓ {L.titleUsing}</span>{/if}</span>
+            {#if t}<span class="muted fs-sm condition">{titleCondition(id)}</span>{/if}
           </button>
-        {/each}
-        <button class="opt" aria-label={L.pickNone} aria-pressed={picked === TITLE_NONE} disabled={saving} onclick={() => pick(TITLE_NONE)} data-title-pick="none">
-          <b>{L.pickNone}</b>
-        </button>
-      </div>
-    {/if}
-    <div class="stack oh-permanent" aria-label={L.permanentTitle}>
-      <h3>{L.permanentTitle}</h3>
-      <p class="muted fs-sm">{L.permanentLead}</p>
-      <p class="muted fs-sm">{L.titleBridge}</p>
-      <button class="btn btn-block" data-act="title-season-achievements" onclick={() => { appState.teamView = 'achievements'; go('team'); }}>{L.viewAchievements}</button>
-      {#each TITLE_GRADES as grade (grade)}
-        <section class="stack oh-grade" aria-label={titleGradeLabel(grade)} data-title-grade={grade}>
-          <div><h4>{titleGradeLabel(grade)}</h4><p class="muted fs-sm">{titleGradeNote(grade)}</p></div>
-      {#each hall.permanent.filter((t) => permanentTitleOf(t.id)?.grade === grade) as t (t.id)}
-        <div class="oh-achievement" data-permanent-title={t.id}>
-          <div class="stack" style="gap:4px;min-width:0">
-            <div class="oh-current"><TitleBadge title={t.id} />{#if t.isNew}<span class="pill good">{L.newTitle}</span>{/if}</div>
-            <p class="muted fs-sm">{titleCondition(t.id)}</p><small class="muted">{titleRelated(t.id)}</small>
-          </div>
-          {#if t.earnedAt}
-            <button class="opt" aria-pressed={picked === t.id} disabled={saving} onclick={() => pick(t.id)} data-title-pick={t.id} aria-label={`${titleLabel(t.id)} ${L.equip}`}>{picked === t.id ? L.selected : L.equip}</button>
-          {:else}
-            <span class="muted fs-sm oh-progress" aria-label={`${L.locked} ${L.progress(t)}`}>{L.progress(t)}</span>
-          {/if}
-        </div>
-      {/each}
-        </section>
-      {/each}
+        {:else}<p class="muted empty">{L.hallEmpty}</p>{/each}
+      {:else}
+        {#each collection.locked as t (t.id)}
+          <section class="oh-title-item locked" data-permanent-title={t.id} data-title-grade={permanentTitleOf(t.id)?.grade} aria-label={titleLabel(t.id) ?? t.id}>
+            {@render identity(t.id)}
+            <p class="muted fs-sm condition">{titleCondition(t.id)}</p>
+            <div class="goal-progress"><progress max={t.target} value={Math.min(t.value, t.target)} aria-label={`${titleLabel(t.id)} ${L.progress(t)}`}></progress><span class="num">{L.progress(t)}</span></div>
+            <small class="muted related">{titleRelated(t.id)}</small>
+          </section>
+        {:else}<p class="muted empty">{L.titleAllEarned}</p>{/each}
+      {/if}
     </div>
-    {#if hall.teamId}
-      {@const teamId = hall.teamId}
-      <button class="btn btn-block" data-act="my-owner-profile" onclick={() => openProfile(teamId)}>{L.viewProfile}</button>
-    {/if}
-  </section>
+    <details class="oh-title-guide">
+      <summary>{L.titleGuide}</summary>
+      <div class="guide-body"><p>{L.permanentLead}</p><p>{L.titleBridge}</p>
+        <button class="btn" data-act="title-season-achievements" onclick={() => { appState.teamView = 'achievements'; go('team'); }}>{L.viewAchievements}</button>
+        {#if collection.cups.length}<button class="btn" aria-pressed={picked === null} disabled={saving} data-title-pick="auto" onclick={() => pick(null)}>{L.titleAutoCup}</button><p>{L.pickAutoNote}</p>{/if}
+      </div>
+    </details>
+  </div>
 {/if}
 
 <style>
-  .oh-current {display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-  .oh-achievement { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--line); }
-  .oh-progress {flex:none; white-space:nowrap;}
-  .oh-achievement > .stack {flex:1 1 100%;}
-  .oh-grade {gap:4px;padding-top:12px;}
-  .oh-grade h4 {margin:0;}
-  .oh-achievement button {min-height:44px;flex:none;}
-  .oh-permanent {gap:8px;}
-  .oh-picks {display:flex; flex-wrap:wrap; gap:8px;}
+  .oh-title-hall {display:flex;flex-direction:column;gap:16px;min-width:0;}
+  .oh-title-current {display:flex;flex-direction:column;gap:12px;border-top:2px solid var(--accent);}
+  .oh-title-current p {margin:0;line-height:1.5;}.current-heading {display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .oh-title-remove {background:none;color:var(--muted);border:0;padding:10px 12px;min-height:44px;text-decoration:underline;text-underline-offset:3px;}.oh-title-remove:disabled{opacity:.45;}
+  .oh-title-filters {display:flex;gap:8px;flex-wrap:wrap;}.oh-title-filters button {display:flex;gap:8px;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--line);border-radius:999px;padding:8px 14px;background:transparent;color:var(--muted);font-weight:650;}.oh-title-filters button[aria-pressed=true]{background:var(--surface-2);border-color:var(--accent-text);color:var(--ink);}.oh-title-filters span {font-variant-numeric:tabular-nums;opacity:.7;}
+  .list-hint {margin:0;}.oh-title-list{display:flex;flex-direction:column;gap:10px;}
+  .oh-title-item {display:flex;flex-direction:column;align-items:stretch;gap:12px;width:100%;box-sizing:border-box;padding:16px;text-align:left;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;min-width:0;}
+  button.oh-title-item {cursor:pointer;}.oh-title-item.equipped {border-color:var(--accent-text);background:color-mix(in srgb,var(--accent) 5%,var(--surface));}
+  .item-heading {display:flex;width:100%;gap:8px;align-items:center;flex-wrap:wrap;}.oh-title-identity{display:flex;gap:10px;align-items:center;min-width:0;flex:1;}
+  .oh-title-art {display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:var(--surface-2);border-radius:10px;flex:none;}.oh-title-art :global(svg){width:24px;height:24px;}
+  .oh-title-name{display:flex;flex-direction:column;gap:4px;min-width:0;}.oh-title-name strong{font-size:16px;line-height:1.4;overflow-wrap:anywhere;}.oh-title-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;color:var(--muted);}.oh-title-new{color:var(--accent-text);}.using{font-size:12px;color:var(--accent-text);white-space:nowrap;}.condition{margin:0;line-height:1.6;overflow-wrap:anywhere;}
+  .goal-progress{display:flex;align-items:center;gap:12px;}.goal-progress progress{flex:1;width:0;height:5px;accent-color:var(--accent-text);border:0;border-radius:6px;overflow:hidden;background:var(--surface-2);}.goal-progress progress::-webkit-progress-bar{background:var(--surface-2);}.goal-progress progress::-webkit-progress-value{background:var(--accent);border-radius:6px;}.goal-progress span{font-size:13px;flex:none;}.related{font-size:12px;line-height:1.5;}.empty{padding:20px 0;}
+  .oh-title-guide{border-top:1px solid var(--line);color:var(--muted);}.oh-title-guide summary{cursor:pointer;min-height:48px;align-content:center;font-size:14px;}.guide-body{display:flex;flex-direction:column;gap:12px;padding:4px 0 16px;font-size:13px;line-height:1.6;}.guide-body p{margin:0;}
 </style>

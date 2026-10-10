@@ -3,6 +3,18 @@
 import { ns } from '../core';
 
 const ko = {
+  collectionEarned: '획득한 칭호',
+  collectionLocked: '도전 중',
+  collectionHint: '칭호를 누르면 바로 대표 칭호로 적용돼요.',
+  challengeHint: '달성에 가까운 칭호부터 보여요.',
+  titleUsing: '사용 중',
+  titleGuide: '칭호 안내',
+  titleCup: '컵',
+  titleAllEarned: '모든 영구 칭호를 획득했어요.',
+  titleLoading: '칭호를 불러오고 있어요.',
+  titleDisplayHint: '프로필·랭킹·댓글·채팅에 표시돼요.',
+  titleRemove: '해제',
+  titleAutoCup: '컵 칭호 자동 선택',
   archiveLead: '시즌마다 남긴 기록과 받은 칭호를 모아 봐요.',
   archiveTab: '시즌 기록',
   titlesTab: '칭호',

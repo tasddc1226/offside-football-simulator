@@ -1,39 +1,35 @@
-// T-11-150 명예관(웹 ui/owner/OwnerHall.svelte) — 구단주 화면에서 받은 칭호 가운데 대표 칭호를 고른다(자동 · 칭호 하나 ·
-// 달지 않기). 고른 칭호는 랭킹 · 팀 프로필 · 댓글 · 채팅 닉네임 옆에 붙는다. 불러오지 못하면 재시도를 제공한다.
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import {
   fetchOwnerTitles,
   putOwnerTitle,
   type OwnerTitlesResponse,
 } from '@offside/app-core/api/ownerProfile';
-import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
 import {
   TITLE_NONE,
   titleLabel,
   titleCondition,
-  parseTitle,
-  TITLE_GRADES,
   permanentTitleOf,
   titleGradeLabel,
-  titleGradeNote,
   titleRelated,
 } from '@offside/app-core/ownerTitle';
-import { hofStart } from '@offside/app-core/state';
+import { titleCollection } from '@offside/app-core/ownerTitleCollection';
+import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
 import { TitleBadge } from '../../components/TitleBadge';
 import { toast } from '../../game/host';
 import { go } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
-import { Btn } from '../../ui/Btn';
-import { Card } from '../../ui/Card';
-import { Opt } from '../../ui/bits';
-import { Txt } from '../../ui/Txt';
+import { useColors } from '../../theme/useColors';
+import { Btn, Card, Press, Txt } from '../../ui';
 
 export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void }) {
   const [hall, setHall] = useState<OwnerTitlesResponse | null>(null);
   const [failed, setFailed] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [filter, setFilter] = useState<'earned' | 'locked' | null>(null);
+  const [guide, setGuide] = useState(false);
+  const c = useColors();
   useEffect(() => {
     let live = true;
     void fetchOwnerTitles().then((r) => {
@@ -48,7 +44,6 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
   if (!hall)
     return failed ? (
       <Card gap={12} testID="owner-hall-error">
-        <Txt v="h2">{L.titlesTab}</Txt>
         <Txt>{L.hallLoadFail}</Txt>
         <Btn
           onPress={() => {
@@ -62,10 +57,15 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
           {L.retry}
         </Btn>
       </Card>
-    ) : null;
-  /** 고른 칸 — null = 자동, TITLE_NONE = 달지 않기, 그 밖은 칭호 id. */
+    ) : (
+      <Txt tone="muted" accessibilityLiveRegion="polite">
+        {L.titleLoading}
+      </Txt>
+    );
   const picked = hall.pinned ? (hall.title ?? TITLE_NONE) : null;
-
+  const collection = titleCollection(hall);
+  const shown = filter ?? (collection.earned.length ? 'earned' : 'locked');
+  const small = { fontSize: rem(0.8), lineHeight: rem(1.25) };
   async function pick(title: string | null) {
     if (!hall || saving || title === picked) return;
     setSaving(true);
@@ -81,132 +81,232 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
     onpick?.(r.data.title);
     toast(L.saved);
   }
-
-  const option = (key: string, title: string | null, label: string, body: ReactNode) => (
-    <Opt
-      key={key}
-      testID={`title-pick-${key}`}
-      selected={picked === title}
-      disabled={saving}
-      accessibilityLabel={label}
-      onPress={() => void pick(title)}
-    >
-      {body}
-    </Opt>
-  );
-
-  const teamId = hall.teamId;
-  return (
-    <Card gap={12} testID="owner-hall">
-      <View style={{ gap: 2 }}>
-        <Txt v="h2" accessibilityRole="header">
-          {L.titlesTab}
-        </Txt>
-        <Txt tone="muted">{L.hallCount({ n: hall.titles.length })}</Txt>
-        <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-          {hall.titles.length ? L.hallLead : L.hallEmpty}
-        </Txt>
-      </View>
-      {hall.titles.length ? (
-        <>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-              {L.current}
-            </Txt>
-            {hall.title ? <TitleBadge title={hall.title} /> : <Txt bold>{L.currentNone}</Txt>}
-          </View>
-          <View
-            accessibilityRole="none"
-            accessibilityLabel={L.current}
-            style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
-          >
-            {option(
-              'auto',
-              null,
-              `${L.pickAuto} · ${L.pickAutoNote}`,
-              <>
-                <Txt bold>{L.pickAuto}</Txt>
-                <Txt tone="muted" style={{ fontSize: rem(0.6875) }}>
-                  {L.pickAutoNote}
-                </Txt>
-              </>,
-            )}
-            {hall.titles
-              .filter((id) => parseTitle(id))
-              .map((t) => option(t, t, titleLabel(t) ?? t, <TitleBadge title={t} />))}
-            {option('none', TITLE_NONE, L.pickNone, <Txt bold>{L.pickNone}</Txt>)}
-          </View>
-        </>
-      ) : null}
-      <View style={{ gap: 12 }}>
-        <Txt v="h2" accessibilityRole="header">
-          {L.permanentTitle}
-        </Txt>
-        <Txt tone="muted">{L.permanentLead}</Txt>
-        <Txt tone="muted">{L.titleBridge}</Txt>
-        <Btn
-          block
-          testID="title-season-achievements"
-          onPress={() => {
-            appState.teamView = 'achievements';
-            go('team');
+  const identity = (id: string, isNew = false) => {
+    const grade = permanentTitleOf(id)?.grade;
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            backgroundColor: c.surface2,
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          {L.viewAchievements}
-        </Btn>
-        {TITLE_GRADES.map((grade) => (
-          <View key={grade} style={{ gap: 12 }}>
-            <Txt v="h2" accessibilityRole="header">
-              {titleGradeLabel(grade)}
+          <TitleBadge title={id} size="icon" />
+        </View>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Txt bold style={{ fontSize: rem(1) }}>
+            {titleLabel(id)}
+          </Txt>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Txt tone="muted" style={small}>
+              {grade ? titleGradeLabel(grade) : L.titleCup}
             </Txt>
-            <Txt tone="muted">{titleGradeNote(grade)}</Txt>
-            {hall.permanent
-              .filter((t) => permanentTitleOf(t.id)?.grade === grade)
-              .map((t) => (
-                <View
-                  key={t.id}
-                  testID={`permanent-title-${t.id}`}
-                  style={{ gap: 8, paddingVertical: 8 }}
-                >
-                  <View
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
-                  >
-                    <TitleBadge title={t.id} />
-                    {t.isNew ? <Txt tone="muted">{L.newTitle}</Txt> : null}
-                  </View>
-                  <Txt tone="muted">{titleCondition(t.id)}</Txt>
-                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                    {titleRelated(t.id)}
-                  </Txt>
-                  {t.earnedAt ? (
-                    option(
-                      t.id,
-                      t.id,
-                      titleLabel(t.id) ?? t.id,
-                      <Txt bold>{picked === t.id ? L.selected : L.equip}</Txt>,
-                    )
-                  ) : (
-                    <Txt tone="muted" accessibilityLabel={`${L.locked} ${L.progress(t)}`}>
-                      {L.progress(t)}
-                    </Txt>
-                  )}
-                </View>
-              ))}
+            {isNew ? <Txt style={{ ...small, color: c.accentText }}>{L.newTitle}</Txt> : null}
           </View>
+        </View>
+      </View>
+    );
+  };
+  const itemStyle = {
+    padding: 16,
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: c.line,
+    backgroundColor: c.surface,
+  };
+  return (
+    <View testID="owner-hall" style={{ gap: 16 }}>
+      <Card gap={12} style={{ borderTopWidth: 2, borderTopColor: c.accent }}>
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <Txt tone="muted" style={small}>
+            {L.current}
+          </Txt>
+          {hall.title ? (
+            <Press
+              testID="title-pick-none"
+              accessibilityLabel={L.pickNone}
+              accessibilityState={{
+                selected: picked === TITLE_NONE,
+                disabled: saving || !hall.title,
+              }}
+              disabled={saving || !hall.title}
+              onPress={() => void pick(TITLE_NONE)}
+              style={{
+                minHeight: 48,
+                paddingHorizontal: 12,
+                justifyContent: 'center',
+                opacity: hall.title ? 1 : 0.45,
+              }}
+            >
+              <Txt tone="muted" style={{ ...small, textDecorationLine: 'underline' }}>
+                {L.titleRemove}
+              </Txt>
+            </Press>
+          ) : null}
+        </View>
+        {hall.title ? identity(hall.title) : <Txt bold>{L.currentNone}</Txt>}
+        <Txt tone="muted" style={small}>
+          {L.titleDisplayHint}
+        </Txt>
+      </Card>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {(['earned', 'locked'] as const).map((key) => (
+          <Press
+            key={key}
+            testID={`title-filter-${key}`}
+            accessibilityState={{ selected: shown === key }}
+            onPress={() => setFilter(key)}
+            style={{
+              flexDirection: 'row',
+              gap: 8,
+              alignItems: 'center',
+              minHeight: 48,
+              paddingHorizontal: 14,
+              borderRadius: 24,
+              borderWidth: 1,
+              borderColor: shown === key ? c.accent : c.line,
+              backgroundColor: shown === key ? c.surface2 : 'transparent',
+            }}
+          >
+            <Txt bold>{key === 'earned' ? L.collectionEarned : L.collectionLocked}</Txt>
+            <Txt tone="muted" num>
+              {collection[key].length}
+            </Txt>
+          </Press>
         ))}
       </View>
-      {teamId ? (
-        <Btn
-          block
-          testID="my-owner-profile"
-          onPress={() => {
-            appState.hof = { ...hofStart(), tab: 'teams', team: teamId, owner: true };
-            go('hof');
+      <Txt tone="muted" style={small}>
+        {shown === 'earned' ? L.collectionHint : L.challengeHint}
+      </Txt>
+      <View style={{ gap: 10 }} accessibilityState={{ busy: saving }}>
+        {shown === 'earned' ? (
+          collection.earned.length ? (
+            collection.earned.map((id) => {
+              const t = hall.permanent.find((p) => p.id === id);
+              return (
+                <Press
+                  key={id}
+                  testID={`title-pick-${id}`}
+                  scale={0.985}
+                  accessibilityLabel={`${titleLabel(id)} · ${L.equip}`}
+                  accessibilityState={{ selected: hall.title === id, disabled: saving }}
+                  disabled={saving}
+                  onPress={() => void pick(id)}
+                  style={{ ...itemStyle, borderColor: hall.title === id ? c.accent : c.line }}
+                >
+                  <View
+                    style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}
+                  >
+                    {identity(id, t?.isNew)}
+                    {hall.title === id ? (
+                      <Txt style={{ ...small, color: c.accentText }}>✓ {L.titleUsing}</Txt>
+                    ) : null}
+                  </View>
+                  {t ? (
+                    <Txt tone="muted" style={small}>
+                      {titleCondition(id)}
+                    </Txt>
+                  ) : null}
+                </Press>
+              );
+            })
+          ) : (
+            <Txt tone="muted">{L.hallEmpty}</Txt>
+          )
+        ) : collection.locked.length ? (
+          collection.locked.map((t) => (
+            <View key={t.id} testID={`permanent-title-${t.id}`} style={itemStyle}>
+              {identity(t.id)}
+              <Txt tone="muted" style={small}>
+                {titleCondition(t.id)}
+              </Txt>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View
+                  accessibilityRole="progressbar"
+                  accessibilityLabel={titleLabel(t.id) ?? t.id}
+                  accessibilityValue={{ min: 0, max: t.target, now: Math.min(t.value, t.target) }}
+                  style={{
+                    flex: 1,
+                    height: 5,
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    backgroundColor: c.surface2,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: `${Math.min(100, (t.value / t.target) * 100)}%`,
+                      height: 5,
+                      backgroundColor: c.accent,
+                    }}
+                  />
+                </View>
+                <Txt num style={small}>
+                  {L.progress(t)}
+                </Txt>
+              </View>
+              <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                {titleRelated(t.id)}
+              </Txt>
+            </View>
+          ))
+        ) : (
+          <Txt tone="muted">{L.titleAllEarned}</Txt>
+        )}
+      </View>
+      <View style={{ borderTopWidth: 1, borderTopColor: c.line }}>
+        <Press
+          accessibilityState={{ expanded: guide }}
+          onPress={() => setGuide(!guide)}
+          style={{
+            minHeight: 48,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}
         >
-          {L.viewProfile}
-        </Btn>
-      ) : null}
-    </Card>
+          <Txt tone="muted">{L.titleGuide}</Txt>
+          <Txt tone="muted">{guide ? '−' : '+'}</Txt>
+        </Press>
+        {guide ? (
+          <View style={{ gap: 12, paddingBottom: 16 }}>
+            <Txt tone="muted" style={small}>
+              {L.permanentLead}
+            </Txt>
+            <Txt tone="muted" style={small}>
+              {L.titleBridge}
+            </Txt>
+            <Btn
+              testID="title-season-achievements"
+              onPress={() => {
+                appState.teamView = 'achievements';
+                go('team');
+              }}
+            >
+              {L.viewAchievements}
+            </Btn>
+            {collection.cups.length ? (
+              <>
+                <Btn testID="title-pick-auto" disabled={saving} onPress={() => void pick(null)}>
+                  {L.titleAutoCup}
+                </Btn>
+                <Txt tone="muted" style={small}>
+                  {L.pickAutoNote}
+                </Txt>
+              </>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+    </View>
   );
 }

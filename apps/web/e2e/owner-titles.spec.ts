@@ -8,6 +8,7 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await page.setViewportSize({ width: 320, height: 740 });
   await page.addInitScript(() => localStorage.setItem('ft_session', '1'));
   let gets = 0;
+  let rejectPick = true;
   let title: string | null = null;
   let pinned = false;
   const permanent = PERMANENT_TITLES.map((t) => ({
@@ -49,6 +50,10 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   );
   await page.route(`${API}/v1/owner/title`, async (route) => {
     if (route.request().method() === 'PUT') {
+      if (rejectPick) {
+        rejectPick = false;
+        return route.fulfill(fail(503, 'UNAVAILABLE', '저장 실패 테스트'));
+      }
       const picked = route.request().postDataJSON().title as string | null;
       title = picked === 'none' ? null : picked;
       pinned = picked !== null;
@@ -72,22 +77,27 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await page.locator('[data-act="open-owner-hall"]').click();
   await page.locator('[data-hall-tab="titles"]').click();
   const hall = page.locator('[data-owner-hall]');
-  await expect(hall.locator('[data-permanent-title]')).toHaveCount(13);
-  await expect(hall.locator('[data-title-grade]')).toHaveCount(4);
-  await expect(
-    hall.locator('[data-title-grade="legend"] [data-permanent-title="owner-keeper"]'),
-  ).toHaveCount(1);
-  await expect(
-    hall.locator('[data-title-grade="honor"] [data-permanent-title="owner-ballon-maker"]'),
-  ).toHaveCount(1);
-  await expect(
-    hall.locator('[data-title-grade="skilled"] [data-permanent-title="owner-national"]'),
-  ).toHaveCount(1);
-  await expect(hall.locator('[data-permanent-title="owner-goals"]')).toContainText(
-    '통산 500골 선수',
+  await expect(hall.locator('[data-permanent-title]')).toHaveCount(12);
+  await expect(hall.locator('[data-title-pick="owner-developer"]')).toHaveCount(1);
+  await expect(hall.locator('[data-permanent-title="owner-keeper"]')).toHaveAttribute(
+    'data-title-grade',
+    'legend',
   );
+  await expect(hall.locator('[data-permanent-title="owner-ballon-maker"]')).toHaveAttribute(
+    'data-title-grade',
+    'honor',
+  );
+  await hall.locator('[data-title-filter="locked"]').click();
+  await expect(hall.locator('[data-permanent-title]')).toHaveCount(1);
   await expect(hall.locator('[data-permanent-title="owner-academy"]')).toContainText('10/50');
   await expect(hall.locator('[data-title-pick="owner-academy"]')).toHaveCount(0);
+  await hall.locator('[data-title-filter="earned"]').click();
+  await hall.locator('[data-title-pick="owner-developer"]').click();
+  await expect(page.getByText('저장 실패 테스트', { exact: true })).toBeVisible();
+  await expect(hall.locator('[data-title-pick="owner-developer"]')).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
   await hall.locator('[data-title-pick="owner-developer"]').click();
   await expect(hall.locator('[data-title-pick="owner-developer"]')).toHaveAttribute(
     'aria-pressed',
@@ -123,7 +133,9 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await expect(page.locator('[data-permanent-title]')).toHaveCount(0);
   await page.locator('[data-act="open-owner-hall"]').click();
   await page.locator('[data-hall-tab="titles"]').click();
-  await expect(hall.locator('[data-title-pick="none"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(hall.locator('[data-title-pick="none"]')).toHaveCount(0);
+  await expect(hall.locator('[aria-label="지금 대표 칭호"]')).toContainText('달지 않음');
+  await hall.locator('summary').click();
   await hall.locator('[data-act="title-season-achievements"]').click();
   await expect(page.locator('[data-club-achievements]')).toBeVisible();
 });

@@ -2,6 +2,18 @@ import type { Translation } from '../core';
 import type { OwnerProfileMsgs } from '../ko/ownerProfile';
 
 export const ownerProfile: Translation<OwnerProfileMsgs> = {
+  collectionEarned: 'Earned',
+  collectionLocked: 'In progress',
+  collectionHint: 'Tap a title to display it immediately.',
+  challengeHint: 'Your closest goals appear first.',
+  titleUsing: 'In use',
+  titleGuide: 'About titles',
+  titleCup: 'Cup',
+  titleAllEarned: 'You have earned every permanent title.',
+  titleLoading: 'Loading titles…',
+  titleDisplayHint: 'Shown on your profile, rankings, comments and chat.',
+  titleRemove: 'Remove',
+  titleAutoCup: 'Choose cup title automatically',
   archiveLead: 'Keep your season records and earned titles together.',
   archiveTab: 'Season records',
   titlesTab: 'Titles',
