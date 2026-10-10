@@ -91,6 +91,7 @@ const ko = {
   noteListed: '판매 중',
   noteNoValue: '기준가 없음',
   noteStarter: '선발',
+  noteLocked: '잠김',
   // 내 거래
   tradesListed: '내놓은 선수',
   listedAgo: (p: { price: string; ago: string }) => `${p.price} · ${p.ago} 등록`,
@@ -129,8 +130,12 @@ const ko = {
   lockBought: '영입한 선수는 방출할 수 없어요',
   lockListed: '판매 중이에요. 내린 뒤 방출할 수 있어요',
   lockStarter: '선발이에요. 팀에서 뺀 뒤 방출할 수 있어요',
+  lockPlayerLocked: '잠긴 선수예요',
+  playerUnlock: '잠금 풀기',
   // 알림
   toastListed: '시장에 내놓았어요.',
+  toastUnlocked: '잠금을 풀었어요.',
+  toastLocked: '선수를 잠갔어요. 이적시장에 내놓거나 방출할 수 없어요.',
   toastUnlisted: '판매를 내렸어요.',
   toastBought: '선수를 영입했어요.',
   toastReleased: (p: { n: number }) => `${p.n}명을 방출했어요.`,

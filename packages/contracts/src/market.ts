@@ -232,6 +232,15 @@ export type BuyListingBody = z.infer<typeof BuyListingBodySchema>;
 export const BuyListingResponseSchema = z.strictObject({ balance: man });
 export type BuyListingResponse = z.infer<typeof BuyListingResponseSchema>;
 
+/** T-11-188 선수 잠금. 잠긴 선수는 내놓거나 방출할 수 없다. */
+export const CardLockBodySchema = z.strictObject({
+  careerId: CareerIdParamSchema,
+  locked: z.boolean(),
+});
+export type CardLockBody = z.infer<typeof CardLockBodySchema>;
+export const CardLockResponseSchema = z.strictObject({ locked: z.boolean() });
+export type CardLockResponse = z.infer<typeof CardLockResponseSchema>;
+
 export const ReleaseCardsBodySchema = z.strictObject({
   careerIds: z.array(CareerIdParamSchema).min(1).max(RELEASE_MAX),
 });

@@ -353,3 +353,90 @@ test('팔기 — 이번 시즌 선수를 슬라이더로 값을 정해 내놓고
   await expect(page.locator('#toast')).toHaveText('1명을 방출했어요.');
   expect(released).toEqual({ careerIds: [RAISED] });
 });
+
+test('T-11-188 라커룸에서 선수를 잠그면 팔기 · 방출에서 막히고, 그 자리에서 풀 수 있다', async ({
+  page,
+}) => {
+  await stub(page);
+  const LISTED = '00000000-0000-4000-8000-000000000023';
+  let players = [
+    player(RAISED, true),
+    player(BOUGHT, false),
+    player(LISTED, true, {
+      publicName: '판매 중 미드필더',
+      listing: { id: LISTING, price: 90_000 },
+    }),
+  ];
+  const locks: unknown[] = [];
+  await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(0)));
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/market',
+    (r) => r.fulfill(fail(500, 'X', 'x')),
+  );
+  await page.route(`${API}/v1/cards/lock`, (r) => {
+    const body = r.request().postDataJSON() as { careerId: string; locked: boolean };
+    locks.push(body);
+    players = players.map((p) =>
+      p.careerId === body.careerId ? { ...p, locked: body.locked } : p,
+    );
+    return r.fulfill(ok({ locked: body.locked }));
+  });
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/owner-team',
+    (r) =>
+      r.fulfill(
+        ok({
+          season: 0,
+          current: 0,
+          seasons: [{ id: 0, name: '프리시즌' }],
+          team: null,
+          players,
+          lastManager: null,
+          matchesLeft: 10,
+          matchesPerDay: 10,
+        }),
+      ),
+  );
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+
+  // 라커룸: 키운 선수 · 영입한 선수를 잠근다. 판매 중인 선수는 내린 뒤에 잠근다.
+  const locker = page.locator('[data-team-locker]');
+  await locker.getByLabel('선발 선수 포함').check();
+  const lockBtn = (id: string) => locker.locator(`[data-locker-player="${id}"] [data-act="lock"]`);
+  await expect(lockBtn(LISTED)).toBeDisabled();
+  await expect(lockBtn(LISTED)).toHaveText('판매 중');
+  await lockBtn(RAISED).click();
+  await expect(page.locator('#toast')).toHaveText(
+    '선수를 잠갔어요. 이적시장에 내놓거나 방출할 수 없어요.',
+  );
+  await expect(lockBtn(RAISED)).toHaveAttribute('aria-pressed', 'true');
+  await expect(locker.locator(`[data-locker-player="${RAISED}"] [data-card-locked]`)).toBeVisible();
+  await lockBtn(BOUGHT).click();
+  await expect(lockBtn(BOUGHT)).toHaveText('잠김');
+  expect(locks).toEqual([
+    { careerId: RAISED, locked: true },
+    { careerId: BOUGHT, locked: true },
+  ]);
+
+  // 팔기: 잠긴 선수는 고를 수 없고 '잠금 풀기'로 바로 푼다.
+  await page.locator('[data-act="team-back"]').click();
+  await page.locator('[data-act="market"]').click();
+  await page.locator('[data-market-tab="sell"]').click();
+  await expect(page.locator(`[data-sell-pick="${RAISED}"]`)).toBeDisabled();
+  await expect(page.locator(`[data-sell-pick="${RAISED}"]`)).toContainText('잠김');
+  await expectNoA11yViolations(page);
+  await page.locator(`[data-unlock="${BOUGHT}"]`).click();
+  await expect(page.locator('#toast')).toHaveText('잠금을 풀었어요.');
+  await expect(page.locator(`[data-sell-pick="${BOUGHT}"]`)).toBeEnabled();
+
+  // 방출: 잠긴 선수는 체크할 수 없고, 같은 줄에서 푼 뒤 고른다.
+  await page.locator('[data-act="open-release"]').click();
+  const row = page.locator(`[data-mine="${RAISED}"]`);
+  await expect(row.locator('input[type="checkbox"]')).toBeDisabled();
+  await expect(row).toContainText('잠긴 선수예요');
+  await page.locator(`[data-unlock="${RAISED}"]`).click();
+  await expect(row.locator('input[type="checkbox"]')).toBeEnabled();
+  expect(locks.at(-1)).toEqual({ careerId: RAISED, locked: false });
+});
