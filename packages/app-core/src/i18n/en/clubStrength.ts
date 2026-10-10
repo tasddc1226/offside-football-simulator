@@ -1,0 +1,25 @@
+import type { Translation } from '../core';
+import type { ClubStrengthMsgs } from '../ko/clubStrength';
+export const clubStrength: Translation<ClubStrengthMsgs> = {
+  title: 'Club strength',
+  note: 'Standings are checked daily after 13:00 KST. New strength applies from the next in-game season. High school, university, K2 and K3 stay fixed.',
+  refresh: 'Refresh',
+  more: 'Older records',
+  empty: 'No automatic update records yet.',
+  fail: 'Could not load strength update history.',
+  version: 'Active strength table',
+  changed: 'Strength changed',
+  unchanged: 'No change',
+  failed: 'Collection failed',
+  unconfigured: 'Connection needed',
+  reason: 'Reason',
+  season: 'Real season',
+  rows: 'Club changes',
+  same: 'Standings are unchanged.',
+  held: 'Strength retained for clubs with too few matches.',
+  valid: 'Validated results processed.',
+  missing: 'Configure the data source and API connection.',
+  invalid: 'Check data source configuration.',
+  error: 'Check the collected data and club mapping.',
+  asOf: 'Strength table date',
+};
