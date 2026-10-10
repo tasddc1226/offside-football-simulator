@@ -1394,6 +1394,13 @@ export const ownerTitleProgress = sqliteTable('owner_title_progress', {
   profileId: text('profile_id')
     .primaryKey()
     .references(() => profiles.id, { onDelete: 'cascade' }),
+  criteriaVersion: integer('criteria_version').notNull().default(0),
+  midfield: integer('midfield').notNull().default(0),
+  defense: integer('defense').notNull().default(0),
+  keeper: integer('keeper').notNull().default(0),
+  scorers: integer('scorers').notNull().default(0),
+  creators: integer('creators').notNull().default(0),
+  internationals: integer('internationals').notNull().default(0),
   retired: integer('retired').notNull(),
   elite: integer('elite').notNull(),
   ballon: integer('ballon').notNull(),

@@ -1,13 +1,13 @@
 <script lang="ts">
   // T-11-150 명예관 — 구단주 화면에서 받은 칭호 가운데 대표 칭호를 고른다(자동 · 칭호 하나 · 달지 않기). 고른 칭호는 랭킹 ·
-  // 팀 프로필 · 댓글 · 채팅 닉네임 옆에 붙는다. 불러오지 못하면 카드를 숨긴다.
+  // 팀 프로필 · 댓글 · 채팅 닉네임 옆에 붙는다. 불러오지 못하면 재시도를 제공한다.
   import { onMount } from 'svelte';
   import {
     fetchOwnerTitles,
     putOwnerTitle,
     type OwnerTitlesResponse,
   } from '@offside/app-core/api/ownerProfile';
-  import { TITLE_NONE, titleLabel, titleCondition, parseTitle } from '@offside/app-core/ownerTitle';
+  import { TITLE_NONE, titleLabel, titleCondition, parseTitle, TITLE_GRADES, permanentTitleOf, titleGradeLabel, titleGradeNote, titleRelated } from '@offside/app-core/ownerTitle';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from '../cup/TitleBadge.svelte';
   import { toast } from '../helpers.js';
@@ -81,11 +81,16 @@
     <div class="stack oh-permanent" aria-label={L.permanentTitle}>
       <h3>{L.permanentTitle}</h3>
       <p class="muted fs-sm">{L.permanentLead}</p>
-      {#each hall.permanent as t (t.id)}
+      <p class="muted fs-sm">{L.titleBridge}</p>
+      <button class="btn btn-block" data-act="title-season-achievements" onclick={() => { appState.teamView = 'achievements'; go('team'); }}>{L.viewAchievements}</button>
+      {#each TITLE_GRADES as grade (grade)}
+        <section class="stack oh-grade" aria-label={titleGradeLabel(grade)} data-title-grade={grade}>
+          <div><h4>{titleGradeLabel(grade)}</h4><p class="muted fs-sm">{titleGradeNote(grade)}</p></div>
+      {#each hall.permanent.filter((t) => permanentTitleOf(t.id)?.grade === grade) as t (t.id)}
         <div class="oh-achievement" data-permanent-title={t.id}>
           <div class="stack" style="gap:4px;min-width:0">
             <div class="oh-current"><TitleBadge title={t.id} />{#if t.isNew}<span class="pill good">{L.newTitle}</span>{/if}</div>
-            <p class="muted fs-sm">{titleCondition(t.id)}</p>
+            <p class="muted fs-sm">{titleCondition(t.id)}</p><small class="muted">{titleRelated(t.id)}</small>
           </div>
           {#if t.earnedAt}
             <button class="opt" aria-pressed={picked === t.id} disabled={saving} onclick={() => pick(t.id)} data-title-pick={t.id} aria-label={`${titleLabel(t.id)} ${L.equip}`}>{picked === t.id ? L.selected : L.equip}</button>
@@ -93,6 +98,8 @@
             <span class="muted fs-sm oh-progress" aria-label={`${L.locked} ${L.progress(t)}`}>{L.progress(t)}</span>
           {/if}
         </div>
+      {/each}
+        </section>
       {/each}
     </div>
     {#if hall.teamId}
@@ -104,8 +111,11 @@
 
 <style>
   .oh-current {display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-  .oh-achievement { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--line); }
+  .oh-achievement { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--line); }
   .oh-progress {flex:none; white-space:nowrap;}
+  .oh-achievement > .stack {flex:1 1 100%;}
+  .oh-grade {gap:4px;padding-top:12px;}
+  .oh-grade h4 {margin:0;}
   .oh-achievement button {min-height:44px;flex:none;}
   .oh-permanent {gap:8px;}
   .oh-picks {display:flex; flex-wrap:wrap; gap:8px;}

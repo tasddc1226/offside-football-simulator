@@ -1,5 +1,4 @@
-// T-11-150 구단주 대표 칭호. 지금은 오프사이드 컵 성적(우승·준우승·4강)이 칭호가 된다 — id는 'cup-{회차}-{단계}'라
-// 랭킹·댓글·채팅이 회차와 단계를 바로 읽어 그린다(따로 찾아보지 않는다). zod 없는 서브패스(`@offside/contracts/owner-title`).
+// T-11-150 컵 성적과 여러 시즌의 육성 이력을 담는 대표 칭호. zod 없는 공통 서브패스.
 import type { CupStage } from './cup.js';
 
 export const TITLE_STAGES = ['champion', 'runnerup', 'sf'] as const;
@@ -42,18 +41,121 @@ export function titlesOf(honors: readonly { edition: number; stage: CupStage }[]
     .sort(compareTitles);
 }
 
-/** Permanent account titles. Criteria v1 includes preseason and every service season. */
+/** Shared single-career feats used by seasonal achievements and lifetime title counts. */
+export const CAREER_FEATS = { goals: 500, caps: 150, assists: 300, peak: 90 } as const;
+export const TITLE_GRADES = ['entry', 'skilled', 'honor', 'legend'] as const;
+export type TitleGrade = (typeof TITLE_GRADES)[number];
+
+/** Grades describe challenge depth, not measured rarity. Player milestones count distinct careers; firsts count finalized honors. */
 export const PERMANENT_TITLES = [
-  { id: 'owner-developer', metric: 'retired', target: 10, symbol: 'academy' },
-  { id: 'owner-academy', metric: 'retired', target: 50, symbol: 'academy' },
-  { id: 'owner-star-maker', metric: 'elite', target: 3, symbol: 'star' },
-  { id: 'owner-ballon-maker', metric: 'ballon', target: 1, symbol: 'ball' },
-  { id: 'owner-legend-home', metric: 'numbers', target: 1, symbol: 'shirt' },
-  { id: 'owner-pioneer', metric: 'firsts', target: 1, symbol: 'flag' },
+  {
+    id: 'owner-developer',
+    metric: 'retired',
+    target: 10,
+    symbol: 'academy',
+    grade: 'entry',
+    related: 'retire',
+  },
+  {
+    id: 'owner-star-maker',
+    metric: 'elite',
+    target: 3,
+    symbol: 'star',
+    grade: 'skilled',
+    related: 'retire',
+  },
+  {
+    id: 'owner-midfield',
+    metric: 'midfield',
+    target: 5,
+    symbol: 'pitch',
+    grade: 'skilled',
+    related: 'retire',
+  },
+  {
+    id: 'owner-defense',
+    metric: 'defense',
+    target: 5,
+    symbol: 'shield',
+    grade: 'skilled',
+    related: 'retire',
+  },
+  {
+    id: 'owner-keeper',
+    metric: 'keeper',
+    target: 5,
+    symbol: 'glove',
+    grade: 'skilled',
+    related: 'retire',
+  },
+  {
+    id: 'owner-academy',
+    metric: 'retired',
+    target: 50,
+    symbol: 'academy',
+    grade: 'honor',
+    related: 'retire',
+  },
+  {
+    id: 'owner-goals',
+    metric: 'scorers',
+    target: 5,
+    symbol: 'ball',
+    grade: 'honor',
+    related: 'goals',
+  },
+  {
+    id: 'owner-assists',
+    metric: 'creators',
+    target: 5,
+    symbol: 'pitch',
+    grade: 'honor',
+    related: 'assists',
+  },
+  {
+    id: 'owner-national',
+    metric: 'internationals',
+    target: 5,
+    symbol: 'flag',
+    grade: 'honor',
+    related: 'caps',
+  },
+  {
+    id: 'owner-legend-home',
+    metric: 'numbers',
+    target: 3,
+    symbol: 'shirt',
+    grade: 'honor',
+    related: 'numbers',
+  },
+  {
+    id: 'owner-pioneer',
+    metric: 'firsts',
+    target: 1,
+    symbol: 'flag',
+    grade: 'honor',
+    related: 'firsts',
+  },
+  {
+    id: 'owner-ballon-maker',
+    metric: 'ballon',
+    target: 5,
+    symbol: 'ball',
+    grade: 'legend',
+    related: 'ballon',
+  },
+  {
+    id: 'owner-dynasty',
+    metric: 'numbers',
+    target: 25,
+    symbol: 'shirt',
+    grade: 'legend',
+    related: 'numbers',
+  },
 ] as const;
 export type PermanentTitleId = (typeof PERMANENT_TITLES)[number]['id'];
 export type TitleMetric = (typeof PERMANENT_TITLES)[number]['metric'];
-export const TITLE_CRITERIA_VERSION = 1;
+export const TITLE_CRITERIA_VERSION = 2;
 export const permanentTitleOf = (id: string | null | undefined) =>
   PERMANENT_TITLES.find((t) => t.id === id);
 export const isOwnerTitle = (id: string): boolean => !!parseTitle(id) || !!permanentTitleOf(id);

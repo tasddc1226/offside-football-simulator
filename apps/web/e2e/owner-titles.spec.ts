@@ -69,7 +69,11 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   const hall = page.locator('[data-owner-hall]');
-  await expect(hall.locator('[data-permanent-title]')).toHaveCount(6);
+  await expect(hall.locator('[data-permanent-title]')).toHaveCount(13);
+  await expect(hall.locator('[data-title-grade]')).toHaveCount(4);
+  await expect(hall.locator('[data-permanent-title="owner-goals"]')).toContainText(
+    '통산 500골 선수',
+  );
   await expect(hall.locator('[data-permanent-title="owner-academy"]')).toContainText('10/50');
   await expect(hall.locator('[data-title-pick="owner-academy"]')).toHaveCount(0);
   await hall.locator('[data-title-pick="owner-developer"]').click();
@@ -94,6 +98,8 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await page.reload();
   await page.locator('[data-act="owner"]').click();
   await expect(hall.locator('[data-title-pick="none"]')).toHaveAttribute('aria-pressed', 'true');
+  await hall.locator('[data-act="title-season-achievements"]').click();
+  await expect(page.locator('[data-club-achievements]')).toBeVisible();
 });
 
 test('hall read failure can retry and shows all locked goals for a new owner', async ({ page }) => {
@@ -140,7 +146,7 @@ test('hall read failure can retry and shows all locked goals for a new owner', a
   await expect(error).toContainText('명예관을 불러오지 못했어요.');
   await error.getByRole('button', { name: '다시 시도' }).click();
   const hall = page.locator('[data-owner-hall]');
-  await expect(hall.locator('[data-permanent-title]')).toHaveCount(6);
+  await expect(hall.locator('[data-permanent-title]')).toHaveCount(13);
   await expect(hall.locator('[data-title-pick]')).toHaveCount(0);
   expect(reads).toBe(2);
 });

@@ -77,6 +77,12 @@ describe('Permanent owner titles', () => {
       .insert(ownerHonors)
       .values({ profileId: a.profileId, season: 0, kind: 'first', value: 1, grantedAt: NOW });
     expect(await titleMetricsOf(ctx.db, a.profileId)).toEqual({
+      midfield: 0,
+      defense: 0,
+      keeper: 0,
+      scorers: 0,
+      creators: 0,
+      internationals: 0,
       retired: 10,
       elite: 3,
       ballon: 1,
@@ -85,27 +91,85 @@ describe('Permanent owner titles', () => {
     });
     expect((await titleMetricsOf(ctx.db, b.profileId)).retired).toBe(0);
     const preview = await refreshOwnerTitles(ctx.db, a.profileId, NOW, true);
-    expect(preview).toEqual([
-      'owner-developer',
-      'owner-star-maker',
-      'owner-ballon-maker',
-      'owner-legend-home',
-      'owner-pioneer',
-    ]);
+    expect(preview).toEqual(['owner-developer', 'owner-star-maker', 'owner-pioneer']);
     expect(await ctx.db.select().from(ownerTitleAwards)).toHaveLength(0);
     expect(await ctx.db.select().from(ownerTitleProgress)).toHaveLength(0);
     await Promise.all([
       refreshOwnerTitles(ctx.db, a.profileId, NOW),
       refreshOwnerTitles(ctx.db, a.profileId, NOW),
     ]);
-    expect(await ctx.db.select().from(ownerTitleAwards)).toHaveLength(5);
+    expect(await ctx.db.select().from(ownerTitleAwards)).toHaveLength(3);
     expect(await refreshOwnerTitles(ctx.db, a.profileId, NOW)).toEqual([]);
     await ctx.db.update(careers).set({ hidden: 1 }).where(eq(careers.profileId, a.profileId));
     await refreshOwnerTitles(ctx.db, a.profileId, '2026-11-01T00:00:00.000Z');
     expect(
       (await permanentTitlesOf(ctx.db, a.profileId, NOW)).filter((t) => t.earnedAt),
-    ).toHaveLength(5);
+    ).toHaveLength(3);
     expect((await ctx.db.select().from(ownerTitleAwards))[0]?.earnedAt).toBe(NOW);
+  });
+
+  it('counts repeated feats across distinct careers, position expertise and versioned progress without revoking old awards', async () => {
+    const who = await issueGoogleCookie(ctx);
+    const ids = await seed(who.profileId, 25);
+    for (const [i, id] of ids.entries()) {
+      await ctx.db
+        .update(careers)
+        .set({
+          pos: i < 5 ? 'MF' : i < 10 ? 'DF' : i < 15 ? 'GK' : 'FW',
+          peak: 90,
+          goals: i < 4 ? 500 : 499,
+          assists: i < 5 ? 300 : 299,
+          caps: i < 5 ? 150 : 149,
+          ballon: i < 5 ? 1 : 0,
+        })
+        .where(eq(careers.id, id));
+      await ctx.db.insert(retiredNumbers).values({
+        season: i % 2,
+        clubId: 'club',
+        number: i + 1,
+        careerId: id,
+        club: 'Club',
+        score: 2000,
+        seq: i + 1,
+        grantedAt: NOW,
+      });
+    }
+    await refreshOwnerTitles(ctx.db, who.profileId, NOW);
+    let hall = await permanentTitlesOf(ctx.db, who.profileId, NOW);
+    expect(hall.find((t) => t.id === 'owner-goals')).toMatchObject({ value: 4, earnedAt: null });
+    for (const id of [
+      'owner-midfield',
+      'owner-defense',
+      'owner-keeper',
+      'owner-assists',
+      'owner-national',
+      'owner-ballon-maker',
+      'owner-dynasty',
+    ]) {
+      expect(hall.find((t) => t.id === id)?.earnedAt).toBe(NOW);
+    }
+    await ctx.db.update(careers).set({ goals: 500 }).where(eq(careers.id, ids[4]!));
+    // A pre-v2 snapshot must be refreshed even without a newer career timestamp.
+    await ctx.db
+      .update(ownerTitleProgress)
+      .set({ criteriaVersion: 0 })
+      .where(eq(ownerTitleProgress.profileId, who.profileId));
+    const later = '2026-10-11T00:00:00.000Z';
+    hall = await permanentTitlesOf(ctx.db, who.profileId, later);
+    expect(hall.find((t) => t.id === 'owner-goals')).toMatchObject({ value: 5, earnedAt: later });
+    expect((await ctx.db.select().from(ownerTitleProgress))[0]?.criteriaVersion).toBe(2);
+    // Historic awards remain valid when their earlier criteria were easier.
+    await ctx.db
+      .update(ownerTitleAwards)
+      .set({ criteriaVersion: 1, evidence: 1 })
+      .where(eq(ownerTitleAwards.titleId, 'owner-ballon-maker'));
+    await ctx.db.update(careers).set({ ballon: 0 }).where(eq(careers.profileId, who.profileId));
+    await refreshOwnerTitles(ctx.db, who.profileId, later);
+    expect(
+      (await permanentTitlesOf(ctx.db, who.profileId, later)).find(
+        (t) => t.id === 'owner-ballon-maker',
+      )?.earnedAt,
+    ).toBe(NOW);
   });
 
   it('private hall seeds old records once, validates ownership, preserves manual choice, marks selected title seen', async () => {

@@ -5,7 +5,14 @@ import Svg, { Path } from 'react-native-svg';
 import { useColors } from '../theme/useColors';
 import { View } from 'react-native';
 import { cupTrophy } from '@offside/app-core/cupTrophy';
-import { parseTitle, titleLabel, titleIconPath } from '@offside/app-core/ownerTitle';
+import {
+  parseTitle,
+  titleLabel,
+  titleIconPath,
+  titleGradeColor,
+  titleGradeLabel,
+  permanentTitleOf,
+} from '@offside/app-core/ownerTitle';
 import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
 import { alpha } from '../theme/colors';
 import { rem } from '../theme/type';
@@ -15,16 +22,21 @@ import { Txt } from '../ui/Txt';
 export function TitleBadge({ title, size = 'md' }: { title: string; size?: 'md' | 'sm' | 'icon' }) {
   const c = useColors();
   const t = parseTitle(title);
+  const grade = permanentTitleOf(title)?.grade;
   const label = titleLabel(title);
   if (!label) return null;
-  const palette = t ? cupTrophy(t.stage).palette : { base: c.accent, light: c.accent };
+  const palette = t
+    ? cupTrophy(t.stage).palette
+    : { base: titleGradeColor(title), light: titleGradeColor(title) };
   const icon = size === 'icon';
   return (
     <View
       testID={`title-badge-${title}`}
       accessible
       accessibilityRole="image"
-      accessibilityLabel={L.titleAria({ title: label })}
+      accessibilityLabel={L.titleAria({
+        title: grade ? `${titleGradeLabel(grade)} · ${label}` : label,
+      })}
       style={{
         flexDirection: 'row',
         alignItems: 'center',

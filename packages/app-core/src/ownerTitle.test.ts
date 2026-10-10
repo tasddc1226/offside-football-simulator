@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { titlesOf } from '@offside/contracts/owner-title';
+import { titlesOf, PERMANENT_TITLES, TITLE_GRADES } from '@offside/contracts/owner-title';
 import { setLocale } from './i18n/core.js';
-import { titleLabel, titleCondition } from './ownerTitle.js';
+import { titleLabel, titleCondition, titleRelated, titleGradeLabel } from './ownerTitle.js';
 
 describe('대표 칭호 (T-11-150)', () => {
   afterEach(() => setLocale('ko'));
@@ -31,7 +31,12 @@ describe('대표 칭호 (T-11-150)', () => {
 it('permanent labels and criteria are translated and unknown titles stay hidden', () => {
   for (const locale of ['ko', 'en', 'ja'] as const) {
     setLocale(locale);
-    expect(titleLabel('owner-developer')).toBeTruthy();
+    for (const t of PERMANENT_TITLES) {
+      expect(titleLabel(t.id)).toBeTruthy();
+      if (t.id !== 'owner-pioneer') expect(titleCondition(t.id)).toContain(String(t.target));
+      expect(titleRelated(t.id)).toBeTruthy();
+    }
+    for (const grade of TITLE_GRADES) expect(titleGradeLabel(grade)).toBeTruthy();
     expect(titleCondition('owner-developer')).toContain('10');
     expect(titleCondition('owner-star-maker')).toContain('90');
   }

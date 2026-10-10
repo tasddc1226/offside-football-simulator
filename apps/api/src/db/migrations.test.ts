@@ -50,6 +50,14 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   ],
   owner_title_progress: [
     'profile_id',
+    'criteria_version',
+    'midfield',
+    'defense',
+    'keeper',
+    'scorers',
+    'creators',
+    'internationals',
+
     'retired',
     'elite',
     'ballon',

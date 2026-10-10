@@ -1,4 +1,8 @@
-import { PERMANENT_TITLES, TITLE_CRITERIA_VERSION } from '@offside/contracts/owner-title';
+import {
+  PERMANENT_TITLES,
+  TITLE_CRITERIA_VERSION,
+  CAREER_FEATS,
+} from '@offside/contracts/owner-title';
 import type { TitleMetric } from '@offside/contracts/owner-title';
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
@@ -10,14 +14,20 @@ type Metrics = Record<TitleMetric, number>;
 /** Scalar aggregates use careers.profile_id, never the transferable cards.owner_id. */
 export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics> {
   const row = await db.get<Metrics>(sql`
-    select count(*) as retired, coalesce(sum(peak >= 90), 0) as elite,
+    select count(*) as retired, coalesce(sum(peak >= ${CAREER_FEATS.peak}), 0) as elite,
       coalesce(sum(ballon >= 1), 0) as ballon,
+      coalesce(sum(pos = 'MF' and peak >= ${CAREER_FEATS.peak}), 0) as midfield,
+      coalesce(sum(pos = 'DF' and peak >= ${CAREER_FEATS.peak}), 0) as defense,
+      coalesce(sum(pos = 'GK' and peak >= ${CAREER_FEATS.peak}), 0) as keeper,
+      coalesce(sum(goals >= ${CAREER_FEATS.goals}), 0) as scorers,
+      coalesce(sum(assists >= ${CAREER_FEATS.assists}), 0) as creators,
+      coalesce(sum(caps >= ${CAREER_FEATS.caps}), 0) as internationals,
       (select count(*) from retired_numbers r join careers c on c.id = r.career_id
        where c.profile_id = ${profileId} and c.hidden = 0) as numbers,
       (select count(*) from owner_honors h where h.profile_id = ${profileId} and h.kind = 'first') as firsts
     from careers where profile_id = ${profileId} and status = 'retired'
       and hidden = 0 and peak is not null and retire_age >= 30`);
-  return row ?? { retired: 0, elite: 0, ballon: 0, numbers: 0, firsts: 0 };
+  return row!;
 }
 
 /** Idempotent snapshot + award ledger. Pure preview follows exactly the same criteria. */
@@ -38,10 +48,10 @@ export async function refreshOwnerTitles(db: Db, profileId: string, now: string,
     // A batch is transactional: progress and awards commit together, including retry/concurrent requests.
     const progress = db
       .insert(ownerTitleProgress)
-      .values({ profileId, ...metrics, updatedAt: now })
+      .values({ profileId, ...metrics, criteriaVersion: TITLE_CRITERIA_VERSION, updatedAt: now })
       .onConflictDoUpdate({
         target: ownerTitleProgress.profileId,
-        set: { ...metrics, updatedAt: now },
+        set: { ...metrics, criteriaVersion: TITLE_CRITERIA_VERSION, updatedAt: now },
         setWhere: sql`${ownerTitleProgress.updatedAt} <= ${now}`,
       });
     if (newlyEarned.length) {
@@ -87,7 +97,7 @@ export async function permanentTitlesOf(db: Db, profileId: string, now: string) 
         )
         .limit(1)
     : [];
-  if (!progress || pending.length) {
+  if (!progress || progress.criteriaVersion !== TITLE_CRITERIA_VERSION || pending.length) {
     await refreshOwnerTitles(db, profileId, now);
     [progress] = await db
       .select()
