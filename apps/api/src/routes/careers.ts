@@ -39,9 +39,11 @@ import { resumeCareerDetails } from '../cron/careerRetention.js';
 import { retireAtOf } from '@offside/contracts/service-seasons';
 import { resolveBalance } from '@offside/contracts';
 import { getActiveBalance } from '../db/repos/balance.js';
+import { completeInvite } from '../db/repos/referrals.js';
 
-/** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다. */
-export const UPLOAD_LIMIT = { CAREER_SEASON: 120, CAREER_RETIRE: 30 } as const;
+/** 프로필당 시간당 업로드 한도. 정상 플레이는 시즌당 PUT 1회, 오프라인 큐 상한은 100이다.
+ * T-11-182 시즌 한도 120은 빠르게 여러 커리어를 도는 이용자가 넘겨(한 커리어 최대 약 28시즌) 은퇴 기록이 한 시간까지 밀렸다. */
+export const UPLOAD_LIMIT = { CAREER_SEASON: 300, CAREER_RETIRE: 30 } as const;
 
 /** 검증을 통과한 업로드만 센다 — 잘못된 요청이 쿼터를 쓰지 않게, D1 쓰기 직전에 부른다. */
 async function limitUpload(
@@ -201,8 +203,11 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       });
       await recordFirsts(c, careerId, { legendOnly: true }); // 레전드 점수 기록은 은퇴 때 판정한다.
     }
+    // T-11-171 친구 초대로 들어온 구단주가 커리어를 은퇴까지 마쳤으면 두 사람에게 초대 보상을 준다. 판정 전 초대만 끝내므로
+    // 재전송(이름 공개 토글)에서 다시 불려도 한 번만 주고, 처음 은퇴 뒤 판정이 실패했으면 재전송 때 마저 준다.
+    await completeInvite(db, session.profileId, careerId, now);
     // T-10-076 영구결번 심사. 이름 공개 토글 재전송도 여기로 온다 — 이름을 공개하는 순간 자리를 잡는다.
-    const retiredNumber = await judgeRetirement(c, careerId, now);
+    const judged = await judgeRetirement(c, careerId, now);
     purgeEdge(c, STALE.retirementPut(careerId));
     publishLive(c, 'retire', careerId, now);
     // T-11-028 그 시즌 구단주 업적 점수(업적 랭킹)를 응답 뒤에 다시 센다.
@@ -212,7 +217,7 @@ export function registerCareerRoutes(app: Hono<AppEnv>): void {
       careerId,
       status: 'retired',
       title: verifiedRetiredTitle(await getCareerHead(db, careerId)),
-      retiredNumber,
+      ...judged,
       serviceSeason: career.serviceSeason,
     });
   });

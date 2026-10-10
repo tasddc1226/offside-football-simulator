@@ -52,7 +52,7 @@ describe('세부 포지션 (T-10-091)', () => {
     expect(legendTerms('MF', t, 'DM').goals).toBeGreaterThan(legendTerms('MF', t).goals);
   });
 
-  it('경기 장악은 중앙 미드필더(CM·DM·AM)만, 평점이 기준을 넘는 몫을 상한까지 센다', () => {
+  it('경기 장악은 중앙·수비형 미드필더(CM·DM)만, 평점이 기준을 넘는 몫을 상한까지 센다', () => {
     const seasons = [
       { apps: 30, rating: CONTROL_BASE + 0.25 },
       { apps: 30, rating: CONTROL_BASE + 3 },
@@ -60,7 +60,9 @@ describe('세부 포지션 (T-10-091)', () => {
     ];
     expect(controlPoints(seasons)).toBeCloseTo(30 * 0.25 + 30 * CONTROL_CAP);
     const t = { ...ZERO, control: controlPoints(seasons) };
-    for (const d of ['CM', 'DM', 'AM']) expect(legendTerms('MF', t, d).control).toBeGreaterThan(0);
+    for (const d of ['CM', 'DM']) expect(legendTerms('MF', t, d).control).toBeGreaterThan(0);
+    // T-11-168 골·도움을 공격수만큼 쌓는 AM은 장악 몫이 없다.
+    expect(legendTerms('MF', t, 'AM').control).toBe(0);
     expect(legendTerms('MF', t).control).toBe(0);
     expect(legendTerms('FW', t, 'W').control).toBe(0);
     expect(legendTerms('DF', t, 'CB').control).toBe(0);

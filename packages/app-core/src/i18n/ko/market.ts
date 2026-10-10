@@ -21,6 +21,7 @@ const ko = {
   tabTrades: '내 거래',
   sortNew: '최신 등록 순',
   sortPrice: '가격 낮은 순',
+  sortOvr: 'OVR 높은 순',
   sortLabel: '정렬',
   posAll: '전체',
   seasonCount: (p: { n: number; more: boolean }) => `이번 시즌 선수 ${p.n}${p.more ? '+' : ''}명`,

@@ -9,8 +9,7 @@ import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { boostHidden, boostView, doBoost, type BoostOutcome } from '@offside/app-core/boost-view';
 import { peekView } from '@offside/app-core/potential-peek';
 import { TRAITS } from '@offside/game/data';
-import { boostFreeOpen, type BoostPay } from '@offside/game/boost';
-import { boostDayLeft } from '@offside/app-core/boost-daily';
+import { boostFreeOpen, boostTicketOpen, type BoostPay } from '@offside/game/boost';
 import { ovr } from '@offside/game/attributes';
 import { leagueOf, fmtMoney } from '@offside/game/engine';
 import {
@@ -31,7 +30,10 @@ import { adFree } from '../../platform/adFree';
 import { claimReward, rewardOffer } from '../../platform/rewarded';
 import { openPeek, openPeekWithClub, peekAvailable, potPeek } from '../../platform/rewardedPeek';
 import { useClubReward } from '../../platform/clubShop';
-import { adBoostRaw, markAdBoost } from '../../platform/boostDaily';
+import { iapItems, useIapItems } from '../../platform/iapItems';
+import { payWithTicket } from '@offside/app-core/club-reward';
+import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
+import { IapPacks } from '../owner/IapPacks';
 import { fundsText } from '@offside/app-core/funds';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -84,10 +86,14 @@ function BoostCard({ s }: { s: GameState }) {
   const [adMessage, setAdMessage] = useState('');
   const owned = useSnapshot(adFree).owned;
   // T-11-153 광고 대신 구단 자금으로 시도(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 시도한다.
-  // T-11-157 자금이 모자란 시즌의 한 번과 추가 시도에 쓰고, 오늘 횟수는 광고와 구단 자금을 합쳐 센다.
+  // T-11-157 자금이 모자란 시즌의 한 번과 추가 시도에 쓴다. 광고는 하루 횟수가 없고, 구단 자금은 서버가 하루 상한을 둔다.
   const club = useClubReward('boost', boostFreeOpen(s) && !owned);
-  const dayLeft = boostDayLeft(adBoostRaw(), club.shop);
-  const v = boostView(s, rewardOffer('boost', owned), { club: !!club.offer, dayLeft });
+  // T-11-174 잠재력 강화권(스토어에서 산다)도 같은 자리에서 쓴다. T-11-184 강화권은 추가 시도 상한 없이 쓴다.
+  const tickets = useIapItems(boostTicketOpen(s)).items?.boost ?? 0;
+  const v = boostView(s, rewardOffer('boost', owned), {
+    club: !!club.offer,
+    ticket: tickets > 0,
+  });
   // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다. 결과를 먼저 저장하고 연출을 연다 — 연출 중에 앱을 꺼도 결과는 그대로다.
   const run = (pay: BoostPay) => {
     const out = doBoost(appState.G!, pay);
@@ -105,16 +111,7 @@ function BoostCard({ s }: { s: GameState }) {
     setAdBusy(true);
     setAdMessage('');
     try {
-      setAdMessage(
-        await claimReward(
-          'boost',
-          () => {
-            markAdBoost();
-            run('ad');
-          },
-          B.adWatch,
-        ),
-      );
+      setAdMessage(await claimReward('boost', () => run('ad'), B.adWatch));
     } finally {
       setAdBusy(false);
     }
@@ -126,6 +123,20 @@ function BoostCard({ s }: { s: GameState }) {
     try {
       const message = await club.pay(() => run('club'));
       if (message !== null) setAdMessage(message);
+    } finally {
+      setAdBusy(false);
+    }
+  };
+  // 서버가 한 장을 뺀 뒤에만 강화한다.
+  const onTicketBoost = async () => {
+    if (adBusy) return;
+    setAdBusy(true);
+    setAdMessage('');
+    try {
+      const r = await payWithTicket(() => run('ticket'));
+      if (r.boost !== null && iapItems.items)
+        iapItems.items = { ...iapItems.items, boost: r.boost };
+      setAdMessage(r.message);
     } finally {
       setAdBusy(false);
     }
@@ -188,24 +199,36 @@ function BoostCard({ s }: { s: GameState }) {
           </View>
         </View>
       ) : null}
-      {v.adButton ? (
+      {/* T-11-181 광고를 볼 수 없어도(광고 단위 없음) 구단 자금 · 강화권 · 상점 묶음은 보인다 — 웹과 같다. T-11-184 광고 · 구단 자금
+          추가 시도를 다 써도 강화권 자리는 남는다(ticketOpen ⊇ free). */}
+      {v.ticketOpen ? (
         <View style={{ marginVertical: 8, gap: 6 }} testID="boost-ad">
-          <Txt v="sm" tone="muted" testID="boost-ad-note">
-            {adMessage || v.adNote}
-          </Txt>
-          <Btn
-            kind="primary"
-            disabled={adBusy}
-            testID="boost-ad-btn"
-            onPress={() => void onAdBoost()}
-          >
-            {adBusy ? B.adLoading : v.adButton}
-          </Btn>
-          {club.offer && v.free ? (
+          {adMessage || v.adNote ? (
+            <Txt v="sm" tone="muted" testID="boost-ad-note">
+              {adMessage || v.adNote}
+            </Txt>
+          ) : null}
+          {v.adButton ? (
+            <Btn
+              kind="primary"
+              disabled={adBusy}
+              testID="boost-ad-btn"
+              onPress={() => void onAdBoost()}
+            >
+              {adBusy ? B.adLoading : v.adButton}
+            </Btn>
+          ) : null}
+          {club.offer ? (
             <Btn disabled={adBusy} testID="boost-club-btn" onPress={() => void onClubBoost()}>
               {B.clubBoost({ price: fundsText(club.offer.price), chance: v.chance })}
             </Btn>
           ) : null}
+          {tickets > 0 ? (
+            <Btn disabled={adBusy} testID="boost-ticket-btn" onPress={() => void onTicketBoost()}>
+              {B.ticketBoost({ n: tickets, chance: v.chance })}
+            </Btn>
+          ) : null}
+          <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} />
         </View>
       ) : null}
       <Txt tone="muted" style={{ fontSize: rem(0.75), marginTop: 4 }}>
@@ -236,9 +259,11 @@ export function PlayerTab({ s }: { s: GameState }) {
   const owned = useSnapshot(adFree).owned;
   const peek = useSnapshot(potPeek);
   const pot = peekView(s, peek.peek, owned ? 'free' : 'ad');
-  const showPeek = pot.kind !== 'shown' && peekAvailable();
+  const canAd = peekAvailable();
   // T-11-153 광고 대신 구단 자금으로 평가 보기(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 본다.
-  const club = useClubReward('peek', showPeek && pot.kind === 'available' && !owned);
+  // T-11-181 광고 단위가 없어도 구단 자금 길은 보인다.
+  const club = useClubReward('peek', pot.kind === 'available' && !owned);
+  const showPeek = pot.kind !== 'shown' && (canAd || !!club.offer);
 
   const info: Row[] = [
     { k: L.nation, testID: 'nation', v: `${flagOf(nation.code)} ${tn(nation.ko)}` },
@@ -275,7 +300,7 @@ export function PlayerTab({ s }: { s: GameState }) {
             <Txt tone="muted" style={{ fontSize: rem(0.8125) }}>
               {peek.message || pot.text}
             </Txt>
-            {pot.kind === 'available' ? (
+            {canAd && pot.kind === 'available' ? (
               <Btn
                 sm
                 block

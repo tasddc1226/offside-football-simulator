@@ -40,6 +40,7 @@ const ko = {
   moreLabel: (p: { nick: string }) => `${p.nick}님 메시지 신고·차단`,
   emptyOpen: '아직 조용해요.',
   loading: '불러오는 중…',
+  loadingOlder: '이전 대화를 불러오는 중…',
   gateLogin: '구글로 로그인하면 채팅에 참여할 수 있어요.',
   gateLoginApple: '구글이나 Apple로 로그인하면 채팅에 참여할 수 있어요.',
   loginGoogle: '구글로 로그인',

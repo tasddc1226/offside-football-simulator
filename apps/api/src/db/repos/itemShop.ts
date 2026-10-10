@@ -1,9 +1,36 @@
-import { REWARD_KINDS, resolveBalance, type FundsSpend, type RewardKind } from '@offside/contracts';
+import {
+  REWARD_KINDS,
+  REWARD_UNCAPPED,
+  resolveBalance,
+  type FundsSpend,
+  type OwnerItem,
+  type RewardKind,
+} from '@offside/contracts';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 
 // T-11-152 구단 자금으로 사는 선수 후보 리롤권. 쌓이기만 하는 구단 자금을 없애는 곳이라 비싸게 팔고, 같은 날 더 살수록
 // 비싸지며 하루 상한이 있다. 수치는 운영 도구 밸런스 설정(이적시장 묶음)의 활성 버전을 요청 때 바로 읽는다.
+
+/**
+ * 구단주 아이템을 qty장 더하는 문장(컵 보상 · 상점 · 친구 초대 · 인앱 구매가 함께 쓴다). guard는 같은 batch 안에서 앞 문장이
+ * 성공했을 때만 주도록 거는 SQL 조건이다.
+ */
+export const grantItemStatement = (
+  d1: D1Database,
+  profileId: string,
+  item: OwnerItem,
+  qty: number,
+  now: string,
+  guard: { sql: string; params?: unknown[] },
+) =>
+  d1
+    .prepare(
+      `INSERT INTO owner_items (profile_id, item, qty, updated_at)
+       SELECT ?, ?, ?, ? WHERE ${guard.sql}
+       ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + excluded.qty, updated_at = excluded.updated_at`,
+    )
+    .bind(profileId, item, qty, now, ...(guard.params ?? []));
 
 /** 리롤권 상점 수치(활성 버전, 없으면 기본값). */
 export async function rerollShopRules(db: Db) {
@@ -60,15 +87,7 @@ async function buyItem(
       )
       .bind(b.price, b.now, b.profileId, b.id),
     ...(b.grantReroll
-      ? [
-          d1
-            .prepare(
-              `INSERT INTO owner_items (profile_id, item, qty, updated_at)
-               SELECT ?, 'reroll', 1, ? WHERE ${won}
-               ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + 1, updated_at = excluded.updated_at`,
-            )
-            .bind(b.profileId, b.now, b.id),
-        ]
+      ? [grantItemStatement(d1, b.profileId, 'reroll', 1, b.now, { sql: won, params: [b.id] })]
       : []),
     d1
       .prepare(
@@ -104,7 +123,7 @@ const REWARD_SUMS = REWARD_KINDS.map(
   (k) => `coalesce(sum(CASE WHEN item = '${rewardItem(k)}' THEN qty END), 0) AS ${k}`,
 ).join(', ');
 
-/** 보상별 수치(활성 버전, 없으면 기본값). 가격 상승 배율 · 하루 횟수는 셋이 같이 쓴다. */
+/** 보상별 수치(활성 버전, 없으면 기본값). 가격 상승 배율 · 하루 횟수는 셋이 같이 쓴다. T-11-173 강화는 하루 횟수 없음. */
 export async function rewardShopRules(db: Db) {
   const b = resolveBalance((await getActiveBalance(db))?.values);
   const price: Record<RewardKind, number> = {
@@ -112,7 +131,11 @@ export async function rewardShopRules(db: Db) {
     peek: b.rewardPricePeek,
     boost: b.rewardPriceBoost,
   };
-  return byKind((k) => ({ price: price[k], growth: b.rewardPriceGrowth, cap: b.rewardDailyCap }));
+  return byKind((k) => ({
+    price: price[k],
+    growth: b.rewardPriceGrowth,
+    cap: k === 'boost' && b.rewardDailyCap > 0 ? REWARD_UNCAPPED : b.rewardDailyCap,
+  }));
 }
 
 /** 구단 자금과 since(오늘 0시, 한국 시각) 뒤에 보상마다 받은 횟수를 한 번에 읽는다(행이 없으면 0). */

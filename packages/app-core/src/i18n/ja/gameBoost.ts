@@ -20,7 +20,6 @@ export const gameBoost: Translation<GameBoostMsgs> = {
     `今シーズンの挑戦は済みました。広告かクラブ資金で追加挑戦でき、この選手はあと${p.left}回です。`,
   lineExtraClub: (p) =>
     `今シーズンの挑戦は済みました。クラブ資金で追加挑戦でき、この選手はあと${p.left}回です。`,
-  lineDayDone: '今日受けられる強化はすべて使いました。明日また挑戦できます。',
   lineShort: (p) => `資金が足りません。次の段階には${p.cost}が必要です。`,
   lineReady: (p) => `次の段階 +${p.next} · 成功確率 ${p.chance}% · ${p.cost}`,
   button: (p) => `${p.cost}を払って強化する（${p.chance}%）`,
@@ -58,4 +57,9 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   clubNote:
     '広告を見るか、クラブ資金を使って受け取れます。クラブ資金は同じ日に使うほど高くなります。',
   clubFail: 'クラブ資金を使えませんでした。',
+  ticketCost: '強化券',
+  ticketBoost: (p) => `強化券を使う（残り${p.n}枚 · ${p.chance}%）`,
+  ticketBusy: '強化券を使っています…',
+  ticketFail: '強化券を使えませんでした。',
+  lineExtraTicket: '今シーズンの挑戦は済んでいます。強化券なら回数の上限なしでさらに挑戦できます。',
 };

@@ -993,8 +993,10 @@ export default function Market() {
                 <View
                   style={{
                     flexDirection: 'row',
+                    flexWrap: 'wrap',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    rowGap: 2,
                   }}
                 >
                   <Txt tone="muted" style={small}>
@@ -1390,6 +1392,8 @@ export default function Market() {
                     number: buying.card.number,
                     legendScore: buying.card.legendScore,
                     attrs: buying.card.attrs,
+                    height: buying.card.height,
+                    weight: buying.card.weight,
                     cardValue: buying.card.cardValue,
                     pos: buying.card.pos,
                     type: buying.card.type ?? null,

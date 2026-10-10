@@ -6696,6 +6696,9 @@ button.what {
 .chat-empty {
   margin: auto;
 }
+.chat-older {
+  text-align: center;
+}
 .chat-dot {
   display: inline-block;
   width: 6px;

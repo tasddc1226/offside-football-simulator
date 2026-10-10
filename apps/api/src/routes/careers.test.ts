@@ -348,7 +348,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
         jsonInit({ method: 'PUT', body: seasonBody(), cookie }),
         ctx.env,
       );
-    // 한도 직전까지 쓴 상태를 바로 만든다 — 120번 PUT은 느리다. 그 한 번은 통과하고 다음부터 429다.
+    // 한도 직전까지 쓴 상태를 바로 만든다 — 한도만큼 PUT하면 느리다. 그 한 번은 통과하고 다음부터 429다.
     expect((await put(heavy.cookie, CAREER_ID)).status).toBe(200);
     await ctx.db
       .update(authAttempts)

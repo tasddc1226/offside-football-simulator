@@ -15,6 +15,7 @@ import {
 import { boot } from '../game/boot';
 import { startPush } from '../platform/push';
 import { syncAdFree } from '../platform/adFree';
+import { recoverIapItems } from '../platform/iapItems';
 import { useColors, useIsDark } from '../theme/useColors';
 import { useSnapshot } from 'valtio';
 import { prefs } from '../store';
@@ -42,6 +43,7 @@ export default function RootLayout() {
     if (!show) return;
     startPush();
     void syncAdFree();
+    void recoverIapItems();
   }, [show]);
   useEffect(() => {
     if (show) void SplashScreen.hideAsync();

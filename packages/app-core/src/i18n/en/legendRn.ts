@@ -3,6 +3,11 @@ import type { LegendRnMsgs } from '../ko/legendRn';
 import { plural } from './_util';
 
 export const legendRn: Translation<LegendRnMsgs> = {
+  missKicker: 'Retired number review',
+  missSeasons: (p: { club: string; seasons: number; need: number }) =>
+    `You played ${p.seasons} seasons at ${p.club}. A retired number needs ${p.need}+ seasons at one club.`,
+  missScore: (p: { club: string; pct: number }) =>
+    `Your contribution at ${p.club} reached ${p.pct}% of the retired number bar. You need to pass it to have your number retired.`,
   pending: 'The server is reviewing your retired number. Check the Hall of Fame in a moment.',
   lineNum: (p) => `No. ${p.number}`,
   lineNumAfter: ' now belongs to',

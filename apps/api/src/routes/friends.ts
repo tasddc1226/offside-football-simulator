@@ -57,6 +57,7 @@ import {
   myTeamIn,
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
+import { claimReferral, inviteCountsOf } from '../db/repos/referrals.js';
 import type { Db } from '../db/client.js';
 import { profiles } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -102,6 +103,13 @@ type PersonInput = {
 };
 
 const OWNER_NAME: Record<Lang, string> = { ko: '구단주', en: 'Owner', ja: 'オーナー' };
+/** 보이는 이름: 닉네임 → 최근 감독 이름 → '구단주'. */
+const nameOf = (
+  nickname: string | null,
+  managers: ReadonlyMap<string, string> | null,
+  profileId: string,
+  lang: Lang,
+) => nickname ?? managers?.get(profileId) ?? OWNER_NAME[lang];
 
 /**
  * 친구 줄들에 지금 시즌 팀 · 프리시즌 팀(개막 뒤 친선전용, T-11-113) · 창단 멤버 여부와 표시 이름(닉네임 → 최근 감독 이름 →
@@ -137,7 +145,7 @@ async function peopleOf(
         p.profileId,
         {
           code: p.code,
-          name: p.nickname ?? managers.get(p.profileId) ?? OWNER_NAME[lang],
+          name: nameOf(p.nickname, managers, p.profileId, lang),
           team: t ? teamSummary(t) : null,
           h2h: h2hOf(p.row),
           ...(legacy ? { preseasonTeam: lt ? teamSummary(lt) : null } : {}),
@@ -167,7 +175,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = teamSeasonAt(now);
-    const [code, [rows, [played], myTeams], recentRows] = await Promise.all([
+    const [code, [rows, [played], myTeams], recentRows, invites] = await Promise.all([
       ensureFriendCode(db, me.id, me.friendCode ?? null),
       db.batch([
         listFriendRows(db, me.id),
@@ -175,11 +183,12 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         teamsOfOwners(db, [me.id], [season ?? 0, 0]),
       ]),
       listRecentFriendlies(db, me.id),
+      inviteCountsOf(db, me.id),
     ]);
     const myTeam = season === null ? undefined : myTeams.find((t) => t.season === season);
     const myLegacy = season === 0 ? undefined : myTeams.find((t) => t.season === 0);
     const live = rows.filter((r): r is typeof r & { code: string } => !!r.code);
-    const [people, recent] = await Promise.all([
+    const [people, recent, inviterNames] = await Promise.all([
       peopleOf(
         db,
         live.map((r) => ({
@@ -197,7 +206,11 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         (r) => (r.profileId === me.id ? r.homeTeamId : r.awayTeamId),
         reqLang(c),
       ),
+      invites.invitedBy && !invites.invitedBy.nickname
+        ? latestManagersOf(db, [invites.invitedBy.inviterId])
+        : null,
     ]);
+    const by = invites.invitedBy;
     const byState = (s: FriendRow['state']) =>
       live.filter((r) => r.row.state === s).map((r) => people.get(r.row.friendId)!);
     return ok(
@@ -216,6 +229,17 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         ...(season !== 0
           ? { canPlayPreseason: !!myLegacy && friendlyTeamOf(myLegacy).filled > 0 }
           : {}),
+        invite: {
+          pending: invites.pending,
+          done: invites.done,
+          rewarded: invites.rewarded,
+          invitedBy: by
+            ? {
+                name: nameOf(by.nickname, inviterNames, by.inviterId, reqLang(c)),
+                done: by.doneAt !== null,
+              }
+            : null,
+        },
       },
       200,
       NO_STORE,
@@ -268,6 +292,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         .where(eq(profiles.id, targetId)),
     ]);
     let state: 'sent' | 'accepted';
+    let invited = false;
     if (mine?.state === 'received') {
       await commitNotifiedEvent(db, [...acceptStatements(db, me.id, targetId, now)], {
         profileId: targetId,
@@ -312,6 +337,9 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
         },
       });
       state = 'sent';
+      // T-11-171 친구 코드(초대 링크)로 새로 신청한 구단주는 그 코드 주인의 초대로 적는다(아직 은퇴 선수가 없을 때 한 번).
+      // 이미 친구거나 상대 신청을 수락하는 경우는 초대로 치지 않는다.
+      invited = 'code' in input && (await claimReferral(db, me.id, targetId, now));
     }
     // 친구 목록은 사람을 코드로 가리키므로 코드가 없는 쪽(팀 프로필에서만 신청하고 친구 화면은 안 열어 본 사람)은 지금 만든다.
     // 신청자 코드가 없으면 받은 쪽 목록에 신청이 보이지 않는다.
@@ -325,7 +353,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       now,
       reqLang(c),
     );
-    return ok(c, FriendRequestResponseSchema, { state, friend }, 201);
+    return ok(c, FriendRequestResponseSchema, { state, friend, invited }, 201);
   });
 
   // 받은 신청 수락.

@@ -20,7 +20,6 @@ export const gameBoost: Translation<GameBoostMsgs> = {
     `You've used this season's try. You can try again with an ad or club funds, ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
   lineExtraClub: (p) =>
     `You've used this season's try. You can try again with club funds, ${p.left} extra ${p.left === 1 ? 'try' : 'tries'} left for this player.`,
-  lineDayDone: "You've used all of today's extra boosts. You can try again tomorrow.",
   lineShort: (p) => `Not enough funds. The next level costs ${p.cost}.`,
   lineReady: (p) => `Next level +${p.next} · ${p.chance}% chance · ${p.cost}`,
   button: (p) => `Pay ${p.cost} to boost (${p.chance}%)`,
@@ -60,4 +59,10 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   clubNote:
     'Watch an ad or use club funds to get this. Club funds cost more each time you use them on the same day.',
   clubFail: "Couldn't use club funds.",
+  ticketCost: 'boost ticket',
+  ticketBoost: (p) => `Use boost ticket (${p.n} left · ${p.chance}%)`,
+  ticketBusy: 'Using a boost ticket…',
+  ticketFail: "Couldn't use a boost ticket.",
+  lineExtraTicket:
+    "You've tried this season. With boost tickets you can keep trying, with no limit on tries.",
 };

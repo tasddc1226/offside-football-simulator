@@ -7,7 +7,7 @@
   import { typeName } from '@offside/game/data';
   import type { DetailPos } from '@offside/contracts/positions';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
-  import { cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier, isLegendTier } from '@offside/app-core/format';
+  import { cardBody, cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier, isLegendTier } from '@offside/app-core/format';
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
@@ -21,6 +21,7 @@
   const statLabels = $derived(player?.pos === 'GK' ? GK_ABBR : FACE_ABBR);
   // 플레이스타일(커리어 유형 — 시너지 듀오의 기준). 자리가 좁은 compact 카드에는 넣지 않는다.
   const style = $derived(!compact && player ? typeName(player.pos, player.type) : null);
+  const body = $derived(player ? cardBody(player) : null);
   let nameViewport = $state<HTMLElement>();
   let viewportWidth = $state(0);
   let nameWidth = $state(0);
@@ -56,6 +57,7 @@
     {#if !compact}
       <div class="card-divider"></div>
       <div class="card-career"><span title={L.legendScoreTitle}>LS</span><b>{(player?.legendScore ?? 0).toLocaleString(intlLocale())}</b></div>
+      {#if body}<div class="card-body" data-card-body>{body}</div>{/if}
       <dl class="card-attributes" aria-label={L.attributesAria}>
         {#each statKeys as key (key)}
           <div><dt>{statLabels[key]}</dt><dd>{player?.attrs ? Math.round(player.attrs[key]) : '—'}</dd></div>
@@ -106,6 +108,7 @@
   .card-divider { height:1px; background:var(--card-ink); opacity:.25; margin:4px 0 6px; }
   .card-career { display:flex;justify-content:center;align-items:baseline;gap:4px;font-size:.72rem; }
   .card-career b { font-family:var(--display); font-size:1.15rem; }
+  .card-body { font-size:.6rem; text-align:center; font-weight:700; opacity:.85; }
   .card-attributes {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 4px;margin:8px 0 0;text-align:center;}
   .card-attributes dt {font-size:10px;line-height:1.3;font-weight:600;}
   .card-attributes dd {margin:0;font-family:var(--display);font-size:1.25rem;line-height:1.1;font-weight:700;}

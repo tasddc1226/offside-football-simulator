@@ -256,4 +256,6 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   friendlyOnly: 'Friendlies only',
   statFriendly: 'Friendlies',
   statFriendlyOnly: 'Only',
+  retireSyncing:
+    "Uploading your retired player's record. They'll join the locker room as soon as it's in.",
 };

@@ -273,6 +273,8 @@ const ko = {
   friendlyOnly: '친선전 전용',
   statFriendly: '친선전',
   statFriendlyOnly: '전용',
+  // T-11-182 은퇴 기록이 아직 서버에 없을 때
+  retireSyncing: '은퇴한 선수 기록을 올리고 있어요. 올라가면 라커룸에 바로 들어와요.',
 };
 
 export type TeamHomeMsgs = typeof ko;

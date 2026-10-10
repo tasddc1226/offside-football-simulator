@@ -26,14 +26,16 @@ export default function Legend() {
   const { motionOK } = useSnapshot(prefs);
   // 화면은 스냅숏으로 그린다 — 쓰기(이름 공개·대표 칭호)는 own.ts가 원본을 찾아 고친다.
   const v = snap.legend as unknown as LegendView | null;
+  /** 이전 화면 기록이 없으면 연 곳(명예의 전당·구단주·홈)으로. */
+  const backTo = () => (appState.screen = appState.legendBack);
   return (
-    // T-10-128 위쪽 '이전으로' 대신 아래 바: 공유할 수 있는 내 선수는 홈으로 + 공유하기, 그 밖은 '← 이전으로' 하나.
+    // T-10-128 위쪽 '이전으로' 대신 아래 바: 공유할 수 있는 내 선수는 이전으로 + 공유하기, 그 밖은 '← 이전으로' 하나.
     <CreditScreen
       footer={
         v?.shareId ? (
-          <ShareBar id={v.shareId} />
+          <ShareBar id={v.shareId} back={backTo} />
         ) : (
-          <BackBar testID="hof-back" fallback={() => (appState.screen = appState.legendBack)} />
+          <BackBar testID="hof-back" fallback={backTo} />
         )
       }
       overlay={motionOK && v ? <CareerPlay /> : null}

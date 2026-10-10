@@ -10,7 +10,13 @@ import { typeName } from '@offside/game/data';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
-import { cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier } from '@offside/app-core/format';
+import {
+  cardBody,
+  cardFootNote,
+  cardSeasonBadge,
+  cardSeasonColor,
+  cardTier,
+} from '@offside/app-core/format';
 import { intlLocale } from '@offside/app-core/i18n/core';
 import { tn } from '@offside/game/i18n/names';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
@@ -215,6 +221,9 @@ export type PlayerCardData = {
   type?: string | null | undefined;
   /** T-11-114 카드 시즌(0 = 프리시즌) — 뱃지. 모르면 없다. */
   season?: number | undefined;
+  /** T-11-180 키(cm)·몸무게(kg) — 큰 카드의 LS 아래. 옛 커리어는 없다. */
+  height?: number | undefined;
+  weight?: number | undefined;
   youth: boolean;
 };
 
@@ -343,6 +352,7 @@ export function PlayerCard({
   const deployed = cell.peak !== undefined && cell.peak !== cell.rating;
   // 플레이스타일(웹 PlayerCard .card-type). 자리가 좁은 compact 카드에는 넣지 않는다.
   const style = !compact && cell.pos ? typeName(cell.pos, cell.type) : null;
+  const body = compact ? null : cardBody(cell);
   const height = compact
     ? mini
       ? 68
@@ -472,6 +482,26 @@ export function PlayerCard({
               <Text style={{ fontFamily: DISPLAY[700], fontSize: 11 }}>
                 {cell.legendScore.toLocaleString(intlLocale())}
               </Text>
+            </Text>
+          ) : null}
+          {body ? (
+            <Text
+              testID="card-body"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              maxFontSizeMultiplier={1.15}
+              style={{
+                width: '100%',
+                textAlign: 'center',
+                color: tone.ink,
+                fontSize: 8,
+                lineHeight: 11,
+                fontWeight: '700',
+                includeFontPadding: false,
+              }}
+            >
+              {body}
             </Text>
           ) : null}
         </View>

@@ -46,6 +46,10 @@ const CARD_SEASON_COLORS = ['#1f7a5c', '#b0472f', '#2e5d7a', '#8a5a14'];
 export const cardSeasonColor = (season: number): string =>
   season === 0 ? PRESEASON_COLOR : CARD_SEASON_COLORS[(season - 1) % CARD_SEASON_COLORS.length]!;
 
+/** T-11-180 카드의 키·몸무게 한 줄(웹·앱 같이). 체격이 없는 옛 커리어는 null. */
+export const cardBody = (p: { height?: number | undefined; weight?: number | undefined }) =>
+  p.height && p.weight ? `${p.height}cm · ${p.weight}kg` : null;
+
 /** 구단주 팀 선수 카드 아랫줄(웹·앱 같이): 능력치 안내가 먼저, 없으면 T-11-080 카드 기준가. 둘 다 없으면 null. */
 export function cardFootNote(p: {
   attrs?: object | null | undefined;

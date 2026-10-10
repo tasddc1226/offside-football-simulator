@@ -1,8 +1,9 @@
-// T-11-145 오프사이드 컵 · 구단주 아이템(선수 후보 리롤권) API. 타입은 type-only import라 번들에 zod가 들어가지 않는다.
+// T-11-145 오프사이드 컵 · 구단주 아이템(선수 후보 리롤권 · 잠재력 강화권) API. 타입은 type-only import라 번들에 zod가 들어가지 않는다.
 import type {
   CupMatchResponse,
   CupMeResponse,
   CupResponse,
+  IapClaimBody,
   OwnerItemsResponse,
   RerollShopResponse,
   RewardKind,
@@ -20,6 +21,7 @@ export type {
   CupStanding,
   CupTeam,
   CupHonor,
+  IapClaimBody,
   OwnerItemsResponse,
   RerollShopResponse,
 } from '@offside/contracts';
@@ -48,6 +50,17 @@ export const spendReroll = (key: string) =>
     method: 'POST',
     headers: { [IDEMPOTENCY_KEY_HEADER]: key },
   });
+
+/** T-11-174 잠재력 강화권 1장 쓰기. 성공하면 남은 장수 — 그다음 기기가 doBoost(s, 'ticket')로 강화한다. key는 spendReroll과 같다. */
+export const spendBoost = (key: string) =>
+  apiFetch<OwnerItemsResponse>('/v1/items/boost/use', {
+    method: 'POST',
+    headers: { [IDEMPOTENCY_KEY_HEADER]: key },
+  });
+
+/** T-11-174 스토어에서 산 소모성 상품을 서버에 알린다. 같은 거래를 다시 보내도 한 번만 받는다. */
+export const claimIap = (body: IapClaimBody) =>
+  apiFetch<OwnerItemsResponse>('/v1/items/iap', { method: 'POST', body: JSON.stringify(body) });
 
 /** T-11-152 리롤권 상점(가진 장수 · 자금 · 다음 가격 · 오늘 산 장수). 상점을 펼칠 때만. 사면(쓰기 성공) 메모가 비워진다. */
 export const fetchRerollShop = () => cachedGet<RerollShopResponse>('/v1/items/shop', 30_000);

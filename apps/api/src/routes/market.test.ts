@@ -184,6 +184,25 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect(await reason(res)).toBe('IN_LINEUP');
   });
 
+  it('T-11-180 OVR 높은 순으로 본다(같으면 싼 것부터)', async () => {
+    const seller = await issueGoogleCookie(ctx);
+    const [lo, hi, mid] = [
+      await addCard(seller.profileId),
+      await addCard(seller.profileId),
+      await addCard(seller.profileId),
+    ];
+    await ctx.db.update(cards).set({ peak: 70 }).where(eq(cards.careerId, lo));
+    await ctx.db.update(cards).set({ peak: 92 }).where(eq(cards.careerId, hi));
+    for (const [id, price] of [
+      [lo, 1_000_000],
+      [hi, 1_500_000],
+      [mid, 1_200_000],
+    ] as const)
+      expect((await list(seller.cookie, id, price)).status).toBe(201);
+    const data = ListRes.parse(await (await call('GET', '/v1/market?sort=ovr')).json()).data;
+    expect(data.items.map((i) => i.card.careerId)).toEqual([hi, mid, lo]);
+  });
+
   it('내놓고 사면 자금이 오가고 카드 주인이 바뀐다(수수료는 판매자 몫에서 뗀다)', async () => {
     const seller = await issueGoogleCookie(ctx);
     const buyer = await issueGoogleCookie(ctx);

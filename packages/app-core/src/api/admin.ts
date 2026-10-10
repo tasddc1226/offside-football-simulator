@@ -12,6 +12,7 @@ import type {
   AdminNameReportResolve,
   AdminFundsOwner,
   AdminFundsReport,
+  AdminInviteReport,
   AdminStats,
   AutomationReport,
   AutomationEnforcement,
@@ -26,6 +27,7 @@ export type {
   AdminComment,
   AdminFundsOwner,
   AdminFundsReport,
+  AdminInviteReport,
   AdminCup,
   AdminCupCreate,
   AdminNameReport,
@@ -93,6 +95,9 @@ export const fetchFundsReport = () => apiFetch<AdminFundsReport>('/v1/admin/fund
 /** q: 프로필 id(prf_…) 또는 닉네임. */
 export const fetchFundsOwner = (q: string) =>
   apiFetch<AdminFundsOwner>(`/v1/admin/funds/owner?q=${encodeURIComponent(q)}`);
+
+/** T-11-177 친구 초대 현황. 열 때마다 새로 읽는다. */
+export const fetchInviteReport = () => apiFetch<AdminInviteReport>('/v1/admin/invites');
 
 export const fetchPushPerformance = (
   days: number,

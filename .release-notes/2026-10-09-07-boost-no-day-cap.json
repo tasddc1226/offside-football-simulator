@@ -1,0 +1,26 @@
+{
+  "id": "t-11-172-boost-no-day-cap",
+  "title": "광고 강화 하루 횟수 제한 해제",
+  "items": [
+    "광고로 받는 잠재력 강화에 하루 횟수 제한이 없어졌어요.",
+    "추가 시도는 지금처럼 선수마다 2번까지예요.",
+    "구단 자금으로 받는 강화는 다른 보상처럼 하루 횟수가 정해져 있어요."
+  ],
+  "en": {
+    "title": "No daily limit on ad boosts",
+    "items": [
+      "Potential boosts from ads no longer have a daily limit.",
+      "Extra tries are still up to 2 per player.",
+      "Boosts with club funds still have a daily limit, like other rewards."
+    ]
+  },
+  "ja": {
+    "title": "広告強化の1日回数制限を解除",
+    "items": [
+      "広告で受けるポテンシャル強化に1日の回数制限がなくなりました。",
+      "追加挑戦はこれまでどおり選手ごとに2回までです。",
+      "クラブ資金で受ける強化は、ほかの報酬と同じく1日の回数が決まっています。"
+    ]
+  },
+  "availability": "web-app"
+}

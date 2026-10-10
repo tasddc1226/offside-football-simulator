@@ -21,7 +21,6 @@ const ko = {
     `이번 시즌 시도는 했어요. 광고나 구단 자금으로 더 시도할 수 있고, 이 선수는 ${p.left}번 남았어요.`,
   lineExtraClub: (p: { left: number }) =>
     `이번 시즌 시도는 했어요. 구단 자금으로 더 시도할 수 있고, 이 선수는 ${p.left}번 남았어요.`,
-  lineDayDone: '오늘 더 받을 수 있는 강화를 다 썼어요. 내일 다시 할 수 있어요.',
   lineShort: (p: { cost: string }) => `자금이 모자라요. 다음 단계에 ${p.cost}이 필요해요.`,
   lineReady: (p: { next: number; chance: number; cost: string }) =>
     `다음 단계 +${p.next} · 성공 확률 ${p.chance}% · ${p.cost}`,
@@ -66,6 +65,13 @@ const ko = {
   clubBusy: '구단 자금을 쓰는 중이에요…',
   clubNote: '광고를 보거나 구단 자금을 써서 받을 수 있어요. 구단 자금은 같은 날 쓸수록 비싸져요.',
   clubFail: '구단 자금을 쓰지 못했어요.',
+  // T-11-174 앱에서 산 잠재력 강화권을 웹에서 쓴다. n은 남은 장수.
+  ticketCost: '강화권',
+  ticketBoost: (p: { n: number; chance: number }) => `강화권 쓰기 (${p.n}장 · ${p.chance}%)`,
+  ticketBusy: '강화권을 쓰는 중이에요…',
+  ticketFail: '강화권을 쓰지 못했어요.',
+  // T-11-184 강화권은 추가 시도 상한이 없다.
+  lineExtraTicket: '이번 시즌 시도는 했어요. 강화권으로는 횟수 상한 없이 더 시도할 수 있어요.',
 };
 
 export type GameBoostMsgs = typeof ko;

@@ -9,6 +9,7 @@ import {
   boostExtraLeft,
   boostState,
   boostStatus,
+  boostTicketOpen,
   tryBoost,
   type BoostPay,
   type BoostStatus,
@@ -38,6 +39,8 @@ export interface BoostView {
    * 남았을 때. 구단 자금 버튼도 이 값을 본다.
    */
   free: boolean;
+  /** T-11-184 강화권으로 지금 시도할 수 있는지 — 이번 시즌의 한 번을 썼거나 자금이 모자랄 때(추가 시도 상한 없음). */
+  ticketOpen: boolean;
   note: string;
   /** 최근 시도(새것부터 4개). */
   history: string[];
@@ -57,19 +60,20 @@ export const boostHidden = (s: GameState): boolean =>
 export type BoostAdOffer = 'ad' | 'free' | null;
 
 /**
- * opts(T-11-157): club = 구단 자금 버튼을 보일 수 있다(로그인한 구단주), dayLeft = 오늘 광고 · 구단 자금으로 더 받을 수 있는
- * 횟수(app-core boost-daily). 추가 시도 안내는 광고나 구단 자금 길이 있을 때만 보인다.
+ * opts(T-11-157): club = 구단 자금 버튼을 보일 수 있다(로그인한 구단주). T-11-174 ticket = 잠재력 강화권을 가졌다. 추가 시도
+ * 안내는 광고 · 구단 자금 · 강화권 길이 있을 때만 보인다. 강화권은 추가 시도 상한이 없다(T-11-184). 광고 · 구단 자금 강화는
+ * 하루 횟수를 세지 않는다(T-11-172 · 173).
  */
 export function boostView(
   s: GameState,
   adOffer: BoostAdOffer = null,
-  opts: { club?: boolean; dayLeft?: number } = {},
+  opts: { club?: boolean; ticket?: boolean } = {},
 ): BoostView {
   const status = boostStatus(s);
-  const dayLeft = opts.dayLeft ?? Infinity;
   const extraLeft = status === 'done' ? boostExtraLeft(s) : 0;
   const path = !!adOffer || !!opts.club;
-  const free = (status === 'short' || extraLeft > 0) && dayLeft > 0;
+  const ticketOpen = boostTicketOpen(s);
+  const free = status === 'short' || extraLeft > 0;
   const b = boostState(s);
   const cost = L2.won({ v: fmtMoney(boostCost(s)) });
   const chance = boostChance(s);
@@ -82,10 +86,10 @@ export function boostView(
           ? L.lineMax({ lv: BOOST_MAX })
           : status === 'done'
             ? extraLeft && path
-              ? dayLeft > 0
-                ? (adOffer ? L.lineExtra : L.lineExtraClub)({ left: extraLeft })
-                : L.lineDayDone
-              : L.lineDone
+              ? (adOffer ? L.lineExtra : L.lineExtraClub)({ left: extraLeft })
+              : opts.ticket
+                ? L.lineExtraTicket
+                : L.lineDone
             : status === 'short'
               ? L.lineShort({ cost })
               : L.lineReady({ next: b.lv + 1, chance, cost });
@@ -99,6 +103,7 @@ export function boostView(
       ? { button: L.button({ cost, chance }), confirm: L.confirm({ cost, chance }) }
       : {}),
     free,
+    ticketOpen,
     ...(free && adOffer
       ? {
           adButton: (adOffer === 'free' ? L.adButtonFree : L.adButton)({ chance }),
@@ -115,7 +120,13 @@ export function boostView(
       .slice(-4)
       .reverse()
       .map((x) => {
-        const cost = x.ad ? L.adCost : x.club ? L.clubCost : L2.won({ v: fmtMoney(x.c) });
+        const cost = x.ad
+          ? L.adCost
+          : x.club
+            ? L.clubCost
+            : x.tk
+              ? L.ticketCost
+              : L2.won({ v: fmtMoney(x.c) });
         // T-11-157 추가 시도는 표시를 붙인다.
         const pay = x.x ? L.extraCost({ cost }) : cost;
         const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost: pay };

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CUP_ROUNDS, CUP_STAGES, REWARD_KINDS } from './cup.js';
+import { CUP_ROUNDS, CUP_STAGES, IAP_PRODUCT_IDS, REWARD_KINDS } from './cup.js';
 import { IsoUtcSchema } from './primitives.js';
 import { TeamIdSchema, TeamLogoSchema, TeamMatchSchema } from './teams.js';
 
@@ -136,8 +136,31 @@ export const CupMatchResponseSchema = z.strictObject({
 });
 export type CupMatchResponse = z.infer<typeof CupMatchResponseSchema>;
 
-export const OwnerItemsResponseSchema = z.strictObject({ reroll: z.number().int().min(0) });
+export const IapStoreSchema = z.enum(['apple', 'google']);
+export type IapStore = z.infer<typeof IapStoreSchema>;
+
+/**
+ * 구단주 아이템 장수. reroll: 선수 후보 리롤권, boost: 잠재력 강화권(T-11-174). iap는 GET /v1/items만 준다 — account는
+ * 인앱 구매에 붙이는 구단주 표시(Apple appAccountToken · Google obfuscatedAccountId), stores는 서버가 구매를 확인할 수 있는
+ * 스토어(여기 없는 스토어에선 상품을 보이지 않는다).
+ */
+export const OwnerItemsResponseSchema = z.strictObject({
+  reroll: z.number().int().min(0),
+  boost: z.number().int().min(0),
+  iap: z.strictObject({ account: z.uuid(), stores: z.array(IapStoreSchema) }).optional(),
+});
 export type OwnerItemsResponse = z.infer<typeof OwnerItemsResponseSchema>;
+
+/**
+ * T-11-174 POST /v1/items/iap — 스토어에서 산 소모성 상품을 서버에 알린다. token: Apple은 서명된 거래(JWS), Google은
+ * purchaseToken. 서버가 스토어 기준으로 확인하고 거래마다 한 번만 아이템을 준다(같은 거래를 다시 보내도 한 번).
+ */
+export const IapClaimBodySchema = z.strictObject({
+  store: IapStoreSchema,
+  productId: z.enum(IAP_PRODUCT_IDS),
+  token: z.string().min(1).max(16384),
+});
+export type IapClaimBody = z.infer<typeof IapClaimBodySchema>;
 
 /**
  * T-11-152 GET /v1/items/shop — 리롤권 상점(구단 자금으로 산다). price는 다음 한 장 가격(만 원), 오늘 상한을 다 썼거나

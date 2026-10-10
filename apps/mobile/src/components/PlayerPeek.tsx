@@ -135,6 +135,8 @@ export function PlayerPeek({
                 legendScore: player.legendScore,
                 attrs: player.attrs,
                 attrsEstimated: player.attrsEstimated,
+                height: player.height,
+                weight: player.weight,
                 cardValue: player.cardValue,
                 pos: player.pos,
                 type: player.type,

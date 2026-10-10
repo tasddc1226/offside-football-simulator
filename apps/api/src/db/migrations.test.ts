@@ -87,6 +87,17 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   ],
   owner_items: ['profile_id', 'item', 'qty', 'updated_at'],
   owner_item_purchases: ['id', 'profile_id', 'item', 'qty', 'price', 'created_at'],
+  referrals: ['invitee_id', 'inviter_id', 'claimed_at', 'done_at', 'career_id', 'inviter_rewarded'],
+  iap_purchases: [
+    'store',
+    'transaction_id',
+    'profile_id',
+    'product_id',
+    'item',
+    'qty',
+    'test',
+    'created_at',
+  ],
   cards: [
     'career_id',
     'owner_id',

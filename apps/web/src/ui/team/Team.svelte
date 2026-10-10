@@ -254,7 +254,31 @@
     appState.hof = { ...hofStart(), tab: 'ach' };
     go('hof');
   }
-  onMount(() => void load());
+  // T-11-182 은퇴 기록이 아직 서버에 없으면 알리고, 올라가면 라커룸 선수 목록만 다시 받는다(편집 중인 팀은 그대로).
+  let retireSyncing = $state(false);
+  async function refreshPlayers() {
+    if (status !== 'ready' || needLogin || !editable) return;
+    const sequence = loadSequence;
+    const r = await fetchOwnerTeam(season);
+    if (sequence === loadSequence && r.ok) players = r.data.players;
+  }
+  onMount(() => {
+    void load();
+    let off: (() => void) | undefined;
+    let gone = false;
+    void import('../../sync/outbox.js').then((outbox) => {
+      retireSyncing = outbox.pendingRetirementIds().size > 0;
+      if (gone) return;
+      off = outbox.onRetirementSynced(() => {
+        retireSyncing = outbox.pendingRetirementIds().size > 0;
+        void refreshPlayers();
+      });
+    });
+    return () => {
+      gone = true;
+      off?.();
+    };
+  });
 
   // ───────── 편성 ─────────
   /** 라커룸에서 넣거나, 이미 선발인 선수의 두 자리를 바꾼다. T-11-114 지난 시즌 선수는 와일드카드 상한까지만. */
@@ -447,6 +471,7 @@
         bind:renaming
         onseason={pickSeason}
       />
+      {#if retireSyncing && editable}<p class="muted fs-sm" data-retire-syncing>{L.retireSyncing}</p>{/if}
       {#if editingLogo && editable}<TeamLogoEditor {logo} name={name.trim() || L.myTeam} onapply={(value) => { logo = value; editingLogo = false; }} onclose={() => (editingLogo = false)} />{/if}
       <TeamLineup
         {team}

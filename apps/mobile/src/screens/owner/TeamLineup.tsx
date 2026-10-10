@@ -416,6 +416,8 @@ export function TeamLineup({
                           legendScore: p.legendScore,
                           attrs: p.attrs,
                           attrsEstimated: p.attrsEstimated,
+                          height: p.height,
+                          weight: p.weight,
                           cardValue: p.cardValue,
                           pos: p.pos,
                           type: p.type,

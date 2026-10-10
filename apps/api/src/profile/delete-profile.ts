@@ -11,11 +11,14 @@ import { deleteCareersStatements } from '../db/repos/careers.js';
 import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
 import { resetFirstsBackfillStatement } from '../db/repos/firsts.js';
 import { deleteFriendsStatements } from '../db/repos/friends.js';
+import { deleteReferralsStatements } from '../db/repos/referrals.js';
 import { deleteOwnerTeamsStatements } from '../db/repos/ownerTeams.js';
 import {
   boardComments,
   careers,
+  iapPurchases,
   idempotency,
+  ownerItems,
   profiles,
   pushDevices,
   pushNewsDeliveries,
@@ -130,6 +133,11 @@ export async function executeProfileDeletion(
     ...deleteOwnerTeamsStatements(db, input.profileId),
     // T-11-098 친구 줄(내 줄 + 나를 가리키는 줄). 친선전은 팀 FK CASCADE로 함께 지워진다.
     ...deleteFriendsStatements(db, input.profileId),
+    // T-11-171 친구 초대 기록(초대한 줄 · 초대받은 줄).
+    ...deleteReferralsStatements(db, input.profileId),
+    // T-11-174 구단주 아이템과 인앱 구매 원장. 같은 거래를 다른 계정이 받는 일은 구단주 표시 확인이 막는다.
+    db.delete(ownerItems).where(eq(ownerItems.profileId, input.profileId)),
+    db.delete(iapPurchases).where(eq(iapPurchases.profileId, input.profileId)),
     ...deleteBoardActivityStatements(db, input.profileId),
     ...deleteChatActivityStatements(db, input.profileId),
     db.delete(pushDevices).where(eq(pushDevices.profileId, input.profileId)),

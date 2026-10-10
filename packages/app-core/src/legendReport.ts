@@ -1,13 +1,15 @@
 // ───────── 은퇴 리포트 순수 계산 (웹·앱 공용, T-10-062 · 공용 T-11-005) ─────────
 // 리포트(LegendReport)·플레이 성향·영구결번·몸값 그래프·대표 칭호 카드가 같이 쓰는 문구 만들기·데이터 가공.
 // 그리는 일(Svelte · React Native)과 분리해 두 클라이언트가 한 벌을 쓴다.
-import type { RetiredNumberResult } from '@offside/contracts';
+import type { RetiredNumberMiss, RetiredNumberResult } from '@offside/contracts';
+import { tn } from '@offside/game/i18n/names';
 import { seasonValue } from '@offside/contracts/market-value';
 import type { ChapterEvent } from '@offside/game/retirement-report';
 import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { titleById, type TitleDef } from '@offside/game/titles';
 import type { CareerRecord, HofEntry } from '@offside/game/types';
 import { totals } from './format.js';
+import { legendRnText as RN } from './i18n/ko/legendRn.js';
 import { legendStyleText as L } from './i18n/ko/legendStyle.js';
 import type { LegendView } from './state.js';
 
@@ -30,6 +32,12 @@ export function rnSlotOf(
 ): Exclude<RetiredNumberResult, { kind: 'pending' }> | null {
   return rn && rn.kind !== 'pending' && (rn.kind !== 'anonymous' || own) ? rn : null;
 }
+
+/** T-11-180 결번을 못 받은 이유 한 문장(웹·앱 같이). */
+export const rnMissText = (m: RetiredNumberMiss) =>
+  m.reason === 'seasons'
+    ? RN.missSeasons({ club: tn(m.club), seasons: m.seasons, need: m.need })
+    : RN.missScore({ club: tn(m.club), pct: m.pct });
 
 /** 결번 구단에서 뛴 시즌(옛 기록은 구단 id가 없어 이름으로 찾는다). */
 export function rnClubStats(rnSlot: Granted, d: LegendView['d']) {

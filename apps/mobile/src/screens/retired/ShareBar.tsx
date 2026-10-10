@@ -1,6 +1,7 @@
 // 은퇴 커리어 공유(웹 ShareBar.svelte, T-10-029 → T-10-067). 내 은퇴 선수 화면(은퇴 직후·선수 상세) 아래에 고정된 버튼으로,
 // 로그인하지 않아도 보기 전용 공유 링크(/career/<id>)를 공유한다 — 링크는 공개 명예의 전당 상세라 로그인과 무관하다.
-// T-10-069 이 기기에 없는 계정의 내 선수도 띄운다 — 띄울지는 LegendView.shareId(legend.ts)가 정한다. 왼쪽 반은 홈으로.
+// T-10-069 이 기기에 없는 계정의 내 선수도 띄운다 — 띄울지는 LegendView.shareId(legend.ts)가 정한다. 왼쪽 반은 홈으로,
+// T-11-180 선수 상세에서 열면(back) 이전으로.
 import { useState } from 'react';
 import { Platform, Share, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -8,13 +9,14 @@ import { flushOutbox } from '@offside/app-core/outbox';
 import { checkShareLink, shareLinkText, shareLinkTitle } from '@offside/app-core/shareLink';
 import { shareText as L } from '@offside/app-core/i18n/ko/share';
 import { shareUrl, toast } from '../../game/host';
-import { goHome } from '../../game/nav';
+import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
+import { goBack, goHome } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { ActionBar } from '../../ui/ActionBar';
 import { Btn } from '../../ui/Btn';
 
-export function ShareBar({ id }: { id: string }) {
+export function ShareBar({ id, back }: { id: string; back?: () => void }) {
   const c = useColors();
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
@@ -89,9 +91,15 @@ export function ShareBar({ id }: { id: string }) {
         />
       ) : null}
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Btn style={{ flex: 1 }} testID="share-home" onPress={goHome}>
-          {L.home}
-        </Btn>
+        {back ? (
+          <Btn style={{ flex: 1 }} testID="hof-back" onPress={() => goBack(back)}>
+            {shellMoreText.back}
+          </Btn>
+        ) : (
+          <Btn style={{ flex: 1 }} testID="share-home" onPress={goHome}>
+            {L.home}
+          </Btn>
+        )}
         <Btn
           kind="primary"
           style={{ flex: 1 }}
