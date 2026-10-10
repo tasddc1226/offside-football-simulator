@@ -180,3 +180,5 @@ export * from './translate.js';
 export * from './push.js';
 export * from './notifications.js';
 export * from './push-performance.js';
+
+export * from './admin-cup-predictions.js';

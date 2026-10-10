@@ -19,6 +19,7 @@ import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { cupEntries, cupMatches, cupState, ownerTeams, profiles } from '../db/schema.js';
 import { cupKo, cupTitle } from '../cupText.js';
+import { predictionSettlementStatements } from './cupPredictions.js';
 import { grantItemStatement } from '../db/repos/itemShop.js';
 import { cupSchedule } from './cupSchedule.js';
 import { eventNotificationStatements } from '../push/events.js';
@@ -398,6 +399,7 @@ export async function playCupMatch(
       ),
     );
   }
+  stmts.push(...predictionSettlementStatements(d1, m.id, now));
   await d1.batch(stmts);
 }
 

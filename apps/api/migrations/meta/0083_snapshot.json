@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "28f7f282-e639-4647-8abd-6621024b8495",
+  "id": "cd31c4c8-99ec-4a35-939e-bb859c2d6b5b",
   "prevId": "db9c010e-f6cd-468f-8e2f-3016ca8dc9ec",
   "tables": {
     "app_auth_tickets": {
@@ -1407,15 +1407,6 @@
           ],
           "isUnique": false
         },
-        "careers_owner_title_updated_idx": {
-          "name": "careers_owner_title_updated_idx",
-          "columns": [
-            "profile_id",
-            "status",
-            "updated_at"
-          ],
-          "isUnique": false
-        },
         "careers_automation_updated_idx": {
           "name": "careers_automation_updated_idx",
           "columns": [
@@ -2069,6 +2060,137 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
+    },
+    "cup_predictions": {
+      "name": "cup_predictions",
+      "columns": {
+        "cup_id": {
+          "name": "cup_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "match_id": {
+          "name": "match_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "profile_id": {
+          "name": "profile_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "pick": {
+          "name": "pick",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "correct": {
+          "name": "correct",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rewarded_at": {
+          "name": "rewarded_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "cup_predictions_cup_match_pick_idx": {
+          "name": "cup_predictions_cup_match_pick_idx",
+          "columns": [
+            "cup_id",
+            "match_id",
+            "pick"
+          ],
+          "isUnique": false
+        },
+        "cup_predictions_profile_cup_idx": {
+          "name": "cup_predictions_profile_cup_idx",
+          "columns": [
+            "profile_id",
+            "cup_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "cup_predictions_match_id_cup_matches_id_fk": {
+          "name": "cup_predictions_match_id_cup_matches_id_fk",
+          "tableFrom": "cup_predictions",
+          "tableTo": "cup_matches",
+          "columnsFrom": [
+            "match_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "cup_predictions_profile_id_profiles_id_fk": {
+          "name": "cup_predictions_profile_id_profiles_id_fk",
+          "tableFrom": "cup_predictions",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "profile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "cup_predictions_match_id_profile_id_pk": {
+          "columns": [
+            "match_id",
+            "profile_id"
+          ],
+          "name": "cup_predictions_match_id_profile_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "cup_predictions_pick_check": {
+          "name": "cup_predictions_pick_check",
+          "value": "\"cup_predictions\".\"pick\" IN ('home', 'draw', 'away')"
+        }
+      }
     },
     "cup_state": {
       "name": "cup_state",
@@ -3942,209 +4064,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "owner_title_awards": {
-      "name": "owner_title_awards",
-      "columns": {
-        "profile_id": {
-          "name": "profile_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "title_id": {
-          "name": "title_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "criteria_version": {
-          "name": "criteria_version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "evidence": {
-          "name": "evidence",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "earned_at": {
-          "name": "earned_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "seen_at": {
-          "name": "seen_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "owner_title_awards_profile_id_profiles_id_fk": {
-          "name": "owner_title_awards_profile_id_profiles_id_fk",
-          "tableFrom": "owner_title_awards",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "owner_title_awards_profile_id_title_id_pk": {
-          "columns": [
-            "profile_id",
-            "title_id"
-          ],
-          "name": "owner_title_awards_profile_id_title_id_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "owner_title_progress": {
-      "name": "owner_title_progress",
-      "columns": {
-        "profile_id": {
-          "name": "profile_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "criteria_version": {
-          "name": "criteria_version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "midfield": {
-          "name": "midfield",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "defense": {
-          "name": "defense",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "keeper": {
-          "name": "keeper",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "scorers": {
-          "name": "scorers",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "creators": {
-          "name": "creators",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "internationals": {
-          "name": "internationals",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "retired": {
-          "name": "retired",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "elite": {
-          "name": "elite",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "ballon": {
-          "name": "ballon",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "numbers": {
-          "name": "numbers",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "firsts": {
-          "name": "firsts",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "owner_title_progress_profile_id_profiles_id_fk": {
-          "name": "owner_title_progress_profile_id_profiles_id_fk",
-          "tableFrom": "owner_title_progress",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "profiles": {
       "name": "profiles",
       "columns": {
@@ -4259,21 +4178,6 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "title_pinned": {
-          "name": "title_pinned",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
         }
       },
       "indexes": {

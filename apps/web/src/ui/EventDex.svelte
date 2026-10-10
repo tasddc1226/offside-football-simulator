@@ -36,6 +36,7 @@
 
 <div class="wrap">
   <Topbar />
+  <BackBar inline act="home" fallback={goHome} />
   <section class="card stack" style="gap:14px">
     <div>
       <div class="eyebrow">Odds</div>
@@ -116,5 +117,5 @@
       <p class="muted fs-xs" style="margin:0">{L.noteWeb}</p>
     {/if}
   </section>
-  <BackBar act="home" fallback={goHome} />
+
 </div>

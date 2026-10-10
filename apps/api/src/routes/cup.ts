@@ -78,6 +78,7 @@ import {
   ok,
   readBody,
 } from './shared.js';
+import { registerCupPredictionRoutes } from './cupPredictions.js';
 import { cupKo } from '../cupText.js';
 
 // T-11-145 오프사이드 컵(조회·신청·취소)과 구단주 아이템(선수 후보 리롤권). T-11-152 구단 자금으로 리롤권 사기.
@@ -216,6 +217,7 @@ async function eligibility(
 }
 
 export function registerCupRoutes(app: Hono<AppEnv>): void {
+  registerCupPredictionRoutes(app, cupOf);
   // 대회 한눈에: 일정·참가 수·조 순위·대진·결과. 누구나 본다. cupId 'current'는 지금 보여 줄 대회.
   app.get('/v1/cups/:cupId', async (c) => {
     const cup = await cupOf(c);

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import GoogleLoginButton from './GoogleLoginButton.svelte';
   import TierBadge from './TierBadge.svelte';
   import TitleBadge from './cup/TitleBadge.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
@@ -385,7 +386,7 @@
           {:else if !viewer.google}
             <div class="comment-gate" data-comment-gate="login">
               <p class="muted">{L.loginGate}</p>
-              <button class="btn btn-primary" data-act="comment-login" onclick={login}>{L.loginGoogle}</button>
+              <GoogleLoginButton act="comment-login" onclick={login} />
             </div>
           {:else if !viewer.nickname}
             <div class="comment-gate" data-comment-gate="nickname">

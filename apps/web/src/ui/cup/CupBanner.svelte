@@ -19,18 +19,17 @@
 </script>
 
 {#if data && cupOnHome(data)}
-  <section class="card cup-banner" aria-label={L.title} data-cup-banner data-cup-phase={data.phase}>
+  <button type="button" class="card cup-banner" aria-label={`${L.fullTitle({ n: data.cup.edition })} · ${L.open}`} data-cup-banner data-cup-phase={data.phase} data-act="cup-open" onclick={onopen}>
     <div class="cb-head">
       <CupTrophy stage="champion" size={44} bare />
       <div class="cb-who">
         <small class="eyebrow">Offside Cup · {L.edition({ n: data.cup.edition })}</small>
-        <h2>{L.fullTitle({ n: data.cup.edition })}</h2>
+        <strong class="cb-title">{L.fullTitle({ n: data.cup.edition })}</strong>
         <span class="muted fs-sm" data-cup-line>{phaseLine(data)}</span>
       </div>
       <span class="pill" class:good={data.phase === 'open' || data.phase === 'group' || data.phase === 'knockout'}>{phaseLabel(data.phase)}</span>
     </div>
-    <button class="btn btn-accent btn-block" data-act="cup-open" onclick={onopen}>{L.open}</button>
-  </section>
+  </button>
 {/if}
 
 <style>
@@ -38,8 +37,18 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    width: 100%;
+    border: 0;
+    text-align: left;
+    color: var(--ink);
+    cursor: pointer;
   }
-  .cup-banner h2 {
+  .cup-banner:hover {
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  }
+  .cb-title {
+    font-size: 1.25rem;
+    line-height: 1.3;
     margin: 0;
     overflow-wrap: anywhere;
   }

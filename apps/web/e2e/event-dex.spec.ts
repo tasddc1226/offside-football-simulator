@@ -34,6 +34,6 @@ test('확률 도감: 홈 타일 → 공통 규칙 · 선택지 확률 · 잠긴 
   const a11y = await new AxeBuilder({ page }).include('.card').analyze();
   expect(a11y.violations).toEqual([]);
 
-  await page.locator('[data-act="home"]').click();
+  await page.locator('[data-back-bar] [data-act="home"]').click();
   await expect(page.locator('[data-act="dex"]')).toBeVisible();
 });

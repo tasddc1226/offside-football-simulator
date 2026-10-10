@@ -125,6 +125,7 @@ for (const wins of [0, 1, 2]) {
     await page.locator('[data-act="open-owner-players"]').click();
     await page.locator('[data-my-player="0"]').click();
     const stat = page.locator('[data-legend-ballon]');
+    await stat.scrollIntoViewIfNeeded();
     await expect(stat).toContainText('발롱도르 수상');
     await expect(stat.locator('b')).toHaveText(String(wins));
     await expect(page.locator('.roll-line').filter({ hasText: '발롱도르' })).toHaveCount(0);

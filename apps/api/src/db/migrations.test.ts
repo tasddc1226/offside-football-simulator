@@ -97,6 +97,17 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'forfeit',
     'detail_json',
   ],
+  cup_predictions: [
+    'cup_id',
+    'match_id',
+    'profile_id',
+    'pick',
+    'correct',
+    'settled_at',
+    'rewarded_at',
+    'created_at',
+    'updated_at',
+  ],
   cup_state: ['cup_id', 'seed', 'groups', 'drawn_at', 'done_at'],
   cups: [
     'id',

@@ -1,5 +1,7 @@
 // T-11-145 오프사이드 컵 서버 문구(한국어 원문). `{이름}` 자리는 cupText.ts의 fill로 채운다. 키는 en/ja와 같다.
 export const CUP_KO = {
+  predictionNotFinished: '아직 종료되지 않은 경기는 정산할 수 없어요.',
+  predictionClosed: '경기가 시작됐거나 지금은 예측할 수 없는 경기예요.',
   title: '시즌 {season} 제{edition}회 오프사이드 컵',
   g1: '조별 1차전',
   g2: '조별 2차전',
