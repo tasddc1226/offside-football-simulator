@@ -387,15 +387,27 @@ export default function Owner() {
               </>
             )}
           </Card>
-          <Card gap={8} testID="owner-hall-entry">
-            <Txt v="h2" accessibilityRole="header">
-              {H.hallTitle}
-            </Txt>
-            <Txt tone="muted">{H.hallSummary}</Txt>
-            <Btn block testID="open-owner-hall" onPress={() => go('honors')}>
-              {H.openHall}
-            </Btn>
-          </Card>
+          <Press
+            testID="open-owner-hall"
+            accessibilityLabel={H.openHall}
+            onPress={() => go('honors')}
+            scale={0.98}
+          >
+            <Card gap={12} testID="owner-hall-entry">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <Txt v="eyebrow">Hall of honors</Txt>
+                  <Txt v="h2">{H.hallTitle}</Txt>
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {H.hallSummary}
+                  </Txt>
+                </View>
+                <Txt tone="muted" style={{ fontSize: rem(1.5) }}>
+                  ›
+                </Txt>
+              </View>
+            </Card>
+          </Press>
           <Press
             testID="market"
             accessibilityLabel={`${L.marketTitle} ${L.open}`}

@@ -203,10 +203,14 @@
         </button>
       {/if}
     </section>
-    <section class="card stack" data-owner-hall-entry aria-label={H.hallTitle}>
-      <h2>{H.hallTitle}</h2>
-      <p class="muted fs-sm">{H.hallSummary}</p>
-      <button class="btn btn-block" data-act="open-owner-hall" onclick={() => go('honors')}>{H.openHall}</button>
+    <section class="card owner-market owner-tap" data-owner-hall-entry aria-label={H.hallTitle}>
+      <div class="owner-who">
+        <small class="eyebrow">Hall of honors</small>
+        <h2>{H.hallTitle}</h2>
+        <span class="muted fs-sm">{H.hallSummary}</span>
+      </div>
+      <span class="tap-go" aria-hidden="true">›</span>
+      <button class="tap-cover" data-act="open-owner-hall" aria-label={H.openHall} onclick={() => go('honors')}></button>
     </section>
     <section class="card owner-market owner-tap" aria-label={L.marketTitle} data-owner-market>
       <div class="owner-who">
