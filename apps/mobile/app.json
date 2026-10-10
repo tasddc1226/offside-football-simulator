@@ -2,7 +2,7 @@
   "expo": {
     "name": "OFFSIDE",
     "slug": "offside",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "offside",
@@ -81,10 +81,10 @@
       ],
       "expo-iap",
       [
-        "./plugins/with-applovin-max",
+        "react-native-google-mobile-ads",
         {
-          "iosAppId": "ca-app-pub-3797087216173591~4994406373",
-          "androidAppId": "ca-app-pub-3797087216173591~9704816739"
+          "androidAppId": "ca-app-pub-3797087216173591~9704816739",
+          "iosAppId": "ca-app-pub-3797087216173591~4994406373"
         }
       ]
     ],
@@ -104,5 +104,8 @@
       "en": "./locales/en.json",
       "ja": "./locales/ja.json"
     }
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-3797087216173591~9704816739"
   }
 }
