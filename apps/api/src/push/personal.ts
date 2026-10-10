@@ -71,7 +71,7 @@ const IS_UNCAPPED = `(${IS_CUP} OR (${IS_COMMUNITY}))`;
 
 /**
  * 같은 이벤트의 여러 기기·재시도는 예산 하나를 공유한다. 서로 다른 이벤트는 한 시간·하루 2회로 제한한다.
- * T-11-161 컵 알림(추첨·경기 결과)은 제때 가야 해서 이 제한을 받지 않는다. 예약 시각도 남기지 않아 다른 알림의 예산을 쓰지 않는다.
+ * 컵 경기 결과와 지정 관리자 운영 알림은 이 제한을 받지 않는다. 예약 시각도 남기지 않아 일반 알림의 예산을 쓰지 않는다.
  */
 async function reserveBudget(db: D1Database, rows: Row[], now: number) {
   const ids = [...new Set(rows.map((r) => r.notification_id))];
@@ -154,7 +154,7 @@ async function claim(
       iso(now),
       iso(now),
       iso(now),
-      communityOwnerEmail(env) ?? '',
+      communityOwnerEmail(env),
       iso(now - 7 * 86400_000),
       state,
       lease,
@@ -289,8 +289,8 @@ export async function runPersonalPush(
   const states: Partial<Record<Outcome['state'], number>> = {};
   const hour = new Date(now + 9 * 3600_000).getUTCHours();
   for (const checking of [true, false, false, false]) {
-    // 조용한 시간에는 영수증만 확인한다. 수동 본인 테스트는 별도의 요청 경로다. T-11-145 컵 알림만 22시까지 보낸다
-    // (경기가 밤 9시라 결과를 다음 날 아침으로 미루지 않게).
+    // 운영 알림은 야간에도 보낸다. 일반 알림은 09~20시, 컵 결과는 22시까지다.
+    // 영수증 조회는 시간 제한 없이 유지하고, 수동 본인 테스트는 별도의 요청 경로를 쓴다.
     const cupOnly = hour >= 20 && hour < CUP_PUSH_UNTIL_HOUR;
     const only = !checking && (hour < 9 || hour >= 20) ? afterHoursOnly(cupOnly) : '';
     const rows = await claim(env, checking, now, lease, only);

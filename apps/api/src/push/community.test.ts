@@ -232,6 +232,17 @@ describe('admin community push', () => {
     expect((await rows('push_deliveries')).every((r) => r.state === 'cancelled')).toBe(true);
   });
 
+  it('cancels queued alerts when disabled, even if the profile email has become empty', async () => {
+    await comment();
+    ctx.env.ADMIN_COMMUNITY_PUSH_ENABLED = '0';
+    await ctx.db.update(profiles).set({ email: '' }).where(eq(profiles.id, owner.profileId));
+    enable();
+    const transport = expo();
+    await runPersonalPush(ctx.env, night(), transport);
+    expect(transport).not.toHaveBeenCalled();
+    expect(await rows('push_deliveries')).toMatchObject([{ state: 'cancelled' }]);
+  });
+
   it('does not target the author even with an old non-admin chat ticket; no registered device means no queue', async () => {
     expect(
       communityStatements(ctx.env, [owner.profileId], {
