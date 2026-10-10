@@ -1,6 +1,6 @@
 // T-10-070 D1 → R2 매일 백업(ADR-007). D1 Time Travel(30일)과 별개로, D1 밖에 오래 남는 사본을 둔다.
-// 형식은 `wrangler d1 export`처럼 SQL 텍스트(gzip) — 복구는 풀어서 빈 D1에 그대로 실행한다:
-//   gunzip -c 2026-09-28.sql.gz > dump.sql && wrangler d1 execute <새 DB> --remote --file dump.sql
+// 형식은 `wrangler d1 export`처럼 SQL 텍스트(gzip, Content-Encoding: gzip) — 빈 D1에 그대로 실행한다.
+// `wrangler r2 object get`은 받으면서 풀어 주므로 gunzip이 필요 없다(복구: docs/operations/d1-backup.md).
 // DB 전체를 메모리에 올리지 않게 표를 rowid 순으로 PAGE씩 읽어 gzip 스트림으로 흘리고, R2에는 멀티파트로 올린다.
 
 /** Candidate row cap. Payloads are additionally bounded in SQL before crossing D1 RPC. */

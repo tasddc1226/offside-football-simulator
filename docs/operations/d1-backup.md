@@ -34,11 +34,23 @@ D1 Time Travel(30일 시점 복구)과 별개로, D1 밖(R2)에 SQL 사본을 �
 빈 D1을 새로 만들어 붓는다(운영 DB에 바로 붓지 않는다 — 확인한 뒤 바꾼다).
 
 ```bash
-wrangler r2 object get offside-d1-backup/d1/production/2026-09-28.sql.gz --remote --file dump.sql.gz
-gunzip dump.sql.gz
+wrangler r2 object get offside-d1-backup/d1/production/2026-09-28.sql.gz --remote --file dump.sql
 wrangler d1 create offside-restore
 wrangler d1 execute offside-restore --remote --file dump.sql
 ```
+
+객체는 gzip으로 저장하지만 `Content-Encoding: gzip`을 달아 둬서, `wrangler r2 object get`(fetch)은 받으면서 풀어 준다.
+이름이 `.sql.gz`여도 받은 파일은 평문 SQL이라 `gunzip`이 `not in gzip format`으로 실패한다. 압축본을 그대로 받는
+도구(S3 API·rclone 등)로 받았을 때만 푼다 — 헷갈리면 `file dump.sql`로 확인한다.
+
+## 장애 기록
+
+- 2026-10-07(UTC) 백업 없음: `backup: {"error":"D1_ERROR: D1 DB's isolate exceeded its memory limit and was reset."}`
+  (`cron:daily:last`, 19:04Z, 233초). DB가 1.78GB로 커지면서 2,000행 고정 페이지(`SELECT *`)의 응답이 D1 isolate
+  메모리 한도를 넘었다. 같은 날 11:15 KST 배포된 #564(T-11-150)가 페이지를 바이트로 자르도록 고쳤다
+  ([인프라 용량 보호](infrastructure-capacity.md#백업)). 빠진 날은 Time Travel(30일)로 덮는다.
+- 결과 확인: Workers Logs는 오래 남지 않는다. 운영 D1에서 읽는다 —
+  `wrangler d1 execute offside-production --remote --env production --command "SELECT value FROM app_meta WHERE key='cron:daily:last'"`.
 
 ## 로컬 확인
 
