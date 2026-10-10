@@ -145,6 +145,7 @@ const ko = {
   rosterBench: '대기',
   lockerLock: '잠그기',
   lockerLocked: '잠김',
+  lockerListed: '판매 중',
   lockerLockAria: (p: { name: string }) => `${p.name} 잠금`,
   dragAria: (p: { name: string }) => `${p.name} 끌어 배치`,
   dragLabel: '끌어 배치',

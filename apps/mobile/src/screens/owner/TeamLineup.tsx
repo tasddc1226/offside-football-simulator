@@ -8,6 +8,7 @@ import {
 } from '@offside/contracts/owner-team';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import { assignSlot, attrLine } from '@offside/app-core/teamOwner';
+import { lockToggleable } from '@offside/app-core/market';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { DragPlayer, type PlayerDrag } from '../../components/DragPlayer';
 import { PlayerCard } from '../../components/PlayerCard';
@@ -49,6 +50,7 @@ export function TeamLineup({
   synFocus,
   synApplied,
   synCaption,
+  onLock,
 }: {
   formation: FormationId;
   layout: TeamPosition[];
@@ -67,6 +69,8 @@ export function TeamLineup({
   synFocus: readonly number[] | null;
   synApplied: readonly number[];
   synCaption: string | null;
+  /** T-11-188 선수 잠금·풀기. */
+  onLock?: ((p: TeamPlayer) => void) | undefined;
 }) {
   const c = useColors();
   const { height } = useWindowDimensions();
@@ -421,17 +425,61 @@ export function TeamLineup({
                           cardValue: p.cardValue,
                           pos: p.pos,
                           type: p.type,
+                          locked: p.locked,
                           youth: false,
                         }}
                         code={p.dpos ?? p.pos}
                       />
                     </Press>
                   </DragPlayer>
-                  <Txt v="xs" tone="muted" style={{ textAlign: 'center' }}>
-                    {slots.includes(p.careerId)
-                      ? L.rosterStarting({ slot: layout[slots.indexOf(p.careerId)]?.slot ?? '' })
-                      : L.rosterBench}
-                  </Txt>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <Txt v="xs" tone="muted" style={{ textAlign: 'center' }}>
+                      {slots.includes(p.careerId)
+                        ? L.rosterStarting({ slot: layout[slots.indexOf(p.careerId)]?.slot ?? '' })
+                        : L.rosterBench}
+                    </Txt>
+                    {onLock ? (
+                      <Press
+                        testID={`team-lock-${p.careerId}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={L.lockerLockAria({ name: nameOf(p) })}
+                        accessibilityState={{ selected: !!p.locked, disabled: !lockToggleable(p) }}
+                        disabled={!lockToggleable(p)}
+                        hitSlop={6}
+                        onPress={() => onLock(p)}
+                        style={{
+                          minHeight: 28,
+                          paddingHorizontal: 8,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: p.locked ? c.accent : c.line,
+                          justifyContent: 'center',
+                          opacity: lockToggleable(p) ? 1 : 0.6,
+                        }}
+                      >
+                        <Txt
+                          v="xs"
+                          style={{
+                            color: p.locked ? c.accentText : c.muted,
+                            fontWeight: p.locked ? '600' : '400',
+                          }}
+                        >
+                          {p.locked
+                            ? `🔒 ${L.lockerLocked}`
+                            : p.listing
+                              ? L.lockerListed
+                              : L.lockerLock}
+                        </Txt>
+                      </Press>
+                    ) : null}
+                  </View>
                 </View>
               ))}
             </View>

@@ -5,6 +5,7 @@
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
   import { attrLine, synergyFocus } from '@offside/app-core/teamOwner';
+  import { lockToggleable } from '@offside/app-core/market';
   import { synergyApplies, type TeamSynergy as Synergy } from '@offside/contracts/owner-team';
   import TeamLines from './TeamLines.svelte';
   import TeamSynergy from './TeamSynergy.svelte';
@@ -212,7 +213,7 @@
             </button>
             <div class="roster-row">
               <span class="roster-state" class:starting={at >= 0}>{at >= 0 ? L.rosterStarting({ slot: positions[at]!.slot }) : L.rosterBench}</span>
-              {#if onlock}<button class="lock-toggle" class:on={p.locked} aria-pressed={!!p.locked} aria-label={L.lockerLockAria({ name: nameOf(p) })} data-act="lock" onclick={() => onlock(p)}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d={p.locked ? 'M5.5 7V5a2.5 2.5 0 0 1 5 0v2' : 'M5.5 7V5a2.5 2.5 0 0 1 4.9-.7'} /></svg><span>{p.locked ? L.lockerLocked : L.lockerLock}</span></button>{/if}
+              {#if onlock}<button class="lock-toggle" class:on={p.locked} aria-pressed={!!p.locked} aria-label={L.lockerLockAria({ name: nameOf(p) })} data-act="lock" disabled={!lockToggleable(p)} onclick={() => onlock(p)}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d={p.locked ? 'M5.5 7V5a2.5 2.5 0 0 1 5 0v2' : 'M5.5 7V5a2.5 2.5 0 0 1 4.9-.7'} /></svg><span>{p.locked ? L.lockerLocked : p.listing ? L.lockerListed : L.lockerLock}</span></button>{/if}
             </div>
             <button class="drag-handle" aria-label={L.dragAria({ name: nameOf(p) })} onpointerdown={(e) => start(e, p.careerId, null)} onclick={() => pickPlayer(p.careerId)}><svg viewBox="0 0 18 12" aria-hidden="true"><path d="M3 2h2M3 6h2M3 10h2M8 2h2M8 6h2M8 10h2M13 2h2M13 6h2M13 10h2" /></svg><span>{L.dragLabel}</span></button>
           </article>
@@ -289,7 +290,7 @@
   .locker-select:focus-visible {outline:3px solid var(--accent);outline-offset:3px;} .locker-player.chosen .locker-select {filter:drop-shadow(0 0 5px var(--accent));}
   .roster-row {display:flex;align-items:center;justify-content:center;gap:8px;padding-top:6px;} .roster-row .roster-state {padding-top:0;}
   .lock-toggle {display:inline-flex;align-items:center;gap:3px;min-height:28px;padding:0 8px;border:1px solid var(--line);border-radius:999px;background:none;color:var(--muted);font:inherit;font-size:.7rem;cursor:pointer;} .lock-toggle svg {width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;} .lock-toggle rect {fill:currentColor;stroke:none;}
-  .lock-toggle.on {border-color:var(--accent);color:var(--accent);font-weight:600;}
+  .lock-toggle.on {border-color:var(--accent);color:var(--accent);font-weight:600;} .lock-toggle:disabled {cursor:default;opacity:.6;}
   .roster-state {display:block;text-align:center;font-size:.7rem;color:var(--muted);padding-top:6px;} .roster-state.starting {color:var(--good);font-weight:600;}
   .drag-handle {display:flex;align-items:center;justify-content:center;gap:5px;width:100%;min-height:44px;border:0;background:none;color:var(--muted);font:inherit;font-size:.7rem;cursor:grab;touch-action:none;}
   .drag-handle svg {width:18px;height:12px;stroke:currentColor;stroke-width:1.6;} .locker-empty {grid-column:1/-1;padding:12px 0;}

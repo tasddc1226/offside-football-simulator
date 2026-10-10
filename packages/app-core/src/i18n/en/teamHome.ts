@@ -134,6 +134,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   rosterBench: 'Bench',
   lockerLock: 'Lock',
   lockerLocked: 'Locked',
+  lockerListed: 'Listed',
   lockerLockAria: (p: { name: string }) => `Lock ${p.name}`,
   dragAria: (p) => `Drag ${p.name} to place`,
   dragLabel: 'Drag to place',

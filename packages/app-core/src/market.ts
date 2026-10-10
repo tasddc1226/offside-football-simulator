@@ -108,6 +108,9 @@ export function sellNote(p: TeamPlayer, lineup: ReadonlySet<string>): string {
   return lineup.has(p.careerId) ? L.noteStarter : '';
 }
 
+/** T-11-188 잠금 버튼을 누를 수 있나: 판매 중인 선수는 내린 뒤에 잠근다(잠긴 선수는 판매 중일 수 없어 늘 풀 수 있다). */
+export const lockToggleable = (p: TeamPlayer) => !!p.locked || !p.listing;
+
 /** 방출 화면에서 고를 수 없는 이유(고를 수 있으면 null). */
 export function releaseLock(p: TeamPlayer, lineup: ReadonlySet<string>): string | null {
   if (!p.raised) return L.lockBought;

@@ -133,6 +133,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   rosterBench: '控え',
   lockerLock: 'ロック',
   lockerLocked: 'ロック中',
+  lockerListed: '出品中',
   lockerLockAria: (p: { name: string }) => `${p.name}をロック`,
   dragAria: (p) => `${p.name}をドラッグして配置`,
   dragLabel: 'ドラッグして配置',
