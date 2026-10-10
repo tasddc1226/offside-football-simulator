@@ -16,6 +16,8 @@ export const gTraining: Translation<GTrainingMsgs> = {
   attrPairUp: (p) => `${p.a}・${p.b} ▲`,
   focusGrowth: (p) => `主力の成長 +${p.pct}%`,
   tooFarAhead: (p) => `突出しすぎ 成長 −${p.pct}%`,
+  maxed: (p) => `${p.attr} 最大値に到達`,
+  nearMax: (p) => `最大値に到達 成長 −${p.pct}%`,
   helpRest: (p) =>
     `トレーニングを休んで体を整えます。コンディションが${p.low}を下回るとケガのリスクが大きく上がり、${p.start}を下回るとスタメン出場が難しくなります。`,
   helpCoach:
@@ -29,6 +31,9 @@ export const gTraining: Translation<GTrainingMsgs> = {
   helpOffFocus: (p) => `主力の能力値ではないので成長が${p.pct}%遅くなります。`,
   helpLopsided: (p) =>
     `他の主要能力値より突出しすぎているため、成長が${p.pct}%落ちています。他の能力値を伸ばすと制限が解除されます。`,
+  helpMaxed: (p) =>
+    `${p.attr}の詳細能力値がすべて最大値(99)のため、このトレーニングではこれ以上上がりません。`,
+  helpNearMax: (p) => `最大値(99)に達した詳細能力値があるため、成長の${p.pct}%が反映されません。`,
   helpOvrSubs: (p) => `この項目のうち${p.list}が今のポジションのOVRに反映されます。`,
   helpOvrSeparate: 'OVRへの反映と試合での活躍は別物です。',
   helpWeightLow: '今のポジションのOVRにはほとんど反映されません。',
