@@ -1,0 +1,26 @@
+{
+  "id": "t-11-188-player-lock",
+  "title": "선수 잠금",
+  "items": [
+    "구단주 팀 라커룸에서 아끼는 선수를 잠글 수 있어요. 잠긴 선수는 이적시장에 내놓거나 방출할 수 없어요.",
+    "직접 키운 선수와 영입한 선수 모두 잠글 수 있어요. 판매 중인 선수는 판매를 내린 뒤에 잠가요.",
+    "잠긴 선수 카드에는 자물쇠가 보이고, 이적시장의 팔기 · 방출 화면에서 바로 잠금을 풀 수 있어요."
+  ],
+  "en": {
+    "title": "Player lock",
+    "items": [
+      "You can now lock favorite players in your owner team's locker room. Locked players can't be listed on the transfer market or released.",
+      "Both players you raised and players you bought can be locked. Take a listed player off the market before locking them.",
+      "Locked cards show a padlock, and you can unlock them right from the market's Sell and Release screens."
+    ]
+  },
+  "ja": {
+    "title": "選手ロック",
+    "items": [
+      "オーナーチームのロッカールームで大切な選手をロックできます。ロック中の選手は移籍市場への出品や放出ができません。",
+      "育てた選手も獲得した選手もロックできます。出品中の選手は出品を取り下げてからロックします。",
+      "ロック中の選手カードには鍵マークが付き、移籍市場の出品・放出画面からすぐにロックを解除できます。"
+    ]
+  },
+  "availability": "web-app"
+}
