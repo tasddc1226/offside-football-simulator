@@ -43,5 +43,7 @@ export const hofRn: Translation<HofRnMsgs> = {
   wallLead:
     'Players who earned a retired number, but every candidate club had already retired that number. They live on as a title.',
   wallClubTitle: 'This club’s Wall of Honour',
+  wallOpen: 'Show',
+  wallClose: 'Hide',
   wallLabel: (p) => `Wall of Honour: ${p.name}, ${p.club} No. ${p.number}, ${p.day}`,
 };

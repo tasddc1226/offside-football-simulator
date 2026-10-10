@@ -317,6 +317,15 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
             { clubId: 'k1-0', club: '울산 호랑이', count: 1 },
           ],
           recent: [...items].reverse(),
+          wall: [
+            (({ seq: _seq, ...w }) => w)(
+              item(9, {
+                careerId: '0d000000-0000-4000-8000-000000000199',
+                name: '벽선수',
+                number: 7,
+              }),
+            ),
+          ],
         }),
       );
     const club = url.searchParams.get('club');
@@ -373,6 +382,15 @@ test('기록실 영구결번 탭: 구단별(결번 많은 구단 먼저)·최신
   // 결번 둘인 맨체스터가 먼저. 결번 당시 유저가 바꿔 부른 이름('시티')이 아니라 게임 기본 이름으로 건다.
   await expect(wall.locator('[data-rn-club]').first()).toHaveAttribute('data-rn-club', 'pl-0');
   await expect(wall.locator('[data-rn-club="pl-0"] b')).toHaveText('맨체스터 스카이블루');
+  // T-11-193 명예의 벽은 접어 두고 눌러서 편다.
+  const wallToggle = wall.locator('[data-rn-wall-toggle]');
+  await expect(wallToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(wall.locator('[data-rn-wall-of-honor]')).toHaveCount(0);
+  await wallToggle.click();
+  await expect(wallToggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(wall.locator('[data-rn-wall-of-honor]')).toHaveCount(1);
+  await wallToggle.click();
+  await expect(wall.locator('[data-rn-wall-of-honor]')).toHaveCount(0);
   const axe = await new AxeBuilder({ page }).include('[data-rn-wall]').analyze();
   expect(axe.violations.map((v) => v.id)).toEqual([]);
 

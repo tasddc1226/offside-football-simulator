@@ -46,6 +46,9 @@ const ko = {
   wallLead:
     '결번 자격을 채웠지만 후보 구단의 번호가 모두 먼저 결번돼, 칭호로 이름을 남긴 선수예요.',
   wallClubTitle: '이 구단 명예의 벽',
+  // T-11-193 첫 화면의 명예의 벽은 접어 두고 눌러서 편다.
+  wallOpen: '펼치기',
+  wallClose: '접기',
   wallLabel: (p: { name: string; club: string; number: number; day: string }) =>
     `명예의 벽 ${p.name}, ${p.club} ${p.number}번, ${p.day}`,
 };
