@@ -33,6 +33,7 @@ export type Bindings = {
   CAREER_RETENTION_DISABLED?: string;
   /** Emergency stops for telemetry offload and public HOF read sessions. */
   SEASON_EVENTS_ARCHIVE_DISABLED?: string;
+  SEASON_TELEMETRY_ARCHIVE_DISABLED?: string;
   D1_READ_SESSIONS_DISABLED?: string;
   DB: D1Database;
   /** local|staging|production. */

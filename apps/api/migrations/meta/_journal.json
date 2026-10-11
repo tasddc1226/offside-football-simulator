@@ -610,6 +610,13 @@
       "when": 1791637043527,
       "tag": "0086_loose_newton_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "6",
+      "when": 1791703145527,
+      "tag": "0087_season_telemetry",
+      "breakpoints": true
     }
   ]
 }
