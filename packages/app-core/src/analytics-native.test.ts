@@ -194,3 +194,29 @@ it('still denies SDK consent when collection shutdown rejects', async () => {
   await h.a.settled();
   expect(h.events.map((e) => e.name)).toEqual(['screen_view']);
 });
+
+describe('push open analytics', () => {
+  it('requires consent, deduplicates responses and never sends arbitrary values or identifiers', async () => {
+    const h = setup();
+    await h.a.settled();
+    expect(h.a.pushOpen('PRIVATE-ID', 'return', 'career_reminder', 1)).toBe(false);
+    h.a.setConsent('granted');
+    await h.a.settled();
+    expect(h.a.pushOpen('PRIVATE-ID', 'return', 'career_reminder', 1)).toBe(true);
+    expect(h.a.pushOpen('PRIVATE-ID', 'return', 'career_reminder', 1)).toBe(false);
+    h.a.pushOpen('PRIVATE-2', 'PRIVATE-kind', 'PRIVATE-campaign', 'PRIVATE-stage');
+    await h.a.settled();
+    const events = h.events.filter((e) => e.name === 'offside_push_open');
+    expect(events).toHaveLength(2);
+    expect(events[0]!.params).toMatchObject({
+      push_category: 'return',
+      push_campaign: 'career_reminder',
+      reminder_stage: 1,
+    });
+    expect(events[1]!.params.push_category).toBe('other');
+    expect(JSON.stringify(events)).not.toContain('PRIVATE');
+    h.a.setConsent('denied');
+    await h.a.settled();
+    expect(h.a.pushOpen('new', 'return', 'career_reminder', 2)).toBe(false);
+  });
+});

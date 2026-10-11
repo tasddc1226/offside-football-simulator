@@ -1,0 +1,20 @@
+export const retention = {
+  title: 'First-career reminders',
+  policy:
+    'After 3, 7 and 14 inactive days · Up to 3 per account · At least 4 days apart · 11:00–19:00 KST',
+  help: 'Grouped by notification creation date. Returns and retirements are career activity observed within 7 days of the latest accepted reminder. Organic returns without a click are included; these counts do not measure incremental lift. Recent sends have not completed the 7-day observation window.',
+  empty: 'No career reminders recorded in this period.',
+  stage1: 'Day 3 stage',
+  stage2: 'Day 7 stage',
+  stage3: 'Day 14 stage',
+  recipients: 'Selected notifications',
+  acceptedRecipients: 'Accepted',
+  confirmed: 'Delivery confirmed',
+  clicked: 'Clicked',
+  returned: 'Returned within 7 days',
+  retired: 'First retirement within 7 days',
+  pending: 'In progress',
+  cancelled: 'Cancelled',
+  failed: 'Failed',
+  unknown: 'Unknown',
+} as const;

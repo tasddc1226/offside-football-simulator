@@ -1,0 +1,23 @@
+{
+  "id": "t-11-208-career-reminders",
+  "title": "이어 하던 커리어 알림",
+  "items": [
+    "앱 알림을 켠 경우, 첫 은퇴를 기다리는 커리어를 며칠 쉬었을 때 이어 하기를 안내해요.",
+    "독려 알림은 계정당 최대 세 번, 최소 4일 간격으로 보내요. 다시 플레이하거나 은퇴하면 멈춰요."
+  ],
+  "en": {
+    "title": "Continue your career",
+    "items": [
+      "With app notifications enabled, you may receive a reminder after leaving your first unfinished career for a few days.",
+      "Reminders are limited to three per account, at least four days apart. They stop when you return or retire."
+    ]
+  },
+  "ja": {
+    "title": "キャリアの続きのお知らせ",
+    "items": [
+      "アプリ通知が有効な場合、初めての引退前のキャリアを数日休むと、再開のお知らせが届くことがあります。",
+      "応援通知は1アカウント最大3回、4日以上の間隔で届きます。プレイの再開や引退で止まります。"
+    ]
+  },
+  "availability": "app"
+}

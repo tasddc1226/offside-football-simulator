@@ -1,0 +1,20 @@
+import { ns } from '../core';
+export const retention = ns('retention', {
+  title: '첫 커리어 독려',
+  policy: '미접속 3·7·14일 · 계정당 최대 3회 · 최소 4일 간격 · 11–19시 KST',
+  help: '알림 생성일 기준으로 집계해요. 복귀·은퇴는 최근 독려 알림 접수 후 7일 안에 관측된 커리어 활동이에요. 클릭하지 않은 자연 복귀도 포함하며, 푸시로 인한 순증가를 뜻하지 않아요. 최근 발송은 7일 관측이 아직 끝나지 않았어요.',
+  empty: '이 기간에 기록된 커리어 독려 발송이 없어요.',
+  stage1: '3일 단계',
+  stage2: '7일 단계',
+  stage3: '14일 단계',
+  recipients: '선정된 알림',
+  acceptedRecipients: '발송 접수',
+  confirmed: '전달 확인',
+  clicked: '클릭',
+  returned: '7일 내 복귀',
+  retired: '7일 내 첫 은퇴',
+  pending: '진행 중',
+  cancelled: '취소',
+  failed: '실패',
+  unknown: '결과 불명',
+});

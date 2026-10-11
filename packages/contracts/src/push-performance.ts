@@ -56,6 +56,16 @@ export const PushPerformanceSchema = z.object({
       }),
     )
     .max(20),
+  retention: z
+    .array(
+      PushMetricsSchema.extend({
+        stage: z.number().int().min(1).max(3),
+        returned: count,
+        retired: count,
+      }),
+    )
+    .max(3)
+    .optional(),
   hasMore: z.boolean(),
 });
 export type PushMetrics = z.infer<typeof PushMetricsSchema>;

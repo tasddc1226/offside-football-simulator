@@ -1,0 +1,1 @@
+CREATE INDEX `push_devices_profile_updated_idx` ON `push_devices` (`profile_id`,`updated_at`,`installation_hash`);

@@ -283,6 +283,7 @@ export const authAttempts = sqliteTable(
         'PUSH_TEST',
         'FRIEND_REQUEST',
         'TRANSLATE',
+        'CAREER_ACTIVITY',
       ],
     }).notNull(),
     subject: text('subject').notNull(),
@@ -316,6 +317,7 @@ export const pushDevices = sqliteTable(
     uniqueIndex('push_devices_token_unique').on(t.token),
     index('push_devices_session_idx').on(t.sessionId),
     index('push_devices_profile_idx').on(t.profileId),
+    index('push_devices_profile_updated_idx').on(t.profileId, t.updatedAt, t.installationHash),
     index('push_devices_updated_idx').on(t.updatedAt),
     index('push_devices_engagement_updated_idx').on(t.engagementEnabled, t.updatedAt),
   ],
@@ -1447,4 +1449,36 @@ export const profileAvatars = sqliteTable('profile_avatars', {
     .references(() => profiles.id, { onDelete: 'cascade' }),
   id: text('id').notNull().unique(),
   image: text('image').notNull(),
+});
+
+/** Minimal activity and lifetime fatigue budget; no player names or save contents. */
+export const careerActivity = sqliteTable(
+  'career_activity',
+  {
+    profileId: text('profile_id')
+      .primaryKey()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    careerId: text('career_id'),
+    lang: text('lang').notNull().default('ko'),
+    state: text('state', { enum: ['active', 'retired', 'none'] }).notNull(),
+    lastActiveAt: text('last_active_at').notNull(),
+    retiredAt: text('retired_at'),
+    reminderStage: integer('reminder_stage').notNull().default(0),
+    lastReminderAt: text('last_reminder_at'),
+    reminderBatch: text('reminder_batch'),
+  },
+  (t) => [
+    index('career_activity_candidate_idx').on(t.state, t.retiredAt, t.lastActiveAt),
+    index('career_activity_batch_idx').on(t.reminderBatch),
+  ],
+);
+
+/** Immutable stage cohort; conversion signals expire with the notification (90 days). */
+export const careerReminderOutcomes = sqliteTable('career_reminder_outcomes', {
+  notificationId: text('notification_id')
+    .primaryKey()
+    .references(() => notifications.id, { onDelete: 'cascade' }),
+  stage: integer('stage').notNull(),
+  returnedAt: text('returned_at'),
+  retiredAt: text('retired_at'),
 });

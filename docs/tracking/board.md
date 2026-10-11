@@ -294,3 +294,5 @@
 - T-11-202 [현재 게임 규칙과 가이드·FAQ 일치](../operations/guide-parity-2026-10-11.md): 확인된 설명 오류·누락 수정, 정적 페이지 검증 완료. PR 검토 대기, 운영 배포 전.
 
 - T-11-205 [관리자 댓글·라운지 Cloudflare Queues 시범 적용](../operations/admin-community-push.md): D1 원장·claim·기존 cron 복구 유지, 관리자 이벤트만 Queue로 가속. 관련 테스트 66건·API 타입/린트·운영 dry-run 통과, 운영 배포 전.
+
+- T-11-208 [첫 커리어 독려와 운영 성과 추적](../operations/career-retention-push.md): 3/7/14일·계정 생애 최대 3회, Queue/cron 복구, 운영 도구 단계별 복귀·은퇴 성과, 동의한 앱의 GA4 푸시 클릭. 구현·검증 중.

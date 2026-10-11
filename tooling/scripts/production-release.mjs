@@ -20,6 +20,8 @@ export const EXPECTED_TABLES = Object.freeze([
   'cards',
   'careers',
   'career_seasons',
+  'career_activity',
+  'career_reminder_outcomes',
   'chat_mutes',
   'chat_reports',
   'club_customs',

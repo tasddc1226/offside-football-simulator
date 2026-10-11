@@ -59,6 +59,7 @@ import { ownerPlayers } from './ownerPlayers';
 import { ownerProfile } from './ownerProfile';
 import { playerNudge } from './playerNudge';
 import { push } from './push';
+import { retention } from './retention';
 import { retired } from './retired';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
@@ -146,6 +147,7 @@ export const en = {
   ownerProfile,
   playerNudge,
   push,
+  retention,
   retired,
   scout,
   seasonGauge,

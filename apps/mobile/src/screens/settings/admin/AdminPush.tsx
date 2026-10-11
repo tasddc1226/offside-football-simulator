@@ -10,6 +10,8 @@ import {
   PUSH_METRICS_HELP,
   PUSH_TARGET_HELP,
   PUSH_RECEIPT_HELP,
+  retentionText as R,
+  RETENTION_METRICS,
 } from '@offside/app-core/pushPerformance';
 import { Txt as BaseTxt, type TxtProps } from '../../../ui/Txt';
 import { Btn } from '../../../ui/Btn';
@@ -235,6 +237,46 @@ export default function AdminPush() {
               <Txt tone="muted">{`알림 생성일을 기준으로 묶어요. 추적 시작: ${kst(data.trackingStartedAt)}. 이전 발송은 남아 있는 결과만 보여요. 클릭 추적은 업데이트된 앱에서 시작돼요. 기록은 90일 보관하며, 계정을 삭제하면 함께 지워져요.`}</Txt>
             </View>
           ) : null}
+          <View
+            testID="career-retention-performance"
+            style={{ gap: 12, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 16 }}
+          >
+            <Txt v="h3" accessibilityRole="header">
+              {R.title}
+            </Txt>
+            <Txt tone="muted">{R.policy}</Txt>
+            {(data.retention ?? []).length ? (
+              data.retention!.map((item) => (
+                <View
+                  key={item.stage}
+                  style={{ gap: 8, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 12 }}
+                >
+                  <Txt bold>
+                    {R[item.stage === 1 ? 'stage1' : item.stage === 2 ? 'stage2' : 'stage3']}
+                  </Txt>
+                  {RETENTION_METRICS.map((key) => (
+                    <View
+                      key={key}
+                      style={{
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        justifyContent: 'space-between',
+                        gap: 8,
+                      }}
+                    >
+                      <Txt tone="muted" style={{ flexShrink: 1 }}>
+                        {R[key]}
+                      </Txt>
+                      <Txt>{item[key].toLocaleString()}</Txt>
+                    </View>
+                  ))}
+                </View>
+              ))
+            ) : (
+              <Txt tone="muted">{R.empty}</Txt>
+            )}
+            <Txt tone="muted">{R.help}</Txt>
+          </View>
           <Txt v="h3" accessibilityRole="header">
             종류별 성과
           </Txt>

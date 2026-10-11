@@ -80,8 +80,19 @@
       // T-10-070 매일 KST 04:00 정리·D1 백업(src/cron/daily.ts).
       "triggers": { "crons": ["0 19 * * *", "*/5 * * * *"] },
       "queues": {
-        "producers": [{ "binding": "ADMIN_PUSH_QUEUE", "queue": "offside-admin-push-production" }],
+        "producers": [
+          { "binding": "ADMIN_PUSH_QUEUE", "queue": "offside-admin-push-production" },
+          { "binding": "CAREER_PUSH_QUEUE", "queue": "offside-career-push-production" },
+        ],
         "consumers": [
+          {
+            "queue": "offside-career-push-production",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 3,
+            "dead_letter_queue": "offside-career-push-production-dlq",
+          },
           {
             "queue": "offside-admin-push-production",
             "max_batch_size": 10,
@@ -116,6 +127,7 @@
         "PUSH_TEST_ENABLED": "1",
         "PERSONAL_PUSH_ENABLED": "1",
         "ADMIN_COMMUNITY_QUEUE_ENABLED": "1",
+        "CAREER_REMINDER_ENABLED": "1",
         "REENGAGEMENT_PUSH_ENABLED": "1",
         "ALLOWED_ORIGINS": "https://offside-lab.com,https://offside-web.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",

@@ -1,3 +1,6 @@
+import { activityErrorText as activityKo } from './i18n/ko/careerReminder.js';
+import { activityErrorText as activityEn } from './i18n/en/careerReminder.js';
+import { activityErrorText as activityJa } from './i18n/ja/careerReminder.js';
 import { EXACT_JA, PATTERNS_JA } from './i18n/ja/errorText.js';
 import { cupText } from './cupText.js';
 import type { Lang } from './lang.js';
@@ -205,6 +208,7 @@ const TABLES: Record<
 /** 한국어 문장을 요청 언어로. 한국어면 그대로, 표에 없으면 한국어 그대로 돌려준다. */
 export function localizeMessage(message: string, lang: Lang): string {
   if (lang === 'ko') return message;
+  if (message === activityKo) return lang === 'en' ? activityEn : activityJa;
   const T = TABLES[lang];
   const hit = T.exact[message];
   if (hit) return hit;

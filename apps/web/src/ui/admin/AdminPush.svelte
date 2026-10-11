@@ -3,7 +3,7 @@
   import type { PushPerformance, PushMetrics } from '@offside/contracts';
   import { fetchPushPerformance } from '@offside/app-core/api/admin';
   import { kstDateTime as kst } from '@offside/app-core/boardText';
-  import { PUSH_CATEGORY_LABELS as labels, PUSH_METRIC_LABELS, pushClickRate, PUSH_METRICS_HELP, PUSH_TARGET_HELP, PUSH_RECEIPT_HELP } from '@offside/app-core/pushPerformance';
+  import { PUSH_CATEGORY_LABELS as labels, PUSH_METRIC_LABELS, pushClickRate, PUSH_METRICS_HELP, PUSH_TARGET_HELP, PUSH_RECEIPT_HELP, retentionText as R, RETENTION_METRICS } from '@offside/app-core/pushPerformance';
 
   let days = $state(7);
   let tests = $state(false);
@@ -68,6 +68,19 @@
       <p>{PUSH_METRICS_HELP}</p><p>{PUSH_RECEIPT_HELP}</p><p>{PUSH_TARGET_HELP}</p>
       <p>알림 생성일을 기준으로 묶어요. 추적 시작: {kst(data.trackingStartedAt)}. 이전 발송은 남아 있는 결과만 보여요. 클릭 추적은 업데이트된 앱에서 시작돼요. 기록은 90일 보관하며, 계정을 삭제하면 함께 지워져요.</p>
     </div></details>
+    <section class="stack retention" style="gap:10px" aria-label={R.title}>
+      <h3>{R.title}</h3>
+      <p class="muted fs-xs">{R.policy}</p>
+      {#each data.retention ?? [] as item (item.stage)}
+        <details class="push-row" open>
+          <summary><strong>{R[item.stage === 1 ? 'stage1' : item.stage === 2 ? 'stage2' : 'stage3']}</strong></summary>
+          <dl class="push-details">
+            {#each RETENTION_METRICS as key (key)}<div><dt>{R[key]}</dt><dd>{item[key].toLocaleString()}</dd></div>{/each}
+          </dl>
+        </details>
+      {:else}<p class="muted">{R.empty}</p>{/each}
+      <p class="muted fs-xs">{R.help}</p>
+    </section>
     <section class="stack" style="gap:8px" aria-label="종류별 푸시 성과">
       <h3>종류별 성과</h3>
       {#each data.categories as m (m.category)}{@render resultRow(m, labels[m.category], '')}{:else}<p class="muted">이 기간에 발송된 푸시가 없어요.</p>{/each}
@@ -86,6 +99,9 @@
 </div>
 
 <style>
+  .retention { border-block: 1px solid var(--line); padding-block: 16px; }
+  .retention summary { display: block; }
+  .retention p { line-height: 1.6; }
   .push-panel { min-width: 0; }
   .push-panel h3, .push-panel p { margin: 0; }
   .push-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
