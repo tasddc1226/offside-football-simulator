@@ -89,3 +89,28 @@ test('저장된 이적 제의의 조건 설명은 반복 열기에도 제의와 
   await expect(page.locator('[data-market-feedback]')).toHaveText(text);
   expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(saved);
 });
+
+for (const width of [320, 390])
+  test(`육성 안내 ${width}px는 저장과 RNG를 바꾸지 않고 훈련 선택을 유지한다`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await startCareer(page);
+    await expect(page.locator('[data-training-pick-hint]')).toBeVisible();
+    const before = await page.evaluate(() => localStorage.getItem('ft_save'));
+    const guide = page.locator('[data-position-guide]');
+    await guide.locator('summary').click();
+    await guide.getByRole('button', { name: '골키퍼', exact: true }).click();
+    await expect(guide).toContainText('스위퍼 키퍼');
+    expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(before);
+    await guide.locator('summary').click();
+    await page.locator('[data-train="pac"]').click();
+    await expect(page.locator('[data-train="pac"]')).toHaveAttribute('aria-pressed', 'true');
+    const saved = JSON.parse((await page.evaluate(() => localStorage.getItem('ft_save')))!);
+    expect(saved.training).toBe('pac');
+    expect(saved.rng).toEqual(JSON.parse(before!).rng);
+    await page.reload();
+    await page.locator('[data-act="continue"]').click();
+    await expect(page.locator('[data-train="pac"]')).toHaveAttribute('aria-pressed', 'true');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  });

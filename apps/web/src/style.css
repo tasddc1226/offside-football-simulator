@@ -2560,9 +2560,9 @@ body:has(.main-nav) .wrap {
   flex-direction: column;
   align-items: center;
   gap: 0;
-  border: 1.5px solid transparent;
+  border: 1.5px solid var(--line);
   border-radius: 12px;
-  background: transparent;
+  background: var(--surface-2);
   line-height: 1.15;
   text-align: center;
 }
@@ -2608,6 +2608,9 @@ body:has(.main-nav) .wrap {
 }
 .tr-head {
   fill: var(--good);
+}
+.train-misc {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
 }
 .train-misc .opt {
   min-width: 0;

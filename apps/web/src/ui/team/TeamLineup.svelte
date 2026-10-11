@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { teamNameIssues } from '@offside/app-core/careerGuide';
   import { tn } from '@offside/game/i18n/names';
   import { onDestroy } from 'svelte';
   import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, presetLayout, positionRole, slotRating, slotFit, type FormationId, type TeamPosition } from '@offside/contracts/owner-team';
@@ -231,7 +232,7 @@
           <button class="close-selection" aria-label={L.deselectAria} onclick={() => (selectedPlayer = null)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg></button>
         </div>
       {/if}
-      {#if dirty || saving}<div class="lineup-save"><span class="fs-sm" role="status">{L.saveNote}</span><button class="btn btn-primary" onclick={onsave} disabled={saving || !nameOk} data-act="team-save">{saving ? L.saving : team ? L.saveChangesWeb : L.createTeam}</button></div>{/if}
+      {#if dirty || saving}<div class="lineup-save"><span class="fs-sm" role="status" data-team-save-reason>{teamNameIssues(teamName, managerName).name || teamNameIssues(teamName, managerName).manager || L.saveNote}</span><button class="btn btn-primary" onclick={onsave} disabled={saving || !nameOk} data-act="team-save">{saving ? L.saving : team ? L.saveChangesWeb : L.createTeam}</button></div>{/if}
     </div>
   {/if}
 {/if}

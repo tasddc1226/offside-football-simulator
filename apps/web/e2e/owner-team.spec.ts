@@ -312,8 +312,9 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   expect(getCount).toBe(1);
 
   await page.locator('[data-team-name]').fill('우리 동네 FC');
-  // 감독 이름이 비면 저장할 수 없다.
+  // 감독 이름이 비면 저장할 수 없고 이유를 보여 준다.
   await expect(page.locator('[data-act="team-save"]')).toBeDisabled();
+  await expect(page.locator('[data-team-save-reason]')).toContainText('감독 이름');
   await page.locator('[data-team-manager]').fill('홍감독');
   await page.locator('[data-act="team-auto"]').click();
   // 스트라이커 자리(9)에 공격수, 골키퍼 자리(0)에 골키퍼가 들어간다.

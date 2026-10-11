@@ -149,8 +149,8 @@ export function Radar({ s, onPick }: { s: GameState; onPick: (id: string) => voi
                   justifyContent: 'center',
                   borderRadius: 12,
                   borderWidth: 1.5,
-                  borderColor: sel ? c.accent : 'transparent',
-                  backgroundColor: sel ? alpha(c.accent, 0.12) : 'transparent',
+                  borderColor: sel ? c.accent : c.line,
+                  backgroundColor: sel ? alpha(c.accent, 0.12) : c.surface2,
                 }}
               >
                 <Txt

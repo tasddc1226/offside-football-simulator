@@ -31,6 +31,8 @@ import { eventById } from '@offside/game/events-data';
 import type { GameState } from '@offside/game/types';
 import { seasonLabel } from '@offside/app-core/career';
 import { Radar } from './Radar';
+import { PositionGuide } from './PositionGuide';
+import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
 import {
   RANK_SEEN_RATIO,
   RESULT_TOUR,
@@ -336,50 +338,41 @@ function ChoiceGrid({
   popped?: string | null;
 }) {
   const c = useColors();
-  const rows: Choice[][] = [];
-  for (let i = 0; i < items.length; i += 3) rows.push(items.slice(i, i + 3));
   return (
-    <View style={{ gap: 8 }}>
-      {rows.map((row, ri) => (
-        <View key={ri} style={{ flexDirection: 'row', gap: 8 }}>
-          {row.map((it) => (
-            <View key={it.id} testID={`${testPrefix}-${it.id}`} style={{ flex: 1 }}>
-              <PickPop on={popped === it.id}>
-                <Opt
-                  selected={it.selected}
-                  disabled={it.disabled}
-                  onPress={it.onPress}
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+      {items.map((it) => (
+        <View key={it.id} testID={`${testPrefix}-${it.id}`} style={{ flexGrow: 1, flexBasis: 100 }}>
+          <PickPop on={popped === it.id}>
+            <Opt
+              selected={it.selected}
+              disabled={it.disabled}
+              onPress={it.onPress}
+              style={{
+                flex: 1,
+                paddingVertical: it.selected ? 7.5 : 9,
+                paddingHorizontal: it.selected ? 8.5 : 10,
+              }}
+            >
+              <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>{it.label}</Txt>
+              {it.effect ? (
+                <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
+                  {it.effect[0]}
+                </Txt>
+              ) : null}
+              {it.tag ? (
+                <Txt
                   style={{
-                    flex: 1,
-                    paddingVertical: it.selected ? 7.5 : 9,
-                    paddingHorizontal: it.selected ? 8.5 : 10,
+                    fontSize: rem(0.75),
+                    lineHeight: rem(0.75) * 1.35,
+                    fontWeight: '600',
+                    color: c.accentText,
                   }}
                 >
-                  <Txt style={{ fontSize: rem(0.875), fontWeight: '700' }}>{it.label}</Txt>
-                  {it.effect ? (
-                    <Txt tone="muted" style={{ fontSize: rem(0.75), lineHeight: rem(0.75) * 1.35 }}>
-                      {it.effect[0]}
-                    </Txt>
-                  ) : null}
-                  {it.tag ? (
-                    <Txt
-                      style={{
-                        fontSize: rem(0.75),
-                        lineHeight: rem(0.75) * 1.35,
-                        fontWeight: '600',
-                        color: c.accentText,
-                      }}
-                    >
-                      {it.tag}
-                    </Txt>
-                  ) : null}
-                </Opt>
-              </PickPop>
-            </View>
-          ))}
-          {Array.from({ length: 3 - row.length }).map((_, i) => (
-            <View key={`pad-${i}`} style={{ flex: 1 }} />
-          ))}
+                  {it.tag}
+                </Txt>
+              ) : null}
+            </Opt>
+          </PickPop>
         </View>
       ))}
     </View>
@@ -602,7 +595,14 @@ export function SeasonTab({ s, onPrepY }: { s: GameState; onPrepY?: (y: number) 
           </View>
           <SubTitle>{L.trainingTitle}</SubTitle>
           {wait === 'train' ? <TourHint>{L.trainHint}</TourHint> : null}
+          <Txt v="sm" tone="muted" testID="training-pick-hint">
+            {CG.trainPick}
+          </Txt>
           <Radar s={s} onPick={setTraining} />
+          <Txt v="sm" tone="muted">
+            {CG.trainWeak}
+          </Txt>
+          <PositionGuide pos={s.pos} />
           <ChoiceGrid
             testPrefix="train"
             popped={popped?.g === 'train' ? popped.id : null}

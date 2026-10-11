@@ -1,5 +1,6 @@
 // 선수 생성(웹 Create.svelte): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
 // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
+import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { Alert, Animated, Easing, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -648,6 +649,9 @@ export default function Create() {
               </Field>
             ) : null}
 
+            <Txt v="sm" tone="muted" testID="candidate-stats-note">
+              {CG.candidateNote}
+            </Txt>
             {ovrGuide}
             <Field label={L.footLabel}>
               <Seg>

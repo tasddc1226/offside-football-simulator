@@ -6,6 +6,7 @@
 </script>
 
 <script lang="ts">
+  import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
   import { appFormatText as W } from '@offside/app-core/i18n/ko/appFormat';
   import { tn } from '@offside/game/i18n/names';
   // ui.ts seasonTab()/compsCard()/storiesCard()/meter() 포트 (224~259줄, 340~345줄, 671~684줄)
@@ -26,6 +27,7 @@
   import PhaseReport from './PhaseReport.svelte';
   import LeagueTable from './LeagueTable.svelte';
   import Radar from '../Radar.svelte';
+  import PositionGuide from '../PositionGuide.svelte';
   import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
 
   const { s }: { s: GameState } = $props();
@@ -247,7 +249,10 @@
   </div>
   <h3 class="sub-title">{L.trainingTitle}</h3>
   {#if tourWait === 'train'}<p class="tour-hint" aria-live="polite">{L.trainHint}</p>{/if}
+  <p class="muted fs-sm" data-training-pick-hint>{CG.trainPick}</p>
   <Radar {s} onpick={setTraining} />
+  <p class="muted fs-sm">{CG.trainWeak}</p>
+  <PositionGuide pos={s.pos} />
   <div class="train train-misc">
     {#each TRAININGS.filter((x) => !x.attr) as tr (tr.id)}
       {@const c = trainingCard(s, tr)}

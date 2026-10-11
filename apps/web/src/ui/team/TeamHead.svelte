@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { teamNameIssues } from '@offside/app-core/careerGuide';
   import { seasonLabel } from '@offside/app-core/seasonName';
   // 팀 소개는 작게, 편성 그라운드는 바로 아래에. 보조 동작은 팀 메뉴에 모은다.
   import { tick } from 'svelte';
@@ -48,6 +49,7 @@
     onseason: (id: number) => void;
   } = $props();
   // T-11-113 개막 뒤 프리시즌 팀 — 친선전 전용으로 고칠 수 있다.
+  const issues = $derived(teamNameIssues(name, manager));
   const legacy = $derived(isPreseasonLegacy(season, current));
   let menuOpen = $state(false);
   let menu = $state<HTMLDetailsElement>();
@@ -121,11 +123,13 @@
     <div class="tm-names">
       <label class="field">
         <span class="lbl">{L.teamNameLabel}</span>
-        <input type="text" bind:this={teamNameInput} bind:value={name} minlength={TEAM_NAME_MIN} maxlength={TEAM_NAME_MAX} placeholder={L.charsRange({ min: TEAM_NAME_MIN, max: TEAM_NAME_MAX })} data-team-name enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
+        <input type="text" bind:this={teamNameInput} bind:value={name} minlength={TEAM_NAME_MIN} maxlength={TEAM_NAME_MAX} placeholder={L.charsRange({ min: TEAM_NAME_MIN, max: TEAM_NAME_MAX })} aria-invalid={!!name && !!issues.name} aria-describedby="team-name-hint" data-team-name enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
+        <small id="team-name-hint" class="muted">{issues.name}</small>
       </label>
       <label class="field">
         <span class="lbl">{L.managerNameLabel}</span>
-        <input type="text" bind:value={manager} minlength={MANAGER_NAME_MIN} maxlength={MANAGER_NAME_MAX} placeholder={L.charsRange({ min: MANAGER_NAME_MIN, max: MANAGER_NAME_MAX })} data-team-manager enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
+        <input type="text" bind:value={manager} minlength={MANAGER_NAME_MIN} maxlength={MANAGER_NAME_MAX} placeholder={L.charsRange({ min: MANAGER_NAME_MIN, max: MANAGER_NAME_MAX })} aria-invalid={!!manager && !!issues.manager} aria-describedby="team-manager-hint" data-team-manager enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" use:doneOnEnter />
+        <small id="team-manager-hint" class="muted">{issues.manager}</small>
       </label>
     </div>
   {/if}

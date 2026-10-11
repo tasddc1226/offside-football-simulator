@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
   import { tn } from '@offside/game/i18n/names';
   // 선수 생성(T-10-022): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
   // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
@@ -378,6 +379,7 @@
     {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
     {@render ovrGuide()}
     <p class="muted fs-sm">{L.ovrCore}</p>
+    <p class="muted fs-sm" data-candidate-stats-note>{CG.candidateNote}</p>
     <div class="cand-list">
       {#each appState.candidates as cand, i (i)}
         {#if appState.candidatesOpen[i]}
