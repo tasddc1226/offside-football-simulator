@@ -651,6 +651,25 @@ export const careerSeasons = sqliteTable(
   ],
 );
 
+/**
+ * T-11-207 시즌 업로드의 측정 기록(선택 로그·성장 기록). 게임·기록·부정 판정에서 읽지 않는다.
+ * career_seasons 행 안에서 열만 비우면 빈 자리가 페이지에 남아 D1 파일이 계속 커진다. 여기에 업로드마다 한 행씩
+ * 덧붙이고(id = 올라온 순서), 5분 cron이 7일 지난 행을 R2로 올린 뒤 오래된 순서대로 통째로 지운다 — 빈 페이지는 새 행이
+ * 다시 쓴다. 보조 인덱스를 두지 않아 업로드마다 쓰기는 한 행이다. 커리어가 지워져도 7일 안에 R2로 옮겨진다.
+ */
+export const seasonTelemetry = sqliteTable('season_telemetry', {
+  id: integer('id').primaryKey(),
+  careerId: text('career_id').notNull(),
+  year: integer('year').notNull(),
+  age: integer('age').notNull(),
+  ovr: integer('ovr').notNull(),
+  /** 비어 있으면(`[]`) NULL. */
+  eventsJson: text('events_json'),
+  /** SeasonGrowth JSON(T-11-048). 없으면 NULL. */
+  growthJson: text('growth_json'),
+  createdAt: text('created_at').notNull(),
+});
+
 /** T-1-004, ADR-008. `PROFILE_DELETED`·`RECOVERY_CODE_ISSUED`·`GOOGLE_LINKED`·`GOOGLE_UNLINKED`(T-1-013)·`CAREERS_MERGED`(T-10-013)·`BALANCE_ACTIVATED`·`COMMENTS_PURGED`(T-10-016). */
 export const auditLog = sqliteTable(
   'audit_log',

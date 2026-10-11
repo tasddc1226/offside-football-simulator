@@ -37,6 +37,7 @@ import {
   goalsPlusAssists,
   ownerFunds,
   retiredNumbers,
+  seasonTelemetry,
 } from '../schema.js';
 
 export const verifiedRetiredTitle = (
@@ -114,9 +115,10 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
     now,
   } = input;
   const signals = signalsJson !== undefined ? { signalsJson } : {};
-  // T-11-048 시즌 성장 기록. 없으면 건드리지 않아, 성장 기록 없이 다시 올라온 옛 시즌이 이미 쌓인 기록을 지우지 않는다.
-  // 세부 능력치(s0·s1)도 그대로 둔다 — 세부 능력치별 성장 분석을 계속한다(T-11-097b, 잠깐 빼고 저장했던 것을 되돌림).
-  const growth = season.growth ? { growthJson: JSON.stringify(season.growth) } : {};
+  // T-11-048 시즌 성장 기록(세부 능력치 s0·s1 포함, T-11-097b)과 선택 로그는 T-11-207부터 season_telemetry에
+  // 업로드마다 덧붙인다. career_seasons의 두 열은 새 행엔 비워 두고, 옛 행의 값은 덮어쓰지 않는다(기존 보관 작업이 옮긴다).
+  const events = eventsJson === '[]' ? null : eventsJson;
+  const growthJson = season.growth ? JSON.stringify(season.growth) : null;
   const name = publicName !== undefined ? { publicName } : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
   const detail = {
@@ -186,10 +188,9 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
         ovr: season.ovr,
         honorsJson: JSON.stringify(season.honors),
         mil: season.mil ? 1 : 0,
-        eventsJson,
+        eventsJson: '[]',
         ...detail,
         ...signals,
-        ...growth,
         createdAt: now,
       })
       .onConflictDoUpdate({
@@ -206,15 +207,26 @@ export async function putCareerSeason(db: Db, input: PutCareerSeasonInput): Prom
           ovr: season.ovr,
           honorsJson: JSON.stringify(season.honors),
           mil: season.mil ? 1 : 0,
-          eventsJson,
           ...detail,
           ...signals,
-          ...growth,
           // 같은 시즌을 다시 보내면 덮어써 결과는 같다(멱등). createdAt은 최초값을 유지한다.
         },
         // 은퇴한 커리어의 시즌은 고치지 않는다(은퇴 요약·결번 판정의 근거). 늦게 도착한 빠진 시즌은 새 행이라 들어간다.
         setWhere: sql`(select ${careers.status} from ${careers} where ${careers.id} = ${careerId}) <> 'retired'`,
       }),
+    ...(events !== null || growthJson !== null
+      ? [
+          db.insert(seasonTelemetry).values({
+            careerId,
+            year,
+            age: season.age,
+            ovr: season.ovr,
+            eventsJson: events,
+            growthJson,
+            createdAt: now,
+          }),
+        ]
+      : []),
     // 맨 뒤에 둔다 — 위 upsert가 행을 만든 뒤여야 숨김이 새 커리어에도 닿는다.
     ...(hide ? hideCareerStatements(db, careerId) : []),
   ]);

@@ -6,8 +6,13 @@
 
 ## 저장 위치
 
-`career_seasons`에 시즌마다 한 줄. `growth_json`(아래 JSON). 성장 기록이 없는 옛 행·옛 클라이언트
-업로드는 NULL이다. 같은 시즌을 성장 기록 없이 다시 올려도 이미 쌓인 값은 지워지지 않는다(coalesce).
+T-11-207부터 `season_telemetry`에 업로드마다 한 줄 덧붙는다. `growth_json`(아래 JSON)과 선택 로그 `events_json`,
+`career_id`·`year`·`age`·`ovr`(시즌 끝)·`created_at`. 같은 시즌을 다시 올리면 새 줄이 생긴다 — 분석에서는
+`(career_id, year)`의 가장 큰 `id`를 쓴다. 성장 기록이 없는 업로드는 `growth_json`이 NULL이고, 성장 기록·선택 로그가
+둘 다 없으면 줄을 만들지 않는다.
+
+그 전(2026-10-02 ~ T-11-207 배포)에 올라온 시즌은 `career_seasons.growth_json`에 있다. 새 시즌은 이 열을 비워 두고, 남은
+값은 아래 T-11-100 보관이 옮긴다.
 
 | 키        | 내용                                                                                               |
 | --------- | -------------------------------------------------------------------------------------------------- |
@@ -31,7 +36,15 @@
 14:52~) 빼고 저장했다가 T-11-097b에서 되돌렸다. 그 사이(UTC 2026-10-05 05:52:50 ~ 07:26:43, 13,988행) 올라온 시즌은
 `s0`·`s1`이 없다 — 분석에서 뺀다.
 
-## 보관 (T-11-100)
+## 보관 (T-11-207)
+
+`season_telemetry`는 5분 cron(`apps/api/src/cron/seasonTelemetryArchive.ts`)이 올라온 지 7일 지난 줄을 올라온 순서대로
+R2 `season-telemetry/<env>/<UTC 날짜>/<첫 id>-<끝 id>.ndjson.gz`로 올리고 D1에서 줄을 지운다. 한 줄:
+`{"id","careerId","year","age","ovr","createdAt","events","growth"}`. 오래된 줄부터 통째로 지우므로 빈 페이지를 새 줄이
+다시 써 D1 파일이 더 커지지 않는다(열만 비우면 빈 자리가 페이지에 남는다). 한 번에 최대 1만 줄. 긴급 중지:
+`SEASON_TELEMETRY_ARCHIVE_DISABLED=1`.
+
+## 옛 행 보관 (T-11-100)
 
 매일 작업(KST 04:00, `apps/api/src/cron/growthArchive.ts`)이 올라온 지 7일(`KEEP_DAYS`, T-11-203에서 30일 → 7일) 지난 시즌의 성장 기록을 R2
 `offside-d1-backup` 버킷 `growth/<env>/<실행일>-<시각>.ndjson.gz`로 옮기고 D1에서는 `growth_json`을 비운다. 시즌 행과 다른
@@ -45,7 +58,7 @@
 - 옮긴 뒤 같은 시즌이 성장 기록과 함께 다시 올라오면(진행 중 커리어의 재전송) 그 행은 다음 실행이 다시 옮긴다. 같은
   `(careerId, year)`가 여러 파일에 있으면 나중 파일(파일 이름의 시각) 값을 쓴다.
 
-분석은 최근 7일은 D1, 그 전은 R2 파일을 내려받아 한다:
+분석은 최근 7일은 D1 `season_telemetry`, 그 전은 R2 파일(`season-telemetry/`, 옛 행은 `growth/`)을 내려받아 한다:
 
 ```bash
 wrangler r2 object get offside-d1-backup/growth/production/<파일> --remote --file g.ndjson.gz
@@ -68,13 +81,13 @@ gunzip -c g.ndjson.gz | jq -c 'select(.age == 18) | [.growth.o0, .ovr]'
 ## 집계 예
 
 ```sql
--- 시즌 시작 OVR과 첫 시즌 말 OVR, 잠재력(숨김 제외)
-SELECT json_extract(s.growth_json, '$.o0'), s.ovr AS ovr_end, c.pot
-FROM career_seasons s JOIN careers c ON c.id = s.career_id
-WHERE s.age = 18 AND json_extract(s.growth_json, '$.o0') IS NOT NULL AND c.hidden = 0;
+-- 시즌 시작 OVR과 첫 시즌 말 OVR, 잠재력(숨김 제외, 최근 7일)
+SELECT json_extract(t.growth_json, '$.o0'), t.ovr AS ovr_end, c.pot
+FROM season_telemetry t JOIN careers c ON c.id = t.career_id
+WHERE t.age = 18 AND json_extract(t.growth_json, '$.o0') IS NOT NULL AND c.hidden = 0;
 
--- 나이별 평균 시즌 성장(시작 → 끝)
-SELECT age, count(*) n, round(avg(ovr - json_extract(growth_json, '$.o0')), 2) gain
-FROM career_seasons s JOIN careers c ON c.id = s.career_id
-WHERE growth_json IS NOT NULL AND c.hidden = 0 GROUP BY age ORDER BY age;
+-- 나이별 평균 시즌 성장(시작 → 끝, 최근 7일)
+SELECT t.age, count(*) n, round(avg(t.ovr - json_extract(t.growth_json, '$.o0')), 2) gain
+FROM season_telemetry t JOIN careers c ON c.id = t.career_id
+WHERE t.growth_json IS NOT NULL AND c.hidden = 0 GROUP BY t.age ORDER BY t.age;
 ```

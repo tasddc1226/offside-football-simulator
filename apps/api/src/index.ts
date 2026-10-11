@@ -5,6 +5,7 @@ import { app } from './app.js';
 import { updateClubStrength } from './clubStrength/update.js';
 import { runDaily } from './cron/daily.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
+import { runSeasonTelemetryArchive } from './cron/seasonTelemetryArchive.js';
 import { runSeasonGauge } from './cron/seasonGauge.js';
 import { loadSeasonSchedule } from './seasonSchedule.js';
 import { runInfraHealth } from './cron/infraHealth.js';
@@ -80,6 +81,13 @@ export default {
             r && console.log(JSON.stringify({ level: 'info', job: 'season-events-archive', ...r })),
         )
         .catch(logged('season-events-archive'));
+      await runSeasonTelemetryArchive(env, controller.scheduledTime)
+        .then(
+          (r) =>
+            r &&
+            console.log(JSON.stringify({ level: 'info', job: 'season-telemetry-archive', ...r })),
+        )
+        .catch(logged('season-telemetry-archive'));
       if (env.AUTOMATION_HIDE_DISABLED !== '1')
         await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
       await updateClubStrength(env, controller.scheduledTime).catch(logged('club-strength'));
