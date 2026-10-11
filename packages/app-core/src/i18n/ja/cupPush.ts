@@ -1,0 +1,32 @@
+export const cupPush = {
+  title: 'カップ終了通知',
+  policy: '各カップ・アカウントにつき1回 · 大会参加者向け案内を優先 · 過去7・30・90日',
+  empty: 'この期間のカップ終了通知はありません。大会終了後に表示されます。',
+  help: '通知作成日で集計します。対象アカウントにはプッシュ未登録も含みます。配信確認はAPNs・FCMの受付で、画面表示や既読を意味しません。',
+  dedupeHelp:
+    '統合した重複数は、大会参加と試合ごとの予想をアカウントごとにまとめて減らした通知数です。重複送信やQueue再試行の回数ではありません。',
+  notQueuedHelp:
+    'プッシュ未登録は、大会終了時に有効な端末がないか、チーム通知がオフで配信記録が作成されなかったアカウントです。',
+  cupName: (p: { season: number; edition: number }) =>
+    `シーズン${p.season} 第${p.edition}回オフサイドカップ`,
+  expand: '詳細を見る',
+  collapse: '閉じる',
+  recipients: '対象アカウント',
+  participants: '大会参加者',
+  predictors: '予想参加者',
+  overlap: '大会と予想の両方に参加',
+  predictionOnly: '予想のみ参加',
+  predictionEntries: '試合ごとの予想数',
+  duplicatesRemoved: '統合した重複数',
+  notQueued: 'プッシュ未登録',
+  queued: '対象端末',
+  acceptedRecipients: '受付アカウント',
+  confirmed: '配信確認',
+  clicked: 'クリックしたアカウント',
+  targetOpened: 'リンク先画面の表示',
+  pending: '処理中',
+  failed: '失敗',
+  unknown: '結果不明',
+  cancelled: 'キャンセル',
+  clickRate: 'クリック率',
+} as const;

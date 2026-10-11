@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import AdminCupPush from './AdminCupPush';
 import { View } from 'react-native';
 import type { PushPerformance, PushMetrics } from '@offside/contracts';
 import { fetchPushPerformance } from '@offside/app-core/api/admin';
@@ -104,7 +105,11 @@ export default function AdminPush() {
       through.current = result.data.cohortThrough;
       setData((old) =>
         more && old
-          ? { ...result.data, campaigns: [...old.campaigns, ...result.data.campaigns] }
+          ? {
+              ...result.data,
+              campaigns: [...old.campaigns, ...result.data.campaigns],
+              cups: [...(old.cups ?? []), ...(result.data.cups ?? [])],
+            }
           : result.data,
       );
     },
@@ -237,6 +242,7 @@ export default function AdminPush() {
               <Txt tone="muted">{`알림 생성일을 기준으로 묶어요. 추적 시작: ${kst(data.trackingStartedAt)}. 이전 발송은 남아 있는 결과만 보여요. 클릭 추적은 업데이트된 앱에서 시작돼요. 기록은 90일 보관하며, 계정을 삭제하면 함께 지워져요.`}</Txt>
             </View>
           ) : null}
+          <AdminCupPush items={data.cups} />
           <View
             testID="career-retention-performance"
             style={{ gap: 12, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 16 }}

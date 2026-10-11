@@ -25,6 +25,23 @@ const report = {
   daily: [],
   campaigns: [],
   hasMore: false,
+  cups: [
+    {
+      ...metrics,
+      cupId: 's1-1',
+      season: 1,
+      edition: 1,
+      title: 'Cup',
+      createdAt: at,
+      participants: 12,
+      predictors: 18,
+      overlap: 10,
+      predictionOnly: 8,
+      predictionEntries: 70,
+      duplicatesRemoved: 62,
+      notQueued: 0,
+    },
+  ],
   retention: [{ ...metrics, stage: 1, returned: 10, retired: 3 }],
 };
 for (const width of [320, 390])
@@ -78,6 +95,14 @@ for (const width of [320, 390])
     await expect(section).toContainText('첫 커리어 독려');
     await expect(section).toContainText('7일 내 첫 은퇴');
     await expect(section.locator('.retention')).toContainText('10');
+    const cups = section.locator('[data-cup-push]');
+    await expect(cups).toContainText('컵 종료 알림');
+    const cup = cups.locator('[data-cup-id="s1-1"]');
+    await cup.locator('summary').click();
+    await expect(cup).toContainText('중복으로 합친 건수');
+    await expect(cup).toContainText('62');
+    expect(calls).toBe(1);
+    await page.screenshot({ path: `/tmp/cup-metrics-${width}.png`, fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

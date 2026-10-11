@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AdminCupPush from './AdminCupPush.svelte';
   import { onMount } from 'svelte';
   import type { PushPerformance, PushMetrics } from '@offside/contracts';
   import { fetchPushPerformance } from '@offside/app-core/api/admin';
@@ -21,7 +22,7 @@
     if (rev !== revision) return;
     busy = false;
     if (!result.ok) { error = result.error.message; return; }
-    data = more && data ? { ...result.data, campaigns: [...data.campaigns, ...result.data.campaigns] } : result.data;
+    data = more && data ? { ...result.data, campaigns: [...data.campaigns, ...result.data.campaigns], cups: [...(data.cups ?? []), ...(result.data.cups ?? [])] } : result.data;
     page = next;
   }
   function period(n: number) { days = n; data = null; void load(); }
@@ -68,6 +69,7 @@
       <p>{PUSH_METRICS_HELP}</p><p>{PUSH_RECEIPT_HELP}</p><p>{PUSH_TARGET_HELP}</p>
       <p>알림 생성일을 기준으로 묶어요. 추적 시작: {kst(data.trackingStartedAt)}. 이전 발송은 남아 있는 결과만 보여요. 클릭 추적은 업데이트된 앱에서 시작돼요. 기록은 90일 보관하며, 계정을 삭제하면 함께 지워져요.</p>
     </div></details>
+    <AdminCupPush items={data.cups} />
     <section class="stack retention" style="gap:10px" aria-label={R.title}>
       <h3>{R.title}</h3>
       <p class="muted fs-xs">{R.policy}</p>
