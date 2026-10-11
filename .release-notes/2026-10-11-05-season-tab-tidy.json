@@ -1,0 +1,26 @@
+{
+  "id": "t-11-200-season-tab-tidy",
+  "title": "시즌 탭이 한눈에 들어오게 바뀌었어요",
+  "items": [
+    "능력치 육각형에서 키우고 싶은 능력치를 바로 눌러 훈련을 골라요",
+    "자기 투자에 어떤 능력치를 키우는지와 비용이 같이 보여요",
+    "순위표가 위로 올라오고, 구간 결과의 오른 것과 내린 것이 두 줄로 나뉘어요"
+  ],
+  "en": {
+    "title": "A cleaner Season tab",
+    "items": [
+      "Pick your training by tapping a stat on the attribute hexagon.",
+      "Self-investment now shows which stat it trains and what it costs.",
+      "The league table sits higher, and stat gains and losses show on separate lines."
+    ]
+  },
+  "ja": {
+    "title": "シーズンタブが見やすくなりました",
+    "items": [
+      "能力値の六角形で伸ばしたい能力値をタップしてトレーニングを選べます。",
+      "自己投資で伸びる能力値と費用が一緒に表示されます。",
+      "順位表が上に移り、区間結果の上がった項目と下がった項目が2行に分かれます。"
+    ]
+  },
+  "availability": "web-app"
+}

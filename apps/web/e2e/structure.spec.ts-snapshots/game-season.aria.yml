@@ -4,36 +4,32 @@
   - text: /No\.\d+ · 공격수/
   - button "대표 칭호 슈퍼스타, 칭호 도감 열기": ‘슈퍼스타’
   - heading "구조테스트" [level=1]
-  - text: /\d+세 · 런던 해머스 프리미어리그 · 연봉 \d+억 \d+,\d+만 · 몸값 \d+억 9천만 \d+ OVR 로테이션 부상 4경기 주력 슈팅·드리블 Next · 프리시즌/
-  - heading "다음 구간 준비" [level=2]
-  - text: /컨디션 \d+ 사기 \d+ 인기 \d+/
-  - heading "훈련 방향" [level=3]
-  - button "스피드 훈련 스피드 ▲"
-  - button /슈팅 훈련 슈팅 ▲ 주력 성장 \+\d+% · 너무 앞서 성장 −\d+%/
-  - button "패스 훈련 패스 ▲"
-  - button /드리블 훈련 드리블 ▲ 주력 성장 \+\d+%/
-  - button "수비 훈련 수비 ▲"
-  - button "피지컬 훈련 피지컬·스피드 ▲"
-  - button /휴식·회복 컨디션 \+\d+/ [pressed]
-  - button /개인 코치 전 능력 소폭 ▲ 비용 \d+,\d+만/
-  - button /미디어 활동 인기 \+5~9 수입 \+\d+만/
-  - text: /휴식·회복 · 컨디션 \+\d+ · 사기 \+4/
-  - paragraph: /훈련을 쉬고 몸을 추슬러요\. 컨디션이 \d+ 밑으로 떨어지면 부상 위험이 크게 늘고, \d+ 밑이면 선발로 나서기 어려워요\./
-  - text: Invest
-  - heading "자기 투자" [level=2]
-  - text: /보유 \d+억 \d+,\d+만원/
-  - button "투자 안 함 자금을 아낀다" [pressed]
-  - button /약점 보강 특훈 수비 ▲ 비용 1억 \d+,\d+만/
-  - button /강점 특화 특훈 슈팅 ▲ 비용 1억 \d+,\d+만/
-  - button /메디컬 케어 컨디션 \+\d+ 비용 \d+,\d+만/
-  - button /멘탈 코칭 사기 \+\d+ 비용 \d+,\d+만/
-  - text: 투자 안 함 · 자금을 아낀다
-  - paragraph: 이번 구간에는 자금을 쓰지 않아요.
-  - text: /\d+-\d+ Season/
+  - text: /\d+세 · 런던 해머스 프리미어리그 · 연봉 \d+억 \d+,\d+만 · 몸값 \d+억 9천만 \d+ OVR 로테이션 부상 4경기 주력 슈팅·드리블 \d+-\d+ Season/
   - heading "프리시즌" [level=2]
   - text: 프리시즌 전반기 후반기
   - heading "프리미어리그 순위" [level=3]
   - paragraph: /개막하면 \d+개 팀 순위표가 채워져요\./
+  - text: Next · 프리시즌
+  - heading "다음 구간 준비" [level=2]
+  - text: /컨디션 \d+ 사기 \d+ 인기 \d+/
+  - heading "코치 메모" [level=3]
+  - paragraph: /이번 시즌 OVR \d+ → \d+\. 아직 표시할 능력치 변화가 없어요\./
+  - paragraph: 부상으로 4경기 결장이 남았어요. 회복 상태를 먼저 확인해요.
+  - paragraph: 슈팅이 다른 핵심 능력치보다 앞서 있어 이 능력치의 훈련 성장이 줄어요. 다른 핵심 능력치를 보완해 주세요.
+  - heading "훈련 방향" [level=3]
+  - button /스피드 훈련 · 스피드 \d+ · 스피드 ▲/
+  - button /슈팅 훈련 · 슈팅 \d+ · 슈팅 ▲ · 주력 성장 \+\d+% · 너무 앞서 성장 −\d+%/: /슈팅★ \d+/
+  - button /패스 훈련 · 패스 \d+ · 패스 ▲/
+  - button /드리블 훈련 · 드리블 \d+ · 드리블 ▲ · 주력 성장 \+\d+%/: /드리블★ \d+/
+  - button /수비 훈련 · 수비 \d+ · 수비 ▲/
+  - button /피지컬 훈련 · 피지컬 \d+ · 피지컬·스피드 ▲/
+  - button "휴식·회복" [pressed]
+  - button /개인 코치 비용 \d+,\d+만/
+  - button /미디어 활동 수입 \+\d+만/
+  - text: /휴식·회복 · 컨디션 \+\d+ · 사기 \+4 Invest/
+  - heading "자기 투자" [level=2]
+  - text: /보유 \d+억 \d+,\d+만원/
+  - button "투자 안 함 자금을 아낀다" [pressed]
   - text: Storylines
   - heading "진행 중인 스토리" [level=2]
   - text: 평생의 라이벌 약 1구간 후 Timeline
@@ -48,7 +44,7 @@
   - text: "[겨울 이적시장] 구단이 여름 이적을 약속했습니다. 이번 시즌이 끝나면 더 큰 무대가 기다립니다."
   - time: /\d+ 시즌 종료/
   - text: /우라와 다이아몬즈 → 리버풀 토피스\(프리미어리그\) 이적! 자유계약 · 3년 · 연봉 \d+억 \d+,\d+만/
-  - button "더 보기"
+  - button "최근 소식 더 보기"
   - 'button /다음 구간 준비 보기: 훈련 휴식·회복 · 투자 없음 · 컨디션 \d+/'
   - button "프리시즌 훈련 진행 →"
   - navigation "게임 메뉴":
