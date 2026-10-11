@@ -1379,6 +1379,10 @@ export const iapPurchases = sqliteTable(
     /** Apple Sandbox · Google 테스트 구매면 1(매출에서 뺀다). */
     test: integer('test', { mode: 'boolean' }).notNull().default(false),
     createdAt: text('created_at').notNull(),
+    /** T-11-215 스토어가 환불(Google은 무효화)한 시각. 한 번만 적는다. */
+    refundedAt: text('refunded_at'),
+    /** T-11-215 환불로 회수한 장수. 이미 쓴 만큼은 회수하지 못해 qty보다 작을 수 있다. */
+    revokedQty: integer('revoked_qty').notNull().default(0),
   },
   (table) => [
     primaryKey({ columns: [table.store, table.transactionId] }),

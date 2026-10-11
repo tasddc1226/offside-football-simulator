@@ -5,7 +5,9 @@ import { grantIapPurchase, iapOwnerOf, ownerItemsOf } from '../db/repos/iap.js';
 import { waitUntil } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
+import { handleAppleNotification } from '../iap/refunds.js';
 import { iapAccount, iapStores, verifyIapClaim, type IapRejection } from '../iap/verify.js';
+import { APPLE_IAP_NOTIFY_PATH } from '../middleware/originGuard.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { requireOwner } from './ownerTeam.js';
 import { conflictError, NO_STORE, nowIso, ok, readBody } from './shared.js';
@@ -25,6 +27,15 @@ const REJECT = {
 const reject = (r: IapRejection) => conflictError(cupKo(REJECT[r][0]), REJECT[r][1]);
 
 export function registerIapRoutes(app: Hono<AppEnv>) {
+  // T-11-215 App Store 서버 알림(V2). Apple 서버가 보낸다 — 세션 없이 본문의 Apple 서명으로 확인하고, 환불이면 아이템을 회수한다.
+  // 처리했거나 다룰 일이 없으면 200(Apple이 다시 보내지 않는다), 서명이 틀리면 400.
+  app.post(APPLE_IAP_NOTIFY_PATH, async (c) => {
+    const body = (await c.req.json().catch(() => null)) as { signedPayload?: unknown } | null;
+    const payload = typeof body?.signedPayload === 'string' ? body.signedPayload : '';
+    const r = await handleAppleNotification(c.env, getDb(c), payload, nowIso());
+    return c.body(null, r === 'invalid' ? 400 : 200);
+  });
+
   app.post('/v1/items/iap', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const input = readBody(c, IapClaimBodySchema);

@@ -59,9 +59,22 @@ App Store Connect · Play Console에 같은 ID로 소모성(Consumable · 일회
 - [ ] TestFlight · 라이선스 테스터로 Sandbox 구매 한 번씩 확인(`iap_purchases.test = 1`)
 - [ ] 상품이 보이기 시작하면 릴리즈 노트를 따로 올린다(이 PR은 보이는 변화가 없어 노트 없음)
 
-## 후속
+## 환불 회수 (T-11-215)
 
-- 환불 알림(App Store Server Notifications · Google RTDN)으로 환불된 구매의 아이템 회수. 지금은 운영 DB에서 `iap_purchases`로 확인한다.
+이용약관 1항("환불된 구매로 받은 아이템은 회수할 수 있습니다")을 서버가 지킨다. 회수는 거래마다 한 번이고(`iap_purchases.refunded_at`),
+그때 가진 장수 안에서만 뺀다. 이미 쓴 만큼은 빼지 못하고 `revoked_qty`가 `qty`보다 작게 남는다(운영자가 조회로 확인).
+
+- Apple: App Store 서버 알림 V2를 `POST /v1/iap/apple/notifications`로 받는다. 세션 · Origin 없이 들어오고, `signedPayload`와
+  그 안의 거래를 구매 확인과 같은 x5c 사슬로 확인한다. `REFUND`만 회수하고 나머지 알림은 200으로 받기만 한다. 서명이 틀리면 400.
+- Google: 매일 cron(`runDaily` → `syncGoogleVoided`)이 Voided Purchases API로 최근 7일 무효화된 일회성 구매를 읽어 회수한다.
+  서비스 계정에 재무 데이터 보기 권한이 있어야 한다(구매 확인과 같은 키).
+- 결과는 Workers Logs `job: "iap-refund"` · 매일 작업 결과(`app_meta` `cron:daily:last`의 `iapRefunds`)로 본다.
+
+운영 준비 (사용자):
+
+- [ ] App Store Connect → 앱 → 앱 정보 → App Store 서버 알림: 프로덕션 · 샌드박스 URL에
+      `https://api.offside-lab.com/v1/iap/apple/notifications`, 버전 2
+- [ ] 샌드박스에서 "테스트 알림 보내기"로 200 응답 확인
 
 ## 프리미엄 스카우트권 규칙 (T-11-196, 2026-10-10 결정)
 

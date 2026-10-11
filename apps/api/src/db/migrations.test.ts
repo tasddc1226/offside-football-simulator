@@ -146,6 +146,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'qty',
     'test',
     'created_at',
+    'refunded_at',
+    'revoked_qty',
   ],
   cards: [
     'career_id',
