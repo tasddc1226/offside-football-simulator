@@ -194,6 +194,10 @@ export const positionedLayout = (layout: TeamLayout): TeamPosition[] =>
  * 저장한다 — 자리마다의 포지션은 positionRole로 정해져 손으로 끌어 놓은 배치와 같다(경기 규칙은 그대로). 배치가 프리셋과
  * 꼭 같으면 shapeOf가 그 이름을 돌려준다.
  */
+/** T-11-217 팀 프리셋 수 · 이름 길이 상한. */
+export const TEAM_PRESET_MAX = 5;
+export const TEAM_PRESET_NAME_MAX = 12;
+
 type ShapePoint = readonly [x: number, y: number];
 // 카드가 덜 겹치게 줄 사이를 넓히고, 위아래로 가까운 자리는 옆으로 비켜 둔다. 첫 점은 골키퍼.
 const GK: ShapePoint = [50, 91];

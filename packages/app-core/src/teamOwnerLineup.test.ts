@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORMATIONS } from '@offside/contracts/owner-team';
+import { FORMATIONS, shapeLayout } from '@offside/contracts/owner-team';
 import type { ClubAchievement, OwnerTeam, TeamMatch, TeamPlayer } from './api/team.js';
 import { cardSeasonBadge } from './format.js';
 import {
@@ -18,6 +18,15 @@ import {
   pickCandidates,
   playHintOf,
 } from './teamOwner.js';
+import {
+  loadPreset,
+  nextPresetName,
+  presetOf,
+  presetSummary,
+  presetsFull,
+  removePreset,
+  renamePreset,
+} from './teamPresets.js';
 
 const player = (careerId: string, over: Partial<TeamPlayer> = {}): TeamPlayer => ({
   careerId,
@@ -245,5 +254,31 @@ describe('경기 결과', () => {
     expect(pct(0)).toBe('0%');
     expect(pct(0.456)).toBe('46%');
     expect(pct(1)).toBe('100%');
+  });
+});
+
+const A = '00000000-0000-4000-8000-00000000000a';
+const B = '00000000-0000-4000-8000-00000000000b';
+const slots = [A, null, null, null, null, null, null, null, null, B, null];
+
+describe('T-11-217 팀 프리셋', () => {
+  it('불러오면 지금 없는 선수 자리는 비우고 그 수를 센다', () => {
+    const p = presetOf(' 공격 ', '4-3-3', slots, shapeLayout('4-2-3-1'));
+    expect(p.name).toBe('공격');
+    const r = loadPreset(p, new Set([A]));
+    expect(r.slots[0]).toBe(A);
+    expect(r.slots[9]).toBeNull();
+    expect(r.missing).toBe(1);
+    expect(presetSummary(p)).toEqual({ shape: '4-2-3-1', starters: 2 });
+  });
+
+  it('기본 이름은 겹치지 않고, 목록은 5개가 상한', () => {
+    const label = ({ n }: { n: number }) => `프리셋 ${n}`;
+    const one = presetOf('프리셋 2', '4-4-2', slots, null);
+    expect(nextPresetName([one], label)).toBe('프리셋 3');
+    const list = Array.from({ length: 5 }, (_, i) => presetOf(`p${i}`, '4-3-3', slots, null));
+    expect(presetsFull(list)).toBe(true);
+    expect(presetsFull(removePreset(list, 0))).toBe(false);
+    expect(renamePreset(list, 1, ' 새 이름 ')[1]!.name).toBe('새 이름');
   });
 });

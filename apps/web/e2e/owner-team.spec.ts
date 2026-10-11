@@ -1346,3 +1346,76 @@ test('T-11-216 시즌 1 팀은 4-2-3-1 같은 배치 프리셋을 고르고, 저
     'ST',
   ]);
 });
+
+test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없는 선수 자리는 비운 채 초안만 바꾼다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  const ST = '00000000-0000-4000-8000-000000000011';
+  const GONE = '00000000-0000-4000-8000-0000000000ff';
+  const slots = (...ids: (string | null)[]) => [...ids, ...Array(11 - ids.length).fill(null)];
+  const team = {
+    ...teamFrom({
+      name: '우리 동네 FC',
+      formation: '4-3-3',
+      slots: slots(null, ...Array(8).fill(null), ST),
+    }),
+    season: 1,
+    presets: [
+      {
+        name: '옛 편성',
+        formation: '4-4-2',
+        slots: slots(GONE, ...Array(8).fill(null), ST),
+        layout: null,
+      },
+    ],
+  };
+  const puts: { presets: { name: string; formation: string }[] }[] = [];
+  let teamPuts = 0;
+  await page.route(ownerTeamUrl, async (route) => {
+    if (route.request().method() === 'GET')
+      return route.fulfill(ownerTeam({ season: 1, current: 1, seasons: SEASONS, team }));
+    teamPuts++;
+    return route.fulfill(ok({ team: teamFrom(route.request().postDataJSON()) }));
+  });
+  await page.route(`${API}/v1/owner-team/presets`, async (route) => {
+    const body = route.request().postDataJSON();
+    puts.push(body);
+    return route.fulfill(ok({ presets: body.presets }));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-act="team-presets"]').click();
+  const sheet = page.locator('[data-team-presets]');
+  await expect(sheet.locator('[data-preset]')).toHaveCount(1);
+  await expect(sheet.locator('[data-preset="0"]')).toContainText('4-4-2 · 선발 2명');
+
+  // 지금 편성을 저장하면 기본 이름으로 목록 끝에 붙는다.
+  await sheet.locator('[data-act="preset-save"]').click();
+  await expect.poll(() => puts.length).toBe(1);
+  expect(puts[0]!.presets.map((p) => p.name)).toEqual(['옛 편성', '프리셋 2']);
+  await expect(sheet.locator('[data-preset]')).toHaveCount(2);
+
+  // 이름 바꾸기 · 삭제도 목록을 통째로 보낸다.
+  await sheet.locator('[data-preset="1"] [data-act="preset-rename"]').click();
+  await sheet.locator('[data-preset-name-input]').fill('주말 리그');
+  await sheet.locator('[data-act="preset-rename-done"]').click();
+  await expect.poll(() => puts.length).toBe(2);
+  expect(puts[1]!.presets[1]!.name).toBe('주말 리그');
+  await expect(sheet.locator('[data-preset="1"] [data-preset-name]')).toHaveText('주말 리그');
+  await expectNoA11yViolations(page);
+
+  // 불러오기는 초안만 바꾼다 — 팔린 선수 자리는 비우고 알린다. 팀 저장은 저장 버튼을 눌러야.
+  await sheet.locator('[data-preset="0"] [data-act="preset-load"]').click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByText('지금 없는 선수 1명의 자리는 비웠어요')).toBeVisible();
+  await expect(page.locator('[data-formation="4-4-2"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-act="team-save"]')).toBeVisible();
+  expect(teamPuts).toBe(0);
+
+  await page.locator('[data-act="team-presets"]').click();
+  await sheet.locator('[data-preset="0"] [data-act="preset-delete"]').click();
+  await expect.poll(() => puts.length).toBe(3);
+  expect(puts[2]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
+});

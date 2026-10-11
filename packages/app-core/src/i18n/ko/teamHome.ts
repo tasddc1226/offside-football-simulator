@@ -280,6 +280,27 @@ const ko = {
   statFriendlyOnly: '전용',
   // T-11-182 은퇴 기록이 아직 서버에 없을 때
   retireSyncing: '은퇴한 선수 기록을 올리고 있어요. 올라가면 라커룸에 바로 들어와요.',
+  // T-11-217 팀 프리셋
+  tpButton: '프리셋',
+  tpTitle: '팀 프리셋',
+  tpIntro: '포메이션 · 선발 · 배치를 5개까지 저장해요. 불러온 편성은 저장을 눌러야 팀에 반영돼요.',
+  tpNeedTeam: '팀을 한 번 저장하면 프리셋을 쓸 수 있어요.',
+  tpEmpty: '저장한 프리셋이 없어요.',
+  tpSaveCurrent: '지금 편성 저장',
+  tpFull: '프리셋은 5개까지예요. 하나를 덮어쓰거나 지워 주세요.',
+  tpDefaultName: (p: { n: number }) => `프리셋 ${p.n}`,
+  tpSummary: (p: { shape: string; n: number }) => `${p.shape} · 선발 ${p.n}명`,
+  tpLoad: '불러오기',
+  tpOverwrite: '덮어쓰기',
+  tpRename: '이름 바꾸기',
+  tpDelete: '삭제',
+  tpNameLabel: '프리셋 이름',
+  tpNameDone: '확인',
+  tpSaved: '프리셋을 저장했어요.',
+  tpLoaded: '프리셋을 불러왔어요. 저장을 눌러야 팀에 반영돼요.',
+  tpLoadedMissing: (p: { n: number }) =>
+    `프리셋을 불러왔어요. 지금 없는 선수 ${p.n}명의 자리는 비웠어요.`,
+  tpLocked: '컵 명단이 잠겨 있어 지금은 불러올 수 없어요.',
 };
 
 export type TeamHomeMsgs = typeof ko;
